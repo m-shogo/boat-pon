@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS decision_history (
   returned INTEGER NOT NULL DEFAULT 0,
   source TEXT NOT NULL,
   fetched_at TEXT NOT NULL,
+  recommended_stake_yen INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -79,6 +80,12 @@ CREATE TABLE IF NOT EXISTS manual_odds (
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 `);
+
+  try {
+    db.exec("ALTER TABLE decision_history ADD COLUMN recommended_stake_yen INTEGER NOT NULL DEFAULT 0");
+  } catch {
+    // Existing databases already have this column.
+  }
 }
 
 export function getSettings(db: DatabaseSync): BudgetRule {
@@ -132,34 +139,59 @@ export function listResults(db: DatabaseSync): RaceResult[] {
 SELECT race_id, date, venue, race_no, trifecta, payout_yen, popularity, returned, source, fetched_at
 FROM race_results
 ORDER BY date DESC, venue ASC, race_no ASC
-LIMIT 60
+LIMIT 120
 `).all() as Array<Record<string, unknown>>;
   return rows.map(rowToResult);
 }
 
 export function insertDecisionHistory(db: DatabaseSync, candidate: BetCandidate, decision: Decision) {
+  const selection = candidate.selection.join("-");
   const existing = db.prepare("SELECT id FROM decision_history WHERE race_id = ? AND selection = ?").get(
     candidate.raceId,
-    candidate.selection.join("-"),
-  );
-  if (existing) return;
+    selection,
+  ) as { id: number } | undefined;
 
   const result = db.prepare("SELECT trifecta, payout_yen, popularity, returned FROM race_results WHERE race_id = ?").get(candidate.raceId) as
     | { trifecta: string | null; payout_yen: number | null; popularity: number | null; returned: number }
     | undefined;
 
+  if (existing) {
+    db.prepare(`
+UPDATE decision_history
+SET estimated_hit_rate = ?, required_odds = ?, current_odds = ?, ev = ?, decision = ?,
+    result = ?, payout_yen = ?, popularity = ?, returned = ?, source = ?, fetched_at = ?,
+    recommended_stake_yen = ?
+WHERE id = ?
+`).run(
+      candidate.estimatedHitRate,
+      decision.requiredOdds,
+      candidate.currentOdds,
+      decision.ev,
+      decision.status,
+      result?.trifecta ?? null,
+      result?.payout_yen ?? null,
+      result?.popularity ?? null,
+      result?.returned ? 1 : 0,
+      candidate.source,
+      candidate.fetchedAt,
+      decision.recommendedAmount,
+      existing.id,
+    );
+    return;
+  }
+
   db.prepare(`
 INSERT INTO decision_history
 (race_id, date, venue, race_no, bet_type, selection, estimated_hit_rate, required_odds, current_odds, ev, decision,
- actually_bought, stake_yen, result, payout_yen, popularity, returned, source, fetched_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ actually_bought, stake_yen, result, payout_yen, popularity, returned, source, fetched_at, recommended_stake_yen)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `).run(
     candidate.raceId,
     candidate.date,
     candidate.venue,
     candidate.raceNo,
     candidate.betType,
-    candidate.selection.join("-"),
+    selection,
     candidate.estimatedHitRate,
     decision.requiredOdds,
     candidate.currentOdds,
@@ -173,6 +205,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     result?.returned ? 1 : 0,
     candidate.source,
     candidate.fetchedAt,
+    decision.recommendedAmount,
   );
 }
 
@@ -180,7 +213,7 @@ export function listDecisionHistory(db: DatabaseSync) {
   const rows = db.prepare(`
 SELECT id, race_id, date, venue, race_no, selection, estimated_hit_rate, required_odds, current_odds,
        ev, decision, actually_bought, stake_yen, result, payout_yen, popularity, returned,
-       source, fetched_at, created_at
+       source, fetched_at, recommended_stake_yen, created_at
 FROM decision_history
 ORDER BY created_at DESC, id DESC
 LIMIT 500
@@ -200,6 +233,7 @@ LIMIT 500
     decision: String(row.decision),
     actuallyBought: Boolean(row.actually_bought),
     stakeYen: Number(row.stake_yen),
+    recommendedStakeYen: Number(row.recommended_stake_yen ?? 0),
     result: row.result == null ? null : String(row.result),
     payoutYen: row.payout_yen == null ? null : Number(row.payout_yen),
     popularity: row.popularity == null ? null : Number(row.popularity),

@@ -14,6 +14,7 @@ export type DecisionHistoryRow = {
   decision: DecisionStatus;
   actuallyBought: boolean;
   stakeYen: number;
+  recommendedStakeYen: number;
   result: string | null;
   payoutYen: number | null;
   popularity: number | null;
@@ -31,6 +32,9 @@ export type BacktestSummary = {
   bought: number;
   totalStakeYen: number;
   totalPayoutYen: number;
+  modelStakeYen: number;
+  modelPayoutYen: number;
+  modelRoi: number;
   hits: number;
   hitRate: number;
   roi: number;
@@ -40,6 +44,9 @@ export type BacktestSummary = {
     stakeYen: number;
     payoutYen: number;
     roi: number;
+    modelStakeYen: number;
+    modelPayoutYen: number;
+    modelRoi: number;
   }>;
   byVenue: Array<{
     venue: string;
@@ -48,12 +55,22 @@ export type BacktestSummary = {
     stakeYen: number;
     payoutYen: number;
     roi: number;
+    modelStakeYen: number;
+    modelPayoutYen: number;
+    modelRoi: number;
   }>;
 };
 
 export function summarizeHistory(rows: DecisionHistoryRow[]): BacktestSummary {
   const totalStakeYen = rows.reduce((sum, row) => sum + row.stakeYen, 0);
-  const totalPayoutYen = rows.reduce((sum, row) => sum + (row.payoutYen ?? 0), 0);
+  const totalPayoutYen = rows
+    .filter((row) => row.actuallyBought && row.result === row.selection)
+    .reduce((sum, row) => sum + (row.payoutYen ?? 0), 0);
+  const modelRows = rows.filter((row) => row.decision === "BUY");
+  const modelStakeYen = modelRows.reduce((sum, row) => sum + row.recommendedStakeYen, 0);
+  const modelPayoutYen = modelRows
+    .filter((row) => row.result === row.selection)
+    .reduce((sum, row) => sum + (row.payoutYen ?? 0), 0);
   const hits = rows.filter((row) => row.result === row.selection).length;
 
   const decisions = rows.length;
@@ -65,6 +82,9 @@ export function summarizeHistory(rows: DecisionHistoryRow[]): BacktestSummary {
     bought: rows.filter((row) => row.actuallyBought).length,
     totalStakeYen,
     totalPayoutYen,
+    modelStakeYen,
+    modelPayoutYen,
+    modelRoi: modelStakeYen ? modelPayoutYen / modelStakeYen : 0,
     hits,
     hitRate: rows.length ? hits / rows.length : 0,
     roi: totalStakeYen ? totalPayoutYen / totalStakeYen : 0,
@@ -81,19 +101,34 @@ export function summarizeHistory(rows: DecisionHistoryRow[]): BacktestSummary {
 
   emptySummary.byDecision = [...byDecision.entries()].map(([decision, grouped]) => {
     const stakeYen = grouped.reduce((sum, row) => sum + row.stakeYen, 0);
-    const payoutYen = grouped.reduce((sum, row) => sum + (row.payoutYen ?? 0), 0);
+    const payoutYen = grouped
+      .filter((row) => row.actuallyBought && row.result === row.selection)
+      .reduce((sum, row) => sum + (row.payoutYen ?? 0), 0);
+    const modelStakeYen = grouped.reduce((sum, row) => sum + row.recommendedStakeYen, 0);
+    const modelPayoutYen = grouped
+      .filter((row) => row.decision === "BUY" && row.result === row.selection)
+      .reduce((sum, row) => sum + (row.payoutYen ?? 0), 0);
     return {
       decision,
       count: grouped.length,
       stakeYen,
       payoutYen,
       roi: stakeYen ? payoutYen / stakeYen : 0,
+      modelStakeYen,
+      modelPayoutYen,
+      modelRoi: modelStakeYen ? modelPayoutYen / modelStakeYen : 0,
     };
   });
 
   emptySummary.byVenue = [...byVenue.entries()].map(([venue, grouped]) => {
     const stakeYen = grouped.reduce((sum, row) => sum + row.stakeYen, 0);
-    const payoutYen = grouped.reduce((sum, row) => sum + (row.payoutYen ?? 0), 0);
+    const payoutYen = grouped
+      .filter((row) => row.actuallyBought && row.result === row.selection)
+      .reduce((sum, row) => sum + (row.payoutYen ?? 0), 0);
+    const modelStakeYen = grouped.reduce((sum, row) => sum + row.recommendedStakeYen, 0);
+    const modelPayoutYen = grouped
+      .filter((row) => row.decision === "BUY" && row.result === row.selection)
+      .reduce((sum, row) => sum + (row.payoutYen ?? 0), 0);
     return {
       venue,
       count: grouped.length,
@@ -101,6 +136,9 @@ export function summarizeHistory(rows: DecisionHistoryRow[]): BacktestSummary {
       stakeYen,
       payoutYen,
       roi: stakeYen ? payoutYen / stakeYen : 0,
+      modelStakeYen,
+      modelPayoutYen,
+      modelRoi: modelStakeYen ? modelPayoutYen / modelStakeYen : 0,
     };
   }).sort((a, b) => b.count - a.count);
 

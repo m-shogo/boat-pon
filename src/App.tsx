@@ -139,6 +139,11 @@ function Dashboard({
               <div className="reasons">
                 {decision.reasons.map((reason) => <span key={reason}>{reason}</span>)}
               </div>
+              <ManualOddsInput
+                raceId={candidate.raceId}
+                defaultValue={candidate.currentOdds}
+                onSaved={onNotify}
+              />
               <a className="officialLink" href={officialUrl} target="_blank" rel="noopener noreferrer">
                 公式で確認して購入 <ExternalLink size={15} />
               </a>
@@ -193,6 +198,8 @@ function ManualOddsInput({
   onSaved: () => Promise<void>;
 }) {
   const [value, setValue] = useState(defaultValue?.toString() ?? "");
+  const odds = Number(value);
+  const canSave = Number.isFinite(odds) && odds > 0;
   useEffect(() => setValue(defaultValue?.toString() ?? ""), [defaultValue]);
   return (
     <div className="manualOdds">
@@ -206,8 +213,9 @@ function ManualOddsInput({
         />
       </label>
       <button
+        disabled={!canSave}
         onClick={async () => {
-          await updateManualOdds(raceId, Number(value));
+          await updateManualOdds(raceId, odds);
           await onSaved();
         }}
       >
@@ -244,8 +252,8 @@ function Backtest({ data }: { data: DashboardResponse }) {
         <Metric label="判定数" value={data.backtest.decisions.toString()} />
         <Metric label="BUY" value={data.backtest.buy.toString()} />
         <Metric label="的中率" value={`${(data.backtest.hitRate * 100).toFixed(1)}%`} />
-        <Metric label="投資額" value={`${data.backtest.totalStakeYen.toLocaleString()}円`} />
-        <Metric label="回収率" value={data.backtest.totalStakeYen ? `${(data.backtest.roi * 100).toFixed(1)}%` : "-"} />
+        <Metric label="検証投資" value={`${data.backtest.modelStakeYen.toLocaleString()}円`} />
+        <Metric label="検証回収率" value={data.backtest.modelStakeYen ? `${(data.backtest.modelRoi * 100).toFixed(1)}%` : "-"} />
       </div>
       <div className="tableWrap">
         <table>
@@ -254,9 +262,9 @@ function Backtest({ data }: { data: DashboardResponse }) {
               <th>会場</th>
               <th>判定数</th>
               <th>BUY</th>
-              <th>投資</th>
-              <th>払戻</th>
-              <th>回収率</th>
+              <th>検証投資</th>
+              <th>検証払戻</th>
+              <th>検証回収率</th>
             </tr>
           </thead>
           <tbody>
@@ -265,9 +273,9 @@ function Backtest({ data }: { data: DashboardResponse }) {
                 <td>{row.venue}</td>
                 <td>{row.count}</td>
                 <td>{row.buy}</td>
-                <td>{row.stakeYen.toLocaleString()}円</td>
-                <td>{row.payoutYen.toLocaleString()}円</td>
-                <td>{row.stakeYen ? `${(row.roi * 100).toFixed(1)}%` : "-"}</td>
+                <td>{row.modelStakeYen.toLocaleString()}円</td>
+                <td>{row.modelPayoutYen.toLocaleString()}円</td>
+                <td>{row.modelStakeYen ? `${(row.modelRoi * 100).toFixed(1)}%` : "-"}</td>
               </tr>
             ))}
           </tbody>
