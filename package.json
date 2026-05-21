@@ -4,17 +4,21 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently -k -n api,web -c green,cyan \"tsx watch server/index.ts\" \"vite\"",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "fetch:kyotei24": "tsx scripts/fetch-kyotei24.ts",
     "import:kyotei24": "tsx scripts/import-kyotei24.ts",
     "db:init": "tsx scripts/init-db.ts",
-    "test": "node --test --import tsx src/domain/decision.test.ts"
+    "test": "node --test --import tsx src/domain/*.test.ts",
+    "dev:web": "vite",
+    "dev:api": "tsx watch server/index.ts"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
     "cheerio": "latest",
+    "concurrently": "^9.2.1",
+    "express": "^5.2.1",
     "lucide-react": "latest",
     "react": "latest",
     "react-dom": "latest",
@@ -23,6 +27,7 @@
     "vite": "latest"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "@types/node": "^25.9.1",
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3"

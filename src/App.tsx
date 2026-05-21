@@ -1,36 +1,45 @@
-import { Activity, Bell, Database, ExternalLink, ShieldCheck } from "lucide-react";
-import { DEFAULT_RULE, judgeCandidate } from "./domain/decision";
-import { sampleCandidates, sampleResults } from "./sampleData";
+import { Activity, Bell, CheckCircle2, Database, ExternalLink, History, Settings, ShieldCheck } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { getDashboard, sendBrowserNotification, updateManualOdds, updateSettings, type DashboardResponse } from "./api";
+import type { BudgetRule } from "./domain/types";
 import "./styles.css";
 
-const officialOddsUrl = "https://www.boatrace.jp/owpc/pc/race/odds3t";
+type Screen = "dashboard" | "results" | "history" | "settings";
 
 export default function App() {
-  const now = new Date("2026-05-21T15:00:00+09:00");
-  let reservedBudgetYen = 0;
-  let buyCountToday = 0;
+  const [screen, setScreen] = useState<Screen>("dashboard");
+  const [data, setData] = useState<DashboardResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const rows = sampleCandidates.map((candidate) => {
-    const decision = judgeCandidate(candidate, DEFAULT_RULE, {
-      now,
-      buyCountToday,
-      reservedBudgetYen,
-    });
-    if (decision.status === "BUY") {
-      buyCountToday += 1;
-      reservedBudgetYen += decision.recommendedAmount;
+  async function notifyUser(title: string, body: string) {
+    if (!("Notification" in window)) return;
+    const permission = Notification.permission === "default"
+      ? await Notification.requestPermission()
+      : Notification.permission;
+    if (permission === "granted") new Notification(title, { body });
+  }
+
+  async function refresh() {
+    setLoading(true);
+    try {
+      setData(await getDashboard());
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "unknown error");
+    } finally {
+      setLoading(false);
     }
-    return { candidate, decision };
-  });
+  }
 
-  const buyRows = rows.filter((row) => row.decision.status === "BUY");
-  const watchRows = rows.filter((row) => row.decision.status === "WATCH");
-  const skipRows = rows.filter((row) => row.decision.status === "SKIP");
+  useEffect(() => {
+    void refresh();
+  }, []);
+
+  const buyRows = data?.rows.filter((row) => row.decision.status === "BUY") ?? [];
+  const watchRows = data?.rows.filter((row) => row.decision.status === "WATCH") ?? [];
+  const skipRows = data?.rows.filter((row) => row.decision.status === "SKIP") ?? [];
   const totalPlanned = buyRows.reduce((sum, row) => sum + row.decision.recommendedAmount, 0);
-  const headline = buyRows.length > 0 ? "BUY候補あり" : "全レース見送り";
-  const headlineSub = buyRows.length > 0
-    ? "購入前に公式オッズで最終確認してください"
-    : "EV 1.25以上の候補なし。買わない日として成功扱いです。";
 
   return (
     <div className="shell">
@@ -43,10 +52,10 @@ export default function App() {
           </div>
         </div>
         <nav className="nav" aria-label="main">
-          <button className="active">Dashboard</button>
-          <button>Results</button>
-          <button>History</button>
-          <button>Settings</button>
+          <NavButton active={screen === "dashboard"} onClick={() => setScreen("dashboard")} icon={<Activity size={16} />} label="Dashboard" />
+          <NavButton active={screen === "results"} onClick={() => setScreen("results")} icon={<Database size={16} />} label="Results" />
+          <NavButton active={screen === "history"} onClick={() => setScreen("history")} icon={<History size={16} />} label="Backtest" />
+          <NavButton active={screen === "settings"} onClick={() => setScreen("settings")} icon={<Settings size={16} />} label="Settings" />
         </nav>
         <div className="guardrail">
           <ShieldCheck size={18} />
@@ -55,101 +64,302 @@ export default function App() {
       </aside>
 
       <main className="main">
-        <header className="hero">
-          <div>
-            <p className="eyebrow">PHASE 1 MVP / LOCAL DATA FIRST</p>
-            <h2>{headline}</h2>
-            <p>{headlineSub}</p>
-          </div>
-          <div className="systemBadge">
-            <span>EV target</span>
-            <strong>{DEFAULT_RULE.targetEv.toFixed(2)}</strong>
-          </div>
-        </header>
+        {error && <div className="errorBox">APIエラー: {error}</div>}
+        {loading && <div className="loading">読み込み中...</div>}
+        {data && (
+          <>
+            <header className="hero">
+              <div>
+                <p className="eyebrow">LOCAL-FIRST / LOW-FREQUENCY FETCH / NO AUTO BETTING</p>
+                <h2>{data.headline}</h2>
+                <p>{data.headlineSub}</p>
+              </div>
+              <div className="systemBadge">
+                <span>EV target</span>
+                <strong>{data.settings.targetEv.toFixed(2)}</strong>
+              </div>
+            </header>
 
-        <section className="metrics" aria-label="today summary">
-          <Metric icon={<Bell size={18} />} label="BUY候補" value={buyRows.length.toString()} />
-          <Metric icon={<Activity size={18} />} label="WATCH" value={watchRows.length.toString()} />
-          <Metric icon={<Database size={18} />} label="SKIP" value={skipRows.length.toString()} />
-          <Metric label="購入予定額" value={`${totalPlanned.toLocaleString()}円`} />
-          <Metric label="本日の最大損失" value={`${DEFAULT_RULE.dailyBudgetYen.toLocaleString()}円`} />
-        </section>
+            <section className="metrics" aria-label="today summary">
+              <Metric icon={<Bell size={18} />} label="BUY候補" value={buyRows.length.toString()} />
+              <Metric icon={<Activity size={18} />} label="WATCH" value={watchRows.length.toString()} />
+              <Metric icon={<Database size={18} />} label="SKIP" value={skipRows.length.toString()} />
+              <Metric label="購入予定額" value={`${totalPlanned.toLocaleString()}円`} />
+              <Metric label="本日の最大損失" value={`${data.settings.dailyBudgetYen.toLocaleString()}円`} />
+            </section>
 
-        <section className="section">
-          <div className="sectionHead">
-            <div>
-              <h3>候補レース</h3>
-              <p>BUY条件を満たした時だけ通知対象。WATCH/SKIPは記録のみ。</p>
-            </div>
-          </div>
-          <div className="candidateGrid">
-            {rows.map(({ candidate, decision }) => (
-              <article className={`card ${decision.status.toLowerCase()}`} key={candidate.raceId}>
-                <div className="cardTop">
-                  <div>
-                    <h4>{candidate.venue} {candidate.raceNo}R</h4>
-                    <p>締切 {candidate.closeAt} / {candidate.betType}</p>
-                  </div>
-                  <span className={`status ${decision.status.toLowerCase()}`}>{decision.status}</span>
-                </div>
-                <div className="betLine">{candidate.selection.join("-")}</div>
-                <div className="stats">
-                  <Stat label="推定的中率" value={`${(candidate.estimatedHitRate * 100).toFixed(1)}%`} />
-                  <Stat label="必要オッズ" value={`${decision.requiredOdds.toFixed(1)}倍`} />
-                  <Stat label="現在オッズ" value={candidate.currentOdds ? `${candidate.currentOdds.toFixed(1)}倍` : "未取得"} />
-                  <Stat label="EV" value={decision.ev ? decision.ev.toFixed(2) : "-"} />
-                  <Stat label="サンプル数" value={candidate.sampleSize.toLocaleString()} />
-                  <Stat label="推奨金額" value={`${decision.recommendedAmount}円`} />
-                </div>
-                <div className="reasons">
-                  {decision.reasons.map((reason) => <span key={reason}>{reason}</span>)}
-                </div>
-                <a className="officialLink" href={officialOddsUrl} target="_blank" rel="noopener noreferrer">
-                  公式で確認して購入 <ExternalLink size={15} />
-                </a>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="section">
-          <div className="sectionHead">
-            <div>
-              <h3>結果取り込みプレビュー</h3>
-              <p>kyotei24 raw HTML → normalized JSON → SQLite の保存先を想定。</p>
-            </div>
-          </div>
-          <div className="tableWrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>日付</th>
-                  <th>会場</th>
-                  <th>R</th>
-                  <th>3連単</th>
-                  <th>払戻</th>
-                  <th>人気</th>
-                  <th>返還</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sampleResults.map((result) => (
-                  <tr key={result.raceId}>
-                    <td>{result.date}</td>
-                    <td>{result.venue}</td>
-                    <td>{result.raceNo}R</td>
-                    <td>{result.trifecta ?? "-"}</td>
-                    <td>{result.payoutYen ? `${result.payoutYen.toLocaleString()}円` : "-"}</td>
-                    <td>{result.popularity ?? "-"}</td>
-                    <td>{result.returned ? "あり" : "なし"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+            {screen === "dashboard" && <Dashboard data={data} onNotify={refresh} onBrowserNotify={notifyUser} />}
+            {screen === "results" && <Results data={data} />}
+            {screen === "history" && <Backtest data={data} />}
+            {screen === "settings" && <SettingsScreen settings={data.settings} onSaved={refresh} />}
+          </>
+        )}
       </main>
     </div>
+  );
+}
+
+function Dashboard({
+  data,
+  onNotify,
+  onBrowserNotify,
+}: {
+  data: DashboardResponse;
+  onNotify: () => Promise<void>;
+  onBrowserNotify: (title: string, body: string) => Promise<void>;
+}) {
+  return (
+    <>
+      <section className="section">
+        <div className="sectionHead">
+          <div>
+            <h3>候補レース</h3>
+            <p>BUY条件を満たした時だけ通知対象。WATCH/SKIPは記録のみ。</p>
+          </div>
+        </div>
+        <div className="candidateGrid">
+          {data.rows.map(({ candidate, decision, officialUrl }) => (
+            <article className={`card ${decision.status.toLowerCase()}`} key={candidate.raceId}>
+              <div className="cardTop">
+                <div>
+                  <h4>{candidate.venue} {candidate.raceNo}R</h4>
+                  <p>締切 {candidate.closeAt} / {candidate.betType}</p>
+                </div>
+                <span className={`status ${decision.status.toLowerCase()}`}>{decision.status}</span>
+              </div>
+              <div className="betLine">{candidate.selection.join("-")}</div>
+              <div className="stats">
+                <Stat label="推定的中率" value={`${(candidate.estimatedHitRate * 100).toFixed(1)}%`} />
+                <Stat label="必要オッズ" value={`${decision.requiredOdds.toFixed(1)}倍`} />
+                <Stat label="現在オッズ" value={candidate.currentOdds ? `${candidate.currentOdds.toFixed(1)}倍` : "未取得"} />
+                <Stat label="EV" value={decision.ev ? decision.ev.toFixed(2) : "-"} />
+                <Stat label="サンプル数" value={candidate.sampleSize.toLocaleString()} />
+                <Stat label="推奨金額" value={`${decision.recommendedAmount}円`} />
+              </div>
+              <div className="reasons">
+                {decision.reasons.map((reason) => <span key={reason}>{reason}</span>)}
+              </div>
+              <a className="officialLink" href={officialUrl} target="_blank" rel="noopener noreferrer">
+                公式で確認して購入 <ExternalLink size={15} />
+              </a>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="sectionHead">
+          <div>
+            <h3>通知センター</h3>
+            <p>BUY候補のみ作成。送信済み重複はDBで防止。</p>
+          </div>
+        </div>
+        <div className="notificationList">
+          {data.notifications.length === 0 && <div className="empty">通知対象なし</div>}
+          {data.notifications.map((notification) => (
+            <div className="notification" key={notification.id}>
+              <div>
+                <strong>{notification.title}</strong>
+                <pre>{notification.body}</pre>
+              </div>
+              <div className="notificationActions">
+                <span className={`status ${notification.status === "SENT" ? "buy" : "watch"}`}>{notification.status}</span>
+                <button
+                  disabled={notification.status === "SENT"}
+                  onClick={async () => {
+                    await onBrowserNotify(notification.title, notification.body);
+                    await sendBrowserNotification(notification.id);
+                    await onNotify();
+                  }}
+                >
+                  <CheckCircle2 size={15} /> 通知済みにする
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </>
+  );
+}
+
+function ManualOddsInput({
+  raceId,
+  defaultValue,
+  onSaved,
+}: {
+  raceId: string;
+  defaultValue: number | null;
+  onSaved: () => Promise<void>;
+}) {
+  const [value, setValue] = useState(defaultValue?.toString() ?? "");
+  useEffect(() => setValue(defaultValue?.toString() ?? ""), [defaultValue]);
+  return (
+    <div className="manualOdds">
+      <label>
+        <span>手動オッズ</span>
+        <input
+          inputMode="decimal"
+          value={value}
+          placeholder="例: 15.7"
+          onChange={(event) => setValue(event.target.value)}
+        />
+      </label>
+      <button
+        onClick={async () => {
+          await updateManualOdds(raceId, Number(value));
+          await onSaved();
+        }}
+      >
+        保存
+      </button>
+    </div>
+  );
+}
+
+function Results({ data }: { data: DashboardResponse }) {
+  return (
+    <section className="section">
+      <div className="sectionHead">
+        <div>
+          <h3>結果取り込み</h3>
+          <p>kyotei24 raw HTML → normalized JSON → SQLite。</p>
+        </div>
+      </div>
+      <ResultTable data={data} />
+    </section>
+  );
+}
+
+function Backtest({ data }: { data: DashboardResponse }) {
+  return (
+    <section className="section">
+      <div className="sectionHead">
+        <div>
+          <h3>バックテスト</h3>
+          <p>判定履歴から的中率・回収率・BUY/WATCH/SKIPを検証。</p>
+        </div>
+      </div>
+      <div className="metrics backtestMetrics">
+        <Metric label="判定数" value={data.backtest.decisions.toString()} />
+        <Metric label="BUY" value={data.backtest.buy.toString()} />
+        <Metric label="的中率" value={`${(data.backtest.hitRate * 100).toFixed(1)}%`} />
+        <Metric label="投資額" value={`${data.backtest.totalStakeYen.toLocaleString()}円`} />
+        <Metric label="回収率" value={data.backtest.totalStakeYen ? `${(data.backtest.roi * 100).toFixed(1)}%` : "-"} />
+      </div>
+      <div className="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>会場</th>
+              <th>判定数</th>
+              <th>BUY</th>
+              <th>投資</th>
+              <th>払戻</th>
+              <th>回収率</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.backtest.byVenue.map((row) => (
+              <tr key={row.venue}>
+                <td>{row.venue}</td>
+                <td>{row.count}</td>
+                <td>{row.buy}</td>
+                <td>{row.stakeYen.toLocaleString()}円</td>
+                <td>{row.payoutYen.toLocaleString()}円</td>
+                <td>{row.stakeYen ? `${(row.roi * 100).toFixed(1)}%` : "-"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function SettingsScreen({ settings, onSaved }: { settings: BudgetRule; onSaved: () => Promise<void> }) {
+  const [draft, setDraft] = useState(settings);
+  useEffect(() => setDraft(settings), [settings]);
+
+  const fields = useMemo(() => [
+    ["targetEv", "目標EV", 0.05],
+    ["dailyBudgetYen", "1日予算", 100],
+    ["stakePerBetYen", "1点", 100],
+    ["maxStakePerRaceYen", "1レース最大", 100],
+    ["maxBuyCountPerDay", "1日最大BUY数", 1],
+    ["minSampleSize", "最小サンプル数", 50],
+    ["minMinutesBeforeClose", "締切前分数", 1],
+  ] as const, []);
+
+  return (
+    <section className="section">
+      <div className="sectionHead">
+        <div>
+          <h3>設定 / 安全装置</h3>
+          <p>厳しめの予算ルールを維持。変更はローカルSQLiteに保存。</p>
+        </div>
+      </div>
+      <div className="settingsGrid">
+        {fields.map(([key, label, step]) => (
+          <label className="settingField" key={key}>
+            <span>{label}</span>
+            <input
+              type="number"
+              step={step}
+              value={draft[key]}
+              onChange={(event) => setDraft({ ...draft, [key]: Number(event.target.value) })}
+            />
+          </label>
+        ))}
+      </div>
+      <button className="saveButton" onClick={async () => {
+        await updateSettings(draft);
+        await onSaved();
+      }}>
+        設定を保存
+      </button>
+    </section>
+  );
+}
+
+function ResultTable({ data }: { data: DashboardResponse }) {
+  return (
+    <div className="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th>日付</th>
+            <th>会場</th>
+            <th>R</th>
+            <th>3連単</th>
+            <th>払戻</th>
+            <th>人気</th>
+            <th>返還</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.results.map((result) => (
+            <tr key={result.raceId}>
+              <td>{result.date}</td>
+              <td>{result.venue}</td>
+              <td>{result.raceNo}R</td>
+              <td>{result.trifecta ?? "-"}</td>
+              <td>{result.payoutYen ? `${result.payoutYen.toLocaleString()}円` : "-"}</td>
+              <td>{result.popularity ?? "-"}</td>
+              <td>{result.returned ? "あり" : "なし"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function NavButton({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
+  return (
+    <button className={active ? "active" : ""} onClick={onClick}>
+      {icon} {label}
+    </button>
   );
 }
 

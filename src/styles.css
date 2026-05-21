@@ -16,7 +16,9 @@ body {
   background: #071311;
 }
 
-button, a { font: inherit; }
+button, a, input { font: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; opacity: 0.45; }
 
 .shell {
   min-height: 100vh;
@@ -53,6 +55,9 @@ button, a { font: inherit; }
 
 .nav { display: grid; gap: 8px; }
 .nav button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   border: 1px solid transparent;
   border-radius: 8px;
   background: transparent;
@@ -77,6 +82,13 @@ button, a { font: inherit; }
 .guardrail p { margin: 8px 0 0; }
 
 .main { padding: 28px; overflow: hidden; }
+.loading, .errorBox {
+  margin-bottom: 12px;
+  border-radius: 8px;
+  padding: 12px;
+}
+.loading { background: rgba(154, 246, 213, 0.08); color: #b9d7ce; }
+.errorBox { background: rgba(255, 91, 91, 0.12); color: #ffb7b7; }
 
 .hero {
   display: flex;
@@ -121,7 +133,7 @@ button, a { font: inherit; }
   margin: 18px 0 26px;
 }
 
-.metric, .card, .tableWrap {
+.metric, .card, .tableWrap, .notification, .settingField {
   border: 1px solid rgba(154, 246, 213, 0.14);
   border-radius: 8px;
   background: #0d201c;
@@ -167,11 +179,14 @@ button, a { font: inherit; }
 .cardTop p { margin: 4px 0 0; color: #86a69c; font-size: 13px; }
 
 .status {
+  display: inline-flex;
+  align-items: center;
   height: 28px;
   border-radius: 999px;
   padding: 5px 10px;
   font-size: 12px;
   font-weight: 900;
+  white-space: nowrap;
 }
 .status.buy { background: rgba(124, 225, 195, 0.15); color: #7ce1c3; }
 .status.watch { background: rgba(242, 181, 74, 0.15); color: #f2b54a; }
@@ -216,18 +231,66 @@ button, a { font: inherit; }
   font-size: 12px;
 }
 
-.officialLink {
+.officialLink, .saveButton, .notificationActions button, .manualOdds button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   min-height: 42px;
+  border: 0;
   border-radius: 8px;
   background: #10a983;
   color: #04110d;
   padding: 0 14px;
   text-decoration: none;
   font-weight: 900;
+}
+
+.manualOdds {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  margin: 14px 0;
+}
+.manualOdds label {
+  display: grid;
+  gap: 4px;
+}
+.manualOdds span { color: #86a69c; font-size: 11px; }
+.manualOdds input {
+  min-height: 42px;
+  border: 1px solid rgba(154, 246, 213, 0.16);
+  border-radius: 8px;
+  background: #071311;
+  color: #ecfff8;
+  padding: 0 10px;
+}
+
+.notificationList { display: grid; gap: 10px; }
+.notification {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px;
+}
+.notification pre {
+  margin: 8px 0 0;
+  color: #b7d0c8;
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: 13px;
+}
+.notificationActions {
+  display: grid;
+  align-content: start;
+  justify-items: end;
+  gap: 10px;
+}
+.empty {
+  border: 1px dashed rgba(154, 246, 213, 0.18);
+  border-radius: 8px;
+  padding: 18px;
+  color: #86a69c;
 }
 
 .tableWrap { overflow-x: auto; }
@@ -241,17 +304,39 @@ th { color: #86a69c; font-size: 12px; }
 td { color: #e8fff7; }
 tr:last-child td { border-bottom: 0; }
 
+.settingsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.settingField {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+.settingField span { color: #86a69c; font-size: 12px; }
+.settingField input {
+  width: 100%;
+  border: 1px solid rgba(154, 246, 213, 0.16);
+  border-radius: 8px;
+  background: #071311;
+  color: #ecfff8;
+  padding: 10px;
+}
+
 @media (max-width: 980px) {
   .shell { grid-template-columns: 1fr; }
   .sidebar { border-right: 0; border-bottom: 1px solid rgba(142, 255, 218, 0.14); }
   .nav { grid-template-columns: repeat(4, 1fr); }
-  .metrics, .candidateGrid { grid-template-columns: 1fr; }
+  .metrics, .candidateGrid, .settingsGrid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 640px) {
   .main { padding: 16px; }
-  .hero { flex-direction: column; }
+  .hero, .notification { flex-direction: column; }
   .metrics { grid-template-columns: 1fr 1fr; }
   .stats { grid-template-columns: 1fr 1fr; }
   .nav { grid-template-columns: 1fr 1fr; }
+  .notificationActions { justify-items: stretch; }
 }
