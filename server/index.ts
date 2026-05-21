@@ -20,8 +20,8 @@ import {
   setSettings,
 } from "./db";
 import { buildCandidateRows } from "./candidates";
-import { fetchKyotei24Odds } from "../scripts/fetch-kyotei24-odds";
-import { parseKyotei24Odds } from "../src/domain/oddsParser";
+import { fetchOfficialOdds } from "../scripts/fetch-official-odds";
+import { parseTrifectaOdds } from "../src/domain/oddsParser";
 import { minutesUntil } from "../src/domain/decision";
 import type { BudgetRule } from "../src/domain/types";
 
@@ -75,7 +75,7 @@ app.get("/api/dashboard", (req, res) => {
       },
       monthly: summarizeMonth(
         history,
-        (date ?? new Date().toISOString().slice(0, 10)).slice(0, 7),
+        (date ?? new Intl.DateTimeFormat("sv", { timeZone: "Asia/Tokyo" }).format(new Date())).slice(0, 7),
         settings.minSampleSize,
       ),
     });
@@ -213,17 +213,17 @@ app.post("/api/odds/fetch", async (req, res) => {
         continue;
       }
       try {
-        const fetched = await fetchKyotei24Odds({
+        const fetched = await fetchOfficialOdds({
           date: candidate.date,
           venue: candidate.venue,
           raceNo: candidate.raceNo,
         });
-        const odds = parseKyotei24Odds(fetched.html, candidate.selection);
+        const odds = parseTrifectaOdds(fetched.html, candidate.selection);
         if (odds == null) {
           results.push({ raceId: candidate.raceId, odds: null, status: "parse-failed" });
           continue;
         }
-        setOdds(db, candidate.raceId, odds, "kyotei24");
+        setOdds(db, candidate.raceId, odds, "official");
         results.push({
           raceId: candidate.raceId,
           odds,

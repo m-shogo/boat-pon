@@ -208,7 +208,7 @@ function Dashboard({
               <span>自動取得 (60秒)</span>
             </label>
             <button disabled={oddsBusy} onClick={() => runFetchOdds()}>
-              {oddsBusy ? "取得中..." : "kyotei24オッズ一括取得"}
+              {oddsBusy ? "取得中..." : "公式オッズ取得"}
             </button>
           </div>
         </div>
@@ -254,7 +254,7 @@ function Dashboard({
                   disabled={oddsBusy}
                   onClick={() => runFetchOdds([candidate.raceId])}
                 >
-                  kyotei24取得
+                  公式オッズ取得
                 </button>
                 <a className="officialLink" href={officialUrl} target="_blank" rel="noopener noreferrer">
                   公式で確認して購入 <ExternalLink size={15} />

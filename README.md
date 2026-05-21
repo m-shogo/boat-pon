@@ -21,11 +21,11 @@ npm run db:init
 npm run fetch:kyotei24
 npm run import:kyotei24 -- YYYY-MM-DD
 npm run import:official -- /path/to/program.csv
-npx tsx scripts/fetch-kyotei24-odds.ts YYYY-MM-DD 蒲郡 8
+npx tsx scripts/fetch-official-odds.ts YYYY-MM-DD 蒲郡 8
 ```
 
-取得はキャッシュ前提です。`fetch:kyotei24` は同じ日のraw HTMLが新しければ再取得しません。
-オッズ取得（`fetch-kyotei24-odds.ts`）は候補レース1件単位、キャッシュ5分、外部アクセスは画面の「kyotei24オッズ一括取得」ボタン押下時か「自動取得 (60秒)」を明示的にONにした時のみ発火します。
+取得はキャッシュ前提です。`fetch:kyotei24` は結果ページのみ（同日 raw が新しければ再取得しません）。
+リアルタイムオッズは公式 boatrace.jp の 3連単オッズページから取得します（`fetch-official-odds.ts`）。候補レース1件単位、キャッシュ5分、外部アクセスは画面の「公式オッズ取得」ボタン押下時か「自動取得 (60秒)」を明示的にONにした時のみ発火します。
 公式番組表はローカルCSV/TSVから取り込みます。外部サイトへの自動巡回は行いません。
 
 ## Phase 1 MVP
@@ -63,4 +63,4 @@ npx tsx scripts/fetch-kyotei24-odds.ts YYYY-MM-DD 蒲郡 8
 - EV別・会場別・過大評価候補をバックテスト表示
 - サンプル不足除外を明示した有効サンプル集計
 - 今月のBUY/的中/ROI/買わない日数の月次サマリー
-- kyotei24人気順オッズの取得（候補レースのみ、5分キャッシュ、手動/自動トグル）
+- 公式 boatrace.jp の3連単オッズをリアルタイム取得（候補レースのみ、5分キャッシュ、手動ボタン/自動60秒トグル）

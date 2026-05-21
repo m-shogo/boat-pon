@@ -11,28 +11,28 @@ const venueCodes: Record<string, string> = {
 
 const MIN_CACHE_MINUTES = 5;
 
-export type FetchOddsArgs = {
+export type FetchOfficialOddsArgs = {
   date: string;
   venue: string;
   raceNo: number;
   forceRefresh?: boolean;
 };
 
-export type FetchOddsResult = {
+export type FetchOfficialOddsResult = {
   cached: boolean;
   html: string;
   url: string;
   path: string;
 };
 
-export async function fetchKyotei24Odds(args: FetchOddsArgs): Promise<FetchOddsResult> {
+export async function fetchOfficialOdds(args: FetchOfficialOddsArgs): Promise<FetchOfficialOddsResult> {
   const jcd = venueCodes[args.venue];
   if (!jcd) throw new Error(`unknown venue: ${args.venue}`);
 
   const hd = args.date.replaceAll("-", "");
-  const outDir = path.join("data", "raw", "kyotei24", "odds", args.date);
+  const outDir = path.join("data", "raw", "official", "odds", args.date);
   const outPath = path.join(outDir, `${jcd}-${String(args.raceNo).padStart(2, "0")}.html`);
-  const url = `https://kyotei24.jp/sp/odds3t.php?jcd=${jcd}&rno=${args.raceNo}&hd=${hd}`;
+  const url = `https://www.boatrace.jp/owpc/pc/race/odds3t?rno=${args.raceNo}&jcd=${jcd}&hd=${hd}`;
 
   if (!args.forceRefresh && (await isFresh(outPath))) {
     return { cached: true, html: await readFile(outPath, "utf8"), url, path: outPath };
@@ -41,7 +41,7 @@ export async function fetchKyotei24Odds(args: FetchOddsArgs): Promise<FetchOddsR
   const res = await fetch(url, {
     headers: { "user-agent": "BoatPon/0.1 personal low-frequency cache fetch" },
   });
-  if (!res.ok) throw new Error(`kyotei24 odds fetch failed: ${res.status} ${res.statusText}`);
+  if (!res.ok) throw new Error(`official odds fetch failed: ${res.status} ${res.statusText}`);
   const html = await res.text();
   await mkdir(outDir, { recursive: true });
   await writeFile(outPath, html, "utf8");
@@ -57,12 +57,12 @@ async function isFresh(filePath: string) {
   }
 }
 
-if (process.argv[1]?.endsWith("fetch-kyotei24-odds.ts")) {
+if (process.argv[1]?.endsWith("fetch-official-odds.ts")) {
   const [date, venue, raceNoStr] = process.argv.slice(2);
   if (!date || !venue || !raceNoStr) {
-    console.error("usage: tsx scripts/fetch-kyotei24-odds.ts <YYYY-MM-DD> <venue> <raceNo>");
+    console.error("usage: tsx scripts/fetch-official-odds.ts <YYYY-MM-DD> <venue> <raceNo>");
     process.exit(1);
   }
-  const result = await fetchKyotei24Odds({ date, venue, raceNo: Number(raceNoStr) });
+  const result = await fetchOfficialOdds({ date, venue, raceNo: Number(raceNoStr) });
   console.log(`${result.cached ? "cache" : "fetched"}: ${result.path}`);
 }

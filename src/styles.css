@@ -417,7 +417,7 @@ tr:last-child td { border-bottom: 0; }
   color: #86a69c;
 }
 .oddsLogItem.ok,
-.oddsLogItem\.ok-cached {
+.oddsLogItem.ok-cached {
   background: rgba(154, 246, 213, 0.2);
   color: #9af6d5;
 }
@@ -425,6 +425,10 @@ tr:last-child td { border-bottom: 0; }
 .oddsLogItem.parse-failed {
   background: rgba(255, 138, 138, 0.15);
   color: #ffb4b4;
+}
+.oddsLogItem.out-of-window {
+  background: rgba(255, 222, 138, 0.1);
+  color: #d6c490;
 }
 
 .oddsControls {
