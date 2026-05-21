@@ -97,6 +97,11 @@ CREATE TABLE IF NOT EXISTS official_programs (
   } catch {
     // Existing databases already have this column.
   }
+  try {
+    db.exec("ALTER TABLE decision_history ADD COLUMN sample_size INTEGER NOT NULL DEFAULT 0");
+  } catch {
+    // Existing databases already have this column.
+  }
 }
 
 export function getSettings(db: DatabaseSync): BudgetRule {
@@ -138,11 +143,15 @@ export function getManualOdds(db: DatabaseSync): Map<string, number> {
 }
 
 export function setManualOdds(db: DatabaseSync, raceId: string, odds: number) {
+  setOdds(db, raceId, odds, "manual");
+}
+
+export function setOdds(db: DatabaseSync, raceId: string, odds: number, source: string) {
   db.prepare(`
 INSERT INTO manual_odds (race_id, odds, source, updated_at)
-VALUES (?, ?, 'manual', CURRENT_TIMESTAMP)
-ON CONFLICT(race_id) DO UPDATE SET odds = excluded.odds, updated_at = CURRENT_TIMESTAMP
-`).run(raceId, odds);
+VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+ON CONFLICT(race_id) DO UPDATE SET odds = excluded.odds, source = excluded.source, updated_at = CURRENT_TIMESTAMP
+`).run(raceId, odds, source);
 }
 
 export function listResults(db: DatabaseSync, date?: string): RaceResult[] {
@@ -221,7 +230,7 @@ export function insertDecisionHistory(db: DatabaseSync, candidate: BetCandidate,
 UPDATE decision_history
 SET estimated_hit_rate = ?, required_odds = ?, current_odds = ?, ev = ?, decision = ?,
     result = ?, payout_yen = ?, popularity = ?, returned = ?, source = ?, fetched_at = ?,
-    recommended_stake_yen = ?
+    recommended_stake_yen = ?, sample_size = ?
 WHERE id = ?
 `).run(
       candidate.estimatedHitRate,
@@ -236,6 +245,7 @@ WHERE id = ?
       candidate.source,
       candidate.fetchedAt,
       decision.recommendedAmount,
+      candidate.sampleSize,
       existing.id,
     );
     return;
@@ -244,8 +254,8 @@ WHERE id = ?
   db.prepare(`
 INSERT INTO decision_history
 (race_id, date, venue, race_no, bet_type, selection, estimated_hit_rate, required_odds, current_odds, ev, decision,
- actually_bought, stake_yen, result, payout_yen, popularity, returned, source, fetched_at, recommended_stake_yen)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ actually_bought, stake_yen, result, payout_yen, popularity, returned, source, fetched_at, recommended_stake_yen, sample_size)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `).run(
     candidate.raceId,
     candidate.date,
@@ -267,6 +277,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     candidate.source,
     candidate.fetchedAt,
     decision.recommendedAmount,
+    candidate.sampleSize,
   );
 }
 
@@ -274,7 +285,7 @@ export function listDecisionHistory(db: DatabaseSync): import("../src/domain/bac
   const rows = db.prepare(`
 SELECT id, race_id, date, venue, race_no, selection, estimated_hit_rate, required_odds, current_odds,
        ev, decision, actually_bought, stake_yen, result, payout_yen, popularity, returned,
-       source, fetched_at, recommended_stake_yen, created_at
+       source, fetched_at, recommended_stake_yen, sample_size, created_at
 FROM decision_history
 ORDER BY created_at DESC, id DESC
 LIMIT 500
@@ -295,6 +306,7 @@ LIMIT 500
     actuallyBought: Boolean(row.actually_bought),
     stakeYen: Number(row.stake_yen),
     recommendedStakeYen: Number(row.recommended_stake_yen ?? 0),
+    sampleSize: Number(row.sample_size ?? 0),
     result: row.result == null ? null : String(row.result),
     payoutYen: row.payout_yen == null ? null : Number(row.payout_yen),
     popularity: row.popularity == null ? null : Number(row.popularity),

@@ -1,6 +1,7 @@
 import { Activity, Bell, CheckCircle2, Database, ExternalLink, History, Settings, ShieldCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
+  fetchOdds,
   getDashboard,
   importOfficialRows,
   reparseKyotei24,
@@ -9,6 +10,7 @@ import {
   updatePurchaseRecord,
   updateSettings,
   type DashboardResponse,
+  type OddsFetchResult,
 } from "./api";
 import type { BudgetRule } from "./domain/types";
 import "./styles.css";
@@ -113,6 +115,7 @@ export default function App() {
               <Metric label="本日の最大損失" value={`${data.settings.dailyBudgetYen.toLocaleString()}円`} />
             </section>
 
+            {screen === "dashboard" && <MonthlyOverview data={data} />}
             {screen === "dashboard" && <Dashboard data={data} onNotify={refresh} onBrowserNotify={notifyUser} />}
             {screen === "dashboard" && <OfficialImport onImported={refresh} date={date} />}
             {screen === "results" && <Results data={data} />}
@@ -125,6 +128,29 @@ export default function App() {
   );
 }
 
+function MonthlyOverview({ data }: { data: DashboardResponse }) {
+  const m = data.monthly;
+  return (
+    <section className="section">
+      <div className="sectionHead">
+        <div>
+          <h3>今月の成績 ({m.ym})</h3>
+          <p>有効サンプルのみ集計。買わない日も成功扱い。</p>
+        </div>
+      </div>
+      <div className="metrics backtestMetrics">
+        <Metric label="判定" value={m.decisions.toString()} />
+        <Metric label="BUY" value={m.buy.toString()} />
+        <Metric label="的中" value={m.hits.toString()} />
+        <Metric label="的中率" value={m.buy ? `${(m.hitRate * 100).toFixed(1)}%` : "-"} />
+        <Metric label="検証投資" value={`${m.modelStakeYen.toLocaleString()}円`} />
+        <Metric label="検証回収率" value={m.modelStakeYen ? `${(m.modelRoi * 100).toFixed(1)}%` : "-"} />
+        <Metric label="買わない日" value={`${m.noBuyDays}/${m.daysActive}日`} />
+      </div>
+    </section>
+  );
+}
+
 function Dashboard({
   data,
   onNotify,
@@ -134,6 +160,36 @@ function Dashboard({
   onNotify: () => Promise<void>;
   onBrowserNotify: (title: string, body: string) => Promise<void>;
 }) {
+  const [oddsBusy, setOddsBusy] = useState(false);
+  const [oddsLog, setOddsLog] = useState<OddsFetchResult[]>([]);
+  const [autoFetch, setAutoFetch] = useState(false);
+
+  async function runFetchOdds(raceIds?: string[]) {
+    setOddsBusy(true);
+    try {
+      const { results } = await fetchOdds(raceIds);
+      setOddsLog(results);
+      await onNotify();
+    } catch (err) {
+      setOddsLog([{
+        raceId: raceIds?.[0] ?? "all",
+        odds: null,
+        status: "error",
+        error: err instanceof Error ? err.message : String(err),
+      }]);
+    } finally {
+      setOddsBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!autoFetch) return;
+    const timer = setInterval(() => {
+      if (!oddsBusy) void runFetchOdds();
+    }, 60_000);
+    return () => clearInterval(timer);
+  }, [autoFetch, oddsBusy]);
+
   return (
     <>
       <section className="section">
@@ -142,7 +198,29 @@ function Dashboard({
             <h3>候補レース</h3>
             <p>BUY条件を満たした時だけ通知対象。WATCH/SKIPは記録のみ。</p>
           </div>
+          <div className="oddsControls">
+            <label className="autoToggle">
+              <input
+                type="checkbox"
+                checked={autoFetch}
+                onChange={(event) => setAutoFetch(event.target.checked)}
+              />
+              <span>自動取得 (60秒)</span>
+            </label>
+            <button disabled={oddsBusy} onClick={() => runFetchOdds()}>
+              {oddsBusy ? "取得中..." : "kyotei24オッズ一括取得"}
+            </button>
+          </div>
         </div>
+        {oddsLog.length > 0 && (
+          <div className="oddsLog">
+            {oddsLog.map((row) => (
+              <span key={row.raceId} className={`oddsLogItem ${row.status}`}>
+                {row.raceId}: {row.status}{row.odds != null ? ` ${row.odds.toFixed(1)}倍` : ""}
+              </span>
+            ))}
+          </div>
+        )}
         <div className="candidateGrid">
           {data.rows.map(({ candidate, decision, officialUrl }) => (
             <article className={`card ${decision.status.toLowerCase()}`} key={candidate.raceId}>
@@ -170,9 +248,18 @@ function Dashboard({
                 defaultValue={candidate.currentOdds}
                 onSaved={onNotify}
               />
-              <a className="officialLink" href={officialUrl} target="_blank" rel="noopener noreferrer">
-                公式で確認して購入 <ExternalLink size={15} />
-              </a>
+              <div className="cardActions">
+                <button
+                  className="miniButton"
+                  disabled={oddsBusy}
+                  onClick={() => runFetchOdds([candidate.raceId])}
+                >
+                  kyotei24取得
+                </button>
+                <a className="officialLink" href={officialUrl} target="_blank" rel="noopener noreferrer">
+                  公式で確認して購入 <ExternalLink size={15} />
+                </a>
+              </div>
             </article>
           ))}
         </div>
@@ -320,6 +407,17 @@ function Backtest({ data, onSaved }: { data: DashboardResponse; onSaved: () => P
         <Metric label="的中率" value={`${(data.backtest.hitRate * 100).toFixed(1)}%`} />
         <Metric label="検証投資" value={`${data.backtest.modelStakeYen.toLocaleString()}円`} />
         <Metric label="検証回収率" value={data.backtest.modelStakeYen ? `${(data.backtest.modelRoi * 100).toFixed(1)}%` : "-"} />
+      </div>
+      <div className="sectionSub">
+        <h3>有効サンプルのみ</h3>
+        <p>サンプル不足({data.backtest.excludedSampleShort}件)を除いた集計。minSampleSize={data.settings.minSampleSize}</p>
+      </div>
+      <div className="metrics backtestMetrics">
+        <Metric label="有効判定数" value={data.backtest.validDecisions.toString()} />
+        <Metric label="有効BUY" value={data.backtest.validBuy.toString()} />
+        <Metric label="有効的中率" value={`${(data.backtest.validHitRate * 100).toFixed(1)}%`} />
+        <Metric label="有効検証投資" value={`${data.backtest.validModelStakeYen.toLocaleString()}円`} />
+        <Metric label="有効検証回収率" value={data.backtest.validModelStakeYen ? `${(data.backtest.validModelRoi * 100).toFixed(1)}%` : "-"} />
       </div>
       <div className="tableWrap">
         <table>

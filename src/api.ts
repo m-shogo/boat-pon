@@ -1,4 +1,4 @@
-import type { BacktestSummary, DecisionHistoryRow } from "./domain/backtest";
+import type { BacktestSummary, DecisionHistoryRow, MonthlySummary } from "./domain/backtest";
 import type { BetCandidate, BudgetRule, Decision, RaceResult } from "./domain/types";
 
 export type CandidateRow = {
@@ -17,6 +17,7 @@ export type DashboardResponse = {
   date: string | null;
   history: DecisionHistoryRow[];
   backtest: BacktestSummary;
+  monthly: MonthlySummary;
 };
 
 export type NotificationRecord = {
@@ -88,10 +89,27 @@ export async function updateManualOdds(raceId: string, odds: number): Promise<{ 
   return res.json();
 }
 
+export type OddsFetchResult = {
+  raceId: string;
+  odds: number | null;
+  status: "ok" | "ok-cached" | "out-of-window" | "parse-failed" | "error";
+  error?: string;
+};
+
+export async function fetchOdds(raceIds?: string[]): Promise<{ results: OddsFetchResult[] }> {
+  const res = await fetch("/api/odds/fetch", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ raceIds }),
+  });
+  if (!res.ok) throw new Error(`odds fetch api failed: ${res.status}`);
+  return res.json();
+}
+
 export async function sendBrowserNotification(id: number): Promise<NotificationRecord> {
   const res = await fetch(`/api/notifications/${id}/send`, { method: "POST" });
   if (!res.ok) throw new Error(`notification api failed: ${res.status}`);
   return res.json();
 }
 
-export type { BacktestSummary, DecisionHistoryRow };
+export type { BacktestSummary, DecisionHistoryRow, MonthlySummary };

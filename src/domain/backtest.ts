@@ -16,6 +16,7 @@ export type DecisionHistoryRow = {
   actuallyBought: boolean;
   stakeYen: number;
   recommendedStakeYen: number;
+  sampleSize: number;
   result: string | null;
   payoutYen: number | null;
   popularity: number | null;
@@ -39,6 +40,14 @@ export type BacktestSummary = {
   hits: number;
   hitRate: number;
   roi: number;
+  excludedSampleShort: number;
+  validDecisions: number;
+  validBuy: number;
+  validHits: number;
+  validHitRate: number;
+  validModelStakeYen: number;
+  validModelPayoutYen: number;
+  validModelRoi: number;
   byDecision: Array<{
     decision: DecisionStatus;
     count: number;
@@ -63,7 +72,62 @@ export type BacktestSummary = {
   }>;
 };
 
-export function summarizeHistory(rows: DecisionHistoryRow[]): BacktestSummary {
+export type MonthlySummary = {
+  ym: string;
+  decisions: number;
+  buy: number;
+  bought: number;
+  hits: number;
+  hitRate: number;
+  modelStakeYen: number;
+  modelPayoutYen: number;
+  modelRoi: number;
+  daysActive: number;
+  noBuyDays: number;
+};
+
+export function summarizeMonth(rows: DecisionHistoryRow[], ym: string, minSampleSize = 0): MonthlySummary {
+  const monthRows = rows.filter((row) => row.date.startsWith(ym) && row.sampleSize >= minSampleSize);
+  const buyRows = monthRows.filter((row) => row.decision === "BUY");
+  const modelStakeYen = buyRows.reduce((sum, row) => sum + row.recommendedStakeYen, 0);
+  const modelPayoutYen = buyRows
+    .filter((row) => row.result === row.selection)
+    .reduce((sum, row) => sum + (row.payoutYen ?? 0), 0);
+
+  const dayMap = new Map<string, { total: number; buy: number }>();
+  for (const row of monthRows) {
+    const day = dayMap.get(row.date) ?? { total: 0, buy: 0 };
+    day.total += 1;
+    if (row.decision === "BUY") day.buy += 1;
+    dayMap.set(row.date, day);
+  }
+  const daysActive = dayMap.size;
+  const noBuyDays = [...dayMap.values()].filter((day) => day.buy === 0).length;
+
+  return {
+    ym,
+    decisions: monthRows.length,
+    buy: buyRows.length,
+    bought: monthRows.filter((row) => row.actuallyBought).length,
+    hits: buyRows.filter((row) => row.result === row.selection).length,
+    hitRate: buyRows.length ? buyRows.filter((row) => row.result === row.selection).length / buyRows.length : 0,
+    modelStakeYen,
+    modelPayoutYen,
+    modelRoi: modelStakeYen ? modelPayoutYen / modelStakeYen : 0,
+    daysActive,
+    noBuyDays,
+  };
+}
+
+export function summarizeHistory(rows: DecisionHistoryRow[], minSampleSize = 0): BacktestSummary {
+  const validRows = rows.filter((row) => row.sampleSize >= minSampleSize);
+  const excludedCount = rows.length - validRows.length;
+  const validBuyRows = validRows.filter((row) => row.decision === "BUY");
+  const validModelStakeYen = validBuyRows.reduce((sum, row) => sum + row.recommendedStakeYen, 0);
+  const validModelPayoutYen = validBuyRows
+    .filter((row) => row.result === row.selection)
+    .reduce((sum, row) => sum + (row.payoutYen ?? 0), 0);
+  const validHits = validRows.filter((row) => row.result === row.selection).length;
   const totalStakeYen = rows.reduce((sum, row) => sum + row.stakeYen, 0);
   const totalPayoutYen = rows
     .filter((row) => row.actuallyBought && row.result === row.selection)
@@ -90,6 +154,14 @@ export function summarizeHistory(rows: DecisionHistoryRow[]): BacktestSummary {
     hits,
     hitRate: rows.length ? hits / rows.length : 0,
     roi: totalStakeYen ? totalPayoutYen / totalStakeYen : 0,
+    excludedSampleShort: excludedCount,
+    validDecisions: validRows.length,
+    validBuy: validBuyRows.length,
+    validHits,
+    validHitRate: validRows.length ? validHits / validRows.length : 0,
+    validModelStakeYen,
+    validModelPayoutYen,
+    validModelRoi: validModelStakeYen ? validModelPayoutYen / validModelStakeYen : 0,
     byDecision: [],
     overvaluation: [],
     byVenue: [],

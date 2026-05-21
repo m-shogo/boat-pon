@@ -1,5 +1,5 @@
 import express from "express";
-import { summarizeHistory } from "../src/domain/backtest";
+import { summarizeHistory, summarizeMonth } from "../src/domain/backtest";
 import { analyzeOvervaluation } from "../src/domain/analysis";
 import {
   createNotificationIfNeeded,
@@ -15,11 +15,17 @@ import {
   markNotificationSent,
   openDb,
   setManualOdds,
+  setOdds,
   updatePurchaseRecord,
   setSettings,
 } from "./db";
 import { buildCandidateRows } from "./candidates";
+import { fetchKyotei24Odds } from "../scripts/fetch-kyotei24-odds";
+import { parseKyotei24Odds } from "../src/domain/oddsParser";
+import { minutesUntil } from "../src/domain/decision";
 import type { BudgetRule } from "../src/domain/types";
+
+const ODDS_FETCH_WINDOW_MINUTES = 30;
 
 const app = express();
 app.use(express.json());
@@ -63,7 +69,15 @@ app.get("/api/dashboard", (req, res) => {
       results: listResults(db, date),
       notifications: listNotifications(db),
       history,
-      backtest: { ...summarizeHistory(history), overvaluation: analyzeOvervaluation(history) },
+      backtest: {
+        ...summarizeHistory(history, settings.minSampleSize),
+        overvaluation: analyzeOvervaluation(history),
+      },
+      monthly: summarizeMonth(
+        history,
+        (date ?? new Date().toISOString().slice(0, 10)).slice(0, 7),
+        settings.minSampleSize,
+      ),
     });
   } finally {
     db.close();
@@ -83,8 +97,9 @@ app.get("/api/results", (req, res) => {
 app.get("/api/history", (_req, res) => {
   const db = openDb();
   try {
+    const settings = getSettings(db);
     const history = listDecisionHistory(db);
-    res.json({ rows: history, summary: summarizeHistory(history) });
+    res.json({ rows: history, summary: summarizeHistory(history, settings.minSampleSize) });
   } finally {
     db.close();
   }
@@ -161,6 +176,69 @@ app.put("/api/odds/:raceId", (req, res) => {
   try {
     setManualOdds(db, req.params.raceId, odds);
     res.json({ raceId: req.params.raceId, odds });
+  } finally {
+    db.close();
+  }
+});
+
+app.post("/api/odds/fetch", async (req, res) => {
+  const requestedIds: string[] | undefined = Array.isArray(req.body?.raceIds)
+    ? req.body.raceIds.map(String)
+    : undefined;
+  const db = openDb();
+  try {
+    const settings = getSettings(db);
+    const now = new Date();
+    const rows = buildCandidateRows(
+      settings,
+      now,
+      getManualOdds(db),
+      listProgramInputs(db).map((row) => ({
+        date: row.date,
+        venue: row.venue,
+        raceNo: row.raceNo,
+        closeAt: row.closeAt,
+      })),
+      listAllResultsForModel(db),
+    );
+
+    type OddsResult = { raceId: string; odds: number | null; status: string; error?: string };
+    const results: OddsResult[] = [];
+    for (const row of rows) {
+      const { candidate } = row;
+      if (requestedIds && !requestedIds.includes(candidate.raceId)) continue;
+      const minutes = minutesUntil(candidate.closeAt, now);
+      if (minutes < settings.minMinutesBeforeClose || minutes > ODDS_FETCH_WINDOW_MINUTES) {
+        results.push({ raceId: candidate.raceId, odds: null, status: "out-of-window" });
+        continue;
+      }
+      try {
+        const fetched = await fetchKyotei24Odds({
+          date: candidate.date,
+          venue: candidate.venue,
+          raceNo: candidate.raceNo,
+        });
+        const odds = parseKyotei24Odds(fetched.html, candidate.selection);
+        if (odds == null) {
+          results.push({ raceId: candidate.raceId, odds: null, status: "parse-failed" });
+          continue;
+        }
+        setOdds(db, candidate.raceId, odds, "kyotei24");
+        results.push({
+          raceId: candidate.raceId,
+          odds,
+          status: fetched.cached ? "ok-cached" : "ok",
+        });
+      } catch (err) {
+        results.push({
+          raceId: candidate.raceId,
+          odds: null,
+          status: "error",
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+    res.json({ results });
   } finally {
     db.close();
   }
