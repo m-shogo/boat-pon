@@ -3,21 +3,20 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
-import { parseOfficialResultsText } from "../src/domain/officialResultParser";
-import { insertResult, openDb } from "../server/db";
-import type { RaceResult } from "../src/domain/types";
+import { parseOfficialProgramsText } from "../src/domain/officialProgramParser";
+import { insertOfficialProgram, openDb } from "../server/db";
 
 const execFile = promisify(execFileCb);
 
-const RAW_DIR = path.join("data", "raw", "official", "results");
-const TMP_DIR = path.join("data", "tmp");
+const RAW_DIR = path.join("data", "raw", "official", "programs");
+const TMP_DIR = path.join("data", "tmp", "programs");
 const SLEEP_MS = 1500;
 const MAX_RANGE_DAYS = 10000;
 
 async function main() {
   const [fromArg, toArg] = process.argv.slice(2);
   if (!fromArg || !toArg) {
-    console.error("usage: tsx scripts/fetch-official-results.ts <YYYY-MM-DD> <YYYY-MM-DD>");
+    console.error("usage: tsx scripts/fetch-official-programs.ts <YYYY-MM-DD> <YYYY-MM-DD>");
     process.exit(1);
   }
   const dates = enumerateDates(fromArg, toArg);
@@ -34,8 +33,7 @@ async function main() {
   await mkdir(TMP_DIR, { recursive: true });
 
   const db = openDb();
-  const fetchedAt = new Date().toISOString();
-  let totalRaces = 0;
+  let totalRows = 0;
   let skippedDays = 0;
   let failedDays = 0;
 
@@ -44,8 +42,8 @@ async function main() {
       const date = dates[i];
       const yymm = toYymm(date);
       const yymmdd = toYymmdd(date);
-      const lzhPath = path.join(RAW_DIR, `k${yymmdd}.lzh`);
-      const url = `https://www1.mbrace.or.jp/od2/K/${yymm}/k${yymmdd}.lzh`;
+      const lzhPath = path.join(RAW_DIR, `b${yymmdd}.lzh`);
+      const url = `https://www1.mbrace.or.jp/od2/B/${yymm}/b${yymmdd}.lzh`;
 
       const cached = existsSync(lzhPath);
       if (!cached) {
@@ -63,10 +61,21 @@ async function main() {
 
       try {
         const text = await extractAndDecode(lzhPath, yymmdd);
-        const results = parseOfficialResultsText(text, { date, fetchedAt });
-        for (const row of results) insertResult(db, row);
-        totalRaces += results.length;
-        console.log(`${date}: ${results.length} races (${cached ? "cache" : "fetched"})`);
+        const rows = parseOfficialProgramsText(text, { date });
+        for (const row of rows) {
+          const raceId = `${row.date.replaceAll("-", "")}-${row.venue}-${String(row.raceNo).padStart(2, "0")}`;
+          insertOfficialProgram(db, {
+            raceId,
+            date: row.date,
+            venue: row.venue,
+            raceNo: row.raceNo,
+            closeAt: row.closeAt,
+            sourceFile: `b${yymmdd}.lzh`,
+            raw: row,
+          });
+        }
+        totalRows += rows.length;
+        console.log(`${date}: ${rows.length} races (${cached ? "cache" : "fetched"})`);
       } catch (err) {
         failedDays += 1;
         console.warn(`parse failed ${date}: ${err instanceof Error ? err.message : err}`);
@@ -76,7 +85,7 @@ async function main() {
     db.close();
   }
 
-  console.log(`--- done: ${dates.length} days / ${totalRaces} races / cached=${skippedDays} / failed=${failedDays}`);
+  console.log(`--- done: ${dates.length} days / ${totalRows} programs / cached=${skippedDays} / failed=${failedDays}`);
 }
 
 async function downloadFile(url: string, dest: string) {
@@ -89,7 +98,7 @@ async function downloadFile(url: string, dest: string) {
 }
 
 async function extractAndDecode(lzhPath: string, yymmdd: string): Promise<string> {
-  const expectedTxt = path.join(TMP_DIR, `K${yymmdd.toUpperCase()}.TXT`);
+  const expectedTxt = path.join(TMP_DIR, `B${yymmdd.toUpperCase()}.TXT`);
   if (existsSync(expectedTxt)) await rm(expectedTxt);
   await execFile("unar", ["-q", "-o", TMP_DIR, "-f", lzhPath]);
   const buf = await readFile(expectedTxt);
