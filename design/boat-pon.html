@@ -12,16 +12,2167 @@
 <body>
 <div id="root"></div>
 
-<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
 
 <script src="data.js"></script>
-<script type="text/babel" src="tweaks-panel.jsx"></script>
-<script type="text/babel" src="ui.jsx"></script>
-<script type="text/babel" src="screens-main.jsx"></script>
-<script type="text/babel" src="screens-aux.jsx"></script>
-<script type="text/babel" src="app.jsx"></script>
+<script type="text/babel" data-source="tweaks-panel.jsx">
+
+// tweaks-panel.jsx
+// Reusable Tweaks shell + form-control helpers.
+//
+// Owns the host protocol (listens for __activate_edit_mode / __deactivate_edit_mode,
+// posts __edit_mode_available / __edit_mode_set_keys / __edit_mode_dismissed) so
+// individual prototypes don't re-roll it. Ships a consistent set of controls so you
+// don't hand-draw <input type="range">, segmented radios, steppers, etc.
+//
+// Usage (in an HTML file that loads React + Babel):
+//
+//   const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+//     "primaryColor": "#D97757",
+//     "palette": ["#D97757", "#29261b", "#f6f4ef"],
+//     "fontSize": 16,
+//     "density": "regular",
+//     "dark": false
+//   }/*EDITMODE-END*/;
+//
+//   function App() {
+//     const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+//     return (
+//       <div style={{ fontSize: t.fontSize, color: t.primaryColor }}>
+//         Hello
+//         <TweaksPanel>
+//           <TweakSection label="Typography" />
+//           <TweakSlider label="Font size" value={t.fontSize} min={10} max={32} unit="px"
+//                        onChange={(v) => setTweak('fontSize', v)} />
+//           <TweakRadio  label="Density" value={t.density}
+//                        options={['compact', 'regular', 'comfy']}
+//                        onChange={(v) => setTweak('density', v)} />
+//           <TweakSection label="Theme" />
+//           <TweakColor  label="Primary" value={t.primaryColor}
+//                        options={['#D97757', '#2A6FDB', '#1F8A5B', '#7A5AE0']}
+//                        onChange={(v) => setTweak('primaryColor', v)} />
+//           <TweakColor  label="Palette" value={t.palette}
+//                        options={[['#D97757', '#29261b', '#f6f4ef'],
+//                                  ['#475569', '#0f172a', '#f1f5f9']]}
+//                        onChange={(v) => setTweak('palette', v)} />
+//           <TweakToggle label="Dark mode" value={t.dark}
+//                        onChange={(v) => setTweak('dark', v)} />
+//         </TweaksPanel>
+//       </div>
+//     );
+//   }
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
+const __TWEAKS_STYLE = `
+  .twk-panel{position:fixed;right:16px;bottom:16px;z-index:2147483646;width:280px;
+    max-height:calc(100vh - 32px);display:flex;flex-direction:column;
+    transform:scale(var(--dc-inv-zoom,1));transform-origin:bottom right;
+    background:rgba(250,249,247,.78);color:#29261b;
+    -webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);
+    border:.5px solid rgba(255,255,255,.6);border-radius:14px;
+    box-shadow:0 1px 0 rgba(255,255,255,.5) inset,0 12px 40px rgba(0,0,0,.18);
+    font:11.5px/1.4 ui-sans-serif,system-ui,-apple-system,sans-serif;overflow:hidden}
+  .twk-hd{display:flex;align-items:center;justify-content:space-between;
+    padding:10px 8px 10px 14px;cursor:move;user-select:none}
+  .twk-hd b{font-size:12px;font-weight:600;letter-spacing:.01em}
+  .twk-x{appearance:none;border:0;background:transparent;color:rgba(41,38,27,.55);
+    width:22px;height:22px;border-radius:6px;cursor:default;font-size:13px;line-height:1}
+  .twk-x:hover{background:rgba(0,0,0,.06);color:#29261b}
+  .twk-body{padding:2px 14px 14px;display:flex;flex-direction:column;gap:10px;
+    overflow-y:auto;overflow-x:hidden;min-height:0;
+    scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.15) transparent}
+  .twk-body::-webkit-scrollbar{width:8px}
+  .twk-body::-webkit-scrollbar-track{background:transparent;margin:2px}
+  .twk-body::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15);border-radius:4px;
+    border:2px solid transparent;background-clip:content-box}
+  .twk-body::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.25);
+    border:2px solid transparent;background-clip:content-box}
+  .twk-row{display:flex;flex-direction:column;gap:5px}
+  .twk-row-h{flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
+  .twk-lbl{display:flex;justify-content:space-between;align-items:baseline;
+    color:rgba(41,38,27,.72)}
+  .twk-lbl>span:first-child{font-weight:500}
+  .twk-val{color:rgba(41,38,27,.5);font-variant-numeric:tabular-nums}
+
+  .twk-sect{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+    color:rgba(41,38,27,.45);padding:10px 0 0}
+  .twk-sect:first-child{padding-top:0}
+
+  .twk-field{appearance:none;box-sizing:border-box;width:100%;min-width:0;height:26px;padding:0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;
+    background:rgba(255,255,255,.6);color:inherit;font:inherit;outline:none}
+  .twk-field:focus{border-color:rgba(0,0,0,.25);background:rgba(255,255,255,.85)}
+  select.twk-field{padding-right:22px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='rgba(0,0,0,.5)' d='M0 0h10L5 6z'/></svg>");
+    background-repeat:no-repeat;background-position:right 8px center}
+
+  .twk-slider{appearance:none;-webkit-appearance:none;width:100%;height:4px;margin:6px 0;
+    border-radius:999px;background:rgba(0,0,0,.12);outline:none}
+  .twk-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:14px;height:14px;border-radius:50%;background:#fff;
+    border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+  .twk-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;
+    background:#fff;border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+
+  .twk-seg{position:relative;display:flex;padding:2px;border-radius:8px;
+    background:rgba(0,0,0,.06);user-select:none}
+  .twk-seg-thumb{position:absolute;top:2px;bottom:2px;border-radius:6px;
+    background:rgba(255,255,255,.9);box-shadow:0 1px 2px rgba(0,0,0,.12);
+    transition:left .15s cubic-bezier(.3,.7,.4,1),width .15s}
+  .twk-seg.dragging .twk-seg-thumb{transition:none}
+  .twk-seg button{appearance:none;position:relative;z-index:1;flex:1;border:0;
+    background:transparent;color:inherit;font:inherit;font-weight:500;min-height:22px;
+    border-radius:6px;cursor:default;padding:4px 6px;line-height:1.2;
+    overflow-wrap:anywhere}
+
+  .twk-toggle{position:relative;width:32px;height:18px;border:0;border-radius:999px;
+    background:rgba(0,0,0,.15);transition:background .15s;cursor:default;padding:0}
+  .twk-toggle[data-on="1"]{background:#34c759}
+  .twk-toggle i{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
+    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+  .twk-toggle[data-on="1"] i{transform:translateX(14px)}
+
+  .twk-num{display:flex;align-items:center;box-sizing:border-box;min-width:0;height:26px;padding:0 0 0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;background:rgba(255,255,255,.6)}
+  .twk-num-lbl{font-weight:500;color:rgba(41,38,27,.6);cursor:ew-resize;
+    user-select:none;padding-right:8px}
+  .twk-num input{flex:1;min-width:0;height:100%;border:0;background:transparent;
+    font:inherit;font-variant-numeric:tabular-nums;text-align:right;padding:0 8px 0 0;
+    outline:none;color:inherit;-moz-appearance:textfield}
+  .twk-num input::-webkit-inner-spin-button,.twk-num input::-webkit-outer-spin-button{
+    -webkit-appearance:none;margin:0}
+  .twk-num-unit{padding-right:8px;color:rgba(41,38,27,.45)}
+
+  .twk-btn{appearance:none;height:26px;padding:0 12px;border:0;border-radius:7px;
+    background:rgba(0,0,0,.78);color:#fff;font:inherit;font-weight:500;cursor:default}
+  .twk-btn:hover{background:rgba(0,0,0,.88)}
+  .twk-btn.secondary{background:rgba(0,0,0,.06);color:inherit}
+  .twk-btn.secondary:hover{background:rgba(0,0,0,.1)}
+
+  .twk-swatch{appearance:none;-webkit-appearance:none;width:56px;height:22px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:6px;padding:0;cursor:default;
+    background:transparent;flex-shrink:0}
+  .twk-swatch::-webkit-color-swatch-wrapper{padding:0}
+  .twk-swatch::-webkit-color-swatch{border:0;border-radius:5.5px}
+  .twk-swatch::-moz-color-swatch{border:0;border-radius:5.5px}
+
+  .twk-chips{display:flex;gap:6px}
+  .twk-chip{position:relative;appearance:none;flex:1;min-width:0;height:46px;
+    padding:0;border:0;border-radius:6px;overflow:hidden;cursor:default;
+    box-shadow:0 0 0 .5px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.06);
+    transition:transform .12s cubic-bezier(.3,.7,.4,1),box-shadow .12s}
+  .twk-chip:hover{transform:translateY(-1px);
+    box-shadow:0 0 0 .5px rgba(0,0,0,.18),0 4px 10px rgba(0,0,0,.12)}
+  .twk-chip[data-on="1"]{box-shadow:0 0 0 1.5px rgba(0,0,0,.85),
+    0 2px 6px rgba(0,0,0,.15)}
+  .twk-chip>span{position:absolute;top:0;bottom:0;right:0;width:34%;
+    display:flex;flex-direction:column;box-shadow:-1px 0 0 rgba(0,0,0,.1)}
+  .twk-chip>span>i{flex:1;box-shadow:0 -1px 0 rgba(0,0,0,.1)}
+  .twk-chip>span>i:first-child{box-shadow:none}
+  .twk-chip svg{position:absolute;top:6px;left:6px;width:13px;height:13px;
+    filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
+`;
+
+// ── useTweaks ───────────────────────────────────────────────────────────────
+// Single source of truth for tweak values. setTweak persists via the host
+// (__edit_mode_set_keys → host rewrites the EDITMODE block on disk).
+function useTweaks(defaults) {
+  const [values, setValues] = React.useState(defaults);
+  // Accepts either setTweak('key', value) or setTweak({ key: value, ... }) so a
+  // useState-style call doesn't write a "[object Object]" key into the persisted
+  // JSON block.
+  const setTweak = React.useCallback((keyOrEdits, val) => {
+    const edits = typeof keyOrEdits === 'object' && keyOrEdits !== null
+      ? keyOrEdits : { [keyOrEdits]: val };
+    setValues((prev) => ({ ...prev, ...edits }));
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits }, '*');
+    // Same-window signal so in-page listeners (deck-stage rail thumbnails)
+    // can react — the parent message only reaches the host, not peers.
+    window.dispatchEvent(new CustomEvent('tweakchange', { detail: edits }));
+  }, []);
+  return [values, setTweak];
+}
+
+// ── TweaksPanel ─────────────────────────────────────────────────────────────
+// Floating shell. Registers the protocol listener BEFORE announcing
+// availability — if the announce ran first, the host's activate could land
+// before our handler exists and the toolbar toggle would silently no-op.
+// The close button posts __edit_mode_dismissed so the host's toolbar toggle
+// flips off in lockstep; the host echoes __deactivate_edit_mode back which
+// is what actually hides the panel.
+function TweaksPanel({ title = 'Tweaks', noDeckControls = false, children }) {
+  const [open, setOpen] = React.useState(false);
+  const dragRef = React.useRef(null);
+  // Auto-inject a rail toggle when a <deck-stage> is on the page. The
+  // toggle drives the deck's per-viewer _railVisible via window message;
+  // state is mirrored from the same localStorage key the deck reads so
+  // the control reflects reality across reloads. The mechanism is the
+  // message — authors who want custom placement can post it directly
+  // and pass noDeckControls to suppress this one.
+  const hasDeckStage = React.useMemo(
+    () => typeof document !== 'undefined' && !!document.querySelector('deck-stage'),
+    [],
+  );
+  // deck-stage enables its rail in connectedCallback, but this panel can
+  // mount before that element has upgraded. The initial read catches the
+  // common case; the listener covers mounting first. (Older deck-stage.js
+  // copies still wait for the host's __omelette_rail_enabled postMessage —
+  // same listener handles those.)
+  const [railEnabled, setRailEnabled] = React.useState(
+    () => hasDeckStage && !!document.querySelector('deck-stage')?._railEnabled,
+  );
+  React.useEffect(() => {
+    if (!hasDeckStage || railEnabled) return undefined;
+    const onMsg = (e) => {
+      if (e.data && e.data.type === '__omelette_rail_enabled') setRailEnabled(true);
+    };
+    window.addEventListener('message', onMsg);
+    return () => window.removeEventListener('message', onMsg);
+  }, [hasDeckStage, railEnabled]);
+  const [railVisible, setRailVisible] = React.useState(() => {
+    try { return localStorage.getItem('deck-stage.railVisible') !== '0'; } catch (e) { return true; }
+  });
+  const toggleRail = (on) => {
+    setRailVisible(on);
+    window.postMessage({ type: '__deck_rail_visible', on }, '*');
+  };
+  const offsetRef = React.useRef({ x: 16, y: 16 });
+  const PAD = 16;
+
+  const clampToViewport = React.useCallback(() => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const w = panel.offsetWidth, h = panel.offsetHeight;
+    const maxRight = Math.max(PAD, window.innerWidth - w - PAD);
+    const maxBottom = Math.max(PAD, window.innerHeight - h - PAD);
+    offsetRef.current = {
+      x: Math.min(maxRight, Math.max(PAD, offsetRef.current.x)),
+      y: Math.min(maxBottom, Math.max(PAD, offsetRef.current.y)),
+    };
+    panel.style.right = offsetRef.current.x + 'px';
+    panel.style.bottom = offsetRef.current.y + 'px';
+  }, []);
+
+  React.useEffect(() => {
+    if (!open) return;
+    clampToViewport();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', clampToViewport);
+      return () => window.removeEventListener('resize', clampToViewport);
+    }
+    const ro = new ResizeObserver(clampToViewport);
+    ro.observe(document.documentElement);
+    return () => ro.disconnect();
+  }, [open, clampToViewport]);
+
+  React.useEffect(() => {
+    const onMsg = (e) => {
+      const t = e?.data?.type;
+      if (t === '__activate_edit_mode') setOpen(true);
+      else if (t === '__deactivate_edit_mode') setOpen(false);
+    };
+    window.addEventListener('message', onMsg);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  const dismiss = () => {
+    setOpen(false);
+    window.parent.postMessage({ type: '__edit_mode_dismissed' }, '*');
+  };
+
+  const onDragStart = (e) => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const r = panel.getBoundingClientRect();
+    const sx = e.clientX, sy = e.clientY;
+    const startRight = window.innerWidth - r.right;
+    const startBottom = window.innerHeight - r.bottom;
+    const move = (ev) => {
+      offsetRef.current = {
+        x: startRight - (ev.clientX - sx),
+        y: startBottom - (ev.clientY - sy),
+      };
+      clampToViewport();
+    };
+    const up = () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  };
+
+  if (!open) return null;
+  return (
+    <>
+      <style>{__TWEAKS_STYLE}</style>
+      <div ref={dragRef} className="twk-panel" data-noncommentable=""
+           style={{ right: offsetRef.current.x, bottom: offsetRef.current.y }}>
+        <div className="twk-hd" onMouseDown={onDragStart}>
+          <b>{title}</b>
+          <button className="twk-x" aria-label="Close tweaks"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={dismiss}>✕</button>
+        </div>
+        <div className="twk-body">
+          {children}
+          {hasDeckStage && railEnabled && !noDeckControls && (
+            <TweakSection label="Deck">
+              <TweakToggle label="Thumbnail rail" value={railVisible} onChange={toggleRail} />
+            </TweakSection>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── Layout helpers ──────────────────────────────────────────────────────────
+
+function TweakSection({ label, children }) {
+  return (
+    <>
+      <div className="twk-sect">{label}</div>
+      {children}
+    </>
+  );
+}
+
+function TweakRow({ label, value, children, inline = false }) {
+  return (
+    <div className={inline ? 'twk-row twk-row-h' : 'twk-row'}>
+      <div className="twk-lbl">
+        <span>{label}</span>
+        {value != null && <span className="twk-val">{value}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// ── Controls ────────────────────────────────────────────────────────────────
+
+function TweakSlider({ label, value, min = 0, max = 100, step = 1, unit = '', onChange }) {
+  return (
+    <TweakRow label={label} value={`${value}${unit}`}>
+      <input type="range" className="twk-slider" min={min} max={max} step={step}
+             value={value} onChange={(e) => onChange(Number(e.target.value))} />
+    </TweakRow>
+  );
+}
+
+function TweakToggle({ label, value, onChange }) {
+  return (
+    <div className="twk-row twk-row-h">
+      <div className="twk-lbl"><span>{label}</span></div>
+      <button type="button" className="twk-toggle" data-on={value ? '1' : '0'}
+              role="switch" aria-checked={!!value}
+              onClick={() => onChange(!value)}><i /></button>
+    </div>
+  );
+}
+
+function TweakRadio({ label, value, options, onChange }) {
+  const trackRef = React.useRef(null);
+  const [dragging, setDragging] = React.useState(false);
+  // The active value is read by pointer-move handlers attached for the lifetime
+  // of a drag — ref it so a stale closure doesn't fire onChange for every move.
+  const valueRef = React.useRef(value);
+  valueRef.current = value;
+
+  // Segments wrap mid-word once per-segment width runs out. The track is
+  // ~248px (280 panel − 28 body pad − 4 seg pad), each button loses 12px
+  // to its own padding, and 11.5px system-ui averages ~6.3px/char — so 2
+  // options fit ~16 chars each, 3 fit ~10. Past that (or >3 options), fall
+  // back to a dropdown rather than wrap.
+  const labelLen = (o) => String(typeof o === 'object' ? o.label : o).length;
+  const maxLen = options.reduce((m, o) => Math.max(m, labelLen(o)), 0);
+  const fitsAsSegments = maxLen <= ({ 2: 16, 3: 10 }[options.length] ?? 0);
+  if (!fitsAsSegments) {
+    // <select> emits strings — map back to the original option value so the
+    // fallback stays type-preserving (numbers, booleans) like the segment path.
+    const resolve = (s) => {
+      const m = options.find((o) => String(typeof o === 'object' ? o.value : o) === s);
+      return m === undefined ? s : typeof m === 'object' ? m.value : m;
+    };
+    return <TweakSelect label={label} value={value} options={options}
+                        onChange={(s) => onChange(resolve(s))} />;
+  }
+  const opts = options.map((o) => (typeof o === 'object' ? o : { value: o, label: o }));
+  const idx = Math.max(0, opts.findIndex((o) => o.value === value));
+  const n = opts.length;
+
+  const segAt = (clientX) => {
+    const r = trackRef.current.getBoundingClientRect();
+    const inner = r.width - 4;
+    const i = Math.floor(((clientX - r.left - 2) / inner) * n);
+    return opts[Math.max(0, Math.min(n - 1, i))].value;
+  };
+
+  const onPointerDown = (e) => {
+    setDragging(true);
+    const v0 = segAt(e.clientX);
+    if (v0 !== valueRef.current) onChange(v0);
+    const move = (ev) => {
+      if (!trackRef.current) return;
+      const v = segAt(ev.clientX);
+      if (v !== valueRef.current) onChange(v);
+    };
+    const up = () => {
+      setDragging(false);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+
+  return (
+    <TweakRow label={label}>
+      <div ref={trackRef} role="radiogroup" onPointerDown={onPointerDown}
+           className={dragging ? 'twk-seg dragging' : 'twk-seg'}>
+        <div className="twk-seg-thumb"
+             style={{ left: `calc(2px + ${idx} * (100% - 4px) / ${n})`,
+                      width: `calc((100% - 4px) / ${n})` }} />
+        {opts.map((o) => (
+          <button key={o.value} type="button" role="radio" aria-checked={o.value === value}>
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </TweakRow>
+  );
+}
+
+function TweakSelect({ label, value, options, onChange }) {
+  return (
+    <TweakRow label={label}>
+      <select className="twk-field" value={value} onChange={(e) => onChange(e.target.value)}>
+        {options.map((o) => {
+          const v = typeof o === 'object' ? o.value : o;
+          const l = typeof o === 'object' ? o.label : o;
+          return <option key={v} value={v}>{l}</option>;
+        })}
+      </select>
+    </TweakRow>
+  );
+}
+
+function TweakText({ label, value, placeholder, onChange }) {
+  return (
+    <TweakRow label={label}>
+      <input className="twk-field" type="text" value={value} placeholder={placeholder}
+             onChange={(e) => onChange(e.target.value)} />
+    </TweakRow>
+  );
+}
+
+function TweakNumber({ label, value, min, max, step = 1, unit = '', onChange }) {
+  const clamp = (n) => {
+    if (min != null && n < min) return min;
+    if (max != null && n > max) return max;
+    return n;
+  };
+  const startRef = React.useRef({ x: 0, val: 0 });
+  const onScrubStart = (e) => {
+    e.preventDefault();
+    startRef.current = { x: e.clientX, val: value };
+    const decimals = (String(step).split('.')[1] || '').length;
+    const move = (ev) => {
+      const dx = ev.clientX - startRef.current.x;
+      const raw = startRef.current.val + dx * step;
+      const snapped = Math.round(raw / step) * step;
+      onChange(clamp(Number(snapped.toFixed(decimals))));
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+  return (
+    <div className="twk-num">
+      <span className="twk-num-lbl" onPointerDown={onScrubStart}>{label}</span>
+      <input type="number" value={value} min={min} max={max} step={step}
+             onChange={(e) => onChange(clamp(Number(e.target.value)))} />
+      {unit && <span className="twk-num-unit">{unit}</span>}
+    </div>
+  );
+}
+
+// Relative-luminance contrast pick — checkmarks drawn over a swatch need to
+// read on both #111 and #fafafa without per-option configuration. Hex input
+// only (#rgb / #rrggbb); named or rgb()/hsl() colors fall through to "light".
+function __twkIsLight(hex) {
+  const h = String(hex).replace('#', '');
+  const x = h.length === 3 ? h.replace(/./g, (c) => c + c) : h.padEnd(6, '0');
+  const n = parseInt(x.slice(0, 6), 16);
+  if (Number.isNaN(n)) return true;
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  return r * 299 + g * 587 + b * 114 > 148000;
+}
+
+const __TwkCheck = ({ light }) => (
+  <svg viewBox="0 0 14 14" aria-hidden="true">
+    <path d="M3 7.2 5.8 10 11 4.2" fill="none" strokeWidth="2.2"
+          strokeLinecap="round" strokeLinejoin="round"
+          stroke={light ? 'rgba(0,0,0,.78)' : '#fff'} />
+  </svg>
+);
+
+// TweakColor — curated color/palette picker. Each option is either a single
+// hex string or an array of 1-5 hex strings; the card adapts — a lone color
+// renders solid, a palette renders colors[0] as the hero (left ~2/3) with the
+// rest stacked in a sharp column on the right. onChange emits the
+// option in the shape it was passed (string stays string, array stays array).
+// Without options it falls back to the native color input for back-compat.
+function TweakColor({ label, value, options, onChange }) {
+  if (!options || !options.length) {
+    return (
+      <div className="twk-row twk-row-h">
+        <div className="twk-lbl"><span>{label}</span></div>
+        <input type="color" className="twk-swatch" value={value}
+               onChange={(e) => onChange(e.target.value)} />
+      </div>
+    );
+  }
+  // Native <input type=color> emits lowercase hex per the HTML spec, so
+  // compare case-insensitively. String() guards JSON.stringify(undefined),
+  // which returns the primitive undefined (no .toLowerCase).
+  const key = (o) => String(JSON.stringify(o)).toLowerCase();
+  const cur = key(value);
+  return (
+    <TweakRow label={label}>
+      <div className="twk-chips" role="radiogroup">
+        {options.map((o, i) => {
+          const colors = Array.isArray(o) ? o : [o];
+          const [hero, ...rest] = colors;
+          const sup = rest.slice(0, 4);
+          const on = key(o) === cur;
+          return (
+            <button key={i} type="button" className="twk-chip" role="radio"
+                    aria-checked={on} data-on={on ? '1' : '0'}
+                    aria-label={colors.join(', ')} title={colors.join(' · ')}
+                    style={{ background: hero }}
+                    onClick={() => onChange(o)}>
+              {sup.length > 0 && (
+                <span>
+                  {sup.map((c, j) => <i key={j} style={{ background: c }} />)}
+                </span>
+              )}
+              {on && <__TwkCheck light={__twkIsLight(hero)} />}
+            </button>
+          );
+        })}
+      </div>
+    </TweakRow>
+  );
+}
+
+function TweakButton({ label, onClick, secondary = false }) {
+  return (
+    <button type="button" className={secondary ? 'twk-btn secondary' : 'twk-btn'}
+            onClick={onClick}>{label}</button>
+  );
+}
+
+Object.assign(window, {
+  useTweaks, TweaksPanel, TweakSection, TweakRow,
+  TweakSlider, TweakToggle, TweakRadio, TweakSelect,
+  TweakText, TweakNumber, TweakColor, TweakButton,
+});
+
+</script>
+<script type="text/babel" data-source="ui.jsx">
+// ============================================================
+// Small reusable UI bits
+// ============================================================
+
+const { useState, useEffect, useMemo, useRef } = React;
+
+// --- Status chip --------------------------------------------
+function StatusChip({ s, sm }) {
+  const m = {
+    BUY:   { c: "buy",    label: "BUY" },
+    WATCH: { c: "watch",  label: "WATCH" },
+    SKIP:  { c: "skip",   label: "SKIP" },
+    PASS:  { c: "buy",    label: "PASS" },
+    HIT:   { c: "buy",    label: "HIT" },
+    MISS:  { c: "skip",   label: "MISS" },
+    SENT:  { c: "info",   label: "SENT" },
+    RISK:  { c: "danger", label: "RISK" },
+  };
+  const v = m[s] || { c: "skip", label: s };
+  return (
+    <span className={"chip " + v.c} style={sm ? { fontSize: 9, padding: "1px 5px" } : null}>
+      <span className="dot"></span>
+      {v.label}
+    </span>
+  );
+}
+
+// --- Boat number tile ---------------------------------------
+function Boat({ n, sm }) {
+  return <span className={"boat" + (sm ? " boat--sm" : "")} data-n={n}>{n}</span>;
+}
+
+function BetNums({ bet, sm }) {
+  return (
+    <span className="bet-line__nums" style={sm ? { fontSize: 13, gap: 3 } : null}>
+      {bet.map((n, i) => (
+        <React.Fragment key={i}>
+          <Boat n={n} sm={sm} />
+          {i < bet.length - 1 && <span className="sep">-</span>}
+        </React.Fragment>
+      ))}
+    </span>
+  );
+}
+
+// --- Countdown timer (mm:ss) --------------------------------
+function useCountdown(initMin, initSec, paused) {
+  const [t, setT] = useState(initMin * 60 + initSec);
+  useEffect(() => { setT(initMin * 60 + initSec); }, [initMin, initSec]);
+  useEffect(() => {
+    if (paused) return;
+    const id = setInterval(() => setT((x) => Math.max(0, x - 1)), 1000);
+    return () => clearInterval(id);
+  }, [paused]);
+  const mm = Math.floor(t / 60);
+  const ss = t % 60;
+  return { t, mm, ss, fmt: `${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}` };
+}
+
+// --- Odds gauge ----------------------------------------------
+function OddsGauge({ req, current, status }) {
+  // domain: 0 → max(req*2, current*1.2)
+  const max = Math.max(req * 2, (current || req) * 1.2);
+  const reqPct = Math.min(100, (req / max) * 100);
+  const curPct = current ? Math.min(100, (current / max) * 100) : 0;
+  const cls =
+    status === "BUY" ? "" :
+    status === "WATCH" ? "is-watch" :
+    "is-skip";
+  return (
+    <div className={"odds-gauge " + cls}>
+      <div className="odds-gauge__top">
+        <span>0倍</span>
+        <span className="dim">必要オッズ {req.toFixed(1)} ▼</span>
+        <span>{max.toFixed(0)}倍</span>
+      </div>
+      <div className="odds-gauge__bar">
+        {current != null && (
+          <div className="odds-gauge__current" style={{ width: curPct + "%" }}></div>
+        )}
+        <div className="odds-gauge__threshold" style={{ left: reqPct + "%" }}></div>
+      </div>
+      <div className="odds-gauge__labels">
+        <span>取得: {current != null ? <b>{current.toFixed(1)}倍</b> : <span className="dim">未取得</span>}</span>
+        <span>{current != null && (
+          current >= req
+            ? <span style={{color:"var(--buy)"}}>+{(current - req).toFixed(1)} ({((current/req - 1) * 100).toFixed(0)}%)</span>
+            : <span style={{color:"var(--danger)"}}>−{(req - current).toFixed(1)}</span>
+        )}</span>
+      </div>
+    </div>
+  );
+}
+
+// --- KPI tile ------------------------------------------------
+function Kpi({ label, value, unit, sub, deltaPos, deltaNeg, bar, barCls, accent }) {
+  return (
+    <div className="kpi">
+      <div className="kpi__head" style={accent ? { color: accent } : null}>
+        <span className="dot"></span> {label}
+      </div>
+      <div className="kpi__value">
+        <span className="num">{value}</span>
+        {unit && <span className="unit">{unit}</span>}
+      </div>
+      {(sub || deltaPos || deltaNeg) && (
+        <div className="kpi__sub">
+          {deltaPos && <span className="delta-pos">▲ {deltaPos}</span>}
+          {deltaNeg && <span className="delta-neg">▼ {deltaNeg}</span>}
+          {sub && <span>{sub}</span>}
+        </div>
+      )}
+      {bar != null && (
+        <div className={"kpi__bar " + (barCls || "")}>
+          <div className="fill" style={{ width: Math.min(100, bar) + "%" }}></div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- Panel ---------------------------------------------------
+function Panel({ title, code, meta, pulse, children, body = true, bracketed = true, className }) {
+  return (
+    <div className={"panel" + (bracketed ? " bracketed" : "") + (className ? " " + className : "")}>
+      {(title || code) && (
+        <div className="panel__head">
+          <span className="corner">┌</span>
+          {code && <span className="corner">[{code}]</span>}
+          <span className="title">{title}</span>
+          <span className="spacer"></span>
+          {pulse && <span className="pulse" title="live"></span>}
+          {meta && <span className="meta">{meta}</span>}
+        </div>
+      )}
+      {body ? <div className="panel__body">{children}</div> : children}
+    </div>
+  );
+}
+
+// --- Race card -----------------------------------------------
+function RaceCard({ race, onOpen, compact }) {
+  const cd = useCountdown(race.closeMin, race.closeSec);
+  const near = cd.t <= 600 && cd.t > 300;
+  const imm  = cd.t <= 300;
+  const statusCls = race.status === "BUY" ? "is-buy" : race.status === "WATCH" ? "is-watch" : "is-skip";
+
+  return (
+    <div className={"racecard " + statusCls} onClick={() => onOpen?.(race)}>
+      <div className="racecard__head">
+        <span className="racecard__venue">{race.venueName}</span>
+        <span className="racecard__race">{race.raceNo}R · {race.betType}</span>
+        <span className={"racecard__close" + (imm ? " is-imminent" : near ? " is-near" : "")}>
+          締切 <span className="countdown num">{cd.fmt}</span> <span className="dim">({race.closeAt})</span>
+        </span>
+      </div>
+      <div className="racecard__body">
+        <div className="row" style={{ marginBottom: 10 }}>
+          <StatusChip s={race.status} />
+          {race.suggestedAmount > 0 && <span className="chip info"><span className="dot"></span>推奨 ¥{race.suggestedAmount}</span>}
+          {!race.samplesEnough && <span className="chip skip">サンプル不足</span>}
+          {race.curOdds == null && <span className="chip skip">オッズ未取得</span>}
+          <span className="tag">{race.bet.join("-")}</span>
+        </div>
+
+        <div className="bet-line">
+          <span className="bet-line__label">買い目</span>
+          <BetNums bet={race.bet} />
+          <span className="bet-line__type">{race.betType}</span>
+        </div>
+
+        <div className="metric-row">
+          <div className="metric-row__cell">
+            <div className="l">推定的中率</div>
+            <div className="v">{(race.pHat * 100).toFixed(1)}<span className="u">%</span></div>
+          </div>
+          <div className="metric-row__cell">
+            <div className="l">必要オッズ</div>
+            <div className="v">{race.reqOdds.toFixed(1)}<span className="u">倍</span></div>
+          </div>
+          <div className="metric-row__cell">
+            <div className="l">現在オッズ</div>
+            <div className="v">{race.curOdds != null ? <>{race.curOdds.toFixed(1)}<span className="u">倍</span></> : <span className="dim">—</span>}</div>
+          </div>
+          <div className={"metric-row__cell " + (race.ev >= 1.25 ? "is-good" : race.ev != null && race.ev < 1.05 ? "is-bad" : "")}>
+            <div className="l">EV</div>
+            <div className="v">{race.ev != null ? race.ev.toFixed(3) : <span className="dim">—</span>}</div>
+          </div>
+        </div>
+
+        {!compact && <OddsGauge req={race.reqOdds} current={race.curOdds} status={race.status} />}
+
+        {race.notes && (
+          <div className="dim" style={{ fontSize: 10.5, marginTop: 8, lineHeight: 1.6 }}>
+            ※ {race.notes}
+          </div>
+        )}
+      </div>
+      <div className="racecard__foot">
+        {race.status === "BUY" ? (
+          <>
+            <span className="amount">推奨 <b>¥{race.suggestedAmount}</b> · 1点のみ</span>
+            <span className="spacer flex--1"></span>
+            <a
+              href="https://www.boatrace.jp/owpc/pc/race/odds3t"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn--primary btn--xs"
+              onClick={(e) => e.stopPropagation()}
+            >
+              公式で確認して購入 <span className="ext"></span>
+            </a>
+          </>
+        ) : (
+          <>
+            <span className="amount dim">記録のみ · 購入対象外</span>
+            <span className="spacer flex--1"></span>
+            <button className="btn btn--ghost btn--xs" onClick={(e) => { e.stopPropagation(); onOpen?.(race); }}>
+              詳細 →
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// --- Tiny sparkline ------------------------------------------
+function Spark({ data, w = 80, h = 20, color = "var(--muted)" }) {
+  const max = Math.max(...data);
+  const min = Math.min(...data);
+  const range = max - min || 1;
+  const step = w / (data.length - 1);
+  const pts = data.map((v, i) => `${(i * step).toFixed(1)},${(h - ((v - min) / range) * h).toFixed(1)}`).join(" ");
+  return (
+    <svg width={w} height={h} style={{ display: "block" }}>
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.2" />
+      <circle cx={w} cy={h - ((data[data.length-1] - min) / range) * h} r="2" fill={color} />
+    </svg>
+  );
+}
+
+// --- Toggle + Seg controls -----------------------------------
+function Seg({ value, onChange, options }) {
+  return (
+    <div className="seg">
+      {options.map((o) => (
+        <button key={o.value} className={value === o.value ? "is-active" : ""} onClick={() => onChange(o.value)}>{o.label}</button>
+      ))}
+    </div>
+  );
+}
+
+function Toggle({ on, onChange }) {
+  return <div className={"toggle " + (on ? "is-on" : "")} onClick={() => onChange(!on)}></div>;
+}
+
+// --- ASCII title divider --------------------------------------
+function AsciiBox({ children, label }) {
+  return (
+    <pre className="ascii dim" style={{ margin: 0, fontSize: 10, lineHeight: 1.1 }}>
+      {`┌─ ${label} `}{"─".repeat(Math.max(4, 40 - label.length))}{`┐\n`}
+      {children}
+      {`\n└${"─".repeat(45)}┘`}
+    </pre>
+  );
+}
+
+// Expose all to window for cross-file React usage
+Object.assign(window, {
+  StatusChip, Boat, BetNums, useCountdown, OddsGauge, Kpi, Panel,
+  RaceCard, Spark, Seg, Toggle, AsciiBox,
+});
+
+</script>
+<script type="text/babel" data-source="screens-main.jsx">
+// ============================================================
+// Dashboard + BUY list + Race detail screens
+// ============================================================
+
+// Use window.BoatData directly to avoid top-level identifier clashes
+// between sibling <script type="text/babel"> files.
+const _BD = window.BoatData;
+
+// =============================================================
+// DASHBOARD
+// =============================================================
+function ScreenDashboard({ mode, settings, onOpen, onNav }) {
+  const RACES_BUY_DAY = _BD.RACES_BUY_DAY;
+  const RACES_QUIET_DAY = _BD.RACES_QUIET_DAY;
+  const EV_BUCKETS = _BD.EV_BUCKETS;
+  const ACTIVITY = _BD.ACTIVITY;
+  const races = mode === "buy" ? RACES_BUY_DAY : RACES_QUIET_DAY;
+  const buyCount = races.filter(r => r.status === "BUY").length;
+  const watchCount = races.filter(r => r.status === "WATCH").length;
+  const skipCount = races.filter(r => r.status === "SKIP").length;
+
+  const usedAmount = races
+    .filter(r => r.status === "BUY")
+    .reduce((s, r) => s + (r.suggestedAmount || 0), 0);
+  const maxLoss = usedAmount; // 1点なので使用額 = 最大損失
+
+  // streak of pass days (mock)
+  const streak = mode === "buy" ? 0 : 4;
+  const recentDays = mode === "buy"
+    ? "○ ○ ○ ○ ●"            // ●=BUY出た日
+    : "○ ○ ○ ○ ○";
+
+  // EV bucket sparkline-ish
+  const evBucketRoi = EV_BUCKETS.map(b => b.roi * 100);
+
+  return (
+    <div className="stack" style={{ gap: "var(--gap)" }}>
+
+      {/* ---- VERDICT ---- */}
+      <div className="verdict" data-mode={mode === "buy" ? "buy" : "success"}>
+        <div className="verdict__row">
+          <pre className="verdict__ascii">{mode === "buy" ? VERDICT_ASCII_BUY : VERDICT_ASCII_PASS}</pre>
+          <div className="verdict__main">
+            <div className="verdict__kicker">
+              <span>2026·05·21</span>
+              <span className="divider">/</span>
+              <span>{mode === "buy" ? "BUY CANDIDATES DETECTED" : "NO QUALIFYING CANDIDATES"}</span>
+              <span className="divider">/</span>
+              <span>RULESET v0.3.1</span>
+            </div>
+            <div className="verdict__title">
+              {mode === "buy" ? `BUY候補 ${buyCount}件` : "本日 全レース見送り"}
+            </div>
+            <div className="verdict__desc">
+              {mode === "buy"
+                ? `EV ≥ ${settings.targetEV.toFixed(2)} を満たす候補が ${buyCount}件あります。締切まで5分以上ある順に通知済み。購入は必ず公式オッズで最終確認してください。`
+                : `EV ≥ ${settings.targetEV.toFixed(2)} を満たす候補は0件。サンプル不足/オッズ不足/EV不足のため全レース見送り。これは失敗ではなく成功です。`}
+            </div>
+
+            <div className="verdict__stats">
+              <div className="verdict__stat">
+                <div className="label">本日の購入予定</div>
+                <div className="value">¥<span className="num">{usedAmount}</span></div>
+                <div className="sub">予算 ¥{settings.budget} / 残 ¥{settings.budget - usedAmount}</div>
+              </div>
+              <div className="verdict__stat">
+                <div className="label">最大損失</div>
+                <div className="value">¥<span className="num">{maxLoss}</span></div>
+                <div className="sub">1点 ¥100 × {buyCount}件</div>
+              </div>
+              <div className="verdict__stat">
+                <div className="label">BUY / WATCH / SKIP</div>
+                <div className="value">
+                  <span style={{ color: "var(--buy)" }}>{buyCount}</span>
+                  <span className="divider"> · </span>
+                  <span style={{ color: "var(--watch)" }}>{watchCount}</span>
+                  <span className="divider"> · </span>
+                  <span style={{ color: "var(--skip-2)" }}>{skipCount}</span>
+                </div>
+                <div className="sub">候補レース計 {buyCount + watchCount + skipCount}件 (絞込前 144件)</div>
+              </div>
+              <div className="verdict__stat">
+                <div className="label">的中モデル</div>
+                <div className="value">v0.3<span className="unit">.1-mvp</span></div>
+                <div className="sub">過去90日 ROI 102.3%</div>
+              </div>
+            </div>
+
+            <div className="verdict__streak">
+              <span>買わない日カウンター</span>
+              <span className="num">{streak}日連続</span>
+              <span className="dim">最長 17日</span>
+              <span className="seq">{recentDays} ←今日</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ---- TOP CANDIDATES / EMPTY ---- */}
+      <Panel title="今日の候補" code="CAND" meta={`updated ${new Date().toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}`} pulse>
+        {mode === "buy" ? (
+          <div className="grid grid--2">
+            {races.filter(r => r.status !== "SKIP").slice(0, 4).map(r => (
+              <RaceCard key={r.raceId} race={r} compact onOpen={onOpen} />
+            ))}
+          </div>
+        ) : (
+          <PassRationale races={races} settings={settings} />
+        )}
+      </Panel>
+
+      {/* ---- LOWER ROW: activity + perf ---- */}
+      <div className="grid grid--12">
+        <div className="col-7">
+          <Panel title="判定アクティビティ" code="LOG" meta="latest 8" pulse>
+            <div style={{ fontSize: 11, lineHeight: 1.75, fontFamily: "var(--mono)" }}>
+              {ACTIVITY.map((a, i) => (
+                <div key={i} className="row" style={{ paddingBottom: 4, borderBottom: i < ACTIVITY.length - 1 ? "1px dashed var(--border)" : "none", paddingTop: i === 0 ? 0 : 4 }}>
+                  <span className="dim" style={{ width: 64 }}>{a.t}</span>
+                  <span style={{ width: 50 }}>
+                    {a.lvl === "warn"
+                      ? <span style={{ color: "var(--watch)" }}>[WARN]</span>
+                      : <span className="dim">[info]</span>}
+                  </span>
+                  <span style={{ color: a.lvl === "warn" ? "var(--watch-2)" : "var(--text)" }}>{a.msg}</span>
+                </div>
+              ))}
+            </div>
+          </Panel>
+        </div>
+
+        <div className="col-5 stack" style={{ gap: "var(--gap)" }}>
+          <Panel title="EV別 90日 ROI" code="BCK" meta="backtest">
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 80, marginBottom: 8 }}>
+              {EV_BUCKETS.map((b, i) => {
+                const max = 160;
+                const h = Math.max(2, (b.roi * 100 / max) * 80);
+                const col = b.roi >= 1.25 ? "var(--buy)" : b.roi >= 1.0 ? "var(--watch)" : "var(--skip)";
+                return (
+                  <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                    <div style={{ fontSize: 9, color: "var(--muted)" }}>{(b.roi * 100).toFixed(0)}</div>
+                    <div style={{ width: "100%", height: h, background: col, opacity: 0.85 }}></div>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ display: "flex", gap: 6 }}>
+              {EV_BUCKETS.map((b, i) => (
+                <div key={i} style={{ flex: 1, fontSize: 8.5, color: "var(--dim)", textAlign: "center", lineHeight: 1.2 }}>
+                  {b.label}
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px dashed var(--border)", fontSize: 11, color: "var(--muted)", lineHeight: 1.6 }}>
+              EV ≥ 1.25 のレンジで <b style={{ color: "var(--buy)" }}>ROI 131〜147%</b>。BUY基準を緩めると急速に劣化するため、
+              現在のしきい値 <b className="bright">{settings.targetEV.toFixed(2)}</b> を維持。
+            </div>
+          </Panel>
+
+          <Panel title="安全装置" code="SAF">
+            <div style={{ display: "grid", gap: 8, fontSize: 11 }}>
+              <SafetyItem label="自動購入"        on={false} note="無効 (実装なし)" />
+              <SafetyItem label="ログイン情報保存" on={false} note="無効 (保存しない)" />
+              <SafetyItem label="1日予算上限"     on={true}  note={`¥${settings.budget}`} />
+              <SafetyItem label="1点上限"         on={true}  note="¥100" />
+              <SafetyItem label="締切5分以内 SKIP" on={true} note="有効" />
+              <SafetyItem label="重複通知防止"     on={true} note="有効" />
+            </div>
+          </Panel>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SafetyItem({ label, on, note }) {
+  return (
+    <div className="row" style={{ justifyContent: "space-between" }}>
+      <span className="row" style={{ gap: 6 }}>
+        <span style={{ color: on ? "var(--buy)" : "var(--dim)", fontFamily: "var(--mono)", width: 12 }}>{on ? "✓" : "×"}</span>
+        <span style={{ color: "var(--text)" }}>{label}</span>
+      </span>
+      <span className="dim" style={{ fontSize: 10 }}>{note}</span>
+    </div>
+  );
+}
+
+function PassRationale({ races, settings }) {
+  const reasons = [
+    { label: "EV不足 (1.05〜1.24)", count: races.filter(r => r.ev != null && r.ev >= 1.05 && r.ev < 1.25).length },
+    { label: "EV不足 (<1.05)",       count: races.filter(r => r.ev != null && r.ev < 1.05).length },
+    { label: "オッズ未取得",          count: races.filter(r => r.curOdds == null).length },
+    { label: "サンプル不足",          count: races.filter(r => !r.samplesEnough).length },
+    { label: "締切5分以内",           count: 0 },
+  ];
+  return (
+    <div className="grid grid--2">
+      <div>
+        <div className="success-strip" style={{ marginBottom: 12 }}>
+          <span className="ico">✓</span>
+          <div>
+            <b>全レース見送り = 成功</b>
+            <div className="dim" style={{ fontSize: 10, marginTop: 2 }}>
+              買わなかったことが今日のベストな判断です。
+            </div>
+          </div>
+        </div>
+        <div style={{ fontSize: 11, lineHeight: 1.7, color: "var(--muted)" }}>
+          本日の候補レース <b className="bright">{races.length}件</b> をスキャンしましたが、
+          EV ≥ <b className="bright">{settings.targetEV.toFixed(2)}</b> を満たす候補は
+          <b style={{ color: "var(--buy-2)" }}> 0件</b>。
+          BUY基準を緩めれば候補は出ますが、過去90日の検証では基準を下げるほど ROI が悪化するため、見送ります。
+        </div>
+        <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px dashed var(--border)", fontSize: 11 }}>
+          <div className="dim" style={{ marginBottom: 6 }}>本日の予算消化</div>
+          <div className="row">
+            <pre className="ascii" style={{ fontSize: 11, color: "var(--buy)", margin: 0 }}>
+{`[░░░░░░░░░░░░░░░░░░░░] 0/${settings.budget} 円`}
+            </pre>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div className="dim" style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>
+          見送り内訳
+        </div>
+        <div className="stack" style={{ gap: 4 }}>
+          {reasons.filter(r => r.count > 0).map((r, i) => (
+            <div key={i} className="row" style={{ justifyContent: "space-between", fontSize: 11, padding: "5px 0", borderBottom: "1px dashed var(--border)" }}>
+              <span>{r.label}</span>
+              <span className="num bright">{r.count}件</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const VERDICT_ASCII_PASS = `   ┌─────────┐
+   │  PASS   │
+   │  ✓✓✓  │
+   │  ─────  │
+   │  0/0/0  │
+   └─────────┘`;
+
+const VERDICT_ASCII_BUY = `   ┌─────────┐
+   │  BUY×2  │
+   │  ■ ■   │
+   │  ─────  │
+   │ EV≥1.25 │
+   └─────────┘`;
+
+// =============================================================
+// BUY LIST (all candidates)
+// =============================================================
+function ScreenBuyList({ mode, settings, onOpen }) {
+  const all = mode === "buy" ? _BD.RACES_BUY_DAY : _BD.RACES_QUIET_DAY;
+  const [filter, setFilter] = useState("ALL");
+  const filtered = filter === "ALL" ? all : all.filter(r => r.status === filter);
+
+  const c = (s) => all.filter(r => r.status === s).length;
+
+  return (
+    <div className="stack">
+      <div className="row" style={{ gap: 8 }}>
+        <Seg
+          value={filter}
+          onChange={setFilter}
+          options={[
+            { value: "ALL", label: `すべて (${all.length})` },
+            { value: "BUY", label: `BUY (${c("BUY")})` },
+            { value: "WATCH", label: `WATCH (${c("WATCH")})` },
+            { value: "SKIP", label: `SKIP (${c("SKIP")})` },
+          ]}
+        />
+        <span className="spacer flex--1"></span>
+        <span className="dim" style={{ fontSize: 11 }}>
+          並び替え:
+        </span>
+        <Seg
+          value={"close"}
+          onChange={() => {}}
+          options={[
+            { value: "close", label: "締切順" },
+            { value: "ev", label: "EV順" },
+          ]}
+        />
+      </div>
+
+      {filtered.length === 0 ? (
+        <Panel>
+          <div className="empty">
+            <div className="glyph">∅</div>
+            <div>該当する候補はありません</div>
+            <div className="dim" style={{ marginTop: 6 }}>フィルタを変更してください</div>
+          </div>
+        </Panel>
+      ) : (
+        <div className="grid grid--2">
+          {filtered.map(r => <RaceCard key={r.raceId} race={r} onOpen={onOpen} />)}
+        </div>
+      )}
+
+      <div className="warn-strip">
+        <span className="ico">⚠</span>
+        <div>
+          <b>このアプリは購入機能を持ちません。</b> BUY候補も含め、すべての発注は
+          公式投票サイトで行ってください。アプリはログイン情報を保存しません。
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// =============================================================
+// RACE DETAIL
+// =============================================================
+function ScreenDetail({ race, onBack }) {
+  if (!race) return null;
+  const cd = useCountdown(race.closeMin, race.closeSec);
+  const gap = race.curOdds != null ? race.curOdds - race.reqOdds : null;
+  const evColor = race.ev >= 1.25 ? "var(--buy-2)" : race.ev != null && race.ev >= 1.05 ? "var(--watch-2)" : "var(--danger)";
+
+  return (
+    <div className="stack">
+      <div className="row" style={{ gap: 8 }}>
+        <button className="btn btn--ghost btn--xs" onClick={onBack}>← 一覧へ戻る</button>
+        <span className="dim" style={{ fontSize: 11 }}>raceId: {race.raceId}</span>
+      </div>
+
+      {/* === Header strip === */}
+      <Panel className="panel" code="DETAIL" title={`${race.venueName} ${race.raceNo}R`}
+        meta={`締切 ${cd.fmt} (${race.closeAt})`} pulse>
+        <div className="row" style={{ gap: 16, flexWrap: "wrap" }}>
+          <div>
+            <div className="dim" style={{ fontSize: 10, textTransform: "uppercase" }}>判定</div>
+            <div style={{ marginTop: 4 }}><StatusChip s={race.status} /></div>
+          </div>
+          <div style={{ borderLeft: "1px dashed var(--border-2)", paddingLeft: 16 }}>
+            <div className="dim" style={{ fontSize: 10, textTransform: "uppercase" }}>買い目</div>
+            <div style={{ marginTop: 4 }}><BetNums bet={race.bet} /></div>
+          </div>
+          <div style={{ borderLeft: "1px dashed var(--border-2)", paddingLeft: 16 }}>
+            <div className="dim" style={{ fontSize: 10, textTransform: "uppercase" }}>EV</div>
+            <div style={{ marginTop: 4, fontSize: 22, fontWeight: 600, color: evColor, fontVariantNumeric: "tabular-nums" }}>
+              {race.ev != null ? race.ev.toFixed(3) : "—"}
+            </div>
+          </div>
+          <span className="spacer flex--1"></span>
+          {race.status === "BUY" ? (
+            <a className="btn btn--primary" href="https://www.boatrace.jp/owpc/pc/race/odds3t" target="_blank" rel="noopener noreferrer">
+              公式で確認して購入 <span className="ext"></span>
+            </a>
+          ) : (
+            <a className="btn" href="https://kyotei24.jp/sp/" target="_blank" rel="noopener noreferrer">
+              kyotei24で確認 <span className="ext"></span>
+            </a>
+          )}
+        </div>
+      </Panel>
+
+      <div className="grid grid--12">
+        {/* === EV breakdown === */}
+        <div className="col-7">
+          <Panel title="EV の内訳" code="EV.CALC">
+            <div style={{ marginBottom: 16 }}>
+              <pre className="ascii" style={{ fontSize: 12, lineHeight: 1.7, color: "var(--text)", margin: 0, overflowX: "auto" }}>
+{`  EV  =  推定的中率  ×  オッズ
+      =  ${(race.pHat * 100).toFixed(2)}%        ×  ${race.curOdds != null ? race.curOdds.toFixed(2) + "倍" : "未取得"}
+      =  ${race.ev != null ? race.ev.toFixed(3) : "—"}
+
+  必要オッズ  =  目標EV / 推定的中率
+              =  ${race.targetEV.toFixed(2)} / ${(race.pHat * 100).toFixed(2)}%
+              =  ${race.reqOdds.toFixed(2)}倍`}
+              </pre>
+            </div>
+
+            <OddsGauge req={race.reqOdds} current={race.curOdds} status={race.status} />
+
+            <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--border)" }}>
+              <h3 style={{ marginBottom: 10 }}>判定ルールの適合</h3>
+              <div className="stack" style={{ gap: 6, fontSize: 11 }}>
+                <RuleCheck ok={race.ev != null && race.ev >= 1.25}
+                  label="EV ≥ 1.25" v={race.ev != null ? race.ev.toFixed(3) : "—"} />
+                <RuleCheck ok={race.samplesEnough}
+                  label="サンプル数十分 (n ≥ 600)" v={`n=${race.sampleN}`} />
+                <RuleCheck ok={cd.t >= 300}
+                  label="締切まで5分以上" v={cd.fmt} />
+                <RuleCheck ok={true}
+                  label="同レース通知済みでない" v="未通知" />
+                <RuleCheck ok={race.suggestedAmount <= 100}
+                  label="1点 ¥100 ルール" v={`¥${race.suggestedAmount}`} />
+                <RuleCheck ok={race.curOdds != null}
+                  label="オッズ取得済み" v={race.curOdds != null ? "kyotei24" : "未取得"} />
+              </div>
+            </div>
+          </Panel>
+        </div>
+
+        {/* === Right side === */}
+        <div className="col-5 stack" style={{ gap: "var(--gap)" }}>
+          <Panel title="推定的中率の根拠" code="P.HAT">
+            <div className="stack" style={{ gap: 6, fontSize: 11 }}>
+              {(race.reasoning || []).map((r, i) => (
+                <div key={i} className="row" style={{ justifyContent: "space-between", padding: "4px 0", borderBottom: i < race.reasoning.length - 1 ? "1px dashed var(--border)" : "none" }}>
+                  <span className="muted">{r.k}</span>
+                  <span className="bright num">{r.v}</span>
+                </div>
+              ))}
+              <div className="row" style={{ marginTop: 6, padding: "8px 10px", background: "var(--bg)", border: "1px dashed var(--border-2)", fontSize: 10.5 }}>
+                <span className="dim">サンプル数</span>
+                <span className="spacer flex--1"></span>
+                <span className="bright num">{race.sampleN.toLocaleString()}件</span>
+              </div>
+            </div>
+          </Panel>
+
+          {race.status === "BUY" ? (
+            <Panel title="通知プレビュー" code="NOTIF" meta="Discord">
+              <NotifPreview race={race} />
+            </Panel>
+          ) : (
+            <Panel title="通知しない理由" code="SKIP">
+              <div className="stack" style={{ gap: 8, fontSize: 11 }}>
+                <div className="row" style={{ gap: 6, padding: "6px 0" }}>
+                  <span style={{ color: "var(--watch)" }}>⚠</span>
+                  <span>{race.notes}</span>
+                </div>
+                <div className="dim" style={{ fontSize: 10.5, lineHeight: 1.7 }}>
+                  通知は BUY 条件をすべて満たした時のみ送信されます。
+                  WATCH / SKIP の場合は記録のみで通知は発生しません。
+                </div>
+              </div>
+            </Panel>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RuleCheck({ ok, label, v }) {
+  return (
+    <div className="row" style={{ justifyContent: "space-between", padding: "5px 0", borderBottom: "1px dashed var(--border)" }}>
+      <span className="row" style={{ gap: 8 }}>
+        <span style={{ color: ok ? "var(--buy)" : "var(--danger)", width: 12, fontFamily: "var(--mono)" }}>{ok ? "✓" : "✗"}</span>
+        <span className={ok ? "" : "muted"}>{label}</span>
+      </span>
+      <span className="bright num" style={{ fontSize: 11 }}>{v}</span>
+    </div>
+  );
+}
+
+function NotifPreview({ race }) {
+  return (
+    <div className="notif">
+      <div className="head">
+        <span className="icon">🚤</span>
+        <span>BUY候補あり</span>
+        <span className="app">Boat EV Notifier · 今</span>
+      </div>
+      <div className="body">
+        <div style={{ marginBottom: 6 }}>
+          <b>{race.venueName} {race.raceNo}R</b>
+          <span className="dim" style={{ marginLeft: 8, fontSize: 10 }}>締切 {race.closeAt}</span>
+        </div>
+        <div className="row" style={{ gap: 6, marginBottom: 8 }}>
+          <span className="dim" style={{ fontSize: 10 }}>買い目</span>
+          <BetNums bet={race.bet} sm />
+        </div>
+        <div className="dim" style={{ fontSize: 11, lineHeight: 1.8 }}>
+          推定的中率 <b className="bright num">{(race.pHat * 100).toFixed(1)}%</b><br />
+          必要オッズ <b className="bright num">{race.reqOdds.toFixed(1)}倍 以上</b><br />
+          取得オッズ <b className="bright num">{race.curOdds != null ? race.curOdds.toFixed(1) + "倍" : "—"}</b><br />
+          EV <b style={{ color: "var(--buy-2)" }} className="num">{race.ev != null ? race.ev.toFixed(2) : "—"}</b>
+        </div>
+        <div className="meta">
+          <span>推奨 ¥{race.suggestedAmount}</span>
+          <span>1点のみ</span>
+          <span style={{ marginLeft: "auto", color: "var(--watch)" }}>公式オッズで最終確認</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, { ScreenDashboard, ScreenBuyList, ScreenDetail });
+
+</script>
+<script type="text/babel" data-source="screens-aux.jsx">
+// ============================================================
+// History/Backtest + Notifications + Settings screens
+// ============================================================
+
+// Aliased to avoid top-level identifier clashes across <script type="text/babel"> files.
+const HIST    = window.BoatData.HISTORY;
+const EVB     = window.BoatData.EV_BUCKETS;
+const VR_LIST = window.BoatData.VENUE_ROI;
+const N_LIST  = window.BoatData.NOTIFS;
+
+// =============================================================
+// HISTORY / BACKTEST
+// =============================================================
+function ScreenHistory() {
+  const buys = HIST.filter(h => h.status === "BUY");
+  const watches = HIST.filter(h => h.status === "WATCH");
+  const passes = HIST.filter(h => h.status === "PASS");
+  const hits = buys.filter(h => h.result === "HIT").length;
+  const totalAmount = buys.reduce((s, h) => s + h.amount, 0);
+  const totalPayout = buys.reduce((s, h) => s + h.payout, 0);
+  const roi = totalAmount > 0 ? totalPayout / totalAmount : 0;
+  const hitRate = buys.length > 0 ? hits / buys.length : 0;
+
+  // would-have-bought analysis
+  const watchHits = watches.filter(w => w.result === "HIT").length;
+
+  return (
+    <div className="stack">
+      {/* KPI row */}
+      <div className="grid grid--3">
+        <Kpi label="BUY 件数" value={buys.length} sub={`過去 12 日 / PASS ${passes.length}日`} />
+        <Kpi label="的中率" value={(hitRate * 100).toFixed(1)} unit="%"
+             sub={`${hits} / ${buys.length}`}
+             bar={hitRate * 100 * 2}
+             barCls={hitRate >= 0.3 ? "" : "is-watch"} />
+        <Kpi label="ROI"
+             value={(roi * 100).toFixed(1)} unit="%"
+             sub={`払戻 ¥${totalPayout.toLocaleString()} / 投入 ¥${totalAmount.toLocaleString()}`}
+             accent={roi >= 1 ? "var(--buy)" : "var(--danger)"}
+             deltaPos={roi >= 1 ? `+¥${(totalPayout - totalAmount).toLocaleString()}` : null}
+             deltaNeg={roi < 1 ? `−¥${(totalAmount - totalPayout).toLocaleString()}` : null} />
+      </div>
+
+      <div className="grid grid--12">
+        {/* EV bucket */}
+        <div className="col-7">
+          <Panel title="EV別 成績" code="BCK.EV" meta="n=436 (過去90日)">
+            <table className="tbl">
+              <thead>
+                <tr>
+                  <th>EVレンジ</th>
+                  <th className="num" style={{textAlign:"right"}}>n</th>
+                  <th className="num" style={{textAlign:"right"}}>的中</th>
+                  <th className="num" style={{textAlign:"right"}}>的中率</th>
+                  <th>ROI</th>
+                  <th className="num" style={{textAlign:"right"}}>ROI%</th>
+                </tr>
+              </thead>
+              <tbody>
+                {EVB.map((b, i) => {
+                  const barPct = Math.min(100, (b.roi / 1.6) * 100);
+                  const goodCutoff = b.label === "1.25-1.30" || b.label === "1.30+";
+                  const color = b.roi >= 1.25 ? "var(--buy)" : b.roi >= 1.0 ? "var(--watch)" : "var(--skip)";
+                  return (
+                    <tr key={i} style={goodCutoff ? { background: "var(--buy-bg)" } : null}>
+                      <td><span className={goodCutoff ? "bright" : ""}>{b.label}</span> {goodCutoff && <span className="chip buy" style={{ fontSize: 9, marginLeft: 6 }}>BUY帯</span>}</td>
+                      <td className="num" style={{textAlign:"right"}}>{b.n}</td>
+                      <td className="num" style={{textAlign:"right"}}>{b.hit}</td>
+                      <td className="num" style={{textAlign:"right"}}>{(b.hitRate * 100).toFixed(1)}%</td>
+                      <td style={{ width: 140 }}>
+                        <div style={{ height: 8, background: "var(--bg)", border: "1px solid var(--border)", position: "relative", overflow: "hidden" }}>
+                          <div style={{ position: "absolute", top: 0, bottom: 0, left: 0, width: barPct + "%", background: color }}></div>
+                          <div style={{ position: "absolute", top: -2, bottom: -2, left: (1.0 / 1.6 * 100) + "%", width: 1, background: "var(--bright)" }}></div>
+                        </div>
+                      </td>
+                      <td className="num" style={{textAlign:"right", color, fontWeight: 600}}>{(b.roi * 100).toFixed(0)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            <div style={{ marginTop: 12, fontSize: 11, color: "var(--muted)", lineHeight: 1.6 }}>
+              <span style={{ color: "var(--buy)" }}>■</span> ROI ≥ 1.25 ·
+              <span style={{ color: "var(--watch)", marginLeft: 8 }}>■</span> 1.00〜1.25 ·
+              <span style={{ color: "var(--skip)", marginLeft: 8 }}>■</span> &lt; 1.00 (損失帯)
+            </div>
+          </Panel>
+        </div>
+
+        {/* Venue ROI */}
+        <div className="col-5">
+          <Panel title="会場別 ROI (TOP 8)" code="BCK.VEN">
+            <div className="barchart">
+              {VR_LIST.map((v, i) => {
+                const pct = Math.min(100, (v.roi / 1.4) * 100);
+                const color = v.roi >= 1.1 ? "var(--buy)" : v.roi >= 1.0 ? "var(--watch)" : "var(--danger)";
+                return (
+                  <div key={i} className="barchart__row" style={{ gridTemplateColumns: "70px 1fr 70px" }}>
+                    <span className="label" style={{ color: "var(--text)" }}>{v.venue} <span className="dim">({v.n})</span></span>
+                    <div className="bar">
+                      <div className="fill" style={{ width: pct + "%", background: color }}></div>
+                      <div style={{ position: "absolute", top: -1, bottom: -1, left: (1.0 / 1.4 * 100) + "%", width: 1, background: "var(--bright)" }}></div>
+                    </div>
+                    <span className="val" style={{ color, fontWeight: 600 }}>{(v.roi * 100).toFixed(0)}%</span>
+                  </div>
+                );
+              })}
+            </div>
+          </Panel>
+        </div>
+      </div>
+
+      {/* Pass analysis */}
+      <Panel title="“買わなかった” WATCH の検証" code="WATCH.SHADOW">
+        <div className="row" style={{ gap: 24, alignItems: "flex-start" }}>
+          <div style={{ minWidth: 220 }}>
+            <div className="dim" style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em" }}>仮にWATCHも買っていたら</div>
+            <div style={{ fontSize: 26, fontWeight: 600, marginTop: 6, color: watchHits >= watches.length / 4 ? "var(--watch-2)" : "var(--buy-2)" }}>
+              {watchHits} <span className="dim" style={{ fontSize: 13 }}>/ {watches.length} hit</span>
+            </div>
+            <div className="dim" style={{ fontSize: 11, marginTop: 6, lineHeight: 1.6 }}>
+              WATCH を全部買っていた場合の仮想成績。<br />
+              EV 1.05-1.24 帯の ROI は平均 <b className="bright">{(EVB.slice(1,4).reduce((s,b)=>s+b.roi,0)/3*100).toFixed(0)}%</b>。
+              <br />→ <b style={{ color: "var(--watch-2)" }}>買わなくて正解</b>
+            </div>
+          </div>
+          <div className="flex--1">
+            <pre className="ascii dim" style={{ fontSize: 11, margin: 0, lineHeight: 1.6 }}>
+{`  ┌────────────────────────────────────────────────────────────┐
+  │  "買わない日 = 成功" 検証                                  │
+  ├────────────────────────────────────────────────────────────┤
+  │  PASS日数        : 4日 (33.3%)    → 損失なし              │
+  │  PASSの代替購入  : −¥1,420 (推定)  → 買わなくて正解        │
+  │  WATCH変換BUY    : ROI 98%        → 期待値マイナス        │
+  │                                                            │
+  │  結論: 現状のBUY基準を維持。緩めないこと。                 │
+  └────────────────────────────────────────────────────────────┘`}
+            </pre>
+          </div>
+        </div>
+      </Panel>
+
+      {/* Decision log */}
+      <Panel title="判定ログ" code="LOG.DEC" meta={`${HIST.length} 件`}>
+        <table className="tbl">
+          <thead>
+            <tr>
+              <th>日付</th>
+              <th>会場</th>
+              <th>R</th>
+              <th>買い目</th>
+              <th>判定</th>
+              <th className="num" style={{textAlign:"right"}}>推定%</th>
+              <th className="num" style={{textAlign:"right"}}>オッズ</th>
+              <th className="num" style={{textAlign:"right"}}>EV</th>
+              <th className="num" style={{textAlign:"right"}}>投入</th>
+              <th>結果</th>
+              <th className="num" style={{textAlign:"right"}}>払戻</th>
+            </tr>
+          </thead>
+          <tbody>
+            {HIST.map((h, i) => (
+              <tr key={i}>
+                <td className="dim">{h.date}</td>
+                <td>{h.venue}</td>
+                <td className="dim">{h.r > 0 ? h.r + "R" : "—"}</td>
+                <td className="num">{h.bet}</td>
+                <td><StatusChip s={h.status} sm /></td>
+                <td className="num" style={{textAlign:"right"}}>{h.pHat != null ? (h.pHat * 100).toFixed(1) + "%" : "—"}</td>
+                <td className="num" style={{textAlign:"right"}}>{h.odds != null ? h.odds.toFixed(1) : "—"}</td>
+                <td className="num" style={{textAlign:"right", color: h.ev != null ? (h.ev >= 1.25 ? "var(--buy)" : h.ev >= 1.05 ? "var(--watch)" : "var(--skip)") : null}}>
+                  {h.ev != null ? h.ev.toFixed(2) : "—"}
+                </td>
+                <td className="num" style={{textAlign:"right"}}>{h.amount > 0 ? "¥" + h.amount : <span className="dim">—</span>}</td>
+                <td>{h.result !== "—" ? <StatusChip s={h.result} sm /> : <span className="dim">—</span>}</td>
+                <td className="num" style={{textAlign:"right", color: h.payout > 0 ? "var(--buy-2)" : null, fontWeight: h.payout > 0 ? 600 : 400}}>
+                  {h.payout > 0 ? "¥" + h.payout.toLocaleString() : <span className="dim">—</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Panel>
+    </div>
+  );
+}
+
+// =============================================================
+// NOTIFICATIONS
+// =============================================================
+function ScreenNotif({ mode }) {
+  const races = mode === "buy" ? window.BoatData.RACES_BUY_DAY : window.BoatData.RACES_QUIET_DAY;
+  const todayBuys = races.filter(r => r.status === "BUY");
+
+  return (
+    <div className="stack">
+      <div className="grid grid--12">
+        <div className="col-7">
+          <Panel title="通知履歴" code="NOTIF.LOG" meta={`${N_LIST.length} 件`}>
+            <table className="tbl">
+              <thead>
+                <tr>
+                  <th>送信日時</th>
+                  <th>会場</th>
+                  <th>R</th>
+                  <th className="num" style={{textAlign:"right"}}>EV</th>
+                  <th>状態</th>
+                  <th>宛先</th>
+                  <th>結果</th>
+                </tr>
+              </thead>
+              <tbody>
+                {N_LIST.map(n => (
+                  <tr key={n.id}>
+                    <td className="dim">{n.at}</td>
+                    <td>{n.venue}</td>
+                    <td className="dim">{n.r}R</td>
+                    <td className="num" style={{textAlign:"right", color: "var(--buy)", fontWeight: 600}}>{n.ev.toFixed(2)}</td>
+                    <td><StatusChip s="SENT" sm /></td>
+                    <td className="dim">{n.target}</td>
+                    <td>{n.result ? <StatusChip s={n.result} sm /> : <span className="dim">待ち</span>}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Panel>
+
+          <div style={{ height: 14 }}></div>
+
+          <Panel title="通知ルール" code="NOTIF.RULE">
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <div>
+                <h3 style={{ marginBottom: 10 }}>通知する条件</h3>
+                <div className="stack" style={{ gap: 4, fontSize: 11 }}>
+                  <Rule ok label="EV ≥ 1.25" />
+                  <Rule ok label="サンプル数十分 (n ≥ 600)" />
+                  <Rule ok label="1日予算以内" />
+                  <Rule ok label="締切まで5分以上" />
+                  <Rule ok label="同レース未通知" />
+                  <Rule ok label="欠場/返還情報なし" />
+                </div>
+              </div>
+              <div>
+                <h3 style={{ marginBottom: 10 }}>通知しない条件</h3>
+                <div className="stack" style={{ gap: 4, fontSize: 11 }}>
+                  <Rule no label="WATCH (EV 1.05-1.24)" />
+                  <Rule no label="SKIP (EV < 1.05)" />
+                  <Rule no label="サンプル不足" />
+                  <Rule no label="オッズ未取得" />
+                  <Rule no label="予算上限到達" />
+                  <Rule no label="締切5分以内" />
+                </div>
+              </div>
+            </div>
+          </Panel>
+        </div>
+
+        <div className="col-5 stack">
+          <Panel title="プレビュー" code="NOTIF.PREV" meta="Discord">
+            {todayBuys.length > 0 ? (
+              <NotifPreview race={todayBuys[0]} />
+            ) : (
+              <div className="empty">
+                <div className="glyph">∅</div>
+                <div>送信予定の通知はありません</div>
+                <div className="dim" style={{ marginTop: 6, fontSize: 11 }}>
+                  BUY条件を満たすレースがあれば<br />
+                  自動で通知が送信されます
+                </div>
+              </div>
+            )}
+          </Panel>
+
+          <Panel title="通知先" code="NOTIF.DST">
+            <div className="stack" style={{ gap: 10, fontSize: 11 }}>
+              <div className="row" style={{ justifyContent: "space-between" }}>
+                <span className="row" style={{ gap: 6 }}>
+                  <span style={{ color: "var(--buy)" }}>●</span>
+                  Discord Webhook
+                </span>
+                <span className="dim" style={{ fontSize: 10, fontFamily: "var(--mono)" }}>
+                  …/api/webhooks/****
+                </span>
+              </div>
+              <div className="row" style={{ justifyContent: "space-between" }}>
+                <span className="row" style={{ gap: 6 }}>
+                  <span style={{ color: "var(--dim)" }}>○</span>
+                  ブラウザ通知
+                </span>
+                <span className="dim" style={{ fontSize: 10 }}>未設定</span>
+              </div>
+              <div className="row" style={{ justifyContent: "space-between" }}>
+                <span className="row" style={{ gap: 6 }}>
+                  <span style={{ color: "var(--dim)" }}>○</span>
+                  メール
+                </span>
+                <span className="dim" style={{ fontSize: 10 }}>未設定</span>
+              </div>
+            </div>
+            <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px dashed var(--border)" }}>
+              <button className="btn btn--xs btn--ghost" style={{ width: "100%", justifyContent: "center" }}>
+                通知先を編集
+              </button>
+            </div>
+          </Panel>
+
+          <Panel title="本日 制限到達状況" code="NOTIF.LIM">
+            <div className="stack" style={{ gap: 10, fontSize: 11 }}>
+              <LimitBar label="通知数" cur={todayBuys.length} max={10} unit="件" />
+              <LimitBar label="予算消化" cur={todayBuys.length * 100} max={1000} unit="円" />
+            </div>
+          </Panel>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Rule({ ok, no, label }) {
+  return (
+    <div className="row" style={{ gap: 8, padding: "3px 0" }}>
+      <span style={{ width: 12, color: ok ? "var(--buy)" : "var(--skip-2)", fontFamily: "var(--mono)" }}>{ok ? "✓" : "−"}</span>
+      <span className={no ? "muted" : ""}>{label}</span>
+    </div>
+  );
+}
+
+function LimitBar({ label, cur, max, unit }) {
+  const pct = (cur / max) * 100;
+  return (
+    <div>
+      <div className="row" style={{ justifyContent: "space-between", marginBottom: 4 }}>
+        <span className="muted">{label}</span>
+        <span className="num bright">{cur} / {max} {unit}</span>
+      </div>
+      <div style={{ height: 6, background: "var(--bg)", border: "1px solid var(--border)", position: "relative", overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: 0, bottom: 0, left: 0, width: Math.min(100, pct) + "%", background: pct >= 80 ? "var(--watch)" : "var(--buy)" }}></div>
+      </div>
+    </div>
+  );
+}
+
+// =============================================================
+// SETTINGS
+// =============================================================
+function ScreenSettings({ settings, onChange }) {
+  const set = (k, v) => onChange({ ...settings, [k]: v });
+
+  return (
+    <div className="stack">
+      <div className="warn-strip">
+        <span className="ico">⚠</span>
+        <div>
+          このアプリは <b>自動購入を一切行いません</b>。
+          ログイン情報も保存しません。すべての発注は公式投票サイトで行います。
+        </div>
+      </div>
+
+      <Panel title="判定パラメータ" code="CONF.JUDGE">
+        <div className="field">
+          <div className="lbl">
+            目標EV (BUYしきい値)
+            <div className="desc">EV がこの値以上の時のみ BUY 候補に。1.20 にすると候補は増えるが ROI は劣化します。</div>
+          </div>
+          <div className="ctrl">
+            <Seg
+              value={settings.targetEV}
+              onChange={(v) => set("targetEV", v)}
+              options={[
+                { value: 1.20, label: "1.20 (緩い)" },
+                { value: 1.25, label: "1.25 (推奨)" },
+                { value: 1.30, label: "1.30 (厳しい)" },
+                { value: 1.40, label: "1.40 (超厳格)" },
+              ]}
+            />
+          </div>
+        </div>
+
+        <div className="field">
+          <div className="lbl">
+            WATCH しきい値
+            <div className="desc">この値以上 / 目標EV未満を WATCH に。記録のみで通知はしません。</div>
+          </div>
+          <div className="ctrl">
+            <input className="input" value="1.05" readOnly />
+            <span className="dim" style={{ fontSize: 10 }}>固定 (MVP)</span>
+          </div>
+        </div>
+
+        <div className="field">
+          <div className="lbl">
+            最低サンプル数
+            <div className="desc">同条件レースがこれ未満ならサンプル不足として SKIP。</div>
+          </div>
+          <div className="ctrl">
+            <input className="input" value="600" readOnly />
+            <span className="dim" style={{ fontSize: 10 }}>レース</span>
+          </div>
+        </div>
+
+        <div className="field">
+          <div className="lbl">
+            締切前 SKIP マージン
+            <div className="desc">締切までこの時間以内になったレースは SKIP。</div>
+          </div>
+          <div className="ctrl">
+            <input className="input" value="5" readOnly />
+            <span className="dim" style={{ fontSize: 10 }}>分</span>
+          </div>
+        </div>
+      </Panel>
+
+      <Panel title="予算ルール" code="CONF.BUDGET">
+        <div className="field">
+          <div className="lbl">
+            1日予算
+            <div className="desc">本日の BUY 合計の上限。超えそうな場合は新規 BUY を SKIP します。</div>
+          </div>
+          <div className="ctrl">
+            <Seg
+              value={settings.budget}
+              onChange={(v) => set("budget", v)}
+              options={[
+                { value: 500,  label: "¥500 (極めて厳しめ)" },
+                { value: 1000, label: "¥1,000 (推奨)" },
+                { value: 2000, label: "¥2,000 (緩め)" },
+              ]}
+            />
+          </div>
+        </div>
+
+        <div className="field">
+          <div className="lbl">
+            1点あたり
+            <div className="desc">1買い目あたりの金額。MVPでは100円固定。</div>
+          </div>
+          <div className="ctrl">
+            <input className="input" value="100" readOnly />
+            <span className="dim" style={{ fontSize: 10 }}>円 / 1点</span>
+          </div>
+        </div>
+
+        <div className="field">
+          <div className="lbl">
+            1日最大 BUY 数
+            <div className="desc">通知件数の上限。これを超えると新規 BUY を SKIP。</div>
+          </div>
+          <div className="ctrl">
+            <input className="input" value="10" readOnly />
+            <span className="dim" style={{ fontSize: 10 }}>件 / 日</span>
+          </div>
+        </div>
+      </Panel>
+
+      <Panel title="表示設定" code="CONF.UI">
+        <div className="field">
+          <div className="lbl">カラーモード</div>
+          <div className="ctrl">
+            <Seg
+              value={settings.theme}
+              onChange={(v) => set("theme", v)}
+              options={[
+                { value: "dark", label: "ダーク" },
+                { value: "light", label: "ライト" },
+              ]}
+            />
+          </div>
+        </div>
+        <div className="field">
+          <div className="lbl">情報密度</div>
+          <div className="ctrl">
+            <Seg
+              value={settings.density}
+              onChange={(v) => set("density", v)}
+              options={[
+                { value: "dense", label: "密 (推奨)" },
+                { value: "loose", label: "ゆったり" },
+              ]}
+            />
+          </div>
+        </div>
+      </Panel>
+
+      <Panel title="データ取得" code="CONF.FETCH">
+        <div className="field">
+          <div className="lbl">
+            kyotei24 取得頻度
+            <div className="desc">候補レースのみ・締切10〜5分前に1回。サイト運営に配慮した最小頻度。</div>
+          </div>
+          <div className="ctrl">
+            <input className="input" value="候補のみ / 締切前1回" readOnly style={{ minWidth: 200 }} />
+          </div>
+        </div>
+        <div className="field">
+          <div className="lbl">
+            BOAT RACE公式ダウンロード
+            <div className="desc">番組表・競走成績はローカル保存。同日2回まで。</div>
+          </div>
+          <div className="ctrl">
+            <span className="chip buy"><span className="dot"></span>有効</span>
+            <span className="dim" style={{ fontSize: 10 }}>最終取得 15:10</span>
+          </div>
+        </div>
+        <div className="field">
+          <div className="lbl">
+            ローカル保存
+            <div className="desc">raw / normalized / sqlite の3層で保存。</div>
+          </div>
+          <div className="ctrl">
+            <span className="chip buy"><span className="dot"></span>有効</span>
+            <span className="dim" style={{ fontSize: 10 }}>data/boat.sqlite · 4.2 MB</span>
+          </div>
+        </div>
+      </Panel>
+
+      <Panel title="安全規約" code="CONF.SAF">
+        <div className="stack" style={{ gap: 0 }}>
+          <SafetyLock label="自動購入"          locked />
+          <SafetyLock label="自動投票"          locked />
+          <SafetyLock label="ログイン情報の保存" locked />
+          <SafetyLock label="投票サイト操作の自動化" locked />
+          <SafetyLock label="全会場全レース毎分取得" locked />
+          <SafetyLock label="オッズ全パターン連打" locked />
+          <SafetyLock label="データ再配布"      locked />
+          <SafetyLock label="商用利用"          locked />
+        </div>
+        <div className="dim" style={{ fontSize: 10.5, lineHeight: 1.6, marginTop: 12, paddingTop: 10, borderTop: "1px dashed var(--border)" }}>
+          上記はアプリレベルで <b className="bright">実装されていません</b>。
+          設定からも有効化できません。これは仕様です。
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function SafetyLock({ label, locked }) {
+  return (
+    <div className="row" style={{ justifyContent: "space-between", padding: "8px 0", borderBottom: "1px dashed var(--border)", fontSize: 11 }}>
+      <span className="row" style={{ gap: 8 }}>
+        <span style={{ color: "var(--danger)" }}>🔒</span>
+        <span>{label}</span>
+      </span>
+      <span className="chip danger" style={{ fontSize: 9 }}>
+        <span className="dot"></span>NEVER
+      </span>
+    </div>
+  );
+}
+
+Object.assign(window, { ScreenHistory, ScreenNotif, ScreenSettings });
+
+</script>
+<script type="text/babel" data-source="app.jsx">
+// ============================================================
+// Boat EV Notifier — main app shell
+// ============================================================
+
+const { useState: useS, useEffect: useE } = React;
+
+const NAV = [
+  { id: "dash",    n: "01", label: "ダッシュボード",  short: "DASH" },
+  { id: "buy",     n: "02", label: "候補レース",      short: "CAND" },
+  { id: "history", n: "03", label: "判定履歴 / 検証", short: "LOG"  },
+  { id: "notif",   n: "04", label: "通知センター",    short: "NOTIF"},
+  { id: "settings",n: "05", label: "設定 / 安全装置", short: "CONF" },
+];
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "mode": "buy",
+  "theme": "dark",
+  "density": "dense",
+  "targetEV": 1.25,
+  "budget": 1000
+}/*EDITMODE-END*/;
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [view, setView] = useS({ screen: "dash", race: null });
+
+  useE(() => {
+    document.documentElement.setAttribute("data-theme", t.theme);
+    document.documentElement.setAttribute("data-density", t.density);
+  }, [t.theme, t.density]);
+
+  const settings = {
+    targetEV: t.targetEV,
+    budget: t.budget,
+    theme: t.theme,
+    density: t.density,
+  };
+
+  const openRace = (r) => setView({ screen: "detail", race: r });
+  const goNav = (id) => setView({ screen: id, race: null });
+
+  const races = t.mode === "buy" ? window.BoatData.RACES_BUY_DAY : window.BoatData.RACES_QUIET_DAY;
+  const buyN = races.filter(r => r.status === "BUY").length;
+
+  return (
+    <div className="app">
+      <Header mode={t.mode} buyN={buyN} settings={settings} />
+      <Sidebar current={view.screen} onNav={goNav} buyN={buyN} mode={t.mode} settings={settings} />
+      <main className="main" data-screen-label={NAV.find(n => n.id === view.screen)?.label || "screen"}>
+        <PageHead view={view} settings={settings} mode={t.mode} />
+        {view.screen === "dash"     && <ScreenDashboard mode={t.mode} settings={settings} onOpen={openRace} onNav={goNav} />}
+        {view.screen === "buy"      && <ScreenBuyList   mode={t.mode} settings={settings} onOpen={openRace} />}
+        {view.screen === "detail"   && <ScreenDetail    race={view.race} onBack={() => setView({ screen: "buy" })} />}
+        {view.screen === "history"  && <ScreenHistory />}
+        {view.screen === "notif"    && <ScreenNotif     mode={t.mode} />}
+        {view.screen === "settings" && <ScreenSettings  settings={t} onChange={(s) => setTweak(s)} />}
+      </main>
+      <MobileNav current={view.screen} onNav={goNav} buyN={buyN} />
+
+      <TweaksPanel title="Tweaks" defaultOpen={false}>
+        <TweakSection title="デモ状態">
+          <TweakRadio
+            value={t.mode}
+            onChange={(v) => setTweak("mode", v)}
+            options={[
+              { value: "quiet", label: "見送り日" },
+              { value: "buy",   label: "BUY候補日" },
+            ]}
+          />
+        </TweakSection>
+        <TweakSection title="判定パラメータ">
+          <TweakRadio
+            value={t.targetEV}
+            onChange={(v) => setTweak("targetEV", v)}
+            options={[
+              { value: 1.20, label: "1.20" },
+              { value: 1.25, label: "1.25" },
+              { value: 1.30, label: "1.30" },
+            ]}
+            label="目標EV"
+          />
+          <TweakRadio
+            value={t.budget}
+            onChange={(v) => setTweak("budget", v)}
+            options={[
+              { value: 500,  label: "¥500" },
+              { value: 1000, label: "¥1k" },
+              { value: 2000, label: "¥2k" },
+            ]}
+            label="1日予算"
+          />
+        </TweakSection>
+        <TweakSection title="表示">
+          <TweakRadio
+            value={t.theme}
+            onChange={(v) => setTweak("theme", v)}
+            options={[
+              { value: "dark",  label: "Dark" },
+              { value: "light", label: "Light" },
+            ]}
+            label="カラーモード"
+          />
+          <TweakRadio
+            value={t.density}
+            onChange={(v) => setTweak("density", v)}
+            options={[
+              { value: "dense", label: "密" },
+              { value: "loose", label: "ゆったり" },
+            ]}
+            label="情報密度"
+          />
+        </TweakSection>
+      </TweaksPanel>
+    </div>
+  );
+}
+
+// ---- Header (top bar) -----------------------------------
+function Header({ mode, buyN, settings }) {
+  const [now, setNow] = useS(new Date());
+  useE(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const time = now.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+
+  return (
+    <header className="header">
+      <div className="header__logo">
+        <span className="mark">⚓</span>
+        <span>Boat EV Notifier</span>
+        <span className="ver">v0.3.1-mvp</span>
+      </div>
+      <div className="header__ticker">
+        <span className="item"><b>SESSION</b><span className="pos">● live</span></span>
+        <span className="item"><b>MODE</b>{mode === "buy" ? "BUY-detected" : "PASS"}</span>
+        <span className="item"><b>EV≥</b>{settings.targetEV.toFixed(2)}</span>
+        <span className="item"><b>BUDGET</b>¥{settings.budget}</span>
+        <span className="item"><b>CAND</b>{buyN}</span>
+        <span className="item"><b>FETCH</b>kyotei24 · low-freq</span>
+      </div>
+      <div className="header__time">
+        <b>{time}</b> JST · 2026-05-21
+      </div>
+      <button className="header__sysbtn"><span className="dot"></span>SYS OK</button>
+    </header>
+  );
+}
+
+// ---- Sidebar (desktop nav) ------------------------------
+function Sidebar({ current, onNav, buyN, mode, settings }) {
+  const races = mode === "buy" ? window.BoatData.RACES_BUY_DAY : window.BoatData.RACES_QUIET_DAY;
+  const watchN = races.filter(r => r.status === "WATCH").length;
+  const skipN = races.filter(r => r.status === "SKIP").length;
+  const usedAmt = races.filter(r => r.status === "BUY").reduce((s, r) => s + (r.suggestedAmount || 0), 0);
+
+  return (
+    <aside className="sidebar">
+      <div className="sidebar__group">
+        <div className="sidebar__label">SCREENS</div>
+        <div className="nav">
+          {NAV.map(n => (
+            <button
+              key={n.id}
+              className={"nav__item" + (current === n.id || (n.id === "buy" && current === "detail") ? " is-active" : "")}
+              onClick={() => onNav(n.id)}>
+              <span className="num">{n.n}</span>
+              <span className="label">{n.label}</span>
+              {n.id === "buy" && buyN > 0 && <span className="badge">{buyN}</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="sidebar__group">
+        <div className="sidebar__label">TODAY</div>
+        <div style={{ fontSize: 11, color: "var(--muted)", lineHeight: 1.8 }}>
+          <div className="row" style={{ justifyContent: "space-between" }}>
+            <span>判定</span>
+            <span style={{ color: mode === "buy" ? "var(--watch-2)" : "var(--buy-2)" }}>
+              {mode === "buy" ? "BUY×" + buyN : "PASS"}
+            </span>
+          </div>
+          <div className="row" style={{ justifyContent: "space-between" }}>
+            <span>BUY</span>
+            <span style={{ color: "var(--buy)" }} className="num">{buyN}</span>
+          </div>
+          <div className="row" style={{ justifyContent: "space-between" }}>
+            <span>WATCH</span>
+            <span style={{ color: "var(--watch)" }} className="num">{watchN}</span>
+          </div>
+          <div className="row" style={{ justifyContent: "space-between" }}>
+            <span>SKIP</span>
+            <span style={{ color: "var(--skip-2)" }} className="num">{skipN}</span>
+          </div>
+          <div className="row" style={{ justifyContent: "space-between", marginTop: 6, paddingTop: 6, borderTop: "1px dashed var(--border)" }}>
+            <span>使用予定</span>
+            <span className="bright num">¥{usedAmt}</span>
+          </div>
+          <div className="row" style={{ justifyContent: "space-between" }}>
+            <span>予算</span>
+            <span className="dim num">¥{settings.budget}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="sidebar__footer">
+        <b>DATA SOURCES</b><br />
+        · BOAT RACE 公式 (DL)<br />
+        · kyotei24.jp (候補のみ)<br />
+        · ローカル SQLite<br />
+        <span className="warn">⚠ 自動購入は実装なし</span>
+      </div>
+    </aside>
+  );
+}
+
+// ---- Mobile bottom nav ----------------------------------
+function MobileNav({ current, onNav, buyN }) {
+  return (
+    <nav className="mobile-nav">
+      {NAV.map(n => (
+        <button
+          key={n.id}
+          className={"nav__item" + (current === n.id || (n.id === "buy" && current === "detail") ? " is-active" : "")}
+          onClick={() => onNav(n.id)}>
+          <span className="label">{n.short}</span>
+          {n.id === "buy" && buyN > 0 && <span className="badge" style={{ fontSize: 9 }}>{buyN}</span>}
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+// ---- Page head ------------------------------------------
+function PageHead({ view, settings, mode }) {
+  const titles = {
+    dash:     ["DASHBOARD",  "本日の判定 (2026-05-21)"],
+    buy:      ["CANDIDATES", "候補レース一覧"],
+    detail:   ["RACE DETAIL", "レース詳細"],
+    history:  ["BACKTEST",   "判定履歴 / バックテスト"],
+    notif:    ["NOTIF",      "通知センター"],
+    settings: ["CONFIG",     "設定 / 安全装置"],
+  };
+  const [code, t] = titles[view.screen] || ["", ""];
+  return (
+    <div className="page__head">
+      <h1>
+        <span className="brk">[</span>
+        <span style={{ color: "var(--buy)", fontSize: 14, fontWeight: 500 }}>{code}</span>
+        <span className="brk">]</span>
+        <span>{t}</span>
+      </h1>
+      <span className="spacer flex--1"></span>
+      <span className="meta">
+        EV target: <b>{settings.targetEV.toFixed(2)}</b> · 予算: <b>¥{settings.budget}</b> · モード: <b>{mode === "buy" ? "BUY-day" : "PASS-day"}</b>
+      </span>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+
+</script>
 
 </body>
 </html>
