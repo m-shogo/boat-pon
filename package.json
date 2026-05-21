@@ -1,0 +1,30 @@
+{
+  "name": "boat-pon",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "fetch:kyotei24": "tsx scripts/fetch-kyotei24.ts",
+    "import:kyotei24": "tsx scripts/import-kyotei24.ts",
+    "db:init": "tsx scripts/init-db.ts",
+    "test": "node --test --import tsx src/domain/decision.test.ts"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "latest",
+    "cheerio": "latest",
+    "lucide-react": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "tsx": "latest",
+    "typescript": "latest",
+    "vite": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3"
+  }
+}
