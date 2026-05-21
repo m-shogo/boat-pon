@@ -21,8 +21,11 @@ npm run db:init
 npm run fetch:kyotei24
 npm run import:kyotei24 -- YYYY-MM-DD
 npm run import:official -- /path/to/program.csv
+npm run fetch:official-results -- 2025-11-21 2026-05-20   # 公式の競走成績(K)を期間指定で一括DL+取り込み
 npx tsx scripts/fetch-official-odds.ts YYYY-MM-DD 蒲郡 8
 ```
+
+公式競走成績の一括取り込みは LZH 圧縮を `unar` で解凍します。事前に `brew install unar` が必要です。礼儀として1.2秒/ファイルのsleepが挟まり、180日分でおおよそ4分です。一度DL済のLZHは再取得しません。
 
 取得はキャッシュ前提です。`fetch:kyotei24` は結果ページのみ（同日 raw が新しければ再取得しません）。
 リアルタイムオッズは公式 boatrace.jp の 3連単オッズページから取得します（`fetch-official-odds.ts`）。候補レース1件単位、キャッシュ5分、外部アクセスは画面の「公式オッズ取得」ボタン押下時か「自動取得 (60秒)」を明示的にONにした時のみ発火します。
@@ -64,3 +67,4 @@ npx tsx scripts/fetch-official-odds.ts YYYY-MM-DD 蒲郡 8
 - サンプル不足除外を明示した有効サンプル集計
 - 今月のBUY/的中/ROI/買わない日数の月次サマリー
 - 公式 boatrace.jp の3連単オッズをリアルタイム取得（候補レースのみ、5分キャッシュ、手動ボタン/自動60秒トグル）
+- 公式 mbrace.or.jp の競走成績LZHを期間指定で一括DL+解凍+取り込み（Shift_JIS、unar依存）

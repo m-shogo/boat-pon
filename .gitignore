@@ -3,5 +3,6 @@ dist/
 .DS_Store
 data/raw/
 data/normalized/
+data/tmp/
 data/*.sqlite
 tsconfig.tsbuildinfo

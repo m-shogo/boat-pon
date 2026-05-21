@@ -13,7 +13,8 @@
     "test": "node --test --import tsx src/domain/*.test.ts",
     "dev:web": "vite",
     "dev:api": "tsx watch server/index.ts",
-    "import:official": "tsx scripts/import-official-file.ts"
+    "import:official": "tsx scripts/import-official-file.ts",
+    "fetch:official-results": "tsx scripts/fetch-official-results.ts"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
