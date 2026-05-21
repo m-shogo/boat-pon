@@ -14,13 +14,15 @@ export type DashboardResponse = {
   rows: CandidateRow[];
   results: RaceResult[];
   notifications: NotificationRecord[];
+  date: string | null;
+  history: DecisionHistoryRow[];
   backtest: BacktestSummary;
 };
 
 export type NotificationRecord = {
   id: number;
   raceId: string;
-  channel: "browser" | "discord" | "none";
+  channel: "browser" | "none";
   status: "PENDING" | "SENT" | "SUPPRESSED";
   title: string;
   body: string;
@@ -29,9 +31,40 @@ export type NotificationRecord = {
   sentAt: string | null;
 };
 
-export async function getDashboard(): Promise<DashboardResponse> {
-  const res = await fetch("/api/dashboard");
+export async function getDashboard(date?: string): Promise<DashboardResponse> {
+  const qs = date ? `?date=${encodeURIComponent(date)}` : "";
+  const res = await fetch(`/api/dashboard${qs}`);
   if (!res.ok) throw new Error(`dashboard api failed: ${res.status}`);
+  return res.json();
+}
+
+export async function reparseKyotei24(date: string): Promise<{ normalizedPath: string; count: number }> {
+  const res = await fetch("/api/import/reparse-kyotei24", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ date }),
+  });
+  if (!res.ok) throw new Error(`reparse api failed: ${res.status}`);
+  return res.json();
+}
+
+export async function updatePurchaseRecord(id: number, actuallyBought: boolean, stakeYen: number): Promise<DecisionHistoryRow> {
+  const res = await fetch(`/api/history/${id}/purchase`, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ actuallyBought, stakeYen }),
+  });
+  if (!res.ok) throw new Error(`purchase api failed: ${res.status}`);
+  return res.json();
+}
+
+export async function importOfficialRows(rows: Array<Record<string, unknown>>, sourceFile = "manual-ui"): Promise<{ imported: number }> {
+  const res = await fetch("/api/import/official-local", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ rows, sourceFile }),
+  });
+  if (!res.ok) throw new Error(`official import api failed: ${res.status}`);
   return res.json();
 }
 

@@ -2,7 +2,7 @@ import { mkdirSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { DEFAULT_RULE } from "../src/domain/decision";
 import type { BetCandidate, BudgetRule, Decision, RaceResult } from "../src/domain/types";
-import { sampleCandidates, sampleResults } from "../src/sampleData";
+import { sampleResults } from "../src/sampleData";
 
 export function openDb() {
   mkdirSync("data", { recursive: true });
@@ -79,6 +79,17 @@ CREATE TABLE IF NOT EXISTS manual_odds (
   source TEXT NOT NULL DEFAULT 'manual',
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS official_programs (
+  race_id TEXT PRIMARY KEY,
+  date TEXT NOT NULL,
+  venue TEXT NOT NULL,
+  race_no INTEGER NOT NULL,
+  close_at TEXT NOT NULL,
+  source_file TEXT NOT NULL,
+  raw_json TEXT NOT NULL,
+  imported_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 `);
 
   try {
@@ -134,15 +145,65 @@ ON CONFLICT(race_id) DO UPDATE SET odds = excluded.odds, updated_at = CURRENT_TI
 `).run(raceId, odds);
 }
 
-export function listResults(db: DatabaseSync): RaceResult[] {
+export function listResults(db: DatabaseSync, date?: string): RaceResult[] {
+  const params: string[] = [];
+  const where = date ? "WHERE date = ?" : "";
+  if (date) params.push(date);
+  const rows = db.prepare(`
+SELECT race_id, date, venue, race_no, trifecta, payout_yen, popularity, returned, source, fetched_at
+FROM race_results
+${where}
+ORDER BY date DESC, venue ASC, race_no ASC
+LIMIT 120
+`).all(...params) as Array<Record<string, unknown>>;
+  return rows.map(rowToResult);
+}
+
+export function listAllResultsForModel(db: DatabaseSync): RaceResult[] {
   const rows = db.prepare(`
 SELECT race_id, date, venue, race_no, trifecta, payout_yen, popularity, returned, source, fetched_at
 FROM race_results
 ORDER BY date DESC, venue ASC, race_no ASC
-LIMIT 120
 `).all() as Array<Record<string, unknown>>;
   return rows.map(rowToResult);
 }
+
+export function listProgramInputs(db: DatabaseSync, date?: string) {
+  const params: string[] = [];
+  const where = date ? "WHERE date = ?" : "";
+  if (date) params.push(date);
+  const rows = db.prepare(`
+SELECT race_id, date, venue, race_no, close_at
+FROM official_programs
+${where}
+ORDER BY date DESC, venue ASC, race_no ASC
+`).all(...params) as Array<Record<string, unknown>>;
+  return rows.map((row) => ({
+    raceId: String(row.race_id),
+    date: String(row.date),
+    venue: String(row.venue),
+    raceNo: Number(row.race_no),
+    closeAt: String(row.close_at),
+  }));
+}
+
+export function insertOfficialProgram(db: DatabaseSync, row: {
+  raceId: string;
+  date: string;
+  venue: string;
+  raceNo: number;
+  closeAt: string;
+  sourceFile: string;
+  raw: Record<string, unknown>;
+}) {
+  db.prepare(`
+INSERT OR REPLACE INTO official_programs
+(race_id, date, venue, race_no, close_at, source_file, raw_json, imported_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+`).run(row.raceId, row.date, row.venue, row.raceNo, row.closeAt, row.sourceFile, JSON.stringify(row.raw));
+}
+
+
 
 export function insertDecisionHistory(db: DatabaseSync, candidate: BetCandidate, decision: Decision) {
   const selection = candidate.selection.join("-");
@@ -281,6 +342,15 @@ LIMIT 50
     createdAt: String(row.created_at),
     sentAt: row.sent_at == null ? null : String(row.sent_at),
   }));
+}
+
+export function updatePurchaseRecord(db: DatabaseSync, id: number, actuallyBought: boolean, stakeYen: number) {
+  db.prepare("UPDATE decision_history SET actually_bought = ?, stake_yen = ? WHERE id = ?").run(
+    actuallyBought ? 1 : 0,
+    actuallyBought ? stakeYen : 0,
+    id,
+  );
+  return listDecisionHistory(db).find((row) => row.id === id);
 }
 
 export function markNotificationSent(db: DatabaseSync, id: number) {

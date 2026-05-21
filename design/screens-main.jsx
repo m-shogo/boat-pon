@@ -417,7 +417,7 @@ function ScreenDetail({ race, onBack }) {
           </Panel>
 
           {race.status === "BUY" ? (
-            <Panel title="通知プレビュー" code="NOTIF" meta="Discord">
+            <Panel title="通知プレビュー" code="NOTIF" meta="ブラウザ通知">
               <NotifPreview race={race} />
             </Panel>
           ) : (

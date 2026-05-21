@@ -17,12 +17,14 @@ npm run dev
 ## データ取り込み
 
 ```sh
+npm run db:init
 npm run fetch:kyotei24
 npm run import:kyotei24 -- YYYY-MM-DD
-npm run db:init
+npm run import:official -- /path/to/program.csv
 ```
 
 取得はキャッシュ前提です。`fetch:kyotei24` は同じ日のraw HTMLが新しければ再取得しません。
+公式番組表はローカルCSV/TSVから取り込みます。外部サイトへの自動巡回は行いません。
 
 ## Phase 1 MVP
 
@@ -42,6 +44,7 @@ npm run db:init
 - 全会場全レースの毎分取得なし
 - オッズ全パターンの連打取得なし
 - BUY候補なしの日を成功扱い
+- Discord連携なし。通知はブラウザ通知ログを使う
 
 
 ## 現在できること
@@ -52,3 +55,7 @@ npm run db:init
 - 手動オッズ入力をSQLiteへ保存し、判定に反映
 - ブラウザ通知はボタン操作時のみ送信
 - 設定画面で予算・目標EV・サンプル数条件を保存
+- 日付指定で保存済みrawを再取り込み
+- 公式番組表CSV/TSVをローカル取り込みし、履歴モデル候補を作成
+- 実際に買った/買っていない履歴を手動記録
+- EV別・会場別・過大評価候補をバックテスト表示

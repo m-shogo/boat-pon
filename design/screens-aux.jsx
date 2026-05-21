@@ -256,7 +256,7 @@ function ScreenNotif({ mode }) {
         </div>
 
         <div className="col-5 stack">
-          <Panel title="プレビュー" code="NOTIF.PREV" meta="Discord">
+          <Panel title="プレビュー" code="NOTIF.PREV" meta="ブラウザ通知">
             {todayBuys.length > 0 ? (
               <NotifPreview race={todayBuys[0]} />
             ) : (
@@ -276,7 +276,7 @@ function ScreenNotif({ mode }) {
               <div className="row" style={{ justifyContent: "space-between" }}>
                 <span className="row" style={{ gap: 6 }}>
                   <span style={{ color: "var(--buy)" }}>●</span>
-                  Discord Webhook
+                  ブラウザ通知
                 </span>
                 <span className="dim" style={{ fontSize: 10, fontFamily: "var(--mono)" }}>
                   …/api/webhooks/****

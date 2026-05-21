@@ -6,29 +6,36 @@ import type { CheerioAPI } from "cheerio";
 import type { RaceResult } from "../src/domain/types";
 import { insertResult, openDb } from "../server/db";
 
-const date = process.argv[2] ?? new Date().toISOString().slice(0, 10);
-const rawPath = path.join("data", "raw", "kyotei24", "results", `${date}.html`);
-const normalizedDir = path.join("data", "normalized", "results");
-const normalizedPath = path.join(normalizedDir, `${date}.json`);
+export async function parseSavedKyotei24(date: string) {
+  const rawPath = path.join("data", "raw", "kyotei24", "results", `${date}.html`);
+  const normalizedDir = path.join("data", "normalized", "results");
+  const normalizedPath = path.join(normalizedDir, `${date}.json`);
 
-if (!existsSync(rawPath)) {
-  throw new Error(`raw file not found: ${rawPath}. Run npm run fetch:kyotei24 first.`);
+  if (!existsSync(rawPath)) {
+    throw new Error(`raw file not found: ${rawPath}. Run npm run fetch:kyotei24 first.`);
+  }
+
+  const html = await readFile(rawPath, "utf8");
+  const fetchedAt = new Date().toISOString();
+  const results = parseKyotei24Results(html, date, fetchedAt);
+
+  await mkdir(normalizedDir, { recursive: true });
+  await writeFile(normalizedPath, JSON.stringify({ source: "kyotei24", date, fetchedAt, results }, null, 2), "utf8");
+
+  const db = openDb();
+  for (const result of results) {
+    insertResult(db, result);
+  }
+  db.close();
+
+  return { normalizedPath, count: results.length };
 }
 
-const html = await readFile(rawPath, "utf8");
-const fetchedAt = new Date().toISOString();
-const results = parseKyotei24Results(html, date, fetchedAt);
-
-await mkdir(normalizedDir, { recursive: true });
-await writeFile(normalizedPath, JSON.stringify({ source: "kyotei24", date, fetchedAt, results }, null, 2), "utf8");
-
-const db = openDb();
-for (const result of results) {
-  insertResult(db, result);
+if (process.argv[1]?.endsWith("import-kyotei24.ts")) {
+  const date = process.argv[2] ?? new Date().toISOString().slice(0, 10);
+  const result = await parseSavedKyotei24(date);
+  console.log(`normalized ${result.count} results: ${result.normalizedPath}`);
 }
-db.close();
-
-console.log(`normalized ${results.length} results: ${normalizedPath}`);
 
 export function parseKyotei24Results(html: string, date: string, fetchedAt: string): RaceResult[] {
   const $ = cheerio.load(html);

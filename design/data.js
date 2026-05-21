@@ -303,19 +303,19 @@ const VENUE_ROI = [
 
 // === Notification log ============
 const NOTIFS = [
-  { id: "n7", at: "今 (15:35)",   venue: "蒲郡", r: 8,  ev: 1.378, status: "sent",   target: "Discord" },
-  { id: "n6", at: "今 (15:34)",   venue: "丸亀", r: 11, ev: 1.335, status: "sent",   target: "Discord" },
-  { id: "n5", at: "昨日 17:42",   venue: "蒲郡", r: 11, ev: 1.420, status: "sent",   target: "Discord", result: "HIT" },
-  { id: "n4", at: "昨日 14:18",   venue: "丸亀", r: 7,  ev: 1.330, status: "sent",   target: "Discord", result: "MISS" },
-  { id: "n3", at: "05/18 16:02", venue: "戸田", r: 11, ev: 1.310, status: "sent",   target: "Discord", result: "HIT" },
-  { id: "n2", at: "05/18 13:24", venue: "桐生", r: 6,  ev: 1.270, status: "sent",   target: "Discord", result: "MISS" },
-  { id: "n1", at: "05/15 19:08", venue: "鳴門", r: 8,  ev: 1.260, status: "sent",   target: "Discord", result: "HIT" },
+  { id: "n7", at: "今 (15:35)",   venue: "蒲郡", r: 8,  ev: 1.378, status: "sent",   target: "ブラウザ通知" },
+  { id: "n6", at: "今 (15:34)",   venue: "丸亀", r: 11, ev: 1.335, status: "sent",   target: "ブラウザ通知" },
+  { id: "n5", at: "昨日 17:42",   venue: "蒲郡", r: 11, ev: 1.420, status: "sent",   target: "ブラウザ通知", result: "HIT" },
+  { id: "n4", at: "昨日 14:18",   venue: "丸亀", r: 7,  ev: 1.330, status: "sent",   target: "ブラウザ通知", result: "MISS" },
+  { id: "n3", at: "05/18 16:02", venue: "戸田", r: 11, ev: 1.310, status: "sent",   target: "ブラウザ通知", result: "HIT" },
+  { id: "n2", at: "05/18 13:24", venue: "桐生", r: 6,  ev: 1.270, status: "sent",   target: "ブラウザ通知", result: "MISS" },
+  { id: "n1", at: "05/15 19:08", venue: "鳴門", r: 8,  ev: 1.260, status: "sent",   target: "ブラウザ通知", result: "HIT" },
 ];
 
 // === Activity log (system) ============
 const ACTIVITY = [
-  { t: "15:35:14", lvl: "info", msg: "BUY通知送信 蒲郡8R EV=1.378 → Discord" },
-  { t: "15:34:02", lvl: "info", msg: "BUY通知送信 丸亀11R EV=1.335 → Discord" },
+  { t: "15:35:14", lvl: "info", msg: "BUY通知送信 蒲郡8R EV=1.378 → ブラウザ通知" },
+  { t: "15:34:02", lvl: "info", msg: "BUY通知送信 丸亀11R EV=1.335 → ブラウザ通知" },
   { t: "15:30:11", lvl: "info", msg: "kyotei24 オッズ取得 (5レース, 1.2s)" },
   { t: "15:25:00", lvl: "info", msg: "候補レース絞込 18→6件 (条件適合)" },
   { t: "15:20:00", lvl: "warn", msg: "下関5R 締切5分以内 SKIP" },

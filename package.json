@@ -12,7 +12,8 @@
     "db:init": "tsx scripts/init-db.ts",
     "test": "node --test --import tsx src/domain/*.test.ts",
     "dev:web": "vite",
-    "dev:api": "tsx watch server/index.ts"
+    "dev:api": "tsx watch server/index.ts",
+    "import:official": "tsx scripts/import-official-file.ts"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",

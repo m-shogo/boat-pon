@@ -1,4 +1,5 @@
 import type { DecisionStatus } from "./types";
+import type { OvervaluationRow } from "./analysis";
 
 export type DecisionHistoryRow = {
   id: number;
@@ -48,6 +49,7 @@ export type BacktestSummary = {
     modelPayoutYen: number;
     modelRoi: number;
   }>;
+  overvaluation: OvervaluationRow[];
   byVenue: Array<{
     venue: string;
     count: number;
@@ -89,6 +91,7 @@ export function summarizeHistory(rows: DecisionHistoryRow[]): BacktestSummary {
     hitRate: rows.length ? hits / rows.length : 0,
     roi: totalStakeYen ? totalPayoutYen / totalStakeYen : 0,
     byDecision: [],
+    overvaluation: [],
     byVenue: [],
   };
 

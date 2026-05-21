@@ -1,6 +1,15 @@
 import { Activity, Bell, CheckCircle2, Database, ExternalLink, History, Settings, ShieldCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { getDashboard, sendBrowserNotification, updateManualOdds, updateSettings, type DashboardResponse } from "./api";
+import {
+  getDashboard,
+  importOfficialRows,
+  reparseKyotei24,
+  sendBrowserNotification,
+  updateManualOdds,
+  updatePurchaseRecord,
+  updateSettings,
+  type DashboardResponse,
+} from "./api";
 import type { BudgetRule } from "./domain/types";
 import "./styles.css";
 
@@ -9,6 +18,7 @@ type Screen = "dashboard" | "results" | "history" | "settings";
 export default function App() {
   const [screen, setScreen] = useState<Screen>("dashboard");
   const [data, setData] = useState<DashboardResponse | null>(null);
+  const [date, setDate] = useState("2026-05-21");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -23,7 +33,7 @@ export default function App() {
   async function refresh() {
     setLoading(true);
     try {
-      setData(await getDashboard());
+      setData(await getDashboard(date));
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "unknown error");
@@ -34,7 +44,7 @@ export default function App() {
 
   useEffect(() => {
     void refresh();
-  }, []);
+  }, [date]);
 
   const buyRows = data?.rows.filter((row) => row.decision.status === "BUY") ?? [];
   const watchRows = data?.rows.filter((row) => row.decision.status === "WATCH") ?? [];
@@ -68,6 +78,19 @@ export default function App() {
         {loading && <div className="loading">読み込み中...</div>}
         {data && (
           <>
+            <div className="toolbar">
+              <label>
+                <span>対象日</span>
+                <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+              </label>
+              <button onClick={async () => {
+                await reparseKyotei24(date);
+                await refresh();
+              }}>
+                保存済みrawを再取り込み
+              </button>
+            </div>
+
             <header className="hero">
               <div>
                 <p className="eyebrow">LOCAL-FIRST / LOW-FREQUENCY FETCH / NO AUTO BETTING</p>
@@ -89,8 +112,9 @@ export default function App() {
             </section>
 
             {screen === "dashboard" && <Dashboard data={data} onNotify={refresh} onBrowserNotify={notifyUser} />}
+            {screen === "dashboard" && <OfficialImport onImported={refresh} date={date} />}
             {screen === "results" && <Results data={data} />}
-            {screen === "history" && <Backtest data={data} />}
+            {screen === "history" && <Backtest data={data} onSaved={refresh} />}
             {screen === "settings" && <SettingsScreen settings={data.settings} onSaved={refresh} />}
           </>
         )}
@@ -225,6 +249,46 @@ function ManualOddsInput({
   );
 }
 
+function OfficialImport({ date, onImported }: { date: string; onImported: () => Promise<void> }) {
+  const [text, setText] = useState("");
+  return (
+    <section className="section">
+      <div className="sectionHead">
+        <div>
+          <h3>公式DL ローカル取り込み</h3>
+          <p>CSV/TSVを貼り付けて番組表を保存。列名は date, venue, raceNo, closeAt を推奨。</p>
+        </div>
+      </div>
+      <textarea
+        className="importBox"
+        value={text}
+        placeholder={"date,venue,raceNo,closeAt\\n" + date + ",蒲郡,8,18:42"}
+        onChange={(event) => setText(event.target.value)}
+      />
+      <button className="saveButton" onClick={async () => {
+        const rows = parsePastedRows(text, date);
+        await importOfficialRows(rows, "manual-paste");
+        setText("");
+        await onImported();
+      }}>
+        公式DLデータを取り込む
+      </button>
+    </section>
+  );
+}
+
+function parsePastedRows(text: string, fallbackDate: string) {
+  const lines = text.split(/\r?\n/).filter((line) => line.trim());
+  if (lines.length < 2) return [];
+  const delimiter = lines[0].includes("\t") ? "\t" : ",";
+  const headers = lines[0].split(delimiter).map((header) => header.trim());
+  return lines.slice(1).map((line) => {
+    const values = line.split(delimiter).map((value) => value.trim());
+    const row = Object.fromEntries(headers.map((header, index) => [header, values[index] ?? ""]));
+    return { date: row.date || fallbackDate, venue: row.venue, raceNo: row.raceNo, closeAt: row.closeAt || "12:00" };
+  });
+}
+
 function Results({ data }: { data: DashboardResponse }) {
   return (
     <section className="section">
@@ -239,7 +303,7 @@ function Results({ data }: { data: DashboardResponse }) {
   );
 }
 
-function Backtest({ data }: { data: DashboardResponse }) {
+function Backtest({ data, onSaved }: { data: DashboardResponse; onSaved: () => Promise<void> }) {
   return (
     <section className="section">
       <div className="sectionHead">
@@ -276,6 +340,75 @@ function Backtest({ data }: { data: DashboardResponse }) {
                 <td>{row.modelStakeYen.toLocaleString()}円</td>
                 <td>{row.modelPayoutYen.toLocaleString()}円</td>
                 <td>{row.modelStakeYen ? `${(row.modelRoi * 100).toFixed(1)}%` : "-"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="sectionSub">
+        <h3>過大評価分析</h3>
+        <p>BUY判定なのに外れた条件を集計します。</p>
+      </div>
+      <div className="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>会場</th>
+              <th>買い目</th>
+              <th>件数</th>
+              <th>外れ</th>
+              <th>平均EV</th>
+              <th>メモ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.backtest.overvaluation.map((row) => (
+              <tr key={row.venue + row.selection}>
+                <td>{row.venue}</td>
+                <td>{row.selection}</td>
+                <td>{row.count}</td>
+                <td>{row.misses}</td>
+                <td>{row.avgEv.toFixed(2)}</td>
+                <td>{row.note}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="sectionSub">
+        <h3>購入記録</h3>
+        <p>実際に買ったかどうかだけ手動で残します。購入処理はしません。</p>
+      </div>
+      <div className="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>日付</th>
+              <th>会場</th>
+              <th>R</th>
+              <th>買い目</th>
+              <th>判定</th>
+              <th>記録</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.history.map((row) => (
+              <tr key={row.id}>
+                <td>{row.date}</td>
+                <td>{row.venue}</td>
+                <td>{row.raceNo}R</td>
+                <td>{row.selection}</td>
+                <td>{row.decision}</td>
+                <td>
+                  <button className="miniButton" onClick={async () => {
+                    await updatePurchaseRecord(row.id, !row.actuallyBought, row.recommendedStakeYen || 100);
+                    await onSaved();
+                  }}>
+                    {row.actuallyBought ? `購入済み ${row.stakeYen}円` : "未購入"}
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
