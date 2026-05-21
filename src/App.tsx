@@ -18,7 +18,9 @@ type Screen = "dashboard" | "results" | "history" | "settings";
 export default function App() {
   const [screen, setScreen] = useState<Screen>("dashboard");
   const [data, setData] = useState<DashboardResponse | null>(null);
-  const [date, setDate] = useState("2026-05-21");
+  const [date, setDate] = useState(() =>
+    new Intl.DateTimeFormat("sv", { timeZone: "Asia/Tokyo" }).format(new Date()),
+  );
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 

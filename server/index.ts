@@ -35,7 +35,7 @@ app.get("/api/dashboard", (req, res) => {
     const date = typeof req.query.date === "string" ? req.query.date : undefined;
     const rows = buildCandidateRows(
       settings,
-      new Date("2026-05-21T15:00:00+09:00"),
+      new Date(),
       getManualOdds(db),
       listProgramInputs(db, date).map((row) => ({
         date: row.date,
@@ -51,7 +51,7 @@ app.get("/api/dashboard", (req, res) => {
     }
 
     const buyRows = rows.filter((row) => row.decision.status === "BUY");
-    const history = listDecisionHistory(db) as any;
+    const history = listDecisionHistory(db);
     res.json({
       settings,
       headline: buyRows.length ? "BUY候補あり" : "全レース見送り",
@@ -83,7 +83,7 @@ app.get("/api/results", (req, res) => {
 app.get("/api/history", (_req, res) => {
   const db = openDb();
   try {
-    const history = listDecisionHistory(db) as any;
+    const history = listDecisionHistory(db);
     res.json({ rows: history, summary: summarizeHistory(history) });
   } finally {
     db.close();

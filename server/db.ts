@@ -1,7 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { DEFAULT_RULE } from "../src/domain/decision";
-import type { BetCandidate, BudgetRule, Decision, RaceResult } from "../src/domain/types";
+import type { BetCandidate, BudgetRule, Decision, DecisionStatus, RaceResult } from "../src/domain/types";
 import { sampleResults } from "../src/sampleData";
 
 export function openDb() {
@@ -270,7 +270,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   );
 }
 
-export function listDecisionHistory(db: DatabaseSync) {
+export function listDecisionHistory(db: DatabaseSync): import("../src/domain/backtest").DecisionHistoryRow[] {
   const rows = db.prepare(`
 SELECT id, race_id, date, venue, race_no, selection, estimated_hit_rate, required_odds, current_odds,
        ev, decision, actually_bought, stake_yen, result, payout_yen, popularity, returned,
@@ -291,7 +291,7 @@ LIMIT 500
     requiredOdds: Number(row.required_odds),
     currentOdds: row.current_odds == null ? null : Number(row.current_odds),
     ev: row.ev == null ? null : Number(row.ev),
-    decision: String(row.decision),
+    decision: String(row.decision) as DecisionStatus,
     actuallyBought: Boolean(row.actually_bought),
     stakeYen: Number(row.stake_yen),
     recommendedStakeYen: Number(row.recommended_stake_yen ?? 0),
@@ -326,12 +326,13 @@ VALUES (?, ?, ?, ?, ?, ?)
 }
 
 export function listNotifications(db: DatabaseSync) {
-  return db.prepare(`
+  const rows = db.prepare(`
 SELECT id, race_id, channel, status, title, body, official_url, created_at, sent_at
 FROM notification_log
 ORDER BY created_at DESC, id DESC
 LIMIT 50
-`).all().map((row: any) => ({
+`).all() as Array<Record<string, unknown>>;
+  return rows.map((row) => ({
     id: Number(row.id),
     raceId: String(row.race_id),
     channel: row.channel,
