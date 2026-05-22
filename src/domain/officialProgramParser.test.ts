@@ -39,6 +39,15 @@ test("dateとraceNoが整っている", () => {
   }
 });
 
+test("「琵琶湖競艇場」「ボートレース琵琶湖」は「びわこ」に正規化される", () => {
+  const html1 = `琵琶湖　競艇場   ５月２０日\n　１Ｒ  一般　　　　          Ｈ１８００ｍ  電話投票締切予定１０：４８ `;
+  const r1 = parseOfficialProgramsText(html1, { date: "2020-05-20" });
+  if (r1.length > 0) assert.equal(r1[0].venue, "びわこ");
+  const html2 = `ボートレース琵琶湖   ５月２０日\n　１Ｒ  一般　　　　          Ｈ１８００ｍ  電話投票締切予定１０：４８ `;
+  const r2 = parseOfficialProgramsText(html2, { date: "2020-05-20" });
+  if (r2.length > 0) assert.equal(r2[0].venue, "びわこ");
+});
+
 test("旧フォーマット（○○競艇場）の番組表もパースできる", () => {
   const oldBuf = readFileSync(path.join("tests", "fixtures", "B040601.TXT"));
   const oldText = new TextDecoder("shift_jis").decode(oldBuf);

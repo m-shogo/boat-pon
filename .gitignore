@@ -8,3 +8,6 @@ data/*.sqlite
 data/*.sqlite-shm
 data/*.sqlite-wal
 tsconfig.tsbuildinfo
+data/*.bak*
+data/boat.sqlite.bak*
+data/fetch-report.txt

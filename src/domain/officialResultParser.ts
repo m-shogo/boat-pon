@@ -1,5 +1,14 @@
 import type { RaceResult } from "./types";
 
+// 公式の旧表記→新表記マップ。「琵琶湖」(〜2020年頃) は「びわこ」に正規化する。
+const VENUE_ALIASES: Record<string, string> = {
+  琵琶湖: "びわこ",
+};
+
+function normalizeVenue(venue: string): string {
+  return VENUE_ALIASES[venue] ?? venue;
+}
+
 export function parseOfficialResultsText(
   text: string,
   defaults: { date: string; fetchedAt: string },
@@ -17,7 +26,8 @@ export function parseOfficialResultsText(
 
     const venueMatch = line.match(/^(.+?)［成績］/);
     if (venueMatch) {
-      venue = venueMatch[1].replace(/[\s　]/g, "");
+      const raw = venueMatch[1].replace(/[\s　]/g, "");
+      venue = normalizeVenue(raw);
       continue;
     }
 

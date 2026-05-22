@@ -109,6 +109,35 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
   } catch {
     // Existing databases already have this column.
   }
+
+  // 検索性能向上のためのINDEX（冪等）
+  db.exec(`
+CREATE INDEX IF NOT EXISTS idx_race_results_date ON race_results (date);
+CREATE INDEX IF NOT EXISTS idx_race_results_venue ON race_results (venue);
+CREATE INDEX IF NOT EXISTS idx_race_results_venue_date ON race_results (venue, date);
+CREATE INDEX IF NOT EXISTS idx_official_programs_date ON official_programs (date);
+CREATE INDEX IF NOT EXISTS idx_official_programs_venue ON official_programs (venue);
+CREATE INDEX IF NOT EXISTS idx_decision_history_date ON decision_history (date);
+CREATE INDEX IF NOT EXISTS idx_decision_history_venue ON decision_history (venue);
+CREATE INDEX IF NOT EXISTS idx_decision_history_decision ON decision_history (decision);
+`);
+
+  // venue表記揺れの正規化（旧「琵琶湖」→新「びわこ」）。冪等。race_idも更新する。
+  try {
+    db.exec(`
+UPDATE race_results
+SET venue='びわこ', race_id=REPLACE(race_id, '-琵琶湖-', '-びわこ-')
+WHERE venue='琵琶湖';
+UPDATE decision_history
+SET venue='びわこ', race_id=REPLACE(race_id, '-琵琶湖-', '-びわこ-')
+WHERE venue='琵琶湖';
+UPDATE official_programs
+SET venue='びわこ', race_id=REPLACE(race_id, '-琵琶湖-', '-びわこ-')
+WHERE venue='琵琶湖';
+`);
+  } catch {
+    // UNIQUE衝突時は手動で要対処（ここでは握りつぶす）。
+  }
 }
 
 export function getSettings(db: DatabaseSync): BudgetRule {
