@@ -13,6 +13,7 @@ const TMP_DIR = path.join("data", "tmp", "programs");
 const SLEEP_MS = 1500;
 const MAX_RANGE_DAYS = 10000;
 const DL_ONLY = process.env.BOAT_PON_DL_ONLY === "1";
+const SKIP_EXISTING = process.env.BOAT_PON_SKIP_EXISTING === "1";
 
 async function main() {
   const [fromArg, toArg] = process.argv.slice(2);
@@ -36,11 +37,26 @@ async function main() {
   const db = openDb();
   let totalRows = 0;
   let skippedDays = 0;
+  let alreadyHaveDays = 0;
   let failedDays = 0;
+
+  // SKIP_EXISTING: SQLiteに既に取り込み済みの日付を事前に取得
+  const existingDates = new Set<string>();
+  if (SKIP_EXISTING) {
+    const rows = db.prepare("SELECT DISTINCT date FROM official_programs").all() as Array<{ date: string }>;
+    for (const row of rows) existingDates.add(row.date);
+    console.log(`SKIP_EXISTING: ${existingDates.size}日分は既に取り込み済みのためスキップします`);
+  }
 
   try {
     for (let i = 0; i < dates.length; i += 1) {
       const date = dates[i];
+
+      if (SKIP_EXISTING && existingDates.has(date)) {
+        alreadyHaveDays += 1;
+        continue;
+      }
+
       const yymm = toYymm(date);
       const yymmdd = toYymmdd(date);
       const lzhPath = path.join(RAW_DIR, `b${yymmdd}.lzh`);
@@ -90,7 +106,7 @@ async function main() {
     db.close();
   }
 
-  console.log(`--- done: ${dates.length} days / ${totalRows} programs / cached=${skippedDays} / failed=${failedDays}`);
+  console.log(`--- done: ${dates.length} days / ${totalRows} programs / cached=${skippedDays} / already=${alreadyHaveDays} / failed=${failedDays}`);
 }
 
 async function downloadFile(url: string, dest: string) {

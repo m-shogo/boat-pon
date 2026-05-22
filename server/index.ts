@@ -10,6 +10,7 @@ import { runWalkForwardBacktest, summarizeWalkForward } from "../src/domain/walk
 import {
   createNotificationIfNeeded,
   deletePushSubscription,
+  getDataCoverage,
   getManualOdds,
   insertOfficialProgram,
   listAllResultsForModel,
@@ -98,6 +99,15 @@ app.use(express.json());
 
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true });
+});
+
+app.get("/api/coverage", (_req, res) => {
+  const db = openDb();
+  try {
+    res.json(getDataCoverage(db));
+  } finally {
+    db.close();
+  }
 });
 
 app.get("/api/dashboard", (req, res) => {

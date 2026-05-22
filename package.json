@@ -16,6 +16,8 @@
     "import:official": "tsx scripts/import-official-file.ts",
     "fetch:official-results": "tsx scripts/fetch-official-results.ts",
     "fetch:official-programs": "tsx scripts/fetch-official-programs.ts",
+    "list:pending": "tsx scripts/list-pending-dates.ts",
+    "fetch:pending": "tsx scripts/fetch-pending-parallel.ts",
     "generate:vapid": "tsx scripts/generate-vapid-keys.ts"
   },
   "dependencies": {

@@ -7,6 +7,10 @@ import { sampleResults } from "../src/sampleData";
 export function openDb() {
   mkdirSync("data", { recursive: true });
   const db = new DatabaseSync("data/boat.sqlite");
+  // ロック競合時に最大30秒待つ。並列書き込み時の "database is locked" を回避
+  db.exec("PRAGMA busy_timeout = 30000;");
+  db.exec("PRAGMA journal_mode = WAL;");
+  db.exec("PRAGMA synchronous = NORMAL;");
   migrate(db);
   seedIfEmpty(db);
   return db;
@@ -457,6 +461,23 @@ export function listPushSubscriptions(db: DatabaseSync): PushSubscriptionRecord[
 
 export function deletePushSubscription(db: DatabaseSync, endpoint: string) {
   db.prepare("DELETE FROM push_subscriptions WHERE endpoint = ?").run(endpoint);
+}
+
+export type DataCoverage = {
+  results: { count: number; days: number; minDate: string | null; maxDate: string | null };
+  programs: { count: number; days: number; minDate: string | null; maxDate: string | null };
+};
+
+export function getDataCoverage(db: DatabaseSync): DataCoverage {
+  const r = db.prepare(`
+    SELECT COUNT(*) AS count, COUNT(DISTINCT date) AS days, MIN(date) AS minDate, MAX(date) AS maxDate
+    FROM race_results WHERE source='official'
+  `).get() as { count: number; days: number; minDate: string | null; maxDate: string | null };
+  const p = db.prepare(`
+    SELECT COUNT(*) AS count, COUNT(DISTINCT date) AS days, MIN(date) AS minDate, MAX(date) AS maxDate
+    FROM official_programs
+  `).get() as { count: number; days: number; minDate: string | null; maxDate: string | null };
+  return { results: r, programs: p };
 }
 
 function seedIfEmpty(db: DatabaseSync) {
