@@ -9,11 +9,13 @@ import {
   sendBrowserNotification,
   subscribePush,
   testPushBroadcast,
+  runWalkForwardApi,
   updateManualOdds,
   updatePurchaseRecord,
   updateSettings,
   type DashboardResponse,
   type OddsFetchResult,
+  type WalkForwardResponse,
 } from "./api";
 import type { BudgetRule } from "./domain/types";
 import { Tooltip } from "./components/Tooltip";
@@ -62,6 +64,9 @@ export default function App() {
   const watchRows = data?.rows.filter((row) => row.decision.status === "WATCH") ?? [];
   const skipRows = data?.rows.filter((row) => row.decision.status === "SKIP") ?? [];
   const totalPlanned = buyRows.reduce((sum, row) => sum + row.decision.recommendedAmount, 0);
+  const noBetDays = data?.monthly.daysActive
+    ? Math.round((data.monthly.noBuyDays / data.monthly.daysActive) * 100)
+    : 0;
 
   return (
     <div className="shell">
@@ -131,14 +136,17 @@ export default function App() {
               <Metric label="本日の最大損失" value={`${data.settings.dailyBudgetYen.toLocaleString()}円`} />
               <Metric label="累計節約額" value={`${data.savings.savedLossYen.toLocaleString()}円`} />
               <Metric label="買わない連続日数" value={`${data.savings.consecutiveNoBuyDays}日`} />
+              <Metric label="今月の見送り率" value={`${noBetDays}%`} />
             </section>
 
             {screen === "dashboard" && <SavingsPanel data={data} />}
+            {screen === "dashboard" && <SafetyReview data={data} />}
             {screen === "dashboard" && <RoiBudgetPanel data={data} />}
             {screen === "dashboard" && <VenueHeatmap data={data} />}
             {screen === "dashboard" && <MonthlyOverview data={data} />}
             {screen === "dashboard" && <Dashboard data={data} onNotify={refresh} onBrowserNotify={notifyUser} />}
             {screen === "dashboard" && <SegmentStats data={data} />}
+            {screen === "dashboard" && <SkipReasonPanel data={data} />}
             {screen === "dashboard" && <ProgramStats data={data} />}
             {screen === "dashboard" && <OfficialImport onImported={refresh} date={date} />}
             {screen === "results" && <Results data={data} />}
@@ -173,6 +181,37 @@ function SavingsPanel({ data }: { data: DashboardResponse }) {
         <Stat label="守った購入予定額" value={`${s.protectedStakeYen.toLocaleString()}円`} />
         <Stat label="未購入BUY候補" value={`${s.unboughtBuySignals}/${s.buySignals}件`} />
         <Stat label="実購入額" value={`${s.actualStakeYen.toLocaleString()}円`} />
+      </div>
+    </section>
+  );
+}
+
+function SafetyReview({ data }: { data: DashboardResponse }) {
+  const buyRows = data.rows.filter((row) => row.decision.status === "BUY");
+  const riskyBuy = buyRows.filter((row) => row.candidate.hasRiskFlag || row.candidate.currentOdds == null);
+  const planned = buyRows.reduce((sum, row) => sum + row.decision.recommendedAmount, 0);
+  const checks = [
+    { label: "自動購入なし", ok: true, value: "外部リンクのみ" },
+    { label: "BUY候補の未確認リスク", ok: riskyBuy.length === 0, value: riskyBuy.length + "件" },
+    { label: "本日の予定額", ok: planned <= data.settings.dailyBudgetYen, value: planned.toLocaleString() + "円" },
+    { label: "BUY数上限", ok: buyRows.length <= data.settings.maxBuyCountPerDay, value: buyRows.length + " / " + data.settings.maxBuyCountPerDay },
+  ];
+  return (
+    <section className="section safetyReview">
+      <div className="sectionHead">
+        <div>
+          <h3>購入前セーフティチェック</h3>
+          <p>BUYが出ても、公式確認と予算上限を通らない限り行動しません。</p>
+        </div>
+      </div>
+      <div className="checkGrid">
+        {checks.map((item) => (
+          <div className={item.ok ? "checkItem ok" : "checkItem ng"} key={item.label}>
+            <span>{item.ok ? "OK" : "確認"}</span>
+            <strong>{item.label}</strong>
+            <em>{item.value}</em>
+          </div>
+        ))}
       </div>
     </section>
   );
@@ -414,7 +453,7 @@ function Dashboard({
           </div>
         )}
         <div className="candidateGrid">
-          {data.rows.map(({ candidate, decision, officialUrl }) => (
+          {data.rows.map(({ candidate, decision, officialUrl, explanation }) => (
             <article className={`card ${decision.status.toLowerCase()}`} key={candidate.raceId}>
               <div className="cardTop">
                 <div>
@@ -432,6 +471,17 @@ function Dashboard({
                 <Stat tip="推定の根拠となる過去データの数。Settingsのminサンプル数を超えないとSKIP扱いになります。" label="サンプル数" value={candidate.sampleSize.toLocaleString()} />
                 <Stat tip="BUY判定時に推奨する1点あたりの金額。Settingsで上限を変えられます。" label="推奨金額" value={`${decision.recommendedAmount}円`} />
               </div>
+              <div className={`decisionExplain ${explanation.tone}`}>
+                <strong>{explanation.headline}</strong>
+                <p>{explanation.detail}</p>
+                <div className="decisionChecklist">
+                  {explanation.checklist.map((item) => (
+                    <span className={item.ok ? "ok" : "ng"} key={item.label}>
+                      {item.label}: {item.value}
+                    </span>
+                  ))}
+                </div>
+              </div>
               <div className="reasons">
                 {decision.reasons.map((reason) => <span key={reason}>{reason}</span>)}
               </div>
@@ -440,6 +490,14 @@ function Dashboard({
                 defaultValue={candidate.currentOdds}
                 onSaved={onNotify}
               />
+              {decision.status === "BUY" && (
+                <div className="finalChecklist">
+                  <span>購入前: 公式オッズ確認</span>
+                  <span>締切5分以上</span>
+                  <span>欠場/返還なし</span>
+                  <span>100円のみ</span>
+                </div>
+              )}
               <div className="cardActions">
                 <button
                   className="miniButton"
@@ -598,6 +656,7 @@ function Backtest({ data, onSaved }: { data: DashboardResponse; onSaved: () => P
       </div>
       <CalendarView data={data} selectedDate={selectedDate} onSelect={setSelectedDate} />
       {selectedDate && <DayDetail date={selectedDate} rows={selectedRows} />}
+      <WalkForwardPanel date={data.date} />
       <ExportButtons />
       <div className="metrics backtestMetrics">
         <Metric label="判定数" value={data.backtest.decisions.toString()} />
@@ -742,6 +801,72 @@ function DayDetail({ date, rows }: { date: string; rows: DashboardResponse["hist
       <h3>{date} の判定</h3>
       {rows.length === 0 && <p>この日の履歴はまだありません。</p>}
       {rows.slice(0, 12).map((row) => <span key={row.id}>{row.venue} {row.raceNo}R {row.decision} {row.selection}</span>)}
+    </div>
+  );
+}
+
+function WalkForwardPanel({ date }: { date: string | null }) {
+  const [from, setFrom] = useState(date?.slice(0, 7) ? date.slice(0, 7) + "-01" : "");
+  const [to, setTo] = useState(date ?? "");
+  const [result, setResult] = useState<WalkForwardResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function run() {
+    setBusy(true);
+    setError(null);
+    try {
+      setResult(await runWalkForwardApi({ from: from || undefined, to: to || undefined }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="walkForwardPanel">
+      <div className="sectionHead">
+        <div>
+          <h3>時系列検証</h3>
+          <p>対象日より前の結果だけでモデルを作り、未来データ混入を避けて検証します。</p>
+        </div>
+      </div>
+      <div className="walkForwardControls">
+        <label><span>開始</span><input type="date" value={from} onChange={(event) => setFrom(event.target.value)} /></label>
+        <label><span>終了</span><input type="date" value={to} onChange={(event) => setTo(event.target.value)} /></label>
+        <button disabled={busy} onClick={run}>{busy ? "検証中..." : "検証する"}</button>
+      </div>
+      {error && <div className="formError">{error}</div>}
+      {result && (
+        <>
+          <div className="metrics backtestMetrics">
+            <Metric label="対象R" value={result.summary.races.toString()} />
+            <Metric label="モデル生成" value={result.summary.modeled.toString()} />
+            <Metric label="BUY" value={result.summary.buy.toString()} />
+            <Metric label="的中率" value={`${(result.summary.hitRate * 100).toFixed(1)}%`} />
+            <Metric label="検証回収率" value={result.summary.modelStakeYen ? `${(result.summary.modelRoi * 100).toFixed(1)}%` : "-"} />
+          </div>
+          <div className="tableWrap walkForwardRows">
+            <table>
+              <thead><tr><th>日付</th><th>会場</th><th>R</th><th>判定</th><th>買い目</th><th>結果</th><th>学習数</th></tr></thead>
+              <tbody>
+                {result.rows.slice(0, 20).map((row) => (
+                  <tr key={row.raceId}>
+                    <td>{row.date}</td>
+                    <td>{row.venue}</td>
+                    <td>{row.raceNo}R</td>
+                    <td>{row.decision}</td>
+                    <td>{row.selection ?? "-"}</td>
+                    <td>{row.result ?? "-"}</td>
+                    <td>{row.trainResults}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -975,6 +1100,30 @@ function SegmentStats({ data }: { data: DashboardResponse }) {
       <div className="sectionHead"><div><h3>時間帯・R別ROI</h3><p>買う時間帯とレース番号の偏りを見ます。</p></div></div>
       <MiniRoiTable title="時間帯" rows={data.segmentStats.byTimeBand} />
       <MiniRoiTable title="レース番号" rows={data.segmentStats.byRaceNo} />
+    </section>
+  );
+}
+
+function SkipReasonPanel({ data }: { data: DashboardResponse }) {
+  return (
+    <section className="section compactStats">
+      <div className="sectionHead">
+        <div>
+          <h3>見送り理由ランキング</h3>
+          <p>SKIPが多い理由を分解し、改善すべき入力データを見つけます。</p>
+        </div>
+      </div>
+      <div className="miniRoiTable fullSpan">
+        <h4>SKIP理由</h4>
+        {data.skipReasons.length === 0 && <p className="miniEmpty">まだSKIP履歴がありません。</p>}
+        {data.skipReasons.slice(0, 8).map((row) => (
+          <div key={row.reason}>
+            <span>{row.reason}</span>
+            <strong>{row.count}件</strong>
+            <em>{(row.share * 100).toFixed(0)}%</em>
+          </div>
+        ))}
+      </div>
     </section>
   );
 }

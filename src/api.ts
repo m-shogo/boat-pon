@@ -3,12 +3,15 @@ import type { SavingsSummary } from "./domain/savings";
 import type { VenueHeatmapSummary } from "./domain/venueHeatmap";
 import type { RoiRow } from "./domain/segmentStats";
 import type { ProgramStatSummary } from "./domain/programStats";
+import type { DecisionExplanation, SkipReasonSummary } from "./domain/decisionExplain";
+import type { WalkForwardRow, WalkForwardSummary } from "./domain/walkForward";
 import type { BetCandidate, BudgetRule, Decision, RaceResult } from "./domain/types";
 
 export type CandidateRow = {
   candidate: BetCandidate;
   decision: Decision;
   officialUrl: string;
+  explanation: DecisionExplanation;
 };
 
 export type DashboardResponse = {
@@ -27,6 +30,7 @@ export type DashboardResponse = {
   venueHeatmap: VenueHeatmapSummary;
   segmentStats: { byTimeBand: RoiRow[]; byRaceNo: RoiRow[] };
   programStats: ProgramStatSummary;
+  skipReasons: SkipReasonSummary[];
 };
 
 export type NotificationRecord = {
@@ -139,6 +143,27 @@ export async function subscribePush(subscription: PushSubscriptionJSON): Promise
 
 export async function testPushBroadcast(): Promise<{ ok: boolean; sent?: number; failed?: number; error?: string }> {
   const res = await fetch("/api/push/test", { method: "POST" });
+  return res.json();
+}
+
+export type WalkForwardResponse = {
+  summary: WalkForwardSummary;
+  rows: WalkForwardRow[];
+};
+
+export async function runWalkForwardApi(params: {
+  from?: string;
+  to?: string;
+  minTrainRaceCount?: number;
+  alpha?: number;
+}): Promise<WalkForwardResponse> {
+  const qs = new URLSearchParams();
+  if (params.from) qs.set("from", params.from);
+  if (params.to) qs.set("to", params.to);
+  if (params.minTrainRaceCount != null) qs.set("minTrainRaceCount", String(params.minTrainRaceCount));
+  if (params.alpha != null) qs.set("alpha", String(params.alpha));
+  const res = await fetch("/api/backtest/walk-forward?" + qs.toString());
+  if (!res.ok) throw new Error(`walk-forward api failed: ${res.status}`);
   return res.json();
 }
 

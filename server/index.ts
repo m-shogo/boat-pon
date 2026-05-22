@@ -5,6 +5,8 @@ import { summarizeVenueHeatmap } from "../src/domain/venueHeatmap";
 import { summarizeByRaceNo, summarizeByTimeBand } from "../src/domain/segmentStats";
 import { summarizeProgramStats } from "../src/domain/programStats";
 import { analyzeOvervaluation } from "../src/domain/analysis";
+import { explainDecision, summarizeSkipReasons } from "../src/domain/decisionExplain";
+import { runWalkForwardBacktest, summarizeWalkForward } from "../src/domain/walkForward";
 import {
   createNotificationIfNeeded,
   deletePushSubscription,
@@ -129,6 +131,10 @@ app.get("/api/dashboard", (req, res) => {
       }
     }
 
+    const explainedRows = rows.map((row) => ({
+      ...row,
+      explanation: explainDecision(row.candidate, row.decision, settings),
+    }));
     const buyRows = rows.filter((row) => row.decision.status === "BUY");
     const history = listDecisionHistory(db);
     const rawPrograms = listOfficialProgramsRaw(db);
@@ -140,7 +146,7 @@ app.get("/api/dashboard", (req, res) => {
       headlineSub: buyRows.length
         ? "BUY条件を満たした候補のみ通知対象です。購入前に公式オッズで最終確認してください。"
         : "EV 1.25以上の候補なし。買わない日として成功扱いです。",
-      rows,
+      rows: explainedRows,
       date: date ?? null,
       results: listResults(db, date),
       notifications: listNotifications(db),
@@ -162,6 +168,7 @@ app.get("/api/dashboard", (req, res) => {
         byRaceNo: summarizeByRaceNo(history),
       },
       programStats: summarizeProgramStats(history, programByRaceId),
+      skipReasons: summarizeSkipReasons(history, settings),
     });
   } finally {
     db.close();
@@ -184,6 +191,43 @@ app.get("/api/history", (_req, res) => {
     const settings = getSettings(db);
     const history = listDecisionHistory(db);
     res.json({ rows: history, summary: summarizeHistory(history, settings.minSampleSize) });
+  } finally {
+    db.close();
+  }
+});
+
+app.get("/api/backtest/walk-forward", (req, res) => {
+  const db = openDb();
+  try {
+    const settings = getSettings(db);
+    const from = typeof req.query.from === "string" ? req.query.from : undefined;
+    const to = typeof req.query.to === "string" ? req.query.to : undefined;
+    const minTrainRaceCount = req.query.minTrainRaceCount == null
+      ? settings.minSampleSize
+      : Number(req.query.minTrainRaceCount);
+    const alpha = req.query.alpha == null ? 1 : Number(req.query.alpha);
+    if (!Number.isFinite(minTrainRaceCount) || minTrainRaceCount < 0) {
+      res.status(400).json({ error: "minTrainRaceCount must be zero or positive" });
+      return;
+    }
+    if (!Number.isFinite(alpha) || alpha < 0) {
+      res.status(400).json({ error: "alpha must be zero or positive" });
+      return;
+    }
+    const programs = listProgramInputs(db)
+      .filter((row) => (!from || row.date >= from) && (!to || row.date <= to));
+    const rows = runWalkForwardBacktest({
+      results: listAllResultsForModel(db),
+      programs,
+      settings,
+      oddsByRaceId: getManualOdds(db),
+      minTrainRaceCount,
+      alpha,
+    });
+    res.json({
+      summary: summarizeWalkForward(rows, settings.stakePerBetYen),
+      rows: rows.slice(-300).reverse(),
+    });
   } finally {
     db.close();
   }

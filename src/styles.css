@@ -942,3 +942,144 @@ tr:last-child td { border-bottom: 0; }
   color: #b9d7ce;
   font-size: 12px;
 }
+
+
+.safetyReview {
+  border: 1px solid rgba(154, 246, 213, 0.12);
+  border-radius: 8px;
+  background: rgba(13, 32, 28, 0.62);
+  padding: 18px;
+}
+.checkGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.checkItem {
+  min-height: 92px;
+  border: 1px solid rgba(154, 246, 213, 0.12);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.035);
+}
+.checkItem span {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 3px 7px;
+  font-size: 11px;
+  font-weight: 900;
+}
+.checkItem.ok span { background: rgba(124, 225, 195, 0.16); color: #7ce1c3; }
+.checkItem.ng span { background: rgba(242, 181, 74, 0.18); color: #f2b54a; }
+.checkItem strong,
+.checkItem em {
+  display: block;
+}
+.checkItem strong {
+  margin-top: 9px;
+}
+.checkItem em {
+  margin-top: 3px;
+  color: #86a69c;
+  font-size: 12px;
+  font-style: normal;
+}
+.decisionExplain {
+  border-radius: 8px;
+  padding: 12px;
+  margin: 12px 0 0;
+  background: rgba(255, 255, 255, 0.035);
+}
+.decisionExplain.buy { border: 1px solid rgba(124, 225, 195, 0.28); }
+.decisionExplain.watch { border: 1px solid rgba(242, 181, 74, 0.24); }
+.decisionExplain.skip { border: 1px solid rgba(139, 152, 164, 0.2); }
+.decisionExplain strong {
+  display: block;
+  font-size: 14px;
+}
+.decisionExplain p {
+  margin: 6px 0 0;
+  color: #b7d0c8;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.decisionChecklist,
+.finalChecklist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.decisionChecklist span,
+.finalChecklist span {
+  border-radius: 999px;
+  padding: 5px 8px;
+  font-size: 11px;
+}
+.decisionChecklist .ok,
+.finalChecklist span {
+  background: rgba(124, 225, 195, 0.12);
+  color: #9af6d5;
+}
+.decisionChecklist .ng {
+  background: rgba(255, 138, 138, 0.12);
+  color: #ffb4b4;
+}
+.finalChecklist {
+  margin: 14px 0 4px;
+}
+.walkForwardPanel {
+  border: 1px solid rgba(154, 246, 213, 0.12);
+  border-radius: 8px;
+  background: rgba(13, 32, 28, 0.62);
+  padding: 14px;
+  margin-bottom: 14px;
+}
+.walkForwardControls {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.walkForwardControls label {
+  display: grid;
+  gap: 5px;
+  color: #86a69c;
+  font-size: 12px;
+}
+.walkForwardControls input {
+  min-height: 38px;
+  border: 1px solid rgba(154, 246, 213, 0.16);
+  border-radius: 8px;
+  background: #071311;
+  color: #ecfff8;
+  padding: 0 10px;
+}
+.walkForwardControls button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(154, 246, 213, 0.13);
+  color: #9af6d5;
+  padding: 0 12px;
+  font-weight: 800;
+}
+.walkForwardRows {
+  margin-top: 12px;
+}
+.fullSpan {
+  grid-column: 1 / -1;
+}
+.miniEmpty {
+  margin: 0;
+  color: #86a69c;
+  font-size: 13px;
+}
+
+@media (max-width: 980px) {
+  .checkGrid { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 640px) {
+  .checkGrid { grid-template-columns: 1fr; }
+}
