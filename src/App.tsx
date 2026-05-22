@@ -121,7 +121,7 @@ export default function App() {
               <Metric label="本日の最大損失" value={`${data.settings.dailyBudgetYen.toLocaleString()}円`} />\n              <Metric label="累計節約額" value={`${data.savings.savedLossYen.toLocaleString()}円`} />\n              <Metric label="買わない連続日数" value={`${data.savings.consecutiveNoBuyDays}日`} />
             </section>
 
-            {screen === "dashboard" && <SavingsPanel data={data} />}\n            {screen === "dashboard" && <MonthlyOverview data={data} />}
+            {screen === "dashboard" && <SavingsPanel data={data} />}\n            {screen === "dashboard" && <RoiBudgetPanel data={data} />}\n            {screen === "dashboard" && <MonthlyOverview data={data} />}
             {screen === "dashboard" && <Dashboard data={data} onNotify={refresh} onBrowserNotify={notifyUser} />}
             {screen === "dashboard" && <OfficialImport onImported={refresh} date={date} />}
             {screen === "results" && <Results data={data} />}
@@ -154,6 +154,76 @@ function SavingsPanel({ data }: { data: DashboardResponse }) {
         <Stat label="実購入額" value={`${s.actualStakeYen.toLocaleString()}円`} />
       </div>
     </section>
+  );
+}
+
+function RoiBudgetPanel({ data }: { data: DashboardResponse }) {
+  const month = data.monthly;
+  const spent = month.modelStakeYen;
+  const budget = data.settings.dailyBudgetYen * Math.max(month.daysActive, 1);
+  const progress = budget ? Math.min(1.2, spent / budget) : 0;
+  const progressClass = progress >= 1 ? "danger" : progress >= 0.9 ? "warn" : "ok";
+  return (
+    <section className="section roiBudgetPanel">
+      <div className="sectionHead">
+        <div>
+          <h3>累積ROIと月予算</h3>
+          <p>検証上の購入予定額で月予算の消化を確認します。</p>
+        </div>
+      </div>
+      <RoiLineChart rows={data.monthlyTrend} />
+      <div className="budgetProgress">
+        <div>
+          <span>今月の検証投資</span>
+          <strong>{spent.toLocaleString()}円 / {budget.toLocaleString()}円</strong>
+        </div>
+        <div className="progressTrack">
+          <div className={`progressFill ${progressClass}`} style={{ width: `${Math.min(progress * 100, 100)}%` }} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function RoiLineChart({ rows }: { rows: DashboardResponse["monthlyTrend"] }) {
+  const points = rows.map((row, index) => {
+    const cumulativeStake = rows.slice(0, index + 1).reduce((sum, r) => sum + r.modelStakeYen, 0);
+    const cumulativePayout = rows.slice(0, index + 1).reduce((sum, r) => sum + r.modelPayoutYen, 0);
+    return {
+      label: row.ym,
+      roi: cumulativeStake ? cumulativePayout / cumulativeStake : 0,
+    };
+  });
+  if (points.length === 0) return <div className="empty">ROI推移はまだありません</div>;
+  const width = 720;
+  const height = 180;
+  const min = Math.min(0, ...points.map((p) => p.roi));
+  const max = Math.max(1, ...points.map((p) => p.roi));
+  const spread = max - min || 1;
+  const coords = points.map((point, index) => {
+    const x = points.length === 1 ? width / 2 : (index / (points.length - 1)) * width;
+    const y = height - ((point.roi - min) / spread) * height;
+    return { ...point, x, y };
+  });
+  const path = coords.map((p, index) => `${index === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+  const baselineY = height - ((1 - min) / spread) * height;
+  return (
+    <div className="roiChartWrap">
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="累積ROI推移">
+        <line x1="0" x2={width} y1={baselineY} y2={baselineY} className="roiBaseline" />
+        <path d={path} className="roiPath" />
+        {coords.map((p) => (
+          <g key={p.label}>
+            <circle cx={p.x} cy={p.y} r="4" className="roiDot" />
+            <text x={p.x} y={height - 4} textAnchor="middle">{p.label.slice(5)}</text>
+          </g>
+        ))}
+      </svg>
+      <div className="roiChartLegend">
+        <span>累積ROI</span>
+        <strong>{(points.at(-1)!.roi * 100).toFixed(1)}%</strong>
+      </div>
+    </div>
   );
 }
 
