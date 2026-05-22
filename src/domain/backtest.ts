@@ -86,6 +86,11 @@ export type MonthlySummary = {
   noBuyDays: number;
 };
 
+export type PeriodSplit = {
+  train: DecisionHistoryRow[];
+  test: DecisionHistoryRow[];
+};
+
 export function summarizeMonth(rows: DecisionHistoryRow[], ym: string, minSampleSize = 0): MonthlySummary {
   const monthRows = rows.filter((row) => row.date.startsWith(ym) && row.sampleSize >= minSampleSize);
   const buyRows = monthRows.filter((row) => row.decision === "BUY");
@@ -116,6 +121,32 @@ export function summarizeMonth(rows: DecisionHistoryRow[], ym: string, minSample
     modelRoi: modelStakeYen ? modelPayoutYen / modelStakeYen : 0,
     daysActive,
     noBuyDays,
+  };
+}
+
+export function summarizeByMonth(rows: DecisionHistoryRow[], minSampleSize = 0): MonthlySummary[] {
+  const months = [...new Set(rows.map((row) => row.date.slice(0, 7)).filter(Boolean))].sort();
+  return months.map((ym) => summarizeMonth(rows, ym, minSampleSize));
+}
+
+export function splitTrainTestByDate(
+  rows: DecisionHistoryRow[],
+  boundaryDate: string,
+  mode: "exclusive" | "inclusive" = "exclusive",
+): PeriodSplit {
+  return {
+    train: rows.filter((row) => mode === "inclusive" ? row.date <= boundaryDate : row.date < boundaryDate),
+    test: rows.filter((row) => mode === "inclusive" ? row.date > boundaryDate : row.date >= boundaryDate),
+  };
+}
+
+export function splitTrainTestByRatio(rows: DecisionHistoryRow[], trainRatio = 0.7): PeriodSplit {
+  const sorted = [...rows].sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
+  const safeRatio = Math.min(1, Math.max(0, trainRatio));
+  const index = Math.floor(sorted.length * safeRatio);
+  return {
+    train: sorted.slice(0, index),
+    test: sorted.slice(index),
   };
 }
 
