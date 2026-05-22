@@ -49,6 +49,25 @@ test("公式風テーブル構造（1着セクション・2着列・3着行）�
   assert.equal(parseTrifectaOdds(html, [1, 3, 2]), 9.1);
 });
 
+test("公式HTML風の分割列から3連単オッズを抽出する", () => {
+  const html = `
+    <table class="is-payout3">
+      <tbody>
+        <tr><td>1</td><td>3</td><td>4</td><td>16.2</td><td>人気</td></tr>
+        <tr><td>1</td><td>4</td><td>3</td><td>21.5倍</td><td>人気</td></tr>
+      </tbody>
+    </table>
+  `;
+  assert.equal(parseTrifectaOdds(html, [1, 3, 4]), 16.2);
+  assert.equal(parseTrifectaOdds(html, [1, 4, 3]), 21.5);
+});
+
+test("矢印や全角ハイフンの買い目表記も抽出する", () => {
+  const html = `<div>1→3→4 16.2  2－1－3 42.5倍</div>`;
+  assert.equal(parseTrifectaOdds(html, [1, 3, 4]), 16.2);
+  assert.equal(parseTrifectaOdds(html, [2, 1, 3]), 42.5);
+});
+
 test("selectionが3要素でない場合はnull", () => {
   const html = `<table><tr><td>1-2</td><td>3.0</td></tr></table>`;
   assert.equal(parseTrifectaOdds(html, [1, 2]), null);

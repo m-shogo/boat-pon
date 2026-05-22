@@ -19,6 +19,16 @@ test("芦屋1Rの締切時刻が抽出できる", () => {
   const ashiya1 = rows.find((row) => row.venue === "芦屋" && row.raceNo === 1);
   assert.ok(ashiya1, "芦屋1Rが見つかる");
   assert.match(ashiya1!.closeAt, /^\d{2}:\d{2}$/);
+  assert.equal(ashiya1!.boats.length, 6);
+  assert.equal(ashiya1!.boats[0].course, 1);
+  assert.equal(ashiya1!.boats[0].registrationNo, "4772");
+  assert.equal(ashiya1!.boats[0].racerName, "石丸海渡");
+  assert.equal(ashiya1!.boats[0].nationalWinRate, 6.40);
+  assert.equal(ashiya1!.boats[0].nationalTop2Rate, 50.41);
+  assert.equal(ashiya1!.boats[0].motorNo, "17");
+  assert.equal(ashiya1!.boats[0].motorTop2Rate, 22.22);
+  assert.equal(ashiya1!.boats[0].boatNo, "138");
+  assert.equal(ashiya1!.boats[0].boatTop2Rate, 39.29);
 });
 
 test("dateとraceNoが整っている", () => {
@@ -39,4 +49,9 @@ test("旧フォーマット（○○競艇場）の番組表もパースでき�
   const karatsu1 = rows.find((row) => row.venue === "唐津" && row.raceNo === 1);
   assert.ok(karatsu1, "唐津1Rが見つかる");
   assert.equal(karatsu1!.closeAt, "10:57");
+  assert.equal(karatsu1!.boats.length, 6);
+  assert.equal(karatsu1!.boats[0].registrationNo, "2167");
+  assert.equal(karatsu1!.boats[0].racerName, "田代敏明");
+  assert.equal(karatsu1!.boats[0].nationalWinRate, 3.36);
+  assert.equal(karatsu1!.boats[0].boatTop2Rate, 25.00);
 });

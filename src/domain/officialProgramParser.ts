@@ -1,8 +1,24 @@
+export type OfficialProgramBoat = {
+  course: number;
+  registrationNo: string;
+  racerName: string;
+  className: string;
+  nationalWinRate: number | null;
+  nationalTop2Rate: number | null;
+  localWinRate: number | null;
+  localTop2Rate: number | null;
+  motorNo: string | null;
+  motorTop2Rate: number | null;
+  boatNo: string | null;
+  boatTop2Rate: number | null;
+};
+
 export type OfficialProgramRow = {
   date: string;
   venue: string;
   raceNo: number;
   closeAt: string;
+  boats: OfficialProgramBoat[];
 };
 
 const KNOWN_VENUES = [
@@ -19,6 +35,22 @@ export function parseOfficialProgramsText(
   const rows: OfficialProgramRow[] = [];
   let venue: string | null = null;
   let pendingRaceNo: number | null = null;
+  let closeAt: string | null = null;
+  let boats: OfficialProgramBoat[] = [];
+
+  function flushRace() {
+    if (!venue || pendingRaceNo == null || !closeAt) return;
+    rows.push({
+      date: defaults.date,
+      venue,
+      raceNo: pendingRaceNo,
+      closeAt,
+      boats,
+    });
+    pendingRaceNo = null;
+    closeAt = null;
+    boats = [];
+  }
 
   for (const raw of lines) {
     const line = toHalfWidth(raw).replace(/\t/g, " ");
@@ -28,24 +60,47 @@ export function parseOfficialProgramsText(
 
     const raceHeaderMatch = line.match(/^[\s 　]*(\d{1,2})R\s/);
     if (raceHeaderMatch) {
+      flushRace();
       pendingRaceNo = Number(raceHeaderMatch[1]);
+      closeAt = null;
+      boats = [];
+    }
+
+    const boat = parseBoatLine(line);
+    if (boat && pendingRaceNo != null) {
+      boats.push(boat);
     }
 
     const closeMatch = line.match(/電話投票締切予定[\s 　]*(\d{1,2})[:：]\s*(\d{1,2})/);
-    if (closeMatch && venue && pendingRaceNo != null) {
+    if (closeMatch) {
       const hh = String(Number(closeMatch[1])).padStart(2, "0");
       const mm = String(Number(closeMatch[2])).padStart(2, "0");
-      rows.push({
-        date: defaults.date,
-        venue,
-        raceNo: pendingRaceNo,
-        closeAt: `${hh}:${mm}`,
-      });
-      pendingRaceNo = null;
+      closeAt = `${hh}:${mm}`;
     }
   }
+  flushRace();
 
   return rows;
+}
+
+function parseBoatLine(line: string): OfficialProgramBoat | null {
+  const normalized = line.replace(/　/g, " ");
+  const match = normalized.match(/^\s*([1-6])\s+(\d{4})(.+?)(\d{2})([^\d\s]{2,3})(\d{2})(A1|A2|B1|B2)\s+(\d+\.\d{2})\s+(\d+\.\d{2})\s+(\d+\.\d{2})\s+(\d+\.\d{2})\s+(\d+)\s+(\d+\.\d{2})\s*(\d+)\s+(\d+\.\d{2})/);
+  if (!match) return null;
+  return {
+    course: Number(match[1]),
+    registrationNo: match[2],
+    racerName: match[3].trim().replace(/\s+/g, " "),
+    className: match[7],
+    nationalWinRate: toNumber(match[8]),
+    nationalTop2Rate: toNumber(match[9]),
+    localWinRate: toNumber(match[10]),
+    localTop2Rate: toNumber(match[11]),
+    motorNo: match[12],
+    motorTop2Rate: toNumber(match[13]),
+    boatNo: match[14],
+    boatTop2Rate: toNumber(match[15]),
+  };
 }
 
 function extractVenue(line: string): string | null {
@@ -57,6 +112,11 @@ function extractVenue(line: string): string | null {
     }
   }
   return null;
+}
+
+function toNumber(value: string | undefined): number | null {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
 }
 
 function toHalfWidth(s: string): string {
