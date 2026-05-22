@@ -121,7 +121,7 @@ export default function App() {
               <Metric label="本日の最大損失" value={`${data.settings.dailyBudgetYen.toLocaleString()}円`} />\n              <Metric label="累計節約額" value={`${data.savings.savedLossYen.toLocaleString()}円`} />\n              <Metric label="買わない連続日数" value={`${data.savings.consecutiveNoBuyDays}日`} />
             </section>
 
-            {screen === "dashboard" && <SavingsPanel data={data} />}\n            {screen === "dashboard" && <RoiBudgetPanel data={data} />}\n            {screen === "dashboard" && <MonthlyOverview data={data} />}
+            {screen === "dashboard" && <SavingsPanel data={data} />}\n            {screen === "dashboard" && <RoiBudgetPanel data={data} />}\n            {screen === "dashboard" && <VenueHeatmap data={data} />}\n            {screen === "dashboard" && <MonthlyOverview data={data} />}
             {screen === "dashboard" && <Dashboard data={data} onNotify={refresh} onBrowserNotify={notifyUser} />}
             {screen === "dashboard" && <OfficialImport onImported={refresh} date={date} />}
             {screen === "results" && <Results data={data} />}
@@ -225,6 +225,64 @@ function RoiLineChart({ rows }: { rows: DashboardResponse["monthlyTrend"] }) {
       </div>
     </div>
   );
+}
+
+function VenueHeatmap({ data }: { data: DashboardResponse }) {
+  const heatmap = data.venueHeatmap;
+  const cellMap = new Map<string, DashboardResponse["venueHeatmap"]["cells"][number]>(heatmap.cells.map((cell) => [`${cell.venue}|${cell.ym}`, cell]));
+  return (
+    <section className="section heatmapPanel">
+      <div className="sectionHead">
+        <div>
+          <h3>会場別ROIヒートマップ</h3>
+          <p>月ごとのBUY検証ROI。緑は好調、赤は苦手。</p>
+        </div>
+      </div>
+      <div className="venueRankGrid">
+        <RankList title="得意 Top3" rows={heatmap.best} />
+        <RankList title="苦手 Top3" rows={heatmap.worst} />
+      </div>
+      <div className="heatmapScroll">
+        <div className="heatmapGrid" style={{ gridTemplateColumns: `86px repeat(${Math.max(heatmap.months.length, 1)}, 62px)` }}>
+          <div className="heatmapHead">会場</div>
+          {heatmap.months.map((month) => <div className="heatmapHead" key={month}>{month.slice(5)}</div>)}
+          {heatmap.venues.map((venue) => (
+            <div className="heatmapRow" key={venue}>
+              <div className="heatmapVenue">{venue}</div>
+              {heatmap.months.map((month) => {
+                const cell = cellMap.get(`${venue}|${month}`);
+                return <div className={`heatCell ${roiClass(cell?.modelRoi ?? 0, cell?.buy ?? 0)}`} key={month} title={`${venue} ${month} ROI ${cell?.modelRoi ? (cell.modelRoi * 100).toFixed(1) : "-"}%`}>{cell?.buy ? (cell.modelRoi * 100).toFixed(0) : "-"}</div>;
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function RankList({ title, rows }: { title: string; rows: DashboardResponse["venueHeatmap"]["best"] }) {
+  return (
+    <div className="rankList">
+      <h4>{title}</h4>
+      {rows.length === 0 && <p>まだデータなし</p>}
+      {rows.map((row) => (
+        <div key={row.venue}>
+          <span>{row.venue}</span>
+          <strong>{(row.modelRoi * 100).toFixed(1)}%</strong>
+          <em>BUY {row.buy}</em>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function roiClass(roi: number, buy: number) {
+  if (buy === 0) return "none";
+  if (roi >= 1.5) return "good strong";
+  if (roi >= 1) return "good";
+  if (roi <= 0.5) return "bad strong";
+  return "bad";
 }
 
 function MonthlyOverview({ data }: { data: DashboardResponse }) {

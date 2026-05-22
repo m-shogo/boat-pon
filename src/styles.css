@@ -616,3 +616,78 @@ tr:last-child td { border-bottom: 0; }
 .progressFill.ok { background: #10a983; }
 .progressFill.warn { background: #f2b54a; }
 .progressFill.danger { background: #ff6b6b; }
+
+
+.heatmapPanel {
+  border: 1px solid rgba(154, 246, 213, 0.12);
+  border-radius: 8px;
+  background: rgba(13, 32, 28, 0.62);
+  padding: 18px;
+}
+.venueRankGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.rankList {
+  border: 1px solid rgba(154, 246, 213, 0.12);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.035);
+}
+.rankList h4 {
+  margin: 0 0 8px;
+}
+.rankList div {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  padding: 7px 0;
+  border-top: 1px solid rgba(154, 246, 213, 0.08);
+}
+.rankList p,
+.rankList em {
+  color: #86a69c;
+  font-size: 12px;
+  font-style: normal;
+}
+.heatmapScroll {
+  overflow-x: auto;
+}
+.heatmapGrid {
+  display: grid;
+  gap: 4px;
+  min-width: max-content;
+}
+.heatmapRow {
+  display: contents;
+}
+.heatmapHead,
+.heatmapVenue,
+.heatCell {
+  min-height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  font-size: 12px;
+}
+.heatmapHead {
+  color: #86a69c;
+  background: rgba(255, 255, 255, 0.04);
+}
+.heatmapVenue {
+  justify-content: start;
+  padding-left: 8px;
+  color: #e8fff7;
+  background: rgba(255, 255, 255, 0.035);
+}
+.heatCell.none { color: #5d756d; background: rgba(255, 255, 255, 0.025); }
+.heatCell.good { color: #dffdf4; background: rgba(16, 169, 131, 0.34); }
+.heatCell.good.strong { background: rgba(16, 169, 131, 0.68); }
+.heatCell.bad { color: #ffe1e1; background: rgba(255, 107, 107, 0.28); }
+.heatCell.bad.strong { background: rgba(255, 107, 107, 0.62); }
+
+@media (max-width: 760px) {
+  .venueRankGrid { grid-template-columns: 1fr; }
+}

@@ -1,5 +1,7 @@
 import express from "express";
-import { summarizeByMonth, summarizeHistory, summarizeMonth } from "../src/domain/backtest";\nimport { calculateSavings } from "../src/domain/savings";
+import { summarizeByMonth, summarizeHistory, summarizeMonth } from "../src/domain/backtest";
+import { calculateSavings } from "../src/domain/savings";
+import { summarizeVenueHeatmap } from "../src/domain/venueHeatmap";
 import { analyzeOvervaluation } from "../src/domain/analysis";
 import {
   createNotificationIfNeeded,
@@ -97,7 +99,9 @@ app.get("/api/dashboard", (req, res) => {
         (date ?? new Intl.DateTimeFormat("sv", { timeZone: "Asia/Tokyo" }).format(new Date())).slice(0, 7),
         settings.minSampleSize,
       ),
-      monthlyTrend: summarizeByMonth(history, settings.minSampleSize),\n      savings: calculateSavings(history, date),
+      monthlyTrend: summarizeByMonth(history, settings.minSampleSize),
+      savings: calculateSavings(history, date),
+      venueHeatmap: summarizeVenueHeatmap(history),
     });
   } finally {
     db.close();
