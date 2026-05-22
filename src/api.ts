@@ -1,4 +1,5 @@
 import type { BacktestSummary, DecisionHistoryRow, MonthlySummary } from "./domain/backtest";
+import type { SavingsSummary } from "./domain/savings";
 import type { BetCandidate, BudgetRule, Decision, RaceResult } from "./domain/types";
 
 export type CandidateRow = {
@@ -19,6 +20,7 @@ export type DashboardResponse = {
   backtest: BacktestSummary;
   monthly: MonthlySummary;
   monthlyTrend: MonthlySummary[];
+  savings: SavingsSummary;
 };
 
 export type NotificationRecord = {
@@ -113,4 +115,4 @@ export async function sendBrowserNotification(id: number): Promise<NotificationR
   return res.json();
 }
 
-export type { BacktestSummary, DecisionHistoryRow, MonthlySummary };
+export type { BacktestSummary, DecisionHistoryRow, MonthlySummary, SavingsSummary };

@@ -118,10 +118,10 @@ export default function App() {
               <Metric icon={<Activity size={18} />} label="WATCH" value={watchRows.length.toString()} />
               <Metric icon={<Database size={18} />} label="SKIP" value={skipRows.length.toString()} />
               <Metric label="購入予定額" value={`${totalPlanned.toLocaleString()}円`} />
-              <Metric label="本日の最大損失" value={`${data.settings.dailyBudgetYen.toLocaleString()}円`} />
+              <Metric label="本日の最大損失" value={`${data.settings.dailyBudgetYen.toLocaleString()}円`} />\n              <Metric label="累計節約額" value={`${data.savings.savedLossYen.toLocaleString()}円`} />\n              <Metric label="買わない連続日数" value={`${data.savings.consecutiveNoBuyDays}日`} />
             </section>
 
-            {screen === "dashboard" && <MonthlyOverview data={data} />}
+            {screen === "dashboard" && <SavingsPanel data={data} />}\n            {screen === "dashboard" && <MonthlyOverview data={data} />}
             {screen === "dashboard" && <Dashboard data={data} onNotify={refresh} onBrowserNotify={notifyUser} />}
             {screen === "dashboard" && <OfficialImport onImported={refresh} date={date} />}
             {screen === "results" && <Results data={data} />}
@@ -131,6 +131,29 @@ export default function App() {
         )}
       </main>
     </div>
+  );
+}
+
+function SavingsPanel({ data }: { data: DashboardResponse }) {
+  const s = data.savings;
+  const message = s.savedLossYen > 0
+    ? `BUYを全部買っていたら ${s.savedLossYen.toLocaleString()}円のマイナス想定。見送れて成功です。`
+    : s.missedProfitYen > 0
+      ? `今回は買っていれば +${s.missedProfitYen.toLocaleString()}円の想定。次の検証材料として記録します。`
+      : "無理に買わず、資金を守っています。";
+  return (
+    <section className="section savingsHero">
+      <div>
+        <p className="eyebrow">NO-BET SUCCESS COUNTER</p>
+        <h3>買わない判断の成果</h3>
+        <p>{message}</p>
+      </div>
+      <div className="savingsStats">
+        <Stat label="守った購入予定額" value={`${s.protectedStakeYen.toLocaleString()}円`} />
+        <Stat label="未購入BUY候補" value={`${s.unboughtBuySignals}/${s.buySignals}件`} />
+        <Stat label="実購入額" value={`${s.actualStakeYen.toLocaleString()}円`} />
+      </div>
+    </section>
   );
 }
 

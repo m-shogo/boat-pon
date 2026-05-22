@@ -144,7 +144,7 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
 
 .metrics {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 12px;
   margin: 18px 0 26px;
 }
@@ -510,4 +510,34 @@ tr:last-child td { border-bottom: 0; }
 
 @media (max-width: 980px) {
   .monthlyTrend { grid-template-columns: 1fr; }
+}
+
+
+.savingsHero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  gap: 18px;
+  align-items: center;
+  border: 1px solid rgba(154, 246, 213, 0.18);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(16, 169, 131, 0.13), rgba(13, 32, 28, 0.78));
+  padding: 20px;
+}
+.savingsHero h3 {
+  margin: 0;
+  font-size: 24px;
+}
+.savingsHero p {
+  margin: 8px 0 0;
+  color: #b7d0c8;
+}
+.savingsStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+@media (max-width: 980px) {
+  .savingsHero,
+  .savingsStats { grid-template-columns: 1fr; }
 }

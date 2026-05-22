@@ -1,5 +1,5 @@
 import express from "express";
-import { summarizeByMonth, summarizeHistory, summarizeMonth } from "../src/domain/backtest";
+import { summarizeByMonth, summarizeHistory, summarizeMonth } from "../src/domain/backtest";\nimport { calculateSavings } from "../src/domain/savings";
 import { analyzeOvervaluation } from "../src/domain/analysis";
 import {
   createNotificationIfNeeded,
@@ -97,7 +97,7 @@ app.get("/api/dashboard", (req, res) => {
         (date ?? new Intl.DateTimeFormat("sv", { timeZone: "Asia/Tokyo" }).format(new Date())).slice(0, 7),
         settings.minSampleSize,
       ),
-      monthlyTrend: summarizeByMonth(history, settings.minSampleSize),
+      monthlyTrend: summarizeByMonth(history, settings.minSampleSize),\n      savings: calculateSavings(history, date),
     });
   } finally {
     db.close();
