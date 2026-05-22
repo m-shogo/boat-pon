@@ -36,9 +36,10 @@ export default function App() {
 
   async function refresh() {
     setLoading(true);
+    setError(null);
+    setData(null);
     try {
       setData(await getDashboard(date));
-      setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "unknown error");
     } finally {
@@ -78,9 +79,14 @@ export default function App() {
       </aside>
 
       <main className="main">
-        {error && <div className="errorBox">APIエラー: {error}</div>}
+        {error && (
+          <div className="errorBox">
+            <span>APIエラー: {error}</span>
+            <button onClick={() => void refresh()}>再試行</button>
+          </div>
+        )}
         {loading && <div className="loading">読み込み中...</div>}
-        {data && (
+        {!loading && data && (
           <>
             <div className="toolbar">
               <label>
@@ -130,6 +136,7 @@ export default function App() {
 
 function MonthlyOverview({ data }: { data: DashboardResponse }) {
   const m = data.monthly;
+
   return (
     <section className="section">
       <div className="sectionHead">
@@ -138,14 +145,27 @@ function MonthlyOverview({ data }: { data: DashboardResponse }) {
           <p>有効サンプルのみ集計。買わない日も成功扱い。</p>
         </div>
       </div>
-      <div className="metrics backtestMetrics">
-        <Metric label="判定" value={m.decisions.toString()} />
-        <Metric label="BUY" value={m.buy.toString()} />
-        <Metric label="的中" value={m.hits.toString()} />
-        <Metric label="的中率" value={m.buy ? `${(m.hitRate * 100).toFixed(1)}%` : "-"} />
-        <Metric label="検証投資" value={`${m.modelStakeYen.toLocaleString()}円`} />
-        <Metric label="検証回収率" value={m.modelStakeYen ? `${(m.modelRoi * 100).toFixed(1)}%` : "-"} />
-        <Metric label="買わない日" value={`${m.noBuyDays}/${m.daysActive}日`} />
+      <div className="monthlyPanel">
+        <div className="metrics backtestMetrics">
+          <Metric label="判定" value={m.decisions.toString()} />
+          <Metric label="BUY" value={m.buy.toString()} />
+          <Metric label="的中" value={m.hits.toString()} />
+          <Metric label="的中率" value={m.buy ? `${(m.hitRate * 100).toFixed(1)}%` : "-"} />
+          <Metric label="検証投資" value={`${m.modelStakeYen.toLocaleString()}円`} />
+          <Metric label="検証回収率" value={m.modelStakeYen ? `${(m.modelRoi * 100).toFixed(1)}%` : "-"} />
+          <Metric label="買わない日" value={`${m.noBuyDays}/${m.daysActive}日`} />
+        </div>
+        {data.monthlyTrend.length > 0 && (
+          <div className="monthlyTrend">
+            {data.monthlyTrend.slice(-6).map((row) => (
+              <div className="monthlyTrendRow" key={row.ym}>
+                <span>{row.ym}</span>
+                <strong>{row.modelStakeYen ? `${(row.modelRoi * 100).toFixed(1)}%` : "-"}</strong>
+                <em>BUY {row.buy} / 見送り日 {row.noBuyDays}</em>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
@@ -520,7 +540,11 @@ function Backtest({ data, onSaved }: { data: DashboardResponse; onSaved: () => P
 
 function SettingsScreen({ settings, onSaved }: { settings: BudgetRule; onSaved: () => Promise<void> }) {
   const [draft, setDraft] = useState(settings);
-  useEffect(() => setDraft(settings), [settings]);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  useEffect(() => {
+    setDraft(settings);
+    setSaveError(null);
+  }, [settings]);
 
   const fields = useMemo(() => [
     ["targetEv", "目標EV", 0.05],
@@ -531,6 +555,8 @@ function SettingsScreen({ settings, onSaved }: { settings: BudgetRule; onSaved: 
     ["minSampleSize", "最小サンプル数", 50],
     ["minMinutesBeforeClose", "締切前分数", 1],
   ] as const, []);
+
+  const validationError = validateSettings(draft);
 
   return (
     <section className="section">
@@ -548,19 +574,46 @@ function SettingsScreen({ settings, onSaved }: { settings: BudgetRule; onSaved: 
               type="number"
               step={step}
               value={draft[key]}
+              min={step}
+              aria-invalid={draft[key] <= 0}
               onChange={(event) => setDraft({ ...draft, [key]: Number(event.target.value) })}
             />
           </label>
         ))}
       </div>
-      <button className="saveButton" onClick={async () => {
-        await updateSettings(draft);
-        await onSaved();
+      {(validationError || saveError) && <div className="formError">{validationError ?? saveError}</div>}
+      <button className="saveButton" disabled={Boolean(validationError)} onClick={async () => {
+        setSaveError(null);
+        try {
+          await updateSettings(draft);
+          await onSaved();
+        } catch (err) {
+          setSaveError(err instanceof Error ? err.message : String(err));
+        }
       }}>
         設定を保存
       </button>
     </section>
   );
+}
+
+function validateSettings(settings: BudgetRule): string | null {
+  const labels: Record<keyof BudgetRule, string> = {
+    dailyBudgetYen: "1日予算",
+    stakePerBetYen: "1点",
+    maxStakePerRaceYen: "1レース最大",
+    maxBuyCountPerDay: "1日最大BUY数",
+    minSampleSize: "最小サンプル数",
+    minMinutesBeforeClose: "締切前分数",
+    targetEv: "目標EV",
+  };
+  for (const [key, label] of Object.entries(labels) as Array<[keyof BudgetRule, string]>) {
+    const value = settings[key];
+    if (!Number.isFinite(value) || value <= 0) return `${label}は0より大きい値にしてください`;
+  }
+  if (settings.stakePerBetYen > settings.maxStakePerRaceYen) return "1点は1レース最大以下にしてください";
+  if (settings.maxStakePerRaceYen > settings.dailyBudgetYen) return "1レース最大は1日予算以下にしてください";
+  return null;
 }
 
 function ResultTable({ data }: { data: DashboardResponse }) {

@@ -1,5 +1,5 @@
 import express from "express";
-import { summarizeHistory, summarizeMonth } from "../src/domain/backtest";
+import { summarizeByMonth, summarizeHistory, summarizeMonth } from "../src/domain/backtest";
 import { analyzeOvervaluation } from "../src/domain/analysis";
 import {
   createNotificationIfNeeded,
@@ -26,6 +26,25 @@ import { minutesUntil } from "../src/domain/decision";
 import type { BudgetRule } from "../src/domain/types";
 
 const ODDS_FETCH_WINDOW_MINUTES = 30;
+
+function validateBudgetRule(settings: BudgetRule): string | null {
+  const positiveKeys: Array<keyof BudgetRule> = [
+    "dailyBudgetYen",
+    "stakePerBetYen",
+    "maxStakePerRaceYen",
+    "maxBuyCountPerDay",
+    "minSampleSize",
+    "minMinutesBeforeClose",
+    "targetEv",
+  ];
+  for (const key of positiveKeys) {
+    const value = settings[key];
+    if (!Number.isFinite(value) || value <= 0) return `${key} must be positive`;
+  }
+  if (settings.stakePerBetYen > settings.maxStakePerRaceYen) return "stakePerBetYen must be <= maxStakePerRaceYen";
+  if (settings.maxStakePerRaceYen > settings.dailyBudgetYen) return "maxStakePerRaceYen must be <= dailyBudgetYen";
+  return null;
+}
 
 const app = express();
 app.use(express.json());
@@ -78,6 +97,7 @@ app.get("/api/dashboard", (req, res) => {
         (date ?? new Intl.DateTimeFormat("sv", { timeZone: "Asia/Tokyo" }).format(new Date())).slice(0, 7),
         settings.minSampleSize,
       ),
+      monthlyTrend: summarizeByMonth(history, settings.minSampleSize),
     });
   } finally {
     db.close();
@@ -110,6 +130,11 @@ app.put("/api/settings", (req, res) => {
   try {
     const current = getSettings(db);
     const next: BudgetRule = { ...current, ...req.body };
+    const invalid = validateBudgetRule(next);
+    if (invalid) {
+      res.status(400).json({ error: invalid });
+      return;
+    }
     setSettings(db, next);
     res.json(next);
   } finally {

@@ -18,6 +18,7 @@ export type DashboardResponse = {
   history: DecisionHistoryRow[];
   backtest: BacktestSummary;
   monthly: MonthlySummary;
+  monthlyTrend: MonthlySummary[];
 };
 
 export type NotificationRecord = {
