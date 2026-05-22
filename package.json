@@ -15,7 +15,8 @@
     "dev:api": "tsx watch server/index.ts",
     "import:official": "tsx scripts/import-official-file.ts",
     "fetch:official-results": "tsx scripts/fetch-official-results.ts",
-    "fetch:official-programs": "tsx scripts/fetch-official-programs.ts"
+    "fetch:official-programs": "tsx scripts/fetch-official-programs.ts",
+    "generate:vapid": "tsx scripts/generate-vapid-keys.ts"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",

@@ -2,6 +2,8 @@ import express from "express";
 import { summarizeByMonth, summarizeHistory, summarizeMonth } from "../src/domain/backtest";
 import { calculateSavings } from "../src/domain/savings";
 import { summarizeVenueHeatmap } from "../src/domain/venueHeatmap";
+import { summarizeByRaceNo, summarizeByTimeBand } from "../src/domain/segmentStats";
+import { summarizeProgramStats } from "../src/domain/programStats";
 import { analyzeOvervaluation } from "../src/domain/analysis";
 import {
   createNotificationIfNeeded,
@@ -12,6 +14,7 @@ import {
   insertDecisionHistory,
   listDecisionHistory,
   listNotifications,
+  listOfficialProgramsRaw,
   listProgramInputs,
   listResults,
   markNotificationSent,
@@ -79,6 +82,9 @@ app.get("/api/dashboard", (req, res) => {
 
     const buyRows = rows.filter((row) => row.decision.status === "BUY");
     const history = listDecisionHistory(db);
+    const rawPrograms = listOfficialProgramsRaw(db);
+    const closeAtByRaceId = new Map(rawPrograms.map((row) => [row.raceId, row.closeAt]));
+    const programByRaceId = new Map(rawPrograms.map((row) => [row.raceId, row.raw]));
     res.json({
       settings,
       headline: buyRows.length ? "BUY候補あり" : "全レース見送り",
@@ -102,6 +108,11 @@ app.get("/api/dashboard", (req, res) => {
       monthlyTrend: summarizeByMonth(history, settings.minSampleSize),
       savings: calculateSavings(history, date),
       venueHeatmap: summarizeVenueHeatmap(history),
+      segmentStats: {
+        byTimeBand: summarizeByTimeBand(history, closeAtByRaceId),
+        byRaceNo: summarizeByRaceNo(history),
+      },
+      programStats: summarizeProgramStats(history, programByRaceId),
     });
   } finally {
     db.close();
@@ -287,6 +298,62 @@ app.post("/api/notifications/:id/send", (req, res) => {
   }
 });
 
+app.get("/api/export/results.csv", (_req, res) => {
+  const db = openDb();
+  try {
+    sendCsv(res, "results.csv", [
+      ["raceId", "date", "venue", "raceNo", "trifecta", "payoutYen", "popularity", "returned", "source", "fetchedAt"],
+      ...listResults(db).map((row) => [row.raceId, row.date, row.venue, row.raceNo, row.trifecta ?? "", row.payoutYen ?? "", row.popularity ?? "", row.returned ? 1 : 0, row.source, row.fetchedAt]),
+    ]);
+  } finally {
+    db.close();
+  }
+});
+
+app.get("/api/export/history.csv", (_req, res) => {
+  const db = openDb();
+  try {
+    sendCsv(res, "history.csv", [
+      ["id", "raceId", "date", "venue", "raceNo", "selection", "estimatedHitRate", "requiredOdds", "currentOdds", "ev", "decision", "actuallyBought", "stakeYen", "recommendedStakeYen", "result", "payoutYen"],
+      ...listDecisionHistory(db).map((row) => [row.id, row.raceId, row.date, row.venue, row.raceNo, row.selection, row.estimatedHitRate, row.requiredOdds, row.currentOdds ?? "", row.ev ?? "", row.decision, row.actuallyBought ? 1 : 0, row.stakeYen, row.recommendedStakeYen, row.result ?? "", row.payoutYen ?? ""]),
+    ]);
+  } finally {
+    db.close();
+  }
+});
+
+app.get("/api/export/monthly.csv", (_req, res) => {
+  const db = openDb();
+  try {
+    const settings = getSettings(db);
+    sendCsv(res, "monthly.csv", [
+      ["ym", "decisions", "buy", "hits", "hitRate", "modelStakeYen", "modelPayoutYen", "modelRoi", "noBuyDays"],
+      ...summarizeByMonth(listDecisionHistory(db), settings.minSampleSize).map((row) => [row.ym, row.decisions, row.buy, row.hits, row.hitRate, row.modelStakeYen, row.modelPayoutYen, row.modelRoi, row.noBuyDays]),
+    ]);
+  } finally {
+    db.close();
+  }
+});
+
+app.get("/api/push/vapid-public-key", (_req, res) => {
+  res.json({ publicKey: process.env.BOAT_PON_VAPID_PUBLIC_KEY ?? null });
+});
+
+app.post("/api/push/subscribe", (_req, res) => {
+  res.status(202).json({ ok: true, note: "Web Push購読の受け口です。送信処理はVAPID設定後に有効化します。" });
+});
+
+function sendCsv(res: express.Response, filename: string, rows: unknown[][]) {
+  const csv = rows.map((row) => row.map(csvCell).join(",")).join("\n");
+  res.setHeader("content-type", "text/csv; charset=utf-8");
+  res.setHeader("content-disposition", "attachment; filename=\"" + filename + "\"");
+  res.send("\ufeff" + csv);
+}
+
+function csvCell(value: unknown) {
+  const text = String(value ?? "");
+  return /[",\n]/.test(text) ? "\"" + text.replaceAll("\"", "\"\"") + "\"" : text;
+}
 const port = Number(process.env.BOAT_PON_API_PORT ?? 5174);
 app.listen(port, "127.0.0.1", () => {
   console.log(`Boat Pon API listening on http://127.0.0.1:${port}`);

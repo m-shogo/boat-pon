@@ -1,6 +1,8 @@
 import type { BacktestSummary, DecisionHistoryRow, MonthlySummary } from "./domain/backtest";
 import type { SavingsSummary } from "./domain/savings";
 import type { VenueHeatmapSummary } from "./domain/venueHeatmap";
+import type { RoiRow } from "./domain/segmentStats";
+import type { ProgramStatSummary } from "./domain/programStats";
 import type { BetCandidate, BudgetRule, Decision, RaceResult } from "./domain/types";
 
 export type CandidateRow = {
@@ -23,6 +25,8 @@ export type DashboardResponse = {
   monthlyTrend: MonthlySummary[];
   savings: SavingsSummary;
   venueHeatmap: VenueHeatmapSummary;
+  segmentStats: { byTimeBand: RoiRow[]; byRaceNo: RoiRow[] };
+  programStats: ProgramStatSummary;
 };
 
 export type NotificationRecord = {

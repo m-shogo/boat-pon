@@ -17,6 +17,8 @@ import "./styles.css";
 
 type Screen = "dashboard" | "results" | "history" | "settings";
 
+type CalendarDay = { date: string; buy: number; watch: number; skip: number };
+
 export default function App() {
   const [screen, setScreen] = useState<Screen>("dashboard");
   const [data, setData] = useState<DashboardResponse | null>(null);
@@ -25,6 +27,7 @@ export default function App() {
   );
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [guideOpen, setGuideOpen] = useState(() => localStorage.getItem("boatpon.guide.done") !== "1");
 
   async function notifyUser(title: string, body: string) {
     if (!("Notification" in window)) return;
@@ -118,17 +121,28 @@ export default function App() {
               <Metric icon={<Activity size={18} />} label="WATCH" value={watchRows.length.toString()} />
               <Metric icon={<Database size={18} />} label="SKIP" value={skipRows.length.toString()} />
               <Metric label="購入予定額" value={`${totalPlanned.toLocaleString()}円`} />
-              <Metric label="本日の最大損失" value={`${data.settings.dailyBudgetYen.toLocaleString()}円`} />\n              <Metric label="累計節約額" value={`${data.savings.savedLossYen.toLocaleString()}円`} />\n              <Metric label="買わない連続日数" value={`${data.savings.consecutiveNoBuyDays}日`} />
+              <Metric label="本日の最大損失" value={`${data.settings.dailyBudgetYen.toLocaleString()}円`} />
+              <Metric label="累計節約額" value={`${data.savings.savedLossYen.toLocaleString()}円`} />
+              <Metric label="買わない連続日数" value={`${data.savings.consecutiveNoBuyDays}日`} />
             </section>
 
-            {screen === "dashboard" && <SavingsPanel data={data} />}\n            {screen === "dashboard" && <RoiBudgetPanel data={data} />}\n            {screen === "dashboard" && <VenueHeatmap data={data} />}\n            {screen === "dashboard" && <MonthlyOverview data={data} />}
+            {screen === "dashboard" && <SavingsPanel data={data} />}
+            {screen === "dashboard" && <RoiBudgetPanel data={data} />}
+            {screen === "dashboard" && <VenueHeatmap data={data} />}
+            {screen === "dashboard" && <MonthlyOverview data={data} />}
             {screen === "dashboard" && <Dashboard data={data} onNotify={refresh} onBrowserNotify={notifyUser} />}
+            {screen === "dashboard" && <SegmentStats data={data} />}
+            {screen === "dashboard" && <ProgramStats data={data} />}
             {screen === "dashboard" && <OfficialImport onImported={refresh} date={date} />}
             {screen === "results" && <Results data={data} />}
             {screen === "history" && <Backtest data={data} onSaved={refresh} />}
             {screen === "settings" && <SettingsScreen settings={data.settings} onSaved={refresh} />}
           </>
         )}
+              {guideOpen && <GuideModal onClose={() => {
+          localStorage.setItem("boatpon.guide.done", "1");
+          setGuideOpen(false);
+        }} />}
       </main>
     </div>
   );
@@ -404,11 +418,11 @@ function Dashboard({
               </div>
               <div className="betLine">{candidate.selection.join("-")}</div>
               <div className="stats">
-                <Stat label="推定的中率" value={`${(candidate.estimatedHitRate * 100).toFixed(1)}%`} />
-                <Stat label="必要オッズ" value={`${decision.requiredOdds.toFixed(1)}倍`} />
+                <Stat tip="モデルが推定した的中確率です。高すぎる時ほど過学習に注意します。" label="推定的中率" value={`${(candidate.estimatedHitRate * 100).toFixed(1)}%`} />
+                <Stat tip="目標EVを満たすために最低限必要なオッズです。" label="必要オッズ" value={`${decision.requiredOdds.toFixed(1)}倍`} />
                 <Stat label="現在オッズ" value={candidate.currentOdds ? `${candidate.currentOdds.toFixed(1)}倍` : "未取得"} />
-                <Stat label="EV" value={decision.ev ? decision.ev.toFixed(2) : "-"} />
-                <Stat label="サンプル数" value={candidate.sampleSize.toLocaleString()} />
+                <Stat tip="推定的中率 × 現在オッズ。1.25以上をBUY候補にします。" label="EV" value={decision.ev ? decision.ev.toFixed(2) : "-"} />
+                <Stat tip="推定に使えた過去データ数。少ない場合はSKIP寄りです。" label="サンプル数" value={candidate.sampleSize.toLocaleString()} />
                 <Stat label="推奨金額" value={`${decision.recommendedAmount}円`} />
               </div>
               <div className="reasons">
@@ -522,7 +536,8 @@ function OfficialImport({ date, onImported }: { date: string; onImported: () => 
       <textarea
         className="importBox"
         value={text}
-        placeholder={"date,venue,raceNo,closeAt\\n" + date + ",蒲郡,8,18:42"}
+        placeholder={"date,venue,raceNo,closeAt\
+" + date + ",蒲郡,8,18:42"}
         onChange={(event) => setText(event.target.value)}
       />
       <button className="saveButton" onClick={async () => {
@@ -564,6 +579,8 @@ function Results({ data }: { data: DashboardResponse }) {
 }
 
 function Backtest({ data, onSaved }: { data: DashboardResponse; onSaved: () => Promise<void> }) {
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const selectedRows = selectedDate ? data.history.filter((row) => row.date === selectedDate) : [];
   return (
     <section className="section">
       <div className="sectionHead">
@@ -572,6 +589,9 @@ function Backtest({ data, onSaved }: { data: DashboardResponse; onSaved: () => P
           <p>判定履歴から的中率・回収率・BUY/WATCH/SKIPを検証。</p>
         </div>
       </div>
+      <CalendarView data={data} selectedDate={selectedDate} onSelect={setSelectedDate} />
+      {selectedDate && <DayDetail date={selectedDate} rows={selectedRows} />}
+      <ExportButtons />
       <div className="metrics backtestMetrics">
         <Metric label="判定数" value={data.backtest.decisions.toString()} />
         <Metric label="BUY" value={data.backtest.buy.toString()} />
@@ -687,6 +707,58 @@ function Backtest({ data, onSaved }: { data: DashboardResponse; onSaved: () => P
       </div>
     </section>
   );
+}
+
+function CalendarView({ data, selectedDate, onSelect }: { data: DashboardResponse; selectedDate: string | null; onSelect: (date: string) => void }) {
+  const days = buildCalendarDays(data.history);
+  return (
+    <div className="calendarPanel">
+      <div className="calendarGrid">
+        {days.map((day) => (
+          <button key={day.date} className={day.date === selectedDate ? "active" : ""} onClick={() => onSelect(day.date)}>
+            <span>{day.date.slice(5)}</span>
+            <div className="dots">
+              {day.buy > 0 && <i className="buy" />}
+              {day.watch > 0 && <i className="watch" />}
+              {day.skip > 0 && <i className="skip" />}
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DayDetail({ date, rows }: { date: string; rows: DashboardResponse["history"] }) {
+  return (
+    <div className="dayDetail">
+      <h3>{date} の判定</h3>
+      {rows.length === 0 && <p>この日の履歴はまだありません。</p>}
+      {rows.slice(0, 12).map((row) => <span key={row.id}>{row.venue} {row.raceNo}R {row.decision} {row.selection}</span>)}
+    </div>
+  );
+}
+
+function ExportButtons() {
+  return (
+    <div className="exportButtons">
+      <a href="/api/export/results.csv">結果CSV</a>
+      <a href="/api/export/history.csv">履歴CSV</a>
+      <a href="/api/export/monthly.csv">月次CSV</a>
+    </div>
+  );
+}
+
+function buildCalendarDays(rows: DashboardResponse["history"]): CalendarDay[] {
+  const map = new Map<string, CalendarDay>();
+  for (const row of rows) {
+    const day = map.get(row.date) ?? { date: row.date, buy: 0, watch: 0, skip: 0 };
+    if (row.decision === "BUY") day.buy += 1;
+    if (row.decision === "WATCH") day.watch += 1;
+    if (row.decision === "SKIP") day.skip += 1;
+    map.set(row.date, day);
+  }
+  return [...map.values()].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 42);
 }
 
 function SettingsScreen({ settings, onSaved }: { settings: BudgetRule; onSaved: () => Promise<void> }) {
@@ -818,10 +890,59 @@ function Metric({ icon, label, value }: { icon?: React.ReactNode; label: string;
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function SegmentStats({ data }: { data: DashboardResponse }) {
   return (
-    <div className="stat">
-      <span>{label}</span>
+    <section className="section compactStats">
+      <div className="sectionHead"><div><h3>時間帯・R別ROI</h3><p>買う時間帯とレース番号の偏りを見ます。</p></div></div>
+      <MiniRoiTable title="時間帯" rows={data.segmentStats.byTimeBand} />
+      <MiniRoiTable title="レース番号" rows={data.segmentStats.byRaceNo} />
+    </section>
+  );
+}
+
+function ProgramStats({ data }: { data: DashboardResponse }) {
+  return (
+    <section className="section compactStats">
+      <div className="sectionHead"><div><h3>選手・モーター統計</h3><p>番組表raw_jsonに艇情報がある履歴だけ集計します。</p></div></div>
+      <MiniRoiTable title="選手Top10" rows={data.programStats.racersBest} />
+      <MiniRoiTable title="モーターTop10" rows={data.programStats.motorsBest} />
+      <MiniRoiTable title="級別" rows={data.programStats.classes} />
+    </section>
+  );
+}
+
+function MiniRoiTable({ title, rows }: { title: string; rows: Array<{ key: string; label: string; buy: number; modelRoi: number }> }) {
+  return (
+    <div className="miniRoiTable">
+      <h4>{title}</h4>
+      {rows.slice(0, 12).map((row) => (
+        <div key={row.key}><span>{row.label}</span><strong>{row.buy ? (row.modelRoi * 100).toFixed(1) + "%" : "-"}</strong><em>BUY {row.buy}</em></div>
+      ))}
+    </div>
+  );
+}
+
+function GuideModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="modalBackdrop">
+      <div className="guideModal">
+        <h2>Boat Ponの使い方</h2>
+        <ol>
+          <li>BUY候補だけ確認し、WATCH/SKIPは記録として眺めます。</li>
+          <li>必要オッズ以上かを公式ページで最終確認します。</li>
+          <li>購入処理はアプリ内で行いません。</li>
+          <li>買わない日も成功として、節約額とROIで振り返ります。</li>
+        </ol>
+        <button onClick={onClose}>始める</button>
+      </div>
+    </div>
+  );
+}
+
+function Stat({ label, value, tip }: { label: string; value: string; tip?: string }) {
+  return (
+    <div className="stat" title={tip}>
+      <span>{label}{tip ? " ?" : ""}</span>
       <strong>{value}</strong>
     </div>
   );

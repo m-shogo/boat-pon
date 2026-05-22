@@ -68,3 +68,45 @@ npx tsx scripts/fetch-official-odds.ts YYYY-MM-DD 蒲郡 8
 - 今月のBUY/的中/ROI/買わない日数の月次サマリー
 - 公式 boatrace.jp の3連単オッズをリアルタイム取得（候補レースのみ、5分キャッシュ、手動ボタン/自動60秒トグル）
 - 公式 mbrace.or.jp の競走成績LZHを期間指定で一括DL+解凍+取り込み（Shift_JIS、unar依存）
+
+
+## API一覧
+
+- `GET /api/health`: API稼働確認
+- `GET /api/dashboard?date=YYYY-MM-DD`: ダッシュボード、候補、結果、通知、節約、ROI集計
+- `GET /api/results?date=YYYY-MM-DD`: 結果一覧
+- `GET /api/history`: 判定履歴とバックテスト要約
+- `PUT /api/settings`: 予算・EVなどの安全設定を保存
+- `PUT /api/odds/:raceId`: 手動オッズ保存
+- `POST /api/odds/fetch`: 候補レースのみ公式オッズ取得
+- `POST /api/notifications/:id/send`: ブラウザ通知を送信済みにする
+- `POST /api/import/official-local`: ローカル番組表データ取り込み
+- `POST /api/import/reparse-kyotei24`: 保存済みrawを再パース
+- `GET /api/export/results.csv`: 結果CSV
+- `GET /api/export/history.csv`: 判定履歴CSV
+- `GET /api/export/monthly.csv`: 月次CSV
+- `GET /api/push/vapid-public-key`: Web Push公開鍵
+- `POST /api/push/subscribe`: Web Push購読登録の受け口
+
+## 判定ロジック差し替えインターフェース案
+
+`judgeCandidate(candidate, rule, context)` と同じ入出力を持つ関数を plugin として扱う想定です。
+
+```ts
+export type JudgePlugin = {
+  name: string;
+  judge: typeof judgeCandidate;
+};
+```
+
+まずは本体の安全条件を固定し、推定的中率モデルだけを差し替え可能にします。自動購入・投票操作を行うpluginは受け入れません。
+
+## 環境変数
+
+- `BOAT_PON_API_PORT`: APIポート。既定値は5174
+- `BOAT_PON_DL_ONLY`: 将来のDL専用モード用フラグ
+- `BOAT_PON_VAPID_PUBLIC_KEY`: Web Push公開鍵
+- `BOAT_PON_VAPID_PRIVATE_KEY`: Web Push秘密鍵
+- `BOAT_PON_VAPID_SUBJECT`: VAPID subject。例: `mailto:you@example.com`
+
+VAPIDキーは `npm run generate:vapid` で生成できます。iOS SafariのWeb Pushは16.4以降で、ホーム画面に追加したWeb Appが対象です。

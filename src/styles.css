@@ -691,3 +691,118 @@ tr:last-child td { border-bottom: 0; }
 @media (max-width: 760px) {
   .venueRankGrid { grid-template-columns: 1fr; }
 }
+
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.62);
+  z-index: 20;
+}
+.guideModal {
+  width: min(520px, calc(100vw - 32px));
+  border: 1px solid rgba(154, 246, 213, 0.2);
+  border-radius: 8px;
+  background: #0d201c;
+  padding: 24px;
+}
+.guideModal h2 { margin: 0 0 12px; }
+.guideModal li { margin: 8px 0; color: #b7d0c8; }
+.guideModal button,
+.exportButtons a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  border-radius: 8px;
+  background: #10a983;
+  color: #04110d;
+  padding: 0 12px;
+  text-decoration: none;
+  font-weight: 900;
+  border: 0;
+}
+.calendarPanel,
+.dayDetail,
+.exportButtons,
+.compactStats {
+  margin-bottom: 14px;
+}
+.calendarGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+  gap: 8px;
+}
+.calendarGrid button {
+  border: 1px solid rgba(154, 246, 213, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+  color: #e8fff7;
+  padding: 10px;
+}
+.calendarGrid button.active {
+  border-color: rgba(154, 246, 213, 0.6);
+}
+.dots {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+.dots i {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+.dots .buy { background: #7ce1c3; }
+.dots .watch { background: #f2b54a; }
+.dots .skip { background: #8b98a4; }
+.dayDetail {
+  border: 1px solid rgba(154, 246, 213, 0.12);
+  border-radius: 8px;
+  padding: 12px;
+}
+.dayDetail h3 { margin: 0 0 8px; }
+.dayDetail span {
+  display: inline-flex;
+  margin: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.055);
+  padding: 5px 9px;
+  font-size: 12px;
+}
+.exportButtons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.compactStats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.compactStats .sectionHead {
+  grid-column: 1 / -1;
+}
+.miniRoiTable {
+  border: 1px solid rgba(154, 246, 213, 0.12);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(13, 32, 28, 0.62);
+}
+.miniRoiTable h4 { margin: 0 0 8px; }
+.miniRoiTable div {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid rgba(154, 246, 213, 0.08);
+}
+.miniRoiTable em {
+  color: #86a69c;
+  font-size: 12px;
+  font-style: normal;
+}
+@media (max-width: 760px) {
+  .compactStats { grid-template-columns: 1fr; }
+}

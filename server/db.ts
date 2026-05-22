@@ -177,6 +177,22 @@ ORDER BY date DESC, venue ASC, race_no ASC
   return rows.map(rowToResult);
 }
 
+export function listOfficialProgramsRaw(db: DatabaseSync) {
+  const rows = db.prepare(`
+SELECT race_id, date, venue, race_no, close_at, raw_json
+FROM official_programs
+ORDER BY date DESC, venue ASC, race_no ASC
+`).all() as Array<Record<string, unknown>>;
+  return rows.map((row) => ({
+    raceId: String(row.race_id),
+    date: String(row.date),
+    venue: String(row.venue),
+    raceNo: Number(row.race_no),
+    closeAt: String(row.close_at),
+    raw: JSON.parse(String(row.raw_json)) as Record<string, unknown>,
+  }));
+}
+
 export function listProgramInputs(db: DatabaseSync, date?: string) {
   const params: string[] = [];
   const where = date ? "WHERE date = ?" : "";

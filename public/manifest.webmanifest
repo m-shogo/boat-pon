@@ -1,0 +1,16 @@
+{
+  "name": "Boat Pon",
+  "short_name": "Boat Pon",
+  "description": "競艇の期待値通知を検証する個人用アプリ",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#071311",
+  "theme_color": "#10a983",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
