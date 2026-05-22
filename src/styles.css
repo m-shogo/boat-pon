@@ -806,3 +806,139 @@ tr:last-child td { border-bottom: 0; }
 @media (max-width: 760px) {
   .compactStats { grid-template-columns: 1fr; }
 }
+
+/* Tooltip */
+.tooltipHost {
+  position: relative;
+  display: inline-block;
+}
+.tooltipTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: help;
+  text-decoration: underline dotted rgba(154, 246, 213, 0.4);
+  text-underline-offset: 3px;
+}
+.tooltipMark {
+  display: inline-grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(154, 246, 213, 0.18);
+  color: #9af6d5;
+  font-size: 10px;
+  font-weight: 900;
+}
+.tooltipBubble {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  min-width: 180px;
+  max-width: 260px;
+  border: 1px solid rgba(154, 246, 213, 0.3);
+  border-radius: 8px;
+  background: #0a1a17;
+  color: #ecfff8;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  white-space: normal;
+}
+
+/* HelpButton in sidebar */
+.helpButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 16px;
+  border: 1px solid rgba(154, 246, 213, 0.2);
+  border-radius: 8px;
+  background: rgba(154, 246, 213, 0.06);
+  color: #b9d7ce;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+.helpButton:hover {
+  background: rgba(154, 246, 213, 0.12);
+}
+
+/* GuideModal step UI */
+.guideStep {
+  margin: 0 0 6px;
+  color: #75d7bb;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.guideBody {
+  margin: 12px 0 24px;
+  color: #b9d7ce;
+  font-size: 14px;
+  line-height: 1.65;
+}
+.guideActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.guideActions button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 16px;
+  font-weight: 800;
+}
+.guideSkip {
+  background: transparent;
+  color: #86a69c;
+}
+.guideBack {
+  background: rgba(154, 246, 213, 0.1);
+  color: #b9d7ce;
+}
+.guideNext {
+  background: #10a983;
+  color: #04110d;
+}
+
+/* PushSubscribePanel */
+.pushPanel {
+  margin-top: 24px;
+  padding: 16px;
+  border: 1px solid rgba(154, 246, 213, 0.18);
+  border-radius: 8px;
+  background: rgba(10, 26, 23, 0.4);
+}
+.pushPanel h4 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+.pushPanel p {
+  margin: 4px 0 12px;
+  color: #86a69c;
+  font-size: 13px;
+}
+.pushActions {
+  display: flex;
+  gap: 10px;
+}
+.pushActions button {
+  min-height: 38px;
+  border: 1px solid rgba(154, 246, 213, 0.3);
+  border-radius: 8px;
+  background: rgba(154, 246, 213, 0.08);
+  color: #9af6d5;
+  padding: 0 14px;
+  font-weight: 800;
+}
+.pushStatus {
+  margin-top: 10px;
+  color: #b9d7ce;
+  font-size: 12px;
+}

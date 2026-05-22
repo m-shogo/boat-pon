@@ -1,11 +1,14 @@
-import { Activity, Bell, CheckCircle2, Database, ExternalLink, History, Settings, ShieldCheck } from "lucide-react";
+import { Activity, Bell, CheckCircle2, Database, ExternalLink, HelpCircle, History, Settings, ShieldCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
   fetchOdds,
+  fetchVapidPublicKey,
   getDashboard,
   importOfficialRows,
   reparseKyotei24,
   sendBrowserNotification,
+  subscribePush,
+  testPushBroadcast,
   updateManualOdds,
   updatePurchaseRecord,
   updateSettings,
@@ -13,6 +16,7 @@ import {
   type OddsFetchResult,
 } from "./api";
 import type { BudgetRule } from "./domain/types";
+import { Tooltip } from "./components/Tooltip";
 import "./styles.css";
 
 type Screen = "dashboard" | "results" | "history" | "settings";
@@ -75,6 +79,9 @@ export default function App() {
           <NavButton active={screen === "history"} onClick={() => setScreen("history")} icon={<History size={16} />} label="Backtest" />
           <NavButton active={screen === "settings"} onClick={() => setScreen("settings")} icon={<Settings size={16} />} label="Settings" />
         </nav>
+        <button className="helpButton" onClick={() => setGuideOpen(true)} aria-label="使い方を見る">
+          <HelpCircle size={16} /> 使い方を見る
+        </button>
         <div className="guardrail">
           <ShieldCheck size={18} />
           <p>自動購入・自動投票・ログイン保存・投票サイト操作は実装しません。</p>
@@ -420,10 +427,10 @@ function Dashboard({
               <div className="stats">
                 <Stat tip="モデルが推定した的中確率です。高すぎる時ほど過学習に注意します。" label="推定的中率" value={`${(candidate.estimatedHitRate * 100).toFixed(1)}%`} />
                 <Stat tip="目標EVを満たすために最低限必要なオッズです。" label="必要オッズ" value={`${decision.requiredOdds.toFixed(1)}倍`} />
-                <Stat label="現在オッズ" value={candidate.currentOdds ? `${candidate.currentOdds.toFixed(1)}倍` : "未取得"} />
-                <Stat tip="推定的中率 × 現在オッズ。1.25以上をBUY候補にします。" label="EV" value={decision.ev ? decision.ev.toFixed(2) : "-"} />
-                <Stat tip="推定に使えた過去データ数。少ない場合はSKIP寄りです。" label="サンプル数" value={candidate.sampleSize.toLocaleString()} />
-                <Stat label="推奨金額" value={`${decision.recommendedAmount}円`} />
+                <Stat tip="公式取得 or 手動入力のオッズ。締切が近いほど信頼度が上がります。" label="現在オッズ" value={candidate.currentOdds ? `${candidate.currentOdds.toFixed(1)}倍` : "未取得"} />
+                <Stat tip="期待値=推定的中率×現在オッズ。1.0で損益±0、1.25以上で割に合う水準です。" label="EV" value={decision.ev ? decision.ev.toFixed(2) : "-"} />
+                <Stat tip="推定の根拠となる過去データの数。Settingsのminサンプル数を超えないとSKIP扱いになります。" label="サンプル数" value={candidate.sampleSize.toLocaleString()} />
+                <Stat tip="BUY判定時に推奨する1点あたりの金額。Settingsで上限を変えられます。" label="推奨金額" value={`${decision.recommendedAmount}円`} />
               </div>
               <div className="reasons">
                 {decision.reasons.map((reason) => <span key={reason}>{reason}</span>)}
@@ -816,6 +823,7 @@ function SettingsScreen({ settings, onSaved }: { settings: BudgetRule; onSaved: 
       }}>
         設定を保存
       </button>
+      <PushSubscribePanel />
     </section>
   );
 }
@@ -837,6 +845,77 @@ function validateSettings(settings: BudgetRule): string | null {
   if (settings.stakePerBetYen > settings.maxStakePerRaceYen) return "1点は1レース最大以下にしてください";
   if (settings.maxStakePerRaceYen > settings.dailyBudgetYen) return "1レース最大は1日予算以下にしてください";
   return null;
+}
+
+function PushSubscribePanel() {
+  const [status, setStatus] = useState<string>("");
+  const [busy, setBusy] = useState(false);
+
+  async function subscribe() {
+    setBusy(true);
+    setStatus("");
+    try {
+      if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+        setStatus("このブラウザはWeb Push非対応です。iOS Safariは16.4以降+ホーム画面追加が必要です。");
+        return;
+      }
+      const { publicKey, enabled } = await fetchVapidPublicKey();
+      if (!enabled || !publicKey) {
+        setStatus("サーバーにVAPIDキーが設定されていません。`npm run generate:vapid` で生成してください。");
+        return;
+      }
+      const perm = await Notification.requestPermission();
+      if (perm !== "granted") {
+        setStatus("通知の許可が必要です。ブラウザ設定で「許可」にしてください。");
+        return;
+      }
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey) as unknown as BufferSource,
+      });
+      const result = await subscribePush(sub.toJSON() as PushSubscriptionJSON);
+      setStatus(result.ok ? "✓ Push購読しました。BUY候補発生時に通知されます。" : "購読に失敗しました。");
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function testPush() {
+    setBusy(true);
+    setStatus("");
+    try {
+      const result = await testPushBroadcast();
+      setStatus(result.ok ? `テスト送信: 成功${result.sent}件 / 失敗${result.failed}件` : `エラー: ${result.error}`);
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="pushPanel">
+      <h4>Web Push通知 (PWA)</h4>
+      <p>ブラウザを閉じていてもBUY候補発生時に通知が届きます。事前にVAPIDキー設定が必要です。</p>
+      <div className="pushActions">
+        <button disabled={busy} onClick={subscribe}>通知を購読する</button>
+        <button disabled={busy} onClick={testPush}>テスト送信</button>
+      </div>
+      {status && <p className="pushStatus">{status}</p>}
+    </div>
+  );
+}
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(base64);
+  const bytes = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i += 1) bytes[i] = raw.charCodeAt(i);
+  return bytes;
 }
 
 function ResultTable({ data }: { data: DashboardResponse }) {
@@ -901,12 +980,32 @@ function SegmentStats({ data }: { data: DashboardResponse }) {
 }
 
 function ProgramStats({ data }: { data: DashboardResponse }) {
+  const hasData =
+    data.programStats.racersBest.length > 0 ||
+    data.programStats.motorsBest.length > 0 ||
+    data.programStats.classes.length > 0;
+
   return (
     <section className="section compactStats">
-      <div className="sectionHead"><div><h3>選手・モーター統計</h3><p>番組表raw_jsonに艇情報がある履歴だけ集計します。</p></div></div>
-      <MiniRoiTable title="選手Top10" rows={data.programStats.racersBest} />
-      <MiniRoiTable title="モーターTop10" rows={data.programStats.motorsBest} />
-      <MiniRoiTable title="級別" rows={data.programStats.classes} />
+      <div className="sectionHead">
+        <div>
+          <h3>選手・モーター統計</h3>
+          <p>BUY判定の1着艇に対する選手・モーター・級別の成績。番組表raw_jsonの艇情報が必要です。</p>
+        </div>
+      </div>
+      {hasData ? (
+        <>
+          <MiniRoiTable title="選手Top10" rows={data.programStats.racersBest} />
+          <MiniRoiTable title="選手Worst10" rows={data.programStats.racersWorst} />
+          <MiniRoiTable title="モーターTop10" rows={data.programStats.motorsBest} />
+          <MiniRoiTable title="モーターWorst10" rows={data.programStats.motorsWorst} />
+          <MiniRoiTable title="級別" rows={data.programStats.classes} />
+        </>
+      ) : (
+        <div className="empty">
+          番組表データ準備中。公式番組表(B)の整形フェーズが完了すると艇情報が利用可能になり、ここに選手・モーター・級別の集計が表示されます。
+        </div>
+      )}
     </section>
   );
 }
@@ -923,17 +1022,49 @@ function MiniRoiTable({ title, rows }: { title: string; rows: Array<{ key: strin
 }
 
 function GuideModal({ onClose }: { onClose: () => void }) {
+  const [step, setStep] = useState(0);
+  const steps = [
+    {
+      title: "Boat Ponは「割に合う時だけ」教えます",
+      body: "EV(期待値)が1.25以上のときだけBUY候補として通知します。ほとんどの日はBUY候補が出ません。それが正常です。",
+    },
+    {
+      title: "BUY / WATCH / SKIP の意味",
+      body: "BUYは買って良い水準。WATCHは惜しい（EV1.05〜目標未満）。SKIPは見送り。WATCH/SKIPはあくまで記録で、購入を促しません。",
+    },
+    {
+      title: "「買わない日」も成功",
+      body: "Boat Ponの最終ゴールは『数字的に割に合う時だけ買う、ほとんどの日は買わない』。買わなかった日も累計節約額として可視化します。",
+    },
+    {
+      title: "最終確認は必ず公式で",
+      body: "オッズは締切直前で変動します。アプリ内で購入はしません。公式リンクで最終確認 → 1点100円までの少額のみ。",
+    },
+  ];
+  const isLast = step === steps.length - 1;
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowRight" && !isLast) setStep((s) => s + 1);
+      if (e.key === "ArrowLeft" && step > 0) setStep((s) => s - 1);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isLast, step, onClose]);
+
   return (
-    <div className="modalBackdrop">
-      <div className="guideModal">
-        <h2>Boat Ponの使い方</h2>
-        <ol>
-          <li>BUY候補だけ確認し、WATCH/SKIPは記録として眺めます。</li>
-          <li>必要オッズ以上かを公式ページで最終確認します。</li>
-          <li>購入処理はアプリ内で行いません。</li>
-          <li>買わない日も成功として、節約額とROIで振り返ります。</li>
-        </ol>
-        <button onClick={onClose}>始める</button>
+    <div className="modalBackdrop" onClick={onClose}>
+      <div className="guideModal" onClick={(e) => e.stopPropagation()}>
+        <p className="guideStep">STEP {step + 1} / {steps.length}</p>
+        <h2>{steps[step].title}</h2>
+        <p className="guideBody">{steps[step].body}</p>
+        <div className="guideActions">
+          <button onClick={onClose} className="guideSkip">あとで</button>
+          {step > 0 && <button onClick={() => setStep((s) => s - 1)} className="guideBack">戻る</button>}
+          {!isLast && <button onClick={() => setStep((s) => s + 1)} className="guideNext">次へ</button>}
+          {isLast && <button onClick={onClose} className="guideNext">始める</button>}
+        </div>
       </div>
     </div>
   );
@@ -941,8 +1072,8 @@ function GuideModal({ onClose }: { onClose: () => void }) {
 
 function Stat({ label, value, tip }: { label: string; value: string; tip?: string }) {
   return (
-    <div className="stat" title={tip}>
-      <span>{label}{tip ? " ?" : ""}</span>
+    <div className="stat">
+      <span>{tip ? <Tooltip label={label} hint={tip} /> : label}</span>
       <strong>{value}</strong>
     </div>
   );

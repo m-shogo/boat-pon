@@ -110,3 +110,15 @@ export type JudgePlugin = {
 - `BOAT_PON_VAPID_SUBJECT`: VAPID subject。例: `mailto:you@example.com`
 
 VAPIDキーは `npm run generate:vapid` で生成できます。iOS SafariのWeb Pushは16.4以降で、ホーム画面に追加したWeb Appが対象です。
+
+### Web Push設定手順
+
+```sh
+npm run generate:vapid
+# 出力された BOAT_PON_VAPID_PUBLIC_KEY / PRIVATE_KEY / SUBJECT を .env.local などに保存
+# dev/api を再起動
+npm run dev
+# 画面右下のSettings画面で「通知を購読する」→「テスト送信」で動作確認
+```
+
+VAPIDキー未設定時は `/api/push/vapid-public-key` が `{ enabled: false }` を返し、UIでも警告表示されます。VAPIDキーは秘密情報なのでGit管理しないでください。

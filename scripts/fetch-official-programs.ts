@@ -12,6 +12,7 @@ const RAW_DIR = path.join("data", "raw", "official", "programs");
 const TMP_DIR = path.join("data", "tmp", "programs");
 const SLEEP_MS = 1500;
 const MAX_RANGE_DAYS = 10000;
+const DL_ONLY = process.env.BOAT_PON_DL_ONLY === "1";
 
 async function main() {
   const [fromArg, toArg] = process.argv.slice(2);
@@ -59,6 +60,10 @@ async function main() {
         skippedDays += 1;
       }
 
+      if (DL_ONLY) {
+        console.log(`${date}: ${cached ? "cache" : "fetched"} (DL-only)`);
+        continue;
+      }
       try {
         const text = await extractAndDecode(lzhPath, yymmdd);
         const rows = parseOfficialProgramsText(text, { date });

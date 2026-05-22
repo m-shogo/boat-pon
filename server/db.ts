@@ -90,6 +90,13 @@ CREATE TABLE IF NOT EXISTS official_programs (
   raw_json TEXT NOT NULL,
   imported_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  endpoint TEXT PRIMARY KEY,
+  p256dh TEXT NOT NULL,
+  auth TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 `);
 
   try {
@@ -333,8 +340,13 @@ LIMIT 500
   }));
 }
 
-export function createNotificationIfNeeded(db: DatabaseSync, candidate: BetCandidate, decision: Decision, officialUrl: string) {
-  if (decision.status !== "BUY") return;
+export function createNotificationIfNeeded(
+  db: DatabaseSync,
+  candidate: BetCandidate,
+  decision: Decision,
+  officialUrl: string,
+): { created: boolean; title: string; body: string } | null {
+  if (decision.status !== "BUY") return null;
   const title = `BUY候補あり: ${candidate.venue} ${candidate.raceNo}R`;
   const body = [
     `買い目: ${candidate.selection.join("-")}`,
@@ -346,11 +358,13 @@ export function createNotificationIfNeeded(db: DatabaseSync, candidate: BetCandi
     "購入前に公式オッズで最終確認してください。",
   ].join("\n");
 
-  db.prepare(`
+  const result = db.prepare(`
 INSERT OR IGNORE INTO notification_log
 (race_id, channel, status, title, body, official_url)
 VALUES (?, ?, ?, ?, ?, ?)
 `).run(candidate.raceId, "browser", "PENDING", title, body, officialUrl);
+
+  return { created: result.changes > 0, title, body };
 }
 
 export function listNotifications(db: DatabaseSync) {
@@ -385,6 +399,35 @@ export function updatePurchaseRecord(db: DatabaseSync, id: number, actuallyBough
 export function markNotificationSent(db: DatabaseSync, id: number) {
   db.prepare("UPDATE notification_log SET status = 'SENT', sent_at = CURRENT_TIMESTAMP WHERE id = ?").run(id);
   return listNotifications(db).find((notification) => notification.id === id);
+}
+
+export type PushSubscriptionRecord = {
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  createdAt: string;
+};
+
+export function upsertPushSubscription(db: DatabaseSync, sub: { endpoint: string; p256dh: string; auth: string }) {
+  db.prepare(`
+INSERT INTO push_subscriptions (endpoint, p256dh, auth, created_at)
+VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+ON CONFLICT(endpoint) DO UPDATE SET p256dh = excluded.p256dh, auth = excluded.auth
+`).run(sub.endpoint, sub.p256dh, sub.auth);
+}
+
+export function listPushSubscriptions(db: DatabaseSync): PushSubscriptionRecord[] {
+  const rows = db.prepare(`SELECT endpoint, p256dh, auth, created_at FROM push_subscriptions`).all() as Array<Record<string, unknown>>;
+  return rows.map((row) => ({
+    endpoint: String(row.endpoint),
+    p256dh: String(row.p256dh),
+    auth: String(row.auth),
+    createdAt: String(row.created_at),
+  }));
+}
+
+export function deletePushSubscription(db: DatabaseSync, endpoint: string) {
+  db.prepare("DELETE FROM push_subscriptions WHERE endpoint = ?").run(endpoint);
 }
 
 function seedIfEmpty(db: DatabaseSync) {

@@ -121,4 +121,25 @@ export async function sendBrowserNotification(id: number): Promise<NotificationR
   return res.json();
 }
 
+export async function fetchVapidPublicKey(): Promise<{ publicKey: string | null; enabled: boolean }> {
+  const res = await fetch("/api/push/vapid-public-key");
+  if (!res.ok) throw new Error(`vapid api failed: ${res.status}`);
+  return res.json();
+}
+
+export async function subscribePush(subscription: PushSubscriptionJSON): Promise<{ ok: boolean; enabled: boolean }> {
+  const res = await fetch("/api/push/subscribe", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(subscription),
+  });
+  if (!res.ok) throw new Error(`subscribe api failed: ${res.status}`);
+  return res.json();
+}
+
+export async function testPushBroadcast(): Promise<{ ok: boolean; sent?: number; failed?: number; error?: string }> {
+  const res = await fetch("/api/push/test", { method: "POST" });
+  return res.json();
+}
+
 export type { BacktestSummary, DecisionHistoryRow, MonthlySummary, SavingsSummary, VenueHeatmapSummary };

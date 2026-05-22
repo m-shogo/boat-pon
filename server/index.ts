@@ -7,6 +7,7 @@ import { summarizeProgramStats } from "../src/domain/programStats";
 import { analyzeOvervaluation } from "../src/domain/analysis";
 import {
   createNotificationIfNeeded,
+  deletePushSubscription,
   getManualOdds,
   insertOfficialProgram,
   listAllResultsForModel,
@@ -16,14 +17,17 @@ import {
   listNotifications,
   listOfficialProgramsRaw,
   listProgramInputs,
+  listPushSubscriptions,
   listResults,
   markNotificationSent,
   openDb,
   setManualOdds,
   setOdds,
   updatePurchaseRecord,
+  upsertPushSubscription,
   setSettings,
 } from "./db";
+import webpush from "web-push";
 import { buildCandidateRows } from "./candidates";
 import { fetchOfficialOdds } from "../scripts/fetch-official-odds";
 import { parseTrifectaOdds } from "../src/domain/oddsParser";
@@ -31,6 +35,42 @@ import { minutesUntil } from "../src/domain/decision";
 import type { BudgetRule } from "../src/domain/types";
 
 const ODDS_FETCH_WINDOW_MINUTES = 30;
+
+const VAPID_PUBLIC = process.env.BOAT_PON_VAPID_PUBLIC_KEY;
+const VAPID_PRIVATE = process.env.BOAT_PON_VAPID_PRIVATE_KEY;
+const VAPID_SUBJECT = process.env.BOAT_PON_VAPID_SUBJECT ?? "mailto:boatpon@example.com";
+const PUSH_ENABLED = Boolean(VAPID_PUBLIC && VAPID_PRIVATE);
+if (PUSH_ENABLED) {
+  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC!, VAPID_PRIVATE!);
+}
+
+async function broadcastPush(payload: { title: string; body: string; url?: string }) {
+  if (!PUSH_ENABLED) return { sent: 0, failed: 0, skipped: true };
+  const db = openDb();
+  let sent = 0;
+  let failed = 0;
+  try {
+    const subs = listPushSubscriptions(db);
+    for (const sub of subs) {
+      try {
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+          JSON.stringify(payload),
+        );
+        sent += 1;
+      } catch (err) {
+        failed += 1;
+        const status = (err as { statusCode?: number }).statusCode;
+        if (status === 404 || status === 410) {
+          deletePushSubscription(db, sub.endpoint);
+        }
+      }
+    }
+  } finally {
+    db.close();
+  }
+  return { sent, failed, skipped: false };
+}
 
 function validateBudgetRule(settings: BudgetRule): string | null {
   const positiveKeys: Array<keyof BudgetRule> = [
@@ -75,9 +115,18 @@ app.get("/api/dashboard", (req, res) => {
       })),
       listAllResultsForModel(db),
     );
+    const freshPushPayloads: Array<{ title: string; body: string; url: string }> = [];
     for (const row of rows) {
       insertDecisionHistory(db, row.candidate, row.decision);
-      createNotificationIfNeeded(db, row.candidate, row.decision, row.officialUrl);
+      const created = createNotificationIfNeeded(db, row.candidate, row.decision, row.officialUrl);
+      if (created?.created) {
+        freshPushPayloads.push({ title: created.title, body: created.body, url: row.officialUrl });
+      }
+    }
+    if (PUSH_ENABLED && freshPushPayloads.length > 0) {
+      for (const payload of freshPushPayloads) {
+        void broadcastPush(payload);
+      }
     }
 
     const buyRows = rows.filter((row) => row.decision.status === "BUY");
@@ -336,11 +385,37 @@ app.get("/api/export/monthly.csv", (_req, res) => {
 });
 
 app.get("/api/push/vapid-public-key", (_req, res) => {
-  res.json({ publicKey: process.env.BOAT_PON_VAPID_PUBLIC_KEY ?? null });
+  res.json({ publicKey: VAPID_PUBLIC ?? null, enabled: PUSH_ENABLED });
 });
 
-app.post("/api/push/subscribe", (_req, res) => {
-  res.status(202).json({ ok: true, note: "Web Push購読の受け口です。送信処理はVAPID設定後に有効化します。" });
+app.post("/api/push/subscribe", (req, res) => {
+  const endpoint = String(req.body?.endpoint ?? "");
+  const p256dh = String(req.body?.keys?.p256dh ?? "");
+  const auth = String(req.body?.keys?.auth ?? "");
+  if (!endpoint || !p256dh || !auth) {
+    res.status(400).json({ error: "endpoint and keys.p256dh and keys.auth are required" });
+    return;
+  }
+  const db = openDb();
+  try {
+    upsertPushSubscription(db, { endpoint, p256dh, auth });
+    res.json({ ok: true, enabled: PUSH_ENABLED });
+  } finally {
+    db.close();
+  }
+});
+
+app.post("/api/push/test", async (_req, res) => {
+  if (!PUSH_ENABLED) {
+    res.status(503).json({ ok: false, error: "VAPIDキー未設定です。`npm run generate:vapid` で生成して .env.local に保存してください。" });
+    return;
+  }
+  const result = await broadcastPush({
+    title: "Boat Pon テスト通知",
+    body: "Push通知が正しく届いています。",
+    url: "/",
+  });
+  res.json({ ok: true, ...result });
 });
 
 function sendCsv(res: express.Response, filename: string, rows: unknown[][]) {

@@ -1,12 +1,8 @@
-import { createECDH } from "node:crypto";
+import webpush from "web-push";
 
-const ecdh = createECDH("prime256v1");
-ecdh.generateKeys();
-
-console.log("BOAT_PON_VAPID_PUBLIC_KEY=" + base64Url(ecdh.getPublicKey()));
-console.log("BOAT_PON_VAPID_PRIVATE_KEY=" + base64Url(ecdh.getPrivateKey()));
+const keys = webpush.generateVAPIDKeys();
+console.log("BOAT_PON_VAPID_PUBLIC_KEY=" + keys.publicKey);
+console.log("BOAT_PON_VAPID_PRIVATE_KEY=" + keys.privateKey);
 console.log("BOAT_PON_VAPID_SUBJECT=mailto:you@example.com");
-
-function base64Url(buffer: Buffer) {
-  return buffer.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-}
+console.log("");
+console.log("# .env.local などに保存して dev/api を再起動してください。");
