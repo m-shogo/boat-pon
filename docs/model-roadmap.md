@@ -54,6 +54,7 @@ Boat Pon は自動購入アプリではない。目的は、ほとんどの日�
 npm run generate:history -- --dry-run --from 2026-05-01 --to 2026-05-21 --limit 100
 npm run generate:history -- --dry-run --from 2026-05-01 --to 2026-05-21 --limit 100 --include-required-odds-candidates
 npm run generate:history -- --from 2026-05-01 --to 2026-05-21 --limit 100
+npm run generate:history -- --from 2026-05-01 --to 2026-05-21 --limit 100 --refresh-existing --include-skips
 ```
 
 - `--from`, `--to`, `--limit` は必須。
@@ -62,4 +63,5 @@ npm run generate:history -- --from 2026-05-01 --to 2026-05-21 --limit 100
 - `--include-skips` を付けた時だけSKIPも保存する。
 - `--include-required-odds-candidates` を付けると、オッズ未取得でも必要オッズ80倍以下の候補を保存対象にできる。
 - 同じ期間を再実行しても、同じ `raceId + selection` の履歴は重複保存しない。
+- `--refresh-existing` を付けると、補完済みオッズを使って既存履歴の `currentOdds / EV / decision` を再計算する。
 - 外部サイトにはアクセスしない。

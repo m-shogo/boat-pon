@@ -12,6 +12,7 @@ type Args = {
   dryRun: boolean;
   includeSkips: boolean;
   includeRequiredOddsCandidates: boolean;
+  refreshExisting: boolean;
   minTrainRaceCount: number | null;
   trainDays: number;
   alpha: number;
@@ -35,6 +36,7 @@ try {
   let generated = 0;
   let written = 0;
   let skippedExisting = 0;
+  let refreshedExisting = 0;
   const modelCache = new Map<string, ReturnType<typeof buildVenueModel>>();
 
   for (const program of programs) {
@@ -57,23 +59,26 @@ try {
       candidate.currentOdds == null &&
       candidate.sampleSize >= settings.minSampleSize &&
       decision.requiredOdds <= 80;
-    if (!args.includeSkips && decision.status === "SKIP" && !isRequiredOddsCandidate) continue;
     const key = decisionKey(candidate.raceId, candidate.selection.join("-"));
-    if (existingKeys.has(key)) {
+    const isExisting = existingKeys.has(key);
+    if (!args.includeSkips && decision.status === "SKIP" && !isRequiredOddsCandidate && !(isExisting && args.refreshExisting)) continue;
+    if (isExisting && !args.refreshExisting) {
       skippedExisting += 1;
       continue;
     }
     generated += 1;
     if (args.dryRun) {
-      console.log(`[dry-run] ${candidate.raceId} ${candidate.selection.join("-")} ${decision.status} odds=${candidate.currentOdds ?? "-"} ev=${decision.ev?.toFixed(2) ?? "-"}`);
+      const marker = isExisting ? "refresh" : "new";
+      console.log(`[dry-run:${marker}] ${candidate.raceId} ${candidate.selection.join("-")} ${decision.status} odds=${candidate.currentOdds ?? "-"} ev=${decision.ev?.toFixed(2) ?? "-"}`);
       continue;
     }
     insertDecisionHistory(db, candidate, decision);
+    if (isExisting) refreshedExisting += 1;
     existingKeys.add(key);
     written += 1;
   }
 
-  console.log(`decision history generated=${generated} written=${written} skippedExisting=${skippedExisting} dryRun=${args.dryRun} programs=${programs.length}`);
+  console.log(`decision history generated=${generated} written=${written} refreshedExisting=${refreshedExisting} skippedExisting=${skippedExisting} dryRun=${args.dryRun} programs=${programs.length}`);
 } finally {
   db.close();
 }
@@ -121,13 +126,14 @@ function beforeCloseTime(date: string, closeAt: string, minutesBeforeClose: numb
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: Args = { from: null, to: null, limit: null, dryRun: false, includeSkips: false, includeRequiredOddsCandidates: false, minTrainRaceCount: null, trainDays: 180, alpha: 1 };
+  const args: Args = { from: null, to: null, limit: null, dryRun: false, includeSkips: false, includeRequiredOddsCandidates: false, refreshExisting: false, minTrainRaceCount: null, trainDays: 180, alpha: 1 };
   for (let i = 0; i < argv.length; i += 1) {
     const key = argv[i];
     const value = argv[i + 1];
     if (key === "--dry-run") args.dryRun = true;
     else if (key === "--include-skips") args.includeSkips = true;
     else if (key === "--include-required-odds-candidates") args.includeRequiredOddsCandidates = true;
+    else if (key === "--refresh-existing") args.refreshExisting = true;
     else if (key === "--from") { args.from = normalizeDate(value); i += 1; }
     else if (key === "--to") { args.to = normalizeDate(value); i += 1; }
     else if (key === "--limit") { args.limit = Number(value); i += 1; }
