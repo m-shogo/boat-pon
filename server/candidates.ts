@@ -10,6 +10,7 @@ type ProgramInput = {
   venue: string;
   raceNo: number;
   closeAt: string;
+  raceCategory?: string;
 };
 
 export function buildCandidateRows(

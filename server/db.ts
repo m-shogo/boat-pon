@@ -1,6 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { DEFAULT_RULE } from "../src/domain/decision";
+import type { RaceCategory } from "../src/domain/programCategory";
 import type { BetCandidate, BudgetRule, Decision, DecisionStatus, RaceResult } from "../src/domain/types";
 import { sampleResults } from "../src/sampleData";
 
@@ -110,6 +111,16 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
   }
   try {
     db.exec("ALTER TABLE decision_history ADD COLUMN sample_size INTEGER NOT NULL DEFAULT 0");
+  } catch {
+    // Existing databases already have this column.
+  }
+  try {
+    db.exec("ALTER TABLE decision_history ADD COLUMN model_version TEXT");
+  } catch {
+    // Existing databases already have this column.
+  }
+  try {
+    db.exec("ALTER TABLE decision_history ADD COLUMN race_category TEXT");
   } catch {
     // Existing databases already have this column.
   }
@@ -238,7 +249,7 @@ export function listProgramInputs(db: DatabaseSync, date?: string) {
   const where = date ? "WHERE date = ?" : "";
   if (date) params.push(date);
   const rows = db.prepare(`
-SELECT race_id, date, venue, race_no, close_at
+SELECT race_id, date, venue, race_no, close_at, raw_json
 FROM official_programs
 ${where}
 ORDER BY date DESC, venue ASC, race_no ASC
@@ -249,6 +260,7 @@ ORDER BY date DESC, venue ASC, race_no ASC
     venue: String(row.venue),
     raceNo: Number(row.race_no),
     closeAt: String(row.close_at),
+    raceCategory: parseRaceCategory(row.raw_json),
   }));
 }
 
@@ -286,7 +298,7 @@ export function insertDecisionHistory(db: DatabaseSync, candidate: BetCandidate,
 UPDATE decision_history
 SET estimated_hit_rate = ?, required_odds = ?, current_odds = ?, ev = ?, decision = ?,
     result = ?, payout_yen = ?, popularity = ?, returned = ?, source = ?, fetched_at = ?,
-    recommended_stake_yen = ?, sample_size = ?
+    recommended_stake_yen = ?, sample_size = ?, model_version = ?, race_category = ?
 WHERE id = ?
 `).run(
       candidate.estimatedHitRate,
@@ -302,6 +314,8 @@ WHERE id = ?
       candidate.fetchedAt,
       decision.recommendedAmount,
       candidate.sampleSize,
+      candidate.modelVersion ?? null,
+      candidate.raceCategory ?? null,
       existing.id,
     );
     return;
@@ -310,8 +324,9 @@ WHERE id = ?
   db.prepare(`
 INSERT INTO decision_history
 (race_id, date, venue, race_no, bet_type, selection, estimated_hit_rate, required_odds, current_odds, ev, decision,
- actually_bought, stake_yen, result, payout_yen, popularity, returned, source, fetched_at, recommended_stake_yen, sample_size)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ actually_bought, stake_yen, result, payout_yen, popularity, returned, source, fetched_at, recommended_stake_yen, sample_size,
+ model_version, race_category)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `).run(
     candidate.raceId,
     candidate.date,
@@ -334,6 +349,8 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     candidate.fetchedAt,
     decision.recommendedAmount,
     candidate.sampleSize,
+    candidate.modelVersion ?? null,
+    candidate.raceCategory ?? null,
   );
 }
 
@@ -341,7 +358,7 @@ export function listDecisionHistory(db: DatabaseSync): import("../src/domain/bac
   const rows = db.prepare(`
 SELECT id, race_id, date, venue, race_no, selection, estimated_hit_rate, required_odds, current_odds,
        ev, decision, actually_bought, stake_yen, result, payout_yen, popularity, returned,
-       source, fetched_at, recommended_stake_yen, sample_size, created_at
+       source, fetched_at, recommended_stake_yen, sample_size, model_version, race_category, created_at
 FROM decision_history
 ORDER BY created_at DESC, id DESC
 LIMIT 500
@@ -363,6 +380,8 @@ LIMIT 500
     stakeYen: Number(row.stake_yen),
     recommendedStakeYen: Number(row.recommended_stake_yen ?? 0),
     sampleSize: Number(row.sample_size ?? 0),
+    modelVersion: row.model_version == null ? null : String(row.model_version),
+    raceCategory: row.race_category == null ? null : String(row.race_category),
     result: row.result == null ? null : String(row.result),
     payoutYen: row.payout_yen == null ? null : Number(row.payout_yen),
     popularity: row.popularity == null ? null : Number(row.popularity),
@@ -484,6 +503,16 @@ function seedIfEmpty(db: DatabaseSync) {
   const resultCount = db.prepare("SELECT COUNT(*) AS c FROM race_results").get() as { c: number };
   if (resultCount.c === 0) {
     for (const result of sampleResults) insertResult(db, result);
+  }
+}
+
+function parseRaceCategory(rawJson: unknown): RaceCategory | undefined {
+  if (rawJson == null) return undefined;
+  try {
+    const parsed = JSON.parse(String(rawJson)) as { category?: { primary?: unknown } };
+    return typeof parsed.category?.primary === "string" ? parsed.category.primary as RaceCategory : undefined;
+  } catch {
+    return undefined;
   }
 }
 

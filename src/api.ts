@@ -3,6 +3,9 @@ import type { SavingsSummary } from "./domain/savings";
 import type { VenueHeatmapSummary } from "./domain/venueHeatmap";
 import type { RoiRow } from "./domain/segmentStats";
 import type { ProgramStatSummary } from "./domain/programStats";
+import type { CategoryStatSummary } from "./domain/categoryStats";
+import type { RollingDriftSummary } from "./domain/rollingDrift";
+import type { ModelVersionInfo } from "./domain/modelVersion";
 import type { DecisionExplanation, SkipReasonSummary } from "./domain/decisionExplain";
 import type { WalkForwardRow, WalkForwardSummary } from "./domain/walkForward";
 import type { BetCandidate, BudgetRule, Decision, RaceResult } from "./domain/types";
@@ -30,6 +33,9 @@ export type DashboardResponse = {
   venueHeatmap: VenueHeatmapSummary;
   segmentStats: { byTimeBand: RoiRow[]; byRaceNo: RoiRow[] };
   programStats: ProgramStatSummary;
+  categoryStats: CategoryStatSummary;
+  rollingDrift: RollingDriftSummary;
+  modelVersion: ModelVersionInfo;
   skipReasons: SkipReasonSummary[];
 };
 

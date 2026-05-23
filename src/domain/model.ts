@@ -1,3 +1,4 @@
+import { MODEL_VERSION } from "./modelVersion";
 import type { BetCandidate, RaceResult } from "./types";
 
 export type ModelCandidateInput = {
@@ -5,6 +6,7 @@ export type ModelCandidateInput = {
   venue: string;
   raceNo: number;
   closeAt: string;
+  raceCategory?: string;
 };
 
 export type CourseRate = {
@@ -137,6 +139,8 @@ export function buildCandidatesFromModel(
       source: "history-model",
       fetchedAt,
       hasRiskFlag,
+      modelVersion: MODEL_VERSION,
+      raceCategory: input.raceCategory ?? "不明",
     }];
   });
 }

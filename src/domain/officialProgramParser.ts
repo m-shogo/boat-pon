@@ -1,3 +1,5 @@
+import { categorizeProgram, type ProgramCategory } from "./programCategory";
+
 export type OfficialProgramBoat = {
   course: number;
   registrationNo: string;
@@ -18,6 +20,8 @@ export type OfficialProgramRow = {
   venue: string;
   raceNo: number;
   closeAt: string;
+  raceTitle: string;
+  category: ProgramCategory;
   boats: OfficialProgramBoat[];
 };
 
@@ -45,6 +49,8 @@ export function parseOfficialProgramsText(
   let venue: string | null = null;
   let pendingRaceNo: number | null = null;
   let closeAt: string | null = null;
+  let raceTitle = "";
+  let eventTitle = "";
   let boats: OfficialProgramBoat[] = [];
 
   function flushRace() {
@@ -54,10 +60,13 @@ export function parseOfficialProgramsText(
       venue,
       raceNo: pendingRaceNo,
       closeAt,
+      raceTitle,
+      category: categorizeProgram([eventTitle, raceTitle].filter(Boolean).join(" ")),
       boats,
     });
     pendingRaceNo = null;
     closeAt = null;
+    raceTitle = "";
     boats = [];
   }
 
@@ -67,10 +76,17 @@ export function parseOfficialProgramsText(
     const detected = extractVenue(raw);
     if (detected) venue = detected;
 
-    const raceHeaderMatch = line.match(/^[\s 　]*(\d{1,2})R\s/);
+    const eventMatch = raw.match(/^\s{6,}(.{4,})$/);
+    if (eventMatch && !raw.includes("番組表") && !raw.includes("電話投票") && !raw.includes("--------")) {
+      const candidate = eventMatch[1].trim();
+      if (candidate && !/^第\s*\d+日/.test(toHalfWidth(candidate))) eventTitle = candidate;
+    }
+
+    const raceHeaderMatch = line.match(/^[\s 　]*(\d{1,2})R\s+(.+?)(?:\s{2,}|\s+H\d|\s+電話投票|$)/);
     if (raceHeaderMatch) {
       flushRace();
       pendingRaceNo = Number(raceHeaderMatch[1]);
+      raceTitle = raceHeaderMatch[2].trim();
       closeAt = null;
       boats = [];
     }

@@ -4,6 +4,9 @@ import { calculateSavings } from "../src/domain/savings";
 import { summarizeVenueHeatmap } from "../src/domain/venueHeatmap";
 import { summarizeByRaceNo, summarizeByTimeBand } from "../src/domain/segmentStats";
 import { summarizeProgramStats } from "../src/domain/programStats";
+import { summarizeCategoryStats } from "../src/domain/categoryStats";
+import { summarizeRollingDrift } from "../src/domain/rollingDrift";
+import { getModelVersionInfo } from "../src/domain/modelVersion";
 import { analyzeOvervaluation } from "../src/domain/analysis";
 import { explainDecision, summarizeSkipReasons } from "../src/domain/decisionExplain";
 import { runWalkForwardBacktest, summarizeWalkForward } from "../src/domain/walkForward";
@@ -124,6 +127,7 @@ app.get("/api/dashboard", (req, res) => {
         venue: row.venue,
         raceNo: row.raceNo,
         closeAt: row.closeAt,
+        raceCategory: row.raceCategory,
       })),
       listAllResultsForModel(db),
     );
@@ -178,6 +182,9 @@ app.get("/api/dashboard", (req, res) => {
         byRaceNo: summarizeByRaceNo(history),
       },
       programStats: summarizeProgramStats(history, programByRaceId),
+      categoryStats: summarizeCategoryStats(history),
+      rollingDrift: summarizeRollingDrift(history, settings.minSampleSize),
+      modelVersion: getModelVersionInfo(),
       skipReasons: summarizeSkipReasons(history, settings),
     });
   } finally {

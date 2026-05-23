@@ -17,6 +17,8 @@ export type DecisionHistoryRow = {
   stakeYen: number;
   recommendedStakeYen: number;
   sampleSize: number;
+  modelVersion?: string | null;
+  raceCategory?: string | null;
   result: string | null;
   payoutYen: number | null;
   popularity: number | null;

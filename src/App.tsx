@@ -147,6 +147,7 @@ export default function App() {
             {screen === "dashboard" && <Dashboard data={data} onNotify={refresh} onBrowserNotify={notifyUser} />}
             {screen === "dashboard" && <SegmentStats data={data} />}
             {screen === "dashboard" && <SkipReasonPanel data={data} />}
+            {screen === "dashboard" && <ModelHealthPanel data={data} />}
             {screen === "dashboard" && <ProgramStats data={data} />}
             {screen === "dashboard" && <OfficialImport onImported={refresh} date={date} />}
             {screen === "results" && <Results data={data} />}
@@ -1124,6 +1125,31 @@ function SkipReasonPanel({ data }: { data: DashboardResponse }) {
           </div>
         ))}
       </div>
+    </section>
+  );
+}
+
+function ModelHealthPanel({ data }: { data: DashboardResponse }) {
+  const drift = data.rollingDrift.latest;
+  return (
+    <section className="section compactStats">
+      <div className="sectionHead">
+        <div>
+          <h3>モデル監視</h3>
+          <p>競技環境・番組カテゴリ・月次ドリフトを分けて、期待値の崩れを早めに見つけます。</p>
+        </div>
+      </div>
+      <div className="modelInfoCard">
+        <span>現行モデル</span>
+        <strong>{data.modelVersion.version}</strong>
+        <p>{data.modelVersion.description} / {data.modelVersion.features.slice(0, 2).join(" / ")}</p>
+      </div>
+      <div className={`modelInfoCard ${drift?.alert ?? "watch"}`}>
+        <span>直近月キャリブレーション</span>
+        <strong>{drift ? `${drift.ym} ${(drift.calibration * 100).toFixed(1)}%` : "データ待ち"}</strong>
+        <p>{drift ? `BUY ${drift.buy}件 / 推定 ${(drift.avgEstimatedHitRate * 100).toFixed(1)}% / 実績 ${(drift.hitRate * 100).toFixed(1)}%` : "BUY履歴が貯まると表示します。"}</p>
+      </div>
+      <MiniRoiTable title="番組カテゴリ別ROI" rows={data.categoryStats.rows} />
     </section>
   );
 }

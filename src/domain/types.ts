@@ -17,6 +17,10 @@ export type BetCandidate = {
   fetchedAt: string;
   hasRiskFlag?: boolean;
   notified?: boolean;
+  modelVersion?: string;
+  raceCategory?: string;
+  environmentRiskLevel?: "low" | "medium" | "high";
+  environmentRiskReasons?: string[];
 };
 
 export type BudgetRule = {
