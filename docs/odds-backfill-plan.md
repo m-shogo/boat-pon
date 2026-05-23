@@ -40,6 +40,42 @@ odds_snapshots(
 4. 取得スクリプトは `--limit` 必須、キャッシュ必須にする。
 5. BUY判定には、`odds_snapshots` の最終確認に近いオッズだけ使う。
 
+## 取得元の役割分担
+
+- 公式 `boatrace.jp/owpc/pc/race/odds3t`
+  - 今日の候補レース、締切前の最終確認用。
+  - `scripts/fetch-official-odds.ts` で候補レースだけ低頻度取得する。
+  - 過去レースの大量補完には使わない。
+- kyotei24 / 競艇倶楽部
+  - 過去検証用のオッズ補完候補。
+  - 現時点の候補URL:
+    - `https://odds.kyotei24.jp/od3t-<venueSlug>-YYYYMMDD-R.html`
+    - `https://odds.kyotei24.jp/od-YYYYMMDD-JCD-R.html`
+  - `scripts/backfill-odds.ts` で `decision_history` の BUY/WATCH かつオッズ未取得レースだけを対象にする。
+- 手動入力
+  - 公式/kyotei24で取れない場合のフォールバック。
+
+## 安全CLI
+
+```bash
+npm run backfill:odds -- --dry-run --limit 10 --from 2026-05-01 --to 2026-05-23
+npm run backfill:odds -- --limit 1 --race-id 20260521-蒲郡-08
+npm run backfill:odds -- --dry-run --limit 1 --race-id 20250625-唐津-03 --selection 1-2-3
+```
+
+安全仕様:
+
+- `--limit` がない場合は拒否。
+- `--dry-run` ではURL候補だけ表示し、外部取得しない。
+- 対象は `decision_history` の `BUY/WATCH` かつ `current_odds` 未取得に限定。
+- `--race-id` と `--selection` を併用すると、DB履歴がなくても1レースだけURL検証できる。
+- raw HTMLキャッシュがあれば再取得しない。
+- 取得ごとに1.5秒以上待つ。
+- 失敗してもリトライ連打しない。
+- rawは `data/raw/kyotei24/odds/YYYY-MM-DD/` に保存。
+- normalized JSONは `data/normalized/odds/YYYY-MM-DD/` に保存。
+- SQLiteは `odds_snapshots` に追記。
+
 ## 採用判断
 
 - 過去オッズ込みウォークフォワードで、BUY数が少なく、月別ROIのブレが小さい条件だけ採用。

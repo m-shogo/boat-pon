@@ -18,6 +18,7 @@
     "fetch:official-programs": "tsx scripts/fetch-official-programs.ts",
     "list:pending": "tsx scripts/list-pending-dates.ts",
     "fetch:pending": "tsx scripts/fetch-pending-parallel.ts",
+    "backfill:odds": "tsx scripts/backfill-odds.ts",
     "generate:vapid": "tsx scripts/generate-vapid-keys.ts"
   },
   "dependencies": {
