@@ -73,6 +73,7 @@ npm run backfill:odds -- --dry-run --limit 10 --include-skip-required-odds
 - `--race-id` と `--selection` を併用すると、DB履歴がなくても1レースだけURL検証できる。
 - `--include-existing` を付けた時だけ、既存オッズありのBUY/WATCHも検証対象に含める。
 - `--include-skip-required-odds` を付けると、必要オッズ80倍以下のSKIP(主にオッズ未取得)も補完対象に含める。
+- 既に `odds_snapshots` に同じ `raceId + selection` がある候補は再取得しない。
 - raw HTMLキャッシュがあれば再取得しない。
 - 取得ごとに1.5秒以上待つ。
 - 失敗してもリトライ連打しない。

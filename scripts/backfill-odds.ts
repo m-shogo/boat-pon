@@ -67,7 +67,10 @@ function listTargets(args: Args): Kyotei24OddsTarget[] {
     where.push("date <= ?");
     params.push(args.to);
   }
-  if (!args.includeExisting) where.push("(current_odds IS NULL OR current_odds <= 0)");
+  if (!args.includeExisting) {
+    where.push("(current_odds IS NULL OR current_odds <= 0)");
+    where.push("NOT EXISTS (SELECT 1 FROM odds_snapshots os WHERE os.race_id = decision_history.race_id AND os.selection = decision_history.selection)");
+  }
 
   const decisionFilter = args.includeSkipRequiredOdds
     ? "decision IN ('BUY', 'WATCH', 'SKIP') AND required_odds <= 80"
