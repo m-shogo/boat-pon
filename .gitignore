@@ -11,3 +11,4 @@ tsconfig.tsbuildinfo
 data/*.bak*
 data/boat.sqlite.bak*
 data/fetch-report.txt
+data/fetch-pending-*.txt
