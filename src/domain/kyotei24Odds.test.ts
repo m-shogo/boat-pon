@@ -10,8 +10,9 @@ const target = {
   selection: "1-2-3",
 };
 
-test("kyotei24の候補URLを2系統作る", () => {
+test("kyotei24の候補URLを3系統作る", () => {
   assert.deepEqual(kyotei24OddsUrls(target), [
+    "https://odds.kyotei24.jp/odds3t-karatsu-20250625-3.html",
     "https://odds.kyotei24.jp/od3t-karatsu-20250625-3.html",
     "https://odds.kyotei24.jp/od-20250625-23-3.html",
   ]);
@@ -36,4 +37,23 @@ test("テキスト化された人気順からも抽出できる", () => {
   const parsed = parseKyotei24TrifectaOdds(html, target, "2026-05-23T00:00:00+09:00");
   assert.equal(parsed?.odds, 15.7);
   assert.equal(parsed?.selection, "1-2-3");
+});
+
+test("艇番をdivで描画する新旧HTML構造から抽出する", () => {
+  const html = `
+    <table>
+      <tr>
+        <td>
+          <div class="rgs3">
+            <div class="r1"><div class="rb">1</div></div>
+            <div class="r2"><div class="rb">2</div></div>
+            <div class="r3"><div class="rb">3</div></div>
+          </div>
+        </td>
+        <td class="odText">8.7</td>
+      </tr>
+    </table>
+  `;
+  const parsed = parseKyotei24TrifectaOdds(html, target, "2026-05-23T00:00:00+09:00");
+  assert.equal(parsed?.odds, 8.7);
 });

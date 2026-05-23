@@ -102,9 +102,14 @@ function directTarget(raceId: string, selection: string | null): Kyotei24OddsTar
 async function fetchAndParseKyotei24(target: Kyotei24OddsTarget, urls: string[]): Promise<OddsSnapshot | null> {
   for (const url of urls) {
     const rawPath = rawCachePath(target, url);
-    const html = existsSync(rawPath)
-      ? await readFile(rawPath, "utf8")
-      : await fetchWithCache(url, rawPath);
+    let html: string;
+    try {
+      html = existsSync(rawPath)
+        ? await readFile(rawPath, "utf8")
+        : await fetchWithCache(url, rawPath);
+    } catch {
+      continue;
+    }
     const parsed = parseKyotei24TrifectaOdds(html, target);
     if (!parsed) continue;
     const normalizedPath = normalizedCachePath(target);
@@ -127,7 +132,7 @@ async function fetchWithCache(url: string, outPath: string) {
 }
 
 function rawCachePath(target: Kyotei24OddsTarget, url: string) {
-  const name = url.includes("/od3t-") ? "od3t" : "od";
+  const name = url.includes("/odds3t-") ? "odds3t" : url.includes("/od3t-") ? "od3t" : "od";
   return path.join("data", "raw", "kyotei24", "odds", target.date, `${target.raceId}-${name}.html`);
 }
 

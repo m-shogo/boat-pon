@@ -50,6 +50,7 @@ export function kyotei24OddsUrls(target: Pick<Kyotei24OddsTarget, "date" | "venu
   if (!meta) return [];
   const ymd = target.date.replaceAll("-", "");
   return [
+    `https://odds.kyotei24.jp/odds3t-${meta.slug}-${ymd}-${target.raceNo}.html`,
     `https://odds.kyotei24.jp/od3t-${meta.slug}-${ymd}-${target.raceNo}.html`,
     `https://odds.kyotei24.jp/od-${ymd}-${meta.jcd}-${target.raceNo}.html`,
   ];
@@ -65,6 +66,9 @@ export function parseKyotei24TrifectaOdds(
   const $ = cheerio.load(html);
 
   for (const tr of $("tr").toArray()) {
+    const rendered = parseRenderedBoatRow($, tr, normalizedSelection);
+    if (rendered) return toParsed(target, rendered.odds, rendered.popularity, capturedAt);
+
     const cells = $(tr).find("th, td").toArray().map((cell) => $(cell).text().replace(/[\s　]+/g, " ").trim());
     const row = parseCells(cells, normalizedSelection);
     if (row) return toParsed(target, row.odds, row.popularity, capturedAt);
@@ -76,6 +80,23 @@ export function parseKyotei24TrifectaOdds(
   const match = text.match(regex);
   if (!match) return null;
   return toParsed(target, Number(match[2]), match[1] == null ? null : Number(match[1]), capturedAt);
+}
+
+function parseRenderedBoatRow(
+  $: cheerio.CheerioAPI,
+  tr: Parameters<cheerio.CheerioAPI>[0],
+  selection: string,
+): { odds: number; popularity: number | null } | null {
+  const nums = $(tr).find(".rb, .r0s, .r1, .r2, .r3, .r4, .r5, .r6").toArray()
+    .map((el) => $(el).text().trim())
+    .filter((value) => /^[1-6]$/.test(value))
+    .slice(0, 3)
+    .join("-");
+  if (nums !== selection) return null;
+  const odds = parseOdds($(tr).find(".odText, .od_text, td").last().text());
+  if (odds == null) return null;
+  const popularity = findPopularity([$(tr).text()]);
+  return { odds, popularity };
 }
 
 function parseCells(cells: string[], selection: string): { odds: number; popularity: number | null } | null {
