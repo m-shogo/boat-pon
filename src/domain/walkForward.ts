@@ -1,5 +1,6 @@
 import { judgeCandidate } from "./decision";
 import { buildCandidatesFromModel, buildVenueModel, type ModelCandidateInput } from "./model";
+import { filterComparableResultsForDate } from "./raceRegime";
 import type { BudgetRule, DecisionStatus, RaceResult } from "./types";
 
 export type WalkForwardInput = {
@@ -53,7 +54,10 @@ export function runWalkForwardBacktest(input: WalkForwardInput): WalkForwardRow[
     .sort((a, b) => a.date.localeCompare(b.date) || a.venue.localeCompare(b.venue) || a.raceNo - b.raceNo)
     .map((program) => {
       const raceId = makeRaceId(program);
-      const trainResults = results.filter((row) => row.date < program.date);
+      const trainResults = filterComparableResultsForDate(
+        results.filter((row) => row.date < program.date),
+        program.date,
+      );
       const model = buildVenueModel(trainResults, minTrainRaceCount, alpha);
       const candidates = buildCandidatesFromModel(
         [program],

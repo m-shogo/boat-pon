@@ -1,6 +1,7 @@
 import { judgeCandidate } from "../src/domain/decision";
 import { officialOddsUrl } from "../src/domain/officialLinks";
 import { buildCandidatesFromModel, buildVenueModel } from "../src/domain/model";
+import { filterComparableResultsForDate } from "../src/domain/raceRegime";
 import { sampleCandidates } from "../src/sampleData";
 import type { BetCandidate, BudgetRule, RaceResult } from "../src/domain/types";
 
@@ -20,7 +21,9 @@ export function buildCandidateRows(
 ) {
   let reservedBudgetYen = 0;
   let buyCountToday = 0;
-  const model = buildVenueModel(modelResults, 1);
+  const targetDate = programInputs[0]?.date ?? now.toISOString().slice(0, 10);
+  const comparableResults = filterComparableResultsForDate(modelResults, targetDate);
+  const model = buildVenueModel(comparableResults, 1);
   const modelCandidates = buildCandidatesFromModel(
     programInputs,
     model,
