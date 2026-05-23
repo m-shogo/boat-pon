@@ -11,6 +11,7 @@ import { analyzeOvervaluation } from "../src/domain/analysis";
 import { explainDecision, summarizeSkipReasons } from "../src/domain/decisionExplain";
 import { runWalkForwardBacktest, summarizeWalkForward } from "../src/domain/walkForward";
 import { compareModelVariants } from "../src/domain/modelComparison";
+import { mergeOddsMaps } from "../src/domain/oddsSnapshot";
 import {
   createNotificationIfNeeded,
   deletePushSubscription,
@@ -120,10 +121,11 @@ app.get("/api/dashboard", (req, res) => {
   try {
     const settings = getSettings(db);
     const date = typeof req.query.date === "string" ? req.query.date : undefined;
+    const oddsByRaceId = mergeOddsMaps(getManualOdds(db), listOddsSnapshots(db));
     const rows = buildCandidateRows(
       settings,
       new Date(),
-      getManualOdds(db),
+      oddsByRaceId,
       listProgramInputs(db, date).map((row) => ({
         date: row.date,
         venue: row.venue,
@@ -237,11 +239,12 @@ app.get("/api/backtest/walk-forward", (req, res) => {
     }
     const programs = listProgramInputs(db)
       .filter((row) => (!from || row.date >= from) && (!to || row.date <= to));
+    const oddsByRaceId = mergeOddsMaps(getManualOdds(db), listOddsSnapshots(db));
     const rows = runWalkForwardBacktest({
       results: listAllResultsForModel(db),
       programs,
       settings,
-      oddsByRaceId: getManualOdds(db),
+      oddsByRaceId,
       minTrainRaceCount,
       alpha,
     });
@@ -262,12 +265,13 @@ app.get("/api/backtest/model-comparison", (req, res) => {
     const to = typeof req.query.to === "string" ? req.query.to : undefined;
     const programs = listProgramInputs(db)
       .filter((row) => (!from || row.date >= from) && (!to || row.date <= to));
+    const oddsByRaceId = mergeOddsMaps(getManualOdds(db), listOddsSnapshots(db));
     res.json({
       rows: compareModelVariants({
         results: listAllResultsForModel(db),
         programs,
         settings,
-        oddsByRaceId: getManualOdds(db),
+        oddsByRaceId,
       }),
     });
   } finally {
@@ -364,10 +368,11 @@ app.post("/api/odds/fetch", async (req, res) => {
   try {
     const settings = getSettings(db);
     const now = new Date();
+    const oddsByRaceId = mergeOddsMaps(getManualOdds(db), listOddsSnapshots(db));
     const rows = buildCandidateRows(
       settings,
       now,
-      getManualOdds(db),
+      oddsByRaceId,
       listProgramInputs(db).map((row) => ({
         date: row.date,
         venue: row.venue,

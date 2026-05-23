@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { filterCandidateSnapshots, latestOddsByRaceId, type OddsSnapshot } from "./oddsSnapshot";
+import { filterCandidateSnapshots, latestOddsByRaceId, mergeOddsMaps, type OddsSnapshot } from "./oddsSnapshot";
 
 const rows: OddsSnapshot[] = [
   { raceId: "r1", selection: "1-2-3", odds: 10, popularity: null, source: "manual", capturedAt: "2026-05-01T10:00:00+09:00", isFinalLike: false },
@@ -14,4 +14,10 @@ test("raceIdごとの最新オッズを返す", () => {
 
 test("候補レースだけに絞れる", () => {
   assert.deepEqual(filterCandidateSnapshots(rows, new Set(["r2"])).map((row) => row.raceId), ["r2"]);
+});
+
+test("手動オッズを優先しつつスナップショットで補完する", () => {
+  const merged = mergeOddsMaps(new Map([["r1", 99]]), rows);
+  assert.equal(merged.get("r1"), 99);
+  assert.equal(merged.get("r2"), 8);
 });

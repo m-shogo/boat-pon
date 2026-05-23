@@ -61,6 +61,7 @@ odds_snapshots(
 npm run backfill:odds -- --dry-run --limit 10 --from 2026-05-01 --to 2026-05-23
 npm run backfill:odds -- --limit 1 --race-id 20260521-蒲郡-08
 npm run backfill:odds -- --dry-run --limit 1 --race-id 20250625-唐津-03 --selection 1-2-3
+npm run backfill:odds -- --dry-run --limit 5 --include-existing
 ```
 
 安全仕様:
@@ -69,6 +70,7 @@ npm run backfill:odds -- --dry-run --limit 1 --race-id 20250625-唐津-03 --sele
 - `--dry-run` ではURL候補だけ表示し、外部取得しない。
 - 対象は `decision_history` の `BUY/WATCH` かつ `current_odds` 未取得に限定。
 - `--race-id` と `--selection` を併用すると、DB履歴がなくても1レースだけURL検証できる。
+- `--include-existing` を付けた時だけ、既存オッズありのBUY/WATCHも検証対象に含める。
 - raw HTMLキャッシュがあれば再取得しない。
 - 取得ごとに1.5秒以上待つ。
 - 失敗してもリトライ連打しない。

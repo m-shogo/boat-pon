@@ -15,6 +15,14 @@ export function latestOddsByRaceId(snapshots: OddsSnapshot[]): Map<string, numbe
   return map;
 }
 
+export function mergeOddsMaps(base: Map<string, number>, snapshots: OddsSnapshot[]): Map<string, number> {
+  const merged = new Map(base);
+  for (const [raceId, odds] of latestOddsByRaceId(snapshots)) {
+    if (!merged.has(raceId)) merged.set(raceId, odds);
+  }
+  return merged;
+}
+
 export function filterCandidateSnapshots(snapshots: OddsSnapshot[], raceIds: Set<string>) {
   return snapshots.filter((row) => raceIds.has(row.raceId));
 }
