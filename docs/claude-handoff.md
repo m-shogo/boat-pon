@@ -37,6 +37,23 @@ Boat Pon は個人用の期待値通知・検証アプリ。自動購入、自�
 
 ## 重い作業の進め方
 
+## 推奨: 安全ループCLI
+
+Codex/Claudeのコンテキスト節約には、まず固定ループを使う。
+このCLIは `backfill:odds` と `generate:history --refresh-existing --include-skips` を組み合わせ、失敗率が高い時は止まる。
+
+```bash
+npm run backfill:odds:loop -- --help
+npm run backfill:odds:loop -- --dry-run --from 2025-08-01 --to 2025-08-31
+npm run backfill:odds:loop -- --from 2025-08-01 --to 2025-08-31 --max-total 200 --max-batches 4
+```
+
+- 1バッチ最大50件。
+- 1回の実行は最大500件。
+- 失敗率20%以上、429/403/5xx疑いで停止。
+- 完了メモは `/tmp/boat-pon-claude-status.json` に出る。
+- `data/` 配下は原則コミットしない。
+
 ### 1. 判定履歴を増やす
 
 外部取得なし。保存済みDBだけを読む。
@@ -96,4 +113,3 @@ git status --short
 3. 補完後に `--refresh-existing` で履歴を再計算する。
 4. 月別・会場別・番組カテゴリ別に、BUY/WATCH/SKIPとROIの変化をまとめる。
 5. 改善案はコード変更前に `docs/model-roadmap.md` へ短く記録する。
-

@@ -19,6 +19,7 @@
     "list:pending": "tsx scripts/list-pending-dates.ts",
     "fetch:pending": "tsx scripts/fetch-pending-parallel.ts",
     "backfill:odds": "tsx scripts/backfill-odds.ts",
+    "backfill:odds:loop": "tsx scripts/run-odds-backfill-loop.ts",
     "generate:history": "tsx scripts/generate-decision-history.ts",
     "generate:vapid": "tsx scripts/generate-vapid-keys.ts"
   },
