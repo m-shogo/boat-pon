@@ -6,6 +6,7 @@ import { getManualOdds, getSettings, insertDecisionHistory, listOddsSnapshots, l
 import type { DatabaseSync } from "node:sqlite";
 
 type Args = {
+  help: boolean;
   from: string | null;
   to: string | null;
   limit: number | null;
@@ -19,6 +20,10 @@ type Args = {
 };
 
 const args = parseArgs(process.argv.slice(2));
+if (args.help) {
+  printHelp();
+  process.exit(0);
+}
 if (!args.from || !args.to || args.limit == null || args.limit <= 0) {
   throw new Error("usage: tsx scripts/generate-decision-history.ts --from YYYY-MM-DD --to YYYY-MM-DD --limit N [--dry-run] [--include-skips]");
 }
@@ -126,11 +131,12 @@ function beforeCloseTime(date: string, closeAt: string, minutesBeforeClose: numb
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: Args = { from: null, to: null, limit: null, dryRun: false, includeSkips: false, includeRequiredOddsCandidates: false, refreshExisting: false, minTrainRaceCount: null, trainDays: 180, alpha: 1 };
+  const args: Args = { help: false, from: null, to: null, limit: null, dryRun: false, includeSkips: false, includeRequiredOddsCandidates: false, refreshExisting: false, minTrainRaceCount: null, trainDays: 180, alpha: 1 };
   for (let i = 0; i < argv.length; i += 1) {
     const key = argv[i];
     const value = argv[i + 1];
-    if (key === "--dry-run") args.dryRun = true;
+    if (key === "--help" || key === "-h") args.help = true;
+    else if (key === "--dry-run") args.dryRun = true;
     else if (key === "--include-skips") args.includeSkips = true;
     else if (key === "--include-required-odds-candidates") args.includeRequiredOddsCandidates = true;
     else if (key === "--refresh-existing") args.refreshExisting = true;
@@ -148,4 +154,29 @@ function parseArgs(argv: string[]): Args {
 function normalizeDate(value: string | undefined) {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error(`date must be YYYY-MM-DD: ${value}`);
   return value;
+}
+
+function printHelp() {
+  console.log(`Boat Pon 判定履歴生成CLI
+
+保存済みの公式番組表・結果・オッズスナップショットだけを使い、外部サイトへアクセスせずに decision_history を生成/更新する。
+
+必須:
+  --from YYYY-MM-DD
+  --to YYYY-MM-DD
+  --limit N
+
+主なオプション:
+  --dry-run                          保存せず対象だけ表示
+  --include-required-odds-candidates オッズ未取得でも必要オッズ80倍以下の候補を保存対象にする
+  --include-skips                    SKIPも保存/更新対象にする
+  --refresh-existing                 既存履歴を補完済みオッズで再計算する
+  --train-days N                     学習に使う過去日数。既定値: 180
+  --min-train N                      会場モデルの最小サンプル数。未指定なら設定値
+  --alpha N                          Laplaceスムージング係数。既定値: 1
+
+例:
+  npm run generate:history -- --dry-run --from 2026-05-01 --to 2026-05-21 --limit 100 --include-required-odds-candidates
+  npm run generate:history -- --from 2026-05-01 --to 2026-05-21 --limit 100 --refresh-existing --include-skips
+`);
 }

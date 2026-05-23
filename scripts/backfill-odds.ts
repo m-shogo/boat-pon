@@ -6,6 +6,7 @@ import { kyotei24OddsUrls, parseKyotei24TrifectaOdds, type Kyotei24OddsTarget } 
 import type { OddsSnapshot } from "../src/domain/oddsSnapshot";
 
 type Args = {
+  help: boolean;
   limit: number | null;
   dryRun: boolean;
   from: string | null;
@@ -19,6 +20,10 @@ type Args = {
 };
 
 const args = parseArgs(process.argv.slice(2));
+if (args.help) {
+  printHelp();
+  process.exit(0);
+}
 if (args.limit == null || args.limit <= 0) {
   throw new Error("安全のため --limit <件数> は必須です。例: tsx scripts/backfill-odds.ts --dry-run --limit 10");
 }
@@ -149,11 +154,12 @@ function normalizedCachePath(target: Kyotei24OddsTarget) {
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: Args = { limit: null, dryRun: false, from: null, to: null, source: "kyotei24", raceId: null, selection: null, includeExisting: false, includeSkipRequiredOdds: false, sleepMs: 1500 };
+  const args: Args = { help: false, limit: null, dryRun: false, from: null, to: null, source: "kyotei24", raceId: null, selection: null, includeExisting: false, includeSkipRequiredOdds: false, sleepMs: 1500 };
   for (let i = 0; i < argv.length; i += 1) {
     const key = argv[i];
     const value = argv[i + 1];
-    if (key === "--dry-run") args.dryRun = true;
+    if (key === "--help" || key === "-h") args.help = true;
+    else if (key === "--dry-run") args.dryRun = true;
     else if (key === "--include-existing") args.includeExisting = true;
     else if (key === "--include-skip-required-odds") args.includeSkipRequiredOdds = true;
     else if (key === "--limit") { args.limit = Number(value); i += 1; }
@@ -181,4 +187,29 @@ function normalizeDate(value: string | undefined) {
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function printHelp() {
+  console.log(`Boat Pon 過去オッズ補完CLI
+
+decision_history の候補だけを対象に、kyotei24の過去3連単オッズを低頻度・キャッシュ前提で補完する。
+自動購入、ログイン保存、投票サイト操作は一切しない。
+
+必須:
+  --limit N
+
+主なオプション:
+  --dry-run                     URL候補だけ表示し、外部取得しない
+  --from YYYY-MM-DD             対象開始日
+  --to YYYY-MM-DD               対象終了日
+  --race-id YYYYMMDD-会場-RR    1レースだけ検証
+  --selection 1-2-3             --race-id と併用する買い目
+  --include-existing            既存オッズありも再検証対象にする
+  --include-skip-required-odds  必要オッズ80倍以下のSKIPも補完対象にする
+  --sleep-ms N                  取得間隔。最低1000ms、既定値1500ms
+
+例:
+  npm run backfill:odds -- --dry-run --limit 10 --include-skip-required-odds
+  npm run backfill:odds -- --limit 5 --include-skip-required-odds
+`);
 }
