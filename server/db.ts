@@ -229,6 +229,10 @@ ON CONFLICT(race_id) DO UPDATE SET odds = excluded.odds, source = excluded.sourc
 }
 
 export function recordOddsSnapshot(db: DatabaseSync, snapshot: OddsSnapshot) {
+  // 同一(race_id, selection, source)の既存行を削除してから挿入（重複防止）
+  db.prepare(`
+DELETE FROM odds_snapshots WHERE race_id = ? AND selection = ? AND source = ?
+`).run(snapshot.raceId, snapshot.selection, snapshot.source);
   db.prepare(`
 INSERT INTO odds_snapshots (race_id, selection, odds, popularity, source, captured_at, is_final_like)
 VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -255,8 +259,10 @@ LIMIT 200
     : db.prepare(`
 SELECT race_id, selection, odds, popularity, source, captured_at, is_final_like
 FROM odds_snapshots
+WHERE id IN (
+  SELECT MAX(id) FROM odds_snapshots GROUP BY race_id, selection
+)
 ORDER BY captured_at DESC, id DESC
-LIMIT 500
 `).all();
   return (rows as Array<Record<string, unknown>>).map((row) => ({
     raceId: String(row.race_id),

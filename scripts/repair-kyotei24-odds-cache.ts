@@ -71,7 +71,7 @@ function parseArgs(argv: string[]): Args {
     else if (key === "--min-odds") { args.minOdds = Number(value); i += 1; }
     else throw new Error(`unknown option: ${key}`);
   }
-  if (args.limit <= 0 || args.limit > 500) throw new Error("--limit は 1〜500 にしてください");
-  if (args.minOdds < 50) throw new Error("--min-odds は 50 以上にしてください");
+  if (args.limit <= 0 || args.limit > 2000) throw new Error("--limit は 1〜2000 にしてください");
+  if (args.minOdds < 10) throw new Error("--min-odds は 10 以上にしてください");
   return args;
 }

@@ -1,6 +1,6 @@
 # Claude Code 引き継ぎメモ
 
-最終更新: 2026-05-23
+最終更新: 2026-05-24
 
 Boat Pon は個人用の期待値通知・検証アプリ。自動購入、自動投票、ログイン保存、投票サイト操作は絶対に実装しない。
 外部サイト取得は候補レースだけ、低頻度、キャッシュ前提で行う。
@@ -9,13 +9,21 @@ Boat Pon は個人用の期待値通知・検証アプリ。自動購入、自�
 
 - リポジトリ: `/Users/m-shogo/Developer/personal/boat-pon`
 - ブランチ: `main`
-- 直近の主な追加:
-  - `npm run generate:history`
-  - `npm run backfill:odds`
-  - 補完済みオッズによる `decision_history` 再計算
+- 直近の主な変更 (2026-05-24):
+  - `server/db.ts`: `recordOddsSnapshot` で DELETE+INSERT（重複防止）
+  - `server/db.ts`: `listOddsSnapshots` の LIMIT 500 を撤廃、MAX(id)で最新1件を返す
+  - `scripts/repair-kyotei24-odds-cache.ts`: --min-odds 下限 50→10、--limit 上限 500→2000
+  - 連結パターン（98.398→98.3等）を全件修正（541件）
+  - 月別100件補完（2025-09〜11各110件）
+  - 全BUY/WATCHの current_odds 取得率: **100%**
+- 直近の分析結果:
+  - BUY 430件、ROI 0.825、的中率 2.79%
+  - calibration 2.28倍過大（推定 6.36% vs 実測 2.79%）
+  - オッズ20〜50倍がROI最良帯（0.995）
+  - 詳細: `docs/odds-quality-report-2026-05-24.md`
 - 直近確認:
-  - `npm test`
-  - `npm run build`
+  - `npm test` 66件全件パス
+  - `npm run build` 成功
 
 ## 触らないもの
 
@@ -109,8 +117,18 @@ git status --short
 
 ## 次にClaudeへ頼みたい重い作業
 
-1. 月単位で `generate:history` を広げる。
-2. `backfill:odds` を小ロットで繰り返す。
-3. 補完後に `--refresh-existing` で履歴を再計算する。
-4. 月別・会場別・番組カテゴリ別に、BUY/WATCH/SKIPとROIの変化をまとめる。
-5. 改善案はコード変更前に `docs/model-roadmap.md` へ短く記録する。
+1. **2025年残り月の generate:history 追加**:
+   - `npm run generate:history -- --from 2025-01-01 --to 2025-07-31 --limit 1000 --include-required-odds-candidates` で月単位で拡張
+   - 各月 dry-run で確認後に実行
+2. **calibration 係数の調整**:
+   - 推定的中率が実測の 2.3 倍なので、モデルの平滑化係数を調整
+   - `src/domain/model.ts` の Laplace スムージングを見直す
+3. **オッズ帯絞り込み条件のサンプル拡大**:
+   - current_odds < 50 かつ EV 2.0〜3.0 で n=103 → 少なくとも 500 件に拡大してから判断
+4. 改善案はコード変更前に `docs/model-roadmap.md` へ短く記録する。
+
+## DBスキーマ注意
+
+- `odds_snapshots`: 同一 (race_id, selection, source) のスナップショットは1件のみ保持（MAX id）
+- `recordOddsSnapshot`: DELETE→INSERT で重複しない（2026-05-24 修正済み）
+- `listOddsSnapshots(db)`: LIMIT なし、MAX(id) GROUP BY race_id, selection で最新1件返す
