@@ -14,6 +14,7 @@ type Args = {
   includeSkips: boolean;
   includeRequiredOddsCandidates: boolean;
   refreshExisting: boolean;
+  refreshOnly: boolean;
   minTrainRaceCount: number | null;
   trainDays: number;
   alpha: number;
@@ -66,6 +67,7 @@ try {
       decision.requiredOdds <= 80;
     const key = decisionKey(candidate.raceId, candidate.selection.join("-"));
     const isExisting = existingKeys.has(key);
+    if (args.refreshOnly && !isExisting) continue;
     if (!args.includeSkips && decision.status === "SKIP" && !isRequiredOddsCandidate && !(isExisting && args.refreshExisting)) continue;
     if (isExisting && !args.refreshExisting) {
       skippedExisting += 1;
@@ -131,7 +133,7 @@ function beforeCloseTime(date: string, closeAt: string, minutesBeforeClose: numb
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: Args = { help: false, from: null, to: null, limit: null, dryRun: false, includeSkips: false, includeRequiredOddsCandidates: false, refreshExisting: false, minTrainRaceCount: null, trainDays: 180, alpha: 1 };
+  const args: Args = { help: false, from: null, to: null, limit: null, dryRun: false, includeSkips: false, includeRequiredOddsCandidates: false, refreshExisting: false, refreshOnly: false, minTrainRaceCount: null, trainDays: 180, alpha: 1 };
   for (let i = 0; i < argv.length; i += 1) {
     const key = argv[i];
     const value = argv[i + 1];
@@ -140,6 +142,7 @@ function parseArgs(argv: string[]): Args {
     else if (key === "--include-skips") args.includeSkips = true;
     else if (key === "--include-required-odds-candidates") args.includeRequiredOddsCandidates = true;
     else if (key === "--refresh-existing") args.refreshExisting = true;
+    else if (key === "--refresh-only") args.refreshOnly = true;
     else if (key === "--from") { args.from = normalizeDate(value); i += 1; }
     else if (key === "--to") { args.to = normalizeDate(value); i += 1; }
     else if (key === "--limit") { args.limit = Number(value); i += 1; }
@@ -171,12 +174,13 @@ function printHelp() {
   --include-required-odds-candidates オッズ未取得でも必要オッズ80倍以下の候補を保存対象にする
   --include-skips                    SKIPも保存/更新対象にする
   --refresh-existing                 既存履歴を補完済みオッズで再計算する
+  --refresh-only                     既存履歴だけを更新し、新規履歴は作らない
   --train-days N                     学習に使う過去日数。既定値: 180
   --min-train N                      会場モデルの最小サンプル数。未指定なら設定値
   --alpha N                          Laplaceスムージング係数。既定値: 1
 
 例:
   npm run generate:history -- --dry-run --from 2026-05-01 --to 2026-05-21 --limit 100 --include-required-odds-candidates
-  npm run generate:history -- --from 2026-05-01 --to 2026-05-21 --limit 100 --refresh-existing --include-skips
+  npm run generate:history -- --from 2026-05-01 --to 2026-05-21 --limit 100 --refresh-existing --refresh-only --include-skips
 `);
 }

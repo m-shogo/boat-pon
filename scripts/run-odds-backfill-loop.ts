@@ -75,7 +75,7 @@ for (let batch = 1; batch <= args.maxBatches; batch += 1) {
 
   const attempted = parsed.ok + parsed.skip;
   const failedRate = attempted === 0 ? 0 : parsed.skip / attempted;
-  const hasBlockedStatus = /(?:429|403|5\d\d)/.test(actual.stdout + actual.stderr);
+  const hasBlockedStatus = hasBlockedHttpStatus(actual.stdout + actual.stderr);
   const batchResult: BatchResult = {
     batch,
     targets,
@@ -134,7 +134,7 @@ async function runBackfill(backfillArgs: string[]) {
 }
 
 async function refreshHistory(from: string, to: string) {
-  await runCommand("npm", ["run", "generate:history", "--", "--from", from, "--to", to, "--limit", "5000", "--refresh-existing", "--include-skips"]);
+  await runCommand("npm", ["run", "generate:history", "--", "--from", from, "--to", to, "--limit", "5000", "--refresh-existing", "--refresh-only", "--include-skips"]);
 }
 
 function parseTargetCount(output: string) {
@@ -146,6 +146,12 @@ function parseBackfillResult(output: string) {
   const ok = (output.match(/^\[ok\]/gm) ?? []).length;
   const skip = (output.match(/^\[skip\]/gm) ?? []).length;
   return { ok, skip };
+}
+
+function hasBlockedHttpStatus(output: string) {
+  return output
+    .split(/\r?\n/)
+    .some((line) => /fetch failed\s+(?:429|403|5\d\d)\b/i.test(line) || /\b(?:HTTP|status)\s*(?:429|403|5\d\d)\b/i.test(line));
 }
 
 function readCounts() {
@@ -264,7 +270,7 @@ Claude/Codexのコンテキスト節約用。自動購入・投票サイト操�
   --batch-size N                  1バッチの取得件数。最大50。既定値: 50
   --max-batches N                 最大バッチ数。最大20。既定値: 2
   --max-total N                   最大成功取得件数。最大500。既定値: 100
-  --refresh-every N               N件成功ごとに履歴再計算。既定値: 100
+  --refresh-every N               N件成功ごとに既存履歴だけ再計算。既定値: 100
   --sleep-between-batches-ms N    バッチ間隔。最低1000ms。既定値: 3000
   --status-file PATH              完了メモJSON。既定値: /tmp/boat-pon-claude-status.json
 
