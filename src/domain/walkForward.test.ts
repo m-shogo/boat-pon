@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { DEFAULT_RULE } from "./decision";
+import { DEFAULT_RULE, judgeCandidate } from "./decision";
 import { runWalkForwardBacktest, summarizeWalkForward } from "./walkForward";
 import type { RaceResult } from "./types";
 
@@ -82,4 +82,37 @@ test("ウォークフォワード集計はBUYだけを検証投資にする", ()
   assert.equal(summary.hits, 1);
   assert.equal(summary.modelStakeYen, 100);
   assert.equal(summary.modelPayoutYen, 1600);
+});
+
+test("締切前モードでは過去日でも締切直前扱いにならない", () => {
+  const rows = runWalkForwardBacktest({
+    results: [result(1, "2026-05-01", "1-2-3"), result(2, "2026-05-02", "1-2-3")],
+    programs: [{ date: "2026-05-02", venue: "蒲郡", raceNo: 2, closeAt: "12:00" }],
+    settings: { ...DEFAULT_RULE, minSampleSize: 1 },
+    oddsByRaceId: new Map([["20260502-蒲郡-02", 200]]),
+    minTrainRaceCount: 1,
+    alpha: 0,
+  });
+  assert.equal(rows[0].decision, "SKIP");
+
+  const candidate = {
+    raceId: "20260502-蒲郡-02",
+    date: "2026-05-02",
+    venue: "蒲郡",
+    raceNo: 2,
+    closeAt: "12:00",
+    betType: "3連単" as const,
+    selection: [1, 2, 3],
+    estimatedHitRate: 0.1,
+    sampleSize: 1000,
+    currentOdds: 20,
+    targetEv: 1.25,
+    suggestedAmount: 100,
+    source: "test",
+    fetchedAt: "2026-05-02T00:00:00+09:00",
+  };
+  const decision = judgeCandidate(candidate, { ...DEFAULT_RULE, minSampleSize: 1 }, {
+    now: new Date("2026-05-02T11:45:00+09:00"),
+  });
+  assert.equal(decision.status, "BUY");
 });

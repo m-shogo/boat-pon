@@ -10,6 +10,7 @@ export type WalkForwardInput = {
   oddsByRaceId?: Map<string, number>;
   minTrainRaceCount?: number;
   alpha?: number;
+  nowMode?: "race-date" | "before-close";
 };
 
 export type WalkForwardRow = {
@@ -88,8 +89,11 @@ export function runWalkForwardBacktest(input: WalkForwardInput): WalkForwardRow[
         };
       }
 
+      const decisionNow = input.nowMode === "before-close"
+        ? beforeCloseTime(program.date, program.closeAt, input.settings.minMinutesBeforeClose + 10)
+        : new Date(program.date + "T00:00:00+09:00");
       const decision = judgeCandidate(candidate, input.settings, {
-        now: new Date(program.date + "T00:00:00+09:00"),
+        now: decisionNow,
         buyCountToday: 0,
         reservedBudgetYen: 0,
       });
@@ -138,4 +142,11 @@ export function summarizeWalkForward(rows: WalkForwardRow[], stakePerBetYen: num
 
 function makeRaceId(input: ModelCandidateInput) {
   return input.date.replaceAll("-", "") + "-" + input.venue + "-" + String(input.raceNo).padStart(2, "0");
+}
+
+function beforeCloseTime(date: string, closeAt: string, minutesBeforeClose: number) {
+  const [hour, minute] = closeAt.split(":").map(Number);
+  const base = new Date(`${date}T00:00:00+09:00`);
+  base.setHours(hour, minute, 0, 0);
+  return new Date(base.getTime() - minutesBeforeClose * 60_000);
 }

@@ -292,6 +292,16 @@ ORDER BY date DESC, venue ASC, race_no ASC
   return rows.map(rowToResult);
 }
 
+export function listResultsForModelRange(db: DatabaseSync, from: string, to: string): RaceResult[] {
+  const rows = db.prepare(`
+SELECT race_id, date, venue, race_no, trifecta, payout_yen, popularity, returned, source, fetched_at
+FROM race_results
+WHERE date >= ? AND date <= ?
+ORDER BY date DESC, venue ASC, race_no ASC
+`).all(from, to) as Array<Record<string, unknown>>;
+  return rows.map(rowToResult);
+}
+
 export function listOfficialProgramsRaw(db: DatabaseSync) {
   const rows = db.prepare(`
 SELECT race_id, date, venue, race_no, close_at, raw_json
@@ -318,6 +328,25 @@ FROM official_programs
 ${where}
 ORDER BY date DESC, venue ASC, race_no ASC
 `).all(...params) as Array<Record<string, unknown>>;
+  return rows.map((row) => ({
+    raceId: String(row.race_id),
+    date: String(row.date),
+    venue: String(row.venue),
+    raceNo: Number(row.race_no),
+    closeAt: String(row.close_at),
+    raceCategory: parseRaceCategory(row.raw_json),
+    features: extractProgramFeatures(parseRawJson(row.raw_json)),
+  }));
+}
+
+export function listProgramInputsRange(db: DatabaseSync, from: string, to: string, limit: number) {
+  const rows = db.prepare(`
+SELECT race_id, date, venue, race_no, close_at, raw_json
+FROM official_programs
+WHERE date >= ? AND date <= ?
+ORDER BY date ASC, venue ASC, race_no ASC
+LIMIT ?
+`).all(from, to, limit) as Array<Record<string, unknown>>;
   return rows.map((row) => ({
     raceId: String(row.race_id),
     date: String(row.date),

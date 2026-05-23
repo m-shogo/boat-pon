@@ -14,6 +14,7 @@ type Args = {
   raceId: string | null;
   selection: string | null;
   includeExisting: boolean;
+  includeSkipRequiredOdds: boolean;
   sleepMs: number;
 };
 
@@ -68,11 +69,15 @@ function listTargets(args: Args): Kyotei24OddsTarget[] {
   }
   if (!args.includeExisting) where.push("(current_odds IS NULL OR current_odds <= 0)");
 
+  const decisionFilter = args.includeSkipRequiredOdds
+    ? "decision IN ('BUY', 'WATCH', 'SKIP') AND required_odds <= 80"
+    : "decision IN ('BUY', 'WATCH')";
+
   const rows = db.prepare(`
 SELECT race_id, date, venue, race_no, selection, decision, current_odds, created_at
 FROM decision_history
 WHERE ${where.join(" AND ")}
-  AND decision IN ('BUY', 'WATCH')
+  AND ${decisionFilter}
 ORDER BY date ASC, created_at ASC, id ASC
 LIMIT ?
 `).all(...params, args.limit) as Array<Record<string, unknown>>;
@@ -141,12 +146,13 @@ function normalizedCachePath(target: Kyotei24OddsTarget) {
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: Args = { limit: null, dryRun: false, from: null, to: null, source: "kyotei24", raceId: null, selection: null, includeExisting: false, sleepMs: 1500 };
+  const args: Args = { limit: null, dryRun: false, from: null, to: null, source: "kyotei24", raceId: null, selection: null, includeExisting: false, includeSkipRequiredOdds: false, sleepMs: 1500 };
   for (let i = 0; i < argv.length; i += 1) {
     const key = argv[i];
     const value = argv[i + 1];
     if (key === "--dry-run") args.dryRun = true;
     else if (key === "--include-existing") args.includeExisting = true;
+    else if (key === "--include-skip-required-odds") args.includeSkipRequiredOdds = true;
     else if (key === "--limit") { args.limit = Number(value); i += 1; }
     else if (key === "--from") { args.from = normalizeDate(value); i += 1; }
     else if (key === "--to") { args.to = normalizeDate(value); i += 1; }

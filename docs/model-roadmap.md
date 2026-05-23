@@ -44,3 +44,22 @@ Boat Pon は自動購入アプリではない。目的は、ほとんどの日�
 3. Dashboard > 番組カテゴリ別ROI
 4. Dashboard > 会場別ROIヒートマップ
 5. Backtest > 時系列検証
+
+## 判定履歴の増やし方
+
+外部取得なしで、保存済みの公式番組表と結果からウォークフォワード判定履歴を作れる。
+補完対象を増やす時は、まず短い期間・少ない件数で dry-run する。
+
+```bash
+npm run generate:history -- --dry-run --from 2026-05-01 --to 2026-05-21 --limit 100
+npm run generate:history -- --dry-run --from 2026-05-01 --to 2026-05-21 --limit 100 --include-required-odds-candidates
+npm run generate:history -- --from 2026-05-01 --to 2026-05-21 --limit 100
+```
+
+- `--from`, `--to`, `--limit` は必須。
+- 学習期間はデフォルトで対象開始日の180日前から。変える場合は `--train-days 365` のように指定する。
+- デフォルトでは BUY/WATCH のみ保存し、SKIPは保存しない。
+- `--include-skips` を付けた時だけSKIPも保存する。
+- `--include-required-odds-candidates` を付けると、オッズ未取得でも必要オッズ80倍以下の候補を保存対象にできる。
+- 同じ期間を再実行しても、同じ `raceId + selection` の履歴は重複保存しない。
+- 外部サイトにはアクセスしない。
