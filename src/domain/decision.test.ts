@@ -46,3 +46,12 @@ test("EVが惜しい候補はWATCHにする", () => {
   });
   assert.equal(decision.status, "WATCH");
 });
+
+test("100倍超オッズはEV条件を満たしても検証保留のWATCHにする", () => {
+  const decision = judgeCandidate({ ...base, currentOdds: 120 }, DEFAULT_RULE, {
+    now: new Date("2026-05-21T18:00:00+09:00"),
+  });
+  assert.equal(decision.status, "WATCH");
+  assert.equal(decision.recommendedAmount, 0);
+  assert.ok(decision.reasons.includes("100倍超オッズは検証保留"));
+});

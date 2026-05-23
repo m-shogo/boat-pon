@@ -57,3 +57,23 @@ test("艇番をdivで描画する新旧HTML構造から抽出する", () => {
   const parsed = parseKyotei24TrifectaOdds(html, target, "2026-05-23T00:00:00+09:00");
   assert.equal(parsed?.odds, 8.7);
 });
+
+test("非表示の重複オッズを連結せず表示値だけ抽出する", () => {
+  const html = `
+    <table>
+      <tr>
+        <td>3<div id="dm-76" style="display: none;">1-2-3</div></td>
+        <td><div class="ng20r1">1</div><div class="ng20r2n">2</div><div class="ng20r3n">3</div></td>
+        <td class="odds">220.4<div id="od-76" style="display: none;">220.4</div></td>
+      </tr>
+    </table>
+  `;
+  const parsed = parseKyotei24TrifectaOdds(html, {
+    ...target,
+    raceId: "20250804-桐生-02",
+    date: "2025-08-04",
+    venue: "桐生",
+    raceNo: 2,
+  }, "2026-05-23T00:00:00+09:00");
+  assert.equal(parsed?.odds, 220.4);
+});

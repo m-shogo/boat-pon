@@ -69,7 +69,7 @@ export function parseKyotei24TrifectaOdds(
     const rendered = parseRenderedBoatRow($, tr, normalizedSelection);
     if (rendered) return toParsed(target, rendered.odds, rendered.popularity, capturedAt);
 
-    const cells = $(tr).find("th, td").toArray().map((cell) => $(cell).text().replace(/[\s　]+/g, " ").trim());
+    const cells = $(tr).find("th, td").toArray().map((cell) => visibleCellText($, cell));
     const row = parseCells(cells, normalizedSelection);
     if (row) return toParsed(target, row.odds, row.popularity, capturedAt);
   }
@@ -93,10 +93,17 @@ function parseRenderedBoatRow(
     .slice(0, 3)
     .join("-");
   if (nums !== selection) return null;
-  const odds = parseOdds($(tr).find(".odText, .od_text, td").last().text());
+  const oddsCell = $(tr).find(".odText, .od_text, td").last().get(0);
+  const odds = oddsCell ? parseOdds(visibleCellText($, oddsCell)) : null;
   if (odds == null) return null;
   const popularity = findPopularity([$(tr).text()]);
   return { odds, popularity };
+}
+
+function visibleCellText($: cheerio.CheerioAPI, cell: Parameters<cheerio.CheerioAPI>[0]) {
+  const cloned = $(cell).clone();
+  cloned.find("[style*='display: none'], [style*='display:none'], script, style").remove();
+  return cloned.text().replace(/[\s　]+/g, " ").trim();
 }
 
 function parseCells(cells: string[], selection: string): { odds: number; popularity: number | null } | null {

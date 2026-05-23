@@ -10,6 +10,8 @@ export const DEFAULT_RULE: BudgetRule = {
   targetEv: 1.25,
 };
 
+const WATCH_ONLY_ODDS_THRESHOLD = 100;
+
 export function requiredOdds(targetEv: number, estimatedHitRate: number): number {
   if (estimatedHitRate <= 0) return Number.POSITIVE_INFINITY;
   return targetEv / estimatedHitRate;
@@ -44,6 +46,9 @@ export function judgeCandidate(
 
   if (candidate.sampleSize < rule.minSampleSize) reasons.push("サンプル不足");
   if (candidate.currentOdds == null) reasons.push("オッズ未取得");
+  if (candidate.currentOdds != null && candidate.currentOdds >= WATCH_ONLY_ODDS_THRESHOLD) {
+    reasons.push("100倍超オッズは検証保留");
+  }
   if (minutes < rule.minMinutesBeforeClose) reasons.push("締切が近すぎる");
   if (candidate.notified) reasons.push("同一レース通知済み");
   if (candidate.hasRiskFlag) reasons.push("欠場/返還など要確認");
@@ -63,7 +68,7 @@ export function judgeCandidate(
     };
   }
 
-  if (ev != null && ev >= 1.05 && ev < rule.targetEv) {
+  if (ev != null && ev >= 1.05 && (ev < rule.targetEv || reasons.includes("100倍超オッズは検証保留"))) {
     return {
       status: "WATCH",
       requiredOdds: req,

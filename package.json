@@ -20,6 +20,7 @@
     "fetch:pending": "tsx scripts/fetch-pending-parallel.ts",
     "backfill:odds": "tsx scripts/backfill-odds.ts",
     "backfill:odds:loop": "tsx scripts/run-odds-backfill-loop.ts",
+    "repair:odds": "tsx scripts/repair-kyotei24-odds-cache.ts",
     "generate:history": "tsx scripts/generate-decision-history.ts",
     "generate:vapid": "tsx scripts/generate-vapid-keys.ts"
   },

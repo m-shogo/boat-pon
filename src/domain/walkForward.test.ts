@@ -89,7 +89,7 @@ test("締切前モードでは過去日でも締切直前扱いにならない",
     results: [result(1, "2026-05-01", "1-2-3"), result(2, "2026-05-02", "1-2-3")],
     programs: [{ date: "2026-05-02", venue: "蒲郡", raceNo: 2, closeAt: "12:00" }],
     settings: { ...DEFAULT_RULE, minSampleSize: 1 },
-    oddsByRaceId: new Map([["20260502-蒲郡-02", 200]]),
+    oddsByRaceId: new Map([["20260502-蒲郡-02", 20]]),
     minTrainRaceCount: 1,
     alpha: 0,
   });
