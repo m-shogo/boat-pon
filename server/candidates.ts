@@ -3,6 +3,7 @@ import { officialOddsUrl } from "../src/domain/officialLinks";
 import { buildCandidatesFromModel, buildVenueModel } from "../src/domain/model";
 import { filterComparableResultsForDate } from "../src/domain/raceRegime";
 import { sampleCandidates } from "../src/sampleData";
+import type { ProgramFeatureSnapshot } from "../src/domain/programFeatures";
 import type { BetCandidate, BudgetRule, RaceResult } from "../src/domain/types";
 
 type ProgramInput = {
@@ -11,6 +12,7 @@ type ProgramInput = {
   raceNo: number;
   closeAt: string;
   raceCategory?: string;
+  features?: ProgramFeatureSnapshot;
 };
 
 export function buildCandidateRows(

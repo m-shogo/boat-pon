@@ -21,6 +21,7 @@ export type BetCandidate = {
   raceCategory?: string;
   environmentRiskLevel?: "low" | "medium" | "high";
   environmentRiskReasons?: string[];
+  featureAdjustment?: number;
 };
 
 export type BudgetRule = {

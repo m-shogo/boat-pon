@@ -1,6 +1,8 @@
 import { mkdirSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { DEFAULT_RULE } from "../src/domain/decision";
+import { extractProgramFeatures } from "../src/domain/programFeatures";
+import type { OddsSnapshot } from "../src/domain/oddsSnapshot";
 import type { RaceCategory } from "../src/domain/programCategory";
 import type { BetCandidate, BudgetRule, Decision, DecisionStatus, RaceResult } from "../src/domain/types";
 import { sampleResults } from "../src/sampleData";
@@ -85,6 +87,17 @@ CREATE TABLE IF NOT EXISTS manual_odds (
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS odds_snapshots (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  race_id TEXT NOT NULL,
+  selection TEXT NOT NULL,
+  odds REAL NOT NULL,
+  popularity INTEGER,
+  source TEXT NOT NULL,
+  captured_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  is_final_like INTEGER NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS official_programs (
   race_id TEXT PRIMARY KEY,
   date TEXT NOT NULL,
@@ -135,6 +148,7 @@ CREATE INDEX IF NOT EXISTS idx_official_programs_venue ON official_programs (ven
 CREATE INDEX IF NOT EXISTS idx_decision_history_date ON decision_history (date);
 CREATE INDEX IF NOT EXISTS idx_decision_history_venue ON decision_history (venue);
 CREATE INDEX IF NOT EXISTS idx_decision_history_decision ON decision_history (decision);
+CREATE INDEX IF NOT EXISTS idx_odds_snapshots_race ON odds_snapshots (race_id, captured_at);
 `);
 
   // venue表記揺れの正規化（旧「琵琶湖」→新「びわこ」）。冪等。race_idも更新する。
@@ -197,12 +211,62 @@ export function setManualOdds(db: DatabaseSync, raceId: string, odds: number) {
   setOdds(db, raceId, odds, "manual");
 }
 
-export function setOdds(db: DatabaseSync, raceId: string, odds: number, source: string) {
+export function setOdds(db: DatabaseSync, raceId: string, odds: number, source: string, selection = "") {
   db.prepare(`
 INSERT INTO manual_odds (race_id, odds, source, updated_at)
 VALUES (?, ?, ?, CURRENT_TIMESTAMP)
 ON CONFLICT(race_id) DO UPDATE SET odds = excluded.odds, source = excluded.source, updated_at = CURRENT_TIMESTAMP
 `).run(raceId, odds, source);
+  recordOddsSnapshot(db, {
+    raceId,
+    selection,
+    odds,
+    popularity: null,
+    source: source === "official" || source === "kyotei24" || source === "import" ? source : "manual",
+    capturedAt: new Date().toISOString(),
+    isFinalLike: source !== "manual",
+  });
+}
+
+export function recordOddsSnapshot(db: DatabaseSync, snapshot: OddsSnapshot) {
+  db.prepare(`
+INSERT INTO odds_snapshots (race_id, selection, odds, popularity, source, captured_at, is_final_like)
+VALUES (?, ?, ?, ?, ?, ?, ?)
+`).run(
+    snapshot.raceId,
+    snapshot.selection,
+    snapshot.odds,
+    snapshot.popularity,
+    snapshot.source,
+    snapshot.capturedAt,
+    snapshot.isFinalLike ? 1 : 0,
+  );
+}
+
+export function listOddsSnapshots(db: DatabaseSync, raceId?: string): OddsSnapshot[] {
+  const rows = raceId
+    ? db.prepare(`
+SELECT race_id, selection, odds, popularity, source, captured_at, is_final_like
+FROM odds_snapshots
+WHERE race_id = ?
+ORDER BY captured_at DESC, id DESC
+LIMIT 200
+`).all(raceId)
+    : db.prepare(`
+SELECT race_id, selection, odds, popularity, source, captured_at, is_final_like
+FROM odds_snapshots
+ORDER BY captured_at DESC, id DESC
+LIMIT 500
+`).all();
+  return (rows as Array<Record<string, unknown>>).map((row) => ({
+    raceId: String(row.race_id),
+    selection: String(row.selection),
+    odds: Number(row.odds),
+    popularity: row.popularity == null ? null : Number(row.popularity),
+    source: String(row.source) as OddsSnapshot["source"],
+    capturedAt: String(row.captured_at),
+    isFinalLike: Boolean(row.is_final_like),
+  }));
 }
 
 export function listResults(db: DatabaseSync, date?: string): RaceResult[] {
@@ -261,6 +325,7 @@ ORDER BY date DESC, venue ASC, race_no ASC
     raceNo: Number(row.race_no),
     closeAt: String(row.close_at),
     raceCategory: parseRaceCategory(row.raw_json),
+    features: extractProgramFeatures(parseRawJson(row.raw_json)),
   }));
 }
 
@@ -507,12 +572,16 @@ function seedIfEmpty(db: DatabaseSync) {
 }
 
 function parseRaceCategory(rawJson: unknown): RaceCategory | undefined {
-  if (rawJson == null) return undefined;
+  const parsed = parseRawJson(rawJson) as { category?: { primary?: unknown } } | null;
+  if (!parsed) return undefined;
+  return typeof parsed.category?.primary === "string" ? parsed.category.primary as RaceCategory : undefined;
+}
+
+function parseRawJson(rawJson: unknown): unknown {
   try {
-    const parsed = JSON.parse(String(rawJson)) as { category?: { primary?: unknown } };
-    return typeof parsed.category?.primary === "string" ? parsed.category.primary as RaceCategory : undefined;
+    return rawJson == null ? null : JSON.parse(String(rawJson));
   } catch {
-    return undefined;
+    return null;
   }
 }
 

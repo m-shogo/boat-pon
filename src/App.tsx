@@ -1,6 +1,7 @@
 import { Activity, Bell, CheckCircle2, Database, ExternalLink, HelpCircle, History, Settings, ShieldCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
+  compareModelsApi,
   fetchOdds,
   fetchVapidPublicKey,
   getDashboard,
@@ -14,6 +15,7 @@ import {
   updatePurchaseRecord,
   updateSettings,
   type DashboardResponse,
+  type ModelComparisonRow,
   type OddsFetchResult,
   type WalkForwardResponse,
 } from "./api";
@@ -658,6 +660,7 @@ function Backtest({ data, onSaved }: { data: DashboardResponse; onSaved: () => P
       <CalendarView data={data} selectedDate={selectedDate} onSelect={setSelectedDate} />
       {selectedDate && <DayDetail date={selectedDate} rows={selectedRows} />}
       <WalkForwardPanel date={data.date} />
+      <ModelComparisonPanel date={data.date} />
       <ExportButtons />
       <div className="metrics backtestMetrics">
         <Metric label="判定数" value={data.backtest.decisions.toString()} />
@@ -872,12 +875,71 @@ function WalkForwardPanel({ date }: { date: string | null }) {
   );
 }
 
+function ModelComparisonPanel({ date }: { date: string | null }) {
+  const [from, setFrom] = useState(date?.slice(0, 7) ? date.slice(0, 7) + "-01" : "");
+  const [to, setTo] = useState(date ?? "");
+  const [rows, setRows] = useState<ModelComparisonRow[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function run() {
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await compareModelsApi({ from: from || undefined, to: to || undefined });
+      setRows(result.rows);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="walkForwardPanel">
+      <div className="sectionHead">
+        <div>
+          <h3>モデル比較</h3>
+          <p>現行・EV厳しめ・サンプル厚め・平滑化強めを同じ期間で比べます。</p>
+        </div>
+      </div>
+      <div className="walkForwardControls">
+        <label><span>開始</span><input type="date" value={from} onChange={(event) => setFrom(event.target.value)} /></label>
+        <label><span>終了</span><input type="date" value={to} onChange={(event) => setTo(event.target.value)} /></label>
+        <button disabled={busy} onClick={run}>{busy ? "比較中..." : "比較する"}</button>
+      </div>
+      {error && <div className="formError">{error}</div>}
+      {rows.length > 0 && (
+        <div className="tableWrap walkForwardRows">
+          <table>
+            <thead><tr><th>モデル</th><th>目標EV</th><th>最小サンプル</th><th>BUY</th><th>的中率</th><th>回収率</th><th>注意</th></tr></thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.variant.id}>
+                  <td>{row.variant.label}</td>
+                  <td>{row.variant.targetEv.toFixed(2)}</td>
+                  <td>{row.variant.minSampleSize}</td>
+                  <td>{row.summary.buy}</td>
+                  <td>{row.summary.buy ? `${(row.summary.hitRate * 100).toFixed(1)}%` : "-"}</td>
+                  <td>{row.summary.modelStakeYen ? `${(row.summary.modelRoi * 100).toFixed(1)}%` : "-"}</td>
+                  <td>{row.caution ?? "OK"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ExportButtons() {
   return (
     <div className="exportButtons">
       <a href="/api/export/results.csv">結果CSV</a>
       <a href="/api/export/history.csv">履歴CSV</a>
       <a href="/api/export/monthly.csv">月次CSV</a>
+      <a href="/api/export/odds.csv">オッズCSV</a>
     </div>
   );
 }
@@ -1150,6 +1212,11 @@ function ModelHealthPanel({ data }: { data: DashboardResponse }) {
         <p>{drift ? `BUY ${drift.buy}件 / 推定 ${(drift.avgEstimatedHitRate * 100).toFixed(1)}% / 実績 ${(drift.hitRate * 100).toFixed(1)}%` : "BUY履歴が貯まると表示します。"}</p>
       </div>
       <MiniRoiTable title="番組カテゴリ別ROI" rows={data.categoryStats.rows} />
+      <div className="modelInfoCard">
+        <span>オッズ履歴</span>
+        <strong>{data.oddsSnapshots.length.toLocaleString()}件</strong>
+        <p>手動・公式取得のオッズを履歴化。今後の過去オッズ補完も同じ器に入れます。</p>
+      </div>
     </section>
   );
 }

@@ -68,3 +68,30 @@ test("モデル候補に手動オッズを反映する", () => {
   assert.equal(candidates[0].selection.join("-"), "1-2-3");
   assert.equal(candidates[0].currentOdds, 15.7);
 });
+
+test("番組表特徴量で推定的中率を保守的に補正する", () => {
+  const model = buildVenueModel([
+    result(1, "蒲郡", "1-2-3"),
+    result(2, "蒲郡", "1-2-3"),
+    result(3, "蒲郡", "2-1-3"),
+  ], 1, 1);
+  const base = buildCandidatesFromModel(
+    [{ date: "2026-05-20", venue: "蒲郡", raceNo: 8, closeAt: "18:42" }],
+    model,
+    1.25,
+    "now",
+  )[0];
+  const adjusted = buildCandidatesFromModel(
+    [{
+      date: "2026-05-20",
+      venue: "蒲郡",
+      raceNo: 8,
+      closeAt: "18:42",
+      features: { boats: [{ course: 1, className: "A1", nationalWinRate: 7.5, localWinRate: 7.2, motorTop2Rate: 45, boatTop2Rate: 44 }] },
+    }],
+    model,
+    1.25,
+    "now",
+  )[0];
+  assert.ok(adjusted.estimatedHitRate > base.estimatedHitRate);
+});

@@ -6,6 +6,8 @@ import type { ProgramStatSummary } from "./domain/programStats";
 import type { CategoryStatSummary } from "./domain/categoryStats";
 import type { RollingDriftSummary } from "./domain/rollingDrift";
 import type { ModelVersionInfo } from "./domain/modelVersion";
+import type { ModelComparisonRow } from "./domain/modelComparison";
+import type { OddsSnapshot } from "./domain/oddsSnapshot";
 import type { DecisionExplanation, SkipReasonSummary } from "./domain/decisionExplain";
 import type { WalkForwardRow, WalkForwardSummary } from "./domain/walkForward";
 import type { BetCandidate, BudgetRule, Decision, RaceResult } from "./domain/types";
@@ -37,6 +39,7 @@ export type DashboardResponse = {
   rollingDrift: RollingDriftSummary;
   modelVersion: ModelVersionInfo;
   skipReasons: SkipReasonSummary[];
+  oddsSnapshots: OddsSnapshot[];
 };
 
 export type NotificationRecord = {
@@ -108,6 +111,13 @@ export async function updateManualOdds(raceId: string, odds: number): Promise<{ 
   return res.json();
 }
 
+export async function getOddsSnapshots(raceId?: string): Promise<{ rows: OddsSnapshot[] }> {
+  const qs = raceId ? `?raceId=${encodeURIComponent(raceId)}` : "";
+  const res = await fetch(`/api/odds/snapshots${qs}`);
+  if (!res.ok) throw new Error(`odds snapshots api failed: ${res.status}`);
+  return res.json();
+}
+
 export type OddsFetchResult = {
   raceId: string;
   odds: number | null;
@@ -173,4 +183,16 @@ export async function runWalkForwardApi(params: {
   return res.json();
 }
 
-export type { BacktestSummary, DecisionHistoryRow, MonthlySummary, SavingsSummary, VenueHeatmapSummary };
+export async function compareModelsApi(params: {
+  from?: string;
+  to?: string;
+}): Promise<{ rows: ModelComparisonRow[] }> {
+  const qs = new URLSearchParams();
+  if (params.from) qs.set("from", params.from);
+  if (params.to) qs.set("to", params.to);
+  const res = await fetch("/api/backtest/model-comparison?" + qs.toString());
+  if (!res.ok) throw new Error(`model comparison api failed: ${res.status}`);
+  return res.json();
+}
+
+export type { BacktestSummary, DecisionHistoryRow, ModelComparisonRow, MonthlySummary, SavingsSummary, VenueHeatmapSummary };

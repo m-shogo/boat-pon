@@ -47,6 +47,7 @@ export function judgeCandidate(
   if (minutes < rule.minMinutesBeforeClose) reasons.push("締切が近すぎる");
   if (candidate.notified) reasons.push("同一レース通知済み");
   if (candidate.hasRiskFlag) reasons.push("欠場/返還など要確認");
+  if (candidate.environmentRiskLevel === "high") reasons.push("荒天/安定板など環境リスク高");
   if (buyCountToday >= rule.maxBuyCountPerDay) reasons.push("1日最大BUY数に到達");
   if (reservedBudgetYen + rule.stakePerBetYen > rule.dailyBudgetYen) reasons.push("1日予算上限");
 

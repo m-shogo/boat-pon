@@ -10,12 +10,14 @@ import { getModelVersionInfo } from "../src/domain/modelVersion";
 import { analyzeOvervaluation } from "../src/domain/analysis";
 import { explainDecision, summarizeSkipReasons } from "../src/domain/decisionExplain";
 import { runWalkForwardBacktest, summarizeWalkForward } from "../src/domain/walkForward";
+import { compareModelVariants } from "../src/domain/modelComparison";
 import {
   createNotificationIfNeeded,
   deletePushSubscription,
   getDataCoverage,
   getManualOdds,
   insertOfficialProgram,
+  listOddsSnapshots,
   listAllResultsForModel,
   getSettings,
   insertDecisionHistory,
@@ -128,6 +130,7 @@ app.get("/api/dashboard", (req, res) => {
         raceNo: row.raceNo,
         closeAt: row.closeAt,
         raceCategory: row.raceCategory,
+        features: row.features,
       })),
       listAllResultsForModel(db),
     );
@@ -186,6 +189,7 @@ app.get("/api/dashboard", (req, res) => {
       rollingDrift: summarizeRollingDrift(history, settings.minSampleSize),
       modelVersion: getModelVersionInfo(),
       skipReasons: summarizeSkipReasons(history, settings),
+      oddsSnapshots: listOddsSnapshots(db),
     });
   } finally {
     db.close();
@@ -244,6 +248,27 @@ app.get("/api/backtest/walk-forward", (req, res) => {
     res.json({
       summary: summarizeWalkForward(rows, settings.stakePerBetYen),
       rows: rows.slice(-300).reverse(),
+    });
+  } finally {
+    db.close();
+  }
+});
+
+app.get("/api/backtest/model-comparison", (req, res) => {
+  const db = openDb();
+  try {
+    const settings = getSettings(db);
+    const from = typeof req.query.from === "string" ? req.query.from : undefined;
+    const to = typeof req.query.to === "string" ? req.query.to : undefined;
+    const programs = listProgramInputs(db)
+      .filter((row) => (!from || row.date >= from) && (!to || row.date <= to));
+    res.json({
+      rows: compareModelVariants({
+        results: listAllResultsForModel(db),
+        programs,
+        settings,
+        oddsByRaceId: getManualOdds(db),
+      }),
     });
   } finally {
     db.close();
@@ -348,6 +373,8 @@ app.post("/api/odds/fetch", async (req, res) => {
         venue: row.venue,
         raceNo: row.raceNo,
         closeAt: row.closeAt,
+        raceCategory: row.raceCategory,
+        features: row.features,
       })),
       listAllResultsForModel(db),
     );
@@ -373,7 +400,7 @@ app.post("/api/odds/fetch", async (req, res) => {
           results.push({ raceId: candidate.raceId, odds: null, status: "parse-failed" });
           continue;
         }
-        setOdds(db, candidate.raceId, odds, "official");
+        setOdds(db, candidate.raceId, odds, "official", candidate.selection.join("-"));
         results.push({
           raceId: candidate.raceId,
           odds,
@@ -389,6 +416,16 @@ app.post("/api/odds/fetch", async (req, res) => {
       }
     }
     res.json({ results });
+  } finally {
+    db.close();
+  }
+});
+
+app.get("/api/odds/snapshots", (req, res) => {
+  const db = openDb();
+  try {
+    const raceId = typeof req.query.raceId === "string" ? req.query.raceId : undefined;
+    res.json({ rows: listOddsSnapshots(db, raceId) });
   } finally {
     db.close();
   }
@@ -439,6 +476,18 @@ app.get("/api/export/monthly.csv", (_req, res) => {
     sendCsv(res, "monthly.csv", [
       ["ym", "decisions", "buy", "hits", "hitRate", "modelStakeYen", "modelPayoutYen", "modelRoi", "noBuyDays"],
       ...summarizeByMonth(listDecisionHistory(db), settings.minSampleSize).map((row) => [row.ym, row.decisions, row.buy, row.hits, row.hitRate, row.modelStakeYen, row.modelPayoutYen, row.modelRoi, row.noBuyDays]),
+    ]);
+  } finally {
+    db.close();
+  }
+});
+
+app.get("/api/export/odds.csv", (_req, res) => {
+  const db = openDb();
+  try {
+    sendCsv(res, "odds.csv", [
+      ["raceId", "selection", "odds", "popularity", "source", "capturedAt", "isFinalLike"],
+      ...listOddsSnapshots(db).map((row) => [row.raceId, row.selection, row.odds, row.popularity ?? "", row.source, row.capturedAt, row.isFinalLike ? 1 : 0]),
     ]);
   } finally {
     db.close();

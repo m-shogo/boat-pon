@@ -1,4 +1,5 @@
 import { MODEL_VERSION } from "./modelVersion";
+import { featureAdjustmentForSelection, type ProgramFeatureSnapshot } from "./programFeatures";
 import type { BetCandidate, RaceResult } from "./types";
 
 export type ModelCandidateInput = {
@@ -7,6 +8,7 @@ export type ModelCandidateInput = {
   raceNo: number;
   closeAt: string;
   raceCategory?: string;
+  features?: ProgramFeatureSnapshot;
 };
 
 export type CourseRate = {
@@ -120,6 +122,8 @@ export function buildCandidatesFromModel(
     const best = model.find((row) => row.venue === input.venue);
     if (!best) return [];
     const selection = best.selection.split("-").map(Number);
+    const featureAdjustment = featureAdjustmentForSelection(input.features, selection);
+    const adjustedHitRate = clamp(best.estimatedHitRate * featureAdjustment, 0.0001, 0.8);
     const raceId = `${input.date.replaceAll("-", "")}-${input.venue}-${String(input.raceNo).padStart(2, "0")}`;
     const sampleSize = best.venueRaceCount;
     const hasRiskFlag = sampleSize < 10;
@@ -131,7 +135,7 @@ export function buildCandidatesFromModel(
       closeAt: input.closeAt,
       betType: "3連単" as const,
       selection,
-      estimatedHitRate: best.estimatedHitRate,
+      estimatedHitRate: adjustedHitRate,
       sampleSize,
       currentOdds: manualOdds.get(raceId) ?? null,
       targetEv,
@@ -141,8 +145,13 @@ export function buildCandidatesFromModel(
       hasRiskFlag,
       modelVersion: MODEL_VERSION,
       raceCategory: input.raceCategory ?? "不明",
+      featureAdjustment,
     }];
   });
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
 }
 
 function smoothedRate(count: number, total: number, alpha: number, buckets: number) {
