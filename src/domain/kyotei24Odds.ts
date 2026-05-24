@@ -119,8 +119,10 @@ function parseCells(cells: string[], selection: string): { odds: number; popular
   return null;
 }
 
+const MAX_VALID_ODDS = 1000;
+
 function toParsed(target: Kyotei24OddsTarget, odds: number, popularity: number | null, capturedAt: string): ParsedKyotei24Odds | null {
-  if (!Number.isFinite(odds) || odds <= 0) return null;
+  if (!Number.isFinite(odds) || odds <= 0 || odds > MAX_VALID_ODDS) return null;
   return {
     raceId: target.raceId,
     selection: normalizeSelection(target.selection),
