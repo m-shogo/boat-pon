@@ -998,6 +998,26 @@ function SettingsScreen({ settings, onSaved }: { settings: BudgetRule; onSaved: 
             />
           </label>
         ))}
+        <label className="settingField">
+          <span>補正モード</span>
+          <select
+            value={draft.calibrationMode ?? "none"}
+            onChange={(event) => setDraft({ ...draft, calibrationMode: event.target.value as BudgetRule["calibrationMode"] })}
+          >
+            <option value="none">なし</option>
+            <option value="v3-empirical">v3実測補正</option>
+          </select>
+        </label>
+        <label className="settingField">
+          <span>補正基準</span>
+          <select
+            value={draft.calibrationBasis ?? "requiredOdds"}
+            onChange={(event) => setDraft({ ...draft, calibrationBasis: event.target.value as BudgetRule["calibrationBasis"] })}
+          >
+            <option value="requiredOdds">必要オッズ</option>
+            <option value="currentOdds">取得オッズ</option>
+          </select>
+        </label>
       </div>
       {(validationError || saveError) && <div className="formError">{validationError ?? saveError}</div>}
       <button className="saveButton" disabled={Boolean(validationError)} onClick={async () => {
@@ -1032,6 +1052,15 @@ function validateSettings(settings: BudgetRule): string | null {
   }
   if (settings.stakePerBetYen > settings.maxStakePerRaceYen) return "1点は1レース最大以下にしてください";
   if (settings.maxStakePerRaceYen > settings.dailyBudgetYen) return "1レース最大は1日予算以下にしてください";
+  if (settings.calibrationMode != null && !["none", "v3-empirical"].includes(settings.calibrationMode)) return "補正モードが不正です";
+  if (settings.calibrationBasis != null && !["requiredOdds", "currentOdds"].includes(settings.calibrationBasis)) return "補正基準が不正です";
+  if (settings.oddsCalibrationFactors != null) {
+    if (!Array.isArray(settings.oddsCalibrationFactors)) return "オッズ補正係数が不正です";
+    for (const factor of settings.oddsCalibrationFactors) {
+      if (!Number.isFinite(factor.maxRequiredOdds) || factor.maxRequiredOdds <= 0) return "補正の必要オッズ上限は0より大きい値にしてください";
+      if (!Number.isFinite(factor.factor) || factor.factor <= 0) return "補正係数は0より大きい値にしてください";
+    }
+  }
   return null;
 }
 

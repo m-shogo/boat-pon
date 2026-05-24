@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { DEFAULT_RULE, blendedHitRate, judgeCandidate, requiredOdds } from "./decision";
+import { DEFAULT_RULE, blendedHitRate, calibratedHitRate, calibrationFactorForRequiredOdds, judgeCandidate, requiredOdds } from "./decision";
 import type { BetCandidate } from "./types";
 
 const base: BetCandidate = {
@@ -69,6 +69,43 @@ test("maxOddsRatioを超える場合はSKIPにする", () => {
 test("marketBlendWeight=0では推定的中率をそのまま使う", () => {
   assert.equal(blendedHitRate(0.08, 20, 0), 0.08);
   assert.equal(blendedHitRate(0.08, null, 0.7), 0.08);
+});
+
+test("calibrationMode=noneでは推定的中率を補正しない", () => {
+  assert.equal(calibratedHitRate(0.03125, 1.25, { ...DEFAULT_RULE, calibrationMode: "none" }), 0.03125);
+});
+
+test("calibrationMode=v3-empiricalでは必要オッズ帯で推定的中率を補正する", () => {
+  assert.equal(calibrationFactorForRequiredOdds(20, [
+    { maxRequiredOdds: 30, factor: 1 },
+    { maxRequiredOdds: 50, factor: 0.55 },
+  ]), 1);
+  assert.equal(calibrationFactorForRequiredOdds(40, [
+    { maxRequiredOdds: 30, factor: 1 },
+    { maxRequiredOdds: 50, factor: 0.55 },
+  ]), 0.55);
+  assert.equal(calibratedHitRate(0.03125, 1.25, { ...DEFAULT_RULE, calibrationMode: "v3-empirical" }), 0.03125 * 0.55);
+});
+
+test("calibrationBasis=currentOddsでは市場オッズ帯で推定的中率を補正する", () => {
+  assert.equal(calibratedHitRate(0.05, 1.25, {
+    ...DEFAULT_RULE,
+    calibrationMode: "v3-empirical",
+    calibrationBasis: "currentOdds",
+  }, 40), 0.05 * 0.55);
+});
+
+test("calibrationMode=v3-empiricalを使うと30倍超の境界BUYがSKIPになる", () => {
+  const candidate = { ...base, currentOdds: 40, estimatedHitRate: 0.03125 };
+  const withoutCalibration = judgeCandidate(candidate, { ...DEFAULT_RULE, minSampleSize: 1 }, {
+    now: new Date("2026-05-21T18:00:00+09:00"),
+  });
+  const withCalibration = judgeCandidate(candidate, { ...DEFAULT_RULE, minSampleSize: 1, calibrationMode: "v3-empirical" }, {
+    now: new Date("2026-05-21T18:00:00+09:00"),
+  });
+  assert.equal(withoutCalibration.status, "BUY");
+  assert.equal(withCalibration.status, "SKIP");
+  assert.ok(withCalibration.requiredOdds > withoutCalibration.requiredOdds);
 });
 
 test("marketBlendWeightで市場インプライド確率を混合する", () => {

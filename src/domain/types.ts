@@ -36,6 +36,14 @@ export type BudgetRule = {
   maxOddsRatio?: number;
   minOddsRatio?: number;
   marketBlendWeight?: number;
+  calibrationMode?: "none" | "v3-empirical";
+  calibrationBasis?: "requiredOdds" | "currentOdds";
+  oddsCalibrationFactors?: OddsCalibrationFactor[];
+};
+
+export type OddsCalibrationFactor = {
+  maxRequiredOdds: number;
+  factor: number;
 };
 
 export type Decision = {

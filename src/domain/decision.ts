@@ -1,4 +1,4 @@
-import type { BetCandidate, BudgetRule, Decision } from "./types";
+import type { BetCandidate, BudgetRule, Decision, OddsCalibrationFactor } from "./types";
 
 export const DEFAULT_RULE: BudgetRule = {
   dailyBudgetYen: 1000,
@@ -11,6 +11,11 @@ export const DEFAULT_RULE: BudgetRule = {
 };
 
 const WATCH_ONLY_ODDS_THRESHOLD = 100;
+export const V3_EMPIRICAL_ODDS_CALIBRATION: OddsCalibrationFactor[] = [
+  { maxRequiredOdds: 30, factor: 1 },
+  { maxRequiredOdds: 50, factor: 0.55 },
+  { maxRequiredOdds: Number.MAX_SAFE_INTEGER, factor: 0.45 },
+];
 
 export function requiredOdds(targetEv: number, estimatedHitRate: number): number {
   if (estimatedHitRate <= 0) return Number.POSITIVE_INFINITY;
@@ -27,6 +32,22 @@ export function blendedHitRate(estimatedHitRate: number, currentOdds: number | n
   // kyotei payout rate is ~75%
   const marketImplied = (1 / currentOdds) * 0.75;
   return (1 - marketBlendWeight) * estimatedHitRate + marketBlendWeight * marketImplied;
+}
+
+export function calibratedHitRate(estimatedHitRate: number, targetEv: number, rule: BudgetRule, currentOdds: number | null = null): number {
+  if (rule.calibrationMode !== "v3-empirical") return estimatedHitRate;
+  const req = requiredOdds(targetEv, estimatedHitRate);
+  const basisValue = rule.calibrationBasis === "currentOdds" && currentOdds != null ? currentOdds : req;
+  const factor = calibrationFactorForRequiredOdds(basisValue, rule.oddsCalibrationFactors ?? V3_EMPIRICAL_ODDS_CALIBRATION);
+  return estimatedHitRate * factor;
+}
+
+export function calibrationFactorForRequiredOdds(requiredOddsValue: number, factors: OddsCalibrationFactor[]): number {
+  const validFactors = factors
+    .filter((row) => Number.isFinite(row.maxRequiredOdds) && Number.isFinite(row.factor) && row.maxRequiredOdds > 0 && row.factor > 0)
+    .sort((a, b) => a.maxRequiredOdds - b.maxRequiredOdds);
+  if (validFactors.length === 0) return 1;
+  return validFactors.find((row) => requiredOddsValue < row.maxRequiredOdds)?.factor ?? validFactors.at(-1)!.factor;
 }
 
 export function minutesUntil(closeAt: string, now = new Date()): number {
@@ -46,7 +67,8 @@ export function judgeCandidate(
 ): Decision {
   const reasons: string[] = [];
   const blendWeight = rule.marketBlendWeight ?? 0;
-  const effectiveHitRate = blendedHitRate(candidate.estimatedHitRate, candidate.currentOdds, blendWeight);
+  const calibrated = calibratedHitRate(candidate.estimatedHitRate, rule.targetEv, rule, candidate.currentOdds);
+  const effectiveHitRate = blendedHitRate(calibrated, candidate.currentOdds, blendWeight);
   const req = requiredOdds(rule.targetEv, effectiveHitRate);
   const ev = expectedValue(effectiveHitRate, candidate.currentOdds);
   const buyCountToday = context.buyCountToday ?? 0;

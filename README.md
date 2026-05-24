@@ -70,6 +70,10 @@ npx tsx scripts/fetch-official-odds.ts YYYY-MM-DD 蒲郡 8
 - 公式 boatrace.jp の3連単オッズをリアルタイム取得（候補レースのみ、5分キャッシュ、手動ボタン/自動60秒トグル）
 - 公式 mbrace.or.jp の競走成績LZHを期間指定で一括DL+解凍+取り込み（Shift_JIS、unar依存）
 
+## 運用メモ
+
+- モデル改善の順序と採用基準: [docs/model-roadmap.md](docs/model-roadmap.md)
+- 失敗・学びの蓄積: [docs/lessons-learned.md](docs/lessons-learned.md)
 
 ## API一覧
 

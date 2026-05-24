@@ -332,7 +332,8 @@ tr:last-child td { border-bottom: 0; }
   padding: 14px;
 }
 .settingField span { color: #86a69c; font-size: 12px; }
-.settingField input {
+.settingField input,
+.settingField select {
   width: 100%;
   border: 1px solid rgba(154, 246, 213, 0.16);
   border-radius: 8px;

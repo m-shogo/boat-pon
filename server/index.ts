@@ -97,6 +97,19 @@ function validateBudgetRule(settings: BudgetRule): string | null {
   }
   if (settings.stakePerBetYen > settings.maxStakePerRaceYen) return "stakePerBetYen must be <= maxStakePerRaceYen";
   if (settings.maxStakePerRaceYen > settings.dailyBudgetYen) return "maxStakePerRaceYen must be <= dailyBudgetYen";
+  if (settings.calibrationMode != null && !["none", "v3-empirical"].includes(settings.calibrationMode)) {
+    return "calibrationMode must be none or v3-empirical";
+  }
+  if (settings.calibrationBasis != null && !["requiredOdds", "currentOdds"].includes(settings.calibrationBasis)) {
+    return "calibrationBasis must be requiredOdds or currentOdds";
+  }
+  if (settings.oddsCalibrationFactors != null) {
+    if (!Array.isArray(settings.oddsCalibrationFactors)) return "oddsCalibrationFactors must be an array";
+    for (const factor of settings.oddsCalibrationFactors) {
+      if (!Number.isFinite(factor.maxRequiredOdds) || factor.maxRequiredOdds <= 0) return "oddsCalibrationFactors.maxRequiredOdds must be positive";
+      if (!Number.isFinite(factor.factor) || factor.factor <= 0) return "oddsCalibrationFactors.factor must be positive";
+    }
+  }
   return null;
 }
 

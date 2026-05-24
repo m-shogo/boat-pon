@@ -50,6 +50,7 @@ Boat Pon は自動購入アプリではない。目的は、ほとんどの日�
 - **app_settings: maxOddsRatio=2.0**（ratio>2.0のBUYを除外）
 - **model_version: boatpon-v3-alpha15**（DEFAULT_MODEL_ALPHA=15）
 - **BudgetRule**: maxOdds, maxOddsRatio, minOddsRatio, marketBlendWeight フィールド実装済み（未設定）
+- **BudgetRule**: calibrationMode, calibrationBasis, oddsCalibrationFactors 実装済み（デフォルトnone、v3-empiricalで必要オッズ帯または取得オッズ帯別補正）
 
 ### 根本課題
 
