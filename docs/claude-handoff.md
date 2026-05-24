@@ -16,14 +16,18 @@ Boat Pon は個人用の期待値通知・検証アプリ。自動購入、自�
   - 連結パターン（98.398→98.3等）を全件修正（541件）
   - 月別100件補完（2025-09〜11各110件）
   - 全BUY/WATCHの current_odds 取得率: **100%**
-- 直近の分析結果:
-  - BUY 430件、ROI 0.825、的中率 2.79%
-  - calibration 2.28倍過大（推定 6.36% vs 実測 2.79%）
-  - オッズ20〜50倍がROI最良帯（0.995）
+- 直近の分析結果（2026-05-24 最終版）:
+  - BUY 717件、ROI 0.519、的中率 1.81%（13的中）
+  - calibration誤差: オッズ帯依存 → 10〜20倍で1.1倍、50〜100倍で10倍以上過大
+  - 最良EV帯: **EV 2.0〜3.0（ROI 1.067、n=209）**
+  - オッズ50倍以上は損失大（ROI 0.295）、EV 3.0以上は全件ミス
+  - オッズスナップショット: 2,215件（全て一意）
+  - 月別補完: 2025-01〜07各140件、2025-08〜11各120〜855件
   - 詳細: `docs/odds-quality-report-2026-05-24.md`
 - 直近確認:
   - `npm test` 66件全件パス
   - `npm run build` 成功
+  - TypeScriptエラー（daily-brushup.ts SQLInputValue型）修正済み
 
 ## 触らないもの
 
@@ -117,14 +121,18 @@ git status --short
 
 ## 次にClaudeへ頼みたい重い作業
 
-1. **2025年残り月の generate:history 追加**:
-   - `npm run generate:history -- --from 2025-01-01 --to 2025-07-31 --limit 1000 --include-required-odds-candidates` で月単位で拡張
-   - 各月 dry-run で確認後に実行
-2. **calibration 係数の調整**:
-   - 推定的中率が実測の 2.3 倍なので、モデルの平滑化係数を調整
-   - `src/domain/model.ts` の Laplace スムージングを見直す
+1. **calibration 係数の調整**（最優先）:
+   - 推定的中率がオッズに依存せず一定（6〜7%）なのが根本問題
+   - `src/domain/model.ts` の `buildVenueModel` を見直す（hit_rate 計算が venue-level でしか分割していない）
+   - 実測: 10〜20倍で6.45%、30〜50倍で1.2%、50〜100倍で0.58%
+   - オッズ帯別に期待的中率を補正するか、required_odds での足切りを強化する
+2. **2025-01〜07 のオッズ補完継続**:
+   - 現状: 各月 140件（BUY/WATCH含む）
+   - 追加対象: 各月 ~4,000件のSKIP候補が未補完
+   - `npm run backfill:odds -- --limit 50 --include-skip-required-odds --from 2025-01-01 --to 2025-01-31 --sleep-ms 1500`
 3. **オッズ帯絞り込み条件のサンプル拡大**:
-   - current_odds < 50 かつ EV 2.0〜3.0 で n=103 → 少なくとも 500 件に拡大してから判断
+   - current_odds < 50 かつ EV 2.0〜3.0 で n=209、ROI 1.067
+   - 少なくとも 500〜1,000 件に拡大してから採用判断
 4. 改善案はコード変更前に `docs/model-roadmap.md` へ短く記録する。
 
 ## DBスキーマ注意
