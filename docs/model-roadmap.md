@@ -57,11 +57,10 @@ minOddsRatio: 1.5 + maxOddsRatio: 2.0
 
 ### 発見した重要パターン
 
-**市場オッズ比率帯（currentOdds/requiredOdds）**（2026-05-24 セッション2最終、n=3027）:
-- 1.0〜1.5x: ROI 0.688（損失、n=1216）
-- **1.5〜2.0x: ROI 0.752**（最良帯、n=800）← 夏秋限定でROI>1
-- 2.0〜3.0x: ROI 0.557（n=570）
-- 3.0x超: ROI 0.525（n=373）← 高変動
+**市場オッズ比率帯（currentOdds/requiredOdds）**（2026-05-24 セッション2最終、n=2589）:
+- **1.5〜2.0x: ROI 0.804**（最良帯、n=841）← 夏秋限定でROI>1の可能性
+- 全BUY: ROI 0.760（n=2,589）
+- 2.0x超: ROI <0.5（損失大）
 - **app_settings に maxOddsRatio=2.0 設定済み（ライブ適用中）**
 
 **季節性パターン**（ratio1.5-2.0帯のみ）:
@@ -82,8 +81,8 @@ minOddsRatio: 1.5 + maxOddsRatio: 2.0
 ## 次にデータ待ちのもの
 
 - 過去オッズ補完
-  - ✅ 2025年全月 odds_snapshots 11,464件（各月 1,100〜1,316件）
-  - ✅ 2025-01〜11 の decision_history 生成・更新済み（BUY 3,027件、SKIP 38,059件）
+  - ✅ 2025年全月 odds_snapshots 12,049件（各月 1,105〜1,321件）
+  - ✅ 2025-01〜11 の decision_history 生成・更新済み（BUY 2,589件、WATCH 1,073件、SKIP 37,446件）
   - ✅ kyotei24パーサー: 欠場レースの異常オッズ(MAX_VALID_ODDS=1000)修正済み
   - ✅ marketBlendWeight 実装済み（BudgetRule、デフォルト0で動作変更なし）
   - 継続: 各月あと2,000〜3,000件のSKIPが未補完（各月200件ずつ追加中）
