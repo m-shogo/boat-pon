@@ -1018,6 +1018,88 @@ function SettingsScreen({ settings, onSaved }: { settings: BudgetRule; onSaved: 
             <option value="currentOdds">取得オッズ</option>
           </select>
         </label>
+        <div className="settingField">
+          <span>1着候補級別</span>
+          <div className="classChecks">
+            {["A1", "A2", "B1", "B2"].map((className) => {
+              const checked = draft.programFilter?.allowedClassNames?.includes(className) ?? false;
+              return (
+                <label key={className}>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={(event) => {
+                      const current = draft.programFilter?.allowedClassNames ?? [];
+                      const allowedClassNames = event.target.checked
+                        ? [...new Set([...current, className])]
+                        : current.filter((value) => value !== className);
+                      setDraft({ ...draft, programFilter: { ...draft.programFilter, allowedClassNames: allowedClassNames.length ? allowedClassNames : undefined } });
+                    }}
+                  />
+                  {className}
+                </label>
+              );
+            })}
+          </div>
+        </div>
+        <label className="settingField">
+          <span>モーター2連率上限</span>
+          <input
+            type="number"
+            step={1}
+            value={draft.programFilter?.maxMotorTop2Rate ?? ""}
+            placeholder="40"
+            onChange={(event) => setDraft({
+              ...draft,
+              programFilter: {
+                ...draft.programFilter,
+                maxMotorTop2Rate: event.target.value === "" ? undefined : Number(event.target.value),
+              },
+            })}
+          />
+        </label>
+        <label className="settingField">
+          <span>ボート2連率上限</span>
+          <input
+            type="number"
+            step={1}
+            value={draft.programFilter?.maxBoatTop2Rate ?? ""}
+            placeholder="将来用"
+            onChange={(event) => setDraft({
+              ...draft,
+              programFilter: {
+                ...draft.programFilter,
+                maxBoatTop2Rate: event.target.value === "" ? undefined : Number(event.target.value),
+              },
+            })}
+          />
+        </label>
+        <label className="settingField">
+          <span>必要オッズ下限</span>
+          <input
+            type="number"
+            step={1}
+            value={draft.minRequiredOdds ?? ""}
+            placeholder="例: 25"
+            onChange={(event) => setDraft({
+              ...draft,
+              minRequiredOdds: event.target.value === "" ? undefined : Number(event.target.value),
+            })}
+          />
+        </label>
+        <label className="settingField">
+          <span>必要オッズ上限</span>
+          <input
+            type="number"
+            step={1}
+            value={draft.maxRequiredOdds ?? ""}
+            placeholder="例: 30"
+            onChange={(event) => setDraft({
+              ...draft,
+              maxRequiredOdds: event.target.value === "" ? undefined : Number(event.target.value),
+            })}
+          />
+        </label>
       </div>
       {(validationError || saveError) && <div className="formError">{validationError ?? saveError}</div>}
       <button className="saveButton" disabled={Boolean(validationError)} onClick={async () => {
@@ -1060,6 +1142,11 @@ function validateSettings(settings: BudgetRule): string | null {
       if (!Number.isFinite(factor.maxRequiredOdds) || factor.maxRequiredOdds <= 0) return "補正の必要オッズ上限は0より大きい値にしてください";
       if (!Number.isFinite(factor.factor) || factor.factor <= 0) return "補正係数は0より大きい値にしてください";
     }
+  }
+  if (settings.programFilter != null) {
+    if (settings.programFilter.allowedClassNames != null && settings.programFilter.allowedClassNames.some((name) => !["A1", "A2", "B1", "B2"].includes(name))) return "1着候補級別が不正です";
+    if (settings.programFilter.maxMotorTop2Rate != null && (!Number.isFinite(settings.programFilter.maxMotorTop2Rate) || settings.programFilter.maxMotorTop2Rate < 0 || settings.programFilter.maxMotorTop2Rate > 100)) return "モーター2連率上限は0〜100で入力してください";
+    if (settings.programFilter.maxBoatTop2Rate != null && (!Number.isFinite(settings.programFilter.maxBoatTop2Rate) || settings.programFilter.maxBoatTop2Rate < 0 || settings.programFilter.maxBoatTop2Rate > 100)) return "ボート2連率上限は0〜100で入力してください";
   }
   return null;
 }

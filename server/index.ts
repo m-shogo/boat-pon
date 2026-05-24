@@ -110,6 +110,18 @@ function validateBudgetRule(settings: BudgetRule): string | null {
       if (!Number.isFinite(factor.factor) || factor.factor <= 0) return "oddsCalibrationFactors.factor must be positive";
     }
   }
+  if (settings.programFilter != null) {
+    const filter = settings.programFilter;
+    if (filter.allowedClassNames != null && (!Array.isArray(filter.allowedClassNames) || filter.allowedClassNames.some((name) => typeof name !== "string"))) {
+      return "programFilter.allowedClassNames must be a string array";
+    }
+    if (filter.maxMotorTop2Rate != null && (!Number.isFinite(filter.maxMotorTop2Rate) || filter.maxMotorTop2Rate < 0 || filter.maxMotorTop2Rate > 100)) {
+      return "programFilter.maxMotorTop2Rate must be between 0 and 100";
+    }
+    if (filter.maxBoatTop2Rate != null && (!Number.isFinite(filter.maxBoatTop2Rate) || filter.maxBoatTop2Rate < 0 || filter.maxBoatTop2Rate > 100)) {
+      return "programFilter.maxBoatTop2Rate must be between 0 and 100";
+    }
+  }
   return null;
 }
 

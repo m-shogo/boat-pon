@@ -135,3 +135,84 @@ test("minOddsRatioを下回る場合はSKIPにする", () => {
   assert.equal(decision.status, "SKIP");
   assert.ok(decision.reasons.some((r) => r.includes("市場オッズがモデル要求の1.5倍未満")));
 });
+
+test("programFilterは1着候補艇の級別とモーター2連率でBUY対象を絞る", () => {
+  const candidate = {
+    ...base,
+    candidateClassName: "A2",
+    candidateMotorTop2Rate: 35,
+    candidateBoatTop2Rate: 42,
+  };
+  const decision = judgeCandidate(candidate, {
+    ...DEFAULT_RULE,
+    minSampleSize: 1,
+    programFilter: { allowedClassNames: ["A2"], maxMotorTop2Rate: 40 },
+  }, {
+    now: new Date("2026-05-21T18:00:00+09:00"),
+  });
+  assert.equal(decision.status, "BUY");
+});
+
+test("programFilterは条件外の1着候補艇をSKIPにする", () => {
+  const candidate = {
+    ...base,
+    candidateClassName: "A1",
+    candidateMotorTop2Rate: 45,
+  };
+  const decision = judgeCandidate(candidate, {
+    ...DEFAULT_RULE,
+    minSampleSize: 1,
+    programFilter: { allowedClassNames: ["A2"], maxMotorTop2Rate: 40 },
+  }, {
+    now: new Date("2026-05-21T18:00:00+09:00"),
+  });
+  assert.equal(decision.status, "SKIP");
+  assert.ok(decision.reasons.some((r) => r.includes("1着候補級別が対象外")));
+  assert.ok(decision.reasons.some((r) => r.includes("1着候補モーター2連率")));
+});
+
+test("programFilter未設定なら番組表特徴では除外しない", () => {
+  const decision = judgeCandidate({
+    ...base,
+    candidateClassName: "B2",
+    candidateMotorTop2Rate: 99,
+  }, { ...DEFAULT_RULE, minSampleSize: 1 }, {
+    now: new Date("2026-05-21T18:00:00+09:00"),
+  });
+  assert.equal(decision.status, "BUY");
+});
+
+test("programFilterはモーター2連率が上限以上ならSKIPにする", () => {
+  const decision = judgeCandidate({
+    ...base,
+    candidateClassName: "A2",
+    candidateMotorTop2Rate: 40,
+  }, {
+    ...DEFAULT_RULE,
+    minSampleSize: 1,
+    programFilter: { maxMotorTop2Rate: 40 },
+  }, {
+    now: new Date("2026-05-21T18:00:00+09:00"),
+  });
+  assert.equal(decision.status, "SKIP");
+  assert.ok(decision.reasons.some((r) => r.includes("1着候補モーター2連率")));
+});
+
+test("minRequiredOddsを下回る場合はSKIPにする", () => {
+  // base: estimatedHitRate=0.085, targetEv=1.25 → requiredOdds≈14.7倍
+  // minRequiredOdds=20 → 14.7 < 20 なのでSKIP
+  const decision = judgeCandidate(base, { ...DEFAULT_RULE, minSampleSize: 1, minRequiredOdds: 20 }, {
+    now: new Date("2026-05-21T18:00:00+09:00"),
+  });
+  assert.equal(decision.status, "SKIP");
+  assert.ok(decision.reasons.some((r) => r.includes("必要オッズが下限未満")));
+});
+
+test("maxRequiredOddsを超える場合はSKIPにする", () => {
+  // base: requiredOdds≈14.7倍、maxRequiredOdds=10 → 14.7 > 10 なのでSKIP
+  const decision = judgeCandidate(base, { ...DEFAULT_RULE, minSampleSize: 1, maxRequiredOdds: 10 }, {
+    now: new Date("2026-05-21T18:00:00+09:00"),
+  });
+  assert.equal(decision.status, "SKIP");
+  assert.ok(decision.reasons.some((r) => r.includes("必要オッズが上限超過")));
+});

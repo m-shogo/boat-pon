@@ -123,6 +123,7 @@ export function buildCandidatesFromModel(
     const best = model.find((row) => row.venue === input.venue);
     if (!best) return [];
     const selection = best.selection.split("-").map(Number);
+    const firstBoatFeature = input.features?.boats.find((boat) => boat.course === selection[0]);
     const featureAdjustment = featureAdjustmentForSelection(input.features, selection);
     const adjustedHitRate = clamp(best.estimatedHitRate * featureAdjustment, 0.0001, 0.8);
     const raceId = `${input.date.replaceAll("-", "")}-${input.venue}-${String(input.raceNo).padStart(2, "0")}`;
@@ -147,6 +148,10 @@ export function buildCandidatesFromModel(
       modelVersion: MODEL_VERSION,
       raceCategory: input.raceCategory ?? "不明",
       featureAdjustment,
+      candidateClassName: firstBoatFeature?.className,
+      candidateMotorTop2Rate: firstBoatFeature?.motorTop2Rate,
+      candidateBoatTop2Rate: firstBoatFeature?.boatTop2Rate,
+      firstBoatFeature,
     }];
   });
 }

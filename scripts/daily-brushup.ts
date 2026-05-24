@@ -28,12 +28,15 @@ try {
 
   const oddsCoverage = oddsCoverageByDecisionMonth(db);
   const buyStability = buyStabilityReport(db, decisionRange);
+  const buyFeatureDrift = buyFeatureDriftByMonth(db, decisionRange);
+  const windowedBuy = windowedBuySummaries(db, decisionRange, maxDecisionDate || decisionRange.to);
   const evFilters = evFilterGrid(db, decisionRange);
 
   const regimeCheck = monthlyRegimeCheck({
     db,
     range: wfRange,
     trainDays,
+    targetEvs: [1.25, 1.35, 1.5],
     configs: [
       { id: "ms600-a1", minSampleSize: 600, alpha: 1 },
       { id: "ms1200-a1", minSampleSize: 1200, alpha: 1 },
@@ -50,6 +53,8 @@ try {
     trainDays,
     oddsCoverage,
     buyStability,
+    buyFeatureDrift,
+    windowedBuy,
     evFilters,
     regimeCheck,
   }, null, 2));
@@ -215,6 +220,159 @@ ORDER BY roi DESC, n DESC
   };
 }
 
+function buyFeatureDriftByMonth(db: DatabaseSync, range: DateRange) {
+  const rows = db.prepare(`
+SELECT
+  substr(date, 1, 7) AS ym,
+  COUNT(*) AS n,
+  ROUND(AVG(estimated_hit_rate), 4) AS avg_est,
+  ROUND(AVG(ev), 3) AS avg_ev,
+  ROUND(AVG(current_odds), 1) AS avg_odds,
+  ROUND(AVG(required_odds), 1) AS avg_req_odds,
+  ROUND(AVG(sample_size), 1) AS avg_sample,
+  ROUND(1.0 * SUM((result = selection)) / COUNT(*), 4) AS hit_rate,
+  ROUND(1.0 * SUM(CASE WHEN (result = selection) THEN COALESCE(current_odds, 0) * recommended_stake_yen ELSE 0 END)
+        / NULLIF(SUM(recommended_stake_yen), 0), 3) AS roi
+FROM decision_history
+WHERE decision = 'BUY'
+  AND returned = 0
+  AND date >= ? AND date <= ?
+GROUP BY ym
+ORDER BY ym DESC
+`).all(range.from, range.to) as Array<Record<string, unknown>>;
+  return rows;
+}
+
+function windowedBuySummaries(db: DatabaseSync, range: DateRange, anchorDate: string) {
+  const windows = [
+    { id: "last30d", days: 30 },
+    { id: "last90d", days: 90 },
+    { id: "last180d", days: 180 },
+  ];
+  const overall = buySummary(db, range.from, range.to, 20);
+  const perWindow = windows.map((w) => {
+    const from = maxDate(range.from, addDays(anchorDate, -w.days));
+    return { id: w.id, from, to: anchorDate, summary: buySummary(db, from, anchorDate, 5) };
+  });
+  return { anchorDate, overall, perWindow };
+}
+
+function buySummary(db: DatabaseSync, from: string, to: string, minN: number) {
+  const overall = db.prepare(`
+WITH buy AS (
+  SELECT
+    h.estimated_hit_rate AS est,
+    h.recommended_stake_yen AS stake,
+    h.current_odds AS odds,
+    (h.result = h.selection) AS hit
+  FROM decision_history h
+  WHERE h.decision = 'BUY'
+    AND h.returned = 0
+    AND h.date >= ? AND h.date <= ?
+)
+SELECT
+  COUNT(*) AS n,
+  SUM(hit) AS hits,
+  ROUND(1.0 * SUM(hit) / COUNT(*), 4) AS hit_rate,
+  ROUND(1.0 * SUM(CASE WHEN hit THEN COALESCE(odds, 0) * stake ELSE 0 END) / NULLIF(SUM(stake), 0), 3) AS roi,
+  ROUND(AVG(est), 4) AS avg_est,
+  ROUND((1.0 * SUM(hit) / COUNT(*)) / NULLIF(AVG(est), 0), 3) AS calibration
+FROM buy
+`).get(from, to) as Record<string, unknown>;
+
+  const byVenue = db.prepare(`
+WITH buy AS (
+  SELECT
+    h.venue AS venue,
+    h.estimated_hit_rate AS est,
+    h.recommended_stake_yen AS stake,
+    h.current_odds AS odds,
+    (h.result = h.selection) AS hit
+  FROM decision_history h
+  WHERE h.decision = 'BUY'
+    AND h.returned = 0
+    AND h.date >= ? AND h.date <= ?
+)
+SELECT
+  venue,
+  COUNT(*) AS n,
+  SUM(hit) AS hits,
+  ROUND(1.0 * SUM(hit) / COUNT(*), 4) AS hit_rate,
+  ROUND(1.0 * SUM(CASE WHEN hit THEN COALESCE(odds, 0) * stake ELSE 0 END) / NULLIF(SUM(stake), 0), 3) AS roi,
+  ROUND(AVG(est), 4) AS avg_est,
+  ROUND((1.0 * SUM(hit) / COUNT(*)) / NULLIF(AVG(est), 0), 3) AS calibration
+FROM buy
+GROUP BY venue
+HAVING COUNT(*) >= ?
+ORDER BY roi DESC, n DESC
+`).all(from, to, minN) as Array<Record<string, unknown>>;
+
+  const byRaceNo = db.prepare(`
+WITH buy AS (
+  SELECT
+    h.race_no AS race_no,
+    h.recommended_stake_yen AS stake,
+    h.current_odds AS odds,
+    (h.result = h.selection) AS hit
+  FROM decision_history h
+  WHERE h.decision = 'BUY'
+    AND h.returned = 0
+    AND h.date >= ? AND h.date <= ?
+)
+SELECT
+  race_no,
+  COUNT(*) AS n,
+  SUM(hit) AS hits,
+  ROUND(1.0 * SUM(hit) / COUNT(*), 4) AS hit_rate,
+  ROUND(1.0 * SUM(CASE WHEN hit THEN COALESCE(odds, 0) * stake ELSE 0 END) / NULLIF(SUM(stake), 0), 3) AS roi
+FROM buy
+GROUP BY race_no
+HAVING COUNT(*) >= ?
+ORDER BY roi DESC, n DESC
+`).all(from, to, minN) as Array<Record<string, unknown>>;
+
+  const byTimeBand = db.prepare(`
+WITH buy AS (
+  SELECT
+    h.estimated_hit_rate AS est,
+    h.recommended_stake_yen AS stake,
+    h.current_odds AS odds,
+    (h.result = h.selection) AS hit,
+    COALESCE(p.close_at, '??:??') AS close_at
+  FROM decision_history h
+  LEFT JOIN official_programs p ON p.race_id = h.race_id
+  WHERE h.decision = 'BUY'
+    AND h.returned = 0
+    AND h.date >= ? AND h.date <= ?
+),
+bucket AS (
+  SELECT
+    CASE
+      WHEN close_at GLOB '[0-2][0-9]:[0-5][0-9]' AND CAST(substr(close_at, 1, 2) AS INT) < 12 THEN 'morning'
+      WHEN close_at GLOB '[0-2][0-9]:[0-5][0-9]' AND CAST(substr(close_at, 1, 2) AS INT) < 16 THEN 'day'
+      WHEN close_at GLOB '[0-2][0-9]:[0-5][0-9]' THEN 'late'
+      ELSE 'unknown'
+    END AS time_band,
+    est, stake, odds, hit
+  FROM buy
+)
+SELECT
+  time_band,
+  COUNT(*) AS n,
+  SUM(hit) AS hits,
+  ROUND(1.0 * SUM(hit) / COUNT(*), 4) AS hit_rate,
+  ROUND(1.0 * SUM(CASE WHEN hit THEN COALESCE(odds, 0) * stake ELSE 0 END) / NULLIF(SUM(stake), 0), 3) AS roi,
+  ROUND(AVG(est), 4) AS avg_est,
+  ROUND((1.0 * SUM(hit) / COUNT(*)) / NULLIF(AVG(est), 0), 3) AS calibration
+FROM bucket
+GROUP BY time_band
+HAVING COUNT(*) >= ?
+ORDER BY roi DESC, n DESC
+`).all(from, to, minN) as Array<Record<string, unknown>>;
+
+  return { overall, byVenue, byRaceNo, byTimeBand };
+}
+
 function evFilterGrid(db: DatabaseSync, range: DateRange) {
   const thresholds = [1.25, 1.35, 1.5, 1.75, 2.0, 2.5];
   const bandStmt = db.prepare(`
@@ -291,6 +449,7 @@ function monthlyRegimeCheck(input: {
   db: DatabaseSync;
   range: DateRange;
   trainDays: number;
+  targetEvs: number[];
   configs: Array<{ id: string; minSampleSize: number; alpha: number }>;
 }) {
   const trainFrom = addDays(input.range.from, -input.trainDays);
@@ -299,7 +458,7 @@ function monthlyRegimeCheck(input: {
   const resultByRaceId = new Map(results.map((r) => [r.raceId, r]));
   const months = monthsInRange(input.range.from, input.range.to);
 
-  const rows = input.configs.map((cfg) => {
+  const rows = input.targetEvs.flatMap((targetEv) => input.configs.map((cfg) => {
     const perMonth = months.map((ym) => {
       const monthFrom = `${ym}-01`;
       const monthTo = addDays(addMonths(monthFrom, 1), -1);
@@ -318,7 +477,7 @@ function monthlyRegimeCheck(input: {
       let avgEstSum = 0;
 
       for (const p of monthPrograms) {
-        const candidates = buildCandidatesFromModel([p], model, 1.25, `${p.date}T00:00:00${JST}`, new Map());
+        const candidates = buildCandidatesFromModel([p], model, targetEv, `${p.date}T00:00:00${JST}`, new Map());
         const c = candidates[0];
         if (!c) continue;
         modeled += 1;
@@ -334,8 +493,8 @@ function monthlyRegimeCheck(input: {
       const calibration = avgEst ? hitRate / avgEst : 0;
       return { ym, programs: monthPrograms.length, modeled, hits, hitRate, avgEst, calibration };
     });
-    return { config: cfg, perMonth };
-  });
+    return { config: { ...cfg, targetEv }, perMonth };
+  }));
 
   return { range: input.range, trainFrom, programs: programs.length, results: results.length, rows };
 }
@@ -398,4 +557,8 @@ function addMonths(date: string, months: number) {
   const d = new Date(`${date}T00:00:00Z`);
   d.setUTCMonth(d.getUTCMonth() + months);
   return d.toISOString().slice(0, 10);
+}
+
+function maxDate(a: string, b: string) {
+  return a > b ? a : b;
 }

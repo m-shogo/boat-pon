@@ -83,6 +83,12 @@ export function judgeCandidate(
   if (rule.maxOdds != null && candidate.currentOdds != null && candidate.currentOdds > rule.maxOdds) {
     reasons.push(`オッズ上限超過(${rule.maxOdds}倍)`);
   }
+  if (rule.minRequiredOdds != null && req < Infinity && req < rule.minRequiredOdds) {
+    reasons.push(`必要オッズが下限未満(${rule.minRequiredOdds}倍)`);
+  }
+  if (rule.maxRequiredOdds != null && req < Infinity && req > rule.maxRequiredOdds) {
+    reasons.push(`必要オッズが上限超過(${rule.maxRequiredOdds}倍)`);
+  }
   if (rule.maxOddsRatio != null && candidate.currentOdds != null && req < Infinity && candidate.currentOdds > req * rule.maxOddsRatio) {
     reasons.push(`市場オッズがモデル要求の${rule.maxOddsRatio}倍超`);
   }
@@ -93,6 +99,7 @@ export function judgeCandidate(
   if (candidate.notified) reasons.push("同一レース通知済み");
   if (candidate.hasRiskFlag) reasons.push("欠場/返還など要確認");
   if (candidate.environmentRiskLevel === "high") reasons.push("荒天/安定板など環境リスク高");
+  reasons.push(...programFilterReasons(candidate, rule));
   if (buyCountToday >= rule.maxBuyCountPerDay) reasons.push("1日最大BUY数に到達");
   if (reservedBudgetYen + rule.stakePerBetYen > rule.dailyBudgetYen) reasons.push("1日予算上限");
 
@@ -125,4 +132,31 @@ export function judgeCandidate(
     recommendedAmount: 0,
     reasons: reasons.length ? reasons : ["EVが低い"],
   };
+}
+
+function programFilterReasons(candidate: BetCandidate, rule: BudgetRule): string[] {
+  const filter = rule.programFilter;
+  if (!filter) return [];
+  const className = candidate.candidateClassName ?? candidate.firstBoatFeature?.className;
+  const motorTop2Rate = candidate.candidateMotorTop2Rate ?? candidate.firstBoatFeature?.motorTop2Rate;
+  const boatTop2Rate = candidate.candidateBoatTop2Rate ?? candidate.firstBoatFeature?.boatTop2Rate;
+  const reasons: string[] = [];
+
+  if (filter.allowedClassNames?.length) {
+    if (!className || !filter.allowedClassNames.includes(className)) {
+      reasons.push(`1着候補級別が対象外(${className ?? "不明"})`);
+    }
+  }
+  if (filter.maxMotorTop2Rate != null) {
+    if (motorTop2Rate != null && motorTop2Rate >= filter.maxMotorTop2Rate) {
+      reasons.push(`1着候補モーター2連率が${filter.maxMotorTop2Rate}%以上`);
+    }
+  }
+  if (filter.maxBoatTop2Rate != null) {
+    if (boatTop2Rate != null && boatTop2Rate >= filter.maxBoatTop2Rate) {
+      reasons.push(`1着候補ボート2連率が${filter.maxBoatTop2Rate}%以上`);
+    }
+  }
+
+  return reasons;
 }

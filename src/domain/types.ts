@@ -1,3 +1,5 @@
+import type { BoatFeature } from "./programFeatures";
+
 export type DecisionStatus = "BUY" | "WATCH" | "SKIP";
 
 export type BetCandidate = {
@@ -22,6 +24,10 @@ export type BetCandidate = {
   environmentRiskLevel?: "low" | "medium" | "high";
   environmentRiskReasons?: string[];
   featureAdjustment?: number;
+  candidateClassName?: string;
+  candidateMotorTop2Rate?: number | null;
+  candidateBoatTop2Rate?: number | null;
+  firstBoatFeature?: BoatFeature;
 };
 
 export type BudgetRule = {
@@ -35,15 +41,24 @@ export type BudgetRule = {
   maxOdds?: number;
   maxOddsRatio?: number;
   minOddsRatio?: number;
+  minRequiredOdds?: number;
+  maxRequiredOdds?: number;
   marketBlendWeight?: number;
   calibrationMode?: "none" | "v3-empirical";
   calibrationBasis?: "requiredOdds" | "currentOdds";
   oddsCalibrationFactors?: OddsCalibrationFactor[];
+  programFilter?: ProgramFilterRule;
 };
 
 export type OddsCalibrationFactor = {
   maxRequiredOdds: number;
   factor: number;
+};
+
+export type ProgramFilterRule = {
+  allowedClassNames?: string[];
+  maxMotorTop2Rate?: number;
+  maxBoatTop2Rate?: number;
 };
 
 export type Decision = {
