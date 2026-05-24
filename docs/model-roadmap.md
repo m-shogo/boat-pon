@@ -1,6 +1,6 @@
 # 期待値モデル改善ロードマップ
 
-最終更新: 2026-05-24 (セッション3)
+最終更新: 2026-05-25 (セッション4)
 
 Boat Pon は自動購入アプリではない。目的は、ほとんどの日を見送り、数字的に割に合う可能性がある時だけ公式確認へ進むこと。
 
@@ -52,6 +52,8 @@ Boat Pon は自動購入アプリではない。目的は、ほとんどの日�
 - **BudgetRule**: maxOdds, maxOddsRatio, minOddsRatio, marketBlendWeight フィールド実装済み（未設定）
 - **BudgetRule**: calibrationMode, calibrationBasis, oddsCalibrationFactors 実装済み（デフォルトnone、v3-empiricalで必要オッズ帯または取得オッズ帯別補正）
 - **BudgetRule**: programFilter 実装済み（1着候補艇の級別、モーター2連率、ボート2連率でBUY対象を絞れる）
+- **BudgetRule**: minRequiredOdds, maxRequiredOdds 実装済み（必要オッズ帯フィルター。2023年外部検証待ち）
+- **BudgetRule**: excludedVenues 実装済み（会場除外。難水面会場の系統的ROI低下対策。2023年外部検証待ち）
 
 ### 根本課題
 
@@ -77,6 +79,8 @@ Boat Pon は自動購入アプリではない。目的は、ほとんどの日�
   - **バックフィルはほぼ完了。次の優先事項: 2023年以前のデータ取得**
   - 残: calibration 30-50倍帯の 2.1x 過大推定（cherry-picking バイアス）
   - 注意: programFilter 等の設定変更評価は --refresh-existing ではなく DELETE + 再生成で行う
+  - **セッション4発見: B1+25-30帯フィルターが両年ROI>1.17（全件1-2-3・B1の1号艇・市場がB1を過小評価）**
+  - **セッション4発見: 難水面5会場（戸田・多摩川・桐生・三国・江戸川）が系統的にROI<0.5**
 - 天候/風波/安定板/周回短縮の実データ紐づけ
 - 返還/欠場/展示異常のBUY抑制
 - 番組カテゴリ別に targetEv/minSampleSize を変える検証
