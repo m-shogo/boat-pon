@@ -96,6 +96,7 @@ export function judgeCandidate(
     reasons.push(`市場オッズがモデル要求の${rule.minOddsRatio}倍未満`);
   }
   if (minutes < rule.minMinutesBeforeClose) reasons.push("締切が近すぎる");
+  if (rule.excludedVenues?.includes(candidate.venue)) reasons.push(`除外会場(${candidate.venue})`);
   if (candidate.notified) reasons.push("同一レース通知済み");
   if (candidate.hasRiskFlag) reasons.push("欠場/返還など要確認");
   if (candidate.environmentRiskLevel === "high") reasons.push("荒天/安定板など環境リスク高");

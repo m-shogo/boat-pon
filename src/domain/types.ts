@@ -48,6 +48,7 @@ export type BudgetRule = {
   calibrationBasis?: "requiredOdds" | "currentOdds";
   oddsCalibrationFactors?: OddsCalibrationFactor[];
   programFilter?: ProgramFilterRule;
+  excludedVenues?: string[];
 };
 
 export type OddsCalibrationFactor = {

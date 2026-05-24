@@ -216,3 +216,18 @@ test("maxRequiredOddsを超える場合はSKIPにする", () => {
   assert.equal(decision.status, "SKIP");
   assert.ok(decision.reasons.some((r) => r.includes("必要オッズが上限超過")));
 });
+
+test("excludedVenuesに含まれる会場はSKIPにする", () => {
+  const decision = judgeCandidate(base, { ...DEFAULT_RULE, minSampleSize: 1, excludedVenues: ["蒲郡"] }, {
+    now: new Date("2026-05-21T18:00:00+09:00"),
+  });
+  assert.equal(decision.status, "SKIP");
+  assert.ok(decision.reasons.some((r) => r.includes("除外会場")));
+});
+
+test("excludedVenuesに含まれない会場はそのまま判定する", () => {
+  const decision = judgeCandidate(base, { ...DEFAULT_RULE, minSampleSize: 1, excludedVenues: ["津"] }, {
+    now: new Date("2026-05-21T18:00:00+09:00"),
+  });
+  assert.equal(decision.status, "BUY");
+});
