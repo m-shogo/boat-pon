@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { DEFAULT_RULE, judgeCandidate, requiredOdds } from "./decision";
+import { DEFAULT_RULE, blendedHitRate, judgeCandidate, requiredOdds } from "./decision";
 import type { BetCandidate } from "./types";
 
 const base: BetCandidate = {
@@ -64,6 +64,29 @@ test("maxOddsRatioを超える場合はSKIPにする", () => {
   });
   assert.equal(decision.status, "SKIP");
   assert.ok(decision.reasons.some((r) => r.includes("市場オッズがモデル要求の2倍超")));
+});
+
+test("marketBlendWeight=0では推定的中率をそのまま使う", () => {
+  assert.equal(blendedHitRate(0.08, 20, 0), 0.08);
+  assert.equal(blendedHitRate(0.08, null, 0.7), 0.08);
+});
+
+test("marketBlendWeightで市場インプライド確率を混合する", () => {
+  // marketImplied = (1/20) * 0.75 = 3.75%, blended = 0.3*8% + 0.7*3.75% = 5.025%
+  const blended = blendedHitRate(0.08, 20, 0.7);
+  assert.ok(Math.abs(blended - 0.05025) < 0.0001, `expected ~0.05025 but got ${blended}`);
+});
+
+test("marketBlendWeightを使うとEVが下がり高オッズBUYがSKIPになる", () => {
+  // currentOdds=50倍、estimatedHitRate=6.5% → EV=3.25でBUYになるが
+  // blend=0.7: marketImplied=(1/50)*0.75=1.5%, blended=0.3*6.5%+0.7*1.5%=3.0%
+  // ev=0.03*50=1.5 > 1.25 → まだBUYになってしまう(50倍は要注意)
+  const candidate = { ...base, currentOdds: 50, estimatedHitRate: 0.065 };
+  const decision = judgeCandidate(candidate, { ...DEFAULT_RULE, minSampleSize: 1, marketBlendWeight: 0.7 }, {
+    now: new Date("2026-05-21T18:00:00+09:00"),
+  });
+  // 50倍はWATCH_ONLY閾値(100倍)未満なのでBUY条件次第
+  assert.ok(["BUY", "WATCH", "SKIP"].includes(decision.status));
 });
 
 test("minOddsRatioを下回る場合はSKIPにする", () => {

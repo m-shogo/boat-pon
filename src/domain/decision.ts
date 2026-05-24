@@ -22,6 +22,13 @@ export function expectedValue(estimatedHitRate: number, odds: number | null): nu
   return estimatedHitRate * odds;
 }
 
+export function blendedHitRate(estimatedHitRate: number, currentOdds: number | null, marketBlendWeight: number): number {
+  if (currentOdds == null || marketBlendWeight <= 0) return estimatedHitRate;
+  // kyotei payout rate is ~75%
+  const marketImplied = (1 / currentOdds) * 0.75;
+  return (1 - marketBlendWeight) * estimatedHitRate + marketBlendWeight * marketImplied;
+}
+
 export function minutesUntil(closeAt: string, now = new Date()): number {
   const [hour, minute] = closeAt.split(":").map(Number);
   const close = new Date(now);
@@ -38,8 +45,10 @@ export function judgeCandidate(
   context: { buyCountToday?: number; reservedBudgetYen?: number; now?: Date } = {},
 ): Decision {
   const reasons: string[] = [];
-  const req = requiredOdds(rule.targetEv, candidate.estimatedHitRate);
-  const ev = expectedValue(candidate.estimatedHitRate, candidate.currentOdds);
+  const blendWeight = rule.marketBlendWeight ?? 0;
+  const effectiveHitRate = blendedHitRate(candidate.estimatedHitRate, candidate.currentOdds, blendWeight);
+  const req = requiredOdds(rule.targetEv, effectiveHitRate);
+  const ev = expectedValue(effectiveHitRate, candidate.currentOdds);
   const buyCountToday = context.buyCountToday ?? 0;
   const reservedBudgetYen = context.reservedBudgetYen ?? 0;
   const minutes = minutesUntil(candidate.closeAt, context.now);

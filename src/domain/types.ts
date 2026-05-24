@@ -35,6 +35,7 @@ export type BudgetRule = {
   maxOdds?: number;
   maxOddsRatio?: number;
   minOddsRatio?: number;
+  marketBlendWeight?: number;
 };
 
 export type Decision = {
