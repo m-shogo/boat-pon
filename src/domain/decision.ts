@@ -49,6 +49,9 @@ export function judgeCandidate(
   if (candidate.currentOdds != null && candidate.currentOdds >= WATCH_ONLY_ODDS_THRESHOLD) {
     reasons.push("100倍超オッズは検証保留");
   }
+  if (rule.maxOdds != null && candidate.currentOdds != null && candidate.currentOdds > rule.maxOdds) {
+    reasons.push(`オッズ上限超過(${rule.maxOdds}倍)`);
+  }
   if (minutes < rule.minMinutesBeforeClose) reasons.push("締切が近すぎる");
   if (candidate.notified) reasons.push("同一レース通知済み");
   if (candidate.hasRiskFlag) reasons.push("欠場/返還など要確認");

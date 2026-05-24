@@ -1017,7 +1017,7 @@ function SettingsScreen({ settings, onSaved }: { settings: BudgetRule; onSaved: 
 }
 
 function validateSettings(settings: BudgetRule): string | null {
-  const labels: Record<keyof BudgetRule, string> = {
+  const labels: Partial<Record<keyof BudgetRule, string>> = {
     dailyBudgetYen: "1日予算",
     stakePerBetYen: "1点",
     maxStakePerRaceYen: "1レース最大",
@@ -1028,7 +1028,7 @@ function validateSettings(settings: BudgetRule): string | null {
   };
   for (const [key, label] of Object.entries(labels) as Array<[keyof BudgetRule, string]>) {
     const value = settings[key];
-    if (!Number.isFinite(value) || value <= 0) return `${label}は0より大きい値にしてください`;
+    if (!Number.isFinite(value) || (value as number) <= 0) return `${label}は0より大きい値にしてください`;
   }
   if (settings.stakePerBetYen > settings.maxStakePerRaceYen) return "1点は1レース最大以下にしてください";
   if (settings.maxStakePerRaceYen > settings.dailyBudgetYen) return "1レース最大は1日予算以下にしてください";

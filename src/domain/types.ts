@@ -32,6 +32,7 @@ export type BudgetRule = {
   minSampleSize: number;
   minMinutesBeforeClose: number;
   targetEv: number;
+  maxOdds?: number;
 };
 
 export type Decision = {
