@@ -81,7 +81,7 @@ test("ウォークフォワード集計はBUYだけを検証投資にする", ()
   assert.equal(summary.buy, 1);
   assert.equal(summary.hits, 1);
   assert.equal(summary.modelStakeYen, 100);
-  assert.equal(summary.modelPayoutYen, 1600);
+  assert.equal(summary.modelPayoutYen, 8000);
 });
 
 test("締切前モードでは過去日でも締切直前扱いにならない", () => {

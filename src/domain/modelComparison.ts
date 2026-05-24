@@ -1,5 +1,5 @@
 import { runWalkForwardBacktest, summarizeWalkForward, type WalkForwardSummary } from "./walkForward";
-import type { ModelCandidateInput } from "./model";
+import { DEFAULT_MODEL_ALPHA, type ModelCandidateInput } from "./model";
 import type { BudgetRule, RaceResult } from "./types";
 
 export type ModelVariant = {
@@ -19,10 +19,10 @@ export type ModelComparisonRow = {
 
 export function defaultModelVariants(settings: BudgetRule): ModelVariant[] {
   return [
-    { id: "current", label: "現行", targetEv: settings.targetEv, minSampleSize: settings.minSampleSize, alpha: 1 },
-    { id: "strict-ev", label: "EV厳しめ", targetEv: Math.max(settings.targetEv, 1.35), minSampleSize: settings.minSampleSize, alpha: 1 },
-    { id: "more-sample", label: "サンプル厚め", targetEv: settings.targetEv, minSampleSize: Math.max(settings.minSampleSize, 1200), alpha: 1 },
-    { id: "smooth", label: "平滑化強め", targetEv: settings.targetEv, minSampleSize: settings.minSampleSize, alpha: 10 },
+    { id: "current", label: "現行", targetEv: settings.targetEv, minSampleSize: settings.minSampleSize, alpha: DEFAULT_MODEL_ALPHA },
+    { id: "strict-ev", label: "EV厳しめ", targetEv: Math.max(settings.targetEv, 1.35), minSampleSize: settings.minSampleSize, alpha: DEFAULT_MODEL_ALPHA },
+    { id: "more-sample", label: "サンプル厚め", targetEv: settings.targetEv, minSampleSize: Math.max(settings.minSampleSize, 1200), alpha: DEFAULT_MODEL_ALPHA },
+    { id: "smooth", label: "平滑化強め", targetEv: settings.targetEv, minSampleSize: settings.minSampleSize, alpha: 20 },
   ];
 }
 

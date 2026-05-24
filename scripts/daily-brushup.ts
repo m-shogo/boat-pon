@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
-import { buildCandidatesFromModel, buildVenueModel, type ModelCandidateInput } from "../src/domain/model";
+import { DEFAULT_MODEL_ALPHA, buildCandidatesFromModel, buildVenueModel, type ModelCandidateInput } from "../src/domain/model";
 import { filterComparableResultsForDate } from "../src/domain/raceRegime";
 import type { RaceResult } from "../src/domain/types";
 
@@ -39,6 +39,7 @@ try {
       { id: "ms1200-a1", minSampleSize: 1200, alpha: 1 },
       { id: "ms2500-a1", minSampleSize: 2500, alpha: 1 },
       { id: "ms1200-a10", minSampleSize: 1200, alpha: 10 },
+      { id: `ms1200-a${DEFAULT_MODEL_ALPHA}`, minSampleSize: 1200, alpha: DEFAULT_MODEL_ALPHA },
       { id: "ms1200-a20", minSampleSize: 1200, alpha: 20 },
     ],
   });
@@ -95,7 +96,7 @@ WITH buy AS (
     p.close_at AS close_at,
     h.estimated_hit_rate AS est,
     h.recommended_stake_yen AS stake,
-    h.payout_yen AS payout,
+    h.current_odds AS odds,
     (h.result = h.selection) AS hit
   FROM decision_history h
   LEFT JOIN official_programs p ON p.race_id = h.race_id
@@ -108,7 +109,7 @@ SELECT
   COUNT(*) AS n,
   SUM(hit) AS hits,
   ROUND(1.0 * SUM(hit) / COUNT(*), 4) AS hit_rate,
-  ROUND(1.0 * SUM(CASE WHEN hit THEN payout ELSE 0 END) / NULLIF(SUM(stake), 0), 3) AS roi,
+  ROUND(1.0 * SUM(CASE WHEN hit THEN COALESCE(odds, 0) * stake ELSE 0 END) / NULLIF(SUM(stake), 0), 3) AS roi,
   ROUND(AVG(est), 4) AS avg_est,
   ROUND((1.0 * SUM(hit) / COUNT(*)) / NULLIF(AVG(est), 0), 3) AS calibration
 FROM buy
@@ -122,7 +123,7 @@ WITH buy AS (
     h.venue AS venue,
     h.estimated_hit_rate AS est,
     h.recommended_stake_yen AS stake,
-    h.payout_yen AS payout,
+    h.current_odds AS odds,
     (h.result = h.selection) AS hit
   FROM decision_history h
   WHERE h.decision = 'BUY'
@@ -134,7 +135,7 @@ SELECT
   COUNT(*) AS n,
   SUM(hit) AS hits,
   ROUND(1.0 * SUM(hit) / COUNT(*), 4) AS hit_rate,
-  ROUND(1.0 * SUM(CASE WHEN hit THEN payout ELSE 0 END) / NULLIF(SUM(stake), 0), 3) AS roi,
+  ROUND(1.0 * SUM(CASE WHEN hit THEN COALESCE(odds, 0) * stake ELSE 0 END) / NULLIF(SUM(stake), 0), 3) AS roi,
   ROUND(AVG(est), 4) AS avg_est,
   ROUND((1.0 * SUM(hit) / COUNT(*)) / NULLIF(AVG(est), 0), 3) AS calibration
 FROM buy
@@ -149,7 +150,7 @@ WITH buy AS (
     h.race_no AS race_no,
     h.estimated_hit_rate AS est,
     h.recommended_stake_yen AS stake,
-    h.payout_yen AS payout,
+    h.current_odds AS odds,
     (h.result = h.selection) AS hit
   FROM decision_history h
   WHERE h.decision = 'BUY'
@@ -161,7 +162,7 @@ SELECT
   COUNT(*) AS n,
   SUM(hit) AS hits,
   ROUND(1.0 * SUM(hit) / COUNT(*), 4) AS hit_rate,
-  ROUND(1.0 * SUM(CASE WHEN hit THEN payout ELSE 0 END) / NULLIF(SUM(stake), 0), 3) AS roi
+  ROUND(1.0 * SUM(CASE WHEN hit THEN COALESCE(odds, 0) * stake ELSE 0 END) / NULLIF(SUM(stake), 0), 3) AS roi
 FROM buy
 GROUP BY race_no
 HAVING COUNT(*) >= 20
@@ -173,7 +174,7 @@ WITH buy AS (
   SELECT
     h.estimated_hit_rate AS est,
     h.recommended_stake_yen AS stake,
-    h.payout_yen AS payout,
+    h.current_odds AS odds,
     (h.result = h.selection) AS hit,
     COALESCE(p.close_at, '??:??') AS close_at
   FROM decision_history h
@@ -190,7 +191,7 @@ bucket AS (
       WHEN close_at GLOB '[0-2][0-9]:[0-5][0-9]' THEN 'late'
       ELSE 'unknown'
     END AS time_band,
-    est, stake, payout, hit
+    est, stake, odds, hit
   FROM buy
 )
 SELECT
@@ -198,7 +199,7 @@ SELECT
   COUNT(*) AS n,
   SUM(hit) AS hits,
   ROUND(1.0 * SUM(hit) / COUNT(*), 4) AS hit_rate,
-  ROUND(1.0 * SUM(CASE WHEN hit THEN payout ELSE 0 END) / NULLIF(SUM(stake), 0), 3) AS roi,
+  ROUND(1.0 * SUM(CASE WHEN hit THEN COALESCE(odds, 0) * stake ELSE 0 END) / NULLIF(SUM(stake), 0), 3) AS roi,
   ROUND(AVG(est), 4) AS avg_est,
   ROUND((1.0 * SUM(hit) / COUNT(*)) / NULLIF(AVG(est), 0), 3) AS calibration
 FROM bucket
@@ -224,7 +225,7 @@ WITH base AS (
     required_odds AS required_odds,
     sample_size AS sample_size,
     recommended_stake_yen AS stake,
-    payout_yen AS payout,
+    current_odds AS odds,
     (result = selection) AS hit
   FROM decision_history
   WHERE decision = 'BUY'
@@ -236,7 +237,7 @@ SELECT
   ? AS label,
   COUNT(*) AS n,
   SUM(hit) AS hits,
-  ROUND(1.0 * SUM(CASE WHEN hit THEN payout ELSE 0 END) / NULLIF(SUM(stake), 0), 3) AS roi,
+  ROUND(1.0 * SUM(CASE WHEN hit THEN COALESCE(odds, 0) * stake ELSE 0 END) / NULLIF(SUM(stake), 0), 3) AS roi,
   ROUND(AVG(ev), 3) AS avg_ev,
   ROUND(AVG(current_odds), 1) AS avg_odds
 FROM base
@@ -264,7 +265,7 @@ WHERE ev BETWEEN ? AND ?
   const thrRows = thresholds.map((thr) => {
     const r = db.prepare(`
 WITH base AS (
-  SELECT ev AS ev, recommended_stake_yen AS stake, payout_yen AS payout, (result = selection) AS hit
+  SELECT ev AS ev, recommended_stake_yen AS stake, current_odds AS odds, (result = selection) AS hit
   FROM decision_history
   WHERE decision = 'BUY'
     AND returned = 0
@@ -275,7 +276,7 @@ SELECT
   ? AS target_ev,
   COUNT(*) AS n,
   SUM(hit) AS hits,
-  ROUND(1.0 * SUM(CASE WHEN hit THEN payout ELSE 0 END) / NULLIF(SUM(stake), 0), 3) AS roi,
+  ROUND(1.0 * SUM(CASE WHEN hit THEN COALESCE(odds, 0) * stake ELSE 0 END) / NULLIF(SUM(stake), 0), 3) AS roi,
   ROUND(AVG(ev), 3) AS avg_ev
 FROM base
 WHERE ev >= ?

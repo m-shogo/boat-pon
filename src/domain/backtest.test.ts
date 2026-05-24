@@ -39,7 +39,7 @@ test("summarizeByMonthは月別ROI推移を返す", () => {
   const summaries = summarizeByMonth(rows);
   assert.deepEqual(summaries.map((m) => m.ym), ["2026-05", "2026-06"]);
   assert.equal(summaries[0].modelStakeYen, 100);
-  assert.equal(summaries[0].modelPayoutYen, 1500);
+  assert.equal(summaries[0].modelPayoutYen, 1300);
   assert.equal(summaries[0].noBuyDays, 1);
   assert.equal(summaries[1].modelRoi, 0);
 });

@@ -39,8 +39,9 @@ export type CandidateModelSummary = {
 
 const COURSES = [1, 2, 3, 4, 5, 6] as const;
 const TRIFECTA_SPACE = 6 * 5 * 4;
+export const DEFAULT_MODEL_ALPHA = 15;
 
-export function buildVenueModel(results: RaceResult[], minVenueRaceCount = 1, alpha = 1): CandidateModelSummary[] {
+export function buildVenueModel(results: RaceResult[], minVenueRaceCount = 1, alpha = DEFAULT_MODEL_ALPHA): CandidateModelSummary[] {
   const byVenue = new Map<string, RaceResult[]>();
 
   for (const result of results) {

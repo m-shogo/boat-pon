@@ -1,4 +1,4 @@
-import type { DecisionHistoryRow } from "./backtest";
+import { oddsPayoutYen, type DecisionHistoryRow } from "./backtest";
 
 export type VenueMonthRoi = {
   venue: string;
@@ -45,8 +45,7 @@ export function summarizeVenueHeatmap(rows: DecisionHistoryRow[]): VenueHeatmapS
     const grouped = buyRows.filter((row) => row.venue === venue);
     const modelStakeYen = grouped.reduce((sum, row) => sum + row.recommendedStakeYen, 0);
     const modelPayoutYen = grouped
-      .filter((row) => row.result === row.selection)
-      .reduce((sum, row) => sum + (row.payoutYen ?? 0), 0);
+      .reduce((sum, row) => sum + oddsPayoutYen(row, row.recommendedStakeYen), 0);
     return {
       venue,
       buy: grouped.length,
@@ -68,8 +67,7 @@ export function summarizeVenueHeatmap(rows: DecisionHistoryRow[]): VenueHeatmapS
 function summarizeGroup(venue: string, ym: string, rows: DecisionHistoryRow[]): VenueMonthRoi {
   const modelStakeYen = rows.reduce((sum, row) => sum + row.recommendedStakeYen, 0);
   const modelPayoutYen = rows
-    .filter((row) => row.result === row.selection)
-    .reduce((sum, row) => sum + (row.payoutYen ?? 0), 0);
+    .reduce((sum, row) => sum + oddsPayoutYen(row, row.recommendedStakeYen), 0);
   return {
     venue,
     ym,

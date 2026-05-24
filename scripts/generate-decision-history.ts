@@ -1,8 +1,8 @@
 import { judgeCandidate } from "../src/domain/decision";
-import { buildCandidatesFromModel, buildVenueModel, type ModelCandidateInput } from "../src/domain/model";
+import { DEFAULT_MODEL_ALPHA, buildCandidatesFromModel, buildVenueModel, type ModelCandidateInput } from "../src/domain/model";
 import { filterComparableResultsForDate } from "../src/domain/raceRegime";
 import { mergeOddsMaps } from "../src/domain/oddsSnapshot";
-import { getManualOdds, getSettings, insertDecisionHistory, listOddsSnapshots, listProgramInputsRange, listResultsForModelRange, openDb } from "../server/db";
+import { getManualOdds, getSettings, insertDecisionHistory, listOddsSnapshots, listProgramInputsRange, listProgramInputsWithOddsSnapshotsRange, listResultsForModelRange, openDb } from "../server/db";
 import type { DatabaseSync } from "node:sqlite";
 
 type Args = {
@@ -36,8 +36,11 @@ try {
   const oddsByRaceId = mergeOddsMaps(getManualOdds(db), listOddsSnapshots(db));
   const trainFrom = addDays(args.from, -args.trainDays);
   const allResults = listResultsForModelRange(db, trainFrom, args.to);
-  const programs = listProgramInputsRange(db, args.from, args.to, args.limit);
+  const programs = args.refreshExisting && args.refreshOnly
+    ? listProgramInputsWithOddsSnapshotsRange(db, args.from, args.to, args.limit)
+    : listProgramInputsRange(db, args.from, args.to, args.limit);
   const existingKeys = loadExistingDecisionKeys(db, args.from, args.to);
+  const existingRaceIds = loadExistingDecisionRaceIds(db, args.from, args.to);
 
   let generated = 0;
   let written = 0;
@@ -67,9 +70,10 @@ try {
       decision.requiredOdds <= 80;
     const key = decisionKey(candidate.raceId, candidate.selection.join("-"));
     const isExisting = existingKeys.has(key);
-    if (args.refreshOnly && !isExisting) continue;
-    if (!args.includeSkips && decision.status === "SKIP" && !isRequiredOddsCandidate && !(isExisting && args.refreshExisting)) continue;
-    if (isExisting && !args.refreshExisting) {
+    const isExistingRace = existingRaceIds.has(candidate.raceId);
+    if (args.refreshOnly && !isExisting && !isExistingRace) continue;
+    if (!args.includeSkips && decision.status === "SKIP" && !isRequiredOddsCandidate && !((isExisting || isExistingRace) && args.refreshExisting)) continue;
+    if ((isExisting || isExistingRace) && !args.refreshExisting) {
       skippedExisting += 1;
       continue;
     }
@@ -79,9 +83,10 @@ try {
       console.log(`[dry-run:${marker}] ${candidate.raceId} ${candidate.selection.join("-")} ${decision.status} odds=${candidate.currentOdds ?? "-"} ev=${decision.ev?.toFixed(2) ?? "-"}`);
       continue;
     }
-    insertDecisionHistory(db, candidate, decision);
-    if (isExisting) refreshedExisting += 1;
+    insertDecisionHistory(db, candidate, decision, { replaceRace: args.refreshExisting && args.refreshOnly });
+    if (isExisting || isExistingRace) refreshedExisting += 1;
     existingKeys.add(key);
+    existingRaceIds.add(candidate.raceId);
     written += 1;
   }
 
@@ -97,6 +102,15 @@ FROM decision_history
 WHERE date >= ? AND date <= ?
 `).all(from, to) as Array<Record<string, unknown>>;
   return new Set(rows.map((row) => decisionKey(String(row.race_id), String(row.selection))));
+}
+
+function loadExistingDecisionRaceIds(db: DatabaseSync, from: string, to: string) {
+  const rows = db.prepare(`
+SELECT DISTINCT race_id
+FROM decision_history
+WHERE date >= ? AND date <= ?
+`).all(from, to) as Array<Record<string, unknown>>;
+  return new Set(rows.map((row) => String(row.race_id)));
 }
 
 function decisionKey(raceId: string, selection: string) {
@@ -133,7 +147,7 @@ function beforeCloseTime(date: string, closeAt: string, minutesBeforeClose: numb
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: Args = { help: false, from: null, to: null, limit: null, dryRun: false, includeSkips: false, includeRequiredOddsCandidates: false, refreshExisting: false, refreshOnly: false, minTrainRaceCount: null, trainDays: 180, alpha: 1 };
+  const args: Args = { help: false, from: null, to: null, limit: null, dryRun: false, includeSkips: false, includeRequiredOddsCandidates: false, refreshExisting: false, refreshOnly: false, minTrainRaceCount: null, trainDays: 180, alpha: DEFAULT_MODEL_ALPHA };
   for (let i = 0; i < argv.length; i += 1) {
     const key = argv[i];
     const value = argv[i + 1];
@@ -177,7 +191,7 @@ function printHelp() {
   --refresh-only                     既存履歴だけを更新し、新規履歴は作らない
   --train-days N                     学習に使う過去日数。既定値: 180
   --min-train N                      会場モデルの最小サンプル数。未指定なら設定値
-  --alpha N                          Laplaceスムージング係数。既定値: 1
+  --alpha N                          Laplaceスムージング係数。既定値: ${DEFAULT_MODEL_ALPHA}
 
 例:
   npm run generate:history -- --dry-run --from 2026-05-01 --to 2026-05-21 --limit 100 --include-required-odds-candidates

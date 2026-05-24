@@ -12,3 +12,4 @@ data/*.bak*
 data/boat.sqlite.bak*
 data/fetch-report.txt
 data/fetch-pending-*.txt
+data/boat-pon.db

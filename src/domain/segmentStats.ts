@@ -1,4 +1,4 @@
-import type { DecisionHistoryRow } from "./backtest";
+import { oddsPayoutYen, type DecisionHistoryRow } from "./backtest";
 
 export type RoiRow = {
   key: string;
@@ -34,8 +34,7 @@ export function summarizeByTimeBand(rows: DecisionHistoryRow[], closeAtByRaceId 
 export function summarizeGroup(key: string, label: string, rows: DecisionHistoryRow[]): RoiRow {
   const modelStakeYen = rows.reduce((sum, row) => sum + row.recommendedStakeYen, 0);
   const modelPayoutYen = rows
-    .filter((row) => row.result === row.selection)
-    .reduce((sum, row) => sum + (row.payoutYen ?? 0), 0);
+    .reduce((sum, row) => sum + oddsPayoutYen(row, row.recommendedStakeYen), 0);
   return {
     key,
     label,

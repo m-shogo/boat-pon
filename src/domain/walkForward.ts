@@ -1,5 +1,5 @@
 import { judgeCandidate } from "./decision";
-import { buildCandidatesFromModel, buildVenueModel, type ModelCandidateInput } from "./model";
+import { DEFAULT_MODEL_ALPHA, buildCandidatesFromModel, buildVenueModel, type ModelCandidateInput } from "./model";
 import { filterComparableResultsForDate } from "./raceRegime";
 import type { BudgetRule, DecisionStatus, RaceResult } from "./types";
 
@@ -45,7 +45,7 @@ export type WalkForwardSummary = {
 
 export function runWalkForwardBacktest(input: WalkForwardInput): WalkForwardRow[] {
   const minTrainRaceCount = input.minTrainRaceCount ?? input.settings.minSampleSize;
-  const alpha = input.alpha ?? 1;
+  const alpha = input.alpha ?? DEFAULT_MODEL_ALPHA;
   const results = [...input.results]
     .filter((row) => row.trifecta && !row.returned)
     .sort((a, b) => a.date.localeCompare(b.date) || a.venue.localeCompare(b.venue) || a.raceNo - b.raceNo);
@@ -125,7 +125,7 @@ export function summarizeWalkForward(rows: WalkForwardRow[], stakePerBetYen: num
   const modelStakeYen = buyRows.length * stakePerBetYen;
   const modelPayoutYen = buyRows
     .filter((row) => row.hit)
-    .reduce((sum, row) => sum + (row.payoutYen ?? 0), 0);
+    .reduce((sum, row) => sum + (row.currentOdds == null ? 0 : row.currentOdds * stakePerBetYen), 0);
   const hits = buyRows.filter((row) => row.hit).length;
   return {
     races: rows.length,

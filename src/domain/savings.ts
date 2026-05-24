@@ -1,4 +1,4 @@
-import type { DecisionHistoryRow } from "./backtest";
+import { oddsPayoutYen, type DecisionHistoryRow } from "./backtest";
 
 export type SavingsSummary = {
   buySignals: number;
@@ -17,8 +17,7 @@ export function calculateSavings(rows: DecisionHistoryRow[], today?: string): Sa
   const buyRows = rows.filter((row) => row.decision === "BUY");
   const simulatedStakeYen = buyRows.reduce((sum, row) => sum + row.recommendedStakeYen, 0);
   const simulatedPayoutYen = buyRows
-    .filter((row) => row.result === row.selection)
-    .reduce((sum, row) => sum + (row.payoutYen ?? 0), 0);
+    .reduce((sum, row) => sum + oddsPayoutYen(row, row.recommendedStakeYen), 0);
   const simulatedNetYen = simulatedPayoutYen - simulatedStakeYen;
   const actualStakeYen = rows.reduce((sum, row) => sum + row.stakeYen, 0);
   const unboughtBuySignals = buyRows.filter((row) => !row.actuallyBought).length;

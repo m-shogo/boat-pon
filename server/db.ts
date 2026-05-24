@@ -364,6 +364,28 @@ LIMIT ?
   }));
 }
 
+export function listProgramInputsWithOddsSnapshotsRange(db: DatabaseSync, from: string, to: string, limit: number) {
+  const rows = db.prepare(`
+SELECT p.race_id, p.date, p.venue, p.race_no, p.close_at, p.raw_json
+FROM official_programs p
+WHERE p.date >= ? AND p.date <= ?
+  AND EXISTS (
+    SELECT 1 FROM odds_snapshots os WHERE os.race_id = p.race_id
+  )
+ORDER BY p.date ASC, p.venue ASC, p.race_no ASC
+LIMIT ?
+`).all(from, to, limit) as Array<Record<string, unknown>>;
+  return rows.map((row) => ({
+    raceId: String(row.race_id),
+    date: String(row.date),
+    venue: String(row.venue),
+    raceNo: Number(row.race_no),
+    closeAt: String(row.close_at),
+    raceCategory: parseRaceCategory(row.raw_json),
+    features: extractProgramFeatures(parseRawJson(row.raw_json)),
+  }));
+}
+
 export function insertOfficialProgram(db: DatabaseSync, row: {
   raceId: string;
   date: string;
@@ -382,12 +404,15 @@ VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
 
 
 
-export function insertDecisionHistory(db: DatabaseSync, candidate: BetCandidate, decision: Decision) {
+export function insertDecisionHistory(db: DatabaseSync, candidate: BetCandidate, decision: Decision, options: { replaceRace?: boolean } = {}) {
   const selection = candidate.selection.join("-");
-  const existing = db.prepare("SELECT id FROM decision_history WHERE race_id = ? AND selection = ?").get(
+  const existingBySelection = db.prepare("SELECT id FROM decision_history WHERE race_id = ? AND selection = ?").get(
     candidate.raceId,
     selection,
   ) as { id: number } | undefined;
+  const existing = existingBySelection ?? (options.replaceRace
+    ? db.prepare("SELECT id FROM decision_history WHERE race_id = ? ORDER BY id DESC LIMIT 1").get(candidate.raceId) as { id: number } | undefined
+    : undefined);
 
   const result = db.prepare("SELECT trifecta, payout_yen, popularity, returned FROM race_results WHERE race_id = ?").get(candidate.raceId) as
     | { trifecta: string | null; payout_yen: number | null; popularity: number | null; returned: number }
@@ -396,11 +421,12 @@ export function insertDecisionHistory(db: DatabaseSync, candidate: BetCandidate,
   if (existing) {
     db.prepare(`
 UPDATE decision_history
-SET estimated_hit_rate = ?, required_odds = ?, current_odds = ?, ev = ?, decision = ?,
+SET selection = ?, estimated_hit_rate = ?, required_odds = ?, current_odds = ?, ev = ?, decision = ?,
     result = ?, payout_yen = ?, popularity = ?, returned = ?, source = ?, fetched_at = ?,
     recommended_stake_yen = ?, sample_size = ?, model_version = ?, race_category = ?
 WHERE id = ?
 `).run(
+      selection,
       candidate.estimatedHitRate,
       decision.requiredOdds,
       candidate.currentOdds,
@@ -418,6 +444,12 @@ WHERE id = ?
       candidate.raceCategory ?? null,
       existing.id,
     );
+    if (options.replaceRace) {
+      if (!existingBySelection) {
+        db.prepare("UPDATE decision_history SET actually_bought = 0, stake_yen = 0 WHERE id = ?").run(existing.id);
+      }
+      db.prepare("DELETE FROM decision_history WHERE race_id = ? AND id <> ?").run(candidate.raceId, existing.id);
+    }
     return;
   }
 

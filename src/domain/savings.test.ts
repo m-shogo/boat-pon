@@ -44,7 +44,7 @@ test("全BUYを買っていたら負けた金額を節約額にする", () => {
 
 test("全BUYを買っていたら勝っていた場合は取り逃し利益にする", () => {
   const summary = calculateSavings([
-    row({ id: 1, date: "2026-05-20", decision: "BUY", result: "1-2-3", payoutYen: 1600 }),
+    row({ id: 1, date: "2026-05-20", decision: "BUY", result: "1-2-3", currentOdds: 16, payoutYen: 9999 }),
   ]);
   assert.equal(summary.savedLossYen, 0);
   assert.equal(summary.missedProfitYen, 1500);

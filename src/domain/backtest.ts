@@ -93,13 +93,17 @@ export type PeriodSplit = {
   test: DecisionHistoryRow[];
 };
 
+export function oddsPayoutYen(row: DecisionHistoryRow, stakeYen: number): number {
+  if (row.result !== row.selection || row.currentOdds == null || stakeYen <= 0) return 0;
+  return row.currentOdds * stakeYen;
+}
+
 export function summarizeMonth(rows: DecisionHistoryRow[], ym: string, minSampleSize = 0): MonthlySummary {
   const monthRows = rows.filter((row) => row.date.startsWith(ym) && row.sampleSize >= minSampleSize);
   const buyRows = monthRows.filter((row) => row.decision === "BUY");
   const modelStakeYen = buyRows.reduce((sum, row) => sum + row.recommendedStakeYen, 0);
   const modelPayoutYen = buyRows
-    .filter((row) => row.result === row.selection)
-    .reduce((sum, row) => sum + (row.payoutYen ?? 0), 0);
+    .reduce((sum, row) => sum + oddsPayoutYen(row, row.recommendedStakeYen), 0);
 
   const dayMap = new Map<string, { total: number; buy: number }>();
   for (const row of monthRows) {
@@ -158,18 +162,16 @@ export function summarizeHistory(rows: DecisionHistoryRow[], minSampleSize = 0):
   const validBuyRows = validRows.filter((row) => row.decision === "BUY");
   const validModelStakeYen = validBuyRows.reduce((sum, row) => sum + row.recommendedStakeYen, 0);
   const validModelPayoutYen = validBuyRows
-    .filter((row) => row.result === row.selection)
-    .reduce((sum, row) => sum + (row.payoutYen ?? 0), 0);
+    .reduce((sum, row) => sum + oddsPayoutYen(row, row.recommendedStakeYen), 0);
   const validHits = validRows.filter((row) => row.result === row.selection).length;
   const totalStakeYen = rows.reduce((sum, row) => sum + row.stakeYen, 0);
   const totalPayoutYen = rows
-    .filter((row) => row.actuallyBought && row.result === row.selection)
-    .reduce((sum, row) => sum + (row.payoutYen ?? 0), 0);
+    .filter((row) => row.actuallyBought)
+    .reduce((sum, row) => sum + oddsPayoutYen(row, row.stakeYen), 0);
   const modelRows = rows.filter((row) => row.decision === "BUY");
   const modelStakeYen = modelRows.reduce((sum, row) => sum + row.recommendedStakeYen, 0);
   const modelPayoutYen = modelRows
-    .filter((row) => row.result === row.selection)
-    .reduce((sum, row) => sum + (row.payoutYen ?? 0), 0);
+    .reduce((sum, row) => sum + oddsPayoutYen(row, row.recommendedStakeYen), 0);
   const hits = rows.filter((row) => row.result === row.selection).length;
 
   const decisions = rows.length;
@@ -210,12 +212,12 @@ export function summarizeHistory(rows: DecisionHistoryRow[], minSampleSize = 0):
   emptySummary.byDecision = [...byDecision.entries()].map(([decision, grouped]) => {
     const stakeYen = grouped.reduce((sum, row) => sum + row.stakeYen, 0);
     const payoutYen = grouped
-      .filter((row) => row.actuallyBought && row.result === row.selection)
-      .reduce((sum, row) => sum + (row.payoutYen ?? 0), 0);
+      .filter((row) => row.actuallyBought)
+      .reduce((sum, row) => sum + oddsPayoutYen(row, row.stakeYen), 0);
     const modelStakeYen = grouped.reduce((sum, row) => sum + row.recommendedStakeYen, 0);
     const modelPayoutYen = grouped
-      .filter((row) => row.decision === "BUY" && row.result === row.selection)
-      .reduce((sum, row) => sum + (row.payoutYen ?? 0), 0);
+      .filter((row) => row.decision === "BUY")
+      .reduce((sum, row) => sum + oddsPayoutYen(row, row.recommendedStakeYen), 0);
     return {
       decision,
       count: grouped.length,
@@ -231,12 +233,12 @@ export function summarizeHistory(rows: DecisionHistoryRow[], minSampleSize = 0):
   emptySummary.byVenue = [...byVenue.entries()].map(([venue, grouped]) => {
     const stakeYen = grouped.reduce((sum, row) => sum + row.stakeYen, 0);
     const payoutYen = grouped
-      .filter((row) => row.actuallyBought && row.result === row.selection)
-      .reduce((sum, row) => sum + (row.payoutYen ?? 0), 0);
+      .filter((row) => row.actuallyBought)
+      .reduce((sum, row) => sum + oddsPayoutYen(row, row.stakeYen), 0);
     const modelStakeYen = grouped.reduce((sum, row) => sum + row.recommendedStakeYen, 0);
     const modelPayoutYen = grouped
-      .filter((row) => row.decision === "BUY" && row.result === row.selection)
-      .reduce((sum, row) => sum + (row.payoutYen ?? 0), 0);
+      .filter((row) => row.decision === "BUY")
+      .reduce((sum, row) => sum + oddsPayoutYen(row, row.recommendedStakeYen), 0);
     return {
       venue,
       count: grouped.length,
