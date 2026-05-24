@@ -1,6 +1,6 @@
 # Claude Code 引き継ぎメモ
 
-最終更新: 2026-05-24
+最終更新: 2026-05-24 (セッション2)
 
 Boat Pon は個人用の期待値通知・検証アプリ。自動購入、自動投票、ログイン保存、投票サイト操作は絶対に実装しない。
 外部サイト取得は候補レースだけ、低頻度、キャッシュ前提で行う。
@@ -9,25 +9,25 @@ Boat Pon は個人用の期待値通知・検証アプリ。自動購入、自�
 
 - リポジトリ: `/Users/m-shogo/Developer/personal/boat-pon`
 - ブランチ: `main`
-- 直近の主な変更 (2026-05-24):
-  - `server/db.ts`: `recordOddsSnapshot` で DELETE+INSERT（重複防止）
-  - `server/db.ts`: `listOddsSnapshots` の LIMIT 500 を撤廃、MAX(id)で最新1件を返す
-  - `scripts/repair-kyotei24-odds-cache.ts`: --min-odds 下限 50→10、--limit 上限 500→2000
-  - 連結パターン（98.398→98.3等）を全件修正（541件）
-  - 月別100件補完（2025-09〜11各110件）
-  - 全BUY/WATCHの current_odds 取得率: **100%**
-- 直近の分析結果（2026-05-24 最終版）:
-  - BUY 717件、ROI 0.519、的中率 1.81%（13的中）
-  - calibration誤差: オッズ帯依存 → 10〜20倍で1.1倍、50〜100倍で10倍以上過大
-  - 最良EV帯: **EV 2.0〜3.0（ROI 1.067、n=209）**
-  - オッズ50倍以上は損失大（ROI 0.295）、EV 3.0以上は全件ミス
-  - オッズスナップショット: 2,215件（全て一意）
-  - 月別補完: 2025-01〜07各140件、2025-08〜11各120〜855件
-  - 詳細: `docs/odds-quality-report-2026-05-24.md`
+- 直近の主な変更 (2026-05-24 セッション2):
+  - `src/domain/kyotei24Odds.ts`: `MAX_VALID_ODDS=1000` ガード追加（欠場レース誤パース修正）
+  - `src/domain/types.ts`: `BudgetRule` に `marketBlendWeight?: number` 追加
+  - `src/domain/decision.ts`: `blendedHitRate()` 実装、`judgeCandidate` に `marketBlendWeight` 組み込み
+  - `src/domain/decision.test.ts`: テスト 71件（全パス）
+  - オッズスナップショット: **9,216件** → 9,216+（各月 940〜1,145件）
+  - decision_history: BUY 3,120件、WATCH 863件、SKIP 37,279件（2025年計）
+
+- 最新分析結果（2026-05-24 セッション2 最終版）:
+  - 全BUY: n=3,120、ROI 0.733、的中率 2.37%（74的中）
+  - **ratio1.5-2.0 帯**: n=698、ROI 0.861、的中率 2.58%（18的中）
+  - **ratio1.5-2.0 + 5-11月**: n=397、ROI 1.069 ← 唯一ROI>1
+  - marketBlendWeight: ROI 改善効果は限定的（ratio フィルターが先に効く）
+  - キャリブレーション: 10-20倍は1.5x過大、30-50倍は4x過大、50倍超は10倍以上過大
+  - 詳細: `docs/model-roadmap.md`, `docs/odds-quality-report-2026-05-24.md`
+
 - 直近確認:
-  - `npm test` 66件全件パス
+  - `npm test` 71件全件パス
   - `npm run build` 成功
-  - TypeScriptエラー（daily-brushup.ts SQLInputValue型）修正済み
 
 ## 触らないもの
 
@@ -49,10 +49,9 @@ Boat Pon は個人用の期待値通知・検証アプリ。自動購入、自�
 
 ## 重い作業の進め方
 
-## 推奨: 安全ループCLI
+### 推奨: 安全ループCLI
 
 Codex/Claudeのコンテキスト節約には、まず固定ループを使う。
-このCLIは `backfill:odds` と `generate:history --refresh-existing --refresh-only --include-skips` を組み合わせ、失敗率が高い時は止まる。
 
 ```bash
 npm run backfill:odds:loop -- --help
@@ -60,52 +59,29 @@ npm run backfill:odds:loop -- --dry-run --from 2025-08-01 --to 2025-08-31
 npm run backfill:odds:loop -- --from 2025-08-01 --to 2025-08-31 --max-total 200 --max-batches 4
 ```
 
-- 1バッチ最大50件。
-- 1回の実行は最大500件。
-- 失敗率20%以上、429/403/5xx疑いで停止。
-- refresh時は既存履歴だけを更新し、新規 `decision_history` は増やさない。
-- 完了メモは `/tmp/boat-pon-claude-status.json` に出る。
-- `data/` 配下は原則コミットしない。
+- 1バッチ最大50件。失敗率20%以上、429/403/5xx疑いで停止。
 
-### 1. 判定履歴を増やす
+### 1. オッズ補完（継続中）
 
-外部取得なし。保存済みDBだけを読む。
-必ず短い dry-run から始める。
+各月まだ1,500〜3,000件のSKIPが未補完。200件ずつ追加中。
 
 ```bash
-npm run generate:history -- --help
-npm run generate:history -- --dry-run --from 2026-04-01 --to 2026-05-21 --limit 500 --include-required-odds-candidates
-npm run generate:history -- --from 2026-04-01 --to 2026-05-21 --limit 500 --include-required-odds-candidates
+npm run backfill:odds -- --limit 200 --include-skip-required-odds --from 2025-01-01 --to 2025-01-31 --sleep-ms 1200
+# 補完後に再計算
+npm run generate:history -- --from 2025-01-01 --to 2025-01-31 --limit 50000 --refresh-existing --refresh-only --include-skips
 ```
 
-広げる時は月単位で進める。いきなり全期間を対象にしない。
-
-### 2. オッズ補完
-
-外部アクセスあり。必ず `--limit` を小さくして、連打しない。
-raw HTMLキャッシュがあれば再取得しない。
+### 2. 判定履歴を増やす
 
 ```bash
-npm run backfill:odds -- --help
-npm run backfill:odds -- --dry-run --limit 10 --include-skip-required-odds
-npm run backfill:odds -- --limit 5 --include-skip-required-odds
+npm run generate:history -- --dry-run --from 2026-05-01 --to 2026-05-24 --limit 500
+npm run generate:history -- --from 2026-05-01 --to 2026-05-24 --limit 500
 ```
 
-大量に取らない。1回あたり5〜20件程度で様子を見る。
-
-### 3. 補完済みオッズを判定履歴へ反映
-
-外部取得なし。オッズ補完後に実行する。
+### 3. 確認
 
 ```bash
-npm run generate:history -- --dry-run --from 2026-05-20 --to 2026-05-21 --limit 200 --refresh-existing --refresh-only --include-skips
-npm run generate:history -- --from 2026-05-20 --to 2026-05-21 --limit 200 --refresh-existing --refresh-only --include-skips
-```
-
-### 4. 確認
-
-```bash
-sqlite3 data/boat.sqlite "SELECT COUNT(*) FROM decision_history; SELECT decision, COUNT(*) FROM decision_history GROUP BY decision; SELECT COUNT(*) FROM odds_snapshots;"
+sqlite3 data/boat.sqlite "SELECT decision, COUNT(*) FROM decision_history WHERE date >= '2025-01-01' AND date <= '2025-11-30' GROUP BY 1; SELECT COUNT(*) FROM odds_snapshots;"
 npm test
 npm run build
 git status --short
@@ -113,30 +89,36 @@ git status --short
 
 ## 期待値調整の見方
 
-- BUY数が少なすぎる条件は採用しない。
-- ROIだけで判断しない。
-- 月別ROI、会場別ROI、WATCH化した候補の実績を見る。
-- オッズ未取得の候補はBUY採用しない。
-- 買わない日が増える改善は成功として扱う。
+- BUY数が少なすぎる条件は採用しない
+- ROIだけで判断しない
+- 月別ROI、会場別ROI、WATCH化した候補の実績を見る
+- オッズ未取得の候補はBUY採用しない
+- 買わない日が増える改善は成功として扱う
 
 ## 次にClaudeへ頼みたい重い作業
 
-1. **calibration 係数の調整**（最優先）:
-   - 推定的中率がオッズに依存せず一定（6〜7%）なのが根本問題
-   - `src/domain/model.ts` の `buildVenueModel` を見直す（hit_rate 計算が venue-level でしか分割していない）
-   - 実測: 10〜20倍で6.45%、30〜50倍で1.2%、50〜100倍で0.58%
-   - オッズ帯別に期待的中率を補正するか、required_odds での足切りを強化する
-2. **2025-01〜07 のオッズ補完継続**:
-   - 現状: 各月 140件（BUY/WATCH含む）
-   - 追加対象: 各月 ~4,000件のSKIP候補が未補完
-   - `npm run backfill:odds -- --limit 50 --include-skip-required-odds --from 2025-01-01 --to 2025-01-31 --sleep-ms 1500`
-3. **オッズ帯絞り込み条件のサンプル拡大**:
-   - current_odds < 50 かつ EV 2.0〜3.0 で n=209、ROI 1.067
-   - 少なくとも 500〜1,000 件に拡大してから採用判断
-4. 改善案はコード変更前に `docs/model-roadmap.md` へ短く記録する。
+1. **オッズ補完の継続**:
+   - 2025-01〜07: 各月あと1,500〜2,000件のSKIPが未補完（1日200件ペースで継続）
+   - 2025-09〜11: 各月約700件のSKIPが未補完（200件ずつ追加中）
+   - コマンド: `npm run backfill:odds -- --limit 200 --include-skip-required-odds --from 2025-XX-01 --to 2025-XX-31 --sleep-ms 1200`
+
+2. **calibration 係数の調整**（中優先）:
+   - `buildVenueModel` の cherry-picking バイアス: トップセレクション選択で過大推定
+   - 対策候補: (a) alpha 引き上げ、(b) minHitCount 閾値追加、(c) 市場オッズ混合（実装済み、効果限定的）
+   - 実装前に `docs/model-roadmap.md` へ方針を記録すること
+
+3. **ratio1.5-2.0 フィルターの季節性検証**:
+   - 1-4月 ROI 0.467 vs 5-11月 ROI 1.069
+   - データ追加後に再検証（現状過学習の可能性あり）
+
+4. **selection 1-3-2 の追加検証**:
+   - 平和島で ROI 3.19 (n=26)、大村で ROI 1.49 (n=17) — 過小サンプル
+   - データ追加後に n>=50 になってから採用判断
 
 ## DBスキーマ注意
 
-- `odds_snapshots`: 同一 (race_id, selection, source) のスナップショットは1件のみ保持（MAX id）
-- `recordOddsSnapshot`: DELETE→INSERT で重複しない（2026-05-24 修正済み）
+- メインDB: `data/boat.sqlite`（`data/boat-pon.db` は0バイトダミー、使わない）
+- `odds_snapshots`: 同一 (race_id, selection, source) のスナップショットは1件のみ保持
+- `recordOddsSnapshot`: DELETE→INSERT で重複しない
 - `listOddsSnapshots(db)`: LIMIT なし、MAX(id) GROUP BY race_id, selection で最新1件返す
+- ROI計算: `SUM(CASE WHEN selection = result THEN current_odds ELSE 0 END) / COUNT(*)` (100円ベット基準)
