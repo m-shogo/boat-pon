@@ -51,6 +51,7 @@ Boat Pon は自動購入アプリではない。目的は、ほとんどの日�
 - **model_version: boatpon-v3-alpha15**（DEFAULT_MODEL_ALPHA=15）
 - **BudgetRule**: maxOdds, maxOddsRatio, minOddsRatio, marketBlendWeight フィールド実装済み（未設定）
 - **BudgetRule**: calibrationMode, calibrationBasis, oddsCalibrationFactors 実装済み（デフォルトnone、v3-empiricalで必要オッズ帯または取得オッズ帯別補正）
+- **BudgetRule**: programFilter 実装済み（1着候補艇の級別、モーター2連率、ボート2連率でBUY対象を絞れる）
 
 ### 根本課題
 
@@ -66,13 +67,16 @@ Boat Pon は自動購入アプリではない。目的は、ほとんどの日�
 
 - 過去オッズ補完
   - ✅ 2025年全月 odds_snapshots 17,123件（セッション3完了時点）
-  - ✅ 2025-01〜11 の decision_history（v3-alpha15）: BUY 2,088件、WATCH 1,216件、SKIP 13,259件
-  - ✅ BUY/WATCH はオッズ取得率 100%（SKIP 残 1件のみ）
+  - ✅ 2025-01〜11 の decision_history（v3-alpha15）: BUY 2,443件、WATCH 1,420件、SKIP 23,839件（再生成済み）
+  - ✅ 2024-01〜12 の decision_history（v3-alpha15）: BUY 3,957件、WATCH 1,947件、SKIP 49,795件（再生成済み）
+  - ✅ BUY/WATCH はオッズ取得率ほぼ100%
   - ✅ kyotei24パーサー: 欠場レースの異常オッズ(MAX_VALID_ODDS=1000)修正済み
   - ✅ marketBlendWeight 実装済み（BudgetRule、デフォルト0）
   - ✅ maxOddsRatio=2.0 を app_settings に設定済み（ライブ適用中）
-  - **バックフィルはほぼ完了。次の優先事項: 2024年以前のデータ取得**
-  - 残: calibration 30-50倍帯の 2.1x 過大推定（cherry-picking バイアス、2024年データなしでは改善困難）
+  - ✅ programFilter (A2×motor<40%) 実装済みだが実測ROI悪化のため不採用（DB設定なし）
+  - **バックフィルはほぼ完了。次の優先事項: 2023年以前のデータ取得**
+  - 残: calibration 30-50倍帯の 2.1x 過大推定（cherry-picking バイアス）
+  - 注意: programFilter 等の設定変更評価は --refresh-existing ではなく DELETE + 再生成で行う
 - 天候/風波/安定板/周回短縮の実データ紐づけ
 - 返還/欠場/展示異常のBUY抑制
 - 番組カテゴリ別に targetEv/minSampleSize を変える検証
