@@ -55,3 +55,23 @@ test("100倍超オッズはEV条件を満たしても検証保留のWATCHにす�
   assert.equal(decision.recommendedAmount, 0);
   assert.ok(decision.reasons.includes("100倍超オッズは検証保留"));
 });
+
+test("maxOddsRatioを超える場合はSKIPにする", () => {
+  // requiredOdds = 1.25 / 0.085 ≈ 14.7倍、maxOddsRatio=2.0 → 上限 29.4倍
+  // currentOdds=40倍は上限超過
+  const decision = judgeCandidate({ ...base, currentOdds: 40 }, { ...DEFAULT_RULE, maxOddsRatio: 2.0 }, {
+    now: new Date("2026-05-21T18:00:00+09:00"),
+  });
+  assert.equal(decision.status, "SKIP");
+  assert.ok(decision.reasons.some((r) => r.includes("市場オッズがモデル要求の2倍超")));
+});
+
+test("minOddsRatioを下回る場合はSKIPにする", () => {
+  // requiredOdds ≈ 14.7倍、minOddsRatio=1.5 → 下限 22.1倍
+  // currentOdds=16.2倍は下限未満
+  const decision = judgeCandidate(base, { ...DEFAULT_RULE, minSampleSize: 1, minOddsRatio: 1.5 }, {
+    now: new Date("2026-05-21T18:00:00+09:00"),
+  });
+  assert.equal(decision.status, "SKIP");
+  assert.ok(decision.reasons.some((r) => r.includes("市場オッズがモデル要求の1.5倍未満")));
+});
