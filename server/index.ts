@@ -121,6 +121,9 @@ function validateBudgetRule(settings: BudgetRule): string | null {
     if (filter.maxBoatTop2Rate != null && (!Number.isFinite(filter.maxBoatTop2Rate) || filter.maxBoatTop2Rate < 0 || filter.maxBoatTop2Rate > 100)) {
       return "programFilter.maxBoatTop2Rate must be between 0 and 100";
     }
+    if (filter.excludedSecondBoatClassNames != null && (!Array.isArray(filter.excludedSecondBoatClassNames) || filter.excludedSecondBoatClassNames.some((name) => typeof name !== "string"))) {
+      return "programFilter.excludedSecondBoatClassNames must be a string array";
+    }
   }
   if (settings.minRequiredOdds != null && (!Number.isFinite(settings.minRequiredOdds) || settings.minRequiredOdds <= 0)) {
     return "minRequiredOdds must be positive";

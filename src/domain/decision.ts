@@ -159,6 +159,12 @@ function programFilterReasons(candidate: BetCandidate, rule: BudgetRule): string
       reasons.push(`1着候補ボート2連率が${filter.maxBoatTop2Rate}%以上`);
     }
   }
+  if (filter.excludedSecondBoatClassNames?.length) {
+    const secondClass = candidate.secondBoatFeature?.className;
+    if (secondClass && filter.excludedSecondBoatClassNames.includes(secondClass)) {
+      reasons.push(`2着候補級別が除外対象(${secondClass})`);
+    }
+  }
 
   return reasons;
 }

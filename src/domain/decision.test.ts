@@ -246,3 +246,26 @@ test("excludedRaceNosに含まれないレース番号はそのまま判定す�
   });
   assert.equal(decision.status, "BUY");
 });
+
+test("excludedSecondBoatClassNamesに2号艇のクラスが含まれる場合はSKIPにする", () => {
+  const candidate: BetCandidate = {
+    ...base,
+    secondBoatFeature: { course: 2, className: "B1", nationalWinRate: 4.5, nationalTop2Rate: 30, localWinRate: 4.0, localTop2Rate: 25, motorTop2Rate: 35, boatTop2Rate: 38 },
+  };
+  const decision = judgeCandidate(candidate, { ...DEFAULT_RULE, minSampleSize: 1, programFilter: { excludedSecondBoatClassNames: ["B1"] } }, {
+    now: new Date("2026-05-21T18:00:00+09:00"),
+  });
+  assert.equal(decision.status, "SKIP");
+  assert.ok(decision.reasons.some((r) => r.includes("2着候補級別が除外対象")));
+});
+
+test("excludedSecondBoatClassNamesに2号艇のクラスが含まれない場合はそのまま判定する", () => {
+  const candidate: BetCandidate = {
+    ...base,
+    secondBoatFeature: { course: 2, className: "A2", nationalWinRate: 5.5, nationalTop2Rate: 40, localWinRate: 5.0, localTop2Rate: 35, motorTop2Rate: 40, boatTop2Rate: 42 },
+  };
+  const decision = judgeCandidate(candidate, { ...DEFAULT_RULE, minSampleSize: 1, programFilter: { excludedSecondBoatClassNames: ["B1"] } }, {
+    now: new Date("2026-05-21T18:00:00+09:00"),
+  });
+  assert.equal(decision.status, "BUY");
+});

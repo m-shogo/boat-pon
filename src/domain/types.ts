@@ -28,6 +28,8 @@ export type BetCandidate = {
   candidateMotorTop2Rate?: number | null;
   candidateBoatTop2Rate?: number | null;
   firstBoatFeature?: BoatFeature;
+  secondBoatFeature?: BoatFeature;
+  thirdBoatFeature?: BoatFeature;
 };
 
 export type BudgetRule = {
@@ -61,6 +63,7 @@ export type ProgramFilterRule = {
   allowedClassNames?: string[];
   maxMotorTop2Rate?: number;
   maxBoatTop2Rate?: number;
+  excludedSecondBoatClassNames?: string[];
 };
 
 export type Decision = {
