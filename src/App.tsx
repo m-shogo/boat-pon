@@ -1148,6 +1148,10 @@ function validateSettings(settings: BudgetRule): string | null {
     if (settings.programFilter.maxMotorTop2Rate != null && (!Number.isFinite(settings.programFilter.maxMotorTop2Rate) || settings.programFilter.maxMotorTop2Rate < 0 || settings.programFilter.maxMotorTop2Rate > 100)) return "モーター2連率上限は0〜100で入力してください";
     if (settings.programFilter.maxBoatTop2Rate != null && (!Number.isFinite(settings.programFilter.maxBoatTop2Rate) || settings.programFilter.maxBoatTop2Rate < 0 || settings.programFilter.maxBoatTop2Rate > 100)) return "ボート2連率上限は0〜100で入力してください";
   }
+  if (settings.minRequiredOdds != null && (!Number.isFinite(settings.minRequiredOdds) || settings.minRequiredOdds <= 0)) return "必要オッズ下限は0より大きい値にしてください";
+  if (settings.maxRequiredOdds != null && (!Number.isFinite(settings.maxRequiredOdds) || settings.maxRequiredOdds <= 0)) return "必要オッズ上限は0より大きい値にしてください";
+  if (settings.minRequiredOdds != null && settings.maxRequiredOdds != null && settings.minRequiredOdds >= settings.maxRequiredOdds) return "必要オッズ下限は上限より小さい値にしてください";
+  if (settings.excludedVenues != null && !Array.isArray(settings.excludedVenues)) return "除外会場の設定が不正です";
   return null;
 }
 
