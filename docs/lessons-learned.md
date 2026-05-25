@@ -825,10 +825,11 @@ result?.popularity ?? null  // ← これは実際の勝利3連単の人気
 現状: 実装未着手（BetCandidate/BudgetRule/judgeCandidate 全て要変更）
 過学習リスク: 要検証（2024-2025のpopularity = 勝利3連単の人気であり、
               決定時の1-2-3の人気とは異なる）
-採用/保留/却下: 保留 — 正しいpopularityデータ（選択の人気）でのバックテストが必要
-次に見ること:
-  - generate-historyに odds_snapshot.popularity を BetCandidate に渡す実装
-  - 再生成後、1-2-3選択の人気帯別ROIを再分析
+採用/保留/却下: **却下確定** — 追加確認で1-2-3は常にrank 1-10と判明
+追加確認(2026年odds_snapshot): 1-2-3の人気帯 → 43,023件中ほぼ全てrank 1-10
+→ 1-2-3選択はモデルの性質上常に最人気帯 → popularity フィルターは無効
+→ pop 11-20 HIT時高ROI は B1フィルター(低評価B1が逆転)で自然に捉えられている
+→ popularity 実装は不要
 ```
 
 ## 今後の地面固め順序
