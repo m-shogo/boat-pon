@@ -1075,6 +1075,21 @@ function SettingsScreen({ settings, onSaved }: { settings: BudgetRule; onSaved: 
           />
         </label>
         <label className="settingField">
+          <span>2着候補同クラス除外</span>
+          <input
+            type="checkbox"
+            checked={draft.programFilter?.excludeSameClassSecondBoat ?? false}
+            onChange={(event) => setDraft({
+              ...draft,
+              programFilter: {
+                ...draft.programFilter,
+                excludeSameClassSecondBoat: event.target.checked || undefined,
+              },
+            })}
+          />
+          <span style={{ fontSize: "0.85em", color: "#666" }}>1着=2着が同クラスを除外</span>
+        </label>
+        <label className="settingField">
           <span>必要オッズ下限</span>
           <input
             type="number"
@@ -1166,6 +1181,7 @@ function validateSettings(settings: BudgetRule): string | null {
     if (settings.programFilter.allowedClassNames != null && settings.programFilter.allowedClassNames.some((name) => !["A1", "A2", "B1", "B2"].includes(name))) return "1着候補級別が不正です";
     if (settings.programFilter.maxMotorTop2Rate != null && (!Number.isFinite(settings.programFilter.maxMotorTop2Rate) || settings.programFilter.maxMotorTop2Rate < 0 || settings.programFilter.maxMotorTop2Rate > 100)) return "モーター2連率上限は0〜100で入力してください";
     if (settings.programFilter.maxBoatTop2Rate != null && (!Number.isFinite(settings.programFilter.maxBoatTop2Rate) || settings.programFilter.maxBoatTop2Rate < 0 || settings.programFilter.maxBoatTop2Rate > 100)) return "ボート2連率上限は0〜100で入力してください";
+    if (settings.programFilter.excludeSameClassSecondBoat != null && typeof settings.programFilter.excludeSameClassSecondBoat !== "boolean") return "2着候補同クラス除外の設定が不正です";
   }
   if (settings.minRequiredOdds != null && (!Number.isFinite(settings.minRequiredOdds) || settings.minRequiredOdds <= 0)) return "必要オッズ下限は0より大きい値にしてください";
   if (settings.maxRequiredOdds != null && (!Number.isFinite(settings.maxRequiredOdds) || settings.maxRequiredOdds <= 0)) return "必要オッズ上限は0より大きい値にしてください";
