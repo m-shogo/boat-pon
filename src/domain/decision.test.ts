@@ -269,3 +269,29 @@ test("excludedSecondBoatClassNamesに2号艇のクラスが含まれない場合
   });
   assert.equal(decision.status, "BUY");
 });
+
+test("excludeSameClassSecondBoat=trueで1着と2着が同クラスならSKIPにする", () => {
+  // base.candidateClassName は未設定だが firstBoatFeature.className で判定
+  const candidate: BetCandidate = {
+    ...base,
+    firstBoatFeature: { course: 1, className: "B1", nationalWinRate: 4.0, nationalTop2Rate: 28, localWinRate: 3.8, localTop2Rate: 26, motorTop2Rate: 38, boatTop2Rate: 40 },
+    secondBoatFeature: { course: 2, className: "B1", nationalWinRate: 4.2, nationalTop2Rate: 30, localWinRate: 3.5, localTop2Rate: 24, motorTop2Rate: 36, boatTop2Rate: 38 },
+  };
+  const decision = judgeCandidate(candidate, { ...DEFAULT_RULE, minSampleSize: 1, programFilter: { excludeSameClassSecondBoat: true } }, {
+    now: new Date("2026-05-21T18:00:00+09:00"),
+  });
+  assert.equal(decision.status, "SKIP");
+  assert.ok(decision.reasons.some((r) => r.includes("2着候補が1着候補と同クラス")));
+});
+
+test("excludeSameClassSecondBoat=trueで1着と2着が異クラスならそのまま判定する", () => {
+  const candidate: BetCandidate = {
+    ...base,
+    firstBoatFeature: { course: 1, className: "B1", nationalWinRate: 4.0, nationalTop2Rate: 28, localWinRate: 3.8, localTop2Rate: 26, motorTop2Rate: 38, boatTop2Rate: 40 },
+    secondBoatFeature: { course: 2, className: "A2", nationalWinRate: 5.5, nationalTop2Rate: 40, localWinRate: 5.0, localTop2Rate: 35, motorTop2Rate: 40, boatTop2Rate: 42 },
+  };
+  const decision = judgeCandidate(candidate, { ...DEFAULT_RULE, minSampleSize: 1, programFilter: { excludeSameClassSecondBoat: true } }, {
+    now: new Date("2026-05-21T18:00:00+09:00"),
+  });
+  assert.equal(decision.status, "BUY");
+});

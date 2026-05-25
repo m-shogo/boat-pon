@@ -124,6 +124,9 @@ function validateBudgetRule(settings: BudgetRule): string | null {
     if (filter.excludedSecondBoatClassNames != null && (!Array.isArray(filter.excludedSecondBoatClassNames) || filter.excludedSecondBoatClassNames.some((name) => typeof name !== "string"))) {
       return "programFilter.excludedSecondBoatClassNames must be a string array";
     }
+    if (filter.excludeSameClassSecondBoat != null && typeof filter.excludeSameClassSecondBoat !== "boolean") {
+      return "programFilter.excludeSameClassSecondBoat must be a boolean";
+    }
   }
   if (settings.minRequiredOdds != null && (!Number.isFinite(settings.minRequiredOdds) || settings.minRequiredOdds <= 0)) {
     return "minRequiredOdds must be positive";

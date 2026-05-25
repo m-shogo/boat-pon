@@ -165,6 +165,13 @@ function programFilterReasons(candidate: BetCandidate, rule: BudgetRule): string
       reasons.push(`2着候補級別が除外対象(${secondClass})`);
     }
   }
+  if (filter.excludeSameClassSecondBoat) {
+    const firstClass = className;
+    const secondClass = candidate.secondBoatFeature?.className;
+    if (firstClass && secondClass && firstClass === secondClass) {
+      reasons.push(`2着候補が1着候補と同クラス(${secondClass})`);
+    }
+  }
 
   return reasons;
 }

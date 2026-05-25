@@ -64,6 +64,7 @@ export type ProgramFilterRule = {
   maxMotorTop2Rate?: number;
   maxBoatTop2Rate?: number;
   excludedSecondBoatClassNames?: string[];
+  excludeSameClassSecondBoat?: boolean;
 };
 
 export type Decision = {
