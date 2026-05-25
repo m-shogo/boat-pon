@@ -1,4 +1,4 @@
-import type { BetCandidate, BudgetRule, Decision, OddsCalibrationFactor } from "./types";
+import type { BetCandidate, BudgetRule, ClassOddsRatioRule, Decision, OddsCalibrationFactor } from "./types";
 
 export const DEFAULT_RULE: BudgetRule = {
   dailyBudgetYen: 1000,
@@ -95,6 +95,18 @@ export function judgeCandidate(
   if (rule.minOddsRatio != null && candidate.currentOdds != null && req < Infinity && candidate.currentOdds < req * rule.minOddsRatio) {
     reasons.push(`市場オッズがモデル要求の${rule.minOddsRatio}倍未満`);
   }
+  if (rule.classOddsRatioRules?.length) {
+    const className = candidate.candidateClassName ?? candidate.firstBoatFeature?.className;
+    const classRule = className ? matchClassOddsRatioRule(className, rule.classOddsRatioRules) : undefined;
+    if (classRule && candidate.currentOdds != null && req < Infinity) {
+      if (classRule.maxOddsRatio != null && candidate.currentOdds > req * classRule.maxOddsRatio) {
+        reasons.push(`${className}クラス: 市場オッズがモデル要求の${classRule.maxOddsRatio}倍超`);
+      }
+      if (classRule.minOddsRatio != null && candidate.currentOdds < req * classRule.minOddsRatio) {
+        reasons.push(`${className}クラス: 市場オッズがモデル要求の${classRule.minOddsRatio}倍未満`);
+      }
+    }
+  }
   if (minutes < rule.minMinutesBeforeClose) reasons.push("締切が近すぎる");
   if (rule.excludedVenues?.includes(candidate.venue)) reasons.push(`除外会場(${candidate.venue})`);
   if (rule.excludedRaceNos?.includes(candidate.raceNo)) reasons.push(`除外レース番号(${candidate.raceNo}R)`);
@@ -172,6 +184,16 @@ function programFilterReasons(candidate: BetCandidate, rule: BudgetRule): string
       reasons.push(`2着候補が1着候補と同クラス(${secondClass})`);
     }
   }
+  if (filter.minFirstBoatNationalWinRate != null) {
+    const winRate = candidate.firstBoatFeature?.nationalWinRate;
+    if (winRate != null && winRate < filter.minFirstBoatNationalWinRate) {
+      reasons.push(`1着候補全国勝率が下限未満(${winRate.toFixed(2)} < ${filter.minFirstBoatNationalWinRate})`);
+    }
+  }
 
   return reasons;
+}
+
+function matchClassOddsRatioRule(className: string, rules: ClassOddsRatioRule[]): ClassOddsRatioRule | undefined {
+  return rules.find((r) => r.classNames.includes(className));
 }

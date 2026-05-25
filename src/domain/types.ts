@@ -50,6 +50,7 @@ export type BudgetRule = {
   calibrationBasis?: "requiredOdds" | "currentOdds";
   oddsCalibrationFactors?: OddsCalibrationFactor[];
   programFilter?: ProgramFilterRule;
+  classOddsRatioRules?: ClassOddsRatioRule[];
   excludedVenues?: string[];
   excludedRaceNos?: number[];
 };
@@ -65,6 +66,13 @@ export type ProgramFilterRule = {
   maxBoatTop2Rate?: number;
   excludedSecondBoatClassNames?: string[];
   excludeSameClassSecondBoat?: boolean;
+  minFirstBoatNationalWinRate?: number;
+};
+
+export type ClassOddsRatioRule = {
+  classNames: string[];
+  maxOddsRatio?: number;
+  minOddsRatio?: number;
 };
 
 export type Decision = {

@@ -295,3 +295,55 @@ test("excludeSameClassSecondBoat=trueで1着と2着が異クラスならその�
   });
   assert.equal(decision.status, "BUY");
 });
+
+test("minFirstBoatNationalWinRateより低い勝率の1着候補はSKIPにする", () => {
+  const candidate: BetCandidate = {
+    ...base,
+    firstBoatFeature: { course: 1, className: "B1", nationalWinRate: 3.8, nationalTop2Rate: 24, localWinRate: 3.5, localTop2Rate: 22, motorTop2Rate: 35, boatTop2Rate: 37 },
+  };
+  const decision = judgeCandidate(candidate, { ...DEFAULT_RULE, minSampleSize: 1, programFilter: { minFirstBoatNationalWinRate: 4.0 } }, {
+    now: new Date("2026-05-21T18:00:00+09:00"),
+  });
+  assert.equal(decision.status, "SKIP");
+  assert.ok(decision.reasons.some((r) => r.includes("全国勝率")));
+});
+
+test("minFirstBoatNationalWinRate以上の勝率の1着候補はそのまま判定する", () => {
+  const candidate: BetCandidate = {
+    ...base,
+    firstBoatFeature: { course: 1, className: "B1", nationalWinRate: 4.2, nationalTop2Rate: 28, localWinRate: 4.0, localTop2Rate: 26, motorTop2Rate: 38, boatTop2Rate: 40 },
+  };
+  const decision = judgeCandidate(candidate, { ...DEFAULT_RULE, minSampleSize: 1, programFilter: { minFirstBoatNationalWinRate: 4.0 } }, {
+    now: new Date("2026-05-21T18:00:00+09:00"),
+  });
+  assert.equal(decision.status, "BUY");
+});
+
+test("classOddsRatioRulesはクラス別にratio上限/下限を適用する", () => {
+  const b1Candidate: BetCandidate = {
+    ...base,
+    candidateClassName: "B1",
+    currentOdds: 40,
+  };
+  // required_odds = 1.25 / 0.05 = 25, ratio = 40/25 = 1.6 → B1 maxOddsRatio=1.5 で除外
+  const decision = judgeCandidate(b1Candidate, {
+    ...DEFAULT_RULE, minSampleSize: 1,
+    classOddsRatioRules: [{ classNames: ["B1"], maxOddsRatio: 1.5 }],
+  }, { now: new Date("2026-05-21T18:00:00+09:00") });
+  assert.equal(decision.status, "SKIP");
+  assert.ok(decision.reasons.some((r) => r.includes("B1クラス")));
+});
+
+test("classOddsRatioRulesは対象外クラスには適用しない", () => {
+  const a2Candidate: BetCandidate = {
+    ...base,
+    candidateClassName: "A2",
+    currentOdds: 40,
+  };
+  // required_odds = 25, ratio = 1.6 → A2にはB1ルール適用されないのでBUY
+  const decision = judgeCandidate(a2Candidate, {
+    ...DEFAULT_RULE, minSampleSize: 1,
+    classOddsRatioRules: [{ classNames: ["B1"], maxOddsRatio: 1.5 }],
+  }, { now: new Date("2026-05-21T18:00:00+09:00") });
+  assert.equal(decision.status, "BUY");
+});

@@ -127,6 +127,23 @@ function validateBudgetRule(settings: BudgetRule): string | null {
     if (filter.excludeSameClassSecondBoat != null && typeof filter.excludeSameClassSecondBoat !== "boolean") {
       return "programFilter.excludeSameClassSecondBoat must be a boolean";
     }
+    if (filter.minFirstBoatNationalWinRate != null && (!Number.isFinite(filter.minFirstBoatNationalWinRate) || filter.minFirstBoatNationalWinRate < 0)) {
+      return "programFilter.minFirstBoatNationalWinRate must be a non-negative number";
+    }
+  }
+  if (settings.classOddsRatioRules != null) {
+    if (!Array.isArray(settings.classOddsRatioRules)) return "classOddsRatioRules must be an array";
+    for (const r of settings.classOddsRatioRules) {
+      if (!Array.isArray(r.classNames) || r.classNames.some((n: unknown) => typeof n !== "string")) {
+        return "classOddsRatioRules[].classNames must be a string array";
+      }
+      if (r.maxOddsRatio != null && (!Number.isFinite(r.maxOddsRatio) || r.maxOddsRatio <= 0)) {
+        return "classOddsRatioRules[].maxOddsRatio must be positive";
+      }
+      if (r.minOddsRatio != null && (!Number.isFinite(r.minOddsRatio) || r.minOddsRatio <= 0)) {
+        return "classOddsRatioRules[].minOddsRatio must be positive";
+      }
+    }
   }
   if (settings.minRequiredOdds != null && (!Number.isFinite(settings.minRequiredOdds) || settings.minRequiredOdds <= 0)) {
     return "minRequiredOdds must be positive";
