@@ -122,6 +122,18 @@ function validateBudgetRule(settings: BudgetRule): string | null {
       return "programFilter.maxBoatTop2Rate must be between 0 and 100";
     }
   }
+  if (settings.minRequiredOdds != null && (!Number.isFinite(settings.minRequiredOdds) || settings.minRequiredOdds <= 0)) {
+    return "minRequiredOdds must be positive";
+  }
+  if (settings.maxRequiredOdds != null && (!Number.isFinite(settings.maxRequiredOdds) || settings.maxRequiredOdds <= 0)) {
+    return "maxRequiredOdds must be positive";
+  }
+  if (settings.minRequiredOdds != null && settings.maxRequiredOdds != null && settings.minRequiredOdds >= settings.maxRequiredOdds) {
+    return "minRequiredOdds must be less than maxRequiredOdds";
+  }
+  if (settings.excludedVenues != null && (!Array.isArray(settings.excludedVenues) || settings.excludedVenues.some((v) => typeof v !== "string"))) {
+    return "excludedVenues must be a string array";
+  }
   return null;
 }
 
