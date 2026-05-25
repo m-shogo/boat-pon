@@ -774,65 +774,61 @@ ROI改善: 0.797 → 0.833
 次に見ること: race_no 10の継続監視（ROI=0.429、統計的有意ではないが悪い傾向）
 ```
 
-## 2026-05-25 セッション7: popularity帯別ROIが最大の構造的シグナル
+## 2026-05-25 セッション7: popularity分析 — 定義の罠と修正（重要）
 
-### 発見内容
+### ⚠️ 分析の誤り: decision_history.popularity の定義
 
-全BUY（2024+2025, selection=1-2-3）の popularity帯別ROIを集計した結果:
+**decision_history.popularity = 実際の勝利3連単（race_results）の人気順位**
+（モデルの選択である1-2-3の人気ではない）
 
-| pop_band | n | hit_pct | ROI | 備考 |
-|---------|---|---------|-----|------|
-| 1-5 | 1852 | 0.86% | 0.372 | 人気すぎ → 市場が正しく評価 |
-| 6-10 | 1020 | 2.75% | 0.899 | borderline |
-| **11-20** | **1165** | **5.58%** | **2.252** | **スイートスポット** |
-| 21-30 | 709 | 1.83% | 1.076 | 2024=1.228, 2025=0.768(ブレ大) |
-| **31-50** | **815** | **0.0%** | **0.0** | **両年全滅** |
-| **51+** | **694** | **0.0%** | **0.0** | **両年全滅** |
+確認コード (server/db.ts:417-437):
+```ts
+const result = db.prepare("SELECT trifecta, payout_yen, popularity FROM race_results WHERE race_id = ?").get(candidate.raceId)
+// ...
+result?.popularity ?? null  // ← これは実際の勝利3連単の人気
+```
 
-**popularity 31+ (n=1509, 2年分): 0 hits. P(0|p=2%)≈10^-13 → 統計的に確実なシグナル**
+### 正しい解釈
 
-年別:
-- pop 31+: 2024=918件 0的中, 2025=591件 0的中 → 両年一貫
-- pop 11-20: 2024=ROI 1.997, 2025=ROI 2.663 → 両年ROI>2.0!
+| 状況 | popularity の意味 |
+|------|-----------------|
+| HIT (selection=result) | 1-2-3自身の人気順位（有用）|
+| MISS (selection≠result) | 実際の勝利trifectaの人気順位（モデル外）|
 
-### B1フィルター内でのpopularity効果
+- **「pop 31+ → 0的中」は自明**: アップセット(31+人気が勝つ)時に1-2-3が外れるのは当然
+- ROI分析が全BUYを混ぜているので「pop帯別ROI」は意味がない（misses含む）
 
-B1(ratio<1.5)+異クラス+5除外+minR25 内のpopularity帯別:
+### HIT時のみの popularity 分布（正しい分析）
 
-| pop_band | n | ROI (2年) |
-|---------|---|---------|
-| 1-10 | 293 | 1.582 |
-| **11-20** | **155** | **3.706** |
-| **21-30** | **85** | **3.484** |
-| **31+** | **178** | **0.0** |
+| pop_band | hits | avg_odds | 意味 |
+|---------|------|---------|------|
+| 1-10 | 44 | 36.5倍 | 1-2-3が1-10番人気で当たり |
+| 11-20 | 65 | 40.4倍 | 1-2-3が11-20番人気で当たり（主な稼ぎ頭）|
+| 21-30 | 13 | 58.7倍 | 1-2-3が21-30番人気で当たり |
+| 31+ | 0 | - | maxOddsRatio=2.0で自然に除外 |
 
-- maxPopularity=30 追加 → n: 711→533, ROI: 1.868→2.503 (+0.635!)
-- popularity 11-20のみ → n=155(~13件/月), ROI=3.706 (月次n少すぎてスタンドアロン不可)
+- モデルが正解するときの典型: 1-2-3が11-20番人気（適度な穴）→ 高ペイアウト
+- pop 31+ HIT が0なのは: maxOddsRatio=2.0により現在値/必要値<2.0の制約 → 30番人気以上は自然にBUY除外される
 
-### 実装上の重要注意
+### リアルタイムpopularity の実装可能性
 
-**decision_history.popularity は「レース結果確定後」にrace_resultsから書き込まれる（server/db.ts:417-437）**
-
-- `insertDecisionHistory` は `race_results` テーブルから trifecta, popularity を取得して記録
-- つまりバックテストの popularity = 最終人気（レース後の公式値）
-- リアルタイムフィルターとして使うには `odds_snapshots.popularity`（kyotei24からリアルタイム取得）を `BetCandidate` に渡す実装が必要
-- 決定時人気 ≈ 最終人気（投票は締め切り5分前に近い状態）と推定されるが、実装要検討
+- `odds_snapshots.popularity` (kyotei24からリアルタイム取得): 2026年データで98.2%カバー
+- 決定時の1-2-3の人気順位 vs 最終人気: ±2ランク差, 93%が5ランク以内（相関良好）
+- **実装方針**: BetCandidateにpopularity追加、BudgetRuleにmaxPopularity追加すれば可能
+- **現状**: BetCandidateにpopularity未追加、judgeCandidate非対応 → 要実装
 
 ### 採用判断
 
 ```text
 日付: 2026-05-25
-変更候補: maxPopularity=30 (BudgetRule に新フィールド追加が必要)
-変更候補2: popularity 11-20 フィルター (さらに絞り込み)
-BUY数削減: 全BUY→pop31除外で-24%, B1フィルター→-25%
-ROI改善: 全BUY 0.797→0.826相当, B1フィルター 1.868→2.503
-過学習リスク: 低い（両年一致、全体n=1509で統計的確実）
-実装難度: 中（BetCandidateにpopularity追加、BudgetRuleにmaxPopularity追加が必要）
-採用/保留/却下: **採用推奨** — ただし実装前に odds_snapshot.popularity の有効性確認が必要
+変更候補: 選択(1-2-3)の人気順位でフィルター (odds_snapshot.popularityを使用)
+現状: 実装未着手（BetCandidate/BudgetRule/judgeCandidate 全て要変更）
+過学習リスク: 要検証（2024-2025のpopularity = 勝利3連単の人気であり、
+              決定時の1-2-3の人気とは異なる）
+採用/保留/却下: 保留 — 正しいpopularityデータ（選択の人気）でのバックテストが必要
 次に見ること:
-  - odds_snapshotsのpopularity coverage確認
-  - リアルタイム判定時にpopularity取得できるか確認
-  - 2023年以前データでも同パターンが出るか（外部検証）
+  - generate-historyに odds_snapshot.popularity を BetCandidate に渡す実装
+  - 再生成後、1-2-3選択の人気帯別ROIを再分析
 ```
 
 ## 今後の地面固め順序
