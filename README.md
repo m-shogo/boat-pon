@@ -73,6 +73,7 @@ npx tsx scripts/fetch-official-odds.ts YYYY-MM-DD 蒲郡 8
 ## 運用メモ
 
 - モデル改善の順序と採用基準: [docs/model-roadmap.md](docs/model-roadmap.md)
+- live設定変更前の安全ゲート: [docs/settings-change-gate.md](docs/settings-change-gate.md)
 - 失敗・学びの蓄積: [docs/lessons-learned.md](docs/lessons-learned.md)
 
 ## API一覧
