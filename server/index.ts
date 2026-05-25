@@ -134,6 +134,9 @@ function validateBudgetRule(settings: BudgetRule): string | null {
   if (settings.excludedVenues != null && (!Array.isArray(settings.excludedVenues) || settings.excludedVenues.some((v) => typeof v !== "string"))) {
     return "excludedVenues must be a string array";
   }
+  if (settings.excludedRaceNos != null && (!Array.isArray(settings.excludedRaceNos) || settings.excludedRaceNos.some((v) => typeof v !== "number" || !Number.isInteger(v) || v < 1 || v > 12))) {
+    return "excludedRaceNos must be an array of integers between 1 and 12";
+  }
   return null;
 }
 

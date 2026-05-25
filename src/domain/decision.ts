@@ -97,6 +97,7 @@ export function judgeCandidate(
   }
   if (minutes < rule.minMinutesBeforeClose) reasons.push("締切が近すぎる");
   if (rule.excludedVenues?.includes(candidate.venue)) reasons.push(`除外会場(${candidate.venue})`);
+  if (rule.excludedRaceNos?.includes(candidate.raceNo)) reasons.push(`除外レース番号(${candidate.raceNo}R)`);
   if (candidate.notified) reasons.push("同一レース通知済み");
   if (candidate.hasRiskFlag) reasons.push("欠場/返還など要確認");
   if (candidate.environmentRiskLevel === "high") reasons.push("荒天/安定板など環境リスク高");

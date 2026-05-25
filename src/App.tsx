@@ -1101,6 +1101,25 @@ function SettingsScreen({ settings, onSaved }: { settings: BudgetRule; onSaved: 
           />
         </label>
       </div>
+      <div className="formRow">
+        <label>
+          除外レース番号（カンマ区切り、例: 2,8）
+          <input
+            type="text"
+            value={draft.excludedRaceNos?.join(",") ?? ""}
+            placeholder="例: 2,8（空欄=全レース対象）"
+            onChange={(event) => {
+              const raw = event.target.value.trim();
+              if (raw === "") {
+                setDraft({ ...draft, excludedRaceNos: undefined });
+              } else {
+                const nums = raw.split(",").map((s) => Number(s.trim())).filter(Number.isInteger);
+                setDraft({ ...draft, excludedRaceNos: nums.length ? nums : undefined });
+              }
+            }}
+          />
+        </label>
+      </div>
       {(validationError || saveError) && <div className="formError">{validationError ?? saveError}</div>}
       <button className="saveButton" disabled={Boolean(validationError)} onClick={async () => {
         setSaveError(null);
@@ -1152,6 +1171,7 @@ function validateSettings(settings: BudgetRule): string | null {
   if (settings.maxRequiredOdds != null && (!Number.isFinite(settings.maxRequiredOdds) || settings.maxRequiredOdds <= 0)) return "必要オッズ上限は0より大きい値にしてください";
   if (settings.minRequiredOdds != null && settings.maxRequiredOdds != null && settings.minRequiredOdds >= settings.maxRequiredOdds) return "必要オッズ下限は上限より小さい値にしてください";
   if (settings.excludedVenues != null && !Array.isArray(settings.excludedVenues)) return "除外会場の設定が不正です";
+  if (settings.excludedRaceNos != null && (!Array.isArray(settings.excludedRaceNos) || settings.excludedRaceNos.some((v) => !Number.isInteger(v) || v < 1 || v > 12))) return "除外レース番号は1〜12の整数配列にしてください";
   return null;
 }
 

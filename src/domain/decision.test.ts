@@ -231,3 +231,18 @@ test("excludedVenuesに含まれない会場はそのまま判定する", () => 
   });
   assert.equal(decision.status, "BUY");
 });
+
+test("excludedRaceNosに含まれるレース番号はSKIPにする", () => {
+  const decision = judgeCandidate(base, { ...DEFAULT_RULE, minSampleSize: 1, excludedRaceNos: [2, 8] }, {
+    now: new Date("2026-05-21T18:00:00+09:00"),
+  });
+  assert.equal(decision.status, "SKIP");
+  assert.ok(decision.reasons.some((r) => r.includes("除外レース番号")));
+});
+
+test("excludedRaceNosに含まれないレース番号はそのまま判定する", () => {
+  const decision = judgeCandidate(base, { ...DEFAULT_RULE, minSampleSize: 1, excludedRaceNos: [1, 3] }, {
+    now: new Date("2026-05-21T18:00:00+09:00"),
+  });
+  assert.equal(decision.status, "BUY");
+});
