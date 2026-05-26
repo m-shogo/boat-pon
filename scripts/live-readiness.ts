@@ -1,13 +1,14 @@
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { LIVE_MONITOR_MODEL_VERSION } from "../src/domain/liveMonitor";
+import { inspectLiveLog, type LiveLogJob } from "./live-log-utils";
 
 const DB_PATH = "data/boat.sqlite";
 const AUTO_ODDS_PLIST = "/Users/m-shogo/Library/LaunchAgents/com.boatpon.auto-odds.plist";
 const DAILY_PROGRAMS_PLIST = "/Users/m-shogo/Library/LaunchAgents/com.boatpon.daily-programs.plist";
 const DAILY_PROGRESS_PLIST = "/Users/m-shogo/Library/LaunchAgents/com.boatpon.daily-progress.plist";
 const KNOWN_POLLUTED_SKIP_DATE = "2026-05-26";
-const LOG_PATHS: Array<{ path: string; job: "daily-programs" | "auto-odds" | "daily-progress" }> = [
+const LOG_PATHS: Array<{ path: string; job: LiveLogJob }> = [
   { path: "data/logs/daily-programs.log", job: "daily-programs" },
   { path: "data/logs/daily-programs-err.log", job: "daily-programs" },
   { path: "data/logs/auto-odds.log", job: "auto-odds" },
@@ -75,7 +76,7 @@ WHERE date = ? AND model_version = ? AND decision = 'SKIP'
       inspectSingleTimePlist("daily-programs", DAILY_PROGRAMS_PLIST, 8, 0),
       inspectSingleTimePlist("daily-progress", DAILY_PROGRESS_PLIST, 21, 5),
     ],
-    logs: LOG_PATHS.map((log) => inspectLog(log.path, log.job)),
+    logs: LOG_PATHS.map((log) => inspectLiveLog(log.path, log.job)),
   };
 }
 
@@ -112,7 +113,7 @@ function printReport(report: ReturnType<typeof buildReport>) {
 
   console.log("Logs:");
   for (const log of report.logs) {
-    const mark = log.exists ? "ok" : "missing";
+    const mark = !log.exists ? "missing" : log.ok ? "ok" : "warn";
     console.log(`  ${mark}\t${log.path}\t${log.detail}`);
   }
 }
@@ -162,19 +163,6 @@ function inspectSingleTimePlist(name: string, path: string, expectedHour: number
     name,
     ok,
     message: ok ? `${pad(hour)}:${pad(minute)} JST local-time schedule` : `unexpected time ${pad(hour)}:${pad(minute)}`,
-  };
-}
-
-function inspectLog(path: string, job: "daily-programs" | "auto-odds" | "daily-progress") {
-  if (!existsSync(path)) {
-    return { path, exists: false, detail: `not created yet; launchd will create it after ${job} runs` };
-  }
-  const stat = statSync(path);
-  const lines = readFileSync(path, "utf8").trimEnd().split("\n").filter(Boolean);
-  return {
-    path,
-    exists: true,
-    detail: `${stat.size} bytes, lines=${lines.length}, last=${lines.at(-1) ?? "-"}`,
   };
 }
 

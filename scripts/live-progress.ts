@@ -1,5 +1,6 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { execFileSync } from "node:child_process";
+import { formatLiveLogLine, tailLiveLog } from "./live-log-utils";
 
 const LOG_PATHS = [
   "data/logs/progress.log",
@@ -13,9 +14,9 @@ process.stdout.write(execFileSync(process.execPath, ["--import", "tsx", "scripts
 
 for (const path of LOG_PATHS) {
   if (!existsSync(path)) continue;
-  const lines = readFileSync(path, "utf8").trimEnd().split("\n").filter(Boolean).slice(-40);
+  const lines = tailLiveLog(path, 40);
   if (lines.length === 0) continue;
   console.log("");
   console.log(`=== ${path} tail ===`);
-  for (const line of lines) console.log(line);
+  for (const line of lines) console.log(formatLiveLogLine(line));
 }
