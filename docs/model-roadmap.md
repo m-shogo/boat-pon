@@ -167,6 +167,12 @@ Boat Pon は自動購入アプリではない。目的は、ほとんどの日�
 診断: LiveMonitorPanel の「診断: 2026年BUY全件内訳」で除外対象を確認できる。
 CLI確認: `npm run monitor:live` でサーバー起動なしに同じ監視サマリーを読み取り専用で確認できる。
 
+蓄積経路:
+- `/api/dashboard` が `buildCandidateRows` の各候補に対して `insertDecisionHistory` を呼ぶ。
+- `buildCandidatesFromModel` 由来の候補は `source="history-model"` と `model_version=boatpon-v3-alpha15` を持つ。
+- `npm run monitor:live` の `latestModelDecision` が空なら、2026年のv3実運用判定履歴がまだ保存されていない。
+- `latestModelDecision` がありBUYだけ0なら、保存経路は動いているがBUY条件未達と見る。
+
 ### 注意: generate:history を 2026年対象で実行しない
 
 generate:historyで2026年の decision_history を生成すると監視データが汚染される。  
