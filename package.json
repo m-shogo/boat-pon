@@ -22,6 +22,7 @@
     "backfill:odds:loop": "tsx scripts/run-odds-backfill-loop.ts",
     "repair:odds": "tsx scripts/repair-kyotei24-odds-cache.ts",
     "generate:history": "tsx scripts/generate-decision-history.ts",
+    "monitor:live": "tsx scripts/live-b1-monitor.ts",
     "generate:vapid": "tsx scripts/generate-vapid-keys.ts"
   },
   "dependencies": {

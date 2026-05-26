@@ -165,6 +165,7 @@ Boat Pon は自動購入アプリではない。目的は、ほとんどの日�
 - generate:historyを2026年対象で実行した場合 → `model_version=boatpon-v3-alpha15` が付くため混入する
 
 診断: LiveMonitorPanel の「診断: 2026年BUY全件内訳」で除外対象を確認できる。
+CLI確認: `npm run monitor:live` でサーバー起動なしに同じ監視サマリーを読み取り専用で確認できる。
 
 ### 注意: generate:history を 2026年対象で実行しない
 
