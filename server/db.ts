@@ -565,7 +565,7 @@ export function createNotificationIfNeeded(
   officialUrl: string,
 ): { created: boolean; title: string; body: string } | null {
   if (decision.status !== "BUY") return null;
-  const title = `BUY候補あり: ${candidate.venue} ${candidate.raceNo}R`;
+  const title = `[paper] BUY候補: ${candidate.venue} ${candidate.raceNo}R`;
   const body = [
     `買い目: ${candidate.selection.join("-")}`,
     `判定的中率: ${(candidate.estimatedHitRate * 100).toFixed(1)}%`,
@@ -575,8 +575,7 @@ export function createNotificationIfNeeded(
     `必要オッズ: ${decision.requiredOdds.toFixed(1)}倍以上`,
     `取得オッズ: ${candidate.currentOdds?.toFixed(1) ?? "未取得"}倍`,
     `EV: ${decision.ev?.toFixed(2) ?? "-"}`,
-    `推奨: ${decision.recommendedAmount}円のみ`,
-    "購入前に公式オッズで最終確認してください。",
+    "【paper観察モード】実購入なし。live ROI確認まで購入しない。",
   ].filter((row): row is string => row != null).join("\n");
 
   const result = db.prepare(`
