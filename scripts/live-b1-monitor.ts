@@ -163,28 +163,78 @@ function buildReport(db: DatabaseSync) {
 
 function printReport(report: ReturnType<typeof buildReport>) {
   const s = report.summary;
-  console.log("Boat Pon 2026 live B1 monitor");
-  console.log(`filter: ${report.period.filter}`);
-  console.log(`n=${s.n} hits=${s.hits} returned=${s.returnedN} latest=${report.latestLiveDate ?? "-"}`);
-  console.log(`roi=${fmt(s.roi)} roiExMax=${fmt(s.roiExMax)} maxHitOdds=${s.maxHitOdds || "-"}`);
-  console.log(`avgRequiredOdds=${fmt(s.avgRequiredOdds)} avgCurrentOdds=${fmt(s.avgCurrentOdds)} avgOddsRatio=${fmt(s.avgOddsRatio)}`);
-  console.log(`estimatedHits=${fmt(s.estimatedHits)} actualHits=${s.actualHits}`);
-  console.log(`latestModelDecision=${report.latestModelDecisionDate ?? "-"} latestAnyDecision=${report.latestAnyDecisionDate ?? "-"}`);
-  console.log(`latestOfficialProgram=${report.latestOfficialProgramDate ?? "-"} latestOddsSnapshot=${report.latestOddsSnapshotDate ?? "-"}`);
-  console.log(`liveDecisionOdds: total=${report.quality.n} present=${report.quality.oddsPresent} missing=${report.quality.oddsMissing} latest=${report.quality.latestDate ?? "-"}`);
-  console.log(`excludedOldModel=${report.excludedOldModelCount} excludedSample=${report.excludedSampleCount} sources=${report.sources.join(",") || "-"}`);
-  console.log(`milestone: ${report.milestone}`);
-  if (report.decisionCounts.length > 0) {
-    console.log("decision counts:");
-    for (const row of report.decisionCounts) {
-      console.log(`  ${row.decision}\tn=${row.n}\todds=${row.odds_present}\tmissing=${row.odds_missing}\tlatest=${row.latest_date ?? "-"}`);
-    }
+  const today = new Date().toISOString().slice(0, 10);
+  const startDate = "2026-05-26"; // paper観察モード開始日
+  const daysSinceStart = Math.floor((Date.parse(today) - Date.parse(startDate)) / 86400000);
+
+  // --- ヘッダー ---
+  console.log("=== Boat Pon live 進捗 ===");
+  console.log(`モード: paper観察中（実購入なし）  ${today}`);
+  console.log("");
+
+  // --- BUY進捗バー ---
+  const TARGET = 300;
+  const pct = Math.min(100, Math.round((s.n / TARGET) * 100));
+  const filled = Math.round(pct / 5);
+  const bar = "█".repeat(filled) + "░".repeat(20 - filled);
+  console.log(`BUY進捗  [${bar}] ${s.n}/${TARGET}件 (${pct}%)`);
+  if (s.n === 0 && daysSinceStart > 0) {
+    console.log(`         開始から${daysSinceStart}日経過、まだ0件`);
+  } else if (s.n > 0) {
+    const ratePerDay = s.n / Math.max(1, daysSinceStart);
+    const daysLeft = ratePerDay > 0 ? Math.ceil((TARGET - s.n) / ratePerDay) : null;
+    const eta = daysLeft !== null ? `あと約${daysLeft}日` : "-";
+    console.log(`         ${daysSinceStart}日で${s.n}件 (${ratePerDay.toFixed(1)}件/日)  n=300まで${eta}`);
   }
+  console.log("");
+
+  // --- システム稼働確認 ---
+  const lastDecision = report.latestModelDecisionDate;
+  const lastProgram = report.latestOfficialProgramDate;
+  const lastOdds = report.latestOddsSnapshotDate;
+  const decisionLag = lastDecision ? Math.floor((Date.parse(today) - Date.parse(lastDecision)) / 86400000) : null;
+  const programLag = lastProgram ? Math.floor((Date.parse(today) - Date.parse(lastProgram)) / 86400000) : null;
+  const oddsLag = lastOdds ? Math.floor((Date.parse(today) - Date.parse(lastOdds)) / 86400000) : null;
+
+  const statusIcon = (lag: number | null, warnDays = 2) =>
+    lag === null ? "❓" : lag <= warnDays ? "✅" : `⚠️ ${lag}日前`;
+
+  console.log("システム稼働");
+  console.log(`  番組取得    ${statusIcon(programLag)}  最終: ${lastProgram ?? "-"}`);
+  console.log(`  判定        ${statusIcon(decisionLag)}  最終: ${lastDecision ?? "-"}`);
+  console.log(`  オッズ取得  ${statusIcon(oddsLag)}  最終: ${lastOdds ?? "-"}`);
+
+  const oddsTotal = report.quality.n;
+  const oddsPresent = report.quality.oddsPresent;
+  const oddsCoverage = oddsTotal > 0 ? `${oddsPresent}/${oddsTotal}件 (${Math.round(oddsPresent / oddsTotal * 100)}%)` : "-";
+  console.log(`  オッズ取得率 ${oddsCoverage}`);
+  console.log("");
+
+  // --- ROI（n>=1のとき） ---
+  if (s.n > 0) {
+    console.log("ROI（参考）");
+    console.log(`  n=${s.n}  ROI=${fmt(s.roi)}  roiExMax=${fmt(s.roiExMax)}`);
+    console.log(`  的中${s.hits}件  最大払戻${s.maxHitOdds || "-"}倍`);
+    console.log("");
+  }
+
+  // --- 再検討条件 ---
+  const cond1 = s.n >= 300 ? "✅" : `❌ (${s.n}/300)`;
+  const cond2 = s.roi !== null && s.roi > 1.05 ? "✅" : `❌ (${fmt(s.roi)})`;
+  const cond3 = s.roiExMax !== null && s.roiExMax > 1.0 ? "✅" : `❌ (${fmt(s.roiExMax)})`;
+  console.log("再検討条件（全部✅で初めて購入を検討）");
+  console.log(`  ${cond1} n >= 300`);
+  console.log(`  ${cond2} ROI > 1.05`);
+  console.log(`  ${cond3} roiExMax > 1.0`);
+
   if (report.diagnostics.length > 0) {
-    console.log("diagnostics:");
-    for (const row of report.diagnostics) {
-      const mark = row.model_version === LIVE_MODEL ? "target" : "excluded";
-      console.log(`  ${mark}\t${row.model_version}\t${row.source}\tn=${row.n}\tlatest=${row.latest_date ?? "-"}`);
+    const excluded = report.diagnostics.filter(r => r.model_version !== LIVE_MODEL);
+    if (excluded.length > 0) {
+      console.log("");
+      console.log("除外済み（旧モデル・サンプル）");
+      for (const row of excluded) {
+        console.log(`  ${row.model_version}  n=${row.n}  latest=${row.latest_date ?? "-"}`);
+      }
     }
   }
 }
