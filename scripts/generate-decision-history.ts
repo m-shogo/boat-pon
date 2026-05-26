@@ -5,6 +5,10 @@ import { mergeOddsMaps } from "../src/domain/oddsSnapshot";
 import { getManualOdds, getSettings, insertDecisionHistory, listOddsSnapshots, listProgramInputsRange, listProgramInputsWithOddsSnapshotsRange, listResultsForModelRange, openDb } from "../server/db";
 import type { DatabaseSync } from "node:sqlite";
 
+// 2026-01-01 以降は live監視の完全未使用データ。generate:history での書き込みは汚染になるため
+// --allow-live-write フラグなしでは実行を拒否する。
+const LIVE_GUARD_FROM = "2026-01-01";
+
 type Args = {
   help: boolean;
   from: string | null;
@@ -18,6 +22,7 @@ type Args = {
   minTrainRaceCount: number | null;
   trainDays: number;
   alpha: number;
+  allowLiveWrite: boolean;
 };
 
 const args = parseArgs(process.argv.slice(2));
@@ -27,6 +32,20 @@ if (args.help) {
 }
 if (!args.from || !args.to || args.limit == null || args.limit <= 0) {
   throw new Error("usage: tsx scripts/generate-decision-history.ts --from YYYY-MM-DD --to YYYY-MM-DD --limit N [--dry-run] [--include-skips]");
+}
+// 2026 live監視ガード: --to が LIVE_GUARD_FROM 以降を含む場合は明示フラグが必須
+if (args.to >= LIVE_GUARD_FROM && !args.allowLiveWrite && !args.dryRun) {
+  console.error(`
+[GUARD] --to ${args.to} は live監視期間（${LIVE_GUARD_FROM}以降）を含みます。
+        generate:history を 2026年以降に実行すると /api/live/b1-monitor の
+        監視データが汚染されます。
+
+        意図的に実行する場合のみ --allow-live-write を付けてください:
+          npm run generate:history -- --from ... --to ... --limit N --allow-live-write
+
+        内容確認だけなら --dry-run を使ってください（ガード対象外）。
+`);
+  process.exit(1);
 }
 
 const db = openDb();
@@ -147,11 +166,12 @@ function beforeCloseTime(date: string, closeAt: string, minutesBeforeClose: numb
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: Args = { help: false, from: null, to: null, limit: null, dryRun: false, includeSkips: false, includeRequiredOddsCandidates: false, refreshExisting: false, refreshOnly: false, minTrainRaceCount: null, trainDays: 180, alpha: DEFAULT_MODEL_ALPHA };
+  const args: Args = { help: false, from: null, to: null, limit: null, dryRun: false, includeSkips: false, includeRequiredOddsCandidates: false, refreshExisting: false, refreshOnly: false, minTrainRaceCount: null, trainDays: 180, alpha: DEFAULT_MODEL_ALPHA, allowLiveWrite: false };
   for (let i = 0; i < argv.length; i += 1) {
     const key = argv[i];
     const value = argv[i + 1];
     if (key === "--help" || key === "-h") args.help = true;
+    else if (key === "--allow-live-write") args.allowLiveWrite = true;
     else if (key === "--dry-run") args.dryRun = true;
     else if (key === "--include-skips") args.includeSkips = true;
     else if (key === "--include-required-odds-candidates") args.includeRequiredOddsCandidates = true;
@@ -192,6 +212,7 @@ function printHelp() {
   --train-days N                     学習に使う過去日数。既定値: 180
   --min-train N                      会場モデルの最小サンプル数。未指定なら設定値
   --alpha N                          Laplaceスムージング係数。既定値: ${DEFAULT_MODEL_ALPHA}
+  --allow-live-write                 ${LIVE_GUARD_FROM}以降への書き込みを許可する（通常は禁止）
 
 例:
   npm run generate:history -- --dry-run --from 2026-05-01 --to 2026-05-21 --limit 100 --include-required-odds-candidates

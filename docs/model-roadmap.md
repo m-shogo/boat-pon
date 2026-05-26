@@ -171,6 +171,21 @@ Boat Pon は自動購入アプリではない。目的は、ほとんどの日�
 generate:historyで2026年の decision_history を生成すると監視データが汚染される。  
 2026年の generate:history 実行は明示承認なしに行わない。
 
+#### ガード仕様（scripts/generate-decision-history.ts 実装済み）
+
+`--to` が `2026-01-01` 以降を含む場合、`--allow-live-write` フラグなしでは exit(1) で停止する。
+
+```
+# 停止される（ガード発動）
+npm run generate:history -- --from 2026-05-01 --to 2026-05-21 --limit 100
+
+# 許可される（dry-runはガード対象外）
+npm run generate:history -- --from 2026-05-01 --to 2026-05-21 --limit 100 --dry-run
+
+# 意図的に実行する場合のみ（通常使用禁止）
+npm run generate:history -- --from 2026-05-01 --to 2026-05-21 --limit 100 --allow-live-write
+```
+
 ## 見るべき画面
 
 1. Backtest > モデル比較
