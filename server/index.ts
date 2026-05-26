@@ -343,6 +343,7 @@ app.get("/api/backtest/model-comparison", (req, res) => {
 });
 
 // B1フィルター条件の共通WHERE句（decision_history=dh, official_programs=op が必要）
+// in-sample(BUY records): current_odds はdecision_historyの列
 const B1_FILTER_WHERE = `
   AND json_extract(op.raw_json, '$.boats[0].className') = 'B1'
   AND json_extract(op.raw_json, '$.boats[1].className') != 'B1'
@@ -351,6 +352,16 @@ const B1_FILTER_WHERE = `
   AND CAST(substr(dh.race_id, -2) AS INTEGER) NOT IN (11, 12)
   AND dh.required_odds >= 25
   AND dh.current_odds / dh.required_odds < 1.5`;
+
+// external(SKIP records + odds_snapshots JOIN): current_oddsはos.odds
+const B1_FILTER_WHERE_EXT = `
+  AND json_extract(op.raw_json, '$.boats[0].className') = 'B1'
+  AND json_extract(op.raw_json, '$.boats[1].className') != 'B1'
+  AND CAST(json_extract(op.raw_json, '$.boats[0].nationalWinRate') AS REAL) >= 4.0
+  AND dh.venue NOT IN ('戸田','多摩川','桐生','三国','江戸川')
+  AND CAST(substr(dh.race_id, -2) AS INTEGER) NOT IN (11, 12)
+  AND dh.required_odds >= 25
+  AND os.odds / dh.required_odds < 1.5`;
 
 function buildCalibrationQuery(extraWhere: string): string {
   return `
@@ -367,6 +378,47 @@ WITH base AS (
     AND dh.returned = 0
     AND dh.selection = '1-2-3'
     AND dh.estimated_hit_rate > 0
+    AND dh.date >= ? AND dh.date <= ?
+    ${extraWhere}
+)
+SELECT
+  CASE
+    WHEN required_odds < 30 THEN '25-30'
+    WHEN required_odds < 40 THEN '30-40'
+    WHEN required_odds < 50 THEN '40-50'
+    WHEN required_odds < 70 THEN '50-70'
+    ELSE '>= 70'
+  END AS req_band,
+  COALESCE(cls, 'unknown') AS cls,
+  COUNT(*) AS n,
+  SUM(hit) AS hits,
+  ROUND(AVG(estimated_hit_rate) * 100, 2) AS avg_est_pct,
+  ROUND(1.0 * SUM(hit) / COUNT(*) * 100, 2) AS actual_pct,
+  ROUND((1.0 * SUM(hit) / COUNT(*)) / AVG(estimated_hit_rate), 3) AS calib_ratio,
+  ROUND(AVG(current_odds), 1) AS avg_odds,
+  ROUND(AVG(required_odds), 1) AS avg_req,
+  ROUND(MAX(CASE WHEN hit THEN current_odds ELSE 0 END), 0) AS max_hit_odds
+FROM base
+GROUP BY req_band, cls
+ORDER BY MIN(required_odds), cls`;
+}
+
+// 外部期間(2020-2023)はdecision='BUY'が存在しないため、odds_snapshotsで擬似BUYを再現するクエリ
+function buildCalibrationQueryExternal(extraWhere: string): string {
+  return `
+WITH base AS (
+  SELECT
+    dh.required_odds,
+    dh.estimated_hit_rate,
+    os.odds AS current_odds,
+    (dh.selection = dh.result) AS hit,
+    json_extract(op.raw_json, '$.boats[0].className') AS cls
+  FROM decision_history dh
+  JOIN official_programs op ON op.race_id = dh.race_id
+  JOIN odds_snapshots os ON os.race_id = dh.race_id AND os.selection = dh.selection
+  WHERE dh.selection = '1-2-3'
+    AND dh.estimated_hit_rate > 0
+    AND os.odds >= dh.required_odds
     AND dh.date >= ? AND dh.date <= ?
     ${extraWhere}
 )
@@ -409,7 +461,9 @@ app.get("/api/backtest/calibration", (req, res) => {
     const mode = req.query.mode === "compare" ? "compare" : "custom";
 
     if (mode === "compare") {
-      const externalRows = db.prepare(buildCalibrationQuery(extraWhere))
+      // 外部期間(2020-2023): SKIP records + odds_snapshots JOIN で擬似BUY再現
+      const extExtraWhere = b1filter ? B1_FILTER_WHERE_EXT : "";
+      const externalRows = db.prepare(buildCalibrationQueryExternal(extExtraWhere))
         .all(EXTERNAL_FROM, EXTERNAL_TO) as Array<Record<string, unknown>>;
       const insampleRows = db.prepare(buildCalibrationQuery(extraWhere))
         .all(INSAMPLE_FROM, "2099-12-31") as Array<Record<string, unknown>>;
