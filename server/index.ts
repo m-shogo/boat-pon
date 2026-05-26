@@ -41,7 +41,7 @@ import webpush from "web-push";
 import { buildCandidateRows } from "./candidates";
 import { fetchOfficialOdds } from "../scripts/fetch-official-odds";
 import { parseTrifectaOdds } from "../src/domain/oddsParser";
-import { minutesUntil } from "../src/domain/decision";
+import { isWithinOddsFetchWindow, shouldPersistDecisionHistory } from "../src/domain/livePersistence";
 import type { BudgetRule } from "../src/domain/types";
 
 const ODDS_FETCH_WINDOW_MINUTES = 30;
@@ -204,6 +204,7 @@ app.get("/api/dashboard", (req, res) => {
     const freshPushPayloads: Array<{ title: string; body: string; url: string }> = [];
     for (const row of rows) {
       if (!persistDashboardHistory || row.candidate.source === "sample") continue;
+      if (!shouldPersistDecisionHistory(row.candidate, settings, LIVE_MONITOR_FROM)) continue;
       insertDecisionHistory(db, row.candidate, row.decision);
       const created = createNotificationIfNeeded(db, row.candidate, row.decision, row.officialUrl);
       if (created?.created) {
@@ -814,8 +815,7 @@ app.post("/api/odds/fetch", async (req, res) => {
     for (const row of rows) {
       const { candidate } = row;
       if (requestedIds && !requestedIds.includes(candidate.raceId)) continue;
-      const minutes = minutesUntil(candidate.closeAt, now);
-      if (minutes < settings.minMinutesBeforeClose || minutes > ODDS_FETCH_WINDOW_MINUTES) {
+      if (!isWithinOddsFetchWindow(candidate, settings, now, ODDS_FETCH_WINDOW_MINUTES)) {
         results.push({ raceId: candidate.raceId, odds: null, status: "out-of-window" });
         continue;
       }

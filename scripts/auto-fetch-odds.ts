@@ -13,13 +13,11 @@
 
 import { buildCandidateRows } from "../server/candidates";
 import { getManualOdds, getSettings, insertDecisionHistory, listAllResultsForModel, listOddsSnapshots, listProgramInputs, openDb, setOdds } from "../server/db";
-import { minutesUntil } from "../src/domain/decision";
+import { LIVE_MONITOR_FROM } from "../src/domain/liveMonitor";
+import { isWithinOddsFetchWindow, minutesUntilRaceClose, shouldPersistDecisionHistory } from "../src/domain/livePersistence";
 import { mergeOddsMaps } from "../src/domain/oddsSnapshot";
 import { parseTrifectaOdds } from "../src/domain/oddsParser";
 import { fetchOfficialOdds } from "./fetch-official-odds";
-
-const ODDS_FETCH_WINDOW_MINUTES = 30;
-const LIVE_MONITOR_FROM = "2026-01-01";
 
 const dryRun = process.argv.includes("--dry-run");
 const force = process.argv.includes("--force");
@@ -51,8 +49,8 @@ try {
   for (const row of rows) {
     const { candidate } = row;
     if (candidate.source === "sample") continue;
-    const minutes = minutesUntil(candidate.closeAt, now);
-    if (minutes < settings.minMinutesBeforeClose || minutes > ODDS_FETCH_WINDOW_MINUTES) {
+    const minutes = minutesUntilRaceClose(candidate.date, candidate.closeAt, now);
+    if (!isWithinOddsFetchWindow(candidate, settings, now)) {
       skipped += 1;
       continue;
     }
@@ -98,7 +96,7 @@ try {
     const persistHistory = today >= LIVE_MONITOR_FROM;
     for (const row of freshRows) {
       if (row.candidate.source === "sample") continue;
-      if (persistHistory) {
+      if (persistHistory && shouldPersistDecisionHistory(row.candidate, settings, LIVE_MONITOR_FROM, now)) {
         insertDecisionHistory(db, row.candidate, row.decision, { replaceRace: true });
         saved += 1;
       }

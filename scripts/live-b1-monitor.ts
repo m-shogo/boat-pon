@@ -54,12 +54,27 @@ function buildReport(db: DatabaseSync) {
   `).get(LIVE_FROM, LIVE_MODEL) as { d: string | null }).d;
 
   const decisionCounts = db.prepare(`
-    SELECT decision, COUNT(*) AS n, MAX(date) AS latest_date
+    SELECT
+      decision,
+      COUNT(*) AS n,
+      SUM(CASE WHEN current_odds IS NULL THEN 1 ELSE 0 END) AS odds_missing,
+      SUM(CASE WHEN current_odds IS NOT NULL THEN 1 ELSE 0 END) AS odds_present,
+      MAX(date) AS latest_date
     FROM decision_history
     WHERE date >= ? AND model_version = ?
     GROUP BY decision
     ORDER BY decision
-  `).all(LIVE_FROM, LIVE_MODEL) as Array<{ decision: string; n: number; latest_date: string | null }>;
+  `).all(LIVE_FROM, LIVE_MODEL) as Array<{ decision: string; n: number; odds_missing: number; odds_present: number; latest_date: string | null }>;
+
+  const quality = db.prepare(`
+    SELECT
+      COUNT(*) AS n,
+      SUM(CASE WHEN current_odds IS NULL THEN 1 ELSE 0 END) AS odds_missing,
+      SUM(CASE WHEN current_odds IS NOT NULL THEN 1 ELSE 0 END) AS odds_present,
+      MAX(date) AS latest_date
+    FROM decision_history
+    WHERE date >= ? AND model_version = ?
+  `).get(LIVE_FROM, LIVE_MODEL) as { n: number; odds_missing: number; odds_present: number; latest_date: string | null };
 
   const latestModelDecisionDate = (db.prepare(`
     SELECT MAX(date) AS d
@@ -128,6 +143,12 @@ function buildReport(db: DatabaseSync) {
     },
     latestLiveDate,
     decisionCounts,
+    quality: {
+      n: numberValue(quality.n),
+      oddsMissing: numberValue(quality.odds_missing),
+      oddsPresent: numberValue(quality.odds_present),
+      latestDate: quality.latest_date,
+    },
     latestModelDecisionDate,
     latestAnyDecisionDate,
     latestOfficialProgramDate,
@@ -150,12 +171,13 @@ function printReport(report: ReturnType<typeof buildReport>) {
   console.log(`estimatedHits=${fmt(s.estimatedHits)} actualHits=${s.actualHits}`);
   console.log(`latestModelDecision=${report.latestModelDecisionDate ?? "-"} latestAnyDecision=${report.latestAnyDecisionDate ?? "-"}`);
   console.log(`latestOfficialProgram=${report.latestOfficialProgramDate ?? "-"} latestOddsSnapshot=${report.latestOddsSnapshotDate ?? "-"}`);
+  console.log(`liveDecisionOdds: total=${report.quality.n} present=${report.quality.oddsPresent} missing=${report.quality.oddsMissing} latest=${report.quality.latestDate ?? "-"}`);
   console.log(`excludedOldModel=${report.excludedOldModelCount} excludedSample=${report.excludedSampleCount} sources=${report.sources.join(",") || "-"}`);
   console.log(`milestone: ${report.milestone}`);
   if (report.decisionCounts.length > 0) {
     console.log("decision counts:");
     for (const row of report.decisionCounts) {
-      console.log(`  ${row.decision}\tn=${row.n}\tlatest=${row.latest_date ?? "-"}`);
+      console.log(`  ${row.decision}\tn=${row.n}\todds=${row.odds_present}\tmissing=${row.odds_missing}\tlatest=${row.latest_date ?? "-"}`);
     }
   }
   if (report.diagnostics.length > 0) {
