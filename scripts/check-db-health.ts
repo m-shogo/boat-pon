@@ -78,7 +78,7 @@ function printReport(report: ReturnType<typeof buildReport>) {
       console.log(`  ${mark}\t${row.model_version}\t${row.source}\tn=${row.n}\tlatest=${row.latest_date ?? "-"}`);
     }
   }
-  console.log("possible 2026 v4 bulk history rows:");
+  console.log(`possible 2026 current-model bulk history rows (${LIVE_MONITOR_MODEL_VERSION}):`);
   if (report.liveV4ByDate.length === 0) {
     console.log("  none");
   } else {
