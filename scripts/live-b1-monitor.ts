@@ -53,6 +53,38 @@ function buildReport(db: DatabaseSync) {
     WHERE decision = 'BUY' AND date >= ? AND model_version = ?
   `).get(LIVE_FROM, LIVE_MODEL) as { d: string | null }).d;
 
+  const decisionCounts = db.prepare(`
+    SELECT decision, COUNT(*) AS n, MAX(date) AS latest_date
+    FROM decision_history
+    WHERE date >= ? AND model_version = ?
+    GROUP BY decision
+    ORDER BY decision
+  `).all(LIVE_FROM, LIVE_MODEL) as Array<{ decision: string; n: number; latest_date: string | null }>;
+
+  const latestModelDecisionDate = (db.prepare(`
+    SELECT MAX(date) AS d
+    FROM decision_history
+    WHERE date >= ? AND model_version = ?
+  `).get(LIVE_FROM, LIVE_MODEL) as { d: string | null }).d;
+
+  const latestAnyDecisionDate = (db.prepare(`
+    SELECT MAX(date) AS d
+    FROM decision_history
+    WHERE date >= ?
+  `).get(LIVE_FROM) as { d: string | null }).d;
+
+  const latestOfficialProgramDate = (db.prepare(`
+    SELECT MAX(date) AS d
+    FROM official_programs
+    WHERE date >= ?
+  `).get(LIVE_FROM) as { d: string | null }).d;
+
+  const latestOddsSnapshotDate = (db.prepare(`
+    SELECT MAX(substr(captured_at, 1, 10)) AS d
+    FROM odds_snapshots
+    WHERE substr(captured_at, 1, 10) >= ?
+  `).get(LIVE_FROM) as { d: string | null }).d;
+
   const diagnostics = db.prepare(`
     SELECT
       COALESCE(model_version, '(null)') AS model_version,
@@ -95,6 +127,11 @@ function buildReport(db: DatabaseSync) {
       actualHits: numberValue(summary.hits),
     },
     latestLiveDate,
+    decisionCounts,
+    latestModelDecisionDate,
+    latestAnyDecisionDate,
+    latestOfficialProgramDate,
+    latestOddsSnapshotDate,
     diagnostics,
     excludedOldModelCount,
     excludedSampleCount,
@@ -111,8 +148,16 @@ function printReport(report: ReturnType<typeof buildReport>) {
   console.log(`roi=${fmt(s.roi)} roiExMax=${fmt(s.roiExMax)} maxHitOdds=${s.maxHitOdds || "-"}`);
   console.log(`avgRequiredOdds=${fmt(s.avgRequiredOdds)} avgCurrentOdds=${fmt(s.avgCurrentOdds)} avgOddsRatio=${fmt(s.avgOddsRatio)}`);
   console.log(`estimatedHits=${fmt(s.estimatedHits)} actualHits=${s.actualHits}`);
+  console.log(`latestModelDecision=${report.latestModelDecisionDate ?? "-"} latestAnyDecision=${report.latestAnyDecisionDate ?? "-"}`);
+  console.log(`latestOfficialProgram=${report.latestOfficialProgramDate ?? "-"} latestOddsSnapshot=${report.latestOddsSnapshotDate ?? "-"}`);
   console.log(`excludedOldModel=${report.excludedOldModelCount} excludedSample=${report.excludedSampleCount} sources=${report.sources.join(",") || "-"}`);
   console.log(`milestone: ${report.milestone}`);
+  if (report.decisionCounts.length > 0) {
+    console.log("decision counts:");
+    for (const row of report.decisionCounts) {
+      console.log(`  ${row.decision}\tn=${row.n}\tlatest=${row.latest_date ?? "-"}`);
+    }
+  }
   if (report.diagnostics.length > 0) {
     console.log("diagnostics:");
     for (const row of report.diagnostics) {

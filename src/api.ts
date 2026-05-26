@@ -266,7 +266,13 @@ export type LiveMonitorDiagnostic = {
   model_version: string;
   source: string;
   n: number;
-  latest_date: string;
+  latest_date: string | null;
+};
+
+export type LiveMonitorDecisionCount = {
+  decision: string;
+  n: number;
+  latest_date: string | null;
 };
 
 export type LiveMonitorResponse = {
@@ -288,6 +294,11 @@ export type LiveMonitorResponse = {
   monthly: LiveMonitorMonthly[];
   diagnostics: LiveMonitorDiagnostic[];
   latestLiveDate: string | null;
+  decisionCounts: LiveMonitorDecisionCount[];
+  latestModelDecisionDate: string | null;
+  latestAnyDecisionDate: string | null;
+  latestOfficialProgramDate: string | null;
+  latestOddsSnapshotDate: string | null;
   excludedOldModelCount: number;
   excludedSampleCount: number;
   sources: string[];

@@ -20,6 +20,7 @@ import {
   type CalibrationReturnedStats,
   type CalibrationRow,
   type LiveMonitorDiagnostic,
+  type LiveMonitorDecisionCount,
   type LiveMonitorResponse,
   type DashboardResponse,
   type ModelComparisonRow,
@@ -1018,6 +1019,15 @@ function LiveMonitorPanel() {
 
   const s = data?.summary;
   const caution = s ? roiCaution(s.n, s.roi) : null;
+  const totalModelDecisions = data?.decisionCounts.reduce((sum, row) => sum + row.n, 0) ?? 0;
+  const buyCount = data?.decisionCounts.find((row) => row.decision === "BUY")?.n ?? 0;
+  const zeroReason = data && s?.n === 0
+    ? totalModelDecisions === 0
+      ? "v3-alpha15の2026判定履歴がまだありません。ダッシュボード実運用記録が未発生です。"
+      : buyCount === 0
+        ? "v3-alpha15判定は記録されていますが、BUY条件を満たした候補はまだありません。"
+        : null
+    : null;
 
   return (
     <div className="walkForwardPanel">
@@ -1079,6 +1089,15 @@ function LiveMonitorPanel() {
             <div style={{ fontSize: "0.78em", color: "#666", marginTop: 6 }}>
               最新記録日: {data.latestLiveDate ?? "なし"} ／ 対象: {data.period.filter}
             </div>
+            <div style={{ fontSize: "0.78em", color: "#777", marginTop: 4, lineHeight: 1.5 }}>
+              最新v3判定: {data.latestModelDecisionDate ?? "なし"} ／ 最新全判定: {data.latestAnyDecisionDate ?? "なし"} ／
+              最新番組表: {data.latestOfficialProgramDate ?? "なし"} ／ 最新オッズ: {data.latestOddsSnapshotDate ?? "なし"}
+            </div>
+            {zeroReason && (
+              <div style={{ fontSize: "0.82em", color: "#aaa", marginTop: 6 }}>
+                {zeroReason}
+              </div>
+            )}
           </div>
 
           {/* 月別テーブル */}
@@ -1120,6 +1139,24 @@ function LiveMonitorPanel() {
               診断: 2026年BUY全件内訳（旧モデル除外 {data.excludedOldModelCount}件 / sample除外 {data.excludedSampleCount}件）
             </summary>
             <div style={{ marginTop: 6 }}>
+              {data.decisionCounts.length > 0 && (
+                <div className="tableWrap walkForwardRows" style={{ marginBottom: 8 }}>
+                  <table>
+                    <thead>
+                      <tr><th>decision</th><th>n</th><th>最新日</th></tr>
+                    </thead>
+                    <tbody>
+                      {data.decisionCounts.map((row: LiveMonitorDecisionCount) => (
+                        <tr key={row.decision}>
+                          <td>{row.decision}</td>
+                          <td>{row.n}</td>
+                          <td>{row.latest_date ?? "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
               {data.diagnostics.length > 0 ? (
                 <div className="tableWrap walkForwardRows">
                   <table>

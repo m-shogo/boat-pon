@@ -622,6 +622,38 @@ app.get("/api/live/b1-monitor", (_req, res) => {
       WHERE decision = 'BUY' AND date >= ? AND model_version = ?
     `).get(LIVE_FROM, LIVE_MODEL) as { d: string | null }).d;
 
+    const decisionCounts = db.prepare(`
+      SELECT decision, COUNT(*) AS n, MAX(date) AS latest_date
+      FROM decision_history
+      WHERE date >= ? AND model_version = ?
+      GROUP BY decision
+      ORDER BY decision
+    `).all(LIVE_FROM, LIVE_MODEL) as Array<Record<string, unknown>>;
+
+    const latestModelDecisionDate = (db.prepare(`
+      SELECT MAX(date) AS d
+      FROM decision_history
+      WHERE date >= ? AND model_version = ?
+    `).get(LIVE_FROM, LIVE_MODEL) as { d: string | null }).d;
+
+    const latestAnyDecisionDate = (db.prepare(`
+      SELECT MAX(date) AS d
+      FROM decision_history
+      WHERE date >= ?
+    `).get(LIVE_FROM) as { d: string | null }).d;
+
+    const latestOfficialProgramDate = (db.prepare(`
+      SELECT MAX(date) AS d
+      FROM official_programs
+      WHERE date >= ?
+    `).get(LIVE_FROM) as { d: string | null }).d;
+
+    const latestOddsSnapshotDate = (db.prepare(`
+      SELECT MAX(substr(captured_at, 1, 10)) AS d
+      FROM odds_snapshots
+      WHERE substr(captured_at, 1, 10) >= ?
+    `).get(LIVE_FROM) as { d: string | null }).d;
+
     // 除外件数の集計（diagnostics から）
     let excludedOldModelCount = 0;
     let excludedSampleCount = 0;
@@ -655,6 +687,11 @@ app.get("/api/live/b1-monitor", (_req, res) => {
       monthly,
       diagnostics,
       latestLiveDate,
+      decisionCounts,
+      latestModelDecisionDate,
+      latestAnyDecisionDate,
+      latestOfficialProgramDate,
+      latestOddsSnapshotDate,
       excludedOldModelCount,
       excludedSampleCount,
       sources,
