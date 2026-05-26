@@ -27,20 +27,24 @@ Boat Pon は自動購入アプリではない。目的は、ほとんどの日�
 
 ## 現行モデル
 
-- **model_version: boatpon-v4-conservative**
-- ベース: v3-alpha15
-- 追加修正:
-  - 会場別買い目の選択基準を平均推定率から信頼下限スコアへ変更
-  - 信頼下限はLaplace平滑化後の的中率と有効母数から計算する
-  - `buildCandidatesFromModel` が候補へ渡す `estimatedHitRate` を `conservativeHitRate` に変更
-  - `decision_history` に `raw_estimated_hit_rate`, `conservative_hit_rate`, `model_selection_score` を保存し、後日検証で保守化前後を分離できるようにする
-  - 2026ライブ監視は `MODEL_VERSION` 連動なので、以後は v4 のBUYを対象にする
-- ねらい:
-  - alphaを大きくするだけでは消えない「会場ごとの最良買い目選択」バイアスを抑える
-  - 市場が高オッズを付けた時の逆選択に対して、必要オッズを保守化し、既存の ratio 上限が効きやすい状態にする
-- 注意:
-  - v4 はROI改善を保証するものではない。2026ライブ監視または2025年以前の再生成で別途検証する
-  - v3 の履歴とは `model_version` が分かれるため、混ぜて採用判断しない
+- **model_version: boatpon-v3-alpha15**（2026-05-26 v4検証後に v3 で確定）
+- DEFAULT_MODEL_ALPHA=15、Laplace平滑化 alpha=15
+- 現行フィルター設定（app_settings.budget_rule）:
+  - `allowedClassNames`: ["B1"]
+  - `minRequiredOdds`: 25
+  - `maxOddsRatio`: 2.0（全体上限）
+  - `classOddsRatioRules`: B1 → maxOddsRatio=1.5
+  - `excludedVenues`: 戸田・多摩川・桐生・三国・江戸川（5会場）
+  - `excludedRaceNos`: [11, 12]
+  - `minFirstBoatNationalWinRate`: 4.0
+  - `excludeSameClassSecondBoat`: false（外部検証で否定済み）
+- 外部検証到達点（2020-2023データ、pseudo-BUY基準）:
+  - ROI=0.939（ランダムベット 0.74 より改善、breakeven 1.0 には届かず）
+  - これ以上のパラメータ調整では改善不可と確認（cherry-picking+逆選択は構造的問題）
+- ❌ **v4-conservative は 2026-05-26 外部検証で不採用**:
+  - 保守化により必要オッズが約17%上昇 → BUY数 86%減 → ROI悪化（2025: 0.788、2024: 0.302）
+  - 外部(2020-2023): v3 ROI=0.720 vs v4 ROI=0.720（BUY数1/3でほぼ同等→得なし）
+  - 根本原因: 閾値を上げると逆選択が強まる。保守化は構造的問題の解決にならない
 
 ## 2026-05-24 の分析結果サマリー（セッション3最終版）
 
