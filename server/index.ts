@@ -342,29 +342,18 @@ app.get("/api/backtest/model-comparison", (req, res) => {
   }
 });
 
-app.get("/api/backtest/calibration", (req, res) => {
-  const db = openDb();
-  try {
-    const from = typeof req.query.from === "string" ? req.query.from : "2024-01-01";
-    const to = typeof req.query.to === "string" ? req.query.to : "2099-12-31";
-    // cls=B1 などでクラス絞り込み可能。未指定なら全クラス
-    const clsFilter = typeof req.query.cls === "string" ? req.query.cls : null;
-    // b1filter=1 で現行B1フィルター条件（異クラス・5会場除外・winRate>=4・minReq25・ratio<1.5）を適用
-    const b1filter = req.query.b1filter === "1";
+// B1フィルター条件の共通WHERE句（decision_history=dh, official_programs=op が必要）
+const B1_FILTER_WHERE = `
+  AND json_extract(op.raw_json, '$.boats[0].className') = 'B1'
+  AND json_extract(op.raw_json, '$.boats[1].className') != 'B1'
+  AND CAST(json_extract(op.raw_json, '$.boats[0].nationalWinRate') AS REAL) >= 4.0
+  AND dh.venue NOT IN ('戸田','多摩川','桐生','三国','江戸川')
+  AND CAST(substr(dh.race_id, -2) AS INTEGER) NOT IN (11, 12)
+  AND dh.required_odds >= 25
+  AND dh.current_odds / dh.required_odds < 1.5`;
 
-    const extraWhere = b1filter
-      ? `AND json_extract(op.raw_json, '$.boats[0].className') = 'B1'
-         AND json_extract(op.raw_json, '$.boats[1].className') != 'B1'
-         AND CAST(json_extract(op.raw_json, '$.boats[0].nationalWinRate') AS REAL) >= 4.0
-         AND dh.venue NOT IN ('戸田','多摩川','桐生','三国','江戸川')
-         AND CAST(substr(dh.race_id, -2) AS INTEGER) NOT IN (11, 12)
-         AND dh.required_odds >= 25
-         AND dh.current_odds / dh.required_odds < 1.5`
-      : "";
-    const clsWhere = clsFilter ? "AND cls = ?" : "";
-    const params: unknown[] = clsFilter ? [from, to, clsFilter] : [from, to];
-
-    const rows = db.prepare(`
+function buildCalibrationQuery(extraWhere: string): string {
+  return `
 WITH base AS (
   SELECT
     dh.required_odds,
@@ -399,11 +388,68 @@ SELECT
   ROUND(AVG(required_odds), 1) AS avg_req,
   ROUND(MAX(CASE WHEN hit THEN current_odds ELSE 0 END), 0) AS max_hit_odds
 FROM base
-${clsWhere ? `WHERE ${clsWhere.replace("AND ", "")}` : ""}
 GROUP BY req_band, cls
-ORDER BY MIN(required_odds), cls
-    `).all(...params) as Array<Record<string, unknown>>;
-    res.json({ from, to, b1filter, rows });
+ORDER BY MIN(required_odds), cls`;
+}
+
+// 外部検証データが存在する期間（kyotei24バックフィル済み）
+const EXTERNAL_FROM = "2020-01-01";
+const EXTERNAL_TO   = "2023-12-31";
+const INSAMPLE_FROM = "2024-01-01";
+
+app.get("/api/backtest/calibration", (req, res) => {
+  const db = openDb();
+  try {
+    // b1filter=1 で現行B1フィルター条件を適用
+    const b1filter = req.query.b1filter === "1";
+    const extraWhere = b1filter ? B1_FILTER_WHERE : "";
+
+    // mode=compare: external(2020-2023) と insample(2024+) を両方返す
+    // mode=custom (デフォルト): from/to で手動指定
+    const mode = req.query.mode === "compare" ? "compare" : "custom";
+
+    if (mode === "compare") {
+      const externalRows = db.prepare(buildCalibrationQuery(extraWhere))
+        .all(EXTERNAL_FROM, EXTERNAL_TO) as Array<Record<string, unknown>>;
+      const insampleRows = db.prepare(buildCalibrationQuery(extraWhere))
+        .all(INSAMPLE_FROM, "2099-12-31") as Array<Record<string, unknown>>;
+
+      // 外部検証合算ROI（B1フィルター適用時）
+      const externalSummary = b1filter
+        ? db.prepare(`
+            SELECT
+              COUNT(*) AS n,
+              ROUND(SUM(CASE WHEN dh.selection = dh.result THEN os.odds ELSE 0 END) * 1.0 / COUNT(*), 3) AS roi,
+              SUM(CASE WHEN dh.selection = dh.result THEN 1 ELSE 0 END) AS hits
+            FROM decision_history dh
+            JOIN official_programs op ON op.race_id = dh.race_id
+            JOIN odds_snapshots os ON os.race_id = dh.race_id AND os.selection = dh.selection
+            WHERE dh.date >= ? AND dh.date < ?
+              AND dh.selection = '1-2-3'
+              AND os.odds >= dh.required_odds
+              AND json_extract(op.raw_json, '$.boats[0].className') = 'B1'
+              AND json_extract(op.raw_json, '$.boats[1].className') != 'B1'
+              AND CAST(json_extract(op.raw_json, '$.boats[0].nationalWinRate') AS REAL) >= 4.0
+              AND dh.venue NOT IN ('戸田','多摩川','桐生','三国','江戸川')
+              AND CAST(substr(dh.race_id, -2) AS INTEGER) NOT IN (11, 12)
+              AND dh.required_odds >= 25
+              AND os.odds / dh.required_odds < 1.5
+          `).get("2020-01-01", "2024-01-01") as Record<string, unknown>
+        : null;
+
+      res.json({
+        mode: "compare",
+        b1filter,
+        external: { from: EXTERNAL_FROM, to: EXTERNAL_TO, rows: externalRows, summary: externalSummary },
+        insample: { from: INSAMPLE_FROM, to: "現在", rows: insampleRows },
+      });
+    } else {
+      const from = typeof req.query.from === "string" ? req.query.from : INSAMPLE_FROM;
+      const to   = typeof req.query.to   === "string" ? req.query.to   : "2099-12-31";
+      const rows = db.prepare(buildCalibrationQuery(extraWhere))
+        .all(from, to) as Array<Record<string, unknown>>;
+      res.json({ mode: "custom", from, to, b1filter, rows });
+    }
   } finally {
     db.close();
   }

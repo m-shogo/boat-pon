@@ -15,6 +15,7 @@ import {
   updateManualOdds,
   updatePurchaseRecord,
   updateSettings,
+  type CalibrationCompareResponse,
   type CalibrationRow,
   type DashboardResponse,
   type ModelComparisonRow,
@@ -936,21 +937,63 @@ function ModelComparisonPanel({ date }: { date: string | null }) {
   );
 }
 
+function CalibrationTable({ rows }: { rows: CalibrationRow[] }) {
+  const calibColor = (ratio: number) => {
+    if (ratio === 0) return "#888";
+    if (ratio >= 1.2) return "var(--green)";
+    if (ratio >= 0.8) return "inherit";
+    return "var(--red)";
+  };
+
+  if (rows.length === 0) return <p style={{ color: "#888", fontSize: "0.85em" }}>データなし</p>;
+
+  return (
+    <div className="tableWrap walkForwardRows">
+      <table>
+        <thead>
+          <tr>
+            <th>req帯</th><th>クラス</th><th>n</th><th>的中</th>
+            <th>推定%</th><th>実測%</th><th>calib比</th><th>avg_odds</th><th>最大配当</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={`${row.req_band}-${row.cls}`}>
+              <td>{row.req_band}</td>
+              <td>{row.cls}</td>
+              <td>{row.n}</td>
+              <td>{row.hits}</td>
+              <td>{row.avg_est_pct.toFixed(2)}%</td>
+              <td>{row.actual_pct.toFixed(2)}%</td>
+              <td style={{ color: calibColor(row.calib_ratio), fontWeight: "bold" }}>
+                {row.calib_ratio.toFixed(3)}
+              </td>
+              <td>{row.avg_odds.toFixed(1)}</td>
+              <td>{row.max_hit_odds > 0 ? `${row.max_hit_odds}x` : "-"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function CalibrationPanel({ date }: { date: string | null }) {
-  const defaultFrom = "2024-01-01";
-  const [from, setFrom] = useState(defaultFrom);
-  const [to, setTo] = useState(date ?? "");
-  const [b1filter, setB1filter] = useState(false);
-  const [rows, setRows] = useState<CalibrationRow[]>([]);
+  const [b1filter, setB1filter] = useState(true);
+  const [compareResult, setCompareResult] = useState<CalibrationCompareResponse | null>(null);
+  const [customFrom, setCustomFrom] = useState("2024-01-01");
+  const [customTo, setCustomTo] = useState(date ?? "");
+  const [customRows, setCustomRows] = useState<CalibrationRow[]>([]);
+  const [showCustom, setShowCustom] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  async function run() {
+  async function runCompare() {
     setBusy(true);
     setError(null);
     try {
-      const result = await fetchCalibrationApi({ from: from || undefined, to: to || undefined, b1filter });
-      setRows(result.rows);
+      const result = await fetchCalibrationApi({ mode: "compare", b1filter });
+      setCompareResult(result as CalibrationCompareResponse);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -958,12 +1001,18 @@ function CalibrationPanel({ date }: { date: string | null }) {
     }
   }
 
-  const calibColor = (ratio: number) => {
-    if (ratio === 0) return "#888";
-    if (ratio >= 1.2) return "var(--green)";
-    if (ratio >= 0.8) return "inherit";
-    return "var(--red)";
-  };
+  async function runCustom() {
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await fetchCalibrationApi({ from: customFrom || undefined, to: customTo || undefined, b1filter });
+      if ("rows" in result) setCustomRows(result.rows);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <div className="walkForwardPanel">
@@ -973,43 +1022,64 @@ function CalibrationPanel({ date }: { date: string | null }) {
           <p>required_odds帯×クラス別の実測/推定的中率比。1.0が理想、&lt;0.5は過大推定。</p>
         </div>
       </div>
+
+      <div style={{ background: "rgba(255,180,0,0.12)", border: "1px solid rgba(255,180,0,0.5)", borderRadius: 6, padding: "8px 12px", marginBottom: 12, fontSize: "0.85em", lineHeight: 1.6 }}>
+        ⚠ <strong>採用判断ではなく校正確認用のパネルです。</strong><br />
+        外部検証（2020-2023）の実測ROI = <strong>0.739</strong>（ランダムベット水準 ≈ 0.75）。<br />
+        calibration比が高くても外部ROIが改善しない限り採用根拠にはなりません。
+      </div>
+
       <div className="walkForwardControls">
-        <label><span>開始</span><input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
-        <label><span>終了</span><input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
         <label>
           <input type="checkbox" checked={b1filter} onChange={(e) => setB1filter(e.target.checked)} />
           <span>B1フィルター内のみ</span>
         </label>
-        <button disabled={busy} onClick={run}>{busy ? "集計中..." : "集計する"}</button>
+        <button disabled={busy} onClick={runCompare}>{busy ? "集計中..." : "外部/in-sample 比較"}</button>
+        <button disabled={busy} onClick={() => setShowCustom(!showCustom)} style={{ marginLeft: 8 }}>
+          {showCustom ? "カスタム非表示" : "カスタム期間"}
+        </button>
       </div>
+
+      {showCustom && (
+        <div className="walkForwardControls" style={{ marginTop: 8 }}>
+          <label><span>開始</span><input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} /></label>
+          <label><span>終了</span><input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} /></label>
+          <button disabled={busy} onClick={runCustom}>{busy ? "集計中..." : "集計"}</button>
+          {customRows.length > 0 && (
+            <span style={{ fontSize: "0.8em", color: "#888", marginLeft: 8 }}>カスタム ({customRows.length}行)</span>
+          )}
+        </div>
+      )}
+
       {error && <div className="formError">{error}</div>}
-      {rows.length > 0 && (
-        <div className="tableWrap walkForwardRows">
-          <table>
-            <thead>
-              <tr>
-                <th>req帯</th><th>クラス</th><th>n</th><th>的中</th>
-                <th>推定%</th><th>実測%</th><th>calib比</th><th>avg_odds</th><th>最大配当</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={`${row.req_band}-${row.cls}`}>
-                  <td>{row.req_band}</td>
-                  <td>{row.cls}</td>
-                  <td>{row.n}</td>
-                  <td>{row.hits}</td>
-                  <td>{row.avg_est_pct.toFixed(2)}%</td>
-                  <td>{row.actual_pct.toFixed(2)}%</td>
-                  <td style={{ color: calibColor(row.calib_ratio), fontWeight: "bold" }}>
-                    {row.calib_ratio.toFixed(3)}
-                  </td>
-                  <td>{row.avg_odds.toFixed(1)}</td>
-                  <td>{row.max_hit_odds > 0 ? `${row.max_hit_odds}x` : "-"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+
+      {showCustom && customRows.length > 0 && (
+        <div style={{ marginTop: 12 }}>
+          <h4 style={{ fontSize: "0.9em", marginBottom: 4 }}>カスタム期間</h4>
+          <CalibrationTable rows={customRows} />
+        </div>
+      )}
+
+      {compareResult && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 12 }}>
+          <div>
+            <h4 style={{ fontSize: "0.9em", marginBottom: 4 }}>
+              外部検証: {compareResult.external.from} ～ {compareResult.external.to}
+              {compareResult.external.summary && (
+                <span style={{ marginLeft: 8, color: compareResult.external.summary.roi >= 1.0 ? "var(--green)" : "var(--red)", fontWeight: "bold" }}>
+                  ROI={compareResult.external.summary.roi.toFixed(3)} (n={compareResult.external.summary.n}, {compareResult.external.summary.hits}的中)
+                </span>
+              )}
+            </h4>
+            <CalibrationTable rows={compareResult.external.rows} />
+          </div>
+          <div>
+            <h4 style={{ fontSize: "0.9em", marginBottom: 4 }}>
+              In-sample: {compareResult.insample.from} ～ 現在
+              <span style={{ marginLeft: 8, fontSize: "0.8em", color: "#888" }}>（学習期間内・過学習注意）</span>
+            </h4>
+            <CalibrationTable rows={compareResult.insample.rows} />
+          </div>
         </div>
       )}
     </div>
