@@ -183,8 +183,8 @@ npm run generate:history -- --from 2026-05-01 --to 2026-05-21 --limit 100
 # 許可される（dry-runはガード対象外）
 npm run generate:history -- --from 2026-05-01 --to 2026-05-21 --limit 100 --dry-run
 
-# 意図的に実行する場合のみ（通常使用禁止）
-npm run generate:history -- --from 2026-05-01 --to 2026-05-21 --limit 100 --allow-live-write
+# 意図的に実行する場合のみ（通常使用禁止・事前承認必須）
+npm run generate:history -- --from YYYY-MM-DD --to YYYY-MM-DD --limit N --allow-live-write
 ```
 
 ## 見るべき画面
