@@ -595,12 +595,32 @@ app.get("/api/live/b1-monitor", (_req, res) => {
       ORDER BY ym
     `).all(LIVE_FROM, LIVE_MODEL) as Array<Record<string, unknown>>;
 
+    // 診断情報: 2026年のBUY全件をmodel_version/source別に集計（除外対象の確認用）
+    const diagnostics = db.prepare(`
+      SELECT
+        COALESCE(model_version, '(null)') AS model_version,
+        source,
+        COUNT(*) AS n,
+        MAX(date) AS latest_date
+      FROM decision_history
+      WHERE decision = 'BUY' AND date >= ?
+      GROUP BY model_version, source
+      ORDER BY n DESC
+    `).all(LIVE_FROM) as Array<Record<string, unknown>>;
+
+    const latestLiveDate = (db.prepare(`
+      SELECT MAX(date) AS d FROM decision_history
+      WHERE decision = 'BUY' AND date >= ? AND model_version = ?
+    `).get(LIVE_FROM, LIVE_MODEL) as { d: string | null }).d;
+
     res.json({
       period: { from: LIVE_FROM, to: "現在", modelVersion: LIVE_MODEL },
       summary: { n, hits, returnedN, roi, maxHitOdds, roiExMax },
       milestoneStatus,
       milestoneNote,
       monthly,
+      diagnostics,
+      latestLiveDate,
     });
   } finally {
     db.close();

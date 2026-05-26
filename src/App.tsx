@@ -19,6 +19,7 @@ import {
   type CalibrationCompareResponse,
   type CalibrationReturnedStats,
   type CalibrationRow,
+  type LiveMonitorDiagnostic,
   type LiveMonitorResponse,
   type DashboardResponse,
   type ModelComparisonRow,
@@ -1074,8 +1075,40 @@ function LiveMonitorPanel() {
             </div>
           ) : (
             <p style={{ color: "#888", fontSize: "0.85em", marginTop: 10 }}>
-              まだ2026年のライブBUYデータがありません（model_version=boatpon-v3-alpha15 の件数: 0）。
+              v3-alpha15 の2026 live BUYはまだ記録なし。ダッシュボードが実日付で起動すると自然に蓄積されます。
             </p>
+          )}
+
+          {data.diagnostics.length > 0 && (
+            <details style={{ marginTop: 12, fontSize: "0.8em", color: "#888" }}>
+              <summary style={{ cursor: "pointer" }}>診断: 2026年のBUY全件内訳（除外対象含む）</summary>
+              <div className="tableWrap walkForwardRows" style={{ marginTop: 6 }}>
+                <table>
+                  <thead>
+                    <tr><th>model_version</th><th>source</th><th>n</th><th>最新日</th><th>対象</th></tr>
+                  </thead>
+                  <tbody>
+                    {data.diagnostics.map((row: LiveMonitorDiagnostic, i: number) => {
+                      const isTarget = row.model_version === data.period.modelVersion;
+                      return (
+                        <tr key={i} style={{ opacity: isTarget ? 1 : 0.5 }}>
+                          <td>{row.model_version}</td>
+                          <td>{row.source}</td>
+                          <td>{row.n}</td>
+                          <td>{row.latest_date}</td>
+                          <td>{isTarget ? "✓" : "除外"}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                <p style={{ marginTop: 4 }}>
+                  ライブ記録の条件: model_version={data.period.modelVersion} / date≥{data.period.from}<br />
+                  source=sample は model_version=null のため自動除外。旧モデルも model_version で除外。<br />
+                  generate:history を2026年対象で実行するとここに混入するため禁止。
+                </p>
+              </div>
+            </details>
           )}
         </>
       )}

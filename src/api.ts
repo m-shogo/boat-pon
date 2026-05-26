@@ -262,6 +262,13 @@ export type LiveMonitorMonthly = {
   avg_ratio: number;
 };
 
+export type LiveMonitorDiagnostic = {
+  model_version: string;
+  source: string;
+  n: number;
+  latest_date: string;
+};
+
 export type LiveMonitorResponse = {
   period: { from: string; to: string; modelVersion: string };
   summary: {
@@ -275,6 +282,8 @@ export type LiveMonitorResponse = {
   milestoneStatus: "insufficient" | "watch" | "conditional" | "near-confirmed";
   milestoneNote: string;
   monthly: LiveMonitorMonthly[];
+  diagnostics: LiveMonitorDiagnostic[];
+  latestLiveDate: string | null;
 };
 
 export async function fetchLiveB1Monitor(): Promise<LiveMonitorResponse> {

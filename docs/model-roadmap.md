@@ -152,6 +152,20 @@ Boat Pon は自動購入アプリではない。目的は、ほとんどの日�
 - A2は BUY除外確定（外部検証 ROI=0.63）。しきい値を満たしても復活させない。
 - app_settings は変更しない。条件変更はしきい値達成後に別途検討。
 
+### live記録の設計（重要）
+
+ライブ決定と generate:history はどちらも `source="history-model"` で保存される。  
+区別は `model_version` と `date` のみで行う。条件: `model_version=boatpon-v3-alpha15 AND date>=2026-01-01`
+
+自動除外されるもの:
+- 旧モデル: `model_version=boatpon-v2-regime-category` 等 → 除外
+- sampleデータ: `model_version=null`（プログラムデータなし時のフォールバック）→ 除外
+
+除外されない汚染リスク:
+- generate:historyを2026年対象で実行した場合 → `model_version=boatpon-v3-alpha15` が付くため混入する
+
+診断: LiveMonitorPanel の「診断: 2026年BUY全件内訳」で除外対象を確認できる。
+
 ### 注意: generate:history を 2026年対象で実行しない
 
 generate:historyで2026年の decision_history を生成すると監視データが汚染される。  
