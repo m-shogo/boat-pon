@@ -342,6 +342,53 @@ app.get("/api/backtest/model-comparison", (req, res) => {
   }
 });
 
+app.get("/api/backtest/calibration", (req, res) => {
+  const db = openDb();
+  try {
+    const from = typeof req.query.from === "string" ? req.query.from : "2024-01-01";
+    const to = typeof req.query.to === "string" ? req.query.to : "2099-12-31";
+    const rows = db.prepare(`
+WITH base AS (
+  SELECT
+    dh.required_odds,
+    dh.estimated_hit_rate,
+    dh.current_odds,
+    (dh.selection = dh.result) AS hit,
+    json_extract(op.raw_json, '$.boats[0].className') AS cls
+  FROM decision_history dh
+  LEFT JOIN official_programs op ON op.race_id = dh.race_id
+  WHERE dh.decision = 'BUY'
+    AND dh.returned = 0
+    AND dh.selection = '1-2-3'
+    AND dh.estimated_hit_rate > 0
+    AND dh.date >= ? AND dh.date <= ?
+)
+SELECT
+  CASE
+    WHEN required_odds < 30 THEN '25-30'
+    WHEN required_odds < 40 THEN '30-40'
+    WHEN required_odds < 50 THEN '40-50'
+    WHEN required_odds < 70 THEN '50-70'
+    ELSE '>= 70'
+  END AS req_band,
+  COALESCE(cls, 'unknown') AS cls,
+  COUNT(*) AS n,
+  SUM(hit) AS hits,
+  ROUND(AVG(estimated_hit_rate) * 100, 2) AS avg_est_pct,
+  ROUND(1.0 * SUM(hit) / COUNT(*) * 100, 2) AS actual_pct,
+  ROUND((1.0 * SUM(hit) / COUNT(*)) / AVG(estimated_hit_rate), 3) AS calib_ratio,
+  ROUND(AVG(current_odds), 1) AS avg_odds,
+  ROUND(AVG(required_odds), 1) AS avg_req
+FROM base
+GROUP BY req_band, cls
+ORDER BY MIN(required_odds), cls
+    `).all(from, to) as Array<Record<string, unknown>>;
+    res.json({ from, to, rows });
+  } finally {
+    db.close();
+  }
+});
+
 app.put("/api/settings", (req, res) => {
   const db = openDb();
   try {
