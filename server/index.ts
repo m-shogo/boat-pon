@@ -20,7 +20,6 @@ import {
   getManualOdds,
   insertOfficialProgram,
   listOddsSnapshots,
-  listAllResultsForModel,
   getSettings,
   insertDecisionHistory,
   listDecisionHistory,
@@ -29,6 +28,7 @@ import {
   listProgramInputs,
   listPushSubscriptions,
   listResults,
+  listResultsForModelRange,
   markNotificationSent,
   openDb,
   setManualOdds,
@@ -184,7 +184,8 @@ app.get("/api/dashboard", (req, res) => {
   const db = openDb();
   try {
     const settings = getSettings(db);
-    const date = typeof req.query.date === "string" ? req.query.date : undefined;
+    const date = typeof req.query.date === "string" ? req.query.date : todayJst();
+    const persistDashboardHistory = date < LIVE_MONITOR_FROM || date === todayJst();
     const oddsByRaceId = mergeOddsMaps(getManualOdds(db), listOddsSnapshots(db));
     const rows = buildCandidateRows(
       settings,
@@ -198,10 +199,11 @@ app.get("/api/dashboard", (req, res) => {
         raceCategory: row.raceCategory,
         features: row.features,
       })),
-      listAllResultsForModel(db),
+      listResultsForModelRange(db, addDaysJst(date, -180), date),
     );
     const freshPushPayloads: Array<{ title: string; body: string; url: string }> = [];
     for (const row of rows) {
+      if (!persistDashboardHistory || row.candidate.source === "sample") continue;
       insertDecisionHistory(db, row.candidate, row.decision);
       const created = createNotificationIfNeeded(db, row.candidate, row.decision, row.officialUrl);
       if (created?.created) {
@@ -219,8 +221,9 @@ app.get("/api/dashboard", (req, res) => {
       explanation: explainDecision(row.candidate, row.decision, settings),
     }));
     const buyRows = rows.filter((row) => row.decision.status === "BUY");
+    const dashboardOddsSnapshots = rows.flatMap((row) => listOddsSnapshots(db, row.candidate.raceId));
     const history = listDecisionHistory(db);
-    const rawPrograms = listOfficialProgramsRaw(db);
+    const rawPrograms = listOfficialProgramsRaw(db, date);
     const closeAtByRaceId = new Map(rawPrograms.map((row) => [row.raceId, row.closeAt]));
     const programByRaceId = new Map(rawPrograms.map((row) => [row.raceId, row.raw]));
     res.json({
@@ -230,7 +233,7 @@ app.get("/api/dashboard", (req, res) => {
         ? "BUY条件を満たした候補のみ通知対象です。購入前に公式オッズで最終確認してください。"
         : "EV 1.25以上の候補なし。買わない日として成功扱いです。",
       rows: explainedRows,
-      date: date ?? null,
+      date,
       results: listResults(db, date),
       notifications: listNotifications(db),
       history,
@@ -255,7 +258,7 @@ app.get("/api/dashboard", (req, res) => {
       rollingDrift: summarizeRollingDrift(history, settings.minSampleSize),
       modelVersion: getModelVersionInfo(),
       skipReasons: summarizeSkipReasons(history, settings),
-      oddsSnapshots: listOddsSnapshots(db),
+      oddsSnapshots: dashboardOddsSnapshots,
     });
   } finally {
     db.close();
@@ -966,6 +969,17 @@ function csvCell(value: unknown) {
   const text = String(value ?? "");
   return /[",\n]/.test(text) ? "\"" + text.replaceAll("\"", "\"\"") + "\"" : text;
 }
+
+function todayJst() {
+  return new Intl.DateTimeFormat("sv", { timeZone: "Asia/Tokyo" }).format(new Date());
+}
+
+function addDaysJst(date: string, days: number) {
+  const d = new Date(`${date}T00:00:00+09:00`);
+  d.setDate(d.getDate() + days);
+  return new Intl.DateTimeFormat("sv", { timeZone: "Asia/Tokyo" }).format(d);
+}
+
 const port = Number(process.env.BOAT_PON_API_PORT ?? 5174);
 app.listen(port, "127.0.0.1", () => {
   console.log(`Boat Pon API listening on http://127.0.0.1:${port}`);
