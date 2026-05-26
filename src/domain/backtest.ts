@@ -9,6 +9,9 @@ export type DecisionHistoryRow = {
   raceNo: number;
   selection: string;
   estimatedHitRate: number;
+  rawEstimatedHitRate?: number | null;
+  conservativeHitRate?: number | null;
+  modelSelectionScore?: number | null;
   requiredOdds: number;
   currentOdds: number | null;
   ev: number | null;

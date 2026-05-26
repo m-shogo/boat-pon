@@ -1,6 +1,6 @@
 import { mkdirSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
-import { DEFAULT_RULE } from "../src/domain/decision";
+import { DEFAULT_APP_RULE } from "../src/domain/decision";
 import { extractProgramFeatures } from "../src/domain/programFeatures";
 import type { OddsSnapshot } from "../src/domain/oddsSnapshot";
 import type { RaceCategory } from "../src/domain/programCategory";
@@ -43,6 +43,9 @@ CREATE TABLE IF NOT EXISTS decision_history (
   bet_type TEXT NOT NULL,
   selection TEXT NOT NULL,
   estimated_hit_rate REAL NOT NULL,
+  raw_estimated_hit_rate REAL,
+  conservative_hit_rate REAL,
+  model_selection_score REAL,
   required_odds REAL NOT NULL,
   current_odds REAL,
   ev REAL,
@@ -137,6 +140,21 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
   } catch {
     // Existing databases already have this column.
   }
+  try {
+    db.exec("ALTER TABLE decision_history ADD COLUMN raw_estimated_hit_rate REAL");
+  } catch {
+    // Existing databases already have this column.
+  }
+  try {
+    db.exec("ALTER TABLE decision_history ADD COLUMN conservative_hit_rate REAL");
+  } catch {
+    // Existing databases already have this column.
+  }
+  try {
+    db.exec("ALTER TABLE decision_history ADD COLUMN model_selection_score REAL");
+  } catch {
+    // Existing databases already have this column.
+  }
 
   // 検索性能向上のためのINDEX（冪等）
   db.exec(`
@@ -171,8 +189,8 @@ WHERE venue='琵琶湖';
 
 export function getSettings(db: DatabaseSync): BudgetRule {
   const row = db.prepare("SELECT value FROM app_settings WHERE key = ?").get("budget_rule") as { value: string } | undefined;
-  if (!row) return DEFAULT_RULE;
-  return { ...DEFAULT_RULE, ...JSON.parse(row.value) };
+  if (!row) return DEFAULT_APP_RULE;
+  return { ...DEFAULT_APP_RULE, ...JSON.parse(row.value) };
 }
 
 export function setSettings(db: DatabaseSync, settings: BudgetRule) {
@@ -425,13 +443,17 @@ export function insertDecisionHistory(db: DatabaseSync, candidate: BetCandidate,
   if (existing) {
     db.prepare(`
 UPDATE decision_history
-SET selection = ?, estimated_hit_rate = ?, required_odds = ?, current_odds = ?, ev = ?, decision = ?,
+SET selection = ?, estimated_hit_rate = ?, raw_estimated_hit_rate = ?, conservative_hit_rate = ?, model_selection_score = ?,
+    required_odds = ?, current_odds = ?, ev = ?, decision = ?,
     result = ?, payout_yen = ?, popularity = ?, returned = ?, source = ?, fetched_at = ?,
     recommended_stake_yen = ?, sample_size = ?, model_version = ?, race_category = ?
 WHERE id = ?
 `).run(
       selection,
       candidate.estimatedHitRate,
+      candidate.rawEstimatedHitRate ?? null,
+      candidate.conservativeHitRate ?? null,
+      candidate.modelSelectionScore ?? null,
       decision.requiredOdds,
       candidate.currentOdds,
       decision.ev,
@@ -459,10 +481,11 @@ WHERE id = ?
 
   db.prepare(`
 INSERT INTO decision_history
-(race_id, date, venue, race_no, bet_type, selection, estimated_hit_rate, required_odds, current_odds, ev, decision,
+(race_id, date, venue, race_no, bet_type, selection, estimated_hit_rate, raw_estimated_hit_rate, conservative_hit_rate,
+ model_selection_score, required_odds, current_odds, ev, decision,
  actually_bought, stake_yen, result, payout_yen, popularity, returned, source, fetched_at, recommended_stake_yen, sample_size,
  model_version, race_category)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `).run(
     candidate.raceId,
     candidate.date,
@@ -471,6 +494,9 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     candidate.betType,
     selection,
     candidate.estimatedHitRate,
+    candidate.rawEstimatedHitRate ?? null,
+    candidate.conservativeHitRate ?? null,
+    candidate.modelSelectionScore ?? null,
     decision.requiredOdds,
     candidate.currentOdds,
     decision.ev,
@@ -493,6 +519,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 export function listDecisionHistory(db: DatabaseSync): import("../src/domain/backtest").DecisionHistoryRow[] {
   const rows = db.prepare(`
 SELECT id, race_id, date, venue, race_no, selection, estimated_hit_rate, required_odds, current_odds,
+       raw_estimated_hit_rate, conservative_hit_rate, model_selection_score,
        ev, decision, actually_bought, stake_yen, result, payout_yen, popularity, returned,
        source, fetched_at, recommended_stake_yen, sample_size, model_version, race_category, created_at
 FROM decision_history
@@ -508,6 +535,9 @@ LIMIT 500
     raceNo: Number(row.race_no),
     selection: String(row.selection),
     estimatedHitRate: Number(row.estimated_hit_rate),
+    rawEstimatedHitRate: row.raw_estimated_hit_rate == null ? null : Number(row.raw_estimated_hit_rate),
+    conservativeHitRate: row.conservative_hit_rate == null ? null : Number(row.conservative_hit_rate),
+    modelSelectionScore: row.model_selection_score == null ? null : Number(row.model_selection_score),
     requiredOdds: Number(row.required_odds),
     currentOdds: row.current_odds == null ? null : Number(row.current_odds),
     ev: row.ev == null ? null : Number(row.ev),
@@ -538,13 +568,16 @@ export function createNotificationIfNeeded(
   const title = `BUY候補あり: ${candidate.venue} ${candidate.raceNo}R`;
   const body = [
     `買い目: ${candidate.selection.join("-")}`,
-    `推定的中率: ${(candidate.estimatedHitRate * 100).toFixed(1)}%`,
+    `判定的中率: ${(candidate.estimatedHitRate * 100).toFixed(1)}%`,
+    candidate.rawEstimatedHitRate != null
+      ? `保守化前推定: ${(candidate.rawEstimatedHitRate * 100).toFixed(1)}%`
+      : null,
     `必要オッズ: ${decision.requiredOdds.toFixed(1)}倍以上`,
     `取得オッズ: ${candidate.currentOdds?.toFixed(1) ?? "未取得"}倍`,
     `EV: ${decision.ev?.toFixed(2) ?? "-"}`,
     `推奨: ${decision.recommendedAmount}円のみ`,
     "購入前に公式オッズで最終確認してください。",
-  ].join("\n");
+  ].filter((row): row is string => row != null).join("\n");
 
   const result = db.prepare(`
 INSERT OR IGNORE INTO notification_log

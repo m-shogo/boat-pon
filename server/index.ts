@@ -528,7 +528,7 @@ app.get("/api/backtest/calibration", (req, res) => {
   }
 });
 
-// 2026 live B1 監視（model_version=v3-alpha15 + date>=2026-01-01、app_settingsがB1フィルターを保証）
+// 2026 live B1 監視（現行model_version + date>=2026-01-01、app_settingsがB1フィルターを保証）
 const LIVE_FROM = LIVE_MONITOR_FROM;
 const LIVE_MODEL = LIVE_MONITOR_MODEL_VERSION;
 
@@ -891,8 +891,8 @@ app.get("/api/export/history.csv", (_req, res) => {
   const db = openDb();
   try {
     sendCsv(res, "history.csv", [
-      ["id", "raceId", "date", "venue", "raceNo", "selection", "estimatedHitRate", "requiredOdds", "currentOdds", "ev", "decision", "actuallyBought", "stakeYen", "recommendedStakeYen", "result", "payoutYen"],
-      ...listDecisionHistory(db).map((row) => [row.id, row.raceId, row.date, row.venue, row.raceNo, row.selection, row.estimatedHitRate, row.requiredOdds, row.currentOdds ?? "", row.ev ?? "", row.decision, row.actuallyBought ? 1 : 0, row.stakeYen, row.recommendedStakeYen, row.result ?? "", row.payoutYen ?? ""]),
+      ["id", "raceId", "date", "venue", "raceNo", "selection", "estimatedHitRate", "rawEstimatedHitRate", "conservativeHitRate", "modelSelectionScore", "requiredOdds", "currentOdds", "ev", "decision", "actuallyBought", "stakeYen", "recommendedStakeYen", "result", "payoutYen"],
+      ...listDecisionHistory(db).map((row) => [row.id, row.raceId, row.date, row.venue, row.raceNo, row.selection, row.estimatedHitRate, row.rawEstimatedHitRate ?? "", row.conservativeHitRate ?? "", row.modelSelectionScore ?? "", row.requiredOdds, row.currentOdds ?? "", row.ev ?? "", row.decision, row.actuallyBought ? 1 : 0, row.stakeYen, row.recommendedStakeYen, row.result ?? "", row.payoutYen ?? ""]),
     ]);
   } finally {
     db.close();

@@ -14,6 +14,8 @@ const candidate: BetCandidate = {
   betType: "3連単",
   selection: [1, 3, 4],
   estimatedHitRate: 0.085,
+  rawEstimatedHitRate: 0.11,
+  conservativeHitRate: 0.085,
   sampleSize: 1247,
   currentOdds: 16.2,
   targetEv: 1.25,
@@ -27,7 +29,9 @@ test("BUY判定の人間向け説明とチェックリストを作る", () => {
   const explanation = explainDecision(candidate, decision, DEFAULT_RULE);
   assert.equal(explanation.tone, "buy");
   assert.match(explanation.headline, /公式/);
+  assert.match(explanation.detail, /保守化前11\.0%/);
   assert.ok(explanation.checklist.some((item) => item.label === "EV" && item.ok));
+  assert.ok(explanation.checklist.some((item) => item.label === "保守化" && /11\.0% → 8\.5%/.test(item.value)));
 });
 
 test("履歴からSKIP理由の偏りを推定する", () => {

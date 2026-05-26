@@ -33,6 +33,8 @@ export type CandidateModelSummary = {
   hitCount: number;
   venueRaceCount: number;
   estimatedHitRate: number;
+  conservativeHitRate: number;
+  selectionScore: number;
   courseRates: CourseRate[];
   secondThirdDistribution: SecondThirdDistribution[];
 };
@@ -40,6 +42,7 @@ export type CandidateModelSummary = {
 const COURSES = [1, 2, 3, 4, 5, 6] as const;
 const TRIFECTA_SPACE = 6 * 5 * 4;
 export const DEFAULT_MODEL_ALPHA = 15;
+const DEFAULT_CONFIDENCE_Z = 1.64;
 
 export function buildVenueModel(results: RaceResult[], minVenueRaceCount = 1, alpha = DEFAULT_MODEL_ALPHA): CandidateModelSummary[] {
   const byVenue = new Map<string, RaceResult[]>();
@@ -100,16 +103,22 @@ export function buildVenueModel(results: RaceResult[], minVenueRaceCount = 1, al
       };
     }).sort((a, b) => b.probability - a.probability || b.count - a.count);
 
-    return [...selectionHits.entries()].map(([selection, hitCount]) => ({
-      venue,
-      selection,
-      hitCount,
-      venueRaceCount,
-      estimatedHitRate: smoothedRate(hitCount, venueRaceCount, alpha, TRIFECTA_SPACE),
-      courseRates,
-      secondThirdDistribution,
-    }));
-  }).sort((a, b) => b.estimatedHitRate - a.estimatedHitRate || b.hitCount - a.hitCount);
+    return [...selectionHits.entries()].map(([selection, hitCount]) => {
+      const estimatedHitRate = smoothedRate(hitCount, venueRaceCount, alpha, TRIFECTA_SPACE);
+      const conservativeHitRate = conservativeRate(estimatedHitRate, venueRaceCount + alpha * TRIFECTA_SPACE);
+      return {
+        venue,
+        selection,
+        hitCount,
+        venueRaceCount,
+        estimatedHitRate,
+        conservativeHitRate,
+        selectionScore: conservativeHitRate,
+        courseRates,
+        secondThirdDistribution,
+      };
+    });
+  }).sort((a, b) => b.selectionScore - a.selectionScore || b.hitCount - a.hitCount || b.estimatedHitRate - a.estimatedHitRate);
 }
 
 export function buildCandidatesFromModel(
@@ -127,7 +136,7 @@ export function buildCandidatesFromModel(
     const secondBoatFeature = input.features?.boats.find((boat) => boat.course === selection[1]);
     const thirdBoatFeature = input.features?.boats.find((boat) => boat.course === selection[2]);
     const featureAdjustment = featureAdjustmentForSelection(input.features, selection);
-    const adjustedHitRate = clamp(best.estimatedHitRate * featureAdjustment, 0.0001, 0.8);
+    const adjustedHitRate = clamp(best.conservativeHitRate * featureAdjustment, 0.0001, 0.8);
     const raceId = `${input.date.replaceAll("-", "")}-${input.venue}-${String(input.raceNo).padStart(2, "0")}`;
     const sampleSize = best.venueRaceCount;
     const hasRiskFlag = sampleSize < 10;
@@ -140,6 +149,9 @@ export function buildCandidatesFromModel(
       betType: "3連単" as const,
       selection,
       estimatedHitRate: adjustedHitRate,
+      rawEstimatedHitRate: best.estimatedHitRate,
+      conservativeHitRate: best.conservativeHitRate,
+      modelSelectionScore: best.selectionScore,
       sampleSize,
       currentOdds: manualOdds.get(raceId) ?? null,
       targetEv,
@@ -167,6 +179,13 @@ function clamp(value: number, min: number, max: number) {
 function smoothedRate(count: number, total: number, alpha: number, buckets: number) {
   if (total <= 0) return 0;
   return (count + alpha) / (total + alpha * buckets);
+}
+
+function conservativeRate(rate: number, effectiveTotal: number) {
+  if (effectiveTotal <= 0 || rate <= 0) return 0;
+  const variance = rate * (1 - rate) / effectiveTotal;
+  const lower = rate - DEFAULT_CONFIDENCE_Z * Math.sqrt(variance);
+  return clamp(Number.isFinite(lower) ? lower : rate, 0, rate);
 }
 
 function parseSelection(value: string | null): [number, number, number] | null {

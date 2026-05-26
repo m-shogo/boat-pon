@@ -475,7 +475,10 @@ function Dashboard({
               </div>
               <div className="betLine">{candidate.selection.join("-")}</div>
               <div className="stats">
-                <Stat tip="モデルが推定した的中確率です。高すぎる時ほど過学習に注意します。" label="推定的中率" value={`${(candidate.estimatedHitRate * 100).toFixed(1)}%`} />
+                <Stat tip={candidate.rawEstimatedHitRate != null ? "保守化前の推定から信頼下限に落とした、判定用の的中確率です。" : "モデルが推定した的中確率です。高すぎる時ほど過学習に注意します。"} label="判定的中率" value={`${(candidate.estimatedHitRate * 100).toFixed(1)}%`} />
+                {candidate.rawEstimatedHitRate != null && (
+                  <Stat tip="信頼下限で保守化する前のモデル推定です。判定には直接使いません。" label="保守化前" value={`${(candidate.rawEstimatedHitRate * 100).toFixed(1)}%`} />
+                )}
                 <Stat tip="目標EVを満たすために最低限必要なオッズです。" label="必要オッズ" value={`${decision.requiredOdds.toFixed(1)}倍`} />
                 <Stat tip="公式取得 or 手動入力のオッズ。締切が近いほど信頼度が上がります。" label="現在オッズ" value={candidate.currentOdds ? `${candidate.currentOdds.toFixed(1)}倍` : "未取得"} />
                 <Stat tip="期待値=推定的中率×現在オッズ。1.0で損益±0、1.25以上で割に合う水準です。" label="EV" value={decision.ev ? decision.ev.toFixed(2) : "-"} />
@@ -1023,9 +1026,9 @@ function LiveMonitorPanel() {
   const buyCount = data?.decisionCounts.find((row) => row.decision === "BUY")?.n ?? 0;
   const zeroReason = data && s?.n === 0
     ? totalModelDecisions === 0
-      ? "v3-alpha15の2026判定履歴がまだありません。ダッシュボード実運用記録が未発生です。"
+      ? `${data.period.modelVersion}の2026判定履歴がまだありません。ダッシュボード実運用記録が未発生です。`
       : buyCount === 0
-        ? "v3-alpha15判定は記録されていますが、BUY条件を満たした候補はまだありません。"
+        ? `${data.period.modelVersion}判定は記録されていますが、BUY条件を満たした候補はまだありません。`
         : null
     : null;
 
@@ -1033,9 +1036,9 @@ function LiveMonitorPanel() {
     <div className="walkForwardPanel">
       <div className="sectionHead">
         <div>
-          <h3>2026 ライブ監視（B1 ratio&lt;1.5）</h3>
+          <h3>2026 ライブ監視（現行ルール）</h3>
           <p>
-            2026-01-01 以降の v3-alpha15 BUY実績。外部検証とは完全分離した未使用データ。<br />
+            2026-01-01 以降の現行モデルBUY実績。外部検証とは完全分離した未使用データ。<br />
             app_settings は変更しない。条件変更・再チューニングはしない。
           </p>
         </div>
@@ -1090,7 +1093,7 @@ function LiveMonitorPanel() {
               最新記録日: {data.latestLiveDate ?? "なし"} ／ 対象: {data.period.filter}
             </div>
             <div style={{ fontSize: "0.78em", color: "#777", marginTop: 4, lineHeight: 1.5 }}>
-              最新v3判定: {data.latestModelDecisionDate ?? "なし"} ／ 最新全判定: {data.latestAnyDecisionDate ?? "なし"} ／
+              最新現行モデル判定: {data.latestModelDecisionDate ?? "なし"} ／ 最新全判定: {data.latestAnyDecisionDate ?? "なし"} ／
               最新番組表: {data.latestOfficialProgramDate ?? "なし"} ／ 最新オッズ: {data.latestOddsSnapshotDate ?? "なし"}
             </div>
             {zeroReason && (
@@ -1128,7 +1131,7 @@ function LiveMonitorPanel() {
             </div>
           ) : (
             <p style={{ color: "#888", fontSize: "0.85em", marginTop: 10 }}>
-              v3-alpha15 の2026 live BUYはまだ記録なし（n=0 は正常初期状態）。<br />
+              {data.period.modelVersion} の2026 live BUYはまだ記録なし（n=0 は正常初期状態）。<br />
               ダッシュボードが実日付で起動すると自然に蓄積されます。
             </p>
           )}
@@ -1186,7 +1189,7 @@ function LiveMonitorPanel() {
               )}
               <p style={{ marginTop: 4, lineHeight: 1.6 }}>
                 source=sample は model_version=null のため自動除外。旧モデルも model_version で除外。<br />
-                generate:history を2026年対象で実行すると v3-alpha15 として混入するため禁止。
+                generate:history を2026年対象で実行すると現行モデルとして混入するため禁止。
               </p>
             </div>
           </details>

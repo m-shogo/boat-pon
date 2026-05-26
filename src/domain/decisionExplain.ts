@@ -27,6 +27,7 @@ export function explainDecision(
 ): DecisionExplanation {
   const evText = decision.ev == null ? "未取得" : decision.ev.toFixed(2);
   const oddsText = candidate.currentOdds == null ? "未取得" : candidate.currentOdds.toFixed(1) + "倍";
+  const hitRateText = hitRateSummary(candidate);
   const requiredText = decision.requiredOdds === Number.POSITIVE_INFINITY
     ? "算出不可"
     : decision.requiredOdds.toFixed(1) + "倍";
@@ -34,7 +35,7 @@ export function explainDecision(
   if (decision.status === "BUY") {
     return {
       headline: "条件はそろっています。ただし購入前に公式で最終確認してください。",
-      detail: `現在オッズ ${oddsText} が必要オッズ ${requiredText} を上回り、EVは ${evText} です。推奨は1点${decision.recommendedAmount}円までです。`,
+      detail: `現在オッズ ${oddsText} が必要オッズ ${requiredText} を上回り、EVは ${evText} です。${hitRateText} 推奨は1点${decision.recommendedAmount}円までです。`,
       tone: "buy",
       checklist: buildChecklist(candidate, decision, rule),
     };
@@ -43,7 +44,7 @@ export function explainDecision(
   if (decision.status === "WATCH") {
     return {
       headline: "惜しい候補ですが、BUY基準には届いていません。",
-      detail: `EVは ${evText}。記録だけ残し、通知と購入判断は見送ります。`,
+      detail: `EVは ${evText}。${hitRateText} 記録だけ残し、通知と購入判断は見送ります。`,
       tone: "watch",
       checklist: buildChecklist(candidate, decision, rule),
     };
@@ -51,7 +52,7 @@ export function explainDecision(
 
   return {
     headline: primarySkipMessage(candidate, decision, rule),
-    detail: `必要オッズは ${requiredText}、現在オッズは ${oddsText}、EVは ${evText} です。見送りを成功として記録します。`,
+    detail: `必要オッズは ${requiredText}、現在オッズは ${oddsText}、EVは ${evText} です。${hitRateText} 見送りを成功として記録します。`,
     tone: "skip",
     checklist: buildChecklist(candidate, decision, rule),
   };
@@ -75,7 +76,7 @@ export function summarizeSkipReasons(
 }
 
 function buildChecklist(candidate: BetCandidate, decision: Decision, rule: BudgetRule): DecisionChecklistItem[] {
-  return [
+  const items: DecisionChecklistItem[] = [
     {
       label: "EV",
       ok: decision.ev != null && decision.ev >= rule.targetEv,
@@ -92,6 +93,11 @@ function buildChecklist(candidate: BetCandidate, decision: Decision, rule: Budge
       value: candidate.currentOdds == null ? "未取得" : candidate.currentOdds.toFixed(1) + "倍",
     },
     {
+      label: "保守化",
+      ok: true,
+      value: conservativeDiscountText(candidate),
+    },
+    {
       label: "リスク",
       ok: !candidate.hasRiskFlag,
       value: candidate.hasRiskFlag ? "要確認" : "通常",
@@ -102,6 +108,24 @@ function buildChecklist(candidate: BetCandidate, decision: Decision, rule: Budge
       value: decision.recommendedAmount.toLocaleString() + "円 / 上限" + rule.maxStakePerRaceYen.toLocaleString() + "円",
     },
   ];
+  return items;
+}
+
+function hitRateSummary(candidate: BetCandidate): string {
+  const raw = candidate.rawEstimatedHitRate;
+  const conservative = candidate.conservativeHitRate ?? candidate.estimatedHitRate;
+  if (raw == null || raw <= 0) {
+    return `判定的中率は${(candidate.estimatedHitRate * 100).toFixed(1)}%です。`;
+  }
+  return `推定的中率は保守化前${(raw * 100).toFixed(1)}%、判定用${(conservative * 100).toFixed(1)}%です。`;
+}
+
+function conservativeDiscountText(candidate: BetCandidate): string {
+  const raw = candidate.rawEstimatedHitRate;
+  const conservative = candidate.conservativeHitRate ?? candidate.estimatedHitRate;
+  if (raw == null || raw <= 0) return "対象外";
+  const discount = Math.max(0, 1 - conservative / raw);
+  return `${(raw * 100).toFixed(1)}% → ${(conservative * 100).toFixed(1)}% (${(discount * 100).toFixed(0)}%減)`;
 }
 
 function primarySkipMessage(candidate: BetCandidate, decision: Decision, rule: BudgetRule): string {

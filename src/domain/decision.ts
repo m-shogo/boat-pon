@@ -10,6 +10,25 @@ export const DEFAULT_RULE: BudgetRule = {
   targetEv: 1.25,
 };
 
+export const DEFAULT_APP_RULE: BudgetRule = {
+  ...DEFAULT_RULE,
+  minSampleSize: 30,
+  maxOddsRatio: 2,
+  calibrationMode: "none",
+  calibrationBasis: "requiredOdds",
+  minRequiredOdds: 25,
+  excludedRaceNos: [11, 12],
+  excludedVenues: ["戸田", "多摩川", "桐生", "三国", "江戸川"],
+  programFilter: {
+    allowedClassNames: ["B1"],
+    excludeSameClassSecondBoat: false,
+    minFirstBoatNationalWinRate: 4,
+  },
+  classOddsRatioRules: [
+    { classNames: ["B1"], maxOddsRatio: 1.5 },
+  ],
+};
+
 const WATCH_ONLY_ODDS_THRESHOLD = 100;
 export const V3_EMPIRICAL_ODDS_CALIBRATION: OddsCalibrationFactor[] = [
   { maxRequiredOdds: 30, factor: 1 },

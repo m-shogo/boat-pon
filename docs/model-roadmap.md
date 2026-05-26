@@ -1,6 +1,6 @@
 # 期待値モデル改善ロードマップ
 
-最終更新: 2026-05-26 (セッション12 会場別外部検証完了)
+最終更新: 2026-05-26 (セッション13 v4信頼下限モデル導入)
 
 Boat Pon は自動購入アプリではない。目的は、ほとんどの日を見送り、数字的に割に合う可能性がある時だけ公式確認へ進むこと。
 
@@ -20,6 +20,27 @@ Boat Pon は自動購入アプリではない。目的は、ほとんどの日�
 - 月次ドリフト監視
 - モデル比較API/UI
 - オッズ履歴保存テーブル
+- 信頼下限スコアによる会場内トップ買い目選択
+  - `estimatedHitRate` の平均値最大ではなく、hit数と母数から計算した信頼下限を `selectionScore` として使う
+  - 候補の実判定に使う的中率も `conservativeHitRate` に落とす
+  - 目的: 120通りの中から過去最大を選ぶ cherry-picking バイアスを、alpha調整とは別の層で抑える
+
+## 現行モデル
+
+- **model_version: boatpon-v4-conservative**
+- ベース: v3-alpha15
+- 追加修正:
+  - 会場別買い目の選択基準を平均推定率から信頼下限スコアへ変更
+  - 信頼下限はLaplace平滑化後の的中率と有効母数から計算する
+  - `buildCandidatesFromModel` が候補へ渡す `estimatedHitRate` を `conservativeHitRate` に変更
+  - `decision_history` に `raw_estimated_hit_rate`, `conservative_hit_rate`, `model_selection_score` を保存し、後日検証で保守化前後を分離できるようにする
+  - 2026ライブ監視は `MODEL_VERSION` 連動なので、以後は v4 のBUYを対象にする
+- ねらい:
+  - alphaを大きくするだけでは消えない「会場ごとの最良買い目選択」バイアスを抑える
+  - 市場が高オッズを付けた時の逆選択に対して、必要オッズを保守化し、既存の ratio 上限が効きやすい状態にする
+- 注意:
+  - v4 はROI改善を保証するものではない。2026ライブ監視または2025年以前の再生成で別途検証する
+  - v3 の履歴とは `model_version` が分かれるため、混ぜて採用判断しない
 
 ## 2026-05-24 の分析結果サマリー（セッション3最終版）
 
@@ -45,7 +66,7 @@ Boat Pon は自動購入アプリではない。目的は、ほとんどの日�
 | ratio1.5-2.0x | 649 | 0.840 | 5/11 | 採用不可 |
 | 可変blendWeight | 353 | ~1.05 | 4/11 | 採用不可 |
 
-### 現在の実装（採用済み）
+### v3時点の実装（参照用）
 
 - **app_settings: maxOddsRatio=2.0**（ratio>2.0のBUYを除外）
 - **model_version: boatpon-v3-alpha15**（DEFAULT_MODEL_ALPHA=15）
@@ -55,8 +76,9 @@ Boat Pon は自動購入アプリではない。目的は、ほとんどの日�
 - **BudgetRule**: minRequiredOdds=25 設定済み（外部検証でreq>=30は逆効果確認、req>=25を維持）
 - **BudgetRule**: excludedVenues 設定済み（戸田・多摩川・桐生・三国・江戸川の5会場除外、外部検証済み）
 - **BudgetRule**: classOddsRatioRules 設定済み（B1 maxOddsRatio=1.5。A2は外部検証ROI=0.63で不採用）
-- **programFilter**: allowedClassNames=["B1"]・excludeSameClassSecondBoat=true・minFirstBoatNationalWinRate=4.0 設定済み
+- **programFilter**: allowedClassNames=["B1"]・excludeSameClassSecondBoat=false・minFirstBoatNationalWinRate=4.0 設定済み
 - ✅ Calibration分析UI追加（/api/backtest/calibration + CalibrationPanel: req帯×クラス別 calib_ratio）
+- ✅ 新規DB/設定未保存時の初期設定も現行の安全フィルター付き `DEFAULT_APP_RULE` に統一
 
 ### 根本課題
 
@@ -154,11 +176,12 @@ Boat Pon は自動購入アプリではない。目的は、ほとんどの日�
 
 ## 2026 ライブ監視フレーム（固定しきい値）
 
-2026-01-01以降の `model_version=boatpon-v3-alpha15` BUYを「完全未使用データ」として外部検証と分離して蓄積する。
+2026-01-01以降の現行 `MODEL_VERSION` BUYを「完全未使用データ」として外部検証と分離して蓄積する。
 
 ### 現在の状態（2026-05-26）
 
-- 2026年 v3-alpha15 BUY: **n=0**（まだ蓄積なし）
+- 2026年 v4-conservative BUY: **n=0**（まだ蓄積なし）
+- v3-alpha15 の2026判定履歴は旧モデル扱い。以後のライブ監視対象には混ぜない
 - ライブ蓄積ペース目安: 月24件（2024-2025実績から）
 - 監視UI: Backtest > 2026ライブ監視パネル（`/api/live/b1-monitor`）
 
@@ -179,22 +202,22 @@ Boat Pon は自動購入アプリではない。目的は、ほとんどの日�
 ### live記録の設計（重要）
 
 ライブ決定と generate:history はどちらも `source="history-model"` で保存される。  
-区別は `model_version` と `date` のみで行う。条件: `model_version=boatpon-v3-alpha15 AND date>=2026-01-01`
+区別は `model_version` と `date` のみで行う。条件: 現行 `MODEL_VERSION` かつ `date>=2026-01-01`
 
 自動除外されるもの:
 - 旧モデル: `model_version=boatpon-v2-regime-category` 等 → 除外
 - sampleデータ: `model_version=null`（プログラムデータなし時のフォールバック）→ 除外
 
 除外されない汚染リスク:
-- generate:historyを2026年対象で実行した場合 → `model_version=boatpon-v3-alpha15` が付くため混入する
+- generate:historyを2026年対象で実行した場合 → 現行 `MODEL_VERSION` が付くため混入する
 
 診断: LiveMonitorPanel の「診断: 2026年BUY全件内訳」で除外対象を確認できる。
 CLI確認: `npm run monitor:live` でサーバー起動なしに同じ監視サマリーを読み取り専用で確認できる。
 
 蓄積経路:
 - `/api/dashboard` が `buildCandidateRows` の各候補に対して `insertDecisionHistory` を呼ぶ。
-- `buildCandidatesFromModel` 由来の候補は `source="history-model"` と `model_version=boatpon-v3-alpha15` を持つ。
-- `npm run monitor:live` の `latestModelDecision` が空なら、2026年のv3実運用判定履歴がまだ保存されていない。
+- `buildCandidatesFromModel` 由来の候補は `source="history-model"` と現行 `model_version` を持つ。
+- `npm run monitor:live` の `latestModelDecision` が空なら、2026年の現行モデル実運用判定履歴がまだ保存されていない。
 - `latestModelDecision` がありBUYだけ0なら、保存経路は動いているがBUY条件未達と見る。
 
 ### 注意: generate:history を 2026年対象で実行しない

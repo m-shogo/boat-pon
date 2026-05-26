@@ -56,6 +56,45 @@ test("estimatedHitRateはLaplaceスムージングした観測頻度を使う", 
   assert.equal(row?.estimatedHitRate, 3 / 123);
 });
 
+test("候補選択と候補的中率は信頼下限で保守的に扱う", () => {
+  const model = buildVenueModel([
+    result(1, "蒲郡", "1-2-3"),
+    result(2, "蒲郡", "1-2-3"),
+    result(3, "蒲郡", "1-2-3"),
+    result(4, "蒲郡", "1-2-3"),
+    result(5, "蒲郡", "1-3-2"),
+  ], 1, 0);
+  const best = model.find((m) => m.venue === "蒲郡")!;
+  assert.equal(best.selection, "1-2-3");
+  assert.ok(best.conservativeHitRate < best.estimatedHitRate);
+  assert.equal(best.selectionScore, best.conservativeHitRate);
+
+  const candidates = buildCandidatesFromModel(
+    [{ date: "2026-05-20", venue: "蒲郡", raceNo: 8, closeAt: "18:42" }],
+    model,
+    1.25,
+    "now",
+  );
+  assert.equal(candidates[0].estimatedHitRate, best.conservativeHitRate);
+  assert.equal(candidates[0].rawEstimatedHitRate, best.estimatedHitRate);
+  assert.equal(candidates[0].conservativeHitRate, best.conservativeHitRate);
+  assert.equal(candidates[0].modelSelectionScore, best.selectionScore);
+});
+
+test("デフォルトalphaでも信頼下限で候補的中率を下げる", () => {
+  const model = buildVenueModel([
+    result(1, "蒲郡", "1-2-3"),
+    result(2, "蒲郡", "1-2-3"),
+    result(3, "蒲郡", "1-2-3"),
+    result(4, "蒲郡", "2-1-3"),
+    result(5, "蒲郡", "2-1-3"),
+    result(6, "蒲郡", "3-1-2"),
+  ]);
+  const best = model.find((m) => m.venue === "蒲郡")!;
+  assert.ok(best.conservativeHitRate > 0);
+  assert.ok(best.conservativeHitRate < best.estimatedHitRate);
+});
+
 test("モデル候補に手動オッズを反映する", () => {
   const model = buildVenueModel([result(1, "蒲郡", "1-2-3")], 1, 0);
   const candidates = buildCandidatesFromModel(

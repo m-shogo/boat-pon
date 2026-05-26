@@ -11,6 +11,9 @@ export type BetCandidate = {
   betType: "3連単" | "3連複" | "2連単" | "2連複";
   selection: number[];
   estimatedHitRate: number;
+  rawEstimatedHitRate?: number;
+  conservativeHitRate?: number;
+  modelSelectionScore?: number;
   sampleSize: number;
   currentOdds: number | null;
   targetEv: number;

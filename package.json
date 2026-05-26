@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "concurrently -k -n api,web -c green,cyan \"tsx watch server/index.ts\" \"vite\"",
     "build": "tsc -b && vite build",
+    "verify": "npm test && npm run build",
     "preview": "vite preview",
     "fetch:kyotei24": "tsx scripts/fetch-kyotei24.ts",
     "import:kyotei24": "tsx scripts/import-kyotei24.ts",

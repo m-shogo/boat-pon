@@ -13,6 +13,13 @@ npm run dev
 ```
 
 `npm run dev` はローカルAPI (`http://127.0.0.1:5174`) と画面 (`http://127.0.0.1:5173`) を同時に起動します。
+`data/` 配下のraw HTMLやSQLiteはViteの依存スキャン・監視対象から外しています。
+
+push前の標準確認:
+
+```sh
+npm run verify
+```
 
 ## データ取り込み
 
