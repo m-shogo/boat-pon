@@ -29,14 +29,15 @@ try {
   const oddsCoverage = oddsCoverageByDecisionMonth(db);
   const buyStability = buyStabilityReport(db, decisionRange);
   const buyFeatureDrift = buyFeatureDriftByMonth(db, decisionRange);
+  const buyModelVersionDrift = buyModelVersionDriftByMonth(db, decisionRange);
   const windowedBuy = windowedBuySummaries(db, decisionRange, maxDecisionDate || decisionRange.to);
   const evFilters = evFilterGrid(db, decisionRange);
+  const decisionRuleGrid = decisionRuleGridFromHistory(db, decisionRange);
 
-  const regimeCheck = monthlyRegimeCheck({
+  const walkForwardCheck = monthlyRegimeCheck({
     db,
     range: wfRange,
     trainDays,
-    targetEvs: [1.25, 1.35, 1.5],
     configs: [
       { id: "ms600-a1", minSampleSize: 600, alpha: 1 },
       { id: "ms1200-a1", minSampleSize: 1200, alpha: 1 },
@@ -54,9 +55,11 @@ try {
     oddsCoverage,
     buyStability,
     buyFeatureDrift,
+    buyModelVersionDrift,
     windowedBuy,
     evFilters,
-    regimeCheck,
+    decisionRuleGrid,
+    walkForwardCheck,
   }, null, 2));
 } finally {
   db.close();
@@ -120,6 +123,32 @@ SELECT
 FROM buy
 GROUP BY ym
 ORDER BY ym DESC
+`).all(range.from, range.to) as Array<Record<string, unknown>>;
+
+  const byYear = db.prepare(`
+WITH buy AS (
+  SELECT
+    substr(date, 1, 4) AS yyyy,
+    estimated_hit_rate AS est,
+    recommended_stake_yen AS stake,
+    current_odds AS odds,
+    (result = selection) AS hit
+  FROM decision_history
+  WHERE decision = 'BUY'
+    AND returned = 0
+    AND date >= ? AND date <= ?
+)
+SELECT
+  yyyy,
+  COUNT(*) AS n,
+  SUM(hit) AS hits,
+  ROUND(1.0 * SUM(hit) / COUNT(*), 4) AS hit_rate,
+  ROUND(1.0 * SUM(CASE WHEN hit THEN COALESCE(odds, 0) * stake ELSE 0 END) / NULLIF(SUM(stake), 0), 3) AS roi,
+  ROUND(AVG(est), 4) AS avg_est,
+  ROUND((1.0 * SUM(hit) / COUNT(*)) / NULLIF(AVG(est), 0), 3) AS calibration
+FROM buy
+GROUP BY yyyy
+ORDER BY yyyy DESC
 `).all(range.from, range.to) as Array<Record<string, unknown>>;
 
   const byVenue = db.prepare(`
@@ -214,6 +243,7 @@ ORDER BY roi DESC, n DESC
 
   return {
     byMonth: rows,
+    byYear,
     byVenue,
     byRaceNo,
     byTimeBand,
@@ -241,6 +271,27 @@ GROUP BY ym
 ORDER BY ym DESC
 `).all(range.from, range.to) as Array<Record<string, unknown>>;
   return rows;
+}
+
+function buyModelVersionDriftByMonth(db: DatabaseSync, range: DateRange) {
+  const rows = db.prepare(`
+SELECT
+  substr(date, 1, 7) AS ym,
+  COALESCE(model_version, 'unknown') AS model_version,
+  COUNT(*) AS n,
+  ROUND(AVG(estimated_hit_rate), 4) AS avg_est,
+  ROUND(AVG(ev), 3) AS avg_ev,
+  ROUND(AVG(current_odds), 1) AS avg_odds,
+  ROUND(AVG(required_odds), 1) AS avg_req_odds,
+  ROUND(AVG(sample_size), 1) AS avg_sample
+FROM decision_history
+WHERE decision = 'BUY'
+  AND returned = 0
+  AND date >= ? AND date <= ?
+GROUP BY ym, model_version
+ORDER BY ym DESC, n DESC
+`).all(range.from, range.to) as Array<Record<string, unknown>>;
+  return rows.slice(0, 120);
 }
 
 function windowedBuySummaries(db: DatabaseSync, range: DateRange, anchorDate: string) {
@@ -445,11 +496,91 @@ WHERE ev >= ?
   return { thresholds: thrRows, bands: bandRows };
 }
 
+function decisionRuleGridFromHistory(db: DatabaseSync, range: DateRange) {
+  type Rule = {
+    id: string;
+    targetEv: number;
+    minSampleSize: number;
+    maxOdds: number | null;
+    maxRequiredOdds: number | null;
+    maxOddsRatio: number | null;
+  };
+
+  const rules: Rule[] = [
+    { id: "base-te1.25-ms0", targetEv: 1.25, minSampleSize: 0, maxOdds: null, maxRequiredOdds: null, maxOddsRatio: null },
+    { id: "te1.25-ms0-odds<50", targetEv: 1.25, minSampleSize: 0, maxOdds: 50, maxRequiredOdds: null, maxOddsRatio: null },
+    { id: "te1.25-ms0-odds<50-req<50", targetEv: 1.25, minSampleSize: 0, maxOdds: 50, maxRequiredOdds: 50, maxOddsRatio: null },
+    { id: "te1.25-ms600-odds<50-req<50", targetEv: 1.25, minSampleSize: 600, maxOdds: 50, maxRequiredOdds: 50, maxOddsRatio: null },
+    { id: "te1.25-ms1200-odds<50-req<50", targetEv: 1.25, minSampleSize: 1200, maxOdds: 50, maxRequiredOdds: 50, maxOddsRatio: null },
+    { id: "te1.25-ms1200-odds<50-req<50-ratio<=2", targetEv: 1.25, minSampleSize: 1200, maxOdds: 50, maxRequiredOdds: 50, maxOddsRatio: 2.0 },
+    { id: "te1.35-ms1200-odds<50-req<50-ratio<=2", targetEv: 1.35, minSampleSize: 1200, maxOdds: 50, maxRequiredOdds: 50, maxOddsRatio: 2.0 },
+    { id: "te1.5-ms1200-odds<50-req<50-ratio<=2", targetEv: 1.5, minSampleSize: 1200, maxOdds: 50, maxRequiredOdds: 50, maxOddsRatio: 2.0 },
+  ];
+
+  const stmt = db.prepare(`
+WITH base AS (
+  SELECT
+    estimated_hit_rate AS est,
+    ev AS ev,
+    sample_size AS sample_size,
+    recommended_stake_yen AS stake,
+    current_odds AS odds,
+    required_odds AS req_odds,
+    (result = selection) AS hit
+  FROM decision_history
+  WHERE returned = 0
+    AND date >= ? AND date <= ?
+    AND ev IS NOT NULL
+    AND recommended_stake_yen > 0
+    AND current_odds IS NOT NULL
+    AND required_odds IS NOT NULL
+),
+picked AS (
+  SELECT *
+  FROM base
+  WHERE ev >= ?
+    AND sample_size >= ?
+    AND (? IS NULL OR odds < ?)
+    AND (? IS NULL OR req_odds < ?)
+    AND (? IS NULL OR odds <= req_odds * ?)
+)
+SELECT
+  COUNT(*) AS n,
+  SUM(hit) AS hits,
+  ROUND(1.0 * SUM(hit) / COUNT(*), 4) AS hit_rate,
+  ROUND(1.0 * SUM(CASE WHEN hit THEN odds * stake ELSE 0 END) / NULLIF(SUM(stake), 0), 3) AS roi,
+  ROUND(AVG(est), 4) AS avg_est,
+  ROUND((1.0 * SUM(hit) / COUNT(*)) / NULLIF(AVG(est), 0), 3) AS calibration,
+  ROUND(AVG(ev), 3) AS avg_ev,
+  ROUND(AVG(odds), 1) AS avg_odds,
+  ROUND(AVG(req_odds), 1) AS avg_req_odds,
+  ROUND(AVG(sample_size), 1) AS avg_sample
+FROM picked
+`);
+
+  const rows = rules.map((r) => {
+    const row = stmt.get(
+      range.from,
+      range.to,
+      r.targetEv,
+      r.minSampleSize,
+      r.maxOdds,
+      r.maxOdds,
+      r.maxRequiredOdds,
+      r.maxRequiredOdds,
+      r.maxOddsRatio,
+      r.maxOddsRatio,
+    ) as Record<string, unknown>;
+    return { rule: r, metrics: row };
+  });
+
+  return { range, baseNote: "decision_history上での簡易シミュレーション（実運用の締切/通知/予算/投票可否等は無視）", rows };
+}
+
 function monthlyRegimeCheck(input: {
   db: DatabaseSync;
   range: DateRange;
   trainDays: number;
-  targetEvs: number[];
   configs: Array<{ id: string; minSampleSize: number; alpha: number }>;
 }) {
   const trainFrom = addDays(input.range.from, -input.trainDays);
@@ -458,7 +589,7 @@ function monthlyRegimeCheck(input: {
   const resultByRaceId = new Map(results.map((r) => [r.raceId, r]));
   const months = monthsInRange(input.range.from, input.range.to);
 
-  const rows = input.targetEvs.flatMap((targetEv) => input.configs.map((cfg) => {
+  const rows = input.configs.map((cfg) => {
     const perMonth = months.map((ym) => {
       const monthFrom = `${ym}-01`;
       const monthTo = addDays(addMonths(monthFrom, 1), -1);
@@ -477,7 +608,7 @@ function monthlyRegimeCheck(input: {
       let avgEstSum = 0;
 
       for (const p of monthPrograms) {
-        const candidates = buildCandidatesFromModel([p], model, targetEv, `${p.date}T00:00:00${JST}`, new Map());
+        const candidates = buildCandidatesFromModel([p], model, 1.25, `${p.date}T00:00:00${JST}`, new Map());
         const c = candidates[0];
         if (!c) continue;
         modeled += 1;
@@ -493,8 +624,8 @@ function monthlyRegimeCheck(input: {
       const calibration = avgEst ? hitRate / avgEst : 0;
       return { ym, programs: monthPrograms.length, modeled, hits, hitRate, avgEst, calibration };
     });
-    return { config: { ...cfg, targetEv }, perMonth };
-  }));
+    return { config: cfg, perMonth };
+  });
 
   return { range: input.range, trainFrom, programs: programs.length, results: results.length, rows };
 }
