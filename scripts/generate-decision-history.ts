@@ -216,6 +216,6 @@ function printHelp() {
 
 例:
   npm run generate:history -- --dry-run --from 2026-05-01 --to 2026-05-21 --limit 100 --include-required-odds-candidates
-  npm run generate:history -- --from 2026-05-01 --to 2026-05-21 --limit 100 --refresh-existing --refresh-only --include-skips
+  npm run generate:history -- --from 2025-05-01 --to 2025-05-21 --limit 100 --refresh-existing --refresh-only --include-skips
 `);
 }

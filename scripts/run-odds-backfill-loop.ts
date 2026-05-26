@@ -3,6 +3,8 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { openDb } from "../server/db";
 
+const LIVE_GUARD_FROM = "2026-01-01";
+
 type Args = {
   help: boolean;
   from: string | null;
@@ -33,6 +35,9 @@ if (args.help) {
 }
 if (!args.from || !args.to) {
   throw new Error("安全のため --from YYYY-MM-DD と --to YYYY-MM-DD は必須です。月単位など短い範囲で実行してください。");
+}
+if (args.to >= LIVE_GUARD_FROM) {
+  throw new Error(`${LIVE_GUARD_FROM}以降は2026 live監視期間です。run-odds-backfill-loop は generate:history refresh を伴うため実行しないでください。`);
 }
 if (args.batchSize <= 0 || args.batchSize > 50) throw new Error("--batch-size は 1〜50 にしてください。");
 if (args.maxBatches <= 0 || args.maxBatches > 20) throw new Error("--max-batches は 1〜20 にしてください。");

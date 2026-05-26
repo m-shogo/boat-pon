@@ -204,11 +204,12 @@ npm run generate:history -- --from 2026-05-01 --to 2026-05-21 --limit 100 --allo
 ```bash
 npm run generate:history -- --dry-run --from 2026-05-01 --to 2026-05-21 --limit 100
 npm run generate:history -- --dry-run --from 2026-05-01 --to 2026-05-21 --limit 100 --include-required-odds-candidates
-npm run generate:history -- --from 2026-05-01 --to 2026-05-21 --limit 100
-npm run generate:history -- --from 2026-05-01 --to 2026-05-21 --limit 100 --refresh-existing --include-skips
+npm run generate:history -- --from 2025-05-01 --to 2025-05-21 --limit 100
+npm run generate:history -- --from 2025-05-01 --to 2025-05-21 --limit 100 --refresh-existing --include-skips
 ```
 
 - `--from`, `--to`, `--limit` は必須。
+- 書き込み実行は2025年以前だけにする。2026年以降は dry-run 以外で対象にしない。
 - 学習期間はデフォルトで対象開始日の180日前から。変える場合は `--train-days 365` のように指定する。
 - デフォルトでは BUY/WATCH のみ保存し、SKIPは保存しない。
 - `--include-skips` を付けた時だけSKIPも保存する。

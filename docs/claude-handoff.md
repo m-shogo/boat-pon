@@ -74,9 +74,11 @@ npm run generate:history -- --from 2025-01-01 --to 2025-01-31 --limit 50000 --re
 ### 2. 判定履歴を増やす
 
 ```bash
-npm run generate:history -- --dry-run --from 2026-05-01 --to 2026-05-24 --limit 500
-npm run generate:history -- --from 2026-05-01 --to 2026-05-24 --limit 500
+npm run generate:history -- --dry-run --from 2025-05-01 --to 2025-05-24 --limit 500
+npm run generate:history -- --from 2025-05-01 --to 2025-05-24 --limit 500
 ```
+
+2026-01-01以降は live監視期間のため、`generate:history` の書き込み対象にしない。
 
 ### 3. 確認
 
