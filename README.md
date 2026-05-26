@@ -21,6 +21,12 @@ push前の標準確認:
 npm run verify
 ```
 
+DB診断とlive監視、secret scanまで含める場合:
+
+```sh
+npm run verify:full
+```
+
 ## データ取り込み
 
 ```sh
@@ -80,8 +86,19 @@ npx tsx scripts/fetch-official-odds.ts YYYY-MM-DD 蒲郡 8
 ## 運用メモ
 
 - モデル改善の順序と採用基準: [docs/model-roadmap.md](docs/model-roadmap.md)
+- v4保守モデル検証: [docs/v4-conservative-validation-2026-05-26.md](docs/v4-conservative-validation-2026-05-26.md)
+- Claude Code 次作業指示: [docs/claude-next-work-order.md](docs/claude-next-work-order.md)
 - live設定変更前の安全ゲート: [docs/settings-change-gate.md](docs/settings-change-gate.md)
 - 失敗・学びの蓄積: [docs/lessons-learned.md](docs/lessons-learned.md)
+
+読み取り専用のv4保守モデル診断:
+
+```sh
+npm run db:health
+npm run evaluate:v4 -- --from 2025-01-01 --to 2025-01-31 --limit 500
+```
+
+`evaluate:v4` は `data/boat.sqlite` を読み取るだけで、`decision_history` へ書き込みません。検証ROIは判定時点の `current_odds` 基準です。
 
 ## API一覧
 
