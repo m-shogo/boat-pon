@@ -6,15 +6,17 @@ const DB_PATH = "data/boat.sqlite";
 const AUTO_ODDS_PLIST = "/Users/m-shogo/Library/LaunchAgents/com.boatpon.auto-odds.plist";
 const DAILY_PROGRAMS_PLIST = "/Users/m-shogo/Library/LaunchAgents/com.boatpon.daily-programs.plist";
 const DAILY_PROGRESS_PLIST = "/Users/m-shogo/Library/LaunchAgents/com.boatpon.daily-progress.plist";
-const LOG_PATHS = [
-  "data/logs/daily-programs.log",
-  "data/logs/daily-programs-err.log",
-  "data/logs/auto-odds.log",
-  "data/logs/auto-odds-err.log",
-  "data/logs/progress.log",
-  "data/logs/progress-err.log",
+const KNOWN_POLLUTED_SKIP_DATE = "2026-05-26";
+const LOG_PATHS: Array<{ path: string; job: "daily-programs" | "auto-odds" | "daily-progress" }> = [
+  { path: "data/logs/daily-programs.log", job: "daily-programs" },
+  { path: "data/logs/daily-programs-err.log", job: "daily-programs" },
+  { path: "data/logs/auto-odds.log", job: "auto-odds" },
+  { path: "data/logs/auto-odds-err.log", job: "auto-odds" },
+  { path: "data/logs/progress.log", job: "daily-progress" },
+  { path: "data/logs/progress-err.log", job: "daily-progress" },
 ];
 
+const now = new Date();
 const today = todayJst();
 const yesterday = addDaysJst(today, -1);
 const db = new DatabaseSync(DB_PATH, { readOnly: true });
@@ -51,17 +53,29 @@ GROUP BY 1
 ORDER BY 1
 `).all(yesterday) as Array<{ date: string; n: number }>;
 
+  const pollutedSkips = db.prepare(`
+SELECT COUNT(*) AS n, SUM(CASE WHEN current_odds IS NOT NULL THEN 1 ELSE 0 END) AS odds_present
+FROM decision_history
+WHERE date = ? AND model_version = ? AND decision = 'SKIP'
+`).get(KNOWN_POLLUTED_SKIP_DATE, LIVE_MONITOR_MODEL_VERSION) as { n: number; odds_present: number };
+
   return {
     today,
     programs,
     decisions,
     odds,
+    nextChecks: [
+      nextDailyCheck("daily-programs", 8, 0),
+      nextAutoOddsCheck(),
+      nextDailyCheck("daily-progress", 21, 5),
+    ],
+    pollutedSkips,
     launchAgents: [
       inspectAutoOddsPlist(),
       inspectSingleTimePlist("daily-programs", DAILY_PROGRAMS_PLIST, 8, 0),
       inspectSingleTimePlist("daily-progress", DAILY_PROGRESS_PLIST, 21, 5),
     ],
-    logs: LOG_PATHS.map(inspectLog),
+    logs: LOG_PATHS.map((log) => inspectLog(log.path, log.job)),
   };
 }
 
@@ -76,6 +90,19 @@ function printReport(report: ReturnType<typeof buildReport>) {
   printRows("odds snapshots", report.odds.map((row) => `${row.date}: ${row.n}`));
   console.log("");
 
+  console.log("Next checks:");
+  for (const check of report.nextChecks) {
+    console.log(`  ${check.name}\t${check.message}`);
+  }
+  console.log("");
+
+  console.log("Known exclusions:");
+  console.log(
+    `  ${KNOWN_POLLUTED_SKIP_DATE} SKIP: n=${report.pollutedSkips.n} odds=${report.pollutedSkips.odds_present} ` +
+      "旧時刻ズレ期間の汚染SKIPとして監視対象。削除せず、採用判断nには入れない。",
+  );
+  console.log("");
+
   console.log("LaunchAgents:");
   for (const agent of report.launchAgents) {
     const mark = agent.ok ? "ok" : "warn";
@@ -88,6 +115,24 @@ function printReport(report: ReturnType<typeof buildReport>) {
     const mark = log.exists ? "ok" : "missing";
     console.log(`  ${mark}\t${log.path}\t${log.detail}`);
   }
+}
+
+function nextDailyCheck(name: string, hour: number, minute: number) {
+  const target = nextJstDate(hour, minute);
+  return {
+    name,
+    message: `next ${target} JST`,
+  };
+}
+
+function nextAutoOddsCheck() {
+  const current = nowJstParts();
+  const minuteSlot = Math.ceil(current.minute / 15) * 15;
+  const candidateHour = minuteSlot === 60 ? current.hour + 1 : current.hour;
+  const candidateMinute = minuteSlot === 60 ? 0 : minuteSlot;
+  const inWindow = candidateHour >= 9 && candidateHour <= 21;
+  const target = inWindow ? nextJstDate(candidateHour, candidateMinute) : nextJstDate(9, 0);
+  return { name: "auto-odds", message: `next ${target} JST, then every 15 minutes through 21:45` };
 }
 
 function inspectAutoOddsPlist() {
@@ -120,8 +165,10 @@ function inspectSingleTimePlist(name: string, path: string, expectedHour: number
   };
 }
 
-function inspectLog(path: string) {
-  if (!existsSync(path)) return { path, exists: false, detail: "not created yet" };
+function inspectLog(path: string, job: "daily-programs" | "auto-odds" | "daily-progress") {
+  if (!existsSync(path)) {
+    return { path, exists: false, detail: `not created yet; launchd will create it after ${job} runs` };
+  }
   const stat = statSync(path);
   const lines = readFileSync(path, "utf8").trimEnd().split("\n").filter(Boolean);
   return {
@@ -148,9 +195,27 @@ function todayJst() {
   return new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
 }
 
+function nowJstParts() {
+  const iso = new Date(now.getTime() + 9 * 3600_000).toISOString();
+  return {
+    date: iso.slice(0, 10),
+    hour: Number(iso.slice(11, 13)),
+    minute: Number(iso.slice(14, 16)),
+  };
+}
+
+function nextJstDate(hour: number, minute: number) {
+  const current = nowJstParts();
+  let date = current.date;
+  if (current.hour > hour || (current.hour === hour && current.minute >= minute)) {
+    date = addDaysJst(date, 1);
+  }
+  return `${date} ${pad(hour)}:${pad(minute)}`;
+}
+
 function addDaysJst(date: string, days: number) {
-  const d = new Date(`${date}T00:00:00+09:00`);
-  d.setDate(d.getDate() + days);
+  const [year, month, day] = date.split("-").map(Number);
+  const d = new Date(Date.UTC(year, month - 1, day + days));
   return d.toISOString().slice(0, 10);
 }
 

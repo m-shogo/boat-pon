@@ -5,6 +5,9 @@ export function parseTrifectaOdds(html: string, selection: number[]): number | n
   const key = selection.join("-");
   const $ = cheerio.load(html);
 
+  const groupedOfficialMatch = matchOfficialGroupedTable($, selection);
+  if (groupedOfficialMatch != null) return groupedOfficialMatch;
+
   const officialMatch = matchOfficialTable($, selection);
   if (officialMatch != null) return officialMatch;
 
@@ -29,6 +32,85 @@ export function parseTrifectaOdds(html: string, selection: number[]): number | n
   }
 
   return null;
+}
+
+type GridCell = {
+  text: string;
+};
+
+function matchOfficialGroupedTable($: cheerio.CheerioAPI, selection: number[]): number | null {
+  const [first, second, third] = selection;
+  for (const table of $("table").toArray()) {
+    const $table = $(table);
+    if ($table.find(".oddsPoint").length === 0) continue;
+
+    const headerGrid = buildTableGrid($, $table.find("thead tr").toArray());
+    const bodyGrid = buildTableGrid($, $table.find("tbody tr").toArray());
+    if (headerGrid.length === 0 || bodyGrid.length === 0) continue;
+
+    const firstPlaceColumns: Array<{ firstPlace: number; column: number }> = [];
+    for (const row of headerGrid) {
+      for (let column = 0; column < row.length; column += 1) {
+        const value = Number(row[column]?.text.trim());
+        if (Number.isInteger(value) && value >= 1 && value <= 6) {
+          firstPlaceColumns.push({ firstPlace: value, column });
+        }
+      }
+    }
+
+    for (const group of firstPlaceColumns) {
+      if (group.firstPlace !== first) continue;
+      for (const row of bodyGrid) {
+        const secondCell = row[group.column];
+        const thirdCell = row[group.column + 1];
+        const oddsCell = row[group.column + 2];
+        if (!secondCell || !thirdCell || !oddsCell) continue;
+        if (Number(secondCell.text.trim()) !== second) continue;
+        if (Number(thirdCell.text.trim()) !== third) continue;
+        const value = parseOddsText(oddsCell.text);
+        if (value != null) return value;
+      }
+    }
+  }
+  return null;
+}
+
+function buildTableGrid($: cheerio.CheerioAPI, rows: Array<Parameters<cheerio.CheerioAPI>[0]>): GridCell[][] {
+  const grid: GridCell[][] = [];
+  const rowSpans = new Map<number, { cell: GridCell; remaining: number }>();
+
+  rows.forEach((tr, rowIndex) => {
+    const row: GridCell[] = [];
+    for (const [column, span] of [...rowSpans.entries()].sort(([a], [b]) => a - b)) {
+      row[column] = span.cell;
+      span.remaining -= 1;
+      if (span.remaining <= 0) {
+        rowSpans.delete(column);
+      }
+    }
+
+    let column = 0;
+    for (const el of $(tr).find("th, td").toArray()) {
+      while (row[column]) column += 1;
+      const cell = { text: $(el).text().replace(/[\s　]+/g, " ").trim() };
+      const colspan = Number($(el).attr("colspan") ?? 1);
+      const rowspan = Number($(el).attr("rowspan") ?? 1);
+      const width = Number.isFinite(colspan) && colspan > 0 ? colspan : 1;
+      const height = Number.isFinite(rowspan) && rowspan > 0 ? rowspan : 1;
+
+      for (let offset = 0; offset < width; offset += 1) {
+        row[column + offset] = cell;
+        if (height > 1) {
+          rowSpans.set(column + offset, { cell, remaining: height - 1 });
+        }
+      }
+      column += width;
+    }
+
+    grid[rowIndex] = row;
+  });
+
+  return grid;
 }
 
 function matchOfficialTable($: cheerio.CheerioAPI, selection: number[]): number | null {

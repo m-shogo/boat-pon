@@ -62,6 +62,32 @@ test("公式HTML風の分割列から3連単オッズを抽出する", () => {
   assert.equal(parseTrifectaOdds(html, [1, 4, 3]), 21.5);
 });
 
+test("公式3連単の1着グループ表からrowspanを展開して抽出する", () => {
+  const html = `
+    <table>
+      <thead>
+        <tr>
+          <th class="is-boatColor1">1</th><th colspan="2">選手1</th>
+          <th class="is-boatColor2">2</th><th colspan="2">選手2</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td rowspan="2">2</td><td>3</td><td class="oddsPoint">24.8</td>
+          <td rowspan="2">1</td><td>3</td><td class="oddsPoint">87.2</td>
+        </tr>
+        <tr>
+          <td>4</td><td class="oddsPoint">52.8</td>
+          <td>4</td><td class="oddsPoint">149.7</td>
+        </tr>
+      </tbody>
+    </table>
+  `;
+  assert.equal(parseTrifectaOdds(html, [1, 2, 3]), 24.8);
+  assert.equal(parseTrifectaOdds(html, [1, 2, 4]), 52.8);
+  assert.equal(parseTrifectaOdds(html, [2, 1, 3]), 87.2);
+});
+
 test("矢印や全角ハイフンの買い目表記も抽出する", () => {
   const html = `<div>1→3→4 16.2  2－1－3 42.5倍</div>`;
   assert.equal(parseTrifectaOdds(html, [1, 3, 4]), 16.2);
