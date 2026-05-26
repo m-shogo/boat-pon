@@ -1,6 +1,6 @@
 # 期待値モデル改善ロードマップ
 
-最終更新: 2026-05-26 (セッション12)
+最終更新: 2026-05-26 (セッション12 完)
 
 Boat Pon は自動購入アプリではない。目的は、ほとんどの日を見送り、数字的に割に合う可能性がある時だけ公式確認へ進むこと。
 
@@ -84,8 +84,11 @@ Boat Pon は自動購入アプリではない。目的は、ほとんどの日�
   - ✅ A2をallowedClassNamesから除外済み（外部検証 ROI=0.63で閾値0.70未満）
   - ✅ Calibration API/UI追加（/api/backtest/calibration）: req帯×クラス別 calib_ratio 表示
   - ✅ daily-brushupにbuyModelVersionDrift・decisionRuleGrid追加
-  - 残: calibration 30-50倍帯の 2.1x 過大推定（cherry-picking バイアス）
-  - B1外部検証結果: 真のROI≒0.74（Codex推定0.73と一致）、ライブ継続は最小額/paper扱い
+  - ✅ calibration バイアス探索完了（セッション12）: パラメータ調整では改善不可と確認
+    - alpha増加・ratio絞り込み・marketBlendWeight いずれも外部ROI悪化
+    - 原因: cherry-picking バイアス＋逆選択は構造的問題でパラメータ非依存
+    - 現モデル到達点: 外部ROI=0.939（ランダム0.74より改善、breakeven未満）
+  - B1外部検証結果: 真のROI≒0.94（ランダムより改善、edge候補だが未確定）、ライブ継続は最小額/paper扱い
   - 注意: programFilter 等の設定変更評価は --refresh-existing ではなく DELETE + 再生成で行う
   - **セッション4発見: B1+25-30帯フィルターが両年ROI>1.17（全件1-2-3・B1の1号艇・市場がB1を過小評価）**
   - **セッション4発見: 難水面5会場（戸田・多摩川・桐生・三国・江戸川）が系統的にROI<0.5**
