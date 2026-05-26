@@ -16,6 +16,7 @@ import {
   updatePurchaseRecord,
   updateSettings,
   type CalibrationCompareResponse,
+  type CalibrationReturnedStats,
   type CalibrationRow,
   type DashboardResponse,
   type ModelComparisonRow,
@@ -1014,6 +1015,11 @@ function CalibrationPanel({ date }: { date: string | null }) {
     }
   }
 
+  const extSummary = compareResult?.external?.summary ?? null;
+  const extFrom = compareResult?.external?.from ?? "2020-01-01";
+  const extTo = compareResult?.external?.to ?? "2023-12-31";
+  const returnedStats: CalibrationReturnedStats | null = compareResult?.insampleReturnedStats ?? null;
+
   return (
     <div className="walkForwardPanel">
       <div className="sectionHead">
@@ -1024,8 +1030,14 @@ function CalibrationPanel({ date }: { date: string | null }) {
       </div>
 
       <div style={{ background: "rgba(255,180,0,0.12)", border: "1px solid rgba(255,180,0,0.5)", borderRadius: 6, padding: "8px 12px", marginBottom: 12, fontSize: "0.85em", lineHeight: 1.6 }}>
-        ⚠ <strong>採用判断ではなく校正確認用のパネルです。</strong><br />
-        外部検証（2020-2023）の実測ROI = <strong>0.739</strong>（ランダムベット水準 ≈ 0.75）。<br />
+        ⚠ <strong>採用判断ではなく校正確認用のパネルです。</strong> B1(ratio&lt;1.5) はedge未確認・ライブ蓄積継続中。<br />
+        {extSummary ? (
+          <>
+            外部検証 ROI: <strong>{extSummary.roi.toFixed(3)}</strong>（{extFrom}〜{extTo} / n={extSummary.n}、{extSummary.hits}的中）—ランダムベット水準（≈0.75）。
+          </>
+        ) : (
+          <>「外部/in-sample 比較」を実行すると外部ROIが表示されます。</>
+        )}<br />
         calibration比が高くても外部ROIが改善しない限り採用根拠にはなりません。
       </div>
 
@@ -1061,26 +1073,34 @@ function CalibrationPanel({ date }: { date: string | null }) {
       )}
 
       {compareResult && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 12 }}>
-          <div>
-            <h4 style={{ fontSize: "0.9em", marginBottom: 4 }}>
-              外部検証: {compareResult.external.from} ～ {compareResult.external.to}
-              {compareResult.external.summary && (
-                <span style={{ marginLeft: 8, color: compareResult.external.summary.roi >= 1.0 ? "var(--green)" : "var(--red)", fontWeight: "bold" }}>
-                  ROI={compareResult.external.summary.roi.toFixed(3)} (n={compareResult.external.summary.n}, {compareResult.external.summary.hits}的中)
-                </span>
-              )}
-            </h4>
-            <CalibrationTable rows={compareResult.external.rows} />
+        <>
+          {returnedStats !== null && (
+            <div style={{ fontSize: "0.82em", color: "#888", marginBottom: 8, padding: "4px 0" }}>
+              In-sample BUY 返還: {returnedStats.returned ?? 0} / {returnedStats.total} 件
+              （{returnedStats.pct != null ? returnedStats.pct.toFixed(2) : "0.00"}%）— 抑制ロジックなし・監視のみ
+            </div>
+          )}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 4 }}>
+            <div>
+              <h4 style={{ fontSize: "0.9em", marginBottom: 4 }}>
+                外部検証: {compareResult.external.from} ～ {compareResult.external.to}
+                {compareResult.external.summary && (
+                  <span style={{ marginLeft: 8, color: compareResult.external.summary.roi >= 1.0 ? "var(--green)" : "var(--red)", fontWeight: "bold" }}>
+                    ROI={compareResult.external.summary.roi.toFixed(3)} (n={compareResult.external.summary.n}, {compareResult.external.summary.hits}的中)
+                  </span>
+                )}
+              </h4>
+              <CalibrationTable rows={compareResult.external.rows} />
+            </div>
+            <div>
+              <h4 style={{ fontSize: "0.9em", marginBottom: 4 }}>
+                In-sample: {compareResult.insample.from} ～ 現在
+                <span style={{ marginLeft: 8, fontSize: "0.8em", color: "#888" }}>（学習期間内・過学習注意）</span>
+              </h4>
+              <CalibrationTable rows={compareResult.insample.rows} />
+            </div>
           </div>
-          <div>
-            <h4 style={{ fontSize: "0.9em", marginBottom: 4 }}>
-              In-sample: {compareResult.insample.from} ～ 現在
-              <span style={{ marginLeft: 8, fontSize: "0.8em", color: "#888" }}>（学習期間内・過学習注意）</span>
-            </h4>
-            <CalibrationTable rows={compareResult.insample.rows} />
-          </div>
-        </div>
+        </>
       )}
     </div>
   );

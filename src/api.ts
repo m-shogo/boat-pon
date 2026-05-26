@@ -214,11 +214,18 @@ export type CalibrationExternalSummary = {
   hits: number;
 };
 
+export type CalibrationReturnedStats = {
+  total: number;
+  returned: number;
+  pct: number;
+};
+
 export type CalibrationCompareResponse = {
   mode: "compare";
   b1filter: boolean;
   external: { from: string; to: string; rows: CalibrationRow[]; summary: CalibrationExternalSummary | null };
   insample: { from: string; to: string; rows: CalibrationRow[] };
+  insampleReturnedStats: CalibrationReturnedStats;
 };
 
 export type CalibrationCustomResponse = {

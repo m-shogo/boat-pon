@@ -491,11 +491,26 @@ app.get("/api/backtest/calibration", (req, res) => {
           `).get("2020-01-01", "2024-01-01") as Record<string, unknown>
         : null;
 
+      // in-sample の返還BUY件数（監視用）
+      const insampleReturnedStats = db.prepare(`
+        SELECT
+          COUNT(*) AS total,
+          SUM(returned) AS returned_count,
+          ROUND(100.0 * SUM(returned) / COUNT(*), 2) AS pct
+        FROM decision_history
+        WHERE decision = 'BUY' AND date >= ?
+      `).get(INSAMPLE_FROM) as Record<string, unknown>;
+
       res.json({
         mode: "compare",
         b1filter,
         external: { from: EXTERNAL_FROM, to: EXTERNAL_TO, rows: externalRows, summary: externalSummary },
         insample: { from: INSAMPLE_FROM, to: "現在", rows: insampleRows },
+        insampleReturnedStats: {
+          total: insampleReturnedStats.total as number,
+          returned: insampleReturnedStats.returned_count as number,
+          pct: insampleReturnedStats.pct as number,
+        },
       });
     } else {
       const from = typeof req.query.from === "string" ? req.query.from : INSAMPLE_FROM;
