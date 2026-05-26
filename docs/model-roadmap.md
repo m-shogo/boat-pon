@@ -128,13 +128,44 @@ Boat Pon は自動購入アプリではない。目的は、ほとんどの日�
 - ROIは `payout_yen` ではなく `current_odds` ベースで確認する。
 - `generate:history` 後は同一 `race_id` 重複と旧モデルBUYの残りを確認する。
 
+## 2026 ライブ監視フレーム（固定しきい値）
+
+2026-01-01以降の `model_version=boatpon-v3-alpha15` BUYを「完全未使用データ」として外部検証と分離して蓄積する。
+
+### 現在の状態（2026-05-26）
+
+- 2026年 v3-alpha15 BUY: **n=0**（まだ蓄積なし）
+- ライブ蓄積ペース目安: 月24件（2024-2025実績から）
+- 監視UI: Backtest > 2026ライブ監視パネル（`/api/live/b1-monitor`）
+
+### 採用・撤退しきい値（変更不可）
+
+| n | 判定 | ROI条件 |
+|---|------|---------|
+| < 300 | データ不足・判定不可 | — |
+| 300〜600 | 継続保留 | ROI < 0.75 → 撤退候補 |
+| 600〜1000 | 条件付き採用判定 | ROI > 1.2 + 月別・ratio帯別に一発依存でない |
+| 1000〜 | 採用確定に近い | 最大払戻除外ROI > 1.0 |
+
+- 外部検証(2020-2023) ROI ≈ 0.74（ランダムベット水準）= **edge未確認**
+- このしきい値は根拠: 3連単の標準偏差は1ベットあたり6〜8 ROI単位。n=600未満では判定不能。
+- A2は BUY除外確定（外部検証 ROI=0.63）。しきい値を満たしても復活させない。
+- app_settings は変更しない。条件変更はしきい値達成後に別途検討。
+
+### 注意: generate:history を 2026年対象で実行しない
+
+generate:historyで2026年の decision_history を生成すると監視データが汚染される。  
+2026年の generate:history 実行は明示承認なしに行わない。
+
 ## 見るべき画面
 
 1. Backtest > モデル比較
-2. Dashboard > モデル監視
-3. Dashboard > 番組カテゴリ別ROI
-4. Dashboard > 会場別ROIヒートマップ
-5. Backtest > 時系列検証
+2. Backtest > 2026ライブ監視
+3. Backtest > Calibration分析（外部/in-sample比較）
+4. Dashboard > モデル監視
+5. Dashboard > 番組カテゴリ別ROI
+6. Dashboard > 会場別ROIヒートマップ
+7. Backtest > 時系列検証
 
 ## 判定履歴の増やし方
 

@@ -524,6 +524,89 @@ app.get("/api/backtest/calibration", (req, res) => {
   }
 });
 
+// 2026 live B1 監視（model_version=v3-alpha15 + date>=2026-01-01、app_settingsがB1フィルターを保証）
+const LIVE_FROM = "2026-01-01";
+const LIVE_MODEL = "boatpon-v3-alpha15";
+
+app.get("/api/live/b1-monitor", (_req, res) => {
+  const db = openDb();
+  try {
+    // 全体サマリー
+    const summary = db.prepare(`
+      SELECT
+        COUNT(*) AS n,
+        SUM(CASE WHEN selection = result THEN 1 ELSE 0 END) AS hits,
+        SUM(returned) AS returned_n,
+        ROUND(SUM(CASE WHEN selection = result AND returned = 0 THEN current_odds ELSE 0 END) * 1.0 /
+          NULLIF(SUM(CASE WHEN returned = 0 THEN 1 ELSE 0 END), 0), 3) AS roi,
+        MAX(CASE WHEN selection = result AND returned = 0 THEN current_odds ELSE 0 END) AS max_hit_odds
+      FROM decision_history
+      WHERE decision = 'BUY'
+        AND date >= ?
+        AND model_version = ?
+    `).get(LIVE_FROM, LIVE_MODEL) as Record<string, unknown>;
+
+    const n = (summary.n as number) ?? 0;
+    const hits = (summary.hits as number) ?? 0;
+    const returnedN = (summary.returned_n as number) ?? 0;
+    const roi = (summary.roi as number) ?? null;
+    const maxHitOdds = (summary.max_hit_odds as number) ?? 0;
+
+    // 最大払戻除外ROI
+    const effectiveN = n - returnedN;
+    const roiExMax = (roi !== null && effectiveN > 0 && maxHitOdds > 0)
+      ? Math.round((roi - maxHitOdds / effectiveN) * 1000) / 1000
+      : null;
+
+    // マイルストーン判定
+    type MilestoneStatus = "insufficient" | "watch" | "conditional" | "near-confirmed";
+    let milestoneStatus: MilestoneStatus;
+    let milestoneNote: string;
+    if (n < 300) {
+      milestoneStatus = "insufficient";
+      milestoneNote = `n=${n} — データ蓄積中（目安: 300件で一次判定）`;
+    } else if (n < 600) {
+      milestoneStatus = "watch";
+      milestoneNote = `n=${n} — 継続保留ゾーン（300〜600件）。ROI<0.75なら撤退候補`;
+    } else if (n < 1000) {
+      milestoneStatus = "conditional";
+      milestoneNote = `n=${n} — 条件付き採用判定可。ROI>1.2かつ月別・ratio帯別に一発依存でないこと`;
+    } else {
+      milestoneStatus = "near-confirmed";
+      milestoneNote = `n=${n} — 採用確定に近い。最大払戻除外ROI>1.0が条件`;
+    }
+
+    // 月別内訳
+    const monthly = db.prepare(`
+      SELECT
+        substr(date, 1, 7) AS ym,
+        COUNT(*) AS n,
+        SUM(CASE WHEN selection = result THEN 1 ELSE 0 END) AS hits,
+        SUM(returned) AS returned_n,
+        ROUND(SUM(CASE WHEN selection = result AND returned = 0 THEN current_odds ELSE 0 END) * 1.0 /
+          NULLIF(SUM(CASE WHEN returned = 0 THEN 1 ELSE 0 END), 0), 3) AS roi,
+        ROUND(AVG(current_odds), 1) AS avg_odds,
+        ROUND(AVG(current_odds / required_odds), 3) AS avg_ratio
+      FROM decision_history
+      WHERE decision = 'BUY'
+        AND date >= ?
+        AND model_version = ?
+      GROUP BY ym
+      ORDER BY ym
+    `).all(LIVE_FROM, LIVE_MODEL) as Array<Record<string, unknown>>;
+
+    res.json({
+      period: { from: LIVE_FROM, to: "現在", modelVersion: LIVE_MODEL },
+      summary: { n, hits, returnedN, roi, maxHitOdds, roiExMax },
+      milestoneStatus,
+      milestoneNote,
+      monthly,
+    });
+  } finally {
+    db.close();
+  }
+});
+
 app.put("/api/settings", (req, res) => {
   const db = openDb();
   try {

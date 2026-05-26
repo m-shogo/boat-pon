@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   compareModelsApi,
   fetchCalibrationApi,
+  fetchLiveB1Monitor,
   fetchOdds,
   fetchVapidPublicKey,
   getDashboard,
@@ -18,6 +19,7 @@ import {
   type CalibrationCompareResponse,
   type CalibrationReturnedStats,
   type CalibrationRow,
+  type LiveMonitorResponse,
   type DashboardResponse,
   type ModelComparisonRow,
   type OddsFetchResult,
@@ -666,6 +668,7 @@ function Backtest({ data, onSaved }: { data: DashboardResponse; onSaved: () => P
       <WalkForwardPanel date={data.date} />
       <ModelComparisonPanel date={data.date} />
       <CalibrationPanel date={data.date} />
+      <LiveMonitorPanel />
       <ExportButtons />
       <div className="metrics backtestMetrics">
         <Metric label="判定数" value={data.backtest.decisions.toString()} />
@@ -975,6 +978,107 @@ function CalibrationTable({ rows }: { rows: CalibrationRow[] }) {
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function LiveMonitorPanel() {
+  const [data, setData] = useState<LiveMonitorResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function load() {
+    setBusy(true);
+    setError(null);
+    try {
+      setData(await fetchLiveB1Monitor());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const milestoneColor: Record<LiveMonitorResponse["milestoneStatus"], string> = {
+    insufficient: "#888",
+    watch: "var(--yellow, #e6a817)",
+    conditional: "var(--green)",
+    "near-confirmed": "var(--green)",
+  };
+
+  return (
+    <div className="walkForwardPanel">
+      <div className="sectionHead">
+        <div>
+          <h3>2026 ライブ監視（B1 ratio&lt;1.5）</h3>
+          <p>
+            2026-01-01 以降の v3-alpha15 BUY実績。外部検証とは完全分離した未使用データ。<br />
+            採用判定は n=600 以上かつ ROI&gt;1.2 が最低条件。app_settings は変更しない。
+          </p>
+        </div>
+      </div>
+
+      <div style={{ background: "rgba(100,100,255,0.08)", border: "1px solid rgba(100,100,255,0.3)", borderRadius: 6, padding: "8px 12px", marginBottom: 12, fontSize: "0.85em", lineHeight: 1.7 }}>
+        <strong>採用・撤退しきい値（固定）:</strong><br />
+        n&lt;300: データ不足 / n=300〜600: 継続保留（ROI&lt;0.75なら撤退候補）<br />
+        n=600〜: ROI&gt;1.2 + 月別一発依存でない → 条件付き採用 / n=1000〜: 最大払戻除外ROI&gt;1.0 → 採用確定に近い<br />
+        <span style={{ color: "#888" }}>外部検証(2020-2023) ROI≈0.74 — edge未確認状態でライブ蓄積中</span>
+      </div>
+
+      <div className="walkForwardControls">
+        <button disabled={busy} onClick={load}>{busy ? "取得中..." : "集計する"}</button>
+      </div>
+
+      {error && <div className="formError">{error}</div>}
+
+      {data && (
+        <>
+          <div style={{ marginTop: 12, padding: "10px 14px", background: "rgba(0,0,0,0.15)", borderRadius: 6 }}>
+            <div style={{ marginBottom: 4, color: milestoneColor[data.milestoneStatus], fontWeight: "bold", fontSize: "0.9em" }}>
+              {data.milestoneNote}
+            </div>
+            <div style={{ display: "flex", gap: 24, flexWrap: "wrap", fontSize: "0.88em" }}>
+              <span>n: <strong>{data.summary.n}</strong></span>
+              <span>的中: <strong>{data.summary.hits}</strong></span>
+              <span>ROI: <strong>{data.summary.roi !== null ? data.summary.roi.toFixed(3) : "—"}</strong></span>
+              <span>最大払戻除外ROI: <strong>{data.summary.roiExMax !== null ? data.summary.roiExMax.toFixed(3) : "—"}</strong></span>
+              <span>最大払戻: <strong>{data.summary.maxHitOdds > 0 ? `${data.summary.maxHitOdds}x` : "—"}</strong></span>
+              <span>返還: <strong>{data.summary.returnedN}</strong>件</span>
+            </div>
+          </div>
+
+          {data.monthly.length > 0 ? (
+            <div className="tableWrap walkForwardRows" style={{ marginTop: 10 }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>月</th><th>n</th><th>的中</th><th>返還</th><th>ROI</th><th>avg_odds</th><th>avg_ratio</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.monthly.map((row) => (
+                    <tr key={row.ym}>
+                      <td>{row.ym}</td>
+                      <td>{row.n}</td>
+                      <td>{row.hits}</td>
+                      <td>{row.returned_n}</td>
+                      <td style={{ color: row.roi !== null && row.roi >= 1.0 ? "var(--green)" : row.roi !== null ? "var(--red)" : "inherit" }}>
+                        {row.roi !== null ? row.roi.toFixed(3) : "—"}
+                      </td>
+                      <td>{row.avg_odds.toFixed(1)}</td>
+                      <td>{row.avg_ratio.toFixed(3)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p style={{ color: "#888", fontSize: "0.85em", marginTop: 10 }}>
+              まだ2026年のライブBUYデータがありません（model_version=boatpon-v3-alpha15 の件数: 0）。
+            </p>
+          )}
+        </>
+      )}
     </div>
   );
 }

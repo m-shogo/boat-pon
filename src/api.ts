@@ -252,4 +252,35 @@ export async function fetchCalibrationApi(params: {
   return res.json();
 }
 
+export type LiveMonitorMonthly = {
+  ym: string;
+  n: number;
+  hits: number;
+  returned_n: number;
+  roi: number | null;
+  avg_odds: number;
+  avg_ratio: number;
+};
+
+export type LiveMonitorResponse = {
+  period: { from: string; to: string; modelVersion: string };
+  summary: {
+    n: number;
+    hits: number;
+    returnedN: number;
+    roi: number | null;
+    maxHitOdds: number;
+    roiExMax: number | null;
+  };
+  milestoneStatus: "insufficient" | "watch" | "conditional" | "near-confirmed";
+  milestoneNote: string;
+  monthly: LiveMonitorMonthly[];
+};
+
+export async function fetchLiveB1Monitor(): Promise<LiveMonitorResponse> {
+  const res = await fetch("/api/live/b1-monitor");
+  if (!res.ok) throw new Error(`live b1 monitor api failed: ${res.status}`);
+  return res.json();
+}
+
 export type { BacktestSummary, DecisionHistoryRow, ModelComparisonRow, MonthlySummary, SavingsSummary, VenueHeatmapSummary };
