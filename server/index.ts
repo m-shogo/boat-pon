@@ -347,6 +347,23 @@ app.get("/api/backtest/calibration", (req, res) => {
   try {
     const from = typeof req.query.from === "string" ? req.query.from : "2024-01-01";
     const to = typeof req.query.to === "string" ? req.query.to : "2099-12-31";
+    // cls=B1 などでクラス絞り込み可能。未指定なら全クラス
+    const clsFilter = typeof req.query.cls === "string" ? req.query.cls : null;
+    // b1filter=1 で現行B1フィルター条件（異クラス・5会場除外・winRate>=4・minReq25・ratio<1.5）を適用
+    const b1filter = req.query.b1filter === "1";
+
+    const extraWhere = b1filter
+      ? `AND json_extract(op.raw_json, '$.boats[0].className') = 'B1'
+         AND json_extract(op.raw_json, '$.boats[1].className') != 'B1'
+         AND CAST(json_extract(op.raw_json, '$.boats[0].nationalWinRate') AS REAL) >= 4.0
+         AND dh.venue NOT IN ('戸田','多摩川','桐生','三国','江戸川')
+         AND CAST(substr(dh.race_id, -2) AS INTEGER) NOT IN (11, 12)
+         AND dh.required_odds >= 25
+         AND dh.current_odds / dh.required_odds < 1.5`
+      : "";
+    const clsWhere = clsFilter ? "AND cls = ?" : "";
+    const params: unknown[] = clsFilter ? [from, to, clsFilter] : [from, to];
+
     const rows = db.prepare(`
 WITH base AS (
   SELECT
@@ -362,6 +379,7 @@ WITH base AS (
     AND dh.selection = '1-2-3'
     AND dh.estimated_hit_rate > 0
     AND dh.date >= ? AND dh.date <= ?
+    ${extraWhere}
 )
 SELECT
   CASE
@@ -378,12 +396,14 @@ SELECT
   ROUND(1.0 * SUM(hit) / COUNT(*) * 100, 2) AS actual_pct,
   ROUND((1.0 * SUM(hit) / COUNT(*)) / AVG(estimated_hit_rate), 3) AS calib_ratio,
   ROUND(AVG(current_odds), 1) AS avg_odds,
-  ROUND(AVG(required_odds), 1) AS avg_req
+  ROUND(AVG(required_odds), 1) AS avg_req,
+  ROUND(MAX(CASE WHEN hit THEN current_odds ELSE 0 END), 0) AS max_hit_odds
 FROM base
+${clsWhere ? `WHERE ${clsWhere.replace("AND ", "")}` : ""}
 GROUP BY req_band, cls
 ORDER BY MIN(required_odds), cls
-    `).all(from, to) as Array<Record<string, unknown>>;
-    res.json({ from, to, rows });
+    `).all(...params) as Array<Record<string, unknown>>;
+    res.json({ from, to, b1filter, rows });
   } finally {
     db.close();
   }

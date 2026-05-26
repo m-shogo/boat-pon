@@ -940,6 +940,7 @@ function CalibrationPanel({ date }: { date: string | null }) {
   const defaultFrom = "2024-01-01";
   const [from, setFrom] = useState(defaultFrom);
   const [to, setTo] = useState(date ?? "");
+  const [b1filter, setB1filter] = useState(false);
   const [rows, setRows] = useState<CalibrationRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -948,7 +949,7 @@ function CalibrationPanel({ date }: { date: string | null }) {
     setBusy(true);
     setError(null);
     try {
-      const result = await fetchCalibrationApi({ from: from || undefined, to: to || undefined });
+      const result = await fetchCalibrationApi({ from: from || undefined, to: to || undefined, b1filter });
       setRows(result.rows);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -975,6 +976,10 @@ function CalibrationPanel({ date }: { date: string | null }) {
       <div className="walkForwardControls">
         <label><span>開始</span><input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
         <label><span>終了</span><input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
+        <label>
+          <input type="checkbox" checked={b1filter} onChange={(e) => setB1filter(e.target.checked)} />
+          <span>B1フィルター内のみ</span>
+        </label>
         <button disabled={busy} onClick={run}>{busy ? "集計中..." : "集計する"}</button>
       </div>
       {error && <div className="formError">{error}</div>}
@@ -984,7 +989,7 @@ function CalibrationPanel({ date }: { date: string | null }) {
             <thead>
               <tr>
                 <th>req帯</th><th>クラス</th><th>n</th><th>的中</th>
-                <th>推定%</th><th>実測%</th><th>calib比</th><th>avg_odds</th>
+                <th>推定%</th><th>実測%</th><th>calib比</th><th>avg_odds</th><th>最大配当</th>
               </tr>
             </thead>
             <tbody>
@@ -1000,6 +1005,7 @@ function CalibrationPanel({ date }: { date: string | null }) {
                     {row.calib_ratio.toFixed(3)}
                   </td>
                   <td>{row.avg_odds.toFixed(1)}</td>
+                  <td>{row.max_hit_odds > 0 ? `${row.max_hit_odds}x` : "-"}</td>
                 </tr>
               ))}
             </tbody>

@@ -205,15 +205,18 @@ export type CalibrationRow = {
   calib_ratio: number;
   avg_odds: number;
   avg_req: number;
+  max_hit_odds: number;
 };
 
 export async function fetchCalibrationApi(params: {
   from?: string;
   to?: string;
-}): Promise<{ from: string; to: string; rows: CalibrationRow[] }> {
+  b1filter?: boolean;
+}): Promise<{ from: string; to: string; b1filter: boolean; rows: CalibrationRow[] }> {
   const qs = new URLSearchParams();
   if (params.from) qs.set("from", params.from);
   if (params.to) qs.set("to", params.to);
+  if (params.b1filter) qs.set("b1filter", "1");
   const res = await fetch("/api/backtest/calibration?" + qs.toString());
   if (!res.ok) throw new Error(`calibration api failed: ${res.status}`);
   return res.json();
