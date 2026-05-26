@@ -8,6 +8,8 @@ const LOG_PATHS = [
 ];
 
 process.stdout.write(execFileSync(process.execPath, ["--import", "tsx", "scripts/live-b1-monitor.ts"], { encoding: "utf8" }));
+console.log("");
+process.stdout.write(execFileSync(process.execPath, ["--import", "tsx", "scripts/live-readiness.ts"], { encoding: "utf8" }));
 
 for (const path of LOG_PATHS) {
   if (!existsSync(path)) continue;

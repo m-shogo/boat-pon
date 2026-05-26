@@ -28,6 +28,7 @@
     "generate:history": "tsx scripts/generate-decision-history.ts",
     "monitor:live": "tsx scripts/live-b1-monitor.ts",
     "progress": "tsx scripts/live-progress.ts",
+    "readiness": "tsx scripts/live-readiness.ts",
     "auto:odds": "tsx scripts/auto-fetch-odds.ts",
     "generate:vapid": "tsx scripts/generate-vapid-keys.ts"
   },
