@@ -163,7 +163,7 @@ function buildReport(db: DatabaseSync) {
 
 function printReport(report: ReturnType<typeof buildReport>) {
   const s = report.summary;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayJst();
   const startDate = "2026-05-26"; // paper観察モード開始日
   const daysSinceStart = Math.floor((Date.parse(today) - Date.parse(startDate)) / 86400000);
 
@@ -258,6 +258,10 @@ function parseArgs(argv: string[]) {
     }
   }
   return parsed;
+}
+
+function todayJst() {
+  return new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
 }
 
 function numberValue(value: unknown) {

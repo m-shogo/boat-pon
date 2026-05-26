@@ -34,12 +34,18 @@ Boat Pon は個人用の期待値通知・検証アプリ。自動購入、自�
 外部ROI=0.939 はランダムベット0.74より改善しているが breakeven 1.0 に届かない。
 原因: cherry-picking バイアス + 逆選択（構造的問題、パラメータ調整では解消不可）。
 
-### 2026ライブ監視状態（2026-05-26時点）
+### 2026ライブ監視状態（2026-05-27時点）
 
-- launchd: `com.boatpon.auto-odds`（15分毎 9:00-21:00 JST）、`com.boatpon.daily-programs`、`com.boatpon.daily-results` 稼働中
-- 2026 v3 BUY累計: **0件**（本日2026-05-26より蓄積開始）
-- 予想ペース: 約222件/月 → n=300 に約42日（2026年7月初旬目安）
-- 2026年の古いBUY（v2: 43件）は別 model_version なので混ぜない
+- 2026 v3 BUY累計: **0件**
+- 2026-05-26 の v3 判定: SKIP 131件、うちオッズ取得あり2件・未取得129件
+- 2026年の古いBUY（v2: 43件）と sample 3件は別枠で、採用判断に混ぜない
+- `history-model` の月間BUY数は事後評価であり、実ライブペースの見積もりには使わない
+- 実ライブペースは未確定。まずは `npm run progress` / `npm run monitor:live` で番組取得・判定・オッズ取得率を見る
+- 2026-05-27 00:04 JST にLaunchAgentの時刻ズレを修正済み
+  - `com.boatpon.auto-odds`: 9:00〜21:00 JST、15分おき
+  - `com.boatpon.daily-progress`: 21:05 JST
+  - 注意: macOS LaunchAgent の `StartCalendarInterval` はローカル時刻。UTC換算で書かない
+  - `launchctl print gui/501/com.boatpon.auto-odds` と `launchctl print gui/501/com.boatpon.daily-progress` で登録確認済み
 
 ### DBの状態
 
@@ -56,6 +62,7 @@ Boat Pon は個人用の期待値通知・検証アプリ。自動購入、自�
 npm test      # 71件全件パス
 npm run build # 成功
 npm run verify:full  # verify + db:health + monitor:live + gitleaks
+npm run progress     # monitor:live + ログ末尾確認
 ```
 
 ## 現在のモード

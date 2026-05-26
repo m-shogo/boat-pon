@@ -100,6 +100,14 @@ npm run evaluate:v4 -- --from 2025-01-01 --to 2025-01-31 --limit 500
 
 `evaluate:v4` は `data/boat.sqlite` を読み取るだけで、`decision_history` へ書き込みません。検証ROIは判定時点の `current_odds` 基準です。
 
+paper live観察の進捗確認:
+
+```sh
+npm run progress
+```
+
+`progress` は live BUY進捗、番組/判定/オッズの最終日、オッズ取得率、ログ末尾をまとめて表示します。実購入判断には使わず、情報取得が止まっていないかを見るためのコマンドです。
+
 ## API一覧
 
 - `GET /api/health`: API稼働確認
