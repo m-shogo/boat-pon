@@ -539,7 +539,11 @@ app.get("/api/live/b1-monitor", (_req, res) => {
         SUM(returned) AS returned_n,
         ROUND(SUM(CASE WHEN selection = result AND returned = 0 THEN current_odds ELSE 0 END) * 1.0 /
           NULLIF(SUM(CASE WHEN returned = 0 THEN 1 ELSE 0 END), 0), 3) AS roi,
-        MAX(CASE WHEN selection = result AND returned = 0 THEN current_odds ELSE 0 END) AS max_hit_odds
+        MAX(CASE WHEN selection = result AND returned = 0 THEN current_odds ELSE 0 END) AS max_hit_odds,
+        ROUND(AVG(required_odds), 2) AS avg_required_odds,
+        ROUND(AVG(current_odds), 2) AS avg_current_odds,
+        ROUND(AVG(CASE WHEN required_odds > 0 THEN current_odds / required_odds END), 3) AS avg_odds_ratio,
+        ROUND(SUM(estimated_hit_rate), 2) AS estimated_hits
       FROM decision_history
       WHERE decision = 'BUY'
         AND date >= ?
@@ -551,6 +555,10 @@ app.get("/api/live/b1-monitor", (_req, res) => {
     const returnedN = (summary.returned_n as number) ?? 0;
     const roi = (summary.roi as number) ?? null;
     const maxHitOdds = (summary.max_hit_odds as number) ?? 0;
+    const avgRequiredOdds = (summary.avg_required_odds as number) ?? null;
+    const avgCurrentOdds = (summary.avg_current_odds as number) ?? null;
+    const avgOddsRatio = (summary.avg_odds_ratio as number) ?? null;
+    const estimatedHits = (summary.estimated_hits as number) ?? null;
 
     // 最大払戻除外ROI
     const effectiveN = n - returnedN;
@@ -613,14 +621,42 @@ app.get("/api/live/b1-monitor", (_req, res) => {
       WHERE decision = 'BUY' AND date >= ? AND model_version = ?
     `).get(LIVE_FROM, LIVE_MODEL) as { d: string | null }).d;
 
+    // 除外件数の集計（diagnostics から）
+    let excludedOldModelCount = 0;
+    let excludedSampleCount = 0;
+    const sources: string[] = [];
+    for (const row of diagnostics) {
+      const mv = row.model_version as string;
+      const src = row.source as string;
+      const cnt = row.n as number;
+      if (mv === LIVE_MODEL) {
+        if (!sources.includes(src)) sources.push(src);
+      } else if (mv === "(null)") {
+        excludedSampleCount += cnt;
+      } else {
+        excludedOldModelCount += cnt;
+      }
+    }
+
     res.json({
-      period: { from: LIVE_FROM, to: "現在", modelVersion: LIVE_MODEL },
-      summary: { n, hits, returnedN, roi, maxHitOdds, roiExMax },
+      period: {
+        from: LIVE_FROM,
+        to: "現在",
+        modelVersion: LIVE_MODEL,
+        filter: `decision='BUY' AND date>='${LIVE_FROM}' AND model_version='${LIVE_MODEL}'`,
+      },
+      summary: {
+        n, hits, returnedN, roi, maxHitOdds, roiExMax,
+        avgRequiredOdds, avgCurrentOdds, avgOddsRatio, estimatedHits,
+      },
       milestoneStatus,
       milestoneNote,
       monthly,
       diagnostics,
       latestLiveDate,
+      excludedOldModelCount,
+      excludedSampleCount,
+      sources,
     });
   } finally {
     db.close();

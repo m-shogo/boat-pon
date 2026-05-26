@@ -1007,6 +1007,18 @@ function LiveMonitorPanel() {
     "near-confirmed": "var(--green)",
   };
 
+  // n < 300 時の ROI 解釈注記
+  function roiCaution(n: number, roi: number | null): string | null {
+    if (n >= 300) return null;
+    if (roi === null) return null;
+    if (roi >= 1.2) return "ROI高くても採用判断不可（n<300）。72〜100件では ROI 0〜2 の振れが通常範囲。";
+    if (roi < 0.75) return "ROI低くても撤退確定ではない（n<300）。ゼロ的中確率は hit率1.5〜2%で n=100 時約13〜22%。";
+    return "n<300のため参考値。ROIの振れ幅（標準誤差≈0.6〜0.7）より大きな変動は判断材料にならない。";
+  }
+
+  const s = data?.summary;
+  const caution = s ? roiCaution(s.n, s.roi) : null;
+
   return (
     <div className="walkForwardPanel">
       <div className="sectionHead">
@@ -1014,15 +1026,16 @@ function LiveMonitorPanel() {
           <h3>2026 ライブ監視（B1 ratio&lt;1.5）</h3>
           <p>
             2026-01-01 以降の v3-alpha15 BUY実績。外部検証とは完全分離した未使用データ。<br />
-            採用判定は n=600 以上かつ ROI&gt;1.2 が最低条件。app_settings は変更しない。
+            app_settings は変更しない。条件変更・再チューニングはしない。
           </p>
         </div>
       </div>
 
-      <div style={{ background: "rgba(100,100,255,0.08)", border: "1px solid rgba(100,100,255,0.3)", borderRadius: 6, padding: "8px 12px", marginBottom: 12, fontSize: "0.85em", lineHeight: 1.7 }}>
-        <strong>採用・撤退しきい値（固定）:</strong><br />
-        n&lt;300: データ不足 / n=300〜600: 継続保留（ROI&lt;0.75なら撤退候補）<br />
-        n=600〜: ROI&gt;1.2 + 月別一発依存でない → 条件付き採用 / n=1000〜: 最大払戻除外ROI&gt;1.0 → 採用確定に近い<br />
+      <div style={{ background: "rgba(100,100,255,0.08)", border: "1px solid rgba(100,100,255,0.3)", borderRadius: 6, padding: "8px 12px", marginBottom: 12, fontSize: "0.83em", lineHeight: 1.7 }}>
+        <strong>採用・撤退しきい値（固定・変更不可）:</strong><br />
+        n&lt;300: <strong>データ不足・判断不可</strong>（ROI高くても採用不可、ROI低くても撤退確定ではない）<br />
+        n=300〜600: 継続保留（ROI&lt;0.75 → 撤退候補）<br />
+        n=600〜1000: ROI&gt;1.2 + 月別一発依存でない → 条件付き採用 / n=1000〜: 最大払戻除外ROI&gt;1.0 → 採用確定に近い<br />
         <span style={{ color: "#888" }}>外部検証(2020-2023) ROI≈0.74 — edge未確認状態でライブ蓄積中</span>
       </div>
 
@@ -1034,20 +1047,41 @@ function LiveMonitorPanel() {
 
       {data && (
         <>
+          {/* マイルストーン + ROI解釈注記 */}
           <div style={{ marginTop: 12, padding: "10px 14px", background: "rgba(0,0,0,0.15)", borderRadius: 6 }}>
-            <div style={{ marginBottom: 4, color: milestoneColor[data.milestoneStatus], fontWeight: "bold", fontSize: "0.9em" }}>
+            <div style={{ marginBottom: 6, color: milestoneColor[data.milestoneStatus], fontWeight: "bold", fontSize: "0.9em" }}>
               {data.milestoneNote}
             </div>
-            <div style={{ display: "flex", gap: 24, flexWrap: "wrap", fontSize: "0.88em" }}>
-              <span>n: <strong>{data.summary.n}</strong></span>
-              <span>的中: <strong>{data.summary.hits}</strong></span>
-              <span>ROI: <strong>{data.summary.roi !== null ? data.summary.roi.toFixed(3) : "—"}</strong></span>
-              <span>最大払戻除外ROI: <strong>{data.summary.roiExMax !== null ? data.summary.roiExMax.toFixed(3) : "—"}</strong></span>
-              <span>最大払戻: <strong>{data.summary.maxHitOdds > 0 ? `${data.summary.maxHitOdds}x` : "—"}</strong></span>
-              <span>返還: <strong>{data.summary.returnedN}</strong>件</span>
+            {caution && (
+              <div style={{ marginBottom: 6, color: "#e6a817", fontSize: "0.82em", lineHeight: 1.5 }}>
+                ⚠ {caution}
+              </div>
+            )}
+            {/* 主要指標 */}
+            <div style={{ display: "flex", gap: 20, flexWrap: "wrap", fontSize: "0.87em" }}>
+              <span>n: <strong>{s!.n}</strong></span>
+              <span>的中: <strong>{s!.hits}</strong></span>
+              <span>推定的中: <strong>{s!.estimatedHits !== null ? s!.estimatedHits.toFixed(1) : "—"}</strong></span>
+              <span>ROI: <strong>{s!.roi !== null ? s!.roi.toFixed(3) : "—"}</strong></span>
+              <span>最大払戻除外ROI: <strong>{s!.roiExMax !== null ? s!.roiExMax.toFixed(3) : "—"}</strong></span>
+              <span>最大払戻: <strong>{s!.maxHitOdds > 0 ? `${s!.maxHitOdds}x` : "—"}</strong></span>
+              <span>返還: <strong>{s!.returnedN}</strong>件</span>
+            </div>
+            {/* オッズ指標 */}
+            {s!.avgRequiredOdds !== null && (
+              <div style={{ display: "flex", gap: 20, flexWrap: "wrap", fontSize: "0.85em", marginTop: 6, color: "#aaa" }}>
+                <span>avg_req: {s!.avgRequiredOdds.toFixed(1)}</span>
+                <span>avg_cur: {s!.avgCurrentOdds !== null ? s!.avgCurrentOdds.toFixed(1) : "—"}</span>
+                <span>avg_ratio: {s!.avgOddsRatio !== null ? s!.avgOddsRatio.toFixed(3) : "—"}</span>
+              </div>
+            )}
+            {/* 最新記録日 + フィルター条件 */}
+            <div style={{ fontSize: "0.78em", color: "#666", marginTop: 6 }}>
+              最新記録日: {data.latestLiveDate ?? "なし"} ／ 対象: {data.period.filter}
             </div>
           </div>
 
+          {/* 月別テーブル */}
           {data.monthly.length > 0 ? (
             <div className="tableWrap walkForwardRows" style={{ marginTop: 10 }}>
               <table>
@@ -1075,41 +1109,50 @@ function LiveMonitorPanel() {
             </div>
           ) : (
             <p style={{ color: "#888", fontSize: "0.85em", marginTop: 10 }}>
-              v3-alpha15 の2026 live BUYはまだ記録なし。ダッシュボードが実日付で起動すると自然に蓄積されます。
+              v3-alpha15 の2026 live BUYはまだ記録なし（n=0 は正常初期状態）。<br />
+              ダッシュボードが実日付で起動すると自然に蓄積されます。
             </p>
           )}
 
-          {data.diagnostics.length > 0 && (
-            <details style={{ marginTop: 12, fontSize: "0.8em", color: "#888" }}>
-              <summary style={{ cursor: "pointer" }}>診断: 2026年のBUY全件内訳（除外対象含む）</summary>
-              <div className="tableWrap walkForwardRows" style={{ marginTop: 6 }}>
-                <table>
-                  <thead>
-                    <tr><th>model_version</th><th>source</th><th>n</th><th>最新日</th><th>対象</th></tr>
-                  </thead>
-                  <tbody>
-                    {data.diagnostics.map((row: LiveMonitorDiagnostic, i: number) => {
-                      const isTarget = row.model_version === data.period.modelVersion;
-                      return (
-                        <tr key={i} style={{ opacity: isTarget ? 1 : 0.5 }}>
-                          <td>{row.model_version}</td>
-                          <td>{row.source}</td>
-                          <td>{row.n}</td>
-                          <td>{row.latest_date}</td>
-                          <td>{isTarget ? "✓" : "除外"}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-                <p style={{ marginTop: 4 }}>
-                  ライブ記録の条件: model_version={data.period.modelVersion} / date≥{data.period.from}<br />
-                  source=sample は model_version=null のため自動除外。旧モデルも model_version で除外。<br />
-                  generate:history を2026年対象で実行するとここに混入するため禁止。
-                </p>
-              </div>
-            </details>
-          )}
+          {/* 診断情報 */}
+          <details style={{ marginTop: 12, fontSize: "0.8em", color: "#888" }}>
+            <summary style={{ cursor: "pointer" }}>
+              診断: 2026年BUY全件内訳（旧モデル除外 {data.excludedOldModelCount}件 / sample除外 {data.excludedSampleCount}件）
+            </summary>
+            <div style={{ marginTop: 6 }}>
+              {data.diagnostics.length > 0 ? (
+                <div className="tableWrap walkForwardRows">
+                  <table>
+                    <thead>
+                      <tr><th>model_version</th><th>source</th><th>n</th><th>最新日</th><th>判定</th></tr>
+                    </thead>
+                    <tbody>
+                      {data.diagnostics.map((row: LiveMonitorDiagnostic, i: number) => {
+                        const isTarget = row.model_version === data.period.modelVersion;
+                        return (
+                          <tr key={i} style={{ opacity: isTarget ? 1 : 0.45 }}>
+                            <td>{row.model_version}</td>
+                            <td>{row.source}</td>
+                            <td>{row.n}</td>
+                            <td>{row.latest_date}</td>
+                            <td style={{ color: isTarget ? "var(--green)" : "var(--red)" }}>
+                              {isTarget ? "✓ 対象" : "✗ 除外"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p>2026年のBUYレコードはまだありません。</p>
+              )}
+              <p style={{ marginTop: 4, lineHeight: 1.6 }}>
+                source=sample は model_version=null のため自動除外。旧モデルも model_version で除外。<br />
+                generate:history を2026年対象で実行すると v3-alpha15 として混入するため禁止。
+              </p>
+            </div>
+          </details>
         </>
       )}
     </div>

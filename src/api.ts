@@ -270,7 +270,7 @@ export type LiveMonitorDiagnostic = {
 };
 
 export type LiveMonitorResponse = {
-  period: { from: string; to: string; modelVersion: string };
+  period: { from: string; to: string; modelVersion: string; filter: string };
   summary: {
     n: number;
     hits: number;
@@ -278,12 +278,19 @@ export type LiveMonitorResponse = {
     roi: number | null;
     maxHitOdds: number;
     roiExMax: number | null;
+    avgRequiredOdds: number | null;
+    avgCurrentOdds: number | null;
+    avgOddsRatio: number | null;
+    estimatedHits: number | null;
   };
   milestoneStatus: "insufficient" | "watch" | "conditional" | "near-confirmed";
   milestoneNote: string;
   monthly: LiveMonitorMonthly[];
   diagnostics: LiveMonitorDiagnostic[];
   latestLiveDate: string | null;
+  excludedOldModelCount: number;
+  excludedSampleCount: number;
+  sources: string[];
 };
 
 export async function fetchLiveB1Monitor(): Promise<LiveMonitorResponse> {
