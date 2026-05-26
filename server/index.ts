@@ -7,6 +7,7 @@ import { summarizeProgramStats } from "../src/domain/programStats";
 import { summarizeCategoryStats } from "../src/domain/categoryStats";
 import { summarizeRollingDrift } from "../src/domain/rollingDrift";
 import { getModelVersionInfo } from "../src/domain/modelVersion";
+import { LIVE_MONITOR_FROM, LIVE_MONITOR_MODEL_VERSION, liveMonitorFilterText } from "../src/domain/liveMonitor";
 import { analyzeOvervaluation } from "../src/domain/analysis";
 import { explainDecision, summarizeSkipReasons } from "../src/domain/decisionExplain";
 import { runWalkForwardBacktest, summarizeWalkForward } from "../src/domain/walkForward";
@@ -525,8 +526,8 @@ app.get("/api/backtest/calibration", (req, res) => {
 });
 
 // 2026 live B1 監視（model_version=v3-alpha15 + date>=2026-01-01、app_settingsがB1フィルターを保証）
-const LIVE_FROM = "2026-01-01";
-const LIVE_MODEL = "boatpon-v3-alpha15";
+const LIVE_FROM = LIVE_MONITOR_FROM;
+const LIVE_MODEL = LIVE_MONITOR_MODEL_VERSION;
 
 app.get("/api/live/b1-monitor", (_req, res) => {
   const db = openDb();
@@ -643,7 +644,7 @@ app.get("/api/live/b1-monitor", (_req, res) => {
         from: LIVE_FROM,
         to: "現在",
         modelVersion: LIVE_MODEL,
-        filter: `decision='BUY' AND date>='${LIVE_FROM}' AND model_version='${LIVE_MODEL}'`,
+        filter: liveMonitorFilterText(),
       },
       summary: {
         n, hits, returnedN, roi, maxHitOdds, roiExMax,

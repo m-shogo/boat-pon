@@ -1,9 +1,10 @@
 import { DatabaseSync } from "node:sqlite";
+import { LIVE_MONITOR_FROM, LIVE_MONITOR_MODEL_VERSION, liveMonitorFilterText } from "../src/domain/liveMonitor";
 
 const DB_PATH = "data/boat.sqlite";
-const LIVE_FROM = "2026-01-01";
-const LIVE_MODEL = "boatpon-v3-alpha15";
-const FILTER = `decision='BUY' AND date>='${LIVE_FROM}' AND model_version='${LIVE_MODEL}'`;
+const LIVE_FROM = LIVE_MONITOR_FROM;
+const LIVE_MODEL = LIVE_MONITOR_MODEL_VERSION;
+const FILTER = liveMonitorFilterText();
 
 const args = parseArgs(process.argv.slice(2));
 const db = new DatabaseSync(DB_PATH, { readOnly: true });
