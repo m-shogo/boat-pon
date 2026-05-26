@@ -2,6 +2,7 @@ import { Activity, Bell, CheckCircle2, Database, ExternalLink, HelpCircle, Histo
 import { useEffect, useMemo, useState } from "react";
 import {
   compareModelsApi,
+  fetchCalibrationApi,
   fetchOdds,
   fetchVapidPublicKey,
   getDashboard,
@@ -14,6 +15,7 @@ import {
   updateManualOdds,
   updatePurchaseRecord,
   updateSettings,
+  type CalibrationRow,
   type DashboardResponse,
   type ModelComparisonRow,
   type OddsFetchResult,
@@ -661,6 +663,7 @@ function Backtest({ data, onSaved }: { data: DashboardResponse; onSaved: () => P
       {selectedDate && <DayDetail date={selectedDate} rows={selectedRows} />}
       <WalkForwardPanel date={data.date} />
       <ModelComparisonPanel date={data.date} />
+      <CalibrationPanel date={data.date} />
       <ExportButtons />
       <div className="metrics backtestMetrics">
         <Metric label="判定数" value={data.backtest.decisions.toString()} />
@@ -923,6 +926,80 @@ function ModelComparisonPanel({ date }: { date: string | null }) {
                   <td>{row.summary.buy ? `${(row.summary.hitRate * 100).toFixed(1)}%` : "-"}</td>
                   <td>{row.summary.modelStakeYen ? `${(row.summary.modelRoi * 100).toFixed(1)}%` : "-"}</td>
                   <td>{row.caution ?? "OK"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CalibrationPanel({ date }: { date: string | null }) {
+  const defaultFrom = "2024-01-01";
+  const [from, setFrom] = useState(defaultFrom);
+  const [to, setTo] = useState(date ?? "");
+  const [rows, setRows] = useState<CalibrationRow[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function run() {
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await fetchCalibrationApi({ from: from || undefined, to: to || undefined });
+      setRows(result.rows);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const calibColor = (ratio: number) => {
+    if (ratio === 0) return "#888";
+    if (ratio >= 1.2) return "var(--green)";
+    if (ratio >= 0.8) return "inherit";
+    return "var(--red)";
+  };
+
+  return (
+    <div className="walkForwardPanel">
+      <div className="sectionHead">
+        <div>
+          <h3>Calibration分析</h3>
+          <p>required_odds帯×クラス別の実測/推定的中率比。1.0が理想、&lt;0.5は過大推定。</p>
+        </div>
+      </div>
+      <div className="walkForwardControls">
+        <label><span>開始</span><input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
+        <label><span>終了</span><input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
+        <button disabled={busy} onClick={run}>{busy ? "集計中..." : "集計する"}</button>
+      </div>
+      {error && <div className="formError">{error}</div>}
+      {rows.length > 0 && (
+        <div className="tableWrap walkForwardRows">
+          <table>
+            <thead>
+              <tr>
+                <th>req帯</th><th>クラス</th><th>n</th><th>的中</th>
+                <th>推定%</th><th>実測%</th><th>calib比</th><th>avg_odds</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={`${row.req_band}-${row.cls}`}>
+                  <td>{row.req_band}</td>
+                  <td>{row.cls}</td>
+                  <td>{row.n}</td>
+                  <td>{row.hits}</td>
+                  <td>{row.avg_est_pct.toFixed(2)}%</td>
+                  <td>{row.actual_pct.toFixed(2)}%</td>
+                  <td style={{ color: calibColor(row.calib_ratio), fontWeight: "bold" }}>
+                    {row.calib_ratio.toFixed(3)}
+                  </td>
+                  <td>{row.avg_odds.toFixed(1)}</td>
                 </tr>
               ))}
             </tbody>

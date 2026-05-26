@@ -195,4 +195,28 @@ export async function compareModelsApi(params: {
   return res.json();
 }
 
+export type CalibrationRow = {
+  req_band: string;
+  cls: string;
+  n: number;
+  hits: number;
+  avg_est_pct: number;
+  actual_pct: number;
+  calib_ratio: number;
+  avg_odds: number;
+  avg_req: number;
+};
+
+export async function fetchCalibrationApi(params: {
+  from?: string;
+  to?: string;
+}): Promise<{ from: string; to: string; rows: CalibrationRow[] }> {
+  const qs = new URLSearchParams();
+  if (params.from) qs.set("from", params.from);
+  if (params.to) qs.set("to", params.to);
+  const res = await fetch("/api/backtest/calibration?" + qs.toString());
+  if (!res.ok) throw new Error(`calibration api failed: ${res.status}`);
+  return res.json();
+}
+
 export type { BacktestSummary, DecisionHistoryRow, ModelComparisonRow, MonthlySummary, SavingsSummary, VenueHeatmapSummary };
