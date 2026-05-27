@@ -113,7 +113,7 @@ npm run guard:live
 
 `status:brief` は監視用の短い要約です。末尾の `action:` 行が次に取るべき操作を示すので、通常はこれだけを見て、`run npm run readiness` / `inspect git diff` 以外の場合はそのまま待機します。`--json` オプション (`npm run status:brief -- --json`) を付けると同じ内容を JSON 1行で出力します（Codex などの自動監視向け）。
 `watch:today` は当日の `WATCH` / `BUY` 候補だけを短く表示します。これは紙上観察用の読み取り専用コマンドで、実購入判断や設定変更には使いません。`--json` オプション (`npm run watch:today -- --json`) で自動監視向けのJSON 1行を出力します。
-`progress` は live BUY進捗、番組/判定/オッズの最終日、オッズ取得率、ログ末尾をまとめて表示します。実購入判断には使わず、情報取得が止まっていないかを見るためのコマンドです。
+`progress` は live BUY進捗、番組/判定/オッズの最終日、オッズ取得率、BUY=0継続の早期警告、n=300到達ETA、ログ末尾をまとめて表示します。実購入判断には使わず、情報取得が止まっていないかを見るためのコマンドです。
 `readiness` はLaunchAgent時刻、DB鮮度、ログ作成状況を読み取り専用で確認します。`--json` オプション (`npm run readiness -- --json`) で同じ内容をJSON 1行で出力します。
 `guard:live` は未コミット差分を読み取り、live判定・設定・DB/data混入に触れる変更があれば停止します。Claude/Codexに作業を渡す前後の安全確認に使います。
 `day:close` は21:05以降に「今日の収集は締められたか」を短く確認します。`close_status: ok / waiting / warn` と次の操作を10行程度で表示します。`--json` オプション (`npm run day:close -- --json`) で自動監視向けのJSON 1行を出力します。

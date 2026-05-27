@@ -22,6 +22,7 @@ v4-conservative の検証・実装・不採用・v3 への戻しが 2026-05-26 �
 - `docs/` の古いファイル整理（odds-backfill-plan.md 等）
 - テスト追加（純粋関数があれば）
 - モニタリング UI の軽微な改善
+- 過去オッズ取得元の深掘り調査は `docs/claude-odds-source-research-prompt.md` を使う
 
 ## 絶対禁止
 

@@ -5,6 +5,8 @@ const DB_PATH = "data/boat.sqlite";
 const LIVE_FROM = LIVE_MONITOR_FROM;
 const LIVE_MODEL = LIVE_MONITOR_MODEL_VERSION;
 const FILTER = liveMonitorFilterText();
+const PAPER_LIVE_START = "2026-05-27";
+const TARGET_BUY_N = 300;
 
 const args = parseArgs(process.argv.slice(2));
 const db = new DatabaseSync(DB_PATH, { readOnly: true });
@@ -135,6 +137,30 @@ function buildReport(db: DatabaseSync) {
     }
   }
 
+  const paperDays = db.prepare(`
+    SELECT
+      date,
+      SUM(CASE WHEN decision = 'BUY' THEN 1 ELSE 0 END) AS buy_n,
+      SUM(CASE WHEN decision = 'WATCH' THEN 1 ELSE 0 END) AS watch_n,
+      COUNT(*) AS total_n
+    FROM decision_history
+    WHERE date >= ? AND model_version = ?
+    GROUP BY date
+    ORDER BY date
+  `).all(PAPER_LIVE_START, LIVE_MODEL) as Array<{ date: string; buy_n: number; watch_n: number; total_n: number }>;
+
+  const historicalPace = historicalBuyPace(db);
+  const livePace = liveBuyPace(paperDays);
+  const eta = buyEta(n, livePace.ratePerDay, historicalPace);
+  const alerts = buildAlerts({
+    buyN: n,
+    paperDays,
+    watchBuyN: numberValue(watchBuyQuality.n),
+    watchBuyOddsMissing: numberValue(watchBuyQuality.odds_missing),
+    latestModelDecisionDate,
+    latestOddsSnapshotDate,
+  });
+
   return {
     generatedAt: new Date().toISOString(),
     period: { from: LIVE_FROM, to: "current", modelVersion: LIVE_MODEL, filter: FILTER },
@@ -173,6 +199,19 @@ function buildReport(db: DatabaseSync) {
       oddsMissing: numberValue(watchBuyQuality.odds_missing),
       oddsPresent: numberValue(watchBuyQuality.odds_present),
     },
+    paperLive: {
+      startDate: PAPER_LIVE_START,
+      observedDays: paperDays.length,
+      zeroBuyDays: paperDays.filter((row) => numberValue(row.buy_n) === 0).length,
+      consecutiveZeroBuyDays: consecutiveZeroBuyDays(paperDays),
+      latestDay: paperDays.at(-1) ?? null,
+    },
+    pace: {
+      live: livePace,
+      historical: historicalPace,
+      eta,
+    },
+    alerts,
   };
 }
 
@@ -188,7 +227,7 @@ function printReport(report: ReturnType<typeof buildReport>) {
   console.log("");
 
   // --- BUY進捗バー ---
-  const TARGET = 300;
+  const TARGET = TARGET_BUY_N;
   const pct = Math.min(100, Math.round((s.n / TARGET) * 100));
   const filled = Math.round(pct / 5);
   const bar = "█".repeat(filled) + "░".repeat(20 - filled);
@@ -196,12 +235,22 @@ function printReport(report: ReturnType<typeof buildReport>) {
   if (s.n === 0 && daysSinceStart > 0) {
     console.log(`         開始から${daysSinceStart}日経過、まだ0件`);
   } else if (s.n > 0) {
-    const ratePerDay = s.n / Math.max(1, daysSinceStart);
-    const daysLeft = ratePerDay > 0 ? Math.ceil((TARGET - s.n) / ratePerDay) : null;
-    const eta = daysLeft !== null ? `あと約${daysLeft}日` : "-";
+    const ratePerDay = report.pace.live.ratePerDay;
+    const eta = report.pace.eta.liveDaysLeft !== null ? `あと約${report.pace.eta.liveDaysLeft}日` : "-";
     console.log(`         ${daysSinceStart}日で${s.n}件 (${ratePerDay.toFixed(1)}件/日)  n=300まで${eta}`);
   }
+  console.log(
+    `         参考ETA: 過去中央値ペースなら${report.pace.eta.historicalMedianDaysLeft}日、保守ペースなら${report.pace.eta.historicalMinDaysLeft}日`,
+  );
   console.log("");
+
+  if (report.alerts.length > 0) {
+    console.log("早期警告");
+    for (const alert of report.alerts) {
+      console.log(`  ${alert.level}\t${alert.code}\t${alert.message}`);
+    }
+    console.log("");
+  }
 
   // --- システム稼働確認 ---
   const lastDecision = report.latestModelDecisionDate;
@@ -265,6 +314,121 @@ function milestoneFor(n: number, roi: number | null) {
   return "near-confirmed: require roiExMax>1.0";
 }
 
+function historicalBuyPace(db: DatabaseSync) {
+  const rows = db.prepare(`
+    SELECT substr(date, 1, 7) AS ym, COUNT(*) AS n
+    FROM decision_history
+    WHERE model_version = ?
+      AND decision = 'BUY'
+      AND date BETWEEN '2024-01-01' AND '2025-12-31'
+    GROUP BY ym
+    ORDER BY ym
+  `).all(LIVE_MODEL) as Array<{ ym: string; n: number }>;
+
+  const counts = rows.map((row) => numberValue(row.n)).filter((n) => n > 0);
+  const sorted = [...counts].sort((a, b) => a - b);
+  const sum = counts.reduce((acc, n) => acc + n, 0);
+  const averagePerMonth = counts.length > 0 ? sum / counts.length : 0;
+  const medianPerMonth =
+    sorted.length > 0 ? (sorted[Math.floor((sorted.length - 1) / 2)] + sorted[Math.ceil((sorted.length - 1) / 2)]) / 2 : 0;
+  const minPerMonth = sorted[0] ?? 0;
+
+  return {
+    source: "2024-2025 v3 BUY months",
+    months: counts.length,
+    total: sum,
+    averagePerMonth: round1(averagePerMonth),
+    medianPerMonth: round1(medianPerMonth),
+    minPerMonth,
+    maxPerMonth: sorted.at(-1) ?? 0,
+  };
+}
+
+function liveBuyPace(rows: Array<{ date: string; buy_n: number }>) {
+  const observedDays = rows.length;
+  const buyN = rows.reduce((acc, row) => acc + numberValue(row.buy_n), 0);
+  return {
+    observedDays,
+    buyN,
+    ratePerDay: observedDays > 0 ? round2(buyN / observedDays) : 0,
+  };
+}
+
+function buyEta(n: number, liveRatePerDay: number, historical: ReturnType<typeof historicalBuyPace>) {
+  const remaining = Math.max(0, TARGET_BUY_N - n);
+  return {
+    targetN: TARGET_BUY_N,
+    remaining,
+    liveDaysLeft: liveRatePerDay > 0 ? Math.ceil(remaining / liveRatePerDay) : null,
+    historicalMedianDaysLeft: daysLeftFromMonthlyPace(remaining, historical.medianPerMonth),
+    historicalAverageDaysLeft: daysLeftFromMonthlyPace(remaining, historical.averagePerMonth),
+    historicalMinDaysLeft: daysLeftFromMonthlyPace(remaining, historical.minPerMonth),
+  };
+}
+
+function daysLeftFromMonthlyPace(remaining: number, monthlyPace: number) {
+  return monthlyPace > 0 ? Math.ceil(remaining / (monthlyPace / 30.4375)) : null;
+}
+
+function buildAlerts(input: {
+  buyN: number;
+  paperDays: Array<{ date: string; buy_n: number; watch_n: number; total_n: number }>;
+  watchBuyN: number;
+  watchBuyOddsMissing: number;
+  latestModelDecisionDate: string | null;
+  latestOddsSnapshotDate: string | null;
+}) {
+  const alerts: Array<{ level: "info" | "warn" | "critical"; code: string; message: string }> = [];
+  const zeroDays = consecutiveZeroBuyDays(input.paperDays);
+
+  if (input.buyN === 0 && zeroDays >= 7) {
+    alerts.push({
+      level: "critical",
+      code: "buy_zero_7d",
+      message: `BUYが${zeroDays}日連続0件です。取得タイミング・BUY条件・保存条件を点検してください。`,
+    });
+  } else if (input.buyN === 0 && zeroDays >= 3) {
+    alerts.push({
+      level: "warn",
+      code: "buy_zero_3d",
+      message: `BUYが${zeroDays}日連続0件です。数日継続するならライブ条件の厳しさを確認します。`,
+    });
+  } else if (input.buyN === 0 && input.watchBuyN > 0) {
+    alerts.push({
+      level: "info",
+      code: "watch_present_buy_zero",
+      message: `WATCH/BUY候補は${input.watchBuyN}件ありますがBUYはまだ0件です。初期日は観察継続で十分です。`,
+    });
+  }
+
+  if (input.watchBuyN > 0 && input.watchBuyOddsMissing > 0) {
+    alerts.push({
+      level: "warn",
+      code: "watch_buy_odds_missing",
+      message: `WATCH/BUY候補のオッズ未取得が${input.watchBuyOddsMissing}件あります。auto-oddsログを確認してください。`,
+    });
+  }
+
+  if (input.latestModelDecisionDate !== input.latestOddsSnapshotDate) {
+    alerts.push({
+      level: "info",
+      code: "latest_date_mismatch",
+      message: `最新判定日=${input.latestModelDecisionDate ?? "-"}、最新オッズ日=${input.latestOddsSnapshotDate ?? "-"}です。`,
+    });
+  }
+
+  return alerts;
+}
+
+function consecutiveZeroBuyDays(rows: Array<{ buy_n: number }>) {
+  let count = 0;
+  for (let i = rows.length - 1; i >= 0; i--) {
+    if (numberValue(rows[i].buy_n) === 0) count += 1;
+    else break;
+  }
+  return count;
+}
+
 function parseArgs(argv: string[]) {
   const parsed = { json: false };
   for (const arg of argv) {
@@ -293,4 +457,12 @@ function nullableNumber(value: unknown) {
 
 function fmt(value: number | null) {
   return value === null ? "-" : value.toFixed(3);
+}
+
+function round1(value: number) {
+  return Math.round(value * 10) / 10;
+}
+
+function round2(value: number) {
+  return Math.round(value * 100) / 100;
 }
