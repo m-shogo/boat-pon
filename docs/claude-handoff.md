@@ -59,10 +59,14 @@ Boat Pon は個人用の期待値通知・検証アプリ。自動購入、自�
 ### テスト・ビルド
 
 ```sh
-npm test      # 71件全件パス
+npm test      # 102件全件パス
 npm run build # 成功
 npm run verify:full  # verify + db:health + monitor:live + gitleaks
 npm run progress     # monitor:live + ログ末尾確認
+npm run status:brief -- --json
+npm run watch:today -- --json
+npm run readiness -- --json
+npm run day:close -- --json
 ```
 
 ## 現在のモード

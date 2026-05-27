@@ -55,6 +55,10 @@ function main() {
   console.log("");
   console.log("## 作業手順");
   console.log("  1. 作業前: npm run status:brief && npm run guard:live && npm run build");
+  console.log("     状態確認だけなら: npm run status:brief -- --json");
+  console.log("     候補確認だけなら: npm run watch:today -- --json");
+  console.log("     起動/ログ確認なら: npm run readiness -- --json");
+  console.log("     21:05以降の締め確認なら: npm run day:close -- --json");
   console.log("  2. 実装（上記範囲のみ）");
   console.log("  3. 作業後: npm run status:brief && npm run guard:live && npm run build");
   console.log("");
