@@ -22,6 +22,7 @@ import {
   type LiveMonitorDiagnostic,
   type LiveMonitorDecisionCount,
   type LiveMonitorResponse,
+  type TodayDiagnosis,
   type DashboardResponse,
   type ModelComparisonRow,
   type OddsFetchResult,
@@ -282,14 +283,76 @@ function LiveMonitorSummaryPanel({
               ))}
             </div>
           )}
+          {report.todayDiagnosis && (
+            <TodayDiagnosisBlock diag={report.todayDiagnosis} />
+          )}
         </>
       )}
     </section>
   );
 }
 
+const CLOSE_STATUS_LABEL: Record<string, string> = {
+  in_window: "受付中",
+  too_early: "早すぎ",
+  too_late: "遅すぎ",
+  closed: "締切",
+  no_close_at: "不明",
+};
+
+const DIAG_ACTION_LABEL: Record<string, string> = {
+  "review paper BUY rows": "Paper BUY行を確認",
+  "watch next odds refresh; open near-miss exists": "次のオッズ更新を確認（未締切の境界候補あり）",
+  "review closed near-misses; no open near-miss within 1.0 odds": "締切済み境界候補を確認（未締切の境界候補なし）",
+  "observe; WATCH exists but not near BUY boundary": "観察継続（WATCHはあるがBUY境界ではない）",
+  "observe; no WATCH/BUY pressure yet": "観察継続（WATCH/BUY圧力なし）",
+};
+
+function TodayDiagnosisBlock({ diag }: { diag: TodayDiagnosis }) {
+  return (
+    <div className="diagnosisBlock">
+      <div className="diagnosisBlockHead">
+        <span>本日の診断</span>
+        <span className="diagnosisBlockDate">{diag.date}</span>
+      </div>
+      <div className="diagnosisMiniStats">
+        <div className="diagnosisMiniStat"><span>BUY</span>{diag.counts.BUY}</div>
+        <div className="diagnosisMiniStat"><span>WATCH</span>{diag.counts.WATCH}</div>
+        <div className="diagnosisMiniStat"><span>SKIP</span>{diag.counts.SKIP}</div>
+        <div className="diagnosisMiniStat"><span>オッズ取得</span>{diag.oddsCoverage.present}/{diag.oddsCoverage.total}</div>
+        <div className="diagnosisMiniStat"><span>境界内</span>{diag.nearMiss.within1_0}件</div>
+        <div className="diagnosisMiniStat"><span>未締切</span>{diag.nearMiss.openWithin1_0}件</div>
+        {diag.nearMiss.minGap != null && (
+          <div className="diagnosisMiniStat"><span>最小ギャップ</span>{diag.nearMiss.minGap}</div>
+        )}
+        <div className="diagnosisMiniStat"><span>SKIP(必要以上)</span>{diag.skipAtOrAboveRequired}</div>
+      </div>
+      <div className="diagnosisAction">{DIAG_ACTION_LABEL[diag.action] ?? diag.action}</div>
+      {diag.topNearMisses.length > 0 && (
+        <div className="nearMissList">
+          {diag.topNearMisses.map((nm) => (
+            <div className="nearMissItem" key={nm.raceId}>
+              <span className="nmVenue">{nm.venue} R{nm.raceNo}</span>
+              <span className="nmOdds">{formatDiagNumber(nm.currentOdds)}/{formatDiagNumber(nm.requiredOdds)}</span>
+              {nm.gap != null && <span className="nmGap">gap {formatDiagNumber(nm.gap)}</span>}
+              <span className={`nmStatus ${nm.closeStatus}`}>
+                {CLOSE_STATUS_LABEL[nm.closeStatus] ?? nm.closeStatus}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function formatEta(days: number | null) {
   return days == null ? "-" : `${days}日`;
+}
+
+function formatDiagNumber(value: number | null): string {
+  if (value == null) return "-";
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
 function SavingsPanel({ data }: { data: DashboardResponse }) {

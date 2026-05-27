@@ -252,6 +252,27 @@ export async function fetchCalibrationApi(params: {
   return res.json();
 }
 
+export type TodayDiagnosisNearMiss = {
+  raceId: string;
+  venue: string;
+  raceNo: number;
+  currentOdds: number | null;
+  requiredOdds: number | null;
+  gap: number | null;
+  closeAt: string | null;
+  closeStatus: "closed" | "too_late" | "in_window" | "too_early" | "no_close_at";
+};
+
+export type TodayDiagnosis = {
+  date: string;
+  counts: { total: number; BUY: number; WATCH: number; SKIP: number };
+  oddsCoverage: { present: number; total: number; pct: number | null };
+  nearMiss: { watchN: number; within1_0: number; openWithin1_0: number; minGap: number | null };
+  topNearMisses: TodayDiagnosisNearMiss[];
+  skipAtOrAboveRequired: number;
+  action: string;
+};
+
 export type LiveMonitorMonthly = {
   ym: string;
   n: number;
@@ -337,6 +358,7 @@ export type LiveMonitorResponse = {
     };
   };
   alerts: LiveMonitorAlert[];
+  todayDiagnosis: TodayDiagnosis;
 };
 
 export async function fetchLiveB1Monitor(): Promise<LiveMonitorResponse> {

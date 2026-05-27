@@ -60,8 +60,9 @@ export function tailLiveLog(path: string, count = 40) {
 }
 
 export function formatLiveLogLine(line: string) {
-  if (isKnownRepairedLine(line)) return `${line} [修正済み既知ログ]`;
-  if (isKnownRepairedSummary(line)) return `${line} [旧parser時の修正済み失敗を含む]`;
+  const normalized = stripKnownAnnotation(line);
+  if (isKnownRepairedLine(normalized)) return `${normalized} [修正済み既知ログ]`;
+  if (isKnownRepairedSummary(normalized)) return `${normalized} [旧parser時の修正済み失敗を含む]`;
   return line;
 }
 
@@ -75,9 +76,14 @@ function isIssueLine(line: string) {
 }
 
 function isKnownRepairedLine(line: string) {
-  return KNOWN_REPAIRED_PARSE_FAILURES.has(line) || SPAWN_UNAR_ENOENT_PATTERN.test(line);
+  const normalized = stripKnownAnnotation(line);
+  return KNOWN_REPAIRED_PARSE_FAILURES.has(normalized) || SPAWN_UNAR_ENOENT_PATTERN.test(normalized);
 }
 
 function isKnownRepairedSummary(line: string) {
   return KNOWN_REPAIRED_SUMMARIES.has(line);
+}
+
+function stripKnownAnnotation(line: string) {
+  return line.replace(/ \[(修正済み既知ログ|旧parser時の修正済み失敗を含む)\]$/, "");
 }

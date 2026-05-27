@@ -1255,3 +1255,107 @@ tr:last-child td { border-bottom: 0; }
 @media (max-width: 640px) {
   .checkGrid { grid-template-columns: 1fr; }
 }
+
+
+/* TodayDiagnosisBlock */
+.diagnosisBlock {
+  margin-top: 14px;
+  border: 1px solid rgba(154, 246, 213, 0.1);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.025);
+  padding: 10px 12px;
+}
+.diagnosisBlockHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #75d7bb;
+  letter-spacing: 0.06em;
+}
+.diagnosisBlockDate {
+  font-weight: 400;
+  color: #86a69c;
+}
+.diagnosisMiniStats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+.diagnosisMiniStat {
+  border: 1px solid rgba(154, 246, 213, 0.1);
+  border-radius: 4px;
+  padding: 3px 7px;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  white-space: nowrap;
+}
+.diagnosisMiniStat span {
+  color: #86a69c;
+  font-size: 11px;
+  margin-right: 4px;
+}
+.diagnosisAction {
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #b7d0c8;
+  padding: 4px 8px;
+  border-left: 2px solid rgba(154, 246, 213, 0.28);
+  word-break: break-word;
+}
+.nearMissList {
+  display: grid;
+  gap: 4px;
+}
+.nearMissItem {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding: 4px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 12px;
+  min-width: 0;
+}
+.nmVenue {
+  font-weight: 700;
+  color: #ecfff8;
+  min-width: 4.5em;
+  flex-shrink: 0;
+}
+.nmOdds {
+  color: #9af6d5;
+  white-space: nowrap;
+}
+.nmGap {
+  color: #f2b54a;
+  white-space: nowrap;
+}
+.nmStatus {
+  font-size: 11px;
+  border-radius: 999px;
+  padding: 2px 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #86a69c;
+  white-space: nowrap;
+}
+.nmStatus.in_window {
+  background: rgba(124, 225, 195, 0.15);
+  color: #7ce1c3;
+}
+.nmStatus.closed {
+  background: rgba(139, 152, 164, 0.14);
+  color: #8b98a4;
+}
+.nmStatus.too_late {
+  background: rgba(255, 138, 138, 0.12);
+  color: #ffb4b4;
+}
+.nmStatus.too_early {
+  background: rgba(255, 222, 138, 0.1);
+  color: #d6c490;
+}

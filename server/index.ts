@@ -752,11 +752,123 @@ app.get("/api/live/b1-monitor", (_req, res) => {
         eta,
       },
       alerts,
+      todayDiagnosis: buildTodayDiagnosis(db, getSettings(db)),
     });
   } finally {
     db.close();
   }
 });
+
+type TodayNearMissRow = {
+  race_id: string;
+  venue: string;
+  race_no: number;
+  current_odds: number | null;
+  required_odds: number | null;
+  close_at: string | null;
+};
+
+function buildTodayDiagnosis(db: ReturnType<typeof openDb>, settings: BudgetRule) {
+  const date = todayJst();
+  const now = new Date();
+  const countsRow = db.prepare(`
+    SELECT
+      COUNT(*) AS total,
+      SUM(CASE WHEN decision = 'BUY' THEN 1 ELSE 0 END) AS buy,
+      SUM(CASE WHEN decision = 'WATCH' THEN 1 ELSE 0 END) AS watch,
+      SUM(CASE WHEN decision = 'SKIP' THEN 1 ELSE 0 END) AS skip,
+      SUM(CASE WHEN current_odds IS NOT NULL THEN 1 ELSE 0 END) AS odds_present,
+      SUM(CASE WHEN decision = 'SKIP' AND current_odds IS NOT NULL AND required_odds IS NOT NULL AND current_odds >= required_odds THEN 1 ELSE 0 END) AS skip_at_or_above_required
+    FROM decision_history
+    WHERE date = ? AND model_version = ?
+  `).get(date, LIVE_MODEL) as Record<string, unknown>;
+
+  const nearRows = db.prepare(`
+    SELECT
+      dh.race_id,
+      dh.venue,
+      dh.race_no,
+      dh.current_odds,
+      dh.required_odds,
+      op.close_at
+    FROM decision_history dh
+    LEFT JOIN official_programs op ON op.race_id = dh.race_id
+    WHERE dh.date = ?
+      AND dh.model_version = ?
+      AND dh.decision = 'WATCH'
+      AND dh.current_odds IS NOT NULL
+      AND dh.required_odds IS NOT NULL
+      AND dh.current_odds < dh.required_odds
+    ORDER BY dh.required_odds - dh.current_odds ASC, dh.race_id
+  `).all(date, LIVE_MODEL) as TodayNearMissRow[];
+
+  const enrichedNearRows = nearRows.map((row) => {
+    const currentOdds = nullableNumber(row.current_odds);
+    const requiredOdds = nullableNumber(row.required_odds);
+    const gap = currentOdds == null || requiredOdds == null ? null : round2(requiredOdds - currentOdds);
+    const closeStatus = liveCloseStatus(date, row.close_at, settings, now);
+    return {
+      raceId: row.race_id,
+      venue: row.venue,
+      raceNo: row.race_no,
+      currentOdds,
+      requiredOdds,
+      gap,
+      closeAt: row.close_at,
+      closeStatus,
+    };
+  });
+
+  let within1_0 = 0;
+  let openWithin1_0 = 0;
+  let minGap: number | null = null;
+  for (const row of enrichedNearRows) {
+    if (row.gap != null) {
+      minGap = minGap == null ? row.gap : Math.min(minGap, row.gap);
+      if (row.gap <= 1) {
+        within1_0 += 1;
+        if (row.closeStatus !== 'closed') openWithin1_0 += 1;
+      }
+    }
+  }
+  const topNearMisses = enrichedNearRows.slice(0, 5);
+
+  const total = numberValue(countsRow.total);
+  const oddsPresent = numberValue(countsRow.odds_present);
+  const counts = {
+    total,
+    BUY: numberValue(countsRow.buy),
+    WATCH: numberValue(countsRow.watch),
+    SKIP: numberValue(countsRow.skip),
+  };
+
+  return {
+    date,
+    counts,
+    oddsCoverage: { present: oddsPresent, total, pct: total > 0 ? round2(oddsPresent / total) : null },
+    nearMiss: { watchN: counts.WATCH, within1_0, openWithin1_0, minGap },
+    topNearMisses,
+    skipAtOrAboveRequired: numberValue(countsRow.skip_at_or_above_required),
+    action: diagnosisAction(counts, openWithin1_0, within1_0),
+  };
+}
+
+function liveCloseStatus(date: string, closeAt: string | null, settings: BudgetRule, now: Date) {
+  if (!closeAt) return 'no_close_at';
+  const minutes = (new Date(`${date}T${closeAt}:00+09:00`).getTime() - now.getTime()) / 60_000;
+  if (minutes < 0) return 'closed';
+  if (minutes < settings.minMinutesBeforeClose) return 'too_late';
+  if (minutes <= ODDS_FETCH_WINDOW_MINUTES) return 'in_window';
+  return 'too_early';
+}
+
+function diagnosisAction(counts: { BUY: number; WATCH: number }, openWithin1_0: number, within1_0: number) {
+  if (counts.BUY > 0) return 'review paper BUY rows';
+  if (openWithin1_0 > 0) return 'watch next odds refresh; open near-miss exists';
+  if (within1_0 > 0) return 'review closed near-misses; no open near-miss within 1.0 odds';
+  if (counts.WATCH > 0) return 'observe; WATCH exists but not near BUY boundary';
+  return 'observe; no WATCH/BUY pressure yet';
+}
 
 function historicalBuyPace(db: ReturnType<typeof openDb>) {
   const rows = db.prepare(`
@@ -854,6 +966,11 @@ function daysLeftFromMonthlyPace(remaining: number, monthlyPace: number) {
 function numberValue(value: unknown) {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
+}
+
+function nullableNumber(value: unknown) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
 }
 
 function round1(value: number) {
