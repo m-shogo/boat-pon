@@ -120,8 +120,10 @@ async function downloadFile(url: string, dest: string) {
 
 async function extractAndDecode(lzhPath: string, yymmdd: string): Promise<string> {
   const expectedTxt = path.join(TMP_DIR, `B${yymmdd.toUpperCase()}.TXT`);
-  if (existsSync(expectedTxt)) await rm(expectedTxt);
-  await execFile("unar", ["-q", "-o", TMP_DIR, "-f", lzhPath]);
+  // LZH内容は不変なので、TXTが既に存在すれば再展開不要
+  if (!existsSync(expectedTxt)) {
+    await execFile("unar", ["-q", "-o", TMP_DIR, "-f", lzhPath]);
+  }
   const buf = await readFile(expectedTxt);
   return new TextDecoder("shift_jis").decode(buf);
 }
