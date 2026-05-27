@@ -29,6 +29,7 @@
     "monitor:live": "tsx scripts/live-b1-monitor.ts",
     "progress": "tsx scripts/live-progress.ts",
     "readiness": "tsx scripts/live-readiness.ts",
+    "status:brief": "tsx scripts/live-brief-status.ts",
     "guard:live": "tsx scripts/live-change-guard.ts",
     "auto:odds": "tsx scripts/auto-fetch-odds.ts",
     "generate:vapid": "tsx scripts/generate-vapid-keys.ts"
