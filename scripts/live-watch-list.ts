@@ -6,6 +6,7 @@ const DEFAULT_LIMIT = 20;
 
 const today = todayJst();
 const limit = parseLimit(process.argv);
+const jsonMode = process.argv.includes("--json");
 const db = new DatabaseSync(DB_PATH, { readOnly: true });
 db.exec("PRAGMA busy_timeout = 5000");
 
@@ -16,6 +17,16 @@ try {
 }
 
 function run() {
+  const report = buildReport();
+
+  if (jsonMode) {
+    console.log(JSON.stringify(report));
+  } else {
+    printReport(report);
+  }
+}
+
+function buildReport() {
   const rows = db
     .prepare(
       `
@@ -66,25 +77,43 @@ GROUP BY decision
     Record<"BUY" | "WATCH", number>
   >;
 
+  return {
+    date: today,
+    model: LIVE_MONITOR_MODEL_VERSION,
+    total,
+    shown: rows.length,
+    counts: {
+      BUY: counts.BUY ?? 0,
+      WATCH: counts.WATCH ?? 0,
+    },
+    candidates: rows,
+    hidden: Math.max(0, total - rows.length),
+    action: "observe only; do not purchase from this command",
+  };
+}
+
+function printReport(report: ReturnType<typeof buildReport>) {
   console.log(`date: ${today}`);
   console.log(`model: ${LIVE_MONITOR_MODEL_VERSION}`);
-  console.log(`watch_buy: total=${total} shown=${rows.length} BUY=${counts.BUY ?? 0} WATCH=${counts.WATCH ?? 0}`);
+  console.log(
+    `watch_buy: total=${report.total} shown=${report.shown} BUY=${report.counts.BUY} WATCH=${report.counts.WATCH}`,
+  );
 
-  if (rows.length === 0) {
+  if (report.candidates.length === 0) {
     console.log("candidates: none");
     console.log("action: observe only");
     return;
   }
 
-  for (const row of rows) {
+  for (const row of report.candidates) {
     console.log(formatRow(row));
   }
 
-  if (total > rows.length) {
-    console.log(`more: ${total - rows.length} hidden; rerun with --limit ${total}`);
+  if (report.hidden > 0) {
+    console.log(`more: ${report.hidden} hidden; rerun with --limit ${report.total}`);
   }
 
-  console.log("action: observe only; do not purchase from this command");
+  console.log(`action: ${report.action}`);
 }
 
 function formatRow(row: WatchRow) {
