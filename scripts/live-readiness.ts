@@ -20,12 +20,17 @@ const LOG_PATHS: Array<{ path: string; job: LiveLogJob }> = [
 const now = new Date();
 const today = todayJst();
 const yesterday = addDaysJst(today, -1);
+const jsonMode = process.argv.includes("--json");
 const db = new DatabaseSync(DB_PATH, { readOnly: true });
 db.exec("PRAGMA busy_timeout = 5000");
 
 try {
   const report = buildReport(db);
-  printReport(report);
+  if (jsonMode) {
+    console.log(JSON.stringify(report));
+  } else {
+    printReport(report);
+  }
 } finally {
   db.close();
 }
