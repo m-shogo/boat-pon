@@ -66,6 +66,14 @@ test("maxOddsRatioを超える場合はSKIPにする", () => {
   assert.ok(decision.reasons.some((r) => r.includes("市場オッズがモデル要求の2倍超")));
 });
 
+test("maxOddsを超える場合はSKIPにする", () => {
+  const decision = judgeCandidate({ ...base, currentOdds: 55 }, { ...DEFAULT_RULE, maxOdds: 50 }, {
+    now: new Date("2026-05-21T18:00:00+09:00"),
+  });
+  assert.equal(decision.status, "SKIP");
+  assert.ok(decision.reasons.includes("オッズ上限超過(50倍)"));
+});
+
 test("marketBlendWeight=0では推定的中率をそのまま使う", () => {
   assert.equal(blendedHitRate(0.08, 20, 0), 0.08);
   assert.equal(blendedHitRate(0.08, null, 0.7), 0.08);
