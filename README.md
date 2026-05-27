@@ -166,3 +166,5 @@ npm run dev
 ```
 
 VAPIDキー未設定時は `/api/push/vapid-public-key` が `{ enabled: false }` を返し、UIでも警告表示されます。VAPIDキーは秘密情報なのでGit管理しないでください。
+
+`npm run handoff:claude` でClaude向け作業引き継ぎ指示（制約・現在状態・作業範囲）を出力します。

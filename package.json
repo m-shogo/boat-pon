@@ -32,7 +32,8 @@
     "status:brief": "tsx scripts/live-brief-status.ts",
     "guard:live": "tsx scripts/live-change-guard.ts",
     "auto:odds": "tsx scripts/auto-fetch-odds.ts",
-    "generate:vapid": "tsx scripts/generate-vapid-keys.ts"
+    "generate:vapid": "tsx scripts/generate-vapid-keys.ts",
+    "handoff:claude": "tsx scripts/claude-handoff.ts"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
