@@ -31,6 +31,7 @@
     "readiness": "tsx scripts/live-readiness.ts",
     "status:brief": "tsx scripts/live-brief-status.ts",
     "watch:today": "tsx scripts/live-watch-list.ts",
+    "live:diagnose": "tsx scripts/live-diagnose.ts",
     "guard:live": "tsx scripts/live-change-guard.ts",
     "auto:odds": "tsx scripts/auto-fetch-odds.ts",
     "generate:vapid": "tsx scripts/generate-vapid-keys.ts",

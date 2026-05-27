@@ -104,6 +104,7 @@ paper live観察の進捗確認:
 
 ```sh
 npm run status:brief
+npm run live:diagnose
 npm run watch:today
 npm run progress
 npm run readiness
@@ -112,6 +113,7 @@ npm run guard:live
 ```
 
 `status:brief` は監視用の短い要約です。末尾の `action:` 行が次に取るべき操作を示すので、通常はこれだけを見て、`run npm run readiness` / `inspect git diff` 以外の場合はそのまま待機します。`--json` オプション (`npm run status:brief -- --json`) を付けると同じ内容を JSON 1行で出力します（Codex などの自動監視向け）。
+`live:diagnose` はBUY=0を「待ち」と決めつけず、当日の取得窓、オッズ取得率、WATCH→BUY境界差、必要オッズ以上なのにSKIPされた行を分解して表示します。読み取り専用で、`--json` オプション (`npm run live:diagnose -- --json`) に対応します。
 `watch:today` は当日の `WATCH` / `BUY` 候補だけを短く表示します。これは紙上観察用の読み取り専用コマンドで、実購入判断や設定変更には使いません。`--json` オプション (`npm run watch:today -- --json`) で自動監視向けのJSON 1行を出力します。
 `progress` は live BUY進捗、番組/判定/オッズの最終日、オッズ取得率、BUY=0継続の早期警告、n=300到達ETA、ログ末尾をまとめて表示します。実購入判断には使わず、情報取得が止まっていないかを見るためのコマンドです。
 `readiness` はLaunchAgent時刻、DB鮮度、ログ作成状況を読み取り専用で確認します。`--json` オプション (`npm run readiness -- --json`) で同じ内容をJSON 1行で出力します。
