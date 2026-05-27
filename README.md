@@ -107,6 +107,7 @@ npm run status:brief
 npm run watch:today
 npm run progress
 npm run readiness
+npm run day:close
 npm run guard:live
 ```
 
