@@ -18,9 +18,15 @@ const today = todayJst();
 const db = new DatabaseSync(DB_PATH, { readOnly: true });
 db.exec("PRAGMA busy_timeout = 5000");
 
+const jsonMode = process.argv.includes("--json");
+
 try {
   const report = buildReport(db);
-  printReport(report);
+  if (jsonMode) {
+    console.log(JSON.stringify({ ...report, action: resolveAction(report) }));
+  } else {
+    printReport(report);
+  }
 } finally {
   db.close();
 }
