@@ -1,5 +1,5 @@
-import { Activity, Bell, CheckCircle2, Database, ExternalLink, HelpCircle, History, Settings, ShieldCheck } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Activity, Bell, CheckCircle2, Database, ExternalLink, HelpCircle, History, RefreshCw, Settings, ShieldCheck } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   compareModelsApi,
   fetchCalibrationApi,
@@ -45,6 +45,8 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [liveMonitor, setLiveMonitor] = useState<LiveMonitorResponse | null>(null);
   const [liveMonitorError, setLiveMonitorError] = useState<string | null>(null);
+  const [liveMonitorLoading, setLiveMonitorLoading] = useState(true);
+  const [liveMonitorLastUpdated, setLiveMonitorLastUpdated] = useState<Date | null>(null);
   const [guideOpen, setGuideOpen] = useState(() => localStorage.getItem("boatpon.guide.done") !== "1");
 
   async function notifyUser(title: string, body: string) {
@@ -72,22 +74,25 @@ export default function App() {
     void refresh();
   }, [date]);
 
-  useEffect(() => {
-    let cancelled = false;
-    fetchLiveB1Monitor()
-      .then((report) => {
-        if (!cancelled) {
-          setLiveMonitor(report);
-          setLiveMonitorError(null);
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) setLiveMonitorError(err instanceof Error ? err.message : "unknown error");
-      });
-    return () => {
-      cancelled = true;
-    };
+  const refreshLiveMonitor = useCallback(async () => {
+    setLiveMonitorLoading(true);
+    try {
+      const report = await fetchLiveB1Monitor();
+      setLiveMonitor(report);
+      setLiveMonitorLastUpdated(new Date());
+      setLiveMonitorError(null);
+    } catch (err) {
+      setLiveMonitorError(err instanceof Error ? err.message : "unknown error");
+    } finally {
+      setLiveMonitorLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void refreshLiveMonitor();
+    const id = setInterval(() => void refreshLiveMonitor(), 60_000);
+    return () => clearInterval(id);
+  }, [refreshLiveMonitor]);
 
   const buyRows = data?.rows.filter((row) => row.decision.status === "BUY") ?? [];
   const watchRows = data?.rows.filter((row) => row.decision.status === "WATCH") ?? [];
@@ -158,7 +163,13 @@ export default function App() {
             </header>
 
             {screen === "dashboard" && (
-              <LiveMonitorSummaryPanel report={liveMonitor} error={liveMonitorError} />
+              <LiveMonitorSummaryPanel
+                report={liveMonitor}
+                error={liveMonitorError}
+                loading={liveMonitorLoading}
+                lastUpdated={liveMonitorLastUpdated}
+                onRefresh={() => void refreshLiveMonitor()}
+              />
             )}
 
             <section className="metrics" aria-label="today summary">
@@ -197,7 +208,15 @@ export default function App() {
   );
 }
 
-function LiveMonitorSummaryPanel({ report, error }: { report: LiveMonitorResponse | null; error: string | null }) {
+function LiveMonitorSummaryPanel({
+  report, error, loading, lastUpdated, onRefresh,
+}: {
+  report: LiveMonitorResponse | null;
+  error: string | null;
+  loading: boolean;
+  lastUpdated: Date | null;
+  onRefresh: () => void;
+}) {
   const summary = report?.summary;
   const pct = summary ? Math.min(100, Math.round((summary.n / 300) * 100)) : 0;
   const eta = report?.pace.eta;
@@ -211,12 +230,29 @@ function LiveMonitorSummaryPanel({ report, error }: { report: LiveMonitorRespons
           <h3>Paper Live監視</h3>
           <p>実購入なし。n=300までは採用/撤退を確定しません。</p>
         </div>
-        <span className={`liveAlertBadge ${alert?.level ?? "ok"}`}>
-          {error ? "error" : alert?.code ?? "normal"}
-        </span>
+        <div className="liveMonitorActions">
+          {lastUpdated && (
+            <span className="liveLastUpdated">
+              {lastUpdated.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+            </span>
+          )}
+          <button
+            className="liveRefreshButton"
+            onClick={onRefresh}
+            disabled={loading}
+            aria-label="更新"
+          >
+            <RefreshCw size={12} className={loading ? "spinning" : ""} />
+            {loading ? "更新中" : "更新"}
+          </button>
+          <span className={`liveAlertBadge ${alert?.level ?? "ok"}`}>
+            {error ? "error" : alert?.code ?? "normal"}
+          </span>
+        </div>
       </div>
       {error && <div className="formError">{error}</div>}
-      {!error && !report && <div className="empty">live監視を読み込み中...</div>}
+      {!error && !report && loading && <div className="empty">live監視を読み込み中...</div>}
+      {!error && !report && !loading && <div className="empty">データなし</div>}
       {report && (
         <>
           <div className="liveProgressRow">
