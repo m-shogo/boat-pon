@@ -97,6 +97,15 @@ function printReport(report: ReturnType<typeof buildReport>) {
   console.log(`coverage: all=${report.coverageAll}, watch+buy=${report.coverageWatchBuy}`);
   console.log(`errors: ${errorText}`);
   console.log(`next: auto-odds ${report.nextAutoOdds}, progress ${report.nextProgress}`);
+  console.log(`action: ${resolveAction(report)}`);
+}
+
+function resolveAction(report: ReturnType<typeof buildReport>) {
+  if (report.errors.length > 0) return "run npm run readiness";
+  if (report.guard === "block") return "inspect git diff and guard output";
+  if (report.git === "dirty") return "review/commit pending changes";
+  if (report.liveBuyN < 300) return "wait for data";
+  return "live_buy_n reached 300 — review results";
 }
 
 function gitStatus() {
@@ -135,7 +144,7 @@ function formatJst(date: Date) {
 
 function nextAutoOddsTime() {
   const current = nowJstParts();
-  const minuteSlot = Math.ceil(current.minute / 15) * 15;
+  const minuteSlot = (Math.floor(current.minute / 15) + 1) * 15;
   const candidateHour = minuteSlot === 60 ? current.hour + 1 : current.hour;
   const candidateMinute = minuteSlot === 60 ? 0 : minuteSlot;
   if (candidateHour >= 9 && candidateHour <= 21) return `${pad(candidateHour)}:${pad(candidateMinute)}`;
