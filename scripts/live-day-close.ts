@@ -8,6 +8,7 @@ const CLOSE_MINUTE = 5;
 
 const now = new Date();
 const today = todayJst();
+const jsonMode = process.argv.includes("--json");
 const db = new DatabaseSync(DB_PATH, { readOnly: true });
 db.exec("PRAGMA busy_timeout = 5000");
 
@@ -18,6 +19,16 @@ try {
 }
 
 function run() {
+  const report = buildReport();
+
+  if (jsonMode) {
+    console.log(JSON.stringify(report));
+  } else {
+    printReport(report);
+  }
+}
+
+function buildReport() {
   const programCount = (
     db.prepare(`SELECT COUNT(*) AS n FROM official_programs WHERE date = ?`).get(today) as { n: number }
   ).n;
@@ -58,19 +69,40 @@ function run() {
 
   const coverage =
     watchBuyQ.n > 0
-      ? `${watchBuyQ.odds_present}/${watchBuyQ.n} ${Math.round((watchBuyQ.odds_present / watchBuyQ.n) * 100)}%`
+      ? `${watchBuyQ.odds_present ?? 0}/${watchBuyQ.n} ${Math.round(((watchBuyQ.odds_present ?? 0) / watchBuyQ.n) * 100)}%`
       : "-";
 
-  console.log(`date: ${today}`);
-  console.log(`programs: ${programCount}`);
-  console.log(`odds_snapshots: ${oddsCount}`);
-  console.log(`decisions: BUY=${dec.BUY ?? 0} WATCH=${dec.WATCH ?? 0} SKIP=${dec.SKIP ?? 0}`);
-  console.log(`live_buy_n: ${liveBuyN}/300`);
-  console.log(`watch+buy odds coverage: ${coverage}`);
-  console.log(`progress.log: ${progressLog.detail}`);
-  console.log(`progress-err.log: ${progressErrLog.detail}`);
-  console.log(`close_status: ${closeStatus}`);
-  console.log(`action: ${resolveAction(closeStatus)}`);
+  return {
+    date: today,
+    programs: programCount,
+    oddsSnapshots: oddsCount,
+    decisions: {
+      BUY: dec.BUY ?? 0,
+      WATCH: dec.WATCH ?? 0,
+      SKIP: dec.SKIP ?? 0,
+    },
+    liveBuyN,
+    watchBuyOddsCoverage: coverage,
+    progressLog: progressLog.detail,
+    progressErrLog: progressErrLog.detail,
+    closeStatus,
+    action: resolveAction(closeStatus),
+  };
+}
+
+function printReport(report: ReturnType<typeof buildReport>) {
+  console.log(`date: ${report.date}`);
+  console.log(`programs: ${report.programs}`);
+  console.log(`odds_snapshots: ${report.oddsSnapshots}`);
+  console.log(
+    `decisions: BUY=${report.decisions.BUY} WATCH=${report.decisions.WATCH} SKIP=${report.decisions.SKIP}`,
+  );
+  console.log(`live_buy_n: ${report.liveBuyN}/300`);
+  console.log(`watch+buy odds coverage: ${report.watchBuyOddsCoverage}`);
+  console.log(`progress.log: ${report.progressLog}`);
+  console.log(`progress-err.log: ${report.progressErrLog}`);
+  console.log(`close_status: ${report.closeStatus}`);
+  console.log(`action: ${report.action}`);
 }
 
 function isPastCloseTime() {
