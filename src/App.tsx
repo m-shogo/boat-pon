@@ -43,6 +43,8 @@ export default function App() {
   );
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [liveMonitor, setLiveMonitor] = useState<LiveMonitorResponse | null>(null);
+  const [liveMonitorError, setLiveMonitorError] = useState<string | null>(null);
   const [guideOpen, setGuideOpen] = useState(() => localStorage.getItem("boatpon.guide.done") !== "1");
 
   async function notifyUser(title: string, body: string) {
@@ -69,6 +71,23 @@ export default function App() {
   useEffect(() => {
     void refresh();
   }, [date]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchLiveB1Monitor()
+      .then((report) => {
+        if (!cancelled) {
+          setLiveMonitor(report);
+          setLiveMonitorError(null);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) setLiveMonitorError(err instanceof Error ? err.message : "unknown error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const buyRows = data?.rows.filter((row) => row.decision.status === "BUY") ?? [];
   const watchRows = data?.rows.filter((row) => row.decision.status === "WATCH") ?? [];
@@ -138,6 +157,10 @@ export default function App() {
               </div>
             </header>
 
+            {screen === "dashboard" && (
+              <LiveMonitorSummaryPanel report={liveMonitor} error={liveMonitorError} />
+            )}
+
             <section className="metrics" aria-label="today summary">
               <Metric icon={<Bell size={18} />} label="BUY候補" value={buyRows.length.toString()} />
               <Metric icon={<Activity size={18} />} label="WATCH" value={watchRows.length.toString()} />
@@ -172,6 +195,65 @@ export default function App() {
       </main>
     </div>
   );
+}
+
+function LiveMonitorSummaryPanel({ report, error }: { report: LiveMonitorResponse | null; error: string | null }) {
+  const summary = report?.summary;
+  const pct = summary ? Math.min(100, Math.round((summary.n / 300) * 100)) : 0;
+  const eta = report?.pace.eta;
+  const watchBuy = report?.watchBuyQuality;
+  const alert = report?.alerts[0] ?? null;
+
+  return (
+    <section className="liveMonitorPanel">
+      <div className="liveMonitorHead">
+        <div>
+          <h3>Paper Live監視</h3>
+          <p>実購入なし。n=300までは採用/撤退を確定しません。</p>
+        </div>
+        <span className={`liveAlertBadge ${alert?.level ?? "ok"}`}>
+          {error ? "error" : alert?.code ?? "normal"}
+        </span>
+      </div>
+      {error && <div className="formError">{error}</div>}
+      {!error && !report && <div className="empty">live監視を読み込み中...</div>}
+      {report && (
+        <>
+          <div className="liveProgressRow">
+            <div>
+              <span>live BUY</span>
+              <strong>{summary!.n}/300</strong>
+            </div>
+            <div className="progressTrack liveProgressTrack">
+              <div className="progressFill ok" style={{ width: `${pct}%` }} />
+            </div>
+          </div>
+          <div className="liveMonitorGrid">
+            <Stat label="BUY=0連続" value={`${report.paperLive.consecutiveZeroBuyDays}日`} />
+            <Stat label="WATCH+BUYオッズ" value={`${watchBuy!.oddsPresent}/${watchBuy!.n}`} />
+            <Stat label="実測ETA" value={formatEta(eta!.liveDaysLeft)} />
+            <Stat label="過去中央値ETA" value={formatEta(eta!.historicalMedianDaysLeft)} />
+            <Stat label="保守ETA" value={formatEta(eta!.historicalMinDaysLeft)} />
+            <Stat label="最新判定" value={report.latestModelDecisionDate ?? "-"} />
+          </div>
+          {report.alerts.length > 0 && (
+            <div className="liveAlerts">
+              {report.alerts.map((item) => (
+                <div className={`liveAlert ${item.level}`} key={item.code}>
+                  <strong>{item.code}</strong>
+                  <span>{item.message}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
+function formatEta(days: number | null) {
+  return days == null ? "-" : `${days}日`;
 }
 
 function SavingsPanel({ data }: { data: DashboardResponse }) {

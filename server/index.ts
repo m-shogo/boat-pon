@@ -532,6 +532,8 @@ app.get("/api/backtest/calibration", (req, res) => {
 // 2026 live B1 監視（現行model_version + date>=2026-01-01、app_settingsがB1フィルターを保証）
 const LIVE_FROM = LIVE_MONITOR_FROM;
 const LIVE_MODEL = LIVE_MONITOR_MODEL_VERSION;
+const PAPER_LIVE_START = "2026-05-27";
+const TARGET_BUY_N = 300;
 
 app.get("/api/live/b1-monitor", (_req, res) => {
   const db = openDb();
@@ -658,6 +660,39 @@ app.get("/api/live/b1-monitor", (_req, res) => {
       WHERE substr(captured_at, 1, 10) >= ?
     `).get(LIVE_FROM) as { d: string | null }).d;
 
+    const watchBuyQuality = db.prepare(`
+      SELECT
+        COUNT(*) AS n,
+        SUM(CASE WHEN current_odds IS NULL THEN 1 ELSE 0 END) AS odds_missing,
+        SUM(CASE WHEN current_odds IS NOT NULL THEN 1 ELSE 0 END) AS odds_present
+      FROM decision_history
+      WHERE date >= ? AND model_version = ? AND decision IN ('WATCH', 'BUY')
+    `).get(LIVE_FROM, LIVE_MODEL) as { n: number; odds_missing: number; odds_present: number };
+
+    const paperDays = db.prepare(`
+      SELECT
+        date,
+        SUM(CASE WHEN decision = 'BUY' THEN 1 ELSE 0 END) AS buy_n,
+        SUM(CASE WHEN decision = 'WATCH' THEN 1 ELSE 0 END) AS watch_n,
+        COUNT(*) AS total_n
+      FROM decision_history
+      WHERE date >= ? AND model_version = ?
+      GROUP BY date
+      ORDER BY date
+    `).all(PAPER_LIVE_START, LIVE_MODEL) as Array<{ date: string; buy_n: number; watch_n: number; total_n: number }>;
+
+    const historicalPace = historicalBuyPace(db);
+    const livePace = liveBuyPace(paperDays);
+    const eta = buyEta(n, livePace.ratePerDay, historicalPace);
+    const alerts = buildLiveAlerts({
+      buyN: n,
+      paperDays,
+      watchBuyN: numberValue(watchBuyQuality.n),
+      watchBuyOddsMissing: numberValue(watchBuyQuality.odds_missing),
+      latestModelDecisionDate,
+      latestOddsSnapshotDate,
+    });
+
     // 除外件数の集計（diagnostics から）
     let excludedOldModelCount = 0;
     let excludedSampleCount = 0;
@@ -699,11 +734,135 @@ app.get("/api/live/b1-monitor", (_req, res) => {
       excludedOldModelCount,
       excludedSampleCount,
       sources,
+      watchBuyQuality: {
+        n: numberValue(watchBuyQuality.n),
+        oddsMissing: numberValue(watchBuyQuality.odds_missing),
+        oddsPresent: numberValue(watchBuyQuality.odds_present),
+      },
+      paperLive: {
+        startDate: PAPER_LIVE_START,
+        observedDays: paperDays.length,
+        zeroBuyDays: paperDays.filter((row) => numberValue(row.buy_n) === 0).length,
+        consecutiveZeroBuyDays: consecutiveZeroBuyDays(paperDays),
+        latestDay: paperDays.at(-1) ?? null,
+      },
+      pace: {
+        live: livePace,
+        historical: historicalPace,
+        eta,
+      },
+      alerts,
     });
   } finally {
     db.close();
   }
 });
+
+function historicalBuyPace(db: ReturnType<typeof openDb>) {
+  const rows = db.prepare(`
+    SELECT substr(date, 1, 7) AS ym, COUNT(*) AS n
+    FROM decision_history
+    WHERE model_version = ?
+      AND decision = 'BUY'
+      AND date BETWEEN '2024-01-01' AND '2025-12-31'
+    GROUP BY ym
+    ORDER BY ym
+  `).all(LIVE_MODEL) as Array<{ ym: string; n: number }>;
+
+  const counts = rows.map((row) => numberValue(row.n)).filter((count) => count > 0);
+  const sorted = [...counts].sort((a, b) => a - b);
+  const total = counts.reduce((sum, count) => sum + count, 0);
+  const averagePerMonth = counts.length > 0 ? total / counts.length : 0;
+  const medianPerMonth =
+    sorted.length > 0 ? (sorted[Math.floor((sorted.length - 1) / 2)] + sorted[Math.ceil((sorted.length - 1) / 2)]) / 2 : 0;
+
+  return {
+    source: "2024-2025 v3 BUY months",
+    months: counts.length,
+    total,
+    averagePerMonth: round1(averagePerMonth),
+    medianPerMonth: round1(medianPerMonth),
+    minPerMonth: sorted[0] ?? 0,
+    maxPerMonth: sorted.at(-1) ?? 0,
+  };
+}
+
+function liveBuyPace(rows: Array<{ buy_n: number }>) {
+  const buyN = rows.reduce((sum, row) => sum + numberValue(row.buy_n), 0);
+  return {
+    observedDays: rows.length,
+    buyN,
+    ratePerDay: rows.length > 0 ? round2(buyN / rows.length) : 0,
+  };
+}
+
+function buyEta(n: number, liveRatePerDay: number, historical: ReturnType<typeof historicalBuyPace>) {
+  const remaining = Math.max(0, TARGET_BUY_N - n);
+  return {
+    targetN: TARGET_BUY_N,
+    remaining,
+    liveDaysLeft: liveRatePerDay > 0 ? Math.ceil(remaining / liveRatePerDay) : null,
+    historicalMedianDaysLeft: daysLeftFromMonthlyPace(remaining, historical.medianPerMonth),
+    historicalAverageDaysLeft: daysLeftFromMonthlyPace(remaining, historical.averagePerMonth),
+    historicalMinDaysLeft: daysLeftFromMonthlyPace(remaining, historical.minPerMonth),
+  };
+}
+
+function buildLiveAlerts(input: {
+  buyN: number;
+  paperDays: Array<{ buy_n: number }>;
+  watchBuyN: number;
+  watchBuyOddsMissing: number;
+  latestModelDecisionDate: string | null;
+  latestOddsSnapshotDate: string | null;
+}) {
+  const alerts: Array<{ level: "info" | "warn" | "critical"; code: string; message: string }> = [];
+  const zeroDays = consecutiveZeroBuyDays(input.paperDays);
+
+  if (input.buyN === 0 && zeroDays >= 7) {
+    alerts.push({ level: "critical", code: "buy_zero_7d", message: `BUYが${zeroDays}日連続0件です。取得タイミング・BUY条件・保存条件を点検してください。` });
+  } else if (input.buyN === 0 && zeroDays >= 3) {
+    alerts.push({ level: "warn", code: "buy_zero_3d", message: `BUYが${zeroDays}日連続0件です。数日継続するならライブ条件の厳しさを確認します。` });
+  } else if (input.buyN === 0 && input.watchBuyN > 0) {
+    alerts.push({ level: "info", code: "watch_present_buy_zero", message: `WATCH/BUY候補は${input.watchBuyN}件ありますがBUYはまだ0件です。初期日は観察継続で十分です。` });
+  }
+
+  if (input.watchBuyN > 0 && input.watchBuyOddsMissing > 0) {
+    alerts.push({ level: "warn", code: "watch_buy_odds_missing", message: `WATCH/BUY候補のオッズ未取得が${input.watchBuyOddsMissing}件あります。auto-oddsログを確認してください。` });
+  }
+
+  if (input.latestModelDecisionDate !== input.latestOddsSnapshotDate) {
+    alerts.push({ level: "info", code: "latest_date_mismatch", message: `最新判定日=${input.latestModelDecisionDate ?? "-"}、最新オッズ日=${input.latestOddsSnapshotDate ?? "-"}です。` });
+  }
+
+  return alerts;
+}
+
+function consecutiveZeroBuyDays(rows: Array<{ buy_n: number }>) {
+  let count = 0;
+  for (let i = rows.length - 1; i >= 0; i--) {
+    if (numberValue(rows[i].buy_n) === 0) count += 1;
+    else break;
+  }
+  return count;
+}
+
+function daysLeftFromMonthlyPace(remaining: number, monthlyPace: number) {
+  return monthlyPace > 0 ? Math.ceil(Math.max(0, remaining) / (monthlyPace / 30.4375)) : null;
+}
+
+function numberValue(value: unknown) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function round1(value: number) {
+  return Math.round(value * 10) / 10;
+}
+
+function round2(value: number) {
+  return Math.round(value * 100) / 100;
+}
 
 app.put("/api/settings", (req, res) => {
   const db = openDb();

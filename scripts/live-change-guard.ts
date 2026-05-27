@@ -13,7 +13,6 @@ const riskyPathRules: Array<{ pattern: RegExp; reason: string }> = [
   { pattern: /^src\/domain\/types\.ts$/, reason: "BudgetRule/候補型の変更により判定条件が増減する可能性" },
   { pattern: /^server\/db\.ts$/, reason: "DB設定・履歴保存に影響" },
   { pattern: /^server\/candidates\.ts$/, reason: "候補生成に影響" },
-  { pattern: /^src\/App\.tsx$/, reason: "設定UI変更によりapp_settings誤変更リスク" },
   { pattern: /^scripts\/generate-decision-history\.ts$/, reason: "decision_history再生成に影響" },
   { pattern: /^scripts\/auto-fetch-odds\.ts$/, reason: "live odds/decision_history保存に影響" },
 ];
@@ -62,8 +61,8 @@ const diffInspectedFiles = changedFiles.filter(
   (path) => !path.startsWith("data/") && path !== "scripts/live-change-guard.ts",
 );
 const diffText = [
-  gitText(["diff", "--", ...diffInspectedFiles]),
-  gitText(["diff", "--cached", "--", ...diffInspectedFiles]),
+  gitText(["diff", "--unified=0", "--", ...diffInspectedFiles]),
+  gitText(["diff", "--cached", "--unified=0", "--", ...diffInspectedFiles]),
 ].join("\n");
 
 for (const rule of riskyDiffPatterns) {

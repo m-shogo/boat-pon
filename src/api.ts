@@ -275,6 +275,12 @@ export type LiveMonitorDecisionCount = {
   latest_date: string | null;
 };
 
+export type LiveMonitorAlert = {
+  level: "info" | "warn" | "critical";
+  code: string;
+  message: string;
+};
+
 export type LiveMonitorResponse = {
   period: { from: string; to: string; modelVersion: string; filter: string };
   summary: {
@@ -302,6 +308,35 @@ export type LiveMonitorResponse = {
   excludedOldModelCount: number;
   excludedSampleCount: number;
   sources: string[];
+  watchBuyQuality: { n: number; oddsMissing: number; oddsPresent: number };
+  paperLive: {
+    startDate: string;
+    observedDays: number;
+    zeroBuyDays: number;
+    consecutiveZeroBuyDays: number;
+    latestDay: { date: string; buy_n: number; watch_n: number; total_n: number } | null;
+  };
+  pace: {
+    live: { observedDays: number; buyN: number; ratePerDay: number };
+    historical: {
+      source: string;
+      months: number;
+      total: number;
+      averagePerMonth: number;
+      medianPerMonth: number;
+      minPerMonth: number;
+      maxPerMonth: number;
+    };
+    eta: {
+      targetN: number;
+      remaining: number;
+      liveDaysLeft: number | null;
+      historicalMedianDaysLeft: number | null;
+      historicalAverageDaysLeft: number | null;
+      historicalMinDaysLeft: number | null;
+    };
+  };
+  alerts: LiveMonitorAlert[];
 };
 
 export async function fetchLiveB1Monitor(): Promise<LiveMonitorResponse> {

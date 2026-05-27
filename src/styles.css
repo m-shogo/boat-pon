@@ -171,6 +171,91 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
 .sectionHead h3 { margin: 0; font-size: 20px; }
 .sectionHead p { margin: 4px 0 0; color: #86a69c; font-size: 13px; }
 
+.liveMonitorPanel {
+  margin-top: 18px;
+  border: 1px solid rgba(154, 246, 213, 0.16);
+  border-radius: 8px;
+  background: rgba(13, 32, 28, 0.82);
+  padding: 18px;
+}
+.liveMonitorHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+}
+.liveMonitorHead h3 {
+  margin: 0;
+  font-size: 20px;
+}
+.liveMonitorHead p {
+  margin: 4px 0 0;
+  color: #86a69c;
+  font-size: 13px;
+}
+.liveAlertBadge {
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: rgba(124, 225, 195, 0.14);
+  color: #7ce1c3;
+  font-size: 11px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+.liveAlertBadge.info { background: rgba(124, 225, 195, 0.14); color: #7ce1c3; }
+.liveAlertBadge.warn { background: rgba(242, 181, 74, 0.18); color: #f2b54a; }
+.liveAlertBadge.critical,
+.liveAlertBadge.error { background: rgba(255, 138, 138, 0.15); color: #ffb4b4; }
+.liveProgressRow {
+  display: grid;
+  grid-template-columns: minmax(120px, 180px) 1fr;
+  gap: 14px;
+  align-items: center;
+  margin-top: 16px;
+}
+.liveProgressRow span {
+  display: block;
+  color: #86a69c;
+  font-size: 12px;
+}
+.liveProgressRow strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 24px;
+}
+.liveProgressTrack {
+  min-height: 12px;
+}
+.liveMonitorGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+.liveAlerts {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+.liveAlert {
+  border: 1px solid rgba(154, 246, 213, 0.12);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.035);
+}
+.liveAlert strong {
+  display: block;
+  font-size: 12px;
+}
+.liveAlert span {
+  display: block;
+  margin-top: 3px;
+  color: #b7d0c8;
+  font-size: 13px;
+}
+.liveAlert.warn { border-color: rgba(242, 181, 74, 0.24); }
+.liveAlert.critical { border-color: rgba(255, 138, 138, 0.25); }
+
 .candidateGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
