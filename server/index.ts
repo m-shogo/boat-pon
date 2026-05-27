@@ -40,7 +40,7 @@ import {
 import webpush from "web-push";
 import { buildCandidateRows } from "./candidates";
 import { fetchOfficialOdds } from "../scripts/fetch-official-odds";
-import { parseTrifectaOdds } from "../src/domain/oddsParser";
+import { isTrifectaSelectionUnavailable, parseTrifectaOdds } from "../src/domain/oddsParser";
 import { isWithinOddsFetchWindow, shouldPersistDecisionHistory } from "../src/domain/livePersistence";
 import type { BudgetRule } from "../src/domain/types";
 
@@ -827,7 +827,13 @@ app.post("/api/odds/fetch", async (req, res) => {
         });
         const odds = parseTrifectaOdds(fetched.html, candidate.selection);
         if (odds == null) {
-          results.push({ raceId: candidate.raceId, odds: null, status: "parse-failed" });
+          results.push({
+            raceId: candidate.raceId,
+            odds: null,
+            status: isTrifectaSelectionUnavailable(fetched.html, candidate.selection)
+              ? "odds-unavailable"
+              : "parse-failed",
+          });
           continue;
         }
         setOdds(db, candidate.raceId, odds, "official", candidate.selection.join("-"));

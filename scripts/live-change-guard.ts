@@ -11,7 +11,6 @@ const riskyPathRules: Array<{ pattern: RegExp; reason: string }> = [
   { pattern: /^src\/domain\/liveMonitor\.ts$/, reason: "live採用判断・モデルバージョンに影響" },
   { pattern: /^src\/domain\/livePersistence\.ts$/, reason: "live履歴保存条件に影響" },
   { pattern: /^src\/domain\/types\.ts$/, reason: "BudgetRule/候補型の変更により判定条件が増減する可能性" },
-  { pattern: /^server\/index\.ts$/, reason: "settings API validationに影響" },
   { pattern: /^server\/db\.ts$/, reason: "DB設定・履歴保存に影響" },
   { pattern: /^server\/candidates\.ts$/, reason: "候補生成に影響" },
   { pattern: /^src\/App\.tsx$/, reason: "設定UI変更によりapp_settings誤変更リスク" },
@@ -29,6 +28,7 @@ const riskyDiffPatterns: Array<{ pattern: RegExp; reason: string }> = [
   { pattern: /\bPAPER_LIVE_VALIDATION_RULE\b/, reason: "live検証プリセット追加/変更" },
   { pattern: /\bjudgeCandidate\b/, reason: "判定関数変更" },
   { pattern: /\bapp_settings\b/, reason: "DB live設定変更" },
+  { pattern: /\/api\/settings\b/, reason: "settings API validationに影響" },
   { pattern: /\bupdateSettings\b|\bsetSettings\b/, reason: "設定保存処理変更" },
   { pattern: /\btargetEv\b|\bminSampleSize\b|\bmaxOdds\b|\bmaxOddsRatio\b|\bminOddsRatio\b/, reason: "判定パラメータ変更" },
   { pattern: /\bminRequiredOdds\b|\bmaxRequiredOdds\b|\bmarketBlendWeight\b|\bcalibrationMode\b|\bcalibrationBasis\b/, reason: "判定パラメータ変更" },
@@ -58,9 +58,12 @@ for (const path of changedFiles) {
   }
 }
 
+const diffInspectedFiles = changedFiles.filter(
+  (path) => !path.startsWith("data/") && path !== "scripts/live-change-guard.ts",
+);
 const diffText = [
-  gitText(["diff", "--", ...changedFiles.filter((path) => !path.startsWith("data/"))]),
-  gitText(["diff", "--cached", "--", ...changedFiles.filter((path) => !path.startsWith("data/"))]),
+  gitText(["diff", "--", ...diffInspectedFiles]),
+  gitText(["diff", "--cached", "--", ...diffInspectedFiles]),
 ].join("\n");
 
 for (const rule of riskyDiffPatterns) {

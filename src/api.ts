@@ -121,7 +121,7 @@ export async function getOddsSnapshots(raceId?: string): Promise<{ rows: OddsSna
 export type OddsFetchResult = {
   raceId: string;
   odds: number | null;
-  status: "ok" | "ok-cached" | "out-of-window" | "parse-failed" | "error";
+  status: "ok" | "ok-cached" | "out-of-window" | "odds-unavailable" | "parse-failed" | "error";
   error?: string;
 };
 
