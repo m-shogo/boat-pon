@@ -5,10 +5,12 @@ const KNOWN_REPAIRED_PARSE_FAILURES = new Set([
   "parse-failed: 20260526-江戸川-11 1-2-3",
   "parse-failed: 20260526-浜名湖-11 1-2-3",
   "parse-failed: 20260526-蒲郡-02 1-2-3",
+  "parse failed 2026-05-27: spawn unar ENOENT",
 ]);
 
 const KNOWN_REPAIRED_SUMMARIES = new Set([
   "auto-fetch-odds done: fetched=2 skipped=125 failed=4 saved=131 dryRun=false",
+  "--- done: 1 days / 0 programs / cached=1 / already=0 / failed=1",
 ]);
 
 export type LiveLogJob = "daily-programs" | "auto-odds" | "daily-progress";
@@ -65,7 +67,7 @@ function readLogLines(path: string) {
 }
 
 function isIssueLine(line: string) {
-  return line.startsWith("parse-failed:") || line.startsWith("error:");
+  return line.startsWith("parse-failed:") || line.startsWith("parse failed ") || line.startsWith("error:");
 }
 
 function isKnownRepairedLine(line: string) {
