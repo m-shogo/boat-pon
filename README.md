@@ -113,6 +113,7 @@ npm run guard:live
 `progress` は live BUY進捗、番組/判定/オッズの最終日、オッズ取得率、ログ末尾をまとめて表示します。実購入判断には使わず、情報取得が止まっていないかを見るためのコマンドです。
 `readiness` はLaunchAgent時刻、DB鮮度、ログ作成状況を読み取り専用で確認します。
 `guard:live` は未コミット差分を読み取り、live判定・設定・DB/data混入に触れる変更があれば停止します。Claude/Codexに作業を渡す前後の安全確認に使います。
+`day:close` は21:05以降に「今日の収集は締められたか」を短く確認します。`close_status: ok / waiting / warn` と次の操作を10行程度で表示します。
 
 ## API一覧
 
