@@ -33,7 +33,8 @@ const riskyDiffPatterns: Array<{ pattern: RegExp; reason: string }> = [
   { pattern: /\btargetEv\b|\bminSampleSize\b|\bmaxOdds\b|\bmaxOddsRatio\b|\bminOddsRatio\b/, reason: "判定パラメータ変更" },
   { pattern: /\bminRequiredOdds\b|\bmaxRequiredOdds\b|\bmarketBlendWeight\b|\bcalibrationMode\b|\bcalibrationBasis\b/, reason: "判定パラメータ変更" },
   { pattern: /\bexcludedVenues\b|\bexcludedRaceNos\b|\bclassOddsRatioRules\b|\bprogramFilter\b/, reason: "フィルター変更" },
-  { pattern: /\bdecision_history\b/, reason: "判定履歴に影響" },
+  { pattern: /\b(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+decision_history\b/i, reason: "判定履歴の書き込みに影響" },
+  { pattern: /\binsertDecisionHistory\b|\bgenerate-decision-history\b|\breplaceRace\b/, reason: "判定履歴の書き込みに影響" },
 ];
 
 const changedFiles = unique([

@@ -5,8 +5,9 @@ const KNOWN_REPAIRED_PARSE_FAILURES = new Set([
   "parse-failed: 20260526-江戸川-11 1-2-3",
   "parse-failed: 20260526-浜名湖-11 1-2-3",
   "parse-failed: 20260526-蒲郡-02 1-2-3",
-  "parse failed 2026-05-27: spawn unar ENOENT",
 ]);
+
+const SPAWN_UNAR_ENOENT_PATTERN = /^parse failed \d{4}-\d{2}-\d{2}: spawn unar ENOENT$/;
 
 const KNOWN_REPAIRED_SUMMARIES = new Set([
   "auto-fetch-odds done: fetched=2 skipped=125 failed=4 saved=131 dryRun=false",
@@ -71,7 +72,7 @@ function isIssueLine(line: string) {
 }
 
 function isKnownRepairedLine(line: string) {
-  return KNOWN_REPAIRED_PARSE_FAILURES.has(line);
+  return KNOWN_REPAIRED_PARSE_FAILURES.has(line) || SPAWN_UNAR_ENOENT_PATTERN.test(line);
 }
 
 function isKnownRepairedSummary(line: string) {

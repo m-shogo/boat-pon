@@ -133,7 +133,8 @@ function nextAutoOddsCheck() {
   const candidateMinute = minuteSlot === 60 ? 0 : minuteSlot;
   const inWindow = candidateHour >= 9 && candidateHour <= 21;
   const target = inWindow ? nextJstDate(candidateHour, candidateMinute) : nextJstDate(9, 0);
-  return { name: "auto-odds", message: `next ${target} JST, then every 15 minutes through 21:45` };
+  const suffix = inWindow ? ", then every 15 minutes through 21:45" : "";
+  return { name: "auto-odds", message: `next ${target} JST${suffix}` };
 }
 
 function inspectAutoOddsPlist() {

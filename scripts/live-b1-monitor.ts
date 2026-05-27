@@ -76,6 +76,15 @@ function buildReport(db: DatabaseSync) {
     WHERE date >= ? AND model_version = ?
   `).get(LIVE_FROM, LIVE_MODEL) as { n: number; odds_missing: number; odds_present: number; latest_date: string | null };
 
+  const watchBuyQuality = db.prepare(`
+    SELECT
+      COUNT(*) AS n,
+      SUM(CASE WHEN current_odds IS NULL THEN 1 ELSE 0 END) AS odds_missing,
+      SUM(CASE WHEN current_odds IS NOT NULL THEN 1 ELSE 0 END) AS odds_present
+    FROM decision_history
+    WHERE date >= ? AND model_version = ? AND decision IN ('WATCH', 'BUY')
+  `).get(LIVE_FROM, LIVE_MODEL) as { n: number; odds_missing: number; odds_present: number };
+
   const latestModelDecisionDate = (db.prepare(`
     SELECT MAX(date) AS d
     FROM decision_history
@@ -158,6 +167,11 @@ function buildReport(db: DatabaseSync) {
     excludedSampleCount,
     sources,
     milestone: milestoneFor(n, roi),
+    watchBuyQuality: {
+      n: numberValue(watchBuyQuality.n),
+      oddsMissing: numberValue(watchBuyQuality.odds_missing),
+      oddsPresent: numberValue(watchBuyQuality.odds_present),
+    },
   };
 }
 
@@ -207,7 +221,11 @@ function printReport(report: ReturnType<typeof buildReport>) {
   const oddsTotal = report.quality.n;
   const oddsPresent = report.quality.oddsPresent;
   const oddsCoverage = oddsTotal > 0 ? `${oddsPresent}/${oddsTotal}件 (${Math.round(oddsPresent / oddsTotal * 100)}%)` : "-";
-  console.log(`  オッズ取得率 ${oddsCoverage}`);
+  console.log(`  オッズ取得率(全体)   ${oddsCoverage}`);
+  const watchBuyTotal = report.watchBuyQuality.n;
+  const watchBuyPresent = report.watchBuyQuality.oddsPresent;
+  const watchBuyCoverage = watchBuyTotal > 0 ? `${watchBuyPresent}/${watchBuyTotal}件 (${Math.round(watchBuyPresent / watchBuyTotal * 100)}%)` : "-";
+  console.log(`  オッズ取得率(WATCH+BUY) ${watchBuyCoverage}`);
   console.log("");
 
   // --- ROI（n>=1のとき） ---
