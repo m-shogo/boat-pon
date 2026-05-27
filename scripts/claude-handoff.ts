@@ -22,6 +22,7 @@ const generatedAt = new Date(now.getTime() + 9 * 3600_000)
   .slice(0, 16) + " JST";
 
 const db = new DatabaseSync(DB_PATH, { readOnly: true });
+db.exec("PRAGMA busy_timeout = 5000");
 try {
   main();
 } finally {

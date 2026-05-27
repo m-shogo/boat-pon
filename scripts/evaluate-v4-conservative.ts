@@ -30,6 +30,7 @@ const evalArgs: Args & { from: string; to: string; limit: number } = {
   limit: args.limit,
 };
 const db = new DatabaseSync(DB_PATH, { readOnly: true });
+db.exec("PRAGMA busy_timeout = 5000");
 
 try {
   const rows = evaluate(db, evalArgs);

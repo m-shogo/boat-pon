@@ -16,6 +16,7 @@ const LOG_PATHS: Array<{ path: string; job: LiveLogJob }> = [
 const now = new Date();
 const today = todayJst();
 const db = new DatabaseSync(DB_PATH, { readOnly: true });
+db.exec("PRAGMA busy_timeout = 5000");
 
 try {
   const report = buildReport(db);

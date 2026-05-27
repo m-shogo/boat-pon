@@ -6,6 +6,7 @@ const DB_PATH = "data/boat.sqlite";
 const UNUSED_DB_PATH = "data/boat-pon.db";
 
 const db = new DatabaseSync(DB_PATH, { readOnly: true });
+db.exec("PRAGMA busy_timeout = 5000");
 
 try {
   const report = buildReport(db);

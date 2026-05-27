@@ -8,6 +8,7 @@ const FILTER = liveMonitorFilterText();
 
 const args = parseArgs(process.argv.slice(2));
 const db = new DatabaseSync(DB_PATH, { readOnly: true });
+db.exec("PRAGMA busy_timeout = 5000");
 
 try {
   const report = buildReport(db);
