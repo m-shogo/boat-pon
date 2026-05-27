@@ -16,7 +16,7 @@ import { getManualOdds, getSettings, insertDecisionHistory, listAllResultsForMod
 import { LIVE_MONITOR_FROM } from "../src/domain/liveMonitor";
 import { isWithinOddsFetchWindow, minutesUntilRaceClose, shouldPersistDecisionHistory } from "../src/domain/livePersistence";
 import { mergeOddsMaps } from "../src/domain/oddsSnapshot";
-import { parseTrifectaOdds } from "../src/domain/oddsParser";
+import { isTrifectaSelectionUnavailable, parseTrifectaOdds } from "../src/domain/oddsParser";
 import { fetchOfficialOdds } from "./fetch-official-odds";
 
 const dryRun = process.argv.includes("--dry-run");
@@ -70,8 +70,12 @@ try {
       });
       const odds = parseTrifectaOdds(result.html, candidate.selection);
       if (odds == null) {
-        console.warn(`parse-failed: ${candidate.raceId} ${candidate.selection.join("-")}`);
-        failed += 1;
+        if (isTrifectaSelectionUnavailable(result.html, candidate.selection)) {
+          console.log(`odds-unavailable: ${candidate.raceId} ${candidate.selection.join("-")}`);
+        } else {
+          console.warn(`parse-failed: ${candidate.raceId} ${candidate.selection.join("-")}`);
+          failed += 1;
+        }
         continue;
       }
       setOdds(db, candidate.raceId, odds, "official", candidate.selection.join("-"));

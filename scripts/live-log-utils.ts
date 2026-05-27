@@ -5,12 +5,15 @@ const KNOWN_REPAIRED_PARSE_FAILURES = new Set([
   "parse-failed: 20260526-江戸川-11 1-2-3",
   "parse-failed: 20260526-浜名湖-11 1-2-3",
   "parse-failed: 20260526-蒲郡-02 1-2-3",
+  "parse-failed: 20260527-江戸川-07 1-2-3",
 ]);
 
 const SPAWN_UNAR_ENOENT_PATTERN = /^parse failed \d{4}-\d{2}-\d{2}: spawn unar ENOENT$/;
 
 const KNOWN_REPAIRED_SUMMARIES = new Set([
   "auto-fetch-odds done: fetched=2 skipped=125 failed=4 saved=131 dryRun=false",
+  "auto-fetch-odds done: fetched=5 skipped=137 failed=1 saved=66 dryRun=false",
+  "auto-fetch-odds done: fetched=6 skipped=136 failed=1 saved=70 dryRun=false",
   "--- done: 1 days / 0 programs / cached=1 / already=0 / failed=1",
 ]);
 

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseTrifectaOdds } from "./oddsParser";
+import { isTrifectaSelectionUnavailable, parseTrifectaOdds } from "./oddsParser";
 
 test("td隣接形式から3連単オッズを抽出する", () => {
   const html = `
@@ -97,4 +97,45 @@ test("矢印や全角ハイフンの買い目表記も抽出する", () => {
 test("selectionが3要素でない場合はnull", () => {
   const html = `<table><tr><td>1-2</td><td>3.0</td></tr></table>`;
   assert.equal(parseTrifectaOdds(html, [1, 2]), null);
+});
+
+test("公式グループ表で欠場セルの場合: parseTrifectaOddsはnull、isTrifectaSelectionUnavailableはtrue", () => {
+  // 実際の公式HTML構造を模したグループ表: 1着=1のグループで2-3が欠場
+  const html = `
+    <table>
+      <thead>
+        <tr>
+          <th class="is-boatColor1">1</th><th colspan="2">選手A</th>
+          <th class="is-boatColor2">2</th><th colspan="2">選手B</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td rowspan="2">2</td>
+          <td>3</td>
+          <td class="oddsPoint is-miss">欠場</td>
+          <td rowspan="2">1</td>
+          <td>3</td>
+          <td class="oddsPoint">47.2</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td class="oddsPoint">12.3</td>
+          <td>4</td>
+          <td class="oddsPoint">25.6</td>
+        </tr>
+      </tbody>
+    </table>
+  `;
+  // 欠場の買い目: parseTrifectaOdds=null, isTrifectaSelectionUnavailable=true
+  assert.equal(parseTrifectaOdds(html, [1, 2, 3]), null);
+  assert.equal(isTrifectaSelectionUnavailable(html, [1, 2, 3]), true);
+
+  // 有効な買い目: parseTrifectaOdds=数値, isTrifectaSelectionUnavailable=false
+  assert.equal(parseTrifectaOdds(html, [1, 2, 4]), 12.3);
+  assert.equal(isTrifectaSelectionUnavailable(html, [1, 2, 4]), false);
+
+  // 存在しない買い目: どちらもfalse/null
+  assert.equal(parseTrifectaOdds(html, [4, 5, 6]), null);
+  assert.equal(isTrifectaSelectionUnavailable(html, [4, 5, 6]), false);
 });

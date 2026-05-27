@@ -1,5 +1,11 @@
 import * as cheerio from "cheerio";
 
+export function isTrifectaSelectionUnavailable(html: string, selection: number[]): boolean {
+  if (selection.length !== 3) return false;
+  const $ = cheerio.load(html);
+  return checkGroupedTableCellUnavailable($, selection);
+}
+
 export function parseTrifectaOdds(html: string, selection: number[]): number | null {
   if (selection.length !== 3) return null;
   const key = selection.join("-");
@@ -176,6 +182,47 @@ function collectTableContext($: cheerio.CheerioAPI, $table: ReturnType<cheerio.C
     $table.find("caption").text(),
     $table.find("thead").text(),
   ].join(" ");
+}
+
+function isUnavailableOddsText(text: string): boolean {
+  const trimmed = text.trim();
+  return /^(?:-|欠場|返還)$/u.test(trimmed);
+}
+
+function checkGroupedTableCellUnavailable($: cheerio.CheerioAPI, selection: number[]): boolean {
+  const [first, second, third] = selection;
+  for (const table of $("table").toArray()) {
+    const $table = $(table);
+    if ($table.find(".oddsPoint").length === 0) continue;
+
+    const headerGrid = buildTableGrid($, $table.find("thead tr").toArray());
+    const bodyGrid = buildTableGrid($, $table.find("tbody tr").toArray());
+    if (headerGrid.length === 0 || bodyGrid.length === 0) continue;
+
+    const firstPlaceColumns: Array<{ firstPlace: number; column: number }> = [];
+    for (const row of headerGrid) {
+      for (let column = 0; column < row.length; column += 1) {
+        const value = Number(row[column]?.text.trim());
+        if (Number.isInteger(value) && value >= 1 && value <= 6) {
+          firstPlaceColumns.push({ firstPlace: value, column });
+        }
+      }
+    }
+
+    for (const group of firstPlaceColumns) {
+      if (group.firstPlace !== first) continue;
+      for (const row of bodyGrid) {
+        const secondCell = row[group.column];
+        const thirdCell = row[group.column + 1];
+        const oddsCell = row[group.column + 2];
+        if (!secondCell || !thirdCell || !oddsCell) continue;
+        if (Number(secondCell.text.trim()) !== second) continue;
+        if (Number(thirdCell.text.trim()) !== third) continue;
+        if (isUnavailableOddsText(oddsCell.text)) return true;
+      }
+    }
+  }
+  return false;
 }
 
 function parseOddsText(text: string): number | null {
