@@ -104,6 +104,9 @@ function validateBudgetRule(settings: BudgetRule): string | null {
   if (settings.calibrationBasis != null && !["requiredOdds", "currentOdds"].includes(settings.calibrationBasis)) {
     return "calibrationBasis must be requiredOdds or currentOdds";
   }
+  if (settings.maxOdds != null && (!Number.isFinite(settings.maxOdds) || settings.maxOdds <= 0)) {
+    return "maxOdds must be positive";
+  }
   if (settings.oddsCalibrationFactors != null) {
     if (!Array.isArray(settings.oddsCalibrationFactors)) return "oddsCalibrationFactors must be an array";
     for (const factor of settings.oddsCalibrationFactors) {

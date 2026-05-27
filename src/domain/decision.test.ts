@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { DEFAULT_RULE, blendedHitRate, calibratedHitRate, calibrationFactorForRequiredOdds, judgeCandidate, requiredOdds } from "./decision";
+import { DEFAULT_RULE, PAPER_LIVE_VALIDATION_RULE, blendedHitRate, calibratedHitRate, calibrationFactorForRequiredOdds, judgeCandidate, requiredOdds } from "./decision";
 import type { BetCandidate } from "./types";
 
 const base: BetCandidate = {
@@ -64,6 +64,21 @@ test("maxOddsRatioを超える場合はSKIPにする", () => {
   });
   assert.equal(decision.status, "SKIP");
   assert.ok(decision.reasons.some((r) => r.includes("市場オッズがモデル要求の2倍超")));
+});
+
+test("maxOddsを超える場合はSKIPにする", () => {
+  const decision = judgeCandidate({ ...base, currentOdds: 55 }, { ...DEFAULT_RULE, maxOdds: 50 }, {
+    now: new Date("2026-05-21T18:00:00+09:00"),
+  });
+  assert.equal(decision.status, "SKIP");
+  assert.ok(decision.reasons.includes("オッズ上限超過(50倍)"));
+});
+
+test("paper/live検証プリセットは日次分析候補の上限を持つ", () => {
+  assert.equal(PAPER_LIVE_VALIDATION_RULE.targetEv, 1.25);
+  assert.equal(PAPER_LIVE_VALIDATION_RULE.minSampleSize, 1200);
+  assert.equal(PAPER_LIVE_VALIDATION_RULE.maxOdds, 50);
+  assert.equal(PAPER_LIVE_VALIDATION_RULE.maxRequiredOdds, 50);
 });
 
 test("marketBlendWeight=0では推定的中率をそのまま使う", () => {

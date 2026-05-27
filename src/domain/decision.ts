@@ -29,6 +29,13 @@ export const DEFAULT_APP_RULE: BudgetRule = {
   ],
 };
 
+export const PAPER_LIVE_VALIDATION_RULE: BudgetRule = {
+  ...DEFAULT_APP_RULE,
+  minSampleSize: 1200,
+  maxOdds: 50,
+  maxRequiredOdds: 50,
+};
+
 const WATCH_ONLY_ODDS_THRESHOLD = 100;
 export const V3_EMPIRICAL_ODDS_CALIBRATION: OddsCalibrationFactor[] = [
   { maxRequiredOdds: 30, factor: 1 },

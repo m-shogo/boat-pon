@@ -27,6 +27,7 @@ import {
   type OddsFetchResult,
   type WalkForwardResponse,
 } from "./api";
+import { PAPER_LIVE_VALIDATION_RULE } from "./domain/decision";
 import type { BudgetRule } from "./domain/types";
 import { Tooltip } from "./components/Tooltip";
 import "./styles.css";
@@ -1356,6 +1357,22 @@ function SettingsScreen({ settings, onSaved }: { settings: BudgetRule; onSaved: 
     setDraft(settings);
     setSaveError(null);
   }, [settings]);
+  const validationPreset = useMemo(() => ({
+    ...PAPER_LIVE_VALIDATION_RULE,
+    programFilter: PAPER_LIVE_VALIDATION_RULE.programFilter
+      ? { ...PAPER_LIVE_VALIDATION_RULE.programFilter }
+      : undefined,
+    classOddsRatioRules: PAPER_LIVE_VALIDATION_RULE.classOddsRatioRules?.map((rule) => ({
+      ...rule,
+      classNames: [...rule.classNames],
+    })),
+    excludedVenues: PAPER_LIVE_VALIDATION_RULE.excludedVenues
+      ? [...PAPER_LIVE_VALIDATION_RULE.excludedVenues]
+      : undefined,
+    excludedRaceNos: PAPER_LIVE_VALIDATION_RULE.excludedRaceNos
+      ? [...PAPER_LIVE_VALIDATION_RULE.excludedRaceNos]
+      : undefined,
+  }), []);
 
   const fields = useMemo(() => [
     ["targetEv", "目標EV", 0.05],
@@ -1410,6 +1427,19 @@ function SettingsScreen({ settings, onSaved }: { settings: BudgetRule; onSaved: 
             <option value="requiredOdds">必要オッズ</option>
             <option value="currentOdds">取得オッズ</option>
           </select>
+        </label>
+        <label className="settingField">
+          <span>オッズ上限</span>
+          <input
+            type="number"
+            step={1}
+            value={draft.maxOdds ?? ""}
+            placeholder="例: 50"
+            onChange={(event) => setDraft({
+              ...draft,
+              maxOdds: event.target.value === "" ? undefined : Number(event.target.value),
+            })}
+          />
         </label>
         <div className="settingField">
           <span>1着候補級別</span>
@@ -1509,6 +1539,12 @@ function SettingsScreen({ settings, onSaved }: { settings: BudgetRule; onSaved: 
           />
         </label>
       </div>
+      <div className="presetActions">
+        <button type="button" onClick={() => setDraft(validationPreset)}>
+          検証プリセットを下書きへ適用
+        </button>
+        <span>minSampleSize=1200 / maxOdds=50 / maxRequiredOdds=50</span>
+      </div>
       <div className="formRow">
         <label>
           除外レース番号（カンマ区切り、例: 2,8）
@@ -1563,6 +1599,7 @@ function validateSettings(settings: BudgetRule): string | null {
   if (settings.maxStakePerRaceYen > settings.dailyBudgetYen) return "1レース最大は1日予算以下にしてください";
   if (settings.calibrationMode != null && !["none", "v3-empirical"].includes(settings.calibrationMode)) return "補正モードが不正です";
   if (settings.calibrationBasis != null && !["requiredOdds", "currentOdds"].includes(settings.calibrationBasis)) return "補正基準が不正です";
+  if (settings.maxOdds != null && (!Number.isFinite(settings.maxOdds) || settings.maxOdds <= 0)) return "オッズ上限は0より大きい値にしてください";
   if (settings.oddsCalibrationFactors != null) {
     if (!Array.isArray(settings.oddsCalibrationFactors)) return "オッズ補正係数が不正です";
     for (const factor of settings.oddsCalibrationFactors) {
