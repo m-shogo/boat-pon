@@ -7,6 +7,7 @@ const DB_PATH = "data/boat.sqlite";
 const AUTO_ODDS_PLIST = "/Users/m-shogo/Library/LaunchAgents/com.boatpon.auto-odds.plist";
 const DAILY_PROGRAMS_PLIST = "/Users/m-shogo/Library/LaunchAgents/com.boatpon.daily-programs.plist";
 const DAILY_PROGRESS_PLIST = "/Users/m-shogo/Library/LaunchAgents/com.boatpon.daily-progress.plist";
+const DAILY_NOTIFY_PLIST = "/Users/m-shogo/Library/LaunchAgents/com.boatpon.daily-notify.plist";
 const KNOWN_POLLUTED_SKIP_DATE = "2026-05-26";
 const LOG_PATHS: Array<{ path: string; job: LiveLogJob }> = [
   { path: "data/logs/daily-programs.log", job: "daily-programs" },
@@ -75,12 +76,14 @@ WHERE date = ? AND model_version = ? AND decision = 'SKIP'
       nextDailyCheck("daily-programs", 8, 0),
       nextAutoOddsCheck(),
       nextDailyCheck("daily-progress", 21, 5),
+      nextDailyCheck("daily-notify", 21, 30),
     ],
     pollutedSkips,
     launchAgents: [
       inspectAutoOddsPlist(),
       inspectSingleTimePlist("daily-programs", DAILY_PROGRAMS_PLIST, 8, 0),
       inspectSingleTimePlist("daily-progress", DAILY_PROGRESS_PLIST, 21, 5),
+      inspectSingleTimePlist("daily-notify", DAILY_NOTIFY_PLIST, 21, 30),
     ],
     logs: LOG_PATHS.map((log) => inspectLiveLog(log.path, log.job)),
   };
