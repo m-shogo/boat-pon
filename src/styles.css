@@ -367,7 +367,7 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
   font-size: 12px;
 }
 
-.officialLink, .saveButton, .notificationActions button, .manualOdds button {
+.officialLink, .saveButton, .notificationActions button, .manualOdds button, .presetActions button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -472,6 +472,16 @@ tr:last-child td { border-bottom: 0; }
   gap: 6px;
   color: #ecfff8;
   font-size: 13px;
+}
+.presetActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0 14px;
+}
+.presetActions span {
+  color: #86a69c;
+  font-size: 12px;
 }
 .classChecks input {
   width: auto;

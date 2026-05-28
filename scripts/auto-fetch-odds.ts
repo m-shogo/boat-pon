@@ -37,7 +37,7 @@ async function fetchWithRetry(args: Parameters<typeof fetchOfficialOdds>[0]) {
     } catch (err) {
       lastErr = err;
       if (attempt < FETCH_RETRY_COUNT) {
-        console.warn(`fetch-retry: ${args.venue}-${String(args.raceNo).padStart(2, "0")} attempt=${attempt + 1}`);
+        console.log(`fetch-retry: ${args.venue}-${String(args.raceNo).padStart(2, "0")} attempt=${attempt + 1}`);
         await sleep(FETCH_RETRY_DELAY_MS);
       }
     }
@@ -97,7 +97,7 @@ try {
 
       // parse失敗時: キャッシュが不完全な可能性があるためforceRefreshで再取得
       if (odds == null && !result.cached && !isTrifectaSelectionUnavailable(html, candidate.selection)) {
-        console.warn(`parse-retry: ${candidate.raceId} ${candidate.selection.join("-")}`);
+        console.log(`parse-retry: ${candidate.raceId} ${candidate.selection.join("-")}`);
         await sleep(FETCH_RETRY_DELAY_MS);
         const retried = await fetchWithRetry({ ...fetchArgs, forceRefresh: true }).catch(() => null);
         if (retried) {
