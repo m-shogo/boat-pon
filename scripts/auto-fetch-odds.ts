@@ -22,6 +22,29 @@ import { fetchOfficialOdds } from "./fetch-official-odds";
 const dryRun = process.argv.includes("--dry-run");
 const force = process.argv.includes("--force");
 
+const FETCH_RETRY_COUNT = 2;
+const FETCH_RETRY_DELAY_MS = 4000;
+
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchWithRetry(args: Parameters<typeof fetchOfficialOdds>[0]) {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= FETCH_RETRY_COUNT; attempt++) {
+    try {
+      return await fetchOfficialOdds(args);
+    } catch (err) {
+      lastErr = err;
+      if (attempt < FETCH_RETRY_COUNT) {
+        console.warn(`fetch-retry: ${args.venue}-${String(args.raceNo).padStart(2, "0")} attempt=${attempt + 1}`);
+        await sleep(FETCH_RETRY_DELAY_MS);
+      }
+    }
+  }
+  throw lastErr;
+}
+
 function todayJst() {
   return new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
 }
@@ -62,15 +85,29 @@ try {
     }
 
     try {
-      const result = await fetchOfficialOdds({
+      const fetchArgs = {
         date: candidate.date,
         venue: candidate.venue,
         raceNo: candidate.raceNo,
         forceRefresh: force,
-      });
-      const odds = parseTrifectaOdds(result.html, candidate.selection);
+      };
+      const result = await fetchWithRetry(fetchArgs);
+      let odds = parseTrifectaOdds(result.html, candidate.selection);
+      let html = result.html;
+
+      // parse失敗時: キャッシュが不完全な可能性があるためforceRefreshで再取得
+      if (odds == null && !result.cached && !isTrifectaSelectionUnavailable(html, candidate.selection)) {
+        console.warn(`parse-retry: ${candidate.raceId} ${candidate.selection.join("-")}`);
+        await sleep(FETCH_RETRY_DELAY_MS);
+        const retried = await fetchWithRetry({ ...fetchArgs, forceRefresh: true }).catch(() => null);
+        if (retried) {
+          html = retried.html;
+          odds = parseTrifectaOdds(html, candidate.selection);
+        }
+      }
+
       if (odds == null) {
-        if (isTrifectaSelectionUnavailable(result.html, candidate.selection)) {
+        if (isTrifectaSelectionUnavailable(html, candidate.selection)) {
           console.log(`odds-unavailable: ${candidate.raceId} ${candidate.selection.join("-")}`);
         } else {
           console.warn(`parse-failed: ${candidate.raceId} ${candidate.selection.join("-")}`);
