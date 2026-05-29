@@ -10,12 +10,28 @@ export const DEFAULT_RULE: BudgetRule = {
   targetEv: 1.25,
 };
 
+const WATCH_ONLY_ODDS_THRESHOLD = 100;
+export const V3_EMPIRICAL_ODDS_CALIBRATION: OddsCalibrationFactor[] = [
+  { maxRequiredOdds: 30, factor: 1 },
+  { maxRequiredOdds: 50, factor: 0.55 },
+  { maxRequiredOdds: Number.MAX_SAFE_INTEGER, factor: 0.45 },
+];
+
+// 2024-01〜2026-05 実績 n=6429 から算出（currentOdds基準）:
+// odds<30: actual/estimated=0.518, odds30-50: 0.51, odds50+: 0.40
+export const V4_EMPIRICAL_CALIBRATION: OddsCalibrationFactor[] = [
+  { maxRequiredOdds: 30, factor: 0.65 },
+  { maxRequiredOdds: 50, factor: 0.51 },
+  { maxRequiredOdds: Number.MAX_SAFE_INTEGER, factor: 0.40 },
+];
+
 export const DEFAULT_APP_RULE: BudgetRule = {
   ...DEFAULT_RULE,
   minSampleSize: 30,
   maxOddsRatio: 2,
-  calibrationMode: "none",
-  calibrationBasis: "requiredOdds",
+  calibrationMode: "v3-empirical",
+  calibrationBasis: "currentOdds",
+  oddsCalibrationFactors: V4_EMPIRICAL_CALIBRATION,
   minRequiredOdds: 25,
   excludedRaceNos: [11, 12],
   excludedVenues: ["戸田", "多摩川", "桐生", "三国", "江戸川"],
@@ -35,13 +51,6 @@ export const PAPER_LIVE_VALIDATION_RULE: BudgetRule = {
   maxOdds: 50,
   maxRequiredOdds: 50,
 };
-
-const WATCH_ONLY_ODDS_THRESHOLD = 100;
-export const V3_EMPIRICAL_ODDS_CALIBRATION: OddsCalibrationFactor[] = [
-  { maxRequiredOdds: 30, factor: 1 },
-  { maxRequiredOdds: 50, factor: 0.55 },
-  { maxRequiredOdds: Number.MAX_SAFE_INTEGER, factor: 0.45 },
-];
 
 export function requiredOdds(targetEv: number, estimatedHitRate: number): number {
   if (estimatedHitRate <= 0) return Number.POSITIVE_INFINITY;

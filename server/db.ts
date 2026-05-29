@@ -265,6 +265,20 @@ VALUES (?, ?, ?, ?, ?, ?, ?)
   );
 }
 
+export function hasEarlyOddsSnapshot(db: DatabaseSync, raceId: string, selection: string): boolean {
+  const row = db.prepare(
+    "SELECT 1 FROM odds_snapshots WHERE race_id = ? AND selection = ? AND source = 'official-early'",
+  ).get(raceId, selection);
+  return row != null;
+}
+
+export function listEarlyOddsSnapshots(db: DatabaseSync): Map<string, number> {
+  const rows = db.prepare(
+    "SELECT race_id, selection, odds FROM odds_snapshots WHERE source = 'official-early'",
+  ).all() as Array<{ race_id: string; selection: string; odds: number }>;
+  return new Map(rows.map((row) => [`${row.race_id}/${row.selection}`, Number(row.odds)]));
+}
+
 export function listOddsSnapshots(db: DatabaseSync, raceId?: string): OddsSnapshot[] {
   const rows = raceId
     ? db.prepare(`

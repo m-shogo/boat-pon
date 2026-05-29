@@ -12,7 +12,7 @@
  */
 
 import { buildCandidateRows } from "../server/candidates";
-import { getManualOdds, getSettings, insertDecisionHistory, listAllResultsForModel, listOddsSnapshots, listProgramInputs, openDb, setOdds } from "../server/db";
+import { getManualOdds, getSettings, hasEarlyOddsSnapshot, insertDecisionHistory, listAllResultsForModel, listEarlyOddsSnapshots, listOddsSnapshots, listProgramInputs, openDb, recordOddsSnapshot, setOdds } from "../server/db";
 import { LIVE_MONITOR_FROM } from "../src/domain/liveMonitor";
 import { isWithinOddsFetchWindow, minutesUntilRaceClose, shouldPersistDecisionHistory } from "../src/domain/livePersistence";
 import { mergeOddsMaps } from "../src/domain/oddsSnapshot";
@@ -62,6 +62,7 @@ try {
     oddsByRaceId,
     listProgramInputs(db, today),
     listAllResultsForModel(db),
+    listEarlyOddsSnapshots(db),
   );
 
   let fetched = 0;
@@ -115,8 +116,23 @@ try {
         }
         continue;
       }
-      setOdds(db, candidate.raceId, odds, "official", candidate.selection.join("-"));
-      console.log(`fetched: ${candidate.raceId} ${candidate.selection.join("-")} odds=${odds} ${result.cached ? "(cached)" : ""}`);
+      const selectionStr = candidate.selection.join("-");
+      setOdds(db, candidate.raceId, odds, "official", selectionStr);
+
+      // Late Money Signal: 初回取得時のオッズを保存（以降の変化と比較するため）
+      if (!hasEarlyOddsSnapshot(db, candidate.raceId, selectionStr)) {
+        recordOddsSnapshot(db, {
+          raceId: candidate.raceId,
+          selection: selectionStr,
+          odds,
+          popularity: null,
+          source: "official-early",
+          capturedAt: new Date().toISOString(),
+          isFinalLike: false,
+        });
+      }
+
+      console.log(`fetched: ${candidate.raceId} ${selectionStr} odds=${odds} ${result.cached ? "(cached)" : ""}`);
       fetched += 1;
     } catch (err) {
       console.error(`error: ${candidate.raceId}`, err instanceof Error ? err.message : err);
@@ -133,6 +149,7 @@ try {
       freshOdds,
       listProgramInputs(db, today),
       listAllResultsForModel(db),
+      listEarlyOddsSnapshots(db),
     );
     const persistHistory = today >= LIVE_MONITOR_FROM;
     for (const row of freshRows) {

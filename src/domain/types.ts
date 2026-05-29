@@ -27,6 +27,7 @@ export type BetCandidate = {
   environmentRiskLevel?: "low" | "medium" | "high";
   environmentRiskReasons?: string[];
   featureAdjustment?: number;
+  sharpSignalDrop?: number | null;
   candidateClassName?: string;
   candidateMotorTop2Rate?: number | null;
   candidateBoatTop2Rate?: number | null;

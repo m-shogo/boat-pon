@@ -21,6 +21,7 @@ export function buildCandidateRows(
   manualOdds = new Map<string, number>(),
   programInputs: ProgramInput[] = [],
   modelResults: RaceResult[] = [],
+  earlyOdds = new Map<string, number>(),
 ) {
   let reservedBudgetYen = 0;
   let buyCountToday = 0;
@@ -37,11 +38,19 @@ export function buildCandidateRows(
   const baseCandidates = modelCandidates.length > 0 ? modelCandidates : sampleCandidates;
 
   return baseCandidates.map((candidate) => {
+    const currentOdds = manualOdds.get(candidate.raceId) ?? candidate.currentOdds;
+    const earlyOddsKey = `${candidate.raceId}/${candidate.selection.join("-")}`;
+    const earlyOddsValue = earlyOdds.get(earlyOddsKey) ?? null;
+    const sharpSignalDrop = earlyOddsValue != null && currentOdds != null && earlyOddsValue > 0
+      ? (earlyOddsValue - currentOdds) / earlyOddsValue
+      : null;
+
     const normalized: BetCandidate = {
       ...candidate,
       targetEv: settings.targetEv,
-      currentOdds: manualOdds.get(candidate.raceId) ?? candidate.currentOdds,
+      currentOdds,
       suggestedAmount: settings.stakePerBetYen,
+      sharpSignalDrop,
     };
     const decision = judgeCandidate(normalized, settings, {
       now,

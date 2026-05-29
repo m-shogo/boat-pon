@@ -3,7 +3,7 @@ export type OddsSnapshot = {
   selection: string;
   odds: number;
   popularity: number | null;
-  source: "manual" | "official" | "kyotei24" | "import";
+  source: "manual" | "official" | "official-early" | "kyotei24" | "import";
   capturedAt: string;
   isFinalLike: boolean;
 };
