@@ -909,6 +909,18 @@ SELECT MAX(fetched_at) as fetched_at FROM racer_course_stats WHERE registration_
   return row?.fetched_at == null ? null : String(row.fetched_at);
 }
 
+/** course_stats と profiles のどちらか新しい fetched_at を返す（引退選手のスキップ判定用） */
+export function getRacerLastFetchedAt(db: DatabaseSync, registrationNo: string): string | null {
+  const row = db.prepare(`
+SELECT MAX(t) as fetched_at FROM (
+  SELECT MAX(fetched_at) AS t FROM racer_course_stats WHERE registration_no = ?
+  UNION ALL
+  SELECT fetched_at AS t FROM racer_profiles WHERE registration_no = ?
+)
+`).get(registrationNo, registrationNo) as Record<string, unknown> | undefined;
+  return row?.fetched_at == null ? null : String(row.fetched_at);
+}
+
 function rowToResult(row: Record<string, unknown>): RaceResult {
   return {
     raceId: String(row.race_id),

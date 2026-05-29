@@ -13,7 +13,7 @@
 
 import * as cheerio from "cheerio";
 import {
-  getRacerCourseStatsFetchedAt,
+  getRacerLastFetchedAt,
   listAllRegistrationNos,
   openDb,
   upsertRacerCourseStats,
@@ -130,7 +130,7 @@ try {
 
   if (dryRun) {
     for (const { registrationNo, racerName } of allRacers) {
-      const fetchedAt = getRacerCourseStatsFetchedAt(db, registrationNo);
+      const fetchedAt = getRacerLastFetchedAt(db, registrationNo);
       if (force || isStale(fetchedAt, RACER_STATS_TTL_DAYS)) {
         console.log(`[dry-run] ${registrationNo} ${racerName}`);
       }
@@ -144,7 +144,7 @@ try {
 
   for (const { registrationNo, racerName } of allRacers) {
     if (!force) {
-      const fetchedAt = getRacerCourseStatsFetchedAt(db, registrationNo);
+      const fetchedAt = getRacerLastFetchedAt(db, registrationNo);
       if (!isStale(fetchedAt, RACER_STATS_TTL_DAYS)) {
         skipped += 1;
         continue;
