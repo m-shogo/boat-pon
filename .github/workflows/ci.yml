@@ -22,6 +22,13 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Check data files are not committed
+        run: |
+          if git ls-files | grep -E '^data/.*(\.sqlite|\.sqlite-wal|\.sqlite-shm|raw|normalized|logs)'; then
+            echo "data files must not be committed"
+            exit 1
+          fi
+
       - name: Test
         run: npm test
 
