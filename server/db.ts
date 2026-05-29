@@ -806,6 +806,18 @@ ORDER BY course
   }));
 }
 
+export function hasExhibitionData(db: DatabaseSync, raceId: string): boolean {
+  const row = db.prepare(`SELECT 1 FROM exhibition_data WHERE race_id = ? LIMIT 1`).get(raceId);
+  return row != null;
+}
+
+export function getRacerCourseStatsFetchedAt(db: DatabaseSync, registrationNo: string): string | null {
+  const row = db.prepare(`
+SELECT MAX(fetched_at) as fetched_at FROM racer_course_stats WHERE registration_no = ?
+`).get(registrationNo) as Record<string, unknown> | undefined;
+  return row?.fetched_at == null ? null : String(row.fetched_at);
+}
+
 function rowToResult(row: Record<string, unknown>): RaceResult {
   return {
     raceId: String(row.race_id),
