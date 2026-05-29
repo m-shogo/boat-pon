@@ -127,48 +127,75 @@ export function buildCandidatesFromModel(
   targetEv: number,
   fetchedAt: string,
   manualOdds = new Map<string, number>(),
+  allOdds = new Map<string, number>(),
 ): BetCandidate[] {
   return inputs.flatMap((input) => {
-    const best = model.find((row) => row.venue === input.venue);
-    if (!best) return [];
-    const selection = best.selection.split("-").map(Number);
-    const firstBoatFeature = input.features?.boats.find((boat) => boat.course === selection[0]);
-    const secondBoatFeature = input.features?.boats.find((boat) => boat.course === selection[1]);
-    const thirdBoatFeature = input.features?.boats.find((boat) => boat.course === selection[2]);
-    const featureAdjustment = featureAdjustmentForSelection(input.features, selection);
-    const adjustedHitRate = clamp(best.conservativeHitRate * featureAdjustment, 0.0001, 0.8);
+    const venueRows = model.filter((row) => row.venue === input.venue);
+    if (venueRows.length === 0) return [];
     const raceId = `${input.date.replaceAll("-", "")}-${input.venue}-${String(input.raceNo).padStart(2, "0")}`;
-    const sampleSize = best.venueRaceCount;
-    const hasRiskFlag = sampleSize < 10;
-    return [{
-      raceId,
-      date: input.date,
-      venue: input.venue,
-      raceNo: input.raceNo,
-      closeAt: input.closeAt,
-      betType: "3連単" as const,
-      selection,
-      estimatedHitRate: adjustedHitRate,
-      rawEstimatedHitRate: best.estimatedHitRate,
-      conservativeHitRate: best.conservativeHitRate,
-      modelSelectionScore: best.selectionScore,
-      sampleSize,
-      currentOdds: manualOdds.get(raceId) ?? null,
-      targetEv,
-      suggestedAmount: 100,
-      source: "history-model",
-      fetchedAt,
-      hasRiskFlag,
-      modelVersion: MODEL_VERSION,
-      raceCategory: input.raceCategory ?? "不明",
-      featureAdjustment,
-      candidateClassName: firstBoatFeature?.className,
-      candidateMotorTop2Rate: firstBoatFeature?.motorTop2Rate,
-      candidateBoatTop2Rate: firstBoatFeature?.boatTop2Rate,
-      firstBoatFeature,
-      secondBoatFeature,
-      thirdBoatFeature,
-    }];
+
+    const candidates: BetCandidate[] = [];
+    for (const modelRow of venueRows) {
+      const selection = modelRow.selection.split("-").map(Number);
+      const selectionStr = modelRow.selection;
+
+      // allOdds にある場合はそちらを優先、なければ top-1 出目に限り manualOdds を使う
+      let currentOdds: number | null = null;
+      const allOddsKey = `${raceId}/${selectionStr}`;
+      if (allOdds.has(allOddsKey)) {
+        currentOdds = allOdds.get(allOddsKey) ?? null;
+      } else if (allOdds.size === 0) {
+        // allOdds が空（後方互換）の場合、manualOdds を使う（top-1出目のみ）
+        if (venueRows[0] === modelRow) {
+          currentOdds = manualOdds.get(raceId) ?? null;
+        } else {
+          // allOdds にデータがなく top-1 以外の出目はスキップ
+          continue;
+        }
+      } else {
+        // allOdds にデータがあるが当該出目がない → スキップ
+        continue;
+      }
+
+      const firstBoatFeature = input.features?.boats.find((boat) => boat.course === selection[0]);
+      const secondBoatFeature = input.features?.boats.find((boat) => boat.course === selection[1]);
+      const thirdBoatFeature = input.features?.boats.find((boat) => boat.course === selection[2]);
+      const featureAdjustment = featureAdjustmentForSelection(input.features, selection);
+      const adjustedHitRate = clamp(modelRow.conservativeHitRate * featureAdjustment, 0.0001, 0.8);
+      const sampleSize = modelRow.venueRaceCount;
+      const hasRiskFlag = sampleSize < 10;
+
+      candidates.push({
+        raceId,
+        date: input.date,
+        venue: input.venue,
+        raceNo: input.raceNo,
+        closeAt: input.closeAt,
+        betType: "3連単" as const,
+        selection,
+        estimatedHitRate: adjustedHitRate,
+        rawEstimatedHitRate: modelRow.estimatedHitRate,
+        conservativeHitRate: modelRow.conservativeHitRate,
+        modelSelectionScore: modelRow.selectionScore,
+        sampleSize,
+        currentOdds,
+        targetEv,
+        suggestedAmount: 100,
+        source: "history-model",
+        fetchedAt,
+        hasRiskFlag,
+        modelVersion: MODEL_VERSION,
+        raceCategory: input.raceCategory ?? "不明",
+        featureAdjustment,
+        candidateClassName: firstBoatFeature?.className,
+        candidateMotorTop2Rate: firstBoatFeature?.motorTop2Rate,
+        candidateBoatTop2Rate: firstBoatFeature?.boatTop2Rate,
+        firstBoatFeature,
+        secondBoatFeature,
+        thirdBoatFeature,
+      });
+    }
+    return candidates;
   });
 }
 

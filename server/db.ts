@@ -118,6 +118,26 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
   auth TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS exhibition_data (
+  race_id TEXT NOT NULL,
+  course INTEGER NOT NULL,
+  exhibition_time REAL,
+  start_timing REAL,
+  ranking INTEGER,
+  fetched_at TEXT NOT NULL,
+  PRIMARY KEY (race_id, course)
+);
+
+CREATE TABLE IF NOT EXISTS racer_course_stats (
+  registration_no TEXT NOT NULL,
+  course INTEGER NOT NULL,
+  races INTEGER NOT NULL DEFAULT 0,
+  wins INTEGER NOT NULL DEFAULT 0,
+  win_rate REAL,
+  fetched_at TEXT NOT NULL,
+  PRIMARY KEY (registration_no, course)
+);
 `);
 
   try {
@@ -270,6 +290,18 @@ export function hasEarlyOddsSnapshot(db: DatabaseSync, raceId: string, selection
     "SELECT 1 FROM odds_snapshots WHERE race_id = ? AND selection = ? AND source = 'official-early'",
   ).get(raceId, selection);
   return row != null;
+}
+
+export function listAllOddsBySelection(db: DatabaseSync): Map<string, number> {
+  // 各(race_id, selection)の最新オッズを取得（source問わず最新行）
+  const rows = db.prepare(`
+SELECT race_id, selection, odds
+FROM odds_snapshots
+WHERE id IN (
+  SELECT MAX(id) FROM odds_snapshots GROUP BY race_id, selection
+)
+`).all() as Array<{ race_id: string; selection: string; odds: number }>;
+  return new Map(rows.map((row) => [`${row.race_id}/${row.selection}`, Number(row.odds)]));
 }
 
 export function listEarlyOddsSnapshots(db: DatabaseSync): Map<string, number> {
@@ -700,6 +732,78 @@ function parseRawJson(rawJson: unknown): unknown {
   } catch {
     return null;
   }
+}
+
+export type ExhibitionEntry = {
+  course: number;
+  exhibitionTime: number | null;
+  startTiming: number | null;
+  ranking: number | null;
+};
+
+export function upsertExhibitionData(db: DatabaseSync, raceId: string, entries: ExhibitionEntry[], fetchedAt: string): void {
+  for (const entry of entries) {
+    db.prepare(`
+INSERT INTO exhibition_data (race_id, course, exhibition_time, start_timing, ranking, fetched_at)
+VALUES (?, ?, ?, ?, ?, ?)
+ON CONFLICT(race_id, course) DO UPDATE SET
+  exhibition_time = excluded.exhibition_time,
+  start_timing = excluded.start_timing,
+  ranking = excluded.ranking,
+  fetched_at = excluded.fetched_at
+`).run(raceId, entry.course, entry.exhibitionTime, entry.startTiming, entry.ranking, fetchedAt);
+  }
+}
+
+export function getExhibitionData(db: DatabaseSync, raceId: string): ExhibitionEntry[] {
+  const rows = db.prepare(`
+SELECT course, exhibition_time, start_timing, ranking
+FROM exhibition_data
+WHERE race_id = ?
+ORDER BY course
+`).all(raceId) as Array<Record<string, unknown>>;
+  return rows.map((row) => ({
+    course: Number(row.course),
+    exhibitionTime: row.exhibition_time == null ? null : Number(row.exhibition_time),
+    startTiming: row.start_timing == null ? null : Number(row.start_timing),
+    ranking: row.ranking == null ? null : Number(row.ranking),
+  }));
+}
+
+export type RacerCourseStat = {
+  course: number;
+  races: number;
+  wins: number;
+  winRate: number | null;
+};
+
+export function upsertRacerCourseStats(db: DatabaseSync, registrationNo: string, stats: RacerCourseStat[], fetchedAt: string): void {
+  for (const stat of stats) {
+    db.prepare(`
+INSERT INTO racer_course_stats (registration_no, course, races, wins, win_rate, fetched_at)
+VALUES (?, ?, ?, ?, ?, ?)
+ON CONFLICT(registration_no, course) DO UPDATE SET
+  races = excluded.races,
+  wins = excluded.wins,
+  win_rate = excluded.win_rate,
+  fetched_at = excluded.fetched_at
+`).run(registrationNo, stat.course, stat.races, stat.wins, stat.winRate, fetchedAt);
+  }
+}
+
+export function getRacerCourseStats(db: DatabaseSync, registrationNo: string): RacerCourseStat[] {
+  const rows = db.prepare(`
+SELECT course, races, wins, win_rate
+FROM racer_course_stats
+WHERE registration_no = ?
+ORDER BY course
+`).all(registrationNo) as Array<Record<string, unknown>>;
+  return rows.map((row) => ({
+    course: Number(row.course),
+    races: Number(row.races),
+    wins: Number(row.wins),
+    winRate: row.win_rate == null ? null : Number(row.win_rate),
+  }));
 }
 
 function rowToResult(row: Record<string, unknown>): RaceResult {

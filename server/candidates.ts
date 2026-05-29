@@ -22,6 +22,7 @@ export function buildCandidateRows(
   programInputs: ProgramInput[] = [],
   modelResults: RaceResult[] = [],
   earlyOdds = new Map<string, number>(),
+  allOdds = new Map<string, number>(),
 ) {
   let reservedBudgetYen = 0;
   let buyCountToday = 0;
@@ -34,6 +35,7 @@ export function buildCandidateRows(
     settings.targetEv,
     now.toISOString(),
     manualOdds,
+    allOdds,
   );
   const baseCandidates = modelCandidates.length > 0 ? modelCandidates : sampleCandidates;
 

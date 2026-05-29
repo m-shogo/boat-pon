@@ -12,11 +12,11 @@
  */
 
 import { buildCandidateRows } from "../server/candidates";
-import { getManualOdds, getSettings, hasEarlyOddsSnapshot, insertDecisionHistory, listAllResultsForModel, listEarlyOddsSnapshots, listOddsSnapshots, listProgramInputs, openDb, recordOddsSnapshot, setOdds } from "../server/db";
+import { getManualOdds, getSettings, hasEarlyOddsSnapshot, insertDecisionHistory, listAllOddsBySelection, listAllResultsForModel, listEarlyOddsSnapshots, listOddsSnapshots, listProgramInputs, openDb, recordOddsSnapshot, setOdds } from "../server/db";
 import { LIVE_MONITOR_FROM } from "../src/domain/liveMonitor";
 import { isWithinOddsFetchWindow, minutesUntilRaceClose, shouldPersistDecisionHistory } from "../src/domain/livePersistence";
 import { mergeOddsMaps } from "../src/domain/oddsSnapshot";
-import { isTrifectaSelectionUnavailable, parseTrifectaOdds } from "../src/domain/oddsParser";
+import { isTrifectaSelectionUnavailable, parseAllTrifectaOdds, parseTrifectaOdds } from "../src/domain/oddsParser";
 import { fetchOfficialOdds } from "./fetch-official-odds";
 
 const dryRun = process.argv.includes("--dry-run");
@@ -63,6 +63,7 @@ try {
     listProgramInputs(db, today),
     listAllResultsForModel(db),
     listEarlyOddsSnapshots(db),
+    listAllOddsBySelection(db),
   );
 
   let fetched = 0;
@@ -93,21 +94,21 @@ try {
         forceRefresh: force,
       };
       const result = await fetchWithRetry(fetchArgs);
-      let odds = parseTrifectaOdds(result.html, candidate.selection);
+      let allOddsMap = parseAllTrifectaOdds(result.html);
       let html = result.html;
 
       // parse失敗時: キャッシュが不完全な可能性があるためforceRefreshで再取得
-      if (odds == null && !result.cached && !isTrifectaSelectionUnavailable(html, candidate.selection)) {
+      if (allOddsMap.size === 0 && !result.cached) {
         console.log(`parse-retry: ${candidate.raceId} ${candidate.selection.join("-")}`);
         await sleep(FETCH_RETRY_DELAY_MS);
         const retried = await fetchWithRetry({ ...fetchArgs, forceRefresh: true }).catch(() => null);
         if (retried) {
           html = retried.html;
-          odds = parseTrifectaOdds(html, candidate.selection);
+          allOddsMap = parseAllTrifectaOdds(html);
         }
       }
 
-      if (odds == null) {
+      if (allOddsMap.size === 0) {
         if (isTrifectaSelectionUnavailable(html, candidate.selection)) {
           console.log(`odds-unavailable: ${candidate.raceId} ${candidate.selection.join("-")}`);
         } else {
@@ -116,23 +117,41 @@ try {
         }
         continue;
       }
-      const selectionStr = candidate.selection.join("-");
-      setOdds(db, candidate.raceId, odds, "official", selectionStr);
 
-      // Late Money Signal: 初回取得時のオッズを保存（以降の変化と比較するため）
-      if (!hasEarlyOddsSnapshot(db, candidate.raceId, selectionStr)) {
+      // 全120通りを保存
+      const capturedAt = new Date().toISOString();
+      for (const [selStr, oddsVal] of allOddsMap) {
         recordOddsSnapshot(db, {
           raceId: candidate.raceId,
-          selection: selectionStr,
-          odds,
+          selection: selStr,
+          odds: oddsVal,
           popularity: null,
-          source: "official-early",
-          capturedAt: new Date().toISOString(),
+          source: "official",
+          capturedAt,
           isFinalLike: false,
         });
+        // Late Money Signal: まだofficial-earlyがない出目のみ保存
+        if (!hasEarlyOddsSnapshot(db, candidate.raceId, selStr)) {
+          recordOddsSnapshot(db, {
+            raceId: candidate.raceId,
+            selection: selStr,
+            odds: oddsVal,
+            popularity: null,
+            source: "official-early",
+            capturedAt,
+            isFinalLike: false,
+          });
+        }
       }
 
-      console.log(`fetched: ${candidate.raceId} ${selectionStr} odds=${odds} ${result.cached ? "(cached)" : ""}`);
+      // manual_oddsテーブルも候補出目のオッズで更新（後続の buildCandidateRows 用）
+      const selectionStr = candidate.selection.join("-");
+      const candidateOdds = allOddsMap.get(selectionStr);
+      if (candidateOdds != null) {
+        setOdds(db, candidate.raceId, candidateOdds, "official", selectionStr);
+      }
+
+      console.log(`fetched: ${candidate.raceId} all-120 odds=${allOddsMap.size}件`);
       fetched += 1;
     } catch (err) {
       console.error(`error: ${candidate.raceId}`, err instanceof Error ? err.message : err);
@@ -150,6 +169,7 @@ try {
       listProgramInputs(db, today),
       listAllResultsForModel(db),
       listEarlyOddsSnapshots(db),
+      listAllOddsBySelection(db),
     );
     const persistHistory = today >= LIVE_MONITOR_FROM;
     for (const row of freshRows) {

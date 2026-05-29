@@ -21,6 +21,7 @@ import {
   insertOfficialProgram,
   listOddsSnapshots,
   listEarlyOddsSnapshots,
+  listAllOddsBySelection,
   getSettings,
   insertDecisionHistory,
   listDecisionHistory,
@@ -205,6 +206,7 @@ app.get("/api/dashboard", (req, res) => {
       })),
       listResultsForModelRange(db, addDaysJst(date, -180), date),
       listEarlyOddsSnapshots(db),
+      listAllOddsBySelection(db),
     );
     const freshPushPayloads: Array<{ title: string; body: string; url: string }> = [];
     for (const row of rows) {
@@ -1090,6 +1092,7 @@ app.post("/api/odds/fetch", async (req, res) => {
       })),
       listAllResultsForModel(db),
       listEarlyOddsSnapshots(db),
+      listAllOddsBySelection(db),
     );
 
     type OddsResult = { raceId: string; odds: number | null; status: string; error?: string };

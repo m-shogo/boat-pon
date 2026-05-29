@@ -235,6 +235,52 @@ function parseOddsText(text: string): number | null {
   return value;
 }
 
+export function parseAllTrifectaOdds(html: string): Map<string, number> {
+  const $ = cheerio.load(html);
+  const result = new Map<string, number>();
+
+  for (const table of $("table").toArray()) {
+    const $table = $(table);
+    if ($table.find(".oddsPoint").length === 0) continue;
+
+    const headerGrid = buildTableGrid($, $table.find("thead tr").toArray());
+    const bodyGrid = buildTableGrid($, $table.find("tbody tr").toArray());
+    if (headerGrid.length === 0 || bodyGrid.length === 0) continue;
+
+    // ヘッダーから1着コースとそのカラム位置を取得
+    const firstPlaceColumns: Array<{ firstPlace: number; column: number }> = [];
+    for (const row of headerGrid) {
+      for (let column = 0; column < row.length; column += 1) {
+        const value = Number(row[column]?.text.trim());
+        if (Number.isInteger(value) && value >= 1 && value <= 6) {
+          firstPlaceColumns.push({ firstPlace: value, column });
+        }
+      }
+    }
+
+    // ボディの各行を走査して全組み合わせを収集
+    for (const group of firstPlaceColumns) {
+      for (const row of bodyGrid) {
+        const secondCell = row[group.column];
+        const thirdCell = row[group.column + 1];
+        const oddsCell = row[group.column + 2];
+        if (!secondCell || !thirdCell || !oddsCell) continue;
+        const second = Number(secondCell.text.trim());
+        const third = Number(thirdCell.text.trim());
+        if (!Number.isInteger(second) || second < 1 || second > 6) continue;
+        if (!Number.isInteger(third) || third < 1 || third > 6) continue;
+        if (group.firstPlace === second || group.firstPlace === third || second === third) continue;
+        const value = parseOddsText(oddsCell.text);
+        if (value != null) {
+          result.set(`${group.firstPlace}-${second}-${third}`, value);
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
 function normalizeSelectionText(text: string) {
   return text
     .replace(/[\s　]+/g, "")
