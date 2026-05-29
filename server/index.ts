@@ -29,6 +29,7 @@ import {
   listOfficialProgramsRaw,
   listProgramInputs,
   listPushSubscriptions,
+  listAllResultsForModel,
   listResults,
   listResultsForModelRange,
   markNotificationSent,
@@ -96,7 +97,7 @@ function validateBudgetRule(settings: BudgetRule): string | null {
   ];
   for (const key of positiveKeys) {
     const value = settings[key];
-    if (!Number.isFinite(value) || value <= 0) return `${key} must be positive`;
+    if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return `${key} must be positive`;
   }
   if (settings.stakePerBetYen > settings.maxStakePerRaceYen) return "stakePerBetYen must be <= maxStakePerRaceYen";
   if (settings.maxStakePerRaceYen > settings.dailyBudgetYen) return "maxStakePerRaceYen must be <= dailyBudgetYen";
@@ -355,6 +356,9 @@ app.get("/api/backtest/model-comparison", (req, res) => {
 });
 
 // B1フィルター条件の共通WHERE句（decision_history=dh, official_programs=op が必要）
+// 注意: boats[1].className != 'B1' は旧検証用フィルター。
+// 現行 DEFAULT_APP_RULE の excludeSameClassSecondBoat=false とは一致しない。
+// Calibration UI の集計範囲であり、live判定ロジックとは別物。
 // in-sample(BUY records): current_odds はdecision_historyの列
 const B1_FILTER_WHERE = `
   AND json_extract(op.raw_json, '$.boats[0].className') = 'B1'

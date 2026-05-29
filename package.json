@@ -38,6 +38,9 @@
     "handoff:claude": "tsx scripts/claude-handoff.ts",
     "day:close": "tsx scripts/live-day-close.ts"
   },
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
     "cheerio": "latest",
