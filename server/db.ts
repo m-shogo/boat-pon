@@ -135,9 +135,22 @@ CREATE TABLE IF NOT EXISTS racer_course_stats (
   races INTEGER NOT NULL DEFAULT 0,
   wins INTEGER NOT NULL DEFAULT 0,
   win_rate REAL,
+  entry_rate REAL,
+  top3_rate REAL,
   avg_st REAL,
+  start_order REAL,
   fetched_at TEXT NOT NULL,
   PRIMARY KEY (registration_no, course)
+);
+
+CREATE TABLE IF NOT EXISTS racer_profiles (
+  registration_no TEXT PRIMARY KEY,
+  flying_count INTEGER,
+  late_start_count INTEGER,
+  top3_rate REAL,
+  avg_st REAL,
+  ability_index INTEGER,
+  fetched_at TEXT NOT NULL
 );
 `);
 
@@ -209,9 +222,16 @@ WHERE venue='琵琶湖';
 
   try {
     db.exec("ALTER TABLE racer_course_stats ADD COLUMN avg_st REAL");
-  } catch {
-    // Already exists.
-  }
+  } catch { /* Already exists. */ }
+  try {
+    db.exec("ALTER TABLE racer_course_stats ADD COLUMN entry_rate REAL");
+  } catch { /* Already exists. */ }
+  try {
+    db.exec("ALTER TABLE racer_course_stats ADD COLUMN top3_rate REAL");
+  } catch { /* Already exists. */ }
+  try {
+    db.exec("ALTER TABLE racer_course_stats ADD COLUMN start_order REAL");
+  } catch { /* Already exists. */ }
 }
 
 export function getSettings(db: DatabaseSync): BudgetRule {
@@ -782,27 +802,55 @@ export type RacerCourseStat = {
   races: number;
   wins: number;
   winRate: number | null;
-  avgSt?: number | null;
+  entryRate: number | null;
+  top3Rate: number | null;
+  avgSt: number | null;
+  startOrder: number | null;
+};
+
+export type RacerProfile = {
+  flyingCount: number | null;
+  lateStartCount: number | null;
+  top3Rate: number | null;
+  avgSt: number | null;
+  abilityIndex: number | null;
 };
 
 export function upsertRacerCourseStats(db: DatabaseSync, registrationNo: string, stats: RacerCourseStat[], fetchedAt: string): void {
   for (const stat of stats) {
     db.prepare(`
-INSERT INTO racer_course_stats (registration_no, course, races, wins, win_rate, avg_st, fetched_at)
-VALUES (?, ?, ?, ?, ?, ?, ?)
+INSERT INTO racer_course_stats (registration_no, course, races, wins, win_rate, entry_rate, top3_rate, avg_st, start_order, fetched_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(registration_no, course) DO UPDATE SET
   races = excluded.races,
   wins = excluded.wins,
   win_rate = excluded.win_rate,
+  entry_rate = excluded.entry_rate,
+  top3_rate = excluded.top3_rate,
   avg_st = excluded.avg_st,
+  start_order = excluded.start_order,
   fetched_at = excluded.fetched_at
-`).run(registrationNo, stat.course, stat.races, stat.wins, stat.winRate, stat.avgSt ?? null, fetchedAt);
+`).run(registrationNo, stat.course, stat.races, stat.wins, stat.winRate, stat.entryRate, stat.top3Rate, stat.avgSt, stat.startOrder, fetchedAt);
   }
+}
+
+export function upsertRacerProfile(db: DatabaseSync, registrationNo: string, profile: RacerProfile, fetchedAt: string): void {
+  db.prepare(`
+INSERT INTO racer_profiles (registration_no, flying_count, late_start_count, top3_rate, avg_st, ability_index, fetched_at)
+VALUES (?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(registration_no) DO UPDATE SET
+  flying_count = excluded.flying_count,
+  late_start_count = excluded.late_start_count,
+  top3_rate = excluded.top3_rate,
+  avg_st = excluded.avg_st,
+  ability_index = excluded.ability_index,
+  fetched_at = excluded.fetched_at
+`).run(registrationNo, profile.flyingCount, profile.lateStartCount, profile.top3Rate, profile.avgSt, profile.abilityIndex, fetchedAt);
 }
 
 export function getRacerCourseStats(db: DatabaseSync, registrationNo: string): RacerCourseStat[] {
   const rows = db.prepare(`
-SELECT course, races, wins, win_rate, avg_st
+SELECT course, races, wins, win_rate, entry_rate, top3_rate, avg_st, start_order
 FROM racer_course_stats
 WHERE registration_no = ?
 ORDER BY course
@@ -812,8 +860,26 @@ ORDER BY course
     races: Number(row.races),
     wins: Number(row.wins),
     winRate: row.win_rate == null ? null : Number(row.win_rate),
+    entryRate: row.entry_rate == null ? null : Number(row.entry_rate),
+    top3Rate: row.top3_rate == null ? null : Number(row.top3_rate),
     avgSt: row.avg_st == null ? null : Number(row.avg_st),
+    startOrder: row.start_order == null ? null : Number(row.start_order),
   }));
+}
+
+export function getRacerProfile(db: DatabaseSync, registrationNo: string): RacerProfile | null {
+  const row = db.prepare(`
+SELECT flying_count, late_start_count, top3_rate, avg_st, ability_index
+FROM racer_profiles WHERE registration_no = ?
+`).get(registrationNo) as Record<string, unknown> | undefined;
+  if (!row) return null;
+  return {
+    flyingCount: row.flying_count == null ? null : Number(row.flying_count),
+    lateStartCount: row.late_start_count == null ? null : Number(row.late_start_count),
+    top3Rate: row.top3_rate == null ? null : Number(row.top3_rate),
+    avgSt: row.avg_st == null ? null : Number(row.avg_st),
+    abilityIndex: row.ability_index == null ? null : Number(row.ability_index),
+  };
 }
 
 export function listAllRegistrationNos(db: DatabaseSync): Array<{ registrationNo: string; racerName: string }> {

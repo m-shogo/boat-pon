@@ -81,13 +81,12 @@ function parseRacerProfileHtml(html: string): RacerCourseStat[] {
         winRate = Math.round((wins / races) * 100) / 100;
       }
 
-      stats.push({ course, races, wins, winRate });
+      stats.push({ course, races, wins, winRate, entryRate: null, top3Rate: null, avgSt: null, startOrder: null });
     }
   });
 
   // テーブルが見つからない場合はフォールバック
   if (stats.length === 0) {
-    // コース1〜6の行をページ全体のテキストから探す
     const allRows = $("tr").toArray();
     for (const tr of allRows) {
       const cells = $(tr).find("td, th").toArray().map((el) => $(el).text().trim());
@@ -104,7 +103,7 @@ function parseRacerProfileHtml(html: string): RacerCourseStat[] {
       const races = nums[0] || 0;
       const wins = nums[1] || 0;
       const winRate = nums.find((v) => !Number.isInteger(v)) ?? (races > 0 ? Math.round((wins / races) * 100) / 100 : null);
-      stats.push({ course: courseVal, races, wins, winRate });
+      stats.push({ course: courseVal, races, wins, winRate, entryRate: null, top3Rate: null, avgSt: null, startOrder: null });
     }
   }
 

@@ -1,13 +1,14 @@
 /**
- * 過去番組に登場した全選手のコース別勝率を一括取得してDBに保存する。
+ * 過去番組に登場した全選手のコース別成績・期別成績を一括取得してDBに保存する。
  *
- * 初回セットアップ用。通常運用は auto-fetch-exhibition.ts に任せる。
+ * 取得元:
+ *   コース別: https://www.boatrace.jp/owpc/pc/data/racersearch/course?toban=XXXX
+ *   期別:     https://www.boatrace.jp/owpc/pc/data/racersearch/season?toban=XXXX
+ *
+ * 期別成績の集計期間は半年ごとにリセットされるため、定期的に再取得が必要。
  *
  * usage:
  *   tsx scripts/bulk-fetch-racer-stats.ts [--dry-run] [--force]
- *
- *   --dry-run  DBに書かず対象選手数だけ表示
- *   --force    既存データがあっても再取得
  */
 
 import * as cheerio from "cheerio";
@@ -16,8 +17,9 @@ import {
   listAllRegistrationNos,
   openDb,
   upsertRacerCourseStats,
+  upsertRacerProfile,
 } from "../server/db";
-import type { RacerCourseStat } from "../server/db";
+import type { RacerCourseStat, RacerProfile } from "../server/db";
 
 const dryRun = process.argv.includes("--dry-run");
 const force = process.argv.includes("--force");
@@ -31,8 +33,7 @@ function sleep(ms: number) {
 
 function isStale(fetchedAt: string | null, ttlDays: number): boolean {
   if (fetchedAt == null) return true;
-  const age = Date.now() - new Date(fetchedAt).getTime();
-  return age > ttlDays * 86400_000;
+  return Date.now() - new Date(fetchedAt).getTime() > ttlDays * 86400_000;
 }
 
 async function fetchHtml(url: string): Promise<string> {
@@ -43,119 +44,95 @@ async function fetchHtml(url: string): Promise<string> {
   return res.text();
 }
 
-function parseAvgSt(html: string): number | null {
-  const $ = cheerio.load(html);
-  // 平均STは「平均ST」ラベルの近くにある小数値（例: 0.15）
-  let avgSt: number | null = null;
-  $("table").each((_i, table) => {
-    if (avgSt != null) return;
-    const $table = $(table);
-    const headerText = $table.find("th, thead").text();
-    if (!headerText.includes("平均ST") && !headerText.includes("ST")) return;
-    $table.find("td, th").each((_j, el) => {
-      if (avgSt != null) return;
-      const text = $(el).text().trim();
-      const v = Number(text);
-      if (Number.isFinite(v) && v > 0 && v < 1) avgSt = v;
-    });
-  });
-  if (avgSt != null) return avgSt;
-  // フォールバック: ページ全体から「平均ST」直後の数値を探す
-  const text = $.root().text();
-  const m = text.match(/平均ST[^\d]*(0\.\d{2})/);
-  if (m) return Number(m[1]);
-  return null;
+function parsePercent(text: string): number | null {
+  const v = Number(text.replace(/[^\d.]/g, ""));
+  return Number.isFinite(v) && v > 0 ? v : null;
 }
 
-function parseRacerProfileHtml(html: string): RacerCourseStat[] {
+function parseNum(text: string): number | null {
+  const v = Number(text.replace(/[^\d.]/g, ""));
+  return Number.isFinite(v) ? v : null;
+}
+
+/** racersearch/course ページからコース別成績を取得 */
+function parseCourseHtml(html: string): RacerCourseStat[] {
   const $ = cheerio.load(html);
-  const stats: RacerCourseStat[] = [];
-  const avgSt = parseAvgSt(html);
+  const byCourse = new Map<number, Partial<RacerCourseStat>>();
 
   $("table").each((_i, table) => {
     const $table = $(table);
-    const headerText = $table.find("th, thead").text();
-    const isCoursTable =
-      headerText.includes("コース別") ||
-      (headerText.includes("コース") && (headerText.includes("勝率") || headerText.includes("1着")));
-    if (!isCoursTable) return;
+    const header = $table.find("th, thead").first().text().trim();
 
-    const headerCells = $table.find("thead tr").last().find("th").toArray().map((el) => $(el).text().trim());
-    const bodyRows = $table.find("tbody tr").toArray();
-
-    for (const tr of bodyRows) {
-      const cells = $(tr).find("th, td").toArray().map((el) => $(el).text().trim());
+    const rows = $table.find("tbody tr, tr").toArray();
+    for (const tr of rows) {
+      const cells = $(tr).find("td, th").toArray().map((el) => $(el).text().trim());
       if (cells.length < 2) continue;
       const courseVal = Number(cells[0]);
       if (!Number.isInteger(courseVal) || courseVal < 1 || courseVal > 6) continue;
 
-      const course = courseVal;
-      let races = 0;
-      let wins = 0;
-      let winRate: number | null = null;
+      if (!byCourse.has(courseVal)) byCourse.set(courseVal, { course: courseVal, races: 0, wins: 0, winRate: null, entryRate: null, top3Rate: null, avgSt: null, startOrder: null });
+      const stat = byCourse.get(courseVal)!;
+      const val = cells[1];
 
-      if (headerCells.length > 0) {
-        const racesIdx = headerCells.findIndex((h) => h.includes("出走") || h === "数");
-        const winsIdx = headerCells.findIndex((h) => h === "1着" || h.includes("1着"));
-        const winRateIdx = headerCells.findIndex((h) => h.includes("勝率"));
-        const dataCells = cells.slice(1);
-        if (racesIdx >= 0 && racesIdx < dataCells.length) races = Number(dataCells[racesIdx].replace(/[^\d]/g, "")) || 0;
-        if (winsIdx >= 0 && winsIdx < dataCells.length) wins = Number(dataCells[winsIdx].replace(/[^\d]/g, "")) || 0;
-        if (winRateIdx >= 0 && winRateIdx < dataCells.length) {
-          const v = Number(dataCells[winRateIdx].replace(/[^\d.]/g, ""));
-          winRate = Number.isFinite(v) ? v : null;
-        }
-      } else {
-        const numericCells = cells.slice(1).map((c) => {
-          const cleaned = c.replace(/[^\d.]/g, "");
-          return cleaned ? Number(cleaned) : null;
-        }).filter((v): v is number => v !== null && Number.isFinite(v));
-        for (const v of numericCells) {
-          if (Number.isInteger(v) && races === 0) { races = v; continue; }
-          if (Number.isInteger(v) && wins === 0) { wins = v; continue; }
-          if (!Number.isInteger(v) && winRate == null) { winRate = v; break; }
-        }
+      if (header.includes("進入率")) {
+        stat.entryRate = parsePercent(val);
+      } else if (header.includes("3連対率")) {
+        stat.top3Rate = parsePercent(val);
+      } else if (header.includes("平均スタート")) {
+        stat.avgSt = parseNum(val);
+      } else if (header.includes("スタート順")) {
+        stat.startOrder = parseNum(val);
       }
-
-      if (winRate == null && races > 0) winRate = Math.round((wins / races) * 100) / 100;
-      stats.push({ course, races, wins, winRate, avgSt });
     }
   });
 
-  if (stats.length === 0) {
-    const allRows = $("tr").toArray();
-    for (const tr of allRows) {
-      const cells = $(tr).find("td, th").toArray().map((el) => $(el).text().trim());
-      if (cells.length < 3) continue;
-      const courseVal = Number(cells[0]);
-      if (!Number.isInteger(courseVal) || courseVal < 1 || courseVal > 6) continue;
-      const nums = cells.slice(1).map((c) => {
-        const cleaned = c.replace(/[^\d.]/g, "");
-        return cleaned ? Number(cleaned) : null;
-      }).filter((v): v is number => v !== null && Number.isFinite(v));
-      if (nums.length < 2) continue;
-      const races = nums[0] || 0;
-      const wins = nums[1] || 0;
-      const winRate = nums.find((v) => !Number.isInteger(v)) ?? (races > 0 ? Math.round((wins / races) * 100) / 100 : null);
-      stats.push({ course: courseVal, races, wins, winRate });
-    }
-  }
+  return [...byCourse.values()].map((s) => ({
+    course: s.course!,
+    races: s.races ?? 0,
+    wins: s.wins ?? 0,
+    winRate: s.winRate ?? null,
+    entryRate: s.entryRate ?? null,
+    top3Rate: s.top3Rate ?? null,
+    avgSt: s.avgSt ?? null,
+    startOrder: s.startOrder ?? null,
+  })).sort((a, b) => a.course - b.course);
+}
 
-  return stats;
+/** racersearch/season ページから期別成績を取得 */
+function parseSeasonHtml(html: string): RacerProfile {
+  const $ = cheerio.load(html);
+  let flyingCount: number | null = null;
+  let lateStartCount: number | null = null;
+  let top3Rate: number | null = null;
+  let avgSt: number | null = null;
+  let abilityIndex: number | null = null;
+
+  $("table tr").each((_i, tr) => {
+    const cells = $(tr).find("td, th").toArray().map((el) => $(el).text().trim());
+    for (let ci = 0; ci < cells.length - 1; ci++) {
+      const label = cells[ci];
+      const val = cells[ci + 1];
+      if (label.includes("3連対率")) top3Rate = parsePercent(val);
+      if (label.includes("平均スタート")) avgSt = parseNum(val);
+      if (label.includes("フライング")) flyingCount = parseNum(val.replace(/回.*/, ""));
+      if (label.includes("出遅れ")) lateStartCount = parseNum(val.replace(/回.*/, ""));
+      if (label.includes("能力指数")) abilityIndex = parseNum(val);
+    }
+  });
+
+  return { flyingCount, lateStartCount, top3Rate, avgSt, abilityIndex };
 }
 
 const db = openDb();
 try {
-  // SQL で全登録番号を直接抽出（メモリ効率）
-  const allRacers = listAllRegistrationNos(db).map((r) => [r.registrationNo, r.racerName] as [string, string]);
+  const allRacers = listAllRegistrationNos(db);
   console.log(`対象選手: ${allRacers.length}人`);
 
   if (dryRun) {
-    for (const [regNo, name] of allRacers) {
-      const fetchedAt = getRacerCourseStatsFetchedAt(db, regNo);
-      const stale = isStale(fetchedAt, RACER_STATS_TTL_DAYS);
-      if (force || stale) {
-        console.log(`[dry-run] ${regNo} ${name} fetchedAt=${fetchedAt ?? "未取得"}`);
+    for (const { registrationNo, racerName } of allRacers) {
+      const fetchedAt = getRacerCourseStatsFetchedAt(db, registrationNo);
+      if (force || isStale(fetchedAt, RACER_STATS_TTL_DAYS)) {
+        console.log(`[dry-run] ${registrationNo} ${racerName}`);
       }
     }
     process.exit(0);
@@ -165,32 +142,41 @@ try {
   let skipped = 0;
   let failed = 0;
 
-  for (const [regNo, name] of allRacers) {
+  for (const { registrationNo, racerName } of allRacers) {
     if (!force) {
-      const fetchedAt = getRacerCourseStatsFetchedAt(db, regNo);
+      const fetchedAt = getRacerCourseStatsFetchedAt(db, registrationNo);
       if (!isStale(fetchedAt, RACER_STATS_TTL_DAYS)) {
         skipped += 1;
         continue;
       }
     }
 
-    const url = `https://www.boatrace.jp/owpc/pc/data/racerprofile?toban=${regNo}`;
+    const courseUrl = `https://www.boatrace.jp/owpc/pc/data/racersearch/course?toban=${registrationNo}`;
+    const seasonUrl = `https://www.boatrace.jp/owpc/pc/data/racersearch/season?toban=${registrationNo}`;
+
     try {
       await sleep(FETCH_DELAY_MS);
-      const html = await fetchHtml(url);
-      const stats = parseRacerProfileHtml(html);
-      if (stats.length > 0) {
-        upsertRacerCourseStats(db, regNo, stats, new Date().toISOString());
-        fetched += 1;
-        if (fetched % 50 === 0) {
-          console.log(`進捗: ${fetched}/${allRacers.length - skipped} 完了 (スキップ=${skipped} 失敗=${failed})`);
-        }
-      } else {
-        console.warn(`empty: ${regNo} ${name}`);
-        skipped += 1;
+      const [courseHtml, seasonHtml] = await Promise.all([
+        fetchHtml(courseUrl),
+        fetchHtml(seasonUrl),
+      ]);
+
+      const courseStats = parseCourseHtml(courseHtml);
+      const profile = parseSeasonHtml(seasonHtml);
+      const fetchedAt = new Date().toISOString();
+
+      if (courseStats.length > 0) {
+        upsertRacerCourseStats(db, registrationNo, courseStats, fetchedAt);
+      }
+      upsertRacerProfile(db, registrationNo, profile, fetchedAt);
+
+      fetched += 1;
+      if (fetched % 50 === 0 || fetched <= 5) {
+        const sample = courseStats[0];
+        console.log(`[${fetched}/${allRacers.length - skipped}] ${registrationNo} ${racerName} ST=${sample?.avgSt} F=${profile.flyingCount}`);
       }
     } catch (err) {
-      console.error(`error: ${regNo} ${name}`, err instanceof Error ? err.message : err);
+      console.error(`error: ${registrationNo} ${racerName}`, err instanceof Error ? err.message : err);
       failed += 1;
       await sleep(FETCH_DELAY_MS * 2);
     }
