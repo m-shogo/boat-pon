@@ -135,6 +135,7 @@ CREATE TABLE IF NOT EXISTS racer_course_stats (
   races INTEGER NOT NULL DEFAULT 0,
   wins INTEGER NOT NULL DEFAULT 0,
   win_rate REAL,
+  avg_st REAL,
   fetched_at TEXT NOT NULL,
   PRIMARY KEY (registration_no, course)
 );
@@ -204,6 +205,12 @@ WHERE venue='琵琶湖';
 `);
   } catch {
     // UNIQUE衝突時は手動で要対処（ここでは握りつぶす）。
+  }
+
+  try {
+    db.exec("ALTER TABLE racer_course_stats ADD COLUMN avg_st REAL");
+  } catch {
+    // Already exists.
   }
 }
 
@@ -775,25 +782,27 @@ export type RacerCourseStat = {
   races: number;
   wins: number;
   winRate: number | null;
+  avgSt?: number | null;
 };
 
 export function upsertRacerCourseStats(db: DatabaseSync, registrationNo: string, stats: RacerCourseStat[], fetchedAt: string): void {
   for (const stat of stats) {
     db.prepare(`
-INSERT INTO racer_course_stats (registration_no, course, races, wins, win_rate, fetched_at)
-VALUES (?, ?, ?, ?, ?, ?)
+INSERT INTO racer_course_stats (registration_no, course, races, wins, win_rate, avg_st, fetched_at)
+VALUES (?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(registration_no, course) DO UPDATE SET
   races = excluded.races,
   wins = excluded.wins,
   win_rate = excluded.win_rate,
+  avg_st = excluded.avg_st,
   fetched_at = excluded.fetched_at
-`).run(registrationNo, stat.course, stat.races, stat.wins, stat.winRate, fetchedAt);
+`).run(registrationNo, stat.course, stat.races, stat.wins, stat.winRate, stat.avgSt ?? null, fetchedAt);
   }
 }
 
 export function getRacerCourseStats(db: DatabaseSync, registrationNo: string): RacerCourseStat[] {
   const rows = db.prepare(`
-SELECT course, races, wins, win_rate
+SELECT course, races, wins, win_rate, avg_st
 FROM racer_course_stats
 WHERE registration_no = ?
 ORDER BY course
@@ -803,6 +812,22 @@ ORDER BY course
     races: Number(row.races),
     wins: Number(row.wins),
     winRate: row.win_rate == null ? null : Number(row.win_rate),
+    avgSt: row.avg_st == null ? null : Number(row.avg_st),
+  }));
+}
+
+export function listAllRegistrationNos(db: DatabaseSync): Array<{ registrationNo: string; racerName: string }> {
+  const rows = db.prepare(`
+SELECT DISTINCT
+  json_extract(boat.value, '$.registrationNo') AS registration_no,
+  json_extract(boat.value, '$.racerName') AS racer_name
+FROM official_programs, json_each(json_extract(raw_json, '$.boats')) AS boat
+WHERE json_extract(boat.value, '$.registrationNo') IS NOT NULL
+ORDER BY registration_no
+`).all() as Array<Record<string, unknown>>;
+  return rows.map((row) => ({
+    registrationNo: String(row.registration_no),
+    racerName: row.racer_name ? String(row.racer_name) : "",
   }));
 }
 

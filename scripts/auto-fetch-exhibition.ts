@@ -179,7 +179,7 @@ function parseRacerProfileHtml(html: string): RacerCourseStat[] {
       }
 
       if (winRate == null && races > 0) winRate = Math.round((wins / races) * 100) / 100;
-      stats.push({ course, races, wins, winRate });
+      stats.push({ course, races, wins, winRate, avgSt: parseAvgSt(html) });
     }
   });
 
@@ -198,11 +198,30 @@ function parseRacerProfileHtml(html: string): RacerCourseStat[] {
       const races = nums[0] || 0;
       const wins = nums[1] || 0;
       const winRate = nums.find((v) => !Number.isInteger(v)) ?? (races > 0 ? Math.round((wins / races) * 100) / 100 : null);
-      stats.push({ course: courseVal, races, wins, winRate });
+      stats.push({ course: courseVal, races, wins, winRate, avgSt: parseAvgSt(html) });
     }
   }
 
   return stats;
+}
+
+function parseAvgSt(html: string): number | null {
+  const $ = cheerio.load(html);
+  let avgSt: number | null = null;
+  $("table").each((_i, table) => {
+    if (avgSt != null) return;
+    const $table = $(table);
+    if (!$table.find("th, thead").text().includes("ST")) return;
+    $table.find("td, th").each((_j, el) => {
+      if (avgSt != null) return;
+      const v = Number($(el).text().trim());
+      if (Number.isFinite(v) && v > 0 && v < 1) avgSt = v;
+    });
+  });
+  if (avgSt != null) return avgSt;
+  const text = $.root().text();
+  const m = text.match(/平均ST[^\d]*(0\.\d{2})/);
+  return m ? Number(m[1]) : null;
 }
 
 const db = openDb();
