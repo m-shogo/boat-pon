@@ -11,6 +11,7 @@
  *   tsx scripts/bulk-fetch-racer-stats.ts [--dry-run] [--force]
  */
 
+import { execSync } from "node:child_process";
 import * as cheerio from "cheerio";
 import {
   getRacerLastFetchedAt,
@@ -182,7 +183,13 @@ try {
     }
   }
 
-  console.log(`完了: fetched=${fetched} skipped=${skipped} failed=${failed}`);
+  const summary = `fetched=${fetched} skipped=${skipped} failed=${failed}`;
+  console.log(`完了: ${summary}`);
+  try {
+    execSync(`osascript -e 'display notification "${summary}" with title "boat-pon バルク取得完了" sound name "Glass"'`);
+  } catch {
+    // 通知失敗は無視（CI環境など）
+  }
 } finally {
   db.close();
 }

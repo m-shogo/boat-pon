@@ -40,8 +40,7 @@
     "day:close": "tsx scripts/live-day-close.ts",
     "fetch:racer-stats": "tsx scripts/bulk-fetch-racer-stats.ts",
     "fetch:racer-stats:dry": "tsx scripts/bulk-fetch-racer-stats.ts --dry-run",
-    "stats:racer-coverage": "tsx scripts/check-racer-stats-coverage.ts",
-    "notify:racer-done": "tsx scripts/notify-racer-stats-done.ts"
+    "stats:racer-coverage": "tsx scripts/check-racer-stats-coverage.ts"
   },
   "engines": {
     "node": ">=24.0.0"
