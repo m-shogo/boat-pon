@@ -15,6 +15,7 @@
     <key>WorkingDirectory</key>
     <string>/Users/m-shogo/Developer/personal/boat-pon</string>
 
+    <!-- 毎週日曜 22:00 JST にルール候補レビューを実行 -->
     <key>StartCalendarInterval</key>
     <dict>
       <key>Weekday</key>
@@ -30,5 +31,15 @@
 
     <key>StandardErrorPath</key>
     <string>/Users/m-shogo/Developer/personal/boat-pon/logs/weekly-rule-review.launchd.err.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>HOME</key>
+      <string>/Users/m-shogo</string>
+      <key>PATH</key>
+      <string>/Users/m-shogo/.local/share/mise/installs/node/24/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+      <key>BOAT_PON_ROOT_DIR</key>
+      <string>/Users/m-shogo/Developer/personal/boat-pon</string>
+    </dict>
   </dict>
 </plist>
