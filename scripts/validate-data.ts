@@ -12,9 +12,18 @@ const json = args.has("--json");
 const failOnWarning = args.has("--fail-on-warning");
 
 if (!existsSync(DB_PATH)) {
-  const payload = { ok: false, error: "db_not_found", dbPath: DB_PATH };
+  const payload = {
+    ok: false,
+    error: "db_not_found",
+    dbPath: DB_PATH,
+    nextCommands: ["npm run db:init", "npm run readiness"],
+  };
   if (json) console.log(JSON.stringify(payload, null, 2));
-  else console.error(`DB not found: ${DB_PATH}`);
+  else {
+    console.error(`DB not found: ${DB_PATH}`);
+    console.error("Next commands:");
+    for (const command of payload.nextCommands) console.error(`  ${command}`);
+  }
   process.exit(1);
 }
 
@@ -22,8 +31,10 @@ const db = new DatabaseSync(DB_PATH, { readOnly: true });
 db.exec("PRAGMA busy_timeout = 5000");
 try {
   const report = buildReport(db);
-  if (json) console.log(JSON.stringify(report, null, 2));
-  else printReport(report);
+  const nextCommands = buildNextCommands(report.checks);
+  const reportWithNextCommands = { ...report, nextCommands };
+  if (json) console.log(JSON.stringify(reportWithNextCommands, null, 2));
+  else printReport(reportWithNextCommands);
   if (!report.ok || (failOnWarning && report.warningCount > 0)) process.exitCode = 1;
 } finally {
   db.close();
@@ -84,7 +95,62 @@ function freshness(db: DatabaseSync, checks: Check[], table: string, column: str
   checks.push({ id: `freshness.${table}`, severity: ageDays > 45 ? "error" : ageDays > 14 || ageDays < 0 ? "warning" : "ok", message: `${table} latest=${latest} ageDays=${ageDays}`, action: ageDays > 14 || ageDays < 0 ? "Check fetch job, sleep, or LaunchAgent" : undefined });
 }
 
-function printReport(report: ReturnType<typeof buildReport>) {
+function buildNextCommands(checks: Check[]) {
+  const commands = new Set<string>();
+  const activeChecks = checks.filter((check) => check.severity !== "ok");
+
+  for (const check of activeChecks) {
+    if (check.id.startsWith("table.")) {
+      commands.add("npm run db:init");
+      commands.add("npm run db:health");
+    }
+
+    if (check.id.startsWith("count.")) {
+      commands.add("npm run db:health");
+      commands.add("npm run list:pending");
+    }
+
+    if (check.id.startsWith("freshness.")) {
+      commands.add("npm run readiness");
+      commands.add("npm run progress");
+      commands.add("npm run list:pending");
+    }
+
+    if (check.id === "coverage.racer_profiles" || check.id === "coverage.course_stats") {
+      commands.add("npm run fetch:racer-stats:dry");
+      commands.add("npm run stats:racer-coverage");
+    }
+
+    if (check.id === "decision.volume") {
+      commands.add("npm run generate:history");
+      commands.add("npm run report:weekly");
+    }
+
+    if (check.id === "decision.buy_odds") {
+      commands.add("npm run decision:dry-run");
+      commands.add("npm run live:diagnose");
+      commands.add("npm run auto:odds");
+    }
+
+    if (check.id === "decision.buy_ev") {
+      commands.add("npm run decision:dry-run");
+      commands.add("npm run report:weekly");
+    }
+
+    if (check.id === "decision.duplicate") {
+      commands.add("npm run report:quality");
+      commands.add("npm run walk:history");
+    }
+  }
+
+  if (commands.size === 0) {
+    return ["npm run decision:dry-run", "npm run report:weekly"];
+  }
+
+  return [...commands];
+}
+
+function printReport(report: ReturnType<typeof buildReport> & { nextCommands: string[] }) {
   console.log("Boat Pon data quality");
   console.log(`db=${report.dbPath}`);
   console.log(`status=${report.ok ? "OK" : "ERROR"} warnings=${report.warningCount} errors=${report.errorCount}`);
@@ -93,6 +159,8 @@ function printReport(report: ReturnType<typeof buildReport>) {
     console.log(`${mark}\t${check.id}\t${check.message}`);
     if (check.action) console.log(`  action: ${check.action}`);
   }
+  console.log("\nNext commands:");
+  for (const command of report.nextCommands) console.log(`  ${command}`);
 }
 
 function tableExists(db: DatabaseSync, table: string) {
