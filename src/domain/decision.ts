@@ -161,6 +161,10 @@ export function judgeCandidate(
   if (candidate.notified) reasons.push("同一レース通知済み");
   if (candidate.hasRiskFlag) reasons.push("欠場/返還など要確認");
   if (candidate.environmentRiskLevel === "high") reasons.push("荒天/安定板など環境リスク高");
+  // シャープマネー逆行: early→finalで15%以上オッズ下落 = 他の情報源がこの出目を不利と判断している
+  if ((candidate.sharpSignalDrop ?? 0) >= 0.15) {
+    reasons.push(`シャープマネー逆行(${Math.round((candidate.sharpSignalDrop ?? 0) * 100)}%下落)`);
+  }
   reasons.push(...programFilterReasons(candidate, rule));
   if (buyCountToday >= rule.maxBuyCountPerDay) reasons.push("1日最大BUY数に到達");
   if (reservedBudgetYen + rule.stakePerBetYen > rule.dailyBudgetYen) reasons.push("1日予算上限");
