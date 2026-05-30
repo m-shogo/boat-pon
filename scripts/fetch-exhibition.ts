@@ -222,7 +222,11 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+// このファイルを直接実行したときだけ main() を呼ぶ。
+// import { parseWeatherHtml } from "./fetch-exhibition" で読み込んだときは呼ばない。
+if (process.argv[1]?.endsWith("/fetch-exhibition.ts") || process.argv[1]?.endsWith("/fetch-exhibition.js")) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}
