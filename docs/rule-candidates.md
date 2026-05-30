@@ -75,6 +75,62 @@ npm run append:rule-candidates -- \
 - `candidate` にする前に、月次・walk-forward・dry-runを必ず確認する
 - `adopted` に変える時は、採用理由と日付を残す
 
+## 週次レビューの自動実行
+
+毎週日曜22:00に、Mac の `launchd` で以下を自動実行できます。
+
+```txt
+validate:data
+↓
+report:quality --days 30 --json
+↓
+append:rule-candidates
+↓
+docs/rule-candidates.md に候補追記
+↓
+logs/weekly-rule-review.log に記録
+```
+
+初回だけ、ローカルで以下を実行します。
+
+```sh
+chmod +x scripts/run-weekly-rule-review.sh
+
+cp docs/launchd/com.shogo.boat-pon.weekly-review.plist ~/Library/LaunchAgents/
+
+launchctl unload ~/Library/LaunchAgents/com.shogo.boat-pon.weekly-review.plist 2>/dev/null || true
+launchctl load ~/Library/LaunchAgents/com.shogo.boat-pon.weekly-review.plist
+```
+
+手動で動作確認する場合:
+
+```sh
+BOAT_PON_ROOT_DIR=/Users/m-shogo/Developer/personal/boat-pon \
+  bash scripts/run-weekly-rule-review.sh
+
+tail -n 80 logs/weekly-rule-review.log
+```
+
+登録状態を確認する場合:
+
+```sh
+launchctl list | grep com.shogo.boat-pon.weekly-review || true
+```
+
+停止したい場合:
+
+```sh
+launchctl unload ~/Library/LaunchAgents/com.shogo.boat-pon.weekly-review.plist
+```
+
+注意:
+
+- この自動実行は live 設定を変更しない
+- 自動購入・自動投票はしない
+- 候補ログ追記だけを行う
+- 追記された候補は初期状態では `watch`
+- 採用する場合は、月次・walk-forward・dry-runを確認してから人間が判断する
+
 ## 判定ステータス
 
 | status | 意味 | live反映 |
