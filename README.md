@@ -82,6 +82,7 @@ npx tsx scripts/fetch-official-odds.ts YYYY-MM-DD 蒲郡 8
 - ROI集計は公式払戻ではなく、判定時に保存した取得オッズを使って検証
 - 公式 boatrace.jp の3連単オッズをリアルタイム取得（候補レースのみ、5分キャッシュ、手動ボタン/自動60秒トグル）
 - 公式 mbrace.or.jp の競走成績LZHを期間指定で一括DL+解凍+取り込み（Shift_JIS、unar依存）
+- 読み取り専用のデータ品質チェック、週次/月次レポート、期間ずらし検証、通知dry-runをCLIで確認
 
 ## 運用メモ
 
@@ -90,6 +91,36 @@ npx tsx scripts/fetch-official-odds.ts YYYY-MM-DD 蒲郡 8
 - Claude Code 次作業指示: [docs/claude-next-work-order.md](docs/claude-next-work-order.md)
 - live設定変更前の安全ゲート: [docs/settings-change-gate.md](docs/settings-change-gate.md)
 - 失敗・学びの蓄積: [docs/lessons-learned.md](docs/lessons-learned.md)
+
+### 毎日の読み取り専用チェック
+
+通常は、まず短い状態確認とデータ品質を見る。
+
+```sh
+npm run status:brief
+npm run validate:data
+npm run decision:dry-run
+```
+
+- `status:brief`: 今日の監視状態と次に取るべき操作を短く確認する。
+- `validate:data`: DB、主要テーブル、データ鮮度、選手成績カバレッジ、BUY行の欠損を確認する。
+- `decision:dry-run`: 実通知を送らず、今日の候補を `send` / `watch` / `skip` に分けて理由を見る。
+
+BUY候補が少ない日は異常扱いしない。まず `status:brief` の `action:` を優先し、必要な時だけ詳細を見る。
+
+### 週次・月次の検証
+
+```sh
+npm run report:weekly
+npm run report:monthly
+npm run walk:history -- --from 2026-01-01 --to 2026-05-30
+```
+
+- `report:weekly`: 直近7日をシグナル帯、会場、レース番号別に確認する。
+- `report:monthly`: 直近30日で、BUY数、的中率、ROI、弱い条件候補を見る。
+- `walk:history`: 期間をずらしながら、特定の月だけたまたま良かったルールを見抜く。
+
+ROIが良い条件を見つけても、すぐlive設定へ反映しない。月別、会場別、レース番号別、期間ずらしで崩れないか確認してから採用候補にする。
 
 読み取り専用のv4保守モデル診断:
 
