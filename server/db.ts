@@ -435,17 +435,62 @@ function loadCourseStatsMap(db: DatabaseSync): Map<string, { avgSt: number | nul
   return map;
 }
 
-/** extractProgramFeatures の結果に racer_course_stats の値を注入する */
-function enrichFeaturesWithCourseStats(
+/** racer_profiles を全件ロードして Map<registrationNo, {flyingCount, lateStartCount}> を返す */
+function loadRacerProfilesMap(db: DatabaseSync): Map<string, { flyingCount: number | null; lateStartCount: number | null }> {
+  const rows = db.prepare(`
+    SELECT registration_no, flying_count, late_start_count FROM racer_profiles
+    WHERE flying_count IS NOT NULL
+  `).all() as Array<Record<string, unknown>>;
+  const map = new Map<string, { flyingCount: number | null; lateStartCount: number | null }>();
+  for (const row of rows) {
+    map.set(String(row.registration_no), {
+      flyingCount: row.flying_count == null ? null : Number(row.flying_count),
+      lateStartCount: row.late_start_count == null ? null : Number(row.late_start_count),
+    });
+  }
+  return map;
+}
+
+/** exhibition_data を全件ロードして Map<"race_id-course", start_timing> を返す
+ *  有効な ST値（0.05〜0.4s）のみ保持。0 や null は欠損とみなす。 */
+function loadExhibitionStMap(db: DatabaseSync): Map<string, number> {
+  const rows = db.prepare(`
+    SELECT race_id, course, start_timing FROM exhibition_data
+    WHERE start_timing > 0.05 AND start_timing < 0.4
+  `).all() as Array<Record<string, unknown>>;
+  const map = new Map<string, number>();
+  for (const row of rows) {
+    map.set(`${row.race_id}-${row.course}`, Number(row.start_timing));
+  }
+  return map;
+}
+
+/** extractProgramFeatures の結果に racer_course_stats / racer_profiles / exhibition_data の値を注入する */
+function enrichFeatures(
+  raceId: string,
   features: ProgramFeatureSnapshot,
   courseStatsMap: Map<string, { avgSt: number | null; top3Rate: number | null }>,
+  profilesMap: Map<string, { flyingCount: number | null; lateStartCount: number | null }>,
+  exhibitionStMap: Map<string, number>,
 ): ProgramFeatureSnapshot {
   return {
     boats: features.boats.map((boat) => {
       if (!boat.registrationNo) return boat;
       const stat = courseStatsMap.get(`${boat.registrationNo}-${boat.course}`);
-      if (!stat) return boat;
-      return { ...boat, courseAvgSt: stat.avgSt, courseTop3Rate: stat.top3Rate };
+      const profile = profilesMap.get(boat.registrationNo);
+      const exhibitionSt = exhibitionStMap.get(`${raceId}-${boat.course}`) ?? null;
+      const exhibitionStResidual =
+        stat?.avgSt != null && exhibitionSt != null
+          ? stat.avgSt - exhibitionSt
+          : null;
+      return {
+        ...boat,
+        courseAvgSt: stat?.avgSt ?? null,
+        courseTop3Rate: stat?.top3Rate ?? null,
+        flyingCount: profile?.flyingCount ?? null,
+        lateStartCount: profile?.lateStartCount ?? null,
+        exhibitionStResidual,
+      };
     }),
   };
 }
@@ -461,15 +506,20 @@ ${where}
 ORDER BY date DESC, venue ASC, race_no ASC
 `).all(...params) as Array<Record<string, unknown>>;
   const courseStatsMap = loadCourseStatsMap(db);
-  return rows.map((row) => ({
-    raceId: String(row.race_id),
-    date: String(row.date),
-    venue: String(row.venue),
-    raceNo: Number(row.race_no),
-    closeAt: String(row.close_at),
-    raceCategory: parseRaceCategory(row.raw_json),
-    features: enrichFeaturesWithCourseStats(extractProgramFeatures(parseRawJson(row.raw_json)), courseStatsMap),
-  }));
+  const profilesMap = loadRacerProfilesMap(db);
+  const exhibitionStMap = loadExhibitionStMap(db);
+  return rows.map((row) => {
+    const raceId = String(row.race_id);
+    return {
+      raceId,
+      date: String(row.date),
+      venue: String(row.venue),
+      raceNo: Number(row.race_no),
+      closeAt: String(row.close_at),
+      raceCategory: parseRaceCategory(row.raw_json),
+      features: enrichFeatures(raceId, extractProgramFeatures(parseRawJson(row.raw_json)), courseStatsMap, profilesMap, exhibitionStMap),
+    };
+  });
 }
 
 export function listProgramInputsRange(db: DatabaseSync, from: string, to: string, limit: number) {
@@ -481,15 +531,20 @@ ORDER BY date ASC, venue ASC, race_no ASC
 LIMIT ?
 `).all(from, to, limit) as Array<Record<string, unknown>>;
   const courseStatsMap = loadCourseStatsMap(db);
-  return rows.map((row) => ({
-    raceId: String(row.race_id),
-    date: String(row.date),
-    venue: String(row.venue),
-    raceNo: Number(row.race_no),
-    closeAt: String(row.close_at),
-    raceCategory: parseRaceCategory(row.raw_json),
-    features: enrichFeaturesWithCourseStats(extractProgramFeatures(parseRawJson(row.raw_json)), courseStatsMap),
-  }));
+  const profilesMap = loadRacerProfilesMap(db);
+  const exhibitionStMap = loadExhibitionStMap(db);
+  return rows.map((row) => {
+    const raceId = String(row.race_id);
+    return {
+      raceId,
+      date: String(row.date),
+      venue: String(row.venue),
+      raceNo: Number(row.race_no),
+      closeAt: String(row.close_at),
+      raceCategory: parseRaceCategory(row.raw_json),
+      features: enrichFeatures(raceId, extractProgramFeatures(parseRawJson(row.raw_json)), courseStatsMap, profilesMap, exhibitionStMap),
+    };
+  });
 }
 
 export function listProgramInputsWithOddsSnapshotsRange(db: DatabaseSync, from: string, to: string, limit: number) {
@@ -504,15 +559,20 @@ ORDER BY p.date ASC, p.venue ASC, p.race_no ASC
 LIMIT ?
 `).all(from, to, limit) as Array<Record<string, unknown>>;
   const courseStatsMap = loadCourseStatsMap(db);
-  return rows.map((row) => ({
-    raceId: String(row.race_id),
-    date: String(row.date),
-    venue: String(row.venue),
-    raceNo: Number(row.race_no),
-    closeAt: String(row.close_at),
-    raceCategory: parseRaceCategory(row.raw_json),
-    features: enrichFeaturesWithCourseStats(extractProgramFeatures(parseRawJson(row.raw_json)), courseStatsMap),
-  }));
+  const profilesMap = loadRacerProfilesMap(db);
+  const exhibitionStMap = loadExhibitionStMap(db);
+  return rows.map((row) => {
+    const raceId = String(row.race_id);
+    return {
+      raceId,
+      date: String(row.date),
+      venue: String(row.venue),
+      raceNo: Number(row.race_no),
+      closeAt: String(row.close_at),
+      raceCategory: parseRaceCategory(row.raw_json),
+      features: enrichFeatures(raceId, extractProgramFeatures(parseRawJson(row.raw_json)), courseStatsMap, profilesMap, exhibitionStMap),
+    };
+  });
 }
 
 export function insertOfficialProgram(db: DatabaseSync, row: {

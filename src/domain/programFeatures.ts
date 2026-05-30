@@ -14,6 +14,11 @@ export type BoatFeature = {
   // racer_course_stats から注入（コース別期別統計）
   courseAvgSt?: number | null;
   courseTop3Rate?: number | null;
+  // racer_profiles から注入
+  flyingCount?: number | null;
+  lateStartCount?: number | null;
+  // exhibition_data から計算（courseAvgSt - 今日の展示ST。正 = 今日が速い）
+  exhibitionStResidual?: number | null;
 };
 
 export type ProgramFeatureSnapshot = {
@@ -50,6 +55,11 @@ export function featureAdjustmentForSelection(features: ProgramFeatureSnapshot |
   const courseTop3Factor = firstBoat.courseTop3Rate != null
     ? clamp(1 + (firstBoat.courseTop3Rate - 33.0) * 0.002, 0.97, 1.03)
     : 1;
+  // 展示ST残差（exhibition_data）: 今日の展示が普段より速い = 正値 → プラス補正
+  // 有効範囲（0.05〜0.4s）のデータが揃った時だけ効く
+  const exhibitionResidualFactor = firstBoat.exhibitionStResidual != null
+    ? clamp(1 + firstBoat.exhibitionStResidual * 3.0, 0.97, 1.03)
+    : 1;
 
   // 2着候補（中程度の影響 ― 強い選手が2着に来るほど3連単が確実になる）
   const secondClassFactor = secondBoat ? supportClassAdjustment(secondBoat.className, 0.06) : 1;
@@ -61,7 +71,8 @@ export function featureAdjustmentForSelection(features: ProgramFeatureSnapshot |
   return clamp(
     classFactor * nationalFactor * localFactor * motorFactor * boatFactor
     * secondClassFactor * secondLocalFactor * thirdClassFactor
-    * courseStFactor * courseTop3Factor,
+    * courseStFactor * courseTop3Factor
+    * exhibitionResidualFactor,
     0.65, 1.40,
   );
 }
