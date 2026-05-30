@@ -40,6 +40,41 @@ npm run decision:dry-run
 4. `walk:history` で期間をずらしても崩れていないか見る
 5. `decision:dry-run` で今日の通知候補に変なBUYが混ざっていないか見る
 
+## 自動追記
+
+`report:quality -- --json` の `ruleSuggestions` は、`append:rule-candidates` でこのファイルへ追記できます。
+追記直後はすべて `watch` として扱い、週次レビューで `candidate` / `reject` / `adopted` に変更します。
+
+```sh
+npm run report:quality -- --json > /tmp/boat-quality.json
+npm run append:rule-candidates -- --input /tmp/boat-quality.json
+```
+
+標準入力から直接渡すこともできます。
+
+```sh
+npm run report:quality -- --json | npm run append:rule-candidates --
+```
+
+任意の出力先・初期ステータスを指定する例。
+
+```sh
+npm run append:rule-candidates -- \
+  --input /tmp/boat-quality.json \
+  --output docs/rule-candidates.md \
+  --status watch \
+  --evidence report:monthly \
+  --action 追加観察 \
+  --next-check next weekly
+```
+
+注意:
+
+- 自動追記は live 設定を変更しない
+- 自動追記された候補は採用ではなく `watch`
+- `candidate` にする前に、月次・walk-forward・dry-runを必ず確認する
+- `adopted` に変える時は、採用理由と日付を残す
+
 ## 判定ステータス
 
 | status | 意味 | live反映 |
@@ -177,4 +212,4 @@ npm run decision:dry-run
 
 まだ候補なし。
 
-次回から `report:weekly` / `report:monthly` の `Rule suggestions` をここに転記する。
+次回から `report:weekly` / `report:monthly` の `Rule suggestions` をここに転記するか、`append:rule-candidates` で自動追記する。
