@@ -13,6 +13,7 @@ type Args = {
   trainDays: number;
   json: boolean;
   b1LiveRule: boolean;
+  blend: number | null;
 };
 
 const DB_PATH = "data/boat.sqlite";
@@ -63,7 +64,8 @@ function evaluate(db: DatabaseSync, args: Args & { from: string; to: string; lim
   const resultByRaceId = new Map(allResults.map((row) => [row.raceId, row]));
   const oddsByRaceSelection = latestOddsByRaceSelection(db, args.from, args.to);
   const modelCache = new Map<string, ReturnType<typeof buildVenueModel>>();
-  const settings = args.b1LiveRule ? DEFAULT_APP_RULE : DEFAULT_RULE;
+  const baseSettings = args.b1LiveRule ? DEFAULT_APP_RULE : DEFAULT_RULE;
+  const settings = args.blend != null ? { ...baseSettings, marketBlendWeight: args.blend } : baseSettings;
 
   return programs.map((program) => {
     const raceId = program.raceId ?? makeRaceId(program);
@@ -238,7 +240,7 @@ function touchesLivePeriod(from: string, to: string) {
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: Args = { from: null, to: null, limit: null, trainDays: 180, json: false, b1LiveRule: true };
+  const args: Args = { from: null, to: null, limit: null, trainDays: 180, json: false, b1LiveRule: true, blend: null };
   for (let i = 0; i < argv.length; i += 1) {
     const key = argv[i];
     const value = argv[i + 1];
@@ -248,6 +250,7 @@ function parseArgs(argv: string[]): Args {
     else if (key === "--train-days") { args.trainDays = Number(value); i += 1; }
     else if (key === "--json") args.json = true;
     else if (key === "--no-b1-live-rule") args.b1LiveRule = false;
+    else if (key === "--blend") { args.blend = Number(value); i += 1; }
     else if (key === "--help" || key === "-h") { printUsage(); process.exit(0); }
     else throw new Error(`unknown option: ${key}`);
   }
@@ -263,7 +266,7 @@ function normalizeDate(value: string | undefined) {
 
 function printUsage() {
   console.log(`Usage:
-  npm run evaluate:v4 -- --from YYYY-MM-DD --to YYYY-MM-DD --limit N [--json] [--train-days N]
+  npm run evaluate:v4 -- --from YYYY-MM-DD --to YYYY-MM-DD --limit N [--json] [--train-days N] [--blend 0.0-1.0]
 
 This command is read-only. It does not write decision_history.`);
 }
