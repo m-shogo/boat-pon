@@ -60,6 +60,9 @@ CREATE TABLE IF NOT EXISTS decision_history (
   source TEXT NOT NULL,
   fetched_at TEXT NOT NULL,
   recommended_stake_yen INTEGER NOT NULL DEFAULT 0,
+  sharp_signal_drop REAL,
+  environment_risk_level TEXT,
+  exhibition_st_residual_sum REAL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -199,6 +202,21 @@ CREATE TABLE IF NOT EXISTS racer_profiles (
   }
   try {
     db.exec("ALTER TABLE decision_history ADD COLUMN model_selection_score REAL");
+  } catch {
+    // Existing databases already have this column.
+  }
+  try {
+    db.exec("ALTER TABLE decision_history ADD COLUMN sharp_signal_drop REAL");
+  } catch {
+    // Existing databases already have this column.
+  }
+  try {
+    db.exec("ALTER TABLE decision_history ADD COLUMN environment_risk_level TEXT");
+  } catch {
+    // Existing databases already have this column.
+  }
+  try {
+    db.exec("ALTER TABLE decision_history ADD COLUMN exhibition_st_residual_sum REAL");
   } catch {
     // Existing databases already have this column.
   }
@@ -588,6 +606,14 @@ LIMIT ?
   });
 }
 
+function calcExhibitionStResidualSum(candidate: BetCandidate): number | null {
+  const r1 = candidate.firstBoatFeature?.exhibitionStResidual;
+  const r2 = candidate.secondBoatFeature?.exhibitionStResidual;
+  const r3 = candidate.thirdBoatFeature?.exhibitionStResidual;
+  if (r1 == null && r2 == null && r3 == null) return null;
+  return (r1 ?? 0) + (r2 ?? 0) + (r3 ?? 0);
+}
+
 export function insertOfficialProgram(db: DatabaseSync, row: {
   raceId: string;
   date: string;
@@ -626,7 +652,8 @@ UPDATE decision_history
 SET selection = ?, estimated_hit_rate = ?, raw_estimated_hit_rate = ?, conservative_hit_rate = ?, model_selection_score = ?,
     required_odds = ?, current_odds = ?, ev = ?, decision = ?,
     result = ?, payout_yen = ?, popularity = ?, returned = ?, source = ?, fetched_at = ?,
-    recommended_stake_yen = ?, sample_size = ?, model_version = ?, race_category = ?
+    recommended_stake_yen = ?, sample_size = ?, model_version = ?, race_category = ?,
+    sharp_signal_drop = ?, environment_risk_level = ?, exhibition_st_residual_sum = ?
 WHERE id = ?
 `).run(
       selection,
@@ -648,6 +675,9 @@ WHERE id = ?
       candidate.sampleSize,
       candidate.modelVersion ?? null,
       candidate.raceCategory ?? null,
+      candidate.sharpSignalDrop ?? null,
+      candidate.environmentRiskLevel ?? null,
+      calcExhibitionStResidualSum(candidate),
       existing.id,
     );
     if (options.replaceRace) {
@@ -664,8 +694,8 @@ INSERT INTO decision_history
 (race_id, date, venue, race_no, bet_type, selection, estimated_hit_rate, raw_estimated_hit_rate, conservative_hit_rate,
  model_selection_score, required_odds, current_odds, ev, decision,
  actually_bought, stake_yen, result, payout_yen, popularity, returned, source, fetched_at, recommended_stake_yen, sample_size,
- model_version, race_category)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ model_version, race_category, sharp_signal_drop, environment_risk_level, exhibition_st_residual_sum)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `).run(
     candidate.raceId,
     candidate.date,
@@ -693,6 +723,9 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
     candidate.sampleSize,
     candidate.modelVersion ?? null,
     candidate.raceCategory ?? null,
+    candidate.sharpSignalDrop ?? null,
+    candidate.environmentRiskLevel ?? null,
+    calcExhibitionStResidualSum(candidate),
   );
 }
 
@@ -701,7 +734,8 @@ export function listDecisionHistory(db: DatabaseSync): import("../src/domain/bac
 SELECT id, race_id, date, venue, race_no, selection, estimated_hit_rate, required_odds, current_odds,
        raw_estimated_hit_rate, conservative_hit_rate, model_selection_score,
        ev, decision, actually_bought, stake_yen, result, payout_yen, popularity, returned,
-       source, fetched_at, recommended_stake_yen, sample_size, model_version, race_category, created_at
+       source, fetched_at, recommended_stake_yen, sample_size, model_version, race_category,
+       sharp_signal_drop, environment_risk_level, exhibition_st_residual_sum, created_at
 FROM decision_history
 ORDER BY created_at DESC, id DESC
 LIMIT 500
@@ -728,6 +762,9 @@ LIMIT 500
     sampleSize: Number(row.sample_size ?? 0),
     modelVersion: row.model_version == null ? null : String(row.model_version),
     raceCategory: row.race_category == null ? null : String(row.race_category),
+    sharpSignalDrop: row.sharp_signal_drop == null ? null : Number(row.sharp_signal_drop),
+    environmentRiskLevel: row.environment_risk_level == null ? null : String(row.environment_risk_level) as "low" | "medium" | "high",
+    exhibitionStResidualSum: row.exhibition_st_residual_sum == null ? null : Number(row.exhibition_st_residual_sum),
     result: row.result == null ? null : String(row.result),
     payoutYen: row.payout_yen == null ? null : Number(row.payout_yen),
     popularity: row.popularity == null ? null : Number(row.popularity),

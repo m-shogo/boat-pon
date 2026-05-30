@@ -22,6 +22,9 @@ export type DecisionHistoryRow = {
   sampleSize: number;
   modelVersion?: string | null;
   raceCategory?: string | null;
+  sharpSignalDrop?: number | null;
+  environmentRiskLevel?: "low" | "medium" | "high" | null;
+  exhibitionStResidualSum?: number | null;
   result: string | null;
   payoutYen: number | null;
   popularity: number | null;

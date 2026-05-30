@@ -85,6 +85,19 @@ export function calibrationFactorForRequiredOdds(requiredOddsValue: number, fact
   return validFactors.find((row) => requiredOddsValue < row.maxRequiredOdds)?.factor ?? validFactors.at(-1)!.factor;
 }
 
+/**
+ * Kelly Criterion fraction.
+ * f* = (p*b - q) / b, where b = odds - 1, q = 1 - p.
+ * Returns null if odds <= 1 or p <= 0.
+ * Positive = edge exists; negative = no edge.
+ */
+export function kellyFraction(effectiveHitRate: number, odds: number | null): number | null {
+  if (odds == null || odds <= 1 || effectiveHitRate <= 0) return null;
+  const b = odds - 1;
+  const q = 1 - effectiveHitRate;
+  return (effectiveHitRate * b - q) / b;
+}
+
 export function minutesUntil(closeAt: string, now = new Date()): number {
   const [hour, minute] = closeAt.split(":").map(Number);
   const close = new Date(now);
