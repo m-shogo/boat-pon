@@ -129,10 +129,18 @@ export function buildCandidatesFromModel(
   manualOdds = new Map<string, number>(),
   allOdds = new Map<string, number>(),
 ): BetCandidate[] {
+  // allOdds にオッズが存在するレースIDの集合を事前構築（O(n)）
+  const raceIdsWithOdds = allOdds.size > 0
+    ? new Set([...allOdds.keys()].map((k) => k.slice(0, k.indexOf("/"))))
+    : new Set<string>();
+
   return inputs.flatMap((input) => {
     const venueRows = model.filter((row) => row.venue === input.venue);
     if (venueRows.length === 0) return [];
     const raceId = `${input.date.replaceAll("-", "")}-${input.venue}-${String(input.raceNo).padStart(2, "0")}`;
+
+    // このレースの全出目オッズが既に取得済みかどうか
+    const raceHasOddsInAllOdds = raceIdsWithOdds.has(raceId);
 
     const candidates: BetCandidate[] = [];
     for (const modelRow of venueRows) {
@@ -144,16 +152,17 @@ export function buildCandidatesFromModel(
       const allOddsKey = `${raceId}/${selectionStr}`;
       if (allOdds.has(allOddsKey)) {
         currentOdds = allOdds.get(allOddsKey) ?? null;
-      } else if (allOdds.size === 0) {
-        // allOdds が空（後方互換）の場合、manualOdds を使う（top-1出目のみ）
+      } else if (allOdds.size === 0 || !raceHasOddsInAllOdds) {
+        // allOdds が空 or このレースのオッズが未取得の場合、top-1 出目のみ manualOdds で生成
+        // （当日まだオッズ取得前の段階でも候補リストに載せてフェッチ対象にする）
         if (venueRows[0] === modelRow) {
           currentOdds = manualOdds.get(raceId) ?? null;
         } else {
-          // allOdds にデータがなく top-1 以外の出目はスキップ
+          // top-1 以外の出目はスキップ
           continue;
         }
       } else {
-        // allOdds にデータがあるが当該出目がない → スキップ
+        // allOdds にこのレースのデータがあるが当該出目がない → スキップ
         continue;
       }
 
