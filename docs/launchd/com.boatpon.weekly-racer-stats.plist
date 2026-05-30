@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.boatpon.weekly-racer-stats</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/m-shogo/.local/share/mise/installs/node/24/bin/npx</string>
+    <string>tsx</string>
+    <string>scripts/bulk-fetch-racer-stats.ts</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/m-shogo/Developer/personal/boat-pon</string>
+
+  <!-- 毎週月曜 5:00 JST に選手データ更新 -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Weekday</key>
+    <integer>1</integer>
+    <key>Hour</key>
+    <integer>5</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+
+  <key>StandardOutPath</key>
+  <string>/Users/m-shogo/Developer/personal/boat-pon/data/logs/weekly-racer-stats.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/m-shogo/Developer/personal/boat-pon/data/logs/weekly-racer-stats-err.log</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HOME</key>
+    <string>/Users/m-shogo</string>
+    <key>PATH</key>
+    <string>/Users/m-shogo/.local/share/mise/installs/node/24/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+</dict>
+</plist>

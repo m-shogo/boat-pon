@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.boatpon.caffeinate</string>
+
+  <!-- 9:00 JST (0:00 UTC) に起動し、12時間スリープを抑制 (〜21:00 JST) -->
+  <!-- -s = AC電源接続時のみシステムスリープを防ぐ（バッテリー時は効かない） -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/caffeinate</string>
+    <string>-s</string>
+    <string>-t</string>
+    <string>43200</string>
+  </array>
+
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict><key>Hour</key><integer>0</integer><key>Minute</key><integer>0</integer></dict>
+  </array>
+
+  <key>StandardOutPath</key>
+  <string>/Users/m-shogo/Developer/personal/boat-pon/data/logs/caffeinate.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/m-shogo/Developer/personal/boat-pon/data/logs/caffeinate-err.log</string>
+</dict>
+</plist>

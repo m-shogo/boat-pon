@@ -8,12 +8,15 @@ const AUTO_ODDS_PLIST = "/Users/m-shogo/Library/LaunchAgents/com.boatpon.auto-od
 const DAILY_PROGRAMS_PLIST = "/Users/m-shogo/Library/LaunchAgents/com.boatpon.daily-programs.plist";
 const DAILY_PROGRESS_PLIST = "/Users/m-shogo/Library/LaunchAgents/com.boatpon.daily-progress.plist";
 const DAILY_NOTIFY_PLIST = "/Users/m-shogo/Library/LaunchAgents/com.boatpon.daily-notify.plist";
+const DAILY_RESULTS_PLIST = "/Users/m-shogo/Library/LaunchAgents/com.boatpon.daily-results.plist";
 const KNOWN_POLLUTED_SKIP_DATE = "2026-05-26";
 const LOG_PATHS: Array<{ path: string; job: LiveLogJob }> = [
   { path: "data/logs/daily-programs.log", job: "daily-programs" },
   { path: "data/logs/daily-programs-err.log", job: "daily-programs" },
   { path: "data/logs/auto-odds.log", job: "auto-odds" },
   { path: "data/logs/auto-odds-err.log", job: "auto-odds" },
+  { path: "data/logs/auto-exhibition.log", job: "auto-odds" },
+  { path: "data/logs/auto-exhibition-err.log", job: "auto-odds" },
   { path: "data/logs/progress.log", job: "daily-progress" },
   { path: "data/logs/progress-err.log", job: "daily-progress" },
 ];
@@ -77,6 +80,7 @@ WHERE date = ? AND model_version = ? AND decision = 'SKIP'
       nextAutoOddsCheck(),
       nextDailyCheck("daily-progress", 21, 5),
       nextDailyCheck("daily-notify", 21, 30),
+      nextDailyCheck("daily-results", 21, 30),
     ],
     pollutedSkips,
     launchAgents: [
@@ -84,6 +88,7 @@ WHERE date = ? AND model_version = ? AND decision = 'SKIP'
       inspectSingleTimePlist("daily-programs", DAILY_PROGRAMS_PLIST, 8, 0),
       inspectSingleTimePlist("daily-progress", DAILY_PROGRESS_PLIST, 21, 5),
       inspectSingleTimePlist("daily-notify", DAILY_NOTIFY_PLIST, 21, 30),
+      inspectSingleTimePlist("daily-results", DAILY_RESULTS_PLIST, 21, 30),
     ],
     logs: LOG_PATHS.map((log) => inspectLiveLog(log.path, log.job)),
   };

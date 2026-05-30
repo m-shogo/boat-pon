@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.boatpon.auto-exhibition</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/m-shogo/.local/share/mise/installs/node/24/bin/npx</string>
+    <string>tsx</string>
+    <string>scripts/auto-fetch-exhibition.ts</string>
+  </array>
+  <key>WorkingDirectory</key><string>/Users/m-shogo/Developer/personal/boat-pon</string>
+  <key>StartInterval</key><integer>1800</integer>
+  <key>StandardOutPath</key><string>/Users/m-shogo/Developer/personal/boat-pon/data/logs/auto-exhibition.log</string>
+  <key>StandardErrorPath</key><string>/Users/m-shogo/Developer/personal/boat-pon/data/logs/auto-exhibition-err.log</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HOME</key><string>/Users/m-shogo</string>
+    <key>PATH</key><string>/Users/m-shogo/.local/share/mise/installs/node/24/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+</dict>
+</plist>

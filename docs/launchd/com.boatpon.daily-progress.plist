@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.boatpon.daily-progress</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/m-shogo/.local/share/mise/installs/node/24/bin/npx</string>
+    <string>tsx</string>
+    <string>scripts/live-progress.ts</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/m-shogo/Developer/personal/boat-pon</string>
+
+  <!-- 21:05 JST / macOS LaunchAgent local time -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>21</integer>
+    <key>Minute</key>
+    <integer>5</integer>
+  </dict>
+
+  <key>StandardOutPath</key>
+  <string>/Users/m-shogo/Developer/personal/boat-pon/data/logs/progress.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/m-shogo/Developer/personal/boat-pon/data/logs/progress-err.log</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HOME</key>
+    <string>/Users/m-shogo</string>
+    <key>PATH</key>
+    <string>/Users/m-shogo/.local/share/mise/installs/node/24/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+</dict>
+</plist>
