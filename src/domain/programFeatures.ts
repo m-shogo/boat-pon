@@ -11,6 +11,9 @@ export type BoatFeature = {
   motorTop2Rate?: number | null;
   boatNo?: string | null;
   boatTop2Rate?: number | null;
+  // racer_course_stats から注入（コース別期別統計）
+  courseAvgSt?: number | null;
+  courseTop3Rate?: number | null;
 };
 
 export type ProgramFeatureSnapshot = {
@@ -38,6 +41,15 @@ export function featureAdjustmentForSelection(features: ProgramFeatureSnapshot |
   const localFactor = rateAdjustment(firstBoat.localWinRate, 6.0, 0.014);
   const motorFactor = rateAdjustment(firstBoat.motorTop2Rate, 35.0, 0.004);
   const boatFactor = rateAdjustment(firstBoat.boatTop2Rate, 35.0, 0.003);
+  // コース別期別統計（racer_course_stats）
+  // avg_st: 0.16前後が平均。小さいほど速い → プラス補正。scale小さめで様子見。
+  const courseStFactor = firstBoat.courseAvgSt != null
+    ? clamp(1 + (0.165 - firstBoat.courseAvgSt) * 2.0, 0.97, 1.03)
+    : 1;
+  // courseTop3Rate: 高いほど良い。33%前後が平均。
+  const courseTop3Factor = firstBoat.courseTop3Rate != null
+    ? clamp(1 + (firstBoat.courseTop3Rate - 33.0) * 0.002, 0.97, 1.03)
+    : 1;
 
   // 2着候補（中程度の影響 ― 強い選手が2着に来るほど3連単が確実になる）
   const secondClassFactor = secondBoat ? supportClassAdjustment(secondBoat.className, 0.06) : 1;
@@ -48,7 +60,8 @@ export function featureAdjustmentForSelection(features: ProgramFeatureSnapshot |
 
   return clamp(
     classFactor * nationalFactor * localFactor * motorFactor * boatFactor
-    * secondClassFactor * secondLocalFactor * thirdClassFactor,
+    * secondClassFactor * secondLocalFactor * thirdClassFactor
+    * courseStFactor * courseTop3Factor,
     0.65, 1.40,
   );
 }

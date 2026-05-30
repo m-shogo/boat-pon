@@ -1,7 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { DEFAULT_APP_RULE } from "../src/domain/decision";
-import { extractProgramFeatures } from "../src/domain/programFeatures";
+import { extractProgramFeatures, type ProgramFeatureSnapshot } from "../src/domain/programFeatures";
 import type { OddsSnapshot } from "../src/domain/oddsSnapshot";
 import type { RaceCategory } from "../src/domain/programCategory";
 import type { BetCandidate, BudgetRule, Decision, DecisionStatus, RaceResult } from "../src/domain/types";
@@ -419,6 +419,37 @@ ORDER BY date DESC, venue ASC, race_no ASC
   }));
 }
 
+/** racer_course_stats を全件ロードして Map<"registrationNo-course", {avgSt, top3Rate}> を返す */
+function loadCourseStatsMap(db: DatabaseSync): Map<string, { avgSt: number | null; top3Rate: number | null }> {
+  const rows = db.prepare(`
+    SELECT registration_no, course, avg_st, top3_rate FROM racer_course_stats
+  `).all() as Array<Record<string, unknown>>;
+  const map = new Map<string, { avgSt: number | null; top3Rate: number | null }>();
+  for (const row of rows) {
+    const key = `${row.registration_no}-${row.course}`;
+    map.set(key, {
+      avgSt: row.avg_st == null ? null : Number(row.avg_st),
+      top3Rate: row.top3_rate == null ? null : Number(row.top3_rate),
+    });
+  }
+  return map;
+}
+
+/** extractProgramFeatures の結果に racer_course_stats の値を注入する */
+function enrichFeaturesWithCourseStats(
+  features: ProgramFeatureSnapshot,
+  courseStatsMap: Map<string, { avgSt: number | null; top3Rate: number | null }>,
+): ProgramFeatureSnapshot {
+  return {
+    boats: features.boats.map((boat) => {
+      if (!boat.registrationNo) return boat;
+      const stat = courseStatsMap.get(`${boat.registrationNo}-${boat.course}`);
+      if (!stat) return boat;
+      return { ...boat, courseAvgSt: stat.avgSt, courseTop3Rate: stat.top3Rate };
+    }),
+  };
+}
+
 export function listProgramInputs(db: DatabaseSync, date?: string) {
   const params: string[] = [];
   const where = date ? "WHERE date = ?" : "";
@@ -429,6 +460,7 @@ FROM official_programs
 ${where}
 ORDER BY date DESC, venue ASC, race_no ASC
 `).all(...params) as Array<Record<string, unknown>>;
+  const courseStatsMap = loadCourseStatsMap(db);
   return rows.map((row) => ({
     raceId: String(row.race_id),
     date: String(row.date),
@@ -436,7 +468,7 @@ ORDER BY date DESC, venue ASC, race_no ASC
     raceNo: Number(row.race_no),
     closeAt: String(row.close_at),
     raceCategory: parseRaceCategory(row.raw_json),
-    features: extractProgramFeatures(parseRawJson(row.raw_json)),
+    features: enrichFeaturesWithCourseStats(extractProgramFeatures(parseRawJson(row.raw_json)), courseStatsMap),
   }));
 }
 
@@ -448,6 +480,7 @@ WHERE date >= ? AND date <= ?
 ORDER BY date ASC, venue ASC, race_no ASC
 LIMIT ?
 `).all(from, to, limit) as Array<Record<string, unknown>>;
+  const courseStatsMap = loadCourseStatsMap(db);
   return rows.map((row) => ({
     raceId: String(row.race_id),
     date: String(row.date),
@@ -455,7 +488,7 @@ LIMIT ?
     raceNo: Number(row.race_no),
     closeAt: String(row.close_at),
     raceCategory: parseRaceCategory(row.raw_json),
-    features: extractProgramFeatures(parseRawJson(row.raw_json)),
+    features: enrichFeaturesWithCourseStats(extractProgramFeatures(parseRawJson(row.raw_json)), courseStatsMap),
   }));
 }
 
@@ -470,6 +503,7 @@ WHERE p.date >= ? AND p.date <= ?
 ORDER BY p.date ASC, p.venue ASC, p.race_no ASC
 LIMIT ?
 `).all(from, to, limit) as Array<Record<string, unknown>>;
+  const courseStatsMap = loadCourseStatsMap(db);
   return rows.map((row) => ({
     raceId: String(row.race_id),
     date: String(row.date),
@@ -477,7 +511,7 @@ LIMIT ?
     raceNo: Number(row.race_no),
     closeAt: String(row.close_at),
     raceCategory: parseRaceCategory(row.raw_json),
-    features: extractProgramFeatures(parseRawJson(row.raw_json)),
+    features: enrichFeaturesWithCourseStats(extractProgramFeatures(parseRawJson(row.raw_json)), courseStatsMap),
   }));
 }
 
