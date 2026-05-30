@@ -62,7 +62,7 @@ function buildCandidateBlock(today: string, report: QualityReport, args: Args) {
     "",
     "| rule | status | evidence | action | next_check |",
     "|---|---|---|---|---|",
-    ...report.ruleSuggestions.map((suggestion) =>
+    ...(report.ruleSuggestions ?? []).map((suggestion) =>
       `| ${escapeTable(suggestion)} | ${escapeTable(args.status)} | ${escapeTable(args.evidence)} | ${escapeTable(args.action)} | ${escapeTable(args.nextCheck)} |`,
     ),
     "",
