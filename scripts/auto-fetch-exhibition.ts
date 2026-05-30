@@ -46,62 +46,53 @@ async function fetchHtml(url: string): Promise<string> {
 
 function parseExhibitionHtml(html: string): ExhibitionEntry[] {
   const $ = cheerio.load(html);
-  const entries: ExhibitionEntry[] = [];
 
+  // 展示タイム: Table 1 (headers: 枠|写真|ボートレーサー|体重|展示タイム|...)
+  // 3行ごと構造: row0=[course,"","name","weight","exTime",...] row1=["進入",...] row2=[pre_st,"ST",...]
+  const exhibitionTimeMap = new Map<number, number>();
   $("table").each((_i, table) => {
-    const $table = $(table);
-    const headerText = $table.find("th, thead").text();
-    if (!headerText.includes("展示タイム") && !headerText.includes("展示") && !headerText.includes("タイム")) return;
-
-    for (const tr of $table.find("tbody tr").toArray()) {
-      const cells = $(tr).find("th, td").toArray().map((el) => $(el).text().trim());
-      if (cells.length < 2) continue;
-
-      let course: number | null = null;
-      for (let ci = 0; ci < Math.min(cells.length, 3); ci++) {
-        const val = Number(cells[ci]);
-        if (Number.isInteger(val) && val >= 1 && val <= 6) { course = val; break; }
+    const headerText = $(table).find("th").map((_, el) => $(el).text().trim()).get().join("|");
+    if (!headerText.includes("展示タイム")) return;
+    $(table).find("tbody tr").each((_j, tr) => {
+      const cells = $(tr).find("th, td").map((_, el) => $(el).text().trim()).get();
+      const course = Number(cells[0]);
+      if (!Number.isInteger(course) || course < 1 || course > 6) return;
+      const exTime = Number(cells[4]);
+      if (Number.isFinite(exTime) && exTime >= 5 && exTime <= 10) {
+        exhibitionTimeMap.set(course, exTime);
       }
-      if (course == null) continue;
-
-      let exhibitionTime: number | null = null;
-      for (const cell of cells) {
-        const cleaned = cell.replace(/[^\d.]/g, "");
-        const val = Number(cleaned);
-        if (Number.isFinite(val) && val >= 5 && val <= 10 && cleaned.includes(".")) {
-          exhibitionTime = val; break;
-        }
-      }
-
-      let startTiming: number | null = null;
-      for (const cell of cells) {
-        const cleaned = cell.trim().replace(/[^\d.\-]/g, "");
-        const val = Number(cleaned);
-        if (Number.isFinite(val) && Math.abs(val) < 2 && cleaned.includes(".") && val !== exhibitionTime) {
-          startTiming = val; break;
-        }
-      }
-
-      entries.push({ course, exhibitionTime, startTiming, ranking: null });
-    }
+    });
   });
 
-  if (entries.length === 0) {
-    for (const line of $.root().text().split(/\n/).map((l) => l.trim()).filter(Boolean)) {
-      const m = line.match(/^([1-6])\s/);
-      if (!m) continue;
+  // スタート展示ST: Table 2 (headers: スタート展示|コース|並び|ST)
+  // 各行が1セルで "course\n\n\t\t.XX" 形式
+  const startTimingMap = new Map<number, number>();
+  $("table").each((_i, table) => {
+    const headerText = $(table).find("th").map((_, el) => $(el).text().trim()).get().join("|");
+    if (!headerText.includes("スタート展示") && !headerText.includes("ST")) return;
+    $(table).find("tbody tr").each((_j, tr) => {
+      const cellText = $(tr).find("th, td").first().text().trim().replace(/\s+/g, " ");
+      // "1 .18" や "2 .05" の形式
+      const m = cellText.match(/^([1-6])\s+([.\-\d]+)$/);
+      if (!m) return;
       const course = Number(m[1]);
-      const timeMatch = line.match(/([5-9]\.\d{2})/);
-      const stMatch = line.match(/([-]?\d\.\d{2})/);
-      entries.push({
-        course,
-        exhibitionTime: timeMatch ? Number(timeMatch[1]) : null,
-        startTiming: stMatch ? Number(stMatch[1]) : null,
-        ranking: null,
-      });
+      const stRaw = m[2].startsWith(".") ? "0" + m[2] : m[2];
+      const st = Number(stRaw);
+      if (Number.isFinite(st) && st > -1 && st < 1) {
+        startTimingMap.set(course, st);
+      }
+    });
+  });
+
+  // コース1〜6でマージ
+  const entries: ExhibitionEntry[] = [];
+  for (let course = 1; course <= 6; course++) {
+    const exTime = exhibitionTimeMap.get(course) ?? null;
+    const st = startTimingMap.get(course) ?? null;
+    if (exTime != null || st != null) {
+      entries.push({ course, exhibitionTime: exTime, startTiming: st, ranking: null });
     }
   }
-
   return entries;
 }
 
