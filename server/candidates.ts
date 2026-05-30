@@ -2,8 +2,10 @@ import { judgeCandidate } from "../src/domain/decision";
 import { officialOddsUrl } from "../src/domain/officialLinks";
 import { buildCandidatesFromModel, buildVenueModel } from "../src/domain/model";
 import { filterComparableResultsForDate } from "../src/domain/raceRegime";
+import { assessEnvironmentRisk } from "../src/domain/raceEnvironment";
 import { sampleCandidates } from "../src/sampleData";
 import type { ProgramFeatureSnapshot } from "../src/domain/programFeatures";
+import type { RaceEnvironment } from "../src/domain/raceEnvironment";
 import type { BetCandidate, BudgetRule, RaceResult } from "../src/domain/types";
 
 type ProgramInput = {
@@ -23,6 +25,7 @@ export function buildCandidateRows(
   modelResults: RaceResult[] = [],
   earlyOdds = new Map<string, number>(),
   allOdds = new Map<string, number>(),
+  weatherMap = new Map<string, RaceEnvironment>(),
 ) {
   let reservedBudgetYen = 0;
   let buyCountToday = 0;
@@ -46,6 +49,7 @@ export function buildCandidateRows(
     const sharpSignalDrop = earlyOddsValue != null && currentOdds != null && earlyOddsValue > 0
       ? (earlyOddsValue - currentOdds) / earlyOddsValue
       : null;
+    const envRisk = assessEnvironmentRisk(weatherMap.get(candidate.raceId) ?? null);
 
     const normalized: BetCandidate = {
       ...candidate,
@@ -53,6 +57,8 @@ export function buildCandidateRows(
       currentOdds,
       suggestedAmount: settings.stakePerBetYen,
       sharpSignalDrop,
+      environmentRiskLevel: envRisk.level,
+      environmentRiskReasons: envRisk.reasons,
     };
     const decision = judgeCandidate(normalized, settings, {
       now,

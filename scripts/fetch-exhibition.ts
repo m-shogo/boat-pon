@@ -7,8 +7,9 @@
  */
 
 import * as cheerio from "cheerio";
-import { openDb, upsertExhibitionData } from "../server/db";
+import { openDb, upsertExhibitionData, upsertRaceWeather } from "../server/db";
 import type { ExhibitionEntry } from "../server/db";
+import type { RaceEnvironment } from "../src/domain/raceEnvironment";
 
 const venueCodes: Record<string, string> = {
   桐生: "01", 戸田: "02", 江戸川: "03", 平和島: "04", 多摩川: "05",
@@ -102,6 +103,67 @@ function parseExhibitionHtml(html: string): ExhibitionEntry[] {
   return entries;
 }
 
+/**
+ * boatrace.jp beforeinfo ページから水面気象情報を抽出する。
+ * .weather1 ブロックに 天候・風速・波高・気温・水温・安定板 などが含まれる。
+ */
+export function parseWeatherHtml(html: string): RaceEnvironment | null {
+  const $ = cheerio.load(html);
+  const block = $(".weather1");
+  if (block.length === 0) return null;
+
+  let weather: string | null = null;
+  let windSpeedMps: number | null = null;
+  let waveHeightCm: number | null = null;
+  let temperatureC: number | null = null;
+  let waterTemperatureC: number | null = null;
+  let stablePlate = false;
+  let shortenedLaps = false;
+
+  // 天候: is-weather クラスの title テキスト or labelTitle
+  const weatherUnit = block.find(".is-weather");
+  if (weatherUnit.length > 0) {
+    const title = weatherUnit.find(".weather1_bodyUnitLabelTitle").text().trim();
+    if (title) weather = title;
+  }
+
+  // 風速: is-wind ブロックの数値（例: "3m" → 3）
+  const windUnit = block.find(".is-wind");
+  if (windUnit.length > 0) {
+    const data = windUnit.find(".weather1_bodyUnitLabelData").text().trim();
+    const m = data.match(/(\d+(?:\.\d+)?)/);
+    if (m) windSpeedMps = Number(m[1]);
+  }
+
+  // 波高: is-wave ブロックの数値（例: "2cm" → 2）
+  const waveUnit = block.find(".is-wave");
+  if (waveUnit.length > 0) {
+    const data = waveUnit.find(".weather1_bodyUnitLabelData").text().trim();
+    const m = data.match(/(\d+(?:\.\d+)?)/);
+    if (m) waveHeightCm = Number(m[1]);
+  }
+
+  // 気温: is-direction ブロック内の ℃ 付きデータ
+  block.find(".weather1_bodyUnit").each((_, el) => {
+    const label = $(el).find(".weather1_bodyUnitLabelTitle").text().trim();
+    const data = $(el).find(".weather1_bodyUnitLabelData").text().trim();
+    const numMatch = data.match(/(\d+(?:\.\d+)?)/);
+    const num = numMatch ? Number(numMatch[1]) : null;
+    if (label === "気温" && num != null) temperatureC = num;
+    if (label === "水温" && num != null) waterTemperatureC = num;
+  });
+
+  // 安定板・周回短縮はページ内テキストで検索
+  const bodyText = $("body").text();
+  if (/安定板/.test(bodyText)) stablePlate = true;
+  if (/周回短縮/.test(bodyText)) shortenedLaps = true;
+
+  // 何も取れなければ null
+  if (weather == null && windSpeedMps == null && waveHeightCm == null) return null;
+
+  return { weather, windSpeedMps, waveHeightCm, temperatureC, waterTemperatureC, stablePlate, shortenedLaps };
+}
+
 async function main() {
   const [date, venue, raceNoStr] = process.argv.slice(2);
   if (!date || !venue || !raceNoStr) {
@@ -135,6 +197,7 @@ async function main() {
 
   const html = await res.text();
   const entries = parseExhibitionHtml(html);
+  const weather = parseWeatherHtml(html);
   if (entries.length === 0) {
     console.warn("no exhibition data found in HTML");
   } else {
@@ -143,12 +206,16 @@ async function main() {
       console.log(`  course=${entry.course} time=${entry.exhibitionTime} ST=${entry.startTiming}`);
     }
   }
+  if (weather) {
+    console.log(`weather: ${weather.weather ?? "-"} wind=${weather.windSpeedMps ?? "-"}m/s wave=${weather.waveHeightCm ?? "-"}cm stablePlate=${weather.stablePlate ?? false}`);
+  }
 
   const raceId = `${hd}-${venue}-${String(raceNo).padStart(2, "0")}`;
   const fetchedAt = new Date().toISOString();
   const db = openDb();
   try {
     upsertExhibitionData(db, raceId, entries, fetchedAt);
+    if (weather) upsertRaceWeather(db, raceId, weather, fetchedAt);
     console.log(`saved: ${raceId} entries=${entries.length}`);
   } finally {
     db.close();

@@ -4,6 +4,7 @@ import { DEFAULT_APP_RULE } from "../src/domain/decision";
 import { extractProgramFeatures, type ProgramFeatureSnapshot } from "../src/domain/programFeatures";
 import type { OddsSnapshot } from "../src/domain/oddsSnapshot";
 import type { RaceCategory } from "../src/domain/programCategory";
+import type { RaceEnvironment } from "../src/domain/raceEnvironment";
 import type { BetCandidate, BudgetRule, Decision, DecisionStatus, RaceResult } from "../src/domain/types";
 import { sampleResults } from "../src/sampleData";
 
@@ -127,6 +128,18 @@ CREATE TABLE IF NOT EXISTS exhibition_data (
   ranking INTEGER,
   fetched_at TEXT NOT NULL,
   PRIMARY KEY (race_id, course)
+);
+
+CREATE TABLE IF NOT EXISTS race_weather (
+  race_id TEXT PRIMARY KEY,
+  weather TEXT,
+  wind_speed_mps REAL,
+  wave_height_cm REAL,
+  temperature_c REAL,
+  water_temperature_c REAL,
+  stable_plate INTEGER,
+  shortened_laps INTEGER,
+  fetched_at TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS racer_course_stats (
@@ -1028,4 +1041,49 @@ function rowToResult(row: Record<string, unknown>): RaceResult {
     source: String(row.source),
     fetchedAt: String(row.fetched_at),
   };
+}
+
+export function upsertRaceWeather(db: DatabaseSync, raceId: string, env: RaceEnvironment, fetchedAt: string): void {
+  db.prepare(`
+INSERT INTO race_weather (race_id, weather, wind_speed_mps, wave_height_cm, temperature_c, water_temperature_c, stable_plate, shortened_laps, fetched_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(race_id) DO UPDATE SET
+  weather = excluded.weather,
+  wind_speed_mps = excluded.wind_speed_mps,
+  wave_height_cm = excluded.wave_height_cm,
+  temperature_c = excluded.temperature_c,
+  water_temperature_c = excluded.water_temperature_c,
+  stable_plate = excluded.stable_plate,
+  shortened_laps = excluded.shortened_laps,
+  fetched_at = excluded.fetched_at
+`).run(
+    raceId,
+    env.weather ?? null,
+    env.windSpeedMps ?? null,
+    env.waveHeightCm ?? null,
+    env.temperatureC ?? null,
+    env.waterTemperatureC ?? null,
+    env.stablePlate ? 1 : 0,
+    env.shortenedLaps ? 1 : 0,
+    fetchedAt,
+  );
+}
+
+export function loadRaceWeatherMap(db: DatabaseSync): Map<string, RaceEnvironment> {
+  const rows = db.prepare(`
+SELECT race_id, weather, wind_speed_mps, wave_height_cm, temperature_c, water_temperature_c, stable_plate, shortened_laps
+FROM race_weather
+`).all() as Array<Record<string, unknown>>;
+  return new Map(rows.map((row) => [
+    String(row.race_id),
+    {
+      weather: row.weather == null ? null : String(row.weather),
+      windSpeedMps: row.wind_speed_mps == null ? null : Number(row.wind_speed_mps),
+      waveHeightCm: row.wave_height_cm == null ? null : Number(row.wave_height_cm),
+      temperatureC: row.temperature_c == null ? null : Number(row.temperature_c),
+      waterTemperatureC: row.water_temperature_c == null ? null : Number(row.water_temperature_c),
+      stablePlate: Boolean(row.stable_plate),
+      shortenedLaps: Boolean(row.shortened_laps),
+    } satisfies RaceEnvironment,
+  ]));
 }

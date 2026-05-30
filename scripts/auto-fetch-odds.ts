@@ -12,7 +12,7 @@
  */
 
 import { buildCandidateRows } from "../server/candidates";
-import { getManualOdds, getSettings, hasEarlyOddsSnapshot, insertDecisionHistory, listAllOddsBySelection, listAllResultsForModel, listEarlyOddsSnapshots, listOddsSnapshots, listProgramInputs, openDb, recordOddsSnapshot, setOdds } from "../server/db";
+import { getManualOdds, getSettings, hasEarlyOddsSnapshot, insertDecisionHistory, listAllOddsBySelection, listAllResultsForModel, listEarlyOddsSnapshots, listOddsSnapshots, listProgramInputs, loadRaceWeatherMap, openDb, recordOddsSnapshot, setOdds } from "../server/db";
 import { LIVE_MONITOR_FROM } from "../src/domain/liveMonitor";
 import { isWithinOddsFetchWindow, minutesUntilRaceClose, shouldPersistDecisionHistory } from "../src/domain/livePersistence";
 import { mergeOddsMaps } from "../src/domain/oddsSnapshot";
@@ -56,6 +56,7 @@ try {
   const settings = getSettings(db);
   const oddsByRaceId = mergeOddsMaps(getManualOdds(db), listOddsSnapshots(db));
 
+  const weatherMap = loadRaceWeatherMap(db);
   const rows = buildCandidateRows(
     settings,
     now,
@@ -64,6 +65,7 @@ try {
     listAllResultsForModel(db),
     listEarlyOddsSnapshots(db),
     listAllOddsBySelection(db),
+    weatherMap,
   );
 
   let fetched = 0;
@@ -170,6 +172,7 @@ try {
       listAllResultsForModel(db),
       listEarlyOddsSnapshots(db),
       listAllOddsBySelection(db),
+      loadRaceWeatherMap(db),
     );
     const persistHistory = today >= LIVE_MONITOR_FROM;
     for (const row of freshRows) {

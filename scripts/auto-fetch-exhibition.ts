@@ -14,8 +14,10 @@ import {
   listProgramInputs,
   openDb,
   upsertExhibitionData,
+  upsertRaceWeather,
 } from "../server/db";
 import type { ExhibitionEntry } from "../server/db";
+import { parseWeatherHtml } from "./fetch-exhibition";
 
 const dryRun = process.argv.includes("--dry-run");
 const FETCH_DELAY_MS = 1500;
@@ -127,9 +129,12 @@ try {
       await sleep(FETCH_DELAY_MS);
       const html = await fetchHtml(url);
       const entries = parseExhibitionHtml(html);
+      const weather = parseWeatherHtml(html);
+      const fetchedAt = new Date().toISOString();
       if (entries.length > 0) {
-        upsertExhibitionData(db, program.raceId, entries, new Date().toISOString());
-        console.log(`exhibition: ${program.raceId} entries=${entries.length}`);
+        upsertExhibitionData(db, program.raceId, entries, fetchedAt);
+        if (weather) upsertRaceWeather(db, program.raceId, weather, fetchedAt);
+        console.log(`exhibition: ${program.raceId} entries=${entries.length}${weather ? ` wind=${weather.windSpeedMps ?? "-"}m/s wave=${weather.waveHeightCm ?? "-"}cm` : ""}`);
         fetched += 1;
       } else {
         console.log(`exhibition-empty: ${program.raceId}`);
