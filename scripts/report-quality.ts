@@ -4,6 +4,17 @@ import { DatabaseSync } from "node:sqlite";
 type Row = { date: string; venue: string; race_no: number; decision: string; selection: string; result: string | null; returned: number; current_odds: number | null; required_odds: number | null; ev: number | null; sample_size?: number | null };
 type Summary = { rows: number; buy: number; watch: number; skip: number; settledBuy: number; hits: number; hitRate: number | null; roi: number | null; avgEv: number | null; avgOddsRatio: number | null };
 type Group = Summary & { key: string };
+type WeakSignal = { key: string; settledBuy: number; roi: number | null; reason: string };
+
+type QualityReport = {
+  rows: number;
+  summary: Summary;
+  byBand: Group[];
+  byVenue: Group[];
+  byRaceNo: Group[];
+  weakSignals: WeakSignal[];
+  ruleSuggestions: string[];
+};
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const parsed = parseArgs(process.argv.slice(2));
@@ -37,7 +48,7 @@ ORDER BY date, venue, race_no
 `).all(from, to) as Row[];
 }
 
-function buildReport(rows: Row[]) {
+function buildReport(rows: Row[]): QualityReport {
   const byBand = groups(rows, signalBand).sort((a, b) => bandOrder(a.key) - bandOrder(b.key));
   const byVenue = groups(rows, (r) => r.venue).sort((a, b) => b.settledBuy - a.settledBuy || (a.roi ?? 999) - (b.roi ?? 999)).slice(0, 24);
   const byRaceNo = groups(rows, (r) => `${r.race_no}R`).sort((a, b) => Number.parseInt(a.key) - Number.parseInt(b.key));
@@ -46,7 +57,8 @@ function buildReport(rows: Row[]) {
     .sort((a, b) => (a.roi ?? -1) - (b.roi ?? -1))
     .slice(0, 8)
     .map((g) => ({ key: g.key, settledBuy: g.settledBuy, roi: g.roi, reason: g.hitRate === 0 ? "zero hit" : "ROI below 1" }));
-  return { rows: rows.length, summary: summarize(rows), byBand, byVenue, byRaceNo, weakSignals };
+  const draftReport = { rows: rows.length, summary: summarize(rows), byBand, byVenue, byRaceNo, weakSignals };
+  return { ...draftReport, ruleSuggestions: buildRuleSuggestions(draftReport) };
 }
 
 function signalBand(row: Row) {
@@ -87,7 +99,56 @@ function summarize(rows: Row[]): Summary {
   };
 }
 
-function printReport(from: string, to: string, report: ReturnType<typeof buildReport>) {
+function buildRuleSuggestions(report: Omit<QualityReport, "ruleSuggestions">) {
+  const suggestions = new Set<string>();
+
+  for (const signal of report.weakSignals) {
+    if (signal.key === "B") {
+      suggestions.add("B帯は通知対象外候補。WATCH以下に寄せる。");
+      continue;
+    }
+    if (signal.key === "A") {
+      suggestions.add("A帯はdry-run継続候補。S帯との差を週次・月次で再確認する。");
+      continue;
+    }
+    if (signal.key === "S") {
+      suggestions.add("S帯が弱い。S条件の過学習、オッズ閾値、sample_size条件を再確認する。");
+      continue;
+    }
+    if (/^\d+R$/.test(signal.key)) {
+      suggestions.add(`${signal.key} はWATCH止まり候補。レース番号別で再確認する。`);
+      continue;
+    }
+    if (signal.key === "C/WATCH" || signal.key === "SKIP") {
+      suggestions.add(`${signal.key} は通知対象外を維持。BUYへ昇格しない。`);
+      continue;
+    }
+    suggestions.add(`${signal.key} はS条件のみ通知候補。A/Bは通知対象外に寄せる。`);
+  }
+
+  const b = report.byBand.find((row) => row.key === "B");
+  if (b && b.settledBuy >= 5 && (b.roi == null || b.roi < 1)) {
+    suggestions.add("B帯はROIが弱いため、通知ではなくWATCHまたはSKIP寄せを検討する。");
+  }
+
+  const s = report.byBand.find((row) => row.key === "S");
+  const a = report.byBand.find((row) => row.key === "A");
+  if (s?.roi != null && a?.roi != null && s.settledBuy >= 5 && a.settledBuy >= 5 && s.roi < a.roi) {
+    suggestions.add("S帯がA帯より弱い。S条件が狭すぎて過学習していないか確認する。");
+  }
+
+  if (report.summary.settledBuy < 20) {
+    suggestions.add("確定BUYが20件未満。ルール変更は急がず、紙上観察を継続する。");
+  }
+
+  if (suggestions.size === 0) {
+    suggestions.add("大きな弱点は未検出。サンプルが増えるまで現行ルールを維持する。");
+  }
+
+  return [...suggestions];
+}
+
+function printReport(from: string, to: string, report: QualityReport) {
   console.log("# Boat Pon quality report");
   console.log(`period: ${from}..${to}`);
   console.log(line("overall", report.summary));
@@ -97,6 +158,8 @@ function printReport(from: string, to: string, report: ReturnType<typeof buildRe
   console.log("\n## Weak signals");
   if (report.weakSignals.length === 0) console.log("- No obvious weak signals yet. Recheck after sample size grows.");
   for (const s of report.weakSignals) console.log(`- ${s.key}: ${s.reason} settledBUY=${s.settledBuy} ROI=${fmt(s.roi)}`);
+  console.log("\n## Rule suggestions");
+  for (const suggestion of report.ruleSuggestions) console.log(`- ${suggestion}`);
 }
 
 function printTable(title: string, rows: Group[]) {
