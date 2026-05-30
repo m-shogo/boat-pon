@@ -32,7 +32,7 @@ export async function parseSavedKyotei24(date: string) {
 }
 
 if (process.argv[1]?.endsWith("import-kyotei24.ts")) {
-  const date = process.argv[2] ?? new Date().toISOString().slice(0, 10);
+  const date = process.argv[2] ?? new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo" }).format(new Date());
   const result = await parseSavedKyotei24(date);
   console.log(`normalized ${result.count} results: ${result.normalizedPath}`);
 }

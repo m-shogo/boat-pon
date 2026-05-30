@@ -2,7 +2,8 @@ import { mkdir, writeFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 const url = "https://kyotei24.jp/sp/kekka_all.php";
-const date = new Date().toISOString().slice(0, 10);
+// ファイル名・インポート対象はJST日付を使う（UTCだとズレるため）
+const date = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo" }).format(new Date());
 const outDir = path.join("data", "raw", "kyotei24", "results");
 const outPath = path.join(outDir, `${date}.html`);
 const minCacheMinutes = 60;
