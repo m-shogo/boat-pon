@@ -29,7 +29,7 @@ function print() {
   console.log("=== Boat Pon モデル検証レポート ===");
   console.log(`生成: ${new Date().toISOString()}`);
   const testYear = String(Number(TRAIN_END.slice(0, 4)) + 1);
-  console.log(`期間分割: train≤${TRAIN_END} / test ${testYear}-${TEST_END} / live ${LIVE_START}+`);
+  console.log(`期間分割: train ≤${TRAIN_END}  /  test ${testYear}-01-01〜${TEST_END}  /  live ${LIVE_START}+`);
   console.log("");
 
   // --- 1. 全体サマリー（分割別） ---
@@ -48,15 +48,18 @@ function print() {
       ROUND(SUM(CASE WHEN selection = result THEN current_odds ELSE 0 END) / COUNT(*), 3) AS roi
     FROM decision_history
     WHERE decision = 'BUY' AND result IS NOT NULL AND result != ''
-    GROUP BY split ORDER BY split
+    GROUP BY split
+    ORDER BY CASE split WHEN 'train(2024)' THEN 1 WHEN 'test(2025)' THEN 2 ELSE 3 END
   `).all(TRAIN_END, TEST_END) as Array<Record<string, unknown>>;
 
   console.log("【分割別 BUY 実績】");
-  console.log("  split        |  n    | hits | hit% | avg_odds | avg_ev | ROI");
-  console.log("  -------------|-------|------|------|----------|--------|----");
+  console.log("  split        |  n    | hits | hit% | avg_odds | avg_ev | ROI   | bar");
+  console.log("  -------------|-------|------|------|----------|--------|-------|-----");
   for (const r of splits) {
+    const roi = Number(r.roi ?? 0);
+    const bar = roiBar(roi);
     console.log(
-      `  ${String(r.split).padEnd(13)}| ${String(r.n).padStart(5)} | ${String(r.hits).padStart(4)} | ${String(r.hit_rate).padStart(4)}%| ${String(r.avg_odds).padStart(8)} | ${String(r.avg_ev).padStart(6)} | ${r.roi}`
+      `  ${String(r.split).padEnd(13)}| ${String(r.n).padStart(5)} | ${String(r.hits).padStart(4)} | ${String(r.hit_rate).padStart(4)}%| ${String(r.avg_odds).padStart(8)} | ${String(r.avg_ev).padStart(6)} | ${String(r.roi).padStart(5)} | ${bar}`
     );
   }
   console.log("");
@@ -109,14 +112,12 @@ function print() {
   `).all(TRAIN_END, TEST_END) as Array<Record<string, unknown>>;
 
   console.log("【テストセット(2025): 月次ROI推移】");
-  console.log("  ym      |  n   | hits | ROI");
-  console.log("  --------|------|------|----");
-  let cumN = 0; let cumHits = 0; let cumPayout = 0;
+  console.log("  ym      |  n   | hits | ROI   | bar");
+  console.log("  --------|------|------|-------|-----");
   for (const r of monthly) {
-    cumN += Number(r.n);
-    cumHits += Number(r.hits);
-    cumPayout += Number(r.hits) * 1; // 1単位のROI換算
-    console.log(`  ${r.ym}  | ${String(r.n).padStart(4)} | ${String(r.hits).padStart(4)} | ${r.roi}`);
+    const roi = Number(r.roi ?? 0);
+    const bar = roiBar(roi);
+    console.log(`  ${r.ym}  | ${String(r.n).padStart(4)} | ${String(r.hits).padStart(4)} | ${String(r.roi).padStart(5)} | ${bar}`);
   }
   console.log("");
 
@@ -204,4 +205,57 @@ function print() {
     else if (gap < 0.2) console.log("  → 乖離中（要注意）");
     else console.log("  → 乖離大（過学習の可能性）");
   }
+
+  // --- 6. 推奨アクション ---
+  console.log("【推奨アクション】");
+  if (testRow && testN > 0) {
+    const testRoiVal = Number(testRow.roi);
+    const evLow = evBands.find((r) => String(r.ev_band) === "ev<1.5");
+    const evMid = evBands.find((r) => String(r.ev_band) === "ev 1.5-2.0");
+
+    // EV<1.5帯だけ黒字の場合 → targetEv下げを推奨
+    if (evLow && Number(evLow.roi) > 1.0 && evMid && Number(evMid.roi) < 1.0) {
+      console.log("  [A] EV<1.5帯のみROI>1.0 → targetEv を 1.1〜1.2 に引き下げて採用レース数を増やすと改善余地あり");
+    }
+
+    // テストROI < 1.0 かつ odds<20 が黒字なら低オッズ特化を推奨
+    const calLow = calibration.find((r) => String(r.odds_band) === "odds<20");
+    if (testRoiVal < 1.0 && calLow && Number(calLow.roi) > 1.0) {
+      console.log("  [B] odds<20帯がROI>1.0 → maxOdds=20 など低オッズ帯に絞ると安定性向上の可能性");
+    }
+
+    // trainとtestのROI差が大きい場合
+    if (trainRow) {
+      const gap2 = Math.abs(Number(trainRow.roi) - testRoiVal);
+      if (gap2 >= 0.2) {
+        console.log("  [C] train/test乖離が大きい → V4キャリブレーション係数を2025のみで再推定することを検討");
+      }
+    }
+
+    // テストROI > 1.0 の場合
+    if (testRoiVal > 1.0) {
+      const p = Number(testRow.hits) / testN;
+      const se = Math.sqrt(p * (1 - p) / testN);
+      const avgOdds = Number(testRow.avg_odds);
+      const roiLower2 = avgOdds * (p - 1.96 * se);
+      if (roiLower2 > 1.0) {
+        console.log("  [✅] テストセットで統計的優位なエッジ確認 → ライブn=300到達後に購入再検討");
+      } else {
+        console.log("  [D] ROI>1.0だがn不足 → ライブ観察継続、n=600目標で再評価");
+      }
+    } else {
+      console.log("  [E] テストROI<1.0 → モデル・フィルター・キャリブレーションの再検討が先決");
+    }
+  }
+  console.log("");
+}
+
+function roiBar(roi: number): string {
+  // ASCII bar: 1.0を中央(|)として左が損失(░)、右が利益(▓)。幅10文字。
+  const clamped = Math.min(Math.max(roi, 0), 2.0);
+  const filled = Math.round(clamped * 5); // 0.0→0, 1.0→5, 2.0→10
+  const loss = "░".repeat(Math.max(0, 5 - filled));
+  const gain = "▓".repeat(Math.max(0, filled - 5));
+  const bar = loss + "|" + gain;
+  return `[${bar.padEnd(10)}]${roi >= 1.0 ? "✅" : ""}`;
 }

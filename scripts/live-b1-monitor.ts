@@ -27,10 +27,11 @@ function buildReport(db: DatabaseSync) {
   const summary = db.prepare(`
     SELECT
       COUNT(*) AS n,
+      SUM(CASE WHEN result IS NOT NULL THEN 1 ELSE 0 END) AS settled_n,
       SUM(CASE WHEN selection = result THEN 1 ELSE 0 END) AS hits,
       SUM(returned) AS returned_n,
       ROUND(SUM(CASE WHEN selection = result AND returned = 0 THEN current_odds ELSE 0 END) * 1.0 /
-        NULLIF(SUM(CASE WHEN returned = 0 THEN 1 ELSE 0 END), 0), 3) AS roi,
+        NULLIF(SUM(CASE WHEN result IS NOT NULL AND returned = 0 THEN 1 ELSE 0 END), 0), 3) AS roi,
       MAX(CASE WHEN selection = result AND returned = 0 THEN current_odds ELSE 0 END) AS max_hit_odds,
       ROUND(AVG(required_odds), 2) AS avg_required_odds,
       ROUND(AVG(current_odds), 2) AS avg_current_odds,
@@ -43,10 +44,11 @@ function buildReport(db: DatabaseSync) {
   `).get(LIVE_FROM, LIVE_MODEL) as Record<string, unknown>;
 
   const n = numberValue(summary.n);
+  const settledN = numberValue(summary.settled_n);
   const returnedN = numberValue(summary.returned_n);
   const roi = nullableNumber(summary.roi);
   const maxHitOdds = numberValue(summary.max_hit_odds);
-  const effectiveN = n - returnedN;
+  const effectiveN = settledN - returnedN;
   const roiExMax = roi !== null && effectiveN > 0 && maxHitOdds > 0
     ? Math.round((roi - maxHitOdds / effectiveN) * 1000) / 1000
     : null;
@@ -177,6 +179,7 @@ function buildReport(db: DatabaseSync) {
     period: { from: LIVE_FROM, to: "current", modelVersion: LIVE_MODEL, filter: FILTER },
     summary: {
       n,
+      settledN,
       hits: numberValue(summary.hits),
       returnedN,
       roi,
@@ -272,7 +275,7 @@ function printReport(report: ReturnType<typeof buildReport>) {
   const programLag = lastProgram ? Math.floor((Date.parse(today) - Date.parse(lastProgram)) / 86400000) : null;
   const oddsLag = lastOdds ? Math.floor((Date.parse(today) - Date.parse(lastOdds)) / 86400000) : null;
 
-  const statusIcon = (lag: number | null, warnDays = 2) =>
+  const statusIcon = (lag: number | null, warnDays = 1) =>
     lag === null ? "❓" : lag <= warnDays ? "✅" : `⚠️ ${lag}日前`;
 
   console.log("システム稼働");
@@ -292,9 +295,15 @@ function printReport(report: ReturnType<typeof buildReport>) {
 
   // --- ROI（n>=1のとき） ---
   if (s.n > 0) {
+    const pendingN = s.n - s.settledN;
+    const pendingStr = pendingN > 0 ? `  未決済${pendingN}件` : "";
     console.log("ROI（参考）");
-    console.log(`  n=${s.n}  ROI=${fmt(s.roi)}  roiExMax=${fmt(s.roiExMax)}`);
-    console.log(`  的中${s.hits}件  最大払戻${s.maxHitOdds || "-"}倍`);
+    console.log(`  BUY ${s.n}件（決済済${s.settledN}件${pendingStr}）`);
+    if (s.settledN > 0) {
+      console.log(`  ROI=${fmt(s.roi)}  roiExMax=${fmt(s.roiExMax)}  的中${s.hits}件  最大払戻${s.maxHitOdds || "-"}倍`);
+    } else {
+      console.log("  ROI=- (決済済みなし)");
+    }
     console.log("");
   }
 
