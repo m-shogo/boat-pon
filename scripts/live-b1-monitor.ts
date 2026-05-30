@@ -152,14 +152,14 @@ function buildReport(db: DatabaseSync) {
   `).all(PAPER_LIVE_START, LIVE_MODEL) as Array<{ date: string; buy_n: number; watch_n: number; total_n: number }>;
 
   const todayBuyCandidates = db.prepare(`
-    SELECT venue, race_no, selection, current_odds, ev, required_odds, result
+    SELECT venue, race_no, selection, current_odds, ev, required_odds, result, selection_popularity
     FROM decision_history
     WHERE date = ? AND decision = 'BUY'
     ORDER BY race_no ASC
   `).all(todayJst()) as Array<{
     venue: string; race_no: number; selection: string;
     current_odds: number | null; ev: number | null; required_odds: number | null;
-    result: string | null;
+    result: string | null; selection_popularity: number | null;
   }>;
 
   const historicalPace = historicalBuyPace(db);
@@ -338,9 +338,10 @@ function printReport(report: ReturnType<typeof buildReport>) {
         ? ((ev - 1) / (odds - 1) * 100).toFixed(2) + "%"
         : "-";
       const resultStr = c.result ? ` [${c.result}]` : "";
+      const popStr = c.selection_popularity != null ? `  pop=${String(c.selection_popularity).padStart(3)}位` : "";
       console.log(
         `  ${c.venue} R${String(c.race_no).padStart(2, "0")}  ${c.selection.padEnd(7)}` +
-        `  odds=${odds != null ? odds.toFixed(1).padStart(6) : "    -"}  EV=${ev != null ? ev.toFixed(2) : "-"}  Kelly=${kelly.padStart(7)}${resultStr}`
+        `  odds=${odds != null ? odds.toFixed(1).padStart(6) : "    -"}  EV=${ev != null ? ev.toFixed(2) : "-"}  Kelly=${kelly.padStart(7)}${popStr}${resultStr}`
       );
     }
   }

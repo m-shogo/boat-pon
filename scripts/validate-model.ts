@@ -206,7 +206,155 @@ function print() {
     else console.log("  → 乖離大（過学習の可能性）");
   }
 
-  // --- 6. 推奨アクション ---
+  // --- 6a. Brierスコア（モデル vs 市場の校正品質） ---
+  // Brier = mean((p_est - result)^2)。小さいほど良い。
+  const brier = db.prepare(`
+    SELECT
+      COUNT(*) AS n,
+      ROUND(AVG(
+        (estimated_hit_rate - CASE WHEN selection=result THEN 1.0 ELSE 0.0 END) *
+        (estimated_hit_rate - CASE WHEN selection=result THEN 1.0 ELSE 0.0 END)
+      ), 5) AS brier_model,
+      ROUND(AVG(
+        (1.0/current_odds*0.75 - CASE WHEN selection=result THEN 1.0 ELSE 0.0 END) *
+        (1.0/current_odds*0.75 - CASE WHEN selection=result THEN 1.0 ELSE 0.0 END)
+      ), 5) AS brier_market
+    FROM decision_history
+    WHERE decision='BUY' AND result IS NOT NULL AND result!=''
+      AND date > ? AND date <= ?
+      AND current_odds IS NOT NULL
+  `).get(TRAIN_END, TEST_END) as Record<string, unknown>;
+
+  console.log("【Brierスコア: モデル vs 市場の校正品質】（テストセット）");
+  console.log("  ※ 小さいほど校正精度高い。market Brier = 1/odds×0.75 基準。");
+  const bM = Number(brier.brier_model ?? 0);
+  const bMkt = Number(brier.brier_market ?? 0);
+  console.log(`  モデルBrier: ${bM.toFixed(5)}   市場Brier: ${bMkt.toFixed(5)}`);
+  if (bM > bMkt) {
+    console.log(`  → 市場の方が${((bM - bMkt) / bMkt * 100).toFixed(1)}%精度高い。marketBlendWeight > 0 の検討価値あり（現在=0）。`);
+  } else {
+    console.log("  → モデルの方が校正精度高い。市場に頼らない方針継続。");
+  }
+  console.log("");
+
+  // --- 6b. ローリング3ヶ月 Walk-Forward ---
+  const rollingWindows: [string, string, string][] = [
+    ["2025-01-01", "2025-03-31", "Jan-Mar"],
+    ["2025-02-01", "2025-04-30", "Feb-Apr"],
+    ["2025-03-01", "2025-05-31", "Mar-May"],
+    ["2025-04-01", "2025-06-30", "Apr-Jun"],
+    ["2025-05-01", "2025-07-31", "May-Jul"],
+    ["2025-06-01", "2025-08-31", "Jun-Aug"],
+    ["2025-07-01", "2025-09-30", "Jul-Sep"],
+    ["2025-08-01", "2025-10-31", "Aug-Oct"],
+    ["2025-09-01", "2025-11-30", "Sep-Nov"],
+  ];
+  const rollingQ = db.prepare(`
+    SELECT COUNT(*) AS n,
+      SUM(CASE WHEN selection=result THEN 1 ELSE 0 END) AS hits,
+      ROUND(SUM(CASE WHEN selection=result THEN current_odds ELSE 0 END)/COUNT(*), 3) AS roi
+    FROM decision_history
+    WHERE decision='BUY' AND result IS NOT NULL AND result!=''
+      AND date >= ? AND date <= ?
+  `);
+
+  console.log("【ローリング3ヶ月 Walk-Forward（テストセット、重複あり）】");
+  console.log("  window    |  n   | hits | ROI   | bar");
+  console.log("  ----------|------|------|-------|-----");
+  let profitableW = 0;
+  for (const [s, e, label] of rollingWindows) {
+    const r = (rollingQ.all(s, e) as Array<Record<string, unknown>>)[0];
+    const roi = Number(r?.roi ?? 0);
+    if (roi >= 1.0) profitableW++;
+    console.log(`  ${label.padEnd(10)}| ${String(r?.n ?? 0).padStart(4)} | ${String(r?.hits ?? 0).padStart(4)} | ${String(r?.roi ?? 0).padStart(5)} | ${roiBar(roi)}`);
+  }
+  console.log(`  黒字ウィンドウ: ${profitableW}/${rollingWindows.length}  ${profitableW <= 2 ? "⚠️ 一発性（期間依存）" : profitableW >= 6 ? "✅ 安定" : "→ 要観察"}`);
+  console.log("");
+
+  // --- 6c. 人気帯別ROI（selection_popularity カラムから） ---
+  // 注: 2025テスト期間はselection_popularityが未収集のため空。2026ライブ以降から蓄積。
+  let popularityBands: Array<Record<string, unknown>> = [];
+  try {
+    popularityBands = db.prepare(`
+      SELECT
+        CASE
+          WHEN selection_popularity <= 5 THEN 'pop 1-5 (本命)'
+          WHEN selection_popularity <= 10 THEN 'pop 6-10'
+          WHEN selection_popularity <= 20 THEN 'pop11-20 (中穴)'
+          ELSE 'pop21+ (大穴)'
+        END AS pop_band,
+        COUNT(*) AS n,
+        SUM(CASE WHEN selection = result THEN 1 ELSE 0 END) AS hits,
+        ROUND(100.0*SUM(CASE WHEN selection = result THEN 1 ELSE 0 END)/COUNT(*), 2) AS hit_rate,
+        ROUND(AVG(current_odds), 1) AS avg_odds,
+        ROUND(SUM(CASE WHEN selection = result THEN current_odds ELSE 0 END)/COUNT(*), 3) AS roi
+      FROM decision_history
+      WHERE decision='BUY' AND result IS NOT NULL AND result!=''
+        AND date > ? AND date <= ?
+        AND selection_popularity IS NOT NULL
+      GROUP BY pop_band ORDER BY MIN(selection_popularity)
+    `).all(TRAIN_END, TEST_END) as Array<Record<string, unknown>>;
+  } catch {
+    // selection_popularity カラム未追加（初回起動前）
+  }
+
+  console.log("【人気帯別ROI（selection_popularityカラム）】");
+  console.log("  ※ Favorite-Longshot Bias: 中穴帯(pop6-20)にEdge残存の理論的根拠");
+  if (popularityBands.length > 0) {
+    console.log("  pop_band           |  n   | hits | hit% | avg_odds | ROI");
+    console.log("  -------------------|------|------|------|----------|----");
+    for (const r of popularityBands) {
+      console.log(
+        `  ${String(r.pop_band).padEnd(19)}| ${String(r.n).padStart(4)} | ${String(r.hits).padStart(4)} | ${String(r.hit_rate).padStart(4)}%| ${String(r.avg_odds).padStart(8)} | ${r.roi}`
+      );
+    }
+  } else {
+    console.log("  ※ selection_popularity未収集（2026ライブ以降から自動蓄積）");
+    console.log("  → 将来: BUY候補の人気順位収集により本命/中穴のEdge分析が可能になる");
+  }
+  console.log("");
+
+  // --- 6d. 新特徴量のデータカバレッジ ---
+  let featureCov: Record<string, unknown> = { total: 0, sharp_n: 0, st_n: 0, pop_n: "-" };
+  let liveFeatureCov: Record<string, unknown> = { total: 0, sharp_n: 0, st_n: 0, pop_n: "-" };
+  try {
+    featureCov = db.prepare(`
+      SELECT
+        COUNT(*) AS total,
+        SUM(CASE WHEN sharp_signal_drop IS NOT NULL THEN 1 ELSE 0 END) AS sharp_n,
+        SUM(CASE WHEN exhibition_st_residual_sum IS NOT NULL THEN 1 ELSE 0 END) AS st_n,
+        SUM(CASE WHEN selection_popularity IS NOT NULL THEN 1 ELSE 0 END) AS pop_n
+      FROM decision_history
+      WHERE decision='BUY' AND result IS NOT NULL AND result!=''
+        AND date > ? AND date <= ?
+    `).get(TRAIN_END, TEST_END) as Record<string, unknown>;
+    liveFeatureCov = db.prepare(`
+      SELECT
+        COUNT(*) AS total,
+        SUM(CASE WHEN sharp_signal_drop IS NOT NULL THEN 1 ELSE 0 END) AS sharp_n,
+        SUM(CASE WHEN exhibition_st_residual_sum IS NOT NULL THEN 1 ELSE 0 END) AS st_n,
+        SUM(CASE WHEN selection_popularity IS NOT NULL THEN 1 ELSE 0 END) AS pop_n
+      FROM decision_history
+      WHERE decision='BUY' AND date > ?
+    `).get(TEST_END) as Record<string, unknown>;
+  } catch {
+    // selection_popularity カラム未追加（初回起動前）
+  }
+
+  console.log("【新特徴量カバレッジ】");
+  console.log("  ※ 各特徴量がどれだけのレコードで取得できているか（0=未収集=テスト期間の検証値なし）");
+  console.log(`  テストセット(n=${featureCov.total}):`);
+  console.log(`    sharp_signal_drop:      ${featureCov.sharp_n}件`);
+  console.log(`    exhibition_st_residual: ${featureCov.st_n}件`);
+  console.log(`    selection_popularity:   ${featureCov.pop_n}件`);
+  console.log(`  ライブ(n=${liveFeatureCov.total}):`);
+  console.log(`    sharp_signal_drop:      ${liveFeatureCov.sharp_n}件`);
+  console.log(`    exhibition_st_residual: ${liveFeatureCov.st_n}件`);
+  console.log(`    selection_popularity:   ${liveFeatureCov.pop_n}件`);
+  console.log("  → テストでカバレッジ=0の特徴量は有効性未検証。ライブ蓄積が先。");
+  console.log("");
+
+  // --- 7. 推奨アクション ---
   console.log("【推奨アクション】");
   if (testRow && testN > 0) {
     const testRoiVal = Number(testRow.roi);

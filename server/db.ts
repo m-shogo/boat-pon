@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS decision_history (
   sharp_signal_drop REAL,
   environment_risk_level TEXT,
   exhibition_st_residual_sum REAL,
+  selection_popularity INTEGER,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -217,6 +218,11 @@ CREATE TABLE IF NOT EXISTS racer_profiles (
   }
   try {
     db.exec("ALTER TABLE decision_history ADD COLUMN exhibition_st_residual_sum REAL");
+  } catch {
+    // Existing databases already have this column.
+  }
+  try {
+    db.exec("ALTER TABLE decision_history ADD COLUMN selection_popularity INTEGER");
   } catch {
     // Existing databases already have this column.
   }
@@ -646,6 +652,12 @@ export function insertDecisionHistory(db: DatabaseSync, candidate: BetCandidate,
     | { trifecta: string | null; payout_yen: number | null; popularity: number | null; returned: number }
     | undefined;
 
+  // 選択肢の人気順位を odds_snapshots から取得（データ収集のみ、フィルター変更なし）
+  const selectionPopularityRow = db.prepare(
+    "SELECT popularity FROM odds_snapshots WHERE race_id = ? AND selection = ? AND is_final_like = 1 ORDER BY captured_at DESC LIMIT 1"
+  ).get(candidate.raceId, selection) as { popularity: number | null } | undefined;
+  const selectionPopularity = selectionPopularityRow?.popularity ?? null;
+
   if (existing) {
     db.prepare(`
 UPDATE decision_history
@@ -653,7 +665,8 @@ SET selection = ?, estimated_hit_rate = ?, raw_estimated_hit_rate = ?, conservat
     required_odds = ?, current_odds = ?, ev = ?, decision = ?,
     result = ?, payout_yen = ?, popularity = ?, returned = ?, source = ?, fetched_at = ?,
     recommended_stake_yen = ?, sample_size = ?, model_version = ?, race_category = ?,
-    sharp_signal_drop = ?, environment_risk_level = ?, exhibition_st_residual_sum = ?
+    sharp_signal_drop = ?, environment_risk_level = ?, exhibition_st_residual_sum = ?,
+    selection_popularity = ?
 WHERE id = ?
 `).run(
       selection,
@@ -678,6 +691,7 @@ WHERE id = ?
       candidate.sharpSignalDrop ?? null,
       candidate.environmentRiskLevel ?? null,
       calcExhibitionStResidualSum(candidate),
+      selectionPopularity,
       existing.id,
     );
     if (options.replaceRace) {
@@ -694,8 +708,8 @@ INSERT INTO decision_history
 (race_id, date, venue, race_no, bet_type, selection, estimated_hit_rate, raw_estimated_hit_rate, conservative_hit_rate,
  model_selection_score, required_odds, current_odds, ev, decision,
  actually_bought, stake_yen, result, payout_yen, popularity, returned, source, fetched_at, recommended_stake_yen, sample_size,
- model_version, race_category, sharp_signal_drop, environment_risk_level, exhibition_st_residual_sum)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ model_version, race_category, sharp_signal_drop, environment_risk_level, exhibition_st_residual_sum, selection_popularity)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `).run(
     candidate.raceId,
     candidate.date,
@@ -726,6 +740,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
     candidate.sharpSignalDrop ?? null,
     candidate.environmentRiskLevel ?? null,
     calcExhibitionStResidualSum(candidate),
+    selectionPopularity,
   );
 }
 
@@ -735,7 +750,8 @@ SELECT id, race_id, date, venue, race_no, selection, estimated_hit_rate, require
        raw_estimated_hit_rate, conservative_hit_rate, model_selection_score,
        ev, decision, actually_bought, stake_yen, result, payout_yen, popularity, returned,
        source, fetched_at, recommended_stake_yen, sample_size, model_version, race_category,
-       sharp_signal_drop, environment_risk_level, exhibition_st_residual_sum, created_at
+       sharp_signal_drop, environment_risk_level, exhibition_st_residual_sum,
+       selection_popularity, created_at
 FROM decision_history
 ORDER BY created_at DESC, id DESC
 LIMIT 500
@@ -765,6 +781,7 @@ LIMIT 500
     sharpSignalDrop: row.sharp_signal_drop == null ? null : Number(row.sharp_signal_drop),
     environmentRiskLevel: row.environment_risk_level == null ? null : String(row.environment_risk_level) as "low" | "medium" | "high",
     exhibitionStResidualSum: row.exhibition_st_residual_sum == null ? null : Number(row.exhibition_st_residual_sum),
+    selectionPopularity: row.selection_popularity == null ? null : Number(row.selection_popularity),
     result: row.result == null ? null : String(row.result),
     payoutYen: row.payout_yen == null ? null : Number(row.payout_yen),
     popularity: row.popularity == null ? null : Number(row.popularity),

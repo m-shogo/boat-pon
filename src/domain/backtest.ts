@@ -25,6 +25,7 @@ export type DecisionHistoryRow = {
   sharpSignalDrop?: number | null;
   environmentRiskLevel?: "low" | "medium" | "high" | null;
   exhibitionStResidualSum?: number | null;
+  selectionPopularity?: number | null;
   result: string | null;
   payoutYen: number | null;
   popularity: number | null;

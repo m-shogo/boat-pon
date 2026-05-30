@@ -28,6 +28,7 @@ export type BetCandidate = {
   environmentRiskReasons?: string[];
   featureAdjustment?: number;
   sharpSignalDrop?: number | null;
+  selectionPopularity?: number | null;
   candidateClassName?: string;
   candidateMotorTop2Rate?: number | null;
   candidateBoatTop2Rate?: number | null;
