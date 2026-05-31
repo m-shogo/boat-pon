@@ -269,3 +269,24 @@ npm run decision:dry-run
 まだ候補なし。
 
 次回から `report:weekly` / `report:monthly` の `Rule suggestions` をここに転記するか、`append:rule-candidates` で自動追記する。
+
+---
+
+## データカバレッジ確認
+
+モデル改善の前に必要なデータが揃っているかを確認する。
+
+```bash
+# テキスト表示（7項目の OK / PARTIAL / MISSING を出力）
+npm run report:data-coverage
+
+# JSON 出力（CI・スクリプト連携用）
+npm run report:data-coverage -- --json
+```
+
+結果の見方:
+- `✅ OK` — 十分なデータあり。モデルへの組み込み・分析が可能
+- `⚠️ PARTIAL` — データあり、ただし疎 or 専用テーブルなし。取得スクリプトの安定稼働が先決
+- `❌ MISSING` — 未実装。`docs/data-roadmap.md` で優先度と設計方針を確認してから着手
+
+各項目の詳細（目的・保存カラム・注意点）は [`docs/data-roadmap.md`](data-roadmap.md) を参照。
