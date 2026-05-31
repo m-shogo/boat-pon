@@ -91,6 +91,7 @@ npx tsx scripts/fetch-official-odds.ts YYYY-MM-DD 蒲郡 8
 - Claude Code 次作業指示: [docs/claude-next-work-order.md](docs/claude-next-work-order.md)
 - live設定変更前の安全ゲート: [docs/settings-change-gate.md](docs/settings-change-gate.md)
 - 失敗・学びの蓄積: [docs/lessons-learned.md](docs/lessons-learned.md)
+- データ取得ロードマップ: [docs/data-roadmap.md](docs/data-roadmap.md)
 
 ### 毎日の読み取り専用チェック
 
@@ -130,6 +131,20 @@ npm run evaluate:v4 -- --from 2025-01-01 --to 2025-01-31 --limit 500
 ```
 
 `evaluate:v4` は `data/boat.sqlite` を読み取るだけで、`decision_history` へ書き込みません。検証ROIは判定時点の `current_odds` 基準です。
+
+### データカバレッジ確認
+
+追加データ取得やモデル改善に進む前に、現在のDBが `docs/data-roadmap.md` の7項目をどれだけ満たしているか確認する。
+
+```sh
+npm run report:data-coverage
+npm run report:data-coverage -- --json
+```
+
+- `report:data-coverage`: 結果データ、締切直前オッズ、オッズ比、水面条件、展示タイム、チルト/部品交換、モーター/ボート成績を `OK` / `PARTIAL` / `MISSING` で確認する。
+- `--json`: 自動監視やCodex/Claudeへの引き継ぎに使いやすいJSON形式で出力する。
+- このコマンドは読み取り専用で、外部サイトへの追加アクセス、自動投票、DB書き込み、live設定変更は行わない。
+- 詳細な保存方針と優先順位は [docs/data-roadmap.md](docs/data-roadmap.md) を参照する。
 
 paper live観察の進捗確認:
 
