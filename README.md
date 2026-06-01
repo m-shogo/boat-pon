@@ -116,11 +116,13 @@ BUY候補が少ない日は異常扱いしない。まず `status:brief` の `ac
 ```sh
 npm run report:weekly
 npm run report:monthly
+npm run report:features
 npm run walk:history -- --from 2026-01-01 --to 2026-05-30
 ```
 
 - `report:weekly`: 直近7日をシグナル帯、会場、レース番号別に確認する。
 - `report:monthly`: 直近30日で、BUY数、的中率、ROI、弱い条件候補を見る。
+- `report:features`: 風、波、安定板、展示ST残差、チルト、部品交換別にROIを観察する。特徴量の採用判断ではなく、候補探し用。
 - `walk:history`: 期間をずらしながら、特定の月だけたまたま良かったルールを見抜く。
 
 ROIが良い条件を見つけても、すぐlive設定へ反映しない。月別、会場別、レース番号別、期間ずらしで崩れないか確認してから採用候補にする。

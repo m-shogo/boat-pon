@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { LIVE_MONITOR_MODEL_VERSION } from "../src/domain/liveMonitor";
 
@@ -65,8 +65,10 @@ function buildReport(db: DatabaseSync, date: string) {
   };
 
   const racerCoverage = buildRacerCoverage(db, date);
+  const beforeInfoCoverage = buildBeforeInfoCoverage(db, date);
+  const logDiagnostics = buildLogDiagnostics(date);
   const dataCoverage = buildDataCoverage(db);
-  const alerts = buildAlerts(date, freshness, today, racerCoverage, dataCoverage);
+  const alerts = buildAlerts(date, freshness, today, racerCoverage, beforeInfoCoverage, dataCoverage, logDiagnostics);
   const nextCommands = buildNextCommands(alerts);
   const errorCount = alerts.filter((a) => a.severity === "error").length;
   const warningCount = alerts.filter((a) => a.severity === "warning").length;
@@ -82,6 +84,8 @@ function buildReport(db: DatabaseSync, date: string) {
     freshness,
     today,
     racerCoverage,
+    beforeInfoCoverage,
+    logDiagnostics,
     dataCoverage,
     alerts,
     nextCommands,
@@ -92,6 +96,118 @@ function buildReport(db: DatabaseSync, date: string) {
       note: "診断のみ。live設定変更、DB書き込み、自動投票は行わない。",
     },
   };
+}
+
+function buildBeforeInfoCoverage(db: DatabaseSync, date: string) {
+  const empty = {
+    totalRaces: 0,
+    exhibitionRaces: 0,
+    weatherRaces: 0,
+    equipmentRaces: 0,
+    fullRaces: 0,
+    exhibitionPct: null as number | null,
+    weatherPct: null as number | null,
+    equipmentPct: null as number | null,
+    fullPct: null as number | null,
+    watchBuyRaces: 0,
+    watchBuyFullRaces: 0,
+    watchBuyFullPct: null as number | null,
+  };
+  if (!tableExists(db, "official_programs")) return empty;
+
+  const totalRaces = count(db, "SELECT COUNT(*) AS value FROM official_programs WHERE date = ?", date);
+  if (totalRaces === 0) return empty;
+  const exhibitionRaces = tableExists(db, "exhibition_data") ? count(db, `
+    SELECT COUNT(DISTINCT e.race_id) AS value
+    FROM exhibition_data e
+    JOIN official_programs p ON p.race_id = e.race_id
+    WHERE p.date = ?
+  `, date) : 0;
+  const weatherRaces = tableExists(db, "race_weather") ? count(db, `
+    SELECT COUNT(DISTINCT w.race_id) AS value
+    FROM race_weather w
+    JOIN official_programs p ON p.race_id = w.race_id
+    WHERE p.date = ?
+  `, date) : 0;
+  const equipmentRaces = tableExists(db, "race_equipment") ? count(db, `
+    SELECT COUNT(DISTINCT q.race_id) AS value
+    FROM race_equipment q
+    JOIN official_programs p ON p.race_id = q.race_id
+    WHERE p.date = ?
+  `, date) : 0;
+  const fullRaces = count(db, `
+    SELECT COUNT(*) AS value
+    FROM official_programs p
+    WHERE p.date = ?
+      AND EXISTS (SELECT 1 FROM exhibition_data e WHERE e.race_id = p.race_id)
+      AND EXISTS (SELECT 1 FROM race_weather w WHERE w.race_id = p.race_id)
+      AND EXISTS (SELECT 1 FROM race_equipment q WHERE q.race_id = p.race_id)
+  `, date);
+  const watchBuyRaces = tableExists(db, "decision_history") ? count(db, `
+    SELECT COUNT(DISTINCT race_id) AS value
+    FROM decision_history
+    WHERE date = ? AND model_version = ? AND decision IN ('WATCH', 'BUY')
+  `, date, LIVE_MONITOR_MODEL_VERSION) : 0;
+  const watchBuyFullRaces = watchBuyRaces > 0 ? count(db, `
+    SELECT COUNT(DISTINCT dh.race_id) AS value
+    FROM decision_history dh
+    WHERE dh.date = ? AND dh.model_version = ? AND dh.decision IN ('WATCH', 'BUY')
+      AND EXISTS (SELECT 1 FROM exhibition_data e WHERE e.race_id = dh.race_id)
+      AND EXISTS (SELECT 1 FROM race_weather w WHERE w.race_id = dh.race_id)
+      AND EXISTS (SELECT 1 FROM race_equipment q WHERE q.race_id = dh.race_id)
+  `, date, LIVE_MONITOR_MODEL_VERSION) : 0;
+
+  return {
+    totalRaces,
+    exhibitionRaces,
+    weatherRaces,
+    equipmentRaces,
+    fullRaces,
+    exhibitionPct: pctNumber(exhibitionRaces, totalRaces),
+    weatherPct: pctNumber(weatherRaces, totalRaces),
+    equipmentPct: pctNumber(equipmentRaces, totalRaces),
+    fullPct: pctNumber(fullRaces, totalRaces),
+    watchBuyRaces,
+    watchBuyFullRaces,
+    watchBuyFullPct: pctNumber(watchBuyFullRaces, watchBuyRaces),
+  };
+}
+
+function buildLogDiagnostics(date: string) {
+  const errPath = "data/logs/auto-exhibition-err.log";
+  const outPath = "data/logs/auto-exhibition.log";
+  return {
+    autoExhibition: {
+      errorLog: summarizeLog(errPath, date, true),
+      runLog: summarizeLog(outPath, date, false),
+    },
+  };
+}
+
+function summarizeLog(path: string, date: string, errorOnly: boolean) {
+  const normalizedDate = date.replaceAll("-", "");
+  if (!existsSync(path)) return { path, exists: false, total: 0, byKind: {}, latest: null as string | null };
+  const lines = readFileSync(path, "utf8").split(/\r?\n/).filter((line) => line.includes(normalizedDate));
+  const selected = errorOnly ? lines.filter((line) => /error|failed|HTTP|usage/i.test(line)) : lines;
+  const byKind: Record<string, number> = {};
+  for (const line of selected) {
+    const kind = classifyLogLine(line);
+    byKind[kind] = (byKind[kind] ?? 0) + 1;
+  }
+  return { path, exists: true, total: selected.length, byKind, latest: selected.at(-1) ?? null };
+}
+
+function classifyLogLine(line: string) {
+  if (/beforeinfo-empty|exhibition-empty/.test(line)) return "empty";
+  if (/HTTP\s+404|404/.test(line)) return "http_404";
+  if (/HTTP\s+403|403/.test(line)) return "http_403";
+  if (/fetch failed/i.test(line)) return "fetch_failed";
+  if (/usage:/.test(line)) return "usage";
+  if (/beforeinfo-error|exhibition-error/.test(line)) return "fetch_error";
+  if (/beforeinfo:|exhibition:/.test(line)) return "fetched";
+  if (/tooEarly/.test(line)) return "too_early";
+  if (/tooLate/.test(line)) return "too_late";
+  return "other";
 }
 
 function decisionCounts(db: DatabaseSync, date: string) {
@@ -192,7 +308,9 @@ function buildAlerts(
   freshness: ReturnType<typeof buildReport>["freshness"],
   today: ReturnType<typeof buildReport>["today"],
   racerCoverage: ReturnType<typeof buildRacerCoverage>,
+  beforeInfoCoverage: ReturnType<typeof buildBeforeInfoCoverage>,
   dataCoverage: ReturnType<typeof buildDataCoverage>,
+  logDiagnostics: ReturnType<typeof buildLogDiagnostics>,
 ) {
   const alerts: DailyAlert[] = [];
 
@@ -216,6 +334,15 @@ function buildAlerts(
   }
   if (racerCoverage.total > 0 && (racerCoverage.profilesPct ?? 0) < 98) {
     alerts.push({ severity: "warning", code: "coverage.profiles_today", message: `今日の選手プロフィールカバー率が ${formatPct(racerCoverage.profilesPct)} です。`, action: "npm run fetch:racer-stats:dry" });
+  }
+  if (beforeInfoCoverage.totalRaces > 0 && (beforeInfoCoverage.fullPct ?? 0) < 80) {
+    alerts.push({ severity: "warning", code: "coverage.beforeinfo_today", message: `今日の直前情報フル取得率が ${formatPct(beforeInfoCoverage.fullPct)} です。`, action: "npm run report:daily" });
+  }
+  if (beforeInfoCoverage.watchBuyRaces > 0 && (beforeInfoCoverage.watchBuyFullPct ?? 0) < 98) {
+    alerts.push({ severity: "warning", code: "coverage.beforeinfo_watch_buy", message: `WATCH/BUY対象の直前情報フル取得率が ${formatPct(beforeInfoCoverage.watchBuyFullPct)} です。`, action: "npm run auto:odds" });
+  }
+  if (logDiagnostics.autoExhibition.errorLog.total > 0) {
+    alerts.push({ severity: "warning", code: "logs.auto_exhibition_errors", message: `auto-exhibition error log に今日の失敗が ${logDiagnostics.autoExhibition.errorLog.total} 件あります。`, action: "npm run readiness" });
   }
   if (dataCoverage.weather !== "OK") {
     alerts.push({ severity: "warning", code: "coverage.weather_partial", message: `天候・風・波データは ${dataCoverage.weather} です。`, action: "npm run report:data-coverage" });
@@ -292,6 +419,9 @@ function printReport(report: ReturnType<typeof buildReport>) {
   console.log(`  programs=${report.today.programs} oddsSnapshots=${report.today.oddsSnapshots} oddsRaces=${report.today.oddsRaces}`);
   console.log(`  decisions BUY=${report.today.decisions.BUY} WATCH=${report.today.decisions.WATCH} SKIP=${report.today.decisions.SKIP} total=${report.today.decisions.total}`);
   console.log(`  racers=${report.racerCoverage.total} courseStats=${report.racerCoverage.courseStats} (${formatPct(report.racerCoverage.courseStatsPct)}) profiles=${report.racerCoverage.profiles} (${formatPct(report.racerCoverage.profilesPct)})`);
+  console.log(`  beforeInfo full=${report.beforeInfoCoverage.fullRaces}/${report.beforeInfoCoverage.totalRaces} (${formatPct(report.beforeInfoCoverage.fullPct)}) exhibition=${formatPct(report.beforeInfoCoverage.exhibitionPct)} weather=${formatPct(report.beforeInfoCoverage.weatherPct)} equipment=${formatPct(report.beforeInfoCoverage.equipmentPct)}`);
+  console.log(`  beforeInfo WATCH/BUY=${report.beforeInfoCoverage.watchBuyFullRaces}/${report.beforeInfoCoverage.watchBuyRaces} (${formatPct(report.beforeInfoCoverage.watchBuyFullPct)})`);
+  console.log(`  autoExhibition errors=${report.logDiagnostics.autoExhibition.errorLog.total} kinds=${JSON.stringify(report.logDiagnostics.autoExhibition.errorLog.byKind)}`);
   console.log("");
   console.log("Data coverage:");
   console.log(`  weather=${report.dataCoverage.weather} exhibition=${report.dataCoverage.exhibition} tiltParts=${report.dataCoverage.tiltParts}`);

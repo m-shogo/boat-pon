@@ -20,6 +20,8 @@ import { parseBeforeInfoHtml } from "../src/domain/beforeInfoParser";
 
 const dryRun = process.argv.includes("--dry-run");
 const FETCH_DELAY_MS = 1500;
+const FETCH_FROM_MINUTES_BEFORE_CLOSE = 45;
+const FETCH_UNTIL_MINUTES_AFTER_CLOSE = 10;
 
 const venueCodes: Record<string, string> = {
   桐生: "01", 戸田: "02", 江戸川: "03", 平和島: "04", 多摩川: "05",
@@ -54,17 +56,21 @@ try {
   let fetched = 0;
   let skipped = 0;
   let failed = 0;
+  let tooEarly = 0;
+  let tooLate = 0;
 
   for (const program of programs) {
     const closeAtMs = new Date(`${program.date}T${program.closeAt}+09:00`).getTime();
-    if (closeAtMs < now.getTime()) { skipped += 1; continue; }
     if (hasBeforeInfoData(db, program.raceId)) { skipped += 1; continue; }
+    const minutesUntilClose = Math.floor((closeAtMs - now.getTime()) / 60_000);
+    if (minutesUntilClose > FETCH_FROM_MINUTES_BEFORE_CLOSE) { tooEarly += 1; skipped += 1; continue; }
+    if (minutesUntilClose < -FETCH_UNTIL_MINUTES_AFTER_CLOSE) { tooLate += 1; skipped += 1; continue; }
 
     const jcd = venueCodes[program.venue];
     if (!jcd) { skipped += 1; continue; }
 
     if (dryRun) {
-      console.log(`[dry-run] exhibition: ${program.raceId}`);
+      console.log(`[dry-run] beforeinfo: ${program.raceId} closeIn=${minutesUntilClose}m`);
       fetched += 1;
       continue;
     }
@@ -81,19 +87,19 @@ try {
         upsertExhibitionData(db, program.raceId, entries, fetchedAt);
         if (weather) upsertRaceWeather(db, program.raceId, weather, fetchedAt);
         upsertRaceEquipment(db, program.raceId, equipment, fetchedAt);
-        console.log(`beforeinfo: ${program.raceId} entries=${entries.length} equipment=${equipment.length}${weather ? ` wind=${weather.windSpeedMps ?? "-"}m/s wave=${weather.waveHeightCm ?? "-"}cm` : ""}`);
+        console.log(`beforeinfo: ${program.raceId} entries=${entries.length} equipment=${equipment.length} closeIn=${minutesUntilClose}m${weather ? ` wind=${weather.windSpeedMps ?? "-"}m/s wave=${weather.waveHeightCm ?? "-"}cm` : ""}`);
         fetched += 1;
       } else {
-        console.log(`beforeinfo-empty: ${program.raceId}`);
+        console.log(`beforeinfo-empty: ${program.raceId} closeIn=${minutesUntilClose}m`);
         skipped += 1;
       }
     } catch (err) {
-      console.error(`exhibition-error: ${program.raceId}`, err instanceof Error ? err.message : err);
+      console.error(`beforeinfo-error: ${program.raceId} closeIn=${minutesUntilClose}m`, err instanceof Error ? err.message : err);
       failed += 1;
     }
   }
 
-  console.log(`auto-fetch-exhibition done: fetched=${fetched} skipped=${skipped} failed=${failed} dryRun=${dryRun}`);
+  console.log(`auto-fetch-exhibition done: fetched=${fetched} skipped=${skipped} tooEarly=${tooEarly} tooLate=${tooLate} failed=${failed} dryRun=${dryRun}`);
 } finally {
   db.close();
 }
