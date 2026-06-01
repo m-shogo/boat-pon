@@ -30,6 +30,7 @@
     "report:daily": "tsx scripts/report-daily.ts",
     "report:quality": "tsx scripts/report-quality.ts",
     "report:features": "tsx scripts/report-feature-quality.ts",
+    "report:buy-audit": "tsx scripts/report-buy-audit.ts",
     "report:weekly": "tsx scripts/report-quality.ts --days 7",
     "report:monthly": "tsx scripts/report-quality.ts --days 30",
     "walk:history": "tsx scripts/walk-forward-history.ts",
