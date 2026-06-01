@@ -11,6 +11,8 @@ const LOG_PATHS: Array<{ path: string; job: LiveLogJob }> = [
   { path: "data/logs/daily-programs-err.log", job: "daily-programs" },
   { path: "data/logs/auto-odds.log", job: "auto-odds" },
   { path: "data/logs/auto-odds-err.log", job: "auto-odds" },
+  { path: "data/logs/auto-exhibition.log", job: "auto-exhibition" },
+  { path: "data/logs/auto-exhibition-err.log", job: "auto-exhibition" },
   { path: "data/logs/progress.log", job: "daily-progress" },
   { path: "data/logs/progress-err.log", job: "daily-progress" },
 ];
@@ -69,6 +71,8 @@ FROM decision_history
 WHERE date >= ? AND model_version = ? AND decision IN ('WATCH', 'BUY')
 `).get(LIVE_MONITOR_FROM, LIVE_MONITOR_MODEL_VERSION) as { n: number; odds_present: number };
 
+  const beforeInfo = beforeInfoCoverage(db, today);
+
   const liveBuy = db.prepare(`
 SELECT COUNT(*) AS n
 FROM decision_history
@@ -102,6 +106,7 @@ ORDER BY date
     liveBuyN,
     coverageAll: formatCoverage(numberValue(quality.odds_present), numberValue(quality.n)),
     coverageWatchBuy: formatCoverage(numberValue(watchBuyQuality.odds_present), numberValue(watchBuyQuality.n)),
+    beforeInfo,
     zeroBuyDays,
     etaTo300: {
       liveDaysLeft: liveRatePerDay > 0 ? Math.ceil(Math.max(0, TARGET_BUY_N - liveBuyN) / liveRatePerDay) : null,
@@ -135,6 +140,7 @@ function printReport(report: ReturnType<typeof buildReport>) {
   );
   console.log(`alerts: ${report.alerts.length === 0 ? "none" : report.alerts.join(",")}`);
   console.log(`coverage: all=${report.coverageAll}, watch+buy=${report.coverageWatchBuy}`);
+  console.log(`beforeinfo: full=${formatCoverage(report.beforeInfo.fullRaces, report.beforeInfo.totalRaces)}, watch+buy=${formatCoverage(report.beforeInfo.watchBuyFullRaces, report.beforeInfo.watchBuyRaces)}`);
   console.log(`errors: ${errorText}`);
   console.log(`next: auto-odds ${report.nextAutoOdds}, progress ${report.nextProgress}`);
   console.log(`action: ${resolveAction(report)}`);
@@ -144,8 +150,52 @@ function resolveAction(report: ReturnType<typeof buildReport>) {
   if (report.errors.length > 0) return "run npm run readiness";
   if (report.guard === "block") return "inspect git diff and guard output";
   if (report.git === "dirty") return "review/commit pending changes";
+  if (report.beforeInfo.totalRaces > 0 && report.beforeInfo.fullPct < 80) return "run npm run auto:beforeinfo";
+  if (report.beforeInfo.watchBuyRaces > 0 && report.beforeInfo.watchBuyFullPct < 98) return "run npm run auto:beforeinfo";
   if (report.liveBuyN < 300) return "wait for data";
   return "live_buy_n reached 300 — review results";
+}
+
+function beforeInfoCoverage(db: DatabaseSync, date: string) {
+  const totalRaces = scalar(db, "SELECT COUNT(*) AS n FROM official_programs WHERE date = ?", date);
+  const fullRaces = scalar(db, `
+SELECT COUNT(*) AS n
+FROM official_programs p
+WHERE p.date = ?
+  AND EXISTS (SELECT 1 FROM exhibition_data e WHERE e.race_id = p.race_id)
+  AND EXISTS (SELECT 1 FROM race_weather w WHERE w.race_id = p.race_id)
+  AND EXISTS (SELECT 1 FROM race_equipment q WHERE q.race_id = p.race_id)
+`, date);
+  const watchBuyRaces = scalar(db, `
+SELECT COUNT(DISTINCT race_id) AS n
+FROM decision_history
+WHERE date = ? AND model_version = ? AND decision IN ('WATCH', 'BUY')
+`, date, LIVE_MONITOR_MODEL_VERSION);
+  const watchBuyFullRaces = scalar(db, `
+SELECT COUNT(DISTINCT dh.race_id) AS n
+FROM decision_history dh
+WHERE dh.date = ? AND dh.model_version = ? AND dh.decision IN ('WATCH', 'BUY')
+  AND EXISTS (SELECT 1 FROM exhibition_data e WHERE e.race_id = dh.race_id)
+  AND EXISTS (SELECT 1 FROM race_weather w WHERE w.race_id = dh.race_id)
+  AND EXISTS (SELECT 1 FROM race_equipment q WHERE q.race_id = dh.race_id)
+`, date, LIVE_MONITOR_MODEL_VERSION);
+  return {
+    totalRaces,
+    fullRaces,
+    fullPct: pct(fullRaces, totalRaces),
+    watchBuyRaces,
+    watchBuyFullRaces,
+    watchBuyFullPct: pct(watchBuyFullRaces, watchBuyRaces),
+  };
+}
+
+function scalar(db: DatabaseSync, sql: string, ...params: Array<string | number>) {
+  const row = db.prepare(sql).get(...params) as { n: number | bigint | null } | undefined;
+  return numberValue(row?.n);
+}
+
+function pct(num: number, denom: number) {
+  return denom > 0 ? (num / denom) * 100 : 100;
 }
 
 function gitStatus() {

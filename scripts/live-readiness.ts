@@ -5,6 +5,7 @@ import { inspectLiveLog, type LiveLogJob } from "./live-log-utils";
 
 const DB_PATH = "data/boat.sqlite";
 const AUTO_ODDS_PLIST = "/Users/m-shogo/Library/LaunchAgents/com.boatpon.auto-odds.plist";
+const AUTO_EXHIBITION_PLIST = "/Users/m-shogo/Library/LaunchAgents/com.boatpon.auto-exhibition.plist";
 const DAILY_PROGRAMS_PLIST = "/Users/m-shogo/Library/LaunchAgents/com.boatpon.daily-programs.plist";
 const DAILY_PROGRESS_PLIST = "/Users/m-shogo/Library/LaunchAgents/com.boatpon.daily-progress.plist";
 const DAILY_NOTIFY_PLIST = "/Users/m-shogo/Library/LaunchAgents/com.boatpon.daily-notify.plist";
@@ -15,8 +16,8 @@ const LOG_PATHS: Array<{ path: string; job: LiveLogJob }> = [
   { path: "data/logs/daily-programs-err.log", job: "daily-programs" },
   { path: "data/logs/auto-odds.log", job: "auto-odds" },
   { path: "data/logs/auto-odds-err.log", job: "auto-odds" },
-  { path: "data/logs/auto-exhibition.log", job: "auto-odds" },
-  { path: "data/logs/auto-exhibition-err.log", job: "auto-odds" },
+  { path: "data/logs/auto-exhibition.log", job: "auto-exhibition" },
+  { path: "data/logs/auto-exhibition-err.log", job: "auto-exhibition" },
   { path: "data/logs/progress.log", job: "daily-progress" },
   { path: "data/logs/progress-err.log", job: "daily-progress" },
 ];
@@ -78,6 +79,7 @@ WHERE date = ? AND model_version = ? AND decision = 'SKIP'
     nextChecks: [
       nextDailyCheck("daily-programs", 8, 0),
       nextAutoOddsCheck(),
+      nextIntervalCheck("auto-exhibition", 30),
       nextDailyCheck("daily-progress", 21, 5),
       nextDailyCheck("daily-notify", 21, 30),
       nextDailyCheck("daily-results", 21, 30),
@@ -85,6 +87,7 @@ WHERE date = ? AND model_version = ? AND decision = 'SKIP'
     pollutedSkips,
     launchAgents: [
       inspectAutoOddsPlist(),
+      inspectIntervalPlist("auto-exhibition", AUTO_EXHIBITION_PLIST, 1800),
       inspectSingleTimePlist("daily-programs", DAILY_PROGRAMS_PLIST, 8, 0),
       inspectSingleTimePlist("daily-progress", DAILY_PROGRESS_PLIST, 21, 5),
       inspectSingleTimePlist("daily-notify", DAILY_NOTIFY_PLIST, 21, 30),
@@ -151,6 +154,15 @@ function nextAutoOddsCheck() {
   return { name: "auto-odds", message: `next ${target} JST${suffix}` };
 }
 
+function nextIntervalCheck(name: string, intervalMinutes: number) {
+  const current = nowJstParts();
+  const slot = Math.ceil(current.minute / intervalMinutes) * intervalMinutes;
+  const hour = slot === 60 ? current.hour + 1 : current.hour;
+  const minute = slot === 60 ? 0 : slot;
+  const target = hour >= 24 ? nextJstDate(0, minute) : nextJstDate(hour, minute);
+  return { name, message: `next around ${target} JST, then every ${intervalMinutes} minutes` };
+}
+
 function inspectAutoOddsPlist() {
   const text = readText(AUTO_ODDS_PLIST);
   if (text == null) return { name: "auto-odds", ok: false, message: "plist missing" };
@@ -165,6 +177,18 @@ function inspectAutoOddsPlist() {
     message: hasExpectedShape
       ? "9:00-21:00 JST local-time schedule"
       : `unexpected hour range ${Number.isFinite(min) ? min : "-"}-${Number.isFinite(max) ? max : "-"}`,
+  };
+}
+
+function inspectIntervalPlist(name: string, path: string, expectedSeconds: number) {
+  const text = readText(path);
+  if (text == null) return { name, ok: false, message: "plist missing" };
+  const seconds = Number(text.match(/<key>StartInterval<\/key>\s*<integer>(\d+)<\/integer>/)?.[1]);
+  const ok = seconds === expectedSeconds;
+  return {
+    name,
+    ok,
+    message: ok ? `every ${Math.round(seconds / 60)} minutes` : `unexpected StartInterval ${Number.isFinite(seconds) ? seconds : "-"}`,
   };
 }
 

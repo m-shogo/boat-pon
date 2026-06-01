@@ -17,7 +17,7 @@ const KNOWN_REPAIRED_SUMMARIES = new Set([
   "--- done: 1 days / 0 programs / cached=1 / already=0 / failed=1",
 ]);
 
-export type LiveLogJob = "daily-programs" | "auto-odds" | "daily-progress";
+export type LiveLogJob = "daily-programs" | "auto-odds" | "auto-exhibition" | "daily-progress";
 
 export type LiveLogInspection = {
   path: string;
@@ -38,7 +38,7 @@ export function inspectLiveLog(path: string, job: LiveLogJob): LiveLogInspection
 
   const stat = statSync(path);
   const lines = readLogLines(path);
-  const activeIssues = lines.filter((line) => isIssueLine(line) && !isKnownRepairedLine(line));
+  const activeIssues = lines.filter((line) => isIssueLine(line) && !isKnownRepairedLine(line) && !isStaleIssueLine(line));
   const repairedIssues = lines.filter(isKnownRepairedLine);
   const suffix =
     activeIssues.length > 0
@@ -72,7 +72,22 @@ function readLogLines(path: string) {
 }
 
 function isIssueLine(line: string) {
-  return line.startsWith("parse-failed:") || line.startsWith("parse failed ") || line.startsWith("error:");
+  return line.startsWith("parse-failed:")
+    || line.startsWith("parse failed ")
+    || line.startsWith("error:")
+    || /\bbeforeinfo-error:/.test(line);
+}
+
+function isStaleIssueLine(line: string) {
+  const date = extractIssueDate(line);
+  return date != null && date < todayJst();
+}
+
+function extractIssueDate(line: string) {
+  const compact = line.match(/\b(20\d{2})(\d{2})(\d{2})-/);
+  if (compact) return `${compact[1]}-${compact[2]}-${compact[3]}`;
+  const iso = line.match(/\b(20\d{2}-\d{2}-\d{2})\b/);
+  return iso?.[1] ?? null;
 }
 
 function isKnownRepairedLine(line: string) {
@@ -86,4 +101,8 @@ function isKnownRepairedSummary(line: string) {
 
 function stripKnownAnnotation(line: string) {
   return line.replace(/ \[(修正済み既知ログ|旧parser時の修正済み失敗を含む)\]$/, "");
+}
+
+function todayJst() {
+  return new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
 }
