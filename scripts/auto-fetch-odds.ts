@@ -12,9 +12,9 @@
  */
 
 import { buildCandidateRows } from "../server/candidates";
-import { getManualOdds, getSettings, hasEarlyOddsSnapshot, insertDecisionHistory, listAllOddsBySelection, listAllResultsForModel, listEarlyOddsSnapshots, listOddsSnapshots, listProgramInputs, loadRaceWeatherMap, openDb, recordOddsSnapshot, setOdds } from "../server/db";
+import { getManualOdds, getSettings, hasEarlyOddsSnapshot, insertDecisionHistory, listAllOddsBySelection, listAllResultsForModel, listEarlyOddsSnapshots, listOddsSnapshots, listProgramInputs, loadRaceWeatherMap, openDb, recordOddsSnapshot, recordOddsTimeseriesSnapshot, setOdds } from "../server/db";
 import { LIVE_MONITOR_FROM } from "../src/domain/liveMonitor";
-import { isWithinOddsFetchWindow, minutesUntilRaceClose, shouldPersistDecisionHistory } from "../src/domain/livePersistence";
+import { isWithinOddsFetchWindow, minutesUntilRaceClose, oddsCheckpointLabel, shouldPersistDecisionHistory } from "../src/domain/livePersistence";
 import { mergeOddsMaps } from "../src/domain/oddsSnapshot";
 import { isTrifectaSelectionUnavailable, parseAllTrifectaOdds, parseTrifectaOdds } from "../src/domain/oddsParser";
 import { fetchOfficialOdds } from "./fetch-official-odds";
@@ -122,6 +122,8 @@ try {
 
       // 全120通りを保存
       const capturedAt = new Date().toISOString();
+      const roundedMinutes = Math.round(minutes);
+      const checkpointLabel = oddsCheckpointLabel(minutes);
       for (const [selStr, oddsVal] of allOddsMap) {
         recordOddsSnapshot(db, {
           raceId: candidate.raceId,
@@ -131,6 +133,17 @@ try {
           source: "official",
           capturedAt,
           isFinalLike: false,
+        });
+        recordOddsTimeseriesSnapshot(db, {
+          raceId: candidate.raceId,
+          selection: selStr,
+          odds: oddsVal,
+          popularity: null,
+          source: "official",
+          capturedAt,
+          isFinalLike: false,
+          minutesBeforeClose: roundedMinutes,
+          checkpointLabel,
         });
         // Late Money Signal: まだofficial-earlyがない出目のみ保存
         if (!hasEarlyOddsSnapshot(db, candidate.raceId, selStr)) {

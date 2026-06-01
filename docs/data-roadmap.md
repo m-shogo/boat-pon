@@ -34,7 +34,7 @@ boat-pon が予測精度向上のために収集・利用したいデータの�
 | **保存カラム** | `race_id`, `selection`, `odds`, `popularity`（人気順位）, `captured_at`, `is_final_like`（締切5分前フラグ）。時系列側は `minutes_before_close`, `checkpoint_label`（T-30/T-20/T-10/T-5）も保持 |
 | **利用タイミング** | レース締切30分前〜5分前に取得。`is_final_like=1` が締切直前スナップショット |
 | **現在の状態** | ✅ OK — `is_final_like=1` で約27万件。2026年ライブ分は97%カバー |
-| **注意点** | `sharp_signal_drop`（早期→終値の下落率）は `decision_history` に保存済みだがテスト期間(2025)は未収集。ライブ蓄積が必要。既存 `odds_snapshots` は互換維持のため最新値中心、CLV/late money検証は append-only の `odds_timeseries_snapshots` を使う |
+| **注意点** | `sharp_signal_drop`（早期→終値の下落率）は `decision_history` に保存済みだがテスト期間(2025)は未収集。ライブ蓄積が必要。既存 `odds_snapshots` は互換維持のため最新値中心、`auto:odds` は append-only の `odds_timeseries_snapshots` にも全120通りを保存する。CLV/late money検証は時系列側を使う |
 
 ---
 

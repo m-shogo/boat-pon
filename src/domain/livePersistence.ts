@@ -27,3 +27,11 @@ export function shouldPersistDecisionHistory(
   if (candidate.currentOdds != null) return true;
   return isWithinOddsFetchWindow(candidate, rule, now);
 }
+
+export function oddsCheckpointLabel(minutesBeforeClose: number): "T-30" | "T-20" | "T-10" | "T-5" | "ad-hoc" {
+  if (minutesBeforeClose <= 6) return "T-5";
+  if (minutesBeforeClose <= 11) return "T-10";
+  if (minutesBeforeClose <= 21) return "T-20";
+  if (minutesBeforeClose <= 31) return "T-30";
+  return "ad-hoc";
+}

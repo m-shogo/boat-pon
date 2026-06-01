@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { isWithinOddsFetchWindow, minutesUntilRaceClose, shouldPersistDecisionHistory } from "./livePersistence";
+import { isWithinOddsFetchWindow, minutesUntilRaceClose, oddsCheckpointLabel, shouldPersistDecisionHistory } from "./livePersistence";
 
 const rule = { minMinutesBeforeClose: 5 };
 const liveFrom = "2026-01-01";
@@ -23,4 +23,13 @@ test("shouldPersistDecisionHistoryはライブ日のオッズ未取得・時間�
   assert.equal(shouldPersistDecisionHistory({ date: "2026-05-26", closeAt: "12:00", currentOdds: 25 }, rule, liveFrom, now), true);
   assert.equal(shouldPersistDecisionHistory({ date: "2026-05-26", closeAt: "12:00", currentOdds: null }, rule, liveFrom, now), false);
   assert.equal(shouldPersistDecisionHistory({ date: "2026-05-26", closeAt: "10:20", currentOdds: null }, rule, liveFrom, now), true);
+});
+
+test("oddsCheckpointLabelは締切までの分数を時系列スナップショットラベルに丸める", () => {
+  assert.equal(oddsCheckpointLabel(5), "T-5");
+  assert.equal(oddsCheckpointLabel(6), "T-5");
+  assert.equal(oddsCheckpointLabel(10), "T-10");
+  assert.equal(oddsCheckpointLabel(20), "T-20");
+  assert.equal(oddsCheckpointLabel(30), "T-30");
+  assert.equal(oddsCheckpointLabel(45), "ad-hoc");
 });

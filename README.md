@@ -162,6 +162,8 @@ npm run backfill:motor-boat-stats -- --dry-run --from 2025-01-01 --to 2025-01-31
 
 `decision_history.run_kind` は `paper-live` / `historical-backfill` / `manual-test` / `sample` を区別する。2026年live監視の集計は `paper-live` のみを対象にし、`generate:history` は常に `historical-backfill` として保存する。2026年以降への通常書き込みはガードされるため、内容確認は `--dry-run` を使う。
 
+`auto:odds` は従来互換の `odds_snapshots` に加えて、append-only の `odds_timeseries_snapshots` にも全120通りのスナップショットを保存する。`checkpoint_label` は締切までの分数から `T-30` / `T-20` / `T-10` / `T-5` / `ad-hoc` を付け、CLVやlate money検証に使う。
+
 paper live観察の進捗確認:
 
 ```sh
