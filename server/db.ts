@@ -565,6 +565,7 @@ ORDER BY date DESC, venue ASC, race_no ASC
   const courseStatsMap = loadCourseStatsMap(db);
   const profilesMap = loadRacerProfilesMap(db);
   const exhibitionStMap = loadExhibitionStMap(db);
+  const beforeInfoCompleteRaceIds = loadBeforeInfoCompleteRaceIds(db);
   return rows.map((row) => {
     const raceId = String(row.race_id);
     return {
@@ -574,6 +575,7 @@ ORDER BY date DESC, venue ASC, race_no ASC
       raceNo: Number(row.race_no),
       closeAt: String(row.close_at),
       raceCategory: parseRaceCategory(row.raw_json),
+      beforeInfoComplete: beforeInfoCompleteRaceIds.has(raceId),
       features: enrichFeatures(raceId, extractProgramFeatures(parseRawJson(row.raw_json)), courseStatsMap, profilesMap, exhibitionStMap),
     };
   });
@@ -1133,6 +1135,16 @@ WHERE e.race_id = ?
 LIMIT 1
 `).get(raceId);
   return row != null;
+}
+
+function loadBeforeInfoCompleteRaceIds(db: DatabaseSync): Set<string> {
+  const rows = db.prepare(`
+SELECT DISTINCT e.race_id
+FROM exhibition_data e
+WHERE EXISTS (SELECT 1 FROM race_weather w WHERE w.race_id = e.race_id)
+  AND EXISTS (SELECT 1 FROM race_equipment q WHERE q.race_id = e.race_id)
+`).all() as Array<{ race_id: string }>;
+  return new Set(rows.map((row) => String(row.race_id)));
 }
 
 export function getRacerCourseStatsFetchedAt(db: DatabaseSync, registrationNo: string): string | null {

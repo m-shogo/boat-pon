@@ -343,10 +343,10 @@ function buildAlerts(
     alerts.push({ severity: "warning", code: "coverage.profiles_today", message: `今日の選手プロフィールカバー率が ${formatPct(racerCoverage.profilesPct)} です。`, action: "npm run fetch:racer-stats:dry" });
   }
   if (beforeInfoCoverage.totalRaces > 0 && (beforeInfoCoverage.fullPct ?? 0) < 80) {
-    alerts.push({ severity: "warning", code: "coverage.beforeinfo_today", message: `今日の直前情報フル取得率が ${formatPct(beforeInfoCoverage.fullPct)} です。`, action: "npm run report:daily" });
+    alerts.push({ severity: "warning", code: "coverage.beforeinfo_today", message: `今日の直前情報フル取得率が ${formatPct(beforeInfoCoverage.fullPct)} です。`, action: "npm run auto:beforeinfo" });
   }
   if (beforeInfoCoverage.watchBuyRaces > 0 && (beforeInfoCoverage.watchBuyFullPct ?? 0) < 98) {
-    alerts.push({ severity: "warning", code: "coverage.beforeinfo_watch_buy", message: `WATCH/BUY対象の直前情報フル取得率が ${formatPct(beforeInfoCoverage.watchBuyFullPct)} です。`, action: "npm run auto:odds" });
+    alerts.push({ severity: "warning", code: "coverage.beforeinfo_watch_buy", message: `WATCH/BUY対象の直前情報フル取得率が ${formatPct(beforeInfoCoverage.watchBuyFullPct)} です。`, action: "npm run auto:beforeinfo" });
   }
   if (logDiagnostics.autoExhibition.errorLog.activeTotal > 0) {
     alerts.push({ severity: "warning", code: "logs.auto_exhibition_errors", message: `auto-exhibition error log に今日の新形式の失敗が ${logDiagnostics.autoExhibition.errorLog.activeTotal} 件あります。`, action: "npm run readiness" });

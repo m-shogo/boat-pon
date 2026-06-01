@@ -56,6 +56,15 @@ test("100倍超オッズはEV条件を満たしても検証保留のWATCHにす�
   assert.ok(decision.reasons.includes("100倍超オッズは検証保留"));
 });
 
+test("直前情報フル取得前はBUY条件を満たしてもWATCH保留にする", () => {
+  const decision = judgeCandidate({ ...base, beforeInfoComplete: false }, { ...DEFAULT_RULE, requireBeforeInfoForBuy: true }, {
+    now: new Date("2026-05-21T18:00:00+09:00"),
+  });
+  assert.equal(decision.status, "WATCH");
+  assert.equal(decision.recommendedAmount, 0);
+  assert.ok(decision.reasons.includes("直前情報フル取得前"));
+});
+
 test("maxOddsRatioを超える場合はSKIPにする", () => {
   // requiredOdds = 1.25 / 0.085 ≈ 14.7倍、maxOddsRatio=2.0 → 上限 29.4倍
   // currentOdds=40倍は上限超過

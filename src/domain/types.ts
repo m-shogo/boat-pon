@@ -26,6 +26,7 @@ export type BetCandidate = {
   raceCategory?: string;
   environmentRiskLevel?: "low" | "medium" | "high";
   environmentRiskReasons?: string[];
+  beforeInfoComplete?: boolean;
   featureAdjustment?: number;
   sharpSignalDrop?: number | null;
   selectionPopularity?: number | null;
@@ -59,6 +60,7 @@ export type BudgetRule = {
   venueSignalBandRules?: VenueSignalBandRule[];
   excludedVenues?: string[];
   excludedRaceNos?: number[];
+  requireBeforeInfoForBuy?: boolean;
 };
 
 export type OddsCalibrationFactor = {

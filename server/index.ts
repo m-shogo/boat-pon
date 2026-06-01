@@ -29,6 +29,7 @@ import {
   listNotifications,
   listOfficialProgramsRaw,
   listProgramInputs,
+  loadRaceWeatherMap,
   listPushSubscriptions,
   listAllResultsForModel,
   listResults,
@@ -180,6 +181,9 @@ function validateBudgetRule(settings: BudgetRule): string | null {
   if (settings.excludedRaceNos != null && (!Array.isArray(settings.excludedRaceNos) || settings.excludedRaceNos.some((v) => typeof v !== "number" || !Number.isInteger(v) || v < 1 || v > 12))) {
     return "excludedRaceNos must be an array of integers between 1 and 12";
   }
+  if (settings.requireBeforeInfoForBuy != null && typeof settings.requireBeforeInfoForBuy !== "boolean") {
+    return "requireBeforeInfoForBuy must be boolean";
+  }
   return null;
 }
 
@@ -227,11 +231,13 @@ function buildRowsForDate(db: ReturnType<typeof openDb>, settings: BudgetRule, d
       raceNo: row.raceNo,
       closeAt: row.closeAt,
       raceCategory: row.raceCategory,
+      beforeInfoComplete: row.beforeInfoComplete,
       features: row.features,
     })),
     listResultsForModelRange(db, addDaysJst(date, -180), date),
     listEarlyOddsSnapshots(db),
     listAllOddsBySelection(db),
+    loadRaceWeatherMap(db),
   );
   candidateCache = { createdAt: nowMs, date, settingsKey, rows };
   return rows;
@@ -1296,11 +1302,13 @@ app.post("/api/odds/fetch", async (req, res) => {
         raceNo: row.raceNo,
         closeAt: row.closeAt,
         raceCategory: row.raceCategory,
+        beforeInfoComplete: row.beforeInfoComplete,
         features: row.features,
       })),
       listAllResultsForModel(db),
       listEarlyOddsSnapshots(db),
       listAllOddsBySelection(db),
+      loadRaceWeatherMap(db),
     );
 
     type OddsResult = { raceId: string; odds: number | null; status: string; error?: string };

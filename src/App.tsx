@@ -1844,6 +1844,18 @@ function SettingsScreen({ settings, onSaved }: { settings: BudgetRule; onSaved: 
             })}
           />
         </label>
+        <label className="settingField">
+          <span>直前情報なしBUY抑制</span>
+          <input
+            type="checkbox"
+            checked={draft.requireBeforeInfoForBuy ?? false}
+            onChange={(event) => setDraft({
+              ...draft,
+              requireBeforeInfoForBuy: event.target.checked || undefined,
+            })}
+          />
+          <span style={{ fontSize: "0.85em", color: "#86a69c" }}>展示・天候・チルト/部品が揃うまでWATCH保留</span>
+        </label>
       </div>
       <div className="presetActions">
         <button type="button" onClick={() => setDraft(validationPreset)}>
@@ -1924,6 +1936,7 @@ function validateSettings(settings: BudgetRule): string | null {
   if (settings.minRequiredOdds != null && settings.maxRequiredOdds != null && settings.minRequiredOdds >= settings.maxRequiredOdds) return "必要オッズ下限は上限より小さい値にしてください";
   if (settings.excludedVenues != null && !Array.isArray(settings.excludedVenues)) return "除外会場の設定が不正です";
   if (settings.excludedRaceNos != null && (!Array.isArray(settings.excludedRaceNos) || settings.excludedRaceNos.some((v) => !Number.isInteger(v) || v < 1 || v > 12))) return "除外レース番号は1〜12の整数配列にしてください";
+  if (settings.requireBeforeInfoForBuy != null && typeof settings.requireBeforeInfoForBuy !== "boolean") return "直前情報なしBUY抑制の設定が不正です";
   if (settings.venueSignalBandRules != null) {
     if (!Array.isArray(settings.venueSignalBandRules)) return "会場別シグナル帯ルールの設定が不正です";
     if (settings.venueSignalBandRules.some((rule) => !Array.isArray(rule.venues) || !["S", "A", "B"].includes(rule.minBand))) return "会場別シグナル帯ルールはS/A/Bで指定してください";

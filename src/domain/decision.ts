@@ -33,6 +33,7 @@ export const DEFAULT_APP_RULE: BudgetRule = {
   calibrationBasis: "currentOdds",
   oddsCalibrationFactors: V4_EMPIRICAL_CALIBRATION,
   minRequiredOdds: 25,
+  requireBeforeInfoForBuy: true,
   excludedRaceNos: [11, 12],
   excludedVenues: ["戸田", "多摩川", "桐生", "三国", "江戸川"],
   programFilter: {
@@ -54,6 +55,8 @@ export const PAPER_LIVE_VALIDATION_RULE: BudgetRule = {
   maxOdds: 50,
   maxRequiredOdds: 50,
 };
+
+const BEFORE_INFO_INCOMPLETE_REASON = "直前情報フル取得前";
 
 export function requiredOdds(targetEv: number, estimatedHitRate: number): number {
   if (estimatedHitRate <= 0) return Number.POSITIVE_INFINITY;
@@ -165,6 +168,9 @@ export function judgeCandidate(
   if (rule.excludedRaceNos?.includes(candidate.raceNo)) reasons.push(`除外レース番号(${candidate.raceNo}R)`);
   if (candidate.notified) reasons.push("同一レース通知済み");
   if (candidate.hasRiskFlag) reasons.push("欠場/返還など要確認");
+  if (rule.requireBeforeInfoForBuy && candidate.beforeInfoComplete === false) {
+    reasons.push(BEFORE_INFO_INCOMPLETE_REASON);
+  }
   if (candidate.environmentRiskLevel === "high") reasons.push("荒天/安定板など環境リスク高");
   // シャープマネー逆行: early→finalで15%以上オッズ下落 = 他の情報源がこの出目を不利と判断している
   if ((candidate.sharpSignalDrop ?? 0) >= 0.15) {
@@ -186,7 +192,11 @@ export function judgeCandidate(
     };
   }
 
-  if (ev != null && ev >= 1.05 && (ev < rule.targetEv || reasons.includes("100倍超オッズは検証保留"))) {
+  if (
+    ev != null &&
+    ev >= 1.05 &&
+    (ev < rule.targetEv || reasons.includes("100倍超オッズは検証保留") || reasons.includes(BEFORE_INFO_INCOMPLETE_REASON))
+  ) {
     return {
       status: "WATCH",
       requiredOdds: req,

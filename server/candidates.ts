@@ -14,6 +14,7 @@ type ProgramInput = {
   raceNo: number;
   closeAt: string;
   raceCategory?: string;
+  beforeInfoComplete?: boolean;
   features?: ProgramFeatureSnapshot;
 };
 

@@ -8,6 +8,7 @@ export type ModelCandidateInput = {
   raceNo: number;
   closeAt: string;
   raceCategory?: string;
+  beforeInfoComplete?: boolean;
   features?: ProgramFeatureSnapshot;
 };
 
@@ -210,6 +211,7 @@ export function buildCandidatesFromModel(
         hasRiskFlag,
         modelVersion: MODEL_VERSION,
         raceCategory: input.raceCategory ?? "不明",
+        beforeInfoComplete: input.beforeInfoComplete,
         featureAdjustment,
         candidateClassName: firstBoatFeature?.className,
         candidateMotorTop2Rate: firstBoatFeature?.motorTop2Rate,
