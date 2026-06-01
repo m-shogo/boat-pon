@@ -1,6 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { DEFAULT_APP_RULE } from "../src/domain/decision";
+import { inferDecisionRunKind, type DecisionRunKind } from "../src/domain/liveRunKind";
 import { extractProgramFeatures, type ProgramFeatureSnapshot } from "../src/domain/programFeatures";
 import type { OddsSnapshot } from "../src/domain/oddsSnapshot";
 import type { RaceCategory } from "../src/domain/programCategory";
@@ -64,6 +65,7 @@ CREATE TABLE IF NOT EXISTS decision_history (
   environment_risk_level TEXT,
   exhibition_st_residual_sum REAL,
   selection_popularity INTEGER,
+  run_kind TEXT NOT NULL DEFAULT 'historical-backfill',
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -106,6 +108,19 @@ CREATE TABLE IF NOT EXISTS odds_snapshots (
   is_final_like INTEGER NOT NULL DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS odds_timeseries_snapshots (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  race_id TEXT NOT NULL,
+  selection TEXT NOT NULL,
+  odds REAL NOT NULL,
+  popularity INTEGER,
+  source TEXT NOT NULL,
+  captured_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  minutes_before_close INTEGER,
+  checkpoint_label TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS official_programs (
   race_id TEXT PRIMARY KEY,
   date TEXT NOT NULL,
@@ -115,6 +130,20 @@ CREATE TABLE IF NOT EXISTS official_programs (
   source_file TEXT NOT NULL,
   raw_json TEXT NOT NULL,
   imported_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS motor_boat_stats (
+  race_id TEXT NOT NULL,
+  date TEXT NOT NULL,
+  venue TEXT NOT NULL,
+  race_no INTEGER NOT NULL,
+  course INTEGER NOT NULL,
+  motor_no TEXT,
+  motor_top2_rate REAL,
+  boat_no TEXT,
+  boat_top2_rate REAL,
+  imported_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (race_id, course)
 );
 
 CREATE TABLE IF NOT EXISTS push_subscriptions (
@@ -237,6 +266,11 @@ CREATE TABLE IF NOT EXISTS racer_profiles (
   } catch {
     // Existing databases already have this column.
   }
+  try {
+    db.exec("ALTER TABLE decision_history ADD COLUMN run_kind TEXT NOT NULL DEFAULT 'historical-backfill'");
+  } catch {
+    // Existing databases already have this column.
+  }
 
   // 検索性能向上のためのINDEX（冪等）
   db.exec(`
@@ -252,6 +286,14 @@ CREATE INDEX IF NOT EXISTS idx_decision_history_race_selection ON decision_histo
 CREATE INDEX IF NOT EXISTS idx_odds_snapshots_race ON odds_snapshots (race_id, captured_at);
 CREATE INDEX IF NOT EXISTS idx_odds_snapshots_race_selection_final
 ON odds_snapshots (race_id, selection, is_final_like, captured_at);
+CREATE INDEX IF NOT EXISTS idx_odds_timeseries_checkpoints
+ON odds_timeseries_snapshots (race_id, selection, checkpoint_label, captured_at);
+CREATE INDEX IF NOT EXISTS idx_decision_history_run_kind_date
+ON decision_history (run_kind, date, model_version, decision);
+CREATE INDEX IF NOT EXISTS idx_motor_boat_stats_motor
+ON motor_boat_stats (venue, motor_no, date);
+CREATE INDEX IF NOT EXISTS idx_motor_boat_stats_boat
+ON motor_boat_stats (venue, boat_no, date);
 CREATE INDEX IF NOT EXISTS idx_race_equipment_race ON race_equipment (race_id);
 `);
 
@@ -361,6 +403,26 @@ VALUES (?, ?, ?, ?, ?, ?, ?)
     snapshot.source,
     snapshot.capturedAt,
     snapshot.isFinalLike ? 1 : 0,
+  );
+}
+
+export function recordOddsTimeseriesSnapshot(db: DatabaseSync, snapshot: OddsSnapshot & {
+  minutesBeforeClose?: number | null;
+  checkpointLabel?: "T-30" | "T-20" | "T-10" | "T-5" | "ad-hoc" | null;
+}) {
+  db.prepare(`
+INSERT INTO odds_timeseries_snapshots
+(race_id, selection, odds, popularity, source, captured_at, minutes_before_close, checkpoint_label)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+`).run(
+    snapshot.raceId,
+    snapshot.selection,
+    snapshot.odds,
+    snapshot.popularity,
+    snapshot.source,
+    snapshot.capturedAt,
+    snapshot.minutesBeforeClose ?? null,
+    snapshot.checkpointLabel ?? null,
   );
 }
 
@@ -656,12 +718,56 @@ INSERT OR REPLACE INTO official_programs
 (race_id, date, venue, race_no, close_at, source_file, raw_json, imported_at)
 VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
 `).run(row.raceId, row.date, row.venue, row.raceNo, row.closeAt, row.sourceFile, JSON.stringify(row.raw));
+  upsertMotorBoatStats(db, row);
 }
 
+export function upsertMotorBoatStats(db: DatabaseSync, row: {
+  raceId: string;
+  date: string;
+  venue: string;
+  raceNo: number;
+  raw: Record<string, unknown>;
+}) {
+  const boats = Array.isArray(row.raw.boats) ? row.raw.boats : [];
+  const insert = db.prepare(`
+INSERT OR REPLACE INTO motor_boat_stats
+(race_id, date, venue, race_no, course, motor_no, motor_top2_rate, boat_no, boat_top2_rate, imported_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+`);
+  for (const boat of boats) {
+    if (!boat || typeof boat !== "object") continue;
+    const b = boat as Record<string, unknown>;
+    const course = toNullableNumber(b.course);
+    if (course == null) continue;
+    insert.run(
+      row.raceId,
+      row.date,
+      row.venue,
+      row.raceNo,
+      course,
+      toNullableText(b.motorNo),
+      toNullableNumber(b.motorTop2Rate),
+      toNullableText(b.boatNo),
+      toNullableNumber(b.boatTop2Rate),
+    );
+  }
+}
 
+function toNullableText(value: unknown): string | null {
+  if (value == null) return null;
+  const text = String(value).trim();
+  return text === "" ? null : text;
+}
 
-export function insertDecisionHistory(db: DatabaseSync, candidate: BetCandidate, decision: Decision, options: { replaceRace?: boolean } = {}) {
+function toNullableNumber(value: unknown): number | null {
+  if (value == null || value === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+export function insertDecisionHistory(db: DatabaseSync, candidate: BetCandidate, decision: Decision, options: { replaceRace?: boolean; runKind?: DecisionRunKind } = {}) {
   const selection = candidate.selection.join("-");
+  const runKind = options.runKind ?? inferDecisionRunKind(candidate);
   const existingBySelection = db.prepare("SELECT id FROM decision_history WHERE race_id = ? AND selection = ?").get(
     candidate.raceId,
     selection,
@@ -688,7 +794,7 @@ SET selection = ?, estimated_hit_rate = ?, raw_estimated_hit_rate = ?, conservat
     result = ?, payout_yen = ?, popularity = ?, returned = ?, source = ?, fetched_at = ?,
     recommended_stake_yen = ?, sample_size = ?, model_version = ?, race_category = ?,
     sharp_signal_drop = ?, environment_risk_level = ?, exhibition_st_residual_sum = ?,
-    selection_popularity = ?
+    selection_popularity = ?, run_kind = ?
 WHERE id = ?
 `).run(
       selection,
@@ -714,6 +820,7 @@ WHERE id = ?
       candidate.environmentRiskLevel ?? null,
       calcExhibitionStResidualSum(candidate),
       selectionPopularity,
+      runKind,
       existing.id,
     );
     if (options.replaceRace) {
@@ -730,8 +837,8 @@ INSERT INTO decision_history
 (race_id, date, venue, race_no, bet_type, selection, estimated_hit_rate, raw_estimated_hit_rate, conservative_hit_rate,
  model_selection_score, required_odds, current_odds, ev, decision,
  actually_bought, stake_yen, result, payout_yen, popularity, returned, source, fetched_at, recommended_stake_yen, sample_size,
- model_version, race_category, sharp_signal_drop, environment_risk_level, exhibition_st_residual_sum, selection_popularity)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ model_version, race_category, sharp_signal_drop, environment_risk_level, exhibition_st_residual_sum, selection_popularity, run_kind)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `).run(
     candidate.raceId,
     candidate.date,
@@ -763,6 +870,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
     candidate.environmentRiskLevel ?? null,
     calcExhibitionStResidualSum(candidate),
     selectionPopularity,
+    runKind,
   );
 }
 
@@ -773,7 +881,7 @@ SELECT id, race_id, date, venue, race_no, selection, estimated_hit_rate, require
        ev, decision, actually_bought, stake_yen, result, payout_yen, popularity, returned,
        source, fetched_at, recommended_stake_yen, sample_size, model_version, race_category,
        sharp_signal_drop, environment_risk_level, exhibition_st_residual_sum,
-       selection_popularity, created_at
+       selection_popularity, run_kind, created_at
 FROM decision_history
 ORDER BY created_at DESC, id DESC
 LIMIT 500
@@ -809,6 +917,7 @@ LIMIT 500
     popularity: row.popularity == null ? null : Number(row.popularity),
     returned: Boolean(row.returned),
     source: String(row.source),
+    runKind: String(row.run_kind ?? "historical-backfill") as DecisionRunKind,
     fetchedAt: String(row.fetched_at),
     createdAt: String(row.created_at),
   }));

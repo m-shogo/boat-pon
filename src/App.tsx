@@ -18,6 +18,7 @@ import {
   updateManualOdds,
   updatePurchaseRecord,
   updateSettings,
+  type CalibrationB1Rule,
   type CalibrationCompareResponse,
   type CalibrationReturnedStats,
   type CalibrationRow,
@@ -1503,6 +1504,7 @@ function LiveMonitorPanel() {
 
 function CalibrationPanel({ date }: { date: string | null }) {
   const [b1filter, setB1filter] = useState(true);
+  const [b1Rule, setB1Rule] = useState<CalibrationB1Rule["id"]>("current-live");
   const [compareResult, setCompareResult] = useState<CalibrationCompareResponse | null>(null);
   const [customFrom, setCustomFrom] = useState("2024-01-01");
   const [customTo, setCustomTo] = useState(date ?? "");
@@ -1515,7 +1517,7 @@ function CalibrationPanel({ date }: { date: string | null }) {
     setBusy(true);
     setError(null);
     try {
-      const result = await fetchCalibrationApi({ mode: "compare", b1filter });
+      const result = await fetchCalibrationApi({ mode: "compare", b1filter, b1Rule });
       setCompareResult(result as CalibrationCompareResponse);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -1528,7 +1530,7 @@ function CalibrationPanel({ date }: { date: string | null }) {
     setBusy(true);
     setError(null);
     try {
-      const result = await fetchCalibrationApi({ from: customFrom || undefined, to: customTo || undefined, b1filter });
+      const result = await fetchCalibrationApi({ from: customFrom || undefined, to: customTo || undefined, b1filter, b1Rule });
       if ("rows" in result) setCustomRows(result.rows);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -1541,6 +1543,12 @@ function CalibrationPanel({ date }: { date: string | null }) {
   const extFrom = compareResult?.external?.from ?? "2020-01-01";
   const extTo = compareResult?.external?.to ?? "2023-12-31";
   const returnedStats: CalibrationReturnedStats | null = compareResult?.insampleReturnedStats ?? null;
+  const activeRule: CalibrationB1Rule = compareResult?.b1Rule ?? {
+    id: b1Rule,
+    label: b1Rule === "current-live" ? "現行live B1" : "旧検証 B1 + 2号艇≠B1",
+    description: b1Rule === "current-live" ? "excludeSameClassSecondBoat=false" : "legacy-second-not-b1。boats[1].className != 'B1'",
+    includesSecondBoatNotB1: b1Rule === "legacy-second-not-b1",
+  };
 
   return (
     <div className="walkForwardPanel">
@@ -1566,7 +1574,14 @@ function CalibrationPanel({ date }: { date: string | null }) {
       <div className="walkForwardControls">
         <label>
           <input type="checkbox" checked={b1filter} onChange={(e) => setB1filter(e.target.checked)} />
-          <span>B1フィルター内のみ</span>
+          <span>B1プリセットを適用</span>
+        </label>
+        <label>
+          <span>B1条件</span>
+          <select value={b1Rule} onChange={(e) => setB1Rule(e.target.value as CalibrationB1Rule["id"])} disabled={!b1filter}>
+            <option value="current-live">現行live: excludeSameClassSecondBoat=false</option>
+            <option value="legacy-second-not-b1">旧検証: legacy-second-not-b1</option>
+          </select>
         </label>
         <button disabled={busy} onClick={runCompare}>{busy ? "集計中..." : "外部/in-sample 比較"}</button>
         <button disabled={busy} onClick={() => setShowCustom(!showCustom)} style={{ marginLeft: 8 }}>
@@ -1586,6 +1601,12 @@ function CalibrationPanel({ date }: { date: string | null }) {
       )}
 
       {error && <div className="formError">{error}</div>}
+
+      {b1filter && (
+        <div style={{ fontSize: "0.82em", color: "#888", marginBottom: 8 }}>
+          B1条件: <strong>{activeRule.label}</strong> — {activeRule.description}
+        </div>
+      )}
 
       {showCustom && customRows.length > 0 && (
         <div style={{ marginTop: 12 }}>

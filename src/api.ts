@@ -277,9 +277,17 @@ export type CalibrationReturnedStats = {
   pct: number;
 };
 
+export type CalibrationB1Rule = {
+  id: "current-live" | "legacy-second-not-b1";
+  label: string;
+  description: string;
+  includesSecondBoatNotB1: boolean;
+};
+
 export type CalibrationCompareResponse = {
   mode: "compare";
   b1filter: boolean;
+  b1Rule: CalibrationB1Rule;
   external: { from: string; to: string; rows: CalibrationRow[]; summary: CalibrationExternalSummary | null };
   insample: { from: string; to: string; rows: CalibrationRow[] };
   insampleReturnedStats: CalibrationReturnedStats;
@@ -290,6 +298,7 @@ export type CalibrationCustomResponse = {
   from: string;
   to: string;
   b1filter: boolean;
+  b1Rule: CalibrationB1Rule;
   rows: CalibrationRow[];
 };
 
@@ -297,12 +306,14 @@ export async function fetchCalibrationApi(params: {
   from?: string;
   to?: string;
   b1filter?: boolean;
+  b1Rule?: CalibrationB1Rule["id"];
   mode?: "compare" | "custom";
 }): Promise<CalibrationCompareResponse | CalibrationCustomResponse> {
   const qs = new URLSearchParams();
   if (params.from) qs.set("from", params.from);
   if (params.to) qs.set("to", params.to);
   if (params.b1filter) qs.set("b1filter", "1");
+  if (params.b1Rule) qs.set("b1Rule", params.b1Rule);
   if (params.mode) qs.set("mode", params.mode);
   const res = await fetch("/api/backtest/calibration?" + qs.toString());
   if (!res.ok) throw new Error(`calibration api failed: ${res.status}`);

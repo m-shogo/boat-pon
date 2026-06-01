@@ -41,6 +41,7 @@ function buildReport(db: DatabaseSync) {
     WHERE decision = 'BUY'
       AND date >= ?
       AND model_version = ?
+      AND run_kind = 'paper-live'
   `).get(LIVE_FROM, LIVE_MODEL) as Record<string, unknown>;
 
   const n = numberValue(summary.n);
@@ -55,7 +56,7 @@ function buildReport(db: DatabaseSync) {
 
   const latestLiveDate = (db.prepare(`
     SELECT MAX(date) AS d FROM decision_history
-    WHERE decision = 'BUY' AND date >= ? AND model_version = ?
+    WHERE decision = 'BUY' AND date >= ? AND model_version = ? AND run_kind = 'paper-live'
   `).get(LIVE_FROM, LIVE_MODEL) as { d: string | null }).d;
 
   const decisionCounts = db.prepare(`
@@ -66,7 +67,7 @@ function buildReport(db: DatabaseSync) {
       SUM(CASE WHEN current_odds IS NOT NULL THEN 1 ELSE 0 END) AS odds_present,
       MAX(date) AS latest_date
     FROM decision_history
-    WHERE date >= ? AND model_version = ?
+    WHERE date >= ? AND model_version = ? AND run_kind = 'paper-live'
     GROUP BY decision
     ORDER BY decision
   `).all(LIVE_FROM, LIVE_MODEL) as Array<{ decision: string; n: number; odds_missing: number; odds_present: number; latest_date: string | null }>;
@@ -78,7 +79,7 @@ function buildReport(db: DatabaseSync) {
       SUM(CASE WHEN current_odds IS NOT NULL THEN 1 ELSE 0 END) AS odds_present,
       MAX(date) AS latest_date
     FROM decision_history
-    WHERE date >= ? AND model_version = ?
+    WHERE date >= ? AND model_version = ? AND run_kind = 'paper-live'
   `).get(LIVE_FROM, LIVE_MODEL) as { n: number; odds_missing: number; odds_present: number; latest_date: string | null };
 
   const watchBuyQuality = db.prepare(`
@@ -87,13 +88,13 @@ function buildReport(db: DatabaseSync) {
       SUM(CASE WHEN current_odds IS NULL THEN 1 ELSE 0 END) AS odds_missing,
       SUM(CASE WHEN current_odds IS NOT NULL THEN 1 ELSE 0 END) AS odds_present
     FROM decision_history
-    WHERE date >= ? AND model_version = ? AND decision IN ('WATCH', 'BUY')
+    WHERE date >= ? AND model_version = ? AND run_kind = 'paper-live' AND decision IN ('WATCH', 'BUY')
   `).get(LIVE_FROM, LIVE_MODEL) as { n: number; odds_missing: number; odds_present: number };
 
   const latestModelDecisionDate = (db.prepare(`
     SELECT MAX(date) AS d
     FROM decision_history
-    WHERE date >= ? AND model_version = ?
+    WHERE date >= ? AND model_version = ? AND run_kind = 'paper-live'
   `).get(LIVE_FROM, LIVE_MODEL) as { d: string | null }).d;
 
   const latestAnyDecisionDate = (db.prepare(`
@@ -118,19 +119,20 @@ function buildReport(db: DatabaseSync) {
     SELECT
       COALESCE(model_version, '(null)') AS model_version,
       source,
+      run_kind,
       COUNT(*) AS n,
       MAX(date) AS latest_date
     FROM decision_history
     WHERE decision = 'BUY' AND date >= ?
-    GROUP BY model_version, source
+    GROUP BY model_version, source, run_kind
     ORDER BY n DESC
-  `).all(LIVE_FROM) as Array<{ model_version: string; source: string; n: number; latest_date: string | null }>;
+  `).all(LIVE_FROM) as Array<{ model_version: string; source: string; run_kind: string; n: number; latest_date: string | null }>;
 
   let excludedOldModelCount = 0;
   let excludedSampleCount = 0;
   const sources: string[] = [];
   for (const row of diagnostics) {
-    if (row.model_version === LIVE_MODEL) {
+    if (row.model_version === LIVE_MODEL && row.run_kind === "paper-live") {
       if (!sources.includes(row.source)) sources.push(row.source);
     } else if (row.model_version === "(null)") {
       excludedSampleCount += row.n;
@@ -146,7 +148,7 @@ function buildReport(db: DatabaseSync) {
       SUM(CASE WHEN decision = 'WATCH' THEN 1 ELSE 0 END) AS watch_n,
       COUNT(*) AS total_n
     FROM decision_history
-    WHERE date >= ? AND model_version = ?
+    WHERE date >= ? AND model_version = ? AND run_kind = 'paper-live'
     GROUP BY date
     ORDER BY date
   `).all(PAPER_LIVE_START, LIVE_MODEL) as Array<{ date: string; buy_n: number; watch_n: number; total_n: number }>;
@@ -154,9 +156,9 @@ function buildReport(db: DatabaseSync) {
   const todayBuyCandidates = db.prepare(`
     SELECT venue, race_no, selection, current_odds, ev, required_odds, result, selection_popularity
     FROM decision_history
-    WHERE date = ? AND decision = 'BUY'
+    WHERE date = ? AND model_version = ? AND run_kind = 'paper-live' AND decision = 'BUY'
     ORDER BY race_no ASC
-  `).all(todayJst()) as Array<{
+  `).all(todayJst(), LIVE_MODEL) as Array<{
     venue: string; race_no: number; selection: string;
     current_odds: number | null; ev: number | null; required_odds: number | null;
     result: string | null; selection_popularity: number | null;

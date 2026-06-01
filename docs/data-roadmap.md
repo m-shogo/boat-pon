@@ -30,11 +30,11 @@ boat-pon が予測精度向上のために収集・利用したいデータの�
 |------|------|
 | **目的** | CLV（Closing Line Value）の算出。早期オッズ → 締切直前オッズの変化を見て市場の「ズレ」を検出する |
 | **重要度** | ★★★ 高（sharp money signal の唯一の源泉） |
-| **保存テーブル** | `odds_snapshots` |
-| **保存カラム** | `race_id`, `selection`, `odds`, `popularity`（人気順位）, `captured_at`, `is_final_like`（締切5分前フラグ） |
+| **保存テーブル** | `odds_snapshots`（最新値互換）+ `odds_timeseries_snapshots`（append-only設計） |
+| **保存カラム** | `race_id`, `selection`, `odds`, `popularity`（人気順位）, `captured_at`, `is_final_like`（締切5分前フラグ）。時系列側は `minutes_before_close`, `checkpoint_label`（T-30/T-20/T-10/T-5）も保持 |
 | **利用タイミング** | レース締切30分前〜5分前に取得。`is_final_like=1` が締切直前スナップショット |
 | **現在の状態** | ✅ OK — `is_final_like=1` で約27万件。2026年ライブ分は97%カバー |
-| **注意点** | `sharp_signal_drop`（早期→終値の下落率）は `decision_history` に保存済みだがテスト期間(2025)は未収集。ライブ蓄積が必要 |
+| **注意点** | `sharp_signal_drop`（早期→終値の下落率）は `decision_history` に保存済みだがテスト期間(2025)は未収集。ライブ蓄積が必要。既存 `odds_snapshots` は互換維持のため最新値中心、CLV/late money検証は append-only の `odds_timeseries_snapshots` を使う |
 
 ---
 
@@ -44,7 +44,7 @@ boat-pon が予測精度向上のために収集・利用したいデータの�
 |------|------|
 | **目的** | `current_odds / required_odds` の比率（ratio）でモデルと市場の乖離を定量化。ratio<1.5 が採用基準 |
 | **重要度** | ★★★ 高（現在の主要フィルター） |
-| **保存テーブル** | `decision_history`（派生値として記録） |
+| **保存テーブル** | `decision_history`（派生値として記録。`run_kind` で paper-live / historical-backfill / manual-test / sample を区別） |
 | **保存カラム** | `current_odds`（市場オッズ）, `required_odds`（EV目標を達成するための最低オッズ）, `ev`（期待値） |
 | **利用タイミング** | BUY/WATCH/SKIP判定時にリアルタイム計算。`decision_history` に保存 |
 | **現在の状態** | ✅ OK — `decision_history` に両カラム存在。ratio はクエリ時に `current_odds/required_odds` で計算 |
@@ -103,8 +103,8 @@ boat-pon が予測精度向上のために収集・利用したいデータの�
 | **保存テーブル** | `official_programs.raw_json`（boats[].motorTop2Rate / boatTop2Rate として埋め込み）+ `racer_profiles`（選手成績）+ `racer_course_stats`（コース別成績） |
 | **保存カラム** | raw_json内: `motorNo`, `motorTop2Rate`, `boatNo`, `boatTop2Rate` / `racer_profiles`: `top3_rate`, `avg_st`, `ability_index`, `flying_count`, `late_start_count` |
 | **利用タイミング** | 番組取得時に raw_json として保存済み。`programFeatures.ts` がパース時に使用 |
-| **現在の状態** | ⚠️ PARTIAL — モーター/ボート成績は `official_programs.raw_json` に約113万件あり実質カバー済み。ただし専用インデックステーブルなし（JSON解析で対応）。`racer_profiles` は2644件で選手単位のF数・ST平均を保持 |
-| **注意点** | 専用テーブルがないため、モーター成績単独での集計クエリが重い。将来的に `motor_stats (motor_no, period, top2_rate)` テーブルを設けるとクエリ効率が上がる |
+| **現在の状態** | ✅/⚠️ 移行中 — 新規取り込み時に `motor_boat_stats` へ正規化。既存 `official_programs.raw_json` は `npm run backfill:motor-boat-stats` で補完可能 |
+| **注意点** | `motor_boat_stats` によりJSON解析なしで会場別・モーター別・ボート別ROI集計が可能。既存データ補完はまず `--dry-run` と小さい `--limit` で確認する |
 
 ---
 

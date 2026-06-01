@@ -3,6 +3,7 @@ import { DEFAULT_MODEL_ALPHA, buildCandidatesFromModel, buildVenueModel, type Mo
 import { filterComparableResultsForDate } from "../src/domain/raceRegime";
 import { mergeOddsMaps } from "../src/domain/oddsSnapshot";
 import { getManualOdds, getSettings, insertDecisionHistory, listOddsSnapshots, listProgramInputsRange, listProgramInputsWithOddsSnapshotsRange, listResultsForModelRange, openDb } from "../server/db";
+import { assertGenerateHistoryWriteAllowed } from "../src/domain/liveRunKind";
 import type { DatabaseSync } from "node:sqlite";
 
 // 2026-01-01 以降は live監視の完全未使用データ。generate:history での書き込みは汚染になるため
@@ -34,7 +35,9 @@ if (!args.from || !args.to || args.limit == null || args.limit <= 0) {
   throw new Error("usage: tsx scripts/generate-decision-history.ts --from YYYY-MM-DD --to YYYY-MM-DD --limit N [--dry-run] [--include-skips]");
 }
 // 2026 live監視ガード: --to が LIVE_GUARD_FROM 以降を含む場合は明示フラグが必須
-if (args.to >= LIVE_GUARD_FROM && !args.allowLiveWrite && !args.dryRun) {
+try {
+  assertGenerateHistoryWriteAllowed({ to: args.to, dryRun: args.dryRun, allowLiveWrite: args.allowLiveWrite }, LIVE_GUARD_FROM);
+} catch {
   console.error(`
 [GUARD] --to ${args.to} は live監視期間（${LIVE_GUARD_FROM}以降）を含みます。
         generate:history を 2026年以降に実行すると /api/live/b1-monitor の
@@ -102,7 +105,10 @@ try {
       console.log(`[dry-run:${marker}] ${candidate.raceId} ${candidate.selection.join("-")} ${decision.status} odds=${candidate.currentOdds ?? "-"} ev=${decision.ev?.toFixed(2) ?? "-"}`);
       continue;
     }
-    insertDecisionHistory(db, candidate, decision, { replaceRace: args.refreshExisting && args.refreshOnly });
+    insertDecisionHistory(db, candidate, decision, {
+      replaceRace: args.refreshExisting && args.refreshOnly,
+      runKind: "historical-backfill",
+    });
     if (isExisting || isExistingRace) refreshedExisting += 1;
     existingKeys.add(key);
     existingRaceIds.add(candidate.raceId);

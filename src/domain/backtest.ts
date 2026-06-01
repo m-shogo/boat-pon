@@ -1,4 +1,5 @@
 import type { DecisionStatus } from "./types";
+import type { DecisionRunKind } from "./liveRunKind";
 import type { OvervaluationRow } from "./analysis";
 
 export type DecisionHistoryRow = {
@@ -31,6 +32,7 @@ export type DecisionHistoryRow = {
   popularity: number | null;
   returned: boolean;
   source: string;
+  runKind?: DecisionRunKind;
   fetchedAt: string;
   createdAt: string;
 };

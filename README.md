@@ -144,13 +144,23 @@ npm run evaluate:v4 -- --from 2025-01-01 --to 2025-01-31 --limit 500
 
 ```sh
 npm run report:data-coverage
+npm run report:data-coverage -- --beforeinfo-days=30
 npm run report:data-coverage -- --json
 ```
 
 - `report:data-coverage`: 結果データ、締切直前オッズ、オッズ比、水面条件、展示タイム、チルト/部品交換、モーター/ボート成績を `OK` / `PARTIAL` / `MISSING` で確認する。
+- `--beforeinfo-days=30`: 直近30日の `race_weather` / `exhibition_data` / `race_equipment` 日別カバレッジと、WATCH/BUY候補の直前情報フル取得率を確認する。目標は98%以上。
 - `--json`: 自動監視やCodex/Claudeへの引き継ぎに使いやすいJSON形式で出力する。
 - このコマンドは読み取り専用で、外部サイトへの追加アクセス、自動投票、DB書き込み、live設定変更は行わない。
 - 詳細な保存方針と優先順位は [docs/data-roadmap.md](docs/data-roadmap.md) を参照する。
+
+モーター/ボート成績は新規取り込み時に `motor_boat_stats` へ正規化される。既存の `official_programs.raw_json` から補完する場合は、まず件数確認だけを行う。
+
+```sh
+npm run backfill:motor-boat-stats -- --dry-run --from 2025-01-01 --to 2025-01-31 --limit 100
+```
+
+`decision_history.run_kind` は `paper-live` / `historical-backfill` / `manual-test` / `sample` を区別する。2026年live監視の集計は `paper-live` のみを対象にし、`generate:history` は常に `historical-backfill` として保存する。2026年以降への通常書き込みはガードされるため、内容確認は `--dry-run` を使う。
 
 paper live観察の進捗確認:
 
@@ -187,6 +197,7 @@ npm run guard:live
 - `GET /api/export/results.csv`: 結果CSV
 - `GET /api/export/history.csv`: 判定履歴CSV
 - `GET /api/export/monthly.csv`: 月次CSV
+- `GET /api/backtest/calibration?b1filter=1&b1Rule=current-live`: Calibration分析。`b1filter=1` はB1プリセット適用、`b1Rule=current-live` は現行live条件、`b1Rule=legacy-second-not-b1` は旧検証用の `boats[1].className != 'B1'` 条件。
 - `GET /api/push/vapid-public-key`: Web Push公開鍵
 - `POST /api/push/subscribe`: Web Push購読登録の受け口
 

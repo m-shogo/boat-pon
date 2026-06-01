@@ -51,22 +51,23 @@
     "fetch:racer-stats": "tsx scripts/bulk-fetch-racer-stats.ts",
     "fetch:racer-stats:dry": "tsx scripts/bulk-fetch-racer-stats.ts --dry-run",
     "stats:racer-coverage": "tsx scripts/check-racer-stats-coverage.ts",
-    "report:data-coverage": "tsx scripts/report-data-coverage.ts"
+    "report:data-coverage": "tsx scripts/report-data-coverage.ts",
+    "backfill:motor-boat-stats": "tsx scripts/backfill-motor-boat-stats.ts"
   },
   "engines": {
     "node": ">=24.0.0"
   },
   "dependencies": {
-    "@vitejs/plugin-react": "latest",
-    "cheerio": "latest",
+    "@vitejs/plugin-react": "6.0.2",
+    "cheerio": "1.2.0",
     "concurrently": "^9.2.1",
     "express": "^5.2.1",
-    "lucide-react": "latest",
-    "react": "latest",
-    "react-dom": "latest",
-    "tsx": "latest",
-    "typescript": "latest",
-    "vite": "latest",
+    "lucide-react": "1.16.0",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "tsx": "4.22.3",
+    "typescript": "6.0.3",
+    "vite": "8.0.14",
     "web-push": "^3.6.7"
   },
   "devDependencies": {

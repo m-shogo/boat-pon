@@ -36,6 +36,17 @@ type CoverageItem = {
   recordCount: number | null;
 };
 
+type BeforeInfoDayCoverage = {
+  date: string;
+  totalRaces: number;
+  weatherRaces: number;
+  exhibitionRaces: number;
+  equipmentRaces: number;
+  fullRaces: number;
+  watchBuyRaces: number;
+  watchBuyFullRaces: number;
+};
+
 // ---------- DB 検索 ----------
 
 const DB_CANDIDATES: string[] = [
@@ -92,6 +103,57 @@ function countSql(db: DatabaseSync, sql: string): number {
     return row?.n ?? 0;
   } catch {
     return 0;
+  }
+}
+
+function queryBeforeInfoDailyCoverage(db: DatabaseSync, days: number): BeforeInfoDayCoverage[] {
+  try {
+    const runKindFilter = columnExists(db, "decision_history", "run_kind")
+      ? "AND (date < '2026-01-01' OR run_kind = 'paper-live')"
+      : "";
+    return db.prepare(`
+WITH recent_dates AS (
+  SELECT DISTINCT date
+  FROM official_programs
+  WHERE date >= (
+    SELECT date(MAX(date), '-' || (? - 1) || ' day')
+    FROM official_programs
+  )
+),
+program_base AS (
+  SELECT p.date, p.race_id
+  FROM official_programs p
+  JOIN recent_dates d ON d.date = p.date
+),
+watch_buy AS (
+  SELECT DISTINCT race_id
+  FROM decision_history
+  WHERE decision IN ('WATCH', 'BUY')
+    ${runKindFilter}
+)
+SELECT
+  pb.date,
+  COUNT(DISTINCT pb.race_id) AS totalRaces,
+  COUNT(DISTINCT w.race_id) AS weatherRaces,
+  COUNT(DISTINCT e.race_id) AS exhibitionRaces,
+  COUNT(DISTINCT q.race_id) AS equipmentRaces,
+  COUNT(DISTINCT CASE
+    WHEN w.race_id IS NOT NULL AND e.race_id IS NOT NULL AND q.race_id IS NOT NULL THEN pb.race_id
+  END) AS fullRaces,
+  COUNT(DISTINCT wb.race_id) AS watchBuyRaces,
+  COUNT(DISTINCT CASE
+    WHEN wb.race_id IS NOT NULL AND w.race_id IS NOT NULL AND e.race_id IS NOT NULL AND q.race_id IS NOT NULL THEN pb.race_id
+  END) AS watchBuyFullRaces
+FROM program_base pb
+LEFT JOIN race_weather w ON w.race_id = pb.race_id
+LEFT JOIN exhibition_data e ON e.race_id = pb.race_id
+LEFT JOIN race_equipment q ON q.race_id = pb.race_id
+LEFT JOIN watch_buy wb ON wb.race_id = pb.race_id
+GROUP BY pb.date
+ORDER BY pb.date DESC
+`).all(days) as BeforeInfoDayCoverage[];
+  } catch {
+    return [];
   }
 }
 
@@ -270,9 +332,11 @@ function buildReport(db: DatabaseSync | null): CoverageItem[] {
     const tables: string[] = [];
 
     const hasPrograms = db != null && tableExists(db, "official_programs");
+    const hasMotorBoatStats = db != null && tableExists(db, "motor_boat_stats");
     const hasProfiles = db != null && tableExists(db, "racer_profiles");
     const hasCourseStats = db != null && tableExists(db, "racer_course_stats");
 
+    if (hasMotorBoatStats) tables.push("motor_boat_stats");
     if (hasPrograms) tables.push("official_programs");
     if (hasProfiles) tables.push("racer_profiles");
     if (hasCourseStats) tables.push("racer_course_stats");
@@ -285,12 +349,17 @@ function buildReport(db: DatabaseSync | null): CoverageItem[] {
       n = motorN;
     }
 
-    if (motorN > 10000) {
-      status = "PARTIAL"; // raw_json 経由なので PARTIAL（専用インデックスなし）
+    const normalizedN = hasMotorBoatStats ? countSql(db!, "SELECT COUNT(*) AS n FROM motor_boat_stats") : 0;
+    if (normalizedN > 10000) {
+      status = "OK";
+      detail = `motor_boat_stats ${normalizedN.toLocaleString()}件。JSON解析なしで会場別・モーター/ボート別集計可能`;
+      n = normalizedN;
+    } else if (motorN > 10000) {
+      status = "PARTIAL";
       const profileN = hasProfiles ? countSql(db!, "SELECT COUNT(*) AS n FROM racer_profiles") : 0;
       detail = `official_programs.raw_json に motorTop2Rate/boatTop2Rate: ${motorN.toLocaleString()}件`
         + (hasProfiles ? `  racer_profiles: ${profileN.toLocaleString()}件` : "")
-        + "  専用インデックステーブルなし（JSON解析で対応）";
+        + `  motor_boat_stats: ${normalizedN.toLocaleString()}件`;
     } else if (hasProfiles) {
       status = "PARTIAL";
       const profileN = countSql(db!, "SELECT COUNT(*) AS n FROM racer_profiles");
@@ -335,6 +404,38 @@ function printText(dbPath: string | null, items: CoverageItem[]) {
   console.log("詳細: docs/data-roadmap.md");
 }
 
+function printBeforeInfoDaily(rows: BeforeInfoDayCoverage[], days: number) {
+  console.log("");
+  console.log(`=== beforeinfo日別カバレッジ（直近${days}日） ===`);
+  if (rows.length === 0) {
+    console.log("対象データなし");
+    return;
+  }
+  console.log("date        races  weather  exhibition  equipment  full   WATCH/BUY full");
+  let watchBuyTotal = 0;
+  let watchBuyFull = 0;
+  for (const row of rows) {
+    watchBuyTotal += row.watchBuyRaces;
+    watchBuyFull += row.watchBuyFullRaces;
+    console.log([
+      row.date.padEnd(10),
+      String(row.totalRaces).padStart(5),
+      formatRatio(row.weatherRaces, row.totalRaces).padStart(8),
+      formatRatio(row.exhibitionRaces, row.totalRaces).padStart(10),
+      formatRatio(row.equipmentRaces, row.totalRaces).padStart(9),
+      formatRatio(row.fullRaces, row.totalRaces).padStart(7),
+      formatRatio(row.watchBuyFullRaces, row.watchBuyRaces).padStart(14),
+    ].join("  "));
+  }
+  const pct = watchBuyTotal === 0 ? "n/a" : `${(watchBuyFull / watchBuyTotal * 100).toFixed(1)}%`;
+  console.log(`WATCH/BUY候補 beforeinfoフル取得率: ${pct} (${watchBuyFull}/${watchBuyTotal})  目標: 98%以上`);
+}
+
+function formatRatio(n: number, d: number) {
+  if (d === 0) return "n/a";
+  return `${(n / d * 100).toFixed(0)}%`;
+}
+
 function printJson(dbPath: string | null, items: CoverageItem[]) {
   const ok = items.filter((i) => i.status === "OK").length;
   const partial = items.filter((i) => i.status === "PARTIAL").length;
@@ -358,14 +459,17 @@ function printJson(dbPath: string | null, items: CoverageItem[]) {
 
 const args = process.argv.slice(2);
 const jsonMode = args.includes("--json");
+const beforeInfoDaysArg = args.find((arg) => arg.startsWith("--beforeinfo-days="));
+const beforeInfoDays = beforeInfoDaysArg ? Number(beforeInfoDaysArg.split("=")[1]) : 30;
 
 const dbPath = findDb();
 const db = dbPath ? openDb(dbPath) : null;
 const items = buildReport(db);
-if (db) { try { db.close(); } catch { /* ignore */ } }
 
 if (jsonMode) {
   printJson(dbPath, items);
 } else {
   printText(dbPath, items);
+  if (db) printBeforeInfoDaily(queryBeforeInfoDailyCoverage(db, beforeInfoDays), beforeInfoDays);
 }
+if (db) { try { db.close(); } catch { /* ignore */ } }

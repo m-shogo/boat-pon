@@ -210,30 +210,32 @@ Boat Pon は自動購入アプリではない。目的は、ほとんどの日�
 
 ### 観察ログの設計（重要）
 
-ライブ決定と generate:history はどちらも `source="history-model"` で保存される。  
-区別は `model_version` と `date` のみで行う。条件: 現行 `MODEL_VERSION` かつ `date>=2026-01-01`
+ライブ決定と generate:history はどちらも `source="history-model"` になり得るため、`decision_history.run_kind` で区別する。
+2026年live監視の条件: 現行 `MODEL_VERSION` かつ `date>=2026-01-01` かつ `run_kind='paper-live'`
 
 自動除外されるもの:
 - 旧モデル: `model_version=boatpon-v2-regime-category` 等 → 除外
 - sampleデータ: `model_version=null`（プログラムデータなし時のフォールバック）→ 除外
+- historical-backfill / manual-test: `run_kind!='paper-live'` → 除外
 
 除外されない汚染リスク:
-- generate:historyを2026年対象で実行した場合 → 現行 `MODEL_VERSION` が付くため混入する
+- `--allow-live-write` で generate:history を2026年対象に意図的実行した場合 → `run_kind='historical-backfill'` として記録し、live集計からは除外する
 
 診断: LiveMonitorPanel の「診断: 2026年BUY全件内訳」で除外対象を確認できる。  
 CLI確認: `npm run monitor:live` でサーバー起動なしに同じ監視サマリーを読み取り専用で確認できる。
 
 ### live記録の設計（重要）
 
-ライブ決定と generate:history はどちらも `source="history-model"` で保存される。  
-区別は `model_version` と `date` のみで行う。条件: 現行 `MODEL_VERSION` かつ `date>=2026-01-01`
+ライブ決定と generate:history はどちらも `source="history-model"` になり得るため、`decision_history.run_kind` で区別する。
+2026年live監視の条件: 現行 `MODEL_VERSION` かつ `date>=2026-01-01` かつ `run_kind='paper-live'`
 
 自動除外されるもの:
 - 旧モデル: `model_version=boatpon-v2-regime-category` 等 → 除外
 - sampleデータ: `model_version=null`（プログラムデータなし時のフォールバック）→ 除外
+- historical-backfill / manual-test: `run_kind!='paper-live'` → 除外
 
 除外されない汚染リスク:
-- generate:historyを2026年対象で実行した場合 → 現行 `MODEL_VERSION` が付くため混入する
+- `--allow-live-write` で generate:history を2026年対象に意図的実行した場合 → `run_kind='historical-backfill'` として記録し、live集計からは除外する
 
 診断: LiveMonitorPanel の「診断: 2026年BUY全件内訳」で除外対象を確認できる。
 CLI確認: `npm run monitor:live` でサーバー起動なしに同じ監視サマリーを読み取り専用で確認できる。

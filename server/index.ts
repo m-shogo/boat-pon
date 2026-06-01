@@ -8,6 +8,7 @@ import { summarizeCategoryStats } from "../src/domain/categoryStats";
 import { summarizeRollingDrift } from "../src/domain/rollingDrift";
 import { getModelVersionInfo } from "../src/domain/modelVersion";
 import { LIVE_MONITOR_FROM, LIVE_MONITOR_MODEL_VERSION, liveMonitorFilterText } from "../src/domain/liveMonitor";
+import { CALIBRATION_B1_RULES, calibrationB1Where, parseCalibrationB1Rule } from "../src/domain/calibrationRule";
 import { analyzeOvervaluation } from "../src/domain/analysis";
 import { explainDecision, summarizeSkipReasons } from "../src/domain/decisionExplain";
 import { runWalkForwardBacktest, summarizeWalkForward } from "../src/domain/walkForward";
@@ -561,30 +562,6 @@ app.get("/api/backtest/model-comparison", (req, res) => {
   }
 });
 
-// B1フィルター条件の共通WHERE句（decision_history=dh, official_programs=op が必要）
-// 注意: boats[1].className != 'B1' は旧検証用フィルター。
-// 現行 DEFAULT_APP_RULE の excludeSameClassSecondBoat=false とは一致しない。
-// Calibration UI の集計範囲であり、live判定ロジックとは別物。
-// in-sample(BUY records): current_odds はdecision_historyの列
-const B1_FILTER_WHERE = `
-  AND json_extract(op.raw_json, '$.boats[0].className') = 'B1'
-  AND json_extract(op.raw_json, '$.boats[1].className') != 'B1'
-  AND CAST(json_extract(op.raw_json, '$.boats[0].nationalWinRate') AS REAL) >= 4.0
-  AND dh.venue NOT IN ('戸田','多摩川','桐生','三国','江戸川')
-  AND CAST(substr(dh.race_id, -2) AS INTEGER) NOT IN (11, 12)
-  AND dh.required_odds >= 25
-  AND dh.current_odds / dh.required_odds < 1.5`;
-
-// external(SKIP records + odds_snapshots JOIN): current_oddsはos.odds
-const B1_FILTER_WHERE_EXT = `
-  AND json_extract(op.raw_json, '$.boats[0].className') = 'B1'
-  AND json_extract(op.raw_json, '$.boats[1].className') != 'B1'
-  AND CAST(json_extract(op.raw_json, '$.boats[0].nationalWinRate') AS REAL) >= 4.0
-  AND dh.venue NOT IN ('戸田','多摩川','桐生','三国','江戸川')
-  AND CAST(substr(dh.race_id, -2) AS INTEGER) NOT IN (11, 12)
-  AND dh.required_odds >= 25
-  AND os.odds / dh.required_odds < 1.5`;
-
 function buildCalibrationQuery(extraWhere: string): string {
   return `
 WITH base AS (
@@ -674,9 +651,11 @@ const INSAMPLE_FROM = "2024-01-01";
 app.get("/api/backtest/calibration", (req, res) => {
   const db = openDb();
   try {
-    // b1filter=1 で現行B1フィルター条件を適用
+    // b1filter=1 はB1プリセット適用だけを表す。実際の条件は b1Rule で明示する。
     const b1filter = req.query.b1filter === "1";
-    const extraWhere = b1filter ? B1_FILTER_WHERE : "";
+    const b1RuleId = parseCalibrationB1Rule(req.query.b1Rule);
+    const b1Rule = CALIBRATION_B1_RULES[b1RuleId];
+    const extraWhere = b1filter ? calibrationB1Where(b1RuleId, "dh.current_odds") : "";
 
     // mode=compare: external(2020-2023) と insample(2024+) を両方返す
     // mode=custom (デフォルト): from/to で手動指定
@@ -684,7 +663,7 @@ app.get("/api/backtest/calibration", (req, res) => {
 
     if (mode === "compare") {
       // 外部期間(2020-2023): SKIP records + odds_snapshots JOIN で擬似BUY再現
-      const extExtraWhere = b1filter ? B1_FILTER_WHERE_EXT : "";
+      const extExtraWhere = b1filter ? calibrationB1Where(b1RuleId, "os.odds") : "";
       const externalRows = db.prepare(buildCalibrationQueryExternal(extExtraWhere))
         .all(EXTERNAL_FROM, EXTERNAL_TO) as Array<Record<string, unknown>>;
       const insampleRows = db.prepare(buildCalibrationQuery(extraWhere))
@@ -704,7 +683,7 @@ app.get("/api/backtest/calibration", (req, res) => {
               AND dh.selection = '1-2-3'
               AND os.odds >= dh.required_odds
               AND json_extract(op.raw_json, '$.boats[0].className') = 'B1'
-              AND json_extract(op.raw_json, '$.boats[1].className') != 'B1'
+              ${b1RuleId === "legacy-second-not-b1" ? "AND json_extract(op.raw_json, '$.boats[1].className') != 'B1'" : ""}
               AND CAST(json_extract(op.raw_json, '$.boats[0].nationalWinRate') AS REAL) >= 4.0
               AND dh.venue NOT IN ('戸田','多摩川','桐生','三国','江戸川')
               AND CAST(substr(dh.race_id, -2) AS INTEGER) NOT IN (11, 12)
@@ -733,13 +712,14 @@ app.get("/api/backtest/calibration", (req, res) => {
           returned: insampleReturnedStats.returned_count as number,
           pct: insampleReturnedStats.pct as number,
         },
+        b1Rule,
       });
     } else {
       const from = typeof req.query.from === "string" ? req.query.from : INSAMPLE_FROM;
       const to   = typeof req.query.to   === "string" ? req.query.to   : "2099-12-31";
       const rows = db.prepare(buildCalibrationQuery(extraWhere))
         .all(from, to) as Array<Record<string, unknown>>;
-      res.json({ mode: "custom", from, to, b1filter, rows });
+      res.json({ mode: "custom", from, to, b1filter, b1Rule, rows });
     }
   } finally {
     db.close();
@@ -772,6 +752,7 @@ app.get("/api/live/b1-monitor", (_req, res) => {
       WHERE decision = 'BUY'
         AND date >= ?
         AND model_version = ?
+        AND run_kind = 'paper-live'
     `).get(LIVE_FROM, LIVE_MODEL) as Record<string, unknown>;
 
     const n = (summary.n as number) ?? 0;
@@ -823,6 +804,7 @@ app.get("/api/live/b1-monitor", (_req, res) => {
       WHERE decision = 'BUY'
         AND date >= ?
         AND model_version = ?
+        AND run_kind = 'paper-live'
       GROUP BY ym
       ORDER BY ym
     `).all(LIVE_FROM, LIVE_MODEL) as Array<Record<string, unknown>>;
@@ -832,23 +814,24 @@ app.get("/api/live/b1-monitor", (_req, res) => {
       SELECT
         COALESCE(model_version, '(null)') AS model_version,
         source,
+        run_kind,
         COUNT(*) AS n,
         MAX(date) AS latest_date
       FROM decision_history
       WHERE decision = 'BUY' AND date >= ?
-      GROUP BY model_version, source
+      GROUP BY model_version, source, run_kind
       ORDER BY n DESC
     `).all(LIVE_FROM) as Array<Record<string, unknown>>;
 
     const latestLiveDate = (db.prepare(`
       SELECT MAX(date) AS d FROM decision_history
-      WHERE decision = 'BUY' AND date >= ? AND model_version = ?
+      WHERE decision = 'BUY' AND date >= ? AND model_version = ? AND run_kind = 'paper-live'
     `).get(LIVE_FROM, LIVE_MODEL) as { d: string | null }).d;
 
     const decisionCounts = db.prepare(`
       SELECT decision, COUNT(*) AS n, MAX(date) AS latest_date
       FROM decision_history
-      WHERE date >= ? AND model_version = ?
+      WHERE date >= ? AND model_version = ? AND run_kind = 'paper-live'
       GROUP BY decision
       ORDER BY decision
     `).all(LIVE_FROM, LIVE_MODEL) as Array<Record<string, unknown>>;
@@ -856,7 +839,7 @@ app.get("/api/live/b1-monitor", (_req, res) => {
     const latestModelDecisionDate = (db.prepare(`
       SELECT MAX(date) AS d
       FROM decision_history
-      WHERE date >= ? AND model_version = ?
+      WHERE date >= ? AND model_version = ? AND run_kind = 'paper-live'
     `).get(LIVE_FROM, LIVE_MODEL) as { d: string | null }).d;
 
     const latestAnyDecisionDate = (db.prepare(`
@@ -883,7 +866,7 @@ app.get("/api/live/b1-monitor", (_req, res) => {
         SUM(CASE WHEN current_odds IS NULL THEN 1 ELSE 0 END) AS odds_missing,
         SUM(CASE WHEN current_odds IS NOT NULL THEN 1 ELSE 0 END) AS odds_present
       FROM decision_history
-      WHERE date >= ? AND model_version = ? AND decision IN ('WATCH', 'BUY')
+      WHERE date >= ? AND model_version = ? AND run_kind = 'paper-live' AND decision IN ('WATCH', 'BUY')
     `).get(LIVE_FROM, LIVE_MODEL) as { n: number; odds_missing: number; odds_present: number };
 
     const paperDays = db.prepare(`
@@ -893,7 +876,7 @@ app.get("/api/live/b1-monitor", (_req, res) => {
         SUM(CASE WHEN decision = 'WATCH' THEN 1 ELSE 0 END) AS watch_n,
         COUNT(*) AS total_n
       FROM decision_history
-      WHERE date >= ? AND model_version = ?
+      WHERE date >= ? AND model_version = ? AND run_kind = 'paper-live'
       GROUP BY date
       ORDER BY date
     `).all(PAPER_LIVE_START, LIVE_MODEL) as Array<{ date: string; buy_n: number; watch_n: number; total_n: number }>;
@@ -917,8 +900,9 @@ app.get("/api/live/b1-monitor", (_req, res) => {
     for (const row of diagnostics) {
       const mv = row.model_version as string;
       const src = row.source as string;
+      const kind = row.run_kind as string;
       const cnt = row.n as number;
-      if (mv === LIVE_MODEL) {
+      if (mv === LIVE_MODEL && kind === "paper-live") {
         if (!sources.includes(src)) sources.push(src);
       } else if (mv === "(null)") {
         excludedSampleCount += cnt;
@@ -997,7 +981,7 @@ function buildTodayDiagnosis(db: ReturnType<typeof openDb>, settings: BudgetRule
       SUM(CASE WHEN current_odds IS NOT NULL THEN 1 ELSE 0 END) AS odds_present,
       SUM(CASE WHEN decision = 'SKIP' AND current_odds IS NOT NULL AND required_odds IS NOT NULL AND current_odds >= required_odds THEN 1 ELSE 0 END) AS skip_at_or_above_required
     FROM decision_history
-    WHERE date = ? AND model_version = ?
+    WHERE date = ? AND model_version = ? AND run_kind = 'paper-live'
   `).get(date, LIVE_MODEL) as Record<string, unknown>;
 
   const nearRows = db.prepare(`
@@ -1012,6 +996,7 @@ function buildTodayDiagnosis(db: ReturnType<typeof openDb>, settings: BudgetRule
     LEFT JOIN official_programs op ON op.race_id = dh.race_id
     WHERE dh.date = ?
       AND dh.model_version = ?
+      AND dh.run_kind = 'paper-live'
       AND dh.decision = 'WATCH'
       AND dh.current_odds IS NOT NULL
       AND dh.required_odds IS NOT NULL
