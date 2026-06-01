@@ -297,6 +297,32 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
   gap: 14px;
 }
 
+.candidateSummary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 8px 0 14px;
+  border: 1px solid rgba(154, 246, 213, 0.12);
+  border-radius: 8px;
+  background: rgba(154, 246, 213, 0.06);
+  color: #b7d0c8;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.inlineMiniButton {
+  min-height: 30px;
+  border: 1px solid rgba(154, 246, 213, 0.22);
+  border-radius: 8px;
+  background: rgba(154, 246, 213, 0.1);
+  color: #9af6d5;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .card {
   padding: 18px;
   position: relative;

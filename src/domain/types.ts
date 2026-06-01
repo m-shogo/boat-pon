@@ -56,6 +56,7 @@ export type BudgetRule = {
   oddsCalibrationFactors?: OddsCalibrationFactor[];
   programFilter?: ProgramFilterRule;
   classOddsRatioRules?: ClassOddsRatioRule[];
+  venueSignalBandRules?: VenueSignalBandRule[];
   excludedVenues?: string[];
   excludedRaceNos?: number[];
 };
@@ -78,6 +79,13 @@ export type ClassOddsRatioRule = {
   classNames: string[];
   maxOddsRatio?: number;
   minOddsRatio?: number;
+};
+
+export type SignalBand = "S" | "A" | "B";
+
+export type VenueSignalBandRule = {
+  venues: string[];
+  minBand: SignalBand;
 };
 
 export type Decision = {

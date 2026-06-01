@@ -1,4 +1,4 @@
-import type { BetCandidate, BudgetRule, ClassOddsRatioRule, Decision, OddsCalibrationFactor } from "./types";
+import type { BetCandidate, BudgetRule, ClassOddsRatioRule, Decision, OddsCalibrationFactor, SignalBand, VenueSignalBandRule } from "./types";
 
 export const DEFAULT_RULE: BudgetRule = {
   dailyBudgetYen: 1000,
@@ -42,6 +42,9 @@ export const DEFAULT_APP_RULE: BudgetRule = {
   },
   classOddsRatioRules: [
     { classNames: ["B1"], maxOddsRatio: 1.5 },
+  ],
+  venueSignalBandRules: [
+    { venues: ["多摩川", "常滑", "徳山", "桐生"], minBand: "S" },
   ],
 };
 
@@ -155,6 +158,8 @@ export function judgeCandidate(
       }
     }
   }
+  const venueSignalReason = venueSignalBandReason(candidate, rule.venueSignalBandRules, effectiveHitRate, req, ev);
+  if (venueSignalReason) reasons.push(venueSignalReason);
   if (minutes < rule.minMinutesBeforeClose) reasons.push("締切が近すぎる");
   if (rule.excludedVenues?.includes(candidate.venue)) reasons.push(`除外会場(${candidate.venue})`);
   if (rule.excludedRaceNos?.includes(candidate.raceNo)) reasons.push(`除外レース番号(${candidate.raceNo}R)`);
@@ -198,6 +203,49 @@ export function judgeCandidate(
     recommendedAmount: 0,
     reasons: reasons.length ? reasons : ["EVが低い"],
   };
+}
+
+export function candidateSignalBand(
+  candidate: Pick<BetCandidate, "sampleSize" | "currentOdds">,
+  requiredOddsValue: number,
+  ev: number | null,
+): SignalBand {
+  const ratio = candidate.currentOdds != null && requiredOddsValue > 0 && requiredOddsValue < Infinity
+    ? candidate.currentOdds / requiredOddsValue
+    : 0;
+  if (candidate.sampleSize >= 100 && ((ev ?? 0) >= 1.25 || ratio >= 1.5)) return "S";
+  if (candidate.sampleSize >= 50 && ((ev ?? 0) >= 1.1 || ratio >= 1.2)) return "A";
+  return "B";
+}
+
+function venueSignalBandReason(
+  candidate: BetCandidate,
+  rules: VenueSignalBandRule[] | undefined,
+  effectiveHitRate: number,
+  requiredOddsValue: number,
+  ev: number | null,
+): string | null {
+  if (!rules?.length) return null;
+  const rule = rules.find((row) => row.venues.includes(candidate.venue));
+  if (!rule) return null;
+  const band = candidateSignalBand(candidate, requiredOddsValue, ev);
+  if (signalBandRank(band) >= signalBandRank(rule.minBand)) return null;
+  const ratio = candidate.currentOdds != null && requiredOddsValue > 0 && requiredOddsValue < Infinity
+    ? candidate.currentOdds / requiredOddsValue
+    : null;
+  const detail = [
+    `sample=${candidate.sampleSize}`,
+    `EV=${ev == null ? "-" : ev.toFixed(2)}`,
+    `ratio=${ratio == null ? "-" : ratio.toFixed(2)}`,
+    `p=${(effectiveHitRate * 100).toFixed(1)}%`,
+  ].join(" / ");
+  return `${candidate.venue}は${rule.minBand}帯のみBUY候補(現在${band}帯: ${detail})`;
+}
+
+function signalBandRank(band: SignalBand) {
+  if (band === "S") return 3;
+  if (band === "A") return 2;
+  return 1;
 }
 
 function programFilterReasons(candidate: BetCandidate, rule: BudgetRule): string[] {

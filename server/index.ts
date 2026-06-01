@@ -15,6 +15,7 @@ import { compareModelVariants } from "../src/domain/modelComparison";
 import { mergeOddsMaps } from "../src/domain/oddsSnapshot";
 import {
   createNotificationIfNeeded,
+  countOddsSnapshots,
   deletePushSubscription,
   getDataCoverage,
   getManualOdds,
@@ -48,6 +49,7 @@ import { isWithinOddsFetchWindow, shouldPersistDecisionHistory } from "../src/do
 import type { BudgetRule } from "../src/domain/types";
 
 const ODDS_FETCH_WINDOW_MINUTES = 30;
+const CANDIDATE_CACHE_TTL_MS = 15_000;
 
 const VAPID_PUBLIC = process.env.BOAT_PON_VAPID_PUBLIC_KEY;
 const VAPID_PRIVATE = process.env.BOAT_PON_VAPID_PRIVATE_KEY;
@@ -152,6 +154,17 @@ function validateBudgetRule(settings: BudgetRule): string | null {
       }
     }
   }
+  if (settings.venueSignalBandRules != null) {
+    if (!Array.isArray(settings.venueSignalBandRules)) return "venueSignalBandRules must be an array";
+    for (const r of settings.venueSignalBandRules) {
+      if (!Array.isArray(r.venues) || r.venues.some((v: unknown) => typeof v !== "string")) {
+        return "venueSignalBandRules[].venues must be a string array";
+      }
+      if (!["S", "A", "B"].includes(String(r.minBand))) {
+        return "venueSignalBandRules[].minBand must be S, A, or B";
+      }
+    }
+  }
   if (settings.minRequiredOdds != null && (!Number.isFinite(settings.minRequiredOdds) || settings.minRequiredOdds <= 0)) {
     return "minRequiredOdds must be positive";
   }
@@ -173,6 +186,80 @@ function validateBudgetRule(settings: BudgetRule): string | null {
 const app = express();
 app.use(express.json());
 
+type BuiltCandidateRow = ReturnType<typeof buildCandidateRows>[number];
+type CandidateCacheEntry = {
+  createdAt: number;
+  date: string;
+  settingsKey: string;
+  rows: BuiltCandidateRow[];
+};
+
+let candidateCache: CandidateCacheEntry | null = null;
+
+function candidateSettingsKey(settings: BudgetRule) {
+  return JSON.stringify(settings);
+}
+
+function invalidateCandidateCache() {
+  candidateCache = null;
+}
+
+function buildRowsForDate(db: ReturnType<typeof openDb>, settings: BudgetRule, date: string) {
+  const settingsKey = candidateSettingsKey(settings);
+  const nowMs = Date.now();
+  if (
+    candidateCache &&
+    candidateCache.date === date &&
+    candidateCache.settingsKey === settingsKey &&
+    nowMs - candidateCache.createdAt <= CANDIDATE_CACHE_TTL_MS
+  ) {
+    return candidateCache.rows;
+  }
+
+  const oddsByRaceId = mergeOddsMaps(getManualOdds(db), listOddsSnapshots(db));
+  const rows = buildCandidateRows(
+    settings,
+    new Date(),
+    oddsByRaceId,
+    listProgramInputs(db, date).map((row) => ({
+      date: row.date,
+      venue: row.venue,
+      raceNo: row.raceNo,
+      closeAt: row.closeAt,
+      raceCategory: row.raceCategory,
+      features: row.features,
+    })),
+    listResultsForModelRange(db, addDaysJst(date, -180), date),
+    listEarlyOddsSnapshots(db),
+    listAllOddsBySelection(db),
+  );
+  candidateCache = { createdAt: nowMs, date, settingsKey, rows };
+  return rows;
+}
+
+function candidateCounts(rows: BuiltCandidateRow[]) {
+  return {
+    total: rows.length,
+    buy: rows.filter((row) => row.decision.status === "BUY").length,
+    watch: rows.filter((row) => row.decision.status === "WATCH").length,
+    skip: rows.filter((row) => row.decision.status === "SKIP").length,
+  };
+}
+
+function selectDashboardRows(rows: BuiltCandidateRow[]) {
+  const buyRows = rows.filter((row) => row.decision.status === "BUY");
+  const watchRows = rows.filter((row) => row.decision.status === "WATCH");
+  if (buyRows.length + watchRows.length > 0) return [...buyRows, ...watchRows.slice(0, 24)];
+  return rows.slice(0, 24);
+}
+
+function explainRows(rows: BuiltCandidateRow[], settings: BudgetRule) {
+  return rows.map((row) => ({
+    ...row,
+    explanation: explainDecision(row.candidate, row.decision, settings),
+  }));
+}
+
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true });
 });
@@ -192,23 +279,7 @@ app.get("/api/dashboard", (req, res) => {
     const settings = getSettings(db);
     const date = typeof req.query.date === "string" ? req.query.date : todayJst();
     const persistDashboardHistory = date < LIVE_MONITOR_FROM || date === todayJst();
-    const oddsByRaceId = mergeOddsMaps(getManualOdds(db), listOddsSnapshots(db));
-    const rows = buildCandidateRows(
-      settings,
-      new Date(),
-      oddsByRaceId,
-      listProgramInputs(db, date).map((row) => ({
-        date: row.date,
-        venue: row.venue,
-        raceNo: row.raceNo,
-        closeAt: row.closeAt,
-        raceCategory: row.raceCategory,
-        features: row.features,
-      })),
-      listResultsForModelRange(db, addDaysJst(date, -180), date),
-      listEarlyOddsSnapshots(db),
-      listAllOddsBySelection(db),
-    );
+    const rows = buildRowsForDate(db, settings, date);
     const freshPushPayloads: Array<{ title: string; body: string; url: string }> = [];
     for (const row of rows) {
       if (!persistDashboardHistory || row.candidate.source === "sample") continue;
@@ -225,12 +296,10 @@ app.get("/api/dashboard", (req, res) => {
       }
     }
 
-    const explainedRows = rows.map((row) => ({
-      ...row,
-      explanation: explainDecision(row.candidate, row.decision, settings),
-    }));
+    const counts = candidateCounts(rows);
+    const explainedRows = explainRows(selectDashboardRows(rows), settings);
     const buyRows = rows.filter((row) => row.decision.status === "BUY");
-    const dashboardOddsSnapshots = rows.flatMap((row) => listOddsSnapshots(db, row.candidate.raceId));
+    const oddsSnapshotCount = countOddsSnapshots(db);
     const history = listDecisionHistory(db);
     const rawPrograms = listOfficialProgramsRaw(db, date);
     const closeAtByRaceId = new Map(rawPrograms.map((row) => [row.raceId, row.closeAt]));
@@ -242,10 +311,12 @@ app.get("/api/dashboard", (req, res) => {
         ? "BUY条件を満たした候補のみ通知対象です。購入前に公式オッズで最終確認してください。"
         : "EV 1.25以上の候補なし。買わない日として成功扱いです。",
       rows: explainedRows,
+      candidateRowCount: counts.total,
+      decisionCounts: counts,
       date,
       results: listResults(db, date),
       notifications: listNotifications(db),
-      history,
+      history: [],
       backtest: {
         ...summarizeHistory(history, settings.minSampleSize),
         overvaluation: analyzeOvervaluation(history),
@@ -267,7 +338,36 @@ app.get("/api/dashboard", (req, res) => {
       rollingDrift: summarizeRollingDrift(history, settings.minSampleSize),
       modelVersion: getModelVersionInfo(),
       skipReasons: summarizeSkipReasons(history, settings),
-      oddsSnapshots: dashboardOddsSnapshots,
+      oddsSnapshotCount,
+      oddsSnapshots: [],
+    });
+  } finally {
+    db.close();
+  }
+});
+
+app.get("/api/candidates", (req, res) => {
+  const db = openDb();
+  try {
+    const settings = getSettings(db);
+    const date = typeof req.query.date === "string" ? req.query.date : todayJst();
+    const limitParam = Number(req.query.limit ?? 100);
+    const offsetParam = Number(req.query.offset ?? 0);
+    const limit = Number.isFinite(limitParam) ? Math.min(Math.max(Math.trunc(limitParam), 1), 300) : 100;
+    const offset = Number.isFinite(offsetParam) ? Math.max(Math.trunc(offsetParam), 0) : 0;
+    const statuses = typeof req.query.status === "string"
+      ? new Set(req.query.status.split(",").map((status) => status.trim().toUpperCase()).filter(Boolean))
+      : null;
+    const rows = buildRowsForDate(db, settings, date)
+      .filter((row) => !statuses || statuses.has(row.decision.status));
+    const pageRows = rows.slice(offset, offset + limit);
+    res.json({
+      date,
+      offset,
+      limit,
+      total: rows.length,
+      decisionCounts: candidateCounts(rows),
+      rows: explainRows(pageRows, settings),
     });
   } finally {
     db.close();
@@ -289,7 +389,14 @@ app.get("/api/history", (_req, res) => {
   try {
     const settings = getSettings(db);
     const history = listDecisionHistory(db);
-    res.json({ rows: history, summary: summarizeHistory(history, settings.minSampleSize) });
+    res.json({
+      rows: history,
+      summary: summarizeHistory(history, settings.minSampleSize),
+      backtest: {
+        ...summarizeHistory(history, settings.minSampleSize),
+        overvaluation: analyzeOvervaluation(history),
+      },
+    });
   } finally {
     db.close();
   }
@@ -1003,6 +1110,7 @@ app.put("/api/settings", (req, res) => {
       return;
     }
     setSettings(db, next);
+    invalidateCandidateCache();
     res.json(next);
   } finally {
     db.close();
@@ -1025,6 +1133,7 @@ app.post("/api/import/official-local", (req, res) => {
       insertOfficialProgram(db, { raceId, date, venue, raceNo, closeAt, sourceFile, raw });
       imported += 1;
     }
+    if (imported > 0) invalidateCandidateCache();
     res.json({ imported });
   } finally {
     db.close();
@@ -1039,6 +1148,7 @@ app.post("/api/import/reparse-kyotei24", async (req, res) => {
   }
   const { parseSavedKyotei24 } = await import("../scripts/import-kyotei24");
   const result = await parseSavedKyotei24(date);
+  invalidateCandidateCache();
   res.json(result);
 });
 
@@ -1067,6 +1177,7 @@ app.put("/api/odds/:raceId", (req, res) => {
   const db = openDb();
   try {
     setManualOdds(db, req.params.raceId, odds);
+    invalidateCandidateCache();
     res.json({ raceId: req.params.raceId, odds });
   } finally {
     db.close();
@@ -1101,6 +1212,7 @@ app.post("/api/odds/fetch", async (req, res) => {
 
     type OddsResult = { raceId: string; odds: number | null; status: string; error?: string };
     const results: OddsResult[] = [];
+    let persistedOdds = false;
     for (const row of rows) {
       const { candidate } = row;
       if (requestedIds && !requestedIds.includes(candidate.raceId)) continue;
@@ -1126,6 +1238,7 @@ app.post("/api/odds/fetch", async (req, res) => {
           continue;
         }
         setOdds(db, candidate.raceId, odds, "official", candidate.selection.join("-"));
+        persistedOdds = true;
         results.push({
           raceId: candidate.raceId,
           odds,
@@ -1140,6 +1253,7 @@ app.post("/api/odds/fetch", async (req, res) => {
         });
       }
     }
+    if (persistedOdds) invalidateCandidateCache();
     res.json({ results });
   } finally {
     db.close();

@@ -51,7 +51,12 @@ export function buildVenueModel(results: RaceResult[], minVenueRaceCount = 1, al
     if (!result.trifecta || result.returned) continue;
     const selection = parseSelection(result.trifecta);
     if (!selection) continue;
-    byVenue.set(result.venue, [...(byVenue.get(result.venue) ?? []), result]);
+    const venueResults = byVenue.get(result.venue);
+    if (venueResults) {
+      venueResults.push(result);
+    } else {
+      byVenue.set(result.venue, [result]);
+    }
   }
 
   return [...byVenue.entries()].flatMap(([venue, venueResults]) => {
@@ -129,13 +134,23 @@ export function buildCandidatesFromModel(
   manualOdds = new Map<string, number>(),
   allOdds = new Map<string, number>(),
 ): BetCandidate[] {
+  const modelByVenue = new Map<string, CandidateModelSummary[]>();
+  for (const row of model) {
+    const venueRows = modelByVenue.get(row.venue);
+    if (venueRows) {
+      venueRows.push(row);
+    } else {
+      modelByVenue.set(row.venue, [row]);
+    }
+  }
+
   // allOdds にオッズが存在するレースIDの集合を事前構築（O(n)）
   const raceIdsWithOdds = allOdds.size > 0
     ? new Set([...allOdds.keys()].map((k) => k.slice(0, k.indexOf("/"))))
     : new Set<string>();
 
   return inputs.flatMap((input) => {
-    const venueRows = model.filter((row) => row.venue === input.venue);
+    const venueRows = modelByVenue.get(input.venue) ?? [];
     if (venueRows.length === 0) return [];
     const raceId = `${input.date.replaceAll("-", "")}-${input.venue}-${String(input.raceNo).padStart(2, "0")}`;
 

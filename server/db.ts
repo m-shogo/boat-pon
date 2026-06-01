@@ -237,7 +237,10 @@ CREATE INDEX IF NOT EXISTS idx_official_programs_venue ON official_programs (ven
 CREATE INDEX IF NOT EXISTS idx_decision_history_date ON decision_history (date);
 CREATE INDEX IF NOT EXISTS idx_decision_history_venue ON decision_history (venue);
 CREATE INDEX IF NOT EXISTS idx_decision_history_decision ON decision_history (decision);
+CREATE INDEX IF NOT EXISTS idx_decision_history_race_selection ON decision_history (race_id, selection);
 CREATE INDEX IF NOT EXISTS idx_odds_snapshots_race ON odds_snapshots (race_id, captured_at);
+CREATE INDEX IF NOT EXISTS idx_odds_snapshots_race_selection_final
+ON odds_snapshots (race_id, selection, is_final_like, captured_at);
 `);
 
   // venue表記揺れの正規化（旧「琵琶湖」→新「びわこ」）。冪等。race_idも更新する。
@@ -401,6 +404,11 @@ ORDER BY captured_at DESC, id DESC
     capturedAt: String(row.captured_at),
     isFinalLike: Boolean(row.is_final_like),
   }));
+}
+
+export function countOddsSnapshots(db: DatabaseSync): number {
+  const row = db.prepare("SELECT COUNT(*) AS count FROM odds_snapshots").get() as { count: number };
+  return Number(row.count);
 }
 
 export function listResults(db: DatabaseSync, date?: string): RaceResult[] {

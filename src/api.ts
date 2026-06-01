@@ -24,6 +24,8 @@ export type DashboardResponse = {
   headline: string;
   headlineSub: string;
   rows: CandidateRow[];
+  candidateRowCount?: number;
+  decisionCounts?: { total: number; buy: number; watch: number; skip: number };
   results: RaceResult[];
   notifications: NotificationRecord[];
   date: string | null;
@@ -40,6 +42,22 @@ export type DashboardResponse = {
   modelVersion: ModelVersionInfo;
   skipReasons: SkipReasonSummary[];
   oddsSnapshots: OddsSnapshot[];
+  oddsSnapshotCount?: number;
+};
+
+export type CandidateRowsResponse = {
+  date: string;
+  offset: number;
+  limit: number;
+  total: number;
+  decisionCounts: { total: number; buy: number; watch: number; skip: number };
+  rows: CandidateRow[];
+};
+
+export type HistoryResponse = {
+  rows: DecisionHistoryRow[];
+  summary: BacktestSummary;
+  backtest: BacktestSummary;
 };
 
 export type NotificationRecord = {
@@ -58,6 +76,29 @@ export async function getDashboard(date?: string): Promise<DashboardResponse> {
   const qs = date ? `?date=${encodeURIComponent(date)}` : "";
   const res = await fetch(`/api/dashboard${qs}`);
   if (!res.ok) throw new Error(`dashboard api failed: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchCandidateRowsApi(params: {
+  date?: string;
+  status?: Array<"BUY" | "WATCH" | "SKIP">;
+  limit?: number;
+  offset?: number;
+}): Promise<CandidateRowsResponse> {
+  const qs = new URLSearchParams();
+  if (params.date) qs.set("date", params.date);
+  if (params.status?.length) qs.set("status", params.status.join(","));
+  if (params.limit != null) qs.set("limit", String(params.limit));
+  if (params.offset != null) qs.set("offset", String(params.offset));
+  const suffix = qs.toString() ? `?${qs.toString()}` : "";
+  const res = await fetch(`/api/candidates${suffix}`);
+  if (!res.ok) throw new Error(`candidates api failed: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchHistoryApi(): Promise<HistoryResponse> {
+  const res = await fetch("/api/history");
+  if (!res.ok) throw new Error(`history api failed: ${res.status}`);
   return res.json();
 }
 

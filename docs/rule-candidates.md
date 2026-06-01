@@ -290,3 +290,24 @@ npm run report:data-coverage -- --json
 - `❌ MISSING` — 未実装。`docs/data-roadmap.md` で優先度と設計方針を確認してから着手
 
 各項目の詳細（目的・保存カラム・注意点）は [`docs/data-roadmap.md`](data-roadmap.md) を参照。
+
+## 2026-05-31 auto candidate review
+
+### Source
+
+- period: 2026-05-02..2026-05-31
+- generatedAt: 2026-05-31T13:00:06.602Z
+- BUY: 47
+- settledBUY: 44
+- hits: 2
+- ROI: 0.748
+
+### Rule suggestions
+
+| rule | status | evidence | action | next_check |
+|---|---|---|---|---|
+| 多摩川 はS条件のみ通知候補。A/Bは通知対象外に寄せる。 | adopted | report:monthly | `venueSignalBandRules` で実装 | next weekly |
+| 常滑 はS条件のみ通知候補。A/Bは通知対象外に寄せる。 | adopted | report:monthly | `venueSignalBandRules` で実装 | next weekly |
+| 徳山 はS条件のみ通知候補。A/Bは通知対象外に寄せる。 | adopted | report:monthly | `venueSignalBandRules` で実装 | next weekly |
+| 桐生 はS条件のみ通知候補。A/Bは通知対象外に寄せる。 | adopted | report:monthly | `venueSignalBandRules` で実装 | next weekly |
+| S帯が弱い。S条件の過学習、オッズ閾値、sample_size条件を再確認する。 | watch | report:monthly | 追加観察 | next weekly |

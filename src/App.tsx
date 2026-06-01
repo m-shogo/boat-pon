@@ -2,8 +2,10 @@ import { Activity, Bell, CheckCircle2, Database, ExternalLink, HelpCircle, Histo
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   compareModelsApi,
+  fetchCandidateRowsApi,
   fetchCalibrationApi,
   fetchLiveB1Monitor,
+  fetchHistoryApi,
   fetchOdds,
   fetchVapidPublicKey,
   getDashboard,
@@ -24,6 +26,7 @@ import {
   type LiveMonitorResponse,
   type TodayDiagnosis,
   type DashboardResponse,
+  type HistoryResponse,
   type ModelComparisonRow,
   type OddsFetchResult,
   type WalkForwardResponse,
@@ -49,6 +52,9 @@ export default function App() {
   const [liveMonitorError, setLiveMonitorError] = useState<string | null>(null);
   const [liveMonitorLoading, setLiveMonitorLoading] = useState(true);
   const [liveMonitorLastUpdated, setLiveMonitorLastUpdated] = useState<Date | null>(null);
+  const [historyData, setHistoryData] = useState<HistoryResponse | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const [guideOpen, setGuideOpen] = useState(() => localStorage.getItem("boatpon.guide.done") !== "1");
 
   async function notifyUser(title: string, body: string) {
@@ -63,6 +69,8 @@ export default function App() {
     setLoading(true);
     setError(null);
     setData(null);
+    setHistoryData(null);
+    setHistoryError(null);
     try {
       setData(await getDashboard(date));
     } catch (err) {
@@ -75,6 +83,16 @@ export default function App() {
   useEffect(() => {
     void refresh();
   }, [date]);
+
+  useEffect(() => {
+    if (screen !== "history" || !data || historyData || historyLoading) return;
+    setHistoryLoading(true);
+    setHistoryError(null);
+    fetchHistoryApi()
+      .then(setHistoryData)
+      .catch((err) => setHistoryError(err instanceof Error ? err.message : String(err)))
+      .finally(() => setHistoryLoading(false));
+  }, [screen, data, historyData, historyLoading]);
 
   const refreshLiveMonitor = useCallback(async () => {
     setLiveMonitorLoading(true);
@@ -97,8 +115,8 @@ export default function App() {
   }, [refreshLiveMonitor]);
 
   const buyRows = data?.rows.filter((row) => row.decision.status === "BUY") ?? [];
-  const watchRows = data?.rows.filter((row) => row.decision.status === "WATCH") ?? [];
-  const skipRows = data?.rows.filter((row) => row.decision.status === "SKIP") ?? [];
+  const watchRows = data?.decisionCounts?.watch ?? data?.rows.filter((row) => row.decision.status === "WATCH").length ?? 0;
+  const skipRows = data?.decisionCounts?.skip ?? data?.rows.filter((row) => row.decision.status === "SKIP").length ?? 0;
   const totalPlanned = buyRows.reduce((sum, row) => sum + row.decision.recommendedAmount, 0);
   const noBetDays = data?.monthly.daysActive
     ? Math.round((data.monthly.noBuyDays / data.monthly.daysActive) * 100)
@@ -176,8 +194,8 @@ export default function App() {
 
             <section className="metrics" aria-label="today summary">
               <Metric icon={<Bell size={18} />} label="BUY候補" value={buyRows.length.toString()} />
-              <Metric icon={<Activity size={18} />} label="WATCH" value={watchRows.length.toString()} />
-              <Metric icon={<Database size={18} />} label="SKIP" value={skipRows.length.toString()} />
+              <Metric icon={<Activity size={18} />} label="WATCH" value={watchRows.toString()} />
+              <Metric icon={<Database size={18} />} label="SKIP" value={skipRows.toString()} />
               <Metric label="購入予定額" value={`${totalPlanned.toLocaleString()}円`} />
               <Metric label="本日の最大損失" value={`${data.settings.dailyBudgetYen.toLocaleString()}円`} />
               <Metric label="累計節約額" value={`${data.savings.savedLossYen.toLocaleString()}円`} />
@@ -197,7 +215,9 @@ export default function App() {
             {screen === "dashboard" && <ProgramStats data={data} />}
             {screen === "dashboard" && <OfficialImport onImported={refresh} date={date} />}
             {screen === "results" && <Results data={data} />}
-            {screen === "history" && <Backtest data={data} onSaved={refresh} />}
+            {screen === "history" && historyLoading && <div className="loading">バックテスト履歴を読み込み中...</div>}
+            {screen === "history" && historyError && <div className="formError">{historyError}</div>}
+            {screen === "history" && historyData && <Backtest data={{ ...data, history: historyData.rows, backtest: historyData.backtest }} onSaved={refresh} />}
             {screen === "settings" && <SettingsScreen settings={data.settings} onSaved={refresh} />}
           </>
         )}
@@ -587,6 +607,17 @@ function Dashboard({
   const [oddsBusy, setOddsBusy] = useState(false);
   const [oddsLog, setOddsLog] = useState<OddsFetchResult[]>([]);
   const [autoFetch, setAutoFetch] = useState(false);
+  const [detailRows, setDetailRows] = useState<DashboardResponse["rows"]>([]);
+  const [detailBusy, setDetailBusy] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const candidateRows = detailRows.length > 0 ? detailRows : data.rows;
+  const totalCandidateRows = data.candidateRowCount ?? data.rows.length;
+  const hiddenCandidateCount = Math.max(0, totalCandidateRows - candidateRows.length);
+
+  useEffect(() => {
+    setDetailRows([]);
+    setDetailError(null);
+  }, [data.date]);
 
   async function runFetchOdds(raceIds?: string[]) {
     setOddsBusy(true);
@@ -603,6 +634,24 @@ function Dashboard({
       }]);
     } finally {
       setOddsBusy(false);
+    }
+  }
+
+  async function loadMoreCandidates() {
+    setDetailBusy(true);
+    setDetailError(null);
+    try {
+      const result = await fetchCandidateRowsApi({
+        date: data.date ?? undefined,
+        status: ["BUY", "WATCH", "SKIP"],
+        limit: 100,
+        offset: detailRows.length,
+      });
+      setDetailRows((current) => [...current, ...result.rows]);
+    } catch (err) {
+      setDetailError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setDetailBusy(false);
     }
   }
 
@@ -645,9 +694,18 @@ function Dashboard({
             ))}
           </div>
         )}
+        {hiddenCandidateCount > 0 && (
+          <div className="candidateSummary">
+            {hiddenCandidateCount.toLocaleString()}件は詳細カードを省略中。上部の件数、Paper Live監視、見送り理由ランキングで確認できます。
+            <button className="inlineMiniButton" disabled={detailBusy} onClick={() => void loadMoreCandidates()}>
+              {detailBusy ? "読み込み中..." : "候補詳細を100件追加"}
+            </button>
+          </div>
+        )}
+        {detailError && <div className="formError">{detailError}</div>}
         <div className="candidateGrid">
-          {data.rows.map(({ candidate, decision, officialUrl, explanation }) => (
-            <article className={`card ${decision.status.toLowerCase()}`} key={candidate.raceId}>
+          {candidateRows.map(({ candidate, decision, officialUrl, explanation }) => (
+            <article className={`card ${decision.status.toLowerCase()}`} key={`${candidate.raceId}/${candidate.selection.join("-")}`}>
               <div className="cardTop">
                 <div>
                   <h4>{candidate.venue} {candidate.raceNo}R</h4>
@@ -842,6 +900,8 @@ function Results({ data }: { data: DashboardResponse }) {
 function Backtest({ data, onSaved }: { data: DashboardResponse; onSaved: () => Promise<void> }) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const selectedRows = selectedDate ? data.history.filter((row) => row.date === selectedDate) : [];
+  const purchaseRows = data.history.slice(0, 100);
+  const hiddenPurchaseRows = Math.max(0, data.history.length - purchaseRows.length);
   return (
     <section className="section">
       <div className="sectionHead">
@@ -935,7 +995,10 @@ function Backtest({ data, onSaved }: { data: DashboardResponse; onSaved: () => P
 
       <div className="sectionSub">
         <h3>購入記録</h3>
-        <p>実際に買ったかどうかだけ手動で残します。購入処理はしません。</p>
+        <p>
+          実際に買ったかどうかだけ手動で残します。購入処理はしません。
+          {hiddenPurchaseRows > 0 && ` 最新100件のみ表示中（残り${hiddenPurchaseRows.toLocaleString()}件はCSV exportで確認）。`}
+        </p>
       </div>
       <div className="tableWrap">
         <table>
@@ -950,7 +1013,7 @@ function Backtest({ data, onSaved }: { data: DashboardResponse; onSaved: () => P
             </tr>
           </thead>
           <tbody>
-            {data.history.map((row) => (
+            {purchaseRows.map((row) => (
               <tr key={row.id}>
                 <td>{row.date}</td>
                 <td>{row.venue}</td>
@@ -1548,6 +1611,10 @@ function SettingsScreen({ settings, onSaved }: { settings: BudgetRule; onSaved: 
       ...rule,
       classNames: [...rule.classNames],
     })),
+    venueSignalBandRules: PAPER_LIVE_VALIDATION_RULE.venueSignalBandRules?.map((rule) => ({
+      ...rule,
+      venues: [...rule.venues],
+    })),
     excludedVenues: PAPER_LIVE_VALIDATION_RULE.excludedVenues
       ? [...PAPER_LIVE_VALIDATION_RULE.excludedVenues]
       : undefined,
@@ -1800,6 +1867,10 @@ function validateSettings(settings: BudgetRule): string | null {
   if (settings.minRequiredOdds != null && settings.maxRequiredOdds != null && settings.minRequiredOdds >= settings.maxRequiredOdds) return "必要オッズ下限は上限より小さい値にしてください";
   if (settings.excludedVenues != null && !Array.isArray(settings.excludedVenues)) return "除外会場の設定が不正です";
   if (settings.excludedRaceNos != null && (!Array.isArray(settings.excludedRaceNos) || settings.excludedRaceNos.some((v) => !Number.isInteger(v) || v < 1 || v > 12))) return "除外レース番号は1〜12の整数配列にしてください";
+  if (settings.venueSignalBandRules != null) {
+    if (!Array.isArray(settings.venueSignalBandRules)) return "会場別シグナル帯ルールの設定が不正です";
+    if (settings.venueSignalBandRules.some((rule) => !Array.isArray(rule.venues) || !["S", "A", "B"].includes(rule.minBand))) return "会場別シグナル帯ルールはS/A/Bで指定してください";
+  }
   return null;
 }
 
@@ -1982,7 +2053,7 @@ function ModelHealthPanel({ data }: { data: DashboardResponse }) {
       <MiniRoiTable title="番組カテゴリ別ROI" rows={data.categoryStats.rows} />
       <div className="modelInfoCard">
         <span>オッズ履歴</span>
-        <strong>{data.oddsSnapshots.length.toLocaleString()}件</strong>
+        <strong>{(data.oddsSnapshotCount ?? data.oddsSnapshots.length).toLocaleString()}件</strong>
         <p>手動・公式取得のオッズを履歴化。今後の過去オッズ補完も同じ器に入れます。</p>
       </div>
     </section>

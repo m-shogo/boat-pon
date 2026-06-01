@@ -355,3 +355,38 @@ test("classOddsRatioRulesは対象外クラスには適用しない", () => {
   }, { now: new Date("2026-05-21T18:00:00+09:00") });
   assert.equal(decision.status, "BUY");
 });
+
+test("venueSignalBandRulesは指定会場のA/B帯BUYを通知対象外に落とす", () => {
+  const candidate: BetCandidate = {
+    ...base,
+    venue: "常滑",
+    sampleSize: 80,
+    estimatedHitRate: 0.04,
+    currentOdds: 35,
+  };
+  const decision = judgeCandidate(candidate, {
+    ...DEFAULT_RULE,
+    minSampleSize: 1,
+    targetEv: 1,
+    venueSignalBandRules: [{ venues: ["常滑"], minBand: "S" }],
+  }, { now: new Date("2026-05-21T18:00:00+09:00") });
+  assert.equal(decision.status, "SKIP");
+  assert.ok(decision.reasons.some((r) => r.includes("常滑はS帯のみBUY候補")));
+});
+
+test("venueSignalBandRulesは指定会場でもS帯ならBUYを許可する", () => {
+  const candidate: BetCandidate = {
+    ...base,
+    venue: "常滑",
+    sampleSize: 120,
+    estimatedHitRate: 0.04,
+    currentOdds: 35,
+  };
+  const decision = judgeCandidate(candidate, {
+    ...DEFAULT_RULE,
+    minSampleSize: 1,
+    targetEv: 1,
+    venueSignalBandRules: [{ venues: ["常滑"], minBand: "S" }],
+  }, { now: new Date("2026-05-21T18:00:00+09:00") });
+  assert.equal(decision.status, "BUY");
+});
