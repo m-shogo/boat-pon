@@ -164,15 +164,25 @@ function buildDataCoverage(db: DatabaseSync) {
   const exhibition = tableExists(db, "exhibition_data")
     ? count(db, "SELECT COUNT(*) AS value FROM exhibition_data WHERE exhibition_time IS NOT NULL")
     : 0;
-  const tilt = tableExists(db, "official_programs") && (columnExists(db, "official_programs", "tilt_angle") || columnExists(db, "official_programs", "tilt"));
+  const equipment = tableExists(db, "race_equipment")
+    ? count(db, "SELECT COUNT(*) AS value FROM race_equipment")
+    : 0;
+  const tilt = tableExists(db, "race_equipment")
+    ? count(db, "SELECT COUNT(*) AS value FROM race_equipment WHERE tilt_angle IS NOT NULL")
+    : 0;
+  const parts = tableExists(db, "race_equipment")
+    ? count(db, "SELECT COUNT(*) AS value FROM race_equipment WHERE parts_changed_count > 0 OR propeller_changed = 1")
+    : 0;
   return {
     weather: statusByCount(weather, 10_000),
     exhibition: statusByCount(exhibition, 10_000),
-    tiltParts: tilt ? "PARTIAL" : "MISSING",
+    tiltParts: statusByCount(equipment, 10_000),
     detail: {
       weatherRows: weather,
       exhibitionRows: exhibition,
-      tiltColumnPresent: tilt,
+      equipmentRows: equipment,
+      tiltRows: tilt,
+      partsChangedRows: parts,
     },
   };
 }
@@ -213,8 +223,8 @@ function buildAlerts(
   if (dataCoverage.exhibition !== "OK") {
     alerts.push({ severity: "warning", code: "coverage.exhibition_partial", message: `展示タイムデータは ${dataCoverage.exhibition} です。`, action: "npm run report:data-coverage" });
   }
-  if (dataCoverage.tiltParts === "MISSING") {
-    alerts.push({ severity: "warning", code: "coverage.tilt_parts_missing", message: "チルト・部品交換データは未実装です。", action: "docs/data-roadmap.md を確認" });
+  if (dataCoverage.tiltParts !== "OK") {
+    alerts.push({ severity: "warning", code: "coverage.tilt_parts_partial", message: `チルト・部品交換データは ${dataCoverage.tiltParts} です。`, action: "npm run report:data-coverage" });
   }
 
   if (alerts.length === 0) {

@@ -146,6 +146,17 @@ CREATE TABLE IF NOT EXISTS race_weather (
   fetched_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS race_equipment (
+  race_id TEXT NOT NULL,
+  course INTEGER NOT NULL,
+  tilt_angle REAL,
+  propeller_changed INTEGER NOT NULL DEFAULT 0,
+  parts_changed TEXT NOT NULL DEFAULT '[]',
+  parts_changed_count INTEGER NOT NULL DEFAULT 0,
+  fetched_at TEXT NOT NULL,
+  PRIMARY KEY (race_id, course)
+);
+
 CREATE TABLE IF NOT EXISTS racer_course_stats (
   registration_no TEXT NOT NULL,
   course INTEGER NOT NULL,
@@ -241,6 +252,7 @@ CREATE INDEX IF NOT EXISTS idx_decision_history_race_selection ON decision_histo
 CREATE INDEX IF NOT EXISTS idx_odds_snapshots_race ON odds_snapshots (race_id, captured_at);
 CREATE INDEX IF NOT EXISTS idx_odds_snapshots_race_selection_final
 ON odds_snapshots (race_id, selection, is_final_like, captured_at);
+CREATE INDEX IF NOT EXISTS idx_race_equipment_race ON race_equipment (race_id);
 `);
 
   // venue表記揺れの正規化（旧「琵琶湖」→新「びわこ」）。冪等。race_idも更新する。
@@ -937,6 +949,14 @@ export type ExhibitionEntry = {
   ranking: number | null;
 };
 
+export type RaceEquipmentEntry = {
+  course: number;
+  tiltAngle: number | null;
+  propellerChanged: boolean;
+  partsChanged: string[];
+  partsChangedCount: number;
+};
+
 export function upsertExhibitionData(db: DatabaseSync, raceId: string, entries: ExhibitionEntry[], fetchedAt: string): void {
   for (const entry of entries) {
     db.prepare(`
@@ -963,6 +983,38 @@ ORDER BY course
     exhibitionTime: row.exhibition_time == null ? null : Number(row.exhibition_time),
     startTiming: row.start_timing == null ? null : Number(row.start_timing),
     ranking: row.ranking == null ? null : Number(row.ranking),
+  }));
+}
+
+export function upsertRaceEquipment(db: DatabaseSync, raceId: string, entries: RaceEquipmentEntry[], fetchedAt: string): void {
+  for (const entry of entries) {
+    const partsChanged = JSON.stringify(entry.partsChanged);
+    db.prepare(`
+INSERT INTO race_equipment (race_id, course, tilt_angle, propeller_changed, parts_changed, parts_changed_count, fetched_at)
+VALUES (?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(race_id, course) DO UPDATE SET
+  tilt_angle = excluded.tilt_angle,
+  propeller_changed = excluded.propeller_changed,
+  parts_changed = excluded.parts_changed,
+  parts_changed_count = excluded.parts_changed_count,
+  fetched_at = excluded.fetched_at
+`).run(raceId, entry.course, entry.tiltAngle, entry.propellerChanged ? 1 : 0, partsChanged, entry.partsChangedCount, fetchedAt);
+  }
+}
+
+export function getRaceEquipment(db: DatabaseSync, raceId: string): RaceEquipmentEntry[] {
+  const rows = db.prepare(`
+SELECT course, tilt_angle, propeller_changed, parts_changed, parts_changed_count
+FROM race_equipment
+WHERE race_id = ?
+ORDER BY course
+`).all(raceId) as Array<Record<string, unknown>>;
+  return rows.map((row) => ({
+    course: Number(row.course),
+    tiltAngle: row.tilt_angle == null ? null : Number(row.tilt_angle),
+    propellerChanged: Boolean(row.propeller_changed),
+    partsChanged: parsePartsChanged(row.parts_changed),
+    partsChangedCount: Number(row.parts_changed_count ?? 0),
   }));
 }
 
@@ -1071,6 +1123,18 @@ export function hasExhibitionData(db: DatabaseSync, raceId: string): boolean {
   return row != null;
 }
 
+export function hasBeforeInfoData(db: DatabaseSync, raceId: string): boolean {
+  const row = db.prepare(`
+SELECT 1
+FROM exhibition_data e
+WHERE e.race_id = ?
+  AND EXISTS (SELECT 1 FROM race_weather w WHERE w.race_id = e.race_id)
+  AND EXISTS (SELECT 1 FROM race_equipment q WHERE q.race_id = e.race_id)
+LIMIT 1
+`).get(raceId);
+  return row != null;
+}
+
 export function getRacerCourseStatsFetchedAt(db: DatabaseSync, registrationNo: string): string | null {
   const row = db.prepare(`
 SELECT MAX(fetched_at) as fetched_at FROM racer_course_stats WHERE registration_no = ?
@@ -1148,4 +1212,14 @@ FROM race_weather
       shortenedLaps: Boolean(row.shortened_laps),
     } satisfies RaceEnvironment,
   ]));
+}
+
+function parsePartsChanged(value: unknown): string[] {
+  if (value == null) return [];
+  try {
+    const parsed = JSON.parse(String(value));
+    return Array.isArray(parsed) ? parsed.map((part) => String(part)) : [];
+  } catch {
+    return String(value).split(/[、,\s/]+/).map((part) => part.trim()).filter(Boolean);
+  }
 }

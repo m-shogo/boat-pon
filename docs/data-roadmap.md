@@ -61,8 +61,8 @@ boat-pon が予測精度向上のために収集・利用したいデータの�
 | **保存テーブル** | `race_weather` |
 | **保存カラム** | `race_id`, `weather`（天候文字列）, `wind_speed_mps`, `wave_height_cm`, `temperature_c`, `water_temperature_c`, `stable_plate`（安定板フラグ）, `shortened_laps`（周回短縮フラグ） |
 | **利用タイミング** | 展示情報（beforeinfo）取得時に同時収集。BUY候補の `environment_risk_level` 判定に使う |
-| **現在の状態** | ⚠️ PARTIAL — `race_weather` は47件のみ。2026年ライブ分のみ蓄積中 |
-| **注意点** | `scripts/fetch-exhibition.ts` が天候も同時取得する設計だが、自動実行スクリプトへの組み込みが未完。外部サイトへのポーリングは最低10分間隔を守ること |
+| **現在の状態** | ⚠️ PARTIAL — `race_weather` は2026年ライブ分を蓄積中 |
+| **注意点** | `scripts/fetch-exhibition.ts` / `scripts/auto-fetch-exhibition.ts` が公式直前情報（beforeinfo）から展示・天候・装備を同時取得する。外部サイトへのポーリングは最低10分間隔を守ること |
 
 ---
 
@@ -75,7 +75,7 @@ boat-pon が予測精度向上のために収集・利用したいデータの�
 | **保存テーブル** | `exhibition_data` |
 | **保存カラム** | `race_id`, `course`（1〜6コース）, `exhibition_time`（秒）, `start_timing`（ST秒）, `ranking`（展示順位）, `fetched_at` |
 | **利用タイミング** | 締切30〜15分前に取得し `featureAdjustmentForSelection` 内の `exhibitionST` 補正に使う |
-| **現在の状態** | ⚠️ PARTIAL — 665件のみ。2026年ライブ分の一部のみ収集。自動取得スクリプト(`auto-fetch-exhibition.ts`)が稼働中だが網羅率低い |
+| **現在の状態** | ⚠️ PARTIAL — 2026年ライブ分の一部のみ収集。自動取得スクリプト(`auto-fetch-exhibition.ts`)が稼働中だが網羅率改善中 |
 | **注意点** | `exhibition_st_residual_sum` は `decision_history` に保存済みだがテスト期間(2025)は未収集。有効性の歴史検証不可 |
 
 ---
@@ -86,11 +86,11 @@ boat-pon が予測精度向上のために収集・利用したいデータの�
 |------|------|
 | **目的** | チルト角（エンジン推進力に影響）・モーター部品交換（整備効果）を把握し、当日コンディションの突発変化を捉える |
 | **重要度** | ★ 低〜中（理論的には有効だが、モーター成績(top2rate)で代替できる部分が多い） |
-| **保存テーブル** | **なし（未実装）** |
-| **保存カラム** | 案: `tilt_angle` (REAL), `part_changed` (TEXT, 例: "キャブレター,電気系"), `part_changed_count` (INTEGER) |
-| **利用タイミング** | 番組取得時（直前情報ページ）に同時収集できれば理想 |
-| **現在の状態** | ❌ MISSING — 専用テーブル・カラムなし |
-| **注意点** | 公式直前情報ページ（beforeinfo）から取得可能だが、チルトはレース直前まで変更されることがある。収集タイミングが重要。外部サイトへの追加アクセスが発生するため導入前にアクセス頻度を確認すること |
+| **保存テーブル** | `race_equipment` |
+| **保存カラム** | `race_id`, `course`, `tilt_angle`, `propeller_changed`, `parts_changed`（JSON配列）, `parts_changed_count`, `fetched_at` |
+| **利用タイミング** | 公式直前情報（beforeinfo）取得時に展示・天候と同時収集する |
+| **現在の状態** | ⚠️ PARTIAL — テーブルと取得処理は実装済み。2026年ライブ分をこれから蓄積 |
+| **注意点** | チルトはレース直前まで変更されることがある。まずは特徴量として蓄積し、n=300到達までは自動ルール採用しない |
 
 ---
 
@@ -117,5 +117,5 @@ boat-pon が予測精度向上のために収集・利用したいデータの�
 | 3 | オッズ比（派生） | ✅ OK | — | 現状維持 |
 | 4 | 天候・風・波 | ⚠️ PARTIAL | ★★ | auto-fetch-exhibition の安定稼働 |
 | 5 | 展示タイム | ⚠️ PARTIAL | ★★ | 同上 |
-| 6 | チルト・部品交換 | ❌ MISSING | ★ | テーブル設計→n=300以降に判断 |
+| 6 | チルト・部品交換 | ⚠️ PARTIAL | ★ | beforeinfo取得で蓄積→n=300以降に判断 |
 | 7 | モーター/ボート成績 | ⚠️ PARTIAL | ★ | 専用テーブル化は将来課題 |

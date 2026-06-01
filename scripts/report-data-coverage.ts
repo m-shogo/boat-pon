@@ -239,18 +239,23 @@ function buildReport(db: DatabaseSync | null): CoverageItem[] {
   // 6. チルト・部品交換
   {
     let status: Status = "MISSING";
-    let detail = "専用テーブル・カラムなし（未実装）。docs/data-roadmap.md 参照";
-    const n: number | null = null;
-    const tables: string[] = [];
+    let detail = "race_equipment テーブルなし";
+    let n: number | null = null;
+    const tables: string[] = ["race_equipment"];
 
-    // official_programs に tilt カラムがあれば PARTIAL
-    if (db && tableExists(db, "official_programs")) {
-      const hasTilt = columnExists(db, "official_programs", "tilt_angle")
-        || columnExists(db, "official_programs", "tilt");
-      if (hasTilt) {
+    if (db && tableExists(db, "race_equipment")) {
+      const total = countSql(db, "SELECT COUNT(*) AS n FROM race_equipment");
+      const tiltN = countSql(db, "SELECT COUNT(*) AS n FROM race_equipment WHERE tilt_angle IS NOT NULL");
+      const partsN = countSql(db, "SELECT COUNT(*) AS n FROM race_equipment WHERE parts_changed_count > 0 OR propeller_changed = 1");
+      n = total;
+      if (total > 10000 && tiltN > 10000) {
+        status = "OK";
+        detail = `race_equipment ${total.toLocaleString()}件（チルト ${tiltN.toLocaleString()}件 / 部品・プロペラ交換 ${partsN.toLocaleString()}件）`;
+      } else if (total > 0) {
         status = "PARTIAL";
-        detail = "official_programs に tilt カラムあり";
-        tables.push("official_programs");
+        detail = `race_equipment ${total}件（チルト ${tiltN}件 / 部品・プロペラ交換 ${partsN}件）。beforeinfo取得の蓄積が必要`;
+      } else {
+        detail = "race_equipment は空";
       }
     }
 

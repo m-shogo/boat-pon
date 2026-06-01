@@ -42,7 +42,7 @@ try {
 
 function buildReport(db: DatabaseSync) {
   const checks: Check[] = [];
-  const tables = ["race_results", "official_programs", "decision_history", "odds_snapshots", "racer_profiles", "racer_course_stats"];
+  const tables = ["race_results", "official_programs", "decision_history", "odds_snapshots", "racer_profiles", "racer_course_stats", "race_weather", "exhibition_data", "race_equipment"];
   for (const table of tables) {
     if (!tableExists(db, table)) {
       checks.push({ id: `table.${table}`, severity: table === "race_results" ? "error" : "warning", message: `${table} table is missing`, action: "Run npm run db:init" });
@@ -58,6 +58,9 @@ function buildReport(db: DatabaseSync) {
   freshness(db, checks, "odds_snapshots", "captured_at", false, 2, 7);
   freshness(db, checks, "racer_profiles", "fetched_at", false, 14, 45);
   freshness(db, checks, "racer_course_stats", "fetched_at", false, 14, 45);
+  freshness(db, checks, "race_weather", "fetched_at", false, 2, 14);
+  freshness(db, checks, "exhibition_data", "fetched_at", false, 2, 14);
+  freshness(db, checks, "race_equipment", "fetched_at", false, 2, 14);
 
   if (tableExists(db, "racer_profiles")) {
     const n = count(db, "SELECT COUNT(*) AS value FROM racer_profiles");
