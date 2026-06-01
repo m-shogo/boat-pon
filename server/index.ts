@@ -246,6 +246,98 @@ function candidateCounts(rows: BuiltCandidateRow[]) {
   };
 }
 
+function pctNumber(num: number, denom: number) {
+  if (denom === 0) return null;
+  return Math.round((num / denom) * 1000) / 10;
+}
+
+function getScalarCount(db: ReturnType<typeof openDb>, sql: string, ...params: Array<string | number>) {
+  const row = db.prepare(sql).get(...params) as { value: number | bigint | null } | undefined;
+  return Number(row?.value ?? 0);
+}
+
+function tableExists(db: ReturnType<typeof openDb>, table: string) {
+  return db.prepare("SELECT 1 AS value FROM sqlite_master WHERE type='table' AND name=?").get(table) != null;
+}
+
+function buildBeforeInfoCoverage(db: ReturnType<typeof openDb>, date: string) {
+  const hasExhibition = tableExists(db, "exhibition_data");
+  const hasWeather = tableExists(db, "race_weather");
+  const hasEquipment = tableExists(db, "race_equipment");
+  const totalRaces = getScalarCount(db, "SELECT COUNT(*) AS value FROM official_programs WHERE date = ?", date);
+  if (totalRaces === 0) {
+    return {
+      totalRaces: 0,
+      exhibitionRaces: 0,
+      weatherRaces: 0,
+      equipmentRaces: 0,
+      fullRaces: 0,
+      exhibitionPct: null,
+      weatherPct: null,
+      equipmentPct: null,
+      fullPct: null,
+      watchBuyRaces: 0,
+      watchBuyFullRaces: 0,
+      watchBuyFullPct: null,
+    };
+  }
+  const exhibitionRaces = hasExhibition ? getScalarCount(db, `
+    SELECT COUNT(DISTINCT e.race_id) AS value
+    FROM exhibition_data e
+    JOIN official_programs p ON p.race_id = e.race_id
+    WHERE p.date = ?
+  `, date) : 0;
+  const weatherRaces = hasWeather ? getScalarCount(db, `
+    SELECT COUNT(DISTINCT w.race_id) AS value
+    FROM race_weather w
+    JOIN official_programs p ON p.race_id = w.race_id
+    WHERE p.date = ?
+  `, date) : 0;
+  const equipmentRaces = hasEquipment ? getScalarCount(db, `
+    SELECT COUNT(DISTINCT q.race_id) AS value
+    FROM race_equipment q
+    JOIN official_programs p ON p.race_id = q.race_id
+    WHERE p.date = ?
+  `, date) : 0;
+  const canMeasureFullCoverage = hasExhibition && hasWeather && hasEquipment;
+  const fullRaces = canMeasureFullCoverage ? getScalarCount(db, `
+    SELECT COUNT(*) AS value
+    FROM official_programs p
+    WHERE p.date = ?
+      AND EXISTS (SELECT 1 FROM exhibition_data e WHERE e.race_id = p.race_id)
+      AND EXISTS (SELECT 1 FROM race_weather w WHERE w.race_id = p.race_id)
+      AND EXISTS (SELECT 1 FROM race_equipment q WHERE q.race_id = p.race_id)
+  `, date) : 0;
+  const watchBuyRaces = tableExists(db, "decision_history") ? getScalarCount(db, `
+    SELECT COUNT(DISTINCT race_id) AS value
+    FROM decision_history
+    WHERE date = ? AND model_version = ? AND decision IN ('WATCH', 'BUY')
+  `, date, LIVE_MONITOR_MODEL_VERSION) : 0;
+  const watchBuyFullRaces = watchBuyRaces > 0 && canMeasureFullCoverage ? getScalarCount(db, `
+    SELECT COUNT(DISTINCT dh.race_id) AS value
+    FROM decision_history dh
+    WHERE dh.date = ? AND dh.model_version = ? AND dh.decision IN ('WATCH', 'BUY')
+      AND EXISTS (SELECT 1 FROM exhibition_data e WHERE e.race_id = dh.race_id)
+      AND EXISTS (SELECT 1 FROM race_weather w WHERE w.race_id = dh.race_id)
+      AND EXISTS (SELECT 1 FROM race_equipment q WHERE q.race_id = dh.race_id)
+  `, date, LIVE_MONITOR_MODEL_VERSION) : 0;
+
+  return {
+    totalRaces,
+    exhibitionRaces,
+    weatherRaces,
+    equipmentRaces,
+    fullRaces,
+    exhibitionPct: pctNumber(exhibitionRaces, totalRaces),
+    weatherPct: pctNumber(weatherRaces, totalRaces),
+    equipmentPct: pctNumber(equipmentRaces, totalRaces),
+    fullPct: pctNumber(fullRaces, totalRaces),
+    watchBuyRaces,
+    watchBuyFullRaces,
+    watchBuyFullPct: pctNumber(watchBuyFullRaces, watchBuyRaces),
+  };
+}
+
 function selectDashboardRows(rows: BuiltCandidateRow[]) {
   const buyRows = rows.filter((row) => row.decision.status === "BUY");
   const watchRows = rows.filter((row) => row.decision.status === "WATCH");
@@ -338,6 +430,7 @@ app.get("/api/dashboard", (req, res) => {
       rollingDrift: summarizeRollingDrift(history, settings.minSampleSize),
       modelVersion: getModelVersionInfo(),
       skipReasons: summarizeSkipReasons(history, settings),
+      beforeInfoCoverage: buildBeforeInfoCoverage(db, date),
       oddsSnapshotCount,
       oddsSnapshots: [],
     });

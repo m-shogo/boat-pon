@@ -191,6 +191,7 @@ export default function App() {
                 onRefresh={() => void refreshLiveMonitor()}
               />
             )}
+            {screen === "dashboard" && <DataReadinessPanel data={data} />}
 
             <section className="metrics" aria-label="today summary">
               <Metric icon={<Bell size={18} />} label="BUY候補" value={buyRows.length.toString()} />
@@ -228,6 +229,62 @@ export default function App() {
       </main>
     </div>
   );
+}
+
+function DataReadinessPanel({ data }: { data: DashboardResponse }) {
+  const coverage = data.beforeInfoCoverage;
+  if (!coverage) return null;
+  const watchBuyLabel = coverage.watchBuyRaces === 0
+    ? "WATCH/BUY対象なし"
+    : `${coverage.watchBuyFullRaces}/${coverage.watchBuyRaces}件`;
+  const fullLevel = readinessLevel(coverage.fullPct);
+  const watchBuyLevel = coverage.watchBuyRaces === 0 ? "ok" : readinessLevel(coverage.watchBuyFullPct);
+  return (
+    <section className="section dataReadinessPanel">
+      <div className="sectionHead">
+        <div>
+          <h3>データ準備状況</h3>
+          <p>プロ視点では、BUY判断の前に今日の入力データが揃っているかを確認します。</p>
+        </div>
+      </div>
+      <div className="readinessGrid">
+        <ReadinessMetric label="直前情報フル取得" value={`${coverage.fullRaces}/${coverage.totalRaces}件`} pct={coverage.fullPct} level={fullLevel} />
+        <ReadinessMetric label="展示" value={`${coverage.exhibitionRaces}件`} pct={coverage.exhibitionPct} level={readinessLevel(coverage.exhibitionPct)} />
+        <ReadinessMetric label="天候/風/波" value={`${coverage.weatherRaces}件`} pct={coverage.weatherPct} level={readinessLevel(coverage.weatherPct)} />
+        <ReadinessMetric label="チルト/部品" value={`${coverage.equipmentRaces}件`} pct={coverage.equipmentPct} level={readinessLevel(coverage.equipmentPct)} />
+        <ReadinessMetric label="WATCH/BUY対象" value={watchBuyLabel} pct={coverage.watchBuyFullPct} level={watchBuyLevel} />
+      </div>
+      <div className="personaNotes">
+        <span>勝負師: BUYを増やすより悪いBUYを消す</span>
+        <span>データ担当: 取得率が低い日は判断保留</span>
+        <span>資金管理: WATCHは購入導線にしない</span>
+      </div>
+    </section>
+  );
+}
+
+function ReadinessMetric({
+  label, value, pct, level,
+}: {
+  label: string;
+  value: string;
+  pct: number | null;
+  level: "ok" | "warn" | "danger";
+}) {
+  return (
+    <div className={`readinessMetric ${level}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+      <em>{pct == null ? "n/a" : `${pct.toFixed(1)}%`}</em>
+    </div>
+  );
+}
+
+function readinessLevel(pct: number | null): "ok" | "warn" | "danger" {
+  if (pct == null) return "ok";
+  if (pct >= 80) return "ok";
+  if (pct >= 30) return "warn";
+  return "danger";
 }
 
 function LiveMonitorSummaryPanel({
@@ -761,7 +818,7 @@ function Dashboard({
                   公式オッズ取得
                 </button>
                 <a className="officialLink" href={officialUrl} target="_blank" rel="noopener noreferrer">
-                  公式で確認して購入 <ExternalLink size={15} />
+                  {decision.status === "BUY" ? "公式で確認して購入" : "公式で確認"} <ExternalLink size={15} />
                 </a>
               </div>
             </article>

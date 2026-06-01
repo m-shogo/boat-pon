@@ -43,6 +43,22 @@ export type DashboardResponse = {
   skipReasons: SkipReasonSummary[];
   oddsSnapshots: OddsSnapshot[];
   oddsSnapshotCount?: number;
+  beforeInfoCoverage?: BeforeInfoCoverage;
+};
+
+export type BeforeInfoCoverage = {
+  totalRaces: number;
+  exhibitionRaces: number;
+  weatherRaces: number;
+  equipmentRaces: number;
+  fullRaces: number;
+  exhibitionPct: number | null;
+  weatherPct: number | null;
+  equipmentPct: number | null;
+  fullPct: number | null;
+  watchBuyRaces: number;
+  watchBuyFullRaces: number;
+  watchBuyFullPct: number | null;
 };
 
 export type CandidateRowsResponse = {

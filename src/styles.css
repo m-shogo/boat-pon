@@ -291,6 +291,60 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
 .liveAlert.warn { border-color: rgba(242, 181, 74, 0.24); }
 .liveAlert.critical { border-color: rgba(255, 138, 138, 0.25); }
 
+.dataReadinessPanel {
+  border: 1px solid rgba(154, 246, 213, 0.14);
+  border-radius: 8px;
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.028);
+}
+.readinessGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+.readinessMetric {
+  border: 1px solid rgba(154, 246, 213, 0.12);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.035);
+}
+.readinessMetric span {
+  display: block;
+  color: #86a69c;
+  font-size: 12px;
+}
+.readinessMetric strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 18px;
+}
+.readinessMetric em {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  font-style: normal;
+}
+.readinessMetric.ok { border-color: rgba(124, 225, 195, 0.24); }
+.readinessMetric.ok em { color: #7ce1c3; }
+.readinessMetric.warn { border-color: rgba(242, 181, 74, 0.26); }
+.readinessMetric.warn em { color: #f2b54a; }
+.readinessMetric.danger { border-color: rgba(255, 138, 138, 0.28); }
+.readinessMetric.danger em { color: #ffb4b4; }
+.personaNotes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.personaNotes span {
+  border-radius: 999px;
+  background: rgba(154, 246, 213, 0.07);
+  color: #b9d7ce;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
 .candidateGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
