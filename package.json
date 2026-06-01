@@ -27,6 +27,7 @@
     "evaluate:v4": "tsx scripts/evaluate-v4-conservative.ts",
     "db:health": "tsx scripts/check-db-health.ts",
     "validate:data": "tsx scripts/validate-data.ts",
+    "report:daily": "tsx scripts/report-daily.ts",
     "report:quality": "tsx scripts/report-quality.ts",
     "report:weekly": "tsx scripts/report-quality.ts --days 7",
     "report:monthly": "tsx scripts/report-quality.ts --days 30",

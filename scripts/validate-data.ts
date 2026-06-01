@@ -55,6 +55,9 @@ function buildReport(db: DatabaseSync) {
   freshness(db, checks, "race_results", "date", true);
   freshness(db, checks, "official_programs", "date", false);
   freshness(db, checks, "decision_history", "date", false);
+  freshness(db, checks, "odds_snapshots", "captured_at", false, 2, 7);
+  freshness(db, checks, "racer_profiles", "fetched_at", false, 14, 45);
+  freshness(db, checks, "racer_course_stats", "fetched_at", false, 14, 45);
 
   if (tableExists(db, "racer_profiles")) {
     const n = count(db, "SELECT COUNT(*) AS value FROM racer_profiles");
@@ -65,6 +68,7 @@ function buildReport(db: DatabaseSync) {
     const full6 = count(db, "SELECT COUNT(*) AS value FROM (SELECT registration_no FROM racer_course_stats GROUP BY registration_no HAVING COUNT(DISTINCT course) >= 6)");
     checks.push({ id: "coverage.course_stats", severity: racers >= 120 ? "ok" : "warning", message: `course stats racers=${racers} full6=${full6}`, action: racers >= 120 ? undefined : "Backfill racer course stats" });
   }
+  latestProgramRacerCoverage(db, checks);
 
   if (tableExists(db, "decision_history")) {
     const buy = count(db, "SELECT COUNT(*) AS value FROM decision_history WHERE decision='BUY'");
@@ -84,15 +88,67 @@ function buildReport(db: DatabaseSync) {
   return { generatedAt: new Date().toISOString(), dbPath: DB_PATH, ok: errorCount === 0, errorCount, warningCount, checks };
 }
 
-function freshness(db: DatabaseSync, checks: Check[], table: string, column: string, missingIsError: boolean) {
-  if (!tableExists(db, table)) return;
+function freshness(db: DatabaseSync, checks: Check[], table: string, column: string, missingIsError: boolean, warningDays = 14, errorDays = 45) {
+  if (!tableExists(db, table) || !columnExists(db, table, column)) return;
   const latest = text(db, `SELECT MAX(${column}) AS value FROM ${table}`)?.slice(0, 10) ?? null;
   if (!latest) {
     checks.push({ id: `freshness.${table}`, severity: missingIsError ? "error" : "warning", message: `${table} latest date is missing`, action: "Check import flow" });
     return;
   }
   const ageDays = daysBetween(latest, todayTokyo());
-  checks.push({ id: `freshness.${table}`, severity: ageDays > 45 ? "error" : ageDays > 14 || ageDays < 0 ? "warning" : "ok", message: `${table} latest=${latest} ageDays=${ageDays}`, action: ageDays > 14 || ageDays < 0 ? "Check fetch job, sleep, or LaunchAgent" : undefined });
+  checks.push({ id: `freshness.${table}`, severity: ageDays > errorDays ? "error" : ageDays > warningDays || ageDays < 0 ? "warning" : "ok", message: `${table} latest=${latest} ageDays=${ageDays}`, action: ageDays > warningDays || ageDays < 0 ? "Check fetch job, sleep, or LaunchAgent" : undefined });
+}
+
+function latestProgramRacerCoverage(db: DatabaseSync, checks: Check[]) {
+  if (!tableExists(db, "official_programs")) return;
+  const latest = text(db, "SELECT MAX(date) AS value FROM official_programs");
+  if (!latest) return;
+  const total = count(db, `
+    SELECT COUNT(DISTINCT json_extract(boat.value, '$.registrationNo')) AS value
+    FROM official_programs, json_each(json_extract(raw_json, '$.boats')) AS boat
+    WHERE date = ?
+      AND json_extract(boat.value, '$.registrationNo') IS NOT NULL
+  `, latest);
+  if (total === 0) {
+    checks.push({ id: "coverage.latest_program_racers", severity: "warning", message: `latest program racers: 0 (${latest})`, action: "Run npm run fetch:official-programs" });
+    return;
+  }
+
+  const courseStats = tableExists(db, "racer_course_stats")
+    ? count(db, `
+      SELECT COUNT(DISTINCT registration_no) AS value
+      FROM racer_course_stats
+      WHERE registration_no IN (
+        SELECT DISTINCT json_extract(boat.value, '$.registrationNo')
+        FROM official_programs, json_each(json_extract(raw_json, '$.boats')) AS boat
+        WHERE date = ?
+          AND json_extract(boat.value, '$.registrationNo') IS NOT NULL
+      )
+    `, latest)
+    : 0;
+  const profiles = tableExists(db, "racer_profiles")
+    ? count(db, `
+      SELECT COUNT(DISTINCT registration_no) AS value
+      FROM racer_profiles
+      WHERE flying_count IS NOT NULL
+        AND registration_no IN (
+          SELECT DISTINCT json_extract(boat.value, '$.registrationNo')
+          FROM official_programs, json_each(json_extract(raw_json, '$.boats')) AS boat
+          WHERE date = ?
+            AND json_extract(boat.value, '$.registrationNo') IS NOT NULL
+        )
+    `, latest)
+    : 0;
+
+  const coursePct = pct(courseStats, total);
+  const profilePct = pct(profiles, total);
+  const severity: Severity = coursePct >= 98 && profilePct >= 98 ? "ok" : coursePct >= 95 && profilePct >= 95 ? "warning" : "error";
+  checks.push({
+    id: "coverage.latest_program_racers",
+    severity,
+    message: `latest=${latest} racers=${total} courseStats=${courseStats} (${coursePct.toFixed(1)}%) profiles=${profiles} (${profilePct.toFixed(1)}%)`,
+    action: severity === "ok" ? undefined : "Run npm run fetch:racer-stats:dry",
+  });
 }
 
 function buildNextCommands(checks: Check[]) {
@@ -119,6 +175,11 @@ function buildNextCommands(checks: Check[]) {
     if (check.id === "coverage.racer_profiles" || check.id === "coverage.course_stats") {
       commands.add("npm run fetch:racer-stats:dry");
       commands.add("npm run stats:racer-coverage");
+    }
+
+    if (check.id === "coverage.latest_program_racers") {
+      commands.add("npm run fetch:racer-stats:dry");
+      commands.add("npm run report:daily");
     }
 
     if (check.id === "decision.volume") {
@@ -166,13 +227,20 @@ function printReport(report: ReturnType<typeof buildReport> & { nextCommands: st
 function tableExists(db: DatabaseSync, table: string) {
   return db.prepare("SELECT 1 AS value FROM sqlite_master WHERE type='table' AND name=?").get(table) != null;
 }
-function count(db: DatabaseSync, sql: string) {
-  const row = db.prepare(sql).get() as CountRow | undefined;
+function columnExists(db: DatabaseSync, table: string, column: string) {
+  return (db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>).some((row) => row.name === column);
+}
+function count(db: DatabaseSync, sql: string, ...params: Array<string | number | null>) {
+  const row = db.prepare(sql).get(...params) as CountRow | undefined;
   return Number(row?.value ?? 0);
 }
 function text(db: DatabaseSync, sql: string) {
   const row = db.prepare(sql).get() as TextRow | undefined;
   return row?.value ?? null;
+}
+function pct(num: number, denom: number) {
+  if (denom === 0) return 0;
+  return Math.round((num / denom) * 1000) / 10;
 }
 function todayTokyo() {
   return new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());

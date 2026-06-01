@@ -99,15 +99,17 @@ npx tsx scripts/fetch-official-odds.ts YYYY-MM-DD 蒲郡 8
 
 ```sh
 npm run status:brief
+npm run report:daily
 npm run validate:data
 npm run decision:dry-run
 ```
 
 - `status:brief`: 今日の監視状態と次に取るべき操作を短く確認する。
+- `report:daily`: 番組、オッズ、判定、選手データ鮮度、今日の選手カバレッジ、未実装データを1コマンドで確認する。`--json` と `--date YYYY-MM-DD` に対応する。
 - `validate:data`: DB、主要テーブル、データ鮮度、選手成績カバレッジ、BUY行の欠損を確認する。
 - `decision:dry-run`: 実通知を送らず、今日の候補を `send` / `watch` / `skip` に分けて理由を見る。
 
-BUY候補が少ない日は異常扱いしない。まず `status:brief` の `action:` を優先し、必要な時だけ詳細を見る。
+BUY候補が少ない日は異常扱いしない。まず `status:brief` の `action:` と `report:daily` の `Alerts` を優先し、必要な時だけ詳細を見る。
 
 ### 週次・月次の検証
 
