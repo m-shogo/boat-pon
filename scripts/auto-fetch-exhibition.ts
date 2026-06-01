@@ -39,6 +39,14 @@ function todayJst() {
   return new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
 }
 
+function log(message: string) {
+  console.log(`[${new Date().toISOString()}] ${message}`);
+}
+
+function logError(message: string, detail: unknown) {
+  console.error(`[${new Date().toISOString()}] ${message}`, detail);
+}
+
 async function fetchHtml(url: string): Promise<string> {
   const res = await fetch(url, {
     headers: { "user-agent": "BoatPon/0.1 personal low-frequency fetch" },
@@ -70,7 +78,7 @@ try {
     if (!jcd) { skipped += 1; continue; }
 
     if (dryRun) {
-      console.log(`[dry-run] beforeinfo: ${program.raceId} closeIn=${minutesUntilClose}m`);
+      log(`[dry-run] beforeinfo: ${program.raceId} closeIn=${minutesUntilClose}m`);
       fetched += 1;
       continue;
     }
@@ -87,19 +95,19 @@ try {
         upsertExhibitionData(db, program.raceId, entries, fetchedAt);
         if (weather) upsertRaceWeather(db, program.raceId, weather, fetchedAt);
         upsertRaceEquipment(db, program.raceId, equipment, fetchedAt);
-        console.log(`beforeinfo: ${program.raceId} entries=${entries.length} equipment=${equipment.length} closeIn=${minutesUntilClose}m${weather ? ` wind=${weather.windSpeedMps ?? "-"}m/s wave=${weather.waveHeightCm ?? "-"}cm` : ""}`);
+        log(`beforeinfo: ${program.raceId} entries=${entries.length} equipment=${equipment.length} closeIn=${minutesUntilClose}m${weather ? ` wind=${weather.windSpeedMps ?? "-"}m/s wave=${weather.waveHeightCm ?? "-"}cm` : ""}`);
         fetched += 1;
       } else {
-        console.log(`beforeinfo-empty: ${program.raceId} closeIn=${minutesUntilClose}m`);
+        log(`beforeinfo-empty: ${program.raceId} closeIn=${minutesUntilClose}m`);
         skipped += 1;
       }
     } catch (err) {
-      console.error(`beforeinfo-error: ${program.raceId} closeIn=${minutesUntilClose}m`, err instanceof Error ? err.message : err);
+      logError(`beforeinfo-error: ${program.raceId} closeIn=${minutesUntilClose}m`, err instanceof Error ? err.message : err);
       failed += 1;
     }
   }
 
-  console.log(`auto-fetch-exhibition done: fetched=${fetched} skipped=${skipped} tooEarly=${tooEarly} tooLate=${tooLate} failed=${failed} dryRun=${dryRun}`);
+  log(`auto-fetch-exhibition done: fetched=${fetched} skipped=${skipped} tooEarly=${tooEarly} tooLate=${tooLate} failed=${failed} dryRun=${dryRun}`);
 } finally {
   db.close();
 }

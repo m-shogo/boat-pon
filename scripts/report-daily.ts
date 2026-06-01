@@ -186,18 +186,25 @@ function buildLogDiagnostics(date: string) {
 
 function summarizeLog(path: string, date: string, errorOnly: boolean) {
   const normalizedDate = date.replaceAll("-", "");
-  if (!existsSync(path)) return { path, exists: false, total: 0, byKind: {}, latest: null as string | null };
+  if (!existsSync(path)) return { path, exists: false, total: 0, activeTotal: 0, legacyTotal: 0, byKind: {}, latest: null as string | null };
   const lines = readFileSync(path, "utf8").split(/\r?\n/).filter((line) => line.includes(normalizedDate));
   const selected = errorOnly ? lines.filter((line) => /error|failed|HTTP|usage/i.test(line)) : lines;
   const byKind: Record<string, number> = {};
+  let activeTotal = 0;
+  let legacyTotal = 0;
   for (const line of selected) {
     const kind = classifyLogLine(line);
     byKind[kind] = (byKind[kind] ?? 0) + 1;
+    if (kind.startsWith("legacy_")) legacyTotal += 1;
+    else activeTotal += 1;
   }
-  return { path, exists: true, total: selected.length, byKind, latest: selected.at(-1) ?? null };
+  return { path, exists: true, total: selected.length, activeTotal, legacyTotal, byKind, latest: selected.at(-1) ?? null };
 }
 
 function classifyLogLine(line: string) {
+  const isTimestamped = /^\[\d{4}-\d{2}-\d{2}T/.test(line);
+  if (!isTimestamped && /exhibition-error:/.test(line)) return "legacy_fetch_failed";
+  if (!isTimestamped && /usage:/.test(line)) return "legacy_usage";
   if (/beforeinfo-empty|exhibition-empty/.test(line)) return "empty";
   if (/HTTP\s+404|404/.test(line)) return "http_404";
   if (/HTTP\s+403|403/.test(line)) return "http_403";
@@ -341,8 +348,8 @@ function buildAlerts(
   if (beforeInfoCoverage.watchBuyRaces > 0 && (beforeInfoCoverage.watchBuyFullPct ?? 0) < 98) {
     alerts.push({ severity: "warning", code: "coverage.beforeinfo_watch_buy", message: `WATCH/BUY対象の直前情報フル取得率が ${formatPct(beforeInfoCoverage.watchBuyFullPct)} です。`, action: "npm run auto:odds" });
   }
-  if (logDiagnostics.autoExhibition.errorLog.total > 0) {
-    alerts.push({ severity: "warning", code: "logs.auto_exhibition_errors", message: `auto-exhibition error log に今日の失敗が ${logDiagnostics.autoExhibition.errorLog.total} 件あります。`, action: "npm run readiness" });
+  if (logDiagnostics.autoExhibition.errorLog.activeTotal > 0) {
+    alerts.push({ severity: "warning", code: "logs.auto_exhibition_errors", message: `auto-exhibition error log に今日の新形式の失敗が ${logDiagnostics.autoExhibition.errorLog.activeTotal} 件あります。`, action: "npm run readiness" });
   }
   if (dataCoverage.weather !== "OK") {
     alerts.push({ severity: "warning", code: "coverage.weather_partial", message: `天候・風・波データは ${dataCoverage.weather} です。`, action: "npm run report:data-coverage" });
@@ -421,7 +428,7 @@ function printReport(report: ReturnType<typeof buildReport>) {
   console.log(`  racers=${report.racerCoverage.total} courseStats=${report.racerCoverage.courseStats} (${formatPct(report.racerCoverage.courseStatsPct)}) profiles=${report.racerCoverage.profiles} (${formatPct(report.racerCoverage.profilesPct)})`);
   console.log(`  beforeInfo full=${report.beforeInfoCoverage.fullRaces}/${report.beforeInfoCoverage.totalRaces} (${formatPct(report.beforeInfoCoverage.fullPct)}) exhibition=${formatPct(report.beforeInfoCoverage.exhibitionPct)} weather=${formatPct(report.beforeInfoCoverage.weatherPct)} equipment=${formatPct(report.beforeInfoCoverage.equipmentPct)}`);
   console.log(`  beforeInfo WATCH/BUY=${report.beforeInfoCoverage.watchBuyFullRaces}/${report.beforeInfoCoverage.watchBuyRaces} (${formatPct(report.beforeInfoCoverage.watchBuyFullPct)})`);
-  console.log(`  autoExhibition errors=${report.logDiagnostics.autoExhibition.errorLog.total} kinds=${JSON.stringify(report.logDiagnostics.autoExhibition.errorLog.byKind)}`);
+  console.log(`  autoExhibition errors=${report.logDiagnostics.autoExhibition.errorLog.activeTotal} legacy=${report.logDiagnostics.autoExhibition.errorLog.legacyTotal} kinds=${JSON.stringify(report.logDiagnostics.autoExhibition.errorLog.byKind)}`);
   console.log("");
   console.log("Data coverage:");
   console.log(`  weather=${report.dataCoverage.weather} exhibition=${report.dataCoverage.exhibition} tiltParts=${report.dataCoverage.tiltParts}`);
