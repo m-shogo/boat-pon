@@ -160,6 +160,8 @@ CREATE TABLE IF NOT EXISTS exhibition_data (
   start_timing REAL,
   ranking INTEGER,
   fetched_at TEXT NOT NULL,
+  source_type TEXT NOT NULL DEFAULT 'official_live',
+  source_quality TEXT NOT NULL DEFAULT 'exact',
   PRIMARY KEY (race_id, course)
 );
 
@@ -172,7 +174,9 @@ CREATE TABLE IF NOT EXISTS race_weather (
   water_temperature_c REAL,
   stable_plate INTEGER,
   shortened_laps INTEGER,
-  fetched_at TEXT NOT NULL
+  fetched_at TEXT NOT NULL,
+  source_type TEXT NOT NULL DEFAULT 'official_live',
+  source_quality TEXT NOT NULL DEFAULT 'exact'
 );
 
 CREATE TABLE IF NOT EXISTS race_equipment (
@@ -183,6 +187,8 @@ CREATE TABLE IF NOT EXISTS race_equipment (
   parts_changed TEXT NOT NULL DEFAULT '[]',
   parts_changed_count INTEGER NOT NULL DEFAULT 0,
   fetched_at TEXT NOT NULL,
+  source_type TEXT NOT NULL DEFAULT 'official_live',
+  source_quality TEXT NOT NULL DEFAULT 'exact',
   PRIMARY KEY (race_id, course)
 );
 
@@ -326,6 +332,39 @@ WHERE venue='琵琶湖';
   try {
     db.exec("ALTER TABLE racer_course_stats ADD COLUMN start_order REAL");
   } catch { /* Already exists. */ }
+
+  // ジョブ管理テーブル
+  db.exec(`
+CREATE TABLE IF NOT EXISTS job_runs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  app_name TEXT NOT NULL,
+  job_name TEXT NOT NULL,
+  target_date TEXT NOT NULL,
+  status TEXT NOT NULL,
+  started_at TEXT NOT NULL,
+  finished_at TEXT,
+  error_message TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_job_runs_unique
+ON job_runs (app_name, job_name, target_date);
+
+CREATE TABLE IF NOT EXISTS missing_jobs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  app_name TEXT NOT NULL,
+  job_name TEXT NOT NULL,
+  target_date TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_missing_jobs_unique
+ON missing_jobs (app_name, job_name, target_date);
+
+CREATE TABLE IF NOT EXISTS job_locks (
+  job_key TEXT PRIMARY KEY,
+  locked_at TEXT NOT NULL
+);
+`);
 }
 
 export function getSettings(db: DatabaseSync): BudgetRule {
@@ -1068,17 +1107,18 @@ export type RaceEquipmentEntry = {
   partsChangedCount: number;
 };
 
-export function upsertExhibitionData(db: DatabaseSync, raceId: string, entries: ExhibitionEntry[], fetchedAt: string): void {
+export function upsertExhibitionData(db: DatabaseSync, raceId: string, entries: ExhibitionEntry[], fetchedAt: string, sourceType = "official_live"): void {
   for (const entry of entries) {
     db.prepare(`
-INSERT INTO exhibition_data (race_id, course, exhibition_time, start_timing, ranking, fetched_at)
-VALUES (?, ?, ?, ?, ?, ?)
+INSERT INTO exhibition_data (race_id, course, exhibition_time, start_timing, ranking, fetched_at, source_type)
+VALUES (?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(race_id, course) DO UPDATE SET
   exhibition_time = excluded.exhibition_time,
   start_timing = excluded.start_timing,
   ranking = excluded.ranking,
-  fetched_at = excluded.fetched_at
-`).run(raceId, entry.course, entry.exhibitionTime, entry.startTiming, entry.ranking, fetchedAt);
+  fetched_at = excluded.fetched_at,
+  source_type = excluded.source_type
+`).run(raceId, entry.course, entry.exhibitionTime, entry.startTiming, entry.ranking, fetchedAt, sourceType);
   }
 }
 
@@ -1097,19 +1137,20 @@ ORDER BY course
   }));
 }
 
-export function upsertRaceEquipment(db: DatabaseSync, raceId: string, entries: RaceEquipmentEntry[], fetchedAt: string): void {
+export function upsertRaceEquipment(db: DatabaseSync, raceId: string, entries: RaceEquipmentEntry[], fetchedAt: string, sourceType = "official_live"): void {
   for (const entry of entries) {
     const partsChanged = JSON.stringify(entry.partsChanged);
     db.prepare(`
-INSERT INTO race_equipment (race_id, course, tilt_angle, propeller_changed, parts_changed, parts_changed_count, fetched_at)
-VALUES (?, ?, ?, ?, ?, ?, ?)
+INSERT INTO race_equipment (race_id, course, tilt_angle, propeller_changed, parts_changed, parts_changed_count, fetched_at, source_type)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(race_id, course) DO UPDATE SET
   tilt_angle = excluded.tilt_angle,
   propeller_changed = excluded.propeller_changed,
   parts_changed = excluded.parts_changed,
   parts_changed_count = excluded.parts_changed_count,
-  fetched_at = excluded.fetched_at
-`).run(raceId, entry.course, entry.tiltAngle, entry.propellerChanged ? 1 : 0, partsChanged, entry.partsChangedCount, fetchedAt);
+  fetched_at = excluded.fetched_at,
+  source_type = excluded.source_type
+`).run(raceId, entry.course, entry.tiltAngle, entry.propellerChanged ? 1 : 0, partsChanged, entry.partsChangedCount, fetchedAt, sourceType);
   }
 }
 
@@ -1290,10 +1331,10 @@ function rowToResult(row: Record<string, unknown>): RaceResult {
   };
 }
 
-export function upsertRaceWeather(db: DatabaseSync, raceId: string, env: RaceEnvironment, fetchedAt: string): void {
+export function upsertRaceWeather(db: DatabaseSync, raceId: string, env: RaceEnvironment, fetchedAt: string, sourceType = "official_live"): void {
   db.prepare(`
-INSERT INTO race_weather (race_id, weather, wind_speed_mps, wave_height_cm, temperature_c, water_temperature_c, stable_plate, shortened_laps, fetched_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO race_weather (race_id, weather, wind_speed_mps, wave_height_cm, temperature_c, water_temperature_c, stable_plate, shortened_laps, fetched_at, source_type)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(race_id) DO UPDATE SET
   weather = excluded.weather,
   wind_speed_mps = excluded.wind_speed_mps,
@@ -1302,7 +1343,8 @@ ON CONFLICT(race_id) DO UPDATE SET
   water_temperature_c = excluded.water_temperature_c,
   stable_plate = excluded.stable_plate,
   shortened_laps = excluded.shortened_laps,
-  fetched_at = excluded.fetched_at
+  fetched_at = excluded.fetched_at,
+  source_type = excluded.source_type
 `).run(
     raceId,
     env.weather ?? null,
@@ -1313,6 +1355,7 @@ ON CONFLICT(race_id) DO UPDATE SET
     env.stablePlate ? 1 : 0,
     env.shortenedLaps ? 1 : 0,
     fetchedAt,
+    sourceType,
   );
 }
 
