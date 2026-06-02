@@ -4,7 +4,8 @@
  */
 
 import { existsSync, readFileSync } from "node:fs";
-import { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync } from "node:sqlite";
+import { openDb } from "../server/db";
 
 type Level = "OK" | "WARN" | "ERROR";
 const checks: Array<{ level: Level; item: string; detail: string }> = [];
@@ -30,16 +31,13 @@ ok("node", process.version);
 // --- DBファイル ---
 const DB_PATH = "data/boat.sqlite";
 let db: DatabaseSync | null = null;
-if (!existsSync(DB_PATH)) {
-  error("db_file", `${DB_PATH} not found`);
-} else {
-  try {
-    db = new DatabaseSync(DB_PATH);
-    db.exec("PRAGMA integrity_check");
-    ok("db_file", DB_PATH);
-  } catch (e) {
-    error("db_file", `open failed: ${e}`);
-  }
+try {
+  // openDb() は migrate() を実行するため、pull直後や新規環境でも自動でスキーマを最新化する
+  db = openDb();
+  db.exec("PRAGMA integrity_check");
+  ok("db_file", DB_PATH);
+} catch (e) {
+  error("db_file", `open/migrate failed: ${e}`);
 }
 
 // --- ジョブ管理テーブル ---
