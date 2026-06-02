@@ -53,7 +53,14 @@
     "fetch:racer-stats:dry": "tsx scripts/bulk-fetch-racer-stats.ts --dry-run",
     "stats:racer-coverage": "tsx scripts/check-racer-stats-coverage.ts",
     "report:data-coverage": "tsx scripts/report-data-coverage.ts",
-    "backfill:motor-boat-stats": "tsx scripts/backfill-motor-boat-stats.ts"
+    "backfill:motor-boat-stats": "tsx scripts/backfill-motor-boat-stats.ts",
+    "backfill:beforeinfo": "tsx scripts/backfill-beforeinfo.ts",
+    "backfill:beforeinfo:dry": "tsx scripts/backfill-beforeinfo.ts --dry-run",
+    "catchup": "tsx scripts/run-catchup.ts",
+    "daily": "tsx scripts/run-daily.ts",
+    "health": "tsx scripts/health-check.ts",
+    "backup": "tsx scripts/backup-db.ts",
+    "typecheck:scripts": "tsc --noEmit -p tsconfig.scripts.json"
   },
   "engines": {
     "node": ">=24.0.0"
