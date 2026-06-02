@@ -13,6 +13,12 @@ if (!existsSync(DB_PATH)) {
 const db = new DatabaseSync(DB_PATH, { readOnly: true });
 db.exec("PRAGMA busy_timeout = 5000");
 try {
+  type AuditRow = {
+    run_kind: string; model_version: string; buy_n: number;
+    settled_n: number; pending_n: number; hits: number;
+    hit_rate: number | null; roi: number | null;
+    max_hit_odds: number; latest_date: string | null;
+  };
   const rows = db.prepare(`
 SELECT
   COALESCE(run_kind, '(null)') AS run_kind,
@@ -31,7 +37,7 @@ WHERE decision = 'BUY'
   AND (? = 'all' OR model_version = ?)
 GROUP BY run_kind, model_version
 ORDER BY run_kind, model_version
-`).all(args.runKind, args.runKind, args.modelVersion, args.modelVersion) as Array<Record<string, unknown>>;
+`).all(args.runKind, args.runKind, args.modelVersion, args.modelVersion) as AuditRow[];
 
   const withExMax = rows.map((row) => {
     const settled = Number(row.settled_n ?? 0);

@@ -84,5 +84,10 @@
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
     "@types/web-push": "^3.6.4"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }

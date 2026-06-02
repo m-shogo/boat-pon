@@ -36,13 +36,13 @@ function hasScript(name: string): boolean {
   return name in getPackageScripts();
 }
 
-function runNpmScript(scriptName: string, extraArgs: string[] = []): void {
-  const result = spawnSync("npm", ["run", scriptName, "--", ...extraArgs], {
+function runScript(scriptName: string, extraArgs: string[] = []): void {
+  const result = spawnSync("pnpm", [scriptName, ...extraArgs], {
     stdio: "inherit",
     encoding: "utf-8",
   });
   if (result.status !== 0) {
-    throw new Error(`npm run ${scriptName} exited with code ${result.status}`);
+    throw new Error(`pnpm ${scriptName} exited with code ${result.status}`);
   }
 }
 
@@ -63,45 +63,46 @@ async function main() {
 
     const results: Array<{ job: string; status: string; note?: string }> = [];
 
-    const job = async (name: string, fn: () => Promise<void>) => {
-      const r = await runJob(db, name, today, fn);
-      results.push({ job: name, status: r.skipped ? "skipped" : r.success ? "ok" : "failed", note: r.message });
+    // target_date は「そのジョブが対象とするデータの日付」
+    const job = async (name: string, targetDate: string, fn: () => Promise<void>) => {
+      const r = await runJob(db, name, targetDate, fn);
+      results.push({ job: `${name}(${targetDate})`, status: r.skipped ? "skipped" : r.success ? "ok" : "failed", note: r.message });
     };
 
-    // 1. 今日の出走表取得
-    await job("race_calendar_fetch", async () => {
+    // 1. 今日の出走表取得 → target_date=today
+    await job("race_calendar_fetch", today, async () => {
       if (!hasScript("fetch:official-programs")) throw new Error("script not found");
-      runNpmScript("fetch:official-programs", [today, today]);
+      runScript("fetch:official-programs", [today, today]);
     });
 
-    // 2. 昨日のレース結果取得
-    await job("race_result_fetch", async () => {
+    // 2. 昨日のレース結果取得 → target_date=yesterday (対象データが昨日分)
+    await job("race_result_fetch", yesterday, async () => {
       if (!hasScript("fetch:official-results")) throw new Error("script not found");
-      runNpmScript("fetch:official-results", [yesterday, yesterday]);
+      runScript("fetch:official-results", [yesterday, yesterday]);
     });
 
-    // 3. 今日のオッズ取得 (live専用。過去分は復元不可)
-    await job("odds_snapshot", async () => {
+    // 3. 今日のオッズ取得 (live専用) → target_date=today
+    await job("odds_snapshot", today, async () => {
       if (!hasScript("auto:odds")) throw new Error("script not found");
-      runNpmScript("auto:odds");
+      runScript("auto:odds");
     });
 
-    // 4. 今日の直前情報取得 (live専用。過去分は復元不可)
-    await job("exhibition_fetch", async () => {
+    // 4. 今日の直前情報取得 (live専用) → target_date=today
+    await job("exhibition_fetch", today, async () => {
       if (!hasScript("auto:beforeinfo")) throw new Error("script not found");
-      runNpmScript("auto:beforeinfo");
+      runScript("auto:beforeinfo");
     });
 
-    // 5. 日次レポート生成
-    await job("daily_report_generate", async () => {
+    // 5. 日次レポート生成 → target_date=today
+    await job("daily_report_generate", today, async () => {
       if (!hasScript("report:daily")) throw new Error("script not found");
-      runNpmScript("report:daily");
+      runScript("report:daily");
     });
 
-    // 6. データカバレッジ確認
-    await job("data_coverage_check", async () => {
+    // 6. データカバレッジ確認 → target_date=today
+    await job("data_coverage_check", today, async () => {
       if (!hasScript("report:data-coverage")) throw new Error("script not found");
-      runNpmScript("report:data-coverage", ["--beforeinfo-days=7"]);
+      runScript("report:data-coverage", ["--beforeinfo-days=7"]);
     });
 
     // --- サマリー ---
