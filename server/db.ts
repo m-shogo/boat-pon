@@ -333,6 +333,14 @@ WHERE venue='琵琶湖';
     db.exec("ALTER TABLE racer_course_stats ADD COLUMN start_order REAL");
   } catch { /* Already exists. */ }
 
+  // beforeinfo系テーブルへの source_type / source_quality 追加（既存DBのmigration）
+  try { db.exec("ALTER TABLE exhibition_data ADD COLUMN source_type TEXT NOT NULL DEFAULT 'official_live'"); } catch { /* Already exists. */ }
+  try { db.exec("ALTER TABLE exhibition_data ADD COLUMN source_quality TEXT NOT NULL DEFAULT 'exact'"); } catch { /* Already exists. */ }
+  try { db.exec("ALTER TABLE race_weather ADD COLUMN source_type TEXT NOT NULL DEFAULT 'official_live'"); } catch { /* Already exists. */ }
+  try { db.exec("ALTER TABLE race_weather ADD COLUMN source_quality TEXT NOT NULL DEFAULT 'exact'"); } catch { /* Already exists. */ }
+  try { db.exec("ALTER TABLE race_equipment ADD COLUMN source_type TEXT NOT NULL DEFAULT 'official_live'"); } catch { /* Already exists. */ }
+  try { db.exec("ALTER TABLE race_equipment ADD COLUMN source_quality TEXT NOT NULL DEFAULT 'exact'"); } catch { /* Already exists. */ }
+
   // ジョブ管理テーブル
   db.exec(`
 CREATE TABLE IF NOT EXISTS job_runs (
