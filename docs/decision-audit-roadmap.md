@@ -91,6 +91,24 @@ pnpm exec tsx scripts/migrate-decision-audit.ts
 pnpm exec tsx scripts/report-decision-reasons.ts -- --from 2026-01-01 --to 2026-06-03
 ```
 
+### 7. CLVレポートCLIを追加
+
+`scripts/report-clv.ts` を追加。
+
+読み取り専用で、`odds_timeseries_snapshots` と `decision_history` を使い、T-30 / T-20 / T-10 / T-5 の平均オッズと、T-30 から T-5 への変化率を見る。
+
+実行例:
+
+```bash
+pnpm exec tsx scripts/report-clv.ts -- --from 2026-01-01 --to 2026-06-03
+```
+
+見るポイント:
+
+- BUY候補のオッズが締切に向けて下がるなら、市場より早く拾えている可能性がある
+- BUY候補のオッズが締切に向けて上がるなら、市場が嫌っている可能性がある
+- ROIだけでなくCLVを見て、最大配当1本依存を避ける
+
 ---
 
 ## 今回ブロックされて完了できなかったこと
@@ -105,7 +123,8 @@ GitHub コネクタの安全チェックにより、一部のファイル作成�
 ```json
 {
   "migrate:decision-audit": "tsx scripts/migrate-decision-audit.ts",
-  "report:decision-reasons": "tsx scripts/report-decision-reasons.ts"
+  "report:decision-reasons": "tsx scripts/report-decision-reasons.ts",
+  "report:clv": "tsx scripts/report-clv.ts"
 }
 ```
 
@@ -179,6 +198,7 @@ pnpm test
 pnpm exec tsx scripts/migrate-decision-audit.ts
 pnpm health
 pnpm exec tsx scripts/report-decision-reasons.ts -- --from 2026-01-01 --to 2026-06-03
+pnpm exec tsx scripts/report-clv.ts -- --from 2026-01-01 --to 2026-06-03
 ```
 
 ---
@@ -208,7 +228,8 @@ const featureAdjustmentBreakdownJson = candidate.featureAdjustmentBreakdown
 
 ```json
 "migrate:decision-audit": "tsx scripts/migrate-decision-audit.ts",
-"report:decision-reasons": "tsx scripts/report-decision-reasons.ts"
+"report:decision-reasons": "tsx scripts/report-decision-reasons.ts",
+"report:clv": "tsx scripts/report-clv.ts"
 ```
 
 ### S3. backup の安全化
