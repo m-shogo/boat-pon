@@ -76,7 +76,7 @@ ALTER TABLE decision_history ADD COLUMN feature_adjustment_breakdown TEXT;
 実行:
 
 ```bash
-pnpm exec tsx scripts/migrate-decision-audit.ts
+pnpm migrate:decision-audit
 ```
 
 ### 6. 判定理由レポートCLIを追加
@@ -88,7 +88,7 @@ pnpm exec tsx scripts/migrate-decision-audit.ts
 実行例:
 
 ```bash
-pnpm exec tsx scripts/report-decision-reasons.ts -- --from 2026-01-01 --to 2026-06-03
+pnpm report:decision-reasons -- --from 2026-01-01 --to 2026-06-03
 ```
 
 ### 7. CLVレポートCLIを追加
@@ -100,7 +100,7 @@ pnpm exec tsx scripts/report-decision-reasons.ts -- --from 2026-01-01 --to 2026-
 実行例:
 
 ```bash
-pnpm exec tsx scripts/report-clv.ts -- --from 2026-01-01 --to 2026-06-03
+pnpm report:clv -- --from 2026-01-01 --to 2026-06-03
 ```
 
 見るポイント:
@@ -109,28 +109,60 @@ pnpm exec tsx scripts/report-clv.ts -- --from 2026-01-01 --to 2026-06-03
 - BUY候補のオッズが締切に向けて上がるなら、市場が嫌っている可能性がある
 - ROIだけでなくCLVを見て、最大配当1本依存を避ける
 
----
+### 8. feature breakdown レポートCLIを追加
 
-## 今回ブロックされて完了できなかったこと
+`scripts/report-feature-breakdown.ts` を追加。
 
-GitHub コネクタの安全チェックにより、一部のファイル作成・更新がブロックされた。
-以下は未完了として残す。
+読み取り専用で、`feature_adjustment_breakdown` を factor 別・補正帯別に集計する。
 
-### 1. `package.json` への script 登録
+実行例:
 
-追加したかった script:
-
-```json
-{
-  "migrate:decision-audit": "tsx scripts/migrate-decision-audit.ts",
-  "report:decision-reasons": "tsx scripts/report-decision-reasons.ts",
-  "report:clv": "tsx scripts/report-clv.ts"
-}
+```bash
+pnpm report:feature-breakdown -- --from 2026-01-01 --to 2026-06-03
 ```
 
-現状は `pnpm exec tsx ...` で直接実行する。
+見るポイント:
 
-### 2. `server/db.ts` の `insertDecisionHistory()` への保存接続
+- `classFactor` が効きすぎていないか
+- `motorFactor` / `boatFactor` が結果に寄与しているか
+- `exhibitionResidualFactor` が過大評価になっていないか
+- `total` が高い帯ほど本当に結果が良いか
+
+### 9. decision audit doctor を追加
+
+`scripts/decision-audit-doctor.ts` を追加。
+
+読み取り専用で、audit系の導入状態を確認する。
+
+現状 `package.json` への `audit:doctor` 登録は未完了のため、直接実行する。
+
+```bash
+pnpm exec tsx scripts/decision-audit-doctor.ts
+```
+
+確認内容:
+
+- 追加CLIファイルの有無
+- package script の有無
+- DBの有無
+- `decision_history` のaudit用カラム有無
+- `odds_timeseries_snapshots` の有無
+
+### 10. テスト追加
+
+`src/domain/programFeatures.breakdown.test.ts` を追加。
+
+確認内容:
+
+- first boat がない場合は全て 1
+- `featureAdjustmentForSelection()` が breakdown.total と一致
+- total が 0.65〜1.40 に clamp される
+
+---
+
+## まだ完了できていないこと
+
+### 1. `server/db.ts` の `insertDecisionHistory()` への保存接続
 
 まだ `decision.reasons` と `candidate.featureAdjustmentBreakdown` は `decision_history` に自動保存されていない。
 
@@ -142,7 +174,7 @@ GitHub コネクタの安全チェックにより、一部のファイル作成�
 - UPDATE / INSERT の両方に対応
 - `listDecisionHistory()` で JSON parse して返す
 
-### 3. `backup-db.ts` の WAL-safe 化
+### 2. `backup-db.ts` の WAL-safe 化
 
 SQLite は WAL mode のため、DB本体の単純コピーだけでは最新状態を取りこぼす可能性がある。
 
@@ -153,19 +185,9 @@ SQLite は WAL mode のため、DB本体の単純コピーだけでは最新状�
 - 補助ファイルは従来通りコピー
 - 最新30件保持は維持
 
-### 4. feature audit report
+### 3. 既存履歴への audit 補完CLI
 
-`feature_adjustment_breakdown` を使って、補正要素ごとの結果を集計するCLIを追加したかったがブロックされた。
-
-欲しいレポート:
-
-- factor 別
-- 補正帯別 `<0.97`, `0.97-1.00`, `1.00-1.03`, `1.03-1.06`, `1.06+`
-- n / settled / hits / ROI(current_odds基準)
-
-### 5. 既存履歴への audit 補完CLI
-
-既存 `decision_history` に対し、過去行の `decision_reasons` を近似補完するCLIを追加したかったがブロックされた。
+既存 `decision_history` に対し、過去行の `decision_reasons` を近似補完するCLIが未完了。
 
 注意:
 
@@ -174,15 +196,15 @@ SQLite は WAL mode のため、DB本体の単純コピーだけでは最新状�
 - 外部アクセスなし
 - `--dry-run` 必須対応
 
-### 6. テスト追加
+### 4. `audit:doctor` script 登録
 
-`featureAdjustmentBreakdownForSelection()` のテスト追加がブロックされた。
+`scripts/decision-audit-doctor.ts` は追加済みだが、`package.json` への `audit:doctor` 登録はブロックされた。
 
-欲しいテスト:
+現状は以下で実行する。
 
-- first boat がない場合は全て 1
-- `featureAdjustmentForSelection()` が breakdown.total と一致
-- total が 0.65〜1.40 に clamp される
+```bash
+pnpm exec tsx scripts/decision-audit-doctor.ts
+```
 
 ---
 
@@ -195,10 +217,12 @@ git pull
 pnpm typecheck:scripts
 pnpm test
 
-pnpm exec tsx scripts/migrate-decision-audit.ts
+pnpm migrate:decision-audit
 pnpm health
-pnpm exec tsx scripts/report-decision-reasons.ts -- --from 2026-01-01 --to 2026-06-03
-pnpm exec tsx scripts/report-clv.ts -- --from 2026-01-01 --to 2026-06-03
+pnpm report:decision-reasons -- --from 2026-01-01 --to 2026-06-03
+pnpm report:clv -- --from 2026-01-01 --to 2026-06-03
+pnpm report:feature-breakdown -- --from 2026-01-01 --to 2026-06-03
+pnpm exec tsx scripts/decision-audit-doctor.ts
 ```
 
 ---
@@ -224,25 +248,13 @@ const featureAdjustmentBreakdownJson = candidate.featureAdjustmentBreakdown
 - `feature_adjustment`
 - `feature_adjustment_breakdown`
 
-### S2. `package.json` script 登録
-
-```json
-"migrate:decision-audit": "tsx scripts/migrate-decision-audit.ts",
-"report:decision-reasons": "tsx scripts/report-decision-reasons.ts",
-"report:clv": "tsx scripts/report-clv.ts"
-```
-
-### S3. backup の安全化
+### S2. backup の安全化
 
 `data/boat.sqlite` は単純コピーではなく `VACUUM INTO` で保存する。
 
-### S4. feature audit report
+### S3. 既存履歴への audit 補完CLI
 
-特徴量ごとの効きすぎ・効かなさを検証する。
-
-### S5. テスト追加
-
-`programFeatures.breakdown.test.ts` を追加し、今後の改修で補正内訳が壊れないようにする。
+過去の `decision_history` に近似理由を付け、理由別レポートをすぐ見られるようにする。
 
 ---
 
