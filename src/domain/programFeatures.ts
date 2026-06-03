@@ -25,6 +25,21 @@ export type ProgramFeatureSnapshot = {
   boats: BoatFeature[];
 };
 
+export type FeatureAdjustmentBreakdown = {
+  total: number;
+  classFactor: number;
+  nationalFactor: number;
+  localFactor: number;
+  motorFactor: number;
+  boatFactor: number;
+  courseStFactor: number;
+  courseTop3Factor: number;
+  exhibitionResidualFactor: number;
+  secondClassFactor: number;
+  secondLocalFactor: number;
+  thirdClassFactor: number;
+};
+
 export function extractProgramFeatures(raw: unknown): ProgramFeatureSnapshot {
   const maybe = raw as { boats?: unknown };
   const boats = Array.isArray(maybe?.boats)
@@ -34,11 +49,19 @@ export function extractProgramFeatures(raw: unknown): ProgramFeatureSnapshot {
 }
 
 export function featureAdjustmentForSelection(features: ProgramFeatureSnapshot | undefined, selection: number[]): number {
+  return featureAdjustmentBreakdownForSelection(features, selection).total;
+}
+
+export function featureAdjustmentBreakdownForSelection(
+  features: ProgramFeatureSnapshot | undefined,
+  selection: number[],
+): FeatureAdjustmentBreakdown {
   const [firstCourse, secondCourse, thirdCourse] = selection;
   const firstBoat = features?.boats.find((boat) => boat.course === firstCourse);
   const secondBoat = features?.boats.find((boat) => boat.course === secondCourse);
   const thirdBoat = features?.boats.find((boat) => boat.course === thirdCourse);
-  if (!firstBoat) return 1;
+
+  if (!firstBoat) return neutralBreakdown();
 
   // 1着候補（主要因子）
   const classFactor = classAdjustment(firstBoat.className);
@@ -68,13 +91,46 @@ export function featureAdjustmentForSelection(features: ProgramFeatureSnapshot |
   // 3着候補（小さい影響）
   const thirdClassFactor = thirdBoat ? supportClassAdjustment(thirdBoat.className, 0.03) : 1;
 
-  return clamp(
+  const total = clamp(
     classFactor * nationalFactor * localFactor * motorFactor * boatFactor
     * secondClassFactor * secondLocalFactor * thirdClassFactor
     * courseStFactor * courseTop3Factor
     * exhibitionResidualFactor,
-    0.65, 1.40,
+    0.65,
+    1.40,
   );
+
+  return {
+    total,
+    classFactor,
+    nationalFactor,
+    localFactor,
+    motorFactor,
+    boatFactor,
+    courseStFactor,
+    courseTop3Factor,
+    exhibitionResidualFactor,
+    secondClassFactor,
+    secondLocalFactor,
+    thirdClassFactor,
+  };
+}
+
+function neutralBreakdown(): FeatureAdjustmentBreakdown {
+  return {
+    total: 1,
+    classFactor: 1,
+    nationalFactor: 1,
+    localFactor: 1,
+    motorFactor: 1,
+    boatFactor: 1,
+    courseStFactor: 1,
+    courseTop3Factor: 1,
+    exhibitionResidualFactor: 1,
+    secondClassFactor: 1,
+    secondLocalFactor: 1,
+    thirdClassFactor: 1,
+  };
 }
 
 function toBoatFeature(value: unknown): BoatFeature | null {
