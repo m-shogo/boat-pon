@@ -1,14 +1,14 @@
 /**
- * decision_history の空の decision_reasons を既存カラムから補完する。
+ * decision_history の空の audit fields を既存カラムから補完する。
  *
  * 目的:
- * - 新しい保存接続が入る前の過去履歴でも、理由別レポートを使えるようにする
+ * - 新しい保存接続が入る前の過去履歴でも、理由別・特徴量別レポートを使えるようにする
  * - 既存行の削除はしない
  * - 外部アクセスなし
  *
  * 注意:
  * - judgeCandidate の完全再現ではない
- * - 履歴分析用の近似理由
+ * - 履歴分析用の近似理由・近似feature total
  */
 
 import { existsSync } from "node:fs";
@@ -28,15 +28,28 @@ db.exec("PRAGMA busy_timeout = 10000");
 try {
   ensureColumns();
   const rows = loadRows();
-  const stmt = db.prepare("UPDATE decision_history SET decision_reasons = ? WHERE id = ?");
+  const stmt = db.prepare(`
+UPDATE decision_history
+SET decision_reasons = ?,
+    feature_adjustment = COALESCE(feature_adjustment, ?),
+    feature_adjustment_breakdown = COALESCE(feature_adjustment_breakdown, ?)
+WHERE id = ?
+`);
 
   let changed = 0;
   for (const row of rows) {
     const reasons = inferReasons(row);
+    const featureAdjustment = inferFeatureAdjustment(row);
+    const featureBreakdown = featureAdjustment == null ? null : JSON.stringify({
+      total: featureAdjustment,
+      source: "fill-decision-reasons",
+      note: "approximation from stored decision_history columns",
+    });
+
     if (args.dryRun) {
-      console.log(`[dry-run] id=${row.id} ${row.date} ${row.venue}${row.race_no}R ${row.decision}: ${reasons.join(" / ")}`);
+      console.log(`[dry-run] id=${row.id} ${row.date} ${row.venue}${row.race_no}R ${row.decision}: ${reasons.join(" / ")} feature=${featureAdjustment ?? "-"}`);
     } else {
-      stmt.run(JSON.stringify(reasons), row.id);
+      stmt.run(JSON.stringify(reasons), featureAdjustment, featureBreakdown, row.id);
     }
     changed += 1;
   }
@@ -60,13 +73,14 @@ type Row = {
   sharp_signal_drop: number | null;
   environment_risk_level: string | null;
   selection_popularity: number | null;
+  exhibition_st_residual_sum: number | null;
 };
 
 function loadRows(): Row[] {
   const where = ["1=1"];
   const params: Array<string | number> = [];
 
-  if (!args.force) where.push("(decision_reasons IS NULL OR decision_reasons = '[]')");
+  if (!args.force) where.push("(decision_reasons IS NULL OR decision_reasons = '[]' OR feature_adjustment_breakdown IS NULL)");
   if (args.from) { where.push("date >= ?"); params.push(args.from); }
   if (args.to) { where.push("date <= ?"); params.push(args.to); }
   if (args.decision) { where.push("decision = ?"); params.push(args.decision); }
@@ -74,7 +88,8 @@ function loadRows(): Row[] {
 
   return db.prepare(`
 SELECT id, date, venue, race_no, decision, current_odds, required_odds, ev,
-       sample_size, run_kind, sharp_signal_drop, environment_risk_level, selection_popularity
+       sample_size, run_kind, sharp_signal_drop, environment_risk_level, selection_popularity,
+       exhibition_st_residual_sum
 FROM decision_history
 WHERE ${where.join(" AND ")}
 ORDER BY date ASC, id ASC
@@ -116,8 +131,15 @@ function inferReasons(row: Row): string[] {
   return [...new Set(reasons)];
 }
 
+function inferFeatureAdjustment(row: Row): number | null {
+  if (row.exhibition_st_residual_sum == null) return null;
+  return clamp(1 + row.exhibition_st_residual_sum, 0.90, 1.10);
+}
+
 function ensureColumns() {
   addColumn("decision_reasons", "TEXT NOT NULL DEFAULT '[]'");
+  addColumn("feature_adjustment", "REAL");
+  addColumn("feature_adjustment_breakdown", "TEXT");
 }
 
 function addColumn(column: string, definition: string) {
@@ -129,6 +151,10 @@ function addColumn(column: string, definition: string) {
 function columnExists(column: string): boolean {
   const rows = db.prepare("PRAGMA table_info(decision_history)").all() as Array<{ name: string }>;
   return rows.some((row) => row.name === column);
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
 }
 
 function parseArgs(argv: string[]) {
@@ -164,12 +190,12 @@ function normalizeDate(value: string | undefined) {
 
 function printHelp() {
   console.log(`Usage:
-  pnpm exec tsx scripts/fill-decision-reasons.ts -- --dry-run
-  pnpm exec tsx scripts/fill-decision-reasons.ts -- --from YYYY-MM-DD --to YYYY-MM-DD
+  pnpm fill:decision-reasons -- --dry-run
+  pnpm fill:decision-reasons -- --from YYYY-MM-DD --to YYYY-MM-DD
 
 Options:
   --dry-run      Show changes only
-  --force        Recreate reasons even when decision_reasons already exists
+  --force        Recreate reasons even when audit fields already exist
   --decision X   BUY, WATCH, or SKIP
   --limit N      Max rows
 `);
