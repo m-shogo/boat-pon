@@ -1,6 +1,7 @@
 import type { DecisionStatus } from "./types";
 import type { DecisionRunKind } from "./liveRunKind";
 import type { OvervaluationRow } from "./analysis";
+import type { FeatureAdjustmentBreakdown } from "./programFeatures";
 
 export type DecisionHistoryRow = {
   id: number;
@@ -17,6 +18,7 @@ export type DecisionHistoryRow = {
   currentOdds: number | null;
   ev: number | null;
   decision: DecisionStatus;
+  decisionReasons?: string[];
   actuallyBought: boolean;
   stakeYen: number;
   recommendedStakeYen: number;
@@ -26,6 +28,8 @@ export type DecisionHistoryRow = {
   sharpSignalDrop?: number | null;
   environmentRiskLevel?: "low" | "medium" | "high" | null;
   exhibitionStResidualSum?: number | null;
+  featureAdjustment?: number | null;
+  featureAdjustmentBreakdown?: FeatureAdjustmentBreakdown | null;
   selectionPopularity?: number | null;
   result: string | null;
   payoutYen: number | null;
