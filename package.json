@@ -66,6 +66,7 @@
     "daily": "tsx scripts/run-daily.ts",
     "health": "tsx scripts/health-check.ts",
     "backup": "tsx scripts/backup-db.ts",
+    "backup:safe": "tsx scripts/backup-db-safe.ts",
     "typecheck:scripts": "tsc --noEmit -p tsconfig.scripts.json"
   },
   "engines": {
