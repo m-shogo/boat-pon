@@ -1,4 +1,4 @@
-import type { BoatFeature } from "./programFeatures";
+import type { BoatFeature, FeatureAdjustmentBreakdown } from "./programFeatures";
 
 export type DecisionStatus = "BUY" | "WATCH" | "SKIP";
 
@@ -28,6 +28,7 @@ export type BetCandidate = {
   environmentRiskReasons?: string[];
   beforeInfoComplete?: boolean;
   featureAdjustment?: number;
+  featureAdjustmentBreakdown?: FeatureAdjustmentBreakdown;
   sharpSignalDrop?: number | null;
   selectionPopularity?: number | null;
   candidateClassName?: string;
