@@ -28,6 +28,8 @@
     "db:health": "tsx scripts/check-db-health.ts",
     "validate:data": "tsx scripts/validate-data.ts",
     "migrate:decision-audit": "tsx scripts/migrate-decision-audit.ts",
+    "audit:doctor": "tsx scripts/decision-audit-doctor.ts",
+    "fill:decision-reasons": "tsx scripts/fill-decision-reasons.ts",
     "report:daily": "tsx scripts/report-daily.ts",
     "report:quality": "tsx scripts/report-quality.ts",
     "report:features": "tsx scripts/report-feature-quality.ts",
