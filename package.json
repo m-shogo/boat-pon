@@ -34,6 +34,7 @@
     "report:buy-audit": "tsx scripts/report-buy-audit.ts",
     "report:decision-reasons": "tsx scripts/report-decision-reasons.ts",
     "report:clv": "tsx scripts/report-clv.ts",
+    "report:feature-breakdown": "tsx scripts/report-feature-breakdown.ts",
     "report:weekly": "tsx scripts/report-quality.ts --days 7",
     "report:monthly": "tsx scripts/report-quality.ts --days 30",
     "walk:history": "tsx scripts/walk-forward-history.ts",
