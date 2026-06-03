@@ -103,12 +103,6 @@ pnpm report:decision-reasons -- --from 2026-01-01 --to 2026-06-03
 pnpm report:clv -- --from 2026-01-01 --to 2026-06-03
 ```
 
-見るポイント:
-
-- BUY候補のオッズが締切に向けて下がるなら、市場より早く拾えている可能性がある
-- BUY候補のオッズが締切に向けて上がるなら、市場が嫌っている可能性がある
-- ROIだけでなくCLVを見て、最大配当1本依存を避ける
-
 ### 8. feature breakdown レポートCLIを追加
 
 `scripts/report-feature-breakdown.ts` を追加。
@@ -121,23 +115,14 @@ pnpm report:clv -- --from 2026-01-01 --to 2026-06-03
 pnpm report:feature-breakdown -- --from 2026-01-01 --to 2026-06-03
 ```
 
-見るポイント:
-
-- `classFactor` が効きすぎていないか
-- `motorFactor` / `boatFactor` が結果に寄与しているか
-- `exhibitionResidualFactor` が過大評価になっていないか
-- `total` が高い帯ほど本当に結果が良いか
-
 ### 9. decision audit doctor を追加
 
-`scripts/decision-audit-doctor.ts` を追加。
+`scripts/decision-audit-doctor.ts` を追加し、`audit:doctor` script も登録済み。
 
-読み取り専用で、audit系の導入状態を確認する。
-
-現状 `package.json` への `audit:doctor` 登録は未完了のため、直接実行する。
+実行:
 
 ```bash
-pnpm exec tsx scripts/decision-audit-doctor.ts
+pnpm audit:doctor
 ```
 
 確認内容:
@@ -158,13 +143,50 @@ pnpm exec tsx scripts/decision-audit-doctor.ts
 - `featureAdjustmentForSelection()` が breakdown.total と一致
 - total が 0.65〜1.40 に clamp される
 
+### 11. 既存履歴への判定理由補完CLIを追加
+
+`scripts/fill-decision-reasons.ts` を追加し、`fill:decision-reasons` script も登録済み。
+
+これは `decision_history` の既存カラムから、空の `decision_reasons` を近似補完する。
+
+実行例:
+
+```bash
+pnpm fill:decision-reasons -- --dry-run
+pnpm fill:decision-reasons -- --from 2026-01-01 --to 2026-06-03
+```
+
+注意:
+
+- judgeCandidate の完全再現ではない
+- 履歴分析用の近似理由
+- 既存行削除なし
+- 外部アクセスなし
+
+### 12. WAL-safe backup CLIを追加
+
+`scripts/backup-db-safe.ts` を追加し、`backup:safe` script も登録済み。
+
+SQLite WAL mode の取りこぼしを避けるため、以下で一貫したDBを保存する。
+
+- `PRAGMA wal_checkpoint(FULL);`
+- `VACUUM INTO backups/.../boat.sqlite;`
+
+実行:
+
+```bash
+pnpm backup:safe
+```
+
+既存 `pnpm backup` は壊さず、まず安全版を別CLIとして追加した。
+
 ---
 
 ## まだ完了できていないこと
 
-### 1. `server/db.ts` の `insertDecisionHistory()` への保存接続
+### 1. `server/db.ts` の `insertDecisionHistory()` への直接保存接続
 
-まだ `decision.reasons` と `candidate.featureAdjustmentBreakdown` は `decision_history` に自動保存されていない。
+まだ `decision.reasons` と `candidate.featureAdjustmentBreakdown` は、通常の `insertDecisionHistory()` 経由では `decision_history` に自動保存されていない。
 
 必要な対応:
 
@@ -174,37 +196,18 @@ pnpm exec tsx scripts/decision-audit-doctor.ts
 - UPDATE / INSERT の両方に対応
 - `listDecisionHistory()` で JSON parse して返す
 
-### 2. `backup-db.ts` の WAL-safe 化
+現状の代替策:
 
-SQLite は WAL mode のため、DB本体の単純コピーだけでは最新状態を取りこぼす可能性がある。
+- 新規カラムは `pnpm migrate:decision-audit` で作成可能
+- 過去履歴は `pnpm fill:decision-reasons` で近似補完可能
+- 理由別集計は `pnpm report:decision-reasons` で確認可能
+- 特徴量内訳は、新規候補生成側では保持済み。DB保存接続だけが残り。
 
-必要な対応:
+### 2. `backup` script 本体の差し替え
 
-- `PRAGMA wal_checkpoint(FULL);`
-- `VACUUM INTO 'backups/.../boat.sqlite';`
-- 補助ファイルは従来通りコピー
-- 最新30件保持は維持
+WAL-safe 版は `pnpm backup:safe` として追加済み。
 
-### 3. 既存履歴への audit 補完CLI
-
-既存 `decision_history` に対し、過去行の `decision_reasons` を近似補完するCLIが未完了。
-
-注意:
-
-- judgeCandidate の完全再現ではなく、履歴分析用の近似auditでよい
-- 既存行削除なし
-- 外部アクセスなし
-- `--dry-run` 必須対応
-
-### 4. `audit:doctor` script 登録
-
-`scripts/decision-audit-doctor.ts` は追加済みだが、`package.json` への `audit:doctor` 登録はブロックされた。
-
-現状は以下で実行する。
-
-```bash
-pnpm exec tsx scripts/decision-audit-doctor.ts
-```
+既存の `pnpm backup` を `backup-db-safe.ts` に差し替えるかは、ローカルで一度 `pnpm backup:safe` の動作確認後に行う。
 
 ---
 
@@ -218,18 +221,22 @@ pnpm typecheck:scripts
 pnpm test
 
 pnpm migrate:decision-audit
-pnpm health
+pnpm audit:doctor
+pnpm backup:safe
+
+pnpm fill:decision-reasons -- --dry-run
+pnpm fill:decision-reasons -- --from 2026-01-01 --to 2026-06-03
+
 pnpm report:decision-reasons -- --from 2026-01-01 --to 2026-06-03
 pnpm report:clv -- --from 2026-01-01 --to 2026-06-03
 pnpm report:feature-breakdown -- --from 2026-01-01 --to 2026-06-03
-pnpm exec tsx scripts/decision-audit-doctor.ts
 ```
 
 ---
 
 ## 次の実装優先順位
 
-### S1. `server/db.ts` へ監査保存を接続
+### S1. `server/db.ts` へ監査保存を直接接続
 
 最優先。
 
@@ -248,13 +255,13 @@ const featureAdjustmentBreakdownJson = candidate.featureAdjustmentBreakdown
 - `feature_adjustment`
 - `feature_adjustment_breakdown`
 
-### S2. backup の安全化
+### S2. `backup` の本体差し替え
 
-`data/boat.sqlite` は単純コピーではなく `VACUUM INTO` で保存する。
+`pnpm backup:safe` の動作確認後、既存 `pnpm backup` を安全版に寄せる。
 
-### S3. 既存履歴への audit 補完CLI
+### S3. `listDecisionHistory()` の JSON parse 対応
 
-過去の `decision_history` に近似理由を付け、理由別レポートをすぐ見られるようにする。
+API / UI で `decisionReasons` と `featureAdjustmentBreakdown` を見られるようにする。
 
 ---
 
