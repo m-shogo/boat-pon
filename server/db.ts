@@ -341,6 +341,11 @@ WHERE venue='琵琶湖';
   try { db.exec("ALTER TABLE race_equipment ADD COLUMN source_type TEXT NOT NULL DEFAULT 'official_live'"); } catch { /* Already exists. */ }
   try { db.exec("ALTER TABLE race_equipment ADD COLUMN source_quality TEXT NOT NULL DEFAULT 'exact'"); } catch { /* Already exists. */ }
 
+  // 判定理由・特徴量内訳の保存（既存DBのmigration）
+  try { db.exec("ALTER TABLE decision_history ADD COLUMN decision_reasons TEXT NOT NULL DEFAULT '[]'"); } catch { /* Already exists. */ }
+  try { db.exec("ALTER TABLE decision_history ADD COLUMN feature_adjustment REAL"); } catch { /* Already exists. */ }
+  try { db.exec("ALTER TABLE decision_history ADD COLUMN feature_adjustment_breakdown TEXT"); } catch { /* Already exists. */ }
+
   // ジョブ管理テーブル
   db.exec(`
 CREATE TABLE IF NOT EXISTS job_runs (
@@ -833,6 +838,11 @@ export function insertDecisionHistory(db: DatabaseSync, candidate: BetCandidate,
   ).get(candidate.raceId, selection) as { popularity: number | null } | undefined;
   const selectionPopularity = selectionPopularityRow?.popularity ?? null;
 
+  const decisionReasonsJson = JSON.stringify(decision.reasons ?? []);
+  const featureAdjustmentBreakdownJson = candidate.featureAdjustmentBreakdown != null
+    ? JSON.stringify(candidate.featureAdjustmentBreakdown)
+    : null;
+
   if (existing) {
     db.prepare(`
 UPDATE decision_history
@@ -841,7 +851,8 @@ SET selection = ?, estimated_hit_rate = ?, raw_estimated_hit_rate = ?, conservat
     result = ?, payout_yen = ?, popularity = ?, returned = ?, source = ?, fetched_at = ?,
     recommended_stake_yen = ?, sample_size = ?, model_version = ?, race_category = ?,
     sharp_signal_drop = ?, environment_risk_level = ?, exhibition_st_residual_sum = ?,
-    selection_popularity = ?, run_kind = ?
+    selection_popularity = ?, run_kind = ?,
+    decision_reasons = ?, feature_adjustment = ?, feature_adjustment_breakdown = ?
 WHERE id = ?
 `).run(
       selection,
@@ -868,6 +879,9 @@ WHERE id = ?
       calcExhibitionStResidualSum(candidate),
       selectionPopularity,
       runKind,
+      decisionReasonsJson,
+      candidate.featureAdjustment ?? null,
+      featureAdjustmentBreakdownJson,
       existing.id,
     );
     if (options.replaceRace) {
@@ -884,8 +898,9 @@ INSERT INTO decision_history
 (race_id, date, venue, race_no, bet_type, selection, estimated_hit_rate, raw_estimated_hit_rate, conservative_hit_rate,
  model_selection_score, required_odds, current_odds, ev, decision,
  actually_bought, stake_yen, result, payout_yen, popularity, returned, source, fetched_at, recommended_stake_yen, sample_size,
- model_version, race_category, sharp_signal_drop, environment_risk_level, exhibition_st_residual_sum, selection_popularity, run_kind)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ model_version, race_category, sharp_signal_drop, environment_risk_level, exhibition_st_residual_sum, selection_popularity, run_kind,
+ decision_reasons, feature_adjustment, feature_adjustment_breakdown)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `).run(
     candidate.raceId,
     candidate.date,
@@ -918,6 +933,9 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
     calcExhibitionStResidualSum(candidate),
     selectionPopularity,
     runKind,
+    decisionReasonsJson,
+    candidate.featureAdjustment ?? null,
+    featureAdjustmentBreakdownJson,
   );
 }
 
@@ -928,7 +946,8 @@ SELECT id, race_id, date, venue, race_no, selection, estimated_hit_rate, require
        ev, decision, actually_bought, stake_yen, result, payout_yen, popularity, returned,
        source, fetched_at, recommended_stake_yen, sample_size, model_version, race_category,
        sharp_signal_drop, environment_risk_level, exhibition_st_residual_sum,
-       selection_popularity, run_kind, created_at
+       selection_popularity, run_kind, created_at,
+       decision_reasons, feature_adjustment, feature_adjustment_breakdown
 FROM decision_history
 ORDER BY created_at DESC, id DESC
 LIMIT 500
@@ -959,6 +978,8 @@ LIMIT 500
     environmentRiskLevel: row.environment_risk_level == null ? null : String(row.environment_risk_level) as "low" | "medium" | "high",
     exhibitionStResidualSum: row.exhibition_st_residual_sum == null ? null : Number(row.exhibition_st_residual_sum),
     selectionPopularity: row.selection_popularity == null ? null : Number(row.selection_popularity),
+    decisionReasons: row.decision_reasons == null ? [] : (() => { try { return JSON.parse(String(row.decision_reasons)) as string[]; } catch { return []; } })(),
+    featureAdjustmentBreakdown: row.feature_adjustment_breakdown == null ? null : (() => { try { return JSON.parse(String(row.feature_adjustment_breakdown)) as Record<string, number>; } catch { return null; } })(),
     result: row.result == null ? null : String(row.result),
     payoutYen: row.payout_yen == null ? null : Number(row.payout_yen),
     popularity: row.popularity == null ? null : Number(row.popularity),
