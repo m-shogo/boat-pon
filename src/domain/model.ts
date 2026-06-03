@@ -1,5 +1,5 @@
 import { MODEL_VERSION } from "./modelVersion";
-import { featureAdjustmentForSelection, type ProgramFeatureSnapshot } from "./programFeatures";
+import { featureAdjustmentBreakdownForSelection, type ProgramFeatureSnapshot } from "./programFeatures";
 import type { BetCandidate, RaceResult } from "./types";
 
 export type ModelCandidateInput = {
@@ -185,7 +185,8 @@ export function buildCandidatesFromModel(
       const firstBoatFeature = input.features?.boats.find((boat) => boat.course === selection[0]);
       const secondBoatFeature = input.features?.boats.find((boat) => boat.course === selection[1]);
       const thirdBoatFeature = input.features?.boats.find((boat) => boat.course === selection[2]);
-      const featureAdjustment = featureAdjustmentForSelection(input.features, selection);
+      const featureAdjustmentBreakdown = featureAdjustmentBreakdownForSelection(input.features, selection);
+      const featureAdjustment = featureAdjustmentBreakdown.total;
       const adjustedHitRate = clamp(modelRow.conservativeHitRate * featureAdjustment, 0.0001, 0.8);
       const sampleSize = modelRow.venueRaceCount;
       const hasRiskFlag = sampleSize < 10;
@@ -213,6 +214,7 @@ export function buildCandidatesFromModel(
         raceCategory: input.raceCategory ?? "不明",
         beforeInfoComplete: input.beforeInfoComplete,
         featureAdjustment,
+        featureAdjustmentBreakdown,
         candidateClassName: firstBoatFeature?.className,
         candidateMotorTop2Rate: firstBoatFeature?.motorTop2Rate,
         candidateBoatTop2Rate: firstBoatFeature?.boatTop2Rate,
