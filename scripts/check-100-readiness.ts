@@ -64,6 +64,7 @@ function checkFiles() {
     ["popularity-movement", "scripts/report-popularity-movement.ts"],
     ["payout-sensitivity", "scripts/report-payout-sensitivity.ts"],
     ["time-split-stability", "scripts/report-time-split-stability.ts"],
+    ["model-version-simple", "scripts/report-model-version-simple.ts"],
   ];
 
   for (const [name, path] of requiredFiles) {
@@ -101,7 +102,7 @@ function checkPackageScripts() {
     "report:popularity-movement",
     "report:payout-sensitivity",
     "report:time-split-stability",
-    "report:model-version-comparison",
+    "report:model-version-simple",
   ];
 
   for (const name of optionalNotYetRegistered) {
