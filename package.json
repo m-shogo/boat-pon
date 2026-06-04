@@ -41,6 +41,7 @@
     "report:venue-monthly": "tsx scripts/report-venue-monthly.ts",
     "report:decision-outcomes": "tsx scripts/report-decision-outcomes.ts",
     "report:missed-hits": "tsx scripts/report-missed-hits.ts",
+    "report:buy-misses": "tsx scripts/report-buy-misses.ts",
     "report:weekly": "tsx scripts/report-quality.ts --days 7",
     "report:monthly": "tsx scripts/report-quality.ts --days 30",
     "walk:history": "tsx scripts/walk-forward-history.ts",
