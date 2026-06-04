@@ -44,6 +44,7 @@
     "report:buy-misses": "tsx scripts/report-buy-misses.ts",
     "report:review-summary": "tsx scripts/report-review-summary.ts",
     "report:data-quality-outcomes": "tsx scripts/report-data-quality-outcomes.ts",
+    "report:odds-band-outcomes": "tsx scripts/report-odds-band-outcomes.ts",
     "report:weekly": "tsx scripts/report-quality.ts --days 7",
     "report:monthly": "tsx scripts/report-quality.ts --days 30",
     "walk:history": "tsx scripts/walk-forward-history.ts",
