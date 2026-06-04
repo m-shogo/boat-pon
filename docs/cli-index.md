@@ -16,28 +16,32 @@ boat-pon の CLI が増えてきたため、用途別に整理した索引です
 | `pnpm daily` | 日次処理 | 外部取得あり |
 | `pnpm health` | 全体ヘルス確認 | 基本read-only |
 | `pnpm backup:safe` | 安全バックアップ | 推奨 |
-| `pnpm backup` | 旧backupの可能性 | safe default化予定 |
+| `pnpm backup` | 安全バックアップ | `backup-db-safe.ts` を使用 |
 
 ## 100点化チェック
 
 | command | 目的 |
 |---|---|
-| `pnpm exec tsx scripts/check-100-readiness.ts` | 100点化に必要な残項目を確認 |
-| `pnpm exec tsx scripts/check-100-readiness.ts --strict` | 未達なら非0終了 |
+| `pnpm check:100` | 100点化に必要な残項目を確認 |
+| `pnpm check:100 -- --strict` | 未達なら非0終了 |
+| `pnpm audit:persistence` | audit保存の接続状態を確認 |
+| `pnpm audit:persistence -- --strict` | audit保存が未達なら非0終了 |
+| `pnpm patch:paper-wording -- --dry-run` | paper通知文言の安全化差分を確認 |
+| `pnpm patch:paper-wording -- --write` | paper通知文言を安全側に置換 |
 
 ## 一括レビュー
 
 | command | 目的 |
 |---|---|
-| `pnpm exec tsx scripts/run-review-suite.ts --from YYYY-MM-DD --to YYYY-MM-DD --split-date YYYY-MM-DD` | 主要reviewを一括実行 |
-| `pnpm exec tsx scripts/run-review-suite.ts --from YYYY-MM-DD --to YYYY-MM-DD --split-date YYYY-MM-DD --keep-going` | 途中失敗しても続行 |
-| `pnpm exec tsx scripts/create-review-log.ts --date YYYY-MM-DD --from YYYY-MM-DD --to YYYY-MM-DD --split-date YYYY-MM-DD` | 日付付きレビュー記録を作成 |
+| `pnpm review:suite -- --from YYYY-MM-DD --to YYYY-MM-DD --split-date YYYY-MM-DD` | 主要reviewを一括実行 |
+| `pnpm review:suite -- --from YYYY-MM-DD --to YYYY-MM-DD --split-date YYYY-MM-DD --keep-going` | 途中失敗しても続行 |
+| `pnpm review:log -- --date YYYY-MM-DD --from YYYY-MM-DD --to YYYY-MM-DD --split-date YYYY-MM-DD` | 日付付きレビュー記録を作成 |
 
 推奨例:
 
 ```bash
-pnpm exec tsx scripts/create-review-log.ts --date 2026-06-04 --from 2026-01-01 --to 2026-06-03 --split-date 2026-04-01
-pnpm exec tsx scripts/run-review-suite.ts --from 2026-01-01 --to 2026-06-03 --split-date 2026-04-01 --keep-going
+pnpm review:log -- --date 2026-06-04 --from 2026-01-01 --to 2026-06-03 --split-date 2026-04-01
+pnpm review:suite -- --from 2026-01-01 --to 2026-06-03 --split-date 2026-04-01 --keep-going
 ```
 
 ## レビュー・分析CLI
@@ -64,8 +68,8 @@ pnpm exec tsx scripts/run-review-suite.ts --from 2026-01-01 --to 2026-06-03 --sp
 |---|---|
 | `pnpm report:clv -- --from YYYY-MM-DD --to YYYY-MM-DD` | CLV確認 |
 | `pnpm report:odds-band-outcomes -- --from YYYY-MM-DD --to YYYY-MM-DD --decision BUY` | オッズ帯別のBUY成績 |
-| `pnpm exec tsx scripts/report-market-warnings.ts -- --from YYYY-MM-DD --to YYYY-MM-DD` | 市場が嫌ったBUY / 買ったWATCHを確認 |
-| `pnpm exec tsx scripts/report-popularity-movement.ts -- --from YYYY-MM-DD --to YYYY-MM-DD` | 人気順位推移 |
+| `pnpm report:market-warnings -- --from YYYY-MM-DD --to YYYY-MM-DD` | 市場が嫌ったBUY / 買ったWATCHを確認 |
+| `pnpm report:popularity-movement -- --from YYYY-MM-DD --to YYYY-MM-DD` | 人気順位推移 |
 
 ### データ品質・特徴量
 
@@ -81,9 +85,9 @@ pnpm exec tsx scripts/run-review-suite.ts --from 2026-01-01 --to 2026-06-03 --sp
 | command | 目的 |
 |---|---|
 | `pnpm report:calibration -- --from YYYY-MM-DD --to YYYY-MM-DD --decision BUY` | 推定的中率の校正 |
-| `pnpm exec tsx scripts/report-payout-sensitivity.ts -- --from YYYY-MM-DD --to YYYY-MM-DD --decision BUY` | 上位配当依存確認 |
-| `pnpm exec tsx scripts/report-time-split-stability.ts -- --from YYYY-MM-DD --split-date YYYY-MM-DD --to YYYY-MM-DD --decision BUY --min-settled 50` | 前半/後半の安定性 |
-| `pnpm exec tsx scripts/report-model-version-simple.ts -- --from YYYY-MM-DD --to YYYY-MM-DD --decision BUY` | model_version比較 |
+| `pnpm report:payout-sensitivity -- --from YYYY-MM-DD --to YYYY-MM-DD --decision BUY` | 上位配当依存確認 |
+| `pnpm report:time-split-stability -- --from YYYY-MM-DD --split-date YYYY-MM-DD --to YYYY-MM-DD --decision BUY --min-settled 50` | 前半/後半の安定性 |
+| `pnpm report:model-version-simple -- --from YYYY-MM-DD --to YYYY-MM-DD --decision BUY` | model_version比較 |
 
 ### 会場/月別
 
@@ -118,6 +122,7 @@ pnpm exec tsx scripts/run-review-suite.ts --from 2026-01-01 --to 2026-06-03 --sp
 | `pnpm validate:data` | データ検証 |
 | `pnpm migrate:decision-audit` | decision auditカラムmigration |
 | `pnpm audit:doctor` | audit状態診断 |
+| `pnpm audit:persistence` | audit fieldsのDB/コード接続確認 |
 | `pnpm fill:decision-reasons` | decision reasons補完 |
 
 ## 開発・検証
@@ -133,12 +138,13 @@ pnpm exec tsx scripts/run-review-suite.ts --from 2026-01-01 --to 2026-06-03 --sp
 ## 推奨レビュー順
 
 ```bash
-pnpm exec tsx scripts/check-100-readiness.ts
-pnpm exec tsx scripts/run-review-suite.ts --from 2026-01-01 --to 2026-06-03 --split-date 2026-04-01 --keep-going
+pnpm check:100
+pnpm audit:persistence
+pnpm review:suite -- --from 2026-01-01 --to 2026-06-03 --split-date 2026-04-01 --keep-going
 pnpm typecheck:scripts
 pnpm test
 pnpm audit:doctor
-pnpm backup:safe
+pnpm backup
 ```
 
 ## 今後の命名整理案
