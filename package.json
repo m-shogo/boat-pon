@@ -56,6 +56,7 @@
     "review:suite": "tsx scripts/run-review-suite.ts",
     "review:log": "tsx scripts/create-review-log.ts",
     "check:100": "tsx scripts/check-100-readiness.ts",
+    "check:100-suite": "tsx scripts/run-100-suite.ts",
     "report:weekly": "tsx scripts/report-quality.ts --days 7",
     "report:monthly": "tsx scripts/report-quality.ts --days 30",
     "walk:history": "tsx scripts/walk-forward-history.ts",
