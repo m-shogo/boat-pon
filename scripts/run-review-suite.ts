@@ -37,6 +37,7 @@ const optionalTsReports = [
   ["scripts/report-popularity-movement.ts", ["--from", args.from, "--to", args.to]],
   ["scripts/report-payout-sensitivity.ts", ["--from", args.from, "--to", args.to, "--decision", "BUY"]],
   ["scripts/report-time-split-stability.ts", ["--from", args.from, "--split-date", args.splitDate, "--to", args.to, "--decision", "BUY", "--min-settled", String(args.minSettled)]],
+  ["scripts/report-model-version-simple.ts", ["--from", args.from, "--to", args.to, "--decision", "BUY", "--min-settled", String(Math.max(10, Math.floor(args.minSettled / 2)))]],
 ] as const;
 
 for (const [file, reportArgs] of optionalTsReports) {
