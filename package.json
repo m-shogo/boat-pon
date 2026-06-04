@@ -29,6 +29,8 @@
     "validate:data": "tsx scripts/validate-data.ts",
     "migrate:decision-audit": "tsx scripts/migrate-decision-audit.ts",
     "audit:doctor": "tsx scripts/decision-audit-doctor.ts",
+    "audit:persistence": "tsx scripts/check-audit-persistence.ts",
+    "patch:paper-wording": "tsx scripts/patch-paper-wording.ts",
     "fill:decision-reasons": "tsx scripts/fill-decision-reasons.ts",
     "report:daily": "tsx scripts/report-daily.ts",
     "report:quality": "tsx scripts/report-quality.ts",
