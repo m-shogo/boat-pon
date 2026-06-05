@@ -28,5 +28,9 @@
     "src",
     "scripts",
     "server"
+  ],
+  "exclude": [
+    "src/generate-buffett-quality.ts",
+    "src/generate-valuation-snapshot.ts"
   ]
 }
