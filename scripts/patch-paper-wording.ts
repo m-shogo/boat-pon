@@ -44,24 +44,20 @@ console.log("applied candidates:");
 for (const row of applied) console.log(`- ${row}`);
 
 if (missing.length > 0) {
-  console.log("
-not found:");
+  console.log("\nnot found:");
   for (const row of missing) console.log(`- ${row}`);
 }
 
 if (after === before) {
-  console.log("
-No changes.");
+  console.log("\nNo changes.");
   process.exit(0);
 }
 
 if (args.write) {
   writeFileSync(TARGET, after);
-  console.log("
-Updated server/db.ts");
+  console.log("\nUpdated server/db.ts");
 } else {
-  console.log("
-Dry-run only. Re-run with --write to update server/db.ts");
+  console.log("\nDry-run only. Re-run with --write to update server/db.ts");
 }
 
 type Args = { write: boolean };
@@ -72,6 +68,7 @@ function parseArgs(argv: string[]): Args {
     if (key === "--write") parsed.write = true;
     else if (key === "--dry-run") parsed.write = false;
     else if (key === "--help" || key === "-h") { printHelp(); process.exit(0); }
+    else if (key === "--") { /* pnpm arg separator, ignore */ }
     else throw new Error(`unknown option: ${key}`);
   }
   return parsed;

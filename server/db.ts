@@ -998,17 +998,17 @@ export function createNotificationIfNeeded(
   officialUrl: string,
 ): { created: boolean; title: string; body: string } | null {
   if (decision.status !== "BUY") return null;
-  const title = `[paper] BUY候補: ${candidate.venue} ${candidate.raceNo}R`;
+  const title = `[paper] 検証候補: ${candidate.venue} ${candidate.raceNo}R`;
   const body = [
-    `買い目: ${candidate.selection.join("-")}`,
-    `判定的中率: ${(candidate.estimatedHitRate * 100).toFixed(1)}%`,
+    `候補: ${candidate.selection.join("-")}`,
+    `推定的中率: ${(candidate.estimatedHitRate * 100).toFixed(1)}%`,
     candidate.rawEstimatedHitRate != null
       ? `保守化前推定: ${(candidate.rawEstimatedHitRate * 100).toFixed(1)}%`
       : null,
     `必要オッズ: ${decision.requiredOdds.toFixed(1)}倍以上`,
     `取得オッズ: ${candidate.currentOdds?.toFixed(1) ?? "未取得"}倍`,
     `EV: ${decision.ev?.toFixed(2) ?? "-"}`,
-    "【paper観察モード】実購入なし。live ROI確認まで購入しない。",
+    "【paper観察モード】実購入なし。検証・反省用。",
   ].filter((row): row is string => row != null).join("\n");
 
   const result = db.prepare(`
