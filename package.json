@@ -56,6 +56,7 @@
     "report:official-historical-buy-reduction": "tsx scripts/report-official-historical-buy-reduction.ts",
     "analyze:roi-candidates": "tsx scripts/analyze-roi-candidates.ts",
     "analyze:bet-strategies": "tsx scripts/analyze-bet-strategies.ts",
+    "analyze:roi-commit": "tsx scripts/analyze-roi-commit.ts",
     "review:suite": "tsx scripts/run-review-suite.ts",
     "review:log": "tsx scripts/create-review-log.ts",
     "check:100": "tsx scripts/check-100-readiness.ts",

@@ -31,6 +31,8 @@ type DecisionRow = {
   selection: string;
   current_odds: number;
   result: string;
+  venue_motor_top2_rate: number | null;
+  venue_boat_top2_rate: number | null;
 };
 
 type RaceContext = {
@@ -54,6 +56,9 @@ type BaseRow = {
   result: string;
   resultNums: number[];
   originalOdds: number;
+  headVenueMotorTop2Rate: number | null;
+  headVenueBoatTop2Rate: number | null;
+  hasVenueMotorBoat: boolean;
   context: RaceContext;
 };
 
@@ -146,6 +151,9 @@ try {
     fBest: bestByGroup(strategyResults, (r) => r.row.context.fPresent ? "F情報あり" : "F情報なし", 30),
     windBest: bestByGroup(strategyResults, (r) => windBand(r.row.context.windMps), 30),
     waveBest: bestByGroup(strategyResults, (r) => waveBand(r.row.context.waveCm), 30),
+    motorBest: bestByGroup(strategyResults, (r) => motorBand(r.row.headVenueMotorTop2Rate), 50),
+    boatBest: bestByGroup(strategyResults, (r) => boatBand(r.row.headVenueBoatTop2Rate), 50),
+    motorStrategy: motorStrategyMatrix(strategyResults),
     flowConditions: findConditionalWinners(strategyResults, ["first_second_third_flow", "first_fixed_second_third_flow", "first_second_flow_odds_min_5", "first_second_flow_odds_min_8", "first_second_flow_odds_min_10"]),
     boxConditions: findConditionalWinners(strategyResults, ["top3_box", "top4_box", "box_only_when_order_uncertain"]),
     additionalSuggestions: additionalSuggestions(),
@@ -163,13 +171,26 @@ try {
 
 function loadBaseRows(): BaseRow[] {
   const decisions = db.prepare(`
-SELECT id, race_id, date, venue, race_no, selection, current_odds, result
-FROM decision_history
-WHERE run_kind = 'historical-backfill'
-  AND decision = 'BUY'
-  AND current_odds IS NOT NULL
-  AND result IS NOT NULL
-ORDER BY date, id
+SELECT
+  dh.id,
+  dh.race_id,
+  dh.date,
+  dh.venue,
+  dh.race_no,
+  dh.selection,
+  dh.current_odds,
+  dh.result,
+  mbs.motor_top2_rate AS venue_motor_top2_rate,
+  mbs.boat_top2_rate AS venue_boat_top2_rate
+FROM decision_history dh
+LEFT JOIN motor_boat_stats mbs
+  ON mbs.race_id = dh.race_id
+ AND mbs.course = CAST(substr(dh.selection, 1, 1) AS INTEGER)
+WHERE dh.run_kind = 'historical-backfill'
+  AND dh.decision = 'BUY'
+  AND dh.current_odds IS NOT NULL
+  AND dh.result IS NOT NULL
+ORDER BY dh.date, dh.id
 `).all() as DecisionRow[];
 
   const contexts = loadRaceContexts(unique(decisions.map((r) => r.race_id)));
@@ -190,6 +211,9 @@ ORDER BY date, id
         result: row.result,
         resultNums,
         originalOdds: Number(row.current_odds),
+        headVenueMotorTop2Rate: nullableNumber(row.venue_motor_top2_rate),
+        headVenueBoatTop2Rate: nullableNumber(row.venue_boat_top2_rate),
+        hasVenueMotorBoat: row.venue_motor_top2_rate != null || row.venue_boat_top2_rate != null,
         context: contexts.get(row.race_id) ?? emptyContext(),
       };
     })
@@ -529,6 +553,37 @@ function findConditionalWinners(results: RaceStrategyResult[], targets: Strategy
     .slice(0, 20);
 }
 
+function motorStrategyMatrix(results: RaceStrategyResult[]) {
+  const conditions: Array<[string, (row: BaseRow) => boolean]> = [
+    ["venueMotorTop2Rate >= 50", (row) => (row.headVenueMotorTop2Rate ?? -1) >= 50],
+    ["venueMotorTop2Rate 35-50", (row) => (row.headVenueMotorTop2Rate ?? -1) >= 35 && (row.headVenueMotorTop2Rate ?? -1) < 50],
+    ["venueMotorTop2Rate < 35", (row) => (row.headVenueMotorTop2Rate ?? 999) < 35],
+    ["venueBoatTop2Rate >= 50", (row) => (row.headVenueBoatTop2Rate ?? -1) >= 50],
+    ["venueBoatTop2Rate < 35", (row) => (row.headVenueBoatTop2Rate ?? 999) < 35],
+    ["venue motor/boatあり", (row) => row.hasVenueMotorBoat],
+    ["venue motor/boat欠損", (row) => !row.hasVenueMotorBoat],
+  ];
+  const strategies: StrategyName[] = ["original_single", "second_third_reverse", "first_second_third_flow", "first_fixed_second_third_flow", "top3_box", "top4_box"];
+  const rows: Array<{ condition: string; strategy: StrategyName } & StrategySummary & { comment: string }> = [];
+  for (const [condition, fn] of conditions) {
+    const subset = results.filter((result) => fn(result.row) && strategies.includes(result.strategy));
+    for (const summary of summarizeStrategies(subset).filter((s) => strategies.includes(s.strategy))) {
+      rows.push({
+        condition,
+        ...summary,
+        comment: summary.races < 50
+          ? "n不足"
+          : summary.missingRate >= 0.8
+            ? "odds欠損が多く参考扱い"
+            : summary.roi >= 100
+              ? "edge候補。ただし最大1hit除外確認"
+              : "単独では弱い",
+      });
+    }
+  }
+  return rows.sort((a, b) => a.condition.localeCompare(b.condition) || b.roi - a.roi);
+}
+
 function monthlyStability(strategy: StrategyName, rows: RaceStrategyResult[]) {
   const byMonth = new Map<string, RaceStrategyResult[]>();
   for (const row of rows) byMonth.set(row.row.ym, [...(byMonth.get(row.row.ym) ?? []), row]);
@@ -565,6 +620,9 @@ function renderMarkdown(report: {
   fBest: GroupBest[];
   windBest: GroupBest[];
   waveBest: GroupBest[];
+  motorBest: GroupBest[];
+  boatBest: GroupBest[];
+  motorStrategy: ReturnType<typeof motorStrategyMatrix>;
   flowConditions: GroupBest[];
   boxConditions: GroupBest[];
   additionalSuggestions: ReturnType<typeof additionalSuggestions>;
@@ -631,18 +689,30 @@ function renderMarkdown(report: {
   lines.push(bestTable("風速", report.windBest));
   lines.push(bestTable("波高", report.waveBest));
 
-  lines.push("## 7. 流しが有効な条件");
+  lines.push("## 8. motor_boat_statsと買い方");
+  lines.push("### motor帯別おすすめstrategy");
+  lines.push(bestTable("motor", report.motorBest));
+  lines.push("### boat帯別おすすめstrategy");
+  lines.push(bestTable("boat", report.boatBest));
+  lines.push("| motor_condition | strategy | n | hit_rate | avg_odds | ROI | 欠損率 | コメント |");
+  lines.push("|---|---|---:|---:|---:|---:|---:|---|");
+  for (const row of report.motorStrategy) {
+    lines.push(`| ${row.condition} | ${row.strategy} | ${row.races} | ${pct(row.hitRate)} | ${num(row.avgTicketOdds)} | ${pct(row.roi / 100)} | ${pct(row.missingRate)} | ${row.comment} |`);
+  }
+  lines.push("");
+
+  lines.push("## 9. 流しが有効な条件");
   lines.push(bestTable("条件", report.flowConditions));
-  lines.push("## 8. BOXが有効な条件");
+  lines.push("## 10. BOXが有効な条件");
   lines.push(bestTable("条件", report.boxConditions));
 
-  lines.push("## 9. やらない方がいい買い方");
+  lines.push("## 11. やらない方がいい買い方");
   lines.push("- 常時 `top3_box` / `top4_box`: 的中率は上がりやすいが、点数増でROIが落ちる場合は危険。");
   lines.push("- odds欠損率が高いstrategy: 結果オッズを取れたticketだけの参考値になる。");
   lines.push("- `first_fixed_second_third_flow` の常用: 最大20点で、的中率上昇より投資増が勝ちやすい。");
   lines.push("- 高配当1発で最大1hit除外ROIが崩れる条件: 偽edge疑い。", "");
 
-  lines.push("## 10. 過学習リスク");
+  lines.push("## 12. 過学習リスク");
   lines.push("| strategy | train ROI | validation ROI | test ROI | 月別安定性 | 判定 |");
   lines.push("|---|---:|---:|---:|---|---|");
   for (const row of report.splitValidation) {
@@ -650,14 +720,14 @@ function renderMarkdown(report: {
   }
   lines.push("");
 
-  lines.push("## 11. 次に実装するならこの順番");
+  lines.push("## 13. 次に実装するならこの順番");
   lines.push("1. 本番変更ではなく、paper検証で `second_third_reverse` と `first_second_third_flow` を比較する。");
   lines.push("2. `1着2着は合っていて3着違い` が多い会場だけ `1-2-流し` を検証する。");
   lines.push("3. `selectionの3艇は全部入っていたが順番違い` が多い条件だけ `top3_box` を検証する。");
   lines.push("4. 常時BOX/常時20点流しは避け、NO BUY条件とセットで検証する。");
   lines.push("5. odds鮮度と欠損率をstrategy評価に加え、締切直前oddsで再評価する。", "");
 
-  lines.push("## 12. 中学生でも分かる説明");
+  lines.push("## 14. 中学生でも分かる説明");
   lines.push("1点買いは、当たると大きいけれど外れやすい作戦です。流しやBOXは当たりやすくなりますが、買う点数が増えるので、お金もたくさん使います。だから「当たる回数が増えた」だけでは良くなくて、「増えた投資より回収が増えたか」を見ます。今回の分析は、どんな時だけ広げる価値があるか、逆に広げても損しやすいかを調べるものです。", "");
 
   lines.push("## 追加提案");
@@ -756,6 +826,22 @@ function waveBand(wave: number | null) {
   if (wave < 3) return "wave < 3";
   if (wave < 5) return "3 <= wave < 5";
   return "wave >= 5";
+}
+
+function motorBand(value: number | null) {
+  if (value == null) return "venueMotorTop2Rateなし";
+  if (value < 25) return "venueMotorTop2Rate < 25";
+  if (value < 35) return "25 <= venueMotorTop2Rate < 35";
+  if (value < 50) return "35 <= venueMotorTop2Rate < 50";
+  return "venueMotorTop2Rate >= 50";
+}
+
+function boatBand(value: number | null) {
+  if (value == null) return "venueBoatTop2Rateなし";
+  if (value < 25) return "venueBoatTop2Rate < 25";
+  if (value < 35) return "25 <= venueBoatTop2Rate < 35";
+  if (value < 50) return "35 <= venueBoatTop2Rate < 50";
+  return "venueBoatTop2Rate >= 50";
 }
 
 function emptyContext(): RaceContext {

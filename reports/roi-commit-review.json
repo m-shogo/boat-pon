@@ -1,0 +1,4069 @@
+{
+  "generatedAt": "2026-06-05T09:25:14.872Z",
+  "dbPath": "data/boat.sqlite",
+  "targetSha": "e9eabe3de747152e90fb6669a52b6e7448a83578",
+  "currentHead": "90ab55344dbcf05ac43978b46ff980d60a1776ef",
+  "targetCommit": {
+    "log": "commit e9eabe3de747152e90fb6669a52b6e7448a83578\nAuthor:     m-shogo <m.shogo.0409@gmail.com>\nAuthorDate: Fri Jun 5 14:45:50 2026 +0900\nCommit:     m-shogo <m.shogo.0409@gmail.com>\nCommitDate: Fri Jun 5 14:45:50 2026 +0900\n\n    motor_boat_stats をモデルに統合・キャリブレーション改善・設定最適化\n    \n    ## app_settings 変更\n    - excludedRaceNos: [11,12] → [10,11,12]\n    - programFilter.maxMotorTop2Rate: 50 追加\n    - oddsCalibrationFactors: [0.65,0.51,0.40] → [0.40,0.40,0.40] (全帯統一)\n    \n    ## モデル改善\n    - src/domain/programFeatures.ts: BoatFeature に venueMotorTop2Rate/venueBoatTop2Rate を追加\n      featureAdjustmentBreakdown で venue別実績を national 平均より優先使用\n    - server/db.ts: loadMotorBoatStatsMap() を新設\n      enrichFeatures() に motorBoatStatsMap を追加\n      listProgramInputs / listProgramInputsRange / listProgramInputsWithOddsSnapshotsRange を更新\n    \n    ## その他\n    - tsconfig.json/tsconfig.scripts.json: 別プロジェクト由来ファイルを除外\n    \n    ROI改善: 0.978 → 1.118 (historical-backfill, 2024:1.087/2025:1.169)\n    motor_boat_stats: 9925件 → 640088件 backfill完了\n    \n    Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n",
+    "stat": "e9eabe3 motor_boat_stats をモデルに統合・キャリブレーション改善・設定最適化\n server/db.ts                  | 31 +++++++++++++++++++++++++++----\n src/domain/programFeatures.ts | 10 ++++++++--\n 2 files changed, 35 insertions(+), 6 deletions(-)\n",
+    "files": [
+      "server/db.ts",
+      "src/domain/programFeatures.ts"
+    ]
+  },
+  "appSettings": {
+    "budget_rule": {
+      "dailyBudgetYen": 1000,
+      "stakePerBetYen": 100,
+      "maxStakePerRaceYen": 100,
+      "maxBuyCountPerDay": 5,
+      "minSampleSize": 30,
+      "minMinutesBeforeClose": 5,
+      "targetEv": 1.25,
+      "maxOddsRatio": 2,
+      "calibrationMode": "v3-empirical",
+      "calibrationBasis": "currentOdds",
+      "oddsCalibrationFactors": [
+        {
+          "maxRequiredOdds": 30,
+          "factor": 0.4
+        },
+        {
+          "maxRequiredOdds": 50,
+          "factor": 0.4
+        },
+        {
+          "maxRequiredOdds": 9007199254740991,
+          "factor": 0.4
+        }
+      ],
+      "minRequiredOdds": 25,
+      "excludedRaceNos": [
+        10,
+        11,
+        12
+      ],
+      "excludedVenues": [
+        "戸田",
+        "多摩川",
+        "桐生",
+        "三国",
+        "江戸川"
+      ],
+      "programFilter": {
+        "allowedClassNames": [
+          "B1"
+        ],
+        "excludeSameClassSecondBoat": false,
+        "minFirstBoatNationalWinRate": 4,
+        "maxMotorTop2Rate": 50
+      },
+      "classOddsRatioRules": [
+        {
+          "classNames": [
+            "B1"
+          ],
+          "maxOddsRatio": 1.5
+        }
+      ],
+      "venueSignalBandRules": [
+        {
+          "venues": [
+            "多摩川",
+            "常滑",
+            "徳山",
+            "桐生"
+          ],
+          "minBand": "S"
+        }
+      ]
+    }
+  },
+  "review": {
+    "stat": "e9eabe3 motor_boat_stats をモデルに統合・キャリブレーション改善・設定最適化\n server/db.ts                  | 31 +++++++++++++++++++++++++++----\n src/domain/programFeatures.ts | 10 ++++++++--\n 2 files changed, 35 insertions(+), 6 deletions(-)\n",
+    "findings": [
+      {
+        "severity": "P1",
+        "title": "loadMotorBoatStatsMapが64万件を各list関数で全ロードする",
+        "detail": "listProgramInputs / listProgramInputsRange / listProgramInputsWithOddsSnapshotsRange のたびに motor_boat_stats 全件をMap化している。読み取り専用の性能確認上も、日付範囲や対象race_idで絞るべき。"
+      },
+      {
+        "severity": "P1",
+        "title": "maxMotorTop2Rate判定がvenueMotorTop2Rateではなくnational motorTop2Rateを見ている可能性",
+        "detail": "programFilterReasonsは candidate.candidateMotorTop2Rate ?? firstBoatFeature.motorTop2Rate を参照し、venueMotorTop2Rateを直接見ていない。コミット意図の会場別motor上限とズレる危険がある。"
+      },
+      {
+        "severity": "P2",
+        "title": "報告ROI 1.118が現在DBから再現できない",
+        "detail": "現在のdecision_history historical-backfill BUYをcurrent_odds基準で再計算するとROIは0.804。報告値は別条件/別DB/再生成結果の可能性がある。"
+      },
+      {
+        "severity": "P2",
+        "title": "motorなし/設定なしの厳密比較にはdecision再生成が必要",
+        "detail": "保存済みdecision_historyだけでは、motor_boat_stats統合により新たにBUYになった/消えた候補を復元できない。今回の要因分解はフィルター反実仮想として扱うべき。"
+      }
+    ],
+    "excerptHash": -1358289182
+  },
+  "overall": {
+    "n": 6260,
+    "hits": 124,
+    "hitRate": 0.019808306709265176,
+    "avgOdds": 44.3436477156549,
+    "stakeYen": 626000,
+    "returnYen": 503160,
+    "roi": 0.8037699680511182,
+    "maxHitOdds": 77.7,
+    "roiExMaxHit": 0.7913578274760383
+  },
+  "reportedRoi": {
+    "before": 0.978,
+    "after": 1.118,
+    "y2024": 1.087,
+    "y2025": 1.169
+  },
+  "patterns": [
+    {
+      "pattern": "A_before相当(保存BUY上の[11,12]除外のみ)",
+      "n": 5979,
+      "hits": 124,
+      "hitRate": 0.020739254055862185,
+      "avgOdds": 44.64126688409429,
+      "stakeYen": 597900,
+      "returnYen": 503160,
+      "roi": 0.8415454089312594,
+      "maxHitOdds": 77.7,
+      "roiExMaxHit": 0.8285499247365781,
+      "comment": "motorなし再生成ではなく、保存BUYに旧raceNoを当てた参考値"
+    },
+    {
+      "pattern": "B_motor_boat_statsのみ反映(再生成不可)",
+      "n": 5979,
+      "hits": 124,
+      "hitRate": 0.020739254055862185,
+      "avgOdds": 44.64126688409429,
+      "stakeYen": 597900,
+      "returnYen": 503160,
+      "roi": 0.8415454089312594,
+      "maxHitOdds": 77.7,
+      "roiExMaxHit": 0.8285499247365781,
+      "comment": "現在DBだけではmotorなしとの差分は厳密再現不可"
+    },
+    {
+      "pattern": "C_excludedRaceNosのみ[10,11,12]",
+      "n": 5639,
+      "hits": 120,
+      "hitRate": 0.0212803688597269,
+      "avgOdds": 44.81094958325935,
+      "stakeYen": 563900,
+      "returnYen": 488750,
+      "roi": 0.8667316900159603,
+      "maxHitOdds": 77.7,
+      "roiExMaxHit": 0.8529526511792871,
+      "comment": "10R除外の単独反実仮想"
+    },
+    {
+      "pattern": "D_maxMotorTop2Rateのみ50",
+      "n": 5844,
+      "hits": 123,
+      "hitRate": 0.02104722792607803,
+      "avgOdds": 44.57201141341542,
+      "stakeYen": 584400,
+      "returnYen": 498880,
+      "roi": 0.8536618754277892,
+      "maxHitOdds": 77.7,
+      "roiExMaxHit": 0.8403661875427789,
+      "comment": "保存BUYから頭motor>=50を削る反実仮想"
+    },
+    {
+      "pattern": "E_oddsCalibrationFactorsのみ0.40",
+      "n": 12,
+      "hits": 0,
+      "hitRate": 0,
+      "avgOdds": 63.074999999999996,
+      "stakeYen": 1200,
+      "returnYen": 0,
+      "roi": 0,
+      "maxHitOdds": 0,
+      "roiExMaxHit": 0,
+      "comment": "保存BUY内でEV/required odds proxyを通るものだけの参考値"
+    },
+    {
+      "pattern": "E_oldCalibrationFactors proxy",
+      "n": 27,
+      "hits": 0,
+      "hitRate": 0,
+      "avgOdds": 50.53703703703704,
+      "stakeYen": 2700,
+      "returnYen": 0,
+      "roi": 0,
+      "maxHitOdds": 0,
+      "roiExMaxHit": 0,
+      "comment": "旧0.65/0.51/0.40 proxy"
+    },
+    {
+      "pattern": "F_最新DB保存BUY",
+      "n": 6260,
+      "hits": 124,
+      "hitRate": 0.019808306709265176,
+      "avgOdds": 44.3436477156549,
+      "stakeYen": 626000,
+      "returnYen": 503160,
+      "roi": 0.8037699680511182,
+      "maxHitOdds": 77.7,
+      "roiExMaxHit": 0.7913578274760383,
+      "comment": "実DBのhistorical-backfill BUY再現"
+    }
+  ],
+  "period": [
+    {
+      "period": "2026",
+      "n": 44,
+      "hits": 2,
+      "hitRate": 0.045454545454545456,
+      "avgOdds": 34.83181818181818,
+      "stakeYen": 4400,
+      "returnYen": 3290,
+      "roi": 0.7477272727272727,
+      "maxHitOdds": 16.7,
+      "roiExMaxHit": 0.36818181818181817,
+      "judgement": "C: n不足"
+    },
+    {
+      "period": "2024",
+      "n": 3951,
+      "hits": 75,
+      "hitRate": 0.018982536066818528,
+      "avgOdds": 44.43644765882059,
+      "stakeYen": 395100,
+      "returnYen": 306750,
+      "roi": 0.7763857251328777,
+      "maxHitOdds": 76.4,
+      "roiExMaxHit": 0.757048848392812,
+      "judgement": "D: 弱い/過学習疑い"
+    },
+    {
+      "period": "2025",
+      "n": 2265,
+      "hits": 47,
+      "hitRate": 0.02075055187637969,
+      "avgOdds": 44.36654746136869,
+      "stakeYen": 226500,
+      "returnYen": 193120,
+      "roi": 0.8526269315673289,
+      "maxHitOdds": 77.7,
+      "roiExMaxHit": 0.8183222958057396,
+      "judgement": "B: 不安定"
+    },
+    {
+      "period": "2024-02",
+      "n": 226,
+      "hits": 0,
+      "hitRate": 0,
+      "avgOdds": 52.95619469026548,
+      "stakeYen": 22600,
+      "returnYen": 0,
+      "roi": 0,
+      "maxHitOdds": 0,
+      "roiExMaxHit": 0,
+      "judgement": "D: 弱い/過学習疑い"
+    },
+    {
+      "period": "2025-01",
+      "n": 1,
+      "hits": 0,
+      "hitRate": 0,
+      "avgOdds": 96.6,
+      "stakeYen": 100,
+      "returnYen": 0,
+      "roi": 0,
+      "maxHitOdds": 0,
+      "roiExMaxHit": 0,
+      "judgement": "C: n不足"
+    },
+    {
+      "period": "2025-07",
+      "n": 307,
+      "hits": 2,
+      "hitRate": 0.006514657980456026,
+      "avgOdds": 41.90944625407168,
+      "stakeYen": 30700,
+      "returnYen": 7210,
+      "roi": 0.23485342019543973,
+      "maxHitOdds": 40.4,
+      "roiExMaxHit": 0.103257328990228,
+      "judgement": "D: 弱い/過学習疑い"
+    },
+    {
+      "period": "2024-09",
+      "n": 377,
+      "hits": 5,
+      "hitRate": 0.013262599469496022,
+      "avgOdds": 39.75384615384617,
+      "stakeYen": 37700,
+      "returnYen": 20050,
+      "roi": 0.5318302387267905,
+      "maxHitOdds": 47.3,
+      "roiExMaxHit": 0.4063660477453581,
+      "judgement": "D: 弱い/過学習疑い"
+    },
+    {
+      "period": "2025-03",
+      "n": 183,
+      "hits": 2,
+      "hitRate": 0.01092896174863388,
+      "avgOdds": 51.0469945355191,
+      "stakeYen": 18300,
+      "returnYen": 10330,
+      "roi": 0.5644808743169399,
+      "maxHitOdds": 64.5,
+      "roiExMaxHit": 0.21202185792349726,
+      "judgement": "D: 弱い/過学習疑い"
+    },
+    {
+      "period": "2025-11",
+      "n": 171,
+      "hits": 3,
+      "hitRate": 0.017543859649122806,
+      "avgOdds": 39.73508771929823,
+      "stakeYen": 17100,
+      "returnYen": 10070,
+      "roi": 0.5888888888888889,
+      "maxHitOdds": 46.1,
+      "roiExMaxHit": 0.3192982456140351,
+      "judgement": "D: 弱い/過学習疑い"
+    },
+    {
+      "period": "2024-03",
+      "n": 282,
+      "hits": 3,
+      "hitRate": 0.010638297872340425,
+      "avgOdds": 51.10627659574469,
+      "stakeYen": 28200,
+      "returnYen": 17000,
+      "roi": 0.6028368794326241,
+      "maxHitOdds": 76.4,
+      "roiExMaxHit": 0.33191489361702126,
+      "judgement": "D: 弱い/過学習疑い"
+    },
+    {
+      "period": "2024-05",
+      "n": 381,
+      "hits": 6,
+      "hitRate": 0.015748031496062992,
+      "avgOdds": 47.00603674540683,
+      "stakeYen": 38100,
+      "returnYen": 23290,
+      "roi": 0.6112860892388452,
+      "maxHitOdds": 44.4,
+      "roiExMaxHit": 0.494750656167979,
+      "judgement": "D: 弱い/過学習疑い"
+    },
+    {
+      "period": "2024-10",
+      "n": 344,
+      "hits": 6,
+      "hitRate": 0.01744186046511628,
+      "avgOdds": 41.26140901162792,
+      "stakeYen": 34400,
+      "returnYen": 24160,
+      "roi": 0.7023255813953488,
+      "maxHitOdds": 55.3,
+      "roiExMaxHit": 0.5415697674418605,
+      "judgement": "D: 弱い/過学習疑い"
+    },
+    {
+      "period": "2024-01",
+      "n": 274,
+      "hits": 4,
+      "hitRate": 0.014598540145985401,
+      "avgOdds": 55.004270072992675,
+      "stakeYen": 27400,
+      "returnYen": 19920,
+      "roi": 0.727007299270073,
+      "maxHitOdds": 62.3,
+      "roiExMaxHit": 0.4996350364963504,
+      "judgement": "D: 弱い/過学習疑い"
+    },
+    {
+      "period": "2026-05",
+      "n": 44,
+      "hits": 2,
+      "hitRate": 0.045454545454545456,
+      "avgOdds": 34.83181818181818,
+      "stakeYen": 4400,
+      "returnYen": 3290,
+      "roi": 0.7477272727272727,
+      "maxHitOdds": 16.7,
+      "roiExMaxHit": 0.36818181818181817,
+      "judgement": "C: n不足"
+    },
+    {
+      "period": "2024-06",
+      "n": 295,
+      "hits": 6,
+      "hitRate": 0.020338983050847456,
+      "avgOdds": 43.23254237288134,
+      "stakeYen": 29500,
+      "returnYen": 23400,
+      "roi": 0.7932203389830509,
+      "maxHitOdds": 60,
+      "roiExMaxHit": 0.5898305084745763,
+      "judgement": "D: 弱い/過学習疑い"
+    },
+    {
+      "period": "2025-02",
+      "n": 159,
+      "hits": 3,
+      "hitRate": 0.018867924528301886,
+      "avgOdds": 52.11572327044023,
+      "stakeYen": 15900,
+      "returnYen": 13540,
+      "roi": 0.8515723270440252,
+      "maxHitOdds": 52.2,
+      "roiExMaxHit": 0.5232704402515723,
+      "judgement": "B: 不安定"
+    },
+    {
+      "period": "2025-10",
+      "n": 150,
+      "hits": 3,
+      "hitRate": 0.02,
+      "avgOdds": 41.02800000000001,
+      "stakeYen": 15000,
+      "returnYen": 13650,
+      "roi": 0.91,
+      "maxHitOdds": 51.1,
+      "roiExMaxHit": 0.5693333333333334,
+      "judgement": "B: 不安定"
+    },
+    {
+      "period": "2024-12",
+      "n": 378,
+      "hits": 11,
+      "hitRate": 0.0291005291005291,
+      "avgOdds": 38.73894179894185,
+      "stakeYen": 37800,
+      "returnYen": 35070,
+      "roi": 0.9277777777777778,
+      "maxHitOdds": 44,
+      "roiExMaxHit": 0.8113756613756614,
+      "judgement": "A: 追加確認"
+    },
+    {
+      "period": "2024-11",
+      "n": 388,
+      "hits": 9,
+      "hitRate": 0.023195876288659795,
+      "avgOdds": 40.6898711340206,
+      "stakeYen": 38800,
+      "returnYen": 36770,
+      "roi": 0.947680412371134,
+      "maxHitOdds": 51.1,
+      "roiExMaxHit": 0.815979381443299,
+      "judgement": "A: 追加確認"
+    },
+    {
+      "period": "2024-04",
+      "n": 237,
+      "hits": 5,
+      "hitRate": 0.02109704641350211,
+      "avgOdds": 47.36514767932491,
+      "stakeYen": 23700,
+      "returnYen": 22780,
+      "roi": 0.9611814345991562,
+      "maxHitOdds": 55.1,
+      "roiExMaxHit": 0.7286919831223628,
+      "judgement": "B: 不安定"
+    },
+    {
+      "period": "2025-09",
+      "n": 156,
+      "hits": 5,
+      "hitRate": 0.03205128205128205,
+      "avgOdds": 38.989743589743604,
+      "stakeYen": 15600,
+      "returnYen": 15830,
+      "roi": 1.0147435897435897,
+      "maxHitOdds": 34.2,
+      "roiExMaxHit": 0.7955128205128205,
+      "judgement": "B: 不安定"
+    },
+    {
+      "period": "2024-07",
+      "n": 386,
+      "hits": 9,
+      "hitRate": 0.023316062176165803,
+      "avgOdds": 42.20362694300515,
+      "stakeYen": 38600,
+      "returnYen": 39210,
+      "roi": 1.0158031088082902,
+      "maxHitOdds": 62.4,
+      "roiExMaxHit": 0.8541450777202072,
+      "judgement": "A: 追加確認"
+    },
+    {
+      "period": "2025-08",
+      "n": 318,
+      "hits": 9,
+      "hitRate": 0.02830188679245283,
+      "avgOdds": 42.921163522012584,
+      "stakeYen": 31800,
+      "returnYen": 32630,
+      "roi": 1.0261006289308177,
+      "maxHitOdds": 47.3,
+      "roiExMaxHit": 0.8773584905660378,
+      "judgement": "A: 追加確認"
+    },
+    {
+      "period": "2025-06",
+      "n": 295,
+      "hits": 7,
+      "hitRate": 0.023728813559322035,
+      "avgOdds": 43.09898305084743,
+      "stakeYen": 29500,
+      "returnYen": 30830,
+      "roi": 1.045084745762712,
+      "maxHitOdds": 62.6,
+      "roiExMaxHit": 0.8328813559322034,
+      "judgement": "A: 追加確認"
+    },
+    {
+      "period": "2025-04",
+      "n": 248,
+      "hits": 5,
+      "hitRate": 0.020161290322580645,
+      "avgOdds": 47.30766129032257,
+      "stakeYen": 24800,
+      "returnYen": 26890,
+      "roi": 1.084274193548387,
+      "maxHitOdds": 77.7,
+      "roiExMaxHit": 0.7709677419354839,
+      "judgement": "B: 不安定"
+    },
+    {
+      "period": "2025-05",
+      "n": 277,
+      "hits": 8,
+      "hitRate": 0.02888086642599278,
+      "avgOdds": 46.110830324909756,
+      "stakeYen": 27700,
+      "returnYen": 32140,
+      "roi": 1.16028880866426,
+      "maxHitOdds": 55.3,
+      "roiExMaxHit": 0.9606498194945848,
+      "judgement": "S: 安定候補"
+    },
+    {
+      "period": "2024-08",
+      "n": 383,
+      "hits": 11,
+      "hitRate": 0.028720626631853787,
+      "avgOdds": 42.6266579634465,
+      "stakeYen": 38300,
+      "returnYen": 45100,
+      "roi": 1.1775456919060052,
+      "maxHitOdds": 59.9,
+      "roiExMaxHit": 1.021148825065274,
+      "judgement": "S: 安定候補"
+    },
+    {
+      "period": "2024-01〜2024-03",
+      "n": 782,
+      "hits": 7,
+      "hitRate": 0.008951406649616368,
+      "avgOdds": 53.00670076726337,
+      "stakeYen": 78200,
+      "returnYen": 36920,
+      "roi": 0.4721227621483376,
+      "maxHitOdds": 76.4,
+      "roiExMaxHit": 0.37442455242966755,
+      "judgement": "D: 弱い/過学習疑い"
+    },
+    {
+      "period": "2024-02〜2024-04",
+      "n": 745,
+      "hits": 8,
+      "hitRate": 0.010738255033557046,
+      "avgOdds": 50.47732885906037,
+      "stakeYen": 74500,
+      "returnYen": 39780,
+      "roi": 0.5339597315436242,
+      "maxHitOdds": 76.4,
+      "roiExMaxHit": 0.43140939597315436,
+      "judgement": "D: 弱い/過学習疑い"
+    },
+    {
+      "period": "2024-03〜2024-05",
+      "n": 900,
+      "hits": 14,
+      "hitRate": 0.015555555555555555,
+      "avgOdds": 48.38534444444439,
+      "stakeYen": 90000,
+      "returnYen": 63070,
+      "roi": 0.7007777777777778,
+      "maxHitOdds": 76.4,
+      "roiExMaxHit": 0.6158888888888889,
+      "judgement": "D: 弱い/過学習疑い"
+    },
+    {
+      "period": "2024-04〜2024-06",
+      "n": 913,
+      "hits": 17,
+      "hitRate": 0.018619934282584884,
+      "avgOdds": 45.880000000000024,
+      "stakeYen": 91300,
+      "returnYen": 69470,
+      "roi": 0.7608981380065717,
+      "maxHitOdds": 60,
+      "roiExMaxHit": 0.6951807228915663,
+      "judgement": "D: 弱い/過学習疑い"
+    },
+    {
+      "period": "2024-05〜2024-07",
+      "n": 1062,
+      "hits": 21,
+      "hitRate": 0.01977401129943503,
+      "avgOdds": 44.21233521657258,
+      "stakeYen": 106200,
+      "returnYen": 85900,
+      "roi": 0.8088512241054614,
+      "maxHitOdds": 62.4,
+      "roiExMaxHit": 0.7500941619585687,
+      "judgement": "B: 不安定"
+    },
+    {
+      "period": "2024-06〜2024-08",
+      "n": 1064,
+      "hits": 26,
+      "hitRate": 0.02443609022556391,
+      "avgOdds": 42.64117481203008,
+      "stakeYen": 106400,
+      "returnYen": 107710,
+      "roi": 1.012312030075188,
+      "maxHitOdds": 62.4,
+      "roiExMaxHit": 0.9536654135338346,
+      "judgement": "S: 安定候補"
+    },
+    {
+      "period": "2024-07〜2024-09",
+      "n": 1146,
+      "hits": 25,
+      "hitRate": 0.02181500872600349,
+      "avgOdds": 41.53910122164045,
+      "stakeYen": 114600,
+      "returnYen": 104360,
+      "roi": 0.9106457242582897,
+      "maxHitOdds": 62.4,
+      "roiExMaxHit": 0.856195462478185,
+      "judgement": "A: 追加確認"
+    },
+    {
+      "period": "2024-08〜2024-10",
+      "n": 1104,
+      "hits": 22,
+      "hitRate": 0.019927536231884056,
+      "avgOdds": 41.22023070652175,
+      "stakeYen": 110400,
+      "returnYen": 89310,
+      "roi": 0.8089673913043478,
+      "maxHitOdds": 59.9,
+      "roiExMaxHit": 0.7547101449275362,
+      "judgement": "B: 不安定"
+    },
+    {
+      "period": "2024-09〜2024-11",
+      "n": 1109,
+      "hits": 20,
+      "hitRate": 0.018034265103697024,
+      "avgOdds": 40.54895825067627,
+      "stakeYen": 110900,
+      "returnYen": 80980,
+      "roi": 0.7302073940486925,
+      "maxHitOdds": 55.3,
+      "roiExMaxHit": 0.6803426510369702,
+      "judgement": "D: 弱い/過学習疑い"
+    },
+    {
+      "period": "2024-10〜2024-12",
+      "n": 1110,
+      "hits": 26,
+      "hitRate": 0.023423423423423424,
+      "avgOdds": 40.2026258558558,
+      "stakeYen": 111000,
+      "returnYen": 96000,
+      "roi": 0.8648648648648649,
+      "maxHitOdds": 55.3,
+      "roiExMaxHit": 0.815045045045045,
+      "judgement": "B: 不安定"
+    },
+    {
+      "period": "2024-11〜2025-01",
+      "n": 767,
+      "hits": 20,
+      "hitRate": 0.02607561929595828,
+      "avgOdds": 39.8012907431551,
+      "stakeYen": 76700,
+      "returnYen": 71840,
+      "roi": 0.9366362451108213,
+      "maxHitOdds": 51.1,
+      "roiExMaxHit": 0.870013037809648,
+      "judgement": "A: 追加確認"
+    },
+    {
+      "period": "2024-12〜2025-02",
+      "n": 538,
+      "hits": 14,
+      "hitRate": 0.026022304832713755,
+      "avgOdds": 42.799851301115304,
+      "stakeYen": 53800,
+      "returnYen": 48610,
+      "roi": 0.9035315985130111,
+      "maxHitOdds": 52.2,
+      "roiExMaxHit": 0.8065055762081784,
+      "judgement": "A: 追加確認"
+    },
+    {
+      "period": "2025-01〜2025-03",
+      "n": 343,
+      "hits": 5,
+      "hitRate": 0.014577259475218658,
+      "avgOdds": 51.67521865889212,
+      "stakeYen": 34300,
+      "returnYen": 23870,
+      "roi": 0.6959183673469388,
+      "maxHitOdds": 64.5,
+      "roiExMaxHit": 0.5078717201166181,
+      "judgement": "D: 弱い/過学習疑い"
+    },
+    {
+      "period": "2025-02〜2025-04",
+      "n": 590,
+      "hits": 10,
+      "hitRate": 0.01694915254237288,
+      "avgOdds": 49.76322033898307,
+      "stakeYen": 59000,
+      "returnYen": 50760,
+      "roi": 0.8603389830508474,
+      "maxHitOdds": 77.7,
+      "roiExMaxHit": 0.7286440677966102,
+      "judgement": "B: 不安定"
+    },
+    {
+      "period": "2025-03〜2025-05",
+      "n": 708,
+      "hits": 15,
+      "hitRate": 0.0211864406779661,
+      "avgOdds": 47.80593220338985,
+      "stakeYen": 70800,
+      "returnYen": 69360,
+      "roi": 0.9796610169491525,
+      "maxHitOdds": 77.7,
+      "roiExMaxHit": 0.8699152542372881,
+      "judgement": "A: 追加確認"
+    },
+    {
+      "period": "2025-04〜2025-06",
+      "n": 820,
+      "hits": 20,
+      "hitRate": 0.024390243902439025,
+      "avgOdds": 45.38926829268294,
+      "stakeYen": 82000,
+      "returnYen": 89860,
+      "roi": 1.0958536585365855,
+      "maxHitOdds": 77.7,
+      "roiExMaxHit": 1.0010975609756096,
+      "judgement": "S: 安定候補"
+    },
+    {
+      "period": "2025-05〜2025-07",
+      "n": 879,
+      "hits": 17,
+      "hitRate": 0.019340159271899887,
+      "avgOdds": 43.63265073947665,
+      "stakeYen": 87900,
+      "returnYen": 70180,
+      "roi": 0.7984072810011377,
+      "maxHitOdds": 62.6,
+      "roiExMaxHit": 0.7271899886234358,
+      "judgement": "D: 弱い/過学習疑い"
+    },
+    {
+      "period": "2025-06〜2025-08",
+      "n": 920,
+      "hits": 18,
+      "hitRate": 0.01956521739130435,
+      "avgOdds": 42.64057608695654,
+      "stakeYen": 92000,
+      "returnYen": 70670,
+      "roi": 0.7681521739130435,
+      "maxHitOdds": 62.6,
+      "roiExMaxHit": 0.7001086956521739,
+      "judgement": "D: 弱い/過学習疑い"
+    },
+    {
+      "period": "2025-07〜2025-09",
+      "n": 781,
+      "hits": 16,
+      "hitRate": 0.020486555697823303,
+      "avgOdds": 41.7381946222791,
+      "stakeYen": 78100,
+      "returnYen": 55670,
+      "roi": 0.7128040973111396,
+      "maxHitOdds": 47.3,
+      "roiExMaxHit": 0.6522407170294494,
+      "judgement": "D: 弱い/過学習疑い"
+    },
+    {
+      "period": "2025-08〜2025-10",
+      "n": 624,
+      "hits": 17,
+      "hitRate": 0.027243589743589744,
+      "avgOdds": 41.48322115384614,
+      "stakeYen": 62400,
+      "returnYen": 62110,
+      "roi": 0.9953525641025641,
+      "maxHitOdds": 51.1,
+      "roiExMaxHit": 0.9134615384615384,
+      "judgement": "A: 追加確認"
+    },
+    {
+      "period": "2025-09〜2025-11",
+      "n": 477,
+      "hits": 11,
+      "hitRate": 0.023060796645702306,
+      "avgOdds": 39.89790356394131,
+      "stakeYen": 47700,
+      "returnYen": 39550,
+      "roi": 0.8291404612159329,
+      "maxHitOdds": 51.1,
+      "roiExMaxHit": 0.7220125786163522,
+      "judgement": "B: 不安定"
+    },
+    {
+      "period": "2025-10〜2026-05",
+      "n": 365,
+      "hits": 8,
+      "hitRate": 0.021917808219178082,
+      "avgOdds": 39.67534246575344,
+      "stakeYen": 36500,
+      "returnYen": 27010,
+      "roi": 0.74,
+      "maxHitOdds": 51.1,
+      "roiExMaxHit": 0.6,
+      "judgement": "D: 弱い/過学習疑い"
+    },
+    {
+      "period": "train古い70%",
+      "n": 4382,
+      "hits": 83,
+      "hitRate": 0.01894112277498859,
+      "avgOdds": 45.11330549977182,
+      "stakeYen": 438200,
+      "returnYen": 345970,
+      "roi": 0.7895253308991328,
+      "maxHitOdds": 76.4,
+      "roiExMaxHit": 0.7720903696942035,
+      "judgement": "D: 弱い/過学習疑い"
+    },
+    {
+      "period": "validation次20%",
+      "n": 1252,
+      "hits": 25,
+      "hitRate": 0.019968051118210862,
+      "avgOdds": 43.88804313099036,
+      "stakeYen": 125200,
+      "returnYen": 103210,
+      "roi": 0.8243610223642173,
+      "maxHitOdds": 77.7,
+      "roiExMaxHit": 0.7623003194888179,
+      "judgement": "B: 不安定"
+    },
+    {
+      "period": "test新しい10%",
+      "n": 626,
+      "hits": 16,
+      "hitRate": 0.025559105431309903,
+      "avgOdds": 39.86725239616616,
+      "stakeYen": 62600,
+      "returnYen": 53980,
+      "roi": 0.8623003194888179,
+      "maxHitOdds": 51.1,
+      "roiExMaxHit": 0.7806709265175719,
+      "judgement": "B: 不安定"
+    }
+  ],
+  "breakdowns": {
+    "venue": [
+      {
+        "key": "戸田",
+        "metric": {
+          "n": 319,
+          "hits": 1,
+          "hitRate": 0.003134796238244514,
+          "avgOdds": 61.04420062695922,
+          "stakeYen": 31900,
+          "returnYen": 5220,
+          "roi": 0.16363636363636364,
+          "maxHitOdds": 52.2,
+          "roiExMaxHit": 0
+        }
+      },
+      {
+        "key": "多摩川",
+        "metric": {
+          "n": 282,
+          "hits": 2,
+          "hitRate": 0.0070921985815602835,
+          "avgOdds": 44.02411347517728,
+          "stakeYen": 28200,
+          "returnYen": 8120,
+          "roi": 0.28794326241134754,
+          "maxHitOdds": 40.9,
+          "roiExMaxHit": 0.14290780141843973
+        }
+      },
+      {
+        "key": "桐生",
+        "metric": {
+          "n": 307,
+          "hits": 3,
+          "hitRate": 0.009771986970684038,
+          "avgOdds": 43.67328990228013,
+          "stakeYen": 30700,
+          "returnYen": 12710,
+          "roi": 0.41400651465798044,
+          "maxHitOdds": 51.1,
+          "roiExMaxHit": 0.247557003257329
+        }
+      },
+      {
+        "key": "三国",
+        "metric": {
+          "n": 276,
+          "hits": 4,
+          "hitRate": 0.014492753623188406,
+          "avgOdds": 40.778550724637704,
+          "stakeYen": 27600,
+          "returnYen": 13770,
+          "roi": 0.4989130434782609,
+          "maxHitOdds": 42.8,
+          "roiExMaxHit": 0.3438405797101449
+        }
+      },
+      {
+        "key": "江戸川",
+        "metric": {
+          "n": 186,
+          "hits": 2,
+          "hitRate": 0.010752688172043012,
+          "avgOdds": 50.22150537634408,
+          "stakeYen": 18600,
+          "returnYen": 10070,
+          "roi": 0.5413978494623656,
+          "maxHitOdds": 60,
+          "roiExMaxHit": 0.21881720430107526
+        }
+      },
+      {
+        "key": "住之江",
+        "metric": {
+          "n": 225,
+          "hits": 4,
+          "hitRate": 0.017777777777777778,
+          "avgOdds": 41.10044444444447,
+          "stakeYen": 22500,
+          "returnYen": 13500,
+          "roi": 0.6,
+          "maxHitOdds": 38.7,
+          "roiExMaxHit": 0.428
+        }
+      },
+      {
+        "key": "徳山",
+        "metric": {
+          "n": 242,
+          "hits": 5,
+          "hitRate": 0.02066115702479339,
+          "avgOdds": 31.54016528925621,
+          "stakeYen": 24200,
+          "returnYen": 16240,
+          "roi": 0.6710743801652893,
+          "maxHitOdds": 44.3,
+          "roiExMaxHit": 0.4880165289256198
+        }
+      },
+      {
+        "key": "福岡",
+        "metric": {
+          "n": 260,
+          "hits": 5,
+          "hitRate": 0.019230769230769232,
+          "avgOdds": 36.117307692307676,
+          "stakeYen": 26000,
+          "returnYen": 17680,
+          "roi": 0.68,
+          "maxHitOdds": 52.5,
+          "roiExMaxHit": 0.47807692307692307
+        }
+      },
+      {
+        "key": "浜名湖",
+        "metric": {
+          "n": 283,
+          "hits": 5,
+          "hitRate": 0.0176678445229682,
+          "avgOdds": 45.63003533568907,
+          "stakeYen": 28300,
+          "returnYen": 20270,
+          "roi": 0.7162544169611308,
+          "maxHitOdds": 47.9,
+          "roiExMaxHit": 0.5469964664310955
+        }
+      },
+      {
+        "key": "下関",
+        "metric": {
+          "n": 241,
+          "hits": 5,
+          "hitRate": 0.02074688796680498,
+          "avgOdds": 36.8402489626556,
+          "stakeYen": 24100,
+          "returnYen": 17570,
+          "roi": 0.7290456431535269,
+          "maxHitOdds": 44.8,
+          "roiExMaxHit": 0.5431535269709543
+        }
+      },
+      {
+        "key": "鳴門",
+        "metric": {
+          "n": 202,
+          "hits": 3,
+          "hitRate": 0.01485148514851485,
+          "avgOdds": 53.39356435643565,
+          "stakeYen": 20200,
+          "returnYen": 15360,
+          "roi": 0.7603960396039604,
+          "maxHitOdds": 62.4,
+          "roiExMaxHit": 0.4514851485148515
+        }
+      },
+      {
+        "key": "蒲郡",
+        "metric": {
+          "n": 330,
+          "hits": 6,
+          "hitRate": 0.01818181818181818,
+          "avgOdds": 46.544242424242405,
+          "stakeYen": 33000,
+          "returnYen": 25580,
+          "roi": 0.7751515151515151,
+          "maxHitOdds": 62.6,
+          "roiExMaxHit": 0.5854545454545454
+        }
+      },
+      {
+        "key": "尼崎",
+        "metric": {
+          "n": 216,
+          "hits": 3,
+          "hitRate": 0.013888888888888888,
+          "avgOdds": 44.43208333333336,
+          "stakeYen": 21600,
+          "returnYen": 16980,
+          "roi": 0.7861111111111111,
+          "maxHitOdds": 76.4,
+          "roiExMaxHit": 0.4324074074074074
+        }
+      },
+      {
+        "key": "丸亀",
+        "metric": {
+          "n": 223,
+          "hits": 5,
+          "hitRate": 0.02242152466367713,
+          "avgOdds": 43.12511210762331,
+          "stakeYen": 22300,
+          "returnYen": 18300,
+          "roi": 0.820627802690583,
+          "maxHitOdds": 38.4,
+          "roiExMaxHit": 0.6484304932735426
+        }
+      },
+      {
+        "key": "若松",
+        "metric": {
+          "n": 292,
+          "hits": 6,
+          "hitRate": 0.02054794520547945,
+          "avgOdds": 44.24794520547949,
+          "stakeYen": 29200,
+          "returnYen": 23970,
+          "roi": 0.8208904109589041,
+          "maxHitOdds": 50.5,
+          "roiExMaxHit": 0.647945205479452
+        }
+      },
+      {
+        "key": "宮島",
+        "metric": {
+          "n": 277,
+          "hits": 7,
+          "hitRate": 0.02527075812274368,
+          "avgOdds": 38.40375451263539,
+          "stakeYen": 27700,
+          "returnYen": 23460,
+          "roi": 0.8469314079422383,
+          "maxHitOdds": 46.1,
+          "roiExMaxHit": 0.6805054151624549
+        }
+      },
+      {
+        "key": "大村",
+        "metric": {
+          "n": 256,
+          "hits": 6,
+          "hitRate": 0.0234375,
+          "avgOdds": 37.48749999999998,
+          "stakeYen": 25600,
+          "returnYen": 22370,
+          "roi": 0.873828125,
+          "maxHitOdds": 47.3,
+          "roiExMaxHit": 0.6890625
+        }
+      },
+      {
+        "key": "唐津",
+        "metric": {
+          "n": 289,
+          "hits": 8,
+          "hitRate": 0.02768166089965398,
+          "avgOdds": 40.84221453287194,
+          "stakeYen": 28900,
+          "returnYen": 28220,
+          "roi": 0.9764705882352941,
+          "maxHitOdds": 60.3,
+          "roiExMaxHit": 0.7678200692041522
+        }
+      },
+      {
+        "key": "津",
+        "metric": {
+          "n": 242,
+          "hits": 6,
+          "hitRate": 0.024793388429752067,
+          "avgOdds": 42.49421487603301,
+          "stakeYen": 24200,
+          "returnYen": 25340,
+          "roi": 1.0471074380165288,
+          "maxHitOdds": 62.3,
+          "roiExMaxHit": 0.7896694214876033
+        }
+      },
+      {
+        "key": "びわこ",
+        "metric": {
+          "n": 284,
+          "hits": 8,
+          "hitRate": 0.028169014084507043,
+          "avgOdds": 47.25341549295773,
+          "stakeYen": 28400,
+          "returnYen": 31780,
+          "roi": 1.1190140845070422,
+          "maxHitOdds": 50,
+          "roiExMaxHit": 0.9429577464788732
+        }
+      },
+      {
+        "key": "平和島",
+        "metric": {
+          "n": 261,
+          "hits": 5,
+          "hitRate": 0.019157088122605363,
+          "avgOdds": 62.14645478927203,
+          "stakeYen": 26100,
+          "returnYen": 29760,
+          "roi": 1.1402298850574712,
+          "maxHitOdds": 77.7,
+          "roiExMaxHit": 0.8425287356321839
+        }
+      },
+      {
+        "key": "常滑",
+        "metric": {
+          "n": 324,
+          "hits": 10,
+          "hitRate": 0.030864197530864196,
+          "avgOdds": 42.295987654321046,
+          "stakeYen": 32400,
+          "returnYen": 39430,
+          "roi": 1.2169753086419752,
+          "maxHitOdds": 46,
+          "roiExMaxHit": 1.075
+        }
+      },
+      {
+        "key": "芦屋",
+        "metric": {
+          "n": 219,
+          "hits": 8,
+          "hitRate": 0.0365296803652968,
+          "avgOdds": 40.317671232876705,
+          "stakeYen": 21900,
+          "returnYen": 32260,
+          "roi": 1.4730593607305935,
+          "maxHitOdds": 53.4,
+          "roiExMaxHit": 1.2292237442922374
+        }
+      },
+      {
+        "key": "児島",
+        "metric": {
+          "n": 224,
+          "hits": 7,
+          "hitRate": 0.03125,
+          "avgOdds": 48.49062500000002,
+          "stakeYen": 22400,
+          "returnYen": 35200,
+          "roi": 1.5714285714285714,
+          "maxHitOdds": 56.8,
+          "roiExMaxHit": 1.3178571428571428
+        }
+      }
+    ],
+    "raceNo": [
+      {
+        "key": "11R",
+        "metric": {
+          "n": 192,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 37.76041666666668,
+          "stakeYen": 19200,
+          "returnYen": 0,
+          "roi": 0,
+          "maxHitOdds": 0,
+          "roiExMaxHit": 0
+        }
+      },
+      {
+        "key": "12R",
+        "metric": {
+          "n": 89,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 38.551685393258424,
+          "stakeYen": 8900,
+          "returnYen": 0,
+          "roi": 0,
+          "maxHitOdds": 0,
+          "roiExMaxHit": 0
+        }
+      },
+      {
+        "key": "10R",
+        "metric": {
+          "n": 340,
+          "hits": 4,
+          "hitRate": 0.011764705882352941,
+          "avgOdds": 41.82702941176472,
+          "stakeYen": 34000,
+          "returnYen": 14410,
+          "roi": 0.4238235294117647,
+          "maxHitOdds": 47.3,
+          "roiExMaxHit": 0.2847058823529412
+        }
+      },
+      {
+        "key": "5R",
+        "metric": {
+          "n": 699,
+          "hits": 11,
+          "hitRate": 0.015736766809728183,
+          "avgOdds": 43.963247496423435,
+          "stakeYen": 69900,
+          "returnYen": 44200,
+          "roi": 0.6323319027181689,
+          "maxHitOdds": 62.6,
+          "roiExMaxHit": 0.5427753934191702
+        }
+      },
+      {
+        "key": "2R",
+        "metric": {
+          "n": 604,
+          "hits": 11,
+          "hitRate": 0.018211920529801324,
+          "avgOdds": 45.99668874172195,
+          "stakeYen": 60400,
+          "returnYen": 40450,
+          "roi": 0.6697019867549668,
+          "maxHitOdds": 53.4,
+          "roiExMaxHit": 0.5812913907284768
+        }
+      },
+      {
+        "key": "4R",
+        "metric": {
+          "n": 772,
+          "hits": 14,
+          "hitRate": 0.018134715025906734,
+          "avgOdds": 45.06386010362696,
+          "stakeYen": 77200,
+          "returnYen": 60280,
+          "roi": 0.7808290155440415,
+          "maxHitOdds": 56.8,
+          "roiExMaxHit": 0.7072538860103627
+        }
+      },
+      {
+        "key": "8R",
+        "metric": {
+          "n": 636,
+          "hits": 13,
+          "hitRate": 0.020440251572327043,
+          "avgOdds": 43.780141509433996,
+          "stakeYen": 63600,
+          "returnYen": 57290,
+          "roi": 0.9007861635220126,
+          "maxHitOdds": 76.4,
+          "roiExMaxHit": 0.7806603773584906
+        }
+      },
+      {
+        "key": "6R",
+        "metric": {
+          "n": 779,
+          "hits": 18,
+          "hitRate": 0.023106546854942234,
+          "avgOdds": 45.43029525032094,
+          "stakeYen": 77900,
+          "returnYen": 70990,
+          "roi": 0.9112965340179717,
+          "maxHitOdds": 62.3,
+          "roiExMaxHit": 0.8313222079589216
+        }
+      },
+      {
+        "key": "1R",
+        "metric": {
+          "n": 312,
+          "hits": 7,
+          "hitRate": 0.022435897435897436,
+          "avgOdds": 46.39358974358975,
+          "stakeYen": 31200,
+          "returnYen": 28970,
+          "roi": 0.9285256410256411,
+          "maxHitOdds": 57.5,
+          "roiExMaxHit": 0.7442307692307693
+        }
+      },
+      {
+        "key": "7R",
+        "metric": {
+          "n": 715,
+          "hits": 16,
+          "hitRate": 0.022377622377622378,
+          "avgOdds": 44.70223776223775,
+          "stakeYen": 71500,
+          "returnYen": 67550,
+          "roi": 0.9447552447552447,
+          "maxHitOdds": 62.4,
+          "roiExMaxHit": 0.8574825174825175
+        }
+      },
+      {
+        "key": "3R",
+        "metric": {
+          "n": 689,
+          "hits": 17,
+          "hitRate": 0.02467343976777939,
+          "avgOdds": 45.131640058055176,
+          "stakeYen": 68900,
+          "returnYen": 69400,
+          "roi": 1.007256894049347,
+          "maxHitOdds": 77.7,
+          "roiExMaxHit": 0.8944847605224964
+        }
+      },
+      {
+        "key": "9R",
+        "metric": {
+          "n": 433,
+          "hits": 13,
+          "hitRate": 0.03002309468822171,
+          "avgOdds": 43.00315173210165,
+          "stakeYen": 43300,
+          "returnYen": 49620,
+          "roi": 1.1459584295612009,
+          "maxHitOdds": 55.3,
+          "roiExMaxHit": 1.0182448036951501
+        }
+      }
+    ],
+    "venueRaceNo": [
+      {
+        "key": "戸田 5R",
+        "metric": {
+          "n": 53,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 58.19433962264152,
+          "stakeYen": 5300,
+          "returnYen": 0,
+          "roi": 0,
+          "maxHitOdds": 0,
+          "roiExMaxHit": 0
+        }
+      },
+      {
+        "key": "戸田 3R",
+        "metric": {
+          "n": 50,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 60.32000000000002,
+          "stakeYen": 5000,
+          "returnYen": 0,
+          "roi": 0,
+          "maxHitOdds": 0,
+          "roiExMaxHit": 0
+        }
+      }
+    ],
+    "selection": [
+      {
+        "key": "1-2-3",
+        "metric": {
+          "n": 6149,
+          "hits": 121,
+          "hitRate": 0.01967799642218247,
+          "avgOdds": 44.18265322816717,
+          "stakeYen": 614900,
+          "returnYen": 490170,
+          "roi": 0.7971540087819158,
+          "maxHitOdds": 77.7,
+          "roiExMaxHit": 0.7845178077736217
+        }
+      },
+      {
+        "key": "1-3-2",
+        "metric": {
+          "n": 45,
+          "hits": 1,
+          "hitRate": 0.022222222222222223,
+          "avgOdds": 57.29777777777776,
+          "stakeYen": 4500,
+          "returnYen": 5110,
+          "roi": 1.1355555555555557,
+          "maxHitOdds": 51.1,
+          "roiExMaxHit": 0
+        }
+      },
+      {
+        "key": "1-3-4",
+        "metric": {
+          "n": 65,
+          "hits": 2,
+          "hitRate": 0.03076923076923077,
+          "avgOdds": 49.896923076923066,
+          "stakeYen": 6500,
+          "returnYen": 7880,
+          "roi": 1.2123076923076923,
+          "maxHitOdds": 62.6,
+          "roiExMaxHit": 0.24923076923076923
+        }
+      }
+    ],
+    "selectionHead": [
+      {
+        "key": "1号艇頭",
+        "metric": {
+          "n": 6260,
+          "hits": 124,
+          "hitRate": 0.019808306709265176,
+          "avgOdds": 44.3436477156549,
+          "stakeYen": 626000,
+          "returnYen": 503160,
+          "roi": 0.8037699680511182,
+          "maxHitOdds": 77.7,
+          "roiExMaxHit": 0.7913578274760383
+        }
+      }
+    ],
+    "oddsBand": [
+      {
+        "key": "20 <= odds < 30",
+        "metric": {
+          "n": 603,
+          "hits": 16,
+          "hitRate": 0.026533996683250415,
+          "avgOdds": 27.14207296849089,
+          "stakeYen": 60300,
+          "returnYen": 43750,
+          "roi": 0.7255389718076285,
+          "maxHitOdds": 29.6,
+          "roiExMaxHit": 0.6764510779436153
+        }
+      },
+      {
+        "key": "odds >= 50",
+        "metric": {
+          "n": 1800,
+          "hits": 24,
+          "hitRate": 0.013333333333333334,
+          "avgOdds": 60.668911111111015,
+          "stakeYen": 180000,
+          "returnYen": 138330,
+          "roi": 0.7685,
+          "maxHitOdds": 77.7,
+          "roiExMaxHit": 0.7253333333333334
+        }
+      },
+      {
+        "key": "30 <= odds < 50",
+        "metric": {
+          "n": 3846,
+          "hits": 82,
+          "hitRate": 0.021320852834113363,
+          "avgOdds": 39.47525343213731,
+          "stakeYen": 384600,
+          "returnYen": 317790,
+          "roi": 0.8262870514820593,
+          "maxHitOdds": 49.7,
+          "roiExMaxHit": 0.8133645345813832
+        }
+      }
+    ],
+    "confidenceBand": [
+      {
+        "key": "confidence < 0.08",
+        "metric": {
+          "n": 638,
+          "hits": 10,
+          "hitRate": 0.01567398119122257,
+          "avgOdds": 31.75155172413793,
+          "stakeYen": 63800,
+          "returnYen": 27030,
+          "roi": 0.42366771159874606,
+          "maxHitOdds": 44.3,
+          "roiExMaxHit": 0.3542319749216301
+        }
+      },
+      {
+        "key": "confidence < 0.03",
+        "metric": {
+          "n": 700,
+          "hits": 9,
+          "hitRate": 0.012857142857142857,
+          "avgOdds": 63.14224285714298,
+          "stakeYen": 70000,
+          "returnYen": 52820,
+          "roi": 0.7545714285714286,
+          "maxHitOdds": 77.7,
+          "roiExMaxHit": 0.6435714285714286
+        }
+      },
+      {
+        "key": "confidence < 0.05",
+        "metric": {
+          "n": 4911,
+          "hits": 104,
+          "hitRate": 0.02117694970474445,
+          "avgOdds": 43.328441193239655,
+          "stakeYen": 491100,
+          "returnYen": 421690,
+          "roi": 0.8586642231724699,
+          "maxHitOdds": 76.4,
+          "roiExMaxHit": 0.8431073101201385
+        }
+      }
+    ],
+    "edgeBand": [
+      {
+        "key": "edge < 0.02",
+        "metric": {
+          "n": 4765,
+          "hits": 97,
+          "hitRate": 0.020356768100734522,
+          "avgOdds": 43.676114312696704,
+          "stakeYen": 476500,
+          "returnYen": 379800,
+          "roi": 0.7970619097586569,
+          "maxHitOdds": 77.7,
+          "roiExMaxHit": 0.7807555089192025
+        }
+      },
+      {
+        "key": "edge < 0.05",
+        "metric": {
+          "n": 1487,
+          "hits": 27,
+          "hitRate": 0.01815736381977135,
+          "avgOdds": 46.44556153328853,
+          "stakeYen": 148700,
+          "returnYen": 123360,
+          "roi": 0.8295897780766645,
+          "maxHitOdds": 62.6,
+          "roiExMaxHit": 0.7874915938130465
+        }
+      }
+    ],
+    "venueMotorBand": [
+      {
+        "key": "venueMotorTop2Rate >= 50",
+        "metric": {
+          "n": 143,
+          "hits": 1,
+          "hitRate": 0.006993006993006993,
+          "avgOdds": 47.19999999999997,
+          "stakeYen": 14300,
+          "returnYen": 4280,
+          "roi": 0.2993006993006993,
+          "maxHitOdds": 42.8,
+          "roiExMaxHit": 0
+        }
+      },
+      {
+        "key": "venueMotorTop2Rate < 45",
+        "metric": {
+          "n": 2016,
+          "hits": 35,
+          "hitRate": 0.017361111111111112,
+          "avgOdds": 43.13624737103179,
+          "stakeYen": 201600,
+          "returnYen": 136360,
+          "roi": 0.6763888888888889,
+          "maxHitOdds": 77.7,
+          "roiExMaxHit": 0.6378472222222222
+        }
+      },
+      {
+        "key": "venueMotorTop2Rate: missing",
+        "metric": {
+          "n": 47,
+          "hits": 2,
+          "hitRate": 0.0425531914893617,
+          "avgOdds": 35.79574468085106,
+          "stakeYen": 4700,
+          "returnYen": 3290,
+          "roi": 0.7,
+          "maxHitOdds": 16.7,
+          "roiExMaxHit": 0.3446808510638298
+        }
+      },
+      {
+        "key": "venueMotorTop2Rate < 25",
+        "metric": {
+          "n": 810,
+          "hits": 13,
+          "hitRate": 0.016049382716049384,
+          "avgOdds": 47.84135802469137,
+          "stakeYen": 81000,
+          "returnYen": 60570,
+          "roi": 0.7477777777777778,
+          "maxHitOdds": 76.4,
+          "roiExMaxHit": 0.6534567901234568
+        }
+      },
+      {
+        "key": "venueMotorTop2Rate < 35",
+        "metric": {
+          "n": 3013,
+          "hits": 67,
+          "hitRate": 0.02223697311649519,
+          "avgOdds": 44.32799867241952,
+          "stakeYen": 301300,
+          "returnYen": 274840,
+          "roi": 0.9121805509459011,
+          "maxHitOdds": 64.5,
+          "roiExMaxHit": 0.8907733156322603
+        }
+      },
+      {
+        "key": "venueMotorTop2Rate < 50",
+        "metric": {
+          "n": 231,
+          "hits": 6,
+          "hitRate": 0.025974025974025976,
+          "avgOdds": 42.79134199134198,
+          "stakeYen": 23100,
+          "returnYen": 23820,
+          "roi": 1.0311688311688312,
+          "maxHitOdds": 55.3,
+          "roiExMaxHit": 0.7917748917748918
+        }
+      }
+    ],
+    "venueBoatBand": [
+      {
+        "key": "venueBoatTop2Rate: missing",
+        "metric": {
+          "n": 47,
+          "hits": 2,
+          "hitRate": 0.0425531914893617,
+          "avgOdds": 35.79574468085106,
+          "stakeYen": 4700,
+          "returnYen": 3290,
+          "roi": 0.7,
+          "maxHitOdds": 16.7,
+          "roiExMaxHit": 0.3446808510638298
+        }
+      },
+      {
+        "key": "venueBoatTop2Rate < 45",
+        "metric": {
+          "n": 2127,
+          "hits": 38,
+          "hitRate": 0.017865538316878232,
+          "avgOdds": 43.692898307475375,
+          "stakeYen": 212700,
+          "returnYen": 152380,
+          "roi": 0.7164080865068171,
+          "maxHitOdds": 77.7,
+          "roiExMaxHit": 0.679877762106253
+        }
+      },
+      {
+        "key": "venueBoatTop2Rate < 35",
+        "metric": {
+          "n": 2818,
+          "hits": 50,
+          "hitRate": 0.017743080198722498,
+          "avgOdds": 44.58883250532287,
+          "stakeYen": 281800,
+          "returnYen": 206950,
+          "roi": 0.7343860894251242,
+          "maxHitOdds": 64.5,
+          "roiExMaxHit": 0.7114975159687722
+        }
+      },
+      {
+        "key": "venueBoatTop2Rate < 50",
+        "metric": {
+          "n": 199,
+          "hits": 4,
+          "hitRate": 0.020100502512562814,
+          "avgOdds": 42.81306532663315,
+          "stakeYen": 19900,
+          "returnYen": 15610,
+          "roi": 0.7844221105527638,
+          "maxHitOdds": 52.2,
+          "roiExMaxHit": 0.5221105527638191
+        }
+      },
+      {
+        "key": "venueBoatTop2Rate >= 50",
+        "metric": {
+          "n": 179,
+          "hits": 5,
+          "hitRate": 0.027932960893854747,
+          "avgOdds": 41.140614525139654,
+          "stakeYen": 17900,
+          "returnYen": 17520,
+          "roi": 0.9787709497206704,
+          "maxHitOdds": 46.4,
+          "roiExMaxHit": 0.7195530726256983
+        }
+      },
+      {
+        "key": "venueBoatTop2Rate < 25",
+        "metric": {
+          "n": 890,
+          "hits": 25,
+          "hitRate": 0.028089887640449437,
+          "avgOdds": 46.560382022471885,
+          "stakeYen": 89000,
+          "returnYen": 107410,
+          "roi": 1.2068539325842698,
+          "maxHitOdds": 62.4,
+          "roiExMaxHit": 1.1367415730337078
+        }
+      }
+    ],
+    "nationalMotorBand": [
+      {
+        "key": "nationalMotorTop2Rate >= 50",
+        "metric": {
+          "n": 246,
+          "hits": 1,
+          "hitRate": 0.0040650406504065045,
+          "avgOdds": 41.76829268292679,
+          "stakeYen": 24600,
+          "returnYen": 4240,
+          "roi": 0.17235772357723578,
+          "maxHitOdds": 42.4,
+          "roiExMaxHit": 0
+        }
+      },
+      {
+        "key": "nationalMotorTop2Rate < 45",
+        "metric": {
+          "n": 1957,
+          "hits": 33,
+          "hitRate": 0.016862544711292796,
+          "avgOdds": 43.435485283597416,
+          "stakeYen": 195700,
+          "returnYen": 135590,
+          "roi": 0.6928461931527848,
+          "maxHitOdds": 77.7,
+          "roiExMaxHit": 0.653142565150741
+        }
+      },
+      {
+        "key": "nationalMotorTop2Rate: missing",
+        "metric": {
+          "n": 47,
+          "hits": 2,
+          "hitRate": 0.0425531914893617,
+          "avgOdds": 35.79574468085106,
+          "stakeYen": 4700,
+          "returnYen": 3290,
+          "roi": 0.7,
+          "maxHitOdds": 16.7,
+          "roiExMaxHit": 0.3446808510638298
+        }
+      },
+      {
+        "key": "nationalMotorTop2Rate < 35",
+        "metric": {
+          "n": 2776,
+          "hits": 53,
+          "hitRate": 0.01909221902017291,
+          "avgOdds": 44.58539625360233,
+          "stakeYen": 277600,
+          "returnYen": 212800,
+          "roi": 0.7665706051873199,
+          "maxHitOdds": 76.4,
+          "roiExMaxHit": 0.7390489913544669
+        }
+      },
+      {
+        "key": "nationalMotorTop2Rate < 25",
+        "metric": {
+          "n": 974,
+          "hits": 23,
+          "hitRate": 0.023613963039014373,
+          "avgOdds": 46.96132443531823,
+          "stakeYen": 97400,
+          "returnYen": 99290,
+          "roi": 1.0194045174537987,
+          "maxHitOdds": 62.4,
+          "roiExMaxHit": 0.9553388090349076
+        }
+      },
+      {
+        "key": "nationalMotorTop2Rate < 50",
+        "metric": {
+          "n": 260,
+          "hits": 12,
+          "hitRate": 0.046153846153846156,
+          "avgOdds": 42.77384615384611,
+          "stakeYen": 26000,
+          "returnYen": 47950,
+          "roi": 1.8442307692307693,
+          "maxHitOdds": 59.9,
+          "roiExMaxHit": 1.613846153846154
+        }
+      }
+    ],
+    "nationalBoatBand": [
+      {
+        "key": "nationalBoatTop2Rate: missing",
+        "metric": {
+          "n": 47,
+          "hits": 2,
+          "hitRate": 0.0425531914893617,
+          "avgOdds": 35.79574468085106,
+          "stakeYen": 4700,
+          "returnYen": 3290,
+          "roi": 0.7,
+          "maxHitOdds": 16.7,
+          "roiExMaxHit": 0.3446808510638298
+        }
+      },
+      {
+        "key": "nationalBoatTop2Rate < 45",
+        "metric": {
+          "n": 2127,
+          "hits": 38,
+          "hitRate": 0.017865538316878232,
+          "avgOdds": 43.692898307475375,
+          "stakeYen": 212700,
+          "returnYen": 152380,
+          "roi": 0.7164080865068171,
+          "maxHitOdds": 77.7,
+          "roiExMaxHit": 0.679877762106253
+        }
+      },
+      {
+        "key": "nationalBoatTop2Rate < 35",
+        "metric": {
+          "n": 2818,
+          "hits": 50,
+          "hitRate": 0.017743080198722498,
+          "avgOdds": 44.58883250532287,
+          "stakeYen": 281800,
+          "returnYen": 206950,
+          "roi": 0.7343860894251242,
+          "maxHitOdds": 64.5,
+          "roiExMaxHit": 0.7114975159687722
+        }
+      },
+      {
+        "key": "nationalBoatTop2Rate < 50",
+        "metric": {
+          "n": 199,
+          "hits": 4,
+          "hitRate": 0.020100502512562814,
+          "avgOdds": 42.81306532663315,
+          "stakeYen": 19900,
+          "returnYen": 15610,
+          "roi": 0.7844221105527638,
+          "maxHitOdds": 52.2,
+          "roiExMaxHit": 0.5221105527638191
+        }
+      },
+      {
+        "key": "nationalBoatTop2Rate >= 50",
+        "metric": {
+          "n": 179,
+          "hits": 5,
+          "hitRate": 0.027932960893854747,
+          "avgOdds": 41.140614525139654,
+          "stakeYen": 17900,
+          "returnYen": 17520,
+          "roi": 0.9787709497206704,
+          "maxHitOdds": 46.4,
+          "roiExMaxHit": 0.7195530726256983
+        }
+      },
+      {
+        "key": "nationalBoatTop2Rate < 25",
+        "metric": {
+          "n": 890,
+          "hits": 25,
+          "hitRate": 0.028089887640449437,
+          "avgOdds": 46.560382022471885,
+          "stakeYen": 89000,
+          "returnYen": 107410,
+          "roi": 1.2068539325842698,
+          "maxHitOdds": 62.4,
+          "roiExMaxHit": 1.1367415730337078
+        }
+      }
+    ]
+  },
+  "noBuy": [
+    {
+      "condition": "F持ち複数レース",
+      "removed": {
+        "n": 4029,
+        "hits": 75,
+        "hitRate": 0.018615040953090096,
+        "avgOdds": 44.43308381732439,
+        "stakeYen": 402900,
+        "returnYen": 301160,
+        "roi": 0.7474807644576819,
+        "maxHitOdds": 76.4,
+        "roiExMaxHit": 0.728518242740134
+      },
+      "remaining": {
+        "n": 2231,
+        "hits": 49,
+        "hitRate": 0.021963245181532944,
+        "avgOdds": 44.18213357238898,
+        "stakeYen": 223100,
+        "returnYen": 202000,
+        "roi": 0.9054235768713581,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.8705961452263559
+      },
+      "risk": "スタート心理。前回も弱い",
+      "recommendation": "A",
+      "lift": 0.10165360882023988
+    },
+    {
+      "condition": "会場=戸田",
+      "removed": {
+        "n": 319,
+        "hits": 1,
+        "hitRate": 0.003134796238244514,
+        "avgOdds": 61.04420062695922,
+        "stakeYen": 31900,
+        "returnYen": 5220,
+        "roi": 0.16363636363636364,
+        "maxHitOdds": 52.2,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 5941,
+        "hits": 123,
+        "hitRate": 0.020703585255007574,
+        "avgOdds": 43.44691713516241,
+        "stakeYen": 594100,
+        "returnYen": 497940,
+        "roi": 0.8381417269819895,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.825063120686753
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "B",
+      "lift": 0.0343717589308713
+    },
+    {
+      "condition": "11R",
+      "removed": {
+        "n": 192,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 37.76041666666668,
+        "stakeYen": 19200,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6068,
+        "hits": 124,
+        "hitRate": 0.02043506921555702,
+        "avgOdds": 44.55195034607776,
+        "stakeYen": 606800,
+        "returnYen": 503160,
+        "roi": 0.8292023731048122,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.8163974950560317
+      },
+      "risk": "現在設定済み。nは十分ではないが0hit",
+      "recommendation": "A",
+      "lift": 0.02543240505369393
+    },
+    {
+      "condition": "会場=多摩川",
+      "removed": {
+        "n": 282,
+        "hits": 2,
+        "hitRate": 0.0070921985815602835,
+        "avgOdds": 44.02411347517728,
+        "stakeYen": 28200,
+        "returnYen": 8120,
+        "roi": 0.28794326241134754,
+        "maxHitOdds": 40.9,
+        "roiExMaxHit": 0.14290780141843973
+      },
+      "remaining": {
+        "n": 5978,
+        "hits": 122,
+        "hitRate": 0.02040816326530612,
+        "avgOdds": 44.35872109401135,
+        "stakeYen": 597800,
+        "returnYen": 495040,
+        "roi": 0.8281030444964871,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.8151053864168618
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "B",
+      "lift": 0.024333076445368862
+    },
+    {
+      "condition": "10R",
+      "removed": {
+        "n": 340,
+        "hits": 4,
+        "hitRate": 0.011764705882352941,
+        "avgOdds": 41.82702941176472,
+        "stakeYen": 34000,
+        "returnYen": 14410,
+        "roi": 0.4238235294117647,
+        "maxHitOdds": 47.3,
+        "roiExMaxHit": 0.2847058823529412
+      },
+      "remaining": {
+        "n": 5920,
+        "hits": 120,
+        "hitRate": 0.02027027027027027,
+        "avgOdds": 44.48818322635129,
+        "stakeYen": 592000,
+        "returnYen": 488750,
+        "roi": 0.8255912162162162,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.8124662162162162
+      },
+      "risk": "現在設定済み。testで跳ねるなら過学習注意",
+      "recommendation": "A",
+      "lift": 0.021821248165098006
+    },
+    {
+      "condition": "会場=桐生",
+      "removed": {
+        "n": 307,
+        "hits": 3,
+        "hitRate": 0.009771986970684038,
+        "avgOdds": 43.67328990228013,
+        "stakeYen": 30700,
+        "returnYen": 12710,
+        "roi": 0.41400651465798044,
+        "maxHitOdds": 51.1,
+        "roiExMaxHit": 0.247557003257329
+      },
+      "remaining": {
+        "n": 5953,
+        "hits": 121,
+        "hitRate": 0.020325886107844783,
+        "avgOdds": 44.37821849487647,
+        "stakeYen": 595300,
+        "returnYen": 490450,
+        "roi": 0.8238703174869814,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.8108180749202083
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "B",
+      "lift": 0.02010034943586314
+    },
+    {
+      "condition": "current_odds >= 50",
+      "removed": {
+        "n": 1800,
+        "hits": 24,
+        "hitRate": 0.013333333333333334,
+        "avgOdds": 60.668911111111015,
+        "stakeYen": 180000,
+        "returnYen": 138330,
+        "roi": 0.7685,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7253333333333334
+      },
+      "remaining": {
+        "n": 4460,
+        "hits": 100,
+        "hitRate": 0.02242152466367713,
+        "avgOdds": 37.75497639013455,
+        "stakeYen": 446000,
+        "returnYen": 364830,
+        "roi": 0.8180044843049328,
+        "maxHitOdds": 49.7,
+        "roiExMaxHit": 0.8068609865470852
+      },
+      "risk": "高配当1発依存注意",
+      "recommendation": "B",
+      "lift": 0.014234516253814555
+    },
+    {
+      "condition": "会場=三国",
+      "removed": {
+        "n": 276,
+        "hits": 4,
+        "hitRate": 0.014492753623188406,
+        "avgOdds": 40.778550724637704,
+        "stakeYen": 27600,
+        "returnYen": 13770,
+        "roi": 0.4989130434782609,
+        "maxHitOdds": 42.8,
+        "roiExMaxHit": 0.3438405797101449
+      },
+      "remaining": {
+        "n": 5984,
+        "hits": 120,
+        "hitRate": 0.020053475935828877,
+        "avgOdds": 44.50808066510691,
+        "stakeYen": 598400,
+        "returnYen": 489390,
+        "roi": 0.8178308823529412,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.804846256684492
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "B",
+      "lift": 0.014060914301822991
+    },
+    {
+      "condition": "wave >= 5",
+      "removed": {
+        "n": 755,
+        "hits": 13,
+        "hitRate": 0.017218543046357615,
+        "avgOdds": 46.28760264900663,
+        "stakeYen": 75500,
+        "returnYen": 53130,
+        "roi": 0.7037086092715232,
+        "maxHitOdds": 60.3,
+        "roiExMaxHit": 0.623841059602649
+      },
+      "remaining": {
+        "n": 5505,
+        "hits": 111,
+        "hitRate": 0.020163487738419618,
+        "avgOdds": 44.07703809264297,
+        "stakeYen": 550500,
+        "returnYen": 450030,
+        "roi": 0.8174931880108992,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.8033787465940054
+      },
+      "risk": "波高リスク",
+      "recommendation": "B",
+      "lift": 0.013723219959780986
+    },
+    {
+      "condition": "venueMotorTop2Rate >= 50",
+      "removed": {
+        "n": 143,
+        "hits": 1,
+        "hitRate": 0.006993006993006993,
+        "avgOdds": 47.19999999999997,
+        "stakeYen": 14300,
+        "returnYen": 4280,
+        "roi": 0.2993006993006993,
+        "maxHitOdds": 42.8,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6117,
+        "hits": 123,
+        "hitRate": 0.020107896027464444,
+        "avgOdds": 44.27687341834231,
+        "stakeYen": 611700,
+        "returnYen": 498880,
+        "roi": 0.8155631845675985,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.8028608795161026
+      },
+      "risk": "人気過剰/高モーター罠候補",
+      "recommendation": "B",
+      "lift": 0.011793216516480243
+    },
+    {
+      "condition": "12R",
+      "removed": {
+        "n": 89,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 38.551685393258424,
+        "stakeYen": 8900,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6171,
+        "hits": 124,
+        "hitRate": 0.02009398800842651,
+        "avgOdds": 44.42718112137411,
+        "stakeYen": 617100,
+        "returnYen": 503160,
+        "roi": 0.8153621779290229,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.8027710257656782
+      },
+      "risk": "現在設定済み。n<100",
+      "recommendation": "B",
+      "lift": 0.011592209877904658
+    },
+    {
+      "condition": "venueMotorTop2Rate < 25",
+      "removed": {
+        "n": 810,
+        "hits": 13,
+        "hitRate": 0.016049382716049384,
+        "avgOdds": 47.84135802469137,
+        "stakeYen": 81000,
+        "returnYen": 60570,
+        "roi": 0.7477777777777778,
+        "maxHitOdds": 76.4,
+        "roiExMaxHit": 0.6534567901234568
+      },
+      "remaining": {
+        "n": 5450,
+        "hits": 111,
+        "hitRate": 0.02036697247706422,
+        "avgOdds": 43.82380453210998,
+        "stakeYen": 545000,
+        "returnYen": 442590,
+        "roi": 0.812091743119266,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7978348623853211
+      },
+      "risk": "低モーター候補",
+      "recommendation": "B",
+      "lift": 0.008321775068147796
+    },
+    {
+      "condition": "会場=江戸川",
+      "removed": {
+        "n": 186,
+        "hits": 2,
+        "hitRate": 0.010752688172043012,
+        "avgOdds": 50.22150537634408,
+        "stakeYen": 18600,
+        "returnYen": 10070,
+        "roi": 0.5413978494623656,
+        "maxHitOdds": 60,
+        "roiExMaxHit": 0.21881720430107526
+      },
+      "remaining": {
+        "n": 6074,
+        "hits": 122,
+        "hitRate": 0.020085610800131708,
+        "avgOdds": 44.163654050049345,
+        "stakeYen": 607400,
+        "returnYen": 493090,
+        "roi": 0.8118044122489299,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7990121830754033
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "B",
+      "lift": 0.00803444419781163
+    },
+    {
+      "condition": "会場=住之江",
+      "removed": {
+        "n": 225,
+        "hits": 4,
+        "hitRate": 0.017777777777777778,
+        "avgOdds": 41.10044444444447,
+        "stakeYen": 22500,
+        "returnYen": 13500,
+        "roi": 0.6,
+        "maxHitOdds": 38.7,
+        "roiExMaxHit": 0.428
+      },
+      "remaining": {
+        "n": 6035,
+        "hits": 120,
+        "hitRate": 0.01988400994200497,
+        "avgOdds": 44.464562502071225,
+        "stakeYen": 603500,
+        "returnYen": 489660,
+        "roi": 0.8113670256835128,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7984921292460646
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "B",
+      "lift": 0.007597057632394599
+    },
+    {
+      "condition": "戸田 5R",
+      "removed": {
+        "n": 53,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 58.19433962264152,
+        "stakeYen": 5300,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6207,
+        "hits": 124,
+        "hitRate": 0.019977444820364103,
+        "avgOdds": 44.225380167552714,
+        "stakeYen": 620700,
+        "returnYen": 503160,
+        "roi": 0.8106331561140647,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.798115031416143
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.006863188062946501
+    },
+    {
+      "condition": "戸田 3R",
+      "removed": {
+        "n": 50,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 60.32000000000002,
+        "stakeYen": 5000,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6210,
+        "hits": 124,
+        "hitRate": 0.01996779388083736,
+        "avgOdds": 44.215013639291435,
+        "stakeYen": 621000,
+        "returnYen": 503160,
+        "roi": 0.8102415458937198,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7977294685990338
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.00647157784260155
+    },
+    {
+      "condition": "桐生 4R",
+      "removed": {
+        "n": 47,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 43.52340425531915,
+        "stakeYen": 4700,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6213,
+        "hits": 124,
+        "hitRate": 0.019958152261387415,
+        "avgOdds": 44.34985267986477,
+        "stakeYen": 621300,
+        "returnYen": 503160,
+        "roi": 0.8098503138580396,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.797344278126509
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.006080345806921406
+    },
+    {
+      "condition": "桐生 2R",
+      "removed": {
+        "n": 46,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 44.35217391304348,
+        "stakeYen": 4600,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6214,
+        "hits": 124,
+        "hitRate": 0.019954940457032506,
+        "avgOdds": 44.343584599291894,
+        "stakeYen": 621400,
+        "returnYen": 503160,
+        "roi": 0.8097199871258449,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7972159639523656
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.005950019074726698
+    },
+    {
+      "condition": "津 4R",
+      "removed": {
+        "n": 45,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 43.76666666666668,
+        "stakeYen": 4500,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6215,
+        "hits": 124,
+        "hitRate": 0.01995172968624296,
+        "avgOdds": 44.34782537409492,
+        "stakeYen": 621500,
+        "returnYen": 503160,
+        "roi": 0.8095897023330652,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.797087691069992
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.005819734281946931
+    },
+    {
+      "condition": "若松 3R",
+      "removed": {
+        "n": 44,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 47.16363636363637,
+        "stakeYen": 4400,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6216,
+        "hits": 124,
+        "hitRate": 0.019948519948519948,
+        "avgOdds": 44.32368640604888,
+        "stakeYen": 621600,
+        "returnYen": 503160,
+        "roi": 0.8094594594594594,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7969594594594595
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.005689491408341185
+    },
+    {
+      "condition": "蒲郡 3R",
+      "removed": {
+        "n": 43,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 46.6953488372093,
+        "stakeYen": 4300,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6217,
+        "hits": 124,
+        "hitRate": 0.019945311243364967,
+        "avgOdds": 44.3273821296445,
+        "stakeYen": 621700,
+        "returnYen": 503160,
+        "roi": 0.8093292584847998,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7968312691008524
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.00555929043368153
+    },
+    {
+      "condition": "常滑 7R",
+      "removed": {
+        "n": 43,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 44.1046511627907,
+        "stakeYen": 4300,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6217,
+        "hits": 124,
+        "hitRate": 0.019945311243364967,
+        "avgOdds": 44.34530073990666,
+        "stakeYen": 621700,
+        "returnYen": 503160,
+        "roi": 0.8093292584847998,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7968312691008524
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.00555929043368153
+    },
+    {
+      "condition": "三国 5R",
+      "removed": {
+        "n": 43,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 42.06767441860464,
+        "stakeYen": 4300,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6217,
+        "hits": 124,
+        "hitRate": 0.019945311243364967,
+        "avgOdds": 44.359389528711596,
+        "stakeYen": 621700,
+        "returnYen": 503160,
+        "roi": 0.8093292584847998,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7968312691008524
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.00555929043368153
+    },
+    {
+      "condition": "唐津 7R",
+      "removed": {
+        "n": 42,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 44.235714285714295,
+        "stakeYen": 4200,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6218,
+        "hits": 124,
+        "hitRate": 0.019942103570279833,
+        "avgOdds": 44.344376761016385,
+        "stakeYen": 621800,
+        "returnYen": 503160,
+        "roi": 0.809199099388871,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7967031199742682
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.005429131337752802
+    },
+    {
+      "condition": "会場=福岡",
+      "removed": {
+        "n": 260,
+        "hits": 5,
+        "hitRate": 0.019230769230769232,
+        "avgOdds": 36.117307692307676,
+        "stakeYen": 26000,
+        "returnYen": 17680,
+        "roi": 0.68,
+        "maxHitOdds": 52.5,
+        "roiExMaxHit": 0.47807692307692307
+      },
+      "remaining": {
+        "n": 6000,
+        "hits": 119,
+        "hitRate": 0.019833333333333335,
+        "avgOdds": 44.700122449999995,
+        "stakeYen": 600000,
+        "returnYen": 485480,
+        "roi": 0.8091333333333334,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7961833333333334
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "B",
+      "lift": 0.005363365282215149
+    },
+    {
+      "condition": "会場=徳山",
+      "removed": {
+        "n": 242,
+        "hits": 5,
+        "hitRate": 0.02066115702479339,
+        "avgOdds": 31.54016528925621,
+        "stakeYen": 24200,
+        "returnYen": 16240,
+        "roi": 0.6710743801652893,
+        "maxHitOdds": 44.3,
+        "roiExMaxHit": 0.4880165289256198
+      },
+      "remaining": {
+        "n": 6018,
+        "hits": 119,
+        "hitRate": 0.01977401129943503,
+        "avgOdds": 44.858510252575606,
+        "stakeYen": 601800,
+        "returnYen": 486920,
+        "roi": 0.809106015287471,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7961947490860751
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "B",
+      "lift": 0.005336047236352726
+    },
+    {
+      "condition": "福岡 7R",
+      "removed": {
+        "n": 40,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 37.1075,
+        "stakeYen": 4000,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6220,
+        "hits": 124,
+        "hitRate": 0.019935691318327974,
+        "avgOdds": 44.390182427652704,
+        "stakeYen": 622000,
+        "returnYen": 503160,
+        "roi": 0.8089389067524115,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7964469453376206
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.005168938701293313
+    },
+    {
+      "condition": "若松 6R",
+      "removed": {
+        "n": 39,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 46.32564102564102,
+        "stakeYen": 3900,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6221,
+        "hits": 124,
+        "hitRate": 0.019932486738466485,
+        "avgOdds": 44.331222424047546,
+        "stakeYen": 622100,
+        "returnYen": 503160,
+        "roi": 0.8088088731715158,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7963189197878154
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.005038905120397619
+    },
+    {
+      "condition": "平和島 6R",
+      "removed": {
+        "n": 39,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 67.89999999999999,
+        "stakeYen": 3900,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6221,
+        "hits": 124,
+        "hitRate": 0.019932486738466485,
+        "avgOdds": 44.19597085677541,
+        "stakeYen": 622100,
+        "returnYen": 503160,
+        "roi": 0.8088088731715158,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7963189197878154
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.005038905120397619
+    },
+    {
+      "condition": "戸田 2R",
+      "removed": {
+        "n": 39,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 66.9897435897436,
+        "stakeYen": 3900,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6221,
+        "hits": 124,
+        "hitRate": 0.019932486738466485,
+        "avgOdds": 44.20167733483361,
+        "stakeYen": 622100,
+        "returnYen": 503160,
+        "roi": 0.8088088731715158,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7963189197878154
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.005038905120397619
+    },
+    {
+      "condition": "唐津 4R",
+      "removed": {
+        "n": 39,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 39.882051282051265,
+        "stakeYen": 3900,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6221,
+        "hits": 124,
+        "hitRate": 0.019932486738466485,
+        "avgOdds": 44.37161785886511,
+        "stakeYen": 622100,
+        "returnYen": 503160,
+        "roi": 0.8088088731715158,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7963189197878154
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.005038905120397619
+    },
+    {
+      "condition": "宮島 4R",
+      "removed": {
+        "n": 38,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 39.6157894736842,
+        "stakeYen": 3800,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6222,
+        "hits": 124,
+        "hitRate": 0.01992928318868531,
+        "avgOdds": 44.37252245258757,
+        "stakeYen": 622200,
+        "returnYen": 503160,
+        "roi": 0.808678881388621,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7961909353905496
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.004908913337502763
+    },
+    {
+      "condition": "戸田 4R",
+      "removed": {
+        "n": 38,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 61.478947368421075,
+        "stakeYen": 3800,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6222,
+        "hits": 124,
+        "hitRate": 0.01992928318868531,
+        "avgOdds": 44.23899625522339,
+        "stakeYen": 622200,
+        "returnYen": 503160,
+        "roi": 0.808678881388621,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7961909353905496
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.004908913337502763
+    },
+    {
+      "condition": "多摩川 4R",
+      "removed": {
+        "n": 38,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 45.1,
+        "stakeYen": 3800,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6222,
+        "hits": 124,
+        "hitRate": 0.01992928318868531,
+        "avgOdds": 44.339028399228525,
+        "stakeYen": 622200,
+        "returnYen": 503160,
+        "roi": 0.808678881388621,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7961909353905496
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.004908913337502763
+    },
+    {
+      "condition": "下関 3R",
+      "removed": {
+        "n": 37,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 34.71621621621621,
+        "stakeYen": 3700,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6223,
+        "hits": 124,
+        "hitRate": 0.019926080668487868,
+        "avgOdds": 44.40088939418284,
+        "stakeYen": 622300,
+        "returnYen": 503160,
+        "roi": 0.8085489313835771,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7960629921259843
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.004778963332458863
+    },
+    {
+      "condition": "多摩川 6R",
+      "removed": {
+        "n": 37,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 46.45945945945946,
+        "stakeYen": 3700,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6223,
+        "hits": 124,
+        "hitRate": 0.019926080668487868,
+        "avgOdds": 44.33106776474368,
+        "stakeYen": 622300,
+        "returnYen": 503160,
+        "roi": 0.8085489313835771,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7960629921259843
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.004778963332458863
+    },
+    {
+      "condition": "浜名湖 2R",
+      "removed": {
+        "n": 37,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 44.921621621621625,
+        "stakeYen": 3700,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6223,
+        "hits": 124,
+        "hitRate": 0.019926080668487868,
+        "avgOdds": 44.34021126466332,
+        "stakeYen": 622300,
+        "returnYen": 503160,
+        "roi": 0.8085489313835771,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7960629921259843
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.004778963332458863
+    },
+    {
+      "condition": "桐生 8R",
+      "removed": {
+        "n": 37,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 40.6,
+        "stakeYen": 3700,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6223,
+        "hits": 124,
+        "hitRate": 0.019926080668487868,
+        "avgOdds": 44.365906267073726,
+        "stakeYen": 622300,
+        "returnYen": 503160,
+        "roi": 0.8085489313835771,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7960629921259843
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.004778963332458863
+    },
+    {
+      "condition": "蒲郡 6R",
+      "removed": {
+        "n": 36,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 46.27777777777779,
+        "stakeYen": 3600,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6224,
+        "hits": 124,
+        "hitRate": 0.01992287917737789,
+        "avgOdds": 44.33246058804626,
+        "stakeYen": 622400,
+        "returnYen": 503160,
+        "roi": 0.8084190231362468,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7959350899742931
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.004649055085128584
+    },
+    {
+      "condition": "若松 2R",
+      "removed": {
+        "n": 36,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 47.34722222222222,
+        "stakeYen": 3600,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6224,
+        "hits": 124,
+        "hitRate": 0.01992287917737789,
+        "avgOdds": 44.326274855398424,
+        "stakeYen": 622400,
+        "returnYen": 503160,
+        "roi": 0.8084190231362468,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7959350899742931
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.004649055085128584
+    },
+    {
+      "condition": "徳山 6R",
+      "removed": {
+        "n": 36,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 34.30833333333334,
+        "stakeYen": 3600,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6224,
+        "hits": 124,
+        "hitRate": 0.01992287917737789,
+        "avgOdds": 44.401692593187626,
+        "stakeYen": 622400,
+        "returnYen": 503160,
+        "roi": 0.8084190231362468,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7959350899742931
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.004649055085128584
+    },
+    {
+      "condition": "頭展示4位以下",
+      "removed": {
+        "n": 2390,
+        "hits": 47,
+        "hitRate": 0.019665271966527197,
+        "avgOdds": 45.43881589958157,
+        "stakeYen": 239000,
+        "returnYen": 190350,
+        "roi": 0.7964435146443515,
+        "maxHitOdds": 76.4,
+        "roiExMaxHit": 0.7644769874476988
+      },
+      "remaining": {
+        "n": 3870,
+        "hits": 77,
+        "hitRate": 0.019896640826873386,
+        "avgOdds": 43.66730354005179,
+        "stakeYen": 387000,
+        "returnYen": 312810,
+        "roi": 0.8082945736434108,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7882170542635659
+      },
+      "risk": "展示下位の頭固定",
+      "recommendation": "A",
+      "lift": 0.004524605592292619
+    },
+    {
+      "condition": "平和島 4R",
+      "removed": {
+        "n": 35,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 63.0457142857143,
+        "stakeYen": 3500,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6225,
+        "hits": 124,
+        "hitRate": 0.01991967871485944,
+        "avgOdds": 44.238495534136526,
+        "stakeYen": 622500,
+        "returnYen": 503160,
+        "roi": 0.808289156626506,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7958072289156627
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.0045191885753878
+    },
+    {
+      "condition": "常滑 5R",
+      "removed": {
+        "n": 35,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 42.222857142857144,
+        "stakeYen": 3500,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6225,
+        "hits": 124,
+        "hitRate": 0.01991967871485944,
+        "avgOdds": 44.3555718393574,
+        "stakeYen": 622500,
+        "returnYen": 503160,
+        "roi": 0.808289156626506,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7958072289156627
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.0045191885753878
+    },
+    {
+      "condition": "平和島 8R",
+      "removed": {
+        "n": 35,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 57.50571428571429,
+        "stakeYen": 3500,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6225,
+        "hits": 124,
+        "hitRate": 0.01991967871485944,
+        "avgOdds": 44.26964412851404,
+        "stakeYen": 622500,
+        "returnYen": 503160,
+        "roi": 0.808289156626506,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7958072289156627
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.0045191885753878
+    },
+    {
+      "condition": "桐生 1R",
+      "removed": {
+        "n": 34,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 43.941176470588225,
+        "stakeYen": 3400,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6226,
+        "hits": 124,
+        "hitRate": 0.019916479280436876,
+        "avgOdds": 44.345845599100514,
+        "stakeYen": 622600,
+        "returnYen": 503160,
+        "roi": 0.8081593318342435,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7956794089302923
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.004389363783125266
+    },
+    {
+      "condition": "徳山 8R",
+      "removed": {
+        "n": 34,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 32.72941176470589,
+        "stakeYen": 3400,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6226,
+        "hits": 124,
+        "hitRate": 0.019916479280436876,
+        "avgOdds": 44.40707271121101,
+        "stakeYen": 622600,
+        "returnYen": 503160,
+        "roi": 0.8081593318342435,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7956794089302923
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.004389363783125266
+    },
+    {
+      "condition": "大村 6R",
+      "removed": {
+        "n": 34,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 36.58529411764707,
+        "stakeYen": 3400,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6226,
+        "hits": 124,
+        "hitRate": 0.019916479280436876,
+        "avgOdds": 44.386015852875005,
+        "stakeYen": 622600,
+        "returnYen": 503160,
+        "roi": 0.8081593318342435,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7956794089302923
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.004389363783125266
+    },
+    {
+      "condition": "会場=浜名湖",
+      "removed": {
+        "n": 283,
+        "hits": 5,
+        "hitRate": 0.0176678445229682,
+        "avgOdds": 45.63003533568907,
+        "stakeYen": 28300,
+        "returnYen": 20270,
+        "roi": 0.7162544169611308,
+        "maxHitOdds": 47.9,
+        "roiExMaxHit": 0.5469964664310955
+      },
+      "remaining": {
+        "n": 5977,
+        "hits": 119,
+        "hitRate": 0.019909653672410908,
+        "avgOdds": 44.28273961853767,
+        "stakeYen": 597700,
+        "returnYen": 482890,
+        "roi": 0.8079136690647482,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7949138363727623
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "B",
+      "lift": 0.00414370101362993
+    },
+    {
+      "condition": "びわこ 6R",
+      "removed": {
+        "n": 32,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 49.878125000000004,
+        "stakeYen": 3200,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6228,
+        "hits": 124,
+        "hitRate": 0.01991008349389852,
+        "avgOdds": 44.31521109505455,
+        "stakeYen": 622800,
+        "returnYen": 503160,
+        "roi": 0.8078998073217727,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7954238921001927
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.004129839270654467
+    },
+    {
+      "condition": "多摩川 1R",
+      "removed": {
+        "n": 32,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 46.475,
+        "stakeYen": 3200,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6228,
+        "hits": 124,
+        "hitRate": 0.01991008349389852,
+        "avgOdds": 44.33269664418751,
+        "stakeYen": 622800,
+        "returnYen": 503160,
+        "roi": 0.8078998073217727,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7954238921001927
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.004129839270654467
+    },
+    {
+      "condition": "三国 4R",
+      "removed": {
+        "n": 32,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 38.26250000000001,
+        "stakeYen": 3200,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6228,
+        "hits": 124,
+        "hitRate": 0.01991008349389852,
+        "avgOdds": 44.3748931759794,
+        "stakeYen": 622800,
+        "returnYen": 503160,
+        "roi": 0.8078998073217727,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7954238921001927
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.004129839270654467
+    },
+    {
+      "condition": "平和島 1R",
+      "removed": {
+        "n": 30,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 62.04666666666667,
+        "stakeYen": 3000,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6230,
+        "hits": 124,
+        "hitRate": 0.019903691813804174,
+        "avgOdds": 44.25840043338681,
+        "stakeYen": 623000,
+        "returnYen": 503160,
+        "roi": 0.8076404494382022,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7951685393258427
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.0038704813870840127
+    },
+    {
+      "condition": "福岡 5R",
+      "removed": {
+        "n": 30,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 34.95333333333333,
+        "stakeYen": 3000,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6230,
+        "hits": 124,
+        "hitRate": 0.019903691813804174,
+        "avgOdds": 44.38886592295343,
+        "stakeYen": 623000,
+        "returnYen": 503160,
+        "roi": 0.8076404494382022,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7951685393258427
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.0038704813870840127
+    },
+    {
+      "condition": "住之江 5R",
+      "removed": {
+        "n": 30,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 39.7,
+        "stakeYen": 3000,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6230,
+        "hits": 124,
+        "hitRate": 0.019903691813804174,
+        "avgOdds": 44.36600878009627,
+        "stakeYen": 623000,
+        "returnYen": 503160,
+        "roi": 0.8076404494382022,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7951685393258427
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.0038704813870840127
+    },
+    {
+      "condition": "多摩川 5R",
+      "removed": {
+        "n": 30,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 45.620000000000005,
+        "stakeYen": 3000,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6230,
+        "hits": 124,
+        "hitRate": 0.019903691813804174,
+        "avgOdds": 44.3375015569823,
+        "stakeYen": 623000,
+        "returnYen": 503160,
+        "roi": 0.8076404494382022,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7951685393258427
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.0038704813870840127
+    },
+    {
+      "condition": "常滑 6R",
+      "removed": {
+        "n": 30,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 43.739999999999995,
+        "stakeYen": 3000,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6230,
+        "hits": 124,
+        "hitRate": 0.019903691813804174,
+        "avgOdds": 44.34655452648472,
+        "stakeYen": 623000,
+        "returnYen": 503160,
+        "roi": 0.8076404494382022,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7951685393258427
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.0038704813870840127
+    },
+    {
+      "condition": "三国 9R",
+      "removed": {
+        "n": 30,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 39.53333333333333,
+        "stakeYen": 3000,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6230,
+        "hits": 124,
+        "hitRate": 0.019903691813804174,
+        "avgOdds": 44.36681134831458,
+        "stakeYen": 623000,
+        "returnYen": 503160,
+        "roi": 0.8076404494382022,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7951685393258427
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.0038704813870840127
+    },
+    {
+      "condition": "浜名湖 5R",
+      "removed": {
+        "n": 30,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 42.39,
+        "stakeYen": 3000,
+        "returnYen": 0,
+        "roi": 0,
+        "maxHitOdds": 0,
+        "roiExMaxHit": 0
+      },
+      "remaining": {
+        "n": 6230,
+        "hits": 124,
+        "hitRate": 0.019903691813804174,
+        "avgOdds": 44.353055329052935,
+        "stakeYen": 623000,
+        "returnYen": 503160,
+        "roi": 0.8076404494382022,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7951685393258427
+      },
+      "risk": "venue×raceNoは細かすぎ注意",
+      "recommendation": "C",
+      "lift": 0.0038704813870840127
+    },
+    {
+      "condition": "会場=下関",
+      "removed": {
+        "n": 241,
+        "hits": 5,
+        "hitRate": 0.02074688796680498,
+        "avgOdds": 36.8402489626556,
+        "stakeYen": 24100,
+        "returnYen": 17570,
+        "roi": 0.7290456431535269,
+        "maxHitOdds": 44.8,
+        "roiExMaxHit": 0.5431535269709543
+      },
+      "remaining": {
+        "n": 6019,
+        "hits": 119,
+        "hitRate": 0.019770726034224955,
+        "avgOdds": 44.64408285429473,
+        "stakeYen": 601900,
+        "returnYen": 485590,
+        "roi": 0.8067619205848148,
+        "maxHitOdds": 77.7,
+        "roiExMaxHit": 0.7938527994683502
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "B",
+      "lift": 0.0029919525336965513
+    }
+  ],
+  "edgeRows": [
+    {
+      "condition": "F持ち複数レース",
+      "trainRoi": 0.8237926136363637,
+      "validationRoi": 0.4986111111111111,
+      "testRoi": 0.7052256532066509,
+      "n": 4029,
+      "roiExMaxHit": 0.728518242740134,
+      "judgement": "S: NO BUY edge候補"
+    },
+    {
+      "condition": "会場=戸田",
+      "trainRoi": 0.22597402597402597,
+      "validationRoi": 0,
+      "testRoi": 0,
+      "n": 319,
+      "roiExMaxHit": 0,
+      "judgement": "S: NO BUY edge候補"
+    },
+    {
+      "condition": "11R",
+      "trainRoi": 0,
+      "validationRoi": 0,
+      "testRoi": 0,
+      "n": 192,
+      "roiExMaxHit": 0,
+      "judgement": "S: NO BUY edge候補"
+    },
+    {
+      "condition": "会場=多摩川",
+      "trainRoi": 0,
+      "validationRoi": 1.4763636363636363,
+      "testRoi": 0,
+      "n": 282,
+      "roiExMaxHit": 0.14290780141843973,
+      "judgement": "B: 観察"
+    },
+    {
+      "condition": "10R",
+      "trainRoi": 0.37330508474576274,
+      "validationRoi": 0,
+      "testRoi": 1.2444444444444445,
+      "n": 340,
+      "roiExMaxHit": 0.2847058823529412,
+      "judgement": "A: NO BUY候補"
+    },
+    {
+      "condition": "会場=桐生",
+      "trainRoi": 0.5857142857142857,
+      "validationRoi": 0,
+      "testRoi": 0,
+      "n": 307,
+      "roiExMaxHit": 0.247557003257329,
+      "judgement": "S: NO BUY edge候補"
+    },
+    {
+      "condition": "current_odds >= 50",
+      "trainRoi": 0.7238761974944731,
+      "validationRoi": 1.0291176470588235,
+      "testRoi": 0.4961165048543689,
+      "n": 1800,
+      "roiExMaxHit": 0.7253333333333334,
+      "judgement": "B: 観察"
+    },
+    {
+      "condition": "会場=三国",
+      "trainRoi": 0.5757894736842105,
+      "validationRoi": 0.5053571428571428,
+      "testRoi": 0,
+      "n": 276,
+      "roiExMaxHit": 0.3438405797101449,
+      "judgement": "S: NO BUY edge候補"
+    },
+    {
+      "condition": "wave >= 5",
+      "trainRoi": 0.9091633466135458,
+      "validationRoi": 0.2248618784530387,
+      "testRoi": 0.4750000000000001,
+      "n": 755,
+      "roiExMaxHit": 0.623841059602649,
+      "judgement": "B: 観察"
+    },
+    {
+      "condition": "venueMotorTop2Rate >= 50",
+      "trainRoi": 0.37543859649122807,
+      "validationRoi": 0,
+      "testRoi": 0,
+      "n": 143,
+      "roiExMaxHit": 0,
+      "judgement": "S: NO BUY edge候補"
+    },
+    {
+      "condition": "12R",
+      "trainRoi": 0,
+      "validationRoi": 0,
+      "testRoi": 0,
+      "n": 89,
+      "roiExMaxHit": 0,
+      "judgement": "S: NO BUY edge候補"
+    },
+    {
+      "condition": "venueMotorTop2Rate < 25",
+      "trainRoi": 0.8141196013289037,
+      "validationRoi": 0.28055555555555556,
+      "testRoi": 1.175,
+      "n": 810,
+      "roiExMaxHit": 0.6534567901234568,
+      "judgement": "A: NO BUY候補"
+    },
+    {
+      "condition": "会場=江戸川",
+      "trainRoi": 0.5405405405405406,
+      "validationRoi": 0.7980392156862746,
+      "testRoi": 0,
+      "n": 186,
+      "roiExMaxHit": 0.21881720430107526,
+      "judgement": "S: NO BUY edge候補"
+    },
+    {
+      "condition": "会場=住之江",
+      "trainRoi": 0.8490566037735849,
+      "validationRoi": 0,
+      "testRoi": 0,
+      "n": 225,
+      "roiExMaxHit": 0.428,
+      "judgement": "S: NO BUY edge候補"
+    },
+    {
+      "condition": "戸田 5R",
+      "trainRoi": 0,
+      "validationRoi": 0,
+      "testRoi": 0,
+      "n": 0,
+      "roiExMaxHit": 0,
+      "judgement": "C: n不足"
+    },
+    {
+      "condition": "戸田 3R",
+      "trainRoi": 0,
+      "validationRoi": 0,
+      "testRoi": 0,
+      "n": 0,
+      "roiExMaxHit": 0,
+      "judgement": "C: n不足"
+    },
+    {
+      "condition": "桐生 4R",
+      "trainRoi": 0,
+      "validationRoi": 0,
+      "testRoi": 0,
+      "n": 0,
+      "roiExMaxHit": 0,
+      "judgement": "C: n不足"
+    },
+    {
+      "condition": "桐生 2R",
+      "trainRoi": 0,
+      "validationRoi": 0,
+      "testRoi": 0,
+      "n": 0,
+      "roiExMaxHit": 0,
+      "judgement": "C: n不足"
+    },
+    {
+      "condition": "津 4R",
+      "trainRoi": 0,
+      "validationRoi": 0,
+      "testRoi": 0,
+      "n": 0,
+      "roiExMaxHit": 0,
+      "judgement": "C: n不足"
+    },
+    {
+      "condition": "若松 3R",
+      "trainRoi": 0,
+      "validationRoi": 0,
+      "testRoi": 0,
+      "n": 0,
+      "roiExMaxHit": 0,
+      "judgement": "C: n不足"
+    },
+    {
+      "condition": "蒲郡 3R",
+      "trainRoi": 0,
+      "validationRoi": 0,
+      "testRoi": 0,
+      "n": 0,
+      "roiExMaxHit": 0,
+      "judgement": "C: n不足"
+    },
+    {
+      "condition": "常滑 7R",
+      "trainRoi": 0,
+      "validationRoi": 0,
+      "testRoi": 0,
+      "n": 0,
+      "roiExMaxHit": 0,
+      "judgement": "C: n不足"
+    },
+    {
+      "condition": "三国 5R",
+      "trainRoi": 0,
+      "validationRoi": 0,
+      "testRoi": 0,
+      "n": 0,
+      "roiExMaxHit": 0,
+      "judgement": "C: n不足"
+    },
+    {
+      "condition": "唐津 7R",
+      "trainRoi": 0,
+      "validationRoi": 0,
+      "testRoi": 0,
+      "n": 0,
+      "roiExMaxHit": 0,
+      "judgement": "C: n不足"
+    },
+    {
+      "condition": "会場=福岡",
+      "trainRoi": 0.506806282722513,
+      "validationRoi": 2.2222222222222223,
+      "testRoi": 0,
+      "n": 260,
+      "roiExMaxHit": 0.47807692307692307,
+      "judgement": "B: 観察"
+    },
+    {
+      "condition": "会場=徳山",
+      "trainRoi": 0.3993548387096774,
+      "validationRoi": 0.9525423728813559,
+      "testRoi": 1.582142857142857,
+      "n": 242,
+      "roiExMaxHit": 0.4880165289256198,
+      "judgement": "B: 観察"
+    },
+    {
+      "condition": "福岡 7R",
+      "trainRoi": 0,
+      "validationRoi": 0,
+      "testRoi": 0,
+      "n": 0,
+      "roiExMaxHit": 0,
+      "judgement": "C: n不足"
+    },
+    {
+      "condition": "若松 6R",
+      "trainRoi": 0,
+      "validationRoi": 0,
+      "testRoi": 0,
+      "n": 0,
+      "roiExMaxHit": 0,
+      "judgement": "C: n不足"
+    },
+    {
+      "condition": "平和島 6R",
+      "trainRoi": 0,
+      "validationRoi": 0,
+      "testRoi": 0,
+      "n": 0,
+      "roiExMaxHit": 0,
+      "judgement": "C: n不足"
+    },
+    {
+      "condition": "戸田 2R",
+      "trainRoi": 0,
+      "validationRoi": 0,
+      "testRoi": 0,
+      "n": 0,
+      "roiExMaxHit": 0,
+      "judgement": "C: n不足"
+    }
+  ],
+  "motorStrategy": [
+    {
+      "motorCondition": "venueMotorTop2Rate >= 50",
+      "strategy": "original_single",
+      "n": 143,
+      "hits": 1,
+      "hitRate": 0.006993006993006993,
+      "avgOdds": 47.19999999999997,
+      "stakeYen": 14300,
+      "returnYen": 4280,
+      "roi": 0.2993006993006993,
+      "maxHitOdds": 42.8,
+      "roiExMaxHit": 0,
+      "comment": "venueMotorTop2Rate >= 50 は弱い。NO BUY/減点候補"
+    },
+    {
+      "motorCondition": "venueMotorTop2Rate 35-50",
+      "strategy": "original_single",
+      "n": 2247,
+      "hits": 41,
+      "hitRate": 0.01824655095683133,
+      "avgOdds": 43.100789808633714,
+      "stakeYen": 224700,
+      "returnYen": 160180,
+      "roi": 0.712861593235425,
+      "maxHitOdds": 77.7,
+      "roiExMaxHit": 0.6782821539830886,
+      "comment": "venueMotorTop2Rate 35-50 は弱い。NO BUY/減点候補"
+    },
+    {
+      "motorCondition": "venueMotorTop2Rate < 35",
+      "strategy": "original_single",
+      "n": 3823,
+      "hits": 80,
+      "hitRate": 0.020925974365681402,
+      "avgOdds": 45.072393408318085,
+      "stakeYen": 382300,
+      "returnYen": 335410,
+      "roi": 0.8773476327491498,
+      "maxHitOdds": 76.4,
+      "roiExMaxHit": 0.8573633272299241,
+      "comment": "中立。単独採用は弱い"
+    },
+    {
+      "motorCondition": "venueMotorあり",
+      "strategy": "original_single",
+      "n": 6213,
+      "hits": 122,
+      "hitRate": 0.01963624657975213,
+      "avgOdds": 44.40831075164972,
+      "stakeYen": 621300,
+      "returnYen": 499870,
+      "roi": 0.8045549653951393,
+      "maxHitOdds": 77.7,
+      "roiExMaxHit": 0.7920489296636085,
+      "comment": "中立。単独採用は弱い"
+    },
+    {
+      "motorCondition": "venueMotor欠損fallback",
+      "strategy": "original_single",
+      "n": 0,
+      "hits": 0,
+      "hitRate": 0,
+      "avgOdds": 0,
+      "stakeYen": 0,
+      "returnYen": 0,
+      "roi": 0,
+      "maxHitOdds": 0,
+      "roiExMaxHit": 0,
+      "comment": "n不足。観察のみ"
+    },
+    {
+      "motorCondition": "motor高いが展示下位",
+      "strategy": "original_single",
+      "n": 120,
+      "hits": 1,
+      "hitRate": 0.008333333333333333,
+      "avgOdds": 46.973333333333315,
+      "stakeYen": 12000,
+      "returnYen": 2730,
+      "roi": 0.2275,
+      "maxHitOdds": 27.3,
+      "roiExMaxHit": 0,
+      "comment": "motor高いが展示下位 は弱い。NO BUY/減点候補"
+    }
+  ],
+  "appSettingsProposal": {
+    "excludedRaceNos": {
+      "current": [
+        10,
+        11,
+        12
+      ],
+      "proposal": [
+        10,
+        11,
+        12
+      ],
+      "reason": "現DBでは11/12は0hit、10Rも低ROI。ただし報告ROIが再現できないため維持提案止まり。"
+    },
+    "programFilter": {
+      "maxMotorTop2Rate": {
+        "current": 50,
+        "proposal": null,
+        "reason": "判定実装がvenueMotorTop2Rateを見ていない疑いがあるため、まず実装/検証修正が先。"
+      }
+    },
+    "oddsCalibrationFactors": {
+      "current": [
+        {
+          "maxRequiredOdds": 30,
+          "factor": 0.4
+        },
+        {
+          "maxRequiredOdds": 50,
+          "factor": 0.4
+        },
+        {
+          "maxRequiredOdds": 9007199254740991,
+          "factor": 0.4
+        }
+      ],
+      "proposal": [],
+      "reason": "全帯0.40はBUY削減による見かけ改善の疑い。walk-forwardで係数探索が必要。"
+    },
+    "betStrategyCandidates": {
+      "default": "original_single",
+      "conditional": [
+        "second_third_reverseは前回レポートで微改善。ただし欠損率/過学習確認必須"
+      ]
+    },
+    "noBuyFilters": [
+      "F持ち複数レース",
+      "会場=戸田",
+      "11R",
+      "会場=多摩川",
+      "10R",
+      "会場=桐生",
+      "current_odds >= 50",
+      "会場=三国"
+    ]
+  },
+  "finalJudgement": {
+    "q1_roi1118": "現在DBのcurrent_odds基準では0.804で、1.118は再現できない。現時点では信用しきれない。",
+    "q2_source": "厳密には分解不能。保存BUY上では10R/11R/12R除外やNO BUYフィルターの影響が大きく、motor_boat_stats単独効果とは断定不可。",
+    "q3_exclude10": "現DBでは10R ROIが低く候補。ただしtestで跳ねる月があり、単独本番固定は追加検証が必要。",
+    "q4_maxMotor50": "実装がvenueMotorTop2Rateではなくnational motorTop2Rateを見ている疑いがあるため、妥当性判断前に修正/検証が必要。",
+    "q5_calibration040": "全帯0.40は強い。BUYを減らすだけの改善に見える危険があるため、やりすぎ疑い。",
+    "q6_single": "現時点では1点買いが基本。複数点は欠損率と過学習リスクが高い。",
+    "q7_reverse": "前回シミュレーションでは微改善だが、採用ではなく条件付きpaper検証候補。",
+    "q8_flow": "1-2流しは的中率だけ上がりROIは微低下。常用非推奨。",
+    "q9_top3box": "微改善に見えるが欠損率が高く、条件付き観察候補。",
+    "q10_next": "本番実装候補はなし。まずloadMotorBoatStatsMapの範囲ロード化、venueMotorTop2Rateをfilterに使うかの整合確認、再生成ベースのA/B検証。",
+    "summary": "現在ROI=0.804、上位NO BUY候補=F持ち複数レース",
+    "patternCount": 7,
+    "periodCount": 52
+  }
+}
