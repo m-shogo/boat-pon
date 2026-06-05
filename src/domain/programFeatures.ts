@@ -17,6 +17,9 @@ export type BoatFeature = {
   // racer_profiles から注入
   flyingCount?: number | null;
   lateStartCount?: number | null;
+  // motor_boat_stats から注入（会場別実績）
+  venueMotorTop2Rate?: number | null;
+  venueBoatTop2Rate?: number | null;
   // exhibition_data から計算（courseAvgSt - 今日の展示ST。正 = 今日が速い）
   exhibitionStResidual?: number | null;
 };
@@ -67,8 +70,11 @@ export function featureAdjustmentBreakdownForSelection(
   const classFactor = classAdjustment(firstBoat.className);
   const nationalFactor = rateAdjustment(firstBoat.nationalWinRate, 6.0, 0.018);
   const localFactor = rateAdjustment(firstBoat.localWinRate, 6.0, 0.014);
-  const motorFactor = rateAdjustment(firstBoat.motorTop2Rate, 35.0, 0.004);
-  const boatFactor = rateAdjustment(firstBoat.boatTop2Rate, 35.0, 0.003);
+  // motor_boat_stats (会場別) を優先、なければ official_programs (全国) にフォールバック
+  const motorRate = firstBoat.venueMotorTop2Rate ?? firstBoat.motorTop2Rate;
+  const boatRate = firstBoat.venueBoatTop2Rate ?? firstBoat.boatTop2Rate;
+  const motorFactor = rateAdjustment(motorRate, 35.0, 0.004);
+  const boatFactor = rateAdjustment(boatRate, 35.0, 0.003);
   // コース別期別統計（racer_course_stats）
   // avg_st: 0.16前後が平均。小さいほど速い → プラス補正。scale小さめで様子見。
   const courseStFactor = firstBoat.courseAvgSt != null

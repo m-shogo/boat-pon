@@ -651,13 +651,30 @@ function loadExhibitionStMap(db: DatabaseSync): Map<string, number> {
   return map;
 }
 
-/** extractProgramFeatures の結果に racer_course_stats / racer_profiles / exhibition_data の値を注入する */
+/** motor_boat_stats を race_id 別にロードして Map<"race_id-course", {motorTop2Rate, boatTop2Rate}> を返す */
+function loadMotorBoatStatsMap(db: DatabaseSync): Map<string, { motorTop2Rate: number | null; boatTop2Rate: number | null }> {
+  const rows = db.prepare(`
+    SELECT race_id, course, motor_top2_rate, boat_top2_rate FROM motor_boat_stats
+    WHERE motor_top2_rate IS NOT NULL OR boat_top2_rate IS NOT NULL
+  `).all() as Array<Record<string, unknown>>;
+  const map = new Map<string, { motorTop2Rate: number | null; boatTop2Rate: number | null }>();
+  for (const row of rows) {
+    map.set(`${row.race_id}-${row.course}`, {
+      motorTop2Rate: row.motor_top2_rate == null ? null : Number(row.motor_top2_rate),
+      boatTop2Rate: row.boat_top2_rate == null ? null : Number(row.boat_top2_rate),
+    });
+  }
+  return map;
+}
+
+/** extractProgramFeatures の結果に racer_course_stats / racer_profiles / exhibition_data / motor_boat_stats の値を注入する */
 function enrichFeatures(
   raceId: string,
   features: ProgramFeatureSnapshot,
   courseStatsMap: Map<string, { avgSt: number | null; top3Rate: number | null }>,
   profilesMap: Map<string, { flyingCount: number | null; lateStartCount: number | null }>,
   exhibitionStMap: Map<string, number>,
+  motorBoatStatsMap: Map<string, { motorTop2Rate: number | null; boatTop2Rate: number | null }>,
 ): ProgramFeatureSnapshot {
   return {
     boats: features.boats.map((boat) => {
@@ -669,6 +686,7 @@ function enrichFeatures(
         stat?.avgSt != null && exhibitionSt != null
           ? stat.avgSt - exhibitionSt
           : null;
+      const motorBoatStat = motorBoatStatsMap.get(`${raceId}-${boat.course}`);
       return {
         ...boat,
         courseAvgSt: stat?.avgSt ?? null,
@@ -676,6 +694,8 @@ function enrichFeatures(
         flyingCount: profile?.flyingCount ?? null,
         lateStartCount: profile?.lateStartCount ?? null,
         exhibitionStResidual,
+        venueMotorTop2Rate: motorBoatStat?.motorTop2Rate ?? null,
+        venueBoatTop2Rate: motorBoatStat?.boatTop2Rate ?? null,
       };
     }),
   };
@@ -694,6 +714,7 @@ ORDER BY date DESC, venue ASC, race_no ASC
   const courseStatsMap = loadCourseStatsMap(db);
   const profilesMap = loadRacerProfilesMap(db);
   const exhibitionStMap = loadExhibitionStMap(db);
+  const motorBoatStatsMap = loadMotorBoatStatsMap(db);
   const beforeInfoCompleteRaceIds = loadBeforeInfoCompleteRaceIds(db);
   return rows.map((row) => {
     const raceId = String(row.race_id);
@@ -705,7 +726,7 @@ ORDER BY date DESC, venue ASC, race_no ASC
       closeAt: String(row.close_at),
       raceCategory: parseRaceCategory(row.raw_json),
       beforeInfoComplete: beforeInfoCompleteRaceIds.has(raceId),
-      features: enrichFeatures(raceId, extractProgramFeatures(parseRawJson(row.raw_json)), courseStatsMap, profilesMap, exhibitionStMap),
+      features: enrichFeatures(raceId, extractProgramFeatures(parseRawJson(row.raw_json)), courseStatsMap, profilesMap, exhibitionStMap, motorBoatStatsMap),
     };
   });
 }
@@ -721,6 +742,7 @@ LIMIT ?
   const courseStatsMap = loadCourseStatsMap(db);
   const profilesMap = loadRacerProfilesMap(db);
   const exhibitionStMap = loadExhibitionStMap(db);
+  const motorBoatStatsMap = loadMotorBoatStatsMap(db);
   return rows.map((row) => {
     const raceId = String(row.race_id);
     return {
@@ -730,7 +752,7 @@ LIMIT ?
       raceNo: Number(row.race_no),
       closeAt: String(row.close_at),
       raceCategory: parseRaceCategory(row.raw_json),
-      features: enrichFeatures(raceId, extractProgramFeatures(parseRawJson(row.raw_json)), courseStatsMap, profilesMap, exhibitionStMap),
+      features: enrichFeatures(raceId, extractProgramFeatures(parseRawJson(row.raw_json)), courseStatsMap, profilesMap, exhibitionStMap, motorBoatStatsMap),
     };
   });
 }
@@ -749,6 +771,7 @@ LIMIT ?
   const courseStatsMap = loadCourseStatsMap(db);
   const profilesMap = loadRacerProfilesMap(db);
   const exhibitionStMap = loadExhibitionStMap(db);
+  const motorBoatStatsMap = loadMotorBoatStatsMap(db);
   return rows.map((row) => {
     const raceId = String(row.race_id);
     return {
@@ -758,7 +781,7 @@ LIMIT ?
       raceNo: Number(row.race_no),
       closeAt: String(row.close_at),
       raceCategory: parseRaceCategory(row.raw_json),
-      features: enrichFeatures(raceId, extractProgramFeatures(parseRawJson(row.raw_json)), courseStatsMap, profilesMap, exhibitionStMap),
+      features: enrichFeatures(raceId, extractProgramFeatures(parseRawJson(row.raw_json)), courseStatsMap, profilesMap, exhibitionStMap, motorBoatStatsMap),
     };
   });
 }
