@@ -31,8 +31,6 @@ export type DecisionHistoryRow = {
   featureAdjustment?: number | null;
   featureAdjustmentBreakdown?: FeatureAdjustmentBreakdown | null;
   selectionPopularity?: number | null;
-  decisionReasons?: string[];
-  featureAdjustmentBreakdown?: Record<string, number> | null;
   result: string | null;
   payoutYen: number | null;
   popularity: number | null;

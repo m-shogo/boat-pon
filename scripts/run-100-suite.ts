@@ -94,6 +94,7 @@ function parseArgs(argv: string[]): Args {
     else if (key === "--to") { parsed.to = normalizeDate(value); i += 1; }
     else if (key === "--split-date") { parsed.splitDate = normalizeDate(value); i += 1; }
     else if (key === "--help" || key === "-h") { printHelp(); process.exit(0); }
+    else if (key === "--") { /* pnpm separator */ }
     else throw new Error(`unknown option: ${key}`);
   }
 

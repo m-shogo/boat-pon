@@ -177,6 +177,7 @@ function parseArgs(argv: string[]) {
     else if (key === "--dry-run") parsed.dryRun = true;
     else if (key === "--force") parsed.force = true;
     else if (key === "--help" || key === "-h") { printHelp(); process.exit(0); }
+    else if (key === "--") { /* pnpm separator */ }
     else throw new Error(`unknown option: ${key}`);
   }
 

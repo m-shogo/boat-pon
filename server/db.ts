@@ -277,6 +277,21 @@ CREATE TABLE IF NOT EXISTS racer_profiles (
   } catch {
     // Existing databases already have this column.
   }
+  try {
+    db.exec("ALTER TABLE decision_history ADD COLUMN decision_reasons TEXT NOT NULL DEFAULT '[]'");
+  } catch {
+    // Existing databases already have this column.
+  }
+  try {
+    db.exec("ALTER TABLE decision_history ADD COLUMN feature_adjustment REAL");
+  } catch {
+    // Existing databases already have this column.
+  }
+  try {
+    db.exec("ALTER TABLE decision_history ADD COLUMN feature_adjustment_breakdown TEXT");
+  } catch {
+    // Existing databases already have this column.
+  }
 
   // 検索性能向上のためのINDEX（冪等）
   db.exec(`
@@ -979,7 +994,8 @@ LIMIT 500
     exhibitionStResidualSum: row.exhibition_st_residual_sum == null ? null : Number(row.exhibition_st_residual_sum),
     selectionPopularity: row.selection_popularity == null ? null : Number(row.selection_popularity),
     decisionReasons: row.decision_reasons == null ? [] : (() => { try { return JSON.parse(String(row.decision_reasons)) as string[]; } catch { return []; } })(),
-    featureAdjustmentBreakdown: row.feature_adjustment_breakdown == null ? null : (() => { try { return JSON.parse(String(row.feature_adjustment_breakdown)) as Record<string, number>; } catch { return null; } })(),
+    featureAdjustment: row.feature_adjustment == null ? null : Number(row.feature_adjustment),
+    featureAdjustmentBreakdown: row.feature_adjustment_breakdown == null ? null : (() => { try { return JSON.parse(String(row.feature_adjustment_breakdown)) as import("../src/domain/programFeatures").FeatureAdjustmentBreakdown; } catch { return null; } })(),
     result: row.result == null ? null : String(row.result),
     payoutYen: row.payout_yen == null ? null : Number(row.payout_yen),
     popularity: row.popularity == null ? null : Number(row.popularity),

@@ -246,6 +246,7 @@ function parseArgs(argv: string[]): Args {
     else if (key === "--refresh-every") { args.refreshEvery = Number(value); i += 1; }
     else if (key === "--sleep-between-batches-ms") { args.sleepBetweenBatchesMs = Math.max(1000, Number(value)); i += 1; }
     else if (key === "--status-file") { args.statusFile = value; i += 1; }
+    else if (key === "--") { /* pnpm separator */ }
     else throw new Error(`unknown option: ${key}`);
   }
   return args;

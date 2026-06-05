@@ -95,6 +95,7 @@ function parseArgs(argv: string[]): Args {
     else if (key === "--min-settled") { parsed.minSettled = Math.max(1, Number(value)); i += 1; }
     else if (key === "--keep-going") parsed.keepGoing = true;
     else if (key === "--help" || key === "-h") { printHelp(); process.exit(0); }
+    else if (key === "--") { /* pnpm separator */ }
     else throw new Error(`unknown option: ${key}`);
   }
 

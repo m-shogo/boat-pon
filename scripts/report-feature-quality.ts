@@ -206,6 +206,7 @@ function parseArgs(argv: string[]) {
     else if (key === "--days") { parsed.days = Number(value); i += 1; }
     else if (key === "--json") parsed.json = true;
     else if (key === "--help") { console.log("Usage: npm run report:features -- --days 30 [--json]"); process.exit(0); }
+    else if (key === "--") { /* pnpm separator */ }
     else throw new Error(`unknown option: ${key}`);
   }
   return parsed;

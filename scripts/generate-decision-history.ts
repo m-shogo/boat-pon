@@ -189,6 +189,7 @@ function parseArgs(argv: string[]): Args {
     else if (key === "--min-train") { args.minTrainRaceCount = Number(value); i += 1; }
     else if (key === "--train-days") { args.trainDays = Number(value); i += 1; }
     else if (key === "--alpha") { args.alpha = Number(value); i += 1; }
+    else if (key === "--") { /* pnpm separator */ }
     else throw new Error(`unknown option: ${key}`);
   }
   return args;

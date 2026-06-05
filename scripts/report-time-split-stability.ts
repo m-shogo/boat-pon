@@ -306,6 +306,7 @@ function parseArgs(argv: string[]) {
     else if (key === "--bad-roi-ex-max") { parsed.badRoiExMax = Number(value); i += 1; }
     else if (key === "--json") parsed.json = true;
     else if (key === "--help" || key === "-h") { printHelp(); process.exit(0); }
+    else if (key === "--") { /* pnpm separator */ }
     else throw new Error(`unknown option: ${key}`);
   }
 

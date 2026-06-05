@@ -74,6 +74,7 @@ function parseArgs(argv: string[]) {
     else if (key === "--model-version") { parsed.modelVersion = modelVersion(value); i += 1; }
     else if (key === "--json") parsed.json = true;
     else if (key === "--help") { console.log("Usage: npm run report:buy-audit -- [--run-kind paper-live|historical-backfill|manual-test|sample|all] [--model-version VERSION|all] [--json]"); process.exit(0); }
+    else if (key === "--") { /* pnpm separator */ }
     else throw new Error(`unknown option: ${key}`);
   }
   return parsed;

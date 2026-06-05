@@ -252,6 +252,7 @@ function parseArgs(argv: string[]): Args {
     else if (key === "--no-b1-live-rule") args.b1LiveRule = false;
     else if (key === "--blend") { args.blend = Number(value); i += 1; }
     else if (key === "--help" || key === "-h") { printUsage(); process.exit(0); }
+    else if (key === "--") { /* pnpm separator */ }
     else throw new Error(`unknown option: ${key}`);
   }
   if (!Number.isInteger(args.limit) || (args.limit ?? 0) <= 0) args.limit = null;

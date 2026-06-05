@@ -111,6 +111,7 @@ function parseArgs(argv: string[]): Args {
     else if (key === "--min-buys") { args.minBuys = positiveInt(value, key); i += 1; }
     else if (key === "--json") args.json = true;
     else if (key === "--help" || key === "-h") { printUsage(); process.exit(0); }
+    else if (key === "--") { /* pnpm separator */ }
     else throw new Error(`unknown option: ${key}`);
   }
   return args;

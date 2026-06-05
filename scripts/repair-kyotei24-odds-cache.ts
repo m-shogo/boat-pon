@@ -69,6 +69,7 @@ function parseArgs(argv: string[]): Args {
     if (key === "--dry-run") args.dryRun = true;
     else if (key === "--limit") { args.limit = Number(value); i += 1; }
     else if (key === "--min-odds") { args.minOdds = Number(value); i += 1; }
+    else if (key === "--") { /* pnpm separator */ }
     else throw new Error(`unknown option: ${key}`);
   }
   if (args.limit <= 0 || args.limit > 2000) throw new Error("--limit は 1〜2000 にしてください");

@@ -192,6 +192,7 @@ function parseArgs(argv: string[]) {
     else if (key === "--run-kind") { parsed.runKind = String(value ?? ""); i += 1; }
     else if (key === "--json") parsed.json = true;
     else if (key === "--help" || key === "-h") { printHelp(); process.exit(0); }
+    else if (key === "--") { /* pnpm separator */ }
     else throw new Error(`unknown option: ${key}`);
   }
 

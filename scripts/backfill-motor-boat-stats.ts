@@ -59,6 +59,7 @@ function parseArgs(argv: string[]): Args {
     else if (key === "--from") { args.from = normalizeDate(value); i += 1; }
     else if (key === "--to") { args.to = normalizeDate(value); i += 1; }
     else if (key === "--limit") { args.limit = Number(value); i += 1; }
+    else if (key === "--") { /* pnpm separator */ }
     else throw new Error(`unknown option: ${key}`);
   }
   return args;

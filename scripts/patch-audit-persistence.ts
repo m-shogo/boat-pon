@@ -112,6 +112,7 @@ function parseArgs(argv: string[]): Args {
     if (key === "--write") parsed.write = true;
     else if (key === "--dry-run") parsed.write = false;
     else if (key === "--help" || key === "-h") { printHelp(); process.exit(0); }
+    else if (key === "--") { /* pnpm separator */ }
     else throw new Error(`unknown option: ${key}`);
   }
   return parsed;
