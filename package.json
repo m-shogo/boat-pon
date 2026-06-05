@@ -81,6 +81,8 @@
     "stats:racer-coverage": "tsx scripts/check-racer-stats-coverage.ts",
     "report:data-coverage": "tsx scripts/report-data-coverage.ts",
     "backfill:motor-boat-stats": "tsx scripts/backfill-motor-boat-stats.ts",
+    "build:venue-motor-stats": "tsx scripts/build-venue-motor-stats.ts",
+    "build:venue-motor-stats:dry": "tsx scripts/build-venue-motor-stats.ts --dry-run",
     "backfill:beforeinfo": "tsx scripts/backfill-beforeinfo.ts",
     "backfill:beforeinfo:dry": "tsx scripts/backfill-beforeinfo.ts --dry-run",
     "catchup": "tsx scripts/run-catchup.ts",
