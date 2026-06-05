@@ -1,0 +1,903 @@
+{
+  "generatedAt": "2026-06-05T09:10:26.560Z",
+  "dbPath": "data/boat.sqlite",
+  "period": {
+    "minDate": "2024-01-01",
+    "maxDate": "2026-05-21"
+  },
+  "original": {
+    "strategy": "original_single",
+    "races": 6260,
+    "totalTickets": 6260,
+    "generatedTickets": 6260,
+    "missingTickets": 0,
+    "missingRate": 0,
+    "avgTicketsPerRace": 1,
+    "hitRaces": 124,
+    "hitRate": 0.019808306709265176,
+    "avgTicketOdds": 44.3436477156549,
+    "avgHitOdds": 40.57741935483873,
+    "stakeYen": 626000,
+    "returnYen": 503160,
+    "roi": 80.37699680511182,
+    "maxHitOdds": 77.7,
+    "roiExMaxHit": 79.13578274760383
+  },
+  "summaries": [
+    {
+      "strategy": "original_single",
+      "races": 6260,
+      "totalTickets": 6260,
+      "generatedTickets": 6260,
+      "missingTickets": 0,
+      "missingRate": 0,
+      "avgTicketsPerRace": 1,
+      "hitRaces": 124,
+      "hitRate": 0.019808306709265176,
+      "avgTicketOdds": 44.3436477156549,
+      "avgHitOdds": 40.57741935483873,
+      "stakeYen": 626000,
+      "returnYen": 503160,
+      "roi": 80.37699680511182,
+      "maxHitOdds": 77.7,
+      "roiExMaxHit": 79.13578274760383
+    },
+    {
+      "strategy": "first_second_third_flow",
+      "races": 6260,
+      "totalTickets": 6450,
+      "generatedTickets": 25040,
+      "missingTickets": 18590,
+      "missingRate": 0.7424121405750799,
+      "avgTicketsPerRace": 1.0303514376996805,
+      "hitRaces": 127,
+      "hitRate": 0.020287539936102238,
+      "avgTicketOdds": 44.52343173643402,
+      "avgHitOdds": 40.807086614173265,
+      "stakeYen": 645000,
+      "returnYen": 518250,
+      "roi": 80.34883720930233,
+      "maxHitOdds": 77.7,
+      "roiExMaxHit": 79.14418604651163
+    },
+    {
+      "strategy": "first_third_second_flow",
+      "races": 6260,
+      "totalTickets": 6260,
+      "generatedTickets": 25040,
+      "missingTickets": 18780,
+      "missingRate": 0.75,
+      "avgTicketsPerRace": 1,
+      "hitRaces": 124,
+      "hitRate": 0.019808306709265176,
+      "avgTicketOdds": 44.3436477156549,
+      "avgHitOdds": 40.57741935483873,
+      "stakeYen": 626000,
+      "returnYen": 503160,
+      "roi": 80.37699680511182,
+      "maxHitOdds": 77.7,
+      "roiExMaxHit": 79.13578274760383
+    },
+    {
+      "strategy": "first_fixed_second_third_flow",
+      "races": 6260,
+      "totalTickets": 7000,
+      "generatedTickets": 125200,
+      "missingTickets": 118200,
+      "missingRate": 0.9440894568690096,
+      "avgTicketsPerRace": 1.1182108626198084,
+      "hitRaces": 138,
+      "hitRate": 0.022044728434504793,
+      "avgTicketOdds": 44.913379914285635,
+      "avgHitOdds": 40.90434782608697,
+      "stakeYen": 700000,
+      "returnYen": 564480,
+      "roi": 80.64,
+      "maxHitOdds": 77.7,
+      "roiExMaxHit": 79.53
+    },
+    {
+      "strategy": "top3_box",
+      "races": 6260,
+      "totalTickets": 6720,
+      "generatedTickets": 37560,
+      "missingTickets": 30840,
+      "missingRate": 0.8210862619808307,
+      "avgTicketsPerRace": 1.073482428115016,
+      "hitRaces": 134,
+      "hitRate": 0.021405750798722045,
+      "avgTicketOdds": 44.73061895833329,
+      "avgHitOdds": 40.622388059701514,
+      "stakeYen": 672000,
+      "returnYen": 544340,
+      "roi": 81.00297619047619,
+      "maxHitOdds": 77.7,
+      "roiExMaxHit": 79.84672619047619
+    },
+    {
+      "strategy": "top4_box",
+      "races": 6260,
+      "totalTickets": 6832,
+      "generatedTickets": 150240,
+      "missingTickets": 143408,
+      "missingRate": 0.9545260915867945,
+      "avgTicketsPerRace": 1.091373801916933,
+      "hitRaces": 137,
+      "hitRate": 0.021884984025559107,
+      "avgTicketOdds": 44.811264549180244,
+      "avgHitOdds": 40.834306569343084,
+      "stakeYen": 683200,
+      "returnYen": 559430,
+      "roi": 81.88378220140515,
+      "maxHitOdds": 77.7,
+      "roiExMaxHit": 80.74648711943794
+    },
+    {
+      "strategy": "second_third_reverse",
+      "races": 6260,
+      "totalTickets": 6720,
+      "generatedTickets": 12520,
+      "missingTickets": 5800,
+      "missingRate": 0.46325878594249204,
+      "avgTicketsPerRace": 1.073482428115016,
+      "hitRaces": 134,
+      "hitRate": 0.021405750798722045,
+      "avgTicketOdds": 44.73061895833329,
+      "avgHitOdds": 40.622388059701514,
+      "stakeYen": 672000,
+      "returnYen": 544340,
+      "roi": 81.00297619047619,
+      "maxHitOdds": 77.7,
+      "roiExMaxHit": 79.84672619047619
+    },
+    {
+      "strategy": "first_second_flow_odds_min_5",
+      "races": 6260,
+      "totalTickets": 6450,
+      "generatedTickets": 25040,
+      "missingTickets": 18590,
+      "missingRate": 0.7424121405750799,
+      "avgTicketsPerRace": 1.0303514376996805,
+      "hitRaces": 127,
+      "hitRate": 0.020287539936102238,
+      "avgTicketOdds": 44.52343173643402,
+      "avgHitOdds": 40.807086614173265,
+      "stakeYen": 645000,
+      "returnYen": 518250,
+      "roi": 80.34883720930233,
+      "maxHitOdds": 77.7,
+      "roiExMaxHit": 79.14418604651163
+    },
+    {
+      "strategy": "first_second_flow_odds_min_8",
+      "races": 6260,
+      "totalTickets": 6450,
+      "generatedTickets": 25040,
+      "missingTickets": 18590,
+      "missingRate": 0.7424121405750799,
+      "avgTicketsPerRace": 1.0303514376996805,
+      "hitRaces": 127,
+      "hitRate": 0.020287539936102238,
+      "avgTicketOdds": 44.52343173643402,
+      "avgHitOdds": 40.807086614173265,
+      "stakeYen": 645000,
+      "returnYen": 518250,
+      "roi": 80.34883720930233,
+      "maxHitOdds": 77.7,
+      "roiExMaxHit": 79.14418604651163
+    },
+    {
+      "strategy": "first_second_flow_odds_min_10",
+      "races": 6260,
+      "totalTickets": 6450,
+      "generatedTickets": 25040,
+      "missingTickets": 18590,
+      "missingRate": 0.7424121405750799,
+      "avgTicketsPerRace": 1.0303514376996805,
+      "hitRaces": 127,
+      "hitRate": 0.020287539936102238,
+      "avgTicketOdds": 44.52343173643402,
+      "avgHitOdds": 40.807086614173265,
+      "stakeYen": 645000,
+      "returnYen": 518250,
+      "roi": 80.34883720930233,
+      "maxHitOdds": 77.7,
+      "roiExMaxHit": 79.14418604651163
+    },
+    {
+      "strategy": "box_only_when_order_uncertain",
+      "races": 6260,
+      "totalTickets": 6708,
+      "generatedTickets": 35130,
+      "missingTickets": 28422,
+      "missingRate": 0.8090520922288642,
+      "avgTicketsPerRace": 1.0715654952076676,
+      "hitRaces": 133,
+      "hitRate": 0.02124600638977636,
+      "avgTicketOdds": 44.76168148479424,
+      "avgHitOdds": 40.736842105263186,
+      "stakeYen": 670800,
+      "returnYen": 541800,
+      "roi": 80.76923076923077,
+      "maxHitOdds": 77.7,
+      "roiExMaxHit": 79.61091234347049
+    }
+  ],
+  "classifications": [
+    {
+      "strategy": "original_single",
+      "classification": "基準",
+      "hitRate": 0.019808306709265176,
+      "roi": 80.37699680511182
+    },
+    {
+      "strategy": "first_second_third_flow",
+      "classification": "B. 的中率は上がるがROIは下がる",
+      "hitRate": 0.020287539936102238,
+      "roi": 80.34883720930233
+    },
+    {
+      "strategy": "first_third_second_flow",
+      "classification": "D. どちらも下がる",
+      "hitRate": 0.019808306709265176,
+      "roi": 80.37699680511182
+    },
+    {
+      "strategy": "first_fixed_second_third_flow",
+      "classification": "A. 的中率もROIも上がる",
+      "hitRate": 0.022044728434504793,
+      "roi": 80.64
+    },
+    {
+      "strategy": "top3_box",
+      "classification": "A. 的中率もROIも上がる",
+      "hitRate": 0.021405750798722045,
+      "roi": 81.00297619047619
+    },
+    {
+      "strategy": "top4_box",
+      "classification": "A. 的中率もROIも上がる",
+      "hitRate": 0.021884984025559107,
+      "roi": 81.88378220140515
+    },
+    {
+      "strategy": "second_third_reverse",
+      "classification": "A. 的中率もROIも上がる",
+      "hitRate": 0.021405750798722045,
+      "roi": 81.00297619047619
+    },
+    {
+      "strategy": "first_second_flow_odds_min_5",
+      "classification": "B. 的中率は上がるがROIは下がる",
+      "hitRate": 0.020287539936102238,
+      "roi": 80.34883720930233
+    },
+    {
+      "strategy": "first_second_flow_odds_min_8",
+      "classification": "B. 的中率は上がるがROIは下がる",
+      "hitRate": 0.020287539936102238,
+      "roi": 80.34883720930233
+    },
+    {
+      "strategy": "first_second_flow_odds_min_10",
+      "classification": "B. 的中率は上がるがROIは下がる",
+      "hitRate": 0.020287539936102238,
+      "roi": 80.34883720930233
+    },
+    {
+      "strategy": "box_only_when_order_uncertain",
+      "classification": "A. 的中率もROIも上がる",
+      "hitRate": 0.02124600638977636,
+      "roi": 80.76923076923077
+    }
+  ],
+  "missAnalysis": {
+    "totalMisses": 6136,
+    "headMatched": 2381,
+    "firstSecondMatchedThirdMiss": 418,
+    "firstThirdMatchedSecondMiss": 374,
+    "secondThirdReversed": 128,
+    "top3AllInOrderDifferent": 321,
+    "completelyDifferent": 3562
+  },
+  "splitValidation": [
+    {
+      "strategy": "original_single",
+      "trainRoi": 78.04883614787768,
+      "validationRoi": 83.76198083067092,
+      "testRoi": 89.90415335463258,
+      "monthlyStability": "7/23ヶ月がROI>=100、11ヶ月がROI<80",
+      "judgement": "C: 観察"
+    },
+    {
+      "strategy": "first_second_third_flow",
+      "trainRoi": 78.33814067006878,
+      "validationRoi": 83.06636155606407,
+      "testRoi": 89.0506329113924,
+      "monthlyStability": "6/23ヶ月がROI>=100、11ヶ月がROI<80",
+      "judgement": "C: 観察"
+    },
+    {
+      "strategy": "first_third_second_flow",
+      "trainRoi": 78.04883614787768,
+      "validationRoi": 83.76198083067092,
+      "testRoi": 89.90415335463258,
+      "monthlyStability": "7/23ヶ月がROI>=100、11ヶ月がROI<80",
+      "judgement": "C: 観察"
+    },
+    {
+      "strategy": "first_fixed_second_third_flow",
+      "trainRoi": 79.27745664739885,
+      "validationRoi": 86.05682605682605,
+      "testRoi": 78.93408134642355,
+      "monthlyStability": "4/23ヶ月がROI>=100、12ヶ月がROI<80",
+      "judgement": "C: 観察"
+    },
+    {
+      "strategy": "top3_box",
+      "trainRoi": 79.18854928971159,
+      "validationRoi": 87.00217233888486,
+      "testRoi": 81.21212121212122,
+      "monthlyStability": "4/23ヶ月がROI>=100、10ヶ月がROI<80",
+      "judgement": "C: 観察"
+    },
+    {
+      "strategy": "top4_box",
+      "trainRoi": 80.29025423728814,
+      "validationRoi": 88.19602272727273,
+      "testRoi": 79.94318181818181,
+      "monthlyStability": "5/23ヶ月がROI>=100、10ヶ月がROI<80",
+      "judgement": "C: 観察"
+    },
+    {
+      "strategy": "second_third_reverse",
+      "trainRoi": 79.18854928971159,
+      "validationRoi": 87.00217233888486,
+      "testRoi": 81.21212121212122,
+      "monthlyStability": "4/23ヶ月がROI>=100、10ヶ月がROI<80",
+      "judgement": "C: 観察"
+    },
+    {
+      "strategy": "first_second_flow_odds_min_5",
+      "trainRoi": 78.33814067006878,
+      "validationRoi": 83.06636155606407,
+      "testRoi": 89.0506329113924,
+      "monthlyStability": "6/23ヶ月がROI>=100、11ヶ月がROI<80",
+      "judgement": "C: 観察"
+    },
+    {
+      "strategy": "first_second_flow_odds_min_8",
+      "trainRoi": 78.33814067006878,
+      "validationRoi": 83.06636155606407,
+      "testRoi": 89.0506329113924,
+      "monthlyStability": "6/23ヶ月がROI>=100、11ヶ月がROI<80",
+      "judgement": "C: 観察"
+    },
+    {
+      "strategy": "first_second_flow_odds_min_10",
+      "trainRoi": 78.33814067006878,
+      "validationRoi": 83.06636155606407,
+      "testRoi": 89.0506329113924,
+      "monthlyStability": "6/23ヶ月がROI>=100、11ヶ月がROI<80",
+      "judgement": "C: 観察"
+    },
+    {
+      "strategy": "box_only_when_order_uncertain",
+      "trainRoi": 78.79447918913091,
+      "validationRoi": 87.19158200290276,
+      "testRoi": 81.21212121212122,
+      "monthlyStability": "5/23ヶ月がROI>=100、10ヶ月がROI<80",
+      "judgement": "C: 観察"
+    }
+  ],
+  "venueBest": [
+    {
+      "key": "児島",
+      "bestStrategy": "original_single",
+      "originalRoi": 157.14285714285714,
+      "bestRoi": 157.14285714285714,
+      "n": 224,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "芦屋",
+      "bestStrategy": "original_single",
+      "originalRoi": 147.30593607305934,
+      "bestRoi": 147.30593607305934,
+      "n": 219,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "常滑",
+      "bestStrategy": "original_single",
+      "originalRoi": 121.69753086419752,
+      "bestRoi": 121.69753086419752,
+      "n": 324,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "平和島",
+      "bestStrategy": "original_single",
+      "originalRoi": 114.02298850574712,
+      "bestRoi": 114.02298850574712,
+      "n": 261,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "びわこ",
+      "bestStrategy": "original_single",
+      "originalRoi": 111.90140845070422,
+      "bestRoi": 111.90140845070422,
+      "n": 284,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "津",
+      "bestStrategy": "original_single",
+      "originalRoi": 104.71074380165288,
+      "bestRoi": 104.71074380165288,
+      "n": 242,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "唐津",
+      "bestStrategy": "original_single",
+      "originalRoi": 97.6470588235294,
+      "bestRoi": 97.6470588235294,
+      "n": 289,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "大村",
+      "bestStrategy": "original_single",
+      "originalRoi": 87.3828125,
+      "bestRoi": 87.3828125,
+      "n": 256,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "宮島",
+      "bestStrategy": "original_single",
+      "originalRoi": 84.69314079422384,
+      "bestRoi": 84.69314079422384,
+      "n": 277,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "若松",
+      "bestStrategy": "original_single",
+      "originalRoi": 82.08904109589041,
+      "bestRoi": 82.08904109589041,
+      "n": 292,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "丸亀",
+      "bestStrategy": "original_single",
+      "originalRoi": 82.0627802690583,
+      "bestRoi": 82.0627802690583,
+      "n": 223,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "尼崎",
+      "bestStrategy": "original_single",
+      "originalRoi": 78.61111111111111,
+      "bestRoi": 78.61111111111111,
+      "n": 216,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "蒲郡",
+      "bestStrategy": "original_single",
+      "originalRoi": 77.51515151515152,
+      "bestRoi": 77.51515151515152,
+      "n": 330,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "鳴門",
+      "bestStrategy": "original_single",
+      "originalRoi": 76.03960396039604,
+      "bestRoi": 76.03960396039604,
+      "n": 202,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "下関",
+      "bestStrategy": "original_single",
+      "originalRoi": 72.90456431535269,
+      "bestRoi": 72.90456431535269,
+      "n": 241,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "浜名湖",
+      "bestStrategy": "original_single",
+      "originalRoi": 71.62544169611309,
+      "bestRoi": 71.62544169611309,
+      "n": 283,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "福岡",
+      "bestStrategy": "original_single",
+      "originalRoi": 68,
+      "bestRoi": 68,
+      "n": 260,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "徳山",
+      "bestStrategy": "original_single",
+      "originalRoi": 67.10743801652893,
+      "bestRoi": 67.10743801652893,
+      "n": 242,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "住之江",
+      "bestStrategy": "original_single",
+      "originalRoi": 60,
+      "bestRoi": 60,
+      "n": 225,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "江戸川",
+      "bestStrategy": "original_single",
+      "originalRoi": 54.13978494623656,
+      "bestRoi": 54.13978494623656,
+      "n": 186,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "三国",
+      "bestStrategy": "original_single",
+      "originalRoi": 49.891304347826086,
+      "bestRoi": 49.891304347826086,
+      "n": 276,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "桐生",
+      "bestStrategy": "original_single",
+      "originalRoi": 41.40065146579804,
+      "bestRoi": 41.40065146579804,
+      "n": 307,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "多摩川",
+      "bestStrategy": "original_single",
+      "originalRoi": 28.794326241134755,
+      "bestRoi": 28.794326241134755,
+      "n": 282,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "戸田",
+      "bestStrategy": "original_single",
+      "originalRoi": 16.363636363636363,
+      "bestRoi": 16.363636363636363,
+      "n": 319,
+      "comment": "1点維持候補"
+    }
+  ],
+  "raceNoBest": [
+    {
+      "key": "9R",
+      "bestStrategy": "original_single",
+      "originalRoi": 114.59584295612008,
+      "bestRoi": 114.59584295612008,
+      "n": 433,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "3R",
+      "bestStrategy": "original_single",
+      "originalRoi": 100.7256894049347,
+      "bestRoi": 100.7256894049347,
+      "n": 689,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "7R",
+      "bestStrategy": "original_single",
+      "originalRoi": 94.47552447552448,
+      "bestRoi": 94.47552447552448,
+      "n": 715,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "1R",
+      "bestStrategy": "original_single",
+      "originalRoi": 92.8525641025641,
+      "bestRoi": 92.8525641025641,
+      "n": 312,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "6R",
+      "bestStrategy": "original_single",
+      "originalRoi": 91.12965340179717,
+      "bestRoi": 91.12965340179717,
+      "n": 779,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "8R",
+      "bestStrategy": "original_single",
+      "originalRoi": 90.07861635220125,
+      "bestRoi": 90.07861635220125,
+      "n": 636,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "4R",
+      "bestStrategy": "original_single",
+      "originalRoi": 78.08290155440415,
+      "bestRoi": 78.08290155440415,
+      "n": 772,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "2R",
+      "bestStrategy": "original_single",
+      "originalRoi": 66.97019867549669,
+      "bestRoi": 66.97019867549669,
+      "n": 604,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "5R",
+      "bestStrategy": "original_single",
+      "originalRoi": 63.23319027181689,
+      "bestRoi": 63.23319027181689,
+      "n": 699,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "10R",
+      "bestStrategy": "original_single",
+      "originalRoi": 42.38235294117647,
+      "bestRoi": 42.38235294117647,
+      "n": 340,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "11R",
+      "bestStrategy": "original_single",
+      "originalRoi": 0,
+      "bestRoi": 0,
+      "n": 192,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "12R",
+      "bestStrategy": "original_single",
+      "originalRoi": 0,
+      "bestRoi": 0,
+      "n": 89,
+      "comment": "1点維持候補"
+    }
+  ],
+  "oddsBandBest": [
+    {
+      "key": "30 <= odds < 50",
+      "bestStrategy": "original_single",
+      "originalRoi": 82.62870514820592,
+      "bestRoi": 82.62870514820592,
+      "n": 3846,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "odds >= 50",
+      "bestStrategy": "original_single",
+      "originalRoi": 76.85,
+      "bestRoi": 76.85,
+      "n": 1800,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "20 <= odds < 30",
+      "bestStrategy": "original_single",
+      "originalRoi": 72.55389718076285,
+      "bestRoi": 72.55389718076285,
+      "n": 603,
+      "comment": "1点維持候補"
+    }
+  ],
+  "headBest": [
+    {
+      "key": "1号艇頭",
+      "bestStrategy": "original_single",
+      "originalRoi": 80.37699680511182,
+      "bestRoi": 80.37699680511182,
+      "n": 6260,
+      "comment": "1点維持候補"
+    }
+  ],
+  "weatherBest": [
+    {
+      "key": "天候あり",
+      "bestStrategy": "original_single",
+      "originalRoi": 80.52029639175258,
+      "bestRoi": 80.52029639175258,
+      "n": 6208,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "天候なし",
+      "bestStrategy": "original_single",
+      "originalRoi": 63.26923076923077,
+      "bestRoi": 63.26923076923077,
+      "n": 52,
+      "comment": "1点維持候補"
+    }
+  ],
+  "exhibitionBest": [
+    {
+      "key": "展示あり",
+      "bestStrategy": "original_single",
+      "originalRoi": 80.52029639175258,
+      "bestRoi": 80.52029639175258,
+      "n": 6208,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "展示なし",
+      "bestStrategy": "original_single",
+      "originalRoi": 63.26923076923077,
+      "bestRoi": 63.26923076923077,
+      "n": 52,
+      "comment": "1点維持候補"
+    }
+  ],
+  "fBest": [
+    {
+      "key": "F情報あり",
+      "bestStrategy": "original_single",
+      "originalRoi": 80.13101134366512,
+      "bestRoi": 80.13101134366512,
+      "n": 6259,
+      "comment": "1点維持候補"
+    }
+  ],
+  "windBest": [
+    {
+      "key": "5 <= wind < 8",
+      "bestStrategy": "original_single",
+      "originalRoi": 89.21111111111111,
+      "bestRoi": 89.21111111111111,
+      "n": 900,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "3 <= wind < 5",
+      "bestStrategy": "original_single",
+      "originalRoi": 85.90088198236036,
+      "bestRoi": 85.90088198236036,
+      "n": 2381,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "wind < 3",
+      "bestStrategy": "original_single",
+      "originalRoi": 73.84642857142858,
+      "bestRoi": 73.84642857142858,
+      "n": 2800,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "wind >= 8",
+      "bestStrategy": "original_single",
+      "originalRoi": 67.31707317073172,
+      "bestRoi": 67.31707317073172,
+      "n": 123,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "風速なし",
+      "bestStrategy": "original_single",
+      "originalRoi": 58.75,
+      "bestRoi": 58.75,
+      "n": 56,
+      "comment": "1点維持候補"
+    }
+  ],
+  "waveBest": [
+    {
+      "key": "3 <= wave < 5",
+      "bestStrategy": "original_single",
+      "originalRoi": 100.86078639744953,
+      "bestRoi": 100.86078639744953,
+      "n": 1882,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "wave < 3",
+      "bestStrategy": "original_single",
+      "originalRoi": 72.026913372582,
+      "bestRoi": 72.026913372582,
+      "n": 3567,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "wave >= 5",
+      "bestStrategy": "original_single",
+      "originalRoi": 70.37086092715232,
+      "bestRoi": 70.37086092715232,
+      "n": 755,
+      "comment": "1点維持候補"
+    },
+    {
+      "key": "波高なし",
+      "bestStrategy": "original_single",
+      "originalRoi": 58.75,
+      "bestRoi": 58.75,
+      "n": 56,
+      "comment": "1点維持候補"
+    }
+  ],
+  "flowConditions": [],
+  "boxConditions": [],
+  "additionalSuggestions": [
+    {
+      "priority": "S",
+      "proposal": "流し/BOXの前にNO BUY条件を重ねる",
+      "reason": "点数を増やすと投資が増える",
+      "effect": "不要BUY削減とstrategy改善を両立",
+      "risk": "削りすぎ",
+      "when": "今回レポートで提案、実装は次回paper"
+    },
+    {
+      "priority": "S",
+      "proposal": "odds鮮度をstrategy評価に入れる",
+      "reason": "仮想ticketのoddsが古いとROIが歪む",
+      "effect": "偽edge削減",
+      "risk": "時系列欠損",
+      "when": "次回やる"
+    },
+    {
+      "priority": "A",
+      "proposal": "2着3着逆転専用の条件付き保険",
+      "reason": "常時保険はROIを落としやすい",
+      "effect": "惜しい外れだけ拾う",
+      "risk": "過学習",
+      "when": "次回やる"
+    },
+    {
+      "priority": "A",
+      "proposal": "会場別にstrategyを分ける",
+      "reason": "流しが効く水面と効かない水面が違う",
+      "effect": "汎用ルールの粗さを減らす",
+      "risk": "n不足",
+      "when": "次回やる"
+    },
+    {
+      "priority": "B",
+      "proposal": "人気順/1-2-3固定ベースライン比較",
+      "reason": "モデルstrategyが単純ベースラインに勝つ必要がある",
+      "effect": "モデル価値の確認",
+      "risk": "odds取得範囲依存",
+      "when": "次回やる"
+    },
+    {
+      "priority": "B",
+      "proposal": "UIに買わない理由とstrategy非採用理由を表示",
+      "reason": "BUYが購入指示に見える誤解を避ける",
+      "effect": "安全性と説明性向上",
+      "risk": "UI文言調整",
+      "when": "次回やる"
+    },
+    {
+      "priority": "C",
+      "proposal": "選手役割で展開シナリオを保存",
+      "reason": "強さより逃げ/差し/まくりの噛み合わせが重要",
+      "effect": "BOX条件の精度向上",
+      "risk": "分類過学習",
+      "when": "次回以降"
+    }
+  ]
+}
