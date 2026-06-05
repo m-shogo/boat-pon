@@ -6,6 +6,7 @@ import { extractProgramFeatures, type ProgramFeatureSnapshot } from "../src/doma
 import type { OddsSnapshot } from "../src/domain/oddsSnapshot";
 import type { RaceCategory } from "../src/domain/programCategory";
 import type { RaceEnvironment } from "../src/domain/raceEnvironment";
+import type { ParsedResultDetail } from "../src/domain/officialResultDetailParser";
 import type { BetCandidate, BudgetRule, Decision, DecisionStatus, RaceResult } from "../src/domain/types";
 import { sampleResults } from "../src/sampleData";
 
@@ -215,6 +216,62 @@ CREATE TABLE IF NOT EXISTS racer_profiles (
   ability_index INTEGER,
   fetched_at TEXT NOT NULL
 );
+
+-- 公式K結果アーカイブ(2000-)再パース用。全馬券種払戻。
+CREATE TABLE IF NOT EXISTS race_payouts (
+  race_id TEXT NOT NULL,
+  date TEXT NOT NULL,
+  venue TEXT NOT NULL,
+  race_no INTEGER NOT NULL,
+  bet_type TEXT NOT NULL,
+  combination TEXT NOT NULL,
+  payout_yen INTEGER,
+  popularity INTEGER,
+  returned INTEGER NOT NULL DEFAULT 0,
+  source TEXT NOT NULL DEFAULT 'official',
+  fetched_at TEXT NOT NULL,
+  PRIMARY KEY (race_id, bet_type, combination)
+);
+
+-- 各艇成績(着順/展示/進入/ST/タイム)。
+CREATE TABLE IF NOT EXISTS race_entries (
+  race_id TEXT NOT NULL,
+  date TEXT NOT NULL,
+  venue TEXT NOT NULL,
+  race_no INTEGER NOT NULL,
+  boat INTEGER NOT NULL,
+  finish_pos INTEGER,
+  status_code TEXT,
+  racer_reg TEXT,
+  racer_name TEXT,
+  motor_no INTEGER,
+  boat_no INTEGER,
+  exhibition_time REAL,
+  entry_course INTEGER,
+  st REAL,
+  st_flying INTEGER NOT NULL DEFAULT 0,
+  source TEXT NOT NULL DEFAULT 'official',
+  fetched_at TEXT NOT NULL,
+  PRIMARY KEY (race_id, boat)
+);
+
+-- レース条件(気象/距離/決まり手)。
+CREATE TABLE IF NOT EXISTS race_conditions (
+  race_id TEXT PRIMARY KEY,
+  date TEXT NOT NULL,
+  venue TEXT NOT NULL,
+  race_no INTEGER NOT NULL,
+  race_type TEXT,
+  distance_m INTEGER,
+  weather TEXT,
+  wind_dir TEXT,
+  wind_mps REAL,
+  wave_cm REAL,
+  kimarite TEXT,
+  returned INTEGER NOT NULL DEFAULT 0,
+  source TEXT NOT NULL DEFAULT 'official',
+  fetched_at TEXT NOT NULL
+);
 `);
 
   try {
@@ -316,6 +373,10 @@ ON motor_boat_stats (venue, motor_no, date);
 CREATE INDEX IF NOT EXISTS idx_motor_boat_stats_boat
 ON motor_boat_stats (venue, boat_no, date);
 CREATE INDEX IF NOT EXISTS idx_race_equipment_race ON race_equipment (race_id);
+CREATE INDEX IF NOT EXISTS idx_race_payouts_vd ON race_payouts (venue, date);
+CREATE INDEX IF NOT EXISTS idx_race_payouts_type ON race_payouts (bet_type, date);
+CREATE INDEX IF NOT EXISTS idx_race_entries_vd ON race_entries (venue, date);
+CREATE INDEX IF NOT EXISTS idx_race_conditions_vd ON race_conditions (venue, date);
 `);
 
   // venue表記揺れの正規化（旧「琵琶湖」→新「びわこ」）。冪等。race_idも更新する。
@@ -1187,6 +1248,44 @@ ON CONFLICT(race_id, course) DO UPDATE SET
   fetched_at = excluded.fetched_at,
   source_type = excluded.source_type
 `).run(raceId, entry.course, entry.exhibitionTime, entry.startTiming, entry.ranking, fetchedAt, sourceType);
+  }
+}
+
+// 公式K結果アーカイブの再パース結果(条件/各艇/全馬券種)を保存する。
+// 大量再パース用に prepared statement を再利用。トランザクションは呼び出し側で。
+export function saveResultDetail(db: DatabaseSync, parsed: ParsedResultDetail): void {
+  const condStmt = db.prepare(`
+INSERT INTO race_conditions (race_id, date, venue, race_no, race_type, distance_m, weather, wind_dir, wind_mps, wave_cm, kimarite, returned, source, fetched_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(race_id) DO UPDATE SET
+  race_type=excluded.race_type, distance_m=excluded.distance_m, weather=excluded.weather,
+  wind_dir=excluded.wind_dir, wind_mps=excluded.wind_mps, wave_cm=excluded.wave_cm,
+  kimarite=excluded.kimarite, returned=excluded.returned, source=excluded.source, fetched_at=excluded.fetched_at
+`);
+  const entStmt = db.prepare(`
+INSERT INTO race_entries (race_id, date, venue, race_no, boat, finish_pos, status_code, racer_reg, racer_name, motor_no, boat_no, exhibition_time, entry_course, st, st_flying, source, fetched_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(race_id, boat) DO UPDATE SET
+  finish_pos=excluded.finish_pos, status_code=excluded.status_code, racer_reg=excluded.racer_reg,
+  racer_name=excluded.racer_name, motor_no=excluded.motor_no, boat_no=excluded.boat_no,
+  exhibition_time=excluded.exhibition_time, entry_course=excluded.entry_course, st=excluded.st,
+  st_flying=excluded.st_flying, source=excluded.source, fetched_at=excluded.fetched_at
+`);
+  const payStmt = db.prepare(`
+INSERT INTO race_payouts (race_id, date, venue, race_no, bet_type, combination, payout_yen, popularity, returned, source, fetched_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(race_id, bet_type, combination) DO UPDATE SET
+  payout_yen=excluded.payout_yen, popularity=excluded.popularity, returned=excluded.returned,
+  source=excluded.source, fetched_at=excluded.fetched_at
+`);
+  for (const c of parsed.conditions) {
+    condStmt.run(c.raceId, c.date, c.venue, c.raceNo, c.raceType, c.distanceM, c.weather, c.windDir, c.windMps, c.waveCm, c.kimarite, c.returned ? 1 : 0, c.source, c.fetchedAt);
+  }
+  for (const e of parsed.entries) {
+    entStmt.run(e.raceId, e.date, e.venue, e.raceNo, e.boat, e.finishPos, e.statusCode, e.racerReg, e.racerName, e.motorNo, e.boatNo, e.exhibitionTime, e.entryCourse, e.st, e.stFlying ? 1 : 0, e.source, e.fetchedAt);
+  }
+  for (const p of parsed.payouts) {
+    payStmt.run(p.raceId, p.date, p.venue, p.raceNo, p.betType, p.combination, p.payoutYen, p.popularity, p.returned ? 1 : 0, p.source, p.fetchedAt);
   }
 }
 
