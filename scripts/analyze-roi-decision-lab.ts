@@ -1838,6 +1838,28 @@ function buildConditions(): Condition[] {
       const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
       return (r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt;
     }),
+    // 月10+11追加除外: deep diveで月10=35%, 月11=59%が判明
+    nb("multiFilter5", "F>=1 OR month1-3 OR raceNo>=10 OR venue=戸田 OR venue=多摩川 OR month9 OR wind<3 OR exSt0.10-0.15 OR month10+11", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      return (r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt || mo === 10 || mo === 11;
+    }),
+    nb("multiFilter5", "F>=1 OR month1-3 OR raceNo>=10 OR venue=戸田 OR venue=多摩川 OR month9 OR wind<3 OR exSt0.10-0.15 OR month10+11 OR month5+7", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      return (r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt || mo === 10 || mo === 11 || mo === 5 || mo === 7;
+    }),
+    nb("multiFilter5", "F>=1 OR month1-3 OR raceNo>=10 OR venue=戸田 OR venue=多摩川 OR month9 OR wind<3 OR exSt0.10-0.15 OR month10+11 OR month5+7+8", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      return (r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt || mo === 10 || mo === 11 || mo === 5 || mo === 7 || mo === 8;
+    }),
 
     // ── HHH. exSt死角帯(0.10-0.15)を除いた夏期wind>=3 KEEP (純化版) ──
     kp("summerWindNoDeadZone", "月4-9 AND raceNo7-9 AND F==0 AND wind>=3 AND NOT(exSt0.10-0.15)", (r) => {
@@ -2891,6 +2913,76 @@ function buildConditions(): Condition[] {
       const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
       const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
       return isBase && (mo === 4 || mo === 6 || mo === 12) && r.currentOdds >= 50;
+    }),
+
+    // ── TTTT. 月4+6+12×odds20-50 (test=386%条件の最強月バージョン) ──
+    kp("strongMonths46c12Odds", "新NO_BUY残り×月4+6+12×odds20-50", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 12) && r.currentOdds >= 20 && r.currentOdds < 50;
+    }),
+    kp("strongMonths46c12Odds", "新NO_BUY残り×月4+6+12×odds20-30", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 12) && r.currentOdds >= 20 && r.currentOdds < 30;
+    }),
+
+    // ── TTTT-2. 月4+6 (月12除外版: 240%予想, B/A境界) ──
+    kp("strongMonths46only", "新NO_BUY残り×月4+6", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6);
+    }),
+    kp("strongMonths46only", "新NO_BUY残り×月4+6×racerTop3>=0.5", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6) && (hf?.racerTop3Rate ?? 0) >= 0.5;
+    }),
+
+    // ── UUUU. 月12 (最強NON-夏: 12月単独の特性を確認) ──
+    kp("december46c12", "新NO_BUY残り×月12のみ", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && mo === 12;
+    }),
+    kp("december46c12", "新NO_BUY残り×月12×racerTop3>=0.5", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && mo === 12 && (hf?.racerTop3Rate ?? 0) >= 0.5;
+    }),
+    kp("december46c12", "新NO_BUY残り×月12×wind>=5", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && mo === 12 && (r.windMps ?? 0) >= 5;
+    }),
+    kp("december46c12", "新NO_BUY残り×月12×raceNo7-9", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && mo === 12 && r.raceNo >= 7 && r.raceNo <= 9;
     }),
   ];
 }

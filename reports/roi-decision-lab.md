@@ -7,7 +7,7 @@
 **判定: PAPER-STRONG**
 
 - S候補: 25件 (条件) + 0件 (selector)
-- A候補: 79件 (条件) + 1件 (selector)
+- A候補: 82件 (条件) + 1件 (selector)
 - **本番反映: 不可 — まずpaper検証候補として扱うこと**
 
 ## 2. Baseline
@@ -29,6 +29,9 @@
 
 | 判定 | action | family | label | removed n | removed ROI | afterN | afterROI | +ROI | roiExMax | trainROI | valROI | testROI | 2024(n) | 2024ROI | 2025(n) | 2025ROI | worstMth | warnings |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| **A** | NO_BUY | multiFilter5 | F>=1 OR month1-3 OR raceNo>=10 OR venue=戸田 OR venue=多摩川 OR month9 OR wind<3 OR exSt0.10-0.15 OR month10+11 OR month5+7+8 | 5907 | 71.76% | 353 | 224.59% | +144.21% | 202.58% | 238.99% | 194.78% | 0.00% | 219 | 215.89% | 134 | 238.81% | 150.83% | 月別不安定:12ヶ月ROI<70 |
+| **A** | NO_BUY | multiFilter5 | F>=1 OR month1-3 OR raceNo>=10 OR venue=戸田 OR venue=多摩川 OR month9 OR wind<3 OR exSt0.10-0.15 OR month10+11 OR month5+7 | 5695 | 68.88% | 565 | 196.21% | +115.84% | 182.46% | 203.32% | 168.82% | 296.92% | 333 | 186.10% | 232 | 210.73% | 128.86% | 月別不安定:12ヶ月ROI<70 |
+| **A** | NO_BUY | multiFilter5 | F>=1 OR month1-3 OR raceNo>=10 OR venue=戸田 OR venue=多摩川 OR month9 OR wind<3 OR exSt0.10-0.15 OR month10+11 | 5295 | 65.92% | 965 | 159.70% | +79.32% | 151.65% | 179.28% | 121.88% | 233.50% | 539 | 167.79% | 412 | 150.61% | 45.39% | 月別不安定:13ヶ月ROI<70 |
 | **S** | NO_BUY | multiFilter4 | F>=1 OR month1-3 OR raceNo>=10 OR venue=戸田 OR venue=多摩川 OR month9 OR wind<3 OR exSt0.10-0.15 | 5068 | 65.94% | 1192 | 141.76% | +61.38% | 135.24% | 155.25% | 121.88% | 118.06% | 703 | 145.79% | 475 | 136.57% | 0.00% | 月別不安定:13ヶ月ROI<70 |
 | **S** | NO_BUY | multiFilter4 | F>=1 OR month1-3 OR raceNo>=10 OR venue=戸田 OR venue=多摩川 OR month9 OR wind<3 | 4812 | 65.75% | 1448 | 128.98% | +48.61% | 123.62% | 135.82% | 123.95% | 97.28% | 869 | 128.84% | 565 | 129.54% | 0.00% | 月別不安定:13ヶ月ROI<70 |
 | **S** | NO_BUY | multiFilter3 | F>=1 OR month1-3 OR raceNo>=10 OR venue=戸田 OR venue=多摩川 OR month9 | 3687 | 53.37% | 2573 | 119.07% | +38.69% | 116.05% | 121.47% | 110.72% | 128.35% | 1563 | 118.98% | 988 | 120.22% | 38.97% | 月別不安定:17ヶ月ROI<70 |
@@ -138,6 +141,9 @@
 
 | 判定 | family | label | removed n | removed ROI | afterN | afterROI | +ROI | roiExMax | warnings |
 |---|---|---|---:|---:|---:|---:|---:|---:|---|
+| A | multiFilter5 | F>=1 OR month1-3 OR raceNo>=10 OR venue=戸田 OR venue=多摩川 OR month9 OR wind<3 OR exSt0.10-0.15 OR month10+11 OR month5+7+8 | 5907 | 71.76% | 353 | 224.59% | +144.21% | 202.58% | 月別不安定:12ヶ月ROI<70 |
+| A | multiFilter5 | F>=1 OR month1-3 OR raceNo>=10 OR venue=戸田 OR venue=多摩川 OR month9 OR wind<3 OR exSt0.10-0.15 OR month10+11 OR month5+7 | 5695 | 68.88% | 565 | 196.21% | +115.84% | 182.46% | 月別不安定:12ヶ月ROI<70 |
+| A | multiFilter5 | F>=1 OR month1-3 OR raceNo>=10 OR venue=戸田 OR venue=多摩川 OR month9 OR wind<3 OR exSt0.10-0.15 OR month10+11 | 5295 | 65.92% | 965 | 159.70% | +79.32% | 151.65% | 月別不安定:13ヶ月ROI<70 |
 | S | multiFilter4 | F>=1 OR month1-3 OR raceNo>=10 OR venue=戸田 OR venue=多摩川 OR month9 OR wind<3 OR exSt0.10-0.15 | 5068 | 65.94% | 1192 | 141.76% | +61.38% | 135.24% | 月別不安定:13ヶ月ROI<70 |
 | S | multiFilter4 | F>=1 OR month1-3 OR raceNo>=10 OR venue=戸田 OR venue=多摩川 OR month9 OR wind<3 | 4812 | 65.75% | 1448 | 128.98% | +48.61% | 123.62% | 月別不安定:13ヶ月ROI<70 |
 | S | multiFilter3 | F>=1 OR month1-3 OR raceNo>=10 OR venue=戸田 OR venue=多摩川 OR month9 | 3687 | 53.37% | 2573 | 119.07% | +38.69% | 116.05% | 月別不安定:17ヶ月ROI<70 |
@@ -165,9 +171,6 @@
 | A | venue | venue=戸田 | 319 | 16.36% | 5941 | 83.81% | +3.44% | 82.51% | 平均odds>=50:過剰夢見リスク, 月別不安定:20ヶ月ROI<70, 月別勝ち少ない |
 | A | exhibition | head exSt >= 0.15 | 1754 | 72.06% | 4506 | 83.62% | +3.24% | 81.89% | 月別不安定:9ヶ月ROI<70 |
 | A | raceNo | raceNo=11 | 192 | 0.00% | 6068 | 82.92% | +2.54% | 81.64% | 月別不安定:23ヶ月ROI<70, 月別勝ち少ない |
-| A | venue | venue=多摩川 | 282 | 28.79% | 5978 | 82.81% | +2.43% | 81.51% | 月別不安定:21ヶ月ROI<70 |
-| B | exhibition | slowSt count >= 2 | 1527 | 73.29% | 4733 | 82.66% | +2.29% | 81.02% | 月別不安定:11ヶ月ROI<70 |
-| A | combo | F >= 1 AND raceNo >= 10 | 219 | 18.63% | 6041 | 82.62% | +2.24% | 81.33% | 月別不安定:22ヶ月ROI<70, 月別勝ち少ない |
 
 ## 5. Bet Selector Candidates
 
@@ -344,6 +347,7 @@
 | C | strongMonths46c12Venue | 新NO_BUY残り×月4+6+12×venue=丸亀OR蒲郡OR平和島 | 60 | 509.17% | 379.67% | 318.75% | 890.00% | 0.00% | 0.00% | 平均odds>=50:過剰夢見リスク |
 | C | strongWind | 月4-9 AND raceNo7-9 AND F==0 AND wind>=5 AND exSt>=0.15 | 37 | 499.46% | 336.49% | 972.63% | 0.00% | 0.00% | 0.00% | n<50:偽edge疑い, 月別不安定:8ヶ月ROI<70 |
 | C | motorWindSummer | 月4-9 AND raceNo7-9 AND F==0 AND wind>=3 AND motor>=45 | 24 | 472.50% | 294.17% | 500.62% | 0.00% | 3330.00% | 0.00% | n<50:偽edge疑い, 月別不安定:8ヶ月ROI<70 |
+| C | strongMonths46c12Odds | 新NO_BUY残り×月4+6+12×odds20-30 | 25 | 445.60% | 327.20% | 530.48% | 0.00% | 0.00% | 0.00% | n<50:偽edge疑い, 月別不安定:3ヶ月ROI<70 |
 | C | boatWindSummer | 月5-8 AND raceNo7-9 AND F==0 AND wind>=3 AND boatTop2>=40 AND exSt>=0.15 | 20 | 436.00% | 214.00% | 670.77% | 0.00% | 0.00% | 0.00% | n<50:偽edge疑い, 的中<=2件:高配当依存, 月別不安定:6ヶ月ROI<70, 月別勝ち少ない |
 | C | aprilSubs | 新NO_BUY残り×月4×wind>=5 | 32 | 431.25% | 188.44% | 603.00% | 353.18% | 0.00% | 0.00% | n<50:偽edge疑い, 的中<=2件:高配当依存 |
 | C | aprilNoBuy | 新NO_BUY残り×月4×raceNo7-9×racerTop3>=0.5 | 27 | 427.41% | 204.07% | 678.82% | 0.00% | 0.00% | 393.57% | n<50:偽edge疑い, 的中<=2件:高配当依存 |
@@ -352,15 +356,14 @@
 | C | confCombo | confidence>=0.08 AND 月4-9 AND raceNo7-9 AND F==0 | 4 | 405.00% | 0.00% | 0.00% | 0.00% | 405.00% | 405.00% | n<50:偽edge疑い, 的中<=2件:高配当依存, 最大1hit依存:roiExMax崩れ |
 | C | marugameVenue | 新NO_BUY残り×月4+6+8+12×venue=丸亀OR平和島OR蒲郡 | 98 | 404.29% | 325.00% | 334.64% | 574.19% | 280.00% | 0.00% | 平均odds>=50:過剰夢見リスク |
 | C | newBuyMonthBreak | 新NO_BUY残り×raceNo7-9×月4のみ | 29 | 397.93% | 190.00% | 641.11% | 0.00% | 0.00% | 367.33% | n<50:偽edge疑い, 的中<=2件:高配当依存 |
-| C | aprilSubs | 新NO_BUY残り×月4×raceNo7-9 | 29 | 397.93% | 190.00% | 641.11% | 0.00% | 0.00% | 367.33% | n<50:偽edge疑い, 的中<=2件:高配当依存 |
 
 ## 10. 次にpaper検証すべき候補
 
+- A: F>=1 OR month1-3 OR raceNo>=10 OR venue=戸田 OR venue=多摩川 OR month9 OR wind<3 OR exSt0.10-0.15 OR month10+11 OR month5+7+8 (n=5907, ROI=224.59%)
+- A: F>=1 OR month1-3 OR raceNo>=10 OR venue=戸田 OR venue=多摩川 OR month9 OR wind<3 OR exSt0.10-0.15 OR month10+11 OR month5+7 (n=5695, ROI=196.21%)
+- A: F>=1 OR month1-3 OR raceNo>=10 OR venue=戸田 OR venue=多摩川 OR month9 OR wind<3 OR exSt0.10-0.15 OR month10+11 (n=5295, ROI=159.70%)
 - S: F>=1 OR month1-3 OR raceNo>=10 OR venue=戸田 OR venue=多摩川 OR month9 OR wind<3 OR exSt0.10-0.15 (n=5068, ROI=141.76%)
 - S: F>=1 OR month1-3 OR raceNo>=10 OR venue=戸田 OR venue=多摩川 OR month9 OR wind<3 (n=4812, ROI=128.98%)
-- S: F>=1 OR month1-3 OR raceNo>=10 OR venue=戸田 OR venue=多摩川 OR month9 (n=3687, ROI=119.07%)
-- S: F>=1 OR month1-3 OR raceNo>=10 OR exSt>=0.15 OR month9 (n=4199, ROI=118.74%)
-- S: F>=1 OR month1-3 OR raceNo>=10 OR venue=戸田 OR month9 (n=3561, ROI=116.52%)
 
 ## 12. 月別 × レース番号 ROI マトリクス (全BUY)
 
@@ -382,7 +385,7 @@
 ### 13.x 月4-9 AND raceNo7-9 AND F==0 AND racerTop3>=0.5 AND wind>=3 [S候補 n~429]
 
 **基本統計**: n=429, ROI=189.23%, hits=19, hitRate=4.43%, roiExMaxHit=174.69%
-**Bootstrap 95%CI** (n=429, 2000回): 109.49% 〜 278.23% (中央値=189.58%, 平均=190.65%)
+**Bootstrap 95%CI** (n=429, 2000回): 108.48% 〜 280.84% (中央値=188.28%, 平均=190.36%)
 
 **サブフィルター別ROI (上位20件)**
 | label | n | ROI | hits | roiExMax | 2024(n) | 2024ROI | 2025(n) | 2025ROI |
@@ -442,7 +445,7 @@
 ### 13.x 月5-8 AND raceNo7-9 AND F==0 AND wind>=3 [S候補 n~344]
 
 **基本統計**: n=344, ROI=183.46%, hits=15, hitRate=4.36%, roiExMaxHit=165.32%
-**Bootstrap 95%CI** (n=344, 2000回): 92.18% 〜 283.34% (中央値=182.06%, 平均=183.22%)
+**Bootstrap 95%CI** (n=344, 2000回): 98.40% 〜 288.34% (中央値=180.23%, 平均=183.71%)
 
 **サブフィルター別ROI (上位20件)**
 | label | n | ROI | hits | roiExMax | 2024(n) | 2024ROI | 2025(n) | 2025ROI |
@@ -501,7 +504,7 @@
 ### 13.x 最良NO_BUY残り×wind>=3 [S候補 n~1447]
 
 **基本統計**: n=1447, ROI=127.95%, hits=44, hitRate=3.04%, roiExMaxHit=122.58%
-**Bootstrap 95%CI** (n=1447, 2000回): 90.05% 〜 170.52% (中央値=127.70%, 平均=128.01%)
+**Bootstrap 95%CI** (n=1447, 2000回): 89.97% 〜 168.13% (中央値=127.31%, 平均=127.51%)
 
 **サブフィルター別ROI (上位20件)**
 | label | n | ROI | hits | roiExMax | 2024(n) | 2024ROI | 2025(n) | 2025ROI |
@@ -567,7 +570,7 @@
 ### 13.x 月10-12 AND raceNo<=3 AND F==0 AND wave<5 AND wind<5 AND NOT(戸田\|多摩川) [B候補 n~195]
 
 **基本統計**: n=195, ROI=200.72%, hits=11, hitRate=5.64%, roiExMaxHit=173.33%
-**Bootstrap 95%CI** (n=195, 2000回): 90.26% 〜 332.72% (中央値=194.97%, 平均=199.75%)
+**Bootstrap 95%CI** (n=195, 2000回): 89.33% 〜 329.23% (中央値=194.31%, 平均=199.22%)
 
 **サブフィルター別ROI (上位20件)**
 | label | n | ROI | hits | roiExMax | 2024(n) | 2024ROI | 2025(n) | 2025ROI |
@@ -619,7 +622,7 @@
 ### 13.x 最良NO_BUY残り [S候補 n~2573]
 
 **基本統計**: n=2573, ROI=119.07%, hits=76, hitRate=2.95%, roiExMaxHit=116.05%
-**Bootstrap 95%CI** (n=2573, 2000回): 91.39% 〜 148.20% (中央値=117.75%, 平均=118.40%)
+**Bootstrap 95%CI** (n=2573, 2000回): 93.10% 〜 146.24% (中央値=118.81%, 平均=119.06%)
 
 **サブフィルター別ROI (上位20件)**
 | label | n | ROI | hits | roiExMax | 2024(n) | 2024ROI | 2025(n) | 2025ROI |
@@ -686,7 +689,7 @@
 ### 13.x 新NO_BUY残り×raceNo7-9×month4-9 [A候補 n~302]
 
 **基本統計**: n=302, ROI=241.72%, hits=17, hitRate=5.63%, roiExMaxHit=221.06%
-**Bootstrap 95%CI** (n=302, 2000回): 126.16% 〜 365.76% (中央値=235.70%, 平均=239.89%)
+**Bootstrap 95%CI** (n=302, 2000回): 133.51% 〜 371.89% (中央値=242.25%, 平均=243.98%)
 
 **サブフィルター別ROI (上位20件)**
 | label | n | ROI | hits | roiExMax | 2024(n) | 2024ROI | 2025(n) | 2025ROI |
@@ -745,7 +748,7 @@
 ### 13.x 新NO_BUY残り×racerTop3>=0.5 [S候補 n~1120]
 
 **基本統計**: n=1120, ROI=139.66%, hits=37, hitRate=3.30%, roiExMaxHit=132.72%
-**Bootstrap 95%CI** (n=1120, 2000回): 96.37% 〜 186.64% (中央値=138.08%, 平均=138.99%)
+**Bootstrap 95%CI** (n=1120, 2000回): 95.71% 〜 187.25% (中央値=139.68%, 平均=139.79%)
 
 **サブフィルター別ROI (上位20件)**
 | label | n | ROI | hits | roiExMax | 2024(n) | 2024ROI | 2025(n) | 2025ROI |
@@ -805,7 +808,7 @@
 ### 13.x 新NO_BUY残り×月4+6+8+12×racerTop3>=0.5 [A候補 n~539 test=296%]
 
 **基本統計**: n=539, ROI=193.14%, hits=25, hitRate=4.64%, roiExMaxHit=178.72%
-**Bootstrap 95%CI** (n=539, 2000回): 121.89% 〜 272.76% (中央値=190.41%, 平均=192.56%)
+**Bootstrap 95%CI** (n=539, 2000回): 117.90% 〜 275.99% (中央値=191.65%, 平均=192.50%)
 
 **サブフィルター別ROI (上位20件)**
 | label | n | ROI | hits | roiExMax | 2024(n) | 2024ROI | 2025(n) | 2025ROI |
@@ -861,7 +864,7 @@
 ### 13.x 新NO_BUY残り×月4+6+8+12 [A候補 n~565 ROI=196%]
 
 **基本統計**: n=565, ROI=196.21%, hits=27, hitRate=4.78%, roiExMaxHit=182.46%
-**Bootstrap 95%CI** (n=565, 2000回): 121.63% 〜 276.67% (中央値=194.41%, 平均=195.66%)
+**Bootstrap 95%CI** (n=565, 2000回): 125.54% 〜 272.57% (中央値=195.65%, 平均=196.62%)
 
 **サブフィルター別ROI (上位20件)**
 | label | n | ROI | hits | roiExMax | 2024(n) | 2024ROI | 2025(n) | 2025ROI |
@@ -917,7 +920,7 @@
 ### 13.x 新NO_BUY残り×月4+6+12 [A候補 n~353 ROI=224%]
 
 **基本統計**: n=353, ROI=224.59%, hits=19, hitRate=5.38%, roiExMaxHit=202.58%
-**Bootstrap 95%CI** (n=353, 2000回): 125.98% 〜 330.85% (中央値=220.51%, 平均=223.36%)
+**Bootstrap 95%CI** (n=353, 2000回): 133.06% 〜 334.39% (中央値=225.35%, 平均=226.92%)
 
 **サブフィルター別ROI (上位20件)**
 | label | n | ROI | hits | roiExMax | 2024(n) | 2024ROI | 2025(n) | 2025ROI |
@@ -972,7 +975,7 @@
 ### 13.x 全件ベースライン [n=6260]
 
 **基本統計**: n=6260, ROI=80.38%, hits=124, hitRate=1.98%, roiExMaxHit=79.14%
-**Bootstrap 95%CI** (n=6260, 2000回): 66.94% 〜 95.07% (中央値=80.34%, 平均=80.37%)
+**Bootstrap 95%CI** (n=6260, 2000回): 66.32% 〜 95.45% (中央値=80.46%, 平均=80.72%)
 
 **サブフィルター別ROI (上位20件)**
 | label | n | ROI | hits | roiExMax | 2024(n) | 2024ROI | 2025(n) | 2025ROI |
@@ -1053,4 +1056,4 @@
 - 惜しい外れ（1着一致・2/3着逆）の分析
 
 ---
-*生成: 2026-06-07T16:25:00.897Z / DB: data/boat.sqlite*
+*生成: 2026-06-07T16:32:38.969Z / DB: data/boat.sqlite*
