@@ -2514,6 +2514,384 @@ function buildConditions(): Condition[] {
       const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
       return isBase && mo >= 10 && mo <= 12 && (hf?.racerTop3Rate ?? 0) >= 0.5;
     }),
+
+    // ── GGGG. 深掘り: wind>=5 × 月4+6+8+12シリーズ (最重要: 2024=294%, 2025=252%) ──
+    kp("strongMonthsWind5", "新NO_BUY残り×月4+6+8+12×racerTop3>=0.5×wind>=5", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 8 || mo === 12) && (hf?.racerTop3Rate ?? 0) >= 0.5 && (r.windMps ?? 0) >= 5;
+    }),
+    kp("strongMonthsWind5", "新NO_BUY残り×月4+6+8+12×wind>=5", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 8 || mo === 12) && (r.windMps ?? 0) >= 5;
+    }),
+    kp("strongMonthsWind5", "新NO_BUY残り×月4+6+8+12×raceNo7-9×wind>=5", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 8 || mo === 12) && r.raceNo >= 7 && r.raceNo <= 9 && (r.windMps ?? 0) >= 5;
+    }),
+
+    // ── HHHH. exSt<0.08 × 月4+6+8+12 (2024=237%, 2025=256%: 両年均等!) ──
+    kp("strongMonthsExSt", "新NO_BUY残り×月4+6+8+12×racerTop3>=0.5×exSt<0.08", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 8 || mo === 12) && (hf?.racerTop3Rate ?? 0) >= 0.5 && (hf?.exSt ?? 99) < 0.08;
+    }),
+    kp("strongMonthsExSt", "新NO_BUY残り×月4+6+8+12×exSt<0.08", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 8 || mo === 12) && (hf?.exSt ?? 99) < 0.08;
+    }),
+
+    // ── IIII. odds>=50 × 月4+6+8+12 (2024=255%, 2025=267%: 両年均等!) ──
+    kp("strongMonthsOdds", "新NO_BUY残り×月4+6+8+12×racerTop3>=0.5×odds>=50", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 8 || mo === 12) && (hf?.racerTop3Rate ?? 0) >= 0.5 && r.currentOdds >= 50;
+    }),
+    kp("strongMonthsOdds", "新NO_BUY残り×月4+6+8+12×odds>=50", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 8 || mo === 12) && r.currentOdds >= 50;
+    }),
+    kp("strongMonthsOdds", "新NO_BUY残り×月4+6+8+12×odds>=30", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 8 || mo === 12) && r.currentOdds >= 30;
+    }),
+
+    // ── JJJJ. 丸亀×新NO_BUY残り (2024=766%, 2025=471%: 爆発的!) ──
+    kp("marugameVenue", "新NO_BUY残り×venue=丸亀", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && r.venue === "丸亀";
+    }),
+    kp("marugameVenue", "新NO_BUY残り×月4+6+8+12×venue=丸亀", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 8 || mo === 12) && r.venue === "丸亀";
+    }),
+    kp("marugameVenue", "新NO_BUY残り×月4+6+8+12×venue=丸亀OR平和島OR蒲郡", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 8 || mo === 12) && (r.venue === "丸亀" || r.venue === "平和島" || r.venue === "蒲郡");
+    }),
+
+    // ── KKKK. 4月特化サブフィルター (4月のみ=293%: 最強月を掘り下げ) ──
+    kp("aprilSubs", "新NO_BUY残り×月4のみ", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && mo === 4;
+    }),
+    kp("aprilSubs", "新NO_BUY残り×月4×raceNo7-9", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && mo === 4 && r.raceNo >= 7 && r.raceNo <= 9;
+    }),
+    kp("aprilSubs", "新NO_BUY残り×月4×racerTop3>=0.5", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && mo === 4 && (hf?.racerTop3Rate ?? 0) >= 0.5;
+    }),
+    kp("aprilSubs", "新NO_BUY残り×月4×odds>=30", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && mo === 4 && r.currentOdds >= 30;
+    }),
+    kp("aprilSubs", "新NO_BUY残り×月4×wind>=5", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && mo === 4 && (r.windMps ?? 0) >= 5;
+    }),
+
+    // ── LLLL. 月4+6+8+12 × raceNo7-9 (フィルタなし版) ──
+    kp("strongMonthsRaceNo", "新NO_BUY残り×月4+6+8+12×raceNo7-9", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 8 || mo === 12) && r.raceNo >= 7 && r.raceNo <= 9;
+    }),
+    kp("strongMonthsRaceNo", "新NO_BUY残り×月4+6+8+12×exSt>=0.15", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 8 || mo === 12) && (hf?.exSt ?? 0) >= 0.15;
+    }),
+
+    // ── MMMM. 月4+8+12 (6月除外版: 月6のROI確認後の最良版) ──
+    kp("strongMonths48", "新NO_BUY残り×月4+8×racerTop3>=0.5", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 8) && (hf?.racerTop3Rate ?? 0) >= 0.5;
+    }),
+    kp("strongMonths48", "新NO_BUY残り×月4+8+12×wind>=5", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 8 || mo === 12) && (r.windMps ?? 0) >= 5;
+    }),
+    kp("strongMonths48", "新NO_BUY残り×月4+8+12×exSt<0.08", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 8 || mo === 12) && (hf?.exSt ?? 99) < 0.08;
+    }),
+    kp("strongMonths48", "新NO_BUY残り×月4+8+12×raceNo7-9", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 8 || mo === 12) && r.raceNo >= 7 && r.raceNo <= 9;
+    }),
+
+    // ── NNNN. 総合最強条件: 複数フィルター積み上げ ──
+    kp("ultimateCombo", "新NO_BUY残り×月4+6+8+12×raceNo7-9×racerTop3>=0.5", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 8 || mo === 12) && r.raceNo >= 7 && r.raceNo <= 9 && (hf?.racerTop3Rate ?? 0) >= 0.5;
+    }),
+    kp("ultimateCombo", "新NO_BUY残り×月4+6+8+12×raceNo7-9×odds>=30", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 8 || mo === 12) && r.raceNo >= 7 && r.raceNo <= 9 && r.currentOdds >= 30;
+    }),
+    kp("ultimateCombo", "新NO_BUY残り×月4+6+8+12×exSt<0.08×racerTop3>=0.5", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 8 || mo === 12) && (hf?.exSt ?? 99) < 0.08 && (hf?.racerTop3Rate ?? 0) >= 0.5;
+    }),
+
+    // ── OOOO. 月4+6+12 (月8除外版: 4=280%, 6=206%, 12=187% vs 8=149%) ──
+    kp("strongMonths46c12", "新NO_BUY残り×月4+6+12", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 12);
+    }),
+    kp("strongMonths46c12", "新NO_BUY残り×月4+6+12×racerTop3>=0.5", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 12) && (hf?.racerTop3Rate ?? 0) >= 0.5;
+    }),
+    kp("strongMonths46c12", "新NO_BUY残り×月4+12", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 12);
+    }),
+
+    // ── PPPP. odds20-30 × 強月 (deep dive: odds20-30=324%, 2024=309%, 2025=364%!) ──
+    kp("strongMonthsOdds2030", "新NO_BUY残り×月4+6+8+12×odds20-30", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 8 || mo === 12) && r.currentOdds >= 20 && r.currentOdds < 30;
+    }),
+    kp("strongMonthsOdds2030", "新NO_BUY残り×月4+6+8+12×odds20-50", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 8 || mo === 12) && r.currentOdds >= 20 && r.currentOdds < 50;
+    }),
+    kp("strongMonthsOdds2030", "新NO_BUY残り×月4+6+8+12×odds20-30×racerTop3>=0.5", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 8 || mo === 12) && r.currentOdds >= 20 && r.currentOdds < 30 && (hf?.racerTop3Rate ?? 0) >= 0.5;
+    }),
+
+    // ── QQQQ. 月4+6+12系 追加サブフィルター ──
+    kp("strongMonths46c12Sub", "新NO_BUY残り×月4+6+12×wind>=5", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 12) && (r.windMps ?? 0) >= 5;
+    }),
+    kp("strongMonths46c12Sub", "新NO_BUY残り×月4+6+12×exSt<0.08", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 12) && (hf?.exSt ?? 99) < 0.08;
+    }),
+    kp("strongMonths46c12Sub", "新NO_BUY残り×月4+6+12×odds>=30", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 12) && r.currentOdds >= 30;
+    }),
+    kp("strongMonths46c12Sub", "新NO_BUY残り×月4+6+12×raceNo7-9", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 12) && r.raceNo >= 7 && r.raceNo <= 9;
+    }),
+    kp("strongMonths46c12Sub", "新NO_BUY残り×月4+6+12×raceNo7-9×racerTop3>=0.5", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 12) && r.raceNo >= 7 && r.raceNo <= 9 && (hf?.racerTop3Rate ?? 0) >= 0.5;
+    }),
+
+    // ── RRRR. 月4+6+12×会場 (丸亀=714%両年, 蒲郡=540%両年: 爆発的venue!) ──
+    kp("strongMonths46c12Venue", "新NO_BUY残り×月4+6+12×venue=丸亀OR蒲郡", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 12) && (r.venue === "丸亀" || r.venue === "蒲郡");
+    }),
+    kp("strongMonths46c12Venue", "新NO_BUY残り×月4+6+8+12×venue=丸亀OR蒲郡", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 8 || mo === 12) && (r.venue === "丸亀" || r.venue === "蒲郡");
+    }),
+    kp("strongMonths46c12Venue", "新NO_BUY残り×月4+6+12×venue=丸亀OR蒲郡OR唐津", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 12) && (r.venue === "丸亀" || r.venue === "蒲郡" || r.venue === "唐津");
+    }),
+    kp("strongMonths46c12Venue", "新NO_BUY残り×月4+6+12×venue=丸亀OR蒲郡OR平和島", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 12) && (r.venue === "丸亀" || r.venue === "蒲郡" || r.venue === "平和島");
+    }),
+
+    // ── SSSS. 月4+6+12×wind5 and exSt<0.08 (deep dive shows both years stable) ──
+    kp("strongMonths46c12Wind", "新NO_BUY残り×月4+6+12×wind>=5×racerTop3>=0.5", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 12) && (r.windMps ?? 0) >= 5 && (hf?.racerTop3Rate ?? 0) >= 0.5;
+    }),
+    kp("strongMonths46c12Wind", "新NO_BUY残り×月4+6+12×exSt<0.08×racerTop3>=0.5", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 12) && (hf?.exSt ?? 99) < 0.08 && (hf?.racerTop3Rate ?? 0) >= 0.5;
+    }),
+    kp("strongMonths46c12Wind", "新NO_BUY残り×月4+6+12×exSt<0.08", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 12) && (hf?.exSt ?? 99) < 0.08;
+    }),
+    kp("strongMonths46c12Wind", "新NO_BUY残り×月4+6+12×odds>=50", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 12) && r.currentOdds >= 50;
+    }),
   ];
 }
 
@@ -3106,6 +3484,24 @@ try {
       const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
       return isBase && (mo === 4 || mo === 6 || mo === 8 || mo === 12) && (hf?.racerTop3Rate ?? 0) >= 0.5;
     }, "新NO_BUY残り×月4+6+8+12×racerTop3>=0.5 [A候補 n~539 test=296%]"),
+    // 新NO_BUY残り×月4+6+8+12 (フィルタなし版, ROI196%, A判定, n~565)
+    runDeepDive(rows, (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 8 || mo === 12);
+    }, "新NO_BUY残り×月4+6+8+12 [A候補 n~565 ROI=196%]"),
+    // 新NO_BUY残り×月4+6+12 (月8除外版, ROI224%, A判定, n~353)
+    runDeepDive(rows, (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      const exSt = hf?.exSt ?? null;
+      const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+      const isBase = !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+      return isBase && (mo === 4 || mo === 6 || mo === 12);
+    }, "新NO_BUY残り×月4+6+12 [A候補 n~353 ROI=224%]"),
     runDeepDive(rows, () => true, "全件ベースライン [n=6260]"),
   ];
 
