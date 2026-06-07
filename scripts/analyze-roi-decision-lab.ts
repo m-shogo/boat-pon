@@ -734,6 +734,71 @@ function buildConditions(): Condition[] {
     nb("envRisk", "envRisk = high", (r) => r.environmentRiskLevel === "high"),
     nb("envRisk", "sharpSignalDrop >= 0.1", (r) => (r.sharpSignalDrop ?? 0) >= 0.1),
     nb("envRisk", "sharpSignalDrop >= 0.05", (r) => (r.sharpSignalDrop ?? 0) >= 0.05),
+
+    // ── O. 複合条件 ──
+    nb("combo", "F >= 1 AND raceNo >= 10", (r) => (r.headFlyingCount ?? 0) >= 1 && r.raceNo >= 10),
+    nb("combo", "F >= 1 AND exSt >= 0.15", (r) => (r.headFlyingCount ?? 0) >= 1 && r.exhibitionPresent && (r.headExSt ?? 0) >= 0.15),
+    nb("combo", "F >= 1 AND exRank >= 4", (r) => (r.headFlyingCount ?? 0) >= 1 && r.exhibitionPresent && (r.headExRank ?? 0) >= 4),
+    nb("combo", "F >= 1 AND wave >= 5", (r) => (r.headFlyingCount ?? 0) >= 1 && (r.waveCm ?? 0) >= 5),
+    nb("combo", "odds >= 50 AND raceNo >= 10", (r) => r.currentOdds >= 50 && r.raceNo >= 10),
+    nb("combo", "odds >= 30 AND F >= 1", (r) => r.currentOdds >= 30 && (r.headFlyingCount ?? 0) >= 1),
+    nb("combo", "exSt >= 0.15 AND raceNo >= 10", (r) => r.exhibitionPresent && (r.headExSt ?? 0) >= 0.15 && r.raceNo >= 10),
+    nb("combo", "exRank >= 4 AND F >= 1 AND odds >= 20", (r) => r.exhibitionPresent && (r.headExRank ?? 0) >= 4 && (r.headFlyingCount ?? 0) >= 1 && r.currentOdds >= 20),
+    kp("combo", "raceNo 7-9 AND F == 0", (r) => r.raceNo >= 7 && r.raceNo <= 9 && (r.headFlyingCount ?? 0) === 0),
+    kp("combo", "raceNo 7-9 AND odds 5-30", (r) => r.raceNo >= 7 && r.raceNo <= 9 && r.currentOdds >= 5 && r.currentOdds < 30),
+    kp("combo", "raceNo 7-9 AND exRank <= 3", (r) => r.raceNo >= 7 && r.raceNo <= 9 && r.exhibitionPresent && (r.headExRank ?? 99) <= 3),
+    kp("combo", "raceNo 7-9 AND wind < 5", (r) => r.raceNo >= 7 && r.raceNo <= 9 && r.weatherPresent && (r.windMps ?? 99) < 5),
+    kp("combo", "head==1 AND F==0 AND odds>=10", (r) => r.selectionNums[0] === 1 && (r.headFlyingCount ?? 0) === 0 && r.currentOdds >= 10),
+    kp("combo", "head==1 AND exRank<=2", (r) => r.selectionNums[0] === 1 && r.exhibitionPresent && (r.headExRank ?? 99) <= 2),
+    kp("combo", "motor>=50 AND F==0", (r) => r.motorPresent && (r.headMotorTop2 ?? 0) >= 50 && (r.headFlyingCount ?? 0) === 0),
+    kp("combo", "motor>=50 AND exRank<=3", (r) => r.motorPresent && r.exhibitionPresent && (r.headMotorTop2 ?? 0) >= 50 && (r.headExRank ?? 99) <= 3),
+    nb("combo", "F >= 1 AND attack F >= 1", (r) => (r.headFlyingCount ?? 0) >= 1 && r.attackFlyingCount >= 1),
+    nb("combo", "venue=戸田 AND F >= 1", (r) => r.venue === "戸田" && (r.headFlyingCount ?? 0) >= 1),
+    nb("combo", "venue=戸田 AND raceNo >= 10", (r) => r.venue === "戸田" && r.raceNo >= 10),
+
+    // ── P. 選手質 ──
+    kp("racerQuality", "racerTop3 >= 0.5 (1着候補)", (r) => {
+      const headFeat = r.courseFeaturesMap.get(r.selectionNums[0]);
+      return (headFeat?.racerTop3Rate ?? 0) >= 0.5;
+    }),
+    kp("racerQuality", "racerTop3 >= 0.6 (1着候補)", (r) => {
+      const headFeat = r.courseFeaturesMap.get(r.selectionNums[0]);
+      return (headFeat?.racerTop3Rate ?? 0) >= 0.6;
+    }),
+    nb("racerQuality", "racerTop3 < 0.3 (1着候補)", (r) => {
+      const headFeat = r.courseFeaturesMap.get(r.selectionNums[0]);
+      return headFeat != null && (headFeat.racerTop3Rate ?? 1) < 0.3;
+    }),
+    kp("racerQuality", "racerAvgSt < 0.15 (1着候補)", (r) => {
+      const headFeat = r.courseFeaturesMap.get(r.selectionNums[0]);
+      return headFeat != null && (headFeat.racerAvgSt ?? 1) < 0.15;
+    }),
+
+    // ── Q. 季節性 ──
+    kp("season", "month 4-6 (春)", (r) => {
+      const month = Number(r.ym.slice(5));
+      return month >= 4 && month <= 6;
+    }),
+    kp("season", "month 7-9 (夏)", (r) => {
+      const month = Number(r.ym.slice(5));
+      return month >= 7 && month <= 9;
+    }),
+    kp("season", "month 10-12 (秋冬)", (r) => {
+      const month = Number(r.ym.slice(5));
+      return month >= 10 && month <= 12;
+    }),
+    nb("season", "month 1-3 (寒期)", (r) => {
+      const month = Number(r.ym.slice(5));
+      return month >= 1 && month <= 3;
+    }),
+
+    // ── R. 惜しい外れ分析 (KEEP候補) ──
+    kp("miss", "1着一致・2/3着逆 (惜しい外れ)", (r) => {
+      if (!r.exhibitionPresent) return false;
+      const [a, b, c] = r.selectionNums;
+      const [ra, rb, rc] = r.resultNums;
+      return !r.hit && a === ra && b === rc && c === rb;
+    }),
   ];
 }
 
