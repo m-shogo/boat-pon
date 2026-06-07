@@ -799,6 +799,55 @@ function buildConditions(): Condition[] {
       const [ra, rb, rc] = r.resultNums;
       return !r.hit && a === ra && b === rc && c === rb;
     }),
+
+    // ── S. 複合除外 (複数弱条件の組み合わせ) ──
+    nb("multiFilter", "F>=1 OR raceNo>=10 (複合除外)", (r) => (r.headFlyingCount ?? 0) >= 1 || r.raceNo >= 10),
+    nb("multiFilter", "F>=1 OR month1-3 (複合除外)", (r) => (r.headFlyingCount ?? 0) >= 1 || Number(r.ym.slice(5)) <= 3),
+    nb("multiFilter", "month1-3 OR raceNo>=10 (複合除外)", (r) => Number(r.ym.slice(5)) <= 3 || r.raceNo >= 10),
+    nb("multiFilter", "F>=1 OR exSt>=0.15 (複合除外)", (r) => (r.headFlyingCount ?? 0) >= 1 || (r.exhibitionPresent && (r.headExSt ?? 0) >= 0.15)),
+    nb("multiFilter", "F>=1 OR exSt>=0.15 OR raceNo>=10", (r) =>
+      (r.headFlyingCount ?? 0) >= 1 ||
+      (r.exhibitionPresent && (r.headExSt ?? 0) >= 0.15) ||
+      r.raceNo >= 10,
+    ),
+
+    // ── T. 温かい季節KEEP ──
+    kp("season", "month 4-9 (春夏)", (r) => {
+      const m = Number(r.ym.slice(5));
+      return m >= 4 && m <= 9;
+    }),
+    kp("season", "month 4-12 (非冬期)", (r) => {
+      const m = Number(r.ym.slice(5));
+      return m >= 4;
+    }),
+
+    // ── U. 複合KEEP ──
+    kp("comboKeep", "raceNo7-9 AND F==0 AND month4-12 (非冬)", (r) => {
+      const m = Number(r.ym.slice(5));
+      return r.raceNo >= 7 && r.raceNo <= 9 && (r.headFlyingCount ?? 0) === 0 && m >= 4;
+    }),
+    kp("comboKeep", "raceNo7-9 AND F==0 AND exSt<0.15", (r) =>
+      r.raceNo >= 7 && r.raceNo <= 9 &&
+      (r.headFlyingCount ?? 0) === 0 &&
+      (!r.exhibitionPresent || (r.headExSt ?? 0) < 0.15),
+    ),
+    kp("comboKeep", "exSt<0.10 AND F==0", (r) =>
+      r.exhibitionPresent &&
+      (r.headExSt ?? 1) < 0.10 &&
+      (r.headFlyingCount ?? 0) === 0,
+    ),
+    kp("comboKeep", "raceNo7-9 AND exSt<0.10", (r) =>
+      r.raceNo >= 7 && r.raceNo <= 9 &&
+      r.exhibitionPresent && (r.headExSt ?? 1) < 0.10,
+    ),
+    kp("comboKeep", "month4-9 AND F==0", (r) => {
+      const m = Number(r.ym.slice(5));
+      return m >= 4 && m <= 9 && (r.headFlyingCount ?? 0) === 0;
+    }),
+    kp("comboKeep", "month4-9 AND raceNo7-9", (r) => {
+      const m = Number(r.ym.slice(5));
+      return m >= 4 && m <= 9 && r.raceNo >= 7 && r.raceNo <= 9;
+    }),
   ];
 }
 
@@ -920,7 +969,7 @@ function judgeCondition(
       crossSplit &&
       trainOK && validationOK && testOK &&
       after.roiExMaxHit >= baseline.roi - 5 &&
-      stableRemoved.badMonths <= 1
+      stability.badMonths <= 4  // after rowsが安定 (除外後の残りが月別で崩れない)
     ) return "S";
 
     if (
@@ -1150,11 +1199,41 @@ function buildSelectors(): SelectorDef[] {
       applyFn: (r) => r.exhibitionPresent && (r.headExRank ?? 0) >= 5,
       ticketsFn: singleTicket,
     },
+    {
+      name: "BOX_raceNo7to9",
+      family: "BOX",
+      label: "BOX: raceNo7-9 (順序不確実な中日レース)",
+      applyFn: (r) => r.raceNo >= 7 && r.raceNo <= 9,
+      ticketsFn: boxTickets,
+    },
+    {
+      name: "REVERSE_noF",
+      family: "REVERSE",
+      label: "REVERSE: F==0 (F無し×2/3着逆)",
+      applyFn: (r) => (r.headFlyingCount ?? 0) === 0,
+      ticketsFn: reverseTicket,
+    },
+    {
+      name: "BOX_goodEx",
+      family: "BOX",
+      label: "BOX: exRank<=3 (展示上位3艇)",
+      applyFn: (r) => r.exhibitionPresent && (r.headExRank ?? 99) <= 3 && r.selectedExTop3Count >= 2,
+      ticketsFn: boxTickets,
+    },
+    {
+      name: "FLOW_noF_7to9",
+      family: "FLOW",
+      label: "FLOW 1-2固定: raceNo7-9 AND F==0",
+      applyFn: (r) => r.raceNo >= 7 && r.raceNo <= 9 && (r.headFlyingCount ?? 0) === 0,
+      ticketsFn: flow1Fixed2Tickets,
+    },
   ];
 }
 
 function evaluateSelector(sel: SelectorDef, rows: Row[], splits: ReturnType<typeof splitRows>, baseline: Metric): BetSelectorCandidate {
   const applyRows = rows.filter(sel.applyFn);
+  // 正しい比較ベース: 同じサブセットにSINGLEを適用した場合のROI
+  const subsetSingleROI = metric(applyRows).roi;
 
   function calcSelector(rs: Row[]) {
     let totalStake = 0;
@@ -1207,14 +1286,18 @@ function evaluateSelector(sel: SelectorDef, rows: Row[], splits: ReturnType<type
   const validationCalc = calcSelector(validationRows);
   const testCalc = calcSelector(testRows);
 
-  const improvement = full.roi - baseline.roi;
+  // improvement: vs サブセットSINGLE (全件比較ではなく同subset比較)
+  const improvement = full.roi - subsetSingleROI;
   const warnings: string[] = [];
   if (full.n < 50) warnings.push("n<50");
   if (full.totalTickets / Math.max(full.n, 1) > 10) warnings.push("avg_tickets>10:コスト増大");
   if (full.maxHitOdds > 50 && full.roiExMaxHit < 70) warnings.push("高配当1発依存");
   if (full.badMonths >= 3) warnings.push(`${full.badMonths}ヶ月ROI<70`);
+  if (sel.name !== "SINGLE_all" && Math.abs(subsetSingleROI - baseline.roi) > 3) {
+    warnings.push(`subsetSingle=${pct(subsetSingleROI / 100)} vs baseAll=${pct(baseline.roi / 100)}`);
+  }
 
-  const judgement = judgeSelector(full, baseline, trainCalc, validationCalc, testCalc, improvement);
+  const judgement = judgeSelector(full, { ...baseline, roi: subsetSingleROI }, trainCalc, validationCalc, testCalc, improvement);
 
   return {
     action: "BET_SELECTOR",
@@ -1230,7 +1313,7 @@ function evaluateSelector(sel: SelectorDef, rows: Row[], splits: ReturnType<type
     totalStake: full.totalStake,
     totalReturn: full.totalReturn,
     roi: full.roi,
-    baselineROI: baseline.roi,
+    baselineROI: subsetSingleROI,  // サブセットSINGLEを比較ベースに
     improvement,
     maxHitOdds: full.maxHitOdds,
     roiExMaxHit: full.roiExMaxHit,
