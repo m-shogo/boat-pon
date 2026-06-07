@@ -58,6 +58,7 @@
     "analyze:bet-strategies": "tsx scripts/analyze-bet-strategies.ts",
     "analyze:roi-commit": "tsx scripts/analyze-roi-commit.ts",
     "analyze:regenerated-ab": "tsx scripts/analyze-regenerated-ab.ts",
+    "analyze:regenerated-ab:full": "BOAT_PON_REGEN_SCOPE=odds-results tsx scripts/analyze-regenerated-ab.ts",
     "analyze:motor-filter-consistency": "tsx scripts/analyze-motor-filter-consistency.ts",
     "analyze:bet-strategy-odds-coverage": "tsx scripts/analyze-bet-strategy-odds-coverage.ts",
     "analyze:no-buy-next": "tsx scripts/analyze-no-buy-next.ts",

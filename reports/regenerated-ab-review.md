@@ -4,6 +4,7 @@
 保存済みdecision_historyだけではできない motorあり/なし・設定あり/なし の比較を、同じ対象race inputでメモリ上再生成する土台です。DB書き込みはありません。
 
 ## scope
+- mode: saved-buy
 - period: 2024-01-01〜2026-05-21
 - target race ids: 6260
 - programs loaded: 6259

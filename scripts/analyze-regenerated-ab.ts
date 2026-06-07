@@ -19,8 +19,15 @@ const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const FROM = "2024-01-01";
 const TO = "2026-05-21";
 const TRAIN_DAYS = 180;
-const OUT_MD = "reports/regenerated-ab-review.md";
-const OUT_JSON = "reports/regenerated-ab-review.json";
+
+type ScopeMode = "saved-buy" | "all-results" | "odds-results";
+const SCOPE_MODE = parseScopeMode(process.env.BOAT_PON_REGEN_SCOPE);
+const OUT_MD = SCOPE_MODE === "saved-buy"
+  ? "reports/regenerated-ab-review.md"
+  : `reports/regenerated-ab-${SCOPE_MODE}-review.md`;
+const OUT_JSON = SCOPE_MODE === "saved-buy"
+  ? "reports/regenerated-ab-review.json"
+  : `reports/regenerated-ab-${SCOPE_MODE}-review.json`;
 
 type PatternId =
   | "baseline_before"
@@ -55,7 +62,7 @@ const db = new DatabaseSync(DB_PATH, { readOnly: true });
 db.exec("PRAGMA busy_timeout = 5000;");
 
 try {
-  const targetRaceIds = loadTargetRaceIds();
+  const targetRaceIds = loadTargetRaceIds(SCOPE_MODE);
   const programs = loadPrograms(targetRaceIds);
   const odds = loadLatestOdds(targetRaceIds);
   const results = loadResults(addDays(FROM, -TRAIN_DAYS), TO);
@@ -63,17 +70,19 @@ try {
   const patterns = buildPatterns();
   const rows: EvalRow[] = [];
   const modelCache = new Map<string, ReturnType<typeof buildVenueModel>>();
+  const programsByDate = groupBy(programs, (program) => program.date);
 
   for (const pattern of patterns) {
-    for (const program of programs) {
+    const candidateByRaceId = new Map<string, ReturnType<typeof buildCandidatesFromModel>[number]>();
+    for (const [date, datePrograms] of programsByDate) {
       const settings = pattern.settings;
-      const model = modelForDate(results, program.date, settings.minSampleSize, modelCache);
-      const adjustedProgram = { ...program, features: transformFeatures(program.features, pattern) };
-      const candidates = buildCandidatesFromModel(
-        [adjustedProgram],
+      const model = modelForDate(results, date, settings.minSampleSize, modelCache);
+      const adjustedPrograms = datePrograms.map((program) => ({ ...program, features: transformFeatures(program.features, pattern) }));
+      const candidatesForDate = buildCandidatesFromModel(
+        adjustedPrograms,
         model,
         settings.targetEv,
-        `${program.date}T00:00:00+09:00`,
+        `${date}T00:00:00+09:00`,
         new Map(),
         odds,
       ).map((candidate) => pattern.useVenueMotorForFilter
@@ -82,7 +91,13 @@ try {
           candidateMotorTop2Rate: candidate.firstBoatFeature?.venueMotorTop2Rate ?? candidate.candidateMotorTop2Rate ?? null,
         }
         : candidate);
-      const candidate = candidates[0];
+      for (const candidate of candidatesForDate) {
+        if (!candidateByRaceId.has(candidate.raceId)) candidateByRaceId.set(candidate.raceId, candidate);
+      }
+    }
+    for (const program of programs) {
+      const settings = pattern.settings;
+      const candidate = candidateByRaceId.get(program.raceId);
       if (!candidate) {
         rows.push({
           pattern: pattern.id,
@@ -130,17 +145,18 @@ try {
     generatedAt: new Date().toISOString(),
     mode: "read-only regenerated A/B foundation",
     scope: {
+      mode: SCOPE_MODE,
       from: FROM,
       to: TO,
       targetRaceIds: targetRaceIds.length,
       programs: programs.length,
-      note: "保存済みhistorical-backfill BUYのrace_id集合で再生成。全official_programs再生成ではない。",
+      note: scopeNote(SCOPE_MODE),
     },
     summaries,
     savedHistory: loadSavedHistorySummary(),
     conclusion: {
       roi1118Reproduced: summaries.some((s) => s.roi >= 1.118),
-      note: "この土台ではROI 1.118は再現していない。厳密な全レース再生成には全official_programs + 全odds coverageが必要。",
+      note: conclusionNote(SCOPE_MODE),
     },
   };
 
@@ -154,7 +170,32 @@ try {
   db.close();
 }
 
-function loadTargetRaceIds() {
+function loadTargetRaceIds(scopeMode: ScopeMode) {
+  if (scopeMode === "all-results") {
+    const rows = db.prepare(`
+SELECT DISTINCT p.race_id
+FROM official_programs p
+JOIN race_results rr ON rr.race_id = p.race_id
+WHERE p.date >= ? AND p.date <= ?
+  AND rr.trifecta IS NOT NULL
+ORDER BY p.race_id
+`).all(FROM, TO) as Array<{ race_id: string }>;
+    return rows.map((r) => r.race_id);
+  }
+  if (scopeMode === "odds-results") {
+    const rows = db.prepare(`
+SELECT DISTINCT p.race_id
+FROM official_programs p
+JOIN race_results rr ON rr.race_id = p.race_id
+WHERE p.date >= ? AND p.date <= ?
+  AND rr.trifecta IS NOT NULL
+  AND EXISTS (
+    SELECT 1 FROM odds_snapshots os WHERE os.race_id = p.race_id
+  )
+ORDER BY p.race_id
+`).all(FROM, TO) as Array<{ race_id: string }>;
+    return rows.map((r) => r.race_id);
+  }
   const rows = db.prepare(`
 SELECT DISTINCT race_id
 FROM decision_history
@@ -165,6 +206,28 @@ WHERE run_kind='historical-backfill'
 ORDER BY race_id
 `).all() as Array<{ race_id: string }>;
   return rows.map((r) => r.race_id);
+}
+
+function parseScopeMode(value: string | undefined): ScopeMode {
+  if (value == null || value === "" || value === "saved-buy") return "saved-buy";
+  if (value === "all-results" || value === "odds-results") return value;
+  throw new Error(`BOAT_PON_REGEN_SCOPE must be saved-buy, all-results, or odds-results: ${value}`);
+}
+
+function scopeNote(scopeMode: ScopeMode) {
+  if (scopeMode === "all-results") return "結果がある期間内official_programs全体で再生成。odds欠損raceでは候補が生成されない場合があります。";
+  if (scopeMode === "odds-results") return "結果とodds_snapshotsがある期間内official_programs全体で再生成。保存BUY集合に限定しないpaper A/Bです。";
+  return "保存済みhistorical-backfill BUYのrace_id集合で再生成。全official_programs再生成ではない。";
+}
+
+function conclusionNote(scopeMode: ScopeMode) {
+  if (scopeMode === "odds-results") {
+    return "結果とoddsがあるofficial_programs全体に広げてもROI 1.118は再現しない。保存履歴との差は、motor/boat単体効果よりも現行の候補生成・設定・保存履歴生成時点の差分が主因の可能性が高い。";
+  }
+  if (scopeMode === "all-results") {
+    return "official_programs全体に広げてもROI 1.118は再現しない。odds欠損raceでは候補が生成されないため、odds coverage差分も別途切り分けが必要。";
+  }
+  return "この土台ではROI 1.118は再現していない。厳密な全レース再生成には全official_programs + 全odds coverageが必要。";
 }
 
 function loadPrograms(raceIds: string[]): ProgramRow[] {
@@ -326,7 +389,7 @@ WHERE run_kind='historical-backfill'
 }
 
 function renderMarkdown(report: {
-  scope: { from: string; to: string; targetRaceIds: number; programs: number; note: string };
+  scope: { mode: ScopeMode; from: string; to: string; targetRaceIds: number; programs: number; note: string };
   summaries: Array<ReturnType<typeof summarize> & { id: PatternId; label: string; comment: string }>;
   savedHistory: ReturnType<typeof loadSavedHistorySummary>;
   conclusion: { roi1118Reproduced: boolean; note: string };
@@ -338,6 +401,7 @@ function renderMarkdown(report: {
     "保存済みdecision_historyだけではできない motorあり/なし・設定あり/なし の比較を、同じ対象race inputでメモリ上再生成する土台です。DB書き込みはありません。",
     "",
     "## scope",
+    `- mode: ${report.scope.mode}`,
     `- period: ${report.scope.from}〜${report.scope.to}`,
     `- target race ids: ${report.scope.targetRaceIds}`,
     `- programs loaded: ${report.scope.programs}`,
@@ -357,9 +421,19 @@ function renderMarkdown(report: {
   lines.push("## 判定");
   lines.push(`- ROI 1.118再現: ${report.conclusion.roi1118Reproduced ? "yes" : "no"}`);
   lines.push(`- ${report.conclusion.note}`);
-  lines.push("- このスクリプトは土台です。全official_programsでの完全再生成へ拡張すれば、保存BUY集合に限定しないA/Bが可能です。");
+  lines.push(`- ${nextStepNote(report.scope.mode)}`);
   lines.push("");
   return `${lines.join("\n")}\n`;
+}
+
+function nextStepNote(scopeMode: ScopeMode) {
+  if (scopeMode === "odds-results") {
+    return "次は、保存済みdecision_history生成時の設定・候補selection・odds取得条件をrace単位で突き合わせ、BUY件数が6249件から7件へ縮む原因を特定します。";
+  }
+  if (scopeMode === "all-results") {
+    return "次は、odds有無で候補生成がどれだけ落ちるかを切り分け、odds coverageを補った完全A/Bへ進めます。";
+  }
+  return "このスクリプトは土台です。全official_programsでの完全再生成へ拡張すれば、保存BUY集合に限定しないA/Bが可能です。";
 }
 
 function loadLatestOdds(raceIds: string[]) {
@@ -452,6 +526,17 @@ function chunks<T>(values: T[], size: number) {
   const out: T[][] = [];
   for (let i = 0; i < values.length; i += size) out.push(values.slice(i, i + size));
   return out;
+}
+
+function groupBy<T, K>(values: T[], keyFn: (value: T) => K) {
+  const map = new Map<K, T[]>();
+  for (const value of values) {
+    const key = keyFn(value);
+    const existing = map.get(key);
+    if (existing) existing.push(value);
+    else map.set(key, [value]);
+  }
+  return map;
 }
 
 function average(values: Array<number | null>) {
