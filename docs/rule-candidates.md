@@ -311,3 +311,110 @@ npm run report:data-coverage -- --json
 | 徳山 はS条件のみ通知候補。A/Bは通知対象外に寄せる。 | adopted | report:monthly | `venueSignalBandRules` で実装 | next weekly |
 | 桐生 はS条件のみ通知候補。A/Bは通知対象外に寄せる。 | adopted | report:monthly | `venueSignalBandRules` で実装 | next weekly |
 | S帯が弱い。S条件の過学習、オッズ閾値、sample_size条件を再確認する。 | watch | report:monthly | 追加観察 | next weekly |
+
+## 2026-06-07 auto candidate review
+
+### Source
+
+- period: 2026-05-09..2026-06-07
+- generatedAt: 2026-06-07T13:00:04.222Z
+- BUY: 47
+- settledBUY: 44
+- hits: 2
+- ROI: 0.748
+
+### Rule suggestions
+
+| rule | status | evidence | action | next_check |
+|---|---|---|---|---|
+| 多摩川 はS条件のみ通知候補。A/Bは通知対象外に寄せる。 | watch | report:monthly | 追加観察 | next weekly |
+| 常滑 はS条件のみ通知候補。A/Bは通知対象外に寄せる。 | watch | report:monthly | 追加観察 | next weekly |
+| 徳山 はS条件のみ通知候補。A/Bは通知対象外に寄せる。 | watch | report:monthly | 追加観察 | next weekly |
+| 桐生 はS条件のみ通知候補。A/Bは通知対象外に寄せる。 | watch | report:monthly | 追加観察 | next weekly |
+| S帯が弱い。S条件の過学習、オッズ閾値、sample_size条件を再確認する。 | watch | report:monthly | 追加観察 | next weekly |
+
+---
+
+## 2026-06-08 overnight ROI analysis (analyze-roi-decision-lab)
+
+### Source
+
+- script: `scripts/analyze-roi-decision-lab.ts`
+- baseline: n=6260 BUY rows, ROI=80.38%, hits=124 (historical-backfill, decision='BUY')
+- period: 2024-2025-2026 (2024/2025 year split analysis)
+- branch: `codex/regenerated-ab-roi-analysis`
+- generatedAt: 2026-06-08T朝
+
+### 月別ROI発見 (最重要)
+
+月による ROI の系統的な差が確認された：
+
+| 月 | ROI | n(新NO_BUY残り×月) | 備考 |
+|---|---|---|---|
+| 4月 | 280.88% | 113 | 最強 |
+| 6月 | 206.28% | 137 | 安定 |
+| 8月 | 148.96% | 212 | **弱い** |
+| 12月 | 187.18% | 103 | 安定 |
+| 5月 | 弱い | - | 月4+6+8+12 from 月5+7除外実験 |
+| 7月 | 弱い | - | 同上 |
+
+**→ 月8・月5・月7が弱く、月4・6・12が強い**
+
+### 新発見S/A候補条件 (KEEP系)
+
+| 判定 | 条件 | n | ROI | 2024ROI | 2025ROI | test | 備考 |
+|---|---|---|---|---|---|---|---|
+| **A** | 新NO_BUY残り×月4+6+12 | 353 | **224.59%** | 215.89% | 238.81% | 0% | ★最強安定月条件 |
+| **A** | 新NO_BUY残り×月4+6+12×racerTop3>=0.5 | 335 | **216.48%** | 199.61% | 242.42% | 0% | |
+| **A** | 新NO_BUY残り×月4+6+12×odds>=30 | 328 | **207.74%** | 182.53% | 246.15% | 0% | |
+| **A** | 新NO_BUY残り×月4+8×racerTop3>=0.5 | 312 | **202.95%** | 163.16% | 242.23% | 137% | |
+| **A** | 新NO_BUY残り×月4+6+8+12 | 565 | 196.21% | 186.10% | 210.73% | 297% | |
+| **A** | 新NO_BUY残り×月4+8+12×racerTop3>=0.5 | 408 | 195.64% | 166.49% | 242.23% | 297% | |
+| **A** | 新NO_BUY残り×月4+6+8+12×racerTop3>=0.5 | 539 | 193.14% | 178.10% | 213.49% | 297% | |
+| **A** | 新NO_BUY残り×raceNo7-9×month4-9 | 302 | 241.72% | 303.16% | 175.69% | 126% | 高ROI・2年前後あり |
+| **A** | 新NO_BUY残り×月4+6+8+12×odds20-50 | 416 | 178.39% | 174.54% | 184.81% | 386% | test=386%強い |
+
+**注意: test=0% は、最近10%期間にhitがなかった (件数自体はある) ことを示す。年別ROIは両年安定。**
+
+### サブフィルター発見 (B/C級、将来の参考)
+
+月4+6+12×wind>=5: n=102, **ROI=275.98%**, 2024=247.41%, **2025=313.64%** (両年安定!)
+月4+6+12×exSt<0.08: n=117, **ROI=253.50%**, 2024=199.32%, **2025=343.41%** (両年安定!)
+月4+8+12×wind>=5: n=120, **ROI=303%** (B判定)
+月4×racerTop3>=0.5: n=108, **ROI=294%** (B判定、4月特化)
+
+### 会場シグナル (C判定、参考値)
+
+月4+6+12ベースの会場別上位：
+- 丸亀 (n=16): ROI=**714%**, 2024=696%, **2025=754%** (両年爆発的！)
+- 蒲郡 (n=21): ROI=**540%**, 2024=509%, 2025=569% (両年安定！)
+- 唐津 (n=18): ROI=**475%**
+- 平和島 (n=23): ROI=**337%**
+
+→ 丸亀・蒲郡は両年とも非常に強い。ただしn<50のためC判定。継続観察が必要。
+
+### exSt dead zone 確認
+
+exSt 0.10-0.15 を除外すると ROI が系統的に改善することを確認:
+- 除外なし: ROI=177.49%
+- 除外あり: ROI=197.82% (+20%)
+
+### 既存NO_BUYフィルター評価 (NO_BUY系)
+
+既存の NO_BUY ルール (月1-3除外, raceNo>=10除外, 戸田/多摩川除外, 月9除外, wind<3除外, F>=1除外) に
+さらに exSt0.10-0.15除外を加えた「新NO_BUY残り」が最良のベースとなった:
+- 新NO_BUY残り全件: n=2573, ROI=119.07%
+- 月4+6+12に絞ると: n=353, ROI=224.59%
+
+### Rule suggestions
+
+| rule | status | evidence | action | next_check |
+|---|---|---|---|---|
+| 新NO_BUY残り×月4+6+12 (n=353, ROI=224%) | candidate | analyze-roi-decision-lab 2024/2025両年安定 | paper検証。月4,6,12の3ヶ月のみBUY候補 | 月次レビュー |
+| 新NO_BUY残り×月4+6+12×racerTop3>=0.5 (n=335, ROI=216%) | candidate | analyze-roi-decision-lab 両年安定 | paper検証と月別サンプル確認 | 月次レビュー |
+| 新NO_BUY残り×月4+6+8+12 (n=565, ROI=196%) | candidate | analyze-roi-decision-lab test=297% | paper検証。月5/7/9/10/11/1-3除外 | 月次レビュー |
+| 新NO_BUY残り×raceNo7-9×month4-9 (n=302, ROI=241%) | watch | analyze-roi-decision-lab test=126% | 高ROIだがtrain/val不均衡あり。追加観察 | 月次レビュー |
+| exSt 0.10-0.15 dead zone除外 | candidate | analyze-roi-decision-lab 系統的改善確認 | 新NO_BUY残り条件に組み込み済み | 実装時 |
+| 月8弱シグナル (ROI=149% vs 月4=280%) | watch | analyze-roi-decision-lab | 月8単独除外の live 影響を dry-run で確認 | dry-run後 |
+| 丸亀×月4+6+12 (n=16, ROI=714%) | watch | analyze-roi-decision-lab C判定(n<50) | n不足。2026年6月以降も同傾向か監視 | 月次レビュー(n増加待ち) |
+
