@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-07T14:47:04.918Z",
+  "generatedAt": "2026-06-07T15:11:26.451Z",
   "dbPath": "data/boat.sqlite",
   "baseline": {
     "n": 6260,
@@ -52,6 +52,12 @@
       "goodMonths": 12,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 1818,
+      "year2024ROI": 90.52805280528051,
+      "year2025N": 975,
+      "year2025ROI": 129.67179487179487,
+      "year2026N": 26,
+      "year2026ROI": 62.30769230769231,
       "warnings": [
         "月別不安定:10ヶ月ROI<70"
       ],
@@ -87,6 +93,12 @@
       "goodMonths": 12,
       "badMonths": 10,
       "totalMonths": 24,
+      "year2024N": 2018,
+      "year2024ROI": 83.89990089197224,
+      "year2025N": 1083,
+      "year2025ROI": 121.91135734072023,
+      "year2026N": 34,
+      "year2026ROI": 47.647058823529406,
       "warnings": [
         "月別不安定:12ヶ月ROI<70"
       ],
@@ -122,6 +134,12 @@
       "goodMonths": 13,
       "badMonths": 6,
       "totalMonths": 24,
+      "year2024N": 2503,
+      "year2024ROI": 87.2752696763883,
+      "year2025N": 1401,
+      "year2025ROI": 111.99857244825127,
+      "year2026N": 26,
+      "year2026ROI": 62.30769230769231,
       "warnings": [
         "月別不安定:16ヶ月ROI<70"
       ],
@@ -157,6 +175,12 @@
       "goodMonths": 10,
       "badMonths": 4,
       "totalMonths": 18,
+      "year2024N": 2194,
+      "year2024ROI": 88.37739288969915,
+      "year2025N": 1308,
+      "year2025ROI": 108.77675840978596,
+      "year2026N": 34,
+      "year2026ROI": 47.647058823529406,
       "warnings": [
         "月別不安定:15ヶ月ROI<70"
       ],
@@ -192,6 +216,12 @@
       "goodMonths": 9,
       "badMonths": 4,
       "totalMonths": 18,
+      "year2024N": 2838,
+      "year2024ROI": 91.97322057787176,
+      "year2025N": 1732,
+      "year2025ROI": 94.48614318706699,
+      "year2026N": 34,
+      "year2026ROI": 96.76470588235294,
       "warnings": [
         "月別不安定:18ヶ月ROI<70"
       ],
@@ -227,6 +257,12 @@
       "goodMonths": 10,
       "badMonths": 6,
       "totalMonths": 24,
+      "year2024N": 2760,
+      "year2024ROI": 80.8623188405797,
+      "year2025N": 1539,
+      "year2025ROI": 105.5945419103314,
+      "year2026N": 37,
+      "year2026ROI": 88.9189189189189,
       "warnings": [
         "月別不安定:16ヶ月ROI<70"
       ],
@@ -262,6 +298,12 @@
       "goodMonths": 10,
       "badMonths": 7,
       "totalMonths": 24,
+      "year2024N": 2759,
+      "year2024ROI": 80.89162740123233,
+      "year2025N": 1539,
+      "year2025ROI": 105.5945419103314,
+      "year2026N": 34,
+      "year2026ROI": 47.647058823529406,
       "warnings": [
         "月別不安定:15ヶ月ROI<70"
       ],
@@ -297,6 +339,12 @@
       "goodMonths": 9,
       "badMonths": 6,
       "totalMonths": 24,
+      "year2024N": 2874,
+      "year2024ROI": 79.62421711899792,
+      "year2025N": 1606,
+      "year2025ROI": 101.18929016189291,
+      "year2026N": 39,
+      "year2026ROI": 84.35897435897436,
       "warnings": [
         "月別不安定:15ヶ月ROI<70"
       ],
@@ -332,6 +380,12 @@
       "goodMonths": 9,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3563,
+      "year2024ROI": 83.62054448498459,
+      "year2025N": 2042,
+      "year2025ROI": 91.83153770812929,
+      "year2026N": 34,
+      "year2026ROI": 96.76470588235294,
       "warnings": [
         "月別不安定:19ヶ月ROI<70"
       ],
@@ -367,6 +421,12 @@
       "goodMonths": 7,
       "badMonths": 4,
       "totalMonths": 18,
+      "year2024N": 3169,
+      "year2024ROI": 85.1467339854844,
+      "year2025N": 1922,
+      "year2025ROI": 88.05931321540064,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "平均odds>=50:過剰夢見リスク",
         "月別不安定:4ヶ月ROI<70",
@@ -404,6 +464,12 @@
       "goodMonths": 10,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3752,
+      "year2024ROI": 81.75639658848617,
+      "year2025N": 2145,
+      "year2025ROI": 87.59906759906761,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "平均odds>=50:過剰夢見リスク",
         "月別不安定:20ヶ月ROI<70",
@@ -441,6 +507,12 @@
       "goodMonths": 10,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 2876,
+      "year2024ROI": 78.90472878998608,
+      "year2025N": 1586,
+      "year2025ROI": 92.40226986128626,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:9ヶ月ROI<70"
       ],
@@ -476,6 +548,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3830,
+      "year2024ROI": 80.09138381201046,
+      "year2025N": 2197,
+      "year2025ROI": 87.90168411470188,
+      "year2026N": 41,
+      "year2026ROI": 80.24390243902438,
       "warnings": [
         "月別不安定:23ヶ月ROI<70",
         "月別勝ち少ない"
@@ -512,6 +590,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3766,
+      "year2024ROI": 81.4524694636219,
+      "year2025N": 2175,
+      "year2025ROI": 85.05747126436782,
+      "year2026N": 37,
+      "year2026ROI": 88.9189189189189,
       "warnings": [
         "月別不安定:21ヶ月ROI<70"
       ],
@@ -547,6 +631,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3819,
+      "year2024ROI": 79.25373134328362,
+      "year2025N": 2180,
+      "year2025ROI": 88.58715596330276,
+      "year2026N": 42,
+      "year2026ROI": 78.33333333333333,
       "warnings": [
         "月別不安定:22ヶ月ROI<70",
         "月別勝ち少ない"
@@ -583,6 +673,12 @@
       "goodMonths": 6,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3348,
+      "year2024ROI": 78.3482676224612,
+      "year2025N": 1894,
+      "year2025ROI": 90.2323125659979,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:13ヶ月ROI<70"
       ],
@@ -618,6 +714,12 @@
       "goodMonths": 8,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3734,
+      "year2024ROI": 79.79110873058384,
+      "year2025N": 2146,
+      "year2025ROI": 87.38117427772602,
+      "year2026N": 40,
+      "year2026ROI": 82.25,
       "warnings": [
         "月別不安定:19ヶ月ROI<70"
       ],
@@ -653,6 +755,12 @@
       "goodMonths": 4,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3511,
+      "year2024ROI": 79.8746795784677,
+      "year2025N": 2010,
+      "year2025ROI": 87.17910447761194,
+      "year2026N": 40,
+      "year2026ROI": 82.25,
       "warnings": [
         "月別不安定:14ヶ月ROI<70"
       ],
@@ -688,6 +796,12 @@
       "goodMonths": 8,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3754,
+      "year2024ROI": 78.32711774107622,
+      "year2025N": 2161,
+      "year2025ROI": 89.36603424340585,
+      "year2026N": 38,
+      "year2026ROI": 86.57894736842104,
       "warnings": [
         "月別不安定:20ヶ月ROI<70"
       ],
@@ -723,6 +837,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3860,
+      "year2024ROI": 79.46891191709847,
+      "year2025N": 2209,
+      "year2025ROI": 87.42417383431417,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:22ヶ月ROI<70",
         "月別勝ち少ない"
@@ -759,6 +879,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3841,
+      "year2024ROI": 78.98203592814373,
+      "year2025N": 2197,
+      "year2025ROI": 87.90168411470188,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:21ヶ月ROI<70",
         "月別勝ち少ない"
@@ -795,6 +921,12 @@
       "goodMonths": 4,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3767,
+      "year2024ROI": 80.65303955402179,
+      "year2025N": 2134,
+      "year2025ROI": 84.76101218369261,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:18ヶ月ROI<70"
       ],
@@ -830,6 +962,12 @@
       "goodMonths": 4,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3767,
+      "year2024ROI": 80.65303955402179,
+      "year2025N": 2134,
+      "year2025ROI": 84.76101218369261,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:18ヶ月ROI<70"
       ],
@@ -865,6 +1003,12 @@
       "goodMonths": 11,
       "badMonths": 4,
       "totalMonths": 18,
+      "year2024N": 642,
+      "year2024ROI": 112.64797507788163,
+      "year2025N": 372,
+      "year2025ROI": 152.2043010752688,
+      "year2026N": 11,
+      "year2026ROI": 147.27272727272725,
       "warnings": [
         "月別不安定:4ヶ月ROI<70"
       ],
@@ -900,6 +1044,12 @@
       "goodMonths": 8,
       "badMonths": 1,
       "totalMonths": 13,
+      "year2024N": 602,
+      "year2024ROI": 112.24252491694351,
+      "year2025N": 451,
+      "year2025ROI": 142.35033259423503,
+      "year2026N": 11,
+      "year2026ROI": 147.27272727272725,
       "warnings": [],
       "judgement": "S",
       "comment": "残す強BUY候補。n=1064 ROI=125.37% exMax=119.50%。8/13ヶ月ROI>=100 / 1ヶ月ROI<70 / worst=27.83%"
@@ -933,6 +1083,12 @@
       "goodMonths": 10,
       "badMonths": 12,
       "totalMonths": 24,
+      "year2024N": 570,
+      "year2024ROI": 95.82456140350875,
+      "year2025N": 304,
+      "year2025ROI": 150.42763157894737,
+      "year2026N": 11,
+      "year2026ROI": 147.27272727272725,
       "warnings": [
         "月別不安定:12ヶ月ROI<70"
       ],
@@ -968,6 +1124,12 @@
       "goodMonths": 12,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 815,
+      "year2024ROI": 98.45398773006133,
+      "year2025N": 427,
+      "year2025ROI": 144.82435597189695,
+      "year2026N": 11,
+      "year2026ROI": 147.27272727272725,
       "warnings": [
         "月別不安定:8ヶ月ROI<70"
       ],
@@ -1003,6 +1165,12 @@
       "goodMonths": 8,
       "badMonths": 7,
       "totalMonths": 22,
+      "year2024N": 987,
+      "year2024ROI": 108.71327254305979,
+      "year2025N": 513,
+      "year2025ROI": 113.99610136452243,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "月別不安定:7ヶ月ROI<70"
       ],
@@ -1038,6 +1206,12 @@
       "goodMonths": 11,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 1151,
+      "year2024ROI": 81.56385751520415,
+      "year2025N": 622,
+      "year2025ROI": 126.9453376205788,
+      "year2026N": 11,
+      "year2026ROI": 147.27272727272725,
       "warnings": [
         "月別不安定:9ヶ月ROI<70"
       ],
@@ -1073,6 +1247,12 @@
       "goodMonths": 8,
       "badMonths": 3,
       "totalMonths": 13,
+      "year2024N": 1423,
+      "year2024ROI": 88.13070976809556,
+      "year2025N": 1094,
+      "year2025ROI": 108.37294332723948,
+      "year2026N": 34,
+      "year2026ROI": 47.647058823529406,
       "warnings": [
         "月別不安定:3ヶ月ROI<70"
       ],
@@ -1110,6 +1290,12 @@
       "goodMonths": 12,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 1818,
+      "year2024ROI": 90.52805280528051,
+      "year2025N": 975,
+      "year2025ROI": 129.67179487179487,
+      "year2026N": 26,
+      "year2026ROI": 62.30769230769231,
       "warnings": [
         "月別不安定:10ヶ月ROI<70"
       ],
@@ -1145,6 +1331,12 @@
       "goodMonths": 12,
       "badMonths": 10,
       "totalMonths": 24,
+      "year2024N": 2018,
+      "year2024ROI": 83.89990089197224,
+      "year2025N": 1083,
+      "year2025ROI": 121.91135734072023,
+      "year2026N": 34,
+      "year2026ROI": 47.647058823529406,
       "warnings": [
         "月別不安定:12ヶ月ROI<70"
       ],
@@ -1180,6 +1372,12 @@
       "goodMonths": 13,
       "badMonths": 6,
       "totalMonths": 24,
+      "year2024N": 2503,
+      "year2024ROI": 87.2752696763883,
+      "year2025N": 1401,
+      "year2025ROI": 111.99857244825127,
+      "year2026N": 26,
+      "year2026ROI": 62.30769230769231,
       "warnings": [
         "月別不安定:16ヶ月ROI<70"
       ],
@@ -1215,6 +1413,12 @@
       "goodMonths": 10,
       "badMonths": 4,
       "totalMonths": 18,
+      "year2024N": 2194,
+      "year2024ROI": 88.37739288969915,
+      "year2025N": 1308,
+      "year2025ROI": 108.77675840978596,
+      "year2026N": 34,
+      "year2026ROI": 47.647058823529406,
       "warnings": [
         "月別不安定:15ヶ月ROI<70"
       ],
@@ -1250,6 +1454,12 @@
       "goodMonths": 9,
       "badMonths": 4,
       "totalMonths": 18,
+      "year2024N": 2838,
+      "year2024ROI": 91.97322057787176,
+      "year2025N": 1732,
+      "year2025ROI": 94.48614318706699,
+      "year2026N": 34,
+      "year2026ROI": 96.76470588235294,
       "warnings": [
         "月別不安定:18ヶ月ROI<70"
       ],
@@ -1285,6 +1495,12 @@
       "goodMonths": 10,
       "badMonths": 6,
       "totalMonths": 24,
+      "year2024N": 2760,
+      "year2024ROI": 80.8623188405797,
+      "year2025N": 1539,
+      "year2025ROI": 105.5945419103314,
+      "year2026N": 37,
+      "year2026ROI": 88.9189189189189,
       "warnings": [
         "月別不安定:16ヶ月ROI<70"
       ],
@@ -1320,6 +1536,12 @@
       "goodMonths": 10,
       "badMonths": 7,
       "totalMonths": 24,
+      "year2024N": 2759,
+      "year2024ROI": 80.89162740123233,
+      "year2025N": 1539,
+      "year2025ROI": 105.5945419103314,
+      "year2026N": 34,
+      "year2026ROI": 47.647058823529406,
       "warnings": [
         "月別不安定:15ヶ月ROI<70"
       ],
@@ -1355,6 +1577,12 @@
       "goodMonths": 9,
       "badMonths": 6,
       "totalMonths": 24,
+      "year2024N": 2874,
+      "year2024ROI": 79.62421711899792,
+      "year2025N": 1606,
+      "year2025ROI": 101.18929016189291,
+      "year2026N": 39,
+      "year2026ROI": 84.35897435897436,
       "warnings": [
         "月別不安定:15ヶ月ROI<70"
       ],
@@ -1390,6 +1618,12 @@
       "goodMonths": 9,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 1412,
+      "year2024ROI": 92.74787535410762,
+      "year2025N": 893,
+      "year2025ROI": 77.80515117581186,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:9ヶ月ROI<70"
       ],
@@ -1425,6 +1659,12 @@
       "goodMonths": 9,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3563,
+      "year2024ROI": 83.62054448498459,
+      "year2025N": 2042,
+      "year2025ROI": 91.83153770812929,
+      "year2026N": 34,
+      "year2026ROI": 96.76470588235294,
       "warnings": [
         "月別不安定:19ヶ月ROI<70"
       ],
@@ -1460,6 +1700,12 @@
       "goodMonths": 7,
       "badMonths": 4,
       "totalMonths": 18,
+      "year2024N": 3169,
+      "year2024ROI": 85.1467339854844,
+      "year2025N": 1922,
+      "year2025ROI": 88.05931321540064,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "平均odds>=50:過剰夢見リスク",
         "月別不安定:4ヶ月ROI<70",
@@ -1497,6 +1743,12 @@
       "goodMonths": 10,
       "badMonths": 12,
       "totalMonths": 24,
+      "year2024N": 1325,
+      "year2024ROI": 69.30566037735849,
+      "year2025N": 722,
+      "year2025ROI": 113.14404432132967,
+      "year2026N": 16,
+      "year2026ROI": 101.25,
       "warnings": [
         "月別不安定:8ヶ月ROI<70"
       ],
@@ -1532,6 +1784,12 @@
       "goodMonths": 10,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3752,
+      "year2024ROI": 81.75639658848617,
+      "year2025N": 2145,
+      "year2025ROI": 87.59906759906761,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "平均odds>=50:過剰夢見リスク",
         "月別不安定:20ヶ月ROI<70",
@@ -1569,6 +1827,12 @@
       "goodMonths": 10,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 2876,
+      "year2024ROI": 78.90472878998608,
+      "year2025N": 1586,
+      "year2025ROI": 92.40226986128626,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:9ヶ月ROI<70"
       ],
@@ -1604,6 +1868,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3830,
+      "year2024ROI": 80.09138381201046,
+      "year2025N": 2197,
+      "year2025ROI": 87.90168411470188,
+      "year2026N": 41,
+      "year2026ROI": 80.24390243902438,
       "warnings": [
         "月別不安定:23ヶ月ROI<70",
         "月別勝ち少ない"
@@ -1640,6 +1910,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3766,
+      "year2024ROI": 81.4524694636219,
+      "year2025N": 2175,
+      "year2025ROI": 85.05747126436782,
+      "year2026N": 37,
+      "year2026ROI": 88.9189189189189,
       "warnings": [
         "月別不安定:21ヶ月ROI<70"
       ],
@@ -1675,6 +1951,12 @@
       "goodMonths": 8,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3005,
+      "year2024ROI": 82.77204658901832,
+      "year2025N": 1684,
+      "year2025ROI": 82.67220902612827,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:11ヶ月ROI<70"
       ],
@@ -1710,6 +1992,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3819,
+      "year2024ROI": 79.25373134328362,
+      "year2025N": 2180,
+      "year2025ROI": 88.58715596330276,
+      "year2026N": 42,
+      "year2026ROI": 78.33333333333333,
       "warnings": [
         "月別不安定:22ヶ月ROI<70",
         "月別勝ち少ない"
@@ -1746,6 +2034,12 @@
       "goodMonths": 6,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3348,
+      "year2024ROI": 78.3482676224612,
+      "year2025N": 1894,
+      "year2025ROI": 90.2323125659979,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:13ヶ月ROI<70"
       ],
@@ -1781,6 +2075,12 @@
       "goodMonths": 8,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3734,
+      "year2024ROI": 79.79110873058384,
+      "year2025N": 2146,
+      "year2025ROI": 87.38117427772602,
+      "year2026N": 40,
+      "year2026ROI": 82.25,
       "warnings": [
         "月別不安定:19ヶ月ROI<70"
       ],
@@ -1816,6 +2116,12 @@
       "goodMonths": 4,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3511,
+      "year2024ROI": 79.8746795784677,
+      "year2025N": 2010,
+      "year2025ROI": 87.17910447761194,
+      "year2026N": 40,
+      "year2026ROI": 82.25,
       "warnings": [
         "月別不安定:14ヶ月ROI<70"
       ],
@@ -1851,6 +2157,12 @@
       "goodMonths": 8,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3754,
+      "year2024ROI": 78.32711774107622,
+      "year2025N": 2161,
+      "year2025ROI": 89.36603424340585,
+      "year2026N": 38,
+      "year2026ROI": 86.57894736842104,
       "warnings": [
         "月別不安定:20ヶ月ROI<70"
       ],
@@ -1886,6 +2198,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3860,
+      "year2024ROI": 79.46891191709847,
+      "year2025N": 2209,
+      "year2025ROI": 87.42417383431417,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:22ヶ月ROI<70",
         "月別勝ち少ない"
@@ -1922,6 +2240,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3841,
+      "year2024ROI": 78.98203592814373,
+      "year2025N": 2197,
+      "year2025ROI": 87.90168411470188,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:21ヶ月ROI<70",
         "月別勝ち少ない"
@@ -1958,6 +2282,12 @@
       "goodMonths": 4,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3767,
+      "year2024ROI": 80.65303955402179,
+      "year2025N": 2134,
+      "year2025ROI": 84.76101218369261,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:18ヶ月ROI<70"
       ],
@@ -1993,6 +2323,12 @@
       "goodMonths": 4,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3767,
+      "year2024ROI": 80.65303955402179,
+      "year2025N": 2134,
+      "year2025ROI": 84.76101218369261,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:18ヶ月ROI<70"
       ],
@@ -2028,6 +2364,12 @@
       "goodMonths": 9,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3533,
+      "year2024ROI": 75.61279365977924,
+      "year2025N": 1924,
+      "year2025ROI": 93.34719334719335,
+      "year2026N": 43,
+      "year2026ROI": 76.51162790697674,
       "warnings": [
         "月別不安定:15ヶ月ROI<70"
       ],
@@ -2063,6 +2405,12 @@
       "goodMonths": 8,
       "badMonths": 10,
       "totalMonths": 24,
+      "year2024N": 3580,
+      "year2024ROI": 78.76815642458102,
+      "year2025N": 2036,
+      "year2025ROI": 87.14636542239688,
+      "year2026N": 40,
+      "year2026ROI": 82.25,
       "warnings": [
         "月別不安定:15ヶ月ROI<70"
       ],
@@ -2098,6 +2446,12 @@
       "goodMonths": 8,
       "badMonths": 8,
       "totalMonths": 23,
+      "year2024N": 2805,
+      "year2024ROI": 82.69875222816401,
+      "year2025N": 1619,
+      "year2025ROI": 80.0308832612724,
+      "year2026N": 36,
+      "year2026ROI": 91.38888888888889,
       "warnings": [
         "平均odds>=50:過剰夢見リスク",
         "月別不安定:13ヶ月ROI<70"
@@ -2134,6 +2488,12 @@
       "goodMonths": 8,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3786,
+      "year2024ROI": 78.13259376650822,
+      "year2025N": 2154,
+      "year2025ROI": 88.34261838440113,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:16ヶ月ROI<70"
       ],
@@ -2169,6 +2529,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3883,
+      "year2024ROI": 78.99819727015198,
+      "year2025N": 2228,
+      "year2025ROI": 86.6786355475763,
+      "year2026N": 42,
+      "year2026ROI": 78.33333333333333,
       "warnings": [
         "平均odds>=50:過剰夢見リスク",
         "月別不安定:22ヶ月ROI<70",
@@ -2206,6 +2572,12 @@
       "goodMonths": 9,
       "badMonths": 7,
       "totalMonths": 24,
+      "year2024N": 3334,
+      "year2024ROI": 74.51709658068386,
+      "year2025N": 1846,
+      "year2025ROI": 95.64463705308776,
+      "year2026N": 38,
+      "year2026ROI": 42.63157894736842,
       "warnings": [
         "月別不安定:14ヶ月ROI<70"
       ],
@@ -2241,6 +2613,12 @@
       "goodMonths": 8,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3574,
+      "year2024ROI": 76.42417459429213,
+      "year2025N": 1963,
+      "year2025ROI": 91.49261334691798,
+      "year2026N": 43,
+      "year2026ROI": 76.51162790697674,
       "warnings": [
         "月別不安定:15ヶ月ROI<70"
       ],
@@ -2276,6 +2654,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3892,
+      "year2024ROI": 78.81551901336077,
+      "year2025N": 2222,
+      "year2025ROI": 86.91269126912692,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "平均odds>=50:過剰夢見リスク",
         "月別不安定:20ヶ月ROI<70",
@@ -2313,6 +2697,12 @@
       "goodMonths": 7,
       "badMonths": 7,
       "totalMonths": 23,
+      "year2024N": 3886,
+      "year2024ROI": 78.93721049922802,
+      "year2025N": 2238,
+      "year2025ROI": 86.29133154602324,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "平均odds>=50:過剰夢見リスク",
         "月別不安定:18ヶ月ROI<70",
@@ -2350,6 +2740,12 @@
       "goodMonths": 8,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3694,
+      "year2024ROI": 75.32485110990798,
+      "year2025N": 2045,
+      "year2025ROI": 92.93398533007337,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:17ヶ月ROI<70"
       ],
@@ -2385,6 +2781,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3901,
+      "year2024ROI": 78.63368367085364,
+      "year2025N": 2229,
+      "year2025ROI": 86.63974876626291,
+      "year2026N": 41,
+      "year2026ROI": 80.24390243902438,
       "warnings": [
         "月別不安定:23ヶ月ROI<70",
         "月別勝ち少ない"
@@ -2421,6 +2823,12 @@
       "goodMonths": 5,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3827,
+      "year2024ROI": 77.8207473216619,
+      "year2025N": 2151,
+      "year2025ROI": 88.19153881915389,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:19ヶ月ROI<70"
       ],
@@ -2456,6 +2864,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3919,
+      "year2024ROI": 78.27251849961728,
+      "year2025N": 2221,
+      "year2025ROI": 86.95182350292662,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "平均odds>=50:過剰夢見リスク",
         "月別不安定:19ヶ月ROI<70",
@@ -2493,6 +2907,12 @@
       "goodMonths": 6,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3841,
+      "year2024ROI": 78.95339755272067,
+      "year2025N": 2211,
+      "year2025ROI": 85.45454545454547,
+      "year2026N": 43,
+      "year2026ROI": 76.51162790697674,
       "warnings": [
         "月別不安定:21ヶ月ROI<70"
       ],
@@ -2528,6 +2948,12 @@
       "goodMonths": 8,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3556,
+      "year2024ROI": 79.32508436445445,
+      "year2025N": 2072,
+      "year2025ROI": 83.99613899613901,
+      "year2026N": 29,
+      "year2026ROI": 113.44827586206895,
       "warnings": [
         "月別不安定:17ヶ月ROI<70"
       ],
@@ -2563,6 +2989,12 @@
       "goodMonths": 6,
       "badMonths": 11,
       "totalMonths": 24,
+      "year2024N": 3386,
+      "year2024ROI": 77.66095688127587,
+      "year2025N": 2020,
+      "year2025ROI": 87.29702970297029,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:12ヶ月ROI<70"
       ],
@@ -2598,6 +3030,12 @@
       "goodMonths": 6,
       "badMonths": 11,
       "totalMonths": 24,
+      "year2024N": 3386,
+      "year2024ROI": 77.66095688127587,
+      "year2025N": 2020,
+      "year2025ROI": 87.29702970297029,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:12ヶ月ROI<70"
       ],
@@ -2633,6 +3071,12 @@
       "goodMonths": 6,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3858,
+      "year2024ROI": 77.95489891135306,
+      "year2025N": 2172,
+      "year2025ROI": 87.03959484346225,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "平均odds>=50:過剰夢見リスク",
         "月別不安定:20ヶ月ROI<70"
@@ -2669,6 +3113,12 @@
       "goodMonths": 8,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3805,
+      "year2024ROI": 77.0696452036794,
+      "year2025N": 2186,
+      "year2025ROI": 88.34400731930468,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:17ヶ月ROI<70"
       ],
@@ -2704,6 +3154,12 @@
       "goodMonths": 6,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3777,
+      "year2024ROI": 80.32036007413292,
+      "year2025N": 2170,
+      "year2025ROI": 82.14746543778803,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:17ヶ月ROI<70"
       ],
@@ -2739,6 +3195,12 @@
       "goodMonths": 5,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3771,
+      "year2024ROI": 79.72421108459295,
+      "year2025N": 2185,
+      "year2025ROI": 83.0892448512586,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:15ヶ月ROI<70"
       ],
@@ -2774,6 +3236,12 @@
       "goodMonths": 7,
       "badMonths": 9,
       "totalMonths": 23,
+      "year2024N": 3809,
+      "year2024ROI": 78.90784982935156,
+      "year2025N": 2171,
+      "year2025ROI": 84.32519576232153,
+      "year2026N": 38,
+      "year2026ROI": 86.57894736842104,
       "warnings": [
         "月別不安定:15ヶ月ROI<70"
       ],
@@ -2809,6 +3277,12 @@
       "goodMonths": 9,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3617,
+      "year2024ROI": 77.63339784351675,
+      "year2025N": 2042,
+      "year2025ROI": 86.69441723800196,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:15ヶ月ROI<70"
       ],
@@ -2844,6 +3318,12 @@
       "goodMonths": 7,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3762,
+      "year2024ROI": 76.1509835194046,
+      "year2025N": 2171,
+      "year2025ROI": 88.95439889451868,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:17ヶ月ROI<70"
       ],
@@ -2881,6 +3361,12 @@
       "goodMonths": 1,
       "badMonths": 2,
       "totalMonths": 3,
+      "year2024N": 1,
+      "year2024ROI": 0,
+      "year2025N": 1,
+      "year2025ROI": 0,
+      "year2026N": 9,
+      "year2026ROI": 365.55555555555554,
       "warnings": [
         "n<50:偽edge疑い",
         "的中<=2件:高配当依存",
@@ -2918,6 +3404,12 @@
       "goodMonths": 11,
       "badMonths": 4,
       "totalMonths": 18,
+      "year2024N": 642,
+      "year2024ROI": 112.64797507788163,
+      "year2025N": 372,
+      "year2025ROI": 152.2043010752688,
+      "year2026N": 11,
+      "year2026ROI": 147.27272727272725,
       "warnings": [
         "月別不安定:4ヶ月ROI<70"
       ],
@@ -2953,6 +3445,12 @@
       "goodMonths": 8,
       "badMonths": 1,
       "totalMonths": 13,
+      "year2024N": 602,
+      "year2024ROI": 112.24252491694351,
+      "year2025N": 451,
+      "year2025ROI": 142.35033259423503,
+      "year2026N": 11,
+      "year2026ROI": 147.27272727272725,
       "warnings": [],
       "judgement": "S",
       "comment": "残す強BUY候補。n=1064 ROI=125.37% exMax=119.50%。8/13ヶ月ROI>=100 / 1ヶ月ROI<70 / worst=27.83%"
@@ -2986,6 +3484,12 @@
       "goodMonths": 10,
       "badMonths": 12,
       "totalMonths": 24,
+      "year2024N": 570,
+      "year2024ROI": 95.82456140350875,
+      "year2025N": 304,
+      "year2025ROI": 150.42763157894737,
+      "year2026N": 11,
+      "year2026ROI": 147.27272727272725,
       "warnings": [
         "月別不安定:12ヶ月ROI<70"
       ],
@@ -3021,6 +3525,12 @@
       "goodMonths": 12,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 815,
+      "year2024ROI": 98.45398773006133,
+      "year2025N": 427,
+      "year2025ROI": 144.82435597189695,
+      "year2026N": 11,
+      "year2026ROI": 147.27272727272725,
       "warnings": [
         "月別不安定:8ヶ月ROI<70"
       ],
@@ -3056,6 +3566,12 @@
       "goodMonths": 1,
       "badMonths": 7,
       "totalMonths": 8,
+      "year2024N": 6,
+      "year2024ROI": 0,
+      "year2025N": 39,
+      "year2025ROI": 131.02564102564102,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "n<50:偽edge疑い",
         "的中<=2件:高配当依存",
@@ -3095,6 +3611,12 @@
       "goodMonths": 8,
       "badMonths": 7,
       "totalMonths": 22,
+      "year2024N": 987,
+      "year2024ROI": 108.71327254305979,
+      "year2025N": 513,
+      "year2025ROI": 113.99610136452243,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "月別不安定:7ヶ月ROI<70"
       ],
@@ -3130,6 +3652,12 @@
       "goodMonths": 11,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 1151,
+      "year2024ROI": 81.56385751520415,
+      "year2025N": 622,
+      "year2025ROI": 126.9453376205788,
+      "year2026N": 11,
+      "year2026ROI": 147.27272727272725,
       "warnings": [
         "月別不安定:9ヶ月ROI<70"
       ],
@@ -3165,6 +3693,12 @@
       "goodMonths": 8,
       "badMonths": 3,
       "totalMonths": 13,
+      "year2024N": 1423,
+      "year2024ROI": 88.13070976809556,
+      "year2025N": 1094,
+      "year2025ROI": 108.37294332723948,
+      "year2026N": 34,
+      "year2026ROI": 47.647058823529406,
       "warnings": [
         "月別不安定:3ヶ月ROI<70"
       ],
@@ -3200,6 +3734,12 @@
       "goodMonths": 5,
       "badMonths": 15,
       "totalMonths": 22,
+      "year2024N": 397,
+      "year2024ROI": 78.94206549118388,
+      "year2025N": 224,
+      "year2025ROI": 117.81250000000001,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "月別不安定:15ヶ月ROI<70"
       ],
@@ -3235,6 +3775,12 @@
       "goodMonths": 3,
       "badMonths": 1,
       "totalMonths": 7,
+      "year2024N": 913,
+      "year2024ROI": 76.08981380065717,
+      "year2025N": 820,
+      "year2025ROI": 109.58536585365854,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [],
       "judgement": "B",
       "comment": "残す強BUY候補。n=1777 ROI=91.51% exMax=87.14%。3/7ヶ月ROI>=100 / 1ヶ月ROI<70 / worst=61.13%"
@@ -3268,6 +3814,12 @@
       "goodMonths": 7,
       "badMonths": 10,
       "totalMonths": 22,
+      "year2024N": 1409,
+      "year2024ROI": 96.37331440738112,
+      "year2025N": 759,
+      "year2025ROI": 82.4505928853755,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "月別不安定:10ヶ月ROI<70"
       ],
@@ -3303,6 +3855,12 @@
       "goodMonths": 10,
       "badMonths": 7,
       "totalMonths": 24,
+      "year2024N": 2759,
+      "year2024ROI": 80.89162740123233,
+      "year2025N": 1539,
+      "year2025ROI": 105.5945419103314,
+      "year2026N": 34,
+      "year2026ROI": 47.647058823529406,
       "warnings": [
         "月別不安定:7ヶ月ROI<70"
       ],
@@ -3338,6 +3896,12 @@
       "goodMonths": 9,
       "badMonths": 13,
       "totalMonths": 24,
+      "year2024N": 947,
+      "year2024ROI": 72.84054910242872,
+      "year2025N": 503,
+      "year2025ROI": 121.70974155069581,
+      "year2026N": 9,
+      "year2026ROI": 0,
       "warnings": [
         "月別不安定:13ヶ月ROI<70"
       ],
@@ -3373,6 +3937,12 @@
       "goodMonths": 9,
       "badMonths": 11,
       "totalMonths": 22,
+      "year2024N": 642,
+      "year2024ROI": 79.54828660436138,
+      "year2025N": 343,
+      "year2025ROI": 105.88921282798836,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "月別不安定:11ヶ月ROI<70"
       ],
@@ -3408,6 +3978,12 @@
       "goodMonths": 7,
       "badMonths": 3,
       "totalMonths": 13,
+      "year2024N": 2059,
+      "year2024ROI": 84.42447790189411,
+      "year2025N": 1601,
+      "year2025ROI": 90.8994378513429,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:3ヶ月ROI<70"
       ],
@@ -3443,6 +4019,12 @@
       "goodMonths": 7,
       "badMonths": 4,
       "totalMonths": 18,
+      "year2024N": 3169,
+      "year2024ROI": 85.1467339854844,
+      "year2025N": 1922,
+      "year2025ROI": 88.05931321540064,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:4ヶ月ROI<70"
       ],
@@ -3478,6 +4060,12 @@
       "goodMonths": 10,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 917,
+      "year2024ROI": 67.4154852780807,
+      "year2025N": 480,
+      "year2025ROI": 120.58333333333333,
+      "year2026N": 12,
+      "year2026ROI": 135,
       "warnings": [
         "月別不安定:9ヶ月ROI<70"
       ],
@@ -3513,6 +4101,12 @@
       "goodMonths": 0,
       "badMonths": 1,
       "totalMonths": 5,
+      "year2024N": 1110,
+      "year2024ROI": 86.48648648648648,
+      "year2025N": 321,
+      "year2025ROI": 73.89408099688474,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "月別勝ち少ない"
       ],
@@ -3548,6 +4142,12 @@
       "goodMonths": 4,
       "badMonths": 2,
       "totalMonths": 6,
+      "year2024N": 1146,
+      "year2024ROI": 91.06457242582896,
+      "year2025N": 781,
+      "year2025ROI": 71.28040973111396,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [],
       "judgement": "D",
       "comment": "残す強BUY候補。n=1927 ROI=83.05% exMax=79.81%。4/6ヶ月ROI>=100 / 2ヶ月ROI<70 / worst=23.49%"
@@ -3581,6 +4181,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:8ヶ月ROI<70"
       ],
@@ -3616,6 +4222,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:8ヶ月ROI<70"
       ],
@@ -3651,6 +4263,12 @@
       "goodMonths": 6,
       "badMonths": 10,
       "totalMonths": 24,
+      "year2024N": 3931,
+      "year2024ROI": 78.0335792419232,
+      "year2025N": 2175,
+      "year2025ROI": 83.56321839080461,
+      "year2026N": 43,
+      "year2026ROI": 38.83720930232558,
       "warnings": [
         "月別不安定:10ヶ月ROI<70"
       ],
@@ -3686,6 +4304,12 @@
       "goodMonths": 7,
       "badMonths": 9,
       "totalMonths": 22,
+      "year2024N": 3744,
+      "year2024ROI": 75.9428418803419,
+      "year2025N": 2229,
+      "year2025ROI": 84.29789143113506,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "月別不安定:9ヶ月ROI<70"
       ],
@@ -3721,6 +4345,12 @@
       "goodMonths": 7,
       "badMonths": 9,
       "totalMonths": 22,
+      "year2024N": 3744,
+      "year2024ROI": 75.9428418803419,
+      "year2025N": 2229,
+      "year2025ROI": 84.29789143113506,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "月別不安定:9ヶ月ROI<70"
       ],
@@ -3756,6 +4386,12 @@
       "goodMonths": 7,
       "badMonths": 16,
       "totalMonths": 23,
+      "year2024N": 396,
+      "year2024ROI": 62.29797979797981,
+      "year2025N": 194,
+      "year2025ROI": 98.35051546391753,
+      "year2026N": 24,
+      "year2026ROI": 137.08333333333334,
       "warnings": [
         "月別不安定:16ヶ月ROI<70"
       ],
@@ -3791,6 +4427,12 @@
       "goodMonths": 5,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 1696,
+      "year2024ROI": 72.66509433962264,
+      "year2025N": 934,
+      "year2025ROI": 71.73447537473233,
+      "year2026N": 18,
+      "year2026ROI": 92.77777777777777,
       "warnings": [
         "月別不安定:9ヶ月ROI<70"
       ],
@@ -3826,6 +4468,12 @@
       "goodMonths": 3,
       "badMonths": 15,
       "totalMonths": 18,
+      "year2024N": 118,
+      "year2024ROI": 0,
+      "year2025N": 57,
+      "year2025ROI": 137.3684210526316,
+      "year2026N": 8,
+      "year2026ROI": 202.5,
       "warnings": [
         "月別不安定:15ヶ月ROI<70"
       ],
@@ -3861,6 +4509,12 @@
       "goodMonths": 1,
       "badMonths": 18,
       "totalMonths": 19,
+      "year2024N": 77,
+      "year2024ROI": 55.58441558441558,
+      "year2025N": 26,
+      "year2025ROI": 0,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "月別不安定:18ヶ月ROI<70",
         "月別勝ち少ない"
@@ -3897,6 +4551,12 @@
       "goodMonths": 1,
       "badMonths": 19,
       "totalMonths": 20,
+      "year2024N": 111,
+      "year2024ROI": 38.55855855855855,
+      "year2025N": 32,
+      "year2025ROI": 0,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "月別不安定:19ヶ月ROI<70",
         "月別勝ち少ない"
@@ -3930,6 +4590,12 @@
       "worstMonthROI": 0,
       "goodMonths": 7,
       "badMonths": 8,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "8ヶ月ROI<70"
       ],
@@ -3959,6 +4625,12 @@
       "worstMonthROI": 0,
       "goodMonths": 4,
       "badMonths": 7,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "7ヶ月ROI<70"
       ],
@@ -3988,6 +4660,12 @@
       "worstMonthROI": 0,
       "goodMonths": 0,
       "badMonths": 0,
+      "year2024N": 0,
+      "year2024ROI": null,
+      "year2025N": 0,
+      "year2025ROI": null,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "n<50",
         "subsetSingle=0.00% vs baseAll=80.38%"
@@ -4018,6 +4696,12 @@
       "worstMonthROI": 0,
       "goodMonths": 0,
       "badMonths": 9,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "avg_tickets>10:コスト増大",
         "高配当1発依存",
@@ -4049,6 +4733,12 @@
       "worstMonthROI": 0,
       "goodMonths": 3,
       "badMonths": 11,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "11ヶ月ROI<70"
       ],
@@ -4078,6 +4768,12 @@
       "worstMonthROI": 35.578947368421055,
       "goodMonths": 7,
       "badMonths": 11,
+      "year2024N": 605,
+      "year2024ROI": 82.9090909090909,
+      "year2025N": 422,
+      "year2025ROI": 91.01895734597156,
+      "year2026N": 2,
+      "year2026ROI": 0,
       "warnings": [
         "avg_tickets>10:コスト増大",
         "11ヶ月ROI<70",
@@ -4109,6 +4805,12 @@
       "worstMonthROI": 0,
       "goodMonths": 2,
       "badMonths": 15,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "高配当1発依存",
         "15ヶ月ROI<70"
@@ -4139,6 +4841,12 @@
       "worstMonthROI": 0,
       "goodMonths": 0,
       "badMonths": 0,
+      "year2024N": 0,
+      "year2024ROI": null,
+      "year2025N": 0,
+      "year2025ROI": null,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "n<50",
         "subsetSingle=0.00% vs baseAll=80.38%"
@@ -4169,6 +4877,12 @@
       "worstMonthROI": 0,
       "goodMonths": 8,
       "badMonths": 12,
+      "year2024N": 418,
+      "year2024ROI": 94.76076555023926,
+      "year2025N": 341,
+      "year2025ROI": 39.64809384164222,
+      "year2026N": 1,
+      "year2026ROI": 0,
       "warnings": [
         "12ヶ月ROI<70",
         "subsetSingle=69.91% vs baseAll=80.38%"
@@ -4199,6 +4913,12 @@
       "worstMonthROI": 0,
       "goodMonths": 5,
       "badMonths": 15,
+      "year2024N": 1192,
+      "year2024ROI": 70.10906040268455,
+      "year2025N": 726,
+      "year2025ROI": 42.16253443526171,
+      "year2026N": 10,
+      "year2026ROI": 167,
       "warnings": [
         "高配当1発依存",
         "15ヶ月ROI<70",
@@ -4230,6 +4950,12 @@
       "worstMonthROI": 0,
       "goodMonths": 7,
       "badMonths": 9,
+      "year2024N": 3555,
+      "year2024ROI": 79.34739803094234,
+      "year2025N": 2071,
+      "year2025ROI": 84.03669724770644,
+      "year2026N": 20,
+      "year2026ROI": 0,
       "warnings": [
         "9ヶ月ROI<70"
       ],
@@ -4259,6 +4985,12 @@
       "worstMonthROI": 0,
       "goodMonths": 0,
       "badMonths": 0,
+      "year2024N": 0,
+      "year2024ROI": null,
+      "year2025N": 0,
+      "year2025ROI": null,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "n<50",
         "subsetSingle=0.00% vs baseAll=80.38%"
@@ -4289,6 +5021,12 @@
       "worstMonthROI": 0,
       "goodMonths": 3,
       "badMonths": 16,
+      "year2024N": 1151,
+      "year2024ROI": 81.56385751520415,
+      "year2025N": 622,
+      "year2025ROI": 126.9453376205788,
+      "year2026N": 11,
+      "year2026ROI": 147.27272727272725,
       "warnings": [
         "高配当1発依存",
         "16ヶ月ROI<70",
@@ -4320,6 +5058,12 @@
       "worstMonthROI": 0,
       "goodMonths": 7,
       "badMonths": 9,
+      "year2024N": 2759,
+      "year2024ROI": 80.89162740123233,
+      "year2025N": 1539,
+      "year2025ROI": 105.5945419103314,
+      "year2026N": 34,
+      "year2026ROI": 47.647058823529406,
       "warnings": [
         "9ヶ月ROI<70",
         "subsetSingle=89.41% vs baseAll=80.38%"
@@ -4350,6 +5094,12 @@
       "worstMonthROI": 0,
       "goodMonths": 0,
       "badMonths": 0,
+      "year2024N": 0,
+      "year2024ROI": null,
+      "year2025N": 0,
+      "year2025ROI": null,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "n<50",
         "subsetSingle=0.00% vs baseAll=80.38%"
@@ -4380,6 +5130,12 @@
       "worstMonthROI": 0,
       "goodMonths": 7,
       "badMonths": 15,
+      "year2024N": 815,
+      "year2024ROI": 98.45398773006133,
+      "year2025N": 427,
+      "year2025ROI": 144.82435597189695,
+      "year2026N": 11,
+      "year2026ROI": 147.27272727272725,
       "warnings": [
         "15ヶ月ROI<70",
         "subsetSingle=114.68% vs baseAll=80.38%"
@@ -4412,11 +5168,313 @@
       "worstMonthROI": 0,
       "goodMonths": 8,
       "badMonths": 12,
+      "year2024N": 418,
+      "year2024ROI": 94.76076555023926,
+      "year2025N": 341,
+      "year2025ROI": 39.64809384164222,
+      "year2026N": 1,
+      "year2026ROI": 0,
       "warnings": [
         "12ヶ月ROI<70",
         "subsetSingle=69.91% vs baseAll=80.38%"
       ],
       "judgement": "A"
+    }
+  ],
+  "combinedStrategies": [
+    {
+      "label": "月4-9 AND raceNo7-9 AND F==0",
+      "n": 752,
+      "roi": 146.6356382978723,
+      "hits": 27,
+      "hitRate": 0.03590425531914894,
+      "roiExMaxHit": 138.3377659574468,
+      "trainROI": 154.33789954337897,
+      "trainN": 438,
+      "validationROI": 149.6825396825397,
+      "validationN": 252,
+      "testROI": 79.83870967741935,
+      "testN": 62,
+      "year2024N": 425,
+      "year2024ROI": 144.87058823529412,
+      "year2025N": 316,
+      "year2025ROI": 148.9873417721519,
+      "year2026N": 11,
+      "year2026ROI": 147.27272727272725,
+      "goodMonths": 10,
+      "badMonths": 1,
+      "worstMonthROI": 39.02439024390244,
+      "baselineROI": 80.37699680511187,
+      "improvement": 66.25864149276043,
+      "warnings": [],
+      "judgement": "S"
+    },
+    {
+      "label": "月4-9 AND raceNo7-9 AND F==0 AND exSt<0.10",
+      "n": 259,
+      "roi": 165.90733590733592,
+      "hits": 10,
+      "hitRate": 0.03861003861003861,
+      "roiExMaxHit": 141.8146718146718,
+      "trainROI": 216.13793103448273,
+      "trainN": 145,
+      "validationROI": 122.42105263157895,
+      "validationN": 95,
+      "testROI": 0,
+      "testN": 19,
+      "year2024N": 142,
+      "year2024ROI": 220.70422535211267,
+      "year2025N": 117,
+      "year2025ROI": 99.40170940170941,
+      "year2026N": 0,
+      "year2026ROI": null,
+      "goodMonths": 5,
+      "badMonths": 6,
+      "worstMonthROI": 0,
+      "baselineROI": 80.37699680511187,
+      "improvement": 85.53033910222405,
+      "warnings": [
+        "6ヶ月ROI<70"
+      ],
+      "judgement": "A"
+    },
+    {
+      "label": "月4-9 AND raceNo7-9 AND F==0 AND exRank<=3",
+      "n": 12,
+      "roi": 135,
+      "hits": 1,
+      "hitRate": 0.08333333333333333,
+      "roiExMaxHit": 0,
+      "trainROI": 0,
+      "trainN": 0,
+      "validationROI": 0,
+      "validationN": 1,
+      "testROI": 147.27272727272725,
+      "testN": 11,
+      "year2024N": 0,
+      "year2024ROI": null,
+      "year2025N": 1,
+      "year2025ROI": 0,
+      "year2026N": 11,
+      "year2026ROI": 147.27272727272725,
+      "goodMonths": 1,
+      "badMonths": 1,
+      "worstMonthROI": 0,
+      "baselineROI": 80.37699680511187,
+      "improvement": 54.62300319488813,
+      "warnings": [
+        "n<50",
+        "hits<=2",
+        "最大hit依存"
+      ],
+      "judgement": "D"
+    },
+    {
+      "label": "raceNo7-9 AND F==0 AND exSt<0.10",
+      "n": 433,
+      "roi": 133.32563510392612,
+      "hits": 13,
+      "hitRate": 0.03002309468822171,
+      "roiExMaxHit": 118.9145496535797,
+      "trainROI": 123.0976430976431,
+      "trainN": 297,
+      "validationROI": 122.42105263157895,
+      "validationN": 95,
+      "testROI": 232.68292682926833,
+      "testN": 41,
+      "year2024N": 274,
+      "year2024ROI": 114.3795620437956,
+      "year2025N": 159,
+      "year2025ROI": 165.97484276729563,
+      "year2026N": 0,
+      "year2026ROI": null,
+      "goodMonths": 7,
+      "badMonths": 14,
+      "worstMonthROI": 0,
+      "baselineROI": 80.37699680511187,
+      "improvement": 52.948638298814245,
+      "warnings": [
+        "14ヶ月ROI<70"
+      ],
+      "judgement": "S"
+    },
+    {
+      "label": "月4-9 AND F==0 AND exSt<0.10",
+      "n": 861,
+      "roi": 126.05110336817653,
+      "hits": 25,
+      "hitRate": 0.029036004645760744,
+      "roiExMaxHit": 117.02671312427411,
+      "trainROI": 140.23032629558543,
+      "trainN": 521,
+      "validationROI": 104.73309608540926,
+      "validationN": 281,
+      "testROI": 102.37288135593221,
+      "testN": 59,
+      "year2024N": 505,
+      "year2024ROI": 137.6039603960396,
+      "year2025N": 356,
+      "year2025ROI": 109.66292134831461,
+      "year2026N": 0,
+      "year2026ROI": null,
+      "goodMonths": 5,
+      "badMonths": 3,
+      "worstMonthROI": 0,
+      "baselineROI": 80.37699680511187,
+      "improvement": 45.674106563064655,
+      "warnings": [
+        "3ヶ月ROI<70"
+      ],
+      "judgement": "S"
+    },
+    {
+      "label": "月4-9 AND F==0 AND exRank<=2",
+      "n": 0,
+      "roi": 0,
+      "hits": 0,
+      "hitRate": 0,
+      "roiExMaxHit": 0,
+      "trainROI": 0,
+      "trainN": 0,
+      "validationROI": 0,
+      "validationN": 0,
+      "testROI": 0,
+      "testN": 0,
+      "year2024N": 0,
+      "year2024ROI": null,
+      "year2025N": 0,
+      "year2025ROI": null,
+      "year2026N": 0,
+      "year2026ROI": null,
+      "goodMonths": 0,
+      "badMonths": 0,
+      "worstMonthROI": 0,
+      "baselineROI": 80.37699680511187,
+      "improvement": -80.37699680511187,
+      "warnings": [
+        "n<50",
+        "hits<=2",
+        "最大hit依存"
+      ],
+      "judgement": "D"
+    },
+    {
+      "label": "exSt<0.10 AND F==0 AND raceNo7-9 AND 月4-9",
+      "n": 259,
+      "roi": 165.90733590733592,
+      "hits": 10,
+      "hitRate": 0.03861003861003861,
+      "roiExMaxHit": 141.8146718146718,
+      "trainROI": 216.13793103448273,
+      "trainN": 145,
+      "validationROI": 122.42105263157895,
+      "validationN": 95,
+      "testROI": 0,
+      "testN": 19,
+      "year2024N": 142,
+      "year2024ROI": 220.70422535211267,
+      "year2025N": 117,
+      "year2025ROI": 99.40170940170941,
+      "year2026N": 0,
+      "year2026ROI": null,
+      "goodMonths": 5,
+      "badMonths": 6,
+      "worstMonthROI": 0,
+      "baselineROI": 80.37699680511187,
+      "improvement": 85.53033910222405,
+      "warnings": [
+        "6ヶ月ROI<70"
+      ],
+      "judgement": "A"
+    },
+    {
+      "label": "raceNo7-9 AND F==0 AND 月4-9 AND exRank<=2",
+      "n": 0,
+      "roi": 0,
+      "hits": 0,
+      "hitRate": 0,
+      "roiExMaxHit": 0,
+      "trainROI": 0,
+      "trainN": 0,
+      "validationROI": 0,
+      "validationN": 0,
+      "testROI": 0,
+      "testN": 0,
+      "year2024N": 0,
+      "year2024ROI": null,
+      "year2025N": 0,
+      "year2025ROI": null,
+      "year2026N": 0,
+      "year2026ROI": null,
+      "goodMonths": 0,
+      "badMonths": 0,
+      "worstMonthROI": 0,
+      "baselineROI": 80.37699680511187,
+      "improvement": -80.37699680511187,
+      "warnings": [
+        "n<50",
+        "hits<=2",
+        "最大hit依存"
+      ],
+      "judgement": "D"
+    },
+    {
+      "label": "exSt<0.10 AND F==0 AND 月4-12",
+      "n": 1240,
+      "roi": 117.12096774193547,
+      "hits": 35,
+      "hitRate": 0.028225806451612902,
+      "roiExMaxHit": 110.85483870967741,
+      "trainROI": 122.81862745098042,
+      "trainN": 816,
+      "validationROI": 104.73309608540926,
+      "validationN": 281,
+      "testROI": 108.95104895104896,
+      "testN": 143,
+      "year2024N": 800,
+      "year2024ROI": 120.81250000000001,
+      "year2025N": 440,
+      "year2025ROI": 110.4090909090909,
+      "year2026N": 0,
+      "year2026ROI": null,
+      "goodMonths": 7,
+      "badMonths": 4,
+      "worstMonthROI": 0,
+      "baselineROI": 80.37699680511187,
+      "improvement": 36.7439709368236,
+      "warnings": [
+        "4ヶ月ROI<70"
+      ],
+      "judgement": "S"
+    },
+    {
+      "label": "月4-9 AND raceNo7-9 AND F==0 AND wind<5",
+      "n": 633,
+      "roi": 134.8815165876777,
+      "hits": 21,
+      "hitRate": 0.03317535545023697,
+      "roiExMaxHit": 125.02369668246445,
+      "trainROI": 117.58620689655173,
+      "trainN": 377,
+      "validationROI": 186.73267326732673,
+      "validationN": 202,
+      "testROI": 61.66666666666666,
+      "testN": 54,
+      "year2024N": 367,
+      "year2024ROI": 120.79019073569484,
+      "year2025N": 257,
+      "year2025ROI": 159.72762645914398,
+      "year2026N": 9,
+      "year2026ROI": 0,
+      "goodMonths": 8,
+      "badMonths": 5,
+      "worstMonthROI": 0,
+      "baselineROI": 80.37699680511187,
+      "improvement": 54.504519782565836,
+      "warnings": [
+        "5ヶ月ROI<70"
+      ],
+      "judgement": "S"
     }
   ],
   "risky": [
@@ -4449,6 +5507,12 @@
       "goodMonths": 6,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3937,
+      "year2024ROI": 77.91465582931168,
+      "year2025N": 2214,
+      "year2025ROI": 84.3992773261066,
+      "year2026N": 43,
+      "year2026ROI": 38.83720930232558,
       "warnings": [
         "的中<=2件:高配当依存",
         "平均odds>=50:過剰夢見リスク",
@@ -4486,6 +5550,12 @@
       "goodMonths": 0,
       "badMonths": 1,
       "totalMonths": 5,
+      "year2024N": 1110,
+      "year2024ROI": 86.48648648648648,
+      "year2025N": 321,
+      "year2025ROI": 73.89408099688474,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "月別勝ち少ない"
       ],
@@ -4521,6 +5591,12 @@
       "goodMonths": 4,
       "badMonths": 2,
       "totalMonths": 6,
+      "year2024N": 1146,
+      "year2024ROI": 91.06457242582896,
+      "year2025N": 781,
+      "year2025ROI": 71.28040973111396,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [],
       "judgement": "D",
       "comment": "残す強BUY候補。n=1927 ROI=83.05% exMax=79.81%。4/6ヶ月ROI>=100 / 2ヶ月ROI<70 / worst=23.49%"
@@ -4554,6 +5630,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:8ヶ月ROI<70"
       ],
@@ -4589,6 +5671,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:8ヶ月ROI<70"
       ],
@@ -4624,6 +5712,12 @@
       "goodMonths": 6,
       "badMonths": 10,
       "totalMonths": 24,
+      "year2024N": 3931,
+      "year2024ROI": 78.0335792419232,
+      "year2025N": 2175,
+      "year2025ROI": 83.56321839080461,
+      "year2026N": 43,
+      "year2026ROI": 38.83720930232558,
       "warnings": [
         "月別不安定:10ヶ月ROI<70"
       ],
@@ -4659,6 +5753,12 @@
       "goodMonths": 7,
       "badMonths": 9,
       "totalMonths": 22,
+      "year2024N": 3744,
+      "year2024ROI": 75.9428418803419,
+      "year2025N": 2229,
+      "year2025ROI": 84.29789143113506,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "月別不安定:9ヶ月ROI<70"
       ],
@@ -4694,6 +5794,12 @@
       "goodMonths": 7,
       "badMonths": 9,
       "totalMonths": 22,
+      "year2024N": 3744,
+      "year2024ROI": 75.9428418803419,
+      "year2025N": 2229,
+      "year2025ROI": 84.29789143113506,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "月別不安定:9ヶ月ROI<70"
       ],
@@ -4729,6 +5835,12 @@
       "goodMonths": 7,
       "badMonths": 16,
       "totalMonths": 23,
+      "year2024N": 396,
+      "year2024ROI": 62.29797979797981,
+      "year2025N": 194,
+      "year2025ROI": 98.35051546391753,
+      "year2026N": 24,
+      "year2026ROI": 137.08333333333334,
       "warnings": [
         "月別不安定:16ヶ月ROI<70"
       ],
@@ -4764,6 +5876,12 @@
       "goodMonths": 5,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 1696,
+      "year2024ROI": 72.66509433962264,
+      "year2025N": 934,
+      "year2025ROI": 71.73447537473233,
+      "year2026N": 18,
+      "year2026ROI": 92.77777777777777,
       "warnings": [
         "月別不安定:9ヶ月ROI<70"
       ],
@@ -4799,6 +5917,12 @@
       "goodMonths": 3,
       "badMonths": 15,
       "totalMonths": 18,
+      "year2024N": 118,
+      "year2024ROI": 0,
+      "year2025N": 57,
+      "year2025ROI": 137.3684210526316,
+      "year2026N": 8,
+      "year2026ROI": 202.5,
       "warnings": [
         "月別不安定:15ヶ月ROI<70"
       ],
@@ -4834,6 +5958,12 @@
       "goodMonths": 1,
       "badMonths": 18,
       "totalMonths": 19,
+      "year2024N": 77,
+      "year2024ROI": 55.58441558441558,
+      "year2025N": 26,
+      "year2025ROI": 0,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "月別不安定:18ヶ月ROI<70",
         "月別勝ち少ない"
@@ -4870,6 +6000,12 @@
       "goodMonths": 1,
       "badMonths": 19,
       "totalMonths": 20,
+      "year2024N": 111,
+      "year2024ROI": 38.55855855855855,
+      "year2025N": 32,
+      "year2025ROI": 0,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "月別不安定:19ヶ月ROI<70",
         "月別勝ち少ない"
@@ -4906,6 +6042,12 @@
       "goodMonths": 1,
       "badMonths": 19,
       "totalMonths": 20,
+      "year2024N": 111,
+      "year2024ROI": 38.55855855855855,
+      "year2025N": 32,
+      "year2025ROI": 0,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "月別不安定:19ヶ月ROI<70",
         "月別勝ち少ない"
@@ -4942,6 +6084,12 @@
       "goodMonths": 0,
       "badMonths": 22,
       "totalMonths": 22,
+      "year2024N": 82,
+      "year2024ROI": 0,
+      "year2025N": 44,
+      "year2025ROI": 0,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "月別不安定:22ヶ月ROI<70",
         "月別勝ち少ない"
@@ -4980,6 +6128,12 @@
       "goodMonths": 7,
       "badMonths": 16,
       "totalMonths": 23,
+      "year2024N": 396,
+      "year2024ROI": 62.29797979797981,
+      "year2025N": 194,
+      "year2025ROI": 98.35051546391753,
+      "year2026N": 24,
+      "year2026ROI": 137.08333333333334,
       "warnings": [
         "月別不安定:9ヶ月ROI<70"
       ],
@@ -5015,6 +6169,12 @@
       "goodMonths": 8,
       "badMonths": 8,
       "totalMonths": 23,
+      "year2024N": 2805,
+      "year2024ROI": 82.69875222816401,
+      "year2025N": 1619,
+      "year2025ROI": 80.0308832612724,
+      "year2026N": 36,
+      "year2026ROI": 91.38888888888889,
       "warnings": [
         "平均odds>=50:過剰夢見リスク",
         "月別不安定:13ヶ月ROI<70"
@@ -5051,6 +6211,12 @@
       "goodMonths": 7,
       "badMonths": 7,
       "totalMonths": 23,
+      "year2024N": 3886,
+      "year2024ROI": 78.93721049922802,
+      "year2025N": 2238,
+      "year2025ROI": 86.29133154602324,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "平均odds>=50:過剰夢見リスク",
         "月別不安定:18ヶ月ROI<70",
@@ -5088,6 +6254,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -5123,6 +6295,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -5158,6 +6336,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -5193,6 +6377,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -5228,6 +6418,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -5263,6 +6459,12 @@
       "goodMonths": 7,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3950,
+      "year2024ROI": 77.65822784810129,
+      "year2025N": 2264,
+      "year2025ROI": 85.30035335689047,
+      "year2026N": 35,
+      "year2026ROI": 0,
       "warnings": [
         "n<50:偽edge疑い",
         "的中<=2件:高配当依存",
@@ -5300,6 +6502,12 @@
       "goodMonths": 8,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3556,
+      "year2024ROI": 79.32508436445445,
+      "year2025N": 2072,
+      "year2025ROI": 83.99613899613901,
+      "year2026N": 29,
+      "year2026ROI": 113.44827586206895,
       "warnings": [
         "月別不安定:17ヶ月ROI<70"
       ],
@@ -5335,6 +6543,12 @@
       "goodMonths": 0,
       "badMonths": 0,
       "totalMonths": 0,
+      "year2024N": 0,
+      "year2024ROI": null,
+      "year2025N": 0,
+      "year2025ROI": null,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -5370,6 +6584,12 @@
       "goodMonths": 1,
       "badMonths": 2,
       "totalMonths": 3,
+      "year2024N": 1,
+      "year2024ROI": 0,
+      "year2025N": 1,
+      "year2025ROI": 0,
+      "year2026N": 9,
+      "year2026ROI": 365.55555555555554,
       "warnings": [
         "n<50:偽edge疑い",
         "的中<=2件:高配当依存",
@@ -5407,6 +6627,12 @@
       "goodMonths": 7,
       "badMonths": 16,
       "totalMonths": 23,
+      "year2024N": 396,
+      "year2024ROI": 62.29797979797981,
+      "year2025N": 194,
+      "year2025ROI": 98.35051546391753,
+      "year2026N": 24,
+      "year2026ROI": 137.08333333333334,
       "warnings": [
         "月別不安定:16ヶ月ROI<70"
       ],
@@ -5442,6 +6668,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -5477,6 +6709,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -5512,6 +6750,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -5547,6 +6791,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -5582,6 +6832,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -5617,6 +6873,12 @@
       "goodMonths": 10,
       "badMonths": 7,
       "totalMonths": 24,
+      "year2024N": 2759,
+      "year2024ROI": 80.89162740123233,
+      "year2025N": 1539,
+      "year2025ROI": 105.5945419103314,
+      "year2026N": 34,
+      "year2026ROI": 47.647058823529406,
       "warnings": [
         "月別不安定:15ヶ月ROI<70"
       ],
@@ -5652,6 +6914,12 @@
       "goodMonths": 6,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3841,
+      "year2024ROI": 78.95339755272067,
+      "year2025N": 2211,
+      "year2025ROI": 85.45454545454547,
+      "year2026N": 43,
+      "year2026ROI": 76.51162790697674,
       "warnings": [
         "月別不安定:21ヶ月ROI<70"
       ],
@@ -5687,6 +6955,12 @@
       "goodMonths": 6,
       "badMonths": 13,
       "totalMonths": 24,
+      "year2024N": 1877,
+      "year2024ROI": 59.62706446457112,
+      "year2025N": 1033,
+      "year2025ROI": 85.0048402710552,
+      "year2026N": 23,
+      "year2026ROI": 70.43478260869564,
       "warnings": [
         "月別不安定:4ヶ月ROI<70"
       ],
@@ -5722,6 +6996,12 @@
       "goodMonths": 6,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3412,
+      "year2024ROI": 68.97127784290741,
+      "year2025N": 1915,
+      "year2025ROI": 86.25065274151437,
+      "year2026N": 37,
+      "year2026ROI": 88.9189189189189,
       "warnings": [
         "月別不安定:10ヶ月ROI<70"
       ],
@@ -5757,6 +7037,12 @@
       "goodMonths": 8,
       "badMonths": 10,
       "totalMonths": 24,
+      "year2024N": 1302,
+      "year2024ROI": 66.55913978494624,
+      "year2025N": 726,
+      "year2025ROI": 101.5977961432507,
+      "year2026N": 19,
+      "year2026ROI": 85.26315789473684,
       "warnings": [
         "月別不安定:7ヶ月ROI<70"
       ],
@@ -5792,6 +7078,12 @@
       "goodMonths": 5,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 2914,
+      "year2024ROI": 66.93548387096773,
+      "year2025N": 1592,
+      "year2025ROI": 93.00879396984925,
+      "year2026N": 32,
+      "year2026ROI": 50.625,
       "warnings": [
         "月別不安定:8ヶ月ROI<70"
       ],
@@ -5827,6 +7119,12 @@
       "goodMonths": 10,
       "badMonths": 12,
       "totalMonths": 24,
+      "year2024N": 1325,
+      "year2024ROI": 69.30566037735849,
+      "year2025N": 722,
+      "year2025ROI": 113.14404432132967,
+      "year2026N": 16,
+      "year2026ROI": 101.25,
       "warnings": [
         "月別不安定:8ヶ月ROI<70"
       ],
@@ -5862,6 +7160,12 @@
       "goodMonths": 8,
       "badMonths": 12,
       "totalMonths": 24,
+      "year2024N": 2506,
+      "year2024ROI": 72.5778132482043,
+      "year2025N": 1360,
+      "year2025ROI": 91.01470588235296,
+      "year2026N": 31,
+      "year2026ROI": 52.25806451612903,
       "warnings": [
         "月別不安定:8ヶ月ROI<70"
       ],
@@ -5897,6 +7201,12 @@
       "goodMonths": 4,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3767,
+      "year2024ROI": 80.65303955402179,
+      "year2025N": 2134,
+      "year2025ROI": 84.76101218369261,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:18ヶ月ROI<70"
       ],
@@ -5932,6 +7242,12 @@
       "goodMonths": 10,
       "badMonths": 6,
       "totalMonths": 24,
+      "year2024N": 2760,
+      "year2024ROI": 80.8623188405797,
+      "year2025N": 1539,
+      "year2025ROI": 105.5945419103314,
+      "year2026N": 37,
+      "year2026ROI": 88.9189189189189,
       "warnings": [
         "月別不安定:16ヶ月ROI<70"
       ],
@@ -5967,6 +7283,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -6002,6 +7324,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -6037,6 +7365,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -6072,6 +7406,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -6107,6 +7447,12 @@
       "goodMonths": 10,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 2876,
+      "year2024ROI": 78.90472878998608,
+      "year2025N": 1586,
+      "year2025ROI": 92.40226986128626,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:9ヶ月ROI<70"
       ],
@@ -6142,6 +7488,12 @@
       "goodMonths": 6,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3348,
+      "year2024ROI": 78.3482676224612,
+      "year2025N": 1894,
+      "year2025ROI": 90.2323125659979,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:13ヶ月ROI<70"
       ],
@@ -6177,6 +7529,12 @@
       "goodMonths": 8,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3005,
+      "year2024ROI": 82.77204658901832,
+      "year2025N": 1684,
+      "year2025ROI": 82.67220902612827,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:11ヶ月ROI<70"
       ],
@@ -6212,6 +7570,12 @@
       "goodMonths": 0,
       "badMonths": 3,
       "totalMonths": 4,
+      "year2024N": 0,
+      "year2024ROI": null,
+      "year2025N": 8,
+      "year2025ROI": 0,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:7ヶ月ROI<70",
         "除外後n<300"
@@ -6248,6 +7612,12 @@
       "goodMonths": 0,
       "badMonths": 3,
       "totalMonths": 4,
+      "year2024N": 0,
+      "year2024ROI": null,
+      "year2025N": 8,
+      "year2025ROI": 0,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:7ヶ月ROI<70",
         "除外後n<300"
@@ -6284,6 +7654,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -6319,6 +7695,12 @@
       "goodMonths": 0,
       "badMonths": 0,
       "totalMonths": 0,
+      "year2024N": 0,
+      "year2024ROI": null,
+      "year2025N": 0,
+      "year2025ROI": null,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -6354,6 +7736,12 @@
       "goodMonths": 0,
       "badMonths": 0,
       "totalMonths": 0,
+      "year2024N": 0,
+      "year2024ROI": null,
+      "year2025N": 0,
+      "year2025ROI": null,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -6389,6 +7777,12 @@
       "goodMonths": 0,
       "badMonths": 0,
       "totalMonths": 0,
+      "year2024N": 0,
+      "year2024ROI": null,
+      "year2025N": 0,
+      "year2025ROI": null,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -6424,6 +7818,12 @@
       "goodMonths": 7,
       "badMonths": 10,
       "totalMonths": 22,
+      "year2024N": 1409,
+      "year2024ROI": 96.37331440738112,
+      "year2025N": 759,
+      "year2025ROI": 82.4505928853755,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "月別不安定:10ヶ月ROI<70"
       ],
@@ -6459,6 +7859,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -6494,6 +7900,12 @@
       "goodMonths": 0,
       "badMonths": 0,
       "totalMonths": 0,
+      "year2024N": 0,
+      "year2024ROI": null,
+      "year2025N": 0,
+      "year2025ROI": null,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -6529,6 +7941,12 @@
       "goodMonths": 6,
       "badMonths": 11,
       "totalMonths": 24,
+      "year2024N": 3386,
+      "year2024ROI": 77.66095688127587,
+      "year2025N": 2020,
+      "year2025ROI": 87.29702970297029,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:12ヶ月ROI<70"
       ],
@@ -6564,6 +7982,12 @@
       "goodMonths": 6,
       "badMonths": 11,
       "totalMonths": 24,
+      "year2024N": 2560,
+      "year2024ROI": 75.38671874999999,
+      "year2025N": 1538,
+      "year2025ROI": 81.20286085825748,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:8ヶ月ROI<70"
       ],
@@ -6599,6 +8023,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 23,
+      "year2024N": 3950,
+      "year2024ROI": 77.65822784810129,
+      "year2025N": 2263,
+      "year2025ROI": 85.33804684047726,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "n<50:偽edge疑い",
         "月別不安定:3ヶ月ROI<70",
@@ -6636,6 +8066,12 @@
       "goodMonths": 8,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3668,
+      "year2024ROI": 76.10414394765542,
+      "year2025N": 2180,
+      "year2025ROI": 86.73394495412845,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:17ヶ月ROI<70"
       ],
@@ -6671,6 +8107,12 @@
       "goodMonths": 1,
       "badMonths": 19,
       "totalMonths": 20,
+      "year2024N": 111,
+      "year2024ROI": 38.55855855855855,
+      "year2025N": 32,
+      "year2025ROI": 0,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "月別不安定:19ヶ月ROI<70",
         "月別勝ち少ない"
@@ -6707,6 +8149,12 @@
       "goodMonths": 0,
       "badMonths": 6,
       "totalMonths": 6,
+      "year2024N": 20,
+      "year2024ROI": 0,
+      "year2025N": 0,
+      "year2025ROI": null,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "n<50:偽edge疑い",
         "月別不安定:6ヶ月ROI<70",
@@ -6744,6 +8192,12 @@
       "goodMonths": 6,
       "badMonths": 11,
       "totalMonths": 24,
+      "year2024N": 3386,
+      "year2024ROI": 77.66095688127587,
+      "year2025N": 2020,
+      "year2025ROI": 87.29702970297029,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:12ヶ月ROI<70"
       ],
@@ -6779,6 +8233,12 @@
       "goodMonths": 1,
       "badMonths": 19,
       "totalMonths": 20,
+      "year2024N": 111,
+      "year2024ROI": 38.55855855855855,
+      "year2025N": 32,
+      "year2025ROI": 0,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "月別不安定:19ヶ月ROI<70",
         "月別勝ち少ない"
@@ -6815,6 +8275,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -6850,6 +8316,12 @@
       "goodMonths": 8,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3346,
+      "year2024ROI": 76.68559473998806,
+      "year2025N": 1843,
+      "year2025ROI": 83.94465545306566,
+      "year2026N": 42,
+      "year2026ROI": 78.33333333333333,
       "warnings": [
         "月別不安定:14ヶ月ROI<70"
       ],
@@ -6885,6 +8357,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3892,
+      "year2024ROI": 76.68807810894144,
+      "year2025N": 2199,
+      "year2025ROI": 87.82173715325149,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:19ヶ月ROI<70"
       ],
@@ -6920,6 +8398,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3937,
+      "year2024ROI": 77.91465582931168,
+      "year2025N": 2255,
+      "year2025ROI": 85.6407982261641,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "n<50:偽edge疑い",
         "平均odds>=50:過剰夢見リスク",
@@ -6958,6 +8442,12 @@
       "goodMonths": 9,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3533,
+      "year2024ROI": 75.61279365977924,
+      "year2025N": 1924,
+      "year2025ROI": 93.34719334719335,
+      "year2026N": 43,
+      "year2026ROI": 76.51162790697674,
       "warnings": [
         "月別不安定:15ヶ月ROI<70"
       ],
@@ -6993,6 +8483,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3898,
+      "year2024ROI": 76.5700359158543,
+      "year2025N": 2196,
+      "year2025ROI": 87.94171220400729,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:18ヶ月ROI<70"
       ],
@@ -7028,6 +8524,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3919,
+      "year2024ROI": 78.27251849961728,
+      "year2025N": 2221,
+      "year2025ROI": 86.95182350292662,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "平均odds>=50:過剰夢見リスク",
         "月別不安定:19ヶ月ROI<70",
@@ -7065,6 +8567,12 @@
       "goodMonths": 8,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3694,
+      "year2024ROI": 75.32485110990798,
+      "year2025N": 2045,
+      "year2025ROI": 92.93398533007337,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:17ヶ月ROI<70"
       ],
@@ -7100,6 +8608,12 @@
       "goodMonths": 7,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 43,
+      "year2026ROI": 38.83720930232558,
       "warnings": [
         "n<50:偽edge疑い",
         "的中<=2件:高配当依存",
@@ -7137,6 +8651,12 @@
       "goodMonths": 8,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3574,
+      "year2024ROI": 76.42417459429213,
+      "year2025N": 1963,
+      "year2025ROI": 91.49261334691798,
+      "year2026N": 43,
+      "year2026ROI": 76.51162790697674,
       "warnings": [
         "月別不安定:15ヶ月ROI<70"
       ],
@@ -7172,6 +8692,12 @@
       "goodMonths": 4,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3767,
+      "year2024ROI": 80.65303955402179,
+      "year2025N": 2134,
+      "year2025ROI": 84.76101218369261,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:18ヶ月ROI<70"
       ],
@@ -7207,6 +8733,12 @@
       "goodMonths": 7,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3391,
+      "year2024ROI": 77.40489531111768,
+      "year2025N": 1867,
+      "year2025ROI": 82.8655597214783,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:13ヶ月ROI<70"
       ],
@@ -7242,6 +8774,12 @@
       "goodMonths": 5,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 1696,
+      "year2024ROI": 72.66509433962264,
+      "year2025N": 934,
+      "year2025ROI": 71.73447537473233,
+      "year2026N": 18,
+      "year2026ROI": 92.77777777777777,
       "warnings": [
         "月別不安定:9ヶ月ROI<70"
       ],
@@ -7277,6 +8815,12 @@
       "goodMonths": 8,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3754,
+      "year2024ROI": 78.32711774107622,
+      "year2025N": 2161,
+      "year2025ROI": 89.36603424340585,
+      "year2026N": 38,
+      "year2026ROI": 86.57894736842104,
       "warnings": [
         "月別不安定:20ヶ月ROI<70"
       ],
@@ -7312,6 +8856,12 @@
       "goodMonths": 10,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3752,
+      "year2024ROI": 81.75639658848617,
+      "year2025N": 2145,
+      "year2025ROI": 87.59906759906761,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "平均odds>=50:過剰夢見リスク",
         "月別不安定:20ヶ月ROI<70",
@@ -7349,6 +8899,12 @@
       "goodMonths": 6,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3858,
+      "year2024ROI": 77.95489891135306,
+      "year2025N": 2172,
+      "year2025ROI": 87.03959484346225,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "平均odds>=50:過剰夢見リスク",
         "月別不安定:20ヶ月ROI<70"
@@ -7385,6 +8941,12 @@
       "goodMonths": 7,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3784,
+      "year2024ROI": 78.30866807610997,
+      "year2025N": 2171,
+      "year2025ROI": 80.05066789497928,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "平均odds>=50:過剰夢見リスク",
         "月別不安定:16ヶ月ROI<70"
@@ -7421,6 +8983,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3766,
+      "year2024ROI": 81.4524694636219,
+      "year2025N": 2175,
+      "year2025ROI": 85.05747126436782,
+      "year2026N": 37,
+      "year2026ROI": 88.9189189189189,
       "warnings": [
         "月別不安定:21ヶ月ROI<70"
       ],
@@ -7456,6 +9024,12 @@
       "goodMonths": 7,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3762,
+      "year2024ROI": 76.1509835194046,
+      "year2025N": 2171,
+      "year2025ROI": 88.95439889451868,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:17ヶ月ROI<70"
       ],
@@ -7491,6 +9065,12 @@
       "goodMonths": 4,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3756,
+      "year2024ROI": 79.24920127795531,
+      "year2025N": 2131,
+      "year2025ROI": 83.64617550445801,
+      "year2026N": 43,
+      "year2026ROI": 38.83720930232558,
       "warnings": [
         "月別不安定:16ヶ月ROI<70"
       ],
@@ -7526,6 +9106,12 @@
       "goodMonths": 6,
       "badMonths": 11,
       "totalMonths": 24,
+      "year2024N": 3728,
+      "year2024ROI": 73.58369098712448,
+      "year2025N": 2171,
+      "year2025ROI": 85.73007830492861,
+      "year2026N": 37,
+      "year2026ROI": 88.9189189189189,
       "warnings": [
         "月別不安定:16ヶ月ROI<70"
       ],
@@ -7561,6 +9147,12 @@
       "goodMonths": 8,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3802,
+      "year2024ROI": 75.51814834297741,
+      "year2025N": 2176,
+      "year2025ROI": 86.12591911764707,
+      "year2026N": 40,
+      "year2026ROI": 82.25,
       "warnings": [
         "月別不安定:16ヶ月ROI<70"
       ],
@@ -7596,6 +9188,12 @@
       "goodMonths": 8,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3786,
+      "year2024ROI": 78.13259376650822,
+      "year2025N": 2154,
+      "year2025ROI": 88.34261838440113,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:16ヶ月ROI<70"
       ],
@@ -7631,6 +9229,12 @@
       "goodMonths": 3,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3790,
+      "year2024ROI": 78.57783641160952,
+      "year2025N": 2142,
+      "year2025ROI": 79.49579831932775,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:12ヶ月ROI<70"
       ],
@@ -7666,6 +9270,12 @@
       "goodMonths": 8,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3805,
+      "year2024ROI": 77.0696452036794,
+      "year2025N": 2186,
+      "year2025ROI": 88.34400731930468,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:17ヶ月ROI<70"
       ],
@@ -7701,6 +9311,12 @@
       "goodMonths": 6,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3830,
+      "year2024ROI": 78.09660574412534,
+      "year2025N": 2170,
+      "year2025ROI": 84.69124423963135,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:14ヶ月ROI<70"
       ],
@@ -7736,6 +9352,12 @@
       "goodMonths": 7,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3819,
+      "year2024ROI": 77.52553024351927,
+      "year2025N": 2195,
+      "year2025ROI": 85.8496583143508,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "平均odds>=50:過剰夢見リスク",
         "月別不安定:17ヶ月ROI<70"
@@ -7772,6 +9394,12 @@
       "goodMonths": 6,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3806,
+      "year2024ROI": 77.57488176563324,
+      "year2025N": 2191,
+      "year2025ROI": 85.03879507074397,
+      "year2026N": 40,
+      "year2026ROI": 82.25,
       "warnings": [
         "月別不安定:17ヶ月ROI<70"
       ],
@@ -7807,6 +9435,12 @@
       "goodMonths": 6,
       "badMonths": 10,
       "totalMonths": 24,
+      "year2024N": 3799,
+      "year2024ROI": 72.82969202421693,
+      "year2025N": 2196,
+      "year2025ROI": 85.6056466302368,
+      "year2026N": 41,
+      "year2026ROI": 80.24390243902438,
       "warnings": [
         "月別不安定:12ヶ月ROI<70"
       ],
@@ -7842,6 +9476,12 @@
       "goodMonths": 6,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3765,
+      "year2024ROI": 78.45683930942899,
+      "year2025N": 2179,
+      "year2025ROI": 83.84121156493805,
+      "year2026N": 39,
+      "year2026ROI": 41.53846153846153,
       "warnings": [
         "月別不安定:14ヶ月ROI<70"
       ],
@@ -7877,6 +9517,12 @@
       "goodMonths": 7,
       "badMonths": 9,
       "totalMonths": 23,
+      "year2024N": 3809,
+      "year2024ROI": 78.90784982935156,
+      "year2025N": 2171,
+      "year2025ROI": 84.32519576232153,
+      "year2026N": 38,
+      "year2026ROI": 86.57894736842104,
       "warnings": [
         "月別不安定:15ヶ月ROI<70"
       ],
@@ -7912,6 +9558,12 @@
       "goodMonths": 8,
       "badMonths": 12,
       "totalMonths": 24,
+      "year2024N": 3795,
+      "year2024ROI": 77.15942028985509,
+      "year2025N": 2180,
+      "year2025ROI": 86.91743119266056,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:16ヶ月ROI<70"
       ],
@@ -7947,6 +9599,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3774,
+      "year2024ROI": 77.1489136195019,
+      "year2025N": 2150,
+      "year2025ROI": 85.92558139534884,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:16ヶ月ROI<70"
       ],
@@ -7982,6 +9640,12 @@
       "goodMonths": 6,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3805,
+      "year2024ROI": 75.29829172141922,
+      "year2025N": 2193,
+      "year2025ROI": 82.58093935248519,
+      "year2026N": 43,
+      "year2026ROI": 76.51162790697674,
       "warnings": [
         "月別不安定:14ヶ月ROI<70"
       ],
@@ -8017,6 +9681,12 @@
       "goodMonths": 5,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3771,
+      "year2024ROI": 79.72421108459295,
+      "year2025N": 2185,
+      "year2025ROI": 83.0892448512586,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:15ヶ月ROI<70"
       ],
@@ -8052,6 +9722,12 @@
       "goodMonths": 4,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3771,
+      "year2024ROI": 76.36701140281095,
+      "year2025N": 2156,
+      "year2025ROI": 85.19016697588127,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:14ヶ月ROI<70"
       ],
@@ -8087,6 +9763,12 @@
       "goodMonths": 5,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3786,
+      "year2024ROI": 78.18806127839412,
+      "year2025N": 2174,
+      "year2025ROI": 83.47746090156394,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:17ヶ月ROI<70"
       ],
@@ -8122,6 +9804,12 @@
       "goodMonths": 5,
       "badMonths": 10,
       "totalMonths": 24,
+      "year2024N": 3764,
+      "year2024ROI": 77.61689691817219,
+      "year2025N": 2141,
+      "year2025ROI": 83.48902382064458,
+      "year2026N": 43,
+      "year2026ROI": 76.51162790697674,
       "warnings": [
         "月別不安定:18ヶ月ROI<70"
       ],
@@ -8157,6 +9845,12 @@
       "goodMonths": 8,
       "badMonths": 10,
       "totalMonths": 24,
+      "year2024N": 3580,
+      "year2024ROI": 78.76815642458102,
+      "year2025N": 2036,
+      "year2025ROI": 87.14636542239688,
+      "year2026N": 40,
+      "year2026ROI": 82.25,
       "warnings": [
         "月別不安定:15ヶ月ROI<70"
       ],
@@ -8192,6 +9886,12 @@
       "goodMonths": 5,
       "badMonths": 11,
       "totalMonths": 24,
+      "year2024N": 3517,
+      "year2024ROI": 75.99943133352292,
+      "year2025N": 2016,
+      "year2025ROI": 81.77083333333334,
+      "year2026N": 38,
+      "year2026ROI": 42.63157894736842,
       "warnings": [
         "月別不安定:11ヶ月ROI<70"
       ],
@@ -8227,6 +9927,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3468,
+      "year2024ROI": 77.20011534025377,
+      "year2025N": 1980,
+      "year2025ROI": 86.7979797979798,
+      "year2026N": 40,
+      "year2026ROI": 82.25,
       "warnings": [
         "月別不安定:14ヶ月ROI<70"
       ],
@@ -8262,6 +9968,12 @@
       "goodMonths": 4,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3511,
+      "year2024ROI": 79.8746795784677,
+      "year2025N": 2010,
+      "year2025ROI": 87.17910447761194,
+      "year2026N": 40,
+      "year2026ROI": 82.25,
       "warnings": [
         "月別不安定:14ヶ月ROI<70"
       ],
@@ -8297,6 +10009,12 @@
       "goodMonths": 8,
       "badMonths": 10,
       "totalMonths": 24,
+      "year2024N": 3454,
+      "year2024ROI": 71.46496815286626,
+      "year2025N": 1987,
+      "year2025ROI": 91.6155007549069,
+      "year2026N": 40,
+      "year2026ROI": 82.25,
       "warnings": [
         "月別不安定:12ヶ月ROI<70"
       ],
@@ -8332,6 +10050,12 @@
       "goodMonths": 4,
       "badMonths": 10,
       "totalMonths": 24,
+      "year2024N": 3500,
+      "year2024ROI": 75.9657142857143,
+      "year2025N": 2004,
+      "year2025ROI": 83.05389221556887,
+      "year2026N": 41,
+      "year2026ROI": 80.24390243902438,
       "warnings": [
         "月別不安定:14ヶ月ROI<70"
       ],
@@ -8367,6 +10091,12 @@
       "goodMonths": 9,
       "badMonths": 10,
       "totalMonths": 23,
+      "year2024N": 3534,
+      "year2024ROI": 77.11092246745899,
+      "year2025N": 2051,
+      "year2025ROI": 83.71038517796198,
+      "year2026N": 39,
+      "year2026ROI": 42.82051282051282,
       "warnings": [
         "月別不安定:12ヶ月ROI<70"
       ],
@@ -8402,6 +10132,12 @@
       "goodMonths": 6,
       "badMonths": 10,
       "totalMonths": 24,
+      "year2024N": 3668,
+      "year2024ROI": 78.51145038167941,
+      "year2025N": 2118,
+      "year2025ROI": 76.61473087818698,
+      "year2026N": 41,
+      "year2026ROI": 80.24390243902438,
       "warnings": [
         "月別不安定:13ヶ月ROI<70"
       ],
@@ -8437,6 +10173,12 @@
       "goodMonths": 8,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3734,
+      "year2024ROI": 79.79110873058384,
+      "year2025N": 2146,
+      "year2025ROI": 87.38117427772602,
+      "year2026N": 40,
+      "year2026ROI": 82.25,
       "warnings": [
         "月別不安定:19ヶ月ROI<70"
       ],
@@ -8472,6 +10214,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3830,
+      "year2024ROI": 80.09138381201046,
+      "year2025N": 2197,
+      "year2025ROI": 87.90168411470188,
+      "year2026N": 41,
+      "year2026ROI": 80.24390243902438,
       "warnings": [
         "月別不安定:23ヶ月ROI<70",
         "月別勝ち少ない"
@@ -8508,6 +10256,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3901,
+      "year2024ROI": 78.63368367085364,
+      "year2025N": 2229,
+      "year2025ROI": 86.63974876626291,
+      "year2026N": 41,
+      "year2026ROI": 80.24390243902438,
       "warnings": [
         "月別不安定:23ヶ月ROI<70",
         "月別勝ち少ない"
@@ -8544,6 +10298,12 @@
       "goodMonths": 9,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3563,
+      "year2024ROI": 83.62054448498459,
+      "year2025N": 2042,
+      "year2025ROI": 91.83153770812929,
+      "year2026N": 34,
+      "year2026ROI": 96.76470588235294,
       "warnings": [
         "月別不安定:19ヶ月ROI<70"
       ],
@@ -8579,6 +10339,12 @@
       "goodMonths": 7,
       "badMonths": 12,
       "totalMonths": 24,
+      "year2024N": 1539,
+      "year2024ROI": 66.7251461988304,
+      "year2025N": 845,
+      "year2025ROI": 100.07100591715978,
+      "year2026N": 21,
+      "year2026ROI": 77.14285714285714,
       "warnings": [
         "月別不安定:7ヶ月ROI<70"
       ],
@@ -8614,6 +10380,12 @@
       "goodMonths": 11,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 1151,
+      "year2024ROI": 81.56385751520415,
+      "year2025N": 622,
+      "year2025ROI": 126.9453376205788,
+      "year2026N": 11,
+      "year2026ROI": 147.27272727272725,
       "warnings": [
         "月別不安定:9ヶ月ROI<70"
       ],
@@ -8649,6 +10421,12 @@
       "goodMonths": 10,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 917,
+      "year2024ROI": 67.4154852780807,
+      "year2025N": 480,
+      "year2025ROI": 120.58333333333333,
+      "year2026N": 12,
+      "year2026ROI": 135,
       "warnings": [
         "月別不安定:9ヶ月ROI<70"
       ],
@@ -8684,6 +10462,12 @@
       "goodMonths": 6,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3777,
+      "year2024ROI": 80.32036007413292,
+      "year2025N": 2170,
+      "year2025ROI": 82.14746543778803,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:17ヶ月ROI<70"
       ],
@@ -8719,6 +10503,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3841,
+      "year2024ROI": 78.98203592814373,
+      "year2025N": 2197,
+      "year2025ROI": 87.90168411470188,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:21ヶ月ROI<70",
         "月別勝ち少ない"
@@ -8755,6 +10545,12 @@
       "goodMonths": 9,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 1412,
+      "year2024ROI": 92.74787535410762,
+      "year2025N": 893,
+      "year2025ROI": 77.80515117581186,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:9ヶ月ROI<70"
       ],
@@ -8790,6 +10586,12 @@
       "goodMonths": 6,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3937,
+      "year2024ROI": 77.91465582931168,
+      "year2025N": 2214,
+      "year2025ROI": 84.3992773261066,
+      "year2026N": 43,
+      "year2026ROI": 38.83720930232558,
       "warnings": [
         "的中<=2件:高配当依存",
         "平均odds>=50:過剰夢見リスク",
@@ -8827,6 +10629,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -8862,6 +10670,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -8897,6 +10711,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -8932,6 +10752,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -8967,6 +10793,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:8ヶ月ROI<70"
       ],
@@ -9002,6 +10834,12 @@
       "goodMonths": 0,
       "badMonths": 0,
       "totalMonths": 0,
+      "year2024N": 0,
+      "year2024ROI": null,
+      "year2025N": 0,
+      "year2025ROI": null,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -9037,6 +10875,12 @@
       "goodMonths": 6,
       "badMonths": 10,
       "totalMonths": 24,
+      "year2024N": 3931,
+      "year2024ROI": 78.0335792419232,
+      "year2025N": 2175,
+      "year2025ROI": 83.56321839080461,
+      "year2026N": 43,
+      "year2026ROI": 38.83720930232558,
       "warnings": [
         "月別不安定:10ヶ月ROI<70"
       ],
@@ -9072,6 +10916,12 @@
       "goodMonths": 1,
       "badMonths": 7,
       "totalMonths": 8,
+      "year2024N": 6,
+      "year2024ROI": 0,
+      "year2025N": 39,
+      "year2025ROI": 131.02564102564102,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "n<50:偽edge疑い",
         "的中<=2件:高配当依存",
@@ -9111,6 +10961,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:8ヶ月ROI<70"
       ],
@@ -9146,6 +11002,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -9181,6 +11043,12 @@
       "goodMonths": 3,
       "badMonths": 18,
       "totalMonths": 22,
+      "year2024N": 426,
+      "year2024ROI": 30.962441314553992,
+      "year2025N": 179,
+      "year2025ROI": 67.98882681564245,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:8ヶ月ROI<70"
       ],
@@ -9216,6 +11084,12 @@
       "goodMonths": 3,
       "badMonths": 19,
       "totalMonths": 23,
+      "year2024N": 426,
+      "year2024ROI": 30.962441314553992,
+      "year2025N": 180,
+      "year2025ROI": 67.6111111111111,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:7ヶ月ROI<70"
       ],
@@ -9251,6 +11125,12 @@
       "goodMonths": 0,
       "badMonths": 0,
       "totalMonths": 0,
+      "year2024N": 0,
+      "year2024ROI": null,
+      "year2025N": 0,
+      "year2025ROI": null,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -9286,6 +11166,12 @@
       "goodMonths": 0,
       "badMonths": 0,
       "totalMonths": 0,
+      "year2024N": 0,
+      "year2024ROI": null,
+      "year2025N": 0,
+      "year2025ROI": null,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -9321,6 +11207,12 @@
       "goodMonths": 7,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 43,
+      "year2026ROI": 38.83720930232558,
       "warnings": [
         "n<50:偽edge疑い",
         "的中<=2件:高配当依存",
@@ -9358,6 +11250,12 @@
       "goodMonths": 7,
       "badMonths": 7,
       "totalMonths": 22,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2257,
+      "year2025ROI": 85.56490917146657,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "月別不安定:3ヶ月ROI<70",
         "月別勝ち少ない"
@@ -9394,6 +11292,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 23,
+      "year2024N": 3950,
+      "year2024ROI": 77.65822784810129,
+      "year2025N": 2263,
+      "year2025ROI": 85.33804684047726,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "n<50:偽edge疑い",
         "月別不安定:3ヶ月ROI<70",
@@ -9431,6 +11335,12 @@
       "goodMonths": 7,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 43,
+      "year2026ROI": 38.83720930232558,
       "warnings": [
         "n<50:偽edge疑い",
         "的中<=2件:高配当依存",
@@ -9468,6 +11378,12 @@
       "goodMonths": 7,
       "badMonths": 16,
       "totalMonths": 23,
+      "year2024N": 396,
+      "year2024ROI": 62.29797979797981,
+      "year2025N": 194,
+      "year2025ROI": 98.35051546391753,
+      "year2026N": 24,
+      "year2026ROI": 137.08333333333334,
       "warnings": [
         "月別不安定:9ヶ月ROI<70"
       ],
@@ -9503,6 +11419,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -9538,6 +11460,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -9573,6 +11501,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -9608,6 +11542,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3819,
+      "year2024ROI": 79.25373134328362,
+      "year2025N": 2180,
+      "year2025ROI": 88.58715596330276,
+      "year2026N": 42,
+      "year2026ROI": 78.33333333333333,
       "warnings": [
         "月別不安定:22ヶ月ROI<70",
         "月別勝ち少ない"
@@ -9644,6 +11584,12 @@
       "goodMonths": 9,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3617,
+      "year2024ROI": 77.63339784351675,
+      "year2025N": 2042,
+      "year2025ROI": 86.69441723800196,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:15ヶ月ROI<70"
       ],
@@ -9679,6 +11625,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -9714,6 +11666,12 @@
       "goodMonths": 5,
       "badMonths": 9,
       "totalMonths": 24,
+      "year2024N": 3827,
+      "year2024ROI": 77.8207473216619,
+      "year2025N": 2151,
+      "year2025ROI": 88.19153881915389,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:19ヶ月ROI<70"
       ],
@@ -9749,6 +11707,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3883,
+      "year2024ROI": 78.99819727015198,
+      "year2025N": 2228,
+      "year2025ROI": 86.6786355475763,
+      "year2026N": 42,
+      "year2026ROI": 78.33333333333333,
       "warnings": [
         "平均odds>=50:過剰夢見リスク",
         "月別不安定:22ヶ月ROI<70",
@@ -9786,6 +11750,12 @@
       "goodMonths": 9,
       "badMonths": 6,
       "totalMonths": 24,
+      "year2024N": 2874,
+      "year2024ROI": 79.62421711899792,
+      "year2025N": 1606,
+      "year2025ROI": 101.18929016189291,
+      "year2026N": 39,
+      "year2026ROI": 84.35897435897436,
       "warnings": [
         "月別不安定:15ヶ月ROI<70"
       ],
@@ -9821,6 +11791,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3860,
+      "year2024ROI": 79.46891191709847,
+      "year2025N": 2209,
+      "year2025ROI": 87.42417383431417,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:22ヶ月ROI<70",
         "月別勝ち少ない"
@@ -9857,6 +11833,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -9892,6 +11874,12 @@
       "goodMonths": 12,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 815,
+      "year2024ROI": 98.45398773006133,
+      "year2025N": 427,
+      "year2025ROI": 144.82435597189695,
+      "year2026N": 11,
+      "year2026ROI": 147.27272727272725,
       "warnings": [
         "月別不安定:8ヶ月ROI<70"
       ],
@@ -9927,6 +11915,12 @@
       "goodMonths": 3,
       "badMonths": 15,
       "totalMonths": 18,
+      "year2024N": 118,
+      "year2024ROI": 0,
+      "year2025N": 57,
+      "year2025ROI": 137.3684210526316,
+      "year2026N": 8,
+      "year2026ROI": 202.5,
       "warnings": [
         "月別不安定:15ヶ月ROI<70"
       ],
@@ -9962,6 +11956,12 @@
       "goodMonths": 0,
       "badMonths": 0,
       "totalMonths": 0,
+      "year2024N": 0,
+      "year2024ROI": null,
+      "year2025N": 0,
+      "year2025ROI": null,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -9997,6 +11997,12 @@
       "goodMonths": 9,
       "badMonths": 13,
       "totalMonths": 24,
+      "year2024N": 947,
+      "year2024ROI": 72.84054910242872,
+      "year2025N": 503,
+      "year2025ROI": 121.70974155069581,
+      "year2026N": 9,
+      "year2026ROI": 0,
       "warnings": [
         "月別不安定:13ヶ月ROI<70"
       ],
@@ -10032,6 +12038,12 @@
       "goodMonths": 10,
       "badMonths": 7,
       "totalMonths": 24,
+      "year2024N": 2759,
+      "year2024ROI": 80.89162740123233,
+      "year2025N": 1539,
+      "year2025ROI": 105.5945419103314,
+      "year2026N": 34,
+      "year2026ROI": 47.647058823529406,
       "warnings": [
         "月別不安定:7ヶ月ROI<70"
       ],
@@ -10067,6 +12079,12 @@
       "goodMonths": 0,
       "badMonths": 0,
       "totalMonths": 0,
+      "year2024N": 0,
+      "year2024ROI": null,
+      "year2025N": 0,
+      "year2025ROI": null,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -10102,6 +12120,12 @@
       "goodMonths": 1,
       "badMonths": 18,
       "totalMonths": 19,
+      "year2024N": 77,
+      "year2024ROI": 55.58441558441558,
+      "year2025N": 26,
+      "year2025ROI": 0,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "月別不安定:18ヶ月ROI<70",
         "月別勝ち少ない"
@@ -10138,6 +12162,12 @@
       "goodMonths": 0,
       "badMonths": 0,
       "totalMonths": 0,
+      "year2024N": 0,
+      "year2024ROI": null,
+      "year2025N": 0,
+      "year2025ROI": null,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -10173,6 +12203,12 @@
       "goodMonths": 9,
       "badMonths": 7,
       "totalMonths": 24,
+      "year2024N": 3334,
+      "year2024ROI": 74.51709658068386,
+      "year2025N": 1846,
+      "year2025ROI": 95.64463705308776,
+      "year2026N": 38,
+      "year2026ROI": 42.63157894736842,
       "warnings": [
         "月別不安定:14ヶ月ROI<70"
       ],
@@ -10208,6 +12244,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3892,
+      "year2024ROI": 78.81551901336077,
+      "year2025N": 2222,
+      "year2025ROI": 86.91269126912692,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "平均odds>=50:過剰夢見リスク",
         "月別不安定:20ヶ月ROI<70",
@@ -10245,6 +12287,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3934,
+      "year2024ROI": 77.97407219115406,
+      "year2025N": 2252,
+      "year2025ROI": 85.75488454706928,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "n<50:偽edge疑い",
         "平均odds>=50:過剰夢見リスク",
@@ -10283,6 +12331,12 @@
       "goodMonths": 7,
       "badMonths": 9,
       "totalMonths": 22,
+      "year2024N": 3744,
+      "year2024ROI": 75.9428418803419,
+      "year2025N": 2229,
+      "year2025ROI": 84.29789143113506,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "月別不安定:9ヶ月ROI<70"
       ],
@@ -10318,6 +12372,12 @@
       "goodMonths": 7,
       "badMonths": 9,
       "totalMonths": 22,
+      "year2024N": 3744,
+      "year2024ROI": 75.9428418803419,
+      "year2025N": 2229,
+      "year2025ROI": 84.29789143113506,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "月別不安定:9ヶ月ROI<70"
       ],
@@ -10353,6 +12413,12 @@
       "goodMonths": 7,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 3951,
+      "year2024ROI": 77.6385725132878,
+      "year2025N": 2265,
+      "year2025ROI": 85.26269315673291,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "n<50:偽edge疑い"
       ],
@@ -10388,6 +12454,12 @@
       "goodMonths": 9,
       "badMonths": 11,
       "totalMonths": 22,
+      "year2024N": 642,
+      "year2024ROI": 79.54828660436138,
+      "year2025N": 343,
+      "year2025ROI": 105.88921282798836,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "月別不安定:11ヶ月ROI<70"
       ],
@@ -10423,6 +12495,12 @@
       "goodMonths": 3,
       "badMonths": 1,
       "totalMonths": 7,
+      "year2024N": 913,
+      "year2024ROI": 76.08981380065717,
+      "year2025N": 820,
+      "year2025ROI": 109.58536585365854,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [],
       "judgement": "B",
       "comment": "残す強BUY候補。n=1777 ROI=91.51% exMax=87.14%。3/7ヶ月ROI>=100 / 1ヶ月ROI<70 / worst=61.13%"
@@ -10456,6 +12534,12 @@
       "goodMonths": 4,
       "badMonths": 2,
       "totalMonths": 6,
+      "year2024N": 1146,
+      "year2024ROI": 91.06457242582896,
+      "year2025N": 781,
+      "year2025ROI": 71.28040973111396,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [],
       "judgement": "D",
       "comment": "残す強BUY候補。n=1927 ROI=83.05% exMax=79.81%。4/6ヶ月ROI>=100 / 2ヶ月ROI<70 / worst=23.49%"
@@ -10489,6 +12573,12 @@
       "goodMonths": 0,
       "badMonths": 1,
       "totalMonths": 5,
+      "year2024N": 1110,
+      "year2024ROI": 86.48648648648648,
+      "year2025N": 321,
+      "year2025ROI": 73.89408099688474,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "月別勝ち少ない"
       ],
@@ -10524,6 +12614,12 @@
       "goodMonths": 7,
       "badMonths": 4,
       "totalMonths": 18,
+      "year2024N": 3169,
+      "year2024ROI": 85.1467339854844,
+      "year2025N": 1922,
+      "year2025ROI": 88.05931321540064,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "平均odds>=50:過剰夢見リスク",
         "月別不安定:4ヶ月ROI<70",
@@ -10561,6 +12657,12 @@
       "goodMonths": 0,
       "badMonths": 22,
       "totalMonths": 22,
+      "year2024N": 82,
+      "year2024ROI": 0,
+      "year2025N": 44,
+      "year2025ROI": 0,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "月別不安定:22ヶ月ROI<70",
         "月別勝ち少ない"
@@ -10597,6 +12699,12 @@
       "goodMonths": 13,
       "badMonths": 6,
       "totalMonths": 24,
+      "year2024N": 2503,
+      "year2024ROI": 87.2752696763883,
+      "year2025N": 1401,
+      "year2025ROI": 111.99857244825127,
+      "year2026N": 26,
+      "year2026ROI": 62.30769230769231,
       "warnings": [
         "月別不安定:16ヶ月ROI<70"
       ],
@@ -10632,6 +12740,12 @@
       "goodMonths": 10,
       "badMonths": 4,
       "totalMonths": 18,
+      "year2024N": 2194,
+      "year2024ROI": 88.37739288969915,
+      "year2025N": 1308,
+      "year2025ROI": 108.77675840978596,
+      "year2026N": 34,
+      "year2026ROI": 47.647058823529406,
       "warnings": [
         "月別不安定:15ヶ月ROI<70"
       ],
@@ -10667,6 +12781,12 @@
       "goodMonths": 9,
       "badMonths": 4,
       "totalMonths": 18,
+      "year2024N": 2838,
+      "year2024ROI": 91.97322057787176,
+      "year2025N": 1732,
+      "year2025ROI": 94.48614318706699,
+      "year2026N": 34,
+      "year2026ROI": 96.76470588235294,
       "warnings": [
         "月別不安定:18ヶ月ROI<70"
       ],
@@ -10702,6 +12822,12 @@
       "goodMonths": 12,
       "badMonths": 10,
       "totalMonths": 24,
+      "year2024N": 2018,
+      "year2024ROI": 83.89990089197224,
+      "year2025N": 1083,
+      "year2025ROI": 121.91135734072023,
+      "year2026N": 34,
+      "year2026ROI": 47.647058823529406,
       "warnings": [
         "月別不安定:12ヶ月ROI<70"
       ],
@@ -10737,6 +12863,12 @@
       "goodMonths": 12,
       "badMonths": 8,
       "totalMonths": 24,
+      "year2024N": 1818,
+      "year2024ROI": 90.52805280528051,
+      "year2025N": 975,
+      "year2025ROI": 129.67179487179487,
+      "year2026N": 26,
+      "year2026ROI": 62.30769230769231,
       "warnings": [
         "月別不安定:10ヶ月ROI<70"
       ],
@@ -10772,6 +12904,12 @@
       "goodMonths": 7,
       "badMonths": 3,
       "totalMonths": 13,
+      "year2024N": 2059,
+      "year2024ROI": 84.42447790189411,
+      "year2025N": 1601,
+      "year2025ROI": 90.8994378513429,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:3ヶ月ROI<70"
       ],
@@ -10807,6 +12945,12 @@
       "goodMonths": 7,
       "badMonths": 4,
       "totalMonths": 18,
+      "year2024N": 3169,
+      "year2024ROI": 85.1467339854844,
+      "year2025N": 1922,
+      "year2025ROI": 88.05931321540064,
+      "year2026N": 44,
+      "year2026ROI": 74.77272727272727,
       "warnings": [
         "月別不安定:4ヶ月ROI<70"
       ],
@@ -10842,6 +12986,12 @@
       "goodMonths": 11,
       "badMonths": 4,
       "totalMonths": 18,
+      "year2024N": 642,
+      "year2024ROI": 112.64797507788163,
+      "year2025N": 372,
+      "year2025ROI": 152.2043010752688,
+      "year2026N": 11,
+      "year2026ROI": 147.27272727272725,
       "warnings": [
         "月別不安定:4ヶ月ROI<70"
       ],
@@ -10877,6 +13027,12 @@
       "goodMonths": 10,
       "badMonths": 12,
       "totalMonths": 24,
+      "year2024N": 570,
+      "year2024ROI": 95.82456140350875,
+      "year2025N": 304,
+      "year2025ROI": 150.42763157894737,
+      "year2026N": 11,
+      "year2026ROI": 147.27272727272725,
       "warnings": [
         "月別不安定:12ヶ月ROI<70"
       ],
@@ -10912,6 +13068,12 @@
       "goodMonths": 8,
       "badMonths": 7,
       "totalMonths": 22,
+      "year2024N": 987,
+      "year2024ROI": 108.71327254305979,
+      "year2025N": 513,
+      "year2025ROI": 113.99610136452243,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "月別不安定:7ヶ月ROI<70"
       ],
@@ -10947,6 +13109,12 @@
       "goodMonths": 5,
       "badMonths": 15,
       "totalMonths": 22,
+      "year2024N": 397,
+      "year2024ROI": 78.94206549118388,
+      "year2025N": 224,
+      "year2025ROI": 117.81250000000001,
+      "year2026N": 0,
+      "year2026ROI": null,
       "warnings": [
         "月別不安定:15ヶ月ROI<70"
       ],
@@ -10982,6 +13150,12 @@
       "goodMonths": 8,
       "badMonths": 3,
       "totalMonths": 13,
+      "year2024N": 1423,
+      "year2024ROI": 88.13070976809556,
+      "year2025N": 1094,
+      "year2025ROI": 108.37294332723948,
+      "year2026N": 34,
+      "year2026ROI": 47.647058823529406,
       "warnings": [
         "月別不安定:3ヶ月ROI<70"
       ],
@@ -11017,6 +13191,12 @@
       "goodMonths": 8,
       "badMonths": 1,
       "totalMonths": 13,
+      "year2024N": 602,
+      "year2024ROI": 112.24252491694351,
+      "year2025N": 451,
+      "year2025ROI": 142.35033259423503,
+      "year2026N": 11,
+      "year2026ROI": 147.27272727272725,
       "warnings": [],
       "judgement": "S",
       "comment": "残す強BUY候補。n=1064 ROI=125.37% exMax=119.50%。8/13ヶ月ROI>=100 / 1ヶ月ROI<70 / worst=27.83%"

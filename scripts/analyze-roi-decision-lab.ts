@@ -185,6 +185,12 @@ type LabCandidate = {
   goodMonths: number;
   badMonths: number;
   totalMonths: number;
+  year2024N: number;
+  year2024ROI: number | null;
+  year2025N: number;
+  year2025ROI: number | null;
+  year2026N: number;
+  year2026ROI: number | null;
   warnings: string[];
   judgement: Judgement;
   comment: string;
@@ -214,6 +220,12 @@ type BetSelectorCandidate = {
   worstMonthROI: number;
   goodMonths: number;
   badMonths: number;
+  year2024N: number;
+  year2024ROI: number | null;
+  year2025N: number;
+  year2025ROI: number | null;
+  year2026N: number;
+  year2026ROI: number | null;
   warnings: string[];
   judgement: Judgement;
 };
@@ -555,6 +567,106 @@ function monthlyStability(rows: Row[]): MonthlyStability {
   };
 }
 
+function yearMetric(rows: Row[], year: number): { n: number; roi: number | null } {
+  const yr = rows.filter((r) => r.date.startsWith(String(year)));
+  if (yr.length === 0) return { n: 0, roi: null };
+  return { n: yr.length, roi: metric(yr).roi };
+}
+
+type CombinedStrategyResult = {
+  label: string;
+  n: number;
+  roi: number;
+  hits: number;
+  hitRate: number;
+  roiExMaxHit: number;
+  trainROI: number;
+  trainN: number;
+  validationROI: number;
+  validationN: number;
+  testROI: number;
+  testN: number;
+  year2024N: number;
+  year2024ROI: number | null;
+  year2025N: number;
+  year2025ROI: number | null;
+  year2026N: number;
+  year2026ROI: number | null;
+  goodMonths: number;
+  badMonths: number;
+  worstMonthROI: number;
+  baselineROI: number;
+  improvement: number;
+  warnings: string[];
+  judgement: Judgement;
+};
+
+function evaluateCombinedStrategy(
+  label: string,
+  fn: (r: Row) => boolean,
+  rows: Row[],
+  splits: ReturnType<typeof splitRows>,
+  baseline: Metric,
+): CombinedStrategyResult {
+  const subset = rows.filter(fn);
+  const m = metric(subset);
+  const trainM = metric(splits.train.filter(fn));
+  const valM = metric(splits.validation.filter(fn));
+  const testM = metric(splits.test.filter(fn));
+  const stab = monthlyStability(subset);
+  const y2024 = yearMetric(subset, 2024);
+  const y2025 = yearMetric(subset, 2025);
+  const y2026 = yearMetric(subset, 2026);
+  const improvement = m.roi - baseline.roi;
+
+  const warnings: string[] = [];
+  if (subset.length < 50) warnings.push("n<50");
+  if (m.hits <= 2) warnings.push("hits<=2");
+  if (m.roiExMaxHit < baseline.roi - 10) warnings.push("最大hit依存");
+  if (stab.badMonths >= 3) warnings.push(`${stab.badMonths}ヶ月ROI<70`);
+
+  const crossSplit = trainM.n >= 50 && valM.n >= 20;
+  let judgement: Judgement = "D";
+  if (subset.length >= 300 && m.roi >= 100 && m.roiExMaxHit >= 85 && crossSplit && trainM.roi >= 85 && valM.roi >= 85) {
+    judgement = "S";
+  } else if (subset.length >= 100 && m.roi >= 95 && crossSplit && trainM.roi >= 80 && valM.roi >= 80) {
+    judgement = "A";
+  } else if (subset.length >= 50 && m.roi >= 90) {
+    judgement = "B";
+  } else if (subset.length >= 30 && m.roi >= 85) {
+    judgement = "C";
+  }
+
+  return {
+    label, n: subset.length, roi: m.roi, hits: m.hits, hitRate: m.hitRate,
+    roiExMaxHit: m.roiExMaxHit,
+    trainROI: trainM.roi, trainN: trainM.n,
+    validationROI: valM.roi, validationN: valM.n,
+    testROI: testM.roi, testN: testM.n,
+    year2024N: y2024.n, year2024ROI: y2024.roi,
+    year2025N: y2025.n, year2025ROI: y2025.roi,
+    year2026N: y2026.n, year2026ROI: y2026.roi,
+    goodMonths: stab.goodMonths, badMonths: stab.badMonths, worstMonthROI: stab.worstMonthRoi,
+    baselineROI: baseline.roi, improvement,
+    warnings, judgement,
+  };
+}
+
+function buildCombinedStrategies() {
+  return [
+    { label: "月4-9 AND raceNo7-9 AND F==0", fn: (r: Row) => { const m = Number(r.ym.slice(5)); return m >= 4 && m <= 9 && r.raceNo >= 7 && r.raceNo <= 9 && (r.headFlyingCount ?? 0) === 0; } },
+    { label: "月4-9 AND raceNo7-9 AND F==0 AND exSt<0.10", fn: (r: Row) => { const m = Number(r.ym.slice(5)); return m >= 4 && m <= 9 && r.raceNo >= 7 && r.raceNo <= 9 && (r.headFlyingCount ?? 0) === 0 && r.exhibitionPresent && (r.headExSt ?? 1) < 0.10; } },
+    { label: "月4-9 AND raceNo7-9 AND F==0 AND exRank<=3", fn: (r: Row) => { const m = Number(r.ym.slice(5)); return m >= 4 && m <= 9 && r.raceNo >= 7 && r.raceNo <= 9 && (r.headFlyingCount ?? 0) === 0 && (!r.exhibitionPresent || (r.headExRank ?? 99) <= 3); } },
+    { label: "raceNo7-9 AND F==0 AND exSt<0.10", fn: (r: Row) => r.raceNo >= 7 && r.raceNo <= 9 && (r.headFlyingCount ?? 0) === 0 && r.exhibitionPresent && (r.headExSt ?? 1) < 0.10 },
+    { label: "月4-9 AND F==0 AND exSt<0.10", fn: (r: Row) => { const m = Number(r.ym.slice(5)); return m >= 4 && m <= 9 && (r.headFlyingCount ?? 0) === 0 && r.exhibitionPresent && (r.headExSt ?? 1) < 0.10; } },
+    { label: "月4-9 AND F==0 AND exRank<=2", fn: (r: Row) => { const m = Number(r.ym.slice(5)); return m >= 4 && m <= 9 && (r.headFlyingCount ?? 0) === 0 && r.exhibitionPresent && (r.headExRank ?? 99) <= 2; } },
+    { label: "exSt<0.10 AND F==0 AND raceNo7-9 AND 月4-9", fn: (r: Row) => { const m = Number(r.ym.slice(5)); return m >= 4 && m <= 9 && r.raceNo >= 7 && r.raceNo <= 9 && (r.headFlyingCount ?? 0) === 0 && r.exhibitionPresent && (r.headExSt ?? 1) < 0.10; } },
+    { label: "raceNo7-9 AND F==0 AND 月4-9 AND exRank<=2", fn: (r: Row) => { const m = Number(r.ym.slice(5)); return m >= 4 && m <= 9 && r.raceNo >= 7 && r.raceNo <= 9 && (r.headFlyingCount ?? 0) === 0 && r.exhibitionPresent && (r.headExRank ?? 99) <= 2; } },
+    { label: "exSt<0.10 AND F==0 AND 月4-12", fn: (r: Row) => { const m = Number(r.ym.slice(5)); return m >= 4 && (r.headFlyingCount ?? 0) === 0 && r.exhibitionPresent && (r.headExSt ?? 1) < 0.10; } },
+    { label: "月4-9 AND raceNo7-9 AND F==0 AND wind<5", fn: (r: Row) => { const m = Number(r.ym.slice(5)); return m >= 4 && m <= 9 && r.raceNo >= 7 && r.raceNo <= 9 && (r.headFlyingCount ?? 0) === 0 && r.weatherPresent && (r.windMps ?? 99) < 5; } },
+  ];
+}
+
 // ───────────────── NO_BUY Conditions ─────────────────
 
 type Condition = {
@@ -874,6 +986,12 @@ function evaluateCondition(cond: Condition, rows: Row[], splits: ReturnType<type
   const stability = monthlyStability(isNoBuy ? afterRows : removedRows);
   const stableRemoved = monthlyStability(removedRows);
 
+  // year-by-year breakdown (for NO_BUY: afterRows; for KEEP: removedRows)
+  const yearRows = isNoBuy ? afterRows : removedRows;
+  const y2024 = yearMetric(yearRows, 2024);
+  const y2025 = yearMetric(yearRows, 2025);
+  const y2026 = yearMetric(yearRows, 2026);
+
   const afterROI = isNoBuy ? after.roi : subset.roi;
   const afterN = isNoBuy ? after.n : subset.n;
   const improvement = afterROI - baseline.roi;
@@ -917,6 +1035,12 @@ function evaluateCondition(cond: Condition, rows: Row[], splits: ReturnType<type
     goodMonths: stability.goodMonths,
     badMonths: stability.badMonths,
     totalMonths: stability.totalMonths,
+    year2024N: y2024.n,
+    year2024ROI: y2024.roi,
+    year2025N: y2025.n,
+    year2025ROI: y2025.roi,
+    year2026N: y2026.n,
+    year2026ROI: y2026.roi,
     warnings,
     judgement,
     comment: commentFor(cond, removed, after, baseline, stability),
@@ -1285,6 +1409,9 @@ function evaluateSelector(sel: SelectorDef, rows: Row[], splits: ReturnType<type
   const trainCalc = calcSelector(trainRows);
   const validationCalc = calcSelector(validationRows);
   const testCalc = calcSelector(testRows);
+  const sy2024 = yearMetric(applyRows, 2024);
+  const sy2025 = yearMetric(applyRows, 2025);
+  const sy2026 = yearMetric(applyRows, 2026);
 
   // improvement: vs サブセットSINGLE (全件比較ではなく同subset比較)
   const improvement = full.roi - subsetSingleROI;
@@ -1323,6 +1450,12 @@ function evaluateSelector(sel: SelectorDef, rows: Row[], splits: ReturnType<type
     worstMonthROI: full.worstMonthROI,
     goodMonths: full.goodMonths,
     badMonths: full.badMonths,
+    year2024N: sy2024.n,
+    year2024ROI: sy2024.roi,
+    year2025N: sy2025.n,
+    year2025ROI: sy2025.roi,
+    year2026N: sy2026.n,
+    year2026ROI: sy2026.roi,
     warnings,
     judgement,
   };
@@ -1377,6 +1510,7 @@ try {
   const candidates = conditions.map((c) => evaluateCondition(c, rows, splits, baseline));
   const selectors = buildSelectors();
   const selectorResults = selectors.map((s) => evaluateSelector(s, rows, splits, baseline));
+  const combinedStrategies = buildCombinedStrategies().map((cs) => evaluateCombinedStrategy(cs.label, cs.fn, rows, splits, baseline));
 
   // Sort
   const noBuyCandidates = candidates
@@ -1409,6 +1543,7 @@ try {
     keepCandidates: keepCandidates.slice(0, 30),
     betSelectors: selectorResults,
     betSelectorSOrA: selectorSOrA,
+    combinedStrategies,
     risky,
     allConditions: candidates,
   };
@@ -1432,6 +1567,7 @@ function renderMarkdown(r: {
   keepCandidates: LabCandidate[];
   betSelectors: BetSelectorCandidate[];
   betSelectorSOrA: BetSelectorCandidate[];
+  combinedStrategies: CombinedStrategyResult[];
   risky: LabCandidate[];
 }) {
   const lines: string[] = [];
@@ -1471,10 +1607,12 @@ function renderMarkdown(r: {
   if (r.stableCandidates.length === 0) {
     lines.push("S/A候補なし。", "");
   } else {
-    lines.push("| 判定 | action | family | label | removed n | removed ROI | afterN | afterROI | +ROI | hitRate | roiExMax | trainROI | valROI | testROI | worstMth | warnings |");
-    lines.push("|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|");
+    lines.push("| 判定 | action | family | label | removed n | removed ROI | afterN | afterROI | +ROI | roiExMax | trainROI | valROI | testROI | 2024(n) | 2024ROI | 2025(n) | 2025ROI | worstMth | warnings |");
+    lines.push("|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|");
     for (const c of r.stableCandidates) {
-      lines.push(`| **${c.judgement}** | ${c.action} | ${c.family} | ${esc(c.label)} | ${c.n} | ${pct(c.removedROI / 100)} | ${c.afterN} | ${pct(c.afterROI / 100)} | ${signPct(c.improvement / 100)} | ${pct(c.hitRate)} | ${pct(c.roiExMaxHit / 100)} | ${pct(c.trainROI / 100)} | ${pct(c.validationROI / 100)} | ${pct(c.testROI / 100)} | ${pct(c.worstMonthROI / 100)} | ${c.warnings.join(", ")} |`);
+      const y24 = c.year2024ROI != null ? pct(c.year2024ROI / 100) : "-";
+      const y25 = c.year2025ROI != null ? pct(c.year2025ROI / 100) : "-";
+      lines.push(`| **${c.judgement}** | ${c.action} | ${c.family} | ${esc(c.label)} | ${c.n} | ${pct(c.removedROI / 100)} | ${c.afterN} | ${pct(c.afterROI / 100)} | ${signPct(c.improvement / 100)} | ${pct(c.roiExMaxHit / 100)} | ${pct(c.trainROI / 100)} | ${pct(c.validationROI / 100)} | ${pct(c.testROI / 100)} | ${c.year2024N} | ${y24} | ${c.year2025N} | ${y25} | ${pct(c.worstMonthROI / 100)} | ${c.warnings.join(", ")} |`);
     }
     lines.push("");
   }
@@ -1522,8 +1660,25 @@ function renderMarkdown(r: {
   lines.push(`- ROI < 70 ヶ月: ${b.monthlyStability.badMonths} / ${b.monthlyStability.totalMonths}`);
   lines.push("");
 
-  // 8. KEEP Candidates (top)
-  lines.push("## 8. KEEP Candidates (強いBUY条件)", "");
+  // 8. Combined Strategy Simulation
+  lines.push("## 8. 複合戦略シミュレーション", "");
+  lines.push("複数のS/A条件を組み合わせた場合のROI検証 (KEEP絞り込み戦略)。", "");
+  const topCombined = r.combinedStrategies.sort((a, b) => b.roi - a.roi);
+  if (topCombined.length === 0) {
+    lines.push("複合戦略なし。", "");
+  } else {
+    lines.push("| 判定 | label | n | ROI | +ROI | roiExMax | 2024(n) | 2024ROI | 2025(n) | 2025ROI | trainROI | valROI | testROI | worstMth | warnings |");
+    lines.push("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|");
+    for (const cs of topCombined) {
+      const y24 = cs.year2024ROI != null ? pct(cs.year2024ROI / 100) : "-";
+      const y25 = cs.year2025ROI != null ? pct(cs.year2025ROI / 100) : "-";
+      lines.push(`| **${cs.judgement}** | ${esc(cs.label)} | ${cs.n} | ${pct(cs.roi / 100)} | ${signPct(cs.improvement / 100)} | ${pct(cs.roiExMaxHit / 100)} | ${cs.year2024N} | ${y24} | ${cs.year2025N} | ${y25} | ${pct(cs.trainROI / 100)} | ${pct(cs.validationROI / 100)} | ${pct(cs.testROI / 100)} | ${pct(cs.worstMonthROI / 100)} | ${cs.warnings.join(", ")} |`);
+    }
+    lines.push("");
+  }
+
+  // 9. KEEP Candidates (top)
+  lines.push("## 9. KEEP Candidates (強いBUY条件)", "");
   const topKeep = r.keepCandidates.slice(0, 20);
   if (topKeep.length === 0) {
     lines.push("B以上候補なし。全KEEP候補はJSONを参照。", "");
@@ -1536,8 +1691,8 @@ function renderMarkdown(r: {
     lines.push("");
   }
 
-  // 9. 次にpaper検証すべき候補
-  lines.push("## 9. 次にpaper検証すべき候補", "");
+  // 10. 次にpaper検証すべき候補
+  lines.push("## 10. 次にpaper検証すべき候補", "");
   const nextPaper = [...r.stableCandidates, ...r.betSelectorSOrA].slice(0, 5);
   if (nextPaper.length === 0) {
     lines.push("まずB候補の月別・test期間安定性を追加確認すること。", "");
@@ -1548,8 +1703,8 @@ function renderMarkdown(r: {
     lines.push("");
   }
 
-  // 10. まだ足りないfeature
-  lines.push("## 10. まだ足りないfeature / 次の仮説", "");
+  // 11. まだ足りないfeature
+  lines.push("## 11. まだ足りないfeature / 次の仮説", "");
   lines.push("- 選手×コース一致率（当地巧者 vs 非当地）");
   lines.push("- 直近5走の成績トレンド");
   lines.push("- CLV（closing line value）— odds動き最終比較");
