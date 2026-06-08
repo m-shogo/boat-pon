@@ -4,7 +4,7 @@
 
 **禁止**: 本番decision変更不可 / app_settings変更不可 / 自動投票不可
 
-*生成: 2026-06-08T04:17:24.826Z / DB: data/boat.sqlite*
+*生成: 2026-06-08T05:14:37.866Z / DB: data/boat.sqlite*
 
 
 ## 1. 条件定義

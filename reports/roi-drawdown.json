@@ -1,0 +1,3363 @@
+{
+  "generatedAt": "2026-06-08T05:14:26.407Z",
+  "dbPath": "data/boat.sqlite",
+  "totalRows": 6260,
+  "segments": [
+    {
+      "label": "全BUY",
+      "description": "historical-backfill decision=BUY 全件",
+      "n": 6260,
+      "hits": 124,
+      "hitRate": 0.019808306709265176,
+      "roi": 80.37699680511187,
+      "roiExMaxHit": 79.13578274760387,
+      "maxLossStreak": 310,
+      "avgLossStreak": 49.483870967741936,
+      "medianLossStreak": 33,
+      "lossStreakDistribution": [
+        {
+          "streak": 1,
+          "count": 1
+        },
+        {
+          "streak": 2,
+          "count": 1
+        },
+        {
+          "streak": 3,
+          "count": 3
+        },
+        {
+          "streak": 4,
+          "count": 2
+        },
+        {
+          "streak": 5,
+          "count": 2
+        },
+        {
+          "streak": 6,
+          "count": 2
+        },
+        {
+          "streak": 7,
+          "count": 1
+        },
+        {
+          "streak": 8,
+          "count": 1
+        },
+        {
+          "streak": 9,
+          "count": 2
+        },
+        {
+          "streak": 10,
+          "count": 1
+        },
+        {
+          "streak": 11,
+          "count": 1
+        },
+        {
+          "streak": 12,
+          "count": 1
+        },
+        {
+          "streak": 13,
+          "count": 2
+        },
+        {
+          "streak": 14,
+          "count": 5
+        },
+        {
+          "streak": 15,
+          "count": 1
+        },
+        {
+          "streak": 16,
+          "count": 1
+        },
+        {
+          "streak": 17,
+          "count": 2
+        },
+        {
+          "streak": 18,
+          "count": 6
+        },
+        {
+          "streak": 19,
+          "count": 1
+        },
+        {
+          "streak": 21,
+          "count": 5
+        },
+        {
+          "streak": 22,
+          "count": 1
+        },
+        {
+          "streak": 25,
+          "count": 1
+        },
+        {
+          "streak": 26,
+          "count": 3
+        },
+        {
+          "streak": 27,
+          "count": 6
+        },
+        {
+          "streak": 28,
+          "count": 2
+        },
+        {
+          "streak": 29,
+          "count": 1
+        },
+        {
+          "streak": 30,
+          "count": 1
+        },
+        {
+          "streak": 31,
+          "count": 3
+        },
+        {
+          "streak": 32,
+          "count": 3
+        },
+        {
+          "streak": 33,
+          "count": 1
+        },
+        {
+          "streak": 34,
+          "count": 1
+        },
+        {
+          "streak": 36,
+          "count": 1
+        },
+        {
+          "streak": 37,
+          "count": 2
+        },
+        {
+          "streak": 38,
+          "count": 1
+        },
+        {
+          "streak": 39,
+          "count": 1
+        },
+        {
+          "streak": 43,
+          "count": 2
+        },
+        {
+          "streak": 46,
+          "count": 1
+        },
+        {
+          "streak": 47,
+          "count": 1
+        },
+        {
+          "streak": 48,
+          "count": 1
+        },
+        {
+          "streak": 49,
+          "count": 2
+        },
+        {
+          "streak": 50,
+          "count": 1
+        },
+        {
+          "streak": 55,
+          "count": 1
+        },
+        {
+          "streak": 56,
+          "count": 1
+        },
+        {
+          "streak": 58,
+          "count": 5
+        },
+        {
+          "streak": 59,
+          "count": 1
+        },
+        {
+          "streak": 60,
+          "count": 1
+        },
+        {
+          "streak": 61,
+          "count": 4
+        },
+        {
+          "streak": 62,
+          "count": 3
+        },
+        {
+          "streak": 63,
+          "count": 1
+        },
+        {
+          "streak": 67,
+          "count": 2
+        },
+        {
+          "streak": 69,
+          "count": 1
+        },
+        {
+          "streak": 71,
+          "count": 1
+        },
+        {
+          "streak": 73,
+          "count": 1
+        },
+        {
+          "streak": 75,
+          "count": 1
+        },
+        {
+          "streak": 77,
+          "count": 1
+        },
+        {
+          "streak": 78,
+          "count": 1
+        },
+        {
+          "streak": 79,
+          "count": 2
+        },
+        {
+          "streak": 83,
+          "count": 1
+        },
+        {
+          "streak": 87,
+          "count": 1
+        },
+        {
+          "streak": 89,
+          "count": 1
+        },
+        {
+          "streak": 94,
+          "count": 1
+        },
+        {
+          "streak": 102,
+          "count": 1
+        },
+        {
+          "streak": 106,
+          "count": 1
+        },
+        {
+          "streak": 111,
+          "count": 1
+        },
+        {
+          "streak": 112,
+          "count": 1
+        },
+        {
+          "streak": 114,
+          "count": 1
+        },
+        {
+          "streak": 121,
+          "count": 3
+        },
+        {
+          "streak": 126,
+          "count": 1
+        },
+        {
+          "streak": 128,
+          "count": 1
+        },
+        {
+          "streak": 131,
+          "count": 1
+        },
+        {
+          "streak": 134,
+          "count": 1
+        },
+        {
+          "streak": 138,
+          "count": 1
+        },
+        {
+          "streak": 214,
+          "count": 1
+        },
+        {
+          "streak": 225,
+          "count": 1
+        },
+        {
+          "streak": 310,
+          "count": 1
+        }
+      ],
+      "maxDrawdownPct": 100,
+      "maxDrawdownYen100": 124360,
+      "maxDrawdownYen1000": 1243600,
+      "avgHitInterval": 49.90243902439025,
+      "maxHitInterval": 311,
+      "hitIntervalDistribution": [
+        {
+          "interval": 2,
+          "count": 1
+        },
+        {
+          "interval": 3,
+          "count": 1
+        },
+        {
+          "interval": 4,
+          "count": 3
+        },
+        {
+          "interval": 5,
+          "count": 2
+        },
+        {
+          "interval": 6,
+          "count": 2
+        },
+        {
+          "interval": 7,
+          "count": 2
+        },
+        {
+          "interval": 8,
+          "count": 1
+        },
+        {
+          "interval": 9,
+          "count": 1
+        },
+        {
+          "interval": 10,
+          "count": 2
+        },
+        {
+          "interval": 11,
+          "count": 1
+        },
+        {
+          "interval": 12,
+          "count": 1
+        },
+        {
+          "interval": 13,
+          "count": 1
+        },
+        {
+          "interval": 14,
+          "count": 2
+        },
+        {
+          "interval": 15,
+          "count": 5
+        },
+        {
+          "interval": 16,
+          "count": 1
+        },
+        {
+          "interval": 17,
+          "count": 1
+        },
+        {
+          "interval": 18,
+          "count": 2
+        },
+        {
+          "interval": 19,
+          "count": 6
+        },
+        {
+          "interval": 20,
+          "count": 1
+        },
+        {
+          "interval": 22,
+          "count": 5
+        },
+        {
+          "interval": 23,
+          "count": 1
+        },
+        {
+          "interval": 26,
+          "count": 1
+        },
+        {
+          "interval": 27,
+          "count": 3
+        },
+        {
+          "interval": 28,
+          "count": 6
+        },
+        {
+          "interval": 29,
+          "count": 2
+        },
+        {
+          "interval": 30,
+          "count": 1
+        },
+        {
+          "interval": 31,
+          "count": 1
+        },
+        {
+          "interval": 32,
+          "count": 3
+        },
+        {
+          "interval": 33,
+          "count": 3
+        },
+        {
+          "interval": 34,
+          "count": 1
+        },
+        {
+          "interval": 35,
+          "count": 1
+        },
+        {
+          "interval": 37,
+          "count": 1
+        },
+        {
+          "interval": 38,
+          "count": 2
+        },
+        {
+          "interval": 39,
+          "count": 1
+        },
+        {
+          "interval": 40,
+          "count": 1
+        },
+        {
+          "interval": 44,
+          "count": 2
+        },
+        {
+          "interval": 47,
+          "count": 1
+        },
+        {
+          "interval": 48,
+          "count": 1
+        },
+        {
+          "interval": 49,
+          "count": 1
+        },
+        {
+          "interval": 50,
+          "count": 2
+        },
+        {
+          "interval": 51,
+          "count": 1
+        },
+        {
+          "interval": 56,
+          "count": 1
+        },
+        {
+          "interval": 57,
+          "count": 1
+        },
+        {
+          "interval": 59,
+          "count": 5
+        },
+        {
+          "interval": 60,
+          "count": 1
+        },
+        {
+          "interval": 61,
+          "count": 1
+        },
+        {
+          "interval": 62,
+          "count": 4
+        },
+        {
+          "interval": 63,
+          "count": 3
+        },
+        {
+          "interval": 64,
+          "count": 1
+        },
+        {
+          "interval": 68,
+          "count": 2
+        },
+        {
+          "interval": 70,
+          "count": 1
+        },
+        {
+          "interval": 72,
+          "count": 1
+        },
+        {
+          "interval": 74,
+          "count": 1
+        },
+        {
+          "interval": 76,
+          "count": 1
+        },
+        {
+          "interval": 78,
+          "count": 1
+        },
+        {
+          "interval": 79,
+          "count": 1
+        },
+        {
+          "interval": 80,
+          "count": 2
+        },
+        {
+          "interval": 84,
+          "count": 1
+        },
+        {
+          "interval": 88,
+          "count": 1
+        },
+        {
+          "interval": 90,
+          "count": 1
+        },
+        {
+          "interval": 95,
+          "count": 1
+        },
+        {
+          "interval": 103,
+          "count": 1
+        },
+        {
+          "interval": 107,
+          "count": 1
+        },
+        {
+          "interval": 112,
+          "count": 1
+        },
+        {
+          "interval": 113,
+          "count": 1
+        },
+        {
+          "interval": 115,
+          "count": 1
+        },
+        {
+          "interval": 122,
+          "count": 2
+        },
+        {
+          "interval": 127,
+          "count": 1
+        },
+        {
+          "interval": 129,
+          "count": 1
+        },
+        {
+          "interval": 132,
+          "count": 1
+        },
+        {
+          "interval": 135,
+          "count": 1
+        },
+        {
+          "interval": 139,
+          "count": 1
+        },
+        {
+          "interval": 215,
+          "count": 1
+        },
+        {
+          "interval": 226,
+          "count": 1
+        },
+        {
+          "interval": 311,
+          "count": 1
+        }
+      ],
+      "bankroll100": 248800,
+      "bankroll1000": 2488000,
+      "operationJudgement": "DO_NOT_SHIP",
+      "operationReasons": [
+        "ROI80.38%<100%: 期待値マイナス"
+      ],
+      "modelPerformance": {
+        "roi": 80.37699680511187,
+        "hitRate": 0.019808306709265176,
+        "roiExMaxHit": 79.13578274760387,
+        "roiExMax3Hits": 76.88498402555915,
+        "avgOdds": 44.3436477156549,
+        "maxHitOdds": 77.7,
+        "monthlyStability": 0.30434782608695654,
+        "highOddsDependency": -1.1988786812695054
+      },
+      "operationPerformance": {
+        "maxConsecutiveLosses": 310,
+        "maxDrawdown": 100,
+        "avgHitInterval": 49.90243902439025,
+        "bankroll100": 248800,
+        "forwardN": null,
+        "monthlyCoverage": "月1/2/3/4/5/6/7/8/9/10/11/12 (12ヶ月)",
+        "oddsVolatilityRisk": "LOW"
+      }
+    },
+    {
+      "label": "isBase (月4/6/8/12×parts=0)",
+      "description": "seasonal_parts0_month_4_6_8_12 完全条件",
+      "n": 543,
+      "hits": 26,
+      "hitRate": 0.04788213627992634,
+      "roi": 199.09760589318603,
+      "roiExMaxHit": 184.78821362799263,
+      "maxLossStreak": 102,
+      "avgLossStreak": 19.14814814814815,
+      "medianLossStreak": 12,
+      "lossStreakDistribution": [
+        {
+          "streak": 1,
+          "count": 1
+        },
+        {
+          "streak": 3,
+          "count": 1
+        },
+        {
+          "streak": 5,
+          "count": 2
+        },
+        {
+          "streak": 6,
+          "count": 3
+        },
+        {
+          "streak": 7,
+          "count": 1
+        },
+        {
+          "streak": 8,
+          "count": 1
+        },
+        {
+          "streak": 9,
+          "count": 1
+        },
+        {
+          "streak": 10,
+          "count": 1
+        },
+        {
+          "streak": 12,
+          "count": 4
+        },
+        {
+          "streak": 14,
+          "count": 1
+        },
+        {
+          "streak": 17,
+          "count": 1
+        },
+        {
+          "streak": 20,
+          "count": 1
+        },
+        {
+          "streak": 21,
+          "count": 1
+        },
+        {
+          "streak": 23,
+          "count": 2
+        },
+        {
+          "streak": 29,
+          "count": 1
+        },
+        {
+          "streak": 30,
+          "count": 1
+        },
+        {
+          "streak": 32,
+          "count": 1
+        },
+        {
+          "streak": 38,
+          "count": 1
+        },
+        {
+          "streak": 54,
+          "count": 1
+        },
+        {
+          "streak": 102,
+          "count": 1
+        }
+      ],
+      "maxDrawdownPct": 15.91015442208704,
+      "maxDrawdownYen100": 10200,
+      "maxDrawdownYen1000": 102000,
+      "avgHitInterval": 20.16,
+      "maxHitInterval": 103,
+      "hitIntervalDistribution": [
+        {
+          "interval": 2,
+          "count": 1
+        },
+        {
+          "interval": 4,
+          "count": 1
+        },
+        {
+          "interval": 6,
+          "count": 2
+        },
+        {
+          "interval": 7,
+          "count": 2
+        },
+        {
+          "interval": 8,
+          "count": 1
+        },
+        {
+          "interval": 9,
+          "count": 1
+        },
+        {
+          "interval": 10,
+          "count": 1
+        },
+        {
+          "interval": 11,
+          "count": 1
+        },
+        {
+          "interval": 13,
+          "count": 4
+        },
+        {
+          "interval": 15,
+          "count": 1
+        },
+        {
+          "interval": 18,
+          "count": 1
+        },
+        {
+          "interval": 21,
+          "count": 1
+        },
+        {
+          "interval": 22,
+          "count": 1
+        },
+        {
+          "interval": 24,
+          "count": 2
+        },
+        {
+          "interval": 30,
+          "count": 1
+        },
+        {
+          "interval": 31,
+          "count": 1
+        },
+        {
+          "interval": 39,
+          "count": 1
+        },
+        {
+          "interval": 55,
+          "count": 1
+        },
+        {
+          "interval": 103,
+          "count": 1
+        }
+      ],
+      "bankroll100": 20400,
+      "bankroll1000": 204000,
+      "operationJudgement": "TOO_VOLATILE",
+      "operationReasons": [
+        "最大連敗102回: 資金リスク大"
+      ],
+      "modelPerformance": {
+        "roi": 199.09760589318603,
+        "hitRate": 0.04788213627992634,
+        "roiExMaxHit": 184.78821362799263,
+        "roiExMax3Hits": 162.15469613259668,
+        "avgOdds": 43.28453038674033,
+        "maxHitOdds": 77.7,
+        "monthlyStability": 1,
+        "highOddsDependency": -1.1060978105177242
+      },
+      "operationPerformance": {
+        "maxConsecutiveLosses": 102,
+        "maxDrawdown": 15.91015442208704,
+        "avgHitInterval": 20.16,
+        "bankroll100": 20400,
+        "forwardN": null,
+        "monthlyCoverage": "月4/6/8/12 (4ヶ月)",
+        "oddsVolatilityRisk": "LOW"
+      }
+    },
+    {
+      "label": "強月のみ (月4/6/8/12)",
+      "description": "month IN (4,6,8,12) parts条件なし",
+      "n": 2154,
+      "hits": 54,
+      "hitRate": 0.025069637883008356,
+      "roi": 100.60352831940574,
+      "roiExMaxHit": 96.99628597957287,
+      "maxLossStreak": 138,
+      "avgLossStreak": 38.18181818181818,
+      "medianLossStreak": 32,
+      "lossStreakDistribution": [
+        {
+          "streak": 3,
+          "count": 2
+        },
+        {
+          "streak": 4,
+          "count": 1
+        },
+        {
+          "streak": 5,
+          "count": 1
+        },
+        {
+          "streak": 6,
+          "count": 2
+        },
+        {
+          "streak": 7,
+          "count": 1
+        },
+        {
+          "streak": 11,
+          "count": 1
+        },
+        {
+          "streak": 12,
+          "count": 1
+        },
+        {
+          "streak": 13,
+          "count": 1
+        },
+        {
+          "streak": 14,
+          "count": 2
+        },
+        {
+          "streak": 15,
+          "count": 1
+        },
+        {
+          "streak": 16,
+          "count": 1
+        },
+        {
+          "streak": 17,
+          "count": 1
+        },
+        {
+          "streak": 18,
+          "count": 3
+        },
+        {
+          "streak": 21,
+          "count": 2
+        },
+        {
+          "streak": 22,
+          "count": 1
+        },
+        {
+          "streak": 25,
+          "count": 1
+        },
+        {
+          "streak": 26,
+          "count": 1
+        },
+        {
+          "streak": 27,
+          "count": 2
+        },
+        {
+          "streak": 29,
+          "count": 1
+        },
+        {
+          "streak": 31,
+          "count": 1
+        },
+        {
+          "streak": 32,
+          "count": 3
+        },
+        {
+          "streak": 33,
+          "count": 1
+        },
+        {
+          "streak": 34,
+          "count": 1
+        },
+        {
+          "streak": 36,
+          "count": 1
+        },
+        {
+          "streak": 38,
+          "count": 1
+        },
+        {
+          "streak": 39,
+          "count": 1
+        },
+        {
+          "streak": 43,
+          "count": 2
+        },
+        {
+          "streak": 45,
+          "count": 1
+        },
+        {
+          "streak": 48,
+          "count": 1
+        },
+        {
+          "streak": 55,
+          "count": 1
+        },
+        {
+          "streak": 57,
+          "count": 1
+        },
+        {
+          "streak": 58,
+          "count": 3
+        },
+        {
+          "streak": 60,
+          "count": 1
+        },
+        {
+          "streak": 61,
+          "count": 1
+        },
+        {
+          "streak": 67,
+          "count": 2
+        },
+        {
+          "streak": 75,
+          "count": 1
+        },
+        {
+          "streak": 79,
+          "count": 1
+        },
+        {
+          "streak": 83,
+          "count": 1
+        },
+        {
+          "streak": 89,
+          "count": 1
+        },
+        {
+          "streak": 97,
+          "count": 1
+        },
+        {
+          "streak": 114,
+          "count": 1
+        },
+        {
+          "streak": 138,
+          "count": 1
+        }
+      ],
+      "maxDrawdownPct": 93.93414211438474,
+      "maxDrawdownYen100": 21680,
+      "maxDrawdownYen1000": 216800,
+      "avgHitInterval": 40.283018867924525,
+      "maxHitInterval": 139,
+      "hitIntervalDistribution": [
+        {
+          "interval": 4,
+          "count": 2
+        },
+        {
+          "interval": 5,
+          "count": 1
+        },
+        {
+          "interval": 6,
+          "count": 1
+        },
+        {
+          "interval": 7,
+          "count": 1
+        },
+        {
+          "interval": 8,
+          "count": 1
+        },
+        {
+          "interval": 12,
+          "count": 1
+        },
+        {
+          "interval": 14,
+          "count": 1
+        },
+        {
+          "interval": 15,
+          "count": 2
+        },
+        {
+          "interval": 16,
+          "count": 1
+        },
+        {
+          "interval": 17,
+          "count": 1
+        },
+        {
+          "interval": 18,
+          "count": 1
+        },
+        {
+          "interval": 19,
+          "count": 3
+        },
+        {
+          "interval": 22,
+          "count": 2
+        },
+        {
+          "interval": 23,
+          "count": 1
+        },
+        {
+          "interval": 26,
+          "count": 1
+        },
+        {
+          "interval": 27,
+          "count": 1
+        },
+        {
+          "interval": 28,
+          "count": 2
+        },
+        {
+          "interval": 30,
+          "count": 1
+        },
+        {
+          "interval": 32,
+          "count": 1
+        },
+        {
+          "interval": 33,
+          "count": 3
+        },
+        {
+          "interval": 34,
+          "count": 1
+        },
+        {
+          "interval": 35,
+          "count": 1
+        },
+        {
+          "interval": 37,
+          "count": 1
+        },
+        {
+          "interval": 39,
+          "count": 1
+        },
+        {
+          "interval": 40,
+          "count": 1
+        },
+        {
+          "interval": 44,
+          "count": 2
+        },
+        {
+          "interval": 46,
+          "count": 1
+        },
+        {
+          "interval": 49,
+          "count": 1
+        },
+        {
+          "interval": 56,
+          "count": 1
+        },
+        {
+          "interval": 58,
+          "count": 1
+        },
+        {
+          "interval": 59,
+          "count": 3
+        },
+        {
+          "interval": 61,
+          "count": 1
+        },
+        {
+          "interval": 62,
+          "count": 1
+        },
+        {
+          "interval": 68,
+          "count": 2
+        },
+        {
+          "interval": 76,
+          "count": 1
+        },
+        {
+          "interval": 80,
+          "count": 1
+        },
+        {
+          "interval": 84,
+          "count": 1
+        },
+        {
+          "interval": 90,
+          "count": 1
+        },
+        {
+          "interval": 98,
+          "count": 1
+        },
+        {
+          "interval": 115,
+          "count": 1
+        },
+        {
+          "interval": 139,
+          "count": 1
+        }
+      ],
+      "bankroll100": 43400,
+      "bankroll1000": 434000,
+      "operationJudgement": "TOO_VOLATILE",
+      "operationReasons": [
+        "最大連敗138回: 資金リスク大",
+        "最大DD93.93%: 資金枯渇リスク"
+      ],
+      "modelPerformance": {
+        "roi": 100.60352831940574,
+        "hitRate": 0.025069637883008356,
+        "roiExMaxHit": 96.99628597957287,
+        "roiExMax3Hits": 91.29062209842152,
+        "avgOdds": 43.19586815227486,
+        "maxHitOdds": 77.7,
+        "monthlyStability": 0.5714285714285714,
+        "highOddsDependency": -1.372942268829533
+      },
+      "operationPerformance": {
+        "maxConsecutiveLosses": 138,
+        "maxDrawdown": 93.93414211438474,
+        "avgHitInterval": 40.283018867924525,
+        "bankroll100": 43400,
+        "forwardN": null,
+        "monthlyCoverage": "月4/6/8/12 (4ヶ月)",
+        "oddsVolatilityRisk": "LOW"
+      }
+    },
+    {
+      "label": "弱月 (その他月)",
+      "description": "month NOT IN (4,6,8,12)",
+      "n": 4106,
+      "hits": 70,
+      "hitRate": 0.017048222113979543,
+      "roi": 69.76619581100827,
+      "roiExMaxHit": 67.90550414028253,
+      "maxLossStreak": 310,
+      "avgLossStreak": 57.65714285714286,
+      "medianLossStreak": 47,
+      "lossStreakDistribution": [
+        {
+          "streak": 1,
+          "count": 1
+        },
+        {
+          "streak": 2,
+          "count": 1
+        },
+        {
+          "streak": 3,
+          "count": 1
+        },
+        {
+          "streak": 4,
+          "count": 1
+        },
+        {
+          "streak": 5,
+          "count": 1
+        },
+        {
+          "streak": 6,
+          "count": 1
+        },
+        {
+          "streak": 8,
+          "count": 1
+        },
+        {
+          "streak": 9,
+          "count": 2
+        },
+        {
+          "streak": 10,
+          "count": 1
+        },
+        {
+          "streak": 12,
+          "count": 1
+        },
+        {
+          "streak": 13,
+          "count": 1
+        },
+        {
+          "streak": 14,
+          "count": 2
+        },
+        {
+          "streak": 17,
+          "count": 1
+        },
+        {
+          "streak": 18,
+          "count": 3
+        },
+        {
+          "streak": 19,
+          "count": 1
+        },
+        {
+          "streak": 21,
+          "count": 2
+        },
+        {
+          "streak": 26,
+          "count": 2
+        },
+        {
+          "streak": 27,
+          "count": 4
+        },
+        {
+          "streak": 28,
+          "count": 1
+        },
+        {
+          "streak": 30,
+          "count": 1
+        },
+        {
+          "streak": 31,
+          "count": 1
+        },
+        {
+          "streak": 36,
+          "count": 1
+        },
+        {
+          "streak": 37,
+          "count": 3
+        },
+        {
+          "streak": 40,
+          "count": 1
+        },
+        {
+          "streak": 47,
+          "count": 2
+        },
+        {
+          "streak": 49,
+          "count": 2
+        },
+        {
+          "streak": 55,
+          "count": 1
+        },
+        {
+          "streak": 56,
+          "count": 1
+        },
+        {
+          "streak": 58,
+          "count": 1
+        },
+        {
+          "streak": 59,
+          "count": 2
+        },
+        {
+          "streak": 60,
+          "count": 1
+        },
+        {
+          "streak": 61,
+          "count": 1
+        },
+        {
+          "streak": 62,
+          "count": 3
+        },
+        {
+          "streak": 63,
+          "count": 1
+        },
+        {
+          "streak": 69,
+          "count": 1
+        },
+        {
+          "streak": 71,
+          "count": 1
+        },
+        {
+          "streak": 73,
+          "count": 1
+        },
+        {
+          "streak": 77,
+          "count": 1
+        },
+        {
+          "streak": 79,
+          "count": 1
+        },
+        {
+          "streak": 94,
+          "count": 1
+        },
+        {
+          "streak": 102,
+          "count": 1
+        },
+        {
+          "streak": 105,
+          "count": 1
+        },
+        {
+          "streak": 106,
+          "count": 1
+        },
+        {
+          "streak": 111,
+          "count": 1
+        },
+        {
+          "streak": 112,
+          "count": 1
+        },
+        {
+          "streak": 121,
+          "count": 2
+        },
+        {
+          "streak": 126,
+          "count": 1
+        },
+        {
+          "streak": 128,
+          "count": 1
+        },
+        {
+          "streak": 131,
+          "count": 1
+        },
+        {
+          "streak": 134,
+          "count": 1
+        },
+        {
+          "streak": 214,
+          "count": 1
+        },
+        {
+          "streak": 225,
+          "count": 1
+        },
+        {
+          "streak": 310,
+          "count": 1
+        }
+      ],
+      "maxDrawdownPct": 100,
+      "maxDrawdownYen100": 125660,
+      "maxDrawdownYen1000": 1256600,
+      "avgHitInterval": 57.73913043478261,
+      "maxHitInterval": 311,
+      "hitIntervalDistribution": [
+        {
+          "interval": 2,
+          "count": 1
+        },
+        {
+          "interval": 3,
+          "count": 1
+        },
+        {
+          "interval": 4,
+          "count": 1
+        },
+        {
+          "interval": 5,
+          "count": 1
+        },
+        {
+          "interval": 6,
+          "count": 1
+        },
+        {
+          "interval": 7,
+          "count": 1
+        },
+        {
+          "interval": 9,
+          "count": 1
+        },
+        {
+          "interval": 10,
+          "count": 2
+        },
+        {
+          "interval": 11,
+          "count": 1
+        },
+        {
+          "interval": 13,
+          "count": 1
+        },
+        {
+          "interval": 14,
+          "count": 1
+        },
+        {
+          "interval": 15,
+          "count": 2
+        },
+        {
+          "interval": 18,
+          "count": 1
+        },
+        {
+          "interval": 19,
+          "count": 3
+        },
+        {
+          "interval": 20,
+          "count": 1
+        },
+        {
+          "interval": 22,
+          "count": 2
+        },
+        {
+          "interval": 27,
+          "count": 2
+        },
+        {
+          "interval": 28,
+          "count": 4
+        },
+        {
+          "interval": 29,
+          "count": 1
+        },
+        {
+          "interval": 31,
+          "count": 1
+        },
+        {
+          "interval": 32,
+          "count": 1
+        },
+        {
+          "interval": 37,
+          "count": 1
+        },
+        {
+          "interval": 38,
+          "count": 3
+        },
+        {
+          "interval": 41,
+          "count": 1
+        },
+        {
+          "interval": 48,
+          "count": 2
+        },
+        {
+          "interval": 50,
+          "count": 2
+        },
+        {
+          "interval": 56,
+          "count": 1
+        },
+        {
+          "interval": 57,
+          "count": 1
+        },
+        {
+          "interval": 59,
+          "count": 1
+        },
+        {
+          "interval": 60,
+          "count": 2
+        },
+        {
+          "interval": 61,
+          "count": 1
+        },
+        {
+          "interval": 62,
+          "count": 1
+        },
+        {
+          "interval": 63,
+          "count": 3
+        },
+        {
+          "interval": 64,
+          "count": 1
+        },
+        {
+          "interval": 70,
+          "count": 1
+        },
+        {
+          "interval": 72,
+          "count": 1
+        },
+        {
+          "interval": 74,
+          "count": 1
+        },
+        {
+          "interval": 78,
+          "count": 1
+        },
+        {
+          "interval": 80,
+          "count": 1
+        },
+        {
+          "interval": 95,
+          "count": 1
+        },
+        {
+          "interval": 103,
+          "count": 1
+        },
+        {
+          "interval": 106,
+          "count": 1
+        },
+        {
+          "interval": 107,
+          "count": 1
+        },
+        {
+          "interval": 112,
+          "count": 1
+        },
+        {
+          "interval": 113,
+          "count": 1
+        },
+        {
+          "interval": 122,
+          "count": 1
+        },
+        {
+          "interval": 127,
+          "count": 1
+        },
+        {
+          "interval": 129,
+          "count": 1
+        },
+        {
+          "interval": 132,
+          "count": 1
+        },
+        {
+          "interval": 135,
+          "count": 1
+        },
+        {
+          "interval": 215,
+          "count": 1
+        },
+        {
+          "interval": 226,
+          "count": 1
+        },
+        {
+          "interval": 311,
+          "count": 1
+        }
+      ],
+      "bankroll100": 251400,
+      "bankroll1000": 2514000,
+      "operationJudgement": "DO_NOT_SHIP",
+      "operationReasons": [
+        "ROI69.77%<100%: 期待値マイナス"
+      ],
+      "modelPerformance": {
+        "roi": 69.76619581100827,
+        "hitRate": 0.017048222113979543,
+        "roiExMaxHit": 67.90550414028253,
+        "roiExMax3Hits": 64.81490501704825,
+        "avgOdds": 44.94577075012169,
+        "maxHitOdds": 76.4,
+        "monthlyStability": 0.1875,
+        "highOddsDependency": -1.0871309265628355
+      },
+      "operationPerformance": {
+        "maxConsecutiveLosses": 310,
+        "maxDrawdown": 100,
+        "avgHitInterval": 57.73913043478261,
+        "bankroll100": 251400,
+        "forwardN": null,
+        "monthlyCoverage": "月1/2/3/5/7/9/10/11 (8ヶ月)",
+        "oddsVolatilityRisk": "LOW"
+      }
+    },
+    {
+      "label": "odds < 30",
+      "description": "current_odds < 30",
+      "n": 614,
+      "hits": 18,
+      "hitRate": 0.029315960912052116,
+      "roi": 76.61237785016286,
+      "roiExMaxHit": 71.7915309446254,
+      "maxLossStreak": 154,
+      "avgLossStreak": 33.111111111111114,
+      "medianLossStreak": 24,
+      "lossStreakDistribution": [
+        {
+          "streak": 1,
+          "count": 1
+        },
+        {
+          "streak": 5,
+          "count": 2
+        },
+        {
+          "streak": 6,
+          "count": 1
+        },
+        {
+          "streak": 16,
+          "count": 1
+        },
+        {
+          "streak": 20,
+          "count": 2
+        },
+        {
+          "streak": 21,
+          "count": 2
+        },
+        {
+          "streak": 24,
+          "count": 1
+        },
+        {
+          "streak": 30,
+          "count": 1
+        },
+        {
+          "streak": 35,
+          "count": 1
+        },
+        {
+          "streak": 41,
+          "count": 2
+        },
+        {
+          "streak": 51,
+          "count": 1
+        },
+        {
+          "streak": 52,
+          "count": 1
+        },
+        {
+          "streak": 53,
+          "count": 1
+        },
+        {
+          "streak": 154,
+          "count": 1
+        }
+      ],
+      "maxDrawdownPct": 100,
+      "maxDrawdownYen100": 23520,
+      "maxDrawdownYen1000": 235200,
+      "avgHitInterval": 32.94117647058823,
+      "maxHitInterval": 155,
+      "hitIntervalDistribution": [
+        {
+          "interval": 2,
+          "count": 1
+        },
+        {
+          "interval": 6,
+          "count": 2
+        },
+        {
+          "interval": 7,
+          "count": 1
+        },
+        {
+          "interval": 17,
+          "count": 1
+        },
+        {
+          "interval": 21,
+          "count": 2
+        },
+        {
+          "interval": 22,
+          "count": 2
+        },
+        {
+          "interval": 25,
+          "count": 1
+        },
+        {
+          "interval": 31,
+          "count": 1
+        },
+        {
+          "interval": 36,
+          "count": 1
+        },
+        {
+          "interval": 42,
+          "count": 2
+        },
+        {
+          "interval": 52,
+          "count": 1
+        },
+        {
+          "interval": 53,
+          "count": 1
+        },
+        {
+          "interval": 155,
+          "count": 1
+        }
+      ],
+      "bankroll100": 47100,
+      "bankroll1000": 471000,
+      "operationJudgement": "DO_NOT_SHIP",
+      "operationReasons": [
+        "ROI76.61%<100%: 期待値マイナス"
+      ],
+      "modelPerformance": {
+        "roi": 76.61237785016286,
+        "hitRate": 0.029315960912052116,
+        "roiExMaxHit": 71.7915309446254,
+        "roiExMax3Hits": 62.198697068403916,
+        "avgOdds": 26.97942996742672,
+        "maxHitOdds": 29.6,
+        "monthlyStability": 0.3888888888888889,
+        "highOddsDependency": 0
+      },
+      "operationPerformance": {
+        "maxConsecutiveLosses": 154,
+        "maxDrawdown": 100,
+        "avgHitInterval": 32.94117647058823,
+        "bankroll100": 47100,
+        "forwardN": null,
+        "monthlyCoverage": "月1/2/3/4/5/6/7/8/9/10/11/12 (12ヶ月)",
+        "oddsVolatilityRisk": "LOW"
+      }
+    },
+    {
+      "label": "odds 30-50",
+      "description": "30 <= current_odds < 50",
+      "n": 3846,
+      "hits": 82,
+      "hitRate": 0.021320852834113363,
+      "roi": 82.62870514820592,
+      "roiExMaxHit": 81.33645345813835,
+      "maxLossStreak": 183,
+      "avgLossStreak": 45.34939759036145,
+      "medianLossStreak": 36,
+      "lossStreakDistribution": [
+        {
+          "streak": 1,
+          "count": 1
+        },
+        {
+          "streak": 2,
+          "count": 2
+        },
+        {
+          "streak": 3,
+          "count": 5
+        },
+        {
+          "streak": 4,
+          "count": 1
+        },
+        {
+          "streak": 6,
+          "count": 2
+        },
+        {
+          "streak": 7,
+          "count": 1
+        },
+        {
+          "streak": 8,
+          "count": 1
+        },
+        {
+          "streak": 9,
+          "count": 3
+        },
+        {
+          "streak": 10,
+          "count": 1
+        },
+        {
+          "streak": 11,
+          "count": 3
+        },
+        {
+          "streak": 13,
+          "count": 3
+        },
+        {
+          "streak": 14,
+          "count": 1
+        },
+        {
+          "streak": 15,
+          "count": 1
+        },
+        {
+          "streak": 18,
+          "count": 1
+        },
+        {
+          "streak": 19,
+          "count": 2
+        },
+        {
+          "streak": 20,
+          "count": 2
+        },
+        {
+          "streak": 21,
+          "count": 1
+        },
+        {
+          "streak": 25,
+          "count": 2
+        },
+        {
+          "streak": 26,
+          "count": 1
+        },
+        {
+          "streak": 27,
+          "count": 1
+        },
+        {
+          "streak": 28,
+          "count": 1
+        },
+        {
+          "streak": 31,
+          "count": 2
+        },
+        {
+          "streak": 32,
+          "count": 2
+        },
+        {
+          "streak": 35,
+          "count": 1
+        },
+        {
+          "streak": 36,
+          "count": 2
+        },
+        {
+          "streak": 37,
+          "count": 2
+        },
+        {
+          "streak": 39,
+          "count": 1
+        },
+        {
+          "streak": 40,
+          "count": 3
+        },
+        {
+          "streak": 41,
+          "count": 1
+        },
+        {
+          "streak": 43,
+          "count": 1
+        },
+        {
+          "streak": 50,
+          "count": 2
+        },
+        {
+          "streak": 54,
+          "count": 2
+        },
+        {
+          "streak": 56,
+          "count": 1
+        },
+        {
+          "streak": 57,
+          "count": 1
+        },
+        {
+          "streak": 58,
+          "count": 1
+        },
+        {
+          "streak": 59,
+          "count": 1
+        },
+        {
+          "streak": 62,
+          "count": 1
+        },
+        {
+          "streak": 64,
+          "count": 2
+        },
+        {
+          "streak": 73,
+          "count": 1
+        },
+        {
+          "streak": 75,
+          "count": 1
+        },
+        {
+          "streak": 82,
+          "count": 1
+        },
+        {
+          "streak": 83,
+          "count": 1
+        },
+        {
+          "streak": 84,
+          "count": 3
+        },
+        {
+          "streak": 86,
+          "count": 1
+        },
+        {
+          "streak": 87,
+          "count": 1
+        },
+        {
+          "streak": 88,
+          "count": 1
+        },
+        {
+          "streak": 89,
+          "count": 1
+        },
+        {
+          "streak": 91,
+          "count": 1
+        },
+        {
+          "streak": 99,
+          "count": 1
+        },
+        {
+          "streak": 103,
+          "count": 1
+        },
+        {
+          "streak": 104,
+          "count": 1
+        },
+        {
+          "streak": 109,
+          "count": 1
+        },
+        {
+          "streak": 117,
+          "count": 1
+        },
+        {
+          "streak": 119,
+          "count": 1
+        },
+        {
+          "streak": 154,
+          "count": 1
+        },
+        {
+          "streak": 155,
+          "count": 1
+        },
+        {
+          "streak": 183,
+          "count": 1
+        }
+      ],
+      "maxDrawdownPct": 52.59988665344291,
+      "maxDrawdownYen100": 74250,
+      "maxDrawdownYen1000": 742500,
+      "avgHitInterval": 45.4320987654321,
+      "maxHitInterval": 184,
+      "hitIntervalDistribution": [
+        {
+          "interval": 2,
+          "count": 1
+        },
+        {
+          "interval": 3,
+          "count": 2
+        },
+        {
+          "interval": 4,
+          "count": 5
+        },
+        {
+          "interval": 5,
+          "count": 1
+        },
+        {
+          "interval": 7,
+          "count": 2
+        },
+        {
+          "interval": 8,
+          "count": 1
+        },
+        {
+          "interval": 9,
+          "count": 1
+        },
+        {
+          "interval": 10,
+          "count": 3
+        },
+        {
+          "interval": 11,
+          "count": 1
+        },
+        {
+          "interval": 12,
+          "count": 3
+        },
+        {
+          "interval": 14,
+          "count": 3
+        },
+        {
+          "interval": 15,
+          "count": 1
+        },
+        {
+          "interval": 16,
+          "count": 1
+        },
+        {
+          "interval": 19,
+          "count": 1
+        },
+        {
+          "interval": 20,
+          "count": 2
+        },
+        {
+          "interval": 21,
+          "count": 2
+        },
+        {
+          "interval": 22,
+          "count": 1
+        },
+        {
+          "interval": 26,
+          "count": 2
+        },
+        {
+          "interval": 27,
+          "count": 1
+        },
+        {
+          "interval": 28,
+          "count": 1
+        },
+        {
+          "interval": 29,
+          "count": 1
+        },
+        {
+          "interval": 32,
+          "count": 2
+        },
+        {
+          "interval": 33,
+          "count": 2
+        },
+        {
+          "interval": 36,
+          "count": 1
+        },
+        {
+          "interval": 37,
+          "count": 2
+        },
+        {
+          "interval": 38,
+          "count": 2
+        },
+        {
+          "interval": 40,
+          "count": 1
+        },
+        {
+          "interval": 41,
+          "count": 3
+        },
+        {
+          "interval": 42,
+          "count": 1
+        },
+        {
+          "interval": 44,
+          "count": 1
+        },
+        {
+          "interval": 51,
+          "count": 2
+        },
+        {
+          "interval": 55,
+          "count": 2
+        },
+        {
+          "interval": 58,
+          "count": 1
+        },
+        {
+          "interval": 59,
+          "count": 1
+        },
+        {
+          "interval": 60,
+          "count": 1
+        },
+        {
+          "interval": 63,
+          "count": 1
+        },
+        {
+          "interval": 65,
+          "count": 2
+        },
+        {
+          "interval": 74,
+          "count": 1
+        },
+        {
+          "interval": 76,
+          "count": 1
+        },
+        {
+          "interval": 83,
+          "count": 1
+        },
+        {
+          "interval": 84,
+          "count": 1
+        },
+        {
+          "interval": 85,
+          "count": 3
+        },
+        {
+          "interval": 87,
+          "count": 1
+        },
+        {
+          "interval": 88,
+          "count": 1
+        },
+        {
+          "interval": 89,
+          "count": 1
+        },
+        {
+          "interval": 90,
+          "count": 1
+        },
+        {
+          "interval": 92,
+          "count": 1
+        },
+        {
+          "interval": 100,
+          "count": 1
+        },
+        {
+          "interval": 104,
+          "count": 1
+        },
+        {
+          "interval": 105,
+          "count": 1
+        },
+        {
+          "interval": 118,
+          "count": 1
+        },
+        {
+          "interval": 120,
+          "count": 1
+        },
+        {
+          "interval": 155,
+          "count": 1
+        },
+        {
+          "interval": 156,
+          "count": 1
+        },
+        {
+          "interval": 184,
+          "count": 1
+        }
+      ],
+      "bankroll100": 148500,
+      "bankroll1000": 1485000,
+      "operationJudgement": "DO_NOT_SHIP",
+      "operationReasons": [
+        "ROI82.63%<100%: 期待値マイナス"
+      ],
+      "modelPerformance": {
+        "roi": 82.62870514820592,
+        "hitRate": 0.021320852834113363,
+        "roiExMaxHit": 81.33645345813835,
+        "roiExMax3Hits": 78.85595423816953,
+        "avgOdds": 39.47525343213731,
+        "maxHitOdds": 49.7,
+        "monthlyStability": 0.34782608695652173,
+        "highOddsDependency": 0
+      },
+      "operationPerformance": {
+        "maxConsecutiveLosses": 183,
+        "maxDrawdown": 52.59988665344291,
+        "avgHitInterval": 45.4320987654321,
+        "bankroll100": 148500,
+        "forwardN": null,
+        "monthlyCoverage": "月1/2/3/4/5/6/7/8/9/10/11/12 (12ヶ月)",
+        "oddsVolatilityRisk": "LOW"
+      }
+    },
+    {
+      "label": "odds 50-80",
+      "description": "50 <= current_odds < 80",
+      "n": 1708,
+      "hits": 24,
+      "hitRate": 0.01405152224824356,
+      "roi": 80.9894613583138,
+      "roiExMaxHit": 76.44028103044495,
+      "maxLossStreak": 210,
+      "avgLossStreak": 67.36,
+      "medianLossStreak": 57,
+      "lossStreakDistribution": [
+        {
+          "streak": 6,
+          "count": 2
+        },
+        {
+          "streak": 7,
+          "count": 1
+        },
+        {
+          "streak": 9,
+          "count": 1
+        },
+        {
+          "streak": 14,
+          "count": 1
+        },
+        {
+          "streak": 20,
+          "count": 1
+        },
+        {
+          "streak": 21,
+          "count": 1
+        },
+        {
+          "streak": 23,
+          "count": 1
+        },
+        {
+          "streak": 24,
+          "count": 2
+        },
+        {
+          "streak": 32,
+          "count": 1
+        },
+        {
+          "streak": 49,
+          "count": 1
+        },
+        {
+          "streak": 57,
+          "count": 1
+        },
+        {
+          "streak": 58,
+          "count": 1
+        },
+        {
+          "streak": 66,
+          "count": 1
+        },
+        {
+          "streak": 69,
+          "count": 1
+        },
+        {
+          "streak": 70,
+          "count": 1
+        },
+        {
+          "streak": 97,
+          "count": 1
+        },
+        {
+          "streak": 120,
+          "count": 2
+        },
+        {
+          "streak": 128,
+          "count": 1
+        },
+        {
+          "streak": 134,
+          "count": 1
+        },
+        {
+          "streak": 148,
+          "count": 1
+        },
+        {
+          "streak": 172,
+          "count": 1
+        },
+        {
+          "streak": 210,
+          "count": 1
+        }
+      ],
+      "maxDrawdownPct": 100,
+      "maxDrawdownYen100": 41400,
+      "maxDrawdownYen1000": 414000,
+      "avgHitInterval": 66.1304347826087,
+      "maxHitInterval": 211,
+      "hitIntervalDistribution": [
+        {
+          "interval": 7,
+          "count": 2
+        },
+        {
+          "interval": 8,
+          "count": 1
+        },
+        {
+          "interval": 10,
+          "count": 1
+        },
+        {
+          "interval": 15,
+          "count": 1
+        },
+        {
+          "interval": 21,
+          "count": 1
+        },
+        {
+          "interval": 22,
+          "count": 1
+        },
+        {
+          "interval": 24,
+          "count": 1
+        },
+        {
+          "interval": 25,
+          "count": 2
+        },
+        {
+          "interval": 33,
+          "count": 1
+        },
+        {
+          "interval": 50,
+          "count": 1
+        },
+        {
+          "interval": 58,
+          "count": 1
+        },
+        {
+          "interval": 59,
+          "count": 1
+        },
+        {
+          "interval": 70,
+          "count": 1
+        },
+        {
+          "interval": 71,
+          "count": 1
+        },
+        {
+          "interval": 98,
+          "count": 1
+        },
+        {
+          "interval": 121,
+          "count": 1
+        },
+        {
+          "interval": 129,
+          "count": 1
+        },
+        {
+          "interval": 135,
+          "count": 1
+        },
+        {
+          "interval": 149,
+          "count": 1
+        },
+        {
+          "interval": 173,
+          "count": 1
+        },
+        {
+          "interval": 211,
+          "count": 1
+        }
+      ],
+      "bankroll100": 82800,
+      "bankroll1000": 828000,
+      "operationJudgement": "DO_NOT_SHIP",
+      "operationReasons": [
+        "ROI80.99%<100%: 期待値マイナス"
+      ],
+      "modelPerformance": {
+        "roi": 80.9894613583138,
+        "hitRate": 0.01405152224824356,
+        "roiExMaxHit": 76.44028103044495,
+        "roiExMax3Hits": 68.19086651053864,
+        "avgOdds": 59.23837236533947,
+        "maxHitOdds": 77.7,
+        "monthlyStability": 0.43478260869565216,
+        "highOddsDependency": 0
+      },
+      "operationPerformance": {
+        "maxConsecutiveLosses": 210,
+        "maxDrawdown": 100,
+        "avgHitInterval": 66.1304347826087,
+        "bankroll100": 82800,
+        "forwardN": null,
+        "monthlyCoverage": "月1/2/3/4/5/6/7/8/9/10/11/12 (12ヶ月)",
+        "oddsVolatilityRisk": "LOW"
+      }
+    },
+    {
+      "label": "odds >= 80 (高配当)",
+      "description": "current_odds >= 80",
+      "n": 92,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "roiExMaxHit": 0,
+      "maxLossStreak": 92,
+      "avgLossStreak": 92,
+      "medianLossStreak": 92,
+      "lossStreakDistribution": [
+        {
+          "streak": 92,
+          "count": 1
+        }
+      ],
+      "maxDrawdownPct": 100,
+      "maxDrawdownYen100": 9200,
+      "maxDrawdownYen1000": 92000,
+      "avgHitInterval": 92,
+      "maxHitInterval": 92,
+      "hitIntervalDistribution": [],
+      "bankroll100": 18400,
+      "bankroll1000": 184000,
+      "operationJudgement": "DO_NOT_SHIP",
+      "operationReasons": [
+        "ROI0.00%<100%: 期待値マイナス"
+      ],
+      "modelPerformance": {
+        "roi": 0,
+        "hitRate": 0,
+        "roiExMaxHit": 0,
+        "roiExMax3Hits": 0,
+        "avgOdds": 87.22717391304346,
+        "maxHitOdds": 0,
+        "monthlyStability": 0,
+        "highOddsDependency": 0
+      },
+      "operationPerformance": {
+        "maxConsecutiveLosses": 92,
+        "maxDrawdown": 100,
+        "avgHitInterval": 92,
+        "bankroll100": 18400,
+        "forwardN": null,
+        "monthlyCoverage": "月1/2/3/4/5/6/7/8/10/11 (10ヶ月)",
+        "oddsVolatilityRisk": "LOW"
+      }
+    },
+    {
+      "label": "parts=0 全月",
+      "description": "parts_changed_count=0",
+      "n": 5939,
+      "hits": 117,
+      "hitRate": 0.01970028624347533,
+      "roi": 81.0961441320088,
+      "roiExMaxHit": 79.78784307122416,
+      "maxLossStreak": 299,
+      "avgLossStreak": 49.33898305084746,
+      "medianLossStreak": 36,
+      "lossStreakDistribution": [
+        {
+          "streak": 1,
+          "count": 1
+        },
+        {
+          "streak": 2,
+          "count": 1
+        },
+        {
+          "streak": 3,
+          "count": 3
+        },
+        {
+          "streak": 4,
+          "count": 2
+        },
+        {
+          "streak": 5,
+          "count": 2
+        },
+        {
+          "streak": 6,
+          "count": 2
+        },
+        {
+          "streak": 7,
+          "count": 2
+        },
+        {
+          "streak": 8,
+          "count": 2
+        },
+        {
+          "streak": 9,
+          "count": 1
+        },
+        {
+          "streak": 11,
+          "count": 2
+        },
+        {
+          "streak": 12,
+          "count": 3
+        },
+        {
+          "streak": 13,
+          "count": 1
+        },
+        {
+          "streak": 14,
+          "count": 3
+        },
+        {
+          "streak": 15,
+          "count": 1
+        },
+        {
+          "streak": 16,
+          "count": 3
+        },
+        {
+          "streak": 17,
+          "count": 2
+        },
+        {
+          "streak": 18,
+          "count": 4
+        },
+        {
+          "streak": 19,
+          "count": 2
+        },
+        {
+          "streak": 20,
+          "count": 2
+        },
+        {
+          "streak": 21,
+          "count": 2
+        },
+        {
+          "streak": 22,
+          "count": 1
+        },
+        {
+          "streak": 25,
+          "count": 2
+        },
+        {
+          "streak": 26,
+          "count": 3
+        },
+        {
+          "streak": 27,
+          "count": 2
+        },
+        {
+          "streak": 29,
+          "count": 3
+        },
+        {
+          "streak": 30,
+          "count": 2
+        },
+        {
+          "streak": 31,
+          "count": 3
+        },
+        {
+          "streak": 32,
+          "count": 1
+        },
+        {
+          "streak": 35,
+          "count": 1
+        },
+        {
+          "streak": 36,
+          "count": 2
+        },
+        {
+          "streak": 37,
+          "count": 2
+        },
+        {
+          "streak": 40,
+          "count": 1
+        },
+        {
+          "streak": 41,
+          "count": 1
+        },
+        {
+          "streak": 43,
+          "count": 2
+        },
+        {
+          "streak": 45,
+          "count": 1
+        },
+        {
+          "streak": 47,
+          "count": 2
+        },
+        {
+          "streak": 49,
+          "count": 1
+        },
+        {
+          "streak": 52,
+          "count": 1
+        },
+        {
+          "streak": 53,
+          "count": 1
+        },
+        {
+          "streak": 54,
+          "count": 3
+        },
+        {
+          "streak": 55,
+          "count": 1
+        },
+        {
+          "streak": 56,
+          "count": 3
+        },
+        {
+          "streak": 57,
+          "count": 2
+        },
+        {
+          "streak": 58,
+          "count": 2
+        },
+        {
+          "streak": 59,
+          "count": 3
+        },
+        {
+          "streak": 60,
+          "count": 1
+        },
+        {
+          "streak": 62,
+          "count": 1
+        },
+        {
+          "streak": 63,
+          "count": 1
+        },
+        {
+          "streak": 65,
+          "count": 1
+        },
+        {
+          "streak": 66,
+          "count": 2
+        },
+        {
+          "streak": 72,
+          "count": 1
+        },
+        {
+          "streak": 74,
+          "count": 1
+        },
+        {
+          "streak": 75,
+          "count": 3
+        },
+        {
+          "streak": 82,
+          "count": 1
+        },
+        {
+          "streak": 83,
+          "count": 1
+        },
+        {
+          "streak": 89,
+          "count": 1
+        },
+        {
+          "streak": 98,
+          "count": 1
+        },
+        {
+          "streak": 103,
+          "count": 1
+        },
+        {
+          "streak": 107,
+          "count": 1
+        },
+        {
+          "streak": 109,
+          "count": 1
+        },
+        {
+          "streak": 110,
+          "count": 1
+        },
+        {
+          "streak": 114,
+          "count": 2
+        },
+        {
+          "streak": 119,
+          "count": 1
+        },
+        {
+          "streak": 120,
+          "count": 1
+        },
+        {
+          "streak": 122,
+          "count": 1
+        },
+        {
+          "streak": 126,
+          "count": 1
+        },
+        {
+          "streak": 127,
+          "count": 1
+        },
+        {
+          "streak": 130,
+          "count": 2
+        },
+        {
+          "streak": 214,
+          "count": 1
+        },
+        {
+          "streak": 281,
+          "count": 1
+        },
+        {
+          "streak": 299,
+          "count": 1
+        }
+      ],
+      "maxDrawdownPct": 100,
+      "maxDrawdownYen100": 112270,
+      "maxDrawdownYen1000": 1122700,
+      "avgHitInterval": 49.258620689655174,
+      "maxHitInterval": 300,
+      "hitIntervalDistribution": [
+        {
+          "interval": 2,
+          "count": 1
+        },
+        {
+          "interval": 3,
+          "count": 1
+        },
+        {
+          "interval": 4,
+          "count": 3
+        },
+        {
+          "interval": 5,
+          "count": 2
+        },
+        {
+          "interval": 6,
+          "count": 2
+        },
+        {
+          "interval": 7,
+          "count": 2
+        },
+        {
+          "interval": 8,
+          "count": 2
+        },
+        {
+          "interval": 9,
+          "count": 2
+        },
+        {
+          "interval": 10,
+          "count": 1
+        },
+        {
+          "interval": 12,
+          "count": 2
+        },
+        {
+          "interval": 13,
+          "count": 3
+        },
+        {
+          "interval": 14,
+          "count": 1
+        },
+        {
+          "interval": 15,
+          "count": 3
+        },
+        {
+          "interval": 16,
+          "count": 1
+        },
+        {
+          "interval": 17,
+          "count": 3
+        },
+        {
+          "interval": 18,
+          "count": 2
+        },
+        {
+          "interval": 19,
+          "count": 4
+        },
+        {
+          "interval": 20,
+          "count": 2
+        },
+        {
+          "interval": 21,
+          "count": 2
+        },
+        {
+          "interval": 22,
+          "count": 2
+        },
+        {
+          "interval": 23,
+          "count": 1
+        },
+        {
+          "interval": 26,
+          "count": 2
+        },
+        {
+          "interval": 27,
+          "count": 3
+        },
+        {
+          "interval": 28,
+          "count": 2
+        },
+        {
+          "interval": 30,
+          "count": 3
+        },
+        {
+          "interval": 31,
+          "count": 2
+        },
+        {
+          "interval": 32,
+          "count": 3
+        },
+        {
+          "interval": 33,
+          "count": 1
+        },
+        {
+          "interval": 36,
+          "count": 1
+        },
+        {
+          "interval": 37,
+          "count": 2
+        },
+        {
+          "interval": 38,
+          "count": 2
+        },
+        {
+          "interval": 41,
+          "count": 1
+        },
+        {
+          "interval": 42,
+          "count": 1
+        },
+        {
+          "interval": 44,
+          "count": 2
+        },
+        {
+          "interval": 46,
+          "count": 1
+        },
+        {
+          "interval": 48,
+          "count": 2
+        },
+        {
+          "interval": 50,
+          "count": 1
+        },
+        {
+          "interval": 53,
+          "count": 1
+        },
+        {
+          "interval": 54,
+          "count": 1
+        },
+        {
+          "interval": 55,
+          "count": 3
+        },
+        {
+          "interval": 56,
+          "count": 1
+        },
+        {
+          "interval": 57,
+          "count": 3
+        },
+        {
+          "interval": 58,
+          "count": 2
+        },
+        {
+          "interval": 59,
+          "count": 2
+        },
+        {
+          "interval": 60,
+          "count": 3
+        },
+        {
+          "interval": 61,
+          "count": 1
+        },
+        {
+          "interval": 63,
+          "count": 1
+        },
+        {
+          "interval": 64,
+          "count": 1
+        },
+        {
+          "interval": 66,
+          "count": 1
+        },
+        {
+          "interval": 67,
+          "count": 2
+        },
+        {
+          "interval": 73,
+          "count": 1
+        },
+        {
+          "interval": 75,
+          "count": 1
+        },
+        {
+          "interval": 76,
+          "count": 3
+        },
+        {
+          "interval": 83,
+          "count": 1
+        },
+        {
+          "interval": 84,
+          "count": 1
+        },
+        {
+          "interval": 90,
+          "count": 1
+        },
+        {
+          "interval": 99,
+          "count": 1
+        },
+        {
+          "interval": 104,
+          "count": 1
+        },
+        {
+          "interval": 108,
+          "count": 1
+        },
+        {
+          "interval": 110,
+          "count": 1
+        },
+        {
+          "interval": 115,
+          "count": 1
+        },
+        {
+          "interval": 120,
+          "count": 1
+        },
+        {
+          "interval": 121,
+          "count": 1
+        },
+        {
+          "interval": 123,
+          "count": 1
+        },
+        {
+          "interval": 127,
+          "count": 1
+        },
+        {
+          "interval": 128,
+          "count": 1
+        },
+        {
+          "interval": 131,
+          "count": 2
+        },
+        {
+          "interval": 215,
+          "count": 1
+        },
+        {
+          "interval": 282,
+          "count": 1
+        },
+        {
+          "interval": 300,
+          "count": 1
+        }
+      ],
+      "bankroll100": 224600,
+      "bankroll1000": 2246000,
+      "operationJudgement": "DO_NOT_SHIP",
+      "operationReasons": [
+        "ROI81.10%<100%: 期待値マイナス"
+      ],
+      "modelPerformance": {
+        "roi": 81.0961441320088,
+        "hitRate": 0.01970028624347533,
+        "roiExMaxHit": 79.78784307122416,
+        "roiExMax3Hits": 77.41538979626206,
+        "avgOdds": 44.344356743559494,
+        "maxHitOdds": 77.7,
+        "monthlyStability": 0.2727272727272727,
+        "highOddsDependency": -1.1775149045474365
+      },
+      "operationPerformance": {
+        "maxConsecutiveLosses": 299,
+        "maxDrawdown": 100,
+        "avgHitInterval": 49.258620689655174,
+        "bankroll100": 224600,
+        "forwardN": null,
+        "monthlyCoverage": "月1/2/3/4/5/6/7/8/9/10/11/12 (12ヶ月)",
+        "oddsVolatilityRisk": "LOW"
+      }
+    },
+    {
+      "label": "partsあり 全月",
+      "description": "parts_changed_count>=1",
+      "n": 321,
+      "hits": 7,
+      "hitRate": 0.021806853582554516,
+      "roi": 67.07165109034267,
+      "roiExMaxHit": 50.71651090342678,
+      "maxLossStreak": 151,
+      "avgLossStreak": 44.857142857142854,
+      "medianLossStreak": 27,
+      "lossStreakDistribution": [
+        {
+          "streak": 7,
+          "count": 1
+        },
+        {
+          "streak": 18,
+          "count": 1
+        },
+        {
+          "streak": 22,
+          "count": 1
+        },
+        {
+          "streak": 27,
+          "count": 1
+        },
+        {
+          "streak": 28,
+          "count": 1
+        },
+        {
+          "streak": 61,
+          "count": 1
+        },
+        {
+          "streak": 151,
+          "count": 1
+        }
+      ],
+      "maxDrawdownPct": 100,
+      "maxDrawdownYen100": 17920,
+      "maxDrawdownYen1000": 179200,
+      "avgHitInterval": 43.166666666666664,
+      "maxHitInterval": 152,
+      "hitIntervalDistribution": [
+        {
+          "interval": 8,
+          "count": 1
+        },
+        {
+          "interval": 19,
+          "count": 1
+        },
+        {
+          "interval": 23,
+          "count": 1
+        },
+        {
+          "interval": 28,
+          "count": 1
+        },
+        {
+          "interval": 29,
+          "count": 1
+        },
+        {
+          "interval": 152,
+          "count": 1
+        }
+      ],
+      "bankroll100": 35900,
+      "bankroll1000": 359000,
+      "operationJudgement": "DO_NOT_SHIP",
+      "operationReasons": [
+        "ROI67.07%<100%: 期待値マイナス"
+      ],
+      "modelPerformance": {
+        "roi": 67.07165109034267,
+        "hitRate": 0.021806853582554516,
+        "roiExMaxHit": 50.71651090342678,
+        "roiExMax3Hits": 27.60124610591901,
+        "avgOdds": 44.33052959501554,
+        "maxHitOdds": 52.5,
+        "monthlyStability": 0.22727272727272727,
+        "highOddsDependency": -1.495227890549046
+      },
+      "operationPerformance": {
+        "maxConsecutiveLosses": 151,
+        "maxDrawdown": 100,
+        "avgHitInterval": 43.166666666666664,
+        "bankroll100": 35900,
+        "forwardN": null,
+        "monthlyCoverage": "月1/2/3/4/5/6/7/8/9/10/11/12 (12ヶ月)",
+        "oddsVolatilityRisk": "LOW"
+      }
+    }
+  ],
+  "summary": {
+    "bestSegment": "isBase (月4/6/8/12×parts=0)",
+    "worstSegment": "odds >= 80 (高配当)",
+    "overallBankroll100": 248800,
+    "overallBankroll1000": 2488000
+  },
+  "gradeMatrix": [
+    {
+      "label": "seasonal_parts0_month_4_6_8_12 (月4/6/8/12×parts=0)",
+      "historicalGrade": "S",
+      "forwardGrade": "B/A-",
+      "productionStatus": "NOT_ALLOWED (forward n<100 / hit<5 / 月8以外未完)",
+      "note": "forward n=25/hit=2/roiExMaxHit=123.2%。checklist 3項目未達。本番反映不可。"
+    },
+    {
+      "label": "強月のみ (月4/6/8/12, parts条件なし)",
+      "historicalGrade": "B",
+      "forwardGrade": "未観察",
+      "productionStatus": "NOT_ALLOWED",
+      "note": "parts=0条件なしではROIが低下する可能性。単独ではPAPER_ONLY。"
+    },
+    {
+      "label": "odds>=80 単独",
+      "historicalGrade": "X",
+      "forwardGrade": "X",
+      "productionStatus": "DO_NOT_TOUCH",
+      "note": "高配当一発依存。roiExMaxHitで崩れる。実運用不可。"
+    },
+    {
+      "label": "弱月 (月1/2/3/5/7/9/10/11)",
+      "historicalGrade": "C/D",
+      "forwardGrade": "未観察",
+      "productionStatus": "NOT_ALLOWED",
+      "note": "月別ROIが低い。条件フィルターとの組み合わせでも改善が見られない場合はNO_BUY。"
+    }
+  ]
+}

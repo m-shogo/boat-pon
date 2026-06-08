@@ -106,6 +106,10 @@
     "backup:safe": "tsx scripts/backup-db-safe.ts",
     "typecheck:scripts": "tsc --noEmit -p tsconfig.scripts.json",
     "analyze:roi-decision-lab": "tsx scripts/analyze-roi-decision-lab.ts",
+    "analyze:roi-monthly-regime": "tsx scripts/analyze-roi-monthly-regime.ts",
+    "analyze:roi-miss-patterns": "tsx scripts/analyze-roi-miss-patterns.ts",
+    "analyze:roi-weak-patterns": "tsx scripts/analyze-roi-weak-patterns.ts",
+    "analyze:roi-drawdown": "tsx scripts/analyze-roi-drawdown.ts",
     "paper:forward": "tsx scripts/paper-forward-test.ts"
   },
   "engines": {

@@ -1,0 +1,360 @@
+{
+  "generatedAt": "2026-06-08T05:14:22.296Z",
+  "dbPath": "data/boat.sqlite",
+  "totalRows": 6260,
+  "totalHits": 124,
+  "totalMisses": 6136,
+  "missBreakdown": [
+    {
+      "type": "HEAD_CORRECT_REVERSED",
+      "n": 128,
+      "rate": 0.020860495436766623,
+      "description": "1着正解・2/3着が逆 → REVERSE selectorで的中可能性"
+    },
+    {
+      "type": "TOP3_INCLUDED",
+      "n": 193,
+      "rate": 0.03145371577574967,
+      "description": "買い目3艇がTop3に全部入っていた → TOP3_BOX selectorで的中可能性"
+    },
+    {
+      "type": "HEAD_CORRECT_REST_WRONG",
+      "n": 1205,
+      "rate": 0.19638200782268578,
+      "description": "1着正解・2/3着が一部外れ → HEAD_FIXED_FLOWで改善余地"
+    },
+    {
+      "type": "FIRST_SECOND_FIXED_WOULD_HIT",
+      "n": 418,
+      "rate": 0.06812255541069101,
+      "description": "1着2着正解・3着だけ外れ → 1-2固定3着流しで的中可能性"
+    },
+    {
+      "type": "HEAD_FIXED_WOULD_HIT",
+      "n": 630,
+      "rate": 0.10267275097783572,
+      "description": "1着正解・2/3着外れ → 1着固定流しで的中の可能性"
+    },
+    {
+      "type": "COMPLETE_MISS",
+      "n": 3562,
+      "rate": 0.5805084745762712,
+      "description": "完全外れ"
+    }
+  ],
+  "monthlyMissBreakdown": [
+    {
+      "month": 1,
+      "label": "月1",
+      "n": 275,
+      "hits": 4,
+      "hitRate": 0.014545454545454545,
+      "topMissType": "COMPLETE_MISS",
+      "description": "最多外れパターン: COMPLETE_MISS — 完全外れ"
+    },
+    {
+      "month": 2,
+      "label": "月2",
+      "n": 385,
+      "hits": 3,
+      "hitRate": 0.007792207792207792,
+      "topMissType": "COMPLETE_MISS",
+      "description": "最多外れパターン: COMPLETE_MISS — 完全外れ"
+    },
+    {
+      "month": 3,
+      "label": "月3",
+      "n": 465,
+      "hits": 5,
+      "hitRate": 0.010752688172043012,
+      "topMissType": "COMPLETE_MISS",
+      "description": "最多外れパターン: COMPLETE_MISS — 完全外れ"
+    },
+    {
+      "month": 4,
+      "label": "月4⭐",
+      "n": 485,
+      "hits": 10,
+      "hitRate": 0.020618556701030927,
+      "topMissType": "COMPLETE_MISS",
+      "description": "最多外れパターン: COMPLETE_MISS — 完全外れ"
+    },
+    {
+      "month": 5,
+      "label": "月5",
+      "n": 702,
+      "hits": 16,
+      "hitRate": 0.022792022792022793,
+      "topMissType": "COMPLETE_MISS",
+      "description": "最多外れパターン: COMPLETE_MISS — 完全外れ"
+    },
+    {
+      "month": 6,
+      "label": "月6⭐",
+      "n": 590,
+      "hits": 13,
+      "hitRate": 0.022033898305084745,
+      "topMissType": "COMPLETE_MISS",
+      "description": "最多外れパターン: COMPLETE_MISS — 完全外れ"
+    },
+    {
+      "month": 7,
+      "label": "月7",
+      "n": 693,
+      "hits": 11,
+      "hitRate": 0.015873015873015872,
+      "topMissType": "COMPLETE_MISS",
+      "description": "最多外れパターン: COMPLETE_MISS — 完全外れ"
+    },
+    {
+      "month": 8,
+      "label": "月8⭐",
+      "n": 701,
+      "hits": 20,
+      "hitRate": 0.028530670470756064,
+      "topMissType": "COMPLETE_MISS",
+      "description": "最多外れパターン: COMPLETE_MISS — 完全外れ"
+    },
+    {
+      "month": 9,
+      "label": "月9",
+      "n": 533,
+      "hits": 10,
+      "hitRate": 0.01876172607879925,
+      "topMissType": "COMPLETE_MISS",
+      "description": "最多外れパターン: COMPLETE_MISS — 完全外れ"
+    },
+    {
+      "month": 10,
+      "label": "月10",
+      "n": 494,
+      "hits": 9,
+      "hitRate": 0.018218623481781375,
+      "topMissType": "COMPLETE_MISS",
+      "description": "最多外れパターン: COMPLETE_MISS — 完全外れ"
+    },
+    {
+      "month": 11,
+      "label": "月11",
+      "n": 559,
+      "hits": 12,
+      "hitRate": 0.02146690518783542,
+      "topMissType": "COMPLETE_MISS",
+      "description": "最多外れパターン: COMPLETE_MISS — 完全外れ"
+    },
+    {
+      "month": 12,
+      "label": "月12⭐",
+      "n": 378,
+      "hits": 11,
+      "hitRate": 0.0291005291005291,
+      "topMissType": "COMPLETE_MISS",
+      "description": "最多外れパターン: COMPLETE_MISS — 完全外れ"
+    }
+  ],
+  "conditionMissBreakdown": [
+    {
+      "label": "isBase条件",
+      "n": 543,
+      "hits": 26,
+      "hitRate": 0.04788213627992634,
+      "topMissType": "COMPLETE_MISS"
+    },
+    {
+      "label": "強月×parts=0",
+      "n": 2074,
+      "hits": 52,
+      "hitRate": 0.02507232401157184,
+      "topMissType": "COMPLETE_MISS"
+    },
+    {
+      "label": "弱月(その他)",
+      "n": 4106,
+      "hits": 70,
+      "hitRate": 0.017048222113979543,
+      "topMissType": "COMPLETE_MISS"
+    },
+    {
+      "label": "parts=0",
+      "n": 5939,
+      "hits": 117,
+      "hitRate": 0.01970028624347533,
+      "topMissType": "COMPLETE_MISS"
+    },
+    {
+      "label": "partsあり",
+      "n": 321,
+      "hits": 7,
+      "hitRate": 0.021806853582554516,
+      "topMissType": "COMPLETE_MISS"
+    },
+    {
+      "label": "headF=0",
+      "n": 4121,
+      "hits": 91,
+      "hitRate": 0.022082018927444796,
+      "topMissType": "COMPLETE_MISS"
+    },
+    {
+      "label": "headFあり",
+      "n": 1938,
+      "hits": 29,
+      "hitRate": 0.014963880288957688,
+      "topMissType": "COMPLETE_MISS"
+    }
+  ],
+  "oddsMissBreakdown": [
+    {
+      "label": "odds<30",
+      "n": 614,
+      "hits": 18,
+      "hitRate": 0.029315960912052116,
+      "topMissType": "COMPLETE_MISS"
+    },
+    {
+      "label": "30-50",
+      "n": 3846,
+      "hits": 82,
+      "hitRate": 0.021320852834113363,
+      "topMissType": "COMPLETE_MISS"
+    },
+    {
+      "label": "50-80",
+      "n": 1708,
+      "hits": 24,
+      "hitRate": 0.01405152224824356,
+      "topMissType": "COMPLETE_MISS"
+    },
+    {
+      "label": ">=80",
+      "n": 92,
+      "hits": 0,
+      "hitRate": 0,
+      "topMissType": "COMPLETE_MISS"
+    }
+  ],
+  "selectorSimulations": [
+    {
+      "selectorName": "SINGLE",
+      "description": "現在の1点買い (baseline)",
+      "ticketsPerRace": 1,
+      "totalTickets": 6260,
+      "totalStake": 626000,
+      "hits": 124,
+      "totalReturn": 503160.0000000003,
+      "roi": 80.37699680511187,
+      "roiExMaxHit": 79.13578274760387,
+      "hitRate": 0.019808306709265176,
+      "maxHitOdds": 77.7,
+      "avgOdds": 44.3436477156549,
+      "warning": "baseline",
+      "recommendation": "WATCH"
+    },
+    {
+      "selectorName": "REVERSE",
+      "description": "1-2着入れ替え 2点買い (点数2倍)",
+      "ticketsPerRace": 2,
+      "totalTickets": 12520,
+      "totalStake": 1252000,
+      "hits": 184,
+      "totalReturn": 934150,
+      "roi": 74.61261980830672,
+      "roiExMaxHit": 73.25399361022365,
+      "hitRate": 0.02939297124600639,
+      "maxHitOdds": 170.1,
+      "avgOdds": 0,
+      "warning": "点数2倍注意: コスト増加分をROI改善が上回るか要確認",
+      "recommendation": "DANGEROUS"
+    },
+    {
+      "selectorName": "TOP3_BOX",
+      "description": "3艇BOX 6点買い (⚠️常時BOXは危険候補)",
+      "ticketsPerRace": 6,
+      "totalTickets": 37560,
+      "totalStake": 3756000,
+      "hits": 445,
+      "totalReturn": 2614400,
+      "roi": 69.6059637912673,
+      "roiExMaxHit": 68.54339723109692,
+      "hitRate": 0.07108626198083066,
+      "maxHitOdds": 399.1,
+      "avgOdds": 0,
+      "warning": "⚠️ 点数6倍: 常時BOX適用は危険候補。ROI改善が大幅でなければ不採用",
+      "recommendation": "DANGEROUS"
+    },
+    {
+      "selectorName": "HEAD_FIXED_FLOW",
+      "description": "1着固定 2/3着流し 10点買い (⚠️常時FLOWは危険候補)",
+      "ticketsPerRace": 10,
+      "totalTickets": 62600,
+      "totalStake": 6260000,
+      "hits": 2505,
+      "totalReturn": 8772850,
+      "roi": 140.14137380191693,
+      "roiExMaxHit": 138.90607028753993,
+      "hitRate": 0.4001597444089457,
+      "maxHitOdds": 773.3,
+      "avgOdds": 0,
+      "warning": "⚠️ 点数10倍: 常時FLOW適用は危険候補。1着正解率とROI改善のバランス要確認",
+      "recommendation": "WATCH"
+    },
+    {
+      "selectorName": "FIRST_SECOND_FIXED_FLOW",
+      "description": "1-2着固定 3着流し 4点買い",
+      "ticketsPerRace": 4,
+      "totalTickets": 25040,
+      "totalStake": 2504000,
+      "hits": 542,
+      "totalReturn": 1819680,
+      "roi": 72.67092651757189,
+      "roiExMaxHit": 71.5167731629393,
+      "hitRate": 0.0865814696485623,
+      "maxHitOdds": 289,
+      "avgOdds": 0,
+      "warning": "点数4倍: 1-2着正解率に依存。改善幅要確認",
+      "recommendation": "NO_BUY"
+    }
+  ],
+  "isBaseMissBreakdown": [
+    {
+      "type": "HEAD_CORRECT_REVERSED",
+      "n": 11,
+      "rate": 0.02127659574468085
+    },
+    {
+      "type": "TOP3_INCLUDED",
+      "n": 23,
+      "rate": 0.04448742746615087
+    },
+    {
+      "type": "HEAD_CORRECT_REST_WRONG",
+      "n": 96,
+      "rate": 0.18568665377176016
+    },
+    {
+      "type": "FIRST_SECOND_FIXED_WOULD_HIT",
+      "n": 26,
+      "rate": 0.05029013539651837
+    },
+    {
+      "type": "HEAD_FIXED_WOULD_HIT",
+      "n": 50,
+      "rate": 0.09671179883945841
+    },
+    {
+      "type": "COMPLETE_MISS",
+      "n": 311,
+      "rate": 0.6015473887814313
+    }
+  ],
+  "selectorRecommendations": [
+    "HEAD_FIXED_FLOW: 外れのうち31.99%が1着正解 → 1着固定流しに改善余地あり(点数増大注意)",
+    "REVERSE: ROI 5.76% 悪化 → 不採用推奨",
+    "TOP3_BOX: ROI 10.77% 悪化 → 不採用推奨",
+    "HEAD_FIXED_FLOW: ROI 59.76% 改善 (80.38% → 140.14%), 点数10倍",
+    "FIRST_SECOND_FIXED_FLOW: ROI 7.71% 悪化 → 不採用推奨",
+    "",
+    "⚠️ 常時BOX/常時FLOWは危険候補: 全レースに適用すると期待値が下がるリスクあり。",
+    "条件を絞った上での部分適用のみ検討してください。"
+  ]
+}
