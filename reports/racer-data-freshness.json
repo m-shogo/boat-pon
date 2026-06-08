@@ -1,0 +1,76 @@
+{
+  "generatedAt": "2026-06-08T06:31:12.420Z",
+  "profiles": {
+    "total": 2657,
+    "distinctRacers": 2657,
+    "maxFetchedAt": "2026-06-08T05:41:58.443Z",
+    "minFetchedAt": "2026-05-29T07:29:37.047Z",
+    "over7Days": 24,
+    "over14Days": 0,
+    "nullFetchedAt": 0
+  },
+  "courseStats": {
+    "total": 9822,
+    "distinctRacers": 1637,
+    "maxFetchedAt": "2026-06-08T05:41:58.443Z",
+    "minFetchedAt": "2026-05-29T07:29:37.047Z",
+    "over7Days": 102,
+    "over14Days": 0,
+    "nullFetchedAt": 0
+  },
+  "recentIsBase": {
+    "label": "isBase (直近90日)",
+    "totalRacers": 1052,
+    "stale7": 10,
+    "flyingCountNull": 1,
+    "notInProfiles": 0,
+    "headFImpacted": 1
+  },
+  "recentWind5": {
+    "label": "wind5 (直近90日)",
+    "totalRacers": 465,
+    "stale7": 4,
+    "flyingCountNull": 0,
+    "notInProfiles": 0,
+    "headFImpacted": 0
+  },
+  "forwardPeriod": {
+    "label": "paper forward期間 (2025-08-09以降)",
+    "totalRacers": 25,
+    "stale7": 0,
+    "flyingCountNull": 0,
+    "notInProfiles": 0,
+    "headFImpacted": 0
+  },
+  "launchd": {
+    "loaded": true,
+    "label": "com.boatpon.weekly-racer-stats",
+    "schedule": "毎週月曜 05:00 JST"
+  },
+  "log": {
+    "exists": true,
+    "lastModified": "2026-06-08T05:41:58.447Z",
+    "lastLines": [
+      "[2450/2658] 5286 坂井滉哉 ST=0.16 F=1",
+      "[2500/2658] 5336 瀬川大地 ST=0.19 F=0",
+      "[2550/2658] 5386 米玉利大 ST=0 F=0",
+      "[2600/2658] 5437 中澤里桜 ST=0 F=0",
+      "完了: fetched=2633 skipped=22 failed=25"
+    ],
+    "errExists": true,
+    "errLastModified": "2026-06-08T00:48:46.978Z",
+    "errLastLines": [
+      "error: 3871 池田紫乃 fetch failed",
+      "error: 3872 岡田憲行 fetch failed",
+      "error: 3873 別府昌樹 fetch failed",
+      "error: 3874 山本寛久 fetch failed",
+      "error: 3875 廣中良一 fetch failed"
+    ]
+  },
+  "flyingCountReliability": "HIGH",
+  "flyingCountReliabilityReason": "forward期間の対象選手全員のflying_countが取得済みで14日超なし",
+  "fetchNeededNow": false,
+  "fetchNeededReason": "本日または直近実行済み、14日超なし",
+  "recommendedAction": "NO_ACTION",
+  "recommendedActionDetail": "launchd稼働中、データ鮮度は正常範囲。次回自動更新まで待機"
+}
