@@ -94,6 +94,7 @@
     "stats:racer-coverage": "tsx scripts/check-racer-stats-coverage.ts",
     "report:racer-freshness": "tsx scripts/report-racer-data-freshness.ts",
     "report:roi-condition-watch": "tsx scripts/report-roi-condition-watch.ts",
+    "report:roi-combination-watch": "tsx scripts/report-roi-combination-watch.ts",
     "report:data-coverage": "tsx scripts/report-data-coverage.ts",
     "backfill:motor-boat-stats": "tsx scripts/backfill-motor-boat-stats.ts",
     "build:venue-motor-stats": "tsx scripts/build-venue-motor-stats.ts",
