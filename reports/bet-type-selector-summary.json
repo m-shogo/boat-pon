@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-08T09:01:59.162Z",
+  "generatedAt": "2026-06-08T09:15:40.347Z",
   "totalBuyRaces": 6260,
   "finalVerdict": {
     "今すぐ有望": [],
@@ -28,29 +28,29 @@
     {
       "condition": "風速4m/s以上（荒天）",
       "recommendedBetType": "3連複",
-      "rationale": "荒天時は順番予測が難しくなる。3連複ROI=82.7% vs 3連単ROI=68.14%",
-      "evidenceROI": "3連単:68.14% 3連複:82.7% 2連複:74.35%",
+      "rationale": "荒天時は順番予測が難しくなる。全候補比較で 3連複 が最良。",
+      "evidenceROI": "3連単:68.14% 3連複:82.7% 2連単:69.44% 2連複:74.35%",
       "confidence": "中"
     },
     {
       "condition": "風速0〜2m/s（穏やか）",
-      "recommendedBetType": "3連単",
-      "rationale": "穏天時は順番精度が高まる可能性。3連単ROI=68.44% vs 3連複ROI=65.07%",
-      "evidenceROI": "3連単:68.44% 3連複:65.07% 2連複:83.6%",
+      "recommendedBetType": "2連単",
+      "rationale": "穏天時の全候補比較で 2連単 が最良。",
+      "evidenceROI": "3連単:68.44% 3連複:65.07% 2連単:86.9% 2連複:83.6%",
       "confidence": "中"
     },
     {
       "condition": "安定板使用",
-      "recommendedBetType": "3連複",
-      "rationale": "安定板は波高・荒天のサイン。3連複ROI=75.51% vs 3連単ROI=66.18%",
-      "evidenceROI": "3連単:66.18% 3連複:75.51% 2連複:80.34%",
+      "recommendedBetType": "2連単",
+      "rationale": "安定板は波高・荒天のサイン。全候補比較で 2連単 が最良。",
+      "evidenceROI": "3連単:66.18% 3連複:75.51% 2連単:88.95% 2連複:80.34%",
       "confidence": "中"
     },
     {
       "condition": "1着候補が1コース進入",
-      "recommendedBetType": "3連複",
-      "rationale": "1コース進入は逃げ有利。3連単ROI=69.84% vs 3連複ROI=72.52%",
-      "evidenceROI": "3連単:69.84% 3連複:72.52% 2連複:78.9%",
+      "recommendedBetType": "2連複",
+      "rationale": "1コース進入は逃げ有利。全候補比較で 2連複 が最良。",
+      "evidenceROI": "3連単:69.84% 3連複:72.52% 2連単:77.07% 2連複:78.9%",
       "confidence": "中"
     },
     {

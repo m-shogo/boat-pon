@@ -69,7 +69,9 @@ type StrategyResult = {
   roiExMaxHit: number;
   roiExMax3Hits: number;
   roiExMax5Hits: number;
-  coverageRate: number;
+  coverageRate: number;         // joinableRaces / totalBuyRaces（payout行が存在したレース率）
+  missingCoverageCount: number; // payout行が一切存在しなかったレース数
+  missingCoverageNote: string;  // 欠損の扱い（外れ扱い or 除外）
   missingPayoutCount: number;
   returnedCount: number;
   trainROI: number;
@@ -108,6 +110,8 @@ const rows = db.prepare(`
 // race_payouts を全件ロード（インデックスとして使う）
 const payoutIndex = new Map<string, number>(); // key: "race_id|bet_type|combination"
 const payoutReturnedSet = new Set<string>();
+// bet_type ごとに「そのレースのpayoutが存在するか」を確認するセット
+const payoutRaceByType = new Map<string, Set<string>>(); // betType -> Set<race_id>
 
 const payoutRows = db.prepare(`
   SELECT race_id, bet_type, combination, payout_yen, returned
@@ -119,6 +123,8 @@ for (const p of payoutRows) {
   const key = `${p.race_id}|${p.bet_type}|${p.combination}`;
   payoutIndex.set(key, p.payout_yen ?? 0);
   if (p.returned === 1) payoutReturnedSet.add(key);
+  if (!payoutRaceByType.has(p.bet_type)) payoutRaceByType.set(p.bet_type, new Set());
+  payoutRaceByType.get(p.bet_type)!.add(p.race_id);
 }
 
 // ─── ユーティリティ ──────────────────────────────────────────────────────────
@@ -206,8 +212,11 @@ function evaluate(strategy: Strategy): StrategyResult {
 
   const hitsByDate: HitRecord[] = [];
   let missingCount = 0;
+  let missingCoverageCount = 0; // payout テーブルにそのレース自体が存在しない
   let returnedCount = 0;
   let validRaces = 0;
+
+  const raceSetForType = payoutRaceByType.get(strategy.dbBetType) ?? new Set<string>();
 
   // 年月別 stake / return
   const ymStake = new Map<string, number>();
@@ -228,23 +237,29 @@ function evaluate(strategy: Strategy): StrategyResult {
       continue;
     }
 
+    // そのレース自体が race_payouts に存在するか確認
+    const hasPayoutForRace = raceSetForType.has(raceId);
+    if (!hasPayoutForRace) {
+      missingCoverageCount++;
+      // coverage 欠損レースは「外れ扱い」としてROI計算に含む（除外しない）
+      validRaces++;
+      ymStake.set(ym, (ymStake.get(ym) ?? 0) + STAKE);
+      ymReturn.set(ym, ymReturn.get(ym) ?? 0);
+      continue;
+    }
+
     validRaces++;
     ymStake.set(ym, (ymStake.get(ym) ?? 0) + STAKE);
 
     const p = payout(raceId, betTypeDb, combination);
-    if (p === null || p === undefined) {
-      // race_payouts に該当なし = 外れ or データなし
-      // race_payouts 自体にそのレースが存在するか確認
-      if (!payoutIndex.has(key) && !payoutReturnedSet.has(key)) {
-        // "外れ" or "欠損"：どちらか区別するには別クエリが必要
-        // ここでは payout=0 として外れ扱い
-        ymReturn.set(ym, ymReturn.get(ym) ?? 0);
-      }
+    if (p === null) {
+      // returned 処理済み（上で continue 済み）
     } else if (p > 0) {
       const odds = p / 100;
       hitsByDate.push({ payout: p, odds, date: row.date, ym });
       ymReturn.set(ym, (ymReturn.get(ym) ?? 0) + p);
     }
+    // p === 0: 外れ（stake は積んでいる）
   }
 
   const hits = hitsByDate.length;
@@ -302,7 +317,9 @@ function evaluate(strategy: Strategy): StrategyResult {
   const badMonths = monthROIs.filter((r) => r < 80).length;
 
   const hitRate = validRaces > 0 ? Math.round((hits / validRaces) * 10000) / 100 : 0;
-  const coverageRate = rows.length > 0 ? Math.round((validRaces / rows.length) * 10000) / 100 : 0;
+  // coverageRate: race_payouts にpayout行が存在したレース / 全BUYレース
+  const joinableRaces = validRaces - missingCoverageCount;
+  const coverageRate = rows.length > 0 ? Math.round((joinableRaces / rows.length) * 10000) / 100 : 0;
 
   // 警告
   const warnings: string[] = [];
@@ -356,6 +373,8 @@ function evaluate(strategy: Strategy): StrategyResult {
     roiExMax3Hits,
     roiExMax5Hits,
     coverageRate,
+    missingCoverageCount,
+    missingCoverageNote: "coverage欠損レースは外れ扱い（ステークに含む、回収ゼロ）でROI計算に含む",
     missingPayoutCount: missingCount,
     returnedCount,
     trainROI,
@@ -467,6 +486,8 @@ ${results
 | 最悪月 ROI | ${s.worstMonthROI}% |
 | 良好月数(≥100%) | ${s.goodMonths} |
 | 不調月数(<80%) | ${s.badMonths} |
+| payout coverage率 | ${pct(s.coverageRate)} (${s.missingCoverageCount}件欠損) |
+| coverage欠損の扱い | 外れ扱い（ROI計算に含む・回収ゼロ） |
 | returned 除外 | ${s.returnedCount} |
 | **判定** | **${s.verdict}** |
 

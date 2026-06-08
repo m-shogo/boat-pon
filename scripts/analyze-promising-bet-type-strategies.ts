@@ -154,8 +154,10 @@ type StrategyResult = {
   totalTickets: number;
   avgTicketsPerRace: number;
   totalStake: number;
-  hits: number;
-  hitRate: number;
+  hitTickets: number;      // 的中チケット数（複数点戦略で1レース複数になりうる）
+  hitRaces: number;        // 的中レース数（1レースで複数的中でも1カウント）
+  ticketHitRate: number;   // hitTickets / totalTickets
+  raceHitRate: number;     // hitRaces / nRaces
   avgOdds: number;
   medianOdds: number;
   maxOdds: number;
@@ -172,7 +174,8 @@ function evaluate(strat: StrategyDef): StrategyResult {
   let totalTickets = 0;
   let totalReturn = 0;
   let validRaces = 0;
-  const hitPayouts: number[] = [];
+  let hitRaces = 0;         // 1つ以上的中したレース数
+  const hitPayouts: number[] = []; // 的中チケットの払戻（複数点戦略で1レース複数あり）
   const hitOdds: number[] = [];
 
   const ymStake = new Map<string, number>();
@@ -193,20 +196,23 @@ function evaluate(strat: StrategyDef): StrategyResult {
     ymStake.set(ym, (ymStake.get(ym) ?? 0) + stake);
 
     let raceReturn = 0;
+    let raceHit = false;
     for (const t of tickets) {
       const p = getPayout(row.race_id, t.dbBetType, t.combination);
       if (p !== null && p > 0) {
         raceReturn += p;
         hitPayouts.push(p);
         hitOdds.push(p / 100);
+        raceHit = true;
       }
     }
+    if (raceHit) hitRaces++;
     totalReturn += raceReturn;
     ymReturn.set(ym, (ymReturn.get(ym) ?? 0) + raceReturn);
   }
 
   const totalStake = totalTickets * STAKE;
-  const hits = hitPayouts.length;
+  const hitTickets = hitPayouts.length;
   const ROI = totalStake > 0 ? Math.round(totalReturn / totalStake * 10000) / 100 : 0;
 
   const sortedH = [...hitPayouts].sort((a,b) => b-a);
@@ -219,22 +225,25 @@ function evaluate(strat: StrategyDef): StrategyResult {
     return s > 0 ? Math.round(r / s * 10000) / 100 : 0;
   }
 
-  const avgOdds = hits > 0 ? hitOdds.reduce((s,o)=>s+o,0)/hits : 0;
-  const hitRate = validRaces > 0 ? Math.round(hits/validRaces*10000)/100 : 0;
+  const avgOdds = hitTickets > 0 ? hitOdds.reduce((s,o)=>s+o,0)/hitTickets : 0;
+  const ticketHitRate = totalTickets > 0 ? Math.round(hitTickets/totalTickets*10000)/100 : 0;
+  const raceHitRate = validRaces > 0 ? Math.round(hitRaces/validRaces*10000)/100 : 0;
 
   let verdict: StrategyResult["verdict"] = "非効率";
   if (ROI >= 95 && roi1 >= 85) verdict = "有望";
   else if (ROI >= 85) verdict = "参考";
-  else if (hits < 5) verdict = "要確認";
+  else if (hitTickets < 5) verdict = "要確認";
 
   return {
     name: strat.name, betType: strat.betType,
     nRaces: validRaces, totalTickets,
     avgTicketsPerRace: Math.round(totalTickets / validRaces * 100) / 100,
-    totalStake, hits, hitRate,
+    totalStake,
+    hitTickets, hitRaces,
+    ticketHitRate, raceHitRate,
     avgOdds: Math.round(avgOdds * 100) / 100,
     medianOdds: Math.round(median(hitOdds) * 100) / 100,
-    maxOdds: hits > 0 ? Math.max(...hitOdds) : 0,
+    maxOdds: hitTickets > 0 ? Math.max(...hitOdds) : 0,
     totalReturn, ROI,
     roiExMaxHit: roi1, roiExMax3Hits: roi3,
     year2024ROI: ymROI(ym => ym.startsWith("2024")),
@@ -267,20 +276,22 @@ DB: ${DB_PATH}
 for (const group of groups) {
   const gs = results.filter(r => r.betType === group).sort((a,b) => b.ROI - a.ROI);
   md += `## ${group}\n\n`;
-  md += `| 戦略 | 点数/R | 的中 | 的中率 | ROI | ExMax1 ROI | ExMax3 ROI | 2024ROI | 2025ROI | 判定 |\n`;
-  md += `|---|---|---|---|---|---|---|---|---|---|\n`;
+  md += `| 戦略 | 点数/R | 的中R | R的中率 | T的中率 | ROI | ExMax1 ROI | ExMax3 ROI | 2024ROI | 2025ROI | 判定 |\n`;
+  md += `|---|---|---|---|---|---|---|---|---|---|---|\n`;
   for (const r of gs) {
-    md += `| ${r.name.replace(group + ": ", "")} | ${r.avgTicketsPerRace} | ${r.hits} | ${pct(r.hitRate)} | **${r.ROI}%** | ${r.roiExMaxHit}% | ${r.roiExMax3Hits}% | ${r.year2024ROI}% | ${r.year2025ROI}% | ${r.verdict} |\n`;
+    md += `| ${r.name.replace(group + ": ", "")} | ${r.avgTicketsPerRace} | ${r.hitRaces} | ${pct(r.raceHitRate)} | ${pct(r.ticketHitRate)} | **${r.ROI}%** | ${r.roiExMaxHit}% | ${r.roiExMax3Hits}% | ${r.year2024ROI}% | ${r.year2025ROI}% | ${r.verdict} |\n`;
   }
   md += "\n";
 }
 
 md += `## 全戦略 ROI ランキング
 
-| rank | 戦略 | 点数/R | ROI | ExMax1 ROI | 的中率 | 判定 |
-|---|---|---|---|---|---|---|
+> 的中R: 的中レース数 / R的中率: hitRaces/nRaces / T的中率: hitTickets/totalTickets
+
+| rank | 戦略 | 点数/R | ROI | ExMax1 ROI | R的中率 | T的中率 | 判定 |
+|---|---|---|---|---|---|---|---|
 ${[...results].sort((a,b)=>b.ROI-a.ROI).map((r,i) =>
-  `| ${i+1} | ${r.name} | ${r.avgTicketsPerRace} | **${r.ROI}%** | ${r.roiExMaxHit}% | ${pct(r.hitRate)} | ${r.verdict} |`
+  `| ${i+1} | ${r.name} | ${r.avgTicketsPerRace} | **${r.ROI}%** | ${r.roiExMaxHit}% | ${pct(r.raceHitRate)} | ${pct(r.ticketHitRate)} | ${r.verdict} |`
 ).join("\n")}
 
 ## 注意事項
@@ -297,5 +308,5 @@ writeFileSync(OUT_JSON, JSON.stringify({ generatedAt: new Date().toISOString(), 
 console.log(`[promising] 完了 → ${OUT_MD}`);
 console.log(`\nトップ5 ROI:`);
 [...results].sort((a,b)=>b.ROI-a.ROI).slice(0,5).forEach((r,i) =>
-  console.log(`  ${i+1}. ${r.name}: ROI=${r.ROI}% hits=${r.hits} → ${r.verdict}`)
+  console.log(`  ${i+1}. ${r.name}: ROI=${r.ROI}% hitRaces=${r.hitRaces} → ${r.verdict}`)
 );

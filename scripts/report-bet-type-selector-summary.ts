@@ -25,7 +25,7 @@ function readJSON(path: string): unknown {
   return JSON.parse(readFileSync(path, "utf-8"));
 }
 
-const coverageData = readJSON("reports/bet-type-coverage-audit.json") as { betTypeStats?: { normalizedBetType: string; verdict: string; buyRacesJoinable: number; coverageRate: number }[] } | null;
+const coverageData = readJSON("reports/bet-type-coverage-audit.json") as { betTypeStats?: { normalizedBetType: string; rawBetType: string | null; verdict: string; buyRacesJoinable: number; coverageRate: number }[] } | null;
 const screeningData = readJSON("reports/all-bet-type-screening.json") as { strategies?: { betType: string; strategyName: string; ROI: number; roiExMaxHit: number; hits: number; hitRate: number; trainROI: number; validationROI: number; testROI: number; year2024ROI: number; year2025ROI: number; verdict: string }[] } | null;
 const promisingData = readJSON("reports/promising-bet-type-strategies.json") as { results?: { name: string; betType: string; avgTicketsPerRace: number; ROI: number; roiExMaxHit: number; hits: number; hitRate: number; year2024ROI: number; year2025ROI: number; verdict: string }[] } | null;
 const missData = readJSON("reports/miss-to-bet-type-recovery.json") as { total?: number; missTypeBreakdown?: { value: string; n: number; rate: number }[]; altStats?: Record<string, { hits: number; totalReturn: number; roi?: number }> } | null;
@@ -80,6 +80,19 @@ const deepDiveBestROI = sortedByROI[0]?.ROI ?? 0;
 const riskGroups = riskData?.riskGroups ?? [];
 function findRisk(label: string) { return riskGroups.find(g => g.label.includes(label)); }
 
+// 全4候補の中から ROI 最大の券種を選ぶ（拡連複は除外）
+function bestBetType(g: { trifecta: number; trio: number; exacta: number; quinella: number }): string {
+  const candidates: [string, number][] = [
+    ["3連単", g.trifecta], ["3連複", g.trio],
+    ["2連単", g.exacta], ["2連複", g.quinella],
+  ];
+  return candidates.reduce((best, cur) => cur[1] > best[1] ? cur : best)[0];
+}
+
+function allROI(g: { trifecta: number; trio: number; exacta: number; quinella: number }): string {
+  return `3連単:${g.trifecta}% 3連複:${g.trio}% 2連単:${g.exacta}% 2連複:${g.quinella}%`;
+}
+
 // 最終セレクタールール（分析結果から導出）
 const selectorRules: SelectorRule[] = [];
 
@@ -104,16 +117,16 @@ const windLow = findRisk("風速 0〜2m/s");
 if (windHigh && windLow) {
   selectorRules.push({
     condition: "風速4m/s以上（荒天）",
-    recommendedBetType: windHigh.trio > windHigh.trifecta ? "3連複" : windHigh.quinella > windHigh.trifecta ? "2連複" : "見送り検討",
-    rationale: `荒天時は順番予測が難しくなる。3連複ROI=${windHigh.trio}% vs 3連単ROI=${windHigh.trifecta}%`,
-    evidenceROI: `3連単:${windHigh.trifecta}% 3連複:${windHigh.trio}% 2連複:${windHigh.quinella}%`,
+    recommendedBetType: bestBetType(windHigh),
+    rationale: `荒天時は順番予測が難しくなる。全候補比較で ${bestBetType(windHigh)} が最良。`,
+    evidenceROI: allROI(windHigh),
     confidence: "中",
   });
   selectorRules.push({
     condition: "風速0〜2m/s（穏やか）",
-    recommendedBetType: windLow.trifecta > windLow.trio ? "3連単" : "2連複",
-    rationale: `穏天時は順番精度が高まる可能性。3連単ROI=${windLow.trifecta}% vs 3連複ROI=${windLow.trio}%`,
-    evidenceROI: `3連単:${windLow.trifecta}% 3連複:${windLow.trio}% 2連複:${windLow.quinella}%`,
+    recommendedBetType: bestBetType(windLow),
+    rationale: `穏天時の全候補比較で ${bestBetType(windLow)} が最良。`,
+    evidenceROI: allROI(windLow),
     confidence: "中",
   });
 }
@@ -123,9 +136,9 @@ const stablePlate = findRisk("安定板あり");
 if (stablePlate) {
   selectorRules.push({
     condition: "安定板使用",
-    recommendedBetType: stablePlate.trio > stablePlate.trifecta ? "3連複" : "2連複",
-    rationale: `安定板は波高・荒天のサイン。3連複ROI=${stablePlate.trio}% vs 3連単ROI=${stablePlate.trifecta}%`,
-    evidenceROI: `3連単:${stablePlate.trifecta}% 3連複:${stablePlate.trio}% 2連複:${stablePlate.quinella}%`,
+    recommendedBetType: bestBetType(stablePlate),
+    rationale: `安定板は波高・荒天のサイン。全候補比較で ${bestBetType(stablePlate)} が最良。`,
+    evidenceROI: allROI(stablePlate),
     confidence: "中",
   });
 }
@@ -135,22 +148,21 @@ const exhRank1 = findRisk("展示順位1位");
 if (exhRank1) {
   selectorRules.push({
     condition: "1着候補が展示1位",
-    recommendedBetType: exhRank1.trifecta > exhRank1.trio ? "3連単" : "2連複",
-    rationale: `展示1位は1着候補の実力裏付け。3連単ROI=${exhRank1.trifecta}% vs 3連複ROI=${exhRank1.trio}%`,
-    evidenceROI: `3連単:${exhRank1.trifecta}% 3連複:${exhRank1.trio}% 2連複:${exhRank1.quinella}%`,
+    recommendedBetType: bestBetType(exhRank1),
+    rationale: `展示1位は1着候補の実力裏付け。全候補比較で ${bestBetType(exhRank1)} が最良。`,
+    evidenceROI: allROI(exhRank1),
     confidence: "中",
   });
 }
 
 // 進入コース
 const entry1 = findRisk("進入1コース");
-const entry2plus = findRisk("進入2コース");
 if (entry1) {
   selectorRules.push({
     condition: "1着候補が1コース進入",
-    recommendedBetType: entry1.trifecta > entry1.trio ? "3連単" : "3連複",
-    rationale: `1コース進入は逃げ有利。3連単ROI=${entry1.trifecta}% vs 3連複ROI=${entry1.trio}%`,
-    evidenceROI: `3連単:${entry1.trifecta}% 3連複:${entry1.trio}% 2連複:${entry1.quinella}%`,
+    recommendedBetType: bestBetType(entry1),
+    rationale: `1コース進入は逃げ有利。全候補比較で ${bestBetType(entry1)} が最良。`,
+    evidenceROI: allROI(entry1),
     confidence: "中",
   });
 }
@@ -216,7 +228,7 @@ DB: ${DB_PATH}
 | 券種 | DB値 | BUY結合可能 | 判定 |
 |---|---|---|---|
 ${(coverageData?.betTypeStats ?? []).map(s =>
-  `| ${s.normalizedBetType} | \`${s.verdict === "coverage不足" && s.buyRacesJoinable === 0 ? "なし" : "-"}\` | ${s.buyRacesJoinable.toLocaleString()} | **${s.verdict}** |`
+  `| ${s.normalizedBetType} | \`${s.rawBetType ?? "なし"}\` | ${s.buyRacesJoinable.toLocaleString()} | **${s.verdict}** |`
 ).join("\n")}
 
 ## 2. 全船券一次ROI ランキング
