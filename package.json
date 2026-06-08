@@ -116,7 +116,14 @@
     "analyze:roi-weak-patterns": "tsx scripts/analyze-roi-weak-patterns.ts",
     "analyze:roi-drawdown": "tsx scripts/analyze-roi-drawdown.ts",
     "analyze:roi-isbase-risk": "tsx scripts/analyze-roi-isbase-risk.ts",
-    "paper:forward": "tsx scripts/paper-forward-test.ts"
+    "paper:forward": "tsx scripts/paper-forward-test.ts",
+    "audit:bet-type-coverage": "tsx scripts/audit-bet-type-coverage.ts",
+    "analyze:all-bet-type-screening": "tsx scripts/analyze-all-bet-type-screening.ts",
+    "analyze:promising-bet-types": "tsx scripts/analyze-promising-bet-type-strategies.ts",
+    "analyze:miss-recovery": "tsx scripts/analyze-miss-to-bet-type-recovery.ts",
+    "analyze:bet-type-course-edge": "tsx scripts/analyze-bet-type-course-edge.ts",
+    "analyze:bet-type-risk-factors": "tsx scripts/analyze-bet-type-risk-factors.ts",
+    "report:bet-type-selector": "tsx scripts/report-bet-type-selector-summary.ts"
   },
   "engines": {
     "node": ">=24.0.0"

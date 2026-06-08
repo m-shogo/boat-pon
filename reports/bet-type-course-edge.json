@@ -1,0 +1,82 @@
+{
+  "generatedAt": "2026-06-08T08:59:17.201Z",
+  "nullRates": {
+    "top3Rate": 0.10639380981470169,
+    "avgSt": 0,
+    "winRate": 1,
+    "startOrder": 0
+  },
+  "dataAvailRate": 96.01,
+  "courseGroups": [
+    {
+      "label": "1着候補 top3_rate≥0.6",
+      "n": 6010,
+      "trifectaROI": 68.17,
+      "trifectaHits": 116,
+      "trioROI": 73.01,
+      "trioHits": 0,
+      "exactaROI": 75.93,
+      "quinellaROI": 77.79
+    },
+    {
+      "label": "1着候補 top3_rate 0.5-0.6",
+      "n": 0,
+      "trifectaROI": 0,
+      "trioROI": 0,
+      "exactaROI": 0,
+      "quinellaROI": 0,
+      "trifectaHits": 0,
+      "trioHits": 0
+    },
+    {
+      "label": "1着候補 top3_rate 0.4-0.5",
+      "n": 0,
+      "trifectaROI": 0,
+      "trioROI": 0,
+      "exactaROI": 0,
+      "quinellaROI": 0,
+      "trifectaHits": 0,
+      "trioHits": 0
+    },
+    {
+      "label": "1着候補 top3_rate<0.4",
+      "n": 0,
+      "trifectaROI": 0,
+      "trioROI": 0,
+      "exactaROI": 0,
+      "quinellaROI": 0,
+      "trifectaHits": 0,
+      "trioHits": 0
+    },
+    {
+      "label": "1着候補 top3_rate データなし",
+      "n": 250,
+      "trifectaROI": 88.56,
+      "trifectaHits": 7,
+      "trioROI": 58.68,
+      "trioHits": 0,
+      "exactaROI": 78.4,
+      "quinellaROI": 82.12
+    },
+    {
+      "label": "3艇平均 top3_rate≥0.5 (安定)",
+      "n": 6258,
+      "trifectaROI": 69,
+      "trifectaHits": 123,
+      "trioROI": 72.46,
+      "trioHits": 0,
+      "exactaROI": 76.05,
+      "quinellaROI": 77.99
+    },
+    {
+      "label": "3艇平均 top3_rate<0.4 (不安定)",
+      "n": 0,
+      "trifectaROI": 0,
+      "trioROI": 0,
+      "exactaROI": 0,
+      "quinellaROI": 0,
+      "trifectaHits": 0,
+      "trioHits": 0
+    }
+  ]
+}

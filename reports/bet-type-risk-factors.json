@@ -1,0 +1,204 @@
+{
+  "generatedAt": "2026-06-08T09:01:38.654Z",
+  "riskGroups": [
+    {
+      "label": "全体ベースライン",
+      "timing": "事前取得可能",
+      "n": 6260,
+      "trifecta": 68.98,
+      "trio": 72.44,
+      "exacta": 76.03,
+      "quinella": 77.96
+    },
+    {
+      "label": "風速 0〜2m/s (穏やか)",
+      "timing": "事前取得可能",
+      "n": 1363,
+      "trifecta": 68.44,
+      "trio": 65.07,
+      "exacta": 86.9,
+      "quinella": 83.6
+    },
+    {
+      "label": "風速 2〜4m/s",
+      "timing": "事前取得可能",
+      "n": 2891,
+      "trifecta": 70.56,
+      "trio": 69.05,
+      "exacta": 74.06,
+      "quinella": 77.08
+    },
+    {
+      "label": "風速 4m/s以上 (荒れ傾向)",
+      "timing": "事前取得可能",
+      "n": 1950,
+      "trifecta": 68.14,
+      "trio": 82.7,
+      "exacta": 69.44,
+      "quinella": 74.35
+    },
+    {
+      "label": "風速データなし",
+      "timing": "事前取得可能",
+      "n": 56,
+      "trifecta": 29.82,
+      "trio": 69.11,
+      "exacta": 142.14,
+      "quinella": 112.5
+    },
+    {
+      "label": "波高 0〜5cm",
+      "timing": "事前取得可能",
+      "n": 5449,
+      "trifecta": 69.19,
+      "trio": 71.03,
+      "exacta": 75.38,
+      "quinella": 77.59
+    },
+    {
+      "label": "波高 5〜15cm",
+      "timing": "事前取得可能",
+      "n": 709,
+      "trifecta": 74.94,
+      "trio": 87.08,
+      "exacta": 77.39,
+      "quinella": 79.89
+    },
+    {
+      "label": "波高 15cm以上 (荒れ)",
+      "timing": "事前取得可能",
+      "n": 46,
+      "trifecta": 0,
+      "trio": 17.17,
+      "exacta": 51.09,
+      "quinella": 50.65
+    },
+    {
+      "label": "安定板あり",
+      "timing": "事前取得可能",
+      "n": 477,
+      "trifecta": 66.18,
+      "trio": 75.51,
+      "exacta": 88.95,
+      "quinella": 80.34
+    },
+    {
+      "label": "安定板なし",
+      "timing": "事前取得可能",
+      "n": 5731,
+      "trifecta": 69.55,
+      "trio": 72.16,
+      "exacta": 74.63,
+      "quinella": 77.73
+    },
+    {
+      "label": "安定板データなし",
+      "timing": "事前取得可能",
+      "n": 52,
+      "trifecta": 32.12,
+      "trio": 74.42,
+      "exacta": 111.92,
+      "quinella": 82.31
+    },
+    {
+      "label": "1着候補 展示ST < 0.15",
+      "timing": "事前取得可能",
+      "n": 3201,
+      "trifecta": 71.48,
+      "trio": 76.65,
+      "exacta": 71,
+      "quinella": 78.44
+    },
+    {
+      "label": "1着候補 展示ST 0.15〜0.20",
+      "timing": "事前取得可能",
+      "n": 778,
+      "trifecta": 69.15,
+      "trio": 82.4,
+      "exacta": 92.98,
+      "quinella": 75.48
+    },
+    {
+      "label": "1着候補 展示ST 0.20以上",
+      "timing": "事前取得可能",
+      "n": 979,
+      "trifecta": 65.41,
+      "trio": 61.26,
+      "exacta": 77.15,
+      "quinella": 81.46
+    },
+    {
+      "label": "展示STデータなし",
+      "timing": "事前取得可能",
+      "n": 1302,
+      "trifecta": 65.42,
+      "trio": 64.53,
+      "exacta": 77.4,
+      "quinella": 75.65
+    },
+    {
+      "label": "展示順位データなし",
+      "timing": "事前取得可能",
+      "n": 6260,
+      "trifecta": 68.98,
+      "trio": 72.44,
+      "exacta": 76.03,
+      "quinella": 77.96
+    },
+    {
+      "label": "1着候補 進入1コース",
+      "timing": "事前取得可能",
+      "n": 6169,
+      "trifecta": 69.84,
+      "trio": 72.52,
+      "exacta": 77.07,
+      "quinella": 78.9
+    },
+    {
+      "label": "1着候補 進入2コース以降",
+      "timing": "事前取得可能",
+      "n": 86,
+      "trifecta": 11.63,
+      "trio": 70.7,
+      "exacta": 5.35,
+      "quinella": 15.23
+    },
+    {
+      "label": "進入コースデータなし",
+      "timing": "事前取得可能",
+      "n": 5,
+      "trifecta": 0,
+      "trio": 0,
+      "exacta": 0,
+      "quinella": 0
+    },
+    {
+      "label": "決まり手: 逃げ",
+      "timing": "結果後のみ",
+      "n": 2386,
+      "trifecta": 169.32,
+      "trio": 111.33,
+      "exacta": 185.71,
+      "quinella": 129.71
+    },
+    {
+      "label": "決まり手: 差し",
+      "timing": "結果後のみ",
+      "n": 853,
+      "trifecta": 0,
+      "trio": 90.14,
+      "exacta": 0,
+      "quinella": 139.53
+    },
+    {
+      "label": "決まり手: まくり系",
+      "timing": "結果後のみ",
+      "n": 2475,
+      "trifecta": 0,
+      "trio": 26.73,
+      "exacta": 0,
+      "quinella": 9.64
+    }
+  ],
+  "oddsCount": 7535997
+}

@@ -1,0 +1,136 @@
+{
+  "generatedAt": "2026-06-08T08:49:22.293Z",
+  "dbPath": "data/boat.sqlite",
+  "totalBuyRaces": 6260,
+  "totalPayoutRaces": 1190226,
+  "rawBetTypes": [
+    {
+      "bet_type": "exacta",
+      "n": 1186065
+    },
+    {
+      "bet_type": "quinella",
+      "n": 1177355
+    },
+    {
+      "bet_type": "trifecta",
+      "n": 1170582
+    },
+    {
+      "bet_type": "trio",
+      "n": 1169376
+    },
+    {
+      "bet_type": "wide",
+      "n": 1168596
+    }
+  ],
+  "betTypeStats": [
+    {
+      "rawBetType": "win",
+      "normalizedBetType": "単勝",
+      "payoutRaces": 0,
+      "payoutRows": 0,
+      "nullPayoutCount": 0,
+      "returnedCount": 0,
+      "combinationExample": "-",
+      "combinationExample2": "-",
+      "coverageRate": 0,
+      "buyRacesJoinable": 0,
+      "missingRate": 1,
+      "verdict": "coverage不足",
+      "notes": "race_payouts に行なし"
+    },
+    {
+      "rawBetType": "place",
+      "normalizedBetType": "複勝",
+      "payoutRaces": 0,
+      "payoutRows": 0,
+      "nullPayoutCount": 0,
+      "returnedCount": 0,
+      "combinationExample": "-",
+      "combinationExample2": "-",
+      "coverageRate": 0,
+      "buyRacesJoinable": 0,
+      "missingRate": 1,
+      "verdict": "coverage不足",
+      "notes": "race_payouts に行なし"
+    },
+    {
+      "rawBetType": "exacta",
+      "normalizedBetType": "2連単",
+      "payoutRaces": 1186060,
+      "payoutRows": 1186065,
+      "nullPayoutCount": 0,
+      "returnedCount": 58523,
+      "combinationExample": "1-2",
+      "combinationExample2": "6-5",
+      "coverageRate": 0.9965,
+      "buyRacesJoinable": 6259,
+      "missingRate": 0.0002,
+      "verdict": "分析可能",
+      "notes": ""
+    },
+    {
+      "rawBetType": "quinella",
+      "normalizedBetType": "2連複",
+      "payoutRaces": 1177350,
+      "payoutRows": 1177355,
+      "nullPayoutCount": 0,
+      "returnedCount": 58079,
+      "combinationExample": "1-2",
+      "combinationExample2": "5-6",
+      "coverageRate": 0.9892,
+      "buyRacesJoinable": 6259,
+      "missingRate": 0.0002,
+      "verdict": "分析可能",
+      "notes": ""
+    },
+    {
+      "rawBetType": "wide",
+      "normalizedBetType": "拡連複",
+      "payoutRaces": 1168591,
+      "payoutRows": 1168596,
+      "nullPayoutCount": 0,
+      "returnedCount": 57417,
+      "combinationExample": "0-0",
+      "combinationExample2": "5-6",
+      "coverageRate": 0.9818,
+      "buyRacesJoinable": 6251,
+      "missingRate": 0.0014,
+      "verdict": "分析可能",
+      "notes": "wide: 1レースあたり払戻行数が1〜3のレースが混在。払戻行は一部省略の可能性あり。"
+    },
+    {
+      "rawBetType": "trifecta",
+      "normalizedBetType": "3連単",
+      "payoutRaces": 1170576,
+      "payoutRows": 1170582,
+      "nullPayoutCount": 0,
+      "returnedCount": 59029,
+      "combinationExample": "1-2-3",
+      "combinationExample2": "6-5-4",
+      "coverageRate": 0.9835,
+      "buyRacesJoinable": 6259,
+      "missingRate": 0.0002,
+      "verdict": "分析可能",
+      "notes": ""
+    },
+    {
+      "rawBetType": "trio",
+      "normalizedBetType": "3連複",
+      "payoutRaces": 1169370,
+      "payoutRows": 1169376,
+      "nullPayoutCount": 0,
+      "returnedCount": 57829,
+      "combinationExample": "1-2-3",
+      "combinationExample2": "4-5-6",
+      "coverageRate": 0.9825,
+      "buyRacesJoinable": 6251,
+      "missingRate": 0.0014,
+      "verdict": "分析可能",
+      "notes": ""
+    }
+  ],
+  "summary": "単勝: coverage不足 (joinable=0), 複勝: coverage不足 (joinable=0), 2連単: 分析可能 (joinable=6259), 2連複: 分析可能 (joinable=6259), 拡連複: 分析可能 (joinable=6251), 3連単: 分析可能 (joinable=6259), 3連複: 分析可能 (joinable=6251)"
+}

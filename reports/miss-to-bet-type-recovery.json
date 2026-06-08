@@ -1,0 +1,90 @@
+{
+  "generatedAt": "2026-06-08T08:59:01.515Z",
+  "total": 6260,
+  "missTypeBreakdown": [
+    {
+      "value": "3連単的中",
+      "n": 123,
+      "rate": 1.96
+    },
+    {
+      "value": "3連複なら的中",
+      "n": 319,
+      "rate": 5.1
+    },
+    {
+      "value": "2連単なら的中",
+      "n": 418,
+      "rate": 6.68
+    },
+    {
+      "value": "2連複なら的中",
+      "n": 202,
+      "rate": 3.23
+    },
+    {
+      "value": "拡連複なら的中",
+      "n": 0,
+      "rate": 0
+    },
+    {
+      "value": "全部ダメ",
+      "n": 5198,
+      "rate": 83.04
+    }
+  ],
+  "selAccBreakdown": [
+    {
+      "value": "1着完全一致",
+      "n": 252,
+      "rate": 4.03
+    },
+    {
+      "value": "2/3着だけ逆",
+      "n": 418,
+      "rate": 6.68
+    },
+    {
+      "value": "3艇全部Top3内",
+      "n": 193,
+      "rate": 3.08
+    },
+    {
+      "value": "1着はTop3内",
+      "n": 1835,
+      "rate": 29.31
+    },
+    {
+      "value": "上位2艇絡み",
+      "n": 588,
+      "rate": 9.39
+    },
+    {
+      "value": "完全外れ",
+      "n": 2974,
+      "rate": 47.51
+    }
+  ],
+  "altStats": {
+    "trio": {
+      "hits": 442,
+      "totalReturn": 453450,
+      "roi": 72.44
+    },
+    "exacta": {
+      "hits": 541,
+      "totalReturn": 475930,
+      "roi": 76.03
+    },
+    "quinella": {
+      "hits": 803,
+      "totalReturn": 488060,
+      "roi": 77.96
+    },
+    "wide": {
+      "hits": 803,
+      "totalReturn": 223620,
+      "roi": 35.72
+    }
+  }
+}

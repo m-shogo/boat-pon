@@ -1,0 +1,103 @@
+{
+  "generatedAt": "2026-06-08T09:01:59.162Z",
+  "totalBuyRaces": 6260,
+  "finalVerdict": {
+    "今すぐ有望": [],
+    "追加検証候補": [],
+    "危険/過学習": [],
+    "coverage不足": [
+      "単勝",
+      "複勝"
+    ],
+    "本番投入はまだ早い": [
+      "3連単",
+      "3連複",
+      "2連単",
+      "2連複",
+      "拡連複"
+    ]
+  },
+  "selectorRules": [
+    {
+      "condition": "全体デフォルト（条件絞り込みなし）",
+      "recommendedBetType": "2連複（quinella）",
+      "rationale": "全5券種中 ROI が最も高い (77.96%) ただし全体的に ROI < 100% のため慎重。的中率が高く(12.8%)安定感あり。",
+      "evidenceROI": "2連複: 77.96% / 2連単: 76.03% / 3連複: 72.44% / 3連単: 68.98%",
+      "confidence": "低"
+    },
+    {
+      "condition": "風速4m/s以上（荒天）",
+      "recommendedBetType": "3連複",
+      "rationale": "荒天時は順番予測が難しくなる。3連複ROI=82.7% vs 3連単ROI=68.14%",
+      "evidenceROI": "3連単:68.14% 3連複:82.7% 2連複:74.35%",
+      "confidence": "中"
+    },
+    {
+      "condition": "風速0〜2m/s（穏やか）",
+      "recommendedBetType": "3連単",
+      "rationale": "穏天時は順番精度が高まる可能性。3連単ROI=68.44% vs 3連複ROI=65.07%",
+      "evidenceROI": "3連単:68.44% 3連複:65.07% 2連複:83.6%",
+      "confidence": "中"
+    },
+    {
+      "condition": "安定板使用",
+      "recommendedBetType": "3連複",
+      "rationale": "安定板は波高・荒天のサイン。3連複ROI=75.51% vs 3連単ROI=66.18%",
+      "evidenceROI": "3連単:66.18% 3連複:75.51% 2連複:80.34%",
+      "confidence": "中"
+    },
+    {
+      "condition": "1着候補が1コース進入",
+      "recommendedBetType": "3連複",
+      "rationale": "1コース進入は逃げ有利。3連単ROI=69.84% vs 3連複ROI=72.52%",
+      "evidenceROI": "3連単:69.84% 3連複:72.52% 2連複:78.9%",
+      "confidence": "中"
+    },
+    {
+      "condition": "常時",
+      "recommendedBetType": "単勝・複勝は除外",
+      "rationale": "race_payouts に win/place が存在しない。coverage=0 のため分析・投資対象外。",
+      "evidenceROI": "coverage 0%",
+      "confidence": "高"
+    },
+    {
+      "condition": "拡連複（wide）",
+      "recommendedBetType": "使用しない",
+      "rationale": "ROI=35.72%（全5券種中最低）。的中率はquinellaと同等だが払戻が著しく低い。費用対効果なし。",
+      "evidenceROI": "拡連複:35.72% vs 2連複:77.96%",
+      "confidence": "高"
+    }
+  ],
+  "screeningRanking": [
+    {
+      "rank": 1,
+      "betType": "2連複",
+      "ROI": 77.96,
+      "verdict": "本番投入はまだ早い"
+    },
+    {
+      "rank": 2,
+      "betType": "2連単",
+      "ROI": 76.03,
+      "verdict": "本番投入はまだ早い"
+    },
+    {
+      "rank": 3,
+      "betType": "3連複",
+      "ROI": 72.44,
+      "verdict": "本番投入はまだ早い"
+    },
+    {
+      "rank": 4,
+      "betType": "3連単",
+      "ROI": 68.98,
+      "verdict": "本番投入はまだ早い"
+    },
+    {
+      "rank": 5,
+      "betType": "拡連複",
+      "ROI": 35.72,
+      "verdict": "本番投入はまだ早い"
+    }
+  ]
+}
