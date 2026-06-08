@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-08T03:28:42.748Z",
+  "generatedAt": "2026-06-08T03:37:59.725Z",
   "conditionName": "seasonal_parts0_month_4_6_8_12",
   "conditionDesc": "月4+6+8+12×parts=0 (isBase条件付き)",
   "forwardStart": "2025-08-09",

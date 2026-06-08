@@ -101,7 +101,9 @@
     "backup": "tsx scripts/backup-db-safe.ts",
     "backup:legacy": "tsx scripts/backup-db.ts",
     "backup:safe": "tsx scripts/backup-db-safe.ts",
-    "typecheck:scripts": "tsc --noEmit -p tsconfig.scripts.json"
+    "typecheck:scripts": "tsc --noEmit -p tsconfig.scripts.json",
+    "analyze:roi-decision-lab": "tsx scripts/analyze-roi-decision-lab.ts",
+    "paper:forward": "tsx scripts/paper-forward-test.ts"
   },
   "engines": {
     "node": ">=24.0.0"
