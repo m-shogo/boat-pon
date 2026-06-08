@@ -1,6 +1,6 @@
 # ROI Drawdown & Operation Analysis
 
-生成: 2026-06-08T05:14:26.407Z / DB: data/boat.sqlite
+生成: 2026-06-08T05:57:10.566Z / DB: data/boat.sqlite
 
 対象: historical-backfill BUY n=6260
 
@@ -237,4 +237,4 @@
 
 
 ---
-*生成: 2026-06-08T05:14:26.407Z / DB: data/boat.sqlite*
+*生成: 2026-06-08T05:57:10.566Z / DB: data/boat.sqlite*

@@ -1,6 +1,6 @@
 # ROI Monthly Regime Analysis
 
-生成: 2026-06-08T05:14:13.524Z / DB: data/boat.sqlite
+生成: 2026-06-08T05:57:08.958Z / DB: data/boat.sqlite
 
 対象: historical-backfill BUY n=6260
 
@@ -163,6 +163,8 @@ n=378 / ROI=92.78% / roiExMaxHit=81.14% / isBase n=100 / isBase ROI=192.80%
 
 **強月候補** (ROI>=150% or isBase ROI高): 月4, 月6, 月8, 月12
 
+> ⚠️ **月6 / 月12 は単独ROI<100%**: 月6=91.92%、月12=92.78%。強月効果はisBase条件と組み合わせた場合のみ (月6 isBase ROI=214%、月12 isBase ROI=193%)。月4/8は単独でROI≥100%。強月単独(parts条件なし)では採用不可。
+
 **弱月候補** (ROI<80% n>=20): 月1, 月2, 月3, 月7, 月9, 月10
 
 **観察月** (ROI 80-120%): 月4, 月5, 月6, 月8, 月11, 月12
@@ -202,4 +204,4 @@ n=378 / ROI=92.78% / roiExMaxHit=81.14% / isBase n=100 / isBase ROI=192.80%
 - → 月が条件を揃えた後でも追加効果を持つ可能性
 
 ---
-*生成: 2026-06-08T05:14:13.524Z / DB: data/boat.sqlite*
+*生成: 2026-06-08T05:57:08.958Z / DB: data/boat.sqlite*

@@ -538,8 +538,8 @@ function simulateSelectors(rows: Row[], payoutsMap: Map<string, number>): Select
       hitRate: n > 0 ? hits / n : 0,
       maxHitOdds: hitOdds[0] ?? 0,
       avgOdds: 0,
-      warning: `⚠️ 点数${TICKETS_PER_RACE}倍: 常時FLOW適用は危険候補。1着正解率とROI改善のバランス要確認`,
-      recommendation: roi > 120 && roiEx > 80 ? "WATCH" : "DANGEROUS",
+      warning: `⚠️ 点数${TICKETS_PER_RACE}倍: 常時採用不可 (全レース適用禁止)。特定条件に絞った部分適用のみ要検討`,
+      recommendation: "DANGEROUS" as const,
     });
   }
 
@@ -606,7 +606,7 @@ function buildRecommendations(
     recs.push(`REVERSE: 外れのうち${pct(reversedRate)}が逆順外れ → 2点買い追加で改善余地あり`);
   }
   if (headFixedRate > 0.3) {
-    recs.push(`HEAD_FIXED_FLOW: 外れのうち${pct(headFixedRate)}が1着正解 → 1着固定流しに改善余地あり(点数増大注意)`);
+    recs.push(`HEAD_FIXED_FLOW: 外れのうち${pct(headFixedRate)}が1着正解 → **常時採用不可** (点数10倍: 全レース一律適用は禁止)。特定条件を絞った部分検討のみ`);
   }
   if (first2FixedRate > 0.1) {
     recs.push(`FIRST_SECOND_FIXED_FLOW: 外れのうち${pct(first2FixedRate)}が1-2固定3着外れ → 追加1点で改善可能`);

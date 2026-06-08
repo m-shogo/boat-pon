@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-08T05:14:22.296Z",
+  "generatedAt": "2026-06-08T05:57:09.653Z",
   "dbPath": "data/boat.sqlite",
   "totalRows": 6260,
   "totalHits": 124,
@@ -295,8 +295,8 @@
       "hitRate": 0.4001597444089457,
       "maxHitOdds": 773.3,
       "avgOdds": 0,
-      "warning": "⚠️ 点数10倍: 常時FLOW適用は危険候補。1着正解率とROI改善のバランス要確認",
-      "recommendation": "WATCH"
+      "warning": "⚠️ 点数10倍: 常時採用不可 (全レース適用禁止)。特定条件に絞った部分適用のみ要検討",
+      "recommendation": "DANGEROUS"
     },
     {
       "selectorName": "FIRST_SECOND_FIXED_FLOW",
@@ -348,7 +348,7 @@
     }
   ],
   "selectorRecommendations": [
-    "HEAD_FIXED_FLOW: 外れのうち31.99%が1着正解 → 1着固定流しに改善余地あり(点数増大注意)",
+    "HEAD_FIXED_FLOW: 外れのうち31.99%が1着正解 → **常時採用不可** (点数10倍: 全レース一律適用は禁止)。特定条件を絞った部分検討のみ",
     "REVERSE: ROI 5.76% 悪化 → 不採用推奨",
     "TOP3_BOX: ROI 10.77% 悪化 → 不採用推奨",
     "HEAD_FIXED_FLOW: ROI 59.76% 改善 (80.38% → 140.14%), 点数10倍",

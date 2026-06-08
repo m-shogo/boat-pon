@@ -120,8 +120,10 @@ type RiskReport = {
   baselineDd: DrawdownResult;
   // 目標
   targets: { maxStreak: number; maxDDPct: number; minROI: number };
-  // 各次元の分析
+  // 各次元の分析 (CUT sim対象)
   dimensions: { name: string; subgroups: SubgroupStats[] }[];
+  // wind5 内訳など情報のみ (CUT sim対象外)
+  analysisDimensions: { name: string; subgroups: SubgroupStats[] }[];
   // CUT推奨
   cutCandidates: SubgroupStats[];
   // 最適化シミュレーション
@@ -392,7 +394,8 @@ function buildExplanation(label: string, m: Metric, dd: DrawdownResult, ci: CutI
 
 function buildRecommendation(cls: string, ci: CutImpact, m: Metric, dd: DrawdownResult): string {
   if (cls === "CUT_CANDIDATE") {
-    return `✂️ CUT推奨: 除外後ROI=${pct(ci.roiAfterCut / 100)} / 連敗=${ci.streakAfterCut} / DD=${num(ci.ddAfterCut)}%`;
+    const ddNote = ci.ddAfterCut > TARGET_MAX_DD_PCT ? ` ⚠️DD目標未達(目標≤${TARGET_MAX_DD_PCT}%)` : "";
+    return `✂️ CUT候補: 除外後ROI=${pct(ci.roiAfterCut / 100)} / 連敗=${ci.streakAfterCut} / DD=${num(ci.ddAfterCut)}%${ddNote}`;
   }
   if (cls === "KEEP_STRONG") return `✅ KEEP: 目標条件を満たす`;
   if (cls === "PAPER_ONLY") return `⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大`;
@@ -523,6 +526,34 @@ function analyzeIsBaseRisk(rows: Row[]): RiskReport {
   ];
   dims.push(analyzeDimension("完全外れリスク高条件", highMissGroups, rows, bm, bd));
 
+  // wind5 (wind>=5) 詳細内訳 — PAPER_STRONG_CANDIDATE 分析 (CUT sim対象外)
+  const analysisDims: { name: string; subgroups: SubgroupStats[] }[] = [];
+  const wind5Rows = rows.filter((r) => r.windMps >= 5);
+  const wind5Metric = calcMetric(wind5Rows);
+  const wind5Dd = calcDrawdown(wind5Rows);
+  // 月別
+  const wind5MonthGroups = [4, 6, 8, 12].map((m) => ({
+    label: `wind5×月${m}`, condition: `wind>=5 AND month=${m}`,
+    rows: wind5Rows.filter((r) => r.month === m),
+  }));
+  analysisDims.push(analyzeDimension("wind5 月別内訳 (月4/6/8/12×wind>=5)", wind5MonthGroups, wind5Rows, wind5Metric, wind5Dd));
+  // オッズ帯別
+  const wind5OddsGroups = [
+    { label: "wind5×odds<30", condition: "wind>=5 AND odds<30", rows: wind5Rows.filter((r) => r.currentOdds < 30) },
+    { label: "wind5×30<=odds<50", condition: "wind>=5 AND 30<=odds<50", rows: wind5Rows.filter((r) => r.currentOdds >= 30 && r.currentOdds < 50) },
+    { label: "wind5×50<=odds<80", condition: "wind>=5 AND 50<=odds<80", rows: wind5Rows.filter((r) => r.currentOdds >= 50 && r.currentOdds < 80) },
+    { label: "wind5×odds>=80", condition: "wind>=5 AND odds>=80", rows: wind5Rows.filter((r) => r.currentOdds >= 80) },
+  ];
+  analysisDims.push(analyzeDimension("wind5 オッズ帯別 (wind>=5)", wind5OddsGroups, wind5Rows, wind5Metric, wind5Dd));
+  // 会場別 (n>=5)
+  const wind5VenueMap = new Map<string, Row[]>();
+  for (const r of wind5Rows) { if (!wind5VenueMap.has(r.venue)) wind5VenueMap.set(r.venue, []); wind5VenueMap.get(r.venue)!.push(r); }
+  const wind5VenueGroups = [...wind5VenueMap.entries()]
+    .filter(([, rs]) => rs.length >= 5)
+    .sort((a, b) => b[1].length - a[1].length)
+    .map(([venue, rs]) => ({ label: `wind5×${venue}`, condition: `wind>=5 AND venue='${venue}'`, rows: rs }));
+  analysisDims.push(analyzeDimension("wind5 会場別 (wind>=5, n>=5)", wind5VenueGroups, wind5Rows, wind5Metric, wind5Dd));
+
   // CUT候補を収集
   const allSubgroups = dims.flatMap((d) => d.subgroups);
   const cutCandidates = allSubgroups
@@ -543,6 +574,7 @@ function analyzeIsBaseRisk(rows: Row[]): RiskReport {
     baselineDd: bd,
     targets: { maxStreak: TARGET_MAX_STREAK, maxDDPct: TARGET_MAX_DD_PCT, minROI: MIN_ROI_AFTER_CUT },
     dimensions: dims,
+    analysisDimensions: analysisDims,
     cutCandidates,
     cutSimulations: cutSims,
     keepStrong,
@@ -789,6 +821,24 @@ function renderMd(r: RiskReport): string {
       lines.push(`| ${icon} ${esc(s.label)} | ${s.n} | ${pct(s.metric.roi / 100)} | ${pct(s.metric.roiExMaxHit / 100)} | ${s.dd.maxStreakN} | ${num(s.dd.maxDDPct)}% | ${pct(s.dd.completeMissRate)} | ${s.cutImpact.streakAfterCut} | ${pct(s.cutImpact.roiAfterCut / 100)} | ${icon} ${s.classification} |`);
     }
     lines.push("");
+  }
+
+  // wind5 詳細内訳 (CUT sim対象外 / 情報のみ)
+  if (r.analysisDimensions.length > 0) {
+    lines.push("## wind5 詳細内訳 (月4/6/8/12×wind>=5, n=153)", "");
+    lines.push("> **注**: PAPER_STRONG_CANDIDATE として並走中。月別・オッズ帯・会場の偏りを確認する。", "");
+    lines.push("> DD=20.92% (目標12%未達)。ROI/連敗は目標達成。forward n>=50 まで判断保留。", "");
+    lines.push("");
+    for (const dim of r.analysisDimensions) {
+      lines.push(`### ${dim.name}`, "");
+      lines.push("| 条件 | n | ROI | roiExMaxHit | 最大連敗 | DD% |");
+      lines.push("|---|---:|---:|---:|---:|---:|");
+      for (const s of dim.subgroups) {
+        const icon = s.classification === "CUT_CANDIDATE" ? "✂️" : s.classification === "KEEP_STRONG" ? "✅" : s.classification === "PAPER_ONLY" ? "⚠️" : s.classification === "INSUFFICIENT" ? "ℹ️" : "△";
+        lines.push(`| ${icon} ${esc(s.label)} | ${s.n} | ${pct(s.metric.roi / 100)} | ${pct(s.metric.roiExMaxHit / 100)} | ${s.dd.maxStreakN} | ${num(s.dd.maxDDPct)}% |`);
+      }
+      lines.push("");
+    }
   }
 
   // 解説

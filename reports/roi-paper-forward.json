@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-08T05:48:12.363Z",
+  "generatedAt": "2026-06-08T05:59:33.969Z",
   "forwardStart": "2025-08-09",
   "conditions": [
     {
@@ -158,8 +158,8 @@
       },
       "insertStats": {
         "attempted": 153,
-        "inserted": 153,
-        "ignored": 0,
+        "inserted": 0,
+        "ignored": 153,
         "totalInDB": 153
       },
       "totals": {

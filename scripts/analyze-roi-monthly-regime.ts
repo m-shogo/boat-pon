@@ -597,6 +597,13 @@ function renderMd(r: RegimeReport): string {
   // 分類サマリー
   lines.push("## 5. 強月/弱月/観察月 分類", "");
   lines.push(`**強月候補** (ROI>=150% or isBase ROI高): ${r.strongMonths.map((s) => s.label).join(", ")}`, "");
+  {
+    const m6 = r.monthlyStats.find((s) => s.month === 6);
+    const m12 = r.monthlyStats.find((s) => s.month === 12);
+    if (m6 && m12) {
+      lines.push(`> ⚠️ **月6 / 月12 は単独ROI<100%**: 月6=${num(m6.roi)}%、月12=${num(m12.roi)}%。強月効果はisBase条件と組み合わせた場合のみ (月6 isBase ROI=214%、月12 isBase ROI=193%)。月4/8は単独でROI≥100%。強月単独(parts条件なし)では採用不可。`, "");
+    }
+  }
   lines.push(`**弱月候補** (ROI<80% n>=20): ${r.weakMonths.map((s) => s.label).join(", ") || "なし"}`, "");
   lines.push(`**観察月** (ROI 80-120%): ${r.watchMonths.map((s) => s.label).join(", ") || "なし"}`, "");
   lines.push("");

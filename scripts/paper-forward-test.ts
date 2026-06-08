@@ -537,6 +537,73 @@ if (isBaseRep && wind5Rep) {
   lines.push("> **注**: wind5 forward n=10 / wind3-5 forward n=15 はいずれも小サンプル。forward ROIは参考値のみ。n>=50まで判断保留。", "");
 }
 lines.push("");
+
+// wind5 historical breakdown (月別/オッズ帯/会場)
+if (wind5Rep) {
+  lines.push("## wind5 Historical 内訳 (月別・オッズ帯・会場)", "");
+  lines.push("> historical n=153 (wind>=5 isBase条件)。月8依存度・オッズ帯偏り・会場偏りを確認する。", "");
+  lines.push("");
+
+  const w5hist = wind5Rep.historicalRows;
+
+  // 月別
+  lines.push("### 月別 (historical)");
+  lines.push("| 月 | n | hits | hitRate | ROI | roiExMaxHit |");
+  lines.push("|---|---:|---:|---:|---:|---:|");
+  for (const month of [4, 6, 8, 12]) {
+    const mRows = w5hist.filter((r) => Number(r.date.slice(5, 7)) === month);
+    const m = calcMetrics(mRows);
+    const roiStr = m.roi !== null ? `${m.roi.toFixed(1)}%` : "-";
+    const roiExStr = m.roiExMaxHit !== null ? `${m.roiExMaxHit.toFixed(1)}%` : "-";
+    const hitRateStr = m.hitRate !== null ? `${(m.hitRate * 100).toFixed(1)}%` : "-";
+    lines.push(`| 月${month} | ${m.n} | ${m.hits} | ${hitRateStr} | ${roiStr} | ${roiExStr} |`);
+  }
+  lines.push("");
+  lines.push("> ⚠️ 月8だけでROIが高い場合は過学習リスク。月4/6/12でも正のROIが確認できることが PAPER_STRONG_CANDIDATE 維持の条件。", "");
+
+  // オッズ帯別
+  lines.push("### オッズ帯別 (historical)");
+  lines.push("| オッズ帯 | n | hits | hitRate | ROI | roiExMaxHit |");
+  lines.push("|---|---:|---:|---:|---:|---:|");
+  for (const { label, lo, hi } of [
+    { label: "odds<30", lo: 0, hi: 30 },
+    { label: "30<=odds<50", lo: 30, hi: 50 },
+    { label: "50<=odds<80", lo: 50, hi: 80 },
+    { label: "odds>=80 ⛔", lo: 80, hi: Infinity },
+  ]) {
+    const oRows = w5hist.filter((r) => r.current_odds >= lo && r.current_odds < hi);
+    const m = calcMetrics(oRows);
+    const roiStr = m.roi !== null ? `${m.roi.toFixed(1)}%` : "-";
+    const roiExStr = m.roiExMaxHit !== null ? `${m.roiExMaxHit.toFixed(1)}%` : "-";
+    const hitRateStr = m.hitRate !== null ? `${(m.hitRate * 100).toFixed(1)}%` : "-";
+    lines.push(`| ${label} | ${m.n} | ${m.hits} | ${hitRateStr} | ${roiStr} | ${roiExStr} |`);
+  }
+  lines.push("");
+  lines.push("> odds>=80 は DO_NOT_SHIP 寄り。odds<30 帯での ROI が wind5 全体 ROI を支えている場合は過学習リスク。", "");
+
+  // 会場別 (n>=5)
+  lines.push("### 会場別 (historical, n>=5)");
+  lines.push("| 会場 | n | hits | hitRate | ROI | roiExMaxHit |");
+  lines.push("|---|---:|---:|---:|---:|---:|");
+  const venueMap = new Map<string, typeof w5hist>();
+  for (const r of w5hist) {
+    if (!venueMap.has(r.venue)) venueMap.set(r.venue, []);
+    venueMap.get(r.venue)!.push(r);
+  }
+  const venueSorted = [...venueMap.entries()]
+    .filter(([, rs]) => rs.length >= 5)
+    .sort((a, b) => b[1].length - a[1].length);
+  for (const [venue, vRows] of venueSorted) {
+    const m = calcMetrics(vRows);
+    const roiStr = m.roi !== null ? `${m.roi.toFixed(1)}%` : "-";
+    const roiExStr = m.roiExMaxHit !== null ? `${m.roiExMaxHit.toFixed(1)}%` : "-";
+    const hitRateStr = m.hitRate !== null ? `${(m.hitRate * 100).toFixed(1)}%` : "-";
+    lines.push(`| ${venue} | ${m.n} | ${m.hits} | ${hitRateStr} | ${roiStr} | ${roiExStr} |`);
+  }
+  lines.push("");
+  lines.push("> n<5 の会場は省略。特定会場に ROI が集中している場合は会場固有の過学習に注意。", "");
+}
+lines.push("");
 lines.push("> **本番反映禁止**: この結果がどうであれ、app_settings や本番 decision ロジックは変更しないこと。", "");
 
 // ───────────────── JSON ─────────────────
