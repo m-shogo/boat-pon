@@ -237,7 +237,7 @@ function evaluate(strat: StrategyDef): StrategyResult {
   return {
     name: strat.name, betType: strat.betType,
     nRaces: validRaces, totalTickets,
-    avgTicketsPerRace: Math.round(totalTickets / validRaces * 100) / 100,
+    avgTicketsPerRace: validRaces > 0 ? Math.round(totalTickets / validRaces * 100) / 100 : 0,
     totalStake,
     hitTickets, hitRaces,
     ticketHitRate, raceHitRate,
