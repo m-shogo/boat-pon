@@ -1,0 +1,101 @@
+{
+  "generatedAt": "2026-06-08T03:14:06.197Z",
+  "conditionName": "seasonal_parts0_month_4_6_8_12",
+  "conditionDesc": "月4+6+8+12×parts=0 (isBase条件付き)",
+  "forwardStart": "2025-08-09",
+  "historicalBaseline": {
+    "n": 543,
+    "roi": 199.1,
+    "roiExMaxHit": 184.79,
+    "roiExMax3Hits": 162.15,
+    "roiExMax5Hits": 140.98,
+    "hitRate": 0.04788213627992634,
+    "partsMissing": 0,
+    "description": "2024-01〜2025-08 (train+val) n=543"
+  },
+  "totals": {
+    "historical": 748,
+    "forward": 33,
+    "forwardConfirmed": 33,
+    "forwardPending": 0
+  },
+  "histMetrics": {
+    "n": 748,
+    "nEval": 748,
+    "hits": 30,
+    "hitRate": 0.040106951871657755,
+    "roi": 171.6978609625668,
+    "roiExMaxHit": 161.3101604278075,
+    "roiExMax3Hits": 144.87967914438505,
+    "maxHitOdds": 77.7
+  },
+  "forwardMetrics": {
+    "n": 33,
+    "nEval": 33,
+    "hits": 2,
+    "hitRate": 0.06060606060606061,
+    "roi": 233.93939393939394,
+    "roiExMaxHit": 93.33333333333333,
+    "roiExMax3Hits": 0,
+    "maxHitOdds": 46.4
+  },
+  "forwardMonthBreakdown": [
+    {
+      "ym": "2025-08",
+      "n": 33,
+      "nEval": 33,
+      "hits": 2,
+      "hitRate": 0.06060606060606061,
+      "roi": 233.93939393939394,
+      "roiExMaxHit": 93.33333333333333,
+      "roiExMax3Hits": 0,
+      "maxHitOdds": 46.4
+    }
+  ],
+  "forwardOddsBands": [
+    {
+      "label": "odds<30",
+      "n": 3,
+      "nEval": 3,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "roiExMaxHit": 0,
+      "roiExMax3Hits": 0,
+      "maxHitOdds": 0
+    },
+    {
+      "label": "30<=odds<50",
+      "n": 23,
+      "nEval": 23,
+      "hits": 2,
+      "hitRate": 0.08695652173913043,
+      "roi": 335.6521739130435,
+      "roiExMaxHit": 133.91304347826087,
+      "roiExMax3Hits": 0,
+      "maxHitOdds": 46.4
+    },
+    {
+      "label": "50<=odds<80",
+      "n": 5,
+      "nEval": 5,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "roiExMaxHit": 0,
+      "roiExMax3Hits": 0,
+      "maxHitOdds": 0
+    },
+    {
+      "label": "odds>=80",
+      "n": 2,
+      "nEval": 2,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "roiExMaxHit": 0,
+      "roiExMax3Hits": 0,
+      "maxHitOdds": 0
+    }
+  ]
+}
