@@ -7,11 +7,12 @@
  * 判定ラベルは historical データ上の傾向を示すだけで、BUY設定採用可否ではない。
  * - insufficient data: historicalN < 30
  * - strong historical pattern: historicalN >= 50, hits >= 5, ROI >= 150%
+ * - risk-adjusted watch: strong 判定だがリスク要因あり (maxStreak>50, maxGapDays>180,
+ *     forwardN>0かつ<30, 3条件かつn<100 のいずれか)
  * - weak historical pattern: historicalN >= 30, ROI < 100%
  * - watch: それ以外 (n>=30)
  *
  * 3条件組み合わせは探索数が多く過剰適合リスクが高い。
- * historicalN < 100 の strong は "過剰探索注意" フラグを付ける。
  *
  * 読み取り専用。DB書き込みなし。
  *
@@ -30,13 +31,15 @@ const REPORT_JSON = "reports/roi-combination-watch.json";
 const COND_ISBASE = "seasonal_parts0_month_4_6_8_12";
 const COND_WIND5 = "seasonal_parts0_month_4_6_8_12_wind5";
 
-const N_MIN_JUDGE = 30;      // insufficient data 判定下限
-const N_MIN_STRONG = 50;     // strong pattern 最低 n
-const N_STRONG_CAUTION = 100; // 3条件 strong での過剰探索注意 n 閾値
-const N_MIN_SHOW_MD = 10;    // markdown 表示最低 n (historical)
+const N_MIN_JUDGE = 30;       // insufficient data 判定下限
+const N_MIN_STRONG = 50;      // strong pattern 最低 n
+const N_STRONG_CAUTION = 100; // 3条件 strong でのリスク注意 n 閾値
+const N_MIN_SHOW_MD = 10;     // markdown 表示最低 n (historical)
 const ROI_STRONG = 150;
 const ROI_WEAK = 100;
 const HITS_MIN_STRONG = 5;
+const RISK_MAX_STREAK = 50;       // これを超えると riskNote
+const RISK_MAX_GAP_DAYS = 180;    // これを超えると riskNote
 
 // ── 型定義 ────────────────────────────────────────────────────────────────
 
@@ -69,7 +72,7 @@ type ComboStat = {
   fwdAvgOdds: number;
   roi: number;
   maxConsecLosses: number;
-  maxHitGapRaces: number;   // hit間の最大外れ数 (filtered records内)
+  maxHitGapRaces: number;     // hit間の最大外れ数 (filtered records内)
   maxCalendarGapDays: number; // hit間の最大日数
   historicalN: number;
   historicalHits: number;
@@ -78,7 +81,7 @@ type ComboStat = {
   forwardHits: number;
   forwardRoi: number;
   pattern: Pattern;
-  overExplorationNote: string; // 3条件かつ n<100 の場合に警告
+  riskNote: string; // strong かつリスク要因ありの場合、理由を列挙
 };
 
 type Report = {
@@ -222,6 +225,24 @@ function classifyPattern(
   return "watch";
 }
 
+// strong に対してリスク要因を列挙する。non-strong は空文字を返す。
+function computeRiskNote(
+  pattern: Pattern,
+  maxConsecLosses: number,
+  maxCalendarGapDays: number,
+  fwdN: number,
+  dimCount: number,
+  histN: number
+): string {
+  if (pattern !== "strong historical pattern") return "";
+  const reasons: string[] = [];
+  if (maxConsecLosses > RISK_MAX_STREAK) reasons.push(`maxStreak=${maxConsecLosses}`);
+  if (maxCalendarGapDays > RISK_MAX_GAP_DAYS) reasons.push(`maxGapDays=${maxCalendarGapDays}`);
+  if (fwdN > 0 && fwdN < N_MIN_JUDGE) reasons.push(`fwd n=${fwdN}`);
+  if (dimCount === 3 && histN < N_STRONG_CAUTION) reasons.push(`3条件n=${histN}<${N_STRONG_CAUTION}`);
+  return reasons.join(", ");
+}
+
 function computeCombo(
   allRecords: RawRecord[],
   condLabel: string,
@@ -250,14 +271,19 @@ function computeCombo(
   const fwdRoi = roiCalc(fwdSumOdds, fwdN);
   const roiAll = roiCalc(sumOddsAll, n);
 
-  const pattern = classifyPattern(histN, histHits, histRoi);
+  const maxConsecLossesVal = computeMaxConsecLosses(hist);
+  const maxHitGapRacesVal = computeMaxHitGapRaces(hist);
+  const maxCalendarGapDaysVal = computeMaxCalendarGapDays(hist);
 
-  const overExplorationNote =
-    dimNames.length === 3 &&
-    pattern === "strong historical pattern" &&
-    histN < N_STRONG_CAUTION
-      ? `⚠️ 3条件・n=${histN}<${N_STRONG_CAUTION}: 過剰探索注意`
-      : "";
+  const pattern = classifyPattern(histN, histHits, histRoi);
+  const riskNote = computeRiskNote(
+    pattern,
+    maxConsecLossesVal,
+    maxCalendarGapDaysVal,
+    fwdN,
+    dimNames.length,
+    histN
+  );
 
   return {
     condition: condLabel,
@@ -269,9 +295,9 @@ function computeCombo(
     histAvgOdds: avgOddsCalc(hist),
     fwdAvgOdds: avgOddsCalc(fwd),
     roi: roiAll,
-    maxConsecLosses: computeMaxConsecLosses(hist),
-    maxHitGapRaces: computeMaxHitGapRaces(hist),
-    maxCalendarGapDays: computeMaxCalendarGapDays(hist),
+    maxConsecLosses: maxConsecLossesVal,
+    maxHitGapRaces: maxHitGapRacesVal,
+    maxCalendarGapDays: maxCalendarGapDaysVal,
     historicalN: histN,
     historicalHits: histHits,
     historicalRoi: histRoi,
@@ -279,7 +305,7 @@ function computeCombo(
     forwardHits: fwdHits,
     forwardRoi: fwdRoi,
     pattern,
-    overExplorationNote,
+    riskNote,
   };
 }
 
@@ -370,13 +396,6 @@ function run(): Report {
 
 // ── Markdown生成 ──────────────────────────────────────────────────────────
 
-const PATTERN_ICON: Record<Pattern, string> = {
-  "strong historical pattern": "🟢",
-  watch: "🟡",
-  "weak historical pattern": "🔴",
-  "insufficient data": "⚪",
-};
-
 function f1(n: number): string {
   return n.toFixed(1);
 }
@@ -386,10 +405,29 @@ function fwdRoiCell(c: ComboStat): string {
   return `${f1(c.forwardRoi)}%${note}`;
 }
 
-function patternSection(combos: ComboStat[], pattern: Pattern, minN: number): string[] {
-  const filtered = combos.filter((c) => c.pattern === pattern && c.historicalN >= minN);
+const TABLE_HEADER = [
+  "| 組み合わせ | hist_n | hist_hit | hist_ROI | fwd_n | fwd_hit | fwd_ROI | hist_avg | fwd_avg | maxStreak | maxGapDays | 備考 |",
+  "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|",
+];
+
+function tableRow(c: ComboStat, remarkOverride?: string): string {
+  const gapDays = c.maxCalendarGapDays < 0 ? "—" : String(c.maxCalendarGapDays);
+  const fwdAvg = c.forwardN > 0 ? f1(c.fwdAvgOdds) : "—";
+  const remark = remarkOverride ?? "";
+  return (
+    `| ${c.dims} | ${c.historicalN} | ${c.historicalHits} | ${f1(c.historicalRoi)}% | ` +
+    `${c.forwardN} | ${c.forwardHits} | ${fwdRoiCell(c)} | ` +
+    `${f1(c.histAvgOdds)} | ${fwdAvg} | ${c.maxConsecLosses} | ${gapDays} | ${remark} |`
+  );
+}
+
+// strong パターンのうち riskNote なし (真の strong)
+function strongSection(combos: ComboStat[], minN: number): string[] {
+  const filtered = combos.filter(
+    (c) => c.pattern === "strong historical pattern" && c.historicalN >= minN && c.riskNote === ""
+  );
   const lines: string[] = [
-    `### ${PATTERN_ICON[pattern]} ${pattern} (hist n>=${minN})`,
+    `### 🟢 strong historical pattern (strong判定: hist n>=${N_MIN_STRONG}, hits>=${HITS_MIN_STRONG}, ROI>=${ROI_STRONG}% / 表示: hist n>=${minN})`,
     "",
   ];
   if (filtered.length === 0) {
@@ -397,16 +435,53 @@ function patternSection(combos: ComboStat[], pattern: Pattern, minN: number): st
     lines.push("");
     return lines;
   }
-  lines.push(
-    "| 組み合わせ | hist_n | hist_hit | hist_ROI | fwd_n | fwd_hit | fwd_ROI | hist_avg | maxStreak | maxGapDays | 備考 |",
-    "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|"
-  );
+  lines.push(...TABLE_HEADER);
   for (const c of filtered) {
-    const gapDays = c.maxCalendarGapDays < 0 ? "—" : String(c.maxCalendarGapDays);
-    const note = c.overExplorationNote || "";
-    lines.push(
-      `| ${c.dims} | ${c.historicalN} | ${c.historicalHits} | ${f1(c.historicalRoi)}% | ${c.forwardN} | ${c.forwardHits} | ${fwdRoiCell(c)} | ${f1(c.histAvgOdds)} | ${c.maxConsecLosses} | ${gapDays} | ${note} |`
-    );
+    lines.push(tableRow(c));
+  }
+  lines.push("");
+  return lines;
+}
+
+// strong パターンのうち riskNote あり
+function riskAdjustedSection(combos: ComboStat[], minN: number): string[] {
+  const filtered = combos.filter(
+    (c) => c.pattern === "strong historical pattern" && c.historicalN >= minN && c.riskNote !== ""
+  );
+  const lines: string[] = [
+    `### 🟠 risk-adjusted watch (strong 判定・リスク要因あり / 表示: hist n>=${minN})`,
+    "",
+    `> リスク要因: maxStreak>${RISK_MAX_STREAK}, maxGapDays>${RISK_MAX_GAP_DAYS}, fwd n<${N_MIN_JUDGE}(かつ>0), 3条件かつn<${N_STRONG_CAUTION} のいずれか。`,
+    "",
+  ];
+  if (filtered.length === 0) {
+    lines.push("該当なし");
+    lines.push("");
+    return lines;
+  }
+  lines.push(...TABLE_HEADER);
+  for (const c of filtered) {
+    lines.push(tableRow(c, c.riskNote));
+  }
+  lines.push("");
+  return lines;
+}
+
+function patternSection(combos: ComboStat[], pattern: "watch" | "weak historical pattern", minN: number): string[] {
+  const icon = pattern === "watch" ? "🟡" : "🔴";
+  const filtered = combos.filter((c) => c.pattern === pattern && c.historicalN >= minN);
+  const lines: string[] = [
+    `### ${icon} ${pattern} (表示条件: hist n>=${minN})`,
+    "",
+  ];
+  if (filtered.length === 0) {
+    lines.push("該当なし");
+    lines.push("");
+    return lines;
+  }
+  lines.push(...TABLE_HEADER);
+  for (const c of filtered) {
+    lines.push(tableRow(c));
   }
   lines.push("");
   return lines;
@@ -421,8 +496,8 @@ function condSection(
 
   lines.push(
     "> ⚠️ 判定ラベルは historical 傾向のみ。BUY採用には forward n>=30 の蓄積と追加検証が必要。",
-    "> hist_avg: historical平均オッズ。maxStreak: historical最大連敗数。",
-    "> maxGapDays: historical 連続hit間の最大日数 (hit<2の場合は —)。",
+    "> hist_avg: historical平均オッズ。fwd_avg: forward平均オッズ (forward n=0 は —)。",
+    "> maxStreak: historical最大連敗数。maxGapDays: historical 連続hit間の最大日数 (hit<2は —)。",
     ""
   );
 
@@ -433,35 +508,34 @@ function condSection(
 
     const total = combos.length;
     const judgeCount = combos.filter((c) => c.historicalN >= N_MIN_JUDGE).length;
-    const strongCount = combos.filter((c) => c.pattern === "strong historical pattern").length;
+    const strongAll = combos.filter((c) => c.pattern === "strong historical pattern");
+    const strongClean = strongAll.filter((c) => c.riskNote === "");
+    const riskAdj = strongAll.filter((c) => c.riskNote !== "");
     const weakCount = combos.filter((c) => c.pattern === "weak historical pattern").length;
 
     lines.push(
-      `組み合わせ総数: ${total}  /  判定可能(n>=${N_MIN_JUDGE}): ${judgeCount}  /  strong: ${strongCount}  /  weak: ${weakCount}`,
+      `組み合わせ総数: ${total}  /  判定可能(n>=${N_MIN_JUDGE}): ${judgeCount}  /  strong: ${strongClean.length}  /  risk-adjusted: ${riskAdj.length}  /  weak: ${weakCount}`,
       ""
     );
 
     if (ncols === 3) {
       lines.push(
-        "> ⚠️ **3条件は探索数が多く過剰適合リスクが高い。** strong でも n<100 は「過剰探索注意」フラグ付き。判断には forward の蓄積が必要。",
+        "> ⚠️ **3条件は探索数が多く過剰適合リスクが高い。** strong でも n<100 は risk-adjusted watch に分類。判断には forward の蓄積が必要。",
         ""
       );
     }
 
-    for (const p of [
-      "strong historical pattern",
-      "watch",
-      "weak historical pattern",
-    ] as Pattern[]) {
-      lines.push(...patternSection(combos, p, N_MIN_SHOW_MD));
-    }
+    lines.push(...strongSection(combos, N_MIN_SHOW_MD));
+    lines.push(...riskAdjustedSection(combos, N_MIN_SHOW_MD));
+    lines.push(...patternSection(combos, "watch", N_MIN_SHOW_MD));
+    lines.push(...patternSection(combos, "weak historical pattern", N_MIN_SHOW_MD));
 
     const insuf = combos.filter(
       (c) => c.pattern === "insufficient data" && c.historicalN >= N_MIN_SHOW_MD
     ).length;
     if (insuf > 0) {
       lines.push(
-        `> ⚪ insufficient data (n>=${N_MIN_SHOW_MD}) : ${insuf} 件 — hist n<${N_MIN_JUDGE} のため判断不可`,
+        `> ⚪ insufficient data (表示条件: hist n>=${N_MIN_SHOW_MD}) : ${insuf} 件 — hist n<${N_MIN_JUDGE} のため判断不可`,
         ""
       );
     }
@@ -479,7 +553,8 @@ function generateMarkdown(r: Report): string {
     "",
     "> ROIはすべて current_odds 基準。",
     "> **判定ラベルは historical データ上の傾向を示すだけで BUY設定採用可否ではない。**",
-    "> strong: hist n>=50, hits>=5, ROI>=150%。3条件は過剰探索リスク高。",
+    `> strong: hist n>=${N_MIN_STRONG}, hits>=${HITS_MIN_STRONG}, ROI>=${ROI_STRONG}%。3条件は過剰探索リスク高。`,
+    `> risk-adjusted watch: strong 判定だがリスク要因 (maxStreak>${RISK_MAX_STREAK} / maxGapDays>${RISK_MAX_GAP_DAYS} / fwd n<${N_MIN_JUDGE}(>0) / 3条件n<${N_STRONG_CAUTION}) あり。`,
     "> forward n<30 は *(n小)* 表示で参考値扱い。",
     "",
   ];

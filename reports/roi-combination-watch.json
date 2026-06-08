@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-08T08:22:04.191Z",
+  "generatedAt": "2026-06-08T08:28:29.870Z",
   "forwardStart": "2025-08-09",
   "note": "判定ラベルは historical データ上の傾向のみ。BUY設定採用可否ではない。3条件組み合わせは探索数が多く過剰適合リスクが高い。forward n<30 は参考値。",
   "isBase": {
@@ -24,7 +24,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "strong historical pattern",
-        "overExplorationNote": ""
+        "riskNote": "fwd n=4"
       },
       {
         "condition": "isBase",
@@ -46,7 +46,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "strong historical pattern",
-        "overExplorationNote": ""
+        "riskNote": "fwd n=6"
       },
       {
         "condition": "isBase",
@@ -68,7 +68,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "strong historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -90,7 +90,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "strong historical pattern",
-        "overExplorationNote": ""
+        "riskNote": "fwd n=7"
       },
       {
         "condition": "isBase",
@@ -112,7 +112,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "strong historical pattern",
-        "overExplorationNote": ""
+        "riskNote": "fwd n=2"
       },
       {
         "condition": "isBase",
@@ -134,7 +134,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "strong historical pattern",
-        "overExplorationNote": ""
+        "riskNote": "maxGapDays=354"
       },
       {
         "condition": "isBase",
@@ -156,7 +156,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "strong historical pattern",
-        "overExplorationNote": ""
+        "riskNote": "fwd n=6"
       },
       {
         "condition": "isBase",
@@ -178,7 +178,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "strong historical pattern",
-        "overExplorationNote": ""
+        "riskNote": "maxStreak=64, maxGapDays=307, fwd n=6"
       },
       {
         "condition": "isBase",
@@ -200,7 +200,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "strong historical pattern",
-        "overExplorationNote": ""
+        "riskNote": "fwd n=4"
       },
       {
         "condition": "isBase",
@@ -222,7 +222,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "strong historical pattern",
-        "overExplorationNote": ""
+        "riskNote": "maxStreak=61, maxGapDays=296, fwd n=5"
       },
       {
         "condition": "isBase",
@@ -244,7 +244,7 @@
         "forwardHits": 1,
         "forwardRoi": 1160,
         "pattern": "strong historical pattern",
-        "overExplorationNote": ""
+        "riskNote": "fwd n=4"
       },
       {
         "condition": "isBase",
@@ -266,7 +266,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -288,7 +288,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -310,7 +310,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -332,7 +332,7 @@
         "forwardHits": 1,
         "forwardRoi": 1026.7,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -354,7 +354,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -376,7 +376,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -398,7 +398,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -420,7 +420,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -442,7 +442,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -464,7 +464,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -486,7 +486,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -508,7 +508,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -530,7 +530,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -552,7 +552,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -574,7 +574,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -596,7 +596,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -618,7 +618,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -640,7 +640,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -662,7 +662,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -684,7 +684,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -706,7 +706,7 @@
         "forwardHits": 1,
         "forwardRoi": 308,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -728,7 +728,7 @@
         "forwardHits": 1,
         "forwardRoi": 580,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -750,7 +750,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -772,7 +772,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -794,7 +794,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -816,7 +816,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -838,7 +838,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -860,7 +860,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -882,7 +882,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -904,7 +904,7 @@
         "forwardHits": 1,
         "forwardRoi": 1026.7,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -926,7 +926,7 @@
         "forwardHits": 1,
         "forwardRoi": 1160,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -948,7 +948,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -970,7 +970,7 @@
         "forwardHits": 1,
         "forwardRoi": 1546.7,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -992,7 +992,7 @@
         "forwardHits": 1,
         "forwardRoi": 770,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1014,7 +1014,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1036,7 +1036,7 @@
         "forwardHits": 1,
         "forwardRoi": 580,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1058,7 +1058,7 @@
         "forwardHits": 1,
         "forwardRoi": 309.3,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1080,7 +1080,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1102,7 +1102,7 @@
         "forwardHits": 1,
         "forwardRoi": 309.3,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1124,7 +1124,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1146,7 +1146,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1168,7 +1168,7 @@
         "forwardHits": 1,
         "forwardRoi": 580,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1190,7 +1190,7 @@
         "forwardHits": 1,
         "forwardRoi": 1160,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1212,7 +1212,7 @@
         "forwardHits": 1,
         "forwardRoi": 1026.7,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1234,7 +1234,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1256,7 +1256,7 @@
         "forwardHits": 1,
         "forwardRoi": 342.2,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1278,7 +1278,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1300,7 +1300,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1322,7 +1322,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1344,7 +1344,7 @@
         "forwardHits": 2,
         "forwardRoi": 1102.9,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1366,7 +1366,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1388,7 +1388,7 @@
         "forwardHits": 1,
         "forwardRoi": 1026.7,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1410,7 +1410,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1432,7 +1432,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1454,7 +1454,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1476,7 +1476,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1498,7 +1498,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1520,7 +1520,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1542,7 +1542,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1564,7 +1564,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1586,7 +1586,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1608,7 +1608,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1630,7 +1630,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1652,7 +1652,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1674,7 +1674,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1696,7 +1696,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1718,7 +1718,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1740,7 +1740,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1762,7 +1762,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1784,7 +1784,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1806,7 +1806,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1828,7 +1828,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1850,7 +1850,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1872,7 +1872,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1894,7 +1894,7 @@
         "forwardHits": 1,
         "forwardRoi": 342.2,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1916,7 +1916,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1938,7 +1938,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1960,7 +1960,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -1982,7 +1982,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2004,7 +2004,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2026,7 +2026,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2048,7 +2048,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2070,7 +2070,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2092,7 +2092,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2114,7 +2114,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2136,7 +2136,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2158,7 +2158,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2180,7 +2180,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2202,7 +2202,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2224,7 +2224,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2246,7 +2246,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2268,7 +2268,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2290,7 +2290,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2312,7 +2312,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2334,7 +2334,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2356,7 +2356,7 @@
         "forwardHits": 1,
         "forwardRoi": 1026.7,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2378,7 +2378,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2400,7 +2400,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2422,7 +2422,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2444,7 +2444,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2466,7 +2466,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2488,7 +2488,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       }
     ],
     "threeDim": [
@@ -2512,7 +2512,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2534,7 +2534,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2556,7 +2556,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2578,7 +2578,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2600,7 +2600,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2622,7 +2622,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2644,7 +2644,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2666,7 +2666,7 @@
         "forwardHits": 1,
         "forwardRoi": 1160,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2688,7 +2688,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2710,7 +2710,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2732,7 +2732,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2754,7 +2754,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2776,7 +2776,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2798,7 +2798,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2820,7 +2820,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2842,7 +2842,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2864,7 +2864,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2886,7 +2886,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2908,7 +2908,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2930,7 +2930,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2952,7 +2952,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2974,7 +2974,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -2996,7 +2996,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3018,7 +3018,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3040,7 +3040,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3062,7 +3062,7 @@
         "forwardHits": 1,
         "forwardRoi": 1546.7,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3084,7 +3084,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3106,7 +3106,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3128,7 +3128,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3150,7 +3150,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3172,7 +3172,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3194,7 +3194,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3216,7 +3216,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3238,7 +3238,7 @@
         "forwardHits": 1,
         "forwardRoi": 1546.7,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3260,7 +3260,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3282,7 +3282,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3304,7 +3304,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3326,7 +3326,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3348,7 +3348,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3370,7 +3370,7 @@
         "forwardHits": 1,
         "forwardRoi": 1160,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3392,7 +3392,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3414,7 +3414,7 @@
         "forwardHits": 1,
         "forwardRoi": 1160,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3436,7 +3436,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3458,7 +3458,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3480,7 +3480,7 @@
         "forwardHits": 1,
         "forwardRoi": 580,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3502,7 +3502,7 @@
         "forwardHits": 1,
         "forwardRoi": 580,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3524,7 +3524,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3546,7 +3546,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3568,7 +3568,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3590,7 +3590,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3612,7 +3612,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3634,7 +3634,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3656,7 +3656,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3678,7 +3678,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3700,7 +3700,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3722,7 +3722,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3744,7 +3744,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3766,7 +3766,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3788,7 +3788,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3810,7 +3810,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3832,7 +3832,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3854,7 +3854,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3876,7 +3876,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3898,7 +3898,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3920,7 +3920,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3942,7 +3942,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3964,7 +3964,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -3986,7 +3986,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4008,7 +4008,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4030,7 +4030,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4052,7 +4052,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4074,7 +4074,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4096,7 +4096,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4118,7 +4118,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4140,7 +4140,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4162,7 +4162,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4184,7 +4184,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4206,7 +4206,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4228,7 +4228,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4250,7 +4250,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4272,7 +4272,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4294,7 +4294,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4316,7 +4316,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4338,7 +4338,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4360,7 +4360,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4382,7 +4382,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4404,7 +4404,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4426,7 +4426,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4448,7 +4448,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4470,7 +4470,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4492,7 +4492,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4514,7 +4514,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4536,7 +4536,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4558,7 +4558,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4580,7 +4580,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4602,7 +4602,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4624,7 +4624,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4646,7 +4646,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4668,7 +4668,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4690,7 +4690,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4712,7 +4712,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4734,7 +4734,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4756,7 +4756,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4778,7 +4778,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4800,7 +4800,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4822,7 +4822,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4844,7 +4844,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4866,7 +4866,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4888,7 +4888,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4910,7 +4910,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4932,7 +4932,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4954,7 +4954,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4976,7 +4976,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -4998,7 +4998,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5020,7 +5020,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5042,7 +5042,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5064,7 +5064,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5086,7 +5086,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5108,7 +5108,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5130,7 +5130,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5152,7 +5152,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5174,7 +5174,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5196,7 +5196,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5218,7 +5218,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5240,7 +5240,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5262,7 +5262,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5284,7 +5284,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5306,7 +5306,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5328,7 +5328,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5350,7 +5350,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5372,7 +5372,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5394,7 +5394,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5416,7 +5416,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5438,7 +5438,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5460,7 +5460,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5482,7 +5482,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5504,7 +5504,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5526,7 +5526,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5548,7 +5548,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5570,7 +5570,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5592,7 +5592,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5614,7 +5614,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5636,7 +5636,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5658,7 +5658,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5680,7 +5680,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5702,7 +5702,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5724,7 +5724,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5746,7 +5746,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5768,7 +5768,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5790,7 +5790,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5812,7 +5812,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5834,7 +5834,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5856,7 +5856,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5878,7 +5878,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5900,7 +5900,7 @@
         "forwardHits": 1,
         "forwardRoi": 1026.7,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5922,7 +5922,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5944,7 +5944,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5966,7 +5966,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -5988,7 +5988,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6010,7 +6010,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6032,7 +6032,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6054,7 +6054,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6076,7 +6076,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6098,7 +6098,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6120,7 +6120,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6142,7 +6142,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6164,7 +6164,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6186,7 +6186,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6208,7 +6208,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6230,7 +6230,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6252,7 +6252,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6274,7 +6274,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6296,7 +6296,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6318,7 +6318,7 @@
         "forwardHits": 1,
         "forwardRoi": 1026.7,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6340,7 +6340,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6362,7 +6362,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6384,7 +6384,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6406,7 +6406,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6428,7 +6428,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6450,7 +6450,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6472,7 +6472,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6494,7 +6494,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6516,7 +6516,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6538,7 +6538,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6560,7 +6560,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6582,7 +6582,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6604,7 +6604,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6626,7 +6626,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6648,7 +6648,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6670,7 +6670,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6692,7 +6692,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6714,7 +6714,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6736,7 +6736,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6758,7 +6758,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6780,7 +6780,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6802,7 +6802,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6824,7 +6824,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6846,7 +6846,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6868,7 +6868,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6890,7 +6890,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6912,7 +6912,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6934,7 +6934,7 @@
         "forwardHits": 1,
         "forwardRoi": 1026.7,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6956,7 +6956,7 @@
         "forwardHits": 1,
         "forwardRoi": 1546.7,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -6978,7 +6978,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7000,7 +7000,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7022,7 +7022,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7044,7 +7044,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7066,7 +7066,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7088,7 +7088,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7110,7 +7110,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7132,7 +7132,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7154,7 +7154,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7176,7 +7176,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7198,7 +7198,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7220,7 +7220,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7242,7 +7242,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7264,7 +7264,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7286,7 +7286,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7308,7 +7308,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7330,7 +7330,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7352,7 +7352,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7374,7 +7374,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7396,7 +7396,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7418,7 +7418,7 @@
         "forwardHits": 1,
         "forwardRoi": 1026.7,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7440,7 +7440,7 @@
         "forwardHits": 1,
         "forwardRoi": 1160,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7462,7 +7462,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7484,7 +7484,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7506,7 +7506,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7528,7 +7528,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7550,7 +7550,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7572,7 +7572,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7594,7 +7594,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7616,7 +7616,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7638,7 +7638,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7660,7 +7660,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7682,7 +7682,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7704,7 +7704,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7726,7 +7726,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7748,7 +7748,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7770,7 +7770,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7792,7 +7792,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7814,7 +7814,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7836,7 +7836,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7858,7 +7858,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7880,7 +7880,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7902,7 +7902,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7924,7 +7924,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7946,7 +7946,7 @@
         "forwardHits": 1,
         "forwardRoi": 770,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7968,7 +7968,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -7990,7 +7990,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8012,7 +8012,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8034,7 +8034,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8056,7 +8056,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8078,7 +8078,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8100,7 +8100,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8122,7 +8122,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8144,7 +8144,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8166,7 +8166,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8188,7 +8188,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8210,7 +8210,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8232,7 +8232,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8254,7 +8254,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8276,7 +8276,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8298,7 +8298,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8320,7 +8320,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8342,7 +8342,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8364,7 +8364,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8386,7 +8386,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8408,7 +8408,7 @@
         "forwardHits": 1,
         "forwardRoi": 1026.7,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8430,7 +8430,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8452,7 +8452,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8474,7 +8474,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8496,7 +8496,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8518,7 +8518,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8540,7 +8540,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8562,7 +8562,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8584,7 +8584,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8606,7 +8606,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8628,7 +8628,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8650,7 +8650,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8672,7 +8672,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8694,7 +8694,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8716,7 +8716,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8738,7 +8738,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8760,7 +8760,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8782,7 +8782,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8804,7 +8804,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8826,7 +8826,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8848,7 +8848,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8870,7 +8870,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8892,7 +8892,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8914,7 +8914,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8936,7 +8936,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8958,7 +8958,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -8980,7 +8980,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9002,7 +9002,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9024,7 +9024,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9046,7 +9046,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9068,7 +9068,7 @@
         "forwardHits": 1,
         "forwardRoi": 1540,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9090,7 +9090,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9112,7 +9112,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9134,7 +9134,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9156,7 +9156,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9178,7 +9178,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9200,7 +9200,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9222,7 +9222,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9244,7 +9244,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9266,7 +9266,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9288,7 +9288,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9310,7 +9310,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9332,7 +9332,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9354,7 +9354,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9376,7 +9376,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9398,7 +9398,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9420,7 +9420,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9442,7 +9442,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9464,7 +9464,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9486,7 +9486,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9508,7 +9508,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9530,7 +9530,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9552,7 +9552,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9574,7 +9574,7 @@
         "forwardHits": 1,
         "forwardRoi": 1540,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9596,7 +9596,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9618,7 +9618,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9640,7 +9640,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9662,7 +9662,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9684,7 +9684,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9706,7 +9706,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9728,7 +9728,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9750,7 +9750,7 @@
         "forwardHits": 1,
         "forwardRoi": 3080,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9772,7 +9772,7 @@
         "forwardHits": 1,
         "forwardRoi": 2320,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9794,7 +9794,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9816,7 +9816,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9838,7 +9838,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9860,7 +9860,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9882,7 +9882,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9904,7 +9904,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9926,7 +9926,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9948,7 +9948,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9970,7 +9970,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -9992,7 +9992,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -10014,7 +10014,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -10036,7 +10036,7 @@
         "forwardHits": 1,
         "forwardRoi": 1540,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -10058,7 +10058,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -10080,7 +10080,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -10102,7 +10102,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -10124,7 +10124,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -10146,7 +10146,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -10168,7 +10168,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -10190,7 +10190,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -10212,7 +10212,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -10234,7 +10234,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -10256,7 +10256,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "isBase",
@@ -10278,7 +10278,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       }
     ]
   },
@@ -10304,7 +10304,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "strong historical pattern",
-        "overExplorationNote": ""
+        "riskNote": "fwd n=6"
       },
       {
         "condition": "wind5",
@@ -10326,7 +10326,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -10348,7 +10348,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -10370,7 +10370,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -10392,7 +10392,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -10414,7 +10414,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -10436,7 +10436,7 @@
         "forwardHits": 1,
         "forwardRoi": 770,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -10458,7 +10458,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -10480,7 +10480,7 @@
         "forwardHits": 1,
         "forwardRoi": 1026.7,
         "pattern": "weak historical pattern",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -10502,7 +10502,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -10524,7 +10524,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -10546,7 +10546,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -10568,7 +10568,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -10590,7 +10590,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -10612,7 +10612,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -10634,7 +10634,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -10656,7 +10656,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -10678,7 +10678,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -10700,7 +10700,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -10722,7 +10722,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -10744,7 +10744,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -10766,7 +10766,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -10788,7 +10788,7 @@
         "forwardHits": 1,
         "forwardRoi": 1540,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -10810,7 +10810,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -10832,7 +10832,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -10854,7 +10854,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -10876,7 +10876,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -10898,7 +10898,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -10920,7 +10920,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -10942,7 +10942,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -10964,7 +10964,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -10986,7 +10986,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11008,7 +11008,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11030,7 +11030,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11052,7 +11052,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11074,7 +11074,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11096,7 +11096,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11118,7 +11118,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11140,7 +11140,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11162,7 +11162,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11184,7 +11184,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11206,7 +11206,7 @@
         "forwardHits": 1,
         "forwardRoi": 342.2,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11228,7 +11228,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11250,7 +11250,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11272,7 +11272,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11294,7 +11294,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11316,7 +11316,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11338,7 +11338,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11360,7 +11360,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11382,7 +11382,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11404,7 +11404,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11426,7 +11426,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11448,7 +11448,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11470,7 +11470,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11492,7 +11492,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11514,7 +11514,7 @@
         "forwardHits": 1,
         "forwardRoi": 1026.7,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11536,7 +11536,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11558,7 +11558,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11580,7 +11580,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11602,7 +11602,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11624,7 +11624,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11646,7 +11646,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11668,7 +11668,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11690,7 +11690,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11712,7 +11712,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11734,7 +11734,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11756,7 +11756,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11778,7 +11778,7 @@
         "forwardHits": 1,
         "forwardRoi": 616,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11800,7 +11800,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11822,7 +11822,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11844,7 +11844,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11866,7 +11866,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11888,7 +11888,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11910,7 +11910,7 @@
         "forwardHits": 1,
         "forwardRoi": 1026.7,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11932,7 +11932,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11954,7 +11954,7 @@
         "forwardHits": 1,
         "forwardRoi": 1026.7,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11976,7 +11976,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -11998,7 +11998,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12020,7 +12020,7 @@
         "forwardHits": 1,
         "forwardRoi": 1540,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12042,7 +12042,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12064,7 +12064,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12086,7 +12086,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12108,7 +12108,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12130,7 +12130,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12152,7 +12152,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12174,7 +12174,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12196,7 +12196,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12218,7 +12218,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12240,7 +12240,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12262,7 +12262,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12284,7 +12284,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12306,7 +12306,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12328,7 +12328,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12350,7 +12350,7 @@
         "forwardHits": 1,
         "forwardRoi": 1540,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12372,7 +12372,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12394,7 +12394,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12416,7 +12416,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       }
     ],
     "threeDim": [
@@ -12440,7 +12440,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "watch",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12462,7 +12462,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12484,7 +12484,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12506,7 +12506,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12528,7 +12528,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12550,7 +12550,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12572,7 +12572,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12594,7 +12594,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12616,7 +12616,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12638,7 +12638,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12660,7 +12660,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12682,7 +12682,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12704,7 +12704,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12726,7 +12726,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12748,7 +12748,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12770,7 +12770,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12792,7 +12792,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12814,7 +12814,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12836,7 +12836,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12858,7 +12858,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12880,7 +12880,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12902,7 +12902,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12924,7 +12924,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12946,7 +12946,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12968,7 +12968,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -12990,7 +12990,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13012,7 +13012,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13034,7 +13034,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13056,7 +13056,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13078,7 +13078,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13100,7 +13100,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13122,7 +13122,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13144,7 +13144,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13166,7 +13166,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13188,7 +13188,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13210,7 +13210,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13232,7 +13232,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13254,7 +13254,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13276,7 +13276,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13298,7 +13298,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13320,7 +13320,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13342,7 +13342,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13364,7 +13364,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13386,7 +13386,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13408,7 +13408,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13430,7 +13430,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13452,7 +13452,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13474,7 +13474,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13496,7 +13496,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13518,7 +13518,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13540,7 +13540,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13562,7 +13562,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13584,7 +13584,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13606,7 +13606,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13628,7 +13628,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13650,7 +13650,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13672,7 +13672,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13694,7 +13694,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13716,7 +13716,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13738,7 +13738,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13760,7 +13760,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13782,7 +13782,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13804,7 +13804,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13826,7 +13826,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13848,7 +13848,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13870,7 +13870,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13892,7 +13892,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13914,7 +13914,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13936,7 +13936,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13958,7 +13958,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -13980,7 +13980,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14002,7 +14002,7 @@
         "forwardHits": 1,
         "forwardRoi": 1026.7,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14024,7 +14024,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14046,7 +14046,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14068,7 +14068,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14090,7 +14090,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14112,7 +14112,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14134,7 +14134,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14156,7 +14156,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14178,7 +14178,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14200,7 +14200,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14222,7 +14222,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14244,7 +14244,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14266,7 +14266,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14288,7 +14288,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14310,7 +14310,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14332,7 +14332,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14354,7 +14354,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14376,7 +14376,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14398,7 +14398,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14420,7 +14420,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14442,7 +14442,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14464,7 +14464,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14486,7 +14486,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14508,7 +14508,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14530,7 +14530,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14552,7 +14552,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14574,7 +14574,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14596,7 +14596,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14618,7 +14618,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14640,7 +14640,7 @@
         "forwardHits": 1,
         "forwardRoi": 1540,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14662,7 +14662,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14684,7 +14684,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14706,7 +14706,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14728,7 +14728,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14750,7 +14750,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14772,7 +14772,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14794,7 +14794,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14816,7 +14816,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14838,7 +14838,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14860,7 +14860,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14882,7 +14882,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14904,7 +14904,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14926,7 +14926,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14948,7 +14948,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14970,7 +14970,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -14992,7 +14992,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15014,7 +15014,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15036,7 +15036,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15058,7 +15058,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15080,7 +15080,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15102,7 +15102,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15124,7 +15124,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15146,7 +15146,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15168,7 +15168,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15190,7 +15190,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15212,7 +15212,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15234,7 +15234,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15256,7 +15256,7 @@
         "forwardHits": 1,
         "forwardRoi": 1540,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15278,7 +15278,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15300,7 +15300,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15322,7 +15322,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15344,7 +15344,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15366,7 +15366,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15388,7 +15388,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15410,7 +15410,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15432,7 +15432,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15454,7 +15454,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15476,7 +15476,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15498,7 +15498,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15520,7 +15520,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15542,7 +15542,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15564,7 +15564,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15586,7 +15586,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15608,7 +15608,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15630,7 +15630,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15652,7 +15652,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15674,7 +15674,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15696,7 +15696,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15718,7 +15718,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15740,7 +15740,7 @@
         "forwardHits": 1,
         "forwardRoi": 770,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15762,7 +15762,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15784,7 +15784,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15806,7 +15806,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15828,7 +15828,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15850,7 +15850,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15872,7 +15872,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15894,7 +15894,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15916,7 +15916,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15938,7 +15938,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15960,7 +15960,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -15982,7 +15982,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16004,7 +16004,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16026,7 +16026,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16048,7 +16048,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16070,7 +16070,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16092,7 +16092,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16114,7 +16114,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16136,7 +16136,7 @@
         "forwardHits": 1,
         "forwardRoi": 1026.7,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16158,7 +16158,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16180,7 +16180,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16202,7 +16202,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16224,7 +16224,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16246,7 +16246,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16268,7 +16268,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16290,7 +16290,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16312,7 +16312,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16334,7 +16334,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16356,7 +16356,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16378,7 +16378,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16400,7 +16400,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16422,7 +16422,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16444,7 +16444,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16466,7 +16466,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16488,7 +16488,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16510,7 +16510,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16532,7 +16532,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16554,7 +16554,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16576,7 +16576,7 @@
         "forwardHits": 1,
         "forwardRoi": 1540,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16598,7 +16598,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16620,7 +16620,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16642,7 +16642,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16664,7 +16664,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16686,7 +16686,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16708,7 +16708,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16730,7 +16730,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16752,7 +16752,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16774,7 +16774,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16796,7 +16796,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16818,7 +16818,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16840,7 +16840,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16862,7 +16862,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16884,7 +16884,7 @@
         "forwardHits": 1,
         "forwardRoi": 1540,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16906,7 +16906,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16928,7 +16928,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16950,7 +16950,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16972,7 +16972,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -16994,7 +16994,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17016,7 +17016,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17038,7 +17038,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17060,7 +17060,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17082,7 +17082,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17104,7 +17104,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17126,7 +17126,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17148,7 +17148,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17170,7 +17170,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17192,7 +17192,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17214,7 +17214,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17236,7 +17236,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17258,7 +17258,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17280,7 +17280,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17302,7 +17302,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17324,7 +17324,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17346,7 +17346,7 @@
         "forwardHits": 1,
         "forwardRoi": 1540,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17368,7 +17368,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17390,7 +17390,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17412,7 +17412,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17434,7 +17434,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17456,7 +17456,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17478,7 +17478,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17500,7 +17500,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17522,7 +17522,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17544,7 +17544,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17566,7 +17566,7 @@
         "forwardHits": 1,
         "forwardRoi": 3080,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17588,7 +17588,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17610,7 +17610,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17632,7 +17632,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17654,7 +17654,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17676,7 +17676,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17698,7 +17698,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17720,7 +17720,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17742,7 +17742,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17764,7 +17764,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17786,7 +17786,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17808,7 +17808,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17830,7 +17830,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17852,7 +17852,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17874,7 +17874,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17896,7 +17896,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17918,7 +17918,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17940,7 +17940,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17962,7 +17962,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -17984,7 +17984,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -18006,7 +18006,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -18028,7 +18028,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -18050,7 +18050,7 @@
         "forwardHits": 1,
         "forwardRoi": 1540,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -18072,7 +18072,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -18094,7 +18094,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -18116,7 +18116,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -18138,7 +18138,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -18160,7 +18160,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -18182,7 +18182,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -18204,7 +18204,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -18226,7 +18226,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -18248,7 +18248,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -18270,7 +18270,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       },
       {
         "condition": "wind5",
@@ -18292,7 +18292,7 @@
         "forwardHits": 0,
         "forwardRoi": 0,
         "pattern": "insufficient data",
-        "overExplorationNote": ""
+        "riskNote": ""
       }
     ]
   }
