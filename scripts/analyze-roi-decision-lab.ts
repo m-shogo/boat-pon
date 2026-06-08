@@ -3709,7 +3709,7 @@ function evaluateCondition(cond: Condition, rows: Row[], splits: ReturnType<type
   const testN = isNoBuy ? testAfter.n : testRemoved.n;
 
   const warnings = buildWarnings(cond, removed, after, baseline, stableRemoved);
-  const judgement = judgeCondition(cond, removed, after, baseline, stability, stableRemoved, trainAfter, validationAfter, testAfter, trainRemoved, validationRemoved, testRemoved);
+  const judgement = judgeCondition(cond, removed, after, baseline, stability, stableRemoved, trainAfter, validationAfter, testAfter, trainRemoved, validationRemoved, testRemoved, y2024, y2025);
 
   return {
     action: cond.action === "KEEP" ? "KEEP" : "NO_BUY",
@@ -3777,6 +3777,8 @@ function judgeCondition(
   trainRemoved: Metric,
   validationRemoved: Metric,
   testRemoved: Metric,
+  yearA: { n: number; roi: number | null },
+  yearB: { n: number; roi: number | null },
 ): Judgement {
   if (removed.n < 50) return "C";
   if (removed.hits <= 2 && removed.roi > 100) return "D";
@@ -3798,7 +3800,7 @@ function judgeCondition(
       crossSplit &&
       trainOK && validationOK && testOK &&
       after.roiExMaxHit >= baseline.roi - 5 &&
-      stability.badMonths <= 4  // after rowsが安定 (除外後の残りが月別で崩れない)
+      stability.badMonths <= 4
     ) return "S";
 
     if (
@@ -3816,16 +3818,33 @@ function judgeCondition(
     return "C";
   }
 
-  // KEEP
+  // KEEP — 月別・年別安定性チェック付き
   const crossSplit = trainRemoved.n >= 100 && validationRemoved.n >= 30;
+  // 年別安定性: データが十分ある年(n>=50)でROI>=80%を要求
+  const yearStableA = yearA.n < 50 || (yearA.roi ?? 0) >= 80;
+  const yearStableB = yearB.n < 50 || (yearB.roi ?? 0) >= 80;
+  const yearStable = yearStableA && yearStableB;
+  const testRemovedOK = testRemoved.n < 30 || testRemoved.roi >= 80;
+
   if (
     removed.n >= 1000 &&
     removed.roi >= 100 &&
     removed.roiExMaxHit >= 90 &&
     crossSplit &&
-    trainRemoved.roi >= 90 && validationRemoved.roi >= 90
+    trainRemoved.roi >= 90 && validationRemoved.roi >= 90 &&
+    stableRemoved.badMonths <= 4 &&
+    yearStable
   ) return "S";
-  if (removed.n >= 300 && removed.roi >= 95 && crossSplit && trainRemoved.roi >= 80) return "A";
+  if (
+    removed.n >= 300 &&
+    removed.roi >= 95 &&
+    removed.roiExMaxHit >= 85 &&
+    crossSplit &&
+    trainRemoved.roi >= 80 &&
+    stableRemoved.badMonths <= 6 &&
+    yearStable &&
+    testRemovedOK
+  ) return "A";
   if (removed.n >= 100 && removed.roi >= 90) return "B";
   if (removed.n >= 50 && removed.roi >= 85) return "C";
   return "D";
@@ -4129,7 +4148,7 @@ function evaluateSelector(sel: SelectorDef, rows: Row[], splits: ReturnType<type
     warnings.push(`subsetSingle=${pct(subsetSingleROI / 100)} vs baseAll=${pct(baseline.roi / 100)}`);
   }
 
-  const judgement = judgeSelector(full, { ...baseline, roi: subsetSingleROI }, trainCalc, validationCalc, testCalc, improvement);
+  const judgement = judgeSelector(full, { ...baseline, roi: subsetSingleROI }, trainCalc, validationCalc, testCalc, improvement, sy2024, sy2025);
 
   return {
     action: "BET_SELECTOR",
@@ -4173,12 +4192,16 @@ function judgeSelector(
   validation: { roi: number; n: number },
   test: { roi: number; n: number },
   improvement: number,
+  yearA: { n: number; roi: number | null },
+  yearB: { n: number; roi: number | null },
 ): Judgement {
   if (full.n < 50) return "C";
   if (full.maxHitOdds > 50 && full.roiExMaxHit < 70) return "D";
-  if (full.totalTickets / Math.max(full.n, 1) > 15) return "D"; // too many tickets
+  if (full.totalTickets / Math.max(full.n, 1) > 15) return "D";
 
   const crossSplit = train.n >= 200 && validation.n >= 50;
+  const yearStable = (yearA.n < 50 || (yearA.roi ?? 0) >= 80) && (yearB.n < 50 || (yearB.roi ?? 0) >= 80);
+
   if (
     full.n >= 1000 &&
     improvement >= 3 &&
@@ -4187,10 +4210,19 @@ function judgeSelector(
     train.roi >= baseline.roi - 5 &&
     validation.roi >= baseline.roi - 5 &&
     (test.n < 30 || test.roi >= baseline.roi - 10) &&
-    full.badMonths <= 1
+    full.badMonths <= 1 &&
+    yearStable
   ) return "S";
 
-  if (full.n >= 300 && improvement >= 1.5 && crossSplit && train.roi >= baseline.roi - 5 && validation.roi >= baseline.roi - 5) return "A";
+  if (
+    full.n >= 300 &&
+    improvement >= 1.5 &&
+    crossSplit &&
+    train.roi >= baseline.roi - 5 &&
+    validation.roi >= baseline.roi - 5 &&
+    full.roiExMaxHit >= baseline.roi - 15 &&
+    yearStable
+  ) return "A";
   if (full.n >= 100 && improvement > 0) return "B";
   if (full.n < 100) return "C";
   return "C";
@@ -4439,12 +4471,34 @@ function renderMarkdown(r: {
 
   // 5. Bet Selector Candidates
   lines.push("## 5. Bet Selector Candidates", "");
-  lines.push("| 判定 | family | label | n | avgTickets | hitRate | ROI | base ROI | +ROI | roiExMax | trainROI | valROI | testROI | worst月 | warnings |");
-  lines.push("|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|");
-  for (const s of r.betSelectors.sort((a, b) => b.improvement - a.improvement)) {
-    lines.push(`| ${s.judgement} | ${s.family} | ${esc(s.label)} | ${s.n} | ${num(s.avgTickets)} | ${pct(s.hitRate)} | ${pct(s.roi / 100)} | ${pct(s.baselineROI / 100)} | ${signPct(s.improvement / 100)} | ${pct(s.roiExMaxHit / 100)} | ${pct(s.trainROI / 100)} | ${pct(s.validationROI / 100)} | ${pct(s.testROI / 100)} | ${pct(s.worstMonthROI / 100)} | ${s.warnings.join(", ")} |`);
+  lines.push("> **列の意味**: n=対象レース数 / totalTickets=実チケット数(FLOW/BOXは点数増) / avgTickets=1レース平均点数 / hitRaces=的中レース数 / stake=投資額(円) / return=回収額(円)", "");
+
+  function renderSelectorTable(selectors: typeof r.betSelectors) {
+    lines.push("| 判定 | family | label | n(レース) | totalTickets | avgTickets | hitRaces | stake(円) | return(円) | ROI | base ROI | +ROI | roiExMax | trainROI | valROI | testROI | worst月 | warnings |");
+    lines.push("|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|");
+    for (const s of selectors.sort((a, b) => b.improvement - a.improvement)) {
+      lines.push(`| ${s.judgement} | ${s.family} | ${esc(s.label)} | ${s.n} | ${s.totalTickets} | ${num(s.avgTickets)} | ${s.hitRaces} | ${Math.round(s.totalStake).toLocaleString()} | ${Math.round(s.totalReturn).toLocaleString()} | ${pct(s.roi / 100)} | ${pct(s.baselineROI / 100)} | ${signPct(s.improvement / 100)} | ${pct(s.roiExMaxHit / 100)} | ${pct(s.trainROI / 100)} | ${pct(s.validationROI / 100)} | ${pct(s.testROI / 100)} | ${pct(s.worstMonthROI / 100)} | ${s.warnings.join(", ")} |`);
+    }
+    lines.push("");
   }
-  lines.push("");
+
+  const mainSelectors = r.betSelectors.filter((s) => s.family !== "PAPER_ONLY");
+  const paperOnlySelectors = r.betSelectors.filter((s) => s.family === "PAPER_ONLY");
+
+  lines.push("### 5a. 買い方候補 (SINGLE / REVERSE / FLOW / BOX)", "");
+  if (mainSelectors.length === 0) {
+    lines.push("候補なし。", "");
+  } else {
+    renderSelectorTable(mainSelectors);
+  }
+
+  lines.push("### 5b. PAPER_ONLY (観察のみ — 除外候補ではない)", "");
+  lines.push("> PAPER_ONLYはROI計算への反映はしない。除外すべきかどうかの観察用。", "");
+  if (paperOnlySelectors.length === 0) {
+    lines.push("PAPER_ONLY候補なし。", "");
+  } else {
+    renderSelectorTable(paperOnlySelectors);
+  }
 
   // 6. Risky / Do Not Ship
   lines.push("## 6. Risky / Do Not Ship (D判定)", "");

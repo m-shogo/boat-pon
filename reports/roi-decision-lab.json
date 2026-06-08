@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-08T01:10:19.172Z",
+  "generatedAt": "2026-06-08T02:05:38.327Z",
   "dbPath": "data/boat.sqlite",
   "baseline": {
     "n": 6260,
@@ -2181,47 +2181,6 @@
     },
     {
       "action": "KEEP",
-      "family": "newNoBuyCombo",
-      "label": "新NO_BUY残り×raceNo7-9×racerTop3>=0.5",
-      "condition": "新NO_BUY残り×raceNo7-9×racerTop3>=0.5",
-      "n": 392,
-      "removedROI": 201.63265306122446,
-      "afterN": 392,
-      "afterROI": 201.63265306122446,
-      "baselineROI": 80.37699680511187,
-      "improvement": 121.25565625611259,
-      "hitRate": 0.04591836734693878,
-      "avgOdds": 42.62977040816326,
-      "stake": 39200,
-      "returnYen": 79039.99999999999,
-      "avgTickets": 1,
-      "maxHitOdds": 62.4,
-      "roiExMaxHit": 185.71428571428567,
-      "roiExMax3Hits": 155.05102040816325,
-      "trainROI": 254.34042553191486,
-      "trainN": 235,
-      "validationROI": 151.73228346456693,
-      "validationN": 127,
-      "testROI": 0,
-      "testN": 30,
-      "worstMonthROI": 0,
-      "goodMonths": 11,
-      "badMonths": 4,
-      "totalMonths": 15,
-      "year2024N": 232,
-      "year2024ROI": 231.63793103448276,
-      "year2025N": 160,
-      "year2025ROI": 158.125,
-      "year2026N": 0,
-      "year2026ROI": null,
-      "warnings": [
-        "月別不安定:4ヶ月ROI<70"
-      ],
-      "judgement": "A",
-      "comment": "残す強BUY候補。n=392 ROI=201.63% exMax=185.71%。11/15ヶ月ROI>=100 / 4ヶ月ROI<70 / worst=0.00%"
-    },
-    {
-      "action": "KEEP",
       "family": "venueSpecificSummer",
       "label": "NOT(戸田|多摩川|江戸川) AND 月5-8 AND raceNo7-9 AND F==0 AND wind>=3",
       "condition": "NOT(戸田|多摩川|江戸川) AND 月5-8 AND raceNo7-9 AND F==0 AND wind>=3",
@@ -2453,47 +2412,6 @@
       "warnings": [],
       "judgement": "A",
       "comment": "残す強BUY候補。n=408 ROI=195.64% exMax=176.59%。5/5ヶ月ROI>=100 / 0ヶ月ROI<70 / worst=137.29%"
-    },
-    {
-      "action": "KEEP",
-      "family": "newNoBuyResidualSub",
-      "label": "新NO_BUY残り×raceNo7-9",
-      "condition": "新NO_BUY残り×raceNo7-9",
-      "n": 414,
-      "removedROI": 194.83091787439614,
-      "afterN": 414,
-      "afterROI": 194.83091787439614,
-      "baselineROI": 80.37699680511187,
-      "improvement": 114.45392106928426,
-      "hitRate": 0.04589371980676329,
-      "avgOdds": 42.40765700483093,
-      "stake": 41400,
-      "returnYen": 80659.99999999999,
-      "avgTickets": 1,
-      "maxHitOdds": 62.4,
-      "roiExMaxHit": 179.75845410628017,
-      "roiExMax3Hits": 150.72463768115944,
-      "trainROI": 242.9674796747967,
-      "trainN": 246,
-      "validationROI": 145.98484848484847,
-      "validationN": 132,
-      "testROI": 44.99999999999999,
-      "testN": 36,
-      "worstMonthROI": 0,
-      "goodMonths": 12,
-      "badMonths": 4,
-      "totalMonths": 16,
-      "year2024N": 243,
-      "year2024ROI": 221.15226337448556,
-      "year2025N": 165,
-      "year2025ROI": 153.33333333333334,
-      "year2026N": 6,
-      "year2026ROI": 270,
-      "warnings": [
-        "月別不安定:4ヶ月ROI<70"
-      ],
-      "judgement": "A",
-      "comment": "残す強BUY候補。n=414 ROI=194.83% exMax=179.76%。12/16ヶ月ROI>=100 / 4ヶ月ROI<70 / worst=0.00%"
     },
     {
       "action": "KEEP",
@@ -2806,48 +2724,6 @@
       "warnings": [],
       "judgement": "A",
       "comment": "残す強BUY候補。n=459 ROI=182.40% exMax=165.47%。7/7ヶ月ROI>=100 / 0ヶ月ROI<70 / worst=111.41%"
-    },
-    {
-      "action": "KEEP",
-      "family": "noBuyWind3Sub",
-      "label": "最良NO_BUY残り×wind>=3×odds>=50",
-      "condition": "最良NO_BUY残り×wind>=3×odds>=50",
-      "n": 359,
-      "removedROI": 179.44289693593316,
-      "afterN": 359,
-      "afterROI": 179.44289693593316,
-      "baselineROI": 80.37699680511187,
-      "improvement": 99.06590013082129,
-      "hitRate": 0.03064066852367688,
-      "avgOdds": 58.77158774373259,
-      "stake": 35900,
-      "returnYen": 64420.00000000001,
-      "avgTickets": 1,
-      "maxHitOdds": 77.7,
-      "roiExMaxHit": 157.79944289693591,
-      "roiExMax3Hits": 122.98050139275767,
-      "trainROI": 180.95454545454544,
-      "trainN": 220,
-      "validationROI": 203.38842975206614,
-      "validationN": 121,
-      "testROI": 0,
-      "testN": 18,
-      "worstMonthROI": 0,
-      "goodMonths": 7,
-      "badMonths": 9,
-      "totalMonths": 16,
-      "year2024N": 205,
-      "year2024ROI": 164.78048780487802,
-      "year2025N": 152,
-      "year2025ROI": 201.57894736842107,
-      "year2026N": 2,
-      "year2026ROI": 0,
-      "warnings": [
-        "平均odds>=50:過剰夢見リスク",
-        "月別不安定:9ヶ月ROI<70"
-      ],
-      "judgement": "A",
-      "comment": "残す強BUY候補。n=359 ROI=179.44% exMax=157.80%。7/16ヶ月ROI>=100 / 9ヶ月ROI<70 / worst=0.00%"
     },
     {
       "action": "KEEP",
@@ -3241,47 +3117,6 @@
     },
     {
       "action": "KEEP",
-      "family": "noBuyWind3Sub",
-      "label": "最良NO_BUY残り×wind>=3×exSt<0.10",
-      "condition": "最良NO_BUY残り×wind>=3×exSt<0.10",
-      "n": 481,
-      "removedROI": 163.43035343035345,
-      "afterN": 481,
-      "afterROI": 163.43035343035345,
-      "baselineROI": 80.37699680511187,
-      "improvement": 83.05335662524158,
-      "hitRate": 0.037422037422037424,
-      "avgOdds": 42.591060291060266,
-      "stake": 48100,
-      "returnYen": 78610.00000000001,
-      "avgTickets": 1,
-      "maxHitOdds": 77.7,
-      "roiExMaxHit": 147.27650727650726,
-      "roiExMax3Hits": 121.28898128898129,
-      "trainROI": 182.17105263157893,
-      "trainN": 304,
-      "validationROI": 147.08029197080293,
-      "validationN": 137,
-      "testROI": 77,
-      "testN": 40,
-      "worstMonthROI": 0,
-      "goodMonths": 8,
-      "badMonths": 5,
-      "totalMonths": 15,
-      "year2024N": 297,
-      "year2024ROI": 174.44444444444446,
-      "year2025N": 184,
-      "year2025ROI": 145.65217391304347,
-      "year2026N": 0,
-      "year2026ROI": null,
-      "warnings": [
-        "月別不安定:5ヶ月ROI<70"
-      ],
-      "judgement": "A",
-      "comment": "残す強BUY候補。n=481 ROI=163.43% exMax=147.28%。8/15ヶ月ROI>=100 / 5ヶ月ROI<70 / worst=0.00%"
-    },
-    {
-      "action": "KEEP",
       "family": "summer2",
       "label": "month4-8 AND raceNo7-9 AND F==0",
       "condition": "month4-8 AND raceNo7-9 AND F==0",
@@ -3318,47 +3153,6 @@
       "warnings": [],
       "judgement": "A",
       "comment": "残す強BUY候補。n=636 ROI=163.11% exMax=153.30%。10/11ヶ月ROI>=100 / 0ヶ月ROI<70 / worst=79.69%"
-    },
-    {
-      "action": "KEEP",
-      "family": "venueNoBuy",
-      "label": "新NO_BUY残り×racerTop3>=0.5×wind>=5",
-      "condition": "新NO_BUY残り×racerTop3>=0.5×wind>=5",
-      "n": 321,
-      "removedROI": 162.74143302180684,
-      "afterN": 321,
-      "afterROI": 162.74143302180684,
-      "baselineROI": 80.37699680511187,
-      "improvement": 82.36443621669497,
-      "hitRate": 0.037383177570093455,
-      "avgOdds": 43.528878504672896,
-      "stake": 32100,
-      "returnYen": 52240,
-      "avgTickets": 1,
-      "maxHitOdds": 77.7,
-      "roiExMaxHit": 138.53582554517135,
-      "roiExMax3Hits": 104.8286604361371,
-      "trainROI": 219.52941176470594,
-      "trainN": 170,
-      "validationROI": 102.06896551724138,
-      "validationN": 116,
-      "testROI": 88,
-      "testN": 35,
-      "worstMonthROI": 0,
-      "goodMonths": 7,
-      "badMonths": 8,
-      "totalMonths": 15,
-      "year2024N": 164,
-      "year2024ROI": 190.7926829268293,
-      "year2025N": 157,
-      "year2025ROI": 133.4394904458599,
-      "year2026N": 0,
-      "year2026ROI": null,
-      "warnings": [
-        "月別不安定:8ヶ月ROI<70"
-      ],
-      "judgement": "A",
-      "comment": "残す強BUY候補。n=321 ROI=162.74% exMax=138.54%。7/15ヶ月ROI>=100 / 8ヶ月ROI<70 / worst=0.00%"
     },
     {
       "action": "KEEP",
@@ -3561,45 +3355,6 @@
     },
     {
       "action": "KEEP",
-      "family": "racerCombo",
-      "label": "racerTop3>=0.5 AND 月4-9 AND raceNo7-9 AND F==0",
-      "condition": "racerTop3>=0.5 AND 月4-9 AND raceNo7-9 AND F==0",
-      "n": 705,
-      "removedROI": 154.11347517730493,
-      "afterN": 705,
-      "afterROI": 154.11347517730493,
-      "baselineROI": 80.37699680511187,
-      "improvement": 73.73647837219306,
-      "hitRate": 0.03687943262411347,
-      "avgOdds": 43.17035460992908,
-      "stake": 70500,
-      "returnYen": 108649.99999999997,
-      "avgTickets": 1,
-      "maxHitOdds": 62.4,
-      "roiExMaxHit": 145.2624113475177,
-      "roiExMax3Hits": 128.2127659574468,
-      "trainROI": 163.68038740920093,
-      "trainN": 413,
-      "validationROI": 155.22633744855966,
-      "validationN": 243,
-      "testROI": 67.95918367346938,
-      "testN": 49,
-      "worstMonthROI": 42.10526315789473,
-      "goodMonths": 10,
-      "badMonths": 1,
-      "totalMonths": 12,
-      "year2024N": 400,
-      "year2024ROI": 153.925,
-      "year2025N": 305,
-      "year2025ROI": 154.36065573770492,
-      "year2026N": 0,
-      "year2026ROI": null,
-      "warnings": [],
-      "judgement": "A",
-      "comment": "残す強BUY候補。n=705 ROI=154.11% exMax=145.26%。10/12ヶ月ROI>=100 / 1ヶ月ROI<70 / worst=42.11%"
-    },
-    {
-      "action": "KEEP",
       "family": "noBuySubFilter",
       "label": "最良NO_BUY残り×motor>=40",
       "condition": "最良NO_BUY残り×motor>=40",
@@ -3723,47 +3478,6 @@
     },
     {
       "action": "KEEP",
-      "family": "noBuySubFilter",
-      "label": "最良NO_BUY残り×exSt<0.08",
-      "condition": "最良NO_BUY残り×exSt<0.08",
-      "n": 681,
-      "removedROI": 151.10132158590312,
-      "afterN": 681,
-      "afterROI": 151.10132158590312,
-      "baselineROI": 80.37699680511187,
-      "improvement": 70.72432478079125,
-      "hitRate": 0.03671071953010279,
-      "avgOdds": 42.42176901615272,
-      "stake": 68100,
-      "returnYen": 102900.00000000003,
-      "avgTickets": 1,
-      "maxHitOdds": 77.7,
-      "roiExMaxHit": 139.69162995594718,
-      "roiExMax3Hits": 122.93685756240824,
-      "trainROI": 181.11872146118725,
-      "trainN": 438,
-      "validationROI": 104.59016393442622,
-      "validationN": 183,
-      "testROI": 73.83333333333333,
-      "testN": 60,
-      "worstMonthROI": 0,
-      "goodMonths": 9,
-      "badMonths": 4,
-      "totalMonths": 15,
-      "year2024N": 428,
-      "year2024ROI": 177.00934579439257,
-      "year2025N": 253,
-      "year2025ROI": 107.27272727272725,
-      "year2026N": 0,
-      "year2026ROI": null,
-      "warnings": [
-        "月別不安定:4ヶ月ROI<70"
-      ],
-      "judgement": "A",
-      "comment": "残す強BUY候補。n=681 ROI=151.10% exMax=139.69%。9/15ヶ月ROI>=100 / 4ヶ月ROI<70 / worst=0.00%"
-    },
-    {
-      "action": "KEEP",
       "family": "noBuyKeep",
       "label": "NO_BUY残り×raceNo7-9×racerTop3>=0.5",
       "condition": "NO_BUY残り×raceNo7-9×racerTop3>=0.5",
@@ -3805,123 +3519,6 @@
     },
     {
       "action": "KEEP",
-      "family": "summer",
-      "label": "month5-9 AND raceNo7-9 AND F==0",
-      "condition": "month5-9 AND raceNo7-9 AND F==0",
-      "n": 667,
-      "removedROI": 148.02098950524737,
-      "afterN": 667,
-      "afterROI": 148.02098950524737,
-      "baselineROI": 80.37699680511187,
-      "improvement": 67.6439927001355,
-      "hitRate": 0.037481259370314844,
-      "avgOdds": 42.57331334332836,
-      "stake": 66700,
-      "returnYen": 98730,
-      "avgTickets": 1,
-      "maxHitOdds": 62.4,
-      "roiExMaxHit": 138.6656671664168,
-      "roiExMax3Hits": 121.3943028485757,
-      "trainROI": 147.13910761154855,
-      "trainN": 381,
-      "validationROI": 168.39285714285714,
-      "validationN": 224,
-      "testROI": 79.83870967741935,
-      "testN": 62,
-      "worstMonthROI": 39.02439024390244,
-      "goodMonths": 8,
-      "badMonths": 1,
-      "totalMonths": 11,
-      "year2024N": 381,
-      "year2024ROI": 147.13910761154855,
-      "year2025N": 275,
-      "year2025ROI": 149.27272727272728,
-      "year2026N": 11,
-      "year2026ROI": 147.27272727272725,
-      "warnings": [],
-      "judgement": "A",
-      "comment": "残す強BUY候補。n=667 ROI=148.02% exMax=138.67%。8/11ヶ月ROI>=100 / 1ヶ月ROI<70 / worst=39.02%"
-    },
-    {
-      "action": "KEEP",
-      "family": "headPos",
-      "label": "head==1 AND 月4-9 AND raceNo7-9 AND F==0",
-      "condition": "head==1 AND 月4-9 AND raceNo7-9 AND F==0",
-      "n": 752,
-      "removedROI": 146.6356382978723,
-      "afterN": 752,
-      "afterROI": 146.6356382978723,
-      "baselineROI": 80.37699680511187,
-      "improvement": 66.25864149276043,
-      "hitRate": 0.03590425531914894,
-      "avgOdds": 43.15545212765958,
-      "stake": 75200,
-      "returnYen": 110269.99999999996,
-      "avgTickets": 1,
-      "maxHitOdds": 62.4,
-      "roiExMaxHit": 138.3377659574468,
-      "roiExMax3Hits": 122.35372340425532,
-      "trainROI": 154.33789954337897,
-      "trainN": 438,
-      "validationROI": 149.6825396825397,
-      "validationN": 252,
-      "testROI": 79.83870967741935,
-      "testN": 62,
-      "worstMonthROI": 39.02439024390244,
-      "goodMonths": 10,
-      "badMonths": 1,
-      "totalMonths": 13,
-      "year2024N": 425,
-      "year2024ROI": 144.87058823529412,
-      "year2025N": 316,
-      "year2025ROI": 148.9873417721519,
-      "year2026N": 11,
-      "year2026ROI": 147.27272727272725,
-      "warnings": [],
-      "judgement": "A",
-      "comment": "残す強BUY候補。n=752 ROI=146.64% exMax=138.34%。10/13ヶ月ROI>=100 / 1ヶ月ROI<70 / worst=39.02%"
-    },
-    {
-      "action": "KEEP",
-      "family": "headPos",
-      "label": "head<=2 AND 月4-9 AND raceNo7-9 AND F==0",
-      "condition": "head<=2 AND 月4-9 AND raceNo7-9 AND F==0",
-      "n": 752,
-      "removedROI": 146.6356382978723,
-      "afterN": 752,
-      "afterROI": 146.6356382978723,
-      "baselineROI": 80.37699680511187,
-      "improvement": 66.25864149276043,
-      "hitRate": 0.03590425531914894,
-      "avgOdds": 43.15545212765958,
-      "stake": 75200,
-      "returnYen": 110269.99999999996,
-      "avgTickets": 1,
-      "maxHitOdds": 62.4,
-      "roiExMaxHit": 138.3377659574468,
-      "roiExMax3Hits": 122.35372340425532,
-      "trainROI": 154.33789954337897,
-      "trainN": 438,
-      "validationROI": 149.6825396825397,
-      "validationN": 252,
-      "testROI": 79.83870967741935,
-      "testN": 62,
-      "worstMonthROI": 39.02439024390244,
-      "goodMonths": 10,
-      "badMonths": 1,
-      "totalMonths": 13,
-      "year2024N": 425,
-      "year2024ROI": 144.87058823529412,
-      "year2025N": 316,
-      "year2025ROI": 148.9873417721519,
-      "year2026N": 11,
-      "year2026ROI": 147.27272727272725,
-      "warnings": [],
-      "judgement": "A",
-      "comment": "残す強BUY候補。n=752 ROI=146.64% exMax=138.34%。10/13ヶ月ROI>=100 / 1ヶ月ROI<70 / worst=39.02%"
-    },
-    {
-      "action": "KEEP",
       "family": "exStGrid",
       "label": "exSt<0.12 AND F==0 AND 月4-9 AND raceNo7-9",
       "condition": "exSt<0.12 AND F==0 AND 月4-9 AND raceNo7-9",
@@ -3960,86 +3557,6 @@
       ],
       "judgement": "A",
       "comment": "残す強BUY候補。n=317 ROI=145.55% exMax=125.87%。6/12ヶ月ROI>=100 / 6ヶ月ROI<70 / worst=0.00%"
-    },
-    {
-      "action": "KEEP",
-      "family": "oddsRaceF",
-      "label": "odds>=20 AND 月4-9 AND raceNo7-9 AND F==0",
-      "condition": "odds>=20 AND 月4-9 AND raceNo7-9 AND F==0",
-      "n": 750,
-      "removedROI": 144.86666666666665,
-      "afterN": 750,
-      "afterROI": 144.86666666666665,
-      "baselineROI": 80.37699680511187,
-      "improvement": 64.48966986155477,
-      "hitRate": 0.034666666666666665,
-      "avgOdds": 43.2224,
-      "stake": 75000,
-      "returnYen": 108650,
-      "avgTickets": 1,
-      "maxHitOdds": 62.4,
-      "roiExMaxHit": 136.54666666666665,
-      "roiExMax3Hits": 120.52000000000001,
-      "trainROI": 154.33789954337897,
-      "trainN": 438,
-      "validationROI": 149.6825396825397,
-      "validationN": 252,
-      "testROI": 55.49999999999999,
-      "testN": 60,
-      "worstMonthROI": 0,
-      "goodMonths": 9,
-      "badMonths": 2,
-      "totalMonths": 13,
-      "year2024N": 425,
-      "year2024ROI": 144.87058823529412,
-      "year2025N": 316,
-      "year2025ROI": 148.9873417721519,
-      "year2026N": 9,
-      "year2026ROI": 0,
-      "warnings": [],
-      "judgement": "A",
-      "comment": "残す強BUY候補。n=750 ROI=144.87% exMax=136.55%。9/13ヶ月ROI>=100 / 2ヶ月ROI<70 / worst=0.00%"
-    },
-    {
-      "action": "KEEP",
-      "family": "exStGrid",
-      "label": "exSt<0.08 AND F==0 AND raceNo7-9",
-      "condition": "exSt<0.08 AND F==0 AND raceNo7-9",
-      "n": 321,
-      "removedROI": 144.48598130841123,
-      "afterN": 321,
-      "afterROI": 144.48598130841123,
-      "baselineROI": 80.37699680511187,
-      "improvement": 64.10898450329935,
-      "hitRate": 0.03426791277258567,
-      "avgOdds": 43.73549750778817,
-      "stake": 32100,
-      "returnYen": 46380,
-      "avgTickets": 1,
-      "maxHitOdds": 59.9,
-      "roiExMaxHit": 125.82554517133954,
-      "roiExMax3Hits": 93.20872274143301,
-      "trainROI": 135.96412556053812,
-      "trainN": 223,
-      "validationROI": 181.71875,
-      "validationN": 64,
-      "testROI": 130.2941176470588,
-      "testN": 34,
-      "worstMonthROI": 0,
-      "goodMonths": 8,
-      "badMonths": 14,
-      "totalMonths": 22,
-      "year2024N": 207,
-      "year2024ROI": 121.25603864734298,
-      "year2025N": 114,
-      "year2025ROI": 186.66666666666666,
-      "year2026N": 0,
-      "year2026ROI": null,
-      "warnings": [
-        "月別不安定:14ヶ月ROI<70"
-      ],
-      "judgement": "A",
-      "comment": "残す強BUY候補。n=321 ROI=144.49% exMax=125.83%。8/22ヶ月ROI>=100 / 14ヶ月ROI<70 / worst=0.00%"
     },
     {
       "action": "KEEP",
@@ -4122,88 +3639,6 @@
       ],
       "judgement": "S",
       "comment": "残す強BUY候補。n=1120 ROI=139.66% exMax=132.72%。10/15ヶ月ROI>=100 / 4ヶ月ROI<70 / worst=0.00%"
-    },
-    {
-      "action": "KEEP",
-      "family": "newNoBuyResidualSub",
-      "label": "新NO_BUY残り×exSt>=0.15",
-      "condition": "新NO_BUY残り×exSt>=0.15",
-      "n": 438,
-      "removedROI": 138.85844748858446,
-      "afterN": 438,
-      "afterROI": 138.85844748858446,
-      "baselineROI": 80.37699680511187,
-      "improvement": 58.48145068347259,
-      "hitRate": 0.03424657534246575,
-      "avgOdds": 43.902054794520566,
-      "stake": 43800,
-      "returnYen": 60819.99999999999,
-      "avgTickets": 1,
-      "maxHitOdds": 60.3,
-      "roiExMaxHit": 125.09132420091325,
-      "roiExMax3Hits": 102.00913242009133,
-      "trainROI": 172.8679245283019,
-      "trainN": 265,
-      "validationROI": 104.96503496503496,
-      "validationN": 143,
-      "testROI": 0,
-      "testN": 30,
-      "worstMonthROI": 0,
-      "goodMonths": 9,
-      "badMonths": 6,
-      "totalMonths": 15,
-      "year2024N": 256,
-      "year2024ROI": 155.390625,
-      "year2025N": 182,
-      "year2025ROI": 115.60439560439562,
-      "year2026N": 0,
-      "year2026ROI": null,
-      "warnings": [
-        "月別不安定:6ヶ月ROI<70"
-      ],
-      "judgement": "A",
-      "comment": "残す強BUY候補。n=438 ROI=138.86% exMax=125.09%。9/15ヶ月ROI>=100 / 6ヶ月ROI<70 / worst=0.00%"
-    },
-    {
-      "action": "KEEP",
-      "family": "weatherCombo",
-      "label": "wind<5 AND wave<5 AND 月4-9 AND raceNo7-9 AND F==0",
-      "condition": "wind<5 AND wave<5 AND 月4-9 AND raceNo7-9 AND F==0",
-      "n": 622,
-      "removedROI": 137.26688102893888,
-      "afterN": 622,
-      "afterROI": 137.26688102893888,
-      "baselineROI": 80.37699680511187,
-      "improvement": 56.88988422382701,
-      "hitRate": 0.03376205787781351,
-      "avgOdds": 42.65530546623795,
-      "stake": 62200,
-      "returnYen": 85380,
-      "avgTickets": 1,
-      "maxHitOdds": 62.4,
-      "roiExMaxHit": 127.2347266881029,
-      "roiExMax3Hits": 108.71382636655949,
-      "trainROI": 118.21333333333332,
-      "trainN": 375,
-      "validationROI": 195.440414507772,
-      "validationN": 193,
-      "testROI": 61.66666666666666,
-      "testN": 54,
-      "worstMonthROI": 0,
-      "goodMonths": 8,
-      "badMonths": 5,
-      "totalMonths": 13,
-      "year2024N": 365,
-      "year2024ROI": 121.45205479452055,
-      "year2025N": 248,
-      "year2025ROI": 165.5241935483871,
-      "year2026N": 9,
-      "year2026ROI": 0,
-      "warnings": [
-        "月別不安定:5ヶ月ROI<70"
-      ],
-      "judgement": "A",
-      "comment": "残す強BUY候補。n=622 ROI=137.27% exMax=127.23%。8/13ヶ月ROI>=100 / 5ヶ月ROI<70 / worst=0.00%"
     },
     {
       "action": "KEEP",
@@ -4369,47 +3804,6 @@
     },
     {
       "action": "KEEP",
-      "family": "exStGrid",
-      "label": "exSt<0.12 AND F==0 AND raceNo7-9",
-      "condition": "exSt<0.12 AND F==0 AND raceNo7-9",
-      "n": 525,
-      "removedROI": 121.88571428571431,
-      "afterN": 525,
-      "afterROI": 121.88571428571431,
-      "baselineROI": 80.37699680511187,
-      "improvement": 41.50871748060244,
-      "hitRate": 0.02857142857142857,
-      "avgOdds": 44.15465657142858,
-      "stake": 52500,
-      "returnYen": 63990.00000000001,
-      "avgTickets": 1,
-      "maxHitOdds": 62.4,
-      "roiExMaxHit": 110.00000000000001,
-      "roiExMax3Hits": 88.59047619047618,
-      "trainROI": 108.63013698630138,
-      "trainN": 365,
-      "validationROI": 135.7798165137615,
-      "validationN": 109,
-      "testROI": 187.05882352941177,
-      "testN": 51,
-      "worstMonthROI": 0,
-      "goodMonths": 8,
-      "badMonths": 13,
-      "totalMonths": 22,
-      "year2024N": 335,
-      "year2024ROI": 102.77611940298506,
-      "year2025N": 190,
-      "year2025ROI": 155.57894736842107,
-      "year2026N": 0,
-      "year2026ROI": null,
-      "warnings": [
-        "月別不安定:13ヶ月ROI<70"
-      ],
-      "judgement": "A",
-      "comment": "残す強BUY候補。n=525 ROI=121.89% exMax=110.00%。8/22ヶ月ROI>=100 / 13ヶ月ROI<70 / worst=0.00%"
-    },
-    {
-      "action": "KEEP",
       "family": "aprilSignal",
       "label": "月4 AND F==0",
       "condition": "月4 AND F==0",
@@ -4449,252 +3843,6 @@
     },
     {
       "action": "KEEP",
-      "family": "racerCombo",
-      "label": "racerTop3>=0.5 AND raceNo7-9 AND F==0",
-      "condition": "racerTop3>=0.5 AND raceNo7-9 AND F==0",
-      "n": 1173,
-      "removedROI": 116.67519181585678,
-      "afterN": 1173,
-      "afterROI": 116.67519181585678,
-      "baselineROI": 80.37699680511187,
-      "improvement": 36.298195010744905,
-      "hitRate": 0.028132992327365727,
-      "avgOdds": 44.26442003410061,
-      "stake": 117300,
-      "returnYen": 136860,
-      "avgTickets": 1,
-      "maxHitOdds": 62.4,
-      "roiExMaxHit": 111.3554987212276,
-      "roiExMax3Hits": 101.10826939471438,
-      "trainROI": 104.56969696969696,
-      "trainN": 825,
-      "validationROI": 155.22633744855966,
-      "validationN": 243,
-      "testROI": 122.57142857142856,
-      "testN": 105,
-      "worstMonthROI": 0,
-      "goodMonths": 11,
-      "badMonths": 7,
-      "totalMonths": 22,
-      "year2024N": 762,
-      "year2024ROI": 105.3018372703412,
-      "year2025N": 411,
-      "year2025ROI": 137.76155717761554,
-      "year2026N": 0,
-      "year2026ROI": null,
-      "warnings": [
-        "月別不安定:7ヶ月ROI<70"
-      ],
-      "judgement": "S",
-      "comment": "残す強BUY候補。n=1173 ROI=116.68% exMax=111.36%。11/22ヶ月ROI>=100 / 7ヶ月ROI<70 / worst=0.00%"
-    },
-    {
-      "action": "KEEP",
-      "family": "racerTop3Combo",
-      "label": "racerTop3>=0.5 AND raceNo7-9 AND F==0",
-      "condition": "racerTop3>=0.5 AND raceNo7-9 AND F==0",
-      "n": 1173,
-      "removedROI": 116.67519181585678,
-      "afterN": 1173,
-      "afterROI": 116.67519181585678,
-      "baselineROI": 80.37699680511187,
-      "improvement": 36.298195010744905,
-      "hitRate": 0.028132992327365727,
-      "avgOdds": 44.26442003410061,
-      "stake": 117300,
-      "returnYen": 136860,
-      "avgTickets": 1,
-      "maxHitOdds": 62.4,
-      "roiExMaxHit": 111.3554987212276,
-      "roiExMax3Hits": 101.10826939471438,
-      "trainROI": 104.56969696969696,
-      "trainN": 825,
-      "validationROI": 155.22633744855966,
-      "validationN": 243,
-      "testROI": 122.57142857142856,
-      "testN": 105,
-      "worstMonthROI": 0,
-      "goodMonths": 11,
-      "badMonths": 7,
-      "totalMonths": 22,
-      "year2024N": 762,
-      "year2024ROI": 105.3018372703412,
-      "year2025N": 411,
-      "year2025ROI": 137.76155717761554,
-      "year2026N": 0,
-      "year2026ROI": null,
-      "warnings": [
-        "月別不安定:7ヶ月ROI<70"
-      ],
-      "judgement": "S",
-      "comment": "残す強BUY候補。n=1173 ROI=116.68% exMax=111.36%。11/22ヶ月ROI>=100 / 7ヶ月ROI<70 / worst=0.00%"
-    },
-    {
-      "action": "KEEP",
-      "family": "comboKeep",
-      "label": "raceNo7-9 AND F==0 AND exSt<0.15",
-      "condition": "raceNo7-9 AND F==0 AND exSt<0.15",
-      "n": 885,
-      "removedROI": 115.22033898305084,
-      "afterN": 885,
-      "afterROI": 115.22033898305084,
-      "baselineROI": 80.37699680511187,
-      "improvement": 34.843342177938965,
-      "hitRate": 0.02824858757062147,
-      "avgOdds": 43.963881016949166,
-      "stake": 88500,
-      "returnYen": 101970,
-      "avgTickets": 1,
-      "maxHitOdds": 62.4,
-      "roiExMaxHit": 108.16949152542372,
-      "roiExMax3Hits": 95.15254237288136,
-      "trainROI": 96.20578778135048,
-      "trainN": 622,
-      "validationROI": 161.63742690058479,
-      "validationN": 171,
-      "testROI": 157.49999999999997,
-      "testN": 92,
-      "worstMonthROI": 0,
-      "goodMonths": 10,
-      "badMonths": 12,
-      "totalMonths": 24,
-      "year2024N": 570,
-      "year2024ROI": 95.82456140350875,
-      "year2025N": 304,
-      "year2025ROI": 150.42763157894737,
-      "year2026N": 11,
-      "year2026ROI": 147.27272727272725,
-      "warnings": [
-        "月別不安定:12ヶ月ROI<70"
-      ],
-      "judgement": "A",
-      "comment": "残す強BUY候補。n=885 ROI=115.22% exMax=108.17%。10/24ヶ月ROI>=100 / 12ヶ月ROI<70 / worst=0.00%"
-    },
-    {
-      "action": "KEEP",
-      "family": "combo",
-      "label": "raceNo 7-9 AND F == 0",
-      "condition": "raceNo 7-9 AND F == 0",
-      "n": 1253,
-      "removedROI": 114.6847565841979,
-      "afterN": 1253,
-      "afterROI": 114.6847565841979,
-      "baselineROI": 80.37699680511187,
-      "improvement": 34.30775977908603,
-      "hitRate": 0.027932960893854747,
-      "avgOdds": 44.386540063846766,
-      "stake": 125300,
-      "returnYen": 143699.99999999997,
-      "avgTickets": 1,
-      "maxHitOdds": 62.4,
-      "roiExMaxHit": 109.7047086991221,
-      "roiExMax3Hits": 100.11173184357543,
-      "trainROI": 103.61268403171007,
-      "trainN": 883,
-      "validationROI": 149.6825396825397,
-      "validationN": 252,
-      "testROI": 122.7966101694915,
-      "testN": 118,
-      "worstMonthROI": 0,
-      "goodMonths": 12,
-      "badMonths": 8,
-      "totalMonths": 24,
-      "year2024N": 815,
-      "year2024ROI": 98.45398773006133,
-      "year2025N": 427,
-      "year2025ROI": 144.82435597189695,
-      "year2026N": 11,
-      "year2026ROI": 147.27272727272725,
-      "warnings": [
-        "月別不安定:8ヶ月ROI<70"
-      ],
-      "judgement": "S",
-      "comment": "残す強BUY候補。n=1253 ROI=114.68% exMax=109.70%。12/24ヶ月ROI>=100 / 8ヶ月ROI<70 / worst=0.00%"
-    },
-    {
-      "action": "KEEP",
-      "family": "headPos",
-      "label": "head==1 AND raceNo7-9 AND F==0",
-      "condition": "head==1 AND raceNo7-9 AND F==0",
-      "n": 1253,
-      "removedROI": 114.6847565841979,
-      "afterN": 1253,
-      "afterROI": 114.6847565841979,
-      "baselineROI": 80.37699680511187,
-      "improvement": 34.30775977908603,
-      "hitRate": 0.027932960893854747,
-      "avgOdds": 44.386540063846766,
-      "stake": 125300,
-      "returnYen": 143699.99999999997,
-      "avgTickets": 1,
-      "maxHitOdds": 62.4,
-      "roiExMaxHit": 109.7047086991221,
-      "roiExMax3Hits": 100.11173184357543,
-      "trainROI": 103.61268403171007,
-      "trainN": 883,
-      "validationROI": 149.6825396825397,
-      "validationN": 252,
-      "testROI": 122.7966101694915,
-      "testN": 118,
-      "worstMonthROI": 0,
-      "goodMonths": 12,
-      "badMonths": 8,
-      "totalMonths": 24,
-      "year2024N": 815,
-      "year2024ROI": 98.45398773006133,
-      "year2025N": 427,
-      "year2025ROI": 144.82435597189695,
-      "year2026N": 11,
-      "year2026ROI": 147.27272727272725,
-      "warnings": [
-        "月別不安定:8ヶ月ROI<70"
-      ],
-      "judgement": "S",
-      "comment": "残す強BUY候補。n=1253 ROI=114.68% exMax=109.70%。12/24ヶ月ROI>=100 / 8ヶ月ROI<70 / worst=0.00%"
-    },
-    {
-      "action": "KEEP",
-      "family": "comboKeep",
-      "label": "exSt<0.10 AND F==0",
-      "condition": "exSt<0.10 AND F==0",
-      "n": 1500,
-      "removedROI": 110.52,
-      "afterN": 1500,
-      "afterROI": 110.52,
-      "baselineROI": 80.37699680511187,
-      "improvement": 30.143003194888124,
-      "hitRate": 0.026,
-      "avgOdds": 43.843396466666704,
-      "stake": 150000,
-      "returnYen": 165780,
-      "avgTickets": 1,
-      "maxHitOdds": 77.7,
-      "roiExMaxHit": 105.33999999999999,
-      "roiExMax3Hits": 97.00666666666665,
-      "trainROI": 112.23977695167287,
-      "trainN": 1076,
-      "validationROI": 104.73309608540926,
-      "validationN": 281,
-      "testROI": 108.95104895104896,
-      "testN": 143,
-      "worstMonthROI": 0,
-      "goodMonths": 8,
-      "badMonths": 7,
-      "totalMonths": 22,
-      "year2024N": 987,
-      "year2024ROI": 108.71327254305979,
-      "year2025N": 513,
-      "year2025ROI": 113.99610136452243,
-      "year2026N": 0,
-      "year2026ROI": null,
-      "warnings": [
-        "月別不安定:7ヶ月ROI<70"
-      ],
-      "judgement": "S",
-      "comment": "残す強BUY候補。n=1500 ROI=110.52% exMax=105.34%。8/22ヶ月ROI>=100 / 7ヶ月ROI<70 / worst=0.00%"
-    },
-    {
-      "action": "KEEP",
       "family": "summer2",
       "label": "month4-8 AND F==0",
       "condition": "month4-8 AND F==0",
@@ -4731,88 +3879,6 @@
       "warnings": [],
       "judgement": "S",
       "comment": "残す強BUY候補。n=2177 ROI=103.32% exMax=99.75%。7/11ヶ月ROI>=100 / 2ヶ月ROI<70 / worst=33.23%"
-    },
-    {
-      "action": "KEEP",
-      "family": "exStBand",
-      "label": "全BUY AND exSt<0.08",
-      "condition": "全BUY AND exSt<0.08",
-      "n": 1664,
-      "removedROI": 102.7403846153846,
-      "afterN": 1664,
-      "afterROI": 102.7403846153846,
-      "baselineROI": 80.37699680511187,
-      "improvement": 22.363387810272727,
-      "hitRate": 0.024639423076923076,
-      "avgOdds": 43.52457614182697,
-      "stake": 166400,
-      "returnYen": 170959.99999999997,
-      "avgTickets": 1,
-      "maxHitOdds": 77.7,
-      "roiExMaxHit": 98.07091346153844,
-      "roiExMax3Hits": 91.05769230769229,
-      "trainROI": 115.60644614079729,
-      "trainN": 1179,
-      "validationROI": 83.65030674846625,
-      "validationN": 326,
-      "testROI": 46.47798742138365,
-      "testN": 159,
-      "worstMonthROI": 0,
-      "goodMonths": 9,
-      "badMonths": 8,
-      "totalMonths": 22,
-      "year2024N": 1081,
-      "year2024ROI": 113.62627197039777,
-      "year2025N": 583,
-      "year2025ROI": 82.55574614065179,
-      "year2026N": 0,
-      "year2026ROI": null,
-      "warnings": [
-        "月別不安定:8ヶ月ROI<70"
-      ],
-      "judgement": "A",
-      "comment": "残す強BUY候補。n=1664 ROI=102.74% exMax=98.07%。9/22ヶ月ROI>=100 / 8ヶ月ROI<70 / worst=0.00%"
-    },
-    {
-      "action": "KEEP",
-      "family": "raceNo",
-      "label": "raceNo 7-9",
-      "condition": "raceNo 7-9",
-      "n": 1784,
-      "removedROI": 97.79147982062781,
-      "afterN": 1784,
-      "afterROI": 97.79147982062781,
-      "baselineROI": 80.37699680511187,
-      "improvement": 17.41448301551594,
-      "hitRate": 0.023542600896860985,
-      "avgOdds": 43.96111810538115,
-      "stake": 178400,
-      "returnYen": 174460,
-      "avgTickets": 1,
-      "maxHitOdds": 76.4,
-      "roiExMaxHit": 93.50896860986548,
-      "roiExMax3Hits": 86.6311659192825,
-      "trainROI": 83.63564041368336,
-      "trainN": 1257,
-      "validationROI": 137.69230769230768,
-      "validationN": 351,
-      "testROI": 119.31818181818184,
-      "testN": 176,
-      "worstMonthROI": 0,
-      "goodMonths": 11,
-      "badMonths": 9,
-      "totalMonths": 24,
-      "year2024N": 1151,
-      "year2024ROI": 81.56385751520415,
-      "year2025N": 622,
-      "year2025ROI": 126.9453376205788,
-      "year2026N": 11,
-      "year2026ROI": 147.27272727272725,
-      "warnings": [
-        "月別不安定:9ヶ月ROI<70"
-      ],
-      "judgement": "A",
-      "comment": "残す強BUY候補。n=1784 ROI=97.79% exMax=93.51%。11/24ヶ月ROI>=100 / 9ヶ月ROI<70 / worst=0.00%"
     },
     {
       "action": "KEEP",
@@ -8500,7 +7566,7 @@
         "12ヶ月ROI<70",
         "subsetSingle=69.91% vs baseAll=80.38%"
       ],
-      "judgement": "A"
+      "judgement": "B"
     },
     {
       "action": "BET_SELECTOR",
@@ -8756,44 +7822,7 @@
       "judgement": "C"
     }
   ],
-  "betSelectorSOrA": [
-    {
-      "action": "BET_SELECTOR",
-      "family": "BOX",
-      "label": "BOX: 荒天 (wave>=5cm)",
-      "selectorName": "BOX_highWave",
-      "applyCondition": "BOX: 荒天 (wave>=5cm)",
-      "n": 760,
-      "totalTickets": 4560,
-      "avgTickets": 6,
-      "hitRaces": 58,
-      "hitRate": 0.07631578947368421,
-      "totalStake": 456000,
-      "totalReturn": 381700,
-      "roi": 83.70614035087719,
-      "baselineROI": 69.9078947368421,
-      "improvement": 13.798245614035096,
-      "maxHitOdds": 335,
-      "roiExMaxHit": 76.37639833296775,
-      "trainROI": 80.15904572564612,
-      "validationROI": 83.33333333333334,
-      "testROI": 109.08675799086758,
-      "worstMonthROI": 0,
-      "goodMonths": 8,
-      "badMonths": 12,
-      "year2024N": 418,
-      "year2024ROI": 94.76076555023926,
-      "year2025N": 341,
-      "year2025ROI": 39.64809384164222,
-      "year2026N": 1,
-      "year2026ROI": 0,
-      "warnings": [
-        "12ヶ月ROI<70",
-        "subsetSingle=69.91% vs baseAll=80.38%"
-      ],
-      "judgement": "A"
-    }
-  ],
+  "betSelectorSOrA": [],
   "combinedStrategies": [
     {
       "label": "月4-9 AND raceNo7-9 AND F==0",
@@ -11691,10 +10720,10 @@
       "baseHitRate": 0.04428904428904429,
       "baseRoiExMaxHit": 174.68531468531467,
       "bootstrapCI": {
-        "mean": 188.04536130536098,
-        "median": 187.08624708624706,
-        "ci95lo": 109.44055944055944,
-        "ci95hi": 278.76456876456876
+        "mean": 188.36013986013944,
+        "median": 186.75990675990676,
+        "ci95lo": 108.20512820512822,
+        "ci95hi": 285.2680652680652
       },
       "venueBreakdown": [
         {
@@ -12435,10 +11464,10 @@
       "baseHitRate": 0.0436046511627907,
       "baseRoiExMaxHit": 165.31976744186048,
       "bootstrapCI": {
-        "mean": 183.21510174418603,
-        "median": 181.33720930232556,
-        "ci95lo": 98.80813953488371,
-        "ci95hi": 279.7965116279069
+        "mean": 182.1189825581394,
+        "median": 180.20348837209298,
+        "ci95lo": 94.73837209302327,
+        "ci95hi": 285.72674418604646
       },
       "venueBreakdown": [
         {
@@ -13194,10 +12223,10 @@
       "baseHitRate": 0.0304077401520387,
       "baseRoiExMaxHit": 122.58465791292328,
       "bootstrapCI": {
-        "mean": 127.75498272287494,
-        "median": 127.77470628887355,
-        "ci95lo": 89.53006219765031,
-        "ci95hi": 167.31167933655846
+        "mean": 127.97709398756056,
+        "median": 126.84865238424328,
+        "ci95lo": 91.1610228058051,
+        "ci95hi": 169.25362819626818
       },
       "venueBreakdown": [
         {
@@ -13998,10 +13027,10 @@
       "baseHitRate": 0.05641025641025641,
       "baseRoiExMaxHit": 173.33333333333334,
       "bootstrapCI": {
-        "mean": 197.45176923076951,
-        "median": 195.3846153846154,
-        "ci95lo": 86.25641025641026,
-        "ci95hi": 323.64102564102575
+        "mean": 202.39674358974347,
+        "median": 199.94871794871793,
+        "ci95lo": 95.33333333333334,
+        "ci95hi": 323.79487179487177
       },
       "venueBreakdown": [
         {
@@ -14622,10 +13651,10 @@
       "baseHitRate": 0.029537504858142247,
       "baseRoiExMaxHit": 116.05130198212204,
       "bootstrapCI": {
-        "mean": 118.8105868635836,
-        "median": 118.39875631558495,
-        "ci95lo": 92.08317139525847,
-        "ci95hi": 147.8002331908278
+        "mean": 119.46040031092113,
+        "median": 119.28099494753212,
+        "ci95lo": 93.49008938981736,
+        "ci95hi": 147.70307034589976
       },
       "venueBreakdown": [
         {
@@ -15441,10 +14470,10 @@
       "baseHitRate": 0.056291390728476824,
       "baseRoiExMaxHit": 221.0596026490066,
       "bootstrapCI": {
-        "mean": 244.16099337748372,
-        "median": 241.9205298013245,
-        "ci95lo": 134.73509933774835,
-        "ci95hi": 362.3841059602649
+        "mean": 240.45432119205324,
+        "median": 238.3443708609271,
+        "ci95lo": 134.23841059602648,
+        "ci95hi": 368.04635761589407
       },
       "venueBreakdown": [
         {
@@ -16170,10 +15199,10 @@
       "baseHitRate": 0.033035714285714286,
       "baseRoiExMaxHit": 132.72321428571428,
       "bootstrapCI": {
-        "mean": 139.61945535714284,
-        "median": 138.98214285714286,
-        "ci95lo": 94.57142857142857,
-        "ci95hi": 189.0892857142857
+        "mean": 140.4028080357145,
+        "median": 140.17857142857144,
+        "ci95lo": 95,
+        "ci95hi": 189.18750000000003
       },
       "venueBreakdown": [
         {
@@ -16884,10 +15913,10 @@
       "baseHitRate": 0.04638218923933209,
       "baseRoiExMaxHit": 178.71985157699444,
       "bootstrapCI": {
-        "mean": 192.3630705009279,
-        "median": 192.31910946196663,
-        "ci95lo": 115.71428571428572,
-        "ci95hi": 271.948051948052
+        "mean": 193.79652133580734,
+        "median": 191.26159554730987,
+        "ci95lo": 121.00185528756955,
+        "ci95hi": 276.43784786641925
       },
       "venueBreakdown": [
         {
@@ -17523,10 +16552,10 @@
       "baseHitRate": 0.047787610619469026,
       "baseRoiExMaxHit": 182.46017699115046,
       "bootstrapCI": {
-        "mean": 195.66346902654846,
-        "median": 194.69026548672562,
-        "ci95lo": 125.64601769911505,
-        "ci95hi": 275.66371681415933
+        "mean": 195.72851327433614,
+        "median": 193.5221238938053,
+        "ci95lo": 124.56637168141592,
+        "ci95hi": 277.858407079646
       },
       "venueBreakdown": [
         {
@@ -18162,10 +17191,10 @@
       "baseHitRate": 0.053824362606232294,
       "baseRoiExMaxHit": 202.57790368271955,
       "bootstrapCI": {
-        "mean": 225.24177053824394,
-        "median": 223.1728045325779,
-        "ci95lo": 132.69121813031163,
-        "ci95hi": 332.2946175637394
+        "mean": 226.99999999999986,
+        "median": 224.75920679886684,
+        "ci95lo": 132.74787535410763,
+        "ci95hi": 336.4022662889518
       },
       "venueBreakdown": [
         {
@@ -18786,10 +17815,10 @@
       "baseHitRate": 0.056291390728476824,
       "baseRoiExMaxHit": 210.99337748344368,
       "bootstrapCI": {
-        "mean": 236.7151821192048,
-        "median": 233.94039735099338,
-        "ci95lo": 127.11920529801324,
-        "ci95hi": 358.0132450331127
+        "mean": 235.34930463576129,
+        "median": 233.67549668874173,
+        "ci95lo": 125.29801324503312,
+        "ci95hi": 357.4172185430464
       },
       "venueBreakdown": [
         {
@@ -19395,10 +18424,10 @@
       "baseHitRate": 0.05309734513274336,
       "baseRoiExMaxHit": 212.12389380530973,
       "bootstrapCI": {
-        "mean": 280.20030973451287,
-        "median": 273.8053097345133,
-        "ci95lo": 76.63716814159291,
-        "ci95hi": 532.9203539823009
+        "mean": 282.495796460177,
+        "median": 276.283185840708,
+        "ci95lo": 78.40707964601769,
+        "ci95hi": 527.8761061946904
       },
       "venueBreakdown": [
         {
@@ -19974,10 +19003,10 @@
       "baseHitRate": 0.051094890510948905,
       "baseRoiExMaxHit": 160.5839416058394,
       "bootstrapCI": {
-        "mean": 206.2750364963501,
-        "median": 199.7080291970803,
-        "ci95lo": 68.32116788321167,
-        "ci95hi": 385.1824817518248
+        "mean": 205.1205474452551,
+        "median": 199.85401459854015,
+        "ci95lo": 63.21167883211678,
+        "ci95hi": 369.9270072992701
       },
       "venueBreakdown": [
         {
@@ -20568,10 +19597,10 @@
       "baseHitRate": 0.05539358600583091,
       "baseRoiExMaxHit": 208.48396501457728,
       "bootstrapCI": {
-        "mean": 230.70880466472278,
-        "median": 228.6297376093295,
-        "ci95lo": 132.332361516035,
-        "ci95hi": 343.26530612244903
+        "mean": 230.70470845481074,
+        "median": 228.25072886297377,
+        "ci95lo": 127.87172011661809,
+        "ci95hi": 339.88338192419826
       },
       "venueBreakdown": [
         {
@@ -21192,10 +20221,10 @@
       "baseHitRate": 0.019808306709265176,
       "baseRoiExMaxHit": 79.13578274760387,
       "bootstrapCI": {
-        "mean": 80.42505271565504,
-        "median": 80.30670926517577,
-        "ci95lo": 66.12140575079873,
-        "ci95hi": 95.34025559105436
+        "mean": 80.63661581469644,
+        "median": 80.4345047923323,
+        "ci95lo": 66.61341853035147,
+        "ci95hi": 95.99520766773165
       },
       "venueBreakdown": [
         {
@@ -27788,7 +26817,7 @@
       "warnings": [
         "月別不安定:9ヶ月ROI<70"
       ],
-      "judgement": "A",
+      "judgement": "B",
       "comment": "残す強BUY候補。n=1784 ROI=97.79% exMax=93.51%。11/24ヶ月ROI>=100 / 9ヶ月ROI<70 / worst=0.00%"
     },
     {
@@ -29282,7 +28311,7 @@
       "warnings": [
         "月別不安定:8ヶ月ROI<70"
       ],
-      "judgement": "S",
+      "judgement": "B",
       "comment": "残す強BUY候補。n=1253 ROI=114.68% exMax=109.70%。12/24ヶ月ROI>=100 / 8ヶ月ROI<70 / worst=0.00%"
     },
     {
@@ -30435,7 +29464,7 @@
       "warnings": [
         "月別不安定:12ヶ月ROI<70"
       ],
-      "judgement": "A",
+      "judgement": "B",
       "comment": "残す強BUY候補。n=885 ROI=115.22% exMax=108.17%。10/24ヶ月ROI>=100 / 12ヶ月ROI<70 / worst=0.00%"
     },
     {
@@ -30476,7 +29505,7 @@
       "warnings": [
         "月別不安定:7ヶ月ROI<70"
       ],
-      "judgement": "S",
+      "judgement": "B",
       "comment": "残す強BUY候補。n=1500 ROI=110.52% exMax=105.34%。8/22ヶ月ROI>=100 / 7ヶ月ROI<70 / worst=0.00%"
     },
     {
@@ -30638,7 +29667,7 @@
       "warnings": [
         "月別不安定:14ヶ月ROI<70"
       ],
-      "judgement": "A",
+      "judgement": "B",
       "comment": "残す強BUY候補。n=321 ROI=144.49% exMax=125.83%。8/22ヶ月ROI>=100 / 14ヶ月ROI<70 / worst=0.00%"
     },
     {
@@ -30679,7 +29708,7 @@
       "warnings": [
         "月別不安定:13ヶ月ROI<70"
       ],
-      "judgement": "A",
+      "judgement": "B",
       "comment": "残す強BUY候補。n=525 ROI=121.89% exMax=110.00%。8/22ヶ月ROI>=100 / 13ヶ月ROI<70 / worst=0.00%"
     },
     {
@@ -31052,7 +30081,7 @@
       "year2026N": 9,
       "year2026ROI": 0,
       "warnings": [],
-      "judgement": "A",
+      "judgement": "B",
       "comment": "残す強BUY候補。n=750 ROI=144.87% exMax=136.55%。9/13ヶ月ROI>=100 / 2ヶ月ROI<70 / worst=0.00%"
     },
     {
@@ -31339,7 +30368,7 @@
       "warnings": [
         "月別不安定:7ヶ月ROI<70"
       ],
-      "judgement": "S",
+      "judgement": "B",
       "comment": "残す強BUY候補。n=1173 ROI=116.68% exMax=111.36%。11/22ヶ月ROI>=100 / 7ヶ月ROI<70 / worst=0.00%"
     },
     {
@@ -31419,7 +30448,7 @@
       "year2026N": 0,
       "year2026ROI": null,
       "warnings": [],
-      "judgement": "A",
+      "judgement": "B",
       "comment": "残す強BUY候補。n=705 ROI=154.11% exMax=145.26%。10/12ヶ月ROI>=100 / 1ヶ月ROI<70 / worst=42.11%"
     },
     {
@@ -31538,7 +30567,7 @@
       "year2026N": 11,
       "year2026ROI": 147.27272727272725,
       "warnings": [],
-      "judgement": "A",
+      "judgement": "B",
       "comment": "残す強BUY候補。n=667 ROI=148.02% exMax=138.67%。8/11ヶ月ROI>=100 / 1ヶ月ROI<70 / worst=39.02%"
     },
     {
@@ -31864,7 +30893,7 @@
       "warnings": [
         "月別不安定:8ヶ月ROI<70"
       ],
-      "judgement": "S",
+      "judgement": "B",
       "comment": "残す強BUY候補。n=1253 ROI=114.68% exMax=109.70%。12/24ヶ月ROI>=100 / 8ヶ月ROI<70 / worst=0.00%"
     },
     {
@@ -31944,7 +30973,7 @@
       "year2026N": 11,
       "year2026ROI": 147.27272727272725,
       "warnings": [],
-      "judgement": "A",
+      "judgement": "B",
       "comment": "残す強BUY候補。n=752 ROI=146.64% exMax=138.34%。10/13ヶ月ROI>=100 / 1ヶ月ROI<70 / worst=39.02%"
     },
     {
@@ -31983,7 +31012,7 @@
       "year2026N": 11,
       "year2026ROI": 147.27272727272725,
       "warnings": [],
-      "judgement": "A",
+      "judgement": "B",
       "comment": "残す強BUY候補。n=752 ROI=146.64% exMax=138.34%。10/13ヶ月ROI>=100 / 1ヶ月ROI<70 / worst=39.02%"
     },
     {
@@ -32315,7 +31344,7 @@
       "warnings": [
         "月別不安定:5ヶ月ROI<70"
       ],
-      "judgement": "A",
+      "judgement": "B",
       "comment": "残す強BUY候補。n=622 ROI=137.27% exMax=127.23%。8/13ヶ月ROI>=100 / 5ヶ月ROI<70 / worst=0.00%"
     },
     {
@@ -32675,7 +31704,7 @@
       "warnings": [
         "月別不安定:7ヶ月ROI<70"
       ],
-      "judgement": "S",
+      "judgement": "B",
       "comment": "残す強BUY候補。n=1173 ROI=116.68% exMax=111.36%。11/22ヶ月ROI>=100 / 7ヶ月ROI<70 / worst=0.00%"
     },
     {
@@ -33761,7 +32790,7 @@
       "warnings": [
         "月別不安定:4ヶ月ROI<70"
       ],
-      "judgement": "A",
+      "judgement": "B",
       "comment": "残す強BUY候補。n=681 ROI=151.10% exMax=139.69%。9/15ヶ月ROI>=100 / 4ヶ月ROI<70 / worst=0.00%"
     },
     {
@@ -34576,7 +33605,7 @@
         "平均odds>=50:過剰夢見リスク",
         "月別不安定:9ヶ月ROI<70"
       ],
-      "judgement": "A",
+      "judgement": "B",
       "comment": "残す強BUY候補。n=359 ROI=179.44% exMax=157.80%。7/16ヶ月ROI>=100 / 9ヶ月ROI<70 / worst=0.00%"
     },
     {
@@ -34617,7 +33646,7 @@
       "warnings": [
         "月別不安定:5ヶ月ROI<70"
       ],
-      "judgement": "A",
+      "judgement": "B",
       "comment": "残す強BUY候補。n=481 ROI=163.43% exMax=147.28%。8/15ヶ月ROI>=100 / 5ヶ月ROI<70 / worst=0.00%"
     },
     {
@@ -35668,7 +34697,7 @@
       "warnings": [
         "月別不安定:4ヶ月ROI<70"
       ],
-      "judgement": "A",
+      "judgement": "B",
       "comment": "残す強BUY候補。n=414 ROI=194.83% exMax=179.76%。12/16ヶ月ROI>=100 / 4ヶ月ROI<70 / worst=0.00%"
     },
     {
@@ -35871,7 +34900,7 @@
       "warnings": [
         "月別不安定:6ヶ月ROI<70"
       ],
-      "judgement": "A",
+      "judgement": "B",
       "comment": "残す強BUY候補。n=438 ROI=138.86% exMax=125.09%。9/15ヶ月ROI>=100 / 6ヶ月ROI<70 / worst=0.00%"
     },
     {
@@ -37138,7 +36167,7 @@
       "warnings": [
         "月別不安定:4ヶ月ROI<70"
       ],
-      "judgement": "A",
+      "judgement": "B",
       "comment": "残す強BUY候補。n=392 ROI=201.63% exMax=185.71%。11/15ヶ月ROI>=100 / 4ヶ月ROI<70 / worst=0.00%"
     },
     {
@@ -37762,7 +36791,7 @@
       "warnings": [
         "月別不安定:8ヶ月ROI<70"
       ],
-      "judgement": "A",
+      "judgement": "B",
       "comment": "残す強BUY候補。n=1664 ROI=102.74% exMax=98.07%。9/22ヶ月ROI>=100 / 8ヶ月ROI<70 / worst=0.00%"
     },
     {
@@ -38946,7 +37975,7 @@
       "warnings": [
         "月別不安定:8ヶ月ROI<70"
       ],
-      "judgement": "A",
+      "judgement": "B",
       "comment": "残す強BUY候補。n=321 ROI=162.74% exMax=138.54%。7/15ヶ月ROI>=100 / 8ヶ月ROI<70 / worst=0.00%"
     },
     {
