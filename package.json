@@ -110,6 +110,7 @@
     "analyze:roi-miss-patterns": "tsx scripts/analyze-roi-miss-patterns.ts",
     "analyze:roi-weak-patterns": "tsx scripts/analyze-roi-weak-patterns.ts",
     "analyze:roi-drawdown": "tsx scripts/analyze-roi-drawdown.ts",
+    "analyze:roi-isbase-risk": "tsx scripts/analyze-roi-isbase-risk.ts",
     "paper:forward": "tsx scripts/paper-forward-test.ts"
   },
   "engines": {

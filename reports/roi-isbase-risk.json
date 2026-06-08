@@ -1,0 +1,3610 @@
+{
+  "generatedAt": "2026-06-08T05:34:31.045Z",
+  "dbPath": "data/boat.sqlite",
+  "isBaseN": 543,
+  "baselineMetric": {
+    "n": 543,
+    "hits": 26,
+    "hitRate": 0.04788213627992634,
+    "avgOdds": 43.28453038674033,
+    "roi": 199.09760589318603,
+    "roiExMaxHit": 184.78821362799263,
+    "roiExMax3Hits": 162.15469613259668,
+    "maxHitOdds": 77.7
+  },
+  "baselineDd": {
+    "maxStreakN": 102,
+    "avgStreak": 19.14814814814815,
+    "maxDDPct": 18.784530386740332,
+    "maxDDYen100": 10200,
+    "completeMissRate": 0.6015473887814313,
+    "avgHitInterval": 20.16,
+    "maxHitInterval": 103
+  },
+  "targets": {
+    "maxStreak": 60,
+    "maxDDPct": 12,
+    "minROI": 150
+  },
+  "dimensions": [
+    {
+      "name": "月別",
+      "subgroups": [
+        {
+          "label": "月8",
+          "condition": "month=8",
+          "n": 200,
+          "metric": {
+            "n": 200,
+            "hits": 7,
+            "hitRate": 0.035,
+            "avgOdds": 42.2835,
+            "roi": 144.14999999999998,
+            "roiExMaxHit": 114.20000000000002,
+            "roiExMax3Hits": 67.05000000000001,
+            "maxHitOdds": 59.9
+          },
+          "dd": {
+            "maxStreakN": 65,
+            "avgStreak": 24.125,
+            "maxDDPct": 38.4,
+            "maxDDYen100": 7680,
+            "completeMissRate": 0.538860103626943,
+            "avgHitInterval": 30.5,
+            "maxHitInterval": 66
+          },
+          "remainN": 343,
+          "remainMetric": {
+            "n": 343,
+            "hits": 19,
+            "hitRate": 0.05539358600583091,
+            "avgOdds": 43.86822157434403,
+            "roi": 231.13702623906707,
+            "roiExMaxHit": 208.48396501457728,
+            "roiExMax3Hits": 172.6530612244898,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 41,
+            "avgStreak": 16.2,
+            "maxDDPct": 11.9533527696793,
+            "maxDDYen100": 4100,
+            "completeMissRate": 0.6388888888888888,
+            "avgHitInterval": 16.666666666666668,
+            "maxHitInterval": 42
+          },
+          "classification": "CUT_CANDIDATE",
+          "cutImpact": {
+            "roiChange": 32.03942034588104,
+            "streakChange": -61,
+            "ddPctChange": -6.831177617061032,
+            "roiAfterCut": 231.13702623906707,
+            "streakAfterCut": 41,
+            "ddAfterCut": 11.9533527696793,
+            "worthCutting": true
+          },
+          "explanation": "除外することでROI 231.14%、連敗 41回、DD 11.95% に改善。ROI低下は 32.04% 以内。",
+          "recommendation": "✂️ CUT推奨: 除外後ROI=231.14% / 連敗=41 / DD=11.95%"
+        },
+        {
+          "label": "月12",
+          "condition": "month=12",
+          "n": 100,
+          "metric": {
+            "n": 100,
+            "hits": 6,
+            "hitRate": 0.06,
+            "avgOdds": 39.49499999999999,
+            "roi": 192.79999999999998,
+            "roiExMaxHit": 154.4,
+            "roiExMax3Hits": 86.1,
+            "maxHitOdds": 38.4
+          },
+          "dd": {
+            "maxStreakN": 39,
+            "avgStreak": 15.666666666666666,
+            "maxDDPct": 39,
+            "maxDDYen100": 3900,
+            "completeMissRate": 0.574468085106383,
+            "avgHitInterval": 12,
+            "maxHitInterval": 24
+          },
+          "remainN": 443,
+          "remainMetric": {
+            "n": 443,
+            "hits": 20,
+            "hitRate": 0.045146726862302484,
+            "avgOdds": 44.139954853273125,
+            "roi": 200.51918735891644,
+            "roiExMaxHit": 182.97968397291194,
+            "roiExMax3Hits": 155.23702031602707,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 75,
+            "avgStreak": 20.142857142857142,
+            "maxDDPct": 16.93002257336343,
+            "maxDDYen100": 7500,
+            "completeMissRate": 0.607565011820331,
+            "avgHitInterval": 21.263157894736842,
+            "maxHitInterval": 76
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": 1.4215814657304122,
+            "streakChange": -27,
+            "ddPctChange": -1.8545078133769017,
+            "roiAfterCut": 200.51918735891644,
+            "streakAfterCut": 75,
+            "ddAfterCut": 16.93002257336343,
+            "worthCutting": false
+          },
+          "explanation": "ROI 192.80% は良好だが連敗 39回 / DD 39.00% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        },
+        {
+          "label": "月6",
+          "condition": "month=6",
+          "n": 132,
+          "metric": {
+            "n": 132,
+            "hits": 7,
+            "hitRate": 0.05303030303030303,
+            "avgOdds": 43.27575757575758,
+            "roi": 214.09090909090912,
+            "roiExMaxHit": 166.66666666666669,
+            "roiExMax3Hits": 101.06060606060608,
+            "maxHitOdds": 62.6
+          },
+          "dd": {
+            "maxStreakN": 39,
+            "avgStreak": 15.625,
+            "maxDDPct": 29.545454545454547,
+            "maxDDYen100": 3900,
+            "completeMissRate": 0.64,
+            "avgHitInterval": 19.333333333333332,
+            "maxHitInterval": 40
+          },
+          "remainN": 411,
+          "remainMetric": {
+            "n": 411,
+            "hits": 19,
+            "hitRate": 0.046228710462287104,
+            "avgOdds": 43.287347931873484,
+            "roi": 194.28223844282243,
+            "roiExMaxHit": 175.3771289537713,
+            "roiExMax3Hits": 146.13138686131387,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 102,
+            "avgStreak": 19.6,
+            "maxDDPct": 24.817518248175183,
+            "maxDDYen100": 10200,
+            "completeMissRate": 0.5892857142857143,
+            "avgHitInterval": 20.666666666666668,
+            "maxHitInterval": 103
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": -4.8153674503635955,
+            "streakChange": 0,
+            "ddPctChange": 6.032987861434851,
+            "roiAfterCut": 194.28223844282243,
+            "streakAfterCut": 102,
+            "ddAfterCut": 24.817518248175183,
+            "worthCutting": false
+          },
+          "explanation": "ROI 214.09% は良好だが連敗 39回 / DD 29.55% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        },
+        {
+          "label": "月4",
+          "condition": "month=4",
+          "n": 111,
+          "metric": {
+            "n": 111,
+            "hits": 6,
+            "hitRate": 0.05405405405405406,
+            "avgOdds": 48.51261261261261,
+            "roi": 285.94594594594594,
+            "roiExMaxHit": 215.94594594594594,
+            "roiExMax3Hits": 111.98198198198197,
+            "maxHitOdds": 77.7
+          },
+          "dd": {
+            "maxStreakN": 32,
+            "avgStreak": 15,
+            "maxDDPct": 28.82882882882883,
+            "maxDDYen100": 3200,
+            "completeMissRate": 0.6952380952380952,
+            "avgHitInterval": 15.4,
+            "maxHitInterval": 24
+          },
+          "remainN": 432,
+          "remainMetric": {
+            "n": 432,
+            "hits": 20,
+            "hitRate": 0.046296296296296294,
+            "avgOdds": 41.941203703703735,
+            "roi": 176.7824074074074,
+            "roiExMaxHit": 162.29166666666669,
+            "roiExMax3Hits": 137.33796296296293,
+            "maxHitOdds": 62.6
+          },
+          "remainDd": {
+            "maxStreakN": 102,
+            "avgStreak": 19.61904761904762,
+            "maxDDPct": 23.61111111111111,
+            "maxDDYen100": 10200,
+            "completeMissRate": 0.5776699029126213,
+            "avgHitInterval": 22.105263157894736,
+            "maxHitInterval": 103
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": -22.315198485778637,
+            "streakChange": 0,
+            "ddPctChange": 4.826580724370778,
+            "roiAfterCut": 176.7824074074074,
+            "streakAfterCut": 102,
+            "ddAfterCut": 23.61111111111111,
+            "worthCutting": false
+          },
+          "explanation": "ROI 285.95% は良好だが連敗 32回 / DD 28.83% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        }
+      ]
+    },
+    {
+      "name": "会場別 (n>=10)",
+      "subgroups": [
+        {
+          "label": "会場: 津",
+          "condition": "venue='津'",
+          "n": 21,
+          "metric": {
+            "n": 21,
+            "hits": 0,
+            "hitRate": 0,
+            "avgOdds": 42.733333333333334,
+            "roi": 0,
+            "roiExMaxHit": 0,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 0
+          },
+          "dd": {
+            "maxStreakN": 21,
+            "avgStreak": 21,
+            "maxDDPct": 100,
+            "maxDDYen100": 2100,
+            "completeMissRate": 0.6190476190476191,
+            "avgHitInterval": 21,
+            "maxHitInterval": 21
+          },
+          "remainN": 522,
+          "remainMetric": {
+            "n": 522,
+            "hits": 26,
+            "hitRate": 0.04980842911877394,
+            "avgOdds": 43.30670498084293,
+            "roi": 207.10727969348662,
+            "roiExMaxHit": 192.22222222222223,
+            "roiExMax3Hits": 168.67816091954023,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 100,
+            "avgStreak": 18.37037037037037,
+            "maxDDPct": 19.157088122605366,
+            "maxDDYen100": 10000,
+            "completeMissRate": 0.6008064516129032,
+            "avgHitInterval": 19.44,
+            "maxHitInterval": 101
+          },
+          "classification": "WATCH",
+          "cutImpact": {
+            "roiChange": 8.00967380030059,
+            "streakChange": -2,
+            "ddPctChange": 0.3725577358650334,
+            "roiAfterCut": 207.10727969348662,
+            "streakAfterCut": 100,
+            "ddAfterCut": 19.157088122605366,
+            "worthCutting": false
+          },
+          "explanation": "n=21 / ROI=0.00% / 連敗=21 — 様子見。",
+          "recommendation": "△ WATCH: ROI=0.00% / 連敗=21"
+        },
+        {
+          "label": "会場: 鳴門",
+          "condition": "venue='鳴門'",
+          "n": 14,
+          "metric": {
+            "n": 14,
+            "hits": 0,
+            "hitRate": 0,
+            "avgOdds": 47.97142857142857,
+            "roi": 0,
+            "roiExMaxHit": 0,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 0
+          },
+          "dd": {
+            "maxStreakN": 14,
+            "avgStreak": 14,
+            "maxDDPct": 100,
+            "maxDDYen100": 1400,
+            "completeMissRate": 0.9285714285714286,
+            "avgHitInterval": 14,
+            "maxHitInterval": 14
+          },
+          "remainN": 529,
+          "remainMetric": {
+            "n": 529,
+            "hits": 26,
+            "hitRate": 0.04914933837429111,
+            "avgOdds": 43.16049149338375,
+            "roi": 204.366729678639,
+            "roiExMaxHit": 189.67863894139887,
+            "roiExMax3Hits": 166.44612476370511,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 100,
+            "avgStreak": 18.62962962962963,
+            "maxDDPct": 18.90359168241966,
+            "maxDDYen100": 10000,
+            "completeMissRate": 0.5924453280318092,
+            "avgHitInterval": 19.68,
+            "maxHitInterval": 101
+          },
+          "classification": "INSUFFICIENT",
+          "cutImpact": {
+            "roiChange": 5.269123785452962,
+            "streakChange": -2,
+            "ddPctChange": 0.11906129567932666,
+            "roiAfterCut": 204.366729678639,
+            "streakAfterCut": 100,
+            "ddAfterCut": 18.90359168241966,
+            "worthCutting": false
+          },
+          "explanation": "n=14 / ROI=0.00% / 連敗=14 — 様子見。",
+          "recommendation": "ℹ️ n<15: データ不足"
+        },
+        {
+          "label": "会場: 宮島",
+          "condition": "venue='宮島'",
+          "n": 20,
+          "metric": {
+            "n": 20,
+            "hits": 0,
+            "hitRate": 0,
+            "avgOdds": 36.995000000000005,
+            "roi": 0,
+            "roiExMaxHit": 0,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 0
+          },
+          "dd": {
+            "maxStreakN": 20,
+            "avgStreak": 20,
+            "maxDDPct": 100,
+            "maxDDYen100": 2000,
+            "completeMissRate": 0.65,
+            "avgHitInterval": 20,
+            "maxHitInterval": 20
+          },
+          "remainN": 523,
+          "remainMetric": {
+            "n": 523,
+            "hits": 26,
+            "hitRate": 0.0497131931166348,
+            "avgOdds": 43.52504780114723,
+            "roi": 206.71128107074574,
+            "roiExMaxHit": 191.8546845124283,
+            "roiExMax3Hits": 168.35564053537283,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 95,
+            "avgStreak": 19.115384615384617,
+            "maxDDPct": 18.164435946462714,
+            "maxDDYen100": 9500,
+            "completeMissRate": 0.5995975855130785,
+            "avgHitInterval": 19.48,
+            "maxHitInterval": 96
+          },
+          "classification": "WATCH",
+          "cutImpact": {
+            "roiChange": 7.613675177559713,
+            "streakChange": -7,
+            "ddPctChange": -0.6200944402776187,
+            "roiAfterCut": 206.71128107074574,
+            "streakAfterCut": 95,
+            "ddAfterCut": 18.164435946462714,
+            "worthCutting": false
+          },
+          "explanation": "n=20 / ROI=0.00% / 連敗=20 — 様子見。",
+          "recommendation": "△ WATCH: ROI=0.00% / 連敗=20"
+        },
+        {
+          "label": "会場: 三国",
+          "condition": "venue='三国'",
+          "n": 18,
+          "metric": {
+            "n": 18,
+            "hits": 0,
+            "hitRate": 0,
+            "avgOdds": 40.91666666666667,
+            "roi": 0,
+            "roiExMaxHit": 0,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 0
+          },
+          "dd": {
+            "maxStreakN": 18,
+            "avgStreak": 18,
+            "maxDDPct": 100,
+            "maxDDYen100": 1800,
+            "completeMissRate": 0.5555555555555556,
+            "avgHitInterval": 18,
+            "maxHitInterval": 18
+          },
+          "remainN": 525,
+          "remainMetric": {
+            "n": 525,
+            "hits": 26,
+            "hitRate": 0.049523809523809526,
+            "avgOdds": 43.36571428571429,
+            "roi": 205.92380952380952,
+            "roiExMaxHit": 191.1238095238095,
+            "roiExMax3Hits": 167.7142857142857,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 101,
+            "avgStreak": 18.48148148148148,
+            "maxDDPct": 19.238095238095237,
+            "maxDDYen100": 10100,
+            "completeMissRate": 0.6032064128256514,
+            "avgHitInterval": 19.52,
+            "maxHitInterval": 102
+          },
+          "classification": "WATCH",
+          "cutImpact": {
+            "roiChange": 6.826203630623496,
+            "streakChange": -1,
+            "ddPctChange": 0.4535648513549049,
+            "roiAfterCut": 205.92380952380952,
+            "streakAfterCut": 101,
+            "ddAfterCut": 19.238095238095237,
+            "worthCutting": false
+          },
+          "explanation": "n=18 / ROI=0.00% / 連敗=18 — 様子見。",
+          "recommendation": "△ WATCH: ROI=0.00% / 連敗=18"
+        },
+        {
+          "label": "会場: 住之江",
+          "condition": "venue='住之江'",
+          "n": 11,
+          "metric": {
+            "n": 11,
+            "hits": 0,
+            "hitRate": 0,
+            "avgOdds": 40.04545454545455,
+            "roi": 0,
+            "roiExMaxHit": 0,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 0
+          },
+          "dd": {
+            "maxStreakN": 11,
+            "avgStreak": 11,
+            "maxDDPct": 100,
+            "maxDDYen100": 1100,
+            "completeMissRate": 0.5454545454545454,
+            "avgHitInterval": 11,
+            "maxHitInterval": 11
+          },
+          "remainN": 532,
+          "remainMetric": {
+            "n": 532,
+            "hits": 26,
+            "hitRate": 0.04887218045112782,
+            "avgOdds": 43.351503759398504,
+            "roi": 203.21428571428575,
+            "roiExMaxHit": 188.60902255639098,
+            "roiExMax3Hits": 165.50751879699249,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 99,
+            "avgStreak": 18.74074074074074,
+            "maxDDPct": 18.60902255639098,
+            "maxDDYen100": 9900,
+            "completeMissRate": 0.6027667984189723,
+            "avgHitInterval": 19.72,
+            "maxHitInterval": 100
+          },
+          "classification": "INSUFFICIENT",
+          "cutImpact": {
+            "roiChange": 4.116679821099723,
+            "streakChange": -3,
+            "ddPctChange": -0.17550783034935336,
+            "roiAfterCut": 203.21428571428575,
+            "streakAfterCut": 99,
+            "ddAfterCut": 18.60902255639098,
+            "worthCutting": false
+          },
+          "explanation": "n=11 / ROI=0.00% / 連敗=11 — 様子見。",
+          "recommendation": "ℹ️ n<15: データ不足"
+        },
+        {
+          "label": "会場: 大村",
+          "condition": "venue='大村'",
+          "n": 12,
+          "metric": {
+            "n": 12,
+            "hits": 0,
+            "hitRate": 0,
+            "avgOdds": 38.68333333333333,
+            "roi": 0,
+            "roiExMaxHit": 0,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 0
+          },
+          "dd": {
+            "maxStreakN": 12,
+            "avgStreak": 12,
+            "maxDDPct": 100,
+            "maxDDYen100": 1200,
+            "completeMissRate": 0.5833333333333334,
+            "avgHitInterval": 12,
+            "maxHitInterval": 12
+          },
+          "remainN": 531,
+          "remainMetric": {
+            "n": 531,
+            "hits": 26,
+            "hitRate": 0.04896421845574388,
+            "avgOdds": 43.38851224105461,
+            "roi": 203.59698681732584,
+            "roiExMaxHit": 188.96421845574386,
+            "roiExMax3Hits": 165.81920903954804,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 101,
+            "avgStreak": 18.703703703703702,
+            "maxDDPct": 19.02071563088512,
+            "maxDDYen100": 10100,
+            "completeMissRate": 0.601980198019802,
+            "avgHitInterval": 19.68,
+            "maxHitInterval": 102
+          },
+          "classification": "INSUFFICIENT",
+          "cutImpact": {
+            "roiChange": 4.499380924139814,
+            "streakChange": -1,
+            "ddPctChange": 0.2361852441447887,
+            "roiAfterCut": 203.59698681732584,
+            "streakAfterCut": 101,
+            "ddAfterCut": 19.02071563088512,
+            "worthCutting": false
+          },
+          "explanation": "n=12 / ROI=0.00% / 連敗=12 — 様子見。",
+          "recommendation": "ℹ️ n<15: データ不足"
+        },
+        {
+          "label": "会場: 尼崎",
+          "condition": "venue='尼崎'",
+          "n": 33,
+          "metric": {
+            "n": 33,
+            "hits": 0,
+            "hitRate": 0,
+            "avgOdds": 41.76363636363636,
+            "roi": 0,
+            "roiExMaxHit": 0,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 0
+          },
+          "dd": {
+            "maxStreakN": 33,
+            "avgStreak": 33,
+            "maxDDPct": 100,
+            "maxDDYen100": 3300,
+            "completeMissRate": 0.45454545454545453,
+            "avgHitInterval": 33,
+            "maxHitInterval": 33
+          },
+          "remainN": 510,
+          "remainMetric": {
+            "n": 510,
+            "hits": 26,
+            "hitRate": 0.050980392156862744,
+            "avgOdds": 43.3829411764706,
+            "roi": 211.98039215686276,
+            "roiExMaxHit": 196.74509803921566,
+            "roiExMax3Hits": 172.64705882352942,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 93,
+            "avgStreak": 17.925925925925927,
+            "maxDDPct": 18.235294117647058,
+            "maxDDYen100": 9300,
+            "completeMissRate": 0.6115702479338843,
+            "avgHitInterval": 18.84,
+            "maxHitInterval": 94
+          },
+          "classification": "WATCH",
+          "cutImpact": {
+            "roiChange": 12.882786263676735,
+            "streakChange": -9,
+            "ddPctChange": -0.5492362690932744,
+            "roiAfterCut": 211.98039215686276,
+            "streakAfterCut": 93,
+            "ddAfterCut": 18.235294117647058,
+            "worthCutting": false
+          },
+          "explanation": "n=33 / ROI=0.00% / 連敗=33 — 様子見。",
+          "recommendation": "△ WATCH: ROI=0.00% / 連敗=33"
+        },
+        {
+          "label": "会場: 桐生",
+          "condition": "venue='桐生'",
+          "n": 25,
+          "metric": {
+            "n": 25,
+            "hits": 1,
+            "hitRate": 0.04,
+            "avgOdds": 41.772000000000006,
+            "roi": 114.8,
+            "roiExMaxHit": 0,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 28.7
+          },
+          "dd": {
+            "maxStreakN": 15,
+            "avgStreak": 12,
+            "maxDDPct": 60,
+            "maxDDYen100": 1500,
+            "completeMissRate": 0.5833333333333334,
+            "avgHitInterval": 25,
+            "maxHitInterval": 25
+          },
+          "remainN": 518,
+          "remainMetric": {
+            "n": 518,
+            "hits": 25,
+            "hitRate": 0.04826254826254826,
+            "avgOdds": 43.357528957528956,
+            "roi": 203.1660231660232,
+            "roiExMaxHit": 188.16602316602317,
+            "roiExMax3Hits": 164.44015444015443,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 104,
+            "avgStreak": 18.96153846153846,
+            "maxDDPct": 20.077220077220076,
+            "maxDDYen100": 10400,
+            "completeMissRate": 0.6024340770791075,
+            "avgHitInterval": 20.083333333333332,
+            "maxHitInterval": 105
+          },
+          "classification": "WATCH",
+          "cutImpact": {
+            "roiChange": 4.068417272837166,
+            "streakChange": 2,
+            "ddPctChange": 1.2926896904797438,
+            "roiAfterCut": 203.1660231660232,
+            "streakAfterCut": 104,
+            "ddAfterCut": 20.077220077220076,
+            "worthCutting": false
+          },
+          "explanation": "n=25 / ROI=114.80% / 連敗=15 — 様子見。",
+          "recommendation": "△ WATCH: ROI=114.80% / 連敗=15"
+        },
+        {
+          "label": "会場: 芦屋",
+          "condition": "venue='芦屋'",
+          "n": 23,
+          "metric": {
+            "n": 23,
+            "hits": 1,
+            "hitRate": 0.043478260869565216,
+            "avgOdds": 42.1,
+            "roi": 128.69565217391306,
+            "roiExMaxHit": 0,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 29.6
+          },
+          "dd": {
+            "maxStreakN": 11,
+            "avgStreak": 11,
+            "maxDDPct": 47.82608695652174,
+            "maxDDYen100": 1100,
+            "completeMissRate": 0.6818181818181818,
+            "avgHitInterval": 23,
+            "maxHitInterval": 23
+          },
+          "remainN": 520,
+          "remainMetric": {
+            "n": 520,
+            "hits": 25,
+            "hitRate": 0.04807692307692308,
+            "avgOdds": 43.336923076923085,
+            "roi": 202.21153846153848,
+            "roiExMaxHit": 187.26923076923077,
+            "roiExMax3Hits": 163.6346153846154,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 97,
+            "avgStreak": 19.03846153846154,
+            "maxDDPct": 18.653846153846153,
+            "maxDDYen100": 9700,
+            "completeMissRate": 0.597979797979798,
+            "avgHitInterval": 20.041666666666668,
+            "maxHitInterval": 98
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": 3.1139325683524532,
+            "streakChange": -5,
+            "ddPctChange": -0.13068423289417908,
+            "roiAfterCut": 202.21153846153848,
+            "streakAfterCut": 97,
+            "ddAfterCut": 18.653846153846153,
+            "worthCutting": false
+          },
+          "explanation": "ROI 128.70% は良好だが連敗 11回 / DD 47.83% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        },
+        {
+          "label": "会場: 江戸川",
+          "condition": "venue='江戸川'",
+          "n": 28,
+          "metric": {
+            "n": 28,
+            "hits": 1,
+            "hitRate": 0.03571428571428571,
+            "avgOdds": 47.28928571428571,
+            "roi": 145.35714285714286,
+            "roiExMaxHit": 0,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 40.7
+          },
+          "dd": {
+            "maxStreakN": 16,
+            "avgStreak": 13.5,
+            "maxDDPct": 57.14285714285714,
+            "maxDDYen100": 1600,
+            "completeMissRate": 0.6296296296296297,
+            "avgHitInterval": 28,
+            "maxHitInterval": 28
+          },
+          "remainN": 515,
+          "remainMetric": {
+            "n": 515,
+            "hits": 25,
+            "hitRate": 0.04854368932038835,
+            "avgOdds": 43.06679611650487,
+            "roi": 202.01941747572815,
+            "roiExMaxHit": 186.93203883495147,
+            "roiExMax3Hits": 163.06796116504853,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 100,
+            "avgStreak": 18.846153846153847,
+            "maxDDPct": 19.41747572815534,
+            "maxDDYen100": 10000,
+            "completeMissRate": 0.6,
+            "avgHitInterval": 19.958333333333332,
+            "maxHitInterval": 101
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": 2.9218115825421194,
+            "streakChange": -2,
+            "ddPctChange": 0.6329453414150059,
+            "roiAfterCut": 202.01941747572815,
+            "streakAfterCut": 100,
+            "ddAfterCut": 19.41747572815534,
+            "worthCutting": false
+          },
+          "explanation": "ROI 145.36% は良好だが連敗 16回 / DD 57.14% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        },
+        {
+          "label": "会場: 常滑",
+          "condition": "venue='常滑'",
+          "n": 25,
+          "metric": {
+            "n": 25,
+            "hits": 1,
+            "hitRate": 0.04,
+            "avgOdds": 40.348,
+            "roi": 162.4,
+            "roiExMaxHit": 0,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 40.6
+          },
+          "dd": {
+            "maxStreakN": 22,
+            "avgStreak": 12,
+            "maxDDPct": 88,
+            "maxDDYen100": 2200,
+            "completeMissRate": 0.7083333333333334,
+            "avgHitInterval": 25,
+            "maxHitInterval": 25
+          },
+          "remainN": 518,
+          "remainMetric": {
+            "n": 518,
+            "hits": 25,
+            "hitRate": 0.04826254826254826,
+            "avgOdds": 43.426254826254834,
+            "roi": 200.86872586872587,
+            "roiExMaxHit": 185.86872586872587,
+            "roiExMax3Hits": 162.14285714285714,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 97,
+            "avgStreak": 18.96153846153846,
+            "maxDDPct": 18.725868725868725,
+            "maxDDYen100": 9700,
+            "completeMissRate": 0.5963488843813387,
+            "avgHitInterval": 20,
+            "maxHitInterval": 98
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": 1.7711199755398468,
+            "streakChange": -5,
+            "ddPctChange": -0.05866166087160707,
+            "roiAfterCut": 200.86872586872587,
+            "streakAfterCut": 97,
+            "ddAfterCut": 18.725868725868725,
+            "worthCutting": false
+          },
+          "explanation": "ROI 162.40% は良好だが連敗 22回 / DD 88.00% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        },
+        {
+          "label": "会場: 浜名湖",
+          "condition": "venue='浜名湖'",
+          "n": 43,
+          "metric": {
+            "n": 43,
+            "hits": 2,
+            "hitRate": 0.046511627906976744,
+            "avgOdds": 44.35581395348836,
+            "roi": 181.3953488372093,
+            "roiExMaxHit": 70,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 47.9
+          },
+          "dd": {
+            "maxStreakN": 20,
+            "avgStreak": 13.666666666666666,
+            "maxDDPct": 46.51162790697674,
+            "maxDDYen100": 2000,
+            "completeMissRate": 0.5609756097560976,
+            "avgHitInterval": 9,
+            "maxHitInterval": 9
+          },
+          "remainN": 500,
+          "remainMetric": {
+            "n": 500,
+            "hits": 24,
+            "hitRate": 0.048,
+            "avgOdds": 43.19240000000001,
+            "roi": 200.61999999999998,
+            "roiExMaxHit": 185.08,
+            "roiExMax3Hits": 160.5,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 99,
+            "avgStreak": 19.04,
+            "maxDDPct": 19.8,
+            "maxDDYen100": 9900,
+            "completeMissRate": 0.6050420168067226,
+            "avgHitInterval": 20.08695652173913,
+            "maxHitInterval": 100
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": 1.5223941068139482,
+            "streakChange": -3,
+            "ddPctChange": 1.0154696132596683,
+            "roiAfterCut": 200.61999999999998,
+            "streakAfterCut": 99,
+            "ddAfterCut": 19.8,
+            "worthCutting": false
+          },
+          "explanation": "ROI 181.40% は良好だが連敗 20回 / DD 46.51% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        },
+        {
+          "label": "会場: 福岡",
+          "condition": "venue='福岡'",
+          "n": 18,
+          "metric": {
+            "n": 18,
+            "hits": 1,
+            "hitRate": 0.05555555555555555,
+            "avgOdds": 39.55,
+            "roi": 198.33333333333334,
+            "roiExMaxHit": 0,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 35.7
+          },
+          "dd": {
+            "maxStreakN": 11,
+            "avgStreak": 8.5,
+            "maxDDPct": 61.111111111111114,
+            "maxDDYen100": 1100,
+            "completeMissRate": 0.5882352941176471,
+            "avgHitInterval": 18,
+            "maxHitInterval": 18
+          },
+          "remainN": 525,
+          "remainMetric": {
+            "n": 525,
+            "hits": 25,
+            "hitRate": 0.047619047619047616,
+            "avgOdds": 43.41257142857144,
+            "roi": 199.12380952380954,
+            "roiExMaxHit": 184.3238095238095,
+            "roiExMax3Hits": 160.9142857142857,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 101,
+            "avgStreak": 19.23076923076923,
+            "maxDDPct": 19.238095238095237,
+            "maxDDYen100": 10100,
+            "completeMissRate": 0.602,
+            "avgHitInterval": 20.291666666666668,
+            "maxHitInterval": 102
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": 0.026203630623513163,
+            "streakChange": -1,
+            "ddPctChange": 0.4535648513549049,
+            "roiAfterCut": 199.12380952380954,
+            "streakAfterCut": 101,
+            "ddAfterCut": 19.238095238095237,
+            "worthCutting": false
+          },
+          "explanation": "ROI 198.33% は良好だが連敗 11回 / DD 61.11% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        },
+        {
+          "label": "会場: 下関",
+          "condition": "venue='下関'",
+          "n": 32,
+          "metric": {
+            "n": 32,
+            "hits": 2,
+            "hitRate": 0.0625,
+            "avgOdds": 35.6875,
+            "roi": 211.24999999999997,
+            "roiExMaxHit": 86.875,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 39.8
+          },
+          "dd": {
+            "maxStreakN": 15,
+            "avgStreak": 10,
+            "maxDDPct": 46.875,
+            "maxDDYen100": 1500,
+            "completeMissRate": 0.5,
+            "avgHitInterval": 16,
+            "maxHitInterval": 16
+          },
+          "remainN": 511,
+          "remainMetric": {
+            "n": 511,
+            "hits": 24,
+            "hitRate": 0.046966731898238745,
+            "avgOdds": 43.760273972602754,
+            "roi": 198.3365949119374,
+            "roiExMaxHit": 183.13111545988258,
+            "roiExMax3Hits": 159.0802348336595,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 94,
+            "avgStreak": 19.48,
+            "maxDDPct": 18.395303326810176,
+            "maxDDYen100": 9400,
+            "completeMissRate": 0.6078028747433265,
+            "avgHitInterval": 20.608695652173914,
+            "maxHitInterval": 95
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": -0.7610109812486314,
+            "streakChange": -8,
+            "ddPctChange": -0.3892270599301568,
+            "roiAfterCut": 198.3365949119374,
+            "streakAfterCut": 94,
+            "ddAfterCut": 18.395303326810176,
+            "worthCutting": false
+          },
+          "explanation": "ROI 211.25% は良好だが連敗 15回 / DD 46.88% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        },
+        {
+          "label": "会場: 徳山",
+          "condition": "venue='徳山'",
+          "n": 25,
+          "metric": {
+            "n": 25,
+            "hits": 2,
+            "hitRate": 0.08,
+            "avgOdds": 30.192000000000004,
+            "roi": 243.2,
+            "roiExMaxHit": 94,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 37.3
+          },
+          "dd": {
+            "maxStreakN": 18,
+            "avgStreak": 11.5,
+            "maxDDPct": 72,
+            "maxDDYen100": 1800,
+            "completeMissRate": 0.5217391304347826,
+            "avgHitInterval": 19,
+            "maxHitInterval": 19
+          },
+          "remainN": 518,
+          "remainMetric": {
+            "n": 518,
+            "hits": 24,
+            "hitRate": 0.04633204633204633,
+            "avgOdds": 43.916409266409275,
+            "roi": 196.96911196911196,
+            "roiExMaxHit": 181.96911196911196,
+            "roiExMax3Hits": 158.24324324324326,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 96,
+            "avgStreak": 19.76,
+            "maxDDPct": 18.53281853281853,
+            "maxDDYen100": 9600,
+            "completeMissRate": 0.6052631578947368,
+            "avgHitInterval": 20.82608695652174,
+            "maxHitInterval": 97
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": -2.128493924074064,
+            "streakChange": -6,
+            "ddPctChange": -0.25171185392180107,
+            "roiAfterCut": 196.96911196911196,
+            "streakAfterCut": 96,
+            "ddAfterCut": 18.53281853281853,
+            "worthCutting": false
+          },
+          "explanation": "ROI 243.20% は良好だが連敗 18回 / DD 72.00% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        },
+        {
+          "label": "会場: 若松",
+          "condition": "venue='若松'",
+          "n": 26,
+          "metric": {
+            "n": 26,
+            "hits": 2,
+            "hitRate": 0.07692307692307693,
+            "avgOdds": 45.307692307692314,
+            "roi": 269.6153846153846,
+            "roiExMaxHit": 119.23076923076923,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 39.1
+          },
+          "dd": {
+            "maxStreakN": 14,
+            "avgStreak": 8,
+            "maxDDPct": 53.84615384615385,
+            "maxDDYen100": 1400,
+            "completeMissRate": 0.625,
+            "avgHitInterval": 2,
+            "maxHitInterval": 2
+          },
+          "remainN": 517,
+          "remainMetric": {
+            "n": 517,
+            "hits": 24,
+            "hitRate": 0.04642166344294004,
+            "avgOdds": 43.18278529980658,
+            "roi": 195.5512572533849,
+            "roiExMaxHit": 180.52224371373308,
+            "roiExMax3Hits": 156.7504835589942,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 98,
+            "avgStreak": 19.72,
+            "maxDDPct": 18.95551257253385,
+            "maxDDYen100": 9800,
+            "completeMissRate": 0.6004056795131846,
+            "avgHitInterval": 21,
+            "maxHitInterval": 99
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": -3.546348639801124,
+            "streakChange": -4,
+            "ddPctChange": 0.1709821857935161,
+            "roiAfterCut": 195.5512572533849,
+            "streakAfterCut": 98,
+            "ddAfterCut": 18.95551257253385,
+            "worthCutting": false
+          },
+          "explanation": "ROI 269.62% は良好だが連敗 14回 / DD 53.85% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        },
+        {
+          "label": "会場: 唐津",
+          "condition": "venue='唐津'",
+          "n": 31,
+          "metric": {
+            "n": 31,
+            "hits": 2,
+            "hitRate": 0.06451612903225806,
+            "avgOdds": 39.11935483870967,
+            "roi": 276.1290322580645,
+            "roiExMaxHit": 81.61290322580645,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 60.3
+          },
+          "dd": {
+            "maxStreakN": 13,
+            "avgStreak": 9.666666666666666,
+            "maxDDPct": 41.935483870967744,
+            "maxDDYen100": 1300,
+            "completeMissRate": 0.6896551724137931,
+            "avgHitInterval": 10,
+            "maxHitInterval": 10
+          },
+          "remainN": 512,
+          "remainMetric": {
+            "n": 512,
+            "hits": 24,
+            "hitRate": 0.046875,
+            "avgOdds": 43.53671875000001,
+            "roi": 194.43359375,
+            "roiExMaxHit": 179.2578125,
+            "roiExMax3Hits": 155.33203125,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 95,
+            "avgStreak": 19.52,
+            "maxDDPct": 18.5546875,
+            "maxDDYen100": 9500,
+            "completeMissRate": 0.5963114754098361,
+            "avgHitInterval": 20.652173913043477,
+            "maxHitInterval": 96
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": -4.664012143186028,
+            "streakChange": -7,
+            "ddPctChange": -0.22984288674033237,
+            "roiAfterCut": 194.43359375,
+            "streakAfterCut": 95,
+            "ddAfterCut": 18.5546875,
+            "worthCutting": false
+          },
+          "explanation": "ROI 276.13% は良好だが連敗 13回 / DD 41.94% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        },
+        {
+          "label": "会場: びわこ",
+          "condition": "venue='びわこ'",
+          "n": 28,
+          "metric": {
+            "n": 28,
+            "hits": 2,
+            "hitRate": 0.07142857142857142,
+            "avgOdds": 44.50000000000001,
+            "roi": 330,
+            "roiExMaxHit": 164.28571428571428,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 46.4
+          },
+          "dd": {
+            "maxStreakN": 21,
+            "avgStreak": 8.666666666666666,
+            "maxDDPct": 75,
+            "maxDDYen100": 2100,
+            "completeMissRate": 0.6538461538461539,
+            "avgHitInterval": 4,
+            "maxHitInterval": 4
+          },
+          "remainN": 515,
+          "remainMetric": {
+            "n": 515,
+            "hits": 24,
+            "hitRate": 0.04660194174757282,
+            "avgOdds": 43.21844660194176,
+            "roi": 191.98058252427185,
+            "roiExMaxHit": 176.89320388349518,
+            "roiExMax3Hits": 153.02912621359224,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 92,
+            "avgStreak": 19.64,
+            "maxDDPct": 17.864077669902912,
+            "maxDDYen100": 9200,
+            "completeMissRate": 0.5987780040733197,
+            "avgHitInterval": 20.782608695652176,
+            "maxHitInterval": 93
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": -7.117023368914175,
+            "streakChange": -10,
+            "ddPctChange": -0.9204527168374206,
+            "roiAfterCut": 191.98058252427185,
+            "streakAfterCut": 92,
+            "ddAfterCut": 17.864077669902912,
+            "worthCutting": false
+          },
+          "explanation": "ROI 330.00% は良好だが連敗 21回 / DD 75.00% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        },
+        {
+          "label": "会場: 蒲郡",
+          "condition": "venue='蒲郡'",
+          "n": 42,
+          "metric": {
+            "n": 42,
+            "hits": 3,
+            "hitRate": 0.07142857142857142,
+            "avgOdds": 47.271428571428565,
+            "roi": 343.5714285714286,
+            "roiExMaxHit": 194.52380952380952,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 62.6
+          },
+          "dd": {
+            "maxStreakN": 26,
+            "avgStreak": 9.75,
+            "maxDDPct": 61.904761904761905,
+            "maxDDYen100": 2600,
+            "completeMissRate": 0.5384615384615384,
+            "avgHitInterval": 18,
+            "maxHitInterval": 27
+          },
+          "remainN": 501,
+          "remainMetric": {
+            "n": 501,
+            "hits": 23,
+            "hitRate": 0.04590818363273453,
+            "avgOdds": 42.95029940119762,
+            "roi": 186.98602794411178,
+            "roiExMaxHit": 171.47704590818367,
+            "roiExMax3Hits": 147.48502994011977,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 90,
+            "avgStreak": 19.916666666666668,
+            "maxDDPct": 17.964071856287426,
+            "maxDDYen100": 9000,
+            "completeMissRate": 0.606694560669456,
+            "avgHitInterval": 20.681818181818183,
+            "maxHitInterval": 91
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": -12.111577949074245,
+            "streakChange": -12,
+            "ddPctChange": -0.8204585304529068,
+            "roiAfterCut": 186.98602794411178,
+            "streakAfterCut": 90,
+            "ddAfterCut": 17.964071856287426,
+            "worthCutting": false
+          },
+          "explanation": "ROI 343.57% は良好だが連敗 26回 / DD 61.90% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        },
+        {
+          "label": "会場: 児島",
+          "condition": "venue='児島'",
+          "n": 15,
+          "metric": {
+            "n": 15,
+            "hits": 1,
+            "hitRate": 0.06666666666666667,
+            "avgOdds": 53.41333333333335,
+            "roi": 367.3333333333333,
+            "roiExMaxHit": 0,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 55.1
+          },
+          "dd": {
+            "maxStreakN": 14,
+            "avgStreak": 14,
+            "maxDDPct": 93.33333333333333,
+            "maxDDYen100": 1400,
+            "completeMissRate": 0.42857142857142855,
+            "avgHitInterval": 15,
+            "maxHitInterval": 15
+          },
+          "remainN": 528,
+          "remainMetric": {
+            "n": 528,
+            "hits": 25,
+            "hitRate": 0.04734848484848485,
+            "avgOdds": 42.9967803030303,
+            "roi": 194.3181818181818,
+            "roiExMaxHit": 179.60227272727275,
+            "roiExMax3Hits": 156.32575757575756,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 101,
+            "avgStreak": 19.346153846153847,
+            "maxDDPct": 19.12878787878788,
+            "maxDDYen100": 10100,
+            "completeMissRate": 0.6063618290258449,
+            "avgHitInterval": 20.375,
+            "maxHitInterval": 102
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": -4.779424075004215,
+            "streakChange": -1,
+            "ddPctChange": 0.3442574920475465,
+            "roiAfterCut": 194.3181818181818,
+            "streakAfterCut": 101,
+            "ddAfterCut": 19.12878787878788,
+            "worthCutting": false
+          },
+          "explanation": "ROI 367.33% は良好だが連敗 14回 / DD 93.33% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        },
+        {
+          "label": "会場: 平和島",
+          "condition": "venue='平和島'",
+          "n": 34,
+          "metric": {
+            "n": 34,
+            "hits": 2,
+            "hitRate": 0.058823529411764705,
+            "avgOdds": 62.7,
+            "roi": 404.70588235294116,
+            "roiExMaxHit": 176.1764705882353,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 77.7
+          },
+          "dd": {
+            "maxStreakN": 17,
+            "avgStreak": 10.666666666666666,
+            "maxDDPct": 50,
+            "maxDDYen100": 1700,
+            "completeMissRate": 0.71875,
+            "avgHitInterval": 18,
+            "maxHitInterval": 18
+          },
+          "remainN": 509,
+          "remainMetric": {
+            "n": 509,
+            "hits": 24,
+            "hitRate": 0.047151277013752456,
+            "avgOdds": 41.98762278978391,
+            "roi": 185.36345776031433,
+            "roiExMaxHit": 173.06483300589392,
+            "roiExMax3Hits": 150.39292730844792,
+            "maxHitOdds": 62.6
+          },
+          "remainDd": {
+            "maxStreakN": 100,
+            "avgStreak": 19.4,
+            "maxDDPct": 19.646365422396855,
+            "maxDDYen100": 10000,
+            "completeMissRate": 0.5938144329896907,
+            "avgHitInterval": 20.565217391304348,
+            "maxHitInterval": 101
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": -13.734148132871695,
+            "streakChange": -2,
+            "ddPctChange": 0.8618350356565223,
+            "roiAfterCut": 185.36345776031433,
+            "streakAfterCut": 100,
+            "ddAfterCut": 19.646365422396855,
+            "worthCutting": false
+          },
+          "explanation": "ROI 404.71% は良好だが連敗 17回 / DD 50.00% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        },
+        {
+          "label": "会場: 丸亀",
+          "condition": "venue='丸亀'",
+          "n": 19,
+          "metric": {
+            "n": 19,
+            "hits": 3,
+            "hitRate": 0.15789473684210525,
+            "avgOdds": 39.931578947368415,
+            "roi": 601.578947368421,
+            "roiExMaxHit": 399.47368421052636,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 38.4
+          },
+          "dd": {
+            "maxStreakN": 8,
+            "avgStreak": 4,
+            "maxDDPct": 42.10526315789473,
+            "maxDDYen100": 800,
+            "completeMissRate": 0.5625,
+            "avgHitInterval": 2.5,
+            "maxHitInterval": 3
+          },
+          "remainN": 524,
+          "remainMetric": {
+            "n": 524,
+            "hits": 23,
+            "hitRate": 0.04389312977099236,
+            "avgOdds": 43.406106870229,
+            "roi": 184.50381679389312,
+            "roiExMaxHit": 169.67557251908397,
+            "roiExMax3Hits": 146.22137404580153,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 96,
+            "avgStreak": 20.875,
+            "maxDDPct": 18.3206106870229,
+            "maxDDYen100": 9600,
+            "completeMissRate": 0.6027944111776448,
+            "avgHitInterval": 22.045454545454547,
+            "maxHitInterval": 97
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": -14.593789099292906,
+            "streakChange": -6,
+            "ddPctChange": -0.4639196997174331,
+            "roiAfterCut": 184.50381679389312,
+            "streakAfterCut": 96,
+            "ddAfterCut": 18.3206106870229,
+            "worthCutting": false
+          },
+          "explanation": "ROI 601.58% は良好だが連敗 8回 / DD 42.11% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        }
+      ]
+    },
+    {
+      "name": "レースNo別",
+      "subgroups": [
+        {
+          "label": "R1",
+          "condition": "race_no=1",
+          "n": 19,
+          "metric": {
+            "n": 19,
+            "hits": 0,
+            "hitRate": 0,
+            "avgOdds": 41.30526315789474,
+            "roi": 0,
+            "roiExMaxHit": 0,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 0
+          },
+          "dd": {
+            "maxStreakN": 19,
+            "avgStreak": 19,
+            "maxDDPct": 100,
+            "maxDDYen100": 1900,
+            "completeMissRate": 0.47368421052631576,
+            "avgHitInterval": 19,
+            "maxHitInterval": 19
+          },
+          "remainN": 524,
+          "remainMetric": {
+            "n": 524,
+            "hits": 26,
+            "hitRate": 0.04961832061068702,
+            "avgOdds": 43.356297709923666,
+            "roi": 206.3167938931298,
+            "roiExMaxHit": 191.4885496183206,
+            "roiExMax3Hits": 168.0343511450382,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 98,
+            "avgStreak": 18.444444444444443,
+            "maxDDPct": 18.702290076335878,
+            "maxDDYen100": 9800,
+            "completeMissRate": 0.606425702811245,
+            "avgHitInterval": 19.44,
+            "maxHitInterval": 99
+          },
+          "classification": "WATCH",
+          "cutImpact": {
+            "roiChange": 7.2191879999437845,
+            "streakChange": -4,
+            "ddPctChange": -0.08224031040445468,
+            "roiAfterCut": 206.3167938931298,
+            "streakAfterCut": 98,
+            "ddAfterCut": 18.702290076335878,
+            "worthCutting": false
+          },
+          "explanation": "n=19 / ROI=0.00% / 連敗=19 — 様子見。",
+          "recommendation": "△ WATCH: ROI=0.00% / 連敗=19"
+        },
+        {
+          "label": "R5",
+          "condition": "race_no=5",
+          "n": 55,
+          "metric": {
+            "n": 55,
+            "hits": 1,
+            "hitRate": 0.01818181818181818,
+            "avgOdds": 41.51090909090909,
+            "roi": 113.81818181818181,
+            "roiExMaxHit": 0,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 62.6
+          },
+          "dd": {
+            "maxStreakN": 37,
+            "avgStreak": 27,
+            "maxDDPct": 67.27272727272727,
+            "maxDDYen100": 3700,
+            "completeMissRate": 0.5185185185185185,
+            "avgHitInterval": 55,
+            "maxHitInterval": 55
+          },
+          "remainN": 488,
+          "remainMetric": {
+            "n": 488,
+            "hits": 25,
+            "hitRate": 0.05122950819672131,
+            "avgOdds": 43.48442622950822,
+            "roi": 208.7090163934426,
+            "roiExMaxHit": 192.78688524590163,
+            "roiExMax3Hits": 168.15573770491804,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 90,
+            "avgStreak": 17.807692307692307,
+            "maxDDPct": 18.442622950819672,
+            "maxDDYen100": 9000,
+            "completeMissRate": 0.6112311015118791,
+            "avgHitInterval": 18.833333333333332,
+            "maxHitInterval": 91
+          },
+          "classification": "WATCH",
+          "cutImpact": {
+            "roiChange": 9.611410500256568,
+            "streakChange": -12,
+            "ddPctChange": -0.3419074359206604,
+            "roiAfterCut": 208.7090163934426,
+            "streakAfterCut": 90,
+            "ddAfterCut": 18.442622950819672,
+            "worthCutting": false
+          },
+          "explanation": "n=55 / ROI=113.82% / 連敗=37 — 様子見。",
+          "recommendation": "△ WATCH: ROI=113.82% / 連敗=37"
+        },
+        {
+          "label": "R8",
+          "condition": "race_no=8",
+          "n": 82,
+          "metric": {
+            "n": 82,
+            "hits": 2,
+            "hitRate": 0.024390243902439025,
+            "avgOdds": 41.67926829268293,
+            "roi": 131.9512195121951,
+            "roiExMaxHit": 58.41463414634146,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 60.3
+          },
+          "dd": {
+            "maxStreakN": 34,
+            "avgStreak": 26.666666666666668,
+            "maxDDPct": 41.46341463414634,
+            "maxDDYen100": 3400,
+            "completeMissRate": 0.5,
+            "avgHitInterval": 33,
+            "maxHitInterval": 33
+          },
+          "remainN": 461,
+          "remainMetric": {
+            "n": 461,
+            "hits": 24,
+            "hitRate": 0.052060737527114966,
+            "avgOdds": 43.57006507592192,
+            "roi": 211.0412147505423,
+            "roiExMaxHit": 194.18655097613885,
+            "roiExMax3Hits": 167.6138828633406,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 84,
+            "avgStreak": 18.208333333333332,
+            "maxDDPct": 18.22125813449024,
+            "maxDDYen100": 8400,
+            "completeMissRate": 0.620137299771167,
+            "avgHitInterval": 18.434782608695652,
+            "maxHitInterval": 85
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": 11.943608857356281,
+            "streakChange": -18,
+            "ddPctChange": -0.5632722522500941,
+            "roiAfterCut": 211.0412147505423,
+            "streakAfterCut": 84,
+            "ddAfterCut": 18.22125813449024,
+            "worthCutting": false
+          },
+          "explanation": "ROI 131.95% は良好だが連敗 34回 / DD 41.46% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        },
+        {
+          "label": "R6",
+          "condition": "race_no=6",
+          "n": 79,
+          "metric": {
+            "n": 79,
+            "hits": 3,
+            "hitRate": 0.0379746835443038,
+            "avgOdds": 45.28481012658226,
+            "roi": 133.0379746835443,
+            "roiExMaxHit": 82.65822784810129,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 39.8
+          },
+          "dd": {
+            "maxStreakN": 26,
+            "avgStreak": 19,
+            "maxDDPct": 32.91139240506329,
+            "maxDDYen100": 2600,
+            "completeMissRate": 0.6973684210526315,
+            "avgHitInterval": 16,
+            "maxHitInterval": 27
+          },
+          "remainN": 464,
+          "remainMetric": {
+            "n": 464,
+            "hits": 23,
+            "hitRate": 0.04956896551724138,
+            "avgOdds": 42.94396551724139,
+            "roi": 210.3448275862069,
+            "roiExMaxHit": 193.59913793103448,
+            "roiExMax3Hits": 167.1120689655172,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 86,
+            "avgStreak": 18.375,
+            "maxDDPct": 18.53448275862069,
+            "maxDDYen100": 8600,
+            "completeMissRate": 0.5850340136054422,
+            "avgHitInterval": 19.59090909090909,
+            "maxHitInterval": 87
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": 11.247221693020862,
+            "streakChange": -16,
+            "ddPctChange": -0.250047628119642,
+            "roiAfterCut": 210.3448275862069,
+            "streakAfterCut": 86,
+            "ddAfterCut": 18.53448275862069,
+            "worthCutting": false
+          },
+          "explanation": "ROI 133.04% は良好だが連敗 26回 / DD 32.91% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        },
+        {
+          "label": "R4",
+          "condition": "race_no=4",
+          "n": 85,
+          "metric": {
+            "n": 85,
+            "hits": 3,
+            "hitRate": 0.03529411764705882,
+            "avgOdds": 44.53411764705882,
+            "roi": 152.11764705882354,
+            "roiExMaxHit": 92.23529411764707,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 50.9
+          },
+          "dd": {
+            "maxStreakN": 44,
+            "avgStreak": 20.5,
+            "maxDDPct": 51.76470588235295,
+            "maxDDYen100": 4400,
+            "completeMissRate": 0.5609756097560976,
+            "avgHitInterval": 32,
+            "maxHitInterval": 45
+          },
+          "remainN": 458,
+          "remainMetric": {
+            "n": 458,
+            "hits": 23,
+            "hitRate": 0.05021834061135371,
+            "avgOdds": 43.05262008733626,
+            "roi": 207.81659388646284,
+            "roiExMaxHit": 190.85152838427948,
+            "roiExMax3Hits": 164.0174672489083,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 92,
+            "avgStreak": 18.125,
+            "maxDDPct": 20.087336244541483,
+            "maxDDYen100": 9200,
+            "completeMissRate": 0.6091954022988506,
+            "avgHitInterval": 19.227272727272727,
+            "maxHitInterval": 93
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": 8.718987993276812,
+            "streakChange": -10,
+            "ddPctChange": 1.3028058578011503,
+            "roiAfterCut": 207.81659388646284,
+            "streakAfterCut": 92,
+            "ddAfterCut": 20.087336244541483,
+            "worthCutting": false
+          },
+          "explanation": "ROI 152.12% は良好だが連敗 44回 / DD 51.76% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        },
+        {
+          "label": "R3",
+          "condition": "race_no=3",
+          "n": 61,
+          "metric": {
+            "n": 61,
+            "hits": 3,
+            "hitRate": 0.04918032786885246,
+            "avgOdds": 44.221311475409834,
+            "roi": 223.7704918032787,
+            "roiExMaxHit": 96.39344262295081,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 77.7
+          },
+          "dd": {
+            "maxStreakN": 27,
+            "avgStreak": 19.333333333333332,
+            "maxDDPct": 44.26229508196721,
+            "maxDDYen100": 2700,
+            "completeMissRate": 0.6896551724137931,
+            "avgHitInterval": 6,
+            "maxHitInterval": 11
+          },
+          "remainN": 482,
+          "remainMetric": {
+            "n": 482,
+            "hits": 23,
+            "hitRate": 0.04771784232365145,
+            "avgOdds": 43.16597510373447,
+            "roi": 195.9751037344398,
+            "roiExMaxHit": 182.98755186721988,
+            "roiExMax3Hits": 158.04979253112032,
+            "maxHitOdds": 62.6
+          },
+          "remainDd": {
+            "maxStreakN": 117,
+            "avgStreak": 19.125,
+            "maxDDPct": 24.273858921161825,
+            "maxDDYen100": 11700,
+            "completeMissRate": 0.5904139433551199,
+            "avgHitInterval": 20.40909090909091,
+            "maxHitInterval": 118
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": -3.122502158746215,
+            "streakChange": 15,
+            "ddPctChange": 5.489328534421492,
+            "roiAfterCut": 195.9751037344398,
+            "streakAfterCut": 117,
+            "ddAfterCut": 24.273858921161825,
+            "worthCutting": false
+          },
+          "explanation": "ROI 223.77% は良好だが連敗 27回 / DD 44.26% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        },
+        {
+          "label": "R9",
+          "condition": "race_no=9",
+          "n": 38,
+          "metric": {
+            "n": 38,
+            "hits": 3,
+            "hitRate": 0.07894736842105263,
+            "avgOdds": 41.736842105263165,
+            "roi": 280.2631578947369,
+            "roiExMaxHit": 179.73684210526315,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 38.2
+          },
+          "dd": {
+            "maxStreakN": 17,
+            "avgStreak": 8.75,
+            "maxDDPct": 44.73684210526316,
+            "maxDDYen100": 1700,
+            "completeMissRate": 0.6,
+            "avgHitInterval": 10.5,
+            "maxHitInterval": 18
+          },
+          "remainN": 505,
+          "remainMetric": {
+            "n": 505,
+            "hits": 23,
+            "hitRate": 0.04554455445544554,
+            "avgOdds": 43.4009900990099,
+            "roi": 192.99009900990097,
+            "roiExMaxHit": 177.6039603960396,
+            "roiExMax3Hits": 153.26732673267327,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 95,
+            "avgStreak": 20.083333333333332,
+            "maxDDPct": 18.81188118811881,
+            "maxDDYen100": 9500,
+            "completeMissRate": 0.6016597510373444,
+            "avgHitInterval": 21.272727272727273,
+            "maxHitInterval": 96
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": -6.107506883285055,
+            "streakChange": -7,
+            "ddPctChange": 0.02735080137847845,
+            "roiAfterCut": 192.99009900990097,
+            "streakAfterCut": 95,
+            "ddAfterCut": 18.81188118811881,
+            "worthCutting": false
+          },
+          "explanation": "ROI 280.26% は良好だが連敗 17回 / DD 44.74% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        },
+        {
+          "label": "R2",
+          "condition": "race_no=2",
+          "n": 56,
+          "metric": {
+            "n": 56,
+            "hits": 5,
+            "hitRate": 0.08928571428571429,
+            "avgOdds": 42.769642857142856,
+            "roi": 305.17857142857144,
+            "roiExMaxHit": 222.32142857142856,
+            "roiExMax3Hits": 94.82142857142858,
+            "maxHitOdds": 46.4
+          },
+          "dd": {
+            "maxStreakN": 24,
+            "avgStreak": 10.2,
+            "maxDDPct": 42.857142857142854,
+            "maxDDYen100": 2400,
+            "completeMissRate": 0.6470588235294118,
+            "avgHitInterval": 11.75,
+            "maxHitInterval": 25
+          },
+          "remainN": 487,
+          "remainMetric": {
+            "n": 487,
+            "hits": 21,
+            "hitRate": 0.043121149897330596,
+            "avgOdds": 43.34373716632446,
+            "roi": 186.89938398357293,
+            "roiExMaxHit": 170.94455852156062,
+            "roiExMax3Hits": 145.70841889117045,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 92,
+            "avgStreak": 21.181818181818183,
+            "maxDDPct": 18.8911704312115,
+            "maxDDYen100": 9200,
+            "completeMissRate": 0.5965665236051502,
+            "avgHitInterval": 19.5,
+            "maxHitInterval": 93
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": -12.198221909613096,
+            "streakChange": -10,
+            "ddPctChange": 0.10664004447116682,
+            "roiAfterCut": 186.89938398357293,
+            "streakAfterCut": 92,
+            "ddAfterCut": 18.8911704312115,
+            "worthCutting": false
+          },
+          "explanation": "ROI 305.18% は良好だが連敗 24回 / DD 42.86% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        },
+        {
+          "label": "R7",
+          "condition": "race_no=7",
+          "n": 68,
+          "metric": {
+            "n": 68,
+            "hits": 6,
+            "hitRate": 0.08823529411764706,
+            "avgOdds": 43.77058823529413,
+            "roi": 385.29411764705884,
+            "roiExMaxHit": 297.20588235294116,
+            "roiExMax3Hits": 148.52941176470588,
+            "maxHitOdds": 59.9
+          },
+          "dd": {
+            "maxStreakN": 20,
+            "avgStreak": 10.333333333333334,
+            "maxDDPct": 29.411764705882355,
+            "maxDDYen100": 2000,
+            "completeMissRate": 0.6612903225806451,
+            "avgHitInterval": 10,
+            "maxHitInterval": 21
+          },
+          "remainN": 475,
+          "remainMetric": {
+            "n": 475,
+            "hits": 20,
+            "hitRate": 0.042105263157894736,
+            "avgOdds": 43.214947368421065,
+            "roi": 172.4421052631579,
+            "roiExMaxHit": 156.0842105263158,
+            "roiExMax3Hits": 130.21052631578945,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 117,
+            "avgStreak": 21.666666666666668,
+            "maxDDPct": 24.63157894736842,
+            "maxDDYen100": 11700,
+            "completeMissRate": 0.5934065934065934,
+            "avgHitInterval": 23.36842105263158,
+            "maxHitInterval": 118
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": -26.655500630028115,
+            "streakChange": 15,
+            "ddPctChange": 5.847048560628089,
+            "roiAfterCut": 172.4421052631579,
+            "streakAfterCut": 117,
+            "ddAfterCut": 24.63157894736842,
+            "worthCutting": false
+          },
+          "explanation": "ROI 385.29% は良好だが連敗 20回 / DD 29.41% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        }
+      ]
+    },
+    {
+      "name": "オッズ帯別",
+      "subgroups": [
+        {
+          "label": "odds>=80",
+          "condition": "odds>=80",
+          "n": 3,
+          "metric": {
+            "n": 3,
+            "hits": 0,
+            "hitRate": 0,
+            "avgOdds": 89.60000000000001,
+            "roi": 0,
+            "roiExMaxHit": 0,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 0
+          },
+          "dd": {
+            "maxStreakN": 3,
+            "avgStreak": 3,
+            "maxDDPct": 100,
+            "maxDDYen100": 300,
+            "completeMissRate": 1,
+            "avgHitInterval": 3,
+            "maxHitInterval": 3
+          },
+          "remainN": 540,
+          "remainMetric": {
+            "n": 540,
+            "hits": 26,
+            "hitRate": 0.04814814814814815,
+            "avgOdds": 43.02722222222222,
+            "roi": 200.20370370370375,
+            "roiExMaxHit": 185.8148148148148,
+            "roiExMax3Hits": 163.05555555555554,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 102,
+            "avgStreak": 19.037037037037038,
+            "maxDDPct": 18.88888888888889,
+            "maxDDYen100": 10200,
+            "completeMissRate": 0.5992217898832685,
+            "avgHitInterval": 20.04,
+            "maxHitInterval": 103
+          },
+          "classification": "INSUFFICIENT",
+          "cutImpact": {
+            "roiChange": 1.1060978105177242,
+            "streakChange": 0,
+            "ddPctChange": 0.10435850214855691,
+            "roiAfterCut": 200.20370370370375,
+            "streakAfterCut": 102,
+            "ddAfterCut": 18.88888888888889,
+            "worthCutting": false
+          },
+          "explanation": "n=3 / ROI=0.00% / 連敗=3 — 様子見。",
+          "recommendation": "ℹ️ n<15: データ不足"
+        },
+        {
+          "label": "30<=odds<50",
+          "condition": "30<=odds<50",
+          "n": 350,
+          "metric": {
+            "n": 350,
+            "hits": 15,
+            "hitRate": 0.04285714285714286,
+            "avgOdds": 39.4617142857143,
+            "roi": 165.6285714285714,
+            "roiExMaxHit": 151.94285714285712,
+            "roiExMax3Hits": 125.54285714285716,
+            "maxHitOdds": 47.9
+          },
+          "dd": {
+            "maxStreakN": 72,
+            "avgStreak": 20.9375,
+            "maxDDPct": 20.57142857142857,
+            "maxDDYen100": 7200,
+            "completeMissRate": 0.5880597014925373,
+            "avgHitInterval": 22.428571428571427,
+            "maxHitInterval": 73
+          },
+          "remainN": 193,
+          "remainMetric": {
+            "n": 193,
+            "hits": 11,
+            "hitRate": 0.05699481865284974,
+            "avgOdds": 50.217098445595866,
+            "roi": 259.79274611398966,
+            "roiExMaxHit": 219.5336787564767,
+            "roiExMax3Hits": 155.85492227979276,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 36,
+            "avgStreak": 15.166666666666666,
+            "maxDDPct": 18.65284974093264,
+            "maxDDYen100": 3600,
+            "completeMissRate": 0.6263736263736264,
+            "avgHitInterval": 14,
+            "maxHitInterval": 37
+          },
+          "classification": "CUT_CANDIDATE",
+          "cutImpact": {
+            "roiChange": 60.69514022080364,
+            "streakChange": -66,
+            "ddPctChange": -0.13168064580769112,
+            "roiAfterCut": 259.79274611398966,
+            "streakAfterCut": 36,
+            "ddAfterCut": 18.65284974093264,
+            "worthCutting": true
+          },
+          "explanation": "除外することでROI 259.79%、連敗 36回、DD 18.65% に改善。ROI低下は 60.70% 以内。",
+          "recommendation": "✂️ CUT推奨: 除外後ROI=259.79% / 連敗=36 / DD=18.65%"
+        },
+        {
+          "label": "50<=odds<80",
+          "condition": "50<=odds<80",
+          "n": 141,
+          "metric": {
+            "n": 141,
+            "hits": 6,
+            "hitRate": 0.0425531914893617,
+            "avgOdds": 57.57304964539005,
+            "roi": 259.92907801418437,
+            "roiExMaxHit": 204.822695035461,
+            "roiExMax3Hits": 117.65957446808511,
+            "maxHitOdds": 77.7
+          },
+          "dd": {
+            "maxStreakN": 37,
+            "avgStreak": 19.285714285714285,
+            "maxDDPct": 26.24113475177305,
+            "maxDDYen100": 3700,
+            "completeMissRate": 0.6814814814814815,
+            "avgHitInterval": 18.6,
+            "maxHitInterval": 38
+          },
+          "remainN": 402,
+          "remainMetric": {
+            "n": 402,
+            "hits": 20,
+            "hitRate": 0.04975124378109453,
+            "avgOdds": 38.27288557213933,
+            "roi": 177.76119402985074,
+            "roiExMaxHit": 165.8457711442786,
+            "roiExMax3Hits": 142.86069651741292,
+            "maxHitOdds": 47.9
+          },
+          "remainDd": {
+            "maxStreakN": 80,
+            "avgStreak": 18.19047619047619,
+            "maxDDPct": 19.900497512437813,
+            "maxDDYen100": 8000,
+            "completeMissRate": 0.5732984293193717,
+            "avgHitInterval": 19.157894736842106,
+            "maxHitInterval": 81
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": -21.336411863335286,
+            "streakChange": -22,
+            "ddPctChange": 1.1159671256974804,
+            "roiAfterCut": 177.76119402985074,
+            "streakAfterCut": 80,
+            "ddAfterCut": 19.900497512437813,
+            "worthCutting": false
+          },
+          "explanation": "ROI 259.93% は良好だが連敗 37回 / DD 26.24% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        },
+        {
+          "label": "odds<30",
+          "condition": "odds<30",
+          "n": 49,
+          "metric": {
+            "n": 49,
+            "hits": 5,
+            "hitRate": 0.10204081632653061,
+            "avgOdds": 26.63877551020409,
+            "roi": 275.3061224489795,
+            "roiExMaxHit": 214.89795918367344,
+            "roiExMax3Hits": 99.59183673469387,
+            "maxHitOdds": 29.6
+          },
+          "dd": {
+            "maxStreakN": 20,
+            "avgStreak": 7.333333333333333,
+            "maxDDPct": 40.816326530612244,
+            "maxDDYen100": 2000,
+            "completeMissRate": 0.4318181818181818,
+            "avgHitInterval": 9.5,
+            "maxHitInterval": 21
+          },
+          "remainN": 494,
+          "remainMetric": {
+            "n": 494,
+            "hits": 21,
+            "hitRate": 0.04251012145748988,
+            "avgOdds": 44.935627530364364,
+            "roi": 191.53846153846155,
+            "roiExMaxHit": 175.8097165991903,
+            "roiExMax3Hits": 150.93117408906883,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 95,
+            "avgStreak": 21.5,
+            "maxDDPct": 19.230769230769234,
+            "maxDDYen100": 9500,
+            "completeMissRate": 0.6173361522198731,
+            "avgHitInterval": 22.85,
+            "maxHitInterval": 96
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": -7.559144354724481,
+            "streakChange": -7,
+            "ddPctChange": 0.4462388440289011,
+            "roiAfterCut": 191.53846153846155,
+            "streakAfterCut": 95,
+            "ddAfterCut": 19.230769230769234,
+            "worthCutting": false
+          },
+          "explanation": "ROI 275.31% は良好だが連敗 20回 / DD 40.82% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        }
+      ]
+    },
+    {
+      "name": "wind帯別",
+      "subgroups": [
+        {
+          "label": "wind>=8",
+          "condition": "wind>=8",
+          "n": 26,
+          "metric": {
+            "n": 26,
+            "hits": 1,
+            "hitRate": 0.038461538461538464,
+            "avgOdds": 42.76538461538462,
+            "roi": 147.69230769230768,
+            "roiExMaxHit": 0,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 38.4
+          },
+          "dd": {
+            "maxStreakN": 21,
+            "avgStreak": 12.5,
+            "maxDDPct": 80.76923076923077,
+            "maxDDYen100": 2100,
+            "completeMissRate": 0.72,
+            "avgHitInterval": 26,
+            "maxHitInterval": 26
+          },
+          "remainN": 517,
+          "remainMetric": {
+            "n": 517,
+            "hits": 25,
+            "hitRate": 0.048355899419729204,
+            "avgOdds": 43.31063829787235,
+            "roi": 201.68278529980657,
+            "roiExMaxHit": 186.65377176015474,
+            "roiExMax3Hits": 162.88201160541587,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 100,
+            "avgStreak": 18.923076923076923,
+            "maxDDPct": 19.342359767891683,
+            "maxDDYen100": 10000,
+            "completeMissRate": 0.5955284552845529,
+            "avgHitInterval": 19.916666666666668,
+            "maxHitInterval": 101
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": 2.58517940662054,
+            "streakChange": -2,
+            "ddPctChange": 0.5578293811513504,
+            "roiAfterCut": 201.68278529980657,
+            "streakAfterCut": 100,
+            "ddAfterCut": 19.342359767891683,
+            "worthCutting": false
+          },
+          "explanation": "ROI 147.69% は良好だが連敗 21回 / DD 80.77% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        },
+        {
+          "label": "wind 3-5",
+          "condition": "3<=wind<5",
+          "n": 390,
+          "metric": {
+            "n": 390,
+            "hits": 17,
+            "hitRate": 0.04358974358974359,
+            "avgOdds": 42.79487179487182,
+            "roi": 174.41025641025644,
+            "roiExMaxHit": 158.35897435897436,
+            "roiExMax3Hits": 128.87179487179486,
+            "maxHitOdds": 62.6
+          },
+          "dd": {
+            "maxStreakN": 84,
+            "avgStreak": 20.72222222222222,
+            "maxDDPct": 21.53846153846154,
+            "maxDDYen100": 8400,
+            "completeMissRate": 0.5844504021447721,
+            "avgHitInterval": 21.8125,
+            "maxHitInterval": 85
+          },
+          "remainN": 153,
+          "remainMetric": {
+            "n": 153,
+            "hits": 9,
+            "hitRate": 0.058823529411764705,
+            "avgOdds": 44.532679738562095,
+            "roi": 262.0261437908497,
+            "roiExMaxHit": 211.24183006535952,
+            "roiExMax3Hits": 140.52287581699346,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 32,
+            "avgStreak": 14.4,
+            "maxDDPct": 20.915032679738562,
+            "maxDDYen100": 3200,
+            "completeMissRate": 0.6458333333333334,
+            "avgHitInterval": 18.25,
+            "maxHitInterval": 33
+          },
+          "classification": "CUT_CANDIDATE",
+          "cutImpact": {
+            "roiChange": 62.92853789766366,
+            "streakChange": -70,
+            "ddPctChange": 2.13050229299823,
+            "roiAfterCut": 262.0261437908497,
+            "streakAfterCut": 32,
+            "ddAfterCut": 20.915032679738562,
+            "worthCutting": true
+          },
+          "explanation": "除外することでROI 262.03%、連敗 32回、DD 20.92% に改善。ROI低下は 62.93% 以内。",
+          "recommendation": "✂️ CUT推奨: 除外後ROI=262.03% / 連敗=32 / DD=20.92%"
+        },
+        {
+          "label": "wind 5-8",
+          "condition": "5<=wind<8",
+          "n": 127,
+          "metric": {
+            "n": 127,
+            "hits": 8,
+            "hitRate": 0.06299212598425197,
+            "avgOdds": 44.89448818897637,
+            "roi": 285.43307086614175,
+            "roiExMaxHit": 224.25196850393704,
+            "roiExMax3Hits": 139.0551181102362,
+            "maxHitOdds": 77.7
+          },
+          "dd": {
+            "maxStreakN": 29,
+            "avgStreak": 13.222222222222221,
+            "maxDDPct": 22.83464566929134,
+            "maxDDYen100": 2900,
+            "completeMissRate": 0.6302521008403361,
+            "avgHitInterval": 17.142857142857142,
+            "maxHitInterval": 30
+          },
+          "remainN": 416,
+          "remainMetric": {
+            "n": 416,
+            "hits": 18,
+            "hitRate": 0.04326923076923077,
+            "avgOdds": 42.79302884615385,
+            "roi": 172.7403846153846,
+            "roiExMaxHit": 157.69230769230768,
+            "roiExMax3Hits": 130.0480769230769,
+            "maxHitOdds": 62.6
+          },
+          "remainDd": {
+            "maxStreakN": 86,
+            "avgStreak": 20.94736842105263,
+            "maxDDPct": 20.673076923076923,
+            "maxDDYen100": 8600,
+            "completeMissRate": 0.592964824120603,
+            "avgHitInterval": 22.058823529411764,
+            "maxHitInterval": 87
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": -26.357221277801415,
+            "streakChange": -16,
+            "ddPctChange": 1.888546536336591,
+            "roiAfterCut": 172.7403846153846,
+            "streakAfterCut": 86,
+            "ddAfterCut": 20.673076923076923,
+            "worthCutting": false
+          },
+          "explanation": "ROI 285.43% は良好だが連敗 29回 / DD 22.83% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        }
+      ]
+    },
+    {
+      "name": "wave帯別",
+      "subgroups": [
+        {
+          "label": "wave>=15cm",
+          "condition": "wave>=15",
+          "n": 13,
+          "metric": {
+            "n": 13,
+            "hits": 0,
+            "hitRate": 0,
+            "avgOdds": 46.169230769230765,
+            "roi": 0,
+            "roiExMaxHit": 0,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 0
+          },
+          "dd": {
+            "maxStreakN": 13,
+            "avgStreak": 13,
+            "maxDDPct": 100,
+            "maxDDYen100": 1300,
+            "completeMissRate": 0.6153846153846154,
+            "avgHitInterval": 13,
+            "maxHitInterval": 13
+          },
+          "remainN": 530,
+          "remainMetric": {
+            "n": 530,
+            "hits": 26,
+            "hitRate": 0.04905660377358491,
+            "avgOdds": 43.21377358490567,
+            "roi": 203.98113207547172,
+            "roiExMaxHit": 189.32075471698113,
+            "roiExMax3Hits": 166.1320754716981,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 101,
+            "avgStreak": 18.666666666666668,
+            "maxDDPct": 19.056603773584907,
+            "maxDDYen100": 10100,
+            "completeMissRate": 0.6011904761904762,
+            "avgHitInterval": 19.64,
+            "maxHitInterval": 102
+          },
+          "classification": "INSUFFICIENT",
+          "cutImpact": {
+            "roiChange": 4.883526182285692,
+            "streakChange": -1,
+            "ddPctChange": 0.2720733868445748,
+            "roiAfterCut": 203.98113207547172,
+            "streakAfterCut": 101,
+            "ddAfterCut": 19.056603773584907,
+            "worthCutting": false
+          },
+          "explanation": "n=13 / ROI=0.00% / 連敗=13 — 様子見。",
+          "recommendation": "ℹ️ n<15: データ不足"
+        },
+        {
+          "label": "wave 0-5cm",
+          "condition": "0<=wave<5",
+          "n": 437,
+          "metric": {
+            "n": 437,
+            "hits": 20,
+            "hitRate": 0.04576659038901602,
+            "avgOdds": 43.22356979405037,
+            "roi": 191.44164759725402,
+            "roiExMaxHit": 173.66132723112128,
+            "roiExMax3Hits": 145.62929061784897,
+            "maxHitOdds": 77.7
+          },
+          "dd": {
+            "maxStreakN": 92,
+            "avgStreak": 19.857142857142858,
+            "maxDDPct": 21.052631578947366,
+            "maxDDYen100": 9200,
+            "completeMissRate": 0.5899280575539568,
+            "avgHitInterval": 21.157894736842106,
+            "maxHitInterval": 93
+          },
+          "remainN": 106,
+          "remainMetric": {
+            "n": 106,
+            "hits": 6,
+            "hitRate": 0.05660377358490566,
+            "avgOdds": 43.53584905660379,
+            "roi": 230.6603773584906,
+            "roiExMaxHit": 173.77358490566039,
+            "roiExMax3Hits": 99.15094339622641,
+            "maxHitOdds": 60.3
+          },
+          "remainDd": {
+            "maxStreakN": 33,
+            "avgStreak": 16.666666666666668,
+            "maxDDPct": 31.132075471698112,
+            "maxDDYen100": 3300,
+            "completeMissRate": 0.65,
+            "avgHitInterval": 15.2,
+            "maxHitInterval": 34
+          },
+          "classification": "CUT_CANDIDATE",
+          "cutImpact": {
+            "roiChange": 31.562771465304564,
+            "streakChange": -69,
+            "ddPctChange": 12.34754508495778,
+            "roiAfterCut": 230.6603773584906,
+            "streakAfterCut": 33,
+            "ddAfterCut": 31.132075471698112,
+            "worthCutting": true
+          },
+          "explanation": "除外することでROI 230.66%、連敗 33回、DD 31.13% に改善。ROI低下は 31.56% 以内。",
+          "recommendation": "✂️ CUT推奨: 除外後ROI=230.66% / 連敗=33 / DD=31.13%"
+        },
+        {
+          "label": "wave 5-15cm",
+          "condition": "5<=wave<15",
+          "n": 93,
+          "metric": {
+            "n": 93,
+            "hits": 6,
+            "hitRate": 0.06451612903225806,
+            "avgOdds": 43.167741935483875,
+            "roi": 262.90322580645164,
+            "roiExMaxHit": 198.06451612903226,
+            "roiExMax3Hits": 113.01075268817205,
+            "maxHitOdds": 60.3
+          },
+          "dd": {
+            "maxStreakN": 31,
+            "avgStreak": 14.5,
+            "maxDDPct": 33.33333333333333,
+            "maxDDYen100": 3100,
+            "completeMissRate": 0.6551724137931034,
+            "avgHitInterval": 14.4,
+            "maxHitInterval": 32
+          },
+          "remainN": 450,
+          "remainMetric": {
+            "n": 450,
+            "hits": 20,
+            "hitRate": 0.044444444444444446,
+            "avgOdds": 43.308666666666696,
+            "roi": 185.91111111111113,
+            "roiExMaxHit": 168.64444444444445,
+            "roiExMax3Hits": 141.42222222222222,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 93,
+            "avgStreak": 20.476190476190474,
+            "maxDDPct": 20.666666666666668,
+            "maxDDYen100": 9300,
+            "completeMissRate": 0.5906976744186047,
+            "avgHitInterval": 21.842105263157894,
+            "maxHitInterval": 94
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": -13.186494782074902,
+            "streakChange": -9,
+            "ddPctChange": 1.8821362799263355,
+            "roiAfterCut": 185.91111111111113,
+            "streakAfterCut": 93,
+            "ddAfterCut": 20.666666666666668,
+            "worthCutting": false
+          },
+          "explanation": "ROI 262.90% は良好だが連敗 31回 / DD 33.33% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        }
+      ]
+    },
+    {
+      "name": "展示ST帯別",
+      "subgroups": [
+        {
+          "label": "exSt欠損",
+          "condition": "exSt IS NULL",
+          "n": 104,
+          "metric": {
+            "n": 104,
+            "hits": 4,
+            "hitRate": 0.038461538461538464,
+            "avgOdds": 42.667307692307695,
+            "roi": 149.42307692307693,
+            "roiExMaxHit": 103.36538461538463,
+            "roiExMax3Hits": 28.942307692307693,
+            "maxHitOdds": 47.9
+          },
+          "dd": {
+            "maxStreakN": 50,
+            "avgStreak": 20,
+            "maxDDPct": 48.07692307692308,
+            "maxDDYen100": 5000,
+            "completeMissRate": 0.62,
+            "avgHitInterval": 27,
+            "maxHitInterval": 51
+          },
+          "remainN": 439,
+          "remainMetric": {
+            "n": 439,
+            "hits": 22,
+            "hitRate": 0.05011389521640091,
+            "avgOdds": 43.43075170842826,
+            "roi": 210.86560364464694,
+            "roiExMaxHit": 193.16628701594536,
+            "roiExMax3Hits": 165.17084282460138,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 83,
+            "avgStreak": 18.130434782608695,
+            "maxDDPct": 18.906605922551254,
+            "maxDDYen100": 8300,
+            "completeMissRate": 0.5971223021582733,
+            "avgHitInterval": 19.38095238095238,
+            "maxHitInterval": 84
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": 11.76799775146091,
+            "streakChange": -19,
+            "ddPctChange": 0.12207553581092156,
+            "roiAfterCut": 210.86560364464694,
+            "streakAfterCut": 83,
+            "ddAfterCut": 18.906605922551254,
+            "worthCutting": false
+          },
+          "explanation": "ROI 149.42% は良好だが連敗 50回 / DD 48.08% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        },
+        {
+          "label": "exSt 0-0.05",
+          "condition": "0<=exSt<0.05",
+          "n": 101,
+          "metric": {
+            "n": 101,
+            "hits": 5,
+            "hitRate": 0.04950495049504951,
+            "avgOdds": 41.64455445544554,
+            "roi": 185.14851485148515,
+            "roiExMaxHit": 125.84158415841584,
+            "roiExMax3Hits": 48.31683168316832,
+            "maxHitOdds": 59.9
+          },
+          "dd": {
+            "maxStreakN": 32,
+            "avgStreak": 16,
+            "maxDDPct": 31.683168316831683,
+            "maxDDYen100": 3200,
+            "completeMissRate": 0.5729166666666666,
+            "avgHitInterval": 17.75,
+            "maxHitInterval": 33
+          },
+          "remainN": 442,
+          "remainMetric": {
+            "n": 442,
+            "hits": 21,
+            "hitRate": 0.04751131221719457,
+            "avgOdds": 43.659276018099554,
+            "roi": 202.28506787330315,
+            "roiExMaxHit": 184.7058823529412,
+            "roiExMax3Hits": 156.9004524886878,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 86,
+            "avgStreak": 19.136363636363637,
+            "maxDDPct": 19.457013574660635,
+            "maxDDYen100": 8600,
+            "completeMissRate": 0.6080760095011877,
+            "avgHitInterval": 20.5,
+            "maxHitInterval": 87
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": 3.1874619801171207,
+            "streakChange": -16,
+            "ddPctChange": 0.672483187920303,
+            "roiAfterCut": 202.28506787330315,
+            "streakAfterCut": 86,
+            "ddAfterCut": 19.457013574660635,
+            "worthCutting": false
+          },
+          "explanation": "ROI 185.15% は良好だが連敗 32回 / DD 31.68% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        },
+        {
+          "label": "exSt>=0.15 (遅め)",
+          "condition": "exSt>=0.15",
+          "n": 218,
+          "metric": {
+            "n": 218,
+            "hits": 10,
+            "hitRate": 0.045871559633027525,
+            "avgOdds": 44.42706422018351,
+            "roi": 189.54128440366975,
+            "roiExMaxHit": 161.88073394495416,
+            "roiExMax3Hits": 115.50458715596332,
+            "maxHitOdds": 60.3
+          },
+          "dd": {
+            "maxStreakN": 69,
+            "avgStreak": 18.90909090909091,
+            "maxDDPct": 31.65137614678899,
+            "maxDDYen100": 6900,
+            "completeMissRate": 0.6298076923076923,
+            "avgHitInterval": 19.555555555555557,
+            "maxHitInterval": 70
+          },
+          "remainN": 325,
+          "remainMetric": {
+            "n": 325,
+            "hits": 16,
+            "hitRate": 0.04923076923076923,
+            "avgOdds": 42.51815384615386,
+            "roi": 205.5076923076923,
+            "roiExMaxHit": 181.6,
+            "roiExMax3Hits": 143.90769230769232,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 63,
+            "avgStreak": 19.3125,
+            "maxDDPct": 19.384615384615383,
+            "maxDDYen100": 6300,
+            "completeMissRate": 0.5825242718446602,
+            "avgHitInterval": 20.2,
+            "maxHitInterval": 64
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": 6.4100864145062815,
+            "streakChange": -39,
+            "ddPctChange": 0.6000849978750509,
+            "roiAfterCut": 205.5076923076923,
+            "streakAfterCut": 63,
+            "ddAfterCut": 19.384615384615383,
+            "worthCutting": false
+          },
+          "explanation": "ROI 189.54% は良好だが連敗 69回 / DD 31.65% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        },
+        {
+          "label": "exSt 0.05-0.10",
+          "condition": "0.05<=exSt<0.10",
+          "n": 120,
+          "metric": {
+            "n": 120,
+            "hits": 7,
+            "hitRate": 0.058333333333333334,
+            "avgOdds": 43.12416666666666,
+            "roi": 271.25,
+            "roiExMaxHit": 206.5,
+            "roiExMax3Hits": 111.91666666666669,
+            "maxHitOdds": 77.7
+          },
+          "dd": {
+            "maxStreakN": 27,
+            "avgStreak": 14.125,
+            "maxDDPct": 22.5,
+            "maxDDYen100": 2700,
+            "completeMissRate": 0.5575221238938053,
+            "avgHitInterval": 18.666666666666668,
+            "maxHitInterval": 28
+          },
+          "remainN": 423,
+          "remainMetric": {
+            "n": 423,
+            "hits": 19,
+            "hitRate": 0.04491725768321513,
+            "avgOdds": 43.33002364066192,
+            "roi": 178.628841607565,
+            "roiExMaxHit": 164.37352245862883,
+            "roiExMax3Hits": 137.1867612293144,
+            "maxHitOdds": 60.3
+          },
+          "remainDd": {
+            "maxStreakN": 80,
+            "avgStreak": 20.2,
+            "maxDDPct": 18.912529550827422,
+            "maxDDYen100": 8000,
+            "completeMissRate": 0.6138613861386139,
+            "avgHitInterval": 21.333333333333332,
+            "maxHitInterval": 81
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": -20.468764285621035,
+            "streakChange": -22,
+            "ddPctChange": 0.12799916408708967,
+            "roiAfterCut": 178.628841607565,
+            "streakAfterCut": 80,
+            "ddAfterCut": 18.912529550827422,
+            "worthCutting": false
+          },
+          "explanation": "ROI 271.25% は良好だが連敗 27回 / DD 22.50% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        }
+      ]
+    },
+    {
+      "name": "motor帯別 (head)",
+      "subgroups": [
+        {
+          "label": "motor 40-60",
+          "condition": "40<=motor<60",
+          "n": 84,
+          "metric": {
+            "n": 84,
+            "hits": 4,
+            "hitRate": 0.047619047619047616,
+            "avgOdds": 41.92857142857142,
+            "roi": 186.42857142857144,
+            "roiExMaxHit": 129.4047619047619,
+            "roiExMax3Hits": 36.66666666666667,
+            "maxHitOdds": 47.9
+          },
+          "dd": {
+            "maxStreakN": 53,
+            "avgStreak": 16,
+            "maxDDPct": 63.095238095238095,
+            "maxDDYen100": 5300,
+            "completeMissRate": 0.55,
+            "avgHitInterval": 24,
+            "maxHitInterval": 54
+          },
+          "remainN": 459,
+          "remainMetric": {
+            "n": 459,
+            "hits": 22,
+            "hitRate": 0.04793028322440087,
+            "avgOdds": 43.5326797385621,
+            "roi": 201.41612200435733,
+            "roiExMaxHit": 184.48801742919395,
+            "roiExMax3Hits": 157.71241830065358,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 87,
+            "avgStreak": 19,
+            "maxDDPct": 18.954248366013072,
+            "maxDDYen100": 8700,
+            "completeMissRate": 0.6109839816933639,
+            "avgHitInterval": 20.047619047619047,
+            "maxHitInterval": 88
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": 2.3185161111713057,
+            "streakChange": -15,
+            "ddPctChange": 0.16971797927273968,
+            "roiAfterCut": 201.41612200435733,
+            "streakAfterCut": 87,
+            "ddAfterCut": 18.954248366013072,
+            "worthCutting": false
+          },
+          "explanation": "ROI 186.43% は良好だが連敗 53回 / DD 63.10% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        },
+        {
+          "label": "motor<40 (低勝率)",
+          "condition": "motor_top2<40",
+          "n": 459,
+          "metric": {
+            "n": 459,
+            "hits": 22,
+            "hitRate": 0.04793028322440087,
+            "avgOdds": 43.5326797385621,
+            "roi": 201.41612200435733,
+            "roiExMaxHit": 184.48801742919395,
+            "roiExMax3Hits": 157.71241830065358,
+            "maxHitOdds": 77.7
+          },
+          "dd": {
+            "maxStreakN": 87,
+            "avgStreak": 19,
+            "maxDDPct": 18.954248366013072,
+            "maxDDYen100": 8700,
+            "completeMissRate": 0.6109839816933639,
+            "avgHitInterval": 20.047619047619047,
+            "maxHitInterval": 88
+          },
+          "remainN": 84,
+          "remainMetric": {
+            "n": 84,
+            "hits": 4,
+            "hitRate": 0.047619047619047616,
+            "avgOdds": 41.92857142857142,
+            "roi": 186.42857142857144,
+            "roiExMaxHit": 129.4047619047619,
+            "roiExMax3Hits": 36.66666666666667,
+            "maxHitOdds": 47.9
+          },
+          "remainDd": {
+            "maxStreakN": 53,
+            "avgStreak": 16,
+            "maxDDPct": 63.095238095238095,
+            "maxDDYen100": 5300,
+            "completeMissRate": 0.55,
+            "avgHitInterval": 24,
+            "maxHitInterval": 54
+          },
+          "classification": "CUT_CANDIDATE",
+          "cutImpact": {
+            "roiChange": -12.669034464614583,
+            "streakChange": -49,
+            "ddPctChange": 44.31070770849776,
+            "roiAfterCut": 186.42857142857144,
+            "streakAfterCut": 53,
+            "ddAfterCut": 63.095238095238095,
+            "worthCutting": true
+          },
+          "explanation": "除外することでROI 186.43%、連敗 53回、DD 63.10% に改善。ROI低下は 12.67% 以内。",
+          "recommendation": "✂️ CUT推奨: 除外後ROI=186.43% / 連敗=53 / DD=63.10%"
+        }
+      ]
+    },
+    {
+      "name": "完全外れリスク高条件",
+      "subgroups": [
+        {
+          "label": "wave>=10cm",
+          "condition": "wave>=10",
+          "n": 15,
+          "metric": {
+            "n": 15,
+            "hits": 0,
+            "hitRate": 0,
+            "avgOdds": 46.9,
+            "roi": 0,
+            "roiExMaxHit": 0,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 0
+          },
+          "dd": {
+            "maxStreakN": 15,
+            "avgStreak": 15,
+            "maxDDPct": 100,
+            "maxDDYen100": 1500,
+            "completeMissRate": 0.6666666666666666,
+            "avgHitInterval": 15,
+            "maxHitInterval": 15
+          },
+          "remainN": 528,
+          "remainMetric": {
+            "n": 528,
+            "hits": 26,
+            "hitRate": 0.04924242424242424,
+            "avgOdds": 43.18181818181819,
+            "roi": 204.7537878787879,
+            "roiExMaxHit": 190.03787878787878,
+            "roiExMax3Hits": 166.76136363636365,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 101,
+            "avgStreak": 18.59259259259259,
+            "maxDDPct": 19.12878787878788,
+            "maxDDYen100": 10100,
+            "completeMissRate": 0.599601593625498,
+            "avgHitInterval": 19.56,
+            "maxHitInterval": 102
+          },
+          "classification": "WATCH",
+          "cutImpact": {
+            "roiChange": 5.656181985601876,
+            "streakChange": -1,
+            "ddPctChange": 0.3442574920475465,
+            "roiAfterCut": 204.7537878787879,
+            "streakAfterCut": 101,
+            "ddAfterCut": 19.12878787878788,
+            "worthCutting": false
+          },
+          "explanation": "n=15 / ROI=0.00% / 連敗=15 — 様子見。",
+          "recommendation": "△ WATCH: ROI=0.00% / 連敗=15"
+        },
+        {
+          "label": "odds>=80 (isBase内高配当)",
+          "condition": "odds>=80",
+          "n": 3,
+          "metric": {
+            "n": 3,
+            "hits": 0,
+            "hitRate": 0,
+            "avgOdds": 89.60000000000001,
+            "roi": 0,
+            "roiExMaxHit": 0,
+            "roiExMax3Hits": 0,
+            "maxHitOdds": 0
+          },
+          "dd": {
+            "maxStreakN": 3,
+            "avgStreak": 3,
+            "maxDDPct": 100,
+            "maxDDYen100": 300,
+            "completeMissRate": 1,
+            "avgHitInterval": 3,
+            "maxHitInterval": 3
+          },
+          "remainN": 540,
+          "remainMetric": {
+            "n": 540,
+            "hits": 26,
+            "hitRate": 0.04814814814814815,
+            "avgOdds": 43.02722222222222,
+            "roi": 200.20370370370375,
+            "roiExMaxHit": 185.8148148148148,
+            "roiExMax3Hits": 163.05555555555554,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 102,
+            "avgStreak": 19.037037037037038,
+            "maxDDPct": 18.88888888888889,
+            "maxDDYen100": 10200,
+            "completeMissRate": 0.5992217898832685,
+            "avgHitInterval": 20.04,
+            "maxHitInterval": 103
+          },
+          "classification": "INSUFFICIENT",
+          "cutImpact": {
+            "roiChange": 1.1060978105177242,
+            "streakChange": 0,
+            "ddPctChange": 0.10435850214855691,
+            "roiAfterCut": 200.20370370370375,
+            "streakAfterCut": 102,
+            "ddAfterCut": 18.88888888888889,
+            "worthCutting": false
+          },
+          "explanation": "n=3 / ROI=0.00% / 連敗=3 — 様子見。",
+          "recommendation": "ℹ️ n<15: データ不足"
+        },
+        {
+          "label": "raceNo 1-3 (前半)",
+          "condition": "race_no<=3",
+          "n": 136,
+          "metric": {
+            "n": 136,
+            "hits": 8,
+            "hitRate": 0.058823529411764705,
+            "avgOdds": 43.216176470588216,
+            "roi": 226.02941176470588,
+            "roiExMaxHit": 168.89705882352942,
+            "roiExMax3Hits": 104.9264705882353,
+            "maxHitOdds": 77.7
+          },
+          "dd": {
+            "maxStreakN": 38,
+            "avgStreak": 14.222222222222221,
+            "maxDDPct": 27.941176470588236,
+            "maxDDYen100": 3800,
+            "completeMissRate": 0.640625,
+            "avgHitInterval": 16.285714285714285,
+            "maxHitInterval": 39
+          },
+          "remainN": 407,
+          "remainMetric": {
+            "n": 407,
+            "hits": 18,
+            "hitRate": 0.044226044226044224,
+            "avgOdds": 43.307371007371025,
+            "roi": 190.09828009828013,
+            "roiExMaxHit": 174.71744471744472,
+            "roiExMax3Hits": 145.18427518427518,
+            "maxHitOdds": 62.6
+          },
+          "remainDd": {
+            "maxStreakN": 102,
+            "avgStreak": 21.61111111111111,
+            "maxDDPct": 25.061425061425062,
+            "maxDDYen100": 10200,
+            "completeMissRate": 0.5886889460154242,
+            "avgHitInterval": 19.235294117647058,
+            "maxHitInterval": 103
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": -8.9993257949059,
+            "streakChange": 0,
+            "ddPctChange": 6.27689467468473,
+            "roiAfterCut": 190.09828009828013,
+            "streakAfterCut": 102,
+            "ddAfterCut": 25.061425061425062,
+            "worthCutting": false
+          },
+          "explanation": "ROI 226.03% は良好だが連敗 38回 / DD 27.94% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        },
+        {
+          "label": "raceNo 7-9 (後半)",
+          "condition": "race_no>=7",
+          "n": 188,
+          "metric": {
+            "n": 188,
+            "hits": 11,
+            "hitRate": 0.05851063829787234,
+            "avgOdds": 42.447340425531905,
+            "roi": 253.56382978723403,
+            "roiExMaxHit": 221.48936170212764,
+            "roiExMax3Hits": 160.31914893617022,
+            "maxHitOdds": 60.3
+          },
+          "dd": {
+            "maxStreakN": 51,
+            "avgStreak": 14.75,
+            "maxDDPct": 27.127659574468083,
+            "maxDDYen100": 5100,
+            "completeMissRate": 0.576271186440678,
+            "avgHitInterval": 14,
+            "maxHitInterval": 52
+          },
+          "remainN": 355,
+          "remainMetric": {
+            "n": 355,
+            "hits": 15,
+            "hitRate": 0.04225352112676056,
+            "avgOdds": 43.72788732394369,
+            "roi": 170.25352112676055,
+            "roiExMaxHit": 148.3661971830986,
+            "roiExMax3Hits": 116.3943661971831,
+            "maxHitOdds": 77.7
+          },
+          "remainDd": {
+            "maxStreakN": 89,
+            "avgStreak": 21.25,
+            "maxDDPct": 25.070422535211268,
+            "maxDDYen100": 8900,
+            "completeMissRate": 0.6147058823529412,
+            "avgHitInterval": 23.428571428571427,
+            "maxHitInterval": 90
+          },
+          "classification": "PAPER_ONLY",
+          "cutImpact": {
+            "roiChange": -28.844084766425482,
+            "streakChange": -13,
+            "ddPctChange": 6.285892148470936,
+            "roiAfterCut": 170.25352112676055,
+            "streakAfterCut": 89,
+            "ddAfterCut": 25.070422535211268,
+            "worthCutting": false
+          },
+          "explanation": "ROI 253.56% は良好だが連敗 51回 / DD 27.13% が高い。除外するとROI低下が大きすぎる。",
+          "recommendation": "⚠️ PAPER_ONLY: ROI高いが運用リスク大、除外コスト大"
+        }
+      ]
+    }
+  ],
+  "cutCandidates": [
+    {
+      "label": "wind 3-5",
+      "condition": "3<=wind<5",
+      "n": 390,
+      "metric": {
+        "n": 390,
+        "hits": 17,
+        "hitRate": 0.04358974358974359,
+        "avgOdds": 42.79487179487182,
+        "roi": 174.41025641025644,
+        "roiExMaxHit": 158.35897435897436,
+        "roiExMax3Hits": 128.87179487179486,
+        "maxHitOdds": 62.6
+      },
+      "dd": {
+        "maxStreakN": 84,
+        "avgStreak": 20.72222222222222,
+        "maxDDPct": 21.53846153846154,
+        "maxDDYen100": 8400,
+        "completeMissRate": 0.5844504021447721,
+        "avgHitInterval": 21.8125,
+        "maxHitInterval": 85
+      },
+      "remainN": 153,
+      "remainMetric": {
+        "n": 153,
+        "hits": 9,
+        "hitRate": 0.058823529411764705,
+        "avgOdds": 44.532679738562095,
+        "roi": 262.0261437908497,
+        "roiExMaxHit": 211.24183006535952,
+        "roiExMax3Hits": 140.52287581699346,
+        "maxHitOdds": 77.7
+      },
+      "remainDd": {
+        "maxStreakN": 32,
+        "avgStreak": 14.4,
+        "maxDDPct": 20.915032679738562,
+        "maxDDYen100": 3200,
+        "completeMissRate": 0.6458333333333334,
+        "avgHitInterval": 18.25,
+        "maxHitInterval": 33
+      },
+      "classification": "CUT_CANDIDATE",
+      "cutImpact": {
+        "roiChange": 62.92853789766366,
+        "streakChange": -70,
+        "ddPctChange": 2.13050229299823,
+        "roiAfterCut": 262.0261437908497,
+        "streakAfterCut": 32,
+        "ddAfterCut": 20.915032679738562,
+        "worthCutting": true
+      },
+      "explanation": "除外することでROI 262.03%、連敗 32回、DD 20.92% に改善。ROI低下は 62.93% 以内。",
+      "recommendation": "✂️ CUT推奨: 除外後ROI=262.03% / 連敗=32 / DD=20.92%"
+    },
+    {
+      "label": "wave 0-5cm",
+      "condition": "0<=wave<5",
+      "n": 437,
+      "metric": {
+        "n": 437,
+        "hits": 20,
+        "hitRate": 0.04576659038901602,
+        "avgOdds": 43.22356979405037,
+        "roi": 191.44164759725402,
+        "roiExMaxHit": 173.66132723112128,
+        "roiExMax3Hits": 145.62929061784897,
+        "maxHitOdds": 77.7
+      },
+      "dd": {
+        "maxStreakN": 92,
+        "avgStreak": 19.857142857142858,
+        "maxDDPct": 21.052631578947366,
+        "maxDDYen100": 9200,
+        "completeMissRate": 0.5899280575539568,
+        "avgHitInterval": 21.157894736842106,
+        "maxHitInterval": 93
+      },
+      "remainN": 106,
+      "remainMetric": {
+        "n": 106,
+        "hits": 6,
+        "hitRate": 0.05660377358490566,
+        "avgOdds": 43.53584905660379,
+        "roi": 230.6603773584906,
+        "roiExMaxHit": 173.77358490566039,
+        "roiExMax3Hits": 99.15094339622641,
+        "maxHitOdds": 60.3
+      },
+      "remainDd": {
+        "maxStreakN": 33,
+        "avgStreak": 16.666666666666668,
+        "maxDDPct": 31.132075471698112,
+        "maxDDYen100": 3300,
+        "completeMissRate": 0.65,
+        "avgHitInterval": 15.2,
+        "maxHitInterval": 34
+      },
+      "classification": "CUT_CANDIDATE",
+      "cutImpact": {
+        "roiChange": 31.562771465304564,
+        "streakChange": -69,
+        "ddPctChange": 12.34754508495778,
+        "roiAfterCut": 230.6603773584906,
+        "streakAfterCut": 33,
+        "ddAfterCut": 31.132075471698112,
+        "worthCutting": true
+      },
+      "explanation": "除外することでROI 230.66%、連敗 33回、DD 31.13% に改善。ROI低下は 31.56% 以内。",
+      "recommendation": "✂️ CUT推奨: 除外後ROI=230.66% / 連敗=33 / DD=31.13%"
+    },
+    {
+      "label": "30<=odds<50",
+      "condition": "30<=odds<50",
+      "n": 350,
+      "metric": {
+        "n": 350,
+        "hits": 15,
+        "hitRate": 0.04285714285714286,
+        "avgOdds": 39.4617142857143,
+        "roi": 165.6285714285714,
+        "roiExMaxHit": 151.94285714285712,
+        "roiExMax3Hits": 125.54285714285716,
+        "maxHitOdds": 47.9
+      },
+      "dd": {
+        "maxStreakN": 72,
+        "avgStreak": 20.9375,
+        "maxDDPct": 20.57142857142857,
+        "maxDDYen100": 7200,
+        "completeMissRate": 0.5880597014925373,
+        "avgHitInterval": 22.428571428571427,
+        "maxHitInterval": 73
+      },
+      "remainN": 193,
+      "remainMetric": {
+        "n": 193,
+        "hits": 11,
+        "hitRate": 0.05699481865284974,
+        "avgOdds": 50.217098445595866,
+        "roi": 259.79274611398966,
+        "roiExMaxHit": 219.5336787564767,
+        "roiExMax3Hits": 155.85492227979276,
+        "maxHitOdds": 77.7
+      },
+      "remainDd": {
+        "maxStreakN": 36,
+        "avgStreak": 15.166666666666666,
+        "maxDDPct": 18.65284974093264,
+        "maxDDYen100": 3600,
+        "completeMissRate": 0.6263736263736264,
+        "avgHitInterval": 14,
+        "maxHitInterval": 37
+      },
+      "classification": "CUT_CANDIDATE",
+      "cutImpact": {
+        "roiChange": 60.69514022080364,
+        "streakChange": -66,
+        "ddPctChange": -0.13168064580769112,
+        "roiAfterCut": 259.79274611398966,
+        "streakAfterCut": 36,
+        "ddAfterCut": 18.65284974093264,
+        "worthCutting": true
+      },
+      "explanation": "除外することでROI 259.79%、連敗 36回、DD 18.65% に改善。ROI低下は 60.70% 以内。",
+      "recommendation": "✂️ CUT推奨: 除外後ROI=259.79% / 連敗=36 / DD=18.65%"
+    },
+    {
+      "label": "月8",
+      "condition": "month=8",
+      "n": 200,
+      "metric": {
+        "n": 200,
+        "hits": 7,
+        "hitRate": 0.035,
+        "avgOdds": 42.2835,
+        "roi": 144.14999999999998,
+        "roiExMaxHit": 114.20000000000002,
+        "roiExMax3Hits": 67.05000000000001,
+        "maxHitOdds": 59.9
+      },
+      "dd": {
+        "maxStreakN": 65,
+        "avgStreak": 24.125,
+        "maxDDPct": 38.4,
+        "maxDDYen100": 7680,
+        "completeMissRate": 0.538860103626943,
+        "avgHitInterval": 30.5,
+        "maxHitInterval": 66
+      },
+      "remainN": 343,
+      "remainMetric": {
+        "n": 343,
+        "hits": 19,
+        "hitRate": 0.05539358600583091,
+        "avgOdds": 43.86822157434403,
+        "roi": 231.13702623906707,
+        "roiExMaxHit": 208.48396501457728,
+        "roiExMax3Hits": 172.6530612244898,
+        "maxHitOdds": 77.7
+      },
+      "remainDd": {
+        "maxStreakN": 41,
+        "avgStreak": 16.2,
+        "maxDDPct": 11.9533527696793,
+        "maxDDYen100": 4100,
+        "completeMissRate": 0.6388888888888888,
+        "avgHitInterval": 16.666666666666668,
+        "maxHitInterval": 42
+      },
+      "classification": "CUT_CANDIDATE",
+      "cutImpact": {
+        "roiChange": 32.03942034588104,
+        "streakChange": -61,
+        "ddPctChange": -6.831177617061032,
+        "roiAfterCut": 231.13702623906707,
+        "streakAfterCut": 41,
+        "ddAfterCut": 11.9533527696793,
+        "worthCutting": true
+      },
+      "explanation": "除外することでROI 231.14%、連敗 41回、DD 11.95% に改善。ROI低下は 32.04% 以内。",
+      "recommendation": "✂️ CUT推奨: 除外後ROI=231.14% / 連敗=41 / DD=11.95%"
+    },
+    {
+      "label": "motor<40 (低勝率)",
+      "condition": "motor_top2<40",
+      "n": 459,
+      "metric": {
+        "n": 459,
+        "hits": 22,
+        "hitRate": 0.04793028322440087,
+        "avgOdds": 43.5326797385621,
+        "roi": 201.41612200435733,
+        "roiExMaxHit": 184.48801742919395,
+        "roiExMax3Hits": 157.71241830065358,
+        "maxHitOdds": 77.7
+      },
+      "dd": {
+        "maxStreakN": 87,
+        "avgStreak": 19,
+        "maxDDPct": 18.954248366013072,
+        "maxDDYen100": 8700,
+        "completeMissRate": 0.6109839816933639,
+        "avgHitInterval": 20.047619047619047,
+        "maxHitInterval": 88
+      },
+      "remainN": 84,
+      "remainMetric": {
+        "n": 84,
+        "hits": 4,
+        "hitRate": 0.047619047619047616,
+        "avgOdds": 41.92857142857142,
+        "roi": 186.42857142857144,
+        "roiExMaxHit": 129.4047619047619,
+        "roiExMax3Hits": 36.66666666666667,
+        "maxHitOdds": 47.9
+      },
+      "remainDd": {
+        "maxStreakN": 53,
+        "avgStreak": 16,
+        "maxDDPct": 63.095238095238095,
+        "maxDDYen100": 5300,
+        "completeMissRate": 0.55,
+        "avgHitInterval": 24,
+        "maxHitInterval": 54
+      },
+      "classification": "CUT_CANDIDATE",
+      "cutImpact": {
+        "roiChange": -12.669034464614583,
+        "streakChange": -49,
+        "ddPctChange": 44.31070770849776,
+        "roiAfterCut": 186.42857142857144,
+        "streakAfterCut": 53,
+        "ddAfterCut": 63.095238095238095,
+        "worthCutting": true
+      },
+      "explanation": "除外することでROI 186.43%、連敗 53回、DD 63.10% に改善。ROI低下は 12.67% 以内。",
+      "recommendation": "✂️ CUT推奨: 除外後ROI=186.43% / 連敗=53 / DD=63.10%"
+    }
+  ],
+  "cutSimulations": [
+    {
+      "label": "単体CUT: wind 3-5",
+      "cutConditions": [
+        "3<=wind<5"
+      ],
+      "remainN": 153,
+      "remainMetric": {
+        "n": 153,
+        "hits": 9,
+        "hitRate": 0.058823529411764705,
+        "avgOdds": 44.532679738562095,
+        "roi": 262.0261437908497,
+        "roiExMaxHit": 211.24183006535952,
+        "roiExMax3Hits": 140.52287581699346,
+        "maxHitOdds": 77.7
+      },
+      "remainDd": {
+        "maxStreakN": 32,
+        "avgStreak": 14.4,
+        "maxDDPct": 20.915032679738562,
+        "maxDDYen100": 3200,
+        "completeMissRate": 0.6458333333333334,
+        "avgHitInterval": 18.25,
+        "maxHitInterval": 33
+      },
+      "verdict": "✅ 目標達成: ROI=262.03% / 連敗=32 / DD=20.92%"
+    },
+    {
+      "label": "2条件CUT: wind 3-5 + wave 0-5cm",
+      "cutConditions": [
+        "3<=wind<5",
+        "0<=wave<5"
+      ],
+      "remainN": 97,
+      "remainMetric": {
+        "n": 97,
+        "hits": 6,
+        "hitRate": 0.061855670103092786,
+        "avgOdds": 43.21443298969072,
+        "roi": 252.06185567010314,
+        "roiExMaxHit": 189.89690721649484,
+        "roiExMax3Hits": 108.35051546391752,
+        "maxHitOdds": 60.3
+      },
+      "remainDd": {
+        "maxStreakN": 29,
+        "avgStreak": 15.166666666666666,
+        "maxDDPct": 29.896907216494846,
+        "maxDDYen100": 2900,
+        "completeMissRate": 0.6703296703296703,
+        "avgHitInterval": 14,
+        "maxHitInterval": 30
+      },
+      "verdict": "✅ 目標達成: ROI=252.06% / 連敗=29 / DD=29.90%"
+    },
+    {
+      "label": "3条件CUT: wind 3-5 + wave 0-5cm + 30<=odds<50",
+      "cutConditions": [
+        "3<=wind<5",
+        "0<=wave<5",
+        "30<=odds<50"
+      ],
+      "remainN": 32,
+      "remainMetric": {
+        "n": 32,
+        "hits": 2,
+        "hitRate": 0.0625,
+        "avgOdds": 50.88125,
+        "roi": 280.9375,
+        "roiExMaxHit": 92.5,
+        "roiExMax3Hits": 0,
+        "maxHitOdds": 60.3
+      },
+      "remainDd": {
+        "maxStreakN": 19,
+        "avgStreak": 10,
+        "maxDDPct": 59.375,
+        "maxDDYen100": 1900,
+        "completeMissRate": 0.7,
+        "avgHitInterval": 2,
+        "maxHitInterval": 2
+      },
+      "verdict": "✅ 目標達成: ROI=280.94% / 連敗=19 / DD=59.38%"
+    },
+    {
+      "label": "全CUT (5条件)",
+      "cutConditions": [
+        "3<=wind<5",
+        "0<=wave<5",
+        "30<=odds<50",
+        "month=8",
+        "motor_top2<40"
+      ],
+      "remainN": 1,
+      "remainMetric": {
+        "n": 1,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 55.5,
+        "roi": 0,
+        "roiExMaxHit": 0,
+        "roiExMax3Hits": 0,
+        "maxHitOdds": 0
+      },
+      "remainDd": {
+        "maxStreakN": 1,
+        "avgStreak": 1,
+        "maxDDPct": 100,
+        "maxDDYen100": 100,
+        "completeMissRate": 1,
+        "avgHitInterval": 1,
+        "maxHitInterval": 1
+      },
+      "verdict": "△ 連敗達成・ROI未達: ROI=0.00%(目標≥150%) / 連敗=1"
+    },
+    {
+      "label": "odds<80 のみ (高配当除外)",
+      "cutConditions": [
+        "odds>=80 を除外"
+      ],
+      "remainN": 540,
+      "remainMetric": {
+        "n": 540,
+        "hits": 26,
+        "hitRate": 0.04814814814814815,
+        "avgOdds": 43.02722222222222,
+        "roi": 200.20370370370375,
+        "roiExMaxHit": 185.8148148148148,
+        "roiExMax3Hits": 163.05555555555554,
+        "maxHitOdds": 77.7
+      },
+      "remainDd": {
+        "maxStreakN": 102,
+        "avgStreak": 19.037037037037038,
+        "maxDDPct": 18.88888888888889,
+        "maxDDYen100": 10200,
+        "completeMissRate": 0.5992217898832685,
+        "avgHitInterval": 20.04,
+        "maxHitInterval": 103
+      },
+      "verdict": "△ ROI達成・連敗未達: ROI=200.20% / 連敗=102(目標≤60)"
+    },
+    {
+      "label": "raceNo 4-8 限定",
+      "cutConditions": [
+        "race_no BETWEEN 4 AND 8"
+      ],
+      "remainN": 369,
+      "remainMetric": {
+        "n": 369,
+        "hits": 15,
+        "hitRate": 0.04065040650406504,
+        "avgOdds": 43.46910569105693,
+        "roi": 180.81300813008136,
+        "roiExMaxHit": 163.84823848238483,
+        "roiExMax3Hits": 131.27371273712737,
+        "maxHitOdds": 62.6
+      },
+      "remainDd": {
+        "maxStreakN": 100,
+        "avgStreak": 22.125,
+        "maxDDPct": 27.100271002710024,
+        "maxDDYen100": 10000,
+        "completeMissRate": 0.5875706214689266,
+        "avgHitInterval": 21,
+        "maxHitInterval": 101
+      },
+      "verdict": "△ ROI達成・連敗未達: ROI=180.81% / 連敗=100(目標≤60)"
+    }
+  ],
+  "keepStrong": []
+}
