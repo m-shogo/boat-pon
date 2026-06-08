@@ -1,8 +1,8 @@
 /**
- * Paper Forward Test — 月4+6+8+12×parts=0 候補の追跡
+ * Paper Forward Test — 複数候補の並走追跡
  *
  * 禁止:
- * - 既存テーブルへのINSERT/UPDATE/DELETE
+ * - 既存テーブルへのINSERT/UPDATE/DELETE (paper_roi_candidates以外)
  * - DROP TABLE / ALTER TABLE
  * - app_settings 変更
  * - 本番decisionロジック変更
@@ -10,7 +10,7 @@
  *
  * このスクリプトは:
  * - paper_roi_candidates テーブルを CREATE TABLE IF NOT EXISTS で作成する
- * - decision_history の historical-backfill BUY から条件マッチ行を抽出し記録する
+ * - 複数conditionを並走追跡する (condition_name で分離)
  * - 本番のBUY/NO_BUY判定は変更しない
  * - reports/roi-paper-forward.md / .json を生成する
  */
@@ -23,29 +23,14 @@ const OUT_MD = "reports/roi-paper-forward.md";
 const OUT_JSON = "reports/roi-paper-forward.json";
 const STAKE = 100;
 
-// 分析の境界: test split 開始日 (全体の90%地点 = 2025-08-09 付近)
+// forward期間の開始日
 const FORWARD_START = "2025-08-09";
-const CONDITION_NAME = "seasonal_parts0_month_4_6_8_12";
-const CONDITION_DESC = "月4+6+8+12×parts=0 (isBase条件付き)";
-
-// Historical baseline (analyze-roi-decision-lab.ts の検証結果)
-const HISTORICAL_BASELINE = {
-  n: 543,
-  roi: 199.10,
-  roiExMaxHit: 184.79,
-  roiExMax3Hits: 162.15,
-  roiExMax5Hits: 140.98,
-  hitRate: 26 / 543,
-  partsMissing: 0,
-  description: "2024-01〜2025-08 (train+val) n=543",
-};
 
 if (!existsSync(DB_PATH)) {
   console.error(`[paper-forward] DB not found: ${DB_PATH}`);
   process.exit(1);
 }
 
-// 書き込み用DBコネクション (paper_roi_candidatesの作成/書き込みのみ)
 const db = new DatabaseSync(DB_PATH);
 db.exec("PRAGMA busy_timeout = 5000;");
 
@@ -77,7 +62,7 @@ db.exec(`
 `);
 console.log("[paper-forward] table paper_roi_candidates ready");
 
-// ── Load matching rows via SQL + TypeScript filter ──
+// ───────────────── Types ─────────────────
 
 type RawRow = {
   race_id: string;
@@ -95,10 +80,99 @@ type RawRow = {
   motor_top2_rate: number | null;
 };
 
-// SQL: month4/6/8/12 + join equipment + exhibition + weather
-// headFlyingCount は racer_profiles.flying_count (キャリア通算F数) を使う
-// これは analyze-roi-decision-lab.ts の loadEntries() + loadRows() の挙動に合わせた実装
-const rows = db.prepare(`
+type ConditionConfig = {
+  name: string;
+  desc: string;
+  paperAction: string;
+  // historical baseline (analyze-roi-isbase-risk.ts の結果から)
+  historical: {
+    n: number;
+    roi: number;
+    roiExMaxHit: number;
+    roiExMax3Hits: number;
+    hitRate: number;
+    maxStreak: number;
+    maxDDPct: number;
+    description: string;
+  };
+  // 本番反映チェックリスト
+  checklist: { label: string; required: boolean }[];
+  filter: (r: RawRow) => boolean;
+};
+
+// ───────────────── 条件定義 ─────────────────
+
+const CONDITIONS: ConditionConfig[] = [
+  {
+    name: "seasonal_parts0_month_4_6_8_12",
+    desc: "月4+6+8+12×parts=0 (isBase条件)",
+    paperAction: "PAPER_STRONG",
+    historical: {
+      n: 543,
+      roi: 199.10,
+      roiExMaxHit: 184.79,
+      roiExMax3Hits: 162.15,
+      hitRate: 26 / 543,
+      maxStreak: 102,
+      maxDDPct: 18.78,
+      description: "2024-01〜2025-08 (train+val) n=543 / 最大連敗102 / DD18.8%",
+    },
+    checklist: [
+      { label: "forward n >= 100", required: true },
+      { label: "hit >= 5", required: true },
+      { label: "roiExMaxHit >= 100%", required: true },
+      { label: "月8以外を含む (月4/6/12 のいずれか)", required: true },
+      { label: "staleRows = 0", required: true },
+      { label: "本番decision/app_settings 変更なし", required: false },
+    ],
+    filter: (r) => {
+      const mo = Number(r.date.slice(5, 7));
+      if (![4, 6, 8, 12].includes(mo)) return false;
+      if ((r.wind_speed_mps ?? 99) < 3) return false;
+      if ((r.flying_count_head ?? 0) >= 1) return false;
+      const exSt = r.start_timing;
+      if (exSt !== null && exSt >= 0.10 && exSt < 0.15) return false;
+      return true;
+    },
+  },
+  {
+    name: "seasonal_parts0_month_4_6_8_12_wind5",
+    desc: "月4+6+8+12×parts=0×wind>=5 (isBase + wind強化)",
+    paperAction: "PAPER_STRONG_CANDIDATE",
+    historical: {
+      n: 153,
+      roi: 262.03,
+      roiExMaxHit: 211.24,
+      roiExMax3Hits: 140.52,
+      hitRate: 9 / 153,
+      maxStreak: 32,
+      maxDDPct: 20.92,
+      description: "historical n=153 / ROI=262% / roiExMaxHit=211% / 最大連敗32 / DD20.9% — ROI/連敗目標達成・DD未達(目標12%)",
+    },
+    checklist: [
+      { label: "forward n >= 50 (n=153のため緩和)", required: true },
+      { label: "hit >= 3", required: true },
+      { label: "roiExMaxHit >= 100%", required: true },
+      { label: "月4/6/8/12 の複数月を含む", required: true },
+      { label: "staleRows = 0", required: true },
+      { label: "本番decision/app_settings 変更なし", required: false },
+    ],
+    filter: (r) => {
+      const mo = Number(r.date.slice(5, 7));
+      if (![4, 6, 8, 12].includes(mo)) return false;
+      // wind >= 5 (強化条件)
+      if ((r.wind_speed_mps ?? 0) < 5) return false;
+      if ((r.flying_count_head ?? 0) >= 1) return false;
+      const exSt = r.start_timing;
+      if (exSt !== null && exSt >= 0.10 && exSt < 0.15) return false;
+      return true;
+    },
+  },
+];
+
+// ───────────────── Load base rows (SQL) ─────────────────
+
+const baseRows = db.prepare(`
   SELECT
     dh.race_id, dh.date, dh.venue, dh.race_no, dh.selection,
     dh.current_odds, dh.result,
@@ -128,26 +202,10 @@ const rows = db.prepare(`
   ORDER BY dh.date
 `).all() as RawRow[];
 
-// TypeScript-level filters (isBase の残り部分)
-function passesIsBase(r: RawRow): boolean {
-  // wind >= 3
-  if ((r.wind_speed_mps ?? 99) < 3) return false;
-  // headFlyingCount >= 1 はNO
-  if ((r.flying_count_head ?? 0) >= 1) return false;
-  // month=9 はNO (SQL側で除外済みだが念のため)
-  const mo = Number(r.date.slice(5, 7));
-  if (mo === 9 || mo <= 3) return false;
-  // exSt 0.10-0.15 はNO
-  const exSt = r.start_timing;
-  if (exSt !== null && exSt >= 0.10 && exSt < 0.15) return false;
-  return true;
-}
+console.log(`[paper-forward] SQL base rows: ${baseRows.length}`);
 
-const filtered = rows.filter(passesIsBase);
-console.log(`[paper-forward] SQL rows: ${rows.length}, after isBase: ${filtered.length}`);
+// ───────────────── INSERT per condition ─────────────────
 
-// ── INSERT OR IGNORE into paper_roi_candidates ──
-// rerun safe: INSERT OR IGNORE + changes() で attempted/inserted/ignored を集計
 const insertStmt = db.prepare(`
   INSERT OR IGNORE INTO paper_roi_candidates
     (condition_name, race_id, date, venue, race_no, selection, current_odds, result, hit,
@@ -158,58 +216,71 @@ const insertStmt = db.prepare(`
           ?, ?)
 `);
 
-let attempted = 0;
-let insertedRows = 0;
-for (const r of filtered) {
-  const hit = r.result != null ? (r.result === r.selection ? 1 : 0) : null;
-  insertStmt.run(
-    CONDITION_NAME, r.race_id, r.date, r.venue, r.race_no, r.selection,
-    r.current_odds, r.result, hit,
-    1, r.parts_changed_count ?? 0,
-    r.motor_top2_rate !== null ? 1 : 0, r.motor_top2_rate,
-    r.wind_speed_mps, r.start_timing, r.flying_count_head,
-    "PAPER_STRONG", r.date >= FORWARD_START ? "forward" : "historical",
-  );
-  attempted++;
-  insertedRows += (db.prepare("SELECT changes() as c").get() as { c: number }).c;
+type InsertStats = { attempted: number; inserted: number; ignored: number; totalInDB: number };
+
+const insertStats = new Map<string, InsertStats>();
+
+for (const cond of CONDITIONS) {
+  const filtered = baseRows.filter(cond.filter);
+  console.log(`[paper-forward] ${cond.name}: SQL base=${baseRows.length}, after filter=${filtered.length}`);
+
+  let attempted = 0;
+  let insertedRows = 0;
+
+  for (const r of filtered) {
+    const hit = r.result != null ? (r.result === r.selection ? 1 : 0) : null;
+    insertStmt.run(
+      cond.name, r.race_id, r.date, r.venue, r.race_no, r.selection,
+      r.current_odds, r.result, hit,
+      1, r.parts_changed_count ?? 0,
+      r.motor_top2_rate !== null ? 1 : 0, r.motor_top2_rate,
+      r.wind_speed_mps, r.start_timing, r.flying_count_head,
+      cond.paperAction, r.date >= FORWARD_START ? "forward" : "historical",
+    );
+    attempted++;
+    insertedRows += (db.prepare("SELECT changes() as c").get() as { c: number }).c;
+  }
+
+  const totalInDB = (db.prepare(
+    `SELECT COUNT(*) as cnt FROM paper_roi_candidates WHERE condition_name = ?`,
+  ).get(cond.name) as { cnt: number }).cnt;
+
+  const stats: InsertStats = {
+    attempted,
+    inserted: insertedRows,
+    ignored: attempted - insertedRows,
+    totalInDB,
+  };
+  insertStats.set(cond.name, stats);
+
+  console.log(`[paper-forward] ${cond.name}: attempted=${attempted}, inserted=${insertedRows}, ignored=${stats.ignored}, totalInDB=${totalInDB}`);
+  if (totalInDB > attempted) {
+    console.warn(`[paper-forward] ⚠️  ${cond.name}: 旧データ残存 ${totalInDB - attempted}件`);
+  }
 }
-const ignoredRows = attempted - insertedRows;
 
-// condition別カウント（DB全体）
-const totalInDB = (db.prepare(`SELECT COUNT(*) as cnt FROM paper_roi_candidates WHERE condition_name = ?`).get(CONDITION_NAME) as { cnt: number }).cnt;
-const duplicateCount = ignoredRows;
+// ───────────────── Read back & Metrics ─────────────────
 
-console.log(`[paper-forward] attempted: ${attempted}, inserted: ${insertedRows}, ignored(duplicate): ${ignoredRows}`);
-console.log(`[paper-forward] total in DB for ${CONDITION_NAME}: ${totalInDB}`);
-if (totalInDB > attempted) {
-  console.warn(`[paper-forward] ⚠️  DB内に旧データ残存: ${totalInDB - attempted} 件 (DB合計${totalInDB} > 今回の正しいセット${attempted})`);
-  console.warn(`[paper-forward]    旧データはflying_count修正前に登録された可能性があります。`);
-  console.warn(`[paper-forward]    クリーンアップするには: DELETE FROM paper_roi_candidates WHERE condition_name='${CONDITION_NAME}' (要ユーザー承認)`);
-}
-
-// ── Read back for report ──
 type CandRow = {
   race_id: string; date: string; venue: string; race_no: number;
   selection: string; current_odds: number; result: string | null;
-  hit: number | null; review_status: string;
+  hit: number | null; review_status: string; wind_mps: number | null;
 };
-const allRows = db.prepare(`
-  SELECT race_id, date, venue, race_no, selection, current_odds, result, hit, review_status
-  FROM paper_roi_candidates
-  WHERE condition_name = ?
-  ORDER BY date
-`).all(CONDITION_NAME) as CandRow[];
 
-const historicalRows = allRows.filter(r => r.review_status === "historical");
-const forwardRows = allRows.filter(r => r.review_status === "forward");
-const confirmedForward = forwardRows.filter(r => r.hit !== null);
-const pendingForward = forwardRows.filter(r => r.hit === null);
+function readConditionRows(condName: string): CandRow[] {
+  return db.prepare(`
+    SELECT race_id, date, venue, race_no, selection, current_odds, result, hit, review_status, wind_mps
+    FROM paper_roi_candidates
+    WHERE condition_name = ?
+    ORDER BY date
+  `).all(condName) as CandRow[];
+}
 
 function calcMetrics(rs: CandRow[]) {
   const n = rs.length;
-  const withResult = rs.filter(r => r.hit !== null);
-  const hits = withResult.filter(r => r.hit === 1).length;
-  const hitOdds = withResult.filter(r => r.hit === 1).map(r => r.current_odds).sort((a, b) => b - a);
+  const withResult = rs.filter((r) => r.hit !== null);
+  const hits = withResult.filter((r) => r.hit === 1).length;
+  const hitOdds = withResult.filter((r) => r.hit === 1).map((r) => r.current_odds).sort((a, b) => b - a);
   const total = hitOdds.reduce((s, o) => s + o, 0);
   const ex1 = hitOdds.slice(1).reduce((s, o) => s + o, 0);
   const ex3 = hitOdds.slice(3).reduce((s, o) => s + o, 0);
@@ -224,10 +295,6 @@ function calcMetrics(rs: CandRow[]) {
   };
 }
 
-const histMetrics = calcMetrics(historicalRows);
-const fwdMetrics = calcMetrics(confirmedForward);
-
-// monthly breakdown for forward
 function monthBreakdown(rs: CandRow[]) {
   const byYm = new Map<string, CandRow[]>();
   for (const r of rs) {
@@ -235,252 +302,281 @@ function monthBreakdown(rs: CandRow[]) {
     if (!byYm.has(ym)) byYm.set(ym, []);
     byYm.get(ym)!.push(r);
   }
-  return [...byYm.entries()].sort().map(([ym, rows]) => {
-    const m = calcMetrics(rows);
-    return { ym, ...m };
-  });
+  return [...byYm.entries()].sort().map(([ym, rows]) => ({ ym, ...calcMetrics(rows) }));
 }
 
-// odds band for forward confirmed
 function oddsBands(rs: CandRow[]) {
-  const bands = [
+  return [
     { label: "odds<30", lo: 0, hi: 30 },
     { label: "30<=odds<50", lo: 30, hi: 50 },
     { label: "50<=odds<80", lo: 50, hi: 80 },
     { label: "odds>=80", lo: 80, hi: Infinity },
-  ];
-  return bands.map(({ label, lo, hi }) => {
-    const band = rs.filter(r => r.current_odds >= lo && r.current_odds < hi);
-    return { label, ...calcMetrics(band) };
-  });
+  ].map(({ label, lo, hi }) => ({
+    label,
+    ...calcMetrics(rs.filter((r) => r.current_odds >= lo && r.current_odds < hi)),
+  }));
 }
+
+// ───────────────── Report Generation ─────────────────
+
+type CondReport = {
+  config: ConditionConfig;
+  stats: InsertStats;
+  allRows: CandRow[];
+  historicalRows: CandRow[];
+  forwardRows: CandRow[];
+  confirmedForward: CandRow[];
+  pendingForward: CandRow[];
+  histMetrics: ReturnType<typeof calcMetrics>;
+  fwdMetrics: ReturnType<typeof calcMetrics>;
+  fwdMonths: ReturnType<typeof monthBreakdown>;
+  fwdOdds: ReturnType<typeof oddsBands>;
+  checklistResults: { label: string; ok: boolean; value: string }[];
+  verdict: string;
+  paperGrade: string;
+};
+
+function buildCondReport(cond: ConditionConfig): CondReport {
+  const stats = insertStats.get(cond.name)!;
+  const allRows = readConditionRows(cond.name);
+  const historicalRows = allRows.filter((r) => r.review_status === "historical");
+  const forwardRows = allRows.filter((r) => r.review_status === "forward");
+  const confirmedForward = forwardRows.filter((r) => r.hit !== null);
+  const pendingForward = forwardRows.filter((r) => r.hit === null);
+  const histMetrics = calcMetrics(historicalRows);
+  const fwdMetrics = calcMetrics(confirmedForward);
+  const fwdMonths = monthBreakdown(forwardRows);
+  const fwdOdds = oddsBands(confirmedForward);
+
+  const fwdN = confirmedForward.length;
+  const fwdHits = fwdMetrics.hits;
+  const hasMultiMonth = fwdMonths.filter((m) => (m.nEval ?? 0) > 0).length > 1;
+  const staleOk = stats.totalInDB <= stats.attempted;
+
+  const checklistResults = cond.checklist.map((cl) => {
+    if (cl.label.startsWith("forward n >= 100")) {
+      return { label: cl.label, ok: fwdN >= 100, value: `n=${fwdN}` };
+    }
+    if (cl.label.startsWith("forward n >= 50")) {
+      return { label: cl.label, ok: fwdN >= 50, value: `n=${fwdN}` };
+    }
+    if (cl.label.startsWith("hit >= 5")) {
+      return { label: cl.label, ok: fwdHits >= 5, value: `${fwdHits}hits` };
+    }
+    if (cl.label.startsWith("hit >= 3")) {
+      return { label: cl.label, ok: fwdHits >= 3, value: `${fwdHits}hits` };
+    }
+    if (cl.label.startsWith("roiExMaxHit")) {
+      const v = fwdMetrics.roiExMaxHit;
+      return { label: cl.label, ok: v !== null && v >= 100, value: v !== null ? `${v.toFixed(1)}%` : "未集計" };
+    }
+    if (cl.label.includes("月8以外") || cl.label.includes("複数月")) {
+      return { label: cl.label, ok: hasMultiMonth, value: hasMultiMonth ? `複数月確認` : "月8のみ" };
+    }
+    if (cl.label.startsWith("staleRows")) {
+      return { label: cl.label, ok: staleOk, value: `stale=${Math.max(0, stats.totalInDB - stats.attempted)}` };
+    }
+    return { label: cl.label, ok: true, value: "確認済み" };
+  });
+
+  const allOk = checklistResults.filter((c) => cond.checklist.find((cl) => cl.label === c.label)?.required).every((c) => c.ok);
+
+  const verdict = fwdMetrics.roi === null ? "未評価 (結果待ち)"
+    : fwdMetrics.roi >= 100 && (fwdMetrics.roiExMaxHit ?? 0) >= 80 ? "✅ PAPER継続"
+      : fwdMetrics.roi >= 50 ? "⚠️ PAPER (要観察)"
+        : "❌ 期待値割れ — 再評価必要";
+
+  const paperGrade = allOk ? "本番反映検討可" : `観察継続 (${checklistResults.filter((c) => !c.ok && cond.checklist.find((cl) => cl.label === c.label)?.required).length}項目未達)`;
+
+  return {
+    config: cond, stats, allRows, historicalRows, forwardRows,
+    confirmedForward, pendingForward, histMetrics, fwdMetrics,
+    fwdMonths, fwdOdds, checklistResults, verdict, paperGrade,
+  };
+}
+
+const condReports = CONDITIONS.map(buildCondReport);
+
+// ───────────────── Helpers ─────────────────
 
 function pct(v: number | null): string {
   if (v === null) return "-";
   return `${(v * 100).toFixed(2)}%`;
 }
-function num(v: number): string {
-  return v.toFixed(2);
-}
+function num(v: number): string { return v.toFixed(2); }
+function esc(s: string): string { return s.replaceAll("|", "\\|"); }
 
-// ── Generate Report ──
+// ───────────────── Markdown ─────────────────
+
 const lines: string[] = [];
 lines.push("# ROI Paper Forward Test Report", "");
-lines.push("**条件**: 月4+6+8+12×parts=0 (isBase付き)", "");
 lines.push("**禁止**: 本番decision変更不可 / app_settings変更不可 / 自動投票不可", "");
 lines.push(`*生成: ${new Date().toISOString()} / DB: ${DB_PATH}*`, "");
 lines.push("");
 
-// 1. 条件定義
-lines.push("## 1. 条件定義", "");
-lines.push("```");
-lines.push(`条件名: ${CONDITION_NAME}`);
-lines.push(`説明: ${CONDITION_DESC}`);
-lines.push("");
-lines.push("フィルター:");
-lines.push("  - run_kind = 'historical-backfill'");
-lines.push("  - decision = 'BUY'");
-lines.push("  - month in (4, 6, 8, 12)");
-lines.push("  - race_equipment.parts_changed_count = 0 (equipmentPresent=true)");
-lines.push("  - exhibition_data 存在必須 (head boat)");
-lines.push("  - race_no < 10");
-lines.push("  - venue NOT IN ('戸田', '多摩川')");
-lines.push("  - wind_speed_mps >= 3");
-lines.push("  - headFlyingCount (racer_profiles.flying_count) = 0");
-lines.push("  - exSt NOT IN [0.10, 0.15)");
-lines.push("```");
-lines.push("");
-
-// 1b. Rerun Safety
-lines.push("## 1b. Rerun Safety", "");
-lines.push("```");
-lines.push("INSERT OR IGNORE による重複排除: ✅ rerun safe");
-lines.push(`UNIQUE KEY: condition_name + race_id`);
-lines.push("  ⚠️ 将来複数selection対応する場合は UNIQUE(condition_name, race_id, selection) を推奨");
-lines.push("     (現時点では既存DBがあるため ALTER TABLE しない — 設計メモとして記録)");
-lines.push("");
-lines.push(`今回の実行:`);
-lines.push(`  attempted    : ${attempted}`);
-lines.push(`  inserted     : ${insertedRows}`);
-lines.push(`  ignored (dup): ${ignoredRows}`);
-lines.push(`  total in DB  : ${totalInDB}`);
-if (totalInDB > attempted) {
-  lines.push("");
-  lines.push(`  ⚠️  旧データ残存: DB合計 ${totalInDB} > 正しいセット ${attempted}`);
-  lines.push(`     差分 ${totalInDB - attempted} 件は flying_count 修正前に登録された誤データの可能性あり`);
-  lines.push(`     クリーンアップコマンド (要ユーザー承認):`);
-  lines.push(`       DELETE FROM paper_roi_candidates WHERE condition_name='${CONDITION_NAME}'`);
-  lines.push(`     その後このスクリプトを再実行して正しい ${attempted} 件を再登録する`);
+// 比較テーブル
+lines.push("## 条件比較サマリー", "");
+lines.push("| 条件 | hist n | hist ROI | hist roiExMaxHit | 最大連敗 | hist DD% | fwd n | fwd hits | fwd ROI | 判定 |");
+lines.push("|---|---:|---:|---:|---:|---:|---:|---:|---:|---|");
+for (const cr of condReports) {
+  const h = cr.config.historical;
+  const fwd = cr.fwdMetrics;
+  const fwdRoi = fwd.roi !== null ? `${fwd.roi.toFixed(0)}%` : "-";
+  lines.push(`| ${esc(cr.config.name)} | ${h.n} | ${h.roi.toFixed(1)}% | ${h.roiExMaxHit.toFixed(1)}% | ${h.maxStreak} | ${h.maxDDPct.toFixed(1)}% | ${cr.confirmedForward.length} | ${fwd.hits} | ${fwdRoi} | ${cr.verdict} |`);
 }
-lines.push("```");
 lines.push("");
 
-// 2. Baseline比較
-lines.push("## 2. Historical Baseline (train+val: 〜2025-08-08)", "");
-lines.push("| 指標 | 歴史検証 | paper forward (確定済み) |");
-lines.push("|---|---:|---:|");
-lines.push(`| n (記録件数) | ${HISTORICAL_BASELINE.n} | ${confirmedForward.length} |`);
-lines.push(`| 未確定 | - | ${pendingForward.length}件 |`);
-lines.push(`| hits | 26 | ${fwdMetrics.hits} |`);
-lines.push(`| hitRate | ${pct(HISTORICAL_BASELINE.hitRate)} | ${pct(fwdMetrics.hitRate)} |`);
-lines.push(`| ROI | **${HISTORICAL_BASELINE.roi.toFixed(2)}%** | **${fwdMetrics.roi !== null ? fwdMetrics.roi.toFixed(2) + "%" : "-"}** |`);
-lines.push(`| roiExMaxHit | ${HISTORICAL_BASELINE.roiExMaxHit.toFixed(2)}% | ${fwdMetrics.roiExMaxHit !== null ? fwdMetrics.roiExMaxHit.toFixed(2) + "%" : "-"} |`);
-lines.push(`| roiExMax3Hits | ${HISTORICAL_BASELINE.roiExMax3Hits.toFixed(2)}% | ${fwdMetrics.roiExMax3Hits !== null ? fwdMetrics.roiExMax3Hits.toFixed(2) + "%" : "-"} |`);
-lines.push(`| parts欠損率 | 0% | 0% (条件による) |`);
+// 注記: DD目標について
+lines.push("> **DD目標について**: 目標 DD<=12%。`seasonal_parts0_month_4_6_8_12` DD=18.8%、`wind5` DD=20.9% — いずれもDD目標未達。ROI/連敗は達成。**PAPER_STRONG_CANDIDATE (DD未達)** として扱う。", "");
 lines.push("");
 
-// 3. Forward test 月別内訳
-lines.push("## 3. Forward Test 月別内訳 (2025-08-09〜)", "");
-const fwdMonths = monthBreakdown(forwardRows);
-if (fwdMonths.length === 0) {
-  lines.push("forward期間のデータなし。", "");
-} else {
-  lines.push("| 年月 | n | 確定済み | hits | hitRate | ROI | maxHitOdds |");
-  lines.push("|---|---:|---:|---:|---:|---:|---:|");
-  for (const mb of fwdMonths) {
-    const roi = mb.roi !== null ? mb.roi.toFixed(0) + "%" : "(未確定)";
-    const hr = mb.hitRate !== null ? pct(mb.hitRate) : "-";
-    lines.push(`| ${mb.ym} | ${mb.n} | ${mb.nEval} | ${mb.hits} | ${hr} | ${roi} | ${num(mb.maxHitOdds)} |`);
+// 条件別詳細セクション
+for (const cr of condReports) {
+  const h = cr.config.historical;
+  lines.push(`## 条件: ${cr.config.name}`, "");
+  lines.push(`**${cr.config.desc}**`, "");
+  lines.push(`paper_action: \`${cr.config.paperAction}\``, "");
+  lines.push(`forward開始: ${FORWARD_START}`, "");
+  lines.push("");
+
+  // historical baseline
+  lines.push("### Historical Baseline", "");
+  lines.push("| 指標 | 値 |");
+  lines.push("|---|---:|");
+  lines.push(`| n | ${h.n} |`);
+  lines.push(`| ROI | ${h.roi.toFixed(2)}% |`);
+  lines.push(`| roiExMaxHit | ${h.roiExMaxHit.toFixed(2)}% |`);
+  lines.push(`| roiExMax3Hits | ${h.roiExMax3Hits.toFixed(2)}% |`);
+  lines.push(`| hitRate | ${pct(h.hitRate)} |`);
+  lines.push(`| 最大連敗 | ${h.maxStreak}回 |`);
+  lines.push(`| 最大DD | ${h.maxDDPct.toFixed(2)}% |`);
+  lines.push(`| 備考 | ${h.description} |`);
+  lines.push("");
+
+  // forward summary
+  lines.push("### Forward Test サマリー", "");
+  lines.push("| 指標 | 値 |");
+  lines.push("|---|---:|");
+  lines.push(`| forward件数 (全) | ${cr.forwardRows.length} |`);
+  lines.push(`| forward確定済み | ${cr.confirmedForward.length} |`);
+  lines.push(`| forward未確定 | ${cr.pendingForward.length} |`);
+  lines.push(`| forward hits | ${cr.fwdMetrics.hits} |`);
+  lines.push(`| forward hitRate | ${pct(cr.fwdMetrics.hitRate)} |`);
+  lines.push(`| forward ROI | ${cr.fwdMetrics.roi !== null ? cr.fwdMetrics.roi.toFixed(2) + "%" : "-"} |`);
+  lines.push(`| forward roiExMaxHit | ${cr.fwdMetrics.roiExMaxHit !== null ? cr.fwdMetrics.roiExMaxHit.toFixed(2) + "%" : "-"} |`);
+  lines.push(`| forward maxHitOdds | ${num(cr.fwdMetrics.maxHitOdds)} |`);
+  lines.push("");
+
+  // forward monthly
+  lines.push("### Forward 月別内訳", "");
+  if (cr.fwdMonths.length === 0) {
+    lines.push("forward期間のデータなし。", "");
+  } else {
+    lines.push("| 年月 | n | 確定 | hits | hitRate | ROI | maxHitOdds |");
+    lines.push("|---|---:|---:|---:|---:|---:|---:|");
+    for (const mb of cr.fwdMonths) {
+      const roi = mb.roi !== null ? mb.roi.toFixed(0) + "%" : "(未確定)";
+      lines.push(`| ${mb.ym} | ${mb.n} | ${mb.nEval} | ${mb.hits} | ${pct(mb.hitRate)} | ${roi} | ${num(mb.maxHitOdds)} |`);
+    }
+    lines.push("");
+  }
+
+  // checklist
+  lines.push("### 本番反映チェックリスト", "");
+  lines.push("**全 required ✅ になるまで本番反映しないこと**", "");
+  lines.push("| 条件 | 現状 | 判定 |");
+  lines.push("|---|---|:---:|");
+  for (const c of cr.checklistResults) {
+    const req = cr.config.checklist.find((cl) => cl.label === c.label)?.required ?? false;
+    const icon = c.ok ? "✅" : req ? "❌" : "ℹ️";
+    lines.push(`| ${req ? "" : "(任意)"}${c.label} | ${c.value} | ${icon} |`);
   }
   lines.push("");
+  lines.push(cr.checklistResults.every((c) => c.ok)
+    ? "**→ 全条件クリア: 本番反映を検討してよい段階**"
+    : `**→ 観察継続: ${cr.paperGrade}**`);
+  lines.push("");
+
+  // rerun safety
+  const s = cr.stats;
+  lines.push("### Rerun Safety", "");
+  lines.push(`attempted=${s.attempted} / inserted=${s.inserted} / ignored=${s.ignored} / totalInDB=${s.totalInDB}${s.totalInDB > s.attempted ? ` ⚠️旧データ${s.totalInDB - s.attempted}件残存` : ""}`);
+  lines.push("");
+
+  // 先頭20件
+  lines.push("### Forward 記録 (先頭20件)", "");
+  lines.push("| date | venue | R | selection | odds | result | hit | wind |");
+  lines.push("|---|---|---:|---|---:|---|---|---:|");
+  for (const r of cr.forwardRows.slice(0, 20)) {
+    const hitStr = r.hit === null ? "-" : r.hit === 1 ? "✓" : "✗";
+    lines.push(`| ${r.date} | ${r.venue} | ${r.race_no} | ${r.selection} | ${r.current_odds.toFixed(1)} | ${r.result ?? "-"} | ${hitStr} | ${r.wind_mps?.toFixed(0) ?? "-"} |`);
+  }
+  if (cr.forwardRows.length > 20) lines.push(`| ... | ${cr.forwardRows.length - 20}件省略 | | | | | | |`);
+  lines.push("");
+  lines.push("---", "");
 }
 
-// 4. Forward test odds帯内訳
-lines.push("## 4. Forward Test オッズ帯別 (確定済みのみ)", "");
-const fwdOdds = oddsBands(confirmedForward);
-lines.push("| オッズ帯 | n | hits | ROI | maxHitOdds |");
-lines.push("|---|---:|---:|---:|---:|");
-for (const b of fwdOdds) {
-  const roi = b.roi !== null ? b.roi.toFixed(0) + "%" : "-";
-  lines.push(`| ${b.label} | ${b.n} | ${b.hits} | ${roi} | ${num(b.maxHitOdds)} |`);
-}
-lines.push("");
+// wind5 vs isBase forward比較
+lines.push("## 並走比較: isBase vs wind5 (forward期間)", "");
+const isBaseRep = condReports.find((c) => c.config.name === "seasonal_parts0_month_4_6_8_12")!;
+const wind5Rep = condReports.find((c) => c.config.name === "seasonal_parts0_month_4_6_8_12_wind5")!;
+if (isBaseRep && wind5Rep) {
+  // wind5はisBaseのサブセット — 差分行を計算
+  const isBaseFwd = isBaseRep.confirmedForward;
+  const wind5Fwd = wind5Rep.confirmedForward;
+  const wind3to5Fwd = isBaseFwd.filter((r) => (r.wind_mps ?? 0) >= 3 && (r.wind_mps ?? 0) < 5);
+  const wind5FwdCalc = calcMetrics(wind5Fwd);
+  const wind3to5FwdCalc = calcMetrics(wind3to5Fwd);
 
-// 5. 判定
-lines.push("## 5. 現時点の判定", "");
-const verdict = fwdMetrics.roi === null ? "未評価"
-  : fwdMetrics.roi >= 100 && fwdMetrics.roiExMax3Hits !== null && fwdMetrics.roiExMax3Hits >= 80
-    ? "✅ PAPER_STRONG継続"
-    : fwdMetrics.roi >= 50
-      ? "⚠️ PAPER (要観察)"
-      : "❌ 期待値割れ — 再評価必要";
-lines.push(`**判定: ${verdict}**`, "");
-lines.push(`- Forward期間: ${FORWARD_START} 〜 現在`);
-lines.push(`- 記録件数: ${forwardRows.length}件 (確定済み: ${confirmedForward.length}件, 未確定: ${pendingForward.length}件)`);
-lines.push(`- Forward ROI: ${fwdMetrics.roi !== null ? fwdMetrics.roi.toFixed(1) + "%" : "未確定"}`);
+  lines.push("| セグメント | forward n | hits | ROI | roiExMaxHit | maxHitOdds |");
+  lines.push("|---|---:|---:|---:|---:|---:|");
+  lines.push(`| isBase全体 | ${isBaseRep.confirmedForward.length} | ${isBaseRep.fwdMetrics.hits} | ${isBaseRep.fwdMetrics.roi?.toFixed(1) ?? "-"}% | ${isBaseRep.fwdMetrics.roiExMaxHit?.toFixed(1) ?? "-"}% | ${num(isBaseRep.fwdMetrics.maxHitOdds)} |`);
+  lines.push(`| wind>=5サブセット | ${wind5FwdCalc.nEval} | ${wind5FwdCalc.hits} | ${wind5FwdCalc.roi?.toFixed(1) ?? "-"}% | ${wind5FwdCalc.roiExMaxHit?.toFixed(1) ?? "-"}% | ${num(wind5FwdCalc.maxHitOdds)} |`);
+  lines.push(`| wind 3-5サブセット | ${wind3to5FwdCalc.nEval} | ${wind3to5FwdCalc.hits} | ${wind3to5FwdCalc.roi?.toFixed(1) ?? "-"}% | ${wind3to5FwdCalc.roiExMaxHit?.toFixed(1) ?? "-"}% | ${num(wind3to5FwdCalc.maxHitOdds)} |`);
+  lines.push("");
+  lines.push("> **注**: wind5 forward n=10 / wind3-5 forward n=15 はいずれも小サンプル。forward ROIは参考値のみ。n>=50まで判断保留。", "");
+}
 lines.push("");
 lines.push("> **本番反映禁止**: この結果がどうであれ、app_settings や本番 decision ロジックは変更しないこと。", "");
-lines.push("> paper検証として追跡のみ行う。", "");
 
-// 5b. 本番反映条件チェックリスト
-lines.push("## 5b. 本番反映条件チェックリスト", "");
-lines.push("**全て ✅ になるまで本番反映しないこと**", "");
-{
-  const fwdN = confirmedForward.length;
-  const fwdHits = fwdMetrics.hits;
-  const fwdRoiExMax = fwdMetrics.roiExMaxHit;
-  const hasNonAugust = fwdMonths.some(m => !m.ym.endsWith("-08") && (m.nEval ?? 0) > 0);
-  const staleOk = totalInDB <= attempted;
-
-  const checks: { label: string; value: string; ok: boolean }[] = [
-    {
-      label: "forward n >= 100",
-      value: `現在 n=${fwdN}`,
-      ok: fwdN >= 100,
-    },
-    {
-      label: "hit >= 5",
-      value: `現在 ${fwdHits}hits`,
-      ok: fwdHits >= 5,
-    },
-    {
-      label: "roiExMaxHit >= 100%",
-      value: fwdRoiExMax !== null ? `現在 ${fwdRoiExMax.toFixed(1)}%` : "未集計",
-      ok: fwdRoiExMax !== null && fwdRoiExMax >= 100,
-    },
-    {
-      label: "月8以外を含む (月4/6/12 のいずれか)",
-      value: hasNonAugust ? "含む" : "月8のみ",
-      ok: hasNonAugust,
-    },
-    {
-      label: "staleRows = 0",
-      value: `staleRows=${Math.max(0, totalInDB - attempted)}`,
-      ok: staleOk,
-    },
-    {
-      label: "本番decision/app_settings 変更なし",
-      value: "変更なし (このスクリプトは変更しない)",
-      ok: true,
-    },
-  ];
-
-  const allOk = checks.every(c => c.ok);
-  lines.push(`| 条件 | 現状 | 判定 |`);
-  lines.push(`|---|---|:---:|`);
-  for (const c of checks) {
-    lines.push(`| ${c.label} | ${c.value} | ${c.ok ? "✅" : "❌"} |`);
-  }
-  lines.push("");
-  lines.push(allOk
-    ? "**→ 全条件クリア: 本番反映を検討してよい段階**"
-    : `**→ 未達: あと ${checks.filter(c => !c.ok).length} 項目。引き続き観測のみ**`);
-  lines.push("");
-}
-
-// 6. 生データサマリー
-lines.push("## 6. Forward 記録一覧 (先頭30件)", "");
-lines.push("| date | venue | raceNo | selection | odds | result | hit | status |");
-lines.push("|---|---|---:|---|---:|---|---|---|");
-for (const r of forwardRows.slice(0, 30)) {
-  const hitStr = r.hit === null ? "pending" : r.hit === 1 ? "✓" : "✗";
-  lines.push(`| ${r.date} | ${r.venue} | ${r.race_no} | ${r.selection} | ${r.current_odds.toFixed(1)} | ${r.result ?? "-"} | ${hitStr} | ${r.review_status} |`);
-}
-if (forwardRows.length > 30) lines.push(`| ... | ${forwardRows.length - 30}件省略 | | | | | | |`);
-lines.push("");
+// ───────────────── JSON ─────────────────
 
 const reportData = {
   generatedAt: new Date().toISOString(),
-  conditionName: CONDITION_NAME,
-  conditionDesc: CONDITION_DESC,
   forwardStart: FORWARD_START,
-  historicalBaseline: HISTORICAL_BASELINE,
-  rerunSafety: {
-    rerunSafe: true,
-    uniqueKey: "condition_name + race_id",
-    uniqueKeyNote: "将来複数selection対応するなら UNIQUE(condition_name, race_id, selection) 推奨",
-    attempted,
-    insertedRows,
-    ignoredRows,
-    duplicateCount,
-    totalRows: totalInDB,
-    staleRows: Math.max(0, totalInDB - attempted),
-    staleWarning: totalInDB > attempted
-      ? `DB合計 ${totalInDB} > 正しいセット ${attempted}: 差分${totalInDB - attempted}件は旧スクリプトで登録された誤データの可能性あり。クリーンアップには DELETE FROM paper_roi_candidates WHERE condition_name='${CONDITION_NAME}' が必要 (要ユーザー承認)`
-      : null,
-  },
-  totals: {
-    historical: historicalRows.length,
-    forward: forwardRows.length,
-    forwardConfirmed: confirmedForward.length,
-    forwardPending: pendingForward.length,
-  },
-  histMetrics,
-  forwardMetrics: fwdMetrics,
-  forwardMonthBreakdown: fwdMonths,
-  forwardOddsBands: fwdOdds,
+  conditions: condReports.map((cr) => ({
+    name: cr.config.name,
+    desc: cr.config.desc,
+    paperAction: cr.config.paperAction,
+    historical: cr.config.historical,
+    insertStats: cr.stats,
+    totals: {
+      historical: cr.historicalRows.length,
+      forward: cr.forwardRows.length,
+      forwardConfirmed: cr.confirmedForward.length,
+      forwardPending: cr.pendingForward.length,
+    },
+    histMetrics: cr.histMetrics,
+    forwardMetrics: cr.fwdMetrics,
+    forwardMonthBreakdown: cr.fwdMonths,
+    forwardOddsBands: cr.fwdOdds,
+    checklistResults: cr.checklistResults,
+    verdict: cr.verdict,
+    paperGrade: cr.paperGrade,
+  })),
 };
 
 mkdirSync("reports", { recursive: true });
 writeFileSync(OUT_MD, lines.join("\n"));
 writeFileSync(OUT_JSON, `${JSON.stringify(reportData, null, 2)}\n`);
+
 console.log(`[paper-forward] wrote ${OUT_MD}`);
 console.log(`[paper-forward] wrote ${OUT_JSON}`);
-console.log(`[paper-forward] historical: ${historicalRows.length}, forward: ${forwardRows.length} (confirmed: ${confirmedForward.length}, pending: ${pendingForward.length})`);
-if (fwdMetrics.roi !== null) {
-  console.log(`[paper-forward] forward ROI: ${fwdMetrics.roi.toFixed(1)}% (n=${confirmedForward.length})`);
-} else {
-  console.log("[paper-forward] forward ROI: 未確定 (結果待ち)");
+for (const cr of condReports) {
+  console.log(`[paper-forward] ${cr.config.name}: historical=${cr.historicalRows.length}, forward=${cr.forwardRows.length} (confirmed=${cr.confirmedForward.length}, pending=${cr.pendingForward.length})`);
+  if (cr.fwdMetrics.roi !== null) {
+    console.log(`[paper-forward]   forward ROI: ${cr.fwdMetrics.roi.toFixed(1)}% (n=${cr.confirmedForward.length})`);
+  }
 }
 
 db.close();

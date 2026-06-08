@@ -425,11 +425,21 @@ function analyzeIsBaseRisk(rows: Row[]): RiskReport {
   const dims: { name: string; subgroups: SubgroupStats[] }[] = [];
 
   // 1. 月別
+  // 月8はpaper forwardで現在観測中のため、CUT判定ではなく「要分解」として扱う
   const monthGroups = [4, 6, 8, 12].map((m) => ({
-    label: `月${m}`, condition: `month=${m}`,
+    label: `月${m}${m === 8 ? " (要分解)" : ""}`, condition: `month=${m}`,
     rows: rows.filter((r) => r.month === m),
   }));
-  dims.push(analyzeDimension("月別", monthGroups, rows, bm, bd));
+  const monthDim = analyzeDimension("月別", monthGroups, rows, bm, bd);
+  // 月8: forward観測中のためCUT_CANDIDATEからWATCHに強制変更
+  for (const sg of monthDim.subgroups) {
+    if (sg.condition === "month=8" && sg.classification === "CUT_CANDIDATE") {
+      sg.classification = "WATCH";
+      sg.recommendation = "△ 要分解: paper forward観測中 (月8) — wind/odds/venue別に分解してから判断";
+      sg.explanation = "月8はpaper forwardで現在観測中。forward実績と接点があるため単純CUT禁止。月8×wind>=5/月8×venue/月8×odds帯で分解し、弱いサブセットを特定してから除外を検討する。";
+    }
+  }
+  dims.push(monthDim);
 
   // 2. venue別 (n>=10のみ)
   const venueMap = new Map<string, Row[]>();
@@ -489,7 +499,22 @@ function analyzeIsBaseRisk(rows: Row[]): RiskReport {
   ];
   dims.push(analyzeDimension("motor帯別 (head)", motorGroups, rows, bm, bd));
 
-  // 9. 完全外れ率が高い条件
+  // 9. 月8の分解 (paper forward観測中のため分解で弱サブセットを特定)
+  const month8Rows = rows.filter((r) => r.month === 8);
+  const month8Groups = [
+    { label: "月8×wind3-5", condition: "month=8 AND 3<=wind<5", rows: month8Rows.filter((r) => r.windMps >= 3 && r.windMps < 5) },
+    { label: "月8×wind>=5", condition: "month=8 AND wind>=5", rows: month8Rows.filter((r) => r.windMps >= 5) },
+    { label: "月8×odds<50", condition: "month=8 AND odds<50", rows: month8Rows.filter((r) => r.currentOdds < 50) },
+    { label: "月8×odds>=50", condition: "month=8 AND odds>=50", rows: month8Rows.filter((r) => r.currentOdds >= 50) },
+    { label: "月8×raceNo4-6", condition: "month=8 AND race_no IN(4,5,6)", rows: month8Rows.filter((r) => r.raceNo >= 4 && r.raceNo <= 6) },
+    { label: "月8×raceNo7-9", condition: "month=8 AND race_no IN(7,8,9)", rows: month8Rows.filter((r) => r.raceNo >= 7) },
+  ];
+  // 月8内での分解は全体(isBase)に対するCUT判定ではなく、月8内での相対比較のみ行う
+  const month8AllMetric = calcMetric(month8Rows);
+  const month8AllDd = calcDrawdown(month8Rows);
+  dims.push(analyzeDimension("月8 分解 (forward観測中・CUT禁止)", month8Groups, month8Rows, month8AllMetric, month8AllDd));
+
+  // 10. 完全外れ率が高い条件
   const highMissGroups = [
     { label: "raceNo 1-3 (前半)", condition: "race_no<=3", rows: rows.filter((r) => r.raceNo <= 3) },
     { label: "raceNo 7-9 (後半)", condition: "race_no>=7", rows: rows.filter((r) => r.raceNo >= 7) },
@@ -676,10 +701,25 @@ function buildSimVerdict(rm: Metric, rdd: DrawdownResult): string {
   const roiOk = rm.roi >= MIN_ROI_AFTER_CUT;
   const streakOk = rdd.maxStreakN <= TARGET_MAX_STREAK;
   const ddOk = rdd.maxDDPct <= TARGET_MAX_DD_PCT;
-  if (roiOk && streakOk) return `✅ 目標達成: ROI=${pct(rm.roi / 100)} / 連敗=${rdd.maxStreakN} / DD=${num(rdd.maxDDPct)}%`;
-  if (roiOk && !streakOk) return `△ ROI達成・連敗未達: ROI=${pct(rm.roi / 100)} / 連敗=${rdd.maxStreakN}(目標≤${TARGET_MAX_STREAK})`;
-  if (!roiOk && streakOk) return `△ 連敗達成・ROI未達: ROI=${pct(rm.roi / 100)}(目標≥${MIN_ROI_AFTER_CUT}%) / 連敗=${rdd.maxStreakN}`;
-  return `❌ 両方未達: ROI=${pct(rm.roi / 100)} / 連敗=${rdd.maxStreakN}`;
+  const nWeak = rm.n < 50;
+
+  const base = `ROI=${pct(rm.roi / 100)} / 連敗=${rdd.maxStreakN} / DD=${num(rdd.maxDDPct)}%${nWeak ? ` / ⚠️n=${rm.n}(過学習注意)` : ""}`;
+
+  if (roiOk && streakOk && ddOk) {
+    return `✅ ROI/連敗/DD 全目標達成: ${base}`;
+  }
+  const unmet: string[] = [];
+  if (!roiOk) unmet.push(`ROI未達(目標≥${MIN_ROI_AFTER_CUT}%)`);
+  if (!streakOk) unmet.push(`連敗未達(目標≤${TARGET_MAX_STREAK})`);
+  if (!ddOk) unmet.push(`DD未達(目標≤${TARGET_MAX_DD_PCT}%)`);
+
+  if (unmet.length === 1 && !ddOk && roiOk && streakOk) {
+    return `⚠️ ROI/連敗は達成・DD未達 → PAPER_STRONG_CANDIDATE: ${base}`;
+  }
+  if (unmet.length === 1) {
+    return `△ ${unmet[0]}: ${base}`;
+  }
+  return `❌ 未達(${unmet.join(" / ")}): ${base}`;
 }
 
 // ───────────────── Render ─────────────────
