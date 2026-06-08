@@ -4,7 +4,7 @@
 
 **禁止**: 本番decision変更不可 / app_settings変更不可 / 自動投票不可
 
-*生成: 2026-06-08T03:14:06.197Z / DB: data/boat.sqlite*
+*生成: 2026-06-08T03:23:19.751Z / DB: data/boat.sqlite*
 
 
 ## 1. 条件定義
@@ -18,11 +18,33 @@
   - decision = 'BUY'
   - month in (4, 6, 8, 12)
   - race_equipment.parts_changed_count = 0 (equipmentPresent=true)
+  - exhibition_data 存在必須 (head boat)
   - race_no < 10
   - venue NOT IN ('戸田', '多摩川')
   - wind_speed_mps >= 3
-  - headFlyingCount = 0
+  - headFlyingCount (racer_profiles.flying_count) = 0
   - exSt NOT IN [0.10, 0.15)
+```
+
+## 1b. Rerun Safety
+
+```
+INSERT OR IGNORE による重複排除: ✅ rerun safe
+UNIQUE KEY: condition_name + race_id
+  ⚠️ 将来複数selection対応する場合は UNIQUE(condition_name, race_id, selection) を推奨
+     (現時点では既存DBがあるため ALTER TABLE しない — 設計メモとして記録)
+
+今回の実行:
+  attempted    : 543
+  inserted     : 0
+  ignored (dup): 543
+  total in DB  : 781
+
+  ⚠️  旧データ残存: DB合計 781 > 正しいセット 543
+     差分 238 件は flying_count 修正前に登録された誤データの可能性あり
+     クリーンアップコマンド (要ユーザー承認):
+       DELETE FROM paper_roi_candidates WHERE condition_name='seasonal_parts0_month_4_6_8_12'
+     その後このスクリプトを再実行して正しい 543 件を再登録する
 ```
 
 ## 2. Historical Baseline (train+val: 〜2025-08-08)

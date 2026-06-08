@@ -147,6 +147,7 @@ const filtered = rows.filter(passesIsBase);
 console.log(`[paper-forward] SQL rows: ${rows.length}, after isBase: ${filtered.length}`);
 
 // ── INSERT OR IGNORE into paper_roi_candidates ──
+// rerun safe: INSERT OR IGNORE + changes() で attempted/inserted/ignored を集計
 const insertStmt = db.prepare(`
   INSERT OR IGNORE INTO paper_roi_candidates
     (condition_name, race_id, date, venue, race_no, selection, current_odds, result, hit,
@@ -157,7 +158,8 @@ const insertStmt = db.prepare(`
           ?, ?)
 `);
 
-let inserted = 0;
+let attempted = 0;
+let insertedRows = 0;
 for (const r of filtered) {
   const hit = r.result != null ? (r.result === r.selection ? 1 : 0) : null;
   insertStmt.run(
@@ -168,9 +170,22 @@ for (const r of filtered) {
     r.wind_speed_mps, r.start_timing, r.flying_count_head,
     "PAPER_STRONG", r.date >= FORWARD_START ? "forward" : "historical",
   );
-  inserted++;
+  attempted++;
+  insertedRows += (db.prepare("SELECT changes() as c").get() as { c: number }).c;
 }
-console.log(`[paper-forward] inserted/skipped: ${inserted} rows`);
+const ignoredRows = attempted - insertedRows;
+
+// condition別カウント（DB全体）
+const totalInDB = (db.prepare(`SELECT COUNT(*) as cnt FROM paper_roi_candidates WHERE condition_name = ?`).get(CONDITION_NAME) as { cnt: number }).cnt;
+const duplicateCount = ignoredRows;
+
+console.log(`[paper-forward] attempted: ${attempted}, inserted: ${insertedRows}, ignored(duplicate): ${ignoredRows}`);
+console.log(`[paper-forward] total in DB for ${CONDITION_NAME}: ${totalInDB}`);
+if (totalInDB > attempted) {
+  console.warn(`[paper-forward] ⚠️  DB内に旧データ残存: ${totalInDB - attempted} 件 (DB合計${totalInDB} > 今回の正しいセット${attempted})`);
+  console.warn(`[paper-forward]    旧データはflying_count修正前に登録された可能性があります。`);
+  console.warn(`[paper-forward]    クリーンアップするには: DELETE FROM paper_roi_candidates WHERE condition_name='${CONDITION_NAME}' (要ユーザー承認)`);
+}
 
 // ── Read back for report ──
 type CandRow = {
@@ -267,11 +282,36 @@ lines.push("  - run_kind = 'historical-backfill'");
 lines.push("  - decision = 'BUY'");
 lines.push("  - month in (4, 6, 8, 12)");
 lines.push("  - race_equipment.parts_changed_count = 0 (equipmentPresent=true)");
+lines.push("  - exhibition_data 存在必須 (head boat)");
 lines.push("  - race_no < 10");
 lines.push("  - venue NOT IN ('戸田', '多摩川')");
 lines.push("  - wind_speed_mps >= 3");
-lines.push("  - headFlyingCount = 0");
+lines.push("  - headFlyingCount (racer_profiles.flying_count) = 0");
 lines.push("  - exSt NOT IN [0.10, 0.15)");
+lines.push("```");
+lines.push("");
+
+// 1b. Rerun Safety
+lines.push("## 1b. Rerun Safety", "");
+lines.push("```");
+lines.push("INSERT OR IGNORE による重複排除: ✅ rerun safe");
+lines.push(`UNIQUE KEY: condition_name + race_id`);
+lines.push("  ⚠️ 将来複数selection対応する場合は UNIQUE(condition_name, race_id, selection) を推奨");
+lines.push("     (現時点では既存DBがあるため ALTER TABLE しない — 設計メモとして記録)");
+lines.push("");
+lines.push(`今回の実行:`);
+lines.push(`  attempted    : ${attempted}`);
+lines.push(`  inserted     : ${insertedRows}`);
+lines.push(`  ignored (dup): ${ignoredRows}`);
+lines.push(`  total in DB  : ${totalInDB}`);
+if (totalInDB > attempted) {
+  lines.push("");
+  lines.push(`  ⚠️  旧データ残存: DB合計 ${totalInDB} > 正しいセット ${attempted}`);
+  lines.push(`     差分 ${totalInDB - attempted} 件は flying_count 修正前に登録された誤データの可能性あり`);
+  lines.push(`     クリーンアップコマンド (要ユーザー承認):`);
+  lines.push(`       DELETE FROM paper_roi_candidates WHERE condition_name='${CONDITION_NAME}'`);
+  lines.push(`     その後このスクリプトを再実行して正しい ${attempted} 件を再登録する`);
+}
 lines.push("```");
 lines.push("");
 
@@ -349,6 +389,20 @@ const reportData = {
   conditionDesc: CONDITION_DESC,
   forwardStart: FORWARD_START,
   historicalBaseline: HISTORICAL_BASELINE,
+  rerunSafety: {
+    rerunSafe: true,
+    uniqueKey: "condition_name + race_id",
+    uniqueKeyNote: "将来複数selection対応するなら UNIQUE(condition_name, race_id, selection) 推奨",
+    attempted,
+    insertedRows,
+    ignoredRows,
+    duplicateCount,
+    totalRows: totalInDB,
+    staleRows: Math.max(0, totalInDB - attempted),
+    staleWarning: totalInDB > attempted
+      ? `DB合計 ${totalInDB} > 正しいセット ${attempted}: 差分${totalInDB - attempted}件は旧スクリプトで登録された誤データの可能性あり。クリーンアップには DELETE FROM paper_roi_candidates WHERE condition_name='${CONDITION_NAME}' が必要 (要ユーザー承認)`
+      : null,
+  },
   totals: {
     historical: historicalRows.length,
     forward: forwardRows.length,
