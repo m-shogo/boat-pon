@@ -661,6 +661,9 @@ for (const cr of condReports) {
   lines.push(`| forward roiExMaxHit | ${cr.fwdMetrics.roiExMaxHit !== null ? cr.fwdMetrics.roiExMaxHit.toFixed(2) + "%" : "-"} |`);
   lines.push(`| forward maxHitOdds | ${num(cr.fwdMetrics.maxHitOdds)} |`);
   lines.push("");
+  if (cr.fwdMetrics.hits < 3) {
+    lines.push(`> ℹ️ **roiExMaxHit は参考値**: forward hit=${cr.fwdMetrics.hits} (hit<3のため未評価)。hit>=3 から評価開始。`, "");
+  }
 
   // forward monthly
   lines.push("### Forward 月別内訳", "");
@@ -710,7 +713,7 @@ for (const cr of condReports) {
     lines.push(`| ${dg.label} | ${icon} | ${dg.severity} | ${dg.value} | ${dg.action} |`);
   }
   lines.push("");
-  lines.push(`**次のレビュートリガー**: ${sa.nextReviewTrigger}`, "");
+  lines.push(`> 📅 **次のレビュートリガー**: ${sa.nextReviewTrigger}`, "");
 
   // rerun safety
   const s = cr.stats;

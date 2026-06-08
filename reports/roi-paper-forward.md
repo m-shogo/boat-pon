@@ -2,7 +2,7 @@
 
 **禁止**: 本番decision変更不可 / app_settings変更不可 / 自動投票不可
 
-*生成: 2026-06-08T06:05:46.209Z / DB: data/boat.sqlite*
+*生成: 2026-06-08T06:11:41.376Z / DB: data/boat.sqlite*
 
 
 ## 条件比較サマリー
@@ -50,6 +50,8 @@ forward開始: 2025-08-09
 | forward roiExMaxHit | 123.20% |
 | forward maxHitOdds | 46.40 |
 
+> ℹ️ **roiExMaxHit は参考値**: forward hit=2 (hit<3のため未評価)。hit>=3 から評価開始。
+
 ### Forward 月別内訳
 
 | 年月 | n | 確定 | hits | hitRate | ROI | maxHitOdds |
@@ -88,7 +90,7 @@ forward開始: 2025-08-09
 | 連敗 >= 51 (historical102回の50%) | 🟢 | WARNING | forward 最大連敗=9回 (閾値=51) ✅ | 現在問題なし |
 | 月8以外のforward実績なし | 🔴 | STOP | forward月: 08 | PRODUCTION_BLOCKED: 月4/6/12 のforward実績が必要 |
 
-**次のレビュートリガー**: forward n=30 到達時 (現在n=25)
+> 📅 **次のレビュートリガー**: forward n=30 到達時 (現在n=25)
 
 ### Rerun Safety
 
@@ -157,6 +159,8 @@ forward開始: 2025-08-09
 | forward roiExMaxHit | 0.00% |
 | forward maxHitOdds | 30.80 |
 
+> ℹ️ **roiExMaxHit は参考値**: forward hit=1 (hit<3のため未評価)。hit>=3 から評価開始。
+
 ### Forward 月別内訳
 
 | 年月 | n | 確定 | hits | hitRate | ROI | maxHitOdds |
@@ -197,7 +201,7 @@ forward開始: 2025-08-09
 | 月8以外のforward実績なし | 🔴 | STOP | forward月: 08 | PRODUCTION_BLOCKED: 月4/6/12 のforward実績が必要 |
 | DD historical 20.92% > 目標12% | 🔴 | STOP | historical DD=20.92% (目標≤12%) | PRODUCTION_BLOCKED_DD: forward期間でDDが改善するか確認必要 |
 
-**次のレビュートリガー**: forward n=30 到達時 (現在n=10)
+> 📅 **次のレビュートリガー**: forward n=30 到達時 (現在n=10)
 
 ### Rerun Safety
 
