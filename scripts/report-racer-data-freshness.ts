@@ -43,6 +43,12 @@ type RacerFreshnessDetail = {
   headFImpacted: number;
 };
 
+type ForwardPeriodMeta = {
+  minDate: string | null;
+  maxDate: string | null;
+  raceCount: number;
+};
+
 type LaunchdStatus = {
   loaded: boolean;
   label: string;
@@ -71,6 +77,7 @@ type FreshnessReport = {
   recentIsBase: RacerFreshnessDetail;
   recentWind5: RacerFreshnessDetail;
   forwardPeriod: RacerFreshnessDetail;
+  forwardPeriodMeta: ForwardPeriodMeta;
   launchd: LaunchdStatus;
   log: LogStatus;
   flyingCountReliability: "HIGH" | "MEDIUM" | "LOW";
@@ -80,11 +87,6 @@ type FreshnessReport = {
   recommendedAction: RecommendedAction;
   recommendedActionDetail: string;
 };
-
-function pct(n: number, d: number): string {
-  if (d === 0) return "n/a";
-  return ((n / d) * 100).toFixed(1) + "%";
-}
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "なし";
@@ -101,8 +103,8 @@ function queryFreshness(db: DatabaseSync, table: string): FreshnessStats {
       ${hasDistinct ? "COUNT(DISTINCT registration_no)" : "COUNT(*)"} as distinct_racers,
       MAX(fetched_at) as max_fetched,
       MIN(fetched_at) as min_fetched,
-      SUM(CASE WHEN fetched_at < datetime('now','-${STALE_DAYS_WARN} days') THEN 1 ELSE 0 END) as over7,
-      SUM(CASE WHEN fetched_at < datetime('now','-${STALE_DAYS_CRIT} days') THEN 1 ELSE 0 END) as over14,
+      SUM(CASE WHEN fetched_at IS NOT NULL AND julianday(fetched_at) < julianday('now', '-${STALE_DAYS_WARN} days') THEN 1 ELSE 0 END) as over7,
+      SUM(CASE WHEN fetched_at IS NOT NULL AND julianday(fetched_at) < julianday('now', '-${STALE_DAYS_CRIT} days') THEN 1 ELSE 0 END) as over14,
       SUM(CASE WHEN fetched_at IS NULL THEN 1 ELSE 0 END) as null_count
     FROM ${table}
   `
@@ -140,7 +142,7 @@ function queryRacerDetail(
       COUNT(*) as total,
       SUM(CASE WHEN p.registration_no IS NULL THEN 1 ELSE 0 END) as not_in_profiles,
       SUM(CASE WHEN p.flying_count IS NULL AND p.registration_no IS NOT NULL THEN 1 ELSE 0 END) as fnull,
-      SUM(CASE WHEN p.fetched_at < datetime('now','-${STALE_DAYS_WARN} days') THEN 1 ELSE 0 END) as stale7
+      SUM(CASE WHEN p.fetched_at IS NOT NULL AND julianday(p.fetched_at) < julianday('now', '-${STALE_DAYS_WARN} days') THEN 1 ELSE 0 END) as stale7
     FROM target_racers tr
     LEFT JOIN racer_profiles p ON p.registration_no = tr.reg_no
   `
@@ -162,7 +164,9 @@ function queryRacerDetail(
   };
 }
 
-function queryForwardDetail(db: DatabaseSync): RacerFreshnessDetail {
+function queryForwardDetail(
+  db: DatabaseSync
+): { detail: RacerFreshnessDetail; meta: ForwardPeriodMeta } {
   const r = db
     .prepare(
       `
@@ -178,23 +182,43 @@ function queryForwardDetail(db: DatabaseSync): RacerFreshnessDetail {
       COUNT(*) as total,
       SUM(CASE WHEN rp.registration_no IS NULL THEN 1 ELSE 0 END) as not_in_profiles,
       SUM(CASE WHEN rp.flying_count IS NULL AND rp.registration_no IS NOT NULL THEN 1 ELSE 0 END) as fnull,
-      SUM(CASE WHEN rp.fetched_at < datetime('now','-${STALE_DAYS_WARN} days') THEN 1 ELSE 0 END) as stale7
+      SUM(CASE WHEN rp.fetched_at IS NOT NULL AND julianday(rp.fetched_at) < julianday('now', '-${STALE_DAYS_WARN} days') THEN 1 ELSE 0 END) as stale7
     FROM forward_racers fr
     LEFT JOIN racer_profiles rp ON rp.registration_no = fr.reg_no
   `
     )
     .get() as Record<string, number>;
 
+  const meta = db
+    .prepare(
+      `
+    SELECT
+      MIN(date) as min_date,
+      MAX(date) as max_date,
+      COUNT(DISTINCT race_id) as race_count
+    FROM paper_roi_candidates
+    WHERE date >= '${FORWARD_START}'
+  `
+    )
+    .get() as { min_date: string | null; max_date: string | null; race_count: number };
+
   const fnull = r.fnull;
   const notInProfiles = r.not_in_profiles;
 
   return {
-    label: `paper forward期間 (${FORWARD_START}以降)`,
-    totalRacers: r.total,
-    stale7: r.stale7,
-    flyingCountNull: fnull,
-    notInProfiles,
-    headFImpacted: fnull + notInProfiles,
+    detail: {
+      label: `paper forward期間 (${FORWARD_START}以降)`,
+      totalRacers: r.total,
+      stale7: r.stale7,
+      flyingCountNull: fnull,
+      notInProfiles,
+      headFImpacted: fnull + notInProfiles,
+    },
+    meta: {
+      minDate: meta.min_date,
+      maxDate: meta.max_date,
+      raceCount: meta.race_count,
+    },
   };
 }
 
@@ -285,14 +309,17 @@ function assessFlyingCountReliability(
 
 function assessFetchNeeded(
   profiles: FreshnessStats,
+  courseStats: FreshnessStats,
   log: LogStatus
 ): { needed: boolean; reason: string } {
-  // 14日超があれば緊急
-  if (profiles.over14Days > 0) {
-    return { needed: true, reason: `14日超の古いデータ ${profiles.over14Days}件あり` };
+  const stale14Parts: string[] = [];
+  if (profiles.over14Days > 0) stale14Parts.push(`profiles ${profiles.over14Days}件`);
+  if (courseStats.over14Days > 0) stale14Parts.push(`course_stats ${courseStats.over14Days}件`);
+  if (stale14Parts.length > 0) {
+    return { needed: true, reason: `14日超の古いデータあり: ${stale14Parts.join(", ")}` };
   }
 
-  // ログの最終実行が7日超前なら要確認
+  // ログの最終実行が8日超前なら要確認
   if (log.lastModified) {
     const lastRun = new Date(log.lastModified);
     const daysSince =
@@ -335,7 +362,7 @@ function run(): FreshnessReport {
 
     const recentIsBase = queryRacerDetail(db, "isBase (直近90日)", isBaseCondition);
     const recentWind5 = queryRacerDetail(db, "wind5 (直近90日)", wind5Condition);
-    const forwardPeriod = queryForwardDetail(db);
+    const { detail: forwardPeriod, meta: forwardPeriodMeta } = queryForwardDetail(db);
 
     const launchd = checkLaunchd();
     const log = checkLog();
@@ -344,6 +371,7 @@ function run(): FreshnessReport {
       assessFlyingCountReliability(profiles, forwardPeriod);
     const { needed: fetchNeeded, reason: fetchReason } = assessFetchNeeded(
       profiles,
+      courseStats,
       log
     );
 
@@ -374,6 +402,7 @@ function run(): FreshnessReport {
       recentIsBase,
       recentWind5,
       forwardPeriod,
+      forwardPeriodMeta,
       launchd,
       log,
       flyingCountReliability: reliability,
@@ -411,40 +440,22 @@ function generateMarkdown(r: FreshnessReport): string {
 
   lines.push("## サマリー");
   lines.push("");
-  lines.push(
-    `| 項目 | 値 |`
-  );
+  lines.push(`| 項目 | 値 |`);
   lines.push(`|---|---|`);
   lines.push(`| racer_profiles 総件数 | ${r.profiles.total} 件 |`);
-  lines.push(
-    `| racer_profiles 最新取得 | ${fmtDate(r.profiles.maxFetchedAt)} |`
-  );
-  lines.push(
-    `| racer_profiles 最古取得 | ${fmtDate(r.profiles.minFetchedAt)} |`
-  );
+  lines.push(`| racer_profiles 最新取得 | ${fmtDate(r.profiles.maxFetchedAt)} |`);
+  lines.push(`| racer_profiles 最古取得 | ${fmtDate(r.profiles.minFetchedAt)} |`);
   lines.push(`| racer_profiles 7日超 | ${r.profiles.over7Days} 件 |`);
   lines.push(`| racer_profiles 14日超 | ${r.profiles.over14Days} 件 |`);
   lines.push(`| racer_profiles null | ${r.profiles.nullFetchedAt} 件 |`);
   lines.push(`| racer_course_stats 総行数 | ${r.courseStats.total} 行 |`);
-  lines.push(
-    `| racer_course_stats 登録選手 | ${r.courseStats.distinctRacers} 人 |`
-  );
-  lines.push(
-    `| racer_course_stats 最新取得 | ${fmtDate(r.courseStats.maxFetchedAt)} |`
-  );
-  lines.push(
-    `| racer_course_stats 最古取得 | ${fmtDate(r.courseStats.minFetchedAt)} |`
-  );
+  lines.push(`| racer_course_stats 登録選手 | ${r.courseStats.distinctRacers} 人 |`);
+  lines.push(`| racer_course_stats 最新取得 | ${fmtDate(r.courseStats.maxFetchedAt)} |`);
+  lines.push(`| racer_course_stats 最古取得 | ${fmtDate(r.courseStats.minFetchedAt)} |`);
   lines.push(`| racer_course_stats 7日超 | ${r.courseStats.over7Days} 件 |`);
-  lines.push(
-    `| racer_course_stats 14日超 | ${r.courseStats.over14Days} 件 |`
-  );
-  lines.push(
-    `| weekly launchd | ${r.launchd.loaded ? "✅ ロード済み" : "❌ 未ロード"} |`
-  );
-  lines.push(
-    `| ログ最終更新 | ${r.log.lastModified ? fmtDate(r.log.lastModified) : "なし"} |`
-  );
+  lines.push(`| racer_course_stats 14日超 | ${r.courseStats.over14Days} 件 |`);
+  lines.push(`| weekly launchd | ${r.launchd.loaded ? "✅ ロード済み" : "❌ 未ロード"} |`);
+  lines.push(`| ログ最終更新 | ${r.log.lastModified ? fmtDate(r.log.lastModified) : "なし"} |`);
   lines.push("");
 
   lines.push("## F歴判定 (headFlyingCount) の信頼度");
@@ -474,9 +485,17 @@ function generateMarkdown(r: FreshnessReport): string {
   lines.push(
     "> profiles未登録・flying_count NULL の選手は引退選手または履歴期間前の選手が大半。"
   );
-  lines.push(
-    "> forward期間 (2025-08-09以降) の headF影響可能性が 0 であれば判定信頼度は高い。"
-  );
+  lines.push("");
+
+  const fm = r.forwardPeriodMeta;
+  lines.push("## paper forward期間の実データ範囲");
+  lines.push("");
+  lines.push(`| 項目 | 値 |`);
+  lines.push(`|---|---|`);
+  lines.push(`| 基準日 (FORWARD_START) | ${FORWARD_START} |`);
+  lines.push(`| 実データ最古 | ${fm.minDate ?? "なし"} |`);
+  lines.push(`| 実データ最新 | ${fm.maxDate ?? "なし"} |`);
+  lines.push(`| 対象レース数 | ${fm.raceCount} 件 |`);
   lines.push("");
 
   lines.push("## launchd 週次自動更新");
