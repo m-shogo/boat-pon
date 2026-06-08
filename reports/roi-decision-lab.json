@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-08T02:18:52.461Z",
+  "generatedAt": "2026-06-08T02:26:42.413Z",
   "dbPath": "data/boat.sqlite",
   "baseline": {
     "n": 6260,
@@ -10720,10 +10720,10 @@
       "baseHitRate": 0.04428904428904429,
       "baseRoiExMaxHit": 174.68531468531467,
       "bootstrapCI": {
-        "mean": 187.85926573426562,
-        "median": 185.31468531468528,
-        "ci95lo": 109.18414918414918,
-        "ci95hi": 279.5804195804195
+        "mean": 188.50904428904374,
+        "median": 187.50582750582748,
+        "ci95lo": 106.64335664335664,
+        "ci95hi": 275.2447552447552
       },
       "venueBreakdown": [
         {
@@ -11464,10 +11464,10 @@
       "baseHitRate": 0.0436046511627907,
       "baseRoiExMaxHit": 165.31976744186048,
       "bootstrapCI": {
-        "mean": 184.44700581395327,
-        "median": 182.90697674418604,
-        "ci95lo": 96.30813953488372,
-        "ci95hi": 282.0348837209302
+        "mean": 184.04738372093001,
+        "median": 181.91860465116275,
+        "ci95lo": 97.61627906976743,
+        "ci95hi": 283.51744186046506
       },
       "venueBreakdown": [
         {
@@ -12223,10 +12223,10 @@
       "baseHitRate": 0.0304077401520387,
       "baseRoiExMaxHit": 122.58465791292328,
       "bootstrapCI": {
-        "mean": 128.1049689011749,
-        "median": 127.98894263994475,
-        "ci95lo": 90.80856945404284,
-        "ci95hi": 168.0649619903249
+        "mean": 128.5361679336559,
+        "median": 128.1271596406358,
+        "ci95lo": 91.16793365583968,
+        "ci95hi": 169.16378714581887
       },
       "venueBreakdown": [
         {
@@ -13027,10 +13027,10 @@
       "baseHitRate": 0.05641025641025641,
       "baseRoiExMaxHit": 173.33333333333334,
       "bootstrapCI": {
-        "mean": 201.88510256410294,
-        "median": 199.23076923076923,
-        "ci95lo": 98.56410256410257,
-        "ci95hi": 330.7692307692307
+        "mean": 199.87623076923063,
+        "median": 197.89743589743588,
+        "ci95lo": 89.12820512820512,
+        "ci95hi": 329.6410256410256
       },
       "venueBreakdown": [
         {
@@ -13651,10 +13651,10 @@
       "baseHitRate": 0.029537504858142247,
       "baseRoiExMaxHit": 116.05130198212204,
       "bootstrapCI": {
-        "mean": 118.89995530509131,
-        "median": 118.6280606296153,
-        "ci95lo": 92.23085891954918,
-        "ci95hi": 147.36494364554997
+        "mean": 118.90081033812683,
+        "median": 119.01671200932765,
+        "ci95lo": 92.77497085114652,
+        "ci95hi": 147.06568208317145
       },
       "venueBreakdown": [
         {
@@ -14470,10 +14470,10 @@
       "baseHitRate": 0.056291390728476824,
       "baseRoiExMaxHit": 221.0596026490066,
       "bootstrapCI": {
-        "mean": 242.17486754966885,
-        "median": 239.20529801324508,
-        "ci95lo": 133.41059602649005,
-        "ci95hi": 370.33112582781456
+        "mean": 243.30264900662235,
+        "median": 240.728476821192,
+        "ci95lo": 134.00662251655632,
+        "ci95hi": 369.63576158940396
       },
       "venueBreakdown": [
         {
@@ -15199,10 +15199,10 @@
       "baseHitRate": 0.033035714285714286,
       "baseRoiExMaxHit": 132.72321428571428,
       "bootstrapCI": {
-        "mean": 139.29549553571442,
-        "median": 138.77678571428572,
-        "ci95lo": 95.26785714285715,
-        "ci95hi": 185.5535714285715
+        "mean": 139.940638392857,
+        "median": 138.98214285714286,
+        "ci95lo": 94.80357142857142,
+        "ci95hi": 189.16964285714283
       },
       "venueBreakdown": [
         {
@@ -15913,10 +15913,10 @@
       "baseHitRate": 0.04638218923933209,
       "baseRoiExMaxHit": 178.71985157699444,
       "bootstrapCI": {
-        "mean": 191.08144712430445,
-        "median": 189.16512059369202,
-        "ci95lo": 118.97959183673473,
-        "ci95hi": 277.34693877551024
+        "mean": 193.0945918367346,
+        "median": 192.0037105751391,
+        "ci95lo": 115.91836734693877,
+        "ci95hi": 275.23191094619676
       },
       "venueBreakdown": [
         {
@@ -16552,10 +16552,10 @@
       "baseHitRate": 0.047787610619469026,
       "baseRoiExMaxHit": 182.46017699115046,
       "bootstrapCI": {
-        "mean": 197.180168141593,
-        "median": 196.93805309734515,
-        "ci95lo": 124.12389380530972,
-        "ci95hi": 272.70796460176985
+        "mean": 197.91273451327456,
+        "median": 195.91150442477877,
+        "ci95lo": 127.50442477876109,
+        "ci95hi": 272.4424778761063
       },
       "venueBreakdown": [
         {
@@ -17191,10 +17191,10 @@
       "baseHitRate": 0.053824362606232294,
       "baseRoiExMaxHit": 202.57790368271955,
       "bootstrapCI": {
-        "mean": 226.4494900849856,
-        "median": 224.73087818696885,
-        "ci95lo": 128.328611898017,
-        "ci95hi": 339.5467422096318
+        "mean": 225.36399433427755,
+        "median": 223.08781869688383,
+        "ci95lo": 128.58356940509915,
+        "ci95hi": 333.4560906515581
       },
       "venueBreakdown": [
         {
@@ -17815,10 +17815,10 @@
       "baseHitRate": 0.056291390728476824,
       "baseRoiExMaxHit": 210.99337748344368,
       "bootstrapCI": {
-        "mean": 234.91842715231755,
-        "median": 231.4569536423841,
-        "ci95lo": 126.95364238410598,
-        "ci95hi": 356.42384105960264
+        "mean": 234.53620860927137,
+        "median": 231.3245033112583,
+        "ci95lo": 122.91390728476823,
+        "ci95hi": 362.4834437086093
       },
       "venueBreakdown": [
         {
@@ -18424,10 +18424,10 @@
       "baseHitRate": 0.05309734513274336,
       "baseRoiExMaxHit": 212.12389380530973,
       "bootstrapCI": {
-        "mean": 279.84438053097335,
-        "median": 273.89380530973455,
-        "ci95lo": 78.40707964601769,
-        "ci95hi": 516.7256637168141
+        "mean": 277.97787610619434,
+        "median": 269.2920353982301,
+        "ci95lo": 82.12389380530975,
+        "ci95hi": 525.6637168141592
       },
       "venueBreakdown": [
         {
@@ -19003,10 +19003,10 @@
       "baseHitRate": 0.051094890510948905,
       "baseRoiExMaxHit": 160.5839416058394,
       "bootstrapCI": {
-        "mean": 204.74244525547456,
-        "median": 200.80291970802918,
-        "ci95lo": 60.802919708029194,
-        "ci95hi": 382.6277372262774
+        "mean": 204.14678832116752,
+        "median": 199.92700729927006,
+        "ci95lo": 66.56934306569343,
+        "ci95hi": 376.71532846715337
       },
       "venueBreakdown": [
         {
@@ -19597,10 +19597,10 @@
       "baseHitRate": 0.05539358600583091,
       "baseRoiExMaxHit": 208.48396501457728,
       "bootstrapCI": {
-        "mean": 229.71597667638508,
-        "median": 227.95918367346943,
-        "ci95lo": 130.81632653061226,
-        "ci95hi": 340.78717201166177
+        "mean": 231.97295918367374,
+        "median": 228.8046647230321,
+        "ci95lo": 136.53061224489798,
+        "ci95hi": 355.1020408163265
       },
       "venueBreakdown": [
         {
@@ -20221,10 +20221,10 @@
       "baseHitRate": 0.019808306709265176,
       "baseRoiExMaxHit": 79.13578274760387,
       "bootstrapCI": {
-        "mean": 80.28208945686914,
-        "median": 80.13258785942494,
-        "ci95lo": 65.85303514376997,
-        "ci95hi": 94.81629392971246
+        "mean": 80.35720846645356,
+        "median": 80.23961661341856,
+        "ci95lo": 66.27316293929715,
+        "ci95hi": 94.41533546325884
       },
       "venueBreakdown": [
         {
@@ -44101,6 +44101,548 @@
       "warnings": [],
       "judgement": "A",
       "comment": "残す強BUY候補。n=403 ROI=218.61% exMax=199.33%。7/7ヶ月ROI>=100 / 0ヶ月ROI<70 / worst=116.32%"
+    }
+  ],
+  "paperValidations": [
+    {
+      "label": "月4+6+8+12×parts=0",
+      "n": 543,
+      "roi": 199.09760589318603,
+      "roiExMaxHit": 184.78821362799263,
+      "roiExMax3Hits": 162.15469613259668,
+      "roiExMax5Hits": 140.97605893186002,
+      "maxHitOdds": 77.7,
+      "hits": 26,
+      "partsCoverage": {
+        "total": 543,
+        "present": 543,
+        "presentPct": 100,
+        "parts0": 543,
+        "parts0Pct": 100,
+        "partsPos": 0,
+        "missingCount": 0
+      },
+      "motorCoverage": null,
+      "monthBreakdown": [
+        {
+          "ym": "2024-04",
+          "n": 49,
+          "hits": 2,
+          "roi": 216.3265306122449,
+          "maxHitOdds": 55.1,
+          "roiExMaxHit": 103.87755102040816
+        },
+        {
+          "ym": "2024-06",
+          "n": 62,
+          "hits": 5,
+          "roi": 280.6451612903226,
+          "maxHitOdds": 40.6,
+          "roiExMaxHit": 215.16129032258067
+        },
+        {
+          "ym": "2024-08",
+          "n": 106,
+          "hits": 3,
+          "roi": 138.58490566037736,
+          "maxHitOdds": 59.9,
+          "roiExMaxHit": 82.0754716981132
+        },
+        {
+          "ym": "2024-12",
+          "n": 100,
+          "hits": 6,
+          "roi": 192.79999999999998,
+          "maxHitOdds": 38.4,
+          "roiExMaxHit": 154.4
+        },
+        {
+          "ym": "2025-04",
+          "n": 62,
+          "hits": 4,
+          "roi": 340.96774193548384,
+          "maxHitOdds": 77.7,
+          "roiExMaxHit": 215.64516129032256
+        },
+        {
+          "ym": "2025-06",
+          "n": 70,
+          "hits": 2,
+          "roi": 155.14285714285714,
+          "maxHitOdds": 62.6,
+          "roiExMaxHit": 65.71428571428571
+        },
+        {
+          "ym": "2025-08",
+          "n": 94,
+          "hits": 4,
+          "roi": 150.42553191489358,
+          "maxHitOdds": 46.4,
+          "roiExMaxHit": 101.06382978723406
+        }
+      ],
+      "oddsBands": [
+        {
+          "label": "odds<30",
+          "n": 49,
+          "hits": 5,
+          "roi": 275.3061224489795,
+          "maxHitOdds": 29.6,
+          "avgOdds": 26.63877551020409
+        },
+        {
+          "label": "30<=odds<50",
+          "n": 351,
+          "hits": 15,
+          "roi": 165.15669515669512,
+          "maxHitOdds": 47.9,
+          "avgOdds": 39.45102564102566
+        },
+        {
+          "label": "50<=odds<80",
+          "n": 140,
+          "hits": 6,
+          "roi": 261.7857142857143,
+          "maxHitOdds": 77.7,
+          "avgOdds": 57.55142857142855
+        },
+        {
+          "label": "odds>=80",
+          "n": 3,
+          "hits": 0,
+          "roi": 0,
+          "maxHitOdds": 0,
+          "avgOdds": 89.60000000000001
+        }
+      ],
+      "judgment": "PAPER_STRONG",
+      "judgmentReasons": [
+        "全基準クリア"
+      ]
+    },
+    {
+      "label": "月4+6+8+12",
+      "n": 565,
+      "roi": 196.212389380531,
+      "roiExMaxHit": 182.46017699115046,
+      "roiExMax3Hits": 160.7079646017699,
+      "roiExMax5Hits": 140.35398230088495,
+      "maxHitOdds": 77.7,
+      "hits": 27,
+      "partsCoverage": {
+        "total": 565,
+        "present": 565,
+        "presentPct": 100,
+        "parts0": 543,
+        "parts0Pct": 96.10619469026548,
+        "partsPos": 22,
+        "missingCount": 0
+      },
+      "motorCoverage": null,
+      "monthBreakdown": [
+        {
+          "ym": "2024-04",
+          "n": 51,
+          "hits": 2,
+          "roi": 207.843137254902,
+          "maxHitOdds": 55.1,
+          "roiExMaxHit": 99.80392156862746
+        },
+        {
+          "ym": "2024-06",
+          "n": 65,
+          "hits": 5,
+          "roi": 267.6923076923077,
+          "maxHitOdds": 40.6,
+          "roiExMaxHit": 205.23076923076923
+        },
+        {
+          "ym": "2024-08",
+          "n": 114,
+          "hits": 3,
+          "roi": 128.85964912280704,
+          "maxHitOdds": 59.9,
+          "roiExMaxHit": 76.31578947368422
+        },
+        {
+          "ym": "2024-12",
+          "n": 103,
+          "hits": 6,
+          "roi": 187.18446601941744,
+          "maxHitOdds": 38.4,
+          "roiExMaxHit": 149.9029126213592
+        },
+        {
+          "ym": "2025-04",
+          "n": 62,
+          "hits": 4,
+          "roi": 340.96774193548384,
+          "maxHitOdds": 77.7,
+          "roiExMaxHit": 215.64516129032256
+        },
+        {
+          "ym": "2025-06",
+          "n": 72,
+          "hits": 2,
+          "roi": 150.83333333333334,
+          "maxHitOdds": 62.6,
+          "roiExMaxHit": 63.888888888888886
+        },
+        {
+          "ym": "2025-08",
+          "n": 98,
+          "hits": 5,
+          "roi": 172.34693877551018,
+          "maxHitOdds": 46.4,
+          "roiExMaxHit": 125
+        }
+      ],
+      "oddsBands": [
+        {
+          "label": "odds<30",
+          "n": 50,
+          "hits": 6,
+          "roi": 324.8,
+          "maxHitOdds": 29.6,
+          "avgOdds": 26.65600000000001
+        },
+        {
+          "label": "30<=odds<50",
+          "n": 366,
+          "hits": 15,
+          "roi": 158.3879781420765,
+          "maxHitOdds": 47.9,
+          "avgOdds": 39.41122950819674
+        },
+        {
+          "label": "50<=odds<80",
+          "n": 146,
+          "hits": 6,
+          "roi": 251.027397260274,
+          "maxHitOdds": 77.7,
+          "avgOdds": 57.536301369863
+        },
+        {
+          "label": "odds>=80",
+          "n": 3,
+          "hits": 0,
+          "roi": 0,
+          "maxHitOdds": 0,
+          "avgOdds": 89.60000000000001
+        }
+      ],
+      "judgment": "PAPER",
+      "judgmentReasons": [
+        "年間差25pp>20pp"
+      ]
+    },
+    {
+      "label": "月4+6+12×parts=0",
+      "n": 343,
+      "roi": 231.13702623906707,
+      "roiExMaxHit": 208.48396501457728,
+      "roiExMax3Hits": 172.6530612244898,
+      "roiExMax5Hits": 141.74927113702626,
+      "maxHitOdds": 77.7,
+      "hits": 19,
+      "partsCoverage": {
+        "total": 343,
+        "present": 343,
+        "presentPct": 100,
+        "parts0": 343,
+        "parts0Pct": 100,
+        "partsPos": 0,
+        "missingCount": 0
+      },
+      "motorCoverage": null,
+      "monthBreakdown": [
+        {
+          "ym": "2024-04",
+          "n": 49,
+          "hits": 2,
+          "roi": 216.3265306122449,
+          "maxHitOdds": 55.1,
+          "roiExMaxHit": 103.87755102040816
+        },
+        {
+          "ym": "2024-06",
+          "n": 62,
+          "hits": 5,
+          "roi": 280.6451612903226,
+          "maxHitOdds": 40.6,
+          "roiExMaxHit": 215.16129032258067
+        },
+        {
+          "ym": "2024-12",
+          "n": 100,
+          "hits": 6,
+          "roi": 192.79999999999998,
+          "maxHitOdds": 38.4,
+          "roiExMaxHit": 154.4
+        },
+        {
+          "ym": "2025-04",
+          "n": 62,
+          "hits": 4,
+          "roi": 340.96774193548384,
+          "maxHitOdds": 77.7,
+          "roiExMaxHit": 215.64516129032256
+        },
+        {
+          "ym": "2025-06",
+          "n": 70,
+          "hits": 2,
+          "roi": 155.14285714285714,
+          "maxHitOdds": 62.6,
+          "roiExMaxHit": 65.71428571428571
+        }
+      ],
+      "oddsBands": [
+        {
+          "label": "odds<30",
+          "n": 25,
+          "hits": 4,
+          "roi": 445.59999999999997,
+          "maxHitOdds": 29.6,
+          "avgOdds": 26.888
+        },
+        {
+          "label": "30<=odds<50",
+          "n": 225,
+          "hits": 10,
+          "roi": 166.57777777777778,
+          "maxHitOdds": 46,
+          "avgOdds": 39.74666666666669
+        },
+        {
+          "label": "50<=odds<80",
+          "n": 92,
+          "hits": 5,
+          "roi": 333.26086956521743,
+          "maxHitOdds": 77.7,
+          "avgOdds": 57.99239130434784
+        },
+        {
+          "label": "odds>=80",
+          "n": 1,
+          "hits": 0,
+          "roi": 0,
+          "maxHitOdds": 0,
+          "avgOdds": 96.3
+        }
+      ],
+      "judgment": "PAPER",
+      "judgmentReasons": [
+        "n=343<500"
+      ]
+    },
+    {
+      "label": "月4+6+12",
+      "n": 353,
+      "roi": 224.5892351274788,
+      "roiExMaxHit": 202.57790368271955,
+      "roiExMax3Hits": 167.76203966005662,
+      "roiExMax5Hits": 137.73371104815865,
+      "maxHitOdds": 77.7,
+      "hits": 19,
+      "partsCoverage": {
+        "total": 353,
+        "present": 353,
+        "presentPct": 100,
+        "parts0": 343,
+        "parts0Pct": 97.16713881019831,
+        "partsPos": 10,
+        "missingCount": 0
+      },
+      "motorCoverage": null,
+      "monthBreakdown": [
+        {
+          "ym": "2024-04",
+          "n": 51,
+          "hits": 2,
+          "roi": 207.843137254902,
+          "maxHitOdds": 55.1,
+          "roiExMaxHit": 99.80392156862746
+        },
+        {
+          "ym": "2024-06",
+          "n": 65,
+          "hits": 5,
+          "roi": 267.6923076923077,
+          "maxHitOdds": 40.6,
+          "roiExMaxHit": 205.23076923076923
+        },
+        {
+          "ym": "2024-12",
+          "n": 103,
+          "hits": 6,
+          "roi": 187.18446601941744,
+          "maxHitOdds": 38.4,
+          "roiExMaxHit": 149.9029126213592
+        },
+        {
+          "ym": "2025-04",
+          "n": 62,
+          "hits": 4,
+          "roi": 340.96774193548384,
+          "maxHitOdds": 77.7,
+          "roiExMaxHit": 215.64516129032256
+        },
+        {
+          "ym": "2025-06",
+          "n": 72,
+          "hits": 2,
+          "roi": 150.83333333333334,
+          "maxHitOdds": 62.6,
+          "roiExMaxHit": 63.888888888888886
+        }
+      ],
+      "oddsBands": [
+        {
+          "label": "odds<30",
+          "n": 25,
+          "hits": 4,
+          "roi": 445.59999999999997,
+          "maxHitOdds": 29.6,
+          "avgOdds": 26.888
+        },
+        {
+          "label": "30<=odds<50",
+          "n": 232,
+          "hits": 10,
+          "roi": 161.55172413793105,
+          "maxHitOdds": 46,
+          "avgOdds": 39.73620689655174
+        },
+        {
+          "label": "50<=odds<80",
+          "n": 95,
+          "hits": 5,
+          "roi": 322.7368421052632,
+          "maxHitOdds": 77.7,
+          "avgOdds": 58.005263157894746
+        },
+        {
+          "label": "odds>=80",
+          "n": 1,
+          "hits": 0,
+          "roi": 0,
+          "maxHitOdds": 0,
+          "avgOdds": 96.3
+        }
+      ],
+      "judgment": "PAPER",
+      "judgmentReasons": [
+        "n=353<500",
+        "年間差23pp>20pp"
+      ]
+    },
+    {
+      "label": "月4+6+12×motor<40",
+      "n": 302,
+      "roi": 236.72185430463574,
+      "roiExMaxHit": 210.99337748344368,
+      "roiExMax3Hits": 170.29801324503313,
+      "roiExMax5Hits": 135.19867549668874,
+      "maxHitOdds": 77.7,
+      "hits": 17,
+      "partsCoverage": {
+        "total": 302,
+        "present": 302,
+        "presentPct": 100,
+        "parts0": 293,
+        "parts0Pct": 97.01986754966887,
+        "partsPos": 9,
+        "missingCount": 0
+      },
+      "motorCoverage": {
+        "total": 302,
+        "present": 302,
+        "presentPct": 100,
+        "motorLow40": 302,
+        "motorLow40Pct": 100
+      },
+      "monthBreakdown": [
+        {
+          "ym": "2024-04",
+          "n": 42,
+          "hits": 2,
+          "roi": 252.38095238095238,
+          "maxHitOdds": 55.1,
+          "roiExMaxHit": 121.19047619047618
+        },
+        {
+          "ym": "2024-06",
+          "n": 50,
+          "hits": 3,
+          "roi": 192.2,
+          "maxHitOdds": 39.8,
+          "roiExMaxHit": 112.6
+        },
+        {
+          "ym": "2024-12",
+          "n": 88,
+          "hits": 6,
+          "roi": 219.0909090909091,
+          "maxHitOdds": 38.4,
+          "roiExMaxHit": 175.45454545454547
+        },
+        {
+          "ym": "2025-04",
+          "n": 55,
+          "hits": 4,
+          "roi": 384.3636363636363,
+          "maxHitOdds": 77.7,
+          "roiExMaxHit": 243.09090909090907
+        },
+        {
+          "ym": "2025-06",
+          "n": 67,
+          "hits": 2,
+          "roi": 162.08955223880596,
+          "maxHitOdds": 62.6,
+          "roiExMaxHit": 68.65671641791045
+        }
+      ],
+      "oddsBands": [
+        {
+          "label": "odds<30",
+          "n": 24,
+          "hits": 4,
+          "roi": 464.1666666666667,
+          "maxHitOdds": 29.6,
+          "avgOdds": 27.012500000000003
+        },
+        {
+          "label": "30<=odds<50",
+          "n": 195,
+          "hits": 8,
+          "roi": 152.25641025641025,
+          "maxHitOdds": 46,
+          "avgOdds": 39.70769230769232
+        },
+        {
+          "label": "50<=odds<80",
+          "n": 82,
+          "hits": 5,
+          "roi": 373.9024390243903,
+          "maxHitOdds": 77.7,
+          "avgOdds": 58.09878048780488
+        },
+        {
+          "label": "odds>=80",
+          "n": 1,
+          "hits": 0,
+          "roi": 0,
+          "maxHitOdds": 0,
+          "avgOdds": 96.3
+        }
+      ],
+      "judgment": "PAPER",
+      "judgmentReasons": [
+        "n=302<500",
+        "年間差43pp>20pp"
+      ]
     }
   ]
 }

@@ -144,6 +144,7 @@ type Metric = {
   maxHitOdds: number;
   roiExMaxHit: number;
   roiExMax3Hits: number;
+  roiExMax5Hits: number;
 };
 
 type MonthlyStability = {
@@ -527,6 +528,7 @@ function metric(rows: Row[]): Metric {
   const totalReturn = hitOdds.reduce((s, o) => s + o, 0);
   const returnEx1 = hitOdds.slice(1).reduce((s, o) => s + o, 0);
   const returnEx3 = hitOdds.slice(3).reduce((s, o) => s + o, 0);
+  const returnEx5 = hitOdds.slice(5).reduce((s, o) => s + o, 0);
   const avgOdds = n ? rows.reduce((s, r) => s + r.currentOdds, 0) / n : 0;
   return {
     n,
@@ -537,6 +539,7 @@ function metric(rows: Row[]): Metric {
     maxHitOdds: hitOdds[0] ?? 0,
     roiExMaxHit: n ? (returnEx1 / n) * 100 : 0,
     roiExMax3Hits: n ? (returnEx3 / n) * 100 : 0,
+    roiExMax5Hits: n ? (returnEx5 / n) * 100 : 0,
   };
 }
 
@@ -725,6 +728,125 @@ type DeepDiveAnalysis = {
   exStBreakdown: BreakdownRow[];
   subFilterBreakdown: BreakdownRow[];
 };
+
+// ───────────────── Deep Validation (Paper候補 Top5検証) ─────────────────
+
+type MonthYearCell = { ym: string; n: number; hits: number; roi: number; maxHitOdds: number; roiExMaxHit: number };
+type OddsBandCell = { label: string; n: number; hits: number; roi: number; maxHitOdds: number; avgOdds: number };
+
+type DeepValidation = {
+  label: string;
+  n: number;
+  roi: number;
+  roiExMaxHit: number;
+  roiExMax3Hits: number;
+  roiExMax5Hits: number;
+  maxHitOdds: number;
+  hits: number;
+  // parts coverage
+  partsCoverage: { total: number; present: number; presentPct: number; parts0: number; parts0Pct: number; partsPos: number; missingCount: number };
+  // motor coverage (optional)
+  motorCoverage: { total: number; present: number; presentPct: number; motorLow40: number; motorLow40Pct: number } | null;
+  // monthly breakdown (year-month level)
+  monthBreakdown: MonthYearCell[];
+  // odds band breakdown
+  oddsBands: OddsBandCell[];
+  // judgment
+  judgment: "PAPER_STRONG" | "PAPER" | "DO_NOT_SHIP";
+  judgmentReasons: string[];
+};
+
+function validateDeep(
+  rows: Row[],
+  label: string,
+  fn: (r: Row) => boolean,
+  checkMotor: boolean,
+): DeepValidation {
+  const subset = rows.filter(fn);
+  const m = metric(subset);
+
+  // parts coverage
+  const total = subset.length;
+  const present = subset.filter((r) => r.equipmentPresent).length;
+  const parts0 = subset.filter((r) => r.equipmentPresent && (r.courseFeaturesMap.get(r.selectionNums[0])?.partsCount ?? 0) === 0).length;
+  const partsPos = subset.filter((r) => r.equipmentPresent && (r.courseFeaturesMap.get(r.selectionNums[0])?.partsCount ?? 0) > 0).length;
+  const missingCount = total - present;
+  const partsCoverage = {
+    total,
+    present,
+    presentPct: total > 0 ? (present / total) * 100 : 0,
+    parts0,
+    parts0Pct: total > 0 ? (parts0 / total) * 100 : 0,
+    partsPos,
+    missingCount,
+  };
+
+  // motor coverage
+  let motorCoverage: DeepValidation["motorCoverage"] = null;
+  if (checkMotor) {
+    const mPresent = subset.filter((r) => r.motorPresent).length;
+    const mLow40 = subset.filter((r) => r.motorPresent && (r.headMotorTop2 ?? 100) < 40).length;
+    motorCoverage = {
+      total,
+      present: mPresent,
+      presentPct: total > 0 ? (mPresent / total) * 100 : 0,
+      motorLow40: mLow40,
+      motorLow40Pct: mPresent > 0 ? (mLow40 / mPresent) * 100 : 0,
+    };
+  }
+
+  // monthly breakdown (by year-month)
+  const byYm = groupBy(subset, (r) => r.ym);
+  const monthBreakdown: MonthYearCell[] = [...byYm.entries()]
+    .map(([ym, rs]) => {
+      const mm = metric(rs);
+      return { ym, n: mm.n, hits: mm.hits, roi: mm.roi, maxHitOdds: mm.maxHitOdds, roiExMaxHit: mm.roiExMaxHit };
+    })
+    .sort((a, b) => a.ym.localeCompare(b.ym));
+
+  // odds band breakdown
+  const bands: Array<{ label: string; lo: number; hi: number }> = [
+    { label: "odds<30", lo: 0, hi: 30 },
+    { label: "30<=odds<50", lo: 30, hi: 50 },
+    { label: "50<=odds<80", lo: 50, hi: 80 },
+    { label: "odds>=80", lo: 80, hi: Infinity },
+  ];
+  const oddsBands: OddsBandCell[] = bands.map(({ label: bl, lo, hi }) => {
+    const band = subset.filter((r) => r.currentOdds >= lo && r.currentOdds < hi);
+    const bm = metric(band);
+    return { label: bl, n: bm.n, hits: bm.hits, roi: bm.roi, maxHitOdds: bm.maxHitOdds, avgOdds: bm.avgOdds };
+  });
+
+  // judgment
+  const judgmentReasons: string[] = [];
+  let judgment: DeepValidation["judgment"] = "PAPER_STRONG";
+
+  // PAPER_STRONG conditions
+  if (m.n < 500) { judgmentReasons.push(`n=${m.n}<500`); judgment = "PAPER"; }
+  const yearGap = Math.abs((metric(subset.filter((r) => r.date.startsWith("2024"))).roi) - (metric(subset.filter((r) => r.date.startsWith("2025"))).roi));
+  if (yearGap > 20) { judgmentReasons.push(`年間差${yearGap.toFixed(0)}pp>20pp`); if (judgment === "PAPER_STRONG") judgment = "PAPER"; }
+  if (m.roiExMax3Hits < 100) { judgmentReasons.push(`roiExMax3Hits=${pct(m.roiExMax3Hits / 100)}<100%`); judgment = "DO_NOT_SHIP"; }
+  if (missingCount / total > 0.20) { judgmentReasons.push(`equipment欠損${((missingCount / total) * 100).toFixed(0)}%>20%`); judgment = "DO_NOT_SHIP"; }
+
+  // check if 1 month drives everything
+  const topMonth = monthBreakdown.sort((a, b) => b.roi * b.n - a.roi * a.n)[0];
+  if (topMonth && topMonth.n / total > 0.5) { judgmentReasons.push(`1月に${((topMonth.n / total) * 100).toFixed(0)}%集中`); if (judgment === "PAPER_STRONG") judgment = "PAPER"; }
+
+  // odds>=80 dependency: if odds>=80 band drives > 50% of total return
+  const highOddsBand = oddsBands.find((b) => b.label === "odds>=80");
+  if (highOddsBand && highOddsBand.hits > 0) {
+    const highOddsReturn = highOddsBand.hits * highOddsBand.maxHitOdds;
+    const totalReturn = m.hits > 0 ? m.roi * total / 100 : 0;
+    if (totalReturn > 0 && highOddsReturn / totalReturn > 0.5) {
+      judgmentReasons.push(`odds>=80一発依存(${((highOddsReturn / totalReturn) * 100).toFixed(0)}%)`);
+      judgment = "DO_NOT_SHIP";
+    }
+  }
+
+  if (judgmentReasons.length === 0) judgmentReasons.push("全基準クリア");
+
+  return { label, n: m.n, roi: m.roi, roiExMaxHit: m.roiExMaxHit, roiExMax3Hits: m.roiExMax3Hits, roiExMax5Hits: m.roiExMax5Hits, maxHitOdds: m.maxHitOdds, hits: m.hits, partsCoverage, motorCoverage, monthBreakdown: monthBreakdown.sort((a, b) => a.ym.localeCompare(b.ym)), oddsBands, judgment, judgmentReasons };
+}
 
 function runDeepDive(rows: Row[], baseFn: (r: Row) => boolean, baseLabel: string): DeepDiveAnalysis {
   const baseRows = rows.filter(baseFn);
@@ -4346,6 +4468,41 @@ try {
   const monthRaceMatrix = computeMonthRaceMatrix(rows);
   console.log("[roi-decision-lab] deep dive done");
 
+  // ── Paper候補 Top5 詳細検証 ──
+  console.log("[roi-decision-lab] validating paper candidates top5...");
+  function isBase(r: Row): boolean {
+    const mo = Number(r.ym.slice(5));
+    const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+    const exSt = hf?.exSt ?? null;
+    const isBadExSt = exSt !== null && exSt >= 0.10 && exSt < 0.15;
+    return !((r.headFlyingCount ?? 0) >= 1 || mo <= 3 || r.raceNo >= 10 || r.venue === "戸田" || r.venue === "多摩川" || mo === 9 || (r.windMps ?? 99) < 3 || isBadExSt);
+  }
+  const paperValidations: DeepValidation[] = [
+    validateDeep(rows, "月4+6+8+12×parts=0", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      return isBase(r) && (mo === 4 || mo === 6 || mo === 8 || mo === 12) && r.equipmentPresent && (hf?.partsCount ?? 0) === 0;
+    }, false),
+    validateDeep(rows, "月4+6+8+12", (r) => {
+      const mo = Number(r.ym.slice(5));
+      return isBase(r) && (mo === 4 || mo === 6 || mo === 8 || mo === 12);
+    }, false),
+    validateDeep(rows, "月4+6+12×parts=0", (r) => {
+      const mo = Number(r.ym.slice(5));
+      const hf = r.courseFeaturesMap.get(r.selectionNums[0]);
+      return isBase(r) && (mo === 4 || mo === 6 || mo === 12) && r.equipmentPresent && (hf?.partsCount ?? 0) === 0;
+    }, false),
+    validateDeep(rows, "月4+6+12", (r) => {
+      const mo = Number(r.ym.slice(5));
+      return isBase(r) && (mo === 4 || mo === 6 || mo === 12);
+    }, false),
+    validateDeep(rows, "月4+6+12×motor<40", (r) => {
+      const mo = Number(r.ym.slice(5));
+      return isBase(r) && (mo === 4 || mo === 6 || mo === 12) && r.motorPresent && (r.headMotorTop2 ?? 100) < 40;
+    }, true),
+  ];
+  console.log("[roi-decision-lab] paper validation done");
+
   // Sort
   const noBuyCandidates = candidates
     .filter((c) => c.action === "NO_BUY")
@@ -4382,6 +4539,7 @@ try {
     monthRaceMatrix,
     risky,
     allConditions: candidates,
+    paperValidations,
   };
 
   mkdirSync("reports", { recursive: true });
@@ -4407,6 +4565,7 @@ function renderMarkdown(r: {
   deepDives: DeepDiveAnalysis[];
   monthRaceMatrix: MonthRaceMatrix[];
   risky: LabCandidate[];
+  paperValidations: DeepValidation[];
 }) {
   const lines: string[] = [];
   const b = r.baseline;
@@ -4719,6 +4878,84 @@ function renderMarkdown(r: {
       lines.push("");
     }
   }
+
+  // 11. Paper候補 Top5 詳細検証
+  lines.push("## 11. Paper候補 Top5 詳細検証", "");
+  lines.push("> **PAPER_STRONG判定基準**: n>=500 / 年間差<=20pp / roiExMax3Hits>=100% / equipment欠損<=20% / 1月集中なし / odds>=80依存なし", "");
+
+  for (const v of r.paperValidations) {
+    const jIcon = v.judgment === "PAPER_STRONG" ? "✅" : v.judgment === "PAPER" ? "⚠️" : "❌";
+    lines.push(`### 11.x ${jIcon} ${esc(v.label)} — **${v.judgment}**`, "");
+    lines.push(`**基本**: n=${v.n} / hits=${v.hits} / ROI=${pct(v.roi / 100)} / maxHitOdds=${num(v.maxHitOdds)}`, "");
+    lines.push(`**判定理由**: ${v.judgmentReasons.join(" / ")}`, "");
+    lines.push("");
+
+    // hit除外ROI
+    lines.push("**最大hit除外ROI (過学習確認)**");
+    lines.push("| 指標 | ROI |");
+    lines.push("|---|---:|");
+    lines.push(`| 全件 ROI | ${pct(v.roi / 100)} |`);
+    lines.push(`| Top1 hit除外 (roiExMaxHit) | ${pct(v.roiExMaxHit / 100)} |`);
+    lines.push(`| Top3 hit除外 (roiExMax3Hits) | ${pct(v.roiExMax3Hits / 100)} |`);
+    lines.push(`| Top5 hit除外 (roiExMax5Hits) | ${pct(v.roiExMax5Hits / 100)} |`);
+    lines.push("");
+
+    // parts coverage
+    const pc = v.partsCoverage;
+    lines.push("**equipment / parts=0 欠損確認**");
+    lines.push("| 項目 | 件数 | 割合 |");
+    lines.push("|---|---:|---:|");
+    lines.push(`| 対象全件 | ${pc.total} | 100% |`);
+    lines.push(`| equipment情報あり (equipmentPresent=true) | ${pc.present} | ${pct(pc.presentPct / 100)} |`);
+    lines.push(`| equipment情報なし (欠損) | ${pc.missingCount} | ${pct((100 - pc.presentPct) / 100)} |`);
+    lines.push(`| parts=0 (部品交換なし・情報あり) | ${pc.parts0} | ${pct(pc.parts0Pct / 100)} |`);
+    lines.push(`| parts>=1 (部品交換あり・情報あり) | ${pc.partsPos} | ${pct(pc.partsPos / pc.total * 100 / 100)} |`);
+    const riskNote = pc.missingCount / pc.total > 0.20 ? "⚠️ **欠損率20%超: parts=0条件は欠損を含む可能性あり**" : "✓ 欠損率許容内";
+    lines.push(`> ${riskNote}`, "");
+    lines.push("");
+
+    // motor coverage (if applicable)
+    if (v.motorCoverage) {
+      const mc = v.motorCoverage;
+      lines.push("**motor情報 確認**");
+      lines.push("| 項目 | 件数 | 割合 |");
+      lines.push("|---|---:|---:|");
+      lines.push(`| motor情報あり | ${mc.present} | ${pct(mc.presentPct / 100)} |`);
+      lines.push(`| motor情報なし (欠損) | ${mc.total - mc.present} | ${pct((100 - mc.presentPct) / 100)} |`);
+      lines.push(`| motor<40 (motor情報あり中) | ${mc.motorLow40} | ${pct(mc.motorLow40Pct / 100)} |`);
+      lines.push("");
+    }
+
+    // odds band
+    lines.push("**オッズ帯別内訳**");
+    lines.push("| オッズ帯 | n | hits | ROI | maxHitOdds | avgOdds |");
+    lines.push("|---|---:|---:|---:|---:|---:|");
+    for (const b of v.oddsBands) {
+      lines.push(`| ${b.label} | ${b.n} | ${b.hits} | ${pct(b.roi / 100)} | ${num(b.maxHitOdds)} | ${num(b.avgOdds)} |`);
+    }
+    lines.push("");
+
+    // monthly breakdown (year-month)
+    lines.push("**月別内訳 (年月単位)**");
+    lines.push("| 年月 | n | hits | ROI | maxHitOdds | roiExMaxHit |");
+    lines.push("|---|---:|---:|---:|---:|---:|");
+    for (const mb of v.monthBreakdown) {
+      const rowFlag = mb.roi > 300 ? " ⚡" : mb.roi > 200 ? " ✓" : mb.roi > 100 ? "" : mb.roi > 0 ? " △" : " ✗";
+      lines.push(`| ${mb.ym}${rowFlag} | ${mb.n} | ${mb.hits} | ${pct(mb.roi / 100)} | ${num(mb.maxHitOdds)} | ${pct(mb.roiExMaxHit / 100)} |`);
+    }
+    lines.push("");
+  }
+
+  // サマリー表
+  lines.push("### Paper候補 最終判定サマリー", "");
+  lines.push("| # | 判定 | label | n | ROI | roiExMax3Hits | parts欠損% | 年間差 | 理由 |");
+  lines.push("|---:|---|---|---:|---:|---:|---:|---:|---|");
+  r.paperValidations.forEach((v, i) => {
+    const icon = v.judgment === "PAPER_STRONG" ? "✅ PAPER_STRONG" : v.judgment === "PAPER" ? "⚠️ PAPER" : "❌ DO_NOT_SHIP";
+    const missingPct = (v.partsCoverage.missingCount / v.partsCoverage.total * 100).toFixed(0);
+    lines.push(`| ${i + 1} | ${icon} | ${esc(v.label)} | ${v.n} | ${pct(v.roi / 100)} | ${pct(v.roiExMax3Hits / 100)} | ${missingPct}% | (別途) | ${v.judgmentReasons.join(", ")} |`);
+  });
+  lines.push("");
 
   // 14. まだ足りないfeature
   lines.push("## 14. まだ足りないfeature / 次の仮説", "");
