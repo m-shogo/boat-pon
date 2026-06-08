@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-06-08T08:33:59.848Z",
-  "sourceGeneratedAt": "2026-06-08T08:33:59.379Z",
+  "generatedAt": "2026-06-08T08:38:25.525Z",
+  "sourceGeneratedAt": "2026-06-08T08:38:25.082Z",
   "forwardStart": "2025-08-09",
   "catA": [
     {
@@ -24,7 +24,9 @@
       "forwardRoi": 0,
       "pattern": "strong historical pattern",
       "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "重複: isBase/wind5",
+      "priority": "LOW"
     }
   ],
   "catB": [
@@ -49,7 +51,9 @@
       "forwardRoi": 0,
       "pattern": "strong historical pattern",
       "riskNote": "fwd n=4",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "重複: isBase/wind5",
+      "priority": "MID"
     },
     {
       "condition": "isBase",
@@ -72,7 +76,9 @@
       "forwardRoi": 0,
       "pattern": "strong historical pattern",
       "riskNote": "fwd n=6",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "重複: isBase/wind5",
+      "priority": "HIGH"
     },
     {
       "condition": "wind5",
@@ -95,7 +101,9 @@
       "forwardRoi": 0,
       "pattern": "strong historical pattern",
       "riskNote": "fwd n=6",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "重複: isBase/wind5",
+      "priority": "HIGH"
     },
     {
       "condition": "isBase",
@@ -118,7 +126,9 @@
       "forwardRoi": 0,
       "pattern": "strong historical pattern",
       "riskNote": "fwd n=7",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "",
+      "priority": "HIGH"
     },
     {
       "condition": "isBase",
@@ -141,7 +151,9 @@
       "forwardRoi": 0,
       "pattern": "strong historical pattern",
       "riskNote": "fwd n=2",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "重複: isBase/wind5",
+      "priority": "MID"
     },
     {
       "condition": "isBase",
@@ -164,7 +176,9 @@
       "forwardRoi": 0,
       "pattern": "strong historical pattern",
       "riskNote": "maxGapDays=354",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "",
+      "priority": "MID"
     },
     {
       "condition": "isBase",
@@ -187,7 +201,9 @@
       "forwardRoi": 0,
       "pattern": "strong historical pattern",
       "riskNote": "fwd n=6",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "重複: isBase/wind5",
+      "priority": "HIGH"
     },
     {
       "condition": "isBase",
@@ -210,7 +226,9 @@
       "forwardRoi": 0,
       "pattern": "strong historical pattern",
       "riskNote": "maxStreak=64, maxGapDays=307, fwd n=6",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "",
+      "priority": "HIGH"
     },
     {
       "condition": "isBase",
@@ -233,7 +251,9 @@
       "forwardRoi": 0,
       "pattern": "strong historical pattern",
       "riskNote": "fwd n=4",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "",
+      "priority": "MID"
     },
     {
       "condition": "isBase",
@@ -256,7 +276,9 @@
       "forwardRoi": 0,
       "pattern": "strong historical pattern",
       "riskNote": "maxStreak=61, maxGapDays=296, fwd n=5",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "",
+      "priority": "HIGH"
     },
     {
       "condition": "isBase",
@@ -279,7 +301,9 @@
       "forwardRoi": 1160,
       "pattern": "strong historical pattern",
       "riskNote": "fwd n=4",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "",
+      "priority": "MID"
     }
   ],
   "catC": [
@@ -304,7 +328,9 @@
       "forwardRoi": 309.3,
       "pattern": "weak historical pattern",
       "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "重複: isBase/wind5",
+      "priority": "HIGH"
     },
     {
       "condition": "isBase",
@@ -327,7 +353,9 @@
       "forwardRoi": 580,
       "pattern": "weak historical pattern",
       "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "",
+      "priority": "HIGH"
     },
     {
       "condition": "isBase",
@@ -350,7 +378,9 @@
       "forwardRoi": 309.3,
       "pattern": "weak historical pattern",
       "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "",
+      "priority": "HIGH"
     },
     {
       "condition": "isBase",
@@ -373,7 +403,9 @@
       "forwardRoi": 0,
       "pattern": "weak historical pattern",
       "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "重複: isBase/wind5",
+      "priority": "HIGH"
     },
     {
       "condition": "isBase",
@@ -396,7 +428,9 @@
       "forwardRoi": 580,
       "pattern": "weak historical pattern",
       "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "",
+      "priority": "MID"
     },
     {
       "condition": "isBase",
@@ -419,7 +453,9 @@
       "forwardRoi": 0,
       "pattern": "weak historical pattern",
       "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "",
+      "priority": "LOW"
     },
     {
       "condition": "isBase",
@@ -442,7 +478,9 @@
       "forwardRoi": 1160,
       "pattern": "weak historical pattern",
       "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "",
+      "priority": "LOW"
     },
     {
       "condition": "isBase",
@@ -465,7 +503,9 @@
       "forwardRoi": 0,
       "pattern": "weak historical pattern",
       "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "重複: isBase/wind5",
+      "priority": "LOW"
     },
     {
       "condition": "isBase",
@@ -488,7 +528,9 @@
       "forwardRoi": 0,
       "pattern": "weak historical pattern",
       "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "重複: isBase/wind5",
+      "priority": "LOW"
     },
     {
       "condition": "isBase",
@@ -511,7 +553,9 @@
       "forwardRoi": 342.2,
       "pattern": "weak historical pattern",
       "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "重複: isBase/wind5",
+      "priority": "MID"
     },
     {
       "condition": "isBase",
@@ -534,7 +578,9 @@
       "forwardRoi": 0,
       "pattern": "weak historical pattern",
       "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "重複: isBase/wind5",
+      "priority": "MID"
     },
     {
       "condition": "isBase",
@@ -557,7 +603,9 @@
       "forwardRoi": 0,
       "pattern": "weak historical pattern",
       "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "重複: isBase/wind5",
+      "priority": "LOW"
     },
     {
       "condition": "isBase",
@@ -580,10 +628,12 @@
       "forwardRoi": 1160,
       "pattern": "weak historical pattern",
       "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "重複: isBase/wind5",
+      "priority": "LOW"
     }
   ],
-  "catD": [
+  "catDHigh": [
     {
       "condition": "isBase",
       "dims": "08月 × <0.10",
@@ -605,53 +655,9 @@
       "forwardRoi": 308,
       "pattern": "watch",
       "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
-    },
-    {
-      "condition": "isBase",
-      "dims": "08月 × R7-9",
-      "dimCount": 2,
-      "n": 84,
-      "hits": 4,
-      "hitRate": 4.8,
-      "histAvgOdds": 40.7,
-      "fwdAvgOdds": 49.7,
-      "roi": 202.9,
-      "maxConsecLosses": 27,
-      "maxHitGapRaces": 27,
-      "maxCalendarGapDays": 358,
-      "historicalN": 75,
-      "historicalHits": 4,
-      "historicalRoi": 227.2,
-      "forwardN": 9,
-      "forwardHits": 0,
-      "forwardRoi": 0,
-      "pattern": "watch",
-      "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
-    },
-    {
-      "condition": "isBase",
-      "dims": "08月 × 40-50",
-      "dimCount": 2,
-      "n": 58,
-      "hits": 3,
-      "hitRate": 5.2,
-      "histAvgOdds": 43.6,
-      "fwdAvgOdds": 44.6,
-      "roi": 232.8,
-      "maxConsecLosses": 29,
-      "maxHitGapRaces": 29,
-      "maxCalendarGapDays": 366,
-      "historicalN": 50,
-      "historicalHits": 2,
-      "historicalRoi": 177.2,
-      "forwardN": 8,
-      "forwardHits": 1,
-      "forwardRoi": 580,
-      "pattern": "watch",
-      "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "重複: isBase/wind5",
+      "priority": "HIGH"
     },
     {
       "condition": "isBase",
@@ -674,7 +680,9 @@
       "forwardRoi": 580,
       "pattern": "watch",
       "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "",
+      "priority": "HIGH"
     },
     {
       "condition": "isBase",
@@ -697,30 +705,9 @@
       "forwardRoi": 0,
       "pattern": "strong historical pattern",
       "riskNote": "fwd n=7",
-      "sourceFile": "reports/roi-combination-watch.json"
-    },
-    {
-      "condition": "isBase",
-      "dims": "08月 × 3.0-4.9m × <0.10",
-      "dimCount": 3,
-      "n": 59,
-      "hits": 3,
-      "hitRate": 5.1,
-      "histAvgOdds": 39.8,
-      "fwdAvgOdds": 46.3,
-      "roi": 207.6,
-      "maxConsecLosses": 25,
-      "maxHitGapRaces": 25,
-      "maxCalendarGapDays": 358,
-      "historicalN": 52,
-      "historicalHits": 3,
-      "historicalRoi": 235.6,
-      "forwardN": 7,
-      "forwardHits": 0,
-      "forwardRoi": 0,
-      "pattern": "watch",
-      "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "",
+      "priority": "HIGH"
     },
     {
       "condition": "isBase",
@@ -743,7 +730,9 @@
       "forwardRoi": 0,
       "pattern": "strong historical pattern",
       "riskNote": "fwd n=6",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "重複: isBase/wind5",
+      "priority": "HIGH"
     },
     {
       "condition": "wind5",
@@ -766,30 +755,9 @@
       "forwardRoi": 0,
       "pattern": "strong historical pattern",
       "riskNote": "fwd n=6",
-      "sourceFile": "reports/roi-combination-watch.json"
-    },
-    {
-      "condition": "isBase",
-      "dims": "08月 × R7-9 × 3.0-4.9m",
-      "dimCount": 3,
-      "n": 63,
-      "hits": 3,
-      "hitRate": 4.8,
-      "histAvgOdds": 40.4,
-      "fwdAvgOdds": 40.9,
-      "roi": 194.4,
-      "maxConsecLosses": 25,
-      "maxHitGapRaces": 25,
-      "maxCalendarGapDays": 358,
-      "historicalN": 57,
-      "historicalHits": 3,
-      "historicalRoi": 214.9,
-      "forwardN": 6,
-      "forwardHits": 0,
-      "forwardRoi": 0,
-      "pattern": "watch",
-      "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "重複: isBase/wind5",
+      "priority": "HIGH"
     },
     {
       "condition": "isBase",
@@ -812,7 +780,9 @@
       "forwardRoi": 0,
       "pattern": "strong historical pattern",
       "riskNote": "fwd n=6",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "重複: isBase/wind5",
+      "priority": "HIGH"
     },
     {
       "condition": "isBase",
@@ -835,7 +805,9 @@
       "forwardRoi": 0,
       "pattern": "strong historical pattern",
       "riskNote": "maxStreak=64, maxGapDays=307, fwd n=6",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "",
+      "priority": "HIGH"
     },
     {
       "condition": "isBase",
@@ -858,7 +830,111 @@
       "forwardRoi": 0,
       "pattern": "strong historical pattern",
       "riskNote": "maxStreak=61, maxGapDays=296, fwd n=5",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "",
+      "priority": "HIGH"
+    }
+  ],
+  "catDMid": [
+    {
+      "condition": "isBase",
+      "dims": "08月 × R7-9",
+      "dimCount": 2,
+      "n": 84,
+      "hits": 4,
+      "hitRate": 4.8,
+      "histAvgOdds": 40.7,
+      "fwdAvgOdds": 49.7,
+      "roi": 202.9,
+      "maxConsecLosses": 27,
+      "maxHitGapRaces": 27,
+      "maxCalendarGapDays": 358,
+      "historicalN": 75,
+      "historicalHits": 4,
+      "historicalRoi": 227.2,
+      "forwardN": 9,
+      "forwardHits": 0,
+      "forwardRoi": 0,
+      "pattern": "watch",
+      "riskNote": "",
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "重複: isBase/wind5",
+      "priority": "MID"
+    },
+    {
+      "condition": "isBase",
+      "dims": "08月 × 40-50",
+      "dimCount": 2,
+      "n": 58,
+      "hits": 3,
+      "hitRate": 5.2,
+      "histAvgOdds": 43.6,
+      "fwdAvgOdds": 44.6,
+      "roi": 232.8,
+      "maxConsecLosses": 29,
+      "maxHitGapRaces": 29,
+      "maxCalendarGapDays": 366,
+      "historicalN": 50,
+      "historicalHits": 2,
+      "historicalRoi": 177.2,
+      "forwardN": 8,
+      "forwardHits": 1,
+      "forwardRoi": 580,
+      "pattern": "watch",
+      "riskNote": "",
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "重複: isBase/wind5",
+      "priority": "MID"
+    },
+    {
+      "condition": "isBase",
+      "dims": "08月 × 3.0-4.9m × <0.10",
+      "dimCount": 3,
+      "n": 59,
+      "hits": 3,
+      "hitRate": 5.1,
+      "histAvgOdds": 39.8,
+      "fwdAvgOdds": 46.3,
+      "roi": 207.6,
+      "maxConsecLosses": 25,
+      "maxHitGapRaces": 25,
+      "maxCalendarGapDays": 358,
+      "historicalN": 52,
+      "historicalHits": 3,
+      "historicalRoi": 235.6,
+      "forwardN": 7,
+      "forwardHits": 0,
+      "forwardRoi": 0,
+      "pattern": "watch",
+      "riskNote": "",
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "",
+      "priority": "MID"
+    },
+    {
+      "condition": "isBase",
+      "dims": "08月 × R7-9 × 3.0-4.9m",
+      "dimCount": 3,
+      "n": 63,
+      "hits": 3,
+      "hitRate": 4.8,
+      "histAvgOdds": 40.4,
+      "fwdAvgOdds": 40.9,
+      "roi": 194.4,
+      "maxConsecLosses": 25,
+      "maxHitGapRaces": 25,
+      "maxCalendarGapDays": 358,
+      "historicalN": 57,
+      "historicalHits": 3,
+      "historicalRoi": 214.9,
+      "forwardN": 6,
+      "forwardHits": 0,
+      "forwardRoi": 0,
+      "pattern": "watch",
+      "riskNote": "",
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "",
+      "priority": "MID"
     },
     {
       "condition": "isBase",
@@ -881,7 +957,9 @@
       "forwardRoi": 0,
       "pattern": "watch",
       "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "重複: isBase/wind5",
+      "priority": "MID"
     },
     {
       "condition": "isBase",
@@ -904,76 +982,9 @@
       "forwardRoi": 0,
       "pattern": "strong historical pattern",
       "riskNote": "fwd n=4",
-      "sourceFile": "reports/roi-combination-watch.json"
-    },
-    {
-      "condition": "isBase",
-      "dims": "R7-9 × 3.0-4.9m × <0.10",
-      "dimCount": 3,
-      "n": 54,
-      "hits": 3,
-      "hitRate": 5.6,
-      "histAvgOdds": 41.9,
-      "fwdAvgOdds": 39.8,
-      "roi": 226.9,
-      "maxConsecLosses": 28,
-      "maxHitGapRaces": 28,
-      "maxCalendarGapDays": 358,
-      "historicalN": 50,
-      "historicalHits": 3,
-      "historicalRoi": 245,
-      "forwardN": 4,
-      "forwardHits": 0,
-      "forwardRoi": 0,
-      "pattern": "watch",
-      "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
-    },
-    {
-      "condition": "isBase",
-      "dims": "R7-9 × 40-50",
-      "dimCount": 2,
-      "n": 59,
-      "hits": 2,
-      "hitRate": 3.4,
-      "histAvgOdds": 44.6,
-      "fwdAvgOdds": 45.6,
-      "roi": 159.2,
-      "maxConsecLosses": 30,
-      "maxHitGapRaces": 30,
-      "maxCalendarGapDays": 313,
-      "historicalN": 55,
-      "historicalHits": 2,
-      "historicalRoi": 170.7,
-      "forwardN": 4,
-      "forwardHits": 0,
-      "forwardRoi": 0,
-      "pattern": "watch",
-      "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
-    },
-    {
-      "condition": "isBase",
-      "dims": "R4-6 × 30-40",
-      "dimCount": 2,
-      "n": 72,
-      "hits": 3,
-      "hitRate": 4.2,
-      "histAvgOdds": 35.6,
-      "fwdAvgOdds": 35.9,
-      "roi": 157.2,
-      "maxConsecLosses": 30,
-      "maxHitGapRaces": 30,
-      "maxCalendarGapDays": 296,
-      "historicalN": 68,
-      "historicalHits": 3,
-      "historicalRoi": 166.5,
-      "forwardN": 4,
-      "forwardHits": 0,
-      "forwardRoi": 0,
-      "pattern": "watch",
-      "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "重複: isBase/wind5",
+      "priority": "MID"
     },
     {
       "condition": "isBase",
@@ -996,7 +1007,9 @@
       "forwardRoi": 0,
       "pattern": "strong historical pattern",
       "riskNote": "fwd n=4",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "",
+      "priority": "MID"
     },
     {
       "condition": "isBase",
@@ -1019,145 +1032,9 @@
       "forwardRoi": 1160,
       "pattern": "strong historical pattern",
       "riskNote": "fwd n=4",
-      "sourceFile": "reports/roi-combination-watch.json"
-    },
-    {
-      "condition": "isBase",
-      "dims": "40-50 × >=0.15",
-      "dimCount": 2,
-      "n": 100,
-      "hits": 4,
-      "hitRate": 4,
-      "histAvgOdds": 44.1,
-      "fwdAvgOdds": 44.4,
-      "roi": 181,
-      "maxConsecLosses": 55,
-      "maxHitGapRaces": 55,
-      "maxCalendarGapDays": 313,
-      "historicalN": 96,
-      "historicalHits": 3,
-      "historicalRoi": 140.2,
-      "forwardN": 4,
-      "forwardHits": 1,
-      "forwardRoi": 1160,
-      "pattern": "watch",
-      "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
-    },
-    {
-      "condition": "isBase",
-      "dims": "R1-3 × <0.10",
-      "dimCount": 2,
-      "n": 58,
-      "hits": 5,
-      "hitRate": 8.6,
-      "histAvgOdds": 41,
-      "fwdAvgOdds": 42.5,
-      "roi": 350.2,
-      "maxConsecLosses": 17,
-      "maxHitGapRaces": 17,
-      "maxCalendarGapDays": 173,
-      "historicalN": 55,
-      "historicalHits": 4,
-      "historicalRoi": 313.3,
-      "forwardN": 3,
-      "forwardHits": 1,
-      "forwardRoi": 1026.7,
-      "pattern": "watch",
-      "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
-    },
-    {
-      "condition": "isBase",
-      "dims": "30-40 × <0.10",
-      "dimCount": 2,
-      "n": 79,
-      "hits": 4,
-      "hitRate": 5.1,
-      "histAvgOdds": 35.3,
-      "fwdAvgOdds": 33.2,
-      "roi": 181.4,
-      "maxConsecLosses": 26,
-      "maxHitGapRaces": 26,
-      "maxCalendarGapDays": 242,
-      "historicalN": 76,
-      "historicalHits": 3,
-      "historicalRoi": 148,
-      "forwardN": 3,
-      "forwardHits": 1,
-      "forwardRoi": 1026.7,
-      "pattern": "watch",
-      "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
-    },
-    {
-      "condition": "isBase",
-      "dims": "3.0-4.9m × 30-40 × >=0.15",
-      "dimCount": 3,
-      "n": 80,
-      "hits": 3,
-      "hitRate": 3.8,
-      "histAvgOdds": 35.3,
-      "fwdAvgOdds": 35.4,
-      "roi": 126.1,
-      "maxConsecLosses": 34,
-      "maxHitGapRaces": 34,
-      "maxCalendarGapDays": 176,
-      "historicalN": 77,
-      "historicalHits": 3,
-      "historicalRoi": 131,
-      "forwardN": 3,
-      "forwardHits": 0,
-      "forwardRoi": 0,
-      "pattern": "watch",
-      "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
-    },
-    {
-      "condition": "isBase",
-      "dims": "R1-3 × 3.0-4.9m × >=0.15",
-      "dimCount": 3,
-      "n": 57,
-      "hits": 3,
-      "hitRate": 5.3,
-      "histAvgOdds": 45,
-      "fwdAvgOdds": 41.8,
-      "roi": 183,
-      "maxConsecLosses": 29,
-      "maxHitGapRaces": 29,
-      "maxCalendarGapDays": 4,
-      "historicalN": 54,
-      "historicalHits": 2,
-      "historicalRoi": 107.2,
-      "forwardN": 3,
-      "forwardHits": 1,
-      "forwardRoi": 1546.7,
-      "pattern": "watch",
-      "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
-    },
-    {
-      "condition": "isBase",
-      "dims": "R4-6 × 3.0-4.9m × <0.10",
-      "dimCount": 3,
-      "n": 57,
-      "hits": 4,
-      "hitRate": 7,
-      "histAvgOdds": 41.9,
-      "fwdAvgOdds": 61.5,
-      "roi": 327.9,
-      "maxConsecLosses": 33,
-      "maxHitGapRaces": 33,
-      "maxCalendarGapDays": 357,
-      "historicalN": 55,
-      "historicalHits": 4,
-      "historicalRoi": 339.8,
-      "forwardN": 2,
-      "forwardHits": 0,
-      "forwardRoi": 0,
-      "pattern": "watch",
-      "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "",
+      "priority": "MID"
     },
     {
       "condition": "isBase",
@@ -1180,7 +1057,236 @@
       "forwardRoi": 0,
       "pattern": "strong historical pattern",
       "riskNote": "fwd n=2",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "重複: isBase/wind5",
+      "priority": "MID"
+    }
+  ],
+  "catDLow": [
+    {
+      "condition": "isBase",
+      "dims": "R7-9 × 3.0-4.9m × <0.10",
+      "dimCount": 3,
+      "n": 54,
+      "hits": 3,
+      "hitRate": 5.6,
+      "histAvgOdds": 41.9,
+      "fwdAvgOdds": 39.8,
+      "roi": 226.9,
+      "maxConsecLosses": 28,
+      "maxHitGapRaces": 28,
+      "maxCalendarGapDays": 358,
+      "historicalN": 50,
+      "historicalHits": 3,
+      "historicalRoi": 245,
+      "forwardN": 4,
+      "forwardHits": 0,
+      "forwardRoi": 0,
+      "pattern": "watch",
+      "riskNote": "",
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "",
+      "priority": "LOW"
+    },
+    {
+      "condition": "isBase",
+      "dims": "R7-9 × 40-50",
+      "dimCount": 2,
+      "n": 59,
+      "hits": 2,
+      "hitRate": 3.4,
+      "histAvgOdds": 44.6,
+      "fwdAvgOdds": 45.6,
+      "roi": 159.2,
+      "maxConsecLosses": 30,
+      "maxHitGapRaces": 30,
+      "maxCalendarGapDays": 313,
+      "historicalN": 55,
+      "historicalHits": 2,
+      "historicalRoi": 170.7,
+      "forwardN": 4,
+      "forwardHits": 0,
+      "forwardRoi": 0,
+      "pattern": "watch",
+      "riskNote": "",
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "重複: isBase/wind5",
+      "priority": "LOW"
+    },
+    {
+      "condition": "isBase",
+      "dims": "R4-6 × 30-40",
+      "dimCount": 2,
+      "n": 72,
+      "hits": 3,
+      "hitRate": 4.2,
+      "histAvgOdds": 35.6,
+      "fwdAvgOdds": 35.9,
+      "roi": 157.2,
+      "maxConsecLosses": 30,
+      "maxHitGapRaces": 30,
+      "maxCalendarGapDays": 296,
+      "historicalN": 68,
+      "historicalHits": 3,
+      "historicalRoi": 166.5,
+      "forwardN": 4,
+      "forwardHits": 0,
+      "forwardRoi": 0,
+      "pattern": "watch",
+      "riskNote": "",
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "重複: isBase/wind5",
+      "priority": "LOW"
+    },
+    {
+      "condition": "isBase",
+      "dims": "40-50 × >=0.15",
+      "dimCount": 2,
+      "n": 100,
+      "hits": 4,
+      "hitRate": 4,
+      "histAvgOdds": 44.1,
+      "fwdAvgOdds": 44.4,
+      "roi": 181,
+      "maxConsecLosses": 55,
+      "maxHitGapRaces": 55,
+      "maxCalendarGapDays": 313,
+      "historicalN": 96,
+      "historicalHits": 3,
+      "historicalRoi": 140.2,
+      "forwardN": 4,
+      "forwardHits": 1,
+      "forwardRoi": 1160,
+      "pattern": "watch",
+      "riskNote": "",
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "重複: isBase/wind5",
+      "priority": "LOW"
+    },
+    {
+      "condition": "isBase",
+      "dims": "R1-3 × <0.10",
+      "dimCount": 2,
+      "n": 58,
+      "hits": 5,
+      "hitRate": 8.6,
+      "histAvgOdds": 41,
+      "fwdAvgOdds": 42.5,
+      "roi": 350.2,
+      "maxConsecLosses": 17,
+      "maxHitGapRaces": 17,
+      "maxCalendarGapDays": 173,
+      "historicalN": 55,
+      "historicalHits": 4,
+      "historicalRoi": 313.3,
+      "forwardN": 3,
+      "forwardHits": 1,
+      "forwardRoi": 1026.7,
+      "pattern": "watch",
+      "riskNote": "",
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "重複: isBase/wind5",
+      "priority": "LOW"
+    },
+    {
+      "condition": "isBase",
+      "dims": "30-40 × <0.10",
+      "dimCount": 2,
+      "n": 79,
+      "hits": 4,
+      "hitRate": 5.1,
+      "histAvgOdds": 35.3,
+      "fwdAvgOdds": 33.2,
+      "roi": 181.4,
+      "maxConsecLosses": 26,
+      "maxHitGapRaces": 26,
+      "maxCalendarGapDays": 242,
+      "historicalN": 76,
+      "historicalHits": 3,
+      "historicalRoi": 148,
+      "forwardN": 3,
+      "forwardHits": 1,
+      "forwardRoi": 1026.7,
+      "pattern": "watch",
+      "riskNote": "",
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "重複: isBase/wind5",
+      "priority": "LOW"
+    },
+    {
+      "condition": "isBase",
+      "dims": "3.0-4.9m × 30-40 × >=0.15",
+      "dimCount": 3,
+      "n": 80,
+      "hits": 3,
+      "hitRate": 3.8,
+      "histAvgOdds": 35.3,
+      "fwdAvgOdds": 35.4,
+      "roi": 126.1,
+      "maxConsecLosses": 34,
+      "maxHitGapRaces": 34,
+      "maxCalendarGapDays": 176,
+      "historicalN": 77,
+      "historicalHits": 3,
+      "historicalRoi": 131,
+      "forwardN": 3,
+      "forwardHits": 0,
+      "forwardRoi": 0,
+      "pattern": "watch",
+      "riskNote": "",
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "",
+      "priority": "LOW"
+    },
+    {
+      "condition": "isBase",
+      "dims": "R1-3 × 3.0-4.9m × >=0.15",
+      "dimCount": 3,
+      "n": 57,
+      "hits": 3,
+      "hitRate": 5.3,
+      "histAvgOdds": 45,
+      "fwdAvgOdds": 41.8,
+      "roi": 183,
+      "maxConsecLosses": 29,
+      "maxHitGapRaces": 29,
+      "maxCalendarGapDays": 4,
+      "historicalN": 54,
+      "historicalHits": 2,
+      "historicalRoi": 107.2,
+      "forwardN": 3,
+      "forwardHits": 1,
+      "forwardRoi": 1546.7,
+      "pattern": "watch",
+      "riskNote": "",
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "",
+      "priority": "LOW"
+    },
+    {
+      "condition": "isBase",
+      "dims": "R4-6 × 3.0-4.9m × <0.10",
+      "dimCount": 3,
+      "n": 57,
+      "hits": 4,
+      "hitRate": 7,
+      "histAvgOdds": 41.9,
+      "fwdAvgOdds": 61.5,
+      "roi": 327.9,
+      "maxConsecLosses": 33,
+      "maxHitGapRaces": 33,
+      "maxCalendarGapDays": 357,
+      "historicalN": 55,
+      "historicalHits": 4,
+      "historicalRoi": 339.8,
+      "forwardN": 2,
+      "forwardHits": 0,
+      "forwardRoi": 0,
+      "pattern": "watch",
+      "riskNote": "",
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "",
+      "priority": "LOW"
     },
     {
       "condition": "isBase",
@@ -1203,7 +1309,9 @@
       "forwardRoi": 0,
       "pattern": "watch",
       "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "重複: isBase/wind5",
+      "priority": "LOW"
     },
     {
       "condition": "isBase",
@@ -1226,7 +1334,9 @@
       "forwardRoi": 0,
       "pattern": "watch",
       "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "",
+      "priority": "LOW"
     },
     {
       "condition": "isBase",
@@ -1249,7 +1359,9 @@
       "forwardRoi": 0,
       "pattern": "watch",
       "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "",
+      "priority": "LOW"
     },
     {
       "condition": "isBase",
@@ -1272,7 +1384,9 @@
       "forwardRoi": 0,
       "pattern": "watch",
       "riskNote": "",
-      "sourceFile": "reports/roi-combination-watch.json"
+      "sourceFile": "reports/roi-combination-watch.json",
+      "duplicateNote": "",
+      "priority": "LOW"
     }
   ]
 }
