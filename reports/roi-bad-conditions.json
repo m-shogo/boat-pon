@@ -1,0 +1,668 @@
+{
+  "generatedAt": "2026-06-08T09:26:48.536Z",
+  "baseline": {
+    "label": "ベースライン（除外後全体）",
+    "n": 4401,
+    "hits": 109,
+    "hitRate": 2.48,
+    "roi": 100.79,
+    "warning": ""
+  },
+  "oddsBands": [
+    {
+      "label": "odds 25〜39",
+      "n": 1877,
+      "hits": 54,
+      "hitRate": 2.88,
+      "roi": 96.61,
+      "warning": ""
+    },
+    {
+      "label": "odds 40〜49",
+      "n": 1236,
+      "hits": 30,
+      "hitRate": 2.43,
+      "roi": 106.93,
+      "warning": ""
+    },
+    {
+      "label": "odds 50〜59",
+      "n": 735,
+      "hits": 14,
+      "hitRate": 1.9,
+      "roi": 102.56,
+      "warning": ""
+    },
+    {
+      "label": "odds 60〜69",
+      "n": 285,
+      "hits": 5,
+      "hitRate": 1.75,
+      "roi": 109.51,
+      "warning": ""
+    },
+    {
+      "label": "odds 70〜79",
+      "n": 127,
+      "hits": 2,
+      "hitRate": 1.57,
+      "roi": 121.34,
+      "warning": "hits=0系"
+    },
+    {
+      "label": "odds 80以上",
+      "n": 56,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": "hits少"
+    }
+  ],
+  "venueStats": [
+    {
+      "label": "住之江",
+      "venue": "住之江",
+      "n": 207,
+      "hits": 4,
+      "hitRate": 1.93,
+      "roi": 65.22,
+      "warning": ""
+    },
+    {
+      "label": "福岡",
+      "venue": "福岡",
+      "n": 240,
+      "hits": 5,
+      "hitRate": 2.08,
+      "roi": 73.67,
+      "warning": ""
+    },
+    {
+      "label": "下関",
+      "venue": "下関",
+      "n": 225,
+      "hits": 5,
+      "hitRate": 2.22,
+      "roi": 78.09,
+      "warning": ""
+    },
+    {
+      "label": "浜名湖",
+      "venue": "浜名湖",
+      "n": 254,
+      "hits": 5,
+      "hitRate": 1.97,
+      "roi": 79.8,
+      "warning": ""
+    },
+    {
+      "label": "徳山",
+      "venue": "徳山",
+      "n": 199,
+      "hits": 5,
+      "hitRate": 2.51,
+      "roi": 81.61,
+      "warning": ""
+    },
+    {
+      "label": "尼崎",
+      "venue": "尼崎",
+      "n": 199,
+      "hits": 3,
+      "hitRate": 1.51,
+      "roi": 85.33,
+      "warning": ""
+    },
+    {
+      "label": "鳴門",
+      "venue": "鳴門",
+      "n": 180,
+      "hits": 3,
+      "hitRate": 1.67,
+      "roi": 85.33,
+      "warning": ""
+    },
+    {
+      "label": "丸亀",
+      "venue": "丸亀",
+      "n": 209,
+      "hits": 5,
+      "hitRate": 2.39,
+      "roi": 87.56,
+      "warning": ""
+    },
+    {
+      "label": "蒲郡",
+      "venue": "蒲郡",
+      "n": 284,
+      "hits": 6,
+      "hitRate": 2.11,
+      "roi": 90.07,
+      "warning": ""
+    },
+    {
+      "label": "大村",
+      "venue": "大村",
+      "n": 244,
+      "hits": 6,
+      "hitRate": 2.46,
+      "roi": 91.68,
+      "warning": ""
+    },
+    {
+      "label": "若松",
+      "venue": "若松",
+      "n": 256,
+      "hits": 6,
+      "hitRate": 2.34,
+      "roi": 93.63,
+      "warning": ""
+    },
+    {
+      "label": "宮島",
+      "venue": "宮島",
+      "n": 244,
+      "hits": 7,
+      "hitRate": 2.87,
+      "roi": 96.15,
+      "warning": ""
+    },
+    {
+      "label": "津",
+      "venue": "津",
+      "n": 219,
+      "hits": 5,
+      "hitRate": 2.28,
+      "roi": 103.65,
+      "warning": ""
+    },
+    {
+      "label": "唐津",
+      "venue": "唐津",
+      "n": 267,
+      "hits": 8,
+      "hitRate": 3,
+      "roi": 105.69,
+      "warning": ""
+    },
+    {
+      "label": "びわこ",
+      "venue": "びわこ",
+      "n": 257,
+      "hits": 7,
+      "hitRate": 2.72,
+      "roi": 112.14,
+      "warning": ""
+    },
+    {
+      "label": "平和島",
+      "venue": "平和島",
+      "n": 245,
+      "hits": 5,
+      "hitRate": 2.04,
+      "roi": 121.47,
+      "warning": ""
+    },
+    {
+      "label": "常滑",
+      "venue": "常滑",
+      "n": 290,
+      "hits": 10,
+      "hitRate": 3.45,
+      "roi": 135.97,
+      "warning": ""
+    },
+    {
+      "label": "芦屋",
+      "venue": "芦屋",
+      "n": 189,
+      "hits": 7,
+      "hitRate": 3.7,
+      "roi": 149.1,
+      "warning": ""
+    },
+    {
+      "label": "児島",
+      "venue": "児島",
+      "n": 193,
+      "hits": 7,
+      "hitRate": 3.63,
+      "roi": 182.38,
+      "warning": ""
+    }
+  ],
+  "raceNoStats": [
+    {
+      "label": "race_no 1R",
+      "n": 215,
+      "hits": 7,
+      "hitRate": 3.26,
+      "roi": 134.74,
+      "warning": ""
+    },
+    {
+      "label": "race_no 2R",
+      "n": 464,
+      "hits": 10,
+      "hitRate": 2.16,
+      "roi": 78.36,
+      "warning": ""
+    },
+    {
+      "label": "race_no 3R",
+      "n": 531,
+      "hits": 16,
+      "hitRate": 3.01,
+      "roi": 125.29,
+      "warning": ""
+    },
+    {
+      "label": "race_no 4R",
+      "n": 596,
+      "hits": 13,
+      "hitRate": 2.18,
+      "roi": 94.31,
+      "warning": ""
+    },
+    {
+      "label": "race_no 5R",
+      "n": 513,
+      "hits": 10,
+      "hitRate": 1.95,
+      "roi": 76.2,
+      "warning": ""
+    },
+    {
+      "label": "race_no 6R",
+      "n": 651,
+      "hits": 16,
+      "hitRate": 2.46,
+      "roi": 99.34,
+      "warning": ""
+    },
+    {
+      "label": "race_no 7R",
+      "n": 597,
+      "hits": 14,
+      "hitRate": 2.35,
+      "roi": 101.09,
+      "warning": ""
+    },
+    {
+      "label": "race_no 8R",
+      "n": 498,
+      "hits": 11,
+      "hitRate": 2.21,
+      "roi": 94.4,
+      "warning": ""
+    },
+    {
+      "label": "race_no 9R",
+      "n": 336,
+      "hits": 12,
+      "hitRate": 3.57,
+      "roi": 132.14,
+      "warning": ""
+    }
+  ],
+  "monthStats": [
+    {
+      "ym": "2024-01",
+      "n": 223,
+      "hits": 4,
+      "roi": 89.33,
+      "flag": ""
+    },
+    {
+      "ym": "2024-02",
+      "n": 166,
+      "hits": 0,
+      "roi": 0,
+      "flag": "⚠️0hits"
+    },
+    {
+      "ym": "2024-03",
+      "n": 204,
+      "hits": 3,
+      "roi": 83.33,
+      "flag": ""
+    },
+    {
+      "ym": "2024-04",
+      "n": 155,
+      "hits": 5,
+      "roi": 146.97,
+      "flag": ""
+    },
+    {
+      "ym": "2024-05",
+      "n": 255,
+      "hits": 5,
+      "roi": 74.55,
+      "flag": ""
+    },
+    {
+      "ym": "2024-06",
+      "n": 208,
+      "hits": 5,
+      "roi": 83.65,
+      "flag": ""
+    },
+    {
+      "ym": "2024-07",
+      "n": 289,
+      "hits": 8,
+      "roi": 123.6,
+      "flag": ""
+    },
+    {
+      "ym": "2024-08",
+      "n": 274,
+      "hits": 9,
+      "roi": 138.14,
+      "flag": ""
+    },
+    {
+      "ym": "2024-09",
+      "n": 282,
+      "hits": 4,
+      "roi": 54.33,
+      "flag": "⚠️低ROI"
+    },
+    {
+      "ym": "2024-10",
+      "n": 232,
+      "hits": 6,
+      "roi": 104.14,
+      "flag": ""
+    },
+    {
+      "ym": "2024-11",
+      "n": 241,
+      "hits": 8,
+      "roi": 131.37,
+      "flag": ""
+    },
+    {
+      "ym": "2024-12",
+      "n": 269,
+      "hits": 10,
+      "roi": 119.7,
+      "flag": ""
+    },
+    {
+      "ym": "2025-01",
+      "n": 1,
+      "hits": 0,
+      "roi": 0,
+      "flag": "⚠️0hits"
+    },
+    {
+      "ym": "2025-02",
+      "n": 114,
+      "hits": 2,
+      "roi": 72.98,
+      "flag": ""
+    },
+    {
+      "ym": "2025-03",
+      "n": 119,
+      "hits": 2,
+      "roi": 86.81,
+      "flag": ""
+    },
+    {
+      "ym": "2025-04",
+      "n": 174,
+      "hits": 5,
+      "roi": 154.54,
+      "flag": ""
+    },
+    {
+      "ym": "2025-05",
+      "n": 200,
+      "hits": 7,
+      "roi": 140.25,
+      "flag": ""
+    },
+    {
+      "ym": "2025-06",
+      "n": 209,
+      "hits": 5,
+      "roi": 114.69,
+      "flag": ""
+    },
+    {
+      "ym": "2025-07",
+      "n": 227,
+      "hits": 2,
+      "roi": 31.76,
+      "flag": "⚠️低ROI"
+    },
+    {
+      "ym": "2025-08",
+      "n": 215,
+      "hits": 8,
+      "roi": 132.84,
+      "flag": ""
+    },
+    {
+      "ym": "2025-09",
+      "n": 116,
+      "hits": 4,
+      "roi": 110.95,
+      "flag": ""
+    },
+    {
+      "ym": "2025-10",
+      "n": 94,
+      "hits": 3,
+      "roi": 145.21,
+      "flag": ""
+    },
+    {
+      "ym": "2025-11",
+      "n": 110,
+      "hits": 2,
+      "roi": 67.55,
+      "flag": "⚠️低ROI"
+    },
+    {
+      "ym": "2026-05",
+      "n": 24,
+      "hits": 2,
+      "roi": 137.08,
+      "flag": ""
+    }
+  ],
+  "windGroups": [
+    {
+      "label": "風速データなし",
+      "n": 31,
+      "hits": 2,
+      "hitRate": 6.45,
+      "roi": 106.13,
+      "warning": ""
+    },
+    {
+      "label": "風速 0〜2m/s",
+      "n": 890,
+      "hits": 24,
+      "hitRate": 2.7,
+      "roi": 108.84,
+      "warning": ""
+    },
+    {
+      "label": "風速 2〜4m/s",
+      "n": 2146,
+      "hits": 51,
+      "hitRate": 2.38,
+      "roi": 94.82,
+      "warning": ""
+    },
+    {
+      "label": "風速 4m/s以上",
+      "n": 1334,
+      "hits": 32,
+      "hitRate": 2.4,
+      "roi": 104.91,
+      "warning": ""
+    },
+    {
+      "label": "安定板あり",
+      "n": 273,
+      "hits": 7,
+      "hitRate": 2.56,
+      "roi": 99.96,
+      "warning": ""
+    },
+    {
+      "label": "安定板なし",
+      "n": 4097,
+      "hits": 100,
+      "hitRate": 2.44,
+      "roi": 100.81,
+      "warning": ""
+    }
+  ],
+  "exhibitionGroups": [
+    {
+      "label": "展示データなし（1着候補）",
+      "n": 31,
+      "hits": 2,
+      "hitRate": 6.45,
+      "roi": 106.13,
+      "warning": ""
+    },
+    {
+      "label": "展示タイム1位（1着候補）",
+      "n": 1052,
+      "hits": 18,
+      "hitRate": 1.71,
+      "roi": 74.99,
+      "warning": ""
+    },
+    {
+      "label": "展示タイム2〜3位（1着候補）",
+      "n": 1644,
+      "hits": 45,
+      "hitRate": 2.74,
+      "roi": 111.44,
+      "warning": ""
+    },
+    {
+      "label": "展示タイム4位以下（1着候補）",
+      "n": 1674,
+      "hits": 44,
+      "hitRate": 2.63,
+      "roi": 106.45,
+      "warning": ""
+    },
+    {
+      "label": "展示ST < 0.15（1着候補・早い）",
+      "n": 2252,
+      "hits": 59,
+      "hitRate": 2.62,
+      "roi": 107.5,
+      "warning": ""
+    },
+    {
+      "label": "展示ST 0.15〜0.20（1着候補）",
+      "n": 547,
+      "hits": 13,
+      "hitRate": 2.38,
+      "roi": 96.58,
+      "warning": ""
+    },
+    {
+      "label": "展示ST 0.20以上（1着候補・遅い）",
+      "n": 702,
+      "hits": 13,
+      "hitRate": 1.85,
+      "roi": 80.31,
+      "warning": ""
+    }
+  ],
+  "courseGroups": [
+    {
+      "label": "1着候補 進入1コース",
+      "n": 4340,
+      "hits": 107,
+      "hitRate": 2.47,
+      "roi": 100.76,
+      "warning": ""
+    },
+    {
+      "label": "1着候補 進入2コース",
+      "n": 55,
+      "hits": 1,
+      "hitRate": 1.82,
+      "roi": 85.09,
+      "warning": ""
+    },
+    {
+      "label": "1着候補 進入3コース以上",
+      "n": 5,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": ""
+    }
+  ],
+  "selectionStats": [
+    {
+      "selection": "1-2-3",
+      "n": 4301,
+      "hits": 106,
+      "share": 97.73,
+      "roi": 100.12
+    },
+    {
+      "selection": "1-3-4",
+      "n": 59,
+      "hits": 2,
+      "share": 1.34,
+      "roi": 133.56
+    },
+    {
+      "selection": "1-3-2",
+      "n": 40,
+      "hits": 1,
+      "share": 0.91,
+      "roi": 127.75
+    },
+    {
+      "selection": "1-2-4",
+      "n": 1,
+      "hits": 0,
+      "share": 0.02,
+      "roi": 0
+    }
+  ],
+  "exclusionCandidates": [
+    {
+      "condition": "odds >= 80",
+      "n": 56,
+      "hits": 0,
+      "roi": 0,
+      "saving": 1.3,
+      "note": "hits=0に近い"
+    },
+    {
+      "condition": "venue = '住之江'",
+      "n": 207,
+      "hits": 4,
+      "roi": 65.22,
+      "saving": 1.76,
+      "note": "ROI 65.22% (207件)"
+    },
+    {
+      "condition": "odds >= 70",
+      "n": 183,
+      "hits": 2,
+      "roi": 84.21,
+      "saving": 0.72,
+      "note": "hits率が全体の半分以下"
+    }
+  ]
+}

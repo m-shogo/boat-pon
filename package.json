@@ -110,6 +110,7 @@
     "backup:legacy": "tsx scripts/backup-db.ts",
     "backup:safe": "tsx scripts/backup-db-safe.ts",
     "typecheck:scripts": "tsc --noEmit -p tsconfig.scripts.json",
+    "analyze:roi-bad-conditions": "tsx scripts/analyze-roi-bad-conditions.ts",
     "analyze:roi-decision-lab": "tsx scripts/analyze-roi-decision-lab.ts",
     "analyze:roi-monthly-regime": "tsx scripts/analyze-roi-monthly-regime.ts",
     "analyze:roi-miss-patterns": "tsx scripts/analyze-roi-miss-patterns.ts",
