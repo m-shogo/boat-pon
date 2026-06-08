@@ -25,15 +25,17 @@ const REPORT_JSON = "reports/roi-condition-watch.json";
 const COND_ISBASE = "seasonal_parts0_month_4_6_8_12";
 const COND_WIND5 = "seasonal_parts0_month_4_6_8_12_wind5";
 
-const N_MIN_ADOPT = 50;  // 採用候補最低n
-const N_MIN_WATCH = 30;  // 監視候補最低n
-const ROI_ADOPT = 150;   // 採用候補最低ROI%
-const ROI_WATCH = 100;   // 監視最低ROI%
+const N_MIN_ADOPT = 100;   // historical強め候補最低n
+const N_MIN_ADOPT_SOFT = 50; // hits>=5 + ROI条件を満たす場合の下限n
+const HITS_MIN_ADOPT = 5;    // historical強め候補最低hit数
+const N_MIN_WATCH = 30;      // 監視候補最低n
+const ROI_ADOPT = 150;       // historical強め候補最低ROI%
+const ROI_WATCH = 100;       // 監視最低ROI%
 
 // ── 型定義 ─────────────────────────────────────────────────────────────────
 
 type Period = "historical" | "forward" | "all";
-type Verdict = "採用候補" | "監視候補+" | "監視候補" | "捨て候補";
+type Verdict = "historical強め候補" | "監視候補+" | "監視候補" | "historical弱め候補";
 
 type GroupStat = {
   label: string;
@@ -94,16 +96,24 @@ function hitRate(hits: number, n: number): number {
   return Math.round((hits / n) * 100 * 10) / 10;
 }
 
-function verdict(roi: number, n: number): Verdict {
+function verdict(roi: number, n: number, hits: number): Verdict {
   if (n < N_MIN_WATCH) return "監視候補";
-  if (roi < ROI_WATCH) return "捨て候補";
-  if (roi >= ROI_ADOPT && n >= N_MIN_ADOPT) return "採用候補";
+  if (roi < ROI_WATCH) return "historical弱め候補";
+  const strongEnough =
+    (n >= N_MIN_ADOPT && hits >= HITS_MIN_ADOPT) ||
+    (n >= N_MIN_ADOPT_SOFT && hits >= HITS_MIN_ADOPT);
+  if (roi >= ROI_ADOPT && strongEnough) return "historical強め候補";
   if (roi >= ROI_WATCH) return "監視候補+";
   return "監視候補";
 }
 
 function verdictIcon(v: Verdict): string {
-  return { "採用候補": "🟢", "監視候補+": "🟡", "監視候補": "⚪", "捨て候補": "🔴" }[v];
+  return {
+    "historical強め候補": "🟢",
+    "監視候補+": "🟡",
+    "監視候補": "⚪",
+    "historical弱め候補": "🔴",
+  }[v];
 }
 
 // ── クエリ ─────────────────────────────────────────────────────────────────
@@ -217,11 +227,11 @@ function queryDim(
 
   return rows.map((r) => {
     const roi = roiVal(r.sum_odds, r.n);
-    const v = verdict(roi, r.n);
+    const v = verdict(roi, r.n, r.hits);
     const note =
       r.n < N_MIN_WATCH
         ? `n=${r.n} (n<${N_MIN_WATCH}のため判断不可)`
-        : r.n < N_MIN_ADOPT && v !== "捨て候補"
+        : r.n < N_MIN_ADOPT && v !== "historical弱め候補"
         ? `n=${r.n} (n<${N_MIN_ADOPT}のため注意)`
         : "";
     return {
@@ -350,7 +360,7 @@ function run(): Report {
     }
 
     const verdictSummary: Report["verdictSummary"] = [];
-    for (const v of ["採用候補", "監視候補+", "監視候補", "捨て候補"] as Verdict[]) {
+    for (const v of ["historical強め候補", "監視候補+", "監視候補", "historical弱め候補"] as Verdict[]) {
       verdictSummary.push({ verdict: v, groups: verdictMap.get(v) ?? [] });
     }
 
@@ -407,7 +417,7 @@ function generateMarkdown(r: Report): string {
   lines.push(`forward期間: ${r.forwardStart} 以降`);
   lines.push("");
   lines.push("> ROIはすべて current_odds 基準。headF比較のみ race_payouts (payout_yen) 基準で別表記。");
-  lines.push("> n<30 は採用判断不可、n<50 は注意付き。");
+  lines.push("> n<30 は判断不可。判定名は historical 上の傾向を示すもので、BUY設定への採用可否ではない。");
   lines.push("");
 
   // 全体概況
@@ -426,11 +436,12 @@ function generateMarkdown(r: Report): string {
   // headF比較
   lines.push("## headF比較 (payout_yen基準・isBase条件全適用)");
   lines.push("");
-  lines.push("> isBaseの全フィルター (parts=0, exSt除外, month/venue/race_no/wind) を適用した上でheadFのみを変えて比較。");
-  lines.push("> 1-2-3 trifecta 払戻 (payout_yen÷100) を ROI として使用。current_odds 基準とは異なる。");
-  lines.push("> 対象期間: 2024-04-01 以降。");
+  lines.push("> **参考比較 (payout_yen基準)**: isBaseの全フィルター (parts=0, exSt除外, month/venue/race_no/wind) を");
+  lines.push("> 適用した上で headF のみを変えた場合の 1-2-3 trifecta 払戻 (payout_yen÷100) を ROI として比較。");
+  lines.push("> current_odds 基準とは計算方法が異なるため、BUY削減ルールとして採用するには");
+  lines.push("> paper_roi_candidates 上での追加検証が別途必要。対象期間: 2024-04-01 以降。");
   lines.push("");
-  lines.push("| グループ | n | hit | hitRate | avg payout(yen) | ROI(payout) |");
+  lines.push("| グループ | n | hit | hitRate | avg payout(yen) | ROI(payout参考) |");
   lines.push("|---|---:|---:|---:|---:|---:|");
   for (const hf of r.headFComparison) {
     lines.push(
@@ -438,8 +449,8 @@ function generateMarkdown(r: Report): string {
     );
   }
   lines.push("");
-  lines.push("> 解釈: headF=0 でも headF>=1 でも 1-2-3 の hit率は同程度だが、");
-  lines.push("> headF=0 のほうが ROI が大きい → headF>=1 は低オッズで負けやすい (高人気レース)。");
+  lines.push("> 傾向: 1-2-3 の hit率はheadF=0/>=1 で大きく変わらない。ROI差はオッズ水準の違いによる部分が大きく、");
+  lines.push("> headF フィルター単体の効果か他フィルターとの交互作用かはこのデータだけでは判断できない。");
   lines.push("");
 
   // 次元別
@@ -473,8 +484,10 @@ function generateMarkdown(r: Report): string {
   }
 
   // verdict summary
-  lines.push("## 採用/監視/捨て サマリー");
+  lines.push("## 傾向サマリー (historical n>=30)");
   lines.push("");
+  lines.push("> ⚠️ **判定名について**: 「historical強め候補」「historical弱め候補」は historical データ上の ROI 傾向を示すラベルであり、");
+  lines.push("> BUY設定への採用可否ではない。採用判断には forward n>=30 の蓄積と paper_roi_candidates 上の追加検証が必要。");
   lines.push("> historical n>=30 の区分のみ掲載。forward は n が小さいため参考扱い。");
   lines.push("");
   for (const vs of r.verdictSummary) {

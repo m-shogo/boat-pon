@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-08T06:49:09.836Z",
+  "generatedAt": "2026-06-08T07:54:21.091Z",
   "forwardStart": "2025-08-09",
   "overview": [
     {
@@ -73,7 +73,7 @@
           "hitRate": 5.4,
           "avgOdds": 48.5,
           "roi": 285.9,
-          "verdict": "採用候補",
+          "verdict": "historical強め候補",
           "note": ""
         },
         {
@@ -83,7 +83,7 @@
           "hitRate": 5.3,
           "avgOdds": 43.3,
           "roi": 214.1,
-          "verdict": "採用候補",
+          "verdict": "historical強め候補",
           "note": ""
         },
         {
@@ -103,7 +103,7 @@
           "hitRate": 6,
           "avgOdds": 39.5,
           "roi": 192.8,
-          "verdict": "採用候補",
+          "verdict": "historical強め候補",
           "note": ""
         }
       ],
@@ -131,7 +131,7 @@
           "hitRate": 4.7,
           "avgOdds": 43.3,
           "roi": 178.4,
-          "verdict": "採用候補",
+          "verdict": "historical強め候補",
           "note": ""
         },
         {
@@ -151,7 +151,7 @@
           "hitRate": 6.1,
           "avgOdds": 42.1,
           "roi": 266.3,
-          "verdict": "採用候補",
+          "verdict": "historical強め候補",
           "note": ""
         }
       ],
@@ -199,7 +199,7 @@
           "hitRate": 4.3,
           "avgOdds": 42.8,
           "roi": 169,
-          "verdict": "採用候補",
+          "verdict": "historical強め候補",
           "note": ""
         },
         {
@@ -209,7 +209,7 @@
           "hitRate": 4.8,
           "avgOdds": 44.1,
           "roi": 207.5,
-          "verdict": "採用候補",
+          "verdict": "historical強め候補",
           "note": ""
         },
         {
@@ -220,7 +220,7 @@
           "avgOdds": 43.7,
           "roi": 395.6,
           "verdict": "監視候補+",
-          "note": "n=39 (n<50のため注意)"
+          "note": "n=39 (n<100のため注意)"
         }
       ],
       "forward": [
@@ -268,7 +268,7 @@
           "avgOdds": 26.7,
           "roi": 287,
           "verdict": "監視候補+",
-          "note": "n=47 (n<50のため注意)"
+          "note": "n=47 (n<100のため注意)"
         },
         {
           "label": "30-40",
@@ -277,7 +277,7 @@
           "hitRate": 5,
           "avgOdds": 35.3,
           "roi": 182.8,
-          "verdict": "採用候補",
+          "verdict": "historical強め候補",
           "note": ""
         },
         {
@@ -297,7 +297,7 @@
           "hitRate": 2.9,
           "avgOdds": 54,
           "roi": 161.1,
-          "verdict": "採用候補",
+          "verdict": "監視候補+",
           "note": ""
         },
         {
@@ -308,7 +308,7 @@
           "avgOdds": 68.3,
           "roi": 573.1,
           "verdict": "監視候補+",
-          "note": "n=35 (n<50のため注意)"
+          "note": "n=35 (n<100のため注意)"
         }
       ],
       "forward": [
@@ -375,7 +375,7 @@
           "hitRate": 5.2,
           "avgOdds": 42.4,
           "roi": 228.3,
-          "verdict": "採用候補",
+          "verdict": "historical強め候補",
           "note": ""
         },
         {
@@ -385,7 +385,7 @@
           "hitRate": 4.2,
           "avgOdds": 43.7,
           "roi": 170.1,
-          "verdict": "採用候補",
+          "verdict": "historical強め候補",
           "note": ""
         }
       ],
@@ -444,7 +444,7 @@
           "avgOdds": 35.5,
           "roi": 225.3,
           "verdict": "監視候補+",
-          "note": "n=30 (n<50のため注意)"
+          "note": "n=30 (n<100のため注意)"
         },
         {
           "label": "丸亀",
@@ -513,7 +513,7 @@
           "hitRate": 0,
           "avgOdds": 42.1,
           "roi": 0,
-          "verdict": "捨て候補",
+          "verdict": "historical弱め候補",
           "note": ""
         },
         {
@@ -584,7 +584,7 @@
           "avgOdds": 44.9,
           "roi": 190.2,
           "verdict": "監視候補+",
-          "note": "n=41 (n<50のため注意)"
+          "note": "n=41 (n<100のため注意)"
         },
         {
           "label": "福岡",
@@ -624,7 +624,7 @@
           "avgOdds": 47.8,
           "roi": 306.8,
           "verdict": "監視候補+",
-          "note": "n=37 (n<50のため注意)"
+          "note": "n=37 (n<100のため注意)"
         },
         {
           "label": "鳴門",
@@ -752,7 +752,7 @@
           "avgOdds": 47.6,
           "roi": 431.3,
           "verdict": "監視候補+",
-          "note": "n=32 (n<50のため注意)"
+          "note": "n=32 (n<100のため注意)"
         },
         {
           "label": "06月",
@@ -762,7 +762,7 @@
           "avgOdds": 44.2,
           "roi": 106.6,
           "verdict": "監視候補+",
-          "note": "n=35 (n<50のため注意)"
+          "note": "n=35 (n<100のため注意)"
         },
         {
           "label": "08月",
@@ -772,7 +772,7 @@
           "avgOdds": 43.7,
           "roi": 211,
           "verdict": "監視候補+",
-          "note": "n=42 (n<50のため注意)"
+          "note": "n=42 (n<100のため注意)"
         },
         {
           "label": "12月",
@@ -782,7 +782,7 @@
           "avgOdds": 40.6,
           "roi": 312.4,
           "verdict": "監視候補+",
-          "note": "n=34 (n<50のため注意)"
+          "note": "n=34 (n<100のため注意)"
         }
       ],
       "forward": [
@@ -820,7 +820,7 @@
           "avgOdds": 44.6,
           "roi": 113.4,
           "verdict": "監視候補+",
-          "note": ""
+          "note": "n=62 (n<100のため注意)"
         },
         {
           "label": "R7-9",
@@ -829,8 +829,8 @@
           "hitRate": 9.6,
           "avgOdds": 42.9,
           "roi": 427.1,
-          "verdict": "採用候補",
-          "note": ""
+          "verdict": "historical強め候補",
+          "note": "n=52 (n<100のため注意)"
         }
       ],
       "forward": [
@@ -877,7 +877,7 @@
           "hitRate": 4.8,
           "avgOdds": 44.1,
           "roi": 207.5,
-          "verdict": "採用候補",
+          "verdict": "historical強め候補",
           "note": ""
         },
         {
@@ -888,7 +888,7 @@
           "avgOdds": 43.7,
           "roi": 395.6,
           "verdict": "監視候補+",
-          "note": "n=39 (n<50のため注意)"
+          "note": "n=39 (n<100のため注意)"
         }
       ],
       "forward": [
@@ -936,7 +936,7 @@
           "avgOdds": 35.3,
           "roi": 237.3,
           "verdict": "監視候補+",
-          "note": "n=48 (n<50のため注意)"
+          "note": "n=48 (n<100のため注意)"
         },
         {
           "label": "40-50",
@@ -946,7 +946,7 @@
           "avgOdds": 43.9,
           "roi": 192.6,
           "verdict": "監視候補+",
-          "note": "n=46 (n<50のため注意)"
+          "note": "n=46 (n<100のため注意)"
         },
         {
           "label": "50-60",
@@ -955,7 +955,7 @@
           "hitRate": 0,
           "avgOdds": 54,
           "roi": 0,
-          "verdict": "捨て候補",
+          "verdict": "historical弱め候補",
           "note": ""
         },
         {
@@ -1014,7 +1014,7 @@
           "avgOdds": 44.5,
           "roi": 129.5,
           "verdict": "監視候補+",
-          "note": ""
+          "note": "n=60 (n<100のため注意)"
         },
         {
           "label": ">=0.15(通常)",
@@ -1023,8 +1023,8 @@
           "hitRate": 8.4,
           "avgOdds": 43.7,
           "roi": 352.3,
-          "verdict": "採用候補",
-          "note": ""
+          "verdict": "historical強め候補",
+          "note": "n=83 (n<100のため注意)"
         }
       ],
       "forward": [
@@ -1331,7 +1331,7 @@
   ],
   "verdictSummary": [
     {
-      "verdict": "採用候補",
+      "verdict": "historical強め候補",
       "groups": [
         "[isBase/月] 04月 (n=111, ROI=285.9%)",
         "[isBase/月] 06月 (n=132, ROI=214.1%)",
@@ -1341,7 +1341,6 @@
         "[isBase/wind_mps帯] 3.0-4.9m (n=375, ROI=169%)",
         "[isBase/wind_mps帯] 5.0-6.9m (n=104, ROI=207.5%)",
         "[isBase/odds帯] 30-40 (n=179, ROI=182.8%)",
-        "[isBase/odds帯] 50-60 (n=103, ROI=161.1%)",
         "[isBase/ex_st帯] <0.10(早め) (n=211, ROI=228.3%)",
         "[isBase/ex_st帯] >=0.15(通常) (n=307, ROI=170.1%)",
         "[wind5/race_no帯] R7-9 (n=52, ROI=427.1%)",
@@ -1357,6 +1356,7 @@
         "[isBase/wind_mps帯] >=7.0m (n=39, ROI=395.6%)",
         "[isBase/odds帯] <30 (n=47, ROI=287%)",
         "[isBase/odds帯] 40-50 (n=154, ROI=113.8%)",
+        "[isBase/odds帯] 50-60 (n=103, ROI=161.1%)",
         "[isBase/odds帯] >=60 (n=35, ROI=573.1%)",
         "[isBase/会場] 下関 (n=30, ROI=225.3%)",
         "[isBase/会場] 浜名湖 (n=41, ROI=190.2%)",
@@ -1377,7 +1377,7 @@
       "groups": []
     },
     {
-      "verdict": "捨て候補",
+      "verdict": "historical弱め候補",
       "groups": [
         "[isBase/会場] 尼崎 (n=31, ROI=0%)",
         "[wind5/odds帯] 50-60 (n=33, ROI=0%)"
