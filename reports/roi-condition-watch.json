@@ -1,0 +1,1387 @@
+{
+  "generatedAt": "2026-06-08T06:49:09.836Z",
+  "forwardStart": "2025-08-09",
+  "overview": [
+    {
+      "condition": "seasonal_parts0_month_4_6_8_12",
+      "period": "forward",
+      "n": 25,
+      "hits": 2,
+      "hitRatePct": 8,
+      "avgOdds": 46.12,
+      "roi": 308.8,
+      "roiPayoutYen": 192.8
+    },
+    {
+      "condition": "seasonal_parts0_month_4_6_8_12",
+      "period": "historical",
+      "n": 518,
+      "hits": 24,
+      "hitRatePct": 4.6,
+      "avgOdds": 43.15,
+      "roi": 193.8,
+      "roiPayoutYen": 169.4
+    },
+    {
+      "condition": "seasonal_parts0_month_4_6_8_12_wind5",
+      "period": "forward",
+      "n": 10,
+      "hits": 1,
+      "hitRatePct": 10,
+      "avgOdds": 52.32,
+      "roi": 308,
+      "roiPayoutYen": 308
+    },
+    {
+      "condition": "seasonal_parts0_month_4_6_8_12_wind5",
+      "period": "historical",
+      "n": 143,
+      "hits": 8,
+      "hitRatePct": 5.6,
+      "avgOdds": 43.99,
+      "roi": 258.8,
+      "roiPayoutYen": 233.5
+    }
+  ],
+  "headFComparison": [
+    {
+      "group": "headF=0",
+      "n": 690,
+      "hits": 27,
+      "hitRatePct": 3.9,
+      "avgPayoutYen": 127.6,
+      "roiPct": 127.6
+    },
+    {
+      "group": "headF>=1",
+      "n": 302,
+      "hits": 6,
+      "hitRatePct": 2,
+      "avgPayoutYen": 60.6,
+      "roiPct": 60.6
+    }
+  ],
+  "dimensions": [
+    {
+      "dimension": "月",
+      "condition": "isBase",
+      "historical": [
+        {
+          "label": "04月",
+          "n": 111,
+          "hits": 6,
+          "hitRate": 5.4,
+          "avgOdds": 48.5,
+          "roi": 285.9,
+          "verdict": "採用候補",
+          "note": ""
+        },
+        {
+          "label": "06月",
+          "n": 132,
+          "hits": 7,
+          "hitRate": 5.3,
+          "avgOdds": 43.3,
+          "roi": 214.1,
+          "verdict": "採用候補",
+          "note": ""
+        },
+        {
+          "label": "08月",
+          "n": 175,
+          "hits": 5,
+          "hitRate": 2.9,
+          "avgOdds": 41.7,
+          "roi": 120.6,
+          "verdict": "監視候補+",
+          "note": ""
+        },
+        {
+          "label": "12月",
+          "n": 100,
+          "hits": 6,
+          "hitRate": 6,
+          "avgOdds": 39.5,
+          "roi": 192.8,
+          "verdict": "採用候補",
+          "note": ""
+        }
+      ],
+      "forward": [
+        {
+          "label": "08月",
+          "n": 25,
+          "hits": 2,
+          "hitRate": 8,
+          "avgOdds": 46.1,
+          "roi": 308.8,
+          "verdict": "監視候補",
+          "note": "n=25 (n<30のため判断不可)"
+        }
+      ]
+    },
+    {
+      "dimension": "race_no帯",
+      "condition": "isBase",
+      "historical": [
+        {
+          "label": "R1-3",
+          "n": 129,
+          "hits": 6,
+          "hitRate": 4.7,
+          "avgOdds": 43.3,
+          "roi": 178.4,
+          "verdict": "採用候補",
+          "note": ""
+        },
+        {
+          "label": "R4-6",
+          "n": 210,
+          "hits": 7,
+          "hitRate": 3.3,
+          "avgOdds": 43.9,
+          "roi": 141.4,
+          "verdict": "監視候補+",
+          "note": ""
+        },
+        {
+          "label": "R7-9",
+          "n": 179,
+          "hits": 11,
+          "hitRate": 6.1,
+          "avgOdds": 42.1,
+          "roi": 266.3,
+          "verdict": "採用候補",
+          "note": ""
+        }
+      ],
+      "forward": [
+        {
+          "label": "R1-3",
+          "n": 7,
+          "hits": 2,
+          "hitRate": 28.6,
+          "avgOdds": 41,
+          "roi": 1102.9,
+          "verdict": "監視候補",
+          "note": "n=7 (n<30のため判断不可)"
+        },
+        {
+          "label": "R4-6",
+          "n": 9,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 46.5,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=9 (n<30のため判断不可)"
+        },
+        {
+          "label": "R7-9",
+          "n": 9,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 49.7,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=9 (n<30のため判断不可)"
+        }
+      ]
+    },
+    {
+      "dimension": "wind_mps帯",
+      "condition": "isBase",
+      "historical": [
+        {
+          "label": "3.0-4.9m",
+          "n": 375,
+          "hits": 16,
+          "hitRate": 4.3,
+          "avgOdds": 42.8,
+          "roi": 169,
+          "verdict": "採用候補",
+          "note": ""
+        },
+        {
+          "label": "5.0-6.9m",
+          "n": 104,
+          "hits": 5,
+          "hitRate": 4.8,
+          "avgOdds": 44.1,
+          "roi": 207.5,
+          "verdict": "採用候補",
+          "note": ""
+        },
+        {
+          "label": ">=7.0m",
+          "n": 39,
+          "hits": 3,
+          "hitRate": 7.7,
+          "avgOdds": 43.7,
+          "roi": 395.6,
+          "verdict": "監視候補+",
+          "note": "n=39 (n<50のため注意)"
+        }
+      ],
+      "forward": [
+        {
+          "label": "3.0-4.9m",
+          "n": 15,
+          "hits": 1,
+          "hitRate": 6.7,
+          "avgOdds": 42,
+          "roi": 309.3,
+          "verdict": "監視候補",
+          "note": "n=15 (n<30のため判断不可)"
+        },
+        {
+          "label": "5.0-6.9m",
+          "n": 9,
+          "hits": 1,
+          "hitRate": 11.1,
+          "avgOdds": 53.7,
+          "roi": 342.2,
+          "verdict": "監視候補",
+          "note": "n=9 (n<30のため判断不可)"
+        },
+        {
+          "label": ">=7.0m",
+          "n": 1,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 39.6,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=1 (n<30のため判断不可)"
+        }
+      ]
+    },
+    {
+      "dimension": "odds帯",
+      "condition": "isBase",
+      "historical": [
+        {
+          "label": "<30",
+          "n": 47,
+          "hits": 5,
+          "hitRate": 10.6,
+          "avgOdds": 26.7,
+          "roi": 287,
+          "verdict": "監視候補+",
+          "note": "n=47 (n<50のため注意)"
+        },
+        {
+          "label": "30-40",
+          "n": 179,
+          "hits": 9,
+          "hitRate": 5,
+          "avgOdds": 35.3,
+          "roi": 182.8,
+          "verdict": "採用候補",
+          "note": ""
+        },
+        {
+          "label": "40-50",
+          "n": 154,
+          "hits": 4,
+          "hitRate": 2.6,
+          "avgOdds": 44.3,
+          "roi": 113.8,
+          "verdict": "監視候補+",
+          "note": ""
+        },
+        {
+          "label": "50-60",
+          "n": 103,
+          "hits": 3,
+          "hitRate": 2.9,
+          "avgOdds": 54,
+          "roi": 161.1,
+          "verdict": "採用候補",
+          "note": ""
+        },
+        {
+          "label": ">=60",
+          "n": 35,
+          "hits": 3,
+          "hitRate": 8.6,
+          "avgOdds": 68.3,
+          "roi": 573.1,
+          "verdict": "監視候補+",
+          "note": "n=35 (n<50のため注意)"
+        }
+      ],
+      "forward": [
+        {
+          "label": "<30",
+          "n": 2,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 25.8,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=2 (n<30のため判断不可)"
+        },
+        {
+          "label": "30-40",
+          "n": 9,
+          "hits": 1,
+          "hitRate": 11.1,
+          "avgOdds": 34.6,
+          "roi": 342.2,
+          "verdict": "監視候補",
+          "note": "n=9 (n<30のため判断不可)"
+        },
+        {
+          "label": "40-50",
+          "n": 8,
+          "hits": 1,
+          "hitRate": 12.5,
+          "avgOdds": 44.5,
+          "roi": 580,
+          "verdict": "監視候補",
+          "note": "n=8 (n<30のため判断不可)"
+        },
+        {
+          "label": "50-60",
+          "n": 2,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 52.8,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=2 (n<30のため判断不可)"
+        },
+        {
+          "label": ">=60",
+          "n": 4,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 82.1,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=4 (n<30のため判断不可)"
+        }
+      ]
+    },
+    {
+      "dimension": "ex_st帯",
+      "condition": "isBase",
+      "historical": [
+        {
+          "label": "<0.10(早め)",
+          "n": 211,
+          "hits": 11,
+          "hitRate": 5.2,
+          "avgOdds": 42.4,
+          "roi": 228.3,
+          "verdict": "採用候補",
+          "note": ""
+        },
+        {
+          "label": ">=0.15(通常)",
+          "n": 307,
+          "hits": 13,
+          "hitRate": 4.2,
+          "avgOdds": 43.7,
+          "roi": 170.1,
+          "verdict": "採用候補",
+          "note": ""
+        }
+      ],
+      "forward": [
+        {
+          "label": "<0.10(早め)",
+          "n": 10,
+          "hits": 1,
+          "hitRate": 10,
+          "avgOdds": 44.5,
+          "roi": 308,
+          "verdict": "監視候補",
+          "note": "n=10 (n<30のため判断不可)"
+        },
+        {
+          "label": ">=0.15(通常)",
+          "n": 15,
+          "hits": 1,
+          "hitRate": 6.7,
+          "avgOdds": 47.2,
+          "roi": 309.3,
+          "verdict": "監視候補",
+          "note": "n=15 (n<30のため判断不可)"
+        }
+      ]
+    },
+    {
+      "dimension": "会場",
+      "condition": "isBase",
+      "historical": [
+        {
+          "label": "びわこ",
+          "n": 24,
+          "hits": 1,
+          "hitRate": 4.2,
+          "avgOdds": 44.8,
+          "roi": 191.7,
+          "verdict": "監視候補",
+          "note": "n=24 (n<30のため判断不可)"
+        },
+        {
+          "label": "三国",
+          "n": 18,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 40.9,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=18 (n<30のため判断不可)"
+        },
+        {
+          "label": "下関",
+          "n": 30,
+          "hits": 2,
+          "hitRate": 6.7,
+          "avgOdds": 35.5,
+          "roi": 225.3,
+          "verdict": "監視候補+",
+          "note": "n=30 (n<50のため注意)"
+        },
+        {
+          "label": "丸亀",
+          "n": 18,
+          "hits": 3,
+          "hitRate": 16.7,
+          "avgOdds": 39.9,
+          "roi": 635,
+          "verdict": "監視候補",
+          "note": "n=18 (n<30のため判断不可)"
+        },
+        {
+          "label": "住之江",
+          "n": 11,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 40,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=11 (n<30のため判断不可)"
+        },
+        {
+          "label": "児島",
+          "n": 15,
+          "hits": 1,
+          "hitRate": 6.7,
+          "avgOdds": 53.4,
+          "roi": 367.3,
+          "verdict": "監視候補",
+          "note": "n=15 (n<30のため判断不可)"
+        },
+        {
+          "label": "唐津",
+          "n": 29,
+          "hits": 2,
+          "hitRate": 6.9,
+          "avgOdds": 39.2,
+          "roi": 295.2,
+          "verdict": "監視候補",
+          "note": "n=29 (n<30のため判断不可)"
+        },
+        {
+          "label": "大村",
+          "n": 12,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 38.7,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=12 (n<30のため判断不可)"
+        },
+        {
+          "label": "宮島",
+          "n": 20,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 37,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=20 (n<30のため判断不可)"
+        },
+        {
+          "label": "尼崎",
+          "n": 31,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 42.1,
+          "roi": 0,
+          "verdict": "捨て候補",
+          "note": ""
+        },
+        {
+          "label": "常滑",
+          "n": 25,
+          "hits": 1,
+          "hitRate": 4,
+          "avgOdds": 40.3,
+          "roi": 162.4,
+          "verdict": "監視候補",
+          "note": "n=25 (n<30のため判断不可)"
+        },
+        {
+          "label": "平和島",
+          "n": 29,
+          "hits": 2,
+          "hitRate": 6.9,
+          "avgOdds": 60.4,
+          "roi": 474.5,
+          "verdict": "監視候補",
+          "note": "n=29 (n<30のため判断不可)"
+        },
+        {
+          "label": "徳山",
+          "n": 24,
+          "hits": 2,
+          "hitRate": 8.3,
+          "avgOdds": 30.5,
+          "roi": 253.3,
+          "verdict": "監視候補",
+          "note": "n=24 (n<30のため判断不可)"
+        },
+        {
+          "label": "桐生",
+          "n": 25,
+          "hits": 1,
+          "hitRate": 4,
+          "avgOdds": 41.8,
+          "roi": 114.8,
+          "verdict": "監視候補",
+          "note": "n=25 (n<30のため判断不可)"
+        },
+        {
+          "label": "江戸川",
+          "n": 28,
+          "hits": 1,
+          "hitRate": 3.6,
+          "avgOdds": 47.3,
+          "roi": 145.4,
+          "verdict": "監視候補",
+          "note": "n=28 (n<30のため判断不可)"
+        },
+        {
+          "label": "津",
+          "n": 21,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 42.7,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=21 (n<30のため判断不可)"
+        },
+        {
+          "label": "浜名湖",
+          "n": 41,
+          "hits": 2,
+          "hitRate": 4.9,
+          "avgOdds": 44.9,
+          "roi": 190.2,
+          "verdict": "監視候補+",
+          "note": "n=41 (n<50のため注意)"
+        },
+        {
+          "label": "福岡",
+          "n": 18,
+          "hits": 1,
+          "hitRate": 5.6,
+          "avgOdds": 39.5,
+          "roi": 198.3,
+          "verdict": "監視候補",
+          "note": "n=18 (n<30のため判断不可)"
+        },
+        {
+          "label": "芦屋",
+          "n": 23,
+          "hits": 1,
+          "hitRate": 4.3,
+          "avgOdds": 42.1,
+          "roi": 128.7,
+          "verdict": "監視候補",
+          "note": "n=23 (n<30のため判断不可)"
+        },
+        {
+          "label": "若松",
+          "n": 25,
+          "hits": 2,
+          "hitRate": 8,
+          "avgOdds": 45.8,
+          "roi": 280.4,
+          "verdict": "監視候補",
+          "note": "n=25 (n<30のため判断不可)"
+        },
+        {
+          "label": "蒲郡",
+          "n": 37,
+          "hits": 2,
+          "hitRate": 5.4,
+          "avgOdds": 47.8,
+          "roi": 306.8,
+          "verdict": "監視候補+",
+          "note": "n=37 (n<50のため注意)"
+        },
+        {
+          "label": "鳴門",
+          "n": 14,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 48,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=14 (n<30のため判断不可)"
+        }
+      ],
+      "forward": [
+        {
+          "label": "びわこ",
+          "n": 4,
+          "hits": 1,
+          "hitRate": 25,
+          "avgOdds": 42.6,
+          "roi": 1160,
+          "verdict": "監視候補",
+          "note": "n=4 (n<30のため判断不可)"
+        },
+        {
+          "label": "下関",
+          "n": 2,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 38.3,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=2 (n<30のため判断不可)"
+        },
+        {
+          "label": "丸亀",
+          "n": 1,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 41,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=1 (n<30のため判断不可)"
+        },
+        {
+          "label": "唐津",
+          "n": 2,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 38.1,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=2 (n<30のため判断不可)"
+        },
+        {
+          "label": "尼崎",
+          "n": 2,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 36.6,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=2 (n<30のため判断不可)"
+        },
+        {
+          "label": "平和島",
+          "n": 5,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 75.8,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=5 (n<30のため判断不可)"
+        },
+        {
+          "label": "徳山",
+          "n": 1,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 22.1,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=1 (n<30のため判断不可)"
+        },
+        {
+          "label": "浜名湖",
+          "n": 2,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 32.8,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=2 (n<30のため判断不可)"
+        },
+        {
+          "label": "若松",
+          "n": 1,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 34,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=1 (n<30のため判断不可)"
+        },
+        {
+          "label": "蒲郡",
+          "n": 5,
+          "hits": 1,
+          "hitRate": 20,
+          "avgOdds": 43,
+          "roi": 616,
+          "verdict": "監視候補",
+          "note": "n=5 (n<30のため判断不可)"
+        }
+      ]
+    },
+    {
+      "dimension": "月",
+      "condition": "wind5",
+      "historical": [
+        {
+          "label": "04月",
+          "n": 32,
+          "hits": 2,
+          "hitRate": 6.3,
+          "avgOdds": 47.6,
+          "roi": 431.3,
+          "verdict": "監視候補+",
+          "note": "n=32 (n<50のため注意)"
+        },
+        {
+          "label": "06月",
+          "n": 35,
+          "hits": 1,
+          "hitRate": 2.9,
+          "avgOdds": 44.2,
+          "roi": 106.6,
+          "verdict": "監視候補+",
+          "note": "n=35 (n<50のため注意)"
+        },
+        {
+          "label": "08月",
+          "n": 42,
+          "hits": 2,
+          "hitRate": 4.8,
+          "avgOdds": 43.7,
+          "roi": 211,
+          "verdict": "監視候補+",
+          "note": "n=42 (n<50のため注意)"
+        },
+        {
+          "label": "12月",
+          "n": 34,
+          "hits": 3,
+          "hitRate": 8.8,
+          "avgOdds": 40.6,
+          "roi": 312.4,
+          "verdict": "監視候補+",
+          "note": "n=34 (n<50のため注意)"
+        }
+      ],
+      "forward": [
+        {
+          "label": "08月",
+          "n": 10,
+          "hits": 1,
+          "hitRate": 10,
+          "avgOdds": 52.3,
+          "roi": 308,
+          "verdict": "監視候補",
+          "note": "n=10 (n<30のため判断不可)"
+        }
+      ]
+    },
+    {
+      "dimension": "race_no帯",
+      "condition": "wind5",
+      "historical": [
+        {
+          "label": "R1-3",
+          "n": 29,
+          "hits": 1,
+          "hitRate": 3.4,
+          "avgOdds": 44.6,
+          "roi": 267.9,
+          "verdict": "監視候補",
+          "note": "n=29 (n<30のため判断不可)"
+        },
+        {
+          "label": "R4-6",
+          "n": 62,
+          "hits": 2,
+          "hitRate": 3.2,
+          "avgOdds": 44.6,
+          "roi": 113.4,
+          "verdict": "監視候補+",
+          "note": ""
+        },
+        {
+          "label": "R7-9",
+          "n": 52,
+          "hits": 5,
+          "hitRate": 9.6,
+          "avgOdds": 42.9,
+          "roi": 427.1,
+          "verdict": "採用候補",
+          "note": ""
+        }
+      ],
+      "forward": [
+        {
+          "label": "R1-3",
+          "n": 3,
+          "hits": 1,
+          "hitRate": 33.3,
+          "avgOdds": 39.9,
+          "roi": 1026.7,
+          "verdict": "監視候補",
+          "note": "n=3 (n<30のため判断不可)"
+        },
+        {
+          "label": "R4-6",
+          "n": 4,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 50.4,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=4 (n<30のため判断不可)"
+        },
+        {
+          "label": "R7-9",
+          "n": 3,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 67.3,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=3 (n<30のため判断不可)"
+        }
+      ]
+    },
+    {
+      "dimension": "wind_mps帯",
+      "condition": "wind5",
+      "historical": [
+        {
+          "label": "5.0-6.9m",
+          "n": 104,
+          "hits": 5,
+          "hitRate": 4.8,
+          "avgOdds": 44.1,
+          "roi": 207.5,
+          "verdict": "採用候補",
+          "note": ""
+        },
+        {
+          "label": ">=7.0m",
+          "n": 39,
+          "hits": 3,
+          "hitRate": 7.7,
+          "avgOdds": 43.7,
+          "roi": 395.6,
+          "verdict": "監視候補+",
+          "note": "n=39 (n<50のため注意)"
+        }
+      ],
+      "forward": [
+        {
+          "label": "5.0-6.9m",
+          "n": 9,
+          "hits": 1,
+          "hitRate": 11.1,
+          "avgOdds": 53.7,
+          "roi": 342.2,
+          "verdict": "監視候補",
+          "note": "n=9 (n<30のため判断不可)"
+        },
+        {
+          "label": ">=7.0m",
+          "n": 1,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 39.6,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=1 (n<30のため判断不可)"
+        }
+      ]
+    },
+    {
+      "dimension": "odds帯",
+      "condition": "wind5",
+      "historical": [
+        {
+          "label": "<30",
+          "n": 7,
+          "hits": 1,
+          "hitRate": 14.3,
+          "avgOdds": 27.5,
+          "roi": 422.9,
+          "verdict": "監視候補",
+          "note": "n=7 (n<30のため判断不可)"
+        },
+        {
+          "label": "30-40",
+          "n": 48,
+          "hits": 3,
+          "hitRate": 6.3,
+          "avgOdds": 35.3,
+          "roi": 237.3,
+          "verdict": "監視候補+",
+          "note": "n=48 (n<50のため注意)"
+        },
+        {
+          "label": "40-50",
+          "n": 46,
+          "hits": 2,
+          "hitRate": 4.3,
+          "avgOdds": 43.9,
+          "roi": 192.6,
+          "verdict": "監視候補+",
+          "note": "n=46 (n<50のため注意)"
+        },
+        {
+          "label": "50-60",
+          "n": 33,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 54,
+          "roi": 0,
+          "verdict": "捨て候補",
+          "note": ""
+        },
+        {
+          "label": ">=60",
+          "n": 9,
+          "hits": 2,
+          "hitRate": 22.2,
+          "avgOdds": 66.6,
+          "roi": 1533.3,
+          "verdict": "監視候補",
+          "note": "n=9 (n<30のため判断不可)"
+        }
+      ],
+      "forward": [
+        {
+          "label": "30-40",
+          "n": 5,
+          "hits": 1,
+          "hitRate": 20,
+          "avgOdds": 34.2,
+          "roi": 616,
+          "verdict": "監視候補",
+          "note": "n=5 (n<30のため判断不可)"
+        },
+        {
+          "label": "50-60",
+          "n": 2,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 52.8,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=2 (n<30のため判断不可)"
+        },
+        {
+          "label": ">=60",
+          "n": 3,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 82.2,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=3 (n<30のため判断不可)"
+        }
+      ]
+    },
+    {
+      "dimension": "ex_st帯",
+      "condition": "wind5",
+      "historical": [
+        {
+          "label": "<0.10(早め)",
+          "n": 60,
+          "hits": 1,
+          "hitRate": 1.7,
+          "avgOdds": 44.5,
+          "roi": 129.5,
+          "verdict": "監視候補+",
+          "note": ""
+        },
+        {
+          "label": ">=0.15(通常)",
+          "n": 83,
+          "hits": 7,
+          "hitRate": 8.4,
+          "avgOdds": 43.7,
+          "roi": 352.3,
+          "verdict": "採用候補",
+          "note": ""
+        }
+      ],
+      "forward": [
+        {
+          "label": "<0.10(早め)",
+          "n": 3,
+          "hits": 1,
+          "hitRate": 33.3,
+          "avgOdds": 40.4,
+          "roi": 1026.7,
+          "verdict": "監視候補",
+          "note": "n=3 (n<30のため判断不可)"
+        },
+        {
+          "label": ">=0.15(通常)",
+          "n": 7,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 57.4,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=7 (n<30のため判断不可)"
+        }
+      ]
+    },
+    {
+      "dimension": "会場",
+      "condition": "wind5",
+      "historical": [
+        {
+          "label": "びわこ",
+          "n": 4,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 43.1,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=4 (n<30のため判断不可)"
+        },
+        {
+          "label": "三国",
+          "n": 9,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 40.5,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=9 (n<30のため判断不可)"
+        },
+        {
+          "label": "下関",
+          "n": 3,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 33.8,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=3 (n<30のため判断不可)"
+        },
+        {
+          "label": "丸亀",
+          "n": 8,
+          "hits": 2,
+          "hitRate": 25,
+          "avgOdds": 41.6,
+          "roi": 957.5,
+          "verdict": "監視候補",
+          "note": "n=8 (n<30のため判断不可)"
+        },
+        {
+          "label": "住之江",
+          "n": 2,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 39.5,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=2 (n<30のため判断不可)"
+        },
+        {
+          "label": "児島",
+          "n": 3,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 56.3,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=3 (n<30のため判断不可)"
+        },
+        {
+          "label": "唐津",
+          "n": 12,
+          "hits": 1,
+          "hitRate": 8.3,
+          "avgOdds": 40.8,
+          "roi": 502.5,
+          "verdict": "監視候補",
+          "note": "n=12 (n<30のため判断不可)"
+        },
+        {
+          "label": "大村",
+          "n": 4,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 44.2,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=4 (n<30のため判断不可)"
+        },
+        {
+          "label": "宮島",
+          "n": 2,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 36.9,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=2 (n<30のため判断不可)"
+        },
+        {
+          "label": "尼崎",
+          "n": 13,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 40.4,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=13 (n<30のため判断不可)"
+        },
+        {
+          "label": "常滑",
+          "n": 12,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 42.5,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=12 (n<30のため判断不可)"
+        },
+        {
+          "label": "平和島",
+          "n": 11,
+          "hits": 1,
+          "hitRate": 9.1,
+          "avgOdds": 57.4,
+          "roi": 706.4,
+          "verdict": "監視候補",
+          "note": "n=11 (n<30のため判断不可)"
+        },
+        {
+          "label": "徳山",
+          "n": 4,
+          "hits": 1,
+          "hitRate": 25,
+          "avgOdds": 34.5,
+          "roi": 932.5,
+          "verdict": "監視候補",
+          "note": "n=4 (n<30のため判断不可)"
+        },
+        {
+          "label": "桐生",
+          "n": 3,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 41.6,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=3 (n<30のため判断不可)"
+        },
+        {
+          "label": "江戸川",
+          "n": 20,
+          "hits": 1,
+          "hitRate": 5,
+          "avgOdds": 46.6,
+          "roi": 203.5,
+          "verdict": "監視候補",
+          "note": "n=20 (n<30のため判断不可)"
+        },
+        {
+          "label": "津",
+          "n": 5,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 47.3,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=5 (n<30のため判断不可)"
+        },
+        {
+          "label": "浜名湖",
+          "n": 8,
+          "hits": 1,
+          "hitRate": 12.5,
+          "avgOdds": 47.3,
+          "roi": 598.8,
+          "verdict": "監視候補",
+          "note": "n=8 (n<30のため判断不可)"
+        },
+        {
+          "label": "福岡",
+          "n": 2,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 35.5,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=2 (n<30のため判断不可)"
+        },
+        {
+          "label": "芦屋",
+          "n": 4,
+          "hits": 1,
+          "hitRate": 25,
+          "avgOdds": 37.6,
+          "roi": 740,
+          "verdict": "監視候補",
+          "note": "n=4 (n<30のため判断不可)"
+        },
+        {
+          "label": "若松",
+          "n": 5,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 43.8,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=5 (n<30のため判断不可)"
+        },
+        {
+          "label": "蒲郡",
+          "n": 4,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 45.7,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=4 (n<30のため判断不可)"
+        },
+        {
+          "label": "鳴門",
+          "n": 5,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 46.2,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=5 (n<30のため判断不可)"
+        }
+      ],
+      "forward": [
+        {
+          "label": "唐津",
+          "n": 1,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 35.3,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=1 (n<30のため判断不可)"
+        },
+        {
+          "label": "尼崎",
+          "n": 1,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 39.6,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=1 (n<30のため判断不可)"
+        },
+        {
+          "label": "平和島",
+          "n": 4,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 74.3,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=4 (n<30のため判断不可)"
+        },
+        {
+          "label": "浜名湖",
+          "n": 2,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 32.8,
+          "roi": 0,
+          "verdict": "監視候補",
+          "note": "n=2 (n<30のため判断不可)"
+        },
+        {
+          "label": "蒲郡",
+          "n": 2,
+          "hits": 1,
+          "hitRate": 50,
+          "avgOdds": 42.9,
+          "roi": 1540,
+          "verdict": "監視候補",
+          "note": "n=2 (n<30のため判断不可)"
+        }
+      ]
+    }
+  ],
+  "verdictSummary": [
+    {
+      "verdict": "採用候補",
+      "groups": [
+        "[isBase/月] 04月 (n=111, ROI=285.9%)",
+        "[isBase/月] 06月 (n=132, ROI=214.1%)",
+        "[isBase/月] 12月 (n=100, ROI=192.8%)",
+        "[isBase/race_no帯] R1-3 (n=129, ROI=178.4%)",
+        "[isBase/race_no帯] R7-9 (n=179, ROI=266.3%)",
+        "[isBase/wind_mps帯] 3.0-4.9m (n=375, ROI=169%)",
+        "[isBase/wind_mps帯] 5.0-6.9m (n=104, ROI=207.5%)",
+        "[isBase/odds帯] 30-40 (n=179, ROI=182.8%)",
+        "[isBase/odds帯] 50-60 (n=103, ROI=161.1%)",
+        "[isBase/ex_st帯] <0.10(早め) (n=211, ROI=228.3%)",
+        "[isBase/ex_st帯] >=0.15(通常) (n=307, ROI=170.1%)",
+        "[wind5/race_no帯] R7-9 (n=52, ROI=427.1%)",
+        "[wind5/wind_mps帯] 5.0-6.9m (n=104, ROI=207.5%)",
+        "[wind5/ex_st帯] >=0.15(通常) (n=83, ROI=352.3%)"
+      ]
+    },
+    {
+      "verdict": "監視候補+",
+      "groups": [
+        "[isBase/月] 08月 (n=175, ROI=120.6%)",
+        "[isBase/race_no帯] R4-6 (n=210, ROI=141.4%)",
+        "[isBase/wind_mps帯] >=7.0m (n=39, ROI=395.6%)",
+        "[isBase/odds帯] <30 (n=47, ROI=287%)",
+        "[isBase/odds帯] 40-50 (n=154, ROI=113.8%)",
+        "[isBase/odds帯] >=60 (n=35, ROI=573.1%)",
+        "[isBase/会場] 下関 (n=30, ROI=225.3%)",
+        "[isBase/会場] 浜名湖 (n=41, ROI=190.2%)",
+        "[isBase/会場] 蒲郡 (n=37, ROI=306.8%)",
+        "[wind5/月] 04月 (n=32, ROI=431.3%)",
+        "[wind5/月] 06月 (n=35, ROI=106.6%)",
+        "[wind5/月] 08月 (n=42, ROI=211%)",
+        "[wind5/月] 12月 (n=34, ROI=312.4%)",
+        "[wind5/race_no帯] R4-6 (n=62, ROI=113.4%)",
+        "[wind5/wind_mps帯] >=7.0m (n=39, ROI=395.6%)",
+        "[wind5/odds帯] 30-40 (n=48, ROI=237.3%)",
+        "[wind5/odds帯] 40-50 (n=46, ROI=192.6%)",
+        "[wind5/ex_st帯] <0.10(早め) (n=60, ROI=129.5%)"
+      ]
+    },
+    {
+      "verdict": "監視候補",
+      "groups": []
+    },
+    {
+      "verdict": "捨て候補",
+      "groups": [
+        "[isBase/会場] 尼崎 (n=31, ROI=0%)",
+        "[wind5/odds帯] 50-60 (n=33, ROI=0%)"
+      ]
+    }
+  ]
+}
