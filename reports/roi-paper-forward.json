@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-08T05:59:33.969Z",
+  "generatedAt": "2026-06-08T06:05:46.210Z",
   "forwardStart": "2025-08-09",
   "conditions": [
     {
@@ -140,7 +140,54 @@
         }
       ],
       "verdict": "✅ PAPER継続",
-      "paperGrade": "観察継続 (3項目未達)"
+      "paperGrade": "観察継続 (3項目未達)",
+      "statusAssessment": {
+        "currentStatus": "PAPER",
+        "productionAllowed": false,
+        "unmetPromotionCriteria": [
+          "forward n >= 100 (現状: n=25)",
+          "hit >= 5 (現状: 2hits)",
+          "月8以外を含む (月4/6/12 のいずれか) (現状: 月8のみ)"
+        ],
+        "downgradeWarnings": [
+          {
+            "label": "ROI<100% (n>=50達成後に評価)",
+            "triggered": false,
+            "severity": "STOP",
+            "value": "n=25 (n<50: 未評価)",
+            "action": "forward n>=50 到達後に評価"
+          },
+          {
+            "label": "roiExMaxHit<80% (n>=50達成後に評価)",
+            "triggered": false,
+            "severity": "DOWNGRADE",
+            "value": "n=25 (n<50: 未評価)",
+            "action": "forward n>=50 到達後に評価"
+          },
+          {
+            "label": "hit<3 (n>=50達成後に評価)",
+            "triggered": false,
+            "severity": "DOWNGRADE",
+            "value": "n=25 (n<50: 未評価)",
+            "action": "forward n>=50 到達後に評価"
+          },
+          {
+            "label": "連敗 >= 51 (historical102回の50%)",
+            "triggered": false,
+            "severity": "WARNING",
+            "value": "forward 最大連敗=9回 (閾値=51) ✅",
+            "action": "現在問題なし"
+          },
+          {
+            "label": "月8以外のforward実績なし",
+            "triggered": true,
+            "severity": "STOP",
+            "value": "forward月: 08",
+            "action": "PRODUCTION_BLOCKED: 月4/6/12 のforward実績が必要"
+          }
+        ],
+        "nextReviewTrigger": "forward n=30 到達時 (現在n=25)"
+      }
     },
     {
       "name": "seasonal_parts0_month_4_6_8_12_wind5",
@@ -280,7 +327,62 @@
         }
       ],
       "verdict": "⚠️ PAPER (要観察)",
-      "paperGrade": "観察継続 (4項目未達)"
+      "paperGrade": "観察継続 (4項目未達)",
+      "statusAssessment": {
+        "currentStatus": "PAPER_STRONG_CANDIDATE",
+        "productionAllowed": false,
+        "unmetPromotionCriteria": [
+          "forward n >= 50 (n=153のため緩和) (現状: n=10)",
+          "hit >= 3 (現状: 1hits)",
+          "roiExMaxHit >= 100% (現状: 0.0%)",
+          "月4/6/8/12 の複数月を含む (現状: 月8のみ)"
+        ],
+        "downgradeWarnings": [
+          {
+            "label": "ROI<100% (n>=50達成後に評価)",
+            "triggered": false,
+            "severity": "STOP",
+            "value": "n=10 (n<50: 未評価)",
+            "action": "forward n>=50 到達後に評価"
+          },
+          {
+            "label": "roiExMaxHit<80% (n>=50達成後に評価)",
+            "triggered": false,
+            "severity": "DOWNGRADE",
+            "value": "n=10 (n<50: 未評価)",
+            "action": "forward n>=50 到達後に評価"
+          },
+          {
+            "label": "hit<3 (n>=50達成後に評価)",
+            "triggered": false,
+            "severity": "DOWNGRADE",
+            "value": "n=10 (n<50: 未評価)",
+            "action": "forward n>=50 到達後に評価"
+          },
+          {
+            "label": "連敗 >= 16 (historical32回の50%)",
+            "triggered": false,
+            "severity": "WARNING",
+            "value": "forward 最大連敗=8回 (閾値=16) ✅",
+            "action": "現在問題なし"
+          },
+          {
+            "label": "月8以外のforward実績なし",
+            "triggered": true,
+            "severity": "STOP",
+            "value": "forward月: 08",
+            "action": "PRODUCTION_BLOCKED: 月4/6/12 のforward実績が必要"
+          },
+          {
+            "label": "DD historical 20.92% > 目標12%",
+            "triggered": true,
+            "severity": "STOP",
+            "value": "historical DD=20.92% (目標≤12%)",
+            "action": "PRODUCTION_BLOCKED_DD: forward期間でDDが改善するか確認必要"
+          }
+        ],
+        "nextReviewTrigger": "forward n=30 到達時 (現在n=10)"
+      }
     }
   ]
 }

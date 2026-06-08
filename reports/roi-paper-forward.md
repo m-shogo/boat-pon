@@ -2,15 +2,15 @@
 
 **禁止**: 本番decision変更不可 / app_settings変更不可 / 自動投票不可
 
-*生成: 2026-06-08T05:59:33.968Z / DB: data/boat.sqlite*
+*生成: 2026-06-08T06:05:46.209Z / DB: data/boat.sqlite*
 
 
 ## 条件比較サマリー
 
-| 条件 | hist n | hist ROI | hist roiExMaxHit | 最大連敗 | hist DD% | fwd n | fwd hits | fwd ROI | 判定 |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
-| seasonal_parts0_month_4_6_8_12 | 543 | 199.1% | 184.8% | 102 | 18.8% | 25 | 2 | 309% | ✅ PAPER継続 |
-| seasonal_parts0_month_4_6_8_12_wind5 | 153 | 262.0% | 211.2% | 32 | 20.9% | 10 | 1 | 308% | ⚠️ PAPER (要観察) |
+| 条件 | hist n | hist ROI | hist roiExMaxHit | 最大連敗 | hist DD% | fwd n | fwd hits | fwd ROI | ステータス | 本番 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---|:---:|
+| seasonal_parts0_month_4_6_8_12 | 543 | 199.1% | 184.8% | 102 | 18.8% | 25 | 2 | 309% | 📋 PAPER | 🚫 不可 |
+| seasonal_parts0_month_4_6_8_12_wind5 | 153 | 262.0% | 211.2% | 32 | 20.9% | 10 | 1 | 308% | 📋 PAPER_STRONG_CANDIDATE | 🚫 不可 |
 
 > **DD目標について**: 目標 DD<=12%。`seasonal_parts0_month_4_6_8_12` DD=18.8%、`wind5` DD=20.9% — いずれもDD目標未達。ROI/連敗は達成。**PAPER_STRONG_CANDIDATE (DD未達)** として扱う。
 
@@ -70,6 +70,25 @@ forward開始: 2025-08-09
 | (任意)本番decision/app_settings 変更なし | 確認済み | ✅ |
 
 **→ 観察継続: 観察継続 (3項目未達)**
+
+### 降格・停止ライン
+
+**現在ステータス**: `PAPER` — **本番反映: 不可**
+
+**未達昇格条件:**
+- ❌ forward n >= 100 (現状: n=25)
+- ❌ hit >= 5 (現状: 2hits)
+- ❌ 月8以外を含む (月4/6/12 のいずれか) (現状: 月8のみ)
+
+| チェック | トリガー | 重大度 | 現状 | アクション |
+|---|:---:|:---:|---|---|
+| ROI<100% (n>=50達成後に評価) | 🟢 | STOP | n=25 (n<50: 未評価) | forward n>=50 到達後に評価 |
+| roiExMaxHit<80% (n>=50達成後に評価) | 🟢 | DOWNGRADE | n=25 (n<50: 未評価) | forward n>=50 到達後に評価 |
+| hit<3 (n>=50達成後に評価) | 🟢 | DOWNGRADE | n=25 (n<50: 未評価) | forward n>=50 到達後に評価 |
+| 連敗 >= 51 (historical102回の50%) | 🟢 | WARNING | forward 最大連敗=9回 (閾値=51) ✅ | 現在問題なし |
+| 月8以外のforward実績なし | 🔴 | STOP | forward月: 08 | PRODUCTION_BLOCKED: 月4/6/12 のforward実績が必要 |
+
+**次のレビュートリガー**: forward n=30 到達時 (現在n=25)
 
 ### Rerun Safety
 
@@ -158,6 +177,27 @@ forward開始: 2025-08-09
 | (任意)本番decision/app_settings 変更なし | 確認済み | ✅ |
 
 **→ 観察継続: 観察継続 (4項目未達)**
+
+### 降格・停止ライン
+
+**現在ステータス**: `PAPER_STRONG_CANDIDATE` — **本番反映: 不可**
+
+**未達昇格条件:**
+- ❌ forward n >= 50 (n=153のため緩和) (現状: n=10)
+- ❌ hit >= 3 (現状: 1hits)
+- ❌ roiExMaxHit >= 100% (現状: 0.0%)
+- ❌ 月4/6/8/12 の複数月を含む (現状: 月8のみ)
+
+| チェック | トリガー | 重大度 | 現状 | アクション |
+|---|:---:|:---:|---|---|
+| ROI<100% (n>=50達成後に評価) | 🟢 | STOP | n=10 (n<50: 未評価) | forward n>=50 到達後に評価 |
+| roiExMaxHit<80% (n>=50達成後に評価) | 🟢 | DOWNGRADE | n=10 (n<50: 未評価) | forward n>=50 到達後に評価 |
+| hit<3 (n>=50達成後に評価) | 🟢 | DOWNGRADE | n=10 (n<50: 未評価) | forward n>=50 到達後に評価 |
+| 連敗 >= 16 (historical32回の50%) | 🟢 | WARNING | forward 最大連敗=8回 (閾値=16) ✅ | 現在問題なし |
+| 月8以外のforward実績なし | 🔴 | STOP | forward月: 08 | PRODUCTION_BLOCKED: 月4/6/12 のforward実績が必要 |
+| DD historical 20.92% > 目標12% | 🔴 | STOP | historical DD=20.92% (目標≤12%) | PRODUCTION_BLOCKED_DD: forward期間でDDが改善するか確認必要 |
+
+**次のレビュートリガー**: forward n=30 到達時 (現在n=10)
 
 ### Rerun Safety
 

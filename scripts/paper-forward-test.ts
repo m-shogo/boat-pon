@@ -317,6 +317,196 @@ function oddsBands(rs: CandRow[]) {
   }));
 }
 
+// ───────────────── 降格・停止ライン ─────────────────
+
+type DowngradeCheck = {
+  label: string;
+  triggered: boolean;
+  severity: "STOP" | "DOWNGRADE" | "WARNING" | "INFO";
+  value: string;
+  action: string;
+};
+
+type StatusAssessment = {
+  currentStatus: "PAPER_STRONG_CANDIDATE" | "PAPER" | "WATCH" | "DO_NOT_SHIP";
+  productionAllowed: false;
+  unmetPromotionCriteria: string[];
+  downgradeWarnings: DowngradeCheck[];
+  nextReviewTrigger: string;
+};
+
+function buildStatusAssessment(
+  cond: ConditionConfig,
+  confirmedForward: CandRow[],
+  fwdMetrics: ReturnType<typeof calcMetrics>,
+  fwdMonths: ReturnType<typeof monthBreakdown>,
+  checklistResults: { label: string; ok: boolean; value: string }[],
+): StatusAssessment {
+  const fwdN = confirmedForward.length;
+  const hasMultiMonth = fwdMonths.filter((m) => (m.nEval ?? 0) > 0).length > 1;
+  const hist = cond.historical;
+
+  // 降格・停止チェック
+  const downgradeWarnings: DowngradeCheck[] = [];
+
+  // 1. n>=50 かつ ROI<100% → DOWNGRADE_TO_WATCH
+  const roi = fwdMetrics.roi;
+  if (fwdN >= 50 && roi !== null && roi < 100) {
+    downgradeWarnings.push({
+      label: "ROI<100% (n>=50)",
+      triggered: true,
+      severity: "STOP",
+      value: `forward ROI=${roi.toFixed(1)}% / n=${fwdN}`,
+      action: "DOWNGRADE_TO_WATCH: 期待値がマイナス。paper forward継続中止を検討",
+    });
+  } else {
+    downgradeWarnings.push({
+      label: "ROI<100% (n>=50達成後に評価)",
+      triggered: false,
+      severity: "STOP",
+      value: fwdN >= 50 ? `ROI=${roi?.toFixed(1)}% ✅` : `n=${fwdN} (n<50: 未評価)`,
+      action: "forward n>=50 到達後に評価",
+    });
+  }
+
+  // 2. n>=50 かつ roiExMaxHit<80% → DOWNGRADE_TO_PAPER_ONLY
+  const roiEx = fwdMetrics.roiExMaxHit;
+  if (fwdN >= 50 && roiEx !== null && roiEx < 80) {
+    downgradeWarnings.push({
+      label: "roiExMaxHit<80% (n>=50)",
+      triggered: true,
+      severity: "DOWNGRADE",
+      value: `roiExMaxHit=${roiEx.toFixed(1)}% / n=${fwdN}`,
+      action: "DOWNGRADE_TO_PAPER_ONLY: top1 hit依存。過学習リスク確認必要",
+    });
+  } else {
+    downgradeWarnings.push({
+      label: "roiExMaxHit<80% (n>=50達成後に評価)",
+      triggered: false,
+      severity: "DOWNGRADE",
+      value: fwdN >= 50 ? `roiExMaxHit=${roiEx?.toFixed(1)}% ✅` : `n=${fwdN} (n<50: 未評価)`,
+      action: "forward n>=50 到達後に評価",
+    });
+  }
+
+  // 3. n>=50 かつ hit<3 → WATCH
+  const hits = fwdMetrics.hits;
+  if (fwdN >= 50 && hits < 3) {
+    downgradeWarnings.push({
+      label: "hit<3 (n>=50)",
+      triggered: true,
+      severity: "DOWNGRADE",
+      value: `hits=${hits} / n=${fwdN}`,
+      action: "WATCH: 的中率が想定より低い。条件再検討",
+    });
+  } else {
+    downgradeWarnings.push({
+      label: "hit<3 (n>=50達成後に評価)",
+      triggered: false,
+      severity: "DOWNGRADE",
+      value: fwdN >= 50 ? `hits=${hits} ✅` : `n=${fwdN} (n<50: 未評価)`,
+      action: "forward n>=50 到達後に評価",
+    });
+  }
+
+  // 4. 最大連敗が historical 想定を超えたらWARNING
+  // forwardの連続外れを計算
+  let maxFwdStreak = 0;
+  let curStreak = 0;
+  for (const r of confirmedForward) {
+    if (r.hit === 0) { curStreak++; maxFwdStreak = Math.max(maxFwdStreak, curStreak); }
+    else { curStreak = 0; }
+  }
+  const streakThreshold = Math.ceil(hist.maxStreak * 0.5); // 過去最大の50%でWARNING
+  if (maxFwdStreak >= streakThreshold) {
+    downgradeWarnings.push({
+      label: `連敗 >= ${streakThreshold} (historical${hist.maxStreak}回の50%)`,
+      triggered: true,
+      severity: "WARNING",
+      value: `forward 最大連敗=${maxFwdStreak}回 (閾値=${streakThreshold})`,
+      action: "WARNING: historical 想定内だが資金計画を見直す",
+    });
+  } else {
+    downgradeWarnings.push({
+      label: `連敗 >= ${streakThreshold} (historical${hist.maxStreak}回の50%)`,
+      triggered: false,
+      severity: "WARNING",
+      value: `forward 最大連敗=${maxFwdStreak}回 (閾値=${streakThreshold}) ✅`,
+      action: "現在問題なし",
+    });
+  }
+
+  // 5. 月8以外のforward実績がない → production不可
+  if (!hasMultiMonth) {
+    downgradeWarnings.push({
+      label: "月8以外のforward実績なし",
+      triggered: true,
+      severity: "STOP",
+      value: `forward月: ${[...new Set(confirmedForward.map((r) => r.date.slice(5, 7)))].sort().join(",")}`,
+      action: "PRODUCTION_BLOCKED: 月4/6/12 のforward実績が必要",
+    });
+  } else {
+    downgradeWarnings.push({
+      label: "月8以外のforward実績なし",
+      triggered: false,
+      severity: "STOP",
+      value: "複数月確認済み ✅",
+      action: "月別条件を満たす",
+    });
+  }
+
+  // 6. wind5 はDD未達により production不可
+  if (cond.name.includes("wind5")) {
+    downgradeWarnings.push({
+      label: "DD historical 20.92% > 目標12%",
+      triggered: true,
+      severity: "STOP",
+      value: `historical DD=${hist.maxDDPct.toFixed(2)}% (目標≤12%)`,
+      action: "PRODUCTION_BLOCKED_DD: forward期間でDDが改善するか確認必要",
+    });
+  }
+
+  // 未達昇格条件
+  const unmetPromotionCriteria = checklistResults
+    .filter((c) => !c.ok && cond.checklist.find((cl) => cl.label === c.label)?.required)
+    .map((c) => `${c.label} (現状: ${c.value})`);
+
+  // currentStatus 判定
+  // - ROI/hit 品質の劣化が確認された場合のみ WATCH に降格
+  // - 月8以外未達・DD未達は production_block だが currentStatus は変えない
+  const qualityDowngrade = (fwdN >= 50 && roi !== null && roi < 100)  // ROI期待値マイナス
+    || (fwdN >= 50 && fwdMetrics.hits < 3);  // hit rate 低すぎ
+
+  let currentStatus: StatusAssessment["currentStatus"];
+  if (qualityDowngrade) {
+    currentStatus = "WATCH";
+  } else {
+    currentStatus = cond.paperAction === "PAPER_STRONG" ? "PAPER" : "PAPER_STRONG_CANDIDATE";
+  }
+
+  // nextReviewTrigger
+  let nextReviewTrigger: string;
+  if (fwdN < 30) {
+    nextReviewTrigger = `forward n=30 到達時 (現在n=${fwdN})`;
+  } else if (fwdN < 50) {
+    nextReviewTrigger = `forward n=50 到達時 (現在n=${fwdN}) — 降格条件の本格評価開始`;
+  } else if (!hasMultiMonth) {
+    nextReviewTrigger = "月4/6/12 のいずれかのforward実績が出たとき";
+  } else if (fwdN < 100) {
+    nextReviewTrigger = `forward n=100 到達時 (現在n=${fwdN}) — PAPER_STRONG昇格条件の評価`;
+  } else {
+    nextReviewTrigger = "全checklist項目をレビュー";
+  }
+
+  return {
+    currentStatus,
+    productionAllowed: false,
+    unmetPromotionCriteria,
+    downgradeWarnings,
+    nextReviewTrigger,
+  };
+}
+
 // ───────────────── Report Generation ─────────────────
 
 type CondReport = {
@@ -334,6 +524,7 @@ type CondReport = {
   checklistResults: { label: string; ok: boolean; value: string }[];
   verdict: string;
   paperGrade: string;
+  statusAssessment: StatusAssessment;
 };
 
 function buildCondReport(cond: ConditionConfig): CondReport {
@@ -388,10 +579,13 @@ function buildCondReport(cond: ConditionConfig): CondReport {
 
   const paperGrade = allOk ? "本番反映検討可" : `観察継続 (${checklistResults.filter((c) => !c.ok && cond.checklist.find((cl) => cl.label === c.label)?.required).length}項目未達)`;
 
+  const statusAssessment = buildStatusAssessment(cond, confirmedForward, fwdMetrics, fwdMonths, checklistResults);
+
   return {
     config: cond, stats, allRows, historicalRows, forwardRows,
     confirmedForward, pendingForward, histMetrics, fwdMetrics,
     fwdMonths, fwdOdds, checklistResults, verdict, paperGrade,
+    statusAssessment,
   };
 }
 
@@ -416,13 +610,14 @@ lines.push("");
 
 // 比較テーブル
 lines.push("## 条件比較サマリー", "");
-lines.push("| 条件 | hist n | hist ROI | hist roiExMaxHit | 最大連敗 | hist DD% | fwd n | fwd hits | fwd ROI | 判定 |");
-lines.push("|---|---:|---:|---:|---:|---:|---:|---:|---:|---|");
+lines.push("| 条件 | hist n | hist ROI | hist roiExMaxHit | 最大連敗 | hist DD% | fwd n | fwd hits | fwd ROI | ステータス | 本番 |");
+lines.push("|---|---:|---:|---:|---:|---:|---:|---:|---:|---|:---:|");
 for (const cr of condReports) {
   const h = cr.config.historical;
   const fwd = cr.fwdMetrics;
   const fwdRoi = fwd.roi !== null ? `${fwd.roi.toFixed(0)}%` : "-";
-  lines.push(`| ${esc(cr.config.name)} | ${h.n} | ${h.roi.toFixed(1)}% | ${h.roiExMaxHit.toFixed(1)}% | ${h.maxStreak} | ${h.maxDDPct.toFixed(1)}% | ${cr.confirmedForward.length} | ${fwd.hits} | ${fwdRoi} | ${cr.verdict} |`);
+  const statusIcon = cr.statusAssessment.currentStatus === "WATCH" ? "⚠️" : cr.statusAssessment.currentStatus === "DO_NOT_SHIP" ? "❌" : "📋";
+  lines.push(`| ${esc(cr.config.name)} | ${h.n} | ${h.roi.toFixed(1)}% | ${h.roiExMaxHit.toFixed(1)}% | ${h.maxStreak} | ${h.maxDDPct.toFixed(1)}% | ${cr.confirmedForward.length} | ${fwd.hits} | ${fwdRoi} | ${statusIcon} ${cr.statusAssessment.currentStatus} | 🚫 不可 |`);
 }
 lines.push("");
 
@@ -496,6 +691,26 @@ for (const cr of condReports) {
     ? "**→ 全条件クリア: 本番反映を検討してよい段階**"
     : `**→ 観察継続: ${cr.paperGrade}**`);
   lines.push("");
+
+  // 降格・停止ライン
+  const sa = cr.statusAssessment;
+  lines.push("### 降格・停止ライン", "");
+  lines.push(`**現在ステータス**: \`${sa.currentStatus}\` — **本番反映: 不可**`, "");
+  if (sa.unmetPromotionCriteria.length > 0) {
+    lines.push("**未達昇格条件:**");
+    for (const u of sa.unmetPromotionCriteria) lines.push(`- ❌ ${u}`);
+    lines.push("");
+  }
+  lines.push("| チェック | トリガー | 重大度 | 現状 | アクション |");
+  lines.push("|---|:---:|:---:|---|---|");
+  for (const dg of sa.downgradeWarnings) {
+    const icon = dg.triggered
+      ? (dg.severity === "STOP" ? "🔴" : dg.severity === "DOWNGRADE" ? "🟠" : "🟡")
+      : "🟢";
+    lines.push(`| ${dg.label} | ${icon} | ${dg.severity} | ${dg.value} | ${dg.action} |`);
+  }
+  lines.push("");
+  lines.push(`**次のレビュートリガー**: ${sa.nextReviewTrigger}`, "");
 
   // rerun safety
   const s = cr.stats;
@@ -630,6 +845,7 @@ const reportData = {
     checklistResults: cr.checklistResults,
     verdict: cr.verdict,
     paperGrade: cr.paperGrade,
+    statusAssessment: cr.statusAssessment,
   })),
 };
 
