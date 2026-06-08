@@ -96,6 +96,7 @@
     "report:roi-condition-watch": "tsx scripts/report-roi-condition-watch.ts",
     "report:roi-combination-watch": "tsx scripts/report-roi-combination-watch.ts",
     "report:roi-watchlist": "tsx scripts/report-roi-watchlist.ts",
+    "report:roi-watchlist-summary": "tsx scripts/report-roi-watchlist-summary.ts",
     "report:data-coverage": "tsx scripts/report-data-coverage.ts",
     "backfill:motor-boat-stats": "tsx scripts/backfill-motor-boat-stats.ts",
     "build:venue-motor-stats": "tsx scripts/build-venue-motor-stats.ts",
