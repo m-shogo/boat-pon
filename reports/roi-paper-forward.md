@@ -4,7 +4,7 @@
 
 **禁止**: 本番decision変更不可 / app_settings変更不可 / 自動投票不可
 
-*生成: 2026-06-08T03:37:59.724Z / DB: data/boat.sqlite*
+*生成: 2026-06-08T04:17:24.826Z / DB: data/boat.sqlite*
 
 
 ## 1. 条件定義
@@ -80,6 +80,21 @@ UNIQUE KEY: condition_name + race_id
 > **本番反映禁止**: この結果がどうであれ、app_settings や本番 decision ロジックは変更しないこと。
 
 > paper検証として追跡のみ行う。
+
+## 5b. 本番反映条件チェックリスト
+
+**全て ✅ になるまで本番反映しないこと**
+
+| 条件 | 現状 | 判定 |
+|---|---|:---:|
+| forward n >= 100 | 現在 n=25 | ❌ |
+| hit >= 5 | 現在 2hits | ❌ |
+| roiExMaxHit >= 100% | 現在 123.2% | ✅ |
+| 月8以外を含む (月4/6/12 のいずれか) | 月8のみ | ❌ |
+| staleRows = 0 | staleRows=0 | ✅ |
+| 本番decision/app_settings 変更なし | 変更なし (このスクリプトは変更しない) | ✅ |
+
+**→ 未達: あと 3 項目。引き続き観測のみ**
 
 ## 6. Forward 記録一覧 (先頭30件)
 

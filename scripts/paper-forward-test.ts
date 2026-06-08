@@ -372,6 +372,62 @@ lines.push("");
 lines.push("> **本番反映禁止**: この結果がどうであれ、app_settings や本番 decision ロジックは変更しないこと。", "");
 lines.push("> paper検証として追跡のみ行う。", "");
 
+// 5b. 本番反映条件チェックリスト
+lines.push("## 5b. 本番反映条件チェックリスト", "");
+lines.push("**全て ✅ になるまで本番反映しないこと**", "");
+{
+  const fwdN = confirmedForward.length;
+  const fwdHits = fwdMetrics.hits;
+  const fwdRoiExMax = fwdMetrics.roiExMaxHit;
+  const hasNonAugust = fwdMonths.some(m => !m.ym.endsWith("-08") && (m.nEval ?? 0) > 0);
+  const staleOk = totalInDB <= attempted;
+
+  const checks: { label: string; value: string; ok: boolean }[] = [
+    {
+      label: "forward n >= 100",
+      value: `現在 n=${fwdN}`,
+      ok: fwdN >= 100,
+    },
+    {
+      label: "hit >= 5",
+      value: `現在 ${fwdHits}hits`,
+      ok: fwdHits >= 5,
+    },
+    {
+      label: "roiExMaxHit >= 100%",
+      value: fwdRoiExMax !== null ? `現在 ${fwdRoiExMax.toFixed(1)}%` : "未集計",
+      ok: fwdRoiExMax !== null && fwdRoiExMax >= 100,
+    },
+    {
+      label: "月8以外を含む (月4/6/12 のいずれか)",
+      value: hasNonAugust ? "含む" : "月8のみ",
+      ok: hasNonAugust,
+    },
+    {
+      label: "staleRows = 0",
+      value: `staleRows=${Math.max(0, totalInDB - attempted)}`,
+      ok: staleOk,
+    },
+    {
+      label: "本番decision/app_settings 変更なし",
+      value: "変更なし (このスクリプトは変更しない)",
+      ok: true,
+    },
+  ];
+
+  const allOk = checks.every(c => c.ok);
+  lines.push(`| 条件 | 現状 | 判定 |`);
+  lines.push(`|---|---|:---:|`);
+  for (const c of checks) {
+    lines.push(`| ${c.label} | ${c.value} | ${c.ok ? "✅" : "❌"} |`);
+  }
+  lines.push("");
+  lines.push(allOk
+    ? "**→ 全条件クリア: 本番反映を検討してよい段階**"
+    : `**→ 未達: あと ${checks.filter(c => !c.ok).length} 項目。引き続き観測のみ**`);
+  lines.push("");
+}
+
 // 6. 生データサマリー
 lines.push("## 6. Forward 記録一覧 (先頭30件)", "");
 lines.push("| date | venue | raceNo | selection | odds | result | hit | status |");
