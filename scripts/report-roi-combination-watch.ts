@@ -5,10 +5,13 @@
  * 2条件・3条件の組み合わせROIを検証する。
  *
  * 判定ラベルは historical データ上の傾向を示すだけで、BUY設定採用可否ではない。
- * - n<30: insufficient data
- * - n>=30, ROI>=150%, hits>=3: strong historical pattern
- * - n>=30, ROI<100%: weak historical pattern
- * - それ以外: watch
+ * - insufficient data: historicalN < 30
+ * - strong historical pattern: historicalN >= 50, hits >= 5, ROI >= 150%
+ * - weak historical pattern: historicalN >= 30, ROI < 100%
+ * - watch: それ以外 (n>=30)
+ *
+ * 3条件組み合わせは探索数が多く過剰適合リスクが高い。
+ * historicalN < 100 の strong は "過剰探索注意" フラグを付ける。
  *
  * 読み取り専用。DB書き込みなし。
  *
@@ -27,11 +30,13 @@ const REPORT_JSON = "reports/roi-combination-watch.json";
 const COND_ISBASE = "seasonal_parts0_month_4_6_8_12";
 const COND_WIND5 = "seasonal_parts0_month_4_6_8_12_wind5";
 
-const N_MIN_JUDGE = 30;
-const N_MIN_SHOW_MD = 10;    // markdown に出す最低 n (historical)
+const N_MIN_JUDGE = 30;      // insufficient data 判定下限
+const N_MIN_STRONG = 50;     // strong pattern 最低 n
+const N_STRONG_CAUTION = 100; // 3条件 strong での過剰探索注意 n 閾値
+const N_MIN_SHOW_MD = 10;    // markdown 表示最低 n (historical)
 const ROI_STRONG = 150;
 const ROI_WEAK = 100;
-const HITS_MIN_STRONG = 3;
+const HITS_MIN_STRONG = 5;
 
 // ── 型定義 ────────────────────────────────────────────────────────────────
 
@@ -60,10 +65,12 @@ type ComboStat = {
   n: number;
   hits: number;
   hitRate: number;
-  avgOdds: number;
+  histAvgOdds: number;
+  fwdAvgOdds: number;
   roi: number;
   maxConsecLosses: number;
-  maxHitGap: number;
+  maxHitGapRaces: number;   // hit間の最大外れ数 (filtered records内)
+  maxCalendarGapDays: number; // hit間の最大日数
   historicalN: number;
   historicalHits: number;
   historicalRoi: number;
@@ -71,6 +78,7 @@ type ComboStat = {
   forwardHits: number;
   forwardRoi: number;
   pattern: Pattern;
+  overExplorationNote: string; // 3条件かつ n<100 の場合に警告
 };
 
 type Report = {
@@ -91,14 +99,6 @@ type Report = {
 
 const DIMS: DimName[] = ["month", "raceNoBand", "windBand", "oddsBand", "exStBand"];
 
-const DIM_DISPLAY: Record<DimName, string> = {
-  month: "月",
-  raceNoBand: "race_no",
-  windBand: "wind",
-  oddsBand: "odds",
-  exStBand: "ex_st",
-};
-
 const DIM_VALUES: Record<DimName, string[]> = {
   month: ["04月", "06月", "08月", "12月"],
   raceNoBand: ["R1-3", "R4-6", "R7-9"],
@@ -108,10 +108,10 @@ const DIM_VALUES: Record<DimName, string[]> = {
 };
 
 function getDimVal(r: RawRecord, dim: DimName): string {
-  return r[dim === "raceNoBand" ? "raceNoBand" : dim];
+  return r[dim];
 }
 
-// ── DB読み込み ─────────────────────────────────────────────────────────────
+// ── DB読み込み ────────────────────────────────────────────────────────────
 
 function loadRecords(db: DatabaseSync, condName: string): RawRecord[] {
   return db
@@ -149,7 +149,7 @@ function loadRecords(db: DatabaseSync, condName: string): RawRecord[] {
       END AS exStBand
     FROM paper_roi_candidates
     WHERE condition_name = ?
-    ORDER BY date
+    ORDER BY date, race_no, race_id
   `
     )
     .all(condName) as RawRecord[];
@@ -157,46 +157,68 @@ function loadRecords(db: DatabaseSync, condName: string): RawRecord[] {
 
 // ── 統計計算 ──────────────────────────────────────────────────────────────
 
-function roi(sumOdds: number, n: number): number {
+function roiCalc(sumOdds: number, n: number): number {
   if (n === 0) return 0;
   return Math.round((sumOdds / n) * 100 * 10) / 10;
 }
 
-function maxConsecLosses(records: RawRecord[]): number {
-  let max = 0,
-    cur = 0;
+function avgOddsCalc(records: RawRecord[]): number {
+  if (records.length === 0) return 0;
+  return Math.round((records.reduce((s, r) => s + r.current_odds, 0) / records.length) * 10) / 10;
+}
+
+function computeMaxConsecLosses(records: RawRecord[]): number {
+  let max = 0, cur = 0;
   for (const r of records) {
-    if (r.hit === 0) {
-      cur++;
-      if (cur > max) max = cur;
-    } else {
-      cur = 0;
-    }
+    if (r.hit === 0) { cur++; if (cur > max) max = cur; }
+    else cur = 0;
   }
   return max;
 }
 
-function maxHitGap(records: RawRecord[]): number {
+// hit間の最大外れ数 (filtered records 内)
+function computeMaxHitGapRaces(records: RawRecord[]): number {
   if (records.length === 0) return 0;
   const hitIdx: number[] = [];
-  records.forEach((r, i) => {
-    if (r.hit === 1) hitIdx.push(i);
-  });
+  records.forEach((r, i) => { if (r.hit === 1) hitIdx.push(i); });
   if (hitIdx.length === 0) return records.length;
-  let max = hitIdx[0]; // gap before first hit
+  let max = hitIdx[0];
   for (let i = 1; i < hitIdx.length; i++) {
     const gap = hitIdx[i] - hitIdx[i - 1] - 1;
     if (gap > max) max = gap;
   }
-  const tailGap = records.length - 1 - hitIdx[hitIdx.length - 1];
-  if (tailGap > max) max = tailGap;
+  const tail = records.length - 1 - hitIdx[hitIdx.length - 1];
+  if (tail > max) max = tail;
   return max;
 }
 
-function classifyPattern(historicalN: number, historicalHits: number, historicalRoi: number): Pattern {
+// 連続するhit間の最大日数
+function computeMaxCalendarGapDays(records: RawRecord[]): number {
+  const hitDates = records
+    .filter((r) => r.hit === 1)
+    .map((r) => new Date(r.date).getTime());
+  if (hitDates.length < 2) return -1;
+  let max = 0;
+  for (let i = 1; i < hitDates.length; i++) {
+    const days = Math.round((hitDates[i] - hitDates[i - 1]) / 86400000);
+    if (days > max) max = days;
+  }
+  return max;
+}
+
+function classifyPattern(
+  historicalN: number,
+  historicalHits: number,
+  historicalRoi: number
+): Pattern {
   if (historicalN < N_MIN_JUDGE) return "insufficient data";
   if (historicalRoi < ROI_WEAK) return "weak historical pattern";
-  if (historicalRoi >= ROI_STRONG && historicalHits >= HITS_MIN_STRONG) return "strong historical pattern";
+  if (
+    historicalRoi >= ROI_STRONG &&
+    historicalN >= N_MIN_STRONG &&
+    historicalHits >= HITS_MIN_STRONG
+  )
+    return "strong historical pattern";
   return "watch";
 }
 
@@ -224,35 +246,40 @@ function computeCombo(
   const fwdHits = fwd.reduce((s, r) => s + r.hit, 0);
   const fwdSumOdds = fwd.reduce((s, r) => s + r.hit * r.current_odds, 0);
 
-  const histRoi = roi(histSumOdds, histN);
-  const fwdRoi = roi(fwdSumOdds, fwdN);
-  const roiAll = roi(sumOddsAll, n);
+  const histRoi = roiCalc(histSumOdds, histN);
+  const fwdRoi = roiCalc(fwdSumOdds, fwdN);
+  const roiAll = roiCalc(sumOddsAll, n);
 
-  const avgOdds =
-    n > 0
-      ? Math.round((filtered.reduce((s, r) => s + r.current_odds, 0) / n) * 10) / 10
-      : 0;
+  const pattern = classifyPattern(histN, histHits, histRoi);
 
-  const dimsLabel = dimValues.join(" × ");
+  const overExplorationNote =
+    dimNames.length === 3 &&
+    pattern === "strong historical pattern" &&
+    histN < N_STRONG_CAUTION
+      ? `⚠️ 3条件・n=${histN}<${N_STRONG_CAUTION}: 過剰探索注意`
+      : "";
 
   return {
     condition: condLabel,
-    dims: dimsLabel,
+    dims: dimValues.join(" × "),
     dimCount: dimNames.length as 2 | 3,
     n,
     hits,
     hitRate: n > 0 ? Math.round((hits / n) * 100 * 10) / 10 : 0,
-    avgOdds,
+    histAvgOdds: avgOddsCalc(hist),
+    fwdAvgOdds: avgOddsCalc(fwd),
     roi: roiAll,
-    maxConsecLosses: maxConsecLosses(hist),
-    maxHitGap: maxHitGap(hist),
+    maxConsecLosses: computeMaxConsecLosses(hist),
+    maxHitGapRaces: computeMaxHitGapRaces(hist),
+    maxCalendarGapDays: computeMaxCalendarGapDays(hist),
     historicalN: histN,
     historicalHits: histHits,
     historicalRoi: histRoi,
     forwardN: fwdN,
     forwardHits: fwdHits,
     forwardRoi: fwdRoi,
-    pattern: classifyPattern(histN, histHits, histRoi),
+    pattern,
+    overExplorationNote,
   };
 }
 
@@ -268,8 +295,7 @@ function generateCombos(
   if (ncols === 2) {
     for (let i = 0; i < DIMS.length; i++) {
       for (let j = i + 1; j < DIMS.length; j++) {
-        const dA = DIMS[i],
-          dB = DIMS[j];
+        const dA = DIMS[i], dB = DIMS[j];
         for (const vA of DIM_VALUES[dA]) {
           for (const vB of DIM_VALUES[dB]) {
             const stat = computeCombo(records, condLabel, [dA, dB], [vA, vB]);
@@ -282,9 +308,7 @@ function generateCombos(
     for (let i = 0; i < DIMS.length; i++) {
       for (let j = i + 1; j < DIMS.length; j++) {
         for (let k = j + 1; k < DIMS.length; k++) {
-          const dA = DIMS[i],
-            dB = DIMS[j],
-            dC = DIMS[k];
+          const dA = DIMS[i], dB = DIMS[j], dC = DIMS[k];
           for (const vA of DIM_VALUES[dA]) {
             for (const vB of DIM_VALUES[dB]) {
               for (const vC of DIM_VALUES[dC]) {
@@ -299,7 +323,6 @@ function generateCombos(
   }
 
   return results.sort((a, b) => {
-    // sort: strong first, then by historicalRoi desc
     const po: Record<Pattern, number> = {
       "strong historical pattern": 0,
       watch: 1,
@@ -327,8 +350,9 @@ function run(): Report {
       generatedAt: new Date().toISOString(),
       forwardStart: FORWARD_START,
       note:
-        "判定ラベルは historical データ上の傾向を示すだけで BUY設定採用可否ではない。" +
-        "forward n が小さいため forward ROI は参考値。",
+        "判定ラベルは historical データ上の傾向のみ。BUY設定採用可否ではない。" +
+        "3条件組み合わせは探索数が多く過剰適合リスクが高い。" +
+        "forward n<30 は参考値。",
       isBase: {
         twoDim: generateCombos(isBaseRecords, "isBase", 2),
         threeDim: generateCombos(isBaseRecords, "isBase", 3),
@@ -357,29 +381,15 @@ function f1(n: number): string {
   return n.toFixed(1);
 }
 
-function comboTableRows(combos: ComboStat[], minN: number): string[] {
-  const visible = combos.filter((c) => c.historicalN >= minN);
-  if (visible.length === 0) return ["該当なし (n>=10 のものなし)"];
-
-  const lines: string[] = [
-    "| 組み合わせ | hist_n | hist_hit | hist_ROI | fwd_n | fwd_hit | fwd_ROI | avgOdds | maxStreak | maxGap | 判定 |",
-    "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|",
-  ];
-
-  for (const c of visible) {
-    const icon = PATTERN_ICON[c.pattern];
-    const fwdNote = c.forwardN < 5 ? "*(n小)*" : "";
-    lines.push(
-      `| ${c.dims} | ${c.historicalN} | ${c.historicalHits} | ${f1(c.historicalRoi)}% | ${c.forwardN} | ${c.forwardHits} | ${f1(c.forwardRoi)}%${fwdNote} | ${f1(c.avgOdds)} | ${c.maxConsecLosses} | ${c.maxHitGap} | ${icon} ${c.pattern} |`
-    );
-  }
-  return lines;
+function fwdRoiCell(c: ComboStat): string {
+  const note = c.forwardN > 0 && c.forwardN < N_MIN_JUDGE ? "*(n小)*" : "";
+  return `${f1(c.forwardRoi)}%${note}`;
 }
 
 function patternSection(combos: ComboStat[], pattern: Pattern, minN: number): string[] {
   const filtered = combos.filter((c) => c.pattern === pattern && c.historicalN >= minN);
   const lines: string[] = [
-    `### ${PATTERN_ICON[pattern]} ${pattern} (n>=${minN})`,
+    `### ${PATTERN_ICON[pattern]} ${pattern} (hist n>=${minN})`,
     "",
   ];
   if (filtered.length === 0) {
@@ -388,13 +398,14 @@ function patternSection(combos: ComboStat[], pattern: Pattern, minN: number): st
     return lines;
   }
   lines.push(
-    "| 組み合わせ | hist_n | hist_hit | hist_ROI | fwd_n | fwd_hit | fwd_ROI | avgOdds | maxStreak | maxGap |",
-    "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|"
+    "| 組み合わせ | hist_n | hist_hit | hist_ROI | fwd_n | fwd_hit | fwd_ROI | hist_avg | maxStreak | maxGapDays | 備考 |",
+    "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|"
   );
   for (const c of filtered) {
-    const fwdNote = c.forwardN > 0 && c.forwardN < 5 ? "*(n小)*" : "";
+    const gapDays = c.maxCalendarGapDays < 0 ? "—" : String(c.maxCalendarGapDays);
+    const note = c.overExplorationNote || "";
     lines.push(
-      `| ${c.dims} | ${c.historicalN} | ${c.historicalHits} | ${f1(c.historicalRoi)}% | ${c.forwardN} | ${c.forwardHits} | ${f1(c.forwardRoi)}%${fwdNote} | ${f1(c.avgOdds)} | ${c.maxConsecLosses} | ${c.maxHitGap} |`
+      `| ${c.dims} | ${c.historicalN} | ${c.historicalHits} | ${f1(c.historicalRoi)}% | ${c.forwardN} | ${c.forwardHits} | ${fwdRoiCell(c)} | ${f1(c.histAvgOdds)} | ${c.maxConsecLosses} | ${gapDays} | ${note} |`
     );
   }
   lines.push("");
@@ -408,14 +419,15 @@ function condSection(
 ): string[] {
   const lines: string[] = [`## ${condLabel}`, ""];
 
-  const judgeNote =
-    "> ⚠️ 判定ラベルは historical 傾向のみ。BUY採用には forward n>=30 の蓄積と追加検証が必要。\n" +
-    "> maxStreak: historical 最大連敗数。maxGap: historical hit間の最大レース間隔。";
-  lines.push(judgeNote, "");
+  lines.push(
+    "> ⚠️ 判定ラベルは historical 傾向のみ。BUY採用には forward n>=30 の蓄積と追加検証が必要。",
+    "> hist_avg: historical平均オッズ。maxStreak: historical最大連敗数。",
+    "> maxGapDays: historical 連続hit間の最大日数 (hit<2の場合は —)。",
+    ""
+  );
 
   for (const ncols of [2, 3] as const) {
     const combos = ncols === 2 ? twoDim : threeDim;
-    const minN = ncols === 2 ? N_MIN_SHOW_MD : N_MIN_SHOW_MD;
 
     lines.push(`### ${condLabel} / ${ncols}条件組み合わせ`, "");
 
@@ -429,21 +441,27 @@ function condSection(
       ""
     );
 
+    if (ncols === 3) {
+      lines.push(
+        "> ⚠️ **3条件は探索数が多く過剰適合リスクが高い。** strong でも n<100 は「過剰探索注意」フラグ付き。判断には forward の蓄積が必要。",
+        ""
+      );
+    }
+
     for (const p of [
       "strong historical pattern",
       "watch",
       "weak historical pattern",
     ] as Pattern[]) {
-      lines.push(...patternSection(combos, p, minN));
+      lines.push(...patternSection(combos, p, N_MIN_SHOW_MD));
     }
 
-    // insufficient data summary (count only)
     const insuf = combos.filter(
-      (c) => c.pattern === "insufficient data" && c.historicalN >= minN
+      (c) => c.pattern === "insufficient data" && c.historicalN >= N_MIN_SHOW_MD
     ).length;
     if (insuf > 0) {
       lines.push(
-        `> ⚪ insufficient data (n>=${minN}) : ${insuf} 件 — n<${N_MIN_JUDGE} のため判断不可`,
+        `> ⚪ insufficient data (n>=${N_MIN_SHOW_MD}) : ${insuf} 件 — hist n<${N_MIN_JUDGE} のため判断不可`,
         ""
       );
     }
@@ -461,7 +479,8 @@ function generateMarkdown(r: Report): string {
     "",
     "> ROIはすべて current_odds 基準。",
     "> **判定ラベルは historical データ上の傾向を示すだけで BUY設定採用可否ではない。**",
-    "> forward n が小さい場合は参考扱い。n<30 は insufficient data。",
+    "> strong: hist n>=50, hits>=5, ROI>=150%。3条件は過剰探索リスク高。",
+    "> forward n<30 は *(n小)* 表示で参考値扱い。",
     "",
   ];
 
