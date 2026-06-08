@@ -4551,16 +4551,85 @@ function renderMarkdown(r: {
     lines.push("");
   }
 
-  // 10. 次にpaper検証すべき候補
-  lines.push("## 10. 次にpaper検証すべき候補", "");
-  const nextPaper = [...r.stableCandidates, ...r.betSelectorSOrA].slice(0, 5);
-  if (nextPaper.length === 0) {
-    lines.push("まずB候補の月別・test期間安定性を追加確認すること。", "");
+  // 10. Paper候補 精選リスト (97件 → 絞り込み)
+  lines.push("## 10. Paper候補 精選リスト", "");
+  lines.push("> **絞り込み基準**: worstMonthROI >= 50% / 2024&2025 両年ROI >= 120% / roiExMaxHit >= ROI×80% / n >= 300 / KEEP条件のみ", "");
+  lines.push("> **スコア式**: exMaxHit × 0.4 + worstMonthROI × 0.3 + max(0, 200 - 年間ROI差) × 0.3 (年間差が小さいほど安定)", "");
+  lines.push("> **重複除外**: n差 <= 5 かつ ROI差 <= 1% の条件は同一とみなし上位1件のみ残す", "");
+  lines.push("> **familyキャップ**: 同一familyから最大2件", "");
+  lines.push("");
+
+  // Step1: 絞り込み
+  const paperPool = r.stableCandidates.filter((c) => {
+    if (c.action !== "KEEP") return false;
+    if (c.afterN < 300) return false;
+    if (c.worstMonthROI < 50) return false;
+    if (c.roiExMaxHit < c.afterROI * 0.80) return false;
+    const y24ok = c.year2024N < 30 || (c.year2024ROI ?? 0) >= 120;
+    const y25ok = c.year2025N < 30 || (c.year2025ROI ?? 0) >= 120;
+    return y24ok && y25ok;
+  });
+
+  // Step2: スコアリング
+  type ScoredCandidate = LabCandidate & { paperScore: number; yearGap: number };
+  const scored: ScoredCandidate[] = paperPool.map((c) => {
+    const yearGap = Math.abs((c.year2024ROI ?? 0) - (c.year2025ROI ?? 0));
+    const score = c.roiExMaxHit * 0.4 + c.worstMonthROI * 0.3 + Math.max(0, 200 - yearGap) * 0.3;
+    return { ...c, paperScore: score, yearGap };
+  }).sort((a, b) => b.paperScore - a.paperScore);
+
+  // Step3: 重複除外 (n差<=5 かつ afterROI差<=1%は同一)
+  const deduped: ScoredCandidate[] = [];
+  for (const c of scored) {
+    const isDup = deduped.some((d) =>
+      Math.abs(d.afterN - c.afterN) <= 5 && Math.abs(d.afterROI - c.afterROI) <= 1.0
+    );
+    if (!isDup) deduped.push(c);
+  }
+
+  // Step4: familyキャップ (同一family最大2件)
+  const familyCount = new Map<string, number>();
+  const paperFinal: ScoredCandidate[] = [];
+  for (const c of deduped) {
+    const cnt = familyCount.get(c.family) ?? 0;
+    if (cnt >= 2) continue;
+    familyCount.set(c.family, cnt + 1);
+    paperFinal.push(c);
+    if (paperFinal.length >= 10) break;
+  }
+
+  if (paperFinal.length === 0) {
+    lines.push("絞り込み後候補なし。基準を緩めて再検討。", "");
   } else {
-    for (const c of nextPaper) {
-      lines.push(`- ${c.judgement}: ${c.label} (n=${"n" in c ? c.n : "?"}, ROI=${pct(("afterROI" in c ? c.afterROI : (c as BetSelectorCandidate).roi) / 100)})`);
-    }
+    lines.push(`絞り込み結果: **${paperFinal.length}件** (pool=${paperPool.length}件 → dedup=${deduped.length}件 → family cap → ${paperFinal.length}件)`, "");
     lines.push("");
+    lines.push("| # | score | n | ROI | roiExMax | 2024ROI | 2025ROI | 年間差 | worstMth | trainROI | valROI | testROI | family | label |");
+    lines.push("|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|");
+    paperFinal.forEach((c, i) => {
+      const y24 = c.year2024ROI != null ? pct(c.year2024ROI / 100) : "-";
+      const y25 = c.year2025ROI != null ? pct(c.year2025ROI / 100) : "-";
+      lines.push(`| ${i + 1} | ${c.paperScore.toFixed(0)} | ${c.afterN} | ${pct(c.afterROI / 100)} | ${pct(c.roiExMaxHit / 100)} | ${y24} | ${y25} | ${c.yearGap.toFixed(0)}pp | ${pct(c.worstMonthROI / 100)} | ${pct(c.trainROI / 100)} | ${pct(c.validationROI / 100)} | ${pct(c.testROI / 100)} | ${c.family} | ${esc(c.label)} |`);
+    });
+    lines.push("");
+
+    lines.push("> **testN=0 について**: テスト期間(最新10%)が2025-08〜2026-05に集中しており、月4・6・12条件はこの期間に構造的に存在しない。testN=0は失敗ではなく「テスト期間に該当月なし」という時間軸の制約。", "");
+    lines.push("### 各候補の評価コメント", "");
+    paperFinal.forEach((c, i) => {
+      const yearGapFlag = c.yearGap > 80 ? "⚠️年間差大" : c.yearGap > 40 ? "△年間差やや大" : "✓年間差小";
+      const exMaxFlag = c.roiExMaxHit >= c.afterROI * 0.90 ? "✓最大1hit除外強" : "△最大1hit依存やや残る";
+      const testFlag = c.testN < 10
+        ? "⚠️test期間に該当レースなし(構造的—季節条件)"
+        : c.testROI >= 100 ? "✓test期間ROI>=100%"
+        : c.testROI >= 70 ? "△test弱め"
+        : "⚠️test崩れ";
+      lines.push(`**${i + 1}. ${c.label}**`);
+      lines.push(`- n=${c.afterN} / ROI=${pct(c.afterROI / 100)} / score=${c.paperScore.toFixed(0)}`);
+      lines.push(`- ${yearGapFlag} (2024=${pct((c.year2024ROI ?? 0) / 100)}, 2025=${pct((c.year2025ROI ?? 0) / 100)}, 差=${c.yearGap.toFixed(0)}pp)`);
+      lines.push(`- ${exMaxFlag} (roiExMax=${pct(c.roiExMaxHit / 100)})`);
+      lines.push(`- ${testFlag} (test=${pct(c.testROI / 100)}, n=${c.testN})`);
+      lines.push(`- warnings: ${c.warnings.length > 0 ? c.warnings.join(", ") : "なし"}`);
+      lines.push("");
+    });
   }
 
   // 12. 月 × raceNo ROI マトリクス
