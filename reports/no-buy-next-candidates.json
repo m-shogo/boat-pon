@@ -1,0 +1,2104 @@
+{
+  "generatedAt": "2026-06-05T12:45:33.602Z",
+  "before": {
+    "n": 6260,
+    "hits": 124,
+    "hitRate": 0.019808306709265176,
+    "avgOdds": 44.3436477156549,
+    "roi": 0.8037699680511182,
+    "roiExMaxHit": 0.7913578274760383,
+    "maxHitOdds": 77.7
+  },
+  "ranked": [
+    {
+      "condition": "F持ち複数レース",
+      "removed": {
+        "n": 4029,
+        "hits": 75,
+        "hitRate": 0.018615040953090096,
+        "avgOdds": 44.43308381732439,
+        "roi": 0.7474807644576819,
+        "roiExMaxHit": 0.728518242740134,
+        "maxHitOdds": 76.4
+      },
+      "remaining": {
+        "n": 2231,
+        "hits": 49,
+        "hitRate": 0.021963245181532944,
+        "avgOdds": 44.18213357238898,
+        "roi": 0.9054235768713581,
+        "roiExMaxHit": 0.8705961452263559,
+        "maxHitOdds": 77.7
+      },
+      "risk": "スタート心理",
+      "recommendation": "A: 追加確認",
+      "split": {
+        "train": {
+          "n": 2820,
+          "hits": 55,
+          "hitRate": 0.01950354609929078,
+          "avgOdds": 45.270530035460986,
+          "roi": 0.8226241134751773,
+          "roiExMaxHit": 0.7955319148936171,
+          "maxHitOdds": 76.4
+        },
+        "validation": {
+          "n": 806,
+          "hits": 11,
+          "hitRate": 0.013647642679900745,
+          "avgOdds": 43.712531017369706,
+          "roi": 0.48995037220843674,
+          "roiExMaxHit": 0.42133995037220845,
+          "maxHitOdds": 55.3
+        },
+        "test": {
+          "n": 403,
+          "hits": 9,
+          "hitRate": 0.022332506203473945,
+          "avgOdds": 40.01414392059553,
+          "roi": 0.7367245657568238,
+          "roiExMaxHit": 0.6215880893300249,
+          "maxHitOdds": 46.4
+        },
+        "badMonths": 14,
+        "months": 23
+      },
+      "lift": 0.10165360882023988
+    },
+    {
+      "condition": "venueMotorTop2Rate 35-50",
+      "removed": {
+        "n": 2247,
+        "hits": 41,
+        "hitRate": 0.01824655095683133,
+        "avgOdds": 43.100789808633714,
+        "roi": 0.712861593235425,
+        "roiExMaxHit": 0.6782821539830886,
+        "maxHitOdds": 77.7
+      },
+      "remaining": {
+        "n": 4013,
+        "hits": 83,
+        "hitRate": 0.020682780961873908,
+        "avgOdds": 45.03956142536752,
+        "roi": 0.8546723149763269,
+        "roiExMaxHit": 0.8356341888861201,
+        "maxHitOdds": 76.4
+      },
+      "risk": "中高motor帯",
+      "recommendation": "A: 追加確認",
+      "split": {
+        "train": {
+          "n": 1572,
+          "hits": 25,
+          "hitRate": 0.015903307888040712,
+          "avgOdds": 43.49705769720097,
+          "roi": 0.6409033078880407,
+          "roiExMaxHit": 0.602735368956743,
+          "maxHitOdds": 60
+        },
+        "validation": {
+          "n": 450,
+          "hits": 10,
+          "hitRate": 0.022222222222222223,
+          "avgOdds": 43.569999999999986,
+          "roi": 0.876,
+          "roiExMaxHit": 0.7033333333333334,
+          "maxHitOdds": 77.7
+        },
+        "test": {
+          "n": 225,
+          "hits": 6,
+          "hitRate": 0.02666666666666667,
+          "avgOdds": 39.39377777777778,
+          "roi": 0.8893333333333333,
+          "roiExMaxHit": 0.6622222222222223,
+          "maxHitOdds": 51.1
+        },
+        "badMonths": 10,
+        "months": 22
+      },
+      "lift": 0.050902346925208675
+    },
+    {
+      "condition": "会場=戸田",
+      "removed": {
+        "n": 319,
+        "hits": 1,
+        "hitRate": 0.003134796238244514,
+        "avgOdds": 61.04420062695922,
+        "roi": 0.16363636363636364,
+        "roiExMaxHit": 0,
+        "maxHitOdds": 52.2
+      },
+      "remaining": {
+        "n": 5941,
+        "hits": 123,
+        "hitRate": 0.020703585255007574,
+        "avgOdds": 43.44691713516241,
+        "roi": 0.8381417269819895,
+        "roiExMaxHit": 0.825063120686753,
+        "maxHitOdds": 77.7
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "S: paper NO BUY検証",
+      "split": {
+        "train": {
+          "n": 223,
+          "hits": 1,
+          "hitRate": 0.004484304932735426,
+          "avgOdds": 62.730493273542606,
+          "roi": 0.23408071748878923,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 52.2
+        },
+        "validation": {
+          "n": 64,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 58.495312500000004,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "test": {
+          "n": 32,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 54.39062500000001,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "badMonths": 5,
+        "months": 5
+      },
+      "lift": 0.0343717589308713
+    },
+    {
+      "condition": "11R",
+      "removed": {
+        "n": 192,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 37.76041666666668,
+        "roi": 0,
+        "roiExMaxHit": 0,
+        "maxHitOdds": 0
+      },
+      "remaining": {
+        "n": 6068,
+        "hits": 124,
+        "hitRate": 0.02043506921555702,
+        "avgOdds": 44.55195034607776,
+        "roi": 0.8292023731048122,
+        "roiExMaxHit": 0.8163974950560317,
+        "maxHitOdds": 77.7
+      },
+      "risk": "現設定済み。0hitだがn注意",
+      "recommendation": "S: paper NO BUY検証",
+      "split": {
+        "train": {
+          "n": 134,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 38.73358208955224,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "validation": {
+          "n": 38,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 36.2078947368421,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "test": {
+          "n": 20,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 34.18999999999999,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "badMonths": 1,
+        "months": 1
+      },
+      "lift": 0.02543240505369393
+    },
+    {
+      "condition": "会場=多摩川",
+      "removed": {
+        "n": 282,
+        "hits": 2,
+        "hitRate": 0.0070921985815602835,
+        "avgOdds": 44.02411347517728,
+        "roi": 0.28794326241134754,
+        "roiExMaxHit": 0.14290780141843973,
+        "maxHitOdds": 40.9
+      },
+      "remaining": {
+        "n": 5978,
+        "hits": 122,
+        "hitRate": 0.02040816326530612,
+        "avgOdds": 44.35872109401135,
+        "roi": 0.8281030444964871,
+        "roiExMaxHit": 0.8151053864168618,
+        "maxHitOdds": 77.7
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "A: 追加確認",
+      "split": {
+        "train": {
+          "n": 197,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 45.411675126903525,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "validation": {
+          "n": 56,
+          "hits": 2,
+          "hitRate": 0.03571428571428571,
+          "avgOdds": 42.482142857142854,
+          "roi": 1.45,
+          "roiExMaxHit": 0.7196428571428571,
+          "maxHitOdds": 40.9
+        },
+        "test": {
+          "n": 29,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 37.57586206896552,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "badMonths": 3,
+        "months": 3
+      },
+      "lift": 0.024333076445368862
+    },
+    {
+      "condition": "10R",
+      "removed": {
+        "n": 340,
+        "hits": 4,
+        "hitRate": 0.011764705882352941,
+        "avgOdds": 41.82702941176472,
+        "roi": 0.4238235294117647,
+        "roiExMaxHit": 0.2847058823529412,
+        "maxHitOdds": 47.3
+      },
+      "remaining": {
+        "n": 5920,
+        "hits": 120,
+        "hitRate": 0.02027027027027027,
+        "avgOdds": 44.48818322635129,
+        "roi": 0.8255912162162162,
+        "roiExMaxHit": 0.8124662162162162,
+        "maxHitOdds": 77.7
+      },
+      "risk": "現設定済み。test跳ねに注意",
+      "recommendation": "A: 追加確認",
+      "split": {
+        "train": {
+          "n": 237,
+          "hits": 2,
+          "hitRate": 0.008438818565400843,
+          "avgOdds": 42.67451476793252,
+          "roi": 0.3717299578059072,
+          "roiExMaxHit": 0.17215189873417722,
+          "maxHitOdds": 47.3
+        },
+        "validation": {
+          "n": 69,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 41.09028985507248,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "test": {
+          "n": 34,
+          "hits": 2,
+          "hitRate": 0.058823529411764705,
+          "avgOdds": 37.41470588235294,
+          "roi": 1.6470588235294117,
+          "roiExMaxHit": 0.7764705882352941,
+          "maxHitOdds": 29.6
+        },
+        "badMonths": 4,
+        "months": 6
+      },
+      "lift": 0.021821248165098006
+    },
+    {
+      "condition": "会場=桐生",
+      "removed": {
+        "n": 307,
+        "hits": 3,
+        "hitRate": 0.009771986970684038,
+        "avgOdds": 43.67328990228013,
+        "roi": 0.41400651465798044,
+        "roiExMaxHit": 0.247557003257329,
+        "maxHitOdds": 51.1
+      },
+      "remaining": {
+        "n": 5953,
+        "hits": 121,
+        "hitRate": 0.020325886107844783,
+        "avgOdds": 44.37821849487647,
+        "roi": 0.8238703174869814,
+        "roiExMaxHit": 0.8108180749202083,
+        "maxHitOdds": 77.7
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "S: paper NO BUY検証",
+      "split": {
+        "train": {
+          "n": 214,
+          "hits": 3,
+          "hitRate": 0.014018691588785047,
+          "avgOdds": 42.29485981308413,
+          "roi": 0.5939252336448598,
+          "roiExMaxHit": 0.35514018691588783,
+          "maxHitOdds": 51.1
+        },
+        "validation": {
+          "n": 62,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 46.148387096774215,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "test": {
+          "n": 31,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 48.23870967741936,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "badMonths": 2,
+        "months": 4
+      },
+      "lift": 0.02010034943586314
+    },
+    {
+      "condition": "odds >= 50",
+      "removed": {
+        "n": 1800,
+        "hits": 24,
+        "hitRate": 0.013333333333333334,
+        "avgOdds": 60.668911111111015,
+        "roi": 0.7685,
+        "roiExMaxHit": 0.7253333333333334,
+        "maxHitOdds": 77.7
+      },
+      "remaining": {
+        "n": 4460,
+        "hits": 100,
+        "hitRate": 0.02242152466367713,
+        "avgOdds": 37.75497639013455,
+        "roi": 0.8180044843049328,
+        "roiExMaxHit": 0.8068609865470852,
+        "maxHitOdds": 49.7
+      },
+      "risk": "高配当1発依存注意",
+      "recommendation": "A: 追加確認",
+      "split": {
+        "train": {
+          "n": 1260,
+          "hits": 14,
+          "hitRate": 0.011111111111111112,
+          "avgOdds": 61.15590476190475,
+          "roi": 0.6349206349206349,
+          "roiExMaxHit": 0.5742857142857143,
+          "maxHitOdds": 76.4
+        },
+        "validation": {
+          "n": 360,
+          "hits": 9,
+          "hitRate": 0.025,
+          "avgOdds": 59.54499999999996,
+          "roi": 1.4783333333333333,
+          "roiExMaxHit": 1.2625,
+          "maxHitOdds": 77.7
+        },
+        "test": {
+          "n": 180,
+          "hits": 1,
+          "hitRate": 0.005555555555555556,
+          "avgOdds": 59.50777777777777,
+          "roi": 0.2838888888888889,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 51.1
+        },
+        "badMonths": 11,
+        "months": 21
+      },
+      "lift": 0.014234516253814555
+    },
+    {
+      "condition": "会場=三国",
+      "removed": {
+        "n": 276,
+        "hits": 4,
+        "hitRate": 0.014492753623188406,
+        "avgOdds": 40.778550724637704,
+        "roi": 0.4989130434782609,
+        "roiExMaxHit": 0.3438405797101449,
+        "maxHitOdds": 42.8
+      },
+      "remaining": {
+        "n": 5984,
+        "hits": 120,
+        "hitRate": 0.020053475935828877,
+        "avgOdds": 44.50808066510691,
+        "roi": 0.8178308823529412,
+        "roiExMaxHit": 0.804846256684492,
+        "maxHitOdds": 77.7
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "S: paper NO BUY検証",
+      "split": {
+        "train": {
+          "n": 193,
+          "hits": 3,
+          "hitRate": 0.015544041450777202,
+          "avgOdds": 42.62165803108809,
+          "roi": 0.566839378238342,
+          "roiExMaxHit": 0.3450777202072539,
+          "maxHitOdds": 42.8
+        },
+        "validation": {
+          "n": 55,
+          "hits": 1,
+          "hitRate": 0.01818181818181818,
+          "avgOdds": 37.28909090909091,
+          "roi": 0.5145454545454545,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 28.3
+        },
+        "test": {
+          "n": 28,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 34.92857142857143,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "badMonths": 2,
+        "months": 4
+      },
+      "lift": 0.014060914301822991
+    },
+    {
+      "condition": "wave >= 5",
+      "removed": {
+        "n": 755,
+        "hits": 13,
+        "hitRate": 0.017218543046357615,
+        "avgOdds": 46.28760264900663,
+        "roi": 0.7037086092715232,
+        "roiExMaxHit": 0.623841059602649,
+        "maxHitOdds": 60.3
+      },
+      "remaining": {
+        "n": 5505,
+        "hits": 111,
+        "hitRate": 0.020163487738419618,
+        "avgOdds": 44.07703809264297,
+        "roi": 0.8174931880108992,
+        "roiExMaxHit": 0.8033787465940054,
+        "maxHitOdds": 77.7
+      },
+      "risk": "波高",
+      "recommendation": "A: 追加確認",
+      "split": {
+        "train": {
+          "n": 528,
+          "hits": 11,
+          "hitRate": 0.020833333333333332,
+          "avgOdds": 46.987196969696996,
+          "roi": 0.8643939393939394,
+          "roiExMaxHit": 0.750189393939394,
+          "maxHitOdds": 60.3
+        },
+        "validation": {
+          "n": 151,
+          "hits": 1,
+          "hitRate": 0.006622516556291391,
+          "avgOdds": 46.31721854304635,
+          "roi": 0.26953642384105964,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 40.7
+        },
+        "test": {
+          "n": 76,
+          "hits": 1,
+          "hitRate": 0.013157894736842105,
+          "avgOdds": 41.36842105263157,
+          "roi": 0.45000000000000007,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 34.2
+        },
+        "badMonths": 9,
+        "months": 17
+      },
+      "lift": 0.013723219959780986
+    },
+    {
+      "condition": "venueMotorTop2Rate >= 50",
+      "removed": {
+        "n": 143,
+        "hits": 1,
+        "hitRate": 0.006993006993006993,
+        "avgOdds": 47.19999999999997,
+        "roi": 0.2993006993006993,
+        "roiExMaxHit": 0,
+        "maxHitOdds": 42.8
+      },
+      "remaining": {
+        "n": 6117,
+        "hits": 123,
+        "hitRate": 0.020107896027464444,
+        "avgOdds": 44.27687341834231,
+        "roi": 0.8155631845675985,
+        "roiExMaxHit": 0.8028608795161026,
+        "maxHitOdds": 77.7
+      },
+      "risk": "motor人気過剰候補",
+      "recommendation": "S: paper NO BUY検証",
+      "split": {
+        "train": {
+          "n": 100,
+          "hits": 1,
+          "hitRate": 0.01,
+          "avgOdds": 48.938999999999986,
+          "roi": 0.428,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 42.8
+        },
+        "validation": {
+          "n": 28,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 44.71785714285715,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "test": {
+          "n": 15,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 40.24,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "badMonths": 2,
+        "months": 2
+      },
+      "lift": 0.011793216516480243
+    },
+    {
+      "condition": "12R",
+      "removed": {
+        "n": 89,
+        "hits": 0,
+        "hitRate": 0,
+        "avgOdds": 38.551685393258424,
+        "roi": 0,
+        "roiExMaxHit": 0,
+        "maxHitOdds": 0
+      },
+      "remaining": {
+        "n": 6171,
+        "hits": 124,
+        "hitRate": 0.02009398800842651,
+        "avgOdds": 44.42718112137411,
+        "roi": 0.8153621779290229,
+        "roiExMaxHit": 0.8027710257656782,
+        "maxHitOdds": 77.7
+      },
+      "risk": "現設定済み。n不足",
+      "recommendation": "S: paper NO BUY検証",
+      "split": {
+        "train": {
+          "n": 62,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 40.21774193548387,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "validation": {
+          "n": 18,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 32.87777777777777,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "test": {
+          "n": 9,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 38.42222222222222,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "badMonths": 0,
+        "months": 0
+      },
+      "lift": 0.011592209877904658
+    },
+    {
+      "condition": "会場=江戸川",
+      "removed": {
+        "n": 186,
+        "hits": 2,
+        "hitRate": 0.010752688172043012,
+        "avgOdds": 50.22150537634408,
+        "roi": 0.5413978494623656,
+        "roiExMaxHit": 0.21881720430107526,
+        "maxHitOdds": 60
+      },
+      "remaining": {
+        "n": 6074,
+        "hits": 122,
+        "hitRate": 0.020085610800131708,
+        "avgOdds": 44.163654050049345,
+        "roi": 0.8118044122489299,
+        "roiExMaxHit": 0.7990121830754033,
+        "maxHitOdds": 77.7
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "A: 追加確認",
+      "split": {
+        "train": {
+          "n": 130,
+          "hits": 1,
+          "hitRate": 0.007692307692307693,
+          "avgOdds": 52.24769230769229,
+          "roi": 0.46153846153846156,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 60
+        },
+        "validation": {
+          "n": 37,
+          "hits": 1,
+          "hitRate": 0.02702702702702703,
+          "avgOdds": 45.4,
+          "roi": 1.1,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 40.7
+        },
+        "test": {
+          "n": 19,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 45.74736842105264,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "badMonths": 0,
+        "months": 0
+      },
+      "lift": 0.00803444419781163
+    },
+    {
+      "condition": "会場=住之江",
+      "removed": {
+        "n": 225,
+        "hits": 4,
+        "hitRate": 0.017777777777777778,
+        "avgOdds": 41.10044444444447,
+        "roi": 0.6,
+        "roiExMaxHit": 0.428,
+        "maxHitOdds": 38.7
+      },
+      "remaining": {
+        "n": 6035,
+        "hits": 120,
+        "hitRate": 0.01988400994200497,
+        "avgOdds": 44.464562502071225,
+        "roi": 0.8113670256835128,
+        "roiExMaxHit": 0.7984921292460646,
+        "maxHitOdds": 77.7
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "S: paper NO BUY検証",
+      "split": {
+        "train": {
+          "n": 157,
+          "hits": 4,
+          "hitRate": 0.025477707006369428,
+          "avgOdds": 42.133121019108295,
+          "roi": 0.8598726114649682,
+          "roiExMaxHit": 0.6133757961783439,
+          "maxHitOdds": 38.7
+        },
+        "validation": {
+          "n": 45,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 40.40222222222221,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "test": {
+          "n": 23,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 35.417391304347824,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "badMonths": 1,
+        "months": 1
+      },
+      "lift": 0.007597057632394599
+    },
+    {
+      "condition": "会場=福岡",
+      "removed": {
+        "n": 260,
+        "hits": 5,
+        "hitRate": 0.019230769230769232,
+        "avgOdds": 36.117307692307676,
+        "roi": 0.68,
+        "roiExMaxHit": 0.47807692307692307,
+        "maxHitOdds": 52.5
+      },
+      "remaining": {
+        "n": 6000,
+        "hits": 119,
+        "hitRate": 0.019833333333333335,
+        "avgOdds": 44.700122449999995,
+        "roi": 0.8091333333333334,
+        "roiExMaxHit": 0.7961833333333334,
+        "maxHitOdds": 77.7
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "A: 追加確認",
+      "split": {
+        "train": {
+          "n": 182,
+          "hits": 2,
+          "hitRate": 0.01098901098901099,
+          "avgOdds": 34.900549450549434,
+          "roi": 0.3357142857142857,
+          "roiExMaxHit": 0.15000000000000002,
+          "maxHitOdds": 33.8
+        },
+        "validation": {
+          "n": 52,
+          "hits": 3,
+          "hitRate": 0.057692307692307696,
+          "avgOdds": 41.03846153846154,
+          "roi": 2.225,
+          "roiExMaxHit": 1.2153846153846153,
+          "maxHitOdds": 52.5
+        },
+        "test": {
+          "n": 26,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 34.792307692307695,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "badMonths": 4,
+        "months": 4
+      },
+      "lift": 0.005363365282215149
+    },
+    {
+      "condition": "会場=徳山",
+      "removed": {
+        "n": 242,
+        "hits": 5,
+        "hitRate": 0.02066115702479339,
+        "avgOdds": 31.54016528925621,
+        "roi": 0.6710743801652893,
+        "roiExMaxHit": 0.4880165289256198,
+        "maxHitOdds": 44.3
+      },
+      "remaining": {
+        "n": 6018,
+        "hits": 119,
+        "hitRate": 0.01977401129943503,
+        "avgOdds": 44.858510252575606,
+        "roi": 0.809106015287471,
+        "roiExMaxHit": 0.7961947490860751,
+        "maxHitOdds": 77.7
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "S: paper NO BUY検証",
+      "split": {
+        "train": {
+          "n": 169,
+          "hits": 3,
+          "hitRate": 0.01775147928994083,
+          "avgOdds": 31.98887573964497,
+          "roi": 0.5597633136094674,
+          "roiExMaxHit": 0.3390532544378698,
+          "maxHitOdds": 37.3
+        },
+        "validation": {
+          "n": 48,
+          "hits": 1,
+          "hitRate": 0.020833333333333332,
+          "avgOdds": 29.27083333333333,
+          "roi": 0.4895833333333333,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 23.5
+        },
+        "test": {
+          "n": 25,
+          "hits": 1,
+          "hitRate": 0.04,
+          "avgOdds": 32.864,
+          "roi": 1.772,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 44.3
+        },
+        "badMonths": 2,
+        "months": 3
+      },
+      "lift": 0.005336047236352726
+    },
+    {
+      "condition": "頭展示4位以下",
+      "removed": {
+        "n": 2389,
+        "hits": 47,
+        "hitRate": 0.019673503557974047,
+        "avgOdds": 45.44172038509834,
+        "roi": 0.7967768940979489,
+        "roiExMaxHit": 0.764796986186689,
+        "maxHitOdds": 76.4
+      },
+      "remaining": {
+        "n": 3871,
+        "hits": 77,
+        "hitRate": 0.019891500904159132,
+        "avgOdds": 43.66596866442791,
+        "roi": 0.8080857659519504,
+        "roiExMaxHit": 0.7880134332213898,
+        "maxHitOdds": 77.7
+      },
+      "risk": "展示下位頭固定",
+      "recommendation": "A: 追加確認",
+      "split": {
+        "train": {
+          "n": 1672,
+          "hits": 32,
+          "hitRate": 0.019138755980861243,
+          "avgOdds": 46.04083133971286,
+          "roi": 0.7676435406698564,
+          "roiExMaxHit": 0.7219497607655503,
+          "maxHitOdds": 76.4
+        },
+        "validation": {
+          "n": 478,
+          "hits": 8,
+          "hitRate": 0.016736401673640166,
+          "avgOdds": 45.08556485355645,
+          "roi": 0.7232217573221758,
+          "roiExMaxHit": 0.597071129707113,
+          "maxHitOdds": 60.3
+        },
+        "test": {
+          "n": 239,
+          "hits": 7,
+          "hitRate": 0.029288702928870293,
+          "avgOdds": 41.962761506276145,
+          "roi": 1.1476987447698745,
+          "roiExMaxHit": 0.9338912133891213,
+          "maxHitOdds": 51.1
+        },
+        "badMonths": 11,
+        "months": 22
+      },
+      "lift": 0.004315797900832141
+    },
+    {
+      "condition": "会場=浜名湖",
+      "removed": {
+        "n": 283,
+        "hits": 5,
+        "hitRate": 0.0176678445229682,
+        "avgOdds": 45.63003533568907,
+        "roi": 0.7162544169611308,
+        "roiExMaxHit": 0.5469964664310955,
+        "maxHitOdds": 47.9
+      },
+      "remaining": {
+        "n": 5977,
+        "hits": 119,
+        "hitRate": 0.019909653672410908,
+        "avgOdds": 44.28273961853767,
+        "roi": 0.8079136690647482,
+        "roiExMaxHit": 0.7949138363727623,
+        "maxHitOdds": 77.7
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "A: 追加確認",
+      "split": {
+        "train": {
+          "n": 198,
+          "hits": 5,
+          "hitRate": 0.025252525252525252,
+          "avgOdds": 46.1717171717172,
+          "roi": 1.0237373737373738,
+          "roiExMaxHit": 0.7818181818181819,
+          "maxHitOdds": 47.9
+        },
+        "validation": {
+          "n": 56,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 46.301785714285714,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "test": {
+          "n": 29,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 40.6344827586207,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "badMonths": 1,
+        "months": 3
+      },
+      "lift": 0.00414370101362993
+    },
+    {
+      "condition": "会場=下関",
+      "removed": {
+        "n": 241,
+        "hits": 5,
+        "hitRate": 0.02074688796680498,
+        "avgOdds": 36.8402489626556,
+        "roi": 0.7290456431535269,
+        "roiExMaxHit": 0.5431535269709543,
+        "maxHitOdds": 44.8
+      },
+      "remaining": {
+        "n": 6019,
+        "hits": 119,
+        "hitRate": 0.019770726034224955,
+        "avgOdds": 44.64408285429473,
+        "roi": 0.8067619205848148,
+        "roiExMaxHit": 0.7938527994683502,
+        "maxHitOdds": 77.7
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "A: 追加確認",
+      "split": {
+        "train": {
+          "n": 168,
+          "hits": 5,
+          "hitRate": 0.02976190476190476,
+          "avgOdds": 36.14404761904761,
+          "roi": 1.0458333333333334,
+          "roiExMaxHit": 0.7791666666666667,
+          "maxHitOdds": 44.8
+        },
+        "validation": {
+          "n": 48,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 40.231249999999996,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "test": {
+          "n": 25,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 35.007999999999996,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "badMonths": 2,
+        "months": 3
+      },
+      "lift": 0.0029919525336965513
+    },
+    {
+      "condition": "wind >= 8",
+      "removed": {
+        "n": 123,
+        "hits": 2,
+        "hitRate": 0.016260162601626018,
+        "avgOdds": 47.61707317073174,
+        "roi": 0.6731707317073171,
+        "roiExMaxHit": 0.3121951219512195,
+        "maxHitOdds": 44.4
+      },
+      "remaining": {
+        "n": 6137,
+        "hits": 122,
+        "hitRate": 0.019879419912009123,
+        "avgOdds": 44.27804052468632,
+        "roi": 0.8063874857422193,
+        "roiExMaxHit": 0.7937265765031775,
+        "maxHitOdds": 77.7
+      },
+      "risk": "強風",
+      "recommendation": "A: 追加確認",
+      "split": {
+        "train": {
+          "n": 86,
+          "hits": 2,
+          "hitRate": 0.023255813953488372,
+          "avgOdds": 50.325581395348856,
+          "roi": 0.9627906976744186,
+          "roiExMaxHit": 0.44651162790697674,
+          "maxHitOdds": 44.4
+        },
+        "validation": {
+          "n": 24,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 41.770833333333336,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "test": {
+          "n": 13,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 40.49230769230769,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "badMonths": 0,
+        "months": 0
+      },
+      "lift": 0.002617517691101079
+    },
+    {
+      "condition": "会場=蒲郡",
+      "removed": {
+        "n": 330,
+        "hits": 6,
+        "hitRate": 0.01818181818181818,
+        "avgOdds": 46.544242424242405,
+        "roi": 0.7751515151515151,
+        "roiExMaxHit": 0.5854545454545454,
+        "maxHitOdds": 62.6
+      },
+      "remaining": {
+        "n": 5930,
+        "hits": 118,
+        "hitRate": 0.019898819561551432,
+        "avgOdds": 44.22118629005055,
+        "roi": 0.805362563237774,
+        "roiExMaxHit": 0.7922596964586847,
+        "maxHitOdds": 77.7
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "A: 追加確認",
+      "split": {
+        "train": {
+          "n": 230,
+          "hits": 2,
+          "hitRate": 0.008695652173913044,
+          "avgOdds": 47.75521739130434,
+          "roi": 0.39521739130434785,
+          "roiExMaxHit": 0.17391304347826086,
+          "maxHitOdds": 50.9
+        },
+        "validation": {
+          "n": 67,
+          "hits": 2,
+          "hitRate": 0.029850746268656716,
+          "avgOdds": 45.15223880597013,
+          "roi": 1.7597014925373133,
+          "roiExMaxHit": 0.8253731343283582,
+          "maxHitOdds": 62.6
+        },
+        "test": {
+          "n": 33,
+          "hits": 2,
+          "hitRate": 0.06060606060606061,
+          "avgOdds": 40.93030303030303,
+          "roi": 1.4242424242424243,
+          "roiExMaxHit": 0.4909090909090909,
+          "maxHitOdds": 30.8
+        },
+        "badMonths": 7,
+        "months": 9
+      },
+      "lift": 0.0015925951866557764
+    },
+    {
+      "condition": "会場=鳴門",
+      "removed": {
+        "n": 202,
+        "hits": 3,
+        "hitRate": 0.01485148514851485,
+        "avgOdds": 53.39356435643565,
+        "roi": 0.7603960396039604,
+        "roiExMaxHit": 0.4514851485148515,
+        "maxHitOdds": 62.4
+      },
+      "remaining": {
+        "n": 6058,
+        "hits": 121,
+        "hitRate": 0.01997358864311654,
+        "avgOdds": 44.04188423572132,
+        "roi": 0.8052162429844834,
+        "roiExMaxHit": 0.7923902277979531,
+        "maxHitOdds": 77.7
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "A: 追加確認",
+      "split": {
+        "train": {
+          "n": 141,
+          "hits": 3,
+          "hitRate": 0.02127659574468085,
+          "avgOdds": 53.34326241134751,
+          "roi": 1.0893617021276596,
+          "roiExMaxHit": 0.6468085106382979,
+          "maxHitOdds": 62.4
+        },
+        "validation": {
+          "n": 40,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 55.49500000000002,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "test": {
+          "n": 21,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 49.72857142857143,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "badMonths": 1,
+        "months": 1
+      },
+      "lift": 0.0014462749333651326
+    },
+    {
+      "condition": "motor情報fallback/missing",
+      "removed": {
+        "n": 47,
+        "hits": 2,
+        "hitRate": 0.0425531914893617,
+        "avgOdds": 35.79574468085106,
+        "roi": 0.7,
+        "roiExMaxHit": 0.3446808510638298,
+        "maxHitOdds": 16.7
+      },
+      "remaining": {
+        "n": 6213,
+        "hits": 122,
+        "hitRate": 0.01963624657975213,
+        "avgOdds": 44.40831075164972,
+        "roi": 0.8045549653951393,
+        "roiExMaxHit": 0.7920489296636085,
+        "maxHitOdds": 77.7
+      },
+      "risk": "n不足注意",
+      "recommendation": "C: n不足",
+      "split": {
+        "train": {
+          "n": 32,
+          "hits": 1,
+          "hitRate": 0.03125,
+          "avgOdds": 33.84375,
+          "roi": 0.521875,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 16.7
+        },
+        "validation": {
+          "n": 10,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 45.33999999999999,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "test": {
+          "n": 5,
+          "hits": 1,
+          "hitRate": 0.2,
+          "avgOdds": 29.2,
+          "roi": 3.24,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 16.2
+        },
+        "badMonths": 1,
+        "months": 1
+      },
+      "lift": 0.0007849973440210434
+    },
+    {
+      "condition": "会場=尼崎",
+      "removed": {
+        "n": 216,
+        "hits": 3,
+        "hitRate": 0.013888888888888888,
+        "avgOdds": 44.43208333333336,
+        "roi": 0.7861111111111111,
+        "roiExMaxHit": 0.4324074074074074,
+        "maxHitOdds": 76.4
+      },
+      "remaining": {
+        "n": 6044,
+        "hits": 121,
+        "hitRate": 0.0200198544010589,
+        "avgOdds": 44.340487210456644,
+        "roi": 0.8044010589013898,
+        "roiExMaxHit": 0.7915453342157511,
+        "maxHitOdds": 77.7
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "A: 追加確認",
+      "split": {
+        "train": {
+          "n": 151,
+          "hits": 3,
+          "hitRate": 0.019867549668874173,
+          "avgOdds": 45.831125827814574,
+          "roi": 1.124503311258278,
+          "roiExMaxHit": 0.6185430463576159,
+          "maxHitOdds": 76.4
+        },
+        "validation": {
+          "n": 43,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 42.04651162790697,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "test": {
+          "n": 22,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 39.49227272727273,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "badMonths": 2,
+        "months": 2
+      },
+      "lift": 0.0006310908502715762
+    },
+    {
+      "condition": "会場=丸亀",
+      "removed": {
+        "n": 223,
+        "hits": 5,
+        "hitRate": 0.02242152466367713,
+        "avgOdds": 43.12511210762331,
+        "roi": 0.820627802690583,
+        "roiExMaxHit": 0.6484304932735426,
+        "maxHitOdds": 38.4
+      },
+      "remaining": {
+        "n": 6037,
+        "hits": 119,
+        "hitRate": 0.019711777372867317,
+        "avgOdds": 44.38865905250952,
+        "roi": 0.8031472585721385,
+        "roiExMaxHit": 0.7902766274639722,
+        "maxHitOdds": 77.7
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "D: 残りROI改善なし",
+      "split": {
+        "train": {
+          "n": 156,
+          "hits": 3,
+          "hitRate": 0.019230769230769232,
+          "avgOdds": 45.26666666666667,
+          "roi": 0.7371794871794872,
+          "roiExMaxHit": 0.491025641025641,
+          "maxHitOdds": 38.4
+        },
+        "validation": {
+          "n": 44,
+          "hits": 1,
+          "hitRate": 0.022727272727272728,
+          "avgOdds": 39.11590909090909,
+          "roi": 0.8568181818181819,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 37.7
+        },
+        "test": {
+          "n": 23,
+          "hits": 1,
+          "hitRate": 0.043478260869565216,
+          "avgOdds": 36.2695652173913,
+          "roi": 1.317391304347826,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 30.3
+        },
+        "badMonths": 2,
+        "months": 2
+      },
+      "lift": -0.0006227094789796883
+    },
+    {
+      "condition": "会場=若松",
+      "removed": {
+        "n": 292,
+        "hits": 6,
+        "hitRate": 0.02054794520547945,
+        "avgOdds": 44.24794520547949,
+        "roi": 0.8208904109589041,
+        "roiExMaxHit": 0.647945205479452,
+        "maxHitOdds": 50.5
+      },
+      "remaining": {
+        "n": 5968,
+        "hits": 118,
+        "hitRate": 0.019772117962466487,
+        "avgOdds": 44.34833021112592,
+        "roi": 0.8029323056300268,
+        "roiExMaxHit": 0.7899128686327078,
+        "maxHitOdds": 77.7
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "D: 残りROI改善なし",
+      "split": {
+        "train": {
+          "n": 204,
+          "hits": 4,
+          "hitRate": 0.0196078431372549,
+          "avgOdds": 45.117156862745134,
+          "roi": 0.7642156862745098,
+          "roiExMaxHit": 0.5313725490196078,
+          "maxHitOdds": 47.5
+        },
+        "validation": {
+          "n": 58,
+          "hits": 1,
+          "hitRate": 0.017241379310344827,
+          "avgOdds": 43.586206896551715,
+          "roi": 0.8706896551724138,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 50.5
+        },
+        "test": {
+          "n": 30,
+          "hits": 1,
+          "hitRate": 0.03333333333333333,
+          "avgOdds": 39.61666666666666,
+          "roi": 1.1099999999999999,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 33.3
+        },
+        "badMonths": 3,
+        "months": 4
+      },
+      "lift": -0.0008376624210914008
+    },
+    {
+      "condition": "会場=宮島",
+      "removed": {
+        "n": 277,
+        "hits": 7,
+        "hitRate": 0.02527075812274368,
+        "avgOdds": 38.40375451263539,
+        "roi": 0.8469314079422383,
+        "roiExMaxHit": 0.6805054151624549,
+        "maxHitOdds": 46.1
+      },
+      "remaining": {
+        "n": 5983,
+        "hits": 117,
+        "hitRate": 0.019555406986461642,
+        "avgOdds": 44.61865196389768,
+        "roi": 0.8017716864449272,
+        "roiExMaxHit": 0.7887848905231489,
+        "maxHitOdds": 77.7
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "D: 残りROI改善なし",
+      "split": {
+        "train": {
+          "n": 193,
+          "hits": 3,
+          "hitRate": 0.015544041450777202,
+          "avgOdds": 38.75564766839379,
+          "roi": 0.5886010362694301,
+          "roiExMaxHit": 0.3606217616580311,
+          "maxHitOdds": 44
+        },
+        "validation": {
+          "n": 56,
+          "hits": 2,
+          "hitRate": 0.03571428571428571,
+          "avgOdds": 38.55357142857143,
+          "roi": 1.0392857142857144,
+          "roiExMaxHit": 0.4875,
+          "maxHitOdds": 30.9
+        },
+        "test": {
+          "n": 28,
+          "hits": 2,
+          "hitRate": 0.07142857142857142,
+          "avgOdds": 35.67857142857143,
+          "roi": 2.242857142857143,
+          "roiExMaxHit": 0.5964285714285714,
+          "maxHitOdds": 46.1
+        },
+        "badMonths": 4,
+        "months": 5
+      },
+      "lift": -0.001998281606190977
+    },
+    {
+      "condition": "会場=大村",
+      "removed": {
+        "n": 256,
+        "hits": 6,
+        "hitRate": 0.0234375,
+        "avgOdds": 37.48749999999998,
+        "roi": 0.873828125,
+        "roiExMaxHit": 0.6890625,
+        "maxHitOdds": 47.3
+      },
+      "remaining": {
+        "n": 6004,
+        "hits": 118,
+        "hitRate": 0.01965356429047302,
+        "avgOdds": 44.63598179546967,
+        "roi": 0.8007828114590273,
+        "roiExMaxHit": 0.7878414390406395,
+        "maxHitOdds": 77.7
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "D: 残りROI改善なし",
+      "split": {
+        "train": {
+          "n": 179,
+          "hits": 3,
+          "hitRate": 0.01675977653631285,
+          "avgOdds": 36.691061452513964,
+          "roi": 0.5994413407821229,
+          "roiExMaxHit": 0.3547486033519553,
+          "maxHitOdds": 43.8
+        },
+        "validation": {
+          "n": 51,
+          "hits": 2,
+          "hitRate": 0.0392156862745098,
+          "avgOdds": 40.22941176470588,
+          "roi": 1.611764705882353,
+          "roiExMaxHit": 0.6843137254901961,
+          "maxHitOdds": 47.3
+        },
+        "test": {
+          "n": 26,
+          "hits": 1,
+          "hitRate": 0.038461538461538464,
+          "avgOdds": 37.59230769230769,
+          "roi": 1.3153846153846156,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 34.2
+        },
+        "badMonths": 1,
+        "months": 2
+      },
+      "lift": -0.0029871565920909227
+    },
+    {
+      "condition": "会場=唐津",
+      "removed": {
+        "n": 289,
+        "hits": 8,
+        "hitRate": 0.02768166089965398,
+        "avgOdds": 40.84221453287194,
+        "roi": 0.9764705882352941,
+        "roiExMaxHit": 0.7678200692041522,
+        "maxHitOdds": 60.3
+      },
+      "remaining": {
+        "n": 5971,
+        "hits": 116,
+        "hitRate": 0.019427231619494223,
+        "avgOdds": 44.51311919276503,
+        "roi": 0.7954111539105677,
+        "roiExMaxHit": 0.7823982582481996,
+        "maxHitOdds": 77.7
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "D: 残りROI改善なし",
+      "split": {
+        "train": {
+          "n": 202,
+          "hits": 6,
+          "hitRate": 0.0297029702970297,
+          "avgOdds": 41.39059405940591,
+          "roi": 0.9292079207920793,
+          "roiExMaxHit": 0.7321782178217822,
+          "maxHitOdds": 39.8
+        },
+        "validation": {
+          "n": 58,
+          "hits": 1,
+          "hitRate": 0.017241379310344827,
+          "avgOdds": 40.156896551724124,
+          "roi": 1.039655172413793,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 60.3
+        },
+        "test": {
+          "n": 29,
+          "hits": 1,
+          "hitRate": 0.034482758620689655,
+          "avgOdds": 38.39310344827586,
+          "roi": 1.1793103448275863,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 34.2
+        },
+        "badMonths": 0,
+        "months": 3
+      },
+      "lift": -0.008358814140550508
+    },
+    {
+      "condition": "会場=津",
+      "removed": {
+        "n": 242,
+        "hits": 6,
+        "hitRate": 0.024793388429752067,
+        "avgOdds": 42.49421487603301,
+        "roi": 1.0471074380165288,
+        "roiExMaxHit": 0.7896694214876033,
+        "maxHitOdds": 62.3
+      },
+      "remaining": {
+        "n": 6018,
+        "hits": 118,
+        "hitRate": 0.0196078431372549,
+        "avgOdds": 44.41801839481556,
+        "roi": 0.7939847125290794,
+        "roiExMaxHit": 0.7810734463276836,
+        "maxHitOdds": 77.7
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "D: 残りROI改善なし",
+      "split": {
+        "train": {
+          "n": 169,
+          "hits": 5,
+          "hitRate": 0.029585798816568046,
+          "avgOdds": 44.55562130177514,
+          "roi": 1.3431952662721893,
+          "roiExMaxHit": 0.9745562130177515,
+          "maxHitOdds": 62.3
+        },
+        "validation": {
+          "n": 48,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 39.20208333333333,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "test": {
+          "n": 25,
+          "hits": 1,
+          "hitRate": 0.04,
+          "avgOdds": 34.87999999999999,
+          "roi": 1.056,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 26.4
+        },
+        "badMonths": 2,
+        "months": 3
+      },
+      "lift": -0.009785255522038794
+    },
+    {
+      "condition": "wind >= 5",
+      "removed": {
+        "n": 1023,
+        "hits": 20,
+        "hitRate": 0.019550342130987292,
+        "avgOdds": 46.426363636363654,
+        "roi": 0.8657869012707723,
+        "roiExMaxHit": 0.7898338220918866,
+        "maxHitOdds": 77.7
+      },
+      "remaining": {
+        "n": 5237,
+        "hits": 104,
+        "hitRate": 0.019858697727706702,
+        "avgOdds": 43.93680822990254,
+        "roi": 0.7916555279740309,
+        "roiExMaxHit": 0.777067023104831,
+        "maxHitOdds": 76.4
+      },
+      "risk": "水面リスク",
+      "recommendation": "D: 残りROI改善なし",
+      "split": {
+        "train": {
+          "n": 716,
+          "hits": 15,
+          "hitRate": 0.02094972067039106,
+          "avgOdds": 47.16541899441344,
+          "roi": 0.9379888268156424,
+          "roiExMaxHit": 0.850977653631285,
+          "maxHitOdds": 62.3
+        },
+        "validation": {
+          "n": 204,
+          "hits": 3,
+          "hitRate": 0.014705882352941176,
+          "avgOdds": 46.19622549019609,
+          "roi": 0.7308823529411764,
+          "roiExMaxHit": 0.35,
+          "maxHitOdds": 77.7
+        },
+        "test": {
+          "n": 103,
+          "hits": 2,
+          "hitRate": 0.019417475728155338,
+          "avgOdds": 41.744660194174756,
+          "roi": 0.6310679611650486,
+          "roiExMaxHit": 0.2990291262135922,
+          "maxHitOdds": 34.2
+        },
+        "badMonths": 11,
+        "months": 20
+      },
+      "lift": -0.012114440077087285
+    },
+    {
+      "condition": "会場=平和島",
+      "removed": {
+        "n": 261,
+        "hits": 5,
+        "hitRate": 0.019157088122605363,
+        "avgOdds": 62.14645478927203,
+        "roi": 1.1402298850574712,
+        "roiExMaxHit": 0.8425287356321839,
+        "maxHitOdds": 77.7
+      },
+      "remaining": {
+        "n": 5999,
+        "hits": 119,
+        "hitRate": 0.019836639439906652,
+        "avgOdds": 43.56909651608597,
+        "roi": 0.7891315219203201,
+        "roiExMaxHit": 0.7763960660110019,
+        "maxHitOdds": 76.4
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "D: 残りROI改善なし",
+      "split": {
+        "train": {
+          "n": 182,
+          "hits": 3,
+          "hitRate": 0.016483516483516484,
+          "avgOdds": 61.63420164835165,
+          "roi": 0.9274725274725275,
+          "roiExMaxHit": 0.573076923076923,
+          "maxHitOdds": 64.5
+        },
+        "validation": {
+          "n": 52,
+          "hits": 1,
+          "hitRate": 0.019230769230769232,
+          "avgOdds": 65.59807692307693,
+          "roi": 1.4942307692307693,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 77.7
+        },
+        "test": {
+          "n": 27,
+          "hits": 1,
+          "hitRate": 0.037037037037037035,
+          "avgOdds": 58.951851851851856,
+          "roi": 1.8925925925925926,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 51.1
+        },
+        "badMonths": 2,
+        "months": 3
+      },
+      "lift": -0.014638446130798122
+    },
+    {
+      "condition": "会場=びわこ",
+      "removed": {
+        "n": 284,
+        "hits": 8,
+        "hitRate": 0.028169014084507043,
+        "avgOdds": 47.25341549295773,
+        "roi": 1.1190140845070422,
+        "roiExMaxHit": 0.9429577464788732,
+        "maxHitOdds": 50
+      },
+      "remaining": {
+        "n": 5976,
+        "hits": 116,
+        "hitRate": 0.019410977242302542,
+        "avgOdds": 44.205365578982565,
+        "roi": 0.7887884872824632,
+        "roiExMaxHit": 0.7757864792503347,
+        "maxHitOdds": 77.7
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "D: 残りROI改善なし",
+      "split": {
+        "train": {
+          "n": 198,
+          "hits": 3,
+          "hitRate": 0.015151515151515152,
+          "avgOdds": 50.28570707070705,
+          "roi": 0.6212121212121212,
+          "roiExMaxHit": 0.3686868686868687,
+          "maxHitOdds": 50
+        },
+        "validation": {
+          "n": 57,
+          "hits": 3,
+          "hitRate": 0.05263157894736842,
+          "avgOdds": 40.98245614035087,
+          "roi": 2.1771929824561402,
+          "roiExMaxHit": 1.3631578947368421,
+          "maxHitOdds": 46.4
+        },
+        "test": {
+          "n": 29,
+          "hits": 2,
+          "hitRate": 0.06896551724137931,
+          "avgOdds": 38.87586206896551,
+          "roi": 2.4379310344827587,
+          "roiExMaxHit": 1.0206896551724138,
+          "maxHitOdds": 41.1
+        },
+        "badMonths": 2,
+        "months": 5
+      },
+      "lift": -0.01498148076865502
+    },
+    {
+      "condition": "部品交換あり",
+      "removed": {
+        "n": 822,
+        "hits": 19,
+        "hitRate": 0.023114355231143552,
+        "avgOdds": 44.75611922141122,
+        "roi": 0.9113138686131387,
+        "roiExMaxHit": 0.8167883211678832,
+        "maxHitOdds": 77.7
+      },
+      "remaining": {
+        "n": 5438,
+        "hits": 105,
+        "hitRate": 0.01930856932695844,
+        "avgOdds": 44.28129913571161,
+        "roi": 0.7875137918352335,
+        "roiExMaxHit": 0.7734645090106657,
+        "maxHitOdds": 76.4
+      },
+      "risk": "不確実性",
+      "recommendation": "D: 残りROI改善なし",
+      "split": {
+        "train": {
+          "n": 575,
+          "hits": 11,
+          "hitRate": 0.019130434782608695,
+          "avgOdds": 45.73113043478263,
+          "roi": 0.727304347826087,
+          "roiExMaxHit": 0.6408695652173914,
+          "maxHitOdds": 49.7
+        },
+        "validation": {
+          "n": 164,
+          "hits": 6,
+          "hitRate": 0.036585365853658534,
+          "avgOdds": 43.16725609756099,
+          "roi": 1.6573170731707316,
+          "roiExMaxHit": 1.1835365853658537,
+          "maxHitOdds": 77.7
+        },
+        "test": {
+          "n": 83,
+          "hits": 2,
+          "hitRate": 0.024096385542168676,
+          "avgOdds": 41.14096385542168,
+          "roi": 0.7120481927710843,
+          "roiExMaxHit": 0.3397590361445783,
+          "maxHitOdds": 30.9
+        },
+        "badMonths": 9,
+        "months": 22
+      },
+      "lift": -0.01625617621588471
+    },
+    {
+      "condition": "会場=常滑",
+      "removed": {
+        "n": 324,
+        "hits": 10,
+        "hitRate": 0.030864197530864196,
+        "avgOdds": 42.295987654321046,
+        "roi": 1.2169753086419752,
+        "roiExMaxHit": 1.075,
+        "maxHitOdds": 46
+      },
+      "remaining": {
+        "n": 5936,
+        "hits": 114,
+        "hitRate": 0.019204851752021565,
+        "avgOdds": 44.45541352762793,
+        "roi": 0.781216307277628,
+        "roiExMaxHit": 0.7681266846361186,
+        "maxHitOdds": 77.7
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "D: 残りROI改善なし",
+      "split": {
+        "train": {
+          "n": 226,
+          "hits": 8,
+          "hitRate": 0.035398230088495575,
+          "avgOdds": 42.56504424778764,
+          "roi": 1.4349557522123895,
+          "roiExMaxHit": 1.2314159292035398,
+          "maxHitOdds": 46
+        },
+        "validation": {
+          "n": 65,
+          "hits": 1,
+          "hitRate": 0.015384615384615385,
+          "avgOdds": 44.08,
+          "roi": 0.6430769230769231,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 41.8
+        },
+        "test": {
+          "n": 33,
+          "hits": 1,
+          "hitRate": 0.030303030303030304,
+          "avgOdds": 36.93939393939394,
+          "roi": 0.8545454545454545,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 28.2
+        },
+        "badMonths": 3,
+        "months": 5
+      },
+      "lift": -0.02255366077349019
+    },
+    {
+      "condition": "会場=芦屋",
+      "removed": {
+        "n": 219,
+        "hits": 8,
+        "hitRate": 0.0365296803652968,
+        "avgOdds": 40.317671232876705,
+        "roi": 1.4730593607305935,
+        "roiExMaxHit": 1.2292237442922374,
+        "maxHitOdds": 53.4
+      },
+      "remaining": {
+        "n": 6041,
+        "hits": 116,
+        "hitRate": 0.01920211885449429,
+        "avgOdds": 44.48959852673397,
+        "roi": 0.7795067041880483,
+        "roiExMaxHit": 0.7666445952656845,
+        "maxHitOdds": 77.7
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "D: 残りROI改善なし",
+      "split": {
+        "train": {
+          "n": 153,
+          "hits": 5,
+          "hitRate": 0.032679738562091505,
+          "avgOdds": 40.12725490196079,
+          "roi": 1.322875816993464,
+          "roiExMaxHit": 0.9738562091503268,
+          "maxHitOdds": 53.4
+        },
+        "validation": {
+          "n": 44,
+          "hits": 2,
+          "hitRate": 0.045454545454545456,
+          "avgOdds": 40.740909090909085,
+          "roi": 1.8,
+          "roiExMaxHit": 0.8818181818181818,
+          "maxHitOdds": 40.4
+        },
+        "test": {
+          "n": 22,
+          "hits": 1,
+          "hitRate": 0.045454545454545456,
+          "avgOdds": 40.79545454545455,
+          "roi": 1.8636363636363635,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 41
+        },
+        "badMonths": 1,
+        "months": 2
+      },
+      "lift": -0.024263263863069873
+    },
+    {
+      "condition": "会場=児島",
+      "removed": {
+        "n": 224,
+        "hits": 7,
+        "hitRate": 0.03125,
+        "avgOdds": 48.49062500000002,
+        "roi": 1.5714285714285714,
+        "roiExMaxHit": 1.3178571428571428,
+        "maxHitOdds": 56.8
+      },
+      "remaining": {
+        "n": 6036,
+        "hits": 117,
+        "hitRate": 0.019383697813121274,
+        "avgOdds": 44.189750612988725,
+        "roi": 0.7752816434724984,
+        "roiExMaxHit": 0.7624088800530152,
+        "maxHitOdds": 77.7
+      },
+      "risk": "会場単位は過学習注意",
+      "recommendation": "D: 残りROI改善なし",
+      "split": {
+        "train": {
+          "n": 156,
+          "hits": 6,
+          "hitRate": 0.038461538461538464,
+          "avgOdds": 46.882692307692324,
+          "roi": 1.9275641025641026,
+          "roiExMaxHit": 1.5634615384615385,
+          "maxHitOdds": 56.8
+        },
+        "validation": {
+          "n": 45,
+          "hits": 1,
+          "hitRate": 0.022222222222222223,
+          "avgOdds": 56.337777777777745,
+          "roi": 1.14,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 51.3
+        },
+        "test": {
+          "n": 23,
+          "hits": 0,
+          "hitRate": 0,
+          "avgOdds": 44.04347826086957,
+          "roi": 0,
+          "roiExMaxHit": 0,
+          "maxHitOdds": 0
+        },
+        "badMonths": 1,
+        "months": 3
+      },
+      "lift": -0.028488324578619828
+    },
+    {
+      "condition": "venueMotorTop2Rate < 35",
+      "removed": {
+        "n": 3823,
+        "hits": 80,
+        "hitRate": 0.020925974365681402,
+        "avgOdds": 45.072393408318085,
+        "roi": 0.8773476327491498,
+        "roiExMaxHit": 0.8573633272299241,
+        "maxHitOdds": 76.4
+      },
+      "remaining": {
+        "n": 2437,
+        "hits": 44,
+        "hitRate": 0.018054985638079606,
+        "avgOdds": 43.20044099302418,
+        "roi": 0.688346327451785,
+        "roiExMaxHit": 0.6564628641772672,
+        "maxHitOdds": 77.7
+      },
+      "risk": "低motor帯",
+      "recommendation": "D: 残りROI改善なし",
+      "split": {
+        "train": {
+          "n": 2676,
+          "hits": 55,
+          "hitRate": 0.02055306427503737,
+          "avgOdds": 45.88476457399103,
+          "roi": 0.8655455904334828,
+          "roiExMaxHit": 0.8369955156950672,
+          "maxHitOdds": 76.4
+        },
+        "validation": {
+          "n": 764,
+          "hits": 16,
+          "hitRate": 0.020942408376963352,
+          "avgOdds": 44.0749083769634,
+          "roi": 0.9112565445026178,
+          "roiExMaxHit": 0.8293193717277487,
+          "maxHitOdds": 62.6
+        },
+        "test": {
+          "n": 383,
+          "hits": 9,
+          "hitRate": 0.02349869451697128,
+          "avgOdds": 41.38616187989557,
+          "roi": 0.8921671018276762,
+          "roiExMaxHit": 0.7710182767624021,
+          "maxHitOdds": 46.4
+        },
+        "badMonths": 8,
+        "months": 22
+      },
+      "lift": -0.11542364059933319
+    }
+  ]
+}

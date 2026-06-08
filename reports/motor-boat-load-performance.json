@@ -1,0 +1,28 @@
+{
+  "generatedAt": "2026-06-05T12:43:39.837Z",
+  "indexes": [
+    {
+      "name": "idx_motor_boat_stats_boat",
+      "sql": "CREATE INDEX idx_motor_boat_stats_boat\nON motor_boat_stats (venue, boat_no, date)"
+    },
+    {
+      "name": "idx_motor_boat_stats_motor",
+      "sql": "CREATE INDEX idx_motor_boat_stats_motor\nON motor_boat_stats (venue, motor_no, date)"
+    },
+    {
+      "name": "sqlite_autoindex_motor_boat_stats_1",
+      "sql": null
+    }
+  ],
+  "total": {
+    "label": "full load",
+    "rows": 640088,
+    "ms": 1153.18
+  },
+  "scoped": {
+    "label": "scoped load",
+    "rows": 37266,
+    "ms": 28.01
+  },
+  "targetRaceIds": 6260
+}

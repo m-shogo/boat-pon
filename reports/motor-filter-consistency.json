@@ -1,0 +1,68 @@
+{
+  "generatedAt": "2026-06-05T12:43:39.330Z",
+  "summaries": [
+    {
+      "condition": "national motorTop2Rate >= 50",
+      "n": 246,
+      "hits": 1,
+      "hitRate": 0.0040650406504065045,
+      "avgOdds": 41.768292682926806,
+      "roi": 0.17235772357723578,
+      "recommendation": "national基準も弱いが、venueとのズレ確認が必要"
+    },
+    {
+      "condition": "venueMotorTop2Rate >= 50",
+      "n": 143,
+      "hits": 1,
+      "hitRate": 0.006993006993006993,
+      "avgOdds": 47.199999999999996,
+      "roi": 0.2993006993006993,
+      "recommendation": "venue基準のNO BUY/減点候補"
+    },
+    {
+      "condition": "both >= 50",
+      "n": 49,
+      "hits": 0,
+      "hitRate": 0,
+      "avgOdds": 45.140816326530626,
+      "roi": 0,
+      "recommendation": "n不足。採用不可"
+    },
+    {
+      "condition": "nationalのみ >= 50",
+      "n": 197,
+      "hits": 1,
+      "hitRate": 0.005076142131979695,
+      "avgOdds": 40.929441624365474,
+      "roi": 0.2152284263959391,
+      "recommendation": "national基準も弱いが、venueとのズレ確認が必要"
+    },
+    {
+      "condition": "venueのみ >= 50",
+      "n": 94,
+      "hits": 1,
+      "hitRate": 0.010638297872340425,
+      "avgOdds": 48.273404255319114,
+      "roi": 0.4553191489361702,
+      "recommendation": "venue基準のNO BUY/減点候補"
+    },
+    {
+      "condition": "両方 < 50",
+      "n": 5920,
+      "hits": 122,
+      "hitRate": 0.02060810810810811,
+      "avgOdds": 44.38826599662163,
+      "roi": 0.8355405405405405,
+      "recommendation": "観察"
+    },
+    {
+      "condition": "venueMotor missing",
+      "n": 47,
+      "hits": 2,
+      "hitRate": 0.0425531914893617,
+      "avgOdds": 35.79574468085106,
+      "roi": 0.7,
+      "recommendation": "n不足。採用不可"
+    }
+  ]
+}

@@ -3,7 +3,7 @@
 ## 1. 対象コミット
 - sha: e9eabe3de747152e90fb6669a52b6e7448a83578
 - message: motor_boat_stats をモデルに統合・キャリブレーション改善・設定最適化
-- current HEAD: 90ab55344dbcf05ac43978b46ff980d60a1776ef
+- current HEAD: 399a0c3a95e29ed30d68f2424acd11b982f5ef03
 - 変更ファイル: server/db.ts, src/domain/programFeatures.ts
 - 報告ROI: before 0.978 → after 1.118、2024=1.087、2025=1.169
 
