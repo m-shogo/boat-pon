@@ -1,0 +1,228 @@
+{
+  "generatedAt": "2026-06-09T06:10:43.569Z",
+  "forwardStart": "2025-01-01",
+  "forwardEnd": "2026-06-09",
+  "recent3mCutoff": "2026-03-09",
+  "baseline": {
+    "n": 1522,
+    "hits": 39,
+    "roi": 87.12
+  },
+  "compSets": [
+    {
+      "id": "A",
+      "name": "2Rのみ",
+      "skipN": 169,
+      "skipPct": 11.1,
+      "skipRoi": 51.48,
+      "remainRoi": 91.57,
+      "delta": 4.45
+    },
+    {
+      "id": "B",
+      "name": "5Rのみ",
+      "skipN": 184,
+      "skipPct": 12.09,
+      "skipRoi": 54.46,
+      "remainRoi": 91.61,
+      "delta": 4.49
+    },
+    {
+      "id": "C",
+      "name": "6Rのみ",
+      "skipN": 215,
+      "skipPct": 14.13,
+      "skipRoi": 21.26,
+      "remainRoi": 97.95,
+      "delta": 10.83
+    },
+    {
+      "id": "D",
+      "name": "2R+5R",
+      "skipN": 353,
+      "skipPct": 23.19,
+      "skipRoi": 53.03,
+      "remainRoi": 97.41,
+      "delta": 10.29
+    },
+    {
+      "id": "E",
+      "name": "5R+6R",
+      "skipN": 399,
+      "skipPct": 26.22,
+      "skipRoi": 36.57,
+      "remainRoi": 105.08,
+      "delta": 17.96
+    },
+    {
+      "id": "F",
+      "name": "2R+6R",
+      "skipN": 384,
+      "skipPct": 25.23,
+      "skipRoi": 34.56,
+      "remainRoi": 104.85,
+      "delta": 17.73
+    },
+    {
+      "id": "G",
+      "name": "2R+5R+6R",
+      "skipN": 568,
+      "skipPct": 37.32,
+      "skipRoi": 41,
+      "remainRoi": 114.57,
+      "delta": 27.45
+    },
+    {
+      "id": "H",
+      "name": "浜名湖+住之江",
+      "skipN": 159,
+      "skipPct": 10.45,
+      "skipRoi": 0,
+      "remainRoi": 97.28,
+      "delta": 10.16
+    },
+    {
+      "id": "I",
+      "name": "弱R-悪会場",
+      "skipN": 494,
+      "skipPct": 32.46,
+      "skipRoi": 47.15,
+      "remainRoi": 106.32,
+      "delta": 19.2
+    },
+    {
+      "id": "J",
+      "name": "悪会場-弱R",
+      "skipN": 85,
+      "skipPct": 5.58,
+      "skipRoi": 0,
+      "remainRoi": 92.27,
+      "delta": 5.15
+    }
+  ],
+  "condSets": [
+    {
+      "id": "K",
+      "name": "odds40〜79外でのweakR",
+      "baseN": 705,
+      "baseRoi": 91.46,
+      "skipN": 263,
+      "skipPct": 37.3,
+      "skipRoi": 53.04,
+      "remainRoi": 114.32,
+      "delta": 22.86
+    },
+    {
+      "id": "L",
+      "name": "weakR外でのodds40〜79",
+      "baseN": 954,
+      "baseRoi": 114.57,
+      "skipN": 512,
+      "skipPct": 53.67,
+      "skipRoi": 114.79,
+      "remainRoi": 114.32,
+      "delta": -0.25
+    }
+  ],
+  "residuals": [
+    {
+      "label": "weakR | 悪会場除去後",
+      "baseN": 1363,
+      "baseRoi": 97.28,
+      "skipN": 494,
+      "skipPct": 36.24,
+      "skipRoi": 47.15,
+      "remainN": 869,
+      "remainRoi": 125.78,
+      "delta": 28.5
+    },
+    {
+      "label": "weakR | odds40〜79除去後",
+      "baseN": 705,
+      "baseRoi": 91.46,
+      "skipN": 263,
+      "skipPct": 37.3,
+      "skipRoi": 53.04,
+      "remainN": 442,
+      "remainRoi": 114.32,
+      "delta": 22.86
+    },
+    {
+      "label": "weakR | 2025-07除去後",
+      "baseN": 1296,
+      "baseRoi": 98.41,
+      "skipN": 479,
+      "skipPct": 36.96,
+      "skipRoi": 48.62,
+      "remainN": 817,
+      "remainRoi": 127.6,
+      "delta": 29.19
+    },
+    {
+      "label": "badVenue | 弱R除去後",
+      "baseN": 954,
+      "baseRoi": 114.57,
+      "skipN": 85,
+      "skipPct": 8.91,
+      "skipRoi": 0,
+      "remainN": 869,
+      "remainRoi": 125.78,
+      "delta": 11.21
+    },
+    {
+      "label": "badVenue | odds40〜79除去後",
+      "baseN": 705,
+      "baseRoi": 91.46,
+      "skipN": 68,
+      "skipPct": 9.65,
+      "skipRoi": 0,
+      "remainN": 637,
+      "remainRoi": 101.22,
+      "delta": 9.76
+    },
+    {
+      "label": "badVenue | 2025-07除去後",
+      "baseN": 1296,
+      "baseRoi": 98.41,
+      "skipN": 130,
+      "skipPct": 10.03,
+      "skipRoi": 0,
+      "remainN": 1166,
+      "remainRoi": 109.38,
+      "delta": 10.97
+    },
+    {
+      "label": "odds40〜79 | 弱R除去後",
+      "baseN": 954,
+      "baseRoi": 114.57,
+      "skipN": 512,
+      "skipPct": 53.67,
+      "skipRoi": 114.79,
+      "remainN": 442,
+      "remainRoi": 114.32,
+      "delta": -0.25
+    },
+    {
+      "label": "odds40〜79 | 悪会場除去後",
+      "baseN": 1363,
+      "baseRoi": 97.28,
+      "skipN": 726,
+      "skipPct": 53.26,
+      "skipRoi": 93.82,
+      "remainN": 637,
+      "remainRoi": 101.22,
+      "delta": 3.94
+    },
+    {
+      "label": "odds40〜79 | 2025-07除去後",
+      "baseN": 1296,
+      "baseRoi": 98.41,
+      "skipN": 709,
+      "skipPct": 54.71,
+      "skipRoi": 93.41,
+      "remainN": 587,
+      "remainRoi": 104.45,
+      "delta": 6.04
+    }
+  ]
+}
