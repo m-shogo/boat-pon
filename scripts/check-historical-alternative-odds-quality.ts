@@ -112,6 +112,81 @@ const condBInTable = (db.prepare(`
     AND ${WIND24} AND ${EXH1}
 `).get() as { n: number }).n;
 
+// ─── skip6R 対象 race 数 ──────────────────────────────────────────────────────
+
+// フォワード期間 + 除外条件フィルター (backfill 候補と同じ条件)
+const FWD_COND = `dh.decision='BUY' AND dh.run_kind='historical-backfill'
+    AND dh.result IS NOT NULL AND dh.result != ''
+    AND dh.current_odds IS NOT NULL
+    AND dh.selection='1-2-3'
+    AND dh.date >= '${FORWARD_START}'
+    AND dh.venue NOT IN (${excl_v})
+    AND dh.race_no NOT IN (${excl_r})`;
+
+const skip6RInTable = (db.prepare(`
+  SELECT COUNT(DISTINCT hao.race_id) n
+  FROM ${TARGET_TABLE} hao
+  JOIN decision_history dh ON dh.race_id=hao.race_id
+    AND dh.selection='1-2-3' AND dh.run_kind='historical-backfill'
+  WHERE hao.source_type='${SOURCE_TYPE}' AND hao.source_quality='${SOURCE_QUALITY}'
+    AND ${FWD_COND}
+    AND dh.race_no=6
+`).get() as { n: number }).n;
+
+const skip6RTotal = (db.prepare(`
+  SELECT COUNT(DISTINCT race_id) n
+  FROM decision_history dh
+  WHERE selection='1-2-3' AND run_kind='historical-backfill'
+    AND ${FWD_COND}
+    AND dh.race_no=6
+`).get() as { n: number }).n;
+
+// ─── skipVenue 対象 race 数 ───────────────────────────────────────────────────
+
+const skipVenueInTable = (db.prepare(`
+  SELECT COUNT(DISTINCT hao.race_id) n
+  FROM ${TARGET_TABLE} hao
+  JOIN decision_history dh ON dh.race_id=hao.race_id
+    AND dh.selection='1-2-3' AND dh.run_kind='historical-backfill'
+  WHERE hao.source_type='${SOURCE_TYPE}' AND hao.source_quality='${SOURCE_QUALITY}'
+    AND ${FWD_COND}
+    AND dh.venue IN ('浜名湖', '住之江')
+`).get() as { n: number }).n;
+
+const skipVenueTotal = (db.prepare(`
+  SELECT COUNT(DISTINCT race_id) n
+  FROM decision_history dh
+  WHERE selection='1-2-3' AND run_kind='historical-backfill'
+    AND ${FWD_COND}
+    AND dh.venue IN ('浜名湖', '住之江')
+`).get() as { n: number }).n;
+
+const skip6RAndVenueOverlap = (db.prepare(`
+  SELECT COUNT(DISTINCT hao.race_id) n
+  FROM ${TARGET_TABLE} hao
+  JOIN decision_history dh ON dh.race_id=hao.race_id
+    AND dh.selection='1-2-3' AND dh.run_kind='historical-backfill'
+  WHERE hao.source_type='${SOURCE_TYPE}' AND hao.source_quality='${SOURCE_QUALITY}'
+    AND ${FWD_COND}
+    AND dh.race_no=6
+    AND dh.venue IN ('浜名湖', '住之江')
+`).get() as { n: number }).n;
+
+// ─── 最大 odds 乖離 (race内の最大-最小 spread) ─────────────────────────────────
+
+type DeltaRow = { race_id: string; race_date: string; venue: string; race_no: number; max_odds: number; min_odds: number; delta: number };
+const topDeltaRaces = db.prepare(`
+  SELECT race_id, race_date, venue, race_no,
+    ROUND(MAX(odds), 1) max_odds,
+    ROUND(MIN(odds), 1) min_odds,
+    ROUND(MAX(odds) - MIN(odds), 1) delta
+  FROM ${TARGET_TABLE}
+  WHERE source_type='${SOURCE_TYPE}' AND source_quality='${SOURCE_QUALITY}'
+  GROUP BY race_id
+  ORDER BY delta DESC
+  LIMIT 5
+`).all() as DeltaRow[];
+
 // ─── 同値チェック: 1-2-3 = 1-3-2 の件数 ─────────────────────────────────────
 
 const sameValueCheck = db.prepare(`
@@ -214,7 +289,13 @@ lines.push(`| ユニーク race 数 | ${basic.total_races} |`);
 lines.push(`| データ期間 | ${basic.min_date} 〜 ${basic.max_date} |`);
 lines.push(`| 5買い目全て揃っている race 数 | ${with5Sels} / ${basic.total_races} (${pct(with5Sels, basic.total_races)}%) |`);
 lines.push(`| 4買い目のみの race 数 | ${with4Sels} (欠場等で正常なスキップ) |`);
-lines.push(`| condB 該当 race 数 | ${condBInTable} |`);
+lines.push(`| condB 該当 race 数 | ${condBInTable} / 167 |`);
+lines.push(`| skip6R 該当 race 数 | ${skip6RInTable} / ${skip6RTotal} (${pct(skip6RInTable, skip6RTotal)}%) |`);
+lines.push(`| skipVenue 該当 race 数 | ${skipVenueInTable} / ${skipVenueTotal} (${pct(skipVenueInTable, skipVenueTotal)}%) ※下記注意参照 |`);
+lines.push(`| skip6R × skipVenue 重複 | ${skip6RAndVenueOverlap} |`);
+lines.push(``);
+lines.push(`> **⚠️ skipVenue coverage 注意**: skipVenueInTable の件数増加は skip6R backfill 対象レースが skipVenue 条件にも重複該当したためであり、`);
+lines.push(`> skipVenue を意図的に write したものではない。skipVenue 専用 backfill は H004 完了後に着手する。`);
 lines.push(``);
 lines.push(`## combination 別件数`);
 lines.push(``);
@@ -241,6 +322,17 @@ lines.push(`|---|---:|---|`);
 lines.push(`| odds ≤ 0 | ${anomaly.zero_or_neg} | ${anomaly.zero_or_neg === 0 ? "✅ OK" : "❌ ERROR"} |`);
 lines.push(`| odds = NULL | ${anomaly.null_odds} | ${anomaly.null_odds === 0 ? "✅ OK" : "❌ ERROR"} |`);
 lines.push(`| odds > 9999 | ${anomaly.very_large} | ${anomaly.very_large === 0 ? "✅ OK" : "⚠️ 要確認"} |`);
+lines.push(``);
+lines.push(`## 買い目間 odds spread トップ5 (異常確認)`);
+lines.push(``);
+lines.push(`> 同一 race 内での最大 odds - 最小 odds の乖離。historical closing odds は締切直前値のため`);
+lines.push(`> current_odds (意思決定時の暫定値) と 40〜50pt 前後の差が生じることは正常動作。`);
+lines.push(``);
+lines.push(`| race_id | race_date | venue | R | max_odds | min_odds | delta |`);
+lines.push(`|---|---|---|---:|---:|---:|---:|`);
+for (const row of topDeltaRaces) {
+  lines.push(`| ${row.race_id} | ${row.race_date} | ${row.venue} | ${row.race_no} | ${row.max_odds} | ${row.min_odds} | ${row.delta} |`);
+}
 lines.push(``);
 lines.push(`## source フィールド確認`);
 lines.push(``);
@@ -282,7 +374,7 @@ const allOk = anomaly.zero_or_neg === 0 && anomaly.null_odds === 0
   && sourceCheck.is_backfill_1 === totalRows
   && oddsSnapshotsCount === 0 && timeseriesCount === 0;
 
-lines.push(`**${allOk ? "✅ 品質良好。次回 --limit 200 --write へ進んでよい。" : "⚠️ 要確認項目あり。上記エラーを確認してください。"}**`);
+lines.push(`**${allOk ? `✅ 品質良好。skip6R 次バッチ (pnpm backfill:historical-alt-odds --limit 30 --priority skip6R --write --sleep-ms 1000) へ進んでよい。残 ${skip6RTotal - skip6RInTable}/${skip6RTotal} 件。` : "⚠️ 要確認項目あり。上記エラーを確認してください。"}**`);
 lines.push(``);
 lines.push(`---`);
 lines.push(``);
@@ -309,6 +401,9 @@ const jsonOutput = {
   with5Sels,
   with4Sels,
   condBInTable,
+  skip6R: { inTable: skip6RInTable, total: skip6RTotal, coverage: pct(skip6RInTable, skip6RTotal) },
+  skipVenue: { inTable: skipVenueInTable, total: skipVenueTotal, coverage: pct(skipVenueInTable, skipVenueTotal), skip6ROverlap: skip6RAndVenueOverlap },
+  topDeltaRaces,
   byCombo,
   sameValueCheck,
   anomaly,
@@ -322,7 +417,8 @@ writeFileSync(OUT_JSON, JSON.stringify(jsonOutput, null, 2), "utf-8");
 console.log("=== historical_alternative_odds 品質チェック ===");
 console.log(`総レコード: ${totalRows} / ユニーク race: ${basic.total_races}`);
 console.log(`5買い目揃い: ${with5Sels}/${basic.total_races} (${pct(with5Sels, basic.total_races)}%)`);
-console.log(`condB該当: ${condBInTable} / 同値率: ${same132Rate}% / 全同値: ${sameValueCheck.all_same}`);
+console.log(`condB該当: ${condBInTable}/167 / skip6R: ${skip6RInTable}/${skip6RTotal} (${pct(skip6RInTable, skip6RTotal)}%) / skipVenue: ${skipVenueInTable}/${skipVenueTotal} (skip6R重複${skip6RAndVenueOverlap}件含む)`);
+console.log(`同値率: ${same132Rate}% / 全同値: ${sameValueCheck.all_same}`);
 console.log(`異常値: zero_or_neg=${anomaly.zero_or_neg} / null=${anomaly.null_odds}`);
 console.log(`既存テーブル汚染: odds_snapshots=${oddsSnapshotsCount} / timeseries=${timeseriesCount}`);
 console.log(`総合: ${allOk ? "✅ 品質良好" : "⚠️ 要確認"}`);

@@ -1,6 +1,6 @@
 # Research Governor
 
-生成日時: 2026-06-09T12:40:39.363Z
+生成日時: 2026-06-09T12:52:02.743Z
 
 > **⚠️ BUY は検証候補。ROI は検証指標。購入指示・採用判断ではない。**
 > **app_settings / 本番 decision / 自動投票 は絶対に変更しない。**
@@ -20,7 +20,7 @@
 
 ## B. 次にやるべき1本
 
-**skip6R historical alternative odds の小規模backfill準備 (162/215件未保存)**
+**skip6R historical alternative odds の小規模backfill準備 (132/215件未保存)**
 
 > ⚠️ **書き込みを行う場合は以下の手順を守ること:**
 > 1. backup を先に実行: `pnpm backup`
@@ -88,16 +88,16 @@
 | 項目 | 対象 | 保存済 | coverage |
 |---|---:|---:|---:|
 | condB historical closing odds | 167 | 167 | 100% |
-| skip6R historical closing odds | 215 | 53 | 25% |
-| skipVenue historical closing odds | 159 | 20 | 13% |
+| skip6R historical closing odds | 215 | 83 | 39% |
+| skipVenue historical closing odds | 159 | 24 | 15% |
 | timeseries BUY forward overlap (T-5) | — | 0 | — |
 | timeseries condB overlap (T-5) | — | 0 | — |
 
 | 項目 | 状態 |
 |---|---|
 | condB historical odds 完備 | ✅ 完了 |
-| skip6R historical odds 完備 | ❌ 53/215 |
-| skipVenue historical odds 完備 | ❌ 20/159 |
+| skip6R historical odds 完備 | ❌ 83/215 |
+| skipVenue historical odds 完備 | ❌ 24/159 |
 | future-only switch 評価可能 | ❌ condB overlap n=0 (<30) |
 | timeseries 日付範囲 | なし |
 
