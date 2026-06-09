@@ -21,10 +21,12 @@
 データが更新されたら以下の順で実行する:
 
 ```bash
-pnpm report:paper-forward-candidates   # 台帳: switch/除外/残存/過信注意の一覧
-pnpm report:paper-forward-monitor      # 訓練/forward比較・格上げ判定・除外候補追跡
-pnpm analyze:wind24-exh1-switch        # 最有力候補の深掘り（最大払戻除外・月別・会場別）
+pnpm report:paper-forward-candidates        # 台帳: switch/除外/残存/過信注意の一覧
+pnpm report:paper-forward-monitor           # 訓練/forward比較・格上げ判定・除外候補追跡
+pnpm analyze:wind24-exh1-switch             # 最有力候補の深掘り（最大払戻除外・月別・会場別）
 ```
+
+確認ポイント: **条件B 3連単1-3-2 が forward n=200 到達後に 最大2件除外ROI ≥ 100% を満たすか**（現在 n=167 / top2除外 91.08%）
 
 ## 現在フェーズ（2025-06 時点）
 
@@ -58,6 +60,11 @@ pnpm analyze:wind24-exh1-switch        # 最有力候補の深掘り（最大払
 - 1-2-3 が多数でも、条件によっては 1-3-2 の方が実払戻が高い
 - forward急伸（訓練期弱く forward期強い）は高配当依存チェック必須
 - 除外だけでは黒字化しない（最大複合除外でも残存 97%）
+- 条件別券種セレクター検証（2025-06）: セレクター化で改善なし（forward 79% < 現行 87%）
+  - 拡連複: 全条件最下位。不採用確定
+  - 住之江系: n<30のため data-insufficient（過学習リスクあり、凍結）
+  - 条件B 3連単1-3-2: セレクターとしては不採用だが forward急伸monitor として継続
+    （train 66% → forward 174%。top2除外 91%のため格上げ条件未達）
 
 ## 分析スクリプト一覧（読み取り専用）
 
@@ -72,3 +79,4 @@ pnpm analyze:wind24-exh1-switch        # 最有力候補の深掘り（最大払
 | `analyze:suminoe-breakdown` | 住之江分解（参考） |
 | `analyze:123-breakdown` | 1-2-3 selection 分解（参考） |
 | `analyze:123-bet-type-conversion` | 券種変換比較（実払戻基準） |
+| `analyze:ticket-selector-strategies` | 条件別券種/買い目セレクター検証（12条件×9券種、セレクター比較） |
