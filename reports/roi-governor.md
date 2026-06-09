@@ -1,6 +1,6 @@
 # ROI Governor Report
 
-生成日時: 2026-06-09T06:33:58.598Z
+生成日時: 2026-06-09T08:11:36.825Z
 
 > **読み取り専用。BUY は検証候補、ROI は検証指標。購入指示ではない。app_settings / 本番 decision 変更禁止。**
 
@@ -56,6 +56,10 @@
 > 
 > train ROI < 100% (66.17%) → forward ROI > 100% (174.37%) = **forward急伸**
 > セレクターとしては不採用（train最良買い目は 2連単1-3）。単独 monitor 継続。
+>
+> ⚠️ **switch（1-3-2）評価は現在不可**: forward ROI 174.37% は事後計算（race_payouts.payout_yen から逆引き）であり、
+> 事前 odds ベースの期待値ではない。odds_snapshots の 1-3-2 データは 124/125 件が 1-2-3 と同値のバックフィルバグ。
+> odds_timeseries_snapshots（2026-06〜）でデータが蓄積されてから再評価。詳細: `pnpm audit:alt-odds`。
 
 ### セレクター（条件別券種セレクター）
 
