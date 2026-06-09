@@ -1,0 +1,93 @@
+{
+  "generatedAt": "2026-06-09T05:04:20.784Z",
+  "phase": "monitor-only",
+  "phaseReason": "条件別セレクター不採用 (1点=79.19% / 複数点=79.27% < 現行=86.29%); 条件B n=167/n=200まであと33件 / top2除外=91.08%(格上げ条件>=100% ❌); 住之江系: 全条件 n<30 または 過学習疑いで凍結",
+  "condB": {
+    "n": 167,
+    "nToUpgrade": 33,
+    "nReached200": false,
+    "trainRoi": 66.17,
+    "fwdRoi": 174.37,
+    "top1ExclRoi": 115.81,
+    "top2ExclRoi": 91.08,
+    "top3ExclRoi": 67.9,
+    "recentFwdRoi": 0,
+    "recentZeroMonths": 3,
+    "top2RoiOk": false,
+    "upgradeVerdict": "格上げ待ち(n不足)",
+    "demotionRisk": true,
+    "verdict": "格上げ待ち"
+  },
+  "selector": {
+    "baselineFwdRoi": 86.29,
+    "onePtFwdRoi": 79.19,
+    "multiPtFwdRoi": 79.27,
+    "onePtAdopted": false,
+    "multiPtAdopted": false,
+    "reason": "現行全件 3連単1-2-3 forward ROI = 86.29% / 1点セレクター forward ROI = 79.19% → 悪化(不採用) / 複数点セレクター forward ROI = 79.27% → 悪化(不採用)"
+  },
+  "suminoe": [
+    {
+      "label": "C. 住之江 × odds40〜49",
+      "fwdN": 23,
+      "status": "overfit-risk",
+      "note": "n<30 かつ trainROI(best)=276.11%。過学習リスクあり。n=30到達まで凍結"
+    },
+    {
+      "label": "D. 住之江 × 1号艇展示1位",
+      "fwdN": 18,
+      "status": "overfit-risk",
+      "note": "n<30 かつ trainROI(best)=342.76%。過学習リスクあり。n=30到達まで凍結"
+    },
+    {
+      "label": "E. 住之江 × 5R",
+      "fwdN": 10,
+      "status": "overfit-risk",
+      "note": "n<30 かつ trainROI(best)=214%。過学習リスクあり。n=30到達まで凍結"
+    },
+    {
+      "label": "F. 住之江 × odds25〜39",
+      "fwdN": 41,
+      "status": "overfit",
+      "note": "n=41 / trainROI高 / fwdROI低。過学習疑い。n=50到達後に再確認"
+    }
+  ],
+  "blockedActions": [
+    "新規 ROI 候補探索（今は候補探しフェーズではない）",
+    "app_settings 変更（禁止）",
+    "本番 decision ロジック変更（禁止）",
+    "条件別券種セレクター採用（forward ROI < 現行）",
+    "複数点買いセット採用（forward ROI < 現行）",
+    "拡連複採用（全条件最下位）",
+    "住之江系の即採用（n不足 / 過学習リスク）",
+    "自動投票・ログイン保存・投票サイト操作（禁止）"
+  ],
+  "allowedActions": [
+    "監視 3点セット実行（データ更新後）",
+    "forward データ蓄積の継続",
+    "条件B forward n=167 → n=200到達を待つ",
+    "住之江系 n=30 / n=50 到達を待つ"
+  ],
+  "nextCommands": [
+    "pnpm report:paper-forward-candidates   # 台帳: switch/除外/残存",
+    "pnpm report:paper-forward-monitor      # 格上げ判定自動表示",
+    "pnpm analyze:wind24-exh1-switch        # 最有力候補の深掘り",
+    "# 必要なら:",
+    "pnpm analyze:ticket-selector-strategies  # 券種セレクター検証（月次程度でOK）"
+  ],
+  "humanSummary": {
+    "doNow": [
+      "監視 3点セットを定期実行する",
+      "条件B forward n=167。n=200到達後に top2除外ROI ≥ 100% を確認する",
+      "⚠️ 直近3ヶ月 0hit 継続中。降格ラインに注意"
+    ],
+    "doNotDo": [
+      "app_settings / 本番 decision ロジックを変更する",
+      "新しい ROI 候補を探索する（今は不要）",
+      "条件別セレクター・複数点買いを採用する",
+      "拡連複を採用する",
+      "住之江系（n<30）を採用する"
+    ],
+    "nextTrigger": "条件B forward n が 167 から 200 に到達したとき（あと 33 件）"
+  }
+}
