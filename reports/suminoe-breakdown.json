@@ -1,0 +1,587 @@
+{
+  "generatedAt": "2026-06-09T01:11:15.338Z",
+  "baseline": {
+    "n": 4401,
+    "roi": 100.79
+  },
+  "suminoeAll": {
+    "label": "住之江 全体",
+    "n": 207,
+    "hits": 4,
+    "hitRate": 1.93,
+    "roi": 65.22,
+    "warning": ""
+  },
+  "withoutSuminoe": {
+    "label": "住之江除外後残存",
+    "n": 4194,
+    "hits": 105,
+    "hitRate": 2.5,
+    "roi": 102.55,
+    "warning": ""
+  },
+  "roiImprovement": 1.76,
+  "oddsBands": [
+    {
+      "label": "住之江 odds 25〜39",
+      "n": 110,
+      "hits": 4,
+      "hitRate": 3.64,
+      "roi": 122.73,
+      "warning": ""
+    },
+    {
+      "label": "住之江 odds 40〜49",
+      "n": 59,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": ""
+    },
+    {
+      "label": "住之江 odds 50〜59",
+      "n": 27,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": ""
+    },
+    {
+      "label": "住之江 odds 60〜69",
+      "n": 9,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": ""
+    },
+    {
+      "label": "住之江 odds 70〜79",
+      "n": 2,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": ""
+    },
+    {
+      "label": "住之江 odds 80以上",
+      "n": 0,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": ""
+    }
+  ],
+  "raceNoStats": [
+    {
+      "label": "住之江 1R",
+      "n": 12,
+      "hits": 1,
+      "hitRate": 8.33,
+      "roi": 289.17,
+      "warning": ""
+    },
+    {
+      "label": "住之江 2R",
+      "n": 21,
+      "hits": 1,
+      "hitRate": 4.76,
+      "roi": 149.05,
+      "warning": ""
+    },
+    {
+      "label": "住之江 3R",
+      "n": 29,
+      "hits": 1,
+      "hitRate": 3.45,
+      "roi": 104.48,
+      "warning": ""
+    },
+    {
+      "label": "住之江 4R",
+      "n": 20,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": ""
+    },
+    {
+      "label": "住之江 5R",
+      "n": 30,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": ""
+    },
+    {
+      "label": "住之江 6R",
+      "n": 34,
+      "hits": 1,
+      "hitRate": 2.94,
+      "roi": 113.82,
+      "warning": ""
+    },
+    {
+      "label": "住之江 7R",
+      "n": 27,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": ""
+    },
+    {
+      "label": "住之江 8R",
+      "n": 17,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": ""
+    },
+    {
+      "label": "住之江 9R",
+      "n": 17,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": ""
+    }
+  ],
+  "selectionStats": [
+    {
+      "selection": "1-2-3",
+      "n": 207,
+      "hits": 4,
+      "share": 100,
+      "roi": 65.22
+    }
+  ],
+  "sel123": {
+    "label": "住之江 selection=1-2-3",
+    "n": 207,
+    "hits": 4,
+    "hitRate": 1.93,
+    "roi": 65.22,
+    "warning": ""
+  },
+  "selOther": {
+    "label": "住之江 selection≠1-2-3",
+    "n": 0,
+    "hits": 0,
+    "hitRate": 0,
+    "roi": 0,
+    "warning": ""
+  },
+  "exhibitionGroups": [
+    {
+      "label": "住之江 展示データなし（1着候補）",
+      "n": 0,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": ""
+    },
+    {
+      "label": "住之江 展示タイム1位（1着候補）",
+      "n": 47,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": ""
+    },
+    {
+      "label": "住之江 展示タイム2〜3位（1着候補）",
+      "n": 85,
+      "hits": 2,
+      "hitRate": 2.35,
+      "roi": 81.18,
+      "warning": ""
+    },
+    {
+      "label": "住之江 展示タイム4位以下（1着候補）",
+      "n": 75,
+      "hits": 2,
+      "hitRate": 2.67,
+      "roi": 88,
+      "warning": ""
+    }
+  ],
+  "stGroups": [
+    {
+      "label": "住之江 ST < 0.15（早い）",
+      "n": 99,
+      "hits": 2,
+      "hitRate": 2.02,
+      "roi": 74.14,
+      "warning": ""
+    },
+    {
+      "label": "住之江 ST 0.15〜0.20",
+      "n": 23,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": ""
+    },
+    {
+      "label": "住之江 ST 0.20以上（遅い）",
+      "n": 36,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": ""
+    },
+    {
+      "label": "住之江 STデータなし",
+      "n": 49,
+      "hits": 2,
+      "hitRate": 4.08,
+      "roi": 125.71,
+      "warning": ""
+    }
+  ],
+  "windGroups": [
+    {
+      "label": "住之江 風速データなし",
+      "n": 0,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": ""
+    },
+    {
+      "label": "住之江 風速 0〜2m/s",
+      "n": 105,
+      "hits": 3,
+      "hitRate": 2.86,
+      "roi": 99.71,
+      "warning": ""
+    },
+    {
+      "label": "住之江 風速 2〜4m/s",
+      "n": 83,
+      "hits": 1,
+      "hitRate": 1.2,
+      "roi": 36.51,
+      "warning": ""
+    },
+    {
+      "label": "住之江 風速 4m/s以上",
+      "n": 19,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": ""
+    },
+    {
+      "label": "住之江 安定板あり",
+      "n": 2,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": ""
+    },
+    {
+      "label": "住之江 安定板なし",
+      "n": 205,
+      "hits": 4,
+      "hitRate": 1.95,
+      "roi": 65.85,
+      "warning": ""
+    }
+  ],
+  "courseGroups": [
+    {
+      "label": "住之江 1着候補 進入1コース",
+      "n": 204,
+      "hits": 4,
+      "hitRate": 1.96,
+      "roi": 66.18,
+      "warning": ""
+    },
+    {
+      "label": "住之江 1着候補 進入2コース",
+      "n": 3,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": ""
+    },
+    {
+      "label": "住之江 1着候補 進入3コース以上",
+      "n": 0,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": ""
+    }
+  ],
+  "crossStats": [
+    {
+      "label": "住之江 × odds>=80",
+      "n": 0,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": "",
+      "condition": "住之江 × odds>=80"
+    },
+    {
+      "label": "住之江 × odds 70〜79",
+      "n": 2,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": "",
+      "condition": "住之江 × odds 70〜79"
+    },
+    {
+      "label": "住之江 × odds 60〜69",
+      "n": 9,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": "",
+      "condition": "住之江 × odds 60〜69"
+    },
+    {
+      "label": "住之江 × odds < 60",
+      "n": 196,
+      "hits": 4,
+      "hitRate": 2.04,
+      "roi": 68.88,
+      "warning": "",
+      "condition": "住之江 × odds < 60"
+    },
+    {
+      "label": "住之江 × 2R",
+      "n": 21,
+      "hits": 1,
+      "hitRate": 4.76,
+      "roi": 149.05,
+      "warning": "",
+      "condition": "住之江 × 2R"
+    },
+    {
+      "label": "住之江 × 5R",
+      "n": 30,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": "",
+      "condition": "住之江 × 5R"
+    },
+    {
+      "label": "住之江 × 1R",
+      "n": 12,
+      "hits": 1,
+      "hitRate": 8.33,
+      "roi": 289.17,
+      "warning": "",
+      "condition": "住之江 × 1R"
+    },
+    {
+      "label": "住之江 × 3R",
+      "n": 29,
+      "hits": 1,
+      "hitRate": 3.45,
+      "roi": 104.48,
+      "warning": "",
+      "condition": "住之江 × 3R"
+    },
+    {
+      "label": "住之江 × 展示タイム1位",
+      "n": 47,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": "",
+      "condition": "住之江 × 展示タイム1位"
+    },
+    {
+      "label": "住之江 × 1-2-3",
+      "n": 207,
+      "hits": 4,
+      "hitRate": 1.93,
+      "roi": 65.22,
+      "warning": "",
+      "condition": "住之江 × 1-2-3"
+    },
+    {
+      "label": "住之江 × odds>=80 × 1-2-3",
+      "n": 0,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": "",
+      "condition": "住之江 × odds>=80 × 1-2-3"
+    },
+    {
+      "label": "住之江 × odds<60 × 1-2-3",
+      "n": 196,
+      "hits": 4,
+      "hitRate": 2.04,
+      "roi": 68.88,
+      "warning": "",
+      "condition": "住之江 × odds<60 × 1-2-3"
+    }
+  ],
+  "paperForward": [
+    {
+      "label": "住之江 odds 40〜49",
+      "n": 59,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": "",
+      "group": "オッズ帯"
+    },
+    {
+      "label": "住之江 5R",
+      "n": 30,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": "",
+      "group": "race_no"
+    },
+    {
+      "label": "住之江 展示タイム1位（1着候補）",
+      "n": 47,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": "",
+      "group": "展示タイム"
+    },
+    {
+      "label": "住之江 ST < 0.15（早い）",
+      "n": 99,
+      "hits": 2,
+      "hitRate": 2.02,
+      "roi": 74.14,
+      "warning": "",
+      "group": "展示ST"
+    },
+    {
+      "label": "住之江 ST 0.20以上（遅い）",
+      "n": 36,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": "",
+      "group": "展示ST"
+    },
+    {
+      "label": "住之江 風速 2〜4m/s",
+      "n": 83,
+      "hits": 1,
+      "hitRate": 1.2,
+      "roi": 36.51,
+      "warning": "",
+      "group": "風速"
+    }
+  ],
+  "needsCheck": [
+    {
+      "label": "住之江 odds 50〜59",
+      "n": 27,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": "",
+      "group": "オッズ帯"
+    },
+    {
+      "label": "住之江 4R",
+      "n": 20,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": "",
+      "group": "race_no"
+    },
+    {
+      "label": "住之江 7R",
+      "n": 27,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": "",
+      "group": "race_no"
+    },
+    {
+      "label": "住之江 展示タイム2〜3位（1着候補）",
+      "n": 85,
+      "hits": 2,
+      "hitRate": 2.35,
+      "roi": 81.18,
+      "warning": "",
+      "group": "展示タイム"
+    },
+    {
+      "label": "住之江 展示タイム4位以下（1着候補）",
+      "n": 75,
+      "hits": 2,
+      "hitRate": 2.67,
+      "roi": 88,
+      "warning": "",
+      "group": "展示タイム"
+    },
+    {
+      "label": "住之江 ST 0.15〜0.20",
+      "n": 23,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": "",
+      "group": "展示ST"
+    }
+  ],
+  "goodConditions": [
+    {
+      "label": "住之江 odds 25〜39",
+      "n": 110,
+      "hits": 4,
+      "hitRate": 3.64,
+      "roi": 122.73,
+      "warning": "",
+      "group": "オッズ帯"
+    },
+    {
+      "label": "住之江 2R",
+      "n": 21,
+      "hits": 1,
+      "hitRate": 4.76,
+      "roi": 149.05,
+      "warning": "",
+      "group": "race_no"
+    },
+    {
+      "label": "住之江 3R",
+      "n": 29,
+      "hits": 1,
+      "hitRate": 3.45,
+      "roi": 104.48,
+      "warning": "",
+      "group": "race_no"
+    },
+    {
+      "label": "住之江 6R",
+      "n": 34,
+      "hits": 1,
+      "hitRate": 2.94,
+      "roi": 113.82,
+      "warning": "",
+      "group": "race_no"
+    },
+    {
+      "label": "住之江 STデータなし",
+      "n": 49,
+      "hits": 2,
+      "hitRate": 4.08,
+      "roi": 125.71,
+      "warning": "",
+      "group": "展示ST"
+    }
+  ],
+  "finalVerdict": "条件付き除外推奨（ROI>=100の条件は残し、ROI<80の条件のみ除外候補）"
+}
