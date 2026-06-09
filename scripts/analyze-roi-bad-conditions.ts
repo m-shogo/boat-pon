@@ -56,6 +56,18 @@ function stat(label: string, where: string, warn = ""): GroupStat {
   };
 }
 
+// ─── データ品質チェック ───────────────────────────────────────────────────────
+const qualityCheck = db.prepare(`
+  SELECT COUNT(*) as total,
+    SUM(CASE WHEN current_odds IS NULL THEN 1 ELSE 0 END) as null_odds,
+    SUM(CASE WHEN result=selection AND current_odds IS NULL THEN 1 ELSE 0 END) as hit_null_odds
+  FROM decision_history dh
+  WHERE decision='BUY' AND run_kind='historical-backfill'
+    AND result IS NOT NULL AND result != ''
+    AND venue NOT IN (${EXCLUDED_VENUES.map(v=>`'${v}'`).join(",")})
+    AND race_no NOT IN (${EXCLUDED_RACE_NOS.join(",")})
+`).get() as { total: number; null_odds: number; hit_null_odds: number };
+
 // ─── ベースライン ─────────────────────────────────────────────────────────────
 const baseline = stat("ベースライン（除外後全体）", "");
 
@@ -296,8 +308,11 @@ DB: ${DB_PATH}
 | 的中数 | ${baseline.hits} |
 | 的中率 | ${pct(baseline.hitRate)} |
 | **ROI** | **${baseline.roi}%** |
+| current_odds NULL件数 | ${qualityCheck.null_odds} (total ${qualityCheck.total}件) |
+| 的中かつ odds NULL | ${qualityCheck.hit_null_odds} |
 
 > ※ 全件 (除外なし) ROI は約 80.4%。除外条件により +20pt 改善済み。
+> ※ current_odds NULL の行は stake に算入されるが return が 0 になるため、NULL件数が多い場合は ROI が過小評価される。
 
 ---
 
@@ -309,7 +324,11 @@ ${oddsBands.map(g =>
   `| ${g.label} | ${g.n} | ${g.hits} | ${pct(g.hitRate)} | **${g.roi}%** | ${g.warning} |`
 ).join("\n")}
 
-**示唆**: odds 70以上で ROI が大幅低下。除外候補として検討価値あり。
+**示唆**:
+- odds **70〜79 は ROI 121%台** で、帯単体では問題なし（むしろ上振れ）
+- odds **80以上で的中0件・ROI 0%** が全体を引き下げている
+- 「odds≥70」合算で ROI 84% に見えるのは 80以上 のゼロ寄与が原因
+- 除外候補は **odds≥80** であり、**odds≥70 全切りは 70〜79 の良い帯まで除外するため不適切**
 
 ---
 
@@ -384,8 +403,9 @@ ${selectionStats.map(s =>
   `| \`${s.selection}\` | ${s.n} | ${pct(s.share)} | ${s.hits} | **${s.roi}%** |`
 ).join("\n")}
 
-> **注意**: BUYの ${pct(selectionStats[0]?.share ?? 0)} が \`${selectionStats[0]?.selection ?? "-"}\` に集中している。
-> 過学習・selection多様性不足の可能性がある。
+> BUYの ${pct(selectionStats[0]?.share ?? 0)} が \`${selectionStats[0]?.selection ?? "-"}\` に集中。
+> **問題の本質は selection の多様性不足ではなく「1-2-3 の中で勝つ条件 / 負ける条件を分けられていないこと」**。
+> selectionを増やすより先に、1-2-3 × odds帯 / 展示タイム / 会場 の勝ち負け分解が次フェーズ。
 
 ---
 
@@ -426,16 +446,18 @@ ${exclusionCandidates.length > 0
   : "- 現時点では明確な単一条件除外候補なし"}
 
 ### 最重要所見
-- selection の **${pct(selectionStats[0]?.share ?? 0)} が \`${selectionStats[0]?.selection ?? "-"}\` に集中**しており、モデルの多様性が低い
-- odds 80以上: ROI 0%（${oddsBands.find(b=>b.label.includes("80以上"))?.n ?? "-"}件・的中0）
-- odds 70以上 合算: ROI ${exclusionCandidates.find(c=>c.condition==="odds >= 70")?.roi ?? "-"}%
-- 月次 ROI の分散が大きく、2024-02（0hits）・2025-07（31.76%）は構造的問題か確率的外れ値かを要確認
+1. **selection 97.7% が 1-2-3 に集中** — 問題は多様性不足ではなく「1-2-3 の中で勝ち負けを分けられていないこと」
+2. **odds 80以上: ROI 0%（${oddsBands.find(b=>b.label.includes("80以上"))?.n ?? "-"}件・的中0）** — 最もクリアな除外候補
+3. **odds 70〜79 は ROI 121%** — odds≥70 を一括除外するのは誤り。問題は 80以上のみ
+4. **展示タイム1位の ROI が低い（74.99%）** — 強さではなく「人気過剰による割高」の可能性。単独除外は危険
+5. **住之江: ROI 65.22%（207件）** — 除外効果が大きいが、会場単独除外前に odds帯/race_no/展示タイム×会場の分解が先
+6. **月次分散大** — 2024-02（0hits/166件）・2025-07（ROI 31.76%/227件）は原因別調査要
 
-### 次フェーズ推奨
-1. **odds 80以上の除外検討**（的中0件・ROI 0%）
-2. **selection 多様性の評価**（1-2-3 一辺倒の原因調査）
-3. **悪化月（2024-02/2025-07）の特定**（確率的外れ値 vs 構造的問題）
-4. **残存会場で ROI < 70% の会場の追加除外検討**
+### 次フェーズ推奨（優先順）
+1. **paper-forward で odds≥80 除外を検証** — n=56・ROI 0%・最もクリア。app_settings 変更前に forward観察
+2. **住之江の中身を分解** — 住之江×odds帯 / ×race_no / ×展示タイム で壊れている条件を特定してから会場全除外検討
+3. **1-2-3 の勝ち負け分解** — 1-2-3 × odds帯 / × 展示タイム順位 / × 風速 でROI差を可視化
+4. **悪化月の原因調査** — データ品質・会場偏り・オッズ帯偏りを確認
 `;
 
 if (!existsSync("reports")) mkdirSync("reports", { recursive: true });
