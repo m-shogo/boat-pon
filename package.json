@@ -140,7 +140,9 @@
     "analyze:roi-skip-interactions": "tsx scripts/analyze-roi-skip-interactions.ts",
     "analyze:roi-skip-policy": "tsx scripts/analyze-roi-skip-policy-simulation.ts",
     "analyze:roi-edge-market-gap": "tsx scripts/analyze-roi-edge-market-gap.ts",
-    "audit:alt-odds": "tsx scripts/audit-alternative-odds-coverage.ts"
+    "audit:alt-odds": "tsx scripts/audit-alternative-odds-coverage.ts",
+    "check:alt-odds-health": "tsx scripts/check-alternative-odds-timeseries-health.ts",
+    "audit:historical-closing-odds": "tsx scripts/audit-historical-closing-odds-availability.ts"
   },
   "engines": {
     "node": ">=24.0.0"
