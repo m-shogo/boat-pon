@@ -1,6 +1,6 @@
 # paper-forward 候補台帳（payout_yen 基準）
 
-生成日時: 2026-06-09T05:33:00.396Z
+生成日時: 2026-06-09T05:54:35.484Z
 DB: data/boat.sqlite
 
 > **禁止事項**: app_settings変更 / DBへの書き込み / 本番decisionロジック変更 / 自動投票

@@ -1,0 +1,210 @@
+{
+  "generatedAt": "2026-06-09T06:01:51.420Z",
+  "forwardStart": "2025-01-01",
+  "forwardEnd": "2026-06-09",
+  "recent3mCutoff": "2026-03-09",
+  "baseline": {
+    "n": 1522,
+    "hits": 39,
+    "roi": 87.12
+  },
+  "baselineExJul25": {
+    "n": 1296,
+    "roi": 98.41
+  },
+  "candidates": [
+    {
+      "id": "jul25",
+      "name": "2025-07",
+      "finalVerdict": "⚠️ 後付き月別フィルター — 運用不可",
+      "skipDelta": 11.29,
+      "deltaExJul25": 0,
+      "excludedN": 226,
+      "excludedRoi": 22.35,
+      "remainingRoi": 98.41,
+      "jackpotRatio": 62.77,
+      "jul25Pct": 100,
+      "verdicts": []
+    },
+    {
+      "id": "r6",
+      "name": "6R",
+      "finalVerdict": "🟢 有力見送り候補",
+      "skipDelta": 10.83,
+      "deltaExJul25": 11.68,
+      "excludedN": 215,
+      "excludedRoi": 21.26,
+      "remainingRoi": 97.95,
+      "jackpotRatio": 78.12,
+      "jul25Pct": 16.74,
+      "verdicts": [
+        "🟢 2025-07外でも効果あり (delta=11.68pt)",
+        "⚠️ 高配当1件依存(jackpot=78.12%) — top2除外でROIほぼゼロ",
+        "🟢 月別: 9/11ヶ月でROI<50% (横断的弱さ)"
+      ]
+    },
+    {
+      "id": "r5",
+      "name": "5R",
+      "finalVerdict": "🟢 有力見送り候補",
+      "skipDelta": 4.49,
+      "deltaExJul25": 4.86,
+      "excludedN": 184,
+      "excludedRoi": 54.46,
+      "remainingRoi": 91.61,
+      "jackpotRatio": 35.23,
+      "jul25Pct": 14.13,
+      "verdicts": [
+        "🟢 2025-07外でも効果あり (delta=4.86pt)",
+        "🟢 月別: 8/11ヶ月でROI<50% (横断的弱さ)"
+      ]
+    },
+    {
+      "id": "r2",
+      "name": "2R",
+      "finalVerdict": "🟢 有力見送り候補",
+      "skipDelta": 4.45,
+      "deltaExJul25": 4.57,
+      "excludedN": 169,
+      "excludedRoi": 51.48,
+      "remainingRoi": 91.57,
+      "jackpotRatio": 44.6,
+      "jul25Pct": 15.98,
+      "verdicts": [
+        "🟢 2025-07外でも効果あり (delta=4.57pt)",
+        "🟢 月別: 8/10ヶ月でROI<50% (横断的弱さ)"
+      ]
+    },
+    {
+      "id": "hamanako",
+      "name": "浜名湖",
+      "finalVerdict": "🔴 forward 0hit → 有力見送り候補",
+      "skipDelta": 5.02,
+      "deltaExJul25": 5.37,
+      "excludedN": 83,
+      "excludedRoi": 0,
+      "remainingRoi": 92.14,
+      "jackpotRatio": 0,
+      "jul25Pct": 19.28,
+      "verdicts": [
+        "🟢 2025-07外でも効果あり (delta=5.37pt)",
+        "🟢 月別: 10/10ヶ月でROI<50% (横断的弱さ)",
+        "🔶 forward期間 0hit",
+        "⚠️ 候補内67.47%がodds40〜79 (odds帯効果と混在の可能性)"
+      ]
+    },
+    {
+      "id": "suminoe",
+      "name": "住之江",
+      "finalVerdict": "🔴 forward 0hit → 有力見送り候補",
+      "skipDelta": 4.57,
+      "deltaExJul25": 5.03,
+      "excludedN": 76,
+      "excludedRoi": 0,
+      "remainingRoi": 91.69,
+      "jackpotRatio": 0,
+      "jul25Pct": 17.11,
+      "verdicts": [
+        "🟢 2025-07外でも効果あり (delta=5.03pt)",
+        "🟢 月別: 8/8ヶ月でROI<50% (横断的弱さ)",
+        "🔶 forward期間 0hit"
+      ]
+    },
+    {
+      "id": "odds4079",
+      "name": "odds40〜79",
+      "finalVerdict": "🔵 monitor継続",
+      "skipDelta": 4.34,
+      "deltaExJul25": 6.04,
+      "excludedN": 817,
+      "excludedRoi": 83.37,
+      "remainingRoi": 91.46,
+      "jackpotRatio": 8.85,
+      "jul25Pct": 13.22,
+      "verdicts": [
+        "🟢 2025-07外でも効果あり (delta=6.04pt)",
+        "⚪ 月別: 4/11ヶ月でROI<50%"
+      ]
+    },
+    {
+      "id": "condB",
+      "name": "条件B重複",
+      "finalVerdict": "🔵 monitor継続",
+      "skipDelta": 2.65,
+      "deltaExJul25": 1.84,
+      "excludedN": 167,
+      "excludedRoi": 65.57,
+      "remainingRoi": 89.77,
+      "jackpotRatio": 40.46,
+      "jul25Pct": 20.36,
+      "verdicts": [
+        "🟢 月別: 7/10ヶ月でROI<50% (横断的弱さ)"
+      ]
+    }
+  ],
+  "combos": [
+    {
+      "id": "A",
+      "name": "odds40〜79",
+      "excludedN": 817,
+      "excludedPct": 53.68,
+      "remainingRoi": 91.46,
+      "delta": 4.34,
+      "deltaExJul25": 6.04
+    },
+    {
+      "id": "B",
+      "name": "浜名湖+住之江",
+      "excludedN": 159,
+      "excludedPct": 10.45,
+      "remainingRoi": 97.28,
+      "delta": 10.16,
+      "deltaExJul25": 10.97
+    },
+    {
+      "id": "C",
+      "name": "2R+5R+6R",
+      "excludedN": 568,
+      "excludedPct": 37.32,
+      "remainingRoi": 114.57,
+      "delta": 27.45,
+      "deltaExJul25": 29.19
+    },
+    {
+      "id": "D",
+      "name": "odds40〜79+浜名湖+住之江",
+      "excludedN": 885,
+      "excludedPct": 58.15,
+      "remainingRoi": 101.22,
+      "delta": 14.1,
+      "deltaExJul25": 16.62
+    },
+    {
+      "id": "E",
+      "name": "odds40〜79+2R+5R+6R",
+      "excludedN": 1080,
+      "excludedPct": 70.96,
+      "remainingRoi": 114.32,
+      "delta": 27.2,
+      "deltaExJul25": 28.9
+    },
+    {
+      "id": "F",
+      "name": "全候補(2025-07除く)",
+      "excludedN": 1167,
+      "excludedPct": 76.68,
+      "remainingRoi": 123.97,
+      "delta": 36.85,
+      "deltaExJul25": 38.64
+    },
+    {
+      "id": "G",
+      "name": "全候補合計",
+      "excludedN": 1224,
+      "excludedPct": 80.42,
+      "remainingRoi": 137.05,
+      "delta": 49.93,
+      "deltaExJul25": 38.64
+    }
+  ]
+}
