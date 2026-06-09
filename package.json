@@ -138,7 +138,8 @@
     "analyze:roi-skip-filters": "tsx scripts/analyze-roi-mechanism-skip-filters.ts",
     "analyze:roi-skip-robustness": "tsx scripts/analyze-roi-skip-filter-robustness.ts",
     "analyze:roi-skip-interactions": "tsx scripts/analyze-roi-skip-interactions.ts",
-    "analyze:roi-skip-policy": "tsx scripts/analyze-roi-skip-policy-simulation.ts"
+    "analyze:roi-skip-policy": "tsx scripts/analyze-roi-skip-policy-simulation.ts",
+    "analyze:roi-edge-market-gap": "tsx scripts/analyze-roi-edge-market-gap.ts"
   },
   "engines": {
     "node": ">=24.0.0"
