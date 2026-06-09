@@ -1,0 +1,485 @@
+{
+  "generatedAt": "2026-06-09T02:20:44.888Z",
+  "results": [
+    {
+      "id": "all",
+      "label": "A. 全体 1-2-3",
+      "n": 4301,
+      "coverageRate": 100,
+      "trifecta123": {
+        "totalReturn": 371150,
+        "roi": 86.29
+      },
+      "trio123": {
+        "totalReturn": 337100,
+        "roi": 78.38
+      },
+      "exacta12": {
+        "totalReturn": 335060,
+        "roi": 77.9
+      },
+      "quinella12": {
+        "totalReturn": 346240,
+        "roi": 80.5
+      },
+      "wide12": {
+        "totalReturn": 158410,
+        "roi": 36.83
+      },
+      "trifecta132": {
+        "totalReturn": 369110,
+        "roi": 85.82
+      },
+      "exacta13": {
+        "totalReturn": 303280,
+        "roi": 70.51
+      },
+      "quinella13": {
+        "totalReturn": 324980,
+        "roi": 75.56
+      },
+      "bestBet": "3連単1-2-3",
+      "verdict": "現行維持"
+    },
+    {
+      "id": "exh1_fastest",
+      "label": "B. 1号艇展示タイム1位（最速）",
+      "n": 1031,
+      "coverageRate": 100,
+      "trifecta123": {
+        "totalReturn": 60040,
+        "roi": 58.23
+      },
+      "trio123": {
+        "totalReturn": 65410,
+        "roi": 63.44
+      },
+      "exacta12": {
+        "totalReturn": 67680,
+        "roi": 65.65
+      },
+      "quinella12": {
+        "totalReturn": 70800,
+        "roi": 68.67
+      },
+      "wide12": {
+        "totalReturn": 33180,
+        "roi": 32.18
+      },
+      "trifecta132": {
+        "totalReturn": 100170,
+        "roi": 97.16
+      },
+      "exacta13": {
+        "totalReturn": 86640,
+        "roi": 84.03
+      },
+      "quinella13": {
+        "totalReturn": 82870,
+        "roi": 80.38
+      },
+      "bestBet": "3連単1-3-2",
+      "verdict": "要追加確認"
+    },
+    {
+      "id": "exh1_rank23",
+      "label": "C. 1号艇展示タイム2〜3位",
+      "n": 1603,
+      "coverageRate": 100,
+      "trifecta123": {
+        "totalReturn": 154750,
+        "roi": 96.54
+      },
+      "trio123": {
+        "totalReturn": 132500,
+        "roi": 82.66
+      },
+      "exacta12": {
+        "totalReturn": 132950,
+        "roi": 82.94
+      },
+      "quinella12": {
+        "totalReturn": 131890,
+        "roi": 82.28
+      },
+      "wide12": {
+        "totalReturn": 59280,
+        "roi": 36.98
+      },
+      "trifecta132": {
+        "totalReturn": 143000,
+        "roi": 89.21
+      },
+      "exacta13": {
+        "totalReturn": 117780,
+        "roi": 73.47
+      },
+      "quinella13": {
+        "totalReturn": 128700,
+        "roi": 80.29
+      },
+      "bestBet": "3連単1-2-3",
+      "verdict": "現行維持"
+    },
+    {
+      "id": "exh1_rank4p",
+      "label": "D. 1号艇展示タイム4位以下",
+      "n": 1637,
+      "coverageRate": 100,
+      "trifecta123": {
+        "totalReturn": 154690,
+        "roi": 94.5
+      },
+      "trio123": {
+        "totalReturn": 137440,
+        "roi": 83.96
+      },
+      "exacta12": {
+        "totalReturn": 131300,
+        "roi": 80.21
+      },
+      "quinella12": {
+        "totalReturn": 141720,
+        "roi": 86.57
+      },
+      "wide12": {
+        "totalReturn": 64890,
+        "roi": 39.64
+      },
+      "trifecta132": {
+        "totalReturn": 124210,
+        "roi": 75.88
+      },
+      "exacta13": {
+        "totalReturn": 96660,
+        "roi": 59.05
+      },
+      "quinella13": {
+        "totalReturn": 111860,
+        "roi": 68.33
+      },
+      "bestBet": "3連単1-2-3",
+      "verdict": "現行維持"
+    },
+    {
+      "id": "race5",
+      "label": "E. 5R",
+      "n": 503,
+      "coverageRate": 100,
+      "trifecta123": {
+        "totalReturn": 31220,
+        "roi": 62.07
+      },
+      "trio123": {
+        "totalReturn": 31420,
+        "roi": 62.47
+      },
+      "exacta12": {
+        "totalReturn": 32310,
+        "roi": 64.23
+      },
+      "quinella12": {
+        "totalReturn": 37470,
+        "roi": 74.49
+      },
+      "wide12": {
+        "totalReturn": 15640,
+        "roi": 31.09
+      },
+      "trifecta132": {
+        "totalReturn": 38060,
+        "roi": 75.67
+      },
+      "exacta13": {
+        "totalReturn": 40710,
+        "roi": 80.93
+      },
+      "quinella13": {
+        "totalReturn": 41340,
+        "roi": 82.19
+      },
+      "bestBet": "2連複1-3",
+      "verdict": "除外候補"
+    },
+    {
+      "id": "odds80p",
+      "label": "F. odds 80以上",
+      "n": 49,
+      "coverageRate": 100,
+      "trifecta123": {
+        "totalReturn": 0,
+        "roi": 0
+      },
+      "trio123": {
+        "totalReturn": 3020,
+        "roi": 61.63
+      },
+      "exacta12": {
+        "totalReturn": 2590,
+        "roi": 52.86
+      },
+      "quinella12": {
+        "totalReturn": 1460,
+        "roi": 29.8
+      },
+      "wide12": {
+        "totalReturn": 520,
+        "roi": 10.61
+      },
+      "trifecta132": {
+        "totalReturn": 0,
+        "roi": 0
+      },
+      "exacta13": {
+        "totalReturn": 2570,
+        "roi": 52.45
+      },
+      "quinella13": {
+        "totalReturn": 3250,
+        "roi": 66.33
+      },
+      "bestBet": "2連複1-3",
+      "verdict": "除外候補"
+    },
+    {
+      "id": "boat2_faster",
+      "label": "G. 2号艇が3号艇より展示速い（1-2-3有利）",
+      "n": 2005,
+      "coverageRate": 100,
+      "trifecta123": {
+        "totalReturn": 198350,
+        "roi": 98.93
+      },
+      "trio123": {
+        "totalReturn": 161640,
+        "roi": 80.62
+      },
+      "exacta12": {
+        "totalReturn": 167930,
+        "roi": 83.76
+      },
+      "quinella12": {
+        "totalReturn": 174580,
+        "roi": 87.07
+      },
+      "wide12": {
+        "totalReturn": 82250,
+        "roi": 41.02
+      },
+      "trifecta132": {
+        "totalReturn": 165880,
+        "roi": 82.73
+      },
+      "exacta13": {
+        "totalReturn": 130610,
+        "roi": 65.14
+      },
+      "quinella13": {
+        "totalReturn": 140890,
+        "roi": 70.27
+      },
+      "bestBet": "3連単1-2-3",
+      "verdict": "現行維持"
+    },
+    {
+      "id": "boat3_faster",
+      "label": "H. 3号艇が2号艇より展示速い（1-3-2リスク）",
+      "n": 1980,
+      "coverageRate": 100,
+      "trifecta123": {
+        "totalReturn": 156930,
+        "roi": 79.26
+      },
+      "trio123": {
+        "totalReturn": 160360,
+        "roi": 80.99
+      },
+      "exacta12": {
+        "totalReturn": 140770,
+        "roi": 71.1
+      },
+      "quinella12": {
+        "totalReturn": 148570,
+        "roi": 75.04
+      },
+      "wide12": {
+        "totalReturn": 64780,
+        "roi": 32.72
+      },
+      "trifecta132": {
+        "totalReturn": 181320,
+        "roi": 91.58
+      },
+      "exacta13": {
+        "totalReturn": 145860,
+        "roi": 73.67
+      },
+      "quinella13": {
+        "totalReturn": 159410,
+        "roi": 80.51
+      },
+      "bestBet": "3連単1-3-2",
+      "verdict": "要追加確認"
+    },
+    {
+      "id": "wind24",
+      "label": "I. 風速 2〜4m/s",
+      "n": 2099,
+      "coverageRate": 100,
+      "trifecta123": {
+        "totalReturn": 168830,
+        "roi": 80.43
+      },
+      "trio123": {
+        "totalReturn": 155570,
+        "roi": 74.12
+      },
+      "exacta12": {
+        "totalReturn": 159210,
+        "roi": 75.85
+      },
+      "quinella12": {
+        "totalReturn": 170130,
+        "roi": 81.05
+      },
+      "wide12": {
+        "totalReturn": 75060,
+        "roi": 35.76
+      },
+      "trifecta132": {
+        "totalReturn": 154990,
+        "roi": 73.84
+      },
+      "exacta13": {
+        "totalReturn": 129130,
+        "roi": 61.52
+      },
+      "quinella13": {
+        "totalReturn": 148650,
+        "roi": 70.82
+      },
+      "bestBet": "2連複1-2",
+      "verdict": "除外候補"
+    },
+    {
+      "id": "wind24_exh1",
+      "label": "J. 風速2〜4m/s × 1号艇展示1位",
+      "n": 488,
+      "coverageRate": 100,
+      "trifecta123": {
+        "totalReturn": 18120,
+        "roi": 37.13
+      },
+      "trio123": {
+        "totalReturn": 27570,
+        "roi": 56.5
+      },
+      "exacta12": {
+        "totalReturn": 29370,
+        "roi": 60.18
+      },
+      "quinella12": {
+        "totalReturn": 32160,
+        "roi": 65.9
+      },
+      "wide12": {
+        "totalReturn": 15270,
+        "roi": 31.29
+      },
+      "trifecta132": {
+        "totalReturn": 50360,
+        "roi": 103.2
+      },
+      "exacta13": {
+        "totalReturn": 43230,
+        "roi": 88.59
+      },
+      "quinella13": {
+        "totalReturn": 40930,
+        "roi": 83.87
+      },
+      "bestBet": "3連単1-3-2",
+      "verdict": "switch候補"
+    },
+    {
+      "id": "suminoe_o40",
+      "label": "K. 住之江 × odds 40〜49",
+      "n": 59,
+      "coverageRate": 100,
+      "trifecta123": {
+        "totalReturn": 0,
+        "roi": 0
+      },
+      "trio123": {
+        "totalReturn": 3120,
+        "roi": 52.88
+      },
+      "exacta12": {
+        "totalReturn": 2670,
+        "roi": 45.25
+      },
+      "quinella12": {
+        "totalReturn": 5360,
+        "roi": 90.85
+      },
+      "wide12": {
+        "totalReturn": 2180,
+        "roi": 36.95
+      },
+      "trifecta132": {
+        "totalReturn": 9940,
+        "roi": 168.47
+      },
+      "exacta13": {
+        "totalReturn": 6150,
+        "roi": 104.24
+      },
+      "quinella13": {
+        "totalReturn": 5070,
+        "roi": 85.93
+      },
+      "bestBet": "3連単1-3-2",
+      "verdict": "switch候補"
+    },
+    {
+      "id": "suminoe_exh1",
+      "label": "L. 住之江 × 1号艇展示1位",
+      "n": 47,
+      "coverageRate": 100,
+      "trifecta123": {
+        "totalReturn": 0,
+        "roi": 0
+      },
+      "trio123": {
+        "totalReturn": 4590,
+        "roi": 97.66
+      },
+      "exacta12": {
+        "totalReturn": 3050,
+        "roi": 64.89
+      },
+      "quinella12": {
+        "totalReturn": 3120,
+        "roi": 66.38
+      },
+      "wide12": {
+        "totalReturn": 1740,
+        "roi": 37.02
+      },
+      "trifecta132": {
+        "totalReturn": 9940,
+        "roi": 211.49
+      },
+      "exacta13": {
+        "totalReturn": 5670,
+        "roi": 120.64
+      },
+      "quinella13": {
+        "totalReturn": 5670,
+        "roi": 120.64
+      },
+      "bestBet": "3連単1-3-2",
+      "verdict": "switch候補"
+    }
+  ]
+}
