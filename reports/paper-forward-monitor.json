@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-09T03:15:56.121Z",
+  "generatedAt": "2026-06-09T03:46:41.094Z",
   "forwardStart": "2025-01-01",
   "baseline": {
     "train": {
@@ -45,7 +45,13 @@
         "nConf": "継続/降格判断(n≥100)"
       },
       "verdict": "strong",
-      "trend": "forward急伸"
+      "trend": "forward急伸",
+      "upgradeCheck": {
+        "top2ExclRoi": 91.08,
+        "recentZeroMonths": 3,
+        "upgradeVerdict": "格上げ待ち(n不足)",
+        "nToUpgrade": 33
+      }
     },
     {
       "id": "sw_suminoe_o40",
@@ -76,7 +82,13 @@
         "nConf": "判定不可(n<30)"
       },
       "verdict": "data-insufficient",
-      "trend": "データ不足"
+      "trend": "データ不足",
+      "upgradeCheck": {
+        "top2ExclRoi": 0,
+        "recentZeroMonths": 3,
+        "upgradeVerdict": "判定不可(n<30)",
+        "nToUpgrade": 177
+      }
     },
     {
       "id": "sw_suminoe_exh1",
@@ -107,7 +119,13 @@
         "nConf": "判定不可(n<30)"
       },
       "verdict": "data-insufficient",
-      "trend": "データ不足"
+      "trend": "データ不足",
+      "upgradeCheck": {
+        "top2ExclRoi": 0,
+        "recentZeroMonths": 3,
+        "upgradeVerdict": "判定不可(n<30)",
+        "nToUpgrade": 182
+      }
     },
     {
       "id": "sw_suminoe_r5",
@@ -138,7 +156,13 @@
         "nConf": "判定不可(n<30)"
       },
       "verdict": "data-insufficient",
-      "trend": "データ不足"
+      "trend": "データ不足",
+      "upgradeCheck": {
+        "top2ExclRoi": 0,
+        "recentZeroMonths": 3,
+        "upgradeVerdict": "判定不可(n<30)",
+        "nToUpgrade": 190
+      }
     }
   ],
   "exclMonitors": [

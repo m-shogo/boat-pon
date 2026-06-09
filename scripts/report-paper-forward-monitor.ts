@@ -80,6 +80,22 @@ type MilestoneStatus = {
   nConf: string;
 };
 
+type UpgradeVerdict =
+  | "格上げ候補"
+  | "格上げ待ち(n不足)"
+  | "格上げ待ち(2件除外ROI不足)"
+  | "格上げ待ち(直近失速)"
+  | "降格候補"
+  | "観察継続"
+  | "判定不可(n<30)";
+
+type UpgradeCheck = {
+  top2ExclRoi: number;
+  recentZeroMonths: number;
+  upgradeVerdict: UpgradeVerdict;
+  nToUpgrade: number;
+};
+
 type SwitchMonitor = {
   id: string;
   label: string;
@@ -90,6 +106,7 @@ type SwitchMonitor = {
   milestone: MilestoneStatus;
   verdict: "strong" | "watch" | "weak-watch" | "reject" | "data-insufficient";
   trend: "再現" | "forward急伸" | "方向一致" | "弱い" | "逆転" | "データ不足";
+  upgradeCheck: UpgradeCheck;
 };
 
 type ExcludeMonitor = {
@@ -156,6 +173,60 @@ function exclTrend(trainResidual: number, fwdImprov: number, fwdN: number): Excl
   if (fwdImprov > 0) return "方向一致";
   if (fwdImprov > -5) return "弱い";
   return "逆転";
+}
+
+// ─── 格上げ判定 ──────────────────────────────────────────────────────────────
+
+const UPGRADE_N_THRESHOLD = 200;
+
+function computeUpgradeCheck(
+  baseWhere: string, where: string, selFilter: string
+): UpgradeCheck {
+  const selW = selFilter ? `AND ${selFilter}` : "";
+  const condW = where ? `AND (${where})` : "";
+
+  // forward全件の 1-3-2 payout を降順取得（最大払戻除外用）
+  const allPr132 = db.prepare(`
+    SELECT COALESCE((SELECT rp.payout_yen FROM race_payouts rp
+      WHERE rp.race_id=dh.race_id AND rp.bet_type='trifecta' AND rp.combination='1-3-2' LIMIT 1), 0) as pr132
+    FROM decision_history dh
+    WHERE ${baseWhere} ${selW} ${condW}
+    ORDER BY pr132 DESC
+  `).all().map(r => (r as { pr132: number }).pr132);
+
+  const n = allPr132.length;
+  const stake = n * STAKE;
+  const total = allPr132.reduce((a, b) => a + b, 0);
+  const roi = (s: number) => stake > 0 ? r100(s / stake * 100) : 0;
+  const top2ExclRoi = roi(total - (allPr132[0] ?? 0) - (allPr132[1] ?? 0));
+
+  // 直近3ヶ月のゼロ月数
+  const recentMonths = db.prepare(`
+    SELECT substr(dh.date,1,7) as month,
+      SUM(COALESCE((SELECT rp.payout_yen FROM race_payouts rp
+        WHERE rp.race_id=dh.race_id AND rp.bet_type='trifecta' AND rp.combination='1-3-2' LIMIT 1), 0)) as pr132
+    FROM decision_history dh
+    WHERE ${baseWhere} ${selW} ${condW}
+    GROUP BY month ORDER BY month DESC LIMIT 3
+  `).all() as { month: string; pr132: number }[];
+  const recentZeroMonths = recentMonths.filter(m => (m.pr132 ?? 0) === 0).length;
+
+  let upgradeVerdict: UpgradeVerdict;
+  if (n < 30) {
+    upgradeVerdict = "判定不可(n<30)";
+  } else if (n < UPGRADE_N_THRESHOLD) {
+    upgradeVerdict = "格上げ待ち(n不足)";
+  } else if (top2ExclRoi < 95) {
+    upgradeVerdict = recentZeroMonths >= 3 ? "降格候補" : "格上げ待ち(2件除外ROI不足)";
+  } else if (recentZeroMonths >= 3) {
+    upgradeVerdict = "格上げ待ち(直近失速)";
+  } else if (top2ExclRoi >= 100) {
+    upgradeVerdict = "格上げ候補";
+  } else {
+    upgradeVerdict = "観察継続";
+  }
+
+  return { top2ExclRoi, recentZeroMonths, upgradeVerdict, nToUpgrade: Math.max(0, UPGRADE_N_THRESHOLD - n) };
 }
 
 function querySwitchBoth(baseWhere: string, where: string, selFilter = ""): SwitchPeriodStat {
@@ -229,8 +300,9 @@ for (const d of SWITCH_DEFS) {
   const milestone = milestoneStatus(fwd.n);
   const verdict = switchVerdict(fwd, fwd.n);
   const trend = switchTrend(train, fwd, fwd.n);
-  switchMonitors.push({ id: d.id, label: d.label, from: "3連単1-2-3", to: "3連単1-3-2", train, forward: fwd, milestone, verdict, trend });
-  console.log(`  ${d.label}: fwd n=${fwd.n} payout1-3-2=${fwd.payoutRoi132}% [${trend}] (${milestone.nConf})`);
+  const upgradeCheck = computeUpgradeCheck(BASE_WHERE_FORWARD, d.where, d.sel);
+  switchMonitors.push({ id: d.id, label: d.label, from: "3連単1-2-3", to: "3連単1-3-2", train, forward: fwd, milestone, verdict, trend, upgradeCheck });
+  console.log(`  ${d.label}: fwd n=${fwd.n} payout1-3-2=${fwd.payoutRoi132}% [${trend}] (${upgradeCheck.upgradeVerdict})`);
 }
 
 // ── 除外候補モニタ ────────────────────────────────────────────────────────────
@@ -311,11 +383,22 @@ forward 開始日: **${FORWARD_START}**（それ以前を訓練期、以降を f
 
 ## switch候補モニター（1-2-3 → 1-3-2）
 
-| 条件 | 訓練1-3-2 | fwd n | **fwd 1-3-2** | fwd改善 | 信頼度 | 判定 | トレンド |
-|---|---|---|---|---|---|---|---|
-${switchMonitors.map(m =>
-  `| ${m.label} | ${m.train.payoutRoi132}% | ${m.forward.n} | **${m.forward.payoutRoi132}%** | +${m.forward.switchGain}pt | ${m.milestone.nConf} | ${verdictIcon(m.verdict)} ${m.verdict} | ${trendIcon(m.trend)} ${m.trend} |`
-).join("\n")}
+| 条件 | 訓練1-3-2 | fwd n | **fwd 1-3-2** | fwd改善 | 信頼度 | 判定 | トレンド | **格上げ判定** |
+|---|---|---|---|---|---|---|---|---|
+${switchMonitors.map(m => {
+  const uv = m.upgradeCheck.upgradeVerdict;
+  const uIcon = ({ "格上げ候補": "✅", "格上げ待ち(n不足)": "⏳", "格上げ待ち(2件除外ROI不足)": "🔶", "格上げ待ち(直近失速)": "⚠️", "降格候補": "❌", "観察継続": "🔷", "判定不可(n<30)": "⏳" } as Record<string,string>)[uv] ?? "—";
+  return `| ${m.label} | ${m.train.payoutRoi132}% | ${m.forward.n} | **${m.forward.payoutRoi132}%** | +${m.forward.switchGain}pt | ${m.milestone.nConf} | ${verdictIcon(m.verdict)} ${m.verdict} | ${trendIcon(m.trend)} ${m.trend} | ${uIcon} ${uv} |`;
+}).join("\n")}
+
+### 格上げ状況（n≥30の候補）
+
+${switchMonitors.filter(m => m.forward.n >= 30).map(m => {
+  const uc = m.upgradeCheck;
+  const uIcon = ({ "格上げ候補": "✅", "格上げ待ち(n不足)": "⏳", "格上げ待ち(2件除外ROI不足)": "🔶", "格上げ待ち(直近失速)": "⚠️", "降格候補": "❌", "観察継続": "🔷", "判定不可(n<30)": "⏳" } as Record<string,string>)[uc.upgradeVerdict] ?? "—";
+  const nStatus = uc.nToUpgrade > 0 ? `あと${uc.nToUpgrade}件（目標${UPGRADE_N_THRESHOLD}件）` : "n到達済み";
+  return `- **${m.label}**: ${uIcon} ${uc.upgradeVerdict} — 最大2件除外ROI=${uc.top2ExclRoi}% / 直近${uc.recentZeroMonths}ヶ月ゼロ / ${nStatus}`;
+}).join("\n") || "- 現在 n≥30 の候補なし"}
 
 ### 詳細
 
