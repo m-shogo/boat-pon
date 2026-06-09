@@ -1,0 +1,191 @@
+{
+  "generatedAt": "2026-06-09T09:13:38.925Z",
+  "targetTable": "historical_alternative_odds",
+  "alreadyExisted": false,
+  "created": true,
+  "columns": [
+    {
+      "cid": 0,
+      "name": "id",
+      "type": "INTEGER",
+      "notnull": 0,
+      "dflt_value": null,
+      "pk": 1
+    },
+    {
+      "cid": 1,
+      "name": "race_id",
+      "type": "TEXT",
+      "notnull": 1,
+      "dflt_value": null,
+      "pk": 0
+    },
+    {
+      "cid": 2,
+      "name": "race_date",
+      "type": "TEXT",
+      "notnull": 1,
+      "dflt_value": null,
+      "pk": 0
+    },
+    {
+      "cid": 3,
+      "name": "venue",
+      "type": "TEXT",
+      "notnull": 1,
+      "dflt_value": null,
+      "pk": 0
+    },
+    {
+      "cid": 4,
+      "name": "venue_code",
+      "type": "TEXT",
+      "notnull": 1,
+      "dflt_value": null,
+      "pk": 0
+    },
+    {
+      "cid": 5,
+      "name": "race_no",
+      "type": "INTEGER",
+      "notnull": 1,
+      "dflt_value": null,
+      "pk": 0
+    },
+    {
+      "cid": 6,
+      "name": "combination",
+      "type": "TEXT",
+      "notnull": 1,
+      "dflt_value": null,
+      "pk": 0
+    },
+    {
+      "cid": 7,
+      "name": "odds",
+      "type": "REAL",
+      "notnull": 1,
+      "dflt_value": null,
+      "pk": 0
+    },
+    {
+      "cid": 8,
+      "name": "source_type",
+      "type": "TEXT",
+      "notnull": 1,
+      "dflt_value": "'official_archive'",
+      "pk": 0
+    },
+    {
+      "cid": 9,
+      "name": "source_quality",
+      "type": "TEXT",
+      "notnull": 1,
+      "dflt_value": "'historical_closing_odds'",
+      "pk": 0
+    },
+    {
+      "cid": 10,
+      "name": "source_url",
+      "type": "TEXT",
+      "notnull": 1,
+      "dflt_value": null,
+      "pk": 0
+    },
+    {
+      "cid": 11,
+      "name": "fetched_at",
+      "type": "TEXT",
+      "notnull": 1,
+      "dflt_value": null,
+      "pk": 0
+    },
+    {
+      "cid": 12,
+      "name": "parser_version",
+      "type": "TEXT",
+      "notnull": 1,
+      "dflt_value": "'1.0'",
+      "pk": 0
+    },
+    {
+      "cid": 13,
+      "name": "is_backfill",
+      "type": "INTEGER",
+      "notnull": 1,
+      "dflt_value": "1",
+      "pk": 0
+    },
+    {
+      "cid": 14,
+      "name": "fetch_status",
+      "type": "TEXT",
+      "notnull": 1,
+      "dflt_value": "'success'",
+      "pk": 0
+    },
+    {
+      "cid": 15,
+      "name": "notes",
+      "type": "TEXT",
+      "notnull": 0,
+      "dflt_value": null,
+      "pk": 0
+    }
+  ],
+  "indexes": [
+    {
+      "seq": 0,
+      "name": "idx_hao_source",
+      "unique": 0,
+      "origin": "c",
+      "partial": 0
+    },
+    {
+      "seq": 1,
+      "name": "idx_hao_combination",
+      "unique": 0,
+      "origin": "c",
+      "partial": 0
+    },
+    {
+      "seq": 2,
+      "name": "idx_hao_race_no",
+      "unique": 0,
+      "origin": "c",
+      "partial": 0
+    },
+    {
+      "seq": 3,
+      "name": "idx_hao_venue",
+      "unique": 0,
+      "origin": "c",
+      "partial": 0
+    },
+    {
+      "seq": 4,
+      "name": "idx_hao_race_date",
+      "unique": 0,
+      "origin": "c",
+      "partial": 0
+    },
+    {
+      "seq": 5,
+      "name": "idx_hao_race_id",
+      "unique": 0,
+      "origin": "c",
+      "partial": 0
+    },
+    {
+      "seq": 6,
+      "name": "uq_historical_alternative_odds_key",
+      "unique": 1,
+      "origin": "c",
+      "partial": 0
+    }
+  ],
+  "newTables": [
+    "historical_alternative_odds"
+  ],
+  "removedTables": []
+}

@@ -144,7 +144,9 @@
     "check:alt-odds-health": "tsx scripts/check-alternative-odds-timeseries-health.ts",
     "audit:historical-closing-odds": "tsx scripts/audit-historical-closing-odds-availability.ts",
     "design:historical-alt-odds": "tsx scripts/design-historical-alternative-odds-storage.ts",
-    "backfill:historical-alt-odds": "tsx scripts/backfill-historical-alternative-odds.ts"
+    "backfill:historical-alt-odds": "tsx scripts/backfill-historical-alternative-odds.ts",
+    "db:create-historical-alt-odds": "tsx scripts/create-historical-alternative-odds-table.ts",
+    "check:historical-alt-odds-quality": "tsx scripts/check-historical-alternative-odds-quality.ts"
   },
   "engines": {
     "node": ">=24.0.0"
