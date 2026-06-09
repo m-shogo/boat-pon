@@ -146,7 +146,8 @@
     "design:historical-alt-odds": "tsx scripts/design-historical-alternative-odds-storage.ts",
     "backfill:historical-alt-odds": "tsx scripts/backfill-historical-alternative-odds.ts",
     "db:create-historical-alt-odds": "tsx scripts/create-historical-alternative-odds-table.ts",
-    "check:historical-alt-odds-quality": "tsx scripts/check-historical-alternative-odds-quality.ts"
+    "check:historical-alt-odds-quality": "tsx scripts/check-historical-alternative-odds-quality.ts",
+    "analyze:condb-switch-historical": "tsx scripts/analyze-condb-switch-historical-closing-odds.ts"
   },
   "engines": {
     "node": ">=24.0.0"

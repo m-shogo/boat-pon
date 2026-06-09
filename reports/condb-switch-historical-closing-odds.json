@@ -1,0 +1,741 @@
+{
+  "generatedAt": "2026-06-09T12:21:53.962Z",
+  "meta": {
+    "description": "condB historical closing odds switch予備検証",
+    "warningNotForward": "これはhistorical closing odds backtestです。live/T-5/T-10 forwardではありません",
+    "warningNoAdoption": "historical closing oddsで良くても本採用不可。future-only odds_timeseriesで再確認必要",
+    "forwardStart": "2025-01-01",
+    "unit": 100,
+    "topExcludeN": 2
+  },
+  "overview": {
+    "condBRaces": 167,
+    "closingOddsRaces": 167,
+    "allForwardRaces": 1522,
+    "nonCondBRaces": 1355
+  },
+  "strategies": [
+    {
+      "name": "A. baseline 1-2-3",
+      "combination": "1-2-3",
+      "n": 167,
+      "n_closing_odds": 167,
+      "hits": 3,
+      "hitRate": 1.8,
+      "invest": 16700,
+      "payout": 10950,
+      "roi": 65.57,
+      "profit": -5750,
+      "avgClosingOdds": 40.05,
+      "medClosingOdds": 37.7,
+      "impliedProbAvg": 2.87,
+      "hitRateMinusImplied": -1.07,
+      "maxPayout": 4430,
+      "topNExcludeRoi": 16.67,
+      "recent3mRoi": 0,
+      "oddsRatioVs123Avg": null,
+      "dataInsufficient": false,
+      "monthlyRoi": {
+        "2025-02": {
+          "n": 10,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-03": {
+          "n": 7,
+          "hits": 1,
+          "roi": 632.86
+        },
+        "2025-04": {
+          "n": 11,
+          "hits": 1,
+          "roi": 342.73
+        },
+        "2025-05": {
+          "n": 25,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-06": {
+          "n": 15,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-07": {
+          "n": 34,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-08": {
+          "n": 29,
+          "hits": 1,
+          "roi": 94.83
+        },
+        "2025-09": {
+          "n": 18,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-10": {
+          "n": 10,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-11": {
+          "n": 8,
+          "hits": 0,
+          "roi": 0
+        }
+      }
+    },
+    {
+      "name": "C. switch 1-3-2",
+      "combination": "1-3-2",
+      "n": 167,
+      "n_closing_odds": 167,
+      "hits": 8,
+      "hitRate": 4.79,
+      "invest": 16700,
+      "payout": 29120,
+      "roi": 174.37,
+      "profit": 12420,
+      "avgClosingOdds": 47.77,
+      "medClosingOdds": 42.3,
+      "impliedProbAvg": 2.87,
+      "hitRateMinusImplied": 1.92,
+      "maxPayout": 9780,
+      "topNExcludeRoi": 92.18,
+      "recent3mRoi": 0,
+      "oddsRatioVs123Avg": 1.221,
+      "dataInsufficient": false,
+      "monthlyRoi": {
+        "2025-02": {
+          "n": 10,
+          "hits": 1,
+          "roi": 387
+        },
+        "2025-03": {
+          "n": 7,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-04": {
+          "n": 11,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-05": {
+          "n": 25,
+          "hits": 1,
+          "roi": 93.2
+        },
+        "2025-06": {
+          "n": 15,
+          "hits": 2,
+          "roi": 226
+        },
+        "2025-07": {
+          "n": 34,
+          "hits": 2,
+          "roi": 221.18
+        },
+        "2025-08": {
+          "n": 29,
+          "hits": 2,
+          "roi": 414.14
+        },
+        "2025-09": {
+          "n": 18,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-10": {
+          "n": 10,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-11": {
+          "n": 8,
+          "hits": 0,
+          "roi": 0
+        }
+      }
+    },
+    {
+      "name": "D. switch 1-2-4",
+      "combination": "1-2-4",
+      "n": 167,
+      "n_closing_odds": 166,
+      "hits": 4,
+      "hitRate": 2.4,
+      "invest": 16700,
+      "payout": 6920,
+      "roi": 41.44,
+      "profit": -9780,
+      "avgClosingOdds": 47.91,
+      "medClosingOdds": 36.4,
+      "impliedProbAvg": 4.47,
+      "hitRateMinusImplied": -2.08,
+      "maxPayout": 3470,
+      "topNExcludeRoi": 10.79,
+      "recent3mRoi": 0,
+      "oddsRatioVs123Avg": 1.268,
+      "dataInsufficient": false,
+      "monthlyRoi": {
+        "2025-02": {
+          "n": 10,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-03": {
+          "n": 7,
+          "hits": 1,
+          "roi": 95.71
+        },
+        "2025-04": {
+          "n": 11,
+          "hits": 2,
+          "roi": 416.36
+        },
+        "2025-05": {
+          "n": 25,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-06": {
+          "n": 15,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-07": {
+          "n": 34,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-08": {
+          "n": 29,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-09": {
+          "n": 18,
+          "hits": 1,
+          "roi": 92.78
+        },
+        "2025-10": {
+          "n": 10,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-11": {
+          "n": 8,
+          "hits": 0,
+          "roi": 0
+        }
+      }
+    },
+    {
+      "name": "E. switch 1-4-2",
+      "combination": "1-4-2",
+      "n": 167,
+      "n_closing_odds": 166,
+      "hits": 5,
+      "hitRate": 2.99,
+      "invest": 16700,
+      "payout": 13750,
+      "roi": 82.34,
+      "profit": -2950,
+      "avgClosingOdds": 64.99,
+      "medClosingOdds": 39.3,
+      "impliedProbAvg": 4.58,
+      "hitRateMinusImplied": -1.59,
+      "maxPayout": 7870,
+      "topNExcludeRoi": 20.18,
+      "recent3mRoi": 0,
+      "oddsRatioVs123Avg": 1.871,
+      "dataInsufficient": false,
+      "monthlyRoi": {
+        "2025-02": {
+          "n": 10,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-03": {
+          "n": 7,
+          "hits": 1,
+          "roi": 78.57
+        },
+        "2025-04": {
+          "n": 11,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-05": {
+          "n": 25,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-06": {
+          "n": 15,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-07": {
+          "n": 34,
+          "hits": 2,
+          "roi": 128.53
+        },
+        "2025-08": {
+          "n": 29,
+          "hits": 1,
+          "roi": 33.1
+        },
+        "2025-09": {
+          "n": 18,
+          "hits": 1,
+          "roi": 437.22
+        },
+        "2025-10": {
+          "n": 10,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-11": {
+          "n": 8,
+          "hits": 0,
+          "roi": 0
+        }
+      }
+    },
+    {
+      "name": "F. switch 1-3-4",
+      "combination": "1-3-4",
+      "n": 167,
+      "n_closing_odds": 166,
+      "hits": 2,
+      "hitRate": 1.2,
+      "invest": 16700,
+      "payout": 5260,
+      "roi": 31.5,
+      "profit": -11440,
+      "avgClosingOdds": 49.15,
+      "medClosingOdds": 29.8,
+      "impliedProbAvg": 4.9,
+      "hitRateMinusImplied": -3.7,
+      "maxPayout": 2680,
+      "topNExcludeRoi": 0,
+      "recent3mRoi": 0,
+      "oddsRatioVs123Avg": 1.305,
+      "dataInsufficient": false,
+      "monthlyRoi": {
+        "2025-02": {
+          "n": 10,
+          "hits": 1,
+          "roi": 258
+        },
+        "2025-03": {
+          "n": 7,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-04": {
+          "n": 11,
+          "hits": 1,
+          "roi": 243.64
+        },
+        "2025-05": {
+          "n": 25,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-06": {
+          "n": 15,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-07": {
+          "n": 34,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-08": {
+          "n": 29,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-09": {
+          "n": 18,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-10": {
+          "n": 10,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-11": {
+          "n": 8,
+          "hits": 0,
+          "roi": 0
+        }
+      }
+    },
+    {
+      "name": "B. skip (condB除外後の残存)",
+      "combination": "1-2-3",
+      "n": 1355,
+      "n_closing_odds": 0,
+      "hits": 36,
+      "hitRate": 2.66,
+      "invest": 135500,
+      "payout": 121640,
+      "roi": 89.77,
+      "profit": -13860,
+      "avgClosingOdds": null,
+      "medClosingOdds": null,
+      "impliedProbAvg": null,
+      "hitRateMinusImplied": null,
+      "maxPayout": 6030,
+      "topNExcludeRoi": 81.2,
+      "recent3mRoi": 72.61,
+      "oddsRatioVs123Avg": null,
+      "dataInsufficient": false,
+      "monthlyRoi": {
+        "2025-01": {
+          "n": 1,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-02": {
+          "n": 93,
+          "hits": 2,
+          "roi": 49.89
+        },
+        "2025-03": {
+          "n": 90,
+          "hits": 1,
+          "roi": 43.11
+        },
+        "2025-04": {
+          "n": 154,
+          "hits": 4,
+          "roi": 126.62
+        },
+        "2025-05": {
+          "n": 166,
+          "hits": 7,
+          "roi": 142.71
+        },
+        "2025-06": {
+          "n": 180,
+          "hits": 4,
+          "roi": 98.39
+        },
+        "2025-07": {
+          "n": 192,
+          "hits": 2,
+          "roi": 26.3
+        },
+        "2025-08": {
+          "n": 186,
+          "hits": 7,
+          "roi": 92.69
+        },
+        "2025-09": {
+          "n": 96,
+          "hits": 4,
+          "roi": 134.06
+        },
+        "2025-10": {
+          "n": 72,
+          "hits": 2,
+          "roi": 110.56
+        },
+        "2025-11": {
+          "n": 102,
+          "hits": 2,
+          "roi": 72.84
+        },
+        "2026-05": {
+          "n": 23,
+          "hits": 1,
+          "roi": 72.61
+        }
+      }
+    },
+    {
+      "name": "H. hybrid 1-2-3 + condB skip",
+      "combination": "skip",
+      "n": 1355,
+      "n_closing_odds": 0,
+      "hits": 36,
+      "hitRate": 2.66,
+      "invest": 135500,
+      "payout": 121640,
+      "roi": 89.77,
+      "profit": -13860,
+      "avgClosingOdds": null,
+      "medClosingOdds": null,
+      "impliedProbAvg": null,
+      "hitRateMinusImplied": null,
+      "maxPayout": 6030,
+      "topNExcludeRoi": 81.2,
+      "recent3mRoi": 72.61,
+      "oddsRatioVs123Avg": null,
+      "dataInsufficient": false,
+      "monthlyRoi": {
+        "2025-01": {
+          "n": 1,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-02": {
+          "n": 93,
+          "hits": 2,
+          "roi": 49.89
+        },
+        "2025-03": {
+          "n": 90,
+          "hits": 1,
+          "roi": 43.11
+        },
+        "2025-04": {
+          "n": 154,
+          "hits": 4,
+          "roi": 126.62
+        },
+        "2025-05": {
+          "n": 166,
+          "hits": 7,
+          "roi": 142.71
+        },
+        "2025-06": {
+          "n": 180,
+          "hits": 4,
+          "roi": 98.39
+        },
+        "2025-07": {
+          "n": 192,
+          "hits": 2,
+          "roi": 26.3
+        },
+        "2025-08": {
+          "n": 186,
+          "hits": 7,
+          "roi": 92.69
+        },
+        "2025-09": {
+          "n": 96,
+          "hits": 4,
+          "roi": 134.06
+        },
+        "2025-10": {
+          "n": 72,
+          "hits": 2,
+          "roi": 110.56
+        },
+        "2025-11": {
+          "n": 102,
+          "hits": 2,
+          "roi": 72.84
+        },
+        "2026-05": {
+          "n": 23,
+          "hits": 1,
+          "roi": 72.61
+        }
+      }
+    },
+    {
+      "name": "I/J. hybrid 1-2-3 + condB 1-3-2",
+      "combination": "1-3-2",
+      "n": 1522,
+      "n_closing_odds": 167,
+      "hits": 44,
+      "hitRate": 2.89,
+      "invest": 152200,
+      "payout": 150760,
+      "roi": 99.05,
+      "profit": -1440,
+      "avgClosingOdds": 47.77,
+      "medClosingOdds": 42.3,
+      "impliedProbAvg": 2.87,
+      "hitRateMinusImplied": 0.02,
+      "maxPayout": 9780,
+      "topNExcludeRoi": 88.78,
+      "recent3mRoi": 72.61,
+      "oddsRatioVs123Avg": 1.221,
+      "dataInsufficient": false,
+      "monthlyRoi": {
+        "2025-01": {
+          "n": 1,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-02": {
+          "n": 103,
+          "hits": 3,
+          "roi": 82.62
+        },
+        "2025-03": {
+          "n": 97,
+          "hits": 1,
+          "roi": 40
+        },
+        "2025-04": {
+          "n": 165,
+          "hits": 4,
+          "roi": 118.18
+        },
+        "2025-05": {
+          "n": 191,
+          "hits": 8,
+          "roi": 136.23
+        },
+        "2025-06": {
+          "n": 195,
+          "hits": 6,
+          "roi": 108.21
+        },
+        "2025-07": {
+          "n": 226,
+          "hits": 4,
+          "roi": 55.62
+        },
+        "2025-08": {
+          "n": 215,
+          "hits": 9,
+          "roi": 136.05
+        },
+        "2025-09": {
+          "n": 114,
+          "hits": 4,
+          "roi": 112.89
+        },
+        "2025-10": {
+          "n": 82,
+          "hits": 2,
+          "roi": 97.07
+        },
+        "2025-11": {
+          "n": 110,
+          "hits": 2,
+          "roi": 67.55
+        },
+        "2026-05": {
+          "n": 23,
+          "hits": 1,
+          "roi": 72.61
+        }
+      }
+    },
+    {
+      "name": "I/J. hybrid 1-2-3 + condB 1-3-4",
+      "combination": "1-3-4",
+      "n": 1522,
+      "n_closing_odds": 166,
+      "hits": 38,
+      "hitRate": 2.5,
+      "invest": 152200,
+      "payout": 126900,
+      "roi": 83.38,
+      "profit": -25300,
+      "avgClosingOdds": 49.15,
+      "medClosingOdds": 29.8,
+      "impliedProbAvg": 4.9,
+      "hitRateMinusImplied": -2.4,
+      "maxPayout": 6030,
+      "topNExcludeRoi": 75.74,
+      "recent3mRoi": 72.61,
+      "oddsRatioVs123Avg": 1.305,
+      "dataInsufficient": false,
+      "monthlyRoi": {
+        "2025-01": {
+          "n": 1,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-02": {
+          "n": 103,
+          "hits": 3,
+          "roi": 70.1
+        },
+        "2025-03": {
+          "n": 97,
+          "hits": 1,
+          "roi": 40
+        },
+        "2025-04": {
+          "n": 165,
+          "hits": 5,
+          "roi": 134.42
+        },
+        "2025-05": {
+          "n": 191,
+          "hits": 7,
+          "roi": 124.03
+        },
+        "2025-06": {
+          "n": 195,
+          "hits": 4,
+          "roi": 90.82
+        },
+        "2025-07": {
+          "n": 226,
+          "hits": 2,
+          "roi": 22.35
+        },
+        "2025-08": {
+          "n": 215,
+          "hits": 7,
+          "roi": 80.19
+        },
+        "2025-09": {
+          "n": 114,
+          "hits": 4,
+          "roi": 112.89
+        },
+        "2025-10": {
+          "n": 82,
+          "hits": 2,
+          "roi": 97.07
+        },
+        "2025-11": {
+          "n": 110,
+          "hits": 2,
+          "roi": 67.55
+        },
+        "2026-05": {
+          "n": 23,
+          "hits": 1,
+          "roi": 72.61
+        }
+      }
+    }
+  ],
+  "allForwardBaseline": {
+    "n": 1522,
+    "hits": 39,
+    "roi": 87.12,
+    "topNExcludeRoi": 79.48,
+    "recent3mRoi": 72.61
+  },
+  "verdict": {
+    "n": 167,
+    "stratC_roi": 174.37,
+    "stratA_roi": 65.57,
+    "switch132_beats_baseline": true,
+    "top2ExcludeRoi": 92.18,
+    "top2ExcludeRoiOk": false,
+    "excl2507Roi": 162.41,
+    "excl2507N": 133,
+    "excl2507Ok": true,
+    "recent3mRoi": 0,
+    "recent3mN": 0,
+    "recent3mNoData": true,
+    "has3mZeroHit": false,
+    "hybridI_roi": 99.05,
+    "historicalAdoptionAllowed": false,
+    "futureTimeseriesRequired": true
+  }
+}
