@@ -1,6 +1,6 @@
 # ROI Governor Report
 
-生成日時: 2026-06-09T05:04:20.784Z
+生成日時: 2026-06-09T05:19:13.606Z
 
 > **読み取り専用。BUY は検証候補、ROI は検証指標。購入指示ではない。app_settings / 本番 decision 変更禁止。**
 
@@ -11,7 +11,7 @@
 **🔍 monitor-only（監視フェーズ）**
 
 **理由:**
-- 条件別セレクター不採用 (1点=79.19% / 複数点=79.27% < 現行=86.29%)
+- 条件別セレクター不採用 (1点=79.19% / 複数点=79.27% < 現行=87.12%)
 - 条件B n=167/n=200まであと33件 / top2除外=91.08%(格上げ条件>=100% ❌)
 - 住之江系: 全条件 n<30 または 過学習疑いで凍結
 
@@ -61,9 +61,9 @@
 
 | セレクター | forward ROI | 現行比 | 採用 |
 |---|---|---|---|
-| 現行 全件3連単1-2-3 | **86.29%** | baseline | - |
-| 1点セレクター | 79.19% | -7.1pt | ❌ 不採用 |
-| 複数点セレクター | 79.27% | -7.02pt | ❌ 不採用 |
+| 現行 全件3連単1-2-3 | **87.12%** | baseline | - |
+| 1点セレクター | 79.19% | -7.93pt | ❌ 不採用 |
+| 複数点セレクター | 79.27% | -7.85pt | ❌ 不採用 |
 
 > 拡連複: 全条件最下位。完全不採用。
 
@@ -86,18 +86,19 @@
 | C. 住之江 × odds40〜49 | 23 | - | - | - | **overfit-risk** | n=30到達後に再評価 |
 | D. 住之江 × 1号艇展示1位 | 18 | - | - | - | **overfit-risk** | n=30到達後に再評価 |
 | E. 住之江 × 5R | 10 | - | - | - | **overfit-risk** | n=30到達後に再評価 |
-| F. 住之江 × odds25〜39 | 41 | - | - | - | **overfit** | n=30到達後に再評価 |
+| F. 住之江 × odds25〜39 | 41 | - | - | - | **overfit** | n=50到達後に再確認 |
 
 ---
 
 ## 次に実行するコマンド
 
 ```bash
-pnpm report:paper-forward-candidates   # 台帳: switch/除外/残存
-pnpm report:paper-forward-monitor      # 格上げ判定自動表示
-pnpm analyze:wind24-exh1-switch        # 最有力候補の深掘り
-# 必要なら:
-pnpm analyze:ticket-selector-strategies  # 券種セレクター検証（月次程度でOK）
+pnpm report:paper-forward-candidates        # 台帳: switch/除外/残存
+pnpm report:paper-forward-monitor           # 格上げ判定自動表示
+pnpm analyze:wind24-exh1-switch             # 最有力候補の深掘り
+pnpm report:roi-governor                    # 全体判断まとめ（最後に実行）
+# 必要なら（月次程度）:
+pnpm analyze:ticket-selector-strategies     # 券種セレクター検証
 ```
 
 ---

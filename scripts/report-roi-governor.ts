@@ -182,19 +182,24 @@ function buildCondBStatus(): CondBStatus {
 // ─── セレクター判定 ────────────────────────────────────────────────────────────
 
 function buildSelectorStatus(): SelectorStatus {
-  const baseline = candidatesJson?.baseline.payoutRoi ?? monitorJson?.baseline.payoutRoi ?? 0;
+  // セレクターとの比較は forward ROI で揃える（全期間ROIではなく forward 期間のみ）
+  const baselineFwdRoi =
+    selectorJson?.conditions["A_all"]?.singleBets["3連単1-2-3"]?.forward.roi
+    ?? candidatesJson?.baseline.payoutRoi
+    ?? monitorJson?.baseline.payoutRoi
+    ?? 0;
   const onePt    = selectorJson?.selectors.onePt.forward.roi ?? 0;
   const multiPt  = selectorJson?.selectors.multiPt.forward.roi ?? 0;
 
-  const onePtAdopted  = onePt > baseline;
-  const multiPtAdopted = multiPt > baseline;
+  const onePtAdopted   = onePt > baselineFwdRoi;
+  const multiPtAdopted = multiPt > baselineFwdRoi;
   const reason = [
-    `現行全件 3連単1-2-3 forward ROI = ${baseline}%`,
+    `現行全件 3連単1-2-3 forward ROI = ${baselineFwdRoi}%`,
     `1点セレクター forward ROI = ${onePt}% → ${onePtAdopted ? "改善(採用候補)" : "悪化(不採用)"}`,
     `複数点セレクター forward ROI = ${multiPt}% → ${multiPtAdopted ? "改善(採用候補)" : "悪化(不採用)"}`,
   ].join(" / ");
 
-  return { baselineFwdRoi: baseline, onePtFwdRoi: onePt, multiPtFwdRoi: multiPt, onePtAdopted, multiPtAdopted, reason };
+  return { baselineFwdRoi, onePtFwdRoi: onePt, multiPtFwdRoi: multiPt, onePtAdopted, multiPtAdopted, reason };
 }
 
 // ─── 住之江ステータス ──────────────────────────────────────────────────────────
@@ -290,11 +295,12 @@ function buildActions(phase: Phase, condB: CondBStatus): { allowed: string[]; bl
   }
 
   const nextCommands = [
-    "pnpm report:paper-forward-candidates   # 台帳: switch/除外/残存",
-    "pnpm report:paper-forward-monitor      # 格上げ判定自動表示",
-    "pnpm analyze:wind24-exh1-switch        # 最有力候補の深掘り",
-    "# 必要なら:",
-    "pnpm analyze:ticket-selector-strategies  # 券種セレクター検証（月次程度でOK）",
+    "pnpm report:paper-forward-candidates        # 台帳: switch/除外/残存",
+    "pnpm report:paper-forward-monitor           # 格上げ判定自動表示",
+    "pnpm analyze:wind24-exh1-switch             # 最有力候補の深掘り",
+    "pnpm report:roi-governor                    # 全体判断まとめ（最後に実行）",
+    "# 必要なら（月次程度）:",
+    "pnpm analyze:ticket-selector-strategies     # 券種セレクター検証",
   ];
 
   return { allowed, blocked, nextCommands };
@@ -449,7 +455,10 @@ ${suminoe.map(s => `| ${s.label} | ${s.fwdN} | ${s.status} | ${s.note} |`).join(
 | 候補 | n | forward ROI | top2除外ROI | 直近3M | 判定 | 次のトリガー |
 |---|---|---|---|---|---|---|
 | 条件B 3連単1-3-2 | ${condB.n} | ${condB.fwdRoi}% | **${condB.top2ExclRoi}%** ${condB.top2RoiOk ? "✅" : "❌"} | ${recentNote} | **${condB.verdict}** | ${condB.nReached200 ? "top2除外ROI >= 100% 到達時" : `n=200到達 (あと${condB.nToUpgrade}件)`} |
-${suminoe.map(s => `| ${s.label} | ${s.fwdN} | - | - | - | **${s.status}** | n=30到達後に再評価 |`).join("\n")}
+${suminoe.map(s => {
+  const nextTrigger = s.fwdN >= 30 ? "n=50到達後に再確認" : "n=30到達後に再評価";
+  return `| ${s.label} | ${s.fwdN} | - | - | - | **${s.status}** | ${nextTrigger} |`;
+}).join("\n")}
 
 ---
 

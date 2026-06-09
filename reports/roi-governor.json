@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-06-09T05:04:20.784Z",
+  "generatedAt": "2026-06-09T05:19:13.606Z",
   "phase": "monitor-only",
-  "phaseReason": "条件別セレクター不採用 (1点=79.19% / 複数点=79.27% < 現行=86.29%); 条件B n=167/n=200まであと33件 / top2除外=91.08%(格上げ条件>=100% ❌); 住之江系: 全条件 n<30 または 過学習疑いで凍結",
+  "phaseReason": "条件別セレクター不採用 (1点=79.19% / 複数点=79.27% < 現行=87.12%); 条件B n=167/n=200まであと33件 / top2除外=91.08%(格上げ条件>=100% ❌); 住之江系: 全条件 n<30 または 過学習疑いで凍結",
   "condB": {
     "n": 167,
     "nToUpgrade": 33,
@@ -19,12 +19,12 @@
     "verdict": "格上げ待ち"
   },
   "selector": {
-    "baselineFwdRoi": 86.29,
+    "baselineFwdRoi": 87.12,
     "onePtFwdRoi": 79.19,
     "multiPtFwdRoi": 79.27,
     "onePtAdopted": false,
     "multiPtAdopted": false,
-    "reason": "現行全件 3連単1-2-3 forward ROI = 86.29% / 1点セレクター forward ROI = 79.19% → 悪化(不採用) / 複数点セレクター forward ROI = 79.27% → 悪化(不採用)"
+    "reason": "現行全件 3連単1-2-3 forward ROI = 87.12% / 1点セレクター forward ROI = 79.19% → 悪化(不採用) / 複数点セレクター forward ROI = 79.27% → 悪化(不採用)"
   },
   "suminoe": [
     {
@@ -69,11 +69,12 @@
     "住之江系 n=30 / n=50 到達を待つ"
   ],
   "nextCommands": [
-    "pnpm report:paper-forward-candidates   # 台帳: switch/除外/残存",
-    "pnpm report:paper-forward-monitor      # 格上げ判定自動表示",
-    "pnpm analyze:wind24-exh1-switch        # 最有力候補の深掘り",
-    "# 必要なら:",
-    "pnpm analyze:ticket-selector-strategies  # 券種セレクター検証（月次程度でOK）"
+    "pnpm report:paper-forward-candidates        # 台帳: switch/除外/残存",
+    "pnpm report:paper-forward-monitor           # 格上げ判定自動表示",
+    "pnpm analyze:wind24-exh1-switch             # 最有力候補の深掘り",
+    "pnpm report:roi-governor                    # 全体判断まとめ（最後に実行）",
+    "# 必要なら（月次程度）:",
+    "pnpm analyze:ticket-selector-strategies     # 券種セレクター検証"
   ],
   "humanSummary": {
     "doNow": [
