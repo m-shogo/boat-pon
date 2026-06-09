@@ -1,0 +1,193 @@
+{
+  "generatedAt": "2026-06-09T02:58:57.734Z",
+  "baseline": {
+    "n": 4301,
+    "hits": 106,
+    "currentRoi": 100.12,
+    "payoutRoi": 86.29
+  },
+  "switchCandidates": [
+    {
+      "id": "sw_wind24_exh1",
+      "label": "風速2〜4 × 1号艇展示1位",
+      "from": "3連単1-2-3",
+      "to": "3連単1-3-2",
+      "n": 488,
+      "currentRoi": 51.05,
+      "payoutRoiFrom": 37.13,
+      "payoutRoiTo": 103.2,
+      "switchGain": 66.07,
+      "nConfidence": "継続/降格判断(n≥100)",
+      "payoutVerdict": "watch(100〜105%)"
+    },
+    {
+      "id": "sw_suminoe_o40",
+      "label": "住之江 × odds40〜49",
+      "from": "3連単1-2-3",
+      "to": "3連単1-3-2",
+      "n": 59,
+      "currentRoi": 0,
+      "payoutRoiFrom": 0,
+      "payoutRoiTo": 168.47,
+      "switchGain": 168.47,
+      "nConfidence": "要確認(n≥50)",
+      "payoutVerdict": "strong(≥105%)"
+    },
+    {
+      "id": "sw_suminoe_exh1",
+      "label": "住之江 × 1号艇展示1位",
+      "from": "3連単1-2-3",
+      "to": "3連単1-3-2",
+      "n": 47,
+      "currentRoi": 0,
+      "payoutRoiFrom": 0,
+      "payoutRoiTo": 211.49,
+      "switchGain": 211.49,
+      "nConfidence": "仮判定(n≥30)",
+      "payoutVerdict": "strong(≥105%)",
+      "note": "n<50 — forward で再現性確認必須"
+    },
+    {
+      "id": "sw_suminoe_r5",
+      "label": "住之江 × 5R",
+      "from": "3連単1-2-3",
+      "to": "3連単1-3-2",
+      "n": 30,
+      "currentRoi": 0,
+      "payoutRoiFrom": 0,
+      "payoutRoiTo": 142.67,
+      "switchGain": 142.67,
+      "nConfidence": "仮判定(n≥30)",
+      "payoutVerdict": "strong(≥105%)",
+      "note": "n<50 — forward で再現性確認必須"
+    }
+  ],
+  "excludeCandidates": [
+    {
+      "id": "ex_exh1",
+      "label": "1号艇展示1位 除外",
+      "exclN": 1031,
+      "residualN": 3270,
+      "basePayoutRoi": 86.29,
+      "residualPayoutRoi": 95.14,
+      "improvPayout": 8.85,
+      "payoutVerdict": "weak-watch(95〜100%)"
+    },
+    {
+      "id": "ex_boat3",
+      "label": "3号艇が2号艇より展示速い 除外",
+      "exclN": 1980,
+      "residualN": 2321,
+      "basePayoutRoi": 86.29,
+      "residualPayoutRoi": 92.3,
+      "improvPayout": 6.01,
+      "payoutVerdict": "reject(<95%)"
+    },
+    {
+      "id": "ex_race5",
+      "label": "5R 除外",
+      "exclN": 503,
+      "residualN": 3798,
+      "basePayoutRoi": 86.29,
+      "residualPayoutRoi": 89.5,
+      "improvPayout": 3.21,
+      "payoutVerdict": "reject(<95%)"
+    },
+    {
+      "id": "ex_odds80",
+      "label": "odds 80以上 除外",
+      "exclN": 49,
+      "residualN": 4252,
+      "basePayoutRoi": 86.29,
+      "residualPayoutRoi": 87.29,
+      "improvPayout": 1,
+      "payoutVerdict": "reject(<95%)"
+    },
+    {
+      "id": "ex_wind24_caut",
+      "label": "風速2〜4m/s 除外（注意付き）",
+      "exclN": 2099,
+      "residualN": 2202,
+      "basePayoutRoi": 86.29,
+      "residualPayoutRoi": 91.88,
+      "improvPayout": 5.59,
+      "payoutVerdict": "reject(<95%)",
+      "caution": "switch候補「風速2〜4 × 1号艇展示1位」を含む。全除外ではなく switch 条件で別管理を推奨"
+    }
+  ],
+  "keepCandidates": [
+    {
+      "id": "keep_suminoe_o25",
+      "label": "住之江 × odds25〜39",
+      "n": 110,
+      "currentRoi": 122.73,
+      "payoutRoi": 110.82,
+      "note": "住之江全除外を行う場合も、この条件は除外しない"
+    }
+  ],
+  "overconfident": [
+    {
+      "label": "1号艇展示タイム4位以下",
+      "currentRoi": 105.74,
+      "payoutRoi": 94.5,
+      "gap": 11.24
+    },
+    {
+      "label": "2号艇が3号艇より展示速い",
+      "currentRoi": 111.51,
+      "payoutRoi": 98.93,
+      "gap": 12.58
+    },
+    {
+      "label": "1号艇展示タイム2〜3位",
+      "currentRoi": 110.39,
+      "payoutRoi": 96.54,
+      "gap": 13.85
+    }
+  ],
+  "forwardRules": {
+    "nThresholds": [
+      {
+        "n": 30,
+        "label": "n≥30: 仮判定（forward開始可）"
+      },
+      {
+        "n": 50,
+        "label": "n≥50: 要確認（結果の方向感をチェック）"
+      },
+      {
+        "n": 100,
+        "label": "n≥100: 継続 or 降格判断"
+      }
+    ],
+    "payoutBands": [
+      {
+        "min": 105,
+        "label": "strong(≥105%): 継続観察"
+      },
+      {
+        "min": 100,
+        "label": "watch(100〜105%): 継続観察（週次確認）"
+      },
+      {
+        "min": 95,
+        "label": "weak-watch(95〜100%): 条件付き継続"
+      },
+      {
+        "min": 0,
+        "label": "reject(<95%): 降格候補"
+      }
+    ],
+    "recordingRules": [
+      "switch候補: 実際の買い目（1-2-3）とswitch先（1-3-2）の両方のpayout_yenを記録",
+      "除外候補: 除外対象が的中したか、除外後残存のROIが改善したかを追跡",
+      "判断基準: race_payouts.payout_yen のみ（current_odds は参考値）",
+      "app_settings変更禁止: forward観察のみ、本番ロジック変更は行わない"
+    ],
+    "promotionCriteria": {
+      "switch": "n≥100 かつ forward payout ROI ≥ 100% で 3ヶ月継続",
+      "exclude": "除外後 forward payout ROI が baseline を +5pt 超で 3ヶ月継続",
+      "demotion": "forward payout ROI < 85% が 2ヶ月連続"
+    }
+  }
+}

@@ -129,7 +129,8 @@
     "analyze:bet-type-risk-factors": "tsx scripts/analyze-bet-type-risk-factors.ts",
     "report:bet-type-selector": "tsx scripts/report-bet-type-selector-summary.ts",
     "analyze:odds-payout-gap": "tsx scripts/analyze-odds-payout-gap.ts",
-    "analyze:payout-rebase": "tsx scripts/analyze-payout-rebase.ts"
+    "analyze:payout-rebase": "tsx scripts/analyze-payout-rebase.ts",
+    "report:paper-forward-candidates": "tsx scripts/report-paper-forward-candidates.ts"
   },
   "engines": {
     "node": ">=24.0.0"
