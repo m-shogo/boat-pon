@@ -134,7 +134,8 @@
     "report:paper-forward-monitor": "tsx scripts/report-paper-forward-monitor.ts",
     "analyze:wind24-exh1-switch": "tsx scripts/analyze-wind24-exh1-switch-deep-dive.ts",
     "analyze:ticket-selector-strategies": "tsx scripts/analyze-ticket-selector-strategies.ts",
-    "report:roi-governor": "tsx scripts/report-roi-governor.ts"
+    "report:roi-governor": "tsx scripts/report-roi-governor.ts",
+    "analyze:roi-skip-filters": "tsx scripts/analyze-roi-mechanism-skip-filters.ts"
   },
   "engines": {
     "node": ">=24.0.0"

@@ -1,6 +1,6 @@
 # paper-forward 候補台帳（payout_yen 基準）
 
-生成日時: 2026-06-09T02:58:57.734Z
+生成日時: 2026-06-09T05:33:00.396Z
 DB: data/boat.sqlite
 
 > **禁止事項**: app_settings変更 / DBへの書き込み / 本番decisionロジック変更 / 自動投票
@@ -23,7 +23,8 @@ DB: data/boat.sqlite
 > 1-2-3 を 1-3-2 に変換すると実払戻ROIが向上する条件。
 > **app_settings変更はしない。forward観察のみ。**
 
-### 確定 switch候補（実払戻 1-3-2 >= 100%）
+### backtest上のswitch候補（実払戻 1-3-2 >= 100%）
+> backtest結果であり本採用確定ではない。forward で再現性確認後に判断。
 
 | 優先 | 条件 | n | 変換 | 現行payout | **switch payout** | 改善 | 信頼度 |
 |---|---|---|---|---|---|---|---|
@@ -115,7 +116,7 @@ DB: data/boat.sqlite
 ### 現時点の方針
 1. **app_settings変更なし** — forward 観察のみ
 2. **switch候補 4件** を forward で実払戻追跡（現行1-2-3 vs switch先1-3-2）
-3. **除外候補 4件** を forward で残存ROI追跡
+3. **除外候補 4件 + 注意付き1件（風速2〜4）** を forward で残存ROI追跡
 4. **風速2〜4は全除外せず** switch条件（風速2〜4 × 1号艇展示1位）として別管理
 5. **住之江 × odds25〜39 は保持** — 住之江全除外を検討する場合も除外しない
 

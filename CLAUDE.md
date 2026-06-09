@@ -80,3 +80,4 @@ pnpm analyze:wind24-exh1-switch             # 最有力候補の深掘り（最�
 | `analyze:123-breakdown` | 1-2-3 selection 分解（参考） |
 | `analyze:123-bet-type-conversion` | 券種変換比較（実払戻基準） |
 | `analyze:ticket-selector-strategies` | 条件別券種/買い目セレクター検証（12条件×9券種、セレクター比較） |
+| `analyze:roi-skip-filters` | 見送りROI分析: raceNo/venue/odds帯/月/直近3M/条件B重複で「除外した場合の改善delta」を計測 |
