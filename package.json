@@ -127,7 +127,8 @@
     "analyze:miss-recovery": "tsx scripts/analyze-miss-to-bet-type-recovery.ts",
     "analyze:bet-type-course-edge": "tsx scripts/analyze-bet-type-course-edge.ts",
     "analyze:bet-type-risk-factors": "tsx scripts/analyze-bet-type-risk-factors.ts",
-    "report:bet-type-selector": "tsx scripts/report-bet-type-selector-summary.ts"
+    "report:bet-type-selector": "tsx scripts/report-bet-type-selector-summary.ts",
+    "analyze:odds-payout-gap": "tsx scripts/analyze-odds-payout-gap.ts"
   },
   "engines": {
     "node": ">=24.0.0"

@@ -1,0 +1,348 @@
+{
+  "generatedAt": "2026-06-09T02:39:25.063Z",
+  "gaps": [
+    {
+      "label": "A. 全体",
+      "n": 4401,
+      "hits": 109,
+      "coverageRate": 99.98,
+      "currentOddsRoi": 100.79,
+      "payoutRoi": 85.85,
+      "gap": 14.94,
+      "avgCurrentOdds": 40.7,
+      "avgPayoutOdds": 34.99,
+      "verdict": "current_odds楽観"
+    },
+    {
+      "label": "B. selection=1-2-3",
+      "n": 4301,
+      "hits": 106,
+      "coverageRate": 100,
+      "currentOddsRoi": 100.12,
+      "payoutRoi": 86.29,
+      "gap": 13.83,
+      "avgCurrentOdds": 40.62,
+      "avgPayoutOdds": 35.01,
+      "verdict": "current_odds楽観"
+    },
+    {
+      "label": "C. 1号艇展示タイム1位",
+      "n": 1031,
+      "hits": 18,
+      "coverageRate": 100,
+      "currentOddsRoi": 76.52,
+      "payoutRoi": 58.23,
+      "gap": 18.29,
+      "avgCurrentOdds": 43.83,
+      "avgPayoutOdds": 33.36,
+      "verdict": "要注意"
+    },
+    {
+      "label": "D. 1号艇展示タイム2〜3位",
+      "n": 1603,
+      "hits": 44,
+      "coverageRate": 100,
+      "currentOddsRoi": 110.39,
+      "payoutRoi": 96.54,
+      "gap": 13.85,
+      "avgCurrentOdds": 40.22,
+      "avgPayoutOdds": 35.17,
+      "verdict": "要注意"
+    },
+    {
+      "label": "E. 1号艇展示タイム4位以下",
+      "n": 1637,
+      "hits": 43,
+      "coverageRate": 100,
+      "currentOddsRoi": 105.74,
+      "payoutRoi": 94.5,
+      "gap": 11.24,
+      "avgCurrentOdds": 40.25,
+      "avgPayoutOdds": 35.97,
+      "verdict": "current_odds楽観"
+    },
+    {
+      "label": "F. 5R",
+      "n": 503,
+      "hits": 9,
+      "coverageRate": 100,
+      "currentOddsRoi": 65.27,
+      "payoutRoi": 62.07,
+      "gap": 3.2,
+      "avgCurrentOdds": 36.48,
+      "avgPayoutOdds": 34.69,
+      "verdict": "採用不可"
+    },
+    {
+      "label": "G. odds 80以上",
+      "n": 49,
+      "hits": 0,
+      "coverageRate": 100,
+      "currentOddsRoi": 0,
+      "payoutRoi": 0,
+      "gap": 0,
+      "avgCurrentOdds": 0,
+      "avgPayoutOdds": 0,
+      "verdict": "採用不可"
+    },
+    {
+      "label": "H. 住之江",
+      "n": 207,
+      "hits": 4,
+      "coverageRate": 100,
+      "currentOddsRoi": 65.22,
+      "payoutRoi": 58.89,
+      "gap": 6.33,
+      "avgCurrentOdds": 33.75,
+      "avgPayoutOdds": 30.48,
+      "verdict": "採用不可"
+    },
+    {
+      "label": "I. 住之江 × odds40〜49",
+      "n": 59,
+      "hits": 0,
+      "coverageRate": 100,
+      "currentOddsRoi": 0,
+      "payoutRoi": 0,
+      "gap": 0,
+      "avgCurrentOdds": 0,
+      "avgPayoutOdds": 0,
+      "verdict": "採用不可"
+    },
+    {
+      "label": "J. 住之江 × 1号艇展示1位",
+      "n": 47,
+      "hits": 0,
+      "coverageRate": 100,
+      "currentOddsRoi": 0,
+      "payoutRoi": 0,
+      "gap": 0,
+      "avgCurrentOdds": 0,
+      "avgPayoutOdds": 0,
+      "verdict": "採用不可"
+    },
+    {
+      "label": "K. 風速2〜4m/s",
+      "n": 2099,
+      "hits": 49,
+      "coverageRate": 100,
+      "currentOddsRoi": 91.52,
+      "payoutRoi": 80.43,
+      "gap": 11.09,
+      "avgCurrentOdds": 39.21,
+      "avgPayoutOdds": 34.46,
+      "verdict": "要注意"
+    },
+    {
+      "label": "L. 風速2〜4 × 1号艇展示1位",
+      "n": 488,
+      "hits": 6,
+      "coverageRate": 100,
+      "currentOddsRoi": 51.05,
+      "payoutRoi": 37.13,
+      "gap": 13.92,
+      "avgCurrentOdds": 41.52,
+      "avgPayoutOdds": 30.2,
+      "verdict": "要注意"
+    },
+    {
+      "label": "M. 2号艇が3号艇より展示速い",
+      "n": 2005,
+      "hits": 55,
+      "coverageRate": 100,
+      "currentOddsRoi": 111.51,
+      "payoutRoi": 98.93,
+      "gap": 12.58,
+      "avgCurrentOdds": 40.65,
+      "avgPayoutOdds": 36.06,
+      "verdict": "要注意"
+    },
+    {
+      "label": "N. 3号艇が2号艇より展示速い",
+      "n": 1980,
+      "hits": 46,
+      "coverageRate": 100,
+      "currentOddsRoi": 96.54,
+      "payoutRoi": 79.26,
+      "gap": 17.28,
+      "avgCurrentOdds": 41.55,
+      "avgPayoutOdds": 34.12,
+      "verdict": "要注意"
+    }
+  ],
+  "residuals": [
+    {
+      "label": "1号艇展示1位 除外",
+      "excluded": {
+        "n": 1031,
+        "currentRoi": 76.52,
+        "payoutRoi": 58.23
+      },
+      "residual": {
+        "n": 3270,
+        "currentRoi": 107.56,
+        "payoutRoi": 95.14
+      },
+      "baseline": {
+        "currentRoi": 100.12,
+        "payoutRoi": 86.29
+      },
+      "improvement": {
+        "current": 7.44,
+        "payout": 8.85
+      }
+    },
+    {
+      "label": "5R 除外",
+      "excluded": {
+        "n": 503,
+        "currentRoi": 65.27,
+        "payoutRoi": 62.07
+      },
+      "residual": {
+        "n": 3798,
+        "currentRoi": 104.73,
+        "payoutRoi": 89.5
+      },
+      "baseline": {
+        "currentRoi": 100.12,
+        "payoutRoi": 86.29
+      },
+      "improvement": {
+        "current": 4.61,
+        "payout": 3.21
+      }
+    },
+    {
+      "label": "odds 80以上 除外",
+      "excluded": {
+        "n": 49,
+        "currentRoi": 0,
+        "payoutRoi": 0
+      },
+      "residual": {
+        "n": 4252,
+        "currentRoi": 101.27,
+        "payoutRoi": 87.29
+      },
+      "baseline": {
+        "currentRoi": 100.12,
+        "payoutRoi": 86.29
+      },
+      "improvement": {
+        "current": 1.15,
+        "payout": 1
+      }
+    },
+    {
+      "label": "住之江 全除外",
+      "excluded": {
+        "n": 207,
+        "currentRoi": 65.22,
+        "payoutRoi": 58.89
+      },
+      "residual": {
+        "n": 4094,
+        "currentRoi": 101.88,
+        "payoutRoi": 87.68
+      },
+      "baseline": {
+        "currentRoi": 100.12,
+        "payoutRoi": 86.29
+      },
+      "improvement": {
+        "current": 1.76,
+        "payout": 1.39
+      }
+    },
+    {
+      "label": "住之江 × odds40〜49 除外",
+      "excluded": {
+        "n": 59,
+        "currentRoi": 0,
+        "payoutRoi": 0
+      },
+      "residual": {
+        "n": 4242,
+        "currentRoi": 101.51,
+        "payoutRoi": 87.49
+      },
+      "baseline": {
+        "currentRoi": 100.12,
+        "payoutRoi": 86.29
+      },
+      "improvement": {
+        "current": 1.39,
+        "payout": 1.2
+      }
+    },
+    {
+      "label": "風速2〜4m/s 除外",
+      "excluded": {
+        "n": 2099,
+        "currentRoi": 91.52,
+        "payoutRoi": 80.43
+      },
+      "residual": {
+        "n": 2202,
+        "currentRoi": 108.31,
+        "payoutRoi": 91.88
+      },
+      "baseline": {
+        "currentRoi": 100.12,
+        "payoutRoi": 86.29
+      },
+      "improvement": {
+        "current": 8.19,
+        "payout": 5.59
+      }
+    }
+  ],
+  "switchResults": [
+    {
+      "label": "風速2〜4 × 1号艇展示1位 → 1-3-2",
+      "n": 488,
+      "currentRoi123": 51.05,
+      "payoutRoi123": 37.13,
+      "payoutRoi132": 103.2,
+      "switchGain": 66.07
+    },
+    {
+      "label": "住之江 × odds40〜49 → 1-3-2",
+      "n": 59,
+      "currentRoi123": 0,
+      "payoutRoi123": 0,
+      "payoutRoi132": 168.47,
+      "switchGain": 168.47
+    },
+    {
+      "label": "住之江 × 1号艇展示1位 → 1-3-2",
+      "n": 47,
+      "currentRoi123": 0,
+      "payoutRoi123": 0,
+      "payoutRoi132": 211.49,
+      "switchGain": 211.49
+    },
+    {
+      "label": "1号艇展示1位 全体 → 1-3-2",
+      "n": 1031,
+      "currentRoi123": 76.52,
+      "payoutRoi123": 58.23,
+      "payoutRoi132": 97.16,
+      "switchGain": 38.93
+    },
+    {
+      "label": "3号艇が2号艇より展示速い → 1-3-2",
+      "n": 1980,
+      "currentRoi123": 96.54,
+      "payoutRoi123": 79.26,
+      "payoutRoi132": 91.58,
+      "switchGain": 12.32
+    }
+  ],
+  "baseline": {
+    "currentOddsRoi": 100.79,
+    "payoutRoi": 85.85,
+    "gap": 14.94
+  }
+}
