@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-09T05:54:37.048Z",
+  "generatedAt": "2026-06-09T06:33:58.598Z",
   "phase": "monitor-only",
   "phaseReason": "条件別セレクター不採用 (1点=79.19% / 複数点=79.27% < 現行=87.12%); 条件B n=167/n=200まであと33件 / top2除外=91.08%(格上げ条件>=100% ❌); 住之江系: 全条件 n<30 または 過学習疑いで凍結",
   "condB": {
@@ -52,6 +52,146 @@
       "note": "n=41 / trainROI高 / fwdROI低。過学習疑い。n=50到達後に再確認"
     }
   ],
+  "skipPolicyMonitor": {
+    "baselineN": 1522,
+    "baselineRoi": 87.12,
+    "items": [
+      {
+        "id": "A",
+        "name": "6Rのみ",
+        "skipRate": 14.13,
+        "remainRoi": 97.95,
+        "delta": 10.83,
+        "remainTop1Roi": 93.34,
+        "remainTop2Roi": 88.94,
+        "remainTop3Roi": 84.92,
+        "deltaExJul25": 11.68,
+        "recent3mRoi": 83.5,
+        "remainHits": 37,
+        "remainJackpotRatio": 4.71,
+        "skipTooLarge": false,
+        "verdict": "⚠️ 高配当依存（top2除外ROI<100%）— monitor継続",
+        "nextReviewTrigger": "forward 全体n が 1622 に到達したとき、または 残存ROI≥100 かつ top2除外ROI≥100 に到達したとき",
+        "role": "最有力 monitor 候補"
+      },
+      {
+        "id": "J",
+        "name": "浜名湖+住之江",
+        "skipRate": 10.45,
+        "remainRoi": 97.28,
+        "delta": 10.16,
+        "remainTop1Roi": 92.85,
+        "remainTop2Roi": 88.64,
+        "remainTop3Roi": 84.78,
+        "deltaExJul25": 10.97,
+        "recent3mRoi": 72.61,
+        "remainHits": 39,
+        "remainJackpotRatio": 4.55,
+        "skipTooLarge": false,
+        "verdict": "⚠️ 高配当依存（top2除外ROI<100%）— monitor継続",
+        "nextReviewTrigger": "浜名湖/住之江どちらかで forward hit が出たとき、または全体n が 1572 に到達したとき",
+        "role": "0hit継続監視"
+      },
+      {
+        "id": "K",
+        "name": "6R + 浜名湖+住之江",
+        "skipRate": 22.4,
+        "remainRoi": 108.4,
+        "delta": 21.28,
+        "remainTop1Roi": 103.29,
+        "remainTop2Roi": 98.43,
+        "remainTop3Roi": 93.98,
+        "deltaExJul25": 23.1,
+        "recent3mRoi": 83.5,
+        "remainHits": 37,
+        "remainJackpotRatio": 4.71,
+        "skipTooLarge": false,
+        "verdict": "⚠️ 高配当依存（top2除外ROI<100%）— monitor継続",
+        "nextReviewTrigger": "top2除外ROI (現在98.43%) が 100% に到達したとき",
+        "role": "中程度: 6R+悪会場"
+      },
+      {
+        "id": "G",
+        "name": "2R+5R+6R",
+        "skipRate": 37.32,
+        "remainRoi": 114.57,
+        "delta": 27.45,
+        "remainTop1Roi": 108.25,
+        "remainTop2Roi": 102.22,
+        "remainTop3Roi": 96.72,
+        "deltaExJul25": 29.19,
+        "recent3mRoi": 119.29,
+        "remainHits": 31,
+        "remainJackpotRatio": 5.52,
+        "skipTooLarge": true,
+        "verdict": "⚠️ 強すぎる除外（除外率30%超）— 保留",
+        "nextReviewTrigger": "除外率37%超のため本採用不可。参考観察のみ。",
+        "role": "参考のみ（強すぎる除外）"
+      },
+      {
+        "id": "Q",
+        "name": "条件B重複のみ",
+        "skipRate": 10.97,
+        "remainRoi": 89.77,
+        "delta": 2.65,
+        "remainTop1Roi": 85.32,
+        "remainTop2Roi": 81.08,
+        "remainTop3Roi": 77.2,
+        "deltaExJul25": 1.84,
+        "recent3mRoi": 72.61,
+        "remainHits": 36,
+        "remainJackpotRatio": 4.96,
+        "skipTooLarge": false,
+        "verdict": "❌ 採用不可",
+        "nextReviewTrigger": "条件B forward n=200 到達時（条件B 本体の格上げ判定に統合）",
+        "role": "凍結（条件B forward n=200まで）"
+      }
+    ],
+    "greedy": [
+      {
+        "step": 1,
+        "added": "6R",
+        "cumulativePred": [
+          "r6"
+        ],
+        "skipN": 215,
+        "skipRate": 14.13,
+        "remainRoi": 97.95,
+        "delta": 10.83,
+        "note": ""
+      },
+      {
+        "step": 2,
+        "added": "5R",
+        "cumulativePred": [
+          "r6",
+          "r5"
+        ],
+        "skipN": 399,
+        "skipRate": 26.22,
+        "remainRoi": 105.08,
+        "delta": 17.96,
+        "note": ""
+      },
+      {
+        "step": 3,
+        "added": "浜名湖",
+        "cumulativePred": [
+          "r6",
+          "r5",
+          "hama"
+        ],
+        "skipN": 454,
+        "skipRate": 29.83,
+        "remainRoi": 110.49,
+        "delta": 23.37,
+        "note": ""
+      }
+    ],
+    "greedyFinalSkipRate": 29.83,
+    "greedyFinalRoi": 110.49,
+    "appSettingsOk": false
+  },
   "blockedActions": [
     "新規 ROI 候補探索（今は候補探しフェーズではない）",
     "app_settings 変更（禁止）",

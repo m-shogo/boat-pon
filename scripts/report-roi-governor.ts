@@ -59,6 +59,30 @@ type SuminoeStatus = {
   note: string;
 };
 
+type SkipPolicyItem = {
+  id: string; name: string;
+  skipRate: number; remainRoi: number; delta: number;
+  remainTop1Roi: number; remainTop2Roi: number; remainTop3Roi: number;
+  deltaExJul25: number; recent3mRoi: number; remainHits: number;
+  remainJackpotRatio: number;
+  skipTooLarge: boolean; verdict: string;
+  nextReviewTrigger: string;
+  role: string;
+};
+
+type GreedyStep = {
+  step: number; added: string; cumulativePred: string[];
+  skipN: number; skipRate: number; remainRoi: number; delta: number;
+};
+
+type SkipPolicyMonitor = {
+  baselineN: number; baselineRoi: number;
+  items: SkipPolicyItem[];
+  greedy: GreedyStep[];
+  greedyFinalSkipRate: number; greedyFinalRoi: number;
+  appSettingsOk: boolean;
+};
+
 type GovReport = {
   generatedAt: string;
   phase: Phase;
@@ -66,6 +90,7 @@ type GovReport = {
   condB: CondBStatus;
   selector: SelectorStatus;
   suminoe: SuminoeStatus[];
+  skipPolicyMonitor: SkipPolicyMonitor;
   blockedActions: string[];
   allowedActions: string[];
   nextCommands: string[];
@@ -143,6 +168,27 @@ const candidatesJson = readJson<{
   baseline: { n: number; payoutRoi: number };
   switchCandidates: { id: string; label: string; n: number; payoutRoiTo: number; nConfidence: string }[];
 }>("reports/paper-forward-candidates.json");
+
+type SkipPolicyJsonPolicy = {
+  id: string; name: string; skipDesc: string;
+  remainN: number; skipN: number; skipRate: number;
+  skipRoi: number; remainRoi: number; delta: number;
+  remainHits: number; remainHitRate: number;
+  remainProfit: number; remainAvgPayout: number; remainMaxPayout: number;
+  remainTop1Roi: number; remainTop2Roi: number; remainTop3Roi: number;
+  remainJackpotRatio: number;
+  deltaExJul25: number; recent3mRoi: number;
+  weakMonths: number; totalMonths: number; weakMonthPct: number;
+  overlapCondB: number; overlapCondBPct: number;
+  overlapOdds4079: number; overlapOdds4079Pct: number;
+  skipTooLarge: boolean; verdict: string; monthlyCount: number;
+};
+const skipPolicyJson = readJson<{
+  generatedAt: string; dbMaxDate: string; recent3mCutoff: string;
+  baseline: { n: number; hits: number; roi: number; exJul25BaseRoi: number };
+  policies: SkipPolicyJsonPolicy[];
+  greedy: GreedyStep[];
+}>("reports/roi-skip-policy-simulation.json");
 
 // ─── 条件B 判定 ────────────────────────────────────────────────────────────────
 
@@ -235,6 +281,90 @@ function buildSuminoeStatus(): SuminoeStatus[] {
     result.push({ label: cond.label, fwdN, status, note });
   }
   return result;
+}
+
+// ─── Skip Policy Monitor ─────────────────────────────────────────────────────
+
+const SKIP_MONITOR_TARGETS: Array<{
+  id: string; role: string;
+  nextTrigger: (p: SkipPolicyJsonPolicy, base: number, baseHits: number) => string;
+}> = [
+  {
+    id: "A", role: "最有力 monitor 候補",
+    nextTrigger: (p, base) =>
+      p.remainRoi >= 100 && p.remainTop2Roi >= 100
+        ? "格上げ候補: 採用条件チェックを実施"
+        : `forward 全体n が ${base + 100} に到達したとき、または 残存ROI≥100 かつ top2除外ROI≥100 に到達したとき`,
+  },
+  {
+    id: "J", role: "0hit継続監視",
+    // skipHits = totalHits - remainHits (除外対象自体のhit数)
+    nextTrigger: (p, base, baseHits) => {
+      const skipHits = baseHits - p.remainHits;
+      return skipHits > 0
+        ? `除外対象 hit 検出済 (${skipHits}件)。top2除外ROI推移を観察`
+        : `浜名湖/住之江どちらかで forward hit が出たとき、または全体n が ${base + 50} に到達したとき`;
+    },
+  },
+  {
+    id: "K", role: "中程度: 6R+悪会場",
+    nextTrigger: (p) =>
+      p.remainTop2Roi >= 100
+        ? "格上げ条件チェックへ"
+        : `top2除外ROI (現在${p.remainTop2Roi}%) が 100% に到達したとき`,
+  },
+  {
+    id: "G", role: "参考のみ（強すぎる除外）",
+    nextTrigger: () => "除外率37%超のため本採用不可。参考観察のみ。",
+  },
+  {
+    id: "Q", role: "凍結（条件B forward n=200まで）",
+    nextTrigger: () => "条件B forward n=200 到達時（条件B 本体の格上げ判定に統合）",
+  },
+];
+type SkipMonitorTarget = typeof SKIP_MONITOR_TARGETS[0];
+
+function buildSkipPolicyMonitor(): SkipPolicyMonitor {
+  const json = skipPolicyJson;
+  const baselineN    = json?.baseline.n    ?? 1522;
+  const baselineRoi  = json?.baseline.roi  ?? 87.12;
+  const baselineHits = json?.baseline.hits ?? 39;
+
+  const items: SkipPolicyItem[] = SKIP_MONITOR_TARGETS.map((t: SkipMonitorTarget) => {
+    const p = json?.policies.find(x => x.id === t.id);
+    if (!p) {
+      return {
+        id: t.id, name: t.id, skipRate: 0, remainRoi: 0, delta: 0,
+        remainTop1Roi: 0, remainTop2Roi: 0, remainTop3Roi: 0,
+        deltaExJul25: 0, recent3mRoi: 0, remainHits: 0,
+        remainJackpotRatio: 0,
+        skipTooLarge: false, verdict: "データなし",
+        nextReviewTrigger: "roi-skip-policy-simulation.ts を先に実行",
+        role: t.role,
+      };
+    }
+    return {
+      id: p.id, name: p.name,
+      skipRate: p.skipRate, remainRoi: p.remainRoi, delta: p.delta,
+      remainTop1Roi: p.remainTop1Roi, remainTop2Roi: p.remainTop2Roi, remainTop3Roi: p.remainTop3Roi,
+      deltaExJul25: p.deltaExJul25, recent3mRoi: p.recent3mRoi, remainHits: p.remainHits,
+      remainJackpotRatio: p.remainJackpotRatio,
+      skipTooLarge: p.skipTooLarge, verdict: p.verdict,
+      nextReviewTrigger: t.nextTrigger(p, baselineN, baselineHits),
+      role: t.role,
+    };
+  });
+
+  const greedy = json?.greedy ?? [];
+  const lastGreedy = greedy[greedy.length - 1];
+
+  return {
+    baselineN, baselineRoi,
+    items, greedy,
+    greedyFinalSkipRate: lastGreedy?.skipRate ?? 0,
+    greedyFinalRoi: lastGreedy?.remainRoi ?? 0,
+    appSettingsOk: false,
+  };
 }
 
 // ─── フェーズ判定 ──────────────────────────────────────────────────────────────
@@ -349,6 +479,7 @@ function buildHumanSummary(phase: Phase, condB: CondBStatus, sel: SelectorStatus
 const condB    = buildCondBStatus();
 const selector = buildSelectorStatus();
 const suminoe  = buildSuminoeStatus();
+const skipPolicy = buildSkipPolicyMonitor();
 const { phase, reason: phaseReason } = determinePhase(condB, selector, suminoe);
 const { allowed, blocked, nextCommands } = buildActions(phase, condB);
 const humanSummary = buildHumanSummary(phase, condB, selector);
@@ -356,7 +487,7 @@ const humanSummary = buildHumanSummary(phase, condB, selector);
 const report: GovReport = {
   generatedAt: new Date().toISOString(),
   phase, phaseReason,
-  condB, selector, suminoe,
+  condB, selector, suminoe, skipPolicyMonitor: skipPolicy,
   blockedActions: blocked,
   allowedActions: allowed,
   nextCommands,
@@ -450,6 +581,39 @@ ${suminoe.map(s => `| ${s.label} | ${s.fwdN} | ${s.status} | ${s.note} |`).join(
 
 ---
 
+## Skip Policy Monitor
+
+> **app_settings 反映なし。monitor-only。** 読み取り専用シミュレーション結果。
+> baseline: forward n=${skipPolicy.baselineN} / ROI=${skipPolicy.baselineRoi}%
+
+### 除外ポリシー監視対象
+
+| ID | 除外条件 | 役割 | 除外率 | 残存ROI | delta | top2除外ROI | exJul25Δ | 直近3M | 判定 |
+|---|---|---|---:|---:|---:|---:|---:|---:|---|
+${skipPolicy.items.map(s => {
+  const roiOk  = s.remainRoi  >= 100 ? "✅" : "";
+  const top2Ok = s.remainTop2Roi >= 100 ? "✅" : "❌";
+  const large  = s.skipTooLarge ? "⚠️" : "";
+  return `| ${s.id} | ${s.name} | ${s.role} | ${large}${s.skipRate}% | ${s.remainRoi}%${roiOk} | +${s.delta}pt | ${s.remainTop2Roi}%${top2Ok} | +${s.deltaExJul25}pt | ${s.recent3mRoi}% | ${s.verdict} |`;
+}).join("\n")}
+
+### 次のレビュートリガー
+
+${skipPolicy.items.map(s => `- **[${s.id}] ${s.name}**: ${s.nextReviewTrigger}`).join("\n")}
+
+### Greedy Simulation（上限 30%）
+
+${skipPolicy.greedy.length > 0
+  ? `| Step | 追加条件 | skipN | 除外率 | 残存ROI | delta |\n|---|---|---:|---:|---:|---:|\n` +
+    skipPolicy.greedy.map(g =>
+      `| ${g.step} | ${g.added} | ${g.skipN} | ${g.skipRate}% | ${g.remainRoi}% | +${g.delta}pt |`
+    ).join("\n") + `\n\n最終ステップ: 除外率 ${skipPolicy.greedyFinalSkipRate}% / 残存ROI ${skipPolicy.greedyFinalRoi}%`
+  : "（データなし — pnpm analyze:roi-skip-policy を先に実行）"}
+
+> Greedy は 30% 上限で停止。30% 未満かつ top2除外ROI≥100% 到達時に採用条件チェックへ。
+
+---
+
 ## 格上げ/降格 判定表
 
 | 候補 | n | forward ROI | top2除外ROI | 直近3M | 判定 | 次のトリガー |
@@ -502,6 +666,13 @@ console.log(`  直近${condB.recentZeroMonths}ヶ月 0hit / forward後半ROI=${c
 console.log(`\n=== セレクター ===`);
 console.log(`  現行=${selector.baselineFwdRoi}% / 1点=${selector.onePtFwdRoi}% / 複数点=${selector.multiPtFwdRoi}%`);
 console.log(`  → ${selector.onePtAdopted || selector.multiPtAdopted ? "改善あり(採用候補)" : "両方不採用"}`);
+console.log(`\n=== Skip Policy Monitor ===`);
+for (const s of skipPolicy.items) {
+  const large = s.skipTooLarge ? " ⚠️強すぎ" : "";
+  console.log(`  [${s.id}] ${s.name}: skip=${s.skipRate}%${large} / ROI=${s.remainRoi}% / top2=${s.remainTop2Roi}% / exJul25Δ=+${s.deltaExJul25}pt`);
+  console.log(`       → ${s.nextReviewTrigger}`);
+}
+console.log(`  Greedy: 除外率${skipPolicy.greedyFinalSkipRate}% / ROI=${skipPolicy.greedyFinalRoi}%`);
 console.log(`\n=== 次アクション ===`);
 humanSummary.doNow.forEach(d => console.log(`  ✅ ${d}`));
 console.log(`\n=== 次の判断タイミング ===`);
