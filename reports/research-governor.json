@@ -1,0 +1,237 @@
+{
+  "generatedAt": "2026-06-09T12:31:05.913Z",
+  "phase": "research-monitor",
+  "warnings": [],
+  "nextAction": {
+    "priority": 3,
+    "action": "skip6R historical alternative odds の小規模backfill準備 (192/215件未保存)",
+    "command": "pnpm backfill:historical-alt-odds --limit 30 --priority skip6R --write --sleep-ms 1000"
+  },
+  "dataReadiness": {
+    "forwardTotal": 1522,
+    "condB": {
+      "total": 167,
+      "haoSaved": 167,
+      "coverage": 100
+    },
+    "skip6R": {
+      "total": 215,
+      "haoSaved": 23,
+      "coverage": 11
+    },
+    "skipVenue": {
+      "total": 159,
+      "haoSaved": 16,
+      "coverage": 10
+    },
+    "timeseries": {
+      "buyForwardOverlap": 0,
+      "condBOverlap": 0,
+      "dateRange": "なし",
+      "futureOnlySwitchReady": false
+    }
+  },
+  "hypotheses": [
+    {
+      "id": "H001",
+      "name": "condB 1-3-2 switch",
+      "status": "testing-historical",
+      "priority": 1,
+      "adoptionAllowed": false,
+      "adoptionBlockReason": "historical closing oddsでは有望だが top2除外ROI=92.2%(<100%) かつ future-only odds_timeseries 未確認",
+      "nextAction": "future-only odds_timeseries confirmation (condB BUY overlap蓄積待ち)",
+      "blockedReason": "timeseries overlap n=0。2026-06以降のBUY forward condBレースがT-5 timeseriesに蓄積するまで待つ",
+      "gateStatus": {
+        "nSufficient": true,
+        "dataQualityOk": true,
+        "roiBeatsBaseline": true,
+        "top2ExcludeRoiOk": false,
+        "recent3mOk": null,
+        "futureOnlyConfirmed": false
+      },
+      "lastKnownMetrics": {
+        "condB_n": 167,
+        "baseline_1_2_3_roi": 65.6,
+        "switch_1_3_2_roi": 174.4,
+        "switch_1_3_2_top2ExcludeRoi": 92.2,
+        "switch_1_3_2_excl2507_roi": 162.4,
+        "hybrid_condB_1_3_2_roi": 99.1,
+        "skip_remaining_roi": 89.8,
+        "recent3mN": 0,
+        "odds_source": "historical_closing_odds",
+        "forward_baseline_roi": 87.12
+      }
+    },
+    {
+      "id": "H002",
+      "name": "condB skip",
+      "status": "tested-historical",
+      "priority": 2,
+      "adoptionAllowed": false,
+      "adoptionBlockReason": "H001 switch 1-3-2 の方が有望。本採用判断は future-only確認後",
+      "nextAction": "H001 と並行して monitor",
+      "blockedReason": null,
+      "gateStatus": {
+        "roiBeatsBaseline": true,
+        "top2ExcludeRoiOk": false,
+        "futureOnlyConfirmed": false
+      },
+      "lastKnownMetrics": {
+        "skip_remaining_roi": 89.8,
+        "forward_baseline_roi": 87.12,
+        "delta": 2.68
+      }
+    },
+    {
+      "id": "H003",
+      "name": "6R skip",
+      "status": "monitor",
+      "priority": 3,
+      "adoptionAllowed": false,
+      "adoptionBlockReason": "top2除外ROI=88.94%(<100%)",
+      "nextAction": "pnpm report:paper-forward-monitor (monitor継続)",
+      "blockedReason": null,
+      "gateStatus": {
+        "roiBeatsBaseline": true,
+        "top2ExcludeRoiOk": false,
+        "recent3mOk": true
+      },
+      "lastKnownMetrics": {
+        "skip_n": 215,
+        "skip_rate": 14.13,
+        "skip_roi": 21.26,
+        "remaining_roi": 97.95,
+        "remaining_top2_exclude_roi": 88.94,
+        "recent3m_roi": 83.5,
+        "overlap_condB": 23
+      }
+    },
+    {
+      "id": "H004",
+      "name": "6R switch (代替買い目)",
+      "status": "waiting-data",
+      "priority": 4,
+      "adoptionAllowed": false,
+      "adoptionBlockReason": "historical_alternative_odds skip6R 未取得",
+      "nextAction": "pnpm backfill:historical-alt-odds --limit 30 --priority skip6R --write --sleep-ms 1000 (人間確認後・backup後)",
+      "blockedReason": "skip6R の代替買い目 historical closing odds 未取得 (192/215 未保存)",
+      "gateStatus": null,
+      "lastKnownMetrics": {
+        "skip6R_total_races": 215,
+        "historical_alt_odds_saved": 23
+      }
+    },
+    {
+      "id": "H005",
+      "name": "浜名湖+住之江 skip",
+      "status": "monitor",
+      "priority": 5,
+      "adoptionAllowed": false,
+      "adoptionBlockReason": "top2未確認 / forward n不足",
+      "nextAction": "pnpm report:paper-forward-monitor (monitor継続)",
+      "blockedReason": null,
+      "gateStatus": null,
+      "lastKnownMetrics": {
+        "skip_n": 159,
+        "note": "skip6R+浜名湖+住之江合計でskip_rate=22.4%, 残存ROI=108.4%, top2=98.43%"
+      }
+    },
+    {
+      "id": "H006",
+      "name": "浜名湖+住之江 switch (代替買い目)",
+      "status": "waiting-data",
+      "priority": 6,
+      "adoptionAllowed": false,
+      "adoptionBlockReason": "historical_alternative_odds skipVenue 未取得",
+      "nextAction": "H004完了後に着手",
+      "blockedReason": "H004(6R switch) 完了が先",
+      "gateStatus": null,
+      "lastKnownMetrics": {
+        "skipVenue_total_races": 159,
+        "historical_alt_odds_saved": 0
+      }
+    },
+    {
+      "id": "H007",
+      "name": "condB 1-3-4 switch",
+      "status": "secondary",
+      "priority": 7,
+      "adoptionAllowed": false,
+      "adoptionBlockReason": "top2除外ROI=0% → 明確に不採用",
+      "nextAction": "condB 1-3-2 検証内で参考として監視",
+      "blockedReason": null,
+      "gateStatus": null,
+      "lastKnownMetrics": {
+        "roi": 31.5,
+        "top2_exclude_roi": 0
+      }
+    },
+    {
+      "id": "H008",
+      "name": "1-3-5 / 1-3-6 switch",
+      "status": "backlog",
+      "priority": 8,
+      "adoptionAllowed": false,
+      "adoptionBlockReason": "買い目拡張は過学習リスク",
+      "nextAction": "none",
+      "blockedReason": "condB/skip switch検証が完了するまで着手しない。今は触らない",
+      "gateStatus": null,
+      "lastKnownMetrics": null
+    },
+    {
+      "id": "H009",
+      "name": "選手タイプ × 会場構造",
+      "status": "backlog",
+      "priority": 9,
+      "adoptionAllowed": false,
+      "adoptionBlockReason": null,
+      "nextAction": "none",
+      "blockedReason": "condB/skip switch検証完了後に着手",
+      "gateStatus": null,
+      "lastKnownMetrics": null
+    },
+    {
+      "id": "H010",
+      "name": "会場別着順構造",
+      "status": "backlog",
+      "priority": 10,
+      "adoptionAllowed": false,
+      "adoptionBlockReason": null,
+      "nextAction": "none",
+      "blockedReason": "skip/switch検証完了後に着手",
+      "gateStatus": null,
+      "lastKnownMetrics": null
+    }
+  ],
+  "condBSwitchVerdict": {
+    "n": 167,
+    "stratC_roi": 174.37,
+    "stratA_roi": 65.57,
+    "switch132_beats_baseline": true,
+    "top2ExcludeRoi": 92.18,
+    "top2ExcludeRoiOk": false,
+    "excl2507Roi": 162.41,
+    "excl2507N": 133,
+    "excl2507Ok": true,
+    "recent3mRoi": 0,
+    "recent3mN": 0,
+    "recent3mNoData": true,
+    "has3mZeroHit": false,
+    "hybridI_roi": 99.05,
+    "historicalAdoptionAllowed": false,
+    "futureTimeseriesRequired": true
+  },
+  "forbidden": [
+    "app_settings 変更",
+    "本番 decision ロジック変更",
+    "1-3-5 / 1-3-6 新規買い目追加",
+    "選手相性の深掘り (condB/skip 完了前)",
+    "allForward 一括 backfill (--priority allForward --write)",
+    "複数仮説の同時採用",
+    "historical closing odds を live/T-5 forward として扱うこと",
+    "top2除外ROI < 100% の候補を採用すること (condB top2=92.2%)",
+    "future-only timeseries 未確認の候補を本採用すること",
+    "skip6R / skipVenue の write (今回は確認ステップを先に)"
+  ],
+  "oneLiner": "次は skip6R historical alt odds の小規模backfill準備（人間確認後）。condB switchはhistorical上有望（174.4%）だがtop2=92.2%/future-only未確認のため本採用不可。"
+}

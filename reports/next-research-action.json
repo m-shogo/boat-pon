@@ -1,0 +1,110 @@
+{
+  "generatedAt": "2026-06-09T12:31:11.765Z",
+  "governorGeneratedAt": "2026-06-09T12:31:05.913Z",
+  "nextAction": {
+    "priority": 3,
+    "action": "skip6R historical alternative odds の小規模backfill準備 (192/215件未保存)",
+    "command": "pnpm backfill:historical-alt-odds --limit 30 --priority skip6R --write --sleep-ms 1000"
+  },
+  "plan": {
+    "title": "skip6R historical alternative odds 小規模 backfill (残 192/215件)",
+    "rationale": "condB historical closing odds は完備 (100%)。次は skip6R switch 予備検証のためにデータ取得。",
+    "writeAllowed": true,
+    "writeTarget": "historical_alternative_odds のみ (既存テーブルへの書き込み禁止)",
+    "steps": [
+      {
+        "step": 1,
+        "description": "backup を実施",
+        "command": "pnpm backup"
+      },
+      {
+        "step": 2,
+        "description": "現状確認",
+        "command": "pnpm check:historical-alt-odds-quality"
+      },
+      {
+        "step": 3,
+        "description": "skip6R dry-run (5件)",
+        "command": "pnpm backfill:historical-alt-odds --limit 5 --priority skip6R"
+      },
+      {
+        "step": 4,
+        "description": "dry-run 結果を人間が確認",
+        "command": null
+      },
+      {
+        "step": 5,
+        "description": "小規模 write 30件",
+        "command": "pnpm backfill:historical-alt-odds --limit 30 --priority skip6R --write --sleep-ms 1000"
+      },
+      {
+        "step": 6,
+        "description": "quality check",
+        "command": "pnpm check:historical-alt-odds-quality"
+      },
+      {
+        "step": 7,
+        "description": "governor 更新",
+        "command": "pnpm report:research-governor"
+      },
+      {
+        "step": 8,
+        "description": "満足なら残り write",
+        "command": "pnpm backfill:historical-alt-odds --limit 192 --priority skip6R --write --sleep-ms 1000"
+      }
+    ],
+    "prereqs": [
+      "backup 実施",
+      "dry-run 確認",
+      "human approval",
+      "condB coverage 100%"
+    ],
+    "checks": [
+      "fetch 成功率 ≥ 95%",
+      "5買い目揃い率 ≥ 95%",
+      "同値率 0%",
+      "既存テーブル汚染なし"
+    ],
+    "postChecks": [
+      "skip6R historical closing odds coverage 確認",
+      "switch 予備検証スクリプト作成"
+    ]
+  },
+  "dataReadiness": {
+    "forwardTotal": 1522,
+    "condB": {
+      "total": 167,
+      "haoSaved": 167,
+      "coverage": 100
+    },
+    "skip6R": {
+      "total": 215,
+      "haoSaved": 23,
+      "coverage": 11
+    },
+    "skipVenue": {
+      "total": 159,
+      "haoSaved": 16,
+      "coverage": 10
+    },
+    "timeseries": {
+      "buyForwardOverlap": 0,
+      "condBOverlap": 0,
+      "dateRange": "なし",
+      "futureOnlySwitchReady": false
+    }
+  },
+  "forbidden": [
+    "app_settings 変更",
+    "本番 decision ロジック変更",
+    "1-3-5 / 1-3-6 新規買い目追加",
+    "選手相性の深掘り (condB/skip 完了前)",
+    "allForward 一括 backfill (--priority allForward --write)",
+    "複数仮説の同時採用",
+    "historical closing odds を live/T-5 forward として扱うこと",
+    "top2除外ROI < 100% の候補を採用すること (condB top2=92.2%)",
+    "future-only timeseries 未確認の候補を本採用すること",
+    "skip6R / skipVenue の write (今回は確認ステップを先に)"
+  ],
+  "oneLiner": "次は skip6R historical alt odds の小規模backfill準備（人間確認後）。condB switchはhistorical上有望（174.4%）だがtop2=92.2%/future-only未確認のため本採用不可。"
+}
