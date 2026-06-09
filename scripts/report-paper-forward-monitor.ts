@@ -89,7 +89,7 @@ type SwitchMonitor = {
   forward: SwitchPeriodStat;
   milestone: MilestoneStatus;
   verdict: "strong" | "watch" | "weak-watch" | "reject" | "data-insufficient";
-  trend: "再現" | "方向一致" | "弱い" | "逆転" | "データ不足";
+  trend: "再現" | "forward急伸" | "方向一致" | "弱い" | "逆転" | "データ不足";
 };
 
 type ExcludeMonitor = {
@@ -124,7 +124,7 @@ function milestoneStatus(n: number): MilestoneStatus {
 }
 
 function switchVerdict(fwd: SwitchPeriodStat, fwdN: number): SwitchMonitor["verdict"] {
-  if (fwdN < 10) return "data-insufficient";
+  if (fwdN < 30) return "data-insufficient";
   if (fwd.payoutRoi132 >= 105) return "strong";
   if (fwd.payoutRoi132 >= 100) return "watch";
   if (fwd.payoutRoi132 >= 95)  return "weak-watch";
@@ -132,8 +132,11 @@ function switchVerdict(fwd: SwitchPeriodStat, fwdN: number): SwitchMonitor["verd
 }
 
 function switchTrend(train: SwitchPeriodStat, fwd: SwitchPeriodStat, fwdN: number): SwitchMonitor["trend"] {
-  if (fwdN < 10) return "データ不足";
-  if (fwd.payoutRoi132 >= 100) return "再現";
+  if (fwdN < 30) return "データ不足";
+  // 訓練期100%未満 → forward100%以上: 訓練期では弱かったが forward で強く出た
+  if (train.payoutRoi132 < 100 && fwd.payoutRoi132 >= 100) return "forward急伸";
+  // 訓練期も forward も 100%以上: 真の再現
+  if (train.payoutRoi132 >= 100 && fwd.payoutRoi132 >= 100) return "再現";
   if (fwd.payoutRoi132 > fwd.payoutRoi) return "方向一致";
   if (fwd.payoutRoi132 > train.payoutRoi132 * 0.7) return "弱い";
   return "逆転";
@@ -281,8 +284,8 @@ console.log(`  直近4週 n=${last4w.n} hits=${last4w.hits} payout=${l4wPayout}%
 // ─── Markdown 生成 ────────────────────────────────────────────────────────────
 
 const now = new Date().toISOString();
-const verdictIcon = (v: string) => ({ strong: "✅", watch: "🔷", "weak-watch": "🔶", reject: "❌", "data-insufficient": "⏳" })[v] ?? "—";
-const trendIcon = (t: string) => ({ "再現": "✅", "方向一致": "🔷", "弱い": "🔶", "逆転": "❌", "データ不足": "⏳" })[t] ?? "—";
+const verdictIcon = (v: string): string => ({ strong: "✅", watch: "🔷", "weak-watch": "🔶", reject: "❌", "data-insufficient": "⏳" })[v] ?? "—";
+const trendIcon   = (t: string): string => ({ "再現": "✅", "forward急伸": "🚀", "方向一致": "🔷", "弱い": "🔶", "逆転": "❌", "データ不足": "⏳" })[t] ?? "—";
 
 let md = `# paper-forward モニターレポート
 
@@ -317,13 +320,20 @@ ${switchMonitors.map(m =>
 ### 詳細
 
 ${switchMonitors.map(m => {
-  const nLeft = m.milestone.nextMilestone ? `次のマイルストーンまで: **${m.milestone.nextMilestone - m.forward.n} 件**（目標 n=${m.milestone.nextMilestone}）` : "n≥100 到達済み — 継続/降格判断フェーズ";
+  const nLeft = m.milestone.nextMilestone
+    ? `次のマイルストーンまで: **${m.milestone.nextMilestone - m.forward.n} 件**（目標 n=${m.milestone.nextMilestone}）`
+    : "n≥100 到達済み — 継続/降格判断フェーズ";
+  const extraNote = m.trend === "forward急伸"
+    ? `\n> ⚠️ **forward急伸注意**: 訓練期 1-3-2=${m.train.payoutRoi132}%（100%未満）だったが forward で急上昇。高配当1〜2件への依存がないか hit数・最大払戻除外ROI・月別ROIで要確認。`
+    : m.verdict === "data-insufficient"
+      ? `\n> ⏳ **データ不足（n<30）**: forward 期のサンプルが少なすぎるため判定不可。reject ではない。n=30 到達後に再判定。`
+      : "";
   return `#### ${m.label}
 - 訓練: n=${m.train.n} / 1-2-3=${m.train.payoutRoi}% / **1-3-2=${m.train.payoutRoi132}%**
 - forward: n=${m.forward.n} / 1-2-3=${m.forward.payoutRoi}% / **1-3-2=${m.forward.payoutRoi132}%** (+${m.forward.switchGain}pt)
 - ${nLeft}
 - 判定: ${verdictIcon(m.verdict)} **${m.verdict}** / トレンド: ${trendIcon(m.trend)} ${m.trend}
-`;
+${extraNote}`;
 }).join("\n")}
 
 ---
@@ -361,10 +371,19 @@ ${exclMonitors.filter(m => m.caution).map(m => `> ⚠️ **${m.label}**: ${m.cau
 
 | n | 信頼度 |
 |---|---|
-| <30 | ⏳ データ不足 |
+| <30 | ⏳ **判定不可** — データ不足。reject ではない |
 | ≥30 | 仮判定 |
 | ≥50 | 要確認 |
 | ≥100 | 継続/降格判断 |
+
+| トレンド | 意味 |
+|---|---|
+| ✅ 再現 | 訓練期も forward も 1-3-2 >= 100% |
+| 🚀 forward急伸 | 訓練期 < 100% だった候補が forward で >= 100% に急上昇。高配当依存の可能性あり、要深掘り |
+| 🔷 方向一致 | forward が 100% 未満でも switch で改善 |
+| 🔶 弱い | 改善幅が小さい |
+| ❌ 逆転 | forward で switch による改善が消えている |
+| ⏳ データ不足 | n<30 のため判定不可 |
 
 ### 昇格・降格ルール
 - **switch本採用**: n≥100 かつ forward payout 1-3-2 ≥ 100% で3ヶ月継続

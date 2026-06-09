@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-09T03:11:53.539Z",
+  "generatedAt": "2026-06-09T03:15:56.121Z",
   "forwardStart": "2025-01-01",
   "baseline": {
     "train": {
@@ -45,7 +45,7 @@
         "nConf": "継続/降格判断(n≥100)"
       },
       "verdict": "strong",
-      "trend": "再現"
+      "trend": "forward急伸"
     },
     {
       "id": "sw_suminoe_o40",
@@ -75,8 +75,8 @@
         "nextMilestone": 30,
         "nConf": "判定不可(n<30)"
       },
-      "verdict": "reject",
-      "trend": "逆転"
+      "verdict": "data-insufficient",
+      "trend": "データ不足"
     },
     {
       "id": "sw_suminoe_exh1",
@@ -106,8 +106,8 @@
         "nextMilestone": 30,
         "nConf": "判定不可(n<30)"
       },
-      "verdict": "reject",
-      "trend": "逆転"
+      "verdict": "data-insufficient",
+      "trend": "データ不足"
     },
     {
       "id": "sw_suminoe_r5",
@@ -137,8 +137,8 @@
         "nextMilestone": 30,
         "nConf": "判定不可(n<30)"
       },
-      "verdict": "reject",
-      "trend": "逆転"
+      "verdict": "data-insufficient",
+      "trend": "データ不足"
     }
   ],
   "exclMonitors": [
