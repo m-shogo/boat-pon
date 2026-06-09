@@ -1,0 +1,231 @@
+{
+  "generatedAt": "2026-06-09T08:11:05.336Z",
+  "forwardN": 1522,
+  "forwardMinDate": "2025-01-05",
+  "forwardMaxDate": "2026-05-20",
+  "oddsSnapshots": {
+    "snap132Total": 125,
+    "sameOddsCount": 124,
+    "diffOddsCount": 1,
+    "bugRate": 99.2,
+    "bugByVenue": [
+      {
+        "venue": "平和島",
+        "same_as_dh_odds": 51,
+        "diff_from_dh_odds": 0,
+        "total": 51
+      },
+      {
+        "venue": "鳴門",
+        "same_as_dh_odds": 22,
+        "diff_from_dh_odds": 1,
+        "total": 23
+      },
+      {
+        "venue": "大村",
+        "same_as_dh_odds": 17,
+        "diff_from_dh_odds": 0,
+        "total": 17
+      },
+      {
+        "venue": "芦屋",
+        "same_as_dh_odds": 15,
+        "diff_from_dh_odds": 0,
+        "total": 15
+      },
+      {
+        "venue": "宮島",
+        "same_as_dh_odds": 11,
+        "diff_from_dh_odds": 0,
+        "total": 11
+      },
+      {
+        "venue": "蒲郡",
+        "same_as_dh_odds": 8,
+        "diff_from_dh_odds": 0,
+        "total": 8
+      }
+    ],
+    "bySelection": {
+      "1-2-3": 1354,
+      "1-3-2": 125,
+      "1-2-4": 38,
+      "1-4-2": 0,
+      "1-3-4": 6
+    }
+  },
+  "oddsTimeseries": {
+    "minDate": "2026-06-02",
+    "maxDate": "2026-06-09",
+    "totalRaces": 60,
+    "totalDays": 8,
+    "fwdOverlap": 0,
+    "bySelectionAndCheckpoint": [
+      {
+        "selection": "1-2-3",
+        "checkpoint": "T-10",
+        "n": 305,
+        "minDate": "2026-06-01",
+        "maxDate": "2026-06-09",
+        "fwdOverlap": 0
+      },
+      {
+        "selection": "1-2-3",
+        "checkpoint": "T-20",
+        "n": 602,
+        "minDate": "2026-06-01",
+        "maxDate": "2026-06-09",
+        "fwdOverlap": 0
+      },
+      {
+        "selection": "1-2-3",
+        "checkpoint": "T-30",
+        "n": 540,
+        "minDate": "2026-06-01",
+        "maxDate": "2026-06-09",
+        "fwdOverlap": 0
+      },
+      {
+        "selection": "1-2-3",
+        "checkpoint": "T-5",
+        "n": 60,
+        "minDate": "2026-06-02",
+        "maxDate": "2026-06-09",
+        "fwdOverlap": 0
+      },
+      {
+        "selection": "1-2-4",
+        "checkpoint": "T-10",
+        "n": 307,
+        "minDate": "2026-06-01",
+        "maxDate": "2026-06-09",
+        "fwdOverlap": 0
+      },
+      {
+        "selection": "1-2-4",
+        "checkpoint": "T-20",
+        "n": 603,
+        "minDate": "2026-06-01",
+        "maxDate": "2026-06-09",
+        "fwdOverlap": 0
+      },
+      {
+        "selection": "1-2-4",
+        "checkpoint": "T-30",
+        "n": 542,
+        "minDate": "2026-06-01",
+        "maxDate": "2026-06-09",
+        "fwdOverlap": 0
+      },
+      {
+        "selection": "1-2-4",
+        "checkpoint": "T-5",
+        "n": 60,
+        "minDate": "2026-06-02",
+        "maxDate": "2026-06-09",
+        "fwdOverlap": 0
+      },
+      {
+        "selection": "1-3-2",
+        "checkpoint": "T-10",
+        "n": 305,
+        "minDate": "2026-06-01",
+        "maxDate": "2026-06-09",
+        "fwdOverlap": 0
+      },
+      {
+        "selection": "1-3-2",
+        "checkpoint": "T-20",
+        "n": 602,
+        "minDate": "2026-06-01",
+        "maxDate": "2026-06-09",
+        "fwdOverlap": 0
+      },
+      {
+        "selection": "1-3-2",
+        "checkpoint": "T-30",
+        "n": 540,
+        "minDate": "2026-06-01",
+        "maxDate": "2026-06-09",
+        "fwdOverlap": 0
+      },
+      {
+        "selection": "1-3-2",
+        "checkpoint": "T-5",
+        "n": 60,
+        "minDate": "2026-06-02",
+        "maxDate": "2026-06-09",
+        "fwdOverlap": 0
+      },
+      {
+        "selection": "1-3-4",
+        "checkpoint": "T-10",
+        "n": 306,
+        "minDate": "2026-06-01",
+        "maxDate": "2026-06-09",
+        "fwdOverlap": 0
+      },
+      {
+        "selection": "1-3-4",
+        "checkpoint": "T-20",
+        "n": 603,
+        "minDate": "2026-06-01",
+        "maxDate": "2026-06-09",
+        "fwdOverlap": 0
+      },
+      {
+        "selection": "1-3-4",
+        "checkpoint": "T-30",
+        "n": 541,
+        "minDate": "2026-06-01",
+        "maxDate": "2026-06-09",
+        "fwdOverlap": 0
+      },
+      {
+        "selection": "1-3-4",
+        "checkpoint": "T-5",
+        "n": 60,
+        "minDate": "2026-06-02",
+        "maxDate": "2026-06-09",
+        "fwdOverlap": 0
+      },
+      {
+        "selection": "1-4-2",
+        "checkpoint": "T-10",
+        "n": 307,
+        "minDate": "2026-06-01",
+        "maxDate": "2026-06-09",
+        "fwdOverlap": 0
+      },
+      {
+        "selection": "1-4-2",
+        "checkpoint": "T-20",
+        "n": 603,
+        "minDate": "2026-06-01",
+        "maxDate": "2026-06-09",
+        "fwdOverlap": 0
+      },
+      {
+        "selection": "1-4-2",
+        "checkpoint": "T-30",
+        "n": 542,
+        "minDate": "2026-06-01",
+        "maxDate": "2026-06-09",
+        "fwdOverlap": 0
+      },
+      {
+        "selection": "1-4-2",
+        "checkpoint": "T-5",
+        "n": 60,
+        "minDate": "2026-06-02",
+        "maxDate": "2026-06-09",
+        "fwdOverlap": 0
+      }
+    ]
+  },
+  "conclusion": {
+    "switchRoiEvaluationStatus": "not-possible-until-timeseries-accumulates",
+    "condBSwitch132PostHocRoi": "174.37% (事後計算のみ。事前odds不足のため期待値評価不可)",
+    "nextMilestone": "timeseries BUY forward n=50 (〜2026-08)"
+  }
+}

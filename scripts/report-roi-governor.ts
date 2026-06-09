@@ -562,6 +562,10 @@ ${blocked.map(b => `- 🚫 ${b}`).join("\n")}
 ${condB.demotionRisk ? `> ⚠️ **降格リスク警告**: top2除外ROI=${condB.top2ExclRoi}%(<95%) かつ 直近${condB.recentZeroMonths}ヶ月連続0hit。降格条件を数値上は満たしている。\n> ただし n=${condB.n} < 200 のため判定を保留。n=200到達後に改めて判断する。\n> ` : ""}
 > train ROI < 100% (${condB.trainRoi}%) → forward ROI > 100% (${condB.fwdRoi}%) = **forward急伸**
 > セレクターとしては不採用（train最良買い目は 2連単1-3）。単独 monitor 継続。
+>
+> ⚠️ **switch（1-3-2）評価は現在不可**: forward ROI 174.37% は事後計算（race_payouts.payout_yen から逆引き）であり、
+> 事前 odds ベースの期待値ではない。odds_snapshots の 1-3-2 データは 124/125 件が 1-2-3 と同値のバックフィルバグ。
+> odds_timeseries_snapshots（2026-06〜）でデータが蓄積されてから再評価。詳細: \`pnpm audit:alt-odds\`。
 
 ### セレクター（条件別券種セレクター）
 
