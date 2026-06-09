@@ -1,40 +1,40 @@
 {
-  "generatedAt": "2026-06-09T09:15:22.640Z",
+  "generatedAt": "2026-06-09T09:26:26.594Z",
   "tableExists": true,
   "basic": {
-    "total_rows": 297,
-    "total_races": 60,
+    "total_rows": 827,
+    "total_races": 166,
     "total_combinations": 5,
-    "min_date": "2025-08-02",
+    "min_date": "2025-02-02",
     "max_date": "2025-11-08"
   },
-  "with5Sels": 59,
+  "with5Sels": 165,
   "with4Sels": 0,
-  "condBInTable": 60,
+  "condBInTable": 166,
   "byCombo": [
     {
       "combination": "1-2-3",
-      "n": 60
+      "n": 166
     },
     {
       "combination": "1-2-4",
-      "n": 59
+      "n": 165
     },
     {
       "combination": "1-3-2",
-      "n": 60
+      "n": 166
     },
     {
       "combination": "1-3-4",
-      "n": 59
+      "n": 165
     },
     {
       "combination": "1-4-2",
-      "n": 59
+      "n": 165
     }
   ],
   "sameValueCheck": {
-    "total_with_both": 59,
+    "total_with_both": 165,
     "same_123_132": 0,
     "all_same": 0
   },
@@ -44,12 +44,12 @@
     "very_large": 0
   },
   "sourceCheck": {
-    "correct_type": 297,
-    "correct_quality": 297,
-    "is_backfill_1": 297,
-    "has_url": 297,
-    "has_fetched_at": 297,
-    "has_parser_ver": 297
+    "correct_type": 827,
+    "correct_quality": 827,
+    "is_backfill_1": 827,
+    "has_url": 827,
+    "has_fetched_at": 827,
+    "has_parser_ver": 827
   },
   "existingTablesContaminated": {
     "oddsSnapshotsCount": 0,

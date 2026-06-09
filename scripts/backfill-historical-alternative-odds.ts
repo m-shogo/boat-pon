@@ -109,16 +109,22 @@ const EXH1   = `EXISTS (SELECT 1 FROM race_entries re
 // ─── 取得済み race_id セット（--only-missing 用）────────────────────────────
 
 const fetchedRaceIds = new Set<string>();
-if (ONLY_MISSING && WRITE_MODE) {
-  // テーブルが存在する場合のみ確認
+let alreadyExistingRecordCount = 0;
+if (ONLY_MISSING) {
+  // テーブルが存在する場合のみ確認（dry-run でも skip 件数を表示するため）
   try {
     const fetched = db.prepare(
       `SELECT DISTINCT race_id FROM historical_alternative_odds
        WHERE source_type='${SOURCE_TYPE}' AND source_quality='${SOURCE_QUALITY}'`
     ).all() as { race_id: string }[];
     for (const r of fetched) fetchedRaceIds.add(r.race_id);
+    const recCount = db.prepare(
+      `SELECT COUNT(*) n FROM historical_alternative_odds
+       WHERE source_type='${SOURCE_TYPE}' AND source_quality='${SOURCE_QUALITY}'`
+    ).get() as { n: number };
+    alreadyExistingRecordCount = recCount.n;
   } catch {
-    // テーブルなしは無視（dry-run なら到達しない）
+    // テーブルなしは無視
   }
 }
 
@@ -176,6 +182,7 @@ const allCandidates = db.prepare(`
 const candidates = ONLY_MISSING
   ? allCandidates.filter(r => !fetchedRaceIds.has(r.race_id))
   : allCandidates;
+const skippedExistingRaceCount = allCandidates.length - candidates.length;
 
 const targets = candidates.slice(0, LIMIT);
 
@@ -275,6 +282,10 @@ console.log(`モード: ${WRITE_MODE ? "⚠️ --write (DB INSERT)" : "✅ dry-r
 console.log(`優先順位: ${PRIORITY} (${priorityLabel[PRIORITY] ?? PRIORITY})`);
 console.log(`対象: ${targets.length}件 / 候補: ${allCandidates.length}件 / limit: ${LIMIT} / sleep: ${SLEEP_MS}ms`);
 console.log(`only-missing: ${ONLY_MISSING} / from: ${FROM_DATE || FORWARD_START} / to: ${TO_DATE || "(最新)"}`);
+if (ONLY_MISSING) {
+  console.log(`  └ 既保存済みrace: ${fetchedRaceIds.size}件 skip → 次の未保存 ${targets.length}件 を取得`);
+  console.log(`  └ ⚠️ 再実行しても同じraceを再処理しない（resume動作）。重複防止はunique制約+INSERT OR IGNOREが担保`);
+}
 console.log();
 
 const results: RaceResult[] = [];
@@ -406,15 +417,19 @@ for (let i = 0; i < targets.length; i++) {
 
 // ─── 集計 ────────────────────────────────────────────────────────────────────
 
-const total       = results.length;
-const fetchOk     = results.filter(r => r.fetch_ok).length;
-const parseOk     = results.filter(r => r.parse_ok).length;
-const all5Ok      = results.filter(r => r.all5_found).length;
-const diff132Ok   = results.filter(r => r.odds_132_diff_from_123).length;
-const all5DiffOk  = results.filter(r => r.all5_diff_from_123).length;
-const cachedCount = results.filter(r => r.cached).length;
-const wouldInsert = results.reduce((s, r) => s + r.would_insert.filter(x => x.combination !== "N/A" && x.odds > 0).length, 0);
-const inserted    = results.filter(r => r.was_inserted).length;
+const total            = results.length;
+const fetchOk          = results.filter(r => r.fetch_ok).length;
+const parseOk          = results.filter(r => r.parse_ok).length;
+const all5Ok           = results.filter(r => r.all5_found).length;
+const partialRaceCount = results.filter(r => r.fetch_ok && r.parse_ok && !r.all5_found).length;
+const diff132Ok        = results.filter(r => r.odds_132_diff_from_123).length;
+const all5DiffOk       = results.filter(r => r.all5_diff_from_123).length;
+const cachedCount      = results.filter(r => r.cached).length;
+const plannedRecordCount = results.reduce((s, r) => s + r.would_insert.filter(x => x.combination !== "N/A" && x.odds > 0).length, 0);
+const wouldInsert      = plannedRecordCount; // alias for MD output
+const insertedRaceCount = results.filter(r => r.was_inserted).length;
+const insertedCount    = results.reduce((s, r) => s + (r.was_inserted ? r.would_insert.filter(x => x.combination !== "N/A" && x.odds > 0).length : 0), 0);
+const inserted         = insertedRaceCount; // alias for MD output
 
 const deltas = results.filter(r => r.odds_123_vs_current_odds_delta !== null).map(r => r.odds_123_vs_current_odds_delta!);
 const avgDelta = deltas.length > 0 ? Math.round(deltas.reduce((s, v) => s + v, 0) / deltas.length * 100) / 100 : null;
@@ -443,6 +458,23 @@ lines.push(``);
 lines.push(`> **historical closing odds は live/T-5/timeseries odds ではありません。**`);
 lines.push(`> **公式アーカイブから後日取得した「締切時オッズ backfill」です。**`);
 lines.push(`> BUY は検証候補、ROI は検証指標。購入指示ではない。app_settings / 本番 decision 変更禁止。`);
+lines.push(``);
+lines.push(`---`);
+lines.push(``);
+lines.push(`## only-missing=true の動作仕様`);
+lines.push(``);
+lines.push(`| 項目 | 値 |`);
+lines.push(`|---|---|`);
+lines.push(`| only-missing | ${ONLY_MISSING} (デフォルト: true) |`);
+lines.push(`| 既保存済み race 数 | ${fetchedRaceIds.size} 件 (スキップ) |`);
+lines.push(`| 既保存済みレコード数 | ${alreadyExistingRecordCount} 件 |`);
+lines.push(`| 今回の対象 race 数 | ${targets.length} 件 (= 次の未保存分) |`);
+lines.push(``);
+lines.push(`> **⚠️ 仕様注意**: \`only-missing=true\` は **resume（再開）動作** です。`);
+lines.push(`> - 同じコマンドを再実行すると、**既存 race をスキップ**して次の未保存 race へ進みます`);
+lines.push(`> - 「同じ30件で重複確認（べき等確認）」にはなりません`);
+lines.push(`> - 重複防止は **unique制約 + INSERT OR IGNORE** が担保しています（race 単位ではなく record 単位）`);
+lines.push(`> - べき等確認が必要な場合は \`--no-only-missing\` で実行してください（同一 race に対し IGNORE が正常動作するか確認できます）`);
 lines.push(``);
 lines.push(`---`);
 lines.push(``);
@@ -530,7 +562,21 @@ const jsonOutput = {
   mode: WRITE_MODE ? "write" : "dry-run",
   priority: PRIORITY,
   params: { limit: LIMIT, sleepMs: SLEEP_MS, fromDate: FROM_DATE, toDate: TO_DATE, venueFilter: VENUE_FILTER, onlyMissing: ONLY_MISSING },
-  summary: { total, cached: cachedCount, fetchOk, parseOk, all5Ok, diff132Ok, all5DiffOk, wouldInsert, inserted, avgDelta, maxDelta },
+  onlyMissingStats: {
+    onlyMissing: ONLY_MISSING,
+    skippedExistingRaceCount,
+    alreadyExistingRecordCount,
+    candidateTotalRaceCount: allCandidates.length,
+    targetRaceCount: targets.length,
+  },
+  summary: {
+    total, cached: cachedCount, fetchOk, parseOk,
+    all5Ok, partialRaceCount, diff132Ok, all5DiffOk,
+    plannedRecordCount, insertedCount, insertedRaceCount,
+    avgDelta, maxDelta,
+    // aliases for backward compatibility
+    wouldInsert, inserted,
+  },
   quality: { fetchRate: fetchRate(), all5Rate: all5Rate(), diff132Rate: diff132Rate(), qualityOk, nextWriteReady: qualityOk && !WRITE_MODE },
   results,
 };
