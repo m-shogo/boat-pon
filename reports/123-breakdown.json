@@ -1,0 +1,625 @@
+{
+  "generatedAt": "2026-06-09T01:39:49.838Z",
+  "baseline": {
+    "n": 4401,
+    "roi": 100.79
+  },
+  "base123": {
+    "label": "1-2-3 全体",
+    "n": 4301,
+    "hits": 106,
+    "hitRate": 2.46,
+    "roi": 100.12,
+    "warning": ""
+  },
+  "oddsBands": [
+    {
+      "label": "1-2-3 odds 25〜39",
+      "n": 1864,
+      "hits": 54,
+      "hitRate": 2.9,
+      "roi": 97.28,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 odds 40〜49",
+      "n": 1204,
+      "hits": 30,
+      "hitRate": 2.49,
+      "roi": 109.77,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 odds 50〜59",
+      "n": 708,
+      "hits": 13,
+      "hitRate": 1.84,
+      "roi": 99.25,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 odds 60〜69",
+      "n": 272,
+      "hits": 4,
+      "hitRate": 1.47,
+      "roi": 91.73,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 odds 70〜79",
+      "n": 120,
+      "hits": 2,
+      "hitRate": 1.67,
+      "roi": 128.42,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 odds 80以上",
+      "n": 49,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": ""
+    }
+  ],
+  "exhBoat1": [
+    {
+      "label": "1-2-3 1号艇展示データなし",
+      "n": 30,
+      "hits": 1,
+      "hitRate": 3.33,
+      "roi": 55.67,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 1号艇 展示タイム1位（最速）",
+      "n": 1031,
+      "hits": 18,
+      "hitRate": 1.75,
+      "roi": 76.52,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 1号艇 展示タイム2〜3位",
+      "n": 1603,
+      "hits": 44,
+      "hitRate": 2.74,
+      "roi": 110.39,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 1号艇 展示タイム4位以下",
+      "n": 1637,
+      "hits": 43,
+      "hitRate": 2.63,
+      "roi": 105.74,
+      "warning": ""
+    }
+  ],
+  "stBoat1": [
+    {
+      "label": "1-2-3 1号艇 ST < 0.15（早い）",
+      "n": 2198,
+      "hits": 57,
+      "hitRate": 2.59,
+      "roi": 104.97,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 1号艇 ST 0.15〜0.20",
+      "n": 539,
+      "hits": 13,
+      "hitRate": 2.41,
+      "roi": 98.01,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 1号艇 ST 0.20以上（遅い）",
+      "n": 687,
+      "hits": 13,
+      "hitRate": 1.89,
+      "roi": 82.07,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 1号艇 STデータなし",
+      "n": 877,
+      "hits": 23,
+      "hitRate": 2.62,
+      "roi": 103.39,
+      "warning": ""
+    }
+  ],
+  "boat23Cmp": [
+    {
+      "label": "1-2-3 2号艇展示速い（2号艇<3号艇）— 1-2-3有利",
+      "n": 2005,
+      "hits": 55,
+      "hitRate": 2.74,
+      "roi": 111.51,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 3号艇展示速い（3号艇<2号艇）— 1-3-2に流れやすい",
+      "n": 1980,
+      "hits": 46,
+      "hitRate": 2.32,
+      "roi": 96.54,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 2号艇・3号艇 展示データ欠損",
+      "n": 34,
+      "hits": 1,
+      "hitRate": 2.94,
+      "roi": 49.12,
+      "warning": ""
+    }
+  ],
+  "raceNoStats": [
+    {
+      "label": "1-2-3 1R",
+      "n": 208,
+      "hits": 7,
+      "hitRate": 3.37,
+      "roi": 139.28,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 2R",
+      "n": 450,
+      "hits": 10,
+      "hitRate": 2.22,
+      "roi": 80.8,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 3R",
+      "n": 516,
+      "hits": 16,
+      "hitRate": 3.1,
+      "roi": 128.93,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 4R",
+      "n": 581,
+      "hits": 13,
+      "hitRate": 2.24,
+      "roi": 96.75,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 5R",
+      "n": 503,
+      "hits": 9,
+      "hitRate": 1.79,
+      "roi": 65.27,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 6R",
+      "n": 636,
+      "hits": 16,
+      "hitRate": 2.52,
+      "roi": 101.68,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 7R",
+      "n": 585,
+      "hits": 13,
+      "hitRate": 2.22,
+      "roi": 94.43,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 8R",
+      "n": 489,
+      "hits": 10,
+      "hitRate": 2.04,
+      "roi": 92.82,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 9R",
+      "n": 333,
+      "hits": 12,
+      "hitRate": 3.6,
+      "roi": 133.33,
+      "warning": ""
+    }
+  ],
+  "windGroups": [
+    {
+      "label": "1-2-3 風速データなし",
+      "n": 30,
+      "hits": 1,
+      "hitRate": 3.33,
+      "roi": 55.67,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 風速 0〜2m/s",
+      "n": 867,
+      "hits": 24,
+      "hitRate": 2.77,
+      "roi": 111.73,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 風速 2〜4m/s",
+      "n": 2099,
+      "hits": 49,
+      "hitRate": 2.33,
+      "roi": 91.52,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 風速 4m/s以上",
+      "n": 1305,
+      "hits": 32,
+      "hitRate": 2.45,
+      "roi": 107.24,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 安定板あり",
+      "n": 271,
+      "hits": 7,
+      "hitRate": 2.58,
+      "roi": 100.7,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 安定板なし",
+      "n": 4000,
+      "hits": 98,
+      "hitRate": 2.45,
+      "roi": 100.41,
+      "warning": ""
+    }
+  ],
+  "venueStats": [
+    {
+      "venue": "住之江",
+      "n": 207,
+      "hits": 4,
+      "hitRate": 1.93,
+      "roi": 65.22,
+      "judgment": "paper-forward候補"
+    },
+    {
+      "venue": "福岡",
+      "n": 240,
+      "hits": 5,
+      "hitRate": 2.08,
+      "roi": 73.67,
+      "judgment": "paper-forward候補"
+    },
+    {
+      "venue": "蒲郡",
+      "n": 239,
+      "hits": 4,
+      "hitRate": 1.67,
+      "roi": 74.06,
+      "judgment": "paper-forward候補"
+    },
+    {
+      "venue": "下関",
+      "n": 225,
+      "hits": 5,
+      "hitRate": 2.22,
+      "roi": 78.09,
+      "judgment": "paper-forward候補"
+    },
+    {
+      "venue": "浜名湖",
+      "n": 254,
+      "hits": 5,
+      "hitRate": 1.97,
+      "roi": 79.8,
+      "judgment": "paper-forward候補"
+    },
+    {
+      "venue": "徳山",
+      "n": 199,
+      "hits": 5,
+      "hitRate": 2.51,
+      "roi": 81.61,
+      "judgment": "要追加確認"
+    },
+    {
+      "venue": "鳴門",
+      "n": 180,
+      "hits": 3,
+      "hitRate": 1.67,
+      "roi": 85.33,
+      "judgment": "要追加確認"
+    },
+    {
+      "venue": "丸亀",
+      "n": 209,
+      "hits": 5,
+      "hitRate": 2.39,
+      "roi": 87.56,
+      "judgment": "要追加確認"
+    },
+    {
+      "venue": "大村",
+      "n": 244,
+      "hits": 6,
+      "hitRate": 2.46,
+      "roi": 91.68,
+      "judgment": "採用しない"
+    },
+    {
+      "venue": "尼崎",
+      "n": 185,
+      "hits": 3,
+      "hitRate": 1.62,
+      "roi": 91.78,
+      "judgment": "採用しない"
+    },
+    {
+      "venue": "若松",
+      "n": 252,
+      "hits": 6,
+      "hitRate": 2.38,
+      "roi": 95.12,
+      "judgment": "採用しない"
+    },
+    {
+      "venue": "宮島",
+      "n": 244,
+      "hits": 7,
+      "hitRate": 2.87,
+      "roi": 96.15,
+      "judgment": "採用しない"
+    },
+    {
+      "venue": "津",
+      "n": 219,
+      "hits": 5,
+      "hitRate": 2.28,
+      "roi": 103.65,
+      "judgment": "採用しない"
+    },
+    {
+      "venue": "唐津",
+      "n": 267,
+      "hits": 8,
+      "hitRate": 3,
+      "roi": 105.69,
+      "judgment": "採用しない"
+    },
+    {
+      "venue": "平和島",
+      "n": 232,
+      "hits": 4,
+      "hitRate": 1.72,
+      "roi": 106.25,
+      "judgment": "採用しない"
+    },
+    {
+      "venue": "びわこ",
+      "n": 256,
+      "hits": 7,
+      "hitRate": 2.73,
+      "roi": 112.58,
+      "judgment": "採用しない"
+    },
+    {
+      "venue": "常滑",
+      "n": 290,
+      "hits": 10,
+      "hitRate": 3.45,
+      "roi": 135.97,
+      "judgment": "採用しない"
+    },
+    {
+      "venue": "芦屋",
+      "n": 189,
+      "hits": 7,
+      "hitRate": 3.7,
+      "roi": 149.1,
+      "judgment": "採用しない"
+    },
+    {
+      "venue": "児島",
+      "n": 170,
+      "hits": 7,
+      "hitRate": 4.12,
+      "roi": 207.06,
+      "judgment": "採用しない"
+    }
+  ],
+  "crossStats": [
+    {
+      "label": "1-2-3 × 1号艇展示1位 × odds<60",
+      "n": 946,
+      "hits": 17,
+      "hitRate": 1.8,
+      "roi": 76.58,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 × 1号艇展示1位 × odds>=60",
+      "n": 85,
+      "hits": 1,
+      "hitRate": 1.18,
+      "roi": 75.88,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 × 1号艇展示1位 × 2号艇展示速い（ダブル有利）",
+      "n": 450,
+      "hits": 8,
+      "hitRate": 1.78,
+      "roi": 73.91,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 × 1号艇展示1位 × 3号艇展示速い（1-3-2リスク）",
+      "n": 485,
+      "hits": 8,
+      "hitRate": 1.65,
+      "roi": 80.06,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 × 風速2〜4 × 1号艇展示1位",
+      "n": 488,
+      "hits": 6,
+      "hitRate": 1.23,
+      "roi": 51.05,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 × odds 40〜49 × 1〜3R",
+      "n": 340,
+      "hits": 9,
+      "hitRate": 2.65,
+      "roi": 116.41,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 × odds 40〜49 × 4〜9R",
+      "n": 864,
+      "hits": 21,
+      "hitRate": 2.43,
+      "roi": 107.15,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 × 住之江 × odds<40",
+      "n": 110,
+      "hits": 4,
+      "hitRate": 3.64,
+      "roi": 122.73,
+      "warning": ""
+    },
+    {
+      "label": "1-2-3 × 住之江 × odds 40〜49",
+      "n": 59,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": ""
+    }
+  ],
+  "paperForward": [
+    {
+      "label": "1-2-3 odds 80以上",
+      "n": 49,
+      "hits": 0,
+      "hitRate": 0,
+      "roi": 0,
+      "warning": "",
+      "group": "オッズ帯"
+    },
+    {
+      "label": "1-2-3 1号艇展示データなし",
+      "n": 30,
+      "hits": 1,
+      "hitRate": 3.33,
+      "roi": 55.67,
+      "warning": "",
+      "group": "1号艇展示タイム"
+    },
+    {
+      "label": "1-2-3 1号艇 展示タイム1位（最速）",
+      "n": 1031,
+      "hits": 18,
+      "hitRate": 1.75,
+      "roi": 76.52,
+      "warning": "",
+      "group": "1号艇展示タイム"
+    },
+    {
+      "label": "1-2-3 2号艇・3号艇 展示データ欠損",
+      "n": 34,
+      "hits": 1,
+      "hitRate": 2.94,
+      "roi": 49.12,
+      "warning": "",
+      "group": "2vs3号艇展示"
+    },
+    {
+      "label": "1-2-3 5R",
+      "n": 503,
+      "hits": 9,
+      "hitRate": 1.79,
+      "roi": 65.27,
+      "warning": "",
+      "group": "race_no"
+    },
+    {
+      "label": "1-2-3 風速データなし",
+      "n": 30,
+      "hits": 1,
+      "hitRate": 3.33,
+      "roi": 55.67,
+      "warning": "",
+      "group": "風速"
+    }
+  ],
+  "needsCheck": [
+    {
+      "label": "1-2-3 1号艇 ST 0.20以上（遅い）",
+      "n": 687,
+      "hits": 13,
+      "hitRate": 1.89,
+      "roi": 82.07,
+      "warning": "",
+      "group": "1号艇ST"
+    },
+    {
+      "label": "1-2-3 2R",
+      "n": 450,
+      "hits": 10,
+      "hitRate": 2.22,
+      "roi": 80.8,
+      "warning": "",
+      "group": "race_no"
+    }
+  ],
+  "goodConds": [
+    {
+      "label": "1-2-3 odds 70〜79",
+      "n": 120,
+      "hits": 2,
+      "hitRate": 1.67,
+      "roi": 128.42,
+      "warning": "",
+      "group": "オッズ帯"
+    },
+    {
+      "label": "1-2-3 1R",
+      "n": 208,
+      "hits": 7,
+      "hitRate": 3.37,
+      "roi": 139.28,
+      "warning": "",
+      "group": "race_no"
+    },
+    {
+      "label": "1-2-3 3R",
+      "n": 516,
+      "hits": 16,
+      "hitRate": 3.1,
+      "roi": 128.93,
+      "warning": "",
+      "group": "race_no"
+    },
+    {
+      "label": "1-2-3 9R",
+      "n": 333,
+      "hits": 12,
+      "hitRate": 3.6,
+      "roi": 133.33,
+      "warning": "",
+      "group": "race_no"
+    }
+  ]
+}
