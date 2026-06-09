@@ -1,0 +1,262 @@
+{
+  "generatedAt": "2026-06-09T03:11:53.539Z",
+  "forwardStart": "2025-01-01",
+  "baseline": {
+    "train": {
+      "n": 2779,
+      "hits": 67,
+      "currentRoi": 98.24,
+      "payoutRoi": 85.84
+    },
+    "forward": {
+      "n": 1522,
+      "hits": 39,
+      "currentRoi": 103.53,
+      "payoutRoi": 87.12
+    }
+  },
+  "switchMonitors": [
+    {
+      "id": "sw_wind24_exh1",
+      "label": "風速2〜4 × 1号艇展示1位",
+      "from": "3連単1-2-3",
+      "to": "3連単1-3-2",
+      "train": {
+        "n": 321,
+        "hits": 3,
+        "currentRoi": 37.2,
+        "payoutRoi": 22.34,
+        "payoutRoi132": 66.17,
+        "switchGain": 43.83
+      },
+      "forward": {
+        "n": 167,
+        "hits": 3,
+        "currentRoi": 77.66,
+        "payoutRoi": 65.57,
+        "payoutRoi132": 174.37,
+        "switchGain": 108.8
+      },
+      "milestone": {
+        "reached30": true,
+        "reached50": true,
+        "reached100": true,
+        "nextMilestone": null,
+        "nConf": "継続/降格判断(n≥100)"
+      },
+      "verdict": "strong",
+      "trend": "再現"
+    },
+    {
+      "id": "sw_suminoe_o40",
+      "label": "住之江 × odds40〜49",
+      "from": "3連単1-2-3",
+      "to": "3連単1-3-2",
+      "train": {
+        "n": 36,
+        "hits": 0,
+        "currentRoi": 0,
+        "payoutRoi": 0,
+        "payoutRoi132": 276.11,
+        "switchGain": 276.11
+      },
+      "forward": {
+        "n": 23,
+        "hits": 0,
+        "currentRoi": 0,
+        "payoutRoi": 0,
+        "payoutRoi132": 0,
+        "switchGain": 0
+      },
+      "milestone": {
+        "reached30": false,
+        "reached50": false,
+        "reached100": false,
+        "nextMilestone": 30,
+        "nConf": "判定不可(n<30)"
+      },
+      "verdict": "reject",
+      "trend": "逆転"
+    },
+    {
+      "id": "sw_suminoe_exh1",
+      "label": "住之江 × 1号艇展示1位",
+      "from": "3連単1-2-3",
+      "to": "3連単1-3-2",
+      "train": {
+        "n": 29,
+        "hits": 0,
+        "currentRoi": 0,
+        "payoutRoi": 0,
+        "payoutRoi132": 342.76,
+        "switchGain": 342.76
+      },
+      "forward": {
+        "n": 18,
+        "hits": 0,
+        "currentRoi": 0,
+        "payoutRoi": 0,
+        "payoutRoi132": 0,
+        "switchGain": 0
+      },
+      "milestone": {
+        "reached30": false,
+        "reached50": false,
+        "reached100": false,
+        "nextMilestone": 30,
+        "nConf": "判定不可(n<30)"
+      },
+      "verdict": "reject",
+      "trend": "逆転"
+    },
+    {
+      "id": "sw_suminoe_r5",
+      "label": "住之江 × 5R",
+      "from": "3連単1-2-3",
+      "to": "3連単1-3-2",
+      "train": {
+        "n": 20,
+        "hits": 0,
+        "currentRoi": 0,
+        "payoutRoi": 0,
+        "payoutRoi132": 214,
+        "switchGain": 214
+      },
+      "forward": {
+        "n": 10,
+        "hits": 0,
+        "currentRoi": 0,
+        "payoutRoi": 0,
+        "payoutRoi132": 0,
+        "switchGain": 0
+      },
+      "milestone": {
+        "reached30": false,
+        "reached50": false,
+        "reached100": false,
+        "nextMilestone": 30,
+        "nConf": "判定不可(n<30)"
+      },
+      "verdict": "reject",
+      "trend": "逆転"
+    }
+  ],
+  "exclMonitors": [
+    {
+      "id": "ex_exh1",
+      "label": "1号艇展示1位 除外",
+      "trainResidualPayoutRoi": 97.22,
+      "trainExclN": 681,
+      "forward": {
+        "exclN": 350,
+        "residualN": 1172,
+        "residualPayoutRoi": 91.42,
+        "basePayoutRoi": 87.12,
+        "improvPayout": 4.3
+      },
+      "milestone": {
+        "reached30": true,
+        "reached50": true,
+        "reached100": true,
+        "nextMilestone": null,
+        "nConf": "継続/降格判断(n≥100)"
+      },
+      "verdict": "reject",
+      "trend": "方向一致"
+    },
+    {
+      "id": "ex_boat3",
+      "label": "3号艇が2号艇より展示速い 除外",
+      "trainResidualPayoutRoi": 96.37,
+      "trainExclN": 1291,
+      "forward": {
+        "exclN": 689,
+        "residualN": 833,
+        "residualPayoutRoi": 85.02,
+        "basePayoutRoi": 87.12,
+        "improvPayout": -2.1
+      },
+      "milestone": {
+        "reached30": true,
+        "reached50": true,
+        "reached100": true,
+        "nextMilestone": null,
+        "nConf": "継続/降格判断(n≥100)"
+      },
+      "verdict": "reject",
+      "trend": "弱い"
+    },
+    {
+      "id": "ex_race5",
+      "label": "5R 除外",
+      "trainResidualPayoutRoi": 88.36,
+      "trainExclN": 319,
+      "forward": {
+        "exclN": 184,
+        "residualN": 1338,
+        "residualPayoutRoi": 91.61,
+        "basePayoutRoi": 87.12,
+        "improvPayout": 4.49
+      },
+      "milestone": {
+        "reached30": true,
+        "reached50": true,
+        "reached100": true,
+        "nextMilestone": null,
+        "nConf": "継続/降格判断(n≥100)"
+      },
+      "verdict": "reject",
+      "trend": "方向一致"
+    },
+    {
+      "id": "ex_odds80",
+      "label": "odds 80以上 除外",
+      "trainResidualPayoutRoi": 86.94,
+      "trainExclN": 35,
+      "forward": {
+        "exclN": 14,
+        "residualN": 1508,
+        "residualPayoutRoi": 87.92,
+        "basePayoutRoi": 87.12,
+        "improvPayout": 0.8
+      },
+      "milestone": {
+        "reached30": true,
+        "reached50": true,
+        "reached100": true,
+        "nextMilestone": null,
+        "nConf": "継続/降格判断(n≥100)"
+      },
+      "verdict": "reject",
+      "trend": "方向一致"
+    },
+    {
+      "id": "ex_wind24_caut",
+      "label": "風速2〜4m/s 除外（注意付き）",
+      "caution": "switch候補と競合",
+      "trainResidualPayoutRoi": 92.06,
+      "trainExclN": 1405,
+      "forward": {
+        "exclN": 694,
+        "residualN": 828,
+        "residualPayoutRoi": 91.58,
+        "basePayoutRoi": 87.12,
+        "improvPayout": 4.46
+      },
+      "milestone": {
+        "reached30": true,
+        "reached50": true,
+        "reached100": true,
+        "nextMilestone": null,
+        "nConf": "継続/降格判断(n≥100)"
+      },
+      "verdict": "reject",
+      "trend": "方向一致"
+    }
+  ],
+  "last4weeks": {
+    "n": 23,
+    "hits": 1,
+    "payoutRoi": 72.61
+  }
+}
