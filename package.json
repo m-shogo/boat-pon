@@ -142,7 +142,9 @@
     "analyze:roi-edge-market-gap": "tsx scripts/analyze-roi-edge-market-gap.ts",
     "audit:alt-odds": "tsx scripts/audit-alternative-odds-coverage.ts",
     "check:alt-odds-health": "tsx scripts/check-alternative-odds-timeseries-health.ts",
-    "audit:historical-closing-odds": "tsx scripts/audit-historical-closing-odds-availability.ts"
+    "audit:historical-closing-odds": "tsx scripts/audit-historical-closing-odds-availability.ts",
+    "design:historical-alt-odds": "tsx scripts/design-historical-alternative-odds-storage.ts",
+    "backfill:historical-alt-odds": "tsx scripts/backfill-historical-alternative-odds.ts"
   },
   "engines": {
     "node": ">=24.0.0"

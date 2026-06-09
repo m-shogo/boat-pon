@@ -1,0 +1,199 @@
+{
+  "generatedAt": "2026-06-09T09:00:29.232Z",
+  "targetTableExists": false,
+  "forwardStats": {
+    "total": 1522,
+    "condB": 167,
+    "r6": 215,
+    "hamanako": 83,
+    "suminoe": 76,
+    "other": 1046
+  },
+  "estimatedTotalRecords": 7610,
+  "createTableSql": "-- ⚠️ 設計案のみ。今回は実行しない。実行は次フェーズで確認後に行う。\nCREATE TABLE historical_alternative_odds (\n  id           INTEGER PRIMARY KEY AUTOINCREMENT,\n\n  -- レース識別 (decision_history.race_id と JOIN 可能)\n  race_id      TEXT NOT NULL,\n  race_date    TEXT NOT NULL,  -- YYYY-MM-DD\n  venue        TEXT NOT NULL,\n  venue_code   TEXT NOT NULL,  -- 2桁場コード (01〜24)\n  race_no      INTEGER NOT NULL,\n\n  -- 代替買い目 odds\n  combination  TEXT NOT NULL,  -- '1-2-3' / '1-3-2' / '1-2-4' / '1-4-2' / '1-3-4'\n  odds         REAL NOT NULL,\n\n  -- データソース情報 (live odds / timeseries odds と明確に区別する)\n  source_type    TEXT NOT NULL DEFAULT 'official_archive',\n  source_quality TEXT NOT NULL DEFAULT 'historical_closing_odds',\n  -- source_quality: 'historical_closing_odds' のみ使用。\n  --   live_odds / t5_odds / timeseries_odds とは絶対に混同しない。\n\n  source_url   TEXT NOT NULL,  -- 取得元 URL\n  fetched_at   TEXT NOT NULL,  -- ISO8601 取得日時\n  parser_version TEXT NOT NULL DEFAULT '1.0',\n\n  -- backfill フラグ\n  is_backfill  INTEGER NOT NULL DEFAULT 1,  -- 常に 1 (後日補完)\n\n  -- 品質ステータス\n  fetch_status TEXT NOT NULL DEFAULT 'success',\n  -- 'success' / 'fetch_error' / 'parse_error' / 'no_odds_found'\n\n  notes        TEXT  -- 備考 (parse失敗理由等)\n);\n\n-- ユニーク制約: 同一レース×買い目×ソース種別の重複を防ぐ\nCREATE UNIQUE INDEX uq_historical_alternative_odds_key\n  ON historical_alternative_odds (race_id, combination, source_type, source_quality);\n\n-- 検索用インデックス\nCREATE INDEX idx_hao_race_id    ON historical_alternative_odds (race_id);\nCREATE INDEX idx_hao_race_date  ON historical_alternative_odds (race_date);\nCREATE INDEX idx_hao_venue      ON historical_alternative_odds (venue);\nCREATE INDEX idx_hao_race_no    ON historical_alternative_odds (race_no);\nCREATE INDEX idx_hao_combination ON historical_alternative_odds (combination);\nCREATE INDEX idx_hao_source     ON historical_alternative_odds (source_type, source_quality);",
+  "columns": [
+    {
+      "name": "id",
+      "type": "INTEGER",
+      "notNull": true,
+      "default": "AUTOINCREMENT",
+      "note": "主キー"
+    },
+    {
+      "name": "race_id",
+      "type": "TEXT",
+      "notNull": true,
+      "note": "decision_history.race_id と JOIN 可能"
+    },
+    {
+      "name": "race_date",
+      "type": "TEXT",
+      "notNull": true,
+      "note": "YYYY-MM-DD"
+    },
+    {
+      "name": "venue",
+      "type": "TEXT",
+      "notNull": true,
+      "note": "場名"
+    },
+    {
+      "name": "venue_code",
+      "type": "TEXT",
+      "notNull": true,
+      "note": "2桁場コード"
+    },
+    {
+      "name": "race_no",
+      "type": "INTEGER",
+      "notNull": true,
+      "note": "レース番号"
+    },
+    {
+      "name": "combination",
+      "type": "TEXT",
+      "notNull": true,
+      "note": "1-2-3 等 5択"
+    },
+    {
+      "name": "odds",
+      "type": "REAL",
+      "notNull": true,
+      "note": "取得オッズ"
+    },
+    {
+      "name": "source_type",
+      "type": "TEXT",
+      "notNull": true,
+      "default": "official_archive"
+    },
+    {
+      "name": "source_quality",
+      "type": "TEXT",
+      "notNull": true,
+      "default": "historical_closing_odds"
+    },
+    {
+      "name": "source_url",
+      "type": "TEXT",
+      "notNull": true
+    },
+    {
+      "name": "fetched_at",
+      "type": "TEXT",
+      "notNull": true
+    },
+    {
+      "name": "parser_version",
+      "type": "TEXT",
+      "notNull": true,
+      "default": "1.0"
+    },
+    {
+      "name": "is_backfill",
+      "type": "INTEGER",
+      "notNull": true,
+      "default": 1
+    },
+    {
+      "name": "fetch_status",
+      "type": "TEXT",
+      "notNull": true,
+      "default": "success"
+    },
+    {
+      "name": "notes",
+      "type": "TEXT",
+      "notNull": false
+    }
+  ],
+  "uniqueConstraint": [
+    "race_id",
+    "combination",
+    "source_type",
+    "source_quality"
+  ],
+  "indexes": [
+    {
+      "name": "uq_key",
+      "columns": [
+        "race_id",
+        "combination",
+        "source_type",
+        "source_quality"
+      ],
+      "unique": true
+    },
+    {
+      "name": "idx_race_id",
+      "columns": [
+        "race_id"
+      ]
+    },
+    {
+      "name": "idx_race_date",
+      "columns": [
+        "race_date"
+      ]
+    },
+    {
+      "name": "idx_venue",
+      "columns": [
+        "venue"
+      ]
+    },
+    {
+      "name": "idx_race_no",
+      "columns": [
+        "race_no"
+      ]
+    },
+    {
+      "name": "idx_combination",
+      "columns": [
+        "combination"
+      ]
+    },
+    {
+      "name": "idx_source",
+      "columns": [
+        "source_type",
+        "source_quality"
+      ]
+    }
+  ],
+  "backfillPriority": [
+    {
+      "priority": "A",
+      "label": "condB",
+      "n": 167
+    },
+    {
+      "priority": "B",
+      "label": "6R",
+      "n": 215
+    },
+    {
+      "priority": "C",
+      "label": "浜名湖+住之江",
+      "n": 159
+    },
+    {
+      "priority": "D",
+      "label": "6R+浜名湖+住之江",
+      "n": 374
+    },
+    {
+      "priority": "E",
+      "label": "allForward",
+      "n": 1522
+    }
+  ],
+  "notes": [
+    "条件Bの1-3-2 ROIは事後計算（事前oddsベースではない）",
+    "事前代替odds不足のためswitch本採用不可",
+    "historical closing odds backfillができてもlive/T-5 forwardではない",
+    "現時点で採用可能なのはskip monitorのみ",
+    "条件Bはn=200到達しても代替odds蓄積なしではswitch採用不可"
+  ]
+}
