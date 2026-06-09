@@ -21,7 +21,6 @@ const OUT_MD   = "reports/ticket-selector-strategies.md";
 const OUT_JSON = "reports/ticket-selector-strategies.json";
 const STAKE = 100;
 const TRAIN_END = "2025-01-01";   // train: < TRAIN_END, forward: >= TRAIN_END
-const RECENT_3M = "2026-02-01";   // 直近3ヶ月 (2026-05 から逆算)
 
 const EXCLUDED_VENUES   = ["戸田", "多摩川", "桐生", "三国", "江戸川"];
 const EXCLUDED_RACE_NOS = [10, 11, 12];
@@ -31,6 +30,15 @@ const EXCL_R = EXCLUDED_RACE_NOS.join(",");
 if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
 const db = new DatabaseSync(DB_PATH, { readOnly: true });
 db.exec("PRAGMA busy_timeout = 5000;");
+
+// 直近3ヶ月: 固定日付ではなく DB最大date - 3ヶ月で算出（データ更新に追従）
+const { dbMaxDate } = db.prepare(
+  "SELECT MAX(date) as dbMaxDate FROM decision_history WHERE run_kind='historical-backfill' AND result IS NOT NULL"
+).get() as { dbMaxDate: string };
+const _recent3mDate = new Date(dbMaxDate);
+_recent3mDate.setMonth(_recent3mDate.getMonth() - 3);
+const RECENT_3M = _recent3mDate.toISOString().slice(0, 10);
+console.log(`[ticket-selector] DB最大date: ${dbMaxDate} / 直近3ヶ月基準: ${RECENT_3M}`);
 
 // ─── 型 ──────────────────────────────────────────────────────────────────────
 
@@ -770,7 +778,7 @@ let md = `# 条件別券種/買い目セレクター検証レポート
 生成日時: ${new Date().toISOString()}
 DB: ${DB_PATH}
 対象期間: train < ${TRAIN_END} / forward >= ${TRAIN_END}
-直近3ヶ月: >= ${RECENT_3M}
+直近3ヶ月基準: >= ${RECENT_3M} (DB最大date ${dbMaxDate} から逆算)
 
 > **読み取り専用分析。BUY は検証候補、ROI は検証指標。購入指示ではない。**
 > ROI 評価基準: race_payouts.payout_yen 実払戻ベース
@@ -940,27 +948,52 @@ ${overlapFwd.condOverlap.slice(0, 10).map(o => `| ${o.conds} | ${o.count} |`).jo
 `;
 
 // 分類
+// 判定ルール:
+//   n<30 → data-insufficient (trainが高ROIでも "過学習疑い" にしない。n不足で判断不能)
+//     ただし train ROI >= 150% の場合は ※過学習リスク を付記
+//   n>=30 で train高ROI + forward 0% → 過学習疑い (n>=50 で確定的に判断)
+//   条件B(B_wind24_exh1) → 3連単1-3-2 が forward急伸monitor 候補として別管理
 const paperForward: string[] = [];
 const upgradeWait: string[] = [];
 const dataInsufficient: string[] = [];
-const fwdRising: string[] = [];
+const fwdRisingMonitor: string[] = []; // forward急伸 で monitor対象（セレクター採用はしない）
+const fwdRising: string[] = [];        // forward急伸 その他
 const overfit: string[] = [];
 const degraded: string[] = [];
 const skipped2: string[] = [];
 const rejected: string[] = [];
 
+// 条件B の 3連単1-3-2 は「forward急伸monitor」として別枠で管理
+const condB = results.get("B_wind24_exh1");
+if (condB) {
+  const t132fwd   = condB.singleBets["3連単1-3-2"].forward;
+  const t132train = condB.singleBets["3連単1-3-2"].train;
+  fwdRisingMonitor.push(
+    `${condB.label} [3連単1-3-2] train=${t132train.roi}%/fwd=${t132fwd.roi}% top2除外=${t132fwd.top2ExclRoi}% n(fwd)=${t132fwd.n}`
+  );
+}
+
 for (const [id, res] of results) {
   if (id === "A_all") continue;
-  const fwdN = res.nForward;
-  const best = res.singleBets[res.bestTrainBet];
-  const fwdRoi = best.forward.roi;
-  const top2 = best.forward.top2ExclRoi;
+  if (id === "B_wind24_exh1") continue; // 上で別管理
+  const fwdN    = res.nForward;
+  const trainN  = res.nTrain;
+  const best    = res.singleBets[res.bestTrainBet];
+  const fwdRoi  = best.forward.roi;
+  const trainRoi = best.train.roi;
+  const top2    = best.forward.top2ExclRoi;
 
-  if (fwdN < 30) { dataInsufficient.push(res.label); continue; }
-  if (res.trend === "forward急伸") { fwdRising.push(res.label); continue; }
-  if (res.trend === "過学習疑い") { overfit.push(res.label); continue; }
-  if (res.trend === "reject" && fwdRoi < 95) { rejected.push(res.label); continue; }
+  // n<30: data-insufficient (trainROI高くても過学習疑いとは断定しない)
+  if (fwdN < 30) {
+    const suffix = trainRoi >= 150 ? " ※過学習リスク(trainROI高+n不足)" : "";
+    dataInsufficient.push(`${res.label}${suffix}`);
+    continue;
+  }
   if (id === "H_odds80" || id === "G_race5") { skipped2.push(res.label); continue; }
+  if (res.trend === "forward急伸") { fwdRising.push(res.label); continue; }
+  // 過学習疑い: n>=30 かつ train>=100% かつ forward<95%
+  if (trainRoi >= 100 && fwdRoi < 95) { overfit.push(res.label); continue; }
+  if (res.trend === "reject" && fwdRoi < 95) { rejected.push(res.label); continue; }
   if (fwdRoi >= 100 && top2 >= 100 && fwdN >= 30) { paperForward.push(res.label); continue; }
   if (fwdRoi >= 100 && fwdN < 200) { upgradeWait.push(res.label); continue; }
   if (fwdRoi < 95) { degraded.push(res.label); continue; }
@@ -969,14 +1002,19 @@ for (const [id, res] of results) {
 
 md += `| 分類 | 条件 |
 |---|---|
-| paper-forward候補 | ${paperForward.length > 0 ? paperForward.join(", ") : "なし"} |
-| 格上げ待ち | ${upgradeWait.length > 0 ? upgradeWait.join(", ") : "なし"} |
-| data-insufficient | ${dataInsufficient.length > 0 ? dataInsufficient.join(", ") : "なし"} |
-| forward急伸 | ${fwdRising.length > 0 ? fwdRising.join(", ") : "なし"} |
-| 過学習疑い | ${overfit.length > 0 ? overfit.join(", ") : "なし"} |
-| 降格候補 | ${degraded.length > 0 ? degraded.join(", ") : "なし"} |
-| 見送り候補 | ${skipped2.length > 0 ? skipped2.join(", ") : "なし"} |
-| 採用しない | ${rejected.length > 0 ? rejected.join(", ") : "なし"} |
+| paper-forward候補 | ${paperForward.length > 0 ? paperForward.join("<br>") : "なし"} |
+| 格上げ待ち | ${upgradeWait.length > 0 ? upgradeWait.join("<br>") : "なし"} |
+| forward急伸monitor(セレクター不採用) | ${fwdRisingMonitor.length > 0 ? fwdRisingMonitor.join("<br>") : "なし"} |
+| forward急伸(その他) | ${fwdRising.length > 0 ? fwdRising.join("<br>") : "なし"} |
+| data-insufficient(n<30) | ${dataInsufficient.length > 0 ? dataInsufficient.join("<br>") : "なし"} |
+| 過学習疑い(n>=30+trainROI高+fwd低) | ${overfit.length > 0 ? overfit.join("<br>") : "なし"} |
+| 降格候補 | ${degraded.length > 0 ? degraded.join("<br>") : "なし"} |
+| 見送り候補 | ${skipped2.length > 0 ? skipped2.join("<br>") : "なし"} |
+| 採用しない | ${rejected.length > 0 ? rejected.join("<br>") : "なし"} |
+
+> **条件B 3連単1-3-2 について**: セレクターとしては不採用（trainROI=66%のため train最良ではなく選ばれない）。
+> ただし forward急伸(train=66%/fwd=174%)として monitor継続。top2除外=91%のため格上げ条件（>=100%）未達。
+> n=200到達後に再判定。
 
 `;
 
@@ -1051,7 +1089,7 @@ const jsonOutput = {
   overlap: { train: overlapTrain, forward: overlapFwd },
   classification: {
     paperForward, upgradeWait, dataInsufficient,
-    fwdRising, overfit, degraded, skipped: skipped2, rejected,
+    fwdRisingMonitor, fwdRising, overfit, degraded, skipped: skipped2, rejected,
   },
 };
 
@@ -1080,5 +1118,8 @@ for (const [id, res] of results) {
 console.log("\n採用候補分類:");
 console.log(`  paper-forward候補: ${paperForward.length > 0 ? paperForward.join(", ") : "なし"}`);
 console.log(`  格上げ待ち: ${upgradeWait.length > 0 ? upgradeWait.join(", ") : "なし"}`);
-console.log(`  data-insufficient: ${dataInsufficient.join(", ")}`);
-console.log(`  forward急伸: ${fwdRising.join(", ") || "なし"}`);
+console.log(`  forward急伸monitor(セレクター不採用): ${fwdRisingMonitor.join(", ") || "なし"}`);
+console.log(`  data-insufficient(n<30): ${dataInsufficient.join(", ") || "なし"}`);
+console.log(`  過学習疑い(n>=30): ${overfit.join(", ") || "なし"}`);
+console.log(`  降格候補: ${degraded.join(", ") || "なし"}`);
+console.log(`  forward急伸(その他): ${fwdRising.join(", ") || "なし"}`);

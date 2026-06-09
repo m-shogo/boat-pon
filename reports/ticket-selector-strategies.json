@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-06-09T04:16:43.613Z",
+  "generatedAt": "2026-06-09T04:30:48.880Z",
   "trainEnd": "2025-01-01",
-  "recent3m": "2026-02-01",
+  "recent3m": "2026-02-26",
   "conditions": {
     "A_all": {
       "id": "A_all",
@@ -14034,10 +14034,13 @@
     "paperForward": [],
     "upgradeWait": [],
     "dataInsufficient": [
-      "C. 住之江 × odds40〜49",
-      "D. 住之江 × 1号艇展示1位",
-      "E. 住之江 × 5R",
+      "C. 住之江 × odds40〜49 ※過学習リスク(trainROI高+n不足)",
+      "D. 住之江 × 1号艇展示1位 ※過学習リスク(trainROI高+n不足)",
+      "E. 住之江 × 5R ※過学習リスク(trainROI高+n不足)",
       "H. odds80以上"
+    ],
+    "fwdRisingMonitor": [
+      "B. 風速2〜4 × 1号艇展示1位 [3連単1-3-2] train=66.17%/fwd=174.37% top2除外=91.08% n(fwd)=167"
     ],
     "fwdRising": [],
     "overfit": [
@@ -14045,10 +14048,10 @@
       "K. 2号艇が3号艇より展示速い"
     ],
     "degraded": [],
-    "skipped": [],
+    "skipped": [
+      "G. 5R"
+    ],
     "rejected": [
-      "B. 風速2〜4 × 1号艇展示1位",
-      "G. 5R",
       "I. 1号艇展示タイム1位",
       "J. 3号艇が2号艇より展示速い",
       "L. 風速2〜4m/s 全体"
