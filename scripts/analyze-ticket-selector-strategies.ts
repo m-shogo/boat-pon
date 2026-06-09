@@ -816,7 +816,11 @@ md += `---
 
 for (const [id, res] of results) {
   const best = res.singleBets[res.bestTrainBet];
-  md += `| ${res.label} | ${res.n} | ${res.nTrain} | ${fmtN(res.nForward)} | ${res.bestTrainBet} | ${res.bestTrainRoi}% | ${best.forward.roi}% | ${best.forward.top2ExclRoi}% | ${fmtVerdict(res.verdict)} | ${res.trend} |\n`;
+  // n<30 の場合は trend を "過学習疑い" と断定せず "data-insufficient" に寄せる
+  const trendDisplay = res.nForward < 30 && res.trend === "過学習疑い"
+    ? "data-insufficient ※過学習リスク"
+    : res.trend;
+  md += `| ${res.label} | ${res.n} | ${res.nTrain} | ${fmtN(res.nForward)} | ${res.bestTrainBet} | ${res.bestTrainRoi}% | ${best.forward.roi}% | ${best.forward.top2ExclRoi}% | ${fmtVerdict(res.verdict)} | ${trendDisplay} |\n`;
 }
 
 md += `
@@ -1043,14 +1047,26 @@ for (const [id, res] of results) {
   if (id === "A_all") continue;
   const best = res.singleBets[res.bestTrainBet];
   let conclusion = "";
-  if (res.verdict === "data-insufficient") conclusion = "判定不可(n不足)";
-  else if (id === "H_odds80") conclusion = "見送り推奨";
-  else if (id === "G_race5") conclusion = "見送り推奨";
-  else if (res.trend === "forward急伸") conclusion = "高配当依存チェック要";
-  else if (res.trend === "過学習疑い") conclusion = "過学習疑い→要監視";
-  else if (res.trend === "再現") conclusion = "再現confirmed";
-  else if (best.forward.roi >= 100) conclusion = "forward観察継続";
-  else conclusion = "弱い→見送り検討";
+  if (id === "B_wind24_exh1") {
+    // train selector では不採用(best=2連単1-3)。3連単1-3-2 が forward急伸monitor として別管理
+    conclusion = "train selectorでは不採用 / 3連単1-3-2 forward急伸monitor継続(n=200待ち)";
+  } else if (res.verdict === "data-insufficient") {
+    conclusion = "判定不可(n不足)";
+  } else if (id === "H_odds80") {
+    conclusion = "見送り推奨";
+  } else if (id === "G_race5") {
+    conclusion = "見送り推奨";
+  } else if (res.trend === "forward急伸") {
+    conclusion = "高配当依存チェック要";
+  } else if (res.trend === "過学習疑い") {
+    conclusion = "過学習疑い→要監視";
+  } else if (res.trend === "再現") {
+    conclusion = "再現confirmed";
+  } else if (best.forward.roi >= 100) {
+    conclusion = "forward観察継続";
+  } else {
+    conclusion = "弱い→見送り検討";
+  }
   md += `| ${res.label} | ${res.bestTrainBet} | ${res.bestTrainRoi}% | ${best.forward.roi}% | ${best.forward.top2ExclRoi}% | ${fmtVerdict(res.verdict)} | ${conclusion} |\n`;
 }
 
