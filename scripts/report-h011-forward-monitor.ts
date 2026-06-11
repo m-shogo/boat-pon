@@ -78,6 +78,30 @@ console.log(`forward 対象レース: ${forwardRaces.length}件`);
 
 const raceIdList = forwardRaces.map(r => `'${r.race_id}'`).join(",") || "''";
 
+// ─── run_kind 診断 (将来 paper/live-forward が入った時の取りこぼし防止) ────────
+//   レポート自体に run_kind 状況を出すことで、「monitor が未来検証用データを
+//   本当に拾っているか」を後から確認できるようにする。
+
+type RunKindRow = { run_kind: string; n: number; min_date: string; max_date: string; since_monitor: number };
+const runKindDiag = db.prepare(`
+  SELECT run_kind,
+    COUNT(*) n,
+    MIN(date) min_date,
+    MAX(date) max_date,
+    SUM(CASE WHEN date >= '${MONITOR_START}' THEN 1 ELSE 0 END) since_monitor
+  FROM decision_history
+  WHERE decision='BUY' AND selection='1-2-3'
+  GROUP BY run_kind
+  ORDER BY n DESC
+`).all() as RunKindRow[];
+
+const latestDate = (db.prepare(
+  `SELECT MAX(date) d FROM decision_history WHERE decision='BUY' AND selection='1-2-3'`
+).get() as { d: string | null }).d ?? "(なし)";
+
+// monitor が使っている RUN_KIND 以外に、MONITOR_START 以降のデータを持つ run_kind があるか
+const uncoveredRunKinds = runKindDiag.filter(r => r.run_kind !== RUN_KIND && r.since_monitor > 0);
+
 // ─── 払戻 (exacta) ────────────────────────────────────────────────────────────
 
 type PayoutRow = { race_id: string; combination: string; payout_yen: number };
@@ -317,9 +341,35 @@ lines.push(`| うち未確定 (pending) | ${totalPending} |`);
 lines.push(`| 判定最低 n_resolved / hits | ${MIN_N_FOR_JUDGE} / ${MIN_HITS_FOR_JUDGE} |`);
 lines.push(``);
 if (forwardRaces.length === 0) {
-  lines.push(`> ⚠️ **現時点で ${MONITOR_START} 以降の forward BUY レースは 0 件**。`);
-  lines.push(`> 全データは run_kind=${RUN_KIND} で最新が 2026-05-29 まで。これは正常 (未来監視の箱を先に用意した状態)。`);
+  lines.push(`> ⚠️ **現時点で ${MONITOR_START} 以降・run_kind=${RUN_KIND} の forward BUY レースは 0 件**。`);
+  lines.push(`> 全データは run_kind=${RUN_KIND} で最新が ${latestDate} まで。これは正常 (未来監視の箱を先に用意した状態)。`);
   lines.push(`> 新しいレースが追加されると本レポートが自動で埋まる。`);
+  lines.push(``);
+}
+lines.push(`---`);
+lines.push(``);
+lines.push(`## run_kind 診断 (未来検証データの取りこぼし防止)`);
+lines.push(``);
+lines.push(`> このモニターは run_kind=**${RUN_KIND}** のみを対象にしている。`);
+lines.push(`> 将来 paper-forward / live-forward 的な別 run_kind が入った場合、その行が`);
+lines.push(`> \`${MONITOR_START}以降\` 列に件数を持っていれば、monitor の対象 run_kind を見直す必要がある。`);
+lines.push(``);
+lines.push(`| run_kind | 全件数 | 期間 | ${MONITOR_START}以降 | monitor対象 |`);
+lines.push(`|---|---:|---|---:|:---:|`);
+for (const rk of runKindDiag) {
+  const isTarget = rk.run_kind === RUN_KIND ? "✅" : (rk.since_monitor > 0 ? "⚠️ 未カバー" : "—");
+  lines.push(`| ${rk.run_kind} | ${rk.n} | ${rk.min_date}〜${rk.max_date} | ${rk.since_monitor} | ${isTarget} |`);
+}
+lines.push(``);
+lines.push(`| 確認項目 | 値 |`);
+lines.push(`|---|---|`);
+lines.push(`| decision_history 最新 BUY date | ${latestDate} |`);
+lines.push(`| monitor 対象 run_kind | ${RUN_KIND} |`);
+lines.push(`| 未カバー run_kind (${MONITOR_START}以降に件数あり) | ${uncoveredRunKinds.length === 0 ? "なし ✅" : uncoveredRunKinds.map(r => `${r.run_kind} (${r.since_monitor}件)`).join(", ") + " ⚠️"} |`);
+lines.push(``);
+if (uncoveredRunKinds.length > 0) {
+  lines.push(`> ⚠️ **${MONITOR_START} 以降のデータを持つ別 run_kind を検出**: ${uncoveredRunKinds.map(r => r.run_kind).join(", ")}。`);
+  lines.push(`> H011_RUN_KIND 環境変数で対象を切り替えるか、複数 run_kind 対応を検討すること。`);
   lines.push(``);
 }
 lines.push(`---`);
@@ -414,6 +464,15 @@ const jsonOutput = {
     settled: forwardRaces.length - totalPending,
     pending: totalPending,
   },
+  runKindDiagnostics: {
+    targetRunKind: RUN_KIND,
+    latestBuyDate: latestDate,
+    runKinds: runKindDiag.map(r => ({
+      run_kind: r.run_kind, n: r.n, minDate: r.min_date, maxDate: r.max_date,
+      sinceMonitorStart: r.since_monitor, isTarget: r.run_kind === RUN_KIND,
+    })),
+    uncoveredRunKinds: uncoveredRunKinds.map(r => ({ run_kind: r.run_kind, sinceMonitorStart: r.since_monitor })),
+  },
   conditions: stats.map(s => ({
     id: s.id, label: s.label,
     n_total: s.n_total,
@@ -439,6 +498,13 @@ const jsonOutput = {
 writeFileSync(OUT_JSON, JSON.stringify(jsonOutput, null, 2), "utf-8");
 
 // ─── コンソール ───────────────────────────────────────────────────────────────
+
+console.log(`\n=== run_kind 診断 ===`);
+console.log(`  最新BUY date: ${latestDate} / monitor対象: ${RUN_KIND}`);
+for (const rk of runKindDiag) {
+  console.log(`  ${rk.run_kind}: ${rk.n}件 (${rk.min_date}〜${rk.max_date}) / ${MONITOR_START}以降=${rk.since_monitor}${rk.run_kind === RUN_KIND ? " ←対象" : ""}`);
+}
+if (uncoveredRunKinds.length > 0) console.log(`  ⚠️ 未カバー run_kind: ${uncoveredRunKinds.map(r => r.run_kind).join(", ")}`);
 
 console.log("\n=== H011 forward monitor ===");
 for (const s of stats) {

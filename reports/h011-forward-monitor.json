@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-11T06:48:23.081Z",
+  "generatedAt": "2026-06-11T06:53:16.727Z",
   "meta": {
     "description": "H011「1-4系 市場過小評価」forward モニター (未来データ固定監視)",
     "monitorStart": "2026-06-01",
@@ -34,6 +34,21 @@
     "forwardRaces": 0,
     "settled": 0,
     "pending": 0
+  },
+  "runKindDiagnostics": {
+    "targetRunKind": "historical-backfill",
+    "latestBuyDate": "2026-05-29",
+    "runKinds": [
+      {
+        "run_kind": "historical-backfill",
+        "n": 6164,
+        "minDate": "2024-01-01",
+        "maxDate": "2026-05-29",
+        "sinceMonitorStart": 0,
+        "isTarget": true
+      }
+    ],
+    "uncoveredRunKinds": []
   },
   "conditions": [
     {

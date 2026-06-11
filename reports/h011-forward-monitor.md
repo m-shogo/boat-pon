@@ -1,6 +1,6 @@
 # H011 「1-4系 市場過小評価」 forward モニター
 
-生成日時: 2026-06-11T06:48:23.081Z
+生成日時: 2026-06-11T06:53:16.727Z
 monitor 開始日: **2026-06-01** (run_kind=historical-backfill)
 
 > **読み取り専用。BUY は検証候補、ROI は検証指標。購入推奨ではない。**
@@ -33,9 +33,27 @@ monitor 開始日: **2026-06-01** (run_kind=historical-backfill)
 | うち未確定 (pending) | 0 |
 | 判定最低 n_resolved / hits | 30 / 3 |
 
-> ⚠️ **現時点で 2026-06-01 以降の forward BUY レースは 0 件**。
+> ⚠️ **現時点で 2026-06-01 以降・run_kind=historical-backfill の forward BUY レースは 0 件**。
 > 全データは run_kind=historical-backfill で最新が 2026-05-29 まで。これは正常 (未来監視の箱を先に用意した状態)。
 > 新しいレースが追加されると本レポートが自動で埋まる。
+
+---
+
+## run_kind 診断 (未来検証データの取りこぼし防止)
+
+> このモニターは run_kind=**historical-backfill** のみを対象にしている。
+> 将来 paper-forward / live-forward 的な別 run_kind が入った場合、その行が
+> `2026-06-01以降` 列に件数を持っていれば、monitor の対象 run_kind を見直す必要がある。
+
+| run_kind | 全件数 | 期間 | 2026-06-01以降 | monitor対象 |
+|---|---:|---|---:|:---:|
+| historical-backfill | 6164 | 2024-01-01〜2026-05-29 | 0 | ✅ |
+
+| 確認項目 | 値 |
+|---|---|
+| decision_history 最新 BUY date | 2026-05-29 |
+| monitor 対象 run_kind | historical-backfill |
+| 未カバー run_kind (2026-06-01以降に件数あり) | なし ✅ |
 
 ---
 
