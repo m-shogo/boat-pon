@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-06-11T02:08:30.804Z",
+  "generatedAt": "2026-06-11T02:11:02.678Z",
   "phase": "research-monitor",
   "warnings": [],
   "nextAction": {
-    "priority": 5,
-    "action": "skipVenue historical alternative odds の小規模backfill準備 (57/159件未保存, H006用)",
-    "command": "pnpm backfill:historical-alt-odds --limit 30 --priority skipVenue --write --sleep-ms 1000"
+    "priority": 6,
+    "action": "skipVenue switch 予備検証 (H006) または condB timeseries overlap 蓄積待ち",
+    "command": "pnpm analyze:skip6r-switch-historical (skipVenue版 実装後)"
   },
   "dataReadiness": {
     "forwardTotal": 1522,
@@ -21,8 +21,8 @@
     },
     "skipVenue": {
       "total": 159,
-      "haoSaved": 102,
-      "coverage": 64
+      "haoSaved": 132,
+      "coverage": 83
     },
     "timeseries": {
       "buyForwardOverlap": 0,
@@ -249,5 +249,5 @@
     "future-only timeseries 未確認の候補を本採用すること",
     "skip6R / skipVenue の write (今回は確認ステップを先に)"
   ],
-  "oneLiner": "次は「skipVenue historical alternative odds の小規模backfill準備 (57/159件未保存, H006用)」（write系は人間確認後）。condB switchはhistorical上有望（174.4%）だがtop2=92.2%/future-only未確認、6R switchは全候補reject（H004）のため本採用可能な edge はなし。"
+  "oneLiner": "次は「skipVenue switch 予備検証 (H006) または condB timeseries overlap 蓄積待ち」（write系は人間確認後）。condB switchはhistorical上有望（174.4%）だがtop2=92.2%/future-only未確認、6R switchは全候補reject（H004）のため本採用可能な edge はなし。"
 }

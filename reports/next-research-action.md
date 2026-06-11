@@ -1,7 +1,7 @@
 # 次のリサーチアクション計画
 
-生成日時: 2026-06-11T02:08:40.693Z
-governor 生成日時: 2026-06-11T02:08:30.804Z
+生成日時: 2026-06-11T02:11:16.614Z
+governor 生成日時: 2026-06-11T02:11:02.678Z
 
 > **⚠️ この計画は提案のみです。自動実行しません。write が必要な場合は人間確認後に実施してください。**
 > **BUY は検証候補。ROI は検証指標。購入指示・採用判断ではない。app_settings 変更禁止。**
@@ -10,9 +10,9 @@ governor 生成日時: 2026-06-11T02:08:30.804Z
 
 ## 1行結論
 
-> **次は「skipVenue historical alternative odds の小規模backfill準備 (57/159件未保存, H006用)」（write系は人間確認後）。condB switchはhistorical上有望（174.4%）だがtop2=92.2%/future-only未確認、6R switchは全候補reject（H004）のため本採用可能な edge はなし。**
+> **次は「skipVenue switch 予備検証 (H006) または condB timeseries overlap 蓄積待ち」（write系は人間確認後）。condB switchはhistorical上有望（174.4%）だがtop2=92.2%/future-only未確認、6R switchは全候補reject（H004）のため本採用可能な edge はなし。**
 
-## 次アクション: skipVenue historical alternative odds の小規模backfill準備 (57/159件未保存, H006用)
+## 次アクション: skipVenue switch 予備検証 (H006) または condB timeseries overlap 蓄積待ち
 
 **根拠:** governor の自動判断に基づく次アクション
 
@@ -22,7 +22,7 @@ governor 生成日時: 2026-06-11T02:08:30.804Z
 
 ### 実行ステップ
 
-1. pnpm backfill:historical-alt-odds --limit 30 --priority skipVenue --write --sleep-ms 1000
+1. pnpm analyze:skip6r-switch-historical (skipVenue版 実装後)
 
 ### 品質チェックリスト
 
@@ -55,7 +55,7 @@ governor 生成日時: 2026-06-11T02:08:30.804Z
 |---|---|
 | condB historical closing odds | 167/167 (100%) ✅ |
 | skip6R historical closing odds | 215/215 (100%) ✅ |
-| skipVenue historical closing odds | 102/159 (64%) ❌ |
+| skipVenue historical closing odds | 132/159 (83%) ❌ |
 | future-only timeseries condB overlap | 0 ❌ (<30) |
 
 ## 仮説状態サマリ
