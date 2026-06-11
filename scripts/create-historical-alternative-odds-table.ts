@@ -46,9 +46,10 @@ if (!alreadyExists) {
       venue_code   TEXT NOT NULL,
       race_no      INTEGER NOT NULL,
 
-      -- 代替買い目 odds
+      -- 代替買い目 odds (bet_type で exacta/quinella/trifecta を区別)
       combination  TEXT NOT NULL,
       odds         REAL NOT NULL,
+      bet_type     TEXT NOT NULL DEFAULT 'trifecta',
 
       -- データソース情報 (live/timeseries odds と明確に区別)
       source_type    TEXT NOT NULL DEFAULT 'official_archive',
@@ -65,9 +66,9 @@ if (!alreadyExists) {
       notes        TEXT
     );
 
-    -- ユニーク制約: 同一レース×買い目×ソース種別の重複を防ぐ
+    -- ユニーク制約: bet_type を含む (combination='1-4' は exacta/quinella で衝突するため必須)
     CREATE UNIQUE INDEX uq_historical_alternative_odds_key
-      ON historical_alternative_odds (race_id, combination, source_type, source_quality);
+      ON historical_alternative_odds (race_id, bet_type, combination, source_type, source_quality);
 
     -- 検索用インデックス
     CREATE INDEX idx_hao_race_id     ON historical_alternative_odds (race_id);

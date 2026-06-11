@@ -10,7 +10,7 @@
  *   2連単 (exacta) closing odds を公式アーカイブ (odds2tf) から取得し
  *   historical_alternative_odds テーブル (bet_type='exacta') に保存する。
  *
- * 保存組番: デフォルト 1-2 / 1-3 / 1-4 (H011 検証用)。--all-combos で全30通り。
+ * 保存組番: デフォルト全30通り (overround正規化に必要)。--h011-only で 1-2/1-3/1-4 の3通りのみ。
  *
  * デフォルト: dry-run。--write 指定時のみ DB に INSERT する。
  *   historical_alternative_odds テーブルが存在しない場合はエラー停止。
@@ -24,7 +24,7 @@
  *   --from YYYY-MM-DD       対象期間開始
  *   --to   YYYY-MM-DD       対象期間終了
  *   --sleep-ms 1000         取得間隔ms (デフォルト 1000)
- *   --all-combos            全30通り保存 (デフォルト: 1-2/1-3/1-4 のみ)
+ *   --h011-only             1-2/1-3/1-4 の3通りのみ保存 (overround正規化不可。デフォルトは全30通り)
  *   --batch-size 30         1バッチ書き込み件数 (デフォルト 30)
  */
 
@@ -66,15 +66,15 @@ const LIMIT       = parseInt(getArg("--limit", "30"), 10);
 const SLEEP_MS    = parseInt(getArg("--sleep-ms", "1000"), 10);
 const FROM_DATE   = getArg("--from", "");
 const TO_DATE     = getArg("--to", "");
-const ALL_COMBOS  = hasFlag("--all-combos");
+const H011_ONLY   = hasFlag("--h011-only");  // 3通りのみ (overround正規化不可)
 const BATCH_SIZE  = parseInt(getArg("--batch-size", "30"), 10);
 
-// H011 検証対象の組番 (デフォルト)
+// H011専用の3通り。デフォルトは全30通りを保存する (overround正規化に必要)
 const H011_COMBOS = ["1-2", "1-3", "1-4"];
 
 console.log(`=== exacta closing odds backfill ===`);
 console.log(`  モード: ${WRITE_MODE ? "⚠️  WRITE" : "🔍 dry-run"}`);
-console.log(`  limit: ${LIMIT} / sleep: ${SLEEP_MS}ms / 組番: ${ALL_COMBOS ? "全30通り" : H011_COMBOS.join("/")} / batch: ${BATCH_SIZE}`);
+console.log(`  limit: ${LIMIT} / sleep: ${SLEEP_MS}ms / 組番: ${H011_ONLY ? "1-2/1-3/1-4のみ(overround正規化不可)" : "全30通り"} / batch: ${BATCH_SIZE}`);
 if (FROM_DATE) console.log(`  from: ${FROM_DATE}`);
 if (TO_DATE)   console.log(`  to:   ${TO_DATE}`);
 console.log();
@@ -117,7 +117,8 @@ let dateClause = "AND dh.date >= '2024-01-01'";
 if (FROM_DATE) dateClause = `AND dh.date >= '${FROM_DATE}'`;
 if (TO_DATE)   dateClause += ` AND dh.date <= '${TO_DATE}'`;
 
-// 未保存レースのみ対象 (exacta bet_type で既存行があればスキップ)
+// 完全保存済みレースのみスキップ (20組番以上 = 6艇30通りまたは欠場5艇20通り)
+// 3通りしか保存していない部分保存レースは再処理対象とする
 const allBuyRaces = db.prepare(`
   SELECT DISTINCT dh.race_id, dh.date, dh.venue,
     COALESCE(vc.code, '00') as venue_code,
@@ -140,10 +141,11 @@ for (const r of allBuyRaces) {
   r.venue_code = VENUE_CODES[r.venue] ?? r.venue_code;
 }
 
-// 既存 exacta 保存済みレースを除外
+// 完全保存済み (20通り以上) のレースのみスキップ。部分保存 (例: 3通りのみ) は再処理する。
 const savedSet = new Set(
   (db.prepare(
-    `SELECT DISTINCT race_id FROM historical_alternative_odds WHERE bet_type='exacta'`
+    `SELECT race_id FROM historical_alternative_odds WHERE bet_type='exacta'
+     GROUP BY race_id HAVING COUNT(*) >= 20`
   ).all() as { race_id: string }[]).map(r => r.race_id)
 );
 
@@ -290,10 +292,10 @@ for (const [i, r] of targets.entries()) {
     `SELECT COUNT(*) n FROM race_entries WHERE race_id=? AND status_code='F'`
   ).get(r.race_id) as { n: number }).n > 0);
 
-  // 保存対象の組番を決定
-  const targetCombos = ALL_COMBOS
-    ? Object.keys(exacta)
-    : H011_COMBOS.filter(c => exacta[c] != null);
+  // 保存対象の組番を決定 (デフォルト: 全30通り。overround正規化に必要)
+  const targetCombos = H011_ONLY
+    ? H011_COMBOS.filter(c => exacta[c] != null)
+    : Object.keys(exacta);
 
   row.combosAvailable = targetCombos;
 
@@ -317,7 +319,7 @@ for (const [i, r] of targets.entries()) {
     }
   }
 
-  if (WRITE_MODE && batchBuffer.length >= BATCH_SIZE * (ALL_COMBOS ? 30 : 3)) {
+  if (WRITE_MODE && batchBuffer.length >= BATCH_SIZE * (H011_ONLY ? 3 : 30)) {
     await flushBatch();
     console.log(`  → バッチ書き込み完了`);
   }
