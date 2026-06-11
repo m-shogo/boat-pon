@@ -141,11 +141,13 @@ for (const r of allBuyRaces) {
   r.venue_code = VENUE_CODES[r.venue] ?? r.venue_code;
 }
 
-// 完全保存済み (20通り以上) のレースのみスキップ。部分保存 (例: 3通りのみ) は再処理する。
+// 事前スキップ: COUNT=30 のみ (6艇完全保存確定)。
+// COUNT=20 の欠場レースや COUNT=3 の部分保存は fetch+parse 後に savedCount vs parsedCount で判定。
+// これにより「6艇レースが途中停止で20〜29通りだけ保存」されても永久欠損にならない。
 const savedSet = new Set(
   (db.prepare(
     `SELECT race_id FROM historical_alternative_odds WHERE bet_type='exacta'
-     GROUP BY race_id HAVING COUNT(*) >= 20`
+     GROUP BY race_id HAVING COUNT(*) = 30`
   ).all() as { race_id: string }[]).map(r => r.race_id)
 );
 
@@ -232,8 +234,9 @@ const insertStmt = WRITE_MODE ? db.prepare(`
 
 type ResultRow = {
   race_id: string; date: string; venue: string;
-  status: "ok" | "cached_ok" | "fetch_error" | "parse_error";
-  cellCount: number; insertedCount: number; skippedCount: number;
+  status: "ok" | "cached_ok" | "already_complete" | "fetch_error" | "parse_error";
+  cellCount: number; parsedCount: number; dbSavedCount: number;
+  insertedCount: number; skippedCount: number;
   combosAvailable: string[]; error?: string;
   isFRefund: boolean;
 };
@@ -263,7 +266,8 @@ for (const [i, r] of targets.entries()) {
 
   const row: ResultRow = {
     race_id: r.race_id, date: r.date, venue: r.venue,
-    status: "fetch_error", cellCount: 0, insertedCount: 0, skippedCount: 0,
+    status: "fetch_error", cellCount: 0, parsedCount: 0, dbSavedCount: 0,
+    insertedCount: 0, skippedCount: 0,
     combosAvailable: [], isFRefund: false, error: f.error,
   };
 
@@ -297,7 +301,25 @@ for (const [i, r] of targets.entries()) {
     ? H011_COMBOS.filter(c => exacta[c] != null)
     : Object.keys(exacta);
 
+  row.parsedCount = targetCombos.length;
   row.combosAvailable = targetCombos;
+
+  // post-fetch 完了チェック: DB保存数 vs パース数を比較
+  // これにより6艇レースが途中停止で20〜29通りだけ保存された場合でも補完できる
+  const dbSavedCount = (db.prepare(
+    `SELECT COUNT(*) n FROM historical_alternative_odds WHERE race_id=? AND bet_type='exacta'`
+  ).get(r.race_id) as { n: number }).n;
+  row.dbSavedCount = dbSavedCount;
+
+  if (dbSavedCount >= targetCombos.length) {
+    // 完全保存済み (事前スキップの漏れ = 欠場レース等)
+    row.status = "already_complete";
+    const cTag = f.cached ? " [cache]" : "";
+    console.log(`${prefix}${cTag}: ✅ already_complete (saved=${dbSavedCount}/${targetCombos.length})`);
+    results.push(row);
+    if (!f.cached) await new Promise(s => setTimeout(s, SLEEP_MS));
+    continue;
+  }
 
   const fetchedAt = now;
   let inserted = 0;
@@ -344,10 +366,11 @@ await flushBatch();
 
 // ─── 集計 ────────────────────────────────────────────────────────────────────
 
-const okCount       = results.filter(r => r.status === "ok" || r.status === "cached_ok").length;
-const fRefundCount  = results.filter(r => r.isFRefund).length;
-const errCount      = results.filter(r => r.status === "fetch_error" || r.status === "parse_error").length;
-const remaining     = missing.length - okCount;
+const okCount           = results.filter(r => r.status === "ok" || r.status === "cached_ok").length;
+const alreadyComplete   = results.filter(r => r.status === "already_complete").length;
+const fRefundCount      = results.filter(r => r.isFRefund).length;
+const errCount          = results.filter(r => r.status === "fetch_error" || r.status === "parse_error").length;
+const remaining         = missing.length - okCount;
 
 // 保存済み件数 (DBから再カウント)
 const savedExactaCount = WRITE_MODE
@@ -355,13 +378,34 @@ const savedExactaCount = WRITE_MODE
   : savedSet.size;
 
 console.log(`\n=== 完了 ===`);
-console.log(`  今回処理: ${targets.length}件 (ok=${okCount} / error=${errCount} / F返還=${fRefundCount})`);
+console.log(`  今回処理: ${targets.length}件 (ok=${okCount} / already_complete=${alreadyComplete} / error=${errCount} / F返還=${fRefundCount})`);
 if (WRITE_MODE) {
   console.log(`  INSERT: ${totalInserted}行`);
-  console.log(`  exacta保存済み (DB): ${savedExactaCount}件 / 全体: ${allBuyRaces.length}件 / 残: ${remaining}件`);
+  console.log(`  exacta保存済み (DB, 完全): ${savedExactaCount}件 / 全体: ${allBuyRaces.length}件 / 残: ${remaining}件`);
 } else {
   console.log(`  (dry-run: INSERT しない。対象組番: ${totalSkipped + totalInserted}行)`);
   console.log(`  残: ${missing.length}件 (limit=${LIMIT}で今回は${targets.length}件処理)`);
+}
+
+// quality check: race別 exacta count 分布
+const countDist = db.prepare(`
+  SELECT cnt, COUNT(*) races FROM (
+    SELECT race_id, COUNT(*) cnt FROM historical_alternative_odds
+    WHERE bet_type='exacta' GROUP BY race_id
+  ) GROUP BY cnt ORDER BY cnt
+`).all() as { cnt: number; races: number }[];
+
+console.log(`\n  [quality check] race別 exacta count 分布:`);
+let warnCount = 0;
+for (const d of countDist) {
+  const label = d.cnt === 30 ? "(6艇完全)" : d.cnt === 20 ? "(欠場1艇)" : d.cnt === 12 ? "(欠場2艇)" : d.cnt === 3 ? "(旧部分保存)" : "⚠️ 要調査";
+  if (d.cnt > 3 && d.cnt < 20) warnCount++;
+  console.log(`    COUNT=${d.cnt}: ${d.races}件 ${label}`);
+}
+if (warnCount > 0) {
+  console.log(`  ⚠️ COUNT 4〜19 のレースが存在します。途中保存またはパース欠損の可能性があります。`);
+} else {
+  console.log(`  ✅ 中途半端な保存数なし (COUNT 4〜19 = 0件)`);
 }
 console.log();
 
