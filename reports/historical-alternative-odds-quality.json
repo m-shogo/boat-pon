@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-06-11T01:52:42.768Z",
+  "generatedAt": "2026-06-11T02:05:52.346Z",
   "tableExists": true,
   "basic": {
-    "total_rows": 1792,
-    "total_races": 359,
+    "total_rows": 1942,
+    "total_races": 389,
     "total_combinations": 5,
     "min_date": "2025-02-01",
     "max_date": "2026-05-20"
   },
-  "with5Sels": 358,
+  "with5Sels": 388,
   "with4Sels": 0,
   "condBInTable": 167,
   "skip6R": {
@@ -17,9 +17,9 @@
     "coverage": 100
   },
   "skipVenue": {
-    "inTable": 42,
+    "inTable": 72,
     "total": 159,
-    "coverage": 26,
+    "coverage": 45,
     "skip6ROverlap": 33
   },
   "topDeltaRaces": [
@@ -42,6 +42,15 @@
       "delta": 728.8
     },
     {
+      "race_id": "20250901-住之江-01",
+      "race_date": "2025-09-01",
+      "venue": "住之江",
+      "race_no": 1,
+      "max_odds": 726.8,
+      "min_odds": 28.4,
+      "delta": 698.4
+    },
+    {
       "race_id": "20250503-浜名湖-06",
       "race_date": "2025-05-03",
       "venue": "浜名湖",
@@ -58,41 +67,32 @@
       "max_odds": 596.8,
       "min_odds": 38.6,
       "delta": 558.2
-    },
-    {
-      "race_id": "20250201-住之江-06",
-      "race_date": "2025-02-01",
-      "venue": "住之江",
-      "race_no": 6,
-      "max_odds": 569.3,
-      "min_odds": 29.5,
-      "delta": 539.8
     }
   ],
   "byCombo": [
     {
       "combination": "1-2-3",
-      "n": 359
+      "n": 389
     },
     {
       "combination": "1-2-4",
-      "n": 358
+      "n": 388
     },
     {
       "combination": "1-3-2",
-      "n": 359
+      "n": 389
     },
     {
       "combination": "1-3-4",
-      "n": 358
+      "n": 388
     },
     {
       "combination": "1-4-2",
-      "n": 358
+      "n": 388
     }
   ],
   "sameValueCheck": {
-    "total_with_both": 358,
+    "total_with_both": 388,
     "same_123_132": 0,
     "all_same": 0
   },
@@ -102,12 +102,12 @@
     "very_large": 0
   },
   "sourceCheck": {
-    "correct_type": 1792,
-    "correct_quality": 1792,
-    "is_backfill_1": 1792,
-    "has_url": 1792,
-    "has_fetched_at": 1792,
-    "has_parser_ver": 1792
+    "correct_type": 1942,
+    "correct_quality": 1942,
+    "is_backfill_1": 1942,
+    "has_url": 1942,
+    "has_fetched_at": 1942,
+    "has_parser_ver": 1942
   },
   "existingTablesContaminated": {
     "oddsSnapshotsCount": 0,
