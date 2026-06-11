@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-06-11T01:52:43.322Z",
+  "generatedAt": "2026-06-11T01:59:39.156Z",
   "phase": "research-monitor",
   "warnings": [],
   "nextAction": {
-    "priority": 4,
-    "action": "skip6R historical alternative odds が揃ったら switch 予備検証",
-    "command": "pnpm analyze:condb-switch-historical (skip6R版 実装後)"
+    "priority": 5,
+    "action": "skipVenue historical alternative odds の小規模backfill準備 (117/159件未保存, H006用)",
+    "command": "pnpm backfill:historical-alt-odds --limit 30 --priority skipVenue --write --sleep-ms 1000"
   },
   "dataReadiness": {
     "forwardTotal": 1522,
@@ -109,16 +109,32 @@
     {
       "id": "H004",
       "name": "6R switch (代替買い目)",
-      "status": "waiting-data",
+      "status": "tested-historical",
       "priority": 4,
       "adoptionAllowed": false,
-      "adoptionBlockReason": "historical_alternative_odds skip6R 未取得",
-      "nextAction": "pnpm backfill:historical-alt-odds --limit 30 --priority skip6R --write --sleep-ms 1000 (人間確認後・backup後)",
-      "blockedReason": "skip6R の代替買い目 historical closing odds 未取得 (192/215 未保存)",
-      "gateStatus": null,
+      "adoptionBlockReason": "switch 4候補すべて reject: 全候補 ROI<100% かつ 0hit月4〜7つ (期間依存)。skip (H003) の方が優位",
+      "nextAction": "switch は終了。6R の扱いは H003 (skip monitor) に一本化",
+      "blockedReason": null,
+      "gateStatus": {
+        "nSufficient": true,
+        "dataQualityOk": true,
+        "roiBeatsBaseline": false,
+        "top2ExcludeRoiOk": false,
+        "futureOnlyConfirmed": false
+      },
       "lastKnownMetrics": {
-        "skip6R_total_races": 215,
-        "historical_alt_odds_saved": 23
+        "skip6R_n": 215,
+        "baseline_6r_1_2_3_roi": 21.3,
+        "switch_1_3_2_roi": 80.5,
+        "switch_1_2_4_roi": 42.6,
+        "switch_1_4_2_roi": 92,
+        "switch_1_3_4_roi": 82.3,
+        "best_switch_top2_exclude_roi": 39.7,
+        "skip_remaining_roi": 97.9,
+        "skip_remaining_top2_exclude_roi": 89.1,
+        "hybrid_132_roi": 95.5,
+        "condB_overlap": 23,
+        "odds_source": "historical_closing_odds"
       }
     },
     {
@@ -143,12 +159,12 @@
       "priority": 6,
       "adoptionAllowed": false,
       "adoptionBlockReason": "historical_alternative_odds skipVenue 未取得",
-      "nextAction": "H004完了後に着手",
-      "blockedReason": "H004(6R switch) 完了が先",
+      "nextAction": "skipVenue backfill 着手可 (H004 検証完了済み)。pnpm backfill:historical-alt-odds --limit 30 --priority skipVenue (人間確認後・backup後)",
+      "blockedReason": "skipVenue historical closing odds 残117/159 未保存 (42件はskip6R/condB重複分)",
       "gateStatus": null,
       "lastKnownMetrics": {
         "skipVenue_total_races": 159,
-        "historical_alt_odds_saved": 0
+        "historical_alt_odds_saved": 42
       }
     },
     {
@@ -233,5 +249,5 @@
     "future-only timeseries 未確認の候補を本採用すること",
     "skip6R / skipVenue の write (今回は確認ステップを先に)"
   ],
-  "oneLiner": "次は skip6R historical alt odds の小規模backfill準備（人間確認後）。condB switchはhistorical上有望（174.4%）だがtop2=92.2%/future-only未確認のため本採用不可。"
+  "oneLiner": "次は「skipVenue historical alternative odds の小規模backfill準備 (117/159件未保存, H006用)」（write系は人間確認後）。condB switchはhistorical上有望（174.4%）だがtop2=92.2%/future-only未確認、6R switchは全候補reject（H004）のため本採用可能な edge はなし。"
 }

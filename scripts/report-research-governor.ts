@@ -26,6 +26,7 @@ const REPORT_FILES = {
   roiGovernor:            "reports/roi-governor.json",
   altOddsQuality:         "reports/historical-alternative-odds-quality.json",
   condBSwitch:            "reports/condb-switch-historical-closing-odds.json",
+  skip6RSwitch:           "reports/skip6r-switch-historical-closing-odds.json",
   timeseriesHealth:       "reports/alternative-odds-timeseries-health.json",
   skipPolicy:             "reports/roi-skip-policy-simulation.json",
   paperForwardMonitor:    "reports/paper-forward-monitor.json",
@@ -69,6 +70,7 @@ const hypotheses = registry.hypotheses;
 // ─── レポートファイル読み込み ─────────────────────────────────────────────────
 
 const r_condBSwitch   = loadJson(REPORT_FILES.condBSwitch, "condB switch report");
+const r_skip6RSwitch  = loadJson(REPORT_FILES.skip6RSwitch, "skip6R switch report");
 const r_altOdds       = loadJson(REPORT_FILES.altOddsQuality, "alt-odds quality");
 const r_timeseries    = loadJson(REPORT_FILES.timeseriesHealth, "timeseries health");
 const r_skipPolicy    = loadJson(REPORT_FILES.skipPolicy, "skip policy");
@@ -173,10 +175,18 @@ if (dataReadiness.timeseries.futureOnlySwitchReady) {
   nextAction = `skip6R historical alternative odds の小規模backfill準備 (${skip6RTotal - haoSkip6R}/${skip6RTotal}件未保存)`;
   nextActionCommand = `pnpm backfill:historical-alt-odds --limit 30 --priority skip6R --write --sleep-ms 1000`;
   nextActionPriority = 3;
-} else {
-  nextAction = "skip6R historical alternative odds が揃ったら switch 予備検証";
-  nextActionCommand = "pnpm analyze:condb-switch-historical (skip6R版 実装後)";
+} else if (!r_skip6RSwitch.ok) {
+  nextAction = "skip6R switch 予備検証 (H004) を実行";
+  nextActionCommand = "pnpm analyze:skip6r-switch-historical";
   nextActionPriority = 4;
+} else if (dataReadiness.skipVenue.coverage < 80) {
+  nextAction = `skipVenue historical alternative odds の小規模backfill準備 (${skipVenueTotal - haoSkipVenue}/${skipVenueTotal}件未保存, H006用)`;
+  nextActionCommand = `pnpm backfill:historical-alt-odds --limit 30 --priority skipVenue --write --sleep-ms 1000`;
+  nextActionPriority = 5;
+} else {
+  nextAction = "skipVenue switch 予備検証 (H006) または condB timeseries overlap 蓄積待ち";
+  nextActionCommand = "pnpm analyze:skip6r-switch-historical (skipVenue版 実装後)";
+  nextActionPriority = 6;
 }
 
 const condBSwitchMetrics = r_condBSwitch.ok && r_condBSwitch.data
@@ -387,9 +397,10 @@ lines.push(`> ⚠️ 既存テーブル (odds_snapshots / odds_timeseries_snapsh
 lines.push(``);
 
 // I. 1行結論
+const oneLiner = `次は「${nextAction}」（write系は人間確認後）。condB switchはhistorical上有望（174.4%）だがtop2=92.2%/future-only未確認、6R switchは全候補reject（H004）のため本採用可能な edge はなし。`;
 lines.push(`## I. 1行結論`);
 lines.push(``);
-lines.push(`> **次は skip6R historical alt odds の小規模backfill準備（人間確認後）。condB switchはhistorical上有望（174.4%）だがtop2=92.2%/future-only未確認のため本採用不可。**`);
+lines.push(`> **${oneLiner}**`);
 lines.push(``);
 
 // 注記
@@ -430,7 +441,7 @@ const jsonOutput = {
   })),
   condBSwitchVerdict: condBSwitchMetrics,
   forbidden: forbidden,
-  oneLiner: "次は skip6R historical alt odds の小規模backfill準備（人間確認後）。condB switchはhistorical上有望（174.4%）だがtop2=92.2%/future-only未確認のため本採用不可。",
+  oneLiner,
 };
 writeFileSync(OUT_JSON, JSON.stringify(jsonOutput, null, 2), "utf-8");
 

@@ -1,7 +1,7 @@
 # 次のリサーチアクション計画
 
-生成日時: 2026-06-11T01:53:16.648Z
-governor 生成日時: 2026-06-11T01:52:43.322Z
+生成日時: 2026-06-11T01:59:39.598Z
+governor 生成日時: 2026-06-11T01:59:39.156Z
 
 > **⚠️ この計画は提案のみです。自動実行しません。write が必要な場合は人間確認後に実施してください。**
 > **BUY は検証候補。ROI は検証指標。購入指示・採用判断ではない。app_settings 変更禁止。**
@@ -10,9 +10,9 @@ governor 生成日時: 2026-06-11T01:52:43.322Z
 
 ## 1行結論
 
-> **次は skip6R historical alt odds の小規模backfill準備（人間確認後）。condB switchはhistorical上有望（174.4%）だがtop2=92.2%/future-only未確認のため本採用不可。**
+> **次は「skipVenue historical alternative odds の小規模backfill準備 (117/159件未保存, H006用)」（write系は人間確認後）。condB switchはhistorical上有望（174.4%）だがtop2=92.2%/future-only未確認、6R switchは全候補reject（H004）のため本採用可能な edge はなし。**
 
-## 次アクション: skip6R historical alternative odds が揃ったら switch 予備検証
+## 次アクション: skipVenue historical alternative odds の小規模backfill準備 (117/159件未保存, H006用)
 
 **根拠:** governor の自動判断に基づく次アクション
 
@@ -22,7 +22,7 @@ governor 生成日時: 2026-06-11T01:52:43.322Z
 
 ### 実行ステップ
 
-1. pnpm analyze:condb-switch-historical (skip6R版 実装後)
+1. pnpm backfill:historical-alt-odds --limit 30 --priority skipVenue --write --sleep-ms 1000
 
 ### 品質チェックリスト
 
@@ -65,7 +65,7 @@ governor 生成日時: 2026-06-11T01:52:43.322Z
 | H001 | condB 1-3-2 switch | testing-historical | ❌ |
 | H002 | condB skip | tested-historical | ❌ |
 | H003 | 6R skip | monitor | ❌ |
-| H004 | 6R switch (代替買い目) | waiting-data | ❌ |
+| H004 | 6R switch (代替買い目) | tested-historical | ❌ |
 | H005 | 浜名湖+住之江 skip | monitor | ❌ |
 | H006 | 浜名湖+住之江 switch (代替買い目) | waiting-data | ❌ |
 | H007 | condB 1-3-4 switch | secondary | ❌ |

@@ -1,20 +1,20 @@
 {
-  "generatedAt": "2026-06-11T01:53:16.648Z",
-  "governorGeneratedAt": "2026-06-11T01:52:43.322Z",
+  "generatedAt": "2026-06-11T01:59:39.598Z",
+  "governorGeneratedAt": "2026-06-11T01:59:39.156Z",
   "nextAction": {
-    "priority": 4,
-    "action": "skip6R historical alternative odds が揃ったら switch 予備検証",
-    "command": "pnpm analyze:condb-switch-historical (skip6R版 実装後)"
+    "priority": 5,
+    "action": "skipVenue historical alternative odds の小規模backfill準備 (117/159件未保存, H006用)",
+    "command": "pnpm backfill:historical-alt-odds --limit 30 --priority skipVenue --write --sleep-ms 1000"
   },
   "plan": {
-    "title": "skip6R historical alternative odds が揃ったら switch 予備検証",
+    "title": "skipVenue historical alternative odds の小規模backfill準備 (117/159件未保存, H006用)",
     "rationale": "governor の自動判断に基づく次アクション",
     "writeAllowed": false,
     "writeTarget": null,
     "steps": [
       {
         "step": 1,
-        "description": "pnpm analyze:condb-switch-historical (skip6R版 実装後)",
+        "description": "pnpm backfill:historical-alt-odds --limit 30 --priority skipVenue --write --sleep-ms 1000",
         "command": null
       }
     ],
@@ -58,5 +58,5 @@
     "future-only timeseries 未確認の候補を本採用すること",
     "skip6R / skipVenue の write (今回は確認ステップを先に)"
   ],
-  "oneLiner": "次は skip6R historical alt odds の小規模backfill準備（人間確認後）。condB switchはhistorical上有望（174.4%）だがtop2=92.2%/future-only未確認のため本採用不可。"
+  "oneLiner": "次は「skipVenue historical alternative odds の小規模backfill準備 (117/159件未保存, H006用)」（write系は人間確認後）。condB switchはhistorical上有望（174.4%）だがtop2=92.2%/future-only未確認、6R switchは全候補reject（H004）のため本採用可能な edge はなし。"
 }
