@@ -154,6 +154,7 @@
     "analyze:one-four-structure": "tsx scripts/analyze-one-four-structure.ts",
     "report:h011-forward-monitor": "tsx scripts/report-h011-forward-monitor.ts",
     "audit:exacta-closing-odds": "tsx scripts/audit-exacta-closing-odds-availability.ts",
+    "backfill:exacta-closing-odds": "tsx scripts/backfill-exacta-closing-odds.ts",
     "report:research-governor": "tsx scripts/report-research-governor.ts",
     "plan:next-research": "tsx scripts/plan-next-research-action.ts"
   },
