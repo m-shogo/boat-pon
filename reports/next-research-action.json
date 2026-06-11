@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-06-11T01:30:21.017Z",
-  "governorGeneratedAt": "2026-06-11T01:30:20.579Z",
+  "generatedAt": "2026-06-11T01:46:26.345Z",
+  "governorGeneratedAt": "2026-06-11T01:46:11.677Z",
   "nextAction": {
     "priority": 3,
-    "action": "skip6R historical alternative odds の小規模backfill準備 (102/215件未保存)",
+    "action": "skip6R historical alternative odds の小規模backfill準備 (72/215件未保存)",
     "command": "pnpm backfill:historical-alt-odds --limit 30 --priority skip6R --write --sleep-ms 1000"
   },
   "plan": {
-    "title": "skip6R historical alternative odds 小規模 backfill (残 102/215件)",
+    "title": "skip6R historical alternative odds 小規模 backfill (残 72/215件)",
     "rationale": "condB historical closing odds は完備 (100%)。次は skip6R switch 予備検証のためにデータ取得。",
     "writeAllowed": true,
     "writeTarget": "historical_alternative_odds のみ (既存テーブルへの書き込み禁止)",
@@ -50,7 +50,7 @@
       {
         "step": 8,
         "description": "満足なら残り write",
-        "command": "pnpm backfill:historical-alt-odds --limit 102 --priority skip6R --write --sleep-ms 1000"
+        "command": "pnpm backfill:historical-alt-odds --limit 72 --priority skip6R --write --sleep-ms 1000"
       }
     ],
     "prereqs": [
@@ -79,13 +79,13 @@
     },
     "skip6R": {
       "total": 215,
-      "haoSaved": 113,
-      "coverage": 53
+      "haoSaved": 143,
+      "coverage": 67
     },
     "skipVenue": {
       "total": 159,
-      "haoSaved": 29,
-      "coverage": 18
+      "haoSaved": 31,
+      "coverage": 19
     },
     "timeseries": {
       "buyForwardOverlap": 0,
