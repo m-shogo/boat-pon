@@ -1,6 +1,6 @@
 # Research Governor
 
-生成日時: 2026-06-11T02:14:08.305Z
+生成日時: 2026-06-11T02:19:16.122Z
 
 > **⚠️ BUY は検証候補。ROI は検証指標。購入指示・採用判断ではない。**
 > **app_settings / 本番 decision / 自動投票 は絶対に変更しない。**
@@ -20,9 +20,9 @@
 
 ## B. 次にやるべき1本
 
-**skipVenue switch 予備検証 (H006) または condB timeseries overlap 蓄積待ち**
+**switch検証は全て完了 (H004/H006 とも switch reject)。condB timeseries overlap 蓄積待ち。次の大型候補: 全券種ROIシミュレーター**
 
-実行候補: `pnpm analyze:skip6r-switch-historical (skipVenue版 実装後)`
+実行候補: `pnpm report:paper-forward-monitor (monitor継続)`
 
 ## C. 今やってはいけないこと
 
@@ -45,8 +45,8 @@
 | H002 | condB skip | 🟠 tested-historical | ❌ 不可 | H001 と並行して monitor |
 | H003 | 6R skip | 👁️ monitor | ❌ 不可 | pnpm report:paper-forward-monitor (monitor継続) |
 | H004 | 6R switch (代替買い目) | 🟠 tested-historical | ❌ 不可 | switch は終了。6R の扱いは H003 (skip monitor) に一本化 |
-| H005 | 浜名湖+住之江 skip | 👁️ monitor | ❌ 不可 | pnpm report:paper-forward-monitor (monitor継続) |
-| H006 | 浜名湖+住之江 switch (代替買い目) | ⏳ waiting-data | ❌ 不可 | skipVenue backfill 着手可 (H004 検証完了済み)。pnpm backfill:historical-alt-odds --limit 30 --priority skipVenue (人間確認後・backup後) |
+| H005 | 浜名湖+住之江 skip | 👁️ monitor | ❌ 不可 | pnpm report:paper-forward-monitor (monitor継続)。2026-06以降のforwardでvenue 1-2-3のhit有無を追跡 |
+| H006 | 浜名湖+住之江 switch (代替買い目) | 🟠 tested-historical | ❌ 不可 | switch は終了。venue の扱いは H005 (skip monitor) に一本化 |
 | H007 | condB 1-3-4 switch | 🔵 secondary | ❌ 不可 | condB 1-3-2 検証内で参考として監視 |
 | H008 | 1-3-5 / 1-3-6 switch | 📋 backlog | ❌ 不可 | none |
 | H009 | 選手タイプ × 会場構造 | 📋 backlog | ❌ 不可 | none |
@@ -115,11 +115,9 @@
 
 **🔬 testing-historical**: H001 condB 1-3-2 switch
 
-**🟠 tested-historical**: H002 condB skip / H004 6R switch (代替買い目)
+**🟠 tested-historical**: H002 condB skip / H004 6R switch (代替買い目) / H006 浜名湖+住之江 switch (代替買い目)
 
 **👁️ monitor**: H003 6R skip / H005 浜名湖+住之江 skip
-
-**⏳ waiting-data**: H006 浜名湖+住之江 switch (代替買い目)
 
 **🔵 secondary**: H007 condB 1-3-4 switch
 
@@ -146,7 +144,7 @@ pnpm backfill:historical-alt-odds --limit 30 --priority skip6R --write --sleep-m
 
 ## I. 1行結論
 
-> **次は「skipVenue switch 予備検証 (H006) または condB timeseries overlap 蓄積待ち」（write系は人間確認後）。condB switchはhistorical上有望（174.4%）だがtop2=92.2%/future-only未確認、6R switchは全候補reject（H004）のため本採用可能な edge はなし。**
+> **次は「switch検証は全て完了 (H004/H006 とも switch reject)。condB timeseries overlap 蓄積待ち。次の大型候補: 全券種ROIシミュレーター」（write系は人間確認後）。condB switchはhistorical上有望（174.4%）だがtop2=92.2%/future-only未確認、6R switchは全候補reject（H004）のため本採用可能な edge はなし。**
 
 ---
 

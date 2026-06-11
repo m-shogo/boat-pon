@@ -27,6 +27,7 @@ const REPORT_FILES = {
   altOddsQuality:         "reports/historical-alternative-odds-quality.json",
   condBSwitch:            "reports/condb-switch-historical-closing-odds.json",
   skip6RSwitch:           "reports/skip6r-switch-historical-closing-odds.json",
+  skipVenueSwitch:        "reports/skipvenue-switch-historical-closing-odds.json",
   timeseriesHealth:       "reports/alternative-odds-timeseries-health.json",
   skipPolicy:             "reports/roi-skip-policy-simulation.json",
   paperForwardMonitor:    "reports/paper-forward-monitor.json",
@@ -71,6 +72,7 @@ const hypotheses = registry.hypotheses;
 
 const r_condBSwitch   = loadJson(REPORT_FILES.condBSwitch, "condB switch report");
 const r_skip6RSwitch  = loadJson(REPORT_FILES.skip6RSwitch, "skip6R switch report");
+const r_skipVenueSwitch = loadJson(REPORT_FILES.skipVenueSwitch, "skipVenue switch report");
 const r_altOdds       = loadJson(REPORT_FILES.altOddsQuality, "alt-odds quality");
 const r_timeseries    = loadJson(REPORT_FILES.timeseriesHealth, "timeseries health");
 const r_skipPolicy    = loadJson(REPORT_FILES.skipPolicy, "skip policy");
@@ -183,10 +185,14 @@ if (dataReadiness.timeseries.futureOnlySwitchReady) {
   nextAction = `skipVenue historical alternative odds の小規模backfill準備 (${skipVenueTotal - haoSkipVenue}/${skipVenueTotal}件未保存, H006用)`;
   nextActionCommand = `pnpm backfill:historical-alt-odds --limit 30 --priority skipVenue --write --sleep-ms 1000`;
   nextActionPriority = 5;
-} else {
-  nextAction = "skipVenue switch 予備検証 (H006) または condB timeseries overlap 蓄積待ち";
-  nextActionCommand = "pnpm analyze:skip6r-switch-historical (skipVenue版 実装後)";
+} else if (!r_skipVenueSwitch.ok) {
+  nextAction = "skipVenue switch 予備検証 (H006) を実行";
+  nextActionCommand = "pnpm analyze:skipvenue-switch-historical";
   nextActionPriority = 6;
+} else {
+  nextAction = "switch検証は全て完了 (H004/H006 とも switch reject)。condB timeseries overlap 蓄積待ち。次の大型候補: 全券種ROIシミュレーター";
+  nextActionCommand = "pnpm report:paper-forward-monitor (monitor継続)";
+  nextActionPriority = 7;
 }
 
 const condBSwitchMetrics = r_condBSwitch.ok && r_condBSwitch.data

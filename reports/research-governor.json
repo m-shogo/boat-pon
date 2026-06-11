@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-06-11T02:14:08.305Z",
+  "generatedAt": "2026-06-11T02:19:16.122Z",
   "phase": "research-monitor",
   "warnings": [],
   "nextAction": {
-    "priority": 6,
-    "action": "skipVenue switch 予備検証 (H006) または condB timeseries overlap 蓄積待ち",
-    "command": "pnpm analyze:skip6r-switch-historical (skipVenue版 実装後)"
+    "priority": 7,
+    "action": "switch検証は全て完了 (H004/H006 とも switch reject)。condB timeseries overlap 蓄積待ち。次の大型候補: 全券種ROIシミュレーター",
+    "command": "pnpm report:paper-forward-monitor (monitor継続)"
   },
   "dataReadiness": {
     "forwardTotal": 1522,
@@ -143,28 +143,51 @@
       "status": "monitor",
       "priority": 5,
       "adoptionAllowed": false,
-      "adoptionBlockReason": "top2未確認 / forward n不足",
-      "nextAction": "pnpm report:paper-forward-monitor (monitor継続)",
+      "adoptionBlockReason": "skip残存97.3% > 全体87.1%だが top2除外88.8% < 100%。in-sample選択バイアスありforward確認必須",
+      "nextAction": "pnpm report:paper-forward-monitor (monitor継続)。2026-06以降のforwardでvenue 1-2-3のhit有無を追跡",
       "blockedReason": null,
       "gateStatus": null,
       "lastKnownMetrics": {
         "skip_n": 159,
-        "note": "skip6R+浜名湖+住之江合計でskip_rate=22.4%, 残存ROI=108.4%, top2=98.43%"
+        "baseline_venue_1_2_3_roi": 0,
+        "baseline_venue_1_2_3_hits": 0,
+        "venue_non6R_roi": 0,
+        "skip_remaining_roi": 97.3,
+        "skip_remaining_top2_exclude_roi": 88.8,
+        "skip6R_overlap": 33,
+        "condB_overlap": 16,
+        "odds_source": "historical_closing_odds"
       }
     },
     {
       "id": "H006",
       "name": "浜名湖+住之江 switch (代替買い目)",
-      "status": "waiting-data",
+      "status": "tested-historical",
       "priority": 6,
       "adoptionAllowed": false,
-      "adoptionBlockReason": "historical_alternative_odds skipVenue 未取得",
-      "nextAction": "skipVenue backfill 着手可 (H004 検証完了済み)。pnpm backfill:historical-alt-odds --limit 30 --priority skipVenue (人間確認後・backup後)",
-      "blockedReason": "skipVenue historical closing odds 残117/159 未保存 (42件はskip6R/condB重複分)",
-      "gateStatus": null,
+      "adoptionBlockReason": "switch全候補 reject/insufficient: 0hit月6〜8つの期間依存か hits<3。venueはswitchで救えない",
+      "nextAction": "switch は終了。venue の扱いは H005 (skip monitor) に一本化",
+      "blockedReason": null,
+      "gateStatus": {
+        "nSufficient": true,
+        "dataQualityOk": true,
+        "roiBeatsBaseline": true,
+        "top2ExcludeRoiOk": false,
+        "futureOnlyConfirmed": false
+      },
       "lastKnownMetrics": {
-        "skipVenue_total_races": 159,
-        "historical_alt_odds_saved": 42
+        "skipVenue_n": 159,
+        "baseline_1_2_3_roi": 0,
+        "baseline_1_2_3_hits": 0,
+        "switch_1_3_2_roi": 33.4,
+        "switch_1_2_4_roi": 81.9,
+        "switch_1_4_2_roi": 86.7,
+        "switch_1_3_4_roi": 141.4,
+        "switch_1_3_4_top2_exclude_roi": 29.4,
+        "venue_non6R_switch_1_3_4_roi": 158,
+        "skip6R_overlap": 33,
+        "condB_overlap": 16,
+        "odds_source": "historical_closing_odds"
       }
     },
     {
@@ -249,5 +272,5 @@
     "future-only timeseries 未確認の候補を本採用すること",
     "skip6R / skipVenue の write (今回は確認ステップを先に)"
   ],
-  "oneLiner": "次は「skipVenue switch 予備検証 (H006) または condB timeseries overlap 蓄積待ち」（write系は人間確認後）。condB switchはhistorical上有望（174.4%）だがtop2=92.2%/future-only未確認、6R switchは全候補reject（H004）のため本採用可能な edge はなし。"
+  "oneLiner": "次は「switch検証は全て完了 (H004/H006 とも switch reject)。condB timeseries overlap 蓄積待ち。次の大型候補: 全券種ROIシミュレーター」（write系は人間確認後）。condB switchはhistorical上有望（174.4%）だがtop2=92.2%/future-only未確認、6R switchは全候補reject（H004）のため本採用可能な edge はなし。"
 }

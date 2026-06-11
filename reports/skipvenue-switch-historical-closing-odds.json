@@ -1,0 +1,3230 @@
+{
+  "generatedAt": "2026-06-11T02:17:39.329Z",
+  "meta": {
+    "description": "H006: skipVenue (浜名湖+住之江) historical closing odds switch/skip 予備検証",
+    "warningNotForward": "これはhistorical closing odds backtestです。live/T-5/T-10 forwardではありません",
+    "warningNoAdoption": "historical closing oddsで良くても本採用不可。future-only odds_timeseriesで再確認必要",
+    "forwardStart": "2025-01-01",
+    "skipVenues": [
+      "浜名湖",
+      "住之江"
+    ],
+    "unit": 100,
+    "topExcludeN": 2,
+    "minNForJudge": 30,
+    "minHitsForJudge": 3
+  },
+  "overview": {
+    "allForwardRaces": 1522,
+    "skipVenueRaces": 159,
+    "hamanako": 83,
+    "suminoe": 76,
+    "venue6ROverlap": 33,
+    "venueNon6R": 126,
+    "condBVenueOverlap": 16,
+    "closingOddsCoveragePct": 100
+  },
+  "baseline": {
+    "name": "baseline skipVenue 1-2-3",
+    "combination": "1-2-3",
+    "n": 159,
+    "n_closing_odds": 159,
+    "hits": 0,
+    "hitRate": 0,
+    "invest": 15900,
+    "payout": 0,
+    "roi": 0,
+    "profit": -15900,
+    "avgClosingOdds": 43.34,
+    "medClosingOdds": 41.5,
+    "maxPayout": 0,
+    "maxLosingStreak": 159,
+    "topNExcludeRoi": 0,
+    "recent3mRoi": 0,
+    "recent3mN": 0,
+    "zeroHitMonths": [
+      "2025-02",
+      "2025-03",
+      "2025-04",
+      "2025-05",
+      "2025-06",
+      "2025-07",
+      "2025-08",
+      "2025-09",
+      "2025-10",
+      "2025-11"
+    ],
+    "dataInsufficient": false,
+    "overfittingWarnings": [
+      "hits=0 < 3: 参考値扱い",
+      "0hit月 (n≥5): 2025-02, 2025-03, 2025-04, 2025-05, 2025-06, 2025-07, 2025-08, 2025-09, 2025-10, 2025-11"
+    ],
+    "monthlyRoi": {
+      "2025-02": {
+        "n": 16,
+        "hits": 0,
+        "roi": 0
+      },
+      "2025-03": {
+        "n": 5,
+        "hits": 0,
+        "roi": 0
+      },
+      "2025-04": {
+        "n": 15,
+        "hits": 0,
+        "roi": 0
+      },
+      "2025-05": {
+        "n": 22,
+        "hits": 0,
+        "roi": 0
+      },
+      "2025-06": {
+        "n": 28,
+        "hits": 0,
+        "roi": 0
+      },
+      "2025-07": {
+        "n": 29,
+        "hits": 0,
+        "roi": 0
+      },
+      "2025-08": {
+        "n": 6,
+        "hits": 0,
+        "roi": 0
+      },
+      "2025-09": {
+        "n": 13,
+        "hits": 0,
+        "roi": 0
+      },
+      "2025-10": {
+        "n": 12,
+        "hits": 0,
+        "roi": 0
+      },
+      "2025-11": {
+        "n": 13,
+        "hits": 0,
+        "roi": 0
+      }
+    },
+    "venueRoi": {
+      "住之江": {
+        "n": 76,
+        "hits": 0,
+        "roi": 0
+      },
+      "浜名湖": {
+        "n": 83,
+        "hits": 0,
+        "roi": 0
+      }
+    },
+    "raceNoRoi": {
+      "1": {
+        "n": 8,
+        "hits": 0,
+        "roi": 0
+      },
+      "2": {
+        "n": 20,
+        "hits": 0,
+        "roi": 0
+      },
+      "3": {
+        "n": 14,
+        "hits": 0,
+        "roi": 0
+      },
+      "4": {
+        "n": 12,
+        "hits": 0,
+        "roi": 0
+      },
+      "5": {
+        "n": 21,
+        "hits": 0,
+        "roi": 0
+      },
+      "6": {
+        "n": 33,
+        "hits": 0,
+        "roi": 0
+      },
+      "7": {
+        "n": 24,
+        "hits": 0,
+        "roi": 0
+      },
+      "8": {
+        "n": 18,
+        "hits": 0,
+        "roi": 0
+      },
+      "9": {
+        "n": 9,
+        "hits": 0,
+        "roi": 0
+      }
+    }
+  },
+  "venueNon6R": {
+    "name": "C. venue単独 (6R重複除外) 1-2-3",
+    "combination": "1-2-3",
+    "n": 126,
+    "n_closing_odds": 126,
+    "hits": 0,
+    "hitRate": 0,
+    "invest": 12600,
+    "payout": 0,
+    "roi": 0,
+    "profit": -12600,
+    "avgClosingOdds": 43.13,
+    "medClosingOdds": 41.2,
+    "maxPayout": 0,
+    "maxLosingStreak": 126,
+    "topNExcludeRoi": 0,
+    "recent3mRoi": 0,
+    "recent3mN": 0,
+    "zeroHitMonths": [
+      "2025-02",
+      "2025-04",
+      "2025-05",
+      "2025-06",
+      "2025-07",
+      "2025-09",
+      "2025-10",
+      "2025-11"
+    ],
+    "dataInsufficient": false,
+    "overfittingWarnings": [
+      "hits=0 < 3: 参考値扱い",
+      "0hit月 (n≥5): 2025-02, 2025-04, 2025-05, 2025-06, 2025-07, 2025-09, 2025-10, 2025-11"
+    ],
+    "monthlyRoi": {
+      "2025-02": {
+        "n": 10,
+        "hits": 0,
+        "roi": 0
+      },
+      "2025-03": {
+        "n": 4,
+        "hits": 0,
+        "roi": 0
+      },
+      "2025-04": {
+        "n": 13,
+        "hits": 0,
+        "roi": 0
+      },
+      "2025-05": {
+        "n": 17,
+        "hits": 0,
+        "roi": 0
+      },
+      "2025-06": {
+        "n": 25,
+        "hits": 0,
+        "roi": 0
+      },
+      "2025-07": {
+        "n": 21,
+        "hits": 0,
+        "roi": 0
+      },
+      "2025-08": {
+        "n": 4,
+        "hits": 0,
+        "roi": 0
+      },
+      "2025-09": {
+        "n": 11,
+        "hits": 0,
+        "roi": 0
+      },
+      "2025-10": {
+        "n": 9,
+        "hits": 0,
+        "roi": 0
+      },
+      "2025-11": {
+        "n": 12,
+        "hits": 0,
+        "roi": 0
+      }
+    },
+    "venueRoi": {
+      "浜名湖": {
+        "n": 66,
+        "hits": 0,
+        "roi": 0
+      },
+      "住之江": {
+        "n": 60,
+        "hits": 0,
+        "roi": 0
+      }
+    },
+    "raceNoRoi": {
+      "1": {
+        "n": 8,
+        "hits": 0,
+        "roi": 0
+      },
+      "2": {
+        "n": 20,
+        "hits": 0,
+        "roi": 0
+      },
+      "3": {
+        "n": 14,
+        "hits": 0,
+        "roi": 0
+      },
+      "4": {
+        "n": 12,
+        "hits": 0,
+        "roi": 0
+      },
+      "5": {
+        "n": 21,
+        "hits": 0,
+        "roi": 0
+      },
+      "7": {
+        "n": 24,
+        "hits": 0,
+        "roi": 0
+      },
+      "8": {
+        "n": 18,
+        "hits": 0,
+        "roi": 0
+      },
+      "9": {
+        "n": 9,
+        "hits": 0,
+        "roi": 0
+      }
+    }
+  },
+  "venue6ROnly": {
+    "name": "D. 6R重複のみ 1-2-3",
+    "combination": "1-2-3",
+    "n": 33,
+    "n_closing_odds": 33,
+    "hits": 0,
+    "hitRate": 0,
+    "invest": 3300,
+    "payout": 0,
+    "roi": 0,
+    "profit": -3300,
+    "avgClosingOdds": 44.17,
+    "medClosingOdds": 41.8,
+    "maxPayout": 0,
+    "maxLosingStreak": 33,
+    "topNExcludeRoi": 0,
+    "recent3mRoi": 0,
+    "recent3mN": 0,
+    "zeroHitMonths": [
+      "2025-02",
+      "2025-05",
+      "2025-07"
+    ],
+    "dataInsufficient": false,
+    "overfittingWarnings": [
+      "hits=0 < 3: 参考値扱い",
+      "0hit月 (n≥5): 2025-02, 2025-05, 2025-07"
+    ],
+    "monthlyRoi": {
+      "2025-02": {
+        "n": 6,
+        "hits": 0,
+        "roi": 0
+      },
+      "2025-03": {
+        "n": 1,
+        "hits": 0,
+        "roi": 0
+      },
+      "2025-04": {
+        "n": 2,
+        "hits": 0,
+        "roi": 0
+      },
+      "2025-05": {
+        "n": 5,
+        "hits": 0,
+        "roi": 0
+      },
+      "2025-06": {
+        "n": 3,
+        "hits": 0,
+        "roi": 0
+      },
+      "2025-07": {
+        "n": 8,
+        "hits": 0,
+        "roi": 0
+      },
+      "2025-08": {
+        "n": 2,
+        "hits": 0,
+        "roi": 0
+      },
+      "2025-09": {
+        "n": 2,
+        "hits": 0,
+        "roi": 0
+      },
+      "2025-10": {
+        "n": 3,
+        "hits": 0,
+        "roi": 0
+      },
+      "2025-11": {
+        "n": 1,
+        "hits": 0,
+        "roi": 0
+      }
+    },
+    "venueRoi": {
+      "住之江": {
+        "n": 16,
+        "hits": 0,
+        "roi": 0
+      },
+      "浜名湖": {
+        "n": 17,
+        "hits": 0,
+        "roi": 0
+      }
+    },
+    "raceNoRoi": {
+      "6": {
+        "n": 33,
+        "hits": 0,
+        "roi": 0
+      }
+    }
+  },
+  "skipRemaining": {
+    "name": "A. skip (venue除外後の残存)",
+    "combination": "1-2-3",
+    "n": 1363,
+    "n_closing_odds": 317,
+    "hits": 39,
+    "hitRate": 2.86,
+    "invest": 136300,
+    "payout": 132590,
+    "roi": 97.28,
+    "profit": -3710,
+    "avgClosingOdds": 41.95,
+    "medClosingOdds": 39.1,
+    "maxPayout": 6030,
+    "maxLosingStreak": 136,
+    "topNExcludeRoi": 88.77,
+    "recent3mRoi": 72.61,
+    "recent3mN": 23,
+    "zeroHitMonths": [],
+    "dataInsufficient": false,
+    "overfittingWarnings": [],
+    "monthlyRoi": {
+      "2025-01": {
+        "n": 1,
+        "hits": 0,
+        "roi": 0
+      },
+      "2025-02": {
+        "n": 87,
+        "hits": 2,
+        "roi": 53.33
+      },
+      "2025-03": {
+        "n": 92,
+        "hits": 2,
+        "roi": 90.33
+      },
+      "2025-04": {
+        "n": 150,
+        "hits": 5,
+        "roi": 155.13
+      },
+      "2025-05": {
+        "n": 169,
+        "hits": 7,
+        "roi": 140.18
+      },
+      "2025-06": {
+        "n": 167,
+        "hits": 4,
+        "roi": 106.05
+      },
+      "2025-07": {
+        "n": 197,
+        "hits": 2,
+        "roi": 25.63
+      },
+      "2025-08": {
+        "n": 209,
+        "hits": 8,
+        "roi": 95.65
+      },
+      "2025-09": {
+        "n": 101,
+        "hits": 4,
+        "roi": 127.43
+      },
+      "2025-10": {
+        "n": 70,
+        "hits": 2,
+        "roi": 113.71
+      },
+      "2025-11": {
+        "n": 97,
+        "hits": 2,
+        "roi": 76.6
+      },
+      "2026-05": {
+        "n": 23,
+        "hits": 1,
+        "roi": 72.61
+      }
+    },
+    "venueRoi": {
+      "徳山": {
+        "n": 83,
+        "hits": 3,
+        "roi": 121.08
+      },
+      "びわこ": {
+        "n": 114,
+        "hits": 5,
+        "roi": 143.86
+      },
+      "下関": {
+        "n": 79,
+        "hits": 1,
+        "roi": 46.08
+      },
+      "唐津": {
+        "n": 96,
+        "hits": 2,
+        "roi": 98.44
+      },
+      "尼崎": {
+        "n": 86,
+        "hits": 2,
+        "roi": 108.6
+      },
+      "常滑": {
+        "n": 88,
+        "hits": 2,
+        "roi": 79.55
+      },
+      "鳴門": {
+        "n": 63,
+        "hits": 1,
+        "roi": 15.87
+      },
+      "平和島": {
+        "n": 77,
+        "hits": 2,
+        "roi": 111.43
+      },
+      "若松": {
+        "n": 98,
+        "hits": 2,
+        "roi": 85.51
+      },
+      "丸亀": {
+        "n": 71,
+        "hits": 2,
+        "roi": 95.77
+      },
+      "芦屋": {
+        "n": 69,
+        "hits": 3,
+        "roi": 127.97
+      },
+      "宮島": {
+        "n": 80,
+        "hits": 4,
+        "roi": 151.25
+      },
+      "大村": {
+        "n": 87,
+        "hits": 3,
+        "roi": 80.46
+      },
+      "津": {
+        "n": 83,
+        "hits": 1,
+        "roi": 36.99
+      },
+      "児島": {
+        "n": 38,
+        "hits": 1,
+        "roi": 135
+      },
+      "福岡": {
+        "n": 77,
+        "hits": 3,
+        "roi": 150.26
+      },
+      "蒲郡": {
+        "n": 74,
+        "hits": 2,
+        "roi": 57.43
+      }
+    },
+    "raceNoRoi": {
+      "1": {
+        "n": 74,
+        "hits": 3,
+        "roi": 166.89
+      },
+      "2": {
+        "n": 149,
+        "hits": 3,
+        "roi": 58.39
+      },
+      "3": {
+        "n": 166,
+        "hits": 7,
+        "roi": 146.39
+      },
+      "4": {
+        "n": 193,
+        "hits": 4,
+        "roi": 75.49
+      },
+      "5": {
+        "n": 163,
+        "hits": 3,
+        "roi": 61.47
+      },
+      "6": {
+        "n": 182,
+        "hits": 2,
+        "roi": 25.11
+      },
+      "7": {
+        "n": 185,
+        "hits": 5,
+        "roi": 94.81
+      },
+      "8": {
+        "n": 150,
+        "hits": 5,
+        "roi": 128.47
+      },
+      "9": {
+        "n": 101,
+        "hits": 7,
+        "roi": 210.59
+      }
+    }
+  },
+  "allForwardBaseline": {
+    "name": "全forward baseline",
+    "combination": "1-2-3",
+    "n": 1522,
+    "n_closing_odds": 476,
+    "hits": 39,
+    "hitRate": 2.56,
+    "invest": 152200,
+    "payout": 132590,
+    "roi": 87.12,
+    "profit": -19610,
+    "avgClosingOdds": 42.42,
+    "medClosingOdds": 40.5,
+    "maxPayout": 6030,
+    "maxLosingStreak": 153,
+    "topNExcludeRoi": 79.48,
+    "recent3mRoi": 72.61,
+    "recent3mN": 23,
+    "zeroHitMonths": [],
+    "dataInsufficient": false,
+    "overfittingWarnings": [],
+    "monthlyRoi": {
+      "2025-01": {
+        "n": 1,
+        "hits": 0,
+        "roi": 0
+      },
+      "2025-02": {
+        "n": 103,
+        "hits": 2,
+        "roi": 45.05
+      },
+      "2025-03": {
+        "n": 97,
+        "hits": 2,
+        "roi": 85.67
+      },
+      "2025-04": {
+        "n": 165,
+        "hits": 5,
+        "roi": 141.03
+      },
+      "2025-05": {
+        "n": 191,
+        "hits": 7,
+        "roi": 124.03
+      },
+      "2025-06": {
+        "n": 195,
+        "hits": 4,
+        "roi": 90.82
+      },
+      "2025-07": {
+        "n": 226,
+        "hits": 2,
+        "roi": 22.35
+      },
+      "2025-08": {
+        "n": 215,
+        "hits": 8,
+        "roi": 92.98
+      },
+      "2025-09": {
+        "n": 114,
+        "hits": 4,
+        "roi": 112.89
+      },
+      "2025-10": {
+        "n": 82,
+        "hits": 2,
+        "roi": 97.07
+      },
+      "2025-11": {
+        "n": 110,
+        "hits": 2,
+        "roi": 67.55
+      },
+      "2026-05": {
+        "n": 23,
+        "hits": 1,
+        "roi": 72.61
+      }
+    },
+    "venueRoi": {
+      "徳山": {
+        "n": 83,
+        "hits": 3,
+        "roi": 121.08
+      },
+      "びわこ": {
+        "n": 114,
+        "hits": 5,
+        "roi": 143.86
+      },
+      "下関": {
+        "n": 79,
+        "hits": 1,
+        "roi": 46.08
+      },
+      "住之江": {
+        "n": 76,
+        "hits": 0,
+        "roi": 0
+      },
+      "唐津": {
+        "n": 96,
+        "hits": 2,
+        "roi": 98.44
+      },
+      "尼崎": {
+        "n": 86,
+        "hits": 2,
+        "roi": 108.6
+      },
+      "常滑": {
+        "n": 88,
+        "hits": 2,
+        "roi": 79.55
+      },
+      "鳴門": {
+        "n": 63,
+        "hits": 1,
+        "roi": 15.87
+      },
+      "平和島": {
+        "n": 77,
+        "hits": 2,
+        "roi": 111.43
+      },
+      "浜名湖": {
+        "n": 83,
+        "hits": 0,
+        "roi": 0
+      },
+      "若松": {
+        "n": 98,
+        "hits": 2,
+        "roi": 85.51
+      },
+      "丸亀": {
+        "n": 71,
+        "hits": 2,
+        "roi": 95.77
+      },
+      "芦屋": {
+        "n": 69,
+        "hits": 3,
+        "roi": 127.97
+      },
+      "宮島": {
+        "n": 80,
+        "hits": 4,
+        "roi": 151.25
+      },
+      "大村": {
+        "n": 87,
+        "hits": 3,
+        "roi": 80.46
+      },
+      "津": {
+        "n": 83,
+        "hits": 1,
+        "roi": 36.99
+      },
+      "児島": {
+        "n": 38,
+        "hits": 1,
+        "roi": 135
+      },
+      "福岡": {
+        "n": 77,
+        "hits": 3,
+        "roi": 150.26
+      },
+      "蒲郡": {
+        "n": 74,
+        "hits": 2,
+        "roi": 57.43
+      }
+    },
+    "raceNoRoi": {
+      "1": {
+        "n": 82,
+        "hits": 3,
+        "roi": 150.61
+      },
+      "2": {
+        "n": 169,
+        "hits": 3,
+        "roi": 51.48
+      },
+      "3": {
+        "n": 180,
+        "hits": 7,
+        "roi": 135
+      },
+      "4": {
+        "n": 205,
+        "hits": 4,
+        "roi": 71.07
+      },
+      "5": {
+        "n": 184,
+        "hits": 3,
+        "roi": 54.46
+      },
+      "6": {
+        "n": 215,
+        "hits": 2,
+        "roi": 21.26
+      },
+      "7": {
+        "n": 209,
+        "hits": 5,
+        "roi": 83.92
+      },
+      "8": {
+        "n": 168,
+        "hits": 5,
+        "roi": 114.7
+      },
+      "9": {
+        "n": 110,
+        "hits": 7,
+        "roi": 193.36
+      }
+    }
+  },
+  "switches": [
+    {
+      "set": "skipVenue全体",
+      "combo": "1-3-2",
+      "stats": {
+        "name": "skipVenue全体 switch 1-3-2",
+        "combination": "1-3-2",
+        "n": 159,
+        "n_closing_odds": 159,
+        "hits": 1,
+        "hitRate": 0.63,
+        "invest": 15900,
+        "payout": 5310,
+        "roi": 33.4,
+        "profit": -10590,
+        "avgClosingOdds": 52.91,
+        "medClosingOdds": 47.2,
+        "maxPayout": 5310,
+        "maxLosingStreak": 105,
+        "topNExcludeRoi": 0,
+        "recent3mRoi": 0,
+        "recent3mN": 0,
+        "zeroHitMonths": [
+          "2025-02",
+          "2025-03",
+          "2025-04",
+          "2025-05",
+          "2025-06",
+          "2025-08",
+          "2025-09",
+          "2025-10",
+          "2025-11"
+        ],
+        "dataInsufficient": false,
+        "overfittingWarnings": [
+          "hits=1 < 3: 参考値扱い",
+          "単一raceが払戻の100%を占める: 単発依存",
+          "0hit月 (n≥5): 2025-02, 2025-03, 2025-04, 2025-05, 2025-06, 2025-08, 2025-09, 2025-10, 2025-11"
+        ],
+        "monthlyRoi": {
+          "2025-02": {
+            "n": 16,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-03": {
+            "n": 5,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-04": {
+            "n": 15,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-05": {
+            "n": 22,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-06": {
+            "n": 28,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-07": {
+            "n": 29,
+            "hits": 1,
+            "roi": 183.1
+          },
+          "2025-08": {
+            "n": 6,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-09": {
+            "n": 13,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-10": {
+            "n": 12,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-11": {
+            "n": 13,
+            "hits": 0,
+            "roi": 0
+          }
+        },
+        "venueRoi": {
+          "住之江": {
+            "n": 76,
+            "hits": 1,
+            "roi": 69.87
+          },
+          "浜名湖": {
+            "n": 83,
+            "hits": 0,
+            "roi": 0
+          }
+        },
+        "raceNoRoi": {
+          "1": {
+            "n": 8,
+            "hits": 0,
+            "roi": 0
+          },
+          "2": {
+            "n": 20,
+            "hits": 0,
+            "roi": 0
+          },
+          "3": {
+            "n": 14,
+            "hits": 0,
+            "roi": 0
+          },
+          "4": {
+            "n": 12,
+            "hits": 0,
+            "roi": 0
+          },
+          "5": {
+            "n": 21,
+            "hits": 0,
+            "roi": 0
+          },
+          "6": {
+            "n": 33,
+            "hits": 0,
+            "roi": 0
+          },
+          "7": {
+            "n": 24,
+            "hits": 0,
+            "roi": 0
+          },
+          "8": {
+            "n": 18,
+            "hits": 1,
+            "roi": 295
+          },
+          "9": {
+            "n": 9,
+            "hits": 0,
+            "roi": 0
+          }
+        }
+      },
+      "verdict": "insufficient",
+      "reasons": [
+        "hits=1 < 3: 参考値"
+      ]
+    },
+    {
+      "set": "skipVenue全体",
+      "combo": "1-2-4",
+      "stats": {
+        "name": "skipVenue全体 switch 1-2-4",
+        "combination": "1-2-4",
+        "n": 159,
+        "n_closing_odds": 159,
+        "hits": 3,
+        "hitRate": 1.89,
+        "invest": 15900,
+        "payout": 13030,
+        "roi": 81.95,
+        "profit": -2870,
+        "avgClosingOdds": 54.18,
+        "medClosingOdds": 36.4,
+        "maxPayout": 6920,
+        "maxLosingStreak": 116,
+        "topNExcludeRoi": 16.05,
+        "recent3mRoi": 0,
+        "recent3mN": 0,
+        "zeroHitMonths": [
+          "2025-02",
+          "2025-05",
+          "2025-06",
+          "2025-07",
+          "2025-08",
+          "2025-09",
+          "2025-10"
+        ],
+        "dataInsufficient": false,
+        "overfittingWarnings": [
+          "単一raceが払戻の53%を占める: 単発依存",
+          "0hit月 (n≥5): 2025-02, 2025-05, 2025-06, 2025-07, 2025-08, 2025-09, 2025-10"
+        ],
+        "monthlyRoi": {
+          "2025-02": {
+            "n": 16,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-03": {
+            "n": 5,
+            "hits": 1,
+            "roi": 1384
+          },
+          "2025-04": {
+            "n": 15,
+            "hits": 1,
+            "roi": 239.33
+          },
+          "2025-05": {
+            "n": 22,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-06": {
+            "n": 28,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-07": {
+            "n": 29,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-08": {
+            "n": 6,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-09": {
+            "n": 13,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-10": {
+            "n": 12,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-11": {
+            "n": 13,
+            "hits": 1,
+            "roi": 193.85
+          }
+        },
+        "venueRoi": {
+          "住之江": {
+            "n": 76,
+            "hits": 2,
+            "roi": 80.39
+          },
+          "浜名湖": {
+            "n": 83,
+            "hits": 1,
+            "roi": 83.37
+          }
+        },
+        "raceNoRoi": {
+          "1": {
+            "n": 8,
+            "hits": 0,
+            "roi": 0
+          },
+          "2": {
+            "n": 20,
+            "hits": 0,
+            "roi": 0
+          },
+          "3": {
+            "n": 14,
+            "hits": 0,
+            "roi": 0
+          },
+          "4": {
+            "n": 12,
+            "hits": 1,
+            "roi": 576.67
+          },
+          "5": {
+            "n": 21,
+            "hits": 2,
+            "roi": 290.95
+          },
+          "6": {
+            "n": 33,
+            "hits": 0,
+            "roi": 0
+          },
+          "7": {
+            "n": 24,
+            "hits": 0,
+            "roi": 0
+          },
+          "8": {
+            "n": 18,
+            "hits": 0,
+            "roi": 0
+          },
+          "9": {
+            "n": 9,
+            "hits": 0,
+            "roi": 0
+          }
+        }
+      },
+      "verdict": "reject",
+      "reasons": [
+        "0hit月が7つ (2025-02, 2025-05, 2025-06, 2025-07, 2025-08, 2025-09, 2025-10): 期間依存疑い"
+      ]
+    },
+    {
+      "set": "skipVenue全体",
+      "combo": "1-4-2",
+      "stats": {
+        "name": "skipVenue全体 switch 1-4-2",
+        "combination": "1-4-2",
+        "n": 159,
+        "n_closing_odds": 159,
+        "hits": 5,
+        "hitRate": 3.14,
+        "invest": 15900,
+        "payout": 13790,
+        "roi": 86.73,
+        "profit": -2110,
+        "avgClosingOdds": 79.31,
+        "medClosingOdds": 41.6,
+        "maxPayout": 9460,
+        "maxLosingStreak": 75,
+        "topNExcludeRoi": 14.59,
+        "recent3mRoi": 0,
+        "recent3mN": 0,
+        "zeroHitMonths": [
+          "2025-02",
+          "2025-03",
+          "2025-04",
+          "2025-06",
+          "2025-07",
+          "2025-08",
+          "2025-10",
+          "2025-11"
+        ],
+        "dataInsufficient": false,
+        "overfittingWarnings": [
+          "単一raceが払戻の69%を占める: 単発依存",
+          "0hit月 (n≥5): 2025-02, 2025-03, 2025-04, 2025-06, 2025-07, 2025-08, 2025-10, 2025-11"
+        ],
+        "monthlyRoi": {
+          "2025-02": {
+            "n": 16,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-03": {
+            "n": 5,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-04": {
+            "n": 15,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-05": {
+            "n": 22,
+            "hits": 4,
+            "roi": 601.36
+          },
+          "2025-06": {
+            "n": 28,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-07": {
+            "n": 29,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-08": {
+            "n": 6,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-09": {
+            "n": 13,
+            "hits": 1,
+            "roi": 43.08
+          },
+          "2025-10": {
+            "n": 12,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-11": {
+            "n": 13,
+            "hits": 0,
+            "roi": 0
+          }
+        },
+        "venueRoi": {
+          "住之江": {
+            "n": 76,
+            "hits": 2,
+            "roi": 34.21
+          },
+          "浜名湖": {
+            "n": 83,
+            "hits": 3,
+            "roi": 134.82
+          }
+        },
+        "raceNoRoi": {
+          "1": {
+            "n": 8,
+            "hits": 0,
+            "roi": 0
+          },
+          "2": {
+            "n": 20,
+            "hits": 2,
+            "roi": 526.5
+          },
+          "3": {
+            "n": 14,
+            "hits": 0,
+            "roi": 0
+          },
+          "4": {
+            "n": 12,
+            "hits": 1,
+            "roi": 46.67
+          },
+          "5": {
+            "n": 21,
+            "hits": 0,
+            "roi": 0
+          },
+          "6": {
+            "n": 33,
+            "hits": 1,
+            "roi": 61.82
+          },
+          "7": {
+            "n": 24,
+            "hits": 0,
+            "roi": 0
+          },
+          "8": {
+            "n": 18,
+            "hits": 1,
+            "roi": 36.67
+          },
+          "9": {
+            "n": 9,
+            "hits": 0,
+            "roi": 0
+          }
+        }
+      },
+      "verdict": "reject",
+      "reasons": [
+        "0hit月が8つ (2025-02, 2025-03, 2025-04, 2025-06, 2025-07, 2025-08, 2025-10, 2025-11): 期間依存疑い"
+      ]
+    },
+    {
+      "set": "skipVenue全体",
+      "combo": "1-3-4",
+      "stats": {
+        "name": "skipVenue全体 switch 1-3-4",
+        "combination": "1-3-4",
+        "n": 159,
+        "n_closing_odds": 159,
+        "hits": 5,
+        "hitRate": 3.14,
+        "invest": 15900,
+        "payout": 22490,
+        "roi": 141.45,
+        "profit": 6590,
+        "avgClosingOdds": 56.81,
+        "medClosingOdds": 33.7,
+        "maxPayout": 11270,
+        "maxLosingStreak": 59,
+        "topNExcludeRoi": 29.36,
+        "recent3mRoi": 0,
+        "recent3mN": 0,
+        "zeroHitMonths": [
+          "2025-03",
+          "2025-04",
+          "2025-05",
+          "2025-08",
+          "2025-09",
+          "2025-11"
+        ],
+        "dataInsufficient": false,
+        "overfittingWarnings": [
+          "ROI 141.4% は top2除外で 29.4% に低下: 高配当依存",
+          "単一raceが払戻の50%を占める: 単発依存",
+          "0hit月 (n≥5): 2025-03, 2025-04, 2025-05, 2025-08, 2025-09, 2025-11"
+        ],
+        "monthlyRoi": {
+          "2025-02": {
+            "n": 16,
+            "hits": 2,
+            "roi": 574.38
+          },
+          "2025-03": {
+            "n": 5,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-04": {
+            "n": 15,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-05": {
+            "n": 22,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-06": {
+            "n": 28,
+            "hits": 1,
+            "roi": 402.5
+          },
+          "2025-07": {
+            "n": 29,
+            "hits": 1,
+            "roi": 23.45
+          },
+          "2025-08": {
+            "n": 6,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-09": {
+            "n": 13,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-10": {
+            "n": 12,
+            "hits": 1,
+            "roi": 112.5
+          },
+          "2025-11": {
+            "n": 13,
+            "hits": 0,
+            "roi": 0
+          }
+        },
+        "venueRoi": {
+          "住之江": {
+            "n": 76,
+            "hits": 3,
+            "roi": 113.68
+          },
+          "浜名湖": {
+            "n": 83,
+            "hits": 2,
+            "roi": 166.87
+          }
+        },
+        "raceNoRoi": {
+          "1": {
+            "n": 8,
+            "hits": 0,
+            "roi": 0
+          },
+          "2": {
+            "n": 20,
+            "hits": 2,
+            "roi": 398
+          },
+          "3": {
+            "n": 14,
+            "hits": 1,
+            "roi": 48.57
+          },
+          "4": {
+            "n": 12,
+            "hits": 0,
+            "roi": 0
+          },
+          "5": {
+            "n": 21,
+            "hits": 0,
+            "roi": 0
+          },
+          "6": {
+            "n": 33,
+            "hits": 1,
+            "roi": 78.18
+          },
+          "7": {
+            "n": 24,
+            "hits": 1,
+            "roi": 469.58
+          },
+          "8": {
+            "n": 18,
+            "hits": 0,
+            "roi": 0
+          },
+          "9": {
+            "n": 9,
+            "hits": 0,
+            "roi": 0
+          }
+        }
+      },
+      "verdict": "reject",
+      "reasons": [
+        "0hit月が6つ (2025-03, 2025-04, 2025-05, 2025-08, 2025-09, 2025-11): 期間依存疑い"
+      ]
+    },
+    {
+      "set": "浜名湖のみ",
+      "combo": "1-3-2",
+      "stats": {
+        "name": "浜名湖のみ switch 1-3-2",
+        "combination": "1-3-2",
+        "n": 83,
+        "n_closing_odds": 83,
+        "hits": 0,
+        "hitRate": 0,
+        "invest": 8300,
+        "payout": 0,
+        "roi": 0,
+        "profit": -8300,
+        "avgClosingOdds": 54.18,
+        "medClosingOdds": 47.8,
+        "maxPayout": 0,
+        "maxLosingStreak": 83,
+        "topNExcludeRoi": 0,
+        "recent3mRoi": 0,
+        "recent3mN": 0,
+        "zeroHitMonths": [
+          "2025-02",
+          "2025-04",
+          "2025-05",
+          "2025-06",
+          "2025-07",
+          "2025-08"
+        ],
+        "dataInsufficient": false,
+        "overfittingWarnings": [
+          "hits=0 < 3: 参考値扱い",
+          "0hit月 (n≥5): 2025-02, 2025-04, 2025-05, 2025-06, 2025-07, 2025-08"
+        ],
+        "monthlyRoi": {
+          "2025-02": {
+            "n": 10,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-03": {
+            "n": 3,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-04": {
+            "n": 10,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-05": {
+            "n": 12,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-06": {
+            "n": 15,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-07": {
+            "n": 16,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-08": {
+            "n": 6,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-09": {
+            "n": 4,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-10": {
+            "n": 4,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-11": {
+            "n": 3,
+            "hits": 0,
+            "roi": 0
+          }
+        },
+        "venueRoi": {
+          "浜名湖": {
+            "n": 83,
+            "hits": 0,
+            "roi": 0
+          }
+        },
+        "raceNoRoi": {
+          "1": {
+            "n": 1,
+            "hits": 0,
+            "roi": 0
+          },
+          "2": {
+            "n": 12,
+            "hits": 0,
+            "roi": 0
+          },
+          "3": {
+            "n": 8,
+            "hits": 0,
+            "roi": 0
+          },
+          "4": {
+            "n": 5,
+            "hits": 0,
+            "roi": 0
+          },
+          "5": {
+            "n": 11,
+            "hits": 0,
+            "roi": 0
+          },
+          "6": {
+            "n": 17,
+            "hits": 0,
+            "roi": 0
+          },
+          "7": {
+            "n": 13,
+            "hits": 0,
+            "roi": 0
+          },
+          "8": {
+            "n": 11,
+            "hits": 0,
+            "roi": 0
+          },
+          "9": {
+            "n": 5,
+            "hits": 0,
+            "roi": 0
+          }
+        }
+      },
+      "verdict": "insufficient",
+      "reasons": [
+        "hits=0 < 3: 参考値"
+      ]
+    },
+    {
+      "set": "浜名湖のみ",
+      "combo": "1-2-4",
+      "stats": {
+        "name": "浜名湖のみ switch 1-2-4",
+        "combination": "1-2-4",
+        "n": 83,
+        "n_closing_odds": 83,
+        "hits": 1,
+        "hitRate": 1.2,
+        "invest": 8300,
+        "payout": 6920,
+        "roi": 83.37,
+        "profit": -1380,
+        "avgClosingOdds": 54.12,
+        "medClosingOdds": 41.3,
+        "maxPayout": 6920,
+        "maxLosingStreak": 71,
+        "topNExcludeRoi": 0,
+        "recent3mRoi": 0,
+        "recent3mN": 0,
+        "zeroHitMonths": [
+          "2025-02",
+          "2025-04",
+          "2025-05",
+          "2025-06",
+          "2025-07",
+          "2025-08"
+        ],
+        "dataInsufficient": false,
+        "overfittingWarnings": [
+          "hits=1 < 3: 参考値扱い",
+          "単一raceが払戻の100%を占める: 単発依存",
+          "0hit月 (n≥5): 2025-02, 2025-04, 2025-05, 2025-06, 2025-07, 2025-08"
+        ],
+        "monthlyRoi": {
+          "2025-02": {
+            "n": 10,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-03": {
+            "n": 3,
+            "hits": 1,
+            "roi": 2306.67
+          },
+          "2025-04": {
+            "n": 10,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-05": {
+            "n": 12,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-06": {
+            "n": 15,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-07": {
+            "n": 16,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-08": {
+            "n": 6,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-09": {
+            "n": 4,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-10": {
+            "n": 4,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-11": {
+            "n": 3,
+            "hits": 0,
+            "roi": 0
+          }
+        },
+        "venueRoi": {
+          "浜名湖": {
+            "n": 83,
+            "hits": 1,
+            "roi": 83.37
+          }
+        },
+        "raceNoRoi": {
+          "1": {
+            "n": 1,
+            "hits": 0,
+            "roi": 0
+          },
+          "2": {
+            "n": 12,
+            "hits": 0,
+            "roi": 0
+          },
+          "3": {
+            "n": 8,
+            "hits": 0,
+            "roi": 0
+          },
+          "4": {
+            "n": 5,
+            "hits": 1,
+            "roi": 1384
+          },
+          "5": {
+            "n": 11,
+            "hits": 0,
+            "roi": 0
+          },
+          "6": {
+            "n": 17,
+            "hits": 0,
+            "roi": 0
+          },
+          "7": {
+            "n": 13,
+            "hits": 0,
+            "roi": 0
+          },
+          "8": {
+            "n": 11,
+            "hits": 0,
+            "roi": 0
+          },
+          "9": {
+            "n": 5,
+            "hits": 0,
+            "roi": 0
+          }
+        }
+      },
+      "verdict": "insufficient",
+      "reasons": [
+        "hits=1 < 3: 参考値"
+      ]
+    },
+    {
+      "set": "浜名湖のみ",
+      "combo": "1-4-2",
+      "stats": {
+        "name": "浜名湖のみ switch 1-4-2",
+        "combination": "1-4-2",
+        "n": 83,
+        "n_closing_odds": 83,
+        "hits": 3,
+        "hitRate": 3.61,
+        "invest": 8300,
+        "payout": 11190,
+        "roi": 134.82,
+        "profit": 2890,
+        "avgClosingOdds": 72.15,
+        "medClosingOdds": 54.8,
+        "maxPayout": 9460,
+        "maxLosingStreak": 51,
+        "topNExcludeRoi": 8.15,
+        "recent3mRoi": 0,
+        "recent3mN": 0,
+        "zeroHitMonths": [
+          "2025-02",
+          "2025-04",
+          "2025-06",
+          "2025-07",
+          "2025-08"
+        ],
+        "dataInsufficient": false,
+        "overfittingWarnings": [
+          "ROI 134.8% は top2除外で 8.1% に低下: 高配当依存",
+          "単一raceが払戻の85%を占める: 単発依存",
+          "0hit月 (n≥5): 2025-02, 2025-04, 2025-06, 2025-07, 2025-08"
+        ],
+        "monthlyRoi": {
+          "2025-02": {
+            "n": 10,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-03": {
+            "n": 3,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-04": {
+            "n": 10,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-05": {
+            "n": 12,
+            "hits": 3,
+            "roi": 932.5
+          },
+          "2025-06": {
+            "n": 15,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-07": {
+            "n": 16,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-08": {
+            "n": 6,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-09": {
+            "n": 4,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-10": {
+            "n": 4,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-11": {
+            "n": 3,
+            "hits": 0,
+            "roi": 0
+          }
+        },
+        "venueRoi": {
+          "浜名湖": {
+            "n": 83,
+            "hits": 3,
+            "roi": 134.82
+          }
+        },
+        "raceNoRoi": {
+          "1": {
+            "n": 1,
+            "hits": 0,
+            "roi": 0
+          },
+          "2": {
+            "n": 12,
+            "hits": 2,
+            "roi": 877.5
+          },
+          "3": {
+            "n": 8,
+            "hits": 0,
+            "roi": 0
+          },
+          "4": {
+            "n": 5,
+            "hits": 0,
+            "roi": 0
+          },
+          "5": {
+            "n": 11,
+            "hits": 0,
+            "roi": 0
+          },
+          "6": {
+            "n": 17,
+            "hits": 0,
+            "roi": 0
+          },
+          "7": {
+            "n": 13,
+            "hits": 0,
+            "roi": 0
+          },
+          "8": {
+            "n": 11,
+            "hits": 1,
+            "roi": 60
+          },
+          "9": {
+            "n": 5,
+            "hits": 0,
+            "roi": 0
+          }
+        }
+      },
+      "verdict": "reject",
+      "reasons": [
+        "0hit月が5つ (2025-02, 2025-04, 2025-06, 2025-07, 2025-08): 期間依存疑い"
+      ]
+    },
+    {
+      "set": "浜名湖のみ",
+      "combo": "1-3-4",
+      "stats": {
+        "name": "浜名湖のみ switch 1-3-4",
+        "combination": "1-3-4",
+        "n": 83,
+        "n_closing_odds": 83,
+        "hits": 2,
+        "hitRate": 2.41,
+        "invest": 8300,
+        "payout": 13850,
+        "roi": 166.87,
+        "profit": 5550,
+        "avgClosingOdds": 52.25,
+        "medClosingOdds": 30.4,
+        "maxPayout": 11270,
+        "maxLosingStreak": 44,
+        "topNExcludeRoi": 0,
+        "recent3mRoi": 0,
+        "recent3mN": 0,
+        "zeroHitMonths": [
+          "2025-04",
+          "2025-05",
+          "2025-07",
+          "2025-08"
+        ],
+        "dataInsufficient": false,
+        "overfittingWarnings": [
+          "hits=2 < 3: 参考値扱い",
+          "ROI 166.9% は top2除外で 0.0% に低下: 高配当依存",
+          "単一raceが払戻の81%を占める: 単発依存",
+          "0hit月 (n≥5): 2025-04, 2025-05, 2025-07, 2025-08"
+        ],
+        "monthlyRoi": {
+          "2025-02": {
+            "n": 10,
+            "hits": 1,
+            "roi": 258
+          },
+          "2025-03": {
+            "n": 3,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-04": {
+            "n": 10,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-05": {
+            "n": 12,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-06": {
+            "n": 15,
+            "hits": 1,
+            "roi": 751.33
+          },
+          "2025-07": {
+            "n": 16,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-08": {
+            "n": 6,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-09": {
+            "n": 4,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-10": {
+            "n": 4,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-11": {
+            "n": 3,
+            "hits": 0,
+            "roi": 0
+          }
+        },
+        "venueRoi": {
+          "浜名湖": {
+            "n": 83,
+            "hits": 2,
+            "roi": 166.87
+          }
+        },
+        "raceNoRoi": {
+          "1": {
+            "n": 1,
+            "hits": 0,
+            "roi": 0
+          },
+          "2": {
+            "n": 12,
+            "hits": 0,
+            "roi": 0
+          },
+          "3": {
+            "n": 8,
+            "hits": 0,
+            "roi": 0
+          },
+          "4": {
+            "n": 5,
+            "hits": 0,
+            "roi": 0
+          },
+          "5": {
+            "n": 11,
+            "hits": 0,
+            "roi": 0
+          },
+          "6": {
+            "n": 17,
+            "hits": 1,
+            "roi": 151.76
+          },
+          "7": {
+            "n": 13,
+            "hits": 1,
+            "roi": 866.92
+          },
+          "8": {
+            "n": 11,
+            "hits": 0,
+            "roi": 0
+          },
+          "9": {
+            "n": 5,
+            "hits": 0,
+            "roi": 0
+          }
+        }
+      },
+      "verdict": "insufficient",
+      "reasons": [
+        "hits=2 < 3: 参考値"
+      ]
+    },
+    {
+      "set": "住之江のみ",
+      "combo": "1-3-2",
+      "stats": {
+        "name": "住之江のみ switch 1-3-2",
+        "combination": "1-3-2",
+        "n": 76,
+        "n_closing_odds": 76,
+        "hits": 1,
+        "hitRate": 1.32,
+        "invest": 7600,
+        "payout": 5310,
+        "roi": 69.87,
+        "profit": -2290,
+        "avgClosingOdds": 51.52,
+        "medClosingOdds": 47,
+        "maxPayout": 5310,
+        "maxLosingStreak": 45,
+        "topNExcludeRoi": 0,
+        "recent3mRoi": 0,
+        "recent3mN": 0,
+        "zeroHitMonths": [
+          "2025-02",
+          "2025-04",
+          "2025-05",
+          "2025-06",
+          "2025-09",
+          "2025-10",
+          "2025-11"
+        ],
+        "dataInsufficient": false,
+        "overfittingWarnings": [
+          "hits=1 < 3: 参考値扱い",
+          "単一raceが払戻の100%を占める: 単発依存",
+          "0hit月 (n≥5): 2025-02, 2025-04, 2025-05, 2025-06, 2025-09, 2025-10, 2025-11"
+        ],
+        "monthlyRoi": {
+          "2025-02": {
+            "n": 6,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-03": {
+            "n": 2,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-04": {
+            "n": 5,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-05": {
+            "n": 10,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-06": {
+            "n": 13,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-07": {
+            "n": 13,
+            "hits": 1,
+            "roi": 408.46
+          },
+          "2025-09": {
+            "n": 9,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-10": {
+            "n": 8,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-11": {
+            "n": 10,
+            "hits": 0,
+            "roi": 0
+          }
+        },
+        "venueRoi": {
+          "住之江": {
+            "n": 76,
+            "hits": 1,
+            "roi": 69.87
+          }
+        },
+        "raceNoRoi": {
+          "1": {
+            "n": 7,
+            "hits": 0,
+            "roi": 0
+          },
+          "2": {
+            "n": 8,
+            "hits": 0,
+            "roi": 0
+          },
+          "3": {
+            "n": 6,
+            "hits": 0,
+            "roi": 0
+          },
+          "4": {
+            "n": 7,
+            "hits": 0,
+            "roi": 0
+          },
+          "5": {
+            "n": 10,
+            "hits": 0,
+            "roi": 0
+          },
+          "6": {
+            "n": 16,
+            "hits": 0,
+            "roi": 0
+          },
+          "7": {
+            "n": 11,
+            "hits": 0,
+            "roi": 0
+          },
+          "8": {
+            "n": 7,
+            "hits": 1,
+            "roi": 758.57
+          },
+          "9": {
+            "n": 4,
+            "hits": 0,
+            "roi": 0
+          }
+        }
+      },
+      "verdict": "insufficient",
+      "reasons": [
+        "hits=1 < 3: 参考値"
+      ]
+    },
+    {
+      "set": "住之江のみ",
+      "combo": "1-2-4",
+      "stats": {
+        "name": "住之江のみ switch 1-2-4",
+        "combination": "1-2-4",
+        "n": 76,
+        "n_closing_odds": 76,
+        "hits": 2,
+        "hitRate": 2.63,
+        "invest": 7600,
+        "payout": 6110,
+        "roi": 80.39,
+        "profit": -1490,
+        "avgClosingOdds": 54.24,
+        "medClosingOdds": 34.4,
+        "maxPayout": 3590,
+        "maxLosingStreak": 55,
+        "topNExcludeRoi": 0,
+        "recent3mRoi": 0,
+        "recent3mN": 0,
+        "zeroHitMonths": [
+          "2025-02",
+          "2025-05",
+          "2025-06",
+          "2025-07",
+          "2025-09",
+          "2025-10"
+        ],
+        "dataInsufficient": false,
+        "overfittingWarnings": [
+          "hits=2 < 3: 参考値扱い",
+          "単一raceが払戻の59%を占める: 単発依存",
+          "0hit月 (n≥5): 2025-02, 2025-05, 2025-06, 2025-07, 2025-09, 2025-10"
+        ],
+        "monthlyRoi": {
+          "2025-02": {
+            "n": 6,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-03": {
+            "n": 2,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-04": {
+            "n": 5,
+            "hits": 1,
+            "roi": 718
+          },
+          "2025-05": {
+            "n": 10,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-06": {
+            "n": 13,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-07": {
+            "n": 13,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-09": {
+            "n": 9,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-10": {
+            "n": 8,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-11": {
+            "n": 10,
+            "hits": 1,
+            "roi": 252
+          }
+        },
+        "venueRoi": {
+          "住之江": {
+            "n": 76,
+            "hits": 2,
+            "roi": 80.39
+          }
+        },
+        "raceNoRoi": {
+          "1": {
+            "n": 7,
+            "hits": 0,
+            "roi": 0
+          },
+          "2": {
+            "n": 8,
+            "hits": 0,
+            "roi": 0
+          },
+          "3": {
+            "n": 6,
+            "hits": 0,
+            "roi": 0
+          },
+          "4": {
+            "n": 7,
+            "hits": 0,
+            "roi": 0
+          },
+          "5": {
+            "n": 10,
+            "hits": 2,
+            "roi": 611
+          },
+          "6": {
+            "n": 16,
+            "hits": 0,
+            "roi": 0
+          },
+          "7": {
+            "n": 11,
+            "hits": 0,
+            "roi": 0
+          },
+          "8": {
+            "n": 7,
+            "hits": 0,
+            "roi": 0
+          },
+          "9": {
+            "n": 4,
+            "hits": 0,
+            "roi": 0
+          }
+        }
+      },
+      "verdict": "insufficient",
+      "reasons": [
+        "hits=2 < 3: 参考値"
+      ]
+    },
+    {
+      "set": "住之江のみ",
+      "combo": "1-4-2",
+      "stats": {
+        "name": "住之江のみ switch 1-4-2",
+        "combination": "1-4-2",
+        "n": 76,
+        "n_closing_odds": 76,
+        "hits": 2,
+        "hitRate": 2.63,
+        "invest": 7600,
+        "payout": 2600,
+        "roi": 34.21,
+        "profit": -5000,
+        "avgClosingOdds": 87.13,
+        "medClosingOdds": 31.4,
+        "maxPayout": 2040,
+        "maxLosingStreak": 32,
+        "topNExcludeRoi": 0,
+        "recent3mRoi": 0,
+        "recent3mN": 0,
+        "zeroHitMonths": [
+          "2025-02",
+          "2025-04",
+          "2025-06",
+          "2025-07",
+          "2025-10",
+          "2025-11"
+        ],
+        "dataInsufficient": false,
+        "overfittingWarnings": [
+          "hits=2 < 3: 参考値扱い",
+          "単一raceが払戻の78%を占める: 単発依存",
+          "0hit月 (n≥5): 2025-02, 2025-04, 2025-06, 2025-07, 2025-10, 2025-11"
+        ],
+        "monthlyRoi": {
+          "2025-02": {
+            "n": 6,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-03": {
+            "n": 2,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-04": {
+            "n": 5,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-05": {
+            "n": 10,
+            "hits": 1,
+            "roi": 204
+          },
+          "2025-06": {
+            "n": 13,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-07": {
+            "n": 13,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-09": {
+            "n": 9,
+            "hits": 1,
+            "roi": 62.22
+          },
+          "2025-10": {
+            "n": 8,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-11": {
+            "n": 10,
+            "hits": 0,
+            "roi": 0
+          }
+        },
+        "venueRoi": {
+          "住之江": {
+            "n": 76,
+            "hits": 2,
+            "roi": 34.21
+          }
+        },
+        "raceNoRoi": {
+          "1": {
+            "n": 7,
+            "hits": 0,
+            "roi": 0
+          },
+          "2": {
+            "n": 8,
+            "hits": 0,
+            "roi": 0
+          },
+          "3": {
+            "n": 6,
+            "hits": 0,
+            "roi": 0
+          },
+          "4": {
+            "n": 7,
+            "hits": 1,
+            "roi": 80
+          },
+          "5": {
+            "n": 10,
+            "hits": 0,
+            "roi": 0
+          },
+          "6": {
+            "n": 16,
+            "hits": 1,
+            "roi": 127.5
+          },
+          "7": {
+            "n": 11,
+            "hits": 0,
+            "roi": 0
+          },
+          "8": {
+            "n": 7,
+            "hits": 0,
+            "roi": 0
+          },
+          "9": {
+            "n": 4,
+            "hits": 0,
+            "roi": 0
+          }
+        }
+      },
+      "verdict": "insufficient",
+      "reasons": [
+        "hits=2 < 3: 参考値"
+      ]
+    },
+    {
+      "set": "住之江のみ",
+      "combo": "1-3-4",
+      "stats": {
+        "name": "住之江のみ switch 1-3-4",
+        "combination": "1-3-4",
+        "n": 76,
+        "n_closing_odds": 76,
+        "hits": 3,
+        "hitRate": 3.95,
+        "invest": 7600,
+        "payout": 8640,
+        "roi": 113.68,
+        "profit": 1040,
+        "avgClosingOdds": 61.79,
+        "medClosingOdds": 41,
+        "maxPayout": 6610,
+        "maxLosingStreak": 40,
+        "topNExcludeRoi": 9.19,
+        "recent3mRoi": 0,
+        "recent3mN": 0,
+        "zeroHitMonths": [
+          "2025-04",
+          "2025-05",
+          "2025-06",
+          "2025-09",
+          "2025-11"
+        ],
+        "dataInsufficient": false,
+        "overfittingWarnings": [
+          "ROI 113.7% は top2除外で 9.2% に低下: 高配当依存",
+          "単一raceが払戻の77%を占める: 単発依存",
+          "0hit月 (n≥5): 2025-04, 2025-05, 2025-06, 2025-09, 2025-11"
+        ],
+        "monthlyRoi": {
+          "2025-02": {
+            "n": 6,
+            "hits": 1,
+            "roi": 1101.67
+          },
+          "2025-03": {
+            "n": 2,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-04": {
+            "n": 5,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-05": {
+            "n": 10,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-06": {
+            "n": 13,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-07": {
+            "n": 13,
+            "hits": 1,
+            "roi": 52.31
+          },
+          "2025-09": {
+            "n": 9,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-10": {
+            "n": 8,
+            "hits": 1,
+            "roi": 168.75
+          },
+          "2025-11": {
+            "n": 10,
+            "hits": 0,
+            "roi": 0
+          }
+        },
+        "venueRoi": {
+          "住之江": {
+            "n": 76,
+            "hits": 3,
+            "roi": 113.68
+          }
+        },
+        "raceNoRoi": {
+          "1": {
+            "n": 7,
+            "hits": 0,
+            "roi": 0
+          },
+          "2": {
+            "n": 8,
+            "hits": 2,
+            "roi": 995
+          },
+          "3": {
+            "n": 6,
+            "hits": 1,
+            "roi": 113.33
+          },
+          "4": {
+            "n": 7,
+            "hits": 0,
+            "roi": 0
+          },
+          "5": {
+            "n": 10,
+            "hits": 0,
+            "roi": 0
+          },
+          "6": {
+            "n": 16,
+            "hits": 0,
+            "roi": 0
+          },
+          "7": {
+            "n": 11,
+            "hits": 0,
+            "roi": 0
+          },
+          "8": {
+            "n": 7,
+            "hits": 0,
+            "roi": 0
+          },
+          "9": {
+            "n": 4,
+            "hits": 0,
+            "roi": 0
+          }
+        }
+      },
+      "verdict": "reject",
+      "reasons": [
+        "0hit月が5つ (2025-04, 2025-05, 2025-06, 2025-09, 2025-11): 期間依存疑い"
+      ]
+    },
+    {
+      "set": "venue単独(6R除外)",
+      "combo": "1-3-2",
+      "stats": {
+        "name": "venue単独(6R除外) switch 1-3-2",
+        "combination": "1-3-2",
+        "n": 126,
+        "n_closing_odds": 126,
+        "hits": 1,
+        "hitRate": 0.79,
+        "invest": 12600,
+        "payout": 5310,
+        "roi": 42.14,
+        "profit": -7290,
+        "avgClosingOdds": 51.94,
+        "medClosingOdds": 47,
+        "maxPayout": 5310,
+        "maxLosingStreak": 83,
+        "topNExcludeRoi": 0,
+        "recent3mRoi": 0,
+        "recent3mN": 0,
+        "zeroHitMonths": [
+          "2025-02",
+          "2025-04",
+          "2025-05",
+          "2025-06",
+          "2025-09",
+          "2025-10",
+          "2025-11"
+        ],
+        "dataInsufficient": false,
+        "overfittingWarnings": [
+          "hits=1 < 3: 参考値扱い",
+          "単一raceが払戻の100%を占める: 単発依存",
+          "0hit月 (n≥5): 2025-02, 2025-04, 2025-05, 2025-06, 2025-09, 2025-10, 2025-11"
+        ],
+        "monthlyRoi": {
+          "2025-02": {
+            "n": 10,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-03": {
+            "n": 4,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-04": {
+            "n": 13,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-05": {
+            "n": 17,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-06": {
+            "n": 25,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-07": {
+            "n": 21,
+            "hits": 1,
+            "roi": 252.86
+          },
+          "2025-08": {
+            "n": 4,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-09": {
+            "n": 11,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-10": {
+            "n": 9,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-11": {
+            "n": 12,
+            "hits": 0,
+            "roi": 0
+          }
+        },
+        "venueRoi": {
+          "浜名湖": {
+            "n": 66,
+            "hits": 0,
+            "roi": 0
+          },
+          "住之江": {
+            "n": 60,
+            "hits": 1,
+            "roi": 88.5
+          }
+        },
+        "raceNoRoi": {
+          "1": {
+            "n": 8,
+            "hits": 0,
+            "roi": 0
+          },
+          "2": {
+            "n": 20,
+            "hits": 0,
+            "roi": 0
+          },
+          "3": {
+            "n": 14,
+            "hits": 0,
+            "roi": 0
+          },
+          "4": {
+            "n": 12,
+            "hits": 0,
+            "roi": 0
+          },
+          "5": {
+            "n": 21,
+            "hits": 0,
+            "roi": 0
+          },
+          "7": {
+            "n": 24,
+            "hits": 0,
+            "roi": 0
+          },
+          "8": {
+            "n": 18,
+            "hits": 1,
+            "roi": 295
+          },
+          "9": {
+            "n": 9,
+            "hits": 0,
+            "roi": 0
+          }
+        }
+      },
+      "verdict": "insufficient",
+      "reasons": [
+        "hits=1 < 3: 参考値"
+      ]
+    },
+    {
+      "set": "venue単独(6R除外)",
+      "combo": "1-2-4",
+      "stats": {
+        "name": "venue単独(6R除外) switch 1-2-4",
+        "combination": "1-2-4",
+        "n": 126,
+        "n_closing_odds": 126,
+        "hits": 3,
+        "hitRate": 2.38,
+        "invest": 12600,
+        "payout": 13030,
+        "roi": 103.41,
+        "profit": 430,
+        "avgClosingOdds": 47.07,
+        "medClosingOdds": 36.4,
+        "maxPayout": 6920,
+        "maxLosingStreak": 92,
+        "topNExcludeRoi": 20.32,
+        "recent3mRoi": 0,
+        "recent3mN": 0,
+        "zeroHitMonths": [
+          "2025-02",
+          "2025-05",
+          "2025-06",
+          "2025-07",
+          "2025-09",
+          "2025-10"
+        ],
+        "dataInsufficient": false,
+        "overfittingWarnings": [
+          "ROI 103.4% は top2除外で 20.3% に低下: 高配当依存",
+          "単一raceが払戻の53%を占める: 単発依存",
+          "0hit月 (n≥5): 2025-02, 2025-05, 2025-06, 2025-07, 2025-09, 2025-10"
+        ],
+        "monthlyRoi": {
+          "2025-02": {
+            "n": 10,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-03": {
+            "n": 4,
+            "hits": 1,
+            "roi": 1730
+          },
+          "2025-04": {
+            "n": 13,
+            "hits": 1,
+            "roi": 276.15
+          },
+          "2025-05": {
+            "n": 17,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-06": {
+            "n": 25,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-07": {
+            "n": 21,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-08": {
+            "n": 4,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-09": {
+            "n": 11,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-10": {
+            "n": 9,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-11": {
+            "n": 12,
+            "hits": 1,
+            "roi": 210
+          }
+        },
+        "venueRoi": {
+          "浜名湖": {
+            "n": 66,
+            "hits": 1,
+            "roi": 104.85
+          },
+          "住之江": {
+            "n": 60,
+            "hits": 2,
+            "roi": 101.83
+          }
+        },
+        "raceNoRoi": {
+          "1": {
+            "n": 8,
+            "hits": 0,
+            "roi": 0
+          },
+          "2": {
+            "n": 20,
+            "hits": 0,
+            "roi": 0
+          },
+          "3": {
+            "n": 14,
+            "hits": 0,
+            "roi": 0
+          },
+          "4": {
+            "n": 12,
+            "hits": 1,
+            "roi": 576.67
+          },
+          "5": {
+            "n": 21,
+            "hits": 2,
+            "roi": 290.95
+          },
+          "7": {
+            "n": 24,
+            "hits": 0,
+            "roi": 0
+          },
+          "8": {
+            "n": 18,
+            "hits": 0,
+            "roi": 0
+          },
+          "9": {
+            "n": 9,
+            "hits": 0,
+            "roi": 0
+          }
+        }
+      },
+      "verdict": "reject",
+      "reasons": [
+        "0hit月が6つ (2025-02, 2025-05, 2025-06, 2025-07, 2025-09, 2025-10): 期間依存疑い"
+      ]
+    },
+    {
+      "set": "venue単独(6R除外)",
+      "combo": "1-4-2",
+      "stats": {
+        "name": "venue単独(6R除外) switch 1-4-2",
+        "combination": "1-4-2",
+        "n": 126,
+        "n_closing_odds": 126,
+        "hits": 4,
+        "hitRate": 3.17,
+        "invest": 12600,
+        "payout": 11750,
+        "roi": 93.25,
+        "profit": -850,
+        "avgClosingOdds": 64.56,
+        "medClosingOdds": 40.8,
+        "maxPayout": 9460,
+        "maxLosingStreak": 60,
+        "topNExcludeRoi": 9.84,
+        "recent3mRoi": 0,
+        "recent3mN": 0,
+        "zeroHitMonths": [
+          "2025-02",
+          "2025-04",
+          "2025-06",
+          "2025-07",
+          "2025-10",
+          "2025-11"
+        ],
+        "dataInsufficient": false,
+        "overfittingWarnings": [
+          "単一raceが払戻の81%を占める: 単発依存",
+          "0hit月 (n≥5): 2025-02, 2025-04, 2025-06, 2025-07, 2025-10, 2025-11"
+        ],
+        "monthlyRoi": {
+          "2025-02": {
+            "n": 10,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-03": {
+            "n": 4,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-04": {
+            "n": 13,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-05": {
+            "n": 17,
+            "hits": 3,
+            "roi": 658.24
+          },
+          "2025-06": {
+            "n": 25,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-07": {
+            "n": 21,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-08": {
+            "n": 4,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-09": {
+            "n": 11,
+            "hits": 1,
+            "roi": 50.91
+          },
+          "2025-10": {
+            "n": 9,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-11": {
+            "n": 12,
+            "hits": 0,
+            "roi": 0
+          }
+        },
+        "venueRoi": {
+          "浜名湖": {
+            "n": 66,
+            "hits": 3,
+            "roi": 169.55
+          },
+          "住之江": {
+            "n": 60,
+            "hits": 1,
+            "roi": 9.33
+          }
+        },
+        "raceNoRoi": {
+          "1": {
+            "n": 8,
+            "hits": 0,
+            "roi": 0
+          },
+          "2": {
+            "n": 20,
+            "hits": 2,
+            "roi": 526.5
+          },
+          "3": {
+            "n": 14,
+            "hits": 0,
+            "roi": 0
+          },
+          "4": {
+            "n": 12,
+            "hits": 1,
+            "roi": 46.67
+          },
+          "5": {
+            "n": 21,
+            "hits": 0,
+            "roi": 0
+          },
+          "7": {
+            "n": 24,
+            "hits": 0,
+            "roi": 0
+          },
+          "8": {
+            "n": 18,
+            "hits": 1,
+            "roi": 36.67
+          },
+          "9": {
+            "n": 9,
+            "hits": 0,
+            "roi": 0
+          }
+        }
+      },
+      "verdict": "reject",
+      "reasons": [
+        "0hit月が6つ (2025-02, 2025-04, 2025-06, 2025-07, 2025-10, 2025-11): 期間依存疑い"
+      ]
+    },
+    {
+      "set": "venue単独(6R除外)",
+      "combo": "1-3-4",
+      "stats": {
+        "name": "venue単独(6R除外) switch 1-3-4",
+        "combination": "1-3-4",
+        "n": 126,
+        "n_closing_odds": 126,
+        "hits": 4,
+        "hitRate": 3.17,
+        "invest": 12600,
+        "payout": 19910,
+        "roi": 158.02,
+        "profit": 7310,
+        "avgClosingOdds": 51.34,
+        "medClosingOdds": 31.3,
+        "maxPayout": 11270,
+        "maxLosingStreak": 50,
+        "topNExcludeRoi": 16.37,
+        "recent3mRoi": 0,
+        "recent3mN": 0,
+        "zeroHitMonths": [
+          "2025-04",
+          "2025-05",
+          "2025-09",
+          "2025-11"
+        ],
+        "dataInsufficient": false,
+        "overfittingWarnings": [
+          "ROI 158.0% は top2除外で 16.4% に低下: 高配当依存",
+          "単一raceが払戻の57%を占める: 単発依存",
+          "0hit月 (n≥5): 2025-04, 2025-05, 2025-09, 2025-11"
+        ],
+        "monthlyRoi": {
+          "2025-02": {
+            "n": 10,
+            "hits": 1,
+            "roi": 661
+          },
+          "2025-03": {
+            "n": 4,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-04": {
+            "n": 13,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-05": {
+            "n": 17,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-06": {
+            "n": 25,
+            "hits": 1,
+            "roi": 450.8
+          },
+          "2025-07": {
+            "n": 21,
+            "hits": 1,
+            "roi": 32.38
+          },
+          "2025-08": {
+            "n": 4,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-09": {
+            "n": 11,
+            "hits": 0,
+            "roi": 0
+          },
+          "2025-10": {
+            "n": 9,
+            "hits": 1,
+            "roi": 150
+          },
+          "2025-11": {
+            "n": 12,
+            "hits": 0,
+            "roi": 0
+          }
+        },
+        "venueRoi": {
+          "浜名湖": {
+            "n": 66,
+            "hits": 1,
+            "roi": 170.76
+          },
+          "住之江": {
+            "n": 60,
+            "hits": 3,
+            "roi": 144
+          }
+        },
+        "raceNoRoi": {
+          "1": {
+            "n": 8,
+            "hits": 0,
+            "roi": 0
+          },
+          "2": {
+            "n": 20,
+            "hits": 2,
+            "roi": 398
+          },
+          "3": {
+            "n": 14,
+            "hits": 1,
+            "roi": 48.57
+          },
+          "4": {
+            "n": 12,
+            "hits": 0,
+            "roi": 0
+          },
+          "5": {
+            "n": 21,
+            "hits": 0,
+            "roi": 0
+          },
+          "7": {
+            "n": 24,
+            "hits": 1,
+            "roi": 469.58
+          },
+          "8": {
+            "n": 18,
+            "hits": 0,
+            "roi": 0
+          },
+          "9": {
+            "n": 9,
+            "hits": 0,
+            "roi": 0
+          }
+        }
+      },
+      "verdict": "reject",
+      "reasons": [
+        "0hit月が4つ (2025-04, 2025-05, 2025-09, 2025-11): 期間依存疑い"
+      ]
+    }
+  ],
+  "verdicts": {
+    "skip": {
+      "verdict": "watch",
+      "reasons": [
+        "残存ROI 97.3% > 全体 87.1%: 除外効果あり",
+        "ただし top2除外ROI 88.8% < 100%: 黒字化には未達"
+      ]
+    },
+    "separation": {
+      "conclusion": "venue自体が弱い: 6R重複を除いても全体baselineを10pt以上下回る。venue除外候補として有力",
+      "venueOwnRoi": 0,
+      "venue6RRoi": 0,
+      "allForwardRoi": 87.12
+    },
+    "historicalAdoptionAllowed": false,
+    "futureTimeseriesRequired": true
+  }
+}
