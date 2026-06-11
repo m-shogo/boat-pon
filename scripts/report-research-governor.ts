@@ -173,7 +173,7 @@ if (dataReadiness.timeseries.futureOnlySwitchReady) {
   nextAction = `condB historical closing odds 残件取得 (${condBTotal - haoCondB}件未保存)`;
   nextActionCommand = `pnpm backfill:historical-alt-odds --limit 10 --priority condB --write --sleep-ms 1000`;
   nextActionPriority = 2;
-} else if (dataReadiness.skip6R.coverage < 80) {
+} else if (dataReadiness.skip6R.coverage < 100) {
   nextAction = `skip6R historical alternative odds の小規模backfill準備 (${skip6RTotal - haoSkip6R}/${skip6RTotal}件未保存)`;
   nextActionCommand = `pnpm backfill:historical-alt-odds --limit 30 --priority skip6R --write --sleep-ms 1000`;
   nextActionPriority = 3;
@@ -181,7 +181,7 @@ if (dataReadiness.timeseries.futureOnlySwitchReady) {
   nextAction = "skip6R switch 予備検証 (H004) を実行";
   nextActionCommand = "pnpm analyze:skip6r-switch-historical";
   nextActionPriority = 4;
-} else if (dataReadiness.skipVenue.coverage < 80) {
+} else if (dataReadiness.skipVenue.coverage < 100) {
   nextAction = `skipVenue historical alternative odds の小規模backfill準備 (${skipVenueTotal - haoSkipVenue}/${skipVenueTotal}件未保存, H006用)`;
   nextActionCommand = `pnpm backfill:historical-alt-odds --limit 30 --priority skipVenue --write --sleep-ms 1000`;
   nextActionPriority = 5;
@@ -350,18 +350,18 @@ lines.push(``);
 // F. Gate 判定サマリ
 lines.push(`## F. Gate 判定`);
 lines.push(``);
-lines.push(`| Gate 条件 | condB 1-3-2 | 6R skip | 6R switch |`);
-lines.push(`|---|:---:|:---:|:---:|`);
-lines.push(`| 必要データあり | ✅ | ✅ | ❌ 未取得 |`);
-lines.push(`| データ品質 OK | ✅ | ✅ | — |`);
-lines.push(`| n ≥ 30 | ✅ | ✅ | — |`);
-lines.push(`| n ≥ 100 | ✅ | ✅ | — |`);
-lines.push(`| ROI > baseline | ✅ (174.4% vs 65.6%) | ✅ (97.95%) | — |`);
-lines.push(`| top2除外ROI ≥ 100% | ❌ 92.2% | ❌ 88.94% | — |`);
-lines.push(`| 直近3M OK | ⚠️ n=0 | ✅ 83.5% | — |`);
-lines.push(`| July-onlyではない | ✅ (162.4%) | ✅ | — |`);
-lines.push(`| future-only 確認済 | ❌ | — | — |`);
-lines.push(`| **本採用可** | **❌** | **❌** | **❌** |`);
+lines.push(`| Gate 条件 | condB 1-3-2 | 6R skip (H003) | 6R switch (H004) | venue skip (H005) | venue switch (H006) |`);
+lines.push(`|---|:---:|:---:|:---:|:---:|:---:|`);
+lines.push(`| historical closing odds 完備 | ✅ 167/167 | ✅ 215/215 | ✅ 215/215 | ✅ 159/159 | ✅ 159/159 |`);
+lines.push(`| データ品質 OK | ✅ | ✅ | ✅ | ✅ | ✅ |`);
+lines.push(`| n ≥ 100 | ✅ | ✅ | ✅ | ✅ | ✅ |`);
+lines.push(`| ROI > baseline | ✅ (174.4% vs 65.6%) | ✅ (97.95%) | ❌ 全候補<100% | ✅ (97.3%) | ❌ 安定候補なし |`);
+lines.push(`| top2除外ROI ≥ 100% | ❌ 92.2% | ❌ 88.94% | ❌ best 39.7% | ❌ 88.8% | ❌ best 29.4% |`);
+lines.push(`| 期間依存なし | ✅ (162.4%) | ✅ | ❌ 0hit月4〜7 | ⚠️ forward要確認 | ❌ 0hit月6〜8 |`);
+lines.push(`| future-only 確認済 | ❌ | — (monitor) | 未対象 | — (monitor) | 未対象 |`);
+lines.push(`| switch 判定 | watch | — | **reject** | — | **reject** |`);
+lines.push(`| skip 判定 | — | watch | — | watch | — |`);
+lines.push(`| **本採用可 (app_settings反映)** | **❌** | **❌** | **❌** | **❌** | **❌** |`);
 lines.push(``);
 
 // G. 状態分類
@@ -386,24 +386,29 @@ lines.push(`## H. write 許可`);
 lines.push(``);
 lines.push(`**今回: 自動 write 禁止**`);
 lines.push(``);
-lines.push(`人間確認後に次回実行可能な候補:`);
-lines.push(``);
-lines.push(`\`\`\`bash`);
-lines.push(`# 1. 事前 backup`);
-lines.push(`pnpm backup`);
-lines.push(``);
-lines.push(`# 2. dry-run 確認`);
-lines.push(`pnpm backfill:historical-alt-odds --limit 5 --priority skip6R`);
-lines.push(``);
-lines.push(`# 3. 人間確認後・backup後・小規模 write (historical_alternative_odds のみ)`);
-lines.push(`pnpm backfill:historical-alt-odds --limit 30 --priority skip6R --write --sleep-ms 1000`);
-lines.push(`\`\`\``);
+const backfillRemaining =
+  (dataReadiness.condB.total - dataReadiness.condB.haoSaved) +
+  (dataReadiness.skip6R.total - dataReadiness.skip6R.haoSaved) +
+  (dataReadiness.skipVenue.total - dataReadiness.skipVenue.haoSaved);
+if (backfillRemaining > 0) {
+  lines.push(`人間確認後に次回実行可能な候補:`);
+  lines.push(``);
+  lines.push(`\`\`\`bash`);
+  lines.push(`# 1. 事前 backup → 2. dry-run 確認 → 3. 人間確認後に小規模 write`);
+  lines.push(`pnpm backup`);
+  lines.push(`pnpm backfill:historical-alt-odds --limit 30 --priority <condB|skip6R|skipVenue> --sleep-ms 1000`);
+  lines.push(`\`\`\``);
+} else {
+  lines.push(`**現時点で historical closing odds backfill の write 候補なし** (condB ${dataReadiness.condB.haoSaved}/${dataReadiness.condB.total} / skip6R ${dataReadiness.skip6R.haoSaved}/${dataReadiness.skip6R.total} / skipVenue ${dataReadiness.skipVenue.haoSaved}/${dataReadiness.skipVenue.total} すべて完走済み)。`);
+  lines.push(``);
+  lines.push(`次は monitor 継続、または全券種ROIシミュレーター (読み取り専用) が候補。完了済み backfill を再実行しないこと。`);
+}
 lines.push(``);
 lines.push(`> ⚠️ 既存テーブル (odds_snapshots / odds_timeseries_snapshots) への書き込みは禁止`);
 lines.push(``);
 
 // I. 1行結論
-const oneLiner = `次は「${nextAction}」（write系は人間確認後）。condB switchはhistorical上有望（174.4%）だがtop2=92.2%/future-only未確認、6R switchは全候補reject（H004）のため本採用可能な edge はなし。`;
+const oneLiner = `次は「${nextAction}」（write系は人間確認後）。switch検証: H004 6R=reject / H006 venue=reject / H001 condBはfuture-only timeseries overlap蓄積待ち（historical 174.4%だがtop2=92.2%）。skip: H003 6R / H005 venueともwatch（top2除外<100%・in-sampleバイアスありforward確認要）。本採用可能な edge はなし。次の大型候補は全券種ROIシミュレーター。`;
 lines.push(`## I. 1行結論`);
 lines.push(``);
 lines.push(`> **${oneLiner}**`);

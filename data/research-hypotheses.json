@@ -2,7 +2,7 @@
   "_meta": {
     "description": "boat-pon 研究仮説レジストリ",
     "warning": "BUYは検証候補。ROIは検証指標。購入指示・採用判断ではない。app_settings/本番decision変更禁止。",
-    "lastUpdated": "2026-06-09",
+    "lastUpdated": "2026-06-11",
     "statusValues": [
       "testing-historical",
       "testing-ready",
@@ -232,7 +232,7 @@
         "switch_1_2_4": "reject (0hit月7つ)",
         "switch_1_4_2": "reject (0hit月8つ)",
         "switch_1_3_4": "reject (ROI141%だがtop2除外29.4%・0hit月6つ: 高配当依存+期間依存)",
-        "separation": "venue自体が弱い (6R重複除外後もhits=0)。venue除外方向が正しい"
+        "separation": "venue自体が弱い (6R重複除外後もhits=0)。venue除外は有力な損失削減候補だが、in-sample選択バイアスがあるためapp_settings反映不可。2026-06以降のforward monitorで構造性を確認"
       },
       "nextAction": "switch は終了。venue の扱いは H005 (skip monitor) に一本化",
       "notes": [

@@ -1,6 +1,6 @@
 # Research Governor
 
-生成日時: 2026-06-11T02:19:16.122Z
+生成日時: 2026-06-11T02:29:38.757Z
 
 > **⚠️ BUY は検証候補。ROI は検証指標。購入指示・採用判断ではない。**
 > **app_settings / 本番 decision / 自動投票 は絶対に変更しない。**
@@ -98,18 +98,18 @@
 
 ## F. Gate 判定
 
-| Gate 条件 | condB 1-3-2 | 6R skip | 6R switch |
-|---|:---:|:---:|:---:|
-| 必要データあり | ✅ | ✅ | ❌ 未取得 |
-| データ品質 OK | ✅ | ✅ | — |
-| n ≥ 30 | ✅ | ✅ | — |
-| n ≥ 100 | ✅ | ✅ | — |
-| ROI > baseline | ✅ (174.4% vs 65.6%) | ✅ (97.95%) | — |
-| top2除外ROI ≥ 100% | ❌ 92.2% | ❌ 88.94% | — |
-| 直近3M OK | ⚠️ n=0 | ✅ 83.5% | — |
-| July-onlyではない | ✅ (162.4%) | ✅ | — |
-| future-only 確認済 | ❌ | — | — |
-| **本採用可** | **❌** | **❌** | **❌** |
+| Gate 条件 | condB 1-3-2 | 6R skip (H003) | 6R switch (H004) | venue skip (H005) | venue switch (H006) |
+|---|:---:|:---:|:---:|:---:|:---:|
+| historical closing odds 完備 | ✅ 167/167 | ✅ 215/215 | ✅ 215/215 | ✅ 159/159 | ✅ 159/159 |
+| データ品質 OK | ✅ | ✅ | ✅ | ✅ | ✅ |
+| n ≥ 100 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| ROI > baseline | ✅ (174.4% vs 65.6%) | ✅ (97.95%) | ❌ 全候補<100% | ✅ (97.3%) | ❌ 安定候補なし |
+| top2除外ROI ≥ 100% | ❌ 92.2% | ❌ 88.94% | ❌ best 39.7% | ❌ 88.8% | ❌ best 29.4% |
+| 期間依存なし | ✅ (162.4%) | ✅ | ❌ 0hit月4〜7 | ⚠️ forward要確認 | ❌ 0hit月6〜8 |
+| future-only 確認済 | ❌ | — (monitor) | 未対象 | — (monitor) | 未対象 |
+| switch 判定 | watch | — | **reject** | — | **reject** |
+| skip 判定 | — | watch | — | watch | — |
+| **本採用可 (app_settings反映)** | **❌** | **❌** | **❌** | **❌** | **❌** |
 
 ## G. 状態分類
 
@@ -127,24 +127,15 @@
 
 **今回: 自動 write 禁止**
 
-人間確認後に次回実行可能な候補:
+**現時点で historical closing odds backfill の write 候補なし** (condB 167/167 / skip6R 215/215 / skipVenue 159/159 すべて完走済み)。
 
-```bash
-# 1. 事前 backup
-pnpm backup
-
-# 2. dry-run 確認
-pnpm backfill:historical-alt-odds --limit 5 --priority skip6R
-
-# 3. 人間確認後・backup後・小規模 write (historical_alternative_odds のみ)
-pnpm backfill:historical-alt-odds --limit 30 --priority skip6R --write --sleep-ms 1000
-```
+次は monitor 継続、または全券種ROIシミュレーター (読み取り専用) が候補。完了済み backfill を再実行しないこと。
 
 > ⚠️ 既存テーブル (odds_snapshots / odds_timeseries_snapshots) への書き込みは禁止
 
 ## I. 1行結論
 
-> **次は「switch検証は全て完了 (H004/H006 とも switch reject)。condB timeseries overlap 蓄積待ち。次の大型候補: 全券種ROIシミュレーター」（write系は人間確認後）。condB switchはhistorical上有望（174.4%）だがtop2=92.2%/future-only未確認、6R switchは全候補reject（H004）のため本採用可能な edge はなし。**
+> **次は「switch検証は全て完了 (H004/H006 とも switch reject)。condB timeseries overlap 蓄積待ち。次の大型候補: 全券種ROIシミュレーター」（write系は人間確認後）。switch検証: H004 6R=reject / H006 venue=reject / H001 condBはfuture-only timeseries overlap蓄積待ち（historical 174.4%だがtop2=92.2%）。skip: H003 6R / H005 venueともwatch（top2除外<100%・in-sampleバイアスありforward確認要）。本採用可能な edge はなし。次の大型候補は全券種ROIシミュレーター。**
 
 ---
 

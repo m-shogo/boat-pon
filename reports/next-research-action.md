@@ -1,7 +1,7 @@
 # 次のリサーチアクション計画
 
-生成日時: 2026-06-11T02:19:16.786Z
-governor 生成日時: 2026-06-11T02:19:16.122Z
+生成日時: 2026-06-11T02:29:39.382Z
+governor 生成日時: 2026-06-11T02:29:38.757Z
 
 > **⚠️ この計画は提案のみです。自動実行しません。write が必要な場合は人間確認後に実施してください。**
 > **BUY は検証候補。ROI は検証指標。購入指示・採用判断ではない。app_settings 変更禁止。**
@@ -10,7 +10,7 @@ governor 生成日時: 2026-06-11T02:19:16.122Z
 
 ## 1行結論
 
-> **次は「switch検証は全て完了 (H004/H006 とも switch reject)。condB timeseries overlap 蓄積待ち。次の大型候補: 全券種ROIシミュレーター」（write系は人間確認後）。condB switchはhistorical上有望（174.4%）だがtop2=92.2%/future-only未確認、6R switchは全候補reject（H004）のため本採用可能な edge はなし。**
+> **次は「switch検証は全て完了 (H004/H006 とも switch reject)。condB timeseries overlap 蓄積待ち。次の大型候補: 全券種ROIシミュレーター」（write系は人間確認後）。switch検証: H004 6R=reject / H006 venue=reject / H001 condBはfuture-only timeseries overlap蓄積待ち（historical 174.4%だがtop2=92.2%）。skip: H003 6R / H005 venueともwatch（top2除外<100%・in-sampleバイアスありforward確認要）。本採用可能な edge はなし。次の大型候補は全券種ROIシミュレーター。**
 
 ## 次アクション: switch検証は全て完了 (H004/H006 とも switch reject)。condB timeseries overlap 蓄積待ち。次の大型候補: 全券種ROIシミュレーター
 
