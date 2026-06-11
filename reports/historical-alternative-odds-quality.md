@@ -1,6 +1,6 @@
 # historical_alternative_odds 保存品質チェック
 
-生成日時: 2026-06-11T01:48:34.958Z
+生成日時: 2026-06-11T01:50:48.455Z
 
 > **読み取り専用。BUY は検証候補、ROI は検証指標。購入指示ではない。**
 > **historical closing odds は live/T-5/timeseries odds ではない。**
@@ -11,15 +11,15 @@
 
 | 項目 | 値 |
 |---|---|
-| 総レコード数 | 1582 |
-| ユニーク race 数 | 317 |
+| 総レコード数 | 1732 |
+| ユニーク race 数 | 347 |
 | データ期間 | 2025-02-02 〜 2026-05-20 |
-| 5買い目全て揃っている race 数 | 316 / 317 (100%) |
+| 5買い目全て揃っている race 数 | 346 / 347 (100%) |
 | 4買い目のみの race 数 | 0 (欠場等で正常なスキップ) |
 | condB 該当 race 数 | 167 / 167 |
-| skip6R 該当 race 数 | 173 / 215 (80%) |
-| skipVenue 該当 race 数 | 36 / 159 (23%) ※下記注意参照 |
-| skip6R × skipVenue 重複 | 27 |
+| skip6R 該当 race 数 | 203 / 215 (94%) |
+| skipVenue 該当 race 数 | 40 / 159 (25%) ※下記注意参照 |
+| skip6R × skipVenue 重複 | 31 |
 
 > **⚠️ skipVenue coverage 注意**: skipVenueInTable の件数増加は skip6R backfill 対象レースが skipVenue 条件にも重複該当したためであり、
 > skipVenue を意図的に write したものではない。skipVenue 専用 backfill は H004 完了後に着手する。
@@ -28,17 +28,17 @@
 
 | combination | 件数 | 率 |
 |---|---:|---:|
-| 1-2-3 | 317 | 100% |
-| 1-2-4 | 316 | 100% |
-| 1-3-2 | 317 | 100% |
-| 1-3-4 | 316 | 100% |
-| 1-4-2 | 316 | 100% |
+| 1-2-3 | 347 | 100% |
+| 1-2-4 | 346 | 100% |
+| 1-3-2 | 347 | 100% |
+| 1-3-4 | 346 | 100% |
+| 1-4-2 | 346 | 100% |
 
 ## 同値チェック
 
 | 項目 | 件数 | 率 | 判定 |
 |---|---:|---:|---|
-| 5買い目揃い race | 316 | — | — |
+| 5買い目揃い race | 346 | — | — |
 | 1-2-3=1-3-2 同値 | 0 | 0% | ✅ OK |
 | 5買い目全同値 | 0 | 0% | ✅ OK |
 
@@ -67,12 +67,12 @@
 
 | 項目 | 件数 | 率 | 判定 |
 |---|---:|---:|---|
-| source_type=official_archive | 1582 | 100% | ✅ |
-| source_quality=historical_closing_odds | 1582 | 100% | ✅ |
-| is_backfill=1 | 1582 | 100% | ✅ |
-| source_url あり | 1582 | 100% | ✅ |
-| fetched_at あり | 1582 | 100% | ✅ |
-| parser_version あり | 1582 | 100% | ✅ |
+| source_type=official_archive | 1732 | 100% | ✅ |
+| source_quality=historical_closing_odds | 1732 | 100% | ✅ |
+| is_backfill=1 | 1732 | 100% | ✅ |
+| source_url あり | 1732 | 100% | ✅ |
+| fetched_at あり | 1732 | 100% | ✅ |
+| parser_version あり | 1732 | 100% | ✅ |
 
 ## 既存テーブルへの影響確認
 
@@ -91,7 +91,7 @@
 
 ## 総合判定
 
-**✅ 品質良好。skip6R 次バッチ (pnpm backfill:historical-alt-odds --limit 30 --priority skip6R --write --sleep-ms 1000) へ進んでよい。残 42/215 件。**
+**✅ 品質良好。skip6R 次バッチ (pnpm backfill:historical-alt-odds --limit 30 --priority skip6R --write --sleep-ms 1000) へ進んでよい。残 12/215 件。**
 
 ---
 

@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-06-11T01:48:46.688Z",
-  "governorGeneratedAt": "2026-06-11T01:48:35.544Z",
+  "generatedAt": "2026-06-11T01:51:00.505Z",
+  "governorGeneratedAt": "2026-06-11T01:50:48.998Z",
   "nextAction": {
     "priority": 4,
     "action": "skip6R historical alternative odds が揃ったら switch 予備検証",
@@ -31,13 +31,13 @@
     },
     "skip6R": {
       "total": 215,
-      "haoSaved": 173,
-      "coverage": 80
+      "haoSaved": 203,
+      "coverage": 94
     },
     "skipVenue": {
       "total": 159,
-      "haoSaved": 36,
-      "coverage": 23
+      "haoSaved": 40,
+      "coverage": 25
     },
     "timeseries": {
       "buyForwardOverlap": 0,
