@@ -1,0 +1,2359 @@
+{
+  "generatedAt": "2026-06-11T06:26:47.077Z",
+  "meta": {
+    "description": "全券種ROIシミュレーター (1レース100円・実払戻ベース)",
+    "warningNotForward": "race_payouts実払戻ベースのbacktest。live/T-5 forwardではない",
+    "warningNoAdoption": "結果が良くてもapp_settings/本番decision反映禁止。購入推奨ではない",
+    "forwardStart": "2025-01-01",
+    "unit": 100,
+    "betTypesInDb": [
+      "exacta",
+      "quinella",
+      "trifecta",
+      "trio",
+      "wide"
+    ],
+    "winPlacePayoutAvailable": false,
+    "minNForJudge": 30,
+    "minHitsForJudge": 3,
+    "longStreakWarn": 60
+  },
+  "overview": {
+    "forwardRaces": 1522,
+    "skip6ROverlap": 215,
+    "skipVenueOverlap": 159,
+    "condBOverlap": 167
+  },
+  "candidates": [
+    {
+      "id": "trifecta_123",
+      "label": "3連単 1-2-3 (baseline)",
+      "betType": "trifecta",
+      "combination": "1-2-3",
+      "roiAvailable": true,
+      "n": 1522,
+      "hits": 39,
+      "hitRate": 2.56,
+      "stake": 152200,
+      "payout": 132590,
+      "profit": -19610,
+      "roi": 87.12,
+      "avgPayout": 3400,
+      "medPayout": 3360,
+      "maxPayout": 6030,
+      "maxLosingStreak": 153,
+      "top1ExcludeRoi": 83.21,
+      "top2ExcludeRoi": 79.48,
+      "recent3mRoi": 72.61,
+      "recent3mN": 23,
+      "zeroHitMonths": [],
+      "avgClosingOdds": 42.42,
+      "overlapImpact": {
+        "exclSkip6R": {
+          "n": 1307,
+          "roi": 97.95
+        },
+        "exclSkipVenue": {
+          "n": 1363,
+          "roi": 97.28
+        },
+        "exclCondB": {
+          "n": 1355,
+          "roi": 89.77
+        }
+      },
+      "monthlyRoi": {
+        "2025-01": {
+          "n": 1,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-02": {
+          "n": 103,
+          "hits": 2,
+          "roi": 45.05
+        },
+        "2025-03": {
+          "n": 97,
+          "hits": 2,
+          "roi": 85.67
+        },
+        "2025-04": {
+          "n": 165,
+          "hits": 5,
+          "roi": 141.03
+        },
+        "2025-05": {
+          "n": 191,
+          "hits": 7,
+          "roi": 124.03
+        },
+        "2025-06": {
+          "n": 195,
+          "hits": 4,
+          "roi": 90.82
+        },
+        "2025-07": {
+          "n": 226,
+          "hits": 2,
+          "roi": 22.35
+        },
+        "2025-08": {
+          "n": 215,
+          "hits": 8,
+          "roi": 92.98
+        },
+        "2025-09": {
+          "n": 114,
+          "hits": 4,
+          "roi": 112.89
+        },
+        "2025-10": {
+          "n": 82,
+          "hits": 2,
+          "roi": 97.07
+        },
+        "2025-11": {
+          "n": 110,
+          "hits": 2,
+          "roi": 67.55
+        },
+        "2026-05": {
+          "n": 23,
+          "hits": 1,
+          "roi": 72.61
+        }
+      },
+      "venueTop": [
+        {
+          "venue": "宮島",
+          "n": 80,
+          "hits": 4,
+          "roi": 151.25
+        },
+        {
+          "venue": "福岡",
+          "n": 77,
+          "hits": 3,
+          "roi": 150.26
+        },
+        {
+          "venue": "びわこ",
+          "n": 114,
+          "hits": 5,
+          "roi": 143.86
+        },
+        {
+          "venue": "児島",
+          "n": 38,
+          "hits": 1,
+          "roi": 135
+        },
+        {
+          "venue": "芦屋",
+          "n": 69,
+          "hits": 3,
+          "roi": 127.97
+        }
+      ],
+      "warnings": [
+        "最大連敗153 ≥ 60: 運用難"
+      ],
+      "verdict": "reject",
+      "verdictReasons": [
+        "ROI 87.1% < 100%: 期待値なし"
+      ]
+    },
+    {
+      "id": "trifecta_132",
+      "label": "3連単 1-3-2",
+      "betType": "trifecta",
+      "combination": "1-3-2",
+      "roiAvailable": true,
+      "n": 1522,
+      "hits": 33,
+      "hitRate": 2.17,
+      "stake": 152200,
+      "payout": 140480,
+      "profit": -11720,
+      "roi": 92.3,
+      "avgPayout": 4257,
+      "medPayout": 3800,
+      "maxPayout": 9780,
+      "maxLosingStreak": 189,
+      "top1ExcludeRoi": 85.93,
+      "top2ExcludeRoi": 79.7,
+      "recent3mRoi": 75.22,
+      "recent3mN": 23,
+      "zeroHitMonths": [
+        "2025-10"
+      ],
+      "avgClosingOdds": 50.7,
+      "overlapImpact": {
+        "exclSkip6R": {
+          "n": 1307,
+          "roi": 94.24
+        },
+        "exclSkipVenue": {
+          "n": 1363,
+          "roi": 99.17
+        },
+        "exclCondB": {
+          "n": 1355,
+          "roi": 82.18
+        }
+      },
+      "monthlyRoi": {
+        "2025-01": {
+          "n": 1,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-02": {
+          "n": 103,
+          "hits": 2,
+          "roi": 104.66
+        },
+        "2025-03": {
+          "n": 97,
+          "hits": 2,
+          "roi": 122.99
+        },
+        "2025-04": {
+          "n": 165,
+          "hits": 2,
+          "roi": 69.7
+        },
+        "2025-05": {
+          "n": 191,
+          "hits": 3,
+          "roi": 69.79
+        },
+        "2025-06": {
+          "n": 195,
+          "hits": 5,
+          "roi": 88.05
+        },
+        "2025-07": {
+          "n": 226,
+          "hits": 8,
+          "roi": 125.35
+        },
+        "2025-08": {
+          "n": 215,
+          "hits": 5,
+          "roi": 96.93
+        },
+        "2025-09": {
+          "n": 114,
+          "hits": 2,
+          "roi": 89.3
+        },
+        "2025-10": {
+          "n": 82,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-11": {
+          "n": 110,
+          "hits": 3,
+          "roi": 133.55
+        },
+        "2026-05": {
+          "n": 23,
+          "hits": 1,
+          "roi": 75.22
+        }
+      },
+      "venueTop": [
+        {
+          "venue": "鳴門",
+          "n": 63,
+          "hits": 3,
+          "roi": 291.59
+        },
+        {
+          "venue": "尼崎",
+          "n": 86,
+          "hits": 5,
+          "roi": 186.05
+        },
+        {
+          "venue": "若松",
+          "n": 98,
+          "hits": 3,
+          "roi": 182.35
+        },
+        {
+          "venue": "丸亀",
+          "n": 71,
+          "hits": 3,
+          "roi": 175.35
+        },
+        {
+          "venue": "びわこ",
+          "n": 114,
+          "hits": 3,
+          "roi": 152.72
+        }
+      ],
+      "warnings": [
+        "最大連敗189 ≥ 60: 運用難",
+        "0hit月 (n≥5): 2025-10"
+      ],
+      "verdict": "reject",
+      "verdictReasons": [
+        "ROI 92.3% < 100%: 期待値なし"
+      ]
+    },
+    {
+      "id": "trifecta_124",
+      "label": "3連単 1-2-4",
+      "betType": "trifecta",
+      "combination": "1-2-4",
+      "roiAvailable": true,
+      "n": 1522,
+      "hits": 31,
+      "hitRate": 2.04,
+      "stake": 152200,
+      "payout": 63550,
+      "profit": -88650,
+      "roi": 41.75,
+      "avgPayout": 2050,
+      "medPayout": 1670,
+      "maxPayout": 6920,
+      "maxLosingStreak": 175,
+      "top1ExcludeRoi": 37.23,
+      "top2ExcludeRoi": 34.49,
+      "recent3mRoi": 87.83,
+      "recent3mN": 23,
+      "zeroHitMonths": [],
+      "avgClosingOdds": 53.13,
+      "overlapImpact": {
+        "exclSkip6R": {
+          "n": 1307,
+          "roi": 41.61
+        },
+        "exclSkipVenue": {
+          "n": 1363,
+          "roi": 37.07
+        },
+        "exclCondB": {
+          "n": 1355,
+          "roi": 41.79
+        }
+      },
+      "monthlyRoi": {
+        "2025-01": {
+          "n": 1,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-02": {
+          "n": 103,
+          "hits": 3,
+          "roi": 65.83
+        },
+        "2025-03": {
+          "n": 97,
+          "hits": 3,
+          "roi": 92.78
+        },
+        "2025-04": {
+          "n": 165,
+          "hits": 4,
+          "roi": 64.36
+        },
+        "2025-05": {
+          "n": 191,
+          "hits": 2,
+          "roi": 13.35
+        },
+        "2025-06": {
+          "n": 195,
+          "hits": 3,
+          "roi": 41.49
+        },
+        "2025-07": {
+          "n": 226,
+          "hits": 4,
+          "roi": 14.82
+        },
+        "2025-08": {
+          "n": 215,
+          "hits": 4,
+          "roi": 22.23
+        },
+        "2025-09": {
+          "n": 114,
+          "hits": 2,
+          "roi": 20.18
+        },
+        "2025-10": {
+          "n": 82,
+          "hits": 1,
+          "roi": 47.93
+        },
+        "2025-11": {
+          "n": 110,
+          "hits": 4,
+          "roi": 92.09
+        },
+        "2026-05": {
+          "n": 23,
+          "hits": 1,
+          "roi": 87.83
+        }
+      },
+      "venueTop": [
+        {
+          "venue": "大村",
+          "n": 87,
+          "hits": 5,
+          "roi": 91.49
+        },
+        {
+          "venue": "浜名湖",
+          "n": 83,
+          "hits": 1,
+          "roi": 83.37
+        },
+        {
+          "venue": "住之江",
+          "n": 76,
+          "hits": 2,
+          "roi": 80.39
+        },
+        {
+          "venue": "宮島",
+          "n": 80,
+          "hits": 2,
+          "roi": 76.88
+        },
+        {
+          "venue": "蒲郡",
+          "n": 74,
+          "hits": 3,
+          "roi": 76.35
+        }
+      ],
+      "warnings": [
+        "最大連敗175 ≥ 60: 運用難"
+      ],
+      "verdict": "reject",
+      "verdictReasons": [
+        "ROI 41.8% < 100%: 期待値なし"
+      ]
+    },
+    {
+      "id": "trifecta_142",
+      "label": "3連単 1-4-2",
+      "betType": "trifecta",
+      "combination": "1-4-2",
+      "roiAvailable": true,
+      "n": 1522,
+      "hits": 51,
+      "hitRate": 3.35,
+      "stake": 152200,
+      "payout": 136300,
+      "profit": -15900,
+      "roi": 89.55,
+      "avgPayout": 2673,
+      "medPayout": 1820,
+      "maxPayout": 9460,
+      "maxLosingStreak": 133,
+      "top1ExcludeRoi": 83.39,
+      "top2ExcludeRoi": 78.05,
+      "recent3mRoi": 0,
+      "recent3mN": 23,
+      "zeroHitMonths": [
+        "2026-05"
+      ],
+      "avgClosingOdds": 76.79,
+      "overlapImpact": {
+        "exclSkip6R": {
+          "n": 1307,
+          "roi": 89.16
+        },
+        "exclSkipVenue": {
+          "n": 1363,
+          "roi": 89.88
+        },
+        "exclCondB": {
+          "n": 1355,
+          "roi": 90.44
+        }
+      },
+      "monthlyRoi": {
+        "2025-01": {
+          "n": 1,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-02": {
+          "n": 103,
+          "hits": 2,
+          "roi": 59.13
+        },
+        "2025-03": {
+          "n": 97,
+          "hits": 5,
+          "roi": 57.42
+        },
+        "2025-04": {
+          "n": 165,
+          "hits": 2,
+          "roi": 21.76
+        },
+        "2025-05": {
+          "n": 191,
+          "hits": 9,
+          "roi": 129.84
+        },
+        "2025-06": {
+          "n": 195,
+          "hits": 6,
+          "roi": 87.38
+        },
+        "2025-07": {
+          "n": 226,
+          "hits": 8,
+          "roi": 84.69
+        },
+        "2025-08": {
+          "n": 215,
+          "hits": 6,
+          "roi": 83.21
+        },
+        "2025-09": {
+          "n": 114,
+          "hits": 3,
+          "roi": 87.02
+        },
+        "2025-10": {
+          "n": 82,
+          "hits": 3,
+          "roi": 100.37
+        },
+        "2025-11": {
+          "n": 110,
+          "hits": 7,
+          "roi": 218.45
+        },
+        "2026-05": {
+          "n": 23,
+          "hits": 0,
+          "roi": 0
+        }
+      },
+      "venueTop": [
+        {
+          "venue": "常滑",
+          "n": 88,
+          "hits": 4,
+          "roi": 218.3
+        },
+        {
+          "venue": "徳山",
+          "n": 83,
+          "hits": 4,
+          "roi": 166.87
+        },
+        {
+          "venue": "津",
+          "n": 83,
+          "hits": 4,
+          "roi": 160.12
+        },
+        {
+          "venue": "若松",
+          "n": 98,
+          "hits": 4,
+          "roi": 155.92
+        },
+        {
+          "venue": "浜名湖",
+          "n": 83,
+          "hits": 3,
+          "roi": 134.82
+        }
+      ],
+      "warnings": [
+        "最大連敗133 ≥ 60: 運用難",
+        "0hit月 (n≥5): 2026-05"
+      ],
+      "verdict": "reject",
+      "verdictReasons": [
+        "ROI 89.6% < 100%: 期待値なし"
+      ]
+    },
+    {
+      "id": "trifecta_134",
+      "label": "3連単 1-3-4",
+      "betType": "trifecta",
+      "combination": "1-3-4",
+      "roiAvailable": true,
+      "n": 1522,
+      "hits": 47,
+      "hitRate": 3.09,
+      "stake": 152200,
+      "payout": 108300,
+      "profit": -43900,
+      "roi": 71.16,
+      "avgPayout": 2304,
+      "medPayout": 1240,
+      "maxPayout": 11270,
+      "maxLosingStreak": 93,
+      "top1ExcludeRoi": 63.79,
+      "top2ExcludeRoi": 57.97,
+      "recent3mRoi": 50.87,
+      "recent3mN": 23,
+      "zeroHitMonths": [],
+      "avgClosingOdds": 55.53,
+      "overlapImpact": {
+        "exclSkip6R": {
+          "n": 1307,
+          "roi": 69.32
+        },
+        "exclSkipVenue": {
+          "n": 1363,
+          "roi": 62.96
+        },
+        "exclCondB": {
+          "n": 1355,
+          "roi": 76.04
+        }
+      },
+      "monthlyRoi": {
+        "2025-01": {
+          "n": 1,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-02": {
+          "n": 103,
+          "hits": 4,
+          "roi": 220.78
+        },
+        "2025-03": {
+          "n": 97,
+          "hits": 1,
+          "roi": 25.57
+        },
+        "2025-04": {
+          "n": 165,
+          "hits": 8,
+          "roi": 68.36
+        },
+        "2025-05": {
+          "n": 191,
+          "hits": 2,
+          "roi": 34.66
+        },
+        "2025-06": {
+          "n": 195,
+          "hits": 8,
+          "roi": 149.23
+        },
+        "2025-07": {
+          "n": 226,
+          "hits": 4,
+          "roi": 12.3
+        },
+        "2025-08": {
+          "n": 215,
+          "hits": 9,
+          "roi": 48.88
+        },
+        "2025-09": {
+          "n": 114,
+          "hits": 4,
+          "roi": 86.84
+        },
+        "2025-10": {
+          "n": 82,
+          "hits": 3,
+          "roi": 110.24
+        },
+        "2025-11": {
+          "n": 110,
+          "hits": 2,
+          "roi": 24.36
+        },
+        "2026-05": {
+          "n": 23,
+          "hits": 2,
+          "roi": 50.87
+        }
+      },
+      "venueTop": [
+        {
+          "venue": "津",
+          "n": 83,
+          "hits": 5,
+          "roi": 225.78
+        },
+        {
+          "venue": "唐津",
+          "n": 96,
+          "hits": 6,
+          "roi": 186.67
+        },
+        {
+          "venue": "浜名湖",
+          "n": 83,
+          "hits": 2,
+          "roi": 166.87
+        },
+        {
+          "venue": "丸亀",
+          "n": 71,
+          "hits": 4,
+          "roi": 119.15
+        },
+        {
+          "venue": "住之江",
+          "n": 76,
+          "hits": 3,
+          "roi": 113.68
+        }
+      ],
+      "warnings": [
+        "最大連敗93 ≥ 60: 運用難"
+      ],
+      "verdict": "reject",
+      "verdictReasons": [
+        "ROI 71.2% < 100%: 期待値なし"
+      ]
+    },
+    {
+      "id": "trio_123",
+      "label": "3連複 1=2=3",
+      "betType": "trio",
+      "combination": "1-2-3",
+      "roiAvailable": true,
+      "n": 1522,
+      "hits": 117,
+      "hitRate": 7.69,
+      "stake": 152200,
+      "payout": 123250,
+      "profit": -28950,
+      "roi": 80.98,
+      "avgPayout": 1053,
+      "medPayout": 1010,
+      "maxPayout": 2660,
+      "maxLosingStreak": 63,
+      "top1ExcludeRoi": 79.28,
+      "top2ExcludeRoi": 77.88,
+      "recent3mRoi": 76.09,
+      "recent3mN": 23,
+      "zeroHitMonths": [],
+      "avgClosingOdds": null,
+      "overlapImpact": {
+        "exclSkip6R": {
+          "n": 1307,
+          "roi": 84.63
+        },
+        "exclSkipVenue": {
+          "n": 1363,
+          "roi": 85.77
+        },
+        "exclCondB": {
+          "n": 1355,
+          "roi": 78.45
+        }
+      },
+      "monthlyRoi": {
+        "2025-01": {
+          "n": 1,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-02": {
+          "n": 103,
+          "hits": 10,
+          "roi": 120.19
+        },
+        "2025-03": {
+          "n": 97,
+          "hits": 6,
+          "roi": 84.64
+        },
+        "2025-04": {
+          "n": 165,
+          "hits": 12,
+          "roi": 83.39
+        },
+        "2025-05": {
+          "n": 191,
+          "hits": 15,
+          "roi": 64.35
+        },
+        "2025-06": {
+          "n": 195,
+          "hits": 16,
+          "roi": 89.69
+        },
+        "2025-07": {
+          "n": 226,
+          "hits": 18,
+          "roi": 87.3
+        },
+        "2025-08": {
+          "n": 215,
+          "hits": 19,
+          "roi": 85.67
+        },
+        "2025-09": {
+          "n": 114,
+          "hits": 7,
+          "roi": 55.79
+        },
+        "2025-10": {
+          "n": 82,
+          "hits": 7,
+          "roi": 79.51
+        },
+        "2025-11": {
+          "n": 110,
+          "hits": 5,
+          "roi": 57.64
+        },
+        "2026-05": {
+          "n": 23,
+          "hits": 2,
+          "roi": 76.09
+        }
+      },
+      "venueTop": [
+        {
+          "venue": "鳴門",
+          "n": 63,
+          "hits": 8,
+          "roi": 135.56
+        },
+        {
+          "venue": "福岡",
+          "n": 77,
+          "hits": 9,
+          "roi": 134.03
+        },
+        {
+          "venue": "宮島",
+          "n": 80,
+          "hits": 9,
+          "roi": 123.5
+        },
+        {
+          "venue": "丸亀",
+          "n": 71,
+          "hits": 8,
+          "roi": 114.23
+        },
+        {
+          "venue": "唐津",
+          "n": 96,
+          "hits": 9,
+          "roi": 101.25
+        }
+      ],
+      "warnings": [
+        "最大連敗63 ≥ 60: 運用難"
+      ],
+      "verdict": "reject",
+      "verdictReasons": [
+        "ROI 81.0% < 100%: 期待値なし"
+      ]
+    },
+    {
+      "id": "trio_124",
+      "label": "3連複 1=2=4",
+      "betType": "trio",
+      "combination": "1-2-4",
+      "roiAvailable": true,
+      "n": 1522,
+      "hits": 156,
+      "hitRate": 10.25,
+      "stake": 152200,
+      "payout": 104640,
+      "profit": -47560,
+      "roi": 68.75,
+      "avgPayout": 671,
+      "medPayout": 490,
+      "maxPayout": 3290,
+      "maxLosingStreak": 45,
+      "top1ExcludeRoi": 66.63,
+      "top2ExcludeRoi": 64.93,
+      "recent3mRoi": 15.65,
+      "recent3mN": 23,
+      "zeroHitMonths": [],
+      "avgClosingOdds": null,
+      "overlapImpact": {
+        "exclSkip6R": {
+          "n": 1307,
+          "roi": 70.79
+        },
+        "exclSkipVenue": {
+          "n": 1363,
+          "roi": 64.89
+        },
+        "exclCondB": {
+          "n": 1355,
+          "roi": 70.66
+        }
+      },
+      "monthlyRoi": {
+        "2025-01": {
+          "n": 1,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-02": {
+          "n": 103,
+          "hits": 7,
+          "roi": 37.67
+        },
+        "2025-03": {
+          "n": 97,
+          "hits": 13,
+          "roi": 96.29
+        },
+        "2025-04": {
+          "n": 165,
+          "hits": 19,
+          "roi": 91.94
+        },
+        "2025-05": {
+          "n": 191,
+          "hits": 19,
+          "roi": 63.4
+        },
+        "2025-06": {
+          "n": 195,
+          "hits": 28,
+          "roi": 88.56
+        },
+        "2025-07": {
+          "n": 226,
+          "hits": 21,
+          "roi": 52.52
+        },
+        "2025-08": {
+          "n": 215,
+          "hits": 14,
+          "roi": 38.84
+        },
+        "2025-09": {
+          "n": 114,
+          "hits": 8,
+          "roi": 46.93
+        },
+        "2025-10": {
+          "n": 82,
+          "hits": 8,
+          "roi": 92.93
+        },
+        "2025-11": {
+          "n": 110,
+          "hits": 17,
+          "roi": 121.09
+        },
+        "2026-05": {
+          "n": 23,
+          "hits": 2,
+          "roi": 15.65
+        }
+      },
+      "venueTop": [
+        {
+          "venue": "芦屋",
+          "n": 69,
+          "hits": 12,
+          "roi": 121.16
+        },
+        {
+          "venue": "浜名湖",
+          "n": 83,
+          "hits": 8,
+          "roi": 106.87
+        },
+        {
+          "venue": "丸亀",
+          "n": 71,
+          "hits": 9,
+          "roi": 96.48
+        },
+        {
+          "venue": "住之江",
+          "n": 76,
+          "hits": 11,
+          "roi": 96.45
+        },
+        {
+          "venue": "尼崎",
+          "n": 86,
+          "hits": 15,
+          "roi": 89.53
+        }
+      ],
+      "warnings": [],
+      "verdict": "reject",
+      "verdictReasons": [
+        "ROI 68.8% < 100%: 期待値なし"
+      ]
+    },
+    {
+      "id": "trio_134",
+      "label": "3連複 1=3=4",
+      "betType": "trio",
+      "combination": "1-3-4",
+      "roiAvailable": true,
+      "n": 1522,
+      "hits": 163,
+      "hitRate": 10.71,
+      "stake": 152200,
+      "payout": 97610,
+      "profit": -54590,
+      "roi": 64.13,
+      "avgPayout": 599,
+      "medPayout": 360,
+      "maxPayout": 5650,
+      "maxLosingStreak": 46,
+      "top1ExcludeRoi": 60.46,
+      "top2ExcludeRoi": 57.74,
+      "recent3mRoi": 16.52,
+      "recent3mN": 23,
+      "zeroHitMonths": [],
+      "avgClosingOdds": null,
+      "overlapImpact": {
+        "exclSkip6R": {
+          "n": 1307,
+          "roi": 64.14
+        },
+        "exclSkipVenue": {
+          "n": 1363,
+          "roi": 59.88
+        },
+        "exclCondB": {
+          "n": 1355,
+          "roi": 66.17
+        }
+      },
+      "monthlyRoi": {
+        "2025-01": {
+          "n": 1,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-02": {
+          "n": 103,
+          "hits": 12,
+          "roi": 130
+        },
+        "2025-03": {
+          "n": 97,
+          "hits": 8,
+          "roi": 36.29
+        },
+        "2025-04": {
+          "n": 165,
+          "hits": 22,
+          "roi": 68.12
+        },
+        "2025-05": {
+          "n": 191,
+          "hits": 20,
+          "roi": 50.26
+        },
+        "2025-06": {
+          "n": 195,
+          "hits": 22,
+          "roi": 88.77
+        },
+        "2025-07": {
+          "n": 226,
+          "hits": 20,
+          "roi": 42.43
+        },
+        "2025-08": {
+          "n": 215,
+          "hits": 21,
+          "roi": 68.7
+        },
+        "2025-09": {
+          "n": 114,
+          "hits": 17,
+          "roi": 82.81
+        },
+        "2025-10": {
+          "n": 82,
+          "hits": 7,
+          "roi": 49.63
+        },
+        "2025-11": {
+          "n": 110,
+          "hits": 12,
+          "roi": 39.09
+        },
+        "2026-05": {
+          "n": 23,
+          "hits": 2,
+          "roi": 16.52
+        }
+      },
+      "venueTop": [
+        {
+          "venue": "浜名湖",
+          "n": 83,
+          "hits": 13,
+          "roi": 134.82
+        },
+        {
+          "venue": "津",
+          "n": 83,
+          "hits": 13,
+          "roi": 111.33
+        },
+        {
+          "venue": "徳山",
+          "n": 83,
+          "hits": 8,
+          "roi": 100.12
+        },
+        {
+          "venue": "宮島",
+          "n": 80,
+          "hits": 9,
+          "roi": 95.38
+        },
+        {
+          "venue": "丸亀",
+          "n": 71,
+          "hits": 10,
+          "roi": 90.99
+        }
+      ],
+      "warnings": [],
+      "verdict": "reject",
+      "verdictReasons": [
+        "ROI 64.1% < 100%: 期待値なし"
+      ]
+    },
+    {
+      "id": "exacta_12",
+      "label": "2連単 1-2",
+      "betType": "exacta",
+      "combination": "1-2",
+      "roiAvailable": true,
+      "n": 1522,
+      "hits": 117,
+      "hitRate": 7.69,
+      "stake": 152200,
+      "payout": 102820,
+      "profit": -49380,
+      "roi": 67.56,
+      "avgPayout": 879,
+      "medPayout": 800,
+      "maxPayout": 2480,
+      "maxLosingStreak": 47,
+      "top1ExcludeRoi": 65.97,
+      "top2ExcludeRoi": 64.54,
+      "recent3mRoi": 136.09,
+      "recent3mN": 23,
+      "zeroHitMonths": [],
+      "avgClosingOdds": null,
+      "overlapImpact": {
+        "exclSkip6R": {
+          "n": 1307,
+          "roi": 70.75
+        },
+        "exclSkipVenue": {
+          "n": 1363,
+          "roi": 69.85
+        },
+        "exclCondB": {
+          "n": 1355,
+          "roi": 69.44
+        }
+      },
+      "monthlyRoi": {
+        "2025-01": {
+          "n": 1,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-02": {
+          "n": 103,
+          "hits": 8,
+          "roi": 70.19
+        },
+        "2025-03": {
+          "n": 97,
+          "hits": 9,
+          "roi": 77.63
+        },
+        "2025-04": {
+          "n": 165,
+          "hits": 15,
+          "roi": 91.39
+        },
+        "2025-05": {
+          "n": 191,
+          "hits": 15,
+          "roi": 86.49
+        },
+        "2025-06": {
+          "n": 195,
+          "hits": 13,
+          "roi": 65.64
+        },
+        "2025-07": {
+          "n": 226,
+          "hits": 11,
+          "roi": 37.65
+        },
+        "2025-08": {
+          "n": 215,
+          "hits": 16,
+          "roi": 56.28
+        },
+        "2025-09": {
+          "n": 114,
+          "hits": 10,
+          "roi": 70.96
+        },
+        "2025-10": {
+          "n": 82,
+          "hits": 7,
+          "roi": 56.46
+        },
+        "2025-11": {
+          "n": 110,
+          "hits": 9,
+          "roi": 65.45
+        },
+        "2026-05": {
+          "n": 23,
+          "hits": 4,
+          "roi": 136.09
+        }
+      },
+      "venueTop": [
+        {
+          "venue": "常滑",
+          "n": 88,
+          "hits": 11,
+          "roi": 147.5
+        },
+        {
+          "venue": "丸亀",
+          "n": 71,
+          "hits": 9,
+          "roi": 126.9
+        },
+        {
+          "venue": "尼崎",
+          "n": 86,
+          "hits": 7,
+          "roi": 109.19
+        },
+        {
+          "venue": "宮島",
+          "n": 80,
+          "hits": 9,
+          "roi": 107.63
+        },
+        {
+          "venue": "大村",
+          "n": 87,
+          "hits": 13,
+          "roi": 106.32
+        }
+      ],
+      "warnings": [],
+      "verdict": "reject",
+      "verdictReasons": [
+        "ROI 67.6% < 100%: 期待値なし"
+      ]
+    },
+    {
+      "id": "exacta_13",
+      "label": "2連単 1-3",
+      "betType": "exacta",
+      "combination": "1-3",
+      "roiAvailable": true,
+      "n": 1522,
+      "hits": 145,
+      "hitRate": 9.53,
+      "stake": 152200,
+      "payout": 115600,
+      "profit": -36600,
+      "roi": 75.95,
+      "avgPayout": 797,
+      "medPayout": 550,
+      "maxPayout": 3420,
+      "maxLosingStreak": 51,
+      "top1ExcludeRoi": 73.75,
+      "top2ExcludeRoi": 71.79,
+      "recent3mRoi": 95.65,
+      "recent3mN": 23,
+      "zeroHitMonths": [],
+      "avgClosingOdds": null,
+      "overlapImpact": {
+        "exclSkip6R": {
+          "n": 1307,
+          "roi": 76.22
+        },
+        "exclSkipVenue": {
+          "n": 1363,
+          "roi": 76.79
+        },
+        "exclCondB": {
+          "n": 1355,
+          "roi": 76.96
+        }
+      },
+      "monthlyRoi": {
+        "2025-01": {
+          "n": 1,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-02": {
+          "n": 103,
+          "hits": 7,
+          "roi": 91.17
+        },
+        "2025-03": {
+          "n": 97,
+          "hits": 12,
+          "roi": 115.26
+        },
+        "2025-04": {
+          "n": 165,
+          "hits": 13,
+          "roi": 74.73
+        },
+        "2025-05": {
+          "n": 191,
+          "hits": 11,
+          "roi": 47.75
+        },
+        "2025-06": {
+          "n": 195,
+          "hits": 21,
+          "roi": 86
+        },
+        "2025-07": {
+          "n": 226,
+          "hits": 27,
+          "roi": 76.5
+        },
+        "2025-08": {
+          "n": 215,
+          "hits": 22,
+          "roi": 73.16
+        },
+        "2025-09": {
+          "n": 114,
+          "hits": 10,
+          "roi": 66.84
+        },
+        "2025-10": {
+          "n": 82,
+          "hits": 5,
+          "roi": 47.8
+        },
+        "2025-11": {
+          "n": 110,
+          "hits": 12,
+          "roi": 91.36
+        },
+        "2026-05": {
+          "n": 23,
+          "hits": 5,
+          "roi": 95.65
+        }
+      },
+      "venueTop": [
+        {
+          "venue": "尼崎",
+          "n": 86,
+          "hits": 16,
+          "roi": 129.88
+        },
+        {
+          "venue": "宮島",
+          "n": 80,
+          "hits": 16,
+          "roi": 126.38
+        },
+        {
+          "venue": "唐津",
+          "n": 96,
+          "hits": 11,
+          "roi": 108.44
+        },
+        {
+          "venue": "平和島",
+          "n": 77,
+          "hits": 6,
+          "roi": 103.9
+        },
+        {
+          "venue": "若松",
+          "n": 98,
+          "hits": 7,
+          "roi": 102.14
+        }
+      ],
+      "warnings": [],
+      "verdict": "reject",
+      "verdictReasons": [
+        "ROI 76.0% < 100%: 期待値なし"
+      ]
+    },
+    {
+      "id": "exacta_14",
+      "label": "2連単 1-4",
+      "betType": "exacta",
+      "combination": "1-4",
+      "roiAvailable": true,
+      "n": 1522,
+      "hits": 177,
+      "hitRate": 11.63,
+      "stake": 152200,
+      "payout": 144110,
+      "profit": -8090,
+      "roi": 94.68,
+      "avgPayout": 814,
+      "medPayout": 500,
+      "maxPayout": 5600,
+      "maxLosingStreak": 40,
+      "top1ExcludeRoi": 91.07,
+      "top2ExcludeRoi": 88.56,
+      "recent3mRoi": 0,
+      "recent3mN": 23,
+      "zeroHitMonths": [
+        "2026-05"
+      ],
+      "avgClosingOdds": null,
+      "overlapImpact": {
+        "exclSkip6R": {
+          "n": 1307,
+          "roi": 98.71
+        },
+        "exclSkipVenue": {
+          "n": 1363,
+          "roi": 98.19
+        },
+        "exclCondB": {
+          "n": 1355,
+          "roi": 92.61
+        }
+      },
+      "monthlyRoi": {
+        "2025-01": {
+          "n": 1,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-02": {
+          "n": 103,
+          "hits": 8,
+          "roi": 55.73
+        },
+        "2025-03": {
+          "n": 97,
+          "hits": 13,
+          "roi": 91.13
+        },
+        "2025-04": {
+          "n": 165,
+          "hits": 18,
+          "roi": 68.73
+        },
+        "2025-05": {
+          "n": 191,
+          "hits": 29,
+          "roi": 136.65
+        },
+        "2025-06": {
+          "n": 195,
+          "hits": 17,
+          "roi": 74.41
+        },
+        "2025-07": {
+          "n": 226,
+          "hits": 21,
+          "roi": 78.81
+        },
+        "2025-08": {
+          "n": 215,
+          "hits": 27,
+          "roi": 114.79
+        },
+        "2025-09": {
+          "n": 114,
+          "hits": 14,
+          "roi": 84.39
+        },
+        "2025-10": {
+          "n": 82,
+          "hits": 12,
+          "roi": 144.76
+        },
+        "2025-11": {
+          "n": 110,
+          "hits": 18,
+          "roi": 123.64
+        },
+        "2026-05": {
+          "n": 23,
+          "hits": 0,
+          "roi": 0
+        }
+      },
+      "venueTop": [
+        {
+          "venue": "尼崎",
+          "n": 86,
+          "hits": 13,
+          "roi": 184.42
+        },
+        {
+          "venue": "津",
+          "n": 83,
+          "hits": 12,
+          "roi": 179.52
+        },
+        {
+          "venue": "丸亀",
+          "n": 71,
+          "hits": 13,
+          "roi": 155.35
+        },
+        {
+          "venue": "常滑",
+          "n": 88,
+          "hits": 10,
+          "roi": 133.3
+        },
+        {
+          "venue": "徳山",
+          "n": 83,
+          "hits": 14,
+          "roi": 131.81
+        }
+      ],
+      "warnings": [
+        "0hit月 (n≥5): 2026-05"
+      ],
+      "verdict": "reject",
+      "verdictReasons": [
+        "ROI 94.7% < 100%: 期待値なし"
+      ]
+    },
+    {
+      "id": "quinella_12",
+      "label": "2連複 1=2",
+      "betType": "quinella",
+      "combination": "1-2",
+      "roiAvailable": true,
+      "n": 1522,
+      "hits": 174,
+      "hitRate": 11.43,
+      "stake": 152200,
+      "payout": 104410,
+      "profit": -47790,
+      "roi": 68.6,
+      "avgPayout": 600,
+      "medPayout": 490,
+      "maxPayout": 2750,
+      "maxLosingStreak": 36,
+      "top1ExcludeRoi": 66.84,
+      "top2ExcludeRoi": 65.2,
+      "recent3mRoi": 79.57,
+      "recent3mN": 23,
+      "zeroHitMonths": [],
+      "avgClosingOdds": null,
+      "overlapImpact": {
+        "exclSkip6R": {
+          "n": 1307,
+          "roi": 72.62
+        },
+        "exclSkipVenue": {
+          "n": 1363,
+          "roi": 68.96
+        },
+        "exclCondB": {
+          "n": 1355,
+          "roi": 68.78
+        }
+      },
+      "monthlyRoi": {
+        "2025-01": {
+          "n": 1,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-02": {
+          "n": 103,
+          "hits": 12,
+          "roi": 59.51
+        },
+        "2025-03": {
+          "n": 97,
+          "hits": 11,
+          "roi": 81.96
+        },
+        "2025-04": {
+          "n": 165,
+          "hits": 24,
+          "roi": 98.85
+        },
+        "2025-05": {
+          "n": 191,
+          "hits": 21,
+          "roi": 79.01
+        },
+        "2025-06": {
+          "n": 195,
+          "hits": 25,
+          "roi": 91.59
+        },
+        "2025-07": {
+          "n": 226,
+          "hits": 17,
+          "roi": 39.47
+        },
+        "2025-08": {
+          "n": 215,
+          "hits": 20,
+          "roi": 39.49
+        },
+        "2025-09": {
+          "n": 114,
+          "hits": 14,
+          "roi": 70.35
+        },
+        "2025-10": {
+          "n": 82,
+          "hits": 11,
+          "roi": 81.83
+        },
+        "2025-11": {
+          "n": 110,
+          "hits": 14,
+          "roi": 64.55
+        },
+        "2026-05": {
+          "n": 23,
+          "hits": 5,
+          "roi": 79.57
+        }
+      },
+      "venueTop": [
+        {
+          "venue": "丸亀",
+          "n": 71,
+          "hits": 15,
+          "roi": 129.72
+        },
+        {
+          "venue": "常滑",
+          "n": 88,
+          "hits": 14,
+          "roi": 111.02
+        },
+        {
+          "venue": "びわこ",
+          "n": 114,
+          "hits": 13,
+          "roi": 99.82
+        },
+        {
+          "venue": "大村",
+          "n": 87,
+          "hits": 16,
+          "roi": 86.32
+        },
+        {
+          "venue": "平和島",
+          "n": 77,
+          "hits": 10,
+          "roi": 79.61
+        }
+      ],
+      "warnings": [],
+      "verdict": "reject",
+      "verdictReasons": [
+        "ROI 68.6% < 100%: 期待値なし"
+      ]
+    },
+    {
+      "id": "quinella_13",
+      "label": "2連複 1=3",
+      "betType": "quinella",
+      "combination": "1-3",
+      "roiAvailable": true,
+      "n": 1522,
+      "hits": 226,
+      "hitRate": 14.85,
+      "stake": 152200,
+      "payout": 115640,
+      "profit": -36560,
+      "roi": 75.98,
+      "avgPayout": 512,
+      "medPayout": 350,
+      "maxPayout": 2350,
+      "maxLosingStreak": 35,
+      "top1ExcludeRoi": 74.48,
+      "top2ExcludeRoi": 73.33,
+      "recent3mRoi": 67.39,
+      "recent3mN": 23,
+      "zeroHitMonths": [],
+      "avgClosingOdds": null,
+      "overlapImpact": {
+        "exclSkip6R": {
+          "n": 1307,
+          "roi": 75.6
+        },
+        "exclSkipVenue": {
+          "n": 1363,
+          "roi": 75.19
+        },
+        "exclCondB": {
+          "n": 1355,
+          "roi": 77.71
+        }
+      },
+      "monthlyRoi": {
+        "2025-01": {
+          "n": 1,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-02": {
+          "n": 103,
+          "hits": 13,
+          "roi": 107.96
+        },
+        "2025-03": {
+          "n": 97,
+          "hits": 14,
+          "roi": 91.13
+        },
+        "2025-04": {
+          "n": 165,
+          "hits": 23,
+          "roi": 89.15
+        },
+        "2025-05": {
+          "n": 191,
+          "hits": 21,
+          "roi": 45.29
+        },
+        "2025-06": {
+          "n": 195,
+          "hits": 31,
+          "roi": 86.21
+        },
+        "2025-07": {
+          "n": 226,
+          "hits": 39,
+          "roi": 75.84
+        },
+        "2025-08": {
+          "n": 215,
+          "hits": 33,
+          "roi": 61.86
+        },
+        "2025-09": {
+          "n": 114,
+          "hits": 16,
+          "roi": 60.61
+        },
+        "2025-10": {
+          "n": 82,
+          "hits": 14,
+          "roi": 88.54
+        },
+        "2025-11": {
+          "n": 110,
+          "hits": 17,
+          "roi": 85
+        },
+        "2026-05": {
+          "n": 23,
+          "hits": 5,
+          "roi": 67.39
+        }
+      },
+      "venueTop": [
+        {
+          "venue": "宮島",
+          "n": 80,
+          "hits": 21,
+          "roi": 125.37
+        },
+        {
+          "venue": "尼崎",
+          "n": 86,
+          "hits": 20,
+          "roi": 125.23
+        },
+        {
+          "venue": "唐津",
+          "n": 96,
+          "hits": 18,
+          "roi": 96.77
+        },
+        {
+          "venue": "平和島",
+          "n": 77,
+          "hits": 10,
+          "roi": 94.81
+        },
+        {
+          "venue": "住之江",
+          "n": 76,
+          "hits": 13,
+          "roi": 92.37
+        }
+      ],
+      "warnings": [],
+      "verdict": "reject",
+      "verdictReasons": [
+        "ROI 76.0% < 100%: 期待値なし"
+      ]
+    },
+    {
+      "id": "quinella_14",
+      "label": "2連複 1=4",
+      "betType": "quinella",
+      "combination": "1-4",
+      "roiAvailable": true,
+      "n": 1522,
+      "hits": 252,
+      "hitRate": 16.56,
+      "stake": 152200,
+      "payout": 131550,
+      "profit": -20650,
+      "roi": 86.43,
+      "avgPayout": 522,
+      "medPayout": 310,
+      "maxPayout": 2700,
+      "maxLosingStreak": 30,
+      "top1ExcludeRoi": 84.71,
+      "top2ExcludeRoi": 83.03,
+      "recent3mRoi": 25.65,
+      "recent3mN": 23,
+      "zeroHitMonths": [],
+      "avgClosingOdds": null,
+      "overlapImpact": {
+        "exclSkip6R": {
+          "n": 1307,
+          "roi": 87.38
+        },
+        "exclSkipVenue": {
+          "n": 1363,
+          "roi": 89.98
+        },
+        "exclCondB": {
+          "n": 1355,
+          "roi": 85.1
+        }
+      },
+      "monthlyRoi": {
+        "2025-01": {
+          "n": 1,
+          "hits": 1,
+          "roi": 1030
+        },
+        "2025-02": {
+          "n": 103,
+          "hits": 11,
+          "roi": 50.58
+        },
+        "2025-03": {
+          "n": 97,
+          "hits": 17,
+          "roi": 76.39
+        },
+        "2025-04": {
+          "n": 165,
+          "hits": 28,
+          "roi": 67.39
+        },
+        "2025-05": {
+          "n": 191,
+          "hits": 39,
+          "roi": 92.77
+        },
+        "2025-06": {
+          "n": 195,
+          "hits": 29,
+          "roi": 87.74
+        },
+        "2025-07": {
+          "n": 226,
+          "hits": 31,
+          "roi": 73.58
+        },
+        "2025-08": {
+          "n": 215,
+          "hits": 36,
+          "roi": 98.88
+        },
+        "2025-09": {
+          "n": 114,
+          "hits": 20,
+          "roi": 90
+        },
+        "2025-10": {
+          "n": 82,
+          "hits": 16,
+          "roi": 145.24
+        },
+        "2025-11": {
+          "n": 110,
+          "hits": 23,
+          "roi": 102.73
+        },
+        "2026-05": {
+          "n": 23,
+          "hits": 1,
+          "roi": 25.65
+        }
+      },
+      "venueTop": [
+        {
+          "venue": "丸亀",
+          "n": 71,
+          "hits": 19,
+          "roi": 147.18
+        },
+        {
+          "venue": "津",
+          "n": 83,
+          "hits": 16,
+          "roi": 127.71
+        },
+        {
+          "venue": "福岡",
+          "n": 77,
+          "hits": 16,
+          "roi": 124.03
+        },
+        {
+          "venue": "尼崎",
+          "n": 86,
+          "hits": 18,
+          "roi": 123.26
+        },
+        {
+          "venue": "蒲郡",
+          "n": 74,
+          "hits": 15,
+          "roi": 106.49
+        }
+      ],
+      "warnings": [],
+      "verdict": "reject",
+      "verdictReasons": [
+        "ROI 86.4% < 100%: 期待値なし"
+      ]
+    },
+    {
+      "id": "win_1",
+      "label": "単勝 1号艇 (的中率のみ)",
+      "betType": "win",
+      "combination": null,
+      "roiAvailable": false,
+      "n": 1522,
+      "hits": 596,
+      "hitRate": 39.16,
+      "stake": 152200,
+      "payout": 0,
+      "profit": -152200,
+      "roi": null,
+      "avgPayout": null,
+      "medPayout": null,
+      "maxPayout": 0,
+      "maxLosingStreak": 13,
+      "top1ExcludeRoi": null,
+      "top2ExcludeRoi": null,
+      "recent3mRoi": null,
+      "recent3mN": 23,
+      "zeroHitMonths": [],
+      "avgClosingOdds": null,
+      "overlapImpact": {
+        "exclSkip6R": {
+          "n": 1307,
+          "roi": 0
+        },
+        "exclSkipVenue": {
+          "n": 1363,
+          "roi": 0
+        },
+        "exclCondB": {
+          "n": 1355,
+          "roi": 0
+        }
+      },
+      "monthlyRoi": {
+        "2025-01": {
+          "n": 1,
+          "hits": 0,
+          "roi": 0
+        },
+        "2025-02": {
+          "n": 103,
+          "hits": 42,
+          "roi": 0
+        },
+        "2025-03": {
+          "n": 97,
+          "hits": 46,
+          "roi": 0
+        },
+        "2025-04": {
+          "n": 165,
+          "hits": 59,
+          "roi": 0
+        },
+        "2025-05": {
+          "n": 191,
+          "hits": 71,
+          "roi": 0
+        },
+        "2025-06": {
+          "n": 195,
+          "hits": 65,
+          "roi": 0
+        },
+        "2025-07": {
+          "n": 226,
+          "hits": 76,
+          "roi": 0
+        },
+        "2025-08": {
+          "n": 215,
+          "hits": 91,
+          "roi": 0
+        },
+        "2025-09": {
+          "n": 114,
+          "hits": 47,
+          "roi": 0
+        },
+        "2025-10": {
+          "n": 82,
+          "hits": 30,
+          "roi": 0
+        },
+        "2025-11": {
+          "n": 110,
+          "hits": 56,
+          "roi": 0
+        },
+        "2026-05": {
+          "n": 23,
+          "hits": 13,
+          "roi": 0
+        }
+      },
+      "venueTop": [
+        {
+          "venue": "徳山",
+          "n": 83,
+          "hits": 38,
+          "roi": 0
+        },
+        {
+          "venue": "びわこ",
+          "n": 114,
+          "hits": 37,
+          "roi": 0
+        },
+        {
+          "venue": "下関",
+          "n": 79,
+          "hits": 29,
+          "roi": 0
+        },
+        {
+          "venue": "住之江",
+          "n": 76,
+          "hits": 33,
+          "roi": 0
+        },
+        {
+          "venue": "唐津",
+          "n": 96,
+          "hits": 34,
+          "roi": 0
+        }
+      ],
+      "warnings": [
+        "払戻データなし: ROI算出不可 (的中率のみ実測)"
+      ],
+      "verdict": "data-unavailable",
+      "verdictReasons": [
+        "単勝/複勝の払戻データがDBにないためROI評価不可。的中率のみ実測"
+      ]
+    },
+    {
+      "id": "place_1",
+      "label": "複勝 1号艇 (的中率のみ)",
+      "betType": "place",
+      "combination": null,
+      "roiAvailable": false,
+      "n": 1522,
+      "hits": 879,
+      "hitRate": 57.75,
+      "stake": 152200,
+      "payout": 0,
+      "profit": -152200,
+      "roi": null,
+      "avgPayout": null,
+      "medPayout": null,
+      "maxPayout": 0,
+      "maxLosingStreak": 10,
+      "top1ExcludeRoi": null,
+      "top2ExcludeRoi": null,
+      "recent3mRoi": null,
+      "recent3mN": 23,
+      "zeroHitMonths": [],
+      "avgClosingOdds": null,
+      "overlapImpact": {
+        "exclSkip6R": {
+          "n": 1307,
+          "roi": 0
+        },
+        "exclSkipVenue": {
+          "n": 1363,
+          "roi": 0
+        },
+        "exclCondB": {
+          "n": 1355,
+          "roi": 0
+        }
+      },
+      "monthlyRoi": {
+        "2025-01": {
+          "n": 1,
+          "hits": 1,
+          "roi": 0
+        },
+        "2025-02": {
+          "n": 103,
+          "hits": 57,
+          "roi": 0
+        },
+        "2025-03": {
+          "n": 97,
+          "hits": 59,
+          "roi": 0
+        },
+        "2025-04": {
+          "n": 165,
+          "hits": 99,
+          "roi": 0
+        },
+        "2025-05": {
+          "n": 191,
+          "hits": 106,
+          "roi": 0
+        },
+        "2025-06": {
+          "n": 195,
+          "hits": 107,
+          "roi": 0
+        },
+        "2025-07": {
+          "n": 226,
+          "hits": 117,
+          "roi": 0
+        },
+        "2025-08": {
+          "n": 215,
+          "hits": 127,
+          "roi": 0
+        },
+        "2025-09": {
+          "n": 114,
+          "hits": 70,
+          "roi": 0
+        },
+        "2025-10": {
+          "n": 82,
+          "hits": 50,
+          "roi": 0
+        },
+        "2025-11": {
+          "n": 110,
+          "hits": 71,
+          "roi": 0
+        },
+        "2026-05": {
+          "n": 23,
+          "hits": 15,
+          "roi": 0
+        }
+      },
+      "venueTop": [
+        {
+          "venue": "徳山",
+          "n": 83,
+          "hits": 51,
+          "roi": 0
+        },
+        {
+          "venue": "びわこ",
+          "n": 114,
+          "hits": 61,
+          "roi": 0
+        },
+        {
+          "venue": "下関",
+          "n": 79,
+          "hits": 41,
+          "roi": 0
+        },
+        {
+          "venue": "住之江",
+          "n": 76,
+          "hits": 45,
+          "roi": 0
+        },
+        {
+          "venue": "唐津",
+          "n": 96,
+          "hits": 55,
+          "roi": 0
+        }
+      ],
+      "warnings": [
+        "払戻データなし: ROI算出不可 (的中率のみ実測)"
+      ],
+      "verdict": "data-unavailable",
+      "verdictReasons": [
+        "単勝/複勝の払戻データがDBにないためROI評価不可。的中率のみ実測"
+      ]
+    }
+  ],
+  "rankings": {
+    "roi": [
+      "exacta_14",
+      "trifecta_132",
+      "trifecta_142",
+      "trifecta_123",
+      "quinella_14",
+      "trio_123",
+      "quinella_13",
+      "exacta_13",
+      "trifecta_134",
+      "trio_124",
+      "quinella_12",
+      "exacta_12",
+      "trio_134",
+      "trifecta_124"
+    ],
+    "hitRate": [
+      "place_1",
+      "win_1",
+      "quinella_14",
+      "quinella_13",
+      "exacta_14",
+      "quinella_12",
+      "trio_134",
+      "trio_124",
+      "exacta_13",
+      "trio_123",
+      "exacta_12",
+      "trifecta_142",
+      "trifecta_134",
+      "trifecta_123",
+      "trifecta_132",
+      "trifecta_124"
+    ],
+    "shortestStreak": [
+      "place_1",
+      "win_1",
+      "quinella_14",
+      "quinella_13",
+      "quinella_12",
+      "exacta_14",
+      "trio_124",
+      "trio_134",
+      "exacta_12",
+      "exacta_13",
+      "trio_123",
+      "trifecta_134",
+      "trifecta_142",
+      "trifecta_123",
+      "trifecta_124",
+      "trifecta_132"
+    ],
+    "operability": [
+      {
+        "id": "quinella_14",
+        "score": 2.3
+      },
+      {
+        "id": "exacta_14",
+        "score": 2.7
+      },
+      {
+        "id": "quinella_13",
+        "score": 3.7
+      },
+      {
+        "id": "quinella_12",
+        "score": 6
+      },
+      {
+        "id": "trio_124",
+        "score": 7
+      },
+      {
+        "id": "trio_123",
+        "score": 7.7
+      },
+      {
+        "id": "exacta_13",
+        "score": 7.7
+      },
+      {
+        "id": "trifecta_142",
+        "score": 8
+      },
+      {
+        "id": "trio_134",
+        "score": 8
+      },
+      {
+        "id": "trifecta_123",
+        "score": 9.3
+      },
+      {
+        "id": "exacta_12",
+        "score": 9.3
+      },
+      {
+        "id": "trifecta_132",
+        "score": 9.7
+      },
+      {
+        "id": "trifecta_134",
+        "score": 10
+      },
+      {
+        "id": "trifecta_124",
+        "score": 13.7
+      }
+    ]
+  }
+}
