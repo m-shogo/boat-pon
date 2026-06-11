@@ -1,7 +1,7 @@
 # 次のリサーチアクション計画
 
-生成日時: 2026-06-11T02:29:39.382Z
-governor 生成日時: 2026-06-11T02:29:38.757Z
+生成日時: 2026-06-11T06:34:29.403Z
+governor 生成日時: 2026-06-11T06:34:28.954Z
 
 > **⚠️ この計画は提案のみです。自動実行しません。write が必要な場合は人間確認後に実施してください。**
 > **BUY は検証候補。ROI は検証指標。購入指示・採用判断ではない。app_settings 変更禁止。**
@@ -65,6 +65,7 @@ governor 生成日時: 2026-06-11T02:29:38.757Z
 | H001 | condB 1-3-2 switch | testing-historical | ❌ |
 | H002 | condB skip | tested-historical | ❌ |
 | H003 | 6R skip | monitor | ❌ |
+| H011 | 1-4系 市場過小評価 (2連単1-4) | tested-historical | ❌ |
 | H004 | 6R switch (代替買い目) | tested-historical | ❌ |
 | H005 | 浜名湖+住之江 skip | monitor | ❌ |
 | H006 | 浜名湖+住之江 switch (代替買い目) | tested-historical | ❌ |

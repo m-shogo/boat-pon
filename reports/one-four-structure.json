@@ -1,0 +1,4241 @@
+{
+  "generatedAt": "2026-06-11T06:33:07.919Z",
+  "meta": {
+    "description": "1-4系構造検証 (市場の4号艇過小評価仮説)",
+    "warningNotForward": "実払戻backtest。live/T-5 forwardではない",
+    "warningNoAdoption": "結果が良くてもapp_settings反映禁止。購入推奨ではない",
+    "forwardStart": "2025-01-01",
+    "unit": 100,
+    "minNForJudge": 30,
+    "minHitsForJudge": 3
+  },
+  "overview": {
+    "forwardRaces": 1522,
+    "exhCoverage": 1491,
+    "motorCoverage": 1499,
+    "boat1WinRaces": 596,
+    "boat1WinRate": 39.16
+  },
+  "overall": [
+    {
+      "id": "exacta_14",
+      "label": "2連単 1-4",
+      "n": 1522,
+      "hits": 177,
+      "hitRate": 11.63,
+      "roi": 94.68,
+      "top1ExclRoi": 91.07,
+      "top2ExclRoi": 88.56,
+      "maxStreak": 40,
+      "avgPayout": 814,
+      "medPayout": 500,
+      "verdict": "reject"
+    },
+    {
+      "id": "quinella_14",
+      "label": "2連複 1=4",
+      "n": 1522,
+      "hits": 252,
+      "hitRate": 16.56,
+      "roi": 86.43,
+      "top1ExclRoi": 84.71,
+      "top2ExclRoi": 83.03,
+      "maxStreak": 30,
+      "avgPayout": 522,
+      "medPayout": 310,
+      "verdict": "reject"
+    },
+    {
+      "id": "trifecta_142",
+      "label": "3連単 1-4-2",
+      "n": 1522,
+      "hits": 51,
+      "hitRate": 3.35,
+      "roi": 89.55,
+      "top1ExclRoi": 83.39,
+      "top2ExclRoi": 78.05,
+      "maxStreak": 133,
+      "avgPayout": 2673,
+      "medPayout": 1820,
+      "verdict": "reject"
+    },
+    {
+      "id": "exacta_12",
+      "label": "2連単 1-2",
+      "n": 1522,
+      "hits": 117,
+      "hitRate": 7.69,
+      "roi": 67.56,
+      "top1ExclRoi": 65.97,
+      "top2ExclRoi": 64.54,
+      "maxStreak": 47,
+      "avgPayout": 879,
+      "medPayout": 800,
+      "verdict": "reject"
+    },
+    {
+      "id": "exacta_13",
+      "label": "2連単 1-3",
+      "n": 1522,
+      "hits": 145,
+      "hitRate": 9.53,
+      "roi": 75.95,
+      "top1ExclRoi": 73.75,
+      "top2ExclRoi": 71.79,
+      "maxStreak": 51,
+      "avgPayout": 797,
+      "medPayout": 550,
+      "verdict": "reject"
+    },
+    {
+      "id": "trifecta_123",
+      "label": "3連単 1-2-3",
+      "n": 1522,
+      "hits": 39,
+      "hitRate": 2.56,
+      "roi": 87.12,
+      "top1ExclRoi": 83.21,
+      "top2ExclRoi": 79.48,
+      "maxStreak": 153,
+      "avgPayout": 3400,
+      "medPayout": 3360,
+      "verdict": "reject"
+    },
+    {
+      "id": "trifecta_132",
+      "label": "3連単 1-3-2",
+      "n": 1522,
+      "hits": 33,
+      "hitRate": 2.17,
+      "roi": 92.3,
+      "top1ExclRoi": 85.93,
+      "top2ExclRoi": 79.7,
+      "maxStreak": 189,
+      "avgPayout": 4257,
+      "medPayout": 3800,
+      "verdict": "reject"
+    }
+  ],
+  "secondDistGivenBoat1Win": {
+    "2": {
+      "count": 117,
+      "rate": 19.63,
+      "avgExactaPayout": 879
+    },
+    "3": {
+      "count": 145,
+      "rate": 24.33,
+      "avgExactaPayout": 797
+    },
+    "4": {
+      "count": 177,
+      "rate": 29.7,
+      "avgExactaPayout": 814
+    },
+    "5": {
+      "count": 91,
+      "rate": 15.27,
+      "avgExactaPayout": 1247
+    },
+    "6": {
+      "count": 66,
+      "rate": 11.07,
+      "avgExactaPayout": 1530
+    }
+  },
+  "splits": [
+    {
+      "name": "1. 4号艇展示順位",
+      "rows": [
+        {
+          "group": "展示1位",
+          "cells": {
+            "exacta_14": {
+              "n": 279,
+              "hits": 48,
+              "hitRate": 17.2,
+              "roi": 104.12,
+              "top1ExclRoi": 95.22,
+              "top2ExclRoi": 88.56,
+              "maxStreak": 18,
+              "avgPayout": 605,
+              "medPayout": 460,
+              "verdict": "watch"
+            },
+            "quinella_14": {
+              "n": 279,
+              "hits": 64,
+              "hitRate": 22.94,
+              "roi": 85.52,
+              "top1ExclRoi": 80.25,
+              "top2ExclRoi": 76.79,
+              "maxStreak": 12,
+              "avgPayout": 373,
+              "medPayout": 260,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 279,
+              "hits": 13,
+              "hitRate": 4.66,
+              "roi": 119.21,
+              "top1ExclRoi": 85.61,
+              "top2ExclRoi": 69.6,
+              "maxStreak": 50,
+              "avgPayout": 2558,
+              "medPayout": 1670,
+              "verdict": "watch"
+            },
+            "exacta_12": {
+              "n": 279,
+              "hits": 17,
+              "hitRate": 6.09,
+              "roi": 56.77,
+              "top1ExclRoi": 49.78,
+              "top2ExclRoi": 43.07,
+              "maxStreak": 79,
+              "avgPayout": 932,
+              "medPayout": 620,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "展示2-3位",
+          "cells": {
+            "exacta_14": {
+              "n": 475,
+              "hits": 52,
+              "hitRate": 10.95,
+              "roi": 83.05,
+              "top1ExclRoi": 71.41,
+              "top2ExclRoi": 63.74,
+              "maxStreak": 33,
+              "avgPayout": 759,
+              "medPayout": 490,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 475,
+              "hits": 79,
+              "hitRate": 16.63,
+              "roi": 80.72,
+              "top1ExclRoi": 75.19,
+              "top2ExclRoi": 71.06,
+              "maxStreak": 22,
+              "avgPayout": 485,
+              "medPayout": 320,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 475,
+              "hits": 17,
+              "hitRate": 3.58,
+              "roi": 84.61,
+              "top1ExclRoi": 67.47,
+              "top2ExclRoi": 50.97,
+              "maxStreak": 71,
+              "avgPayout": 2364,
+              "medPayout": 1320,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 475,
+              "hits": 41,
+              "hitRate": 8.63,
+              "roi": 69.75,
+              "top1ExclRoi": 65.55,
+              "top2ExclRoi": 61.46,
+              "maxStreak": 46,
+              "avgPayout": 808,
+              "medPayout": 800,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "展示4位以下",
+          "cells": {
+            "exacta_14": {
+              "n": 737,
+              "hits": 75,
+              "hitRate": 10.18,
+              "roi": 101.21,
+              "top1ExclRoi": 96.05,
+              "top2ExclRoi": 91.41,
+              "maxStreak": 51,
+              "avgPayout": 995,
+              "medPayout": 640,
+              "verdict": "watch"
+            },
+            "quinella_14": {
+              "n": 737,
+              "hits": 105,
+              "hitRate": 14.25,
+              "roi": 90.96,
+              "top1ExclRoi": 87.5,
+              "top2ExclRoi": 84.22,
+              "maxStreak": 25,
+              "avgPayout": 638,
+              "medPayout": 340,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 737,
+              "hits": 20,
+              "hitRate": 2.71,
+              "roi": 83.19,
+              "top1ExclRoi": 72.99,
+              "top2ExclRoi": 63.12,
+              "maxStreak": 156,
+              "avgPayout": 3066,
+              "medPayout": 2640,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 737,
+              "hits": 55,
+              "hitRate": 7.46,
+              "roi": 68.82,
+              "top1ExclRoi": 65.54,
+              "top2ExclRoi": 62.59,
+              "maxStreak": 33,
+              "avgPayout": 922,
+              "medPayout": 860,
+              "verdict": "reject"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. 4号艇展示タイム差 (レース最速比)",
+      "rows": [
+        {
+          "group": "最速 (0.00)",
+          "cells": {
+            "exacta_14": {
+              "n": 317,
+              "hits": 50,
+              "hitRate": 15.77,
+              "roi": 98.17,
+              "top1ExclRoi": 90.32,
+              "top2ExclRoi": 84.44,
+              "maxStreak": 19,
+              "avgPayout": 622,
+              "medPayout": 460,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 317,
+              "hits": 70,
+              "hitRate": 22.08,
+              "roi": 82.56,
+              "top1ExclRoi": 77.91,
+              "top2ExclRoi": 74.86,
+              "maxStreak": 15,
+              "avgPayout": 374,
+              "medPayout": 270,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 317,
+              "hits": 14,
+              "hitRate": 4.42,
+              "roi": 129.75,
+              "top1ExclRoi": 100.22,
+              "top2ExclRoi": 75.56,
+              "maxStreak": 53,
+              "avgPayout": 2938,
+              "medPayout": 2030,
+              "verdict": "watch"
+            },
+            "exacta_12": {
+              "n": 317,
+              "hits": 23,
+              "hitRate": 7.26,
+              "roi": 60.25,
+              "top1ExclRoi": 54.11,
+              "top2ExclRoi": 48.22,
+              "maxStreak": 80,
+              "avgPayout": 830,
+              "medPayout": 550,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "0.01-0.05",
+          "cells": {
+            "exacta_14": {
+              "n": 494,
+              "hits": 55,
+              "hitRate": 11.13,
+              "roi": 86.6,
+              "top1ExclRoi": 75.42,
+              "top2ExclRoi": 68.9,
+              "maxStreak": 36,
+              "avgPayout": 778,
+              "medPayout": 490,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 494,
+              "hits": 80,
+              "hitRate": 16.19,
+              "roi": 82.41,
+              "top1ExclRoi": 78.22,
+              "top2ExclRoi": 74.23,
+              "maxStreak": 26,
+              "avgPayout": 509,
+              "medPayout": 320,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 494,
+              "hits": 13,
+              "hitRate": 2.63,
+              "roi": 46.01,
+              "top1ExclRoi": 39.21,
+              "top2ExclRoi": 32.66,
+              "maxStreak": 97,
+              "avgPayout": 1748,
+              "medPayout": 1220,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 494,
+              "hits": 43,
+              "hitRate": 8.7,
+              "roi": 75,
+              "top1ExclRoi": 70.97,
+              "top2ExclRoi": 67.05,
+              "maxStreak": 49,
+              "avgPayout": 862,
+              "medPayout": 880,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "0.06-0.10",
+          "cells": {
+            "exacta_14": {
+              "n": 412,
+              "hits": 49,
+              "hitRate": 11.89,
+              "roi": 103.4,
+              "top1ExclRoi": 94.65,
+              "top2ExclRoi": 87.54,
+              "maxStreak": 45,
+              "avgPayout": 869,
+              "medPayout": 530,
+              "verdict": "watch"
+            },
+            "quinella_14": {
+              "n": 412,
+              "hits": 67,
+              "hitRate": 16.26,
+              "roi": 90.73,
+              "top1ExclRoi": 84.87,
+              "top2ExclRoi": 80.41,
+              "maxStreak": 25,
+              "avgPayout": 558,
+              "medPayout": 310,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 412,
+              "hits": 17,
+              "hitRate": 4.13,
+              "roi": 114.03,
+              "top1ExclRoi": 94.33,
+              "top2ExclRoi": 76.05,
+              "maxStreak": 65,
+              "avgPayout": 2764,
+              "medPayout": 1790,
+              "verdict": "watch"
+            },
+            "exacta_12": {
+              "n": 412,
+              "hits": 36,
+              "hitRate": 8.74,
+              "roi": 74.73,
+              "top1ExclRoi": 69.46,
+              "top2ExclRoi": 65.34,
+              "maxStreak": 30,
+              "avgPayout": 855,
+              "medPayout": 800,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "0.10超",
+          "cells": {
+            "exacta_14": {
+              "n": 268,
+              "hits": 21,
+              "hitRate": 7.84,
+              "roi": 99.22,
+              "top1ExclRoi": 84.98,
+              "top2ExclRoi": 72.14,
+              "maxStreak": 63,
+              "avgPayout": 1266,
+              "medPayout": 1060,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 268,
+              "hits": 31,
+              "hitRate": 11.57,
+              "roi": 93.21,
+              "top1ExclRoi": 83.45,
+              "top2ExclRoi": 73.83,
+              "maxStreak": 28,
+              "avgPayout": 806,
+              "medPayout": 370,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 268,
+              "hits": 6,
+              "hitRate": 2.24,
+              "roi": 89.25,
+              "top1ExclRoi": 62.13,
+              "top2ExclRoi": 39.47,
+              "maxStreak": 119,
+              "avgPayout": 3987,
+              "medPayout": 4070,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 268,
+              "hits": 11,
+              "hitRate": 4.1,
+              "roi": 47.57,
+              "top1ExclRoi": 38.46,
+              "top2ExclRoi": 31.13,
+              "maxStreak": 73,
+              "avgPayout": 1159,
+              "medPayout": 1130,
+              "verdict": "reject"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. 2号艇展示順位",
+      "rows": [
+        {
+          "group": "展示1位",
+          "cells": {
+            "exacta_14": {
+              "n": 223,
+              "hits": 14,
+              "hitRate": 6.28,
+              "roi": 59.6,
+              "top1ExclRoi": 43.2,
+              "top2ExclRoi": 32.22,
+              "maxStreak": 33,
+              "avgPayout": 949,
+              "medPayout": 490,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 223,
+              "hits": 19,
+              "hitRate": 8.52,
+              "roi": 52.38,
+              "top1ExclRoi": 44.01,
+              "top2ExclRoi": 35.97,
+              "maxStreak": 33,
+              "avgPayout": 615,
+              "medPayout": 300,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 223,
+              "hits": 5,
+              "hitRate": 2.24,
+              "roi": 80.31,
+              "top1ExclRoi": 43.69,
+              "top2ExclRoi": 25.48,
+              "maxStreak": 66,
+              "avgPayout": 3582,
+              "medPayout": 3400,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 223,
+              "hits": 15,
+              "hitRate": 6.73,
+              "roi": 61.84,
+              "top1ExclRoi": 53.11,
+              "top2ExclRoi": 45.38,
+              "maxStreak": 53,
+              "avgPayout": 919,
+              "medPayout": 680,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "展示2-3位",
+          "cells": {
+            "exacta_14": {
+              "n": 506,
+              "hits": 69,
+              "hitRate": 13.64,
+              "roi": 102.98,
+              "top1ExclRoi": 96.69,
+              "top2ExclRoi": 91.09,
+              "maxStreak": 30,
+              "avgPayout": 755,
+              "medPayout": 510,
+              "verdict": "watch"
+            },
+            "quinella_14": {
+              "n": 506,
+              "hits": 92,
+              "hitRate": 18.18,
+              "roi": 90.63,
+              "top1ExclRoi": 85.47,
+              "top2ExclRoi": 81.59,
+              "maxStreak": 22,
+              "avgPayout": 498,
+              "medPayout": 320,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 506,
+              "hits": 27,
+              "hitRate": 5.34,
+              "roi": 135.81,
+              "top1ExclRoi": 121.05,
+              "top2ExclRoi": 106.75,
+              "maxStreak": 54,
+              "avgPayout": 2545,
+              "medPayout": 2030,
+              "verdict": "watch"
+            },
+            "exacta_12": {
+              "n": 506,
+              "hits": 45,
+              "hitRate": 8.89,
+              "roi": 73.83,
+              "top1ExclRoi": 69.54,
+              "top2ExclRoi": 65.73,
+              "maxStreak": 34,
+              "avgPayout": 830,
+              "medPayout": 720,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "展示4位以下",
+          "cells": {
+            "exacta_14": {
+              "n": 763,
+              "hits": 92,
+              "hitRate": 12.06,
+              "roi": 101.82,
+              "top1ExclRoi": 94.61,
+              "top2ExclRoi": 89.61,
+              "maxStreak": 28,
+              "avgPayout": 844,
+              "medPayout": 490,
+              "verdict": "watch"
+            },
+            "quinella_14": {
+              "n": 763,
+              "hits": 137,
+              "hitRate": 17.96,
+              "roi": 93.97,
+              "top1ExclRoi": 90.63,
+              "top2ExclRoi": 87.46,
+              "maxStreak": 25,
+              "avgPayout": 523,
+              "medPayout": 310,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 763,
+              "hits": 18,
+              "hitRate": 2.36,
+              "roi": 63.08,
+              "top1ExclRoi": 50.75,
+              "top2ExclRoi": 40.47,
+              "maxStreak": 80,
+              "avgPayout": 2674,
+              "medPayout": 1790,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 763,
+              "hits": 53,
+              "hitRate": 6.95,
+              "roi": 63.62,
+              "top1ExclRoi": 60.45,
+              "top2ExclRoi": 57.82,
+              "maxStreak": 65,
+              "avgPayout": 916,
+              "medPayout": 850,
+              "verdict": "reject"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. 1号艇展示1位有無",
+      "rows": [
+        {
+          "group": "1号艇展示1位",
+          "cells": {
+            "exacta_14": {
+              "n": 350,
+              "hits": 48,
+              "hitRate": 13.71,
+              "roi": 112.51,
+              "top1ExclRoi": 96.79,
+              "top2ExclRoi": 87.64,
+              "maxStreak": 28,
+              "avgPayout": 820,
+              "medPayout": 510,
+              "verdict": "watch"
+            },
+            "quinella_14": {
+              "n": 350,
+              "hits": 70,
+              "hitRate": 20,
+              "roi": 99.31,
+              "top1ExclRoi": 93.75,
+              "top2ExclRoi": 88.19,
+              "maxStreak": 15,
+              "avgPayout": 497,
+              "medPayout": 330,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 350,
+              "hits": 14,
+              "hitRate": 4,
+              "roi": 90.71,
+              "top1ExclRoi": 68.42,
+              "top2ExclRoi": 52.96,
+              "maxStreak": 67,
+              "avgPayout": 2268,
+              "medPayout": 1820,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 350,
+              "hits": 28,
+              "hitRate": 8,
+              "roi": 58.69,
+              "top1ExclRoi": 54.67,
+              "top2ExclRoi": 51.35,
+              "maxStreak": 35,
+              "avgPayout": 734,
+              "medPayout": 660,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "1号艇展示非1位",
+          "cells": {
+            "exacta_14": {
+              "n": 1142,
+              "hits": 127,
+              "hitRate": 11.12,
+              "roi": 90.81,
+              "top1ExclRoi": 87.48,
+              "top2ExclRoi": 84.31,
+              "maxStreak": 51,
+              "avgPayout": 817,
+              "medPayout": 490,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 1142,
+              "hits": 178,
+              "hitRate": 15.59,
+              "roi": 82.73,
+              "top1ExclRoi": 80.44,
+              "top2ExclRoi": 78.19,
+              "maxStreak": 31,
+              "avgPayout": 531,
+              "medPayout": 300,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 1142,
+              "hits": 36,
+              "hitRate": 3.15,
+              "roi": 90.2,
+              "top1ExclRoi": 81.99,
+              "top2ExclRoi": 74.86,
+              "maxStreak": 113,
+              "avgPayout": 2861,
+              "medPayout": 2040,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 1142,
+              "hits": 85,
+              "hitRate": 7.44,
+              "roi": 69.31,
+              "top1ExclRoi": 67.2,
+              "top2ExclRoi": 65.29,
+              "maxStreak": 43,
+              "avgPayout": 931,
+              "medPayout": 810,
+              "verdict": "reject"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. 4号艇モーター2連率 (レース内上位2)",
+      "rows": [
+        {
+          "group": "モーター上位",
+          "cells": {
+            "exacta_14": {
+              "n": 538,
+              "hits": 72,
+              "hitRate": 13.38,
+              "roi": 112.12,
+              "top1ExclRoi": 105.44,
+              "top2ExclRoi": 99.51,
+              "maxStreak": 38,
+              "avgPayout": 838,
+              "medPayout": 570,
+              "verdict": "watch"
+            },
+            "quinella_14": {
+              "n": 538,
+              "hits": 96,
+              "hitRate": 17.84,
+              "roi": 93.7,
+              "top1ExclRoi": 88.85,
+              "top2ExclRoi": 85,
+              "maxStreak": 33,
+              "avgPayout": 525,
+              "medPayout": 320,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 538,
+              "hits": 22,
+              "hitRate": 4.09,
+              "roi": 127.73,
+              "top1ExclRoi": 110.35,
+              "top2ExclRoi": 95.24,
+              "maxStreak": 59,
+              "avgPayout": 3124,
+              "medPayout": 2390,
+              "verdict": "watch"
+            },
+            "exacta_12": {
+              "n": 538,
+              "hits": 39,
+              "hitRate": 7.25,
+              "roi": 66.47,
+              "top1ExclRoi": 61.97,
+              "top2ExclRoi": 58.36,
+              "maxStreak": 44,
+              "avgPayout": 917,
+              "medPayout": 800,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "モーター非上位",
+          "cells": {
+            "exacta_14": {
+              "n": 961,
+              "hits": 105,
+              "hitRate": 10.93,
+              "roi": 87.19,
+              "top1ExclRoi": 81.45,
+              "top2ExclRoi": 77.47,
+              "maxStreak": 33,
+              "avgPayout": 798,
+              "medPayout": 470,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 961,
+              "hits": 155,
+              "hitRate": 16.13,
+              "roi": 83.82,
+              "top1ExclRoi": 81.16,
+              "top2ExclRoi": 78.63,
+              "maxStreak": 24,
+              "avgPayout": 520,
+              "medPayout": 310,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 961,
+              "hits": 29,
+              "hitRate": 3.02,
+              "roi": 70.32,
+              "top1ExclRoi": 62.2,
+              "top2ExclRoi": 55.91,
+              "maxStreak": 130,
+              "avgPayout": 2330,
+              "medPayout": 1610,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 961,
+              "hits": 74,
+              "hitRate": 7.7,
+              "roi": 66.52,
+              "top1ExclRoi": 64.26,
+              "top2ExclRoi": 62.18,
+              "maxStreak": 47,
+              "avgPayout": 864,
+              "medPayout": 810,
+              "verdict": "reject"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. 4号艇ボート2連率 (レース内上位2)",
+      "rows": [
+        {
+          "group": "ボート上位",
+          "cells": {
+            "exacta_14": {
+              "n": 455,
+              "hits": 49,
+              "hitRate": 10.77,
+              "roi": 79.43,
+              "top1ExclRoi": 72.97,
+              "top2ExclRoi": 66.69,
+              "maxStreak": 34,
+              "avgPayout": 738,
+              "medPayout": 460,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 455,
+              "hits": 72,
+              "hitRate": 15.82,
+              "roi": 82.09,
+              "top1ExclRoi": 76.76,
+              "top2ExclRoi": 73.02,
+              "maxStreak": 34,
+              "avgPayout": 519,
+              "medPayout": 320,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 455,
+              "hits": 17,
+              "hitRate": 3.74,
+              "roi": 93.34,
+              "top1ExclRoi": 76.21,
+              "top2ExclRoi": 62.94,
+              "maxStreak": 75,
+              "avgPayout": 2498,
+              "medPayout": 1610,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 455,
+              "hits": 35,
+              "hitRate": 7.69,
+              "roi": 61.98,
+              "top1ExclRoi": 57.73,
+              "top2ExclRoi": 53.97,
+              "maxStreak": 51,
+              "avgPayout": 806,
+              "medPayout": 850,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "ボート非上位",
+          "cells": {
+            "exacta_14": {
+              "n": 1044,
+              "hits": 128,
+              "hitRate": 12.26,
+              "roi": 103.42,
+              "top1ExclRoi": 98.15,
+              "top2ExclRoi": 94.5,
+              "maxStreak": 30,
+              "avgPayout": 844,
+              "medPayout": 520,
+              "verdict": "watch"
+            },
+            "quinella_14": {
+              "n": 1044,
+              "hits": 179,
+              "hitRate": 17.15,
+              "roi": 89.66,
+              "top1ExclRoi": 87.16,
+              "top2ExclRoi": 84.71,
+              "maxStreak": 26,
+              "avgPayout": 523,
+              "medPayout": 300,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 1044,
+              "hits": 34,
+              "hitRate": 3.26,
+              "roi": 89.88,
+              "top1ExclRoi": 80.89,
+              "top2ExclRoi": 73.09,
+              "maxStreak": 115,
+              "avgPayout": 2760,
+              "medPayout": 2040,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 1044,
+              "hits": 78,
+              "hitRate": 7.47,
+              "roi": 68.48,
+              "top1ExclRoi": 66.16,
+              "top2ExclRoi": 64.08,
+              "maxStreak": 36,
+              "avgPayout": 917,
+              "medPayout": 760,
+              "verdict": "reject"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. 風速帯",
+      "rows": [
+        {
+          "group": "0-1 m/s",
+          "cells": {
+            "exacta_14": {
+              "n": 294,
+              "hits": 32,
+              "hitRate": 10.88,
+              "roi": 67.24,
+              "top1ExclRoi": 59.8,
+              "top2ExclRoi": 52.33,
+              "maxStreak": 33,
+              "avgPayout": 618,
+              "medPayout": 390,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 294,
+              "hits": 48,
+              "hitRate": 16.33,
+              "roi": 65.37,
+              "top1ExclRoi": 61.16,
+              "top2ExclRoi": 56.92,
+              "maxStreak": 33,
+              "avgPayout": 400,
+              "medPayout": 290,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 294,
+              "hits": 10,
+              "hitRate": 3.4,
+              "roi": 67.04,
+              "top1ExclRoi": 53.38,
+              "top2ExclRoi": 42.4,
+              "maxStreak": 76,
+              "avgPayout": 1971,
+              "medPayout": 2030,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 294,
+              "hits": 24,
+              "hitRate": 8.16,
+              "roi": 75.99,
+              "top1ExclRoi": 69.22,
+              "top2ExclRoi": 63.94,
+              "maxStreak": 67,
+              "avgPayout": 931,
+              "medPayout": 950,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "2-3 m/s",
+          "cells": {
+            "exacta_14": {
+              "n": 694,
+              "hits": 88,
+              "hitRate": 12.68,
+              "roi": 113.46,
+              "top1ExclRoi": 108.28,
+              "top2ExclRoi": 103.38,
+              "maxStreak": 37,
+              "avgPayout": 895,
+              "medPayout": 590,
+              "verdict": "watch"
+            },
+            "quinella_14": {
+              "n": 694,
+              "hits": 119,
+              "hitRate": 17.15,
+              "roi": 98.8,
+              "top1ExclRoi": 95.05,
+              "top2ExclRoi": 91.58,
+              "maxStreak": 20,
+              "avgPayout": 576,
+              "medPayout": 340,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 694,
+              "hits": 23,
+              "hitRate": 3.31,
+              "roi": 98.85,
+              "top1ExclRoi": 85.34,
+              "top2ExclRoi": 73.6,
+              "maxStreak": 123,
+              "avgPayout": 2983,
+              "medPayout": 1820,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 694,
+              "hits": 49,
+              "hitRate": 7.06,
+              "roi": 65.01,
+              "top1ExclRoi": 61.53,
+              "top2ExclRoi": 58.73,
+              "maxStreak": 61,
+              "avgPayout": 921,
+              "medPayout": 760,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "4+ m/s",
+          "cells": {
+            "exacta_14": {
+              "n": 504,
+              "hits": 55,
+              "hitRate": 10.91,
+              "roi": 88.45,
+              "top1ExclRoi": 77.5,
+              "top2ExclRoi": 69.88,
+              "maxStreak": 43,
+              "avgPayout": 811,
+              "medPayout": 470,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 504,
+              "hits": 81,
+              "hitRate": 16.07,
+              "roi": 82.24,
+              "top1ExclRoi": 77.16,
+              "top2ExclRoi": 73.27,
+              "maxStreak": 27,
+              "avgPayout": 512,
+              "medPayout": 300,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 504,
+              "hits": 17,
+              "hitRate": 3.37,
+              "roi": 92.16,
+              "top1ExclRoi": 77.26,
+              "top2ExclRoi": 65.28,
+              "maxStreak": 91,
+              "avgPayout": 2732,
+              "medPayout": 2060,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 504,
+              "hits": 40,
+              "hitRate": 7.94,
+              "roi": 63.95,
+              "top1ExclRoi": 59.62,
+              "top2ExclRoi": 55.78,
+              "maxStreak": 67,
+              "avgPayout": 806,
+              "medPayout": 710,
+              "verdict": "reject"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. 風向 (n≥30のみ)",
+      "rows": [
+        {
+          "group": "南",
+          "cells": {
+            "exacta_14": {
+              "n": 225,
+              "hits": 25,
+              "hitRate": 11.11,
+              "roi": 80.13,
+              "top1ExclRoi": 70.04,
+              "top2ExclRoi": 63,
+              "maxStreak": 41,
+              "avgPayout": 721,
+              "medPayout": 500,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 225,
+              "hits": 36,
+              "hitRate": 16,
+              "roi": 72.04,
+              "top1ExclRoi": 62.77,
+              "top2ExclRoi": 56.01,
+              "maxStreak": 21,
+              "avgPayout": 450,
+              "medPayout": 310,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 225,
+              "hits": 6,
+              "hitRate": 2.67,
+              "roi": 71.91,
+              "top1ExclRoi": 37.1,
+              "top2ExclRoi": 28.03,
+              "maxStreak": 62,
+              "avgPayout": 2697,
+              "medPayout": 2040,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 225,
+              "hits": 17,
+              "hitRate": 7.56,
+              "roi": 73.47,
+              "top1ExclRoi": 64.87,
+              "top2ExclRoi": 56.23,
+              "maxStreak": 50,
+              "avgPayout": 972,
+              "medPayout": 790,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "北西",
+          "cells": {
+            "exacta_14": {
+              "n": 222,
+              "hits": 21,
+              "hitRate": 9.46,
+              "roi": 63.96,
+              "top1ExclRoi": 55.43,
+              "top2ExclRoi": 46.86,
+              "maxStreak": 48,
+              "avgPayout": 676,
+              "medPayout": 460,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 222,
+              "hits": 30,
+              "hitRate": 13.51,
+              "roi": 74.59,
+              "top1ExclRoi": 62.71,
+              "top2ExclRoi": 56.73,
+              "maxStreak": 30,
+              "avgPayout": 552,
+              "medPayout": 310,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 222,
+              "hits": 8,
+              "hitRate": 3.6,
+              "roi": 84.32,
+              "top1ExclRoi": 60.05,
+              "top2ExclRoi": 39.77,
+              "maxStreak": 82,
+              "avgPayout": 2340,
+              "medPayout": 1670,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 222,
+              "hits": 21,
+              "hitRate": 9.46,
+              "roi": 82.16,
+              "top1ExclRoi": 75.25,
+              "top2ExclRoi": 68.45,
+              "maxStreak": 22,
+              "avgPayout": 869,
+              "medPayout": 760,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "南西",
+          "cells": {
+            "exacta_14": {
+              "n": 212,
+              "hits": 29,
+              "hitRate": 13.68,
+              "roi": 140.42,
+              "top1ExclRoi": 114.55,
+              "top2ExclRoi": 97.48,
+              "maxStreak": 23,
+              "avgPayout": 1027,
+              "medPayout": 560,
+              "verdict": "watch"
+            },
+            "quinella_14": {
+              "n": 212,
+              "hits": 36,
+              "hitRate": 16.98,
+              "roi": 106.56,
+              "top1ExclRoi": 95.21,
+              "top2ExclRoi": 83.76,
+              "maxStreak": 17,
+              "avgPayout": 628,
+              "medPayout": 350,
+              "verdict": "watch"
+            },
+            "trifecta_142": {
+              "n": 212,
+              "hits": 11,
+              "hitRate": 5.19,
+              "roi": 124.06,
+              "top1ExclRoi": 85.73,
+              "top2ExclRoi": 71.33,
+              "maxStreak": 91,
+              "avgPayout": 2391,
+              "medPayout": 1820,
+              "verdict": "watch"
+            },
+            "exacta_12": {
+              "n": 212,
+              "hits": 20,
+              "hitRate": 9.43,
+              "roi": 81.42,
+              "top1ExclRoi": 72.04,
+              "top2ExclRoi": 63.29,
+              "maxStreak": 49,
+              "avgPayout": 863,
+              "medPayout": 730,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "北",
+          "cells": {
+            "exacta_14": {
+              "n": 197,
+              "hits": 27,
+              "hitRate": 13.71,
+              "roi": 142.13,
+              "top1ExclRoi": 122.96,
+              "top2ExclRoi": 108.92,
+              "maxStreak": 17,
+              "avgPayout": 1037,
+              "medPayout": 690,
+              "verdict": "watch"
+            },
+            "quinella_14": {
+              "n": 197,
+              "hits": 39,
+              "hitRate": 19.8,
+              "roi": 127.56,
+              "top1ExclRoi": 114.74,
+              "top2ExclRoi": 106,
+              "maxStreak": 17,
+              "avgPayout": 644,
+              "medPayout": 410,
+              "verdict": "watch"
+            },
+            "trifecta_142": {
+              "n": 197,
+              "hits": 7,
+              "hitRate": 3.55,
+              "roi": 89.85,
+              "top1ExclRoi": 63.01,
+              "top2ExclRoi": 45.9,
+              "maxStreak": 70,
+              "avgPayout": 2529,
+              "medPayout": 1570,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 197,
+              "hits": 10,
+              "hitRate": 5.08,
+              "roi": 33.35,
+              "top1ExclRoi": 28.62,
+              "top2ExclRoi": 23.9,
+              "maxStreak": 50,
+              "avgPayout": 657,
+              "medPayout": 630,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "西",
+          "cells": {
+            "exacta_14": {
+              "n": 165,
+              "hits": 22,
+              "hitRate": 13.33,
+              "roi": 94.3,
+              "top1ExclRoi": 74.88,
+              "top2ExclRoi": 63.13,
+              "maxStreak": 25,
+              "avgPayout": 707,
+              "medPayout": 490,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 165,
+              "hits": 35,
+              "hitRate": 21.21,
+              "roi": 105.15,
+              "top1ExclRoi": 93.35,
+              "top2ExclRoi": 83.74,
+              "maxStreak": 21,
+              "avgPayout": 496,
+              "medPayout": 240,
+              "verdict": "watch"
+            },
+            "trifecta_142": {
+              "n": 165,
+              "hits": 5,
+              "hitRate": 3.03,
+              "roi": 68.73,
+              "top1ExclRoi": 48.72,
+              "top2ExclRoi": 29.33,
+              "maxStreak": 55,
+              "avgPayout": 2268,
+              "medPayout": 2550,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 165,
+              "hits": 12,
+              "hitRate": 7.27,
+              "roi": 74.79,
+              "top1ExclRoi": 60.12,
+              "top2ExclRoi": 48.22,
+              "maxStreak": 50,
+              "avgPayout": 1028,
+              "medPayout": 900,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "北東",
+          "cells": {
+            "exacta_14": {
+              "n": 157,
+              "hits": 13,
+              "hitRate": 8.28,
+              "roi": 48.54,
+              "top1ExclRoi": 38.59,
+              "top2ExclRoi": 28.77,
+              "maxStreak": 34,
+              "avgPayout": 586,
+              "medPayout": 340,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 157,
+              "hits": 23,
+              "hitRate": 14.65,
+              "roi": 65.03,
+              "top1ExclRoi": 54.1,
+              "top2ExclRoi": 43.87,
+              "maxStreak": 17,
+              "avgPayout": 444,
+              "medPayout": 280,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 157,
+              "hits": 4,
+              "hitRate": 2.55,
+              "roi": 104.2,
+              "top1ExclRoi": 56.22,
+              "top2ExclRoi": 17.29,
+              "maxStreak": 52,
+              "avgPayout": 4090,
+              "medPayout": 6090,
+              "verdict": "watch"
+            },
+            "exacta_12": {
+              "n": 157,
+              "hits": 10,
+              "hitRate": 6.37,
+              "roi": 52.61,
+              "top1ExclRoi": 44.42,
+              "top2ExclRoi": 36.9,
+              "maxStreak": 49,
+              "avgPayout": 826,
+              "medPayout": 860,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "南東",
+          "cells": {
+            "exacta_14": {
+              "n": 151,
+              "hits": 14,
+              "hitRate": 9.27,
+              "roi": 67.81,
+              "top1ExclRoi": 48.8,
+              "top2ExclRoi": 40.27,
+              "maxStreak": 28,
+              "avgPayout": 731,
+              "medPayout": 570,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 151,
+              "hits": 18,
+              "hitRate": 11.92,
+              "roi": 52.85,
+              "top1ExclRoi": 44.93,
+              "top2ExclRoi": 38.32,
+              "maxStreak": 19,
+              "avgPayout": 443,
+              "medPayout": 320,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 151,
+              "hits": 1,
+              "hitRate": 0.66,
+              "roi": 6.16,
+              "top1ExclRoi": 0,
+              "top2ExclRoi": 0,
+              "maxStreak": 111,
+              "avgPayout": 930,
+              "medPayout": 930,
+              "verdict": "insufficient"
+            },
+            "exacta_12": {
+              "n": 151,
+              "hits": 14,
+              "hitRate": 9.27,
+              "roi": 76.29,
+              "top1ExclRoi": 65.07,
+              "top2ExclRoi": 54.43,
+              "maxStreak": 34,
+              "avgPayout": 823,
+              "medPayout": 720,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "東",
+          "cells": {
+            "exacta_14": {
+              "n": 133,
+              "hits": 18,
+              "hitRate": 13.53,
+              "roi": 105.19,
+              "top1ExclRoi": 86.44,
+              "top2ExclRoi": 68.09,
+              "maxStreak": 35,
+              "avgPayout": 777,
+              "medPayout": 440,
+              "verdict": "watch"
+            },
+            "quinella_14": {
+              "n": 133,
+              "hits": 23,
+              "hitRate": 17.29,
+              "roi": 75.71,
+              "top1ExclRoi": 64.55,
+              "top2ExclRoi": 53.97,
+              "maxStreak": 26,
+              "avgPayout": 438,
+              "medPayout": 290,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 133,
+              "hits": 7,
+              "hitRate": 5.26,
+              "roi": 181.5,
+              "top1ExclRoi": 111.21,
+              "top2ExclRoi": 56.11,
+              "maxStreak": 43,
+              "avgPayout": 3449,
+              "medPayout": 2390,
+              "verdict": "watch"
+            },
+            "exacta_12": {
+              "n": 133,
+              "hits": 8,
+              "hitRate": 6.02,
+              "roi": 47.07,
+              "top1ExclRoi": 36.29,
+              "top2ExclRoi": 29.31,
+              "maxStreak": 60,
+              "avgPayout": 783,
+              "medPayout": 890,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "無風",
+          "cells": {
+            "exacta_14": {
+              "n": 60,
+              "hits": 8,
+              "hitRate": 13.33,
+              "roi": 111.67,
+              "top1ExclRoi": 75.42,
+              "top2ExclRoi": 38.1,
+              "maxStreak": 12,
+              "avgPayout": 838,
+              "medPayout": 370,
+              "verdict": "watch"
+            },
+            "quinella_14": {
+              "n": 60,
+              "hits": 12,
+              "hitRate": 20,
+              "roi": 90.83,
+              "top1ExclRoi": 70.34,
+              "top2ExclRoi": 54.48,
+              "maxStreak": 10,
+              "avgPayout": 454,
+              "medPayout": 290,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 60,
+              "hits": 2,
+              "hitRate": 3.33,
+              "roi": 77.17,
+              "top1ExclRoi": 9.49,
+              "top2ExclRoi": 0,
+              "maxStreak": 30,
+              "avgPayout": 2315,
+              "medPayout": 4070,
+              "verdict": "insufficient"
+            },
+            "exacta_12": {
+              "n": 60,
+              "hits": 5,
+              "hitRate": 8.33,
+              "roi": 97.33,
+              "top1ExclRoi": 61.02,
+              "top2ExclRoi": 38.79,
+              "maxStreak": 25,
+              "avgPayout": 1168,
+              "medPayout": 1140,
+              "verdict": "reject"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. 波高",
+      "rows": [
+        {
+          "group": "0-2 cm",
+          "cells": {
+            "exacta_14": {
+              "n": 829,
+              "hits": 107,
+              "hitRate": 12.91,
+              "roi": 110.49,
+              "top1ExclRoi": 103.86,
+              "top2ExclRoi": 99.76,
+              "maxStreak": 34,
+              "avgPayout": 856,
+              "medPayout": 510,
+              "verdict": "watch"
+            },
+            "quinella_14": {
+              "n": 829,
+              "hits": 143,
+              "hitRate": 17.25,
+              "roi": 92.75,
+              "top1ExclRoi": 89.6,
+              "top2ExclRoi": 86.69,
+              "maxStreak": 25,
+              "avgPayout": 538,
+              "medPayout": 310,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 829,
+              "hits": 30,
+              "hitRate": 3.62,
+              "roi": 90.66,
+              "top1ExclRoi": 79.35,
+              "top2ExclRoi": 69.93,
+              "maxStreak": 105,
+              "avgPayout": 2505,
+              "medPayout": 1820,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 829,
+              "hits": 63,
+              "hitRate": 7.6,
+              "roi": 66.01,
+              "top1ExclRoi": 63.09,
+              "top2ExclRoi": 60.68,
+              "maxStreak": 57,
+              "avgPayout": 869,
+              "medPayout": 800,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "3-5 cm",
+          "cells": {
+            "exacta_14": {
+              "n": 586,
+              "hits": 62,
+              "hitRate": 10.58,
+              "roi": 82.71,
+              "top1ExclRoi": 76.19,
+              "top2ExclRoi": 69.98,
+              "maxStreak": 29,
+              "avgPayout": 782,
+              "medPayout": 490,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 586,
+              "hits": 95,
+              "hitRate": 16.21,
+              "roi": 82.85,
+              "top1ExclRoi": 78.48,
+              "top2ExclRoi": 74.93,
+              "maxStreak": 29,
+              "avgPayout": 511,
+              "medPayout": 340,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 586,
+              "hits": 19,
+              "hitRate": 3.24,
+              "roi": 99.8,
+              "top1ExclRoi": 85.93,
+              "top2ExclRoi": 73.08,
+              "maxStreak": 110,
+              "avgPayout": 3078,
+              "medPayout": 2220,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 586,
+              "hits": 45,
+              "hitRate": 7.68,
+              "roi": 70.09,
+              "top1ExclRoi": 66.38,
+              "top2ExclRoi": 63.07,
+              "maxStreak": 47,
+              "avgPayout": 913,
+              "medPayout": 810,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "6+ cm",
+          "cells": {
+            "exacta_14": {
+              "n": 77,
+              "hits": 6,
+              "hitRate": 7.79,
+              "roi": 39.22,
+              "top1ExclRoi": 26.45,
+              "top2ExclRoi": 16.53,
+              "maxStreak": 34,
+              "avgPayout": 503,
+              "medPayout": 370,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 77,
+              "hits": 10,
+              "hitRate": 12.99,
+              "roi": 49.35,
+              "top1ExclRoi": 37.37,
+              "top2ExclRoi": 28.67,
+              "maxStreak": 13,
+              "avgPayout": 380,
+              "medPayout": 260,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 77,
+              "hits": 1,
+              "hitRate": 1.3,
+              "roi": 14.55,
+              "top1ExclRoi": 0,
+              "top2ExclRoi": 0,
+              "maxStreak": 39,
+              "avgPayout": 1120,
+              "medPayout": 1120,
+              "verdict": "insufficient"
+            },
+            "exacta_12": {
+              "n": 77,
+              "hits": 5,
+              "hitRate": 6.49,
+              "roi": 50.65,
+              "top1ExclRoi": 32.11,
+              "top2ExclRoi": 20.67,
+              "maxStreak": 32,
+              "avgPayout": 780,
+              "medPayout": 670,
+              "verdict": "reject"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "13-15. 既存フィルター除外",
+      "rows": [
+        {
+          "group": "全体",
+          "cells": {
+            "exacta_14": {
+              "n": 1522,
+              "hits": 177,
+              "hitRate": 11.63,
+              "roi": 94.68,
+              "top1ExclRoi": 91.07,
+              "top2ExclRoi": 88.56,
+              "maxStreak": 40,
+              "avgPayout": 814,
+              "medPayout": 500,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 1522,
+              "hits": 252,
+              "hitRate": 16.56,
+              "roi": 86.43,
+              "top1ExclRoi": 84.71,
+              "top2ExclRoi": 83.03,
+              "maxStreak": 30,
+              "avgPayout": 522,
+              "medPayout": 310,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 1522,
+              "hits": 51,
+              "hitRate": 3.35,
+              "roi": 89.55,
+              "top1ExclRoi": 83.39,
+              "top2ExclRoi": 78.05,
+              "maxStreak": 133,
+              "avgPayout": 2673,
+              "medPayout": 1820,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 1522,
+              "hits": 117,
+              "hitRate": 7.69,
+              "roi": 67.56,
+              "top1ExclRoi": 65.97,
+              "top2ExclRoi": 64.54,
+              "maxStreak": 47,
+              "avgPayout": 879,
+              "medPayout": 800,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "skip6R除外",
+          "cells": {
+            "exacta_14": {
+              "n": 1307,
+              "hits": 153,
+              "hitRate": 11.71,
+              "roi": 98.71,
+              "top1ExclRoi": 94.5,
+              "top2ExclRoi": 91.59,
+              "maxStreak": 43,
+              "avgPayout": 843,
+              "medPayout": 510,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 1307,
+              "hits": 217,
+              "hitRate": 16.6,
+              "roi": 87.38,
+              "top1ExclRoi": 85.42,
+              "top2ExclRoi": 83.57,
+              "maxStreak": 27,
+              "avgPayout": 526,
+              "medPayout": 310,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 1307,
+              "hits": 44,
+              "hitRate": 3.37,
+              "roi": 89.16,
+              "top1ExclRoi": 81.98,
+              "top2ExclRoi": 76.02,
+              "maxStreak": 112,
+              "avgPayout": 2648,
+              "medPayout": 1820,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 1307,
+              "hits": 103,
+              "hitRate": 7.88,
+              "roi": 70.75,
+              "top1ExclRoi": 68.91,
+              "top2ExclRoi": 67.24,
+              "maxStreak": 42,
+              "avgPayout": 898,
+              "medPayout": 810,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "skipVenue除外",
+          "cells": {
+            "exacta_14": {
+              "n": 1363,
+              "hits": 160,
+              "hitRate": 11.74,
+              "roi": 98.19,
+              "top1ExclRoi": 94.15,
+              "top2ExclRoi": 91.35,
+              "maxStreak": 41,
+              "avgPayout": 836,
+              "medPayout": 510,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 1363,
+              "hits": 228,
+              "hitRate": 16.73,
+              "roi": 89.98,
+              "top1ExclRoi": 88.06,
+              "top2ExclRoi": 86.19,
+              "maxStreak": 30,
+              "avgPayout": 538,
+              "medPayout": 320,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 1363,
+              "hits": 46,
+              "hitRate": 3.37,
+              "roi": 89.88,
+              "top1ExclRoi": 83.92,
+              "top2ExclRoi": 78.2,
+              "maxStreak": 128,
+              "avgPayout": 2663,
+              "medPayout": 2030,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 1363,
+              "hits": 109,
+              "hitRate": 8,
+              "roi": 69.85,
+              "top1ExclRoi": 68.08,
+              "top2ExclRoi": 66.48,
+              "maxStreak": 54,
+              "avgPayout": 873,
+              "medPayout": 790,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "condB除外",
+          "cells": {
+            "exacta_14": {
+              "n": 1355,
+              "hits": 154,
+              "hitRate": 11.37,
+              "roi": 92.61,
+              "top1ExclRoi": 88.54,
+              "top2ExclRoi": 85.72,
+              "maxStreak": 58,
+              "avgPayout": 815,
+              "medPayout": 490,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 1355,
+              "hits": 219,
+              "hitRate": 16.16,
+              "roi": 85.1,
+              "top1ExclRoi": 83.17,
+              "top2ExclRoi": 81.28,
+              "maxStreak": 34,
+              "avgPayout": 527,
+              "medPayout": 310,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 1355,
+              "hits": 46,
+              "hitRate": 3.39,
+              "roi": 90.44,
+              "top1ExclRoi": 83.52,
+              "top2ExclRoi": 77.52,
+              "maxStreak": 122,
+              "avgPayout": 2664,
+              "medPayout": 2030,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 1355,
+              "hits": 103,
+              "hitRate": 7.6,
+              "roi": 69.44,
+              "top1ExclRoi": 67.66,
+              "top2ExclRoi": 66.05,
+              "maxStreak": 44,
+              "avgPayout": 913,
+              "medPayout": 850,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "skip6R+skipVenue除外",
+          "cells": {
+            "exacta_14": {
+              "n": 1181,
+              "hits": 139,
+              "hitRate": 11.77,
+              "roi": 101.85,
+              "top1ExclRoi": 97.19,
+              "top2ExclRoi": 93.96,
+              "maxStreak": 39,
+              "avgPayout": 865,
+              "medPayout": 520,
+              "verdict": "watch"
+            },
+            "quinella_14": {
+              "n": 1181,
+              "hits": 197,
+              "hitRate": 16.68,
+              "roi": 90.36,
+              "top1ExclRoi": 88.19,
+              "top2ExclRoi": 86.15,
+              "maxStreak": 24,
+              "avgPayout": 542,
+              "medPayout": 320,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 1181,
+              "hits": 40,
+              "hitRate": 3.39,
+              "roi": 88.72,
+              "top1ExclRoi": 82.13,
+              "top2ExclRoi": 75.76,
+              "maxStreak": 106,
+              "avgPayout": 2620,
+              "medPayout": 2030,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 1181,
+              "hits": 98,
+              "hitRate": 8.3,
+              "roi": 73.78,
+              "top1ExclRoi": 71.75,
+              "top2ExclRoi": 69.91,
+              "maxStreak": 48,
+              "avgPayout": 889,
+              "medPayout": 800,
+              "verdict": "reject"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. 会場 (n≥30のみ)",
+      "rows": [
+        {
+          "group": "びわこ",
+          "cells": {
+            "exacta_14": {
+              "n": 114,
+              "hits": 7,
+              "hitRate": 6.14,
+              "roi": 49.39,
+              "top1ExclRoi": 35.66,
+              "top2ExclRoi": 22.05,
+              "maxStreak": 56,
+              "avgPayout": 804,
+              "medPayout": 580,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 114,
+              "hits": 13,
+              "hitRate": 11.4,
+              "roi": 91.23,
+              "top1ExclRoi": 76.37,
+              "top2ExclRoi": 62.41,
+              "maxStreak": 25,
+              "avgPayout": 800,
+              "medPayout": 540,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 114,
+              "hits": 2,
+              "hitRate": 1.75,
+              "roi": 80.7,
+              "top1ExclRoi": 27.52,
+              "top2ExclRoi": 0,
+              "maxStreak": 109,
+              "avgPayout": 4600,
+              "medPayout": 6090,
+              "verdict": "insufficient"
+            },
+            "exacta_12": {
+              "n": 114,
+              "hits": 7,
+              "hitRate": 6.14,
+              "roi": 55,
+              "top1ExclRoi": 42.3,
+              "top2ExclRoi": 31.43,
+              "maxStreak": 29,
+              "avgPayout": 896,
+              "medPayout": 810,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "若松",
+          "cells": {
+            "exacta_14": {
+              "n": 98,
+              "hits": 8,
+              "hitRate": 8.16,
+              "roi": 61.94,
+              "top1ExclRoi": 42.58,
+              "top2ExclRoi": 29.69,
+              "maxStreak": 31,
+              "avgPayout": 759,
+              "medPayout": 660,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 98,
+              "hits": 11,
+              "hitRate": 11.22,
+              "roi": 55,
+              "top1ExclRoi": 42.68,
+              "top2ExclRoi": 33.13,
+              "maxStreak": 19,
+              "avgPayout": 490,
+              "medPayout": 300,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 98,
+              "hits": 4,
+              "hitRate": 4.08,
+              "roi": 155.92,
+              "top1ExclRoi": 79.28,
+              "top2ExclRoi": 33.02,
+              "maxStreak": 43,
+              "avgPayout": 3820,
+              "medPayout": 4520,
+              "verdict": "watch"
+            },
+            "exacta_12": {
+              "n": 98,
+              "hits": 6,
+              "hitRate": 6.12,
+              "roi": 46.22,
+              "top1ExclRoi": 34.23,
+              "top2ExclRoi": 23.02,
+              "maxStreak": 29,
+              "avgPayout": 755,
+              "medPayout": 1030,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "唐津",
+          "cells": {
+            "exacta_14": {
+              "n": 96,
+              "hits": 9,
+              "hitRate": 9.38,
+              "roi": 88.02,
+              "top1ExclRoi": 47.89,
+              "top2ExclRoi": 37.66,
+              "maxStreak": 30,
+              "avgPayout": 939,
+              "medPayout": 470,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 96,
+              "hits": 14,
+              "hitRate": 14.58,
+              "roi": 81.35,
+              "top1ExclRoi": 54.42,
+              "top2ExclRoi": 47.02,
+              "maxStreak": 12,
+              "avgPayout": 558,
+              "medPayout": 410,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 96,
+              "hits": 3,
+              "hitRate": 3.13,
+              "roi": 63.44,
+              "top1ExclRoi": 28.32,
+              "top2ExclRoi": 11.91,
+              "maxStreak": 49,
+              "avgPayout": 2030,
+              "medPayout": 1570,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 96,
+              "hits": 5,
+              "hitRate": 5.21,
+              "roi": 38.02,
+              "top1ExclRoi": 21.89,
+              "top2ExclRoi": 12.66,
+              "maxStreak": 32,
+              "avgPayout": 730,
+              "medPayout": 670,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "常滑",
+          "cells": {
+            "exacta_14": {
+              "n": 88,
+              "hits": 10,
+              "hitRate": 11.36,
+              "roi": 133.3,
+              "top1ExclRoi": 97.13,
+              "top2ExclRoi": 65,
+              "maxStreak": 18,
+              "avgPayout": 1173,
+              "medPayout": 700,
+              "verdict": "watch"
+            },
+            "quinella_14": {
+              "n": 88,
+              "hits": 11,
+              "hitRate": 12.5,
+              "roi": 89.09,
+              "top1ExclRoi": 66.67,
+              "top2ExclRoi": 51.63,
+              "maxStreak": 18,
+              "avgPayout": 713,
+              "medPayout": 590,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 88,
+              "hits": 4,
+              "hitRate": 4.55,
+              "roi": 218.3,
+              "top1ExclRoi": 130.34,
+              "top2ExclRoi": 69.65,
+              "maxStreak": 32,
+              "avgPayout": 4803,
+              "medPayout": 5350,
+              "verdict": "watch"
+            },
+            "exacta_12": {
+              "n": 88,
+              "hits": 11,
+              "hitRate": 12.5,
+              "roi": 147.5,
+              "top1ExclRoi": 120.69,
+              "top2ExclRoi": 102.91,
+              "maxStreak": 28,
+              "avgPayout": 1180,
+              "medPayout": 1160,
+              "verdict": "watch"
+            }
+          }
+        },
+        {
+          "group": "大村",
+          "cells": {
+            "exacta_14": {
+              "n": 87,
+              "hits": 11,
+              "hitRate": 12.64,
+              "roi": 66.67,
+              "top1ExclRoi": 56.05,
+              "top2ExclRoi": 45.76,
+              "maxStreak": 26,
+              "avgPayout": 527,
+              "medPayout": 450,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 87,
+              "hits": 14,
+              "hitRate": 16.09,
+              "roi": 101.95,
+              "top1ExclRoi": 71.74,
+              "top2ExclRoi": 57.18,
+              "maxStreak": 18,
+              "avgPayout": 634,
+              "medPayout": 310,
+              "verdict": "watch"
+            },
+            "trifecta_142": {
+              "n": 87,
+              "hits": 3,
+              "hitRate": 3.45,
+              "roi": 53.22,
+              "top1ExclRoi": 24.19,
+              "top2ExclRoi": 12,
+              "maxStreak": 39,
+              "avgPayout": 1543,
+              "medPayout": 1060,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 87,
+              "hits": 13,
+              "hitRate": 14.94,
+              "roi": 106.32,
+              "top1ExclRoi": 88.84,
+              "top2ExclRoi": 76,
+              "maxStreak": 21,
+              "avgPayout": 712,
+              "medPayout": 620,
+              "verdict": "watch"
+            }
+          }
+        },
+        {
+          "group": "尼崎",
+          "cells": {
+            "exacta_14": {
+              "n": 86,
+              "hits": 13,
+              "hitRate": 15.12,
+              "roi": 184.42,
+              "top1ExclRoi": 120.71,
+              "top2ExclRoi": 80.48,
+              "maxStreak": 18,
+              "avgPayout": 1220,
+              "medPayout": 470,
+              "verdict": "watch"
+            },
+            "quinella_14": {
+              "n": 86,
+              "hits": 18,
+              "hitRate": 20.93,
+              "roi": 123.26,
+              "top1ExclRoi": 95.29,
+              "top2ExclRoi": 72.26,
+              "maxStreak": 14,
+              "avgPayout": 589,
+              "medPayout": 270,
+              "verdict": "watch"
+            },
+            "trifecta_142": {
+              "n": 86,
+              "hits": 5,
+              "hitRate": 5.81,
+              "roi": 94.19,
+              "top1ExclRoi": 57.53,
+              "top2ExclRoi": 36.55,
+              "maxStreak": 35,
+              "avgPayout": 1620,
+              "medPayout": 1220,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 86,
+              "hits": 7,
+              "hitRate": 8.14,
+              "roi": 109.19,
+              "top1ExclRoi": 84.12,
+              "top2ExclRoi": 61.43,
+              "maxStreak": 34,
+              "avgPayout": 1341,
+              "medPayout": 1300,
+              "verdict": "watch"
+            }
+          }
+        },
+        {
+          "group": "徳山",
+          "cells": {
+            "exacta_14": {
+              "n": 83,
+              "hits": 14,
+              "hitRate": 16.87,
+              "roi": 131.81,
+              "top1ExclRoi": 88.29,
+              "top2ExclRoi": 71.48,
+              "maxStreak": 18,
+              "avgPayout": 781,
+              "medPayout": 440,
+              "verdict": "watch"
+            },
+            "quinella_14": {
+              "n": 83,
+              "hits": 17,
+              "hitRate": 20.48,
+              "roi": 102.89,
+              "top1ExclRoi": 80.85,
+              "top2ExclRoi": 69.14,
+              "maxStreak": 18,
+              "avgPayout": 502,
+              "medPayout": 280,
+              "verdict": "watch"
+            },
+            "trifecta_142": {
+              "n": 83,
+              "hits": 4,
+              "hitRate": 4.82,
+              "roi": 166.87,
+              "top1ExclRoi": 68.78,
+              "top2ExclRoi": 37.53,
+              "maxStreak": 24,
+              "avgPayout": 3463,
+              "medPayout": 2600,
+              "verdict": "watch"
+            },
+            "exacta_12": {
+              "n": 83,
+              "hits": 6,
+              "hitRate": 7.23,
+              "roi": 59.4,
+              "top1ExclRoi": 35.73,
+              "top2ExclRoi": 18.15,
+              "maxStreak": 20,
+              "avgPayout": 822,
+              "medPayout": 420,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "浜名湖",
+          "cells": {
+            "exacta_14": {
+              "n": 83,
+              "hits": 9,
+              "hitRate": 10.84,
+              "roi": 70.24,
+              "top1ExclRoi": 39.63,
+              "top2ExclRoi": 31.98,
+              "maxStreak": 19,
+              "avgPayout": 648,
+              "medPayout": 420,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 83,
+              "hits": 13,
+              "hitRate": 15.66,
+              "roi": 57.59,
+              "top1ExclRoi": 39.39,
+              "top2ExclRoi": 34.07,
+              "maxStreak": 13,
+              "avgPayout": 368,
+              "medPayout": 280,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 83,
+              "hits": 3,
+              "hitRate": 3.61,
+              "roi": 134.82,
+              "top1ExclRoi": 21.1,
+              "top2ExclRoi": 8.15,
+              "maxStreak": 51,
+              "avgPayout": 3730,
+              "medPayout": 1070,
+              "verdict": "watch"
+            },
+            "exacta_12": {
+              "n": 83,
+              "hits": 4,
+              "hitRate": 4.82,
+              "roi": 51.2,
+              "top1ExclRoi": 32.93,
+              "top2ExclRoi": 18.89,
+              "maxStreak": 26,
+              "avgPayout": 1063,
+              "medPayout": 1170,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "津",
+          "cells": {
+            "exacta_14": {
+              "n": 83,
+              "hits": 12,
+              "hitRate": 14.46,
+              "roi": 179.52,
+              "top1ExclRoi": 151.34,
+              "top2ExclRoi": 123.33,
+              "maxStreak": 14,
+              "avgPayout": 1242,
+              "medPayout": 800,
+              "verdict": "watch"
+            },
+            "quinella_14": {
+              "n": 83,
+              "hits": 16,
+              "hitRate": 19.28,
+              "roi": 127.71,
+              "top1ExclRoi": 109.02,
+              "top2ExclRoi": 92.47,
+              "maxStreak": 14,
+              "avgPayout": 663,
+              "medPayout": 620,
+              "verdict": "watch"
+            },
+            "trifecta_142": {
+              "n": 83,
+              "hits": 4,
+              "hitRate": 4.82,
+              "roi": 160.12,
+              "top1ExclRoi": 72.68,
+              "top2ExclRoi": 23.33,
+              "maxStreak": 50,
+              "avgPayout": 3323,
+              "medPayout": 4070,
+              "verdict": "watch"
+            },
+            "exacta_12": {
+              "n": 83,
+              "hits": 6,
+              "hitRate": 7.23,
+              "roi": 51.33,
+              "top1ExclRoi": 35.85,
+              "top2ExclRoi": 23.83,
+              "maxStreak": 21,
+              "avgPayout": 710,
+              "medPayout": 860,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "宮島",
+          "cells": {
+            "exacta_14": {
+              "n": 80,
+              "hits": 7,
+              "hitRate": 8.75,
+              "roi": 55.25,
+              "top1ExclRoi": 35.7,
+              "top2ExclRoi": 26.28,
+              "maxStreak": 19,
+              "avgPayout": 631,
+              "medPayout": 490,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 80,
+              "hits": 10,
+              "hitRate": 12.5,
+              "roi": 55,
+              "top1ExclRoi": 33.92,
+              "top2ExclRoi": 28.97,
+              "maxStreak": 18,
+              "avgPayout": 440,
+              "medPayout": 320,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 80,
+              "hits": 1,
+              "hitRate": 1.25,
+              "roi": 12,
+              "top1ExclRoi": 0,
+              "top2ExclRoi": 0,
+              "maxStreak": 52,
+              "avgPayout": 960,
+              "medPayout": 960,
+              "verdict": "insufficient"
+            },
+            "exacta_12": {
+              "n": 80,
+              "hits": 9,
+              "hitRate": 11.25,
+              "roi": 107.63,
+              "top1ExclRoi": 87.72,
+              "top2ExclRoi": 71.79,
+              "maxStreak": 20,
+              "avgPayout": 957,
+              "medPayout": 950,
+              "verdict": "watch"
+            }
+          }
+        },
+        {
+          "group": "下関",
+          "cells": {
+            "exacta_14": {
+              "n": 79,
+              "hits": 12,
+              "hitRate": 15.19,
+              "roi": 60.51,
+              "top1ExclRoi": 51.03,
+              "top2ExclRoi": 42.6,
+              "maxStreak": 17,
+              "avgPayout": 398,
+              "medPayout": 330,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 79,
+              "hits": 18,
+              "hitRate": 22.78,
+              "roi": 85.57,
+              "top1ExclRoi": 73.72,
+              "top2ExclRoi": 64.29,
+              "maxStreak": 15,
+              "avgPayout": 376,
+              "medPayout": 290,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 79,
+              "hits": 4,
+              "hitRate": 5.06,
+              "roi": 62.66,
+              "top1ExclRoi": 40.51,
+              "top2ExclRoi": 21.69,
+              "maxStreak": 42,
+              "avgPayout": 1238,
+              "medPayout": 1490,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 79,
+              "hits": 5,
+              "hitRate": 6.33,
+              "roi": 31.39,
+              "top1ExclRoi": 22.95,
+              "top2ExclRoi": 14.68,
+              "maxStreak": 33,
+              "avgPayout": 496,
+              "medPayout": 410,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "平和島",
+          "cells": {
+            "exacta_14": {
+              "n": 77,
+              "hits": 6,
+              "hitRate": 7.79,
+              "roi": 86.75,
+              "top1ExclRoi": 66.32,
+              "top2ExclRoi": 48,
+              "maxStreak": 38,
+              "avgPayout": 1113,
+              "medPayout": 1320,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 77,
+              "hits": 11,
+              "hitRate": 14.29,
+              "roi": 60.13,
+              "top1ExclRoi": 50,
+              "top2ExclRoi": 40.53,
+              "maxStreak": 13,
+              "avgPayout": 421,
+              "medPayout": 290,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 77,
+              "hits": 1,
+              "hitRate": 1.3,
+              "roi": 26.75,
+              "top1ExclRoi": 0,
+              "top2ExclRoi": 0,
+              "maxStreak": 73,
+              "avgPayout": 2060,
+              "medPayout": 2060,
+              "verdict": "insufficient"
+            },
+            "exacta_12": {
+              "n": 77,
+              "hits": 5,
+              "hitRate": 6.49,
+              "roi": 69.61,
+              "top1ExclRoi": 44.21,
+              "top2ExclRoi": 31.6,
+              "maxStreak": 29,
+              "avgPayout": 1072,
+              "medPayout": 900,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "福岡",
+          "cells": {
+            "exacta_14": {
+              "n": 77,
+              "hits": 11,
+              "hitRate": 14.29,
+              "roi": 125.71,
+              "top1ExclRoi": 96.58,
+              "top2ExclRoi": 71.87,
+              "maxStreak": 27,
+              "avgPayout": 880,
+              "medPayout": 500,
+              "verdict": "watch"
+            },
+            "quinella_14": {
+              "n": 77,
+              "hits": 16,
+              "hitRate": 20.78,
+              "roi": 124.03,
+              "top1ExclRoi": 97.37,
+              "top2ExclRoi": 80.27,
+              "maxStreak": 22,
+              "avgPayout": 597,
+              "medPayout": 430,
+              "verdict": "watch"
+            },
+            "trifecta_142": {
+              "n": 77,
+              "hits": 3,
+              "hitRate": 3.9,
+              "roi": 118.83,
+              "top1ExclRoi": 48.68,
+              "top2ExclRoi": 22.27,
+              "maxStreak": 47,
+              "avgPayout": 3050,
+              "medPayout": 2030,
+              "verdict": "watch"
+            },
+            "exacta_12": {
+              "n": 77,
+              "hits": 5,
+              "hitRate": 6.49,
+              "roi": 40.65,
+              "top1ExclRoi": 30.26,
+              "top2ExclRoi": 22.27,
+              "maxStreak": 24,
+              "avgPayout": 626,
+              "medPayout": 610,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "住之江",
+          "cells": {
+            "exacta_14": {
+              "n": 76,
+              "hits": 8,
+              "hitRate": 10.53,
+              "roi": 58.55,
+              "top1ExclRoi": 37.47,
+              "top2ExclRoi": 27.7,
+              "maxStreak": 28,
+              "avgPayout": 556,
+              "medPayout": 460,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 76,
+              "hits": 11,
+              "hitRate": 14.47,
+              "roi": 54.34,
+              "top1ExclRoi": 37.73,
+              "top2ExclRoi": 27.43,
+              "maxStreak": 24,
+              "avgPayout": 375,
+              "medPayout": 240,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 76,
+              "hits": 2,
+              "hitRate": 2.63,
+              "roi": 34.21,
+              "top1ExclRoi": 7.47,
+              "top2ExclRoi": 0,
+              "maxStreak": 32,
+              "avgPayout": 1300,
+              "medPayout": 2040,
+              "verdict": "insufficient"
+            },
+            "exacta_12": {
+              "n": 76,
+              "hits": 4,
+              "hitRate": 5.26,
+              "roi": 44.34,
+              "top1ExclRoi": 26.93,
+              "top2ExclRoi": 14.32,
+              "maxStreak": 55,
+              "avgPayout": 843,
+              "medPayout": 960,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "蒲郡",
+          "cells": {
+            "exacta_14": {
+              "n": 74,
+              "hits": 11,
+              "hitRate": 14.86,
+              "roi": 119.59,
+              "top1ExclRoi": 81.23,
+              "top2ExclRoi": 64.86,
+              "maxStreak": 26,
+              "avgPayout": 805,
+              "medPayout": 580,
+              "verdict": "watch"
+            },
+            "quinella_14": {
+              "n": 74,
+              "hits": 15,
+              "hitRate": 20.27,
+              "roi": 106.49,
+              "top1ExclRoi": 86.44,
+              "top2ExclRoi": 70.42,
+              "maxStreak": 25,
+              "avgPayout": 525,
+              "medPayout": 290,
+              "verdict": "watch"
+            },
+            "trifecta_142": {
+              "n": 74,
+              "hits": 2,
+              "hitRate": 2.7,
+              "roi": 48.24,
+              "top1ExclRoi": 8.08,
+              "top2ExclRoi": 0,
+              "maxStreak": 41,
+              "avgPayout": 1785,
+              "medPayout": 2980,
+              "verdict": "insufficient"
+            },
+            "exacta_12": {
+              "n": 74,
+              "hits": 6,
+              "hitRate": 8.11,
+              "roi": 58.24,
+              "top1ExclRoi": 34.93,
+              "top2ExclRoi": 18.61,
+              "maxStreak": 28,
+              "avgPayout": 718,
+              "medPayout": 480,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "丸亀",
+          "cells": {
+            "exacta_14": {
+              "n": 71,
+              "hits": 13,
+              "hitRate": 18.31,
+              "roi": 155.35,
+              "top1ExclRoi": 114.57,
+              "top2ExclRoi": 80.43,
+              "maxStreak": 15,
+              "avgPayout": 848,
+              "medPayout": 490,
+              "verdict": "watch"
+            },
+            "quinella_14": {
+              "n": 71,
+              "hits": 19,
+              "hitRate": 26.76,
+              "roi": 147.18,
+              "top1ExclRoi": 113.57,
+              "top2ExclRoi": 88.84,
+              "maxStreak": 10,
+              "avgPayout": 550,
+              "medPayout": 340,
+              "verdict": "watch"
+            },
+            "trifecta_142": {
+              "n": 71,
+              "hits": 3,
+              "hitRate": 4.23,
+              "roi": 99.3,
+              "top1ExclRoi": 54.14,
+              "top2ExclRoi": 22.75,
+              "maxStreak": 34,
+              "avgPayout": 2350,
+              "medPayout": 2220,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 71,
+              "hits": 9,
+              "hitRate": 12.68,
+              "roi": 126.9,
+              "top1ExclRoi": 101.43,
+              "top2ExclRoi": 81.59,
+              "maxStreak": 18,
+              "avgPayout": 1001,
+              "medPayout": 900,
+              "verdict": "watch"
+            }
+          }
+        },
+        {
+          "group": "芦屋",
+          "cells": {
+            "exacta_14": {
+              "n": 69,
+              "hits": 11,
+              "hitRate": 15.94,
+              "roi": 69.13,
+              "top1ExclRoi": 57.65,
+              "top2ExclRoi": 48.21,
+              "maxStreak": 14,
+              "avgPayout": 434,
+              "medPayout": 400,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 69,
+              "hits": 17,
+              "hitRate": 24.64,
+              "roi": 60.29,
+              "top1ExclRoi": 54.12,
+              "top2ExclRoi": 48.66,
+              "maxStreak": 10,
+              "avgPayout": 245,
+              "medPayout": 200,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 69,
+              "hits": 3,
+              "hitRate": 4.35,
+              "roi": 74.2,
+              "top1ExclRoi": 40.15,
+              "top2ExclRoi": 17.76,
+              "maxStreak": 32,
+              "avgPayout": 1707,
+              "medPayout": 1540,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 69,
+              "hits": 7,
+              "hitRate": 10.14,
+              "roi": 65.51,
+              "top1ExclRoi": 52.5,
+              "top2ExclRoi": 40.15,
+              "maxStreak": 26,
+              "avgPayout": 646,
+              "medPayout": 490,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "鳴門",
+          "cells": {
+            "exacta_14": {
+              "n": 63,
+              "hits": 2,
+              "hitRate": 3.17,
+              "roi": 32.54,
+              "top1ExclRoi": 5.32,
+              "top2ExclRoi": 0,
+              "maxStreak": 40,
+              "avgPayout": 1025,
+              "medPayout": 1720,
+              "verdict": "insufficient"
+            },
+            "quinella_14": {
+              "n": 63,
+              "hits": 4,
+              "hitRate": 6.35,
+              "roi": 44.29,
+              "top1ExclRoi": 24.35,
+              "top2ExclRoi": 11.15,
+              "maxStreak": 21,
+              "avgPayout": 698,
+              "medPayout": 830,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 63,
+              "hits": 0,
+              "hitRate": 0,
+              "roi": 0,
+              "top1ExclRoi": 0,
+              "top2ExclRoi": 0,
+              "maxStreak": 63,
+              "avgPayout": null,
+              "medPayout": null,
+              "verdict": "insufficient"
+            },
+            "exacta_12": {
+              "n": 63,
+              "hits": 1,
+              "hitRate": 1.59,
+              "roi": 7.3,
+              "top1ExclRoi": 0,
+              "top2ExclRoi": 0,
+              "maxStreak": 62,
+              "avgPayout": 460,
+              "medPayout": 460,
+              "verdict": "insufficient"
+            }
+          }
+        },
+        {
+          "group": "児島",
+          "cells": {
+            "exacta_14": {
+              "n": 38,
+              "hits": 3,
+              "hitRate": 7.89,
+              "roi": 57.63,
+              "top1ExclRoi": 24.86,
+              "top2ExclRoi": 7.78,
+              "maxStreak": 20,
+              "avgPayout": 730,
+              "medPayout": 640,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 38,
+              "hits": 4,
+              "hitRate": 10.53,
+              "roi": 51.84,
+              "top1ExclRoi": 32.43,
+              "top2ExclRoi": 15,
+              "maxStreak": 20,
+              "avgPayout": 493,
+              "medPayout": 660,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 38,
+              "hits": 0,
+              "hitRate": 0,
+              "roi": 0,
+              "top1ExclRoi": 0,
+              "top2ExclRoi": 0,
+              "maxStreak": 38,
+              "avgPayout": null,
+              "medPayout": null,
+              "verdict": "insufficient"
+            },
+            "exacta_12": {
+              "n": 38,
+              "hits": 1,
+              "hitRate": 2.63,
+              "roi": 54.21,
+              "top1ExclRoi": 0,
+              "top2ExclRoi": 0,
+              "maxStreak": 35,
+              "avgPayout": 2060,
+              "medPayout": 2060,
+              "verdict": "insufficient"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "11. raceNo",
+      "rows": [
+        {
+          "group": "1R",
+          "cells": {
+            "exacta_14": {
+              "n": 82,
+              "hits": 8,
+              "hitRate": 9.76,
+              "roi": 94.88,
+              "top1ExclRoi": 68.4,
+              "top2ExclRoi": 49.25,
+              "maxStreak": 22,
+              "avgPayout": 973,
+              "medPayout": 780,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 82,
+              "hits": 11,
+              "hitRate": 13.41,
+              "roi": 75.61,
+              "top1ExclRoi": 56.3,
+              "top2ExclRoi": 44.63,
+              "maxStreak": 22,
+              "avgPayout": 564,
+              "medPayout": 400,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 82,
+              "hits": 2,
+              "hitRate": 2.44,
+              "roi": 58.78,
+              "top1ExclRoi": 19.26,
+              "top2ExclRoi": 0,
+              "maxStreak": 39,
+              "avgPayout": 2410,
+              "medPayout": 3260,
+              "verdict": "insufficient"
+            },
+            "exacta_12": {
+              "n": 82,
+              "hits": 10,
+              "hitRate": 12.2,
+              "roi": 140.73,
+              "top1ExclRoi": 114.81,
+              "top2ExclRoi": 90.5,
+              "maxStreak": 21,
+              "avgPayout": 1154,
+              "medPayout": 1460,
+              "verdict": "watch"
+            }
+          }
+        },
+        {
+          "group": "2R",
+          "cells": {
+            "exacta_14": {
+              "n": 169,
+              "hits": 22,
+              "hitRate": 13.02,
+              "roi": 89.17,
+              "top1ExclRoi": 74.35,
+              "top2ExclRoi": 60.78,
+              "maxStreak": 22,
+              "avgPayout": 685,
+              "medPayout": 460,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 169,
+              "hits": 32,
+              "hitRate": 18.93,
+              "roi": 87.1,
+              "top1ExclRoi": 74.82,
+              "top2ExclRoi": 65.99,
+              "maxStreak": 20,
+              "avgPayout": 460,
+              "medPayout": 280,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 169,
+              "hits": 6,
+              "hitRate": 3.55,
+              "roi": 127.22,
+              "top1ExclRoi": 71.67,
+              "top2ExclRoi": 45.03,
+              "maxStreak": 45,
+              "avgPayout": 3583,
+              "medPayout": 3350,
+              "verdict": "watch"
+            },
+            "exacta_12": {
+              "n": 169,
+              "hits": 9,
+              "hitRate": 5.33,
+              "roi": 34.26,
+              "top1ExclRoi": 28.75,
+              "top2ExclRoi": 23.23,
+              "maxStreak": 53,
+              "avgPayout": 643,
+              "medPayout": 710,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "3R",
+          "cells": {
+            "exacta_14": {
+              "n": 180,
+              "hits": 19,
+              "hitRate": 10.56,
+              "roi": 146.89,
+              "top1ExclRoi": 129.39,
+              "top2ExclRoi": 113.2,
+              "maxStreak": 36,
+              "avgPayout": 1392,
+              "medPayout": 1350,
+              "verdict": "watch"
+            },
+            "quinella_14": {
+              "n": 180,
+              "hits": 25,
+              "hitRate": 13.89,
+              "roi": 106.83,
+              "top1ExclRoi": 93.46,
+              "top2ExclRoi": 82.53,
+              "maxStreak": 21,
+              "avgPayout": 769,
+              "medPayout": 660,
+              "verdict": "watch"
+            },
+            "trifecta_142": {
+              "n": 180,
+              "hits": 5,
+              "hitRate": 2.78,
+              "roi": 150.89,
+              "top1ExclRoi": 107.77,
+              "top2ExclRoi": 65.73,
+              "maxStreak": 91,
+              "avgPayout": 5432,
+              "medPayout": 7330,
+              "verdict": "watch"
+            },
+            "exacta_12": {
+              "n": 180,
+              "hits": 13,
+              "hitRate": 7.22,
+              "roi": 68.06,
+              "top1ExclRoi": 57.32,
+              "top2ExclRoi": 48.2,
+              "maxStreak": 50,
+              "avgPayout": 942,
+              "medPayout": 900,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "4R",
+          "cells": {
+            "exacta_14": {
+              "n": 205,
+              "hits": 22,
+              "hitRate": 10.73,
+              "roi": 105.12,
+              "top1ExclRoi": 88.48,
+              "top2ExclRoi": 76.75,
+              "maxStreak": 26,
+              "avgPayout": 980,
+              "medPayout": 590,
+              "verdict": "watch"
+            },
+            "quinella_14": {
+              "n": 205,
+              "hits": 28,
+              "hitRate": 13.66,
+              "roi": 112.83,
+              "top1ExclRoi": 101.13,
+              "top2ExclRoi": 92.66,
+              "maxStreak": 19,
+              "avgPayout": 826,
+              "medPayout": 770,
+              "verdict": "watch"
+            },
+            "trifecta_142": {
+              "n": 205,
+              "hits": 9,
+              "hitRate": 4.39,
+              "roi": 102.1,
+              "top1ExclRoi": 75.88,
+              "top2ExclRoi": 56.21,
+              "maxStreak": 49,
+              "avgPayout": 2326,
+              "medPayout": 2030,
+              "verdict": "watch"
+            },
+            "exacta_12": {
+              "n": 205,
+              "hits": 17,
+              "hitRate": 8.29,
+              "roi": 83.71,
+              "top1ExclRoi": 71.96,
+              "top2ExclRoi": 63.65,
+              "maxStreak": 26,
+              "avgPayout": 1009,
+              "medPayout": 1020,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "5R",
+          "cells": {
+            "exacta_14": {
+              "n": 184,
+              "hits": 23,
+              "hitRate": 12.5,
+              "roi": 81.09,
+              "top1ExclRoi": 72.57,
+              "top2ExclRoi": 64.4,
+              "maxStreak": 21,
+              "avgPayout": 649,
+              "medPayout": 510,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 184,
+              "hits": 36,
+              "hitRate": 19.57,
+              "roi": 79.51,
+              "top1ExclRoi": 70.27,
+              "top2ExclRoi": 66.04,
+              "maxStreak": 14,
+              "avgPayout": 406,
+              "medPayout": 320,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 184,
+              "hits": 9,
+              "hitRate": 4.89,
+              "roi": 94.18,
+              "top1ExclRoi": 61.42,
+              "top2ExclRoi": 45.38,
+              "maxStreak": 61,
+              "avgPayout": 1926,
+              "medPayout": 1190,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 184,
+              "hits": 15,
+              "hitRate": 8.15,
+              "roi": 67.72,
+              "top1ExclRoi": 59.51,
+              "top2ExclRoi": 52.42,
+              "maxStreak": 43,
+              "avgPayout": 831,
+              "medPayout": 720,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "6R",
+          "cells": {
+            "exacta_14": {
+              "n": 215,
+              "hits": 24,
+              "hitRate": 11.16,
+              "roi": 70.19,
+              "top1ExclRoi": 53.22,
+              "top2ExclRoi": 45.96,
+              "maxStreak": 38,
+              "avgPayout": 629,
+              "medPayout": 420,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 215,
+              "hits": 35,
+              "hitRate": 16.28,
+              "roi": 80.7,
+              "top1ExclRoi": 68.46,
+              "top2ExclRoi": 59.81,
+              "maxStreak": 19,
+              "avgPayout": 496,
+              "medPayout": 340,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 215,
+              "hits": 7,
+              "hitRate": 3.26,
+              "roi": 91.95,
+              "top1ExclRoi": 54.02,
+              "top2ExclRoi": 39.67,
+              "maxStreak": 60,
+              "avgPayout": 2824,
+              "medPayout": 2040,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 215,
+              "hits": 14,
+              "hitRate": 6.51,
+              "roi": 48.14,
+              "top1ExclRoi": 42.29,
+              "top2ExclRoi": 37,
+              "maxStreak": 39,
+              "avgPayout": 739,
+              "medPayout": 660,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "7R",
+          "cells": {
+            "exacta_14": {
+              "n": 209,
+              "hits": 21,
+              "hitRate": 10.05,
+              "roi": 94.5,
+              "top1ExclRoi": 76.2,
+              "top2ExclRoi": 62.75,
+              "maxStreak": 29,
+              "avgPayout": 940,
+              "medPayout": 550,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 209,
+              "hits": 28,
+              "hitRate": 13.4,
+              "roi": 75.65,
+              "top1ExclRoi": 63.32,
+              "top2ExclRoi": 55.6,
+              "maxStreak": 22,
+              "avgPayout": 565,
+              "medPayout": 390,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 209,
+              "hits": 5,
+              "hitRate": 2.39,
+              "roi": 36.7,
+              "top1ExclRoi": 24.38,
+              "top2ExclRoi": 16.91,
+              "maxStreak": 113,
+              "avgPayout": 1534,
+              "medPayout": 1320,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 209,
+              "hits": 14,
+              "hitRate": 6.7,
+              "roi": 61,
+              "top1ExclRoi": 54.28,
+              "top2ExclRoi": 47.92,
+              "maxStreak": 38,
+              "avgPayout": 911,
+              "medPayout": 950,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "8R",
+          "cells": {
+            "exacta_14": {
+              "n": 168,
+              "hits": 24,
+              "hitRate": 14.29,
+              "roi": 69.94,
+              "top1ExclRoi": 63.17,
+              "top2ExclRoi": 57.11,
+              "maxStreak": 37,
+              "avgPayout": 490,
+              "medPayout": 440,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 168,
+              "hits": 38,
+              "hitRate": 22.62,
+              "roi": 72.32,
+              "top1ExclRoi": 66.47,
+              "top2ExclRoi": 60.66,
+              "maxStreak": 24,
+              "avgPayout": 320,
+              "medPayout": 210,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 168,
+              "hits": 8,
+              "hitRate": 4.76,
+              "roi": 101.9,
+              "top1ExclRoi": 70.48,
+              "top2ExclRoi": 50.42,
+              "maxStreak": 48,
+              "avgPayout": 2140,
+              "medPayout": 2060,
+              "verdict": "watch"
+            },
+            "exacta_12": {
+              "n": 168,
+              "hits": 14,
+              "hitRate": 8.33,
+              "roi": 65.71,
+              "top1ExclRoi": 54.13,
+              "top2ExclRoi": 45.48,
+              "maxStreak": 30,
+              "avgPayout": 789,
+              "medPayout": 630,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "9R",
+          "cells": {
+            "exacta_14": {
+              "n": 110,
+              "hits": 14,
+              "hitRate": 12.73,
+              "roi": 106.91,
+              "top1ExclRoi": 56.51,
+              "top2ExclRoi": 47.69,
+              "maxStreak": 23,
+              "avgPayout": 840,
+              "medPayout": 430,
+              "verdict": "watch"
+            },
+            "quinella_14": {
+              "n": 110,
+              "hits": 19,
+              "hitRate": 17.27,
+              "roi": 75.73,
+              "top1ExclRoi": 57.8,
+              "top2ExclRoi": 49.63,
+              "maxStreak": 15,
+              "avgPayout": 438,
+              "medPayout": 250,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 110,
+              "hits": 0,
+              "hitRate": 0,
+              "roi": 0,
+              "top1ExclRoi": 0,
+              "top2ExclRoi": 0,
+              "maxStreak": 110,
+              "avgPayout": null,
+              "medPayout": null,
+              "verdict": "insufficient"
+            },
+            "exacta_12": {
+              "n": 110,
+              "hits": 11,
+              "hitRate": 10,
+              "roi": 86.18,
+              "top1ExclRoi": 68.62,
+              "top2ExclRoi": 53.98,
+              "maxStreak": 22,
+              "avgPayout": 862,
+              "medPayout": 670,
+              "verdict": "reject"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "12. 月別",
+      "rows": [
+        {
+          "group": "2025-01",
+          "cells": {
+            "exacta_14": {
+              "n": 1,
+              "hits": 0,
+              "hitRate": 0,
+              "roi": 0,
+              "top1ExclRoi": 0,
+              "top2ExclRoi": 0,
+              "maxStreak": 1,
+              "avgPayout": null,
+              "medPayout": null,
+              "verdict": "insufficient"
+            },
+            "quinella_14": {
+              "n": 1,
+              "hits": 1,
+              "hitRate": 100,
+              "roi": 1030,
+              "top1ExclRoi": 0,
+              "top2ExclRoi": 0,
+              "maxStreak": 0,
+              "avgPayout": 1030,
+              "medPayout": 1030,
+              "verdict": "insufficient"
+            },
+            "trifecta_142": {
+              "n": 1,
+              "hits": 0,
+              "hitRate": 0,
+              "roi": 0,
+              "top1ExclRoi": 0,
+              "top2ExclRoi": 0,
+              "maxStreak": 1,
+              "avgPayout": null,
+              "medPayout": null,
+              "verdict": "insufficient"
+            },
+            "exacta_12": {
+              "n": 1,
+              "hits": 0,
+              "hitRate": 0,
+              "roi": 0,
+              "top1ExclRoi": 0,
+              "top2ExclRoi": 0,
+              "maxStreak": 1,
+              "avgPayout": null,
+              "medPayout": null,
+              "verdict": "insufficient"
+            }
+          }
+        },
+        {
+          "group": "2025-02",
+          "cells": {
+            "exacta_14": {
+              "n": 103,
+              "hits": 8,
+              "hitRate": 7.77,
+              "roi": 55.73,
+              "top1ExclRoi": 37.25,
+              "top2ExclRoi": 21.39,
+              "maxStreak": 38,
+              "avgPayout": 718,
+              "medPayout": 440,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 103,
+              "hits": 11,
+              "hitRate": 10.68,
+              "roi": 50.58,
+              "top1ExclRoi": 38.33,
+              "top2ExclRoi": 29.21,
+              "maxStreak": 30,
+              "avgPayout": 474,
+              "medPayout": 290,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 103,
+              "hits": 2,
+              "hitRate": 1.94,
+              "roi": 59.13,
+              "top1ExclRoi": 15.39,
+              "top2ExclRoi": 0,
+              "maxStreak": 53,
+              "avgPayout": 3045,
+              "medPayout": 4520,
+              "verdict": "insufficient"
+            },
+            "exacta_12": {
+              "n": 103,
+              "hits": 8,
+              "hitRate": 7.77,
+              "roi": 70.19,
+              "top1ExclRoi": 55.49,
+              "top2ExclRoi": 41.58,
+              "maxStreak": 35,
+              "avgPayout": 904,
+              "medPayout": 850,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "2025-03",
+          "cells": {
+            "exacta_14": {
+              "n": 97,
+              "hits": 13,
+              "hitRate": 13.4,
+              "roi": 91.13,
+              "top1ExclRoi": 66.35,
+              "top2ExclRoi": 53.16,
+              "maxStreak": 16,
+              "avgPayout": 680,
+              "medPayout": 470,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 97,
+              "hits": 17,
+              "hitRate": 17.53,
+              "roi": 76.39,
+              "top1ExclRoi": 58.23,
+              "top2ExclRoi": 50.11,
+              "maxStreak": 16,
+              "avgPayout": 436,
+              "medPayout": 310,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 97,
+              "hits": 5,
+              "hitRate": 5.15,
+              "roi": 57.42,
+              "top1ExclRoi": 41.67,
+              "top2ExclRoi": 25.89,
+              "maxStreak": 52,
+              "avgPayout": 1114,
+              "medPayout": 1220,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 97,
+              "hits": 9,
+              "hitRate": 9.28,
+              "roi": 77.63,
+              "top1ExclRoi": 62.29,
+              "top2ExclRoi": 52.53,
+              "maxStreak": 22,
+              "avgPayout": 837,
+              "medPayout": 900,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "2025-04",
+          "cells": {
+            "exacta_14": {
+              "n": 165,
+              "hits": 18,
+              "hitRate": 10.91,
+              "roi": 68.73,
+              "top1ExclRoi": 49.15,
+              "top2ExclRoi": 40.61,
+              "maxStreak": 21,
+              "avgPayout": 630,
+              "medPayout": 380,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 165,
+              "hits": 28,
+              "hitRate": 16.97,
+              "roi": 67.39,
+              "top1ExclRoi": 55.37,
+              "top2ExclRoi": 49.51,
+              "maxStreak": 12,
+              "avgPayout": 397,
+              "medPayout": 260,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 165,
+              "hits": 2,
+              "hitRate": 1.21,
+              "roi": 21.76,
+              "top1ExclRoi": 9.51,
+              "top2ExclRoi": 0,
+              "maxStreak": 133,
+              "avgPayout": 1795,
+              "medPayout": 2030,
+              "verdict": "insufficient"
+            },
+            "exacta_12": {
+              "n": 165,
+              "hits": 15,
+              "hitRate": 9.09,
+              "roi": 91.39,
+              "top1ExclRoi": 78.29,
+              "top2ExclRoi": 69.57,
+              "maxStreak": 26,
+              "avgPayout": 1005,
+              "medPayout": 910,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "2025-05",
+          "cells": {
+            "exacta_14": {
+              "n": 191,
+              "hits": 29,
+              "hitRate": 15.18,
+              "roi": 136.65,
+              "top1ExclRoi": 107.89,
+              "top2ExclRoi": 93.33,
+              "maxStreak": 17,
+              "avgPayout": 900,
+              "medPayout": 460,
+              "verdict": "watch"
+            },
+            "quinella_14": {
+              "n": 191,
+              "hits": 39,
+              "hitRate": 20.42,
+              "roi": 92.77,
+              "top1ExclRoi": 82.58,
+              "top2ExclRoi": 74.23,
+              "maxStreak": 17,
+              "avgPayout": 454,
+              "medPayout": 260,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 191,
+              "hits": 9,
+              "hitRate": 4.71,
+              "roi": 129.84,
+              "top1ExclRoi": 80.74,
+              "top2ExclRoi": 52.86,
+              "maxStreak": 43,
+              "avgPayout": 2756,
+              "medPayout": 1120,
+              "verdict": "watch"
+            },
+            "exacta_12": {
+              "n": 191,
+              "hits": 15,
+              "hitRate": 7.85,
+              "roi": 86.49,
+              "top1ExclRoi": 76.42,
+              "top2ExclRoi": 66.3,
+              "maxStreak": 30,
+              "avgPayout": 1101,
+              "medPayout": 950,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "2025-06",
+          "cells": {
+            "exacta_14": {
+              "n": 195,
+              "hits": 17,
+              "hitRate": 8.72,
+              "roi": 74.41,
+              "top1ExclRoi": 56.75,
+              "top2ExclRoi": 45.39,
+              "maxStreak": 32,
+              "avgPayout": 854,
+              "medPayout": 590,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 195,
+              "hits": 29,
+              "hitRate": 14.87,
+              "roi": 87.74,
+              "top1ExclRoi": 74.28,
+              "top2ExclRoi": 61.71,
+              "maxStreak": 20,
+              "avgPayout": 590,
+              "medPayout": 340,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 195,
+              "hits": 6,
+              "hitRate": 3.08,
+              "roi": 87.38,
+              "top1ExclRoi": 66.86,
+              "top2ExclRoi": 49.59,
+              "maxStreak": 107,
+              "avgPayout": 2840,
+              "medPayout": 3260,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 195,
+              "hits": 13,
+              "hitRate": 6.67,
+              "roi": 65.64,
+              "top1ExclRoi": 55.36,
+              "top2ExclRoi": 45.28,
+              "maxStreak": 31,
+              "avgPayout": 985,
+              "medPayout": 900,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "2025-07",
+          "cells": {
+            "exacta_14": {
+              "n": 226,
+              "hits": 21,
+              "hitRate": 9.29,
+              "roi": 78.81,
+              "top1ExclRoi": 61.82,
+              "top2ExclRoi": 49.06,
+              "maxStreak": 40,
+              "avgPayout": 848,
+              "medPayout": 550,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 226,
+              "hits": 31,
+              "hitRate": 13.72,
+              "roi": 73.58,
+              "top1ExclRoi": 62.18,
+              "top2ExclRoi": 55.36,
+              "maxStreak": 30,
+              "avgPayout": 536,
+              "medPayout": 330,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 226,
+              "hits": 8,
+              "hitRate": 3.54,
+              "roi": 84.69,
+              "top1ExclRoi": 51.33,
+              "top2ExclRoi": 36.61,
+              "maxStreak": 63,
+              "avgPayout": 2393,
+              "medPayout": 1820,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 226,
+              "hits": 11,
+              "hitRate": 4.87,
+              "roi": 37.65,
+              "top1ExclRoi": 26.8,
+              "top2ExclRoi": 19.06,
+              "maxStreak": 36,
+              "avgPayout": 774,
+              "medPayout": 490,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "2025-08",
+          "cells": {
+            "exacta_14": {
+              "n": 215,
+              "hits": 27,
+              "hitRate": 12.56,
+              "roi": 114.79,
+              "top1ExclRoi": 98.04,
+              "top2ExclRoi": 84.37,
+              "maxStreak": 28,
+              "avgPayout": 914,
+              "medPayout": 660,
+              "verdict": "watch"
+            },
+            "quinella_14": {
+              "n": 215,
+              "hits": 36,
+              "hitRate": 16.74,
+              "roi": 98.88,
+              "top1ExclRoi": 87.66,
+              "top2ExclRoi": 79.11,
+              "maxStreak": 28,
+              "avgPayout": 591,
+              "medPayout": 360,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 215,
+              "hits": 6,
+              "hitRate": 2.79,
+              "roi": 83.21,
+              "top1ExclRoi": 45.23,
+              "top2ExclRoi": 31.46,
+              "maxStreak": 45,
+              "avgPayout": 2982,
+              "medPayout": 2490,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 215,
+              "hits": 16,
+              "hitRate": 7.44,
+              "roi": 56.28,
+              "top1ExclRoi": 47.62,
+              "top2ExclRoi": 39.95,
+              "maxStreak": 32,
+              "avgPayout": 756,
+              "medPayout": 630,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "2025-09",
+          "cells": {
+            "exacta_14": {
+              "n": 114,
+              "hits": 14,
+              "hitRate": 12.28,
+              "roi": 84.39,
+              "top1ExclRoi": 64.42,
+              "top2ExclRoi": 52.77,
+              "maxStreak": 34,
+              "avgPayout": 687,
+              "medPayout": 480,
+              "verdict": "reject"
+            },
+            "quinella_14": {
+              "n": 114,
+              "hits": 20,
+              "hitRate": 17.54,
+              "roi": 90,
+              "top1ExclRoi": 71.77,
+              "top2ExclRoi": 65.27,
+              "maxStreak": 16,
+              "avgPayout": 513,
+              "medPayout": 390,
+              "verdict": "reject"
+            },
+            "trifecta_142": {
+              "n": 114,
+              "hits": 3,
+              "hitRate": 2.63,
+              "roi": 87.02,
+              "top1ExclRoi": 18.14,
+              "top2ExclRoi": 5,
+              "maxStreak": 53,
+              "avgPayout": 3307,
+              "medPayout": 1490,
+              "verdict": "reject"
+            },
+            "exacta_12": {
+              "n": 114,
+              "hits": 10,
+              "hitRate": 8.77,
+              "roi": 70.96,
+              "top1ExclRoi": 58.58,
+              "top2ExclRoi": 48.3,
+              "maxStreak": 36,
+              "avgPayout": 809,
+              "medPayout": 900,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "2025-10",
+          "cells": {
+            "exacta_14": {
+              "n": 82,
+              "hits": 12,
+              "hitRate": 14.63,
+              "roi": 144.76,
+              "top1ExclRoi": 116.67,
+              "top2ExclRoi": 96.63,
+              "maxStreak": 15,
+              "avgPayout": 989,
+              "medPayout": 980,
+              "verdict": "watch"
+            },
+            "quinella_14": {
+              "n": 82,
+              "hits": 16,
+              "hitRate": 19.51,
+              "roi": 145.24,
+              "top1ExclRoi": 125.19,
+              "top2ExclRoi": 106.25,
+              "maxStreak": 11,
+              "avgPayout": 744,
+              "medPayout": 800,
+              "verdict": "watch"
+            },
+            "trifecta_142": {
+              "n": 82,
+              "hits": 3,
+              "hitRate": 3.66,
+              "roi": 100.37,
+              "top1ExclRoi": 26.42,
+              "top2ExclRoi": 4.38,
+              "maxStreak": 27,
+              "avgPayout": 2743,
+              "medPayout": 1790,
+              "verdict": "watch"
+            },
+            "exacta_12": {
+              "n": 82,
+              "hits": 7,
+              "hitRate": 8.54,
+              "roi": 56.46,
+              "top1ExclRoi": 37.28,
+              "top2ExclRoi": 22,
+              "maxStreak": 27,
+              "avgPayout": 661,
+              "medPayout": 390,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "2025-11",
+          "cells": {
+            "exacta_14": {
+              "n": 110,
+              "hits": 18,
+              "hitRate": 16.36,
+              "roi": 123.64,
+              "top1ExclRoi": 101.93,
+              "top2ExclRoi": 84.81,
+              "maxStreak": 33,
+              "avgPayout": 756,
+              "medPayout": 490,
+              "verdict": "watch"
+            },
+            "quinella_14": {
+              "n": 110,
+              "hits": 23,
+              "hitRate": 20.91,
+              "roi": 102.73,
+              "top1ExclRoi": 90.37,
+              "top2ExclRoi": 78.43,
+              "maxStreak": 15,
+              "avgPayout": 491,
+              "medPayout": 300,
+              "verdict": "watch"
+            },
+            "trifecta_142": {
+              "n": 110,
+              "hits": 7,
+              "hitRate": 6.36,
+              "roi": 218.45,
+              "top1ExclRoi": 153.21,
+              "top2ExclRoi": 104.17,
+              "maxStreak": 47,
+              "avgPayout": 3433,
+              "medPayout": 2640,
+              "verdict": "watch"
+            },
+            "exacta_12": {
+              "n": 110,
+              "hits": 9,
+              "hitRate": 8.18,
+              "roi": 65.45,
+              "top1ExclRoi": 53.85,
+              "top2ExclRoi": 43.15,
+              "maxStreak": 42,
+              "avgPayout": 800,
+              "medPayout": 730,
+              "verdict": "reject"
+            }
+          }
+        },
+        {
+          "group": "2026-05",
+          "cells": {
+            "exacta_14": {
+              "n": 23,
+              "hits": 0,
+              "hitRate": 0,
+              "roi": 0,
+              "top1ExclRoi": 0,
+              "top2ExclRoi": 0,
+              "maxStreak": 23,
+              "avgPayout": null,
+              "medPayout": null,
+              "verdict": "insufficient"
+            },
+            "quinella_14": {
+              "n": 23,
+              "hits": 1,
+              "hitRate": 4.35,
+              "roi": 25.65,
+              "top1ExclRoi": 0,
+              "top2ExclRoi": 0,
+              "maxStreak": 16,
+              "avgPayout": 590,
+              "medPayout": 590,
+              "verdict": "insufficient"
+            },
+            "trifecta_142": {
+              "n": 23,
+              "hits": 0,
+              "hitRate": 0,
+              "roi": 0,
+              "top1ExclRoi": 0,
+              "top2ExclRoi": 0,
+              "maxStreak": 23,
+              "avgPayout": null,
+              "medPayout": null,
+              "verdict": "insufficient"
+            },
+            "exacta_12": {
+              "n": 23,
+              "hits": 4,
+              "hitRate": 17.39,
+              "roi": 136.09,
+              "top1ExclRoi": 85.45,
+              "top2ExclRoi": 34.29,
+              "maxStreak": 7,
+              "avgPayout": 783,
+              "medPayout": 1160,
+              "verdict": "insufficient"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

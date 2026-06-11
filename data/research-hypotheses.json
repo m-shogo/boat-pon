@@ -288,6 +288,54 @@
       "adoptionAllowed": false,
       "nextAction": "none",
       "blockedReason": "skip/switch検証完了後に着手"
+    },
+    {
+      "id": "H011",
+      "name": "1-4系 市場過小評価 (2連単1-4)",
+      "description": "現行BUY集合で4号艇2着が市場に過小評価されている可能性。2連単1-4を中心とした1-4系チケット",
+      "status": "tested-historical",
+      "priority": 3,
+      "adoptionAllowed": false,
+      "adoptionBlockReason": "全体ROI 94.7% < 100%。条件付き(風速2-3/モーター上位)でROI>100%だがbacktest内の条件選択でありforward未確認",
+      "lastKnownMetrics": {
+        "n": 1522,
+        "exacta_14_roi": 94.7,
+        "exacta_14_top2_exclude_roi": 88.6,
+        "exacta_12_roi": 67.6,
+        "second_dist_given_boat1_win": "4号艇29.7% > 3号艇24.3% > 2号艇19.6%",
+        "avg_exacta_payout": "1-4: 814円 / 1-2: 879円 / 1-3: 797円",
+        "conditional_ev": "1-4: 2.42 / 1-3: 1.94 / 1-2: 1.72",
+        "wind23_roi": 113.5,
+        "wind23_top2_exclude_roi": 103.4,
+        "wind23_n": 694,
+        "motor_top_roi": 112.1,
+        "motor_top_top2_exclude_roi": 99.5,
+        "motor_top_n": 538,
+        "skip6r_skipvenue_excl_roi": 101.8,
+        "odds_source": "race_payouts実払戻"
+      },
+      "gateStatus": {
+        "nSufficient": true,
+        "dataQualityOk": true,
+        "roiBeatsBaseline": true,
+        "top2ExcludeRoiOk": false,
+        "futureOnlyConfirmed": false
+      },
+      "verdict": {
+        "structural_evidence": "1号艇1着時の2着率は4号艇が最多(29.7%)なのに平均払戻は2号艇並み → このBUY集合内で市場が1-2をデフォルト2着として過大評価している示唆",
+        "overall": "reject (94.7% < 100%)",
+        "wind23": "watch (113.5% / top2除外103.4% / n=694 / 0hit月なし)",
+        "motor_top": "watch (112.1% / top2除外99.5% / n=538)",
+        "caution": "条件付きROI>100%はbacktest内の条件選択。condB(風速2-4)と帯が重なる点も独立性に注意"
+      },
+      "nextAction": "forward monitor: 2026-06以降のBUYレースで2連単1-4相当の的中/払戻を追跡。条件追加でのROI掘りは禁止",
+      "notes": [
+        "2026-06-12 検証: pnpm analyze:one-four-structure (774026b全券種シミュレーターの追跡)",
+        "月別で0hit月なし、11ヶ月中9ヶ月で1-4が1-2を上回る一貫性",
+        "2着分布の歪みは説明可能な構造 (BUY集合は1号艇優位レースに偏る→市場は1-2を本線視)",
+        "ただし単勝/複勝同様、2連単の事前オッズデータがないため市場価格での検証は不可",
+        "風向別(北142%等)はn<200で会場相関の可能性が高くノイズ扱い"
+      ]
     }
   ]
 }

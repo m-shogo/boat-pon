@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-11T02:29:38.757Z",
+  "generatedAt": "2026-06-11T06:34:28.954Z",
   "phase": "research-monitor",
   "warnings": [],
   "nextAction": {
@@ -104,6 +104,40 @@
         "remaining_top2_exclude_roi": 88.94,
         "recent3m_roi": 83.5,
         "overlap_condB": 23
+      }
+    },
+    {
+      "id": "H011",
+      "name": "1-4系 市場過小評価 (2連単1-4)",
+      "status": "tested-historical",
+      "priority": 3,
+      "adoptionAllowed": false,
+      "adoptionBlockReason": "全体ROI 94.7% < 100%。条件付き(風速2-3/モーター上位)でROI>100%だがbacktest内の条件選択でありforward未確認",
+      "nextAction": "forward monitor: 2026-06以降のBUYレースで2連単1-4相当の的中/払戻を追跡。条件追加でのROI掘りは禁止",
+      "blockedReason": null,
+      "gateStatus": {
+        "nSufficient": true,
+        "dataQualityOk": true,
+        "roiBeatsBaseline": true,
+        "top2ExcludeRoiOk": false,
+        "futureOnlyConfirmed": false
+      },
+      "lastKnownMetrics": {
+        "n": 1522,
+        "exacta_14_roi": 94.7,
+        "exacta_14_top2_exclude_roi": 88.6,
+        "exacta_12_roi": 67.6,
+        "second_dist_given_boat1_win": "4号艇29.7% > 3号艇24.3% > 2号艇19.6%",
+        "avg_exacta_payout": "1-4: 814円 / 1-2: 879円 / 1-3: 797円",
+        "conditional_ev": "1-4: 2.42 / 1-3: 1.94 / 1-2: 1.72",
+        "wind23_roi": 113.5,
+        "wind23_top2_exclude_roi": 103.4,
+        "wind23_n": 694,
+        "motor_top_roi": 112.1,
+        "motor_top_top2_exclude_roi": 99.5,
+        "motor_top_n": 538,
+        "skip6r_skipvenue_excl_roi": 101.8,
+        "odds_source": "race_payouts実払戻"
       }
     },
     {

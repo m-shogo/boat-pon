@@ -151,6 +151,7 @@
     "analyze:skip6r-switch-historical": "tsx scripts/analyze-skip6r-switch-historical-closing-odds.ts",
     "analyze:skipvenue-switch-historical": "tsx scripts/analyze-skipvenue-switch-historical-closing-odds.ts",
     "analyze:all-bet-types-roi": "tsx scripts/analyze-all-bet-types-roi.ts",
+    "analyze:one-four-structure": "tsx scripts/analyze-one-four-structure.ts",
     "report:research-governor": "tsx scripts/report-research-governor.ts",
     "plan:next-research": "tsx scripts/plan-next-research-action.ts"
   },
