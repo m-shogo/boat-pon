@@ -244,15 +244,16 @@ type ResultRow = {
 const results: ResultRow[] = [];
 let totalInserted = 0;
 let totalSkipped  = 0;
-let batchBuffer: Parameters<typeof insertStmt extends null ? never : (typeof insertStmt)["run"]>[0][] = [];
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let batchBuffer: any[][] = [];
 
 async function flushBatch() {
-  if (!WRITE_MODE || batchBuffer.length === 0) return;
+  if (!WRITE_MODE || !insertStmt || batchBuffer.length === 0) return;
   const t = db.prepare("BEGIN");
   const c = db.prepare("COMMIT");
   t.run();
   for (const args of batchBuffer) {
-    insertStmt!.run(...(args as Parameters<typeof insertStmt.run>));
+    insertStmt.run(...args);
   }
   c.run();
   batchBuffer = [];
