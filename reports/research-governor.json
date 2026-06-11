@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-06-09T12:52:02.743Z",
+  "generatedAt": "2026-06-11T01:30:20.579Z",
   "phase": "research-monitor",
   "warnings": [],
   "nextAction": {
     "priority": 3,
-    "action": "skip6R historical alternative odds の小規模backfill準備 (132/215件未保存)",
+    "action": "skip6R historical alternative odds の小規模backfill準備 (102/215件未保存)",
     "command": "pnpm backfill:historical-alt-odds --limit 30 --priority skip6R --write --sleep-ms 1000"
   },
   "dataReadiness": {
@@ -16,13 +16,13 @@
     },
     "skip6R": {
       "total": 215,
-      "haoSaved": 83,
-      "coverage": 39
+      "haoSaved": 113,
+      "coverage": 53
     },
     "skipVenue": {
       "total": 159,
-      "haoSaved": 24,
-      "coverage": 15
+      "haoSaved": 29,
+      "coverage": 18
     },
     "timeseries": {
       "buyForwardOverlap": 0,

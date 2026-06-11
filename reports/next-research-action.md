@@ -1,7 +1,7 @@
 # 次のリサーチアクション計画
 
-生成日時: 2026-06-09T12:52:04.002Z
-governor 生成日時: 2026-06-09T12:52:02.743Z
+生成日時: 2026-06-11T01:30:21.017Z
+governor 生成日時: 2026-06-11T01:30:20.579Z
 
 > **⚠️ この計画は提案のみです。自動実行しません。write が必要な場合は人間確認後に実施してください。**
 > **BUY は検証候補。ROI は検証指標。購入指示・採用判断ではない。app_settings 変更禁止。**
@@ -12,7 +12,7 @@ governor 生成日時: 2026-06-09T12:52:02.743Z
 
 > **次は skip6R historical alt odds の小規模backfill準備（人間確認後）。condB switchはhistorical上有望（174.4%）だがtop2=92.2%/future-only未確認のため本採用不可。**
 
-## 次アクション: skip6R historical alternative odds 小規模 backfill (残 132/215件)
+## 次アクション: skip6R historical alternative odds 小規模 backfill (残 102/215件)
 
 **根拠:** condB historical closing odds は完備 (100%)。次は skip6R switch 予備検証のためにデータ取得。
 
@@ -52,7 +52,7 @@ governor 生成日時: 2026-06-09T12:52:02.743Z
    ```
 8. 満足なら残り write
    ```bash
-   pnpm backfill:historical-alt-odds --limit 132 --priority skip6R --write --sleep-ms 1000
+   pnpm backfill:historical-alt-odds --limit 102 --priority skip6R --write --sleep-ms 1000
    ```
 
 ### 品質チェックリスト
@@ -88,8 +88,8 @@ governor 生成日時: 2026-06-09T12:52:02.743Z
 | 項目 | 状態 |
 |---|---|
 | condB historical closing odds | 167/167 (100%) ✅ |
-| skip6R historical closing odds | 83/215 (39%) ❌ |
-| skipVenue historical closing odds | 24/159 (15%) ❌ |
+| skip6R historical closing odds | 113/215 (53%) ❌ |
+| skipVenue historical closing odds | 29/159 (18%) ❌ |
 | future-only timeseries condB overlap | 0 ❌ (<30) |
 
 ## 仮説状態サマリ
