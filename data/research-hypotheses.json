@@ -296,7 +296,7 @@
       "status": "tested-historical",
       "priority": 3,
       "adoptionAllowed": false,
-      "adoptionBlockReason": "全体ROI 94.7% < 100%。条件付き(風速2-3/モーター上位)でROI>100%だがbacktest内の条件選択でありforward未確認",
+      "adoptionBlockReason": "2024 held-out検証 (2026-06-12) で条件付き>100%は再現せず (B: 113.5%→76.8% / C: 112.1%→83.0%)。分布の傾きは再現するがROI優位は期間依存",
       "lastKnownMetrics": {
         "n": 1522,
         "exacta_14_roi": 94.7,
@@ -312,7 +312,22 @@
         "motor_top_top2_exclude_roi": 99.5,
         "motor_top_n": 538,
         "skip6r_skipvenue_excl_roi": 101.8,
-        "odds_source": "race_payouts実払戻"
+        "odds_source": "race_payouts実払戻",
+        "heldout2024": {
+          "n": 2779,
+          "second_dist_given_boat1_win": "4号艇26.4% > 2号艇23.0% = 3号艇23.0% (分布の傾きは再現)",
+          "exacta_14_roi": 75.9,
+          "exacta_12_roi": 83.6,
+          "wind23_roi": 76.8,
+          "wind23_n": 1405,
+          "motor_top_roi": 83.0,
+          "motor_top_n": 1029
+        },
+        "fullPopulationBaseline": {
+          "second_dist": "全レースでは2号艇34% > 3号艇28% > 4号艇19% (BUY集合と真逆)",
+          "blind_exacta_14_roi": "73-76% (2018-2026年一貫)",
+          "exh1_only": "展示1位条件だけでは反転しない (2023: 2号艇34.3% > 4号艇19.5%)"
+        }
       },
       "gateStatus": {
         "nSufficient": true,
@@ -322,19 +337,22 @@
         "futureOnlyConfirmed": false
       },
       "verdict": {
-        "structural_evidence": "1号艇1着時の2着率は4号艇が最多(29.7%)なのに平均払戻は2号艇並み → このBUY集合内で市場が1-2をデフォルト2着として過大評価している示唆",
-        "overall": "reject (94.7% < 100%)",
-        "wind23": "watch (113.5% / top2除外103.4% / n=694 / 0hit月なし)",
-        "motor_top": "watch (112.1% / top2除外99.5% / n=538)",
-        "caution": "条件付きROI>100%はbacktest内の条件選択。condB(風速2-4)と帯が重なる点も独立性に注意"
+        "structural_evidence": "2着分布の傾き (BUY集合で4号艇>2号艇) は2024 held-outでも再現 → BUYフィルターが『場が開いたレース』を選んでいる構造は本物",
+        "overall": "reject (2025: 94.7% / 2024 held-out: 75.9%、ともに<100%)",
+        "wind23": "reject (held-out 76.8% — backtest 113.5%はin-sample)",
+        "motor_top": "reject (held-out 83.0% — backtest 112.1%はin-sample)",
+        "caution": "分布の傾きとROI優位を分離せよ。傾きは構造、ROI>100%は2025年の払戻運。全レースでは1-4ブラインドROI 73-76%でedgeなし"
       },
-      "nextAction": "forward monitor: 2026-06以降のBUYレースで2連単1-4相当の的中/払戻を追跡。条件追加でのROI掘りは禁止",
+      "nextAction": "forward monitorは継続 (箱は有効)。次の本質検証は exacta 1-2/1-3/1-4 の closing odds backfill → 頻度の傾きを市場価格が織り込んでいるかの直接比較",
       "notes": [
-        "2026-06-12 検証: pnpm analyze:one-four-structure (774026b全券種シミュレーターの追跡)",
-        "月別で0hit月なし、11ヶ月中9ヶ月で1-4が1-2を上回る一貫性",
-        "2着分布の歪みは説明可能な構造 (BUY集合は1号艇優位レースに偏る→市場は1-2を本線視)",
-        "ただし単勝/複勝同様、2連単の事前オッズデータがないため市場価格での検証は不可",
-        "風向別(北142%等)はn<200で会場相関の可能性が高くノイズ扱い"
+        "2026-06-12 構造検証: pnpm analyze:one-four-structure (774026b全券種シミュレーターの追跡)",
+        "2026-06-12 held-out検証: 2024訓練期BUY 2779レース (H011発見に未使用) で再テスト",
+        "  - 分布の傾き再現: 4号艇2着26.4% > 2号艇23.0% (全レース基準19%) → 構造確認",
+        "  - ROI優位は非再現: 1-4 75.9% < 1-2 83.6%。2025の94.7%/113.5%/112.1%は期間限定",
+        "  - 全レース2018-2026: 2着=2号艇34%>4号艇19%で真逆、1-4ブラインド73-76% → 市場全体の歪みではない",
+        "  - 展示1位条件だけでは反転しない → BUYモデルのオッズ/EV条件が傾きの源泉",
+        "メカニズム仮説: BUYは1-2-3オッズが高め(市場が逃げ筋を疑う)のレースを選ぶ→場が開いて4が差す",
+        "2連単の事前オッズデータがないため市場価格での検証は未了 (closing odds backfillで可能)"
       ]
     }
   ]

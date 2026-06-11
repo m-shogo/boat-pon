@@ -51,10 +51,12 @@ const excl_r = EXCL_RACES.join(",");
 
 // ─── backtest 基準値 (9fb13c3 で固定。forward 比較用の表示のみ) ────────────────
 
+// heldout2024: H011発見に未使用の2024訓練期BUYレースでの再テスト値 (2026-06-12)。
+// 条件付き>100%はheld-outで再現しなかった。forward比較は backtest と heldout の両方と行うこと。
 const BACKTEST = {
-  "H011-A": { label: "2連単 1-4 全体",            roi: 94.7,  top2: 88.6,  n: 1522 },
-  "H011-B": { label: "2連単 1-4 × 風速2-3m/s",    roi: 113.5, top2: 103.4, n: 694 },
-  "H011-C": { label: "2連単 1-4 × 4号艇モーター上位", roi: 112.1, top2: 99.5,  n: 538 },
+  "H011-A": { label: "2連単 1-4 全体",            roi: 94.7,  top2: 88.6,  n: 1522, heldout2024Roi: 75.9, heldout2024N: 2779 },
+  "H011-B": { label: "2連単 1-4 × 風速2-3m/s",    roi: 113.5, top2: 103.4, n: 694,  heldout2024Roi: 76.8, heldout2024N: 1405 },
+  "H011-C": { label: "2連単 1-4 × 4号艇モーター上位", roi: 112.1, top2: 99.5,  n: 538,  heldout2024Roi: 83.0, heldout2024N: 1029 },
 } as const;
 
 // ─── forward 対象レース ───────────────────────────────────────────────────────
@@ -374,15 +376,19 @@ if (uncoveredRunKinds.length > 0) {
 }
 lines.push(`---`);
 lines.push(``);
-lines.push(`## 条件別 forward 結果 (backtest 基準と並列表示)`);
+lines.push(`## 条件別 forward 結果 (backtest / held-out 基準と並列表示)`);
 lines.push(``);
-lines.push(`| ID | 条件 | backtest ROI (n) | forward n_total | resolved | pending | hits | forward ROI | top2除外 | 最大連敗 | 判定 |`);
-lines.push(`|---|---|---|---:|---:|---:|---:|---:|---:|---:|---|`);
+lines.push(`> **⚠️ held-out検証 (2026-06-12)**: H011発見に未使用の2024訓練期BUY 2779レースで再テストした結果、`);
+lines.push(`> 条件付き>100%は再現しなかった (B: 113.5%→76.8% / C: 112.1%→83.0%)。`);
+lines.push(`> 2着分布の傾き (4号艇>2号艇) は再現 → 構造は本物だがROI優位は期間依存。forward は両基準と比較する。`);
+lines.push(``);
+lines.push(`| ID | 条件 | backtest 2025+ ROI (n) | held-out 2024 ROI (n) | forward n_total | resolved | pending | hits | forward ROI | top2除外 | 最大連敗 | 判定 |`);
+lines.push(`|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---|`);
 for (const s of stats) {
   const bt = BACKTEST[s.id as keyof typeof BACKTEST];
   const fwdRoi = s.n_resolved > 0 ? fmtRoi(s.roi) : "—";
   const fwdT2  = s.n_resolved > 0 ? fmtRoi(s.top2ExclRoi) : "—";
-  lines.push(`| ${s.id} | ${s.label} | ${fmtRoi(bt.roi)} (n=${bt.n}) | ${s.n_total} | ${s.n_resolved} | ${s.n_pending} | ${s.hits} | ${fwdRoi} | ${fwdT2} | ${s.maxLosingStreak} | **${s.verdict}** |`);
+  lines.push(`| ${s.id} | ${s.label} | ${fmtRoi(bt.roi)} (n=${bt.n}) | ${fmtRoi(bt.heldout2024Roi)} (n=${bt.heldout2024N}) | ${s.n_total} | ${s.n_resolved} | ${s.n_pending} | ${s.hits} | ${fwdRoi} | ${fwdT2} | ${s.maxLosingStreak} | **${s.verdict}** |`);
 }
 lines.push(``);
 lines.push(`---`);
