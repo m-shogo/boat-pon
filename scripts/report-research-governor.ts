@@ -190,8 +190,8 @@ if (dataReadiness.timeseries.futureOnlySwitchReady) {
   nextActionCommand = "pnpm analyze:skipvenue-switch-historical";
   nextActionPriority = 6;
 } else {
-  nextAction = "switch検証は全て完了 (H004/H006 とも switch reject)。condB timeseries overlap 蓄積待ち。次の大型候補: 全券種ROIシミュレーター";
-  nextActionCommand = "pnpm report:paper-forward-monitor (monitor継続)";
+  nextAction = "switch検証は全て完了 (H004/H006 とも switch reject)。condB timeseries overlap 蓄積待ち / H011 1-4系 forward monitor 継続";
+  nextActionCommand = "pnpm report:h011-forward-monitor (H011固定監視) / pnpm report:paper-forward-monitor";
   nextActionPriority = 7;
 }
 
