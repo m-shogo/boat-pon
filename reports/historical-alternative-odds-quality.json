@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-06-11T02:11:01.834Z",
+  "generatedAt": "2026-06-11T02:14:07.112Z",
   "tableExists": true,
   "basic": {
-    "total_rows": 2242,
-    "total_races": 449,
+    "total_rows": 2377,
+    "total_races": 476,
     "total_combinations": 5,
     "min_date": "2025-02-01",
     "max_date": "2026-05-20"
   },
-  "with5Sels": 448,
+  "with5Sels": 475,
   "with4Sels": 0,
   "condBInTable": 167,
   "skip6R": {
@@ -17,9 +17,9 @@
     "coverage": 100
   },
   "skipVenue": {
-    "inTable": 132,
+    "inTable": 159,
     "total": 159,
-    "coverage": 83,
+    "coverage": 100,
     "skip6ROverlap": 33
   },
   "topDeltaRaces": [
@@ -72,27 +72,27 @@
   "byCombo": [
     {
       "combination": "1-2-3",
-      "n": 449
+      "n": 476
     },
     {
       "combination": "1-2-4",
-      "n": 448
+      "n": 475
     },
     {
       "combination": "1-3-2",
-      "n": 449
+      "n": 476
     },
     {
       "combination": "1-3-4",
-      "n": 448
+      "n": 475
     },
     {
       "combination": "1-4-2",
-      "n": 448
+      "n": 475
     }
   ],
   "sameValueCheck": {
-    "total_with_both": 448,
+    "total_with_both": 475,
     "same_123_132": 0,
     "all_same": 0
   },
@@ -102,12 +102,12 @@
     "very_large": 0
   },
   "sourceCheck": {
-    "correct_type": 2242,
-    "correct_quality": 2242,
-    "is_backfill_1": 2242,
-    "has_url": 2242,
-    "has_fetched_at": 2242,
-    "has_parser_ver": 2242
+    "correct_type": 2377,
+    "correct_quality": 2377,
+    "is_backfill_1": 2377,
+    "has_url": 2377,
+    "has_fetched_at": 2377,
+    "has_parser_ver": 2377
   },
   "existingTablesContaminated": {
     "oddsSnapshotsCount": 0,

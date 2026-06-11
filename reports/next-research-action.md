@@ -1,7 +1,7 @@
 # 次のリサーチアクション計画
 
-生成日時: 2026-06-11T02:11:16.614Z
-governor 生成日時: 2026-06-11T02:11:02.678Z
+生成日時: 2026-06-11T02:14:43.554Z
+governor 生成日時: 2026-06-11T02:14:08.305Z
 
 > **⚠️ この計画は提案のみです。自動実行しません。write が必要な場合は人間確認後に実施してください。**
 > **BUY は検証候補。ROI は検証指標。購入指示・採用判断ではない。app_settings 変更禁止。**
@@ -55,7 +55,7 @@ governor 生成日時: 2026-06-11T02:11:02.678Z
 |---|---|
 | condB historical closing odds | 167/167 (100%) ✅ |
 | skip6R historical closing odds | 215/215 (100%) ✅ |
-| skipVenue historical closing odds | 132/159 (83%) ❌ |
+| skipVenue historical closing odds | 159/159 (100%) ✅ |
 | future-only timeseries condB overlap | 0 ❌ (<30) |
 
 ## 仮説状態サマリ

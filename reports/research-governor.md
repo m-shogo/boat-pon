@@ -1,6 +1,6 @@
 # Research Governor
 
-生成日時: 2026-06-11T02:11:02.678Z
+生成日時: 2026-06-11T02:14:08.305Z
 
 > **⚠️ BUY は検証候補。ROI は検証指標。購入指示・採用判断ではない。**
 > **app_settings / 本番 decision / 自動投票 は絶対に変更しない。**
@@ -84,7 +84,7 @@
 |---|---:|---:|---:|
 | condB historical closing odds | 167 | 167 | 100% |
 | skip6R historical closing odds | 215 | 215 | 100% |
-| skipVenue historical closing odds | 159 | 132 | 83% |
+| skipVenue historical closing odds | 159 | 159 | 100% |
 | timeseries BUY forward overlap (T-5) | — | 0 | — |
 | timeseries condB overlap (T-5) | — | 0 | — |
 
@@ -92,7 +92,7 @@
 |---|---|
 | condB historical odds 完備 | ✅ 完了 |
 | skip6R historical odds 完備 | ✅ |
-| skipVenue historical odds 完備 | ❌ 132/159 |
+| skipVenue historical odds 完備 | ✅ |
 | future-only switch 評価可能 | ❌ condB overlap n=0 (<30) |
 | timeseries 日付範囲 | なし |
 
