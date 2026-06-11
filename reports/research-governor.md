@@ -1,6 +1,6 @@
 # Research Governor
 
-生成日時: 2026-06-11T01:46:11.677Z
+生成日時: 2026-06-11T01:48:35.544Z
 
 > **⚠️ BUY は検証候補。ROI は検証指標。購入指示・採用判断ではない。**
 > **app_settings / 本番 decision / 自動投票 は絶対に変更しない。**
@@ -20,14 +20,9 @@
 
 ## B. 次にやるべき1本
 
-**skip6R historical alternative odds の小規模backfill準備 (72/215件未保存)**
+**skip6R historical alternative odds が揃ったら switch 予備検証**
 
-> ⚠️ **書き込みを行う場合は以下の手順を守ること:**
-> 1. backup を先に実行: `pnpm backup`
-> 2. dry-run で確認: `pnpm backfill:historical-alt-odds --limit 5 --priority skip6R`
-> 3. 人間確認後に小規模 write: `pnpm backfill:historical-alt-odds --limit 30 --priority skip6R --write --sleep-ms 1000`
-> 4. historical_alternative_odds のみへの INSERT
-> 5. 既存テーブルへの書き込みは禁止
+実行候補: `pnpm analyze:condb-switch-historical (skip6R版 実装後)`
 
 ## C. 今やってはいけないこと
 
@@ -88,16 +83,16 @@
 | 項目 | 対象 | 保存済 | coverage |
 |---|---:|---:|---:|
 | condB historical closing odds | 167 | 167 | 100% |
-| skip6R historical closing odds | 215 | 143 | 67% |
-| skipVenue historical closing odds | 159 | 31 | 19% |
+| skip6R historical closing odds | 215 | 173 | 80% |
+| skipVenue historical closing odds | 159 | 36 | 23% |
 | timeseries BUY forward overlap (T-5) | — | 0 | — |
 | timeseries condB overlap (T-5) | — | 0 | — |
 
 | 項目 | 状態 |
 |---|---|
 | condB historical odds 完備 | ✅ 完了 |
-| skip6R historical odds 完備 | ❌ 143/215 |
-| skipVenue historical odds 完備 | ❌ 31/159 |
+| skip6R historical odds 完備 | ❌ 173/215 |
+| skipVenue historical odds 完備 | ❌ 36/159 |
 | future-only switch 評価可能 | ❌ condB overlap n=0 (<30) |
 | timeseries 日付範囲 | なし |
 

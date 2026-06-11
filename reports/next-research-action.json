@@ -1,74 +1,26 @@
 {
-  "generatedAt": "2026-06-11T01:46:26.345Z",
-  "governorGeneratedAt": "2026-06-11T01:46:11.677Z",
+  "generatedAt": "2026-06-11T01:48:46.688Z",
+  "governorGeneratedAt": "2026-06-11T01:48:35.544Z",
   "nextAction": {
-    "priority": 3,
-    "action": "skip6R historical alternative odds の小規模backfill準備 (72/215件未保存)",
-    "command": "pnpm backfill:historical-alt-odds --limit 30 --priority skip6R --write --sleep-ms 1000"
+    "priority": 4,
+    "action": "skip6R historical alternative odds が揃ったら switch 予備検証",
+    "command": "pnpm analyze:condb-switch-historical (skip6R版 実装後)"
   },
   "plan": {
-    "title": "skip6R historical alternative odds 小規模 backfill (残 72/215件)",
-    "rationale": "condB historical closing odds は完備 (100%)。次は skip6R switch 予備検証のためにデータ取得。",
-    "writeAllowed": true,
-    "writeTarget": "historical_alternative_odds のみ (既存テーブルへの書き込み禁止)",
+    "title": "skip6R historical alternative odds が揃ったら switch 予備検証",
+    "rationale": "governor の自動判断に基づく次アクション",
+    "writeAllowed": false,
+    "writeTarget": null,
     "steps": [
       {
         "step": 1,
-        "description": "backup を実施",
-        "command": "pnpm backup"
-      },
-      {
-        "step": 2,
-        "description": "現状確認",
-        "command": "pnpm check:historical-alt-odds-quality"
-      },
-      {
-        "step": 3,
-        "description": "skip6R dry-run (5件)",
-        "command": "pnpm backfill:historical-alt-odds --limit 5 --priority skip6R"
-      },
-      {
-        "step": 4,
-        "description": "dry-run 結果を人間が確認",
+        "description": "pnpm analyze:condb-switch-historical (skip6R版 実装後)",
         "command": null
-      },
-      {
-        "step": 5,
-        "description": "小規模 write 30件",
-        "command": "pnpm backfill:historical-alt-odds --limit 30 --priority skip6R --write --sleep-ms 1000"
-      },
-      {
-        "step": 6,
-        "description": "quality check",
-        "command": "pnpm check:historical-alt-odds-quality"
-      },
-      {
-        "step": 7,
-        "description": "governor 更新",
-        "command": "pnpm report:research-governor"
-      },
-      {
-        "step": 8,
-        "description": "満足なら残り write",
-        "command": "pnpm backfill:historical-alt-odds --limit 72 --priority skip6R --write --sleep-ms 1000"
       }
     ],
-    "prereqs": [
-      "backup 実施",
-      "dry-run 確認",
-      "human approval",
-      "condB coverage 100%"
-    ],
-    "checks": [
-      "fetch 成功率 ≥ 95%",
-      "5買い目揃い率 ≥ 95%",
-      "同値率 0%",
-      "既存テーブル汚染なし"
-    ],
-    "postChecks": [
-      "skip6R historical closing odds coverage 確認",
-      "switch 予備検証スクリプト作成"
-    ]
+    "prereqs": [],
+    "checks": [],
+    "postChecks": []
   },
   "dataReadiness": {
     "forwardTotal": 1522,
@@ -79,13 +31,13 @@
     },
     "skip6R": {
       "total": 215,
-      "haoSaved": 143,
-      "coverage": 67
+      "haoSaved": 173,
+      "coverage": 80
     },
     "skipVenue": {
       "total": 159,
-      "haoSaved": 31,
-      "coverage": 19
+      "haoSaved": 36,
+      "coverage": 23
     },
     "timeseries": {
       "buyForwardOverlap": 0,

@@ -1,7 +1,7 @@
 # 次のリサーチアクション計画
 
-生成日時: 2026-06-11T01:46:26.345Z
-governor 生成日時: 2026-06-11T01:46:11.677Z
+生成日時: 2026-06-11T01:48:46.688Z
+governor 生成日時: 2026-06-11T01:48:35.544Z
 
 > **⚠️ この計画は提案のみです。自動実行しません。write が必要な場合は人間確認後に実施してください。**
 > **BUY は検証候補。ROI は検証指標。購入指示・採用判断ではない。app_settings 変更禁止。**
@@ -12,62 +12,28 @@ governor 生成日時: 2026-06-11T01:46:11.677Z
 
 > **次は skip6R historical alt odds の小規模backfill準備（人間確認後）。condB switchはhistorical上有望（174.4%）だがtop2=92.2%/future-only未確認のため本採用不可。**
 
-## 次アクション: skip6R historical alternative odds 小規模 backfill (残 72/215件)
+## 次アクション: skip6R historical alternative odds が揃ったら switch 予備検証
 
-**根拠:** condB historical closing odds は完備 (100%)。次は skip6R switch 予備検証のためにデータ取得。
+**根拠:** governor の自動判断に基づく次アクション
 
 ### 前提条件
 
-- [ ] backup 実施
-- [ ] dry-run 確認
-- [ ] human approval
-- [ ] condB coverage 100%
+- (なし)
 
 ### 実行ステップ
 
-1. backup を実施 ✅
-   ```bash
-   pnpm backup
-   ```
-2. 現状確認
-   ```bash
-   pnpm check:historical-alt-odds-quality
-   ```
-3. skip6R dry-run (5件)
-   ```bash
-   pnpm backfill:historical-alt-odds --limit 5 --priority skip6R
-   ```
-4. dry-run 結果を人間が確認 ⚠️ **人間確認が必要**
-5. 小規模 write 30件
-   ```bash
-   pnpm backfill:historical-alt-odds --limit 30 --priority skip6R --write --sleep-ms 1000
-   ```
-6. quality check
-   ```bash
-   pnpm check:historical-alt-odds-quality
-   ```
-7. governor 更新
-   ```bash
-   pnpm report:research-governor
-   ```
-8. 満足なら残り write
-   ```bash
-   pnpm backfill:historical-alt-odds --limit 72 --priority skip6R --write --sleep-ms 1000
-   ```
+1. pnpm analyze:condb-switch-historical (skip6R版 実装後)
 
 ### 品質チェックリスト
 
-- [ ] fetch 成功率 ≥ 95%
-- [ ] 5買い目揃い率 ≥ 95%
-- [ ] 同値率 0%
-- [ ] 既存テーブル汚染なし
+- (なし)
 
 ### write 許可
 
 | 項目 | 内容 |
 |---|---|
-| write 許可 | ⚠️ 人間確認後に許可 |
-| write 対象 | historical_alternative_odds のみ (既存テーブルへの書き込み禁止) |
+| write 許可 | ❌ 今回は write なし |
+| write 対象 | なし |
 | 既存テーブルへの書き込み | **禁止** |
 
 ## 今やってはいけないこと
@@ -88,8 +54,8 @@ governor 生成日時: 2026-06-11T01:46:11.677Z
 | 項目 | 状態 |
 |---|---|
 | condB historical closing odds | 167/167 (100%) ✅ |
-| skip6R historical closing odds | 143/215 (67%) ❌ |
-| skipVenue historical closing odds | 31/159 (19%) ❌ |
+| skip6R historical closing odds | 173/215 (80%) ❌ |
+| skipVenue historical closing odds | 36/159 (23%) ❌ |
 | future-only timeseries condB overlap | 0 ❌ (<30) |
 
 ## 仮説状態サマリ
