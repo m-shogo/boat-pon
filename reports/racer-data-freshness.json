@@ -1,12 +1,12 @@
 {
-  "generatedAt": "2026-06-08T06:38:04.440Z",
+  "generatedAt": "2026-06-12T16:19:22.330Z",
   "profiles": {
     "total": 2657,
     "distinctRacers": 2657,
     "maxFetchedAt": "2026-06-08T05:41:58.443Z",
     "minFetchedAt": "2026-05-29T07:29:37.047Z",
     "over7Days": 24,
-    "over14Days": 0,
+    "over14Days": 24,
     "nullFetchedAt": 0
   },
   "courseStats": {
@@ -15,7 +15,7 @@
     "maxFetchedAt": "2026-06-08T05:41:58.443Z",
     "minFetchedAt": "2026-05-29T07:29:37.047Z",
     "over7Days": 102,
-    "over14Days": 0,
+    "over14Days": 102,
     "nullFetchedAt": 0
   },
   "recentIsBase": {
@@ -72,10 +72,10 @@
       "error: 3875 廣中良一 fetch failed"
     ]
   },
-  "flyingCountReliability": "HIGH",
-  "flyingCountReliabilityReason": "forward期間の対象選手全員のflying_countが取得済みで14日超なし",
-  "fetchNeededNow": false,
-  "fetchNeededReason": "本日または直近実行済み、14日超なし",
-  "recommendedAction": "NO_ACTION",
-  "recommendedActionDetail": "launchd稼働中、データ鮮度は正常範囲。次回自動更新まで待機"
+  "flyingCountReliability": "MEDIUM",
+  "flyingCountReliabilityReason": "forward期間headF潜在影響 0/25件 または14日超=24件",
+  "fetchNeededNow": true,
+  "fetchNeededReason": "14日超の古いデータあり: profiles 24件, course_stats 102件",
+  "recommendedAction": "RUN_FETCH",
+  "recommendedActionDetail": "pnpm fetch:racer-stats を実行 (理由: 14日超の古いデータあり: profiles 24件, course_stats 102件)"
 }

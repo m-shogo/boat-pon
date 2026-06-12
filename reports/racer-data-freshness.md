@@ -1,6 +1,6 @@
 # 選手データ鮮度レポート
 
-生成日時: 2026-06-08T06:38:04.440Z
+生成日時: 2026-06-12T16:19:22.330Z
 
 ## サマリー
 
@@ -10,20 +10,20 @@
 | racer_profiles 最新取得 | 2026-06-08 05:41 UTC |
 | racer_profiles 最古取得 | 2026-05-29 07:29 UTC |
 | racer_profiles 7日超 | 24 件 |
-| racer_profiles 14日超 | 0 件 |
+| racer_profiles 14日超 | 24 件 |
 | racer_profiles null | 0 件 |
 | racer_course_stats 総行数 | 9822 行 |
 | racer_course_stats 登録選手 | 1637 人 |
 | racer_course_stats 最新取得 | 2026-06-08 05:41 UTC |
 | racer_course_stats 最古取得 | 2026-05-29 07:29 UTC |
 | racer_course_stats 7日超 | 102 件 |
-| racer_course_stats 14日超 | 0 件 |
+| racer_course_stats 14日超 | 102 件 |
 | weekly launchd | ✅ ロード済み |
 | ログ最終更新 | 2026-06-08 05:41 UTC |
 
 ## F歴判定 (headFlyingCount) の信頼度
 
-> 🟢 **HIGH**: forward期間の対象選手全員のflying_countが取得済みで14日超なし
+> 🟡 **MEDIUM**: forward期間headF潜在影響 0/25件 または14日超=24件
 
 > ℹ️ flying_count が NULL の場合、isBase/wind5 条件では `?? 0` で headF=0 扱いになる。
 > NULL選手が 1号艇に入ると headF=0 条件を誤って通過する可能性がある。
@@ -77,7 +77,7 @@ error: 3875 廣中良一 fetch failed
 
 ## 判定・推奨アクション
 
-> ✅ **NO_ACTION**: launchd稼働中、データ鮮度は正常範囲。次回自動更新まで待機
+> ⚠️ **RUN_FETCH**: pnpm fetch:racer-stats を実行 (理由: 14日超の古いデータあり: profiles 24件, course_stats 102件)
 
-- **今すぐ fetch:racer-stats 必要**: ✅ NO
-  - 理由: 本日または直近実行済み、14日超なし
+- **今すぐ fetch:racer-stats 必要**: ⚠️ YES
+  - 理由: 14日超の古いデータあり: profiles 24件, course_stats 102件

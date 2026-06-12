@@ -1,0 +1,2562 @@
+{
+  "generatedAt": "2026-06-12T15:49:40.148Z",
+  "dbPath": "data/boat.sqlite",
+  "mode": "read-only racer ability data audit",
+  "warning": "本レポートは coverage / point-in-time 安全性の監査のみ。ROI評価・買い条件作成・候補変更は行わない。",
+  "schemaInventory": {
+    "racer_profiles": [
+      {
+        "name": "registration_no",
+        "type": "TEXT",
+        "notNull": false
+      },
+      {
+        "name": "flying_count",
+        "type": "INTEGER",
+        "notNull": false
+      },
+      {
+        "name": "late_start_count",
+        "type": "INTEGER",
+        "notNull": false
+      },
+      {
+        "name": "top3_rate",
+        "type": "REAL",
+        "notNull": false
+      },
+      {
+        "name": "avg_st",
+        "type": "REAL",
+        "notNull": false
+      },
+      {
+        "name": "ability_index",
+        "type": "INTEGER",
+        "notNull": false
+      },
+      {
+        "name": "fetched_at",
+        "type": "TEXT",
+        "notNull": true
+      }
+    ],
+    "racer_course_stats": [
+      {
+        "name": "registration_no",
+        "type": "TEXT",
+        "notNull": true
+      },
+      {
+        "name": "course",
+        "type": "INTEGER",
+        "notNull": true
+      },
+      {
+        "name": "races",
+        "type": "INTEGER",
+        "notNull": true
+      },
+      {
+        "name": "wins",
+        "type": "INTEGER",
+        "notNull": true
+      },
+      {
+        "name": "win_rate",
+        "type": "REAL",
+        "notNull": false
+      },
+      {
+        "name": "fetched_at",
+        "type": "TEXT",
+        "notNull": true
+      },
+      {
+        "name": "avg_st",
+        "type": "REAL",
+        "notNull": false
+      },
+      {
+        "name": "entry_rate",
+        "type": "REAL",
+        "notNull": false
+      },
+      {
+        "name": "top3_rate",
+        "type": "REAL",
+        "notNull": false
+      },
+      {
+        "name": "start_order",
+        "type": "REAL",
+        "notNull": false
+      }
+    ],
+    "race_entries": [
+      {
+        "name": "race_id",
+        "type": "TEXT",
+        "notNull": true
+      },
+      {
+        "name": "date",
+        "type": "TEXT",
+        "notNull": true
+      },
+      {
+        "name": "venue",
+        "type": "TEXT",
+        "notNull": true
+      },
+      {
+        "name": "race_no",
+        "type": "INTEGER",
+        "notNull": true
+      },
+      {
+        "name": "boat",
+        "type": "INTEGER",
+        "notNull": true
+      },
+      {
+        "name": "finish_pos",
+        "type": "INTEGER",
+        "notNull": false
+      },
+      {
+        "name": "status_code",
+        "type": "TEXT",
+        "notNull": false
+      },
+      {
+        "name": "racer_reg",
+        "type": "TEXT",
+        "notNull": false
+      },
+      {
+        "name": "racer_name",
+        "type": "TEXT",
+        "notNull": false
+      },
+      {
+        "name": "motor_no",
+        "type": "INTEGER",
+        "notNull": false
+      },
+      {
+        "name": "boat_no",
+        "type": "INTEGER",
+        "notNull": false
+      },
+      {
+        "name": "exhibition_time",
+        "type": "REAL",
+        "notNull": false
+      },
+      {
+        "name": "entry_course",
+        "type": "INTEGER",
+        "notNull": false
+      },
+      {
+        "name": "st",
+        "type": "REAL",
+        "notNull": false
+      },
+      {
+        "name": "st_flying",
+        "type": "INTEGER",
+        "notNull": true
+      },
+      {
+        "name": "source",
+        "type": "TEXT",
+        "notNull": true
+      },
+      {
+        "name": "fetched_at",
+        "type": "TEXT",
+        "notNull": true
+      }
+    ],
+    "motor_boat_stats": [
+      {
+        "name": "race_id",
+        "type": "TEXT",
+        "notNull": true
+      },
+      {
+        "name": "date",
+        "type": "TEXT",
+        "notNull": true
+      },
+      {
+        "name": "venue",
+        "type": "TEXT",
+        "notNull": true
+      },
+      {
+        "name": "race_no",
+        "type": "INTEGER",
+        "notNull": true
+      },
+      {
+        "name": "course",
+        "type": "INTEGER",
+        "notNull": true
+      },
+      {
+        "name": "motor_no",
+        "type": "TEXT",
+        "notNull": false
+      },
+      {
+        "name": "motor_top2_rate",
+        "type": "REAL",
+        "notNull": false
+      },
+      {
+        "name": "boat_no",
+        "type": "TEXT",
+        "notNull": false
+      },
+      {
+        "name": "boat_top2_rate",
+        "type": "REAL",
+        "notNull": false
+      },
+      {
+        "name": "imported_at",
+        "type": "TEXT",
+        "notNull": true
+      }
+    ],
+    "official_programs": [
+      {
+        "name": "race_id",
+        "type": "TEXT",
+        "notNull": false
+      },
+      {
+        "name": "date",
+        "type": "TEXT",
+        "notNull": true
+      },
+      {
+        "name": "venue",
+        "type": "TEXT",
+        "notNull": true
+      },
+      {
+        "name": "race_no",
+        "type": "INTEGER",
+        "notNull": true
+      },
+      {
+        "name": "close_at",
+        "type": "TEXT",
+        "notNull": true
+      },
+      {
+        "name": "source_file",
+        "type": "TEXT",
+        "notNull": true
+      },
+      {
+        "name": "raw_json",
+        "type": "TEXT",
+        "notNull": true
+      },
+      {
+        "name": "imported_at",
+        "type": "TEXT",
+        "notNull": true
+      }
+    ]
+  },
+  "rawJsonKeySurvey": [
+    {
+      "year": "2004",
+      "sampled": 200,
+      "boatsPresent": 198,
+      "keyPresence": {
+        "course": 198,
+        "registrationNo": 198,
+        "racerName": 198,
+        "className": 198,
+        "nationalWinRate": 198,
+        "nationalTop2Rate": 198,
+        "localWinRate": 198,
+        "localTop2Rate": 198,
+        "motorNo": 198,
+        "motorTop2Rate": 198,
+        "boatNo": 198,
+        "boatTop2Rate": 198
+      }
+    },
+    {
+      "year": "2005",
+      "sampled": 200,
+      "boatsPresent": 200,
+      "keyPresence": {
+        "course": 200,
+        "registrationNo": 200,
+        "racerName": 200,
+        "className": 200,
+        "nationalWinRate": 200,
+        "nationalTop2Rate": 200,
+        "localWinRate": 200,
+        "localTop2Rate": 200,
+        "motorNo": 200,
+        "motorTop2Rate": 200,
+        "boatNo": 200,
+        "boatTop2Rate": 200
+      }
+    },
+    {
+      "year": "2006",
+      "sampled": 200,
+      "boatsPresent": 200,
+      "keyPresence": {
+        "course": 200,
+        "registrationNo": 200,
+        "racerName": 200,
+        "className": 200,
+        "nationalWinRate": 200,
+        "nationalTop2Rate": 200,
+        "localWinRate": 200,
+        "localTop2Rate": 200,
+        "motorNo": 200,
+        "motorTop2Rate": 200,
+        "boatNo": 200,
+        "boatTop2Rate": 200
+      }
+    },
+    {
+      "year": "2007",
+      "sampled": 200,
+      "boatsPresent": 200,
+      "keyPresence": {
+        "course": 200,
+        "registrationNo": 200,
+        "racerName": 200,
+        "className": 200,
+        "nationalWinRate": 200,
+        "nationalTop2Rate": 200,
+        "localWinRate": 200,
+        "localTop2Rate": 200,
+        "motorNo": 200,
+        "motorTop2Rate": 200,
+        "boatNo": 200,
+        "boatTop2Rate": 200
+      }
+    },
+    {
+      "year": "2008",
+      "sampled": 200,
+      "boatsPresent": 200,
+      "keyPresence": {
+        "course": 200,
+        "registrationNo": 200,
+        "racerName": 200,
+        "className": 200,
+        "nationalWinRate": 200,
+        "nationalTop2Rate": 200,
+        "localWinRate": 200,
+        "localTop2Rate": 200,
+        "motorNo": 200,
+        "motorTop2Rate": 200,
+        "boatNo": 200,
+        "boatTop2Rate": 200
+      }
+    },
+    {
+      "year": "2009",
+      "sampled": 200,
+      "boatsPresent": 200,
+      "keyPresence": {
+        "course": 200,
+        "registrationNo": 200,
+        "racerName": 200,
+        "className": 200,
+        "nationalWinRate": 200,
+        "nationalTop2Rate": 200,
+        "localWinRate": 200,
+        "localTop2Rate": 200,
+        "motorNo": 200,
+        "motorTop2Rate": 200,
+        "boatNo": 200,
+        "boatTop2Rate": 200
+      }
+    },
+    {
+      "year": "2010",
+      "sampled": 200,
+      "boatsPresent": 200,
+      "keyPresence": {
+        "course": 200,
+        "registrationNo": 200,
+        "racerName": 200,
+        "className": 200,
+        "nationalWinRate": 200,
+        "nationalTop2Rate": 200,
+        "localWinRate": 200,
+        "localTop2Rate": 200,
+        "motorNo": 200,
+        "motorTop2Rate": 200,
+        "boatNo": 200,
+        "boatTop2Rate": 200
+      }
+    },
+    {
+      "year": "2011",
+      "sampled": 200,
+      "boatsPresent": 200,
+      "keyPresence": {
+        "course": 200,
+        "registrationNo": 200,
+        "racerName": 200,
+        "className": 200,
+        "nationalWinRate": 200,
+        "nationalTop2Rate": 200,
+        "localWinRate": 200,
+        "localTop2Rate": 200,
+        "motorNo": 200,
+        "motorTop2Rate": 200,
+        "boatNo": 200,
+        "boatTop2Rate": 200
+      }
+    },
+    {
+      "year": "2012",
+      "sampled": 200,
+      "boatsPresent": 200,
+      "keyPresence": {
+        "course": 200,
+        "registrationNo": 200,
+        "racerName": 200,
+        "className": 200,
+        "nationalWinRate": 200,
+        "nationalTop2Rate": 200,
+        "localWinRate": 200,
+        "localTop2Rate": 200,
+        "motorNo": 200,
+        "motorTop2Rate": 200,
+        "boatNo": 200,
+        "boatTop2Rate": 200
+      }
+    },
+    {
+      "year": "2013",
+      "sampled": 200,
+      "boatsPresent": 200,
+      "keyPresence": {
+        "course": 200,
+        "registrationNo": 200,
+        "racerName": 200,
+        "className": 200,
+        "nationalWinRate": 200,
+        "nationalTop2Rate": 200,
+        "localWinRate": 200,
+        "localTop2Rate": 200,
+        "motorNo": 200,
+        "motorTop2Rate": 200,
+        "boatNo": 200,
+        "boatTop2Rate": 200
+      }
+    },
+    {
+      "year": "2014",
+      "sampled": 200,
+      "boatsPresent": 200,
+      "keyPresence": {
+        "course": 200,
+        "registrationNo": 200,
+        "racerName": 200,
+        "className": 200,
+        "nationalWinRate": 200,
+        "nationalTop2Rate": 200,
+        "localWinRate": 200,
+        "localTop2Rate": 200,
+        "motorNo": 200,
+        "motorTop2Rate": 200,
+        "boatNo": 200,
+        "boatTop2Rate": 200
+      }
+    },
+    {
+      "year": "2015",
+      "sampled": 200,
+      "boatsPresent": 200,
+      "keyPresence": {
+        "course": 200,
+        "registrationNo": 200,
+        "racerName": 200,
+        "className": 200,
+        "nationalWinRate": 200,
+        "nationalTop2Rate": 200,
+        "localWinRate": 200,
+        "localTop2Rate": 200,
+        "motorNo": 200,
+        "motorTop2Rate": 200,
+        "boatNo": 200,
+        "boatTop2Rate": 200
+      }
+    },
+    {
+      "year": "2016",
+      "sampled": 200,
+      "boatsPresent": 200,
+      "keyPresence": {
+        "course": 200,
+        "registrationNo": 200,
+        "racerName": 200,
+        "className": 200,
+        "nationalWinRate": 200,
+        "nationalTop2Rate": 200,
+        "localWinRate": 200,
+        "localTop2Rate": 200,
+        "motorNo": 200,
+        "motorTop2Rate": 200,
+        "boatNo": 200,
+        "boatTop2Rate": 200
+      }
+    },
+    {
+      "year": "2017",
+      "sampled": 200,
+      "boatsPresent": 200,
+      "keyPresence": {
+        "course": 200,
+        "registrationNo": 200,
+        "racerName": 200,
+        "className": 200,
+        "nationalWinRate": 200,
+        "nationalTop2Rate": 200,
+        "localWinRate": 200,
+        "localTop2Rate": 200,
+        "motorNo": 200,
+        "motorTop2Rate": 200,
+        "boatNo": 200,
+        "boatTop2Rate": 200
+      }
+    },
+    {
+      "year": "2018",
+      "sampled": 200,
+      "boatsPresent": 200,
+      "keyPresence": {
+        "course": 200,
+        "registrationNo": 200,
+        "racerName": 200,
+        "className": 200,
+        "nationalWinRate": 200,
+        "nationalTop2Rate": 200,
+        "localWinRate": 200,
+        "localTop2Rate": 200,
+        "motorNo": 200,
+        "motorTop2Rate": 200,
+        "boatNo": 200,
+        "boatTop2Rate": 200
+      }
+    },
+    {
+      "year": "2019",
+      "sampled": 200,
+      "boatsPresent": 200,
+      "keyPresence": {
+        "course": 200,
+        "registrationNo": 200,
+        "racerName": 200,
+        "className": 200,
+        "nationalWinRate": 200,
+        "nationalTop2Rate": 200,
+        "localWinRate": 200,
+        "localTop2Rate": 200,
+        "motorNo": 200,
+        "motorTop2Rate": 200,
+        "boatNo": 200,
+        "boatTop2Rate": 200
+      }
+    },
+    {
+      "year": "2020",
+      "sampled": 200,
+      "boatsPresent": 200,
+      "keyPresence": {
+        "course": 200,
+        "registrationNo": 200,
+        "racerName": 200,
+        "className": 200,
+        "nationalWinRate": 200,
+        "nationalTop2Rate": 200,
+        "localWinRate": 200,
+        "localTop2Rate": 200,
+        "motorNo": 200,
+        "motorTop2Rate": 200,
+        "boatNo": 200,
+        "boatTop2Rate": 200
+      }
+    },
+    {
+      "year": "2021",
+      "sampled": 200,
+      "boatsPresent": 200,
+      "keyPresence": {
+        "course": 200,
+        "registrationNo": 200,
+        "racerName": 200,
+        "className": 200,
+        "nationalWinRate": 200,
+        "nationalTop2Rate": 200,
+        "localWinRate": 200,
+        "localTop2Rate": 200,
+        "motorNo": 200,
+        "motorTop2Rate": 200,
+        "boatNo": 200,
+        "boatTop2Rate": 200
+      }
+    },
+    {
+      "year": "2022",
+      "sampled": 200,
+      "boatsPresent": 200,
+      "keyPresence": {
+        "course": 200,
+        "registrationNo": 200,
+        "racerName": 200,
+        "className": 200,
+        "nationalWinRate": 200,
+        "nationalTop2Rate": 200,
+        "localWinRate": 200,
+        "localTop2Rate": 200,
+        "motorNo": 200,
+        "motorTop2Rate": 200,
+        "boatNo": 200,
+        "boatTop2Rate": 200
+      }
+    },
+    {
+      "year": "2023",
+      "sampled": 200,
+      "boatsPresent": 200,
+      "keyPresence": {
+        "course": 200,
+        "registrationNo": 200,
+        "racerName": 200,
+        "className": 200,
+        "nationalWinRate": 200,
+        "nationalTop2Rate": 200,
+        "localWinRate": 200,
+        "localTop2Rate": 200,
+        "motorNo": 200,
+        "motorTop2Rate": 200,
+        "boatNo": 200,
+        "boatTop2Rate": 200
+      }
+    },
+    {
+      "year": "2024",
+      "sampled": 200,
+      "boatsPresent": 200,
+      "keyPresence": {
+        "course": 200,
+        "registrationNo": 200,
+        "racerName": 200,
+        "className": 200,
+        "nationalWinRate": 200,
+        "nationalTop2Rate": 200,
+        "localWinRate": 200,
+        "localTop2Rate": 200,
+        "motorNo": 200,
+        "motorTop2Rate": 200,
+        "boatNo": 200,
+        "boatTop2Rate": 200
+      }
+    },
+    {
+      "year": "2025",
+      "sampled": 200,
+      "boatsPresent": 200,
+      "keyPresence": {
+        "course": 200,
+        "registrationNo": 200,
+        "racerName": 200,
+        "className": 200,
+        "nationalWinRate": 200,
+        "nationalTop2Rate": 200,
+        "localWinRate": 200,
+        "localTop2Rate": 200,
+        "motorNo": 200,
+        "motorTop2Rate": 200,
+        "boatNo": 200,
+        "boatTop2Rate": 200
+      }
+    },
+    {
+      "year": "2026",
+      "sampled": 200,
+      "boatsPresent": 56,
+      "keyPresence": {
+        "course": 56,
+        "registrationNo": 56,
+        "racerName": 56,
+        "className": 56,
+        "nationalWinRate": 56,
+        "nationalTop2Rate": 56,
+        "localWinRate": 56,
+        "localTop2Rate": 56,
+        "motorNo": 56,
+        "motorTop2Rate": 56,
+        "boatNo": 56,
+        "boatTop2Rate": 56
+      }
+    }
+  ],
+  "rawJsonMissingBoats": {
+    "total": 196,
+    "in_2026": 144
+  },
+  "snapshotMeta": {
+    "racerProfiles": {
+      "total": 2657,
+      "real_rows": 1637,
+      "min_fetched": "2026-05-29T07:29:37.047Z",
+      "max_fetched": "2026-06-08T05:41:58.443Z"
+    },
+    "racerCourseStats": {
+      "total": 9822,
+      "racers": 1637,
+      "min_fetched": "2026-05-29T07:29:37.047Z",
+      "max_fetched": "2026-06-08T05:41:58.443Z"
+    },
+    "motorBoatStats": {
+      "total": 646078,
+      "min_date": "2024-01-01",
+      "max_date": "2026-06-12"
+    }
+  },
+  "allRegistered": {
+    "profiles": {
+      "total": 2657,
+      "real_rows": 1637,
+      "has_avg_st": 1637,
+      "has_ability": 1637,
+      "has_top3": 1561
+    },
+    "courseStats": {
+      "racers": 1637,
+      "rows": 9822,
+      "has_avg_st": 9822,
+      "has_top3": 8777,
+      "has_entry": 9095,
+      "has_start_order": 9822
+    }
+  },
+  "populations": [
+    {
+      "population": "today_entrants",
+      "description": "最新program日 2026-06-12 の全出走艇",
+      "races": 143,
+      "boats": 858,
+      "distinctRacers": 540,
+      "programFieldCoverage": {
+        "className": {
+          "nonNull": 858,
+          "pct": 100
+        },
+        "nationalWinRate": {
+          "nonNull": 858,
+          "pct": 100
+        },
+        "nationalTop2Rate": {
+          "nonNull": 858,
+          "pct": 100
+        },
+        "localWinRate": {
+          "nonNull": 858,
+          "pct": 100
+        },
+        "localTop2Rate": {
+          "nonNull": 858,
+          "pct": 100
+        },
+        "motorTop2Rate": {
+          "nonNull": 858,
+          "pct": 100
+        },
+        "boatTop2Rate": {
+          "nonNull": 858,
+          "pct": 100
+        }
+      },
+      "snapshotCoverage": {
+        "inRacerProfilesReal": {
+          "nonNull": 854,
+          "pct": 99.53
+        },
+        "profileAvgSt": {
+          "nonNull": 854,
+          "pct": 99.53
+        },
+        "profileAbilityIndex": {
+          "nonNull": 854,
+          "pct": 99.53
+        },
+        "profileFlyingCount": {
+          "nonNull": 854,
+          "pct": 99.53
+        },
+        "profileLateStartCount": {
+          "nonNull": 854,
+          "pct": 99.53
+        },
+        "courseStatsRow": {
+          "nonNull": 854,
+          "pct": 99.53
+        },
+        "courseAvgSt": {
+          "nonNull": 854,
+          "pct": 99.53
+        },
+        "courseTop3Rate": {
+          "nonNull": 790,
+          "pct": 92.07
+        },
+        "courseEntryRate": {
+          "nonNull": 815,
+          "pct": 94.99
+        },
+        "courseStartOrder": {
+          "nonNull": 854,
+          "pct": 99.53
+        }
+      },
+      "motorBoatStats": {
+        "raceCourseRows": 858,
+        "motorTop2Rate": {
+          "nonNull": 858,
+          "pct": 100
+        },
+        "boatTop2Rate": {
+          "nonNull": 858,
+          "pct": 100
+        }
+      }
+    },
+    {
+      "population": "today_buy",
+      "description": "paper-live BUY（2026-06-12）",
+      "races": 0,
+      "boats": 0,
+      "distinctRacers": 0,
+      "programFieldCoverage": {
+        "className": {
+          "nonNull": 0,
+          "pct": null
+        },
+        "nationalWinRate": {
+          "nonNull": 0,
+          "pct": null
+        },
+        "nationalTop2Rate": {
+          "nonNull": 0,
+          "pct": null
+        },
+        "localWinRate": {
+          "nonNull": 0,
+          "pct": null
+        },
+        "localTop2Rate": {
+          "nonNull": 0,
+          "pct": null
+        },
+        "motorTop2Rate": {
+          "nonNull": 0,
+          "pct": null
+        },
+        "boatTop2Rate": {
+          "nonNull": 0,
+          "pct": null
+        }
+      },
+      "snapshotCoverage": {
+        "inRacerProfilesReal": {
+          "nonNull": 0,
+          "pct": null
+        },
+        "profileAvgSt": {
+          "nonNull": 0,
+          "pct": null
+        },
+        "profileAbilityIndex": {
+          "nonNull": 0,
+          "pct": null
+        },
+        "profileFlyingCount": {
+          "nonNull": 0,
+          "pct": null
+        },
+        "profileLateStartCount": {
+          "nonNull": 0,
+          "pct": null
+        },
+        "courseStatsRow": {
+          "nonNull": 0,
+          "pct": null
+        },
+        "courseAvgSt": {
+          "nonNull": 0,
+          "pct": null
+        },
+        "courseTop3Rate": {
+          "nonNull": 0,
+          "pct": null
+        },
+        "courseEntryRate": {
+          "nonNull": 0,
+          "pct": null
+        },
+        "courseStartOrder": {
+          "nonNull": 0,
+          "pct": null
+        }
+      },
+      "motorBoatStats": {
+        "raceCourseRows": 0,
+        "motorTop2Rate": {
+          "nonNull": 0,
+          "pct": null
+        },
+        "boatTop2Rate": {
+          "nonNull": 0,
+          "pct": null
+        }
+      }
+    },
+    {
+      "population": "historical_backfill_buy_all",
+      "description": "historical-backfill BUY 全期間",
+      "races": 6273,
+      "boats": 37350,
+      "distinctRacers": 1667,
+      "programFieldCoverage": {
+        "className": {
+          "nonNull": 37350,
+          "pct": 100
+        },
+        "nationalWinRate": {
+          "nonNull": 37350,
+          "pct": 100
+        },
+        "nationalTop2Rate": {
+          "nonNull": 37350,
+          "pct": 100
+        },
+        "localWinRate": {
+          "nonNull": 37350,
+          "pct": 100
+        },
+        "localTop2Rate": {
+          "nonNull": 37350,
+          "pct": 100
+        },
+        "motorTop2Rate": {
+          "nonNull": 37350,
+          "pct": 100
+        },
+        "boatTop2Rate": {
+          "nonNull": 37350,
+          "pct": 100
+        }
+      },
+      "snapshotCoverage": {
+        "inRacerProfilesReal": {
+          "nonNull": 36335,
+          "pct": 97.28
+        },
+        "profileAvgSt": {
+          "nonNull": 36335,
+          "pct": 97.28
+        },
+        "profileAbilityIndex": {
+          "nonNull": 36335,
+          "pct": 97.28
+        },
+        "profileFlyingCount": {
+          "nonNull": 36335,
+          "pct": 97.28
+        },
+        "profileLateStartCount": {
+          "nonNull": 36335,
+          "pct": 97.28
+        },
+        "courseStatsRow": {
+          "nonNull": 36335,
+          "pct": 97.28
+        },
+        "courseAvgSt": {
+          "nonNull": 36335,
+          "pct": 97.28
+        },
+        "courseTop3Rate": {
+          "nonNull": 35002,
+          "pct": 93.71
+        },
+        "courseEntryRate": {
+          "nonNull": 35868,
+          "pct": 96.03
+        },
+        "courseStartOrder": {
+          "nonNull": 36335,
+          "pct": 97.28
+        }
+      },
+      "motorBoatStats": {
+        "raceCourseRows": 37350,
+        "motorTop2Rate": {
+          "nonNull": 37350,
+          "pct": 99.23
+        },
+        "boatTop2Rate": {
+          "nonNull": 37350,
+          "pct": 99.23
+        }
+      }
+    },
+    {
+      "population": "held_out_2024_buy",
+      "description": "historical-backfill BUY 2024 held-out",
+      "races": 3957,
+      "boats": 23720,
+      "distinctRacers": 1616,
+      "programFieldCoverage": {
+        "className": {
+          "nonNull": 23720,
+          "pct": 100
+        },
+        "nationalWinRate": {
+          "nonNull": 23720,
+          "pct": 100
+        },
+        "nationalTop2Rate": {
+          "nonNull": 23720,
+          "pct": 100
+        },
+        "localWinRate": {
+          "nonNull": 23720,
+          "pct": 100
+        },
+        "localTop2Rate": {
+          "nonNull": 23720,
+          "pct": 100
+        },
+        "motorTop2Rate": {
+          "nonNull": 23720,
+          "pct": 100
+        },
+        "boatTop2Rate": {
+          "nonNull": 23720,
+          "pct": 100
+        }
+      },
+      "snapshotCoverage": {
+        "inRacerProfilesReal": {
+          "nonNull": 22836,
+          "pct": 96.27
+        },
+        "profileAvgSt": {
+          "nonNull": 22836,
+          "pct": 96.27
+        },
+        "profileAbilityIndex": {
+          "nonNull": 22836,
+          "pct": 96.27
+        },
+        "profileFlyingCount": {
+          "nonNull": 22836,
+          "pct": 96.27
+        },
+        "profileLateStartCount": {
+          "nonNull": 22836,
+          "pct": 96.27
+        },
+        "courseStatsRow": {
+          "nonNull": 22836,
+          "pct": 96.27
+        },
+        "courseAvgSt": {
+          "nonNull": 22836,
+          "pct": 96.27
+        },
+        "courseTop3Rate": {
+          "nonNull": 21977,
+          "pct": 92.65
+        },
+        "courseEntryRate": {
+          "nonNull": 22523,
+          "pct": 94.95
+        },
+        "courseStartOrder": {
+          "nonNull": 22836,
+          "pct": 96.27
+        }
+      },
+      "motorBoatStats": {
+        "raceCourseRows": 23720,
+        "motorTop2Rate": {
+          "nonNull": 23720,
+          "pct": 99.91
+        },
+        "boatTop2Rate": {
+          "nonNull": 23720,
+          "pct": 99.91
+        }
+      }
+    },
+    {
+      "population": "forward_2025_plus_buy",
+      "description": "historical-backfill BUY 2025-01-01 以降 forward",
+      "races": 2316,
+      "boats": 13630,
+      "distinctRacers": 1595,
+      "programFieldCoverage": {
+        "className": {
+          "nonNull": 13630,
+          "pct": 100
+        },
+        "nationalWinRate": {
+          "nonNull": 13630,
+          "pct": 100
+        },
+        "nationalTop2Rate": {
+          "nonNull": 13630,
+          "pct": 100
+        },
+        "localWinRate": {
+          "nonNull": 13630,
+          "pct": 100
+        },
+        "localTop2Rate": {
+          "nonNull": 13630,
+          "pct": 100
+        },
+        "motorTop2Rate": {
+          "nonNull": 13630,
+          "pct": 100
+        },
+        "boatTop2Rate": {
+          "nonNull": 13630,
+          "pct": 100
+        }
+      },
+      "snapshotCoverage": {
+        "inRacerProfilesReal": {
+          "nonNull": 13499,
+          "pct": 99.04
+        },
+        "profileAvgSt": {
+          "nonNull": 13499,
+          "pct": 99.04
+        },
+        "profileAbilityIndex": {
+          "nonNull": 13499,
+          "pct": 99.04
+        },
+        "profileFlyingCount": {
+          "nonNull": 13499,
+          "pct": 99.04
+        },
+        "profileLateStartCount": {
+          "nonNull": 13499,
+          "pct": 99.04
+        },
+        "courseStatsRow": {
+          "nonNull": 13499,
+          "pct": 99.04
+        },
+        "courseAvgSt": {
+          "nonNull": 13499,
+          "pct": 99.04
+        },
+        "courseTop3Rate": {
+          "nonNull": 13025,
+          "pct": 95.56
+        },
+        "courseEntryRate": {
+          "nonNull": 13345,
+          "pct": 97.91
+        },
+        "courseStartOrder": {
+          "nonNull": 13499,
+          "pct": 99.04
+        }
+      },
+      "motorBoatStats": {
+        "raceCourseRows": 13630,
+        "motorTop2Rate": {
+          "nonNull": 13630,
+          "pct": 98.09
+        },
+        "boatTop2Rate": {
+          "nonNull": 13630,
+          "pct": 98.09
+        }
+      }
+    },
+    {
+      "population": "since_locked_at_buy",
+      "description": "historical-backfill BUY lockedAt(2026-06-12) 以降",
+      "races": 0,
+      "boats": 0,
+      "distinctRacers": 0,
+      "programFieldCoverage": {
+        "className": {
+          "nonNull": 0,
+          "pct": null
+        },
+        "nationalWinRate": {
+          "nonNull": 0,
+          "pct": null
+        },
+        "nationalTop2Rate": {
+          "nonNull": 0,
+          "pct": null
+        },
+        "localWinRate": {
+          "nonNull": 0,
+          "pct": null
+        },
+        "localTop2Rate": {
+          "nonNull": 0,
+          "pct": null
+        },
+        "motorTop2Rate": {
+          "nonNull": 0,
+          "pct": null
+        },
+        "boatTop2Rate": {
+          "nonNull": 0,
+          "pct": null
+        }
+      },
+      "snapshotCoverage": {
+        "inRacerProfilesReal": {
+          "nonNull": 0,
+          "pct": null
+        },
+        "profileAvgSt": {
+          "nonNull": 0,
+          "pct": null
+        },
+        "profileAbilityIndex": {
+          "nonNull": 0,
+          "pct": null
+        },
+        "profileFlyingCount": {
+          "nonNull": 0,
+          "pct": null
+        },
+        "profileLateStartCount": {
+          "nonNull": 0,
+          "pct": null
+        },
+        "courseStatsRow": {
+          "nonNull": 0,
+          "pct": null
+        },
+        "courseAvgSt": {
+          "nonNull": 0,
+          "pct": null
+        },
+        "courseTop3Rate": {
+          "nonNull": 0,
+          "pct": null
+        },
+        "courseEntryRate": {
+          "nonNull": 0,
+          "pct": null
+        },
+        "courseStartOrder": {
+          "nonNull": 0,
+          "pct": null
+        }
+      },
+      "motorBoatStats": {
+        "raceCourseRows": 0,
+        "motorTop2Rate": {
+          "nonNull": 0,
+          "pct": null
+        },
+        "boatTop2Rate": {
+          "nonNull": 0,
+          "pct": null
+        }
+      }
+    }
+  ],
+  "candidateCoverage": [
+    {
+      "id": "wind2_3m_exacta_1_4",
+      "label": "wind 2-3m × 2連単 1-4",
+      "combo": "1-4",
+      "forward": {
+        "matchedRaces": 0,
+        "firstBoat": {
+          "course": 1,
+          "boats": 0,
+          "className": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "nationalWinRate": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "localWinRate": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "inRacerProfilesReal": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "profileAvgSt": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "profileAbilityIndex": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "courseAvgSt": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "courseTop3Rate": {
+            "nonNull": 0,
+            "pct": null
+          }
+        },
+        "secondBoat": {
+          "course": 4,
+          "boats": 0,
+          "className": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "nationalWinRate": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "localWinRate": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "inRacerProfilesReal": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "profileAvgSt": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "profileAbilityIndex": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "courseAvgSt": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "courseTop3Rate": {
+            "nonNull": 0,
+            "pct": null
+          }
+        },
+        "motorBoatStats": {
+          "raceCourseRows": 0,
+          "motorTop2Rate": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "boatTop2Rate": {
+            "nonNull": 0,
+            "pct": null
+          }
+        }
+      },
+      "preLockReference": {
+        "matchedRaces": 1032,
+        "firstBoat": {
+          "course": 1,
+          "boats": 1031,
+          "className": {
+            "nonNull": 1031,
+            "pct": 100
+          },
+          "nationalWinRate": {
+            "nonNull": 1031,
+            "pct": 100
+          },
+          "localWinRate": {
+            "nonNull": 1031,
+            "pct": 100
+          },
+          "inRacerProfilesReal": {
+            "nonNull": 992,
+            "pct": 96.22
+          },
+          "profileAvgSt": {
+            "nonNull": 992,
+            "pct": 96.22
+          },
+          "profileAbilityIndex": {
+            "nonNull": 992,
+            "pct": 96.22
+          },
+          "courseAvgSt": {
+            "nonNull": 992,
+            "pct": 96.22
+          },
+          "courseTop3Rate": {
+            "nonNull": 983,
+            "pct": 95.34
+          }
+        },
+        "secondBoat": {
+          "course": 4,
+          "boats": 1032,
+          "className": {
+            "nonNull": 1032,
+            "pct": 100
+          },
+          "nationalWinRate": {
+            "nonNull": 1032,
+            "pct": 100
+          },
+          "localWinRate": {
+            "nonNull": 1032,
+            "pct": 100
+          },
+          "inRacerProfilesReal": {
+            "nonNull": 1010,
+            "pct": 97.87
+          },
+          "profileAvgSt": {
+            "nonNull": 1010,
+            "pct": 97.87
+          },
+          "profileAbilityIndex": {
+            "nonNull": 1010,
+            "pct": 97.87
+          },
+          "courseAvgSt": {
+            "nonNull": 1010,
+            "pct": 97.87
+          },
+          "courseTop3Rate": {
+            "nonNull": 987,
+            "pct": 95.64
+          }
+        },
+        "motorBoatStats": {
+          "raceCourseRows": 2063,
+          "motorTop2Rate": {
+            "nonNull": 2063,
+            "pct": 99.95
+          },
+          "boatTop2Rate": {
+            "nonNull": 2063,
+            "pct": 99.95
+          }
+        }
+      }
+    },
+    {
+      "id": "amagasaki_exacta_1_3",
+      "label": "尼崎 × 2連単 1-3",
+      "combo": "1-3",
+      "forward": {
+        "matchedRaces": 0,
+        "firstBoat": {
+          "course": 1,
+          "boats": 0,
+          "className": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "nationalWinRate": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "localWinRate": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "inRacerProfilesReal": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "profileAvgSt": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "profileAbilityIndex": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "courseAvgSt": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "courseTop3Rate": {
+            "nonNull": 0,
+            "pct": null
+          }
+        },
+        "secondBoat": {
+          "course": 3,
+          "boats": 0,
+          "className": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "nationalWinRate": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "localWinRate": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "inRacerProfilesReal": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "profileAvgSt": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "profileAbilityIndex": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "courseAvgSt": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "courseTop3Rate": {
+            "nonNull": 0,
+            "pct": null
+          }
+        },
+        "motorBoatStats": {
+          "raceCourseRows": 0,
+          "motorTop2Rate": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "boatTop2Rate": {
+            "nonNull": 0,
+            "pct": null
+          }
+        }
+      },
+      "preLockReference": {
+        "matchedRaces": 183,
+        "firstBoat": {
+          "course": 1,
+          "boats": 183,
+          "className": {
+            "nonNull": 183,
+            "pct": 100
+          },
+          "nationalWinRate": {
+            "nonNull": 183,
+            "pct": 100
+          },
+          "localWinRate": {
+            "nonNull": 183,
+            "pct": 100
+          },
+          "inRacerProfilesReal": {
+            "nonNull": 178,
+            "pct": 97.27
+          },
+          "profileAvgSt": {
+            "nonNull": 178,
+            "pct": 97.27
+          },
+          "profileAbilityIndex": {
+            "nonNull": 178,
+            "pct": 97.27
+          },
+          "courseAvgSt": {
+            "nonNull": 178,
+            "pct": 97.27
+          },
+          "courseTop3Rate": {
+            "nonNull": 177,
+            "pct": 96.72
+          }
+        },
+        "secondBoat": {
+          "course": 3,
+          "boats": 183,
+          "className": {
+            "nonNull": 183,
+            "pct": 100
+          },
+          "nationalWinRate": {
+            "nonNull": 183,
+            "pct": 100
+          },
+          "localWinRate": {
+            "nonNull": 183,
+            "pct": 100
+          },
+          "inRacerProfilesReal": {
+            "nonNull": 176,
+            "pct": 96.17
+          },
+          "profileAvgSt": {
+            "nonNull": 176,
+            "pct": 96.17
+          },
+          "profileAbilityIndex": {
+            "nonNull": 176,
+            "pct": 96.17
+          },
+          "courseAvgSt": {
+            "nonNull": 176,
+            "pct": 96.17
+          },
+          "courseTop3Rate": {
+            "nonNull": 175,
+            "pct": 95.63
+          }
+        },
+        "motorBoatStats": {
+          "raceCourseRows": 366,
+          "motorTop2Rate": {
+            "nonNull": 366,
+            "pct": 100
+          },
+          "boatTop2Rate": {
+            "nonNull": 366,
+            "pct": 100
+          }
+        }
+      }
+    },
+    {
+      "id": "marugame_exacta_1_2",
+      "label": "丸亀 × 2連単 1-2",
+      "combo": "1-2",
+      "forward": {
+        "matchedRaces": 0,
+        "firstBoat": {
+          "course": 1,
+          "boats": 0,
+          "className": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "nationalWinRate": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "localWinRate": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "inRacerProfilesReal": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "profileAvgSt": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "profileAbilityIndex": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "courseAvgSt": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "courseTop3Rate": {
+            "nonNull": 0,
+            "pct": null
+          }
+        },
+        "secondBoat": {
+          "course": 2,
+          "boats": 0,
+          "className": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "nationalWinRate": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "localWinRate": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "inRacerProfilesReal": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "profileAvgSt": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "profileAbilityIndex": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "courseAvgSt": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "courseTop3Rate": {
+            "nonNull": 0,
+            "pct": null
+          }
+        },
+        "motorBoatStats": {
+          "raceCourseRows": 0,
+          "motorTop2Rate": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "boatTop2Rate": {
+            "nonNull": 0,
+            "pct": null
+          }
+        }
+      },
+      "preLockReference": {
+        "matchedRaces": 204,
+        "firstBoat": {
+          "course": 1,
+          "boats": 200,
+          "className": {
+            "nonNull": 200,
+            "pct": 100
+          },
+          "nationalWinRate": {
+            "nonNull": 200,
+            "pct": 100
+          },
+          "localWinRate": {
+            "nonNull": 200,
+            "pct": 100
+          },
+          "inRacerProfilesReal": {
+            "nonNull": 187,
+            "pct": 93.5
+          },
+          "profileAvgSt": {
+            "nonNull": 187,
+            "pct": 93.5
+          },
+          "profileAbilityIndex": {
+            "nonNull": 187,
+            "pct": 93.5
+          },
+          "courseAvgSt": {
+            "nonNull": 187,
+            "pct": 93.5
+          },
+          "courseTop3Rate": {
+            "nonNull": 185,
+            "pct": 92.5
+          }
+        },
+        "secondBoat": {
+          "course": 2,
+          "boats": 200,
+          "className": {
+            "nonNull": 200,
+            "pct": 100
+          },
+          "nationalWinRate": {
+            "nonNull": 200,
+            "pct": 100
+          },
+          "localWinRate": {
+            "nonNull": 200,
+            "pct": 100
+          },
+          "inRacerProfilesReal": {
+            "nonNull": 186,
+            "pct": 93
+          },
+          "profileAvgSt": {
+            "nonNull": 186,
+            "pct": 93
+          },
+          "profileAbilityIndex": {
+            "nonNull": 186,
+            "pct": 93
+          },
+          "courseAvgSt": {
+            "nonNull": 186,
+            "pct": 93
+          },
+          "courseTop3Rate": {
+            "nonNull": 185,
+            "pct": 92.5
+          }
+        },
+        "motorBoatStats": {
+          "raceCourseRows": 400,
+          "motorTop2Rate": {
+            "nonNull": 400,
+            "pct": 98.04
+          },
+          "boatTop2Rate": {
+            "nonNull": 400,
+            "pct": 98.04
+          }
+        }
+      }
+    },
+    {
+      "id": "tokoname_exacta_1_2",
+      "label": "常滑 × 2連単 1-2",
+      "combo": "1-2",
+      "forward": {
+        "matchedRaces": 0,
+        "firstBoat": {
+          "course": 1,
+          "boats": 0,
+          "className": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "nationalWinRate": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "localWinRate": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "inRacerProfilesReal": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "profileAvgSt": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "profileAbilityIndex": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "courseAvgSt": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "courseTop3Rate": {
+            "nonNull": 0,
+            "pct": null
+          }
+        },
+        "secondBoat": {
+          "course": 2,
+          "boats": 0,
+          "className": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "nationalWinRate": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "localWinRate": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "inRacerProfilesReal": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "profileAvgSt": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "profileAbilityIndex": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "courseAvgSt": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "courseTop3Rate": {
+            "nonNull": 0,
+            "pct": null
+          }
+        },
+        "motorBoatStats": {
+          "raceCourseRows": 0,
+          "motorTop2Rate": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "boatTop2Rate": {
+            "nonNull": 0,
+            "pct": null
+          }
+        }
+      },
+      "preLockReference": {
+        "matchedRaces": 288,
+        "firstBoat": {
+          "course": 1,
+          "boats": 283,
+          "className": {
+            "nonNull": 283,
+            "pct": 100
+          },
+          "nationalWinRate": {
+            "nonNull": 283,
+            "pct": 100
+          },
+          "localWinRate": {
+            "nonNull": 283,
+            "pct": 100
+          },
+          "inRacerProfilesReal": {
+            "nonNull": 280,
+            "pct": 98.94
+          },
+          "profileAvgSt": {
+            "nonNull": 280,
+            "pct": 98.94
+          },
+          "profileAbilityIndex": {
+            "nonNull": 280,
+            "pct": 98.94
+          },
+          "courseAvgSt": {
+            "nonNull": 280,
+            "pct": 98.94
+          },
+          "courseTop3Rate": {
+            "nonNull": 276,
+            "pct": 97.53
+          }
+        },
+        "secondBoat": {
+          "course": 2,
+          "boats": 282,
+          "className": {
+            "nonNull": 282,
+            "pct": 100
+          },
+          "nationalWinRate": {
+            "nonNull": 282,
+            "pct": 100
+          },
+          "localWinRate": {
+            "nonNull": 282,
+            "pct": 100
+          },
+          "inRacerProfilesReal": {
+            "nonNull": 269,
+            "pct": 95.39
+          },
+          "profileAvgSt": {
+            "nonNull": 269,
+            "pct": 95.39
+          },
+          "profileAbilityIndex": {
+            "nonNull": 269,
+            "pct": 95.39
+          },
+          "courseAvgSt": {
+            "nonNull": 269,
+            "pct": 95.39
+          },
+          "courseTop3Rate": {
+            "nonNull": 265,
+            "pct": 93.97
+          }
+        },
+        "motorBoatStats": {
+          "raceCourseRows": 565,
+          "motorTop2Rate": {
+            "nonNull": 565,
+            "pct": 98.09
+          },
+          "boatTop2Rate": {
+            "nonNull": 565,
+            "pct": 98.09
+          }
+        }
+      }
+    },
+    {
+      "id": "omura_exacta_1_2",
+      "label": "大村 × 2連単 1-2",
+      "combo": "1-2",
+      "forward": {
+        "matchedRaces": 0,
+        "firstBoat": {
+          "course": 1,
+          "boats": 0,
+          "className": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "nationalWinRate": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "localWinRate": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "inRacerProfilesReal": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "profileAvgSt": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "profileAbilityIndex": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "courseAvgSt": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "courseTop3Rate": {
+            "nonNull": 0,
+            "pct": null
+          }
+        },
+        "secondBoat": {
+          "course": 2,
+          "boats": 0,
+          "className": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "nationalWinRate": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "localWinRate": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "inRacerProfilesReal": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "profileAvgSt": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "profileAbilityIndex": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "courseAvgSt": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "courseTop3Rate": {
+            "nonNull": 0,
+            "pct": null
+          }
+        },
+        "motorBoatStats": {
+          "raceCourseRows": 0,
+          "motorTop2Rate": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "boatTop2Rate": {
+            "nonNull": 0,
+            "pct": null
+          }
+        }
+      },
+      "preLockReference": {
+        "matchedRaces": 241,
+        "firstBoat": {
+          "course": 1,
+          "boats": 241,
+          "className": {
+            "nonNull": 241,
+            "pct": 100
+          },
+          "nationalWinRate": {
+            "nonNull": 241,
+            "pct": 100
+          },
+          "localWinRate": {
+            "nonNull": 241,
+            "pct": 100
+          },
+          "inRacerProfilesReal": {
+            "nonNull": 231,
+            "pct": 95.85
+          },
+          "profileAvgSt": {
+            "nonNull": 231,
+            "pct": 95.85
+          },
+          "profileAbilityIndex": {
+            "nonNull": 231,
+            "pct": 95.85
+          },
+          "courseAvgSt": {
+            "nonNull": 231,
+            "pct": 95.85
+          },
+          "courseTop3Rate": {
+            "nonNull": 231,
+            "pct": 95.85
+          }
+        },
+        "secondBoat": {
+          "course": 2,
+          "boats": 241,
+          "className": {
+            "nonNull": 241,
+            "pct": 100
+          },
+          "nationalWinRate": {
+            "nonNull": 241,
+            "pct": 100
+          },
+          "localWinRate": {
+            "nonNull": 241,
+            "pct": 100
+          },
+          "inRacerProfilesReal": {
+            "nonNull": 230,
+            "pct": 95.44
+          },
+          "profileAvgSt": {
+            "nonNull": 230,
+            "pct": 95.44
+          },
+          "profileAbilityIndex": {
+            "nonNull": 230,
+            "pct": 95.44
+          },
+          "courseAvgSt": {
+            "nonNull": 230,
+            "pct": 95.44
+          },
+          "courseTop3Rate": {
+            "nonNull": 229,
+            "pct": 95.02
+          }
+        },
+        "motorBoatStats": {
+          "raceCourseRows": 482,
+          "motorTop2Rate": {
+            "nonNull": 482,
+            "pct": 100
+          },
+          "boatTop2Rate": {
+            "nonNull": 482,
+            "pct": 100
+          }
+        }
+      }
+    },
+    {
+      "id": "race3_exacta_1_4",
+      "label": "3R × 2連単 1-4",
+      "combo": "1-4",
+      "forward": {
+        "matchedRaces": 0,
+        "firstBoat": {
+          "course": 1,
+          "boats": 0,
+          "className": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "nationalWinRate": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "localWinRate": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "inRacerProfilesReal": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "profileAvgSt": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "profileAbilityIndex": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "courseAvgSt": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "courseTop3Rate": {
+            "nonNull": 0,
+            "pct": null
+          }
+        },
+        "secondBoat": {
+          "course": 4,
+          "boats": 0,
+          "className": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "nationalWinRate": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "localWinRate": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "inRacerProfilesReal": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "profileAvgSt": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "profileAbilityIndex": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "courseAvgSt": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "courseTop3Rate": {
+            "nonNull": 0,
+            "pct": null
+          }
+        },
+        "motorBoatStats": {
+          "raceCourseRows": 0,
+          "motorTop2Rate": {
+            "nonNull": 0,
+            "pct": null
+          },
+          "boatTop2Rate": {
+            "nonNull": 0,
+            "pct": null
+          }
+        }
+      },
+      "preLockReference": {
+        "matchedRaces": 508,
+        "firstBoat": {
+          "course": 1,
+          "boats": 504,
+          "className": {
+            "nonNull": 504,
+            "pct": 100
+          },
+          "nationalWinRate": {
+            "nonNull": 504,
+            "pct": 100
+          },
+          "localWinRate": {
+            "nonNull": 504,
+            "pct": 100
+          },
+          "inRacerProfilesReal": {
+            "nonNull": 479,
+            "pct": 95.04
+          },
+          "profileAvgSt": {
+            "nonNull": 479,
+            "pct": 95.04
+          },
+          "profileAbilityIndex": {
+            "nonNull": 479,
+            "pct": 95.04
+          },
+          "courseAvgSt": {
+            "nonNull": 479,
+            "pct": 95.04
+          },
+          "courseTop3Rate": {
+            "nonNull": 474,
+            "pct": 94.05
+          }
+        },
+        "secondBoat": {
+          "course": 4,
+          "boats": 504,
+          "className": {
+            "nonNull": 504,
+            "pct": 100
+          },
+          "nationalWinRate": {
+            "nonNull": 504,
+            "pct": 100
+          },
+          "localWinRate": {
+            "nonNull": 504,
+            "pct": 100
+          },
+          "inRacerProfilesReal": {
+            "nonNull": 494,
+            "pct": 98.02
+          },
+          "profileAvgSt": {
+            "nonNull": 494,
+            "pct": 98.02
+          },
+          "profileAbilityIndex": {
+            "nonNull": 494,
+            "pct": 98.02
+          },
+          "courseAvgSt": {
+            "nonNull": 494,
+            "pct": 98.02
+          },
+          "courseTop3Rate": {
+            "nonNull": 485,
+            "pct": 96.23
+          }
+        },
+        "motorBoatStats": {
+          "raceCourseRows": 1008,
+          "motorTop2Rate": {
+            "nonNull": 1008,
+            "pct": 99.21
+          },
+          "boatTop2Rate": {
+            "nonNull": 1008,
+            "pct": 99.21
+          }
+        }
+      }
+    }
+  ],
+  "pointInTime": {
+    "latestProgramDate": "2026-06-12",
+    "racerProfiles": {
+      "fetchedAtRange": {
+        "min_f": "2026-05-29T07:29:37.047Z",
+        "max_f": "2026-06-08T05:41:58.443Z"
+      },
+      "distinctFetchDays": 3,
+      "note": "1世代スナップショットのみ。snapshot履歴なし → 過去レースに当てると未来情報リーク。"
+    },
+    "racerCourseStats": {
+      "fetchedAtRange": {
+        "min_f": "2026-05-29T07:29:37.047Z",
+        "max_f": "2026-06-08T05:41:58.443Z"
+      },
+      "distinctFetchDays": 3,
+      "note": "同上。enrichFeatures は registrationNo+course だけでJOINし日付条件なし。"
+    },
+    "historicalBuyDateRange": {
+      "min_d": "2024-01-01",
+      "max_d": "2026-05-29",
+      "races": 6276
+    },
+    "leakEvidence": {
+      "description": "historical-backfill 行の feature_adjustment_breakdown に courseStFactor/courseTop3Factor 非中立が存在する場合、fetched_at がレース日より後のスナップショットを過去レースに適用した証拠になる。",
+      "rows_with_breakdown": 1969,
+      "course_factor_active": 1938,
+      "exhibition_residual_active": 155,
+      "min_date": "2025-01-01",
+      "max_date": "2025-01-12"
+    },
+    "motorBoatStats": {
+      "note": "race_id 単位で当日番組から取り込むためレース時点で利用可能。point-in-time 安全。"
+    },
+    "officialProgramsRawJson": {
+      "note": "出走表は前売り時点で公表される情報。レース日キー付きで保存されており point-in-time 安全。"
+    }
+  },
+  "safetyClassification": [
+    {
+      "feature": "className (A1/A2/B1/B2)",
+      "source": "official_programs.raw_json boats[].className",
+      "classifications": [
+        "usable_for_historical",
+        "currently_used_in_decision"
+      ],
+      "notes": "出走表掲載の時点データ。programFeatures.ts classAdjustment/supportClassAdjustment で使用中。"
+    },
+    {
+      "feature": "nationalWinRate",
+      "source": "official_programs.raw_json boats[].nationalWinRate",
+      "classifications": [
+        "usable_for_historical",
+        "currently_used_in_decision"
+      ],
+      "notes": "出走表掲載の時点データ。1着候補の nationalFactor で使用中。"
+    },
+    {
+      "feature": "nationalTop2Rate",
+      "source": "official_programs.raw_json boats[].nationalTop2Rate",
+      "classifications": [
+        "usable_for_historical",
+        "not_used_in_decision"
+      ],
+      "notes": "出走表掲載の時点データ。BoatFeature に取り込み済みだが補正係数では未使用。"
+    },
+    {
+      "feature": "nationalTop3Rate",
+      "source": "（存在しない）",
+      "classifications": [
+        "missing_or_low_coverage",
+        "needs_schema_change"
+      ],
+      "notes": "出走表raw_jsonにもDBにも全国3連率は存在しない。取得元の追加が必要。"
+    },
+    {
+      "feature": "localWinRate",
+      "source": "official_programs.raw_json boats[].localWinRate",
+      "classifications": [
+        "usable_for_historical",
+        "currently_used_in_decision"
+      ],
+      "notes": "出走表掲載の時点データ。1着・2着候補の localFactor で使用中。"
+    },
+    {
+      "feature": "localTop2Rate",
+      "source": "official_programs.raw_json boats[].localTop2Rate",
+      "classifications": [
+        "usable_for_historical",
+        "not_used_in_decision"
+      ],
+      "notes": "出走表掲載の時点データ。取り込み済みだが補正係数では未使用。"
+    },
+    {
+      "feature": "localTop3Rate",
+      "source": "（存在しない）",
+      "classifications": [
+        "missing_or_low_coverage",
+        "needs_schema_change"
+      ],
+      "notes": "当地3連率は存在しない。"
+    },
+    {
+      "feature": "motorTop2Rate（全国）",
+      "source": "official_programs.raw_json boats[].motorTop2Rate",
+      "classifications": [
+        "usable_for_historical",
+        "currently_used_in_decision"
+      ],
+      "notes": "出走表掲載の時点データ。venueMotorTop2Rate のフォールバックとして使用中。"
+    },
+    {
+      "feature": "boatTop2Rate（全国）",
+      "source": "official_programs.raw_json boats[].boatTop2Rate",
+      "classifications": [
+        "usable_for_historical",
+        "currently_used_in_decision"
+      ],
+      "notes": "出走表掲載の時点データ。venueBoatTop2Rate のフォールバックとして使用中。"
+    },
+    {
+      "feature": "venueMotorTop2Rate / venueBoatTop2Rate",
+      "source": "motor_boat_stats (race_id, course 単位)",
+      "classifications": [
+        "usable_for_historical",
+        "currently_used_in_decision"
+      ],
+      "notes": "レースごとに当日の番組から保存。2024-01-01以降のみ。それ以前は needs_backfill。"
+    },
+    {
+      "feature": "avg_st（全コース平均ST）",
+      "source": "racer_profiles.avg_st（現在値スナップショット）",
+      "classifications": [
+        "usable_for_live_only",
+        "unsafe_due_to_point_in_time_leakage",
+        "not_used_in_decision"
+      ],
+      "notes": "fetched_at 2026-05/06 の1世代のみ。過去レースに当てるとリーク。decision の補正係数では未使用。"
+    },
+    {
+      "feature": "ability_index",
+      "source": "racer_profiles.ability_index（現在値スナップショット）",
+      "classifications": [
+        "usable_for_live_only",
+        "unsafe_due_to_point_in_time_leakage",
+        "not_used_in_decision"
+      ],
+      "notes": "同上。decision では未使用。"
+    },
+    {
+      "feature": "flying_count / late_start_count",
+      "source": "racer_profiles（現在値スナップショット）",
+      "classifications": [
+        "usable_for_live_only",
+        "unsafe_due_to_point_in_time_leakage",
+        "not_used_in_decision"
+      ],
+      "notes": "BoatFeature に注入されるが補正係数では未使用。歴史検証に使うなら期別スナップショットが必要。"
+    },
+    {
+      "feature": "courseAvgSt / courseTop3Rate（コース別）",
+      "source": "racer_course_stats（現在値スナップショット）",
+      "classifications": [
+        "usable_for_live_only",
+        "unsafe_due_to_point_in_time_leakage",
+        "currently_used_in_decision"
+      ],
+      "notes": "courseStFactor / courseTop3Factor として decision に影響。enrichFeatures に日付条件がないため、historical-backfill 再生成時に過去レースへ現在値が注入される（leakEvidence 参照）。"
+    },
+    {
+      "feature": "courseEntryRate / courseStartOrder",
+      "source": "racer_course_stats（現在値スナップショット）",
+      "classifications": [
+        "usable_for_live_only",
+        "unsafe_due_to_point_in_time_leakage",
+        "not_used_in_decision"
+      ],
+      "notes": "保存のみ。補正係数では未使用。"
+    },
+    {
+      "feature": "exhibitionStResidual",
+      "source": "exhibition_data（当日直前情報） − racer_course_stats.avg_st（現在値）",
+      "classifications": [
+        "usable_for_live_only",
+        "unsafe_due_to_point_in_time_leakage",
+        "currently_used_in_decision"
+      ],
+      "notes": "展示ST自体は当日情報で安全だが、基準側の courseAvgSt が現在値スナップショットのため残差は時点不整合。"
+    },
+    {
+      "feature": "race_entries（racer_reg/entry_course/st/finish_pos 等）",
+      "source": "race_entries（結果確定後データ）",
+      "classifications": [
+        "usable_for_historical",
+        "not_used_in_decision"
+      ],
+      "notes": "結果データとしては全期間あり。ただし『そのレースのst/finish_pos』は事後情報なので、特徴量にするなら race_date より前のレースだけで as-of 集計すること。"
+    }
+  ]
+}
