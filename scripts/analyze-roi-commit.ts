@@ -9,6 +9,14 @@
  *
  * このスクリプトの「要因分解」は、既に保存済みのdecision_history BUY集合に対する
  * フィルター反実仮想です。過去コミット時点のdecision再生成ではありません。
+ *
+ * ⚠️ POINT-IN-TIME 安全性警告:
+ * race_f CTE は racer_profiles.flying_count を現在値でJOINしている（current snapshot diagnostic only）。
+ * racer_profiles は現在値スナップショット1世代のみのため、過去レース当時の flying_count とは異なる可能性がある。
+ * raceFlyingCount / fPresent を使った条件分析（「F持ち複数レース」等）は
+ * historical causal feature として扱ってはいけない。参考診断値のみ。
+ * 将来 racer_ability_snapshots が導入され snapshot_date <= race_date の条件が付いた場合に限り
+ * historical 検証に使える（docs/racer-point-in-time-feature-plan.md 参照）。
  */
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";

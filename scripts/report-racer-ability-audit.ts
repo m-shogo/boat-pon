@@ -266,6 +266,9 @@ function main() {
   // ── 6. 安全分類 ──────────────────────────────────────────────────────
   const safetyClassification = buildSafetyClassification();
 
+  // ── 7. コードパス安全性 ───────────────────────────────────────────────
+  const codePathSafety = buildCodePathSafety();
+
   const report = {
     generatedAt: new Date().toISOString(),
     dbPath: DB_PATH,
@@ -281,6 +284,7 @@ function main() {
     candidateCoverage,
     pointInTime,
     safetyClassification,
+    codePathSafety,
   };
 
   mkdirSync("reports", { recursive: true });
@@ -818,6 +822,67 @@ function buildSafetyClassification() {
   ];
 }
 
+function buildCodePathSafety() {
+  return [
+    {
+      path: "listProgramInputs (live runtime)",
+      file: "server/db.ts",
+      mode: "live",
+      liveOnlyFeaturesInjected: true,
+      guardPresent: false,
+      notes: "liveレース判定用。courseAvgSt/courseTop3Rate/exhibitionStResidual を enrich する（正常）。",
+    },
+    {
+      path: "listProgramInputsRange (evaluation/report)",
+      file: "server/db.ts",
+      mode: "historical-readonly (default)",
+      liveOnlyFeaturesInjected: false,
+      guardPresent: true,
+      notes: "デフォルト mode='historical-readonly'。live-only 特徴量は null。明示的に 'live' を渡さない限り安全。",
+    },
+    {
+      path: "listProgramInputsWithOddsSnapshotsRange (evaluation)",
+      file: "server/db.ts",
+      mode: "historical (default)",
+      liveOnlyFeaturesInjected: false,
+      guardPresent: true,
+      notes: "デフォルト mode='historical'。live-only 特徴量は null。",
+    },
+    {
+      path: "generate-decision-history (historical write)",
+      file: "scripts/generate-decision-history.ts",
+      mode: "historical",
+      liveOnlyFeaturesInjected: false,
+      guardPresent: true,
+      notes: "assertNoLiveOnlyFeaturesForHistorical + assertBreakdownNeutralForHistorical で生成前に throw。",
+    },
+    {
+      path: "analyze-regenerated-ab (AB comparison)",
+      file: "scripts/analyze-regenerated-ab.ts",
+      mode: "historical-readonly",
+      liveOnlyFeaturesInjected: false,
+      guardPresent: true,
+      notes: "loadCourseStats/loadProfiles/loadExhibitionSt を削除し stripLiveOnlyRacerFeatures に置換。",
+    },
+    {
+      path: "evaluate-v4-conservative (read-only eval)",
+      file: "scripts/evaluate-v4-conservative.ts",
+      mode: "historical-readonly",
+      liveOnlyFeaturesInjected: false,
+      guardPresent: true,
+      notes: "listProgramInputsRange を mode='historical-readonly' で呼び出し。featureSafety セクションを出力に含む。",
+    },
+    {
+      path: "analyze-roi-candidates (diagnostic report)",
+      file: "scripts/analyze-roi-candidates.ts",
+      mode: "current-snapshot-diagnostic-only",
+      liveOnlyFeaturesInjected: "diagnostic (not enrichFeatures path)",
+      guardPresent: false,
+      notes: "racer_profiles/racer_course_stats を直接 JOIN しているが ProgramFeatureSnapshot への注入はしない。診断専用。",
+    },
+  ];
+}
+
 function chunks<T>(items: T[], size: number): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
@@ -938,7 +1003,20 @@ function renderMarkdown(report: ReturnType<typeof buildReportType>): string {
   }
   lines.push("");
 
-  lines.push("## 8. まとめ");
+  lines.push("## 8. コードパス安全性（2026-06-13 実装）");
+  lines.push("");
+  lines.push("| パス | ファイル | mode | live-only 注入 | guard |");
+  lines.push("|---|---|---|---|---|");
+  for (const row of report.codePathSafety) {
+    const injected = typeof row.liveOnlyFeaturesInjected === "boolean"
+      ? (row.liveOnlyFeaturesInjected ? "✅ あり" : "❌ なし")
+      : `⚠️ ${row.liveOnlyFeaturesInjected}`;
+    const guard = row.guardPresent ? "✅ あり" : "—";
+    lines.push(`| ${row.path} | ${row.file} | ${row.mode} | ${injected} | ${guard} |`);
+  }
+  lines.push("");
+
+  lines.push("## 9. まとめ");
   lines.push("");
   lines.push("- **今すぐ historical に使える**: className / nationalWinRate / nationalTop2Rate / localWinRate / localTop2Rate / motorTop2Rate / boatTop2Rate（raw_json 時点データ）、motor_boat_stats（2024以降）");
   lines.push("- **live-only なら使える**: avg_st / ability_index / flying_count / late_start_count / コース別成績（現在値スナップショットのみ）");
@@ -983,5 +1061,6 @@ function buildReportType() {
     }>;
     pointInTime: ReturnType<typeof auditPointInTime>;
     safetyClassification: ReturnType<typeof buildSafetyClassification>;
+    codePathSafety: ReturnType<typeof buildCodePathSafety>;
   };
 }

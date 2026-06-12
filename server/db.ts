@@ -728,7 +728,17 @@ function loadMotorBoatStatsMap(db: DatabaseSync): Map<string, { motorTop2Rate: n
   return map;
 }
 
-/** extractProgramFeatures の結果に racer_course_stats / racer_profiles / exhibition_data / motor_boat_stats の値を注入する */
+/**
+ * extractProgramFeatures の結果に racer_course_stats / racer_profiles / exhibition_data / motor_boat_stats の値を注入する。
+ *
+ * mode による live-only特徴量の制御:
+ *   - "live": 全特徴量を注入（現在値スナップショットを使ってよい）
+ *   - "historical" | "historical-readonly": live-only特徴量（courseAvgSt/courseTop3Rate/flyingCount/lateStartCount/exhibitionStResidual）は null にする
+ *   - "report": 値の存在確認用。historical と同じく live-only は null にする
+ *
+ * historical mode で live-only を注入しないのは point-in-time leakage 防止のため。
+ * racer_profiles / racer_course_stats は現在値スナップショット1世代のみで snapshot_date が race_date より後のため unsafe。
+ */
 function enrichFeatures(
   raceId: string,
   features: ProgramFeatureSnapshot,
@@ -736,10 +746,27 @@ function enrichFeatures(
   profilesMap: Map<string, { flyingCount: number | null; lateStartCount: number | null }>,
   exhibitionStMap: Map<string, number>,
   motorBoatStatsMap: Map<string, { motorTop2Rate: number | null; boatTop2Rate: number | null }>,
+  mode: import("../src/domain/programFeatureSafety").ProgramFeatureUsageMode = "live",
 ): ProgramFeatureSnapshot {
+  const isLive = mode === "live";
   return {
     boats: features.boats.map((boat) => {
       if (!boat.registrationNo) return boat;
+      const motorBoatStat = motorBoatStatsMap.get(`${raceId}-${boat.course}`);
+      if (!isLive) {
+        // historical / historical-readonly / report: live-only特徴量は null。motor_boat_stats は race_id単位で安全。
+        return {
+          ...boat,
+          courseAvgSt: null,
+          courseTop3Rate: null,
+          flyingCount: null,
+          lateStartCount: null,
+          exhibitionStResidual: null,
+          venueMotorTop2Rate: motorBoatStat?.motorTop2Rate ?? null,
+          venueBoatTop2Rate: motorBoatStat?.boatTop2Rate ?? null,
+        };
+      }
+      // live mode: 現状どおり全特徴量を注入
       const stat = courseStatsMap.get(`${boat.registrationNo}-${boat.course}`);
       const profile = profilesMap.get(boat.registrationNo);
       const exhibitionSt = exhibitionStMap.get(`${raceId}-${boat.course}`) ?? null;
@@ -747,7 +774,6 @@ function enrichFeatures(
         stat?.avgSt != null && exhibitionSt != null
           ? stat.avgSt - exhibitionSt
           : null;
-      const motorBoatStat = motorBoatStatsMap.get(`${raceId}-${boat.course}`);
       return {
         ...boat,
         courseAvgSt: stat?.avgSt ?? null,
@@ -762,6 +788,7 @@ function enrichFeatures(
   };
 }
 
+/** live runtime用（date指定なしは当日全レース）。live modeで全特徴量を注入する。 */
 export function listProgramInputs(db: DatabaseSync, date?: string) {
   const params: string[] = [];
   const where = date ? "WHERE date = ?" : "";
@@ -787,12 +814,25 @@ ORDER BY date DESC, venue ASC, race_no ASC
       closeAt: String(row.close_at),
       raceCategory: parseRaceCategory(row.raw_json),
       beforeInfoComplete: beforeInfoCompleteRaceIds.has(raceId),
-      features: enrichFeatures(raceId, extractProgramFeatures(parseRawJson(row.raw_json)), courseStatsMap, profilesMap, exhibitionStMap, motorBoatStatsMap),
+      // live runtime: mode="live" で全特徴量を注入してよい
+      features: enrichFeatures(raceId, extractProgramFeatures(parseRawJson(row.raw_json)), courseStatsMap, profilesMap, exhibitionStMap, motorBoatStatsMap, "live"),
     };
   });
 }
 
-export function listProgramInputsRange(db: DatabaseSync, from: string, to: string, limit: number) {
+/**
+ * historical range 用。
+ * modeは "historical"（DB書き込みパス）または "historical-readonly"（read-only評価）を指定。
+ * live-only特徴量は mode に従い null にする。
+ * デフォルト "historical-readonly" で安全側に倒す。
+ */
+export function listProgramInputsRange(
+  db: DatabaseSync,
+  from: string,
+  to: string,
+  limit: number,
+  mode: import("../src/domain/programFeatureSafety").ProgramFeatureUsageMode = "historical-readonly",
+) {
   const rows = db.prepare(`
 SELECT race_id, date, venue, race_no, close_at, raw_json
 FROM official_programs
@@ -800,10 +840,11 @@ WHERE date >= ? AND date <= ?
 ORDER BY date ASC, venue ASC, race_no ASC
 LIMIT ?
 `).all(from, to, limit) as Array<Record<string, unknown>>;
-  const courseStatsMap = loadCourseStatsMap(db);
-  const profilesMap = loadRacerProfilesMap(db);
-  const exhibitionStMap = loadExhibitionStMap(db);
   const motorBoatStatsMap = loadMotorBoatStatsMap(db);
+  // historical/historical-readonly/report では live-only マップのロードはスキップ（パフォーマンスも改善）
+  const courseStatsMap = mode === "live" ? loadCourseStatsMap(db) : new Map<string, never>();
+  const profilesMap = mode === "live" ? loadRacerProfilesMap(db) : new Map<string, never>();
+  const exhibitionStMap = mode === "live" ? loadExhibitionStMap(db) : new Map<string, never>();
   return rows.map((row) => {
     const raceId = String(row.race_id);
     return {
@@ -813,12 +854,23 @@ LIMIT ?
       raceNo: Number(row.race_no),
       closeAt: String(row.close_at),
       raceCategory: parseRaceCategory(row.raw_json),
-      features: enrichFeatures(raceId, extractProgramFeatures(parseRawJson(row.raw_json)), courseStatsMap, profilesMap, exhibitionStMap, motorBoatStatsMap),
+      features: enrichFeatures(raceId, extractProgramFeatures(parseRawJson(row.raw_json)), courseStatsMap, profilesMap, exhibitionStMap, motorBoatStatsMap, mode),
+      featureMode: mode,
     };
   });
 }
 
-export function listProgramInputsWithOddsSnapshotsRange(db: DatabaseSync, from: string, to: string, limit: number) {
+/**
+ * historical range（odds snapshot 付き）用。
+ * デフォルト "historical" でDB書き込みパスを安全に保護する。
+ */
+export function listProgramInputsWithOddsSnapshotsRange(
+  db: DatabaseSync,
+  from: string,
+  to: string,
+  limit: number,
+  mode: import("../src/domain/programFeatureSafety").ProgramFeatureUsageMode = "historical",
+) {
   const rows = db.prepare(`
 SELECT p.race_id, p.date, p.venue, p.race_no, p.close_at, p.raw_json
 FROM official_programs p
@@ -829,10 +881,10 @@ WHERE p.date >= ? AND p.date <= ?
 ORDER BY p.date ASC, p.venue ASC, p.race_no ASC
 LIMIT ?
 `).all(from, to, limit) as Array<Record<string, unknown>>;
-  const courseStatsMap = loadCourseStatsMap(db);
-  const profilesMap = loadRacerProfilesMap(db);
-  const exhibitionStMap = loadExhibitionStMap(db);
   const motorBoatStatsMap = loadMotorBoatStatsMap(db);
+  const courseStatsMap = mode === "live" ? loadCourseStatsMap(db) : new Map<string, never>();
+  const profilesMap = mode === "live" ? loadRacerProfilesMap(db) : new Map<string, never>();
+  const exhibitionStMap = mode === "live" ? loadExhibitionStMap(db) : new Map<string, never>();
   return rows.map((row) => {
     const raceId = String(row.race_id);
     return {
@@ -842,7 +894,8 @@ LIMIT ?
       raceNo: Number(row.race_no),
       closeAt: String(row.close_at),
       raceCategory: parseRaceCategory(row.raw_json),
-      features: enrichFeatures(raceId, extractProgramFeatures(parseRawJson(row.raw_json)), courseStatsMap, profilesMap, exhibitionStMap, motorBoatStatsMap),
+      features: enrichFeatures(raceId, extractProgramFeatures(parseRawJson(row.raw_json)), courseStatsMap, profilesMap, exhibitionStMap, motorBoatStatsMap, mode),
+      featureMode: mode,
     };
   });
 }

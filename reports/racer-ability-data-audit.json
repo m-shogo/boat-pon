@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-12T15:49:40.148Z",
+  "generatedAt": "2026-06-12T16:46:12.669Z",
   "dbPath": "data/boat.sqlite",
   "mode": "read-only racer ability data audit",
   "warning": "本レポートは coverage / point-in-time 安全性の監査のみ。ROI評価・買い条件作成・候補変更は行わない。",
@@ -2557,6 +2557,64 @@
         "not_used_in_decision"
       ],
       "notes": "結果データとしては全期間あり。ただし『そのレースのst/finish_pos』は事後情報なので、特徴量にするなら race_date より前のレースだけで as-of 集計すること。"
+    }
+  ],
+  "codePathSafety": [
+    {
+      "path": "listProgramInputs (live runtime)",
+      "file": "server/db.ts",
+      "mode": "live",
+      "liveOnlyFeaturesInjected": true,
+      "guardPresent": false,
+      "notes": "liveレース判定用。courseAvgSt/courseTop3Rate/exhibitionStResidual を enrich する（正常）。"
+    },
+    {
+      "path": "listProgramInputsRange (evaluation/report)",
+      "file": "server/db.ts",
+      "mode": "historical-readonly (default)",
+      "liveOnlyFeaturesInjected": false,
+      "guardPresent": true,
+      "notes": "デフォルト mode='historical-readonly'。live-only 特徴量は null。明示的に 'live' を渡さない限り安全。"
+    },
+    {
+      "path": "listProgramInputsWithOddsSnapshotsRange (evaluation)",
+      "file": "server/db.ts",
+      "mode": "historical (default)",
+      "liveOnlyFeaturesInjected": false,
+      "guardPresent": true,
+      "notes": "デフォルト mode='historical'。live-only 特徴量は null。"
+    },
+    {
+      "path": "generate-decision-history (historical write)",
+      "file": "scripts/generate-decision-history.ts",
+      "mode": "historical",
+      "liveOnlyFeaturesInjected": false,
+      "guardPresent": true,
+      "notes": "assertNoLiveOnlyFeaturesForHistorical + assertBreakdownNeutralForHistorical で生成前に throw。"
+    },
+    {
+      "path": "analyze-regenerated-ab (AB comparison)",
+      "file": "scripts/analyze-regenerated-ab.ts",
+      "mode": "historical-readonly",
+      "liveOnlyFeaturesInjected": false,
+      "guardPresent": true,
+      "notes": "loadCourseStats/loadProfiles/loadExhibitionSt を削除し stripLiveOnlyRacerFeatures に置換。"
+    },
+    {
+      "path": "evaluate-v4-conservative (read-only eval)",
+      "file": "scripts/evaluate-v4-conservative.ts",
+      "mode": "historical-readonly",
+      "liveOnlyFeaturesInjected": false,
+      "guardPresent": true,
+      "notes": "listProgramInputsRange を mode='historical-readonly' で呼び出し。featureSafety セクションを出力に含む。"
+    },
+    {
+      "path": "analyze-roi-candidates (diagnostic report)",
+      "file": "scripts/analyze-roi-candidates.ts",
+      "mode": "current-snapshot-diagnostic-only",
+      "liveOnlyFeaturesInjected": "diagnostic (not enrichFeatures path)",
+      "guardPresent": false,
+      "notes": "racer_profiles/racer_course_stats を直接 JOIN しているが ProgramFeatureSnapshot への注入はしない。診断専用。"
     }
   ]
 }

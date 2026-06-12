@@ -1,6 +1,6 @@
 # 選手能力データ監査レポート（point-in-time 安全性）
 
-生成日時: 2026-06-12T15:49:40.148Z
+生成日時: 2026-06-12T16:46:12.669Z
 DB: data/boat.sqlite
 
 > 本レポートは coverage / point-in-time 安全性の監査のみ。ROI評価・買い条件作成・候補変更は行わない。
@@ -546,7 +546,19 @@ DB: data/boat.sqlite
 | exhibitionStResidual | exhibition_data（当日直前情報） − racer_course_stats.avg_st（現在値） | usable_for_live_only, unsafe_due_to_point_in_time_leakage, currently_used_in_decision | 展示ST自体は当日情報で安全だが、基準側の courseAvgSt が現在値スナップショットのため残差は時点不整合。 |
 | race_entries（racer_reg/entry_course/st/finish_pos 等） | race_entries（結果確定後データ） | usable_for_historical, not_used_in_decision | 結果データとしては全期間あり。ただし『そのレースのst/finish_pos』は事後情報なので、特徴量にするなら race_date より前のレースだけで as-of 集計すること。 |
 
-## 8. まとめ
+## 8. コードパス安全性（2026-06-13 実装）
+
+| パス | ファイル | mode | live-only 注入 | guard |
+|---|---|---|---|---|
+| listProgramInputs (live runtime) | server/db.ts | live | ✅ あり | — |
+| listProgramInputsRange (evaluation/report) | server/db.ts | historical-readonly (default) | ❌ なし | ✅ あり |
+| listProgramInputsWithOddsSnapshotsRange (evaluation) | server/db.ts | historical (default) | ❌ なし | ✅ あり |
+| generate-decision-history (historical write) | scripts/generate-decision-history.ts | historical | ❌ なし | ✅ あり |
+| analyze-regenerated-ab (AB comparison) | scripts/analyze-regenerated-ab.ts | historical-readonly | ❌ なし | ✅ あり |
+| evaluate-v4-conservative (read-only eval) | scripts/evaluate-v4-conservative.ts | historical-readonly | ❌ なし | ✅ あり |
+| analyze-roi-candidates (diagnostic report) | scripts/analyze-roi-candidates.ts | current-snapshot-diagnostic-only | ⚠️ diagnostic (not enrichFeatures path) | — |
+
+## 9. まとめ
 
 - **今すぐ historical に使える**: className / nationalWinRate / nationalTop2Rate / localWinRate / localTop2Rate / motorTop2Rate / boatTop2Rate（raw_json 時点データ）、motor_boat_stats（2024以降）
 - **live-only なら使える**: avg_st / ability_index / flying_count / late_start_count / コース別成績（現在値スナップショットのみ）

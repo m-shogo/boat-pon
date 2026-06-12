@@ -40,6 +40,14 @@ try {
   const payload = {
     generatedAt: new Date().toISOString(),
     mode: "read-only",
+    featureSafety: {
+      mode: "historical-readonly",
+      liveOnlyFeaturesNeutralized: true,
+      unsafeLiveSnapshotUsed: false,
+      note: "listProgramInputsRange は mode='historical-readonly' で呼ばれており、" +
+        "courseAvgSt/courseTop3Rate/flyingCount/lateStartCount/exhibitionStResidual は null。" +
+        "className/winRate/top2Rate/motor・boatTop2Rate は出走表・motor_boat_stats由来で安全。",
+    },
     warning: touchesLivePeriod(args.from, args.to)
       ? "2026年を含む読み取り専用評価です。live判断やdecision_history書き込みには使っていません。"
       : null,

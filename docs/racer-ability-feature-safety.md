@@ -97,10 +97,25 @@ racer_course_stats が空だった可能性が高い（=中立）が、再生成
 - 現在値スナップショットであることを結果に明記
 - live で得た知見を「そのまま historical に外挿しない」ことを明記
 
-## 5. 監査コマンド
+## 5. コードレベルの実施状況（2026-06-13 実装済み）
+
+以下は設計案ではなくコードに入った実装である。
+
+| パス | 実施内容 |
+|---|---|
+| `server/db.ts enrichFeatures` | `mode` パラメータ追加。`"historical"/"historical-readonly"` では live-only 特徴量を注入しない（racer_profiles/racer_course_stats JOIN なし） |
+| `listProgramInputsRange` | デフォルト `"historical-readonly"`（明示しなければ安全） |
+| `listProgramInputsWithOddsSnapshotsRange` | デフォルト `"historical"` |
+| `src/domain/programFeatureSafety.ts` | `stripLiveOnlyRacerFeatures` / `assertNoLiveOnlyFeaturesForHistorical` / `assertBreakdownNeutralForHistorical` |
+| `scripts/generate-decision-history.ts` | historical guard 追加: 生成前に上記 assert を実行。混入があれば即 throw |
+| `scripts/analyze-regenerated-ab.ts` | 独自の `loadCourseStats/loadProfiles/loadExhibitionSt` を削除、`stripLiveOnlyRacerFeatures` に置換 |
+| `scripts/check-point-in-time-safety.ts` | 静的スキャン: 許可リスト外でのライブonly特徴量注入を error、直接 JOIN を warning として出力。`pnpm check:point-in-time-safety` で実行 |
+
+## 6. 監査コマンド
 
 ```bash
-pnpm report:racer-ability-audit   # この監査（coverage / leak証拠 / 分類）
-pnpm stats:racer-coverage         # racer_profiles / racer_course_stats の充足率
-pnpm report:racer-freshness       # 鮮度レポート
+pnpm report:racer-ability-audit     # この監査（coverage / leak証拠 / 分類）
+pnpm stats:racer-coverage           # racer_profiles / racer_course_stats の充足率
+pnpm report:racer-freshness         # 鮮度レポート
+pnpm check:point-in-time-safety     # 静的スキャン（exit 0 = error なし）
 ```

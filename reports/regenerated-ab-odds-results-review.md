@@ -16,14 +16,14 @@
 ## A/B再生成結果
 | pattern | BUY件数 | 的中数 | 的中率 | avg odds | 投資 | 回収 | ROI | 最大1hit除外ROI | コメント |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---|
-| baseline_before | 6 | 0 | 0.00% | 95.067 | 600円 | 0円 | 0.000 | 0.000 | venue motor/boatなし、旧raceNo、旧calibration |
-| venue_motor_only | 7 | 0 | 0.00% | 94.500 | 700円 | 0円 | 0.000 | 0.000 | featureAdjustmentにvenue motorのみ |
-| venue_motor_and_boat | 7 | 0 | 0.00% | 94.500 | 700円 | 0円 | 0.000 | 0.000 | featureAdjustmentにvenue motor/boat |
-| excluded_10_11_12_only | 6 | 0 | 0.00% | 95.067 | 600円 | 0円 | 0.000 | 0.000 | 10R除外のみ追加 |
-| max_motor_top2_50_national | 6 | 0 | 0.00% | 95.067 | 600円 | 0円 | 0.000 | 0.000 | national motor基準でmaxMotorTop2Rate=50 |
-| max_motor_top2_50_venue | 5 | 0 | 0.00% | 94.240 | 500円 | 0円 | 0.000 | 0.000 | venue motor基準でmaxMotorTop2Rate=50 |
-| calibration_040_all | 6 | 0 | 0.00% | 95.067 | 600円 | 0円 | 0.000 | 0.000 | 全帯0.40のみ |
-| current_like | 7 | 0 | 0.00% | 94.500 | 700円 | 0円 | 0.000 | 0.000 | 現在設定に近い。filterは現実装同様national寄り |
+| baseline_before | 3 | 0 | 0.00% | 95.333 | 300円 | 0円 | 0.000 | 0.000 | venue motor/boatなし、旧raceNo、旧calibration |
+| venue_motor_only | 3 | 0 | 0.00% | 95.333 | 300円 | 0円 | 0.000 | 0.000 | featureAdjustmentにvenue motorのみ |
+| venue_motor_and_boat | 3 | 0 | 0.00% | 95.333 | 300円 | 0円 | 0.000 | 0.000 | featureAdjustmentにvenue motor/boat |
+| excluded_10_11_12_only | 3 | 0 | 0.00% | 95.333 | 300円 | 0円 | 0.000 | 0.000 | 10R除外のみ追加 |
+| max_motor_top2_50_national | 3 | 0 | 0.00% | 95.333 | 300円 | 0円 | 0.000 | 0.000 | national motor基準でmaxMotorTop2Rate=50 |
+| max_motor_top2_50_venue | 3 | 0 | 0.00% | 95.333 | 300円 | 0円 | 0.000 | 0.000 | venue motor基準でmaxMotorTop2Rate=50 |
+| calibration_040_all | 3 | 0 | 0.00% | 95.333 | 300円 | 0円 | 0.000 | 0.000 | 全帯0.40のみ |
+| current_like | 3 | 0 | 0.00% | 95.333 | 300円 | 0円 | 0.000 | 0.000 | 現在設定に近い。filterは現実装同様national寄り |
 
 ## 判定
 - ROI 1.118再現: no

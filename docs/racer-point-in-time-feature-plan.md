@@ -103,7 +103,18 @@ LIMIT 1
 4. **監査**: snapshots 導入後も `pnpm report:racer-ability-audit` を拡張して
    「snapshot_date > race_date の JOIN が0件であること」を機械チェックする
 
-## 5. やらないこと（このフェーズの禁止事項の再確認)
+## 5. 実装済みの部分的対処（2026-06-13）
+
+上記フルスキーマは未実装だが、以下を実装することで historical backtest への live-only 特徴量注入をコードレベルでブロックした（docs/racer-ability-feature-safety.md §5 参照）:
+
+- `enrichFeatures` に `mode` パラメータを追加し、`"historical*"` では racer_profiles / racer_course_stats JOIN を行わない
+- `assertNoLiveOnlyFeaturesForHistorical` / `assertBreakdownNeutralForHistorical` を decision 生成パスに挿入
+- `check:point-in-time-safety` 静的スキャンを追加
+
+これにより「現在値スナップショットを過去レースに注入しない」という規約はコードで強制されるようになった。
+スナップショット履歴テーブルは、将来 historical 検証に live-only 特徴量を使いたい場合（= 級別変更をレース日単位で追いたい）になって初めて必要になる。
+
+## 6. やらないこと（このフェーズの禁止事項の再確認)
 
 - 今回のスキーマ追加・migration 実行
 - これらの特徴量を使った BUY 条件作成・ROI 探索

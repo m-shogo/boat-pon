@@ -4,6 +4,7 @@ import { filterComparableResultsForDate } from "../src/domain/raceRegime";
 import { mergeOddsMaps } from "../src/domain/oddsSnapshot";
 import { getManualOdds, getSettings, insertDecisionHistory, listOddsSnapshots, listProgramInputsRange, listProgramInputsWithOddsSnapshotsRange, listResultsForModelRange, openDb } from "../server/db";
 import { assertGenerateHistoryWriteAllowed } from "../src/domain/liveRunKind";
+import { assertNoLiveOnlyFeaturesForHistorical, assertBreakdownNeutralForHistorical } from "../src/domain/programFeatureSafety";
 import type { DatabaseSync } from "node:sqlite";
 
 // 2026-01-01 以降は live監視の完全未使用データ。generate:history での書き込みは汚染になるため
@@ -58,9 +59,10 @@ try {
   const oddsByRaceId = mergeOddsMaps(getManualOdds(db), listOddsSnapshots(db));
   const trainFrom = addDays(args.from, -args.trainDays);
   const allResults = listResultsForModelRange(db, trainFrom, args.to);
+  // historical-backfill DB書き込みパス: mode="historical" を明示して live-only特徴量を無効化する
   const programs = args.refreshExisting && args.refreshOnly
-    ? listProgramInputsWithOddsSnapshotsRange(db, args.from, args.to, args.limit)
-    : listProgramInputsRange(db, args.from, args.to, args.limit);
+    ? listProgramInputsWithOddsSnapshotsRange(db, args.from, args.to, args.limit, "historical")
+    : listProgramInputsRange(db, args.from, args.to, args.limit, "historical");
   const existingKeys = loadExistingDecisionKeys(db, args.from, args.to);
   const existingRaceIds = loadExistingDecisionRaceIds(db, args.from, args.to);
 
@@ -81,6 +83,13 @@ try {
     );
     const candidate = candidates[0];
     if (!candidate) continue;
+
+    // historical-backfill write path guard: live-only特徴量が混入していたら失敗させる
+    // --dry-run でも guard は動かす（リークを検知するため）
+    if (program.features) {
+      assertNoLiveOnlyFeaturesForHistorical(program.raceId, program.features);
+    }
+
     const decision = judgeCandidate(candidate, settings, {
       now: beforeCloseTime(program.date, program.closeAt, settings.minMinutesBeforeClose + 10),
       buyCountToday: 0,
@@ -105,6 +114,12 @@ try {
       console.log(`[dry-run:${marker}] ${candidate.raceId} ${candidate.selection.join("-")} ${decision.status} odds=${candidate.currentOdds ?? "-"} ev=${decision.ev?.toFixed(2) ?? "-"}`);
       continue;
     }
+
+    // breakdown guard: featureAdjustmentBreakdown の live-only系factorが中立でなければ throw
+    if (candidate.featureAdjustmentBreakdown) {
+      assertBreakdownNeutralForHistorical(candidate.raceId, candidate.featureAdjustmentBreakdown);
+    }
+
     insertDecisionHistory(db, candidate, decision, {
       replaceRace: args.refreshExisting && args.refreshOnly,
       runKind: "historical-backfill",

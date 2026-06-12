@@ -13,6 +13,7 @@ import { DEFAULT_MODEL_ALPHA, buildCandidatesFromModel, buildVenueModel, type Mo
 import { judgeCandidate, DEFAULT_APP_RULE, V4_EMPIRICAL_CALIBRATION } from "../src/domain/decision";
 import { filterComparableResultsForDate } from "../src/domain/raceRegime";
 import { extractProgramFeatures, type BoatFeature, type ProgramFeatureSnapshot } from "../src/domain/programFeatures";
+import { stripLiveOnlyRacerFeatures } from "../src/domain/programFeatureSafety";
 import type { BudgetRule, RaceResult } from "../src/domain/types";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
@@ -144,6 +145,16 @@ try {
   const report = {
     generatedAt: new Date().toISOString(),
     mode: "read-only regenerated A/B foundation",
+    featureSafety: {
+      mode: "historical-readonly",
+      liveOnlyFeaturesNeutralized: true,
+      unsafeLiveSnapshotUsed: false,
+      note: "courseAvgSt/courseTop3Rate/flyingCount/lateStartCount/exhibitionStResidual は null にした。" +
+        "これらは racer_profiles/racer_course_stats の現在値スナップショットであり、point-in-time leakage になるため。" +
+        "motor_boat_stats は race_id 単位で安全なため維持。className/winRate/top2Rate は出走表掲載値で安全。",
+      warning: "このレポートの ROI は live-only特徴量を無効化した状態の再生成値。" +
+        "419bda3 以前の decision_history は courseStFactor/courseTop3Factor が非中立で保存されている可能性あり（leakEvidence確認済み）。",
+    },
     scope: {
       mode: SCOPE_MODE,
       from: FROM,
@@ -230,10 +241,17 @@ function conclusionNote(scopeMode: ScopeMode) {
   return "この土台ではROI 1.118は再現していない。厳密な全レース再生成には全official_programs + 全odds coverageが必要。";
 }
 
+/**
+ * historical-readonly mode でプログラムをロードする。
+ * live-only特徴量（courseAvgSt/courseTop3Rate/flyingCount/lateStartCount/exhibitionStResidual）は
+ * stripLiveOnlyRacerFeatures で null にする。
+ * motor_boat_stats は race_id 単位で安全なので維持する。
+ *
+ * 旧実装は独自 enrich で racer_profiles/racer_course_stats を直接JOINしていたが、
+ * それらは現在値スナップショットのみのため historical 検証では未来情報リークになっていた。
+ * point-in-time safety hardening (commit after 419bda3) で修正済み。
+ */
 function loadPrograms(raceIds: string[]): ProgramRow[] {
-  const courseStats = loadCourseStats();
-  const profiles = loadProfiles();
-  const exhibition = loadExhibitionSt(raceIds);
   const motorBoat = loadMotorBoat(raceIds);
   const out: ProgramRow[] = [];
   for (const ids of chunks(raceIds, 500)) {
@@ -247,45 +265,28 @@ ORDER BY date ASC, venue ASC, race_no ASC
     for (const row of rows) {
       const raceId = String(row.race_id);
       const base = extractProgramFeatures(JSON.parse(String(row.raw_json)));
+      // motor_boat_stats は race_id 単位で安全。live-only特徴量は strip する。
+      const withMotor: ProgramFeatureSnapshot = {
+        boats: base.boats.map((boat) => {
+          const mb = motorBoat.get(`${raceId}-${boat.course}`);
+          return {
+            ...boat,
+            venueMotorTop2Rate: mb?.motorTop2Rate ?? null,
+            venueBoatTop2Rate: mb?.boatTop2Rate ?? null,
+          };
+        }),
+      };
       out.push({
         raceId,
         date: String(row.date),
         venue: String(row.venue),
         raceNo: Number(row.race_no),
         closeAt: String(row.close_at),
-        features: enrich(base, raceId, courseStats, profiles, exhibition, motorBoat),
+        features: stripLiveOnlyRacerFeatures(withMotor),
       });
     }
   }
   return out;
-}
-
-function enrich(
-  features: ProgramFeatureSnapshot,
-  raceId: string,
-  courseStats: Map<string, { avgSt: number | null; top3Rate: number | null }>,
-  profiles: Map<string, { flyingCount: number | null; lateStartCount: number | null }>,
-  exhibition: Map<string, number>,
-  motorBoat: Map<string, { motorTop2Rate: number | null; boatTop2Rate: number | null }>,
-): ProgramFeatureSnapshot {
-  return {
-    boats: features.boats.map((boat) => {
-      const stat = boat.registrationNo ? courseStats.get(`${boat.registrationNo}-${boat.course}`) : undefined;
-      const profile = boat.registrationNo ? profiles.get(boat.registrationNo) : undefined;
-      const st = exhibition.get(`${raceId}-${boat.course}`) ?? null;
-      const mb = motorBoat.get(`${raceId}-${boat.course}`);
-      return {
-        ...boat,
-        courseAvgSt: stat?.avgSt ?? null,
-        courseTop3Rate: stat?.top3Rate ?? null,
-        flyingCount: profile?.flyingCount ?? null,
-        lateStartCount: profile?.lateStartCount ?? null,
-        exhibitionStResidual: stat?.avgSt != null && st != null ? stat.avgSt - st : null,
-        venueMotorTop2Rate: mb?.motorTop2Rate ?? null,
-        venueBoatTop2Rate: mb?.boatTop2Rate ?? null,
-      };
-    }),
-  };
 }
 
 function transformFeatures(features: ProgramFeatureSnapshot, pattern: ReturnType<typeof buildPatterns>[number]): ProgramFeatureSnapshot {
@@ -475,24 +476,9 @@ ORDER BY date DESC, venue ASC, race_no ASC
   }));
 }
 
-function loadCourseStats() {
-  const rows = db.prepare("SELECT registration_no, course, avg_st, top3_rate FROM racer_course_stats").all() as Array<Record<string, unknown>>;
-  return new Map(rows.map((r) => [`${r.registration_no}-${r.course}`, { avgSt: nullableNumber(r.avg_st), top3Rate: nullableNumber(r.top3_rate) }]));
-}
-
-function loadProfiles() {
-  const rows = db.prepare("SELECT registration_no, flying_count, late_start_count FROM racer_profiles").all() as Array<Record<string, unknown>>;
-  return new Map(rows.map((r) => [String(r.registration_no), { flyingCount: nullableNumber(r.flying_count), lateStartCount: nullableNumber(r.late_start_count) }]));
-}
-
-function loadExhibitionSt(raceIds: string[]) {
-  const map = new Map<string, number>();
-  for (const ids of chunks(raceIds, 500)) {
-    const rows = db.prepare(`SELECT race_id, course, start_timing FROM exhibition_data WHERE race_id IN (${ids.map(() => "?").join(",")}) AND start_timing > 0.05 AND start_timing < 0.4`).all(...ids) as Array<Record<string, unknown>>;
-    for (const row of rows) map.set(`${row.race_id}-${row.course}`, Number(row.start_timing));
-  }
-  return map;
-}
+// loadCourseStats / loadProfiles / loadExhibitionSt は historical-readonly 安全化（419bda3以降）で不要になった。
+// live-only特徴量を historical 検証に使うと point-in-time leakage になるため削除した。
+// motor_boat_stats は race_id 単位で安全なため loadMotorBoat のみ残す。
 
 function loadMotorBoat(raceIds: string[]) {
   const map = new Map<string, { motorTop2Rate: number | null; boatTop2Rate: number | null }>();
