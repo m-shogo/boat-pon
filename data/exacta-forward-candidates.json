@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "description": "exacta market residual sweep で見つけた候補を、ここで固定して future-only paper monitor に回す。BUY昇格・app_settings反映・decision logic変更は禁止。",
+  "lockedAt": "2026-06-12",
+  "sourceCommit": "1604905",
+  "sourceReport": "reports/exacta-market-residual-sweep.md",
+  "basePopulation": {
+    "runKind": "historical-backfill",
+    "decision": "BUY",
+    "selection": "1-2-3",
+    "excludedVenues": ["戸田", "多摩川", "桐生", "三国", "江戸川"],
+    "excludedRaceNos": [10, 11, 12],
+    "note": "sweep と同じ現行BUY集合を母集団にする。lockedAt以降の新規レースだけを forward として集計する。"
+  },
+  "reviewPolicy": {
+    "nextReviewTriggers": [30, 50, 100],
+    "rules": [
+      "forward n < 30 は評価しない",
+      "n >= 30 かつ hit < 3 は参考",
+      "n >= 50 かつ ROI < 90% は rejected寄り",
+      "n >= 100 かつ ROI > 105%、max1hit > 95%、edge_pp > 0 は manual review",
+      "n >= 100 までは BUY昇格なし",
+      "manual review 到達後も BUY昇格ではなく paper 継続を基本にする"
+    ]
+  },
+  "excludedFromLock": [
+    {
+      "id": "odds05_10_exacta_1_4",
+      "reason": "forward ROI 88.0% / max1x 85.5%。normalized implied上は良く見えても realized ROI で価格負け。"
+    },
+    {
+      "id": "race7_exacta_1_3",
+      "reason": "forward ROI 100.7% だが max1x 87.1%。1本依存が残るため優先候補から除外。必要なら low-priority watch。"
+    }
+  ],
+  "candidates": [
+    {
+      "id": "wind2_3m_exacta_1_4",
+      "label": "wind 2-3m × 2連単 1-4",
+      "priority": 1,
+      "status": "pending",
+      "combo": "1-4",
+      "filter": { "type": "wind_band", "minInclusive": 2, "maxExclusive": 3 },
+      "sourceMetrics": {
+        "forwardN": 331,
+        "forwardEdgePp": 5.12,
+        "forwardRoi": 1.264,
+        "forwardMax1xRoi": 1.176
+      },
+      "notes": [
+        "最優先の観察箱。nが大きく、max1hit除外後も崩れていない。",
+        "ただし sweep 後に選んだ候補なので、これは真のfuture validationではない。"
+      ]
+    },
+    {
+      "id": "amagasaki_exacta_1_3",
+      "label": "尼崎 × 2連単 1-3",
+      "priority": 2,
+      "status": "pending",
+      "combo": "1-3",
+      "filter": { "type": "venue", "venue": "尼崎" },
+      "sourceMetrics": {
+        "allN": 182,
+        "allEdgePp": 5.4,
+        "allRoi": 0.984,
+        "allMax1xRoi": 0.886
+      },
+      "notes": [
+        "会場別は 24会場×30組番 の探索で過学習リスクが高い。",
+        "両期間再現してもすぐ採用しない。"
+      ]
+    },
+    {
+      "id": "marugame_exacta_1_2",
+      "label": "丸亀 × 2連単 1-2",
+      "priority": 3,
+      "status": "pending",
+      "combo": "1-2",
+      "filter": { "type": "venue", "venue": "丸亀" },
+      "sourceMetrics": {
+        "allN": 204,
+        "allEdgePp": 4.7,
+        "allRoi": 1.223,
+        "allMax1xRoi": 1.134
+      },
+      "notes": ["会場別候補。過学習リスク高。"]
+    },
+    {
+      "id": "tokoname_exacta_1_2",
+      "label": "常滑 × 2連単 1-2",
+      "priority": 4,
+      "status": "pending",
+      "combo": "1-2",
+      "filter": { "type": "venue", "venue": "常滑" },
+      "sourceMetrics": {
+        "allN": 287,
+        "allEdgePp": 3.09,
+        "allRoi": 1.185,
+        "allMax1xRoi": 1.097
+      },
+      "notes": ["会場別候補。過学習リスク高。"]
+    },
+    {
+      "id": "omura_exacta_1_2",
+      "label": "大村 × 2連単 1-2",
+      "priority": 5,
+      "status": "pending",
+      "combo": "1-2",
+      "filter": { "type": "venue", "venue": "大村" },
+      "sourceMetrics": {
+        "allN": 240,
+        "allEdgePp": 4.91,
+        "allRoi": 1.086,
+        "allMax1xRoi": 1.009
+      },
+      "notes": ["会場別候補。過学習リスク高。"]
+    },
+    {
+      "id": "race3_exacta_1_4",
+      "label": "3R × 2連単 1-4",
+      "priority": 6,
+      "status": "pending",
+      "combo": "1-4",
+      "filter": { "type": "race_no", "raceNo": 3 },
+      "sourceMetrics": {
+        "forwardN": 179,
+        "forwardEdgePp": 3.2,
+        "forwardRoi": 1.477,
+        "forwardMax1xRoi": 1.301
+      },
+      "notes": [
+        "forward急伸・全期間では未出現のため unstable watch。",
+        "wind 2-3m × 1-4 より優先度を下げる。"
+      ]
+    }
+  ]
+}

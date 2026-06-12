@@ -159,7 +159,8 @@
     "analyze:h011-implied-vs-frequency": "tsx scripts/analyze-h011-implied-vs-frequency.ts",
     "report:research-governor": "tsx scripts/report-research-governor.ts",
     "plan:next-research": "tsx scripts/plan-next-research-action.ts",
-    "analyze:exacta-market-residual-sweep": "tsx scripts/analyze-exacta-market-residual-sweep.ts"
+    "analyze:exacta-market-residual-sweep": "tsx scripts/analyze-exacta-market-residual-sweep.ts",
+    "report:exacta-forward-monitor": "tsx scripts/report-exacta-forward-monitor.ts"
   },
   "engines": {
     "node": ">=24.0.0"
