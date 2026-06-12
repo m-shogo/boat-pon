@@ -1,0 +1,23 @@
+{
+  "generatedAt": "2026-06-12T00:40:47.340Z",
+  "writeMode": true,
+  "allBuyRaces": 14,
+  "savedExactaRaces": 4301,
+  "missing": 1,
+  "processed": 1,
+  "ok": 1,
+  "errors": 0,
+  "fRefund": 0,
+  "inserted": 20,
+  "results": [
+    {
+      "race_id": "20241015-平和島-09",
+      "date": "2024-10-15",
+      "venue": "平和島",
+      "status": "cached_ok",
+      "cellCount": 20,
+      "isFRefund": false,
+      "combos": 20
+    }
+  ]
+}
