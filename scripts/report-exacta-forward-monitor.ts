@@ -25,6 +25,9 @@ const UNIT = 100;
 type CandidateFile = {
   schemaVersion: number;
   description: string;
+  frozen: boolean;
+  freezeReason: string;
+  doNotEditUntilNote: string;
   lockedAt: string;
   sourceCommit: string;
   sourceReport: string;
@@ -133,6 +136,9 @@ try {
     mode: "fixed exacta future monitor",
     warning: "post-hoc sweep候補を固定し、lockedAt以降だけを見る。BUY昇格・app_settings反映・decision logic変更は禁止。",
     lockedAt: candidateFile.lockedAt,
+    frozen: candidateFile.frozen,
+    freezeReason: candidateFile.freezeReason,
+    doNotEditUntilNote: candidateFile.doNotEditUntilNote,
     sourceCommit: candidateFile.sourceCommit,
     sourceReport: candidateFile.sourceReport,
     basePopulation: candidateFile.basePopulation,
@@ -383,6 +389,9 @@ function renderMarkdown(report: {
   generatedAt: string;
   warning: string;
   lockedAt: string;
+  frozen: boolean;
+  freezeReason: string;
+  doNotEditUntilNote: string;
   sourceCommit: string;
   sourceReport: string;
   basePopulation: CandidateFile["basePopulation"];
@@ -397,11 +406,16 @@ function renderMarkdown(report: {
   lines.push(`生成日時: ${report.generatedAt}`);
   lines.push("");
   lines.push(`> **${report.warning}**`);
+  lines.push("> **これは候補固定後のfuture-only validation monitorです。n=30到達前に候補追加・条件変更・採用判断をしないでください。**");
+  lines.push("> **Do not add, remove, or tune candidates until predefined review triggers are reached. n<30 is not evaluable.**");
   lines.push("> **これは購入指示ではありません。BUY昇格・app_settings反映・decision logic変更・自動投票は禁止。**");
   lines.push("");
   lines.push("## 固定条件");
   lines.push("");
   lines.push(`- lockedAt: ${report.lockedAt}`);
+  lines.push(`- frozen: ${report.frozen ? "true" : "false"}`);
+  lines.push(`- freezeReason: ${report.freezeReason}`);
+  lines.push(`- doNotEditUntilNote: ${report.doNotEditUntilNote}`);
   lines.push(`- sourceCommit: ${report.sourceCommit}`);
   lines.push(`- sourceReport: ${report.sourceReport}`);
   lines.push(`- baseRaceCount since lockedAt: ${report.baseRaceCount}`);

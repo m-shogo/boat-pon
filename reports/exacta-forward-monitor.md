@@ -1,13 +1,18 @@
 # exacta forward monitor
 
-生成日時: 2026-06-12T02:14:16.776Z
+生成日時: 2026-06-12T02:41:03.712Z
 
 > **post-hoc sweep候補を固定し、lockedAt以降だけを見る。BUY昇格・app_settings反映・decision logic変更は禁止。**
+> **これは候補固定後のfuture-only validation monitorです。n=30到達前に候補追加・条件変更・採用判断をしないでください。**
+> **Do not add, remove, or tune candidates until predefined review triggers are reached. n<30 is not evaluable.**
 > **これは購入指示ではありません。BUY昇格・app_settings反映・decision logic変更・自動投票は禁止。**
 
 ## 固定条件
 
 - lockedAt: 2026-06-12
+- frozen: true
+- freezeReason: post-hoc sweep candidates locked for future-only validation
+- doNotEditUntilNote: 候補追加・削除・条件変更は、事前定義した forward n=30/50/100 の review trigger まで行わない。n<30で採用判断しない。
 - sourceCommit: 1604905
 - sourceReport: reports/exacta-market-residual-sweep.md
 - baseRaceCount since lockedAt: 0
