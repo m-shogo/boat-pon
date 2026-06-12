@@ -305,19 +305,27 @@ for (const period of ["all", "heldout", "forward"] as const) {
 
 // ─── 結果フィルタ & ソート ────────────────────────────────────────────────────
 
-// "all" period のみ表示 (heldout/forward は JSON に保持)
-const allPeriod = allResults.filter(r => r.period === "all");
+function filterStrong(rows: SweepResult[], minN = 50) {
+  return rows.filter(r => r.edge_pp >= 3.0 && r.realized_roi >= 0.80 && r.max1hit_excl_roi >= 0.75 && r.n >= minN)
+    .sort((a, b) => b.edge_pp - a.edge_pp);
+}
+function filterWatch(rows: SweepResult[], strong: SweepResult[], minN = 50) {
+  return rows.filter(r =>
+    r.edge_pp >= 2.0 && r.n >= minN &&
+    !strong.some(s => s.dimension === r.dimension && s.group === r.group && s.combo === r.combo)
+  ).sort((a, b) => b.edge_pp - a.edge_pp);
+}
 
-// strong候補: edge_pp >= 3pt AND realized_roi >= 0.80 AND max1hit_excl_roi >= 0.75 AND n >= 50
-const strong = allPeriod.filter(r =>
-  r.edge_pp >= 3.0 && r.realized_roi >= 0.80 && r.max1hit_excl_roi >= 0.75 && r.n >= 50
-).sort((a, b) => b.edge_pp - a.edge_pp);
+const allPeriod     = allResults.filter(r => r.period === "all");
+const heldoutPeriod = allResults.filter(r => r.period === "heldout");
+const forwardPeriod = allResults.filter(r => r.period === "forward");
 
-// watch候補: edge_pp >= 2pt AND n >= 50 (strongでないもの)
-const watch = allPeriod.filter(r =>
-  r.edge_pp >= 2.0 && r.n >= 50 &&
-  !strong.some(s => s.dimension === r.dimension && s.group === r.group && s.combo === r.combo)
-).sort((a, b) => b.edge_pp - a.edge_pp);
+const strong     = filterStrong(allPeriod);
+const watch      = filterWatch(allPeriod, strong);
+const fwStrong   = filterStrong(forwardPeriod, 30);
+const fwWatch    = filterWatch(forwardPeriod, fwStrong, 30);
+const hoStrong   = filterStrong(heldoutPeriod);
+const hoWatch    = filterWatch(heldoutPeriod, hoStrong);
 
 // combination次元のみ全結果
 const comboAll = allPeriod
@@ -359,7 +367,27 @@ if (watch.length === 0) {
 }
 
 // H011対象3組番の次元別詳細
-console.log("=== 4. H011対象 (1-2/1-3/1-4) 次元別トップ ===\n");
+console.log("=== 4. forward期 strong候補 (edge_pp>=3pt, roi>=80%, max1x>=75%, n>=30) ===\n");
+if (fwStrong.length === 0) {
+  console.log("  (なし)\n");
+} else {
+  for (const r of fwStrong.slice(0, 20)) {
+    console.log(`  [${r.dimension}] ${r.group} / ${r.combo}: edge=${fmt(r.edge_pp)}pt roi=${roi(r.realized_roi)} max1x=${roi(r.max1hit_excl_roi)} n=${r.n}`);
+  }
+  console.log();
+}
+
+console.log("=== 5. forward期 watch候補 (edge_pp>=2pt, n>=30) ===\n");
+if (fwWatch.length === 0) {
+  console.log("  (なし)\n");
+} else {
+  for (const r of fwWatch.slice(0, 20)) {
+    console.log(`  [${r.dimension}] ${r.group} / ${r.combo}: edge=${fmt(r.edge_pp)}pt roi=${roi(r.realized_roi)} max1x=${roi(r.max1hit_excl_roi)} n=${r.n}`);
+  }
+  console.log();
+}
+
+console.log("=== 6. H011対象 (1-2/1-3/1-4) 次元別トップ ===\n");
 for (const combo of h011Combos) {
   const dims = ["odds_band", "venue", "race_no", "wind_band", "exh1_rank"] as const;
   console.log(`  [${combo}] 各次元 top3:`);
@@ -438,7 +466,33 @@ if (watch.length === 0) {
 }
 lines.push(``);
 
-lines.push(`## 4. H011対象 (1-2/1-3/1-4) 次元別`);
+lines.push(`## 4. forward期 strong候補 (edge_pp≥3pt・roi≥80%・max1x≥75%・n≥30)`);
+lines.push(``);
+if (fwStrong.length === 0) {
+  lines.push(`*forward期 strong候補なし*`);
+} else {
+  lines.push(`| dimension | group | combo | n | edge_pp | roi | max1hit_excl | actual | implied |`);
+  lines.push(`|---|---|---|---|---|---|---|---|---|`);
+  for (const r of fwStrong.slice(0, 30)) {
+    lines.push(`| ${r.dimension} | ${r.group} | ${r.combo} | ${r.n} | ${fmt(r.edge_pp)}pt | ${roi(r.realized_roi)} | ${roi(r.max1hit_excl_roi)} | ${pct(r.actual_rate)} | ${pct(r.avg_normalized_implied)} |`);
+  }
+}
+lines.push(``);
+
+lines.push(`## 5. forward期 watch候補 (edge_pp≥2pt・n≥30)`);
+lines.push(``);
+if (fwWatch.length === 0) {
+  lines.push(`*forward期 watch候補なし*`);
+} else {
+  lines.push(`| dimension | group | combo | n | edge_pp | roi | max1hit_excl | actual | implied |`);
+  lines.push(`|---|---|---|---|---|---|---|---|---|`);
+  for (const r of fwWatch.slice(0, 30)) {
+    lines.push(`| ${r.dimension} | ${r.group} | ${r.combo} | ${r.n} | ${fmt(r.edge_pp)}pt | ${roi(r.realized_roi)} | ${roi(r.max1hit_excl_roi)} | ${pct(r.actual_rate)} | ${pct(r.avg_normalized_implied)} |`);
+  }
+}
+lines.push(``);
+
+lines.push(`## 6. H011対象 (1-2/1-3/1-4) 次元別`);
 lines.push(``);
 for (const combo of h011Combos) {
   lines.push(`### ${combo}`);
@@ -472,8 +526,12 @@ writeFileSync(OUT_JSON, JSON.stringify({
   forwardCount: forwardRaces.length,
   strongCandidates: strong,
   watchCandidates: watch,
+  forwardStrong: fwStrong,
+  forwardWatch: fwWatch,
+  heldoutStrong: hoStrong,
+  heldoutWatch: hoWatch,
   allCombinations: comboAll,
-  allResults: allResults.filter(r => r.period === "all"),
+  allResults: allResults,
 }, null, 2), "utf-8");
 
 console.log(`出力: ${OUT_MD}`);
