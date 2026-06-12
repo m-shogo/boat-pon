@@ -32,6 +32,18 @@ type PersonaReport = {
   consensus?: Array<{ label: string; personas?: number; bestImprovement?: number; remainingN?: number; bestRoi?: number; warnings?: string[] }>;
 };
 
+type RunSummary = {
+  case: (typeof cases)[number];
+  baseline: AllReport["baseline"];
+  counts: AllReport["counts"];
+  topStable: Candidate[];
+  topImprovement: Candidate[];
+  personaDecision: string | undefined;
+  personaConsensus: NonNullable<PersonaReport["consensus"]>;
+  allArchive: string;
+  personaArchive: string;
+};
+
 const cases = [
   { name: "wide", minN: 40, minRemaining: 300, maxRules: 5000 },
   { name: "balanced", minN: 80, minRemaining: 500, maxRules: 5000 },
@@ -50,7 +62,7 @@ const personas = [
 ];
 
 mkdirSync(OUT_DIR, { recursive: true });
-const runs = [];
+const runs: RunSummary[] = [];
 
 for (const [index, c] of cases.entries()) {
   console.log(`[roi-pro-loop] ${index + 1}/${cases.length} ${c.name}`);
