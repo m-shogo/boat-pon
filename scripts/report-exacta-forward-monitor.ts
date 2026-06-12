@@ -267,13 +267,23 @@ function aggregateCandidate(
     return race.combo_count === 30 && race.overround != null && race.overround > 0 && odds != null && odds > 0;
   });
   const resolvedRows = pricedRows.filter((race) => (payoutsByRace.get(race.race_id)?.length ?? 0) > 0);
-  const incompleteExactaOdds = matched.filter((race) => race.combo_count > 0 && race.combo_count < 30).length;
-  const unpriced = matched.filter((race) => {
+  const incompleteRows = matched.filter((race) => race.combo_count > 0 && race.combo_count < 30);
+  const unpricedRows = matched.filter((race) => {
     const odds = oddsByRace.get(race.race_id)?.get(candidate.combo);
-    return race.combo_count === 0 || race.overround == null || race.overround <= 0 || odds == null || odds <= 0;
-  }).length;
+    return race.combo_count === 0 || (
+      race.combo_count === 30 &&
+      (race.overround == null || race.overround <= 0 || odds == null || odds <= 0)
+    );
+  });
   const payoutPending = pricedRows.length - resolvedRows.length;
-  const pending = unpriced + incompleteExactaOdds + payoutPending;
+  const pending = matched.length - resolvedRows.length;
+  const incompleteExactaOdds = incompleteRows.length;
+  const unpriced = unpricedRows.length;
+  if (pending !== unpriced + incompleteExactaOdds + payoutPending) {
+    throw new Error(
+      `pending breakdown mismatch for ${candidate.id}: pending=${pending} unpriced=${unpriced} incomplete=${incompleteExactaOdds} payoutPending=${payoutPending}`,
+    );
+  }
 
   let hit = 0;
   let payout = 0;
