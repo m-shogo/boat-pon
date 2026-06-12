@@ -33,6 +33,13 @@ export type ProgramFeatureUsageMode =
   /** coverage監査・棚卸し用: 値の存在確認のみ、ROI/BUY評価には使わない */
   | "report";
 
+/**
+ * historical 系 mode のみを受け付ける型。
+ * listProgramInputsRange / listProgramInputsWithOddsSnapshotsRange の引数に使い、
+ * "live" を誤って渡すとコンパイルエラーになる。
+ */
+export type HistoricalProgramFeatureUsageMode = Exclude<ProgramFeatureUsageMode, "live">;
+
 /** live-only特徴量のキー一覧（unsafe_due_to_point_in_time_leakage） */
 export const LIVE_ONLY_FEATURE_KEYS = [
   "courseAvgSt",

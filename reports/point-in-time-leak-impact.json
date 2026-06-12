@@ -1,0 +1,41 @@
+{
+  "generatedAt": "2026-06-12T18:22:09.266Z",
+  "note": "読み取り専用。ROI評価・BUY条件変更・候補変更は行わない。",
+  "methodology": "feature_adjustment_breakdown の live-only factor（courseStFactor / courseTop3Factor / exhibitionResidualFactor）を除去（=1）した場合の required_odds を計算し、actual decision との差分を集計。",
+  "scope": {
+    "rowsWithBreakdown": 2975,
+    "rowsWithoutBreakdown": "本レポートの対象外（feature_adjustment_breakdown 列追加前の decisions）",
+    "buyDecisionsWithBreakdown": 1,
+    "buyDecisionsWithoutBreakdown": 6275,
+    "note": "breakdownなしBUYは live-only feature が適用される前に生成されたため、リークの影響を受けない。"
+  },
+  "factorDistribution": {
+    "neutral": 56,
+    "positive": 2024,
+    "negative": 895,
+    "note": "positive = courseStFactor or courseTop3Factor が > 1（現在の選手が得意コースに出場）。negative = < 1（苦手コース）。"
+  },
+  "decisionImpact": {
+    "buyChangedToSkip": 0,
+    "skipChangedToBuy": 0,
+    "watchChanged": 0,
+    "buyUnchanged": 1,
+    "conclusion": "BUY/SKIP 決定が変わったケースはゼロ。live-only feature リークは既存 BUY 判定に影響していなかった。"
+  },
+  "buyDetails": [
+    {
+      "raceId": "20250105-徳山-08",
+      "date": "2025-01-05",
+      "decision": "BUY",
+      "liveFactorProduct": 1.0609,
+      "reqWithLeak": 80.5,
+      "reqClean": 85.4,
+      "currentOdds": 96.6,
+      "wouldBuyWithLeak": true,
+      "wouldBuyClean": true,
+      "decisionChanged": false
+    }
+  ],
+  "changedDetails": [],
+  "watchChangedSample": []
+}

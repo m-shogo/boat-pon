@@ -746,7 +746,7 @@ function enrichFeatures(
   profilesMap: Map<string, { flyingCount: number | null; lateStartCount: number | null }>,
   exhibitionStMap: Map<string, number>,
   motorBoatStatsMap: Map<string, { motorTop2Rate: number | null; boatTop2Rate: number | null }>,
-  mode: import("../src/domain/programFeatureSafety").ProgramFeatureUsageMode = "live",
+  mode: import("../src/domain/programFeatureSafety").ProgramFeatureUsageMode,
 ): ProgramFeatureSnapshot {
   const isLive = mode === "live";
   return {
@@ -831,7 +831,7 @@ export function listProgramInputsRange(
   from: string,
   to: string,
   limit: number,
-  mode: import("../src/domain/programFeatureSafety").ProgramFeatureUsageMode = "historical-readonly",
+  mode: import("../src/domain/programFeatureSafety").HistoricalProgramFeatureUsageMode = "historical-readonly",
 ) {
   const rows = db.prepare(`
 SELECT race_id, date, venue, race_no, close_at, raw_json
@@ -841,10 +841,10 @@ ORDER BY date ASC, venue ASC, race_no ASC
 LIMIT ?
 `).all(from, to, limit) as Array<Record<string, unknown>>;
   const motorBoatStatsMap = loadMotorBoatStatsMap(db);
-  // historical/historical-readonly/report では live-only マップのロードはスキップ（パフォーマンスも改善）
-  const courseStatsMap = mode === "live" ? loadCourseStatsMap(db) : new Map<string, never>();
-  const profilesMap = mode === "live" ? loadRacerProfilesMap(db) : new Map<string, never>();
-  const exhibitionStMap = mode === "live" ? loadExhibitionStMap(db) : new Map<string, never>();
+  // HistoricalProgramFeatureUsageMode は "live" を含まないため live-only マップは常に空
+  const courseStatsMap = new Map<string, never>();
+  const profilesMap = new Map<string, never>();
+  const exhibitionStMap = new Map<string, never>();
   return rows.map((row) => {
     const raceId = String(row.race_id);
     return {
@@ -869,7 +869,7 @@ export function listProgramInputsWithOddsSnapshotsRange(
   from: string,
   to: string,
   limit: number,
-  mode: import("../src/domain/programFeatureSafety").ProgramFeatureUsageMode = "historical",
+  mode: import("../src/domain/programFeatureSafety").HistoricalProgramFeatureUsageMode = "historical",
 ) {
   const rows = db.prepare(`
 SELECT p.race_id, p.date, p.venue, p.race_no, p.close_at, p.raw_json
@@ -882,9 +882,10 @@ ORDER BY p.date ASC, p.venue ASC, p.race_no ASC
 LIMIT ?
 `).all(from, to, limit) as Array<Record<string, unknown>>;
   const motorBoatStatsMap = loadMotorBoatStatsMap(db);
-  const courseStatsMap = mode === "live" ? loadCourseStatsMap(db) : new Map<string, never>();
-  const profilesMap = mode === "live" ? loadRacerProfilesMap(db) : new Map<string, never>();
-  const exhibitionStMap = mode === "live" ? loadExhibitionStMap(db) : new Map<string, never>();
+  // HistoricalProgramFeatureUsageMode は "live" を含まないため live-only マップは常に空
+  const courseStatsMap = new Map<string, never>();
+  const profilesMap = new Map<string, never>();
+  const exhibitionStMap = new Map<string, never>();
   return rows.map((row) => {
     const raceId = String(row.race_id);
     return {
