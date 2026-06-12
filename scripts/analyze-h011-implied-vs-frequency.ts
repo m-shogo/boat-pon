@@ -85,8 +85,8 @@ const raceData = db.prepare(`
     MAX(CASE WHEN hao_base.combination='1-4' THEN hao_base.odds END) odds_14,
     MAX(CASE WHEN hao_base.combination='1-5' THEN hao_base.odds END) odds_15,
     MAX(CASE WHEN hao_base.combination='1-6' THEN hao_base.odds END) odds_16,
-    -- overround = sum(1/odds) for all combinations in this race
-    SUM(1.0 / hao_base.odds) as overround,
+    -- overround = sum(1/odds) for all valid combinations (odds=0 は除外: 投票なしのプレースホルダー)
+    SUM(CASE WHEN hao_base.odds > 0 THEN 1.0 / hao_base.odds ELSE 0 END) as overround,
     COUNT(*) as combo_count,
     -- 実際の当選 exacta
     rp.combination as winning_combo,
@@ -142,7 +142,8 @@ type ImpliedResult = {
 // races は呼び出し側で period フィルタ済みのものを渡す
 function calcImplied(races: RaceRow[], combo: "1-2" | "1-3" | "1-4", period: string): ImpliedResult {
   const oddsKey = combo === "1-2" ? "odds_12" : combo === "1-3" ? "odds_13" : "odds_14";
-  const validRaces = races.filter(r => r[oddsKey] != null && r.overround > 0);
+  // odds=0.0 (投票なしプレースホルダー) は implied計算から除外
+  const validRaces = races.filter(r => r[oddsKey] != null && (r[oddsKey] as number) > 0 && r.overround > 0);
 
   const impliedValues = validRaces.map(r => (1.0 / r[oddsKey]!) / r.overround);
   const oddsValues    = validRaces.map(r => r[oddsKey]!);

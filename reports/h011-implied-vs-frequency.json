@@ -1,0 +1,108 @@
+{
+  "generatedAt": "2026-06-12T00:41:29.333Z",
+  "normalRaceCount": 4207,
+  "absentRaceCount": 22,
+  "fRefundRaceCount": 72,
+  "results": [
+    {
+      "combination": "1-2",
+      "period": "heldout",
+      "n": 2715,
+      "avg_implied": 0.08465395276374267,
+      "median_implied": 0.06865278107647749,
+      "actual_hits": 262,
+      "actual_rate": 0.09650092081031307,
+      "gap": -0.0118469680465704,
+      "avg_odds": 12.134290976058953
+    },
+    {
+      "combination": "1-3",
+      "period": "heldout",
+      "n": 2715,
+      "avg_implied": 0.09824663468055272,
+      "median_implied": 0.0747105260273325,
+      "actual_hits": 261,
+      "actual_rate": 0.09613259668508287,
+      "gap": 0.0021140379954698585,
+      "avg_odds": 12.822025782688765
+    },
+    {
+      "combination": "1-4",
+      "period": "heldout",
+      "n": 2715,
+      "avg_implied": 0.10266411047773792,
+      "median_implied": 0.07475506175162715,
+      "actual_hits": 304,
+      "actual_rate": 0.11197053406998159,
+      "gap": -0.009306423592243665,
+      "avg_odds": 17.25303867403313
+    },
+    {
+      "combination": "1-2",
+      "period": "forward",
+      "n": 1492,
+      "avg_implied": 0.08284395860341101,
+      "median_implied": 0.06873297549044537,
+      "actual_hits": 115,
+      "actual_rate": 0.07707774798927614,
+      "gap": 0.005766210614134876,
+      "avg_odds": 12.171179624664852
+    },
+    {
+      "combination": "1-3",
+      "period": "forward",
+      "n": 1492,
+      "avg_implied": 0.09582707295174343,
+      "median_implied": 0.06957446641516755,
+      "actual_hits": 143,
+      "actual_rate": 0.09584450402144772,
+      "gap": -0.00001743106970428232,
+      "avg_odds": 13.55167560321716
+    },
+    {
+      "combination": "1-4",
+      "period": "forward",
+      "n": 1492,
+      "avg_implied": 0.10023650551818257,
+      "median_implied": 0.07211007461976944,
+      "actual_hits": 175,
+      "actual_rate": 0.11729222520107238,
+      "gap": -0.01705571968288981,
+      "avg_odds": 18.03277479892758
+    },
+    {
+      "combination": "1-2",
+      "period": "all",
+      "n": 4207,
+      "avg_implied": 0.08401204373421685,
+      "median_implied": 0.06865278107647749,
+      "actual_hits": 377,
+      "actual_rate": 0.089612550511053,
+      "gap": -0.005600506776836156,
+      "avg_odds": 12.147373425243677
+    },
+    {
+      "combination": "1-3",
+      "period": "all",
+      "n": 4207,
+      "avg_implied": 0.09738854433128173,
+      "median_implied": 0.07286193894994869,
+      "actual_hits": 404,
+      "actual_rate": 0.09603042548134062,
+      "gap": 0.001358118849941109,
+      "avg_odds": 13.080793914903737
+    },
+    {
+      "combination": "1-4",
+      "period": "all",
+      "n": 4207,
+      "avg_implied": 0.10180316762067688,
+      "median_implied": 0.07354619652435031,
+      "actual_hits": 479,
+      "actual_rate": 0.11385785595436178,
+      "gap": -0.012054688333684893,
+      "avg_odds": 17.52956976467794
+    }
+  ],
+  "verdict": "h011_closed_market_priced_in"
+}

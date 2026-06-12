@@ -1,0 +1,27 @@
+{
+  "generatedAt": "2026-06-12T00:41:02.291Z",
+  "h011Ready": false,
+  "issues": [
+    "odds<=1.0: 31件"
+  ],
+  "totalRows": 128810,
+  "totalRaces": 4301,
+  "targetBuyRaces": 4301,
+  "trifectaRows": 2377,
+  "countDist": [
+    {
+      "cnt": 20,
+      "races": 22
+    },
+    {
+      "cnt": 30,
+      "races": 4279
+    }
+  ],
+  "comboDist": 30,
+  "nullOdds": 0,
+  "tooLowOdds": 31,
+  "dups": 0,
+  "absentRaces": 22,
+  "fRefundRaces": 72
+}

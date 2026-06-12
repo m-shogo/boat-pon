@@ -282,9 +282,11 @@ for (const [i, r] of targets.entries()) {
   const { exacta, cellCount } = parseExactaOdds(f.html);
   row.cellCount = cellCount;
 
-  if (cellCount < 20 || exacta["1-2"] == null) {
+  // cellCount < 20 はパース異常。1-2==null は欠場2号艇の場合に正常なのでチェック外す。
+  const validCombos = Object.keys(exacta).length;
+  if (cellCount < 20 || validCombos < 20) {
     row.status = "parse_error";
-    console.log(`${prefix}${f.cached ? " [cache]" : ""}: ❌ parse_error cellCount=${cellCount}`);
+    console.log(`${prefix}${f.cached ? " [cache]" : ""}: ❌ parse_error cellCount=${cellCount} validCombos=${validCombos}`);
     results.push(row);
     if (!f.cached) await new Promise(s => setTimeout(s, SLEEP_MS));
     continue;
