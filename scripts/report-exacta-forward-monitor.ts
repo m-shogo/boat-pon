@@ -93,6 +93,9 @@ type CandidateStats = {
   priced: number;
   resolved: number;
   pending: number;
+  unpriced: number;
+  incompleteExactaOdds: number;
+  payoutPending: number;
   hit: number;
   actualRate: number | null;
   avgNormalizedImplied: number | null;
@@ -205,7 +208,8 @@ WHERE dh.run_kind = ?
   AND dh.race_no NOT IN (${raceNoPlaceholders})
   AND NOT EXISTS (
     SELECT 1 FROM race_entries re
-    WHERE re.race_id = dh.race_id AND re.status_code = 'F'
+    WHERE re.race_id = dh.race_id
+      AND (re.status_code LIKE 'F%' OR re.status_code LIKE 'L%')
   )
 ORDER BY dh.date, dh.venue, dh.race_no
 `).all(...params) as RaceRow[];
@@ -263,7 +267,13 @@ function aggregateCandidate(
     return race.combo_count === 30 && race.overround != null && race.overround > 0 && odds != null && odds > 0;
   });
   const resolvedRows = pricedRows.filter((race) => (payoutsByRace.get(race.race_id)?.length ?? 0) > 0);
-  const pending = matched.length - resolvedRows.length;
+  const incompleteExactaOdds = matched.filter((race) => race.combo_count > 0 && race.combo_count < 30).length;
+  const unpriced = matched.filter((race) => {
+    const odds = oddsByRace.get(race.race_id)?.get(candidate.combo);
+    return race.combo_count === 0 || race.overround == null || race.overround <= 0 || odds == null || odds <= 0;
+  }).length;
+  const payoutPending = pricedRows.length - resolvedRows.length;
+  const pending = unpriced + incompleteExactaOdds + payoutPending;
 
   let hit = 0;
   let payout = 0;
@@ -334,6 +344,9 @@ function aggregateCandidate(
     priced: pricedRows.length,
     resolved: n,
     pending,
+    unpriced,
+    incompleteExactaOdds,
+    payoutPending,
     hit,
     actualRate,
     avgNormalizedImplied: avgImplied,
@@ -420,6 +433,7 @@ function renderMarkdown(report: {
   lines.push(`- sourceReport: ${report.sourceReport}`);
   lines.push(`- baseRaceCount since lockedAt: ${report.baseRaceCount}`);
   lines.push(`- basePopulation: run_kind=${report.basePopulation.runKind}, decision=${report.basePopulation.decision}, selection=${report.basePopulation.selection}`);
+  lines.push("- excludedStatuses: F* / L* (フライング・出遅れ等の返還/不成立系をfuture monitorから除外)");
   lines.push(`- excludedVenues: ${report.basePopulation.excludedVenues.join(", ")}`);
   lines.push(`- excludedRaceNos: ${report.basePopulation.excludedRaceNos.join(", ")}`);
   lines.push("");
@@ -429,10 +443,10 @@ function renderMarkdown(report: {
   lines.push("");
   lines.push("## Candidates");
   lines.push("");
-  lines.push("| candidate | lockedAt | matched | forward n | hit | actual | implied | edge_pp | ROI | max1x ROI | nextReview | status |");
-  lines.push("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|");
+  lines.push("| candidate | lockedAt | matched | forward n | hit | actual | implied | edge_pp | ROI | max1x ROI | pending | unpriced | incomplete odds | payout pending | nextReview | status |");
+  lines.push("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|");
   for (const row of report.candidates) {
-    lines.push(`| ${row.label} | ${row.lockedAt} | ${row.matched} | ${row.resolved} | ${row.hit} | ${fmtPct(row.actualRate)} | ${fmtPct(row.avgNormalizedImplied)} | ${fmtPp(row.edgePp)} | ${fmtPct(row.realizedRoi)} | ${fmtPct(row.max1hitExcludedRoi)} | ${row.nextReviewTrigger ?? "-"} | ${row.status} |`);
+    lines.push(`| ${row.label} | ${row.lockedAt} | ${row.matched} | ${row.resolved} | ${row.hit} | ${fmtPct(row.actualRate)} | ${fmtPct(row.avgNormalizedImplied)} | ${fmtPp(row.edgePp)} | ${fmtPct(row.realizedRoi)} | ${fmtPct(row.max1hitExcludedRoi)} | ${row.pending} | ${row.unpriced} | ${row.incompleteExactaOdds} | ${row.payoutPending} | ${row.nextReviewTrigger ?? "-"} | ${row.status} |`);
   }
   lines.push("");
   lines.push("## Status Reasons");

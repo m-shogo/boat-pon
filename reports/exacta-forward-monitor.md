@@ -1,6 +1,6 @@
 # exacta forward monitor
 
-生成日時: 2026-06-12T02:41:03.712Z
+生成日時: 2026-06-12T03:52:31.173Z
 
 > **post-hoc sweep候補を固定し、lockedAt以降だけを見る。BUY昇格・app_settings反映・decision logic変更は禁止。**
 > **これは候補固定後のfuture-only validation monitorです。n=30到達前に候補追加・条件変更・採用判断をしないでください。**
@@ -17,6 +17,7 @@
 - sourceReport: reports/exacta-market-residual-sweep.md
 - baseRaceCount since lockedAt: 0
 - basePopulation: run_kind=historical-backfill, decision=BUY, selection=1-2-3
+- excludedStatuses: F* / L* (フライング・出遅れ等の返還/不成立系をfuture monitorから除外)
 - excludedVenues: 戸田, 多摩川, 桐生, 三国, 江戸川
 - excludedRaceNos: 10, 11, 12
 
@@ -31,14 +32,14 @@
 
 ## Candidates
 
-| candidate | lockedAt | matched | forward n | hit | actual | implied | edge_pp | ROI | max1x ROI | nextReview | status |
-|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
-| wind 2-3m × 2連単 1-4 | 2026-06-12 | 0 | 0 | 0 | - | - | - | - | - | 30 | pending |
-| 尼崎 × 2連単 1-3 | 2026-06-12 | 0 | 0 | 0 | - | - | - | - | - | 30 | pending |
-| 丸亀 × 2連単 1-2 | 2026-06-12 | 0 | 0 | 0 | - | - | - | - | - | 30 | pending |
-| 常滑 × 2連単 1-2 | 2026-06-12 | 0 | 0 | 0 | - | - | - | - | - | 30 | pending |
-| 大村 × 2連単 1-2 | 2026-06-12 | 0 | 0 | 0 | - | - | - | - | - | 30 | pending |
-| 3R × 2連単 1-4 | 2026-06-12 | 0 | 0 | 0 | - | - | - | - | - | 30 | pending |
+| candidate | lockedAt | matched | forward n | hit | actual | implied | edge_pp | ROI | max1x ROI | pending | unpriced | incomplete odds | payout pending | nextReview | status |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| wind 2-3m × 2連単 1-4 | 2026-06-12 | 0 | 0 | 0 | - | - | - | - | - | 0 | 0 | 0 | 0 | 30 | pending |
+| 尼崎 × 2連単 1-3 | 2026-06-12 | 0 | 0 | 0 | - | - | - | - | - | 0 | 0 | 0 | 0 | 30 | pending |
+| 丸亀 × 2連単 1-2 | 2026-06-12 | 0 | 0 | 0 | - | - | - | - | - | 0 | 0 | 0 | 0 | 30 | pending |
+| 常滑 × 2連単 1-2 | 2026-06-12 | 0 | 0 | 0 | - | - | - | - | - | 0 | 0 | 0 | 0 | 30 | pending |
+| 大村 × 2連単 1-2 | 2026-06-12 | 0 | 0 | 0 | - | - | - | - | - | 0 | 0 | 0 | 0 | 30 | pending |
+| 3R × 2連単 1-4 | 2026-06-12 | 0 | 0 | 0 | - | - | - | - | - | 0 | 0 | 0 | 0 | 30 | pending |
 
 ## Status Reasons
 
