@@ -17,3 +17,6 @@ data/fetch-report.txt
 data/fetch-pending-*.txt
 data/boat-pon.db
 backups/
+.env
+.env.*
+!.env.example
