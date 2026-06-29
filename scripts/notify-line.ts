@@ -63,15 +63,10 @@ function usage() {
     "  pnpm notify:line:daily [--date YYYY-MM-DD] [--dry-run]",
     "",
     "Env file:",
-    "  Copy .env.example to .env.local and set LINE credentials there.",
+    "  Create .env in the repository root. Use .env.example only as a reference.",
     "",
-    "Required env for actual send:",
-    "  BOAT_PON_LINE_CHANNEL_ACCESS_TOKEN=<Messaging API channel access token>",
-    "  BOAT_PON_LINE_TO=<userId,groupId,or roomId>[,<more recipients>]",
-    "",
-    "Optional env:",
-    "  BOAT_PON_LINE_DRY_RUN=1",
-    "  BOAT_PON_LINE_ENDPOINT=https://api.line.me/v2/bot/message/push",
+    "Optional:",
+    "  --dry-run prints the LINE message without sending.",
   ].join("\n");
 }
 
@@ -310,7 +305,7 @@ async function deliverNotifications(db: DatabaseSync | null, notifications: Noti
 }
 
 async function run() {
-  loadEnvFiles();
+  loadEnvFiles([".env"]);
   const args = process.argv.slice(2);
   const mode = parseMode(args);
   const dryRun = hasFlag(args, "--dry-run") || process.env.BOAT_PON_LINE_DRY_RUN === "1" || process.env.BOAT_PON_LINE_DRY_RUN === "true";
