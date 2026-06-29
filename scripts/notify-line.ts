@@ -1,4 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
+import { loadEnvFiles } from "../src/domain/envFile";
 import { officialOddsUrl } from "../src/domain/officialLinks";
 import { buildLineText, lineMessagingConfigFromEnv, sendLinePushTextToRecipients } from "../src/domain/lineMessaging";
 import { LIVE_MONITOR_MODEL_VERSION } from "../src/domain/liveMonitor";
@@ -60,6 +61,9 @@ function usage() {
     "Usage:",
     "  pnpm notify:line:test [--dry-run] [--message <text>]",
     "  pnpm notify:line:daily [--date YYYY-MM-DD] [--dry-run]",
+    "",
+    "Env file:",
+    "  Copy .env.example to .env.local and set LINE credentials there.",
     "",
     "Required env for actual send:",
     "  BOAT_PON_LINE_CHANNEL_ACCESS_TOKEN=<Messaging API channel access token>",
@@ -306,6 +310,7 @@ async function deliverNotifications(db: DatabaseSync | null, notifications: Noti
 }
 
 async function run() {
+  loadEnvFiles();
   const args = process.argv.slice(2);
   const mode = parseMode(args);
   const dryRun = hasFlag(args, "--dry-run") || process.env.BOAT_PON_LINE_DRY_RUN === "1" || process.env.BOAT_PON_LINE_DRY_RUN === "true";
