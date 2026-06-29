@@ -43,28 +43,42 @@ BUY候補や日次サマリをLINEへ送る。通知は**購入指示ではな�
 
 LINE Notify は提供終了済みのため、LINE Messaging API の push message を使う。
 
-### 必須環境変数
+### envファイル設定
+
+`.env.example` をコピーして `.env.local` を作る。`.env` / `.env.local` は `.gitignore` 対象なので、実トークンはgitに入れない。
 
 ```bash
-export BOAT_PON_LINE_CHANNEL_ACCESS_TOKEN="<Messaging API channel access token>"
-export BOAT_PON_LINE_TO="<userId or groupId or roomId>"
+cp .env.example .env.local
+```
+
+`.env.local` に以下を設定する。
+
+```bash
+BOAT_PON_LINE_CHANNEL_ACCESS_TOKEN=<Messaging API channel access token>
+BOAT_PON_LINE_TO=<userId or groupId or roomId>
 ```
 
 複数宛先に送る場合:
 
 ```bash
-export BOAT_PON_LINE_TO="Uxxxx,Cxxxx,Rxxxx"
+BOAT_PON_LINE_TO=Uxxxx,Cxxxx,Rxxxx
 ```
 
-### 任意環境変数
+任意設定:
 
 ```bash
 # 実送信せず、送信内容だけ表示
-export BOAT_PON_LINE_DRY_RUN=1
+BOAT_PON_LINE_DRY_RUN=1
 
 # 通常は不要。テスト用エンドポイント差し替え
-export BOAT_PON_LINE_ENDPOINT="https://api.line.me/v2/bot/message/push"
+BOAT_PON_LINE_ENDPOINT=https://api.line.me/v2/bot/message/push
 ```
+
+読み込み優先順位:
+
+1. シェル環境変数
+2. `.env.local`
+3. `.env`
 
 ### テスト送信
 
@@ -74,7 +88,7 @@ export BOAT_PON_LINE_ENDPOINT="https://api.line.me/v2/bot/message/push"
 pnpm notify:line:test -- --dry-run
 ```
 
-実送信する場合:
+`.env.local` の `BOAT_PON_LINE_DRY_RUN=1` を外して実送信する場合:
 
 ```bash
 pnpm notify:line:test -- --message "Boat Pon LINE 通知テスト"
