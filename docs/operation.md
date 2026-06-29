@@ -98,7 +98,7 @@ pnpm notify:line:daily -- --date 2026-06-29
 `scripts/daily-notify.sh` は macOS 通知の前に以下を実行する。
 
 ```bash
-pnpm --silent notify:line:daily --date "$TODAY"
+pnpm --silent notify:line:daily -- --date "$TODAY"
 ```
 
 LINE env が未設定ならスキップ。LINE送信に失敗しても macOS 通知は継続する。
