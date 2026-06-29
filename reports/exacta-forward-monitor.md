@@ -1,6 +1,6 @@
 # exacta forward monitor
 
-生成日時: 2026-06-12T03:55:54.972Z
+生成日時: 2026-06-12T16:46:39.481Z
 
 > **post-hoc sweep候補を固定し、lockedAt以降だけを見る。BUY昇格・app_settings反映・decision logic変更は禁止。**
 > **これは候補固定後のfuture-only validation monitorです。n=30到達前に候補追加・条件変更・採用判断をしないでください。**

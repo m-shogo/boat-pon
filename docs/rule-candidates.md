@@ -574,3 +574,59 @@ overnight自律分析（5h相当）の継続セッション。未探索次元を
 | 新NO_BUY残り×月4+6+8+12×selectedMotorLow=0 (n=403, ROI=218%) | candidate | 2025急上昇=273% | paper検証 | 月次レビュー |
 | 新NO_BUY残り×月4+6+8+12×boat<40 (n=459, ROI=182%) | candidate | 両年安定・n大 | paper検証 | 月次レビュー |
 | raceNo<=3 OR raceNo>=10 NO_BUY (+6.37%) | candidate | 序盤+終盤除外で安定改善 | 既存フィルターに追加検討 | dry-run後 |
+
+## 2026-06-14 auto candidate review
+
+### Source
+
+- period: 2026-05-16..2026-06-14
+- generatedAt: 2026-06-14T13:00:04.052Z
+- BUY: 47
+- settledBUY: 44
+- hits: 2
+- ROI: 0.748
+
+### Rule suggestions
+
+| rule | status | evidence | action | next_check |
+|---|---|---|---|---|
+| 多摩川 はS条件のみ通知候補。A/Bは通知対象外に寄せる。 | watch | report:monthly | 追加観察 | next weekly |
+| 常滑 はS条件のみ通知候補。A/Bは通知対象外に寄せる。 | watch | report:monthly | 追加観察 | next weekly |
+| 徳山 はS条件のみ通知候補。A/Bは通知対象外に寄せる。 | watch | report:monthly | 追加観察 | next weekly |
+| 桐生 はS条件のみ通知候補。A/Bは通知対象外に寄せる。 | watch | report:monthly | 追加観察 | next weekly |
+| S帯が弱い。S条件の過学習、オッズ閾値、sample_size条件を再確認する。 | watch | report:monthly | 追加観察 | next weekly |
+
+## 2026-06-21 auto candidate review
+
+### Source
+
+- period: 2026-05-23..2026-06-21
+- generatedAt: 2026-06-21T13:00:04.270Z
+- BUY: 1
+- settledBUY: 0
+- hits: 0
+- ROI: -
+
+### Rule suggestions
+
+| rule | status | evidence | action | next_check |
+|---|---|---|---|---|
+| 確定BUYが20件未満。ルール変更は急がず、紙上観察を継続する。 | watch | report:monthly | 追加観察 | next weekly |
+
+## 2026-06-28 auto candidate review
+
+### Source
+
+- period: 2026-05-30..2026-06-28
+- generatedAt: 2026-06-28T13:00:05.380Z
+- BUY: 0
+- settledBUY: 0
+- hits: 0
+- ROI: -
+
+### Rule suggestions
+
+| rule | status | evidence | action | next_check |
+|---|---|---|---|---|
+| 確定BUYが20件未満。ルール変更は急がず、紙上観察を継続する。 | watch | report:monthly | 追加観察 | next weekly |
+
