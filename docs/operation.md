@@ -34,6 +34,77 @@ pnpm backup
 
 ---
 
+## LINE通知
+
+### 目的
+
+BUY候補や日次サマリをLINEへ送る。通知は**購入指示ではなくpaper検証候補の確認用**。
+`notification_log` の `channel='line'` を使い、同一 `race_id` は送信済みなら再送しない。
+
+LINE Notify は提供終了済みのため、LINE Messaging API の push message を使う。
+
+### 必須環境変数
+
+```bash
+export BOAT_PON_LINE_CHANNEL_ACCESS_TOKEN="<Messaging API channel access token>"
+export BOAT_PON_LINE_TO="<userId or groupId or roomId>"
+```
+
+複数宛先に送る場合:
+
+```bash
+export BOAT_PON_LINE_TO="Uxxxx,Cxxxx,Rxxxx"
+```
+
+### 任意環境変数
+
+```bash
+# 実送信せず、送信内容だけ表示
+export BOAT_PON_LINE_DRY_RUN=1
+
+# 通常は不要。テスト用エンドポイント差し替え
+export BOAT_PON_LINE_ENDPOINT="https://api.line.me/v2/bot/message/push"
+```
+
+### テスト送信
+
+まずdry-runで本文を確認する。
+
+```bash
+pnpm notify:line:test -- --dry-run
+```
+
+実送信する場合:
+
+```bash
+pnpm notify:line:test -- --message "Boat Pon LINE 通知テスト"
+```
+
+### 日次サマリ + BUY個別通知
+
+```bash
+pnpm notify:line:daily -- --date 2026-06-29
+```
+
+送信内容:
+
+- 日次サマリ: `BUY / WATCH / SKIP / odds coverage`
+- BUY候補がある場合: レースごとの個別通知
+- 公式オッズURL
+- `paper観察モード` 注記
+
+### daily-notify.sh 連動
+
+`scripts/daily-notify.sh` は macOS 通知の前に以下を実行する。
+
+```bash
+pnpm --silent notify:line:daily --date "$TODAY"
+```
+
+LINE env が未設定ならスキップ。LINE送信に失敗しても macOS 通知は継続する。
+
+---
+
 ## ROI 分析
 
 ### 全条件ラボ分析（S/A/B判定）
@@ -144,4 +215,6 @@ pnpm paper:forward
 | `pnpm paper:forward` | scripts/paper-forward-test.ts | Paper forward test 記録・レポート更新 |
 | `pnpm backup` | scripts/backup-db-safe.ts | DB バックアップ |
 | `pnpm daily` | scripts/run-daily.ts | 日次処理 |
+| `pnpm notify:line:daily` | scripts/notify-line.ts | LINE日次サマリ + BUY個別通知 |
+| `pnpm notify:line:test` | scripts/notify-line.ts | LINE疎通テスト |
 | `pnpm catchup` | scripts/run-catchup.ts | 過去分取り込み |
