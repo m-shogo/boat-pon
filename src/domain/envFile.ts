@@ -46,7 +46,7 @@ export function parseEnvFileContent(content: string): Record<string, string> {
   return values;
 }
 
-export function loadEnvFiles(files = [".env.local", ".env"]): EnvLoadResult[] {
+export function loadEnvFiles(files = [".env"]): EnvLoadResult[] {
   const results: EnvLoadResult[] = [];
   for (const file of files) {
     if (!existsSync(file)) continue;
