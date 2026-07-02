@@ -13,11 +13,14 @@
 
 import { buildCandidateRows } from "../server/candidates";
 import { getManualOdds, getSettings, hasEarlyOddsSnapshot, insertDecisionHistory, listAllOddsBySelection, listAllResultsForModel, listEarlyOddsSnapshots, listOddsSnapshots, listProgramInputs, loadRaceWeatherMap, openDb, recordOddsSnapshot, recordOddsTimeseriesSnapshot, setOdds } from "../server/db";
-import { LIVE_MONITOR_FROM } from "../src/domain/liveMonitor";
+import { LIVE_MONITOR_FROM, LIVE_MONITOR_MODEL_VERSION } from "../src/domain/liveMonitor";
 import { isWithinOddsFetchWindow, minutesUntilRaceClose, oddsCheckpointLabel, shouldPersistDecisionHistory } from "../src/domain/livePersistence";
 import { mergeOddsMaps } from "../src/domain/oddsSnapshot";
 import { isTrifectaSelectionUnavailable, parseAllTrifectaOdds, parseTrifectaOdds } from "../src/domain/oddsParser";
 import { fetchOfficialOdds } from "./fetch-official-odds";
+import { loadEnvFiles } from "../src/domain/envFile";
+import { buildLineText, lineMessagingConfigFromEnv, sendLinePushTextToRecipients } from "../src/domain/lineMessaging";
+import { officialOddsUrl, teleBoatUrl } from "../src/domain/officialLinks";
 
 const dryRun = process.argv.includes("--dry-run");
 const force = process.argv.includes("--force");
@@ -193,6 +196,66 @@ try {
       if (persistHistory && shouldPersistDecisionHistory(row.candidate, settings, LIVE_MONITOR_FROM, now)) {
         insertDecisionHistory(db, row.candidate, row.decision, { replaceRace: true });
         saved += 1;
+      }
+    }
+
+    // 保存後の DB から実際の BUY を取得し、未通知なら即 LINE 通知
+    const confirmedBuys = db.prepare(`
+      SELECT race_id, date, venue, race_no, selection, bet_type, current_odds, ev, recommended_stake_yen
+      FROM decision_history
+      WHERE date = ? AND decision = 'BUY' AND source = 'history-model' AND model_version = ?
+    `).all(today, LIVE_MONITOR_MODEL_VERSION) as Array<{
+      race_id: string; date: string; venue: string; race_no: number;
+      selection: string; bet_type: string; current_odds: number | null;
+      ev: number | null; recommended_stake_yen: number;
+    }>;
+
+    const pendingBuys = confirmedBuys.filter((buy) => {
+      const notif = db.prepare(
+        "SELECT status FROM notification_log WHERE race_id = ? AND channel = 'line'"
+      ).get(buy.race_id) as { status: string } | undefined;
+      return notif?.status !== "SENT";
+    });
+
+    if (pendingBuys.length > 0) {
+      try {
+        loadEnvFiles([".env"]);
+        const envConfig = lineMessagingConfigFromEnv(process.env);
+        if (envConfig.enabled && !envConfig.config.dryRun) {
+          for (const buy of pendingBuys) {
+            const odds = buy.current_odds != null ? `${buy.current_odds.toFixed(1)}倍` : "未取得";
+            const ev = buy.ev != null ? buy.ev.toFixed(2) : "-";
+            const voteUrl = teleBoatUrl(buy.date, buy.venue, buy.race_no);
+            const oddsUrl = officialOddsUrl(buy.date, buy.venue, buy.race_no);
+            const title = `🎯 BUY: ${buy.venue}${buy.race_no}R ${buy.selection}`;
+            const body = [
+              `券種: ${buy.bet_type}`,
+              `オッズ: ${odds} / EV: ${ev}`,
+              `stake: ${buy.recommended_stake_yen}円`,
+              "",
+              `投票: ${voteUrl}`,
+              "【paper観察モード】",
+            ].join("\n");
+            const text = buildLineText(title, body, oddsUrl);
+
+            await sendLinePushTextToRecipients({
+              channelAccessToken: envConfig.config.channelAccessToken,
+              recipients: envConfig.config.recipients,
+              text,
+              endpoint: envConfig.config.endpoint,
+            });
+
+            db.prepare(`
+              INSERT INTO notification_log (race_id, channel, status, title, body, official_url, sent_at)
+              VALUES (?, 'line', 'SENT', ?, ?, ?, CURRENT_TIMESTAMP)
+              ON CONFLICT(race_id, channel) DO UPDATE SET status='SENT', title=?, body=?, official_url=?, sent_at=CURRENT_TIMESTAMP
+            `).run(buy.race_id, title, body, oddsUrl, title, body, oddsUrl);
+
+            console.log(`LINE realtime: ${buy.race_id} ${buy.selection}`);
+          }
+        }
+      } catch (err) {
+        console.error("LINE realtime notify error:", err instanceof Error ? err.message : err);
       }
     }
   }

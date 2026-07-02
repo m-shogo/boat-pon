@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.boatpon.weekly-forward-notify</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/m-shogo/Developer/personal/boat-pon/scripts/weekly-forward-notify.sh</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/m-shogo/Developer/personal/boat-pon</string>
+
+  <!-- 毎週月曜 09:00 JST に forward 週次サマリー通知 -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Weekday</key>
+    <integer>1</integer>
+    <key>Hour</key>
+    <integer>9</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+
+  <key>StandardOutPath</key>
+  <string>/Users/m-shogo/Developer/personal/boat-pon/data/logs/weekly-forward-notify.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/m-shogo/Developer/personal/boat-pon/data/logs/weekly-forward-notify-err.log</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HOME</key>
+    <string>/Users/m-shogo</string>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+</dict>
+</plist>

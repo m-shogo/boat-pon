@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-06-11T06:48:41.189Z",
-  "governorGeneratedAt": "2026-06-11T06:48:40.761Z",
+  "generatedAt": "2026-06-30T23:06:51.497Z",
+  "governorGeneratedAt": "2026-06-29T22:06:34.827Z",
   "nextAction": {
     "priority": 7,
     "action": "switch検証は全て完了 (H004/H006 とも switch reject)。condB timeseries overlap 蓄積待ち / H011 1-4系 forward monitor 継続",

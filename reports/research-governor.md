@@ -1,6 +1,6 @@
 # Research Governor
 
-生成日時: 2026-06-11T06:48:40.761Z
+生成日時: 2026-06-29T22:06:34.827Z
 
 > **⚠️ BUY は検証候補。ROI は検証指標。購入指示・採用判断ではない。**
 > **app_settings / 本番 decision / 自動投票 は絶対に変更しない。**
@@ -44,7 +44,7 @@
 | H001 | condB 1-3-2 switch | 🔬 testing-historical | ❌ 不可 | future-only odds_timeseries confirmation (condB BUY overlap蓄積待ち) |
 | H002 | condB skip | 🟠 tested-historical | ❌ 不可 | H001 と並行して monitor |
 | H003 | 6R skip | 👁️ monitor | ❌ 不可 | pnpm report:paper-forward-monitor (monitor継続) |
-| H011 | 1-4系 市場過小評価 (2連単1-4) | 🟠 tested-historical | ❌ 不可 | forward monitor: 2026-06以降のBUYレースで2連単1-4相当の的中/払戻を追跡。条件追加でのROI掘りは禁止 |
+| H011 | 1-4系 市場過小評価 (2連単1-4) | — closed-rejected | ❌ 不可 | forward monitorは継続 (箱は有効)。次の本質検証は exacta 1-2/1-3/1-4 の closing odds backfill → 頻度の傾きを市場価格が織り込んでいるかの直接比較 |
 | H004 | 6R switch (代替買い目) | 🟠 tested-historical | ❌ 不可 | switch は終了。6R の扱いは H003 (skip monitor) に一本化 |
 | H005 | 浜名湖+住之江 skip | 👁️ monitor | ❌ 不可 | pnpm report:paper-forward-monitor (monitor継続)。2026-06以降のforwardでvenue 1-2-3のhit有無を追跡 |
 | H006 | 浜名湖+住之江 switch (代替買い目) | 🟠 tested-historical | ❌ 不可 | switch は終了。venue の扱いは H005 (skip monitor) に一本化 |
@@ -116,7 +116,7 @@
 
 **🔬 testing-historical**: H001 condB 1-3-2 switch
 
-**🟠 tested-historical**: H002 condB skip / H011 1-4系 市場過小評価 (2連単1-4) / H004 6R switch (代替買い目) / H006 浜名湖+住之江 switch (代替買い目)
+**🟠 tested-historical**: H002 condB skip / H004 6R switch (代替買い目) / H006 浜名湖+住之江 switch (代替買い目)
 
 **👁️ monitor**: H003 6R skip / H005 浜名湖+住之江 skip
 
