@@ -4,6 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 TODAY=$(TZ=Asia/Tokyo date +%Y-%m-%d)
+YESTERDAY=$(TZ=Asia/Tokyo date -v-1d +%Y-%m-%d)
 LOG_PREFIX="[$(TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M:%S')]"
 
 # ---------- DB から今日の数字を取得 ----------
@@ -49,7 +50,13 @@ if [ "$NEW_ERRORS" -gt 0 ]; then
 fi
 
 # LINE Messaging API 通知（env未設定時はスキップ、送信失敗してもmacOS通知は継続）
-pnpm --silent notify:line:daily -- --date "$TODAY" || echo "${LOG_PREFIX} line notify skipped or failed"
+pnpm --silent notify:line:daily -- --date "$TODAY" || echo "${LOG_PREFIX} line daily skipped or failed"
+
+# レース結果通知（昨日分の結果が確定しているはず）
+pnpm --silent notify:line:results -- --date "$YESTERDAY" || echo "${LOG_PREFIX} line results skipped or failed"
+
+# エラーアラート（今日のエラーがあれば通知）
+pnpm --silent notify:line:errors -- --date "$TODAY" || echo "${LOG_PREFIX} line errors skipped or failed"
 
 # macOS 通知センターへ送信
 osascript -e "display notification \"${BODY}\" with title \"Boat Pon 日次サマリ\" subtitle \"${SUBTITLE}\""
