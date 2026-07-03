@@ -13,7 +13,9 @@ import { existsSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import type { DecisionHistoryRow } from "../src/domain/backtest";
 import type { DecisionStatus } from "../src/domain/types";
+import type { ResearchRule } from "../src/domain/researchRule";
 import { applyCondition, buildRuleEvaluationResult, parseCondition, type RowCondition } from "../src/domain/researchEvaluation";
+import { buildResearchSummaryViewModel, buildRuleCardViewModel } from "../src/view-models/researchViewModel.adapters";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const args = parseArgs(process.argv.slice(2));
@@ -42,7 +44,22 @@ const result = buildRuleEvaluationResult({
   extraWarnings: [...sourceWarnings, ...conditionWarnings],
 });
 
-if (args.json) {
+if (args.viewJson) {
+  // 探索用CLIの単発実行なので、ここで作るResearchRuleは常にcandidate段階の使い捨て。
+  // 永続化されたルールのライフサイクル管理はPhase 3の役割。
+  const syntheticRule: ResearchRule = {
+    ruleId: result.ruleId,
+    status: "candidate",
+    createdAt: result.metadata.evaluationRunAt,
+    updatedAt: result.metadata.evaluationRunAt,
+    reasonSummary: result.reasonSummary,
+    warnings: result.warnings,
+  };
+  const card = buildRuleCardViewModel(syntheticRule, result, {
+    title: args.condition ? `${args.ruleId} (${args.condition.key}=${args.condition.value})` : args.ruleId,
+  });
+  console.log(JSON.stringify(buildResearchSummaryViewModel([card]), null, 2));
+} else if (args.json) {
   console.log(JSON.stringify(result, null, 2));
 } else {
   printResult();
@@ -119,13 +136,15 @@ function printResult() {
 }
 
 function parseArgs(argv: string[]) {
-  const parsed: { from?: string; to?: string; ruleId: string; json: boolean; condition?: RowCondition } = {
+  const parsed: { from?: string; to?: string; ruleId: string; json: boolean; viewJson: boolean; condition?: RowCondition } = {
     ruleId: "explore-roi-adhoc",
     json: false,
+    viewJson: false,
   };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--json") parsed.json = true;
+    else if (arg === "--view-json") parsed.viewJson = true;
     else if (arg === "--from") parsed.from = argv[++i];
     else if (arg === "--to") parsed.to = argv[++i];
     else if (arg === "--rule-id") parsed.ruleId = argv[++i] ?? parsed.ruleId;
@@ -138,7 +157,7 @@ function parseArgs(argv: string[]) {
 
 function printHelp() {
   console.log(`Usage:
-  pnpm explore:roi [-- --from YYYY-MM-DD --to YYYY-MM-DD --rule-id <id> --condition key=value --json]
+  pnpm explore:roi [-- --from YYYY-MM-DD --to YYYY-MM-DD --rule-id <id> --condition key=value --json|--view-json]
 
 Read-only. Aggregates decision_history into a RuleEvaluationResult.
 ROI prefers payout_yen (actual payout); falls back to current_odds
@@ -148,5 +167,8 @@ per-row only when payout_yen is missing, and warns when it does.
   --to         data window end (default today)
   --rule-id    ruleId label in output (default explore-roi-adhoc)
   --condition  single key=value row filter (supported keys: venue, raceNo, decision)
-  --json       emit RuleEvaluationResult JSON`);
+  --json       emit RuleEvaluationResult JSON (domain shape, unchanged)
+  --view-json  emit a ResearchSummaryViewModel JSON (UI/Fable-ready display
+               contract: opportunity score, warning badges, lifecycle steps,
+               metrics). Takes precedence over --json if both are passed.`);
 }
