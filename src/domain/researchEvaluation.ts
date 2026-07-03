@@ -44,6 +44,17 @@ export function estimateConfidence(sampleSize: number): number {
   return sampleSize / (sampleSize + CONFIDENCE_PRIOR_WEIGHT);
 }
 
+/**
+ * 行1件の実現payoutを返す。`payout_yen`（race_payouts由来、100円あたりの公式払戻額）が
+ * あればそれをstakeYenへスケールして使う。無い場合のみ current_odds ベースの
+ * `oddsPayoutYen` にfallbackする（CLAUDE.mdの主評価基準 = 実払戻ベースに合わせる）。
+ */
+export function realizedPayoutYen(row: DecisionHistoryRow, stakeYen: number): number {
+  if (row.result !== row.selection || stakeYen <= 0) return 0;
+  if (row.payoutYen != null) return (row.payoutYen / 100) * stakeYen;
+  return oddsPayoutYen(row, stakeYen);
+}
+
 /** 総投入額に対する最大ピーク→谷の落ち込み比。BUY行を日付順に累積して計算する。 */
 export function computeMaxDrawdown(rows: DecisionHistoryRow[]): number {
   const buyRows = rows
@@ -56,15 +67,16 @@ export function computeMaxDrawdown(rows: DecisionHistoryRow[]): number {
   for (const row of buyRows) {
     const stake = row.recommendedStakeYen;
     totalStake += stake;
-    cumulative += oddsPayoutYen(row, stake) - stake;
+    cumulative += realizedPayoutYen(row, stake) - stake;
     peak = Math.max(peak, cumulative);
     maxDrop = Math.max(maxDrop, peak - cumulative);
   }
   return totalStake ? maxDrop / totalStake : 0;
 }
 
-export const ROI_BASIS_WARNING =
-  "roi is current_odds-based (approx. +14.94pt optimistic vs payout_yen); payout_yen rebase is a Phase 2 TODO";
+export function currentOddsFallbackWarning(fallbackCount: number): string {
+  return `${fallbackCount} settled BUY row(s) lack payout_yen; used current_odds-based ROI for those rows (approx. +14.94pt optimistic bias)`;
+}
 
 export type BuildRuleEvaluationInput = {
   ruleId: string;
@@ -80,6 +92,7 @@ export type BuildRuleEvaluationInput = {
  * decision_history 行を RuleEvaluationResult へ変換する読み取り専用アダプタ。
  * - dataWindow 外の行は集計に使わない（Future Leak防止）
  * - ROI/hitRate/sampleSize は結果確定済みのBUY行のみで計算する
+ * - ROIは payout_yen（実払戻）優先、無い行のみ current_odds へfallback
  * - 探索用なので isForwardTested / isProductionEligible は常に false
  */
 export function buildRuleEvaluationResult(input: BuildRuleEvaluationInput): RuleEvaluationResult {
@@ -90,7 +103,15 @@ export function buildRuleEvaluationResult(input: BuildRuleEvaluationInput): Rule
   const settledBuyRows = buyRows.filter((row) => row.result != null);
   const hits = settledBuyRows.filter((row) => row.result === row.selection).length;
   const stakeYen = settledBuyRows.reduce((sum, row) => sum + row.recommendedStakeYen, 0);
-  const payoutYen = settledBuyRows.reduce((sum, row) => sum + oddsPayoutYen(row, row.recommendedStakeYen), 0);
+  const payoutYen = settledBuyRows.reduce((sum, row) => sum + realizedPayoutYen(row, row.recommendedStakeYen), 0);
+  const fallbackCount = settledBuyRows.filter((row) => row.payoutYen == null).length;
+  const roiBasis = settledBuyRows.length === 0
+    ? "n/a"
+    : fallbackCount === 0
+      ? "payout_yen"
+      : fallbackCount === settledBuyRows.length
+        ? "current_odds (fallback)"
+        : `mixed (${settledBuyRows.length - fallbackCount}/${settledBuyRows.length} payout_yen)`;
 
   const metadata: EvaluationMetadata = {
     dataWindowStart: input.dataWindowStart,
@@ -102,7 +123,7 @@ export function buildRuleEvaluationResult(input: BuildRuleEvaluationInput): Rule
   const warnings = [...validateEvaluationMetadata(metadata).warnings];
   const unsettled = buyRows.length - settledBuyRows.length;
   if (unsettled > 0) warnings.push(`${unsettled} BUY rows are unsettled and excluded from roi/hitRate`);
-  if (settledBuyRows.length > 0) warnings.push(ROI_BASIS_WARNING);
+  if (fallbackCount > 0) warnings.push(currentOddsFallbackWarning(fallbackCount));
   warnings.push(...(input.extraWarnings ?? []));
 
   return {
@@ -116,7 +137,7 @@ export function buildRuleEvaluationResult(input: BuildRuleEvaluationInput): Rule
     isProductionEligible: false,
     reasonSummary:
       input.reasonSummary ??
-      `explore-roi: ${settledBuyRows.length} settled BUY (${hits} hits) in ${input.dataWindowStart}..${input.dataWindowEnd}`,
+      `explore-roi: ${settledBuyRows.length} settled BUY (${hits} hits) in ${input.dataWindowStart}..${input.dataWindowEnd}; roi basis: ${roiBasis}`,
     warnings,
   };
 }

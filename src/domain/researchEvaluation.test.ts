@@ -34,7 +34,7 @@ function row(id: number, overrides: Partial<DecisionHistoryRow> = {}): DecisionH
     recommendedStakeYen: 100,
     sampleSize: 500,
     result: "2-1-3",
-    payoutYen: 0,
+    payoutYen: null,
     popularity: null,
     returned: false,
     source: "test",
@@ -105,8 +105,38 @@ test("CLI出力（RuleEvaluationResult）が必須フィールドを持つ", () 
   // window内の確定BUYは2件（window外の2027年行・未確定行・SKIP行は除外される）
   assert.equal(result.metadata.sampleSize, 2);
   assert.equal(result.hitRate, 0.5);
-  assert.equal(result.roi, 15); // (30*100) / (100+100)
+  assert.equal(result.roi, 15); // payout_yen無し(currentOdds30)*100 / (100+100)
   assert.equal(result.isForwardTested, false);
   assert.equal(result.isProductionEligible, false);
   assert.ok(result.warnings.some((warning) => warning.includes("unsettled")));
+});
+
+test("payout_yen がある場合は payout_yen ベースのROIを使う", () => {
+  const result = buildRuleEvaluationResult({
+    ruleId: "rule-payout",
+    rows: [row(1, { result: "1-2-3", currentOdds: 99, payoutYen: 1620 })],
+    dataWindowStart: "2026-01-01",
+    dataWindowEnd: "2026-06-01",
+    evaluationRunAt: "2026-06-02T00:00:00+09:00",
+  });
+
+  // payout_yenは100円あたりの公式払戻。currentOdds(99)由来なら990になるはずだが、
+  // payout_yen(1620)/100*stake(100)=1620が優先されることを確認する。
+  assert.equal(result.roi, 16.2);
+  assert.ok(result.reasonSummary.includes("payout_yen"));
+  assert.ok(!result.warnings.some((warning) => warning.toLowerCase().includes("fallback")));
+});
+
+test("payout_yen が無い場合はcurrent_oddsへfallbackしwarningを出す", () => {
+  const result = buildRuleEvaluationResult({
+    ruleId: "rule-fallback",
+    rows: [row(1, { result: "1-2-3", currentOdds: 30, payoutYen: null })],
+    dataWindowStart: "2026-01-01",
+    dataWindowEnd: "2026-06-01",
+    evaluationRunAt: "2026-06-02T00:00:00+09:00",
+  });
+
+  assert.equal(result.roi, 30); // fallback: currentOdds(30)*stake(100) / stake(100)
+  assert.ok(result.warnings.some((warning) => warning.includes("lack payout_yen")));
+  assert.ok(result.reasonSummary.includes("current_odds (fallback)"));
 });
