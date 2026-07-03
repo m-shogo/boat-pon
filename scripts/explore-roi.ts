@@ -13,7 +13,7 @@ import { existsSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import type { DecisionHistoryRow } from "../src/domain/backtest";
 import type { DecisionStatus } from "../src/domain/types";
-import { buildRuleEvaluationResult } from "../src/domain/researchEvaluation";
+import { applyCondition, buildRuleEvaluationResult, parseCondition, type RowCondition } from "../src/domain/researchEvaluation";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const args = parseArgs(process.argv.slice(2));
@@ -22,7 +22,15 @@ const evaluationRunAt = new Date().toISOString();
 const dataWindowStart = args.from ?? "1970-01-01";
 const dataWindowEnd = args.to ?? evaluationRunAt.slice(0, 10);
 
-const { rows, sourceWarnings } = loadRows(dataWindowStart, dataWindowEnd);
+const { rows: loadedRows, sourceWarnings } = loadRows(dataWindowStart, dataWindowEnd);
+
+let rows = loadedRows;
+const conditionWarnings: string[] = [];
+if (args.condition) {
+  const filtered = applyCondition(rows, args.condition);
+  rows = filtered.rows;
+  conditionWarnings.push(...filtered.warnings);
+}
 
 const result = buildRuleEvaluationResult({
   ruleId: args.ruleId,
@@ -30,7 +38,8 @@ const result = buildRuleEvaluationResult({
   dataWindowStart,
   dataWindowEnd,
   evaluationRunAt,
-  extraWarnings: sourceWarnings,
+  conditionLabel: args.condition ? `${args.condition.key}=${args.condition.value}` : undefined,
+  extraWarnings: [...sourceWarnings, ...conditionWarnings],
 });
 
 if (args.json) {
@@ -110,7 +119,7 @@ function printResult() {
 }
 
 function parseArgs(argv: string[]) {
-  const parsed: { from?: string; to?: string; ruleId: string; json: boolean } = {
+  const parsed: { from?: string; to?: string; ruleId: string; json: boolean; condition?: RowCondition } = {
     ruleId: "explore-roi-adhoc",
     json: false,
   };
@@ -120,6 +129,7 @@ function parseArgs(argv: string[]) {
     else if (arg === "--from") parsed.from = argv[++i];
     else if (arg === "--to") parsed.to = argv[++i];
     else if (arg === "--rule-id") parsed.ruleId = argv[++i] ?? parsed.ruleId;
+    else if (arg === "--condition") parsed.condition = parseCondition(argv[++i] ?? "");
     else if (arg === "--help" || arg === "-h") { printHelp(); process.exit(0); }
     else throw new Error(`unknown option: ${arg}`);
   }
@@ -128,12 +138,15 @@ function parseArgs(argv: string[]) {
 
 function printHelp() {
   console.log(`Usage:
-  pnpm explore:roi [-- --from YYYY-MM-DD --to YYYY-MM-DD --rule-id <id> --json]
+  pnpm explore:roi [-- --from YYYY-MM-DD --to YYYY-MM-DD --rule-id <id> --condition key=value --json]
 
 Read-only. Aggregates decision_history into a RuleEvaluationResult.
+ROI prefers payout_yen (actual payout); falls back to current_odds
+per-row only when payout_yen is missing, and warns when it does.
 
-  --from     data window start (default 1970-01-01)
-  --to       data window end (default today)
-  --rule-id  ruleId label in output (default explore-roi-adhoc)
-  --json     emit RuleEvaluationResult JSON`);
+  --from       data window start (default 1970-01-01)
+  --to         data window end (default today)
+  --rule-id    ruleId label in output (default explore-roi-adhoc)
+  --condition  single key=value row filter (supported keys: venue, raceNo, decision)
+  --json       emit RuleEvaluationResult JSON`);
 }

@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  applyCondition,
   buildRuleEvaluationResult,
   estimateConfidence,
+  parseCondition,
   validateEvaluationMetadata,
 } from "./researchEvaluation";
 import { MIN_PRODUCTION_CONFIDENCE, MIN_PRODUCTION_SAMPLE_SIZE } from "./researchRuleLifecycle";
@@ -139,4 +141,23 @@ test("payout_yen が無い場合はcurrent_oddsへfallbackしwarningを出す", 
   assert.equal(result.roi, 30); // fallback: currentOdds(30)*stake(100) / stake(100)
   assert.ok(result.warnings.some((warning) => warning.includes("lack payout_yen")));
   assert.ok(result.reasonSummary.includes("current_odds (fallback)"));
+});
+
+test("--condition venue=xxx で対象が絞られる", () => {
+  const rows = [row(1, { venue: "桐生" }), row(2, { venue: "蒲郡" })];
+  const filtered = applyCondition(rows, { key: "venue", value: "桐生" });
+  assert.equal(filtered.rows.length, 1);
+  assert.equal(filtered.rows[0].venue, "桐生");
+  assert.deepEqual(filtered.warnings, []);
+});
+
+test("不正なcondition形式（=無し）はエラー", () => {
+  assert.throws(() => parseCondition("badformat"));
+});
+
+test("未対応のcondition keyはwarningを出し絞り込みをしない", () => {
+  const rows = [row(1), row(2)];
+  const filtered = applyCondition(rows, { key: "unknownKey", value: "x" });
+  assert.equal(filtered.rows.length, 2);
+  assert.ok(filtered.warnings.some((warning) => warning.includes("unsupported condition key")));
 });

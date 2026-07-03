@@ -85,6 +85,7 @@ export type BuildRuleEvaluationInput = {
   dataWindowEnd: string;
   evaluationRunAt: string;
   reasonSummary?: string;
+  conditionLabel?: string;
   extraWarnings?: string[];
 };
 
@@ -126,6 +127,8 @@ export function buildRuleEvaluationResult(input: BuildRuleEvaluationInput): Rule
   if (fallbackCount > 0) warnings.push(currentOddsFallbackWarning(fallbackCount));
   warnings.push(...(input.extraWarnings ?? []));
 
+  const conditionSuffix = input.conditionLabel ? `; condition: ${input.conditionLabel}` : "";
+
   return {
     ruleId: input.ruleId,
     metadata,
@@ -137,7 +140,53 @@ export function buildRuleEvaluationResult(input: BuildRuleEvaluationInput): Rule
     isProductionEligible: false,
     reasonSummary:
       input.reasonSummary ??
-      `explore-roi: ${settledBuyRows.length} settled BUY (${hits} hits) in ${input.dataWindowStart}..${input.dataWindowEnd}; roi basis: ${roiBasis}`,
+      `explore-roi: ${settledBuyRows.length} settled BUY (${hits} hits) in ${input.dataWindowStart}..${input.dataWindowEnd}; roi basis: ${roiBasis}${conditionSuffix}`,
     warnings,
   };
+}
+
+export type RowCondition = {
+  key: string;
+  value: string;
+};
+
+/** `key=value` 形式のみ受け付ける。`=` が無い・keyが空なら不正入力としてthrowする。 */
+export function parseCondition(raw: string): RowCondition {
+  const eqIndex = raw.indexOf("=");
+  if (eqIndex <= 0) throw new Error(`invalid --condition "${raw}", expected key=value`);
+  return { key: raw.slice(0, eqIndex), value: raw.slice(eqIndex + 1) };
+}
+
+export const SUPPORTED_CONDITION_KEYS = ["venue", "raceNo", "decision"] as const;
+
+export type ConditionFilterResult = {
+  rows: DecisionHistoryRow[];
+  warnings: string[];
+};
+
+/**
+ * 単一条件のみの最小フィルタ（AND/OR組み合わせは対象外）。
+ * 未対応keyや値の型不一致は絞り込みをせず（全件のまま）warningsで明示する。
+ */
+export function applyCondition(rows: DecisionHistoryRow[], condition: RowCondition): ConditionFilterResult {
+  switch (condition.key) {
+    case "venue":
+      return { rows: rows.filter((row) => row.venue === condition.value), warnings: [] };
+    case "raceNo": {
+      const raceNo = Number(condition.value);
+      if (!Number.isFinite(raceNo)) {
+        return { rows, warnings: [`condition raceNo="${condition.value}" is not a number; condition ignored`] };
+      }
+      return { rows: rows.filter((row) => row.raceNo === raceNo), warnings: [] };
+    }
+    case "decision":
+      return { rows: rows.filter((row) => row.decision === condition.value), warnings: [] };
+    default:
+      return {
+        rows,
+        warnings: [
+          `unsupported condition key "${condition.key}" (supported: ${SUPPORTED_CONDITION_KEYS.join(", ")}); condition ignored`,
+        ],
+      };
+  }
 }
