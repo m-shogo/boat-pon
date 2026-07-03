@@ -55,14 +55,48 @@ ViewModelは常に「すでにsrc/domainが決めた結果」を表示用に変�
       （`src/view-models/researchViewModel.adapters.ts` + テスト）
 - [x] CLIからViewModel形式のJSONを取得できる（`explore-roi.ts --view-json`）。
       これにより、Fable/React双方の実装者がバックエンドに依存せず表示だけを試作できる
-- [ ] `src/view-models/` の型が複数のCLI/画面で実際に使われ、安定していることを確認する
-      （現状は `explore-roi.ts` の単一カードのみ。Phase 5のDaily Reportで複数カードの
-      実運用を経てから、初めて型が「固まった」と言える）
+- [x] Presentation Layer（`src/presentation/`）とrenderer非依存の
+      `PresentationRenderer<T>` インターフェースができた（`docs/ai/07-PRESENTATION-LAYER.md`）
+- [x] **Fable PoC（境界確認）完了** — `src/renderers/fable/fableOpportunityRenderer.ts`。
+      詳細は下記「Fable PoCの進捗」を参照
+- [ ] `src/view-models/` / `src/presentation/` の型が複数のCLI/画面で実際に使われ、
+      安定していることを確認する（現状は `explore-roi.ts` の単一カードのみ。Phase 5の
+      Daily Reportで複数カードの実運用を経てから、初めて型が「固まった」と言える）
 - [ ] Phase 3（Rule Lifecycle永続化）が完了し、`ResearchRule` が実際のstatus履歴を
       持つようになってから、`RuleLifecycleStepViewModel` の表現が正しいか再検証する
       （現状は履歴が無いため、deprecated/archivedの表示は簡略化している）
 - [ ] Reactでの実装コストが本当に問題になっている（アニメーション・演出面で具体的な
       不満が出ている）ことを確認してから導入する。困っていないのに導入しない
+- [ ] 実際のFable（F#/.NET）ツールチェイン導入。下記PoCはTypeScriptによる
+      境界確認スタンドインであり、まだ本物のFableコンパイラは入れていない
+
+## Fable PoCの進捗（境界確認のみ、本番実装ではない）
+
+`OpportunityPresentation` の星表示だけを対象にした最小PoCを実施した。
+
+- 実装: `src/renderers/fable/fableOpportunityRenderer.ts`
+  （`FableOpportunityRenderer.renderOpportunity`）
+- サンプル: `src/renderers/fable/fableOpportunitySample.ts`
+  （`docs/ai/presentation.sample.json` の値を書き写した静的fixture）
+- テスト: `src/renderers/fable/fableOpportunityRenderer.test.ts`
+
+確認できたこと:
+
+- `PresentationRenderer<T>` を実装するのに `src/presentation/` 以外への依存
+  （domain/view-models/server/scripts）が本当に不要だった
+  （テストで自ソースのimportを静的に検査して確認）
+- `OpportunityPresentation` の `scoreLabel`/`score`/`riskLevel`/`summary` は
+  一切再計算せず、そのまま表示側へ渡すだけで成立した
+- warnings countは `OpportunityPresentation` に含まれないため、呼び出し側から
+  別途渡す形にした（型を拡張して混ぜ込むことはしなかった）
+
+**注意**: これはTypeScriptで書いた境界確認用のスタンドインであり、実際の
+Fable（F#/.NET）コンパイラはまだ導入していない。本番でFableを使う場合は、
+このPoCが確認した「依存境界」と「入力データの形」を再現する形で、実際の
+F#/Feliz実装に置き換える。
+
+次に広げるなら、`docs/ai/06-FABLE-READINESS.md`（本ファイル）の「将来Fableを
+使うならどの画面から試すべきか」の順に、Rule Lifecycleのステップ表示へ進む。
 
 ## Reactで十分な範囲
 
@@ -78,10 +112,12 @@ ViewModelは常に「すでにsrc/domainが決めた結果」を表示用に変�
 上記の条件が満たされ、実際にFableを導入すると決めた場合、影響範囲が最小の画面から
 試す。
 
-1. **Opportunity Scoreの星表示だけの小さなコンポーネント** — `OpportunityScoreViewModel`
-   1つを受け取って星と色を描画するだけの独立コンポーネント。既存UIへの影響が最小
-2. Rule Lifecycleのステップ表示（`RuleLifecycleStepViewModel[]`）のタイムライン演出
-3. うまくいけば、`RuleCardViewModel` 全体を使うROIカードのリッチ表示
-4. 最後に `ResearchSummaryViewModel` を使うDaily Report画面全体
+1. ✅ **Opportunity Scoreの星表示だけの小さなコンポーネント** — `OpportunityPresentation`
+   1つを受け取って星と色を描画するだけの独立コンポーネント。既存UIへの影響が最小。
+   境界確認PoC完了（`src/renderers/fable/fableOpportunityRenderer.ts`、上記
+   「Fable PoCの進捗」参照）。ただし本物のFable(F#)コンパイラでの実装はまだ
+2. Rule Lifecycleのステップ表示（`LifecyclePresentation`）のタイムライン演出
+3. うまくいけば、`RuleCardPresentation` 全体を使うROIカードのリッチ表示
+4. 最後に `ResearchSummaryPresentation` を使うDaily Report画面全体
 
 いきなり既存の `src/App.tsx` 全体をFableに置き換えることはしない。

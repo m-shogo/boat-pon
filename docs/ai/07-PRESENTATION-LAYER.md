@@ -93,18 +93,47 @@ Metric Gridだけ専用のrenderer関数を持たないのは、単独で表示�
 
 ## Future Fable integration（次にやること）
 
-次のセッションの冒頭タスクは「既存のPresentation Layerを使って最初のFableレンダラーを
-実装する」。`docs/ai/06-FABLE-READINESS.md` の「将来Fableを使うならどの画面から試すべきか」
-の通り、影響範囲が最小の `OpportunityPresentation` 単体の星表示から始めるのを推奨する。
+### Fable PoC（境界確認、完了）
 
-Fableレンダラーを実装するときにやること:
+`OpportunityPresentation` の星表示だけを対象にした最小PoCを実施済み:
 
-1. `PresentationRenderer<Fable.ReactElement>`（型は実装時に決める）を実装する
-   `FablePresentationRenderer` を新規作成する
-2. `src/presentation/tokens/themeTokens.ts` / `layoutTokens.ts` の値をFable側の
+- `src/renderers/fable/fableOpportunityRenderer.ts` — `PresentationRenderer<T>` の
+  `renderOpportunity` のみを実装した `FableOpportunityRenderer`。他の4メソッド
+  （`renderRuleCard`/`renderWarning`/`renderLifecycle`/`renderResearchSummary`）は
+  「このPoCの対象外」として明示的にエラーを投げる（TODO）
+- `src/renderers/fable/fableOpportunitySample.ts` — `docs/ai/presentation.sample.json`
+  由来の静的fixture
+- `src/renderers/fable/fableOpportunityRenderer.test.ts` — 自ソースのimportを
+  静的検査し、`src/presentation/` 以外（domain/view-models/server/scripts）への
+  依存が無いことを機械的に確認するテストを含む
+
+**重要**: これは実際のFable（F#/.NET）コンパイラを導入したものではない。
+TypeScriptで書いた「Fableが実装するとしたらこの形になる」という境界確認用の
+スタンドインであり、`PresentationRenderer<T>` を実装するのに
+`src/presentation/` 以外への依存が本当に不要かを検証するのが目的。
+
+このPoCで実証できたこと:
+
+- `OpportunityPresentation` の `scoreLabel`/`score`/`riskLevel`/`summary` を
+  一切再計算せず、そのまま表示側へ渡すだけで成立する
+- `themeTokens`（`RISK_COLOR`）・`layoutTokens`（`CARD_SIZE`）は直接
+  importして使える（Presentation Layerの一部なので依存として許可される）
+- warnings countのように `OpportunityPresentation` に含まれない値は、
+  型を拡張して混ぜ込むのではなく、呼び出し側から別引数として渡す形で
+  境界を保てる
+
+### 本物のFableを導入するときにやること（次のセッション以降）
+
+1. .NET SDK / Fable コンパイラのツールチェイン導入（このリポジトリにはまだ無い）
+2. `PresentationRenderer<Fable.ReactElement>`（型は実装時に決める）を実装する
+   実際のF#/Feliz版 `FablePresentationRenderer` を新規作成する。
+   `fableOpportunityRenderer.ts` が確認した依存境界・入力データの形をそのまま踏襲する
+3. `src/presentation/tokens/themeTokens.ts` / `layoutTokens.ts` の値をFable側の
    スタイリング機構（Feliz.style等）に変換する薄いマッピング層を作る
-3. `src/domain` / `src/view-models` / `src/presentation` のロジックには一切触らない
+4. `src/domain` / `src/view-models` / `src/presentation` のロジックには一切触らない
    （触る必要が出てきたら、それはPresentation Layerの設計に穴があるということ）
+5. 次に広げるコンポーネントは Rule Lifecycle のステップ表示
+   （`docs/ai/06-FABLE-READINESS.md` 参照）
 
 ## Current React usage（現状）
 
@@ -136,7 +165,11 @@ Presentation Layerが複数のCLI/画面で実際に使われて安定してか�
 
 - Presentation Layerは `explore-roi.ts --presentation-json` の単一カード出力でしか
   検証されていない。複数カードでの実運用（Phase 5 Daily Report）はまだ無い
-- Renderer実装（React向け・Fable向けどちらも）はまだ1つも書いていない
-  （インターフェースのみ）
+- Renderer実装は `OpportunityPresentation` のみ（`src/renderers/fable/
+  fableOpportunityRenderer.ts`、TypeScriptによる境界確認スタンドイン）。
+  `renderRuleCard`/`renderWarning`/`renderLifecycle`/`renderResearchSummary` は
+  React向け・Fable向けどちらも未実装
+- 実際のFable（F#/.NET）ツールチェインはまだ導入していない。上記PoCはあくまで
+  依存境界の確認であり、本物のコンパイラ導入は別タスク
 - デザイントークン（`themeTokens.ts`/`layoutTokens.ts`）はプレースホルダー値。
   実際のブランド配色・実機での見た目確認はまだ行っていない
