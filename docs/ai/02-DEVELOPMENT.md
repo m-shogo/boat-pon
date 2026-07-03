@@ -44,13 +44,33 @@ pnpm verify:full        # verify + db:health + validate:data + monitor:live + gi
 ```
 
 環境によって `pnpm install` がレジストリ制限などで失敗し `tsx`/`tsc` が使えないことがある。
-その場合は代替として Node 22 系の型ストリッピングを使う。
+2026-07時点で確認済みのケース: このClaude Code実行環境では `registry.npmjs.org` への
+リクエストが常時 `403 host_not_allowed` を返し（メタデータ取得すら失敗）、`pnpm install` が
+完了しない。org policyによる意図的な遮断であり、リトライでは解消しないため、**この環境では
+`pnpm install` を再試行しない**。
+
+`pnpm install` が通らない環境では代替として Node 22 系の型ストリッピングを使う。
 
 ```sh
 node --experimental-strip-types <script.ts>
 ```
 
-typecheck が実行できない場合は、実行した代替検証コマンドと未実行のコマンドを完了報告に明記する。
+ただしNode標準の型ストリッピングは拡張子なしの相対import（`from "./x"`）を解決できないため、
+このリポジトリの `src/domain/*.ts`（tsx/vite規約で拡張子なしimport）にそのままは使えない。
+`pnpm run verify:strip-types` / `pnpm run verify:roi-smoke`（`node_modules`不要、Node標準機能のみ）
+が、importに`.ts`拡張子を補った一時コピーを作ってこの問題を回避する。詳細は
+`docs/ai/05-VERIFICATION.md` を参照。
+
+**Phase 3（Rule Lifecycle実装）に着手する前に、通常のpnpm環境で以下を実行し正式合格を
+確認すること**。この環境ではこれらは未実行（上記の理由）。
+
+```sh
+pnpm typecheck
+pnpm test
+pnpm explore:roi -- --json
+```
+
+typecheck/testが実行できない場合は、実行した代替検証コマンドと未実行のコマンドを完了報告に明記する。
 
 ## コードの置き場所の慣習
 

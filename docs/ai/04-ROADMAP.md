@@ -54,15 +54,26 @@ Boat Pon AI Development Bible を実装可能な単位に分割したもので�
 
 ### Phase 2 正式検証状況
 
-この開発環境では `pnpm install` が完了しない（`registry.npmjs.org` へのメタデータ取得が常時403、tarball取得も断続的に403 `host_not_allowed`。org policy denialのためリトライ非推奨、既に複数回リトライして再現性を確認済み）。そのため以下は**この環境では未実行**:
+この開発環境（Claude Code実行環境）では `pnpm install` が完了しない — `registry.npmjs.org`
+へのメタデータ取得が常時403、tarball取得も断続的に403（`x-deny-reason: host_not_allowed`）。
+org policy denialであり、既に複数回・別パッケージでリトライして非一時的な遮断であることを
+確認済み。**この環境ではこれ以上 `pnpm install` を再試行しない。** そのため以下は
+**この環境では未実行**:
 
 - `pnpm typecheck`
 - `pnpm test`
 - `pnpm explore:roi -- --json`
 
-代替として、コミット済みソースをそのまま `node --experimental-strip-types --test`（scratchpad上の一時コピーにimport拡張子`.ts`のみ付与、コミット物は変更なし）で実行し、Phase 1+2 合計 **17/17 テストpass** を確認。`explore-roi.ts` も同方式でフィクスチャSQLite DBに対して実行し、payout_yen優先ROI・fallback・`--condition venue=...`・不正condition形式のエラー・未対応keyのwarningを手動検証済み。
+代替として、コミット済みソースをそのまま `node --experimental-strip-types --test`（scratchpad
+上の一時コピーにimport拡張子`.ts`のみ付与、コミット物は変更なし）で実行し、Phase 1+2 合計
+**17/17 テストpass** を確認。`explore-roi.ts` も同方式でフィクスチャSQLite DBに対して実行し、
+payout_yen優先ROI・fallback・`--condition venue=...`・不正condition形式のエラー・未対応key
+のwarningを検証済み。この代替手順は `pnpm run verify:strip-types` / `pnpm run verify:roi-smoke`
+として自動化済み（`node_modules`不要、Node標準機能のみ）。詳細は `docs/ai/05-VERIFICATION.md`
+のチェックリストを参照。
 
-**次のセッションで通常のpnpm環境に入ったら、上記3コマンドを実行し正式合格を確認すること。** 失敗した場合はこのセクションに結果を追記する。
+**Phase 3（Rule Lifecycle実装）に着手する前に、通常のpnpm環境に入り次第、上記3コマンドの
+正式合格を確認すること。** 失敗した場合はこのセクションに結果を追記する。
 
 ### Phase 2 残タスク・未決定事項（TODO）
 
@@ -73,6 +84,11 @@ Boat Pon AI Development Bible を実装可能な単位に分割したもので�
 - 通常pnpm環境での `pnpm typecheck` / `pnpm test` / `pnpm explore:roi -- --json` の正式実行が未確認（上記参照）
 
 ## Phase 3: Rule Lifecycle — `not started`
+
+**着手前提**: 通常pnpm環境で `pnpm typecheck` / `pnpm test` / `pnpm explore:roi -- --json`
+が正式合格していること（`docs/ai/05-VERIFICATION.md` 参照）。Claude Code実行環境の403制約
+下で作業する場合は `pnpm run verify:strip-types` / `pnpm run verify:roi-smoke` で代替検証し、
+その旨を完了報告に明記する。
 
 目的: Phase 1の型・状態遷移関数を実際の運用（`docs/rule-candidates.md` の手動運用）に接続する。
 
