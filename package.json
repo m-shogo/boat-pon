@@ -15,7 +15,7 @@
     "fetch:kyotei24": "tsx scripts/fetch-kyotei24.ts",
     "import:kyotei24": "tsx scripts/import-kyotei24.ts",
     "db:init": "tsx scripts/init-db.ts",
-    "test": "node --test --import tsx src/domain/*.test.ts src/view-models/*.test.ts",
+    "test": "node --test --import tsx src/domain/*.test.ts src/view-models/*.test.ts src/presentation/*.test.ts",
     "dev:web": "vite",
     "dev:api": "tsx watch server/index.ts",
     "import:official": "tsx scripts/import-official-file.ts",
