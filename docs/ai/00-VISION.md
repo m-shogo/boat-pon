@@ -98,5 +98,6 @@ AIだけでルール採用は禁止。必ず 統計 → Forward → Review を�
 - `02-DEVELOPMENT.md` — 開発ルール・実装の進め方
 - `03-RESEARCH.md` — Research Engine の機能一覧と実装状況
 - `04-ROADMAP.md` — Phase分割されたロードマップと進捗
+- `05-VERIFICATION.md` — 検証チェックリスト（Local/CI/Manual smoke test、既知のブロック環境、Phase移行前の必須コマンド）
 
 既存の詳細ドキュメント（`docs/architecture.md`, `docs/rule-candidates.md`, `docs/decision-audit-roadmap.md` など）は残したまま、この `docs/ai/` は「迷ったらまずここを読む」ためのエントリポイントとして追加しています。
