@@ -16,6 +16,8 @@ import type { DecisionStatus } from "../src/domain/types";
 import type { ResearchRule } from "../src/domain/researchRule";
 import { applyCondition, buildRuleEvaluationResult, parseCondition, type RowCondition } from "../src/domain/researchEvaluation";
 import { buildResearchSummaryViewModel, buildRuleCardViewModel } from "../src/view-models/researchViewModel.adapters";
+import type { ResearchSummaryViewModel } from "../src/view-models/researchViewModel";
+import { buildResearchPresentation } from "../src/presentation/presentationBuilder";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const args = parseArgs(process.argv.slice(2));
@@ -44,9 +46,21 @@ const result = buildRuleEvaluationResult({
   extraWarnings: [...sourceWarnings, ...conditionWarnings],
 });
 
-if (args.viewJson) {
-  // 探索用CLIの単発実行なので、ここで作るResearchRuleは常にcandidate段階の使い捨て。
-  // 永続化されたルールのライフサイクル管理はPhase 3の役割。
+if (args.presentationJson) {
+  console.log(JSON.stringify(buildResearchPresentation(buildViewModelSummary()), null, 2));
+} else if (args.viewJson) {
+  console.log(JSON.stringify(buildViewModelSummary(), null, 2));
+} else if (args.json) {
+  console.log(JSON.stringify(result, null, 2));
+} else {
+  printResult();
+}
+
+/**
+ * 探索用CLIの単発実行なので、ここで作るResearchRuleは常にcandidate段階の使い捨て。
+ * 永続化されたルールのライフサイクル管理はPhase 3の役割。
+ */
+function buildViewModelSummary(): ResearchSummaryViewModel {
   const syntheticRule: ResearchRule = {
     ruleId: result.ruleId,
     status: "candidate",
@@ -58,11 +72,7 @@ if (args.viewJson) {
   const card = buildRuleCardViewModel(syntheticRule, result, {
     title: args.condition ? `${args.ruleId} (${args.condition.key}=${args.condition.value})` : args.ruleId,
   });
-  console.log(JSON.stringify(buildResearchSummaryViewModel([card]), null, 2));
-} else if (args.json) {
-  console.log(JSON.stringify(result, null, 2));
-} else {
-  printResult();
+  return buildResearchSummaryViewModel([card]);
 }
 
 function loadRows(from: string, to: string): { rows: DecisionHistoryRow[]; sourceWarnings: string[] } {
@@ -136,15 +146,25 @@ function printResult() {
 }
 
 function parseArgs(argv: string[]) {
-  const parsed: { from?: string; to?: string; ruleId: string; json: boolean; viewJson: boolean; condition?: RowCondition } = {
+  const parsed: {
+    from?: string;
+    to?: string;
+    ruleId: string;
+    json: boolean;
+    viewJson: boolean;
+    presentationJson: boolean;
+    condition?: RowCondition;
+  } = {
     ruleId: "explore-roi-adhoc",
     json: false,
     viewJson: false,
+    presentationJson: false,
   };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--json") parsed.json = true;
     else if (arg === "--view-json") parsed.viewJson = true;
+    else if (arg === "--presentation-json") parsed.presentationJson = true;
     else if (arg === "--from") parsed.from = argv[++i];
     else if (arg === "--to") parsed.to = argv[++i];
     else if (arg === "--rule-id") parsed.ruleId = argv[++i] ?? parsed.ruleId;
@@ -157,18 +177,23 @@ function parseArgs(argv: string[]) {
 
 function printHelp() {
   console.log(`Usage:
-  pnpm explore:roi [-- --from YYYY-MM-DD --to YYYY-MM-DD --rule-id <id> --condition key=value --json|--view-json]
+  pnpm explore:roi [-- --from YYYY-MM-DD --to YYYY-MM-DD --rule-id <id> --condition key=value --json|--view-json|--presentation-json]
 
 Read-only. Aggregates decision_history into a RuleEvaluationResult.
 ROI prefers payout_yen (actual payout); falls back to current_odds
 per-row only when payout_yen is missing, and warns when it does.
 
-  --from       data window start (default 1970-01-01)
-  --to         data window end (default today)
-  --rule-id    ruleId label in output (default explore-roi-adhoc)
-  --condition  single key=value row filter (supported keys: venue, raceNo, decision)
-  --json       emit RuleEvaluationResult JSON (domain shape, unchanged)
-  --view-json  emit a ResearchSummaryViewModel JSON (UI/Fable-ready display
-               contract: opportunity score, warning badges, lifecycle steps,
-               metrics). Takes precedence over --json if both are passed.`);
+  --from              data window start (default 1970-01-01)
+  --to                data window end (default today)
+  --rule-id           ruleId label in output (default explore-roi-adhoc)
+  --condition         single key=value row filter (supported keys: venue, raceNo, decision)
+  --json              emit RuleEvaluationResult JSON (domain shape, unchanged)
+  --view-json         emit a ResearchSummaryViewModel JSON (UI/Fable-ready display
+                      contract: opportunity score, warning badges, lifecycle steps,
+                      metrics)
+  --presentation-json emit a ResearchSummaryPresentation JSON (renderer-independent
+                      Presentation Layer contract, see docs/ai/07-PRESENTATION-LAYER.md)
+
+If more than one of --json/--view-json/--presentation-json is passed,
+--presentation-json wins over --view-json, which wins over --json.`);
 }

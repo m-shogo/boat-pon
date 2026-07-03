@@ -1,0 +1,126 @@
+{
+  "generatedAt": "2026-07-03T00:00:00.000Z",
+  "ruleCards": [
+    {
+      "id": "explore-roi-adhoc",
+      "title": "explore-roi-adhoc",
+      "status": "candidate",
+      "scoreLabel": "★★☆☆☆",
+      "roi": 15.4,
+      "hitRate": 0.6666666666666666,
+      "sampleSize": 3,
+      "confidence": 0.05660377358490566,
+      "riskLevel": "high",
+      "warnings": [
+        {
+          "id": "sample-size",
+          "label": "Sample size",
+          "severity": "warning",
+          "message": "sample size 3 is below the production minimum 200"
+        },
+        {
+          "id": "confidence",
+          "label": "Confidence",
+          "severity": "warning",
+          "message": "confidence 0.057 is below the production minimum 0.8"
+        },
+        {
+          "id": "forward-test",
+          "label": "Forward test",
+          "severity": "critical",
+          "message": "not forward-tested yet; do not treat as production-ready regardless of ROI"
+        },
+        {
+          "id": "source-0",
+          "label": "Note",
+          "severity": "warning",
+          "message": "1 settled BUY row(s) lack payout_yen; used current_odds-based ROI for those rows (approx. +14.94pt optimistic bias)"
+        }
+      ],
+      "reasonSummary": "explore-roi: 3 settled BUY (2 hits) in 2026-01-01..2026-06-01; roi basis: mixed (2/3 payo…",
+      "lifecycle": {
+        "steps": [
+          {
+            "id": "candidate",
+            "label": "Candidate",
+            "isCompleted": false,
+            "isCurrent": true
+          },
+          {
+            "id": "backtest",
+            "label": "Backtest",
+            "isCompleted": false,
+            "isCurrent": false
+          },
+          {
+            "id": "forward",
+            "label": "Forward Test",
+            "isCompleted": false,
+            "isCurrent": false
+          },
+          {
+            "id": "review",
+            "label": "Review",
+            "isCompleted": false,
+            "isCurrent": false
+          },
+          {
+            "id": "approved",
+            "label": "Approved",
+            "isCompleted": false,
+            "isCurrent": false
+          },
+          {
+            "id": "production",
+            "label": "Production",
+            "isCompleted": false,
+            "isCurrent": false
+          }
+        ],
+        "currentStepId": "candidate"
+      },
+      "metrics": [
+        {
+          "id": "roi",
+          "label": "ROI",
+          "value": 15.4,
+          "displayValue": "1540.0%"
+        },
+        {
+          "id": "hitRate",
+          "label": "Hit rate",
+          "value": 0.6666666666666666,
+          "displayValue": "66.7%"
+        },
+        {
+          "id": "sampleSize",
+          "label": "Sample size",
+          "value": 3,
+          "displayValue": "3"
+        },
+        {
+          "id": "confidence",
+          "label": "Confidence",
+          "value": 0.05660377358490566,
+          "displayValue": "0.057"
+        },
+        {
+          "id": "maxDrawdown",
+          "label": "Max drawdown",
+          "value": 0.3333333333333333,
+          "displayValue": "33.3%"
+        }
+      ],
+      "opportunity": {
+        "score": 2,
+        "scoreLabel": "★★☆☆☆",
+        "riskLevel": "high",
+        "summary": "explore-roi: 3 settled BUY (2 hits) in 2026-01-01..2026-06-01; roi basis: mixed (2/3 payo…"
+      },
+      "isForwardTested": false,
+      "isProductionEligible": false,
+      "updatedAt": "2026-07-03T00:00:00.000Z"
+    }
+  ],
+  "totalWarnings": 4
+}
