@@ -11,7 +11,7 @@ Boat Pon AI Development Bible が定義する Research Engine 機能の一覧と
 
 | 機能 | 状態 | 現状の実体 |
 |---|---|---|
-| ROI Explorer | 🟡 | `pnpm report:quality` / `report:venue-monthly` / `analyze:roi-*` 系スクリプト群。条件別の集計はできるが、共通のROI Explorer型・CLIインターフェースは未整備（Phase 2で着手） |
+| ROI Explorer | 🟡 | `pnpm explore:roi` が `RuleEvaluationResult` 型で期間集計を出力（Phase 2最小実装）。条件別の深掘りは従来通り `report:quality` / `report:venue-monthly` / `analyze:roi-*` 系。条件フィルタの統合は Phase 2 残タスク |
 | Pattern Discovery | 🟡 | `analyze:roi-decision-lab` / `analyze:roi-monthly-regime` / `analyze:roi-miss-patterns` などで手動探索している。自動探索エンジンではない |
 | Feature Importance | ❌ | `report:feature-breakdown` は個別レースの特徴量寄与を出すのみ。ランキング・相互作用・相関の可視化は未実装 |
 | Opportunity Score | ❌ | `report:daily` が近い情報を出すが★評価のスコアリングはない |

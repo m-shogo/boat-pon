@@ -30,18 +30,33 @@ Boat Pon AI Development Bible を実装可能な単位に分割したもので�
 - `ResearchRule` / `RuleEvaluationResult` はまだDBに保存されない（純粋な型とロジックのみ）。永続化は既存の `server/db.ts` に相乗りするか専用テーブルを作るか要判断
 - `MIN_PRODUCTION_SAMPLE_SIZE = 200` は `CLAUDE.md` の「風速2〜4×1号艇展示1位」候補が forward n>=200 を格上げ条件にしていることに合わせた仮の値。他ルールにも一律適用してよいかは要レビュー
 - `MIN_PRODUCTION_CONFIDENCE = 0.8` は暫定値。Bayesian Estimateの計算方法とセットで見直す
-- `dataWindowEnd <= evaluationRunAt` のFuture Leakチェックは型定義のみで、実行時バリデーション関数はまだ無い
+- ~~`dataWindowEnd <= evaluationRunAt` のFuture Leakチェックは型定義のみで、実行時バリデーション関数はまだ無い~~ → Phase 2 の `validateEvaluationMetadata` で解消済み
 
-## Phase 2: ROI Explorer — `not started`
+## Phase 2: ROI Explorer — `in progress`
 
 目的: 条件別ROI集計を、Phase 1の型に載せて再利用可能にする。
 
-- [ ] 条件別ROI集計（既存の `analyze:roi-*` 系ロジックを `RuleEvaluationResult` を返す形に寄せる）
-- [ ] sample size / hit rate / ROI / confidence を1つの結果オブジェクトにまとめる
-- [ ] JSON出力（既存reportの `--json` パターンを踏襲）
-- [ ] CLI実行（`pnpm explore:roi -- --condition ...` のような形を想定、命名は着手時に決める）
+- [x] sample size / hit rate / ROI / confidence を1つの結果オブジェクトにまとめる — `src/domain/researchEvaluation.ts` の `buildRuleEvaluationResult`（`oddsPayoutYen` を再利用、確定BUY行のみで集計、window外行は除外）
+- [x] JSON出力 — `pnpm explore:roi -- --json` で `RuleEvaluationResult` をそのまま出力
+- [x] CLI実行 — `scripts/explore-roi.ts`（`pnpm explore:roi`）。`--from/--to/--rule-id/--json`。DB・テーブル欠損時は空評価+warningsで正常終了
+- [x] Future Leak実行時チェック — `validateEvaluationMetadata`（start<=end、end<=evaluationRunAt、sampleSize>=0、欠損はwarnings）。Phase 1 の未決定事項を解消
+- [ ] 条件別ROI集計 — 会場/月/オッズ帯などの条件フィルタは未実装。現状は期間フィルタのみ
 
-前提: 既存の `report:quality` / `analyze:roi-bad-conditions` 等と重複させない。新規型を返すラッパーとして実装するか、置き換えるかは着手時に設計する。
+### Phase 2 実装ファイル
+
+| ファイル | 内容 |
+|---|---|
+| `src/domain/researchEvaluation.ts` | `validateEvaluationMetadata`, `estimateConfidence`, `computeMaxDrawdown`, `buildRuleEvaluationResult`, `ROI_BASIS_WARNING` |
+| `src/domain/researchEvaluation.test.ts` | metadata安全装置 + 出力形状のテスト（7件） |
+| `scripts/explore-roi.ts` | 最小ROI Explorer CLI（read-only） |
+
+### Phase 2 残タスク・未決定事項（TODO）
+
+- 条件フィルタ（`--venue` / `--month` / `--decision` / オッズ帯など）の追加。既存 `analyze:roi-*` と重複しない範囲で段階的に
+- ROIは `current_odds` ベース（約+14.94ptの楽観バイアス）。`payout_yen` 実払戻ベースへの切替オプションが必要（出力には `ROI_BASIS_WARNING` を常時付与済み）
+- `estimateConfidence` は n/(n+50) の暫定縮小（n=200で0.8）。Bayesian Estimate導入時に置き換える
+- `maxDrawdown` は累積BUY損益のピーク→谷を総投入額で割った暫定定義。定義の妥当性を採用判断前にレビューする
+- `explore-roi.ts` のCLI経路自体の自動テストはない（アダプタ関数のテストで代替）。DBフィクスチャを使ったCLIテストはPhase 3以降で検討
 
 ## Phase 3: Rule Lifecycle — `not started`
 
