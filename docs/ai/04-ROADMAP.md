@@ -83,6 +83,49 @@ payout_yen優先ROI・fallback・`--condition venue=...`・不正condition形式
 - `explore-roi.ts` のCLI経路自体の自動テストはない（アダプタ関数のテストで代替）。DBフィクスチャを使ったCLIテストはPhase 3以降で検討
 - 通常pnpm環境での `pnpm typecheck` / `pnpm test` / `pnpm explore:roi -- --json` の正式実行が未確認（上記参照）
 
+## Phase 2.5: Fable-ready View Contract — `done`（最小実装）
+
+目的: Fableをまだ導入せず、将来React/FableどちらからでもResearch Engineの出力を
+描画できる安定した表示契約を先に作る。詳細な判断根拠は `docs/ai/06-FABLE-READINESS.md`
+を参照。
+
+- [x] UIフレームワーク非依存の表示契約型 — `src/view-models/researchViewModel.ts`
+      （`RuleCardViewModel`, `OpportunityScoreViewModel`, `WarningBadgeViewModel`,
+      `RuleLifecycleStepViewModel`, `EvaluationMetricViewModel`, `ResearchSummaryViewModel`）
+- [x] `RuleEvaluationResult`/`ResearchRule` → ViewModel 変換 — `src/view-models/researchViewModel.adapters.ts`
+      （`buildRuleCardViewModel`, `buildOpportunityScoreViewModel`, `buildWarningBadges`,
+      `buildLifecycleStepViewModel`, `buildResearchSummaryViewModel`）。ROI/Forward判定/
+      Production判定はここでは計算し直さず、`src/domain` の結果をそのまま使う
+- [x] `scripts/explore-roi.ts --view-json` — 既存 `--json`（`RuleEvaluationResult`そのまま）
+      は無変更。`--view-json`は `ResearchSummaryViewModel` を出力する新オプション
+- [x] Fable導入判断メモ — `docs/ai/06-FABLE-READINESS.md`
+
+### Phase 2.5 実装ファイル
+
+| ファイル | 内容 |
+|---|---|
+| `src/view-models/researchViewModel.ts` | 表示契約の型定義のみ |
+| `src/view-models/researchViewModel.adapters.ts` | 変換関数（`deriveRiskLevel`, `summarizeReason` 含む） |
+| `src/view-models/researchViewModel.adapters.test.ts` | 安全装置のテスト |
+| `scripts/explore-roi.ts` | `--view-json` 追加 |
+| `docs/ai/06-FABLE-READINESS.md` | Fable導入前チェックリスト |
+
+### Fable導入前の残タスク
+
+`docs/ai/06-FABLE-READINESS.md` の「Fable導入前に必要な条件」参照。特に:
+
+- `src/view-models/` の型が `explore-roi.ts` 単一カード以外の実運用（複数カード・
+  Daily Report）を経ておらず、まだ「固まった」とは言えない
+- Phase 3（Rule Lifecycle永続化）が終わるまで、`ResearchRule` はstatus履歴を持たず、
+  `RuleLifecycleStepViewModel` のdeprecated/archived表現は簡略化したまま
+- Fableは実装コストの具体的な不満が出てから検討する。現時点で導入を急ぐ理由はない
+
+### Phase 3進行条件（更新）
+
+Phase 3着手前提は変わらず: 通常pnpm環境で `pnpm typecheck` / `pnpm test` /
+`pnpm explore:roi -- --json` が正式合格していること。加えて、Phase 2.5で追加した
+`src/view-models/*.test.ts` も同じ `pnpm test` に含まれるため、これも合格対象に含まれる。
+
 ## Phase 3: Rule Lifecycle — `not started`
 
 **着手前提**: 通常pnpm環境で `pnpm typecheck` / `pnpm test` / `pnpm explore:roi -- --json`
