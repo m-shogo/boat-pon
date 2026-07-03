@@ -126,6 +126,58 @@ Phase 3着手前提は変わらず: 通常pnpm環境で `pnpm typecheck` / `pnpm
 `pnpm explore:roi -- --json` が正式合格していること。加えて、Phase 2.5で追加した
 `src/view-models/*.test.ts` も同じ `pnpm test` に含まれるため、これも合格対象に含まれる。
 
+## Phase 2.6: Presentation Layer — `done`（最小実装、Fable導入直前の最終フェーズ）
+
+目的: Fableをまだ導入せず、React/Fableどちらのレンダラーからも同じ形で消費できる
+renderer非依存の最終表示契約（Presentation Layer）を作る。詳細は
+`docs/ai/07-PRESENTATION-LAYER.md` を参照。
+
+- [x] Presentation Models — `src/presentation/presentationModel.ts`
+      （`RuleCardPresentation`, `OpportunityPresentation`, `WarningPresentation`,
+      `LifecyclePresentation`, `MetricPresentation`, `ResearchSummaryPresentation`）
+- [x] Presentation Builders — `src/presentation/presentationBuilder.ts`
+      （`src/view-models` のViewModelを再整形するだけの純粋関数、計算ロジックなし）
+- [x] Renderer Interface — `src/presentation/presentationRenderer.ts`
+      （`PresentationRenderer<T>`。実装はReact/Fableどちらも未着手、インターフェースのみ）
+- [x] Renderer Snapshot — `scripts/explore-roi.ts --presentation-json` +
+      `docs/ai/presentation.sample.json`（実行して得た実データを保存した例）
+- [x] Theme/Layout Tokens — `src/presentation/tokens/themeTokens.ts` /
+      `layoutTokens.ts`（spacing/radius/typography/color/elevation/breakpoint/grid、
+      CSSやアニメーションは含めない）
+- [x] Presentation Validation — `src/presentation/presentationValidation.ts`
+      （JSONシリアライズ可能性・DBエンティティ混入検知・決定性テストヘルパー）
+- [x] Snapshot Tests — `src/presentation/presentation.test.ts`（9件）
+
+### Phase 2.6 実装ファイル
+
+| ファイル | 内容 |
+|---|---|
+| `src/presentation/presentationModel.ts` | 表示契約の型定義 |
+| `src/presentation/presentationBuilder.ts` | ViewModel→Presentationの再整形（純粋関数） |
+| `src/presentation/presentationRenderer.ts` | `PresentationRenderer<T>` インターフェース |
+| `src/presentation/tokens/themeTokens.ts` | spacing/radius/typography/color等のトークン |
+| `src/presentation/tokens/layoutTokens.ts` | breakpoint/card size/grid/gapのトークン |
+| `src/presentation/presentationValidation.ts` | シリアライズ可能性・DBエンティティ混入検知 |
+| `src/presentation/presentation.test.ts` | スナップショットテスト |
+| `scripts/explore-roi.ts` | `--presentation-json` 追加 |
+| `docs/ai/presentation.sample.json` | 実行して得た出力例 |
+| `docs/ai/07-PRESENTATION-LAYER.md` | アーキテクチャ・Component Contract・Fable統合手順 |
+
+### レディネス状況
+
+| 項目 | 状態 | 備考 |
+|---|---|---|
+| Presentation Ready | ✅ done | `src/presentation/` 一式、`--presentation-json` |
+| Renderer Ready | 🟡 partial | インターフェースのみ。React/Fableどちらの実装もまだ無い |
+| Fable Ready | 🟡 partial | データ契約は揃った。`docs/ai/06-FABLE-READINESS.md` の残条件（複数カード実運用、Phase 3完了、実装コスト面の必要性確認）は未達 |
+
+### Phase 2.6後の残タスク
+
+- Presentation Layerを実際に描画するレンダラー実装（React向けが先、Fableは
+  次セッションのPoCで）がまだ無い
+- 複数カード・Daily Report相当の実運用を経ていない（Phase 5待ち）
+- デザイントークンはプレースホルダー値のまま。実配色・実機確認は未実施
+
 ## Phase 3: Rule Lifecycle — `not started`
 
 **着手前提**: 通常pnpm環境で `pnpm typecheck` / `pnpm test` / `pnpm explore:roi -- --json`
