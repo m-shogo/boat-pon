@@ -86,6 +86,7 @@ npx tsx scripts/fetch-official-odds.ts YYYY-MM-DD 蒲郡 8
 
 ## 運用メモ
 
+- AI開発ガイド（ビジョン・アーキテクチャ・開発ルール・Research Engine・ロードマップ）: [docs/ai/00-VISION.md](docs/ai/00-VISION.md)
 - モデル改善の順序と採用基準: [docs/model-roadmap.md](docs/model-roadmap.md)
 - v4保守モデル検証: [docs/v4-conservative-validation-2026-05-26.md](docs/v4-conservative-validation-2026-05-26.md)
 - Claude Code 次作業指示: [docs/claude-next-work-order.md](docs/claude-next-work-order.md)
