@@ -90,10 +90,14 @@ ViewModelは常に「すでにsrc/domainが決めた結果」を表示用に変�
 - warnings countは `OpportunityPresentation` に含まれないため、呼び出し側から
   別途渡す形にした（型を拡張して混ぜ込むことはしなかった）
 
-**注意**: これはTypeScriptで書いた境界確認用のスタンドインであり、実際の
-Fable（F#/.NET）コンパイラはまだ導入していない。本番でFableを使う場合は、
-このPoCが確認した「依存境界」と「入力データの形」を再現する形で、実際の
-F#/Feliz実装に置き換える。
+**注意**: これは **TypeScript stand-in PoC**（TypeScriptで書いた境界確認用の
+スタンドイン）であり、実際のFable（F#/.NET）コンパイラはまだ導入していない。
+本番でFableを使う場合は、このPoCが確認した「依存境界」と「入力データの形」を
+再現する形で、実際のF#/Feliz実装（Real Fable Renderer）に置き換える。
+
+本物のFableを導入するかどうかの判断材料・候補構成・影響範囲・rollback方法・
+最小手順は `docs/ai/08-FABLE-IMPLEMENTATION-PLAN.md` にまとめてある。
+**このPoCの完了は、本物のFable導入の許可を意味しない。**
 
 次に広げるなら、`docs/ai/06-FABLE-READINESS.md`（本ファイル）の「将来Fableを
 使うならどの画面から試すべきか」の順に、Rule Lifecycleのステップ表示へ進む。

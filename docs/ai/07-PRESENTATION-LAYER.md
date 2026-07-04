@@ -124,6 +124,10 @@ TypeScriptで書いた「Fableが実装するとしたらこの形になる」�
 
 ### 本物のFableを導入するときにやること（次のセッション以降）
 
+候補構成・影響範囲（npm/pnpm依存・ビルド影響・React共存方針）・rollback方法・
+最小PoC手順・導入条件は `docs/ai/08-FABLE-IMPLEMENTATION-PLAN.md` に
+まとめてある。**本物のFable導入は現時点でまだ許可されていない。**
+
 1. .NET SDK / Fable コンパイラのツールチェイン導入（このリポジトリにはまだ無い）
 2. `PresentationRenderer<Fable.ReactElement>`（型は実装時に決める）を実装する
    実際のF#/Feliz版 `FablePresentationRenderer` を新規作成する。
