@@ -178,11 +178,12 @@ renderer非依存の最終表示契約（Presentation Layer）を作る。詳細
 - 複数カード・Daily Report相当の実運用を経ていない（Phase 5待ち）
 - デザイントークンはプレースホルダー値のまま。実配色・実機確認は未実施
 
-## Phase 3: Rule Lifecycle — `not started`
+## Phase 3: Rule Lifecycle — `in progress`
 
-**着手前提**: 通常pnpm環境で `pnpm typecheck` / `pnpm test` / `pnpm explore:roi -- --json`
-が正式合格していること（`docs/ai/05-VERIFICATION.md` 参照）。Claude Code実行環境の403制約
-下で作業する場合は `pnpm run verify:strip-types` / `pnpm run verify:roi-smoke` で代替検証し、
+**着手前提: 満たした（2026-07-06）。** 通常pnpm環境で `pnpm typecheck` / `pnpm test`
+（192/192）/ `pnpm explore:roi -- --json|--view-json|--presentation-json` の正式合格を
+確認済み（`docs/ai/05-VERIFICATION.md` 参照）。Claude Code実行環境の403制約下で追加作業
+する場合は `pnpm run verify:strip-types` / `pnpm run verify:roi-smoke` で代替検証し、
 その旨を完了報告に明記する。
 
 目的: Phase 1の型・状態遷移関数を実際の運用（`docs/rule-candidates.md` の手動運用）に接続する。

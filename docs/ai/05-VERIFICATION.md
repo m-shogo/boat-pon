@@ -126,6 +126,25 @@ pnpm run verify:roi-smoke
   入った人が最初にやるべきは、上記3コマンド（`pnpm typecheck`/`pnpm test`/
   `pnpm explore:roi`各モード）を実行し、本ログに正式な結果を追記すること
 
+### 2026-07-06: 通常pnpm環境での正式検証（完了）
+
+ユーザーのローカル環境（macOS、Node 24.15.0、pnpm 11.1.2）で実施。結果:
+
+- `pnpm install` — 成功
+- `pnpm typecheck`（`tsc -b`） — **成功、型エラーなし**
+- `pnpm test` — **192/192 pass**
+  （Phase 1〜2.6 + Fable境界PoCで追加した`researchRule`/`researchRuleLifecycle`/
+  `researchEvaluation`/`view-models`/`presentation`/`renderers/fable`の全テストを含む）
+- `pnpm explore:roi -- --json` / `--view-json` / `--presentation-json` — 初回は
+  `unknown option: --` で失敗（pnpm 11.xが`--`セパレータをストリップせず
+  スクリプトへそのまま転送するため）。`scripts/explore-roi.ts`の`parseArgs`に
+  「`--`単体は無視する」処理を1行追加（`09c9396`）して解消。3モードとも成功を確認
+
+**結論**: 前回セッションの手動型監査は正しかった（`pnpm typecheck`が実際にエラーなしで
+通った）。CLI引数パーサーには実バグが1件あり、実pnpm環境で初めて顕在化した
+（サンドボックス側の`node --experimental-strip-types`直接実行では`--`セパレータを
+経由しないため再現しなかった）。**Phase 3着手条件を満たした。**
+
 ## What to record in completion report
 
 検証結果を完了報告に含める際は、以下を明記する。
