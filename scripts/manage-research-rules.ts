@@ -6,13 +6,17 @@
  * src/domain/researchRuleStore.ts（純粋関数）に委譲し、ここではファイルI/Oのみ行う。
  *
  * サブコマンド:
- *   list [--status <status>]                                  登録済みルール一覧（デフォルト、read-only）
- *   add --rule-id <id> --reason <text> [--title <text>]        candidate状態で新規登録
- *   transition --rule-id <id> --to <status> [--evaluation-file <path>]
- *                                                              状態遷移を試みる
+ *   list [--status <status>]                                          登録済みルール一覧（デフォルト、read-only）
+ *   add --rule-id <id> --reason <text> [--title <text>] [--dry-run]    candidate状態で新規登録
+ *   transition --rule-id <id> --to <status> [--evaluation-file <path>] [--dry-run]
+ *                                                                      状態遷移を試みる
  *
  * --evaluation-file には RuleEvaluationResult 形式のJSON（例: explore-roi.ts --json の出力）を渡す。
  * "production"への遷移はこれが無い、またはisForwardTested=falseだと拒否される。
+ *
+ * --dry-run は add / transition にのみ有効。状態遷移のバリデーション（canTransitionRuleStatus /
+ * validateProductionEligibility）は通常通り実行し、不正な遷移は--dry-runでも失敗する。
+ * data/research-rules.json は一切書き換えず、書き込まれるはずだった内容をJSONで表示するだけ。
  */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -96,12 +100,14 @@ function runList(argv: string[]) {
   }
 }
 
-function runAdd(argv: string[]) {
+function runAdd(rawArgv: string[]) {
+  const dryRun = rawArgv.includes("--dry-run");
+  const argv = rawArgv.filter((arg) => arg !== "--dry-run");
   const args = parseFlags(argv, ["--rule-id", "--reason", "--title"]);
   const ruleId = args["--rule-id"];
   const reason = args["--reason"];
   if (!ruleId || !reason) {
-    console.error("usage: add --rule-id <id> --reason <text> [--title <text>]");
+    console.error("usage: add --rule-id <id> --reason <text> [--title <text>] [--dry-run]");
     process.exit(1);
   }
 
@@ -111,17 +117,25 @@ function runAdd(argv: string[]) {
     console.error(`error: ${result.error.reason}`);
     process.exit(1);
   }
+
+  const addedRule = result.rules[result.rules.length - 1];
+  if (dryRun) {
+    console.log(JSON.stringify({ dryRun: true, action: "add", wouldAdd: addedRule }, null, 2));
+    return;
+  }
   store.rules = result.rules;
   saveStore(store);
   console.log(`added rule "${ruleId}" at status=candidate`);
 }
 
-function runTransition(argv: string[]) {
+function runTransition(rawArgv: string[]) {
+  const dryRun = rawArgv.includes("--dry-run");
+  const argv = rawArgv.filter((arg) => arg !== "--dry-run");
   const args = parseFlags(argv, ["--rule-id", "--to", "--evaluation-file"]);
   const ruleId = args["--rule-id"];
   const to = args["--to"] as RuleStatus | undefined;
   if (!ruleId || !to) {
-    console.error("usage: transition --rule-id <id> --to <status> [--evaluation-file <path>]");
+    console.error("usage: transition --rule-id <id> --to <status> [--evaluation-file <path>] [--dry-run]");
     process.exit(1);
   }
 
@@ -141,6 +155,12 @@ function runTransition(argv: string[]) {
     console.error(`error: ${result.error.reason}`);
     process.exit(1);
   }
+
+  const updatedRule = result.rules.find((rule) => rule.ruleId === ruleId);
+  if (dryRun) {
+    console.log(JSON.stringify({ dryRun: true, action: "transition", to, wouldUpdate: updatedRule }, null, 2));
+    return;
+  }
   store.rules = result.rules;
   saveStore(store);
   console.log(`rule "${ruleId}" transitioned to "${to}"`);
@@ -159,12 +179,16 @@ function parseFlags(argv: string[], known: string[]): Record<string, string | un
 function printHelp() {
   console.log(`Usage:
   pnpm manage:research-rules -- list [--status <status>]
-  pnpm manage:research-rules -- add --rule-id <id> --reason <text> [--title <text>]
-  pnpm manage:research-rules -- transition --rule-id <id> --to <status> [--evaluation-file <path>]
+  pnpm manage:research-rules -- add --rule-id <id> --reason <text> [--title <text>] [--dry-run]
+  pnpm manage:research-rules -- transition --rule-id <id> --to <status> [--evaluation-file <path>] [--dry-run]
 
 Reads/writes only ${STORE_PATH} (override with $BOAT_PON_RULE_STORE_PATH).
 Never touches the SQLite DB, app_settings, or decision_history.
 Status transitions are validated by src/domain/researchRuleStore.ts —
 production requires a forward-tested, eligible evaluation and the rule
-must already be "approved".`);
+must already be "approved".
+
+--dry-run (add / transition only): runs the same validation but never
+writes ${STORE_PATH}; prints the JSON that would have been written.
+An invalid transition still fails under --dry-run.`);
 }
