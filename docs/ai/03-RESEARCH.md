@@ -27,7 +27,7 @@ Boat Pon AI Development Bible が定義する Research Engine 機能の一覧と
 | Rule Comparison | 🟡 | `report:model-version-simple` がモデルバージョン比較を提供。ルール同士の一般比較は未整備 |
 | Rule Merge / Split | ❌ | 未実装。`docs/rule-candidates.md` での手動判断のみ |
 | Rule Timeline | 🟡 | `docs/rule-candidates.md` に週次で追記される候補ログがタイムライン相当。型としては未実装 |
-| Rule Promotion / Retirement | 🟡 | `docs/rule-candidates.md` の `candidate/watch/reject/adopted/reverted` ステータスで運用中。Phase 3 で型・状態遷移バリデーションを導入 |
+| Rule Promotion / Retirement | 🟡 | `pnpm manage:research-rules`（Phase 3最小実装）でCandidate〜Productionの型付き状態遷移・Production直行禁止を強制できるようになった。ただし`docs/rule-candidates.md`の`candidate/watch/reject/adopted/reverted`運用とはまだ統合されていない（並行運用中） |
 | AI Research Assistant | 🟡 | `scripts/run-review-suite.ts` が複数reportをまとめて実行。提案の自動生成・日次配信はまだ |
 
 ## 既存の重要な分析コマンド（重複防止用）

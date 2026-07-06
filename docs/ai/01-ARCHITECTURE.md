@@ -37,7 +37,7 @@ UI
 | Research Engine | 主に `scripts/report-*.ts`, `scripts/analyze-*.ts` | ROI Explorer / Pattern Discovery 相当の分析CLI群。専用の型・状態管理はまだない（Phase 1で着手） |
 | Statistics | `src/domain/backtest.ts`, `src/domain/walkForward.ts`, `src/domain/rollingDrift.ts` | ROI集計・walk-forward・drift検知の計算ロジック |
 | Validation | `scripts/validate-data.ts`, `scripts/decision-audit-doctor.ts`, `src/domain/programFeatureSafety.ts` | データ品質・audit設定・feature安全性のチェック |
-| Rule Engine | `src/domain/decision.ts`, `src/domain/model.ts`, `server/db.ts` の `app_settings` | BUY/WATCH/SKIP判定。ライフサイクル管理は未実装（Phase 3で着手） |
+| Rule Engine | `src/domain/decision.ts`, `src/domain/model.ts`, `server/db.ts` の `app_settings` | BUY/WATCH/SKIP判定。研究ルールのライフサイクル管理は`src/domain/researchRuleStore.ts` + `scripts/manage-research-rules.ts`（Phase 3最小実装、`data/research-rules.json`、SQLite DB非依存）で着手済み |
 | Notification | `src/domain/lineMessaging.ts`, `server/` のLINE/Web Push連携 | BUY候補の通知 |
 | UI | `src/App.tsx`, `src/components/` | レビュー・監視画面 |
 

@@ -188,10 +188,34 @@ renderer非依存の最終表示契約（Presentation Layer）を作る。詳細
 
 目的: Phase 1の型・状態遷移関数を実際の運用（`docs/rule-candidates.md` の手動運用）に接続する。
 
-- [ ] Candidate / Backtest / Forward / Review / Approved / Production / Deprecated / Archive の永続化（テーブルまたはJSON/Markdownとの同期方式は要判断）
-- [ ] 状態遷移制約の適用箇所（どのCLI/UIから呼ばれるか）
-- [ ] Production直行禁止をコード上で強制する経路の実装
-- [ ] `docs/rule-candidates.md` の `candidate/watch/reject/adopted/reverted` との対応関係を整理（用語を統一するか、マッピング表を作るか）
+- [x] Candidate / Backtest / Forward / Review / Approved / Production / Deprecated / Archive の永続化 —
+      **JSON方式を採用**（`data/research-rules.json`、既存の`data/research-hypotheses.json`と
+      同じ「git管理下のJSONレジストリ」パターン）。SQLite DBには一切書き込まない
+      （CLAUDE.mdの絶対禁止事項「DBへのINSERT/UPDATE/DELETE/DROP禁止」を素直に守るため、
+      新規テーブルも作らない選択をした）
+- [x] 状態遷移制約の適用箇所 — `scripts/manage-research-rules.ts`（`pnpm manage:research-rules`）の
+      `add`/`transition`サブコマンドから、`src/domain/researchRuleStore.ts`の
+      `applyRuleTransition`を必ず経由する。UI/他CLIからの呼び出しはまだ無い（最小実装のため）
+- [x] Production直行禁止をコード上で強制する経路の実装 — `applyRuleTransition`が
+      `canTransitionRuleStatus`で許可されない遷移（candidate/backtest/forward/review→production
+      の直行を含む）を拒否し、CLIはexit 1で終了する。手動E2E確認済み（下記実装ファイル参照）
+- [ ] `docs/rule-candidates.md` の `candidate/watch/reject/adopted/reverted` との対応関係を整理（用語を統一するか、マッピング表を作るか）— **未着手（次のPhase 3作業）**
+
+### Phase 3 実装ファイル（最小実装分）
+
+| ファイル | 内容 |
+|---|---|
+| `src/domain/researchRuleStore.ts` | `createResearchRule`（常にcandidateで作成）, `addRule`（重複ruleId拒否）, `applyRuleTransition`（状態遷移バリデーション、production行きはForwardTestResult必須） |
+| `src/domain/researchRuleStore.test.ts` | 10件のテスト |
+| `scripts/manage-research-rules.ts` | `data/research-rules.json`のみを読み書きするCLI（`list`/`add`/`transition`） |
+
+### Phase 3 残タスク（最小実装の次）
+
+- `docs/rule-candidates.md`・`data/research-hypotheses.json`との用語・運用統合
+- `list`以外の読み取り専用レポート（例: production段階のルール一覧、warnings付き表示）
+- Rule Timeline / Rule Comparison など Research Engine機能一覧（`docs/ai/03-RESEARCH.md`）との接続
+- 現状`data/research-rules.json`はまだ空（実際のルール登録はユーザー判断で行う。AI単独判断禁止のため、
+  実データは今回投入していない）
 
 ## Phase 4: Drift Detection — `not started`
 
