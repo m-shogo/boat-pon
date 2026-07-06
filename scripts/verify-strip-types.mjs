@@ -53,6 +53,8 @@ const SCOPE_FILES = [
   "researchRuleLifecycle.test.ts",
   "researchEvaluation.ts",
   "researchEvaluation.test.ts",
+  "researchDrift.ts",
+  "researchDrift.test.ts",
 ];
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
