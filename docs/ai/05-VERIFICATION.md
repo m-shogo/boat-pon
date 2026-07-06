@@ -97,6 +97,35 @@ pnpm run verify:strip-types
 pnpm run verify:roi-smoke
 ```
 
+## Formal verification attempts log
+
+正式コマンド（`pnpm install`/`pnpm typecheck`/`pnpm test`/`pnpm explore:roi`）を
+実際に試みた記録。次にこの環境で作業する人が「また同じ確認をやり直す」ことを
+避けるための履歴。
+
+### 2026-07-03: Phase 1〜2.6 + Fable境界PoC 正式検証の試行
+
+- `pnpm install` を3回リトライ（`registry.npmjs.org` へのメタデータ/tarball取得が
+  毎回別パッケージで403 `host_not_allowed`）。非一時的な遮断を再確認、以後リトライせず
+- `pnpm typecheck` / `pnpm test` / `pnpm explore:roi -- --json|--view-json|--presentation-json`
+  は`node_modules`が完成しないため未実行
+- 代わりに、Phase 1〜2.6・Fable境界PoCで追加した全ファイル（`src/domain/research*.ts`,
+  `src/view-models/*`, `src/presentation/*`, `src/renderers/fable/*`, `scripts/explore-roi.ts`）
+  を1行ずつ手動監査。`isolatedModules`前提のimport type分離、interface実装の互換性、
+  型の絞り込みを確認。`package.json`のscripts（168件）に重複・グロブ不一致なし
+- 監査で1件、予防的な修正が必要な箇所を発見・修正:
+  `src/presentation/presentationValidation.ts`の`isJsonSerializable`が
+  `const type = typeof value` という中間変数を介した型の絞り込みに依存していた。
+  実行時の挙動は正しいことを確認済みだが、tscを手元で確認できない状況では
+  より確実な直接 `typeof value === "..."` 方式に書き換えた（動作は不変、
+  同じテストケースで再確認済み）
+- 代替検証（`node --experimental-strip-types`によるscratchpad一時コピー実行）で
+  **Phase1〜2.6 + Fable境界PoC 合計 44/44 テストpass**、`--json`/`--view-json`/
+  `--presentation-json`いずれも有効なJSONを出力しexit 0を確認
+- **結論**: この環境では引き続き正式なpnpm検証ができない。次に通常pnpm環境に
+  入った人が最初にやるべきは、上記3コマンド（`pnpm typecheck`/`pnpm test`/
+  `pnpm explore:roi`各モード）を実行し、本ログに正式な結果を追記すること
+
 ## What to record in completion report
 
 検証結果を完了報告に含める際は、以下を明記する。
