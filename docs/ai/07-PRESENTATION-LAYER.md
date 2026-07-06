@@ -84,7 +84,7 @@ presentation.json（例: docs/ai/presentation.sample.json）
 | Opportunity Card | `OpportunityPresentation` | `renderOpportunity` |
 | Warning Badge | `WarningPresentation` | `renderWarning` |
 | Metric Grid | `MetricPresentation[]`（`RuleCardPresentation.metrics`） | 専用メソッドなし。`renderRuleCard`内で描画する想定 |
-| Lifecycle Timeline | `LifecyclePresentation` | `renderLifecycle` |
+| Lifecycle Timeline | `LifecyclePresentation` | `renderLifecycle`（境界確認PoC実装済み、`src/renderers/fable/fableLifecycleRenderer.ts`） |
 | Research Summary / Daily Report | `ResearchSummaryPresentation` | `renderResearchSummary` |
 
 Metric Gridだけ専用のrenderer関数を持たないのは、単独で表示されることが
@@ -121,6 +121,31 @@ TypeScriptで書いた「Fableが実装するとしたらこの形になる」�
 - warnings countのように `OpportunityPresentation` に含まれない値は、
   型を拡張して混ぜ込むのではなく、呼び出し側から別引数として渡す形で
   境界を保てる
+
+### Lifecycle PoC（境界確認、完了）
+
+`LifecyclePresentation`（Lifecycle Timeline）を対象にした2つ目のPoCを実施済み:
+
+- `src/renderers/fable/fableLifecycleRenderer.ts` — `renderLifecycle` のみを
+  実装した `FableLifecycleRenderer`。他の4メソッド（`renderOpportunity`を含む）は
+  「このPoCの対象外」としてエラーを投げる。`FableOpportunityRenderer`とは独立しており、
+  互いに依存しない
+- `src/renderers/fable/fableLifecycleSample.ts` — `docs/ai/presentation.sample.json`
+  の`lifecycle`由来の静的fixture
+- `src/renderers/fable/fableLifecycleRenderer.test.ts` — importの静的検査
+  （`src/domain`/`researchRuleStore`/`view-models`/`server`/`scripts`への
+  依存が無いことを確認）に加え、意図的に矛盾したfixture（`isCompleted`と
+  `isCurrent`が同時にtrue、`currentStepId`がどのstepとも一致しない）を渡しても
+  rendererが再判定せずそのまま通すことを確認
+
+このPoCで実証できたこと:
+
+- `LifecyclePresentation`の`steps`/`currentStepId`/`isCompleted`/`isCurrent`を
+  一切再計算・再判定せず、そのまま表示側へ渡すだけで成立する
+- Rule Lifecycleの永続化（Phase 3、`src/domain/researchRuleStore.ts`）を
+  参照する必要が無い。RendererはRuleStatusの状態遷移可否判定に一切関与しない
+- 複数のFable PoC（Opportunity・Lifecycle）を同時に導入しても、互いに干渉しない
+  独立したレンダラーとして共存できる
 
 ### 本物のFableを導入するときにやること（次のセッション以降）
 
@@ -169,10 +194,10 @@ Presentation Layerが複数のCLI/画面で実際に使われて安定してか�
 
 - Presentation Layerは `explore-roi.ts --presentation-json` の単一カード出力でしか
   検証されていない。複数カードでの実運用（Phase 5 Daily Report）はまだ無い
-- Renderer実装は `OpportunityPresentation` のみ（`src/renderers/fable/
-  fableOpportunityRenderer.ts`、TypeScriptによる境界確認スタンドイン）。
-  `renderRuleCard`/`renderWarning`/`renderLifecycle`/`renderResearchSummary` は
-  React向け・Fable向けどちらも未実装
+- Renderer実装は `OpportunityPresentation` と `LifecyclePresentation` の2つのみ
+  （`src/renderers/fable/fableOpportunityRenderer.ts` / `fableLifecycleRenderer.ts`、
+  どちらもTypeScriptによる境界確認スタンドイン）。`renderRuleCard`/`renderWarning`/
+  `renderResearchSummary` は React向け・Fable向けどちらも未実装
 - 実際のFable（F#/.NET）ツールチェインはまだ導入していない。上記PoCはあくまで
   依存境界の確認であり、本物のコンパイラ導入は別タスク
 - デザイントークン（`themeTokens.ts`/`layoutTokens.ts`）はプレースホルダー値。

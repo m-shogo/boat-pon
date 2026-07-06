@@ -99,8 +99,33 @@ ViewModelは常に「すでにsrc/domainが決めた結果」を表示用に変�
 最小手順は `docs/ai/08-FABLE-IMPLEMENTATION-PLAN.md` にまとめてある。
 **このPoCの完了は、本物のFable導入の許可を意味しない。**
 
-次に広げるなら、`docs/ai/06-FABLE-READINESS.md`（本ファイル）の「将来Fableを
-使うならどの画面から試すべきか」の順に、Rule Lifecycleのステップ表示へ進む。
+### Lifecycle PoC（境界確認、完了）
+
+`OpportunityPresentation`に続き、`LifecyclePresentation`（Rule Lifecycle
+Timeline）だけを対象にした2つ目のPoCを実施した。
+
+- 実装: `src/renderers/fable/fableLifecycleRenderer.ts`
+  （`FableLifecycleRenderer.renderLifecycle`）
+- サンプル: `src/renderers/fable/fableLifecycleSample.ts`
+  （`docs/ai/presentation.sample.json` の`lifecycle`値を書き写した静的fixture）
+- テスト: `src/renderers/fable/fableLifecycleRenderer.test.ts`
+
+確認できたこと:
+
+- `PresentationRenderer<T>` を実装するのに `src/presentation/` 以外への依存
+  （domain/view-models/server/scripts、**および`researchRuleStore`**）が
+  本当に不要だった。Rule Lifecycleの永続化（Phase 3）を扱うPoCなので、
+  特に`researchRuleStore`を参照しないことをテストで明示的に確認した
+- `LifecyclePresentation`の`steps`/`currentStepId`/`isCompleted`/`isCurrent`は
+  一切再計算・再判定せず、そのまま表示側へ渡すだけで成立した。意図的に矛盾した
+  fixture（`review`が`isCompleted=true`かつ`isCurrent=true`、`currentStepId`が
+  どのstepの`isCurrent`とも一致しない値）を渡しても、rendererは検証せずそのまま通す
+- `FableOpportunityRenderer`と`FableLifecycleRenderer`は互いに依存せず独立している
+  （2つのPoCを同時にロードしても干渉しない）ことをテストで確認した
+
+Fable PoCとしては`OpportunityPresentation`・`LifecyclePresentation`の2種類が
+境界確認済み。次に広げる候補は`RuleCardPresentation`全体、または
+`ResearchSummaryPresentation`（`docs/ai/07-PRESENTATION-LAYER.md`参照）。
 
 ## Reactで十分な範囲
 
@@ -120,7 +145,9 @@ ViewModelは常に「すでにsrc/domainが決めた結果」を表示用に変�
    1つを受け取って星と色を描画するだけの独立コンポーネント。既存UIへの影響が最小。
    境界確認PoC完了（`src/renderers/fable/fableOpportunityRenderer.ts`、上記
    「Fable PoCの進捗」参照）。ただし本物のFable(F#)コンパイラでの実装はまだ
-2. Rule Lifecycleのステップ表示（`LifecyclePresentation`）のタイムライン演出
+2. ✅ **Rule Lifecycleのステップ表示（`LifecyclePresentation`）のタイムライン演出** —
+   境界確認PoC完了（`src/renderers/fable/fableLifecycleRenderer.ts`、上記
+   「Lifecycle PoC」参照）。ただし本物のFable(F#)コンパイラでの実装はまだ
 3. うまくいけば、`RuleCardPresentation` 全体を使うROIカードのリッチ表示
 4. 最後に `ResearchSummaryPresentation` を使うDaily Report画面全体
 

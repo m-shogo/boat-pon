@@ -168,13 +168,26 @@ renderer非依存の最終表示契約（Presentation Layer）を作る。詳細
 | 項目 | 状態 | 備考 |
 |---|---|---|
 | Presentation Ready | ✅ done | `src/presentation/` 一式、`--presentation-json` |
-| Renderer Ready | 🟡 partial | インターフェースのみ。React/Fableどちらの実装もまだ無い |
-| Fable Ready | 🟡 partial | データ契約は揃った。`docs/ai/06-FABLE-READINESS.md` の残条件（複数カード実運用、Phase 3完了、実装コスト面の必要性確認）は未達 |
+| Renderer Ready | 🟡 partial | `OpportunityPresentation`/`LifecyclePresentation`の境界確認PoC（TypeScript stand-in）のみ実装済み。React向けの実装、および他コンポーネント（RuleCard/Warning/ResearchSummary）はまだ無い |
+| Fable Ready | 🟡 partial | データ契約・境界確認は2種類のPoCで実証済み。本物のFable（F#/.NET）ツールチェインは未導入（`docs/ai/08-FABLE-IMPLEMENTATION-PLAN.md`）。`docs/ai/06-FABLE-READINESS.md` の残条件（複数カード実運用、Phase 3完了、実装コスト面の必要性確認）は未達 |
+
+### Fable境界PoC進捗（Phase 2.6拡張、TypeScript stand-in）
+
+| コンポーネント | 状態 | 実装ファイル |
+|---|---|---|
+| Opportunity Card | ✅ done | `src/renderers/fable/fableOpportunityRenderer.ts` |
+| Lifecycle Timeline | ✅ done | `src/renderers/fable/fableLifecycleRenderer.ts` |
+| Rule Card | 未着手 | — |
+| Warning Badge | 未着手 | — |
+| Research Summary / Daily Report | 未着手 | — |
+
+いずれも実際のFable（F#/.NET）コンパイラは使っていない。本物の導入条件は
+`docs/ai/08-FABLE-IMPLEMENTATION-PLAN.md`を参照。
 
 ### Phase 2.6後の残タスク
 
-- Presentation Layerを実際に描画するレンダラー実装（React向けが先、Fableは
-  次セッションのPoCで）がまだ無い
+- Presentation Layerを実際に描画するReact向けレンダラー実装がまだ無い
+  （Fable向けはTypeScript stand-in PoCが2つ完了、本物のFableはまだ）
 - 複数カード・Daily Report相当の実運用を経ていない（Phase 5待ち）
 - デザイントークンはプレースホルダー値のまま。実配色・実機確認は未実施
 
