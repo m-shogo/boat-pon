@@ -11,6 +11,7 @@
     "verify:full": "npm run verify && npm run db:health && npm run validate:data && npm run monitor:live && gitleaks detect --no-banner --redact",
     "verify:strip-types": "node scripts/verify-strip-types.mjs",
     "verify:roi-smoke": "node scripts/verify-roi-smoke.mjs",
+    "verify:research-rules-dry-run": "node scripts/verify-research-rules-dry-run.mjs",
     "preview": "vite preview",
     "fetch:kyotei24": "tsx scripts/fetch-kyotei24.ts",
     "import:kyotei24": "tsx scripts/import-kyotei24.ts",
