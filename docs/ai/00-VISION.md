@@ -102,5 +102,6 @@ AIだけでルール採用は禁止。必ず 統計 → Forward → Review を�
 - `06-FABLE-READINESS.md` — Fable導入判断メモ（任せるべきこと/任せてはいけないこと、導入前条件）
 - `07-PRESENTATION-LAYER.md` — Presentation Layerのアーキテクチャ・Component Contract・Fable統合手順
 - `08-FABLE-IMPLEMENTATION-PLAN.md` — 本物のFable（F#/Fable/Feliz）導入の判断材料・候補構成・rollback方法（導入自体はまだ未許可）
+- `09-RULE-CANDIDATE-MIGRATION.md` — `docs/rule-candidates.md`と`data/research-rules.json`の用語対応・移行条件（一括移行はまだしない）
 
 既存の詳細ドキュメント（`docs/architecture.md`, `docs/rule-candidates.md`, `docs/decision-audit-roadmap.md` など）は残したまま、この `docs/ai/` は「迷ったらまずここを読む」ためのエントリポイントとして追加しています。
