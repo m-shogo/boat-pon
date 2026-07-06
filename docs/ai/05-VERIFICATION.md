@@ -240,6 +240,39 @@ pnpm detect:drift -- --baseline-from 2025-01-01 --baseline-to 2025-12-31 \
                      --recent-from 2026-01-01 --recent-to 2026-07-06 --json
 ```
 
+### 2026-07-06（続き）: Phase 4 ブランチ再確認・PR準備前の再検証
+
+前回セッションでユーザーのローカル環境から「`detect:drift`/`verify:drift-smoke`が見つからない」
+という報告があったが、原因は`feature/phase4-drift-detection`ブランチに正しく乗れていなかった
+こと（`main`または別のcheckout状態で検証していた）と判明。このセッションで以下を再確認した。
+
+- `git branch --show-current` — `feature/phase4-drift-detection`
+- `git log --oneline -5` — 先頭が`6c9b03d docs: update Phase 4 drift detection progress`、
+  以下`742c4b3`/`56dc407`/`813c5e5`と、Phase 4の4コミットが期待通り並んでいることを確認
+- `git status --short`（作業前） — 空（`reports/*`・`docs/rule-candidates.md`の差分は
+  今回のセッション開始時点で存在せず、restoreは不要だった）
+- `package.json`の`grep`で`"detect:drift"`（line 178）・`"verify:drift-smoke"`（line 15）
+  両方の存在を確認
+
+Claude Code実行環境（`pnpm install`不可、既知の403制約、既に複数セッションで非一時的と
+確認済み）のため、このセッションでも`pnpm install`は再試行していない。そのため
+`pnpm typecheck`/`pnpm test`/`pnpm detect:drift -- --json`は**このセッションでは未実行**。
+代替として依存なし検証スクリプトを再実行した。
+
+- `pnpm run verify:strip-types` — pass（**29/29**、前回と同じ内訳）
+- `pnpm run verify:roi-smoke` — pass（全シナリオ）
+- `pnpm run verify:research-rules-dry-run` — pass（全チェック）
+- `pnpm run verify:drift-smoke` — pass（全24チェック）
+- `git status --short`（作業後） — 空。修正は不要だった（前回セッションのTDZ修正2件以降、
+  全てgreenのまま）
+
+**結論**: ブランチの取り違えが原因であり、コード側の問題ではないことを確認した。
+`feature/phase4-drift-detection`は正しくpush済み・4コミットとも揃っており、このサンドボックスで
+確認できる範囲は全てpass。**Phase 4の正式なmerge可否判断には、通常pnpm環境で
+`pnpm typecheck`/`pnpm test`/`pnpm detect:drift -- --json`の実行結果が必要**（未確定）。
+`reports/*`・`docs/rule-candidates.md`・`data/research-rules.json`は今回のセッションでも
+一切触れていない。
+
 ## What to record in completion report
 
 検証結果を完了報告に含める際は、以下を明記する。
