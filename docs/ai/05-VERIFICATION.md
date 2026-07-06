@@ -162,6 +162,33 @@ pnpm run verify:roi-smoke
 **結論**: `--title`/`--status`/`--dry-run`を含む`manage-research-rules.ts`一式が
 実pnpm/tsx環境で問題なく動作することを確認した。**Phase 3最小実装は実環境で検証済み。**
 
+### 2026-07-06（続き）: main merge前の最終確認
+
+Claude Code実行環境（`pnpm install`不可、既知の403制約）で実施。`pnpm install`は
+今回も再試行1回のみ行い（同じ403 `host_not_allowed`を再確認）、以後リトライしていない。
+
+代替検証:
+
+- `pnpm run verify:strip-types` — pass（17/17）
+- `pnpm run verify:roi-smoke` — pass（全シナリオ）
+- `pnpm run verify:research-rules-dry-run` — pass（全チェック）
+- scratchpad一時コピーでの`node --experimental-strip-types --test`実行 — **60/60 pass**
+  （`src/domain`のresearch系・`src/view-models`・`src/presentation`・
+  `src/renderers/fable`の全テスト）
+- `scripts/explore-roi.ts`の`--json`/`--view-json`/`--presentation-json`を
+  フィクスチャDBに対して実行 — 3モードとも有効なJSON・exit 0を確認
+- `package.json`のscripts（170件）に重複なし
+
+**このセッションでは修正は不要だった**（前回セッションの`verify-*.mjs`拡張子バグ修正
+以降、全て green のまま）。`git status --short`は作業前後ともクリーンで、
+`reports/*`・`docs/rule-candidates.md`・`data/research-rules.json`には
+一切触れていない。
+
+**結論**: このサンドボックスで確認できる範囲は全てpass。ただし`pnpm typecheck`/
+`pnpm test`の実行そのものは、2026-07-06の前回エントリ（ユーザーのローカル環境、
+202/202 pass）が直近の正式実行結果であり、今回のセッションで新たなコード変更は
+無いため、その結果は引き続き有効と判断する。
+
 ## What to record in completion report
 
 検証結果を完了報告に含める際は、以下を明記する。
