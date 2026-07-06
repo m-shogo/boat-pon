@@ -9,11 +9,14 @@
     "build": "npm run typecheck && vite build",
     "verify": "npm run typecheck && npm test && vite build",
     "verify:full": "npm run verify && npm run db:health && npm run validate:data && npm run monitor:live && gitleaks detect --no-banner --redact",
+    "verify:strip-types": "node scripts/verify-strip-types.mjs",
+    "verify:roi-smoke": "node scripts/verify-roi-smoke.mjs",
+    "verify:research-rules-dry-run": "node scripts/verify-research-rules-dry-run.mjs",
     "preview": "vite preview",
     "fetch:kyotei24": "tsx scripts/fetch-kyotei24.ts",
     "import:kyotei24": "tsx scripts/import-kyotei24.ts",
     "db:init": "tsx scripts/init-db.ts",
-    "test": "node --test --import tsx src/domain/*.test.ts",
+    "test": "node --test --import tsx src/domain/*.test.ts src/view-models/*.test.ts src/presentation/*.test.ts src/renderers/fable/*.test.ts",
     "dev:web": "vite",
     "dev:api": "tsx watch server/index.ts",
     "import:official": "tsx scripts/import-official-file.ts",
@@ -168,7 +171,9 @@
     "plan:next-research": "tsx scripts/plan-next-research-action.ts",
     "analyze:exacta-market-residual-sweep": "tsx scripts/analyze-exacta-market-residual-sweep.ts",
     "report:exacta-forward-monitor": "tsx scripts/report-exacta-forward-monitor.ts",
-    "report:pit-leak-impact": "tsx scripts/report-point-in-time-leak-impact.ts"
+    "report:pit-leak-impact": "tsx scripts/report-point-in-time-leak-impact.ts",
+    "explore:roi": "tsx scripts/explore-roi.ts",
+    "manage:research-rules": "tsx scripts/manage-research-rules.ts"
   },
   "engines": {
     "node": ">=24.0.0"

@@ -19,17 +19,17 @@ const checks: Check[] = [];
 
 checkFiles();
 checkPackageScripts();
-checkDb();
+if (!args.noDb) checkDb();
 
 const ok = checks.every((check) => check.ok);
 
 if (args.json) {
-  console.log(JSON.stringify({ ok, generatedAt: new Date().toISOString(), checks }, null, 2));
+  console.log(JSON.stringify({ ok, generatedAt: new Date().toISOString(), checks, noDb: args.noDb, soft: args.soft }, null, 2));
 } else {
   printChecks();
 }
 
-if (!ok) process.exitCode = 1;
+if (!ok && !args.soft) process.exitCode = 1;
 
 type Check = {
   ok: boolean;
@@ -132,9 +132,11 @@ function printChecks() {
 }
 
 function parseArgs(argv: string[]) {
-  const parsed = { json: false };
+  const parsed = { json: false, noDb: false, soft: false };
   for (const arg of argv) {
     if (arg === "--json") parsed.json = true;
+    else if (arg === "--no-db") parsed.noDb = true;
+    else if (arg === "--soft") parsed.soft = true;
     else if (arg === "--help" || arg === "-h") { printHelp(); process.exit(0); }
     else throw new Error(`unknown option: ${arg}`);
   }
@@ -143,7 +145,10 @@ function parseArgs(argv: string[]) {
 
 function printHelp() {
   console.log(`Usage:
-  pnpm audit:doctor [--json]
+  pnpm audit:doctor [--json] [--no-db] [--soft]
 
-Read-only. Checks decision audit setup.`);
+Read-only. Checks decision audit setup.
+
+  --no-db  skip DB checks (for fresh clone / CI environments without a local DB)
+  --soft   always exit 0, even if checks fail (warn only)`);
 }
