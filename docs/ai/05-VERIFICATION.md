@@ -145,35 +145,22 @@ pnpm run verify:roi-smoke
 （サンドボックス側の`node --experimental-strip-types`直接実行では`--`セパレータを
 経由しないため再現しなかった）。**Phase 3着手条件を満たした。**
 
-### 2026-07-06（続き）: `pnpm manage:research-rules` の実環境検証（未実施・依頼中）
+### 2026-07-06（続き）: `pnpm manage:research-rules` の実環境検証（完了）
 
-Phase 3最小実装（`src/domain/researchRuleStore.ts` / `scripts/manage-research-rules.ts`）と
-`--title`/`--status`/`--dry-run`追加分は、この環境で`node --experimental-strip-types`による
-scratchpad一時コピー実行で動作確認済み（add/list/status絞り込み/正規遷移/production直行拒否/
-dry-runのファイル不変更を全て確認）。
+ユーザーのローカル環境（macOS、Node 24.15.0、pnpm 11.1.2）で実施。結果:
 
-**ただし実pnpm環境（`tsx`経由）での実行はまだ未確認。** 次に通常pnpm環境に入った際に
-以下を実行し、結果を本ログに追記すること。
+- `pnpm typecheck` — **pass**
+- `pnpm test` — **202/202 pass**
+- `pnpm manage:research-rules -- list` — **pass**
+- `pnpm manage:research-rules -- add --rule-id test-candidate --title "Test Candidate" --reason "smoke test"` — **pass**
+- `pnpm manage:research-rules -- list --status candidate` — **pass**
+- `pnpm run verify:research-rules-dry-run` — **pass**
 
-```sh
-pnpm typecheck
-pnpm test
-pnpm manage:research-rules -- list
-pnpm manage:research-rules -- add --rule-id test-candidate --title "Test Candidate" --reason "smoke test"
-pnpm manage:research-rules -- list --status candidate
-pnpm run verify:research-rules-dry-run
-```
+`data/research-rules.json`はこのスモークテストで生成された未追跡ファイルであり、
+確認後に削除済み（本番候補として残していない）。
 
-確認後、`test-candidate`は本番候補として残さないこと。以下のいずれかで後片付けする。
-
-```sh
-# deprecated経由でarchiveする（削除ではなく保持）
-pnpm manage:research-rules -- transition --rule-id test-candidate --to deprecated
-pnpm manage:research-rules -- transition --rule-id test-candidate --to archived
-```
-
-またはこのスモークテストが`data/research-rules.json`に加えた変更をコミット前に
-`git checkout -- data/research-rules.json`で取り消す。
+**結論**: `--title`/`--status`/`--dry-run`を含む`manage-research-rules.ts`一式が
+実pnpm/tsx環境で問題なく動作することを確認した。**Phase 3最小実装は実環境で検証済み。**
 
 ## What to record in completion report
 
