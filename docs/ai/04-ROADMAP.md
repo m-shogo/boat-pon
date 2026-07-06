@@ -199,19 +199,25 @@ renderer非依存の最終表示契約（Presentation Layer）を作る。詳細
 - [x] Production直行禁止をコード上で強制する経路の実装 — `applyRuleTransition`が
       `canTransitionRuleStatus`で許可されない遷移（candidate/backtest/forward/review→production
       の直行を含む）を拒否し、CLIはexit 1で終了する。手動E2E確認済み（下記実装ファイル参照）
-- [ ] `docs/rule-candidates.md` の `candidate/watch/reject/adopted/reverted` との対応関係を整理（用語を統一するか、マッピング表を作るか）— **未着手（次のPhase 3作業）**
+- [x] `docs/rule-candidates.md` の `candidate/watch/reject/adopted/reverted` との対応関係を整理 —
+      **マッピング表を作成**（`docs/ai/09-RULE-CANDIDATE-MIGRATION.md`）。既存候補の一括移行は
+      していない（1件ずつ人が判断する運用のまま）。特に`adopted`は自動で`production`にしない
+      （Forward Test未実施のため）ことを明記
 
 ### Phase 3 実装ファイル（最小実装分）
 
 | ファイル | 内容 |
 |---|---|
-| `src/domain/researchRuleStore.ts` | `createResearchRule`（常にcandidateで作成）, `addRule`（重複ruleId拒否）, `applyRuleTransition`（状態遷移バリデーション、production行きはForwardTestResult必須） |
+| `src/domain/researchRuleStore.ts` | `createResearchRule`（常にcandidateで作成、`title`任意）, `addRule`（重複ruleId拒否）, `applyRuleTransition`（状態遷移バリデーション、production行きはForwardTestResult必須） |
 | `src/domain/researchRuleStore.test.ts` | 10件のテスト |
-| `scripts/manage-research-rules.ts` | `data/research-rules.json`のみを読み書きするCLI（`list`/`add`/`transition`） |
+| `scripts/manage-research-rules.ts` | `data/research-rules.json`のみを読み書きするCLI（`list [--status]`/`add [--title] [--dry-run]`/`transition [--dry-run]`） |
+| `scripts/verify-research-rules-dry-run.mjs` | `--dry-run`のファイル不変更・遷移拒否・migrationドキュメントの用語網羅を確認するnpm非依存E2Eチェック |
+| `docs/ai/09-RULE-CANDIDATE-MIGRATION.md` | status mapping・移行してよい/いけない条件・AI単独判断禁止・移行手順・rollback |
 
 ### Phase 3 残タスク（最小実装の次）
 
-- `docs/rule-candidates.md`・`data/research-hypotheses.json`との用語・運用統合
+- `docs/rule-candidates.md`の候補を実際に`data/research-rules.json`へ1件ずつ移行する
+  （`docs/ai/09-RULE-CANDIDATE-MIGRATION.md`の手順に従う。まだ0件）
 - `list`以外の読み取り専用レポート（例: production段階のルール一覧、warnings付き表示）
 - Rule Timeline / Rule Comparison など Research Engine機能一覧（`docs/ai/03-RESEARCH.md`）との接続
 - 現状`data/research-rules.json`はまだ空（実際のルール登録はユーザー判断で行う。AI単独判断禁止のため、
