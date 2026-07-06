@@ -35,12 +35,18 @@ export type ValidationResult = {
  */
 export function isJsonSerializable(value: unknown): boolean {
   if (value === null) return true;
-  const type = typeof value;
-  if (type === "string" || type === "boolean") return true;
-  if (type === "number") return Number.isFinite(value as number);
-  if (type === "undefined" || type === "function" || type === "symbol" || type === "bigint") return false;
+  if (typeof value === "string" || typeof value === "boolean") return true;
+  if (typeof value === "number") return Number.isFinite(value);
+  if (
+    typeof value === "undefined" ||
+    typeof value === "function" ||
+    typeof value === "symbol" ||
+    typeof value === "bigint"
+  ) {
+    return false;
+  }
   if (Array.isArray(value)) return value.every(isJsonSerializable);
-  if (type === "object") {
+  if (typeof value === "object") {
     const prototype = Object.getPrototypeOf(value);
     if (prototype !== Object.prototype && prototype !== null) return false;
     return Object.values(value as Record<string, unknown>).every(isJsonSerializable);
