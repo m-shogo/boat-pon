@@ -236,13 +236,55 @@ renderer非依存の最終表示契約（Presentation Layer）を作る。詳細
 - 現状`data/research-rules.json`はまだ空（実際のルール登録はユーザー判断で行う。AI単独判断禁止のため、
   実データは今回投入していない）
 
-## Phase 4: Drift Detection — `not started`
+## Phase 4: Drift Detection — `in progress`（最小実装）
 
-目的: 既存の `rollingDrift.ts` を拡張し、複数期間比較と警告出力を統一する。
+目的: `RuleEvaluationResult`（Phase 1〜2）2件（baseline期間 / recent期間）を比較し、
+ROI/的中率の悪化を検知する最小基盤を作る。
 
-- [ ] 直近30/60/90日 vs 長期比較
-- [ ] ROI悪化検知（閾値は既存 `rollingDrift.ts` の `alert` 判定を参考に拡張）
-- [ ] 警告出力（通知連携は既存のLINE/Web Push経路に相乗りするか要判断）
+既存の `src/domain/rollingDrift.ts`（decision_history行を月別に集計し、期待的中率との
+calibration乖離で`alert: "ok"|"watch"|"drift"`を出す、`report:calibration`向けの既存ロジック）
+とは別軸として追加した。置き換えではなく、Research Foundation型（`RuleEvaluationResult`）に
+載せたbaseline/recent 2期間比較版。
+
+- [x] baseline/recent 2期間比較の型 — `src/domain/researchDrift.ts`
+      （`DriftWindow`, `DriftComparison`, `DriftSignal`, `DriftDetectionResult`, `DriftSeverity`）
+- [x] ROI悪化検知（最小しきい値） — `detectRoiDrift`（`roiDelta`ベースのwatch/warning/critical
+      3段階 + 損益分岐点割れの`roiCollapse`検知）。しきい値は暫定値（`DRIFT_ROI_DELTA_*`,
+      `BREAKEVEN_ROI`）で、実運用実績が増えたら見直す前提
+- [x] サンプルサイズ不足時の安全装置 — recentサンプルが0なら`severity=unknown`、
+      `MIN_DRIFT_SAMPLE_SIZE`(30)未満なら`severity=warning`とし、信頼できないROI比較を
+      「悪化なし」と誤判定しないようにした
+- [x] Forward未通過ルールをProduction崩壊扱いしない安全装置 — `buildDriftDetectionResult`が
+      `recentEvaluation.isForwardTested`を見て、悪化の事実（severity）自体は変えずに
+      「production崩壊」と断定する文言を避け、candidate/backtest段階の悪化である旨をwarningsに
+      明記する
+- [x] read-only CLI — `scripts/detect-research-drift.ts`（`pnpm detect:drift`）。
+      `--baseline-from/--baseline-to/--recent-from/--recent-to/--rule-id/--condition/--json`。
+      DBへの書き込みは一切行わない（`explore-roi.ts`と同じ read-only 接続）
+- [ ] 直近30/60/90日 vs 長期比較のプリセット（現状は`--baseline-*`/`--recent-*`を都度指定する
+      adhoc運用のみ）
+- [ ] 複数ルール一括判定・`data/research-rules.json`との連携（現状は単一ruleIdのadhoc比較のみ）
+- [ ] 警告出力の通知連携（LINE/Web Push等への接続は未着手、Phase 5以降で判断）
+- [ ] ViewModel/Presentation層（`DriftSignalViewModel`等）は今回未実装。Domain + CLIのみ
+
+### Phase 4 実装ファイル（最小実装分）
+
+| ファイル | 内容 |
+|---|---|
+| `src/domain/researchDrift.ts` | `DriftWindow`, `DriftComparison`, `DriftSignal`, `DriftSeverity`, `DriftDetectionResult`, `compareEvaluationWindows`, `detectRoiDrift`, `buildDriftDetectionResult` |
+| `src/domain/researchDrift.test.ts` | 12件のテスト（サンプル不足/悪化度合い別severity/Forward未通過時の安全装置/window重複警告など） |
+| `scripts/detect-research-drift.ts` | baseline/recent 2期間のROI Explorer相当をDriftDetectionResultとして出力するread-only CLI |
+| `scripts/verify-drift-smoke.mjs` | 依存なしE2Eスモーク（CLIのJSON必須フィールド・severity判定・DB非書き込みを確認） |
+
+### Phase 4 残タスク・未決定事項（TODO）
+
+- `DRIFT_ROI_DELTA_CRITICAL/WARNING/WATCH`と`MIN_DRIFT_SAMPLE_SIZE`は暫定値。実運用実績を
+  見ながら閾値を見直す（`MIN_PRODUCTION_SAMPLE_SIZE`等と同様、レビュー前提の値）
+- 直近30/60/90日など期間プリセットの追加、複数ルール一括判定、`research-rules.json`との連携は未着手
+- ViewModel/Presentation層（`DriftSignalViewModel`, `DriftDetectionViewModel`, `DriftPresentation`）
+  はまだ無い。UI実装・Fable/React実装は今回のスコープ外
+- 通常pnpm環境での`pnpm typecheck`/`pnpm test`/`pnpm detect:drift -- --json`の正式実行は
+  未確認（`docs/ai/05-VERIFICATION.md`参照）
 
 ## Phase 5: Daily Research Report — `not started`
 
