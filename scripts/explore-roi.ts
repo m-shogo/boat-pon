@@ -162,6 +162,7 @@ function parseArgs(argv: string[]) {
   };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
+    if (arg === "--") continue; // `pnpm explore:roi -- --json` forwards this separator as-is on some pnpm versions
     if (arg === "--json") parsed.json = true;
     else if (arg === "--view-json") parsed.viewJson = true;
     else if (arg === "--presentation-json") parsed.presentationJson = true;
