@@ -6,8 +6,8 @@
  * src/domain/researchRuleStore.ts（純粋関数）に委譲し、ここではファイルI/Oのみ行う。
  *
  * サブコマンド:
- *   list                                                     登録済みルール一覧（デフォルト、read-only）
- *   add --rule-id <id> --reason <text>                        candidate状態で新規登録
+ *   list [--status <status>]                                  登録済みルール一覧（デフォルト、read-only）
+ *   add --rule-id <id> --reason <text> [--title <text>]        candidate状態で新規登録
  *   transition --rule-id <id> --to <status> [--evaluation-file <path>]
  *                                                              状態遷移を試みる
  *
@@ -40,7 +40,7 @@ switch (command) {
     break;
   case "list":
   case undefined:
-    runList();
+    runList(rest);
     break;
   case "--help":
   case "-h":
@@ -75,28 +75,38 @@ function saveStore(store: RuleStoreFile) {
   writeFileSync(STORE_PATH, `${JSON.stringify(store, null, 2)}\n`, "utf8");
 }
 
-function runList() {
+function runList(argv: string[]) {
+  const args = parseFlags(argv, ["--status"]);
+  const statusFilter = args["--status"];
+
   const store = loadStore();
-  if (store.rules.length === 0) {
-    console.log(`no rules registered in ${STORE_PATH}`);
+  const rules = statusFilter ? store.rules.filter((rule) => rule.status === statusFilter) : store.rules;
+
+  if (rules.length === 0) {
+    console.log(
+      statusFilter
+        ? `no rules with status="${statusFilter}" in ${STORE_PATH}`
+        : `no rules registered in ${STORE_PATH}`,
+    );
     return;
   }
-  for (const rule of store.rules) {
-    console.log(`${rule.ruleId}\t${rule.status}\tupdatedAt=${rule.updatedAt}\t${rule.reasonSummary}`);
+  for (const rule of rules) {
+    const title = rule.title ? `\ttitle=${rule.title}` : "";
+    console.log(`${rule.ruleId}\t${rule.status}${title}\tupdatedAt=${rule.updatedAt}\t${rule.reasonSummary}`);
   }
 }
 
 function runAdd(argv: string[]) {
-  const args = parseFlags(argv, ["--rule-id", "--reason"]);
+  const args = parseFlags(argv, ["--rule-id", "--reason", "--title"]);
   const ruleId = args["--rule-id"];
   const reason = args["--reason"];
   if (!ruleId || !reason) {
-    console.error("usage: add --rule-id <id> --reason <text>");
+    console.error("usage: add --rule-id <id> --reason <text> [--title <text>]");
     process.exit(1);
   }
 
   const store = loadStore();
-  const result = addRule(store.rules, createResearchRule(ruleId, reason));
+  const result = addRule(store.rules, createResearchRule(ruleId, reason, new Date().toISOString(), args["--title"]));
   if (!result.ok) {
     console.error(`error: ${result.error.reason}`);
     process.exit(1);
@@ -148,8 +158,8 @@ function parseFlags(argv: string[], known: string[]): Record<string, string | un
 
 function printHelp() {
   console.log(`Usage:
-  pnpm manage:research-rules -- list
-  pnpm manage:research-rules -- add --rule-id <id> --reason <text>
+  pnpm manage:research-rules -- list [--status <status>]
+  pnpm manage:research-rules -- add --rule-id <id> --reason <text> [--title <text>]
   pnpm manage:research-rules -- transition --rule-id <id> --to <status> [--evaluation-file <path>]
 
 Reads/writes only ${STORE_PATH} (override with $BOAT_PON_RULE_STORE_PATH).

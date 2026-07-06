@@ -28,6 +28,7 @@ export function createResearchRule(
   ruleId: string,
   reasonSummary: string,
   now: string = new Date().toISOString(),
+  title?: string,
 ): ResearchRule {
   return {
     ruleId,
@@ -36,6 +37,7 @@ export function createResearchRule(
     updatedAt: now,
     reasonSummary,
     warnings: [],
+    ...(title ? { title } : {}),
   };
 }
 

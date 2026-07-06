@@ -15,6 +15,7 @@ export type ResearchRule = {
   updatedAt: string;
   reasonSummary: string;
   warnings: string[];
+  title?: string;
 };
 
 export type EvaluationMetadata = {
