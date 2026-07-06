@@ -20,6 +20,18 @@ import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 
+const KNOWN_EXTENSIONS = new Set(["ts", "tsx", "js", "jsx", "mjs", "cjs", "json"]);
+
+/**
+ * A naive `/\.[a-zA-Z]+$/` check misfires on specifiers with a dot in the
+ * filename but no real extension (e.g. "./researchViewModel.adapters") — only
+ * treat it as "already has an extension" if the suffix is a known one.
+ */
+function hasKnownExtension(spec) {
+  const match = spec.match(/\.([a-zA-Z0-9]+)$/);
+  return match != null && KNOWN_EXTENSIONS.has(match[1].toLowerCase());
+}
+
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const tempDir = mkdtempSync(join(tmpdir(), "boatpon-verify-rule-dry-run-"));
 const tempDomainDir = join(tempDir, "src", "domain");
@@ -108,7 +120,7 @@ function addExplicitTsExtensions(dir) {
     const path = join(dir, name);
     const content = readFileSync(path, "utf8");
     const fixed = content
-      .replace(/from\s+"(\.\.?\/[^"]+)"/g, (full, spec) => (/\.[a-zA-Z]+$/.test(spec) ? full : full.replace(spec, `${spec}.ts`)));
+      .replace(/from\s+"(\.\.?\/[^"]+)"/g, (full, spec) => (hasKnownExtension(spec) ? full : full.replace(spec, `${spec}.ts`)));
     if (fixed !== content) writeFileSync(path, fixed, "utf8");
   }
 }

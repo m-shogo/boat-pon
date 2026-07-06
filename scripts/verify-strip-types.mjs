@@ -32,6 +32,19 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
+const KNOWN_EXTENSIONS = new Set(["ts", "tsx", "js", "jsx", "mjs", "cjs", "json"]);
+
+/**
+ * A naive `/\.[a-zA-Z]+$/` check misfires on specifiers like
+ * "./researchViewModel.adapters" (no real extension, just a dot in the
+ * filename) — only treat it as "already has an extension" if the suffix is a
+ * known one.
+ */
+function hasKnownExtension(spec) {
+  const match = spec.match(/\.([a-zA-Z0-9]+)$/);
+  return match != null && KNOWN_EXTENSIONS.has(match[1].toLowerCase());
+}
+
 const SCOPE_FILES = [
   "types.ts",
   "backtest.ts",
@@ -71,7 +84,7 @@ function addExplicitTsExtensions(dir) {
     const path = join(dir, name);
     const content = readFileSync(path, "utf8");
     const fixed = content.replace(/from\s+"(\.\.?\/[^"]+)"/g, (full, spec) => {
-      if (/\.[a-zA-Z]+$/.test(spec)) return full;
+      if (hasKnownExtension(spec)) return full;
       return full.replace(spec, `${spec}.ts`);
     });
     if (fixed !== content) writeFileSync(path, fixed, "utf8");
