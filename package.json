@@ -173,7 +173,8 @@
     "report:exacta-forward-monitor": "tsx scripts/report-exacta-forward-monitor.ts",
     "report:pit-leak-impact": "tsx scripts/report-point-in-time-leak-impact.ts",
     "explore:roi": "tsx scripts/explore-roi.ts",
-    "manage:research-rules": "tsx scripts/manage-research-rules.ts"
+    "manage:research-rules": "tsx scripts/manage-research-rules.ts",
+    "detect:drift": "tsx scripts/detect-research-drift.ts"
   },
   "engines": {
     "node": ">=24.0.0"
