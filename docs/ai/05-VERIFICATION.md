@@ -328,6 +328,36 @@ Presentation/`--presentation-json`/`--rule-id`の`research-rules.json`読み取�
 ROI計算・Research Engine・Rule Storeの状態遷移ロジックには一切触れておらず、
 表示契約（ViewModel/Presentation）とCLIの読み取り専用な補助表示のみを追加した。
 
+### 2026-07-07（続き）: PR #10 merge後のpost-merge verification（main、完了）
+
+PR #10（`feature/phase4-1-drift-operations` → `main`）をReady化した上でmainへmerge。
+`git pull origin main`でfast-forward後のmain上で正式検証を実施した。
+
+- merge commit hash: `1083c95a55b087f220ad441bfc4397763a8e694c`（PR #10、merge済み）
+- main commit hash: `1083c95a55b087f220ad441bfc4397763a8e694c`
+- `pnpm typecheck` — **pass**（型エラーなし）
+- `pnpm test` — **235/235 pass**
+- `pnpm detect:drift -- --baseline-from 2025-01-01 --baseline-to 2025-12-31 --recent-from 2026-01-01 --recent-to 2026-07-06 --json` — **pass**（`severity: "none"`、baseline n=2265 / recent n=44）
+- `pnpm detect:drift -- (同条件) --presentation-json` — **pass**（`severityLabel: "No drift"`、
+  `--rule-id`未指定のため`ruleTitle`/`ruleStatus`ともnull）
+- `pnpm run verify:strip-types` — **pass**（29/29）
+- `pnpm run verify:roi-smoke` — **pass**（全シナリオ）
+- `pnpm run verify:research-rules-dry-run` — **pass**（全チェック）
+- `pnpm run verify:drift-smoke` — **pass**（`--presentation-json`必須フィールド・`--rule-id`
+  read-only連携・フィクスチャ非書き込みのシナリオを含む全チェック）
+- `git status --short`は作業前後とも`reports/*`・`docs/rule-candidates.md`の既存差分のみで、
+  それ以外はクリーン。`data/research-rules.json`は生成・残置していない
+- 本物のFable/F#/Feliz/.NETは今回も導入していない
+
+**軽微な所見（レビュー時に確認済み、ブロッカーではないため今回は未修正）**:
+`scripts/detect-research-drift.ts`の`loadRuleMeta(args.ruleId)`は`--presentation-json`以外の
+実行時（`--json`・デフォルトのテキスト出力）でも常に呼ばれる。`data/research-rules.json`への
+read-onlyアクセスであり実害は無いが、無駄なI/Oではある。次回の小改善候補として残す
+（出力モードに応じて`--presentation-json`指定時のみ呼び出すよう変更する、等）。
+
+**結論**: PR #10のmainへのmergeが完了し、post-merge verificationも全てpassした。
+Phase 4.1（Drift Operations）はmainに正式に統合された。
+
 ## What to record in completion report
 
 検証結果を完了報告に含める際は、以下を明記する。
