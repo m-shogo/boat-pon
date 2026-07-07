@@ -461,6 +461,40 @@ Daily Research Report（`DailyResearchRuleReport`/`DailyResearchReportAggregate`
 明記し、非production statusのルールをProduction運用実績として扱わない安全装置
 （`rule-status-not-production` finding）を組み込んだ。
 
+### 2026-07-07（続き）: PR #12 merge後のpost-merge verification（main、完了）
+
+PR #12（`feature/phase5-1-multi-rule-daily-report` → `main`）をReady化した上でmainへ
+merge。`git pull origin main`でfast-forward後のmain上で正式検証を実施した。
+
+- merge commit hash: `17e674d38e3b1cd2872b7df69e02526e2a56d097`（PR #12、merge済み）
+- main commit hash: `17e674d38e3b1cd2872b7df69e02526e2a56d097`
+- `pnpm typecheck` — **pass**（型エラーなし）
+- `pnpm test` — **279/279 pass**
+- `pnpm daily:research-report -- --date 2026-07-06 --json`（単一adhoc） — **pass**
+- `pnpm daily:research-report -- --date 2026-07-06 --presentation-json`（単一adhoc） — **pass**
+- `pnpm daily:research-report -- --date 2026-07-06 --rules-file ./tmp/research-rules-fixture.json --json` — **pass**
+  （`totalRules: 2`、archivedルールが除外されることを確認）
+- `pnpm daily:research-report -- --date 2026-07-06 --rules-file ./tmp/research-rules-fixture.json --presentation-json` — **pass**
+- `pnpm run verify:strip-types` — **pass**（29/29）
+- `pnpm run verify:roi-smoke` — **pass**（全シナリオ）
+- `pnpm run verify:research-rules-dry-run` — **pass**（全チェック）
+- `pnpm run verify:drift-smoke` — **pass**（全チェック）
+- `git status --short`は作業前後とも`reports/*`・`docs/rule-candidates.md`の既存差分
+  のみで、それ以外はクリーン。`data/research-rules.json`は生成・残置していない。
+  `tmp/*`（検証フィクスチャ含む）は`git ls-files`で追跡対象外であることを確認済み
+- 本物のFable/F#/Feliz/.NETは今回も導入していない
+
+**Phase 5.2改善候補（今回は着手しない、次回への申し送り）**:
+- 各ルール固有条件でのROI/Drift評価（`ResearchRule`のスキーマ拡張）
+- `--include-archived`オプション
+- `reports/*`への保存・通知連携
+- `OpportunityPresentation`/`RuleCardPresentation`との統合
+- `docs/rule-candidates.md`との接続方針
+- Drift比較窓の可変化（現状固定30日）
+
+**結論**: PR #12のmainへのmergeが完了し、post-merge verificationも全てpassした。
+Phase 5.1（Multiple Rule Daily Research Report）はmainに正式に統合された。
+
 ## What to record in completion report
 
 検証結果を完了報告に含める際は、以下を明記する。
