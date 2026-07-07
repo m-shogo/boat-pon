@@ -76,6 +76,10 @@ export function buildDailyResearchRulePresentation(
     nextActions: [...ruleReport.nextActions],
     isProductionEligible: ruleReport.isProductionEligible,
     isForwardTested: ruleReport.isForwardTested,
+    isRuleSpecificEvaluation: ruleReport.isRuleSpecificEvaluation,
+    evaluationScope: ruleReport.evaluationScope,
+    conditionSummary: [...ruleReport.conditionSummary],
+    conditionWarnings: [...ruleReport.conditionWarnings],
   };
 }
 

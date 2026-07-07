@@ -55,9 +55,13 @@ export type DailyResearchReportPresentation = {
   dataQualityNotes: string[];
 };
 
+/** Phase 5.2: ルールの評価がどう成立したかの表示用ラベル。domain型を直接importせず、独立した文字列リテラルとして再定義する。 */
+export type DailyResearchEvaluationScopePresentation = "rule-specific" | "shared-fallback" | "invalid-condition-fallback";
+
 /**
- * 複数ルール向け（Phase 5.1）。1ルール分のDaily Report表示契約。
- * `driftSummary`は既存の`DriftDetectionPresentation`をそのまま再利用する。
+ * 複数ルール向け（Phase 5.1、Phase 5.2でrule-specific評価情報を追加）。
+ * 1ルール分のDaily Report表示契約。`driftSummary`は既存の`DriftDetectionPresentation`を
+ * そのまま再利用する。
  */
 export type DailyResearchRulePresentation = {
   ruleId: string;
@@ -70,6 +74,10 @@ export type DailyResearchRulePresentation = {
   nextActions: string[];
   isProductionEligible: boolean;
   isForwardTested: boolean;
+  isRuleSpecificEvaluation: boolean;
+  evaluationScope: DailyResearchEvaluationScopePresentation;
+  conditionSummary: string[];
+  conditionWarnings: string[];
 };
 
 /** 複数ルールの件数集計表示用。 */
