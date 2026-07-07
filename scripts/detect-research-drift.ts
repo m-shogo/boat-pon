@@ -1,5 +1,5 @@
 /**
- * Drift Detection 最小CLI（read-only / Phase 4）
+ * Drift Detection 最小CLI（read-only / Phase 4, --presentation-json は Phase 4.1）
  *
  * decision_history を baseline期間とrecent期間の2つの窓に分けて集計し、
  * それぞれを RuleEvaluationResult（src/domain/researchRule.ts）に変換したうえで
@@ -17,6 +17,8 @@ import type { DecisionHistoryRow } from "../src/domain/backtest";
 import type { DecisionStatus } from "../src/domain/types";
 import { applyCondition, buildRuleEvaluationResult, parseCondition, type RowCondition } from "../src/domain/researchEvaluation";
 import { buildDriftDetectionResult } from "../src/domain/researchDrift";
+import { buildDriftDetectionViewModel } from "../src/view-models/driftViewModel.adapters";
+import { buildDriftPresentation } from "../src/presentation/driftPresentationBuilder";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const evaluatedAt = new Date().toISOString();
@@ -27,7 +29,10 @@ const recent = evaluateWindow(args.recentFrom, args.recentTo, "recent");
 
 const result = buildDriftDetectionResult(args.ruleId, baseline, recent, evaluatedAt);
 
-if (args.json) {
+if (args.presentationJson) {
+  const view = buildDriftDetectionViewModel(result);
+  console.log(JSON.stringify(buildDriftPresentation(view), null, 2));
+} else if (args.json) {
   console.log(JSON.stringify(result, null, 2));
 } else {
   printResult();
@@ -130,6 +135,7 @@ function parseArgs(argv: string[]) {
     recentTo: string;
     ruleId: string;
     json: boolean;
+    presentationJson: boolean;
     condition?: RowCondition;
   } = {
     baselineFrom: "1970-01-01",
@@ -138,11 +144,13 @@ function parseArgs(argv: string[]) {
     recentTo: evaluatedAtDate(),
     ruleId: "detect-drift-adhoc",
     json: false,
+    presentationJson: false,
   };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--") continue; // `pnpm detect:drift -- --json` forwards this separator as-is on some pnpm versions
     if (arg === "--json") parsed.json = true;
+    else if (arg === "--presentation-json") parsed.presentationJson = true;
     else if (arg === "--baseline-from") parsed.baselineFrom = argv[++i] ?? parsed.baselineFrom;
     else if (arg === "--baseline-to") parsed.baselineTo = argv[++i] ?? parsed.baselineTo;
     else if (arg === "--recent-from") parsed.recentFrom = argv[++i] ?? parsed.recentFrom;
@@ -163,17 +171,19 @@ function printHelp() {
   console.log(`Usage:
   pnpm detect:drift [-- --baseline-from YYYY-MM-DD --baseline-to YYYY-MM-DD \\
                         --recent-from YYYY-MM-DD --recent-to YYYY-MM-DD \\
-                        --rule-id <id> --condition key=value --json]
+                        --rule-id <id> --condition key=value --json|--presentation-json]
 
 Read-only. Compares two decision_history windows (baseline vs recent) as
 RuleEvaluationResult and reports a DriftDetectionResult (roi/hitRate delta,
 severity, signals, warnings). Does not write to the DB or to any rule store.
 
-  --baseline-from   baseline window start (default 1970-01-01)
-  --baseline-to     baseline window end (default 1970-01-01; must be set explicitly)
-  --recent-from     recent window start (default 1970-01-01)
-  --recent-to       recent window end (default today)
-  --rule-id         ruleId label in output (default detect-drift-adhoc)
-  --condition       single key=value row filter (supported keys: venue, raceNo, decision)
-  --json            emit DriftDetectionResult JSON`);
+  --baseline-from     baseline window start (default 1970-01-01)
+  --baseline-to       baseline window end (default 1970-01-01; must be set explicitly)
+  --recent-from       recent window start (default 1970-01-01)
+  --recent-to         recent window end (default today)
+  --rule-id           ruleId label in output (default detect-drift-adhoc)
+  --condition         single key=value row filter (supported keys: venue, raceNo, decision)
+  --json              emit DriftDetectionResult JSON (unchanged Phase 4 shape)
+  --presentation-json emit DriftDetectionPresentation JSON (Phase 4.1, renderer-ready
+                      shape: severityLabel, ruleTitle/ruleStatus, same numbers as --json)`);
 }
