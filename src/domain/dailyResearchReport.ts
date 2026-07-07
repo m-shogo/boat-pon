@@ -1,6 +1,7 @@
 import type { DriftDetectionResult, DriftSeverity } from "./researchDrift";
 import type { RuleEvaluationResult, RuleStatus } from "./researchRule";
 import { MIN_PRODUCTION_SAMPLE_SIZE } from "./researchRuleLifecycle";
+import type { ResearchRuleEvaluationScope } from "./researchRuleConditions";
 
 /**
  * Daily Research Report の最小実装（Phase 5）。
@@ -243,14 +244,16 @@ export function buildDailyResearchReport(input: BuildDailyResearchReportInput): 
 }
 
 /**
- * 複数ルール向けDaily Research Report（Phase 5.1）。
+ * 複数ルール向けDaily Research Report（Phase 5.1、Phase 5.2でrule-specific評価に対応）。
  *
- * 重要な制約: `data/research-rules.json` の `ResearchRule` はまだルール固有の条件
- * （venue/風速/展示順位等の絞り込み式）を持たない（`docs/ai/09-RULE-CANDIDATE-MIGRATION.md`）。
- * そのため、ここで各ルールに紐づける `roiEvaluation`/`driftResult` は、そのルール専用に
- * 絞り込んだ評価ではなく、呼び出し側（CLI）が計算した共通のdecision_history集計を
- * ruleId/title/statusでラベル付けしただけのもの。これを隠さず、各ルールの`warnings`に
- * 「ルール固有の条件では絞り込んでいない」旨を必ず明記する（ブラックボックス禁止の原則）。
+ * Phase 5.2時点の制約: `ResearchRule.evaluationConditions`（`src/domain/researchRuleConditions.ts`）
+ * はvenue/raceNo/decisionのequals条件のみに対応した最小実装。呼び出し側（CLI）が
+ * `evaluationScope`（"rule-specific"/"shared-fallback"/"invalid-condition-fallback"）を
+ * 判定し、それに応じて`roiEvaluation`/`driftResult`をrule条件で絞り込むか、共通集計を
+ * そのまま使うかを決める。ここ（domain）では絞り込みの成否を再判定せず、渡された
+ * `evaluationScope`をそのまま表示情報に反映するだけ。"rule-specific"以外の場合は、
+ * 各ルールの`warnings`に「ルール固有の条件では絞り込んでいない」旨を必ず明記する
+ * （ブラックボックス禁止の原則）。
  */
 
 /** ルールの登録statusが"production"以外なら、Production運用実績として扱わない旨のfindingを返す。 */
@@ -275,6 +278,13 @@ export type DailyResearchRuleReport = {
   nextActions: string[];
   isProductionEligible: boolean;
   isForwardTested: boolean;
+  /** `evaluationScope === "rule-specific"` と同値。表示側の分岐を楽にするための冗長フィールド。 */
+  isRuleSpecificEvaluation: boolean;
+  evaluationScope: ResearchRuleEvaluationScope;
+  /** 適用された（有効な）評価条件の表示用文字列（Phase 5.2）。無ければ空配列。 */
+  conditionSummary: string[];
+  /** 評価条件のバリデーション/適用時に出たwarnings（unsupported operator/unknown key等）。 */
+  conditionWarnings: string[];
 };
 
 export type BuildDailyResearchRuleReportInput = {
@@ -283,16 +293,36 @@ export type BuildDailyResearchRuleReportInput = {
   status?: RuleStatus;
   roiEvaluation: RuleEvaluationResult;
   driftResult: DriftDetectionResult;
+  /** 省略時は"shared-fallback"（Phase 5.1相当の挙動）。 */
+  evaluationScope?: ResearchRuleEvaluationScope;
+  conditionSummary?: string[];
+  conditionWarnings?: string[];
 };
+
+/** evaluationScopeが"rule-specific"以外の場合のみ、共通集計であることを明記するwarningを返す。 */
+function buildNotRuleSpecificWarning(ruleId: string, scope: ResearchRuleEvaluationScope): DailyResearchReportWarning | null {
+  if (scope === "rule-specific") return null;
+  const reason =
+    scope === "invalid-condition-fallback"
+      ? "evaluationConditions were specified but none were valid (see conditionWarnings); falling back to the shared decision_history aggregate"
+      : "no evaluationConditions were defined for this rule (research-rules.json does not require them)";
+  return {
+    id: "not-rule-specific-filter",
+    message: `roi/drift for ruleId "${ruleId}" is the shared decision_history aggregate, not filtered by this rule's specific hypothesis condition (${reason})`,
+  };
+}
 
 /**
  * 1ルール分の DailyResearchRuleReport を作る。ROI/severityの計算はやり直さず、
  * 入力の `roiEvaluation`/`driftResult` を ruleId でラベル付けし直すだけ
- * （数値・severityは呼び出し側が渡した値のまま）。
+ * （数値・severityは呼び出し側が渡した値のまま）。`evaluationScope`の判定自体も
+ * 呼び出し側（CLI、`src/domain/researchRuleConditions.ts`経由）が行い、ここでは
+ * その結果をそのまま表示情報へ反映するだけで再判定しない。
  */
 export function buildDailyResearchRuleReport(input: BuildDailyResearchRuleReportInput): DailyResearchRuleReport {
   const roiEvaluation: RuleEvaluationResult = { ...input.roiEvaluation, ruleId: input.ruleId };
   const driftResult: DriftDetectionResult = { ...input.driftResult, ruleId: input.ruleId };
+  const evaluationScope: ResearchRuleEvaluationScope = input.evaluationScope ?? "shared-fallback";
 
   const roiSummary = buildDailyResearchRoiSummary(roiEvaluation);
   const driftSummary = buildDailyResearchDriftSummary(driftResult);
@@ -302,12 +332,8 @@ export function buildDailyResearchRuleReport(input: BuildDailyResearchRuleReport
   if (statusFinding) findings.push(statusFinding);
 
   const warnings = buildDailyResearchWarnings(roiEvaluation.warnings, driftResult.warnings);
-  warnings.push({
-    id: "not-rule-specific-filter",
-    message:
-      `roi/drift for ruleId "${input.ruleId}" is the shared decision_history aggregate, not filtered by this ` +
-      "rule's specific hypothesis condition (research-rules.json does not store a queryable condition yet)",
-  });
+  const notRuleSpecificWarning = buildNotRuleSpecificWarning(input.ruleId, evaluationScope);
+  if (notRuleSpecificWarning) warnings.push(notRuleSpecificWarning);
 
   return {
     ruleId: input.ruleId,
@@ -320,6 +346,10 @@ export function buildDailyResearchRuleReport(input: BuildDailyResearchRuleReport
     nextActions: buildDailyResearchNextActions(roiSummary, driftSummary),
     isProductionEligible: roiSummary.isProductionEligible,
     isForwardTested: roiSummary.isForwardTested,
+    isRuleSpecificEvaluation: evaluationScope === "rule-specific",
+    evaluationScope,
+    conditionSummary: input.conditionSummary ?? [],
+    conditionWarnings: input.conditionWarnings ?? [],
   };
 }
 
@@ -383,6 +413,9 @@ export type DailyResearchRuleInput = {
   status?: RuleStatus;
   roiEvaluation: RuleEvaluationResult;
   driftResult: DriftDetectionResult;
+  evaluationScope?: ResearchRuleEvaluationScope;
+  conditionSummary?: string[];
+  conditionWarnings?: string[];
 };
 
 export type BuildMultiRuleDailyResearchReportInput = {

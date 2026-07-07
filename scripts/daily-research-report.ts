@@ -1,5 +1,6 @@
 /**
- * Daily Research Report 最小CLI（read-only / Phase 5, --rules-file は Phase 5.1）
+ * Daily Research Report 最小CLI（read-only / Phase 5, --rules-file は Phase 5.1,
+ * rule-specific evaluation は Phase 5.2）
  *
  * decision_history を1日1回分の研究レポートとしてまとめる。ROI Explorer
  * （src/domain/researchEvaluation.ts の buildRuleEvaluationResult）とDrift Detection
@@ -17,6 +18,12 @@
  *   警告を出してadhocレポートにフォールバックする
  * - archivedステータスのルールは初期状態では集計から除外する（Phase 5.2以降で
  *   --include-archivedを検討、今回は未実装。docs/ai/11-DAILY-RESEARCH-REPORT.md参照）
+ * - Phase 5.2: 各ルールの`evaluationConditions`（equalsのみ、allowlist方式）を
+ *   `src/domain/researchRuleConditions.ts`経由でdecision_historyの行フィルタへ適用する。
+ *   条件が有効なら"rule-specific"、条件が無ければ"shared-fallback"、条件はあるが
+ *   全て無効なら"invalid-condition-fallback"としてラベル付けする。フィルタ適用は
+ *   既存のapplyCondition（ROI Explorerと共通）を再利用するだけで、SQL文字列の生成や
+ *   任意コード実行は一切行わない
  * - これは研究レポートであり、買い推奨・Production昇格の判断ではない
  *   （docs/ai/11-DAILY-RESEARCH-REPORT.md参照）
  */
@@ -28,7 +35,13 @@ import type { DecisionStatus } from "../src/domain/types";
 import type { ResearchRule } from "../src/domain/researchRule";
 import { buildRuleEvaluationResult } from "../src/domain/researchEvaluation";
 import { buildDriftDetectionResult } from "../src/domain/researchDrift";
-import { buildDailyResearchReport, buildMultiRuleDailyResearchReport } from "../src/domain/dailyResearchReport";
+import { buildDailyResearchReport, buildMultiRuleDailyResearchReport, type DailyResearchRuleInput } from "../src/domain/dailyResearchReport";
+import {
+  applyResearchRuleConditions,
+  describeResearchRuleConditions,
+  determineEvaluationScope,
+  validateResearchRuleConditions,
+} from "../src/domain/researchRuleConditions";
 import { buildDriftDetectionViewModel } from "../src/view-models/driftViewModel.adapters";
 import { buildDailyResearchReportAggregatePresentation, buildDailyResearchReportPresentation } from "../src/presentation/dailyResearchReportBuilder";
 
@@ -45,10 +58,10 @@ const recentFrom = shiftDate(reportDate, -RECENT_WINDOW_DAYS);
 const baselineTo = shiftDate(recentFrom, -1);
 const baselineFrom = "1970-01-01";
 
-const roiEvaluation = evaluateRoiWindow("1970-01-01", reportDate);
-const baselineEvaluation = evaluateDriftWindow(baselineFrom, baselineTo, "baseline");
-const recentEvaluation = evaluateDriftWindow(recentFrom, recentTo, "recent");
-const driftResult = buildDriftDetectionResult(RULE_ID, baselineEvaluation, recentEvaluation, generatedAt);
+// 3つの評価窓のrowsは1回だけ読み込み、単一adhoc/複数ruleどちらもここから作る（DBアクセスはwindowごとに1回のみ）。
+const roiWindowRows = loadRows("1970-01-01", reportDate);
+const baselineWindowRows = loadRows(baselineFrom, baselineTo);
+const recentWindowRows = loadRows(recentFrom, recentTo);
 
 const rules = args.rulesFile ? loadRulesFile(args.rulesFile) : undefined;
 
@@ -59,6 +72,31 @@ if (rules) {
 }
 
 function runSingleAdhoc() {
+  const roiEvaluation = buildRuleEvaluationResult({
+    ruleId: RULE_ID,
+    rows: roiWindowRows.rows,
+    dataWindowStart: "1970-01-01",
+    dataWindowEnd: reportDate,
+    evaluationRunAt: generatedAt,
+    extraWarnings: roiWindowRows.sourceWarnings,
+  });
+  const baselineEvaluation = buildRuleEvaluationResult({
+    ruleId: RULE_ID,
+    rows: baselineWindowRows.rows,
+    dataWindowStart: baselineFrom,
+    dataWindowEnd: baselineTo,
+    evaluationRunAt: generatedAt,
+    extraWarnings: ["baseline window", ...baselineWindowRows.sourceWarnings],
+  });
+  const recentEvaluation = buildRuleEvaluationResult({
+    ruleId: RULE_ID,
+    rows: recentWindowRows.rows,
+    dataWindowStart: recentFrom,
+    dataWindowEnd: recentTo,
+    evaluationRunAt: generatedAt,
+    extraWarnings: ["recent window", ...recentWindowRows.sourceWarnings],
+  });
+  const driftResult = buildDriftDetectionResult(RULE_ID, baselineEvaluation, recentEvaluation, generatedAt);
   const report = buildDailyResearchReport({ reportDate, generatedAt, roiEvaluation, driftResult });
 
   if (args.presentationJson) {
@@ -71,24 +109,70 @@ function runSingleAdhoc() {
   }
 }
 
-function runMultiRule(rulesList: ResearchRule[]) {
-  const aggregate = buildMultiRuleDailyResearchReport({
-    reportDate,
-    generatedAt,
-    rules: rulesList.map((rule) => ({
-      ruleId: rule.ruleId,
-      title: rule.title,
-      status: rule.status,
-      roiEvaluation,
-      driftResult,
-    })),
+/**
+ * ルールごとに evaluationConditions を適用したROI/Drift評価を作る。
+ * conditions未指定・全て無効な場合は applyResearchRuleConditions がrowsをそのまま
+ * 返すため、結果的に共通集計と同じ評価になる（shared-fallback/invalid-condition-fallback）。
+ */
+function buildRuleInput(rule: ResearchRule): DailyResearchRuleInput {
+  const conditions = rule.evaluationConditions;
+  const evaluationScope = determineEvaluationScope(conditions);
+  const conditionSummary = describeResearchRuleConditions(conditions);
+  const conditionWarnings = [...validateResearchRuleConditions(conditions).warnings];
+
+  const roiFiltered = applyResearchRuleConditions(roiWindowRows.rows, conditions);
+  const baselineFiltered = applyResearchRuleConditions(baselineWindowRows.rows, conditions);
+  const recentFiltered = applyResearchRuleConditions(recentWindowRows.rows, conditions);
+  conditionWarnings.push(...roiFiltered.warnings, ...baselineFiltered.warnings, ...recentFiltered.warnings);
+  const dedupedConditionWarnings = Array.from(new Set(conditionWarnings));
+
+  const roiEvaluation = buildRuleEvaluationResult({
+    ruleId: rule.ruleId,
+    rows: roiFiltered.rows,
+    dataWindowStart: "1970-01-01",
+    dataWindowEnd: reportDate,
+    evaluationRunAt: generatedAt,
+    extraWarnings: roiWindowRows.sourceWarnings,
   });
+  const baselineEvaluation = buildRuleEvaluationResult({
+    ruleId: rule.ruleId,
+    rows: baselineFiltered.rows,
+    dataWindowStart: baselineFrom,
+    dataWindowEnd: baselineTo,
+    evaluationRunAt: generatedAt,
+    extraWarnings: ["baseline window", ...baselineWindowRows.sourceWarnings],
+  });
+  const recentEvaluation = buildRuleEvaluationResult({
+    ruleId: rule.ruleId,
+    rows: recentFiltered.rows,
+    dataWindowStart: recentFrom,
+    dataWindowEnd: recentTo,
+    evaluationRunAt: generatedAt,
+    extraWarnings: ["recent window", ...recentWindowRows.sourceWarnings],
+  });
+  const driftResult = buildDriftDetectionResult(rule.ruleId, baselineEvaluation, recentEvaluation, generatedAt);
+
+  return {
+    ruleId: rule.ruleId,
+    title: rule.title,
+    status: rule.status,
+    roiEvaluation,
+    driftResult,
+    evaluationScope,
+    conditionSummary,
+    conditionWarnings: dedupedConditionWarnings,
+  };
+}
+
+function runMultiRule(rulesList: ResearchRule[]) {
+  const ruleInputs = rulesList.map(buildRuleInput);
+  const aggregate = buildMultiRuleDailyResearchReport({ reportDate, generatedAt, rules: ruleInputs });
 
   if (args.presentationJson) {
-    const driftViews = aggregate.ruleReports.map((ruleReport, index) =>
+    const driftViews = ruleInputs.map((ruleInput) =>
       buildDriftDetectionViewModel(
-        { ...driftResult, ruleId: ruleReport.ruleId },
-        { title: rulesList[index].title, status: rulesList[index].status },
+        ruleInput.driftResult,
+        ruleInput.status ? { title: ruleInput.title, status: ruleInput.status } : undefined,
       ),
     );
     console.log(JSON.stringify(buildDailyResearchReportAggregatePresentation(aggregate, driftViews), null, 2));
@@ -117,30 +201,6 @@ function loadRulesFile(path: string): ResearchRule[] | undefined {
     console.error(`--rules-file "${path}" could not be parsed (${(error as Error).message}); falling back to a single adhoc report`);
     return undefined;
   }
-}
-
-function evaluateRoiWindow(from: string, to: string) {
-  const { rows, sourceWarnings } = loadRows(from, to);
-  return buildRuleEvaluationResult({
-    ruleId: RULE_ID,
-    rows,
-    dataWindowStart: from,
-    dataWindowEnd: to,
-    evaluationRunAt: generatedAt,
-    extraWarnings: sourceWarnings,
-  });
-}
-
-function evaluateDriftWindow(from: string, to: string, label: "baseline" | "recent") {
-  const { rows, sourceWarnings } = loadRows(from, to);
-  return buildRuleEvaluationResult({
-    ruleId: RULE_ID,
-    rows,
-    dataWindowStart: from,
-    dataWindowEnd: to,
-    evaluationRunAt: generatedAt,
-    extraWarnings: [`${label} window`, ...sourceWarnings],
-  });
 }
 
 function shiftDate(dateStr: string, offsetDays: number): string {
@@ -231,8 +291,9 @@ function printMultiRuleResult(aggregate: ReturnType<typeof buildMultiRuleDailyRe
     `forwardUntested=${aggregate.summary.forwardUntestedCount} nonProduction=${aggregate.summary.nonProductionStatusCount}`,
   );
   for (const ruleReport of aggregate.ruleReports) {
-    console.log(`--- ${ruleReport.ruleId} (status=${ruleReport.status ?? "n/a"}, title=${ruleReport.title ?? "n/a"}) ---`);
+    console.log(`--- ${ruleReport.ruleId} (status=${ruleReport.status ?? "n/a"}, title=${ruleReport.title ?? "n/a"}, scope=${ruleReport.evaluationScope}) ---`);
     console.log(`  drift severity=${ruleReport.driftSummary.severity}`);
+    if (ruleReport.conditionSummary.length) console.log(`  conditions: ${ruleReport.conditionSummary.join("; ")}`);
     for (const finding of ruleReport.findings) console.log(`  - [${finding.severity}] ${finding.title}: ${finding.detail}`);
   }
   console.log("overallNextActions:");
@@ -269,11 +330,12 @@ buy recommendation or a production-promotion decision.
 
   --date              report date (default today, UTC)
   --rules-file        path to a research-rules.json-shaped file ({ rules: ResearchRule[] }),
-                      read-only. Every non-archived rule gets the same shared ROI/Drift
-                      evaluation, labeled with its ruleId/title/status (Phase 5.1: rules do
-                      not yet store a queryable filter condition, so this is NOT a per-rule
-                      filtered evaluation — see docs/ai/11-DAILY-RESEARCH-REPORT.md). Missing
-                      or unparsable file falls back to the single adhoc report unchanged.
+                      read-only. Each non-archived rule's evaluationConditions (equals-only,
+                      allowlisted keys: venue/raceNo/decision) are applied to decision_history
+                      rows via the same filter as explore-roi.ts's --condition. Rules with no
+                      (or no valid) conditions fall back to the shared decision_history
+                      aggregate — see docs/ai/11-DAILY-RESEARCH-REPORT.md. Missing or
+                      unparsable file falls back to the single adhoc report unchanged.
                       Without this flag, behavior is unchanged from Phase 5 (single adhoc report).
   --json              emit DailyResearchReport JSON (domain shape), or
                       DailyResearchReportAggregate JSON when --rules-file is given
@@ -283,5 +345,5 @@ buy recommendation or a production-promotion decision.
 
 If both --json and --presentation-json are passed, --presentation-json wins.
 
-Not implemented yet (Phase 5.2 candidate): --include-archived to include archived rules.`);
+Not implemented yet (Phase 5.3 candidate): --include-archived to include archived rules.`);
 }
