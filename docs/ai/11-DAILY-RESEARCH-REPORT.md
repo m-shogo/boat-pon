@@ -1,11 +1,12 @@
 # Daily Research Report
 
-Phase 5（`src/domain/dailyResearchReport.ts` + `pnpm daily:research-report`）と
-Phase 5.1（複数ルール横断レポート、`--rules-file`）の最小実装を、実際にどう扱うかを
-まとめたメモです。ROI計算・Drift判定・Rule Lifecycle状態遷移のロジックはこの
-ドキュメントの対象外（引き続き`src/domain/researchEvaluation.ts` /
-`researchDrift.ts` / `researchRuleStore.ts`が担当。`docs/ai/10-DRIFT-OPERATIONS.md`と
-同じ原則）。
+Phase 5（`src/domain/dailyResearchReport.ts` + `pnpm daily:research-report`）、
+Phase 5.1（複数ルール横断レポート、`--rules-file`）、Phase 5.2（`ResearchRule`ごとの
+評価条件によるrule-specific ROI/Drift評価、`src/domain/researchRuleConditions.ts`）の
+最小実装を、実際にどう扱うかをまとめたメモです。ROI計算・Drift判定・Rule Lifecycle
+状態遷移のロジックはこのドキュメントの対象外（引き続き
+`src/domain/researchEvaluation.ts` / `researchDrift.ts` / `researchRuleStore.ts`が
+担当。`docs/ai/10-DRIFT-OPERATIONS.md`と同じ原則）。
 
 ## Daily Reportの目的
 
@@ -68,6 +69,11 @@ Phase 5.1（複数ルール横断レポート、`--rules-file`）の最小実装
   「confirmed production incidentとして扱わない」という注記が`warnings`に自動で入る
   （`buildDriftDetectionViewModel`のPhase 4.1ロジックをそのまま再利用しているだけで、
   Phase 5.1で新しい判定は追加していない）
+- Phase 5.2では、baseline/recent両方のdrift評価窓にも、そのルールの
+  `evaluationConditions`（有効なもののみ）を適用してから`buildDriftDetectionResult`を
+  計算する。recent側のsampleSizeが不足する場合の`severity: "unknown"`扱いは、既存の
+  `src/domain/researchDrift.ts`の`MIN_DRIFT_SAMPLE_SIZE`判定をそのまま使う（Drift側の
+  判定ロジックには一切手を入れていない）
 
 ## 複数ルールDaily Report（Phase 5.1）
 
@@ -85,12 +91,11 @@ Phase 5.1（複数ルール横断レポート、`--rules-file`）の最小実装
 - **archivedルールの扱い**: 初期状態（`--rules-file`指定時のデフォルト）では
   `status: "archived"`のルールを集計から除外する。`--include-archived`（archivedも
   含める）はまだ実装していない。Phase 5.2以降の候補としてここに残す
-- **ルール固有条件が無いという制約**: `ResearchRule`（`src/domain/researchRule.ts`）は
-  まだvenue/風速/展示順位等の絞り込み条件を持たない。そのため各ルールの`roiSummary`/
-  `driftSummary`は、そのルール専用に絞り込んだ評価ではなく、共通のdecision_history集計を
-  ruleId/title/statusでラベル付けしただけのもの。これを隠さず、各ルールの`warnings`に
+- **ルール固有条件が無い場合の制約**: `evaluationConditions`を持たないルール（後述の
+  Phase 5.2参照）は、依然として共通のdecision_history集計をruleId/title/statusで
+  ラベル付けしただけのものになる。これを隠さず、各ルールの`warnings`に
   「ルール固有の条件では絞り込んでいない」旨を必ず1件残す（ブラックボックス禁止の原則。
-  厳密なルール別ROIが必要な場合は引き続き`analyze:*`系の専用スクリプトを使う）
+  複雑な条件でのルール別ROIが必要な場合は引き続き`analyze:*`系の専用スクリプトを使う）
 - **Production未満のルールをProduction扱いしないこと**: 各ルールのstatusが
   `"production"`以外なら、`findings`に「このルールはProductionに達しておらず、
   この評価をProduction運用実績として扱ってはいけない」旨のfindingが必ず入る
@@ -102,7 +107,78 @@ Phase 5.1（複数ルール横断レポート、`--rules-file`）の最小実装
   従来動作）へフォールバックする。例外を投げてCLIが落ちることはない
 - **`--rules-file`を指定しない場合**: Phase 5から完全に無変更（単一adhocレポートのまま）
 
-## Phase 5 / 5.1でやること / やらないこと
+## Rule-specific evaluation（Phase 5.2）
+
+Phase 5.1では全ルールが共通集計のラベル付けだったが、Phase 5.2で`ResearchRule`に
+`evaluationConditions`（省略可能・後方互換）を追加し、条件があるルールはその条件で
+decision_historyの行を絞り込んでからROI/Driftを評価できるようにした。
+
+### evaluationConditionsの形
+
+```json
+{
+  "ruleId": "wind24-exh1-switch",
+  "status": "forward",
+  "evaluationConditions": [
+    { "key": "venue", "operator": "equals", "value": "桐生" }
+  ]
+}
+```
+
+- `operator`は現時点で`"equals"`のみ。範囲条件・OR条件・正規表現・任意JS式は
+  **意図的に対象外**（今後追加するとしても、都度allowlistへ明示的に追加する設計であり、
+  任意のJS式やSQL文字列を実行できるようにはしない）
+- `key`はallowlist方式。対応するのは既存のROI Explorer条件フィルタ
+  （`src/domain/researchEvaluation.ts`の`SUPPORTED_CONDITION_KEYS`）と同じ
+  `venue`/`raceNo`/`decision`のみ。それ以外のkeyは`unknown evaluation condition key`
+  としてwarningに積まれ、無視される（例外は投げない）
+- `evaluationConditions`を省略した場合は、Phase 5.1までと同じ挙動（共通集計の
+  ラベル付け、`shared-fallback`）のまま。既存の`data/research-rules.json`は
+  この項目を持たないため、そのまま読み込める（後方互換）
+
+### evaluationScopeの3値
+
+| evaluationScope | 意味 |
+|---|---|
+| `rule-specific` | 有効な条件が1つ以上あり、その条件でROI/Driftを絞り込んで評価した |
+| `shared-fallback` | `evaluationConditions`が未指定・空配列。従来通り共通集計をそのまま使う |
+| `invalid-condition-fallback` | `evaluationConditions`は指定されているが、全て無効
+（unsupported operator・unknown key）だったため、安全側に倒して共通集計へfallbackした |
+
+`isRuleSpecificEvaluation`は`evaluationScope === "rule-specific"`と同値の冗長フィールド。
+`conditionSummary`は実際に適用された有効な条件の表示用文字列（例:
+`venue equals "桐生"`）、`conditionWarnings`はunsupported operator/unknown key等の
+警告文言。
+
+### 安全側に倒す設計
+
+- **allowlist方式**: 未知のkey・未対応のoperatorはthrowせず、その条件だけを無視して
+  warningに積む（`validateResearchRuleConditions`）。1つのルールの条件が一部無効でも、
+  有効な条件だけで`rule-specific`評価を続行する（部分適用）
+- **全滅時は共通集計へfallback**: 有効な条件が1つも無ければ`invalid-condition-fallback`
+  として、共通集計と同じ評価結果になる（`applyResearchRuleConditions`がrowsを
+  そのまま返すため、追加のフォールバック分岐を書く必要が無い設計）
+- **条件適用後にsampleSizeが不足しても、既存の安全装置がそのまま働く**:
+  `sample-size-insufficient`finding（`MIN_PRODUCTION_SAMPLE_SIZE`未満）、
+  Drift側の`severity: "unknown"`（`MIN_DRIFT_SAMPLE_SIZE`未満）は、Phase 5/5.1から
+  一切変更していない。rule-specific評価でサンプルが減っても、強い結論を出す新しい
+  ロジックは追加していない
+- **既存のROI Explorer条件フィルタを再利用**: `applyResearchRuleConditions`は
+  `src/domain/researchEvaluation.ts`の`applyCondition`をそのまま呼ぶだけで、
+  行フィルタのロジックを重複実装していない
+- **SQL文字列生成・任意コード実行は無い**: 条件適用は配列の`.filter()`のみで、
+  decision_historyへのSQLクエリはCLI側の既存の日付範囲SELECTのまま変更していない。
+  `eval`/`new Function`等は一切使っていない
+
+### 買い推奨・Production昇格の判断には使わないこと
+
+- rule-specific評価であっても、findings/nextActionsの文言は「要検証」「見送り候補」
+  「経過観察」等の研究用語に留める。「買い」「利益確定」「採用確定」「Production昇格
+  可能」のような断定表現は使わない
+- rule-specific評価で高ROIが出ても、それだけでAIがルールを昇格・採用することはない。
+  状態遷移は引き続き人間が`pnpm manage:research-rules`で判断する
+
+## Phase 5 / 5.1 / 5.2でやること / やらないこと
 
 やること（今回実装した範囲）:
 
@@ -114,11 +190,12 @@ Phase 5.1（複数ルール横断レポート、`--rules-file`）の最小実装
   整合させる
 - `--rules-file`による複数ルール横断レポート（`DailyResearchReportAggregate`）を
   read-onlyで追加し、Production未満のルールを明示する安全装置を組み込む（Phase 5.1）
+- `ResearchRule.evaluationConditions`（equalsのみ、allowlist方式）によるrule-specific
+  ROI/Drift評価、`evaluationScope`の3値による透明性の確保（Phase 5.2）
 
 やらないこと（残タスク、今回は着手しない）:
 
-- ルール固有の絞り込み条件を`ResearchRule`が持つスキーマ拡張（各ルール別の厳密な
-  ROI/Drift評価はまだできない）
+- 範囲条件・OR条件・正規表現・任意JS式による評価条件（equals以外のoperatorは対象外）
 - `--include-archived`（archivedルールを含める表示オプション）
 - 新仮説の自動発見・提示（Pattern Discovery相当の統合）
 - `OpportunityPresentation`（★スコア）・`RuleCardPresentation`との統合
@@ -137,6 +214,7 @@ pnpm daily:research-report -- --date 2026-07-06 --json
 pnpm daily:research-report -- --date 2026-07-06 --presentation-json
 
 # 複数ルール横断レポート（Phase 5.1、data/research-rules.json形式のファイルをread-onlyで読む）
+# evaluationConditionsを持つルールはrule-specific評価、持たないルールはshared-fallbackになる（Phase 5.2）
 pnpm daily:research-report -- --date 2026-07-06 --rules-file ./tmp/research-rules-fixture.json --json
 pnpm daily:research-report -- --date 2026-07-06 --rules-file ./tmp/research-rules-fixture.json --presentation-json
 ```

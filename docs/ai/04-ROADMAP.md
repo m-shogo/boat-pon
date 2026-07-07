@@ -419,9 +419,9 @@ calibration乖離で`alert: "ok"|"watch"|"drift"`を出す、`report:calibration
       `dailyResearchReportBuilder.ts`に`DailyResearchRulePresentation`/
       `DailyResearchReportAggregatePresentation`を追加。`driftSummary`は既存の
       `DriftDetectionPresentation`をそのまま再利用し、severityLabel等を重複実装しない
-- [ ] `--include-archived`（archivedルールを含める）は未実装。Phase 5.2以降で検討
-- [ ] ルール固有の絞り込み条件（venue/風速/展示順位等）を`ResearchRule`が持つようにする
-      スキーマ拡張は未着手。それまでは複数ルールレポートも「共通集計のラベル付け」のまま
+- [ ] `--include-archived`（archivedルールを含める）は未実装。Phase 5.3以降で検討
+- [x] ルール固有の絞り込み条件（venue/raceNo/decisionのequalsのみ）を`ResearchRule`が
+      持てるようにするスキーマ拡張 — Phase 5.2で対応（下記「Phase 5.2」参照）
 
 ### Phase 5.1 実装ファイル
 
@@ -436,12 +436,80 @@ calibration乖離で`alert: "ok"|"watch"|"drift"`を出す、`report:calibration
 
 ### Phase 5.1 残タスク・未決定事項（TODO）
 
-- 各ルールのROI/Driftは依然「共通集計のラベル付け」であり、ルール固有条件での絞り込み
-  評価ではない。`ResearchRule`に条件を持たせるスキーマ拡張は今回のスコープ外
+- 各ルールのROI/Driftは「共通集計のラベル付け」であり、ルール固有条件での絞り込み
+  評価ではなかった → **Phase 5.2で対応**（下記参照）
 - `--include-archived`は未実装（docsに残すだけの将来対応）
 - 複数ルールレポートの`reports/*`への自動出力・保存、通知連携は未着手
 - `DailyResearchReportAggregate`と`ResearchSummaryPresentation`（既存のRule Card一覧）との
   統合方針は未判断
+- 通常pnpm環境での`pnpm typecheck`/`pnpm test`/
+  `pnpm daily:research-report -- --rules-file <path> --json|--presentation-json`の
+  正式実行結果は`docs/ai/05-VERIFICATION.md`を参照
+
+## Phase 5.2: Rule-Specific Daily Report Evaluation — `done`（最小実装）
+
+目的: Phase 5.1で複数`ResearchRule`をDaily Reportに並べられるようにしたが、各ルールの
+ROI/Driftはまだ「共通集計のラベル付け」だった。Phase 5.2では、`ResearchRule`ごとの
+評価条件をread-onlyで読み取り、可能な範囲でルール固有条件に基づくROI/Drift評価を
+行えるようにする。ROI/Drift計算のロジック自体は変更せず、既存のROI Explorer条件
+フィルタ（`applyCondition`）を再利用するだけに留める。詳細は
+`docs/ai/11-DAILY-RESEARCH-REPORT.md`を参照。
+
+- [x] `ResearchRule`へ評価条件を追加（後方互換） — `src/domain/researchRule.ts`に
+      `ResearchRuleEvaluationCondition`（`key`/`operator`（"equals"のみ）/`value`）と
+      `ResearchRule.evaluationConditions?`を追加。省略可能なため既存`research-rules.json`
+      はそのまま読み込める
+- [x] Rule condition evaluation helper — `src/domain/researchRuleConditions.ts`
+      （`validateResearchRuleConditions`, `applyResearchRuleConditions`,
+      `describeResearchRuleConditions`, `determineEvaluationScope`,
+      `hasRuleSpecificConditions`）。allowlist方式（対応operatorは"equals"のみ、
+      対応keyは既存の`SUPPORTED_CONDITION_KEYS`＝venue/raceNo/decisionのみ）。
+      条件フィルタそのものは既存の`applyCondition`（ROI Explorerと共通）をそのまま
+      再利用し、重複実装しない。unsupported operator・unknown keyはthrowせずwarningへ
+      積んで無視する（安全側に倒す）。SQL文字列の生成・任意コード実行経路は一切無い
+- [x] Daily Reportをrule固有評価へ対応 — `scripts/daily-research-report.ts`の
+      `buildRuleInput`が、各ルールの`evaluationConditions`をROI窓・baseline窓・recent窓の
+      decision_history行に適用してから`buildRuleEvaluationResult`/
+      `buildDriftDetectionResult`を計算する。条件が無い/全て無効なら
+      `applyResearchRuleConditions`がrowsをそのまま返すため、結果的に共通集計と
+      同じ評価になる（新しい分岐ロジックを追加していない）
+- [x] Drift評価もrule固有条件に寄せる — baseline/recent両方の窓に同じrule条件を適用する。
+      recent sampleSize不足時のseverity（`unknown`扱い）は既存の`researchDrift.ts`の
+      判定（`MIN_DRIFT_SAMPLE_SIZE`）をそのまま使い、severityの再判定はしていない
+- [x] Domain/Presentation拡張 — `DailyResearchRuleReport`/`DailyResearchRulePresentation`に
+      `isRuleSpecificEvaluation`/`evaluationScope`/`conditionSummary`/`conditionWarnings`を
+      追加。`evaluationScope`は`"rule-specific"`/`"shared-fallback"`/
+      `"invalid-condition-fallback"`の3値。既存の単一adhoc出力（`DailyResearchReport`）は
+      無変更のまま
+- [x] `not-rule-specific-filter`警告の文言を分岐 — `evaluationScope`が`"rule-specific"`
+      以外の場合のみ、共通集計であることを明記する警告を残す。`"shared-fallback"`
+      （条件未指定）と`"invalid-condition-fallback"`（条件はあるが全て無効）とで
+      理由文言を変える
+
+### Phase 5.2 実装ファイル
+
+| ファイル | 内容 |
+|---|---|
+| `src/domain/researchRule.ts` | （既存ファイルへ追加）`ResearchRuleConditionOperator`, `ResearchRuleEvaluationCondition`, `ResearchRule.evaluationConditions?` |
+| `src/domain/researchRuleConditions.ts` | `validateResearchRuleConditions`, `applyResearchRuleConditions`, `describeResearchRuleConditions`, `determineEvaluationScope`, `hasRuleSpecificConditions`, `ResearchRuleEvaluationScope` |
+| `src/domain/researchRuleConditions.test.ts` | 12件のテスト（unsupported operator/unknown keyのwarning化、AND結合、非破壊、fallback時の素通し） |
+| `src/domain/dailyResearchReport.ts` | （既存ファイルへ追加）`DailyResearchRuleReport`/`BuildDailyResearchRuleReportInput`に`evaluationScope`/`conditionSummary`/`conditionWarnings`/`isRuleSpecificEvaluation`を追加 |
+| `src/domain/dailyResearchReportEvaluationScope.test.ts` | 5件のテスト（scope省略時の後方互換、rule-specific/shared-fallback/invalid-condition-fallbackの警告文言の違い） |
+| `src/presentation/dailyResearchReportPresentation.ts` | （既存ファイルへ追加）`DailyResearchEvaluationScopePresentation`、`DailyResearchRulePresentation`拡張 |
+| `src/presentation/dailyResearchReportBuilder.ts` | （既存ファイルへ追加）`buildDailyResearchRulePresentation`が新フィールドをそのまま反映 |
+| `src/presentation/dailyResearchReportEvaluationScopePresentation.test.ts` | 4件のテスト（rule-specific/shared-fallback/invalid-condition-fallbackの表示・シリアライズ可能性） |
+| `src/presentation/dailyResearchReportAggregatePresentation.test.ts` | （既存ファイル更新）Phase 5.2の新フィールドをキー混入検知の許可リストへ追加 |
+| `scripts/daily-research-report.ts` | `buildRuleInput`でrule-specific評価を組み立て、`--json`/`--presentation-json`双方に反映 |
+
+### Phase 5.2 残タスク・未決定事項（TODO）
+
+- `evaluationConditions`は依然としてequals・venue/raceNo/decisionのみ。範囲条件・OR条件・
+  正規表現・任意JS式は意図的に未対応（`docs/ai/11-DAILY-RESEARCH-REPORT.md`参照）
+- `--include-archived`は引き続き未実装
+- 複数ルールレポートの`reports/*`への自動出力・保存、通知連携は未着手
+- `OpportunityPresentation`・`RuleCardPresentation`との統合、`docs/rule-candidates.md`との
+  接続方針は未判断
+- Drift比較窓のデフォルト（直近30日 vs それ以前の全期間）は暫定値のまま（Phase 5から継続）
 - 通常pnpm環境での`pnpm typecheck`/`pnpm test`/
   `pnpm daily:research-report -- --rules-file <path> --json|--presentation-json`の
   正式実行結果は`docs/ai/05-VERIFICATION.md`を参照

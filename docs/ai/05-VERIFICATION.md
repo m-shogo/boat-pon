@@ -495,6 +495,57 @@ merge。`git pull origin main`でfast-forward後のmain上で正式検証を実�
 **結論**: PR #12のmainへのmergeが完了し、post-merge verificationも全てpassした。
 Phase 5.1（Multiple Rule Daily Research Report）はmainに正式に統合された。
 
+### 2026-07-07（続き）: Phase 5.2 Rule-Specific Daily Report Evaluation 最小実装の検証（完了）
+
+`feature/phase5-2-rule-specific-daily-report`ブランチ（mainから分岐）で、
+`ResearchRule.evaluationConditions`（equalsのみ、allowlist方式）に基づくrule-specific
+ROI/Drift評価（`src/domain/researchRuleConditions.ts` + `evaluationScope`）を追加した
+後の検証結果。
+
+- `pnpm typecheck` — **pass**（型エラーなし）
+- `pnpm test` — **300/300 pass**（Phase 5.2で追加した
+  `src/domain/researchRuleConditions.test.ts`（12件）・
+  `src/domain/dailyResearchReportEvaluationScope.test.ts`（5件）・
+  `src/presentation/dailyResearchReportEvaluationScopePresentation.test.ts`（4件）を含む。
+  既存の`dailyResearchReportAggregatePresentation.test.ts`は新フィールド分の
+  キー許可リストを更新した上でpass）
+- `pnpm daily:research-report -- --date 2026-07-06 --json`（単一adhoc） — **pass**
+  （`--rules-file`無し、Phase 5の単一adhoc出力が無変更のまま出力されることを確認）
+- `pnpm daily:research-report -- --date 2026-07-06 --presentation-json`（単一adhoc） — **pass**
+- `pnpm daily:research-report -- --date 2026-07-06 --rules-file ./tmp/research-rules-fixture.json --json` — **pass**
+  （6件登録・うち1件`archived`・4件が`evaluationConditions`付き（うち2件unsupported
+  operator/unknown keyで無効）のフィクスチャに対して実行。結果:
+  `venue equals "桐生"`のルールは`evaluationScope: "rule-specific"`でsampleSizeが
+  6260→307に絞り込まれ、`raceNo equals 1`のルールも同様に312へ絞り込まれた。
+  条件未指定のルールは`shared-fallback`（sampleSize 6260のまま）、unsupported
+  operator/unknown keyのルールは`invalid-condition-fallback`（同じくsampleSize 6260、
+  `conditionWarnings`にunsupported operator/unknown keyの理由を保持）。archivedルールは
+  `totalRules`から除外（6件中5件）。rule-specific評価の2ルールには
+  `not-rule-specific-filter`警告が付かず、fallback 3ルールには付くことを確認）
+- `pnpm daily:research-report -- --date 2026-07-06 --rules-file ./tmp/research-rules-fixture.json --presentation-json` — **pass**
+  （各ルールの`driftSummary`が既存の`DriftDetectionPresentation`と同じ形で出力され、
+  `evaluationScope`/`isRuleSpecificEvaluation`/`conditionSummary`/`conditionWarnings`が
+  domain側の値をそのまま反映することを確認）
+- `pnpm run verify:strip-types` — **pass**（29/29、影響なし）
+- `pnpm run verify:roi-smoke` — **pass**（全シナリオ）
+- `pnpm run verify:research-rules-dry-run` — **pass**（全チェック）
+- `pnpm run verify:drift-smoke` — **pass**（全チェック）
+- 手動確認: `./tmp/research-rules-fixture.json`（gitignore対象、リポジトリにはコミット
+  していない）に対して`--json`/`--presentation-json`を複数回実行し、実行前後でファイルの
+  MD5ハッシュが一致（byte-for-byte不変）することを確認。read-onlyであることを裏付けた
+- `git status --short`は作業前後とも`reports/*`・`docs/rule-candidates.md`の既存差分
+  のみで、それ以外はクリーン。`data/research-rules.json`は生成・残置していない。
+  `tmp/*`（検証フィクスチャ含む）は`git ls-files`で追跡対象外であることを確認済み
+- 本物のFable/F#/Feliz/.NETは今回も導入していない
+
+**結論**: Phase 5.2（Rule-Specific Daily Report Evaluation最小実装）の正式検証が
+全てpassした。ROI計算・Drift判定ロジックには一切手を入れず、既存の
+`applyCondition`（ROI Explorer由来）を再利用してdecision_history行を絞り込むだけの
+薄いadapter（`researchRuleConditions.ts`）を追加した。既存の単一adhoc出力（Phase 5）・
+複数ルール出力（Phase 5.1、`evaluationConditions`未指定時）はいずれも無変更のまま。
+unsupported operator/unknown keyはthrowせずwarningへ積んで安全側にfallbackすることを
+確認済み。
+
 ## What to record in completion report
 
 検証結果を完了報告に含める際は、以下を明記する。
