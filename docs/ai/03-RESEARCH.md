@@ -29,6 +29,7 @@ Boat Pon AI Development Bible が定義する Research Engine 機能の一覧と
 | Rule Timeline | 🟡 | `docs/rule-candidates.md` に週次で追記される候補ログがタイムライン相当。型としては未実装 |
 | Rule Promotion / Retirement | 🟡 | `pnpm manage:research-rules`（Phase 3最小実装）でCandidate〜Productionの型付き状態遷移・Production直行禁止を強制できるようになった。ただし`docs/rule-candidates.md`の`candidate/watch/reject/adopted/reverted`運用とはまだ統合されていない（並行運用中） |
 | AI Research Assistant | 🟡 | `scripts/run-review-suite.ts` が複数reportをまとめて実行。提案の自動生成・日次配信はまだ |
+| Daily Research Report | 🟡 | `src/domain/dailyResearchReport.ts` + `pnpm daily:research-report`（Phase 5最小実装: ROI Explorerとdetect:driftの結果を1つの研究レポートに要約、`--json`/`--presentation-json`、read-only CLI）。**買い推奨・Production昇格の判断ではない**。複数ルール一括レポート・新仮説/Opportunity/`docs/rule-candidates.md`との統合は未着手 |
 
 ## 既存の重要な分析コマンド（重複防止用）
 

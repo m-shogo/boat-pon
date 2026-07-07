@@ -358,6 +358,37 @@ read-onlyアクセスであり実害は無いが、無駄なI/Oではある。�
 **結論**: PR #10のmainへのmergeが完了し、post-merge verificationも全てpassした。
 Phase 4.1（Drift Operations）はmainに正式に統合された。
 
+### 2026-07-07（続き）: Phase 5 Daily Research Report 最小実装の検証（完了）
+
+`feature/phase5-daily-research-report`ブランチ（mainから分岐）で、Daily Research Report
+（`src/domain/dailyResearchReport.ts` + `pnpm daily:research-report` + Presentation層）を
+追加した後の検証結果。
+
+- `pnpm typecheck` — **pass**（型エラーなし）
+- `pnpm test` — **255/255 pass**（Phase 5で追加した
+  `src/domain/dailyResearchReport.test.ts`（11件）・
+  `src/presentation/dailyResearchReportPresentation.test.ts`（9件）を含む）
+- `pnpm daily:research-report -- --date 2026-07-06 --json` — **pass**（実DBに対して実行。
+  `DailyResearchReport`の必須フィールド（`metadata`/`roiSummary`/`driftSummary`/`findings`/
+  `warnings`/`nextActions`/`dataQualityNotes`）が全て出力され、exit 0）
+- `pnpm daily:research-report -- --date 2026-07-06 --presentation-json` — **pass**
+  （`DailyResearchReportPresentation`。`driftSummary`が既存の`DriftDetectionPresentation`
+  （Phase 4.1）と同じ形で出力されることを確認）
+- `pnpm run verify:strip-types` — **pass**（29/29、既存スコープ内で変化なし。
+  Daily Report関連ファイルはこのスモークのスコープ外のため今回追加はしていない）
+- `pnpm run verify:roi-smoke` — **pass**（全シナリオ）
+- `pnpm run verify:research-rules-dry-run` — **pass**（全チェック）
+- `pnpm run verify:drift-smoke` — **pass**（全チェック、Phase 5の変更による影響なし）
+- `git status --short`は作業前後とも`reports/*`・`docs/rule-candidates.md`の既存差分
+  のみで、それ以外はクリーン。`data/research-rules.json`は生成・残置していない
+- 本物のFable/F#/Feliz/.NETは今回も導入していない
+
+**結論**: Phase 5（Daily Research Report最小実装）の正式検証が全てpassした。
+ROI計算・Drift判定・Rule Storeの状態遷移ロジックには一切触れておらず、既存の
+`RuleEvaluationResult`/`DriftDetectionResult`を要約するだけの新規read-only CLIと
+Presentation契約を追加した。findings/nextActionsは「要検証」「見送り」等の研究用語に
+留めており、買い推奨・Production昇格を意味する文言は含まれない。
+
 ## What to record in completion report
 
 検証結果を完了報告に含める際は、以下を明記する。
