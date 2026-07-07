@@ -23,6 +23,14 @@ pnpm explore:roi -- --json                      # ROI Explorer CLIが正常終�
 pnpm explore:roi -- --condition venue=桐生 --json  # 条件フィルタが機能するか確認（実DBの会場名を使う）
 ```
 
+Drift Detection（Phase 4〜）に関わる変更をした場合は、追加で以下も実行する。
+
+```sh
+pnpm detect:drift -- --baseline-from <開始日> --baseline-to <終了日> \
+                     --recent-from <開始日> --recent-to <終了日> --json
+# DriftDetectionResultが正常終了しJSONが妥当な形か確認（severity/signals/warningsを含む）
+```
+
 ## CI verification
 
 このリポジトリに現状専用のCI設定は無い（`.github/workflows` を都度確認すること）。
@@ -66,6 +74,8 @@ CIを新設する場合は、`pnpm typecheck` / `pnpm test` を最低ライン�
 ```sh
 pnpm run verify:strip-types   # src/domain の研究系モジュール（外部npm依存ゼロ）をnode --experimental-strip-typesで実行
 pnpm run verify:roi-smoke     # explore-roi.ts をフィクスチャSQLite DBに対して実行し、出力形状とROI計算を検証
+pnpm run verify:research-rules-dry-run  # manage-research-rules.ts の --dry-run 安全性とmigrationドキュメントの網羅性を確認
+pnpm run verify:drift-smoke   # detect-research-drift.ts をフィクスチャSQLite DBに対して実行し、出力形状・severity判定・DB非書き込みを確認
 ```
 
 注意点:
@@ -188,6 +198,80 @@ Claude Code実行環境（`pnpm install`不可、既知の403制約）で実施�
 `pnpm test`の実行そのものは、2026-07-06の前回エントリ（ユーザーのローカル環境、
 202/202 pass）が直近の正式実行結果であり、今回のセッションで新たなコード変更は
 無いため、その結果は引き続き有効と判断する。
+
+### 2026-07-06（続き）: Phase 4 Drift Detection 最小実装
+
+`m-shogo/boat-pon` PR #8 のmain merge後、`feature/phase4-drift-detection`ブランチで実施。
+Claude Code実行環境（`pnpm install`不可、既知の403制約）のため、正式コマンド
+（`pnpm typecheck`/`pnpm test`/`pnpm detect:drift -- --json`）はこのセッションでは未実行。
+
+代替検証:
+
+- `pnpm run verify:strip-types` — pass（**29/29**。内訳: `researchRuleLifecycle.test.ts` 5件、
+  `researchEvaluation.test.ts` 12件、新規`researchDrift.test.ts` 12件）
+- `pnpm run verify:roi-smoke` — pass（既存の全シナリオ、Drift追加による回帰なし）
+- `pnpm run verify:research-rules-dry-run` — pass（既存の全チェック、回帰なし）
+- `pnpm run verify:drift-smoke`（新規） — pass（全24チェック）。フィクスチャSQLite DBで
+  baseline窓（黒字30件）とrecent窓（赤字30件）を用意し、`scripts/detect-research-drift.ts`
+  が期待通り`DriftDetectionResult`のJSON（必須14フィールド）を出力し、`severity: "critical"`
+  と`roiCollapse`シグナルを検知すること、DBが無い場合は`severity: "unknown"`で正常終了する
+  こと、CLI実行前後でフィクスチャDBファイルのSHA-256ハッシュが完全に一致する（＝一切書き込み
+  していない）ことを確認した
+- 実装中に2件のバグを発見・修正（いずれもこのセッション内、他ファイルへの影響なし）:
+  1. `scripts/detect-research-drift.ts`: `parseArgs()`呼び出しが`const evaluatedAt`の初期化より
+     前に実行され、`evaluatedAtDate()`内で`evaluatedAt`を参照した際にTDZ
+     (`ReferenceError: Cannot access 'evaluatedAt' before initialization`) が発生。
+     `const evaluatedAt = ...`を`parseArgs()`呼び出しより前に移動して解消（過去の
+     `verify-*.mjs`拡張子バグと同種のtop-level実行順序の問題）
+  2. `scripts/verify-drift-smoke.mjs`: 同様に`const ROWS_PER_WINDOW = 30`をファイル末尾寄りに
+     置いていたため、それより前で実行される`buildFixtureDb()`呼び出しからの参照でTDZが発生。
+     ファイル先頭（`KNOWN_EXTENSIONS`の直後）へ移動して解消
+- `git status --short`は作業前後ともクリーン（新規追加ファイルのみ）。
+  `reports/*`・`docs/rule-candidates.md`・`data/research-rules.json`には一切触れていない
+
+**結論**: このサンドボックスで確認できる範囲（domain層のロジック・CLIの入出力・DB非書き込み）
+は全てpass。**次に通常pnpm環境に入った人が最初にやるべきこと**: 以下3コマンドを実行し、
+本ログに正式な結果を追記する。
+
+```sh
+pnpm typecheck
+pnpm test
+pnpm detect:drift -- --baseline-from 2025-01-01 --baseline-to 2025-12-31 \
+                     --recent-from 2026-01-01 --recent-to 2026-07-06 --json
+```
+
+### 2026-07-06（続き）: Phase 4 ブランチ再確認・PR準備前の再検証
+
+前回セッションでユーザーのローカル環境から「`detect:drift`/`verify:drift-smoke`が見つからない」
+という報告があったが、原因は`feature/phase4-drift-detection`ブランチに正しく乗れていなかった
+こと（`main`または別のcheckout状態で検証していた）と判明。このセッションで以下を再確認した。
+
+- `git branch --show-current` — `feature/phase4-drift-detection`
+- `git log --oneline -5` — 先頭が`6c9b03d docs: update Phase 4 drift detection progress`、
+  以下`742c4b3`/`56dc407`/`813c5e5`と、Phase 4の4コミットが期待通り並んでいることを確認
+- `git status --short`（作業前） — 空（`reports/*`・`docs/rule-candidates.md`の差分は
+  今回のセッション開始時点で存在せず、restoreは不要だった）
+- `package.json`の`grep`で`"detect:drift"`（line 178）・`"verify:drift-smoke"`（line 15）
+  両方の存在を確認
+
+Claude Code実行環境（`pnpm install`不可、既知の403制約、既に複数セッションで非一時的と
+確認済み）のため、このセッションでも`pnpm install`は再試行していない。そのため
+`pnpm typecheck`/`pnpm test`/`pnpm detect:drift -- --json`は**このセッションでは未実行**。
+代替として依存なし検証スクリプトを再実行した。
+
+- `pnpm run verify:strip-types` — pass（**29/29**、前回と同じ内訳）
+- `pnpm run verify:roi-smoke` — pass（全シナリオ）
+- `pnpm run verify:research-rules-dry-run` — pass（全チェック）
+- `pnpm run verify:drift-smoke` — pass（全24チェック）
+- `git status --short`（作業後） — 空。修正は不要だった（前回セッションのTDZ修正2件以降、
+  全てgreenのまま）
+
+**結論**: ブランチの取り違えが原因であり、コード側の問題ではないことを確認した。
+`feature/phase4-drift-detection`は正しくpush済み・4コミットとも揃っており、このサンドボックスで
+確認できる範囲は全てpass。**Phase 4の正式なmerge可否判断には、通常pnpm環境で
+`pnpm typecheck`/`pnpm test`/`pnpm detect:drift -- --json`の実行結果が必要**（未確定）。
+`reports/*`・`docs/rule-candidates.md`・`data/research-rules.json`は今回のセッションでも
+一切触れていない。
 
 ## What to record in completion report
 

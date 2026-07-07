@@ -17,7 +17,7 @@ Boat Pon AI Development Bible が定義する Research Engine 機能の一覧と
 | Opportunity Score | ❌ | `report:daily` が近い情報を出すが★評価のスコアリングはない |
 | Risk Score | 🟡 | `src/domain/raceEnvironment.ts` の `environmentRiskLevel` が部分的なリスク判定を持つ。Volatility/Drawdown込みの統合スコアはない |
 | Confidence Score | 🟡 | `estimatedHitRate` / `sampleSize` はあるが、信頼度を1つの数値にまとめたものはない。Phase 1 の `EvaluationMetadata.confidence` で型を用意 |
-| Drift Detection | ✅ | `src/domain/rollingDrift.ts`（月別ROI悪化検知）、`report:calibration` |
+| Drift Detection | ✅ | `src/domain/rollingDrift.ts`（月別ROI悪化検知、`report:calibration`）に加え、`src/domain/researchDrift.ts` + `pnpm detect:drift`（Phase 4最小実装: `RuleEvaluationResult`のbaseline/recent 2期間比較、read-only CLI）。複数ルール一括判定・`research-rules.json`連携・通知連携は未着手 |
 | Regime Detection | 🟡 | `src/domain/raceRegime.ts` はあるが、市場全体のレジーム分類・切り替えロジックは限定的 |
 | Replay Engine | 🟡 | `scripts/walk-forward-history.ts`、`src/domain/backtest.ts` が近い。当時取得可能情報だけに絞った厳密なReplayは未整備 |
 | What-if Simulator | ❌ | 未実装 |
