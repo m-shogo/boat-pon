@@ -340,17 +340,53 @@ calibration乖離で`alert: "ok"|"watch"|"drift"`を出す、`report:calibration
 - 通常pnpm環境での`pnpm typecheck`/`pnpm test`/`pnpm detect:drift -- --presentation-json`の
   正式実行結果は`docs/ai/05-VERIFICATION.md`を参照
 
-## Phase 5: Daily Research Report — `not started`
+## Phase 5: Daily Research Report — `in progress`（最小実装）
 
-目的: 新仮説・Forward結果・Drift・Opportunity・見送り推奨を1つの日次レポートにまとめる。
+目的: ROI Explorer（Phase 2）とDrift Detection（Phase 4/4.1）の結果を、1日1回の
+研究レポートとして要約する最小基盤を作る。**買い推奨・Production昇格の判断ではない。**
+詳細は`docs/ai/11-DAILY-RESEARCH-REPORT.md`を参照。
 
-- [ ] 新仮説（Phase 2の出力から）
-- [ ] Forward結果（Phase 1の `ForwardTestResult` から)
-- [ ] Drift（Phase 4の出力から）
-- [ ] 今日のOpportunity
-- [ ] 見送り推奨
+- [x] Daily Report Domain型 — `src/domain/dailyResearchReport.ts`
+      （`DailyResearchReport`, `DailyResearchRoiSummary`, `DailyResearchDriftSummary`,
+      `DailyResearchReportFinding`, `DailyResearchReportWarning`）
+- [x] Daily Report Builder — 同ファイルの`buildDailyResearchReport`
+      （`buildDailyResearchRoiSummary`/`buildDailyResearchDriftSummary`はROI/Drift結果を
+      再計算せず要約するだけ。`buildDailyResearchFindings`/`buildDailyResearchNextActions`は
+      既存の`MIN_PRODUCTION_SAMPLE_SIZE`/`isForwardTested`/`severity`をそのまま使い、
+      新しい判定基準は作らない。文言は「要検証」「見送り」等の研究用語に留め、
+      「買い推奨」「採用確定」は使わない）
+- [x] read-only CLI — `scripts/daily-research-report.ts`（`pnpm daily:research-report`）。
+      `--date/--json/--presentation-json`。ROI窓は`--date`までの全期間、Drift窓は
+      直近30日 vs それ以前の全期間（暫定値）。DBへの書き込みは一切行わない
+- [x] Presentation契約 — `src/presentation/dailyResearchReportPresentation.ts` +
+      `dailyResearchReportBuilder.ts`。`driftSummary`は既存の`DriftDetectionPresentation`
+      （Phase 4.1）をそのまま再利用し、severityLabel等を重複実装しない
+- [ ] 新仮説（Phase 2の出力から）の取り込みは未着手。現状はROI Explorerの単一評価のみ
+- [ ] Forward結果の複数ルール一覧は未着手（Phase 4.1同様、単一ruleIdのadhoc評価のみ）
+- [ ] 今日のOpportunity（`OpportunityPresentation`との統合）は未着手
+- [ ] `docs/rule-candidates.md`の候補一覧との接続は未着手
 
-Phase 5 は Phase 2〜4 が揃うまで着手しない。
+### Phase 5 実装ファイル（最小実装分）
+
+| ファイル | 内容 |
+|---|---|
+| `src/domain/dailyResearchReport.ts` | `DailyResearchReport`等の型、`buildDailyResearchReport`とその内部ビルダー |
+| `src/domain/dailyResearchReport.test.ts` | 11件のテスト（要約が数値/severityを再計算しない、Forward未通過/サンプル不足時の文言、dataQualityNotesの抽出等） |
+| `src/presentation/dailyResearchReportPresentation.ts` | `DailyResearchReportPresentation`等のPresentation型 |
+| `src/presentation/dailyResearchReportBuilder.ts` | `buildDailyResearchReportPresentation`（既存`buildDriftPresentation`を再利用） |
+| `src/presentation/dailyResearchReportPresentation.test.ts` | 9件のテスト（キー混入検知・シリアライズ可能性・決定性・研究用語の非断定表現） |
+| `scripts/daily-research-report.ts` | Daily Research Report read-only CLI |
+
+### Phase 5 残タスク・未決定事項（TODO）
+
+- Drift窓のデフォルト（直近30日 vs それ以前の全期間）は暫定値。実運用実績を見ながら見直す
+  （`docs/ai/10-DRIFT-OPERATIONS.md`の閾値注意と同様の扱い）
+- 複数ルールを1つのレポートにまとめる機能（`data/research-rules.json`の全件走査）は未着手。
+  現状は`daily-research-report-adhoc`という単一の固定ruleIdのみ
+- `OpportunityPresentation`・`RuleCardPresentation`との統合、`docs/rule-candidates.md`との
+  接続はまだ判断していない
+- 通常pnpm環境での`pnpm typecheck`/`pnpm test`/`pnpm daily:research-report -- --json|--presentation-json`
+  の正式実行結果は`docs/ai/05-VERIFICATION.md`を参照
 
 ## 進行ルール
 
