@@ -86,7 +86,8 @@ const ALLOWED_TOP_LEVEL_KEYS = new Set(["reportDate", "generatedAt", "rules", "s
 
 const ALLOWED_RULE_KEYS = new Set([
   "ruleId", "title", "status", "roiSummary", "driftSummary", "warnings", "findings", "nextActions",
-  "isProductionEligible", "isForwardTested",
+  "isProductionEligible", "isForwardTested", "isRuleSpecificEvaluation", "evaluationScope",
+  "conditionSummary", "conditionWarnings",
 ]);
 
 const ALLOWED_SUMMARY_KEYS = new Set([
