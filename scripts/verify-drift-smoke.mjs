@@ -8,8 +8,11 @@
  * of detect-research-drift.ts against it via `node --experimental-strip-types`
  * (with `.ts` added to extensionless relative imports, same approach as
  * verify-roi-smoke.mjs / verify-strip-types.mjs), and asserts:
- *   - the JSON output has the required DriftDetectionResult shape
+ *   - the JSON output has the required DriftDetectionResult shape (--json)
  *   - severity reflects the injected roi collapse
+ *   - --presentation-json (Phase 4.1) has the required DriftDetectionPresentation shape
+ *   - --rule-id + a fixture data/research-rules.json attaches title/status without
+ *     ever writing to that file (read-only lookup)
  *   - the fixture DB file is byte-for-byte unchanged after the CLI runs
  *     (proves the CLI is read-only, never writes to decision_history)
  *
@@ -51,27 +54,42 @@ try {
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const domainDir = join(repoRoot, "src", "domain");
+const viewModelsDir = join(repoRoot, "src", "view-models");
+const presentationDir = join(repoRoot, "src", "presentation");
 const tempDir = mkdtempSync(join(tmpdir(), "boatpon-verify-drift-smoke-"));
 const tempDomainDir = join(tempDir, "src", "domain");
+const tempViewModelsDir = join(tempDir, "src", "view-models");
+const tempPresentationDir = join(tempDir, "src", "presentation");
 const tempScriptsDir = join(tempDir, "scripts");
 const dbPath = join(tempDir, "fixture.sqlite");
+const ruleStorePath = join(tempDir, "research-rules-fixture.json");
 
 let failures = 0;
 
 try {
   mkdirSync(tempDomainDir, { recursive: true });
+  mkdirSync(tempViewModelsDir, { recursive: true });
+  mkdirSync(tempPresentationDir, { recursive: true });
   mkdirSync(tempScriptsDir, { recursive: true });
   for (const name of ["types.ts", "backtest.ts", "researchRule.ts", "researchEvaluation.ts", "researchDrift.ts"]) {
     copyFileSync(join(domainDir, name), join(tempDomainDir, name));
   }
+  for (const name of ["driftViewModel.ts", "driftViewModel.adapters.ts"]) {
+    copyFileSync(join(viewModelsDir, name), join(tempViewModelsDir, name));
+  }
+  for (const name of ["driftPresentationModel.ts", "driftPresentationBuilder.ts"]) {
+    copyFileSync(join(presentationDir, name), join(tempPresentationDir, name));
+  }
   copyFileSync(join(repoRoot, "scripts", "detect-research-drift.ts"), join(tempScriptsDir, "detect-research-drift.ts"));
   addExplicitTsExtensions(tempDomainDir);
+  addExplicitTsExtensions(tempViewModelsDir);
+  addExplicitTsExtensions(tempPresentationDir);
   addExplicitTsExtensions(tempScriptsDir);
 
   buildFixtureDb(dbPath);
   const dbHashBefore = hashFile(dbPath);
 
-  console.log("--- scenario 1: profitable baseline vs unprofitable recent -> drift detected ---");
+  console.log("--- scenario 1: profitable baseline vs unprofitable recent -> drift detected (--json) ---");
   const drifted = runDetect([
     "--baseline-from", "2025-01-01", "--baseline-to", "2025-06-01",
     "--recent-from", "2026-01-01", "--recent-to", "2026-06-01",
@@ -107,8 +125,60 @@ try {
     check("missing DB severity is unknown (0 recent sample)", noDbResult.severity === "unknown");
   }
 
-  console.log("--- scenario 3: CLI never writes to the fixture DB ---");
-  check("fixture DB file is byte-for-byte unchanged after running the CLI twice", hashFile(dbPath) === dbHashBefore);
+  console.log("--- scenario 3: --presentation-json (Phase 4.1, adhoc rule, no research-rules.json fixture) ---");
+  const presented = runDetect([
+    "--baseline-from", "2025-01-01", "--baseline-to", "2025-06-01",
+    "--recent-from", "2026-01-01", "--recent-to", "2026-06-01",
+    "--rule-id", "adhoc-not-registered",
+    "--presentation-json",
+  ], { BOAT_PON_RULE_STORE_PATH: ruleStorePath }); // path does not exist yet -> adhoc
+  check("presentation-json exit code 0", presented.status === 0);
+  const presentedResult = parseJson(presented.stdout);
+  if (presentedResult) {
+    for (const field of [
+      "ruleId", "ruleTitle", "ruleStatus", "severity", "severityLabel", "baselineRoi", "recentRoi",
+      "roiDelta", "baselineSampleSize", "recentSampleSize", "signals", "warnings", "reasonSummary", "evaluatedAt",
+    ]) {
+      check(`presentation has field "${field}"`, field in presentedResult);
+    }
+    check("unregistered rule-id -> ruleTitle is null", presentedResult.ruleTitle === null);
+    check("unregistered rule-id -> ruleStatus is null", presentedResult.ruleStatus === null);
+    check("severityLabel is a non-empty display string", typeof presentedResult.severityLabel === "string" && presentedResult.severityLabel.length > 0);
+  }
+
+  console.log("--- scenario 4: --rule-id reads data/research-rules.json but never writes it ---");
+  const ruleStoreFixture = {
+    _meta: { description: "smoke fixture", warning: "smoke fixture", lastUpdated: "2026-01-01T00:00:00Z" },
+    rules: [
+      {
+        ruleId: "wind24-exh1-switch", status: "forward", createdAt: "2026-01-01T00:00:00Z",
+        updatedAt: "2026-01-01T00:00:00Z", reasonSummary: "smoke fixture rule", warnings: [],
+        title: "風速2-4x展示1位",
+      },
+    ],
+  };
+  writeFileSync(ruleStorePath, `${JSON.stringify(ruleStoreFixture, null, 2)}\n`, "utf8");
+  const ruleStoreHashBefore = hashFile(ruleStorePath);
+  const withRuleMeta = runDetect([
+    "--baseline-from", "2025-01-01", "--baseline-to", "2025-06-01",
+    "--recent-from", "2026-01-01", "--recent-to", "2026-06-01",
+    "--rule-id", "wind24-exh1-switch",
+    "--presentation-json",
+  ], { BOAT_PON_RULE_STORE_PATH: ruleStorePath });
+  check("rule-id lookup exit code 0", withRuleMeta.status === 0);
+  const withRuleMetaResult = parseJson(withRuleMeta.stdout);
+  if (withRuleMetaResult) {
+    check("registered rule-id -> ruleTitle attached", withRuleMetaResult.ruleTitle === "風速2-4x展示1位");
+    check("registered rule-id -> ruleStatus attached", withRuleMetaResult.ruleStatus === "forward");
+    check(
+      "status != production -> warnings note it is not a confirmed production incident",
+      withRuleMetaResult.warnings.some((w) => w.includes("do not treat this drift as a confirmed production incident")),
+    );
+  }
+  check("research-rules.json fixture is byte-for-byte unchanged after the CLI runs (read-only)", hashFile(ruleStorePath) === ruleStoreHashBefore);
+
+  console.log("--- scenario 5: CLI never writes to the fixture DB ---");
+  check("fixture DB file is byte-for-byte unchanged after running the CLI multiple times", hashFile(dbPath) === dbHashBefore);
 } finally {
   rmSync(tempDir, { recursive: true, force: true });
 }
