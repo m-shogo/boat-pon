@@ -175,7 +175,8 @@
     "report:pit-leak-impact": "tsx scripts/report-point-in-time-leak-impact.ts",
     "explore:roi": "tsx scripts/explore-roi.ts",
     "manage:research-rules": "tsx scripts/manage-research-rules.ts",
-    "detect:drift": "tsx scripts/detect-research-drift.ts"
+    "detect:drift": "tsx scripts/detect-research-drift.ts",
+    "daily:research-report": "tsx scripts/daily-research-report.ts"
   },
   "engines": {
     "node": ">=24.0.0"
