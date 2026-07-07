@@ -1,7 +1,12 @@
-import type { DailyResearchReport } from "../domain/dailyResearchReport";
+import type { DailyResearchReport, DailyResearchReportAggregate, DailyResearchRoiSummary, DailyResearchRuleReport } from "../domain/dailyResearchReport";
 import type { DriftDetectionViewModel } from "../view-models/driftViewModel";
 import { buildDriftPresentation } from "./driftPresentationBuilder";
-import type { DailyResearchReportPresentation, DailyResearchRoiPresentation } from "./dailyResearchReportPresentation";
+import type {
+  DailyResearchReportAggregatePresentation,
+  DailyResearchReportPresentation,
+  DailyResearchRoiPresentation,
+  DailyResearchRulePresentation,
+} from "./dailyResearchReportPresentation";
 
 /**
  * DailyResearchReport（src/domain）を Presentation（renderer非依存の最終契約）へ
@@ -12,7 +17,7 @@ import type { DailyResearchReportPresentation, DailyResearchRoiPresentation } fr
  * ここで新しくseverityLabel等を作り直すことはしない。
  */
 
-function buildRoiPresentation(summary: DailyResearchReport["roiSummary"]): DailyResearchRoiPresentation {
+function buildRoiPresentation(summary: DailyResearchRoiSummary): DailyResearchRoiPresentation {
   return {
     ruleId: summary.ruleId,
     dataWindowStart: summary.dataWindowStart,
@@ -46,5 +51,50 @@ export function buildDailyResearchReportPresentation(
     warnings: report.warnings.map((warning) => ({ ...warning })),
     nextActions: [...report.nextActions],
     dataQualityNotes: [...report.dataQualityNotes],
+  };
+}
+
+/**
+ * 複数ルール向け（Phase 5.1）。1ルール分の DailyResearchRuleReport を Presentation へ
+ * 再整形するだけ。既存の buildDriftPresentation をそのまま再利用する。
+ *
+ * @param driftView ruleReport.driftSummary の元になった DriftDetectionResult から作った
+ *   DriftDetectionViewModel（ruleId/title/statusでラベル付け済みのもの）。
+ */
+export function buildDailyResearchRulePresentation(
+  ruleReport: DailyResearchRuleReport,
+  driftView: DriftDetectionViewModel,
+): DailyResearchRulePresentation {
+  return {
+    ruleId: ruleReport.ruleId,
+    title: ruleReport.title,
+    status: ruleReport.status,
+    roiSummary: buildRoiPresentation(ruleReport.roiSummary),
+    driftSummary: buildDriftPresentation(driftView),
+    warnings: ruleReport.warnings.map((warning) => ({ ...warning })),
+    findings: ruleReport.findings.map((finding) => ({ ...finding })),
+    nextActions: [...ruleReport.nextActions],
+    isProductionEligible: ruleReport.isProductionEligible,
+    isForwardTested: ruleReport.isForwardTested,
+  };
+}
+
+/**
+ * 複数ルール向け（Phase 5.1）。DailyResearchReportAggregate を Presentation へ
+ * 再整形するだけ。件数集計（summary）は再計算せず、domain側の値をそのまま使う。
+ *
+ * @param driftViews ruleReports と同じ順序で対応する DriftDetectionViewModel の配列
+ *   （各ルールのdriftSummaryをそのままDriftDetectionPresentationへ変換するために必要）。
+ */
+export function buildDailyResearchReportAggregatePresentation(
+  aggregate: DailyResearchReportAggregate,
+  driftViews: DriftDetectionViewModel[],
+): DailyResearchReportAggregatePresentation {
+  return {
+    reportDate: aggregate.metadata.reportDate,
+    generatedAt: aggregate.metadata.generatedAt,
+    rules: aggregate.ruleReports.map((ruleReport, index) => buildDailyResearchRulePresentation(ruleReport, driftViews[index])),
+    summary: { ...aggregate.summary },
+    overallNextActions: [...aggregate.overallNextActions],
   };
 }
