@@ -54,3 +54,39 @@ export type DailyResearchReportPresentation = {
   nextActions: string[];
   dataQualityNotes: string[];
 };
+
+/**
+ * 複数ルール向け（Phase 5.1）。1ルール分のDaily Report表示契約。
+ * `driftSummary`は既存の`DriftDetectionPresentation`をそのまま再利用する。
+ */
+export type DailyResearchRulePresentation = {
+  ruleId: string;
+  title: string | null;
+  status: string | null;
+  roiSummary: DailyResearchRoiPresentation;
+  driftSummary: DriftDetectionPresentation;
+  warnings: DailyResearchWarningPresentation[];
+  findings: DailyResearchFindingPresentation[];
+  nextActions: string[];
+  isProductionEligible: boolean;
+  isForwardTested: boolean;
+};
+
+/** 複数ルールの件数集計表示用。 */
+export type DailyResearchReportAggregateSummaryPresentation = {
+  totalRules: number;
+  criticalDriftCount: number;
+  warningDriftCount: number;
+  unknownDriftCount: number;
+  forwardUntestedCount: number;
+  nonProductionStatusCount: number;
+};
+
+/** 複数ルールDaily Research Report（Phase 5.1）コンポーネントの契約。 */
+export type DailyResearchReportAggregatePresentation = {
+  reportDate: string;
+  generatedAt: string;
+  rules: DailyResearchRulePresentation[];
+  summary: DailyResearchReportAggregateSummaryPresentation;
+  overallNextActions: string[];
+};

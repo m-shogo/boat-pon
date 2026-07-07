@@ -1,5 +1,5 @@
 import type { DriftDetectionResult, DriftSeverity } from "./researchDrift";
-import type { RuleEvaluationResult } from "./researchRule";
+import type { RuleEvaluationResult, RuleStatus } from "./researchRule";
 import { MIN_PRODUCTION_SAMPLE_SIZE } from "./researchRuleLifecycle";
 
 /**
@@ -204,7 +204,7 @@ export function buildDailyResearchNextActions(
   return actions;
 }
 
-function buildDailyResearchWarnings(roiWarnings: string[], driftWarnings: string[]): DailyResearchReportWarning[] {
+export function buildDailyResearchWarnings(roiWarnings: string[], driftWarnings: string[]): DailyResearchReportWarning[] {
   return [
     ...roiWarnings.map((message, index) => ({ id: `roi-${index}`, message })),
     ...driftWarnings.map((message, index) => ({ id: `drift-${index}`, message })),
@@ -239,5 +239,170 @@ export function buildDailyResearchReport(input: BuildDailyResearchReportInput): 
     warnings: buildDailyResearchWarnings(input.roiEvaluation.warnings, input.driftResult.warnings),
     nextActions: buildDailyResearchNextActions(roiSummary, driftSummary),
     dataQualityNotes: buildDailyResearchDataQualityNotes(input.roiEvaluation.warnings, input.driftResult.warnings),
+  };
+}
+
+/**
+ * 複数ルール向けDaily Research Report（Phase 5.1）。
+ *
+ * 重要な制約: `data/research-rules.json` の `ResearchRule` はまだルール固有の条件
+ * （venue/風速/展示順位等の絞り込み式）を持たない（`docs/ai/09-RULE-CANDIDATE-MIGRATION.md`）。
+ * そのため、ここで各ルールに紐づける `roiEvaluation`/`driftResult` は、そのルール専用に
+ * 絞り込んだ評価ではなく、呼び出し側（CLI）が計算した共通のdecision_history集計を
+ * ruleId/title/statusでラベル付けしただけのもの。これを隠さず、各ルールの`warnings`に
+ * 「ルール固有の条件では絞り込んでいない」旨を必ず明記する（ブラックボックス禁止の原則）。
+ */
+
+/** ルールの登録statusが"production"以外なら、Production運用実績として扱わない旨のfindingを返す。 */
+function buildRuleStatusFinding(status: RuleStatus | null): DailyResearchReportFinding | null {
+  if (!status || status === "production") return null;
+  return {
+    id: "rule-status-not-production",
+    title: "Production未達のルール",
+    detail: `registry status is "${status}"; this rule has not reached production, so this evaluation must not be treated as a production result.`,
+    severity: "watch",
+  };
+}
+
+export type DailyResearchRuleReport = {
+  ruleId: string;
+  title: string | null;
+  status: RuleStatus | null;
+  roiSummary: DailyResearchRoiSummary;
+  driftSummary: DailyResearchDriftSummary;
+  warnings: DailyResearchReportWarning[];
+  findings: DailyResearchReportFinding[];
+  nextActions: string[];
+  isProductionEligible: boolean;
+  isForwardTested: boolean;
+};
+
+export type BuildDailyResearchRuleReportInput = {
+  ruleId: string;
+  title?: string;
+  status?: RuleStatus;
+  roiEvaluation: RuleEvaluationResult;
+  driftResult: DriftDetectionResult;
+};
+
+/**
+ * 1ルール分の DailyResearchRuleReport を作る。ROI/severityの計算はやり直さず、
+ * 入力の `roiEvaluation`/`driftResult` を ruleId でラベル付けし直すだけ
+ * （数値・severityは呼び出し側が渡した値のまま）。
+ */
+export function buildDailyResearchRuleReport(input: BuildDailyResearchRuleReportInput): DailyResearchRuleReport {
+  const roiEvaluation: RuleEvaluationResult = { ...input.roiEvaluation, ruleId: input.ruleId };
+  const driftResult: DriftDetectionResult = { ...input.driftResult, ruleId: input.ruleId };
+
+  const roiSummary = buildDailyResearchRoiSummary(roiEvaluation);
+  const driftSummary = buildDailyResearchDriftSummary(driftResult);
+
+  const findings = buildDailyResearchFindings(roiSummary, driftSummary);
+  const statusFinding = buildRuleStatusFinding(input.status ?? null);
+  if (statusFinding) findings.push(statusFinding);
+
+  const warnings = buildDailyResearchWarnings(roiEvaluation.warnings, driftResult.warnings);
+  warnings.push({
+    id: "not-rule-specific-filter",
+    message:
+      `roi/drift for ruleId "${input.ruleId}" is the shared decision_history aggregate, not filtered by this ` +
+      "rule's specific hypothesis condition (research-rules.json does not store a queryable condition yet)",
+  });
+
+  return {
+    ruleId: input.ruleId,
+    title: input.title ?? null,
+    status: input.status ?? null,
+    roiSummary,
+    driftSummary,
+    warnings,
+    findings,
+    nextActions: buildDailyResearchNextActions(roiSummary, driftSummary),
+    isProductionEligible: roiSummary.isProductionEligible,
+    isForwardTested: roiSummary.isForwardTested,
+  };
+}
+
+export type DailyResearchReportAggregateSummary = {
+  totalRules: number;
+  criticalDriftCount: number;
+  warningDriftCount: number;
+  unknownDriftCount: number;
+  forwardUntestedCount: number;
+  nonProductionStatusCount: number;
+};
+
+export type DailyResearchReportAggregate = {
+  metadata: DailyResearchReportMetadata;
+  ruleReports: DailyResearchRuleReport[];
+  summary: DailyResearchReportAggregateSummary;
+  overallNextActions: string[];
+};
+
+/** severity/status別の件数を数えるだけで、判定基準そのものは作らない。 */
+function summarizeDailyResearchRuleReports(ruleReports: DailyResearchRuleReport[]): DailyResearchReportAggregateSummary {
+  return {
+    totalRules: ruleReports.length,
+    criticalDriftCount: ruleReports.filter((rule) => rule.driftSummary.severity === "critical").length,
+    warningDriftCount: ruleReports.filter((rule) => rule.driftSummary.severity === "warning" || rule.driftSummary.severity === "watch").length,
+    unknownDriftCount: ruleReports.filter((rule) => rule.driftSummary.severity === "unknown").length,
+    forwardUntestedCount: ruleReports.filter((rule) => !rule.isForwardTested).length,
+    nonProductionStatusCount: ruleReports.filter((rule) => rule.status !== "production").length,
+  };
+}
+
+/**
+ * 全体向けの次のアクション候補を作るだけで、自動採用・買い推奨・Production昇格は行わない。
+ * 文言は必ず「要検証」「見送り候補」「経過観察」等の研究用語に留める。
+ */
+function buildOverallNextActions(summary: DailyResearchReportAggregateSummary): string[] {
+  const actions: string[] = [];
+
+  if (summary.criticalDriftCount > 0) {
+    actions.push(
+      `critical drift検出ルールが${summary.criticalDriftCount}件。人が原因を確認し、除外/降格候補として要検討する（AI単独では判断しない）`,
+    );
+  }
+  if (summary.warningDriftCount > 0) {
+    actions.push(`軽度のROI悪化兆候があるルールが${summary.warningDriftCount}件。経過観察を継続する（要検証）`);
+  }
+  if (summary.unknownDriftCount > 0) {
+    actions.push(`recentサンプル不足でDrift判定不能のルールが${summary.unknownDriftCount}件。判定を保留する`);
+  }
+  if (summary.forwardUntestedCount > 0) {
+    actions.push(`Forward Test未通過のルールが${summary.forwardUntestedCount}件。継続してForward Testを実施する（見送り候補として扱う）`);
+  }
+  actions.push("このレポートは複数ルールのROI/Drift検証の要約であり、購入推奨・Production昇格・自動採用の判断根拠にはしない");
+
+  return actions;
+}
+
+export type DailyResearchRuleInput = {
+  ruleId: string;
+  title?: string;
+  status?: RuleStatus;
+  roiEvaluation: RuleEvaluationResult;
+  driftResult: DriftDetectionResult;
+};
+
+export type BuildMultiRuleDailyResearchReportInput = {
+  reportDate: string;
+  generatedAt: string;
+  rules: DailyResearchRuleInput[];
+};
+
+/**
+ * 複数ルールを1つの DailyResearchReportAggregate にまとめる。各ルールの評価は
+ * `buildDailyResearchRuleReport` に委譲し、ここではルール一覧の集約・件数集計のみ行う。
+ */
+export function buildMultiRuleDailyResearchReport(input: BuildMultiRuleDailyResearchReportInput): DailyResearchReportAggregate {
+  const ruleReports = input.rules.map((rule) => buildDailyResearchRuleReport(rule));
+  const summary = summarizeDailyResearchRuleReports(ruleReports);
+
+  return {
+    metadata: { reportDate: input.reportDate, generatedAt: input.generatedAt },
+    ruleReports,
+    summary,
+    overallNextActions: buildOverallNextActions(summary),
   };
 }
