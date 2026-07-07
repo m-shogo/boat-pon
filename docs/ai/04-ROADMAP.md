@@ -263,9 +263,10 @@ calibration乖離で`alert: "ok"|"watch"|"drift"`を出す、`report:calibration
       DBへの書き込みは一切行わない（`explore-roi.ts`と同じ read-only 接続）
 - [ ] 直近30/60/90日 vs 長期比較のプリセット（現状は`--baseline-*`/`--recent-*`を都度指定する
       adhoc運用のみ）
-- [ ] 複数ルール一括判定・`data/research-rules.json`との連携（現状は単一ruleIdのadhoc比較のみ）
+- [ ] 複数ルール一括判定（`data/research-rules.json`の**読み取り**連携はPhase 4.1で追加済み。
+      一括判定・複数ルールの並列実行は依然未着手）
 - [ ] 警告出力の通知連携（LINE/Web Push等への接続は未着手、Phase 5以降で判断）
-- [ ] ViewModel/Presentation層（`DriftSignalViewModel`等）は今回未実装。Domain + CLIのみ
+- [x] ViewModel/Presentation層（`DriftSignalViewModel`等）— Phase 4.1で追加（下記参照）
 
 ### Phase 4 実装ファイル（最小実装分）
 
@@ -285,6 +286,59 @@ calibration乖離で`alert: "ok"|"watch"|"drift"`を出す、`report:calibration
   はまだ無い。UI実装・Fable/React実装は今回のスコープ外
 - 通常pnpm環境での`pnpm typecheck`/`pnpm test`/`pnpm detect:drift -- --json`の正式実行は
   未確認（`docs/ai/05-VERIFICATION.md`参照）
+
+## Phase 4.1: Drift Operations（ViewModel/Presentation/ルールメタデータ） — `done`（最小実装）
+
+目的: Phase 4のDrift Detectionを単発CLIから研究運用に近づける。ROI計算・severity判定
+ロジックは一切変更せず、表示契約（ViewModel/Presentation）と`data/research-rules.json`
+の読み取り連携だけを追加する。本物のFable導入は引き続き行っていない。
+
+- [x] Drift ViewModel — `src/view-models/driftViewModel.ts`
+      （`DriftSignalViewModel`, `DriftDetectionViewModel`, `DriftSummaryViewModel`）
+- [x] Drift ViewModel adapter — `src/view-models/driftViewModel.adapters.ts`
+      （`buildDriftDetectionViewModel`, `buildDriftSummaryViewModel`。`DriftDetectionResult`の
+      severity/roi/signalsを再計算せず、そのまま表示用に整形するだけ）
+- [x] Drift Presentation — `src/presentation/driftPresentationModel.ts`
+      （`DriftDetectionPresentation`, `DriftSignalPresentation`, `DriftSummaryPresentation`。
+      既存`presentationModel.ts`と同じくrenderer非依存・JSONシリアライズ可能・domain型を
+      importしない独立した文字列リテラル型）
+- [x] Drift Presentation builder — `src/presentation/driftPresentationBuilder.ts`
+      （`buildDriftPresentation`, `buildDriftSummaryPresentation`。追加した唯一の派生値は
+      severity→表示ラベルの静的マップ`severityLabel`で、severity判定自体は変更しない）
+- [x] CLI `--presentation-json` — `scripts/detect-research-drift.ts`に追加。既存`--json`
+      （`DriftDetectionResult`そのまま）は無変更
+- [x] `data/research-rules.json`の読み取り専用連携 — `--rule-id`が一致するルールを
+      read-onlyで探し、title/statusを表示情報に添える（`loadRuleMeta`。ファイルが無い/
+      パース失敗/未一致なら従来通りadhoc ruleとして動く。書き込みは一切行わない）
+- [x] production以外のルールをproduction崩壊と断定しない安全装置 — ruleMeta.statusが
+      `"production"`以外の場合、`buildDriftDetectionViewModel`が
+      「この drift を confirmed production incident として扱わない」旨の警告を1件追加する
+      （AI単独判断禁止・ブラックボックス禁止の原則に沿う表示レベルの注記であり、
+      severity/signalsの判定そのものは変えない）
+
+### Phase 4.1 実装ファイル
+
+| ファイル | 内容 |
+|---|---|
+| `src/view-models/driftViewModel.ts` | `DriftSignalViewModel`, `DriftDetectionViewModel`, `DriftSummaryViewModel` |
+| `src/view-models/driftViewModel.adapters.ts` | `buildDriftDetectionViewModel`, `buildDriftSummaryViewModel` |
+| `src/view-models/driftViewModel.adapters.test.ts` | 8件のテスト（数値/signals非再計算、ruleMeta有無、production以外の注記付与/非付与） |
+| `src/presentation/driftPresentationModel.ts` | `DriftSeverityPresentation`, `DriftSignalPresentation`, `DriftDetectionPresentation`, `DriftSummaryPresentation` |
+| `src/presentation/driftPresentationBuilder.ts` | `buildDriftPresentation`, `buildDriftSummaryPresentation` |
+| `src/presentation/driftPresentation.test.ts` | スナップショット・キー混入検知・シリアライズ可能性・決定性のテスト（既存`presentation.test.ts`と同パターン） |
+| `scripts/detect-research-drift.ts` | `--presentation-json`追加、`--rule-id`のread-only `research-rules.json`連携（`loadRuleMeta`） |
+| `scripts/verify-drift-smoke.mjs` | `--presentation-json`必須フィールド・`--rule-id`連携・`research-rules.json`フィクスチャ非書き込みのシナリオを追加 |
+
+### Phase 4.1 残タスク・未決定事項（TODO）
+
+- `DriftSummaryViewModel`/`DriftSummaryPresentation`はまだCLIから単体で使われていない
+  （複数drift一覧はPhase 5 Daily Report接続時に使う想定の下地のみ）
+- React向けdriftコンポーネントの実装はまだ無い（`src/renderers/fable/`と同様、本物のFableは
+  依然未導入）
+- 複数ルール一括判定（`data/research-rules.json`のルールを全件走査してdrift判定する機能）は
+  Phase 4に引き続き未着手。今回追加したのは単一`--rule-id`のメタデータ読み取りのみ
+- 通常pnpm環境での`pnpm typecheck`/`pnpm test`/`pnpm detect:drift -- --presentation-json`の
+  正式実行結果は`docs/ai/05-VERIFICATION.md`を参照
 
 ## Phase 5: Daily Research Report — `not started`
 

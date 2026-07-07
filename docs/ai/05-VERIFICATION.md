@@ -296,6 +296,38 @@ Claude Code実行環境（`pnpm install`不可、既知の403制約、既に複�
 `git diff --stat origin/main...<branch>`が空であることを確認済みで、mainは両ブランチの
 変更を完全に含む。ブランチ削除はユーザーの明示的な指示があるまで行わない。
 
+### 2026-07-07: Phase 4.1 Drift Operations 実装後の検証（完了）
+
+`feature/phase4-1-drift-operations`ブランチ（mainから分岐）で、Drift ViewModel/
+Presentation/`--presentation-json`/`--rule-id`の`research-rules.json`読み取り連携
+（Phase 4.1）を追加した後の検証結果。
+
+- `pnpm typecheck` — **pass**（型エラーなし）
+- `pnpm test` — **235/235 pass**（Phase 4.1で追加した
+  `src/view-models/driftViewModel.adapters.test.ts`（8件）・
+  `src/presentation/driftPresentation.test.ts`（7件）を含む）
+- `pnpm detect:drift -- --baseline-from 2025-01-01 --baseline-to 2025-12-31 --recent-from 2026-01-01 --recent-to 2026-07-06 --json` — **pass**（`DriftDetectionResult`、既存Phase 4形状のまま変化なし）
+- `pnpm detect:drift -- (同条件) --presentation-json` — **pass**（`DriftDetectionPresentation`、
+  `severityLabel`/`ruleTitle`/`ruleStatus`を含む新形状。`--rule-id`未指定時は
+  `ruleTitle`/`ruleStatus`ともnull）
+- `pnpm run verify:strip-types` — **pass**（29/29）
+- `pnpm run verify:roi-smoke` — **pass**（全シナリオ）
+- `pnpm run verify:research-rules-dry-run` — **pass**（全チェック）
+- `pnpm run verify:drift-smoke` — **pass**（`--presentation-json`必須フィールド・
+  `--rule-id`によるフィクスチャ`research-rules.json`読み取り・読み取り後もフィクスチャが
+  byte-for-byte不変であることの確認シナリオを追加した上で全チェック）
+- 手動確認: `BOAT_PON_RULE_STORE_PATH`をスクラッチパッド上のフィクスチャJSONに向けて
+  `--rule-id`一致/不一致の両方を実行し、一致時はtitle/status付与＋
+  「confirmed production incidentとして扱わない」警告付与、不一致時はadhoc rule
+  （`ruleTitle`/`ruleStatus`ともnull）のままであることを確認。実行前後でフィクスチャ
+  ファイルの内容が変わっていないことも確認済み
+- `git status --short`は作業前後とも`reports/*`・`docs/rule-candidates.md`の既存差分
+  のみで、それ以外はクリーン。`data/research-rules.json`は生成・残置していない
+
+**結論**: Phase 4.1（Drift Operations最小実装）の正式検証が全てpassした。
+ROI計算・Research Engine・Rule Storeの状態遷移ロジックには一切触れておらず、
+表示契約（ViewModel/Presentation）とCLIの読み取り専用な補助表示のみを追加した。
+
 ## What to record in completion report
 
 検証結果を完了報告に含める際は、以下を明記する。
