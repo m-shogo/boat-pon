@@ -362,7 +362,8 @@ calibration乖離で`alert: "ok"|"watch"|"drift"`を出す、`report:calibration
       `dailyResearchReportBuilder.ts`。`driftSummary`は既存の`DriftDetectionPresentation`
       （Phase 4.1）をそのまま再利用し、severityLabel等を重複実装しない
 - [ ] 新仮説（Phase 2の出力から）の取り込みは未着手。現状はROI Explorerの単一評価のみ
-- [ ] Forward結果の複数ルール一覧は未着手（Phase 4.1同様、単一ruleIdのadhoc評価のみ）
+- [x] Forward結果の複数ルール一覧 — Phase 5.1で`--rules-file`による複数ルール横断が可能に
+      （下記「Phase 5.1」参照）
 - [ ] 今日のOpportunity（`OpportunityPresentation`との統合）は未着手
 - [ ] `docs/rule-candidates.md`の候補一覧との接続は未着手
 
@@ -381,12 +382,69 @@ calibration乖離で`alert: "ok"|"watch"|"drift"`を出す、`report:calibration
 
 - Drift窓のデフォルト（直近30日 vs それ以前の全期間）は暫定値。実運用実績を見ながら見直す
   （`docs/ai/10-DRIFT-OPERATIONS.md`の閾値注意と同様の扱い）
-- 複数ルールを1つのレポートにまとめる機能（`data/research-rules.json`の全件走査）は未着手。
-  現状は`daily-research-report-adhoc`という単一の固定ruleIdのみ
 - `OpportunityPresentation`・`RuleCardPresentation`との統合、`docs/rule-candidates.md`との
   接続はまだ判断していない
 - 通常pnpm環境での`pnpm typecheck`/`pnpm test`/`pnpm daily:research-report -- --json|--presentation-json`
   の正式実行結果は`docs/ai/05-VERIFICATION.md`を参照
+
+## Phase 5.1: Multiple Rule Daily Research Report — `done`（最小実装）
+
+目的: Phase 5の単一adhocレポートを、`data/research-rules.json`に登録された複数
+`ResearchRule`を横断して要約できる研究レポートへ拡張する。ROI/Drift計算のロジックは
+一切変更せず、既存の単一adhocレポート（`--rules-file`省略時）も無変更のまま残す。
+詳細は`docs/ai/11-DAILY-RESEARCH-REPORT.md`を参照。
+
+- [x] 複数ルール向けDomain型 — `src/domain/dailyResearchReport.ts`に追加
+      （`DailyResearchRuleReport`, `DailyResearchReportAggregate`,
+      `DailyResearchReportAggregateSummary`）。既存の`DailyResearchReport`（単一adhoc）は無変更
+- [x] 複数ルールBuilder — 同ファイルの`buildDailyResearchRuleReport`/
+      `buildMultiRuleDailyResearchReport`。ROI/severityは再計算せず、既存の
+      `buildDailyResearchRoiSummary`/`buildDailyResearchDriftSummary`/
+      `buildDailyResearchFindings`/`buildDailyResearchNextActions`をルールごとに再利用するだけ。
+      critical/warning(+watch)/unknownのdrift件数、Forward未通過件数、非production状態件数を
+      集計するが、集計結果から自動採用・買い推奨は行わない
+- [x] Production未満のルールを明示する安全装置 — `buildRuleStatusFinding`が、登録statusが
+      `"production"`以外のルールに対して「このルールはProductionに達しておらず、
+      この評価をProduction運用実績として扱ってはいけない」旨のfindingを必ず追加する
+- [x] ルール固有条件が無いことの明示 — `data/research-rules.json`の`ResearchRule`はまだ
+      ルール固有の絞り込み条件を持たないため、各ルールのROI/Driftは共通のdecision_history
+      集計をruleId/title/statusでラベル付けしたものに過ぎない。この事実を`warnings`に
+      必ず1件残す（ブラックボックス禁止の原則）
+- [x] `research-rules.json`のread-only読み取り — `scripts/daily-research-report.ts`に
+      `--rules-file <path>`を追加。read-only（`existsSync`+`readFileSync`のみ、
+      `writeFileSync`は一切呼ばない）。`archived`ステータスのルールは初期状態で除外。
+      ファイルが無い/パースできない場合は警告を出して単一adhocレポートへフォールバックする
+      （`--rules-file`を指定しなければ従来通り単一adhocレポートのまま、Phase 5から無変更）
+- [x] Presentation拡張 — `src/presentation/dailyResearchReportPresentation.ts`/
+      `dailyResearchReportBuilder.ts`に`DailyResearchRulePresentation`/
+      `DailyResearchReportAggregatePresentation`を追加。`driftSummary`は既存の
+      `DriftDetectionPresentation`をそのまま再利用し、severityLabel等を重複実装しない
+- [ ] `--include-archived`（archivedルールを含める）は未実装。Phase 5.2以降で検討
+- [ ] ルール固有の絞り込み条件（venue/風速/展示順位等）を`ResearchRule`が持つようにする
+      スキーマ拡張は未着手。それまでは複数ルールレポートも「共通集計のラベル付け」のまま
+
+### Phase 5.1 実装ファイル
+
+| ファイル | 内容 |
+|---|---|
+| `src/domain/dailyResearchReport.ts` | （既存ファイルへ追加）`DailyResearchRuleReport`, `DailyResearchReportAggregate`, `DailyResearchReportAggregateSummary`, `buildDailyResearchRuleReport`, `buildMultiRuleDailyResearchReport` |
+| `src/domain/dailyResearchReportMultiRule.test.ts` | 13件のテスト（ラベル付けのみで数値非変更、Production未達finding、archived許容、件数集計、overallNextActionsの非断定表現等） |
+| `src/presentation/dailyResearchReportPresentation.ts` | （既存ファイルへ追加）`DailyResearchRulePresentation`, `DailyResearchReportAggregateSummaryPresentation`, `DailyResearchReportAggregatePresentation` |
+| `src/presentation/dailyResearchReportBuilder.ts` | （既存ファイルへ追加）`buildDailyResearchRulePresentation`, `buildDailyResearchReportAggregatePresentation` |
+| `src/presentation/dailyResearchReportAggregatePresentation.test.ts` | 11件のテスト（キー混入検知・シリアライズ可能性・決定性・非production状態の表示） |
+| `scripts/daily-research-report.ts` | `--rules-file <path>`追加（read-only、archived除外、フォールバック動作） |
+
+### Phase 5.1 残タスク・未決定事項（TODO）
+
+- 各ルールのROI/Driftは依然「共通集計のラベル付け」であり、ルール固有条件での絞り込み
+  評価ではない。`ResearchRule`に条件を持たせるスキーマ拡張は今回のスコープ外
+- `--include-archived`は未実装（docsに残すだけの将来対応）
+- 複数ルールレポートの`reports/*`への自動出力・保存、通知連携は未着手
+- `DailyResearchReportAggregate`と`ResearchSummaryPresentation`（既存のRule Card一覧）との
+  統合方針は未判断
+- 通常pnpm環境での`pnpm typecheck`/`pnpm test`/
+  `pnpm daily:research-report -- --rules-file <path> --json|--presentation-json`の
+  正式実行結果は`docs/ai/05-VERIFICATION.md`を参照
 
 ## 進行ルール
 

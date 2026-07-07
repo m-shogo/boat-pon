@@ -418,6 +418,49 @@ CLI引数から調整できない。次回Phase 5.1の改善候補として残�
 **結論**: PR #11のmainへのmergeが完了し、post-merge verificationも全てpassした。
 Phase 5（Daily Research Report）はmainに正式に統合された。
 
+### 2026-07-07（続き）: Phase 5.1 Multiple Rule Daily Research Report 最小実装の検証（完了）
+
+`feature/phase5-1-multi-rule-daily-report`ブランチ（mainから分岐）で、複数ルール横断の
+Daily Research Report（`DailyResearchRuleReport`/`DailyResearchReportAggregate` +
+`--rules-file`）を追加した後の検証結果。
+
+- `pnpm typecheck` — **pass**（型エラーなし）
+- `pnpm test` — **279/279 pass**（Phase 5.1で追加した
+  `src/domain/dailyResearchReportMultiRule.test.ts`（13件）・
+  `src/presentation/dailyResearchReportAggregatePresentation.test.ts`（11件）を含む）
+- `pnpm daily:research-report -- --date 2026-07-06 --json` — **pass**（`--rules-file`
+  無し、Phase 5の単一adhoc出力が無変更のまま出力されることを確認）
+- `pnpm daily:research-report -- --date 2026-07-06 --presentation-json` — **pass**
+  （同上、単一adhocのPresentation出力も無変更）
+- `pnpm daily:research-report -- --date 2026-07-06 --rules-file ./tmp/research-rules-fixture.json --json` — **pass**
+  （3件登録・うち1件`archived`のフィクスチャに対して実行。`archived`が除外され
+  `totalRules: 2`、各ルールの`warnings`に「ルール固有の条件で絞り込んでいない」旨、
+  非production statusのルールに`rule-status-not-production` findingが入ることを確認）
+- `pnpm daily:research-report -- --date 2026-07-06 --rules-file ./tmp/research-rules-fixture.json --presentation-json` — **pass**
+  （`DailyResearchReportAggregatePresentation`。各ルールの`driftSummary`が既存の
+  `DriftDetectionPresentation`と同じ形（`ruleTitle`/`ruleStatus`/`severityLabel`含む）で
+  出力されることを確認）
+- `pnpm run verify:strip-types` — **pass**（29/29、影響なし）
+- `pnpm run verify:roi-smoke` — **pass**（全シナリオ）
+- `pnpm run verify:research-rules-dry-run` — **pass**（全チェック）
+- `pnpm run verify:drift-smoke` — **pass**（全チェック）
+- 手動確認: `./tmp/research-rules-fixture.json`（gitignore対象の`tmp/`配下、リポジトリには
+  コミットしていない）に対して`--json`/`--presentation-json`を複数回実行し、実行前後で
+  ファイルのMD5ハッシュが一致（byte-for-byte不変）することを確認。read-onlyであることを
+  裏付けた
+  - 存在しないパスを`--rules-file`に渡した場合、stderrへ警告を出したうえで単一adhoc
+    レポートへフォールバックすることも確認済み
+- `git status --short`は作業前後とも`reports/*`・`docs/rule-candidates.md`の既存差分
+  のみで、それ以外はクリーン。`data/research-rules.json`は生成・残置していない
+- 本物のFable/F#/Feliz/.NETは今回も導入していない
+
+**結論**: Phase 5.1（Multiple Rule Daily Research Report最小実装）の正式検証が
+全てpassした。ROI計算・Drift判定・Rule Storeの状態遷移ロジックには一切触れておらず、
+既存の単一adhocレポート（Phase 5、`--rules-file`省略時）も無変更のまま維持されている。
+各ルールの評価は共通decision_history集計のラベル付けに過ぎないことを`warnings`に必ず
+明記し、非production statusのルールをProduction運用実績として扱わない安全装置
+（`rule-status-not-production` finding）を組み込んだ。
+
 ## What to record in completion report
 
 検証結果を完了報告に含める際は、以下を明記する。
