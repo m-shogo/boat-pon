@@ -273,6 +273,29 @@ Claude Code実行環境（`pnpm install`不可、既知の403制約、既に複�
 `reports/*`・`docs/rule-candidates.md`・`data/research-rules.json`は今回のセッションでも
 一切触れていない。
 
+### 2026-07-07: Phase 4 merge後のpost-merge verification（main、完了）
+
+`feature/phase4-drift-detection`がPR #9でmainへmerge済みだったため、mainブランチ
+（`git pull origin main`でfast-forward後、`67dbeae3ebd256d84cd8b865e9431d5eebaf4e35`）
+上で正式検証を実施した。
+
+- main commit hash: `67dbeae3ebd256d84cd8b865e9431d5eebaf4e35`
+- `pnpm typecheck` — **pass**（型エラーなし）
+- `pnpm test` — **220/220 pass**
+- `pnpm detect:drift -- --baseline-from 2025-01-01 --baseline-to 2025-12-31 --recent-from 2026-01-01 --recent-to 2026-07-06 --json` — **pass**
+  （有効なJSON、exit 0。`severity: "none"`、baseline n=2265 / recent n=44）
+- `pnpm run verify:strip-types` — **pass**（29/29）
+- `pnpm run verify:roi-smoke` — **pass**（全シナリオ）
+- `pnpm run verify:research-rules-dry-run` — **pass**（全チェック）
+- `pnpm run verify:drift-smoke` — **pass**（severity=critical検知シナリオ含む全チェック）
+- 作業前後とも`git status --short`は`reports/*`・`docs/rule-candidates.md`の既存差分
+  のみで、それ以外はクリーン。`data/research-rules.json`は生成・残置していない
+
+**結論**: Phase 4（Rule Drift Detection）を含むmainの正式検証が全てpassした。
+`claude/boat-pon-platform-design-5s2cvm`・`feature/phase4-drift-detection`とも
+`git diff --stat origin/main...<branch>`が空であることを確認済みで、mainは両ブランチの
+変更を完全に含む。ブランチ削除はユーザーの明示的な指示があるまで行わない。
+
 ## What to record in completion report
 
 検証結果を完了報告に含める際は、以下を明記する。
