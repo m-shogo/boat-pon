@@ -389,6 +389,35 @@ ROI計算・Drift判定・Rule Storeの状態遷移ロジックには一切触�
 Presentation契約を追加した。findings/nextActionsは「要検証」「見送り」等の研究用語に
 留めており、買い推奨・Production昇格を意味する文言は含まれない。
 
+### 2026-07-07（続き）: PR #11 merge後のpost-merge verification（main、完了）
+
+PR #11（`feature/phase5-daily-research-report` → `main`）をReady化した上でmainへmerge。
+`git pull origin main`でfast-forward後のmain上で正式検証を実施した。
+
+- merge commit hash: `6eea7c4c5658d83a9e2cd98984fb7ed5752b3117`（PR #11、merge済み）
+- main commit hash: `6eea7c4c5658d83a9e2cd98984fb7ed5752b3117`
+- `pnpm typecheck` — **pass**（型エラーなし）
+- `pnpm test` — **255/255 pass**
+- `pnpm daily:research-report -- --date 2026-07-06 --json` — **pass**（`DailyResearchReport`
+  の必須フィールドが全て出力、exit 0）
+- `pnpm daily:research-report -- --date 2026-07-06 --presentation-json` — **pass**
+  （`DailyResearchReportPresentation`、`driftSummary`は既存`DriftDetectionPresentation`と
+  同じ形）
+- `pnpm run verify:strip-types` — **pass**（29/29）
+- `pnpm run verify:roi-smoke` — **pass**（全シナリオ）
+- `pnpm run verify:research-rules-dry-run` — **pass**（全チェック）
+- `pnpm run verify:drift-smoke` — **pass**（全チェック）
+- `git status --short`は作業前後とも`reports/*`・`docs/rule-candidates.md`の既存差分
+  のみで、それ以外はクリーン。`data/research-rules.json`は生成・残置していない
+- 本物のFable/F#/Feliz/.NETは今回も導入していない
+
+**軽微な所見（レビュー時に確認済み、ブロッカーではないため今回は未修正）**:
+`scripts/daily-research-report.ts`のDrift比較窓（`RECENT_WINDOW_DAYS = 30`）は固定値で、
+CLI引数から調整できない。次回Phase 5.1の改善候補として残す。
+
+**結論**: PR #11のmainへのmergeが完了し、post-merge verificationも全てpassした。
+Phase 5（Daily Research Report）はmainに正式に統合された。
+
 ## What to record in completion report
 
 検証結果を完了報告に含める際は、以下を明記する。
