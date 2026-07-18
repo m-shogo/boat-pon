@@ -1,0 +1,1631 @@
+{
+  "generatedAt": "2026-07-18T15:48:43.421Z",
+  "safety": {
+    "readOnly": true,
+    "preKnownCalendar": true,
+    "productionConnected": false
+  },
+  "coverage": {
+    "races": 4184,
+    "rows": 20920
+  },
+  "family": {
+    "factors": 11,
+    "selections": 5,
+    "cells": 55,
+    "eligible": 45
+  },
+  "stable": [
+    {
+      "id": "seven_day_placebo",
+      "label": "7・17・27日_placebo",
+      "group": "placebo",
+      "match": "month",
+      "selection": "1-4",
+      "discovery": {
+        "n": 240,
+        "hits": 35,
+        "edgePp": 3.4273861942322537,
+        "roi": 0.75875,
+        "max2HitExclRoi": 0.6084033613445378
+      },
+      "forward": {
+        "n": 116,
+        "hits": 15,
+        "edgePp": 2.9923442805734535,
+        "roi": 1.0422413793103449,
+        "max2HitExclRoi": 0.7035087719298245
+      },
+      "matched": {
+        "discovery": {
+          "treated": 240,
+          "matched": 176,
+          "coverage": 0.7333333333333333,
+          "deltaPp": 6.8436572713415185
+        },
+        "forward": {
+          "treated": 116,
+          "matched": 89,
+          "coverage": 0.7672413793103449,
+          "deltaPp": 3.4685878872290505
+        }
+      },
+      "leaveOne": {
+        "discovery": 5.998088901647367,
+        "forward": 1.2623600775301087
+      }
+    },
+    {
+      "id": "double_day_placebo",
+      "label": "11・22日_placebo",
+      "group": "placebo",
+      "match": "month",
+      "selection": "1-3",
+      "discovery": {
+        "n": 152,
+        "hits": 19,
+        "edgePp": 2.636080719492555,
+        "roi": 0.9427631578947369,
+        "max2HitExclRoi": 0.6966666666666667
+      },
+      "forward": {
+        "n": 92,
+        "hits": 12,
+        "edgePp": 3.281363033015536,
+        "roi": 1.1771739130434782,
+        "max2HitExclRoi": 0.8333333333333334
+      },
+      "matched": {
+        "discovery": {
+          "treated": 152,
+          "matched": 128,
+          "coverage": 0.8421052631578947,
+          "deltaPp": 3.8216491131509702
+        },
+        "forward": {
+          "treated": 92,
+          "matched": 62,
+          "coverage": 0.6739130434782609,
+          "deltaPp": 0.6735635131376044
+        }
+      },
+      "leaveOne": {
+        "discovery": 1.9403140107882129,
+        "forward": -1.2916317432909774
+      }
+    },
+    {
+      "id": "month_start_1_3",
+      "label": "月初1〜3日",
+      "group": "calendar",
+      "match": "month",
+      "selection": "1-4",
+      "discovery": {
+        "n": 475,
+        "hits": 58,
+        "edgePp": 2.027545545769475,
+        "roi": 0.9147368421052632,
+        "max2HitExclRoi": 0.7961945031712474
+      },
+      "forward": {
+        "n": 416,
+        "hits": 51,
+        "edgePp": 1.6250465313270321,
+        "roi": 1.1326923076923077,
+        "max2HitExclRoi": 0.9545893719806763
+      },
+      "matched": {
+        "discovery": {
+          "treated": 475,
+          "matched": 330,
+          "coverage": 0.6947368421052632,
+          "deltaPp": -0.5668370117226565
+        },
+        "forward": {
+          "treated": 416,
+          "matched": 212,
+          "coverage": 0.5096153846153846,
+          "deltaPp": 1.4210227671761901
+        }
+      },
+      "leaveOne": {
+        "discovery": -1.8490931276243399,
+        "forward": -0.6430064494117627
+      }
+    },
+    {
+      "id": "month_start_1_3",
+      "label": "月初1〜3日",
+      "group": "calendar",
+      "match": "month",
+      "selection": "1-5",
+      "discovery": {
+        "n": 475,
+        "hits": 32,
+        "edgePp": 1.1944118556748526,
+        "roi": 0.7105263157894737,
+        "max2HitExclRoi": 0.5190274841437632
+      },
+      "forward": {
+        "n": 416,
+        "hits": 30,
+        "edgePp": 1.7110418286913947,
+        "roi": 0.7012019230769231,
+        "max2HitExclRoi": 0.5041062801932367
+      },
+      "matched": {
+        "discovery": {
+          "treated": 475,
+          "matched": 330,
+          "coverage": 0.6947368421052632,
+          "deltaPp": 1.8003588373620902
+        },
+        "forward": {
+          "treated": 416,
+          "matched": 212,
+          "coverage": 0.5096153846153846,
+          "deltaPp": 0.8816690353352034
+        }
+      },
+      "leaveOne": {
+        "discovery": 0.7726834378751537,
+        "forward": 0.25147306820655657
+      }
+    },
+    {
+      "id": "weekend",
+      "label": "土日",
+      "group": "weekday",
+      "match": "month",
+      "selection": "1-4",
+      "discovery": {
+        "n": 873,
+        "hits": 99,
+        "edgePp": 1.1913382520453115,
+        "roi": 0.8312714776632303,
+        "max2HitExclRoi": 0.735361653272101
+      },
+      "forward": {
+        "n": 457,
+        "hits": 68,
+        "edgePp": 4.86532230987821,
+        "roi": 1.1787746170678337,
+        "max2HitExclRoi": 1.049010989010989
+      },
+      "matched": {
+        "discovery": {
+          "treated": 873,
+          "matched": 598,
+          "coverage": 0.6849942726231386,
+          "deltaPp": 2.257276716044101
+        },
+        "forward": {
+          "treated": 457,
+          "matched": 261,
+          "coverage": 0.5711159737417943,
+          "deltaPp": 4.850565051941438
+        }
+      },
+      "leaveOne": {
+        "discovery": 1.4403798467407465,
+        "forward": 3.1144807244368673
+      }
+    },
+    {
+      "id": "prime_day_placebo",
+      "label": "素数日_placebo",
+      "group": "placebo",
+      "match": "month",
+      "selection": "1-4",
+      "discovery": {
+        "n": 1090,
+        "hits": 127,
+        "edgePp": 1.2898973877040556,
+        "roi": 0.8387155963302753,
+        "max2HitExclRoi": 0.7619485294117647
+      },
+      "forward": {
+        "n": 645,
+        "hits": 73,
+        "edgePp": 1.0971602274374224,
+        "roi": 0.9503875968992248,
+        "max2HitExclRoi": 0.838258164852255
+      },
+      "matched": {
+        "discovery": {
+          "treated": 1090,
+          "matched": 721,
+          "coverage": 0.6614678899082569,
+          "deltaPp": 1.4155829657699674
+        },
+        "forward": {
+          "treated": 645,
+          "matched": 354,
+          "coverage": 0.5488372093023256,
+          "deltaPp": 3.3096394962759437
+        }
+      },
+      "leaveOne": {
+        "discovery": 0.5728347285885292,
+        "forward": 2.450829282749178
+      }
+    },
+    {
+      "id": "seven_day_placebo",
+      "label": "7・17・27日_placebo",
+      "group": "placebo",
+      "match": "month",
+      "selection": "1-5",
+      "discovery": {
+        "n": 240,
+        "hits": 15,
+        "edgePp": 0.9189062165180673,
+        "roi": 0.555,
+        "max2HitExclRoi": 0.4294117647058823
+      },
+      "forward": {
+        "n": 116,
+        "hits": 9,
+        "edgePp": 2.6775421779895745,
+        "roi": 0.9198275862068965,
+        "max2HitExclRoi": 0.5105263157894737
+      },
+      "matched": {
+        "discovery": {
+          "treated": 240,
+          "matched": 176,
+          "coverage": 0.7333333333333333,
+          "deltaPp": 0.6790257955407594
+        },
+        "forward": {
+          "treated": 116,
+          "matched": 89,
+          "coverage": 0.7672413793103449,
+          "deltaPp": 1.6929497298577802
+        }
+      },
+      "leaveOne": {
+        "discovery": -0.062119514888575186,
+        "forward": 0.46145109899230513
+      }
+    },
+    {
+      "id": "double_day_placebo",
+      "label": "11・22日_placebo",
+      "group": "placebo",
+      "match": "month",
+      "selection": "1-4",
+      "discovery": {
+        "n": 152,
+        "hits": 17,
+        "edgePp": 0.7285478073872977,
+        "roi": 1.069078947368421,
+        "max2HitExclRoi": 0.6173333333333333
+      },
+      "forward": {
+        "n": 92,
+        "hits": 10,
+        "edgePp": 1.3175858437662766,
+        "roi": 0.8902173913043478,
+        "max2HitExclRoi": 0.5466666666666666
+      },
+      "matched": {
+        "discovery": {
+          "treated": 152,
+          "matched": 128,
+          "coverage": 0.8421052631578947,
+          "deltaPp": 0.855210452692375
+        },
+        "forward": {
+          "treated": 92,
+          "matched": 62,
+          "coverage": 0.6739130434782609,
+          "deltaPp": 4.55086889681424
+        }
+      },
+      "leaveOne": {
+        "discovery": -1.9243969827474423,
+        "forward": 2.01470239761388
+      }
+    },
+    {
+      "id": "gotobi",
+      "label": "五十日（5・10・15・20・25・30日）",
+      "group": "calendar",
+      "match": "month",
+      "selection": "1-6",
+      "discovery": {
+        "n": 495,
+        "hits": 27,
+        "edgePp": 0.8999256064453429,
+        "roi": 0.7983838383838384,
+        "max2HitExclRoi": 0.5762677484787019
+      },
+      "forward": {
+        "n": 212,
+        "hits": 10,
+        "edgePp": 0.55393045988029,
+        "roi": 0.9240566037735849,
+        "max2HitExclRoi": 0.40190476190476193
+      },
+      "matched": {
+        "discovery": {
+          "treated": 495,
+          "matched": 379,
+          "coverage": 0.7656565656565657,
+          "deltaPp": -0.13284472088861166
+        },
+        "forward": {
+          "treated": 212,
+          "matched": 146,
+          "coverage": 0.6886792452830188,
+          "deltaPp": -1.3972903332546711
+        }
+      },
+      "leaveOne": {
+        "discovery": -0.9224863452443249,
+        "forward": -2.561777197915741
+      }
+    },
+    {
+      "id": "weekend",
+      "label": "土日",
+      "group": "weekday",
+      "match": "month",
+      "selection": "1-6",
+      "discovery": {
+        "n": 873,
+        "hits": 44,
+        "edgePp": 0.5318900072080617,
+        "roi": 0.5666666666666667,
+        "max2HitExclRoi": 0.46280137772675084
+      },
+      "forward": {
+        "n": 457,
+        "hits": 23,
+        "edgePp": 0.6149086614776492,
+        "roi": 0.573960612691466,
+        "max2HitExclRoi": 0.3903296703296703
+      },
+      "matched": {
+        "discovery": {
+          "treated": 873,
+          "matched": 598,
+          "coverage": 0.6849942726231386,
+          "deltaPp": -2.632547480048026
+        },
+        "forward": {
+          "treated": 457,
+          "matched": 261,
+          "coverage": 0.5711159737417943,
+          "deltaPp": 2.449846450653672
+        }
+      },
+      "leaveOne": {
+        "discovery": -3.184100455933661,
+        "forward": 1.6384340830325952
+      }
+    },
+    {
+      "id": "friday",
+      "label": "金曜日",
+      "group": "weekday",
+      "match": "month",
+      "selection": "1-6",
+      "discovery": {
+        "n": 377,
+        "hits": 22,
+        "edgePp": 0.5217291391524299,
+        "roi": 1.2389920424403182,
+        "max2HitExclRoi": 0.8557333333333333
+      },
+      "forward": {
+        "n": 195,
+        "hits": 11,
+        "edgePp": 0.49957386672271553,
+        "roi": 1.2446153846153847,
+        "max2HitExclRoi": 0.45077720207253885
+      },
+      "matched": {
+        "discovery": {
+          "treated": 377,
+          "matched": 285,
+          "coverage": 0.7559681697612732,
+          "deltaPp": 0.7454112366436776
+        },
+        "forward": {
+          "treated": 195,
+          "matched": 139,
+          "coverage": 0.7128205128205128,
+          "deltaPp": 0.5330223456813405
+        }
+      },
+      "leaveOne": {
+        "discovery": -0.01884839613106162,
+        "forward": -0.3876057315692642
+      }
+    },
+    {
+      "id": "friday",
+      "label": "金曜日",
+      "group": "weekday",
+      "match": "month",
+      "selection": "1-2",
+      "discovery": {
+        "n": 377,
+        "hits": 42,
+        "edgePp": 2.7372299399137665,
+        "roi": 0.9628647214854111,
+        "max2HitExclRoi": 0.8682666666666666
+      },
+      "forward": {
+        "n": 195,
+        "hits": 17,
+        "edgePp": 0.37460391030883317,
+        "roi": 0.681025641025641,
+        "max2HitExclRoi": 0.5321243523316063
+      },
+      "matched": {
+        "discovery": {
+          "treated": 377,
+          "matched": 285,
+          "coverage": 0.7559681697612732,
+          "deltaPp": 2.511548849123578
+        },
+        "forward": {
+          "treated": 195,
+          "matched": 139,
+          "coverage": 0.7128205128205128,
+          "deltaPp": 0.7244029083728739
+        }
+      },
+      "leaveOne": {
+        "discovery": 1.2379228497993504,
+        "forward": -0.26671360145251816
+      }
+    },
+    {
+      "id": "month_start_1_3",
+      "label": "月初1〜3日",
+      "group": "calendar",
+      "match": "month",
+      "selection": "1-2",
+      "discovery": {
+        "n": 475,
+        "hits": 41,
+        "edgePp": 0.4782613925626525,
+        "roi": 0.7888421052631579,
+        "max2HitExclRoi": 0.6980972515856236
+      },
+      "forward": {
+        "n": 416,
+        "hits": 37,
+        "edgePp": 0.2942608956046768,
+        "roi": 0.7819711538461539,
+        "max2HitExclRoi": 0.6777777777777778
+      },
+      "matched": {
+        "discovery": {
+          "treated": 475,
+          "matched": 330,
+          "coverage": 0.6947368421052632,
+          "deltaPp": -2.6878576173091284
+        },
+        "forward": {
+          "treated": 416,
+          "matched": 212,
+          "coverage": 0.5096153846153846,
+          "deltaPp": 1.9687549801543456
+        }
+      },
+      "leaveOne": {
+        "discovery": -4.0395327487167165,
+        "forward": 1.1083944525021008
+      }
+    },
+    {
+      "id": "gotobi",
+      "label": "五十日（5・10・15・20・25・30日）",
+      "group": "calendar",
+      "match": "month",
+      "selection": "1-2",
+      "discovery": {
+        "n": 495,
+        "hits": 57,
+        "edgePp": 2.632907800676556,
+        "roi": 1.0280808080808082,
+        "max2HitExclRoi": 0.9235294117647059
+      },
+      "forward": {
+        "n": 212,
+        "hits": 17,
+        "edgePp": 0.24833743095772207,
+        "roi": 0.8202830188679245,
+        "max2HitExclRoi": 0.6390476190476191
+      },
+      "matched": {
+        "discovery": {
+          "treated": 495,
+          "matched": 379,
+          "coverage": 0.7656565656565657,
+          "deltaPp": 1.342126254042835
+        },
+        "forward": {
+          "treated": 212,
+          "matched": 146,
+          "coverage": 0.6886792452830188,
+          "deltaPp": 2.0960309616924477
+        }
+      },
+      "leaveOne": {
+        "discovery": 0.4973907787265393,
+        "forward": 0.8383310899689247
+      }
+    },
+    {
+      "id": "monday",
+      "label": "月曜日",
+      "group": "weekday",
+      "match": "month",
+      "selection": "1-2",
+      "discovery": {
+        "n": 379,
+        "hits": 36,
+        "edgePp": 1.1274719840901173,
+        "roi": 0.8596306068601584,
+        "max2HitExclRoi": 0.7307692307692307
+      },
+      "forward": {
+        "n": 208,
+        "hits": 17,
+        "edgePp": 0.2127394195983896,
+        "roi": 0.6028846153846154,
+        "max2HitExclRoi": 0.45048543689320386
+      },
+      "matched": {
+        "discovery": {
+          "treated": 379,
+          "matched": 295,
+          "coverage": 0.7783641160949868,
+          "deltaPp": -0.7314815430956831
+        },
+        "forward": {
+          "treated": 208,
+          "matched": 135,
+          "coverage": 0.6490384615384616,
+          "deltaPp": 3.4449370737667144
+        }
+      },
+      "leaveOne": {
+        "discovery": -1.4699714606979262,
+        "forward": 2.1523972723672036
+      }
+    },
+    {
+      "id": "friday",
+      "label": "金曜日",
+      "group": "weekday",
+      "match": "month",
+      "selection": "1-4",
+      "discovery": {
+        "n": 377,
+        "hits": 37,
+        "edgePp": 0.17811511288995205,
+        "roi": 0.7185676392572944,
+        "max2HitExclRoi": 0.5530666666666667
+      },
+      "forward": {
+        "n": 195,
+        "hits": 21,
+        "edgePp": 1.8916312940067022,
+        "roi": 1.101025641025641,
+        "max2HitExclRoi": 0.7870466321243523
+      },
+      "matched": {
+        "discovery": {
+          "treated": 377,
+          "matched": 285,
+          "coverage": 0.7559681697612732,
+          "deltaPp": -0.08258183824586271
+        },
+        "forward": {
+          "treated": 195,
+          "matched": 139,
+          "coverage": 0.7128205128205128,
+          "deltaPp": 0.3721843876734278
+        }
+      },
+      "leaveOne": {
+        "discovery": -0.9508796334559626,
+        "forward": -1.058816111887113
+      }
+    },
+    {
+      "id": "friday",
+      "label": "金曜日",
+      "group": "weekday",
+      "match": "month",
+      "selection": "1-5",
+      "discovery": {
+        "n": 377,
+        "hits": 22,
+        "edgePp": 0.09590758434067809,
+        "roi": 0.5106100795755968,
+        "max2HitExclRoi": 0.37066666666666664
+      },
+      "forward": {
+        "n": 195,
+        "hits": 10,
+        "edgePp": 0.4600070898795895,
+        "roi": 0.44051282051282054,
+        "max2HitExclRoi": 0.23005181347150258
+      },
+      "matched": {
+        "discovery": {
+          "treated": 377,
+          "matched": 285,
+          "coverage": 0.7559681697612732,
+          "deltaPp": 0.9267039289711478
+        },
+        "forward": {
+          "treated": 195,
+          "matched": 139,
+          "coverage": 0.7128205128205128,
+          "deltaPp": -4.215871254999928
+        }
+      },
+      "leaveOne": {
+        "discovery": -0.027376354457527664,
+        "forward": -5.285293908555993
+      }
+    },
+    {
+      "id": "prime_day_placebo",
+      "label": "素数日_placebo",
+      "group": "placebo",
+      "match": "month",
+      "selection": "1-3",
+      "discovery": {
+        "n": 1090,
+        "hits": 110,
+        "edgePp": 0.4374559914558884,
+        "roi": 0.6792660550458716,
+        "max2HitExclRoi": 0.6295955882352942
+      },
+      "forward": {
+        "n": 645,
+        "hits": 66,
+        "edgePp": 0.08951403558143496,
+        "roi": 0.8224806201550388,
+        "max2HitExclRoi": 0.74199066874028
+      },
+      "matched": {
+        "discovery": {
+          "treated": 1090,
+          "matched": 721,
+          "coverage": 0.6614678899082569,
+          "deltaPp": 1.601596105561088
+        },
+        "forward": {
+          "treated": 645,
+          "matched": 354,
+          "coverage": 0.5488372093023256,
+          "deltaPp": 0.20449664064513326
+        }
+      },
+      "leaveOne": {
+        "discovery": 0.6523146241086979,
+        "forward": -0.4688024955990525
+      }
+    }
+  ],
+  "robust": [],
+  "matchedPositive": [
+    {
+      "id": "weekend",
+      "label": "土日",
+      "group": "weekday",
+      "match": "month",
+      "selection": "1-4",
+      "discovery": {
+        "n": 873,
+        "hits": 99,
+        "edgePp": 1.1913382520453115,
+        "roi": 0.8312714776632303,
+        "max2HitExclRoi": 0.735361653272101
+      },
+      "forward": {
+        "n": 457,
+        "hits": 68,
+        "edgePp": 4.86532230987821,
+        "roi": 1.1787746170678337,
+        "max2HitExclRoi": 1.049010989010989
+      },
+      "matched": {
+        "discovery": {
+          "treated": 873,
+          "matched": 598,
+          "coverage": 0.6849942726231386,
+          "deltaPp": 2.257276716044101
+        },
+        "forward": {
+          "treated": 457,
+          "matched": 261,
+          "coverage": 0.5711159737417943,
+          "deltaPp": 4.850565051941438
+        }
+      },
+      "leaveOne": {
+        "discovery": 1.4403798467407465,
+        "forward": 3.1144807244368673
+      }
+    },
+    {
+      "id": "bonus_month",
+      "label": "6月・12月（賞与月proxy）",
+      "group": "season",
+      "match": "quarter",
+      "selection": "1-3",
+      "discovery": {
+        "n": 470,
+        "hits": 47,
+        "edgePp": -0.45261574229083457,
+        "roi": 0.6280851063829788,
+        "max2HitExclRoi": 0.5401709401709401
+      },
+      "forward": {
+        "n": 190,
+        "hits": 20,
+        "edgePp": 0.9966670786337528,
+        "roi": 0.8710526315789474,
+        "max2HitExclRoi": 0.625
+      },
+      "matched": {
+        "discovery": {
+          "treated": 470,
+          "matched": 416,
+          "coverage": 0.8851063829787233,
+          "deltaPp": 1.5909995999231592
+        },
+        "forward": {
+          "treated": 190,
+          "matched": 163,
+          "coverage": 0.8578947368421053,
+          "deltaPp": 3.7525470124938836
+        }
+      },
+      "leaveOne": {
+        "discovery": 1.0546459289793715,
+        "forward": 1.9834842281656235
+      }
+    },
+    {
+      "id": "weekend",
+      "label": "土日",
+      "group": "weekday",
+      "match": "month",
+      "selection": "1-3",
+      "discovery": {
+        "n": 873,
+        "hits": 85,
+        "edgePp": -0.061904519718204994,
+        "roi": 0.645589919816724,
+        "max2HitExclRoi": 0.6035591274397245
+      },
+      "forward": {
+        "n": 457,
+        "hits": 48,
+        "edgePp": 1.0141214901968243,
+        "roi": 0.8665207877461707,
+        "max2HitExclRoi": 0.74
+      },
+      "matched": {
+        "discovery": {
+          "treated": 873,
+          "matched": 598,
+          "coverage": 0.6849942726231386,
+          "deltaPp": 1.356831726903865
+        },
+        "forward": {
+          "treated": 457,
+          "matched": 261,
+          "coverage": 0.5711159737417943,
+          "deltaPp": 1.9275645049844956
+        }
+      },
+      "leaveOne": {
+        "discovery": 0.856193848283906,
+        "forward": 1.019778242343627
+      }
+    },
+    {
+      "id": "gotobi",
+      "label": "五十日（5・10・15・20・25・30日）",
+      "group": "calendar",
+      "match": "month",
+      "selection": "1-2",
+      "discovery": {
+        "n": 495,
+        "hits": 57,
+        "edgePp": 2.632907800676556,
+        "roi": 1.0280808080808082,
+        "max2HitExclRoi": 0.9235294117647059
+      },
+      "forward": {
+        "n": 212,
+        "hits": 17,
+        "edgePp": 0.24833743095772207,
+        "roi": 0.8202830188679245,
+        "max2HitExclRoi": 0.6390476190476191
+      },
+      "matched": {
+        "discovery": {
+          "treated": 495,
+          "matched": 379,
+          "coverage": 0.7656565656565657,
+          "deltaPp": 1.342126254042835
+        },
+        "forward": {
+          "treated": 212,
+          "matched": 146,
+          "coverage": 0.6886792452830188,
+          "deltaPp": 2.0960309616924477
+        }
+      },
+      "leaveOne": {
+        "discovery": 0.4973907787265393,
+        "forward": 0.8383310899689247
+      }
+    },
+    {
+      "id": "month_start_1_3",
+      "label": "月初1〜3日",
+      "group": "calendar",
+      "match": "month",
+      "selection": "1-5",
+      "discovery": {
+        "n": 475,
+        "hits": 32,
+        "edgePp": 1.1944118556748526,
+        "roi": 0.7105263157894737,
+        "max2HitExclRoi": 0.5190274841437632
+      },
+      "forward": {
+        "n": 416,
+        "hits": 30,
+        "edgePp": 1.7110418286913947,
+        "roi": 0.7012019230769231,
+        "max2HitExclRoi": 0.5041062801932367
+      },
+      "matched": {
+        "discovery": {
+          "treated": 475,
+          "matched": 330,
+          "coverage": 0.6947368421052632,
+          "deltaPp": 1.8003588373620902
+        },
+        "forward": {
+          "treated": 416,
+          "matched": 212,
+          "coverage": 0.5096153846153846,
+          "deltaPp": 0.8816690353352034
+        }
+      },
+      "leaveOne": {
+        "discovery": 0.7726834378751537,
+        "forward": 0.25147306820655657
+      }
+    },
+    {
+      "id": "friday",
+      "label": "金曜日",
+      "group": "weekday",
+      "match": "month",
+      "selection": "1-2",
+      "discovery": {
+        "n": 377,
+        "hits": 42,
+        "edgePp": 2.7372299399137665,
+        "roi": 0.9628647214854111,
+        "max2HitExclRoi": 0.8682666666666666
+      },
+      "forward": {
+        "n": 195,
+        "hits": 17,
+        "edgePp": 0.37460391030883317,
+        "roi": 0.681025641025641,
+        "max2HitExclRoi": 0.5321243523316063
+      },
+      "matched": {
+        "discovery": {
+          "treated": 377,
+          "matched": 285,
+          "coverage": 0.7559681697612732,
+          "deltaPp": 2.511548849123578
+        },
+        "forward": {
+          "treated": 195,
+          "matched": 139,
+          "coverage": 0.7128205128205128,
+          "deltaPp": 0.7244029083728739
+        }
+      },
+      "leaveOne": {
+        "discovery": 1.2379228497993504,
+        "forward": -0.26671360145251816
+      }
+    },
+    {
+      "id": "gotobi",
+      "label": "五十日（5・10・15・20・25・30日）",
+      "group": "calendar",
+      "match": "month",
+      "selection": "1-3",
+      "discovery": {
+        "n": 495,
+        "hits": 47,
+        "edgePp": -0.27367518273519786,
+        "roi": 0.6444444444444445,
+        "max2HitExclRoi": 0.568762677484787
+      },
+      "forward": {
+        "n": 212,
+        "hits": 23,
+        "edgePp": 0.971278766499716,
+        "roi": 0.8721698113207547,
+        "max2HitExclRoi": 0.6628571428571428
+      },
+      "matched": {
+        "discovery": {
+          "treated": 495,
+          "matched": 379,
+          "coverage": 0.7656565656565657,
+          "deltaPp": 0.7243105479273588
+        },
+        "forward": {
+          "treated": 212,
+          "matched": 146,
+          "coverage": 0.6886792452830188,
+          "deltaPp": 2.0012412697643573
+        }
+      },
+      "leaveOne": {
+        "discovery": -0.010341838029422703,
+        "forward": 0.6148517495507224
+      }
+    },
+    {
+      "id": "friday",
+      "label": "金曜日",
+      "group": "weekday",
+      "match": "month",
+      "selection": "1-6",
+      "discovery": {
+        "n": 377,
+        "hits": 22,
+        "edgePp": 0.5217291391524299,
+        "roi": 1.2389920424403182,
+        "max2HitExclRoi": 0.8557333333333333
+      },
+      "forward": {
+        "n": 195,
+        "hits": 11,
+        "edgePp": 0.49957386672271553,
+        "roi": 1.2446153846153847,
+        "max2HitExclRoi": 0.45077720207253885
+      },
+      "matched": {
+        "discovery": {
+          "treated": 377,
+          "matched": 285,
+          "coverage": 0.7559681697612732,
+          "deltaPp": 0.7454112366436776
+        },
+        "forward": {
+          "treated": 195,
+          "matched": 139,
+          "coverage": 0.7128205128205128,
+          "deltaPp": 0.5330223456813405
+        }
+      },
+      "leaveOne": {
+        "discovery": -0.01884839613106162,
+        "forward": -0.3876057315692642
+      }
+    }
+  ],
+  "placebo": [
+    {
+      "id": "seven_day_placebo",
+      "label": "7・17・27日_placebo",
+      "group": "placebo",
+      "match": "month",
+      "selection": "1-2",
+      "discovery": {
+        "n": 240,
+        "hits": 29,
+        "edgePp": 3.1926533029854314,
+        "roi": 0.9141666666666667,
+        "max2HitExclRoi": 0.7928571428571428
+      },
+      "forward": {
+        "n": 116,
+        "hits": 5,
+        "edgePp": -4.241663793356254,
+        "roi": 0.34051724137931033,
+        "max2HitExclRoi": 0.13157894736842105
+      },
+      "matched": {
+        "discovery": {
+          "treated": 240,
+          "matched": 176,
+          "coverage": 0.7333333333333333,
+          "deltaPp": 0.4480218681280482
+        },
+        "forward": {
+          "treated": 116,
+          "matched": 89,
+          "coverage": 0.7672413793103449,
+          "deltaPp": -3.22400629080575
+        }
+      },
+      "leaveOne": {
+        "discovery": -0.7569281347840945,
+        "forward": -4.439837959063521
+      }
+    },
+    {
+      "id": "seven_day_placebo",
+      "label": "7・17・27日_placebo",
+      "group": "placebo",
+      "match": "month",
+      "selection": "1-3",
+      "discovery": {
+        "n": 240,
+        "hits": 18,
+        "edgePp": -1.355526693719491,
+        "roi": 0.59125,
+        "max2HitExclRoi": 0.4436974789915966
+      },
+      "forward": {
+        "n": 116,
+        "hits": 10,
+        "edgePp": -1.2913393190126838,
+        "roi": 1.0336206896551725,
+        "max2HitExclRoi": 0.6447368421052632
+      },
+      "matched": {
+        "discovery": {
+          "treated": 240,
+          "matched": 176,
+          "coverage": 0.7333333333333333,
+          "deltaPp": 0.5363872860808492
+        },
+        "forward": {
+          "treated": 116,
+          "matched": 89,
+          "coverage": 0.7672413793103449,
+          "deltaPp": -5.1385583661543945
+        }
+      },
+      "leaveOne": {
+        "discovery": -0.6723215534363939,
+        "forward": -6.55859763697173
+      }
+    },
+    {
+      "id": "seven_day_placebo",
+      "label": "7・17・27日_placebo",
+      "group": "placebo",
+      "match": "month",
+      "selection": "1-4",
+      "discovery": {
+        "n": 240,
+        "hits": 35,
+        "edgePp": 3.4273861942322537,
+        "roi": 0.75875,
+        "max2HitExclRoi": 0.6084033613445378
+      },
+      "forward": {
+        "n": 116,
+        "hits": 15,
+        "edgePp": 2.9923442805734535,
+        "roi": 1.0422413793103449,
+        "max2HitExclRoi": 0.7035087719298245
+      },
+      "matched": {
+        "discovery": {
+          "treated": 240,
+          "matched": 176,
+          "coverage": 0.7333333333333333,
+          "deltaPp": 6.8436572713415185
+        },
+        "forward": {
+          "treated": 116,
+          "matched": 89,
+          "coverage": 0.7672413793103449,
+          "deltaPp": 3.4685878872290505
+        }
+      },
+      "leaveOne": {
+        "discovery": 5.998088901647367,
+        "forward": 1.2623600775301087
+      }
+    },
+    {
+      "id": "seven_day_placebo",
+      "label": "7・17・27日_placebo",
+      "group": "placebo",
+      "match": "month",
+      "selection": "1-5",
+      "discovery": {
+        "n": 240,
+        "hits": 15,
+        "edgePp": 0.9189062165180673,
+        "roi": 0.555,
+        "max2HitExclRoi": 0.4294117647058823
+      },
+      "forward": {
+        "n": 116,
+        "hits": 9,
+        "edgePp": 2.6775421779895745,
+        "roi": 0.9198275862068965,
+        "max2HitExclRoi": 0.5105263157894737
+      },
+      "matched": {
+        "discovery": {
+          "treated": 240,
+          "matched": 176,
+          "coverage": 0.7333333333333333,
+          "deltaPp": 0.6790257955407594
+        },
+        "forward": {
+          "treated": 116,
+          "matched": 89,
+          "coverage": 0.7672413793103449,
+          "deltaPp": 1.6929497298577802
+        }
+      },
+      "leaveOne": {
+        "discovery": -0.062119514888575186,
+        "forward": 0.46145109899230513
+      }
+    },
+    {
+      "id": "seven_day_placebo",
+      "label": "7・17・27日_placebo",
+      "group": "placebo",
+      "match": "month",
+      "selection": "1-6",
+      "discovery": {
+        "n": 240,
+        "hits": 10,
+        "edgePp": -0.19319089170829917,
+        "roi": 0.38916666666666666,
+        "max2HitExclRoi": 0.21722689075630253
+      },
+      "forward": {
+        "n": 116,
+        "hits": 4,
+        "edgePp": -0.39423700364788733,
+        "roi": 0.925,
+        "max2HitExclRoi": 0.20175438596491227
+      },
+      "matched": {
+        "discovery": {
+          "treated": 240,
+          "matched": 176,
+          "coverage": 0.7333333333333333,
+          "deltaPp": -2.64570767462313
+        },
+        "forward": {
+          "treated": 116,
+          "matched": 89,
+          "coverage": 0.7672413793103449,
+          "deltaPp": -1.3702898652002737
+        }
+      },
+      "leaveOne": {
+        "discovery": -4.125314022464072,
+        "forward": -2.8014816025445377
+      }
+    },
+    {
+      "id": "double_day_placebo",
+      "label": "11・22日_placebo",
+      "group": "placebo",
+      "match": "month",
+      "selection": "1-2",
+      "discovery": {
+        "n": 152,
+        "hits": 15,
+        "edgePp": 1.7244980036845654,
+        "roi": 0.8907894736842106,
+        "max2HitExclRoi": 0.6333333333333333
+      },
+      "forward": {
+        "n": 92,
+        "hits": 5,
+        "edgePp": -2.182631280946406,
+        "roi": 0.39456521739130435,
+        "max2HitExclRoi": 0.18333333333333332
+      },
+      "matched": {
+        "discovery": {
+          "treated": 152,
+          "matched": 128,
+          "coverage": 0.8421052631578947,
+          "deltaPp": 0.5058058300462406
+        },
+        "forward": {
+          "treated": 92,
+          "matched": 62,
+          "coverage": 0.6739130434782609,
+          "deltaPp": 0.23986903059143197
+        }
+      },
+      "leaveOne": {
+        "discovery": -0.9000583457996538,
+        "forward": -1.4232317697522894
+      }
+    },
+    {
+      "id": "double_day_placebo",
+      "label": "11・22日_placebo",
+      "group": "placebo",
+      "match": "month",
+      "selection": "1-3",
+      "discovery": {
+        "n": 152,
+        "hits": 19,
+        "edgePp": 2.636080719492555,
+        "roi": 0.9427631578947369,
+        "max2HitExclRoi": 0.6966666666666667
+      },
+      "forward": {
+        "n": 92,
+        "hits": 12,
+        "edgePp": 3.281363033015536,
+        "roi": 1.1771739130434782,
+        "max2HitExclRoi": 0.8333333333333334
+      },
+      "matched": {
+        "discovery": {
+          "treated": 152,
+          "matched": 128,
+          "coverage": 0.8421052631578947,
+          "deltaPp": 3.8216491131509702
+        },
+        "forward": {
+          "treated": 92,
+          "matched": 62,
+          "coverage": 0.6739130434782609,
+          "deltaPp": 0.6735635131376044
+        }
+      },
+      "leaveOne": {
+        "discovery": 1.9403140107882129,
+        "forward": -1.2916317432909774
+      }
+    },
+    {
+      "id": "double_day_placebo",
+      "label": "11・22日_placebo",
+      "group": "placebo",
+      "match": "month",
+      "selection": "1-4",
+      "discovery": {
+        "n": 152,
+        "hits": 17,
+        "edgePp": 0.7285478073872977,
+        "roi": 1.069078947368421,
+        "max2HitExclRoi": 0.6173333333333333
+      },
+      "forward": {
+        "n": 92,
+        "hits": 10,
+        "edgePp": 1.3175858437662766,
+        "roi": 0.8902173913043478,
+        "max2HitExclRoi": 0.5466666666666666
+      },
+      "matched": {
+        "discovery": {
+          "treated": 152,
+          "matched": 128,
+          "coverage": 0.8421052631578947,
+          "deltaPp": 0.855210452692375
+        },
+        "forward": {
+          "treated": 92,
+          "matched": 62,
+          "coverage": 0.6739130434782609,
+          "deltaPp": 4.55086889681424
+        }
+      },
+      "leaveOne": {
+        "discovery": -1.9243969827474423,
+        "forward": 2.01470239761388
+      }
+    },
+    {
+      "id": "double_day_placebo",
+      "label": "11・22日_placebo",
+      "group": "placebo",
+      "match": "month",
+      "selection": "1-5",
+      "discovery": {
+        "n": 152,
+        "hits": 8,
+        "edgePp": -0.6405433409850646,
+        "roi": 0.5381578947368421,
+        "max2HitExclRoi": 0.27466666666666667
+      },
+      "forward": {
+        "n": 92,
+        "hits": 3,
+        "edgePp": -1.5960949521283823,
+        "roi": 0.5315217391304348,
+        "max2HitExclRoi": 0.03888888888888889
+      },
+      "matched": {
+        "discovery": {
+          "treated": 152,
+          "matched": 128,
+          "coverage": 0.8421052631578947,
+          "deltaPp": -1.712615300257642
+        },
+        "forward": {
+          "treated": 92,
+          "matched": 62,
+          "coverage": 0.6739130434782609,
+          "deltaPp": 0.038246621592736
+        }
+      },
+      "leaveOne": {
+        "discovery": -2.743733669678314,
+        "forward": -3.7256799879958344
+      }
+    },
+    {
+      "id": "double_day_placebo",
+      "label": "11・22日_placebo",
+      "group": "placebo",
+      "match": "month",
+      "selection": "1-6",
+      "discovery": {
+        "n": 152,
+        "hits": 4,
+        "edgePp": -1.250639391606348,
+        "roi": 0.6677631578947368,
+        "max2HitExclRoi": 0.074
+      },
+      "forward": {
+        "n": 92,
+        "hits": 4,
+        "edgePp": -0.06628248560915156,
+        "roi": 0.1956521739130435,
+        "max2HitExclRoi": 0.052222222222222225
+      },
+      "matched": {
+        "discovery": {
+          "treated": 152,
+          "matched": 128,
+          "coverage": 0.8421052631578947,
+          "deltaPp": -5.699314260360728
+        },
+        "forward": {
+          "treated": 92,
+          "matched": 62,
+          "coverage": 0.6739130434782609,
+          "deltaPp": -0.015138886719774512
+        }
+      },
+      "leaveOne": {
+        "discovery": -6.849449347201583,
+        "forward": -1.3973649185022836
+      }
+    },
+    {
+      "id": "prime_day_placebo",
+      "label": "素数日_placebo",
+      "group": "placebo",
+      "match": "month",
+      "selection": "1-2",
+      "discovery": {
+        "n": 1090,
+        "hits": 107,
+        "edgePp": 1.4485798980855065,
+        "roi": 0.8593577981651376,
+        "max2HitExclRoi": 0.8210477941176471
+      },
+      "forward": {
+        "n": 645,
+        "hits": 50,
+        "edgePp": -0.5721562333048971,
+        "roi": 0.6733333333333333,
+        "max2HitExclRoi": 0.6124416796267496
+      },
+      "matched": {
+        "discovery": {
+          "treated": 1090,
+          "matched": 721,
+          "coverage": 0.6614678899082569,
+          "deltaPp": -1.1253213615132733
+        },
+        "forward": {
+          "treated": 645,
+          "matched": 354,
+          "coverage": 0.5488372093023256,
+          "deltaPp": -0.10640064687632216
+        }
+      },
+      "leaveOne": {
+        "discovery": -1.966864486362318,
+        "forward": -0.6143988649671239
+      }
+    },
+    {
+      "id": "prime_day_placebo",
+      "label": "素数日_placebo",
+      "group": "placebo",
+      "match": "month",
+      "selection": "1-3",
+      "discovery": {
+        "n": 1090,
+        "hits": 110,
+        "edgePp": 0.4374559914558884,
+        "roi": 0.6792660550458716,
+        "max2HitExclRoi": 0.6295955882352942
+      },
+      "forward": {
+        "n": 645,
+        "hits": 66,
+        "edgePp": 0.08951403558143496,
+        "roi": 0.8224806201550388,
+        "max2HitExclRoi": 0.74199066874028
+      },
+      "matched": {
+        "discovery": {
+          "treated": 1090,
+          "matched": 721,
+          "coverage": 0.6614678899082569,
+          "deltaPp": 1.601596105561088
+        },
+        "forward": {
+          "treated": 645,
+          "matched": 354,
+          "coverage": 0.5488372093023256,
+          "deltaPp": 0.20449664064513326
+        }
+      },
+      "leaveOne": {
+        "discovery": 0.6523146241086979,
+        "forward": -0.4688024955990525
+      }
+    },
+    {
+      "id": "prime_day_placebo",
+      "label": "素数日_placebo",
+      "group": "placebo",
+      "match": "month",
+      "selection": "1-4",
+      "discovery": {
+        "n": 1090,
+        "hits": 127,
+        "edgePp": 1.2898973877040556,
+        "roi": 0.8387155963302753,
+        "max2HitExclRoi": 0.7619485294117647
+      },
+      "forward": {
+        "n": 645,
+        "hits": 73,
+        "edgePp": 1.0971602274374224,
+        "roi": 0.9503875968992248,
+        "max2HitExclRoi": 0.838258164852255
+      },
+      "matched": {
+        "discovery": {
+          "treated": 1090,
+          "matched": 721,
+          "coverage": 0.6614678899082569,
+          "deltaPp": 1.4155829657699674
+        },
+        "forward": {
+          "treated": 645,
+          "matched": 354,
+          "coverage": 0.5488372093023256,
+          "deltaPp": 3.3096394962759437
+        }
+      },
+      "leaveOne": {
+        "discovery": 0.5728347285885292,
+        "forward": 2.450829282749178
+      }
+    },
+    {
+      "id": "prime_day_placebo",
+      "label": "素数日_placebo",
+      "group": "placebo",
+      "match": "month",
+      "selection": "1-5",
+      "discovery": {
+        "n": 1090,
+        "hits": 58,
+        "edgePp": -0.06195841895923854,
+        "roi": 0.5625688073394496,
+        "max2HitExclRoi": 0.46433823529411766
+      },
+      "forward": {
+        "n": 645,
+        "hits": 38,
+        "edgePp": 0.7102317101830871,
+        "roi": 0.6184496124031008,
+        "max2HitExclRoi": 0.4912908242612753
+      },
+      "matched": {
+        "discovery": {
+          "treated": 1090,
+          "matched": 721,
+          "coverage": 0.6614678899082569,
+          "deltaPp": -2.1477120508061036
+        },
+        "forward": {
+          "treated": 645,
+          "matched": 354,
+          "coverage": 0.5488372093023256,
+          "deltaPp": -0.13250382562286614
+        }
+      },
+      "leaveOne": {
+        "discovery": -2.9179286167154306,
+        "forward": -0.7830188002917288
+      }
+    },
+    {
+      "id": "prime_day_placebo",
+      "label": "素数日_placebo",
+      "group": "placebo",
+      "match": "month",
+      "selection": "1-6",
+      "discovery": {
+        "n": 1090,
+        "hits": 57,
+        "edgePp": 0.8702144374424698,
+        "roi": 0.7609174311926605,
+        "max2HitExclRoi": 0.6019301470588235
+      },
+      "forward": {
+        "n": 645,
+        "hits": 28,
+        "edgePp": -0.1122534537542803,
+        "roi": 0.626046511627907,
+        "max2HitExclRoi": 0.4233281493001555
+      },
+      "matched": {
+        "discovery": {
+          "treated": 1090,
+          "matched": 721,
+          "coverage": 0.6614678899082569,
+          "deltaPp": -0.520580564453794
+        },
+        "forward": {
+          "treated": 645,
+          "matched": 354,
+          "coverage": 0.5488372093023256,
+          "deltaPp": -0.6989371382504052
+        }
+      },
+      "leaveOne": {
+        "discovery": -0.9428263143376543,
+        "forward": -1.2426145248092741
+      }
+    }
+  ],
+  "caveats": [
+    "給与日・賞与月は日付proxyで個人の入金を観測していない",
+    "祝日・実際の売上・投票人数は未使用",
+    "matchedは会場×R番号×同月または同四半期",
+    "closing oddsでT-5ではない",
+    "7日・ゾロ目日・素数日は偽陽性対照"
+  ]
+}
