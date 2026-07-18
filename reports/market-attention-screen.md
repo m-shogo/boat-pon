@@ -35,6 +35,16 @@ schedule coverage: 全105115行 / 品質gate後62160行 / exacta評価2114レー
 
 該当なし。
 
+## 会場×R番号×暦月を揃えた残差差
+
+> 同じstratum内で条件ありと条件なしを比較。deltaがプラスなら条件側に追加残差。leave-one会場最小値がマイナスなら特定場依存を崩せない。
+
+| attention proxy | 買い目 | 2024 matched / coverage / delta / LOO最小 | 2025 matched / coverage / delta / LOO最小 |
+|---|---:|---:|---:|
+| 他場締切が前後5分以内に2本以上 | 1-6 | 210 / 30.7% / +0.45pt / -1.27pt | 80 / 24.5% / +2.99pt / +1.32pt |
+
+両期deltaプラス: 1セル。両期leave-one会場最小deltaもプラス: 0セル。
+
 ## placebo
 
 | placebo | 買い目 | 2024 n / edge / ROI | 2025 n / edge / ROI |

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-18T15:32:27.475Z",
+  "generatedAt": "2026-07-18T15:36:35.675Z",
   "safety": {
     "readOnly": true,
     "preRaceSchedule": true,
@@ -642,10 +642,351 @@
       }
     }
   ],
+  "matched": [
+    {
+      "id": "multi_collision_5m",
+      "label": "他場締切が前後5分以内に2本以上",
+      "selection": "1-6",
+      "discovery": {
+        "treated": 685,
+        "matched": 210,
+        "coverage": 0.30656934306569344,
+        "deltaPp": 0.44692321916561484
+      },
+      "forward": {
+        "treated": 327,
+        "matched": 80,
+        "coverage": 0.24464831804281345,
+        "deltaPp": 2.9862995507944707
+      },
+      "leaveOneVenue": {
+        "discovery": -1.2729800236710105,
+        "forward": 1.318671212330335
+      }
+    },
+    {
+      "id": "collision_2m",
+      "label": "他場締切が前後2分以内",
+      "selection": "1-6",
+      "discovery": {
+        "treated": 642,
+        "matched": 211,
+        "coverage": 0.32866043613707163,
+        "deltaPp": -0.5254938571625078
+      },
+      "forward": {
+        "treated": 297,
+        "matched": 77,
+        "coverage": 0.25925925925925924,
+        "deltaPp": 5.412793706933798
+      },
+      "leaveOneVenue": {
+        "discovery": -1.425329682626065,
+        "forward": 4.27437464914844
+      }
+    },
+    {
+      "id": "collision_2m",
+      "label": "他場締切が前後2分以内",
+      "selection": "1-3",
+      "discovery": {
+        "treated": 642,
+        "matched": 211,
+        "coverage": 0.32866043613707163,
+        "deltaPp": 0.3963936957124447
+      },
+      "forward": {
+        "treated": 297,
+        "matched": 77,
+        "coverage": 0.25925925925925924,
+        "deltaPp": -1.1598609568243539
+      },
+      "leaveOneVenue": {
+        "discovery": -0.8639156012619661,
+        "forward": -4.363375608730316
+      }
+    },
+    {
+      "id": "collision_2m",
+      "label": "他場締切が前後2分以内",
+      "selection": "1-5",
+      "discovery": {
+        "treated": 642,
+        "matched": 211,
+        "coverage": 0.32866043613707163,
+        "deltaPp": -1.6741746002683768
+      },
+      "forward": {
+        "treated": 297,
+        "matched": 77,
+        "coverage": 0.25925925925925924,
+        "deltaPp": -0.4662938006295879
+      },
+      "leaveOneVenue": {
+        "discovery": -2.695164398277101,
+        "forward": -1.740567377546064
+      }
+    },
+    {
+      "id": "same_round_5m",
+      "label": "同じR番号の他場締切が前後5分以内",
+      "selection": "1-2",
+      "discovery": {
+        "treated": 466,
+        "matched": 157,
+        "coverage": 0.3369098712446352,
+        "deltaPp": -2.2826857581699747
+      },
+      "forward": {
+        "treated": 167,
+        "matched": 62,
+        "coverage": 0.3712574850299401,
+        "deltaPp": 6.527720945958222
+      },
+      "leaveOneVenue": {
+        "discovery": -4.726284105819565,
+        "forward": 3.9471996110183363
+      }
+    },
+    {
+      "id": "same_round_5m",
+      "label": "同じR番号の他場締切が前後5分以内",
+      "selection": "1-3",
+      "discovery": {
+        "treated": 466,
+        "matched": 157,
+        "coverage": 0.3369098712446352,
+        "deltaPp": 3.3636221568266538
+      },
+      "forward": {
+        "treated": 167,
+        "matched": 62,
+        "coverage": 0.3712574850299401,
+        "deltaPp": -2.5225954258233934
+      },
+      "leaveOneVenue": {
+        "discovery": 1.306907166812571,
+        "forward": -7.2926716035489445
+      }
+    },
+    {
+      "id": "collision_2m",
+      "label": "他場締切が前後2分以内",
+      "selection": "1-2",
+      "discovery": {
+        "treated": 642,
+        "matched": 211,
+        "coverage": 0.32866043613707163,
+        "deltaPp": -0.9173285967676859
+      },
+      "forward": {
+        "treated": 297,
+        "matched": 77,
+        "coverage": 0.25925925925925924,
+        "deltaPp": -2.558090064463072
+      },
+      "leaveOneVenue": {
+        "discovery": -3.4602713995161136,
+        "forward": -6.1643150536175195
+      }
+    },
+    {
+      "id": "multi_collision_5m",
+      "label": "他場締切が前後5分以内に2本以上",
+      "selection": "1-2",
+      "discovery": {
+        "treated": 685,
+        "matched": 210,
+        "coverage": 0.30656934306569344,
+        "deltaPp": -2.6390185967958004
+      },
+      "forward": {
+        "treated": 327,
+        "matched": 80,
+        "coverage": 0.24464831804281345,
+        "deltaPp": 2.3423228474929814
+      },
+      "leaveOneVenue": {
+        "discovery": -4.630262991069377,
+        "forward": -0.6956291177557661
+      }
+    },
+    {
+      "id": "multi_collision_5m",
+      "label": "他場締切が前後5分以内に2本以上",
+      "selection": "1-5",
+      "discovery": {
+        "treated": 685,
+        "matched": 210,
+        "coverage": 0.30656934306569344,
+        "deltaPp": -2.918723578250331
+      },
+      "forward": {
+        "treated": 327,
+        "matched": 80,
+        "coverage": 0.24464831804281345,
+        "deltaPp": 1.4025734736150601
+      },
+      "leaveOneVenue": {
+        "discovery": -3.4769860974956672,
+        "forward": -0.10718974254763092
+      }
+    },
+    {
+      "id": "same_round_5m",
+      "label": "同じR番号の他場締切が前後5分以内",
+      "selection": "1-6",
+      "discovery": {
+        "treated": 466,
+        "matched": 157,
+        "coverage": 0.3369098712446352,
+        "deltaPp": 2.6162749377952443
+      },
+      "forward": {
+        "treated": 167,
+        "matched": 62,
+        "coverage": 0.3712574850299401,
+        "deltaPp": -3.019773018852945
+      },
+      "leaveOneVenue": {
+        "discovery": -0.3778393906891071,
+        "forward": -3.5942144871878767
+      }
+    },
+    {
+      "id": "multi_collision_5m",
+      "label": "他場締切が前後5分以内に2本以上",
+      "selection": "1-3",
+      "discovery": {
+        "treated": 685,
+        "matched": 210,
+        "coverage": 0.30656934306569344,
+        "deltaPp": -3.417767204529924
+      },
+      "forward": {
+        "treated": 327,
+        "matched": 80,
+        "coverage": 0.24464831804281345,
+        "deltaPp": 3.2318905673790264
+      },
+      "leaveOneVenue": {
+        "discovery": -5.249060210746867,
+        "forward": 0.4509135156885967
+      }
+    },
+    {
+      "id": "same_round_5m",
+      "label": "同じR番号の他場締切が前後5分以内",
+      "selection": "1-4",
+      "discovery": {
+        "treated": 466,
+        "matched": 157,
+        "coverage": 0.3369098712446352,
+        "deltaPp": -3.5989042568772978
+      },
+      "forward": {
+        "treated": 167,
+        "matched": 62,
+        "coverage": 0.3712574850299401,
+        "deltaPp": -1.5152798976038286
+      },
+      "leaveOneVenue": {
+        "discovery": -6.096257450888761,
+        "forward": -5.392757364768453
+      }
+    },
+    {
+      "id": "same_round_5m",
+      "label": "同じR番号の他場締切が前後5分以内",
+      "selection": "1-5",
+      "discovery": {
+        "treated": 466,
+        "matched": 157,
+        "coverage": 0.3369098712446352,
+        "deltaPp": -1.2338962783154814
+      },
+      "forward": {
+        "treated": 167,
+        "matched": 62,
+        "coverage": 0.3712574850299401,
+        "deltaPp": -3.6233883473323263
+      },
+      "leaveOneVenue": {
+        "discovery": -2.6080074653543828,
+        "forward": -6.362705756520554
+      }
+    },
+    {
+      "id": "collision_2m",
+      "label": "他場締切が前後2分以内",
+      "selection": "1-4",
+      "discovery": {
+        "treated": 642,
+        "matched": 211,
+        "coverage": 0.32866043613707163,
+        "deltaPp": 3.707947732235306
+      },
+      "forward": {
+        "treated": 297,
+        "matched": 77,
+        "coverage": 0.25925925925925924,
+        "deltaPp": -6.025859820100695
+      },
+      "leaveOneVenue": {
+        "discovery": 2.3537957469919206,
+        "forward": -7.543773527667918
+      }
+    },
+    {
+      "id": "multi_collision_5m",
+      "label": "他場締切が前後5分以内に2本以上",
+      "selection": "1-4",
+      "discovery": {
+        "treated": 685,
+        "matched": 210,
+        "coverage": 0.30656934306569344,
+        "deltaPp": -2.8037264162301416
+      },
+      "forward": {
+        "treated": 327,
+        "matched": 80,
+        "coverage": 0.24464831804281345,
+        "deltaPp": -7.315227003331703
+      },
+      "leaveOneVenue": {
+        "discovery": -4.418809230405327,
+        "forward": -9.596413668642438
+      }
+    }
+  ],
+  "matchedPositive": [
+    {
+      "id": "multi_collision_5m",
+      "label": "他場締切が前後5分以内に2本以上",
+      "selection": "1-6",
+      "discovery": {
+        "treated": 685,
+        "matched": 210,
+        "coverage": 0.30656934306569344,
+        "deltaPp": 0.44692321916561484
+      },
+      "forward": {
+        "treated": 327,
+        "matched": 80,
+        "coverage": 0.24464831804281345,
+        "deltaPp": 2.9862995507944707
+      },
+      "leaveOneVenue": {
+        "discovery": -1.2729800236710105,
+        "forward": 1.318671212330335
+      }
+    }
+  ],
   "caveats": [
     "公式番組の締切予定時刻を使用",
     "1〜12R完備・時刻単調増加venue-dayだけ採用",
-    "時刻帯と開催場には交絡がある",
+    "matched比較は会場×R番号×暦月を固定",
+    "時刻帯と開催場には未観測交絡が残る",
     "closing oddsでT-5ではない",
     "末尾分は偽陽性対照"
   ]
