@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-18T14:07:03.547Z",
+  "generatedAt": "2026-07-18T14:09:15.874Z",
   "safety": {
     "readOnly": true,
     "historicalClosingOdds": true,
@@ -15,7 +15,8 @@
   "caveats": [
     "多重探索を含むため仮説生成専用",
     "historical closing oddsでありT-5再現ではない",
-    "原因ではなく構成差・交絡候補"
+    "原因ではなく構成差・交絡候補",
+    "family-wise simulationは1-4の風×能力32セルだけで、元の買い目・会場・展示探索を含まない部分補正"
   ],
   "interactionCells": [
     {
