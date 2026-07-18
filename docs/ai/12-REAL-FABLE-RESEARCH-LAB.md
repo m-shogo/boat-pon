@@ -89,6 +89,8 @@ npm run backtest:shadow-top1
 npm run backtest:shadow-top1 -- --from 2024-01-01 --to 2025-12-31 --json
 npm run backtest:shadow-top1 -- --selector ev --from 2025-01-01 --to 2025-12-31
 npm run backtest:shadow-top1 -- --edge-grid --from 2025-01-01 --to 2025-12-31 --json
+npm run backtest:shadow-top1 -- --market-grid --from 2025-01-01 --to 2025-12-31 --json
+npm run backtest:shadow-top1 -- --market-grid --odds-source t5 --from 2026-06-01 --to 2026-07-17 --json
 ```
 
 最大高配当1件・2件除外ROI、年別ROI、最大ドローダウン、最大連敗を同時に出す。
@@ -97,3 +99,6 @@ npm run backtest:shadow-top1 -- --edge-grid --from 2025-01-01 --to 2025-12-31 --
 どちらもhistorical latest oddsでありT-5再現ではない。
 `--edge-grid`は事前固定したモデルEV閾値とオッズ上限を横並びにする。探索結果の最良値を
 そのまま採用せず、別年とfuture-onlyで再検証する。
+`--market-grid`は全120通りに近いレースだけを使い、市場確率とモデル確率を別々に正規化して、
+市場のみ・10%/25%/50%モデル混合・モデルのみを比較する。これは市場残差モデルの採用前screeningである。
+`--odds-source t5`は`odds_timeseries_snapshots`のT-5だけを使う。T-5未収集レースは評価対象外。

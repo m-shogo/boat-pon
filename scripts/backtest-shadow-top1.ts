@@ -12,9 +12,22 @@ import {
 import { selectBestPaperDecisionPerRace, selectTopModelCandidatePerRace } from "../src/domain/candidateSelection";
 import { judgeCandidate } from "../src/domain/decision";
 import { DEFAULT_MODEL_ALPHA, buildCandidatesFromModel, buildVenueModel, type ModelCandidateInput } from "../src/domain/model";
+import { normalizeMarketResidual, selectBlendedMarketCandidate } from "../src/domain/marketResidual";
 import { filterComparableResultsForDate } from "../src/domain/raceRegime";
 import { summarizeShadowTop1, type ShadowTop1Row, type ShadowTop1Summary } from "../src/domain/shadowTop1";
-import type { BudgetRule } from "../src/domain/types";
+import type { BetCandidate, BudgetRule } from "../src/domain/types";
+
+const MARKET_VARIANTS = [
+  { id: "market-only-rank", modelWeight: 0, minEv: 0 },
+  { id: "blend10-rank", modelWeight: 0.10, minEv: 0 },
+  { id: "blend25-rank", modelWeight: 0.25, minEv: 0 },
+  { id: "blend50-rank", modelWeight: 0.50, minEv: 0 },
+  { id: "model-only-rank", modelWeight: 1, minEv: 0 },
+  { id: "blend10-edge100", modelWeight: 0.10, minEv: 1 },
+  { id: "blend25-edge100", modelWeight: 0.25, minEv: 1 },
+  { id: "blend50-edge100", modelWeight: 0.50, minEv: 1 },
+  { id: "model-only-edge100", modelWeight: 1, minEv: 1 },
+] as const;
 
 const args = parseArgs(process.argv.slice(2));
 const db = new DatabaseSync("data/boat.sqlite", { readOnly: true });
@@ -26,10 +39,14 @@ try {
   const programs = listProgramInputsRange(db, args.from, args.to, args.limit, "historical-readonly");
   const results = listResultsForModelRange(db, addDays(args.from, -args.trainDays), args.to);
   const resultByRace = new Map(results.map((row) => [row.raceId, row]));
-  const oddsBySelection = listAllOddsBySelection(db);
+  const oddsBySelection = args.oddsSource === "t5"
+    ? loadCheckpointOdds(db, args.from, args.to, "T-5")
+    : listAllOddsBySelection(db);
   const programsByDate = groupProgramsByDate(programs);
   const rows: ShadowTop1Row[] = [];
   const edgeRows: Array<{ row: Omit<ShadowTop1Row, "decision">; modelEv: number; odds: number }> = [];
+  const marketRows = new Map(MARKET_VARIANTS.map((variant) => [variant.id, [] as ShadowTop1Row[]]));
+  let fullMarketRaces = 0;
 
   for (const [date, datePrograms] of [...programsByDate].sort(([a], [b]) => a.localeCompare(b))) {
     const trainFrom = addDays(date, -args.trainDays);
@@ -60,6 +77,35 @@ try {
         modelEv: candidate.estimatedHitRate * (candidate.currentOdds ?? 0),
         odds: candidate.currentOdds ?? 0,
       });
+    }
+    if (args.marketGrid) {
+      for (const raceCandidates of groupCandidatesByRace(candidates).values()) {
+        if (raceCandidates.length < 100) continue;
+        const normalized = normalizeMarketResidual(raceCandidates.flatMap((candidate) =>
+          candidate.currentOdds == null ? [] : [{
+            selection: candidate.selection.join("-"),
+            odds: candidate.currentOdds,
+            modelProbability: candidate.estimatedHitRate,
+          }],
+        ));
+        if (normalized.length < 100) continue;
+        fullMarketRaces += 1;
+        const exemplar = raceCandidates[0];
+        const result = resultByRace.get(exemplar.raceId);
+        for (const variant of MARKET_VARIANTS) {
+          const selectedMarket = selectBlendedMarketCandidate(normalized, variant.modelWeight);
+          if (!selectedMarket) continue;
+          marketRows.get(variant.id)!.push({
+            raceId: exemplar.raceId,
+            date: exemplar.date,
+            selection: selectedMarket.selection,
+            decision: selectedMarket.blendedEv >= variant.minEv ? "BUY" : "SKIP",
+            currentOdds: selectedMarket.odds,
+            result: result?.trifecta ?? null,
+            payoutYen: result?.payoutYen ?? null,
+          });
+        }
+      }
     }
     const selected = args.selector === "ev"
       ? selectBestPaperDecisionPerRace(candidates.map((candidate) => ({
@@ -107,10 +153,17 @@ try {
       productionConnected: false,
       dbWrites: false,
       primaryRoi: "race_results.payout_yen",
-      oddsTiming: "historical latest snapshot; not T-5 replay",
+      oddsTiming: args.oddsSource === "t5" ? "odds_timeseries T-5" : "historical latest snapshot; not T-5 replay",
     },
     summary: summarizeShadowTop1(rows),
     edgeGrid: args.edgeGrid ? buildEdgeGrid(edgeRows) : undefined,
+    marketGrid: args.marketGrid ? {
+      fullMarketRaces,
+      variants: MARKET_VARIANTS.map((variant) => ({
+        ...variant,
+        summary: summarizeShadowTop1(marketRows.get(variant.id) ?? []),
+      })),
+    } : undefined,
   };
   if (args.json) console.log(JSON.stringify(report));
   else printReport(report);
@@ -129,6 +182,10 @@ type ShadowTop1Report = {
   };
   summary: ShadowTop1Summary;
   edgeGrid?: Array<{ id: string; minEv: number; minOdds: number; maxOdds: number; summary: ShadowTop1Summary }>;
+  marketGrid?: {
+    fullMarketRaces: number;
+    variants: Array<{ id: string; modelWeight: number; minEv: number; summary: ShadowTop1Summary }>;
+  };
 };
 
 function printReport(report: ShadowTop1Report) {
@@ -152,6 +209,13 @@ function printReport(report: ShadowTop1Report) {
       console.log(`${variant.id}: n=${m.n} ROI=${pct(m.payoutRoi)} exTop2=${pct(m.payoutRoiExTop2)} DD=¥${m.maxDrawdownYen}`);
     }
   }
+  if (report.marketGrid) {
+    console.log(`\nmarket residual grid: full-market races=${report.marketGrid.fullMarketRaces}`);
+    for (const variant of report.marketGrid.variants) {
+      const m = variant.summary.overall;
+      console.log(`${variant.id}: n=${m.n} ROI=${pct(m.payoutRoi)} exTop2=${pct(m.payoutRoiExTop2)} DD=¥${m.maxDrawdownYen}`);
+    }
+  }
 }
 
 function selectMaxModelEvPerRace(candidates: ReturnType<typeof buildCandidatesFromModel>) {
@@ -168,6 +232,16 @@ function selectMaxModelEvPerRace(candidates: ReturnType<typeof buildCandidatesFr
     }
   }
   return [...selected.values()];
+}
+
+function groupCandidatesByRace(candidates: BetCandidate[]) {
+  const grouped = new Map<string, BetCandidate[]>();
+  for (const candidate of candidates) {
+    const group = grouped.get(candidate.raceId);
+    if (group) group.push(candidate);
+    else grouped.set(candidate.raceId, [candidate]);
+  }
+  return grouped;
 }
 
 function buildEdgeGrid(edgeRows: Array<{ row: Omit<ShadowTop1Row, "decision">; modelEv: number; odds: number }>) {
@@ -231,6 +305,8 @@ function parseArgs(argv: string[]) {
     alpha: numberValue("alpha", DEFAULT_MODEL_ALPHA),
     selector,
     edgeGrid: argv.includes("--edge-grid"),
+    marketGrid: argv.includes("--market-grid"),
+    oddsSource: value("odds-source", "latest") === "t5" ? "t5" as const : "latest" as const,
     json: argv.includes("--json"),
   };
 }
@@ -239,4 +315,20 @@ function addDays(date: string, delta: number) {
   const value = new Date(`${date}T00:00:00+09:00`);
   value.setUTCDate(value.getUTCDate() + delta);
   return value.toLocaleDateString("en-CA", { timeZone: "Asia/Tokyo" });
+}
+
+function loadCheckpointOdds(db: DatabaseSync, from: string, to: string, checkpoint: string) {
+  const fromRaceId = from.replaceAll("-", "");
+  const toExclusive = addDays(to, 1).replaceAll("-", "");
+  const rows = db.prepare(`
+    SELECT race_id, selection, odds
+    FROM odds_timeseries_snapshots
+    WHERE id IN (
+      SELECT MAX(id)
+      FROM odds_timeseries_snapshots
+      WHERE race_id >= ? AND race_id < ? AND checkpoint_label = ?
+      GROUP BY race_id, selection
+    )
+  `).all(fromRaceId, toExclusive, checkpoint) as Array<{ race_id: string; selection: string; odds: number }>;
+  return new Map(rows.map((row) => [`${row.race_id}/${row.selection}`, Number(row.odds)]));
 }
