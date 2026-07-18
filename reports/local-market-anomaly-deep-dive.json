@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-18T14:09:15.874Z",
+  "generatedAt": "2026-07-18T14:21:42.739Z",
   "safety": {
     "readOnly": true,
     "historicalClosingOdds": true,
@@ -349,6 +349,1418 @@
         "controlResidualPp": 19.318788959047435,
         "deltaPp": 18.846159745471482
       }
+    }
+  ],
+  "programCompositionAudit": [
+    {
+      "id": "marugame_12",
+      "label": "丸亀 × 1-2",
+      "proxies": [
+        {
+          "id": "planned_12_a",
+          "label": "1・2号艇だけA級の企画編成proxy",
+          "candidate": {
+            "discovery": {
+              "n": 0,
+              "hits": 0,
+              "actualRate": 0,
+              "impliedRate": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max1HitExclRoi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": 0
+            },
+            "forward": {
+              "n": 0,
+              "hits": 0,
+              "actualRate": 0,
+              "impliedRate": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max1HitExclRoi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": 0
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 134,
+              "hits": 16,
+              "actualRate": 0.11940298507462686,
+              "impliedRate": 0.0733401286089981,
+              "edgePp": 4.606285646562876,
+              "roi": 1.1888059701492537,
+              "max1HitExclRoi": 1.056390977443609,
+              "max2HitExclRoi": 0.9272727272727272,
+              "zScore": 2.0712839986027567
+            },
+            "forward": {
+              "n": 66,
+              "hits": 9,
+              "actualRate": 0.13636363636363635,
+              "impliedRate": 0.08074154727112401,
+              "edgePp": 5.562208909251234,
+              "roi": 1.3651515151515152,
+              "max1HitExclRoi": 1.0923076923076922,
+              "max2HitExclRoi": 0.8796875,
+              "zScore": 1.6762802683421776
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "-",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "-"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "-",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "-"
+            }
+          },
+          "persistent": false,
+          "explainsBoth": false,
+          "forwardAmplifier": false
+        },
+        {
+          "id": "head_only_a",
+          "label": "1号艇だけA級の企画編成proxy",
+          "candidate": {
+            "discovery": {
+              "n": 0,
+              "hits": 0,
+              "actualRate": 0,
+              "impliedRate": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max1HitExclRoi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": 0
+            },
+            "forward": {
+              "n": 0,
+              "hits": 0,
+              "actualRate": 0,
+              "impliedRate": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max1HitExclRoi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": 0
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 134,
+              "hits": 16,
+              "actualRate": 0.11940298507462686,
+              "impliedRate": 0.0733401286089981,
+              "edgePp": 4.606285646562876,
+              "roi": 1.1888059701492537,
+              "max1HitExclRoi": 1.056390977443609,
+              "max2HitExclRoi": 0.9272727272727272,
+              "zScore": 2.0712839986027567
+            },
+            "forward": {
+              "n": 66,
+              "hits": 9,
+              "actualRate": 0.13636363636363635,
+              "impliedRate": 0.08074154727112401,
+              "edgePp": 5.562208909251234,
+              "roi": 1.3651515151515152,
+              "max1HitExclRoi": 1.0923076923076922,
+              "max2HitExclRoi": 0.8796875,
+              "zScore": 1.6762802683421776
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "-",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "-"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "-",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "-"
+            }
+          },
+          "persistent": false,
+          "explainsBoth": false,
+          "forwardAmplifier": false
+        },
+        {
+          "id": "planned_14_a",
+          "label": "1・4号艇だけA級の企画編成proxy",
+          "candidate": {
+            "discovery": {
+              "n": 4,
+              "hits": 0,
+              "actualRate": 0,
+              "impliedRate": 0.10723889610733563,
+              "edgePp": -10.723889610733563,
+              "roi": 0,
+              "max1HitExclRoi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": -0.6954336403166576
+            },
+            "forward": {
+              "n": 0,
+              "hits": 0,
+              "actualRate": 0,
+              "impliedRate": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max1HitExclRoi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": 0
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 130,
+              "hits": 16,
+              "actualRate": 0.12307692307692308,
+              "impliedRate": 0.07229708960904926,
+              "edgePp": 5.077983346787382,
+              "roi": 1.2253846153846153,
+              "max1HitExclRoi": 1.0891472868217054,
+              "max2HitExclRoi": 0.95625,
+              "zScore": 2.264263943089107
+            },
+            "forward": {
+              "n": 66,
+              "hits": 9,
+              "actualRate": 0.13636363636363635,
+              "impliedRate": 0.08074154727112401,
+              "edgePp": 5.562208909251234,
+              "roi": 1.3651515151515152,
+              "max1HitExclRoi": 1.0923076923076922,
+              "max2HitExclRoi": 0.8796875,
+              "zScore": 1.6762802683421776
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "丸亀",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "2024-05"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "-",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "-"
+            }
+          },
+          "persistent": false,
+          "explainsBoth": false,
+          "forwardAmplifier": false
+        },
+        {
+          "id": "course4_only_a_rival",
+          "label": "4号艇が相手で唯一A級",
+          "candidate": {
+            "discovery": {
+              "n": 9,
+              "hits": 2,
+              "actualRate": 0.2222222222222222,
+              "impliedRate": 0.10267244921727975,
+              "edgePp": 11.954977300494246,
+              "roi": 1.8333333333333333,
+              "max1HitExclRoi": 0.6625,
+              "max2HitExclRoi": 0,
+              "zScore": 1.1855718895188787
+            },
+            "forward": {
+              "n": 1,
+              "hits": 0,
+              "actualRate": 0,
+              "impliedRate": 0.13775866414015933,
+              "edgePp": -13.775866414015933,
+              "roi": 0,
+              "max1HitExclRoi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": -0.3997100259367326
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 125,
+              "hits": 14,
+              "actualRate": 0.112,
+              "impliedRate": 0.07122820152520183,
+              "edgePp": 4.077179847479817,
+              "roi": 1.1424,
+              "max1HitExclRoi": 1,
+              "max2HitExclRoi": 0.8609756097560975,
+              "zScore": 1.7955164881910537
+            },
+            "forward": {
+              "n": 65,
+              "hits": 9,
+              "actualRate": 0.13846153846153847,
+              "impliedRate": 0.07986436085775425,
+              "edgePp": 5.859717760378421,
+              "roi": 1.386153846153846,
+              "max1HitExclRoi": 1.109375,
+              "max2HitExclRoi": 0.8936507936507937,
+              "zScore": 1.7611286134202955
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "丸亀",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "2024-05"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "丸亀",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "2025-06"
+            }
+          },
+          "persistent": false,
+          "explainsBoth": false,
+          "forwardAmplifier": false
+        }
+      ]
+    },
+    {
+      "id": "omura_12",
+      "label": "大村 × 1-2",
+      "proxies": [
+        {
+          "id": "planned_12_a",
+          "label": "1・2号艇だけA級の企画編成proxy",
+          "candidate": {
+            "discovery": {
+              "n": 0,
+              "hits": 0,
+              "actualRate": 0,
+              "impliedRate": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max1HitExclRoi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": 0
+            },
+            "forward": {
+              "n": 0,
+              "hits": 0,
+              "actualRate": 0,
+              "impliedRate": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max1HitExclRoi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": 0
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 155,
+              "hits": 21,
+              "actualRate": 0.13548387096774195,
+              "impliedRate": 0.09077312244184482,
+              "edgePp": 4.471074852589712,
+              "roi": 1.0851612903225807,
+              "max1HitExclRoi": 0.964935064935065,
+              "max2HitExclRoi": 0.8666666666666667,
+              "zScore": 1.9715994753744401
+            },
+            "forward": {
+              "n": 85,
+              "hits": 13,
+              "actualRate": 0.15294117647058825,
+              "impliedRate": 0.09591613341710135,
+              "edgePp": 5.70250430534869,
+              "roi": 1.088235294117647,
+              "max1HitExclRoi": 0.9095238095238095,
+              "max2HitExclRoi": 0.7783132530120482,
+              "zScore": 1.8217658311384917
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "-",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "-"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "-",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "-"
+            }
+          },
+          "persistent": false,
+          "explainsBoth": false,
+          "forwardAmplifier": false
+        },
+        {
+          "id": "course4_only_a_rival",
+          "label": "4号艇が相手で唯一A級",
+          "candidate": {
+            "discovery": {
+              "n": 8,
+              "hits": 0,
+              "actualRate": 0,
+              "impliedRate": 0.10342248385628175,
+              "edgePp": -10.342248385628174,
+              "roi": 0,
+              "max1HitExclRoi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": -0.9668967923456857
+            },
+            "forward": {
+              "n": 7,
+              "hits": 0,
+              "actualRate": 0,
+              "impliedRate": 0.12168710581562135,
+              "edgePp": -12.168710581562134,
+              "roi": 0,
+              "max1HitExclRoi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": -0.993393216115925
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 147,
+              "hits": 21,
+              "actualRate": 0.14285714285714285,
+              "impliedRate": 0.09008472182065098,
+              "edgePp": 5.277242103649186,
+              "roi": 1.14421768707483,
+              "max1HitExclRoi": 1.0178082191780822,
+              "max2HitExclRoi": 0.9144827586206896,
+              "zScore": 2.2754421790428734
+            },
+            "forward": {
+              "n": 78,
+              "hits": 13,
+              "actualRate": 0.16666666666666666,
+              "impliedRate": 0.09360335384287521,
+              "edgePp": 7.306331282379144,
+              "roi": 1.185897435897436,
+              "max1HitExclRoi": 0.9922077922077922,
+              "max2HitExclRoi": 0.85,
+              "zScore": 2.2626357529058176
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "大村",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "2024-05"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "大村",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "2025-03"
+            }
+          },
+          "persistent": false,
+          "explainsBoth": false,
+          "forwardAmplifier": false
+        },
+        {
+          "id": "planned_14_a",
+          "label": "1・4号艇だけA級の企画編成proxy",
+          "candidate": {
+            "discovery": {
+              "n": 6,
+              "hits": 0,
+              "actualRate": 0,
+              "impliedRate": 0.09198537691227482,
+              "edgePp": -9.198537691227482,
+              "roi": 0,
+              "max1HitExclRoi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": -0.7826704397261925
+            },
+            "forward": {
+              "n": 5,
+              "hits": 0,
+              "actualRate": 0,
+              "impliedRate": 0.1312499275275712,
+              "edgePp": -13.12499275275712,
+              "roi": 0,
+              "max1HitExclRoi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": -0.8745852457313065
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 149,
+              "hits": 21,
+              "actualRate": 0.14093959731543623,
+              "impliedRate": 0.09072430682558591,
+              "edgePp": 5.021529048985032,
+              "roi": 1.1288590604026845,
+              "max1HitExclRoi": 1.0040540540540541,
+              "max2HitExclRoi": 0.9020408163265307,
+              "zScore": 2.172788924958668
+            },
+            "forward": {
+              "n": 80,
+              "hits": 13,
+              "actualRate": 0.1625,
+              "impliedRate": 0.093707771285197,
+              "edgePp": 6.879222871480301,
+              "roi": 1.15625,
+              "max1HitExclRoi": 0.9670886075949368,
+              "max2HitExclRoi": 0.8282051282051283,
+              "zScore": 2.1559236080818844
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "大村",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "2024-05"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "大村",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "2025-05"
+            }
+          },
+          "persistent": false,
+          "explainsBoth": false,
+          "forwardAmplifier": false
+        },
+        {
+          "id": "head_only_a",
+          "label": "1号艇だけA級の企画編成proxy",
+          "candidate": {
+            "discovery": {
+              "n": 1,
+              "hits": 0,
+              "actualRate": 0,
+              "impliedRate": 0.25572832598964645,
+              "edgePp": -25.572832598964645,
+              "roi": 0,
+              "max1HitExclRoi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": -0.5861701146348117
+            },
+            "forward": {
+              "n": 0,
+              "hits": 0,
+              "actualRate": 0,
+              "impliedRate": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max1HitExclRoi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": 0
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 154,
+              "hits": 21,
+              "actualRate": 0.13636363636363635,
+              "impliedRate": 0.08970198475646948,
+              "edgePp": 4.666165160716687,
+              "roi": 1.0922077922077922,
+              "max1HitExclRoi": 0.9712418300653595,
+              "max2HitExclRoi": 0.8723684210526316,
+              "zScore": 2.060283857233192
+            },
+            "forward": {
+              "n": 85,
+              "hits": 13,
+              "actualRate": 0.15294117647058825,
+              "impliedRate": 0.09591613341710135,
+              "edgePp": 5.70250430534869,
+              "roi": 1.088235294117647,
+              "max1HitExclRoi": 0.9095238095238095,
+              "max2HitExclRoi": 0.7783132530120482,
+              "zScore": 1.8217658311384917
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "大村",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "2024-10"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "-",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "-"
+            }
+          },
+          "persistent": false,
+          "explainsBoth": false,
+          "forwardAmplifier": false
+        }
+      ]
+    },
+    {
+      "id": "tokoname_12",
+      "label": "常滑 × 1-2",
+      "proxies": [
+        {
+          "id": "planned_12_a",
+          "label": "1・2号艇だけA級の企画編成proxy",
+          "candidate": {
+            "discovery": {
+              "n": 0,
+              "hits": 0,
+              "actualRate": 0,
+              "impliedRate": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max1HitExclRoi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": 0
+            },
+            "forward": {
+              "n": 0,
+              "hits": 0,
+              "actualRate": 0,
+              "impliedRate": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max1HitExclRoi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": 0
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 199,
+              "hits": 22,
+              "actualRate": 0.11055276381909548,
+              "impliedRate": 0.08697315550450499,
+              "edgePp": 2.3579608314590494,
+              "roi": 1.0562814070351758,
+              "max1HitExclRoi": 0.9282828282828283,
+              "max2HitExclRoi": 0.8157360406091371,
+              "zScore": 1.2083071415937825
+            },
+            "forward": {
+              "n": 83,
+              "hits": 9,
+              "actualRate": 0.10843373493975904,
+              "impliedRate": 0.07599863180771109,
+              "edgePp": 3.243510313204795,
+              "roi": 1.2734939759036144,
+              "max1HitExclRoi": 0.9865853658536585,
+              "max2HitExclRoi": 0.7950617283950617,
+              "zScore": 1.1307126676934875
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "-",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "-"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "-",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "-"
+            }
+          },
+          "persistent": false,
+          "explainsBoth": false,
+          "forwardAmplifier": false
+        },
+        {
+          "id": "head_only_a",
+          "label": "1号艇だけA級の企画編成proxy",
+          "candidate": {
+            "discovery": {
+              "n": 1,
+              "hits": 1,
+              "actualRate": 1,
+              "impliedRate": 0.39199062717733985,
+              "edgePp": 60.80093728226601,
+              "roi": 1.9,
+              "max1HitExclRoi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": 1.2454241868487064
+            },
+            "forward": {
+              "n": 1,
+              "hits": 0,
+              "actualRate": 0,
+              "impliedRate": 0.044377233033800305,
+              "edgePp": -4.4377233033800305,
+              "roi": 0,
+              "max1HitExclRoi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": -0.215494835317777
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 198,
+              "hits": 21,
+              "actualRate": 0.10606060606060606,
+              "impliedRate": 0.0854326632233291,
+              "edgePp": 2.0627942837276967,
+              "roi": 1.052020202020202,
+              "max1HitExclRoi": 0.9233502538071066,
+              "max2HitExclRoi": 0.810204081632653,
+              "zScore": 1.0601515317288939
+            },
+            "forward": {
+              "n": 82,
+              "hits": 9,
+              "actualRate": 0.10975609756097561,
+              "impliedRate": 0.07638425862202707,
+              "edgePp": 3.3371838938948546,
+              "roi": 1.2890243902439025,
+              "max1HitExclRoi": 0.9987654320987654,
+              "max2HitExclRoi": 0.805,
+              "zScore": 1.1536749876194161
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "常滑",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "2024-09"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "常滑",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "2025-04"
+            }
+          },
+          "persistent": false,
+          "explainsBoth": false,
+          "forwardAmplifier": false
+        },
+        {
+          "id": "course4_only_a_rival",
+          "label": "4号艇が相手で唯一A級",
+          "candidate": {
+            "discovery": {
+              "n": 20,
+              "hits": 2,
+              "actualRate": 0.1,
+              "impliedRate": 0.08109641677357574,
+              "edgePp": 1.890358322642427,
+              "roi": 1.095,
+              "max1HitExclRoi": 0.5368421052631579,
+              "max2HitExclRoi": 0,
+              "zScore": 0.31316549584374404
+            },
+            "forward": {
+              "n": 3,
+              "hits": 0,
+              "actualRate": 0,
+              "impliedRate": 0.052295857475646655,
+              "edgePp": -5.229585747564665,
+              "roi": 0,
+              "max1HitExclRoi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": -0.4071115922781105
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 179,
+              "hits": 20,
+              "actualRate": 0.11173184357541899,
+              "impliedRate": 0.0876297743571228,
+              "edgePp": 2.410206921829619,
+              "roi": 1.0519553072625698,
+              "max1HitExclRoi": 0.9095505617977528,
+              "max2HitExclRoi": 0.784180790960452,
+              "zScore": 1.1688684099977902
+            },
+            "forward": {
+              "n": 80,
+              "hits": 9,
+              "actualRate": 0.1125,
+              "impliedRate": 0.0768874858451635,
+              "edgePp": 3.56125141548365,
+              "roi": 1.32125,
+              "max1HitExclRoi": 1.0240506329113923,
+              "max2HitExclRoi": 0.8256410256410256,
+              "zScore": 1.2125961078622642
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "常滑",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "2024-02"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "常滑",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "2025-06"
+            }
+          },
+          "persistent": false,
+          "explainsBoth": false,
+          "forwardAmplifier": false
+        },
+        {
+          "id": "planned_14_a",
+          "label": "1・4号艇だけA級の企画編成proxy",
+          "candidate": {
+            "discovery": {
+              "n": 15,
+              "hits": 2,
+              "actualRate": 0.13333333333333333,
+              "impliedRate": 0.09069341330536804,
+              "edgePp": 4.263992002796529,
+              "roi": 1.46,
+              "max1HitExclRoi": 0.7285714285714285,
+              "max2HitExclRoi": 0,
+              "zScore": 0.5812904943445157
+            },
+            "forward": {
+              "n": 1,
+              "hits": 0,
+              "actualRate": 0,
+              "impliedRate": 0.06068620249600165,
+              "edgePp": -6.0686202496001656,
+              "roi": 0,
+              "max1HitExclRoi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": -0.2541789785499687
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 184,
+              "hits": 20,
+              "actualRate": 0.10869565217391304,
+              "impliedRate": 0.0866698736185651,
+              "edgePp": 2.2025778555347943,
+              "roi": 1.0233695652173913,
+              "max1HitExclRoi": 0.8846994535519126,
+              "max2HitExclRoi": 0.7626373626373626,
+              "zScore": 1.0882002399341746
+            },
+            "forward": {
+              "n": 82,
+              "hits": 9,
+              "actualRate": 0.10975609756097561,
+              "impliedRate": 0.07618536875053682,
+              "edgePp": 3.3570728810438792,
+              "roi": 1.2890243902439025,
+              "max1HitExclRoi": 0.9987654320987654,
+              "max2HitExclRoi": 0.805,
+              "zScore": 1.1620589387813602
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "常滑",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "2024-02"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "常滑",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "2025-11"
+            }
+          },
+          "persistent": false,
+          "explainsBoth": false,
+          "forwardAmplifier": false
+        }
+      ]
+    },
+    {
+      "id": "wind23_14",
+      "label": "風速2〜3m × 1-4",
+      "proxies": [
+        {
+          "id": "planned_12_a",
+          "label": "1・2号艇だけA級の企画編成proxy",
+          "candidate": {
+            "discovery": {
+              "n": 0,
+              "hits": 0,
+              "actualRate": 0,
+              "impliedRate": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max1HitExclRoi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": 0
+            },
+            "forward": {
+              "n": 0,
+              "hits": 0,
+              "actualRate": 0,
+              "impliedRate": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max1HitExclRoi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": 0
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 1372,
+              "hits": 146,
+              "actualRate": 0.10641399416909621,
+              "impliedRate": 0.10034478629246776,
+              "edgePp": 0.6069207876628444,
+              "roi": 0.7829446064139942,
+              "max1HitExclRoi": 0.751057622173596,
+              "max2HitExclRoi": 0.7218978102189781,
+              "zScore": 0.7790668501226986
+            },
+            "forward": {
+              "n": 681,
+              "hits": 88,
+              "actualRate": 0.12922173274596183,
+              "impliedRate": 0.09888045032811146,
+              "edgePp": 3.0341282417850364,
+              "roi": 1.1562408223201175,
+              "max1HitExclRoi": 1.1035294117647059,
+              "max2HitExclRoi": 1.0536082474226804,
+              "zScore": 2.7645683578993925
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "-",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "-"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "-",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "-"
+            }
+          },
+          "persistent": false,
+          "explainsBoth": false,
+          "forwardAmplifier": false
+        },
+        {
+          "id": "course4_only_a_rival",
+          "label": "4号艇が相手で唯一A級",
+          "candidate": {
+            "discovery": {
+              "n": 106,
+              "hits": 23,
+              "actualRate": 0.2169811320754717,
+              "impliedRate": 0.2233839067639632,
+              "edgePp": -0.6402774688491486,
+              "roi": 0.7037735849056603,
+              "max1HitExclRoi": 0.6542857142857142,
+              "max2HitExclRoi": 0.6153846153846154,
+              "zScore": -0.1612251317202848
+            },
+            "forward": {
+              "n": 60,
+              "hits": 13,
+              "actualRate": 0.21666666666666667,
+              "impliedRate": 0.23764791448077477,
+              "edgePp": -2.0981247814108093,
+              "roi": 0.8116666666666666,
+              "max1HitExclRoi": 0.6898305084745763,
+              "max2HitExclRoi": 0.6017241379310345,
+              "zScore": -0.3908116956177004
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 1266,
+              "hits": 123,
+              "actualRate": 0.0971563981042654,
+              "impliedRate": 0.09004293260370114,
+              "edgePp": 0.711346550056427,
+              "roi": 0.7895734597156399,
+              "max1HitExclRoi": 0.7550197628458498,
+              "max2HitExclRoi": 0.7234177215189873,
+              "zScore": 0.9166536999951509
+            },
+            "forward": {
+              "n": 621,
+              "hits": 75,
+              "actualRate": 0.12077294685990338,
+              "impliedRate": 0.08547296586891694,
+              "edgePp": 3.529998099098644,
+              "roi": 1.1895330112721416,
+              "max1HitExclRoi": 1.1317741935483872,
+              "max2HitExclRoi": 1.077059773828756,
+              "zScore": 3.2503697416618715
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0.535483870967742,
+              "worstVenue": "芦屋",
+              "minLeaveOneMonthMax2Roi": 0.5741573033707865,
+              "worstMonth": "2024-07"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0.3803921568627451,
+              "worstVenue": "下関",
+              "minLeaveOneMonthMax2Roi": 0.5132075471698113,
+              "worstMonth": "2025-04"
+            }
+          },
+          "persistent": false,
+          "explainsBoth": false,
+          "forwardAmplifier": false
+        },
+        {
+          "id": "planned_14_a",
+          "label": "1・4号艇だけA級の企画編成proxy",
+          "candidate": {
+            "discovery": {
+              "n": 69,
+              "hits": 18,
+              "actualRate": 0.2608695652173913,
+              "impliedRate": 0.25456877563681257,
+              "edgePp": 0.6300789580578725,
+              "roi": 0.8043478260869565,
+              "max1HitExclRoi": 0.7294117647058823,
+              "max2HitExclRoi": 0.6701492537313433,
+              "zScore": 0.12156407135482299
+            },
+            "forward": {
+              "n": 43,
+              "hits": 7,
+              "actualRate": 0.16279069767441862,
+              "impliedRate": 0.27411795588364873,
+              "edgePp": -11.132725820923012,
+              "roi": 0.44883720930232557,
+              "max1HitExclRoi": 0.34285714285714286,
+              "max2HitExclRoi": 0.2707317073170732,
+              "zScore": -1.660032963188788
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 1303,
+              "hits": 128,
+              "actualRate": 0.09823484267075978,
+              "impliedRate": 0.09217789813839267,
+              "edgePp": 0.6056944532367117,
+              "roi": 0.7818112049117422,
+              "max1HitExclRoi": 0.7482334869431644,
+              "max2HitExclRoi": 0.7175249807840123,
+              "zScore": 0.7835556439905319
+            },
+            "forward": {
+              "n": 638,
+              "hits": 81,
+              "actualRate": 0.12695924764890282,
+              "impliedRate": 0.08706977205399215,
+              "edgePp": 3.988947559491067,
+              "roi": 1.2039184952978057,
+              "max1HitExclRoi": 1.147723704866562,
+              "max2HitExclRoi": 1.094496855345912,
+              "zScore": 3.6908520476773363
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0.5482142857142858,
+              "worstVenue": "芦屋",
+              "minLeaveOneMonthMax2Roi": 0.5771929824561404,
+              "worstMonth": "2024-07"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0.1810810810810811,
+              "worstVenue": "下関",
+              "minLeaveOneMonthMax2Roi": 0.15897435897435896,
+              "worstMonth": "2025-10"
+            }
+          },
+          "persistent": false,
+          "explainsBoth": false,
+          "forwardAmplifier": false
+        },
+        {
+          "id": "head_only_a",
+          "label": "1号艇だけA級の企画編成proxy",
+          "candidate": {
+            "discovery": {
+              "n": 12,
+              "hits": 1,
+              "actualRate": 0.08333333333333333,
+              "impliedRate": 0.1312605568245199,
+              "edgePp": -4.792722349118657,
+              "roi": 0.26666666666666666,
+              "max1HitExclRoi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": -0.5050452126503985
+            },
+            "forward": {
+              "n": 2,
+              "hits": 0,
+              "actualRate": 0,
+              "impliedRate": 0.25229691840156865,
+              "edgePp": -25.229691840156864,
+              "roi": 0,
+              "max1HitExclRoi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": -0.8218891826837342
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 1360,
+              "hits": 145,
+              "actualRate": 0.10661764705882353,
+              "impliedRate": 0.1000720000818908,
+              "edgePp": 0.6545646976932731,
+              "roi": 0.7875,
+              "max1HitExclRoi": 0.7553348050036792,
+              "max2HitExclRoi": 0.725920471281296,
+              "zScore": 0.8376432203617009
+            },
+            "forward": {
+              "n": 679,
+              "hits": 88,
+              "actualRate": 0.12960235640648013,
+              "impliedRate": 0.09842856087870513,
+              "edgePp": 3.1173795527774995,
+              "roi": 1.1596465390279824,
+              "max1HitExclRoi": 1.1067846607669616,
+              "max2HitExclRoi": 1.0567208271787296,
+              "zScore": 2.8416850036065955
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "芦屋",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "2024-01"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "津",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "2025-07"
+            }
+          },
+          "persistent": false,
+          "explainsBoth": false,
+          "forwardAmplifier": false
+        }
+      ]
+    },
+    {
+      "id": "wind23_sw_14",
+      "label": "風速2〜3m・南西風 × 1-4",
+      "proxies": [
+        {
+          "id": "course4_only_a_rival",
+          "label": "4号艇が相手で唯一A級",
+          "candidate": {
+            "discovery": {
+              "n": 10,
+              "hits": 4,
+              "actualRate": 0.4,
+              "impliedRate": 0.23979033480176634,
+              "edgePp": 16.020966519823368,
+              "roi": 1.26,
+              "max1HitExclRoi": 0.9777777777777777,
+              "max2HitExclRoi": 0.6625,
+              "zScore": 1.1990755622203246
+            },
+            "forward": {
+              "n": 11,
+              "hits": 5,
+              "actualRate": 0.45454545454545453,
+              "impliedRate": 0.2548624502386008,
+              "edgePp": 19.96830043068537,
+              "roi": 1.7727272727272727,
+              "max1HitExclRoi": 1.37,
+              "max2HitExclRoi": 0.9777777777777777,
+              "zScore": 1.5400426941810539
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 188,
+              "hits": 23,
+              "actualRate": 0.12234042553191489,
+              "impliedRate": 0.08689858061284059,
+              "edgePp": 3.5441844919074303,
+              "roi": 1.1558510638297872,
+              "max1HitExclRoi": 1.006951871657754,
+              "max2HitExclRoi": 0.8870967741935484,
+              "zScore": 1.790245371267703
+            },
+            "forward": {
+              "n": 84,
+              "hits": 14,
+              "actualRate": 0.16666666666666666,
+              "impliedRate": 0.07913054610750489,
+              "edgePp": 8.753612055916177,
+              "roi": 2.026190476190476,
+              "max1HitExclRoi": 1.6048192771084338,
+              "max2HitExclRoi": 1.197560975609756,
+              "zScore": 3.0701771911177813
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "尼崎",
+              "minLeaveOneMonthMax2Roi": 0.37142857142857144,
+              "worstMonth": "2024-06"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0.6875,
+              "worstVenue": "常滑",
+              "minLeaveOneMonthMax2Roi": 0.6875,
+              "worstMonth": "2025-03"
+            }
+          },
+          "persistent": false,
+          "explainsBoth": false,
+          "forwardAmplifier": false
+        },
+        {
+          "id": "planned_14_a",
+          "label": "1・4号艇だけA級の企画編成proxy",
+          "candidate": {
+            "discovery": {
+              "n": 8,
+              "hits": 3,
+              "actualRate": 0.375,
+              "impliedRate": 0.25137718603210485,
+              "edgePp": 12.362281396789514,
+              "roi": 1.1,
+              "max1HitExclRoi": 0.7571428571428571,
+              "max2HitExclRoi": 0.43333333333333335,
+              "zScore": 0.8148258328949102
+            },
+            "forward": {
+              "n": 9,
+              "hits": 3,
+              "actualRate": 0.3333333333333333,
+              "impliedRate": 0.2686468837492376,
+              "edgePp": 6.46864495840957,
+              "roi": 1.2,
+              "max1HitExclRoi": 0.7375,
+              "max2HitExclRoi": 0.37142857142857144,
+              "zScore": 0.4424666248000616
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 190,
+              "hits": 24,
+              "actualRate": 0.12631578947368421,
+              "impliedRate": 0.08802010007881504,
+              "edgePp": 3.8295689394869172,
+              "roi": 1.1636842105263159,
+              "max1HitExclRoi": 1.0164021164021164,
+              "max2HitExclRoi": 0.8978723404255319,
+              "zScore": 1.9333243135946026
+            },
+            "forward": {
+              "n": 86,
+              "hits": 16,
+              "actualRate": 0.18604651162790697,
+              "impliedRate": 0.08177477758037072,
+              "edgePp": 10.427173404753626,
+              "roi": 2.0802325581395347,
+              "max1HitExclRoi": 1.6694117647058824,
+              "max2HitExclRoi": 1.2726190476190475,
+              "zScore": 3.649076423799422
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "尼崎",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "2024-01"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "徳山",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "2025-03"
+            }
+          },
+          "persistent": false,
+          "explainsBoth": false,
+          "forwardAmplifier": false
+        },
+        {
+          "id": "planned_12_a",
+          "label": "1・2号艇だけA級の企画編成proxy",
+          "candidate": {
+            "discovery": {
+              "n": 0,
+              "hits": 0,
+              "actualRate": 0,
+              "impliedRate": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max1HitExclRoi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": 0
+            },
+            "forward": {
+              "n": 0,
+              "hits": 0,
+              "actualRate": 0,
+              "impliedRate": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max1HitExclRoi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": 0
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 198,
+              "hits": 27,
+              "actualRate": 0.13636363636363635,
+              "impliedRate": 0.09462038637995811,
+              "edgePp": 4.174324998367824,
+              "roi": 1.1611111111111112,
+              "max1HitExclRoi": 1.0197969543147207,
+              "max2HitExclRoi": 0.9061224489795918,
+              "zScore": 2.0901013376038122
+            },
+            "forward": {
+              "n": 95,
+              "hits": 19,
+              "actualRate": 0.2,
+              "impliedRate": 0.09947845079636862,
+              "edgePp": 10.052154920363138,
+              "roi": 1.996842105263158,
+              "max1HitExclRoi": 1.624468085106383,
+              "max2HitExclRoi": 1.2655913978494624,
+              "zScore": 3.425836529362799
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "-",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "-"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "-",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "-"
+            }
+          },
+          "persistent": false,
+          "explainsBoth": false,
+          "forwardAmplifier": false
+        },
+        {
+          "id": "head_only_a",
+          "label": "1号艇だけA級の企画編成proxy",
+          "candidate": {
+            "discovery": {
+              "n": 0,
+              "hits": 0,
+              "actualRate": 0,
+              "impliedRate": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max1HitExclRoi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": 0
+            },
+            "forward": {
+              "n": 0,
+              "hits": 0,
+              "actualRate": 0,
+              "impliedRate": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max1HitExclRoi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": 0
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 198,
+              "hits": 27,
+              "actualRate": 0.13636363636363635,
+              "impliedRate": 0.09462038637995811,
+              "edgePp": 4.174324998367824,
+              "roi": 1.1611111111111112,
+              "max1HitExclRoi": 1.0197969543147207,
+              "max2HitExclRoi": 0.9061224489795918,
+              "zScore": 2.0901013376038122
+            },
+            "forward": {
+              "n": 95,
+              "hits": 19,
+              "actualRate": 0.2,
+              "impliedRate": 0.09947845079636862,
+              "edgePp": 10.052154920363138,
+              "roi": 1.996842105263158,
+              "max1HitExclRoi": 1.624468085106383,
+              "max2HitExclRoi": 1.2655913978494624,
+              "zScore": 3.425836529362799
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "-",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "-"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "-",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "-"
+            }
+          },
+          "persistent": false,
+          "explainsBoth": false,
+          "forwardAmplifier": false
+        }
+      ]
     }
   ],
   "discoveryGridAudit": {

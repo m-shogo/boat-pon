@@ -97,6 +97,8 @@
     "audit:t5-market-coverage": "tsx scripts/audit-t5-market-coverage.ts",
     "analyze:unconventional-features": "tsx scripts/analyze-unconventional-features.ts",
     "analyze:local-market-anomalies": "tsx scripts/analyze-local-market-anomalies.ts",
+    "analyze:racer-relationship-market": "tsx scripts/analyze-racer-relationship-market.ts",
+    "audit:official-racer-relationships": "tsx scripts/audit-official-racer-relationships.ts",
     "guard:live": "tsx scripts/live-change-guard.ts",
     "auto:odds": "tsx scripts/auto-fetch-odds.ts",
     "auto:beforeinfo": "tsx scripts/auto-fetch-exhibition.ts",

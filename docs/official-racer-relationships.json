@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "policy": {
+    "allowedRelationshipTypes": [
+      "mentor_apprentice"
+    ],
+    "sourcePolicy": "BOAT RACE公式サイト本文で当事者間の関係が明記されたものだけを収録する",
+    "analysisPolicy": "sourcePublishedDate以後のレースでのみ利用し、個人別の疑惑判定には使わない"
+  },
+  "relationships": [
+    {
+      "relationshipType": "mentor_apprentice",
+      "mentor": {
+        "registrationNo": "4190",
+        "name": "長嶋万記"
+      },
+      "apprentice": {
+        "registrationNo": "4984",
+        "name": "森下愛梨"
+      },
+      "sourceUrl": "https://www.boatrace.jp/owpc/pc/site/stadium_info/2019/01/10242/",
+      "sourcePublishedDate": "2019-01-28",
+      "evidenceSummary": "公式記事が森下愛梨選手の師匠を長嶋万記選手と明記",
+      "verifiedAt": "2026-07-18"
+    },
+    {
+      "relationshipType": "mentor_apprentice",
+      "mentor": {
+        "registrationNo": "4475",
+        "name": "末永祐輝"
+      },
+      "apprentice": {
+        "registrationNo": "5145",
+        "name": "島川海輝"
+      },
+      "sourceUrl": "https://www.boatrace.jp/owpc/pc/site/stadium_info/2023/09/18019/",
+      "sourcePublishedDate": "2023-09-06",
+      "evidenceSummary": "公式記事が島川海輝選手の師匠を末永祐輝選手と明記",
+      "verifiedAt": "2026-07-18"
+    }
+  ]
+}

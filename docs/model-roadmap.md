@@ -2,6 +2,12 @@
 
 ## 変わった角度のfeature screen（2026-07-18）
 
+選手間の公開履歴は`pnpm analyze:racer-relationship-market`で、2023年からprior-dayの同走・直接対戦を再構成し、2024→2025のexacta 1-4市場残差へ接続する。師弟は`docs/official-racer-relationships.json`の公式記事で確認できた組だけを記事公開日以後に使う。支部は現在DBにhistorical snapshotがなく、「事務所」に相当する公式構造も確認できないため推測しない。個人名の異常ランキングや不正推測には使わない。
+
+企画番組は主催者が公開している番組設計で、1号艇のみA級、1・4号艇のみA級など明示的な編成が存在する。これは市場が編成構造を過小・過大評価する可能性を調べる正当なfeatureだが、的中率や残差が偏っても「やらせ」の証拠にはならない。現在の旧番組JSONには企画タイトルがないため級別構成proxyに限定し、将来は開催タイトル・企画名をレース前時点で保存してforward検証する。
+
+番組・師弟・イベント・市場・物理環境を単因子の物語にしない検証順序は`docs/integrity-anomaly-research.md`に固定する。利益仮説はT-5市場残差で評価し、公正性の主張とは証拠水準を分離する。
+
 局所的な異常理由は`pnpm analyze:local-market-anomalies`で、丸亀・大村・常滑のexacta 1-2と風速2〜3mの1-4を、2024発見→2025 forward、選手能力差・当地差・機力・展示・相手構成に分解する。historical closing oddsなので仮説生成専用とし、T-5で再現するまで採用しない。
 
 最有力の新規監視仮説は「風速2〜3m・南西風・4号艇が1号艇以外で全国勝率最上位 → exacta 1-4」。2024はn=52、13hit、edge +8.44pt、最大2件除外ROI 132.8%、2025はn=24、10hit、edge +22.66pt、最大2件除外ROI 139.5%。ただし2024はびわこまたは2024-05をleave-one-outすると最大2件除外ROIが100%を割り、2025も標本が24件しかない。過去風向は結果取得系`race_conditions`由来で、live締切前`race_weather`には未保存。post-hoc・point-in-time非同等・小標本のためproduction接続せず、将来T-5で条件固定監視する。

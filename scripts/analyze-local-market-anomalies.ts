@@ -81,6 +81,10 @@ try {
     { id: "stable_plate", label: "安定板あり", applies: r => r.stable_plate === 1 },
     { id: "target_local_motor", label: "相手艇が当地上振れかつ良モーター", applies: r => localGap(r.program, targetCourse(r.combo)) >= 0.5 && value(r.program, targetCourse(r.combo), "motorTop2Rate") >= 40 },
     { id: "target_exh_early", label: "相手艇展示上位2艇かつ1〜4R", applies: r => exhibitionRank(exhibition.get(r.race_id), targetCourse(r.combo)) <= 2 && r.race_no <= 4 },
+    { id: "planned_14_a", label: "1・4号艇だけA級の企画編成proxy", applies: r => onlyCoursesAreAClass(r.program, [1, 4]) },
+    { id: "planned_12_a", label: "1・2号艇だけA級の企画編成proxy", applies: r => onlyCoursesAreAClass(r.program, [1, 2]) },
+    { id: "head_only_a", label: "1号艇だけA級の企画編成proxy", applies: r => onlyCoursesAreAClass(r.program, [1]) },
+    { id: "course4_only_a_rival", label: "4号艇が相手で唯一A級", applies: r => isAClass(boat(r.program, 4)?.className) && boats(r.program).filter(b => b.course !== 1 && b.course !== 4).every(b => !isAClass(b.className)) },
     ...["冬(12-2)", "春(3-5)", "夏(6-8)", "秋(9-11)"].map(season => ({
       id: `season_${season}`, label: season, applies: (r: Observation) => seasonOf(r.date) === season,
     })),
@@ -162,6 +166,8 @@ try {
     scope: { races: raw.length, discovery: raw.filter(r => r.date <= "2024-12-31").length, forward: raw.filter(r => r.date >= "2025-01-01").length },
     caveats: ["多重探索を含むため仮説生成専用", "historical closing oddsでありT-5再現ではない", "原因ではなく構成差・交絡候補", "family-wise simulationは1-4の風×能力32セルだけで、元の買い目・会場・展示探索を含まない部分補正"],
     interactionCells: interactionCells.map(({ filter: _filter, ...cell }) => cell), matchedContrasts,
+    programCompositionAudit: results.map(result => ({ id: result.id, label: result.label,
+      proxies: result.mechanisms.filter(row => ["planned_14_a", "planned_12_a", "head_only_a", "course4_only_a_rival"].includes(row.id)) })),
     discoveryGridAudit: {
       family: "1-4 × 風速5帯 × 風向9種 × 4号艇最強/非最強。2024 n>=30",
       eligibleCells: eligibleGrid.length, targetGridId, targetGridRank, simulations: 1000, ...gridSimulation,
@@ -220,6 +226,13 @@ try {
     ...eligibleGrid.slice(0, 10).map((cell, index) => `| ${index + 1} | ${cell.band}・${cell.direction}・4号艇${cell.topRival4 ? "最強" : "非最強"} | ${shortCell(cell.discovery)} | ${shortCell(cell.forward)} |`),
     "", "### 対象セルの月別", "", "| 月 | n | hit | edge | ROI |", "|---|---:|---:|---:|---:|",
     ...monthlyTarget.map(row => `| ${row.month} | ${row.n} | ${row.hits} | ${row.edgePp >= 0 ? "+" : ""}${row.edgePp.toFixed(2)}pt | ${pct(row.roi)} |`),
+    "", "## 公開企画番組に似た編成proxy", "",
+    "> 1・4号艇だけA級などの構成を比較する。公式タイトル未保存のためproxyであり、該当しても不正を意味しない。", "",
+    ...results.flatMap(result => [
+      `### ${result.label}`, "", "| proxy | 2024 n / edge / ROI | 2025 n / edge / ROI |", "|---|---:|---:|",
+      ...result.mechanisms.filter(row => ["planned_14_a", "planned_12_a", "head_only_a", "course4_only_a_rival"].includes(row.id))
+        .map(row => `| ${row.label} | ${row.candidate.discovery.n} / ${row.candidate.discovery.edgePp >= 0 ? "+" : ""}${row.candidate.discovery.edgePp.toFixed(2)}pt / ${pct(row.candidate.discovery.roi)} | ${row.candidate.forward.n} / ${row.candidate.forward.edgePp >= 0 ? "+" : ""}${row.candidate.forward.edgePp.toFixed(2)}pt / ${pct(row.candidate.forward.roi)} |`), "",
+    ]),
     "", "## 交絡を揃えた市場残差比較", "",
     "> treatmentは「風2〜3m・南西風・4号艇最強ライバル」。edge差は actual - normalized implied の差で、プラスほど条件群側に市場未説明分が残る。", "",
     "| 比較目的 | 調整 | 2024 matched / coverage / edge差 | 2025 matched / coverage / edge差 |", "|---|---|---:|---:|",
@@ -234,6 +247,7 @@ try {
     "7. **実運用可能性**: 過去風向は結果取得系にしかなく、締切前liveで同じ特徴を作れない。予測力があっても現状は実行可能なedgeではない。",
     "8. **探索多重度**: 対象セルの2024 raw pは小さめでも、32セル中の最大値探索を考慮したfamily-wise pは高い。偶然候補を拾った可能性を排除できない。後付け頑健性ゲートでは唯一残り2025も再現したが、ゲート自体を次期間で前向き検証する必要がある。",
     "9. **オッズ品質**: exacta closing oddsは別監査で18/18取得・F返還を除き当選払戻/100との一致を確認済みで、単純なパース誤りの可能性は低い。ただし全4,184レースの完全検算ではなく、風向は結果取得時点なのでT-5同等性はない。",
+    "10. **企画番組**: 1・4号艇だけA級、1・2号艇だけA級、1号艇だけA級など公開編成方針を再現するproxyも比較する。これが効いても不正の証拠ではなく、主催者が公開している番組設計による構成効果。",
     "", "結論は単一原因ではなく、**南西風環境を主軸に、4号艇相対能力が相互作用し、会場・季節・開催単位の交絡と価格時点差が残る**というもの。因果確定やBUY採用ではなく、必要データと反証条件を持つ監視仮説とする。",
     "", "## 公式情報との突合", "",
     "- 丸亀: https://www.boatrace.jp/owsp/sp/site/place/stadium/br15/index.html — 干満と風向でまくり・差しが変わる。",
@@ -307,6 +321,8 @@ function metric(rows: Observation[]): Metric {
 }
 function boats(program: UnconventionalProgram) { return [...program.boats].sort((a, b) => a.course - b.course); }
 function boat(program: UnconventionalProgram, course: number) { return boats(program).find(row => row.course === course); }
+function isAClass(className: string | undefined) { return className === "A1" || className === "A2"; }
+function onlyCoursesAreAClass(program: UnconventionalProgram, courses: number[]) { const expected = new Set(courses); return boats(program).length >= 6 && boats(program).every(row => isAClass(row.className) === expected.has(row.course)); }
 function value(program: UnconventionalProgram, course: number, key: keyof UnconventionalBoat) { const v = boat(program, course)?.[key]; return typeof v === "number" ? v : Number.NEGATIVE_INFINITY; }
 function localGap(program: UnconventionalProgram, course: number) { return value(program, course, "localWinRate") - value(program, course, "nationalWinRate"); }
 function gapFromRivals(program: UnconventionalProgram, course: number) { const own = value(program, course, "nationalWinRate"); const rivals = boats(program).filter(b => b.course !== course).map(b => b.nationalWinRate).filter((v): v is number => v != null); return rivals.length ? own - Math.max(...rivals) : Number.NEGATIVE_INFINITY; }

@@ -1,0 +1,1038 @@
+{
+  "generatedAt": "2026-07-18T14:23:20.215Z",
+  "safety": {
+    "readOnly": true,
+    "pointInTimePriorDay": true,
+    "privateRelationshipInference": false,
+    "profitClaim": false
+  },
+  "scope": {
+    "historyFrom": "2023-01-01",
+    "evaluation": "2024-01-01..2025-12-31",
+    "exactaRaces": 4179
+  },
+  "officialRelationshipRegistry": {
+    "relationshipCount": 2,
+    "pointInTimeRule": "sourcePublishedDate以後のみ"
+  },
+  "unavailable": [
+    "網羅的な公式師弟pair registry",
+    "支部・登録期のhistorical snapshot",
+    "企画タイトルのhistorical保存"
+  ],
+  "caveats": [
+    "登録番号近接は同期の近似であり公式登録期ではない",
+    "同走・対戦は関係性の証拠ではない",
+    "個人単位の不正判定には使わない"
+  ],
+  "results": [
+    {
+      "id": "all",
+      "label": "exacta 1-4全体",
+      "base": {
+        "discovery": {
+          "n": 2711,
+          "hits": 304,
+          "edgePp": 0.9421208681222537,
+          "roi": 0.7760236075248985,
+          "max2HitExclRoi": 0.7448135843484681,
+          "zScore": 1.6853101593345348
+        },
+        "forward": {
+          "n": 1468,
+          "hits": 175,
+          "edgePp": 1.8769852919416548,
+          "roi": 0.969141689373297,
+          "max2HitExclRoi": 0.9056616643929059,
+          "zScore": 2.496031765578921
+        }
+      },
+      "relationships": [
+        {
+          "flag": "公式出典付き師弟pair",
+          "inside": {
+            "discovery": {
+              "n": 0,
+              "hits": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": 0
+            },
+            "forward": {
+              "n": 0,
+              "hits": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 2711,
+              "hits": 304,
+              "edgePp": 0.9421208681222537,
+              "roi": 0.7760236075248985,
+              "max2HitExclRoi": 0.7448135843484681,
+              "zScore": 1.6853101593345348
+            },
+            "forward": {
+              "n": 1468,
+              "hits": 175,
+              "edgePp": 1.8769852919416548,
+              "roi": 0.969141689373297,
+              "max2HitExclRoi": 0.9056616643929059,
+              "zScore": 2.496031765578921
+            }
+          }
+        },
+        {
+          "flag": "1号艇4号艇_過去同走5回以上",
+          "inside": {
+            "discovery": {
+              "n": 370,
+              "hits": 50,
+              "edgePp": -0.42409175395851095,
+              "roi": 0.6940540540540541,
+              "max2HitExclRoi": 0.5315217391304348,
+              "zScore": -0.2449998730524114
+            },
+            "forward": {
+              "n": 306,
+              "hits": 44,
+              "edgePp": 1.6012716112464491,
+              "roi": 0.8477124183006536,
+              "max2HitExclRoi": 0.6717105263157894,
+              "zScore": 0.8765680478012944
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 2341,
+              "hits": 254,
+              "edgePp": 1.1580536618727086,
+              "roi": 0.7889790687740282,
+              "max2HitExclRoi": 0.753227875160325,
+              "zScore": 1.9737682361104696
+            },
+            "forward": {
+              "n": 1162,
+              "hits": 131,
+              "edgePp": 1.9495914763588127,
+              "roi": 1.0011187607573149,
+              "max2HitExclRoi": 0.920948275862069,
+              "zScore": 2.379824606812278
+            }
+          }
+        },
+        {
+          "flag": "1号艇4号艇_過去同走10回以上",
+          "inside": {
+            "discovery": {
+              "n": 54,
+              "hits": 10,
+              "edgePp": 0.6591134726704001,
+              "roi": 0.6277777777777778,
+              "max2HitExclRoi": 0.4576923076923077,
+              "zScore": 0.1301037558997115
+            },
+            "forward": {
+              "n": 78,
+              "hits": 14,
+              "edgePp": 2.1161280303827494,
+              "roi": 0.7256410256410256,
+              "max2HitExclRoi": 0.4881578947368421,
+              "zScore": 0.5341497918032126
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 2657,
+              "hits": 294,
+              "edgePp": 0.9478726179733623,
+              "roi": 0.7790365073391042,
+              "max2HitExclRoi": 0.7471939736346516,
+              "zScore": 1.6895801002023043
+            },
+            "forward": {
+              "n": 1390,
+              "hits": 161,
+              "edgePp": 1.8635657713672829,
+              "roi": 0.9828057553956835,
+              "max2HitExclRoi": 0.9157780979827089,
+              "zScore": 2.444224840868785
+            }
+          }
+        },
+        {
+          "flag": "4号艇_直接対戦優勢",
+          "inside": {
+            "discovery": {
+              "n": 354,
+              "hits": 48,
+              "edgePp": 0.6337803569377742,
+              "roi": 0.668361581920904,
+              "max2HitExclRoi": 0.56875,
+              "zScore": 0.3694420406161225
+            },
+            "forward": {
+              "n": 258,
+              "hits": 36,
+              "edgePp": 0.9823685025926149,
+              "roi": 1.0406976744186047,
+              "max2HitExclRoi": 0.808984375,
+              "zScore": 0.4855790322653585
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 2357,
+              "hits": 256,
+              "edgePp": 0.9884308133743802,
+              "roi": 0.7921934662706831,
+              "max2HitExclRoi": 0.7563057324840764,
+              "zScore": 1.6778714838717945
+            },
+            "forward": {
+              "n": 1210,
+              "hits": 139,
+              "edgePp": 2.0677382933069963,
+              "roi": 0.9538842975206612,
+              "max2HitExclRoi": 0.8768211920529801,
+              "zScore": 2.5721143489155285
+            }
+          }
+        },
+        {
+          "flag": "1号艇_直接対戦優勢",
+          "inside": {
+            "discovery": {
+              "n": 234,
+              "hits": 24,
+              "edgePp": -2.0455655789505687,
+              "roi": 0.6085470085470085,
+              "max2HitExclRoi": 0.34870689655172415,
+              "zScore": -0.9984855280811789
+            },
+            "forward": {
+              "n": 150,
+              "hits": 20,
+              "edgePp": 2.0211688815685136,
+              "roi": 0.77,
+              "max2HitExclRoi": 0.5668918918918919,
+              "zScore": 0.8202713772579742
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 2477,
+              "hits": 280,
+              "edgePp": 1.224364965261937,
+              "roi": 0.7918449737585789,
+              "max2HitExclRoi": 0.7580606060606061,
+              "zScore": 2.109472774930013
+            },
+            "forward": {
+              "n": 1318,
+              "hits": 155,
+              "edgePp": 1.8605759304515066,
+              "roi": 0.9918057663125949,
+              "max2HitExclRoi": 0.9211246200607903,
+              "zScore": 2.357455722584238
+            }
+          }
+        },
+        {
+          "flag": "直近直接対戦_4号艇勝ち",
+          "inside": {
+            "discovery": {
+              "n": 696,
+              "hits": 91,
+              "edgePp": 0.3030618208920366,
+              "roi": 0.7830459770114943,
+              "max2HitExclRoi": 0.7079250720461095,
+              "zScore": 0.2486546440398013
+            },
+            "forward": {
+              "n": 434,
+              "hits": 66,
+              "edgePp": 2.632525194554447,
+              "roi": 0.9790322580645161,
+              "max2HitExclRoi": 0.8414351851851852,
+              "zScore": 1.7192023729926835
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 2015,
+              "hits": 213,
+              "edgePp": 1.1628578889024896,
+              "roi": 0.7735980148883375,
+              "max2HitExclRoi": 0.7315946348733234,
+              "zScore": 1.865800654512153
+            },
+            "forward": {
+              "n": 1034,
+              "hits": 109,
+              "edgePp": 1.559863127788899,
+              "roi": 0.964990328820116,
+              "max2HitExclRoi": 0.8748062015503876,
+              "zScore": 1.8297785563188413
+            }
+          }
+        },
+        {
+          "flag": "登録番号近接60以内_proxy",
+          "inside": {
+            "discovery": {
+              "n": 185,
+              "hits": 30,
+              "edgePp": 3.4714912061195813,
+              "roi": 0.625945945945946,
+              "max2HitExclRoi": 0.5240437158469945,
+              "zScore": 1.4839112427160344
+            },
+            "forward": {
+              "n": 114,
+              "hits": 12,
+              "edgePp": 0.704143519821343,
+              "roi": 0.7350877192982456,
+              "max2HitExclRoi": 0.3848214285714286,
+              "zScore": 0.2634188029282132
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 2526,
+              "hits": 274,
+              "edgePp": 0.7568740302245747,
+              "roi": 0.78701504354711,
+              "max2HitExclRoi": 0.7535261489698891,
+              "zScore": 1.3163576980324563
+            },
+            "forward": {
+              "n": 1354,
+              "hits": 163,
+              "edgePp": 1.9757326789591814,
+              "roi": 0.9888478581979321,
+              "max2HitExclRoi": 0.9200443786982249,
+              "zScore": 2.5212822190043105
+            }
+          }
+        },
+        {
+          "flag": "メンバー過去同走合計30以上",
+          "inside": {
+            "discovery": {
+              "n": 930,
+              "hits": 97,
+              "edgePp": -0.25613822567459726,
+              "roi": 0.6990322580645161,
+              "max2HitExclRoi": 0.6244612068965517,
+              "zScore": -0.2626908650846454
+            },
+            "forward": {
+              "n": 897,
+              "hits": 110,
+              "edgePp": 1.8956330331110591,
+              "roi": 0.9430323299888518,
+              "max2HitExclRoi": 0.8649162011173185,
+              "zScore": 1.939098138129327
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 1781,
+              "hits": 207,
+              "edgePp": 1.5678260658937488,
+              "roi": 0.816226838854576,
+              "max2HitExclRoi": 0.7692523889825745,
+              "zScore": 2.29956718451631
+            },
+            "forward": {
+              "n": 571,
+              "hits": 65,
+              "edgePp": 1.847691029544156,
+              "roi": 1.0101576182136602,
+              "max2HitExclRoi": 0.8502636203866433,
+              "zScore": 1.573285845811973
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "southwest",
+      "label": "風2〜3m・南西風",
+      "base": {
+        "discovery": {
+          "n": 198,
+          "hits": 27,
+          "edgePp": 4.174324998367824,
+          "roi": 1.1611111111111112,
+          "max2HitExclRoi": 0.9061224489795918,
+          "zScore": 2.0901013376038122
+        },
+        "forward": {
+          "n": 94,
+          "hits": 19,
+          "edgePp": 10.202569439303005,
+          "roi": 2.0180851063829786,
+          "max2HitExclRoi": 1.2793478260869566,
+          "zScore": 3.4492087019695075
+        }
+      },
+      "relationships": [
+        {
+          "flag": "公式出典付き師弟pair",
+          "inside": {
+            "discovery": {
+              "n": 0,
+              "hits": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": 0
+            },
+            "forward": {
+              "n": 0,
+              "hits": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 198,
+              "hits": 27,
+              "edgePp": 4.174324998367824,
+              "roi": 1.1611111111111112,
+              "max2HitExclRoi": 0.9061224489795918,
+              "zScore": 2.0901013376038122
+            },
+            "forward": {
+              "n": 94,
+              "hits": 19,
+              "edgePp": 10.202569439303005,
+              "roi": 2.0180851063829786,
+              "max2HitExclRoi": 1.2793478260869566,
+              "zScore": 3.4492087019695075
+            }
+          }
+        },
+        {
+          "flag": "1号艇4号艇_過去同走5回以上",
+          "inside": {
+            "discovery": {
+              "n": 20,
+              "hits": 2,
+              "edgePp": -1.466637683717753,
+              "roi": 0.295,
+              "max2HitExclRoi": 0,
+              "zScore": -0.21533558738748845
+            },
+            "forward": {
+              "n": 16,
+              "hits": 4,
+              "edgePp": 12.408567665457603,
+              "roi": 0.81875,
+              "max2HitExclRoi": 0.37857142857142856,
+              "zScore": 1.5521752297087137
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 178,
+              "hits": 25,
+              "edgePp": 4.80814103006284,
+              "roi": 1.2584269662921348,
+              "max2HitExclRoi": 0.9755681818181818,
+              "zScore": 2.30537433692847
+            },
+            "forward": {
+              "n": 78,
+              "hits": 15,
+              "edgePp": 9.750056982655911,
+              "roi": 2.264102564102564,
+              "max2HitExclRoi": 1.3763157894736842,
+              "zScore": 3.0804718920051757
+            }
+          }
+        },
+        {
+          "flag": "1号艇4号艇_過去同走10回以上",
+          "inside": {
+            "discovery": {
+              "n": 2,
+              "hits": 0,
+              "edgePp": -14.412114971961199,
+              "roi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": -0.5918315838185645
+            },
+            "forward": {
+              "n": 2,
+              "hits": 1,
+              "edgePp": 36.49930928969744,
+              "roi": 2.45,
+              "max2HitExclRoi": 0,
+              "zScore": 1.5124267786054049
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 196,
+              "hits": 27,
+              "edgePp": 4.363982549085469,
+              "roi": 1.1729591836734694,
+              "max2HitExclRoi": 0.9154639175257732,
+              "zScore": 2.1795862988581414
+            },
+            "forward": {
+              "n": 92,
+              "hits": 18,
+              "edgePp": 9.630901181685738,
+              "roi": 2.008695652173913,
+              "max2HitExclRoi": 1.2533333333333334,
+              "zScore": 3.2357932075905866
+            }
+          }
+        },
+        {
+          "flag": "4号艇_直接対戦優勢",
+          "inside": {
+            "discovery": {
+              "n": 26,
+              "hits": 2,
+              "edgePp": -3.3754656569044723,
+              "roi": 0.6384615384615384,
+              "max2HitExclRoi": 0,
+              "zScore": -0.5611841298976767
+            },
+            "forward": {
+              "n": 11,
+              "hits": 4,
+              "edgePp": 21.22938662647069,
+              "roi": 2.5727272727272728,
+              "max2HitExclRoi": 0.8222222222222222,
+              "zScore": 2.007375006022532
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 172,
+              "hits": 25,
+              "edgePp": 5.315572423002016,
+              "roi": 1.2401162790697675,
+              "max2HitExclRoi": 0.9470588235294117,
+              "zScore": 2.5172476457957575
+            },
+            "forward": {
+              "n": 83,
+              "hits": 15,
+              "edgePp": 8.741184028955482,
+              "roi": 1.9445783132530121,
+              "max2HitExclRoi": 1.1037037037037036,
+              "zScore": 2.8728778378919677
+            }
+          }
+        },
+        {
+          "flag": "1号艇_直接対戦優勢",
+          "inside": {
+            "discovery": {
+              "n": 12,
+              "hits": 3,
+              "edgePp": 12.048602461567837,
+              "roi": 0.6166666666666667,
+              "max2HitExclRoi": 0.21,
+              "zScore": 1.3277259016523288
+            },
+            "forward": {
+              "n": 11,
+              "hits": 0,
+              "edgePp": -6.332874353057427,
+              "roi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": -0.8717889457042426
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 186,
+              "hits": 24,
+              "edgePp": 3.6663070975162166,
+              "roi": 1.196236559139785,
+              "max2HitExclRoi": 0.925,
+              "zScore": 1.7938335547906172
+            },
+            "forward": {
+              "n": 83,
+              "hits": 19,
+              "edgePp": 12.394013797326679,
+              "roi": 2.2855421686746986,
+              "max2HitExclRoi": 1.4530864197530864,
+              "zScore": 3.8626952039442966
+            }
+          }
+        },
+        {
+          "flag": "直近直接対戦_4号艇勝ち",
+          "inside": {
+            "discovery": {
+              "n": 53,
+              "hits": 5,
+              "edgePp": -3.449771148940961,
+              "roi": 0.7433962264150943,
+              "max2HitExclRoi": 0.28431372549019607,
+              "zScore": -0.7765411618741711
+            },
+            "forward": {
+              "n": 19,
+              "hits": 3,
+              "edgePp": 1.505491305513157,
+              "roi": 0.531578947368421,
+              "max2HitExclRoi": 0.1588235294117647,
+              "zScore": 0.19475884864898924
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 145,
+              "hits": 22,
+              "edgePp": 6.961063590142763,
+              "roi": 1.313793103448276,
+              "max2HitExclRoi": 0.9664335664335665,
+              "zScore": 3.17699523558861
+            },
+            "forward": {
+              "n": 75,
+              "hits": 16,
+              "edgePp": 12.405829233196437,
+              "roi": 2.3946666666666667,
+              "max2HitExclRoi": 1.473972602739726,
+              "zScore": 3.9410064432093534
+            }
+          }
+        },
+        {
+          "flag": "登録番号近接60以内_proxy",
+          "inside": {
+            "discovery": {
+              "n": 11,
+              "hits": 1,
+              "edgePp": -2.6776914853394507,
+              "roi": 0.21818181818181817,
+              "max2HitExclRoi": 0,
+              "zScore": -0.2872417168428241
+            },
+            "forward": {
+              "n": 5,
+              "hits": 1,
+              "edgePp": 5.465242745768151,
+              "roi": 0.52,
+              "max2HitExclRoi": 0,
+              "zScore": 0.3590417131539331
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 187,
+              "hits": 26,
+              "edgePp": 4.57738479152708,
+              "roi": 1.2165775401069518,
+              "max2HitExclRoi": 0.947027027027027,
+              "zScore": 2.241251147677802
+            },
+            "forward": {
+              "n": 89,
+              "hits": 18,
+              "edgePp": 10.468711388377997,
+              "roi": 2.102247191011236,
+              "max2HitExclRoi": 1.3229885057471265,
+              "zScore": 3.4839914763531974
+            }
+          }
+        },
+        {
+          "flag": "メンバー過去同走合計30以上",
+          "inside": {
+            "discovery": {
+              "n": 53,
+              "hits": 4,
+              "edgePp": -0.9576155727417448,
+              "roi": 1.1169811320754717,
+              "max2HitExclRoi": 0.13529411764705881,
+              "zScore": -0.2580763599113342
+            },
+            "forward": {
+              "n": 57,
+              "hits": 12,
+              "edgePp": 10.651247873619239,
+              "roi": 1.1789473684210525,
+              "max2HitExclRoi": 0.7909090909090909,
+              "zScore": 2.748017963836778
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 145,
+              "hits": 23,
+              "edgePp": 6.05013775884236,
+              "roi": 1.177241379310345,
+              "max2HitExclRoi": 0.9286713286713286,
+              "zScore": 2.5570878831154302
+            },
+            "forward": {
+              "n": 37,
+              "hits": 7,
+              "edgePp": 9.511362121572592,
+              "roi": 3.310810810810811,
+              "max2HitExclRoi": 1.4428571428571428,
+              "zScore": 2.0846065002585976
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "target",
+      "label": "風2〜3m・南西風・4号艇最強",
+      "base": {
+        "discovery": {
+          "n": 52,
+          "hits": 13,
+          "edgePp": 8.43591478970929,
+          "roi": 2.207692307692308,
+          "max2HitExclRoi": 1.328,
+          "zScore": 1.685061828331318
+        },
+        "forward": {
+          "n": 24,
+          "hits": 10,
+          "edgePp": 22.66414376349771,
+          "roi": 1.8,
+          "max2HitExclRoi": 1.3954545454545455,
+          "zScore": 2.897631288785638
+        }
+      },
+      "relationships": [
+        {
+          "flag": "公式出典付き師弟pair",
+          "inside": {
+            "discovery": {
+              "n": 0,
+              "hits": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": 0
+            },
+            "forward": {
+              "n": 0,
+              "hits": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 52,
+              "hits": 13,
+              "edgePp": 8.43591478970929,
+              "roi": 2.207692307692308,
+              "max2HitExclRoi": 1.328,
+              "zScore": 1.685061828331318
+            },
+            "forward": {
+              "n": 24,
+              "hits": 10,
+              "edgePp": 22.66414376349771,
+              "roi": 1.8,
+              "max2HitExclRoi": 1.3954545454545455,
+              "zScore": 2.897631288785638
+            }
+          }
+        },
+        {
+          "flag": "1号艇4号艇_過去同走5回以上",
+          "inside": {
+            "discovery": {
+              "n": 5,
+              "hits": 1,
+              "edgePp": 2.3946927641758764,
+              "roi": 0.76,
+              "max2HitExclRoi": 0,
+              "zScore": 0.14291061378380437
+            },
+            "forward": {
+              "n": 4,
+              "hits": 3,
+              "edgePp": 53.58858465367653,
+              "roi": 2.6,
+              "max2HitExclRoi": 1.3,
+              "zScore": 2.639094102996116
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 47,
+              "hits": 12,
+              "edgePp": 9.078597983914971,
+              "roi": 2.3617021276595747,
+              "max2HitExclRoi": 1.3911111111111112,
+              "zScore": 1.7311747900818306
+            },
+            "forward": {
+              "n": 20,
+              "hits": 7,
+              "edgePp": 16.479255585461942,
+              "roi": 1.64,
+              "max2HitExclRoi": 1.1277777777777778,
+              "zScore": 1.9474765094497584
+            }
+          }
+        },
+        {
+          "flag": "1号艇4号艇_過去同走10回以上",
+          "inside": {
+            "discovery": {
+              "n": 1,
+              "hits": 0,
+              "edgePp": -21.30343137623078,
+              "roi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": -0.5202916817259238
+            },
+            "forward": {
+              "n": 1,
+              "hits": 1,
+              "edgePp": 84.7665246795751,
+              "roi": 4.9,
+              "max2HitExclRoi": 0,
+              "zScore": 2.358917174450222
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 51,
+              "hits": 13,
+              "edgePp": 9.019039224335568,
+              "roi": 2.2509803921568627,
+              "max2HitExclRoi": 1.3551020408163266,
+              "zScore": 1.7891639165754523
+            },
+            "forward": {
+              "n": 23,
+              "hits": 9,
+              "edgePp": 19.96404024540739,
+              "roi": 1.6652173913043478,
+              "max2HitExclRoi": 1.2285714285714286,
+              "zScore": 2.492157817712448
+            }
+          }
+        },
+        {
+          "flag": "4号艇_直接対戦優勢",
+          "inside": {
+            "discovery": {
+              "n": 10,
+              "hits": 1,
+              "edgePp": -5.697167001813649,
+              "roi": 0.38,
+              "max2HitExclRoi": 0,
+              "zScore": -0.5003124879455316
+            },
+            "forward": {
+              "n": 5,
+              "hits": 2,
+              "edgePp": 20.07173360546689,
+              "roi": 1.64,
+              "max2HitExclRoi": 0,
+              "zScore": 1.1322856892381314
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 42,
+              "hits": 12,
+              "edgePp": 11.800934263881416,
+              "roi": 2.642857142857143,
+              "max2HitExclRoi": 1.565,
+              "zScore": 2.117199772860326
+            },
+            "forward": {
+              "n": 19,
+              "hits": 8,
+              "edgePp": 23.346356962979502,
+              "roi": 1.8421052631578947,
+              "max2HitExclRoi": 1.3235294117647058,
+              "zScore": 2.6806324748146255
+            }
+          }
+        },
+        {
+          "flag": "1号艇_直接対戦優勢",
+          "inside": {
+            "discovery": {
+              "n": 3,
+              "hits": 2,
+              "edgePp": 39.70725201103696,
+              "roi": 1.7666666666666666,
+              "max2HitExclRoi": 0,
+              "zScore": 1.5507081975375396
+            },
+            "forward": {
+              "n": 0,
+              "hits": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max2HitExclRoi": 0,
+              "zScore": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 49,
+              "hits": 11,
+              "edgePp": 6.52134312309739,
+              "roi": 2.2346938775510203,
+              "max2HitExclRoi": 1.3,
+              "zScore": 1.2846812233678566
+            },
+            "forward": {
+              "n": 24,
+              "hits": 10,
+              "edgePp": 22.66414376349771,
+              "roi": 1.8,
+              "max2HitExclRoi": 1.3954545454545455,
+              "zScore": 2.897631288785638
+            }
+          }
+        },
+        {
+          "flag": "直近直接対戦_4号艇勝ち",
+          "inside": {
+            "discovery": {
+              "n": 20,
+              "hits": 2,
+              "edgePp": -9.611095860729538,
+              "roi": 0.325,
+              "max2HitExclRoi": 0,
+              "zScore": -1.108923263211582
+            },
+            "forward": {
+              "n": 8,
+              "hits": 1,
+              "edgePp": -8.011025163245197,
+              "roi": 0.4125,
+              "max2HitExclRoi": 0,
+              "zScore": -0.5692954159430448
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 32,
+              "hits": 11,
+              "edgePp": 19.715296446233552,
+              "roi": 3.384375,
+              "max2HitExclRoi": 1.9966666666666666,
+              "zScore": 3.2482478513390007
+            },
+            "forward": {
+              "n": 16,
+              "hits": 9,
+              "edgePp": 38.00172822686916,
+              "roi": 2.49375,
+              "max2HitExclRoi": 1.957142857142857,
+              "zScore": 4.047652461949656
+            }
+          }
+        },
+        {
+          "flag": "登録番号近接60以内_proxy",
+          "inside": {
+            "discovery": {
+              "n": 3,
+              "hits": 1,
+              "edgePp": 7.974438798844618,
+              "roi": 0.8,
+              "max2HitExclRoi": 0,
+              "zScore": 0.320066194319832
+            },
+            "forward": {
+              "n": 3,
+              "hits": 1,
+              "edgePp": 13.666694359921436,
+              "roi": 0.8666666666666667,
+              "max2HitExclRoi": 0,
+              "zScore": 0.6091714217422554
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 49,
+              "hits": 12,
+              "edgePp": 8.464168421803041,
+              "roi": 2.293877551020408,
+              "max2HitExclRoi": 1.3617021276595744,
+              "zScore": 1.6631936370709122
+            },
+            "forward": {
+              "n": 21,
+              "hits": 9,
+              "edgePp": 23.949493678294317,
+              "roi": 1.9333333333333333,
+              "max2HitExclRoi": 1.4789473684210526,
+              "zScore": 2.8700351459602507
+            }
+          }
+        },
+        {
+          "flag": "メンバー過去同走合計30以上",
+          "inside": {
+            "discovery": {
+              "n": 12,
+              "hits": 1,
+              "edgePp": -4.57750828913351,
+              "roi": 2.4166666666666665,
+              "max2HitExclRoi": 0,
+              "zScore": -0.4811740040870796
+            },
+            "forward": {
+              "n": 15,
+              "hits": 7,
+              "edgePp": 27.38935642579184,
+              "roi": 1.9866666666666666,
+              "max2HitExclRoi": 1.4,
+              "zScore": 2.7368084658764
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 40,
+              "hits": 12,
+              "edgePp": 12.339941713362123,
+              "roi": 2.145,
+              "max2HitExclRoi": 1.2605263157894737,
+              "zScore": 2.1097359775507245
+            },
+            "forward": {
+              "n": 9,
+              "hits": 3,
+              "edgePp": 14.788789326340826,
+              "roi": 1.488888888888889,
+              "max2HitExclRoi": 0.37142857142857144,
+              "zScore": 1.1809099618544738
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
