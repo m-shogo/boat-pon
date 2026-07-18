@@ -1,0 +1,318 @@
+{
+  "generatedAt": "2026-07-18T14:36:15.598Z",
+  "safety": {
+    "readOnly": true,
+    "preDefinedFamily": true,
+    "productionConnected": false
+  },
+  "family": {
+    "categories": 11,
+    "selections": 5,
+    "cells": 55,
+    "eligibleCells": 40
+  },
+  "stable": [
+    {
+      "category": "rookie",
+      "categoryLabel": "ルーキー・若手",
+      "selection": "1-4",
+      "inside": {
+        "discovery": {
+          "n": 117,
+          "hits": 20,
+          "edgePp": 6.283380949450848,
+          "roi": 0.9974358974358974,
+          "max2HitExclRoi": 0.7017391304347826
+        },
+        "forward": {
+          "n": 54,
+          "hits": 9,
+          "edgePp": 6.823805624823266,
+          "roi": 1.587037037037037,
+          "max2HitExclRoi": 0.8653846153846154
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2598,
+          "hits": 284,
+          "edgePp": 0.6895836929208642,
+          "roi": 0.7648575827559662,
+          "max2HitExclRoi": 0.7322804314329738
+        },
+        "forward": {
+          "n": 1415,
+          "hits": 166,
+          "edgePp": 1.683987346268494,
+          "roi": 0.9448763250883392,
+          "max2HitExclRoi": 0.8789808917197452
+        }
+      }
+    },
+    {
+      "category": "venue_anniversary",
+      "categoryLabel": "競走場の開設周年らしい開催",
+      "selection": "1-4",
+      "inside": {
+        "discovery": {
+          "n": 46,
+          "hits": 6,
+          "edgePp": 2.220338643399155,
+          "roi": 0.6826086956521739,
+          "max2HitExclRoi": 0.32272727272727275
+        },
+        "forward": {
+          "n": 32,
+          "hits": 7,
+          "edgePp": 11.40403575459084,
+          "roi": 1.621875,
+          "max2HitExclRoi": 0.8366666666666667
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2669,
+          "hits": 298,
+          "edgePp": 0.9084145476574866,
+          "roi": 0.7764705882352941,
+          "max2HitExclRoi": 0.744769403824522
+        },
+        "forward": {
+          "n": 1437,
+          "hits": 168,
+          "edgePp": 1.660680900879238,
+          "roi": 0.9539318023660404,
+          "max2HitExclRoi": 0.8890592334494773
+        }
+      }
+    },
+    {
+      "category": "venue_anniversary",
+      "categoryLabel": "競走場の開設周年らしい開催",
+      "selection": "1-6",
+      "inside": {
+        "discovery": {
+          "n": 46,
+          "hits": 5,
+          "edgePp": 5.675197801414412,
+          "roi": 1.0695652173913044,
+          "max2HitExclRoi": 0.3840909090909091
+        },
+        "forward": {
+          "n": 32,
+          "hits": 2,
+          "edgePp": 2.050893039746854,
+          "roi": 0.878125,
+          "max2HitExclRoi": 0
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2669,
+          "hits": 139,
+          "edgePp": 0.7948816379823904,
+          "roi": 0.7485949793930311,
+          "max2HitExclRoi": 0.6837270341207349
+        },
+        "forward": {
+          "n": 1437,
+          "hits": 62,
+          "edgePp": 0.09790172885801894,
+          "roi": 0.6622129436325679,
+          "max2HitExclRoi": 0.5489895470383275
+        }
+      }
+    },
+    {
+      "category": "golden_week",
+      "categoryLabel": "ゴールデンウィーク4月29日〜5月6日",
+      "selection": "1-4",
+      "inside": {
+        "discovery": {
+          "n": 108,
+          "hits": 13,
+          "edgePp": 1.4025962580192948,
+          "roi": 0.9148148148148149,
+          "max2HitExclRoi": 0.4481132075471698
+        },
+        "forward": {
+          "n": 109,
+          "hits": 17,
+          "edgePp": 5.061458025403534,
+          "roi": 1.1954128440366973,
+          "max2HitExclRoi": 0.7093457943925233
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2607,
+          "hits": 291,
+          "edgePp": 0.9110907592742874,
+          "roi": 0.7690832374376678,
+          "max2HitExclRoi": 0.7366218809980806
+        },
+        "forward": {
+          "n": 1360,
+          "hits": 158,
+          "edgePp": 1.6173740249569173,
+          "roi": 0.9502941176470588,
+          "max2HitExclRoi": 0.8817378497790869
+        }
+      }
+    },
+    {
+      "category": "local_civic",
+      "categoryLabel": "自治体・地元冠",
+      "selection": "1-5",
+      "inside": {
+        "discovery": {
+          "n": 76,
+          "hits": 6,
+          "edgePp": 2.9960284480502053,
+          "roi": 0.4618421052631579,
+          "max2HitExclRoi": 0.28378378378378377
+        },
+        "forward": {
+          "n": 38,
+          "hits": 2,
+          "edgePp": 1.2720760797158799,
+          "roi": 0.7342105263157894,
+          "max2HitExclRoi": 0
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2639,
+          "hits": 160,
+          "edgePp": 0.3494701861159435,
+          "roi": 0.6687002652519894,
+          "max2HitExclRoi": 0.6053090633295412
+        },
+        "forward": {
+          "n": 1431,
+          "hits": 84,
+          "edgePp": 0.41563669232678624,
+          "roi": 0.7467505241090147,
+          "max2HitExclRoi": 0.6386983904828551
+        }
+      }
+    },
+    {
+      "category": "weekend",
+      "categoryLabel": "土日",
+      "selection": "1-4",
+      "inside": {
+        "discovery": {
+          "n": 873,
+          "hits": 99,
+          "edgePp": 1.1913382520453115,
+          "roi": 0.8312714776632303,
+          "max2HitExclRoi": 0.735361653272101
+        },
+        "forward": {
+          "n": 457,
+          "hits": 68,
+          "edgePp": 4.86532230987821,
+          "roi": 1.1787746170678337,
+          "max2HitExclRoi": 1.049010989010989
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 1842,
+          "hits": 205,
+          "edgePp": 0.8070877911284247,
+          "roi": 0.7481541802388708,
+          "max2HitExclRoi": 0.7079891304347826
+        },
+        "forward": {
+          "n": 1012,
+          "hits": 107,
+          "edgePp": 0.521615912150236,
+          "roi": 0.8735177865612648,
+          "max2HitExclRoi": 0.7811881188118812
+        }
+      }
+    },
+    {
+      "category": "golden_week",
+      "categoryLabel": "ゴールデンウィーク4月29日〜5月6日",
+      "selection": "1-2",
+      "inside": {
+        "discovery": {
+          "n": 108,
+          "hits": 10,
+          "edgePp": 0.8204599583867677,
+          "roi": 0.6481481481481481,
+          "max2HitExclRoi": 0.41415094339622643
+        },
+        "forward": {
+          "n": 109,
+          "hits": 11,
+          "edgePp": 1.7755734944066575,
+          "roi": 1.0522935779816514,
+          "max2HitExclRoi": 0.7317757009345794
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2607,
+          "hits": 252,
+          "edgePp": 1.1997860180813615,
+          "roi": 0.8552742616033755,
+          "max2HitExclRoi": 0.8315163147792707
+        },
+        "forward": {
+          "n": 1360,
+          "hits": 100,
+          "edgePp": -0.8805398185335007,
+          "roi": 0.638235294117647,
+          "max2HitExclRoi": 0.6044182621502209
+        }
+      }
+    },
+    {
+      "category": "weekend",
+      "categoryLabel": "土日",
+      "selection": "1-6",
+      "inside": {
+        "discovery": {
+          "n": 873,
+          "hits": 44,
+          "edgePp": 0.5318900072080617,
+          "roi": 0.5666666666666667,
+          "max2HitExclRoi": 0.46280137772675084
+        },
+        "forward": {
+          "n": 457,
+          "hits": 23,
+          "edgePp": 0.6149086614776492,
+          "roi": 0.573960612691466,
+          "max2HitExclRoi": 0.3903296703296703
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 1842,
+          "hits": 100,
+          "edgePp": 1.0413996820561475,
+          "roi": 0.8428338762214984,
+          "max2HitExclRoi": 0.7489130434782608
+        },
+        "forward": {
+          "n": 1012,
+          "hits": 41,
+          "edgePp": -0.07381412712886341,
+          "roi": 0.7088932806324111,
+          "max2HitExclRoi": 0.5481188118811882
+        }
+      }
+    }
+  ],
+  "robust": [],
+  "caveats": [
+    "安定セル順位も探索結果でありfamily-wise補正前",
+    "1着1号艇の5買い目だけを比較",
+    "historical closing oddsでT-5価格ではない"
+  ]
+}

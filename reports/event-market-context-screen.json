@@ -1,0 +1,858 @@
+{
+  "generatedAt": "2026-07-18T14:32:09.250Z",
+  "safety": {
+    "readOnly": true,
+    "preRaceSavedHtml": true,
+    "individualEventRanking": false,
+    "manipulationInference": false
+  },
+  "coverage": {
+    "exactaRaces": 4184,
+    "titleAvailable": 4184,
+    "titleCoverage": 1
+  },
+  "results": [
+    {
+      "id": "all",
+      "label": "exacta 1-4全体",
+      "base": {
+        "discovery": {
+          "n": 2715,
+          "hits": 304,
+          "edgePp": 0.9306423592243664,
+          "roi": 0.7748802946593002,
+          "max2HitExclRoi": 0.7437154441577589
+        },
+        "forward": {
+          "n": 1469,
+          "hits": 175,
+          "edgePp": 1.8729255266918747,
+          "roi": 0.9684819605173588,
+          "max2HitExclRoi": 0.9050443081117928
+        }
+      },
+      "categories": [
+        {
+          "id": "venue_anniversary",
+          "label": "競走場の開設周年らしい開催",
+          "inside": {
+            "discovery": {
+              "n": 46,
+              "hits": 6,
+              "edgePp": 2.220338643399155,
+              "roi": 0.6826086956521739,
+              "max2HitExclRoi": 0.32272727272727275
+            },
+            "forward": {
+              "n": 32,
+              "hits": 7,
+              "edgePp": 11.40403575459084,
+              "roi": 1.621875,
+              "max2HitExclRoi": 0.8366666666666667
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 2669,
+              "hits": 298,
+              "edgePp": 0.9084145476574866,
+              "roi": 0.7764705882352941,
+              "max2HitExclRoi": 0.744769403824522
+            },
+            "forward": {
+              "n": 1437,
+              "hits": 168,
+              "edgePp": 1.660680900879238,
+              "roi": 0.9539318023660404,
+              "max2HitExclRoi": 0.8890592334494773
+            }
+          }
+        },
+        {
+          "id": "satellite_anniversary",
+          "label": "BTS・場外発売所の周年",
+          "inside": {
+            "discovery": {
+              "n": 147,
+              "hits": 19,
+              "edgePp": 3.3105782149991057,
+              "roi": 0.7353741496598639,
+              "max2HitExclRoi": 0.48344827586206895
+            },
+            "forward": {
+              "n": 107,
+              "hits": 10,
+              "edgePp": -1.012773229016263,
+              "roi": 0.7429906542056075,
+              "max2HitExclRoi": 0.2857142857142857
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 2568,
+              "hits": 285,
+              "edgePp": 0.7944077132746502,
+              "roi": 0.7771417445482866,
+              "max2HitExclRoi": 0.7441932969602494
+            },
+            "forward": {
+              "n": 1362,
+              "hits": 165,
+              "edgePp": 2.099628732903911,
+              "roi": 0.9861967694566813,
+              "max2HitExclRoi": 0.9177941176470589
+            }
+          }
+        },
+        {
+          "id": "women",
+          "label": "女子・ヴィーナス・レディース",
+          "inside": {
+            "discovery": {
+              "n": 187,
+              "hits": 18,
+              "edgePp": -0.4758376594842235,
+              "roi": 0.9096256684491979,
+              "max2HitExclRoi": 0.5275675675675676
+            },
+            "forward": {
+              "n": 91,
+              "hits": 10,
+              "edgePp": 0.8523607881255044,
+              "roi": 1.267032967032967,
+              "max2HitExclRoi": 0.6741573033707865
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 2528,
+              "hits": 286,
+              "edgePp": 1.0346818226335954,
+              "roi": 0.7649129746835444,
+              "max2HitExclRoi": 0.7317893903404592
+            },
+            "forward": {
+              "n": 1378,
+              "hits": 165,
+              "edgePp": 1.9403213113141975,
+              "roi": 0.948766328011611,
+              "max2HitExclRoi": 0.8811046511627907
+            }
+          }
+        },
+        {
+          "id": "rookie",
+          "label": "ルーキー・若手",
+          "inside": {
+            "discovery": {
+              "n": 117,
+              "hits": 20,
+              "edgePp": 6.283380949450848,
+              "roi": 0.9974358974358974,
+              "max2HitExclRoi": 0.7017391304347826
+            },
+            "forward": {
+              "n": 54,
+              "hits": 9,
+              "edgePp": 6.823805624823266,
+              "roi": 1.587037037037037,
+              "max2HitExclRoi": 0.8653846153846154
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 2598,
+              "hits": 284,
+              "edgePp": 0.6895836929208642,
+              "roi": 0.7648575827559662,
+              "max2HitExclRoi": 0.7322804314329738
+            },
+            "forward": {
+              "n": 1415,
+              "hits": 166,
+              "edgePp": 1.683987346268494,
+              "roi": 0.9448763250883392,
+              "max2HitExclRoi": 0.8789808917197452
+            }
+          }
+        },
+        {
+          "id": "masters",
+          "label": "マスターズ・名人・匠",
+          "inside": {
+            "discovery": {
+              "n": 39,
+              "hits": 5,
+              "edgePp": 3.109997300951818,
+              "roi": 0.5948717948717949,
+              "max2HitExclRoi": 0.2864864864864865
+            },
+            "forward": {
+              "n": 23,
+              "hits": 3,
+              "edgePp": 4.1233608598271045,
+              "roi": 0.9173913043478261,
+              "max2HitExclRoi": 0.13333333333333333
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 2676,
+              "hits": 299,
+              "edgePp": 0.8988804598494206,
+              "roi": 0.7775037369207772,
+              "max2HitExclRoi": 0.7458863126402393
+            },
+            "forward": {
+              "n": 1446,
+              "hits": 172,
+              "edgePp": 1.837130220563168,
+              "roi": 0.9692946058091286,
+              "max2HitExclRoi": 0.9048476454293629
+            }
+          }
+        },
+        {
+          "id": "new_year_title",
+          "label": "正月・新春タイトル",
+          "inside": {
+            "discovery": {
+              "n": 38,
+              "hits": 5,
+              "edgePp": 3.896087024287429,
+              "roi": 1.5,
+              "max2HitExclRoi": 0.29444444444444445
+            },
+            "forward": {
+              "n": 0,
+              "hits": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 2677,
+              "hits": 299,
+              "edgePp": 0.8885478888200427,
+              "roi": 0.7645872245050429,
+              "max2HitExclRoi": 0.7329719626168224
+            },
+            "forward": {
+              "n": 1469,
+              "hits": 175,
+              "edgePp": 1.8729255266918747,
+              "roi": 0.9684819605173588,
+              "max2HitExclRoi": 0.9050443081117928
+            }
+          }
+        },
+        {
+          "id": "local_civic",
+          "label": "自治体・地元冠",
+          "inside": {
+            "discovery": {
+              "n": 76,
+              "hits": 8,
+              "edgePp": -0.7692340950832418,
+              "roi": 0.6907894736842105,
+              "max2HitExclRoi": 0.31891891891891894
+            },
+            "forward": {
+              "n": 38,
+              "hits": 8,
+              "edgePp": 8.478686175002192,
+              "roi": 1.4289473684210525,
+              "max2HitExclRoi": 0.5805555555555556
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 2639,
+              "hits": 296,
+              "edgePp": 0.9795967398713513,
+              "roi": 0.7773020083364911,
+              "max2HitExclRoi": 0.7452408039438756
+            },
+            "forward": {
+              "n": 1431,
+              "hits": 167,
+              "edgePp": 1.6975104989939167,
+              "roi": 0.9562543675751223,
+              "max2HitExclRoi": 0.89111266620014
+            }
+          }
+        },
+        {
+          "id": "new_year_calendar",
+          "label": "暦上の年始1月1〜7日",
+          "inside": {
+            "discovery": {
+              "n": 121,
+              "hits": 8,
+              "edgePp": -3.388677278386604,
+              "roi": 0.656198347107438,
+              "max2HitExclRoi": 0.2773109243697479
+            },
+            "forward": {
+              "n": 1,
+              "hits": 0,
+              "edgePp": -4.253008058860682,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 2594,
+              "hits": 296,
+              "edgePp": 1.1321218026133142,
+              "roi": 0.7804163454124904,
+              "max2HitExclRoi": 0.747800925925926
+            },
+            "forward": {
+              "n": 1468,
+              "hits": 175,
+              "edgePp": 1.8770985059735872,
+              "roi": 0.969141689373297,
+              "max2HitExclRoi": 0.9056616643929059
+            }
+          }
+        },
+        {
+          "id": "golden_week",
+          "label": "ゴールデンウィーク4月29日〜5月6日",
+          "inside": {
+            "discovery": {
+              "n": 108,
+              "hits": 13,
+              "edgePp": 1.4025962580192948,
+              "roi": 0.9148148148148149,
+              "max2HitExclRoi": 0.4481132075471698
+            },
+            "forward": {
+              "n": 109,
+              "hits": 17,
+              "edgePp": 5.061458025403534,
+              "roi": 1.1954128440366973,
+              "max2HitExclRoi": 0.7093457943925233
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 2607,
+              "hits": 291,
+              "edgePp": 0.9110907592742874,
+              "roi": 0.7690832374376678,
+              "max2HitExclRoi": 0.7366218809980806
+            },
+            "forward": {
+              "n": 1360,
+              "hits": 158,
+              "edgePp": 1.6173740249569173,
+              "roi": 0.9502941176470588,
+              "max2HitExclRoi": 0.8817378497790869
+            }
+          }
+        },
+        {
+          "id": "obon",
+          "label": "お盆8月10〜16日",
+          "inside": {
+            "discovery": {
+              "n": 121,
+              "hits": 8,
+              "edgePp": -2.4170531751178412,
+              "roi": 0.4388429752066116,
+              "max2HitExclRoi": 0.20504201680672268
+            },
+            "forward": {
+              "n": 57,
+              "hits": 11,
+              "edgePp": 10.313540447829372,
+              "roi": 1.7263157894736842,
+              "max2HitExclRoi": 0.9436363636363636
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 2594,
+              "hits": 296,
+              "edgePp": 1.0867993213120406,
+              "roi": 0.7905551272166538,
+              "max2HitExclRoi": 0.7579475308641975
+            },
+            "forward": {
+              "n": 1412,
+              "hits": 164,
+              "edgePp": 1.5321924880907214,
+              "roi": 0.9378895184135977,
+              "max2HitExclRoi": 0.8718439716312056
+            }
+          }
+        },
+        {
+          "id": "weekend",
+          "label": "土日",
+          "inside": {
+            "discovery": {
+              "n": 873,
+              "hits": 99,
+              "edgePp": 1.1913382520453115,
+              "roi": 0.8312714776632303,
+              "max2HitExclRoi": 0.735361653272101
+            },
+            "forward": {
+              "n": 457,
+              "hits": 68,
+              "edgePp": 4.86532230987821,
+              "roi": 1.1787746170678337,
+              "max2HitExclRoi": 1.049010989010989
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 1842,
+              "hits": 205,
+              "edgePp": 0.8070877911284247,
+              "roi": 0.7481541802388708,
+              "max2HitExclRoi": 0.7079891304347826
+            },
+            "forward": {
+              "n": 1012,
+              "hits": 107,
+              "edgePp": 0.521615912150236,
+              "roi": 0.8735177865612648,
+              "max2HitExclRoi": 0.7811881188118812
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "target",
+      "label": "風2〜3m・南西風・4号艇最強",
+      "base": {
+        "discovery": {
+          "n": 52,
+          "hits": 13,
+          "edgePp": 8.43591478970929,
+          "roi": 2.207692307692308,
+          "max2HitExclRoi": 1.328
+        },
+        "forward": {
+          "n": 24,
+          "hits": 10,
+          "edgePp": 22.66414376349771,
+          "roi": 1.8,
+          "max2HitExclRoi": 1.3954545454545455
+        }
+      },
+      "categories": [
+        {
+          "id": "venue_anniversary",
+          "label": "競走場の開設周年らしい開催",
+          "inside": {
+            "discovery": {
+              "n": 0,
+              "hits": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 0,
+              "hits": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 52,
+              "hits": 13,
+              "edgePp": 8.43591478970929,
+              "roi": 2.207692307692308,
+              "max2HitExclRoi": 1.328
+            },
+            "forward": {
+              "n": 24,
+              "hits": 10,
+              "edgePp": 22.66414376349771,
+              "roi": 1.8,
+              "max2HitExclRoi": 1.3954545454545455
+            }
+          }
+        },
+        {
+          "id": "satellite_anniversary",
+          "label": "BTS・場外発売所の周年",
+          "inside": {
+            "discovery": {
+              "n": 4,
+              "hits": 1,
+              "edgePp": 8.91229092709796,
+              "roi": 0.675,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 0,
+              "hits": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 48,
+              "hits": 12,
+              "edgePp": 8.39621677826023,
+              "roi": 2.3354166666666667,
+              "max2HitExclRoi": 1.3847826086956523
+            },
+            "forward": {
+              "n": 24,
+              "hits": 10,
+              "edgePp": 22.66414376349771,
+              "roi": 1.8,
+              "max2HitExclRoi": 1.3954545454545455
+            }
+          }
+        },
+        {
+          "id": "women",
+          "label": "女子・ヴィーナス・レディース",
+          "inside": {
+            "discovery": {
+              "n": 3,
+              "hits": 1,
+              "edgePp": 20.31138167024364,
+              "roi": 9.666666666666666,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 3,
+              "hits": 1,
+              "edgePp": 14.747922798816093,
+              "roi": 0.9666666666666667,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 49,
+              "hits": 12,
+              "edgePp": 7.70884538886025,
+              "roi": 1.7510204081632652,
+              "max2HitExclRoi": 1.0191489361702128
+            },
+            "forward": {
+              "n": 21,
+              "hits": 9,
+              "edgePp": 23.795032472737944,
+              "roi": 1.9190476190476191,
+              "max2HitExclRoi": 1.4631578947368422
+            }
+          }
+        },
+        {
+          "id": "rookie",
+          "label": "ルーキー・若手",
+          "inside": {
+            "discovery": {
+              "n": 1,
+              "hits": 0,
+              "edgePp": -17.80510920788864,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 1,
+              "hits": 1,
+              "edgePp": 77.45697647614116,
+              "roi": 3.3,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 51,
+              "hits": 13,
+              "edgePp": 8.950444672015132,
+              "roi": 2.2509803921568627,
+              "max2HitExclRoi": 1.3551020408163266
+            },
+            "forward": {
+              "n": 23,
+              "hits": 9,
+              "edgePp": 20.28184668903495,
+              "roi": 1.7347826086956522,
+              "max2HitExclRoi": 1.3047619047619048
+            }
+          }
+        },
+        {
+          "id": "masters",
+          "label": "マスターズ・名人・匠",
+          "inside": {
+            "discovery": {
+              "n": 0,
+              "hits": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 0,
+              "hits": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 52,
+              "hits": 13,
+              "edgePp": 8.43591478970929,
+              "roi": 2.207692307692308,
+              "max2HitExclRoi": 1.328
+            },
+            "forward": {
+              "n": 24,
+              "hits": 10,
+              "edgePp": 22.66414376349771,
+              "roi": 1.8,
+              "max2HitExclRoi": 1.3954545454545455
+            }
+          }
+        },
+        {
+          "id": "new_year_title",
+          "label": "正月・新春タイトル",
+          "inside": {
+            "discovery": {
+              "n": 2,
+              "hits": 1,
+              "edgePp": 40.80733915068844,
+              "roi": 9.7,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 0,
+              "hits": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 50,
+              "hits": 12,
+              "edgePp": 7.141057815270127,
+              "roi": 1.908,
+              "max2HitExclRoi": 0.9979166666666667
+            },
+            "forward": {
+              "n": 24,
+              "hits": 10,
+              "edgePp": 22.66414376349771,
+              "roi": 1.8,
+              "max2HitExclRoi": 1.3954545454545455
+            }
+          }
+        },
+        {
+          "id": "local_civic",
+          "label": "自治体・地元冠",
+          "inside": {
+            "discovery": {
+              "n": 5,
+              "hits": 1,
+              "edgePp": 4.913290867377005,
+              "roi": 3.88,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 0,
+              "hits": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 47,
+              "hits": 12,
+              "edgePp": 8.81066201548932,
+              "roi": 2.029787234042553,
+              "max2HitExclRoi": 1.0644444444444445
+            },
+            "forward": {
+              "n": 24,
+              "hits": 10,
+              "edgePp": 22.66414376349771,
+              "roi": 1.8,
+              "max2HitExclRoi": 1.3954545454545455
+            }
+          }
+        },
+        {
+          "id": "new_year_calendar",
+          "label": "暦上の年始1月1〜7日",
+          "inside": {
+            "discovery": {
+              "n": 2,
+              "hits": 1,
+              "edgePp": 40.80733915068844,
+              "roi": 9.7,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 0,
+              "hits": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 50,
+              "hits": 12,
+              "edgePp": 7.141057815270127,
+              "roi": 1.908,
+              "max2HitExclRoi": 0.9979166666666667
+            },
+            "forward": {
+              "n": 24,
+              "hits": 10,
+              "edgePp": 22.66414376349771,
+              "roi": 1.8,
+              "max2HitExclRoi": 1.3954545454545455
+            }
+          }
+        },
+        {
+          "id": "golden_week",
+          "label": "ゴールデンウィーク4月29日〜5月6日",
+          "inside": {
+            "discovery": {
+              "n": 1,
+              "hits": 0,
+              "edgePp": -35.6107892046705,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 0,
+              "hits": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 51,
+              "hits": 13,
+              "edgePp": 9.299575652344187,
+              "roi": 2.2509803921568627,
+              "max2HitExclRoi": 1.3551020408163266
+            },
+            "forward": {
+              "n": 24,
+              "hits": 10,
+              "edgePp": 22.66414376349771,
+              "roi": 1.8,
+              "max2HitExclRoi": 1.3954545454545455
+            }
+          }
+        },
+        {
+          "id": "obon",
+          "label": "お盆8月10〜16日",
+          "inside": {
+            "discovery": {
+              "n": 1,
+              "hits": 0,
+              "edgePp": -21.686714973187275,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 1,
+              "hits": 1,
+              "edgePp": 88.85746960902536,
+              "roi": 6.7,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 51,
+              "hits": 13,
+              "edgePp": 9.026554588981774,
+              "roi": 2.2509803921568627,
+              "max2HitExclRoi": 1.3551020408163266
+            },
+            "forward": {
+              "n": 23,
+              "hits": 9,
+              "edgePp": 19.786173074561724,
+              "roi": 1.5869565217391304,
+              "max2HitExclRoi": 1.223809523809524
+            }
+          }
+        },
+        {
+          "id": "weekend",
+          "label": "土日",
+          "inside": {
+            "discovery": {
+              "n": 17,
+              "hits": 4,
+              "edgePp": 8.57793967636008,
+              "roi": 2.788235294117647,
+              "max2HitExclRoi": 0.6333333333333333
+            },
+            "forward": {
+              "n": 7,
+              "hits": 3,
+              "edgePp": 21.541060677472355,
+              "roi": 1.2571428571428571,
+              "max2HitExclRoi": 0.52
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 35,
+              "hits": 9,
+              "edgePp": 8.366931273336041,
+              "roi": 1.9257142857142857,
+              "max2HitExclRoi": 0.8606060606060606
+            },
+            "forward": {
+              "n": 17,
+              "hits": 7,
+              "edgePp": 23.12658974009639,
+              "roi": 2.023529411764706,
+              "max2HitExclRoi": 1.46
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "caveats": [
+    "タイトル分類は保存済みkyotei24オッズHTMLの表示文字列を使う",
+    "周年という語は競走場周年・BTS周年・企業周年を分離し、G1と一括しない",
+    "暦カテゴリは結果を使わないが、祝日・帰省・売上を直接観測した変数ではない",
+    "小標本カテゴリは効果なし・効果ありのどちらも断定しない"
+  ]
+}

@@ -1,0 +1,324 @@
+{
+  "generatedAt": "2026-07-18T14:34:33.212Z",
+  "safety": {
+    "readOnly": true,
+    "postHocMechanismScreen": true,
+    "productionConnected": false
+  },
+  "scope": {
+    "rookieRaces": 171
+  },
+  "result": {
+    "base": {
+      "discovery": {
+        "n": 117,
+        "hits": 20,
+        "edgePp": 6.283380949450848,
+        "roi": 0.9974358974358974,
+        "max2HitExclRoi": 0.7017391304347826
+      },
+      "forward": {
+        "n": 54,
+        "hits": 9,
+        "edgePp": 6.823805624823266,
+        "roi": 1.587037037037037,
+        "max2HitExclRoi": 0.8653846153846154
+      }
+    },
+    "mechanisms": [
+      {
+        "id": "boat4_top_rival",
+        "label": "4号艇が1号艇以外で全国勝率最上位",
+        "inside": {
+          "discovery": {
+            "n": 38,
+            "hits": 10,
+            "edgePp": 8.947040717296787,
+            "roi": 1.4236842105263159,
+            "max2HitExclRoi": 0.8472222222222222
+          },
+          "forward": {
+            "n": 14,
+            "hits": 4,
+            "edgePp": 8.866145243048457,
+            "roi": 0.9,
+            "max2HitExclRoi": 0.48333333333333334
+          }
+        },
+        "outside": {
+          "discovery": {
+            "n": 79,
+            "hits": 10,
+            "edgePp": 5.002126883904701,
+            "roi": 0.7924050632911392,
+            "max2HitExclRoi": 0.4090909090909091
+          },
+          "forward": {
+            "n": 40,
+            "hits": 5,
+            "edgePp": 6.108986758444446,
+            "roi": 1.8275,
+            "max2HitExclRoi": 0.8526315789473684
+          }
+        }
+      },
+      {
+        "id": "boat4_gap05",
+        "label": "4号艇が他の外敵より全国勝率0.5以上上",
+        "inside": {
+          "discovery": {
+            "n": 28,
+            "hits": 7,
+            "edgePp": 8.35736532921123,
+            "roi": 1.5464285714285715,
+            "max2HitExclRoi": 0.7576923076923077
+          },
+          "forward": {
+            "n": 8,
+            "hits": 4,
+            "edgePp": 27.74138211526345,
+            "roi": 1.575,
+            "max2HitExclRoi": 0.9666666666666667
+          }
+        },
+        "outside": {
+          "discovery": {
+            "n": 89,
+            "hits": 13,
+            "edgePp": 5.630891481661066,
+            "roi": 0.8247191011235955,
+            "max2HitExclRoi": 0.4862068965517241
+          },
+          "forward": {
+            "n": 46,
+            "hits": 5,
+            "edgePp": 3.1859662351814935,
+            "roi": 1.5891304347826087,
+            "max2HitExclRoi": 0.7363636363636363
+          }
+        }
+      },
+      {
+        "id": "boat4_a_class",
+        "label": "4号艇がA級",
+        "inside": {
+          "discovery": {
+            "n": 59,
+            "hits": 16,
+            "edgePp": 12.170721661849662,
+            "roi": 1.535593220338983,
+            "max2HitExclRoi": 0.9578947368421052
+          },
+          "forward": {
+            "n": 32,
+            "hits": 5,
+            "edgePp": 2.0463591188071284,
+            "roi": 0.496875,
+            "max2HitExclRoi": 0.30333333333333334
+          }
+        },
+        "outside": {
+          "discovery": {
+            "n": 58,
+            "hits": 4,
+            "edgePp": 0.29453436270033484,
+            "roi": 0.45,
+            "max2HitExclRoi": 0.15
+          },
+          "forward": {
+            "n": 22,
+            "hits": 4,
+            "edgePp": 13.772818724483098,
+            "roi": 3.172727272727273,
+            "max2HitExclRoi": 1.455
+          }
+        }
+      },
+      {
+        "id": "head4_only_a",
+        "label": "1・4号艇だけA級",
+        "inside": {
+          "discovery": {
+            "n": 6,
+            "hits": 1,
+            "edgePp": -12.108348740714703,
+            "roi": 0.31666666666666665,
+            "max2HitExclRoi": 0
+          },
+          "forward": {
+            "n": 4,
+            "hits": 2,
+            "edgePp": 23.814622906496968,
+            "roi": 1.7,
+            "max2HitExclRoi": 0
+          }
+        },
+        "outside": {
+          "discovery": {
+            "n": 111,
+            "hits": 19,
+            "edgePp": 7.277528500270606,
+            "roi": 1.0342342342342343,
+            "max2HitExclRoi": 0.7229357798165138
+          },
+          "forward": {
+            "n": 50,
+            "hits": 7,
+            "edgePp": 5.464540242289367,
+            "roi": 1.578,
+            "max2HitExclRoi": 0.7958333333333333
+          }
+        }
+      },
+      {
+        "id": "boat4_local_up",
+        "label": "4号艇の当地勝率が全国より1以上高い",
+        "inside": {
+          "discovery": {
+            "n": 5,
+            "hits": 1,
+            "edgePp": 10.165609076905096,
+            "roi": 0.68,
+            "max2HitExclRoi": 0
+          },
+          "forward": {
+            "n": 2,
+            "hits": 0,
+            "edgePp": -5.604018601340311,
+            "roi": 0,
+            "max2HitExclRoi": 0
+          }
+        },
+        "outside": {
+          "discovery": {
+            "n": 112,
+            "hits": 19,
+            "edgePp": 6.110067193760926,
+            "roi": 1.011607142857143,
+            "max2HitExclRoi": 0.7027272727272728
+          },
+          "forward": {
+            "n": 52,
+            "hits": 9,
+            "edgePp": 7.301798864291093,
+            "roi": 1.648076923076923,
+            "max2HitExclRoi": 0.9
+          }
+        }
+      },
+      {
+        "id": "boat4_good_motor",
+        "label": "4号艇モーター2連率40%以上",
+        "inside": {
+          "discovery": {
+            "n": 16,
+            "hits": 4,
+            "edgePp": 13.011830382978012,
+            "roi": 1.9375,
+            "max2HitExclRoi": 0.4642857142857143
+          },
+          "forward": {
+            "n": 6,
+            "hits": 1,
+            "edgePp": 5.135964617507222,
+            "roi": 2.25,
+            "max2HitExclRoi": 0
+          }
+        },
+        "outside": {
+          "discovery": {
+            "n": 101,
+            "hits": 16,
+            "edgePp": 5.217487969882191,
+            "roi": 0.8485148514851485,
+            "max2HitExclRoi": 0.5838383838383838
+          },
+          "forward": {
+            "n": 48,
+            "hits": 8,
+            "edgePp": 7.034785750737769,
+            "roi": 1.5041666666666667,
+            "max2HitExclRoi": 0.6847826086956522
+          }
+        }
+      },
+      {
+        "id": "boat4_newer_head200",
+        "label": "4号艇登録番号が1号艇より200以上新しいproxy",
+        "inside": {
+          "discovery": {
+            "n": 9,
+            "hits": 1,
+            "edgePp": 5.021401074363017,
+            "roi": 2.1777777777777776,
+            "max2HitExclRoi": 0
+          },
+          "forward": {
+            "n": 5,
+            "hits": 1,
+            "edgePp": 10.943248583067255,
+            "roi": 2.7,
+            "max2HitExclRoi": 0
+          }
+        },
+        "outside": {
+          "discovery": {
+            "n": 108,
+            "hits": 19,
+            "edgePp": 6.388545939041501,
+            "roi": 0.899074074074074,
+            "max2HitExclRoi": 0.6528301886792452
+          },
+          "forward": {
+            "n": 49,
+            "hits": 8,
+            "edgePp": 6.403454302553471,
+            "roi": 1.473469387755102,
+            "max2HitExclRoi": 0.6702127659574468
+          }
+        }
+      },
+      {
+        "id": "boat4_newest_field",
+        "label": "4号艇が6艇中もっとも登録番号が新しいproxy",
+        "inside": {
+          "discovery": {
+            "n": 14,
+            "hits": 2,
+            "edgePp": 8.470690597248552,
+            "roi": 0.6642857142857143,
+            "max2HitExclRoi": 0
+          },
+          "forward": {
+            "n": 4,
+            "hits": 0,
+            "edgePp": -3.8312069758126372,
+            "roi": 0,
+            "max2HitExclRoi": 0
+          }
+        },
+        "outside": {
+          "discovery": {
+            "n": 103,
+            "hits": 18,
+            "edgePp": 5.9860767254783465,
+            "roi": 1.0427184466019417,
+            "max2HitExclRoi": 0.7069306930693069
+          },
+          "forward": {
+            "n": 50,
+            "hits": 9,
+            "edgePp": 7.676206632874136,
+            "roi": 1.714,
+            "max2HitExclRoi": 0.9375
+          }
+        }
+      }
+    ]
+  },
+  "caveats": [
+    "登録番号は年齢ではなくデビュー時期のproxy",
+    "各機序は相関であり独立因果ではない",
+    "細分化後の小標本は採用判断に使わない"
+  ]
+}
