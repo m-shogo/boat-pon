@@ -1,0 +1,652 @@
+{
+  "generatedAt": "2026-07-18T15:32:27.475Z",
+  "safety": {
+    "readOnly": true,
+    "preRaceSchedule": true,
+    "productionConnected": false
+  },
+  "coverage": {
+    "programRows": 105115,
+    "validProgramRows": 62160,
+    "exactaRacesWithValidSchedule": 2114,
+    "evaluatedRows": 10570
+  },
+  "family": {
+    "factors": 11,
+    "selections": 5,
+    "cells": 55,
+    "eligible": 40
+  },
+  "stable": [
+    {
+      "id": "isolated_10m",
+      "label": "他場締切まで10分以上孤立",
+      "group": "collision",
+      "selection": "1-4",
+      "discovery": {
+        "n": 130,
+        "hits": 24,
+        "edgePp": 4.883530072781298,
+        "roi": 1.0423076923076924,
+        "max2HitExclRoi": 0.6203125
+      },
+      "forward": {
+        "n": 72,
+        "hits": 17,
+        "edgePp": 8.608033178662561,
+        "roi": 1.1097222222222223,
+        "max2HitExclRoi": 0.7871428571428571
+      }
+    },
+    {
+      "id": "light_10venues",
+      "label": "同日10場以下開催",
+      "group": "load",
+      "selection": "1-4",
+      "discovery": {
+        "n": 1254,
+        "hits": 156,
+        "edgePp": 2.1434126234189628,
+        "roi": 0.8247208931419457,
+        "max2HitExclRoi": 0.7730031948881789
+      },
+      "forward": {
+        "n": 748,
+        "hits": 89,
+        "edgePp": 2.046319361720882,
+        "roi": 1.0122994652406416,
+        "max2HitExclRoi": 0.8876675603217158
+      }
+    },
+    {
+      "id": "multi_collision_5m",
+      "label": "他場締切が前後5分以内に2本以上",
+      "group": "collision",
+      "selection": "1-4",
+      "discovery": {
+        "n": 685,
+        "hits": 76,
+        "edgePp": 1.89413476666767,
+        "roi": 0.8508029197080292,
+        "max2HitExclRoi": 0.7641288433382137
+      },
+      "forward": {
+        "n": 327,
+        "hits": 34,
+        "edgePp": 2.2035949624953783,
+        "roi": 1.2217125382262997,
+        "max2HitExclRoi": 0.9953846153846154
+      }
+    },
+    {
+      "id": "minute_0or5_placebo",
+      "label": "締切分末尾0・5_placebo",
+      "group": "placebo",
+      "selection": "1-4",
+      "discovery": {
+        "n": 293,
+        "hits": 36,
+        "edgePp": 1.33861694936225,
+        "roi": 0.768259385665529,
+        "max2HitExclRoi": 0.5951890034364261
+      },
+      "forward": {
+        "n": 141,
+        "hits": 21,
+        "edgePp": 5.834898427470935,
+        "roi": 1.6361702127659574,
+        "max2HitExclRoi": 0.9762589928057553
+      }
+    },
+    {
+      "id": "morning_before12",
+      "label": "正午前締切",
+      "group": "time",
+      "selection": "1-4",
+      "discovery": {
+        "n": 608,
+        "hits": 65,
+        "edgePp": 0.8448391867224727,
+        "roi": 0.8210526315789474,
+        "max2HitExclRoi": 0.7141914191419142
+      },
+      "forward": {
+        "n": 342,
+        "hits": 41,
+        "edgePp": 1.893004921449842,
+        "roi": 1.1219298245614036,
+        "max2HitExclRoi": 0.905
+      }
+    },
+    {
+      "id": "collision_2m",
+      "label": "他場締切が前後2分以内",
+      "group": "collision",
+      "selection": "1-6",
+      "discovery": {
+        "n": 642,
+        "hits": 39,
+        "edgePp": 1.695827224022526,
+        "roi": 0.996417445482866,
+        "max2HitExclRoi": 0.73890625
+      },
+      "forward": {
+        "n": 297,
+        "hits": 14,
+        "edgePp": 0.7791721151910789,
+        "roi": 0.4962962962962963,
+        "max2HitExclRoi": 0.31728813559322033
+      }
+    },
+    {
+      "id": "same_round_5m",
+      "label": "同じR番号の他場締切が前後5分以内",
+      "group": "round",
+      "selection": "1-2",
+      "discovery": {
+        "n": 466,
+        "hits": 44,
+        "edgePp": 1.5218477532265196,
+        "roi": 0.8214592274678112,
+        "max2HitExclRoi": 0.6995689655172413
+      },
+      "forward": {
+        "n": 167,
+        "hits": 15,
+        "edgePp": 0.770640723195011,
+        "roi": 0.8550898203592814,
+        "max2HitExclRoi": 0.6545454545454545
+      }
+    },
+    {
+      "id": "same_round_5m",
+      "label": "同じR番号の他場締切が前後5分以内",
+      "group": "round",
+      "selection": "1-4",
+      "discovery": {
+        "n": 466,
+        "hits": 49,
+        "edgePp": 0.6213781490928367,
+        "roi": 0.8137339055793992,
+        "max2HitExclRoi": 0.7056034482758621
+      },
+      "forward": {
+        "n": 167,
+        "hits": 16,
+        "edgePp": 0.8653688056929134,
+        "roi": 1.1718562874251497,
+        "max2HitExclRoi": 0.6103030303030303
+      }
+    },
+    {
+      "id": "same_round_5m",
+      "label": "同じR番号の他場締切が前後5分以内",
+      "group": "round",
+      "selection": "1-5",
+      "discovery": {
+        "n": 466,
+        "hits": 27,
+        "edgePp": 0.5446899509270942,
+        "roi": 0.6152360515021459,
+        "max2HitExclRoi": 0.47974137931034483
+      },
+      "forward": {
+        "n": 167,
+        "hits": 11,
+        "edgePp": 1.4283030848489464,
+        "roi": 0.729940119760479,
+        "max2HitExclRoi": 0.33090909090909093
+      }
+    },
+    {
+      "id": "isolated_10m",
+      "label": "他場締切まで10分以上孤立",
+      "group": "collision",
+      "selection": "1-6",
+      "discovery": {
+        "n": 130,
+        "hits": 8,
+        "edgePp": 0.6459818041900139,
+        "roi": 0.6707692307692308,
+        "max2HitExclRoi": 0.28125
+      },
+      "forward": {
+        "n": 72,
+        "hits": 4,
+        "edgePp": 0.5340386313414479,
+        "roi": 0.49722222222222223,
+        "max2HitExclRoi": 0.18571428571428572
+      }
+    },
+    {
+      "id": "same_round_5m",
+      "label": "同じR番号の他場締切が前後5分以内",
+      "group": "round",
+      "selection": "1-6",
+      "discovery": {
+        "n": 466,
+        "hits": 23,
+        "edgePp": 0.6194406226066285,
+        "roi": 0.7156652360515021,
+        "max2HitExclRoi": 0.500646551724138
+      },
+      "forward": {
+        "n": 167,
+        "hits": 8,
+        "edgePp": 0.4078085556144297,
+        "roi": 0.6377245508982036,
+        "max2HitExclRoi": 0.296969696969697
+      }
+    },
+    {
+      "id": "minute_7_placebo",
+      "label": "締切分末尾7_placebo",
+      "group": "placebo",
+      "selection": "1-6",
+      "discovery": {
+        "n": 120,
+        "hits": 5,
+        "edgePp": 0.7789763713155532,
+        "roi": 0.7233333333333334,
+        "max2HitExclRoi": 0.24661016949152542
+      },
+      "forward": {
+        "n": 82,
+        "hits": 3,
+        "edgePp": 0.4008829494492303,
+        "roi": 0.33170731707317075,
+        "max2HitExclRoi": 0.05125
+      }
+    },
+    {
+      "id": "minute_7_placebo",
+      "label": "締切分末尾7_placebo",
+      "group": "placebo",
+      "selection": "1-5",
+      "discovery": {
+        "n": 120,
+        "hits": 11,
+        "edgePp": 3.344138908033912,
+        "roi": 0.845,
+        "max2HitExclRoi": 0.48135593220338985
+      },
+      "forward": {
+        "n": 82,
+        "hits": 5,
+        "edgePp": 0.24229485236299,
+        "roi": 0.47560975609756095,
+        "max2HitExclRoi": 0.21125
+      }
+    },
+    {
+      "id": "minute_7_placebo",
+      "label": "締切分末尾7_placebo",
+      "group": "placebo",
+      "selection": "1-3",
+      "discovery": {
+        "n": 120,
+        "hits": 13,
+        "edgePp": 1.2630147961849596,
+        "roi": 0.8516666666666667,
+        "max2HitExclRoi": 0.5669491525423729
+      },
+      "forward": {
+        "n": 82,
+        "hits": 8,
+        "edgePp": 0.2206603671617735,
+        "roi": 0.7548780487804878,
+        "max2HitExclRoi": 0.4175
+      }
+    },
+    {
+      "id": "morning_before12",
+      "label": "正午前締切",
+      "group": "time",
+      "selection": "1-6",
+      "discovery": {
+        "n": 608,
+        "hits": 26,
+        "edgePp": 0.2535354680484509,
+        "roi": 0.6266447368421053,
+        "max2HitExclRoi": 0.42112211221122114
+      },
+      "forward": {
+        "n": 342,
+        "hits": 14,
+        "edgePp": 0.21146440337321196,
+        "roi": 0.38128654970760234,
+        "max2HitExclRoi": 0.22970588235294118
+      }
+    },
+    {
+      "id": "collision_2m",
+      "label": "他場締切が前後2分以内",
+      "group": "collision",
+      "selection": "1-4",
+      "discovery": {
+        "n": 642,
+        "hits": 76,
+        "edgePp": 2.387015494582692,
+        "roi": 0.8095015576323987,
+        "max2HitExclRoi": 0.7275
+      },
+      "forward": {
+        "n": 297,
+        "hits": 27,
+        "edgePp": 0.20206508956853164,
+        "roi": 0.907070707070707,
+        "max2HitExclRoi": 0.6840677966101695
+      }
+    },
+    {
+      "id": "light_10venues",
+      "label": "同日10場以下開催",
+      "group": "load",
+      "selection": "1-5",
+      "discovery": {
+        "n": 1254,
+        "hits": 71,
+        "edgePp": 0.19263064350555528,
+        "roi": 0.6550239234449761,
+        "max2HitExclRoi": 0.5214856230031949
+      },
+      "forward": {
+        "n": 748,
+        "hits": 48,
+        "edgePp": 0.9363078092208795,
+        "roi": 0.8651069518716578,
+        "max2HitExclRoi": 0.6584450402144773
+      }
+    },
+    {
+      "id": "multi_collision_5m",
+      "label": "他場締切が前後5分以内に2本以上",
+      "group": "collision",
+      "selection": "1-6",
+      "discovery": {
+        "n": 685,
+        "hits": 36,
+        "edgePp": 1.051194052138067,
+        "roi": 0.9162043795620438,
+        "max2HitExclRoi": 0.6746705710102489
+      },
+      "forward": {
+        "n": 327,
+        "hits": 13,
+        "edgePp": 0.14429621614152563,
+        "roi": 0.4620795107033639,
+        "max2HitExclRoi": 0.288
+      }
+    },
+    {
+      "id": "isolated_10m",
+      "label": "他場締切まで10分以上孤立",
+      "group": "collision",
+      "selection": "1-5",
+      "discovery": {
+        "n": 130,
+        "hits": 9,
+        "edgePp": 1.332175297442288,
+        "roi": 0.8823076923076923,
+        "max2HitExclRoi": 0.45234375
+      },
+      "forward": {
+        "n": 72,
+        "hits": 4,
+        "edgePp": 0.09941623788954357,
+        "roi": 0.9472222222222222,
+        "max2HitExclRoi": 0.14857142857142858
+      }
+    },
+    {
+      "id": "same_round_5m",
+      "label": "同じR番号の他場締切が前後5分以内",
+      "group": "round",
+      "selection": "1-3",
+      "discovery": {
+        "n": 466,
+        "hits": 46,
+        "edgePp": 0.39188876905226394,
+        "roi": 0.7592274678111588,
+        "max2HitExclRoi": 0.6275862068965518
+      },
+      "forward": {
+        "n": 167,
+        "hits": 14,
+        "edgePp": 0.05254728135596254,
+        "roi": 0.6760479041916168,
+        "max2HitExclRoi": 0.43575757575757573
+      }
+    },
+    {
+      "id": "minute_7_placebo",
+      "label": "締切分末尾7_placebo",
+      "group": "placebo",
+      "selection": "1-4",
+      "discovery": {
+        "n": 120,
+        "hits": 15,
+        "edgePp": 1.4501812479457885,
+        "roi": 0.49416666666666664,
+        "max2HitExclRoi": 0.3466101694915254
+      },
+      "forward": {
+        "n": 82,
+        "hits": 8,
+        "edgePp": 0.032208095797489684,
+        "roi": 1.196341463414634,
+        "max2HitExclRoi": 0.44125
+      }
+    }
+  ],
+  "robust": [],
+  "placebo": [
+    {
+      "id": "minute_0or5_placebo",
+      "label": "締切分末尾0・5_placebo",
+      "group": "placebo",
+      "selection": "1-2",
+      "discovery": {
+        "n": 293,
+        "hits": 25,
+        "edgePp": 0.20540461308570845,
+        "roi": 0.7453924914675768,
+        "max2HitExclRoi": 0.6264604810996564
+      },
+      "forward": {
+        "n": 141,
+        "hits": 7,
+        "edgePp": -3.158109142627713,
+        "roi": 0.6170212765957447,
+        "max2HitExclRoi": 0.32877697841726616
+      }
+    },
+    {
+      "id": "minute_0or5_placebo",
+      "label": "締切分末尾0・5_placebo",
+      "group": "placebo",
+      "selection": "1-3",
+      "discovery": {
+        "n": 293,
+        "hits": 28,
+        "edgePp": -0.2991817285411878,
+        "roi": 0.5675767918088738,
+        "max2HitExclRoi": 0.47525773195876286
+      },
+      "forward": {
+        "n": 141,
+        "hits": 9,
+        "edgePp": -4.243762373739421,
+        "roi": 0.5177304964539007,
+        "max2HitExclRoi": 0.25971223021582734
+      }
+    },
+    {
+      "id": "minute_0or5_placebo",
+      "label": "締切分末尾0・5_placebo",
+      "group": "placebo",
+      "selection": "1-4",
+      "discovery": {
+        "n": 293,
+        "hits": 36,
+        "edgePp": 1.33861694936225,
+        "roi": 0.768259385665529,
+        "max2HitExclRoi": 0.5951890034364261
+      },
+      "forward": {
+        "n": 141,
+        "hits": 21,
+        "edgePp": 5.834898427470935,
+        "roi": 1.6361702127659574,
+        "max2HitExclRoi": 0.9762589928057553
+      }
+    },
+    {
+      "id": "minute_0or5_placebo",
+      "label": "締切分末尾0・5_placebo",
+      "group": "placebo",
+      "selection": "1-5",
+      "discovery": {
+        "n": 293,
+        "hits": 13,
+        "edgePp": -1.3486151861747233,
+        "roi": 0.4542662116040956,
+        "max2HitExclRoi": 0.26151202749140895
+      },
+      "forward": {
+        "n": 141,
+        "hits": 12,
+        "edgePp": 2.672060224582659,
+        "roi": 0.9390070921985816,
+        "max2HitExclRoi": 0.5510791366906475
+      }
+    },
+    {
+      "id": "minute_0or5_placebo",
+      "label": "締切分末尾0・5_placebo",
+      "group": "placebo",
+      "selection": "1-6",
+      "discovery": {
+        "n": 293,
+        "hits": 14,
+        "edgePp": 0.7236380649565785,
+        "roi": 0.7156996587030716,
+        "max2HitExclRoi": 0.37285223367697595
+      },
+      "forward": {
+        "n": 141,
+        "hits": 4,
+        "edgePp": -0.9332356287724374,
+        "roi": 0.39858156028368796,
+        "max2HitExclRoi": 0.09064748201438849
+      }
+    },
+    {
+      "id": "minute_7_placebo",
+      "label": "締切分末尾7_placebo",
+      "group": "placebo",
+      "selection": "1-2",
+      "discovery": {
+        "n": 120,
+        "hits": 13,
+        "edgePp": 3.221536859533467,
+        "roi": 1.1091666666666666,
+        "max2HitExclRoi": 0.7338983050847457
+      },
+      "forward": {
+        "n": 82,
+        "hits": 4,
+        "edgePp": -2.997677562137738,
+        "roi": 0.3121951219512195,
+        "max2HitExclRoi": 0.0925
+      }
+    },
+    {
+      "id": "minute_7_placebo",
+      "label": "締切分末尾7_placebo",
+      "group": "placebo",
+      "selection": "1-3",
+      "discovery": {
+        "n": 120,
+        "hits": 13,
+        "edgePp": 1.2630147961849596,
+        "roi": 0.8516666666666667,
+        "max2HitExclRoi": 0.5669491525423729
+      },
+      "forward": {
+        "n": 82,
+        "hits": 8,
+        "edgePp": 0.2206603671617735,
+        "roi": 0.7548780487804878,
+        "max2HitExclRoi": 0.4175
+      }
+    },
+    {
+      "id": "minute_7_placebo",
+      "label": "締切分末尾7_placebo",
+      "group": "placebo",
+      "selection": "1-4",
+      "discovery": {
+        "n": 120,
+        "hits": 15,
+        "edgePp": 1.4501812479457885,
+        "roi": 0.49416666666666664,
+        "max2HitExclRoi": 0.3466101694915254
+      },
+      "forward": {
+        "n": 82,
+        "hits": 8,
+        "edgePp": 0.032208095797489684,
+        "roi": 1.196341463414634,
+        "max2HitExclRoi": 0.44125
+      }
+    },
+    {
+      "id": "minute_7_placebo",
+      "label": "締切分末尾7_placebo",
+      "group": "placebo",
+      "selection": "1-5",
+      "discovery": {
+        "n": 120,
+        "hits": 11,
+        "edgePp": 3.344138908033912,
+        "roi": 0.845,
+        "max2HitExclRoi": 0.48135593220338985
+      },
+      "forward": {
+        "n": 82,
+        "hits": 5,
+        "edgePp": 0.24229485236299,
+        "roi": 0.47560975609756095,
+        "max2HitExclRoi": 0.21125
+      }
+    },
+    {
+      "id": "minute_7_placebo",
+      "label": "締切分末尾7_placebo",
+      "group": "placebo",
+      "selection": "1-6",
+      "discovery": {
+        "n": 120,
+        "hits": 5,
+        "edgePp": 0.7789763713155532,
+        "roi": 0.7233333333333334,
+        "max2HitExclRoi": 0.24661016949152542
+      },
+      "forward": {
+        "n": 82,
+        "hits": 3,
+        "edgePp": 0.4008829494492303,
+        "roi": 0.33170731707317075,
+        "max2HitExclRoi": 0.05125
+      }
+    }
+  ],
+  "caveats": [
+    "公式番組の締切予定時刻を使用",
+    "1〜12R完備・時刻単調増加venue-dayだけ採用",
+    "時刻帯と開催場には交絡がある",
+    "closing oddsでT-5ではない",
+    "末尾分は偽陽性対照"
+  ]
+}
