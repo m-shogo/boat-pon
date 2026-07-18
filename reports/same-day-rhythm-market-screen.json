@@ -1,0 +1,1983 @@
+{
+  "generatedAt": "2026-07-18T15:01:05.234Z",
+  "safety": {
+    "readOnly": true,
+    "priorSameDayOnly": true,
+    "productionConnected": false
+  },
+  "scope": {
+    "exactaRaces": 4181
+  },
+  "results": [
+    {
+      "id": "all",
+      "label": "exacta 1-4全体",
+      "base": {
+        "discovery": {
+          "n": 2713,
+          "hits": 304,
+          "edgePp": 0.9341198120160358,
+          "roi": 0.7754515296719499,
+          "max2HitExclRoi": 0.7442641091848027
+        },
+        "forward": {
+          "n": 1468,
+          "hits": 175,
+          "edgePp": 1.8769852919416543,
+          "roi": 0.969141689373297,
+          "max2HitExclRoi": 0.9056616643929059
+        }
+      },
+      "mechanisms": [
+        {
+          "id": "4_won_earlier",
+          "label": "4号艇が同日すでに勝利",
+          "inside": {
+            "discovery": {
+              "n": 103,
+              "hits": 13,
+              "edgePp": 1.3217243314919669,
+              "roi": 1.2194174757281553,
+              "max2HitExclRoi": 0.6079207920792079
+            },
+            "forward": {
+              "n": 57,
+              "hits": 8,
+              "edgePp": 2.3477394468877617,
+              "roi": 1.46140350877193,
+              "max2HitExclRoi": 0.6236363636363637
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 2610,
+              "hits": 291,
+              "edgePp": 0.9188235417072181,
+              "roi": 0.7579310344827587,
+              "max2HitExclRoi": 0.7254984662576687
+            },
+            "forward": {
+              "n": 1411,
+              "hits": 167,
+              "edgePp": 1.857968292060777,
+              "roi": 0.9492558469170801,
+              "max2HitExclRoi": 0.883179559971611
+            }
+          }
+        },
+        {
+          "id": "1_won_earlier",
+          "label": "1号艇が同日すでに勝利",
+          "inside": {
+            "discovery": {
+              "n": 43,
+              "hits": 8,
+              "edgePp": 6.5556455251414,
+              "roi": 0.7906976744186046,
+              "max2HitExclRoi": 0.5146341463414634
+            },
+            "forward": {
+              "n": 27,
+              "hits": 4,
+              "edgePp": -1.0494868057750968,
+              "roi": 0.7407407407407407,
+              "max2HitExclRoi": 0.204
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 2670,
+              "hits": 296,
+              "edgePp": 0.8435858773102805,
+              "roi": 0.7752059925093633,
+              "max2HitExclRoi": 0.7435157421289356
+            },
+            "forward": {
+              "n": 1441,
+              "hits": 171,
+              "edgePp": 1.9318185651119237,
+              "roi": 0.9734212352532963,
+              "max2HitExclRoi": 0.9087560806115358
+            }
+          }
+        },
+        {
+          "id": "4_top2_earlier",
+          "label": "4号艇が同日前走2着以内",
+          "inside": {
+            "discovery": {
+              "n": 194,
+              "hits": 26,
+              "edgePp": 2.9874128011276233,
+              "roi": 1.1556701030927834,
+              "max2HitExclRoi": 0.8145833333333333
+            },
+            "forward": {
+              "n": 107,
+              "hits": 13,
+              "edgePp": 1.2599604242599884,
+              "roi": 1.0785046728971963,
+              "max2HitExclRoi": 0.6257142857142857
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 2519,
+              "hits": 278,
+              "edgePp": 0.7759860923305855,
+              "roi": 0.7461691147280667,
+              "max2HitExclRoi": 0.712554628526023
+            },
+            "forward": {
+              "n": 1361,
+              "hits": 162,
+              "edgePp": 1.9254949619210537,
+              "roi": 0.9605437178545188,
+              "max2HitExclRoi": 0.8920529801324504
+            }
+          }
+        },
+        {
+          "id": "4_bounceback",
+          "label": "4号艇が同日前走4着以下から反発局面",
+          "inside": {
+            "discovery": {
+              "n": 238,
+              "hits": 11,
+              "edgePp": -1.89983737263574,
+              "roi": 0.32983193277310924,
+              "max2HitExclRoi": 0.1690677966101695
+            },
+            "forward": {
+              "n": 105,
+              "hits": 3,
+              "edgePp": -1.6529676165303702,
+              "roi": 0.7380952380952381,
+              "max2HitExclRoi": 0.05339805825242718
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 2475,
+              "hits": 293,
+              "edgePp": 1.2066377150249834,
+              "roi": 0.8183030303030303,
+              "max2HitExclRoi": 0.7841488071168621
+            },
+            "forward": {
+              "n": 1363,
+              "hits": 172,
+              "edgePp": 2.148918568089542,
+              "roi": 0.986940572267058,
+              "max2HitExclRoi": 0.9325495958853784
+            }
+          }
+        },
+        {
+          "id": "4_sharp_st",
+          "label": "4号艇の同日前走STが0.10以内",
+          "inside": {
+            "discovery": {
+              "n": 99,
+              "hits": 14,
+              "edgePp": 3.633892832608806,
+              "roi": 1.202020202020202,
+              "max2HitExclRoi": 0.7051546391752578
+            },
+            "forward": {
+              "n": 45,
+              "hits": 5,
+              "edgePp": 0.36280624764541375,
+              "roi": 1.1377777777777778,
+              "max2HitExclRoi": 0.2186046511627907
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 2614,
+              "hits": 290,
+              "edgePp": 0.831871331129012,
+              "roi": 0.7592960979342005,
+              "max2HitExclRoi": 0.7269142419601837
+            },
+            "forward": {
+              "n": 1423,
+              "hits": 170,
+              "edgePp": 1.9248686770388732,
+              "roi": 0.9638088545326774,
+              "max2HitExclRoi": 0.898311048557354
+            }
+          }
+        },
+        {
+          "id": "4_faster_last_st",
+          "label": "4号艇の同日前走STが1号艇より0.05以上速い",
+          "inside": {
+            "discovery": {
+              "n": 67,
+              "hits": 5,
+              "edgePp": -0.292283725875749,
+              "roi": 0.6686567164179105,
+              "max2HitExclRoi": 0.23384615384615384
+            },
+            "forward": {
+              "n": 28,
+              "hits": 4,
+              "edgePp": 7.2132195090870335,
+              "roi": 2.4285714285714284,
+              "max2HitExclRoi": 0.28846153846153844
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 2646,
+              "hits": 299,
+              "edgePp": 0.9651738698538203,
+              "roi": 0.7781557067271353,
+              "max2HitExclRoi": 0.746180030257186
+            },
+            "forward": {
+              "n": 1440,
+              "hits": 171,
+              "edgePp": 1.7732251821638279,
+              "roi": 0.9407638888888888,
+              "max2HitExclRoi": 0.889221140472879
+            }
+          }
+        },
+        {
+          "id": "both_raced",
+          "label": "1・4号艇とも同日既走",
+          "inside": {
+            "discovery": {
+              "n": 218,
+              "hits": 17,
+              "edgePp": -0.04432700247237242,
+              "roi": 0.6059633027522936,
+              "max2HitExclRoi": 0.37777777777777777
+            },
+            "forward": {
+              "n": 95,
+              "hits": 10,
+              "edgePp": 2.201946919971544,
+              "roi": 1.3821052631578947,
+              "max2HitExclRoi": 0.5021505376344086
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 2495,
+              "hits": 287,
+              "edgePp": 1.0196113573300647,
+              "roi": 0.7902605210420842,
+              "max2HitExclRoi": 0.7563578018451664
+            },
+            "forward": {
+              "n": 1373,
+              "hits": 165,
+              "edgePp": 1.8545006927698984,
+              "roi": 0.9405680990531683,
+              "max2HitExclRoi": 0.886506199854121
+            }
+          }
+        },
+        {
+          "id": "same_day_rematch",
+          "label": "1・4号艇が同日再戦",
+          "inside": {
+            "discovery": {
+              "n": 9,
+              "hits": 0,
+              "edgePp": -6.393090218217192,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 3,
+              "hits": 2,
+              "edgePp": 50.593947905828074,
+              "roi": 3.3,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 2704,
+              "hits": 304,
+              "edgePp": 0.9585077152231747,
+              "roi": 0.7780325443786982,
+              "max2HitExclRoi": 0.7467431532198372
+            },
+            "forward": {
+              "n": 1465,
+              "hits": 173,
+              "edgePp": 1.7772235937562215,
+              "roi": 0.9643686006825939,
+              "max2HitExclRoi": 0.9007518796992481
+            }
+          }
+        },
+        {
+          "id": "rematch_4_won",
+          "label": "同日再戦で直前は4号艇が先着",
+          "inside": {
+            "discovery": {
+              "n": 4,
+              "hits": 0,
+              "edgePp": -7.650748503870532,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 1,
+              "hits": 1,
+              "edgePp": 83.0737498418024,
+              "roi": 4.4,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 2709,
+              "hits": 304,
+              "edgePp": 0.946795881880765,
+              "roi": 0.7765965300849021,
+              "max2HitExclRoi": 0.7453638714444034
+            },
+            "forward": {
+              "n": 1467,
+              "hits": 174,
+              "edgePp": 1.8216364408510883,
+              "roi": 0.9668029993183367,
+              "max2HitExclRoi": 0.9032764505119454
+            }
+          }
+        },
+        {
+          "id": "4_more_runs",
+          "label": "4号艇の同日走数が1号艇より多い",
+          "inside": {
+            "discovery": {
+              "n": 309,
+              "hits": 29,
+              "edgePp": 0.5333597334290011,
+              "roi": 0.7110032362459547,
+              "max2HitExclRoi": 0.49478827361563515
+            },
+            "forward": {
+              "n": 166,
+              "hits": 11,
+              "edgePp": -0.8461734417054254,
+              "roi": 0.6445783132530121,
+              "max2HitExclRoi": 0.32926829268292684
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 2404,
+              "hits": 275,
+              "edgePp": 0.9856318187894783,
+              "roi": 0.7837354409317804,
+              "max2HitExclRoi": 0.7485428809325562
+            },
+            "forward": {
+              "n": 1302,
+              "hits": 164,
+              "edgePp": 2.224177572882844,
+              "roi": 1.0105222734254993,
+              "max2HitExclRoi": 0.939
+            }
+          }
+        },
+        {
+          "id": "1_more_runs",
+          "label": "1号艇の同日走数が4号艇より多い",
+          "inside": {
+            "discovery": {
+              "n": 332,
+              "hits": 34,
+              "edgePp": 0.6800941654563085,
+              "roi": 0.6439759036144578,
+              "max2HitExclRoi": 0.5109090909090909
+            },
+            "forward": {
+              "n": 168,
+              "hits": 24,
+              "edgePp": 3.279247549500776,
+              "roi": 1.0208333333333333,
+              "max2HitExclRoi": 0.7108433734939759
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 2381,
+              "hits": 270,
+              "edgePp": 0.9695404397597513,
+              "roi": 0.7937841243175137,
+              "max2HitExclRoi": 0.7582597730138714
+            },
+            "forward": {
+              "n": 1300,
+              "hits": 151,
+              "edgePp": 1.6957698617340256,
+              "roi": 0.9624615384615385,
+              "max2HitExclRoi": 0.8922958397534668
+            }
+          }
+        },
+        {
+          "id": "4_inward_shift",
+          "label": "4号艇が前走5・6コースから4コースへ内寄り",
+          "inside": {
+            "discovery": {
+              "n": 164,
+              "hits": 13,
+              "edgePp": 0.3434227828303087,
+              "roi": 0.348780487804878,
+              "max2HitExclRoi": 0.2345679012345679
+            },
+            "forward": {
+              "n": 78,
+              "hits": 6,
+              "edgePp": 1.3841498509652017,
+              "roi": 0.35128205128205126,
+              "max2HitExclRoi": 0.18421052631578946
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 2549,
+              "hits": 291,
+              "edgePp": 0.9721246424540451,
+              "roi": 0.8029030992546097,
+              "max2HitExclRoi": 0.7697290930506479
+            },
+            "forward": {
+              "n": 1390,
+              "hits": 169,
+              "edgePp": 1.904640805895736,
+              "roi": 1.0038129496402877,
+              "max2HitExclRoi": 0.9368155619596542
+            }
+          }
+        },
+        {
+          "id": "4_outward_shift",
+          "label": "4号艇が前走1〜3コースから4コースへ外寄り",
+          "inside": {
+            "discovery": {
+              "n": 354,
+              "hits": 32,
+              "edgePp": 0.24897101106123581,
+              "roi": 0.8268361581920904,
+              "max2HitExclRoi": 0.6389204545454545
+            },
+            "forward": {
+              "n": 181,
+              "hits": 15,
+              "edgePp": -0.12631083488219885,
+              "roi": 1.1651933701657458,
+              "max2HitExclRoi": 0.658659217877095
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 2359,
+              "hits": 272,
+              "edgePp": 1.0369356982127107,
+              "roi": 0.767740568037304,
+              "max2HitExclRoi": 0.731862537123462
+            },
+            "forward": {
+              "n": 1287,
+              "hits": 160,
+              "edgePp": 2.158723131067631,
+              "roi": 0.9415695415695415,
+              "max2HitExclRoi": 0.8854474708171206
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "rookie",
+      "label": "ルーキー・若手開催",
+      "base": {
+        "discovery": {
+          "n": 117,
+          "hits": 20,
+          "edgePp": 6.283380949450848,
+          "roi": 0.9974358974358974,
+          "max2HitExclRoi": 0.7017391304347826
+        },
+        "forward": {
+          "n": 54,
+          "hits": 9,
+          "edgePp": 6.823805624823266,
+          "roi": 1.587037037037037,
+          "max2HitExclRoi": 0.8653846153846154
+        }
+      },
+      "mechanisms": [
+        {
+          "id": "4_won_earlier",
+          "label": "4号艇が同日すでに勝利",
+          "inside": {
+            "discovery": {
+              "n": 1,
+              "hits": 0,
+              "edgePp": -4.227416265271114,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 1,
+              "hits": 0,
+              "edgePp": -42.80589622861986,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 116,
+              "hits": 20,
+              "edgePp": 6.373991270267417,
+              "roi": 1.0060344827586207,
+              "max2HitExclRoi": 0.7078947368421052
+            },
+            "forward": {
+              "n": 53,
+              "hits": 9,
+              "edgePp": 7.760215093756156,
+              "roi": 1.6169811320754717,
+              "max2HitExclRoi": 0.8823529411764706
+            }
+          }
+        },
+        {
+          "id": "1_won_earlier",
+          "label": "1号艇が同日すでに勝利",
+          "inside": {
+            "discovery": {
+              "n": 0,
+              "hits": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 4,
+              "hits": 0,
+              "edgePp": -10.164341851555855,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 117,
+              "hits": 20,
+              "edgePp": 6.283380949450848,
+              "roi": 0.9974358974358974,
+              "max2HitExclRoi": 0.7017391304347826
+            },
+            "forward": {
+              "n": 50,
+              "hits": 9,
+              "edgePp": 8.182857422933592,
+              "roi": 1.714,
+              "max2HitExclRoi": 0.9375
+            }
+          }
+        },
+        {
+          "id": "4_top2_earlier",
+          "label": "4号艇が同日前走2着以内",
+          "inside": {
+            "discovery": {
+              "n": 4,
+              "hits": 0,
+              "edgePp": -15.114979563109951,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 2,
+              "hits": 0,
+              "edgePp": -24.761819401452094,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 113,
+              "hits": 20,
+              "edgePp": 7.040845038391054,
+              "roi": 1.0327433628318583,
+              "max2HitExclRoi": 0.727027027027027
+            },
+            "forward": {
+              "n": 52,
+              "hits": 9,
+              "edgePp": 8.038637356603088,
+              "roi": 1.648076923076923,
+              "max2HitExclRoi": 0.9
+            }
+          }
+        },
+        {
+          "id": "4_bounceback",
+          "label": "4号艇が同日前走4着以下から反発局面",
+          "inside": {
+            "discovery": {
+              "n": 7,
+              "hits": 1,
+              "edgePp": 9.033063902068122,
+              "roi": 0.8857142857142857,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 3,
+              "hits": 0,
+              "edgePp": -5.753082017597799,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 110,
+              "hits": 19,
+              "edgePp": 6.108401125193384,
+              "roi": 1.0045454545454546,
+              "max2HitExclRoi": 0.6898148148148148
+            },
+            "forward": {
+              "n": 51,
+              "hits": 9,
+              "edgePp": 7.56362254496568,
+              "roi": 1.6803921568627451,
+              "max2HitExclRoi": 0.9183673469387755
+            }
+          }
+        },
+        {
+          "id": "4_sharp_st",
+          "label": "4号艇の同日前走STが0.10以内",
+          "inside": {
+            "discovery": {
+              "n": 1,
+              "hits": 0,
+              "edgePp": -1.168904070024336,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 2,
+              "hits": 0,
+              "edgePp": -24.761819401452094,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 116,
+              "hits": 20,
+              "edgePp": 6.347624785825634,
+              "roi": 1.0060344827586207,
+              "max2HitExclRoi": 0.7078947368421052
+            },
+            "forward": {
+              "n": 52,
+              "hits": 9,
+              "edgePp": 8.038637356603088,
+              "roi": 1.648076923076923,
+              "max2HitExclRoi": 0.9
+            }
+          }
+        },
+        {
+          "id": "4_faster_last_st",
+          "label": "4号艇の同日前走STが1号艇より0.05以上速い",
+          "inside": {
+            "discovery": {
+              "n": 1,
+              "hits": 0,
+              "edgePp": -1.168904070024336,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 1,
+              "hits": 0,
+              "edgePp": -3.9088454942795203,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 116,
+              "hits": 20,
+              "edgePp": 6.347624785825634,
+              "roi": 1.0060344827586207,
+              "max2HitExclRoi": 0.7078947368421052
+            },
+            "forward": {
+              "n": 53,
+              "hits": 9,
+              "edgePp": 7.026308476127093,
+              "roi": 1.6169811320754717,
+              "max2HitExclRoi": 0.8823529411764706
+            }
+          }
+        },
+        {
+          "id": "both_raced",
+          "label": "1・4号艇とも同日既走",
+          "inside": {
+            "discovery": {
+              "n": 4,
+              "hits": 0,
+              "edgePp": -3.383368499079183,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 4,
+              "hits": 0,
+              "edgePp": -15.016285570353313,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 113,
+              "hits": 20,
+              "edgePp": 6.62556677063775,
+              "roi": 1.0327433628318583,
+              "max2HitExclRoi": 0.727027027027027
+            },
+            "forward": {
+              "n": 50,
+              "hits": 9,
+              "edgePp": 8.571012920437392,
+              "roi": 1.714,
+              "max2HitExclRoi": 0.9375
+            }
+          }
+        },
+        {
+          "id": "same_day_rematch",
+          "label": "1・4号艇が同日再戦",
+          "inside": {
+            "discovery": {
+              "n": 0,
+              "hits": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 0,
+              "hits": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 117,
+              "hits": 20,
+              "edgePp": 6.283380949450848,
+              "roi": 0.9974358974358974,
+              "max2HitExclRoi": 0.7017391304347826
+            },
+            "forward": {
+              "n": 54,
+              "hits": 9,
+              "edgePp": 6.823805624823266,
+              "roi": 1.587037037037037,
+              "max2HitExclRoi": 0.8653846153846154
+            }
+          }
+        },
+        {
+          "id": "rematch_4_won",
+          "label": "同日再戦で直前は4号艇が先着",
+          "inside": {
+            "discovery": {
+              "n": 0,
+              "hits": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 0,
+              "hits": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 117,
+              "hits": 20,
+              "edgePp": 6.283380949450848,
+              "roi": 0.9974358974358974,
+              "max2HitExclRoi": 0.7017391304347826
+            },
+            "forward": {
+              "n": 54,
+              "hits": 9,
+              "edgePp": 6.823805624823266,
+              "roi": 1.587037037037037,
+              "max2HitExclRoi": 0.8653846153846154
+            }
+          }
+        },
+        {
+          "id": "4_more_runs",
+          "label": "4号艇の同日走数が1号艇より多い",
+          "inside": {
+            "discovery": {
+              "n": 9,
+              "hits": 2,
+              "edgePp": 9.72196555029343,
+              "roi": 1,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 3,
+              "hits": 0,
+              "edgePp": -4.173701817516153,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 108,
+              "hits": 18,
+              "edgePp": 5.996832232713967,
+              "roi": 0.9972222222222222,
+              "max2HitExclRoi": 0.6764150943396227
+            },
+            "forward": {
+              "n": 51,
+              "hits": 9,
+              "edgePp": 7.470717827313819,
+              "roi": 1.6803921568627451,
+              "max2HitExclRoi": 0.9183673469387755
+            }
+          }
+        },
+        {
+          "id": "1_more_runs",
+          "label": "1号艇の同日走数が4号艇より多い",
+          "inside": {
+            "discovery": {
+              "n": 11,
+              "hits": 3,
+              "edgePp": 14.346687678888467,
+              "roi": 1.2454545454545454,
+              "max2HitExclRoi": 0.34444444444444444
+            },
+            "forward": {
+              "n": 9,
+              "hits": 2,
+              "edgePp": 7.941714703795164,
+              "roi": 0.6444444444444445,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 106,
+              "hits": 17,
+              "edgePp": 5.44662270394317,
+              "roi": 0.9716981132075472,
+              "max2HitExclRoi": 0.6442307692307693
+            },
+            "forward": {
+              "n": 45,
+              "hits": 7,
+              "edgePp": 6.600223809028885,
+              "roi": 1.7755555555555556,
+              "max2HitExclRoi": 0.9116279069767442
+            }
+          }
+        },
+        {
+          "id": "4_inward_shift",
+          "label": "4号艇が前走5・6コースから4コースへ内寄り",
+          "inside": {
+            "discovery": {
+              "n": 6,
+              "hits": 1,
+              "edgePp": 8.461526517489464,
+              "roi": 0.4666666666666667,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 1,
+              "hits": 0,
+              "edgePp": -6.717742574284329,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 111,
+              "hits": 19,
+              "edgePp": 6.16564335117849,
+              "roi": 1.026126126126126,
+              "max2HitExclRoi": 0.7146788990825688
+            },
+            "forward": {
+              "n": 53,
+              "hits": 9,
+              "edgePp": 7.07930653424039,
+              "roi": 1.6169811320754717,
+              "max2HitExclRoi": 0.8823529411764706
+            }
+          }
+        },
+        {
+          "id": "4_outward_shift",
+          "label": "4号艇が前走1〜3コースから4コースへ外寄り",
+          "inside": {
+            "discovery": {
+              "n": 6,
+              "hits": 1,
+              "edgePp": 4.096996835587755,
+              "roi": 1.0333333333333334,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 6,
+              "hits": 0,
+              "edgePp": -10.978084193279564,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 111,
+              "hits": 19,
+              "edgePp": 6.401563874524528,
+              "roi": 0.9954954954954955,
+              "max2HitExclRoi": 0.6834862385321101
+            },
+            "forward": {
+              "n": 48,
+              "hits": 9,
+              "edgePp": 9.04904185208612,
+              "roi": 1.7854166666666667,
+              "max2HitExclRoi": 0.9782608695652174
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "target",
+      "label": "風2〜3m・南西風・4号艇最強",
+      "base": {
+        "discovery": {
+          "n": 52,
+          "hits": 13,
+          "edgePp": 8.43591478970929,
+          "roi": 2.207692307692308,
+          "max2HitExclRoi": 1.328
+        },
+        "forward": {
+          "n": 24,
+          "hits": 10,
+          "edgePp": 22.66414376349771,
+          "roi": 1.8,
+          "max2HitExclRoi": 1.3954545454545455
+        }
+      },
+      "mechanisms": [
+        {
+          "id": "4_won_earlier",
+          "label": "4号艇が同日すでに勝利",
+          "inside": {
+            "discovery": {
+              "n": 1,
+              "hits": 0,
+              "edgePp": -20.723870680496063,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 1,
+              "hits": 1,
+              "edgePp": 84.77817076766723,
+              "roi": 4.9,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 51,
+              "hits": 13,
+              "edgePp": 9.007675289125084,
+              "roi": 2.2509803921568627,
+              "max2HitExclRoi": 1.3551020408163266
+            },
+            "forward": {
+              "n": 23,
+              "hits": 9,
+              "edgePp": 19.963533893751208,
+              "roi": 1.6652173913043478,
+              "max2HitExclRoi": 1.2285714285714286
+            }
+          }
+        },
+        {
+          "id": "1_won_earlier",
+          "label": "1号艇が同日すでに勝利",
+          "inside": {
+            "discovery": {
+              "n": 1,
+              "hits": 1,
+              "edgePp": 87.55528855601433,
+              "roi": 6,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 0,
+              "hits": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 51,
+              "hits": 12,
+              "edgePp": 6.884554519781741,
+              "roi": 2.1333333333333333,
+              "max2HitExclRoi": 1.2326530612244897
+            },
+            "forward": {
+              "n": 24,
+              "hits": 10,
+              "edgePp": 22.66414376349771,
+              "roi": 1.8,
+              "max2HitExclRoi": 1.3954545454545455
+            }
+          }
+        },
+        {
+          "id": "4_top2_earlier",
+          "label": "4号艇が同日前走2着以内",
+          "inside": {
+            "discovery": {
+              "n": 3,
+              "hits": 0,
+              "edgePp": -17.44414064612515,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 2,
+              "hits": 2,
+              "edgePp": 84.10837326018449,
+              "roi": 4.7,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 49,
+              "hits": 13,
+              "edgePp": 10.020407979658337,
+              "roi": 2.342857142857143,
+              "max2HitExclRoi": 1.4127659574468086
+            },
+            "forward": {
+              "n": 22,
+              "hits": 8,
+              "edgePp": 17.078304718344363,
+              "roi": 1.5363636363636364,
+              "max2HitExclRoi": 1.065
+            }
+          }
+        },
+        {
+          "id": "4_bounceback",
+          "label": "4号艇が同日前走4着以下から反発局面",
+          "inside": {
+            "discovery": {
+              "n": 2,
+              "hits": 0,
+              "edgePp": -16.087663820338467,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 0,
+              "hits": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 50,
+              "hits": 13,
+              "edgePp": 9.4168579341112,
+              "roi": 2.296,
+              "max2HitExclRoi": 1.3833333333333333
+            },
+            "forward": {
+              "n": 24,
+              "hits": 10,
+              "edgePp": 22.66414376349771,
+              "roi": 1.8,
+              "max2HitExclRoi": 1.3954545454545455
+            }
+          }
+        },
+        {
+          "id": "4_sharp_st",
+          "label": "4号艇の同日前走STが0.10以内",
+          "inside": {
+            "discovery": {
+              "n": 0,
+              "hits": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 1,
+              "hits": 1,
+              "edgePp": 83.43857575270178,
+              "roi": 4.5,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 52,
+              "hits": 13,
+              "edgePp": 8.43591478970929,
+              "roi": 2.207692307692308,
+              "max2HitExclRoi": 1.328
+            },
+            "forward": {
+              "n": 23,
+              "hits": 9,
+              "edgePp": 20.021777155271444,
+              "roi": 1.682608695652174,
+              "max2HitExclRoi": 1.2476190476190476
+            }
+          }
+        },
+        {
+          "id": "4_faster_last_st",
+          "label": "4号艇の同日前走STが1号艇より0.05以上速い",
+          "inside": {
+            "discovery": {
+              "n": 0,
+              "hits": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 2,
+              "hits": 1,
+              "edgePp": 37.3775058963312,
+              "roi": 2.25,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 52,
+              "hits": 13,
+              "edgePp": 8.43591478970929,
+              "roi": 2.207692307692308,
+              "max2HitExclRoi": 1.328
+            },
+            "forward": {
+              "n": 22,
+              "hits": 9,
+              "edgePp": 21.32656538778557,
+              "roi": 1.759090909090909,
+              "max2HitExclRoi": 1.31
+            }
+          }
+        },
+        {
+          "id": "both_raced",
+          "label": "1・4号艇とも同日既走",
+          "inside": {
+            "discovery": {
+              "n": 2,
+              "hits": 0,
+              "edgePp": -16.361988094568122,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 3,
+              "hits": 1,
+              "edgePp": 19.94651079790635,
+              "roi": 1.5,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 50,
+              "hits": 13,
+              "edgePp": 9.427830905080388,
+              "roi": 2.296,
+              "max2HitExclRoi": 1.3833333333333333
+            },
+            "forward": {
+              "n": 21,
+              "hits": 9,
+              "edgePp": 23.052377044296474,
+              "roi": 1.8428571428571427,
+              "max2HitExclRoi": 1.3789473684210527
+            }
+          }
+        },
+        {
+          "id": "same_day_rematch",
+          "label": "1・4号艇が同日再戦",
+          "inside": {
+            "discovery": {
+              "n": 0,
+              "hits": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 0,
+              "hits": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 52,
+              "hits": 13,
+              "edgePp": 8.43591478970929,
+              "roi": 2.207692307692308,
+              "max2HitExclRoi": 1.328
+            },
+            "forward": {
+              "n": 24,
+              "hits": 10,
+              "edgePp": 22.66414376349771,
+              "roi": 1.8,
+              "max2HitExclRoi": 1.3954545454545455
+            }
+          }
+        },
+        {
+          "id": "rematch_4_won",
+          "label": "同日再戦で直前は4号艇が先着",
+          "inside": {
+            "discovery": {
+              "n": 0,
+              "hits": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 0,
+              "hits": 0,
+              "edgePp": 0,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 52,
+              "hits": 13,
+              "edgePp": 8.43591478970929,
+              "roi": 2.207692307692308,
+              "max2HitExclRoi": 1.328
+            },
+            "forward": {
+              "n": 24,
+              "hits": 10,
+              "edgePp": 22.66414376349771,
+              "roi": 1.8,
+              "max2HitExclRoi": 1.3954545454545455
+            }
+          }
+        },
+        {
+          "id": "4_more_runs",
+          "label": "4号艇の同日走数が1号艇より多い",
+          "inside": {
+            "discovery": {
+              "n": 4,
+              "hits": 1,
+              "edgePp": 5.165635398580956,
+              "roi": 0.675,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 1,
+              "hits": 1,
+              "edgePp": 84.77817076766723,
+              "roi": 4.9,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 48,
+              "hits": 12,
+              "edgePp": 8.708438072303315,
+              "roi": 2.3354166666666667,
+              "max2HitExclRoi": 1.3847826086956523
+            },
+            "forward": {
+              "n": 23,
+              "hits": 9,
+              "edgePp": 19.963533893751208,
+              "roi": 1.6652173913043478,
+              "max2HitExclRoi": 1.2285714285714286
+            }
+          }
+        },
+        {
+          "id": "1_more_runs",
+          "label": "1号艇の同日走数が4号艇より多い",
+          "inside": {
+            "discovery": {
+              "n": 5,
+              "hits": 2,
+              "edgePp": 22.078864607809518,
+              "roi": 3.2,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 1,
+              "hits": 0,
+              "edgePp": -20.634353771934705,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 47,
+              "hits": 11,
+              "edgePp": 6.984537149485859,
+              "roi": 2.1021276595744682,
+              "max2HitExclRoi": 1.12
+            },
+            "forward": {
+              "n": 23,
+              "hits": 10,
+              "edgePp": 24.546687134603467,
+              "roi": 1.8782608695652174,
+              "max2HitExclRoi": 1.4619047619047618
+            }
+          }
+        },
+        {
+          "id": "4_inward_shift",
+          "label": "4号艇が前走5・6コースから4コースへ内寄り",
+          "inside": {
+            "discovery": {
+              "n": 3,
+              "hits": 0,
+              "edgePp": -12.947042035163367,
+              "roi": 0,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 1,
+              "hits": 1,
+              "edgePp": 84.77817076766723,
+              "roi": 4.9,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 49,
+              "hits": 13,
+              "edgePp": 9.745075411640267,
+              "roi": 2.342857142857143,
+              "max2HitExclRoi": 1.4127659574468086
+            },
+            "forward": {
+              "n": 23,
+              "hits": 9,
+              "edgePp": 19.963533893751208,
+              "roi": 1.6652173913043478,
+              "max2HitExclRoi": 1.2285714285714286
+            }
+          }
+        },
+        {
+          "id": "4_outward_shift",
+          "label": "4号艇が前走1〜3コースから4コースへ外寄り",
+          "inside": {
+            "discovery": {
+              "n": 3,
+              "hits": 1,
+              "edgePp": 8.926563836892559,
+              "roi": 0.9,
+              "max2HitExclRoi": 0
+            },
+            "forward": {
+              "n": 3,
+              "hits": 1,
+              "edgePp": 19.94651079790635,
+              "roi": 1.5,
+              "max2HitExclRoi": 0
+            }
+          },
+          "outside": {
+            "discovery": {
+              "n": 49,
+              "hits": 12,
+              "edgePp": 8.40587505212664,
+              "roi": 2.2877551020408164,
+              "max2HitExclRoi": 1.3553191489361702
+            },
+            "forward": {
+              "n": 21,
+              "hits": 9,
+              "edgePp": 23.052377044296474,
+              "roi": 1.8428571428571427,
+              "max2HitExclRoi": 1.3789473684210527
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "matrix": {
+    "family": {
+      "mechanisms": 13,
+      "selections": 5,
+      "cells": 65,
+      "eligible": 45
+    },
+    "stable": [
+      {
+        "id": "4_sharp_st",
+        "label": "4号艇の同日前走STが0.10以内",
+        "selection": "1-2",
+        "metrics": {
+          "discovery": {
+            "n": 99,
+            "hits": 12,
+            "edgePp": 3.195156917206652,
+            "roi": 1.0212121212121212,
+            "max2HitExclRoi": 0.6690721649484536
+          },
+          "forward": {
+            "n": 45,
+            "hits": 5,
+            "edgePp": 1.905984114516672,
+            "roi": 0.5511111111111111,
+            "max2HitExclRoi": 0.26976744186046514
+          }
+        }
+      },
+      {
+        "id": "4_top2_earlier",
+        "label": "4号艇が同日前走2着以内",
+        "selection": "1-5",
+        "metrics": {
+          "discovery": {
+            "n": 194,
+            "hits": 15,
+            "edgePp": 1.5718465514011892,
+            "roi": 0.6778350515463918,
+            "max2HitExclRoi": 0.4791666666666667
+          },
+          "forward": {
+            "n": 107,
+            "hits": 10,
+            "edgePp": 3.263237298372083,
+            "roi": 1.655140186915888,
+            "max2HitExclRoi": 0.5533333333333333
+          }
+        }
+      },
+      {
+        "id": "4_won_earlier",
+        "label": "4号艇が同日すでに勝利",
+        "selection": "1-6",
+        "metrics": {
+          "discovery": {
+            "n": 103,
+            "hits": 6,
+            "edgePp": 1.5664900930375913,
+            "roi": 0.4300970873786408,
+            "max2HitExclRoi": 0.18118811881188118
+          },
+          "forward": {
+            "n": 57,
+            "hits": 4,
+            "edgePp": 3.1674219632142715,
+            "roi": 0.5456140350877193,
+            "max2HitExclRoi": 0.16727272727272727
+          }
+        }
+      },
+      {
+        "id": "4_won_earlier",
+        "label": "4号艇が同日すでに勝利",
+        "selection": "1-4",
+        "metrics": {
+          "discovery": {
+            "n": 103,
+            "hits": 13,
+            "edgePp": 1.3217243314919669,
+            "roi": 1.2194174757281553,
+            "max2HitExclRoi": 0.6079207920792079
+          },
+          "forward": {
+            "n": 57,
+            "hits": 8,
+            "edgePp": 2.3477394468877617,
+            "roi": 1.46140350877193,
+            "max2HitExclRoi": 0.6236363636363637
+          }
+        }
+      },
+      {
+        "id": "both_raced",
+        "label": "1・4号艇とも同日既走",
+        "selection": "1-5",
+        "metrics": {
+          "discovery": {
+            "n": 218,
+            "hits": 16,
+            "edgePp": 1.3004854761929359,
+            "roi": 0.6165137614678899,
+            "max2HitExclRoi": 0.47824074074074074
+          },
+          "forward": {
+            "n": 95,
+            "hits": 11,
+            "edgePp": 5.453210641143129,
+            "roi": 0.9905263157894737,
+            "max2HitExclRoi": 0.5935483870967742
+          }
+        }
+      },
+      {
+        "id": "4_top2_earlier",
+        "label": "4号艇が同日前走2着以内",
+        "selection": "1-4",
+        "metrics": {
+          "discovery": {
+            "n": 194,
+            "hits": 26,
+            "edgePp": 2.9874128011276233,
+            "roi": 1.1556701030927834,
+            "max2HitExclRoi": 0.8145833333333333
+          },
+          "forward": {
+            "n": 107,
+            "hits": 13,
+            "edgePp": 1.2599604242599884,
+            "roi": 1.0785046728971963,
+            "max2HitExclRoi": 0.6257142857142857
+          }
+        }
+      },
+      {
+        "id": "4_won_earlier",
+        "label": "4号艇が同日すでに勝利",
+        "selection": "1-5",
+        "metrics": {
+          "discovery": {
+            "n": 103,
+            "hits": 8,
+            "edgePp": 2.018839881735387,
+            "roi": 0.7,
+            "max2HitExclRoi": 0.3910891089108911
+          },
+          "forward": {
+            "n": 57,
+            "hits": 4,
+            "edgePp": 1.2140810310354495,
+            "roi": 2.26140350877193,
+            "max2HitExclRoi": 0.18363636363636363
+          }
+        }
+      },
+      {
+        "id": "4_outward_shift",
+        "label": "4号艇が前走1〜3コースから4コースへ外寄り",
+        "selection": "1-2",
+        "metrics": {
+          "discovery": {
+            "n": 354,
+            "hits": 42,
+            "edgePp": 2.838459750856702,
+            "roi": 1.1050847457627118,
+            "max2HitExclRoi": 0.9329545454545455
+          },
+          "forward": {
+            "n": 181,
+            "hits": 17,
+            "edgePp": 1.1730615431997655,
+            "roi": 0.6662983425414365,
+            "max2HitExclRoi": 0.5273743016759777
+          }
+        }
+      },
+      {
+        "id": "both_raced",
+        "label": "1・4号艇とも同日既走",
+        "selection": "1-6",
+        "metrics": {
+          "discovery": {
+            "n": 218,
+            "hits": 16,
+            "edgePp": 2.730008925139562,
+            "roi": 0.6674311926605505,
+            "max2HitExclRoi": 0.3486111111111111
+          },
+          "forward": {
+            "n": 95,
+            "hits": 5,
+            "edgePp": 1.1223365875292743,
+            "roi": 1.0894736842105264,
+            "max2HitExclRoi": 0.17849462365591398
+          }
+        }
+      },
+      {
+        "id": "4_sharp_st",
+        "label": "4号艇の同日前走STが0.10以内",
+        "selection": "1-3",
+        "metrics": {
+          "discovery": {
+            "n": 99,
+            "hits": 13,
+            "edgePp": 2.035265158524549,
+            "roi": 0.8909090909090909,
+            "max2HitExclRoi": 0.47216494845360824
+          },
+          "forward": {
+            "n": 45,
+            "hits": 5,
+            "edgePp": 0.8725692877999751,
+            "roi": 0.5622222222222222,
+            "max2HitExclRoi": 0.23953488372093024
+          }
+        }
+      },
+      {
+        "id": "4_won_earlier",
+        "label": "4号艇が同日すでに勝利",
+        "selection": "1-2",
+        "metrics": {
+          "discovery": {
+            "n": 103,
+            "hits": 10,
+            "edgePp": 0.7384648320134549,
+            "roi": 1.0883495145631068,
+            "max2HitExclRoi": 0.6326732673267327
+          },
+          "forward": {
+            "n": 57,
+            "hits": 6,
+            "edgePp": 1.6004470916134967,
+            "roi": 0.5807017543859649,
+            "max2HitExclRoi": 0.3618181818181818
+          }
+        }
+      },
+      {
+        "id": "4_top2_earlier",
+        "label": "4号艇が同日前走2着以内",
+        "selection": "1-2",
+        "metrics": {
+          "discovery": {
+            "n": 194,
+            "hits": 25,
+            "edgePp": 4.203253279743956,
+            "roi": 1.1649484536082475,
+            "max2HitExclRoi": 0.9260416666666667
+          },
+          "forward": {
+            "n": 107,
+            "hits": 10,
+            "edgePp": 0.7307132623388253,
+            "roi": 0.6224299065420561,
+            "max2HitExclRoi": 0.4085714285714286
+          }
+        }
+      },
+      {
+        "id": "1_more_runs",
+        "label": "1号艇の同日走数が4号艇より多い",
+        "selection": "1-4",
+        "metrics": {
+          "discovery": {
+            "n": 332,
+            "hits": 34,
+            "edgePp": 0.6800941654563085,
+            "roi": 0.6439759036144578,
+            "max2HitExclRoi": 0.5109090909090909
+          },
+          "forward": {
+            "n": 168,
+            "hits": 24,
+            "edgePp": 3.279247549500776,
+            "roi": 1.0208333333333333,
+            "max2HitExclRoi": 0.7108433734939759
+          }
+        }
+      },
+      {
+        "id": "4_top2_earlier",
+        "label": "4号艇が同日前走2着以内",
+        "selection": "1-6",
+        "metrics": {
+          "discovery": {
+            "n": 194,
+            "hits": 10,
+            "edgePp": 0.6597706974680771,
+            "roi": 0.6474226804123712,
+            "max2HitExclRoi": 0.2526041666666667
+          },
+          "forward": {
+            "n": 107,
+            "hits": 7,
+            "edgePp": 2.303082126135803,
+            "roi": 1.1018691588785046,
+            "max2HitExclRoi": 0.24857142857142858
+          }
+        }
+      },
+      {
+        "id": "4_outward_shift",
+        "label": "4号艇が前走1〜3コースから4コースへ外寄り",
+        "selection": "1-5",
+        "metrics": {
+          "discovery": {
+            "n": 354,
+            "hits": 28,
+            "edgePp": 0.6524162862183087,
+            "roi": 0.5822033898305085,
+            "max2HitExclRoi": 0.4732954545454545
+          },
+          "forward": {
+            "n": 181,
+            "hits": 18,
+            "edgePp": 3.6946800019425288,
+            "roi": 1.5696132596685084,
+            "max2HitExclRoi": 0.8547486033519553
+          }
+        }
+      },
+      {
+        "id": "4_sharp_st",
+        "label": "4号艇の同日前走STが0.10以内",
+        "selection": "1-6",
+        "metrics": {
+          "discovery": {
+            "n": 99,
+            "hits": 6,
+            "edgePp": 1.1291848372700228,
+            "roi": 0.695959595959596,
+            "max2HitExclRoi": 0.15051546391752577
+          },
+          "forward": {
+            "n": 45,
+            "hits": 2,
+            "edgePp": 0.5773804370178897,
+            "roi": 0.4088888888888889,
+            "max2HitExclRoi": 0
+          }
+        }
+      },
+      {
+        "id": "4_outward_shift",
+        "label": "4号艇が前走1〜3コースから4コースへ外寄り",
+        "selection": "1-6",
+        "metrics": {
+          "discovery": {
+            "n": 354,
+            "hits": 20,
+            "edgePp": 0.49256712665241775,
+            "roi": 0.607909604519774,
+            "max2HitExclRoi": 0.3573863636363636
+          },
+          "forward": {
+            "n": 181,
+            "hits": 13,
+            "edgePp": 1.6226836925020878,
+            "roi": 0.9546961325966851,
+            "max2HitExclRoi": 0.38268156424581007
+          }
+        }
+      },
+      {
+        "id": "4_sharp_st",
+        "label": "4号艇の同日前走STが0.10以内",
+        "selection": "1-4",
+        "metrics": {
+          "discovery": {
+            "n": 99,
+            "hits": 14,
+            "edgePp": 3.633892832608806,
+            "roi": 1.202020202020202,
+            "max2HitExclRoi": 0.7051546391752578
+          },
+          "forward": {
+            "n": 45,
+            "hits": 5,
+            "edgePp": 0.36280624764541375,
+            "roi": 1.1377777777777778,
+            "max2HitExclRoi": 0.2186046511627907
+          }
+        }
+      },
+      {
+        "id": "4_inward_shift",
+        "label": "4号艇が前走5・6コースから4コースへ内寄り",
+        "selection": "1-4",
+        "metrics": {
+          "discovery": {
+            "n": 164,
+            "hits": 13,
+            "edgePp": 0.3434227828303087,
+            "roi": 0.348780487804878,
+            "max2HitExclRoi": 0.2345679012345679
+          },
+          "forward": {
+            "n": 78,
+            "hits": 6,
+            "edgePp": 1.3841498509652017,
+            "roi": 0.35128205128205126,
+            "max2HitExclRoi": 0.18421052631578946
+          }
+        }
+      },
+      {
+        "id": "1_more_runs",
+        "label": "1号艇の同日走数が4号艇より多い",
+        "selection": "1-2",
+        "metrics": {
+          "discovery": {
+            "n": 332,
+            "hits": 26,
+            "edgePp": 0.23000223778008502,
+            "roi": 0.7030120481927711,
+            "max2HitExclRoi": 0.5933333333333334
+          },
+          "forward": {
+            "n": 168,
+            "hits": 15,
+            "edgePp": 1.4034654605278816,
+            "roi": 0.9404761904761905,
+            "max2HitExclRoi": 0.7108433734939759
+          }
+        }
+      },
+      {
+        "id": "4_inward_shift",
+        "label": "4号艇が前走5・6コースから4コースへ内寄り",
+        "selection": "1-5",
+        "metrics": {
+          "discovery": {
+            "n": 164,
+            "hits": 12,
+            "edgePp": 0.06696949458387864,
+            "roi": 0.7609756097560976,
+            "max2HitExclRoi": 0.41728395061728396
+          },
+          "forward": {
+            "n": 78,
+            "hits": 10,
+            "edgePp": 6.578951875610787,
+            "roi": 1.7115384615384615,
+            "max2HitExclRoi": 0.743421052631579
+          }
+        }
+      },
+      {
+        "id": "4_more_runs",
+        "label": "4号艇の同日走数が1号艇より多い",
+        "selection": "1-3",
+        "metrics": {
+          "discovery": {
+            "n": 309,
+            "hits": 36,
+            "edgePp": 0.2686127142974316,
+            "roi": 0.6673139158576051,
+            "max2HitExclRoi": 0.5218241042345277
+          },
+          "forward": {
+            "n": 166,
+            "hits": 18,
+            "edgePp": 0.04634976160168347,
+            "roi": 0.7259036144578314,
+            "max2HitExclRoi": 0.4926829268292683
+          }
+        }
+      },
+      {
+        "id": "4_more_runs",
+        "label": "4号艇の同日走数が1号艇より多い",
+        "selection": "1-5",
+        "metrics": {
+          "discovery": {
+            "n": 309,
+            "hits": 25,
+            "edgePp": 0.0008709134632873119,
+            "roi": 0.6598705501618123,
+            "max2HitExclRoi": 0.45960912052117264
+          },
+          "forward": {
+            "n": 166,
+            "hits": 17,
+            "edgePp": 3.868260969331726,
+            "roi": 1.9487951807228916,
+            "max2HitExclRoi": 1.0219512195121951
+          }
+        }
+      }
+    ],
+    "robust": []
+  },
+  "caveats": [
+    "同日の現在レースより前だけを状態へ反映",
+    "勢い・反発は心理推定ではなく直前成績proxy",
+    "race_entries欠測時はflagを立てない",
+    "細分化は仮説生成で独立検証ではない"
+  ]
+}

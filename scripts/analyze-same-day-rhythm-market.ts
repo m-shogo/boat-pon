@@ -1,0 +1,59 @@
+/** 同日それ以前の走りだけで「勢い・反発・水面慣れ・再戦」を再構成するread-only市場残差研究。 */
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { DatabaseSync } from "node:sqlite";
+import { load } from "cheerio";
+import { eventContextFlags } from "../src/domain/eventContext";
+import type { UnconventionalProgram } from "../src/domain/unconventionalRaceFeatures";
+
+type MarketRow={race_id:string;date:string;overround:number;odds14:number;winner:string|null;payout_yen:number|null;wind_speed_mps:number|null;wind_dir:string|null};
+type ProgramRow={race_id:string;date:string;venue:string;race_no:number;raw_json:string};
+type EntryRow={race_id:string;racer_reg:string;finish_pos:number|null;st:number|null;st_flying:number;entry_course:number|null;boat:number};
+type RacerState={starts:number;wins:number;top2:number;lastFinish:number|null;lastSt:number|null;lastEntryCourse:number|null};
+type PairState={meetings:number;lastWinner:string|null};
+type EvalRow=MarketRow&{period:"discovery"|"forward";hit:boolean;implied:number;flags:string[]};
+type SelectionEval=EvalRow&{selection:string};
+type Metric={n:number;hits:number;edgePp:number;roi:number;max2HitExclRoi:number};
+const mechanisms=[
+  ["4_won_earlier","4号艇が同日すでに勝利"],["1_won_earlier","1号艇が同日すでに勝利"],["4_top2_earlier","4号艇が同日前走2着以内"],
+  ["4_bounceback","4号艇が同日前走4着以下から反発局面"],["4_sharp_st","4号艇の同日前走STが0.10以内"],["4_faster_last_st","4号艇の同日前走STが1号艇より0.05以上速い"],
+  ["both_raced","1・4号艇とも同日既走"],["same_day_rematch","1・4号艇が同日再戦"],["rematch_4_won","同日再戦で直前は4号艇が先着"],
+  ["4_more_runs","4号艇の同日走数が1号艇より多い"],["1_more_runs","1号艇の同日走数が4号艇より多い"],
+  ["4_inward_shift","4号艇が前走5・6コースから4コースへ内寄り"],["4_outward_shift","4号艇が前走1〜3コースから4コースへ外寄り"],
+] as const;
+
+const db=new DatabaseSync(process.env.BOAT_PON_DB_PATH??"data/boat.sqlite",{readOnly:true});db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
+try{
+  const market=db.prepare(`SELECT h.race_id,h.race_date AS date,SUM(1.0/h.odds) AS overround,MAX(CASE WHEN h.combination='1-4' THEN h.odds END) AS odds14,p.combination AS winner,p.payout_yen,w.wind_speed_mps,c.wind_dir
+    FROM historical_alternative_odds h LEFT JOIN race_payouts p ON p.race_id=h.race_id AND p.bet_type='exacta' LEFT JOIN race_weather w ON w.race_id=h.race_id LEFT JOIN race_conditions c ON c.race_id=h.race_id
+    WHERE h.bet_type='exacta' AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31' AND NOT EXISTS(SELECT 1 FROM race_entries re WHERE re.race_id=h.race_id AND re.status_code='F')
+    GROUP BY h.race_id HAVING COUNT(*)=30 AND odds14 IS NOT NULL`).all() as MarketRow[];
+  const marketMap=new Map(market.map(r=>[r.race_id,r]));
+  const programs=db.prepare(`SELECT op.race_id,op.date,op.venue,op.race_no,op.raw_json FROM official_programs op WHERE op.date BETWEEN '2024-01-01' AND '2025-12-31'
+    AND EXISTS(SELECT 1 FROM historical_alternative_odds h WHERE h.race_date=op.date AND h.bet_type='exacta') ORDER BY op.date,op.venue,op.race_no`).all() as ProgramRow[];
+  const entries=db.prepare(`SELECT re.race_id,re.racer_reg,re.finish_pos,re.st,re.st_flying,re.entry_course,re.boat FROM race_entries re WHERE re.date BETWEEN '2024-01-01' AND '2025-12-31'
+    AND EXISTS(SELECT 1 FROM historical_alternative_odds h WHERE h.race_date=re.date AND h.bet_type='exacta')`).all() as EntryRow[];
+  const entriesByRace=new Map<string,EntryRow[]>();for(const entry of entries)entriesByRace.set(entry.race_id,[...(entriesByRace.get(entry.race_id)??[]),entry]);
+  let currentDate="";let racers=new Map<string,RacerState>();let pairs=new Map<string,PairState>();const evaluations:EvalRow[]=[];
+  for(const row of programs){if(row.date!==currentDate){currentDate=row.date;racers=new Map();pairs=new Map();}const program=JSON.parse(row.raw_json) as UnconventionalProgram;const boats=[...program.boats].sort((a,b)=>a.course-b.course),one=boats.find(b=>b.course===1),four=boats.find(b=>b.course===4);const m=marketMap.get(row.race_id);
+    if(m&&one?.registrationNo&&four?.registrationNo){const a=racers.get(one.registrationNo),b=racers.get(four.registrationNo),pair=pairs.get(pairKey(one.registrationNo,four.registrationNo)),flags:string[]=[];
+      if((b?.wins??0)>0)flags.push("4_won_earlier");if((a?.wins??0)>0)flags.push("1_won_earlier");if((b?.lastFinish??99)<=2)flags.push("4_top2_earlier");if((b?.lastFinish??0)>=4)flags.push("4_bounceback");if(b?.lastSt!=null&&b.lastSt>=0&&b.lastSt<=0.10)flags.push("4_sharp_st");if(a?.lastSt!=null&&b?.lastSt!=null&&a.lastSt-b.lastSt>=0.05)flags.push("4_faster_last_st");if((a?.starts??0)>0&&(b?.starts??0)>0)flags.push("both_raced");if((pair?.meetings??0)>0)flags.push("same_day_rematch");if(pair?.lastWinner===four.registrationNo)flags.push("rematch_4_won");if((b?.starts??0)>(a?.starts??0))flags.push("4_more_runs");if((a?.starts??0)>(b?.starts??0))flags.push("1_more_runs");if((b?.lastEntryCourse??0)>=5)flags.push("4_inward_shift");if(b?.lastEntryCourse!=null&&b.lastEntryCourse<=3)flags.push("4_outward_shift");if(m.wind_speed_mps!=null&&m.wind_speed_mps>=2&&m.wind_speed_mps<4&&m.wind_dir==="南西")flags.push("southwest");if(isTopRival(program,4))flags.push("top_rival_4");if(eventContextFlags(readTitle(row.race_id,row.date),row.date).includes("rookie"))flags.push("rookie");evaluations.push({...m,period:row.date<="2024-12-31"?"discovery":"forward",hit:m.winner==="1-4",implied:(1/m.odds14)/m.overround,flags});}
+    applyRace(entriesByRace.get(row.race_id)??[],racers,pairs);
+  }
+  const scopes=[{id:"all",label:"exacta 1-4全体",test:(_r:EvalRow)=>true},{id:"rookie",label:"ルーキー・若手開催",test:(r:EvalRow)=>r.flags.includes("rookie")},{id:"target",label:"風2〜3m・南西風・4号艇最強",test:(r:EvalRow)=>r.flags.includes("southwest")&&r.flags.includes("top_rival_4")}];
+  const results=scopes.map(s=>({id:s.id,label:s.label,base:byPeriod(evaluations.filter(s.test)),mechanisms:mechanisms.map(([id,label])=>{const inside=evaluations.filter(r=>s.test(r)&&r.flags.includes(id)),outside=evaluations.filter(r=>s.test(r)&&!r.flags.includes(id));return{id,label,inside:byPeriod(inside),outside:byPeriod(outside)};})}));
+  const rhythmByRace=new Map(evaluations.map(r=>[r.race_id,r]));const selections=["1-2","1-3","1-4","1-5","1-6"];
+  const selectionOdds=db.prepare(`SELECT race_id,race_date AS date,combination,odds FROM historical_alternative_odds WHERE bet_type='exacta' AND race_date BETWEEN '2024-01-01' AND '2025-12-31' AND combination IN('1-2','1-3','1-4','1-5','1-6')`).all() as Array<{race_id:string;date:string;combination:string;odds:number}>;
+  const selectionEvaluations:SelectionEval[]=selectionOdds.flatMap(o=>{const base=rhythmByRace.get(o.race_id);return base?[{...base,selection:o.combination,odds14:o.odds,hit:base.winner===o.combination,implied:(1/o.odds)/base.overround}]:[];});
+  const matrixCells=mechanisms.flatMap(([id,label])=>selections.map(selection=>{const inside=selectionEvaluations.filter(r=>r.selection===selection&&r.flags.includes(id));return{id,label,selection,metrics:byPeriod(inside)};}));
+  const eligibleMatrix=matrixCells.filter(c=>c.metrics.discovery.n>=30&&c.metrics.forward.n>=30);const stableMatrix=eligibleMatrix.filter(c=>c.metrics.discovery.edgePp>0&&c.metrics.forward.edgePp>0).sort((a,b)=>Math.min(b.metrics.discovery.edgePp,b.metrics.forward.edgePp)-Math.min(a.metrics.discovery.edgePp,a.metrics.forward.edgePp));const robustMatrix=stableMatrix.filter(c=>c.metrics.discovery.max2HitExclRoi>=1&&c.metrics.forward.max2HitExclRoi>=1);
+  const matrix={family:{mechanisms:mechanisms.length,selections:selections.length,cells:matrixCells.length,eligible:eligibleMatrix.length},stable:stableMatrix,robust:robustMatrix};
+  const report={generatedAt:new Date().toISOString(),safety:{readOnly:true,priorSameDayOnly:true,productionConnected:false},scope:{exactaRaces:evaluations.length},results,matrix,caveats:["同日の現在レースより前だけを状態へ反映","勢い・反発は心理推定ではなく直前成績proxy","race_entries欠測時はflagを立てない","細分化は仮説生成で独立検証ではない"]};mkdirSync("reports",{recursive:true});writeFileSync("reports/same-day-rhythm-market-screen.json",`${JSON.stringify(report,null,2)}\n`);
+  const lines=["# 同日リズムとexacta 1-4市場残差","","> 勢い、反発、水面慣れ、再戦を同日それ以前の公式結果だけで再構成。心理や意図は推測しない。","",...results.flatMap(result=>[`## ${result.label}`,"",`base: 2024 ${cell(result.base.discovery)} / 2025 ${cell(result.base.forward)}`,"","| 当日リズムproxy | 2024 該当 n / edge / ROI / max2 | 2025 該当 n / edge / ROI / max2 | 条件外とのedge差 |","|---|---:|---:|---:|",...result.mechanisms.map(r=>`| ${r.label} | ${cell(r.inside.discovery)} | ${cell(r.inside.forward)} | ${delta(r)} |`),""]),"## 当日リズム×2着買い目matrix","",`探索族: ${matrix.family.mechanisms}リズム×${matrix.family.selections}買い目=${matrix.family.cells}セル（両期n≥30: ${matrix.family.eligible}）`,"","| 順位 | リズム | 買い目 | 2024 n / edge / ROI / max2 | 2025 n / edge / ROI / max2 |","|---:|---|---:|---:|---:|",...matrix.stable.map((r,i)=>`| ${i+1} | ${r.label} | ${r.selection} | ${cell(r.metrics.discovery)} | ${cell(r.metrics.forward)} |`),"","最大2的中除外まで両期100%以上:","",matrix.robust.length?matrix.robust.map(r=>`- ${r.label} × ${r.selection}`).join("\n"):"該当なし。","","## 判定規則","","- 『勝ったから乗っている』『負けたから反発する』を先に信じず、両期の市場残差・条件外差・最大2的中除外で判定する。","- 同日再戦は人間関係の証拠ではなく、互いの走りを直前に見た情報環境のproxy。","- 65セルを見た後のmatrix順位は探索結果。T-5市場で事前固定するまで採用しない。"];
+  writeFileSync("reports/same-day-rhythm-market-screen.md",`${lines.join("\n")}\n`);console.log(`same-day rhythm market: exacta=${evaluations.length}`);
+}finally{db.close();}
+
+function applyRace(entries:EntryRow[],racers:Map<string,RacerState>,pairs:Map<string,PairState>){const winner=entries.find(e=>e.finish_pos===1)?.racer_reg??null;for(const e of entries){if(!e.racer_reg)continue;const s=racers.get(e.racer_reg)??{starts:0,wins:0,top2:0,lastFinish:null,lastSt:null,lastEntryCourse:null};s.starts+=1;if(e.finish_pos===1)s.wins+=1;if(e.finish_pos!=null&&e.finish_pos<=2)s.top2+=1;s.lastFinish=e.finish_pos;s.lastSt=e.st_flying?null:e.st;s.lastEntryCourse=e.entry_course??e.boat;racers.set(e.racer_reg,s);}for(let i=0;i<entries.length;i++)for(let j=i+1;j<entries.length;j++){const a=entries[i].racer_reg,b=entries[j].racer_reg;if(!a||!b)continue;const key=pairKey(a,b),s=pairs.get(key)??{meetings:0,lastWinner:null};s.meetings+=1;if(winner===a||winner===b)s.lastWinner=winner;pairs.set(key,s);}}
+function pairKey(a:string,b:string){return a<b?`${a}/${b}`:`${b}/${a}`;}function isTopRival(program:UnconventionalProgram,course:number){const own=program.boats.find(b=>b.course===course)?.nationalWinRate;if(own==null)return false;return program.boats.filter(b=>b.course!==1&&b.course!==course).every(b=>own>=(b.nationalWinRate??Infinity));}
+function readTitle(raceId:string,date:string){const path=`data/raw/kyotei24/odds/${date}/${raceId}-odds3t.html`;if(!existsSync(path))return"";const $=load(readFileSync(path,"utf8"));return $(".rname a").first().text().replace(/\s+/g," ").trim();}
+function byPeriod(rows:EvalRow[]){return{discovery:metric(rows.filter(r=>r.period==="discovery")),forward:metric(rows.filter(r=>r.period==="forward"))};}function metric(rows:EvalRow[]):Metric{const payouts=rows.filter(r=>r.hit).map(r=>r.payout_yen??0).sort((a,b)=>b-a),total=payouts.reduce((a,b)=>a+b,0),expected=rows.reduce((s,r)=>s+r.implied,0);return{n:rows.length,hits:payouts.length,edgePp:rows.length?(payouts.length-expected)/rows.length*100:0,roi:rows.length?total/(rows.length*100):0,max2HitExclRoi:rows.length>2?(total-(payouts[0]??0)-(payouts[1]??0))/((rows.length-2)*100):0};}
+function pct(v:number){return`${(v*100).toFixed(1)}%`;}function cell(v:Metric){return`${v.n} / ${v.edgePp>=0?"+":""}${v.edgePp.toFixed(2)}pt / ${pct(v.roi)} / ${pct(v.max2HitExclRoi)}`;}function delta(r:{inside:ReturnType<typeof byPeriod>;outside:ReturnType<typeof byPeriod>}){const one=(p:"discovery"|"forward",l:string)=>{if(!r.inside[p].n||!r.outside[p].n)return`${l} n/a`;const d=r.inside[p].edgePp-r.outside[p].edgePp;return`${l} ${d>=0?"+":""}${d.toFixed(2)}pt`;};return`${one("discovery","2024")} / ${one("forward","2025")}`;}
