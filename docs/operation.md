@@ -54,8 +54,9 @@ pnpm notify:line:daily -- --date 2026-06-29
 
 送信内容:
 
-- 日次サマリ: `BUY / WATCH / SKIP / odds coverage`
-- BUY候補がある場合: レースごとの個別通知
+- 自動オッズ取得後: 新規BUY候補をレースごとに即時通知（送信済みは重複送信しない）
+- 21:30の日次サマリ: `BUY / WATCH / SKIP / odds coverage` と見送り理由TOP5
+- 21:30時点で未送信のBUY候補がある場合: レースごとの個別通知
 - 公式オッズURL
 - `paper観察モード` 注記
 

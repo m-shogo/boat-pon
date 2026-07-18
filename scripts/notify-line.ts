@@ -3,6 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 import { loadEnvFiles } from "../src/domain/envFile";
 import { officialOddsUrl, teleBoatUrl } from "../src/domain/officialLinks";
 import { buildLineText, lineMessagingConfigFromEnv, sendLinePushTextToRecipients } from "../src/domain/lineMessaging";
+import { formatNoBuyReasonSummary, summarizeNoBuyReasons } from "../src/domain/lineDailySummary";
 import { LIVE_MONITOR_MODEL_VERSION } from "../src/domain/liveMonitor";
 
 type Mode = "daily" | "test" | "results" | "forward" | "errors";
@@ -41,6 +42,10 @@ type DailyCounts = {
   skip: number;
   total: number;
   oddsPresent: number;
+};
+
+type NoBuyReasonRow = {
+  decision_reasons: string | null;
 };
 
 function todayJst() {
@@ -229,7 +234,18 @@ ORDER BY venue ASC, race_no ASC, race_id ASC
 `).all(date, LIVE_MONITOR_MODEL_VERSION) as BuyRow[];
 }
 
-function buildDailySummary(date: string, counts: DailyCounts, buyRows: BuyRow[]) {
+function listNoBuyReasonRows(db: DatabaseSync, date: string): NoBuyReasonRow[] {
+  return db.prepare(`
+SELECT decision_reasons
+FROM decision_history
+WHERE date = ?
+  AND decision IN ('WATCH', 'SKIP')
+  AND model_version = ?
+  AND run_kind = 'paper-live'
+`).all(date, LIVE_MONITOR_MODEL_VERSION) as NoBuyReasonRow[];
+}
+
+function buildDailySummary(date: string, counts: DailyCounts, buyRows: BuyRow[], noBuyReasonRows: NoBuyReasonRow[]) {
   const buyPreview = buyRows.slice(0, 5).map((row) => {
     const odds = formatOdds(row.current_odds);
     return `・${row.venue} ${row.race_no}R ${row.selection} / ${odds}`;
@@ -241,6 +257,8 @@ function buildDailySummary(date: string, counts: DailyCounts, buyRows: BuyRow[])
     `model=${LIVE_MONITOR_MODEL_VERSION} / paper-live`,
     buyPreview.length > 0 ? ["", "BUY候補:", ...buyPreview].join("\n") : "BUY候補なし。買わない日として観察継続。",
     "",
+    formatNoBuyReasonSummary(summarizeNoBuyReasons(noBuyReasonRows.map((row) => row.decision_reasons))),
+    "",
     "※購入指示ではなくpaper検証候補です。",
   ].join("\n");
 }
@@ -248,6 +266,7 @@ function buildDailySummary(date: string, counts: DailyCounts, buyRows: BuyRow[])
 function buildDailyNotifications(db: DatabaseSync, date: string, dryRun: boolean): NotificationRow[] {
   const counts = dailyCounts(db, date);
   const buyRows = listBuyRows(db, date);
+  const noBuyReasonRows = listNoBuyReasonRows(db, date);
   const notifications: NotificationRow[] = [];
 
   const summaryTitle = counts.buy > 0
@@ -256,7 +275,7 @@ function buildDailyNotifications(db: DatabaseSync, date: string, dryRun: boolean
   const summary = upsertPendingNotification(db, {
     raceId: `line-daily-${date}`,
     title: summaryTitle,
-    body: buildDailySummary(date, counts, buyRows),
+    body: buildDailySummary(date, counts, buyRows, noBuyReasonRows),
     officialUrl: "https://www.boatrace.jp/",
     dryRun,
   });

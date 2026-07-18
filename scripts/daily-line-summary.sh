@@ -16,5 +16,5 @@ run_pnpm() {
   fi
 }
 
-run_pnpm --silent exec tsx scripts/notify-line-scheduled-summary.ts --date "$TODAY" || echo "${LOG_PREFIX} line scheduled summary skipped or failed"
-echo "${LOG_PREFIX} line scheduled summary attempted: ${TODAY}"
+run_pnpm --silent notify:line:daily -- --date "$TODAY" || echo "${LOG_PREFIX} line daily skipped or failed"
+echo "${LOG_PREFIX} line daily attempted: ${TODAY}"
