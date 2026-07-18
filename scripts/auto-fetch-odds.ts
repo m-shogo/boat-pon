@@ -16,14 +16,23 @@ import { getManualOdds, getSettings, hasEarlyOddsSnapshot, insertDecisionHistory
 import { LIVE_MONITOR_FROM, LIVE_MONITOR_MODEL_VERSION } from "../src/domain/liveMonitor";
 import { isWithinOddsFetchWindow, minutesUntilRaceClose, oddsCheckpointLabel, shouldPersistDecisionHistory } from "../src/domain/livePersistence";
 import { mergeOddsMaps } from "../src/domain/oddsSnapshot";
+import { isScheduledCollectionHour, uniqueRaceRows } from "../src/domain/liveOddsFetch";
 import { isTrifectaSelectionUnavailable, parseAllTrifectaOdds, parseTrifectaOdds } from "../src/domain/oddsParser";
 import { fetchOfficialOdds } from "./fetch-official-odds";
 import { loadEnvFiles } from "../src/domain/envFile";
 import { buildLineText, lineMessagingConfigFromEnv, sendLinePushTextToRecipients } from "../src/domain/lineMessaging";
 import { officialOddsUrl, teleBoatUrl } from "../src/domain/officialLinks";
+import { selectTopModelCandidatePerRace } from "../src/domain/candidateSelection";
+import { judgeCandidate } from "../src/domain/decision";
 
 const dryRun = process.argv.includes("--dry-run");
 const force = process.argv.includes("--force");
+const scheduled = process.argv.includes("--scheduled");
+
+if (scheduled && !isScheduledCollectionHour(new Date())) {
+  console.log("auto-fetch-odds scheduled: outside 09:00-21:05 JST, skip");
+  process.exit(0);
+}
 
 const FETCH_RETRY_COUNT = 2;
 const FETCH_RETRY_DELAY_MS = 4000;
@@ -76,7 +85,8 @@ try {
   let failed = 0;
   let saved = 0;
 
-  for (const row of rows) {
+  const fetchRows = uniqueRaceRows(rows);
+  for (const row of fetchRows) {
     const { candidate } = row;
     if (candidate.source === "sample") continue;
     const minutes = minutesUntilRaceClose(candidate.date, candidate.closeAt, now);
@@ -191,10 +201,19 @@ try {
       loadRaceWeatherMap(db),
     );
     const persistHistory = today >= LIVE_MONITOR_FROM;
-    for (const row of freshRows) {
-      if (row.candidate.source === "sample") continue;
-      if (persistHistory && shouldPersistDecisionHistory(row.candidate, settings, LIVE_MONITOR_FROM, now)) {
-        insertDecisionHistory(db, row.candidate, row.decision, { replaceRace: true });
+    const selectedCandidates = selectTopModelCandidatePerRace(
+      freshRows.filter(row => row.candidate.source !== "sample").map(row => row.candidate),
+    );
+    let buyCountToday = 0;
+    let reservedBudgetYen = 0;
+    for (const candidate of selectedCandidates) {
+      const decision = judgeCandidate(candidate, settings, { now, buyCountToday, reservedBudgetYen });
+      if (decision.status === "BUY") {
+        buyCountToday += 1;
+        reservedBudgetYen += decision.recommendedAmount;
+      }
+      if (persistHistory && shouldPersistDecisionHistory(candidate, settings, LIVE_MONITOR_FROM, now)) {
+        insertDecisionHistory(db, candidate, decision, { replaceRace: true });
         saved += 1;
       }
     }

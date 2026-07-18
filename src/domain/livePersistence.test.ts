@@ -27,8 +27,9 @@ test("shouldPersistDecisionHistoryはライブ日のオッズ未取得・時間�
 
 test("oddsCheckpointLabelは締切までの分数を時系列スナップショットラベルに丸める", () => {
   assert.equal(oddsCheckpointLabel(5), "T-5");
-  assert.equal(oddsCheckpointLabel(6), "T-5");
-  assert.equal(oddsCheckpointLabel(10), "T-10");
+  assert.equal(oddsCheckpointLabel(9), "T-5");
+  assert.equal(oddsCheckpointLabel(10), "T-5");
+  assert.equal(oddsCheckpointLabel(15), "T-10");
   assert.equal(oddsCheckpointLabel(20), "T-20");
   assert.equal(oddsCheckpointLabel(30), "T-30");
   assert.equal(oddsCheckpointLabel(45), "ad-hoc");

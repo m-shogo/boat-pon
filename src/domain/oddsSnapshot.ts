@@ -23,6 +23,11 @@ export function mergeOddsMaps(base: Map<string, number>, snapshots: OddsSnapshot
   return merged;
 }
 
+/** 買い目別オッズを優先し、レース単位オッズは未取得時だけfallbackにする。 */
+export function resolveCandidateOdds(selectionOdds: number | null, raceFallbackOdds: number | null) {
+  return selectionOdds ?? raceFallbackOdds;
+}
+
 export function filterCandidateSnapshots(snapshots: OddsSnapshot[], raceIds: Set<string>) {
   return snapshots.filter((row) => raceIds.has(row.raceId));
 }

@@ -3,6 +3,7 @@ import { officialOddsUrl } from "../src/domain/officialLinks";
 import { buildCandidatesFromModel, buildVenueModel } from "../src/domain/model";
 import { filterComparableResultsForDate } from "../src/domain/raceRegime";
 import { assessEnvironmentRisk } from "../src/domain/raceEnvironment";
+import { resolveCandidateOdds } from "../src/domain/oddsSnapshot";
 import { sampleCandidates } from "../src/sampleData";
 import type { ProgramFeatureSnapshot } from "../src/domain/programFeatures";
 import type { RaceEnvironment } from "../src/domain/raceEnvironment";
@@ -44,7 +45,7 @@ export function buildCandidateRows(
   const baseCandidates = modelCandidates.length > 0 ? modelCandidates : sampleCandidates;
 
   return baseCandidates.map((candidate) => {
-    const currentOdds = manualOdds.get(candidate.raceId) ?? candidate.currentOdds;
+    const currentOdds = resolveCandidateOdds(candidate.currentOdds, manualOdds.get(candidate.raceId) ?? null);
     const earlyOddsKey = `${candidate.raceId}/${candidate.selection.join("-")}`;
     const earlyOddsValue = earlyOdds.get(earlyOddsKey) ?? null;
     const sharpSignalDrop = earlyOddsValue != null && currentOdds != null && earlyOddsValue > 0

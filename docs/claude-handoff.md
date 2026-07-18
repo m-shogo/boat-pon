@@ -42,7 +42,7 @@ Boat Pon は個人用の期待値通知・検証アプリ。自動購入、自�
 - `history-model` の月間BUY数は事後評価であり、実ライブペースの見積もりには使わない
 - 実ライブペースは未確定。まずは `npm run progress` / `npm run monitor:live` で番組取得・判定・オッズ取得率を見る
 - 2026-05-27 00:04 JST にLaunchAgentの時刻ズレを修正済み
-  - `com.boatpon.auto-odds`: 9:00〜21:00 JST、15分おき
+  - `com.boatpon.auto-odds`: 9:00〜21:05 JST、5分おき（`--scheduled`、時間外はDBを開かず終了）
   - `com.boatpon.daily-progress`: 21:05 JST
   - 注意: macOS LaunchAgent の `StartCalendarInterval` はローカル時刻。UTC換算で書かない
   - `launchctl print gui/501/com.boatpon.auto-odds` と `launchctl print gui/501/com.boatpon.daily-progress` で登録確認済み

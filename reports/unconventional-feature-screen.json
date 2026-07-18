@@ -1,0 +1,518 @@
+{
+  "generatedAt": "2026-07-18T10:17:45.857Z",
+  "safety": {
+    "readOnly": true,
+    "pointInTime": true,
+    "profitClaim": false,
+    "productionConnected": false
+  },
+  "target": "1号艇1着率。市場残差・ROIではない",
+  "baseline": {
+    "2024": {
+      "n": 54645,
+      "hits": 29824
+    },
+    "2025": {
+      "n": 48344,
+      "hits": 26224
+    }
+  },
+  "stable": [
+    {
+      "feature": "1号艇能力断層",
+      "train": {
+        "n": 1100,
+        "hits": 876
+      },
+      "forward": {
+        "n": 983,
+        "hits": 811
+      },
+      "trainRate": 0.7963636363636364,
+      "forwardRate": 0.8250254323499492,
+      "trainLift": 0.2505863465841506,
+      "forwardLift": 0.2825796272862391,
+      "stableDirection": true
+    },
+    {
+      "feature": "1号艇単独上位級",
+      "train": {
+        "n": 7035,
+        "hits": 5157
+      },
+      "forward": {
+        "n": 6411,
+        "hits": 4718
+      },
+      "trainRate": 0.733049040511727,
+      "forwardRate": 0.7359226329745749,
+      "trainLift": 0.18727175073224123,
+      "forwardLift": 0.19347682791086485,
+      "stableDirection": true
+    },
+    {
+      "feature": "弱い選手_強いモーター",
+      "train": {
+        "n": 3197,
+        "hits": 1239
+      },
+      "forward": {
+        "n": 2783,
+        "hits": 1080
+      },
+      "trainRate": 0.3875508289020957,
+      "forwardRate": 0.3880704275961193,
+      "trainLift": -0.15822646087739012,
+      "forwardLift": -0.15437537746759078,
+      "stableDirection": true
+    },
+    {
+      "feature": "強い選手_弱いモーター",
+      "train": {
+        "n": 2897,
+        "hits": 2002
+      },
+      "forward": {
+        "n": 2757,
+        "hits": 1887
+      },
+      "trainRate": 0.6910597169485675,
+      "forwardRate": 0.6844396082698585,
+      "trainLift": 0.14528242716908168,
+      "forwardLift": 0.1419938032061484,
+      "stableDirection": true
+    },
+    {
+      "feature": "1号艇短期会場移動",
+      "train": {
+        "n": 5531,
+        "hits": 3750
+      },
+      "forward": {
+        "n": 4902,
+        "hits": 3380
+      },
+      "trainRate": 0.6779967456156211,
+      "forwardRate": 0.689514483884129,
+      "trainLift": 0.13221945583613526,
+      "forwardLift": 0.14706867882041885,
+      "stableDirection": true
+    },
+    {
+      "feature": "1号艇_2号艇に過去優勢",
+      "train": {
+        "n": 245,
+        "hits": 174
+      },
+      "forward": {
+        "n": 705,
+        "hits": 475
+      },
+      "trainRate": 0.710204081632653,
+      "forwardRate": 0.6737588652482269,
+      "trainLift": 0.16442679185316722,
+      "forwardLift": 0.13131306018451683,
+      "stableDirection": true
+    },
+    {
+      "feature": "1号艇前走勝利",
+      "train": {
+        "n": 7632,
+        "hits": 4919
+      },
+      "forward": {
+        "n": 6762,
+        "hits": 4345
+      },
+      "trainRate": 0.6445230607966457,
+      "forwardRate": 0.642561372375037,
+      "trainLift": 0.09874577101715987,
+      "forwardLift": 0.10011556731132687,
+      "stableDirection": true
+    },
+    {
+      "feature": "1号艇2号艇_顔なじみ",
+      "train": {
+        "n": 2249,
+        "hits": 1399
+      },
+      "forward": {
+        "n": 7216,
+        "hits": 4366
+      },
+      "trainRate": 0.622054246331703,
+      "forwardRate": 0.6050443458980045,
+      "trainLift": 0.07627695655221722,
+      "forwardLift": 0.06259854083429439,
+      "stableDirection": true
+    },
+    {
+      "feature": "外枠に最強選手",
+      "train": {
+        "n": 24120,
+        "hits": 11885
+      },
+      "forward": {
+        "n": 21268,
+        "hits": 10451
+      },
+      "trainRate": 0.49274461028192373,
+      "forwardRate": 0.49139552379161183,
+      "trainLift": -0.053032679497562074,
+      "forwardLift": -0.051050281272098263,
+      "stableDirection": true
+    },
+    {
+      "feature": "モーター艇ダブル良機",
+      "train": {
+        "n": 1896,
+        "hits": 1113
+      },
+      "forward": {
+        "n": 1910,
+        "hits": 1144
+      },
+      "trainRate": 0.5870253164556962,
+      "forwardRate": 0.5989528795811518,
+      "trainLift": 0.041248026676210414,
+      "forwardLift": 0.05650707451744175,
+      "stableDirection": true
+    },
+    {
+      "feature": "顔なじみが多いメンバー",
+      "train": {
+        "n": 5536,
+        "hits": 3359
+      },
+      "forward": {
+        "n": 18108,
+        "hits": 10554
+      },
+      "trainRate": 0.6067557803468208,
+      "forwardRate": 0.5828363154406891,
+      "trainLift": 0.06097849056733495,
+      "forwardLift": 0.04039051037697905,
+      "stableDirection": true
+    },
+    {
+      "feature": "当地苦手_1号艇",
+      "train": {
+        "n": 10609,
+        "hits": 5399
+      },
+      "forward": {
+        "n": 8677,
+        "hits": 4475
+      },
+      "trainRate": 0.508907531341314,
+      "forwardRate": 0.5157312435173447,
+      "trainLift": -0.03686975843817186,
+      "forwardLift": -0.026714561546365423,
+      "stableDirection": true
+    }
+  ],
+  "all": [
+    {
+      "feature": "1号艇能力断層",
+      "train": {
+        "n": 1100,
+        "hits": 876
+      },
+      "forward": {
+        "n": 983,
+        "hits": 811
+      },
+      "trainRate": 0.7963636363636364,
+      "forwardRate": 0.8250254323499492,
+      "trainLift": 0.2505863465841506,
+      "forwardLift": 0.2825796272862391,
+      "stableDirection": true
+    },
+    {
+      "feature": "1号艇単独上位級",
+      "train": {
+        "n": 7035,
+        "hits": 5157
+      },
+      "forward": {
+        "n": 6411,
+        "hits": 4718
+      },
+      "trainRate": 0.733049040511727,
+      "forwardRate": 0.7359226329745749,
+      "trainLift": 0.18727175073224123,
+      "forwardLift": 0.19347682791086485,
+      "stableDirection": true
+    },
+    {
+      "feature": "弱い選手_強いモーター",
+      "train": {
+        "n": 3197,
+        "hits": 1239
+      },
+      "forward": {
+        "n": 2783,
+        "hits": 1080
+      },
+      "trainRate": 0.3875508289020957,
+      "forwardRate": 0.3880704275961193,
+      "trainLift": -0.15822646087739012,
+      "forwardLift": -0.15437537746759078,
+      "stableDirection": true
+    },
+    {
+      "feature": "強い選手_弱いモーター",
+      "train": {
+        "n": 2897,
+        "hits": 2002
+      },
+      "forward": {
+        "n": 2757,
+        "hits": 1887
+      },
+      "trainRate": 0.6910597169485675,
+      "forwardRate": 0.6844396082698585,
+      "trainLift": 0.14528242716908168,
+      "forwardLift": 0.1419938032061484,
+      "stableDirection": true
+    },
+    {
+      "feature": "1号艇短期会場移動",
+      "train": {
+        "n": 5531,
+        "hits": 3750
+      },
+      "forward": {
+        "n": 4902,
+        "hits": 3380
+      },
+      "trainRate": 0.6779967456156211,
+      "forwardRate": 0.689514483884129,
+      "trainLift": 0.13221945583613526,
+      "forwardLift": 0.14706867882041885,
+      "stableDirection": true
+    },
+    {
+      "feature": "1号艇_2号艇に過去優勢",
+      "train": {
+        "n": 245,
+        "hits": 174
+      },
+      "forward": {
+        "n": 705,
+        "hits": 475
+      },
+      "trainRate": 0.710204081632653,
+      "forwardRate": 0.6737588652482269,
+      "trainLift": 0.16442679185316722,
+      "forwardLift": 0.13131306018451683,
+      "stableDirection": true
+    },
+    {
+      "feature": "1号艇前走勝利",
+      "train": {
+        "n": 7632,
+        "hits": 4919
+      },
+      "forward": {
+        "n": 6762,
+        "hits": 4345
+      },
+      "trainRate": 0.6445230607966457,
+      "forwardRate": 0.642561372375037,
+      "trainLift": 0.09874577101715987,
+      "forwardLift": 0.10011556731132687,
+      "stableDirection": true
+    },
+    {
+      "feature": "1号艇2号艇_顔なじみ",
+      "train": {
+        "n": 2249,
+        "hits": 1399
+      },
+      "forward": {
+        "n": 7216,
+        "hits": 4366
+      },
+      "trainRate": 0.622054246331703,
+      "forwardRate": 0.6050443458980045,
+      "trainLift": 0.07627695655221722,
+      "forwardLift": 0.06259854083429439,
+      "stableDirection": true
+    },
+    {
+      "feature": "外枠に最強選手",
+      "train": {
+        "n": 24120,
+        "hits": 11885
+      },
+      "forward": {
+        "n": 21268,
+        "hits": 10451
+      },
+      "trainRate": 0.49274461028192373,
+      "forwardRate": 0.49139552379161183,
+      "trainLift": -0.053032679497562074,
+      "forwardLift": -0.051050281272098263,
+      "stableDirection": true
+    },
+    {
+      "feature": "モーター艇ダブル良機",
+      "train": {
+        "n": 1896,
+        "hits": 1113
+      },
+      "forward": {
+        "n": 1910,
+        "hits": 1144
+      },
+      "trainRate": 0.5870253164556962,
+      "forwardRate": 0.5989528795811518,
+      "trainLift": 0.041248026676210414,
+      "forwardLift": 0.05650707451744175,
+      "stableDirection": true
+    },
+    {
+      "feature": "顔なじみが多いメンバー",
+      "train": {
+        "n": 5536,
+        "hits": 3359
+      },
+      "forward": {
+        "n": 18108,
+        "hits": 10554
+      },
+      "trainRate": 0.6067557803468208,
+      "forwardRate": 0.5828363154406891,
+      "trainLift": 0.06097849056733495,
+      "forwardLift": 0.04039051037697905,
+      "stableDirection": true
+    },
+    {
+      "feature": "当地苦手_1号艇",
+      "train": {
+        "n": 10609,
+        "hits": 5399
+      },
+      "forward": {
+        "n": 8677,
+        "hits": 4475
+      },
+      "trainRate": 0.508907531341314,
+      "forwardRate": 0.5157312435173447,
+      "trainLift": -0.03686975843817186,
+      "forwardLift": -0.026714561546365423,
+      "stableDirection": true
+    },
+    {
+      "feature": "当地覚醒_1号艇",
+      "train": {
+        "n": 4659,
+        "hits": 2451
+      },
+      "forward": {
+        "n": 4218,
+        "hits": 2185
+      },
+      "trainRate": 0.5260785576303928,
+      "forwardRate": 0.5180180180180181,
+      "trainLift": -0.019698732149093012,
+      "forwardLift": -0.02442778704569204,
+      "stableDirection": false
+    },
+    {
+      "feature": "1号艇同場連戦",
+      "train": {
+        "n": 38521,
+        "hits": 20468
+      },
+      "forward": {
+        "n": 34127,
+        "hits": 17947
+      },
+      "trainRate": 0.5313465382518626,
+      "forwardRate": 0.5258885926099569,
+      "trainLift": -0.014430751527623187,
+      "forwardLift": -0.01655721245375319,
+      "stableDirection": false
+    },
+    {
+      "feature": "1号艇連戦_翌日以内",
+      "train": {
+        "n": 44052,
+        "hits": 24218
+      },
+      "forward": {
+        "n": 39029,
+        "hits": 21327
+      },
+      "trainRate": 0.5497593752837555,
+      "forwardRate": 0.5464398267954598,
+      "trainLift": 0.003982085504269706,
+      "forwardLift": 0.003994021731749675,
+      "stableDirection": false
+    },
+    {
+      "feature": "1号艇F後180日",
+      "train": {
+        "n": 12873,
+        "hits": 6996
+      },
+      "forward": {
+        "n": 15321,
+        "hits": 8127
+      },
+      "trainRate": 0.543463062223258,
+      "forwardRate": 0.5304484041511651,
+      "trainLift": -0.002314227556227788,
+      "forwardLift": -0.011997400912544975,
+      "stableDirection": false
+    },
+    {
+      "feature": "1号艇_2号艇への雪辱戦",
+      "train": {
+        "n": 6818,
+        "hits": 3736
+      },
+      "forward": {
+        "n": 9789,
+        "hits": 5140
+      },
+      "trainRate": 0.5479612789674392,
+      "forwardRate": 0.5250791704974972,
+      "trainLift": 0.0021839891879533724,
+      "forwardLift": -0.017366634566212902,
+      "stableDirection": false
+    },
+    {
+      "feature": "相手にF後が複数",
+      "train": {
+        "n": 20507,
+        "hits": 11177
+      },
+      "forward": {
+        "n": 25316,
+        "hits": 13751
+      },
+      "trainRate": 0.545033403228166,
+      "forwardRate": 0.5431742771369885,
+      "trainLift": -0.00074388655131985,
+      "forwardLift": 0.0007284720732784189,
+      "stableDirection": false
+    }
+  ],
+  "unavailable": [
+    {
+      "feature": "誕生日",
+      "status": "公式選手profileに存在するがDB未保存。取得日によらない静的metadataとして追加可能"
+    },
+    {
+      "feature": "周年・イベント",
+      "status": "2024-2025の旧official_programs.raw_jsonにraceTitle/categoryが未保存。今後のforwardで利用可能"
+    },
+    {
+      "feature": "私的人間関係",
+      "status": "信頼できる構造化一次情報なし。噂は使わず過去同走・対戦で代替"
+    }
+  ]
+}

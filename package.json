@@ -95,6 +95,7 @@
     "backtest:shadow-top1": "tsx scripts/backtest-shadow-top1.ts",
     "audit:profit-feasibility": "tsx scripts/audit-profit-feasibility.ts",
     "audit:t5-market-coverage": "tsx scripts/audit-t5-market-coverage.ts",
+    "analyze:unconventional-features": "tsx scripts/analyze-unconventional-features.ts",
     "guard:live": "tsx scripts/live-change-guard.ts",
     "auto:odds": "tsx scripts/auto-fetch-odds.ts",
     "auto:beforeinfo": "tsx scripts/auto-fetch-exhibition.ts",
