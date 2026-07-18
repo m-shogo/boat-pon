@@ -37,11 +37,6 @@ if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.e
 const db = new DatabaseSync(DB_PATH, { readOnly: true });
 db.exec("PRAGMA busy_timeout = 5000;");
 
-const EXCL_VENUES = ["戸田", "多摩川", "桐生", "三国", "江戸川"];
-const EXCL_RACES  = [10, 11, 12];
-const excl_v = EXCL_VENUES.map(v => `'${v}'`).join(",");
-const excl_r = EXCL_RACES.join(",");
-
 // 主評価: 通常6艇・F返還なし (exacta 30通り保存済み)
 // 欠場あり (COUNT=20) は除外
 const HELDOUT_END   = "2024-12-31";
@@ -108,12 +103,6 @@ const raceRows = db.prepare(`
       WHERE re.race_id = hao.race_id AND re.status_code='F'
     ), 0) as is_f
   FROM historical_alternative_odds hao
-  INNER JOIN decision_history dh ON dh.race_id = hao.race_id
-    AND dh.decision='BUY' AND dh.run_kind='historical-backfill'
-    AND dh.result IS NOT NULL AND dh.result != ''
-    AND dh.current_odds IS NOT NULL AND dh.selection='1-2-3'
-    AND dh.venue NOT IN (${excl_v}) AND dh.race_no NOT IN (${excl_r})
-    AND dh.date >= '2024-01-01'
   LEFT JOIN race_payouts rp ON rp.race_id = hao.race_id AND rp.bet_type='exacta'
   LEFT JOIN race_weather rw ON rw.race_id = hao.race_id
   LEFT JOIN (
@@ -128,12 +117,6 @@ const raceRows = db.prepare(`
 const comboRows = db.prepare(`
   SELECT hao.race_id, hao.combination as combo, hao.odds
   FROM historical_alternative_odds hao
-  INNER JOIN decision_history dh ON dh.race_id = hao.race_id
-    AND dh.decision='BUY' AND dh.run_kind='historical-backfill'
-    AND dh.result IS NOT NULL AND dh.result != ''
-    AND dh.current_odds IS NOT NULL AND dh.selection='1-2-3'
-    AND dh.venue NOT IN (${excl_v}) AND dh.race_no NOT IN (${excl_r})
-    AND dh.date >= '2024-01-01'
   WHERE hao.bet_type='exacta'
 `).all() as ComboOdds[];
 
@@ -326,6 +309,17 @@ const fwStrong   = filterStrong(forwardPeriod, 30);
 const fwWatch    = filterWatch(forwardPeriod, fwStrong, 30);
 const hoStrong   = filterStrong(heldoutPeriod);
 const hoWatch    = filterWatch(heldoutPeriod, hoStrong);
+const heldoutProfitScreens = heldoutPeriod.filter(r =>
+  r.edge_pp >= 2 && r.realized_roi >= 1 && r.max1hit_excl_roi >= 0.90 && r.n >= 100
+);
+const forwardByKey = new Map(forwardPeriod.map(r => [`${r.dimension}\0${r.group}\0${r.combo}`, r]));
+const replicationChecks = heldoutProfitScreens.map(discovery => ({
+  discovery,
+  forward: forwardByKey.get(`${discovery.dimension}\0${discovery.group}\0${discovery.combo}`) ?? null,
+}));
+const replicatedProfitEdges = replicationChecks.filter(({ forward }) =>
+  forward != null && forward.n >= 200 && forward.realized_roi >= 1 && forward.max1hit_excl_roi >= 1 && forward.edge_pp > 0
+);
 
 // combination次元のみ全結果
 const comboAll = allPeriod
@@ -346,7 +340,7 @@ for (const r of comboAll.slice(0, 15)) {
 }
 console.log();
 
-console.log("=== 2. strong候補 (edge_pp>=3pt, roi>=80%, max1x>=75%, n>=50) ===\n");
+console.log("=== 2. 全期間post-hoc screen（採用禁止） ===\n");
 if (strong.length === 0) {
   console.log("  (なし)\n");
 } else {
@@ -356,7 +350,7 @@ if (strong.length === 0) {
   console.log();
 }
 
-console.log("=== 3. watch候補 (edge_pp>=2pt, n>=50) ===\n");
+console.log("=== 3. 全期間post-hoc watch（採用禁止） ===\n");
 if (watch.length === 0) {
   console.log("  (なし)\n");
 } else {
@@ -367,7 +361,7 @@ if (watch.length === 0) {
 }
 
 // H011対象3組番の次元別詳細
-console.log("=== 4. forward期 strong候補 (edge_pp>=3pt, roi>=80%, max1x>=75%, n>=30) ===\n");
+console.log("=== 4. forward期post-hoc screen（仮説生成専用） ===\n");
 if (fwStrong.length === 0) {
   console.log("  (なし)\n");
 } else {
@@ -377,7 +371,7 @@ if (fwStrong.length === 0) {
   console.log();
 }
 
-console.log("=== 5. forward期 watch候補 (edge_pp>=2pt, n>=30) ===\n");
+console.log("=== 5. forward期post-hoc watch（仮説生成専用） ===\n");
 if (fwWatch.length === 0) {
   console.log("  (なし)\n");
 } else {
@@ -387,7 +381,16 @@ if (fwWatch.length === 0) {
   console.log();
 }
 
-console.log("=== 6. H011対象 (1-2/1-3/1-4) 次元別トップ ===\n");
+console.log("=== 6. heldout発見 → forward利益再現ゲート ===\n");
+console.log(`  discovery screens=${heldoutProfitScreens.length} / replicated=${replicatedProfitEdges.length}`);
+console.log("  gate: forward n>=200, ROI>=100%, max1hit-excl ROI>=100%, edge>0");
+if (replicatedProfitEdges.length === 0) console.log("  verified edge: なし\n");
+for (const { discovery, forward } of replicatedProfitEdges) {
+  console.log(`  [${discovery.dimension}] ${discovery.group} / ${discovery.combo}: heldout=${roi(discovery.realized_roi)} n=${discovery.n} -> forward=${roi(forward!.realized_roi)} max1x=${roi(forward!.max1hit_excl_roi)} n=${forward!.n}`);
+}
+console.log();
+
+console.log("=== 7. H011対象 (1-2/1-3/1-4) 次元別トップ（post-hoc） ===\n");
 for (const combo of h011Combos) {
   const dims = ["odds_band", "venue", "race_no", "wind_band", "exh1_rank"] as const;
   console.log(`  [${combo}] 各次元 top3:`);
@@ -415,6 +418,7 @@ lines.push(`生成日時: ${now}`);
 lines.push(``);
 lines.push(`> **読み取り専用。BUY は検証候補、ROI は検証指標。購入推奨ではない。**`);
 lines.push(`> **historical closing odds は live/T-5/timeseries odds ではない。**`);
+lines.push(`> **保存済みexactaレースだけの分析であり、公式開催全体を代表しない。decision_history/BUYでは追加抽出しない。**`);
 lines.push(`> **本分析は新BUYルール作成ではなく市場の歪み探索が目的。本番採用しない。**`);
 lines.push(``);
 lines.push(`---`);
@@ -440,7 +444,7 @@ for (const r of comboAll) {
 }
 lines.push(``);
 
-lines.push(`## 2. strong候補 (edge_pp≥3pt・roi≥80%・max1x≥75%・n≥50)`);
+lines.push(`## 2. 全期間post-hoc screen（採用禁止）`);
 lines.push(``);
 if (strong.length === 0) {
   lines.push(`*strong候補なし*`);
@@ -453,7 +457,7 @@ if (strong.length === 0) {
 }
 lines.push(``);
 
-lines.push(`## 3. watch候補 (edge_pp≥2pt・n≥50)`);
+lines.push(`## 3. 全期間post-hoc watch（採用禁止）`);
 lines.push(``);
 if (watch.length === 0) {
   lines.push(`*watch候補なし*`);
@@ -466,7 +470,7 @@ if (watch.length === 0) {
 }
 lines.push(``);
 
-lines.push(`## 4. forward期 strong候補 (edge_pp≥3pt・roi≥80%・max1x≥75%・n≥30)`);
+lines.push(`## 4. forward期post-hoc screen（仮説生成専用）`);
 lines.push(``);
 if (fwStrong.length === 0) {
   lines.push(`*forward期 strong候補なし*`);
@@ -479,7 +483,7 @@ if (fwStrong.length === 0) {
 }
 lines.push(``);
 
-lines.push(`## 5. forward期 watch候補 (edge_pp≥2pt・n≥30)`);
+lines.push(`## 5. forward期post-hoc watch（仮説生成専用）`);
 lines.push(``);
 if (fwWatch.length === 0) {
   lines.push(`*forward期 watch候補なし*`);
@@ -492,7 +496,22 @@ if (fwWatch.length === 0) {
 }
 lines.push(``);
 
-lines.push(`## 6. H011対象 (1-2/1-3/1-4) 次元別`);
+lines.push(`## 6. heldout発見 → forward利益再現ゲート`);
+lines.push(``);
+lines.push(`事前側screen: ${heldoutProfitScreens.length}件。採用ゲートは forward n≥200、ROI≥100%、最大1hit除外ROI≥100%、edge>0。`);
+lines.push(``);
+if (replicatedProfitEdges.length === 0) {
+  lines.push(`**再現確認済みedgeなし。**`);
+} else {
+  lines.push(`| dimension | group | combo | heldout n / ROI | forward n / ROI / max1x |`);
+  lines.push(`|---|---|---|---|---|`);
+  for (const { discovery, forward } of replicatedProfitEdges) {
+    lines.push(`| ${discovery.dimension} | ${discovery.group} | ${discovery.combo} | ${discovery.n} / ${roi(discovery.realized_roi)} | ${forward!.n} / ${roi(forward!.realized_roi)} / ${roi(forward!.max1hit_excl_roi)} |`);
+  }
+}
+lines.push(``);
+
+lines.push(`## 7. H011対象 (1-2/1-3/1-4) 次元別（post-hoc）`);
 lines.push(``);
 for (const combo of h011Combos) {
   lines.push(`### ${combo}`);
@@ -530,6 +549,11 @@ writeFileSync(OUT_JSON, JSON.stringify({
   forwardWatch: fwWatch,
   heldoutStrong: hoStrong,
   heldoutWatch: hoWatch,
+  replicationGate: {
+    heldoutProfitScreens,
+    checks: replicationChecks,
+    replicatedProfitEdges,
+  },
   allCombinations: comboAll,
   allResults: allResults,
 }, null, 2), "utf-8");

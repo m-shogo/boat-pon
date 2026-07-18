@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-12T02:03:05.521Z",
+  "generatedAt": "2026-07-18T09:50:41.278Z",
   "normalRaceCount": 4207,
   "heldoutCount": 2715,
   "forwardCount": 1492,
@@ -1023,6 +1023,233 @@
       "period": "heldout"
     }
   ],
+  "replicationGate": {
+    "heldoutProfitScreens": [
+      {
+        "dimension": "venue",
+        "group": "丸亀",
+        "combo": "1-2",
+        "n": 134,
+        "hits": 16,
+        "actual_rate": 0.11940298507462686,
+        "avg_normalized_implied": 0.0733401286089981,
+        "edge_pp": 4.606285646562876,
+        "realized_roi": 1.1888059701492537,
+        "max1hit_excl_roi": 1.056390977443609,
+        "avg_odds": 12.941791044776119,
+        "period": "heldout"
+      },
+      {
+        "dimension": "venue",
+        "group": "大村",
+        "combo": "1-2",
+        "n": 155,
+        "hits": 21,
+        "actual_rate": 0.13548387096774195,
+        "avg_normalized_implied": 0.09077312244184482,
+        "edge_pp": 4.471074852589712,
+        "realized_roi": 1.0851612903225807,
+        "max1hit_excl_roi": 0.964935064935065,
+        "avg_odds": 11.169677419354844,
+        "period": "heldout"
+      },
+      {
+        "dimension": "venue",
+        "group": "常滑",
+        "combo": "1-2",
+        "n": 199,
+        "hits": 22,
+        "actual_rate": 0.11055276381909548,
+        "avg_normalized_implied": 0.08697315550450499,
+        "edge_pp": 2.3579608314590494,
+        "realized_roi": 1.0562814070351758,
+        "max1hit_excl_roi": 0.9282828282828283,
+        "avg_odds": 12.276381909547734,
+        "period": "heldout"
+      },
+      {
+        "dimension": "venue",
+        "group": "児島",
+        "combo": "1-4",
+        "n": 128,
+        "hits": 19,
+        "actual_rate": 0.1484375,
+        "avg_normalized_implied": 0.10180089321320522,
+        "edge_pp": 4.663660678679478,
+        "realized_roi": 1.234375,
+        "max1hit_excl_roi": 1.1,
+        "avg_odds": 15.640624999999998,
+        "period": "heldout"
+      },
+      {
+        "dimension": "race_no",
+        "group": "8",
+        "combo": "1-2",
+        "n": 315,
+        "hits": 41,
+        "actual_rate": 0.13015873015873017,
+        "avg_normalized_implied": 0.08672505734473324,
+        "edge_pp": 4.3433672813996935,
+        "realized_roi": 1.1311111111111112,
+        "max1hit_excl_roi": 1.0187898089171974,
+        "avg_odds": 11.864126984126997,
+        "period": "heldout"
+      }
+    ],
+    "checks": [
+      {
+        "discovery": {
+          "dimension": "venue",
+          "group": "丸亀",
+          "combo": "1-2",
+          "n": 134,
+          "hits": 16,
+          "actual_rate": 0.11940298507462686,
+          "avg_normalized_implied": 0.0733401286089981,
+          "edge_pp": 4.606285646562876,
+          "realized_roi": 1.1888059701492537,
+          "max1hit_excl_roi": 1.056390977443609,
+          "avg_odds": 12.941791044776119,
+          "period": "heldout"
+        },
+        "forward": {
+          "dimension": "venue",
+          "group": "丸亀",
+          "combo": "1-2",
+          "n": 70,
+          "hits": 9,
+          "actual_rate": 0.12857142857142856,
+          "avg_normalized_implied": 0.07983054673716214,
+          "edge_pp": 4.874088183426642,
+          "realized_roi": 1.2871428571428571,
+          "max1hit_excl_roi": 1.0289855072463767,
+          "avg_odds": 11.722857142857142,
+          "period": "forward"
+        }
+      },
+      {
+        "discovery": {
+          "dimension": "venue",
+          "group": "大村",
+          "combo": "1-2",
+          "n": 155,
+          "hits": 21,
+          "actual_rate": 0.13548387096774195,
+          "avg_normalized_implied": 0.09077312244184482,
+          "edge_pp": 4.471074852589712,
+          "realized_roi": 1.0851612903225807,
+          "max1hit_excl_roi": 0.964935064935065,
+          "avg_odds": 11.169677419354844,
+          "period": "heldout"
+        },
+        "forward": {
+          "dimension": "venue",
+          "group": "大村",
+          "combo": "1-2",
+          "n": 85,
+          "hits": 13,
+          "actual_rate": 0.15294117647058825,
+          "avg_normalized_implied": 0.09591613341710135,
+          "edge_pp": 5.70250430534869,
+          "realized_roi": 1.088235294117647,
+          "max1hit_excl_roi": 0.9095238095238095,
+          "avg_odds": 10.709411764705886,
+          "period": "forward"
+        }
+      },
+      {
+        "discovery": {
+          "dimension": "venue",
+          "group": "常滑",
+          "combo": "1-2",
+          "n": 199,
+          "hits": 22,
+          "actual_rate": 0.11055276381909548,
+          "avg_normalized_implied": 0.08697315550450499,
+          "edge_pp": 2.3579608314590494,
+          "realized_roi": 1.0562814070351758,
+          "max1hit_excl_roi": 0.9282828282828283,
+          "avg_odds": 12.276381909547734,
+          "period": "heldout"
+        },
+        "forward": {
+          "dimension": "venue",
+          "group": "常滑",
+          "combo": "1-2",
+          "n": 88,
+          "hits": 11,
+          "actual_rate": 0.125,
+          "avg_normalized_implied": 0.07754754577648315,
+          "edge_pp": 4.745245422351685,
+          "realized_roi": 1.475,
+          "max1hit_excl_roi": 1.206896551724138,
+          "avg_odds": 12.579545454545451,
+          "period": "forward"
+        }
+      },
+      {
+        "discovery": {
+          "dimension": "venue",
+          "group": "児島",
+          "combo": "1-4",
+          "n": 128,
+          "hits": 19,
+          "actual_rate": 0.1484375,
+          "avg_normalized_implied": 0.10180089321320522,
+          "edge_pp": 4.663660678679478,
+          "realized_roi": 1.234375,
+          "max1hit_excl_roi": 1.1,
+          "avg_odds": 15.640624999999998,
+          "period": "heldout"
+        },
+        "forward": {
+          "dimension": "venue",
+          "group": "児島",
+          "combo": "1-4",
+          "n": 36,
+          "hits": 3,
+          "actual_rate": 0.08333333333333333,
+          "avg_normalized_implied": 0.09263555124862102,
+          "edge_pp": -0.9302217915287694,
+          "realized_roi": 0.6083333333333333,
+          "max1hit_excl_roi": 0.26285714285714284,
+          "avg_odds": 14.538888888888888,
+          "period": "forward"
+        }
+      },
+      {
+        "discovery": {
+          "dimension": "race_no",
+          "group": "8",
+          "combo": "1-2",
+          "n": 315,
+          "hits": 41,
+          "actual_rate": 0.13015873015873017,
+          "avg_normalized_implied": 0.08672505734473324,
+          "edge_pp": 4.3433672813996935,
+          "realized_roi": 1.1311111111111112,
+          "max1hit_excl_roi": 1.0187898089171974,
+          "avg_odds": 11.864126984126997,
+          "period": "heldout"
+        },
+        "forward": {
+          "dimension": "race_no",
+          "group": "8",
+          "combo": "1-2",
+          "n": 163,
+          "hits": 14,
+          "actual_rate": 0.08588957055214724,
+          "avg_normalized_implied": 0.08690086452558238,
+          "edge_pp": -0.10112939734351345,
+          "realized_roi": 0.6773006134969325,
+          "max1hit_excl_roi": 0.5580246913580247,
+          "avg_odds": 11.360736196319017,
+          "period": "forward"
+        }
+      }
+    ],
+    "replicatedProfitEdges": []
+  },
   "allCombinations": [
     {
       "dimension": "combination",

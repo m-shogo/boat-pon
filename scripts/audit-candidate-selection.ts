@@ -17,6 +17,7 @@ import {
   loadRaceWeatherMap,
 } from "../server/db";
 import { selectTopModelCandidatePerRace } from "../src/domain/candidateSelection";
+import { evaluateCandidateAuditGate } from "../src/domain/candidateAuditGate";
 import { judgeCandidate } from "../src/domain/decision";
 import { LIVE_MONITOR_MODEL_VERSION } from "../src/domain/liveMonitor";
 import { mergeOddsMaps } from "../src/domain/oddsSnapshot";
@@ -73,6 +74,12 @@ try {
   const decisionCounts = countDecisions(paperRows.map((row) => row.decision));
   const persistedComparisons = comparisons.filter((row) => row.persistedSelection != null);
   const matched = persistedComparisons.filter((row) => row.selectionMatches).length;
+  const gate = evaluateCandidateAuditGate({
+    candidateRows: allCandidates.length,
+    attachedOddsMismatchRows: attachedOddsMismatches.length,
+    persistedComparableRaces: persistedComparisons.length,
+    selectionMatches: matched,
+  });
   const report = {
     generatedAt: now.toISOString(),
     date: args.date,
@@ -90,11 +97,13 @@ try {
       selectionMatches: matched,
       selectionMatchPct: persistedComparisons.length > 0 ? matched / persistedComparisons.length : 0,
     },
+    gate,
     mismatches: persistedComparisons.filter((row) => !row.selectionMatches).slice(0, args.limit),
   };
 
   if (args.json) console.log(JSON.stringify(report));
   else printReport(report);
+  if (args.strict && !gate.passed) process.exitCode = 2;
 } finally {
   db.close();
 }
@@ -153,6 +162,7 @@ function printReport(report: {
     raceId: string; paperSelection: string; paperOdds: number | null; paperDecision: string;
     persistedSelection: string | null; persistedOdds: number | null; persistedDecision: string | null;
   }>;
+  gate: { passed: boolean; reasons: string[] };
 }) {
   console.log("=== candidate selection audit (read-only / paper) ===");
   console.log(`date: ${report.date}`);
@@ -164,6 +174,7 @@ function printReport(report: {
   console.log(`persisted races: ${report.summary.persistedRaces}`);
   console.log(`missing persisted races: ${report.summary.missingPersistedRaces}`);
   console.log(`selection match: ${report.summary.selectionMatches}/${report.summary.persistedComparableRaces} (${(report.summary.selectionMatchPct * 100).toFixed(1)}%)`);
+  console.log(`integrity gate: ${report.gate.passed ? "PASS" : `BLOCKED (${report.gate.reasons.join(" / ")})`}`);
   console.log("\nfirst mismatches:");
   for (const row of report.mismatches) {
     console.log(`- ${row.raceId}: paper=${row.paperSelection} odds=${row.paperOdds ?? "-"} ${row.paperDecision} / saved=${row.persistedSelection ?? "-"} odds=${row.persistedOdds ?? "-"} ${row.persistedDecision ?? "-"}`);
@@ -174,14 +185,16 @@ function parseArgs(argv: string[]) {
   let date = todayJst();
   let json = false;
   let limit = 20;
+  let strict = false;
   for (let i = 0; i < argv.length; i += 1) {
     const value = argv[i];
     if (value === "--json") json = true;
+    else if (value === "--strict") strict = true;
     else if (value === "--date") date = argv[++i] ?? date;
     else if (value.startsWith("--date=")) date = value.slice("--date=".length);
     else if (value === "--limit") limit = Number(argv[++i] ?? limit);
   }
-  return { date, json, limit: Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 20 };
+  return { date, json, strict, limit: Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 20 };
 }
 
 function todayJst() {

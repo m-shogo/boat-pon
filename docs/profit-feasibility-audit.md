@@ -6,6 +6,8 @@
 
 ```bash
 pnpm audit:profit-feasibility
+pnpm audit:t5-market-coverage -- --strict
+pnpm audit:candidate-selection -- --strict
 ```
 
 この監査はDB読み取り専用で、app_settings・本番decision・通知・投票には接続しない。
@@ -39,3 +41,9 @@ pnpm audit:profit-feasibility
 6. それでも損益分岐を超えなければ、競艇の自動予測を利益事業としては撤退する。
 
 BUYを増やすことは目標にしない。検証されたedgeが出た場合にだけBUYが生まれる構造にする。
+
+## 現在の研究停止ゲート
+
+2026-06-01〜2026-07-17の公式番組6,999レースに対し、T-5全120通りが揃ったのは349レース（4.99%）、結果確定済みは277レースだった。必要条件のcoverage 80%、settled 1,000件に未達のため、市場残差モデルの選択・採用は停止する。
+
+候補整合性も2026-07-18時点で、買い目別オッズ不一致6,510/6,695行、保存top1一致5/64（7.8%）のため停止中。本番ロジックを変更せず、read-only監査が正常化するまで研究結果を昇格させない。

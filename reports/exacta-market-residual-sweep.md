@@ -1,9 +1,10 @@
 # exacta market residual sweep
 
-生成日時: 2026-06-12T02:03:05.521Z
+生成日時: 2026-07-18T09:50:41.278Z
 
 > **読み取り専用。BUY は検証候補、ROI は検証指標。購入推奨ではない。**
 > **historical closing odds は live/T-5/timeseries odds ではない。**
+> **保存済みexactaレースだけの分析であり、公式開催全体を代表しない。decision_history/BUYでは追加抽出しない。**
 > **本分析は新BUYルール作成ではなく市場の歪み探索が目的。本番採用しない。**
 
 ---
@@ -54,7 +55,7 @@
 | 5-6 | 4207 | 40 | 0.95% | 1.38% | -0.43pt | 40.4% | 35.2% | 154.4 |
 | 2-5 | 4207 | 63 | 1.50% | 2.18% | -0.69pt | 37.5% | 35.5% | 118.0 |
 
-## 2. strong候補 (edge_pp≥3pt・roi≥80%・max1x≥75%・n≥50)
+## 2. 全期間post-hoc screen（採用禁止）
 
 | dimension | group | combo | n | edge_pp | roi | max1hit_excl | actual | implied |
 |---|---|---|---|---|---|---|---|---|
@@ -69,7 +70,7 @@
 | wind_band | 0-1m | 1-3 | 181 | 3.21pt | 105.6% | 95.5% | 12.15% | 8.95% |
 | venue | 常滑 | 1-2 | 287 | 3.09pt | 118.5% | 109.7% | 11.50% | 8.41% |
 
-## 3. watch候補 (edge_pp≥2pt・n≥50)
+## 3. 全期間post-hoc watch（採用禁止）
 
 | dimension | group | combo | n | edge_pp | roi | max1hit_excl | actual | implied |
 |---|---|---|---|---|---|---|---|---|
@@ -86,7 +87,7 @@
 | race_no | 8 | 1-4 | 478 | 2.19pt | 82.3% | 73.9% | 15.06% | 12.87% |
 | venue | 常滑 | 1-4 | 287 | 2.16pt | 97.2% | 86.1% | 11.85% | 9.69% |
 
-## 4. forward期 strong候補 (edge_pp≥3pt・roi≥80%・max1x≥75%・n≥30)
+## 4. forward期post-hoc screen（仮説生成専用）
 
 | dimension | group | combo | n | edge_pp | roi | max1hit_excl | actual | implied |
 |---|---|---|---|---|---|---|---|---|
@@ -111,7 +112,7 @@
 | race_no | 3 | 1-4 | 179 | 3.20pt | 147.7% | 130.1% | 10.61% | 7.42% |
 | venue | 唐津 | 1-3 | 92 | 3.17pt | 113.2% | 88.1% | 11.96% | 8.79% |
 
-## 5. forward期 watch候補 (edge_pp≥2pt・n≥30)
+## 5. forward期post-hoc watch（仮説生成専用）
 
 | dimension | group | combo | n | edge_pp | roi | max1hit_excl | actual | implied |
 |---|---|---|---|---|---|---|---|---|
@@ -122,7 +123,13 @@
 | race_no | 4 | 1-4 | 203 | 2.89pt | 106.2% | 89.4% | 10.84% | 7.95% |
 | odds_band | 05-10 | 1-4 | 361 | 2.15pt | 88.0% | 85.5% | 13.02% | 10.87% |
 
-## 6. H011対象 (1-2/1-3/1-4) 次元別
+## 6. heldout発見 → forward利益再現ゲート
+
+事前側screen: 5件。採用ゲートは forward n≥200、ROI≥100%、最大1hit除外ROI≥100%、edge>0。
+
+**再現確認済みedgeなし。**
+
+## 7. H011対象 (1-2/1-3/1-4) 次元別（post-hoc）
 
 ### 1-2
 
