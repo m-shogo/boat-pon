@@ -11,6 +11,8 @@ const execFile = promisify(execFileCb);
 const RAW_DIR = path.join("data", "raw", "official", "programs");
 const TMP_DIR = path.join("data", "tmp", "programs");
 const SLEEP_MS = 1500;
+const FETCH_RETRY_COUNT = 2;
+const FETCH_RETRY_DELAY_MS = 3000;
 const MAX_RANGE_DAYS = 10000;
 const DL_ONLY = process.env.BOAT_PON_DL_ONLY === "1";
 const SKIP_EXISTING = process.env.BOAT_PON_SKIP_EXISTING === "1";
@@ -65,7 +67,7 @@ async function main() {
       const cached = existsSync(lzhPath);
       if (!cached) {
         try {
-          await downloadFile(url, lzhPath);
+          await downloadFileWithRetry(url, lzhPath);
         } catch (err) {
           failedDays += 1;
           console.warn(`fetch failed ${date}: ${err instanceof Error ? err.message : err}`);
@@ -107,6 +109,21 @@ async function main() {
   }
 
   console.log(`--- done: ${dates.length} days / ${totalRows} programs / cached=${skippedDays} / already=${alreadyHaveDays} / failed=${failedDays}`);
+  if (failedDays > 0) process.exitCode = 1;
+}
+
+async function downloadFileWithRetry(url: string, dest: string) {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= FETCH_RETRY_COUNT; attempt += 1) {
+    try {
+      await downloadFile(url, dest);
+      return;
+    } catch (error) {
+      lastError = error;
+      if (attempt < FETCH_RETRY_COUNT) await sleep(FETCH_RETRY_DELAY_MS * (attempt + 1));
+    }
+  }
+  throw lastError;
 }
 
 async function downloadFile(url: string, dest: string) {

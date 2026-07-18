@@ -69,15 +69,15 @@ ORDER BY 1
 
   const recentResultCoverage = db.prepare(`
 WITH RECURSIVE dates(date) AS (
-  SELECT date(?, '-6 day')
+  SELECT date(?, '-13 day')
   UNION ALL
   SELECT date(date, '+1 day') FROM dates WHERE date < ?
 ), programs AS (
   SELECT date, COUNT(*) AS n FROM official_programs
-  WHERE date BETWEEN date(?, '-6 day') AND ? GROUP BY date
+  WHERE date BETWEEN date(?, '-13 day') AND ? GROUP BY date
 ), results AS (
   SELECT date, COUNT(*) AS n FROM race_results
-  WHERE date BETWEEN date(?, '-6 day') AND ? GROUP BY date
+  WHERE date BETWEEN date(?, '-13 day') AND ? GROUP BY date
 )
 SELECT dates.date, COALESCE(programs.n, 0) AS programs, COALESCE(results.n, 0) AS results
 FROM dates LEFT JOIN programs USING(date) LEFT JOIN results USING(date)
