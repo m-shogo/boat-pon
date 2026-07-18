@@ -109,6 +109,7 @@
     "analyze:market-microstructure": "tsx scripts/analyze-market-microstructure.ts",
     "analyze:market-attention": "tsx scripts/analyze-market-attention.ts",
     "analyze:bettor-calendar": "tsx scripts/analyze-bettor-calendar.ts",
+    "analyze:dynamic-second-selector": "tsx scripts/analyze-dynamic-second-selector.ts",
     "guard:live": "tsx scripts/live-change-guard.ts",
     "auto:odds": "tsx scripts/auto-fetch-odds.ts",
     "auto:beforeinfo": "tsx scripts/auto-fetch-exhibition.ts",

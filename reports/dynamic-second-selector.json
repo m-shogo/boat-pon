@@ -1,0 +1,283 @@
+{
+  "generatedAt": "2026-07-18T15:58:53.957Z",
+  "safety": {
+    "readOnly": true,
+    "oneTicketPerRace": true,
+    "preRaceFeatures": true,
+    "productionConnected": false
+  },
+  "coverage": {
+    "candidateRaces": 4184,
+    "evaluatedCompleteMarkets": 4158,
+    "rejectedMarkets": 26,
+    "outcomes": 37415
+  },
+  "results": [
+    {
+      "id": "fixed_4",
+      "label": "固定4号艇",
+      "discovery": {
+        "n": 2695,
+        "hits": 303,
+        "edgePp": 1.0444760533254616,
+        "roi": 0.7799628942486085,
+        "max2HitExclRoi": 0.7485703676197549
+      },
+      "forward": {
+        "n": 1463,
+        "hits": 175,
+        "edgePp": 1.9459280469534106,
+        "roi": 0.9724538619275461,
+        "max2HitExclRoi": 0.9087611225188227
+      },
+      "selectionDistribution": {
+        "1-4": 4158
+      },
+      "leaveOneVenue": {
+        "discovery": 0.7237631476431632,
+        "forward": 0.8528943560057887
+      }
+    },
+    {
+      "id": "national_best",
+      "label": "全国勝率最上位",
+      "discovery": {
+        "n": 2695,
+        "hits": 410,
+        "edgePp": 1.3078733643890994,
+        "roi": 0.7798515769944342,
+        "max2HitExclRoi": 0.758484961010026
+      },
+      "forward": {
+        "n": 1463,
+        "hits": 210,
+        "edgePp": 0.9016701890267681,
+        "roi": 0.7591250854408749,
+        "max2HitExclRoi": 0.731690622861054
+      },
+      "selectionDistribution": {
+        "1-6": 1095,
+        "1-4": 1201,
+        "1-3": 611,
+        "1-5": 942,
+        "1-2": 309
+      },
+      "leaveOneVenue": {
+        "discovery": 0.739390340459224,
+        "forward": 0.7012354651162791
+      }
+    },
+    {
+      "id": "local_best",
+      "label": "当地勝率最上位",
+      "discovery": {
+        "n": 2695,
+        "hits": 392,
+        "edgePp": 1.5960485380932494,
+        "roi": 0.8259369202226345,
+        "max2HitExclRoi": 0.7876717415521723
+      },
+      "forward": {
+        "n": 1463,
+        "hits": 207,
+        "edgePp": 1.5870622416776237,
+        "roi": 0.8090909090909091,
+        "max2HitExclRoi": 0.7797399041752224
+      },
+      "selectionDistribution": {
+        "1-6": 1040,
+        "1-4": 1187,
+        "1-3": 639,
+        "1-5": 897,
+        "1-2": 395
+      },
+      "leaveOneVenue": {
+        "discovery": 0.7720252167060677,
+        "forward": 0.7419610670511896
+      }
+    },
+    {
+      "id": "motor_best",
+      "label": "モーター2連率最上位",
+      "discovery": {
+        "n": 2695,
+        "hits": 253,
+        "edgePp": 1.0958763548331325,
+        "roi": 0.6987755102040817,
+        "max2HitExclRoi": 0.6748607500928333
+      },
+      "forward": {
+        "n": 1463,
+        "hits": 124,
+        "edgePp": 0.4326728572898385,
+        "roi": 0.7303485987696514,
+        "max2HitExclRoi": 0.6831622176591375
+      },
+      "selectionDistribution": {
+        "1-3": 807,
+        "1-6": 807,
+        "1-5": 849,
+        "1-4": 842,
+        "1-2": 853
+      },
+      "leaveOneVenue": {
+        "discovery": 0.6596326690113326,
+        "forward": 0.6432258064516129
+      }
+    },
+    {
+      "id": "exhibition_best",
+      "label": "展示最速",
+      "discovery": {
+        "n": 2695,
+        "hits": 310,
+        "edgePp": 1.7128744222047378,
+        "roi": 0.8438589981447124,
+        "max2HitExclRoi": 0.8172669884886743
+      },
+      "forward": {
+        "n": 1456,
+        "hits": 143,
+        "edgePp": 0.39757124095685425,
+        "roi": 0.6940247252747253,
+        "max2HitExclRoi": 0.6486932599724897
+      },
+      "selectionDistribution": {
+        "1-2": 909,
+        "1-6": 795,
+        "1-4": 939,
+        "1-5": 743,
+        "1-3": 765
+      },
+      "leaveOneVenue": {
+        "discovery": 0.7918686473807662,
+        "forward": 0.6031318281136198
+      }
+    },
+    {
+      "id": "consensus",
+      "label": "全国・当地・モーター・展示の合議",
+      "discovery": {
+        "n": 2695,
+        "hits": 398,
+        "edgePp": 1.644271553509584,
+        "roi": 0.8238961038961039,
+        "max2HitExclRoi": 0.8012253991830672
+      },
+      "forward": {
+        "n": 1463,
+        "hits": 206,
+        "edgePp": 1.3843409098227666,
+        "roi": 0.807177033492823,
+        "max2HitExclRoi": 0.760164271047228
+      },
+      "selectionDistribution": {
+        "1-6": 843,
+        "1-2": 582,
+        "1-4": 1137,
+        "1-3": 779,
+        "1-5": 817
+      },
+      "leaveOneVenue": {
+        "discovery": 0.775418776782236,
+        "forward": 0.7120525931336742
+      }
+    },
+    {
+      "id": "ability_underbought",
+      "label": "能力順位より市場人気が低い艇",
+      "discovery": {
+        "n": 2695,
+        "hits": 171,
+        "edgePp": 1.3546455172792853,
+        "roi": 0.8742857142857143,
+        "max2HitExclRoi": 0.8225770516152989
+      },
+      "forward": {
+        "n": 1463,
+        "hits": 82,
+        "edgePp": 0.5911809121021769,
+        "roi": 0.7547505126452495,
+        "max2HitExclRoi": 0.6775496235455167
+      },
+      "selectionDistribution": {
+        "1-5": 1262,
+        "1-4": 618,
+        "1-6": 1653,
+        "1-3": 210,
+        "1-2": 415
+      },
+      "leaveOneVenue": {
+        "discovery": 0.7742500973899493,
+        "forward": 0.6418653576437587
+      }
+    },
+    {
+      "id": "market_favorite",
+      "label": "1-Xで市場最人気",
+      "discovery": {
+        "n": 2695,
+        "hits": 486,
+        "edgePp": 1.2516928756746566,
+        "roi": 0.7927643784786642,
+        "max2HitExclRoi": 0.77979948013368
+      },
+      "forward": {
+        "n": 1463,
+        "hits": 248,
+        "edgePp": 0.7858898601514264,
+        "roi": 0.7826384142173616,
+        "max2HitExclRoi": 0.7558521560574949
+      },
+      "selectionDistribution": {
+        "1-3": 1253,
+        "1-6": 297,
+        "1-2": 950,
+        "1-4": 1259,
+        "1-5": 399
+      },
+      "leaveOneVenue": {
+        "discovery": 0.762253743104807,
+        "forward": 0.734375
+      }
+    },
+    {
+      "id": "national_worst_placebo",
+      "label": "全国勝率最低_placebo",
+      "discovery": {
+        "n": 2695,
+        "hits": 81,
+        "edgePp": -0.423471746762777,
+        "roi": 0.6011502782931354,
+        "max2HitExclRoi": 0.5273672484218344
+      },
+      "forward": {
+        "n": 1463,
+        "hits": 46,
+        "edgePp": -0.1227989417215661,
+        "roi": 0.5717703349282297,
+        "max2HitExclRoi": 0.44722792607802875
+      },
+      "selectionDistribution": {
+        "1-4": 522,
+        "1-2": 998,
+        "1-6": 934,
+        "1-3": 827,
+        "1-5": 877
+      },
+      "leaveOneVenue": {
+        "discovery": 0.4800155219247187,
+        "forward": 0.3904796511627907
+      }
+    }
+  ],
+  "robust": [],
+  "caveats": [
+    "全戦略1レース1点100円",
+    "official_programs当時値と展示を使用",
+    "30行でも組番重複・欠損のmarketは除外",
+    "ability_underboughtは順位差でオッズ倍率を直接最適化しない",
+    "closing oddsでT-5ではない",
+    "最低全国勝率は偽陽性対照"
+  ]
+}

@@ -1,0 +1,4 @@
+import assert from"node:assert/strict";import{test}from"node:test";import{selectDynamicSecond,type RivalContext}from"./dynamicSecondSelector";
+const context:RivalContext={boats:[1,2,3,4,5,6].map(course=>({course,nationalWinRate:course===4?7:6-course/10,localWinRate:course===3?8:5,motorTop2Rate:course===5?50:30})),marketProbability:new Map([[2,.2],[3,.18],[4,.08],[5,.12],[6,.05]]),exhibitionTime:new Map([[2,6.8],[3,6.9],[4,6.7],[5,6.85],[6,7]])};
+test("指標ごとに2着候補を1艇選ぶ",()=>{assert.equal(selectDynamicSecond(context,"national_best"),4);assert.equal(selectDynamicSecond(context,"local_best"),3);assert.equal(selectDynamicSecond(context,"motor_best"),5);assert.equal(selectDynamicSecond(context,"exhibition_best"),4);});
+test("能力順位より市場人気順位が低い艇をunderbought候補にする",()=>{assert.equal(selectDynamicSecond(context,"ability_underbought"),4);assert.equal(selectDynamicSecond(context,"market_favorite"),2);});
