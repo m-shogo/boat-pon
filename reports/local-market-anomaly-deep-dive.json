@@ -1,0 +1,2385 @@
+{
+  "generatedAt": "2026-07-18T11:03:22.396Z",
+  "safety": {
+    "readOnly": true,
+    "historicalClosingOdds": true,
+    "t5": false,
+    "profitClaim": false,
+    "productionConnected": false
+  },
+  "scope": {
+    "races": 4184,
+    "discovery": 2715,
+    "forward": 1469
+  },
+  "caveats": [
+    "多重探索を含むため仮説生成専用",
+    "historical closing oddsでありT-5再現ではない",
+    "原因ではなく構成差・交絡候補"
+  ],
+  "anomalies": [
+    {
+      "id": "marugame_12",
+      "label": "丸亀 × 1-2",
+      "combo": "1-2",
+      "base": {
+        "discovery": {
+          "n": 134,
+          "hits": 16,
+          "actualRate": 0.11940298507462686,
+          "impliedRate": 0.0733401286089981,
+          "edgePp": 4.606285646562876,
+          "roi": 1.1888059701492537,
+          "max1HitExclRoi": 1.056390977443609,
+          "max2HitExclRoi": 0.9272727272727272,
+          "zScore": 2.0712839986027567
+        },
+        "forward": {
+          "n": 66,
+          "hits": 9,
+          "actualRate": 0.13636363636363635,
+          "impliedRate": 0.08074154727112401,
+          "edgePp": 5.562208909251234,
+          "roi": 1.3651515151515152,
+          "max1HitExclRoi": 1.0923076923076922,
+          "max2HitExclRoi": 0.8796875,
+          "zScore": 1.6762802683421776
+        }
+      },
+      "mechanisms": [
+        {
+          "id": "target_exh_top2",
+          "label": "相手艇が展示タイム上位2艇",
+          "candidate": {
+            "discovery": {
+              "n": 45,
+              "hits": 6,
+              "actualRate": 0.13333333333333333,
+              "impliedRate": 0.07598247514806074,
+              "edgePp": 5.735085818527259,
+              "roi": 1.4955555555555555,
+              "max1HitExclRoi": 1.1022727272727273,
+              "max2HitExclRoi": 0.7069767441860465,
+              "zScore": 1.4690576281660874
+            },
+            "forward": {
+              "n": 23,
+              "hits": 4,
+              "actualRate": 0.17391304347826086,
+              "impliedRate": 0.07641613401810016,
+              "edgePp": 9.74969094601607,
+              "roi": 1.7652173913043478,
+              "max1HitExclRoi": 1.1818181818181819,
+              "max2HitExclRoi": 0.7523809523809524,
+              "zScore": 1.7777647685117395
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 89,
+              "hits": 10,
+              "actualRate": 0.11235955056179775,
+              "impliedRate": 0.07200411069598892,
+              "edgePp": 4.035543986580883,
+              "roi": 1.0337078651685394,
+              "max1HitExclRoi": 0.8863636363636364,
+              "max2HitExclRoi": 0.7402298850574712,
+              "zScore": 1.4920953242524886
+            },
+            "forward": {
+              "n": 43,
+              "hits": 5,
+              "actualRate": 0.11627906976744186,
+              "impliedRate": 0.08305514040646238,
+              "edgePp": 3.3223929360979483,
+              "roi": 1.1511627906976745,
+              "max1HitExclRoi": 0.7238095238095238,
+              "max2HitExclRoi": 0.3829268292682927,
+              "zScore": 0.7979993737417623
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "丸亀",
+              "minLeaveOneMonthMax2Roi": 0.32051282051282054,
+              "worstMonth": "2024-12"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "丸亀",
+              "minLeaveOneMonthMax2Roi": 0.34,
+              "worstMonth": "2025-09"
+            }
+          },
+          "persistent": true,
+          "explainsBoth": true,
+          "forwardAmplifier": false
+        },
+        {
+          "id": "head_exh_top2",
+          "label": "1号艇が展示タイム上位2艇",
+          "candidate": {
+            "discovery": {
+              "n": 68,
+              "hits": 7,
+              "actualRate": 0.10294117647058823,
+              "impliedRate": 0.06762029055147475,
+              "edgePp": 3.5320885919113474,
+              "roi": 1.0823529411764705,
+              "max1HitExclRoi": 0.8955223880597015,
+              "max2HitExclRoi": 0.7272727272727273,
+              "zScore": 1.1716873380426038
+            },
+            "forward": {
+              "n": 35,
+              "hits": 6,
+              "actualRate": 0.17142857142857143,
+              "impliedRate": 0.08166312870932575,
+              "edgePp": 8.976544271924567,
+              "roi": 1.6571428571428573,
+              "max1HitExclRoi": 1.2735294117647058,
+              "max2HitExclRoi": 0.8696969696969697,
+              "zScore": 1.9591679476847623
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 66,
+              "hits": 9,
+              "actualRate": 0.13636363636363635,
+              "impliedRate": 0.07923329509250704,
+              "edgePp": 5.713034127112931,
+              "roi": 1.2984848484848486,
+              "max1HitExclRoi": 1.0292307692307692,
+              "max2HitExclRoi": 0.7625,
+              "zScore": 1.7432642225522461
+            },
+            "forward": {
+              "n": 31,
+              "hits": 3,
+              "actualRate": 0.0967741935483871,
+              "impliedRate": 0.0797010520989608,
+              "edgePp": 1.7073141449426288,
+              "roi": 1.0354838709677419,
+              "max1HitExclRoi": 0.43333333333333335,
+              "max2HitExclRoi": 0.21379310344827587,
+              "zScore": 0.35486431531270174
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "丸亀",
+              "minLeaveOneMonthMax2Roi": 0.33214285714285713,
+              "worstMonth": "2024-12"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "丸亀",
+              "minLeaveOneMonthMax2Roi": 0.36538461538461536,
+              "worstMonth": "2025-09"
+            }
+          },
+          "persistent": true,
+          "explainsBoth": false,
+          "forwardAmplifier": true
+        },
+        {
+          "id": "early_race",
+          "label": "1〜4R",
+          "candidate": {
+            "discovery": {
+              "n": 71,
+              "hits": 6,
+              "actualRate": 0.08450704225352113,
+              "impliedRate": 0.07130561850641715,
+              "edgePp": 1.320142374710398,
+              "roi": 0.8929577464788733,
+              "max1HitExclRoi": 0.6471428571428571,
+              "max2HitExclRoi": 0.45362318840579713,
+              "zScore": 0.43710146335333133
+            },
+            "forward": {
+              "n": 34,
+              "hits": 6,
+              "actualRate": 0.17647058823529413,
+              "impliedRate": 0.07061433783291939,
+              "edgePp": 10.585625040237474,
+              "roi": 2.1705882352941175,
+              "max1HitExclRoi": 1.6575757575757575,
+              "max2HitExclRoi": 1.25,
+              "zScore": 2.43147036758992
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 63,
+              "hits": 10,
+              "actualRate": 0.15873015873015872,
+              "impliedRate": 0.07563298920079574,
+              "edgePp": 8.309716952936299,
+              "roi": 1.5222222222222221,
+              "max1HitExclRoi": 1.2435483870967743,
+              "max2HitExclRoi": 1.040983606557377,
+              "zScore": 2.5298628194507238
+            },
+            "forward": {
+              "n": 32,
+              "hits": 3,
+              "actualRate": 0.09375,
+              "impliedRate": 0.09150170729921647,
+              "edgePp": 0.22482927007835274,
+              "roi": 0.509375,
+              "max1HitExclRoi": 0.3064516129032258,
+              "max2HitExclRoi": 0.13333333333333333,
+              "zScore": 0.04457528787979241
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "丸亀",
+              "minLeaveOneMonthMax2Roi": 0.32166666666666666,
+              "worstMonth": "2024-01"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "丸亀",
+              "minLeaveOneMonthMax2Roi": 0.5857142857142857,
+              "worstMonth": "2025-09"
+            }
+          },
+          "persistent": true,
+          "explainsBoth": false,
+          "forwardAmplifier": true
+        }
+      ]
+    },
+    {
+      "id": "omura_12",
+      "label": "大村 × 1-2",
+      "combo": "1-2",
+      "base": {
+        "discovery": {
+          "n": 155,
+          "hits": 21,
+          "actualRate": 0.13548387096774195,
+          "impliedRate": 0.09077312244184482,
+          "edgePp": 4.471074852589712,
+          "roi": 1.0851612903225807,
+          "max1HitExclRoi": 0.964935064935065,
+          "max2HitExclRoi": 0.8666666666666667,
+          "zScore": 1.9715994753744401
+        },
+        "forward": {
+          "n": 85,
+          "hits": 13,
+          "actualRate": 0.15294117647058825,
+          "impliedRate": 0.09591613341710135,
+          "edgePp": 5.70250430534869,
+          "roi": 1.088235294117647,
+          "max1HitExclRoi": 0.9095238095238095,
+          "max2HitExclRoi": 0.7783132530120482,
+          "zScore": 1.8217658311384917
+        }
+      },
+      "mechanisms": [
+        {
+          "id": "target_exh_top2",
+          "label": "相手艇が展示タイム上位2艇",
+          "candidate": {
+            "discovery": {
+              "n": 43,
+              "hits": 9,
+              "actualRate": 0.20930232558139536,
+              "impliedRate": 0.09230616232784168,
+              "edgePp": 11.699616325355368,
+              "roi": 1.4883720930232558,
+              "max1HitExclRoi": 1.2285714285714286,
+              "max2HitExclRoi": 1.0414634146341464,
+              "zScore": 2.6879662305341547
+            },
+            "forward": {
+              "n": 23,
+              "hits": 6,
+              "actualRate": 0.2608695652173913,
+              "impliedRate": 0.09180920719441917,
+              "edgePp": 16.906035802297215,
+              "roi": 1.9608695652173913,
+              "max1HitExclRoi": 1.6409090909090909,
+              "max2HitExclRoi": 1.2952380952380953,
+              "zScore": 2.824458410021691
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 112,
+              "hits": 12,
+              "actualRate": 0.10714285714285714,
+              "impliedRate": 0.09018454462847102,
+              "edgePp": 1.695831251438612,
+              "roi": 0.9303571428571429,
+              "max1HitExclRoi": 0.7621621621621621,
+              "max2HitExclRoi": 0.6236363636363637,
+              "zScore": 0.6383714668929048
+            },
+            "forward": {
+              "n": 62,
+              "hits": 7,
+              "actualRate": 0.11290322580645161,
+              "impliedRate": 0.09743967056422542,
+              "edgePp": 1.5463555242226188,
+              "roi": 0.7645161290322581,
+              "max1HitExclRoi": 0.5131147540983606,
+              "max2HitExclRoi": 0.325,
+              "zScore": 0.4210863864369367
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "大村",
+              "minLeaveOneMonthMax2Roi": 0.6914285714285714,
+              "worstMonth": "2024-10"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "大村",
+              "minLeaveOneMonthMax2Roi": 0.8933333333333333,
+              "worstMonth": "2025-08"
+            }
+          },
+          "persistent": true,
+          "explainsBoth": true,
+          "forwardAmplifier": false
+        },
+        {
+          "id": "early_race",
+          "label": "1〜4R",
+          "candidate": {
+            "discovery": {
+              "n": 58,
+              "hits": 10,
+              "actualRate": 0.1724137931034483,
+              "impliedRate": 0.09458697504087982,
+              "edgePp": 7.782681806256847,
+              "roi": 1.1827586206896552,
+              "max1HitExclRoi": 0.9228070175438596,
+              "max2HitExclRoi": 0.7803571428571429,
+              "zScore": 2.0633088395064627
+            },
+            "forward": {
+              "n": 39,
+              "hits": 7,
+              "actualRate": 0.1794871794871795,
+              "impliedRate": 0.08472274940043878,
+              "edgePp": 9.476443008674071,
+              "roi": 1.5025641025641026,
+              "max1HitExclRoi": 1.118421052631579,
+              "max2HitExclRoi": 0.8297297297297297,
+              "zScore": 2.158900731632456
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 97,
+              "hits": 11,
+              "actualRate": 0.1134020618556701,
+              "impliedRate": 0.08849267449603007,
+              "edgePp": 2.490938735964003,
+              "roi": 1.02680412371134,
+              "max1HitExclRoi": 0.8333333333333334,
+              "max2HitExclRoi": 0.708421052631579,
+              "zScore": 0.8782414407632715
+            },
+            "forward": {
+              "n": 46,
+              "hits": 6,
+              "actualRate": 0.13043478260869565,
+              "impliedRate": 0.10540617638775009,
+              "edgePp": 2.5028606220945564,
+              "roi": 0.7369565217391304,
+              "max1HitExclRoi": 0.5555555555555556,
+              "max2HitExclRoi": 0.40454545454545454,
+              "zScore": 0.5652534008265582
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "大村",
+              "minLeaveOneMonthMax2Roi": 0.536,
+              "worstMonth": "2024-07"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "大村",
+              "minLeaveOneMonthMax2Roi": 0.4896551724137931,
+              "worstMonth": "2025-08"
+            }
+          },
+          "persistent": true,
+          "explainsBoth": true,
+          "forwardAmplifier": true
+        },
+        {
+          "id": "season_春(3-5)",
+          "label": "春(3-5)",
+          "candidate": {
+            "discovery": {
+              "n": 27,
+              "hits": 6,
+              "actualRate": 0.2222222222222222,
+              "impliedRate": 0.08606657677963564,
+              "edgePp": 13.615564544258657,
+              "roi": 1.4259259259259258,
+              "max1HitExclRoi": 1.1384615384615384,
+              "max2HitExclRoi": 0.86,
+              "zScore": 2.5608260039475748
+            },
+            "forward": {
+              "n": 25,
+              "hits": 4,
+              "actualRate": 0.16,
+              "impliedRate": 0.08620225191409575,
+              "edgePp": 7.379774808590425,
+              "roi": 1.268,
+              "max1HitExclRoi": 0.8291666666666667,
+              "max2HitExclRoi": 0.4782608695652174,
+              "zScore": 1.327686661751979
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 128,
+              "hits": 15,
+              "actualRate": 0.1171875,
+              "impliedRate": 0.09176590941746708,
+              "edgePp": 2.542159058253292,
+              "roi": 1.01328125,
+              "max1HitExclRoi": 0.8669291338582678,
+              "max2HitExclRoi": 0.7468253968253968,
+              "zScore": 1.0141738052275564
+            },
+            "forward": {
+              "n": 60,
+              "hits": 9,
+              "actualRate": 0.15,
+              "impliedRate": 0.09996358404335372,
+              "edgePp": 5.003641595664628,
+              "roi": 1.0133333333333334,
+              "max1HitExclRoi": 0.7576271186440678,
+              "max2HitExclRoi": 0.6155172413793103,
+              "zScore": 1.323148280472154
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "大村",
+              "minLeaveOneMonthMax2Roi": 0.2833333333333333,
+              "worstMonth": "2024-05"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "大村",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "2025-04"
+            }
+          },
+          "persistent": true,
+          "explainsBoth": true,
+          "forwardAmplifier": false
+        },
+        {
+          "id": "head_local_down",
+          "label": "1号艇当地勝率が全国より0.5以上低い",
+          "candidate": {
+            "discovery": {
+              "n": 45,
+              "hits": 7,
+              "actualRate": 0.15555555555555556,
+              "impliedRate": 0.08532145752808683,
+              "edgePp": 7.023409802746873,
+              "roi": 1.2977777777777777,
+              "max1HitExclRoi": 0.9636363636363636,
+              "max2HitExclRoi": 0.6976744186046512,
+              "zScore": 1.7203840339405234
+            },
+            "forward": {
+              "n": 29,
+              "hits": 8,
+              "actualRate": 0.27586206896551724,
+              "impliedRate": 0.10576249279336226,
+              "edgePp": 17.0099576172155,
+              "roi": 1.893103448275862,
+              "max1HitExclRoi": 1.5392857142857144,
+              "max2HitExclRoi": 1.262962962962963,
+              "zScore": 3.0297793640200736
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 110,
+              "hits": 14,
+              "actualRate": 0.12727272727272726,
+              "impliedRate": 0.09300334899747305,
+              "edgePp": 3.426937827525421,
+              "roi": 0.9981818181818182,
+              "max1HitExclRoi": 0.8275229357798165,
+              "max2HitExclRoi": 0.7175925925925926,
+              "zScore": 1.257926208689602
+            },
+            "forward": {
+              "n": 56,
+              "hits": 5,
+              "actualRate": 0.08928571428571429,
+              "impliedRate": 0.0908171258829663,
+              "edgePp": -0.15314115972520081,
+              "roi": 0.6714285714285714,
+              "max1HitExclRoi": 0.39090909090909093,
+              "max2HitExclRoi": 0.23333333333333334,
+              "zScore": -0.04075282647559301
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "大村",
+              "minLeaveOneMonthMax2Roi": 0.5214285714285715,
+              "worstMonth": "2024-05"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "大村",
+              "minLeaveOneMonthMax2Roi": 1.017391304347826,
+              "worstMonth": "2025-08"
+            }
+          },
+          "persistent": true,
+          "explainsBoth": true,
+          "forwardAmplifier": false
+        },
+        {
+          "id": "wind_dir_北西",
+          "label": "風向北西",
+          "candidate": {
+            "discovery": {
+              "n": 38,
+              "hits": 5,
+              "actualRate": 0.13157894736842105,
+              "impliedRate": 0.0944847636626964,
+              "edgePp": 3.7094183705724646,
+              "roi": 0.631578947368421,
+              "max1HitExclRoi": 0.45135135135135135,
+              "max2HitExclRoi": 0.26944444444444443,
+              "zScore": 0.7994334038463635
+            },
+            "forward": {
+              "n": 32,
+              "hits": 7,
+              "actualRate": 0.21875,
+              "impliedRate": 0.09671856005637697,
+              "edgePp": 12.203143994362303,
+              "roi": 1.621875,
+              "max1HitExclRoi": 1.1548387096774193,
+              "max2HitExclRoi": 0.8933333333333333,
+              "zScore": 2.3686592840899072
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 117,
+              "hits": 16,
+              "actualRate": 0.13675213675213677,
+              "impliedRate": 0.08956763213079903,
+              "edgePp": 4.718450462133774,
+              "roi": 1.2324786324786325,
+              "max1HitExclRoi": 1.0741379310344827,
+              "max2HitExclRoi": 0.9443478260869566,
+              "zScore": 1.8155259387676344
+            },
+            "forward": {
+              "n": 53,
+              "hits": 6,
+              "actualRate": 0.11320754716981132,
+              "impliedRate": 0.09543164940848214,
+              "edgePp": 1.7775897761329178,
+              "roi": 0.7660377358490567,
+              "max1HitExclRoi": 0.5538461538461539,
+              "max2HitExclRoi": 0.39019607843137255,
+              "zScore": 0.45112933963917073
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "大村",
+              "minLeaveOneMonthMax2Roi": 0.07931034482758621,
+              "worstMonth": "2024-03"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "大村",
+              "minLeaveOneMonthMax2Roi": 0.31,
+              "worstMonth": "2025-08"
+            }
+          },
+          "persistent": true,
+          "explainsBoth": false,
+          "forwardAmplifier": true
+        },
+        {
+          "id": "head_exh_top2",
+          "label": "1号艇が展示タイム上位2艇",
+          "candidate": {
+            "discovery": {
+              "n": 65,
+              "hits": 7,
+              "actualRate": 0.1076923076923077,
+              "impliedRate": 0.10176496230906532,
+              "edgePp": 0.5927345383242383,
+              "roi": 0.7169230769230769,
+              "max1HitExclRoi": 0.421875,
+              "max2HitExclRoi": 0.3126984126984127,
+              "zScore": 0.1610213886622181
+            },
+            "forward": {
+              "n": 32,
+              "hits": 6,
+              "actualRate": 0.1875,
+              "impliedRate": 0.11115032438114214,
+              "edgePp": 7.6349675618857855,
+              "roi": 0.803125,
+              "max1HitExclRoi": 0.6290322580645161,
+              "max2HitExclRoi": 0.4766666666666667,
+              "zScore": 1.407579476646155
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 90,
+              "hits": 14,
+              "actualRate": 0.15555555555555556,
+              "impliedRate": 0.08283457142663002,
+              "edgePp": 7.272098412892554,
+              "roi": 1.3511111111111112,
+              "max1HitExclRoi": 1.1865168539325843,
+              "max2HitExclRoi": 1.0556818181818182,
+              "zScore": 2.5417966711992515
+            },
+            "forward": {
+              "n": 53,
+              "hits": 7,
+              "actualRate": 0.1320754716981132,
+              "impliedRate": 0.08671813132560507,
+              "edgePp": 4.535734037250813,
+              "roi": 1.260377358490566,
+              "max1HitExclRoi": 0.975,
+              "max2HitExclRoi": 0.7627450980392156,
+              "zScore": 1.1921143063666029
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "大村",
+              "minLeaveOneMonthMax2Roi": 0.156140350877193,
+              "worstMonth": "2024-03"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "大村",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "2025-08"
+            }
+          },
+          "persistent": true,
+          "explainsBoth": false,
+          "forwardAmplifier": true
+        }
+      ]
+    },
+    {
+      "id": "tokoname_12",
+      "label": "常滑 × 1-2",
+      "combo": "1-2",
+      "base": {
+        "discovery": {
+          "n": 199,
+          "hits": 22,
+          "actualRate": 0.11055276381909548,
+          "impliedRate": 0.08697315550450499,
+          "edgePp": 2.3579608314590494,
+          "roi": 1.0562814070351758,
+          "max1HitExclRoi": 0.9282828282828283,
+          "max2HitExclRoi": 0.8157360406091371,
+          "zScore": 1.2083071415937825
+        },
+        "forward": {
+          "n": 83,
+          "hits": 9,
+          "actualRate": 0.10843373493975904,
+          "impliedRate": 0.07599863180771109,
+          "edgePp": 3.243510313204795,
+          "roi": 1.2734939759036144,
+          "max1HitExclRoi": 0.9865853658536585,
+          "max2HitExclRoi": 0.7950617283950617,
+          "zScore": 1.1307126676934875
+        }
+      },
+      "mechanisms": [
+        {
+          "id": "target_over_inner",
+          "label": "相手艇が内側隣接艇より全国勝率1以上上",
+          "candidate": {
+            "discovery": {
+              "n": 55,
+              "hits": 12,
+              "actualRate": 0.21818181818181817,
+              "impliedRate": 0.14302157117044303,
+              "edgePp": 7.516024701137514,
+              "roi": 1.0636363636363637,
+              "max1HitExclRoi": 0.8944444444444445,
+              "max2HitExclRoi": 0.7905660377358491,
+              "zScore": 1.629162769240521
+            },
+            "forward": {
+              "n": 20,
+              "hits": 4,
+              "actualRate": 0.2,
+              "impliedRate": 0.11568573996375883,
+              "edgePp": 8.431426003624118,
+              "roi": 1.645,
+              "max1HitExclRoi": 1.0789473684210527,
+              "max2HitExclRoi": 0.6944444444444444,
+              "zScore": 1.198044908136529
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 144,
+              "hits": 10,
+              "actualRate": 0.06944444444444445,
+              "impliedRate": 0.06556577452098701,
+              "edgePp": 0.3878669923457437,
+              "roi": 1.0534722222222221,
+              "max1HitExclRoi": 0.8762237762237762,
+              "max2HitExclRoi": 0.719718309859155,
+              "zScore": 0.18998792251137178
+            },
+            "forward": {
+              "n": 63,
+              "hits": 5,
+              "actualRate": 0.07936507936507936,
+              "impliedRate": 0.06339954985341027,
+              "edgePp": 1.5965529511669088,
+              "roi": 1.1555555555555554,
+              "max1HitExclRoi": 0.7741935483870968,
+              "max2HitExclRoi": 0.5163934426229508,
+              "zScore": 0.5237879065563431
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "常滑",
+              "minLeaveOneMonthMax2Roi": 0.5255813953488372,
+              "worstMonth": "2024-09"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "常滑",
+              "minLeaveOneMonthMax2Roi": 0.3058823529411765,
+              "worstMonth": "2025-02"
+            }
+          },
+          "persistent": true,
+          "explainsBoth": true,
+          "forwardAmplifier": false
+        },
+        {
+          "id": "early_race",
+          "label": "1〜4R",
+          "candidate": {
+            "discovery": {
+              "n": 80,
+              "hits": 10,
+              "actualRate": 0.125,
+              "impliedRate": 0.08834579772346152,
+              "edgePp": 3.6654202276538483,
+              "roi": 1.3525,
+              "max1HitExclRoi": 1.0772151898734177,
+              "max2HitExclRoi": 0.8333333333333334,
+              "zScore": 1.1781834532005986
+            },
+            "forward": {
+              "n": 34,
+              "hits": 4,
+              "actualRate": 0.11764705882352941,
+              "impliedRate": 0.060387456711219555,
+              "edgePp": 5.725960211230985,
+              "roi": 1.35,
+              "max1HitExclRoi": 0.6393939393939394,
+              "max2HitExclRoi": 0.390625,
+              "zScore": 1.4119639575232728
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 119,
+              "hits": 12,
+              "actualRate": 0.10084033613445378,
+              "impliedRate": 0.08605037081949221,
+              "edgePp": 1.4789965314961573,
+              "roi": 0.8571428571428571,
+              "max1HitExclRoi": 0.6406779661016949,
+              "max2HitExclRoi": 0.5153846153846153,
+              "zScore": 0.5904074305914657
+            },
+            "forward": {
+              "n": 49,
+              "hits": 5,
+              "actualRate": 0.10204081632653061,
+              "impliedRate": 0.08683087575221547,
+              "edgePp": 1.5209940574315142,
+              "roi": 1.220408163265306,
+              "max1HitExclRoi": 0.9020833333333333,
+              "max2HitExclRoi": 0.6297872340425532,
+              "zScore": 0.38396595222390156
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "常滑",
+              "minLeaveOneMonthMax2Roi": 0.5267605633802817,
+              "worstMonth": "2024-04"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "常滑",
+              "minLeaveOneMonthMax2Roi": 0.17333333333333334,
+              "worstMonth": "2025-02"
+            }
+          },
+          "persistent": true,
+          "explainsBoth": true,
+          "forwardAmplifier": true
+        },
+        {
+          "id": "head_exh_top2",
+          "label": "1号艇が展示タイム上位2艇",
+          "candidate": {
+            "discovery": {
+              "n": 74,
+              "hits": 8,
+              "actualRate": 0.10810810810810811,
+              "impliedRate": 0.10150519123252043,
+              "edgePp": 0.6602916875587685,
+              "roi": 0.8945945945945946,
+              "max1HitExclRoi": 0.5904109589041096,
+              "max2HitExclRoi": 0.4097222222222222,
+              "zScore": 0.19302318549387132
+            },
+            "forward": {
+              "n": 37,
+              "hits": 7,
+              "actualRate": 0.1891891891891892,
+              "impliedRate": 0.08209514631524552,
+              "edgePp": 10.709404287394369,
+              "roi": 2.4108108108108106,
+              "max1HitExclRoi": 1.788888888888889,
+              "max2HitExclRoi": 1.3685714285714285,
+              "zScore": 2.425323107233933
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 125,
+              "hits": 14,
+              "actualRate": 0.112,
+              "impliedRate": 0.07837019035351987,
+              "edgePp": 3.362980964648013,
+              "roi": 1.152,
+              "max1HitExclRoi": 0.9483870967741935,
+              "max2HitExclRoi": 0.7926829268292683,
+              "zScore": 1.427421321576463
+            },
+            "forward": {
+              "n": 46,
+              "hits": 2,
+              "actualRate": 0.043478260869565216,
+              "impliedRate": 0.07109491361686826,
+              "edgePp": -2.7616652747303045,
+              "roi": 0.358695652173913,
+              "max1HitExclRoi": 0.1622222222222222,
+              "max2HitExclRoi": 0,
+              "zScore": -0.7335196052885572
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "常滑",
+              "minLeaveOneMonthMax2Roi": 0.14603174603174604,
+              "worstMonth": "2024-09"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "常滑",
+              "minLeaveOneMonthMax2Roi": 0.7266666666666667,
+              "worstMonth": "2025-05"
+            }
+          },
+          "persistent": true,
+          "explainsBoth": false,
+          "forwardAmplifier": true
+        }
+      ]
+    },
+    {
+      "id": "wind23_14",
+      "label": "風速2〜3m × 1-4",
+      "combo": "1-4",
+      "base": {
+        "discovery": {
+          "n": 1372,
+          "hits": 146,
+          "actualRate": 0.10641399416909621,
+          "impliedRate": 0.10034478629246776,
+          "edgePp": 0.6069207876628444,
+          "roi": 0.7829446064139942,
+          "max1HitExclRoi": 0.751057622173596,
+          "max2HitExclRoi": 0.7218978102189781,
+          "zScore": 0.7790668501226986
+        },
+        "forward": {
+          "n": 681,
+          "hits": 88,
+          "actualRate": 0.12922173274596183,
+          "impliedRate": 0.09888045032811146,
+          "edgePp": 3.0341282417850364,
+          "roi": 1.1562408223201175,
+          "max1HitExclRoi": 1.1035294117647059,
+          "max2HitExclRoi": 1.0536082474226804,
+          "zScore": 2.7645683578993925
+        }
+      },
+      "mechanisms": [
+        {
+          "id": "venue_徳山",
+          "label": "会場徳山",
+          "candidate": {
+            "discovery": {
+              "n": 57,
+              "hits": 11,
+              "actualRate": 0.19298245614035087,
+              "impliedRate": 0.13608916654145686,
+              "edgePp": 5.689328959889401,
+              "roi": 1.0543859649122806,
+              "max1HitExclRoi": 0.8571428571428571,
+              "max2HitExclRoi": 0.7272727272727273,
+              "zScore": 1.2946247353603413
+            },
+            "forward": {
+              "n": 40,
+              "hits": 8,
+              "actualRate": 0.2,
+              "impliedRate": 0.1274544467952416,
+              "edgePp": 7.254555320475841,
+              "roi": 2.0175,
+              "max1HitExclRoi": 1.1205128205128205,
+              "max2HitExclRoi": 0.7684210526315789,
+              "zScore": 1.4372126409740116
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 1315,
+              "hits": 135,
+              "actualRate": 0.10266159695817491,
+              "impliedRate": 0.09879541011437468,
+              "edgePp": 0.38661868438002317,
+              "roi": 0.7711787072243346,
+              "max1HitExclRoi": 0.7378995433789954,
+              "max2HitExclRoi": 0.7074638233054075,
+              "zScore": 0.48928713574580135
+            },
+            "forward": {
+              "n": 641,
+              "hits": 80,
+              "actualRate": 0.12480499219968799,
+              "impliedRate": 0.09709736162501442,
+              "edgePp": 2.7707630574673567,
+              "roi": 1.1024960998439937,
+              "max1HitExclRoi": 1.04953125,
+              "max2HitExclRoi": 0.9998435054773083,
+              "zScore": 2.4680769224836623
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "徳山",
+              "minLeaveOneMonthMax2Roi": 0.54,
+              "worstMonth": "2024-09"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "徳山",
+              "minLeaveOneMonthMax2Roi": 0.28285714285714286,
+              "worstMonth": "2025-06"
+            }
+          },
+          "persistent": true,
+          "explainsBoth": true,
+          "forwardAmplifier": true
+        },
+        {
+          "id": "wind_dir_南西",
+          "label": "風向南西",
+          "candidate": {
+            "discovery": {
+              "n": 198,
+              "hits": 27,
+              "actualRate": 0.13636363636363635,
+              "impliedRate": 0.09462038637995811,
+              "edgePp": 4.174324998367824,
+              "roi": 1.1611111111111112,
+              "max1HitExclRoi": 1.0197969543147207,
+              "max2HitExclRoi": 0.9061224489795918,
+              "zScore": 2.0901013376038122
+            },
+            "forward": {
+              "n": 95,
+              "hits": 19,
+              "actualRate": 0.2,
+              "impliedRate": 0.09947845079636862,
+              "edgePp": 10.052154920363138,
+              "roi": 1.996842105263158,
+              "max1HitExclRoi": 1.624468085106383,
+              "max2HitExclRoi": 1.2655913978494624,
+              "zScore": 3.425836529362799
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 1174,
+              "hits": 119,
+              "actualRate": 0.10136286201022146,
+              "impliedRate": 0.10131023023001202,
+              "edgePp": 0.005263178020943615,
+              "roi": 0.7191652470187394,
+              "max1HitExclRoi": 0.681841432225064,
+              "max2HitExclRoi": 0.6476962457337884,
+              "zScore": 0.006222567225767886
+            },
+            "forward": {
+              "n": 586,
+              "hits": 69,
+              "actualRate": 0.11774744027303755,
+              "impliedRate": 0.09878350485970797,
+              "edgePp": 1.896393541332958,
+              "roi": 1.0199658703071672,
+              "max1HitExclRoi": 0.9656410256410256,
+              "max2HitExclRoi": 0.9183219178082191,
+              "zScore": 1.6024918686646559
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0.682258064516129,
+              "worstVenue": "びわこ",
+              "minLeaveOneMonthMax2Roi": 0.8146067415730337,
+              "worstMonth": "2024-05"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0.9770114942528736,
+              "worstVenue": "丸亀",
+              "minLeaveOneMonthMax2Roi": 0.47638888888888886,
+              "worstMonth": "2025-08"
+            }
+          },
+          "persistent": true,
+          "explainsBoth": true,
+          "forwardAmplifier": true
+        },
+        {
+          "id": "venue_下関",
+          "label": "会場下関",
+          "candidate": {
+            "discovery": {
+              "n": 84,
+              "hits": 11,
+              "actualRate": 0.13095238095238096,
+              "impliedRate": 0.10067976164183287,
+              "edgePp": 3.0272619310548086,
+              "roi": 0.7333333333333333,
+              "max1HitExclRoi": 0.5686746987951807,
+              "max2HitExclRoi": 0.4146341463414634,
+              "zScore": 0.960790490311749
+            },
+            "forward": {
+              "n": 42,
+              "hits": 8,
+              "actualRate": 0.19047619047619047,
+              "impliedRate": 0.10795314040150775,
+              "edgePp": 8.252305007468271,
+              "roi": 0.8404761904761905,
+              "max1HitExclRoi": 0.6658536585365854,
+              "max2HitExclRoi": 0.5075,
+              "zScore": 1.807935258852839
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 1288,
+              "hits": 135,
+              "actualRate": 0.1048136645962733,
+              "impliedRate": 0.10032294007403084,
+              "edgePp": 0.4490724522242459,
+              "roi": 0.7861801242236025,
+              "max1HitExclRoi": 0.7522144522144523,
+              "max2HitExclRoi": 0.7211508553654743,
+              "zScore": 0.5585490534508333
+            },
+            "forward": {
+              "n": 639,
+              "hits": 80,
+              "actualRate": 0.12519561815336464,
+              "impliedRate": 0.09828412328103377,
+              "edgePp": 2.691149487233087,
+              "roi": 1.1769953051643192,
+              "max1HitExclRoi": 1.120846394984326,
+              "max2HitExclRoi": 1.0676609105180535,
+              "zScore": 2.3804731020049568
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "下関",
+              "minLeaveOneMonthMax2Roi": 0.3,
+              "worstMonth": "2024-08"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "下関",
+              "minLeaveOneMonthMax2Roi": 0.20277777777777778,
+              "worstMonth": "2025-08"
+            }
+          },
+          "persistent": true,
+          "explainsBoth": true,
+          "forwardAmplifier": true
+        },
+        {
+          "id": "venue_津",
+          "label": "会場津",
+          "candidate": {
+            "discovery": {
+              "n": 66,
+              "hits": 7,
+              "actualRate": 0.10606060606060606,
+              "impliedRate": 0.08056820967262039,
+              "edgePp": 2.549239638798567,
+              "roi": 0.6075757575757575,
+              "max1HitExclRoi": 0.49538461538461537,
+              "max2HitExclRoi": 0.396875,
+              "zScore": 0.7801646742903022
+            },
+            "forward": {
+              "n": 44,
+              "hits": 5,
+              "actualRate": 0.11363636363636363,
+              "impliedRate": 0.07537361543126116,
+              "edgePp": 3.8262748205102475,
+              "roi": 2.047727272727273,
+              "max1HitExclRoi": 1.5162790697674418,
+              "max2HitExclRoi": 0.9761904761904762,
+              "zScore": 0.9858598360989852
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 1306,
+              "hits": 139,
+              "actualRate": 0.10643185298621746,
+              "impliedRate": 0.10134421512624249,
+              "edgePp": 0.5087637859974972,
+              "roi": 0.7918070444104135,
+              "max1HitExclRoi": 0.7583141762452107,
+              "max2HitExclRoi": 0.7276840490797546,
+              "zScore": 0.6347069882835525
+            },
+            "forward": {
+              "n": 637,
+              "hits": 83,
+              "actualRate": 0.130298273155416,
+              "impliedRate": 0.10050415634924396,
+              "edgePp": 2.979411680617204,
+              "roi": 1.0946624803767662,
+              "max1HitExclRoi": 1.0382075471698113,
+              "max2HitExclRoi": 0.9847244094488189,
+              "zScore": 2.6083102300582093
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "津",
+              "minLeaveOneMonthMax2Roi": 0.158,
+              "worstMonth": "2024-08"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "津",
+              "minLeaveOneMonthMax2Roi": 0.11944444444444445,
+              "worstMonth": "2025-11"
+            }
+          },
+          "persistent": true,
+          "explainsBoth": true,
+          "forwardAmplifier": false
+        },
+        {
+          "id": "season_秋(9-11)",
+          "label": "秋(9-11)",
+          "candidate": {
+            "discovery": {
+              "n": 380,
+              "hits": 49,
+              "actualRate": 0.12894736842105264,
+              "impliedRate": 0.10552171166121171,
+              "edgePp": 2.342565675984093,
+              "roi": 0.8373684210526315,
+              "max1HitExclRoi": 0.7503957783641161,
+              "max2HitExclRoi": 0.7005291005291006,
+              "zScore": 1.5451380305626052
+            },
+            "forward": {
+              "n": 149,
+              "hits": 23,
+              "actualRate": 0.15436241610738255,
+              "impliedRate": 0.09493127651271045,
+              "edgePp": 5.94311395946721,
+              "roi": 1.461744966442953,
+              "max1HitExclRoi": 1.3033783783783783,
+              "max2HitExclRoi": 1.1476190476190475,
+              "zScore": 2.562523068446261
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 992,
+              "hits": 97,
+              "actualRate": 0.09778225806451613,
+              "impliedRate": 0.09836168988105379,
+              "edgePp": -0.05794318165376622,
+              "roi": 0.7620967741935484,
+              "max1HitExclRoi": 0.7179616548940464,
+              "max2HitExclRoi": 0.6775757575757576,
+              "zScore": -0.06384635154532858
+            },
+            "forward": {
+              "n": 532,
+              "hits": 65,
+              "actualRate": 0.12218045112781954,
+              "impliedRate": 0.09998651592678579,
+              "edgePp": 2.2193935201033756,
+              "roi": 1.0706766917293233,
+              "max1HitExclRoi": 1.0030131826741997,
+              "max2HitExclRoi": 0.9388679245283019,
+              "zScore": 1.7816357189175969
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0.639193083573487,
+              "worstVenue": "常滑",
+              "minLeaveOneMonthMax2Roi": 0.4653846153846154,
+              "worstMonth": "2024-09"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0.8135338345864662,
+              "worstVenue": "津",
+              "minLeaveOneMonthMax2Roi": 0.9029126213592233,
+              "worstMonth": "2025-11"
+            }
+          },
+          "persistent": true,
+          "explainsBoth": true,
+          "forwardAmplifier": true
+        },
+        {
+          "id": "target_local_up",
+          "label": "相手艇当地勝率が全国より0.5以上高い",
+          "candidate": {
+            "discovery": {
+              "n": 290,
+              "hits": 35,
+              "actualRate": 0.1206896551724138,
+              "impliedRate": 0.10432813021307678,
+              "edgePp": 1.6361524959337015,
+              "roi": 0.9075862068965517,
+              "max1HitExclRoi": 0.7698961937716263,
+              "max2HitExclRoi": 0.6784722222222223,
+              "zScore": 0.946791632554171
+            },
+            "forward": {
+              "n": 135,
+              "hits": 21,
+              "actualRate": 0.15555555555555556,
+              "impliedRate": 0.09406462942918484,
+              "edgePp": 6.149092612637072,
+              "roi": 1.4022222222222223,
+              "max1HitExclRoi": 1.1365671641791044,
+              "max2HitExclRoi": 0.9187969924812031,
+              "zScore": 2.5262436165733835
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 1082,
+              "hits": 111,
+              "actualRate": 0.10258780036968576,
+              "impliedRate": 0.09927716176661137,
+              "edgePp": 0.3310638603074387,
+              "roi": 0.7495378927911276,
+              "max1HitExclRoi": 0.7090656799259945,
+              "max2HitExclRoi": 0.6784259259259259,
+              "zScore": 0.3794342514952663
+            },
+            "forward": {
+              "n": 546,
+              "hits": 67,
+              "actualRate": 0.1227106227106227,
+              "impliedRate": 0.10007117527564827,
+              "edgePp": 2.263944743497444,
+              "roi": 1.0954212454212455,
+              "max1HitExclRoi": 1.0332110091743119,
+              "max2HitExclRoi": 0.9748161764705883,
+              "zScore": 1.8414024193693002
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0.5938697318007663,
+              "worstVenue": "福岡",
+              "minLeaveOneMonthMax2Roi": 0.5726235741444867,
+              "worstMonth": "2024-12"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0.736,
+              "worstVenue": "福岡",
+              "minLeaveOneMonthMax2Roi": 0.47876106194690266,
+              "worstMonth": "2025-08"
+            }
+          },
+          "persistent": true,
+          "explainsBoth": true,
+          "forwardAmplifier": true
+        },
+        {
+          "id": "target_motor40",
+          "label": "相手艇モーター2連率40%以上",
+          "candidate": {
+            "discovery": {
+              "n": 265,
+              "hits": 32,
+              "actualRate": 0.12075471698113208,
+              "impliedRate": 0.10631556793938642,
+              "edgePp": 1.443914904174566,
+              "roi": 0.7150943396226415,
+              "max1HitExclRoi": 0.643560606060606,
+              "max2HitExclRoi": 0.5775665399239543,
+              "zScore": 0.7910497140837581
+            },
+            "forward": {
+              "n": 150,
+              "hits": 23,
+              "actualRate": 0.15333333333333332,
+              "impliedRate": 0.11032749889918003,
+              "edgePp": 4.300583443415329,
+              "roi": 1.628,
+              "max1HitExclRoi": 1.4187919463087248,
+              "max2HitExclRoi": 1.2540540540540541,
+              "zScore": 1.7647562039016107
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 1107,
+              "hits": 114,
+              "actualRate": 0.10298102981029811,
+              "impliedRate": 0.09891546638602383,
+              "edgePp": 0.40655634242742766,
+              "roi": 0.7991869918699187,
+              "max1HitExclRoi": 0.7596745027124774,
+              "max2HitExclRoi": 0.7235294117647059,
+              "zScore": 0.4721942150448221
+            },
+            "forward": {
+              "n": 531,
+              "hits": 65,
+              "actualRate": 0.1224105461393597,
+              "impliedRate": 0.09564682078826155,
+              "edgePp": 2.6763725351098153,
+              "roi": 1.0229755178907722,
+              "max1HitExclRoi": 0.9550943396226416,
+              "max2HitExclRoi": 0.8907372400756144,
+              "zScore": 2.1799774566109806
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0.5131474103585657,
+              "worstVenue": "宮島",
+              "minLeaveOneMonthMax2Roi": 0.5071428571428571,
+              "worstMonth": "2024-12"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0.8866666666666667,
+              "worstVenue": "津",
+              "minLeaveOneMonthMax2Roi": 0.9619834710743802,
+              "worstMonth": "2025-05"
+            }
+          },
+          "persistent": true,
+          "explainsBoth": true,
+          "forwardAmplifier": true
+        },
+        {
+          "id": "venue_宮島",
+          "label": "会場宮島",
+          "candidate": {
+            "discovery": {
+              "n": 68,
+              "hits": 8,
+              "actualRate": 0.11764705882352941,
+              "impliedRate": 0.10327824424571902,
+              "edgePp": 1.436881457781039,
+              "roi": 1.214705882352941,
+              "max1HitExclRoi": 0.8,
+              "max2HitExclRoi": 0.5863636363636363,
+              "zScore": 0.4048319624942916
+            },
+            "forward": {
+              "n": 29,
+              "hits": 5,
+              "actualRate": 0.1724137931034483,
+              "impliedRate": 0.1097057979992053,
+              "edgePp": 6.2707995104242995,
+              "roi": 1.1551724137931034,
+              "max1HitExclRoi": 0.625,
+              "max2HitExclRoi": 0.42962962962962964,
+              "zScore": 1.1174099759558838
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 1304,
+              "hits": 138,
+              "actualRate": 0.1058282208588957,
+              "impliedRate": 0.1001918145587092,
+              "edgePp": 0.5636406300186512,
+              "roi": 0.7604294478527608,
+              "max1HitExclRoi": 0.7268610897927859,
+              "max2HitExclRoi": 0.6961597542242703,
+              "zScore": 0.7058836972572073
+            },
+            "forward": {
+              "n": 652,
+              "hits": 83,
+              "actualRate": 0.1273006134969325,
+              "impliedRate": 0.09839895480286341,
+              "edgePp": 2.8901658694069092,
+              "roi": 1.1562883435582823,
+              "max1HitExclRoi": 1.1012288786482334,
+              "max2HitExclRoi": 1.049076923076923,
+              "zScore": 2.5832391999485123
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "宮島",
+              "minLeaveOneMonthMax2Roi": 0.4056603773584906,
+              "worstMonth": "2024-12"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "宮島",
+              "minLeaveOneMonthMax2Roi": 0.13043478260869565,
+              "worstMonth": "2025-08"
+            }
+          },
+          "persistent": true,
+          "explainsBoth": true,
+          "forwardAmplifier": false
+        },
+        {
+          "id": "early_race",
+          "label": "1〜4R",
+          "candidate": {
+            "discovery": {
+              "n": 556,
+              "hits": 55,
+              "actualRate": 0.09892086330935251,
+              "impliedRate": 0.08781841042216477,
+              "edgePp": 1.110245288718774,
+              "roi": 0.8537769784172662,
+              "max1HitExclRoi": 0.7751351351351351,
+              "max2HitExclRoi": 0.7155234657039711,
+              "zScore": 0.9588104482779845
+            },
+            "forward": {
+              "n": 290,
+              "hits": 37,
+              "actualRate": 0.12758620689655173,
+              "impliedRate": 0.08464822071889767,
+              "edgePp": 4.293798617765406,
+              "roi": 1.4858620689655173,
+              "max1HitExclRoi": 1.3698961937716263,
+              "max2HitExclRoi": 1.2607638888888888,
+              "zScore": 2.7211641737460197
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 816,
+              "hits": 91,
+              "actualRate": 0.11151960784313726,
+              "impliedRate": 0.10887991494919387,
+              "edgePp": 0.26396928939433906,
+              "roi": 0.7346813725490197,
+              "max1HitExclRoi": 0.685644171779141,
+              "max2HitExclRoi": 0.6508599508599509,
+              "zScore": 0.25246626351599405
+            },
+            "forward": {
+              "n": 391,
+              "hits": 51,
+              "actualRate": 0.13043478260869565,
+              "impliedRate": 0.10943632395131342,
+              "edgePp": 2.099845865738223,
+              "roi": 0.9117647058823529,
+              "max1HitExclRoi": 0.8192307692307692,
+              "max2HitExclRoi": 0.747814910025707,
+              "zScore": 1.3893760806879811
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0.6335907335907336,
+              "worstVenue": "平和島",
+              "minLeaveOneMonthMax2Roi": 0.6303675048355899,
+              "worstMonth": "2024-11"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 1.0424812030075188,
+              "worstVenue": "津",
+              "minLeaveOneMonthMax2Roi": 1.1041984732824428,
+              "worstMonth": "2025-11"
+            }
+          },
+          "persistent": true,
+          "explainsBoth": true,
+          "forwardAmplifier": true
+        },
+        {
+          "id": "venue_常滑",
+          "label": "会場常滑",
+          "candidate": {
+            "discovery": {
+              "n": 121,
+              "hits": 14,
+              "actualRate": 0.11570247933884298,
+              "impliedRate": 0.10807911286195135,
+              "edgePp": 0.762336647689163,
+              "roi": 0.7041322314049587,
+              "max1HitExclRoi": 0.57,
+              "max2HitExclRoi": 0.48739495798319327,
+              "zScore": 0.2831294936280941
+            },
+            "forward": {
+              "n": 47,
+              "hits": 8,
+              "actualRate": 0.1702127659574468,
+              "impliedRate": 0.06781742625763054,
+              "edgePp": 10.239533969981625,
+              "roi": 2.276595744680851,
+              "max1HitExclRoi": 1.6130434782608696,
+              "max2HitExclRoi": 1.0133333333333334,
+              "zScore": 2.8815492155247093
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 1251,
+              "hits": 132,
+              "actualRate": 0.10551558752997602,
+              "impliedRate": 0.09959670194801729,
+              "edgePp": 0.591888558195873,
+              "roi": 0.7905675459632294,
+              "max1HitExclRoi": 0.7556,
+              "max2HitExclRoi": 0.7236188951160929,
+              "zScore": 0.7273796043171228
+            },
+            "forward": {
+              "n": 634,
+              "hits": 80,
+              "actualRate": 0.12618296529968454,
+              "impliedRate": 0.10118322971503985,
+              "edgePp": 2.499973558464469,
+              "roi": 1.073186119873817,
+              "max1HitExclRoi": 1.0164296998420221,
+              "max2HitExclRoi": 0.9626582278481013,
+              "zScore": 2.175675289986921
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "常滑",
+              "minLeaveOneMonthMax2Roi": 0.3105263157894737,
+              "worstMonth": "2024-09"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "常滑",
+              "minLeaveOneMonthMax2Roi": 0.5888888888888889,
+              "worstMonth": "2025-05"
+            }
+          },
+          "persistent": true,
+          "explainsBoth": true,
+          "forwardAmplifier": true
+        },
+        {
+          "id": "venue_大村",
+          "label": "会場大村",
+          "candidate": {
+            "discovery": {
+              "n": 60,
+              "hits": 8,
+              "actualRate": 0.13333333333333333,
+              "impliedRate": 0.12862052114815756,
+              "edgePp": 0.4712812185175774,
+              "roi": 0.62,
+              "max1HitExclRoi": 0.48983050847457626,
+              "max2HitExclRoi": 0.3586206896551724,
+              "zScore": 0.114019375406352
+            },
+            "forward": {
+              "n": 44,
+              "hits": 8,
+              "actualRate": 0.18181818181818182,
+              "impliedRate": 0.13803447298919394,
+              "edgePp": 4.378370882898788,
+              "roi": 0.9363636363636364,
+              "max1HitExclRoi": 0.7418604651162791,
+              "max2HitExclRoi": 0.5452380952380952,
+              "zScore": 0.8743417677747523
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 1312,
+              "hits": 138,
+              "actualRate": 0.10518292682926829,
+              "impliedRate": 0.09905168866187213,
+              "edgePp": 0.6131238167396164,
+              "roi": 0.7903963414634146,
+              "max1HitExclRoi": 0.7570556826849733,
+              "max2HitExclRoi": 0.7265648854961833,
+              "zScore": 0.7737268952918868
+            },
+            "forward": {
+              "n": 637,
+              "hits": 80,
+              "actualRate": 0.12558869701726844,
+              "impliedRate": 0.09617593384916702,
+              "edgePp": 2.9412763168101415,
+              "roi": 1.1714285714285715,
+              "max1HitExclRoi": 1.1150943396226416,
+              "max2HitExclRoi": 1.0617322834645668,
+              "zScore": 2.623398805550798
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "大村",
+              "minLeaveOneMonthMax2Roi": 0.1574468085106383,
+              "worstMonth": "2024-05"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "大村",
+              "minLeaveOneMonthMax2Roi": 0.084375,
+              "worstMonth": "2025-07"
+            }
+          },
+          "persistent": true,
+          "explainsBoth": false,
+          "forwardAmplifier": true
+        },
+        {
+          "id": "head_exh_top2",
+          "label": "1号艇が展示タイム上位2艇",
+          "candidate": {
+            "discovery": {
+              "n": 575,
+              "hits": 64,
+              "actualRate": 0.11130434782608696,
+              "impliedRate": 0.11036166840734499,
+              "edgePp": 0.09426794187419735,
+              "roi": 0.6156521739130435,
+              "max1HitExclRoi": 0.5695121951219512,
+              "max2HitExclRoi": 0.5366492146596858,
+              "zScore": 0.0752524938940233
+            },
+            "forward": {
+              "n": 326,
+              "hits": 50,
+              "actualRate": 0.15337423312883436,
+              "impliedRate": 0.10994307164762575,
+              "edgePp": 4.343116148120861,
+              "roi": 1.2904907975460123,
+              "max1HitExclRoi": 1.1806153846153846,
+              "max2HitExclRoi": 1.0830246913580246,
+              "zScore": 2.6086560297893087
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 797,
+              "hits": 82,
+              "actualRate": 0.1028858218318695,
+              "impliedRate": 0.09311805201887385,
+              "edgePp": 0.9767769812995653,
+              "roi": 0.9036386449184441,
+              "max1HitExclRoi": 0.8488693467336683,
+              "max2HitExclRoi": 0.7987421383647799,
+              "zScore": 0.9858381275108605
+            },
+            "forward": {
+              "n": 355,
+              "hits": 38,
+              "actualRate": 0.10704225352112676,
+              "impliedRate": 0.08872153610230381,
+              "edgePp": 1.832071741882295,
+              "roi": 1.0329577464788733,
+              "max1HitExclRoi": 0.9370056497175141,
+              "max2HitExclRoi": 0.8543909348441926,
+              "zScore": 1.2657449807526322
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0.490625,
+              "worstVenue": "徳山",
+              "minLeaveOneMonthMax2Roi": 0.47371541501976283,
+              "worstMonth": "2024-08"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0.9501672240802675,
+              "worstVenue": "徳山",
+              "minLeaveOneMonthMax2Roi": 0.9397769516728625,
+              "worstMonth": "2025-08"
+            }
+          },
+          "persistent": true,
+          "explainsBoth": false,
+          "forwardAmplifier": true
+        },
+        {
+          "id": "wind_dir_西",
+          "label": "風向西",
+          "candidate": {
+            "discovery": {
+              "n": 118,
+              "hits": 10,
+              "actualRate": 0.0847457627118644,
+              "impliedRate": 0.09420674500372336,
+              "edgePp": -0.946098229185896,
+              "roi": 0.5177966101694915,
+              "max1HitExclRoi": 0.3786324786324786,
+              "max2HitExclRoi": 0.29224137931034483,
+              "zScore": -0.3665036931814387
+            },
+            "forward": {
+              "n": 76,
+              "hits": 13,
+              "actualRate": 0.17105263157894737,
+              "impliedRate": 0.08805188572719364,
+              "edgePp": 8.300074585175373,
+              "roi": 1.5605263157894738,
+              "max1HitExclRoi": 1.144,
+              "max2HitExclRoi": 0.8905405405405405,
+              "zScore": 2.674399781516797
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 1254,
+              "hits": 136,
+              "actualRate": 0.10845295055821372,
+              "impliedRate": 0.10092236912506088,
+              "edgePp": 0.7530581433152841,
+              "roi": 0.8078947368421052,
+              "max1HitExclRoi": 0.773024740622506,
+              "max2HitExclRoi": 0.7411341853035144,
+              "zScore": 0.9217403811371908
+            },
+            "forward": {
+              "n": 605,
+              "hits": 75,
+              "actualRate": 0.12396694214876033,
+              "impliedRate": 0.10024073282343338,
+              "edgePp": 2.372620932532696,
+              "roi": 1.1054545454545455,
+              "max1HitExclRoi": 1.046026490066225,
+              "max2HitExclRoi": 0.9897180762852404,
+              "zScore": 2.0240009648749533
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0.17349397590361446,
+              "worstVenue": "常滑",
+              "minLeaveOneMonthMax2Roi": 0.19158878504672897,
+              "worstMonth": "2024-09"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0.6057142857142858,
+              "worstVenue": "大村",
+              "minLeaveOneMonthMax2Roi": 0.5983606557377049,
+              "worstMonth": "2025-07"
+            }
+          },
+          "persistent": false,
+          "explainsBoth": false,
+          "forwardAmplifier": true
+        },
+        {
+          "id": "wind_dir_東",
+          "label": "風向東",
+          "candidate": {
+            "discovery": {
+              "n": 125,
+              "hits": 10,
+              "actualRate": 0.08,
+              "impliedRate": 0.09409237463443593,
+              "edgePp": -1.4092374634435925,
+              "roi": 0.4496,
+              "max1HitExclRoi": 0.35161290322580646,
+              "max2HitExclRoi": 0.29024390243902437,
+              "zScore": -0.5608187703413454
+            },
+            "forward": {
+              "n": 55,
+              "hits": 9,
+              "actualRate": 0.16363636363636364,
+              "impliedRate": 0.09512140271712935,
+              "edgePp": 6.851496091923429,
+              "roi": 1.8818181818181818,
+              "max1HitExclRoi": 1.4388888888888889,
+              "max2HitExclRoi": 0.9962264150943396,
+              "zScore": 1.8099271035599755
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 1247,
+              "hits": 136,
+              "actualRate": 0.1090617481956696,
+              "impliedRate": 0.10097153164712204,
+              "edgePp": 0.8090216548547566,
+              "roi": 0.8163592622293504,
+              "max1HitExclRoi": 0.7813001605136437,
+              "max2HitExclRoi": 0.7492369477911647,
+              "zScore": 0.9874793453173062
+            },
+            "forward": {
+              "n": 626,
+              "hits": 79,
+              "actualRate": 0.12619808306709265,
+              "impliedRate": 0.09921071808945972,
+              "edgePp": 2.698736497763293,
+              "roi": 1.0924920127795528,
+              "max1HitExclRoi": 1.03504,
+              "max2HitExclRoi": 0.9806089743589743,
+              "zScore": 2.3535404269470868
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0.21320754716981133,
+              "worstVenue": "宮島",
+              "minLeaveOneMonthMax2Roi": 0.2153846153846154,
+              "worstMonth": "2024-03"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0.4024390243902439,
+              "worstVenue": "津",
+              "minLeaveOneMonthMax2Roi": 0.5479166666666667,
+              "worstMonth": "2025-10"
+            }
+          },
+          "persistent": false,
+          "explainsBoth": false,
+          "forwardAmplifier": true
+        },
+        {
+          "id": "venue_蒲郡",
+          "label": "会場蒲郡",
+          "candidate": {
+            "discovery": {
+              "n": 88,
+              "hits": 5,
+              "actualRate": 0.056818181818181816,
+              "impliedRate": 0.09120243241554439,
+              "edgePp": -3.4384250597362573,
+              "roi": 0.7568181818181818,
+              "max1HitExclRoi": 0.2540229885057471,
+              "max2HitExclRoi": 0.1313953488372093,
+              "zScore": -1.1715380192898686
+            },
+            "forward": {
+              "n": 34,
+              "hits": 5,
+              "actualRate": 0.14705882352941177,
+              "impliedRate": 0.09761837176693022,
+              "edgePp": 4.944045176248155,
+              "roi": 0.8529411764705882,
+              "max1HitExclRoi": 0.6454545454545455,
+              "max2HitExclRoi": 0.45,
+              "zScore": 1.0357893708176074
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 1284,
+              "hits": 141,
+              "actualRate": 0.10981308411214953,
+              "impliedRate": 0.10097136506284873,
+              "edgePp": 0.8841719049300798,
+              "roi": 0.7847352024922118,
+              "max1HitExclRoi": 0.7536243180046766,
+              "max2HitExclRoi": 0.7278471138845554,
+              "zScore": 1.0945992033827423
+            },
+            "forward": {
+              "n": 647,
+              "hits": 83,
+              "actualRate": 0.12828438948995363,
+              "impliedRate": 0.09894677284910088,
+              "edgePp": 2.9337616640852757,
+              "roi": 1.1721792890262752,
+              "max1HitExclRoi": 1.11671826625387,
+              "max2HitExclRoi": 1.064186046511628,
+              "zScore": 2.601734034448907
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "蒲郡",
+              "minLeaveOneMonthMax2Roi": 0.038028169014084505,
+              "worstMonth": "2024-01"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "蒲郡",
+              "minLeaveOneMonthMax2Roi": 0.16666666666666666,
+              "worstMonth": "2025-08"
+            }
+          },
+          "persistent": false,
+          "explainsBoth": false,
+          "forwardAmplifier": true
+        },
+        {
+          "id": "venue_丸亀",
+          "label": "会場丸亀",
+          "candidate": {
+            "discovery": {
+              "n": 82,
+              "hits": 5,
+              "actualRate": 0.06097560975609756,
+              "impliedRate": 0.10874567487719623,
+              "edgePp": -4.7770065121098675,
+              "roi": 0.27195121951219514,
+              "max1HitExclRoi": 0.1654320987654321,
+              "max2HitExclRoi": 0.10375,
+              "zScore": -1.422964945799309
+            },
+            "forward": {
+              "n": 42,
+              "hits": 8,
+              "actualRate": 0.19047619047619047,
+              "impliedRate": 0.11298566219267253,
+              "edgePp": 7.749052828351793,
+              "roi": 2.0619047619047617,
+              "max1HitExclRoi": 1.3780487804878048,
+              "max2HitExclRoi": 0.795,
+              "zScore": 1.6435089043450575
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 1290,
+              "hits": 141,
+              "actualRate": 0.10930232558139535,
+              "impliedRate": 0.0998107763204152,
+              "edgePp": 0.9491549260980157,
+              "roi": 0.8154263565891473,
+              "max1HitExclRoi": 0.7815360744763382,
+              "max2HitExclRoi": 0.7505434782608695,
+              "zScore": 1.1855485962686096
+            },
+            "forward": {
+              "n": 639,
+              "hits": 80,
+              "actualRate": 0.12519561815336464,
+              "impliedRate": 0.09795334720086332,
+              "edgePp": 2.7242270952501313,
+              "roi": 1.0967136150234742,
+              "max1HitExclRoi": 1.0404388714733541,
+              "max2HitExclRoi": 0.98712715855573,
+              "zScore": 2.4154383314142813
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "丸亀",
+              "minLeaveOneMonthMax2Roi": 0.07260273972602739,
+              "worstMonth": "2024-08"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "丸亀",
+              "minLeaveOneMonthMax2Roi": 0.581081081081081,
+              "worstMonth": "2025-06"
+            }
+          },
+          "persistent": false,
+          "explainsBoth": false,
+          "forwardAmplifier": true
+        }
+      ]
+    },
+    {
+      "id": "wind23_sw_14",
+      "label": "風速2〜3m・南西風 × 1-4",
+      "combo": "1-4",
+      "base": {
+        "discovery": {
+          "n": 198,
+          "hits": 27,
+          "actualRate": 0.13636363636363635,
+          "impliedRate": 0.09462038637995811,
+          "edgePp": 4.174324998367824,
+          "roi": 1.1611111111111112,
+          "max1HitExclRoi": 1.0197969543147207,
+          "max2HitExclRoi": 0.9061224489795918,
+          "zScore": 2.0901013376038122
+        },
+        "forward": {
+          "n": 95,
+          "hits": 19,
+          "actualRate": 0.2,
+          "impliedRate": 0.09947845079636862,
+          "edgePp": 10.052154920363138,
+          "roi": 1.996842105263158,
+          "max1HitExclRoi": 1.624468085106383,
+          "max2HitExclRoi": 1.2655913978494624,
+          "zScore": 3.425836529362799
+        }
+      },
+      "mechanisms": [
+        {
+          "id": "head_local_up",
+          "label": "1号艇当地勝率が全国より0.5以上高い",
+          "candidate": {
+            "discovery": {
+              "n": 46,
+              "hits": 10,
+              "actualRate": 0.21739130434782608,
+              "impliedRate": 0.08166613950386907,
+              "edgePp": 13.572516484395702,
+              "roi": 2.4347826086956523,
+              "max1HitExclRoi": 1.8444444444444446,
+              "max2HitExclRoi": 1.356818181818182,
+              "zScore": 3.472433221012006
+            },
+            "forward": {
+              "n": 20,
+              "hits": 4,
+              "actualRate": 0.2,
+              "impliedRate": 0.08289227198056862,
+              "edgePp": 11.71077280194314,
+              "roi": 4.03,
+              "max1HitExclRoi": 2.294736842105263,
+              "max2HitExclRoi": 0.75,
+              "zScore": 1.9934884379169493
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 152,
+              "hits": 17,
+              "actualRate": 0.1118421052631579,
+              "impliedRate": 0.09854075056614296,
+              "edgePp": 1.3301354697014933,
+              "roi": 0.7756578947368421,
+              "max1HitExclRoi": 0.652317880794702,
+              "max2HitExclRoi": 0.5333333333333333,
+              "zScore": 0.5740430157785112
+            },
+            "forward": {
+              "n": 75,
+              "hits": 15,
+              "actualRate": 0.2,
+              "impliedRate": 0.10390143181391531,
+              "edgePp": 9.60985681860847,
+              "roi": 1.4546666666666668,
+              "max1HitExclRoi": 1.0013513513513514,
+              "max2HitExclRoi": 0.7958904109589041,
+              "zScore": 2.8512438078441233
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0.8527777777777777,
+              "worstVenue": "徳山",
+              "minLeaveOneMonthMax2Roi": 0.9641025641025641,
+              "worstMonth": "2024-09"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0,
+              "worstVenue": "蒲郡",
+              "minLeaveOneMonthMax2Roi": 0,
+              "worstMonth": "2025-08"
+            }
+          },
+          "persistent": true,
+          "explainsBoth": true,
+          "forwardAmplifier": false
+        },
+        {
+          "id": "target_top_rival",
+          "label": "相手艇が1号艇以外で全国勝率最上位",
+          "candidate": {
+            "discovery": {
+              "n": 52,
+              "hits": 13,
+              "actualRate": 0.25,
+              "impliedRate": 0.1656408521029071,
+              "edgePp": 8.43591478970929,
+              "roi": 2.207692307692308,
+              "max1HitExclRoi": 1.6823529411764706,
+              "max2HitExclRoi": 1.328,
+              "zScore": 1.685061828331318
+            },
+            "forward": {
+              "n": 24,
+              "hits": 10,
+              "actualRate": 0.4166666666666667,
+              "impliedRate": 0.19002522903168959,
+              "edgePp": 22.66414376349771,
+              "roi": 1.8,
+              "max1HitExclRoi": 1.5869565217391304,
+              "max2HitExclRoi": 1.3954545454545455,
+              "zScore": 2.897631288785638
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 146,
+              "hits": 14,
+              "actualRate": 0.0958904109589041,
+              "impliedRate": 0.06932542598548316,
+              "edgePp": 2.656498497342094,
+              "roi": 0.7883561643835616,
+              "max1HitExclRoi": 0.6331034482758621,
+              "max2HitExclRoi": 0.5458333333333333,
+              "zScore": 1.3029665107490156
+            },
+            "forward": {
+              "n": 71,
+              "hits": 9,
+              "actualRate": 0.1267605633802817,
+              "impliedRate": 0.06887108913935873,
+              "edgePp": 5.788947424092296,
+              "roi": 2.063380281690141,
+              "max1HitExclRoi": 1.5642857142857143,
+              "max2HitExclRoi": 1.0797101449275361,
+              "zScore": 1.9945683579994222
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0.8239130434782609,
+              "worstVenue": "びわこ",
+              "minLeaveOneMonthMax2Roi": 0.8386363636363636,
+              "worstMonth": "2024-05"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 1.285,
+              "worstVenue": "蒲郡",
+              "minLeaveOneMonthMax2Roi": 1.0947368421052632,
+              "worstMonth": "2025-08"
+            }
+          },
+          "persistent": true,
+          "explainsBoth": true,
+          "forwardAmplifier": false
+        },
+        {
+          "id": "head_exh_top2",
+          "label": "1号艇が展示タイム上位2艇",
+          "candidate": {
+            "discovery": {
+              "n": 89,
+              "hits": 14,
+              "actualRate": 0.15730337078651685,
+              "impliedRate": 0.09869340829065934,
+              "edgePp": 5.860996249585751,
+              "roi": 1.048314606741573,
+              "max1HitExclRoi": 0.8397727272727272,
+              "max2HitExclRoi": 0.7103448275862069,
+              "zScore": 1.9232603773908097
+            },
+            "forward": {
+              "n": 48,
+              "hits": 13,
+              "actualRate": 0.2708333333333333,
+              "impliedRate": 0.10112872056313149,
+              "edgePp": 16.97046127702018,
+              "roi": 1.9833333333333334,
+              "max1HitExclRoi": 1.2382978723404254,
+              "max2HitExclRoi": 1.0978260869565217,
+              "zScore": 4.073161856937851
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 109,
+              "hits": 13,
+              "actualRate": 0.11926605504587157,
+              "impliedRate": 0.09129470793911035,
+              "edgePp": 2.7971347106761217,
+              "roi": 1.2532110091743118,
+              "max1HitExclRoi": 0.9962962962962963,
+              "max2HitExclRoi": 0.7878504672897196,
+              "zScore": 1.0594653648513186
+            },
+            "forward": {
+              "n": 47,
+              "hits": 6,
+              "actualRate": 0.1276595744680851,
+              "impliedRate": 0.09779306890690864,
+              "edgePp": 2.9866505561176453,
+              "roi": 2.0106382978723403,
+              "max1HitExclRoi": 1.2934782608695652,
+              "max2HitExclRoi": 0.6533333333333333,
+              "zScore": 0.7228889351672028
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0.42105263157894735,
+              "worstVenue": "徳山",
+              "minLeaveOneMonthMax2Roi": 0.5714285714285714,
+              "worstMonth": "2024-08"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 0.8926829268292683,
+              "worstVenue": "蒲郡",
+              "minLeaveOneMonthMax2Roi": 0.4676470588235294,
+              "worstMonth": "2025-08"
+            }
+          },
+          "persistent": true,
+          "explainsBoth": true,
+          "forwardAmplifier": true
+        },
+        {
+          "id": "season_夏(6-8)",
+          "label": "夏(6-8)",
+          "candidate": {
+            "discovery": {
+              "n": 81,
+              "hits": 11,
+              "actualRate": 0.13580246913580246,
+              "impliedRate": 0.09511953363630998,
+              "edgePp": 4.068293549949248,
+              "roi": 0.9259259259259259,
+              "max1HitExclRoi": 0.64625,
+              "max2HitExclRoi": 0.5164556962025316,
+              "zScore": 1.3044665542668048
+            },
+            "forward": {
+              "n": 57,
+              "hits": 13,
+              "actualRate": 0.22807017543859648,
+              "impliedRate": 0.09744937729761402,
+              "edgePp": 13.062079814098245,
+              "roi": 2.9403508771929823,
+              "max1HitExclRoi": 2.3321428571428573,
+              "max2HitExclRoi": 1.7381818181818183,
+              "zScore": 3.5006773940342337
+            }
+          },
+          "control": {
+            "discovery": {
+              "n": 117,
+              "hits": 16,
+              "actualRate": 0.13675213675213677,
+              "impliedRate": 0.09427482289479143,
+              "edgePp": 4.247731385734534,
+              "roi": 1.323931623931624,
+              "max1HitExclRoi": 1.085344827586207,
+              "max2HitExclRoi": 0.9260869565217391,
+              "zScore": 1.6335503614266436
+            },
+            "forward": {
+              "n": 38,
+              "hits": 6,
+              "actualRate": 0.15789473684210525,
+              "impliedRate": 0.10252206104450047,
+              "edgePp": 5.537267579760479,
+              "roi": 0.5815789473684211,
+              "max1HitExclRoi": 0.44054054054054054,
+              "max2HitExclRoi": 0.31666666666666665,
+              "zScore": 1.1677633975748278
+            }
+          },
+          "robustness": {
+            "discovery": {
+              "minLeaveOneVenueMax2Roi": 0.2909090909090909,
+              "worstVenue": "徳山",
+              "minLeaveOneMonthMax2Roi": 0.41739130434782606,
+              "worstMonth": "2024-08"
+            },
+            "forward": {
+              "minLeaveOneVenueMax2Roi": 1.2346938775510203,
+              "worstVenue": "尼崎",
+              "minLeaveOneMonthMax2Roi": 0.3588235294117647,
+              "worstMonth": "2025-08"
+            }
+          },
+          "persistent": true,
+          "explainsBoth": false,
+          "forwardAmplifier": true
+        }
+      ]
+    }
+  ]
+}
