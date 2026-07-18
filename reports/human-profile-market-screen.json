@@ -1,0 +1,1171 @@
+{
+  "generatedAt": "2026-07-18T15:09:29.001Z",
+  "safety": {
+    "readOnly": true,
+    "historicalPreRaceMetadata": true,
+    "personRanking": false,
+    "productionConnected": false
+  },
+  "coverage": {
+    "races": 4184,
+    "fullMetadata": 4184
+  },
+  "family": {
+    "factors": 13,
+    "selections": 5,
+    "cells": 65,
+    "eligible": 65
+  },
+  "stable": [
+    {
+      "id": "boat4_older10",
+      "label": "4号艇が1号艇より10歳以上年上",
+      "group": "age",
+      "selection": "1-4",
+      "inside": {
+        "discovery": {
+          "n": 527,
+          "hits": 61,
+          "edgePp": 1.930109069294403,
+          "roi": 0.9066413662239089,
+          "max2HitExclRoi": 0.7868571428571428
+        },
+        "forward": {
+          "n": 307,
+          "hits": 38,
+          "edgePp": 2.4026610582104353,
+          "roi": 1.430944625407166,
+          "max2HitExclRoi": 1.1288524590163935
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2188,
+          "hits": 243,
+          "edgePp": 0.6899115748519101,
+          "roi": 0.7431444241316271,
+          "max2HitExclRoi": 0.7044373284537969
+        },
+        "forward": {
+          "n": 1162,
+          "hits": 137,
+          "edgePp": 1.7329695816177,
+          "roi": 0.8462994836488812,
+          "max2HitExclRoi": 0.7856896551724138
+        }
+      }
+    },
+    {
+      "id": "same_blood_placebo",
+      "label": "1・4号艇の血液型一致_placebo",
+      "group": "placebo",
+      "selection": "1-4",
+      "inside": {
+        "discovery": {
+          "n": 792,
+          "hits": 96,
+          "edgePp": 1.8248256273573693,
+          "roi": 0.9314393939393939,
+          "max2HitExclRoi": 0.8362025316455696
+        },
+        "forward": {
+          "n": 459,
+          "hits": 59,
+          "edgePp": 2.6961585546881106,
+          "roi": 1.0908496732026143,
+          "max2HitExclRoi": 0.9599562363238512
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 1923,
+          "hits": 208,
+          "edgePp": 0.5623671910697289,
+          "roi": 0.7104004160166406,
+          "max2HitExclRoi": 0.6682977615825091
+        },
+        "forward": {
+          "n": 1010,
+          "hits": 116,
+          "edgePp": 1.498802794166857,
+          "roi": 0.9128712871287129,
+          "max2HitExclRoi": 0.8204365079365079
+        }
+      }
+    },
+    {
+      "id": "age_close3",
+      "label": "1・4号艇の年齢差3歳以内",
+      "group": "cohort",
+      "selection": "1-4",
+      "inside": {
+        "discovery": {
+          "n": 587,
+          "hits": 80,
+          "edgePp": 1.8164170347133568,
+          "roi": 0.7081771720613288,
+          "max2HitExclRoi": 0.6222222222222222
+        },
+        "forward": {
+          "n": 321,
+          "hits": 48,
+          "edgePp": 4.089065793840173,
+          "roi": 0.9489096573208723,
+          "max2HitExclRoi": 0.7965517241379311
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2128,
+          "hits": 224,
+          "edgePp": 0.6863050779686986,
+          "roi": 0.79328007518797,
+          "max2HitExclRoi": 0.753527751646284
+        },
+        "forward": {
+          "n": 1148,
+          "hits": 127,
+          "edgePp": 1.253255643630372,
+          "roi": 0.9739547038327526,
+          "max2HitExclRoi": 0.8927574171029669
+        }
+      }
+    },
+    {
+      "id": "same_branch_14",
+      "label": "1・4号艇が同支部",
+      "group": "relationship",
+      "selection": "1-4",
+      "inside": {
+        "discovery": {
+          "n": 434,
+          "hits": 52,
+          "edgePp": 1.742514844279849,
+          "roi": 0.8548387096774194,
+          "max2HitExclRoi": 0.7261574074074074
+        },
+        "forward": {
+          "n": 199,
+          "hits": 29,
+          "edgePp": 3.4378297431473346,
+          "roi": 1.0301507537688441,
+          "max2HitExclRoi": 0.7644670050761422
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2281,
+          "hits": 252,
+          "edgePp": 0.7761694707920417,
+          "roi": 0.7596668128014029,
+          "max2HitExclRoi": 0.7225537516454585
+        },
+        "forward": {
+          "n": 1270,
+          "hits": 146,
+          "edgePp": 1.6277161258457091,
+          "roi": 0.9588188976377953,
+          "max2HitExclRoi": 0.885410094637224
+        }
+      }
+    },
+    {
+      "id": "boat4_branch_majority",
+      "label": "4号艇の支部が6艇中3人以上",
+      "group": "relationship",
+      "selection": "1-5",
+      "inside": {
+        "discovery": {
+          "n": 373,
+          "hits": 30,
+          "edgePp": 2.5093151284264876,
+          "roi": 0.7563002680965147,
+          "max2HitExclRoi": 0.6331536388140162
+        },
+        "forward": {
+          "n": 161,
+          "hits": 10,
+          "edgePp": 1.2329515766355899,
+          "roi": 0.6012422360248447,
+          "max2HitExclRoi": 0.34779874213836476
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2342,
+          "hits": 136,
+          "edgePp": 0.09136440662199992,
+          "roi": 0.6480358667805295,
+          "max2HitExclRoi": 0.5765811965811966
+        },
+        "forward": {
+          "n": 1308,
+          "hits": 76,
+          "edgePp": 0.3399157445798964,
+          "roi": 0.7642966360856269,
+          "max2HitExclRoi": 0.6460949464012251
+        }
+      }
+    },
+    {
+      "id": "same_branch_14",
+      "label": "1・4号艇が同支部",
+      "group": "relationship",
+      "selection": "1-5",
+      "inside": {
+        "discovery": {
+          "n": 434,
+          "hits": 30,
+          "edgePp": 1.129497858909102,
+          "roi": 0.7066820276497696,
+          "max2HitExclRoi": 0.5212962962962963
+        },
+        "forward": {
+          "n": 199,
+          "hits": 15,
+          "edgePp": 2.4111936400605596,
+          "roi": 1.0683417085427136,
+          "max2HitExclRoi": 0.6786802030456853
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2281,
+          "hits": 136,
+          "edgePp": 0.28923626148411247,
+          "roi": 0.6545813239807102,
+          "max2HitExclRoi": 0.5842035980693286
+        },
+        "forward": {
+          "n": 1270,
+          "hits": 71,
+          "edgePp": 0.12857280580849365,
+          "roi": 0.6959842519685039,
+          "max2HitExclRoi": 0.5741324921135647
+        }
+      }
+    },
+    {
+      "id": "same_blood_placebo",
+      "label": "1・4号艇の血液型一致_placebo",
+      "group": "placebo",
+      "selection": "1-6",
+      "inside": {
+        "discovery": {
+          "n": 792,
+          "hits": 44,
+          "edgePp": 0.9295668145440031,
+          "roi": 0.6035353535353535,
+          "max2HitExclRoi": 0.5110126582278481
+        },
+        "forward": {
+          "n": 459,
+          "hits": 23,
+          "edgePp": 1.0301906647075203,
+          "roi": 0.8542483660130719,
+          "max2HitExclRoi": 0.5455142231947484
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 1923,
+          "hits": 100,
+          "edgePp": 0.85615250833137,
+          "roi": 0.8160166406656266,
+          "max2HitExclRoi": 0.7260281103591879
+        },
+        "forward": {
+          "n": 1010,
+          "hits": 41,
+          "edgePp": -0.2639051024355218,
+          "roi": 0.5817821782178217,
+          "max2HitExclRoi": 0.4284722222222222
+        }
+      }
+    },
+    {
+      "id": "boat4_local_only",
+      "label": "4号艇だけ開催地支部",
+      "group": "local",
+      "selection": "1-4",
+      "inside": {
+        "discovery": {
+          "n": 356,
+          "hits": 51,
+          "edgePp": 2.9104248527726857,
+          "roi": 0.8865168539325843,
+          "max2HitExclRoi": 0.7002824858757062
+        },
+        "forward": {
+          "n": 200,
+          "hits": 21,
+          "edgePp": 0.9228634026644293,
+          "roi": 0.8735,
+          "max2HitExclRoi": 0.5949494949494949
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2359,
+          "hits": 253,
+          "edgePp": 0.6318706052170615,
+          "roi": 0.7580330648579907,
+          "max2HitExclRoi": 0.7221467967755621
+        },
+        "forward": {
+          "n": 1269,
+          "hits": 154,
+          "edgePp": 2.0226595099901474,
+          "roi": 0.983451536643026,
+          "max2HitExclRoi": 0.9100236779794791
+        }
+      }
+    },
+    {
+      "id": "boat4_shorter5",
+      "label": "4号艇が1号艇より5cm以上低い",
+      "group": "body",
+      "selection": "1-2",
+      "inside": {
+        "discovery": {
+          "n": 647,
+          "hits": 65,
+          "edgePp": 1.3402139406212146,
+          "roi": 0.891499227202473,
+          "max2HitExclRoi": 0.8221705426356589
+        },
+        "forward": {
+          "n": 331,
+          "hits": 31,
+          "edgePp": 0.9132632800072867,
+          "roi": 0.8435045317220544,
+          "max2HitExclRoi": 0.7370820668693009
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2068,
+          "hits": 197,
+          "edgePp": 1.1360412983858736,
+          "roi": 0.8331237911025146,
+          "max2HitExclRoi": 0.8035333978702808
+        },
+        "forward": {
+          "n": 1138,
+          "hits": 80,
+          "edgePp": -1.1478794270629509,
+          "roi": 0.6181898066783831,
+          "max2HitExclRoi": 0.5777288732394367
+        }
+      }
+    },
+    {
+      "id": "same_blood_placebo",
+      "label": "1・4号艇の血液型一致_placebo",
+      "group": "placebo",
+      "selection": "1-5",
+      "inside": {
+        "discovery": {
+          "n": 792,
+          "hits": 51,
+          "edgePp": 0.8869600889526428,
+          "roi": 0.7974747474747474,
+          "max2HitExclRoi": 0.708987341772152
+        },
+        "forward": {
+          "n": 459,
+          "hits": 30,
+          "edgePp": 0.9858245004997354,
+          "roi": 0.8098039215686275,
+          "max2HitExclRoi": 0.6306345733041575
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 1923,
+          "hits": 115,
+          "edgePp": 0.23269765614212737,
+          "roi": 0.6074882995319812,
+          "max2HitExclRoi": 0.5204060385216034
+        },
+        "forward": {
+          "n": 1010,
+          "hits": 56,
+          "edgePp": 0.18873420992024756,
+          "roi": 0.7176237623762376,
+          "max2HitExclRoi": 0.5643849206349206
+        }
+      }
+    },
+    {
+      "id": "boat4_younger10",
+      "label": "4号艇が1号艇より10歳以上若い",
+      "group": "age",
+      "selection": "1-3",
+      "inside": {
+        "discovery": {
+          "n": 776,
+          "hits": 86,
+          "edgePp": 0.8816528406247403,
+          "roi": 0.7454896907216495,
+          "max2HitExclRoi": 0.6767441860465117
+        },
+        "forward": {
+          "n": 407,
+          "hits": 46,
+          "edgePp": 2.0462931864788962,
+          "roi": 0.9884520884520884,
+          "max2HitExclRoi": 0.8659259259259259
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 1939,
+          "hits": 175,
+          "edgePp": -0.6488519443501173,
+          "roi": 0.6469314079422382,
+          "max2HitExclRoi": 0.6140423335054207
+        },
+        "forward": {
+          "n": 1062,
+          "hits": 92,
+          "edgePp": -1.0017428774195325,
+          "roi": 0.6824858757062147,
+          "max2HitExclRoi": 0.6244339622641509
+        }
+      }
+    },
+    {
+      "id": "boat4_lighter3",
+      "label": "4号艇が1号艇より3kg以上軽い",
+      "group": "body",
+      "selection": "1-6",
+      "inside": {
+        "discovery": {
+          "n": 632,
+          "hits": 38,
+          "edgePp": 1.8077950893341916,
+          "roi": 0.9147151898734177,
+          "max2HitExclRoi": 0.6855555555555556
+        },
+        "forward": {
+          "n": 348,
+          "hits": 16,
+          "edgePp": 0.8809763033640745,
+          "roi": 0.6859195402298851,
+          "max2HitExclRoi": 0.42890173410404625
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2083,
+          "hits": 106,
+          "edgePp": 0.5953296659533617,
+          "roi": 0.7052808449351896,
+          "max2HitExclRoi": 0.6243152330610283
+        },
+        "forward": {
+          "n": 1121,
+          "hits": 48,
+          "edgePp": -0.08944370377325858,
+          "roi": 0.6610169491525424,
+          "max2HitExclRoi": 0.5158176943699732
+        }
+      }
+    },
+    {
+      "id": "boat4_younger10",
+      "label": "4号艇が1号艇より10歳以上若い",
+      "group": "age",
+      "selection": "1-6",
+      "inside": {
+        "discovery": {
+          "n": 776,
+          "hits": 42,
+          "edgePp": 0.9547155725112305,
+          "roi": 0.8610824742268042,
+          "max2HitExclRoi": 0.6378552971576228
+        },
+        "forward": {
+          "n": 407,
+          "hits": 21,
+          "edgePp": 0.8121780709590397,
+          "roi": 0.9592137592137592,
+          "max2HitExclRoi": 0.5595061728395062
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 1939,
+          "hits": 102,
+          "edgePp": 0.846693608236896,
+          "roi": 0.7111913357400722,
+          "max2HitExclRoi": 0.6421786267423851
+        },
+        "forward": {
+          "n": 1062,
+          "hits": 43,
+          "edgePp": -0.11698974881304014,
+          "roi": 0.5548964218455744,
+          "max2HitExclRoi": 0.4488679245283019
+        }
+      }
+    },
+    {
+      "id": "boat4_older10",
+      "label": "4号艇が1号艇より10歳以上年上",
+      "group": "age",
+      "selection": "1-6",
+      "inside": {
+        "discovery": {
+          "n": 527,
+          "hits": 30,
+          "edgePp": 1.3638986576736425,
+          "roi": 0.796584440227704,
+          "max2HitExclRoi": 0.6348571428571429
+        },
+        "forward": {
+          "n": 307,
+          "hits": 15,
+          "edgePp": 0.685861458689288,
+          "roi": 0.532899022801303,
+          "max2HitExclRoi": 0.30098360655737705
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2188,
+          "hits": 114,
+          "edgePp": 0.7604312605329339,
+          "roi": 0.7437842778793419,
+          "max2HitExclRoi": 0.6646386093321135
+        },
+        "forward": {
+          "n": 1162,
+          "hits": 49,
+          "edgePp": -0.0036541361245602936,
+          "roi": 0.7023235800344234,
+          "max2HitExclRoi": 0.5623275862068966
+        }
+      }
+    },
+    {
+      "id": "boat4_shorter5",
+      "label": "4号艇が1号艇より5cm以上低い",
+      "group": "body",
+      "selection": "1-4",
+      "inside": {
+        "discovery": {
+          "n": 647,
+          "hits": 67,
+          "edgePp": 0.6667274552235621,
+          "roi": 0.7505409582689335,
+          "max2HitExclRoi": 0.6527131782945736
+        },
+        "forward": {
+          "n": 331,
+          "hits": 39,
+          "edgePp": 2.6288301303195984,
+          "roi": 1.488821752265861,
+          "max2HitExclRoi": 1.2151975683890577
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2068,
+          "hits": 237,
+          "edgePp": 1.0132114805437513,
+          "roi": 0.7824951644100581,
+          "max2HitExclRoi": 0.7415779283639884
+        },
+        "forward": {
+          "n": 1138,
+          "hits": 136,
+          "edgePp": 1.6530622368845231,
+          "roi": 0.8171353251318102,
+          "max2HitExclRoi": 0.7553697183098591
+        }
+      }
+    },
+    {
+      "id": "boat4_older10",
+      "label": "4号艇が1号艇より10歳以上年上",
+      "group": "age",
+      "selection": "1-5",
+      "inside": {
+        "discovery": {
+          "n": 527,
+          "hits": 42,
+          "edgePp": 1.8757244820452676,
+          "roi": 0.6667931688804554,
+          "max2HitExclRoi": 0.5765714285714286
+        },
+        "forward": {
+          "n": 307,
+          "hits": 20,
+          "edgePp": 0.5830116922084179,
+          "roi": 0.48697068403908794,
+          "max2HitExclRoi": 0.3580327868852459
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2188,
+          "hits": 124,
+          "edgePp": 0.07378573179796391,
+          "roi": 0.6619744058500914,
+          "max2HitExclRoi": 0.5854986276303751
+        },
+        "forward": {
+          "n": 1162,
+          "hits": 66,
+          "edgePp": 0.3994237592434168,
+          "roi": 0.814974182444062,
+          "max2HitExclRoi": 0.6819827586206897
+        }
+      }
+    },
+    {
+      "id": "boat4_heavier3",
+      "label": "4号艇が1号艇より3kg以上重い",
+      "group": "body",
+      "selection": "1-6",
+      "inside": {
+        "discovery": {
+          "n": 521,
+          "hits": 30,
+          "edgePp": 1.3318342339364537,
+          "roi": 0.7207293666026872,
+          "max2HitExclRoi": 0.553757225433526
+        },
+        "forward": {
+          "n": 318,
+          "hits": 16,
+          "edgePp": 0.5808024090742172,
+          "roi": 0.5025157232704403,
+          "max2HitExclRoi": 0.260126582278481
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2194,
+          "hits": 114,
+          "edgePp": 0.7696957861254164,
+          "roi": 0.7619416590701914,
+          "max2HitExclRoi": 0.683029197080292
+        },
+        "forward": {
+          "n": 1151,
+          "hits": 48,
+          "edgePp": 0.018782098657927154,
+          "roi": 0.7123370981754996,
+          "max2HitExclRoi": 0.5710182767624021
+        }
+      }
+    },
+    {
+      "id": "boat4_heavier3",
+      "label": "4号艇が1号艇より3kg以上重い",
+      "group": "body",
+      "selection": "1-5",
+      "inside": {
+        "discovery": {
+          "n": 521,
+          "hits": 34,
+          "edgePp": 0.7584502790583689,
+          "roi": 0.671401151631478,
+          "max2HitExclRoi": 0.5150289017341041
+        },
+        "forward": {
+          "n": 318,
+          "hits": 20,
+          "edgePp": 0.5477091428203544,
+          "roi": 1.0264150943396226,
+          "max2HitExclRoi": 0.5395569620253164
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2194,
+          "hits": 132,
+          "edgePp": 0.34402797986435796,
+          "roi": 0.6608933454876937,
+          "max2HitExclRoi": 0.5846259124087592
+        },
+        "forward": {
+          "n": 1151,
+          "hits": 66,
+          "edgePp": 0.407422667534287,
+          "roi": 0.6690703735881842,
+          "max2HitExclRoi": 0.5919060052219322
+        }
+      }
+    },
+    {
+      "id": "age_close3",
+      "label": "1・4号艇の年齢差3歳以内",
+      "group": "cohort",
+      "selection": "1-5",
+      "inside": {
+        "discovery": {
+          "n": 587,
+          "hits": 44,
+          "edgePp": 1.5540421872767611,
+          "roi": 0.786541737649063,
+          "max2HitExclRoi": 0.6615384615384615
+        },
+        "forward": {
+          "n": 321,
+          "hits": 18,
+          "edgePp": 0.3448608744950963,
+          "roi": 1.152336448598131,
+          "max2HitExclRoi": 0.7112852664576802
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2128,
+          "hits": 122,
+          "edgePp": 0.11171391883476108,
+          "roi": 0.6288063909774436,
+          "max2HitExclRoi": 0.5501411100658513
+        },
+        "forward": {
+          "n": 1148,
+          "hits": 68,
+          "edgePp": 0.46377583365497055,
+          "roi": 0.6329268292682927,
+          "max2HitExclRoi": 0.5442408376963351
+        }
+      }
+    },
+    {
+      "id": "boat4_local_only",
+      "label": "4号艇だけ開催地支部",
+      "group": "local",
+      "selection": "1-6",
+      "inside": {
+        "discovery": {
+          "n": 356,
+          "hits": 20,
+          "edgePp": 1.7255728137051367,
+          "roi": 0.7674157303370787,
+          "max2HitExclRoi": 0.5522598870056498
+        },
+        "forward": {
+          "n": 200,
+          "hits": 7,
+          "edgePp": 0.31602616352209045,
+          "roi": 0.5105,
+          "max2HitExclRoi": 0.2681818181818182
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2359,
+          "hits": 124,
+          "edgePp": 0.7495948575502465,
+          "roi": 0.7520135650699449,
+          "max2HitExclRoi": 0.678616885871871
+        },
+        "forward": {
+          "n": 1269,
+          "hits": 57,
+          "edgePp": 0.1127723632280974,
+          "roi": 0.6915681639085894,
+          "max2HitExclRoi": 0.5633780584056827
+        }
+      }
+    },
+    {
+      "id": "both_female",
+      "label": "1・4号艇とも女性",
+      "group": "gender",
+      "selection": "1-6",
+      "inside": {
+        "discovery": {
+          "n": 245,
+          "hits": 9,
+          "edgePp": 0.2500418806751234,
+          "roi": 0.7587755102040816,
+          "max2HitExclRoi": 0.2806584362139918
+        },
+        "forward": {
+          "n": 122,
+          "hits": 5,
+          "edgePp": 0.46542300801335845,
+          "roi": 0.31311475409836065,
+          "max2HitExclRoi": 0.16
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2470,
+          "hits": 135,
+          "edgePp": 0.9398129270747589,
+          "roi": 0.7535627530364373,
+          "max2HitExclRoi": 0.6865883306320908
+        },
+        "forward": {
+          "n": 1347,
+          "hits": 59,
+          "edgePp": 0.11101095372178435,
+          "roi": 0.6989606533036378,
+          "max2HitExclRoi": 0.5782156133828996
+        }
+      }
+    },
+    {
+      "id": "age_close3",
+      "label": "1・4号艇の年齢差3歳以内",
+      "group": "cohort",
+      "selection": "1-2",
+      "inside": {
+        "discovery": {
+          "n": 587,
+          "hits": 54,
+          "edgePp": 0.6883312344959498,
+          "roi": 0.8,
+          "max2HitExclRoi": 0.7288888888888889
+        },
+        "forward": {
+          "n": 321,
+          "hits": 28,
+          "edgePp": 0.23102865444966741,
+          "roi": 0.7093457943925233,
+          "max2HitExclRoi": 0.5959247648902821
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2128,
+          "hits": 208,
+          "edgePp": 1.3216171945464144,
+          "roi": 0.8600093984962406,
+          "max2HitExclRoi": 0.8309031044214488
+        },
+        "forward": {
+          "n": 1148,
+          "hits": 83,
+          "edgePp": -0.9391610107957922,
+          "roi": 0.6576655052264808,
+          "max2HitExclRoi": 0.6176265270506108
+        }
+      }
+    },
+    {
+      "id": "boat4_heavier3",
+      "label": "4号艇が1号艇より3kg以上重い",
+      "group": "body",
+      "selection": "1-4",
+      "inside": {
+        "discovery": {
+          "n": 521,
+          "hits": 54,
+          "edgePp": 1.5456515473307835,
+          "roi": 0.7618042226487524,
+          "max2HitExclRoi": 0.6529865125240848
+        },
+        "forward": {
+          "n": 318,
+          "hits": 30,
+          "edgePp": 0.13811302226742342,
+          "roi": 0.6808176100628931,
+          "max2HitExclRoi": 0.5129746835443038
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2194,
+          "hits": 250,
+          "edgePp": 0.7845987006083888,
+          "roi": 0.7779854147675479,
+          "max2HitExclRoi": 0.7394160583941606
+        },
+        "forward": {
+          "n": 1151,
+          "hits": 145,
+          "edgePp": 2.35222211783608,
+          "roi": 1.047958297132928,
+          "max2HitExclRoi": 0.9671018276762402
+        }
+      }
+    },
+    {
+      "id": "mixed_gender_4female",
+      "label": "1号艇男性・4号艇女性",
+      "group": "gender",
+      "selection": "1-6",
+      "inside": {
+        "discovery": {
+          "n": 104,
+          "hits": 7,
+          "edgePp": 0.7595300380344496,
+          "roi": 0.6201923076923077,
+          "max2HitExclRoi": 0.30686274509803924
+        },
+        "forward": {
+          "n": 56,
+          "hits": 4,
+          "edgePp": 0.10055804506033464,
+          "roi": 0.475,
+          "max2HitExclRoi": 0.14629629629629629
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2611,
+          "hits": 137,
+          "edgePp": 0.8822700370296742,
+          "roi": 0.7593642282650326,
+          "max2HitExclRoi": 0.6930624760444615
+        },
+        "forward": {
+          "n": 1413,
+          "hits": 60,
+          "edgePp": 0.14202555634642053,
+          "roi": 0.6745222929936305,
+          "max2HitExclRoi": 0.5593905031892275
+        }
+      }
+    },
+    {
+      "id": "boat1_local_only",
+      "label": "1号艇だけ開催地支部",
+      "group": "local",
+      "selection": "1-4",
+      "inside": {
+        "discovery": {
+          "n": 307,
+          "hits": 36,
+          "edgePp": 0.09654217601044535,
+          "roi": 0.6228013029315961,
+          "max2HitExclRoi": 0.5255737704918033
+        },
+        "forward": {
+          "n": 139,
+          "hits": 20,
+          "edgePp": 2.999649069701175,
+          "roi": 1.2316546762589928,
+          "max2HitExclRoi": 0.8394160583941606
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2408,
+          "hits": 268,
+          "edgePp": 1.0369832048417444,
+          "roi": 0.7942691029900332,
+          "max2HitExclRoi": 0.7591438071487947
+        },
+        "forward": {
+          "n": 1330,
+          "hits": 155,
+          "edgePp": 1.7551702090390424,
+          "roi": 0.9409774436090226,
+          "max2HitExclRoi": 0.8708584337349398
+        }
+      }
+    }
+  ],
+  "robust": [],
+  "placebo": [
+    {
+      "id": "same_blood_placebo",
+      "label": "1・4号艇の血液型一致_placebo",
+      "group": "placebo",
+      "selection": "1-2",
+      "inside": {
+        "discovery": {
+          "n": 792,
+          "hits": 80,
+          "edgePp": 1.175124121485261,
+          "roi": 0.8718434343434344,
+          "max2HitExclRoi": 0.8120253164556962
+        },
+        "forward": {
+          "n": 459,
+          "hits": 38,
+          "edgePp": -0.13797368180474195,
+          "roi": 0.7657952069716776,
+          "max2HitExclRoi": 0.6711159737417943
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 1923,
+          "hits": 182,
+          "edgePp": 1.1886393761973935,
+          "roi": 0.8368174726989079,
+          "max2HitExclRoi": 0.8049973971889641
+        },
+        "forward": {
+          "n": 1010,
+          "hits": 73,
+          "edgePp": -0.9313531904622255,
+          "roi": 0.624950495049505,
+          "max2HitExclRoi": 0.5835317460317461
+        }
+      }
+    },
+    {
+      "id": "same_blood_placebo",
+      "label": "1・4号艇の血液型一致_placebo",
+      "group": "placebo",
+      "selection": "1-3",
+      "inside": {
+        "discovery": {
+          "n": 792,
+          "hits": 70,
+          "edgePp": -0.76779825117237,
+          "roi": 0.6589646464646465,
+          "max2HitExclRoi": 0.5913924050632912
+        },
+        "forward": {
+          "n": 459,
+          "hits": 31,
+          "edgePp": -2.4189832479913034,
+          "roi": 0.5651416122004357,
+          "max2HitExclRoi": 0.4761487964989059
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 1923,
+          "hits": 191,
+          "edgePp": 0.01775085759671024,
+          "roi": 0.6817472698907956,
+          "max2HitExclRoi": 0.648620510150963
+        },
+        "forward": {
+          "n": 1010,
+          "hits": 107,
+          "edgePp": 0.8705977246587877,
+          "roi": 0.8591089108910891,
+          "max2HitExclRoi": 0.7965277777777777
+        }
+      }
+    },
+    {
+      "id": "same_blood_placebo",
+      "label": "1・4号艇の血液型一致_placebo",
+      "group": "placebo",
+      "selection": "1-4",
+      "inside": {
+        "discovery": {
+          "n": 792,
+          "hits": 96,
+          "edgePp": 1.8248256273573693,
+          "roi": 0.9314393939393939,
+          "max2HitExclRoi": 0.8362025316455696
+        },
+        "forward": {
+          "n": 459,
+          "hits": 59,
+          "edgePp": 2.6961585546881106,
+          "roi": 1.0908496732026143,
+          "max2HitExclRoi": 0.9599562363238512
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 1923,
+          "hits": 208,
+          "edgePp": 0.5623671910697289,
+          "roi": 0.7104004160166406,
+          "max2HitExclRoi": 0.6682977615825091
+        },
+        "forward": {
+          "n": 1010,
+          "hits": 116,
+          "edgePp": 1.498802794166857,
+          "roi": 0.9128712871287129,
+          "max2HitExclRoi": 0.8204365079365079
+        }
+      }
+    },
+    {
+      "id": "same_blood_placebo",
+      "label": "1・4号艇の血液型一致_placebo",
+      "group": "placebo",
+      "selection": "1-5",
+      "inside": {
+        "discovery": {
+          "n": 792,
+          "hits": 51,
+          "edgePp": 0.8869600889526428,
+          "roi": 0.7974747474747474,
+          "max2HitExclRoi": 0.708987341772152
+        },
+        "forward": {
+          "n": 459,
+          "hits": 30,
+          "edgePp": 0.9858245004997354,
+          "roi": 0.8098039215686275,
+          "max2HitExclRoi": 0.6306345733041575
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 1923,
+          "hits": 115,
+          "edgePp": 0.23269765614212737,
+          "roi": 0.6074882995319812,
+          "max2HitExclRoi": 0.5204060385216034
+        },
+        "forward": {
+          "n": 1010,
+          "hits": 56,
+          "edgePp": 0.18873420992024756,
+          "roi": 0.7176237623762376,
+          "max2HitExclRoi": 0.5643849206349206
+        }
+      }
+    },
+    {
+      "id": "same_blood_placebo",
+      "label": "1・4号艇の血液型一致_placebo",
+      "group": "placebo",
+      "selection": "1-6",
+      "inside": {
+        "discovery": {
+          "n": 792,
+          "hits": 44,
+          "edgePp": 0.9295668145440031,
+          "roi": 0.6035353535353535,
+          "max2HitExclRoi": 0.5110126582278481
+        },
+        "forward": {
+          "n": 459,
+          "hits": 23,
+          "edgePp": 1.0301906647075203,
+          "roi": 0.8542483660130719,
+          "max2HitExclRoi": 0.5455142231947484
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 1923,
+          "hits": 100,
+          "edgePp": 0.85615250833137,
+          "roi": 0.8160166406656266,
+          "max2HitExclRoi": 0.7260281103591879
+        },
+        "forward": {
+          "n": 1010,
+          "hits": 41,
+          "edgePp": -0.2639051024355218,
+          "roi": 0.5817821782178217,
+          "max2HitExclRoi": 0.4284722222222222
+        }
+      }
+    }
+  ],
+  "caveats": [
+    "支部・年齢・体重等は各レース前HTML表示値",
+    "開催地支部mappingは会場所在地と支部名の一致proxy",
+    "体重差は最低体重・調整重量を未考慮",
+    "血液型一致は探索の偽陽性を測るplacebo",
+    "65セル探索後の順位で独立検証ではない"
+  ]
+}

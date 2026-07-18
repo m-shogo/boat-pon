@@ -1,0 +1,40 @@
+/** 当時のレース前HTMLにある支部・年齢・身体情報とexacta市場残差を調べるread-only screen。 */
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { DatabaseSync } from "node:sqlite";
+import { parseKyotei24RacerMetadata, type HistoricalRacerMetadata } from "../src/domain/kyotei24RacerMetadata";
+
+type OddsRow={race_id:string;date:string;venue:string;combination:string;odds:number;winner:string|null;payout_yen:number|null};
+type EvalRow=OddsRow&{period:"discovery"|"forward";selection:string;implied:number;hit:boolean;flags:string[]};
+type Metric={n:number;hits:number;edgePp:number;roi:number;max2HitExclRoi:number};
+const selections=["1-2","1-3","1-4","1-5","1-6"];
+const factors=[
+  ["same_branch_14","1・4号艇が同支部","relationship"],["boat4_local_only","4号艇だけ開催地支部","local"],["boat1_local_only","1号艇だけ開催地支部","local"],
+  ["boat4_branch_majority","4号艇の支部が6艇中3人以上","relationship"],["age_close3","1・4号艇の年齢差3歳以内","cohort"],
+  ["boat4_younger10","4号艇が1号艇より10歳以上若い","age"],["boat4_older10","4号艇が1号艇より10歳以上年上","age"],
+  ["boat4_lighter3","4号艇が1号艇より3kg以上軽い","body"],["boat4_heavier3","4号艇が1号艇より3kg以上重い","body"],
+  ["boat4_shorter5","4号艇が1号艇より5cm以上低い","body"],["mixed_gender_4female","1号艇男性・4号艇女性","gender"],
+  ["both_female","1・4号艇とも女性","gender"],["same_blood_placebo","1・4号艇の血液型一致_placebo","placebo"],
+] as const;
+const venueBranch:Record<string,string>={"桐生":"群馬","戸田":"埼玉","江戸川":"東京","平和島":"東京","多摩川":"東京","浜名湖":"静岡","蒲郡":"愛知","常滑":"愛知","津":"三重","三国":"福井","びわこ":"滋賀","住之江":"大阪","尼崎":"兵庫","鳴門":"徳島","丸亀":"香川","児島":"岡山","宮島":"広島","徳山":"山口","下関":"山口","若松":"福岡","芦屋":"福岡","福岡":"福岡","唐津":"佐賀","大村":"長崎"};
+
+const db=new DatabaseSync(process.env.BOAT_PON_DB_PATH??"data/boat.sqlite",{readOnly:true});db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
+try{
+  const odds=db.prepare(`SELECT h.race_id,h.race_date AS date,h.venue,h.combination,h.odds,p.combination AS winner,p.payout_yen FROM historical_alternative_odds h LEFT JOIN race_payouts p ON p.race_id=h.race_id AND p.bet_type='exacta'
+    WHERE h.bet_type='exacta' AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31' AND h.combination IN('1-2','1-3','1-4','1-5','1-6')
+      AND NOT EXISTS(SELECT 1 FROM race_entries re WHERE re.race_id=h.race_id AND re.status_code='F') AND (SELECT COUNT(*) FROM historical_alternative_odds a WHERE a.race_id=h.race_id AND a.bet_type='exacta')=30`).all() as OddsRow[];
+  const overround=new Map((db.prepare("SELECT race_id,SUM(1.0/odds) AS value FROM historical_alternative_odds WHERE bet_type='exacta' AND race_date BETWEEN '2024-01-01' AND '2025-12-31' GROUP BY race_id HAVING COUNT(*)=30").all() as Array<{race_id:string;value:number}>).map(r=>[r.race_id,r.value]));
+  const raceIds=[...new Set(odds.map(r=>r.race_id))],flagsByRace=new Map<string,string[]>();let fullCoverage=0;
+  for(const raceId of raceIds){const sample=odds.find(r=>r.race_id===raceId)!;const metadata=readMetadata(raceId,sample.date);if(metadata.length===6)fullCoverage+=1;flagsByRace.set(raceId,profileFlags(metadata,sample.venue));}
+  const rows:EvalRow[]=odds.map(r=>({...r,period:r.date<="2024-12-31"?"discovery":"forward",selection:r.combination,implied:(1/r.odds)/(overround.get(r.race_id)??1),hit:r.winner===r.combination,flags:flagsByRace.get(r.race_id)??[]}));
+  const cells=factors.flatMap(([id,label,group])=>selections.map(selection=>{const inside=rows.filter(r=>r.selection===selection&&r.flags.includes(id)),outside=rows.filter(r=>r.selection===selection&&!r.flags.includes(id));return{id,label,group,selection,inside:byPeriod(inside),outside:byPeriod(outside)};}));
+  const eligible=cells.filter(c=>c.inside.discovery.n>=30&&c.inside.forward.n>=30);const stable=eligible.filter(c=>c.inside.discovery.edgePp>0&&c.inside.forward.edgePp>0).sort((a,b)=>Math.min(b.inside.discovery.edgePp,b.inside.forward.edgePp)-Math.min(a.inside.discovery.edgePp,a.inside.forward.edgePp));const robust=stable.filter(c=>c.inside.discovery.max2HitExclRoi>=1&&c.inside.forward.max2HitExclRoi>=1);const placebo=eligible.filter(c=>c.group==="placebo");
+  const report={generatedAt:new Date().toISOString(),safety:{readOnly:true,historicalPreRaceMetadata:true,personRanking:false,productionConnected:false},coverage:{races:raceIds.length,fullMetadata:fullCoverage},family:{factors:factors.length,selections:selections.length,cells:cells.length,eligible:eligible.length},stable,robust,placebo,caveats:["支部・年齢・体重等は各レース前HTML表示値","開催地支部mappingは会場所在地と支部名の一致proxy","体重差は最低体重・調整重量を未考慮","血液型一致は探索の偽陽性を測るplacebo","65セル探索後の順位で独立検証ではない"]};
+  mkdirSync("reports",{recursive:true});writeFileSync("reports/human-profile-market-screen.json",`${JSON.stringify(report,null,2)}\n`);
+  const lines=["# 支部・年齢・身体情報×exacta市場残差","","> 当時のレース前HTMLだけを使用。個人別ランキングは作らず、血液型はplaceboとして扱う。","",`metadata coverage: ${fullCoverage}/${raceIds.length} / 探索族: ${factors.length}因子×${selections.length}買い目=${cells.length}セル（両期n≥30: ${eligible.length}）`,"","## 両期で市場残差プラス","","| 順位 | 人物構成proxy | 買い目 | 2024 n / edge / ROI / max2 | 2025 n / edge / ROI / max2 |","|---:|---|---:|---:|---:|",...stable.map((c,i)=>`| ${i+1} | ${c.label} | ${c.selection} | ${cell(c.inside.discovery)} | ${cell(c.inside.forward)} |`),"","最大2的中除外まで両期100%以上:","",robust.length?robust.map(c=>`- ${c.label} × ${c.selection}`).join("\n"):"該当なし。","","## placebo","","| placebo | 買い目 | 2024 n / edge / ROI | 2025 n / edge / ROI |","|---|---:|---:|---:|",...placebo.map(c=>`| ${c.label} | ${c.selection} | ${short(c.inside.discovery)} | ${short(c.inside.forward)} |`),"","## 判定規則","","- 同支部は交流機会のproxyであり、協調・忖度の証拠ではない。","- 血液型placeboと同程度の結果は、意味のある人物関係edgeとして扱わない。","- 支部・年齢・身体差は能力、級別、性別開催の交絡を調整するまで因果としない。"];
+  writeFileSync("reports/human-profile-market-screen.md",`${lines.join("\n")}\n`);console.log(`human profile market: races=${raceIds.length} metadata=${fullCoverage} eligible=${eligible.length} stable=${stable.length} robust=${robust.length}`);
+}finally{db.close();}
+
+function readMetadata(raceId:string,date:string){const path=`data/raw/kyotei24/odds/${date}/${raceId}-odds3t.html`;return existsSync(path)?parseKyotei24RacerMetadata(readFileSync(path,"utf8")):[];}
+function profileFlags(rows:HistoricalRacerMetadata[],venue:string){if(rows.length<4)return[];const one=rows[0],four=rows[3],f:string[]=[];if(one.branch&&one.branch===four.branch)f.push("same_branch_14");const local=venueBranch[venue];if(local&&four.branch===local&&one.branch!==local)f.push("boat4_local_only");if(local&&one.branch===local&&four.branch!==local)f.push("boat1_local_only");if(four.branch&&rows.filter(r=>r.branch===four.branch).length>=3)f.push("boat4_branch_majority");if(one.age!=null&&four.age!=null){if(Math.abs(one.age-four.age)<=3)f.push("age_close3");if(one.age-four.age>=10)f.push("boat4_younger10");if(four.age-one.age>=10)f.push("boat4_older10");}if(one.weightKg!=null&&four.weightKg!=null){if(one.weightKg-four.weightKg>=3)f.push("boat4_lighter3");if(four.weightKg-one.weightKg>=3)f.push("boat4_heavier3");}if(one.heightCm!=null&&four.heightCm!=null&&one.heightCm-four.heightCm>=5)f.push("boat4_shorter5");if(one.gender==="男"&&four.gender==="女")f.push("mixed_gender_4female");if(one.gender==="女"&&four.gender==="女")f.push("both_female");if(one.bloodType&&one.bloodType===four.bloodType)f.push("same_blood_placebo");return f;}
+function byPeriod(rows:EvalRow[]){return{discovery:metric(rows.filter(r=>r.period==="discovery")),forward:metric(rows.filter(r=>r.period==="forward"))};}function metric(rows:EvalRow[]):Metric{const payouts=rows.filter(r=>r.hit).map(r=>r.payout_yen??0).sort((a,b)=>b-a),total=payouts.reduce((a,b)=>a+b,0),expected=rows.reduce((s,r)=>s+r.implied,0);return{n:rows.length,hits:payouts.length,edgePp:rows.length?(payouts.length-expected)/rows.length*100:0,roi:rows.length?total/(rows.length*100):0,max2HitExclRoi:rows.length>2?(total-(payouts[0]??0)-(payouts[1]??0))/((rows.length-2)*100):0};}
+function pct(v:number){return`${(v*100).toFixed(1)}%`;}function cell(v:Metric){return`${v.n} / ${v.edgePp>=0?"+":""}${v.edgePp.toFixed(2)}pt / ${pct(v.roi)} / ${pct(v.max2HitExclRoi)}`;}function short(v:Metric){return`${v.n} / ${v.edgePp>=0?"+":""}${v.edgePp.toFixed(2)}pt / ${pct(v.roi)}`;}
