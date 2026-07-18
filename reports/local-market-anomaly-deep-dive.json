@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-18T11:48:49.306Z",
+  "generatedAt": "2026-07-18T14:07:03.547Z",
   "safety": {
     "readOnly": true,
     "historicalClosingOdds": true,
@@ -350,6 +350,573 @@
       }
     }
   ],
+  "discoveryGridAudit": {
+    "family": "1-4 × 風速5帯 × 風向9種 × 4号艇最強/非最強。2024 n>=30",
+    "eligibleCells": 32,
+    "targetGridId": "2-3m|南西|top",
+    "targetGridRank": 3,
+    "simulations": 1000,
+    "observedTargetZ": 1.685061828331318,
+    "rawP": 0.06793206793206794,
+    "familyWiseP": 0.8141858141858141,
+    "retrospectiveRobustGate": {
+      "definition": "2024 n>=30, z>=1.5, max2HitExclRoi>=100%",
+      "selected": [
+        {
+          "id": "2-3m|南西|top",
+          "band": "2-3m",
+          "direction": "南西",
+          "topRival4": true,
+          "discovery": {
+            "n": 52,
+            "hits": 13,
+            "actualRate": 0.25,
+            "impliedRate": 0.1656408521029071,
+            "edgePp": 8.43591478970929,
+            "roi": 2.207692307692308,
+            "max1HitExclRoi": 1.6823529411764706,
+            "max2HitExclRoi": 1.328,
+            "zScore": 1.685061828331318
+          },
+          "forward": {
+            "n": 24,
+            "hits": 10,
+            "actualRate": 0.4166666666666667,
+            "impliedRate": 0.19002522903168959,
+            "edgePp": 22.66414376349771,
+            "roi": 1.8,
+            "max1HitExclRoi": 1.5869565217391304,
+            "max2HitExclRoi": 1.3954545454545455,
+            "zScore": 2.897631288785638
+          }
+        }
+      ]
+    },
+    "topDiscovery": [
+      {
+        "id": "1-2m|南西|not_top",
+        "band": "1-2m",
+        "direction": "南西",
+        "topRival4": false,
+        "discovery": {
+          "n": 30,
+          "hits": 7,
+          "actualRate": 0.23333333333333334,
+          "impliedRate": 0.08841803621330244,
+          "edgePp": 14.49152971200309,
+          "roi": 1.7733333333333334,
+          "max1HitExclRoi": 1.3517241379310345,
+          "max2HitExclRoi": 0.9571428571428572,
+          "zScore": 2.902761351574946
+        },
+        "forward": {
+          "n": 10,
+          "hits": 0,
+          "actualRate": 0,
+          "impliedRate": 0.0783175658220043,
+          "edgePp": -7.8317565822004305,
+          "roi": 0,
+          "max1HitExclRoi": 0,
+          "max2HitExclRoi": 0,
+          "zScore": -0.9480505155971236
+        }
+      },
+      {
+        "id": "4-5m|南|not_top",
+        "band": "4-5m",
+        "direction": "南",
+        "topRival4": false,
+        "discovery": {
+          "n": 57,
+          "hits": 9,
+          "actualRate": 0.15789473684210525,
+          "impliedRate": 0.07100616415791022,
+          "edgePp": 8.688857268419504,
+          "roi": 1.0140350877192983,
+          "max1HitExclRoi": 0.7089285714285715,
+          "max2HitExclRoi": 0.56,
+          "zScore": 2.622560215825158
+        },
+        "forward": {
+          "n": 43,
+          "hits": 0,
+          "actualRate": 0,
+          "impliedRate": 0.05425741134069447,
+          "edgePp": -5.4257411340694475,
+          "roi": 0,
+          "max1HitExclRoi": 0,
+          "max2HitExclRoi": 0,
+          "zScore": -1.5914806532704635
+        }
+      },
+      {
+        "id": "2-3m|南西|top",
+        "band": "2-3m",
+        "direction": "南西",
+        "topRival4": true,
+        "discovery": {
+          "n": 52,
+          "hits": 13,
+          "actualRate": 0.25,
+          "impliedRate": 0.1656408521029071,
+          "edgePp": 8.43591478970929,
+          "roi": 2.207692307692308,
+          "max1HitExclRoi": 1.6823529411764706,
+          "max2HitExclRoi": 1.328,
+          "zScore": 1.685061828331318
+        },
+        "forward": {
+          "n": 24,
+          "hits": 10,
+          "actualRate": 0.4166666666666667,
+          "impliedRate": 0.19002522903168959,
+          "edgePp": 22.66414376349771,
+          "roi": 1.8,
+          "max1HitExclRoi": 1.5869565217391304,
+          "max2HitExclRoi": 1.3954545454545455,
+          "zScore": 2.897631288785638
+        }
+      },
+      {
+        "id": "2-3m|北東|top",
+        "band": "2-3m",
+        "direction": "北東",
+        "topRival4": true,
+        "discovery": {
+          "n": 39,
+          "hits": 10,
+          "actualRate": 0.2564102564102564,
+          "impliedRate": 0.1783019862408251,
+          "edgePp": 7.810827016943128,
+          "roi": 0.9948717948717949,
+          "max1HitExclRoi": 0.8368421052631579,
+          "max2HitExclRoi": 0.6864864864864865,
+          "zScore": 1.3175263386410154
+        },
+        "forward": {
+          "n": 20,
+          "hits": 1,
+          "actualRate": 0.05,
+          "impliedRate": 0.16881509684828036,
+          "edgePp": -11.881509684828035,
+          "roi": 0.105,
+          "max1HitExclRoi": 0,
+          "max2HitExclRoi": 0,
+          "zScore": -1.4688788975664717
+        }
+      },
+      {
+        "id": "2-3m|南西|not_top",
+        "band": "2-3m",
+        "direction": "南西",
+        "topRival4": false,
+        "discovery": {
+          "n": 146,
+          "hits": 14,
+          "actualRate": 0.0958904109589041,
+          "impliedRate": 0.06932542598548316,
+          "edgePp": 2.656498497342094,
+          "roi": 0.7883561643835616,
+          "max1HitExclRoi": 0.6331034482758621,
+          "max2HitExclRoi": 0.5458333333333333,
+          "zScore": 1.3029665107490156
+        },
+        "forward": {
+          "n": 71,
+          "hits": 9,
+          "actualRate": 0.1267605633802817,
+          "impliedRate": 0.06887108913935873,
+          "edgePp": 5.788947424092296,
+          "roi": 2.063380281690141,
+          "max1HitExclRoi": 1.5642857142857143,
+          "max2HitExclRoi": 1.0797101449275361,
+          "zScore": 1.9945683579994222
+        }
+      },
+      {
+        "id": "2-3m|南|top",
+        "band": "2-3m",
+        "direction": "南",
+        "topRival4": true,
+        "discovery": {
+          "n": 42,
+          "hits": 10,
+          "actualRate": 0.23809523809523808,
+          "impliedRate": 0.17588448839562018,
+          "edgePp": 6.22107496996179,
+          "roi": 0.9714285714285714,
+          "max1HitExclRoi": 0.8439024390243902,
+          "max2HitExclRoi": 0.715,
+          "zScore": 1.085733552679122
+        },
+        "forward": {
+          "n": 21,
+          "hits": 4,
+          "actualRate": 0.19047619047619047,
+          "impliedRate": 0.20015836897751704,
+          "edgePp": -0.9682178501326577,
+          "roi": 0.5238095238095238,
+          "max1HitExclRoi": 0.385,
+          "max2HitExclRoi": 0.24210526315789474,
+          "zScore": -0.11403289254195814
+        }
+      },
+      {
+        "id": "4-5m|南西|not_top",
+        "band": "4-5m",
+        "direction": "南西",
+        "topRival4": false,
+        "discovery": {
+          "n": 77,
+          "hits": 6,
+          "actualRate": 0.07792207792207792,
+          "impliedRate": 0.055350615757368694,
+          "edgePp": 2.2571462164709226,
+          "roi": 0.8701298701298701,
+          "max1HitExclRoi": 0.6197368421052631,
+          "max2HitExclRoi": 0.3626666666666667,
+          "zScore": 0.8848287882100305
+        },
+        "forward": {
+          "n": 41,
+          "hits": 5,
+          "actualRate": 0.12195121951219512,
+          "impliedRate": 0.07474520099088468,
+          "edgePp": 4.720601852131044,
+          "roi": 2.0853658536585367,
+          "max1HitExclRoi": 0.7375,
+          "max2HitExclRoi": 0.43333333333333335,
+          "zScore": 1.1698046785117802
+        }
+      },
+      {
+        "id": "2-3m|北東|not_top",
+        "band": "2-3m",
+        "direction": "北東",
+        "topRival4": false,
+        "discovery": {
+          "n": 95,
+          "hits": 9,
+          "actualRate": 0.09473684210526316,
+          "impliedRate": 0.07221190230799926,
+          "edgePp": 2.25249397972639,
+          "roi": 1.1842105263157894,
+          "max1HitExclRoi": 0.9106382978723404,
+          "max2HitExclRoi": 0.7096774193548387,
+          "zScore": 0.8758016732853574
+        },
+        "forward": {
+          "n": 42,
+          "hits": 4,
+          "actualRate": 0.09523809523809523,
+          "impliedRate": 0.0709017135785494,
+          "edgePp": 2.433638165954584,
+          "roi": 0.7142857142857143,
+          "max1HitExclRoi": 0.34146341463414637,
+          "max2HitExclRoi": 0.185,
+          "zScore": 0.6323810907404533
+        }
+      },
+      {
+        "id": "4-5m|北西|not_top",
+        "band": "4-5m",
+        "direction": "北西",
+        "topRival4": false,
+        "discovery": {
+          "n": 81,
+          "hits": 7,
+          "actualRate": 0.08641975308641975,
+          "impliedRate": 0.06892164251495128,
+          "edgePp": 1.7498110571468466,
+          "roi": 0.5901234567901235,
+          "max1HitExclRoi": 0.4425,
+          "max2HitExclRoi": 0.3240506329113924,
+          "zScore": 0.6361320645921336
+        },
+        "forward": {
+          "n": 31,
+          "hits": 2,
+          "actualRate": 0.06451612903225806,
+          "impliedRate": 0.095720062753184,
+          "edgePp": -3.120393372092593,
+          "roi": 0.7161290322580646,
+          "max1HitExclRoi": 0.09,
+          "max2HitExclRoi": 0,
+          "zScore": -0.6175246869923438
+        }
+      },
+      {
+        "id": "4-5m|東|not_top",
+        "band": "4-5m",
+        "direction": "東",
+        "topRival4": false,
+        "discovery": {
+          "n": 33,
+          "hits": 3,
+          "actualRate": 0.09090909090909091,
+          "impliedRate": 0.06461005494518342,
+          "edgePp": 2.6299035963907493,
+          "roi": 0.703030303030303,
+          "max1HitExclRoi": 0.44375,
+          "max2HitExclRoi": 0.22580645161290322,
+          "zScore": 0.6304166893364999
+        },
+        "forward": {
+          "n": 22,
+          "hits": 1,
+          "actualRate": 0.045454545454545456,
+          "impliedRate": 0.07830196478049375,
+          "edgePp": -3.2847419325948297,
+          "roi": 0.2,
+          "max1HitExclRoi": 0,
+          "max2HitExclRoi": 0,
+          "zScore": -0.596487097198237
+        }
+      }
+    ],
+    "monthlyTarget": [
+      {
+        "month": "2024-01",
+        "n": 5,
+        "hits": 2,
+        "actualRate": 0.4,
+        "impliedRate": 0.17353913799440335,
+        "edgePp": 22.64608620055967,
+        "roi": 4.4,
+        "max1HitExclRoi": 0.65,
+        "max2HitExclRoi": 0,
+        "zScore": 1.3699998573061092
+      },
+      {
+        "month": "2024-02",
+        "n": 2,
+        "hits": 0,
+        "actualRate": 0,
+        "impliedRate": 0.1407055246623219,
+        "edgePp": -14.07055246623219,
+        "roi": 0,
+        "max1HitExclRoi": 0,
+        "max2HitExclRoi": 0,
+        "zScore": -0.572268164043002
+      },
+      {
+        "month": "2024-03",
+        "n": 6,
+        "hits": 2,
+        "actualRate": 0.3333333333333333,
+        "impliedRate": 0.13662365889494343,
+        "edgePp": 19.67096744383899,
+        "roi": 3.4833333333333334,
+        "max1HitExclRoi": 0.48,
+        "max2HitExclRoi": 0,
+        "zScore": 1.4600481706660358
+      },
+      {
+        "month": "2024-04",
+        "n": 1,
+        "hits": 0,
+        "actualRate": 0,
+        "impliedRate": 0.15827103904361486,
+        "edgePp": -15.827103904361486,
+        "roi": 0,
+        "max1HitExclRoi": 0,
+        "max2HitExclRoi": 0,
+        "zScore": -0.4336252784729386
+      },
+      {
+        "month": "2024-05",
+        "n": 6,
+        "hits": 3,
+        "actualRate": 0.5,
+        "impliedRate": 0.15196129924827464,
+        "edgePp": 34.80387007517254,
+        "roi": 6.666666666666667,
+        "max1HitExclRoi": 2.2,
+        "max2HitExclRoi": 0.675,
+        "zScore": 2.5203182957593713
+      },
+      {
+        "month": "2024-06",
+        "n": 2,
+        "hits": 2,
+        "actualRate": 1,
+        "impliedRate": 0.19907575036013492,
+        "edgePp": 80.0924249639865,
+        "roi": 4.35,
+        "max1HitExclRoi": 2.7,
+        "max2HitExclRoi": 0,
+        "zScore": 2.8875012327852154
+      },
+      {
+        "month": "2024-07",
+        "n": 9,
+        "hits": 1,
+        "actualRate": 0.1111111111111111,
+        "impliedRate": 0.19162575882705968,
+        "edgePp": -8.051464771594857,
+        "roi": 0.3888888888888889,
+        "max1HitExclRoi": 0,
+        "max2HitExclRoi": 0,
+        "zScore": -0.6297102093500179
+      },
+      {
+        "month": "2024-08",
+        "n": 5,
+        "hits": 0,
+        "actualRate": 0,
+        "impliedRate": 0.21558426869682626,
+        "edgePp": -21.558426869682627,
+        "roi": 0,
+        "max1HitExclRoi": 0,
+        "max2HitExclRoi": 0,
+        "zScore": -1.2114625595991217
+      },
+      {
+        "month": "2024-09",
+        "n": 9,
+        "hits": 2,
+        "actualRate": 0.2222222222222222,
+        "impliedRate": 0.13730734131255118,
+        "edgePp": 8.491488090967103,
+        "roi": 1.5333333333333334,
+        "max1HitExclRoi": 0.475,
+        "max2HitExclRoi": 0,
+        "zScore": 0.74892603374708
+      },
+      {
+        "month": "2024-10",
+        "n": 4,
+        "hits": 0,
+        "actualRate": 0,
+        "impliedRate": 0.18692215236629406,
+        "edgePp": -18.692215236629405,
+        "roi": 0,
+        "max1HitExclRoi": 0,
+        "max2HitExclRoi": 0,
+        "zScore": -0.9828265609879406
+      },
+      {
+        "month": "2024-12",
+        "n": 3,
+        "hits": 1,
+        "actualRate": 0.3333333333333333,
+        "impliedRate": 0.13009247574183744,
+        "edgePp": 20.324085759149586,
+        "roi": 1.9666666666666666,
+        "max1HitExclRoi": 0,
+        "max2HitExclRoi": 0,
+        "zScore": 1.053062802203384
+      },
+      {
+        "month": "2025-03",
+        "n": 1,
+        "hits": 1,
+        "actualRate": 1,
+        "impliedRate": 0.2254302352385883,
+        "edgePp": 77.45697647614116,
+        "roi": 3.3,
+        "max1HitExclRoi": 0,
+        "max2HitExclRoi": 0,
+        "zScore": 1.8536348588637273
+      },
+      {
+        "month": "2025-04",
+        "n": 2,
+        "hits": 1,
+        "actualRate": 0.5,
+        "impliedRate": 0.12428477581642736,
+        "edgePp": 37.57152241835726,
+        "roi": 2.9,
+        "max1HitExclRoi": 0,
+        "max2HitExclRoi": 0,
+        "zScore": 1.6107171666359037
+      },
+      {
+        "month": "2025-05",
+        "n": 4,
+        "hits": 1,
+        "actualRate": 0.25,
+        "impliedRate": 0.17988465343201313,
+        "edgePp": 7.011534656798688,
+        "roi": 0.725,
+        "max1HitExclRoi": 0,
+        "max2HitExclRoi": 0,
+        "zScore": 0.3697838207965602
+      },
+      {
+        "month": "2025-06",
+        "n": 5,
+        "hits": 1,
+        "actualRate": 0.2,
+        "impliedRate": 0.17691598662024588,
+        "edgePp": 2.308401337975413,
+        "roi": 0.9,
+        "max1HitExclRoi": 0,
+        "max2HitExclRoi": 0,
+        "zScore": 0.14019939641670723
+      },
+      {
+        "month": "2025-07",
+        "n": 4,
+        "hits": 1,
+        "actualRate": 0.25,
+        "impliedRate": 0.27489312509345254,
+        "edgePp": -2.489312509345254,
+        "roi": 1.25,
+        "max1HitExclRoi": 0,
+        "max2HitExclRoi": 0,
+        "zScore": -0.11324673698255808
+      },
+      {
+        "month": "2025-08",
+        "n": 3,
+        "hits": 2,
+        "actualRate": 0.6666666666666666,
+        "impliedRate": 0.14193774412602603,
+        "edgePp": 52.472892254064064,
+        "roi": 3.8666666666666667,
+        "max1HitExclRoi": 2.45,
+        "max2HitExclRoi": 0,
+        "zScore": 2.6094464092970386
+      },
+      {
+        "month": "2025-09",
+        "n": 2,
+        "hits": 1,
+        "actualRate": 0.5,
+        "impliedRate": 0.21754167333318444,
+        "edgePp": 28.245832666681558,
+        "roi": 1.3,
+        "max1HitExclRoi": 0,
+        "max2HitExclRoi": 0,
+        "zScore": 0.9817868506660316
+      },
+      {
+        "month": "2025-10",
+        "n": 1,
+        "hits": 1,
+        "actualRate": 1,
+        "impliedRate": 0.28481448354118316,
+        "edgePp": 71.51855164588167,
+        "roi": 2.6,
+        "max1HitExclRoi": 0,
+        "max2HitExclRoi": 0,
+        "zScore": 1.584631629046232
+      },
+      {
+        "month": "2025-11",
+        "n": 2,
+        "hits": 1,
+        "actualRate": 0.5,
+        "impliedRate": 0.11860180005019233,
+        "edgePp": 38.13981999498077,
+        "roi": 2.45,
+        "max1HitExclRoi": 0,
+        "max2HitExclRoi": 0,
+        "zScore": 1.677407636039119
+      }
+    ]
+  },
   "anomalies": [
     {
       "id": "marugame_12",

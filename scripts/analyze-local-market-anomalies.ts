@@ -124,6 +124,22 @@ try {
     { id: "ability_all_weather", label: "4号艇最強ライバル・全天候", filter: (row: Observation) => topRival4(row) },
     { id: "environment_all_ability", label: "風2〜3m・南西風・能力不問", filter: (row: Observation) => wind23(row) && southwest(row) },
   ].map(cell => ({ ...cell, metrics: byPeriod(oneFour.filter(cell.filter)) }));
+  const gridDirections = ["北", "北東", "東", "南東", "南", "南西", "西", "北西", "無風"];
+  const gridBands = ["0-1m", "1-2m", "2-3m", "4-5m", "6m+"];
+  const gridCells = gridBands.flatMap(band => gridDirections.flatMap(direction => [true, false].map(top => {
+    const filter = (row: Observation) => windBand(row.wind_speed_mps) === band && row.wind_dir === direction && topRival4(row) === top;
+    return { id: `${band}|${direction}|${top ? "top" : "not_top"}`, band, direction, topRival4: top,
+      discovery: metric(oneFour.filter(row => row.period === "discovery" && filter(row))),
+      forward: metric(oneFour.filter(row => row.period === "forward" && filter(row))), filter };
+  })));
+  const eligibleGrid = gridCells.filter(cell => cell.discovery.n >= 30).sort((a, b) => b.discovery.zScore - a.discovery.zScore);
+  const discoveryRobustGate = eligibleGrid.filter(cell => cell.discovery.zScore >= 1.5 && cell.discovery.max2HitExclRoi >= 1);
+  const targetGridId = "2-3m|南西|top";
+  const targetGridRank = eligibleGrid.findIndex(cell => cell.id === targetGridId) + 1;
+  const gridSimulation = simulateGridMultiplicity(oneFour.filter(row => row.period === "discovery"), eligibleGrid, targetGridId, 1000);
+  const monthlyTarget = [...new Set(oneFour.map(row => row.date.slice(0, 7)))].sort().map(month => ({
+    month, ...metric(oneFour.filter(row => row.date.startsWith(month) && wind23(row) && southwest(row) && topRival4(row))),
+  })).filter(row => row.n > 0);
   const matchSpecs = [
     { id: "venue_season", label: "会場・季節", key: (row: Observation) => `${row.venue}|${seasonOf(row.date)}` },
     { id: "plus_race_head", label: "会場・季節・R帯・1号艇能力帯", key: (row: Observation) => `${row.venue}|${seasonOf(row.date)}|${raceBand(row.race_no)}|${rateBand(value(row.program, 1, "nationalWinRate"))}` },
@@ -146,6 +162,12 @@ try {
     scope: { races: raw.length, discovery: raw.filter(r => r.date <= "2024-12-31").length, forward: raw.filter(r => r.date >= "2025-01-01").length },
     caveats: ["多重探索を含むため仮説生成専用", "historical closing oddsでありT-5再現ではない", "原因ではなく構成差・交絡候補"],
     interactionCells: interactionCells.map(({ filter: _filter, ...cell }) => cell), matchedContrasts,
+    discoveryGridAudit: {
+      family: "1-4 × 風速5帯 × 風向9種 × 4号艇最強/非最強。2024 n>=30",
+      eligibleCells: eligibleGrid.length, targetGridId, targetGridRank, simulations: 1000, ...gridSimulation,
+      retrospectiveRobustGate: { definition: "2024 n>=30, z>=1.5, max2HitExclRoi>=100%", selected: discoveryRobustGate.map(({ filter: _filter, ...cell }) => cell) },
+      topDiscovery: eligibleGrid.slice(0, 10).map(({ filter: _filter, ...cell }) => cell), monthlyTarget,
+    },
     anomalies: results.map(({ filter: _filter, ...result }) => ({
       ...result,
       mechanisms: result.mechanisms.filter(row => row.explainsBoth || row.forwardAmplifier),
@@ -187,6 +209,16 @@ try {
     "", "## 多因子の組合せ比較", "",
     "| 条件セル | 2024 n / edge / z / ROI / max2除外 | 2025 n / edge / z / ROI / max2除外 |", "|---|---:|---:|",
     ...interactionCells.map(cell => `| ${cell.label} | ${shortCell(cell.metrics.discovery)} | ${shortCell(cell.metrics.forward)} |`),
+    "", "## 2024限定の探索多重度監査", "",
+    `探索族: 1-4 × 風速5帯 × 風向9種 × 4号艇最強/非最強。2024 n≥30は${eligibleGrid.length}セル。`, "",
+    `対象セル（2-3m・南西・4号艇最強）の2024順位: ${targetGridRank > 0 ? `${targetGridRank}/${eligibleGrid.length}` : "n不足"}`, "",
+    `市場確率を真とした1000回simulation: raw p≈${gridSimulation.rawP.toFixed(3)} / family-wise p≈${gridSimulation.familyWiseP.toFixed(3)}`, "",
+    `後付け頑健性ゲート（2024 n≥30・z≥1.5・max2除外ROI≥100%）の通過数: ${discoveryRobustGate.length}セル`, "",
+    ...(discoveryRobustGate.length ? ["| ゲート通過条件 | 2024 n / edge / z / ROI / max2 | 固定条件の2025 n / edge / z / ROI / max2 |", "|---|---:|---:|", ...discoveryRobustGate.map(cell => `| ${cell.band}・${cell.direction}・4号艇${cell.topRival4 ? "最強" : "非最強"} | ${shortCell(cell.discovery)} | ${shortCell(cell.forward)} |`), ""] : []),
+    "| 2024順位 | 条件 | 2024 n / edge / z / ROI / max2 | 同条件2025 n / edge / z / ROI / max2 |", "|---:|---|---:|---:|",
+    ...eligibleGrid.slice(0, 10).map((cell, index) => `| ${index + 1} | ${cell.band}・${cell.direction}・4号艇${cell.topRival4 ? "最強" : "非最強"} | ${shortCell(cell.discovery)} | ${shortCell(cell.forward)} |`),
+    "", "### 対象セルの月別", "", "| 月 | n | hit | edge | ROI |", "|---|---:|---:|---:|---:|",
+    ...monthlyTarget.map(row => `| ${row.month} | ${row.n} | ${row.hits} | ${row.edgePp >= 0 ? "+" : ""}${row.edgePp.toFixed(2)}pt | ${pct(row.roi)} |`),
     "", "## 交絡を揃えた市場残差比較", "",
     "> treatmentは「風2〜3m・南西風・4号艇最強ライバル」。edge差は actual - normalized implied の差で、プラスほど条件群側に市場未説明分が残る。", "",
     "| 比較目的 | 調整 | 2024 matched / coverage / edge差 | 2025 matched / coverage / edge差 |", "|---|---|---:|---:|",
@@ -199,6 +231,7 @@ try {
     "5. **配当集中と開催依存**: 最大2的中除外では候補セルが両期100%超でも、2024のleave-one-venue/monthは100%割れ。特定開催の寄与が残る。",
     "6. **時間レジーム**: 南西風・能力不問セルは2024のmax2除外90.6%から2025は126.6%へ変化。2025固有の気象・選手編成・市場挙動の可能性がある。",
     "7. **実運用可能性**: 過去風向は結果取得系にしかなく、締切前liveで同じ特徴を作れない。予測力があっても現状は実行可能なedgeではない。",
+    "8. **探索多重度**: 対象セルの2024 raw pは小さめでも、32セル中の最大値探索を考慮したfamily-wise pは高い。偶然候補を拾った可能性を排除できない。後付け頑健性ゲートでは唯一残り2025も再現したが、ゲート自体を次期間で前向き検証する必要がある。",
     "", "結論は単一原因ではなく、**南西風環境を主軸に、4号艇相対能力が相互作用し、会場・季節・開催単位の交絡と価格時点差が残る**というもの。因果確定やBUY採用ではなく、必要データと反証条件を持つ監視仮説とする。",
     "", "## 公式情報との突合", "",
     "- 丸亀: https://www.boatrace.jp/owsp/sp/site/place/stadium/br15/index.html — 干満と風向でまくり・差しが変わる。",
@@ -232,6 +265,22 @@ function matchedResidual(rows: Observation[], treatment: (row: Observation) => b
     controlResidualPp: matched ? controlResidual / matched * 100 : 0,
     deltaPp: matched ? (treatedResidual - controlResidual) / matched * 100 : 0 };
 }
+function simulateGridMultiplicity(rows: Observation[], cells: Array<{ id: string; discovery: Metric; filter: (row: Observation) => boolean }>, targetId: string, iterations: number) {
+  const random = mulberry32(20260718); const memberships = cells.map(cell => rows.map((row, index) => cell.filter(row) ? index : -1).filter(index => index >= 0));
+  const targetIndex = cells.findIndex(cell => cell.id === targetId); const observedTargetZ = targetIndex >= 0 ? cells[targetIndex].discovery.zScore : 0;
+  let rawExceed = 0; let familyExceed = 0;
+  for (let iteration = 0; iteration < iterations; iteration += 1) {
+    const hits = rows.map(row => random() < row.implied ? 1 : 0); let targetZ = 0; let maxZ = Number.NEGATIVE_INFINITY;
+    memberships.forEach((indices, index) => {
+      const expected = indices.reduce((sum, i) => sum + rows[i].implied, 0); const variance = indices.reduce((sum, i) => sum + rows[i].implied * (1 - rows[i].implied), 0);
+      const z = variance > 0 ? (indices.reduce((sum, i) => sum + hits[i], 0) - expected) / Math.sqrt(variance) : 0;
+      if (index === targetIndex) targetZ = z; if (z > maxZ) maxZ = z;
+    });
+    if (targetZ >= observedTargetZ) rawExceed += 1; if (maxZ >= observedTargetZ) familyExceed += 1;
+  }
+  return { observedTargetZ, rawP: (rawExceed + 1) / (iterations + 1), familyWiseP: (familyExceed + 1) / (iterations + 1) };
+}
+function mulberry32(seed: number) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 function residual(row: Observation) { return (row.hit ? 1 : 0) - row.implied; }
 function leaveOneOut(rows: Observation[]) {
   const worstAfterDropping = (groups: string[], key: (row: Observation) => string) => groups.map(group => ({ group, value: metric(rows.filter(row => key(row) !== group)).max2HitExclRoi })).sort((a, b) => a.value - b.value)[0] ?? { group: "-", value: 0 };
@@ -270,5 +319,6 @@ function edgeDelta(row: { candidate: ReturnType<typeof byPeriod>; control: Retur
 function matchedCell(row: ReturnType<typeof matchedResidual>) { return `${row.matched}/${row.treated} / ${pct(row.coverage)} / ${row.deltaPp >= 0 ? "+" : ""}${row.deltaPp.toFixed(2)}pt`; }
 function interpretBase(base: ReturnType<typeof byPeriod>) { if (base.discovery.edgePp > 0 && base.forward.edgePp > 0) return "両期で市場過小評価。ただし標本不足"; if (base.forward.edgePp > base.discovery.edgePp) return "2025だけ増幅。レジーム変化疑い"; return "再現せず"; }
 function seasonOf(date: string) { const month = Number(date.slice(5, 7)); if (month === 12 || month <= 2) return "冬(12-2)"; if (month <= 5) return "春(3-5)"; if (month <= 8) return "夏(6-8)"; return "秋(9-11)"; }
+function windBand(speed: number | null) { if (speed == null) return "不明"; if (speed < 1) return "0-1m"; if (speed < 2) return "1-2m"; if (speed < 4) return "2-3m"; if (speed < 6) return "4-5m"; return "6m+"; }
 function raceBand(raceNo: number) { return raceNo <= 4 ? "1-4" : raceNo <= 8 ? "5-8" : "9-12"; }
 function rateBand(rate: number) { return rate < 5 ? "<5" : rate < 6 ? "5-6" : rate < 7 ? "6-7" : "7+"; }
