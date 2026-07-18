@@ -67,3 +67,15 @@ Researchナビゲーションと`ResearchLab`のimportを外し、package script
 DailyResearchReport aggregateとRule LifecycleのFable表示は未接続である。追加する場合も、
 既存Presentation値を変更せず表示する範囲に限定する。ROI向上はResearch Labで仮説と不足データを
 絞り、履歴・walk-forward・paper-forwardのゲートを通した後に別レビューで判断する。
+
+### 候補選択監査
+
+全出目候補とDBに残った候補の違いは、productionへ接続しない読み取り専用監査で確認する。
+
+```sh
+npm run audit:candidate-selection
+npm run audit:candidate-selection -- --json
+```
+
+モデル最上位1件をpaper上で再判定し、現在DBに残った買い目との一致率、BUY/WATCH/SKIP件数、
+買い目別オッズを比較する。この結果だけでlive判定へ接続してはいけない。
