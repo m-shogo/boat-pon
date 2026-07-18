@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { selectTopModelCandidatePerRace } from "./candidateSelection";
+import { selectBestPaperDecisionPerRace, selectTopModelCandidatePerRace } from "./candidateSelection";
 import type { BetCandidate } from "./types";
 
 function candidate(raceId: string, selection: [number, number, number], score: number): BetCandidate {
@@ -43,4 +43,14 @@ test("レース順を維持して各レース1件を返す", () => {
     ["race-2", "1-2-3"],
     ["race-1", "1-2-3"],
   ]);
+});
+
+test("paper EV選択はBUYを優先し、同じ判定ならEV最大を選ぶ", () => {
+  const rows = selectBestPaperDecisionPerRace([
+    { candidate: candidate("race-1", [1, 2, 3], 0.08), decision: { status: "WATCH", reasons: [], requiredOdds: 10, ev: 9, recommendedAmount: 0 } },
+    { candidate: candidate("race-1", [1, 3, 2], 0.05), decision: { status: "BUY", reasons: [], requiredOdds: 10, ev: 1.3, recommendedAmount: 100 } },
+    { candidate: candidate("race-2", [1, 2, 3], 0.08), decision: { status: "BUY", reasons: [], requiredOdds: 10, ev: 1.3, recommendedAmount: 100 } },
+    { candidate: candidate("race-2", [1, 3, 2], 0.05), decision: { status: "BUY", reasons: [], requiredOdds: 10, ev: 1.5, recommendedAmount: 100 } },
+  ]);
+  assert.deepEqual(rows.map((row) => row.candidate.selection), [[1, 3, 2], [1, 3, 2]]);
 });

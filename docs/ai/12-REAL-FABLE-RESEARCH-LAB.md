@@ -79,3 +79,21 @@ npm run audit:candidate-selection -- --json
 
 モデル最上位1件をpaper上で再判定し、現在DBに残った買い目との一致率、BUY/WATCH/SKIP件数、
 買い目別オッズを比較する。この結果だけでlive判定へ接続してはいけない。
+
+### Shadow top-1 backtest
+
+買い目別オッズ、日付以前だけの180日学習、モデルtop-1を使い、公式払戻を主ROIとして評価する。
+
+```sh
+npm run backtest:shadow-top1
+npm run backtest:shadow-top1 -- --from 2024-01-01 --to 2025-12-31 --json
+npm run backtest:shadow-top1 -- --selector ev --from 2025-01-01 --to 2025-12-31
+npm run backtest:shadow-top1 -- --edge-grid --from 2025-01-01 --to 2025-12-31 --json
+```
+
+最大高配当1件・2件除外ROI、年別ROI、最大ドローダウン、最大連敗を同時に出す。
+`current_odds` ROIは補助値で、採否は公式払戻ROIを優先する。read-only shadowでありlive未接続。
+`--selector model-score`はモデル確率top-1、`--selector ev`は判定statusとEVを使う研究比較。
+どちらもhistorical latest oddsでありT-5再現ではない。
+`--edge-grid`は事前固定したモデルEV閾値とオッズ上限を横並びにする。探索結果の最良値を
+そのまま採用せず、別年とfuture-onlyで再検証する。

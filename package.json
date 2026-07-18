@@ -92,6 +92,7 @@
     "watch:today": "tsx scripts/live-watch-list.ts",
     "live:diagnose": "tsx scripts/live-diagnose.ts",
     "audit:candidate-selection": "tsx scripts/audit-candidate-selection.ts",
+    "backtest:shadow-top1": "tsx scripts/backtest-shadow-top1.ts",
     "guard:live": "tsx scripts/live-change-guard.ts",
     "auto:odds": "tsx scripts/auto-fetch-odds.ts",
     "auto:beforeinfo": "tsx scripts/auto-fetch-exhibition.ts",
