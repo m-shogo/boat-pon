@@ -102,6 +102,7 @@
     "analyze:event-market-context": "tsx scripts/analyze-event-market-context.ts",
     "analyze:event-selection-matrix": "tsx scripts/analyze-event-selection-matrix.ts",
     "analyze:rookie-event-edge": "tsx scripts/analyze-rookie-event-edge.ts",
+    "analyze:event-stage-market": "tsx scripts/analyze-event-stage-market.ts",
     "guard:live": "tsx scripts/live-change-guard.ts",
     "auto:odds": "tsx scripts/auto-fetch-odds.ts",
     "auto:beforeinfo": "tsx scripts/auto-fetch-exhibition.ts",

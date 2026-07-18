@@ -1,0 +1,656 @@
+{
+  "generatedAt": "2026-07-18T14:48:45.963Z",
+  "safety": {
+    "readOnly": true,
+    "preRaceStage": true,
+    "productionConnected": false
+  },
+  "coverage": {
+    "races": 4184,
+    "eventStage": 4184
+  },
+  "family": {
+    "stages": 10,
+    "selections": 5,
+    "cells": 50,
+    "eligible": 35
+  },
+  "stable": [
+    {
+      "id": "fixed_entry",
+      "label": "進入固定レース",
+      "selection": "1-3",
+      "inside": {
+        "discovery": {
+          "n": 80,
+          "hits": 15,
+          "edgePp": 4.897571161406507,
+          "roi": 1.04625,
+          "max2HitExclRoi": 0.7692307692307693
+        },
+        "forward": {
+          "n": 33,
+          "hits": 6,
+          "edgePp": 4.126722429297959,
+          "roi": 1.206060606060606,
+          "max2HitExclRoi": 0.3774193548387097
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2635,
+          "hits": 246,
+          "edgePp": -0.3665149938074411,
+          "roi": 0.6638330170777988,
+          "max2HitExclRoi": 0.6396505886821117
+        },
+        "forward": {
+          "n": 1436,
+          "hits": 132,
+          "edgePp": -0.25570435173360384,
+          "roi": 0.7571727019498607,
+          "max2HitExclRoi": 0.7130404463040446
+        }
+      }
+    },
+    {
+      "id": "fixed_entry",
+      "label": "進入固定レース",
+      "selection": "1-4",
+      "inside": {
+        "discovery": {
+          "n": 80,
+          "hits": 16,
+          "edgePp": 3.8756130810760903,
+          "roi": 0.855,
+          "max2HitExclRoi": 0.5384615384615384
+        },
+        "forward": {
+          "n": 33,
+          "hits": 10,
+          "edgePp": 12.974869937426515,
+          "roi": 1.5424242424242425,
+          "max2HitExclRoi": 1.0258064516129033
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2635,
+          "hits": 288,
+          "edgePp": 0.841231483418631,
+          "roi": 0.7724478178368122,
+          "max2HitExclRoi": 0.7403342195214584
+        },
+        "forward": {
+          "n": 1436,
+          "hits": 165,
+          "edgePp": 1.617797277698681,
+          "roi": 0.9552924791086351,
+          "max2HitExclRoi": 0.8903765690376569
+        }
+      }
+    },
+    {
+      "id": "semifinal_day",
+      "label": "準優勝戦がある日",
+      "selection": "1-6",
+      "inside": {
+        "discovery": {
+          "n": 458,
+          "hits": 42,
+          "edgePp": 2.5391753075896273,
+          "roi": 0.6818777292576419,
+          "max2HitExclRoi": 0.5324561403508772
+        },
+        "forward": {
+          "n": 254,
+          "hits": 19,
+          "edgePp": 1.686034373467273,
+          "roi": 0.7074803149606299,
+          "max2HitExclRoi": 0.4666666666666667
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2257,
+          "hits": 102,
+          "edgePp": 0.5403880814195915,
+          "roi": 0.7686752326096589,
+          "max2HitExclRoi": 0.6919733924611974
+        },
+        "forward": {
+          "n": 1215,
+          "hits": 45,
+          "edgePp": -0.18266614750601792,
+          "roi": 0.6584362139917695,
+          "max2HitExclRoi": 0.524484748557296
+        }
+      }
+    },
+    {
+      "id": "day1",
+      "label": "開催初日",
+      "selection": "1-3",
+      "inside": {
+        "discovery": {
+          "n": 485,
+          "hits": 54,
+          "edgePp": 1.2843952520768727,
+          "roi": 0.6909278350515464,
+          "max2HitExclRoi": 0.6178053830227743
+        },
+        "forward": {
+          "n": 255,
+          "hits": 31,
+          "edgePp": 2.9135636540537915,
+          "roi": 1.0701960784313727,
+          "max2HitExclRoi": 0.8822134387351779
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2230,
+          "hits": 207,
+          "edgePp": -0.5367233242275121,
+          "roi": 0.6716591928251121,
+          "max2HitExclRoi": 0.6430879712746859
+        },
+        "forward": {
+          "n": 1214,
+          "hits": 107,
+          "edgePp": -0.8022803465455881,
+          "roi": 0.7036243822075783,
+          "max2HitExclRoi": 0.6513201320132013
+        }
+      }
+    },
+    {
+      "id": "day5_plus",
+      "label": "開催5日目以降",
+      "selection": "1-4",
+      "inside": {
+        "discovery": {
+          "n": 590,
+          "hits": 82,
+          "edgePp": 1.1713042195957666,
+          "roi": 0.9310169491525424,
+          "max2HitExclRoi": 0.8261904761904761
+        },
+        "forward": {
+          "n": 312,
+          "hits": 54,
+          "edgePp": 4.11828756209203,
+          "roi": 1.0733974358974359,
+          "max2HitExclRoi": 0.9116129032258065
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2125,
+          "hits": 222,
+          "edgePp": 0.8638233015212309,
+          "roi": 0.7315294117647059,
+          "max2HitExclRoi": 0.691662741403674
+        },
+        "forward": {
+          "n": 1157,
+          "hits": 121,
+          "edgePp": 1.267434640741271,
+          "roi": 0.94019014693172,
+          "max2HitExclRoi": 0.8595670995670995
+        }
+      }
+    },
+    {
+      "id": "final_day",
+      "label": "優勝戦がある日",
+      "selection": "1-4",
+      "inside": {
+        "discovery": {
+          "n": 301,
+          "hits": 40,
+          "edgePp": 0.8737360291091727,
+          "roi": 0.806312292358804,
+          "max2HitExclRoi": 0.6177257525083613
+        },
+        "forward": {
+          "n": 162,
+          "hits": 28,
+          "edgePp": 4.300985593136729,
+          "roi": 1.2395061728395063,
+          "max2HitExclRoi": 0.928125
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2414,
+          "hits": 264,
+          "edgePp": 0.9377379703944749,
+          "roi": 0.7709610604805303,
+          "max2HitExclRoi": 0.7359038142620232
+        },
+        "forward": {
+          "n": 1307,
+          "hits": 147,
+          "edgePp": 1.5719724044546455,
+          "roi": 0.9348890589135425,
+          "max2HitExclRoi": 0.8635249042145594
+        }
+      }
+    },
+    {
+      "id": "semifinal_day",
+      "label": "準優勝戦がある日",
+      "selection": "1-4",
+      "inside": {
+        "discovery": {
+          "n": 458,
+          "hits": 55,
+          "edgePp": 0.7352968623505804,
+          "roi": 0.9312227074235808,
+          "max2HitExclRoi": 0.7699561403508772
+        },
+        "forward": {
+          "n": 254,
+          "hits": 40,
+          "edgePp": 4.3227139649500685,
+          "roi": 1.0937007874015747,
+          "max2HitExclRoi": 0.8281746031746032
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2257,
+          "hits": 249,
+          "edgePp": 0.9702826948770701,
+          "roi": 0.7431546300398759,
+          "max2HitExclRoi": 0.7073170731707317
+        },
+        "forward": {
+          "n": 1215,
+          "hits": 135,
+          "edgePp": 1.3607886844551929,
+          "roi": 0.9423045267489711,
+          "max2HitExclRoi": 0.8671887881286068
+        }
+      }
+    },
+    {
+      "id": "day5_plus",
+      "label": "開催5日目以降",
+      "selection": "1-6",
+      "inside": {
+        "discovery": {
+          "n": 590,
+          "hits": 48,
+          "edgePp": 1.8773824201622202,
+          "roi": 0.8235593220338983,
+          "max2HitExclRoi": 0.6792517006802721
+        },
+        "forward": {
+          "n": 312,
+          "hits": 21,
+          "edgePp": 0.5807445209739694,
+          "roi": 0.5698717948717948,
+          "max2HitExclRoi": 0.3732258064516129
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2125,
+          "hits": 96,
+          "edgePp": 0.5999729707032275,
+          "roi": 0.7347294117647059,
+          "max2HitExclRoi": 0.653226566179934
+        },
+        "forward": {
+          "n": 1157,
+          "hits": 43,
+          "edgePp": 0.021712248139149272,
+          "roi": 0.693085566119274,
+          "max2HitExclRoi": 0.5524675324675324
+        }
+      }
+    },
+    {
+      "id": "final_day",
+      "label": "優勝戦がある日",
+      "selection": "1-2",
+      "inside": {
+        "discovery": {
+          "n": 301,
+          "hits": 30,
+          "edgePp": 0.5672210989345223,
+          "roi": 0.6757475083056479,
+          "max2HitExclRoi": 0.5872909698996656
+        },
+        "forward": {
+          "n": 162,
+          "hits": 17,
+          "edgePp": 0.860350649404707,
+          "roi": 0.8277777777777777,
+          "max2HitExclRoi": 0.569375
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2414,
+          "hits": 232,
+          "edgePp": 1.2616894257931257,
+          "roi": 0.8683927091963546,
+          "max2HitExclRoi": 0.8427446102819237
+        },
+        "forward": {
+          "n": 1307,
+          "hits": 94,
+          "edgePp": -0.8748075344443724,
+          "roi": 0.6492731446059679,
+          "max2HitExclRoi": 0.6159386973180077
+        }
+      }
+    },
+    {
+      "id": "day1",
+      "label": "開催初日",
+      "selection": "1-5",
+      "inside": {
+        "discovery": {
+          "n": 485,
+          "hits": 27,
+          "edgePp": 0.5348307780771859,
+          "roi": 0.5237113402061856,
+          "max2HitExclRoi": 0.4405797101449275
+        },
+        "forward": {
+          "n": 255,
+          "hits": 15,
+          "edgePp": 0.784997404145093,
+          "roi": 1.3572549019607842,
+          "max2HitExclRoi": 0.7517786561264822
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2230,
+          "hits": 139,
+          "edgePp": 0.39935293984053166,
+          "roi": 0.6931838565022421,
+          "max2HitExclRoi": 0.6181777378815081
+        },
+        "forward": {
+          "n": 1214,
+          "hits": 71,
+          "edgePp": 0.364860510454562,
+          "roi": 0.6181219110378913,
+          "max2HitExclRoi": 0.5448844884488449
+        }
+      }
+    },
+    {
+      "id": "semifinal_day",
+      "label": "準優勝戦がある日",
+      "selection": "1-5",
+      "inside": {
+        "discovery": {
+          "n": 458,
+          "hits": 31,
+          "edgePp": 0.2770414469046458,
+          "roi": 0.7393013100436682,
+          "max2HitExclRoi": 0.5616228070175439
+        },
+        "forward": {
+          "n": 254,
+          "hits": 23,
+          "edgePp": 2.047545491775063,
+          "roi": 0.9874015748031496,
+          "max2HitExclRoi": 0.7710317460317461
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2257,
+          "hits": 135,
+          "edgePp": 0.4532853347494382,
+          "roi": 0.6474080638015064,
+          "max2HitExclRoi": 0.5732594235033259
+        },
+        "forward": {
+          "n": 1215,
+          "hits": 63,
+          "edgePp": 0.10126620809709178,
+          "roi": 0.6960493827160494,
+          "max2HitExclRoi": 0.5686727122835944
+        }
+      }
+    },
+    {
+      "id": "day3_4",
+      "label": "開催3〜4日目",
+      "selection": "1-5",
+      "inside": {
+        "discovery": {
+          "n": 1055,
+          "hits": 62,
+          "edgePp": 0.256398115182126,
+          "roi": 0.7680568720379147,
+          "max2HitExclRoi": 0.6094966761633428
+        },
+        "forward": {
+          "n": 609,
+          "hits": 36,
+          "edgePp": 0.7839441313357408,
+          "roi": 0.6492610837438424,
+          "max2HitExclRoi": 0.528500823723229
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 1660,
+          "hits": 104,
+          "edgePp": 0.5297891395750949,
+          "roi": 0.5960843373493976,
+          "max2HitExclRoi": 0.5479493365500603
+        },
+        "forward": {
+          "n": 860,
+          "hits": 50,
+          "edgePp": 0.19266630437833335,
+          "roi": 0.8152325581395349,
+          "max2HitExclRoi": 0.6354312354312355
+        }
+      }
+    },
+    {
+      "id": "day2",
+      "label": "開催2日目",
+      "selection": "1-5",
+      "inside": {
+        "discovery": {
+          "n": 585,
+          "hits": 34,
+          "edgePp": 0.6771494797060369,
+          "roi": 0.5299145299145299,
+          "max2HitExclRoi": 0.44459691252144085
+        },
+        "forward": {
+          "n": 293,
+          "hits": 15,
+          "edgePp": 0.16927498033014773,
+          "roi": 0.5081911262798635,
+          "max2HitExclRoi": 0.2890034364261168
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2130,
+          "hits": 132,
+          "edgePp": 0.35390494722243104,
+          "roi": 0.6994366197183098,
+          "max2HitExclRoi": 0.6209116541353383
+        },
+        "forward": {
+          "n": 1176,
+          "hits": 71,
+          "edgePp": 0.5046916909116539,
+          "roi": 0.8057823129251701,
+          "max2HitExclRoi": 0.6743611584327087
+        }
+      }
+    },
+    {
+      "id": "day3_4",
+      "label": "開催3〜4日目",
+      "selection": "1-6",
+      "inside": {
+        "discovery": {
+          "n": 1055,
+          "hits": 55,
+          "edgePp": 1.5332095564009574,
+          "roi": 0.8351658767772512,
+          "max2HitExclRoi": 0.6832858499525166
+        },
+        "forward": {
+          "n": 609,
+          "hits": 20,
+          "edgePp": 0.14555472296433955,
+          "roi": 0.8348111658456486,
+          "max2HitExclRoi": 0.5810543657331136
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 1660,
+          "hits": 89,
+          "edgePp": 0.4608807883355693,
+          "roi": 0.7024698795180723,
+          "max2HitExclRoi": 0.5980699638118214
+        },
+        "forward": {
+          "n": 860,
+          "hits": 44,
+          "edgePp": 0.1368262039018558,
+          "roi": 0.5480232558139535,
+          "max2HitExclRoi": 0.40675990675990675
+        }
+      }
+    },
+    {
+      "id": "final_day",
+      "label": "優勝戦がある日",
+      "selection": "1-6",
+      "inside": {
+        "discovery": {
+          "n": 301,
+          "hits": 17,
+          "edgePp": 0.6939729402853647,
+          "roi": 1.044186046511628,
+          "max2HitExclRoi": 0.6331103678929766
+        },
+        "forward": {
+          "n": 162,
+          "hits": 8,
+          "edgePp": 0.0913916700021175,
+          "roi": 0.3697530864197531,
+          "max2HitExclRoi": 0.190625
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2414,
+          "hits": 127,
+          "edgePp": 0.9004607852585653,
+          "roi": 0.717854183927092,
+          "max2HitExclRoi": 0.6461028192371476
+        },
+        "forward": {
+          "n": 1307,
+          "hits": 56,
+          "edgePp": 0.146524798087628,
+          "roi": 0.7037490436113236,
+          "max2HitExclRoi": 0.5793103448275863
+        }
+      }
+    },
+    {
+      "id": "day1",
+      "label": "開催初日",
+      "selection": "1-4",
+      "inside": {
+        "discovery": {
+          "n": 485,
+          "hits": 49,
+          "edgePp": 0.030252843039623206,
+          "roi": 0.7441237113402062,
+          "max2HitExclRoi": 0.5929606625258799
+        },
+        "forward": {
+          "n": 255,
+          "hits": 24,
+          "edgePp": 0.4342045072964154,
+          "roi": 1.0298039215686274,
+          "max2HitExclRoi": 0.7533596837944664
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2230,
+          "hits": 255,
+          "edgePp": 1.1264669849416569,
+          "roi": 0.7815695067264574,
+          "max2HitExclRoi": 0.7436265709156193
+        },
+        "forward": {
+          "n": 1214,
+          "hits": 151,
+          "edgePp": 2.1751280472403547,
+          "roi": 0.9556013179571664,
+          "max2HitExclRoi": 0.8787953795379538
+        }
+      }
+    },
+    {
+      "id": "day2",
+      "label": "開催2日目",
+      "selection": "1-6",
+      "inside": {
+        "discovery": {
+          "n": 585,
+          "hits": 28,
+          "edgePp": 0.21569737311658768,
+          "roi": 0.5969230769230769,
+          "max2HitExclRoi": 0.44356775300171525
+        },
+        "forward": {
+          "n": 293,
+          "hits": 14,
+          "edgePp": 0.012544008948444485,
+          "roi": 0.6600682593856655,
+          "max2HitExclRoi": 0.2573883161512027
+        }
+      },
+      "outside": {
+        "discovery": {
+          "n": 2130,
+          "hits": 116,
+          "edgePp": 1.0593498720032213,
+          "roi": 0.7971830985915493,
+          "max2HitExclRoi": 0.7159304511278195
+        },
+        "forward": {
+          "n": 1176,
+          "hits": 50,
+          "edgePp": 0.17231119644471066,
+          "roi": 0.6686224489795919,
+          "max2HitExclRoi": 0.5371379897785349
+        }
+      }
+    }
+  ],
+  "robust": [],
+  "caveats": [
+    "開催初日は保存HTMLのリンクから復元",
+    "準優日・最終日は同日の公式race_typeから識別",
+    "50セル探索後の順位でfamily-wise補正前",
+    "historical closing oddsでT-5と非同等"
+  ]
+}
