@@ -17,7 +17,7 @@ const KNOWN_REPAIRED_SUMMARIES = new Set([
   "--- done: 1 days / 0 programs / cached=1 / already=0 / failed=1",
 ]);
 
-export type LiveLogJob = "daily-programs" | "auto-odds" | "auto-exhibition" | "daily-progress";
+export type LiveLogJob = "daily-programs" | "auto-odds" | "auto-exhibition" | "daily-progress" | "daily-results";
 
 export type LiveLogInspection = {
   path: string;

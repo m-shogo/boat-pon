@@ -38,7 +38,7 @@ TOTAL_BUY=$(db_query "SELECT COUNT(*) FROM decision_history
   WHERE date >= '2026-05-27'
     AND decision = 'BUY'
     AND source = 'history-model'
-    AND model_version = 'boatpon-v3-alpha15';")
+    AND run_kind = 'paper-live';")
 
 # ---------- err.log の新規エラー件数（既知ログ除く）----------
 ERR_LOG="data/logs/auto-odds-err.log"

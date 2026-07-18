@@ -20,6 +20,8 @@ const LOG_PATHS: Array<{ path: string; job: LiveLogJob }> = [
   { path: "data/logs/auto-exhibition-err.log", job: "auto-exhibition" },
   { path: "data/logs/progress.log", job: "daily-progress" },
   { path: "data/logs/progress-err.log", job: "daily-progress" },
+  { path: "data/logs/daily-results.log", job: "daily-results" },
+  { path: "data/logs/daily-results-err.log", job: "daily-results" },
 ];
 
 const now = new Date();
@@ -65,6 +67,29 @@ GROUP BY 1
 ORDER BY 1
 `).all(yesterday) as Array<{ date: string; n: number }>;
 
+  const recentResultCoverage = db.prepare(`
+WITH RECURSIVE dates(date) AS (
+  SELECT date(?, '-6 day')
+  UNION ALL
+  SELECT date(date, '+1 day') FROM dates WHERE date < ?
+), programs AS (
+  SELECT date, COUNT(*) AS n FROM official_programs
+  WHERE date BETWEEN date(?, '-6 day') AND ? GROUP BY date
+), results AS (
+  SELECT date, COUNT(*) AS n FROM race_results
+  WHERE date BETWEEN date(?, '-6 day') AND ? GROUP BY date
+)
+SELECT dates.date, COALESCE(programs.n, 0) AS programs, COALESCE(results.n, 0) AS results
+FROM dates LEFT JOIN programs USING(date) LEFT JOIN results USING(date)
+ORDER BY dates.date
+`).all(yesterday, yesterday, yesterday, yesterday, yesterday, yesterday) as Array<{ date: string; programs: number; results: number }>;
+  const missingResultDates = recentResultCoverage
+    .filter((row) => row.programs > 0 && row.results === 0)
+    .map((row) => row.date);
+  const missingProgramDates = recentResultCoverage
+    .filter((row) => row.results > 0 && row.programs === 0)
+    .map((row) => row.date);
+
   const pollutedSkips = db.prepare(`
 SELECT COUNT(*) AS n, SUM(CASE WHEN current_odds IS NOT NULL THEN 1 ELSE 0 END) AS odds_present
 FROM decision_history
@@ -76,6 +101,9 @@ WHERE date = ? AND model_version = ? AND decision = 'SKIP'
     programs,
     decisions,
     odds,
+    recentResultCoverage,
+    missingResultDates,
+    missingProgramDates,
     nextChecks: [
       nextDailyCheck("daily-programs", 8, 0),
       nextAutoOddsCheck(),
@@ -106,6 +134,12 @@ function printReport(report: ReturnType<typeof buildReport>) {
   printRows("programs", report.programs.map((row) => `${row.date}: ${row.n}`));
   printRows("decisions", report.decisions.map((row) => `${row.date} ${row.decision}: n=${row.n} odds=${row.odds_present}`));
   printRows("odds snapshots", report.odds.map((row) => `${row.date}: ${row.n}`));
+  printRows("result coverage", report.recentResultCoverage.map((row) => {
+    const mark = row.programs > 0 && row.results === 0 ? "MISSING" : "ok";
+    return `${row.date}: programs=${row.programs} results=${row.results} ${mark}`;
+  }));
+  printRows("missing result dates", report.missingResultDates);
+  printRows("missing program dates", report.missingProgramDates);
   console.log("");
 
   console.log("Next checks:");
