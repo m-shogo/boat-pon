@@ -106,6 +106,7 @@
     "analyze:same-day-rhythm-market": "tsx scripts/analyze-same-day-rhythm-market.ts",
     "analyze:track-mood-market": "tsx scripts/analyze-track-mood-market.ts",
     "analyze:human-profile-market": "tsx scripts/analyze-human-profile-market.ts",
+    "analyze:market-microstructure": "tsx scripts/analyze-market-microstructure.ts",
     "guard:live": "tsx scripts/live-change-guard.ts",
     "auto:odds": "tsx scripts/auto-fetch-odds.ts",
     "auto:beforeinfo": "tsx scripts/auto-fetch-exhibition.ts",

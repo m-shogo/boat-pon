@@ -1,0 +1,684 @@
+{
+  "generatedAt": "2026-07-18T15:15:29.645Z",
+  "safety": {
+    "readOnly": true,
+    "closingOddsOnly": true,
+    "productionConnected": false
+  },
+  "coverage": {
+    "candidateRaces": 4184,
+    "evaluatedRaces": 4161,
+    "rejectedMarkets": 23,
+    "evaluatedRows": 20805
+  },
+  "quantiles": {
+    "oneMass": {
+      "p10": 0.17406346785444898,
+      "p50": 0.371734578805196,
+      "p90": 0.6102948500044973
+    },
+    "effectiveSelections": {
+      "p10": 6.986137537041784,
+      "p50": 11.355035528680729,
+      "p90": 16.896984777597652
+    }
+  },
+  "family": {
+    "factors": 11,
+    "selections": 5,
+    "cells": 55,
+    "eligible": 55
+  },
+  "stable": [
+    {
+      "id": "one_mass_55",
+      "label": "1着1号艇への市場確率mass 55%以上",
+      "group": "concentration",
+      "selection": "1-5",
+      "discovery": {
+        "n": 493,
+        "hits": 62,
+        "edgePp": 2.7951360430880765,
+        "roi": 0.8809330628803246,
+        "max2HitExclRoi": 0.7863543788187373
+      },
+      "forward": {
+        "n": 264,
+        "hits": 31,
+        "edgePp": 2.5251321762174865,
+        "roi": 0.7988636363636363,
+        "max2HitExclRoi": 0.6305343511450382
+      }
+    },
+    {
+      "id": "top3_popular",
+      "label": "全30通りで人気3位以内",
+      "group": "rank",
+      "selection": "1-4",
+      "discovery": {
+        "n": 1212,
+        "hits": 242,
+        "edgePp": 2.2466503801652773,
+        "roi": 0.8794554455445545,
+        "max2HitExclRoi": 0.8640495867768595
+      },
+      "forward": {
+        "n": 620,
+        "hits": 128,
+        "edgePp": 2.689027572090518,
+        "roi": 0.8898387096774194,
+        "max2HitExclRoi": 0.8605177993527509
+      }
+    },
+    {
+      "id": "integer_odds_placebo",
+      "label": "オッズが整数_placebo",
+      "group": "placebo",
+      "selection": "1-4",
+      "discovery": {
+        "n": 296,
+        "hits": 36,
+        "edgePp": 2.1135401078054508,
+        "roi": 0.9054054054054054,
+        "max2HitExclRoi": 0.7040816326530612
+      },
+      "forward": {
+        "n": 166,
+        "hits": 28,
+        "edgePp": 6.594931312546206,
+        "roi": 1.8433734939759037,
+        "max2HitExclRoi": 1.2865853658536586
+      }
+    },
+    {
+      "id": "decimal7_placebo",
+      "label": "オッズ小数第1位が7_placebo",
+      "group": "placebo",
+      "selection": "1-3",
+      "discovery": {
+        "n": 285,
+        "hits": 34,
+        "edgePp": 1.8728009689854095,
+        "roi": 0.8164912280701755,
+        "max2HitExclRoi": 0.707773851590106
+      },
+      "forward": {
+        "n": 140,
+        "hits": 17,
+        "edgePp": 2.885052665861069,
+        "roi": 1.2707142857142857,
+        "max2HitExclRoi": 0.9021739130434783
+      }
+    },
+    {
+      "id": "effective_over18",
+      "label": "市場の有効選択肢数18超",
+      "group": "concentration",
+      "selection": "1-4",
+      "discovery": {
+        "n": 170,
+        "hits": 17,
+        "edgePp": 5.159601262215855,
+        "roi": 1.3376470588235294,
+        "max2HitExclRoi": 1.0458333333333334
+      },
+      "forward": {
+        "n": 97,
+        "hits": 6,
+        "edgePp": 1.2958134065076594,
+        "roi": 0.8927835051546392,
+        "max2HitExclRoi": 0.46842105263157896
+      }
+    },
+    {
+      "id": "local_overbought125",
+      "label": "隣接2着艇より25%以上売れ過ぎ",
+      "group": "local_shape",
+      "selection": "1-4",
+      "discovery": {
+        "n": 1272,
+        "hits": 221,
+        "edgePp": 1.2649482818280897,
+        "roi": 0.8187893081761006,
+        "max2HitExclRoi": 0.7818110236220472
+      },
+      "forward": {
+        "n": 707,
+        "hits": 122,
+        "edgePp": 1.8262984823208663,
+        "roi": 0.8581329561527581,
+        "max2HitExclRoi": 0.7872340425531915
+      }
+    },
+    {
+      "id": "top3_popular",
+      "label": "全30通りで人気3位以内",
+      "group": "rank",
+      "selection": "1-5",
+      "discovery": {
+        "n": 571,
+        "hits": 92,
+        "edgePp": 1.5402995166614473,
+        "roi": 0.8201401050788091,
+        "max2HitExclRoi": 0.7926186291739895
+      },
+      "forward": {
+        "n": 295,
+        "hits": 47,
+        "edgePp": 1.2365564642870897,
+        "roi": 0.8074576271186441,
+        "max2HitExclRoi": 0.7498293515358362
+      }
+    },
+    {
+      "id": "one_mass_under40",
+      "label": "1着1号艇への市場確率mass 40%未満",
+      "group": "concentration",
+      "selection": "1-4",
+      "discovery": {
+        "n": 1479,
+        "hits": 107,
+        "edgePp": 1.1713083338041526,
+        "roi": 0.8076402974983097,
+        "max2HitExclRoi": 0.7510494245091401
+      },
+      "forward": {
+        "n": 837,
+        "hits": 65,
+        "edgePp": 2.05514402614325,
+        "roi": 0.9810035842293907,
+        "max2HitExclRoi": 0.8923353293413173
+      }
+    },
+    {
+      "id": "effective_under12",
+      "label": "市場の有効選択肢数12未満",
+      "group": "concentration",
+      "selection": "1-5",
+      "discovery": {
+        "n": 1506,
+        "hits": 115,
+        "edgePp": 1.3117519587391864,
+        "roi": 0.7188579017264276,
+        "max2HitExclRoi": 0.6680186170212766
+      },
+      "forward": {
+        "n": 812,
+        "hits": 56,
+        "edgePp": 0.7263749018381481,
+        "roi": 0.7722906403940887,
+        "max2HitExclRoi": 0.5817283950617284
+      }
+    },
+    {
+      "id": "rank4_10",
+      "label": "全30通りで人気4〜10位",
+      "group": "rank",
+      "selection": "1-5",
+      "discovery": {
+        "n": 1040,
+        "hits": 64,
+        "edgePp": 1.0992526182475204,
+        "roi": 0.8924038461538462,
+        "max2HitExclRoi": 0.833140655105973
+      },
+      "forward": {
+        "n": 512,
+        "hits": 29,
+        "edgePp": 0.6156589307935265,
+        "roi": 0.82734375,
+        "max2HitExclRoi": 0.7133333333333334
+      }
+    },
+    {
+      "id": "local_overbought125",
+      "label": "隣接2着艇より25%以上売れ過ぎ",
+      "group": "local_shape",
+      "selection": "1-5",
+      "discovery": {
+        "n": 833,
+        "hits": 97,
+        "edgePp": 0.7789971163472477,
+        "roi": 0.814765906362545,
+        "max2HitExclRoi": 0.7257521058965102
+      },
+      "forward": {
+        "n": 444,
+        "hits": 50,
+        "edgePp": 0.5862784370108658,
+        "roi": 0.8101351351351351,
+        "max2HitExclRoi": 0.6622171945701357
+      }
+    },
+    {
+      "id": "one_mass_55",
+      "label": "1着1号艇への市場確率mass 55%以上",
+      "group": "concentration",
+      "selection": "1-6",
+      "discovery": {
+        "n": 493,
+        "hits": 44,
+        "edgePp": 1.3857938589667718,
+        "roi": 0.775050709939148,
+        "max2HitExclRoi": 0.6329938900203665
+      },
+      "forward": {
+        "n": 264,
+        "hits": 22,
+        "edgePp": 0.5166977506231667,
+        "roi": 0.5363636363636364,
+        "max2HitExclRoi": 0.3698473282442748
+      }
+    },
+    {
+      "id": "effective_under12",
+      "label": "市場の有効選択肢数12未満",
+      "group": "concentration",
+      "selection": "1-4",
+      "discovery": {
+        "n": 1506,
+        "hits": 205,
+        "edgePp": 0.4146818246799325,
+        "roi": 0.7345949535192563,
+        "max2HitExclRoi": 0.6873670212765958
+      },
+      "forward": {
+        "n": 812,
+        "hits": 122,
+        "edgePp": 1.9649519950015004,
+        "roi": 0.9403940886699508,
+        "max2HitExclRoi": 0.8254320987654321
+      }
+    },
+    {
+      "id": "one_mass_55",
+      "label": "1着1号艇への市場確率mass 55%以上",
+      "group": "concentration",
+      "selection": "1-4",
+      "discovery": {
+        "n": 493,
+        "hits": 95,
+        "edgePp": 0.4003414596589514,
+        "roi": 0.7578093306288033,
+        "max2HitExclRoi": 0.6822810590631364
+      },
+      "forward": {
+        "n": 264,
+        "hits": 57,
+        "edgePp": 2.825114992376321,
+        "roi": 0.8018939393939394,
+        "max2HitExclRoi": 0.7064885496183206
+      }
+    },
+    {
+      "id": "effective_under12",
+      "label": "市場の有効選択肢数12未満",
+      "group": "concentration",
+      "selection": "1-3",
+      "discovery": {
+        "n": 1506,
+        "hits": 188,
+        "edgePp": 0.6145015346519695,
+        "roi": 0.7463479415670651,
+        "max2HitExclRoi": 0.7041223404255319
+      },
+      "forward": {
+        "n": 812,
+        "hits": 99,
+        "edgePp": 0.28417660045107873,
+        "roi": 0.8273399014778325,
+        "max2HitExclRoi": 0.7561728395061729
+      }
+    },
+    {
+      "id": "effective_over18",
+      "label": "市場の有効選択肢数18超",
+      "group": "concentration",
+      "selection": "1-3",
+      "discovery": {
+        "n": 170,
+        "hits": 11,
+        "edgePp": 0.7403654268753921,
+        "roi": 0.6611764705882353,
+        "max2HitExclRoi": 0.4607142857142857
+      },
+      "forward": {
+        "n": 97,
+        "hits": 6,
+        "edgePp": 0.17410306193181802,
+        "roi": 0.6639175257731958,
+        "max2HitExclRoi": 0.3873684210526316
+      }
+    },
+    {
+      "id": "rank11_plus",
+      "label": "全30通りで人気11位以下",
+      "group": "rank",
+      "selection": "1-6",
+      "discovery": {
+        "n": 1528,
+        "hits": 22,
+        "edgePp": 0.16499343085815474,
+        "roi": 0.6550392670157068,
+        "max2HitExclRoi": 0.5415465268676278
+      },
+      "forward": {
+        "n": 869,
+        "hits": 13,
+        "edgePp": 0.26474306583722823,
+        "roi": 0.6749136939010357,
+        "max2HitExclRoi": 0.4875432525951557
+      }
+    },
+    {
+      "id": "local_underbought80",
+      "label": "隣接2着艇より20%以上売れ残り",
+      "group": "local_shape",
+      "selection": "1-5",
+      "discovery": {
+        "n": 1551,
+        "hits": 45,
+        "edgePp": 0.1177448777954772,
+        "roi": 0.578916827852998,
+        "max2HitExclRoi": 0.4708844415752098
+      },
+      "forward": {
+        "n": 849,
+        "hits": 24,
+        "edgePp": 0.24408766560954165,
+        "roi": 0.7326266195524146,
+        "max2HitExclRoi": 0.5502951593860684
+      }
+    },
+    {
+      "id": "integer_odds_placebo",
+      "label": "オッズが整数_placebo",
+      "group": "placebo",
+      "selection": "1-2",
+      "discovery": {
+        "n": 288,
+        "hits": 34,
+        "edgePp": 2.697097590501411,
+        "roi": 0.96875,
+        "max2HitExclRoi": 0.8531468531468531
+      },
+      "forward": {
+        "n": 148,
+        "hits": 12,
+        "edgePp": 0.0872726552420367,
+        "roi": 0.8108108108108109,
+        "max2HitExclRoi": 0.547945205479452
+      }
+    },
+    {
+      "id": "rank11_plus",
+      "label": "全30通りで人気11位以下",
+      "group": "rank",
+      "selection": "1-2",
+      "discovery": {
+        "n": 143,
+        "hits": 6,
+        "edgePp": 1.1115584770149627,
+        "roi": 1.0041958041958041,
+        "max2HitExclRoi": 0.5964539007092199
+      },
+      "forward": {
+        "n": 97,
+        "hits": 3,
+        "edgePp": 0.07360996086216615,
+        "roi": 0.6577319587628866,
+        "max2HitExclRoi": 0.20105263157894737
+      }
+    },
+    {
+      "id": "rank11_plus",
+      "label": "全30通りで人気11位以下",
+      "group": "rank",
+      "selection": "1-4",
+      "discovery": {
+        "n": 586,
+        "hits": 12,
+        "edgePp": 0.03325096699367951,
+        "roi": 0.6491467576791808,
+        "max2HitExclRoi": 0.5039383561643835
+      },
+      "forward": {
+        "n": 315,
+        "hits": 11,
+        "edgePp": 1.5569874559157746,
+        "roi": 1.08,
+        "max2HitExclRoi": 0.7833865814696486
+      }
+    },
+    {
+      "id": "local_underbought80",
+      "label": "隣接2着艇より20%以上売れ残り",
+      "group": "local_shape",
+      "selection": "1-6",
+      "discovery": {
+        "n": 1575,
+        "hits": 32,
+        "edgePp": 0.2359099102219547,
+        "roi": 0.6146031746031746,
+        "max2HitExclRoi": 0.5044500953591863
+      },
+      "forward": {
+        "n": 835,
+        "hits": 14,
+        "edgePp": 0.002001924831229993,
+        "roi": 0.5554491017964072,
+        "max2HitExclRoi": 0.36014405762304924
+      }
+    }
+  ],
+  "robust": [],
+  "placebo": [
+    {
+      "id": "integer_odds_placebo",
+      "label": "オッズが整数_placebo",
+      "group": "placebo",
+      "selection": "1-2",
+      "discovery": {
+        "n": 288,
+        "hits": 34,
+        "edgePp": 2.697097590501411,
+        "roi": 0.96875,
+        "max2HitExclRoi": 0.8531468531468531
+      },
+      "forward": {
+        "n": 148,
+        "hits": 12,
+        "edgePp": 0.0872726552420367,
+        "roi": 0.8108108108108109,
+        "max2HitExclRoi": 0.547945205479452
+      }
+    },
+    {
+      "id": "integer_odds_placebo",
+      "label": "オッズが整数_placebo",
+      "group": "placebo",
+      "selection": "1-3",
+      "discovery": {
+        "n": 263,
+        "hits": 24,
+        "edgePp": -1.177261435670163,
+        "roi": 0.5779467680608364,
+        "max2HitExclRoi": 0.47126436781609193
+      },
+      "forward": {
+        "n": 150,
+        "hits": 13,
+        "edgePp": 0.044110189561794286,
+        "roi": 0.86,
+        "max2HitExclRoi": 0.6148648648648649
+      }
+    },
+    {
+      "id": "integer_odds_placebo",
+      "label": "オッズが整数_placebo",
+      "group": "placebo",
+      "selection": "1-4",
+      "discovery": {
+        "n": 296,
+        "hits": 36,
+        "edgePp": 2.1135401078054508,
+        "roi": 0.9054054054054054,
+        "max2HitExclRoi": 0.7040816326530612
+      },
+      "forward": {
+        "n": 166,
+        "hits": 28,
+        "edgePp": 6.594931312546206,
+        "roi": 1.8433734939759037,
+        "max2HitExclRoi": 1.2865853658536586
+      }
+    },
+    {
+      "id": "integer_odds_placebo",
+      "label": "オッズが整数_placebo",
+      "group": "placebo",
+      "selection": "1-5",
+      "discovery": {
+        "n": 279,
+        "hits": 12,
+        "edgePp": -1.2886540409290426,
+        "roi": 0.33691756272401435,
+        "max2HitExclRoi": 0.1624548736462094
+      },
+      "forward": {
+        "n": 162,
+        "hits": 12,
+        "edgePp": 1.2412558722456453,
+        "roi": 0.7407407407407407,
+        "max2HitExclRoi": 0.48125
+      }
+    },
+    {
+      "id": "integer_odds_placebo",
+      "label": "オッズが整数_placebo",
+      "group": "placebo",
+      "selection": "1-6",
+      "discovery": {
+        "n": 297,
+        "hits": 10,
+        "edgePp": -0.8256557847678931,
+        "roi": 0.40404040404040403,
+        "max2HitExclRoi": 0.16271186440677965
+      },
+      "forward": {
+        "n": 155,
+        "hits": 4,
+        "edgePp": -1.2988297895295304,
+        "roi": 0.432258064516129,
+        "max2HitExclRoi": 0.032679738562091505
+      }
+    },
+    {
+      "id": "decimal7_placebo",
+      "label": "オッズ小数第1位が7_placebo",
+      "group": "placebo",
+      "selection": "1-2",
+      "discovery": {
+        "n": 262,
+        "hits": 25,
+        "edgePp": 0.978455898137629,
+        "roi": 0.7805343511450382,
+        "max2HitExclRoi": 0.6773076923076923
+      },
+      "forward": {
+        "n": 151,
+        "hits": 8,
+        "edgePp": -2.6920354388107937,
+        "roi": 0.48079470198675495,
+        "max2HitExclRoi": 0.2832214765100671
+      }
+    },
+    {
+      "id": "decimal7_placebo",
+      "label": "オッズ小数第1位が7_placebo",
+      "group": "placebo",
+      "selection": "1-3",
+      "discovery": {
+        "n": 285,
+        "hits": 34,
+        "edgePp": 1.8728009689854095,
+        "roi": 0.8164912280701755,
+        "max2HitExclRoi": 0.707773851590106
+      },
+      "forward": {
+        "n": 140,
+        "hits": 17,
+        "edgePp": 2.885052665861069,
+        "roi": 1.2707142857142857,
+        "max2HitExclRoi": 0.9021739130434783
+      }
+    },
+    {
+      "id": "decimal7_placebo",
+      "label": "オッズ小数第1位が7_placebo",
+      "group": "placebo",
+      "selection": "1-4",
+      "discovery": {
+        "n": 280,
+        "hits": 25,
+        "edgePp": -1.3234728574343433,
+        "roi": 0.5410714285714285,
+        "max2HitExclRoi": 0.33489208633093526
+      },
+      "forward": {
+        "n": 157,
+        "hits": 21,
+        "edgePp": 2.1510879916729406,
+        "roi": 0.8834394904458599,
+        "max2HitExclRoi": 0.6470967741935484
+      }
+    },
+    {
+      "id": "decimal7_placebo",
+      "label": "オッズ小数第1位が7_placebo",
+      "group": "placebo",
+      "selection": "1-5",
+      "discovery": {
+        "n": 259,
+        "hits": 14,
+        "edgePp": -0.0422967484641984,
+        "roi": 0.5629343629343629,
+        "max2HitExclRoi": 0.4101167315175097
+      },
+      "forward": {
+        "n": 126,
+        "hits": 4,
+        "edgePp": -2.384776534287818,
+        "roi": 0.3873015873015873,
+        "max2HitExclRoi": 0.1
+      }
+    },
+    {
+      "id": "decimal7_placebo",
+      "label": "オッズ小数第1位が7_placebo",
+      "group": "placebo",
+      "selection": "1-6",
+      "discovery": {
+        "n": 253,
+        "hits": 16,
+        "edgePp": 1.9457970934709257,
+        "roi": 0.8110671936758893,
+        "max2HitExclRoi": 0.3139442231075697
+      },
+      "forward": {
+        "n": 137,
+        "hits": 5,
+        "edgePp": -1.5005146421092064,
+        "roi": 0.19343065693430658,
+        "max2HitExclRoi": 0.07481481481481482
+      }
+    }
+  ],
+  "caveats": [
+    "historical closing oddsでT-5ではない",
+    "30行でも組番重複・欠損があるmarketは除外",
+    "閾値は探索用で事前登録されていない",
+    "整数・小数末尾7は偽陽性対照",
+    "同一市場から条件とimpliedを作るため因果解釈しない"
+  ]
+}
