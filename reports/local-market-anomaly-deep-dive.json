@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-18T11:03:22.396Z",
+  "generatedAt": "2026-07-18T11:48:49.306Z",
   "safety": {
     "readOnly": true,
     "historicalClosingOdds": true,
@@ -16,6 +16,339 @@
     "多重探索を含むため仮説生成専用",
     "historical closing oddsでありT-5再現ではない",
     "原因ではなく構成差・交絡候補"
+  ],
+  "interactionCells": [
+    {
+      "id": "all_three",
+      "label": "風2〜3m・南西風・4号艇最強ライバル",
+      "metrics": {
+        "discovery": {
+          "n": 52,
+          "hits": 13,
+          "actualRate": 0.25,
+          "impliedRate": 0.1656408521029071,
+          "edgePp": 8.43591478970929,
+          "roi": 2.207692307692308,
+          "max1HitExclRoi": 1.6823529411764706,
+          "max2HitExclRoi": 1.328,
+          "zScore": 1.685061828331318
+        },
+        "forward": {
+          "n": 24,
+          "hits": 10,
+          "actualRate": 0.4166666666666667,
+          "impliedRate": 0.19002522903168959,
+          "edgePp": 22.66414376349771,
+          "roi": 1.8,
+          "max1HitExclRoi": 1.5869565217391304,
+          "max2HitExclRoi": 1.3954545454545455,
+          "zScore": 2.897631288785638
+        }
+      }
+    },
+    {
+      "id": "environment_only",
+      "label": "風2〜3m・南西風・4号艇最強ではない",
+      "metrics": {
+        "discovery": {
+          "n": 146,
+          "hits": 14,
+          "actualRate": 0.0958904109589041,
+          "impliedRate": 0.06932542598548316,
+          "edgePp": 2.656498497342094,
+          "roi": 0.7883561643835616,
+          "max1HitExclRoi": 0.6331034482758621,
+          "max2HitExclRoi": 0.5458333333333333,
+          "zScore": 1.3029665107490156
+        },
+        "forward": {
+          "n": 71,
+          "hits": 9,
+          "actualRate": 0.1267605633802817,
+          "impliedRate": 0.06887108913935873,
+          "edgePp": 5.788947424092296,
+          "roi": 2.063380281690141,
+          "max1HitExclRoi": 1.5642857142857143,
+          "max2HitExclRoi": 1.0797101449275361,
+          "zScore": 1.9945683579994222
+        }
+      }
+    },
+    {
+      "id": "ability_other_wind",
+      "label": "4号艇最強ライバル・風2〜3mだが南西以外",
+      "metrics": {
+        "discovery": {
+          "n": 336,
+          "hits": 65,
+          "actualRate": 0.19345238095238096,
+          "impliedRate": 0.17453921695022098,
+          "edgePp": 1.8913164002159977,
+          "roi": 0.8720238095238095,
+          "max1HitExclRoi": 0.8208955223880597,
+          "max2HitExclRoi": 0.774251497005988,
+          "zScore": 0.9380368026772173
+        },
+        "forward": {
+          "n": 159,
+          "hits": 26,
+          "actualRate": 0.16352201257861634,
+          "impliedRate": 0.1708844321615526,
+          "edgePp": -0.7362419582936264,
+          "roi": 0.8371069182389937,
+          "max1HitExclRoi": 0.7569620253164557,
+          "max2HitExclRoi": 0.6777070063694267,
+          "zScore": -0.25449737703703484
+        }
+      }
+    },
+    {
+      "id": "ability_all_weather",
+      "label": "4号艇最強ライバル・全天候",
+      "metrics": {
+        "discovery": {
+          "n": 784,
+          "hits": 153,
+          "actualRate": 0.1951530612244898,
+          "impliedRate": 0.17645981197294058,
+          "edgePp": 1.8693249251549222,
+          "roi": 0.8906887755102041,
+          "max1HitExclRoi": 0.8547892720306514,
+          "max2HitExclRoi": 0.8310741687979539,
+          "zScore": 1.4142963016438292
+        },
+        "forward": {
+          "n": 429,
+          "hits": 84,
+          "actualRate": 0.1958041958041958,
+          "impliedRate": 0.17129888737111137,
+          "edgePp": 2.450530843308443,
+          "roi": 0.9048951048951049,
+          "max1HitExclRoi": 0.8616822429906542,
+          "max2HitExclRoi": 0.8252927400468384,
+          "zScore": 1.3899157498365422
+        }
+      }
+    },
+    {
+      "id": "environment_all_ability",
+      "label": "風2〜3m・南西風・能力不問",
+      "metrics": {
+        "discovery": {
+          "n": 198,
+          "hits": 27,
+          "actualRate": 0.13636363636363635,
+          "impliedRate": 0.09462038637995811,
+          "edgePp": 4.174324998367824,
+          "roi": 1.1611111111111112,
+          "max1HitExclRoi": 1.0197969543147207,
+          "max2HitExclRoi": 0.9061224489795918,
+          "zScore": 2.0901013376038122
+        },
+        "forward": {
+          "n": 95,
+          "hits": 19,
+          "actualRate": 0.2,
+          "impliedRate": 0.09947845079636862,
+          "edgePp": 10.052154920363138,
+          "roi": 1.996842105263158,
+          "max1HitExclRoi": 1.624468085106383,
+          "max2HitExclRoi": 1.2655913978494624,
+          "zScore": 3.425836529362799
+        }
+      }
+    }
+  ],
+  "matchedContrasts": [
+    {
+      "id": "environment_venue_season",
+      "label": "風環境の寄与（4号艇最強は共通）",
+      "adjustment": "会場・季節",
+      "discovery": {
+        "treated": 52,
+        "matched": 52,
+        "coverage": 1,
+        "treatedResidualPp": 8.435914789709289,
+        "controlResidualPp": -0.052060702146419356,
+        "deltaPp": 8.487975491855709
+      },
+      "forward": {
+        "treated": 24,
+        "matched": 24,
+        "coverage": 1,
+        "treatedResidualPp": 22.66414376349771,
+        "controlResidualPp": -4.419547696385975,
+        "deltaPp": 27.083691459883685
+      }
+    },
+    {
+      "id": "environment_plus_race_head",
+      "label": "風環境の寄与（4号艇最強は共通）",
+      "adjustment": "会場・季節・R帯・1号艇能力帯",
+      "discovery": {
+        "treated": 52,
+        "matched": 42,
+        "coverage": 0.8076923076923077,
+        "treatedResidualPp": 7.600659581413442,
+        "controlResidualPp": -4.179144665230443,
+        "deltaPp": 11.779804246643884
+      },
+      "forward": {
+        "treated": 24,
+        "matched": 11,
+        "coverage": 0.4583333333333333,
+        "treatedResidualPp": 16.01674073686453,
+        "controlResidualPp": -5.2560339535361695,
+        "deltaPp": 21.272774690400702
+      }
+    },
+    {
+      "id": "environment_plus_target",
+      "label": "風環境の寄与（4号艇最強は共通）",
+      "adjustment": "会場・季節・R帯・1/4号艇能力帯",
+      "discovery": {
+        "treated": 52,
+        "matched": 24,
+        "coverage": 0.46153846153846156,
+        "treatedResidualPp": 5.222767583812827,
+        "controlResidualPp": -9.172174379058822,
+        "deltaPp": 14.394941962871647
+      },
+      "forward": {
+        "treated": 24,
+        "matched": 9,
+        "coverage": 0.375,
+        "treatedResidualPp": 13.123876201806722,
+        "controlResidualPp": -8.617630909686447,
+        "deltaPp": 21.74150711149317
+      }
+    },
+    {
+      "id": "ability_venue_season",
+      "label": "4号艇相対能力の寄与（風環境は共通）",
+      "adjustment": "会場・季節",
+      "discovery": {
+        "treated": 52,
+        "matched": 49,
+        "coverage": 0.9423076923076923,
+        "treatedResidualPp": 8.32130242956185,
+        "controlResidualPp": 3.141284127302325,
+        "deltaPp": 5.180018302259526
+      },
+      "forward": {
+        "treated": 24,
+        "matched": 19,
+        "coverage": 0.7916666666666666,
+        "treatedResidualPp": 18.853735841056103,
+        "controlResidualPp": 8.712915589110498,
+        "deltaPp": 10.140820251945605
+      }
+    },
+    {
+      "id": "ability_plus_race_head",
+      "label": "4号艇相対能力の寄与（風環境は共通）",
+      "adjustment": "会場・季節・R帯・1号艇能力帯",
+      "discovery": {
+        "treated": 52,
+        "matched": 21,
+        "coverage": 0.40384615384615385,
+        "treatedResidualPp": -0.9408963050023095,
+        "controlResidualPp": 6.780521380810198,
+        "deltaPp": -7.721417685812508
+      },
+      "forward": {
+        "treated": 24,
+        "matched": 9,
+        "coverage": 0.375,
+        "treatedResidualPp": 25.30948177815201,
+        "controlResidualPp": 26.88966529157142,
+        "deltaPp": -1.5801835134194073
+      }
+    },
+    {
+      "id": "ability_plus_target",
+      "label": "4号艇相対能力の寄与（風環境は共通）",
+      "adjustment": "会場・季節・R帯・1/4号艇能力帯",
+      "discovery": {
+        "treated": 52,
+        "matched": 2,
+        "coverage": 0.038461538461538464,
+        "treatedResidualPp": -11.323302661129562,
+        "controlResidualPp": -12.892341340252681,
+        "deltaPp": 1.5690386791231192
+      },
+      "forward": {
+        "treated": 24,
+        "matched": 2,
+        "coverage": 0.08333333333333333,
+        "treatedResidualPp": 29.03463114462466,
+        "controlResidualPp": 45.57379456590191,
+        "deltaPp": -16.53916342127725
+      }
+    },
+    {
+      "id": "combined_venue_season",
+      "label": "組合せ全体（どちらも満たさない対照）",
+      "adjustment": "会場・季節",
+      "discovery": {
+        "treated": 52,
+        "matched": 52,
+        "coverage": 1,
+        "treatedResidualPp": 8.435914789709289,
+        "controlResidualPp": 0.20646714529717997,
+        "deltaPp": 8.229447644412108
+      },
+      "forward": {
+        "treated": 24,
+        "matched": 24,
+        "coverage": 1,
+        "treatedResidualPp": 22.66414376349771,
+        "controlResidualPp": -2.2462528787622253,
+        "deltaPp": 24.910396642259936
+      }
+    },
+    {
+      "id": "combined_plus_race_head",
+      "label": "組合せ全体（どちらも満たさない対照）",
+      "adjustment": "会場・季節・R帯・1号艇能力帯",
+      "discovery": {
+        "treated": 52,
+        "matched": 48,
+        "coverage": 0.9230769230769231,
+        "treatedResidualPp": 8.692151700053751,
+        "controlResidualPp": -2.658551428218481,
+        "deltaPp": 11.350703128272231
+      },
+      "forward": {
+        "treated": 24,
+        "matched": 18,
+        "coverage": 0.75,
+        "treatedResidualPp": 25.21709493987874,
+        "controlResidualPp": 0.8084529800290116,
+        "deltaPp": 24.408641959849735
+      }
+    },
+    {
+      "id": "combined_plus_target",
+      "label": "組合せ全体（どちらも満たさない対照）",
+      "adjustment": "会場・季節・R帯・1/4号艇能力帯",
+      "discovery": {
+        "treated": 52,
+        "matched": 15,
+        "coverage": 0.28846153846153844,
+        "treatedResidualPp": 3.5528783620185758,
+        "controlResidualPp": 2.6012010840835043,
+        "deltaPp": 0.9516772779350717
+      },
+      "forward": {
+        "treated": 24,
+        "matched": 11,
+        "coverage": 0.4583333333333333,
+        "treatedResidualPp": 38.16494870451892,
+        "controlResidualPp": 19.318788959047435,
+        "deltaPp": 18.846159745471482
+      }
+    }
   ],
   "anomalies": [
     {

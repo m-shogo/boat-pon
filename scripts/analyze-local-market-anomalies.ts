@@ -113,12 +113,39 @@ try {
     }).sort((a, b) => Math.min(b.candidate.discovery.edgePp, b.candidate.forward.edgePp) - Math.min(a.candidate.discovery.edgePp, a.candidate.forward.edgePp));
     return { ...anomaly, base, mechanisms };
   });
+  const oneFour = observations.filter(row => row.combo === "1-4");
+  const wind23 = (row: Observation) => row.wind_speed_mps != null && row.wind_speed_mps >= 2 && row.wind_speed_mps < 4;
+  const southwest = (row: Observation) => row.wind_dir === "南西";
+  const topRival4 = (row: Observation) => isTopRival(row.program, 4);
+  const interactionCells = [
+    { id: "all_three", label: "風2〜3m・南西風・4号艇最強ライバル", filter: (row: Observation) => wind23(row) && southwest(row) && topRival4(row) },
+    { id: "environment_only", label: "風2〜3m・南西風・4号艇最強ではない", filter: (row: Observation) => wind23(row) && southwest(row) && !topRival4(row) },
+    { id: "ability_other_wind", label: "4号艇最強ライバル・風2〜3mだが南西以外", filter: (row: Observation) => wind23(row) && !southwest(row) && topRival4(row) },
+    { id: "ability_all_weather", label: "4号艇最強ライバル・全天候", filter: (row: Observation) => topRival4(row) },
+    { id: "environment_all_ability", label: "風2〜3m・南西風・能力不問", filter: (row: Observation) => wind23(row) && southwest(row) },
+  ].map(cell => ({ ...cell, metrics: byPeriod(oneFour.filter(cell.filter)) }));
+  const matchSpecs = [
+    { id: "venue_season", label: "会場・季節", key: (row: Observation) => `${row.venue}|${seasonOf(row.date)}` },
+    { id: "plus_race_head", label: "会場・季節・R帯・1号艇能力帯", key: (row: Observation) => `${row.venue}|${seasonOf(row.date)}|${raceBand(row.race_no)}|${rateBand(value(row.program, 1, "nationalWinRate"))}` },
+    { id: "plus_target", label: "会場・季節・R帯・1/4号艇能力帯", key: (row: Observation) => `${row.venue}|${seasonOf(row.date)}|${raceBand(row.race_no)}|${rateBand(value(row.program, 1, "nationalWinRate"))}|${rateBand(value(row.program, 4, "nationalWinRate"))}` },
+  ];
+  const treatment = (row: Observation) => wind23(row) && southwest(row) && topRival4(row);
+  const matchedContrasts = [
+    { id: "environment", label: "風環境の寄与（4号艇最強は共通）", control: (row: Observation) => topRival4(row) && !(wind23(row) && southwest(row)) },
+    { id: "ability", label: "4号艇相対能力の寄与（風環境は共通）", control: (row: Observation) => wind23(row) && southwest(row) && !topRival4(row) },
+    { id: "combined", label: "組合せ全体（どちらも満たさない対照）", control: (row: Observation) => !(wind23(row) && southwest(row)) && !topRival4(row) },
+  ].flatMap(contrast => matchSpecs.map(spec => ({
+    id: `${contrast.id}_${spec.id}`, label: contrast.label, adjustment: spec.label,
+    discovery: matchedResidual(oneFour.filter(row => row.period === "discovery"), treatment, contrast.control, spec.key),
+    forward: matchedResidual(oneFour.filter(row => row.period === "forward"), treatment, contrast.control, spec.key),
+  })));
 
   const report = {
     generatedAt: new Date().toISOString(),
     safety: { readOnly: true, historicalClosingOdds: true, t5: false, profitClaim: false, productionConnected: false },
     scope: { races: raw.length, discovery: raw.filter(r => r.date <= "2024-12-31").length, forward: raw.filter(r => r.date >= "2025-01-01").length },
     caveats: ["多重探索を含むため仮説生成専用", "historical closing oddsでありT-5再現ではない", "原因ではなく構成差・交絡候補"],
+    interactionCells: interactionCells.map(({ filter: _filter, ...cell }) => cell), matchedContrasts,
     anomalies: results.map(({ filter: _filter, ...result }) => ({
       ...result,
       mechanisms: result.mechanisms.filter(row => row.explainsBoth || row.forwardAmplifier),
@@ -157,6 +184,22 @@ try {
       return `| ${period} | ${m.n} / ${m.hits} / ${m.edgePp >= 0 ? "+" : ""}${m.edgePp.toFixed(2)}pt / ${m.zScore.toFixed(2)} / ${pct(m.roi)} / ${pct(m.max2HitExclRoi)} | ${pct(robust.minLeaveOneVenueMax2Roi)}（${robust.worstVenue}除外） | ${pct(robust.minLeaveOneMonthMax2Roi)}（${robust.worstMonth}除外） |`;
     }) : ["| - | - | - | - |"]),
     "", "このleave-one-group-outが100%を割る場合、特定会場・月への依存が残る。100%超でもpost-hoc選択とT-5非同等性は解消しない。",
+    "", "## 多因子の組合せ比較", "",
+    "| 条件セル | 2024 n / edge / z / ROI / max2除外 | 2025 n / edge / z / ROI / max2除外 |", "|---|---:|---:|",
+    ...interactionCells.map(cell => `| ${cell.label} | ${shortCell(cell.metrics.discovery)} | ${shortCell(cell.metrics.forward)} |`),
+    "", "## 交絡を揃えた市場残差比較", "",
+    "> treatmentは「風2〜3m・南西風・4号艇最強ライバル」。edge差は actual - normalized implied の差で、プラスほど条件群側に市場未説明分が残る。", "",
+    "| 比較目的 | 調整 | 2024 matched / coverage / edge差 | 2025 matched / coverage / edge差 |", "|---|---|---:|---:|",
+    ...matchedContrasts.map(row => `| ${row.label} | ${row.adjustment} | ${matchedCell(row.discovery)} | ${matchedCell(row.forward)} |`),
+    "", "## 多面的な理由判断", "",
+    "1. **物理環境**: 会場・季節を揃えても南西風環境の市場残差差が両期でプラス。現時点では最も一貫した説明軸。ただし方位が各会場で向かい風か追い風かは別途変換が必要。",
+    "2. **選手構成との相互作用**: 4号艇最強ライバル単独・全天候は両期ROI100%未満で、風2〜3mでも南西風以外は2025 edgeがマイナス。選手能力単独ではなく環境との組合せ。",
+    "3. **交絡調整の限界**: 4号艇能力の寄与は会場・季節だけならプラスだが、R帯と能力帯まで揃えると差が消え、matched coverageも低い。独立した能力効果とは断定できない。",
+    "4. **市場価格**: edgeは正規化市場確率控除後なので、単なる的中率上昇だけではない。一方historical closing oddsとfuture T-5は同じ価格時点ではない。",
+    "5. **配当集中と開催依存**: 最大2的中除外では候補セルが両期100%超でも、2024のleave-one-venue/monthは100%割れ。特定開催の寄与が残る。",
+    "6. **時間レジーム**: 南西風・能力不問セルは2024のmax2除外90.6%から2025は126.6%へ変化。2025固有の気象・選手編成・市場挙動の可能性がある。",
+    "7. **実運用可能性**: 過去風向は結果取得系にしかなく、締切前liveで同じ特徴を作れない。予測力があっても現状は実行可能なedgeではない。",
+    "", "結論は単一原因ではなく、**南西風環境を主軸に、4号艇相対能力が相互作用し、会場・季節・開催単位の交絡と価格時点差が残る**というもの。因果確定やBUY採用ではなく、必要データと反証条件を持つ監視仮説とする。",
     "", "## 公式情報との突合", "",
     "- 丸亀: https://www.boatrace.jp/owsp/sp/site/place/stadium/br15/index.html — 干満と風向でまくり・差しが変わる。",
     "- 大村: https://www.boatrace.jp/owpc/pc/site/place/stadium/br24/ — インが強く、風向変化でダッシュ勢が攻めづらい。",
@@ -176,6 +219,20 @@ try {
 
 function byPeriod(rows: Observation[]) { return { discovery: metric(rows.filter(r => r.period === "discovery")), forward: metric(rows.filter(r => r.period === "forward")) }; }
 function robustnessByPeriod(rows: Observation[]) { return { discovery: leaveOneOut(rows.filter(r => r.period === "discovery")), forward: leaveOneOut(rows.filter(r => r.period === "forward")) }; }
+function matchedResidual(rows: Observation[], treatment: (row: Observation) => boolean, control: (row: Observation) => boolean, key: (row: Observation) => string) {
+  const treated = rows.filter(treatment); const controls = new Map<string, Observation[]>();
+  for (const row of rows.filter(control)) controls.set(key(row), [...(controls.get(key(row)) ?? []), row]);
+  let matched = 0; let treatedResidual = 0; let controlResidual = 0;
+  for (const row of treated) {
+    const peers = controls.get(key(row)); if (!peers?.length) continue;
+    matched += 1; treatedResidual += residual(row); controlResidual += peers.reduce((sum, peer) => sum + residual(peer), 0) / peers.length;
+  }
+  return { treated: treated.length, matched, coverage: treated.length ? matched / treated.length : 0,
+    treatedResidualPp: matched ? treatedResidual / matched * 100 : 0,
+    controlResidualPp: matched ? controlResidual / matched * 100 : 0,
+    deltaPp: matched ? (treatedResidual - controlResidual) / matched * 100 : 0 };
+}
+function residual(row: Observation) { return (row.hit ? 1 : 0) - row.implied; }
 function leaveOneOut(rows: Observation[]) {
   const worstAfterDropping = (groups: string[], key: (row: Observation) => string) => groups.map(group => ({ group, value: metric(rows.filter(row => key(row) !== group)).max2HitExclRoi })).sort((a, b) => a.value - b.value)[0] ?? { group: "-", value: 0 };
   const venue = worstAfterDropping([...new Set(rows.map(row => row.venue))], row => row.venue);
@@ -210,5 +267,8 @@ function pct(value: number) { return `${(value * 100).toFixed(1)}%`; }
 function metricCell(m: Metric) { return `${m.n} / ${m.edgePp >= 0 ? "+" : ""}${m.edgePp.toFixed(2)}pt / ${m.zScore.toFixed(2)} / ${pct(m.roi)} / ${pct(m.max2HitExclRoi)}`; }
 function shortCell(m: Metric) { return `${m.n} / ${m.edgePp >= 0 ? "+" : ""}${m.edgePp.toFixed(2)}pt / ${m.zScore.toFixed(2)} / ${pct(m.roi)} / ${pct(m.max2HitExclRoi)}`; }
 function edgeDelta(row: { candidate: ReturnType<typeof byPeriod>; control: ReturnType<typeof byPeriod> }) { const d = row.candidate.discovery.edgePp - row.control.discovery.edgePp; const f = row.candidate.forward.edgePp - row.control.forward.edgePp; return `2024 ${d >= 0 ? "+" : ""}${d.toFixed(2)}pt / 2025 ${f >= 0 ? "+" : ""}${f.toFixed(2)}pt`; }
+function matchedCell(row: ReturnType<typeof matchedResidual>) { return `${row.matched}/${row.treated} / ${pct(row.coverage)} / ${row.deltaPp >= 0 ? "+" : ""}${row.deltaPp.toFixed(2)}pt`; }
 function interpretBase(base: ReturnType<typeof byPeriod>) { if (base.discovery.edgePp > 0 && base.forward.edgePp > 0) return "両期で市場過小評価。ただし標本不足"; if (base.forward.edgePp > base.discovery.edgePp) return "2025だけ増幅。レジーム変化疑い"; return "再現せず"; }
 function seasonOf(date: string) { const month = Number(date.slice(5, 7)); if (month === 12 || month <= 2) return "冬(12-2)"; if (month <= 5) return "春(3-5)"; if (month <= 8) return "夏(6-8)"; return "秋(9-11)"; }
+function raceBand(raceNo: number) { return raceNo <= 4 ? "1-4" : raceNo <= 8 ? "5-8" : "9-12"; }
+function rateBand(rate: number) { return rate < 5 ? "<5" : rate < 6 ? "5-6" : rate < 7 ? "6-7" : "7+"; }
