@@ -49,6 +49,7 @@ import { fetchOfficialOdds } from "../scripts/fetch-official-odds";
 import { isTrifectaSelectionUnavailable, parseTrifectaOdds } from "../src/domain/oddsParser";
 import { isWithinOddsFetchWindow, shouldPersistDecisionHistory } from "../src/domain/livePersistence";
 import type { BudgetRule } from "../src/domain/types";
+import { readFileSync } from "node:fs";
 
 const ODDS_FETCH_WINDOW_MINUTES = 30;
 const CANDIDATE_CACHE_TTL_MS = 15_000;
@@ -361,6 +362,15 @@ function explainRows(rows: BuiltCandidateRow[], settings: BudgetRule) {
 
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true });
+});
+
+app.get("/api/research/hypotheses", (_req, res) => {
+  try {
+    const registry = JSON.parse(readFileSync("data/research-hypotheses.json", "utf8"));
+    res.json(registry);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+  }
 });
 
 app.get("/api/coverage", (_req, res) => {

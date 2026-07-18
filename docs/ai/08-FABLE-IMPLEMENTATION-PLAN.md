@@ -1,5 +1,10 @@
 # Real Fable Implementation Plan
 
+> **2026-07-18更新:** この計画の最小スコープは実装済み。ローカルFable 5.9.0、
+> Fable.Core 5.2.0、.NET SDK 10.0.302を固定し、Research Labへ接続した。
+> 実装結果は[12-REAL-FABLE-RESEARCH-LAB.md](12-REAL-FABLE-RESEARCH-LAB.md)を正とする。
+> 以下は導入前の判断・ロールバック計画として残す。
+
 **本物のFable（F#/.NET/Feliz）導入はまだ禁止。** このドキュメントは、次に実際に
 Fableを導入するかどうかを判断するためのチェックリストと、導入する場合の
 最小手順・影響範囲・rollback方法をまとめたものです。

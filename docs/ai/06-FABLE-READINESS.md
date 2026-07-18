@@ -1,5 +1,10 @@
 # Fable Readiness
 
+> **2026-07-18更新:** Real Fableの最小導入は完了した。F#は表示用変換だけを担当し、
+> 既存Reactが生成JavaScriptを利用する。実装・安全境界・検証結果は
+> [12-REAL-FABLE-RESEARCH-LAB.md](12-REAL-FABLE-RESEARCH-LAB.md)を正とする。
+> 以下の「未導入」記述は、導入判断時の設計履歴として残している。
+
 Fableは**まだ導入していない**。このドキュメントは、Fable導入を判断・実行する前に
 確認すべきこと、Fableの担当範囲、Fableに任せてはいけないことを整理したメモです。
 Phase 2.5（`docs/ai/04-ROADMAP.md`）で作った表示契約（`src/view-models/`）が

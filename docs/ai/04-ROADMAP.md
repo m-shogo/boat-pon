@@ -6,6 +6,16 @@ Boat Pon AI Development Bible を実装可能な単位に分割したもので�
 
 状態の凡例: `not started` / `in progress` / `done`
 
+## Phase 6: Real Fable Research Lab — `done`（表示専用の最小実装）
+
+- [x] .NET/Fableをリポジトリ内でバージョン固定
+- [x] F#表示変換を既存Reactへ接続
+- [x] 研究仮説、ゲート、採用ブロック、不足データを読み取り専用で表示
+- [x] candidate行/番組レースの多重度を可視化し、live接続前のpaper検証を促す
+- [x] F#からdomain/server/scripts/DBへの依存をテストで禁止
+
+詳細: [12-REAL-FABLE-RESEARCH-LAB.md](12-REAL-FABLE-RESEARCH-LAB.md)
+
 ## Phase 1: Research Foundation — `done`（最小実装）
 
 目的: ルール（仮説）のライフサイクルと評価結果を型として表現する土台を作る。DB・UI・自動化はまだ含めない。

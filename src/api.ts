@@ -70,6 +70,33 @@ export type CandidateRowsResponse = {
   rows: CandidateRow[];
 };
 
+export type ResearchHypothesis = {
+  id: string;
+  name: string;
+  description: string;
+  status: string;
+  priority: number;
+  adoptionAllowed: boolean;
+  adoptionBlockReason?: string;
+  nextAction?: string;
+  gateStatus?: Record<string, boolean | null>;
+  lastKnownMetrics?: Record<string, unknown>;
+  dataReadiness?: Record<string, unknown>;
+  requiredData?: string[];
+  nextReviewTrigger?: string;
+};
+
+export type ResearchHypothesisRegistry = {
+  _meta?: Record<string, unknown>;
+  hypotheses: ResearchHypothesis[];
+};
+
+export async function fetchResearchHypotheses(): Promise<ResearchHypothesisRegistry> {
+  const res = await fetch("/api/research/hypotheses");
+  if (!res.ok) throw new Error(`research hypotheses api failed: ${res.status}`);
+  return res.json();
+}
+
 export type HistoryResponse = {
   rows: DecisionHistoryRow[];
   summary: BacktestSummary;

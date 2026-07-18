@@ -19,6 +19,14 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.302
+
+      - name: Restore Fable
+        run: npm run fable:restore
+
       - name: Install
         run: npm ci
 

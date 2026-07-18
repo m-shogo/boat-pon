@@ -7,8 +7,12 @@ BUY / WATCH / SKIP の判定、公式確認リンク、raw/JSON/SQLite保存、�
 
 ## 開発
 
+Node.jsに加えて .NET SDK 10.0.302 を使用します（macOS: `brew install dotnet`）。
+Fableはリポジトリ内のローカルツールマニフェストで5.9.0に固定しています。
+
 ```sh
 npm install
+npm run fable:restore
 npm run dev
 ```
 
@@ -83,6 +87,7 @@ npx tsx scripts/fetch-official-odds.ts YYYY-MM-DD 蒲郡 8
 - 公式 boatrace.jp の3連単オッズをリアルタイム取得（候補レースのみ、5分キャッシュ、手動ボタン/自動60秒トグル）
 - 公式 mbrace.or.jp の競走成績LZHを期間指定で一括DL+解凍+取り込み（Shift_JIS、unar依存）
 - 読み取り専用のデータ品質チェック、週次/月次レポート、期間ずらし検証、通知dry-runをCLIで確認
+- Real Fable（F#→JavaScript）で研究仮説レジストリ、採用ブロック、不足データ、候補多重度を表示するResearch画面
 
 ## 運用メモ
 
@@ -93,6 +98,7 @@ npx tsx scripts/fetch-official-odds.ts YYYY-MM-DD 蒲郡 8
 - live設定変更前の安全ゲート: [docs/settings-change-gate.md](docs/settings-change-gate.md)
 - 失敗・学びの蓄積: [docs/lessons-learned.md](docs/lessons-learned.md)
 - データ取得ロードマップ: [docs/data-roadmap.md](docs/data-roadmap.md)
+- Real Fable Research Labの構成・安全境界: [docs/ai/12-REAL-FABLE-RESEARCH-LAB.md](docs/ai/12-REAL-FABLE-RESEARCH-LAB.md)
 
 ### 毎日の読み取り専用チェック
 
@@ -191,6 +197,7 @@ npm run guard:live
 - `GET /api/dashboard?date=YYYY-MM-DD`: ダッシュボード、候補、結果、通知、節約、ROI集計
 - `GET /api/results?date=YYYY-MM-DD`: 結果一覧
 - `GET /api/history`: 判定履歴とバックテスト要約
+- `GET /api/research/hypotheses`: 読み取り専用の研究仮説レジストリ
 - `PUT /api/settings`: 予算・EVなどの安全設定を保存
 - `PUT /api/odds/:raceId`: 手動オッズ保存
 - `POST /api/odds/fetch`: 候補レースのみ公式オッズ取得

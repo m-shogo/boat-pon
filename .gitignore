@@ -1,5 +1,10 @@
 node_modules/
 dist/
+src/renderers/fable-fsharp/generated/*
+!src/renderers/fable-fsharp/generated/Renderer.d.ts
+src/renderers/fable-fsharp/fable_modules/
+src/renderers/fable-fsharp/bin/
+src/renderers/fable-fsharp/obj/
 .DS_Store
 data/raw/
 data/normalized/

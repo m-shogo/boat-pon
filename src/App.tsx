@@ -35,9 +35,10 @@ import {
 import { PAPER_LIVE_VALIDATION_RULE } from "./domain/decision";
 import type { BudgetRule } from "./domain/types";
 import { Tooltip } from "./components/Tooltip";
+import { ResearchLab } from "./components/ResearchLab";
 import "./styles.css";
 
-type Screen = "dashboard" | "results" | "history" | "settings";
+type Screen = "dashboard" | "results" | "history" | "research" | "settings";
 
 type CalendarDay = { date: string; buy: number; watch: number; skip: number };
 
@@ -137,6 +138,7 @@ export default function App() {
           <NavButton active={screen === "dashboard"} onClick={() => setScreen("dashboard")} icon={<Activity size={16} />} label="Dashboard" />
           <NavButton active={screen === "results"} onClick={() => setScreen("results")} icon={<Database size={16} />} label="Results" />
           <NavButton active={screen === "history"} onClick={() => setScreen("history")} icon={<History size={16} />} label="Backtest" />
+          <NavButton active={screen === "research"} onClick={() => setScreen("research")} icon={<Activity size={16} />} label="Research" />
           <NavButton active={screen === "settings"} onClick={() => setScreen("settings")} icon={<Settings size={16} />} label="Settings" />
         </nav>
         <button className="helpButton" onClick={() => setGuideOpen(true)} aria-label="使い方を見る">
@@ -218,6 +220,12 @@ export default function App() {
             {screen === "dashboard" && <OfficialImport onImported={refresh} date={date} />}
             {screen === "results" && <Results data={data} />}
             {screen === "history" && historyLoading && <div className="loading">バックテスト履歴を読み込み中...</div>}
+            {screen === "research" && (
+              <ResearchLab
+                candidateRows={data.candidateRowCount ?? data.rows.length}
+                racePrograms={data.beforeInfoCoverage?.totalRaces ?? 0}
+              />
+            )}
             {screen === "history" && historyError && <div className="formError">{historyError}</div>}
             {screen === "history" && historyData && <Backtest data={{ ...data, history: historyData.rows, backtest: historyData.backtest }} onSaved={refresh} />}
             {screen === "settings" && <SettingsScreen settings={data.settings} onSaved={refresh} />}
@@ -762,8 +770,8 @@ function Dashboard({
         )}
         {detailError && <div className="formError">{detailError}</div>}
         <div className="candidateGrid">
-          {candidateRows.map(({ candidate, decision, officialUrl, explanation }) => (
-            <article className={`card ${decision.status.toLowerCase()}`} key={`${candidate.raceId}/${candidate.selection.join("-")}`}>
+          {candidateRows.map(({ candidate, decision, officialUrl, explanation }, index) => (
+            <article className={`card ${decision.status.toLowerCase()}`} key={`${candidate.raceId}/${candidate.selection.join("-")}/${index}`}>
               <div className="cardTop">
                 <div>
                   <h4>{candidate.venue} {candidate.raceNo}R</h4>

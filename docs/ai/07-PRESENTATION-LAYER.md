@@ -1,5 +1,10 @@
 # Presentation Layer
 
+> **2026-07-18更新:** Real Fableの最小実装を追加した。Fable/F#はプレーンな表示契約を
+> JavaScriptオブジェクトへ変換し、Reactが画面を構成する。FelizでReact全体を置換してはいない。
+> 現在の構成は[12-REAL-FABLE-RESEARCH-LAB.md](12-REAL-FABLE-RESEARCH-LAB.md)を参照。
+> 以下の未導入記述は導入前の設計履歴である。
+
 Fable導入直前の最終フェーズで作った、レンダラー非依存のPresentation Layerについての
 ドキュメントです。**Fableはまだ導入していません。** 次のセッションは
 「既存のPresentation Layerを使って最初のFableレンダラーを実装する」ことから始まります。
