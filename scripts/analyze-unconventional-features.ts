@@ -94,19 +94,19 @@ try {
       stableDirection: train.n >= 200 && forward.n >= 200 && Math.sign(trainLift) === Math.sign(forwardLift) && Math.abs(trainLift) >= 0.02 && Math.abs(forwardLift) >= 0.02 };
   }).sort((a, b) => Math.min(Math.abs(b.trainLift), Math.abs(b.forwardLift)) - Math.min(Math.abs(a.trainLift), Math.abs(a.forwardLift)));
   const stable = rows.filter(row => row.stableDirection);
-  const rejectedDefinitions = [
+  const conditionalHoldDefinitions = [
     { feature: "1号艇F後180日", learning: "F歴だけでは慎重化・奮起のどちらも支持できない", retryWhen: "F時期、事故率、ST変化、開催格を事前固定して別検証できる" },
     { feature: "1号艇_2号艇への雪辱戦", learning: "前回敗戦という物語は翌対戦の優位性にならない", retryWhen: "枠、会場、機力、対戦間隔を揃えた十分な標本が得られる" },
     { feature: "相手にF後が複数", learning: "相手のF歴を単純加算しても1号艇優位にはならない", retryWhen: "当節STやスタート展示を含むpoint-in-timeデータが揃う" },
     { feature: "当地覚醒_1号艇", learning: "地元なら覚醒という呼び方と実測方向が合わない", retryWhen: "定義を後付け変更せず当地成績の期待差として再定義する" },
   ];
-  const rejected = rejectedDefinitions.flatMap(definition => {
+  const conditionalHold = conditionalHoldDefinitions.flatMap(definition => {
     const row = rows.find(candidate => candidate.feature === definition.feature);
     return row ? [{ ...definition, ...row }] : [];
   });
   const report = {
     generatedAt: new Date().toISOString(), safety: { readOnly: true, pointInTime: true, profitClaim: false, productionConnected: false },
-    target: "1号艇1着率。市場残差・ROIではない", baseline, stable, rejected, all: rows,
+    target: "1号艇1着率。市場残差・ROIではない", baseline, stable, conditionalHold, all: rows,
     unavailable: [
       { feature: "誕生日", status: "公式選手profileに存在するがDB未保存。取得日によらない静的metadataとして追加可能" },
       { feature: "周年・イベント", status: "2024-2025の旧official_programs.raw_jsonにraceTitle/categoryが未保存。今後のforwardで利用可能" },
@@ -122,10 +122,10 @@ try {
     "| feature | 2024 n / 率 / lift | 2025 n / 率 / lift |", "|---|---:|---:|",
     ...stable.map(row => `| ${row.feature} | ${row.train.n} / ${pct(row.trainRate)} / ${pp(row.trainLift)} | ${row.forward.n} / ${pct(row.forwardRate)} / ${pp(row.forwardLift)} |`),
     "", "## 未利用", "", "- 誕生日: 公式選手profileに存在するがDB未保存", "- 周年・イベント: 2024-2025旧番組JSONにraceTitle/categoryがなく、forward専用", "- 私的人間関係: 噂は使わず、過去同走・直接対戦で代替", "",
-    "## 不採用から得た知見", "",
+    "## 単独勝率では不採用、edge仮説として保留", "",
     "| 仮説 | 2024 n / lift | 2025 n / lift | 学び | 再検証条件 |", "|---|---:|---:|---|---|",
-    ...rejected.map(row => `| ${row.feature} | ${row.train.n} / ${pp(row.trainLift)} | ${row.forward.n} / ${pp(row.forwardLift)} | ${row.learning} | ${row.retryWhen} |`),
-    "", "不採用仮説も削除せず、定義・期間・標本数・方向・棄却理由を残す。同じ仮説を名前だけ変えて再探索しない。再検証は上表の追加データが揃い、採否条件を結果確認前に固定できる場合に限る。", "",
+    ...conditionalHold.map(row => `| ${row.feature} | ${row.train.n} / ${pp(row.trainLift)} | ${row.forward.n} / ${pp(row.forwardLift)} | ${row.learning} | ${row.retryWhen} |`),
+    "", "ここで否定したのは特徴単独の1号艇勝率上昇だけで、利益edgeではない。勝率低下も市場が過小評価していれば逆方向のedgeになり得る。仮説を削除せず、定義・期間・標本数・方向・保留理由を残し、T-5市場残差、買い目別相互作用、独立期間で検証する。", "",
   ].join("\n");
   writeFileSync("reports/unconventional-feature-screen.md", md);
   console.log(`races=${races.length} / stable=${stable.length}`);

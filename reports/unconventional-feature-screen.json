@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-18T10:26:00.787Z",
+  "generatedAt": "2026-07-18T10:27:18.528Z",
   "safety": {
     "readOnly": true,
     "pointInTime": true,
@@ -211,7 +211,7 @@
       "stableDirection": true
     }
   ],
-  "rejected": [
+  "conditionalHold": [
     {
       "feature": "1号艇F後180日",
       "learning": "F歴だけでは慎重化・奮起のどちらも支持できない",
