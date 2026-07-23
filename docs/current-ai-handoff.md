@@ -201,6 +201,6 @@ git diff --check
 
 ## 作業ツリー上の注意
 
-作業ツリーには今回以前からの多数の変更がある。別チャットは未追跡・変更済みファイルをユーザー所有として扱い、広範なrevert・reset・checkoutをしない。commit/pushはユーザーが明示した場合だけ行う。
+本タスクの差分はcommit・pushしてcleanにする。次回開始時は`git status --short`と`git rev-parse HEAD origin/main`を再確認する。その後に新しい未追跡・変更済みファイルがあればユーザー所有として扱い、広範なrevert・reset・checkoutをしない。
 
-`pnpm handoff:ai`の`guard: block`は、この未commitの本番関連差分をguardが検出した結果であり、収集ジョブの異常を意味しない。差分を勝手に戻してguardを通してはいけない。実運転状態はlaunchdの終了コードと`data/logs/auto-odds.log`で別に確認する。
+`pnpm handoff:ai`のguard結果と実運転状態は分けて確認する。収集ジョブはlaunchdの終了コードと`data/logs/auto-odds.log`を正本にする。
