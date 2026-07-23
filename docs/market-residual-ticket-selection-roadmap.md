@@ -15,7 +15,7 @@
 
 現行formal settled固定条件蓄積は継続する。新研究側の順序は`Stage 0 → F0 → F0-R → N1 → D1 → N2 → N3 → N4 → D2 → E1 → E2 → N5 → N6 → N7 → N8`で固定し、次の独立タスクはF0のtemp/sidecar vertical sliceである。
 
-現行benchmarkは`decision_system=legacy_t5_formal`、`strategy_version=legacy-t5-v1`、`evaluation_mode=formal_forward`。新方式は`decision_system=market_intelligence`、versioned strategy、`evaluation_mode=shadow_forward`、versioned fixed cohortとする。公式事実層だけ共有し、manifest、feature/model/strategy、decision、ticket、cohort、ROI、gate、reportは分離する。
+現行benchmarkは`decision_system=legacy_t5_formal`、`strategy_version=legacy-t5-v1`、`evaluation_mode=formal_forward`。これはfixed enrollment protocolのprospective cohortであり、報告時にfrozen analysis snapshotを作る。新方式は`decision_system=market_intelligence`、versioned strategy、`evaluation_mode=shadow_forward`、versioned enrollment/snapshotとする。
 
 ## 中核仮説
 
@@ -228,7 +228,7 @@ T-5表示オッズを確定値とせず、T-5から締切までの変化分布�
 
 ### Stage F0: Research Replay Foundation（次の独立タスク）
 
-N1より前に、capture attempt、byte-exact raw、parse run、typed domain observation、Race As-of Manifestを分離し、raw/semantic hash、canonical identity、checkpoint freeze、versioned resolver、completeness、append-only/supersession、retention pin、deterministic hash、PIT/leakage guardを実装する。F0はtemp/sidecarだけで、`data/boat.sqlite`変更、live collector接続、N1 migration、Error Atlas本体、モデル、Decision Governorを含めない。詳細な開始・完了gateは[`research-platform-master-plan.md`](research-platform-master-plan.md)を正本とする。
+N1より前に、immutable capture lifecycle、entity-body raw、parse run、typed observation、Manifestを分離し、raw/semantic二重change判定、raw security、単方向supersession、FC08A/FC14A、golden fixture、PIT/leakage guardを実装する。F0はtemp/sidecarだけで、`data/boat.sqlite`変更、live collector接続、モデルを含めない。
 
 ### Stage F0-R: Research Replay Foundation Rollout
 

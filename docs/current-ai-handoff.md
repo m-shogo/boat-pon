@@ -26,7 +26,7 @@
 - 正式な収益評価は、2026-07-21 15:15 JST以降に公式networkから直接取得したfuture-only T-5だけでやり直す。
 - DB肥大化の新規増加は抑制済みだが、13.98GiBの原本圧縮は未実施。
 - Phase N0「全券種＋選手PIT＋独自研究軸データ取得可能性・保存設計監査」は読み取り専用で完了した。DB migration、実収集、モデル、production接続は未着手。
-- N0後の正本は`docs/research-platform-master-plan.md`、研究40件と破綻防止契約の機械可読台帳は`docs/research-idea-register.json`。次の独立タスクはPhase N1ではなくStage F0「Research Replay Foundation」のtemp/sidecar vertical slice。
+- N0後の正本は`docs/research-platform-master-plan.md`、研究40件と破綻防止契約の機械可読台帳は`docs/research-idea-register.json`。Stage 0のF0前最終整合修正まで完了し、次の独立タスクはStage F0「Research Replay Foundation」のtemp/sidecar vertical slice。
 - 現行formalは`legacy_t5_formal / legacy-t5-v1 / formal_forward`の固定benchmark、新方式は`market_intelligence / shadow_forward`として評価系列を分離する。
 
 ## 絶対にしてはいけないこと
@@ -188,8 +188,8 @@ Phase N0の確定事項:
 - 独自研究軸の保存候補は`official_information_observations/changes`、`market_observation_batches`、projection audit、uncertainty snapshot、venue-day evidence、Error Atlas。今回migrationは適用していない。
 - 既存DB、`app_settings`、launchd、collector頻度、予測/判定は変更していない。
 
-1. 現行`legacy_t5_formal`の`network-only正式cohort`は固定条件のままT-5完全率、確定結果数、実払戻ROIを更新する。
-2. 新研究側の次の独立実装はStage F0だけ。capture/raw/parse/domain/manifestを分離し、raw/semantic hash、canonical identity、checkpoint freeze、versioned resolver、completeness、append-only、retention pin、deterministic hashをtemp/sidecar DBで検証する。
+1. 現行`legacy_t5_formal`はfixed enrollment protocolのprospective cohortとして、条件を変えずmembershipをappendする。報告・common comparison時にfrozen analysis snapshotを別作成する。
+2. 新研究側の次の独立実装はStage F0だけ。immutable capture/event lifecycle、capture/raw/parse/domain/manifest分離、raw/semantic二重判定、raw security、canonical identity、checkpoint freeze、versioned resolver、単方向supersession、FC08A/FC14A、golden fixtureをtemp/sidecar DBで検証する。
 3. F0では`data/boat.sqlite`をread-only sourceに限定し、live collectorへ接続しない。F0 PASS後も直ちにN1へ進まず、人間承認を含むF0-Rでsidecar rolloutとshadow failure isolationを検証する。
 4. 新方式は`market_intelligence / shadow_forward`として、manifest、decision、ticket、cohort、ROI、gate、reportをLegacyから分離する。
 5. model学習はN5開始gate、production検討はN8と独立production gateまで行わない。
@@ -197,7 +197,7 @@ Phase N0の確定事項:
 
 2023-2024固定履歴モデルと市場の比較器は実装済み。現時点ではα=0が選ばれたため、特徴量追加や本番接続へ進めず、同じ固定条件のformal future蓄積を続ける。
 
-全体順序は`docs/research-platform-master-plan.md`、市場モデル詳細は`docs/market-residual-ticket-selection-roadmap.md`を正本とする。順序は`Stage 0 → F0 → F0-R → N1 → D1 → N2 → N3 → N4 → D2 → E1 → E2 → N5 → N6 → N7 → N8`。N1をF0-Rより先に始めず、N1へ選手特徴、オッズ時系列、予測ロジック、市場残差モデル、120状態baseline、SKIP予測器、Fragility Index、状態推定、券種選択器、production接続を混ぜない。D1前にcohort/evaluation/taxonomyを固定し、N5前にexperiment protocol、fixed split、metric version、multiple-testing registryを凍結する。
+全体順序は`docs/research-platform-master-plan.md`、市場モデル詳細は`docs/market-residual-ticket-selection-roadmap.md`を正本とする。順序は`Stage 0 → F0 → F0-R → N1 → D1 → N2 → N3 → N4 → D2 → E1 → E2 → N5 → N6 → N7 → N8`。D1までにcohort lifecycle/evaluation/taxonomyを固定し、D2/E1前にResearch Hypothesis Registry、N5前に別のModel Experiment Registryを凍結する。未登録D2/E1/E2分析はexploratoryとする。
 
 ## やっても改善にならないこと
 

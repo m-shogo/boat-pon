@@ -8,6 +8,49 @@ N0後の実装順序とLegacy/New評価分離は[`research-platform-master-plan.
 
 Research Replay evidenceの新規schemaではcapture/raw/parse/domain/manifestを分離し、すべてappend-onlyとする。manifest、cohort、evaluationから参照される証拠FKへ`ON DELETE CASCADE`を使わず、`RESTRICT`または明示的tombstoneを採用する。本書の設計SQLも証拠を親ごと消さない`RESTRICT`へ統一した。
 
+## Research Replay最終整合契約（DESIGN ONLY）
+
+この節はF0/F0-Rで検討する契約であり、今回SQLやDBへ適用しない。
+
+### Append-only capture lifecycle
+
+- `capture_attempts`: request開始時に一度だけ作るimmutable row。`logical_request_group_id`でretry群を束ねる。
+- `capture_attempt_events`: `capture_started / response_headers_received / body_completed / capture_failed / capture_cancelled`をappendする。
+- terminal eventがないattemptはincomplete。retryは別attempt IDとする。
+- failure reasonはHTTP未到達、timeout、partial body、hash mismatch、process crash、cancelledを区別する。
+
+### Raw byte・change・security
+
+- parser replay正本はContent-Encoding展開後のentity body bytes。`raw_sha256`はこのbytesへ適用する。
+- wire bodyは任意の補助artifact、decoded textとsemantic payloadはversion付き派生artifact。
+- raw/semantic hashとparser health/source schemaを組み合わせ、cosmetic、unknown、parse error、schema alert、parser-version changeを通常情報eventから分離する。
+- Authorization、Cookie、Set-Cookieは保存しない。secret queryをredactしheader allowlistを使う。
+- body/decompressed size、decompression ratio、content typeを制限し、unknown charsetを隔離する。
+- raw/sidecar/temp file権限、atomic write・fsync・rename、Git除外、secret scanをF0 fixtureで監査する。
+
+### Supersession
+
+訂正rowにだけ`supersedes_id`を持たせ、旧rowは更新しない。`superseded_by`はview/queryで逆引きする。旧rowへの`superseded_by_id`追加は禁止する。複数relationが必要な場合はappend-onlyな`evidence_supersession_edges(old_id, new_id, relation_kind, recorded_at, reason)`を用いる。
+
+### Cohort lifecycle
+
+- cohort definition/enrollment protocol: 条件、期間、target count、decision system、evaluation modeを固定。
+- open membership events: raceのenrollment/exclusionをappend-onlyで記録。
+- frozen analysis snapshot: member IDs、freeze時点、最大event、data availability、snapshot hashを固定。
+
+`legacy_t5_formal`はfixed enrollment protocolのprospective cohortであり、報告時にfrozen snapshotを作る。
+
+### FC08 / FC14責務
+
+- F0 `FC08A`: pin semantics、tombstone、fixture GC dry-run、orphan contract。
+- F0-R `FC08B`: quota、low-water mark、actual GC/audit、crash recovery、backup/restore。
+- F0 `FC14A`: sidecar schema version/ledger/checksum、unknown default deny、deterministic fixture migration。
+- F0-R `FC14B`: minimum reader/writer、old reader、partial recovery/resume、feature flag、live compatibility。
+
+### Statistical registriesとgolden fixture
+
+D2/E1前にResearch Hypothesis Registry、N5前に別のModel Experiment Registryを凍結する。cross-environment hashはlive DBでなく固定fixture bundleで比較する。golden更新は理由とversion bumpを伴う別commitに限定する。
+
 ## 方針
 
 49,034,366行ある`odds_timeseries_snapshots`へ直接`ALTER`しない。既存3連単の互換契約を保ったまま、全券種用v2 tableを新設する案を第一候補とする。

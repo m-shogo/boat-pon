@@ -1,27 +1,48 @@
 {
-  "schema_version": "1.1.0",
+  "schema_version": "1.2.0",
   "canonical_document": "docs/research-platform-master-plan.md",
-  "last_updated": "2026-07-23",
+  "last_updated": "2026-07-24",
   "enums": {
     "status": ["CORE_FOUNDATION", "READY_AFTER_FOUNDATION", "FUTURE_ONLY_RESEARCH", "EXPERIMENTAL", "DEFERRED", "PROHIBITED"],
     "priority": ["S", "A", "B", "C", "NONE"]
   },
   "stage_order": ["Stage 0", "F0", "F0-R", "N1", "D1", "N2", "N3", "N4", "D2", "E1", "E2", "N5", "N6", "N7", "N8"],
   "decision_systems": {
-    "legacy": {"decision_system": "legacy_t5_formal", "strategy_version": "legacy-t5-v1", "evaluation_mode": "formal_forward", "cohort": "current_fixed_formal_cohort", "production_allowed": false},
-    "research": {"decision_system": "market_intelligence", "strategy_version": "versioned", "evaluation_mode": "shadow_forward", "cohort": "versioned_fixed_cohort_id", "production_allowed": false}
+    "legacy": {"decision_system": "legacy_t5_formal", "strategy_version": "legacy-t5-v1", "evaluation_mode": "formal_forward", "cohort": "fixed_enrollment_protocol_with_open_append_only_membership", "analysis": "frozen_snapshot_at_report_time", "production_allowed": false},
+    "research": {"decision_system": "market_intelligence", "strategy_version": "versioned", "evaluation_mode": "shadow_forward", "cohort": "versioned_enrollment_protocol", "analysis": "versioned_frozen_snapshot", "production_allowed": false}
   },
   "required_decision_identity": ["decision_system", "strategy_version", "model_version", "feature_version", "manifest_id", "cohort_id", "evaluation_mode", "ticket_type", "selection", "decision"],
   "required_evaluation_identity": ["decision_id", "cohort_id", "evaluation_protocol_id", "evaluation_result_version"],
   "canonical_identity": ["canonical_race_key", "source_race_alias", "venue_code", "race_date", "race_no", "racer_registration_no", "bet_type", "canonical_selection", "observation_id", "capture_attempt_id", "raw_document_id", "parse_run_id", "decision_id", "cohort_id", "evaluation_protocol_id"],
   "evidence_layers": [
-    {"order": 1, "name": "capture_attempt", "meaning": "HTTP request/response attempt fact"},
+    {"order": 1, "name": "capture_attempt", "meaning": "immutable request-start attempt linked to append-only lifecycle events"},
     {"order": 2, "name": "raw_document", "meaning": "byte-exact received document"},
     {"order": 3, "name": "parse_run", "meaning": "parser-versioned execution against one raw document"},
     {"order": 4, "name": "domain_observation", "meaning": "typed versioned business observation"},
     {"order": 5, "name": "race_asof_manifest", "meaning": "resolver-versioned selected observation set and completeness results"}
   ],
   "manifest_completeness_states": ["found", "missing", "stale", "rejected", "not_published", "not_observed", "not_offered", "parse_error", "timing_ambiguous", "point_in_time_ineligible"],
+  "capture_attempt_event_kinds": ["capture_started", "response_headers_received", "body_completed", "capture_failed", "capture_cancelled"],
+  "capture_failure_reasons": ["http_not_reached", "timeout", "partial_body", "hash_mismatch", "process_crash_incomplete", "cancelled"],
+  "raw_byte_contract": {"parser_replay_canonical": "entity_body_bytes_after_content_encoding", "wire_body": "optional_auxiliary", "decoded_text": "derived_artifact", "semantic_payload": "versioned_derived_artifact"},
+  "raw_change_matrix": [
+    {"raw": "unchanged", "semantic": "unchanged", "classification": "no_event"},
+    {"raw": "changed", "semantic": "changed", "classification": "confirmed_semantic_event"},
+    {"raw": "changed", "semantic": "unchanged_parser_healthy", "classification": "raw_only_or_cosmetic_change"},
+    {"raw": "changed", "semantic": "unchanged_parser_warning", "classification": "unknown_change"},
+    {"raw": "changed", "semantic": "parse_error", "classification": "schema_change_candidate"},
+    {"raw": "changed", "semantic": "unknown_source_schema", "classification": "safety_alert"},
+    {"raw": "unchanged", "semantic": "changed", "classification": "parser_or_canonicalization_version_change"}
+  ],
+  "raw_security_contract": ["no_authorization", "no_cookie", "no_set_cookie", "redact_secret_query", "header_allowlist", "body_size_limit", "decompressed_size_limit", "decompression_ratio_limit", "content_type_allowlist", "unknown_charset_quarantine", "restricted_raw_file_permission", "restricted_sidecar_permission", "restricted_temp_permission", "atomic_temp_write_fsync_rename", "git_exclusion_check", "secret_scan", "no_full_body_in_report", "redacted_source_url", "public_unauthenticated_official_sources_only"],
+  "cohort_lifecycle": {
+    "definition_fields": ["cohort_definition_id", "enrollment_rule_version", "inclusion_rule", "exclusion_rule", "enrollment_started_at", "enrollment_ends_at", "target_count", "decision_system", "evaluation_mode"],
+    "membership_fields": ["race_id", "enrolled_at", "inclusion_evidence", "exclusion_evidence", "membership_status", "membership_event_version"],
+    "snapshot_fields": ["cohort_snapshot_id", "cohort_definition_id", "member_ids", "frozen_at", "member_count", "max_event_at", "data_available_at_freeze", "snapshot_hash"]
+  },
+  "research_hypothesis_registry_fields": ["hypothesis_id", "research_axis", "analysis_class", "primary_metric", "secondary_metric", "event_taxonomy_version", "pre_window", "post_window", "subgroup_definitions", "exclusion_rules", "null_event", "placebo_method", "multiplicity_family", "correction_method", "minimum_sample", "stopping_rule", "created_before_data_inspection"],
+  "model_experiment_registry_fields": ["fixed_train_validation_test_split", "feature_family", "model_family", "hyperparameter_search_budget", "primary_scoring_metric", "calibration_metric", "roi_protocol", "multiple_testing_family", "promotion_gate", "rejection_gate"],
+  "golden_hash_fixture_fields": ["fixture_archive_hash", "expected_raw_hashes", "expected_semantic_hashes", "expected_manifest_hash", "canonicalization_version", "timezone_fixture", "float_range_fixture", "null_missing_fixture", "unicode_fixture", "array_order_fixture", "node_runtime_major", "sqlite_schema_version"],
   "evaluation_protocol_fields": ["evaluation_protocol_id", "stake_policy", "price_source", "checkpoint_definition", "closing_like_definition", "settlement_policy", "refund_policy", "dead_heat_policy", "no_sale_policy", "missing_data_policy", "roi_definition", "clv_definition", "probability_metric_version", "max_hit_exclusion_definition", "bootstrap_block_definition", "coverage_definition", "skip_treatment"],
   "priority_portfolio": {
     "S": ["Race As-of Manifest", "Observation Envelope", "Content-Addressed Raw Cache", "point-in-time guard", "Future Timestamp Trap", "Post-Race Leakage Sentinel", "Error Atlas v1", "Uncertainty Cube", "strict-prior racer statistics", "synchronized all-market observations"],
@@ -31,10 +52,19 @@
   },
   "foundation_contracts": [
     {
-      "id": "FC01", "name": "five_layer_evidence_model", "research_ids": ["R01", "R02", "R03", "R34"], "implementation_stage": "F0", "requirements": ["capture_attempt", "raw_document", "parse_run", "domain_observation", "race_asof_manifest"], "completion_gate": "各層が別identityを持ち、raw再parseが新captureを作らず旧parse/observationを残す"
+      "id": "FC01", "name": "five_layer_evidence_model", "research_ids": ["R01", "R02", "R03", "R34"], "implementation_stage": "F0", "child_contract_ids": ["FC01A"], "requirements": ["capture_attempt", "raw_document", "parse_run", "domain_observation", "race_asof_manifest"], "completion_gate": "各層が別identityを持ち、raw再parseが新captureを作らず旧parse/observationを残す"
     },
     {
-      "id": "FC02", "name": "raw_and_semantic_hash", "research_ids": ["R02", "R04", "R33", "R34"], "implementation_stage": "F0", "requirements": ["raw_sha256", "semantic_payload_hash", "parser_version", "canonicalization_version", "payload_type", "source_schema_version"], "completion_gate": "無関係なHTML差分でsemantic change eventが発火しない"
+      "id": "FC01A", "name": "capture_attempt_lifecycle", "parent_contract_id": "FC01", "research_ids": ["R01", "R02", "R34"], "implementation_stage": "F0", "requirements": ["immutable capture_attempt", "append-only capture_attempt_events", "logical_request_group_id", "terminal/incomplete detection", "retry as new attempt", "failure reason taxonomy"], "completion_gate": "crash/incompleteを成功扱いせずretryが旧attemptを更新しない"
+    },
+    {
+      "id": "FC02", "name": "raw_and_semantic_hash", "research_ids": ["R02", "R04", "R33", "R34"], "implementation_stage": "F0", "child_contract_ids": ["FC02A", "FC02B"], "requirements": ["raw_sha256", "semantic_payload_hash", "parser_version", "canonicalization_version", "payload_type", "source_schema_version"], "completion_gate": "rawを安全網、semanticを業務判定として二重判定する"
+    },
+    {
+      "id": "FC02A", "name": "raw_semantic_change_matrix", "parent_contract_id": "FC02", "research_ids": ["R04", "R33", "R34"], "implementation_stage": "F0", "requirements": ["raw/semantic matrix", "parser health", "source schema status", "safety capture/alert"], "completion_gate": "unknown/parse error/schema alertを通常情報eventと断定しない"
+    },
+    {
+      "id": "FC02B", "name": "raw_byte_and_security_contract", "parent_contract_id": "FC02", "research_ids": ["R02", "R34"], "implementation_stage": "F0", "requirements": ["entity body parser replay", "wire/text/semantic lineage", "secret/header redaction", "size/decompression/content limits", "file permissions", "atomic write", "Git exclusion", "secret scan"], "completion_gate": "公開・非認証sourceだけを安全に保存しraw全文やsecretをreport/logへ出さない"
     },
     {
       "id": "FC03", "name": "canonical_identity", "research_ids": ["R01", "R03"], "implementation_stage": "F0", "requirements": ["canonical race key", "source aliases", "racer/bet/selection identity", "evidence and evaluation IDs"], "completion_gate": "source文字列に依存せず、欠場・中止・締切変更でrace keyが変わらない"
@@ -49,13 +79,19 @@
       "id": "FC06", "name": "manifest_completeness", "research_ids": ["R03", "R16", "R17"], "implementation_stage": "F0", "requirements": ["expected type", "completeness state", "searched source/time range", "rejection reason"], "completion_gate": "required欠損を暗黙補完せずflagまたは生成拒否する"
     },
     {
-      "id": "FC07", "name": "append_only_supersession", "research_ids": ["R01", "R02", "R03", "R12", "R28", "R34"], "implementation_stage": "F0", "requirements": ["supersedes_id", "superseded_by_id", "correction_kind", "correction_reason", "recorded_at", "effective_at"], "completion_gate": "訂正・再parse・再評価が旧証拠をUPDATEしない"
+      "id": "FC07", "name": "append_only_supersession", "research_ids": ["R01", "R02", "R03", "R12", "R28", "R34"], "implementation_stage": "F0", "requirements": ["new-row-only supersedes_id", "reverse query/view for superseded_by", "correction_kind", "correction_reason", "recorded_at", "effective_at", "optional append-only supersession edges"], "completion_gate": "公式訂正・再parse・taxonomy/evaluation訂正が旧証拠へsuperseded_by_idをUPDATEしない"
     },
     {
-      "id": "FC08", "name": "evidence_retention_gc", "research_ids": ["R01", "R03", "R28", "R34"], "implementation_stage": "F0-R", "requirements": ["manifest/cohort/evaluation pin", "retention class", "tombstone", "orphan check", "quota", "low-water mark", "GC dry-run/audit"], "completion_gate": "参照証拠がGC対象外でRESTRICTまたはtombstoneを使う"
+      "id": "FC08", "name": "evidence_retention_gc", "research_ids": ["R01", "R03", "R28", "R34"], "implementation_stage": "F0-R", "stage_span": ["F0", "F0-R"], "child_contract_ids": ["FC08A", "FC08B"], "requirements": ["F0 pin semantics", "F0-R operational retention"], "completion_gate": "子contractのStage責務が分離され参照証拠を削除しない"
     },
     {
-      "id": "FC09", "name": "frozen_cohort_manifest", "research_ids": ["R18", "R19", "R28", "R31"], "implementation_stage": "D1", "requirements": ["cohort_id/version", "race membership", "reasons", "frozen_at", "data_available_at_freeze", "definition_version"], "completion_gate": "後着dataが既存cohort membershipを変更しない"
+      "id": "FC08A", "name": "evidence_pin_semantics", "parent_contract_id": "FC08", "research_ids": ["R01", "R03", "R28", "R34"], "implementation_stage": "F0", "requirements": ["manifest pin", "future cohort/evaluation reference", "referenced evidence GC rejection", "tombstone contract", "fixture GC dry-run", "orphan contract"], "completion_gate": "fixture上でpinned evidenceのGCが拒否される"
+    },
+    {
+      "id": "FC08B", "name": "operational_retention_gc", "parent_contract_id": "FC08", "research_ids": ["R01", "R03", "R28", "R34"], "implementation_stage": "F0-R", "requirements": ["storage quota", "low-water mark", "actual GC", "audit log", "crash recovery", "kill switch", "backup/restore"], "completion_gate": "実GCがunpinned artifactだけを対象に監査・復旧可能"
+    },
+    {
+      "id": "FC09", "name": "prospective_cohort_and_frozen_snapshot", "research_ids": ["R18", "R19", "R28", "R31"], "implementation_stage": "D1", "requirements": ["cohort definition/enrollment protocol", "open append-only membership events", "frozen analysis snapshot"], "completion_gate": "legacy_t5_formalをfixed enrollment protocolとし報告時snapshotへ後着dataを追加しない"
     },
     {
       "id": "FC10", "name": "evaluation_protocol", "research_ids": ["R28", "R29", "R30", "R31", "R32"], "implementation_stage": "D1", "requirements": ["stake/price/checkpoint/settlement policies", "metric versions", "coverage/SKIP treatment"], "completion_gate": "同じdecisionの別protocol評価が別resultとしてappendされる"
@@ -67,18 +103,33 @@
       "id": "FC12", "name": "shadow_write_failure_isolation", "research_ids": ["R01", "R02", "R34"], "implementation_stage": "F0-R", "requirements": ["primary collector", "optional shadow", "separate transaction", "bounded queue", "retry/backpressure", "kill switches", "outbox/replay", "health report"], "completion_gate": "research failure時もprimary collectorが継続しshadow default OFF"
     },
     {
-      "id": "FC13", "name": "deterministic_canonical_hash", "research_ids": ["R01", "R03", "R34", "R36"], "implementation_stage": "F0", "requirements": ["sorted keys/arrays", "UTF-8", "UTC and original timezone", "fixed time/float encoding", "NULL vs missing", "numeric zero rule", "locale independence", "canonical selection", "manifest root versions"], "completion_gate": "Mac・CI・別環境で同一入力hashが一致する"
+      "id": "FC13", "name": "deterministic_canonical_hash", "research_ids": ["R01", "R03", "R34", "R36"], "implementation_stage": "F0", "child_contract_ids": ["FC13A"], "requirements": ["sorted keys/arrays", "UTF-8", "UTC and original timezone", "fixed time/float encoding", "NULL vs missing", "numeric zero rule", "locale independence", "canonical selection", "manifest root versions"], "completion_gate": "canonicalizationがruntime非依存である"
     },
     {
-      "id": "FC14", "name": "schema_compatibility", "research_ids": ["R01", "R02", "R03", "R34"], "implementation_stage": "F0-R", "requirements": ["migration ledger/checksum", "minimum reader/writer", "expand-only", "old reader", "feature flag", "default deny", "resume/partial detection"], "completion_gate": "unknown/partial schemaを拒否しold readerとshadow OFFを維持する"
+      "id": "FC13A", "name": "cross_environment_golden_fixture", "parent_contract_id": "FC13", "research_ids": ["R01", "R03", "R34", "R36"], "implementation_stage": "F0", "requirements": ["fixture archive hash", "expected raw/semantic/manifest hashes", "timezone/float/range/NULL/Unicode/array fixtures", "runtime and SQLite versions", "separate golden update commit", "reason and version bump"], "completion_gate": "Mac・CI・別環境で固定bundle hashが一致し無理由golden更新を拒否する"
     },
     {
-      "id": "FC15", "name": "experiment_protocol_freeze", "research_ids": ["R03", "R19", "R28", "R32"], "implementation_stage": "N5", "requirements": ["experiment protocol manifest", "fixed split manifest", "metric version freeze", "multiple-testing registry"], "completion_gate": "N5開始前に全versionとsplitが凍結される"
+      "id": "FC14", "name": "schema_compatibility", "research_ids": ["R01", "R02", "R03", "R34"], "implementation_stage": "F0-R", "stage_span": ["F0", "F0-R"], "child_contract_ids": ["FC14A", "FC14B"], "requirements": ["F0 sidecar schema contract", "F0-R rollout compatibility"], "completion_gate": "子contractのStage責務が分離される"
+    },
+    {
+      "id": "FC14A", "name": "sidecar_schema_contract", "parent_contract_id": "FC14", "research_ids": ["R01", "R02", "R03", "R34"], "implementation_stage": "F0", "requirements": ["schema version", "migration ledger", "checksum", "unknown schema default deny", "deterministic fixture migration", "sidecar reader/writer contract"], "completion_gate": "固定fixture migrationが決定的でunknown schemaを拒否する"
+    },
+    {
+      "id": "FC14B", "name": "rollout_compatibility", "parent_contract_id": "FC14", "research_ids": ["R01", "R02", "R03", "R34"], "implementation_stage": "F0-R", "requirements": ["minimum reader/writer", "old reader compatibility", "partial migration recovery", "migration resume", "feature flag", "live rollout compatibility"], "completion_gate": "partial migrationから復旧しold readerとshadow default OFFを維持する"
+    },
+    {
+      "id": "FC15", "name": "statistical_registry", "research_ids": ["R03", "R19", "R28", "R32"], "implementation_stage": "N5", "stage_span": ["D2", "E1", "E2", "N5"], "child_contract_ids": ["FC15A", "FC15B"], "requirements": ["research hypothesis registry", "model experiment registry"], "completion_gate": "研究仮説とモデル実験のregistryを混同しない"
+    },
+    {
+      "id": "FC15A", "name": "research_hypothesis_registry", "parent_contract_id": "FC15", "research_ids": ["R04", "R07", "R08", "R24", "R28", "R33", "R37", "R38", "R39"], "implementation_stage": "D2", "requirements": ["hypothesis/axis/class", "metrics", "event taxonomy/windows", "subgroups/exclusions", "null/placebo", "multiplicity/correction", "minimum sample/stopping", "created-before-inspection"], "completion_gate": "D2/E1/E2の未登録分析をconfirmatoryとしない"
+    },
+    {
+      "id": "FC15B", "name": "model_experiment_registry", "parent_contract_id": "FC15", "research_ids": ["R03", "R19", "R28", "R32"], "implementation_stage": "N5", "requirements": ["fixed split", "feature/model family", "search budget", "scoring/calibration metrics", "ROI protocol", "multiple-testing family", "promotion/rejection gate"], "completion_gate": "N5開始前にmodel experiment contractを凍結する"
     }
   ],
   "ideas": [
     {
-      "id": "R01", "name": "Race Time Machine", "category": "replay", "summary": "任意のas-of時点のrace入力・特徴・判断を再生する。", "hypothesis": "意思決定時点の世界を再生できれば全研究の再現性と漏洩検査が成立する。", "status": "CORE_FOUNDATION", "priority": "S", "implementation_stage": "F0", "existing_phase_mapping": ["F0", "F0-R", "N5", "N8"], "dependencies": ["R02", "R03", "R34", "R36", "R40"], "required_data": ["canonical race identity", "five-layer evidence lineage", "observations", "manifest", "versions"], "point_in_time_requirements": ["as_of cutoff", "source/observed time separation", "strict-prior", "checkpoint freeze"], "historical_reconstructability": "PARTIAL: 保存済raw範囲のみ。観測順序欠損は復元不能。", "future_only": false, "request_cost": "0 for replay; upstream collection only", "storage_cost": "MEDIUM", "leakage_risk": "未来観測や結果をmanifestへ混入", "selection_bias_risk": "再生可能raceだけで評価", "subjectivity_risk": "LOW", "acceptance_gate": "五層lineageとversioned resolverから同一manifest/hash/入力が再現される", "rejection_gate": "時刻不明を推測補完または非決定的再生", "production_allowed": false, "notes": "F0はtemp/sidecarのみ。rolloutはF0-R。"
+      "id": "R01", "name": "Race Time Machine", "category": "replay", "summary": "任意のas-of時点のrace入力・特徴・判断を再生する。", "hypothesis": "意思決定時点の世界を再生できれば全研究の再現性と漏洩検査が成立する。", "status": "CORE_FOUNDATION", "priority": "S", "implementation_stage": "F0", "existing_phase_mapping": ["F0", "F0-R", "N5", "N8"], "dependencies": ["R02", "R03", "R34", "R36", "R40"], "required_data": ["canonical race identity", "five-layer evidence lineage", "capture lifecycle events", "observations", "manifest", "versions"], "point_in_time_requirements": ["as_of cutoff", "source/observed time separation", "strict-prior", "checkpoint freeze"], "historical_reconstructability": "PARTIAL: 保存済raw範囲のみ。観測順序欠損は復元不能。", "future_only": false, "request_cost": "0 for replay; upstream collection only", "storage_cost": "MEDIUM", "leakage_risk": "未来観測や結果をmanifestへ混入", "selection_bias_risk": "再生可能raceだけで評価", "subjectivity_risk": "LOW", "acceptance_gate": "五層lineage・immutable capture lifecycle・versioned resolverから同一manifest/hash/入力が再現される", "rejection_gate": "時刻不明を推測補完または非決定的再生", "production_allowed": false, "notes": "F0はtemp/sidecarのみ。rolloutはF0-R。"
     },
     {
       "id": "R02", "name": "Observation Envelope＋typed payload", "category": "observation", "summary": "全観測を共通metadataと型付きpayloadで包む。", "hypothesis": "値と観測品質を同じ契約で保存すれば異種sourceを安全に比較できる。", "status": "CORE_FOUNDATION", "priority": "S", "implementation_stage": "F0", "existing_phase_mapping": ["F0", "F0-R", "N2", "N3"], "dependencies": [], "required_data": ["capture attempt ID", "raw document ID", "parse run ID", "domain observation ID", "canonical race key"], "point_in_time_requirements": ["source_published_at", "source_observed_at", "first_seen_at", "changed_at"], "historical_reconstructability": "PARTIAL: raw cache範囲。正確なfirst_seenはfuture-only。", "future_only": false, "request_cost": "0 when wrapping existing fetches", "storage_cost": "MEDIUM", "leakage_risk": "fetched_atを公開時刻に代用", "selection_bias_risk": "型変換成功rowだけを採用", "subjectivity_risk": "LOW", "acceptance_gate": "取得・raw・parse・typed observationを別entityでlineage接続する", "rejection_gate": "HTTP、raw、parse、typed payloadを同一rowへ畳み込む", "production_allowed": false, "notes": "rawとdomain observationは相互代用不可。"
@@ -159,7 +210,7 @@
       "id": "R27", "name": "Change-Point Evidence", "category": "venue_state", "summary": "日内evidenceの変化点らしさを逐次評価する。", "hypothesis": "急な気象・進入・ST変化を固定状態より早く検知できる。", "status": "EXPERIMENTAL", "priority": "B", "implementation_stage": "N4", "existing_phase_mapping": ["N4", "M4"], "dependencies": ["R24", "R26"], "required_data": ["ordered evidence vectors", "weather changes"], "point_in_time_requirements": ["online-only update"], "historical_reconstructability": "PARTIAL", "future_only": false, "request_cost": "0", "storage_cost": "LOW_DERIVED", "leakage_risk": "一日全体で変化点を決める", "selection_bias_risk": "顕著な日だけ選ぶ", "subjectivity_risk": "MEDIUM", "acceptance_gate": "online algorithmとthreshold事前固定", "rejection_gate": "後日最適分割", "production_allowed": false, "notes": "evidenceであり確定状態ではない。"
     },
     {
-      "id": "R28", "name": "Hierarchical Error Atlas", "category": "diagnostics", "summary": "外れをdata・market・model・strategy・settlement層で分類する。", "hypothesis": "失敗層を分ければ条件探索せず改善箇所を特定できる。", "status": "READY_AFTER_FOUNDATION", "priority": "S", "implementation_stage": "D1", "existing_phase_mapping": ["D1", "N8"], "dependencies": ["R03", "R32"], "required_data": ["decisions", "frozen cohort", "evaluation protocol", "manifests", "results", "odds", "payouts"], "point_in_time_requirements": ["decision-time evidence immutable"], "historical_reconstructability": "PARTIAL", "future_only": false, "request_cost": "0 beyond upstream", "storage_cost": "MEDIUM_DERIVED", "leakage_risk": "結果から当時理由を改変", "selection_bias_risk": "目立つmissだけ分類", "subjectivity_risk": "MEDIUM", "acceptance_gate": "taxonomy pin・cohort・protocol付きで全candidateを分類可能", "rejection_gate": "BUY条件探索または過去分類/評価の上書き", "production_allowed": false, "notes": "D1前までにcohort/evaluation/taxonomyを凍結。"
+      "id": "R28", "name": "Hierarchical Error Atlas", "category": "diagnostics", "summary": "外れをdata・market・model・strategy・settlement層で分類する。", "hypothesis": "失敗層を分ければ条件探索せず改善箇所を特定できる。", "status": "READY_AFTER_FOUNDATION", "priority": "S", "implementation_stage": "D1", "existing_phase_mapping": ["D1", "N8"], "dependencies": ["R03", "R32"], "required_data": ["decisions", "cohort definition", "frozen analysis snapshot", "evaluation protocol", "manifests", "results", "odds", "payouts"], "point_in_time_requirements": ["decision-time evidence immutable"], "historical_reconstructability": "PARTIAL", "future_only": false, "request_cost": "0 beyond upstream", "storage_cost": "MEDIUM_DERIVED", "leakage_risk": "結果から当時理由を改変", "selection_bias_risk": "目立つmissだけ分類", "subjectivity_risk": "MEDIUM", "acceptance_gate": "taxonomy pin・snapshot・protocol付きで全candidateを分類可能", "rejection_gate": "BUY条件探索または過去分類/評価の上書き", "production_allowed": false, "notes": "D1でcohort lifecycle/evaluation/taxonomyを確定。"
     },
     {
       "id": "R29", "name": "Separate counterfactual hit/value", "category": "diagnostics", "summary": "別券種なら的中したかと当時価値があったかを分離する。", "hypothesis": "的中可能性と価格価値を分けると後知恵ticket変更を防げる。", "status": "READY_AFTER_FOUNDATION", "priority": "A", "implementation_stage": "D1", "existing_phase_mapping": ["D1", "N8"], "dependencies": ["R28"], "required_data": ["top3 result", "all-bet payouts", "decision-time odds"], "point_in_time_requirements": ["value uses decision-time market only"], "historical_reconstructability": "PARTIAL", "future_only": false, "request_cost": "0 beyond N1/N2", "storage_cost": "LOW_DERIVED", "leakage_risk": "払戻から当時価値を推測", "selection_bias_risk": "的中した券種だけ表示", "subjectivity_risk": "LOW", "acceptance_gate": "hit/valueを別field・全券種で記録", "rejection_gate": "hitを根拠にstrategy変更", "production_allowed": false, "notes": "counterfactualは研究台帳のみ。"
@@ -174,13 +225,13 @@
       "id": "R32", "name": "Error Atlas taxonomy versioning", "category": "diagnostics", "summary": "Error Atlas分類語彙と変更履歴をversion管理する。", "hypothesis": "taxonomy変更を追跡すれば過去集計の意味を保持できる。", "status": "READY_AFTER_FOUNDATION", "priority": "S", "implementation_stage": "D1", "existing_phase_mapping": ["D1"], "dependencies": ["R03"], "required_data": ["taxonomy definitions", "migration map", "evidence requirements"], "point_in_time_requirements": ["classification version immutable"], "historical_reconstructability": "GO", "future_only": false, "request_cost": "0", "storage_cost": "LOW", "leakage_risk": "結果に合わせtaxonomy変更", "selection_bias_risk": "不利なcategory統合", "subjectivity_risk": "MEDIUM", "acceptance_gate": "version・effective date・mapping・unknownを保持", "rejection_gate": "silent relabel", "production_allowed": false, "notes": "Error Atlas v1の前提。"
     },
     {
-      "id": "R33", "name": "Event-Triggered Burst", "category": "acquisition", "summary": "公式情報変更時だけ短時間の全市場観測を増やす。", "hypothesis": "常時高頻度pollなしに市場反応を捉えられる。", "status": "FUTURE_ONLY_RESEARCH", "priority": "B", "implementation_stage": "E1", "existing_phase_mapping": ["E1"], "dependencies": ["R02", "R34"], "required_data": ["official change detection", "fixed checkpoints", "request budget"], "point_in_time_requirements": ["first_seen event trigger", "monotonic clocks"], "historical_reconstructability": "BLOCKED", "future_only": true, "request_cost": "up to 5 pages × fixed burst checkpoints per detected change", "storage_cost": "HIGH", "leakage_risk": "市場変化を見てeventを遡及選択", "selection_bias_risk": "検知可能eventだけ", "subjectivity_risk": "LOW", "acceptance_gate": "固定cohort・budget・kill switch・null events", "rejection_gate": "全race常時30秒pollまたはadaptive化", "production_allowed": false, "notes": "adaptive budgetより先に固定設計。"
+      "id": "R33", "name": "Event-Triggered Burst", "category": "acquisition", "summary": "公式情報変更時だけ短時間の全市場観測を増やす。", "hypothesis": "常時高頻度pollなしに市場反応を捉えられる。", "status": "FUTURE_ONLY_RESEARCH", "priority": "B", "implementation_stage": "E1", "existing_phase_mapping": ["E1"], "dependencies": ["R02", "R34"], "required_data": ["raw/semantic change matrix", "parser health", "source schema status", "fixed checkpoints", "request budget"], "point_in_time_requirements": ["first_seen event trigger", "monotonic clocks"], "historical_reconstructability": "BLOCKED", "future_only": true, "request_cost": "up to 5 pages × preregistered checkpoints per confirmed event; bounded safety capture for unknowns", "storage_cost": "HIGH", "leakage_risk": "市場変化を見てeventを遡及選択", "selection_bias_risk": "検知可能eventだけ", "subjectivity_risk": "LOW", "acceptance_gate": "Research Hypothesis Registry・二重change判定・budget・kill switch・null events", "rejection_gate": "semantic-only trigger、unknownを通常event化、全race常時30秒poll", "production_allowed": false, "notes": "raw hashは安全網、semantic hashは業務変更判定。"
     },
     {
-      "id": "R34", "name": "Content-Addressed Raw Cache", "category": "storage", "summary": "byte-exact rawをhashでdedupしcapture・parse・観測参照を分離する。", "hypothesis": "storageを抑えつつraw evidenceと全観測時刻を保持できる。", "status": "CORE_FOUNDATION", "priority": "S", "implementation_stage": "F0", "existing_phase_mapping": ["F0", "F0-R", "N2", "N3"], "dependencies": [], "required_data": ["raw bytes", "raw_sha256", "semantic_payload_hash", "content type", "source", "canonicalization metadata"], "point_in_time_requirements": ["capture rows retain each observed_at", "semantic change uses versioned parser/canonicalizer"], "historical_reconstructability": "GO_FOR_EXISTING_RAW", "future_only": false, "request_cost": "0", "storage_cost": "LOW_TO_MEDIUM", "leakage_risk": "同一contentの最終observed_atだけ残す", "selection_bias_risk": "hash失敗responseを捨てる", "subjectivity_risk": "LOW", "acceptance_gate": "raw dedup後もcapture cardinality不変でsemantic decoration差分を無視", "rejection_gate": "観測イベント消失、hash/canonicalization version不明", "production_allowed": false, "notes": "pinned evidenceはGC禁止。"
+      "id": "R34", "name": "Content-Addressed Raw Cache", "category": "storage", "summary": "entity body bytesをhashでdedupしcapture・parse・観測参照を分離する。", "hypothesis": "storageを抑えつつraw evidenceと全観測時刻を保持できる。", "status": "CORE_FOUNDATION", "priority": "S", "implementation_stage": "F0", "existing_phase_mapping": ["F0", "F0-R", "N2", "N3"], "dependencies": [], "required_data": ["entity body bytes", "optional wire bytes", "raw_sha256", "semantic_payload_hash", "content type", "source", "canonicalization metadata", "security/redaction metadata"], "point_in_time_requirements": ["capture rows retain each observed_at", "semantic change uses versioned parser/canonicalizer"], "historical_reconstructability": "GO_FOR_EXISTING_RAW", "future_only": false, "request_cost": "0", "storage_cost": "LOW_TO_MEDIUM", "leakage_risk": "同一contentの最終observed_atだけ残す", "selection_bias_risk": "hash失敗responseを捨てる", "subjectivity_risk": "LOW", "acceptance_gate": "parser replay正本・security・raw/semantic lineageを固定しcapture cardinalityを保つ", "rejection_gate": "secret保存、観測消失、hash/canonicalization version不明", "production_allowed": false, "notes": "pinned evidenceはGC禁止。"
     },
     {
-      "id": "R35", "name": "Adaptive Observation Budget", "category": "acquisition", "summary": "不確実性やeventに応じて取得頻度を動的配分する。", "hypothesis": "固定予算で情報価値を高められる可能性がある。", "status": "DEFERRED", "priority": "C", "implementation_stage": "post-N8", "existing_phase_mapping": ["post-N8"], "dependencies": ["R33", "R08", "R16"], "required_data": ["fixed-cohort burst evidence", "sensor reliability", "uncertainty"], "point_in_time_requirements": ["policy version and decision log"], "historical_reconstructability": "BLOCKED", "future_only": true, "request_cost": "UNKNOWN and policy-dependent", "storage_cost": "HIGH", "leakage_risk": "結果や市場変動後に予算配分", "selection_bias_risk": "観測policyが評価母集団を変える", "subjectivity_risk": "MEDIUM", "acceptance_gate": "固定cohort研究後の独立preregistration", "rejection_gate": "E1前またはfixed cohort前の導入", "production_allowed": false, "notes": "現時点で実装しない。"
+      "id": "R35", "name": "Adaptive Observation Budget", "category": "acquisition", "summary": "不確実性やeventに応じて取得頻度を動的配分する。", "hypothesis": "固定予算で情報価値を高められる可能性がある。", "status": "DEFERRED", "priority": "C", "implementation_stage": "post-N8", "existing_phase_mapping": ["post-N8"], "dependencies": ["R33", "R08", "R16"], "required_data": ["fixed enrollment protocol burst evidence", "frozen analysis snapshots", "sensor reliability", "uncertainty"], "point_in_time_requirements": ["policy version and decision log"], "historical_reconstructability": "BLOCKED", "future_only": true, "request_cost": "UNKNOWN and policy-dependent", "storage_cost": "HIGH", "leakage_risk": "結果や市場変動後に予算配分", "selection_bias_risk": "観測policyが評価母集団を変える", "subjectivity_risk": "MEDIUM", "acceptance_gate": "固定protocol/snapshot研究後の独立preregistration", "rejection_gate": "E1前またはprotocol/snapshot評価前の導入", "production_allowed": false, "notes": "現時点で実装しない。"
     },
     {
       "id": "R36", "name": "Future Timestamp Trap", "category": "safety", "summary": "as-ofより未来の観測参照をfixtureで強制検出する。", "hypothesis": "明示的trapはsilent leakageをCIで止める。", "status": "CORE_FOUNDATION", "priority": "S", "implementation_stage": "F0", "existing_phase_mapping": ["F0"], "dependencies": ["R03"], "required_data": ["manifest builder", "synthetic future observations"], "point_in_time_requirements": ["strict timestamp ordering", "unknown handling"], "historical_reconstructability": "GO", "future_only": false, "request_cost": "0", "storage_cost": "LOW_TEST_ONLY", "leakage_risk": "trap自体を特例skip", "selection_bias_risk": "LOW", "subjectivity_risk": "LOW", "acceptance_gate": "未来rowが必ずfail closed", "rejection_gate": "warningのみ、またはtimezoneで通過", "production_allowed": false, "notes": "timezone/DST/同時刻境界fixtureを含む。"
@@ -209,7 +260,7 @@
     {"id": "P08", "status": "PROHIBITED", "priority": "NONE", "name": "infeasibility as BUY", "reason": "市場矛盾をBUYへ直結しない。"},
     {"id": "P09", "status": "PROHIBITED", "priority": "NONE", "name": "Error Atlas as BUY search", "reason": "失敗台帳を条件探索へ転用しない。"},
     {"id": "P10", "status": "PROHIBITED", "priority": "NONE", "name": "early single uncertainty score", "reason": "不確実性を早期に単一score化しない。"},
-    {"id": "P11", "status": "PROHIBITED", "priority": "NONE", "name": "adaptive budget before fixed cohort", "reason": "固定cohort検証前に観測policyを適応化しない。"},
+    {"id": "P11", "status": "PROHIBITED", "priority": "NONE", "name": "adaptive budget before fixed cohort evidence", "reason": "fixed enrollment protocolとfrozen analysis snapshotの検証前に観測policyを適応化しない。"},
     {"id": "P12", "status": "PROHIBITED", "priority": "NONE", "name": "historical closing as T-5", "reason": "closing oddsをT-5として扱わない。"},
     {"id": "P13", "status": "PROHIBITED", "priority": "NONE", "name": "fetched_at as published_at", "reason": "取得完了時刻をsource公開時刻にしない。"},
     {"id": "P14", "status": "PROHIBITED", "priority": "NONE", "name": "post-race feature leakage", "reason": "対象race・後続race・結果後情報を事前特徴へ入れない。"},
@@ -222,6 +273,15 @@
     {"id": "P21", "status": "PROHIBITED", "priority": "NONE", "name": "pinned evidence GC", "reason": "manifest・cohort・evaluationから参照された証拠を削除しない。"},
     {"id": "P22", "status": "PROHIBITED", "priority": "NONE", "name": "F0 live database mutation", "reason": "F0でdata/boat.sqliteを変更またはlive collectorへ接続しない。"},
     {"id": "P23", "status": "PROHIBITED", "priority": "NONE", "name": "shadow failure propagation", "reason": "research shadow write失敗をprimary collectorへ伝播させない。"},
-    {"id": "P24", "status": "PROHIBITED", "priority": "NONE", "name": "evidence cascade delete", "reason": "研究証拠を消し得るON DELETE CASCADEを使用しない。"}
+    {"id": "P24", "status": "PROHIBITED", "priority": "NONE", "name": "evidence cascade delete", "reason": "研究証拠を消し得るON DELETE CASCADEを使用しない。"},
+    {"id": "P25", "status": "PROHIBITED", "priority": "NONE", "name": "reverse supersession update", "reason": "旧evidence rowへsuperseded_by_idをUPDATEしない。"},
+    {"id": "P26", "status": "PROHIBITED", "priority": "NONE", "name": "mutable capture attempt", "reason": "capture開始rowへstatusやresponse時刻を後付けしない。"},
+    {"id": "P27", "status": "PROHIBITED", "priority": "NONE", "name": "cohort lifecycle conflation", "reason": "prospective enrollmentとfrozen analysis snapshotを混同しない。"},
+    {"id": "P28", "status": "PROHIBITED", "priority": "NONE", "name": "semantic-only burst trigger", "reason": "raw/parser/schema safety判定なしにsemantic hashだけでburstを発火しない。"},
+    {"id": "P29", "status": "PROHIBITED", "priority": "NONE", "name": "raw secret persistence", "reason": "Authorization、Cookie、secret query、token URLを保存・報告しない。"},
+    {"id": "P30", "status": "PROHIBITED", "priority": "NONE", "name": "authenticated source expansion", "reason": "認証・Cookie依存sourceをResearch Replayへ追加しない。"},
+    {"id": "P31", "status": "PROHIBITED", "priority": "NONE", "name": "unregistered confirmatory research", "reason": "未登録D2/E1/E2分析をconfirmatoryと呼ばない。"},
+    {"id": "P32", "status": "PROHIBITED", "priority": "NONE", "name": "registry conflation", "reason": "Research Hypothesis RegistryとModel Experiment Registryを混同しない。"},
+    {"id": "P33", "status": "PROHIBITED", "priority": "NONE", "name": "unreasoned golden update", "reason": "test failureに合わせgolden hashを理由・version bump・別commitなしで更新しない。"}
   ]
 }

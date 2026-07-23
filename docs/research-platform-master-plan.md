@@ -1,6 +1,6 @@
 # boat-pon 研究再現基盤・市場知能マスタープラン
 
-最終更新: 2026-07-23
+最終更新: 2026-07-24
 
 ## 1. 正本としての位置づけ
 
@@ -33,7 +33,7 @@ Phase N0は完了している。次の独立実装タスクはStage F0「Researc
 | `decision_system` | `legacy_t5_formal` | `market_intelligence` |
 | `strategy_version` | `legacy-t5-v1` | versioned |
 | `evaluation_mode` | `formal_forward` | `shadow_forward` |
-| cohort | 現在の固定formal cohort | versioned fixed `cohort_id` |
+| cohort | fixed enrollment protocolのprospective cohort | versioned enrollment protocol＋frozen analysis snapshot |
 | 運用 | 現行BUY/WATCH/SKIP、通知、gateを維持 | N7・N8通過までshadowのみ |
 | production | 固定benchmarkとして存続 | N8後の独立production gateまで禁止 |
 
@@ -84,7 +84,7 @@ Legacyのdecisionや払戻を新方式で再ラベルせず、新方式の候補
 5. **不確実性を値と同格に保存する。** 標本数、窓、欠損理由、precision、source quality、freshnessを保持する。
 6. **主観をlabelにしない。** 「攻撃艇」「隣接艇を潰した」等は公式値から一意に定義できない限り因果labelにしない。
 7. **研究失敗を消さない。** Error AtlasはBUY条件探索ではなく、データ層・市場層・モデル層の失敗台帳にする。
-8. **fixed cohortを先に凍結する。** adaptive observationや条件選択は固定cohort評価の後に限定する。
+8. **cohort規約とanalysis snapshotを分ける。** prospective enrollmentの条件を先に固定し、報告・比較時のmembershipは別snapshotとして凍結する。
 
 ## 5. 研究再現基盤の破綻防止契約
 
@@ -92,7 +92,7 @@ Legacyのdecisionや払戻を新方式で再ラベルせず、新方式の候補
 
 Research Replay Foundationは次の五層を別entityとして扱う。
 
-1. `capture_attempt`: HTTP request/responseを試みた取得事実。成功・失敗・status・request時刻・response時刻を保持する。
+1. `capture_attempt`: 一回のrequest開始を表すimmutableな取得試行。完了状態を後から書き込まない。
 2. `raw_document`: 受信したbyte-exactな原文。`raw_sha256`でcontent-addressedに保存する。
 3. `parse_run`: 一つのrawを特定`parser_version`で解析した実行。成功、失敗、warningを含む。
 4. `domain_observation`: odds、weather、exhibition、racer、result等の型付き・versioned業務観測。
@@ -100,12 +100,32 @@ Research Replay Foundationは次の五層を別entityとして扱う。
 
 HTTP取得とparse結果を同じrowへ畳み込まない。parser更新で過去observationをUPDATEしない。同じrawの再解析は新しい`parse_run`と新しいobservationを作り、HTTP再取得には数えない。rawとtyped observationは互いの代用品ではない。
 
+`capture_attempt`の進行はappend-onlyな`capture_attempt_events`で表す。event kindは`capture_started`、`response_headers_received`、`body_completed`、`capture_failed`、`capture_cancelled`を最低限持つ。process crashによりterminal eventがないattemptはincompleteとし、成功扱いしない。retryは新しいattempt IDを発行し、`logical_request_group_id`で関連付ける。HTTP未到達、timeout、partial body、hash mismatchを別failure reasonにする。
+
 ### 5.2 raw hashとsemantic hash
 
 - `raw_sha256`: 受信bytesそのもののSHA-256。
 - `semantic_payload_hash`: 対象意味データをcanonical化したhash。
 
-公式情報change eventとEvent-Triggered Burstは原則`semantic_payload_hash`の変更で発火する。広告、token、生成時刻、装飾だけの変更をeventにしない。semantic hashは`parser_version`、`canonicalization_version`、`payload_type`、`source_schema_version`と一体で解釈する。
+raw hashを安全網、semantic hashを業務変更判定として、次の二重判定を固定する。
+
+| raw | semantic / parser | 判定 |
+|---|---|---|
+| unchanged | unchanged | no event |
+| changed | changed | confirmed semantic event |
+| changed | unchanged / parser healthy | raw-only or cosmetic change |
+| changed | unchanged / parser warning | unknown change |
+| changed | parse error | schema-change candidate |
+| changed | unknown source schema | safety alert |
+| unchanged | semantic changed | parser/canonicalization version change。source eventとは分離 |
+
+広告、token、生成時刻、装飾だけの変更を通常の情報eventにしない。`unknown change`、parse error、unknown schemaは通常eventと断定せず、少数回のsafety captureまたはalertだけを許可する。semantic hashは`parser_version`、`canonicalization_version`、`payload_type`、`source_schema_version`と一体で解釈する。
+
+#### Raw Byte Contractと保存security
+
+parser replayの正本はContent-Encoding展開後の`entity_body_bytes`とし、そのhashを`raw_sha256`とする。`wire_body_bytes`は取得できる場合だけ補助保存、charset変換後textは派生artifact、semantic payloadはparser/canonicalization version付き派生artifactとする。各層のhashと変換lineageを混同しない。
+
+Authorization、Cookie、Set-Cookieを保存せず、secret-bearing queryをredactする。request/response headerはallowlist、body/decompressed sizeとdecompression ratioには上限、content typeはallowlistとする。charset不明は隔離する。raw cache、sidecar DB、temp fileは最小権限とし、atomic temp-write・fsync・rename、Git対象外検査、secret scanを要求する。raw reportへbody全文やtoken・個人情報を含むURLを出さない。対象sourceは認証・Cookie非依存の公式公開sourceだけに限定する。
 
 ### 5.3 Canonical Identity
 
@@ -131,19 +151,27 @@ Manifestは採用品だけでなく期待したinput typeごとに`found`、`mis
 
 ### 5.7 Append-only、訂正、supersession
 
-raw document、capture attempt、parse run、domain observation、manifest、cohort manifest、evaluation resultはappend-only evidenceとする。公式訂正、parser修正、source修正はUPDATEで置換せず、`supersedes_id`、`superseded_by_id`、`correction_kind`、`correction_reason`、`recorded_at`、`effective_at`を持つ新versionを作る。
+raw document、capture attempt/event、parse run、domain observation、manifest、cohort membership/snapshot、evaluation resultはappend-only evidenceとする。新しい訂正rowにだけ`supersedes_id`、`correction_kind`、`correction_reason`、`recorded_at`、`effective_at`を保存する。旧rowは一切更新せず、`superseded_by`はquery/viewで`supersedes_id`を逆引きする。
+
+`superseded_by_id`を旧evidenceへUPDATEする設計は禁止する。この単方向契約を公式訂正、再parse、taxonomy訂正、evaluation訂正へ共通適用する。複数relationが必要になった場合だけ、append-onlyな`evidence_supersession_edges(old_id, new_id, relation_kind, recorded_at, reason)`へ拡張する。
 
 既存manifestは当時参照した旧observationを保持し、「当時版」と「最新訂正版」を分離する。manifestから参照されたraw/parse/observationはGC禁止。研究証拠を消し得る`ON DELETE CASCADE`は原則使わず、`RESTRICT`または明示的tombstoneを使う。
 
 ### 5.8 Evidence Retention / GC
 
-保存契約はmanifest pin、cohort pin、evaluation pin、raw/parsed artifact retention class、unreferenced artifact GC、tombstone、orphan検査、disk low-water mark、storage quota、GC dry-run、GC audit logを持つ。一度研究結果へ使った証拠は容量対策で削除しない。
+F0のEvidence Pin Semanticsはmanifest pin、将来のcohort/evaluation参照、referenced evidenceのGC拒否、tombstone、fixture上のGC dry-run、orphan検査契約までを担当する。
 
-### 5.9 Frozen Cohort Manifest
+F0-RのOperational Retention / GCはstorage quota、disk low-water mark、unreferenced artifactの実GC、audit log、crash recovery、operational kill switch、backup/restoreを担当する。一度研究結果へ使った証拠は容量対策で削除しない。
 
-cohortを動的SQLだけで再生成しない。`cohort_id`、`cohort_version`、`race_id`、`included`、`inclusion_reason`、`exclusion_reason`、`frozen_at`、`data_available_at_freeze`、`cohort_definition_version`を凍結する。後からdataが揃ったraceを同じversionへ黙って追加せず、新cohort versionを作る。
+### 5.9 Prospective CohortとFrozen Analysis Snapshot
 
-Legacy formal、market-only、new shadowのcommon-cohort比較も固定membershipを正本とする。
+`Cohort Definition / Enrollment Protocol`は`cohort_definition_id`、`enrollment_rule_version`、inclusion/exclusion rule、`enrollment_started_at`、`enrollment_ends_at`、`target_count`、decision system、evaluation modeを固定する。
+
+`Open Append-only Membership`はrace ID、`enrolled_at`、inclusion/exclusion evidence、membership status、membership event versionをeventとして追加する。条件に合うfuture raceを追加できるが、既存membership eventを更新しない。
+
+`Frozen Analysis Snapshot`は`cohort_snapshot_id`、`cohort_definition_id`、member IDs、`frozen_at`、`member_count`、`max_event_at`、`data_available_at_freeze`、snapshot hashを保持し、既存snapshotへ後着dataを追加しない。
+
+現行`legacy_t5_formal`はmembershipが1,000 settledまで増えるfixed enrollment protocolであり、frozen membershipではない。報告・common-cohort比較時に別のfrozen analysis snapshotを作る。文書内の「fixed cohort」は必ず`fixed enrollment protocol`か`frozen membership snapshot`のどちらかを明記する。
 
 ### 5.10 Evaluation Protocol
 
@@ -165,15 +193,23 @@ Stage F0は`data/boat.sqlite`をread-only sourceとしてのみ参照する。ve
 
 Manifest hashとsemantic hashのcanonical化はversion化し、sorted key、決定的array順、UTF-8、UTC canonical time、元timezone、固定timestamp精度、固定float encoding、NULL/missing分離、`-0 / 0 / 0.0`規則、locale非依存、range順序、canonical selectionを定義する。
 
-Manifest rootはgit commit SHA、DB schema version、manifest version、as-of resolver version、parser version set、feature version、taxonomy version、canonicalization version、source snapshot ID、timezone policy versionを含む。Mac、CI、別実行環境で同じ入力から同じhashになることをF0 gateにする。
+Manifest rootはgit commit SHA、DB schema version、manifest version、as-of resolver version、parser version set、feature version、taxonomy version、canonicalization version、source snapshot ID、timezone policy versionを含む。
+
+cross-environment gateはlive DB全体ではなく固定fixture bundleに限定する。fixture archive hash、expected raw/semantic/manifest hashes、canonicalization version、timezone、float/range、NULL/missing、Unicode、array-order fixture、Node/runtime major、SQLite/schema versionを固定する。Mac、CI、別実行環境で同一bundleから同じhashになることをF0 gateにする。golden hash更新は理由とversion bumpを伴う別commitに限定し、test failureに合わせた無理由更新を禁止する。
 
 ### 5.14 Schema compatibility
 
-schema migration ledger、migration checksum、minimum reader/writer version、expand-only migration、old reader compatibility、new writer feature flag、shadow write default OFF、unknown schema default deny、中断migration再開、partial migration検知を契約化する。
+F0のSidecar Schema Contractはschema version、migration ledger/checksum、unknown schema default deny、固定fixtureのdeterministic migration、sidecar reader/writer contractを担当する。
 
-### 5.15 N5前の実験固定
+F0-RのRollout Compatibilityはminimum reader/writer version、expand-only migration、old reader compatibility、partial migration recovery、migration resume、new writer feature flag、shadow write default OFF、live rollout compatibilityを担当する。
 
-D1開始前までにfrozen cohort、evaluation protocol、Error Atlas taxonomy pinを実装する。N5開始前までにexperiment protocol manifest、fixed split manifest、metric version freeze、multiple-testing registryを完成させる。
+### 5.15 Statistical Registries
+
+D1開始前までにcohort lifecycle、evaluation protocol、Error Atlas taxonomy pinを実装する。
+
+D2/E1開始前に`Research Hypothesis Registry`を必須にする。hypothesis ID、research axis、exploratory/confirmatory、primary/secondary metric、event taxonomy version、pre/post window、subgroup、exclusion、null event、placebo、multiplicity family/correction、minimum sample、stopping rule、created-before-data-inspection flagを持つ。D2/E1/E2は未登録分析をconfirmatoryとせず、exploratoryと明示する。
+
+N5開始前には別の`Model Experiment Registry`を必須にする。fixed train/validation/test split、feature/model family、hyperparameter search budget、primary scoring/calibration metric、ROI protocol、multiple-testing family、promotion/rejection gateを凍結する。Research RegistryとModel Registryを混同しない。
 
 ## 6. 実装順序
 
@@ -200,27 +236,30 @@ D1開始前までにfrozen cohort、evaluation protocol、Error Atlas taxonomy p
 
 - 開始gate: Stage 0完了、Legacy formalの不変条件と新方式識別契約が承認済み。
 - 入力: official raw/cache、canonical identity map、N0のPIT/source-quality設計、read-onlyの`data/boat.sqlite`。
-- scope: capture/raw/parse/domain/manifest五層、raw/semantic hash、canonical identity、checkpoint凍結、versioned as-of resolver、manifest completeness、append-only/supersession、retention pin、deterministic hash、schema compatibility、PIT/leakage guard、temp/sidecar DB vertical slice。
+- scope: capture/raw/parse/domain/manifest五層、append-only capture lifecycle、raw/semantic二重change判定、raw byte/security、canonical identity、checkpoint凍結、versioned as-of resolver、manifest completeness、単方向supersession、Evidence Pin Semantics、golden fixture hash、Sidecar Schema Contract、PIT/leakage guard、temp/sidecar DB vertical slice。
 - non-goals: `data/boat.sqlite`変更、N1払戻migration、live collector接続、shadow write、収集job、モデル、Error Atlas本体、Decision Governor、BUY条件変更。
-- tests: 五層lineage、raw再parse、semantic-only change、checkpoint freeze、completeness status、supersession、pin/GC、manifest hash決定性、時刻境界、parser/feature version、unknown schema、Legacy回帰。
-- evidence: temp/sidecar replay conformance report、fixture manifest、lineage audit、hash cross-environment report、GC dry-run、schema compatibility report。
+- tests: 五層lineage、capture crash/retry/failure分類、raw再parse、raw/semantic change matrix、raw size/decompression/security、checkpoint freeze、completeness、単方向supersession、pin/GC dry-run、golden hash、時刻境界、unknown schema、Legacy回帰。
+- evidence: temp/sidecar replay conformance report、fixture manifest、lineage/lifecycle audit、raw security audit、golden fixture cross-environment report、GC dry-run、sidecar schema report。
 - 完了gate:
   - capture attempt、raw document、parse run、domain observation、manifestが別entityでlineage接続される。
+  - capture lifecycleがappend-only eventで、crash/incomplete/retry/timeout/partial body/hash mismatchを区別する。
   - 同じrawを新parserで再解析しても旧parse/observationが残る。
-  - raw hashとversioned semantic hashを分離し、無関係なHTML差分でchange eventを発火しない。
+  - raw/semantic change matrixでcosmetic、unknown、parse error、unknown schema、parser-version changeを通常eventから分離する。
+  - parser replay正本をentity body bytesに固定し、header/body/permission/Git/secret/security gateを満たす。
   - canonical identityだけでsource aliasを統合し、状態変更でrace keyを変えない。
   - checkpoint labelをcapture時点で凍結し、締切変更後も書き換えない。
   - versioned resolverがunknown typeをdefault denyし、current profile、historical closing、fixture、post-raceを拒否する。
   - required inputのfound/missing/stale/rejected等をmanifest completenessに残す。
-  - append-only/supersessionとevidence pinが成立し、参照証拠をGCしない。
-  - 同一入力から決定的なmanifest hashを生成でき、Mac、CI、別環境で一致する。
+  - 新rowの`supersedes_id`だけで訂正を表し、旧rowへ`superseded_by_id`をUPDATEしない。
+  - Evidence Pin Semanticsが成立し、参照証拠をGCしない。
+  - 固定golden fixture bundleから決定的なmanifest hashを生成でき、Mac、CI、別環境で一致する。
   - future timestampと対象race/対象race後の情報を拒否できる。
   - source timestamp不明をstrictに拒否または隔離できる。
   - rawをdedupしても各observationを失わない。
   - parser/feature versionを固定して再現できる。
   - 現在のracer profileをhistoricalへ流用しない。
   - `data/boat.sqlite`を変更せず、temp/sidecar DBでvertical sliceがPASSする。
-  - unknown/partial schemaをdefault denyし、migration ledger/checksumを検査できる。
+  - Sidecar Schema Contractがunknown/partial schemaをdefault denyし、fixture migrationとledger/checksumを再現する。
   - production条件、app settings、Legacy BUY/WATCH/SKIPを変更していない。
 - rollback: temp/sidecar DBを隔離し、共有rawと`data/boat.sqlite`を変更せずLegacy経路を維持。
 - 次stage: F0-R。
@@ -230,9 +269,9 @@ D1開始前までにfrozen cohort、evaluation protocol、Error Atlas taxonomy p
 
 - 開始gate: F0 temp DB PASS、DB copy PASS、migration時間計測、backup、WAL/lock、crash recovery、disk容量、rollback、collector非回帰が確認され、人間が明示承認。
 - 入力: F0 artifact、sidecar schema、migration ledger、shadow write/outbox設計。
-- scope: sidecar research DBの実環境rollout、optional shadow write、outbox/replay、lock/WAL/backup/rollback、storage quota、kill switch、health report。
+- scope: sidecar research DBの実環境rollout、optional shadow write、outbox/replay、Rollout Compatibility、Operational Retention / GC、lock/WAL/backup/rollback、storage quota、kill switch、health report。
 - non-goals: Legacy collectorをsecondary化、同一transaction化、research write失敗のprimary伝播、モデル、BUY条件変更、無承認の`data/boat.sqlite`変更。
-- tests: shadow failure isolation、bounded queue/backpressure、retry/idempotency、outbox replay、disk kill switch、crash recovery、partial migration、old reader互換。
+- tests: shadow failure isolation、bounded queue/backpressure、retry/idempotency、outbox replay、disk kill switch、actual GC/audit、crash recovery、partial migration/resume、old reader互換。
 - evidence: rollout readiness report、backup/restore証跡、collector non-regression report、shadow health report、human approval record。
 - 完了gate: shadow default OFF、research停止時もprimary collector継続、証拠pin/retentionとrollbackが実環境で検証済み。
 - rollback: research writer/feature flagを停止しsidecarをread-only隔離。Legacy collectorと`data/boat.sqlite`を元のまま維持。
@@ -256,11 +295,11 @@ D1開始前までにfrozen cohort、evaluation protocol、Error Atlas taxonomy p
 
 - 開始gate: F0-RとN1完了。
 - 入力: manifest、payout、Legacy/new方式識別契約。
-- scope: frozen cohort manifest、evaluation protocol、Error Atlas v1 taxonomy pin、Uncertainty Cube契約、abstention/OOD/similarityの台帳schemaとレポート仕様。
+- scope: cohort definition/open membership/frozen analysis snapshot、evaluation protocol、Error Atlas v1 taxonomy pin、Uncertainty Cube契約、abstention/OOD/similarityの台帳schemaとレポート仕様。
 - non-goals: BUY条件探索、SKIPモデル、原因断定。
-- tests: cohort membership freeze、evaluation protocol別result、taxonomy versioning、evidence参照、unknown/multi-label、方式別集計分離。
+- tests: prospective enrollment append、frozen snapshot不変性、evaluation protocol別result、taxonomy versioning、evidence参照、unknown/multi-label、方式別集計分離。
 - evidence: diagnostic contract reportと固定fixture。
-- 完了gate: cohort membershipと評価規約を凍結し、失敗分類がdecision当時のmanifestと証拠へ追跡できる。
+- 完了gate: enrollment protocol/open membership/frozen snapshotと評価規約を分離し、失敗分類がdecision当時のmanifestと証拠へ追跡できる。
 - rollback: 診断派生値だけ破棄し、decision/payout正本を変更しない。
 - 次stage: N2。
 - production eligibility: なし。
@@ -273,7 +312,7 @@ D1開始前までにfrozen cohort、evaluation protocol、Error Atlas taxonomy p
 - non-goals: 市場整合性model、adaptive polling、production選択。
 - tests: selection completeness、batch skew、range非midpoint化、checkpoint idempotency。
 - evidence: 日次coverage、request budget、skew/dedup report。
-- 完了gate: 券種別の時刻ずれを可視化した同期観測が固定cohortで成立。
+- 完了gate: 券種別の時刻ずれを可視化した同期観測がfixed enrollment protocolで蓄積され、報告用frozen analysis snapshotを生成できる。
 - rollback: collector停止、append-only観測を保持、Legacy collectorを変更しない。
 - 次stage: N3。
 - production eligibility: なし。
@@ -306,8 +345,8 @@ D1開始前までにfrozen cohort、evaluation protocol、Error Atlas taxonomy p
 
 ### Stage D2: Market Consistency and Sensor Diagnostics
 
-- 開始gate: N2–N4完了。
-- 入力: synchronized markets、120-state projection rules、PIT facts。
+- 開始gate: N2–N4完了。Research Hypothesis Registryへ事前登録済み、またはexploratory分析であることを明示。
+- 入力: synchronized markets、120-state projection rules、PIT facts、research hypothesis ID。
 - scope: infeasibility、sensor reliability、market-vs-model quadrant、partial identification audit。
 - non-goals: 価格矛盾をBUY signalにすること、券種統合model。
 - tests: projection constraints、range bounds、timestamp skew sensitivity、raw contradiction retention。
@@ -319,8 +358,8 @@ D1開始前までにfrozen cohort、evaluation protocol、Error Atlas taxonomy p
 
 ### Stage E1: Event-Study Capture
 
-- 開始gate: N2/N3のfuture-only observationが安定し固定cohortを凍結。
-- 入力: official change events、全市場観測、null-event schedule。
+- 開始gate: N2/N3のfuture-only observationが安定し、fixed enrollment protocolとfrozen analysis snapshotを区別し、Research Hypothesis Registryを事前固定。
+- 入力: official change events、全市場観測、null-event schedule、research hypothesis ID。
 - scope: Event-Triggered Burst、Impossible Lag Test、Null Event Study用の取得・台帳。
 - non-goals: adaptive budget、因果効果確定、後知恵でevent窓変更。
 - tests: pre/post window、clock skew、negative lag、null events、budget cap。
@@ -345,7 +384,7 @@ D1開始前までにfrozen cohort、evaluation protocol、Error Atlas taxonomy p
 
 ### Phase N5: 120-State Market Baseline
 
-- 開始gate: T-5全120通り、正式結果、最低1,000 settled、PIT品質、experiment protocol manifest、fixed split manifest、metric version、multiple-testing registryの凍結。
+- 開始gate: T-5全120通り、正式結果、最低1,000 settled、PIT品質、Model Experiment Registry、fixed split、metric version、model multiple-testing familyの凍結。
 - 入力: synchronized markets、payout、manifest、market diagnostics。
 - scope: 市場のみbaselineと券種別projection。
 - non-goals: racer残差、券種選択、production。
@@ -462,7 +501,7 @@ M1はN3/N4の選手PIT gate、M3は主観を排したstrict-prior label gate、M
 - cross-market infeasibilityをBUY signalへ直結する。
 - Error AtlasをBUY条件探索に使う。
 - 不確実性を早期に単一scoreへ潰す。
-- fixed cohort前にadaptive observation budgetを使う。
+- fixed enrollment protocolとfrozen analysis snapshotの評価前にadaptive observation budgetを使う。
 - historical closing oddsをT-5として扱う。
 - `fetched_at`をsource published timeとして扱う。
 - 対象raceまたはrace後の値をpre-race featureへ入れる。
@@ -470,8 +509,16 @@ M1はN3/N4の選手PIT gate、M3は主観を排したstrict-prior label gate、M
 - formal gate前のproduction接続または自動購入。
 - HTTP取得・parse結果・typed observationを同一rowへ畳み込む。
 - parser更新や評価規約変更で過去observation・ROIをUPDATEする。
+- 旧evidence rowへ`superseded_by_id`を後付けする。
+- capture開始rowへ完了statusやresponse時刻をUPDATEする。
 - capture時checkpointを最新締切で再計算する。
 - 動的SQLだけでcohort membershipを再生成する。
+- prospective enrollmentとfrozen analysis snapshotを同一概念として扱う。
+- semantic hashだけでEvent-Triggered Burstを発火する。
+- 認証・Cookie依存source、secret-bearing header/query/bodyをraw cacheへ保存する。
+- golden hashをtest failureに合わせ無理由で更新する。
+- 未登録のD2/E1/E2分析をconfirmatoryと呼ぶ。
+- Research Hypothesis RegistryとModel Experiment Registryを混同する。
 - manifest/cohort/evaluationから参照された証拠をGCする。
 - F0で`data/boat.sqlite`を変更またはlive collectorへ接続する。
 - research shadow write失敗をprimary collectorへ伝播させる。
