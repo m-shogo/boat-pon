@@ -1,6 +1,6 @@
 # 期待値モデル改善ロードマップ
 
-N0後の研究基盤、実装順序、現行formalと新研究shadowの分離は[`research-platform-master-plan.md`](research-platform-master-plan.md)を最上位正本とする。本書の既存モデル履歴は保持するが、新方式の次工程はStage F0であり、N5以前に市場知能モデルを学習しない。
+N0後の研究基盤、実装順序、現行formalと新研究shadowの分離は[`research-platform-master-plan.md`](research-platform-master-plan.md)を最上位正本とする。本書の既存モデル履歴は保持するが、新方式の次工程はStage F0のtemp/sidecar vertical sliceとF0-R rolloutであり、N5以前に市場知能モデルを学習しない。
 
 ## 変わった角度のfeature screen（2026-07-18）
 

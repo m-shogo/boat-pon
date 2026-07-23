@@ -390,7 +390,7 @@ Error Atlasは結果後の研究台帳であり、BUY条件探索器ではない
 - [ ] 公式サイト方針に適合する低頻度canaryの人間承認
 - [ ] migrationを別タスクとしてレビューし、backup/rollback手順を確定
 
-Phase N0単体の判定では払戻基盤を最初のデータ実装候補とした。その後の統合設計により、全体順序は[`../docs/research-platform-master-plan.md`](../docs/research-platform-master-plan.md)を最上位正本とし、Stage F0「Research Replay Foundation」をN1より先に置く。N1の範囲自体は全券種払戻基盤のみで変えず、オッズ時系列、モデル、券種選択器を含めない。
+Phase N0単体の判定では払戻基盤を最初のデータ実装候補とした。その後の統合設計により、全体順序は[`../docs/research-platform-master-plan.md`](../docs/research-platform-master-plan.md)を最上位正本とし、Stage F0「Research Replay Foundation」とF0-R rolloutをN1より先に置く。N1の範囲自体は全券種払戻基盤のみで変えず、オッズ時系列、モデル、券種選択器を含めない。
 
 ## table inventory
 

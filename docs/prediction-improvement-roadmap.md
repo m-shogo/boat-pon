@@ -4,7 +4,7 @@
 
 この計画は、BUY通知を増やすためではなく、予測確率が市場と実払戻を上回るかを段階的に検証するためのもの。全段階でDB書き込み・本番判定変更・自動投票は行わない。
 
-N0後の全体順序と評価分離は[`research-platform-master-plan.md`](research-platform-master-plan.md)、市場残差モデルの詳細は[`market-residual-ticket-selection-roadmap.md`](market-residual-ticket-selection-roadmap.md)を正本とする。Phase N0は完了したが、次はモデルでもN1でもなくStage F0である。現時点のモデル側作業は`legacy_t5_formal`のformal settled固定条件蓄積であり、N0/F0完了を市場残差モデル開始理由にしない。
+N0後の全体順序と評価分離は[`research-platform-master-plan.md`](research-platform-master-plan.md)、市場残差モデルの詳細は[`market-residual-ticket-selection-roadmap.md`](market-residual-ticket-selection-roadmap.md)を正本とする。Phase N0は完了したが、次はモデルでもN1でもなくStage F0のtemp/sidecar vertical sliceである。F0後はF0-R rolloutを通す。現時点のモデル側作業は`legacy_t5_formal`のformal settled固定条件蓄積であり、N0/F0/F0-R完了を市場残差モデル開始理由にしない。
 
 現行benchmarkと新研究を同一評価系列へ混ぜない。Legacy formal ROI、market-only baseline ROI、new shadow ROI、券種別shadow ROI、各方式のselected-race ROI、common-cohort比較ROIを別々に算出する。新方式は`market_intelligence / shadow_forward`でN7・N8までshadow専用とし、Decision GovernorはN7以降の別設計とする。
 
@@ -137,6 +137,6 @@ N0後の全体順序と評価分離は[`research-platform-master-plan.md`](resea
 
 ## 現時点の判断
 
-現行モデルの確率を補正してBUYを増やす段階ではない。formal蓄積と並行する新研究側は、まずF0で当時世界の再現・漏洩拒否を成立させ、N1〜N4の事実・観測基盤を経てN5の市場baselineへ進む。市場を上回る残差が確認できなければ、予測モデルの複雑化ではなく、見送り中心の運用を選ぶ。
+現行モデルの確率を補正してBUYを増やす段階ではない。formal蓄積と並行する新研究側は、まずF0/F0-Rで当時世界の再現、証拠保持、漏洩拒否、collector failure isolationを成立させ、N1〜N4の事実・観測基盤を経てN5の市場baselineへ進む。D1でcohort/evaluation protocolを凍結し、N5前にsplit・metric・multiple-testing契約を固定する。
 
 現行システム全体の正誤・未完了項目は`reports/current-system-correctness-audit.md`を正本とする。収集や通知が正常でも、予測確率・実払戻ROIの不合格を打ち消さない。

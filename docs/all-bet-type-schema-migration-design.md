@@ -4,7 +4,9 @@
 
 **このSQLは設計レビュー用であり、Phase N0では実行しない。** 現DB、`app_settings`、launchd、既存収集、予測・判定ロジックは変更しない。
 
-N0後の実装順序とLegacy/New評価分離は[`research-platform-master-plan.md`](research-platform-master-plan.md)を最上位正本とする。本書のmigration案はStage F0では適用せず、F0 completion gate後に対象stageごと再レビューする。
+N0後の実装順序とLegacy/New評価分離は[`research-platform-master-plan.md`](research-platform-master-plan.md)を最上位正本とする。本書のmigration案はStage F0では適用せず、F0-R completion gate後に対象stageごと再レビューする。F0は`data/boat.sqlite`をread-onlyにし、temp DB、安全なcopy、または`data/research-replay.sqlite`候補のsidecarでのみvertical sliceを行う。
+
+Research Replay evidenceの新規schemaではcapture/raw/parse/domain/manifestを分離し、すべてappend-onlyとする。manifest、cohort、evaluationから参照される証拠FKへ`ON DELETE CASCADE`を使わず、`RESTRICT`または明示的tombstoneを採用する。本書の設計SQLも証拠を親ごと消さない`RESTRICT`へ統一した。
 
 ## 方針
 
@@ -105,7 +107,7 @@ CREATE INDEX idx_odds_market_v2_race_checkpoint
 
 CREATE TABLE odds_selection_observations_v2 (
   observation_id INTEGER NOT NULL
-    REFERENCES odds_market_observations_v2(id) ON DELETE CASCADE,
+    REFERENCES odds_market_observations_v2(id) ON DELETE RESTRICT,
   selection TEXT NOT NULL,
   odds_min REAL,
   odds_max REAL,
@@ -141,7 +143,7 @@ CREATE TABLE race_settlements_v2 (
 
 CREATE TABLE race_payout_lines_v2 (
   settlement_id INTEGER NOT NULL
-    REFERENCES race_settlements_v2(id) ON DELETE CASCADE,
+    REFERENCES race_settlements_v2(id) ON DELETE RESTRICT,
   line_no INTEGER NOT NULL,
   selection TEXT,
   payout_yen INTEGER,
@@ -153,7 +155,7 @@ CREATE TABLE race_payout_lines_v2 (
 
 CREATE TABLE race_refund_lines_v2 (
   settlement_id INTEGER NOT NULL
-    REFERENCES race_settlements_v2(id) ON DELETE CASCADE,
+    REFERENCES race_settlements_v2(id) ON DELETE RESTRICT,
   line_no INTEGER NOT NULL,
   boat_no INTEGER,
   selection TEXT,
@@ -184,7 +186,7 @@ CREATE TABLE beforeinfo_observations_v2 (
 
 CREATE TABLE beforeinfo_boats_v2 (
   observation_id INTEGER NOT NULL
-    REFERENCES beforeinfo_observations_v2(id) ON DELETE CASCADE,
+    REFERENCES beforeinfo_observations_v2(id) ON DELETE RESTRICT,
   frame_no INTEGER NOT NULL CHECK (frame_no BETWEEN 1 AND 6),
   boat_no INTEGER NOT NULL CHECK (boat_no BETWEEN 1 AND 6),
   exhibition_course INTEGER CHECK (exhibition_course BETWEEN 1 AND 6),
@@ -666,7 +668,7 @@ CREATE TABLE error_atlas_entries (
 
 CREATE TABLE error_atlas_evidence (
   error_atlas_id INTEGER NOT NULL
-    REFERENCES error_atlas_entries(id) ON DELETE CASCADE,
+    REFERENCES error_atlas_entries(id) ON DELETE RESTRICT,
   evidence_type TEXT NOT NULL,
   source_table TEXT NOT NULL,
   source_row_key TEXT NOT NULL,

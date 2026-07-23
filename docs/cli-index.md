@@ -7,9 +7,9 @@ boat-pon の CLI が増えてきたため、用途別に整理した索引です
 - `fetch:*` / `backfill:*` は外部取得を伴う可能性があります。
 - `report:*` / `check:*` / `audit:*` は基本的に read-only です。
 - 自動投票・ログイン保存・投票サイト操作は入れません。
-- N0後の最上位計画は[`research-platform-master-plan.md`](research-platform-master-plan.md)、研究台帳は[`research-idea-register.json`](research-idea-register.json)を参照してください。N0は完了し、次の独立実装はStage F0です。F0完了前にN1へ進みません。
+- N0後の最上位計画は[`research-platform-master-plan.md`](research-platform-master-plan.md)、研究・破綻防止契約台帳は[`research-idea-register.json`](research-idea-register.json)を参照してください。N0は完了し、次の独立実装はStage F0のtemp/sidecar vertical sliceです。F0-R完了前にN1へ進みません。
 
-Stage F0用CLIはまだ存在しない。既存の`audit:*`をF0実装済みと解釈せず、現行formal CLIの出力へ新方式のshadow成績を混ぜない。
+Stage F0/F0-R用CLIはまだ存在しない。既存の`audit:*`をF0実装済みと解釈せず、現行formal CLIの出力へ新方式のshadow成績を混ぜない。
 
 ## 毎日/定期運用
 

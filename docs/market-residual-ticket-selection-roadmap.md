@@ -13,7 +13,7 @@
 - 残差モデル学習は、T-5全市場と正式結果について既存の最低1,000 settled gateを満たすまで開始しない。
 - production判定への接続は、固定条件のfuture-only検証を通過するまで禁止する。
 
-現行formal settled固定条件蓄積は継続する。新研究側の順序は`Stage 0 → F0 → N1 → D1 → N2 → N3 → N4 → D2 → E1 → E2 → N5 → N6 → N7 → N8`で固定し、次の独立タスクはF0である。
+現行formal settled固定条件蓄積は継続する。新研究側の順序は`Stage 0 → F0 → F0-R → N1 → D1 → N2 → N3 → N4 → D2 → E1 → E2 → N5 → N6 → N7 → N8`で固定し、次の独立タスクはF0のtemp/sidecar vertical sliceである。
 
 現行benchmarkは`decision_system=legacy_t5_formal`、`strategy_version=legacy-t5-v1`、`evaluation_mode=formal_forward`。新方式は`decision_system=market_intelligence`、versioned strategy、`evaluation_mode=shadow_forward`、versioned fixed cohortとする。公式事実層だけ共有し、manifest、feature/model/strategy、decision、ticket、cohort、ROI、gate、reportは分離する。
 
@@ -228,7 +228,11 @@ T-5表示オッズを確定値とせず、T-5から締切までの変化分布�
 
 ### Stage F0: Research Replay Foundation（次の独立タスク）
 
-N1より前に、Race As-of Manifest、Observation Envelope、content-addressed raw cache、PIT guard、Future Timestamp Trap、Post-Race Leakage Sentinelを実装する。F0はLegacy formalの判定・通知・ROIを変更せず、N1 migration、収集job、Error Atlas本体、モデル、Decision Governorを含めない。詳細な開始・完了gateは[`research-platform-master-plan.md`](research-platform-master-plan.md)を正本とする。
+N1より前に、capture attempt、byte-exact raw、parse run、typed domain observation、Race As-of Manifestを分離し、raw/semantic hash、canonical identity、checkpoint freeze、versioned resolver、completeness、append-only/supersession、retention pin、deterministic hash、PIT/leakage guardを実装する。F0はtemp/sidecarだけで、`data/boat.sqlite`変更、live collector接続、N1 migration、Error Atlas本体、モデル、Decision Governorを含めない。詳細な開始・完了gateは[`research-platform-master-plan.md`](research-platform-master-plan.md)を正本とする。
+
+### Stage F0-R: Research Replay Foundation Rollout
+
+F0 PASS後に、人間承認、DB copy、backup/restore、WAL/lock、crash recovery、disk、rollback、collector非回帰を確認してsidecar rolloutを行う。research writeはoptional shadow、default OFF、別transactionとし、失敗をprimary collectorへ伝播させない。bounded queue、retry/backpressure、kill switch、outbox/replay、health reportを持つ。無承認で`data/boat.sqlite`を変更しない。
 
 ### Phase N1: 全券種払戻基盤
 
@@ -294,6 +298,7 @@ future-only、固定manifest、最大1・2的中除外ROI、logloss、Brier、ca
 ## 開始・停止gate
 
 - Stage F0開始: N0完了、Legacy/New評価分離契約とF0境界の承認後、別タスクとして開始する。
-- Phase N1開始: F0 completion gate通過後、N1設計を再レビューしてから。
+- Stage F0-R開始: F0 temp/sidecar PASSとrollout readiness証跡、人間の明示承認後。
+- Phase N1開始: F0-R completion gate通過後、N1設計を再レビューしてから。
 - モデル学習開始: network-only T-5全120通りと正式結果が最低1,000 settledに到達し、point-in-time品質と固定splitが確認された後。
 - production接続: N8のfuture-only検証と独立production gateを通過した後。それまでは禁止。

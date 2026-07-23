@@ -4,7 +4,7 @@
 
 この文書は取得可能性と安全な取得契約の設計書である。Phase N0ではDB migration、実収集、production接続を行わない。実測値は[`../reports/all-bet-type-data-feasibility.md`](../reports/all-bet-type-data-feasibility.md)、全schemaは同JSONを正本とする。
 
-N0後の全体順序は[`research-platform-master-plan.md`](research-platform-master-plan.md)を正本とする。本書のN1取得設計は維持するが、N1実装はStage F0の再生・PIT guard完了後にだけ開始する。
+N0後の全体順序は[`research-platform-master-plan.md`](research-platform-master-plan.md)を正本とする。本書のN1取得設計は維持するが、N1実装はStage F0の五層証拠モデル・PIT guardとStage F0-Rのrollout/failure-isolation gate完了後にだけ開始する。取得時はHTTP attempt、byte-exact raw、parse run、typed observationを別entityとし、同じrawの再parseを新規requestへ数えない。
 
 ## 結論
 
