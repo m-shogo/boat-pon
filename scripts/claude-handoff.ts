@@ -32,8 +32,10 @@ try {
 function main() {
   const status = buildStatus();
 
-  console.log(`=== Claude Handoff === ${generatedAt}`);
+  console.log(`=== AI Handoff === ${generatedAt}`);
   console.log(`cwd: ${CWD}`);
+  console.log("read_first: docs/current-ai-handoff.md");
+  console.log("correctness_source: reports/current-system-correctness-audit.md");
   console.log("");
   console.log("## 制約");
   console.log("- commit/push禁止（Codexレビュー後に実施）");
@@ -46,8 +48,8 @@ function main() {
   console.log(`  programs: ${todayJst} ${status.programsToday}`);
   console.log(`  odds: ${todayJst} ${status.oddsToday}`);
   console.log(`  decisions: BUY=${status.buy} WATCH=${status.watch} SKIP=${status.skip}`);
-  console.log(`  live_buy_n: ${status.liveBuyN}/300`);
-  console.log(`  coverage: ${status.coverage}`);
+  console.log(`  paper_live_buy_total: ${status.liveBuyN} (profitability unverified; promotion gateではない)`);
+  console.log(`  watch_buy_odds_coverage: ${status.coverage}`);
   console.log(`  errors: ${status.errors}`);
   console.log("");
   console.log("## 実装可能範囲");
@@ -72,11 +74,11 @@ function buildStatus() {
   ).get(todayJst) as { n: number };
 
   const oddsRow = db.prepare(
-    "SELECT COUNT(*) AS n FROM odds_snapshots WHERE substr(captured_at,1,10) = ?"
+    "SELECT COUNT(*) AS n FROM odds_snapshots WHERE substr(datetime(captured_at, '+9 hours'),1,10) = ?"
   ).get(todayJst) as { n: number };
 
   const decisionRows = db.prepare(
-    "SELECT decision, COUNT(*) AS n FROM decision_history WHERE date = ? AND model_version = ? GROUP BY decision"
+    "SELECT decision, COUNT(*) AS n FROM decision_history WHERE date = ? AND model_version = ? AND run_kind = 'paper-live' GROUP BY decision"
   ).all(todayJst, LIVE_MONITOR_MODEL_VERSION) as Array<{ decision: string; n: number }>;
 
   const decMap = Object.fromEntries(decisionRows.map((r) => [r.decision, r.n]));
@@ -89,7 +91,7 @@ function buildStatus() {
   `).get(LIVE_MONITOR_FROM, LIVE_MONITOR_MODEL_VERSION) as { n: number; present: number };
 
   const liveBuyRow = db.prepare(
-    "SELECT COUNT(*) AS n FROM decision_history WHERE date >= ? AND model_version = ? AND decision = 'BUY'"
+    "SELECT COUNT(*) AS n FROM decision_history WHERE date >= ? AND model_version = ? AND run_kind = 'paper-live' AND decision = 'BUY'"
   ).get(LIVE_MONITOR_FROM, LIVE_MONITOR_MODEL_VERSION) as { n: number };
 
   const coverage =

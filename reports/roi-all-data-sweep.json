@@ -1,0 +1,95 @@
+{
+  "generatedAt": "2026-07-20T13:00:56.112Z",
+  "sources": [
+    {
+      "label": "選手能力/モーターのpoint-in-time screen",
+      "file": "unconventional-feature-screen.json",
+      "generatedAt": "2026-07-20T08:22:24.517Z",
+      "stable": 12,
+      "robust": null,
+      "matchedPositive": null
+    },
+    {
+      "label": "局所市場異常（会場・風・選手構成）",
+      "file": "local-market-anomaly-deep-dive.json",
+      "generatedAt": "2026-07-20T08:22:14.287Z",
+      "stable": null,
+      "robust": null,
+      "matchedPositive": null
+    },
+    {
+      "label": "選手関係proxy",
+      "file": "racer-relationship-market-screen.json",
+      "generatedAt": "2026-07-20T08:22:19.140Z",
+      "stable": null,
+      "robust": null,
+      "matchedPositive": null
+    },
+    {
+      "label": "開催イベント文脈",
+      "file": "event-selection-matrix.json",
+      "generatedAt": "2026-07-20T08:22:40.922Z",
+      "stable": 8,
+      "robust": 0,
+      "matchedPositive": null
+    },
+    {
+      "label": "開催ステージ",
+      "file": "event-stage-market-screen.json",
+      "generatedAt": "2026-07-20T08:23:24.138Z",
+      "stable": 17,
+      "robust": 0,
+      "matchedPositive": null
+    },
+    {
+      "label": "同日リズム",
+      "file": "same-day-rhythm-market-screen.json",
+      "generatedAt": "2026-07-20T08:23:28.576Z",
+      "stable": null,
+      "robust": null,
+      "matchedPositive": null
+    },
+    {
+      "label": "当日水面ムード",
+      "file": "track-mood-market-screen.json",
+      "generatedAt": "2026-07-20T08:22:59.777Z",
+      "stable": 26,
+      "robust": 0,
+      "matchedPositive": null
+    },
+    {
+      "label": "支部・年齢・身体情報",
+      "file": "human-profile-market-screen.json",
+      "generatedAt": "2026-07-20T08:23:30.733Z",
+      "stable": 25,
+      "robust": 0,
+      "matchedPositive": null
+    },
+    {
+      "label": "市場マイクロ構造",
+      "file": "market-microstructure-screen.json",
+      "generatedAt": "2026-07-20T08:23:41.926Z",
+      "stable": 22,
+      "robust": 0,
+      "matchedPositive": null
+    },
+    {
+      "label": "投票者attention",
+      "file": "market-attention-screen.json",
+      "generatedAt": "2026-07-20T08:23:43.124Z",
+      "stable": 21,
+      "robust": 0,
+      "matchedPositive": 1
+    },
+    {
+      "label": "会場×風向×4号艇相対能力",
+      "file": "wind-direction-venue-screen.json",
+      "generatedAt": "2026-07-20T08:44:35.254Z",
+      "stable": null,
+      "robust": null,
+      "matchedPositive": null
+    }
+  ],
+  "verdict": "no_production_candidate",
+  "next": "wind-direction-normalization-and-T5-paper-forward"
+}

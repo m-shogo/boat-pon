@@ -21,9 +21,12 @@ try {
   `).all(from, to) as Array<{ race_id: string }>).map(row => row.race_id));
   // checkpoint_label単独の索引走査を避け、race_id先頭の既存複合索引をレースごとに使う。
   const countT5 = db.prepare(`
-    SELECT COUNT(DISTINCT selection) AS n
-    FROM odds_timeseries_snapshots
-    WHERE race_id = ? AND checkpoint_label = 'T-5'
+    SELECT COALESCE(MAX(n), 0) AS n FROM (
+      SELECT COUNT(DISTINCT selection) AS n
+      FROM odds_timeseries_snapshots
+      WHERE race_id = ? AND checkpoint_label = 'T-5'
+      GROUP BY captured_at
+    )
   `);
   const rows = programsInWindow.map(program => ({
     ...program,

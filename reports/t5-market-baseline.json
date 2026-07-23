@@ -1,0 +1,95 @@
+{
+  "generatedAt": "2026-07-21T04:46:11.964Z",
+  "safety": {
+    "readOnly": true,
+    "dbWrites": false,
+    "productionChanged": false,
+    "modelIndependent": true
+  },
+  "window": {
+    "from": "2026-06-01",
+    "to": "2026-07-21",
+    "boundary": "2026-07-01"
+  },
+  "coverage": {
+    "snapshotRows": 60720,
+    "racesWithT5": 506,
+    "evaluated": 317,
+    "rejectedIncomplete": 0,
+    "rejectedInvalid": 0,
+    "unsettled": 189
+  },
+  "marketFavorite": {
+    "all": {
+      "n": 317,
+      "hits": 35,
+      "hitRate": 0.11041009463722397,
+      "payoutRoi": 0.7208201892744479,
+      "payoutRoiExTop2": 0.6358730158730159,
+      "avgOverround": 1.3365649150756411,
+      "avgFavoriteProbability": 0.0927905617697869,
+      "logLoss": 3.7543529989266142,
+      "brier": 0.9551387902186537
+    },
+    "discovery": {
+      "n": 203,
+      "hits": 24,
+      "hitRate": 0.11822660098522167,
+      "payoutRoi": 0.7857142857142857,
+      "payoutRoiExTop2": 0.6532338308457711,
+      "avgOverround": 1.3365910474455975,
+      "avgFavoriteProbability": 0.09434254338230873,
+      "logLoss": 3.73539099820928,
+      "brier": 0.9546103265913197
+    },
+    "forward": {
+      "n": 114,
+      "hits": 11,
+      "hitRate": 0.09649122807017543,
+      "payoutRoi": 0.6052631578947368,
+      "payoutRoiExTop2": 0.44375,
+      "avgOverround": 1.3365183811186143,
+      "avgFavoriteProbability": 0.0900269453895946,
+      "logLoss": 3.788118666870637,
+      "brier": 0.9560798263269791
+    },
+    "monthly": [
+      {
+        "month": "2026-06",
+        "n": 203,
+        "hits": 24,
+        "hitRate": 0.11822660098522167,
+        "payoutRoi": 0.7857142857142857,
+        "payoutRoiExTop2": 0.6532338308457711,
+        "avgOverround": 1.3365910474455975,
+        "avgFavoriteProbability": 0.09434254338230873,
+        "logLoss": 3.73539099820928,
+        "brier": 0.9546103265913197
+      },
+      {
+        "month": "2026-07",
+        "n": 114,
+        "hits": 11,
+        "hitRate": 0.09649122807017543,
+        "payoutRoi": 0.6052631578947368,
+        "payoutRoiExTop2": 0.44375,
+        "avgOverround": 1.3365183811186143,
+        "avgFavoriteProbability": 0.0900269453895946,
+        "logLoss": 3.788118666870637,
+        "brier": 0.9560798263269791
+      }
+    ]
+  },
+  "gate": {
+    "minimumSettled": 1000,
+    "passed": false,
+    "reasons": [
+      "結果確定済み完全市場が317/1000"
+    ]
+  },
+  "caveats": [
+    "市場favoriteは利益戦略ではなく比較基準",
+    "current T-5 coverageは開催全体の一部",
+    "残差モデルは未実装。holdoutを探索へ戻さない"
+  ]
+}

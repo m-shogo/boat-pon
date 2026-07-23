@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-05T12:43:39.837Z",
+  "generatedAt": "2026-07-20T08:23:41.819Z",
   "indexes": [
     {
       "name": "idx_motor_boat_stats_boat",
@@ -16,13 +16,13 @@
   ],
   "total": {
     "label": "full load",
-    "rows": 640088,
-    "ms": 1153.18
+    "rows": 682882,
+    "ms": 664.8
   },
   "scoped": {
     "label": "scoped load",
     "rows": 37266,
-    "ms": 28.01
+    "ms": 26.31
   },
   "targetRaceIds": 6260
 }

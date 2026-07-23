@@ -1,0 +1,277 @@
+{
+  "generatedAt": "2026-07-20T08:44:35.254Z",
+  "safety": {
+    "readOnly": true,
+    "historicalClosingOdds": true,
+    "t5": false,
+    "productionConnected": false
+  },
+  "scope": {
+    "rows": 4184,
+    "venues": 19
+  },
+  "candidates": [
+    {
+      "id": "wind23_sw",
+      "label": "風速2〜3m × 南西風",
+      "discovery": {
+        "n": 205,
+        "hits": 31,
+        "returnYen": 21400,
+        "roi": 104.39,
+        "top2ExclRoi": 85.66,
+        "venues": 16
+      },
+      "forward": {
+        "n": 100,
+        "hits": 16,
+        "returnYen": 17230,
+        "roi": 172.3,
+        "top2ExclRoi": 100.3,
+        "venues": 15
+      }
+    },
+    {
+      "id": "wind23_sw_top4",
+      "label": "風速2〜3m × 南西風 × 4号艇相対能力上位",
+      "discovery": {
+        "n": 60,
+        "hits": 13,
+        "returnYen": 6500,
+        "roi": 108.33,
+        "top2ExclRoi": 60.83,
+        "venues": 13
+      },
+      "forward": {
+        "n": 25,
+        "hits": 7,
+        "returnYen": 2580,
+        "roi": 103.2,
+        "top2ExclRoi": 63.6,
+        "venues": 12
+      }
+    },
+    {
+      "id": "wind23_not_sw_top4",
+      "label": "風速2〜3m × 南西風以外 × 4号艇相対能力上位",
+      "discovery": {
+        "n": 347,
+        "hits": 74,
+        "returnYen": 33610,
+        "roi": 96.86,
+        "top2ExclRoi": 86.95,
+        "venues": 19
+      },
+      "forward": {
+        "n": 156,
+        "hits": 31,
+        "returnYen": 15420,
+        "roi": 98.85,
+        "top2ExclRoi": 79.68,
+        "venues": 19
+      }
+    }
+  ],
+  "venueDirectionCells": [
+    {
+      "venue": "福岡",
+      "direction": "北",
+      "discovery": {
+        "n": 66,
+        "hits": 10,
+        "returnYen": 5570,
+        "roi": 84.39,
+        "top2ExclRoi": 48.03,
+        "venues": 1
+      },
+      "forward": {
+        "n": 25,
+        "hits": 3,
+        "returnYen": 3380,
+        "roi": 135.2,
+        "top2ExclRoi": 27.2,
+        "venues": 1
+      }
+    },
+    {
+      "venue": "びわこ",
+      "direction": "北東",
+      "discovery": {
+        "n": 32,
+        "hits": 0,
+        "returnYen": 0,
+        "roi": 0,
+        "top2ExclRoi": 0,
+        "venues": 1
+      },
+      "forward": {
+        "n": 33,
+        "hits": 1,
+        "returnYen": 1600,
+        "roi": 48.48,
+        "top2ExclRoi": 0,
+        "venues": 1
+      }
+    }
+  ],
+  "directionRows": [
+    {
+      "direction": "北",
+      "discovery": {
+        "n": 258,
+        "hits": 25,
+        "returnYen": 18440,
+        "roi": 71.47,
+        "top2ExclRoi": 46.43,
+        "venues": 17
+      },
+      "forward": {
+        "n": 100,
+        "hits": 16,
+        "returnYen": 17550,
+        "roi": 175.5,
+        "top2ExclRoi": 122.2,
+        "venues": 16
+      }
+    },
+    {
+      "direction": "北東",
+      "discovery": {
+        "n": 133,
+        "hits": 16,
+        "returnYen": 13370,
+        "roi": 100.53,
+        "top2ExclRoi": 65.56,
+        "venues": 18
+      },
+      "forward": {
+        "n": 86,
+        "hits": 7,
+        "returnYen": 3600,
+        "roi": 41.86,
+        "top2ExclRoi": 15.58,
+        "venues": 14
+      }
+    },
+    {
+      "direction": "東",
+      "discovery": {
+        "n": 128,
+        "hits": 15,
+        "returnYen": 7660,
+        "roi": 59.84,
+        "top2ExclRoi": 46.64,
+        "venues": 16
+      },
+      "forward": {
+        "n": 59,
+        "hits": 10,
+        "returnYen": 10830,
+        "roi": 183.56,
+        "top2ExclRoi": 97.63,
+        "venues": 14
+      }
+    },
+    {
+      "direction": "南東",
+      "discovery": {
+        "n": 207,
+        "hits": 21,
+        "returnYen": 17310,
+        "roi": 83.62,
+        "top2ExclRoi": 53.29,
+        "venues": 15
+      },
+      "forward": {
+        "n": 86,
+        "hits": 9,
+        "returnYen": 7350,
+        "roi": 85.47,
+        "top2ExclRoi": 36.16,
+        "venues": 13
+      }
+    },
+    {
+      "direction": "南",
+      "discovery": {
+        "n": 155,
+        "hits": 24,
+        "returnYen": 16640,
+        "roi": 107.35,
+        "top2ExclRoi": 61.16,
+        "venues": 17
+      },
+      "forward": {
+        "n": 89,
+        "hits": 11,
+        "returnYen": 9020,
+        "roi": 101.35,
+        "top2ExclRoi": 58.76,
+        "venues": 15
+      }
+    },
+    {
+      "direction": "南西",
+      "discovery": {
+        "n": 205,
+        "hits": 31,
+        "returnYen": 21400,
+        "roi": 104.39,
+        "top2ExclRoi": 85.66,
+        "venues": 16
+      },
+      "forward": {
+        "n": 100,
+        "hits": 16,
+        "returnYen": 17230,
+        "roi": 172.3,
+        "top2ExclRoi": 100.3,
+        "venues": 15
+      }
+    },
+    {
+      "direction": "西",
+      "discovery": {
+        "n": 123,
+        "hits": 8,
+        "returnYen": 5530,
+        "roi": 44.96,
+        "top2ExclRoi": 22.85,
+        "venues": 15
+      },
+      "forward": {
+        "n": 78,
+        "hits": 10,
+        "returnYen": 10360,
+        "roi": 132.82,
+        "top2ExclRoi": 65.26,
+        "venues": 14
+      }
+    },
+    {
+      "direction": "北西",
+      "discovery": {
+        "n": 177,
+        "hits": 22,
+        "returnYen": 14820,
+        "roi": 83.73,
+        "top2ExclRoi": 60.11,
+        "venues": 18
+      },
+      "forward": {
+        "n": 99,
+        "hits": 9,
+        "returnYen": 4720,
+        "roi": 47.68,
+        "top2ExclRoi": 25.35,
+        "venues": 14
+      }
+    }
+  ],
+  "caveats": [
+    "風向はrace_conditions保存値を使用。会場ごとのコース方位へは未変換",
+    "風向/相対能力セルは探索多重度が大きい",
+    "exacta pipelineのT-5時系列が未整備",
+    "両期間n>=20はスクリーニングであり採用基準ではない"
+  ]
+}

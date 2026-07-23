@@ -1,0 +1,378 @@
+{
+  "generatedAt": "2026-07-22T04:42:04.342Z",
+  "safety": {
+    "readOnly": true,
+    "oneTicketPerStrategyRace": true,
+    "closingOddsOnly": true,
+    "productionConnected": false,
+    "testThresholdTuning": false
+  },
+  "split": {
+    "discovery": "2024-01-01..2024-06-30",
+    "validation": "2024-07-01..2024-12-31",
+    "untouchedTest": "2025-01-01..2025-12-31"
+  },
+  "family": {
+    "strategies": 9,
+    "candidates": 206,
+    "discoveryPassed": 20,
+    "validationPassed": 1,
+    "robust": 0
+  },
+  "coverage": {
+    "candidateRaces": 4184,
+    "evaluatedRaces": 4136,
+    "rejectedRaces": 48
+  },
+  "validationPassed": [
+    {
+      "strategy": "exhibition_best",
+      "strategyLabel": "展示最速",
+      "context": "market_rank_3",
+      "discovery": {
+        "n": 194,
+        "hits": 23,
+        "edgePp": 5.346288648868233,
+        "roi": 1.4742268041237114,
+        "max2HitExclRoi": 1.1838541666666667
+      },
+      "validation": {
+        "n": 277,
+        "hits": 25,
+        "edgePp": 2.274112800908383,
+        "roi": 1.1249097472924188,
+        "max2HitExclRoi": 0.9676363636363636
+      },
+      "test": {
+        "n": 246,
+        "hits": 16,
+        "edgePp": 0.1205597036090676,
+        "roi": 0.776829268292683,
+        "max2HitExclRoi": 0.5561475409836065
+      },
+      "testLeaveOneVenue": 0.41347826086956524
+    }
+  ],
+  "robust": [],
+  "nearMisses": [
+    {
+      "strategy": "market_favorite",
+      "strategyLabel": "1-X市場最人気",
+      "context": "course_6",
+      "discovery": {
+        "n": 93,
+        "hits": 22,
+        "edgePp": 6.090047940164356,
+        "roi": 1.310752688172043,
+        "max2HitExclRoi": 1.0384615384615385
+      },
+      "validation": {
+        "n": 106,
+        "hits": 26,
+        "edgePp": 7.089938042758938,
+        "roi": 0.9990566037735849,
+        "max2HitExclRoi": 0.8778846153846154
+      }
+    },
+    {
+      "strategy": "exhibition_best",
+      "strategyLabel": "展示最速",
+      "context": "wind_6plus",
+      "discovery": {
+        "n": 73,
+        "hits": 11,
+        "edgePp": 6.622469516628657,
+        "roi": 1.3232876712328767,
+        "max2HitExclRoi": 0.9887323943661972
+      },
+      "validation": {
+        "n": 61,
+        "hits": 7,
+        "edgePp": 3.5890484749847866,
+        "roi": 1.2868852459016393,
+        "max2HitExclRoi": 0.7152542372881356
+      }
+    },
+    {
+      "strategy": "consensus",
+      "strategyLabel": "4指標合議",
+      "context": "market_rank_3",
+      "discovery": {
+        "n": 135,
+        "hits": 18,
+        "edgePp": 6.7502977805941295,
+        "roi": 1.2896296296296297,
+        "max2HitExclRoi": 0.9924812030075187
+      },
+      "validation": {
+        "n": 182,
+        "hits": 17,
+        "edgePp": 2.0341603561077903,
+        "roi": 0.9648351648351648,
+        "max2HitExclRoi": 0.7233333333333334
+      }
+    },
+    {
+      "strategy": "ability_underbought",
+      "strategyLabel": "能力順位より市場人気が低い艇",
+      "context": "market_rank_3",
+      "discovery": {
+        "n": 280,
+        "hits": 32,
+        "edgePp": 4.87663222817591,
+        "roi": 1.3117857142857143,
+        "max2HitExclRoi": 1.1514388489208633
+      },
+      "validation": {
+        "n": 321,
+        "hits": 29,
+        "edgePp": 1.761871374979387,
+        "roi": 0.9218068535825545,
+        "max2HitExclRoi": 0.8119122257053292
+      }
+    },
+    {
+      "strategy": "ability_underbought",
+      "strategyLabel": "能力順位より市場人気が低い艇",
+      "context": "odds_under10",
+      "discovery": {
+        "n": 217,
+        "hits": 39,
+        "edgePp": 6.5732304494179505,
+        "roi": 1.3023041474654378,
+        "max2HitExclRoi": 1.2223255813953489
+      },
+      "validation": {
+        "n": 329,
+        "hits": 43,
+        "edgePp": 1.6756676304815417,
+        "roi": 0.827355623100304,
+        "max2HitExclRoi": 0.77217125382263
+      }
+    },
+    {
+      "strategy": "exhibition_best",
+      "strategyLabel": "展示最速",
+      "context": "wind_1_2",
+      "discovery": {
+        "n": 172,
+        "hits": 28,
+        "edgePp": 6.1135121525065745,
+        "roi": 1.2604651162790699,
+        "max2HitExclRoi": 0.9594117647058824
+      },
+      "validation": {
+        "n": 270,
+        "hits": 35,
+        "edgePp": 1.9663747585863625,
+        "roi": 0.8325925925925926,
+        "max2HitExclRoi": 0.6335820895522388
+      }
+    },
+    {
+      "strategy": "ability_underbought",
+      "strategyLabel": "能力順位より市場人気が低い艇",
+      "context": "wind_3_4",
+      "discovery": {
+        "n": 295,
+        "hits": 22,
+        "edgePp": 2.500142360364146,
+        "roi": 1.148135593220339,
+        "max2HitExclRoi": 0.879863481228669
+      },
+      "validation": {
+        "n": 369,
+        "hits": 24,
+        "edgePp": 1.365854577079469,
+        "roi": 0.8626016260162601,
+        "max2HitExclRoi": 0.691825613079019
+      }
+    },
+    {
+      "strategy": "national_best",
+      "strategyLabel": "全国勝率最上位",
+      "context": "race_9_12",
+      "discovery": {
+        "n": 99,
+        "hits": 22,
+        "edgePp": 7.326693864623033,
+        "roi": 1.0242424242424242,
+        "max2HitExclRoi": 0.8587628865979381
+      },
+      "validation": {
+        "n": 119,
+        "hits": 24,
+        "edgePp": 2.7699636813208364,
+        "roi": 0.6857142857142857,
+        "max2HitExclRoi": 0.5555555555555556
+      }
+    },
+    {
+      "strategy": "local_best",
+      "strategyLabel": "当地勝率最上位",
+      "context": "market_rank_3",
+      "discovery": {
+        "n": 152,
+        "hits": 21,
+        "edgePp": 7.126514806715734,
+        "roi": 1.3098684210526317,
+        "max2HitExclRoi": 1.0186666666666666
+      },
+      "validation": {
+        "n": 198,
+        "hits": 16,
+        "edgePp": 0.43891631479886817,
+        "roi": 0.8555555555555555,
+        "max2HitExclRoi": 0.6622448979591836
+      }
+    },
+    {
+      "strategy": "local_best",
+      "strategyLabel": "当地勝率最上位",
+      "context": "course_6",
+      "discovery": {
+        "n": 308,
+        "hits": 46,
+        "edgePp": 4.744842033693946,
+        "roi": 1.3551948051948053,
+        "max2HitExclRoi": 1.0679738562091503
+      },
+      "validation": {
+        "n": 371,
+        "hits": 42,
+        "edgePp": 1.473365402356052,
+        "roi": 0.7633423180592992,
+        "max2HitExclRoi": 0.5932249322493225
+      }
+    },
+    {
+      "strategy": "consensus",
+      "strategyLabel": "4指標合議",
+      "context": "course_6",
+      "discovery": {
+        "n": 238,
+        "hits": 36,
+        "edgePp": 5.194017871133014,
+        "roi": 1.2600840336134453,
+        "max2HitExclRoi": 1.0411016949152543
+      },
+      "validation": {
+        "n": 319,
+        "hits": 36,
+        "edgePp": 1.6251909098213182,
+        "roi": 0.6981191222570533,
+        "max2HitExclRoi": 0.5482649842271293
+      }
+    },
+    {
+      "strategy": "national_best",
+      "strategyLabel": "全国勝率最上位",
+      "context": "course_6",
+      "discovery": {
+        "n": 325,
+        "hits": 43,
+        "edgePp": 2.8390969804771022,
+        "roi": 1.0483076923076924,
+        "max2HitExclRoi": 0.8832817337461301
+      },
+      "validation": {
+        "n": 378,
+        "hits": 45,
+        "edgePp": 1.332772420425982,
+        "roi": 0.6851851851851852,
+        "max2HitExclRoi": 0.5824468085106383
+      }
+    },
+    {
+      "strategy": "ability_underbought",
+      "strategyLabel": "能力順位より市場人気が低い艇",
+      "context": "course_3",
+      "discovery": {
+        "n": 69,
+        "hits": 8,
+        "edgePp": 5.918444919105198,
+        "roi": 1.372463768115942,
+        "max2HitExclRoi": 0.8537313432835821
+      },
+      "validation": {
+        "n": 64,
+        "hits": 5,
+        "edgePp": 0.5800369247125889,
+        "roi": 0.79375,
+        "max2HitExclRoi": 0.34516129032258064
+      }
+    },
+    {
+      "strategy": "consensus",
+      "strategyLabel": "4指標合議",
+      "context": "underbought_gap_2plus",
+      "discovery": {
+        "n": 159,
+        "hits": 19,
+        "edgePp": 6.458554741364218,
+        "roi": 1.3949685534591194,
+        "max2HitExclRoi": 1.067515923566879
+      },
+      "validation": {
+        "n": 215,
+        "hits": 13,
+        "edgePp": 0.15910129818655291,
+        "roi": 0.6776744186046512,
+        "max2HitExclRoi": 0.3957746478873239
+      }
+    },
+    {
+      "strategy": "motor_best",
+      "strategyLabel": "モーター2連率最上位",
+      "context": "odds_10_20",
+      "discovery": {
+        "n": 313,
+        "hits": 29,
+        "edgePp": 3.8185163680474283,
+        "roi": 1.2651757188498403,
+        "max2HitExclRoi": 1.1495176848874598
+      },
+      "validation": {
+        "n": 411,
+        "hits": 18,
+        "edgePp": -1.011755320356342,
+        "roi": 0.6576642335766424,
+        "max2HitExclRoi": 0.565281173594132
+      }
+    }
+  ],
+  "placebo": [
+    {
+      "strategy": "national_worst_placebo",
+      "strategyLabel": "全国勝率最低_placebo",
+      "context": "all",
+      "discovery": {
+        "n": 1148,
+        "hits": 26,
+        "edgePp": -0.9565741272730601,
+        "roi": 0.5281358885017422,
+        "max2HitExclRoi": 0.4041884816753927
+      },
+      "validation": {
+        "n": 1532,
+        "hits": 55,
+        "edgePp": -0.02813920327428541,
+        "roi": 0.6617493472584857,
+        "max2HitExclRoi": 0.5319607843137255
+      },
+      "test": {
+        "n": 1456,
+        "hits": 46,
+        "edgePp": -0.12338932124907362,
+        "roi": 0.5745192307692307,
+        "max2HitExclRoi": 0.44938101788170565
+      }
+    }
+  ],
+  "caveats": [
+    "historical closing oddsでありlive/T-5ではない",
+    "discoveryとvalidationを通過した候補だけをtest判定する",
+    "venue・月の個別後付け探索は行わない",
+    "通過してもfuture-only監視前に本番接続しない"
+  ]
+}

@@ -281,6 +281,53 @@ export function parseAllTrifectaOdds(html: string): Map<string, number> {
   return result;
 }
 
+/**
+ * 公式グループ表で「欠場・返還」と明示された3連単の組み合わせ数を返す。
+ * 有効オッズ数との合計が120なら、欠場を含めて市場応答は構造的に完全と判定できる。
+ */
+export function countUnavailableTrifectaSelections(html: string): number {
+  const $ = cheerio.load(html);
+  const unavailable = new Set<string>();
+
+  for (const table of $("table").toArray()) {
+    const $table = $(table);
+    if ($table.find(".oddsPoint").length === 0) continue;
+
+    const headerGrid = buildTableGrid($, $table.find("thead tr").toArray());
+    const bodyGrid = buildTableGrid($, $table.find("tbody tr").toArray());
+    if (headerGrid.length === 0 || bodyGrid.length === 0) continue;
+
+    const firstPlaceColumns: Array<{ firstPlace: number; column: number }> = [];
+    for (const row of headerGrid) {
+      for (let column = 0; column < row.length; column += 1) {
+        const value = Number(row[column]?.text.trim());
+        if (Number.isInteger(value) && value >= 1 && value <= 6) {
+          firstPlaceColumns.push({ firstPlace: value, column });
+        }
+      }
+    }
+
+    for (const group of firstPlaceColumns) {
+      for (const row of bodyGrid) {
+        const secondCell = row[group.column];
+        const thirdCell = row[group.column + 1];
+        const oddsCell = row[group.column + 2];
+        if (!secondCell || !thirdCell || !oddsCell) continue;
+        const second = Number(secondCell.text.trim());
+        const third = Number(thirdCell.text.trim());
+        if (!Number.isInteger(second) || second < 1 || second > 6) continue;
+        if (!Number.isInteger(third) || third < 1 || third > 6) continue;
+        if (group.firstPlace === second || group.firstPlace === third || second === third) continue;
+        if (isUnavailableOddsText(oddsCell.text)) {
+          unavailable.add(`${group.firstPlace}-${second}-${third}`);
+        }
+      }
+    }
+  }
+
+  return unavailable.size;
+}
+
 function normalizeSelectionText(text: string) {
   return text
     .replace(/[\s　]+/g, "")

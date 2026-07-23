@@ -32,9 +32,8 @@ export function officialOddsUrl(date: string, venue: string, raceNo: number): st
   return `https://www.boatrace.jp/owpc/pc/race/odds3t?rno=${raceNo}&jcd=${jcd}&hd=${hd}`;
 }
 
-export function teleBoatUrl(date: string, venue: string, raceNo: number): string {
-  const jcd = venueCodes[venue];
-  const hd = date.replaceAll("-", "");
-  if (!jcd) return "https://tb.boatrace.jp/";
-  return `https://tb.boatrace.jp/race/vote?rno=${raceNo}&jcd=${jcd}&hd=${hd}`;
+export function teleBoatUrl(_date: string, _venue: string, _raceNo: number): string {
+  // 公式に案内されている投票サイト入口を使う。
+  // 会場・レース指定のdeep linkは公開仕様を確認できないため組み立てない。
+  return "https://bu.tbbr.jp/";
 }

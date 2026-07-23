@@ -1,0 +1,90 @@
+{
+  "generatedAt": "2026-07-20T13:19:57.782Z",
+  "safety": {
+    "readOnlyDb": true,
+    "dbWrites": false,
+    "cacheWrites": false,
+    "productionConnected": false,
+    "autoBetting": false
+  },
+  "request": {
+    "date": "2026-07-20",
+    "venue": "住之江",
+    "raceNo": 6,
+    "checkpoint": "ad-hoc",
+    "minutesBeforeClose": null,
+    "url": "https://www.boatrace.jp/owpc/pc/race/odds2tf?rno=6&jcd=12&hd=20260720"
+  },
+  "market": {
+    "betType": "exacta",
+    "rowCount": 30,
+    "coverage": {
+      "actual": 30,
+      "expected": 30,
+      "complete": true
+    },
+    "minOdds": 5.8,
+    "maxOdds": 1061
+  },
+  "sample": [
+    {
+      "raceId": "2026-07-20-住之江-06",
+      "betType": "exacta",
+      "popularity": null,
+      "source": "official-dry-run",
+      "capturedAt": "2026-07-20T13:19:57.775Z",
+      "minutesBeforeClose": null,
+      "checkpointLabel": "ad-hoc",
+      "selection": "1-2",
+      "odds": 35.6
+    },
+    {
+      "raceId": "2026-07-20-住之江-06",
+      "betType": "exacta",
+      "popularity": null,
+      "source": "official-dry-run",
+      "capturedAt": "2026-07-20T13:19:57.775Z",
+      "minutesBeforeClose": null,
+      "checkpointLabel": "ad-hoc",
+      "selection": "1-3",
+      "odds": 7.7
+    },
+    {
+      "raceId": "2026-07-20-住之江-06",
+      "betType": "exacta",
+      "popularity": null,
+      "source": "official-dry-run",
+      "capturedAt": "2026-07-20T13:19:57.775Z",
+      "minutesBeforeClose": null,
+      "checkpointLabel": "ad-hoc",
+      "selection": "1-4",
+      "odds": 11
+    },
+    {
+      "raceId": "2026-07-20-住之江-06",
+      "betType": "exacta",
+      "popularity": null,
+      "source": "official-dry-run",
+      "capturedAt": "2026-07-20T13:19:57.775Z",
+      "minutesBeforeClose": null,
+      "checkpointLabel": "ad-hoc",
+      "selection": "1-5",
+      "odds": 12.4
+    },
+    {
+      "raceId": "2026-07-20-住之江-06",
+      "betType": "exacta",
+      "popularity": null,
+      "source": "official-dry-run",
+      "capturedAt": "2026-07-20T13:19:57.775Z",
+      "minutesBeforeClose": null,
+      "checkpointLabel": "ad-hoc",
+      "selection": "1-6",
+      "odds": 86.6
+    }
+  ],
+  "migration": {
+    "applied": false,
+    "reason": "odds_timeseries_snapshotsへのbet_type追加は別途レビュー後に実行"
+  }
+}

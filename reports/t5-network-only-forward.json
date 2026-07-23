@@ -1,0 +1,97 @@
+{
+  "generatedAt": "2026-07-23T07:30:12.636Z",
+  "safety": {
+    "readOnly": true,
+    "dbWrites": false,
+    "productionChanged": false,
+    "futureCohortUsedForTraining": false
+  },
+  "contract": {
+    "networkOnlyFrom": "2026-07-21T06:15:00.000Z",
+    "train": {
+      "from": "2026-06-01",
+      "to": "2026-06-30",
+      "freshness": "unverified; fit only"
+    },
+    "future": {
+      "from": "2026-07-21",
+      "to": "2026-07-23",
+      "pointInTime": "single captured_at T-5 complete market"
+    },
+    "payout": "race_results.payout_yen (official actual payout)",
+    "sameRacePopulation": true
+  },
+  "coverage": {
+    "maturePrograms": 325,
+    "completeT5": 281,
+    "settledComplete": 52,
+    "returnedOrUnsettled": 229
+  },
+  "frozenFit": {
+    "trainRaces": 203,
+    "temperature": 0.9,
+    "residualTemperature": 1,
+    "residualPriorStrength": 30
+  },
+  "metrics": [
+    {
+      "id": "market",
+      "label": "T-5市場",
+      "n": 52,
+      "hits": 5,
+      "hitRate": 0.09615384615384616,
+      "payoutRoi": 0.6423076923076924,
+      "payoutRoiExTop1": 0.40980392156862744,
+      "payoutRoiExTop2": 0.296,
+      "logLoss": 3.7433784427920545,
+      "brier": 0.9515922489913696,
+      "maxDrawdownYen": 2660
+    },
+    {
+      "id": "temperature",
+      "label": "市場temperature T=0.9",
+      "n": 52,
+      "hits": 5,
+      "hitRate": 0.09615384615384616,
+      "payoutRoi": 0.6423076923076924,
+      "payoutRoiExTop1": 0.40980392156862744,
+      "payoutRoiExTop2": 0.296,
+      "logLoss": 3.7267855966373764,
+      "brier": 0.9499117521024385,
+      "maxDrawdownYen": 2660
+    },
+    {
+      "id": "selection-residual",
+      "label": "買い目残差 T=1 prior=30",
+      "n": 52,
+      "hits": 5,
+      "hitRate": 0.09615384615384616,
+      "payoutRoi": 0.6730769230769231,
+      "payoutRoiExTop1": 0.5058823529411764,
+      "payoutRoiExTop2": 0.346,
+      "logLoss": 3.964120277518232,
+      "brier": 0.9668763972109762,
+      "maxDrawdownYen": 2400
+    }
+  ],
+  "gate": {
+    "passed": false,
+    "checks": {
+      "settled1000": false,
+      "residualLogLoss": false,
+      "residualBrier": false,
+      "residualPayoutRoi": false,
+      "residualPayoutRoiExTop2": false,
+      "clv": false
+    }
+  },
+  "unavailable": {
+    "clv": "同一selectionのT-5とclosing oddsを時点整合付きで結合する正式器が未完成",
+    "currentModelMulticlass": "decision_historyは選択買い目の確率だけで、120通り分布のlogloss/Brierと同尺度比較できない"
+  },
+  "caveats": [
+    "修正前T-5は候補fitにだけ使用し、formal future評価には混ぜない",
+    "formal futureの結果をfit・特徴量探索・閾値調整へ戻さない",
+    "settled 1,000件と全gate通過までは本番へ接続しない"
+  ]
+}

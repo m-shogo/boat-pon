@@ -33,7 +33,7 @@
     <key>HOME</key>
     <string>/Users/m-shogo</string>
     <key>PATH</key>
-    <string>/Users/m-shogo/.local/share/mise/installs/node/24/bin:/usr/local/bin:/usr/bin:/bin</string>
+    <string>/Users/m-shogo/.local/share/mise/installs/node/24/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
   </dict>
 </dict>
 </plist>

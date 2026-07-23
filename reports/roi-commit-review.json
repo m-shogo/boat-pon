@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-06-05T12:45:33.865Z",
+  "generatedAt": "2026-07-20T08:08:22.082Z",
   "dbPath": "data/boat.sqlite",
   "targetSha": "e9eabe3de747152e90fb6669a52b6e7448a83578",
-  "currentHead": "399a0c3a95e29ed30d68f2424acd11b982f5ef03",
+  "currentHead": "ac5994666ab1de9eadb994d6957e6e31c58ce2fe",
   "targetCommit": {
     "log": "commit e9eabe3de747152e90fb6669a52b6e7448a83578\nAuthor:     m-shogo <m.shogo.0409@gmail.com>\nAuthorDate: Fri Jun 5 14:45:50 2026 +0900\nCommit:     m-shogo <m.shogo.0409@gmail.com>\nCommitDate: Fri Jun 5 14:45:50 2026 +0900\n\n    motor_boat_stats をモデルに統合・キャリブレーション改善・設定最適化\n    \n    ## app_settings 変更\n    - excludedRaceNos: [11,12] → [10,11,12]\n    - programFilter.maxMotorTop2Rate: 50 追加\n    - oddsCalibrationFactors: [0.65,0.51,0.40] → [0.40,0.40,0.40] (全帯統一)\n    \n    ## モデル改善\n    - src/domain/programFeatures.ts: BoatFeature に venueMotorTop2Rate/venueBoatTop2Rate を追加\n      featureAdjustmentBreakdown で venue別実績を national 平均より優先使用\n    - server/db.ts: loadMotorBoatStatsMap() を新設\n      enrichFeatures() に motorBoatStatsMap を追加\n      listProgramInputs / listProgramInputsRange / listProgramInputsWithOddsSnapshotsRange を更新\n    \n    ## その他\n    - tsconfig.json/tsconfig.scripts.json: 別プロジェクト由来ファイルを除外\n    \n    ROI改善: 0.978 → 1.118 (historical-backfill, 2024:1.087/2025:1.169)\n    motor_boat_stats: 9925件 → 640088件 backfill完了\n    \n    Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n",
     "stat": "e9eabe3 motor_boat_stats をモデルに統合・キャリブレーション改善・設定最適化\n server/db.ts                  | 31 +++++++++++++++++++++++++++----\n src/domain/programFeatures.ts | 10 ++++++++--\n 2 files changed, 35 insertions(+), 6 deletions(-)\n",
@@ -1959,30 +1959,30 @@
     {
       "condition": "F持ち複数レース",
       "removed": {
-        "n": 4029,
-        "hits": 75,
-        "hitRate": 0.018615040953090096,
-        "avgOdds": 44.43308381732439,
-        "stakeYen": 402900,
-        "returnYen": 301160,
-        "roi": 0.7474807644576819,
+        "n": 3704,
+        "hits": 63,
+        "hitRate": 0.01700863930885529,
+        "avgOdds": 44.444424946004276,
+        "stakeYen": 370400,
+        "returnYen": 248220,
+        "roi": 0.6701403887688985,
         "maxHitOdds": 76.4,
-        "roiExMaxHit": 0.728518242740134
+        "roiExMaxHit": 0.6495140388768899
       },
       "remaining": {
-        "n": 2231,
-        "hits": 49,
-        "hitRate": 0.021963245181532944,
-        "avgOdds": 44.18213357238898,
-        "stakeYen": 223100,
-        "returnYen": 202000,
-        "roi": 0.9054235768713581,
+        "n": 2556,
+        "hits": 61,
+        "hitRate": 0.023865414710485134,
+        "avgOdds": 44.197607472613434,
+        "stakeYen": 255600,
+        "returnYen": 254940,
+        "roi": 0.9974178403755869,
         "maxHitOdds": 77.7,
-        "roiExMaxHit": 0.8705961452263559
+        "roiExMaxHit": 0.967018779342723
       },
       "risk": "スタート心理。前回も弱い",
       "recommendation": "A",
-      "lift": 0.10165360882023988
+      "lift": 0.19364787232446867
     },
     {
       "condition": "会場=戸田",
@@ -3640,12 +3640,12 @@
   "edgeRows": [
     {
       "condition": "F持ち複数レース",
-      "trainRoi": 0.8237926136363637,
-      "validationRoi": 0.4986111111111111,
-      "testRoi": 0.7052256532066509,
-      "n": 4029,
-      "roiExMaxHit": 0.728518242740134,
-      "judgement": "S: NO BUY edge候補"
+      "trainRoi": 0.6348754448398577,
+      "validationRoi": 0.5891076115485564,
+      "testRoi": 1.035593220338983,
+      "n": 3704,
+      "roiExMaxHit": 0.6495140388768899,
+      "judgement": "A: NO BUY候補"
     },
     {
       "condition": "会場=戸田",

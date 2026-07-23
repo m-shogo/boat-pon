@@ -1,6 +1,6 @@
 # 選手能力データ監査レポート（point-in-time 安全性）
 
-生成日時: 2026-06-12T16:46:12.669Z
+生成日時: 2026-07-20T08:23:50.729Z
 DB: data/boat.sqlite
 
 > 本レポートは coverage / point-in-time 安全性の監査のみ。ROI評価・買い条件作成・候補変更は行わない。
@@ -49,21 +49,21 @@ DB: data/boat.sqlite
 ```json
 {
   "racerProfiles": {
-    "total": 2657,
+    "total": 2660,
     "real_rows": 1637,
-    "min_fetched": "2026-05-29T07:29:37.047Z",
-    "max_fetched": "2026-06-08T05:41:58.443Z"
+    "min_fetched": "2026-07-12T22:54:25.119Z",
+    "max_fetched": "2026-07-19T20:05:27.355Z"
   },
   "racerCourseStats": {
-    "total": 9822,
-    "racers": 1637,
-    "min_fetched": "2026-05-29T07:29:37.047Z",
-    "max_fetched": "2026-06-08T05:41:58.443Z"
+    "total": 9840,
+    "racers": 1640,
+    "min_fetched": "2026-06-07T21:35:28.123Z",
+    "max_fetched": "2026-07-13T08:40:09.424Z"
   },
   "motorBoatStats": {
-    "total": 646078,
+    "total": 682882,
     "min_date": "2024-01-01",
-    "max_date": "2026-06-12"
+    "max_date": "2026-07-20"
   }
 }
 ```
@@ -73,19 +73,19 @@ DB: data/boat.sqlite
 ```json
 {
   "profiles": {
-    "total": 2657,
+    "total": 2660,
     "real_rows": 1637,
     "has_avg_st": 1637,
     "has_ability": 1637,
-    "has_top3": 1561
+    "has_top3": 1580
   },
   "courseStats": {
-    "racers": 1637,
-    "rows": 9822,
-    "has_avg_st": 9822,
-    "has_top3": 8777,
-    "has_entry": 9095,
-    "has_start_order": 9822
+    "racers": 1640,
+    "rows": 9840,
+    "has_avg_st": 9840,
+    "has_top3": 8919,
+    "has_entry": 9261,
+    "has_start_order": 9840
   }
 }
 ```
@@ -94,128 +94,128 @@ DB: data/boat.sqlite
 
 | 母集団 | races | boats | className | 全国勝率 | 当地勝率 | motor2率 | boat2率 | profiles取得済 | course stats行 | venue motor2率 |
 |---|---|---|---|---|---|---|---|---|---|---|
-| today_entrants | 143 | 858 | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% | 99.5% | 99.5% | 100.0% |
-| today_buy | 0 | 0 | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| historical_backfill_buy_all | 6273 | 37350 | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% | 97.3% | 97.3% | 99.2% |
-| held_out_2024_buy | 3957 | 23720 | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% | 96.3% | 96.3% | 99.9% |
-| forward_2025_plus_buy | 2316 | 13630 | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% | 99.0% | 99.0% | 98.1% |
+| today_entrants | 155 | 928 | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% | 99.8% |
+| today_buy | 3 | 18 | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% |
+| historical_backfill_buy_all | 6273 | 37350 | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% | 97.1% | 97.3% | 99.2% |
+| held_out_2024_buy | 3957 | 23720 | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% | 96.1% | 96.3% | 99.9% |
+| forward_2025_plus_buy | 2316 | 13630 | 100.0% | 100.0% | 100.0% | 100.0% | 100.0% | 98.8% | 99.0% | 98.1% |
 | since_locked_at_buy | 0 | 0 | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
 
-### today_entrants — 最新program日 2026-06-12 の全出走艇
+### today_entrants — 最新program日 2026-07-20 の全出走艇
 
 ```json
 {
   "snapshotCoverage": {
     "inRacerProfilesReal": {
-      "nonNull": 854,
-      "pct": 99.53
+      "nonNull": 928,
+      "pct": 100
     },
     "profileAvgSt": {
-      "nonNull": 854,
-      "pct": 99.53
+      "nonNull": 928,
+      "pct": 100
     },
     "profileAbilityIndex": {
-      "nonNull": 854,
-      "pct": 99.53
+      "nonNull": 928,
+      "pct": 100
     },
     "profileFlyingCount": {
-      "nonNull": 854,
-      "pct": 99.53
+      "nonNull": 928,
+      "pct": 100
     },
     "profileLateStartCount": {
-      "nonNull": 854,
-      "pct": 99.53
+      "nonNull": 928,
+      "pct": 100
     },
     "courseStatsRow": {
-      "nonNull": 854,
-      "pct": 99.53
+      "nonNull": 928,
+      "pct": 100
     },
     "courseAvgSt": {
-      "nonNull": 854,
-      "pct": 99.53
+      "nonNull": 928,
+      "pct": 100
     },
     "courseTop3Rate": {
-      "nonNull": 790,
-      "pct": 92.07
+      "nonNull": 887,
+      "pct": 95.58
     },
     "courseEntryRate": {
-      "nonNull": 815,
-      "pct": 94.99
+      "nonNull": 911,
+      "pct": 98.17
     },
     "courseStartOrder": {
-      "nonNull": 854,
-      "pct": 99.53
+      "nonNull": 928,
+      "pct": 100
     }
   },
   "motorBoatStats": {
-    "raceCourseRows": 858,
+    "raceCourseRows": 928,
     "motorTop2Rate": {
-      "nonNull": 858,
-      "pct": 100
+      "nonNull": 928,
+      "pct": 99.78
     },
     "boatTop2Rate": {
-      "nonNull": 858,
-      "pct": 100
+      "nonNull": 928,
+      "pct": 99.78
     }
   }
 }
 ```
 
-### today_buy — paper-live BUY（2026-06-12）
+### today_buy — paper-live BUY（2026-07-20）
 
 ```json
 {
   "snapshotCoverage": {
     "inRacerProfilesReal": {
-      "nonNull": 0,
-      "pct": null
+      "nonNull": 18,
+      "pct": 100
     },
     "profileAvgSt": {
-      "nonNull": 0,
-      "pct": null
+      "nonNull": 18,
+      "pct": 100
     },
     "profileAbilityIndex": {
-      "nonNull": 0,
-      "pct": null
+      "nonNull": 18,
+      "pct": 100
     },
     "profileFlyingCount": {
-      "nonNull": 0,
-      "pct": null
+      "nonNull": 18,
+      "pct": 100
     },
     "profileLateStartCount": {
-      "nonNull": 0,
-      "pct": null
+      "nonNull": 18,
+      "pct": 100
     },
     "courseStatsRow": {
-      "nonNull": 0,
-      "pct": null
+      "nonNull": 18,
+      "pct": 100
     },
     "courseAvgSt": {
-      "nonNull": 0,
-      "pct": null
+      "nonNull": 18,
+      "pct": 100
     },
     "courseTop3Rate": {
-      "nonNull": 0,
-      "pct": null
+      "nonNull": 16,
+      "pct": 88.89
     },
     "courseEntryRate": {
-      "nonNull": 0,
-      "pct": null
+      "nonNull": 17,
+      "pct": 94.44
     },
     "courseStartOrder": {
-      "nonNull": 0,
-      "pct": null
+      "nonNull": 18,
+      "pct": 100
     }
   },
   "motorBoatStats": {
-    "raceCourseRows": 0,
+    "raceCourseRows": 18,
     "motorTop2Rate": {
-      "nonNull": 0,
-      "pct": null
+      "nonNull": 18,
+      "pct": 100
     },
     "boatTop2Rate": {
-      "nonNull": 0,
-      "pct": null
+      "nonNull": 18,
+      "pct": 100
     }
   }
 }
@@ -227,24 +227,24 @@ DB: data/boat.sqlite
 {
   "snapshotCoverage": {
     "inRacerProfilesReal": {
-      "nonNull": 36335,
-      "pct": 97.28
+      "nonNull": 36272,
+      "pct": 97.11
     },
     "profileAvgSt": {
-      "nonNull": 36335,
-      "pct": 97.28
+      "nonNull": 36272,
+      "pct": 97.11
     },
     "profileAbilityIndex": {
-      "nonNull": 36335,
-      "pct": 97.28
+      "nonNull": 36272,
+      "pct": 97.11
     },
     "profileFlyingCount": {
-      "nonNull": 36335,
-      "pct": 97.28
+      "nonNull": 36272,
+      "pct": 97.11
     },
     "profileLateStartCount": {
-      "nonNull": 36335,
-      "pct": 97.28
+      "nonNull": 36272,
+      "pct": 97.11
     },
     "courseStatsRow": {
       "nonNull": 36335,
@@ -255,12 +255,12 @@ DB: data/boat.sqlite
       "pct": 97.28
     },
     "courseTop3Rate": {
-      "nonNull": 35002,
-      "pct": 93.71
+      "nonNull": 35013,
+      "pct": 93.74
     },
     "courseEntryRate": {
-      "nonNull": 35868,
-      "pct": 96.03
+      "nonNull": 35910,
+      "pct": 96.14
     },
     "courseStartOrder": {
       "nonNull": 36335,
@@ -287,24 +287,24 @@ DB: data/boat.sqlite
 {
   "snapshotCoverage": {
     "inRacerProfilesReal": {
-      "nonNull": 22836,
-      "pct": 96.27
+      "nonNull": 22802,
+      "pct": 96.13
     },
     "profileAvgSt": {
-      "nonNull": 22836,
-      "pct": 96.27
+      "nonNull": 22802,
+      "pct": 96.13
     },
     "profileAbilityIndex": {
-      "nonNull": 22836,
-      "pct": 96.27
+      "nonNull": 22802,
+      "pct": 96.13
     },
     "profileFlyingCount": {
-      "nonNull": 22836,
-      "pct": 96.27
+      "nonNull": 22802,
+      "pct": 96.13
     },
     "profileLateStartCount": {
-      "nonNull": 22836,
-      "pct": 96.27
+      "nonNull": 22802,
+      "pct": 96.13
     },
     "courseStatsRow": {
       "nonNull": 22836,
@@ -315,12 +315,12 @@ DB: data/boat.sqlite
       "pct": 96.27
     },
     "courseTop3Rate": {
-      "nonNull": 21977,
-      "pct": 92.65
+      "nonNull": 21982,
+      "pct": 92.67
     },
     "courseEntryRate": {
-      "nonNull": 22523,
-      "pct": 94.95
+      "nonNull": 22539,
+      "pct": 95.02
     },
     "courseStartOrder": {
       "nonNull": 22836,
@@ -347,24 +347,24 @@ DB: data/boat.sqlite
 {
   "snapshotCoverage": {
     "inRacerProfilesReal": {
-      "nonNull": 13499,
-      "pct": 99.04
+      "nonNull": 13470,
+      "pct": 98.83
     },
     "profileAvgSt": {
-      "nonNull": 13499,
-      "pct": 99.04
+      "nonNull": 13470,
+      "pct": 98.83
     },
     "profileAbilityIndex": {
-      "nonNull": 13499,
-      "pct": 99.04
+      "nonNull": 13470,
+      "pct": 98.83
     },
     "profileFlyingCount": {
-      "nonNull": 13499,
-      "pct": 99.04
+      "nonNull": 13470,
+      "pct": 98.83
     },
     "profileLateStartCount": {
-      "nonNull": 13499,
-      "pct": 99.04
+      "nonNull": 13470,
+      "pct": 98.83
     },
     "courseStatsRow": {
       "nonNull": 13499,
@@ -375,12 +375,12 @@ DB: data/boat.sqlite
       "pct": 99.04
     },
     "courseTop3Rate": {
-      "nonNull": 13025,
-      "pct": 95.56
+      "nonNull": 13031,
+      "pct": 95.61
     },
     "courseEntryRate": {
-      "nonNull": 13345,
-      "pct": 97.91
+      "nonNull": 13371,
+      "pct": 98.1
     },
     "courseStartOrder": {
       "nonNull": 13499,
@@ -466,17 +466,17 @@ DB: data/boat.sqlite
 | 候補 | 期間 | matched | 1号艇 class | 1号艇 全国勝率 | 1号艇 courseAvgSt | 2着艇 class | 2着艇 courseTop3 | motor2率 |
 |---|---|---|---|---|---|---|---|---|
 | wind 2-3m × 2連単 1-4 | forward | 0 | n/a | n/a | n/a | n/a | n/a | n/a |
-| wind 2-3m × 2連単 1-4 | pre-lock参考 | 1032 | 100.0% | 100.0% | 96.2% | 100.0% | 95.6% | 100.0% |
+| wind 2-3m × 2連単 1-4 | pre-lock参考 | 1032 | 100.0% | 100.0% | 96.2% | 100.0% | 95.5% | 100.0% |
 | 尼崎 × 2連単 1-3 | forward | 0 | n/a | n/a | n/a | n/a | n/a | n/a |
-| 尼崎 × 2連単 1-3 | pre-lock参考 | 183 | 100.0% | 100.0% | 97.3% | 100.0% | 95.6% | 100.0% |
+| 尼崎 × 2連単 1-3 | pre-lock参考 | 183 | 100.0% | 100.0% | 97.3% | 100.0% | 96.2% | 100.0% |
 | 丸亀 × 2連単 1-2 | forward | 0 | n/a | n/a | n/a | n/a | n/a | n/a |
-| 丸亀 × 2連単 1-2 | pre-lock参考 | 204 | 100.0% | 100.0% | 93.5% | 100.0% | 92.5% | 98.0% |
+| 丸亀 × 2連単 1-2 | pre-lock参考 | 204 | 100.0% | 100.0% | 93.5% | 100.0% | 92.0% | 98.0% |
 | 常滑 × 2連単 1-2 | forward | 0 | n/a | n/a | n/a | n/a | n/a | n/a |
 | 常滑 × 2連単 1-2 | pre-lock参考 | 288 | 100.0% | 100.0% | 98.9% | 100.0% | 94.0% | 98.1% |
 | 大村 × 2連単 1-2 | forward | 0 | n/a | n/a | n/a | n/a | n/a | n/a |
-| 大村 × 2連単 1-2 | pre-lock参考 | 241 | 100.0% | 100.0% | 95.8% | 100.0% | 95.0% | 100.0% |
+| 大村 × 2連単 1-2 | pre-lock参考 | 241 | 100.0% | 100.0% | 95.8% | 100.0% | 94.6% | 100.0% |
 | 3R × 2連単 1-4 | forward | 0 | n/a | n/a | n/a | n/a | n/a | n/a |
-| 3R × 2連単 1-4 | pre-lock参考 | 508 | 100.0% | 100.0% | 95.0% | 100.0% | 96.2% | 99.2% |
+| 3R × 2連単 1-4 | pre-lock参考 | 508 | 100.0% | 100.0% | 95.0% | 100.0% | 96.0% | 99.2% |
 
 注: forward は lockedAt 以降の monitor 母集団と同一クエリ。まだ 0 件の候補は forward レース未蓄積のため。pre-lock参考 は lock 前の同条件母集団での coverage（将来分析の準備であり、ROI評価・買い条件作成はしない）。
 注: courseAvgSt / courseTop3Rate は現在値スナップショット由来のため、pre-lock 期間に対しては時点不整合（リーク）であり分析には使わないこと。
@@ -485,21 +485,21 @@ DB: data/boat.sqlite
 
 ```json
 {
-  "latestProgramDate": "2026-06-12",
+  "latestProgramDate": "2026-07-20",
   "racerProfiles": {
     "fetchedAtRange": {
-      "min_f": "2026-05-29T07:29:37.047Z",
-      "max_f": "2026-06-08T05:41:58.443Z"
+      "min_f": "2026-07-12T22:54:25.119Z",
+      "max_f": "2026-07-19T20:05:27.355Z"
     },
     "distinctFetchDays": 3,
     "note": "1世代スナップショットのみ。snapshot履歴なし → 過去レースに当てると未来情報リーク。"
   },
   "racerCourseStats": {
     "fetchedAtRange": {
-      "min_f": "2026-05-29T07:29:37.047Z",
-      "max_f": "2026-06-08T05:41:58.443Z"
+      "min_f": "2026-06-07T21:35:28.123Z",
+      "max_f": "2026-07-13T08:40:09.424Z"
     },
-    "distinctFetchDays": 3,
+    "distinctFetchDays": 4,
     "note": "同上。enrichFeatures は registrationNo+course だけでJOINし日付条件なし。"
   },
   "historicalBuyDateRange": {

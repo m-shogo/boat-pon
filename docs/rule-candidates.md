@@ -630,3 +630,54 @@ overnight自律分析（5h相当）の継続セッション。未探索次元を
 |---|---|---|---|---|
 | 確定BUYが20件未満。ルール変更は急がず、紙上観察を継続する。 | watch | report:monthly | 追加観察 | next weekly |
 
+## 2026-07-05 auto candidate review
+
+### Source
+
+- period: 2026-06-06..2026-07-05
+- generatedAt: 2026-07-05T13:00:08.794Z
+- BUY: 0
+- settledBUY: 0
+- hits: 0
+- ROI: -
+
+### Rule suggestions
+
+| rule | status | evidence | action | next_check |
+|---|---|---|---|---|
+| 確定BUYが20件未満。ルール変更は急がず、紙上観察を継続する。 | watch | report:monthly | 追加観察 | next weekly |
+
+## 2026-07-12 auto candidate review
+
+### Source
+
+- period: 2026-06-13..2026-07-12
+- generatedAt: 2026-07-12T13:03:04.123Z
+- BUY: 0
+- settledBUY: 0
+- hits: 0
+- ROI: -
+
+### Rule suggestions
+
+| rule | status | evidence | action | next_check |
+|---|---|---|---|---|
+| 確定BUYが20件未満。ルール変更は急がず、紙上観察を継続する。 | watch | report:monthly | 追加観察 | next weekly |
+
+## 2026-07-19 auto candidate review
+
+### Source
+
+- period: 2026-06-20..2026-07-19
+- generatedAt: 2026-07-19T13:11:39.378Z
+- BUY: 0
+- settledBUY: 0
+- hits: 0
+- ROI: -
+
+### Rule suggestions
+
+| rule | status | evidence | action | next_check |
+|---|---|---|---|---|
+| 確定BUYが20件未満。ルール変更は急がず、紙上観察を継続する。 | watch | report:monthly | 追加観察 | next weekly |
+

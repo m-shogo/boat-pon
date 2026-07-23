@@ -1,0 +1,124 @@
+{
+  "generatedAt": "2026-07-21T02:05:14.676Z",
+  "safety": {
+    "readOnly": true,
+    "dbWrites": false,
+    "productionConnected": false,
+    "productionChanged": false
+  },
+  "contract": {
+    "model": "boatpon-v3-alpha15",
+    "betType": "3連単",
+    "decision": "BUY",
+    "runKind": "historical-backfill",
+    "boundary": "2025-01-01",
+    "payoutBasis": "decision_history.payout_yen / 100円",
+    "currentOddsOnlyForReplay": true
+  },
+  "cohorts": {
+    "all": {
+      "n": 6205,
+      "settled": 6205,
+      "hits": 122,
+      "actualHitRate": 0.019661563255439163,
+      "avgEstimatedHitRate": 0.04009610137035664,
+      "calibrationFactor": 0.49036097235067116,
+      "payoutRoi": 0.6932312651087832,
+      "avgCurrentOdds": 44.40667763094276
+    },
+    "train": {
+      "n": 3944,
+      "settled": 3944,
+      "hits": 75,
+      "actualHitRate": 0.019016227180527385,
+      "avgEstimatedHitRate": 0.04013303583055689,
+      "calibrationFactor": 0.4738297710847137,
+      "payoutRoi": 0.6903904665314402,
+      "avgCurrentOdds": 44.433165491886456
+    },
+    "forward": {
+      "n": 2261,
+      "settled": 2261,
+      "hits": 47,
+      "actualHitRate": 0.020787262273330383,
+      "avgEstimatedHitRate": 0.04003167434203712,
+      "calibrationFactor": 0.5192703681519949,
+      "payoutRoi": 0.6981866430782839,
+      "avgCurrentOdds": 44.36047324192838
+    },
+    "replaySelected": {
+      "n": 0,
+      "settled": 0,
+      "hits": 0,
+      "actualHitRate": null,
+      "avgEstimatedHitRate": null,
+      "calibrationFactor": null,
+      "payoutRoi": null,
+      "avgCurrentOdds": null
+    }
+  },
+  "trainFactor": 0.4738297710847137,
+  "bands": [
+    {
+      "label": "<2%",
+      "n": 1,
+      "settled": 1,
+      "hits": 0,
+      "actualHitRate": 0,
+      "avgEstimatedHitRate": 0.019147367518931868,
+      "calibrationFactor": 0,
+      "payoutRoi": 0,
+      "avgCurrentOdds": 70.9
+    },
+    {
+      "label": "2-3%",
+      "n": 695,
+      "settled": 695,
+      "hits": 9,
+      "actualHitRate": 0.012949640287769784,
+      "avgEstimatedHitRate": 0.02678953708259261,
+      "calibrationFactor": 0.48338424989748113,
+      "payoutRoi": 0.5807194244604317,
+      "avgCurrentOdds": 63.149597122302296
+    },
+    {
+      "label": "3-4%",
+      "n": 2327,
+      "settled": 2327,
+      "hits": 33,
+      "actualHitRate": 0.014181349376880103,
+      "avgEstimatedHitRate": 0.035747602408766954,
+      "calibrationFactor": 0.39670770684755585,
+      "payoutRoi": 0.532445208422862,
+      "avgCurrentOdds": 48.27830025784268
+    },
+    {
+      "label": "4-5%",
+      "n": 2578,
+      "settled": 2578,
+      "hits": 71,
+      "actualHitRate": 0.027540729247478666,
+      "avgEstimatedHitRate": 0.04428274138075342,
+      "calibrationFactor": 0.6219291847963295,
+      "payoutRoi": 0.9330100853374709,
+      "avgCurrentOdds": 38.86624127230411
+    },
+    {
+      "label": "5%+",
+      "n": 604,
+      "settled": 604,
+      "hits": 9,
+      "actualHitRate": 0.014900662251655629,
+      "avgEstimatedHitRate": 0.05432591933503106,
+      "calibrationFactor": 0.27428274448081386,
+      "payoutRoi": 0.4198675496688742,
+      "avgCurrentOdds": 31.527798013245036
+    }
+  ],
+  "caveats": [
+    "historical-backfillのBUY台帳を同じrace_id集合で評価した監査であり、モデル再学習ではない",
+    "train係数をforwardへ一度だけ適用した再生。replaySelectedは本番導入根拠ではない",
+    "current_oddsは暫定値なので、ROI判定はpayout_yenを主とする",
+    "返還(returned=1)と未確定(result=NULL)は母集団から除外"
+  ]
+}

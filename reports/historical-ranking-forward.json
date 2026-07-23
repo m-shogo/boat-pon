@@ -1,0 +1,160 @@
+{
+  "generatedAt": "2026-07-23T04:09:11.701Z",
+  "safety": {
+    "readOnly": true,
+    "dbWrites": false,
+    "productionChanged": false,
+    "automaticWagering": false
+  },
+  "contract": {
+    "train": "2023-01-01..2024-12-31",
+    "validation": "2025-01-01..2025-12-31",
+    "test": "2026-01-01..2026-12-31 (available official_programs only)",
+    "featurePolicy": "official program snapshot and exhibition time only",
+    "excludedLeakage": [
+      "finish_pos",
+      "actual ST",
+      "kimarite",
+      "future racer aggregates",
+      "2025/2026 refit"
+    ],
+    "selection": "one trifecta ticket per race",
+    "stakeYen": 100
+  },
+  "coverage": {
+    "sourceRows": 166467,
+    "evaluated": 156595,
+    "train": 107767,
+    "validation": 47775,
+    "test": 1053,
+    "rejectedProgram": 976,
+    "rejectedExhibition": 8896,
+    "payoutSources": {
+      "race_payouts": 156595
+    }
+  },
+  "fit": {
+    "epochs": 12,
+    "learningRate": 0.35,
+    "l2": 0.002
+  },
+  "metrics": [
+    {
+      "id": "course-only",
+      "label": "コースのみ",
+      "periods": {
+        "train": {
+          "n": 107767,
+          "hits": 7540,
+          "hitRate": 0.06996575946254419,
+          "payoutRoi": 0.8156578544452383,
+          "payoutRoiExTop2": 0.8124474551106574,
+          "logLoss": 4.4751793062075444,
+          "brier": 0.9850616983221101,
+          "maxDrawdownYen": 1987420
+        },
+        "validation": {
+          "n": 47775,
+          "hits": 3313,
+          "hitRate": 0.06934589220303505,
+          "payoutRoi": 0.7832276295133438,
+          "payoutRoiExTop2": 0.7776065978690893,
+          "logLoss": 4.47778220672584,
+          "brier": 0.985109071277666,
+          "maxDrawdownYen": 1063240
+        },
+        "test": {
+          "n": 1053,
+          "hits": 60,
+          "hitRate": 0.05698005698005698,
+          "payoutRoi": 0.7755935422602089,
+          "payoutRoiExTop2": 0.6196955280685061,
+          "logLoss": 4.500255543657199,
+          "brier": 0.9856031533053194,
+          "maxDrawdownYen": 29400
+        }
+      }
+    },
+    {
+      "id": "program-exhibition",
+      "label": "番組能力＋モーター/ボート＋展示",
+      "periods": {
+        "train": {
+          "n": 107767,
+          "hits": 9106,
+          "hitRate": 0.08449710950476491,
+          "payoutRoi": 0.7826718754349662,
+          "payoutRoiExTop2": 0.7802412657170695,
+          "logLoss": 4.354266729289066,
+          "brier": 0.9821626187105019,
+          "maxDrawdownYen": 2349720
+        },
+        "validation": {
+          "n": 47775,
+          "hits": 4100,
+          "hitRate": 0.08581894296180011,
+          "payoutRoi": 0.7864971219256933,
+          "payoutRoiExTop2": 0.7832478596696879,
+          "logLoss": 4.355251241542283,
+          "brier": 0.9821802872583146,
+          "maxDrawdownYen": 1026900
+        },
+        "test": {
+          "n": 1053,
+          "hits": 100,
+          "hitRate": 0.0949667616334283,
+          "payoutRoi": 0.8392212725546059,
+          "payoutRoiExTop2": 0.7859181731684111,
+          "logLoss": 4.372654083645036,
+          "brier": 0.982594186826002,
+          "maxDrawdownYen": 17030
+        }
+      }
+    }
+  ],
+  "fixed123": {
+    "train": {
+      "n": 107767,
+      "hits": 7540,
+      "hitRate": 0.06996575946254419,
+      "payoutRoi": 0.8156578544452383,
+      "payoutRoiExTop2": 0.8124474551106574,
+      "maxDrawdownYen": 1987420
+    },
+    "validation": {
+      "n": 47775,
+      "hits": 3313,
+      "hitRate": 0.06934589220303505,
+      "payoutRoi": 0.7832276295133438,
+      "payoutRoiExTop2": 0.7776065978690893,
+      "maxDrawdownYen": 1063240
+    },
+    "test": {
+      "n": 1053,
+      "hits": 60,
+      "hitRate": 0.05698005698005698,
+      "payoutRoi": 0.7755935422602089,
+      "payoutRoiExTop2": 0.6196955280685061,
+      "maxDrawdownYen": 29400
+    }
+  },
+  "gate": {
+    "passed": false,
+    "checks": {
+      "validationLogLoss": true,
+      "validationBrier": true,
+      "testLogLoss": true,
+      "testBrier": true,
+      "validationPayoutRoi": false,
+      "validationPayoutRoiExTop2": false,
+      "testPayoutRoi": false,
+      "testPayoutRoiExTop2": false
+    }
+  },
+  "caveats": [
+    "完全なhistorical market oddsが無いため、市場確率を上回るかは判定できない",
+    "2026はofficial_programsが存在する2026-05-20以降が中心",
+    "この分析は純粋な着順モデルであり、positive EVの購入戦略ではない",
+    "2025/2026を見て特徴量・epoch・閾値を変更しない"
+  ]
+}

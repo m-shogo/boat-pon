@@ -30,9 +30,15 @@
 
 2着艇の動的選択は`pnpm analyze:dynamic-second-selector`で、1着1号艇を固定し、全国勝率・当地勝率・モーター・展示・4指標合議・能力と市場順位の食い違いから毎レース1艇だけ選んだ。全国勝率最低をplaceboとし、全戦略1点100円で比較した。最低能力placeboはROI60.1%・57.2%なので能力情報は有効だが、全国最上位78.0%・75.9%、当地最上位82.6%・80.9%、合議82.4%・80.7%で市場控除を超えない。固定1-4は2025 ROI97.2%でも2024 78.0%、全利益gate通過は0。強い相手へ機械的に買い替えてBUY数を増やさない。
 
+能力と価格の組合せは`pnpm analyze:ability-market-validation`で、9戦略と市場順位・オッズ帯・艇番・風・R帯を206条件に固定し、2024上期discovery、2024下期validation、2025 untouched testの順に評価した。discovery通過20条件のうちvalidation通過は「展示最速かつ1-X市場人気3位」だけだったが、ROIは147.4%→112.5%→77.7%、test最大2的中除外55.6%、leave-one会場最小41.3%へ崩れた。test頑健利益gateは0。2025を見て条件を作り直さず、この探索族は不採用として閉じる。
+
+2連単候補のfuture-only検証経路は`pnpm audit:exacta-forward-pipeline`で根本監査する。H011の固定1点ROI監視は既定を`paper-live`へ修正し、2026-07-20の初回BUY 1件を取得できた。一方、exacta市場残差の固定候補モニターは`historical_alternative_odds`のclosing oddsを参照し、稼働中T-5収集も3連単120通り専用である。さらに`odds_timeseries_snapshots`に`bet_type`列がないため、2連単をselection文字列だけで混在させない。公式2連単ページから2連複を除外して30通り抽出するパーサーと単体テストまでは用意したが、自動収集・DB migration・本番判定への接続は未実施。券種対応保存先→T-5収集→paper-live固定条件監視→払戻照合の順で整えるまで、市場価格を使う候補のforward件数0を「蓄積待ち」と表現しない。`pnpm dry-run:exacta`と`src/domain/betTypeAwareOdds.ts`で、DB/キャッシュへ書かずに券種付きrowの完全性とexacta/quinellaキー分離を確認できるようにした。
+
 局所的な異常理由は`pnpm analyze:local-market-anomalies`で、丸亀・大村・常滑のexacta 1-2と風速2〜3mの1-4を、2024発見→2025 forward、選手能力差・当地差・機力・展示・相手構成に分解する。historical closing oddsなので仮説生成専用とし、T-5で再現するまで採用しない。
 
 最有力の新規監視仮説は「風速2〜3m・南西風・4号艇が1号艇以外で全国勝率最上位 → exacta 1-4」。2024はn=52、13hit、edge +8.44pt、最大2件除外ROI 132.8%、2025はn=24、10hit、edge +22.66pt、最大2件除外ROI 139.5%。ただし2024はびわこまたは2024-05をleave-one-outすると最大2件除外ROIが100%を割り、2025も標本が24件しかない。過去風向は結果取得系`race_conditions`由来で、live締切前`race_weather`には未保存。post-hoc・point-in-time非同等・小標本のためproduction接続せず、将来T-5で条件固定監視する。
+
+根本監査は`pnpm audit:root-methodology`で固定する。historical BUY 6,260件、governor forward 1,522件、paper-live 4件は別母集団であり、同じROIとして比較しない。さらにpoint-in-time scannerは現在スナップショットを過去レースへJOINする分析を15本検出している。券種を増やす前に、母集団・時点・payout_yen・確率較正を統一する。
 
 理由は単因子に固定しない。組合せセルとexact matchingでは、4号艇最強単独・全天候は両期ROI100%未満、南西風以外の風2〜3mでは2025 edgeが負。一方、会場・季節を揃えた南西風環境の市場残差差は2024 +8.49pt、2025 +27.08pt。現段階は「南西風環境が主軸、4号艇相対能力が相互作用、会場・季節・開催単位の配当集中が交絡」という多因子仮説とする。能力効果は細かいmatchingでcoverageが落ち差も消えるため独立原因とは断定しない。
 

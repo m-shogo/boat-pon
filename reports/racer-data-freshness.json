@@ -1,43 +1,43 @@
 {
-  "generatedAt": "2026-06-12T16:46:36.645Z",
+  "generatedAt": "2026-07-20T08:23:48.202Z",
   "profiles": {
-    "total": 2657,
-    "distinctRacers": 2657,
-    "maxFetchedAt": "2026-06-08T05:41:58.443Z",
-    "minFetchedAt": "2026-05-29T07:29:37.047Z",
-    "over7Days": 24,
-    "over14Days": 24,
+    "total": 2660,
+    "distinctRacers": 2660,
+    "maxFetchedAt": "2026-07-19T20:05:27.355Z",
+    "minFetchedAt": "2026-07-12T22:54:25.119Z",
+    "over7Days": 2543,
+    "over14Days": 0,
     "nullFetchedAt": 0
   },
   "courseStats": {
-    "total": 9822,
-    "distinctRacers": 1637,
-    "maxFetchedAt": "2026-06-08T05:41:58.443Z",
-    "minFetchedAt": "2026-05-29T07:29:37.047Z",
-    "over7Days": 102,
-    "over14Days": 102,
+    "total": 9840,
+    "distinctRacers": 1640,
+    "maxFetchedAt": "2026-07-13T08:40:09.424Z",
+    "minFetchedAt": "2026-06-07T21:35:28.123Z",
+    "over7Days": 9312,
+    "over14Days": 18,
     "nullFetchedAt": 0
   },
   "recentIsBase": {
     "label": "isBase (直近90日)",
-    "totalRacers": 1052,
-    "stale7": 10,
+    "totalRacers": 574,
+    "stale7": 573,
+    "flyingCountNull": 2,
+    "notInProfiles": 0,
+    "headFImpacted": 2
+  },
+  "recentWind5": {
+    "label": "wind5 (直近90日)",
+    "totalRacers": 224,
+    "stale7": 224,
     "flyingCountNull": 1,
     "notInProfiles": 0,
     "headFImpacted": 1
   },
-  "recentWind5": {
-    "label": "wind5 (直近90日)",
-    "totalRacers": 465,
-    "stale7": 4,
-    "flyingCountNull": 0,
-    "notInProfiles": 0,
-    "headFImpacted": 0
-  },
   "forwardPeriod": {
     "label": "paper forward期間 (2025-08-09以降)",
     "totalRacers": 25,
-    "stale7": 0,
+    "stale7": 25,
     "flyingCountNull": 0,
     "notInProfiles": 0,
     "headFImpacted": 0
@@ -54,28 +54,28 @@
   },
   "log": {
     "exists": true,
-    "lastModified": "2026-06-08T05:41:58.447Z",
+    "lastModified": "2026-07-19T20:05:27.406Z",
     "lastLines": [
-      "[2450/2658] 5286 坂井滉哉 ST=0.16 F=1",
-      "[2500/2658] 5336 瀬川大地 ST=0.19 F=0",
-      "[2550/2658] 5386 米玉利大 ST=0 F=0",
-      "[2600/2658] 5437 中澤里桜 ST=0 F=0",
-      "完了: fetched=2633 skipped=22 failed=25"
+      "[2/2683] 1485 加藤峻二 ST=undefined F=null",
+      "[3/2681] 1759 酒井忠義 ST=undefined F=null",
+      "[4/2681] 1781 谷川宏之 ST=undefined F=null",
+      "[5/2681] 1825 森 満弘 ST=undefined F=null",
+      "完了: fetched=28 skipped=2655 failed=0"
     ],
     "errExists": true,
-    "errLastModified": "2026-06-08T00:48:46.978Z",
+    "errLastModified": "2026-07-13T00:35:38.492Z",
     "errLastLines": [
-      "error: 3871 池田紫乃 fetch failed",
-      "error: 3872 岡田憲行 fetch failed",
-      "error: 3873 別府昌樹 fetch failed",
-      "error: 3874 山本寛久 fetch failed",
-      "error: 3875 廣中良一 fetch failed"
+      "error: 2034 谷口 誠 fetch failed",
+      "error: 2036 倉重宏明 fetch failed",
+      "error: 2042 金井秀夫 fetch failed",
+      "error: 2044 友永健策 fetch failed",
+      "error: 2046 榊原利行 fetch failed"
     ]
   },
-  "flyingCountReliability": "MEDIUM",
-  "flyingCountReliabilityReason": "forward期間headF潜在影響 0/25件 または14日超=24件",
+  "flyingCountReliability": "HIGH",
+  "flyingCountReliabilityReason": "forward期間の対象選手全員のflying_countが取得済みで14日超なし",
   "fetchNeededNow": true,
-  "fetchNeededReason": "14日超の古いデータあり: profiles 24件, course_stats 102件",
+  "fetchNeededReason": "14日超の古いデータあり: course_stats 18件",
   "recommendedAction": "RUN_FETCH",
-  "recommendedActionDetail": "pnpm fetch:racer-stats を実行 (理由: 14日超の古いデータあり: profiles 24件, course_stats 102件)"
+  "recommendedActionDetail": "pnpm fetch:racer-stats を実行 (理由: 14日超の古いデータあり: course_stats 18件)"
 }

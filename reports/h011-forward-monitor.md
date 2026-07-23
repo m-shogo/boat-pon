@@ -1,7 +1,7 @@
 # H011 「1-4系 市場過小評価」 forward モニター
 
-生成日時: 2026-06-11T07:12:40.530Z
-monitor 開始日: **2026-06-01** (run_kind=historical-backfill)
+生成日時: 2026-07-20T04:16:22.717Z
+monitor 開始日: **2026-06-01** (run_kind=paper-live)
 
 > **読み取り専用。BUY は検証候補、ROI は検証指標。購入推奨ではない。**
 > **これは H011 を未来データで検証する箱。条件追加・ROI掘りは禁止。app_settings 反映禁止。**
@@ -28,31 +28,28 @@ monitor 開始日: **2026-06-01** (run_kind=historical-backfill)
 | 項目 | 値 |
 |---|---|
 | monitor 開始日 | 2026-06-01 |
-| forward 対象レース総数 | 0 |
+| forward 対象レース総数 | 1 |
 | うち exacta 確定済み | 0 |
-| うち未確定 (pending) | 0 |
+| うち未確定 (pending) | 1 |
 | 判定最低 n_resolved / hits | 30 / 3 |
-
-> ⚠️ **現時点で 2026-06-01 以降・run_kind=historical-backfill の forward BUY レースは 0 件**。
-> 全データは run_kind=historical-backfill で最新が 2026-05-29 まで。これは正常 (未来監視の箱を先に用意した状態)。
-> 新しいレースが追加されると本レポートが自動で埋まる。
 
 ---
 
 ## run_kind 診断 (未来検証データの取りこぼし防止)
 
-> このモニターは run_kind=**historical-backfill** のみを対象にしている。
+> このモニターは run_kind=**paper-live** のみを対象にしている。
 > 将来 paper-forward / live-forward 的な別 run_kind が入った場合、その行が
 > `2026-06-01以降` 列に件数を持っていれば、monitor の対象 run_kind を見直す必要がある。
 
 | run_kind | 全件数 | 期間 | 2026-06-01以降 | monitor対象 |
 |---|---:|---|---:|:---:|
-| historical-backfill | 6164 | 2024-01-01〜2026-05-29 | 0 | ✅ |
+| historical-backfill | 6164 | 2024-01-01〜2026-05-29 | 0 | — |
+| paper-live | 1 | 2026-07-20〜2026-07-20 | 1 | ✅ |
 
 | 確認項目 | 値 |
 |---|---|
-| decision_history 最新 BUY date | 2026-05-29 |
-| monitor 対象 run_kind | historical-backfill |
+| decision_history 最新 BUY date | 2026-07-20 |
+| monitor 対象 run_kind | paper-live |
 | 未カバー run_kind (2026-06-01以降に件数あり) | なし ✅ |
 
 ---
@@ -65,8 +62,8 @@ monitor 開始日: **2026-06-01** (run_kind=historical-backfill)
 
 | ID | 条件 | backtest 2025+ ROI (n) | held-out 2024 ROI (n) | forward n_total | resolved | pending | hits | forward ROI | top2除外 | 最大連敗 | 判定 |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---|
-| H011-A | 2連単 1-4 全体 | 94.7% (n=1522) | 75.9% (n=2779) | 0 | 0 | 0 | 0 | — | — | 0 | **pending** |
-| H011-B | 2連単 1-4 × 風速2-3m/s | 113.5% (n=694) | 76.8% (n=1405) | 0 | 0 | 0 | 0 | — | — | 0 | **pending** |
+| H011-A | 2連単 1-4 全体 | 94.7% (n=1522) | 75.9% (n=2779) | 1 | 0 | 1 | 0 | — | — | 0 | **pending** |
+| H011-B | 2連単 1-4 × 風速2-3m/s | 113.5% (n=694) | 76.8% (n=1405) | 1 | 0 | 1 | 0 | — | — | 0 | **pending** |
 | H011-C | 2連単 1-4 × 4号艇モーター上位 | 112.1% (n=538) | 83.0% (n=1029) | 0 | 0 | 0 | 0 | — | — | 0 | **pending** |
 
 ---
@@ -79,17 +76,17 @@ monitor 開始日: **2026-06-01** (run_kind=historical-backfill)
 
 | 項目 | forward 値 |
 |---|---|
-| n_total (条件該当) | 0 |
+| n_total (条件該当) | 1 |
 | 特徴量不明で除外 | 0 |
 | n_resolved (確定) | 0 |
-| n_pending (未確定) | 0 |
+| n_pending (未確定) | 1 |
 | hits / 的中率 | 0 / — |
 | stake / payout / profit | 0円 / 0円 / 0円 |
 | ROI | — (pending) |
 | top1除外 / top2除外 ROI | — |
 | 最大連敗 | 0 |
 | avg / med 払戻 | — / — |
-| 判定 | **pending** — 対象レースなし。2026-06-01以降のBUYレース待ち |
+| 判定 | **pending** — 確定レースなし (pending=1)。forward データ蓄積待ち |
 
 ---
 
@@ -99,17 +96,17 @@ monitor 開始日: **2026-06-01** (run_kind=historical-backfill)
 
 | 項目 | forward 値 |
 |---|---|
-| n_total (条件該当) | 0 |
+| n_total (条件該当) | 1 |
 | 特徴量不明で除外 | 0 |
 | n_resolved (確定) | 0 |
-| n_pending (未確定) | 0 |
+| n_pending (未確定) | 1 |
 | hits / 的中率 | 0 / — |
 | stake / payout / profit | 0円 / 0円 / 0円 |
 | ROI | — (pending) |
 | top1除外 / top2除外 ROI | — |
 | 最大連敗 | 0 |
 | avg / med 払戻 | — / — |
-| 判定 | **pending** — 対象レースなし。2026-06-01以降のBUYレース待ち |
+| 判定 | **pending** — 確定レースなし (pending=1)。forward データ蓄積待ち |
 
 ---
 
@@ -120,7 +117,7 @@ monitor 開始日: **2026-06-01** (run_kind=historical-backfill)
 | 項目 | forward 値 |
 |---|---|
 | n_total (条件該当) | 0 |
-| 特徴量不明で除外 | 0 |
+| 特徴量不明で除外 | 1 |
 | n_resolved (確定) | 0 |
 | n_pending (未確定) | 0 |
 | hits / 的中率 | 0 / — |

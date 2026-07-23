@@ -1,0 +1,687 @@
+{
+  "generatedAt": "2026-07-21T04:47:29.980Z",
+  "safety": {
+    "readOnly": true,
+    "dbWrites": false,
+    "productionChanged": false,
+    "pointInTime": "T-5 market only"
+  },
+  "window": {
+    "from": "2026-06-01",
+    "to": "2026-07-21",
+    "boundary": "2026-07-01"
+  },
+  "coverage": {
+    "races": 317,
+    "train": 203,
+    "forward": 114
+  },
+  "fit": {
+    "temperature": 0.9,
+    "residual": {
+      "temperature": 1,
+      "priorStrength": 30
+    }
+  },
+  "metrics": [
+    {
+      "id": "market",
+      "label": "T-5市場",
+      "train": {
+        "n": 203,
+        "hits": 24,
+        "hitRate": 0.11822660098522167,
+        "payoutRoi": 0.7857142857142857,
+        "payoutRoiExTop2": 0.6532338308457711,
+        "logLoss": 3.735390998209279,
+        "brier": 0.9546103265913256
+      },
+      "forward": {
+        "n": 114,
+        "hits": 11,
+        "hitRate": 0.09649122807017543,
+        "payoutRoi": 0.6052631578947368,
+        "payoutRoiExTop2": 0.44375,
+        "logLoss": 3.7881186668706373,
+        "brier": 0.9560798263269815
+      }
+    },
+    {
+      "id": "temperature",
+      "label": "市場temperature T=0.9",
+      "train": {
+        "n": 203,
+        "hits": 24,
+        "hitRate": 0.11822660098522167,
+        "payoutRoi": 0.7857142857142857,
+        "payoutRoiExTop2": 0.6532338308457711,
+        "logLoss": 3.724775093786734,
+        "brier": 0.9535320886751275
+      },
+      "forward": {
+        "n": 114,
+        "hits": 11,
+        "hitRate": 0.09649122807017543,
+        "payoutRoi": 0.6052631578947368,
+        "payoutRoiExTop2": 0.44375,
+        "logLoss": 3.7767132173299407,
+        "brier": 0.9553144252745867
+      }
+    },
+    {
+      "id": "selection-residual",
+      "label": "買い目残差 T=1 prior=30",
+      "train": {
+        "n": 203,
+        "hits": 30,
+        "hitRate": 0.1477832512315271,
+        "payoutRoi": 1.4566502463054187,
+        "payoutRoiExTop2": 1.126865671641791,
+        "logLoss": 3.44020491018828,
+        "brier": 0.9416197094349582
+      },
+      "forward": {
+        "n": 114,
+        "hits": 11,
+        "hitRate": 0.09649122807017543,
+        "payoutRoi": 0.7280701754385965,
+        "payoutRoiExTop2": 0.4919642857142857,
+        "logLoss": 4.154700197330419,
+        "brier": 0.9688033732172614
+      }
+    }
+  ],
+  "venueLoo": [
+    {
+      "venue": "びわこ",
+      "n": 6,
+      "temperature": 1,
+      "priorStrength": 30,
+      "market": {
+        "n": 6,
+        "hits": 0,
+        "hitRate": 0,
+        "payoutRoi": 0,
+        "payoutRoiExTop2": 0,
+        "logLoss": 4.315334923500397,
+        "brier": 0.9868842974680101
+      },
+      "candidate": {
+        "n": 6,
+        "hits": 0,
+        "hitRate": 0,
+        "payoutRoi": 0,
+        "payoutRoiExTop2": 0,
+        "logLoss": 4.772232097924634,
+        "brier": 1.0040026297640317
+      },
+      "logLossDelta": 0.4568971744242374,
+      "brierDelta": 0.017118332296021554
+    },
+    {
+      "venue": "三国",
+      "n": 1,
+      "temperature": 0.9,
+      "priorStrength": 30,
+      "market": {
+        "n": 1,
+        "hits": 0,
+        "hitRate": 0,
+        "payoutRoi": 0,
+        "payoutRoiExTop2": null,
+        "logLoss": 3.9578490272330926,
+        "brier": 0.9829949802340531
+      },
+      "candidate": {
+        "n": 1,
+        "hits": 0,
+        "hitRate": 0,
+        "payoutRoi": 0,
+        "payoutRoiExTop2": null,
+        "logLoss": 4.86643828139169,
+        "brier": 1.014040502958984
+      },
+      "logLossDelta": 0.9085892541585974,
+      "brierDelta": 0.031045522724930996
+    },
+    {
+      "venue": "下関",
+      "n": 6,
+      "temperature": 1,
+      "priorStrength": 30,
+      "market": {
+        "n": 6,
+        "hits": 0,
+        "hitRate": 0,
+        "payoutRoi": 0,
+        "payoutRoiExTop2": 0,
+        "logLoss": 4.119362117364169,
+        "brier": 0.9824919357038572
+      },
+      "candidate": {
+        "n": 6,
+        "hits": 0,
+        "hitRate": 0,
+        "payoutRoi": 0,
+        "payoutRoiExTop2": 0,
+        "logLoss": 4.01995296635151,
+        "brier": 0.9889445910277866
+      },
+      "logLossDelta": -0.0994091510126589,
+      "brierDelta": 0.006452655323929468
+    },
+    {
+      "venue": "丸亀",
+      "n": 1,
+      "temperature": 0.9,
+      "priorStrength": 30,
+      "market": {
+        "n": 1,
+        "hits": 0,
+        "hitRate": 0,
+        "payoutRoi": 0,
+        "payoutRoiExTop2": null,
+        "logLoss": 3.2046359025801765,
+        "brier": 0.9737938587564979
+      },
+      "candidate": {
+        "n": 1,
+        "hits": 0,
+        "hitRate": 0,
+        "payoutRoi": 0,
+        "payoutRoiExTop2": null,
+        "logLoss": 2.624790733873547,
+        "brier": 0.9490473582975427
+      },
+      "logLossDelta": -0.5798451687066293,
+      "brierDelta": -0.024746500458955212
+    },
+    {
+      "venue": "住之江",
+      "n": 7,
+      "temperature": 0.9,
+      "priorStrength": 30,
+      "market": {
+        "n": 7,
+        "hits": 2,
+        "hitRate": 0.2857142857142857,
+        "payoutRoi": 1.0857142857142856,
+        "payoutRoiExTop2": 0,
+        "logLoss": 3.454405434062593,
+        "brier": 0.894938581200193
+      },
+      "candidate": {
+        "n": 7,
+        "hits": 2,
+        "hitRate": 0.2857142857142857,
+        "payoutRoi": 1.0857142857142856,
+        "payoutRoiExTop2": 0,
+        "logLoss": 3.876977390281938,
+        "brier": 0.875939988841586
+      },
+      "logLossDelta": 0.42257195621934507,
+      "brierDelta": -0.018998592358607014
+    },
+    {
+      "venue": "児島",
+      "n": 6,
+      "temperature": 1,
+      "priorStrength": 30,
+      "market": {
+        "n": 6,
+        "hits": 0,
+        "hitRate": 0,
+        "payoutRoi": 0,
+        "payoutRoiExTop2": 0,
+        "logLoss": 4.159188286915888,
+        "brier": 0.9766369860959202
+      },
+      "candidate": {
+        "n": 6,
+        "hits": 0,
+        "hitRate": 0,
+        "payoutRoi": 0,
+        "payoutRoiExTop2": 0,
+        "logLoss": 4.795149819288546,
+        "brier": 0.9945776732911957
+      },
+      "logLossDelta": 0.635961532372658,
+      "brierDelta": 0.01794068719527553
+    },
+    {
+      "venue": "唐津",
+      "n": 4,
+      "temperature": 1,
+      "priorStrength": 30,
+      "market": {
+        "n": 4,
+        "hits": 0,
+        "hitRate": 0,
+        "payoutRoi": 0,
+        "payoutRoiExTop2": 0,
+        "logLoss": 3.627541989970693,
+        "brier": 0.9621020604178684
+      },
+      "candidate": {
+        "n": 4,
+        "hits": 1,
+        "hitRate": 0.25,
+        "payoutRoi": 2.525,
+        "payoutRoiExTop2": 0,
+        "logLoss": 4.254897136474662,
+        "brier": 0.9214917264731061
+      },
+      "logLossDelta": 0.6273551465039695,
+      "brierDelta": -0.04061033394476232
+    },
+    {
+      "venue": "多摩川",
+      "n": 9,
+      "temperature": 0.9,
+      "priorStrength": 30,
+      "market": {
+        "n": 9,
+        "hits": 0,
+        "hitRate": 0,
+        "payoutRoi": 0,
+        "payoutRoiExTop2": 0,
+        "logLoss": 4.334421994301184,
+        "brier": 0.9788794539476507
+      },
+      "candidate": {
+        "n": 9,
+        "hits": 0,
+        "hitRate": 0,
+        "payoutRoi": 0,
+        "payoutRoiExTop2": 0,
+        "logLoss": 4.520818291261809,
+        "brier": 0.9849543319885059
+      },
+      "logLossDelta": 0.18639629696062432,
+      "brierDelta": 0.006074878040855158
+    },
+    {
+      "venue": "大村",
+      "n": 1,
+      "temperature": 1,
+      "priorStrength": 30,
+      "market": {
+        "n": 1,
+        "hits": 1,
+        "hitRate": 1,
+        "payoutRoi": 6.3,
+        "payoutRoiExTop2": null,
+        "logLoss": 2.0490850378255376,
+        "brier": 0.8038165282166978
+      },
+      "candidate": {
+        "n": 1,
+        "hits": 1,
+        "hitRate": 1,
+        "payoutRoi": 6.3,
+        "payoutRoiExTop2": null,
+        "logLoss": 1.9139178795507479,
+        "brier": 0.7776747809987917
+      },
+      "logLossDelta": -0.13516715827478976,
+      "brierDelta": -0.026141747217906075
+    },
+    {
+      "venue": "宮島",
+      "n": 3,
+      "temperature": 1,
+      "priorStrength": 30,
+      "market": {
+        "n": 3,
+        "hits": 0,
+        "hitRate": 0,
+        "payoutRoi": 0,
+        "payoutRoiExTop2": 0,
+        "logLoss": 4.1647127485328745,
+        "brier": 0.9682957549971603
+      },
+      "candidate": {
+        "n": 3,
+        "hits": 0,
+        "hitRate": 0,
+        "payoutRoi": 0,
+        "payoutRoiExTop2": 0,
+        "logLoss": 4.984672393140742,
+        "brier": 1.0054002080749003
+      },
+      "logLossDelta": 0.8199596446078674,
+      "brierDelta": 0.03710445307774002
+    },
+    {
+      "venue": "尼崎",
+      "n": 2,
+      "temperature": 0.9,
+      "priorStrength": 30,
+      "market": {
+        "n": 2,
+        "hits": 0,
+        "hitRate": 0,
+        "payoutRoi": 0,
+        "payoutRoiExTop2": null,
+        "logLoss": 2.765103100878096,
+        "brier": 0.9104942342516831
+      },
+      "candidate": {
+        "n": 2,
+        "hits": 0,
+        "hitRate": 0,
+        "payoutRoi": 0,
+        "payoutRoiExTop2": null,
+        "logLoss": 2.886162343637915,
+        "brier": 0.9298477353868784
+      },
+      "logLossDelta": 0.12105924275981916,
+      "brierDelta": 0.019353501135195295
+    },
+    {
+      "venue": "常滑",
+      "n": 14,
+      "temperature": 1,
+      "priorStrength": 30,
+      "market": {
+        "n": 14,
+        "hits": 0,
+        "hitRate": 0,
+        "payoutRoi": 0,
+        "payoutRoiExTop2": 0,
+        "logLoss": 3.8235071348334357,
+        "brier": 0.9782453018365215
+      },
+      "candidate": {
+        "n": 14,
+        "hits": 0,
+        "hitRate": 0,
+        "payoutRoi": 0,
+        "payoutRoiExTop2": 0,
+        "logLoss": 4.446712048535715,
+        "brier": 1.0037182800712963
+      },
+      "logLossDelta": 0.623204913702279,
+      "brierDelta": 0.02547297823477479
+    },
+    {
+      "venue": "平和島",
+      "n": 1,
+      "temperature": 1,
+      "priorStrength": 30,
+      "market": {
+        "n": 1,
+        "hits": 0,
+        "hitRate": 0,
+        "payoutRoi": 0,
+        "payoutRoiExTop2": null,
+        "logLoss": 2.9704549266079576,
+        "brier": 0.9198175382086115
+      },
+      "candidate": {
+        "n": 1,
+        "hits": 0,
+        "hitRate": 0,
+        "payoutRoi": 0,
+        "payoutRoiExTop2": null,
+        "logLoss": 2.725080968481045,
+        "brier": 0.9011973810078759
+      },
+      "logLossDelta": -0.24537395812691276,
+      "brierDelta": -0.01862015720073551
+    },
+    {
+      "venue": "徳山",
+      "n": 8,
+      "temperature": 0.9,
+      "priorStrength": 30,
+      "market": {
+        "n": 8,
+        "hits": 3,
+        "hitRate": 0.375,
+        "payoutRoi": 3.2,
+        "payoutRoiExTop2": 1.05,
+        "logLoss": 3.669206056235561,
+        "brier": 0.9535695492638713
+      },
+      "candidate": {
+        "n": 8,
+        "hits": 1,
+        "hitRate": 0.125,
+        "payoutRoi": 1.2,
+        "payoutRoiExTop2": 0,
+        "logLoss": 4.4832638410311905,
+        "brier": 0.998822984068319
+      },
+      "logLossDelta": 0.8140577847956294,
+      "brierDelta": 0.04525343480444777
+    },
+    {
+      "venue": "戸田",
+      "n": 8,
+      "temperature": 1,
+      "priorStrength": 30,
+      "market": {
+        "n": 8,
+        "hits": 0,
+        "hitRate": 0,
+        "payoutRoi": 0,
+        "payoutRoiExTop2": 0,
+        "logLoss": 4.136822177636456,
+        "brier": 0.9846506238860454
+      },
+      "candidate": {
+        "n": 8,
+        "hits": 1,
+        "hitRate": 0.125,
+        "payoutRoi": 1.775,
+        "payoutRoiExTop2": 0,
+        "logLoss": 4.4891638394473645,
+        "brier": 0.9994324528152165
+      },
+      "logLossDelta": 0.3523416618109083,
+      "brierDelta": 0.014781828929171126
+    },
+    {
+      "venue": "桐生",
+      "n": 7,
+      "temperature": 1,
+      "priorStrength": 30,
+      "market": {
+        "n": 7,
+        "hits": 1,
+        "hitRate": 0.14285714285714285,
+        "payoutRoi": 1.042857142857143,
+        "payoutRoiExTop2": 0,
+        "logLoss": 3.8441389947198874,
+        "brier": 0.9711910908061123
+      },
+      "candidate": {
+        "n": 7,
+        "hits": 1,
+        "hitRate": 0.14285714285714285,
+        "payoutRoi": 1.042857142857143,
+        "payoutRoiExTop2": 0,
+        "logLoss": 4.173271920352346,
+        "brier": 0.9866150630283345
+      },
+      "logLossDelta": 0.32913292563245866,
+      "brierDelta": 0.015423972222222138
+    },
+    {
+      "venue": "津",
+      "n": 6,
+      "temperature": 1,
+      "priorStrength": 30,
+      "market": {
+        "n": 6,
+        "hits": 2,
+        "hitRate": 0.3333333333333333,
+        "payoutRoi": 1.7833333333333334,
+        "payoutRoiExTop2": 0,
+        "logLoss": 3.4865666747601036,
+        "brier": 0.9045896468136556
+      },
+      "candidate": {
+        "n": 6,
+        "hits": 2,
+        "hitRate": 0.3333333333333333,
+        "payoutRoi": 1.7833333333333334,
+        "payoutRoiExTop2": 0,
+        "logLoss": 3.4223656469827692,
+        "brier": 0.8829161568986078
+      },
+      "logLossDelta": -0.06420102777733439,
+      "brierDelta": -0.021673489915047806
+    },
+    {
+      "venue": "浜名湖",
+      "n": 5,
+      "temperature": 1,
+      "priorStrength": 30,
+      "market": {
+        "n": 5,
+        "hits": 0,
+        "hitRate": 0,
+        "payoutRoi": 0,
+        "payoutRoiExTop2": 0,
+        "logLoss": 3.7542390057425754,
+        "brier": 0.9541835373518153
+      },
+      "candidate": {
+        "n": 5,
+        "hits": 0,
+        "hitRate": 0,
+        "payoutRoi": 0,
+        "payoutRoiExTop2": 0,
+        "logLoss": 4.28251279799337,
+        "brier": 1.0013728008520335
+      },
+      "logLossDelta": 0.5282737922507943,
+      "brierDelta": 0.04718926350021824
+    },
+    {
+      "venue": "福岡",
+      "n": 10,
+      "temperature": 1,
+      "priorStrength": 30,
+      "market": {
+        "n": 10,
+        "hits": 1,
+        "hitRate": 0.1,
+        "payoutRoi": 0.8,
+        "payoutRoiExTop2": 0,
+        "logLoss": 3.8302901803349,
+        "brier": 0.9585360529012871
+      },
+      "candidate": {
+        "n": 10,
+        "hits": 0,
+        "hitRate": 0,
+        "payoutRoi": 0,
+        "payoutRoiExTop2": 0,
+        "logLoss": 4.248528431579366,
+        "brier": 0.9769045505416919
+      },
+      "logLossDelta": 0.41823825124446623,
+      "brierDelta": 0.018368497640404824
+    },
+    {
+      "venue": "若松",
+      "n": 4,
+      "temperature": 1,
+      "priorStrength": 30,
+      "market": {
+        "n": 4,
+        "hits": 1,
+        "hitRate": 0.25,
+        "payoutRoi": 0.875,
+        "payoutRoiExTop2": 0,
+        "logLoss": 2.7245096054222473,
+        "brier": 0.8584207267616971
+      },
+      "candidate": {
+        "n": 4,
+        "hits": 1,
+        "hitRate": 0.25,
+        "payoutRoi": 0.875,
+        "payoutRoiExTop2": 0,
+        "logLoss": 2.6600796061190004,
+        "brier": 0.8731857872002922
+      },
+      "logLossDelta": -0.06442999930324689,
+      "brierDelta": 0.014765060438595046
+    },
+    {
+      "venue": "蒲郡",
+      "n": 3,
+      "temperature": 1,
+      "priorStrength": 30,
+      "market": {
+        "n": 3,
+        "hits": 0,
+        "hitRate": 0,
+        "payoutRoi": 0,
+        "payoutRoiExTop2": 0,
+        "logLoss": 3.4680623170836076,
+        "brier": 0.9626470654384022
+      },
+      "candidate": {
+        "n": 3,
+        "hits": 0,
+        "hitRate": 0,
+        "payoutRoi": 0,
+        "payoutRoiExTop2": 0,
+        "logLoss": 3.373811304116319,
+        "brier": 0.9592102447360599
+      },
+      "logLossDelta": -0.09425101296728844,
+      "brierDelta": -0.0034368207023423025
+    },
+    {
+      "venue": "鳴門",
+      "n": 2,
+      "temperature": 1,
+      "priorStrength": 30,
+      "market": {
+        "n": 2,
+        "hits": 0,
+        "hitRate": 0,
+        "payoutRoi": 0,
+        "payoutRoiExTop2": null,
+        "logLoss": 3.0965108963455847,
+        "brier": 0.9414277022936167
+      },
+      "candidate": {
+        "n": 2,
+        "hits": 0,
+        "hitRate": 0,
+        "payoutRoi": 0,
+        "payoutRoiExTop2": null,
+        "logLoss": 4.257139982219098,
+        "brier": 1.0135656164170632
+      },
+      "logLossDelta": 1.1606290858735129,
+      "brierDelta": 0.0721379141234465
+    }
+  ],
+  "gate": {
+    "minimumForward": 300,
+    "targetForward": 1000,
+    "checks": {
+      "sample": false,
+      "logLoss": false,
+      "brier": false,
+      "payoutRoi": false,
+      "payoutRoiExTop2": false,
+      "venueLoo": false
+    },
+    "passed": false
+  },
+  "caveats": [
+    "ハイパーパラメータは6月trainだけで選択",
+    "7月forwardを再学習・条件探索へ戻していない",
+    "外部特徴量なし。買い目残差は構造的偏りの最小仮説",
+    "n<1000のため最終改善判定はBLOCKED"
+  ]
+}

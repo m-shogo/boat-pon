@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { loadEnvFiles } from "../src/domain/envFile";
 import { officialOddsUrl, teleBoatUrl } from "../src/domain/officialLinks";
+import { buildBuyResultNotification } from "../src/domain/buyResultNotification";
 import { buildLineText, lineMessagingConfigFromEnv, sendLinePushTextToRecipients } from "../src/domain/lineMessaging";
 import { formatNoBuyReasonSummary, summarizeNoBuyReasons } from "../src/domain/lineDailySummary";
 import { LIVE_MONITOR_MODEL_VERSION } from "../src/domain/liveMonitor";
@@ -67,7 +68,7 @@ function usage() {
     "Usage:",
     "  pnpm notify:line:test [--dry-run] [--message <text>]",
     "  pnpm notify:line:daily [--date YYYY-MM-DD] [--dry-run]",
-    "  pnpm notify:line:results [--date YYYY-MM-DD] [--dry-run]",
+    "  pnpm notify:line:results [--date YYYY-MM-DD | --from YYYY-MM-DD --to YYYY-MM-DD] [--dry-run]",
     "  pnpm notify:line:forward [--dry-run]",
     "  pnpm notify:line:errors [--date YYYY-MM-DD] [--dry-run]",
     "",
@@ -120,7 +121,7 @@ function formatBuyBody(row: BuyRow) {
     `model: ${row.model_version ?? "unknown"} / ${row.run_kind}`,
     reasons.length > 0 ? `理由: ${reasons.slice(0, 3).join(" / ")}` : null,
     "",
-    `投票: ${voteUrl}`,
+    `投票サイト: ${voteUrl}`,
     "【paper観察モード】実購入なし。公式オッズで確認して検証・反省用。",
   ].filter((line): line is string => line != null);
   return lines.join("\n");
@@ -180,6 +181,22 @@ WHERE race_id = ? AND channel = 'line'
 
 function markNotificationSent(db: DatabaseSync, id: number) {
   db.prepare("UPDATE notification_log SET status = 'SENT', sent_at = CURRENT_TIMESTAMP WHERE id = ?").run(id);
+}
+
+function mergeRecentPendingNotifications(db: DatabaseSync, notifications: NotificationRow[], dryRun: boolean): NotificationRow[] {
+  if (dryRun) return notifications;
+  const pending = db.prepare(`
+SELECT id, race_id, title, body, official_url
+FROM notification_log
+WHERE channel = 'line'
+  AND status = 'PENDING'
+  AND created_at >= datetime('now', '-3 days')
+ORDER BY id ASC
+`).all().map(notificationRowFromRecord);
+
+  const merged = new Map<number, NotificationRow>();
+  for (const notification of [...pending, ...notifications]) merged.set(notification.id, notification);
+  return [...merged.values()];
 }
 
 function dailyCounts(db: DatabaseSync, date: string): DailyCounts {
@@ -313,7 +330,7 @@ async function deliverNotifications(db: DatabaseSync | null, notifications: Noti
     const text = buildLineText(notification.title, notification.body, notification.officialUrl);
     if (dryRun || (envConfig.enabled && envConfig.config.dryRun)) {
       console.log("--- LINE dry-run ---");
-      console.log(`to=${recipients.length > 0 ? recipients.join(",") : "<BOAT_PON_LINE_TO>"}`);
+      console.log(`recipients=${recipients.length > 0 ? recipients.length : "<BOAT_PON_LINE_TO>"}`);
       console.log(text);
       continue;
     }
@@ -342,66 +359,62 @@ type ResultRow = {
   current_odds: number | null;
   recommended_stake_yen: number;
   trifecta: string | null;
-  payout_yen: number | null;
+  winning_payout_yen: number | null;
+  returned: number | null;
 };
 
-function listBuyResults(db: DatabaseSync, date: string): ResultRow[] {
+function listBuyResults(db: DatabaseSync, from: string, to: string): ResultRow[] {
   return db.prepare(`
+WITH buy_rows AS (
+  SELECT dh.*,
+    ROW_NUMBER() OVER (
+      PARTITION BY dh.race_id, dh.bet_type, dh.selection
+      ORDER BY dh.created_at DESC, dh.id DESC
+    ) AS row_num
+  FROM decision_history dh
+  WHERE dh.date >= ? AND dh.date <= ?
+    AND dh.decision = 'BUY'
+    AND dh.model_version = ?
+    AND dh.run_kind = 'paper-live'
+)
 SELECT
   dh.race_id, dh.date, dh.venue, dh.race_no, dh.selection, dh.bet_type,
   dh.current_odds, dh.recommended_stake_yen,
   rr.trifecta,
-  rp.payout_yen
-FROM decision_history dh
-LEFT JOIN race_results rr ON rr.race_id = dh.race_id
-LEFT JOIN race_payouts rp ON rp.race_id = dh.race_id
-  AND rp.bet_type = dh.bet_type AND rp.combination = dh.selection
-WHERE dh.date = ?
-  AND dh.decision = 'BUY'
-  AND dh.source = 'history-model'
-  AND dh.model_version = ?
-ORDER BY dh.venue ASC, dh.race_no ASC
-`).all(date, LIVE_MONITOR_MODEL_VERSION) as ResultRow[];
+  rr.payout_yen AS winning_payout_yen,
+  rr.returned
+FROM buy_rows dh
+JOIN race_results rr ON rr.race_id = dh.race_id
+WHERE dh.row_num = 1
+  AND dh.bet_type IN ('trifecta', '3連単')
+  AND (rr.trifecta IS NOT NULL OR rr.returned != 0)
+ORDER BY dh.date ASC, dh.venue ASC, dh.race_no ASC
+`).all(from, to, LIVE_MONITOR_MODEL_VERSION) as ResultRow[];
 }
 
-function buildResultsNotifications(db: DatabaseSync, date: string, dryRun: boolean): NotificationRow[] {
-  const rows = listBuyResults(db, date);
-  if (rows.length === 0) return [];
-
-  const settled = rows.filter((r) => r.trifecta != null);
-  if (settled.length === 0) return [];
-
-  const hits = settled.filter((r) => r.payout_yen != null && r.payout_yen > 0);
-  const misses = settled.filter((r) => r.payout_yen == null || r.payout_yen === 0);
-
-  const totalStake = settled.length * 100;
-  const totalPayout = hits.reduce((s, r) => s + (r.payout_yen ?? 0), 0);
-  const profit = totalPayout - totalStake;
-  const profitSign = profit >= 0 ? "+" : "";
-
-  const lines: string[] = [];
-  for (const r of hits) {
-    lines.push(`的中: ${r.venue}${r.race_no}R ${r.selection} → ${(r.payout_yen ?? 0).toLocaleString()}円 🎯`);
-  }
-  for (const r of misses) {
-    lines.push(`不的中: ${r.venue}${r.race_no}R ${r.selection} (実際: ${r.trifecta ?? "不明"})`);
-  }
-  lines.push("");
-  lines.push(`収支: ${profitSign}${profit.toLocaleString()}円 (stake ${totalStake.toLocaleString()}円)`);
-  lines.push("※paper検証。実購入なし。");
-
-  const title = `🏁 Boat Pon 結果 | ${hits.length}勝${misses.length}敗 | ${date}`;
-  const body = lines.join("\n");
-
+function buildResultsNotifications(db: DatabaseSync, from: string, to: string, dryRun: boolean): NotificationRow[] {
+  const rows = listBuyResults(db, from, to);
   const notifications: NotificationRow[] = [];
-  const n = upsertPendingNotification(db, {
-    raceId: `line-results-${date}`,
-    title,
-    body,
-    officialUrl: "https://www.boatrace.jp/",
-    dryRun,
-  });
-  if (n) notifications.push(n);
+  for (const row of rows) {
+    const message = buildBuyResultNotification({
+      venue: row.venue,
+      raceNo: row.race_no,
+      betType: row.bet_type,
+      selection: row.selection,
+      resultSelection: row.trifecta,
+      winningPayoutYen: row.winning_payout_yen,
+      returned: row.returned !== 0,
+      currentOdds: row.current_odds,
+    });
+    const notification = upsertPendingNotification(db, {
+      raceId: `line-buy-result-${row.race_id}-${row.bet_type}-${row.selection}`,
+      title: message.title,
+      body: message.body,
+      officialUrl: officialOddsUrl(row.date, row.venue, row.race_no),
+      dryRun,
+    });
+    if (notification) notifications.push(notification);
+  }
   return notifications;
 }
 
@@ -617,7 +630,12 @@ async function run() {
         notifications = buildDailyNotifications(db, date, dryRun);
         break;
       case "results":
-        notifications = buildResultsNotifications(db, date, dryRun);
+        notifications = buildResultsNotifications(
+          db,
+          argValue(args, "--from") ?? date,
+          argValue(args, "--to") ?? date,
+          dryRun,
+        );
         break;
       case "forward":
         notifications = buildForwardNotifications(db, dryRun);
@@ -626,6 +644,7 @@ async function run() {
         notifications = buildErrorNotifications(db, date, dryRun);
         break;
     }
+    notifications = mergeRecentPendingNotifications(db, notifications, dryRun);
     await deliverNotifications(db, notifications, dryRun);
   } finally {
     db.close();

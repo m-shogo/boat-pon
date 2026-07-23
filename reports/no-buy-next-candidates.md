@@ -4,7 +4,7 @@ baseline: n=6260 hit=124 ROI=0.804
 
 | rank | NO BUY条件 | 削除BUY数 | 削除BUY ROI | 残りBUY数 | 残りROI | train/test安定性 | 推奨 |
 |---:|---|---:|---:|---:|---:|---|---|
-| 1 | F持ち複数レース | 4029 | 0.747 | 2231 | 0.905 | train=0.823 validation=0.490 test=0.737 badMonths=14/23 | A: 追加確認 |
+| 1 | F持ち複数レース | 3704 | 0.670 | 2556 | 0.997 | train=0.634 validation=0.618 test=1.028 badMonths=14/23 | A: 追加確認 |
 | 2 | venueMotorTop2Rate 35-50 | 2247 | 0.713 | 4013 | 0.855 | train=0.641 validation=0.876 test=0.889 badMonths=10/22 | A: 追加確認 |
 | 3 | 会場=戸田 | 319 | 0.164 | 5941 | 0.838 | train=0.234 validation=0.000 test=0.000 badMonths=5/5 | S: paper NO BUY検証 |
 | 4 | 11R | 192 | 0.000 | 6068 | 0.829 | train=0.000 validation=0.000 test=0.000 badMonths=1/1 | S: paper NO BUY検証 |

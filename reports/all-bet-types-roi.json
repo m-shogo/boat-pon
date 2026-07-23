@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-11T06:26:47.077Z",
+  "generatedAt": "2026-07-20T08:00:20.366Z",
   "meta": {
     "description": "全券種ROIシミュレーター (1レース100円・実払戻ベース)",
     "warningNotForward": "race_payouts実払戻ベースのbacktest。live/T-5 forwardではない",

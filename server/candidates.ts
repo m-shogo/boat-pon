@@ -19,6 +19,10 @@ type ProgramInput = {
   features?: ProgramFeatureSnapshot;
 };
 
+// 同一ジョブ内で同じ結果配列からモデルを再構築しない。
+// auto-fetchは取得前後で候補オッズだけを更新するため、学習結果は再利用できる。
+const venueModelCache = new WeakMap<RaceResult[], Map<string, ReturnType<typeof buildVenueModel>>>();
+
 export function buildCandidateRows(
   settings: BudgetRule,
   now = new Date(),
@@ -32,8 +36,7 @@ export function buildCandidateRows(
   let reservedBudgetYen = 0;
   let buyCountToday = 0;
   const targetDate = programInputs[0]?.date ?? now.toISOString().slice(0, 10);
-  const comparableResults = filterComparableResultsForDate(modelResults, targetDate);
-  const model = buildVenueModel(comparableResults, 1);
+  const model = cachedVenueModel(modelResults, targetDate);
   const modelCandidates = buildCandidatesFromModel(
     programInputs,
     model,
@@ -77,4 +80,18 @@ export function buildCandidateRows(
       officialUrl: officialOddsUrl(normalized.date, normalized.venue, normalized.raceNo),
     };
   });
+}
+
+function cachedVenueModel(modelResults: RaceResult[], targetDate: string) {
+  let byTargetDate = venueModelCache.get(modelResults);
+  if (!byTargetDate) {
+    byTargetDate = new Map();
+    venueModelCache.set(modelResults, byTargetDate);
+  }
+  const cached = byTargetDate.get(targetDate);
+  if (cached) return cached;
+  const comparableResults = filterComparableResultsForDate(modelResults, targetDate);
+  const model = buildVenueModel(comparableResults, 1);
+  byTargetDate.set(targetDate, model);
+  return model;
 }

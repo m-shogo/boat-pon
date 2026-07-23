@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { isTrifectaSelectionUnavailable, parseTrifectaOdds } from "./oddsParser";
+import { countUnavailableTrifectaSelections, isTrifectaSelectionUnavailable, parseTrifectaOdds } from "./oddsParser";
 
 test("td隣接形式から3連単オッズを抽出する", () => {
   const html = `
@@ -138,4 +138,5 @@ test("公式グループ表で欠場セルの場合: parseTrifectaOddsはnull、
   // 存在しない買い目: どちらもfalse/null
   assert.equal(parseTrifectaOdds(html, [4, 5, 6]), null);
   assert.equal(isTrifectaSelectionUnavailable(html, [4, 5, 6]), false);
+  assert.equal(countUnavailableTrifectaSelections(html), 1);
 });

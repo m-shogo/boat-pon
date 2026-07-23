@@ -1,0 +1,492 @@
+{
+  "generatedAt": "2026-07-21T04:42:01.923Z",
+  "window": {
+    "from": "2026-06-01",
+    "to": "2026-07-21"
+  },
+  "safety": {
+    "readOnly": true,
+    "dbWrites": false,
+    "compactionPerformed": false
+  },
+  "databaseBytes": 15009525760,
+  "totals": {
+    "rows": 48896342,
+    "uniqueKeys": 1147183,
+    "redundantRows": 47749159,
+    "redundancyRatio": 42.62296599583502
+  },
+  "knownPhysicalBreakdown": {
+    "measuredAt": "2026-07-21",
+    "oddsTimeseriesTableBytes": 5204979712,
+    "oddsTimeseriesIndexBytes": 3527729152,
+    "note": "dbstat read-only実測。通常監査では全ページ再走査しない。"
+  },
+  "topRedundancy": [
+    {
+      "date": "2026-06-02",
+      "rows": 1179720,
+      "races": 111,
+      "uniqueKeys": 22680,
+      "redundancyRatio": 52.01587301587302
+    },
+    {
+      "date": "2026-06-26",
+      "rows": 1612859,
+      "races": 153,
+      "uniqueKeys": 31619,
+      "redundancyRatio": 51.00917170055979
+    },
+    {
+      "date": "2026-06-25",
+      "rows": 1684497,
+      "races": 165,
+      "uniqueKeys": 33597,
+      "redundancyRatio": 50.13831592106438
+    },
+    {
+      "date": "2026-07-02",
+      "rows": 1282440,
+      "races": 127,
+      "uniqueKeys": 25800,
+      "redundancyRatio": 49.70697674418604
+    },
+    {
+      "date": "2026-07-11",
+      "rows": 1708860,
+      "races": 171,
+      "uniqueKeys": 34560,
+      "redundancyRatio": 49.44618055555556
+    },
+    {
+      "date": "2026-06-29",
+      "rows": 1460937,
+      "races": 148,
+      "uniqueKeys": 29757,
+      "redundancyRatio": 49.095574150620024
+    },
+    {
+      "date": "2026-06-30",
+      "rows": 1370280,
+      "races": 139,
+      "uniqueKeys": 27960,
+      "redundancyRatio": 49.00858369098712
+    },
+    {
+      "date": "2026-07-07",
+      "rows": 1155300,
+      "races": 118,
+      "uniqueKeys": 23640,
+      "redundancyRatio": 48.870558375634516
+    },
+    {
+      "date": "2026-07-10",
+      "rows": 1223160,
+      "races": 126,
+      "uniqueKeys": 25080,
+      "redundancyRatio": 48.770334928229666
+    },
+    {
+      "date": "2026-06-12",
+      "rows": 1137420,
+      "races": 119,
+      "uniqueKeys": 23580,
+      "redundancyRatio": 48.23664122137404
+    },
+    {
+      "date": "2026-06-09",
+      "rows": 1108217,
+      "races": 116,
+      "uniqueKeys": 22980,
+      "redundancyRatio": 48.22528285465622
+    },
+    {
+      "date": "2026-06-14",
+      "rows": 1301460,
+      "races": 137,
+      "uniqueKeys": 27000,
+      "redundancyRatio": 48.202222222222225
+    },
+    {
+      "date": "2026-07-15",
+      "rows": 1516620,
+      "races": 159,
+      "uniqueKeys": 31500,
+      "redundancyRatio": 48.14666666666667
+    },
+    {
+      "date": "2026-06-22",
+      "rows": 1418039,
+      "races": 149,
+      "uniqueKeys": 29459,
+      "redundancyRatio": 48.136019552598526
+    },
+    {
+      "date": "2026-06-11",
+      "rows": 1173960,
+      "races": 124,
+      "uniqueKeys": 24480,
+      "redundancyRatio": 47.955882352941174
+    }
+  ],
+  "days": [
+    {
+      "date": "2026-06-01",
+      "rows": 58440,
+      "races": 9,
+      "uniqueKeys": 1320,
+      "redundancyRatio": 44.27272727272727
+    },
+    {
+      "date": "2026-06-02",
+      "rows": 1179720,
+      "races": 111,
+      "uniqueKeys": 22680,
+      "redundancyRatio": 52.01587301587302
+    },
+    {
+      "date": "2026-06-03",
+      "rows": 831540,
+      "races": 90,
+      "uniqueKeys": 17580,
+      "redundancyRatio": 47.30034129692833
+    },
+    {
+      "date": "2026-06-04",
+      "rows": 1258258,
+      "races": 137,
+      "uniqueKeys": 26758,
+      "redundancyRatio": 47.02361910456686
+    },
+    {
+      "date": "2026-06-05",
+      "rows": 735300,
+      "races": 98,
+      "uniqueKeys": 17760,
+      "redundancyRatio": 41.402027027027025
+    },
+    {
+      "date": "2026-06-06",
+      "rows": 1145040,
+      "races": 123,
+      "uniqueKeys": 24120,
+      "redundancyRatio": 47.472636815920396
+    },
+    {
+      "date": "2026-06-07",
+      "rows": 1360380,
+      "races": 147,
+      "uniqueKeys": 28800,
+      "redundancyRatio": 47.235416666666666
+    },
+    {
+      "date": "2026-06-08",
+      "rows": 995399,
+      "races": 118,
+      "uniqueKeys": 22259,
+      "redundancyRatio": 44.71894514578373
+    },
+    {
+      "date": "2026-06-09",
+      "rows": 1108217,
+      "races": 116,
+      "uniqueKeys": 22980,
+      "redundancyRatio": 48.22528285465622
+    },
+    {
+      "date": "2026-06-10",
+      "rows": 1099500,
+      "races": 133,
+      "uniqueKeys": 24960,
+      "redundancyRatio": 44.05048076923077
+    },
+    {
+      "date": "2026-06-11",
+      "rows": 1173960,
+      "races": 124,
+      "uniqueKeys": 24480,
+      "redundancyRatio": 47.955882352941174
+    },
+    {
+      "date": "2026-06-12",
+      "rows": 1137420,
+      "races": 119,
+      "uniqueKeys": 23580,
+      "redundancyRatio": 48.23664122137404
+    },
+    {
+      "date": "2026-06-13",
+      "rows": 757800,
+      "races": 136,
+      "uniqueKeys": 22440,
+      "redundancyRatio": 33.77005347593583
+    },
+    {
+      "date": "2026-06-14",
+      "rows": 1301460,
+      "races": 137,
+      "uniqueKeys": 27000,
+      "redundancyRatio": 48.202222222222225
+    },
+    {
+      "date": "2026-06-15",
+      "rows": 977280,
+      "races": 104,
+      "uniqueKeys": 20520,
+      "redundancyRatio": 47.62573099415204
+    },
+    {
+      "date": "2026-06-16",
+      "rows": 1094460,
+      "races": 121,
+      "uniqueKeys": 23460,
+      "redundancyRatio": 46.65217391304348
+    },
+    {
+      "date": "2026-06-17",
+      "rows": 1364040,
+      "races": 147,
+      "uniqueKeys": 28860,
+      "redundancyRatio": 47.264033264033266
+    },
+    {
+      "date": "2026-06-18",
+      "rows": 931799,
+      "races": 106,
+      "uniqueKeys": 20279,
+      "redundancyRatio": 45.94896198037379
+    },
+    {
+      "date": "2026-06-19",
+      "rows": 842220,
+      "races": 89,
+      "uniqueKeys": 17580,
+      "redundancyRatio": 47.907849829351534
+    },
+    {
+      "date": "2026-06-20",
+      "rows": 1311240,
+      "races": 141,
+      "uniqueKeys": 27600,
+      "redundancyRatio": 47.50869565217391
+    },
+    {
+      "date": "2026-06-21",
+      "rows": 132240,
+      "races": 22,
+      "uniqueKeys": 3720,
+      "redundancyRatio": 35.54838709677419
+    },
+    {
+      "date": "2026-06-22",
+      "rows": 1418039,
+      "races": 149,
+      "uniqueKeys": 29459,
+      "redundancyRatio": 48.136019552598526
+    },
+    {
+      "date": "2026-06-23",
+      "rows": 1165199,
+      "races": 125,
+      "uniqueKeys": 24597,
+      "redundancyRatio": 47.37159003130463
+    },
+    {
+      "date": "2026-06-24",
+      "rows": 1276138,
+      "races": 167,
+      "uniqueKeys": 30478,
+      "redundancyRatio": 41.87079204672222
+    },
+    {
+      "date": "2026-06-25",
+      "rows": 1684497,
+      "races": 165,
+      "uniqueKeys": 33597,
+      "redundancyRatio": 50.13831592106438
+    },
+    {
+      "date": "2026-06-26",
+      "rows": 1612859,
+      "races": 153,
+      "uniqueKeys": 31619,
+      "redundancyRatio": 51.00917170055979
+    },
+    {
+      "date": "2026-06-27",
+      "rows": 851820,
+      "races": 124,
+      "uniqueKeys": 21660,
+      "redundancyRatio": 39.32686980609418
+    },
+    {
+      "date": "2026-06-28",
+      "rows": 1359840,
+      "races": 172,
+      "uniqueKeys": 31800,
+      "redundancyRatio": 42.762264150943395
+    },
+    {
+      "date": "2026-06-29",
+      "rows": 1460937,
+      "races": 148,
+      "uniqueKeys": 29757,
+      "redundancyRatio": 49.095574150620024
+    },
+    {
+      "date": "2026-06-30",
+      "rows": 1370280,
+      "races": 139,
+      "uniqueKeys": 27960,
+      "redundancyRatio": 49.00858369098712
+    },
+    {
+      "date": "2026-07-01",
+      "rows": 1080840,
+      "races": 158,
+      "uniqueKeys": 27720,
+      "redundancyRatio": 38.99134199134199
+    },
+    {
+      "date": "2026-07-02",
+      "rows": 1282440,
+      "races": 127,
+      "uniqueKeys": 25800,
+      "redundancyRatio": 49.70697674418604
+    },
+    {
+      "date": "2026-07-03",
+      "rows": 701520,
+      "races": 92,
+      "uniqueKeys": 16800,
+      "redundancyRatio": 41.75714285714286
+    },
+    {
+      "date": "2026-07-04",
+      "rows": 1436700,
+      "races": 154,
+      "uniqueKeys": 30060,
+      "redundancyRatio": 47.79441117764471
+    },
+    {
+      "date": "2026-07-05",
+      "rows": 0,
+      "races": 0,
+      "uniqueKeys": 0,
+      "redundancyRatio": null
+    },
+    {
+      "date": "2026-07-06",
+      "rows": 945060,
+      "races": 107,
+      "uniqueKeys": 20520,
+      "redundancyRatio": 46.05555555555556
+    },
+    {
+      "date": "2026-07-07",
+      "rows": 1155300,
+      "races": 118,
+      "uniqueKeys": 23640,
+      "redundancyRatio": 48.870558375634516
+    },
+    {
+      "date": "2026-07-08",
+      "rows": 820800,
+      "races": 121,
+      "uniqueKeys": 21120,
+      "redundancyRatio": 38.86363636363637
+    },
+    {
+      "date": "2026-07-09",
+      "rows": 449280,
+      "races": 77,
+      "uniqueKeys": 12960,
+      "redundancyRatio": 34.666666666666664
+    },
+    {
+      "date": "2026-07-10",
+      "rows": 1223160,
+      "races": 126,
+      "uniqueKeys": 25080,
+      "redundancyRatio": 48.770334928229666
+    },
+    {
+      "date": "2026-07-11",
+      "rows": 1708860,
+      "races": 171,
+      "uniqueKeys": 34560,
+      "redundancyRatio": 49.44618055555556
+    },
+    {
+      "date": "2026-07-12",
+      "rows": 22740,
+      "races": 70,
+      "uniqueKeys": 8460,
+      "redundancyRatio": 2.6879432624113475
+    },
+    {
+      "date": "2026-07-13",
+      "rows": 0,
+      "races": 0,
+      "uniqueKeys": 0,
+      "redundancyRatio": null
+    },
+    {
+      "date": "2026-07-14",
+      "rows": 1254240,
+      "races": 132,
+      "uniqueKeys": 26160,
+      "redundancyRatio": 47.944954128440365
+    },
+    {
+      "date": "2026-07-15",
+      "rows": 1516620,
+      "races": 159,
+      "uniqueKeys": 31500,
+      "redundancyRatio": 48.14666666666667
+    },
+    {
+      "date": "2026-07-16",
+      "rows": 993120,
+      "races": 116,
+      "uniqueKeys": 22080,
+      "redundancyRatio": 44.97826086956522
+    },
+    {
+      "date": "2026-07-17",
+      "rows": 861060,
+      "races": 96,
+      "uniqueKeys": 18540,
+      "redundancyRatio": 46.44336569579288
+    },
+    {
+      "date": "2026-07-18",
+      "rows": 358020,
+      "races": 68,
+      "uniqueKeys": 12480,
+      "redundancyRatio": 28.6875
+    },
+    {
+      "date": "2026-07-19",
+      "rows": 2160,
+      "races": 18,
+      "uniqueKeys": 2160,
+      "redundancyRatio": 1
+    },
+    {
+      "date": "2026-07-20",
+      "rows": 68460,
+      "races": 152,
+      "uniqueKeys": 58920,
+      "redundancyRatio": 1.1619144602851323
+    },
+    {
+      "date": "2026-07-21",
+      "rows": 20640,
+      "races": 51,
+      "uniqueKeys": 18960,
+      "redundancyRatio": 1.0886075949367089
+    }
+  ],
+  "action": "今後の重複はcollector側で停止済み。過去重複の削除・VACUUMは破壊的かつDB書き込みのため未実施。"
+}

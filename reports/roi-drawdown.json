@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-08T05:57:10.566Z",
+  "generatedAt": "2026-07-20T08:06:32.475Z",
   "dbPath": "data/boat.sqlite",
   "totalRows": 6260,
   "segments": [
@@ -652,18 +652,18 @@
     {
       "label": "isBase (月4/6/8/12×parts=0)",
       "description": "seasonal_parts0_month_4_6_8_12 完全条件",
-      "n": 543,
-      "hits": 26,
-      "hitRate": 0.04788213627992634,
-      "roi": 199.09760589318603,
-      "roiExMaxHit": 184.78821362799263,
-      "maxLossStreak": 102,
-      "avgLossStreak": 19.14814814814815,
-      "medianLossStreak": 12,
+      "n": 544,
+      "hits": 28,
+      "hitRate": 0.051470588235294115,
+      "roi": 219.04411764705878,
+      "roiExMaxHit": 204.76102941176472,
+      "maxLossStreak": 85,
+      "avgLossStreak": 17.79310344827586,
+      "medianLossStreak": 14,
       "lossStreakDistribution": [
         {
           "streak": 1,
-          "count": 1
+          "count": 2
         },
         {
           "streak": 3,
@@ -678,12 +678,8 @@
           "count": 3
         },
         {
-          "streak": 7,
-          "count": 1
-        },
-        {
           "streak": 8,
-          "count": 1
+          "count": 4
         },
         {
           "streak": 9,
@@ -694,19 +690,19 @@
           "count": 1
         },
         {
-          "streak": 12,
-          "count": 4
-        },
-        {
           "streak": 14,
+          "count": 2
+        },
+        {
+          "streak": 15,
+          "count": 2
+        },
+        {
+          "streak": 16,
           "count": 1
         },
         {
-          "streak": 17,
-          "count": 1
-        },
-        {
-          "streak": 20,
+          "streak": 18,
           "count": 1
         },
         {
@@ -714,43 +710,43 @@
           "count": 1
         },
         {
-          "streak": 23,
+          "streak": 22,
           "count": 2
         },
         {
-          "streak": 29,
+          "streak": 24,
           "count": 1
         },
         {
-          "streak": 30,
+          "streak": 28,
           "count": 1
         },
         {
-          "streak": 32,
+          "streak": 39,
           "count": 1
         },
         {
-          "streak": 38,
+          "streak": 47,
           "count": 1
         },
         {
-          "streak": 54,
+          "streak": 52,
           "count": 1
         },
         {
-          "streak": 102,
+          "streak": 85,
           "count": 1
         }
       ],
-      "maxDrawdownPct": 15.91015442208704,
-      "maxDrawdownYen100": 10200,
-      "maxDrawdownYen1000": 102000,
-      "avgHitInterval": 20.16,
-      "maxHitInterval": 103,
+      "maxDrawdownPct": 11.586695747001091,
+      "maxDrawdownYen100": 8500,
+      "maxDrawdownYen1000": 85000,
+      "avgHitInterval": 19.074074074074073,
+      "maxHitInterval": 86,
       "hitIntervalDistribution": [
         {
           "interval": 2,
-          "count": 1
+          "count": 2
         },
         {
           "interval": 4,
@@ -765,12 +761,8 @@
           "count": 2
         },
         {
-          "interval": 8,
-          "count": 1
-        },
-        {
           "interval": 9,
-          "count": 1
+          "count": 4
         },
         {
           "interval": 10,
@@ -781,19 +773,19 @@
           "count": 1
         },
         {
-          "interval": 13,
-          "count": 4
-        },
-        {
           "interval": 15,
+          "count": 2
+        },
+        {
+          "interval": 16,
+          "count": 2
+        },
+        {
+          "interval": 17,
           "count": 1
         },
         {
-          "interval": 18,
-          "count": 1
-        },
-        {
-          "interval": 21,
+          "interval": 19,
           "count": 1
         },
         {
@@ -801,51 +793,56 @@
           "count": 1
         },
         {
-          "interval": 24,
-          "count": 2
-        },
-        {
-          "interval": 30,
+          "interval": 23,
           "count": 1
         },
         {
-          "interval": 31,
+          "interval": 25,
           "count": 1
         },
         {
-          "interval": 39,
+          "interval": 29,
           "count": 1
         },
         {
-          "interval": 55,
+          "interval": 40,
           "count": 1
         },
         {
-          "interval": 103,
+          "interval": 48,
+          "count": 1
+        },
+        {
+          "interval": 53,
+          "count": 1
+        },
+        {
+          "interval": 86,
           "count": 1
         }
       ],
-      "bankroll100": 20400,
-      "bankroll1000": 204000,
-      "operationJudgement": "TOO_VOLATILE",
+      "bankroll100": 17000,
+      "bankroll1000": 170000,
+      "operationJudgement": "PAPER_ONLY",
       "operationReasons": [
-        "最大連敗102回: 資金リスク大"
+        "最大連敗85回: 資金リスク大",
+        "運用条件: PAPER_ONLY推奨"
       ],
       "modelPerformance": {
-        "roi": 199.09760589318603,
-        "hitRate": 0.04788213627992634,
-        "roiExMaxHit": 184.78821362799263,
-        "roiExMax3Hits": 162.15469613259668,
-        "avgOdds": 43.28453038674033,
+        "roi": 219.04411764705878,
+        "hitRate": 0.051470588235294115,
+        "roiExMaxHit": 204.76102941176472,
+        "roiExMax3Hits": 182.16911764705884,
+        "avgOdds": 43.29137867647058,
         "maxHitOdds": 77.7,
         "monthlyStability": 1,
-        "highOddsDependency": -1.1060978105177242
+        "highOddsDependency": -1.2146623899097335
       },
       "operationPerformance": {
-        "maxConsecutiveLosses": 102,
-        "maxDrawdown": 15.91015442208704,
-        "avgHitInterval": 20.16,
-        "bankroll100": 20400,
+        "maxConsecutiveLosses": 85,
+        "maxDrawdown": 11.586695747001091,
+        "avgHitInterval": 19.074074074074073,
+        "bankroll100": 17000,
         "forwardN": null,
         "monthlyCoverage": "月4/6/8/12 (4ヶ月)",
         "oddsVolatilityRisk": "LOW"

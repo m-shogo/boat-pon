@@ -1,0 +1,414 @@
+{
+  "generatedAt": "2026-07-21T02:11:24.969Z",
+  "safety": {
+    "readOnly": true,
+    "dbWrites": false,
+    "productionChanged": false
+  },
+  "contract": {
+    "model": "boatpon-v3-alpha15",
+    "betType": "3連単",
+    "boundary": "2025-01-01",
+    "payoutBasis": "payout_yen"
+  },
+  "train": {
+    "all": {
+      "n": 3944,
+      "hits": 75,
+      "hitRate": 0.019016227180527385,
+      "estimated": 0.04013303583055689,
+      "factor": 0.4738297710847137,
+      "roi": 0.6903904665314402,
+      "roiExMax": 0.6711894496576211
+    },
+    "exMax": {
+      "n": 3943,
+      "hits": 74,
+      "hitRate": 0.018767435962465127,
+      "estimated": 0.040135571137215255,
+      "factor": 0.46760106884496866,
+      "roi": 0.6711894496576211,
+      "roiExMax": 0.6555301877219686
+    }
+  },
+  "forward": {
+    "all": {
+      "n": 2261,
+      "hits": 47,
+      "hitRate": 0.020787262273330383,
+      "estimated": 0.04003167434203712,
+      "factor": 0.5192703681519949,
+      "roi": 0.6981866430782839,
+      "roiExMax": 0.6718141592920354
+    },
+    "exMax": {
+      "n": 2260,
+      "hits": 46,
+      "hitRate": 0.020353982300884955,
+      "estimated": 0.040032522289783865,
+      "factor": 0.5084361698108443,
+      "roi": 0.6718141592920354,
+      "roiExMax": 0.6466578131916777
+    }
+  },
+  "months": [
+    {
+      "month": "2025-01",
+      "n": 1,
+      "hits": 0,
+      "hitRate": 0,
+      "estimated": 0.03883898425991337,
+      "factor": 0,
+      "roi": 0,
+      "roiExMax": 0
+    },
+    {
+      "month": "2025-02",
+      "n": 159,
+      "hits": 3,
+      "hitRate": 0.018867924528301886,
+      "estimated": 0.032722241972341685,
+      "factor": 0.5766085509742855,
+      "roi": 0.4226415094339623,
+      "roiExMax": 0.1949367088607595
+    },
+    {
+      "month": "2025-03",
+      "n": 183,
+      "hits": 2,
+      "hitRate": 0.01092896174863388,
+      "estimated": 0.034656604623348644,
+      "factor": 0.3153500427237723,
+      "roi": 0.4540983606557377,
+      "roiExMax": 0.21318681318681318
+    },
+    {
+      "month": "2025-04",
+      "n": 246,
+      "hits": 5,
+      "hitRate": 0.02032520325203252,
+      "estimated": 0.03640736701622888,
+      "factor": 0.5582717158033536,
+      "roi": 0.9459349593495935,
+      "roiExMax": 0.7036734693877551
+    },
+    {
+      "month": "2025-05",
+      "n": 277,
+      "hits": 8,
+      "hitRate": 0.02888086642599278,
+      "estimated": 0.03827024951038686,
+      "factor": 0.7546558173903277,
+      "roi": 1.0028880866425993,
+      "roiExMax": 0.8235507246376812
+    },
+    {
+      "month": "2025-06",
+      "n": 294,
+      "hits": 7,
+      "hitRate": 0.023809523809523808,
+      "estimated": 0.04067833626900448,
+      "factor": 0.5853121340084368,
+      "roi": 0.8894557823129252,
+      "roiExMax": 0.7133105802047781
+    },
+    {
+      "month": "2025-07",
+      "n": 307,
+      "hits": 2,
+      "hitRate": 0.006514657980456026,
+      "estimated": 0.04176398881248781,
+      "factor": 0.15598744673803966,
+      "roi": 0.16449511400651465,
+      "roiExMax": 0.06143790849673202
+    },
+    {
+      "month": "2025-08",
+      "n": 318,
+      "hits": 9,
+      "hitRate": 0.02830188679245283,
+      "estimated": 0.04172858243325416,
+      "factor": 0.6782374368389427,
+      "roi": 0.7566037735849057,
+      "roiExMax": 0.6305993690851736
+    },
+    {
+      "month": "2025-09",
+      "n": 156,
+      "hits": 5,
+      "hitRate": 0.03205128205128205,
+      "estimated": 0.04422722658804766,
+      "factor": 0.7246957253237276,
+      "roi": 0.8576923076923076,
+      "roiExMax": 0.6425806451612903
+    },
+    {
+      "month": "2025-10",
+      "n": 150,
+      "hits": 3,
+      "hitRate": 0.02,
+      "estimated": 0.04395927075092906,
+      "factor": 0.4549666010912456,
+      "roi": 0.8713333333333333,
+      "roiExMax": 0.5342281879194631
+    },
+    {
+      "month": "2025-11",
+      "n": 170,
+      "hits": 3,
+      "hitRate": 0.01764705882352941,
+      "estimated": 0.04603945635512355,
+      "factor": 0.38330293666826804,
+      "roi": 0.5923529411764706,
+      "roiExMax": 0.3230769230769231
+    }
+  ],
+  "venues": [
+    {
+      "venue": "びわこ",
+      "trainLooN": 3783,
+      "trainLooFactor": 0.4784769065804771,
+      "forwardN": 123,
+      "forwardFactor": 1.202304891809373,
+      "forwardRoi": 1.3747967479674796,
+      "replayN": 0,
+      "replayRoi": null
+    },
+    {
+      "venue": "三国",
+      "trainLooN": 3779,
+      "trainLooFactor": 0.47563116677412975,
+      "forwardN": 111,
+      "forwardFactor": 0.19962057560383362,
+      "forwardRoi": 0.25495495495495496,
+      "replayN": 0,
+      "replayRoi": null
+    },
+    {
+      "venue": "下関",
+      "trainLooN": 3788,
+      "trainLooFactor": 0.4710839445564437,
+      "forwardN": 85,
+      "forwardFactor": 0.26160850201250674,
+      "forwardRoi": 0.42823529411764705,
+      "replayN": 0,
+      "replayRoi": null
+    },
+    {
+      "venue": "丸亀",
+      "trainLooN": 3801,
+      "trainLooFactor": 0.4712683881300852,
+      "forwardN": 74,
+      "forwardFactor": 0.6351591042999466,
+      "forwardRoi": 0.918918918918919,
+      "replayN": 0,
+      "replayRoi": null
+    },
+    {
+      "venue": "住之江",
+      "trainLooN": 3798,
+      "trainLooFactor": 0.4657916853230201,
+      "forwardN": 79,
+      "forwardFactor": 0,
+      "forwardRoi": 0,
+      "replayN": 0,
+      "replayRoi": null
+    },
+    {
+      "venue": "児島",
+      "trainLooN": 3792,
+      "trainLooFactor": 0.4516984780158633,
+      "forwardN": 69,
+      "forwardFactor": 0.44748117229338374,
+      "forwardRoi": 0.7434782608695653,
+      "replayN": 0,
+      "replayRoi": null
+    },
+    {
+      "venue": "唐津",
+      "trainLooN": 3765,
+      "trainLooFactor": 0.45902693177249015,
+      "forwardN": 109,
+      "forwardFactor": 0.4402480514881075,
+      "forwardRoi": 0.8669724770642202,
+      "replayN": 0,
+      "replayRoi": null
+    },
+    {
+      "venue": "多摩川",
+      "trainLooN": 3759,
+      "trainLooFactor": 0.4958039196255054,
+      "forwardN": 89,
+      "forwardFactor": 0.580808948063428,
+      "forwardRoi": 0.9123595505617977,
+      "replayN": 0,
+      "replayRoi": null
+    },
+    {
+      "venue": "大村",
+      "trainLooN": 3779,
+      "trainLooFactor": 0.4789726764553943,
+      "forwardN": 91,
+      "forwardFactor": 0.7503044006194473,
+      "forwardRoi": 0.7692307692307693,
+      "replayN": 0,
+      "replayRoi": null
+    },
+    {
+      "venue": "宮島",
+      "trainLooN": 3758,
+      "trainLooFactor": 0.4805612714980392,
+      "forwardN": 86,
+      "forwardFactor": 0.7784729251613286,
+      "forwardRoi": 1.2127906976744185,
+      "replayN": 0,
+      "replayRoi": null
+    },
+    {
+      "venue": "尼崎",
+      "trainLooN": 3824,
+      "trainLooFactor": 0.48120804309662946,
+      "forwardN": 95,
+      "forwardFactor": 0.495649748948978,
+      "forwardRoi": 0.9831578947368421,
+      "replayN": 0,
+      "replayRoi": null
+    },
+    {
+      "venue": "常滑",
+      "trainLooN": 3721,
+      "trainLooFactor": 0.4496347119964056,
+      "forwardN": 94,
+      "forwardFactor": 0.5250126496761275,
+      "forwardRoi": 0.7446808510638298,
+      "replayN": 0,
+      "replayRoi": null
+    },
+    {
+      "venue": "平和島",
+      "trainLooN": 3778,
+      "trainLooFactor": 0.4754584061134356,
+      "forwardN": 93,
+      "forwardFactor": 1.2480967412906616,
+      "forwardRoi": 1.472043010752688,
+      "replayN": 0,
+      "replayRoi": null
+    },
+    {
+      "venue": "徳山",
+      "trainLooN": 3802,
+      "trainLooFactor": 0.48555405849906835,
+      "forwardN": 94,
+      "forwardFactor": 0.5811453362837893,
+      "forwardRoi": 1.0691489361702127,
+      "replayN": 0,
+      "replayRoi": null
+    },
+    {
+      "venue": "戸田",
+      "trainLooN": 3745,
+      "trainLooFactor": 0.49052149022267916,
+      "forwardN": 120,
+      "forwardFactor": 0.2836453626675446,
+      "forwardRoi": 0.17333333333333334,
+      "replayN": 0,
+      "replayRoi": null
+    },
+    {
+      "venue": "桐生",
+      "trainLooN": 3747,
+      "trainLooFactor": 0.4801147565672665,
+      "forwardN": 104,
+      "forwardFactor": 0,
+      "forwardRoi": 0,
+      "replayN": 0,
+      "replayRoi": null
+    },
+    {
+      "venue": "江戸川",
+      "trainLooN": 3851,
+      "trainLooFactor": 0.47650814020948207,
+      "forwardN": 92,
+      "forwardFactor": 0.2971289307125549,
+      "forwardRoi": 0.4423913043478261,
+      "replayN": 0,
+      "replayRoi": null
+    },
+    {
+      "venue": "津",
+      "trainLooN": 3797,
+      "trainLooFactor": 0.4659216565999272,
+      "forwardN": 89,
+      "forwardFactor": 0.5022236570364733,
+      "forwardRoi": 0.6415730337078651,
+      "replayN": 0,
+      "replayRoi": null
+    },
+    {
+      "venue": "浜名湖",
+      "trainLooN": 3755,
+      "trainLooFactor": 0.4634926715073916,
+      "forwardN": 94,
+      "forwardFactor": 0,
+      "forwardRoi": 0,
+      "replayN": 0,
+      "replayRoi": null
+    },
+    {
+      "venue": "福岡",
+      "trainLooN": 3764,
+      "trainLooFactor": 0.4884395875131222,
+      "forwardN": 80,
+      "forwardFactor": 0.8441139106933699,
+      "forwardRoi": 1.44625,
+      "replayN": 0,
+      "replayRoi": null
+    },
+    {
+      "venue": "芦屋",
+      "trainLooN": 3798,
+      "trainLooFactor": 0.4600066757203814,
+      "forwardN": 72,
+      "forwardFactor": 1.0343840696640405,
+      "forwardRoi": 1.226388888888889,
+      "replayN": 0,
+      "replayRoi": null
+    },
+    {
+      "venue": "若松",
+      "trainLooN": 3767,
+      "trainLooFactor": 0.4697903087545473,
+      "forwardN": 115,
+      "forwardFactor": 0.4305661516116639,
+      "forwardRoi": 0.7286956521739131,
+      "replayN": 0,
+      "replayRoi": null
+    },
+    {
+      "venue": "蒲郡",
+      "trainLooN": 3749,
+      "trainLooFactor": 0.4827058739616956,
+      "forwardN": 133,
+      "forwardFactor": 0.5861460102207248,
+      "forwardRoi": 0.43834586466165415,
+      "replayN": 0,
+      "replayRoi": null
+    },
+    {
+      "venue": "鳴門",
+      "trainLooN": 3812,
+      "trainLooFactor": 0.47415857404312683,
+      "forwardN": 70,
+      "forwardFactor": 0.43985117403324053,
+      "forwardRoi": 0.14285714285714285,
+      "replayN": 0,
+      "replayRoi": null
+    }
+  ],
+  "verdict": {
+    "trainFactor": 0.4738297710847137,
+    "trainExMaxFactor": 0.46760106884496866,
+    "stableMonths": 10,
+    "venueReplayWithSamples": 0
+  }
+}

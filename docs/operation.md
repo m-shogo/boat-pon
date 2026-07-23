@@ -55,19 +55,27 @@ LINE Notify は提供終了済みのため、LINE Messaging API の push message
 pnpm notify:line:test -- --dry-run
 pnpm notify:line:test -- --message "Boat Pon LINE 通知テスト"
 pnpm notify:line:daily -- --date 2026-06-29
+pnpm notify:line:results -- --date 2026-06-29 --dry-run
 ```
 
 送信内容:
 
 - 自動オッズ取得後: 新規BUY候補をレースごとに即時通知（送信済みは重複送信しない）
-- 自動オッズ取得は9:00〜21:05 JSTの5分間隔。同一レースは1回だけ取得し、T-5は締切5〜10分前bucketとして保存する
+- 自動オッズ取得は8:00〜21:05 JSTの5分間隔。同一race/checkpointの完全120通りは再取得せず、締切が近いレースから処理する。T-5収集はジョブ実行時間による飛び越しを避けるため締切1〜10分前bucketとして保存する
 - decision_historyはモデルtop1を1レース1件だけ保存し、買い目別オッズをレース単位fallbackより優先する
 - 21:30の日次サマリ: `BUY / WATCH / SKIP / odds coverage` と見送り理由TOP5
 - 21:30時点で未送信のBUY候補がある場合: レースごとの個別通知
+- 公式結果取得後: paper-live BUYごとの的中/外れ、実着順、的中組の公式払戻、100円仮想損益（専用キーで重複防止）
 - 公式オッズURL
 - `paper観察モード` 注記
 
-`scripts/daily-notify.sh` は macOS 通知の前にLINE通知を試行する。LINE env が未設定ならスキップし、LINE送信に失敗しても macOS 通知は継続する。
+`scripts/daily-notify.sh` は macOS 通知の前にLINE通知を試行する。LINE env が未設定ならスキップし、LINE送信に失敗しても macOS 通知は継続する。`ENOTFOUND` / `EAI_AGAIN` のDNS失敗は、5秒・15秒・30秒待って自動再試行する。送信できず `PENDING` に残った直近3日分は、次回のLINE通知ジョブで再送する。
+
+launchd用の通知・番組・結果補完スクリプトは、Corepack/pnpmの外部メタデータ取得を避け、ローカルの`node --import tsx`を`mise`経由で実行する。これによりnpmレジストリのDNS障害をLINE/API障害と混同しない。
+
+BUY通知の「投票サイト」は、公開仕様のないレース別deep linkを組み立てず、BOAT RACEが案内するシンプル投票サイト`https://bu.tbbr.jp/`へ固定する。別行の「公式」は対象レースの3連単オッズページを維持する。
+
+リアルタイムBUY通知は、途中オッズで一時的にBUYとなる誤通知を減らすため、対象買い目の最新時系列checkpointが`T-5`かつ締切5分以上前の場合だけ送る。収集自体は締切1分前まで続けるが、5分未満では購入余裕がないため通知しない。T-30/T-20/T-10では通知せず、判定ロジック自体は変更しない。通知後のオッズ変動はあり得るため、購入前に通知内の公式オッズで再確認する。
 
 ---
 
@@ -92,5 +100,6 @@ pnpm paper:forward
 | `pnpm backup` | DB バックアップ |
 | `pnpm daily` | 日次処理 |
 | `pnpm notify:line:daily` | LINE日次サマリ + BUY個別通知 |
+| `pnpm notify:line:results` | 結果確定済みpaper-live BUYの的中/外れ・公式払戻・100円仮想損益 |
 | `pnpm notify:line:test` | LINE疎通テスト |
 | `pnpm catchup` | 過去分取り込み |

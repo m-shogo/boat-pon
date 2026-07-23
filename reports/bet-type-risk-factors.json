@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-08T09:01:38.654Z",
+  "generatedAt": "2026-07-21T01:27:35.922Z",
   "riskGroups": [
     {
       "label": "全体ベースライン",
@@ -200,5 +200,5 @@
       "quinella": 9.64
     }
   ],
-  "oddsCount": 7535997
+  "oddsCount": 48877622
 }

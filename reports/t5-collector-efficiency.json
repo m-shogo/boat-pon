@@ -1,0 +1,131 @@
+{
+  "generatedAt": "2026-07-23T07:22:28.706Z",
+  "window": {
+    "from": "2026-07-20",
+    "to": "2026-07-23"
+  },
+  "safety": {
+    "readOnly": true,
+    "dbWrites": false
+  },
+  "denominator": "当日は締切済み、過去日は全番組",
+  "postFixCohort": {
+    "effectiveAt": "2026-07-21T04:40:00.000Z",
+    "maturePrograms": 342,
+    "t5Full": 301,
+    "coverage": 0.8801169590643275,
+    "t10WithoutT5": 3
+  },
+  "networkOnlyCohort": {
+    "effectiveAt": "2026-07-21T06:15:00.000Z",
+    "maturePrograms": 322,
+    "t5Full": 278,
+    "coverage": 0.8633540372670807
+  },
+  "days": [
+    {
+      "date": "2026-07-20",
+      "programs": 155,
+      "maturePrograms": 155,
+      "futurePrograms": 0,
+      "t10Full": 115,
+      "t5Full": 111,
+      "t5Coverage": 0.7161290322580646,
+      "t10WithoutT5": 40,
+      "t5Partial": 1,
+      "rawRows": 68460,
+      "uniqueRows": 58920,
+      "redundancyRatio": 1.1619144602851323
+    },
+    {
+      "date": "2026-07-21",
+      "programs": 143,
+      "maturePrograms": 143,
+      "futurePrograms": 0,
+      "t10Full": 97,
+      "t5Full": 106,
+      "t5Coverage": 0.7412587412587412,
+      "t10WithoutT5": 12,
+      "t5Partial": 0,
+      "rawRows": 51600,
+      "uniqueRows": 49920,
+      "redundancyRatio": 1.0336538461538463
+    },
+    {
+      "date": "2026-07-22",
+      "programs": 143,
+      "maturePrograms": 143,
+      "futurePrograms": 0,
+      "t10Full": 112,
+      "t5Full": 130,
+      "t5Coverage": 0.9090909090909091,
+      "t10WithoutT5": 2,
+      "t5Partial": 0,
+      "rawRows": 58584,
+      "uniqueRows": 58391,
+      "redundancyRatio": 1.0033053038995736
+    },
+    {
+      "date": "2026-07-23",
+      "programs": 155,
+      "maturePrograms": 106,
+      "futurePrograms": 49,
+      "t10Full": 80,
+      "t5Full": 96,
+      "t5Coverage": 0.9056603773584906,
+      "t10WithoutT5": 0,
+      "t5Partial": 0,
+      "rawRows": 42600,
+      "uniqueRows": 42600,
+      "redundancyRatio": 1
+    }
+  ],
+  "gate": {
+    "targetDailyCoverage": 0.8,
+    "completeDays": [
+      {
+        "date": "2026-07-20",
+        "programs": 155,
+        "maturePrograms": 155,
+        "futurePrograms": 0,
+        "t10Full": 115,
+        "t5Full": 111,
+        "t5Coverage": 0.7161290322580646,
+        "t10WithoutT5": 40,
+        "t5Partial": 1,
+        "rawRows": 68460,
+        "uniqueRows": 58920,
+        "redundancyRatio": 1.1619144602851323
+      },
+      {
+        "date": "2026-07-21",
+        "programs": 143,
+        "maturePrograms": 143,
+        "futurePrograms": 0,
+        "t10Full": 97,
+        "t5Full": 106,
+        "t5Coverage": 0.7412587412587412,
+        "t10WithoutT5": 12,
+        "t5Partial": 0,
+        "rawRows": 51600,
+        "uniqueRows": 49920,
+        "redundancyRatio": 1.0336538461538463
+      },
+      {
+        "date": "2026-07-22",
+        "programs": 143,
+        "maturePrograms": 143,
+        "futurePrograms": 0,
+        "t10Full": 112,
+        "t5Full": 130,
+        "t5Coverage": 0.9090909090909091,
+        "t10WithoutT5": 2,
+        "t5Partial": 0,
+        "rawRows": 58584,
+        "uniqueRows": 58391,
+        "redundancyRatio": 1.0033053038995736
+      }
+    ],
+    "passingDays": 1
+  }
+}

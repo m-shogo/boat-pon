@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-06-11T07:12:40.530Z",
+  "generatedAt": "2026-07-20T04:16:22.717Z",
   "meta": {
     "description": "H011「1-4系 市場過小評価」forward モニター (未来データ固定監視)",
     "monitorStart": "2026-06-01",
-    "runKind": "historical-backfill",
+    "runKind": "paper-live",
     "warningNotAdoption": "forward>100%でもapp_settings反映禁止。条件追加・ROI掘り禁止。購入推奨ではない",
     "minNForJudge": 30,
     "minHitsForJudge": 3,
@@ -37,13 +37,13 @@
     }
   },
   "overview": {
-    "forwardRaces": 0,
+    "forwardRaces": 1,
     "settled": 0,
-    "pending": 0
+    "pending": 1
   },
   "runKindDiagnostics": {
-    "targetRunKind": "historical-backfill",
-    "latestBuyDate": "2026-05-29",
+    "targetRunKind": "paper-live",
+    "latestBuyDate": "2026-07-20",
     "runKinds": [
       {
         "run_kind": "historical-backfill",
@@ -51,6 +51,14 @@
         "minDate": "2024-01-01",
         "maxDate": "2026-05-29",
         "sinceMonitorStart": 0,
+        "isTarget": false
+      },
+      {
+        "run_kind": "paper-live",
+        "n": 1,
+        "minDate": "2026-07-20",
+        "maxDate": "2026-07-20",
+        "sinceMonitorStart": 1,
         "isTarget": true
       }
     ],
@@ -60,10 +68,10 @@
     {
       "id": "H011-A",
       "label": "2連単 1-4 全体",
-      "n_total": 0,
+      "n_total": 1,
       "n_unknownFeature": 0,
       "n_resolved": 0,
-      "n_pending": 0,
+      "n_pending": 1,
       "hits": 0,
       "hitRate": null,
       "stake": 0,
@@ -77,15 +85,15 @@
       "medPayout": null,
       "monthly": {},
       "verdict": "pending",
-      "verdictReason": "対象レースなし。2026-06-01以降のBUYレース待ち"
+      "verdictReason": "確定レースなし (pending=1)。forward データ蓄積待ち"
     },
     {
       "id": "H011-B",
       "label": "2連単 1-4 × 風速2-3m/s",
-      "n_total": 0,
+      "n_total": 1,
       "n_unknownFeature": 0,
       "n_resolved": 0,
-      "n_pending": 0,
+      "n_pending": 1,
       "hits": 0,
       "hitRate": null,
       "stake": 0,
@@ -99,13 +107,13 @@
       "medPayout": null,
       "monthly": {},
       "verdict": "pending",
-      "verdictReason": "対象レースなし。2026-06-01以降のBUYレース待ち"
+      "verdictReason": "確定レースなし (pending=1)。forward データ蓄積待ち"
     },
     {
       "id": "H011-C",
       "label": "2連単 1-4 × 4号艇モーター上位",
       "n_total": 0,
-      "n_unknownFeature": 0,
+      "n_unknownFeature": 1,
       "n_resolved": 0,
       "n_pending": 0,
       "hits": 0,

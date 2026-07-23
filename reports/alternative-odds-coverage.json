@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-09T08:11:05.336Z",
+  "generatedAt": "2026-07-20T09:59:24.994Z",
   "forwardN": 1522,
   "forwardMinDate": "2025-01-05",
   "forwardMaxDate": "2026-05-20",
@@ -56,169 +56,169 @@
   },
   "oddsTimeseries": {
     "minDate": "2026-06-02",
-    "maxDate": "2026-06-09",
-    "totalRaces": 60,
-    "totalDays": 8,
+    "maxDate": "2026-07-20",
+    "totalRaces": 462,
+    "totalDays": 47,
     "fwdOverlap": 0,
     "bySelectionAndCheckpoint": [
       {
         "selection": "1-2-3",
         "checkpoint": "T-10",
-        "n": 305,
+        "n": 1901,
         "minDate": "2026-06-01",
-        "maxDate": "2026-06-09",
+        "maxDate": "2026-07-20",
         "fwdOverlap": 0
       },
       {
         "selection": "1-2-3",
         "checkpoint": "T-20",
-        "n": 602,
+        "n": 3646,
         "minDate": "2026-06-01",
-        "maxDate": "2026-06-09",
+        "maxDate": "2026-07-20",
         "fwdOverlap": 0
       },
       {
         "selection": "1-2-3",
         "checkpoint": "T-30",
-        "n": 540,
+        "n": 3346,
         "minDate": "2026-06-01",
-        "maxDate": "2026-06-09",
+        "maxDate": "2026-07-20",
         "fwdOverlap": 0
       },
       {
         "selection": "1-2-3",
         "checkpoint": "T-5",
-        "n": 60,
+        "n": 462,
         "minDate": "2026-06-02",
-        "maxDate": "2026-06-09",
+        "maxDate": "2026-07-20",
         "fwdOverlap": 0
       },
       {
         "selection": "1-2-4",
         "checkpoint": "T-10",
-        "n": 307,
+        "n": 1902,
         "minDate": "2026-06-01",
-        "maxDate": "2026-06-09",
+        "maxDate": "2026-07-20",
         "fwdOverlap": 0
       },
       {
         "selection": "1-2-4",
         "checkpoint": "T-20",
-        "n": 603,
+        "n": 3652,
         "minDate": "2026-06-01",
-        "maxDate": "2026-06-09",
+        "maxDate": "2026-07-20",
         "fwdOverlap": 0
       },
       {
         "selection": "1-2-4",
         "checkpoint": "T-30",
-        "n": 542,
+        "n": 3348,
         "minDate": "2026-06-01",
-        "maxDate": "2026-06-09",
+        "maxDate": "2026-07-20",
         "fwdOverlap": 0
       },
       {
         "selection": "1-2-4",
         "checkpoint": "T-5",
-        "n": 60,
+        "n": 464,
         "minDate": "2026-06-02",
-        "maxDate": "2026-06-09",
+        "maxDate": "2026-07-20",
         "fwdOverlap": 0
       },
       {
         "selection": "1-3-2",
         "checkpoint": "T-10",
-        "n": 305,
+        "n": 1901,
         "minDate": "2026-06-01",
-        "maxDate": "2026-06-09",
+        "maxDate": "2026-07-20",
         "fwdOverlap": 0
       },
       {
         "selection": "1-3-2",
         "checkpoint": "T-20",
-        "n": 602,
+        "n": 3646,
         "minDate": "2026-06-01",
-        "maxDate": "2026-06-09",
+        "maxDate": "2026-07-20",
         "fwdOverlap": 0
       },
       {
         "selection": "1-3-2",
         "checkpoint": "T-30",
-        "n": 540,
+        "n": 3346,
         "minDate": "2026-06-01",
-        "maxDate": "2026-06-09",
+        "maxDate": "2026-07-20",
         "fwdOverlap": 0
       },
       {
         "selection": "1-3-2",
         "checkpoint": "T-5",
-        "n": 60,
+        "n": 462,
         "minDate": "2026-06-02",
-        "maxDate": "2026-06-09",
+        "maxDate": "2026-07-20",
         "fwdOverlap": 0
       },
       {
         "selection": "1-3-4",
         "checkpoint": "T-10",
-        "n": 306,
+        "n": 1902,
         "minDate": "2026-06-01",
-        "maxDate": "2026-06-09",
+        "maxDate": "2026-07-20",
         "fwdOverlap": 0
       },
       {
         "selection": "1-3-4",
         "checkpoint": "T-20",
-        "n": 603,
+        "n": 3647,
         "minDate": "2026-06-01",
-        "maxDate": "2026-06-09",
+        "maxDate": "2026-07-20",
         "fwdOverlap": 0
       },
       {
         "selection": "1-3-4",
         "checkpoint": "T-30",
-        "n": 541,
+        "n": 3346,
         "minDate": "2026-06-01",
-        "maxDate": "2026-06-09",
+        "maxDate": "2026-07-20",
         "fwdOverlap": 0
       },
       {
         "selection": "1-3-4",
         "checkpoint": "T-5",
-        "n": 60,
+        "n": 463,
         "minDate": "2026-06-02",
-        "maxDate": "2026-06-09",
+        "maxDate": "2026-07-20",
         "fwdOverlap": 0
       },
       {
         "selection": "1-4-2",
         "checkpoint": "T-10",
-        "n": 307,
+        "n": 1902,
         "minDate": "2026-06-01",
-        "maxDate": "2026-06-09",
+        "maxDate": "2026-07-20",
         "fwdOverlap": 0
       },
       {
         "selection": "1-4-2",
         "checkpoint": "T-20",
-        "n": 603,
+        "n": 3652,
         "minDate": "2026-06-01",
-        "maxDate": "2026-06-09",
+        "maxDate": "2026-07-20",
         "fwdOverlap": 0
       },
       {
         "selection": "1-4-2",
         "checkpoint": "T-30",
-        "n": 542,
+        "n": 3348,
         "minDate": "2026-06-01",
-        "maxDate": "2026-06-09",
+        "maxDate": "2026-07-20",
         "fwdOverlap": 0
       },
       {
         "selection": "1-4-2",
         "checkpoint": "T-5",
-        "n": 60,
+        "n": 464,
         "minDate": "2026-06-02",
-        "maxDate": "2026-06-09",
+        "maxDate": "2026-07-20",
         "fwdOverlap": 0
       }
     ]

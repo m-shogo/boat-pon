@@ -38,8 +38,8 @@ db.exec("PRAGMA busy_timeout = 5000;");
 
 // forward monitor 開始日。H011 を未来で検証するための境界。
 const MONITOR_START = process.env.H011_MONITOR_START ?? "2026-06-01";
-// 全データは run_kind='historical-backfill' のみ (paper-forward-monitor と同じ)。
-const RUN_KIND      = process.env.H011_RUN_KIND ?? "historical-backfill";
+// 真のfuture-only判定だけを監視する。historical-backfillはロック後に自然増加しない。
+const RUN_KIND      = process.env.H011_RUN_KIND ?? "paper-live";
 const EXCL_VENUES   = ["戸田", "多摩川", "桐生", "三国", "江戸川"];
 const EXCL_RACES    = [10, 11, 12];
 const UNIT          = 100;
@@ -344,8 +344,8 @@ lines.push(`| 判定最低 n_resolved / hits | ${MIN_N_FOR_JUDGE} / ${MIN_HITS_F
 lines.push(``);
 if (forwardRaces.length === 0) {
   lines.push(`> ⚠️ **現時点で ${MONITOR_START} 以降・run_kind=${RUN_KIND} の forward BUY レースは 0 件**。`);
-  lines.push(`> 全データは run_kind=${RUN_KIND} で最新が ${latestDate} まで。これは正常 (未来監視の箱を先に用意した状態)。`);
-  lines.push(`> 新しいレースが追加されると本レポートが自動で埋まる。`);
+  lines.push(`> decision_history の最新BUYは ${latestDate}。paper-liveの保存経路と結果取込を別途確認する。`);
+  lines.push(`> historical-backfillへ切り替えて件数を埋めるとfuture-only性が失われるため行わない。`);
   lines.push(``);
 }
 lines.push(`---`);

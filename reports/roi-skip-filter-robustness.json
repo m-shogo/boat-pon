@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-06-09T06:21:52.410Z",
+  "generatedAt": "2026-07-20T08:06:32.342Z",
   "forwardStart": "2025-01-01",
-  "forwardEnd": "2026-06-09",
-  "recent3mCutoff": "2026-03-09",
+  "forwardEnd": "2026-07-20",
+  "recent3mCutoff": "2026-04-20",
   "baseline": {
     "n": 1522,
     "hits": 39,

@@ -21,6 +21,9 @@
 | reports/paper-forward-candidates.{md,json} | `pnpm report:paper-forward-candidates` | generatedAt |
 | reports/paper-forward-monitor.{md,json} | `pnpm report:paper-forward-monitor` | generatedAt |
 | reports/wind24-exh1-switch-deep-dive.{md,json} | `pnpm analyze:wind24-exh1-switch` | generatedAt |
+| reports/roi-improvement-validation.{md,json} | `pnpm analyze:roi-improvement-validation` | generatedAt |
+| reports/roi-all-data-sweep.{md,json} | `pnpm report:roi-all-data-sweep` | generatedAt |
+| reports/wind-direction-venue-screen.{md,json} | `pnpm analyze:wind-direction-venue` | generatedAt |
 | reports/exacta-forward-monitor.{md,json} | `pnpm report:exacta-forward-monitor` | generatedAt |
 | reports/racer-data-freshness.{md,json} | `pnpm report:racer-freshness` | generatedAt + 鮮度日数が日付依存 |
 | reports/racer-ability-data-audit.{md,json} | `pnpm report:racer-ability-audit` | generatedAt（本監査も同型） |

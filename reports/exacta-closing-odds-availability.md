@@ -1,6 +1,6 @@
 # exacta (2連単) closing odds 取得可能性 audit
 
-生成日時: 2026-06-11T12:40:01.329Z
+生成日時: 2026-07-20T08:52:11.006Z
 
 > **読み取り専用 audit。DB write なし。BUY は検証候補、ROI は検証指標。購入推奨ではない。**
 > **historical closing odds は live/T-5/timeseries odds ではない。**

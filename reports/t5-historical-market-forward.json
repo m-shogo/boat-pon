@@ -1,0 +1,154 @@
+{
+  "generatedAt": "2026-07-23T07:31:05.816Z",
+  "safety": {
+    "readOnly": true,
+    "dbWrites": false,
+    "productionChanged": false,
+    "automaticWagering": false,
+    "formalFutureUsedForTuning": false
+  },
+  "contract": {
+    "historicalModel": {
+      "artifact": "reports/historical-ranking-model.json",
+      "generatedAt": "2026-07-23T04:09:11.701Z",
+      "trainedOn": "2023-01-01..2024-12-31"
+    },
+    "calibration": {
+      "from": "2026-06-01",
+      "to": "2026-06-30",
+      "purpose": "blend alpha selection only",
+      "freshness": "unverified pre-network-only T-5; not formal evidence",
+      "alphaGrid": [
+        0,
+        0.1,
+        0.25,
+        0.5,
+        0.75,
+        1
+      ]
+    },
+    "formal": {
+      "from": "2026-07-21T06:15:00.000Z",
+      "to": "2026-07-23T07:31:05.816Z",
+      "pointInTime": "single captured_at complete T-5 market",
+      "sameRacePopulation": true,
+      "payout": "race_results.payout_yen"
+    }
+  },
+  "coverage": {
+    "calibration": {
+      "completeMarkets": 240,
+      "evaluated": 197,
+      "unsettledOrReturned": 37,
+      "invalidProgram": 1,
+      "incompleteExhibition": 5,
+      "invalidOdds": 0
+    },
+    "formal": {
+      "maturePrograms": 325,
+      "completeMarkets": 281,
+      "evaluated": 50,
+      "unsettledOrReturned": 229,
+      "invalidProgram": 1,
+      "incompleteExhibition": 1,
+      "invalidOdds": 0
+    }
+  },
+  "calibrationScores": [
+    {
+      "alpha": 0,
+      "n": 197,
+      "logLoss": 3.718258428567393,
+      "brier": 0.952841548936831
+    },
+    {
+      "alpha": 0.1,
+      "n": 197,
+      "logLoss": 3.733514207301916,
+      "brier": 0.9542245343168742
+    },
+    {
+      "alpha": 0.25,
+      "n": 197,
+      "logLoss": 3.7738896943060722,
+      "brier": 0.9572800368148559
+    },
+    {
+      "alpha": 0.5,
+      "n": 197,
+      "logLoss": 3.8922019838434365,
+      "brier": 0.9644504435304146
+    },
+    {
+      "alpha": 0.75,
+      "n": 197,
+      "logLoss": 4.079474905153743,
+      "brier": 0.973040780699528
+    },
+    {
+      "alpha": 1,
+      "n": 197,
+      "logLoss": 4.337892972868747,
+      "brier": 0.981662461107261
+    }
+  ],
+  "selectedAlpha": 0,
+  "metrics": [
+    {
+      "id": "market",
+      "label": "T-5市場",
+      "n": 50,
+      "hits": 5,
+      "hitRate": 0.1,
+      "payoutRoi": 0.668,
+      "payoutRoiExTop1": 0.42653061224489797,
+      "payoutRoiExTop2": 0.30833333333333335,
+      "logLoss": 3.734351624170424,
+      "brier": 0.9504969782395679,
+      "maxDrawdownYen": 2540
+    },
+    {
+      "id": "historical",
+      "label": "2023-2024履歴",
+      "n": 50,
+      "hits": 6,
+      "hitRate": 0.12,
+      "payoutRoi": 0.752,
+      "payoutRoiExTop1": 0.5795918367346938,
+      "payoutRoiExTop2": 0.41875,
+      "logLoss": 4.272301317174819,
+      "brier": 0.9798765482744876,
+      "maxDrawdownYen": 1970
+    },
+    {
+      "id": "fixed-blend",
+      "label": "事前固定混合 α=0",
+      "n": 50,
+      "hits": 5,
+      "hitRate": 0.1,
+      "payoutRoi": 0.668,
+      "payoutRoiExTop1": 0.42653061224489797,
+      "payoutRoiExTop2": 0.30833333333333335,
+      "logLoss": 3.734351624170423,
+      "brier": 0.9504969782395679,
+      "maxDrawdownYen": 2540
+    }
+  ],
+  "gate": {
+    "passed": false,
+    "checks": {
+      "settled1000": false,
+      "historicalContribution": false,
+      "blendLogLoss": false,
+      "blendBrier": false,
+      "blendPayoutRoi": false,
+      "blendPayoutRoiExTop2": false
+    }
+  },
+  "caveats": [
+    "修正前T-5は混合係数の事前校正にだけ使用し、正式成績には数えない",
+    "番組または展示が欠けたレースは市場単独も含めて除外し、全モデルを同一race_idで比較する",
+    "最大2的中除外ROIの分母から除くのは実際に除外した的中数だけ",
+    "formal settled 1,000件と全gate通過までは本番へ接続しない"
+  ]
+}

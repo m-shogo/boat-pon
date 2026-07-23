@@ -6,6 +6,8 @@
  * 目的: racer_course_stats を使い、選手のコース適性が
  *       どの券種・条件で効いているかを確認する。
  *       racer_course_stats に実データが注入されているか null 率も確認する。
+ * 注意: racer_course_stats は registration_no+course の現在スナップショットで、
+ *       snapshot_date がない。過去ROIの証明・本番候補の根拠には使わない。
  */
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
@@ -196,6 +198,8 @@ let md = `# コース適性 × 券種 ROI 分析
 生成日時: ${new Date().toISOString()}
 DB: ${DB_PATH}
 
+> **時点整合性未達:** racer_course_stats に snapshot_date がないため、過去レース時点の値とは確認できない。以下は仮説生成専用で、本番接続・ROI証明には使わない。
+
 ## racer_course_stats データ品質確認
 
 | フィールド | 総行数 | null件数 | null率 |
@@ -217,24 +221,25 @@ ${courseGroups.map(g =>
   `| ${g.label} | ${g.n} | ${roi(g.trifectaROI)} | ${roi(g.trioROI)} | ${roi(g.exactaROI)} | ${roi(g.quinellaROI)} |`
 ).join("\n")}
 
-## 解釈ガイド
+## 解釈ガイド（仮説生成専用）
 
 - **top3_rate≥0.6 の1着候補**: 選手が実績あり。3連単でも順番が当たりやすい傾向か確認。
 - **3艇平均 top3_rate が高い**: 3連複・2連複が機能しやすい可能性。
-- **データなし群**: racer_course_stats に未注入のため、本番ロジックへの組み込みは次フェーズ推奨。
-- top3_rate が 50% 以上で提供されている場合は「次フェーズで本番ロジックへの組み込み候補」として扱う。
+- **データなし群**: racer_course_stats に未注入のため、現在値で補完しない。
+- top3_rate が 50% 以上でも、snapshot_date <= race_date の履歴が作られるまで本番候補には昇格しない。
 
-## 次フェーズ実装候補
+## 判定
 
-${dataAvailRate >= 50 ?
-  "- racer_course_stats.top3_rate を decision ロジックの特徴量として追加する（条件別券種セレクター）" :
-  "- racer_course_stats のデータ注入率が低いため、まず backfill を完了させてから再分析する"}
+- 現在の分析は pointInTimeSafe=false。時点付きスナップショットを用意し、同じ期間分割で再計測するまで採用しない。
+- dataAvailRate=${dataAvailRate}% はカバレッジであり、予測精度や利益性を意味しない。
 `;
 
 if (!existsSync("reports")) mkdirSync("reports", { recursive: true });
 writeFileSync(OUT_MD, md, "utf-8");
 writeFileSync(OUT_JSON, JSON.stringify({
-  generatedAt: new Date().toISOString(), nullRates, dataAvailRate, courseGroups,
+  generatedAt: new Date().toISOString(),
+  safety: { readOnly: true, pointInTimeSafe: false, productionConnected: false },
+  nullRates, dataAvailRate, courseGroups,
 }, null, 2), "utf-8");
 
 console.log(`[course-edge] 完了 → ${OUT_MD}`);

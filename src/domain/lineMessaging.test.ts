@@ -104,3 +104,50 @@ test("LINE push exposes API error details", async () => {
     /LINE push failed: 401 Unauthorized bad token/,
   );
 });
+
+test("LINE push retries temporary DNS failures", async () => {
+  let attempts = 0;
+  const delays: number[] = [];
+  const result = await sendLinePushText({
+    channelAccessToken: "test-token",
+    to: "U123",
+    text: "hello",
+    endpoint: "https://example.test/push",
+    fetchImpl: async () => {
+      attempts += 1;
+      if (attempts < 3) {
+        const cause = Object.assign(new Error("dns lookup failed"), { code: attempts === 1 ? "ENOTFOUND" : "EAI_AGAIN" });
+        throw new TypeError("fetch failed", { cause });
+      }
+      return { ok: true, status: 200, statusText: "OK", text: async () => "{}" };
+    },
+    sleepImpl: async (delayMs) => {
+      delays.push(delayMs);
+    },
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal(attempts, 3);
+  assert.deepEqual(delays, [5_000, 15_000]);
+});
+
+test("LINE push does not retry ambiguous network failures", async () => {
+  let attempts = 0;
+  await assert.rejects(
+    sendLinePushText({
+      channelAccessToken: "test-token",
+      to: "U123",
+      text: "hello",
+      endpoint: "https://example.test/push",
+      fetchImpl: async () => {
+        attempts += 1;
+        throw new TypeError("fetch failed");
+      },
+      sleepImpl: async () => {
+        assert.fail("unexpected retry");
+      },
+    }),
+    /fetch failed/,
+  );
+  assert.equal(attempts, 1);
+});

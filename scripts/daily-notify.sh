@@ -7,13 +7,13 @@ TODAY=$(TZ=Asia/Tokyo date +%Y-%m-%d)
 YESTERDAY=$(TZ=Asia/Tokyo date -v-1d +%Y-%m-%d)
 LOG_PREFIX="[$(TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M:%S')]"
 
-run_pnpm() {
-  if command -v pnpm >/dev/null 2>&1; then
-    pnpm "$@"
+run_tsx() {
+  if command -v node >/dev/null 2>&1 && [ -d node_modules/tsx ]; then
+    node --import tsx "$@"
   elif command -v mise >/dev/null 2>&1; then
-    mise exec -- pnpm "$@"
+    mise exec -- node --import tsx "$@"
   else
-    echo "${LOG_PREFIX} pnpm not found (checked PATH and mise)" >&2
+    echo "${LOG_PREFIX} node/tsx not found (checked PATH and mise)" >&2
     return 127
   fi
 }
@@ -61,13 +61,13 @@ if [ "$NEW_ERRORS" -gt 0 ]; then
 fi
 
 # LINE Messaging API 通知（env未設定時はスキップ、送信失敗してもmacOS通知は継続）
-run_pnpm --silent notify:line:daily -- --date "$TODAY" || echo "${LOG_PREFIX} line daily skipped or failed"
+run_tsx scripts/notify-line.ts daily --date "$TODAY" || echo "${LOG_PREFIX} line daily skipped or failed"
 
 # レース結果通知（昨日分の結果が確定しているはず）
-run_pnpm --silent notify:line:results -- --date "$YESTERDAY" || echo "${LOG_PREFIX} line results skipped or failed"
+run_tsx scripts/notify-line.ts results --date "$YESTERDAY" || echo "${LOG_PREFIX} line results skipped or failed"
 
 # エラーアラート（今日のエラーがあれば通知）
-run_pnpm --silent notify:line:errors -- --date "$TODAY" || echo "${LOG_PREFIX} line errors skipped or failed"
+run_tsx scripts/notify-line.ts errors --date "$TODAY" || echo "${LOG_PREFIX} line errors skipped or failed"
 
 # macOS 通知センターへ送信
 osascript -e "display notification \"${BODY}\" with title \"Boat Pon 日次サマリ\" subtitle \"${SUBTITLE}\""

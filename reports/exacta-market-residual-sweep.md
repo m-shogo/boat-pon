@@ -1,6 +1,6 @@
 # exacta market residual sweep
 
-生成日時: 2026-07-18T09:50:41.278Z
+生成日時: 2026-07-21T02:45:10.426Z
 
 > **読み取り専用。BUY は検証候補、ROI は検証指標。購入推奨ではない。**
 > **historical closing odds は live/T-5/timeseries odds ではない。**

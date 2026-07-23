@@ -15,6 +15,26 @@ type FetchLike = (
   text(): Promise<string>;
 }>;
 
+type SleepLike = (delayMs: number) => Promise<void>;
+
+const LINE_DNS_RETRY_DELAYS_MS = [5_000, 15_000, 30_000] as const;
+
+function errorCode(error: unknown): string | null {
+  let current = error;
+  const seen = new Set<unknown>();
+  while (current && typeof current === "object" && !seen.has(current)) {
+    seen.add(current);
+    const code = Reflect.get(current, "code");
+    if (typeof code === "string") return code;
+    current = Reflect.get(current, "cause");
+  }
+  return null;
+}
+
+function isRetryableDnsError(error: unknown): boolean {
+  return ["ENOTFOUND", "EAI_AGAIN"].includes(errorCode(error) ?? "");
+}
+
 export type LineMessagingConfig = {
   channelAccessToken: string;
   recipients: string[];
@@ -94,18 +114,30 @@ export async function sendLinePushText(args: {
   text: string;
   endpoint?: string;
   fetchImpl?: FetchLike;
+  sleepImpl?: SleepLike;
 }) {
   const endpoint = args.endpoint ?? LINE_PUSH_ENDPOINT;
   const fetchImpl = args.fetchImpl ?? fetch;
+  const sleepImpl = args.sleepImpl ?? ((delayMs) => new Promise((resolve) => setTimeout(resolve, delayMs)));
   const request = buildLinePushRequest(args.to, args.text);
-  const response = await fetchImpl(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${args.channelAccessToken}`,
-    },
-    body: JSON.stringify(request),
-  });
+  let response: Awaited<ReturnType<FetchLike>>;
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      response = await fetchImpl(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${args.channelAccessToken}`,
+        },
+        body: JSON.stringify(request),
+      });
+      break;
+    } catch (error) {
+      const delayMs = LINE_DNS_RETRY_DELAYS_MS[attempt];
+      if (delayMs == null || !isRetryableDnsError(error)) throw error;
+      await sleepImpl(delayMs);
+    }
+  }
 
   const responseText = await response.text();
   if (!response.ok) {

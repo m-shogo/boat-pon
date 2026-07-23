@@ -3,8 +3,8 @@
 ## 結果
 | mode | rows | ms |
 |---|---:|---:|
-| full load | 640088 | 1153.18 |
-| scoped historical BUY race_ids | 37266 | 28.01 |
+| full load | 682882 | 664.8 |
+| scoped historical BUY race_ids | 37266 | 26.31 |
 
 target race_ids: 6260
 

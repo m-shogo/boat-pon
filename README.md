@@ -246,4 +246,4 @@ npm run dev
 
 VAPIDキー未設定時は `/api/push/vapid-public-key` が `{ enabled: false }` を返し、UIでも警告表示されます。VAPIDキーは秘密情報なのでGit管理しないでください。
 
-`npm run handoff:claude` でClaude向け作業引き継ぎ指示（制約・現在状態・作業範囲）を出力します。
+別のAIチャットへ引き継ぐ場合は、まず[`docs/current-ai-handoff.md`](docs/current-ai-handoff.md)を読ませ、`pnpm handoff:ai`で現在のDB・ログ状態を再取得してください。従来の`npm run handoff:claude`も同じ確認コマンドとして残しています。

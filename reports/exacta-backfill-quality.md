@@ -1,6 +1,6 @@
 # exacta backfill 品質チェック
 
-生成日時: 2026-06-12T00:41:02.291Z
+生成日時: 2026-07-20T13:20:54.955Z
 
 > **読み取り専用。BUY は検証候補、ROI は検証指標。購入推奨ではない。**
 > **historical closing odds は live/T-5/timeseries odds ではない。**

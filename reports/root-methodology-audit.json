@@ -1,0 +1,110 @@
+{
+  "generatedAt": "2026-07-21T01:57:57.021Z",
+  "safety": {
+    "readOnly": true,
+    "productionConnected": false,
+    "decisionChanged": false,
+    "dbWrites": false
+  },
+  "cohorts": {
+    "historicalBuy": {
+      "n": 6260,
+      "races": 6260,
+      "min_date": "2024-01-01",
+      "max_date": "2026-05-21"
+    },
+    "forwardGovernor": {
+      "n": 1522,
+      "races": 1522,
+      "min_date": "2025-01-05",
+      "max_date": "2026-05-20"
+    },
+    "paperLive": {
+      "n": 4,
+      "races": 4,
+      "min_date": "2026-07-20",
+      "max_date": "2026-07-20"
+    },
+    "warning": "historical 6260件 / governor forward 1522件 / paper-live 4件は別母集団。同じROIとして比較しない。"
+  },
+  "payout": {
+    "payoutTypes": [
+      {
+        "bet_type": "exacta",
+        "payout_races": 1186060,
+        "payout_rows": 1186065,
+        "returned": 58523
+      },
+      {
+        "bet_type": "quinella",
+        "payout_races": 1177350,
+        "payout_rows": 1177355,
+        "returned": 58079
+      },
+      {
+        "bet_type": "trifecta",
+        "payout_races": 1170576,
+        "payout_rows": 1170582,
+        "returned": 59029
+      },
+      {
+        "bet_type": "trio",
+        "payout_races": 1169370,
+        "payout_rows": 1169376,
+        "returned": 57829
+      },
+      {
+        "bet_type": "wide",
+        "payout_races": 1168591,
+        "payout_rows": 1168596,
+        "returned": 57417
+      }
+    ],
+    "buyJoin": [
+      {
+        "bet_type": "exacta",
+        "races": 6259
+      },
+      {
+        "bet_type": "quinella",
+        "races": 6259
+      },
+      {
+        "bet_type": "trifecta",
+        "races": 6259
+      },
+      {
+        "bet_type": "trio",
+        "races": 6251
+      },
+      {
+        "bet_type": "wide",
+        "races": 6251
+      }
+    ],
+    "duplicateKeys": 0,
+    "returnedJoinPolicy": "returned=1は払戻を利益に入れず、券種別に明示分離する"
+  },
+  "decisionHistory": {
+    "duplicateGroupsByRaceModel": 12,
+    "note": "重複12件は旧v2-regime-categoryのhistorical行。v3の6260件には混入しないが、全履歴集計では除外条件が必要。"
+  },
+  "featureFreshness": {
+    "racerCourseStatsRows": 9840,
+    "top3RateNull": 921,
+    "winRateNull": 9840,
+    "pointInTimeWarnings": 15,
+    "warning": "check:point-in-time-safetyが、現在スナップショットを直接JOINするROI/券種分析を15本検出。これらは仮説生成専用で、採用根拠にしない。"
+  },
+  "calibration": {
+    "n": 6045,
+    "hits": 117,
+    "estimated": 0.04041851570693244,
+    "actual_odds": 43.8282770388751,
+    "payout": 410800,
+    "actualHitRate": 0.01935483870967742,
+    "payoutRoi": 0.6795698924731183,
+    "warning": "required_odds 20-50帯で、推定的中率と実績が一致するかを再較正する必要がある。"
+  },
+  "rootVerdict": "券種不足が主因ではない。母集団の不統一、時点不整合、モデル確率の過大評価、current_oddsと実払戻の乖離が複合した根本問題。"
+}

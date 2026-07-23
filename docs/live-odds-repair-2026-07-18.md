@@ -29,7 +29,7 @@
 ## LaunchAgent
 
 - job: `com.boatpon.auto-odds`
-- 新設定: `StartInterval=300`、`--scheduled`、JST 09:00〜21:05以外はDBを開かず終了
+- 7月18日時点の設定: `StartInterval=300`、`--scheduled`、JST 09:00〜21:05以外はDBを開かず終了（7月21日に08:00開始へ拡張）
 - 変更前plistバックアップ: `/Users/m-shogo/Library/LaunchAgents/com.boatpon.auto-odds.plist.backup-20260718-1900`
 
 ## 戻し方
@@ -37,5 +37,9 @@
 1. 上記バックアップを `~/Library/LaunchAgents/com.boatpon.auto-odds.plist` へ戻す。
 2. `launchctl bootout` → `launchctl bootstrap` で再登録する。
 3. コードはこの変更コミットをrevertする。
+
+## 2026-07-21 追加修正
+
+T-10取得済み115レース中40レースでT-5が欠測していたため、同一checkpointの重複取得停止、締切順処理、レースごとの現在時刻再計算、08:00開始、120通り未満の強制再取得、レース単位transactionを追加した。BUY/SKIP閾値とapp_settingsは変更していない。詳細は`reports/t5-collector-root-cause.md`。
 
 DBの削除・過去行修正は戻し手順に含まない。

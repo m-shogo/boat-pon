@@ -1,0 +1,334 @@
+{
+  "generatedAt": "2026-07-22T04:42:03.323Z",
+  "db": "data/boat.sqlite",
+  "population": {
+    "rows": 4301,
+    "dateMin": "2024-01-01",
+    "dateMax": "2026-05-20"
+  },
+  "periods": [
+    {
+      "id": "discovery",
+      "label": "探索: 2024上期"
+    },
+    {
+      "id": "validation",
+      "label": "検証: 2024下期"
+    },
+    {
+      "id": "test",
+      "label": "未使用テスト: 2025年"
+    },
+    {
+      "id": "recent",
+      "label": "参考: 2025-09以降"
+    }
+  ],
+  "baselineByPeriod": {
+    "discovery": {
+      "n": 1192,
+      "covered": 1189,
+      "hits": 22,
+      "returnYen": 91780,
+      "stakeYen": 119200,
+      "roi": 77,
+      "top2ExclRoi": 65.36,
+      "maxLosingStreak": 223
+    },
+    "validation": {
+      "n": 1587,
+      "covered": 1584,
+      "hits": 45,
+      "returnYen": 146780,
+      "stakeYen": 158700,
+      "roi": 92.49,
+      "top2ExclRoi": 84.78,
+      "maxLosingStreak": 254
+    },
+    "test": {
+      "n": 1499,
+      "covered": 1497,
+      "hits": 38,
+      "returnYen": 130920,
+      "stakeYen": 149900,
+      "roi": 87.34,
+      "top2ExclRoi": 79.48,
+      "maxLosingStreak": 153
+    },
+    "recent": {
+      "n": 306,
+      "covered": 306,
+      "hits": 8,
+      "returnYen": 28260,
+      "stakeYen": 30600,
+      "roi": 92.35,
+      "top2ExclRoi": 62.81,
+      "maxLosingStreak": 84
+    }
+  },
+  "candidates": [
+    {
+      "id": "switch_wind24_exh1",
+      "label": "風速2〜4 × 1号展示1位で1-3-2へ切替",
+      "kind": "switch",
+      "enough": true,
+      "passes": false,
+      "discovery": {
+        "n": 1192,
+        "covered": 1189,
+        "hits": 24,
+        "returnYen": 100650,
+        "stakeYen": 119200,
+        "roi": 84.44,
+        "top2ExclRoi": 72.8,
+        "maxLosingStreak": 223
+      },
+      "validation": {
+        "n": 1587,
+        "covered": 1584,
+        "hits": 45,
+        "returnYen": 151980,
+        "stakeYen": 158700,
+        "roi": 95.77,
+        "top2ExclRoi": 86.96,
+        "maxLosingStreak": 204
+      },
+      "test": {
+        "n": 1499,
+        "covered": 1497,
+        "hits": 43,
+        "returnYen": 149090,
+        "stakeYen": 149900,
+        "roi": 99.46,
+        "top2ExclRoi": 88.91,
+        "maxLosingStreak": 106
+      }
+    },
+    {
+      "id": "switch_exh1",
+      "label": "1号展示1位で1-3-2へ切替",
+      "kind": "switch",
+      "enough": true,
+      "passes": false,
+      "discovery": {
+        "n": 1192,
+        "covered": 1189,
+        "hits": 25,
+        "returnYen": 105790,
+        "stakeYen": 119200,
+        "roi": 88.75,
+        "top2ExclRoi": 77.11,
+        "maxLosingStreak": 121
+      },
+      "validation": {
+        "n": 1587,
+        "covered": 1584,
+        "hits": 44,
+        "returnYen": 157490,
+        "stakeYen": 158700,
+        "roi": 99.24,
+        "top2ExclRoi": 87.64,
+        "maxLosingStreak": 204
+      },
+      "test": {
+        "n": 1499,
+        "covered": 1497,
+        "hits": 42,
+        "returnYen": 146330,
+        "stakeYen": 149900,
+        "roi": 97.62,
+        "top2ExclRoi": 87.07,
+        "maxLosingStreak": 106
+      }
+    },
+    {
+      "id": "switch_boat3faster",
+      "label": "3号艇展示が2号艇より速い時に1-3-2へ切替",
+      "kind": "switch",
+      "enough": true,
+      "passes": false,
+      "discovery": {
+        "n": 1192,
+        "covered": 1189,
+        "hits": 35,
+        "returnYen": 133340,
+        "stakeYen": 119200,
+        "roi": 111.86,
+        "top2ExclRoi": 100.55,
+        "maxLosingStreak": 82
+      },
+      "validation": {
+        "n": 1587,
+        "covered": 1584,
+        "hits": 37,
+        "returnYen": 135510,
+        "stakeYen": 158700,
+        "roi": 85.39,
+        "top2ExclRoi": 74.11,
+        "maxLosingStreak": 151
+      },
+      "test": {
+        "n": 1499,
+        "covered": 1497,
+        "hits": 37,
+        "returnYen": 125020,
+        "stakeYen": 149900,
+        "roi": 83.4,
+        "top2ExclRoi": 75.12,
+        "maxLosingStreak": 134
+      }
+    },
+    {
+      "id": "switch_suminoe_4049",
+      "label": "住之江かつ現行オッズ40〜49で1-3-2へ切替",
+      "kind": "switch",
+      "enough": true,
+      "passes": false,
+      "discovery": {
+        "n": 1192,
+        "covered": 1189,
+        "hits": 23,
+        "returnYen": 97440,
+        "stakeYen": 119200,
+        "roi": 81.74,
+        "top2ExclRoi": 70.11,
+        "maxLosingStreak": 223
+      },
+      "validation": {
+        "n": 1587,
+        "covered": 1584,
+        "hits": 46,
+        "returnYen": 151060,
+        "stakeYen": 158700,
+        "roi": 95.19,
+        "top2ExclRoi": 87.48,
+        "maxLosingStreak": 254
+      },
+      "test": {
+        "n": 1499,
+        "covered": 1497,
+        "hits": 38,
+        "returnYen": 130920,
+        "stakeYen": 149900,
+        "roi": 87.34,
+        "top2ExclRoi": 79.48,
+        "maxLosingStreak": 153
+      }
+    },
+    {
+      "id": "filter_exh1",
+      "label": "1号展示1位を見送り",
+      "kind": "filter",
+      "enough": true,
+      "passes": false,
+      "discovery": {
+        "n": 922,
+        "covered": 919,
+        "hits": 18,
+        "returnYen": 78870,
+        "stakeYen": 92200,
+        "roi": 85.54,
+        "top2ExclRoi": 70.5,
+        "maxLosingStreak": 182
+      },
+      "validation": {
+        "n": 1176,
+        "covered": 1174,
+        "hits": 38,
+        "returnYen": 125100,
+        "stakeYen": 117600,
+        "roi": 106.38,
+        "top2ExclRoi": 95.98,
+        "maxLosingStreak": 184
+      },
+      "test": {
+        "n": 1149,
+        "covered": 1147,
+        "hits": 31,
+        "returnYen": 105470,
+        "stakeYen": 114900,
+        "roi": 91.79,
+        "top2ExclRoi": 81.54,
+        "maxLosingStreak": 110
+      }
+    },
+    {
+      "id": "filter_wind24_exh1",
+      "label": "風速2〜4 × 1号展示1位を見送り",
+      "kind": "filter",
+      "enough": true,
+      "passes": false,
+      "discovery": {
+        "n": 1073,
+        "covered": 1070,
+        "hits": 21,
+        "returnYen": 91020,
+        "stakeYen": 107300,
+        "roi": 84.83,
+        "top2ExclRoi": 71.9,
+        "maxLosingStreak": 214
+      },
+      "validation": {
+        "n": 1385,
+        "covered": 1382,
+        "hits": 43,
+        "returnYen": 140370,
+        "stakeYen": 138500,
+        "roi": 101.35,
+        "top2ExclRoi": 92.52,
+        "maxLosingStreak": 207
+      },
+      "test": {
+        "n": 1332,
+        "covered": 1330,
+        "hits": 35,
+        "returnYen": 119970,
+        "stakeYen": 133200,
+        "roi": 90.07,
+        "top2ExclRoi": 81.22,
+        "maxLosingStreak": 129
+      }
+    },
+    {
+      "id": "filter_odds80",
+      "label": "現行オッズ80以上を見送り",
+      "kind": "filter",
+      "enough": true,
+      "passes": false,
+      "discovery": {
+        "n": 1165,
+        "covered": 1162,
+        "hits": 22,
+        "returnYen": 91780,
+        "stakeYen": 116500,
+        "roi": 78.78,
+        "top2ExclRoi": 66.88,
+        "maxLosingStreak": 218
+      },
+      "validation": {
+        "n": 1579,
+        "covered": 1576,
+        "hits": 45,
+        "returnYen": 146780,
+        "stakeYen": 157900,
+        "roi": 92.96,
+        "top2ExclRoi": 85.21,
+        "maxLosingStreak": 254
+      },
+      "test": {
+        "n": 1485,
+        "covered": 1483,
+        "hits": 38,
+        "returnYen": 130920,
+        "stakeYen": 148500,
+        "roi": 88.16,
+        "top2ExclRoi": 80.23,
+        "maxLosingStreak": 153
+      }
+    }
+  ],
+  "rules": {
+    "stakeYen": 100,
+    "pass": "探索・検証・未使用テストの各ROI>=100%、テスト最大2件除外ROI>=90%、各n>=100。合格しても本番採用ではなく紙運用追加検証。"
+  }
+}
