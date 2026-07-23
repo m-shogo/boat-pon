@@ -1,0 +1,3675 @@
+{
+  "phase": "N0",
+  "generatedAt": "2026-07-23T08:37:01.689Z",
+  "auditDateJst": "2026-07-23",
+  "scope": {
+    "included": [
+      "read-only DB/schema/coverage audit",
+      "one-race official source structure check",
+      "storage and migration design"
+    ],
+    "excluded": [
+      "DB migration",
+      "data collection",
+      "prediction/model changes",
+      "market residual model",
+      "ticket selector",
+      "production connection"
+    ]
+  },
+  "safety": {
+    "dbPath": "data/boat.sqlite",
+    "readOnly": true,
+    "queryOnly": true,
+    "externalRequestsByThisCli": 0,
+    "dbTotalChangesBefore": 0,
+    "dbTotalChangesAfter": 0,
+    "databaseBytesBefore": 15057813504,
+    "databaseMtimeBefore": "2026-07-23T08:29:23.746Z",
+    "databaseBytesAfter": 15057813504,
+    "databaseMtimeAfter": "2026-07-23T08:29:23.746Z",
+    "databaseFileChangedDuringAudit": false,
+    "note": "total_changes()=0が本CLIの非書き込み証拠。file変化がtrueの場合は並行collector等の外部processによる可能性を分離する。"
+  },
+  "officialEvidence": {
+    "auditedRace": {
+      "date": "2026-07-21",
+      "venueCode": "23",
+      "raceNo": 1
+    },
+    "beforeInfoUrl": "https://www.boatrace.jp/owpc/pc/race/beforeinfo?hd=20260721&jcd=23&rno=1",
+    "resultUrl": "https://www.boatrace.jp/owpc/pc/race/raceresult?hd=20260721&jcd=23&rno=1",
+    "oddsUrls": [
+      "https://www.boatrace.jp/owpc/pc/race/oddstf?hd=20260721&jcd=23&rno=1",
+      "https://www.boatrace.jp/owpc/pc/race/odds2tf?hd=20260721&jcd=23&rno=1",
+      "https://www.boatrace.jp/owpc/pc/race/oddsk?hd=20260721&jcd=23&rno=1",
+      "https://www.boatrace.jp/owpc/pc/race/odds3t?hd=20260721&jcd=23&rno=1",
+      "https://www.boatrace.jp/owpc/pc/race/odds3f?hd=20260721&jcd=23&rno=1"
+    ],
+    "robotsUrl": "https://www.boatrace.jp/robots.txt",
+    "sitePolicyUrl": "https://www.boatrace.jp/owpc/pc/extra/policy.html",
+    "aboutUrl": "https://www.boatrace.jp/owpc/pc/extra/about.html",
+    "archiveEvidence": "data/raw/official/results/k260721.lzh のK260721.TXTに7券種の払戻行を確認（リポジトリ内既存cache、抽出物は未保存）。"
+  },
+  "schema": [
+    {
+      "name": "app_settings",
+      "sql": "CREATE TABLE app_settings (\n  key TEXT PRIMARY KEY,\n  value TEXT NOT NULL,\n  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n)",
+      "rowCount": 1,
+      "distinctRaces": null,
+      "range": null,
+      "sourceColumns": [],
+      "columns": [
+        {
+          "cid": 0,
+          "name": "key",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "value",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_app_settings_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 0,
+              "name": "key"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "decision_history",
+      "sql": "CREATE TABLE decision_history (\n  id INTEGER PRIMARY KEY AUTOINCREMENT,\n  race_id TEXT NOT NULL,\n  date TEXT NOT NULL,\n  venue TEXT NOT NULL,\n  race_no INTEGER NOT NULL,\n  bet_type TEXT NOT NULL,\n  selection TEXT NOT NULL,\n  estimated_hit_rate REAL NOT NULL,\n  required_odds REAL NOT NULL,\n  current_odds REAL,\n  ev REAL,\n  decision TEXT NOT NULL,\n  actually_bought INTEGER NOT NULL DEFAULT 0,\n  stake_yen INTEGER NOT NULL DEFAULT 0,\n  result TEXT,\n  payout_yen INTEGER,\n  popularity INTEGER,\n  returned INTEGER NOT NULL DEFAULT 0,\n  source TEXT NOT NULL,\n  fetched_at TEXT NOT NULL,\n  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n, recommended_stake_yen INTEGER NOT NULL DEFAULT 0, sample_size INTEGER NOT NULL DEFAULT 0, model_version TEXT, race_category TEXT, raw_estimated_hit_rate REAL, conservative_hit_rate REAL, model_selection_score REAL, sharp_signal_drop REAL, environment_risk_level TEXT, exhibition_st_residual_sum REAL, selection_popularity INTEGER, run_kind TEXT NOT NULL DEFAULT 'historical-backfill', decision_reasons TEXT NOT NULL DEFAULT '[]', feature_adjustment REAL, feature_adjustment_breakdown TEXT)",
+      "rowCount": 444284,
+      "distinctRaces": 444272,
+      "range": {
+        "min": "2018-01-01",
+        "max": "2026-07-23"
+      },
+      "sourceColumns": [
+        "source",
+        "fetched_at"
+      ],
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "race_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "date",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "venue",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "race_no",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "bet_type",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "selection",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "estimated_hit_rate",
+          "type": "REAL",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "required_odds",
+          "type": "REAL",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "current_odds",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "ev",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 11,
+          "name": "decision",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 12,
+          "name": "actually_bought",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 13,
+          "name": "stake_yen",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 14,
+          "name": "result",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 15,
+          "name": "payout_yen",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 16,
+          "name": "popularity",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 17,
+          "name": "returned",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 18,
+          "name": "source",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 19,
+          "name": "fetched_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 20,
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        },
+        {
+          "cid": 21,
+          "name": "recommended_stake_yen",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 22,
+          "name": "sample_size",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 23,
+          "name": "model_version",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 24,
+          "name": "race_category",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 25,
+          "name": "raw_estimated_hit_rate",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 26,
+          "name": "conservative_hit_rate",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 27,
+          "name": "model_selection_score",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 28,
+          "name": "sharp_signal_drop",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 29,
+          "name": "environment_risk_level",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 30,
+          "name": "exhibition_st_residual_sum",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 31,
+          "name": "selection_popularity",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 32,
+          "name": "run_kind",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'historical-backfill'",
+          "pk": 0
+        },
+        {
+          "cid": 33,
+          "name": "decision_reasons",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'[]'",
+          "pk": 0
+        },
+        {
+          "cid": 34,
+          "name": "feature_adjustment",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 35,
+          "name": "feature_adjustment_breakdown",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "idx_decision_history_run_kind_date",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 32,
+              "name": "run_kind"
+            },
+            {
+              "seqno": 1,
+              "cid": 2,
+              "name": "date"
+            },
+            {
+              "seqno": 2,
+              "cid": 23,
+              "name": "model_version"
+            },
+            {
+              "seqno": 3,
+              "cid": 11,
+              "name": "decision"
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "name": "idx_decision_history_race_selection",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "race_id"
+            },
+            {
+              "seqno": 1,
+              "cid": 6,
+              "name": "selection"
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "name": "idx_decision_history_decision",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 11,
+              "name": "decision"
+            }
+          ]
+        },
+        {
+          "seq": 3,
+          "name": "idx_decision_history_venue",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 3,
+              "name": "venue"
+            }
+          ]
+        },
+        {
+          "seq": 4,
+          "name": "idx_decision_history_date",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 2,
+              "name": "date"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "exhibition_data",
+      "sql": "CREATE TABLE exhibition_data (\n  race_id TEXT NOT NULL,\n  course INTEGER NOT NULL,\n  exhibition_time REAL,\n  start_timing REAL,\n  ranking INTEGER,\n  fetched_at TEXT NOT NULL, source_type    TEXT NOT NULL DEFAULT 'official_live', source_quality TEXT NOT NULL DEFAULT 'exact',\n  PRIMARY KEY (race_id, course)\n)",
+      "rowCount": 103007,
+      "distinctRaces": 17194,
+      "range": {
+        "min": "2026-05-30T01:41:24.819Z",
+        "max": "2026-07-23T08:22:28.541Z"
+      },
+      "sourceColumns": [
+        "fetched_at",
+        "source_type",
+        "source_quality"
+      ],
+      "columns": [
+        {
+          "cid": 0,
+          "name": "race_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "course",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "exhibition_time",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "start_timing",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "ranking",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "fetched_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "source_type",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'official_live'",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "source_quality",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'exact'",
+          "pk": 0
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_exhibition_data_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 0,
+              "name": "race_id"
+            },
+            {
+              "seqno": 1,
+              "cid": 1,
+              "name": "course"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "historical_alternative_odds",
+      "sql": "CREATE TABLE historical_alternative_odds (\n      id           INTEGER PRIMARY KEY AUTOINCREMENT,\n\n      -- レース識別 (decision_history.race_id と JOIN 可能)\n      race_id      TEXT NOT NULL,\n      race_date    TEXT NOT NULL,\n      venue        TEXT NOT NULL,\n      venue_code   TEXT NOT NULL,\n      race_no      INTEGER NOT NULL,\n\n      -- 代替買い目 odds\n      combination  TEXT NOT NULL,\n      odds         REAL NOT NULL,\n\n      -- データソース情報 (live/timeseries odds と明確に区別)\n      source_type    TEXT NOT NULL DEFAULT 'official_archive',\n      source_quality TEXT NOT NULL DEFAULT 'historical_closing_odds',\n      source_url   TEXT NOT NULL,\n      fetched_at   TEXT NOT NULL,\n      parser_version TEXT NOT NULL DEFAULT '1.0',\n\n      -- backfill フラグ (常に 1)\n      is_backfill  INTEGER NOT NULL DEFAULT 1,\n\n      -- 品質ステータス\n      fetch_status TEXT NOT NULL DEFAULT 'success',\n      notes        TEXT\n    , bet_type TEXT NOT NULL DEFAULT 'trifecta')",
+      "rowCount": 131187,
+      "distinctRaces": 4301,
+      "range": {
+        "min": "2024-01-01",
+        "max": "2026-05-20"
+      },
+      "sourceColumns": [
+        "source_type",
+        "source_quality",
+        "source_url",
+        "fetched_at",
+        "parser_version",
+        "fetch_status"
+      ],
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "race_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "race_date",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "venue",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "venue_code",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "race_no",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "combination",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "odds",
+          "type": "REAL",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "source_type",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'official_archive'",
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "source_quality",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'historical_closing_odds'",
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "source_url",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 11,
+          "name": "fetched_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 12,
+          "name": "parser_version",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'1.0'",
+          "pk": 0
+        },
+        {
+          "cid": 13,
+          "name": "is_backfill",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "1",
+          "pk": 0
+        },
+        {
+          "cid": 14,
+          "name": "fetch_status",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'success'",
+          "pk": 0
+        },
+        {
+          "cid": 15,
+          "name": "notes",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 16,
+          "name": "bet_type",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'trifecta'",
+          "pk": 0
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "uq_historical_alternative_odds_key",
+          "unique": 1,
+          "origin": "c",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "race_id"
+            },
+            {
+              "seqno": 1,
+              "cid": 16,
+              "name": "bet_type"
+            },
+            {
+              "seqno": 2,
+              "cid": 6,
+              "name": "combination"
+            },
+            {
+              "seqno": 3,
+              "cid": 8,
+              "name": "source_type"
+            },
+            {
+              "seqno": 4,
+              "cid": 9,
+              "name": "source_quality"
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "name": "idx_hao_source",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 8,
+              "name": "source_type"
+            },
+            {
+              "seqno": 1,
+              "cid": 9,
+              "name": "source_quality"
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "name": "idx_hao_combination",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 6,
+              "name": "combination"
+            }
+          ]
+        },
+        {
+          "seq": 3,
+          "name": "idx_hao_race_no",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 5,
+              "name": "race_no"
+            }
+          ]
+        },
+        {
+          "seq": 4,
+          "name": "idx_hao_venue",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 3,
+              "name": "venue"
+            }
+          ]
+        },
+        {
+          "seq": 5,
+          "name": "idx_hao_race_date",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 2,
+              "name": "race_date"
+            }
+          ]
+        },
+        {
+          "seq": 6,
+          "name": "idx_hao_race_id",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "race_id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "job_locks",
+      "sql": "CREATE TABLE job_locks (\n  job_key TEXT PRIMARY KEY,\n  locked_at TEXT NOT NULL\n)",
+      "rowCount": 0,
+      "distinctRaces": null,
+      "range": null,
+      "sourceColumns": [],
+      "columns": [
+        {
+          "cid": 0,
+          "name": "job_key",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "locked_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_job_locks_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 0,
+              "name": "job_key"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "job_runs",
+      "sql": "CREATE TABLE job_runs (\n  id INTEGER PRIMARY KEY AUTOINCREMENT,\n  app_name TEXT NOT NULL,\n  job_name TEXT NOT NULL,\n  target_date TEXT NOT NULL,\n  status TEXT NOT NULL,\n  started_at TEXT NOT NULL,\n  finished_at TEXT,\n  error_message TEXT,\n  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n)",
+      "rowCount": 27,
+      "distinctRaces": null,
+      "range": {
+        "min": "2026-06-02 06:31:48",
+        "max": "2026-06-02 06:45:50"
+      },
+      "sourceColumns": [],
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "app_name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "job_name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "target_date",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "status",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "started_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "finished_at",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "error_message",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "idx_job_runs_unique",
+          "unique": 1,
+          "origin": "c",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "app_name"
+            },
+            {
+              "seqno": 1,
+              "cid": 2,
+              "name": "job_name"
+            },
+            {
+              "seqno": 2,
+              "cid": 3,
+              "name": "target_date"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "manual_odds",
+      "sql": "CREATE TABLE manual_odds (\n  race_id TEXT PRIMARY KEY,\n  odds REAL NOT NULL,\n  source TEXT NOT NULL DEFAULT 'manual',\n  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n)",
+      "rowCount": 6617,
+      "distinctRaces": 6617,
+      "range": null,
+      "sourceColumns": [
+        "source"
+      ],
+      "columns": [
+        {
+          "cid": 0,
+          "name": "race_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "odds",
+          "type": "REAL",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "source",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'manual'",
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_manual_odds_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 0,
+              "name": "race_id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "missing_jobs",
+      "sql": "CREATE TABLE missing_jobs (\n  id INTEGER PRIMARY KEY AUTOINCREMENT,\n  app_name TEXT NOT NULL,\n  job_name TEXT NOT NULL,\n  target_date TEXT NOT NULL,\n  reason TEXT NOT NULL,\n  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n)",
+      "rowCount": 14,
+      "distinctRaces": null,
+      "range": {
+        "min": "2026-06-02 06:40:15",
+        "max": "2026-06-02 06:40:15"
+      },
+      "sourceColumns": [],
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "app_name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "job_name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "target_date",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "reason",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "idx_missing_jobs_unique",
+          "unique": 1,
+          "origin": "c",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "app_name"
+            },
+            {
+              "seqno": 1,
+              "cid": 2,
+              "name": "job_name"
+            },
+            {
+              "seqno": 2,
+              "cid": 3,
+              "name": "target_date"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "motor_boat_stats",
+      "sql": "CREATE TABLE motor_boat_stats (\n  race_id TEXT NOT NULL,\n  date TEXT NOT NULL,\n  venue TEXT NOT NULL,\n  race_no INTEGER NOT NULL,\n  course INTEGER NOT NULL,\n  motor_no TEXT,\n  motor_top2_rate REAL,\n  boat_no TEXT,\n  boat_top2_rate REAL,\n  imported_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  PRIMARY KEY (race_id, course)\n)",
+      "rowCount": 685523,
+      "distinctRaces": 114356,
+      "range": {
+        "min": "2024-01-01",
+        "max": "2026-07-23"
+      },
+      "sourceColumns": [
+        "imported_at"
+      ],
+      "columns": [
+        {
+          "cid": 0,
+          "name": "race_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "date",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "venue",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "race_no",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "course",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 5,
+          "name": "motor_no",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "motor_top2_rate",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "boat_no",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "boat_top2_rate",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "imported_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "idx_motor_boat_stats_boat",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 2,
+              "name": "venue"
+            },
+            {
+              "seqno": 1,
+              "cid": 7,
+              "name": "boat_no"
+            },
+            {
+              "seqno": 2,
+              "cid": 1,
+              "name": "date"
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "name": "idx_motor_boat_stats_motor",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 2,
+              "name": "venue"
+            },
+            {
+              "seqno": 1,
+              "cid": 5,
+              "name": "motor_no"
+            },
+            {
+              "seqno": 2,
+              "cid": 1,
+              "name": "date"
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "name": "sqlite_autoindex_motor_boat_stats_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 0,
+              "name": "race_id"
+            },
+            {
+              "seqno": 1,
+              "cid": 4,
+              "name": "course"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "notification_log",
+      "sql": "CREATE TABLE notification_log (\n  id INTEGER PRIMARY KEY AUTOINCREMENT,\n  race_id TEXT NOT NULL,\n  channel TEXT NOT NULL,\n  status TEXT NOT NULL,\n  title TEXT NOT NULL,\n  body TEXT NOT NULL,\n  official_url TEXT NOT NULL,\n  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  sent_at TEXT\n)",
+      "rowCount": 19,
+      "distinctRaces": 19,
+      "range": {
+        "min": "2026-05-21 07:23:22",
+        "max": "2026-07-23 02:19:37"
+      },
+      "sourceColumns": [],
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "race_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "channel",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "status",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "title",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "body",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "official_url",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "sent_at",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "notification_log_race_channel_uq",
+          "unique": 1,
+          "origin": "c",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "race_id"
+            },
+            {
+              "seqno": 1,
+              "cid": 2,
+              "name": "channel"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "odds_snapshots",
+      "sql": "CREATE TABLE odds_snapshots (\n  id INTEGER PRIMARY KEY AUTOINCREMENT,\n  race_id TEXT NOT NULL,\n  selection TEXT NOT NULL,\n  odds REAL NOT NULL,\n  popularity INTEGER,\n  source TEXT NOT NULL,\n  captured_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  is_final_like INTEGER NOT NULL DEFAULT 0\n)",
+      "rowCount": 1799173,
+      "distinctRaces": 277112,
+      "range": {
+        "min": "2026-05-23T05:11:53.835Z",
+        "max": "2026-07-23T08:29:23.643Z"
+      },
+      "sourceColumns": [
+        "source",
+        "captured_at"
+      ],
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "race_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "selection",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "odds",
+          "type": "REAL",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "popularity",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "source",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "captured_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "is_final_like",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "idx_odds_snapshots_race_selection_final",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "race_id"
+            },
+            {
+              "seqno": 1,
+              "cid": 2,
+              "name": "selection"
+            },
+            {
+              "seqno": 2,
+              "cid": 7,
+              "name": "is_final_like"
+            },
+            {
+              "seqno": 3,
+              "cid": 6,
+              "name": "captured_at"
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "name": "idx_odds_snapshots_race",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "race_id"
+            },
+            {
+              "seqno": 1,
+              "cid": 6,
+              "name": "captured_at"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "odds_timeseries_snapshots",
+      "sql": "CREATE TABLE odds_timeseries_snapshots (\n  id INTEGER PRIMARY KEY AUTOINCREMENT,\n  race_id TEXT NOT NULL,\n  selection TEXT NOT NULL,\n  odds REAL NOT NULL,\n  popularity INTEGER,\n  source TEXT NOT NULL,\n  captured_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  minutes_before_close INTEGER,\n  checkpoint_label TEXT,\n  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n)",
+      "rowCount": 49035326,
+      "distinctRaces": 6103,
+      "range": {
+        "min": "2026-06-01T09:15:19.284Z",
+        "max": "2026-07-23T08:26:11.414Z"
+      },
+      "sourceColumns": [
+        "source",
+        "captured_at"
+      ],
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "race_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "selection",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "odds",
+          "type": "REAL",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "popularity",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "source",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "captured_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "minutes_before_close",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "checkpoint_label",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "idx_odds_timeseries_checkpoints",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "race_id"
+            },
+            {
+              "seqno": 1,
+              "cid": 2,
+              "name": "selection"
+            },
+            {
+              "seqno": 2,
+              "cid": 8,
+              "name": "checkpoint_label"
+            },
+            {
+              "seqno": 3,
+              "cid": 6,
+              "name": "captured_at"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "official_programs",
+      "sql": "CREATE TABLE official_programs (\n  race_id TEXT PRIMARY KEY,\n  date TEXT NOT NULL,\n  venue TEXT NOT NULL,\n  race_no INTEGER NOT NULL,\n  close_at TEXT NOT NULL,\n  source_file TEXT NOT NULL,\n  raw_json TEXT NOT NULL,\n  imported_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n)",
+      "rowCount": 1145194,
+      "distinctRaces": 1145194,
+      "range": {
+        "min": "2004-06-01",
+        "max": "2026-07-23"
+      },
+      "sourceColumns": [
+        "source_file",
+        "imported_at"
+      ],
+      "columns": [
+        {
+          "cid": 0,
+          "name": "race_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "date",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "venue",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "race_no",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "close_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "source_file",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "raw_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "imported_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "idx_official_programs_venue",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 2,
+              "name": "venue"
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "name": "idx_official_programs_date",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "date"
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "name": "sqlite_autoindex_official_programs_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 0,
+              "name": "race_id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "paper_roi_candidates",
+      "sql": "CREATE TABLE paper_roi_candidates (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    condition_name TEXT NOT NULL,\n    race_id TEXT NOT NULL,\n    date TEXT NOT NULL,\n    venue TEXT NOT NULL,\n    race_no INTEGER NOT NULL,\n    selection TEXT NOT NULL,\n    current_odds REAL,\n    result TEXT,\n    hit INTEGER,\n    parts_known INTEGER,\n    parts_count INTEGER,\n    motor_known INTEGER,\n    motor_top2_rate REAL,\n    wind_mps REAL,\n    ex_st REAL,\n    flying_count INTEGER,\n    paper_action TEXT NOT NULL DEFAULT 'PAPER_STRONG',\n    review_status TEXT NOT NULL DEFAULT 'pending',\n    created_at TEXT NOT NULL DEFAULT (datetime('now')),\n    UNIQUE(condition_name, race_id)\n  )",
+      "rowCount": 696,
+      "distinctRaces": 543,
+      "range": {
+        "min": "2024-04-01",
+        "max": "2025-08-12"
+      },
+      "sourceColumns": [],
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "condition_name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "race_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "date",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "venue",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "race_no",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "selection",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "current_odds",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "result",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "hit",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "parts_known",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 11,
+          "name": "parts_count",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 12,
+          "name": "motor_known",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 13,
+          "name": "motor_top2_rate",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 14,
+          "name": "wind_mps",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 15,
+          "name": "ex_st",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 16,
+          "name": "flying_count",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 17,
+          "name": "paper_action",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'PAPER_STRONG'",
+          "pk": 0
+        },
+        {
+          "cid": 18,
+          "name": "review_status",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'pending'",
+          "pk": 0
+        },
+        {
+          "cid": 19,
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "datetime('now')",
+          "pk": 0
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_paper_roi_candidates_1",
+          "unique": 1,
+          "origin": "u",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "condition_name"
+            },
+            {
+              "seqno": 1,
+              "cid": 2,
+              "name": "race_id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "push_subscriptions",
+      "sql": "CREATE TABLE push_subscriptions (\n  endpoint TEXT PRIMARY KEY,\n  p256dh TEXT NOT NULL,\n  auth TEXT NOT NULL,\n  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n)",
+      "rowCount": 0,
+      "distinctRaces": null,
+      "range": {
+        "min": null,
+        "max": null
+      },
+      "sourceColumns": [],
+      "columns": [
+        {
+          "cid": 0,
+          "name": "endpoint",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "p256dh",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "auth",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_push_subscriptions_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 0,
+              "name": "endpoint"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "race_conditions",
+      "sql": "CREATE TABLE race_conditions (\n  race_id TEXT PRIMARY KEY,\n  date TEXT NOT NULL,\n  venue TEXT NOT NULL,\n  race_no INTEGER NOT NULL,\n  race_type TEXT,\n  distance_m INTEGER,\n  weather TEXT,\n  wind_dir TEXT,\n  wind_mps REAL,\n  wave_cm REAL,\n  kimarite TEXT,\n  returned INTEGER NOT NULL DEFAULT 0,\n  source TEXT NOT NULL DEFAULT 'official',\n  fetched_at TEXT NOT NULL\n)",
+      "rowCount": 1190385,
+      "distinctRaces": 1190385,
+      "range": {
+        "min": "2000-01-01",
+        "max": "2026-06-01"
+      },
+      "sourceColumns": [
+        "source",
+        "fetched_at"
+      ],
+      "columns": [
+        {
+          "cid": 0,
+          "name": "race_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "date",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "venue",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "race_no",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "race_type",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "distance_m",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "weather",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "wind_dir",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "wind_mps",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "wave_cm",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "kimarite",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 11,
+          "name": "returned",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 12,
+          "name": "source",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'official'",
+          "pk": 0
+        },
+        {
+          "cid": 13,
+          "name": "fetched_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "idx_race_conditions_vd",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 2,
+              "name": "venue"
+            },
+            {
+              "seqno": 1,
+              "cid": 1,
+              "name": "date"
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "name": "sqlite_autoindex_race_conditions_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 0,
+              "name": "race_id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "race_entries",
+      "sql": "CREATE TABLE race_entries (\n  race_id TEXT NOT NULL,\n  date TEXT NOT NULL,\n  venue TEXT NOT NULL,\n  race_no INTEGER NOT NULL,\n  boat INTEGER NOT NULL,\n  finish_pos INTEGER,\n  status_code TEXT,\n  racer_reg TEXT,\n  racer_name TEXT,\n  motor_no INTEGER,\n  boat_no INTEGER,\n  exhibition_time REAL,\n  entry_course INTEGER,\n  st REAL,\n  st_flying INTEGER NOT NULL DEFAULT 0,\n  source TEXT NOT NULL DEFAULT 'official',\n  fetched_at TEXT NOT NULL,\n  PRIMARY KEY (race_id, boat)\n)",
+      "rowCount": 7132052,
+      "distinctRaces": 1190383,
+      "range": {
+        "min": "2000-01-01",
+        "max": "2026-06-01"
+      },
+      "sourceColumns": [
+        "source",
+        "fetched_at"
+      ],
+      "columns": [
+        {
+          "cid": 0,
+          "name": "race_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "date",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "venue",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "race_no",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "boat",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 5,
+          "name": "finish_pos",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "status_code",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "racer_reg",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "racer_name",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "motor_no",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "boat_no",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 11,
+          "name": "exhibition_time",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 12,
+          "name": "entry_course",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 13,
+          "name": "st",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 14,
+          "name": "st_flying",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 15,
+          "name": "source",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'official'",
+          "pk": 0
+        },
+        {
+          "cid": 16,
+          "name": "fetched_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "idx_race_entries_vd",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 2,
+              "name": "venue"
+            },
+            {
+              "seqno": 1,
+              "cid": 1,
+              "name": "date"
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "name": "sqlite_autoindex_race_entries_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 0,
+              "name": "race_id"
+            },
+            {
+              "seqno": 1,
+              "cid": 4,
+              "name": "boat"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "race_equipment",
+      "sql": "CREATE TABLE race_equipment (\n  race_id TEXT NOT NULL,\n  course INTEGER NOT NULL,\n  tilt_angle REAL,\n  propeller_changed INTEGER NOT NULL DEFAULT 0,\n  parts_changed TEXT NOT NULL DEFAULT '[]',\n  parts_changed_count INTEGER NOT NULL DEFAULT 0,\n  fetched_at TEXT NOT NULL, source_type    TEXT NOT NULL DEFAULT 'official_live', source_quality TEXT NOT NULL DEFAULT 'exact',\n  PRIMARY KEY (race_id, course)\n)",
+      "rowCount": 103206,
+      "distinctRaces": 17201,
+      "range": {
+        "min": "2026-06-01T03:26:48.714Z",
+        "max": "2026-07-23T08:22:49.049Z"
+      },
+      "sourceColumns": [
+        "fetched_at",
+        "source_type",
+        "source_quality"
+      ],
+      "columns": [
+        {
+          "cid": 0,
+          "name": "race_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "course",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "tilt_angle",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "propeller_changed",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "parts_changed",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'[]'",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "parts_changed_count",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "fetched_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "source_type",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'official_live'",
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "source_quality",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'exact'",
+          "pk": 0
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "idx_race_equipment_race",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 0,
+              "name": "race_id"
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "name": "sqlite_autoindex_race_equipment_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 0,
+              "name": "race_id"
+            },
+            {
+              "seqno": 1,
+              "cid": 1,
+              "name": "course"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "race_payouts",
+      "sql": "CREATE TABLE race_payouts (\n  race_id TEXT NOT NULL,\n  date TEXT NOT NULL,\n  venue TEXT NOT NULL,\n  race_no INTEGER NOT NULL,\n  bet_type TEXT NOT NULL,\n  combination TEXT NOT NULL,\n  payout_yen INTEGER,\n  popularity INTEGER,\n  returned INTEGER NOT NULL DEFAULT 0,\n  source TEXT NOT NULL DEFAULT 'official',\n  fetched_at TEXT NOT NULL,\n  PRIMARY KEY (race_id, bet_type, combination)\n)",
+      "rowCount": 5871974,
+      "distinctRaces": 1190226,
+      "range": {
+        "min": "2000-01-01",
+        "max": "2026-06-01"
+      },
+      "sourceColumns": [
+        "source",
+        "fetched_at"
+      ],
+      "columns": [
+        {
+          "cid": 0,
+          "name": "race_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "date",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "venue",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "race_no",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "bet_type",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 5,
+          "name": "combination",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 3
+        },
+        {
+          "cid": 6,
+          "name": "payout_yen",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "popularity",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "returned",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "source",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'official'",
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "fetched_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "idx_race_payouts_type",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 4,
+              "name": "bet_type"
+            },
+            {
+              "seqno": 1,
+              "cid": 1,
+              "name": "date"
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "name": "idx_race_payouts_vd",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 2,
+              "name": "venue"
+            },
+            {
+              "seqno": 1,
+              "cid": 1,
+              "name": "date"
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "name": "sqlite_autoindex_race_payouts_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 0,
+              "name": "race_id"
+            },
+            {
+              "seqno": 1,
+              "cid": 4,
+              "name": "bet_type"
+            },
+            {
+              "seqno": 2,
+              "cid": 5,
+              "name": "combination"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "race_results",
+      "sql": "CREATE TABLE race_results (\n  race_id TEXT PRIMARY KEY,\n  date TEXT NOT NULL,\n  venue TEXT NOT NULL,\n  race_no INTEGER NOT NULL,\n  trifecta TEXT,\n  payout_yen INTEGER,\n  popularity INTEGER,\n  returned INTEGER NOT NULL DEFAULT 0,\n  source TEXT NOT NULL,\n  fetched_at TEXT NOT NULL\n)",
+      "rowCount": 1177477,
+      "distinctRaces": 1177477,
+      "range": {
+        "min": "2004-06-01",
+        "max": "2026-07-21"
+      },
+      "sourceColumns": [
+        "source",
+        "fetched_at"
+      ],
+      "columns": [
+        {
+          "cid": 0,
+          "name": "race_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "date",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "venue",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "race_no",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "trifecta",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "payout_yen",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "popularity",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "returned",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "source",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "fetched_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "idx_race_results_venue_date",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 2,
+              "name": "venue"
+            },
+            {
+              "seqno": 1,
+              "cid": 1,
+              "name": "date"
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "name": "idx_race_results_venue",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 2,
+              "name": "venue"
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "name": "idx_race_results_date",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 1,
+              "name": "date"
+            }
+          ]
+        },
+        {
+          "seq": 3,
+          "name": "sqlite_autoindex_race_results_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 0,
+              "name": "race_id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "race_weather",
+      "sql": "CREATE TABLE race_weather (\n  race_id TEXT PRIMARY KEY,\n  weather TEXT,\n  wind_speed_mps REAL,\n  wave_height_cm REAL,\n  temperature_c REAL,\n  water_temperature_c REAL,\n  stable_plate INTEGER,\n  shortened_laps INTEGER,\n  fetched_at TEXT NOT NULL\n, source_type    TEXT NOT NULL DEFAULT 'official_live', source_quality TEXT NOT NULL DEFAULT 'exact')",
+      "rowCount": 17297,
+      "distinctRaces": 17297,
+      "range": {
+        "min": "2026-05-30T13:02:08.311Z",
+        "max": "2026-07-23T08:22:49.049Z"
+      },
+      "sourceColumns": [
+        "fetched_at",
+        "source_type",
+        "source_quality"
+      ],
+      "columns": [
+        {
+          "cid": 0,
+          "name": "race_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "weather",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "wind_speed_mps",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "wave_height_cm",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "temperature_c",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "water_temperature_c",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "stable_plate",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "shortened_laps",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "fetched_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "source_type",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'official_live'",
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "source_quality",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'exact'",
+          "pk": 0
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_race_weather_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 0,
+              "name": "race_id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "racer_course_stats",
+      "sql": "CREATE TABLE racer_course_stats (\n  registration_no TEXT NOT NULL,\n  course INTEGER NOT NULL,\n  races INTEGER NOT NULL DEFAULT 0,\n  wins INTEGER NOT NULL DEFAULT 0,\n  win_rate REAL,\n  fetched_at TEXT NOT NULL, avg_st REAL, entry_rate REAL, top3_rate REAL, start_order REAL,\n  PRIMARY KEY (registration_no, course)\n)",
+      "rowCount": 9840,
+      "distinctRaces": null,
+      "range": {
+        "min": "2026-06-07T21:35:28.123Z",
+        "max": "2026-07-13T08:40:09.424Z"
+      },
+      "sourceColumns": [
+        "fetched_at"
+      ],
+      "columns": [
+        {
+          "cid": 0,
+          "name": "registration_no",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "course",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "races",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "wins",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "win_rate",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "fetched_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "avg_st",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "entry_rate",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "top3_rate",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "start_order",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_racer_course_stats_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 0,
+              "name": "registration_no"
+            },
+            {
+              "seqno": 1,
+              "cid": 1,
+              "name": "course"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "racer_profiles",
+      "sql": "CREATE TABLE racer_profiles (\n  registration_no TEXT PRIMARY KEY,\n  flying_count INTEGER,\n  late_start_count INTEGER,\n  top3_rate REAL,\n  avg_st REAL,\n  ability_index INTEGER,\n  fetched_at TEXT NOT NULL\n)",
+      "rowCount": 2660,
+      "distinctRaces": null,
+      "range": {
+        "min": "2026-07-12T22:54:25.119Z",
+        "max": "2026-07-19T20:05:27.355Z"
+      },
+      "sourceColumns": [
+        "fetched_at"
+      ],
+      "columns": [
+        {
+          "cid": 0,
+          "name": "registration_no",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "flying_count",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "late_start_count",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "top3_rate",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "avg_st",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "ability_index",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "fetched_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_racer_profiles_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0,
+          "columns": [
+            {
+              "seqno": 0,
+              "cid": 0,
+              "name": "registration_no"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "payoutCoverage": [
+    {
+      "betType": "exacta",
+      "rows": 1186065,
+      "races": 1186060,
+      "minDate": "2000-01-01",
+      "maxDate": "2026-06-01",
+      "returnedRows": 58523,
+      "distinctCombinations": 30
+    },
+    {
+      "betType": "quinella",
+      "rows": 1177355,
+      "races": 1177350,
+      "minDate": "2000-01-01",
+      "maxDate": "2026-06-01",
+      "returnedRows": 58079,
+      "distinctCombinations": 15
+    },
+    {
+      "betType": "trifecta",
+      "rows": 1170582,
+      "races": 1170576,
+      "minDate": "2004-06-01",
+      "maxDate": "2026-06-01",
+      "returnedRows": 59029,
+      "distinctCombinations": 120
+    },
+    {
+      "betType": "trio",
+      "rows": 1169376,
+      "races": 1169370,
+      "minDate": "2004-06-01",
+      "maxDate": "2026-06-01",
+      "returnedRows": 57829,
+      "distinctCombinations": 20
+    },
+    {
+      "betType": "wide",
+      "rows": 1168596,
+      "races": 1168591,
+      "minDate": "2004-06-01",
+      "maxDate": "2026-06-01",
+      "returnedRows": 57417,
+      "distinctCombinations": 16
+    }
+  ],
+  "payoutStructureAnomalies": {
+    "multiLineRaces": [
+      {
+        "betType": "exacta",
+        "races": 5,
+        "maxLines": 2
+      },
+      {
+        "betType": "quinella",
+        "races": 5,
+        "maxLines": 2
+      },
+      {
+        "betType": "trifecta",
+        "races": 6,
+        "maxLines": 2
+      },
+      {
+        "betType": "trio",
+        "races": 6,
+        "maxLines": 2
+      },
+      {
+        "betType": "wide",
+        "races": 5,
+        "maxLines": 2
+      }
+    ],
+    "zeroBoatSelections": [
+      {
+        "betType": "wide",
+        "combination": "0-0",
+        "rows": 1
+      }
+    ]
+  },
+  "closingOddsCoverage": [
+    {
+      "betType": "exacta",
+      "sourceType": "official_archive",
+      "sourceQuality": "historical_closing_odds",
+      "rows": 128810,
+      "races": 4301,
+      "minDate": "2024-01-01",
+      "maxDate": "2026-05-20"
+    },
+    {
+      "betType": "trifecta",
+      "sourceType": "official_archive",
+      "sourceQuality": "historical_closing_odds",
+      "rows": 2377,
+      "races": 476,
+      "minDate": "2025-02-01",
+      "maxDate": "2026-05-20"
+    }
+  ],
+  "checkpointCoverage": [
+    {
+      "checkpoint": "T-10",
+      "rows": 24095520,
+      "races": 2226,
+      "minMinutesBeforeClose": 6,
+      "maxMinutesBeforeClose": 15,
+      "minCapturedAt": "2026-06-01T09:15:19.284Z",
+      "maxCapturedAt": "2026-07-23T08:26:10.972Z"
+    },
+    {
+      "checkpoint": "T-20",
+      "rows": 19709968,
+      "races": 4040,
+      "minMinutesBeforeClose": 11,
+      "maxMinutesBeforeClose": 25,
+      "minCapturedAt": "2026-06-01T09:15:39.905Z",
+      "maxCapturedAt": "2026-07-23T08:26:11.414Z"
+    },
+    {
+      "checkpoint": "T-30",
+      "rows": 453418,
+      "races": 3673,
+      "minMinutesBeforeClose": 21,
+      "maxMinutesBeforeClose": 30,
+      "minCapturedAt": "2026-06-01T09:15:30.661Z",
+      "maxCapturedAt": "2026-07-23T08:12:32.154Z"
+    },
+    {
+      "checkpoint": "T-5",
+      "rows": 4776420,
+      "races": 823,
+      "minMinutesBeforeClose": 4,
+      "maxMinutesBeforeClose": 10,
+      "minCapturedAt": "2026-06-02T00:42:55.010Z",
+      "maxCapturedAt": "2026-07-23T08:26:01.989Z"
+    }
+  ],
+  "sourceCoverage": {
+    "preRaceWeather": {
+      "rows": 17297,
+      "races": 17297,
+      "minTimestamp": "2026-05-30T13:02:08.311Z",
+      "maxTimestamp": "2026-07-23T08:22:49.049Z"
+    },
+    "postRaceConditions": {
+      "rows": 1190385,
+      "races": 1190385,
+      "minTimestamp": "2026-06-05T08:16:06.892Z",
+      "maxTimestamp": "2026-06-05T08:16:36.935Z"
+    },
+    "exhibition": {
+      "rows": 103007,
+      "races": 17194,
+      "minTimestamp": "2026-05-30T01:41:24.819Z",
+      "maxTimestamp": "2026-07-23T08:22:28.541Z"
+    },
+    "equipment": {
+      "rows": 103206,
+      "races": 17201,
+      "minTimestamp": "2026-06-01T03:26:48.714Z",
+      "maxTimestamp": "2026-07-23T08:22:49.049Z"
+    },
+    "actualEntries": {
+      "rows": 7132052,
+      "races": 1190383,
+      "minTimestamp": "2026-06-05T08:16:06.892Z",
+      "maxTimestamp": "2026-06-05T08:16:36.935Z"
+    },
+    "programs": {
+      "rows": 1145194,
+      "races": 1145194,
+      "minTimestamp": "2026-05-21 14:09:05",
+      "maxTimestamp": "2026-07-22 23:02:33"
+    },
+    "results": {
+      "rows": 1177477,
+      "races": 1177477,
+      "minTimestamp": "2026-05-21T07:57:40.516Z",
+      "maxTimestamp": "2026-07-22T12:34:00.554Z"
+    }
+  },
+  "prePostOverlap": {
+    "preRaceWeatherRaces": 17297,
+    "postRaceConditionRaces": 1190385,
+    "overlapRaces": 10010,
+    "exhibitionRaces": 17194,
+    "actualCourseRaces": 1190383,
+    "actualStartTimingRaces": 1190380,
+    "incidentStatusRaces": 77094
+  },
+  "betTypes": [
+    {
+      "betType": "win",
+      "japaneseName": "単勝",
+      "officialOddsPath": "oddstf",
+      "expectedSelectionsForSixBoats": 6,
+      "oddsValueKind": "point",
+      "payout": {
+        "decision": "CONDITIONAL",
+        "rows": 0,
+        "races": 0,
+        "minDate": null,
+        "maxDate": null,
+        "note": "公式結果ページ・日次成績には存在するが、現行detail parserとDB投入経路が未対応。"
+      },
+      "liveOdds": {
+        "decision": "CONDITIONAL",
+        "rows": 0,
+        "note": "公式公開画面は確認済み。bet_type、range odds、欠場・発売なし状態を含む保存契約が未実装。"
+      },
+      "historicalOdds": {
+        "decision": "UNKNOWN",
+        "rows": 0,
+        "races": 0,
+        "minDate": null,
+        "maxDate": null,
+        "note": "現DBに履歴なし。公式画面の保持期間・再現性・許容負荷はN1/N2前canaryで要確認。"
+      },
+      "roiReady": false,
+      "clvReady": false
+    },
+    {
+      "betType": "place",
+      "japaneseName": "複勝",
+      "officialOddsPath": "oddstf",
+      "expectedSelectionsForSixBoats": 6,
+      "oddsValueKind": "range",
+      "payout": {
+        "decision": "CONDITIONAL",
+        "rows": 0,
+        "races": 0,
+        "minDate": null,
+        "maxDate": null,
+        "note": "公式結果ページ・日次成績には存在するが、現行detail parserとDB投入経路が未対応。"
+      },
+      "liveOdds": {
+        "decision": "CONDITIONAL",
+        "rows": 0,
+        "note": "公式公開画面は確認済み。bet_type、range odds、欠場・発売なし状態を含む保存契約が未実装。"
+      },
+      "historicalOdds": {
+        "decision": "UNKNOWN",
+        "rows": 0,
+        "races": 0,
+        "minDate": null,
+        "maxDate": null,
+        "note": "現DBに履歴なし。公式画面の保持期間・再現性・許容負荷はN1/N2前canaryで要確認。"
+      },
+      "roiReady": false,
+      "clvReady": false
+    },
+    {
+      "betType": "exacta",
+      "japaneseName": "2連単",
+      "officialOddsPath": "odds2tf",
+      "expectedSelectionsForSixBoats": 30,
+      "oddsValueKind": "point",
+      "payout": {
+        "decision": "GO",
+        "rows": 1186065,
+        "races": 1186060,
+        "minDate": "2000-01-01",
+        "maxDate": "2026-06-01",
+        "note": "現DBに公式日次成績由来の実払戻あり。複数行・返還の意味をN1でfixture固定する。"
+      },
+      "liveOdds": {
+        "decision": "CONDITIONAL",
+        "rows": 0,
+        "note": "公式公開画面は確認済み。bet_type、range odds、欠場・発売なし状態を含む保存契約が未実装。"
+      },
+      "historicalOdds": {
+        "decision": "GO",
+        "rows": 128810,
+        "races": 4301,
+        "minDate": "2024-01-01",
+        "maxDate": "2026-05-20",
+        "note": "historical closing。T-5や最終確定オッズとは呼ばない。"
+      },
+      "roiReady": true,
+      "clvReady": false
+    },
+    {
+      "betType": "quinella",
+      "japaneseName": "2連複",
+      "officialOddsPath": "odds2tf",
+      "expectedSelectionsForSixBoats": 15,
+      "oddsValueKind": "point",
+      "payout": {
+        "decision": "GO",
+        "rows": 1177355,
+        "races": 1177350,
+        "minDate": "2000-01-01",
+        "maxDate": "2026-06-01",
+        "note": "現DBに公式日次成績由来の実払戻あり。複数行・返還の意味をN1でfixture固定する。"
+      },
+      "liveOdds": {
+        "decision": "CONDITIONAL",
+        "rows": 0,
+        "note": "公式公開画面は確認済み。bet_type、range odds、欠場・発売なし状態を含む保存契約が未実装。"
+      },
+      "historicalOdds": {
+        "decision": "UNKNOWN",
+        "rows": 0,
+        "races": 0,
+        "minDate": null,
+        "maxDate": null,
+        "note": "現DBに履歴なし。公式画面の保持期間・再現性・許容負荷はN1/N2前canaryで要確認。"
+      },
+      "roiReady": false,
+      "clvReady": false
+    },
+    {
+      "betType": "wide",
+      "japaneseName": "拡連複",
+      "officialOddsPath": "oddsk",
+      "expectedSelectionsForSixBoats": 15,
+      "oddsValueKind": "range",
+      "payout": {
+        "decision": "GO",
+        "rows": 1168596,
+        "races": 1168591,
+        "minDate": "2004-06-01",
+        "maxDate": "2026-06-01",
+        "note": "現DBに公式日次成績由来の実払戻あり。複数行・返還の意味をN1でfixture固定する。"
+      },
+      "liveOdds": {
+        "decision": "CONDITIONAL",
+        "rows": 0,
+        "note": "公式公開画面は確認済み。bet_type、range odds、欠場・発売なし状態を含む保存契約が未実装。"
+      },
+      "historicalOdds": {
+        "decision": "UNKNOWN",
+        "rows": 0,
+        "races": 0,
+        "minDate": null,
+        "maxDate": null,
+        "note": "現DBに履歴なし。公式画面の保持期間・再現性・許容負荷はN1/N2前canaryで要確認。"
+      },
+      "roiReady": false,
+      "clvReady": false
+    },
+    {
+      "betType": "trifecta",
+      "japaneseName": "3連単",
+      "officialOddsPath": "odds3t",
+      "expectedSelectionsForSixBoats": 120,
+      "oddsValueKind": "point",
+      "payout": {
+        "decision": "GO",
+        "rows": 1170582,
+        "races": 1170576,
+        "minDate": "2004-06-01",
+        "maxDate": "2026-06-01",
+        "note": "現DBに公式日次成績由来の実払戻あり。複数行・返還の意味をN1でfixture固定する。"
+      },
+      "liveOdds": {
+        "decision": "GO",
+        "rows": 49035986,
+        "note": "現行時系列はbet_type列なしの3連単専用。T-30/T-20/T-10/T-5を保持。"
+      },
+      "historicalOdds": {
+        "decision": "GO",
+        "rows": 2377,
+        "races": 476,
+        "minDate": "2025-02-01",
+        "maxDate": "2026-05-20",
+        "note": "historical closing。T-5や最終確定オッズとは呼ばない。"
+      },
+      "roiReady": true,
+      "clvReady": true
+    },
+    {
+      "betType": "trio",
+      "japaneseName": "3連複",
+      "officialOddsPath": "odds3f",
+      "expectedSelectionsForSixBoats": 20,
+      "oddsValueKind": "point",
+      "payout": {
+        "decision": "GO",
+        "rows": 1169376,
+        "races": 1169370,
+        "minDate": "2004-06-01",
+        "maxDate": "2026-06-01",
+        "note": "現DBに公式日次成績由来の実払戻あり。複数行・返還の意味をN1でfixture固定する。"
+      },
+      "liveOdds": {
+        "decision": "CONDITIONAL",
+        "rows": 0,
+        "note": "公式公開画面は確認済み。bet_type、range odds、欠場・発売なし状態を含む保存契約が未実装。"
+      },
+      "historicalOdds": {
+        "decision": "UNKNOWN",
+        "rows": 0,
+        "races": 0,
+        "minDate": null,
+        "maxDate": null,
+        "note": "現DBに履歴なし。公式画面の保持期間・再現性・許容負荷はN1/N2前canaryで要確認。"
+      },
+      "roiReady": false,
+      "clvReady": false
+    }
+  ],
+  "requestBudgets": [
+    {
+      "name": "result-only",
+      "racesPerDay": 144,
+      "checkpointsPerRace": 0,
+      "pagesPerCheckpoint": 0,
+      "resultPagesPerRace": 1,
+      "requestsPerDay": 144,
+      "minimumAverageIntervalSeconds": 600
+    },
+    {
+      "name": "all-markets-T-5-only",
+      "racesPerDay": 144,
+      "checkpointsPerRace": 1,
+      "pagesPerCheckpoint": 5,
+      "resultPagesPerRace": 1,
+      "requestsPerDay": 864,
+      "minimumAverageIntervalSeconds": 100
+    },
+    {
+      "name": "all-markets-4-checkpoints",
+      "racesPerDay": 144,
+      "checkpointsPerRace": 4,
+      "pagesPerCheckpoint": 5,
+      "resultPagesPerRace": 1,
+      "requestsPerDay": 3024,
+      "minimumAverageIntervalSeconds": 28.571428571428573
+    }
+  ],
+  "acquisitionDecision": {
+    "payout": "CONDITIONAL",
+    "liveOdds": "CONDITIONAL",
+    "historicalOdds": "CONDITIONAL",
+    "weatherAndExhibition": "CONDITIONAL",
+    "salesAndLiquidity": "BLOCKED",
+    "rationale": [
+      "払戻は7券種とも公式結果/日次成績に存在するが、win/place parser、同着・返還・不成立契約が未固定。",
+      "全券種オッズは5画面で公開されるが、全race×4 checkpointは3,024 request/day想定で、サイトポリシーの大量アクセス禁止に照らし現状のままGOにできない。",
+      "売上額・投票口数の公式公開ソースを今回の最小確認では特定できず、オッズ変化は流動性そのものではない。"
+    ]
+  },
+  "phaseN1EntryGate": [
+    "N0設計レビュー承認",
+    "7券種払戻fixtureで通常・複数的中/同着・返還・不成立・特払いを固定",
+    "read-only dry-runでparser coverageとidempotency keyを確認",
+    "公式サイト方針に適合する低頻度canaryの人間承認",
+    "migrationを別タスクとしてレビューし、backup/rollback手順を確定"
+  ]
+}
