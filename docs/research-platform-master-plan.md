@@ -372,4 +372,3 @@ M1はN3/N4の選手PIT gate、M3は主観を排したstrict-prior label gate、M
 ## 10. 次の独立タスク
 
 次はStage F0「Research Replay Foundation」の実装だけを独立タスクとして行う。F0完了後にN1へ進む。F0でN1 migration、Error Atlas本体、全券種collector、モデル、Decision Governor、production接続を抱き合わせない。
-
