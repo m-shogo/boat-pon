@@ -5,6 +5,8 @@ Boat Pon は、競艇の期待値通知アプリ「Boat EV Notifier」の個人�
 自動購入・自動投票・ログイン情報保存・投票サイト操作は実装しません。  
 BUY / WATCH / SKIP の判定、公式確認リンク、raw/JSON/SQLite保存、後日の検証を目的にします。
 
+研究基盤・全券種市場知能の実装順序は[`docs/research-platform-master-plan.md`](docs/research-platform-master-plan.md)、40件の研究台帳は[`docs/research-idea-register.json`](docs/research-idea-register.json)を正本とします。Phase N0は完了し、次の独立タスクはStage F0です。現行formalと新研究shadowの評価系列は分離し、production・自動購入には接続しません。
+
 ## 開発
 
 Node.jsに加えて .NET SDK 10.0.302 を使用します（macOS: `brew install dotnet`）。

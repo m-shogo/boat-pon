@@ -7,12 +7,13 @@
 ## 最初に読むもの
 
 1. `CLAUDE.md` — 絶対禁止事項。禁止事項は常に最優先。
-2. `docs/current-ai-handoff.md` — 現在地と次の作業。
-3. `reports/current-system-correctness-audit.md` — 正誤・未完了一覧。
-4. `docs/prediction-improvement-roadmap.md` — 収益性改善のgate。
-5. `reports/t5-collector-efficiency.md` — T-5収集率と重複率。
-6. `docs/odds-timeseries-compaction-runbook.md` — DB圧縮の人間向け手順。
-7. `docs/market-residual-ticket-selection-roadmap.md` — 現在フェーズ終了後の市場残差・全券種選択計画。
+2. `docs/research-platform-master-plan.md` — N0後の研究基盤・評価分離・実装順序の最上位正本。
+3. `docs/current-ai-handoff.md` — 現在地と次の作業。
+4. `reports/current-system-correctness-audit.md` — 正誤・未完了一覧。
+5. `docs/prediction-improvement-roadmap.md` — 収益性改善のgate。
+6. `reports/t5-collector-efficiency.md` — T-5収集率と重複率。
+7. `docs/odds-timeseries-compaction-runbook.md` — DB圧縮の人間向け手順。
+8. `docs/market-residual-ticket-selection-roadmap.md` — 市場残差・全券種選択の詳細計画。
 
 `CLAUDE.md`内の2025-06フェーズ説明には古い数値がある。禁止事項は有効だが、現在状況はこの文書と上記監査レポートを正本にする。
 
@@ -25,6 +26,8 @@
 - 正式な収益評価は、2026-07-21 15:15 JST以降に公式networkから直接取得したfuture-only T-5だけでやり直す。
 - DB肥大化の新規増加は抑制済みだが、13.98GiBの原本圧縮は未実施。
 - Phase N0「全券種＋選手PIT＋独自研究軸データ取得可能性・保存設計監査」は読み取り専用で完了した。DB migration、実収集、モデル、production接続は未着手。
+- N0後の正本は`docs/research-platform-master-plan.md`、研究40件の機械可読台帳は`docs/research-idea-register.json`。次の独立タスクはPhase N1ではなくStage F0「Research Replay Foundation」。
+- 現行formalは`legacy_t5_formal / legacy-t5-v1 / formal_forward`の固定benchmark、新方式は`market_intelligence / shadow_forward`として評価系列を分離する。
 
 ## 絶対にしてはいけないこと
 
@@ -162,7 +165,7 @@ git diff --check
 
 ## 次に進める順序
 
-Phase N0は完了。監査結果は`reports/all-bet-type-data-feasibility.md/json`、取得設計は`docs/all-bet-type-data-acquisition-design.md`、schema案は`docs/all-bet-type-schema-migration-design.md`を正本とする。
+Phase N0は完了。N0後の順序・研究境界は`docs/research-platform-master-plan.md`、研究台帳は`docs/research-idea-register.json`を最上位正本とする。N0の実測は`reports/all-bet-type-data-feasibility.md/json`、取得設計は`docs/all-bet-type-data-acquisition-design.md`、schema案は`docs/all-bet-type-schema-migration-design.md`を詳細正本とする。
 
 Phase N0の確定事項:
 
@@ -185,17 +188,16 @@ Phase N0の確定事項:
 - 独自研究軸の保存候補は`official_information_observations/changes`、`market_observation_batches`、projection audit、uncertainty snapshot、venue-day evidence、Error Atlas。今回migrationは適用していない。
 - 既存DB、`app_settings`、launchd、collector頻度、予測/判定は変更していない。
 
-1. `network-only正式cohort`のT-5完全率、確定結果数、実払戻ROIを日次で更新する。
-2. 完成日の日次coverage 80% gateを確認する。修正前を含む累積率だけで合格にしない。
-3. network-only settledが貯まったら、市場のみ・現行モデル・残差モデルを同一race母集団で比較する。
-4. forward ROI、最大2的中除外ROI、CLV、logloss、Brier、最大ドローダウンを全て出す。
-5. 2連単・2連複は券種付きT-5完全市場と実払戻結合が完成してからfuture-onlyで比較する。
-6. 本番判定変更が必要なら、先に人間がリポジトリ規則の変更範囲を明示する。
-7. DB圧縮は人間の明示承認後、runbook通り別候補DBで実施する。
+1. 現行`legacy_t5_formal`の`network-only正式cohort`は固定条件のままT-5完全率、確定結果数、実払戻ROIを更新する。
+2. 新研究側の次の独立実装はStage F0だけ。As-of Manifest、Observation Envelope、content-addressed raw cache、PIT guardと漏洩sentinelをLegacy経路から隔離して作る。
+3. F0 completion gateを全て通過した後にだけPhase N1「全券種払戻基盤」へ進む。
+4. 新方式は`market_intelligence / shadow_forward`として、manifest、decision、ticket、cohort、ROI、gate、reportをLegacyから分離する。
+5. model学習はN5開始gate、production検討はN8と独立production gateまで行わない。
+6. DB圧縮は人間の明示承認後、runbook通り別候補DBで実施する。
 
 2023-2024固定履歴モデルと市場の比較器は実装済み。現時点ではα=0が選ばれたため、特徴量追加や本番接続へ進めず、同じ固定条件のformal future蓄積を続ける。
 
-市場残差・全券種選択の計画は`docs/market-residual-ticket-selection-roadmap.md`を正本とする。Phase N0は選手PIT・独自研究軸監査を含めて完了したが、最低1,000 settled gate到達前に残差モデル学習を始めない。次の実装候補は別タスクのPhase N1「全券種払戻基盤」であり、N0設計レビューで承認された範囲だけを対象にする。N1へ選手特徴、オッズ時系列、予測ロジック、市場残差モデル、120状態baseline、SKIP予測器、Fragility Index、状態推定、券種選択器、production接続を混ぜない。選手snapshot・情報versioningはN3、strict-prior recent/course/pair/style・水面evidence・Error AtlasはN4で整備し、それ以前にM1/M3や独自研究modelへ進まない。
+全体順序は`docs/research-platform-master-plan.md`、市場モデル詳細は`docs/market-residual-ticket-selection-roadmap.md`を正本とする。順序は`Stage 0 → F0 → N1 → D1 → N2 → N3 → N4 → D2 → E1 → E2 → N5 → N6 → N7 → N8`。N1をF0より先に始めず、N1へ選手特徴、オッズ時系列、予測ロジック、市場残差モデル、120状態baseline、SKIP予測器、Fragility Index、状態推定、券種選択器、production接続を混ぜない。
 
 ## やっても改善にならないこと
 

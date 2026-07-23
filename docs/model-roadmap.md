@@ -1,5 +1,7 @@
 # 期待値モデル改善ロードマップ
 
+N0後の研究基盤、実装順序、現行formalと新研究shadowの分離は[`research-platform-master-plan.md`](research-platform-master-plan.md)を最上位正本とする。本書の既存モデル履歴は保持するが、新方式の次工程はStage F0であり、N5以前に市場知能モデルを学習しない。
+
 ## 変わった角度のfeature screen（2026-07-18）
 
 選手間の公開履歴は`pnpm analyze:racer-relationship-market`で、2023年からprior-dayの同走・直接対戦を再構成し、2024→2025のexacta 1-4市場残差へ接続する。師弟は`docs/official-racer-relationships.json`の公式記事で確認できた組だけを記事公開日以後に使う。支部は現在DBにhistorical snapshotがなく、「事務所」に相当する公式構造も確認できないため推測しない。個人名の異常ランキングや不正推測には使わない。

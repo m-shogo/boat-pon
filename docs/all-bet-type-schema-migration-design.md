@@ -4,6 +4,8 @@
 
 **このSQLは設計レビュー用であり、Phase N0では実行しない。** 現DB、`app_settings`、launchd、既存収集、予測・判定ロジックは変更しない。
 
+N0後の実装順序とLegacy/New評価分離は[`research-platform-master-plan.md`](research-platform-master-plan.md)を最上位正本とする。本書のmigration案はStage F0では適用せず、F0 completion gate後に対象stageごと再レビューする。
+
 ## 方針
 
 49,034,366行ある`odds_timeseries_snapshots`へ直接`ALTER`しない。既存3連単の互換契約を保ったまま、全券種用v2 tableを新設する案を第一候補とする。

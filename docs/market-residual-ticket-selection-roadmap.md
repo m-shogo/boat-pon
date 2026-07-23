@@ -4,7 +4,7 @@
 
 ## 位置づけと安全境界
 
-この文書は、現在のformal settled固定条件蓄積フェーズとは分離された、次フェーズの正本計画書である。今回は文書化だけを行い、モデル実装、DB migration、収集追加、本番接続は行わない。
+本ロードマップは市場モデルの詳細正本である。N0後の全体順序、研究アイデア、評価系列分離は[`research-platform-master-plan.md`](research-platform-master-plan.md)を最上位正本とする。今回は文書化だけを行い、モデル実装、DB migration、収集追加、本番接続は行わない。
 
 - 現行BUY/WATCH/SKIP条件を変更しない。
 - 自動購入は行わない。
@@ -13,7 +13,9 @@
 - 残差モデル学習は、T-5全市場と正式結果について既存の最低1,000 settled gateを満たすまで開始しない。
 - production判定への接続は、固定条件のfuture-only検証を通過するまで禁止する。
 
-現在地からの順序は、(1) formal settled固定条件蓄積の継続、(2) 完了したPhase N0設計のレビュー、(3) 別タスクで承認範囲のデータ収集基盤構築、(4) settled gate到達後の市場baseline・残差モデル、で固定する。
+現行formal settled固定条件蓄積は継続する。新研究側の順序は`Stage 0 → F0 → N1 → D1 → N2 → N3 → N4 → D2 → E1 → E2 → N5 → N6 → N7 → N8`で固定し、次の独立タスクはF0である。
+
+現行benchmarkは`decision_system=legacy_t5_formal`、`strategy_version=legacy-t5-v1`、`evaluation_mode=formal_forward`。新方式は`decision_system=market_intelligence`、versioned strategy、`evaluation_mode=shadow_forward`、versioned fixed cohortとする。公式事実層だけ共有し、manifest、feature/model/strategy、decision、ticket、cohort、ROI、gate、reportは分離する。
 
 ## 中核仮説
 
@@ -220,9 +222,13 @@ T-5表示オッズを確定値とせず、T-5から締切までの変化分布�
 
 **2026-07-23完了。** 読み取り専用監査は[`../reports/all-bet-type-data-feasibility.md`](../reports/all-bet-type-data-feasibility.md)、取得設計は[`all-bet-type-data-acquisition-design.md`](all-bet-type-data-acquisition-design.md)、schema案は[`all-bet-type-schema-migration-design.md`](all-bet-type-schema-migration-design.md)を正本とする。7券種払戻の公式存在を確認したが、現DBは単勝・複勝が欠落する。live時系列は3連単専用で、売上・投票口数はBLOCKED。
 
-選手PIT監査もN0へ統合した。`official_programs.raw_json`に当時級別・全国/当地勝率・2連率、`race_entries`に結果履歴が残り、strict-priorのコース・recent・pair・style proxyは再構築可能である。一方、`racer_profiles`と`racer_course_stats`は現在値1世代でhistoricalには使えず、3連率、事故率、集計窓・標本数、当日展示・部品交換推移等はsnapshot/append-only設計が必要である。M1はN3/N4のPIT gate、M3はstrict-prior相互作用gateを通過するまで開始しない。DB migration、実収集、モデル、production接続は未着手。次の独立タスクは、承認された範囲だけのPhase N1である。
+選手PIT監査もN0へ統合した。`official_programs.raw_json`に当時級別・全国/当地勝率・2連率、`race_entries`に結果履歴が残り、strict-priorのコース・recent・pair・style proxyは再構築可能である。一方、`racer_profiles`と`racer_course_stats`は現在値1世代でhistoricalには使えず、3連率、事故率、集計窓・標本数、当日展示・部品交換推移等はsnapshot/append-only設計が必要である。M1はN3/N4のPIT gate、M3はstrict-prior相互作用gateを通過するまで開始しない。DB migration、実収集、モデル、production接続は未着手。
 
 独自研究7軸のデータ前提監査も統合した。7軸はすべて`CONDITIONAL`。公式情報の市場反映遅延と全券種市場整合性は、source時刻と観測時刻を分けたversioned future-only取得が必須である。1マークは公式結果から共起proxyまで再構築できるが、攻撃艇・隣接艇への因果は公式telemetryなしでは判定不能。Error Atlas、strict-prior潜在水面evidence、選択的不確実性は既存rawを多く再利用できる有望軸だが、今回modelは実装していない。
+
+### Stage F0: Research Replay Foundation（次の独立タスク）
+
+N1より前に、Race As-of Manifest、Observation Envelope、content-addressed raw cache、PIT guard、Future Timestamp Trap、Post-Race Leakage Sentinelを実装する。F0はLegacy formalの判定・通知・ROIを変更せず、N1 migration、収集job、Error Atlas本体、モデル、Decision Governorを含めない。詳細な開始・完了gateは[`research-platform-master-plan.md`](research-platform-master-plan.md)を正本とする。
 
 ### Phase N1: 全券種払戻基盤
 
@@ -287,7 +293,7 @@ future-only、固定manifest、最大1・2的中除外ROI、logloss、Brier、ca
 
 ## 開始・停止gate
 
-- Phase N0開始: 現在フェーズの検証・commit・push完了後、別タスクとして開始する。
-- データ基盤実装開始: N0で公式取得可能性、負荷、保存設計、安全性が確認された後。
+- Stage F0開始: N0完了、Legacy/New評価分離契約とF0境界の承認後、別タスクとして開始する。
+- Phase N1開始: F0 completion gate通過後、N1設計を再レビューしてから。
 - モデル学習開始: network-only T-5全120通りと正式結果が最低1,000 settledに到達し、point-in-time品質と固定splitが確認された後。
 - production接続: N8のfuture-only検証と独立production gateを通過した後。それまでは禁止。
