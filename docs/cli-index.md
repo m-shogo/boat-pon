@@ -7,6 +7,7 @@ boat-pon の CLI が増えてきたため、用途別に整理した索引です
 - `fetch:*` / `backfill:*` は外部取得を伴う可能性があります。
 - `report:*` / `check:*` / `audit:*` は基本的に read-only です。
 - 自動投票・ログイン保存・投票サイト操作は入れません。
+- 現在フェーズ終了後の市場残差・全券種選択計画は[`market-residual-ticket-selection-roadmap.md`](market-residual-ticket-selection-roadmap.md)を参照してください。Phase N0より前に実装へ進みません。
 
 ## 毎日/定期運用
 
@@ -88,6 +89,25 @@ pnpm review:suite -- --from 2026-01-01 --to 2026-06-03 --split-date 2026-04-01 -
 | `pnpm report:payout-sensitivity -- --from YYYY-MM-DD --to YYYY-MM-DD --decision BUY` | 上位配当依存確認 |
 | `pnpm report:time-split-stability -- --from YYYY-MM-DD --split-date YYYY-MM-DD --to YYYY-MM-DD --decision BUY --min-settled 50` | 前半/後半の安定性 |
 | `pnpm report:model-version-simple -- --from YYYY-MM-DD --to YYYY-MM-DD --decision BUY` | model_version比較 |
+| `pnpm analyze:ability-market-validation` | 能力情報×市場順位をdiscovery/validation/testで検証 |
+| `pnpm analyze:roi-improvement-validation` | ROI改善候補を実払戻し・時系列分割・高配当依存で再検証 |
+| `pnpm report:roi-all-data-sweep` | 選手・モーター・開催・市場など全データ探索結果を集約 |
+| `pnpm analyze:wind-direction-venue` | 会場×風向×4号艇相対能力を実払戻しで再分解 |
+| `pnpm dry-run:exacta -- --date YYYY-MM-DD --venue 住之江 --race 6` | 公式2連単を1レースだけ取得し、券種付き時系列rowを生成（DB/キャッシュ書き込みなし） |
+| `pnpm audit:root-methodology` | 母集団・払戻結合・時点整合性・確率較正の根本監査（読み取り専用） |
+| `pnpm audit:exacta-forward-pipeline` | 2連単future-only収集・保存・監視経路を読み取り専用監査 |
+| `pnpm analyze:canonical-calibration` | 現行BUYを同一母集団・実払戻でtrain/forward較正 |
+| `pnpm analyze:calibration-stability` | 月別・最大払戻除外・会場LOOで較正の安定性を監査 |
+| `pnpm audit:t5-market-baseline` | モデル非依存のT-5全120通り市場ベースラインを監査 |
+| `pnpm analyze:t5-residual-forward` | 6月train→7月以降forwardで市場残差モデルを評価 |
+| `pnpm audit:t5-collector-efficiency` | T-10取得済み/T-5欠測・日次coverage・重複保存率を監査 |
+| `pnpm audit:t5-network-only-forward` | network-only T-5正式cohortを同一race・実払戻・logloss/Brierでfuture評価 |
+| `pnpm audit:t5-historical-market-forward` | 2023-2024固定履歴モデルとT-5市場を同一raceのformal futureで比較 |
+| `pnpm analyze:historical-ranking-forward` | 2023-2024番組・展示だけで学習し2025/2026を着順確率・実払戻で固定forward評価 |
+| `pnpm audit:odds-timeseries-storage` | 時系列DBの日別重複率・物理肥大化を読み取り専用監査 |
+| `pnpm plan:odds-timeseries-compaction` | 完全市場を保持する時系列compact計画と削減見込みを読み取り専用生成 |
+| `pnpm verify:odds-timeseries-compaction` | compact候補DBをintegrity・保持rows・fingerprintで原本と読み取り専用比較 |
+| `pnpm build:odds-timeseries-compact-candidate` | 人間保守専用。原本を変更せず別候補DBをbackup・compact（確認文字列とauto-odds unload必須） |
 
 ### 会場/月別
 
