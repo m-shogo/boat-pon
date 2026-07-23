@@ -1,12 +1,13 @@
 {
   "phase": "N0",
-  "generatedAt": "2026-07-23T09:11:56.309Z",
+  "generatedAt": "2026-07-23T12:34:55.149Z",
   "auditDateJst": "2026-07-23",
   "scope": {
     "included": [
       "read-only DB/schema/coverage audit",
       "one-race official source structure check",
       "racer point-in-time feasibility audit",
+      "seven independent research-axis data prerequisite audits",
       "storage and migration design"
     ],
     "excluded": [
@@ -25,10 +26,10 @@
     "externalRequestsByThisCli": 0,
     "dbTotalChangesBefore": 0,
     "dbTotalChangesAfter": 0,
-    "databaseBytesBefore": 15058649088,
-    "databaseMtimeBefore": "2026-07-23T09:00:22.182Z",
-    "databaseBytesAfter": 15058817024,
-    "databaseMtimeAfter": "2026-07-23T09:10:53.287Z",
+    "databaseBytesBefore": 15059382272,
+    "databaseMtimeBefore": "2026-07-23T09:40:12.016Z",
+    "databaseBytesAfter": 15059394560,
+    "databaseMtimeAfter": "2026-07-23T12:33:11.323Z",
     "databaseFileChangedDuringAudit": true,
     "note": "total_changes()=0が本CLIの非書き込み証拠。file変化がtrueの場合は並行collector等の外部processによる可能性を分離する。"
   },
@@ -106,8 +107,8 @@
     {
       "name": "decision_history",
       "sql": "CREATE TABLE decision_history (\n  id INTEGER PRIMARY KEY AUTOINCREMENT,\n  race_id TEXT NOT NULL,\n  date TEXT NOT NULL,\n  venue TEXT NOT NULL,\n  race_no INTEGER NOT NULL,\n  bet_type TEXT NOT NULL,\n  selection TEXT NOT NULL,\n  estimated_hit_rate REAL NOT NULL,\n  required_odds REAL NOT NULL,\n  current_odds REAL,\n  ev REAL,\n  decision TEXT NOT NULL,\n  actually_bought INTEGER NOT NULL DEFAULT 0,\n  stake_yen INTEGER NOT NULL DEFAULT 0,\n  result TEXT,\n  payout_yen INTEGER,\n  popularity INTEGER,\n  returned INTEGER NOT NULL DEFAULT 0,\n  source TEXT NOT NULL,\n  fetched_at TEXT NOT NULL,\n  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n, recommended_stake_yen INTEGER NOT NULL DEFAULT 0, sample_size INTEGER NOT NULL DEFAULT 0, model_version TEXT, race_category TEXT, raw_estimated_hit_rate REAL, conservative_hit_rate REAL, model_selection_score REAL, sharp_signal_drop REAL, environment_risk_level TEXT, exhibition_st_residual_sum REAL, selection_popularity INTEGER, run_kind TEXT NOT NULL DEFAULT 'historical-backfill', decision_reasons TEXT NOT NULL DEFAULT '[]', feature_adjustment REAL, feature_adjustment_breakdown TEXT)",
-      "rowCount": 444291,
-      "distinctRaces": 444279,
+      "rowCount": 444296,
+      "distinctRaces": 444284,
       "range": {
         "min": "2018-01-01",
         "max": "2026-07-23"
@@ -502,11 +503,11 @@
     {
       "name": "exhibition_data",
       "sql": "CREATE TABLE exhibition_data (\n  race_id TEXT NOT NULL,\n  course INTEGER NOT NULL,\n  exhibition_time REAL,\n  start_timing REAL,\n  ranking INTEGER,\n  fetched_at TEXT NOT NULL, source_type    TEXT NOT NULL DEFAULT 'official_live', source_quality TEXT NOT NULL DEFAULT 'exact',\n  PRIMARY KEY (race_id, course)\n)",
-      "rowCount": 103048,
-      "distinctRaces": 17201,
+      "rowCount": 103078,
+      "distinctRaces": 17206,
       "range": {
         "min": "2026-05-30T01:41:24.819Z",
-        "max": "2026-07-23T08:55:12.638Z"
+        "max": "2026-07-23T09:28:57.878Z"
       },
       "sourceColumns": [
         "fetched_at",
@@ -1038,8 +1039,8 @@
     {
       "name": "manual_odds",
       "sql": "CREATE TABLE manual_odds (\n  race_id TEXT PRIMARY KEY,\n  odds REAL NOT NULL,\n  source TEXT NOT NULL DEFAULT 'manual',\n  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n)",
-      "rowCount": 6624,
-      "distinctRaces": 6624,
+      "rowCount": 6629,
+      "distinctRaces": 6629,
       "range": null,
       "sourceColumns": [
         "source"
@@ -1455,11 +1456,11 @@
     {
       "name": "odds_snapshots",
       "sql": "CREATE TABLE odds_snapshots (\n  id INTEGER PRIMARY KEY AUTOINCREMENT,\n  race_id TEXT NOT NULL,\n  selection TEXT NOT NULL,\n  odds REAL NOT NULL,\n  popularity INTEGER,\n  source TEXT NOT NULL,\n  captured_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  is_final_like INTEGER NOT NULL DEFAULT 0\n)",
-      "rowCount": 1800733,
-      "distinctRaces": 277119,
+      "rowCount": 1801933,
+      "distinctRaces": 277124,
       "range": {
         "min": "2026-05-23T05:11:53.835Z",
-        "max": "2026-07-23T09:00:22.061Z"
+        "max": "2026-07-23T09:40:12.018Z"
       },
       "sourceColumns": [
         "source",
@@ -1585,11 +1586,11 @@
     {
       "name": "odds_timeseries_snapshots",
       "sql": "CREATE TABLE odds_timeseries_snapshots (\n  id INTEGER PRIMARY KEY AUTOINCREMENT,\n  race_id TEXT NOT NULL,\n  selection TEXT NOT NULL,\n  odds REAL NOT NULL,\n  popularity INTEGER,\n  source TEXT NOT NULL,\n  captured_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  minutes_before_close INTEGER,\n  checkpoint_label TEXT,\n  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n)",
-      "rowCount": 49037546,
-      "distinctRaces": 6110,
+      "rowCount": 49039706,
+      "distinctRaces": 6115,
       "range": {
         "min": "2026-06-01T09:15:19.284Z",
-        "max": "2026-07-23T08:59:49.724Z"
+        "max": "2026-07-23T09:37:30.472Z"
       },
       "sourceColumns": [
         "source",
@@ -2446,11 +2447,11 @@
     {
       "name": "race_equipment",
       "sql": "CREATE TABLE race_equipment (\n  race_id TEXT NOT NULL,\n  course INTEGER NOT NULL,\n  tilt_angle REAL,\n  propeller_changed INTEGER NOT NULL DEFAULT 0,\n  parts_changed TEXT NOT NULL DEFAULT '[]',\n  parts_changed_count INTEGER NOT NULL DEFAULT 0,\n  fetched_at TEXT NOT NULL, source_type    TEXT NOT NULL DEFAULT 'official_live', source_quality TEXT NOT NULL DEFAULT 'exact',\n  PRIMARY KEY (race_id, course)\n)",
-      "rowCount": 103230,
-      "distinctRaces": 17205,
+      "rowCount": 103260,
+      "distinctRaces": 17210,
       "range": {
         "min": "2026-06-01T03:26:48.714Z",
-        "max": "2026-07-23T08:55:28.214Z"
+        "max": "2026-07-23T09:30:13.847Z"
       },
       "sourceColumns": [
         "fetched_at",
@@ -2897,11 +2898,11 @@
     {
       "name": "race_weather",
       "sql": "CREATE TABLE race_weather (\n  race_id TEXT PRIMARY KEY,\n  weather TEXT,\n  wind_speed_mps REAL,\n  wave_height_cm REAL,\n  temperature_c REAL,\n  water_temperature_c REAL,\n  stable_plate INTEGER,\n  shortened_laps INTEGER,\n  fetched_at TEXT NOT NULL\n, source_type    TEXT NOT NULL DEFAULT 'official_live', source_quality TEXT NOT NULL DEFAULT 'exact')",
-      "rowCount": 17301,
-      "distinctRaces": 17301,
+      "rowCount": 17306,
+      "distinctRaces": 17306,
       "range": {
         "min": "2026-05-30T13:02:08.311Z",
-        "max": "2026-07-23T08:55:28.214Z"
+        "max": "2026-07-23T09:30:13.847Z"
       },
       "sourceColumns": [
         "fetched_at",
@@ -3325,47 +3326,47 @@
   "checkpointCoverage": [
     {
       "checkpoint": "T-10",
-      "rows": 24096180,
-      "races": 2232,
+      "rows": 24096540,
+      "races": 2235,
       "minMinutesBeforeClose": 6,
       "maxMinutesBeforeClose": 15,
       "minCapturedAt": "2026-06-01T09:15:19.284Z",
-      "maxCapturedAt": "2026-07-23T09:06:38.481Z"
+      "maxCapturedAt": "2026-07-23T09:28:10.542Z"
     },
     {
       "checkpoint": "T-20",
-      "rows": 19710748,
-      "races": 4047,
+      "rows": 19711228,
+      "races": 4051,
       "minMinutesBeforeClose": 11,
       "maxMinutesBeforeClose": 25,
       "minCapturedAt": "2026-06-01T09:15:39.905Z",
-      "maxCapturedAt": "2026-07-23T09:06:47.338Z"
+      "maxCapturedAt": "2026-07-23T09:37:30.059Z"
     },
     {
       "checkpoint": "T-30",
-      "rows": 453898,
-      "races": 3677,
+      "rows": 454138,
+      "races": 3679,
       "minMinutesBeforeClose": 21,
       "maxMinutesBeforeClose": 30,
       "minCapturedAt": "2026-06-01T09:15:30.661Z",
-      "maxCapturedAt": "2026-07-23T09:06:46.997Z"
+      "maxCapturedAt": "2026-07-23T09:37:30.472Z"
     },
     {
       "checkpoint": "T-5",
-      "rows": 4777200,
-      "races": 830,
+      "rows": 4777800,
+      "races": 835,
       "minMinutesBeforeClose": 1,
       "maxMinutesBeforeClose": 10,
       "minCapturedAt": "2026-06-02T00:42:55.010Z",
-      "maxCapturedAt": "2026-07-23T09:06:37.624Z"
+      "maxCapturedAt": "2026-07-23T09:37:19.629Z"
     }
   ],
   "sourceCoverage": {
     "preRaceWeather": {
-      "rows": 17301,
-      "races": 17301,
+      "rows": 17306,
+      "races": 17306,
       "minTimestamp": "2026-05-30T13:02:08.311Z",
-      "maxTimestamp": "2026-07-23T08:55:28.214Z"
+      "maxTimestamp": "2026-07-23T09:30:13.847Z"
     },
     "postRaceConditions": {
       "rows": 1190385,
@@ -3374,16 +3375,16 @@
       "maxTimestamp": "2026-06-05T08:16:36.935Z"
     },
     "exhibition": {
-      "rows": 103048,
-      "races": 17201,
+      "rows": 103078,
+      "races": 17206,
       "minTimestamp": "2026-05-30T01:41:24.819Z",
-      "maxTimestamp": "2026-07-23T08:55:12.638Z"
+      "maxTimestamp": "2026-07-23T09:28:57.878Z"
     },
     "equipment": {
-      "rows": 103230,
-      "races": 17205,
+      "rows": 103260,
+      "races": 17210,
       "minTimestamp": "2026-06-01T03:26:48.714Z",
-      "maxTimestamp": "2026-07-23T08:55:28.214Z"
+      "maxTimestamp": "2026-07-23T09:30:13.847Z"
     },
     "actualEntries": {
       "rows": 7132052,
@@ -3405,10 +3406,10 @@
     }
   },
   "prePostOverlap": {
-    "preRaceWeatherRaces": 17301,
+    "preRaceWeatherRaces": 17306,
     "postRaceConditionRaces": 1190385,
     "overlapRaces": 10010,
-    "exhibitionRaces": 17201,
+    "exhibitionRaces": 17206,
     "actualCourseRaces": 1190383,
     "actualStartTimingRaces": 1190380,
     "incidentStatusRaces": 77094
@@ -3508,9 +3509,9 @@
       },
       "officialResults": {
         "root": "data/raw/official/results",
-        "files": 8163,
+        "files": 8164,
         "minDate": "2000-01-01",
-        "maxDate": "2026-07-21"
+        "maxDate": "2026-07-22"
       },
       "kyotei24PreRaceHtml": {
         "root": "data/raw/kyotei24/odds",
@@ -4418,6 +4419,919 @@
       "raw input fingerprint + parser_version + feature_version + window definitionを固定"
     ]
   },
+  "researchAxisAudit": {
+    "axes": [
+      {
+        "id": "official_information_market_lag",
+        "name": "公式情報の市場反映遅延",
+        "decision": "CONDITIONAL",
+        "currentData": "beforeinfo系はlatest upsert、3連単oddsはcheckpoint時系列。source公開時刻・変更履歴・全券種同期観測がない",
+        "newAcquisition": "公式情報のversioned observationと、変更後lag checkpointごとの全5市場画面",
+        "historicalReconstruction": "保存済みHTMLから値は部分再抽出可能だが、first_seen/changed_atと30秒〜5分反応は再現不可",
+        "futureOnly": "公開時刻がないsourceのfirst_seen bound、変更後30秒/1分/3分/5分反応",
+        "leakageRisk": "取得完了時刻を公開時刻と偽装、変更後に取得した値を変更前oddsへ結合、券種間の観測時刻ずれ",
+        "recommendedPhase": "N2/N3で観測基盤、N5以降で研究",
+        "requiredSchema": [
+          "official_information_observations",
+          "official_information_changes",
+          "odds_market_observations_v2"
+        ],
+        "additionalRequestCost": "情報観測はsource page数×poll回数。反応計測は1 changeあたり5市場画面×lag checkpoint数。正確な日次costは変更頻度実測までUNKNOWN",
+        "pointInTimeRule": "source_published_atとsource_observed_atを分離し、market.observed_at >= change.first_seen_atの組だけをlag計測へ使う",
+        "currentDataPossible": "PARTIAL",
+        "newAcquisitionRequired": true,
+        "historicalReconstructionLevel": "BLOCKED_FOR_LAG",
+        "futureOnlyRequired": true
+      },
+      {
+        "id": "cross_market_consistency",
+        "name": "全券種市場整合性",
+        "decision": "CONDITIONAL",
+        "currentData": "7券種の公式画面構造は確認済みだが、live時系列は3連単のみ。複勝・拡連複はrange",
+        "newAcquisition": "同一観測batchで5画面・7券種の全selection、発売状態、range、返還状態を保存",
+        "historicalReconstruction": "既存3連単のみ部分可。過去の全券種同時点整合性は再現不可",
+        "futureOnly": "券種別ノイズ・波及順序・同時点矛盾の評価",
+        "leakageRisk": "異なる観測時刻を同時市場として投影、range midpointの確定値化、返還後marketを事前値へ混入",
+        "recommendedPhase": "N2で保存、N5以降で120状態投影研究",
+        "requiredSchema": [
+          "market_observation_batches",
+          "odds_market_observations_v2",
+          "odds_selection_observations_v2",
+          "market_projection_audit"
+        ],
+        "additionalRequestCost": "既存設計どおり1 checkpointあたり5 page。投影・制約検査自体は0 request",
+        "pointInTimeRule": "batch内最大observed_at−最小observed_atを保存し、許容skewを超えたbatchは整合性学習へ使わない",
+        "currentDataPossible": "TRIFECTA_ONLY",
+        "newAcquisitionRequired": true,
+        "historicalReconstructionLevel": "BLOCKED_FOR_ALL_MARKETS",
+        "futureOnlyRequired": true
+      },
+      {
+        "id": "first_mark_causal_graph",
+        "name": "1マーク因果グラフのデータ前提",
+        "decision": "CONDITIONAL",
+        "currentData": "展示進入/ST、実進入/ST、決まり手、着順、事故は部分〜広範囲に存在。公式の攻撃艇telemetryはない",
+        "newAcquisition": "展示・装備のappend-only観測。攻撃艇の公式sourceが見つからない限り因果labelは追加しない",
+        "historicalReconstruction": "実進入→実ST→決まり手→上位3着と共起proxyは再構築可能。攻撃艇・隣接艇を潰した因果は不可",
+        "futureOnly": "展示の直前versionと当時PIT品質を伴う完全graph input",
+        "leakageRisk": "決まり手・実ST・着順をレース前特徴へ混入、勝者を攻撃艇と機械的同一視、共起を因果と断定",
+        "recommendedPhase": "N3/N4でdata/label、M3で研究",
+        "requiredSchema": [
+          "beforeinfo_observations_v2",
+          "first_mark_label_audit",
+          "racer_style_features"
+        ],
+        "additionalRequestCost": "既存beforeinfo観測と結果取得を再利用する限り0。追加telemetry sourceはUNKNOWN",
+        "pointInTimeRule": "展示まではpre-race、実進入以後はpost-race label。単一feature rowへ混在させない",
+        "currentDataPossible": "PARTIAL_PROXY_ONLY",
+        "newAcquisitionRequired": true,
+        "historicalReconstructionLevel": "PARTIAL",
+        "futureOnlyRequired": true
+      },
+      {
+        "id": "selective_prediction",
+        "name": "SKIP予測器・選択的予測",
+        "decision": "CONDITIONAL",
+        "currentData": "選手標本数・PIT品質の一部は監査可能だが、全券種120状態分布・券種間不一致・完全な鮮度metadataは未整備",
+        "newAcquisition": "上流のN2/N3観測のみ。SKIP専用の追加外部sourceは不要",
+        "historicalReconstruction": "既存3連単と結果から一部entropy/類似数は可能。全券種不一致と当時欠損maskは不可",
+        "futureOnly": "完全な入力欠損mask、観測skew、全券種不一致、forward calibration",
+        "leakageRisk": "対象結果で予測可能性labelを最適化、欠損を0補完、将来標本数・将来calibrationを使用",
+        "recommendedPhase": "N5で監査値、N6以降で研究",
+        "requiredSchema": [
+          "uncertainty_feature_snapshots",
+          "market_projection_audit"
+        ],
+        "additionalRequestCost": "上流観測を再利用するため追加0 request",
+        "pointInTimeRule": "すべての不確実性にas_of_at、sample_count、missing_reason、source_qualityを必須とする",
+        "currentDataPossible": "PARTIAL",
+        "newAcquisitionRequired": true,
+        "historicalReconstructionLevel": "PARTIAL",
+        "futureOnlyRequired": true
+      },
+      {
+        "id": "fragility_index",
+        "name": "入力摂動とFragility Index",
+        "decision": "CONDITIONAL",
+        "currentData": "値は存在するが、表示precision、measurement error、confidence、late update metadataがほぼない",
+        "newAcquisition": "同一sourceのraw表示、丸め単位、range、version変更履歴を観測rowへ追加",
+        "historicalReconstruction": "raw HTMLが残る範囲は表示precisionを部分再抽出可能。late update順序は不可",
+        "futureOnly": "source間差、更新頻度、late update probabilityの較正",
+        "leakageRisk": "表示丸めより細かい擬似精度、将来判明した更新幅で過去候補を摂動、source差を誤差と断定",
+        "recommendedPhase": "N2/N3でmetadata、N5以降で研究",
+        "requiredSchema": [
+          "measurement_quality_fields on observation tables",
+          "input_perturbation_manifests"
+        ],
+        "additionalRequestCost": "raw表示とversionを同じresponseから保存するなら0。source比較を追加する場合はsource数に比例しUNKNOWN",
+        "pointInTimeRule": "摂動範囲は当該observed_at時点で既知のprecision/range/source差だけから作る",
+        "currentDataPossible": "PARTIAL_VALUES_ONLY",
+        "newAcquisitionRequired": true,
+        "historicalReconstructionLevel": "PARTIAL_RAW_CACHE_ONLY",
+        "futureOnlyRequired": true
+      },
+      {
+        "id": "latent_water_state",
+        "name": "潜在水面状態",
+        "decision": "CONDITIONAL",
+        "currentData": "長期結果に実進入/ST/決まり手/事故/着順、直近期間にpre-race風波・安定板・周回短縮がある",
+        "newAcquisition": "pre-race風向とappend-only観測の継続。状態推定専用の追加requestは不要",
+        "historicalReconstruction": "同日strict-prior結果から市場期待残差以外の多くを再構築可能。市場期待は保存odds範囲のみ",
+        "futureOnly": "完全なpre-race風向、全券種市場期待、観測鮮度付き逐次更新",
+        "leakageRisk": "対象race以後の結果、払戻/高配当を荒れ定義に使用、2〜3raceで状態確定、会場・季節差の無視",
+        "recommendedPhase": "N4でstrict-prior台帳、N5以降で研究",
+        "requiredSchema": [
+          "venue_day_evidence_snapshots",
+          "water_state_rebuild_manifests"
+        ],
+        "additionalRequestCost": "既存結果・上流pre-race観測を再利用するため追加0 request",
+        "pointInTimeRule": "source_max_event_at < target_event_atを必須とし、会場・季節baselineとevidence countを同時保存する",
+        "currentDataPossible": "PARTIAL",
+        "newAcquisitionRequired": true,
+        "historicalReconstructionLevel": "PARTIAL_STRICT_PRIOR",
+        "futureOnlyRequired": true
+      },
+      {
+        "id": "error_atlas",
+        "name": "Error Atlas",
+        "decision": "CONDITIONAL",
+        "currentData": "decision_history、公式上位3着、実進入/ST/事故、3連単T-5、5券種払戻があり現行paper候補は多くを分類可能",
+        "newAcquisition": "単勝・複勝払戻、全券種T-5/final-like、PIT監査reasonの固定保存",
+        "historicalReconstruction": "既存候補の着順誤り・集合/順序誤り・券種変換的中・事故は再構築可能",
+        "futureOnly": "全券種T-5価値→final-like価値消失、当時PIT不適格理由、観測時点別市場対モデル比較",
+        "leakageRisk": "結果を見てBUY条件を変更、final price欠測を払戻から推測、当時利用不能なfeatureで失敗原因を説明",
+        "recommendedPhase": "N4で監査台帳、N5/N8で市場・モデル層分類",
+        "requiredSchema": [
+          "error_atlas_entries",
+          "error_atlas_evidence"
+        ],
+        "additionalRequestCost": "保存済みdecision/resultを使う分類は0。価格層分類はN2の観測を再利用",
+        "pointInTimeRule": "candidate_manifestと当時input fingerprintを凍結し、結果後分類はaudit labelとしてのみ保存する",
+        "currentDataPossible": "CURRENT_TRIFECTA_PAPER_PARTIAL",
+        "newAcquisitionRequired": true,
+        "historicalReconstructionLevel": "PARTIAL",
+        "futureOnlyRequired": true
+      }
+    ],
+    "goNoGoSummary": {
+      "GO": 0,
+      "CONDITIONAL": 7,
+      "BLOCKED": 0,
+      "UNKNOWN": 0
+    },
+    "topThree": [
+      {
+        "rank": 1,
+        "id": "error_atlas",
+        "rationale": "既存decision_history・公式結果・事故・3連単T-5で現行paper候補の失敗層を最も早く監査でき、追加requestは上流観測の再利用で済む。"
+      },
+      {
+        "rank": 2,
+        "id": "latent_water_state",
+        "rationale": "長期結果から同日strict-prior evidenceを再構築できる。高配当依存でない状態証拠と会場・季節baselineを分離できる。"
+      },
+      {
+        "rank": 3,
+        "id": "selective_prediction",
+        "rationale": "標本数・欠損・PIT品質を保存する設計は他の全研究軸にも共通し、専用外部requestを増やさず将来のSKIP監査基盤になる。"
+      }
+    ],
+    "measuredEvidence": {
+      "sourceCoverage": {
+        "preRaceWeather": {
+          "rows": 17306,
+          "races": 17306,
+          "minTimestamp": "2026-05-30T13:02:08.311Z",
+          "maxTimestamp": "2026-07-23T09:30:13.847Z"
+        },
+        "postRaceConditions": {
+          "rows": 1190385,
+          "races": 1190385,
+          "minTimestamp": "2026-06-05T08:16:06.892Z",
+          "maxTimestamp": "2026-06-05T08:16:36.935Z"
+        },
+        "exhibition": {
+          "rows": 103078,
+          "races": 17206,
+          "minTimestamp": "2026-05-30T01:41:24.819Z",
+          "maxTimestamp": "2026-07-23T09:28:57.878Z"
+        },
+        "equipment": {
+          "rows": 103260,
+          "races": 17210,
+          "minTimestamp": "2026-06-01T03:26:48.714Z",
+          "maxTimestamp": "2026-07-23T09:30:13.847Z"
+        },
+        "actualEntries": {
+          "rows": 7132052,
+          "races": 1190383,
+          "minTimestamp": "2026-06-05T08:16:06.892Z",
+          "maxTimestamp": "2026-06-05T08:16:36.935Z"
+        },
+        "programs": {
+          "rows": 1145194,
+          "races": 1145194,
+          "minTimestamp": "2026-05-21 14:09:05",
+          "maxTimestamp": "2026-07-22 23:02:33"
+        },
+        "results": {
+          "rows": 1177477,
+          "races": 1177477,
+          "minTimestamp": "2026-05-21T07:57:40.516Z",
+          "maxTimestamp": "2026-07-22T12:34:00.554Z"
+        }
+      },
+      "prePostOverlap": {
+        "preRaceWeatherRaces": 17306,
+        "postRaceConditionRaces": 1190385,
+        "overlapRaces": 10010,
+        "exhibitionRaces": 17206,
+        "actualCourseRaces": 1190383,
+        "actualStartTimingRaces": 1190380,
+        "incidentStatusRaces": 77094
+      },
+      "liveMarketCoverage": "trifecta only",
+      "allMarketOfficialPages": 5,
+      "officialBetTypes": 7,
+      "topThreeStateSpace": 120,
+      "sourceTimestampFinding": "現行program/beforeinfo保存rowにsource_published_atなし。fetched/imported時刻のみ",
+      "versioningFinding": "race_weather/exhibition_data/race_equipment/official_programsはrace keyのlatest 1世代"
+    },
+    "officialTimingEvidence": {
+      "aboutUrl": "https://www.boatrace.jp/owpc/pc/extra/about.html",
+      "beforeInfoSampleUrl": "https://www.boatrace.jp/owpc/pc/race/beforeinfo?hd=20260723&jcd=23&rno=12",
+      "oddsSampleUrl": "https://www.boatrace.jp/owpc/pc/race/odds3t?hd=20260723&jcd=23&rno=12",
+      "findings": [
+        "公式説明は翌日出走表の表示開始を通常18時頃・サマー20時頃・ナイター22時頃とするが、race/version単位の正確な公開時刻ではない。",
+        "直前情報sampleは水面気象を「11R時点」のようなrace相対markerで示すが、壁時計の公開時刻を表示しない。",
+        "公式説明はlive oddsについて「オッズ更新時間」参照とする。将来parserは表示有無を券種・状態別に保存し、HTTP観測時刻と分離する。",
+        "締切時オッズsampleは締切時状態を示すが、最終確定ではなくスタート事故等を反映しない。"
+      ]
+    },
+    "informationTimingEvents": [
+      {
+        "id": "program",
+        "event": "出走表公開・更新",
+        "source": "official_programs/raw program",
+        "sourceTimestampAvailable": false,
+        "currentVersioning": "single_latest",
+        "historicalLag": "future_only",
+        "sourceTimingEvidence": "公式説明は通常18時頃等の概算表示予定。race/versionごとの正確な公開時刻ではない",
+        "decision": "CONDITIONAL",
+        "timingQuality": "observed_time_only",
+        "requiredFields": [
+          "source_published_at",
+          "source_observed_at",
+          "first_seen_at",
+          "changed_at",
+          "previous_raw_hash",
+          "current_raw_hash",
+          "change_type",
+          "change_payload",
+          "source_version",
+          "timing_quality"
+        ]
+      },
+      {
+        "id": "scratch",
+        "event": "欠場",
+        "source": "official program / odds / beforeinfo",
+        "sourceTimestampAvailable": false,
+        "currentVersioning": "partial_latest",
+        "historicalLag": "future_only",
+        "sourceTimingEvidence": "監査sampleの表示内容と現保存schemaに個別の壁時計公開/更新時刻なし",
+        "decision": "CONDITIONAL",
+        "timingQuality": "observed_time_only",
+        "requiredFields": [
+          "source_published_at",
+          "source_observed_at",
+          "first_seen_at",
+          "changed_at",
+          "previous_raw_hash",
+          "current_raw_hash",
+          "change_type",
+          "change_payload",
+          "source_version",
+          "timing_quality"
+        ]
+      },
+      {
+        "id": "exhibition_course",
+        "event": "展示進入",
+        "source": "beforeinfo",
+        "sourceTimestampAvailable": false,
+        "currentVersioning": "single_latest",
+        "historicalLag": "future_only",
+        "sourceTimingEvidence": "監査sampleの表示内容と現保存schemaに個別の壁時計公開/更新時刻なし",
+        "decision": "CONDITIONAL",
+        "timingQuality": "observed_time_only",
+        "requiredFields": [
+          "source_published_at",
+          "source_observed_at",
+          "first_seen_at",
+          "changed_at",
+          "previous_raw_hash",
+          "current_raw_hash",
+          "change_type",
+          "change_payload",
+          "source_version",
+          "timing_quality"
+        ]
+      },
+      {
+        "id": "exhibition_st",
+        "event": "展示ST",
+        "source": "beforeinfo",
+        "sourceTimestampAvailable": false,
+        "currentVersioning": "single_latest",
+        "historicalLag": "future_only",
+        "sourceTimingEvidence": "監査sampleの表示内容と現保存schemaに個別の壁時計公開/更新時刻なし",
+        "decision": "CONDITIONAL",
+        "timingQuality": "observed_time_only",
+        "requiredFields": [
+          "source_published_at",
+          "source_observed_at",
+          "first_seen_at",
+          "changed_at",
+          "previous_raw_hash",
+          "current_raw_hash",
+          "change_type",
+          "change_payload",
+          "source_version",
+          "timing_quality"
+        ]
+      },
+      {
+        "id": "exhibition_time",
+        "event": "展示タイム",
+        "source": "beforeinfo",
+        "sourceTimestampAvailable": false,
+        "currentVersioning": "single_latest",
+        "historicalLag": "future_only",
+        "sourceTimingEvidence": "監査sampleの表示内容と現保存schemaに個別の壁時計公開/更新時刻なし",
+        "decision": "CONDITIONAL",
+        "timingQuality": "observed_time_only",
+        "requiredFields": [
+          "source_published_at",
+          "source_observed_at",
+          "first_seen_at",
+          "changed_at",
+          "previous_raw_hash",
+          "current_raw_hash",
+          "change_type",
+          "change_payload",
+          "source_version",
+          "timing_quality"
+        ]
+      },
+      {
+        "id": "tilt",
+        "event": "チルト",
+        "source": "beforeinfo",
+        "sourceTimestampAvailable": false,
+        "currentVersioning": "single_latest",
+        "historicalLag": "future_only",
+        "sourceTimingEvidence": "監査sampleの表示内容と現保存schemaに個別の壁時計公開/更新時刻なし",
+        "decision": "CONDITIONAL",
+        "timingQuality": "observed_time_only",
+        "requiredFields": [
+          "source_published_at",
+          "source_observed_at",
+          "first_seen_at",
+          "changed_at",
+          "previous_raw_hash",
+          "current_raw_hash",
+          "change_type",
+          "change_payload",
+          "source_version",
+          "timing_quality"
+        ]
+      },
+      {
+        "id": "parts_change",
+        "event": "部品交換",
+        "source": "beforeinfo",
+        "sourceTimestampAvailable": false,
+        "currentVersioning": "single_latest",
+        "historicalLag": "future_only",
+        "sourceTimingEvidence": "監査sampleの表示内容と現保存schemaに個別の壁時計公開/更新時刻なし",
+        "decision": "CONDITIONAL",
+        "timingQuality": "observed_time_only",
+        "requiredFields": [
+          "source_published_at",
+          "source_observed_at",
+          "first_seen_at",
+          "changed_at",
+          "previous_raw_hash",
+          "current_raw_hash",
+          "change_type",
+          "change_payload",
+          "source_version",
+          "timing_quality"
+        ]
+      },
+      {
+        "id": "weather",
+        "event": "風向・風速・波高",
+        "source": "beforeinfo",
+        "sourceTimestampAvailable": false,
+        "currentVersioning": "single_latest",
+        "historicalLag": "future_only",
+        "sourceTimingEvidence": "公式画面に「11R時点」等のrace相対markerはあるが、壁時計の公開時刻ではない",
+        "decision": "CONDITIONAL",
+        "timingQuality": "observed_time_only",
+        "requiredFields": [
+          "source_published_at",
+          "source_observed_at",
+          "first_seen_at",
+          "changed_at",
+          "previous_raw_hash",
+          "current_raw_hash",
+          "change_type",
+          "change_payload",
+          "source_version",
+          "timing_quality"
+        ]
+      },
+      {
+        "id": "stable_plate",
+        "event": "安定板",
+        "source": "beforeinfo",
+        "sourceTimestampAvailable": false,
+        "currentVersioning": "single_latest",
+        "historicalLag": "future_only",
+        "sourceTimingEvidence": "監査sampleの表示内容と現保存schemaに個別の壁時計公開/更新時刻なし",
+        "decision": "CONDITIONAL",
+        "timingQuality": "observed_time_only",
+        "requiredFields": [
+          "source_published_at",
+          "source_observed_at",
+          "first_seen_at",
+          "changed_at",
+          "previous_raw_hash",
+          "current_raw_hash",
+          "change_type",
+          "change_payload",
+          "source_version",
+          "timing_quality"
+        ]
+      },
+      {
+        "id": "shortened_laps",
+        "event": "周回短縮",
+        "source": "beforeinfo",
+        "sourceTimestampAvailable": false,
+        "currentVersioning": "single_latest",
+        "historicalLag": "future_only",
+        "sourceTimingEvidence": "監査sampleの表示内容と現保存schemaに個別の壁時計公開/更新時刻なし",
+        "decision": "CONDITIONAL",
+        "timingQuality": "observed_time_only",
+        "requiredFields": [
+          "source_published_at",
+          "source_observed_at",
+          "first_seen_at",
+          "changed_at",
+          "previous_raw_hash",
+          "current_raw_hash",
+          "change_type",
+          "change_payload",
+          "source_version",
+          "timing_quality"
+        ]
+      },
+      {
+        "id": "close_time",
+        "event": "締切時刻変更",
+        "source": "official program",
+        "sourceTimestampAvailable": false,
+        "currentVersioning": "single_latest",
+        "historicalLag": "future_only",
+        "sourceTimingEvidence": "監査sampleの表示内容と現保存schemaに個別の壁時計公開/更新時刻なし",
+        "decision": "CONDITIONAL",
+        "timingQuality": "observed_time_only",
+        "requiredFields": [
+          "source_published_at",
+          "source_observed_at",
+          "first_seen_at",
+          "changed_at",
+          "previous_raw_hash",
+          "current_raw_hash",
+          "change_type",
+          "change_payload",
+          "source_version",
+          "timing_quality"
+        ]
+      }
+    ],
+    "informationChangeContract": {
+      "requiredFields": [
+        "source_published_at",
+        "source_observed_at",
+        "first_seen_at",
+        "changed_at",
+        "previous_raw_hash",
+        "current_raw_hash",
+        "change_type",
+        "change_payload",
+        "source_version",
+        "timing_quality"
+      ],
+      "lagCheckpointsSeconds": [
+        30,
+        60,
+        180,
+        300
+      ],
+      "sourceTimestampFallback": "source時刻が無い場合はfirst_seen_atを上限境界として保存し、公開時刻と呼ばない"
+    },
+    "marketProjectionContract": {
+      "stateSpace": "ordered_top3",
+      "stateCount": 120,
+      "sensors": [
+        "win",
+        "place",
+        "exacta",
+        "quinella",
+        "wide",
+        "trifecta",
+        "trio"
+      ],
+      "rangeMarkets": [
+        "place",
+        "wide"
+      ],
+      "preserveRawContradictions": true,
+      "constraints": [
+        "120状態は非負・総和1",
+        "win/exacta/trifectaは順序制約",
+        "quinella/trio/wideは集合制約",
+        "place/wide rangeをpointへ丸めない",
+        "発売なし・欠場・返還・同着を確率0と同一視しない",
+        "券種ごとのobserved_atとbatch skewを保持",
+        "控除率は公式根拠・適用期間付きで保存し、未知はNULL"
+      ],
+      "derivedStorage": "raw odds observationを正本とし、projectionはversion付き派生監査値"
+    },
+    "firstMarkBoundary": [
+      {
+        "item": "展示進入",
+        "role": "pre_race_feature",
+        "source": "beforeinfoの観測時点付きraw",
+        "rule": "append-only化後に利用可"
+      },
+      {
+        "item": "展示ST",
+        "role": "pre_race_feature",
+        "source": "beforeinfoの観測時点付きraw",
+        "rule": "append-only化後に利用可"
+      },
+      {
+        "item": "展示タイム",
+        "role": "pre_race_feature",
+        "source": "beforeinfoの観測時点付きraw",
+        "rule": "append-only化後に利用可"
+      },
+      {
+        "item": "コース別ST平均・分散",
+        "role": "pre_race_feature",
+        "source": "strict-prior race_entries",
+        "rule": "n・window・as_of必須"
+      },
+      {
+        "item": "実進入",
+        "role": "post_race_label",
+        "source": "race_entries.entry_course",
+        "rule": "教師/監査専用"
+      },
+      {
+        "item": "実ST",
+        "role": "post_race_label",
+        "source": "race_entries.st/status_code",
+        "rule": "教師/監査専用"
+      },
+      {
+        "item": "決まり手",
+        "role": "post_race_label",
+        "source": "race_conditions.kimarite",
+        "rule": "教師/監査専用"
+      },
+      {
+        "item": "1号艇の残り方",
+        "role": "post_race_derived_label",
+        "source": "公式着順",
+        "rule": "定義固定で再現可"
+      },
+      {
+        "item": "隣接艇の着順変化",
+        "role": "post_race_proxy",
+        "source": "実進入と着順",
+        "rule": "baseline比較が必要、因果表現禁止"
+      },
+      {
+        "item": "外艇の連動",
+        "role": "post_race_proxy",
+        "source": "実進入と着順",
+        "rule": "共起のみ、因果表現禁止"
+      },
+      {
+        "item": "攻撃艇",
+        "role": "undetermined",
+        "source": "公式telemetry未確認",
+        "rule": "勝者・決まり手から主観補完しない"
+      }
+    ],
+    "selectivePredictionContract": {
+      "requiredUncertaintyFields": [
+        "state120_concentration",
+        "first_place_entropy",
+        "top2_set_entropy",
+        "top2_order_entropy",
+        "top3_set_entropy",
+        "top3_order_entropy",
+        "similar_race_count",
+        "racer_course_sample_count",
+        "input_missing_count",
+        "cross_market_disagreement",
+        "odds_volatility",
+        "entry_uncertainty",
+        "st_variance",
+        "point_in_time_quality",
+        "data_freshness_seconds"
+      ],
+      "requiredMetadata": [
+        "as_of_at",
+        "sample_count",
+        "missing_reason",
+        "source_quality",
+        "feature_version"
+      ],
+      "labelBoundary": "予測可能性の結果labelはpost-race audit専用。candidate生成時の入力へ戻さない"
+    },
+    "fragilityInputs": [
+      {
+        "input": "展示ST",
+        "precisionAudit": "0.01秒表示候補。raw桁を保存して確定",
+        "lateUpdatePossible": true,
+        "measurementQualityRequired": true,
+        "requiredFields": [
+          "measurement_quality",
+          "value_precision",
+          "value_min",
+          "value_max",
+          "source_disagreement",
+          "late_update_possible"
+        ]
+      },
+      {
+        "input": "展示タイム",
+        "precisionAudit": "0.01秒表示候補。raw桁を保存して確定",
+        "lateUpdatePossible": true,
+        "measurementQualityRequired": true,
+        "requiredFields": [
+          "measurement_quality",
+          "value_precision",
+          "value_min",
+          "value_max",
+          "source_disagreement",
+          "late_update_possible"
+        ]
+      },
+      {
+        "input": "風速",
+        "precisionAudit": "表示単位・丸めをrawから保存",
+        "lateUpdatePossible": true,
+        "measurementQualityRequired": true,
+        "requiredFields": [
+          "measurement_quality",
+          "value_precision",
+          "value_min",
+          "value_max",
+          "source_disagreement",
+          "late_update_possible"
+        ]
+      },
+      {
+        "input": "風向",
+        "precisionAudit": "現行pre-race列なし。画像/方位codeの品質がUNKNOWN",
+        "lateUpdatePossible": true,
+        "measurementQualityRequired": true,
+        "requiredFields": [
+          "measurement_quality",
+          "value_precision",
+          "value_min",
+          "value_max",
+          "source_disagreement",
+          "late_update_possible"
+        ]
+      },
+      {
+        "input": "波高",
+        "precisionAudit": "表示単位・丸めをrawから保存",
+        "lateUpdatePossible": true,
+        "measurementQualityRequired": true,
+        "requiredFields": [
+          "measurement_quality",
+          "value_precision",
+          "value_min",
+          "value_max",
+          "source_disagreement",
+          "late_update_possible"
+        ]
+      },
+      {
+        "input": "進入",
+        "precisionAudit": "離散1〜6。展示と実進入を分離",
+        "lateUpdatePossible": true,
+        "measurementQualityRequired": true,
+        "requiredFields": [
+          "measurement_quality",
+          "value_precision",
+          "value_min",
+          "value_max",
+          "source_disagreement",
+          "late_update_possible"
+        ]
+      },
+      {
+        "input": "選手能力snapshot",
+        "precisionAudit": "source掲載精度と集計期間を保存",
+        "lateUpdatePossible": true,
+        "measurementQualityRequired": true,
+        "requiredFields": [
+          "measurement_quality",
+          "value_precision",
+          "value_min",
+          "value_max",
+          "source_disagreement",
+          "late_update_possible"
+        ]
+      },
+      {
+        "input": "モーター成績",
+        "precisionAudit": "source掲載精度と集計期間を保存",
+        "lateUpdatePossible": true,
+        "measurementQualityRequired": true,
+        "requiredFields": [
+          "measurement_quality",
+          "value_precision",
+          "value_min",
+          "value_max",
+          "source_disagreement",
+          "late_update_possible"
+        ]
+      },
+      {
+        "input": "オッズ",
+        "precisionAudit": "point/range、表示丸め、観測skewを保存",
+        "lateUpdatePossible": true,
+        "measurementQualityRequired": true,
+        "requiredFields": [
+          "measurement_quality",
+          "value_precision",
+          "value_min",
+          "value_max",
+          "source_disagreement",
+          "late_update_possible"
+        ]
+      },
+      {
+        "input": "締切までの時間",
+        "precisionAudit": "秒精度のscheduled closeとobserved_atから算出",
+        "lateUpdatePossible": true,
+        "measurementQualityRequired": true,
+        "requiredFields": [
+          "measurement_quality",
+          "value_precision",
+          "value_min",
+          "value_max",
+          "source_disagreement",
+          "late_update_possible"
+        ]
+      }
+    ],
+    "latentWaterStateContract": {
+      "evidence": [
+        "race_event_at",
+        "venue_day_sequence",
+        "lane1_market_expectation_residual",
+        "outer_boat_top3",
+        "st_mean_variance",
+        "pre_race_wind_wave",
+        "kimarite",
+        "incidents",
+        "actual_entry",
+        "stable_plate",
+        "shortened_laps"
+      ],
+      "guards": [
+        "source_max_event_at < target_event_at",
+        "高配当だけを荒れlabelにしない",
+        "会場・季節baselineへ縮小可能にする",
+        "evidence_countとeffective_sample_sizeを保存",
+        "少数raceで確定状態にしない",
+        "従来の手動水面ムード条件と別namespace/versionにする"
+      ]
+    },
+    "errorAtlasClasses": [
+      "first_place_error",
+      "second_place_error",
+      "third_place_error",
+      "top2_set_correct_order_wrong",
+      "top3_set_correct_order_wrong",
+      "win_would_hit",
+      "place_would_hit",
+      "exacta_would_hit",
+      "quinella_would_hit",
+      "trio_would_hit",
+      "value_at_t5_lost_at_final_like",
+      "entry_change",
+      "abnormal_start",
+      "incident_or_fl",
+      "missing_input",
+      "point_in_time_ineligible",
+      "market_and_model_wrong",
+      "market_right_model_wrong"
+    ],
+    "sourceQualityTaxonomy": [
+      {
+        "code": "source_timestamp_exact",
+        "meaning": "source自身の公開/更新時刻が日付・timezone込みで確定"
+      },
+      {
+        "code": "observed_time_only",
+        "meaning": "source時刻なし。取得観測時刻のみ"
+      },
+      {
+        "code": "first_seen_bound",
+        "meaning": "poll間で初めて変化を観測。真の公開時刻は前回観測後〜first_seenの区間"
+      },
+      {
+        "code": "versioned_raw_exact",
+        "meaning": "raw hashと前version hashを持つappend-only観測"
+      },
+      {
+        "code": "rounded_display",
+        "meaning": "表示丸め単位を保持するpoint値"
+      },
+      {
+        "code": "range_display",
+        "meaning": "source表示のmin/maxを保持"
+      },
+      {
+        "code": "derived_strict_prior",
+        "meaning": "対象eventより前だけからversion付き再構築"
+      },
+      {
+        "code": "post_race_label",
+        "meaning": "結果確定後の教師/監査label。事前特徴利用不可"
+      },
+      {
+        "code": "timing_ambiguous",
+        "meaning": "source日付・timezone・更新時刻を一意に決められない"
+      }
+    ],
+    "pointInTimeRules": [
+      "fetched_atをsource_published_atとして扱わない",
+      "同一raceの情報とmarketは各observed_atを保持し、batch内時刻skewを検査する",
+      "change lagはfirst_seen_at以後のmarket observationだけで測る",
+      "対象race結果・対象race後情報をpre-race特徴へ入れない",
+      "post-race labelとpre-race featureを同じ列/qualityで保存しない",
+      "派生値はsource_max_event_at、input fingerprint、feature versionを持つ",
+      "欠測・発売なし・未観測・PIT不適格を別reason codeにする",
+      "raw contradictionを正規化処理で上書きしない"
+    ],
+    "requestCostScenarios": [
+      {
+        "name": "information-versioning-single-pass",
+        "unit": "144-race design day",
+        "formula": "144 races × 2 information pages × 1 pass",
+        "additionalRequests": 288,
+        "note": "開催数実測ではなく既存N0と同じ144 race設計例。poll追加ごとに同数増える"
+      },
+      {
+        "name": "one-change-four-market-lags",
+        "unit": "per changed race",
+        "formula": "5 market pages × 4 lag checkpoints (30s/1m/3m/5m)",
+        "additionalRequests": 20,
+        "note": "情報source再取得分を含まない。変更頻度が未測定なので日次総数はUNKNOWN"
+      },
+      {
+        "name": "derived-research-ledgers",
+        "unit": "per rebuild",
+        "formula": "saved raw only",
+        "additionalRequests": 0,
+        "note": "Error Atlas、strict-prior水面evidence、uncertainty/fragility計算は保存済みrawを再利用"
+      }
+    ],
+    "phaseRecommendation": {
+      "N1": "全券種払戻基盤のみ。独自研究軸のmodel/featureは実装しない。",
+      "N2": "全券種oddsをbatch/skew付きappend-only観測。市場整合性modelは実装しない。",
+      "N3": "公式情報change event、measurement quality、beforeinfo versioning。",
+      "N4": "strict-prior水面evidence、1マーク結果label、Error Atlas監査台帳。",
+      "N5": "120状態raw projection auditと不確実性値。baseline/選択器は既存gate後。",
+      "N6Plus": "市場残差、SKIP、Fragility、因果・市場遅延研究は各gate通過後の別タスク。"
+    }
+  },
   "betTypes": [
     {
       "betType": "win",
@@ -4585,7 +5499,7 @@
       },
       "liveOdds": {
         "decision": "GO",
-        "rows": 49038026,
+        "rows": 49039706,
         "note": "現行時系列はbet_type列なしの3連単専用。T-30/T-20/T-10/T-5を保持。"
       },
       "historicalOdds": {
@@ -4665,12 +5579,14 @@
     "historicalOdds": "CONDITIONAL",
     "weatherAndExhibition": "CONDITIONAL",
     "racerPointInTime": "CONDITIONAL",
+    "independentResearchAxes": "CONDITIONAL",
     "salesAndLiquidity": "BLOCKED",
     "rationale": [
       "払戻は7券種とも公式結果/日次成績に存在するが、win/place parser、同着・返還・不成立契約が未固定。",
       "全券種オッズは5画面で公開されるが、全race×4 checkpointは3,024 request/day想定で、サイトポリシーの大量アクセス禁止に照らし現状のままGOにできない。",
       "売上額・投票口数の公式公開ソースを今回の最小確認では特定できず、オッズ変化は流動性そのものではない。",
-      "レース当時の級別・全国/当地勝率/2連率は番組rawでGO。現在値profile/course statsはhistorical利用BLOCKEDで、結果由来rolling特徴はstrict-prior再構築を条件にCONDITIONAL。"
+      "レース当時の級別・全国/当地勝率/2連率は番組rawでGO。現在値profile/course statsはhistorical利用BLOCKEDで、結果由来rolling特徴はstrict-prior再構築を条件にCONDITIONAL。",
+      "独自研究7軸はすべてCONDITIONAL。Error Atlas・潜在水面状態・選択的不確実性は既存rawから部分再構築できるが、市場反映遅延と全券種同時整合性はversioned future-only観測が必須。"
     ]
   },
   "phaseN1EntryGate": [

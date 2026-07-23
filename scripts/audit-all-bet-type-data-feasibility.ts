@@ -15,11 +15,19 @@ import {
   officialRaceUrl,
 } from "../src/domain/allBetTypeFeasibility";
 import { RACER_FEATURE_FEASIBILITY } from "../src/domain/racerDataFeasibility";
+import {
+  ERROR_ATLAS_CLASSES,
+  FIRST_MARK_DATA_BOUNDARY,
+  FRAGILITY_INPUTS,
+  INFORMATION_TIMING_EVENTS,
+  RESEARCH_AXIS_FEASIBILITY,
+} from "../src/domain/researchAxisFeasibility";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const REPORT_JSON = "reports/all-bet-type-data-feasibility.json";
 const REPORT_MD = "reports/all-bet-type-data-feasibility.md";
 const AUDITED_RACE = { date: "2026-07-21", venueCode: "23", raceNo: 1 };
+const TIMING_EVIDENCE_RACE = { date: "2026-07-23", venueCode: "23", raceNo: 12 };
 const AUDIT_DATE_JST = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tokyo" }).format(new Date());
 
 if (!existsSync(DB_PATH)) throw new Error(`DB not found: ${DB_PATH}`);
@@ -91,6 +99,7 @@ try {
       (SELECT COUNT(DISTINCT race_id) FROM race_entries WHERE status_code IS NOT NULL) AS incidentStatusRaces
   `)[0];
   const racerAudit = buildRacerAudit();
+  const researchAxisAudit = buildResearchAxisAudit({ sourceCoverage, prePostOverlap });
 
   const payoutByBetType = new Map(payoutCoverage.map((row) => [String(row.betType), row]));
   const closingByBetType = new Map(closingOddsCoverage.map((row) => [String(row.betType), row]));
@@ -166,7 +175,13 @@ try {
     generatedAt: new Date().toISOString(),
     auditDateJst: AUDIT_DATE_JST,
     scope: {
-      included: ["read-only DB/schema/coverage audit", "one-race official source structure check", "racer point-in-time feasibility audit", "storage and migration design"],
+      included: [
+        "read-only DB/schema/coverage audit",
+        "one-race official source structure check",
+        "racer point-in-time feasibility audit",
+        "seven independent research-axis data prerequisite audits",
+        "storage and migration design",
+      ],
       excluded: ["DB migration", "data collection", "prediction/model changes", "market residual model", "ticket selector", "production connection"],
     },
     safety: {
@@ -197,6 +212,7 @@ try {
     sourceCoverage,
     prePostOverlap,
     racerAudit,
+    researchAxisAudit,
     betTypes,
     requestBudgets,
     acquisitionDecision: {
@@ -205,12 +221,14 @@ try {
       historicalOdds: "CONDITIONAL",
       weatherAndExhibition: "CONDITIONAL",
       racerPointInTime: "CONDITIONAL",
+      independentResearchAxes: "CONDITIONAL",
       salesAndLiquidity: "BLOCKED",
       rationale: [
         "払戻は7券種とも公式結果/日次成績に存在するが、win/place parser、同着・返還・不成立契約が未固定。",
         "全券種オッズは5画面で公開されるが、全race×4 checkpointは3,024 request/day想定で、サイトポリシーの大量アクセス禁止に照らし現状のままGOにできない。",
         "売上額・投票口数の公式公開ソースを今回の最小確認では特定できず、オッズ変化は流動性そのものではない。",
         "レース当時の級別・全国/当地勝率/2連率は番組rawでGO。現在値profile/course statsはhistorical利用BLOCKEDで、結果由来rolling特徴はstrict-prior再構築を条件にCONDITIONAL。",
+        "独自研究7軸はすべてCONDITIONAL。Error Atlas・潜在水面状態・選択的不確実性は既存rawから部分再構築できるが、市場反映遅延と全券種同時整合性はversioned future-only観測が必須。",
       ],
     },
     phaseN1EntryGate: [
@@ -273,6 +291,238 @@ function tableCoverage(table: string, timestampColumn: string) {
       MAX(${quoteIdentifier(timestampColumn)}) AS maxTimestamp
     FROM ${quoteIdentifier(table)}
   `)[0];
+}
+
+function buildResearchAxisAudit(input: {
+  sourceCoverage: Record<string, Record<string, unknown>>;
+  prePostOverlap: Record<string, unknown>;
+}) {
+  const readinessById = {
+    official_information_market_lag: {
+      currentDataPossible: "PARTIAL",
+      newAcquisitionRequired: true,
+      historicalReconstructionLevel: "BLOCKED_FOR_LAG",
+      futureOnlyRequired: true,
+    },
+    cross_market_consistency: {
+      currentDataPossible: "TRIFECTA_ONLY",
+      newAcquisitionRequired: true,
+      historicalReconstructionLevel: "BLOCKED_FOR_ALL_MARKETS",
+      futureOnlyRequired: true,
+    },
+    first_mark_causal_graph: {
+      currentDataPossible: "PARTIAL_PROXY_ONLY",
+      newAcquisitionRequired: true,
+      historicalReconstructionLevel: "PARTIAL",
+      futureOnlyRequired: true,
+    },
+    selective_prediction: {
+      currentDataPossible: "PARTIAL",
+      newAcquisitionRequired: true,
+      historicalReconstructionLevel: "PARTIAL",
+      futureOnlyRequired: true,
+    },
+    fragility_index: {
+      currentDataPossible: "PARTIAL_VALUES_ONLY",
+      newAcquisitionRequired: true,
+      historicalReconstructionLevel: "PARTIAL_RAW_CACHE_ONLY",
+      futureOnlyRequired: true,
+    },
+    latent_water_state: {
+      currentDataPossible: "PARTIAL",
+      newAcquisitionRequired: true,
+      historicalReconstructionLevel: "PARTIAL_STRICT_PRIOR",
+      futureOnlyRequired: true,
+    },
+    error_atlas: {
+      currentDataPossible: "CURRENT_TRIFECTA_PAPER_PARTIAL",
+      newAcquisitionRequired: true,
+      historicalReconstructionLevel: "PARTIAL",
+      futureOnlyRequired: true,
+    },
+  } as const;
+  const axes = RESEARCH_AXIS_FEASIBILITY.map((axis) => ({
+    ...axis,
+    ...readinessById[axis.id],
+  }));
+  return {
+    axes,
+    goNoGoSummary: Object.fromEntries(["GO", "CONDITIONAL", "BLOCKED", "UNKNOWN"].map((decision) => [
+      decision,
+      axes.filter((axis) => axis.decision === decision).length,
+    ])),
+    topThree: [
+      {
+        rank: 1,
+        id: "error_atlas",
+        rationale: "既存decision_history・公式結果・事故・3連単T-5で現行paper候補の失敗層を最も早く監査でき、追加requestは上流観測の再利用で済む。",
+      },
+      {
+        rank: 2,
+        id: "latent_water_state",
+        rationale: "長期結果から同日strict-prior evidenceを再構築できる。高配当依存でない状態証拠と会場・季節baselineを分離できる。",
+      },
+      {
+        rank: 3,
+        id: "selective_prediction",
+        rationale: "標本数・欠損・PIT品質を保存する設計は他の全研究軸にも共通し、専用外部requestを増やさず将来のSKIP監査基盤になる。",
+      },
+    ],
+    measuredEvidence: {
+      sourceCoverage: input.sourceCoverage,
+      prePostOverlap: input.prePostOverlap,
+      liveMarketCoverage: "trifecta only",
+      allMarketOfficialPages: 5,
+      officialBetTypes: 7,
+      topThreeStateSpace: 120,
+      sourceTimestampFinding: "現行program/beforeinfo保存rowにsource_published_atなし。fetched/imported時刻のみ",
+      versioningFinding: "race_weather/exhibition_data/race_equipment/official_programsはrace keyのlatest 1世代",
+    },
+    officialTimingEvidence: {
+      aboutUrl: "https://www.boatrace.jp/owpc/pc/extra/about.html",
+      beforeInfoSampleUrl: officialRaceUrl("beforeinfo", TIMING_EVIDENCE_RACE),
+      oddsSampleUrl: officialRaceUrl("odds3t", TIMING_EVIDENCE_RACE),
+      findings: [
+        "公式説明は翌日出走表の表示開始を通常18時頃・サマー20時頃・ナイター22時頃とするが、race/version単位の正確な公開時刻ではない。",
+        "直前情報sampleは水面気象を「11R時点」のようなrace相対markerで示すが、壁時計の公開時刻を表示しない。",
+        "公式説明はlive oddsについて「オッズ更新時間」参照とする。将来parserは表示有無を券種・状態別に保存し、HTTP観測時刻と分離する。",
+        "締切時オッズsampleは締切時状態を示すが、最終確定ではなくスタート事故等を反映しない。",
+      ],
+    },
+    informationTimingEvents: INFORMATION_TIMING_EVENTS,
+    informationChangeContract: {
+      requiredFields: [
+        "source_published_at",
+        "source_observed_at",
+        "first_seen_at",
+        "changed_at",
+        "previous_raw_hash",
+        "current_raw_hash",
+        "change_type",
+        "change_payload",
+        "source_version",
+        "timing_quality",
+      ],
+      lagCheckpointsSeconds: [30, 60, 180, 300],
+      sourceTimestampFallback: "source時刻が無い場合はfirst_seen_atを上限境界として保存し、公開時刻と呼ばない",
+    },
+    marketProjectionContract: {
+      stateSpace: "ordered_top3",
+      stateCount: 120,
+      sensors: [...ALL_BET_TYPES],
+      rangeMarkets: ["place", "wide"],
+      preserveRawContradictions: true,
+      constraints: [
+        "120状態は非負・総和1",
+        "win/exacta/trifectaは順序制約",
+        "quinella/trio/wideは集合制約",
+        "place/wide rangeをpointへ丸めない",
+        "発売なし・欠場・返還・同着を確率0と同一視しない",
+        "券種ごとのobserved_atとbatch skewを保持",
+        "控除率は公式根拠・適用期間付きで保存し、未知はNULL",
+      ],
+      derivedStorage: "raw odds observationを正本とし、projectionはversion付き派生監査値",
+    },
+    firstMarkBoundary: FIRST_MARK_DATA_BOUNDARY,
+    selectivePredictionContract: {
+      requiredUncertaintyFields: [
+        "state120_concentration",
+        "first_place_entropy",
+        "top2_set_entropy",
+        "top2_order_entropy",
+        "top3_set_entropy",
+        "top3_order_entropy",
+        "similar_race_count",
+        "racer_course_sample_count",
+        "input_missing_count",
+        "cross_market_disagreement",
+        "odds_volatility",
+        "entry_uncertainty",
+        "st_variance",
+        "point_in_time_quality",
+        "data_freshness_seconds",
+      ],
+      requiredMetadata: ["as_of_at", "sample_count", "missing_reason", "source_quality", "feature_version"],
+      labelBoundary: "予測可能性の結果labelはpost-race audit専用。candidate生成時の入力へ戻さない",
+    },
+    fragilityInputs: FRAGILITY_INPUTS,
+    latentWaterStateContract: {
+      evidence: [
+        "race_event_at",
+        "venue_day_sequence",
+        "lane1_market_expectation_residual",
+        "outer_boat_top3",
+        "st_mean_variance",
+        "pre_race_wind_wave",
+        "kimarite",
+        "incidents",
+        "actual_entry",
+        "stable_plate",
+        "shortened_laps",
+      ],
+      guards: [
+        "source_max_event_at < target_event_at",
+        "高配当だけを荒れlabelにしない",
+        "会場・季節baselineへ縮小可能にする",
+        "evidence_countとeffective_sample_sizeを保存",
+        "少数raceで確定状態にしない",
+        "従来の手動水面ムード条件と別namespace/versionにする",
+      ],
+    },
+    errorAtlasClasses: ERROR_ATLAS_CLASSES,
+    sourceQualityTaxonomy: [
+      { code: "source_timestamp_exact", meaning: "source自身の公開/更新時刻が日付・timezone込みで確定" },
+      { code: "observed_time_only", meaning: "source時刻なし。取得観測時刻のみ" },
+      { code: "first_seen_bound", meaning: "poll間で初めて変化を観測。真の公開時刻は前回観測後〜first_seenの区間" },
+      { code: "versioned_raw_exact", meaning: "raw hashと前version hashを持つappend-only観測" },
+      { code: "rounded_display", meaning: "表示丸め単位を保持するpoint値" },
+      { code: "range_display", meaning: "source表示のmin/maxを保持" },
+      { code: "derived_strict_prior", meaning: "対象eventより前だけからversion付き再構築" },
+      { code: "post_race_label", meaning: "結果確定後の教師/監査label。事前特徴利用不可" },
+      { code: "timing_ambiguous", meaning: "source日付・timezone・更新時刻を一意に決められない" },
+    ],
+    pointInTimeRules: [
+      "fetched_atをsource_published_atとして扱わない",
+      "同一raceの情報とmarketは各observed_atを保持し、batch内時刻skewを検査する",
+      "change lagはfirst_seen_at以後のmarket observationだけで測る",
+      "対象race結果・対象race後情報をpre-race特徴へ入れない",
+      "post-race labelとpre-race featureを同じ列/qualityで保存しない",
+      "派生値はsource_max_event_at、input fingerprint、feature versionを持つ",
+      "欠測・発売なし・未観測・PIT不適格を別reason codeにする",
+      "raw contradictionを正規化処理で上書きしない",
+    ],
+    requestCostScenarios: [
+      {
+        name: "information-versioning-single-pass",
+        unit: "144-race design day",
+        formula: "144 races × 2 information pages × 1 pass",
+        additionalRequests: 288,
+        note: "開催数実測ではなく既存N0と同じ144 race設計例。poll追加ごとに同数増える",
+      },
+      {
+        name: "one-change-four-market-lags",
+        unit: "per changed race",
+        formula: "5 market pages × 4 lag checkpoints (30s/1m/3m/5m)",
+        additionalRequests: 20,
+        note: "情報source再取得分を含まない。変更頻度が未測定なので日次総数はUNKNOWN",
+      },
+      {
+        name: "derived-research-ledgers",
+        unit: "per rebuild",
+        formula: "saved raw only",
+        additionalRequests: 0,
+        note: "Error Atlas、strict-prior水面evidence、uncertainty/fragility計算は保存済みrawを再利用",
+      },
+    ],
+    phaseRecommendation: {
+      N1: "全券種払戻基盤のみ。独自研究軸のmodel/featureは実装しない。",
+      N2: "全券種oddsをbatch/skew付きappend-only観測。市場整合性modelは実装しない。",
+      N3: "公式情報change event、measurement quality、beforeinfo versioning。",
+      N4: "strict-prior水面evidence、1マーク結果label、Error Atlas監査台帳。",
+      N5: "120状態raw projection auditと不確実性値。baseline/選択器は既存gate後。",
+      N6Plus: "市場残差、SKIP、Fragility、因果・市場遅延研究は各gate通過後の別タスク。",
+    },
+  };
 }
 
 function buildRacerAudit() {
@@ -760,6 +1010,96 @@ function renderMarkdown(report: any): string {
     `- N4: ${report.racerAudit.phaseRecommendation.N4}`,
     "",
     "選手特徴を現在のBUY/WATCH/SKIPへ追加しない。M1/M3は既存のformal settled gateとN3/N4のPIT基盤が揃うまで開始しない。",
+    "",
+    "## 独自研究軸監査",
+    "",
+    `判定件数: GO ${report.researchAxisAudit.goNoGoSummary.GO} / CONDITIONAL ${report.researchAxisAudit.goNoGoSummary.CONDITIONAL} / BLOCKED ${report.researchAxisAudit.goNoGoSummary.BLOCKED} / UNKNOWN ${report.researchAxisAudit.goNoGoSummary.UNKNOWN}`,
+    "",
+    "| 研究軸 | 判定 | 現在データ | 新規取得 | 過去再構築 | future-only | 推奨Phase | 必要schema | 追加request cost | 主な漏洩リスク |",
+    "|---|---|---|---|---|---|---|---|---|---|",
+    ...report.researchAxisAudit.axes.map((axis: any) =>
+      `| ${axis.name} | **${axis.decision}** | ${axis.currentDataPossible}: ${axis.currentData} | ${axis.newAcquisitionRequired ? "必要" : "不要"}: ${axis.newAcquisition} | ${axis.historicalReconstructionLevel}: ${axis.historicalReconstruction} | ${axis.futureOnlyRequired ? `必要: ${axis.futureOnly}` : "不要"} | ${axis.recommendedPhase} | ${axis.requiredSchema.join(", ")} | ${axis.additionalRequestCost} | ${axis.leakageRisk} |`),
+    "",
+    "### 特に有望な上位3項目",
+    "",
+    ...report.researchAxisAudit.topThree.map((item: any) => {
+      const axis = report.researchAxisAudit.axes.find((row: any) => row.id === item.id);
+      return `${item.rank}. **${axis.name}** — ${item.rationale}`;
+    }),
+    "",
+    "### 公式情報の市場反映遅延",
+    "",
+    "| event | source | source公開時刻 | 根拠 | 現在version | 過去lag | timing quality | 判定 |",
+    "|---|---|---|---|---|---|---|---|",
+    ...report.researchAxisAudit.informationTimingEvents.map((event: any) =>
+      `| ${event.event} | ${event.source} | ${event.sourceTimestampAvailable ? "正確な時刻あり" : "正確な時刻は未確認/未保存"} | ${event.sourceTimingEvidence} | ${event.currentVersioning} | ${event.historicalLag} | ${event.timingQuality} | **${event.decision}** |`),
+    "",
+    ...report.researchAxisAudit.officialTimingEvidence.findings.map((finding: string) => `- ${finding}`),
+    "",
+    "現行`official_programs`、`race_weather`、`exhibition_data`、`race_equipment`はrace keyの最新1世代で、source自身の公開時刻と変更versionを保存していない。`fetched_at / imported_at`は観測・取込時刻であり、公開時刻ではない。将来はraw hash付きappend-only observationからchange eventを生成し、source時刻が無ければ`first_seen_bound`として前回観測〜first seenの区間を保持する。",
+    "",
+    `反応lag候補: ${report.researchAxisAudit.informationChangeContract.lagCheckpointsSeconds.join(" / ")}秒。全5市場画面を同一batchで取得しても各HTTP応答時刻は異なるため、batch内skewを保存し、一つの券種だけ遅い場合をraw evidenceとして残す。`,
+    "",
+    "### 全券種市場整合性",
+    "",
+    `共通状態は上位3着順序付き${report.researchAxisAudit.marketProjectionContract.stateCount}状態。sensorは${report.researchAxisAudit.marketProjectionContract.sensors.join(" / ")}。`,
+    "",
+    ...report.researchAxisAudit.marketProjectionContract.constraints.map((rule: string) => `- ${rule}`),
+    "",
+    "各券種を異なるノイズ水準のsensorとして扱うが、今回projection/modelは実装しない。raw point/range、発売状態、返還、同着、observed_at、source hashを正本とし、矛盾した値をprojectionで上書きしない。",
+    "",
+    "### 1マーク因果グラフの境界",
+    "",
+    "| 項目 | 役割 | source | 判定規則 |",
+    "|---|---|---|---|",
+    ...report.researchAxisAudit.firstMarkBoundary.map((row: any) =>
+      `| ${row.item} | ${row.role} | ${row.source} | ${row.rule} |`),
+    "",
+    "公式rawで再現できるのは、展示→実進入/ST→決まり手・着順の時系列と共起proxyまで。「攻撃艇」「隣接艇を潰した」は公式telemetryが無い限り判定不能とし、勝者や決まり手から主観で補完しない。",
+    "",
+    "### 選択的不確実性・Fragility",
+    "",
+    `不確実性値は ${report.researchAxisAudit.selectivePredictionContract.requiredMetadata.join(", ")} を必須とする。対象は ${report.researchAxisAudit.selectivePredictionContract.requiredUncertaintyFields.join(", ")}。`,
+    "",
+    "Fragility対象は、値だけでなく`measurement_quality / value_precision / value_min / value_max / source_disagreement / late_update_possible`を観測時点付きで保存する。表示丸めより細かい擬似精度を作らない。",
+    "",
+    "### 潜在水面状態",
+    "",
+    ...report.researchAxisAudit.latentWaterStateContract.guards.map((rule: string) => `- ${rule}`),
+    "",
+    "状態値自体は今回作らない。対象raceより前のevidenceだけをappendし、会場・季節baseline、evidence count、effective sample sizeを保存できる設計に限定する。",
+    "",
+    "### Error Atlas",
+    "",
+    `分類code: ${report.researchAxisAudit.errorAtlasClasses.join(", ")}`,
+    "",
+    "Error Atlasは結果後の研究台帳であり、BUY条件探索器ではない。candidate時点のmanifest/input fingerprintを凍結し、データ層・市場層・モデル層のどこが失敗したかを分類する。",
+    "",
+    "### source-quality / point-in-time",
+    "",
+    "| code | meaning |",
+    "|---|---|",
+    ...report.researchAxisAudit.sourceQualityTaxonomy.map((row: any) => `| ${row.code} | ${row.meaning} |`),
+    "",
+    ...report.researchAxisAudit.pointInTimeRules.map((rule: string) => `- ${rule}`),
+    "",
+    "### 独自研究軸のrequest cost",
+    "",
+    "| scenario | unit | formula | additional requests | note |",
+    "|---|---|---|---:|---|",
+    ...report.researchAxisAudit.requestCostScenarios.map((row: any) =>
+      `| ${row.name} | ${row.unit} | ${row.formula} | ${row.additionalRequests} | ${row.note} |`),
+    "",
+    "### N1以降",
+    "",
+    `- N1: ${report.researchAxisAudit.phaseRecommendation.N1}`,
+    `- N2: ${report.researchAxisAudit.phaseRecommendation.N2}`,
+    `- N3: ${report.researchAxisAudit.phaseRecommendation.N3}`,
+    `- N4: ${report.researchAxisAudit.phaseRecommendation.N4}`,
+    `- N5: ${report.researchAxisAudit.phaseRecommendation.N5}`,
+    `- N6以降: ${report.researchAxisAudit.phaseRecommendation.N6Plus}`,
+    "",
+    "今回、モデル、120状態baseline、SKIP予測器、Fragility Index、状態推定、券種選択器は実装していない。",
     "",
     "## 展示・結果原因・事故",
     "",

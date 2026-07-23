@@ -222,27 +222,29 @@ T-5表示オッズを確定値とせず、T-5から締切までの変化分布�
 
 選手PIT監査もN0へ統合した。`official_programs.raw_json`に当時級別・全国/当地勝率・2連率、`race_entries`に結果履歴が残り、strict-priorのコース・recent・pair・style proxyは再構築可能である。一方、`racer_profiles`と`racer_course_stats`は現在値1世代でhistoricalには使えず、3連率、事故率、集計窓・標本数、当日展示・部品交換推移等はsnapshot/append-only設計が必要である。M1はN3/N4のPIT gate、M3はstrict-prior相互作用gateを通過するまで開始しない。DB migration、実収集、モデル、production接続は未着手。次の独立タスクは、承認された範囲だけのPhase N1である。
 
+独自研究7軸のデータ前提監査も統合した。7軸はすべて`CONDITIONAL`。公式情報の市場反映遅延と全券種市場整合性は、source時刻と観測時刻を分けたversioned future-only取得が必須である。1マークは公式結果から共起proxyまで再構築できるが、攻撃艇・隣接艇への因果は公式telemetryなしでは判定不能。Error Atlas、strict-prior潜在水面evidence、選択的不確実性は既存rawを多く再利用できる有望軸だが、今回modelは実装していない。
+
 ### Phase N1: 全券種払戻基盤
 
 単勝・複勝を含む払戻取得、fixture、parser、dry-run、idempotency、同着・返還・不成立、小規模canary、coverage reportを作る。予測ロジックは変更しない。
 
 ### Phase N2: 全券種オッズ時系列
 
-取得可能な券種からappend-onlyで実装し、checkpoint、重複防止、source分離、rate limit、coverage監視、同値異常検査を持たせる。既存3連単収集を壊さず、予測ロジックは変更しない。
+取得可能な券種からappend-onlyで実装し、checkpoint、重複防止、source分離、rate limit、coverage監視、同値異常検査を持たせる。5画面を`market_observation_batch`で束ねるが、各response時刻とbatch内skewを失わない。point/range、発売なし、返還、raw矛盾を正本として保存する。市場整合性modelや120状態baselineは実装せず、既存3連単収集を壊さず、予測ロジックは変更しない。
 
 ### Phase N3: 物理環境・展示完全化
 
-風向、会場相対風向、展示進入、展示ST、展示タイム、装備、point-in-time品質検査を完成させる。選手のprofile/period/course-period snapshot、支部・登録期・年齢・性別・直前体重を有効期間と集計窓付きで整備する。予測ロジックは変更しない。
+風向、会場相対風向、展示進入、展示ST、展示タイム、装備、point-in-time品質検査を完成させる。選手のprofile/period/course-period snapshot、支部・登録期・年齢・性別・直前体重を有効期間と集計窓付きで整備する。出走表・欠場・展示・気象・装備・締切変更をraw hash付きversionとして保存し、`source_published_at / source_observed_at / first_seen_at / changed_at`を分離する。measurement precisionとlate update可能性も観測rowに持たせる。予測ロジックは変更しない。
 
 ### Phase N4: 結果原因ラベル
 
-実進入、実ST、決まり手、事故、外れ分解レポートを整える。`race_entries`等から、対象raceより厳格に前だけを使うrecent form、コース別能力、過去同走・直接対戦、戦法・隣接艇相互作用proxyを再構築する。因果や私的人間関係は扱わず、予測ロジックは変更しない。
+実進入、実ST、決まり手、事故、外れ分解レポートを整える。`race_entries`等から、対象raceより厳格に前だけを使うrecent form、コース別能力、過去同走・直接対戦、戦法・隣接艇相互作用proxyを再構築する。1マークのpost-race label、会場・季節baselineへ縮小可能な水面evidence、candidate manifest固定のError Atlasを監査台帳として整備する。攻撃艇を主観で補完せず、因果や私的人間関係は扱わず、予測ロジックは変更しない。
 
 ### Phase N5: 120通り市場baseline
 
 開始条件は、T-5全120通り、正式結果、既存の最低1,000 settled gate、point-in-time品質、frozen time splitの確認。
 
-市場確率正規化、120通り合計検査、各券種への集約、market-only logloss/Brier/calibration、市場のみROI、券種別baselineを実装する。shadow/read-onlyのみ。
+まずraw観測ID、range処理、控除根拠、券種別品質、時刻skew、制約残差を持つ120状態projection監査値と不確実性snapshotを固定する。その後に市場確率正規化、120通り合計検査、各券種への集約、market-only logloss/Brier/calibration、市場のみROI、券種別baselineを実装する。shadow/read-onlyのみ。SKIP予測器、Fragility Index、券種選択器はこの段階で自動的に開始しない。
 
 ### Phase N6: 市場offset残差モデル
 

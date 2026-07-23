@@ -39,6 +39,17 @@
 - `historical_closing_odds`
 - `official_settlement`
 - `fixture_only`
+- `source_timestamp_exact`
+- `observed_time_only`
+- `first_seen_bound`
+- `versioned_raw_exact`
+- `rounded_display`
+- `range_display`
+- `derived_strict_prior`
+- `post_race_label`
+- `timing_ambiguous`
+
+市場値の確定度と時刻品質を1列に畳み込まない実装案もN2/N3で比較する。少なくとも`source_quality`、`timing_quality`、`measurement_quality`は意味を分け、未知値を`exact`へ倒さない。
 
 ### fetch_status
 
@@ -418,6 +429,253 @@ AND (observed_at IS NULL OR observed_at <= target_feature_cutoff_at)
 
 `racer_pair_history`と`racer_style_features`は必須の生データtableではない。まず`race_entries`からread-onlyで再構築し、性能・再現性の必要が確認された場合だけ派生cacheとしてmaterializeする。師弟関係は公式公開資料の別registryと公開日を正本にし、pair tableへ推測値を混ぜない。
 
+## 独自研究軸schema候補
+
+これらもDESIGN ONLYであり、今回migrationは適用しない。raw observationを優先し、projection、uncertainty、水面状態、Error Atlasは再計算可能な派生監査値とする。
+
+### 公式情報versioning
+
+```sql
+CREATE TABLE official_information_observations (
+  id INTEGER PRIMARY KEY,
+  race_id TEXT NOT NULL,
+  information_type TEXT NOT NULL,
+  source_url TEXT NOT NULL,
+  source_published_at TEXT,
+  source_observed_at TEXT NOT NULL,
+  fetched_at TEXT NOT NULL,
+  first_seen_at TEXT NOT NULL,
+  source_version INTEGER NOT NULL,
+  raw_sha256 TEXT NOT NULL,
+  raw_reference TEXT NOT NULL,
+  raw_content_type TEXT,
+  parser_version TEXT NOT NULL,
+  source_quality TEXT NOT NULL,
+  timing_quality TEXT NOT NULL,
+  measurement_quality TEXT,
+  value_precision REAL,
+  late_update_possible INTEGER NOT NULL DEFAULT 1 CHECK (late_update_possible IN (0,1)),
+  fetch_status TEXT NOT NULL,
+  missing_reason TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (race_id, information_type, source_url, raw_sha256)
+);
+
+CREATE INDEX idx_information_observation_timing
+  ON official_information_observations
+  (race_id, information_type, source_observed_at);
+
+CREATE TABLE official_information_changes (
+  id INTEGER PRIMARY KEY,
+  race_id TEXT NOT NULL,
+  information_type TEXT NOT NULL,
+  previous_observation_id INTEGER
+    REFERENCES official_information_observations(id),
+  current_observation_id INTEGER NOT NULL
+    REFERENCES official_information_observations(id),
+  source_published_at TEXT,
+  first_seen_at TEXT NOT NULL,
+  changed_at TEXT,
+  previous_raw_hash TEXT,
+  current_raw_hash TEXT NOT NULL,
+  change_type TEXT NOT NULL,
+  change_payload TEXT NOT NULL,
+  timing_quality TEXT NOT NULL,
+  change_detector_version TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (current_observation_id, change_detector_version)
+);
+```
+
+`source_published_at`が無い場合はNULLのままにする。`changed_at`も真のsource時刻が確定しなければNULLとし、`first_seen_at`と前回観測時刻の区間を使う。`fetched_at`を公開時刻へcopyしない。
+
+### market batchと120状態projection監査
+
+既存候補の`odds_market_observations_v2`へ`batch_id`を追加し、batch headerを分ける。
+
+```sql
+CREATE TABLE market_observation_batches (
+  id INTEGER PRIMARY KEY,
+  race_id TEXT NOT NULL,
+  checkpoint_label TEXT,
+  trigger_change_id INTEGER
+    REFERENCES official_information_changes(id),
+  requested_at TEXT NOT NULL,
+  min_observed_at TEXT,
+  max_observed_at TEXT,
+  observation_skew_ms INTEGER,
+  expected_page_count INTEGER NOT NULL,
+  completed_page_count INTEGER NOT NULL,
+  is_time_aligned INTEGER NOT NULL DEFAULT 0 CHECK (is_time_aligned IN (0,1)),
+  alignment_rule_version TEXT NOT NULL,
+  missing_reason TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (race_id, checkpoint_label, requested_at)
+);
+
+CREATE TABLE market_projection_audit (
+  id INTEGER PRIMARY KEY,
+  batch_id INTEGER NOT NULL
+    REFERENCES market_observation_batches(id),
+  projection_version TEXT NOT NULL,
+  state_space TEXT NOT NULL CHECK (state_space='ordered_top3_120'),
+  source_observation_ids_json TEXT NOT NULL,
+  sensor_quality_json TEXT NOT NULL,
+  constraint_residuals_json TEXT NOT NULL,
+  raw_contradiction_count INTEGER NOT NULL,
+  range_handling TEXT NOT NULL,
+  takeout_basis_json TEXT,
+  projected_state_json TEXT,
+  status TEXT NOT NULL,
+  missing_reason TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (batch_id, projection_version)
+);
+```
+
+projection rowはraw marketの代替ではない。rangeをpointへ潰さず、発売なし・返還・同着・時刻ずれ・券種間矛盾を`constraint_residuals_json`とsource observation IDで追跡する。控除率が確認できない場合は`takeout_basis_json=NULL`とし、推測値で正規化しない。
+
+### 1マークlabel audit
+
+```sql
+CREATE TABLE first_mark_label_audit (
+  race_id TEXT NOT NULL,
+  label_version TEXT NOT NULL,
+  result_confirmed_at TEXT NOT NULL,
+  actual_entry_json TEXT,
+  actual_st_json TEXT,
+  kimarite TEXT,
+  lane1_finish INTEGER,
+  adjacent_finish_proxy_json TEXT,
+  outer_boat_top3_proxy_json TEXT,
+  incident_codes_json TEXT,
+  attacking_boat INTEGER,
+  attacking_boat_quality TEXT NOT NULL,
+  indeterminate_reasons_json TEXT NOT NULL,
+  raw_input_fingerprint TEXT NOT NULL,
+  source_quality TEXT NOT NULL DEFAULT 'post_race_label',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (race_id, label_version),
+  CHECK (
+    (attacking_boat IS NULL AND attacking_boat_quality='indeterminate')
+    OR (
+      attacking_boat BETWEEN 1 AND 6
+      AND attacking_boat_quality IN ('official_exact','official_derived')
+    )
+  )
+);
+```
+
+公式telemetryが無い現在は`attacking_boat=NULL`、`attacking_boat_quality='indeterminate'`とする。上のCHECKもfixture review対象であり、今回migrationしない。勝者や決まり手から攻撃艇を埋めない。
+
+### uncertainty / measurement / latent evidence
+
+```sql
+CREATE TABLE uncertainty_feature_snapshots (
+  target_race_id TEXT NOT NULL,
+  as_of_at TEXT NOT NULL,
+  feature_version TEXT NOT NULL,
+  state120_concentration REAL,
+  first_place_entropy REAL,
+  top2_set_entropy REAL,
+  top2_order_entropy REAL,
+  top3_set_entropy REAL,
+  top3_order_entropy REAL,
+  similar_race_count INTEGER,
+  racer_course_sample_count INTEGER,
+  input_missing_count INTEGER NOT NULL,
+  cross_market_disagreement REAL,
+  odds_volatility REAL,
+  entry_uncertainty REAL,
+  st_variance REAL,
+  point_in_time_quality TEXT NOT NULL,
+  data_freshness_seconds INTEGER,
+  sample_count INTEGER,
+  missing_reason TEXT,
+  source_quality TEXT NOT NULL,
+  source_max_event_at TEXT NOT NULL,
+  raw_input_fingerprint TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (target_race_id, as_of_at, feature_version)
+);
+
+CREATE TABLE venue_day_evidence_snapshots (
+  target_race_id TEXT NOT NULL,
+  venue_code TEXT NOT NULL,
+  target_event_at TEXT NOT NULL,
+  evidence_version TEXT NOT NULL,
+  prior_race_count INTEGER NOT NULL,
+  effective_sample_size REAL NOT NULL,
+  lane1_expectation_residual_sum REAL,
+  outer_boat_top3_count INTEGER,
+  st_count INTEGER,
+  st_sum REAL,
+  st_sum_squares REAL,
+  kimarite_counts_json TEXT,
+  incident_count INTEGER,
+  actual_entry_change_count INTEGER,
+  pre_race_weather_summary_json TEXT,
+  stable_plate_evidence_json TEXT,
+  shortened_laps_evidence_json TEXT,
+  shrinkage_baseline_key TEXT NOT NULL,
+  source_max_event_at TEXT NOT NULL,
+  raw_input_fingerprint TEXT NOT NULL,
+  missing_reason TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (target_race_id, evidence_version),
+  CHECK (source_max_event_at < target_event_at)
+);
+```
+
+`uncertainty_feature_snapshots`はSKIP判定ではなく入力監査値、`venue_day_evidence_snapshots`は確定水面stateではなくstrict-prior evidenceである。model出力を保存するtableではない。
+
+measurement metadataは別EAV tableへ安易に複製せず、`beforeinfo_boats_v2`、`beforeinfo_observations_v2`、odds observation、racer snapshotの各観測値へ次を追加する案を優先する。
+
+- `raw_value`
+- `measurement_quality`
+- `value_precision`
+- `value_min / value_max`
+- `confidence`
+- `source_disagreement`
+- `late_update_possible`
+
+### Error Atlas
+
+```sql
+CREATE TABLE error_atlas_entries (
+  id INTEGER PRIMARY KEY,
+  candidate_id TEXT NOT NULL,
+  race_id TEXT NOT NULL,
+  candidate_created_at TEXT NOT NULL,
+  candidate_manifest_sha256 TEXT NOT NULL,
+  input_fingerprint TEXT NOT NULL,
+  classification_version TEXT NOT NULL,
+  result_confirmed_at TEXT NOT NULL,
+  primary_error_code TEXT NOT NULL,
+  error_codes_json TEXT NOT NULL,
+  failed_layer TEXT NOT NULL CHECK (
+    failed_layer IN ('data','point_in_time','market','model','price','incident','unknown')
+  ),
+  source_quality TEXT NOT NULL DEFAULT 'post_race_label',
+  human_override INTEGER NOT NULL DEFAULT 0 CHECK (human_override IN (0,1)),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (candidate_id, classification_version)
+);
+
+CREATE TABLE error_atlas_evidence (
+  error_atlas_id INTEGER NOT NULL
+    REFERENCES error_atlas_entries(id) ON DELETE CASCADE,
+  evidence_type TEXT NOT NULL,
+  source_table TEXT NOT NULL,
+  source_row_key TEXT NOT NULL,
+  source_observed_at TEXT,
+  evidence_json TEXT NOT NULL,
+  PRIMARY KEY (error_atlas_id, evidence_type, source_table, source_row_key)
+);
+```
+
+Error Atlasは結果後audit専用で、BUY/WATCH/SKIP条件を自動変更しない。T-5価値消失はT-5とfinal-like双方の実観測がある場合だけ分類し、払戻からfinal oddsを推測しない。
+
 ## 一意性とidempotency
 
 - raw responseは`response_sha256`で内容同一性を確認する
@@ -427,6 +685,10 @@ AND (observed_at IS NULL OR observed_at <= target_feature_cutoff_at)
 - payout/refundはline番号を保存し、複勝・wide・同着の複数lineを失わない
 - parser再実行で同じsourceを重複INSERTせず、内容差分は監査errorとして止める
 - `INSERT OR REPLACE`でprovenanceを消さない
+- official informationはrace×type×source URL×raw hashで同一内容を一意化し、内容不変pollをchange eventにしない
+- market batchは画面間skewを保持し、複数時刻rowのunionで完全市場を作らない
+- 派生監査値はinput fingerprint＋versionで一意化し、raw変更時は旧versionを上書きしない
+- Error Atlasはcandidate manifestを固定し、再分類はclassification versionを増やす
 
 `checkpoint_label`だけでは一意にしない。同じcheckpoint内に複数観測があり得る。一方、完全市場判定は単一observationだけで行い、複数時刻のunionで完成させない。
 

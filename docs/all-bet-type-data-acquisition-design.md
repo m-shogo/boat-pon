@@ -229,6 +229,141 @@ N1/N2で必要な制御:
 
 M1の「市場offset＋選手・枠・モーター」はN3/N4のPIT品質gateを通過するまで開始しない。M3の「1マーク展開・相互作用」はstrict-prior再構築と因果でないproxy表現が固定されるまで開始しない。
 
+## 独自研究軸のデータ前提
+
+項目別判定とmachine-readable契約は監査JSONの`researchAxisAudit`を正本とする。7軸はいずれも現状`CONDITIONAL`であり、研究modelの実装許可を意味しない。
+
+| 研究軸 | 現在データ | 過去再構築 | future-only | 保存Phase | 追加request |
+|---|---|---|---|---|---|
+| 公式情報の市場反映遅延 | latest情報＋3連単checkpointのみ | 値は部分可、lag不可 | 必須 | N2/N3 | 変更1件×4 lagで5画面×4=20 request。変更頻度はUNKNOWN |
+| 全券種市場整合性 | 3連単のみ | 全券種同時点は不可 | 必須 | N2→N5 | 1 checkpoint 5画面 |
+| 1マーク因果graph | 結果rawは広範囲、展示は部分 | 共起proxyまで可 | 完全な展示PITは必須 | N3/N4→M3 | 上流観測再利用なら0 |
+| 選択的予測 | 標本数・品質の一部 | 一部entropyのみ | 完全な欠損mask/市場不一致は必須 | N5以降 | 上流再利用で0 |
+| Fragility | 値のみ、精度metadata不足 | raw cache範囲は部分可 | late update較正は必須 | N2/N3→N5 | 同一response保存なら0 |
+| 潜在水面状態 | 長期結果＋直近pre-race | strict-priorで部分可 | 完全な市場期待・風向は必須 | N4→N5 | 上流再利用で0 |
+| Error Atlas | 現行paper/結果で部分可 | 着順・集合/順序・事故は可 | 全券種価格層は必須 | N4→N8 | 上流再利用で0 |
+
+特に有望なのは、既存候補を構造分類できるError Atlas、長期結果をstrict-priorで再利用できる潜在水面状態evidence、全軸共通の品質基盤になる選択的不確実性である。これは優先研究候補の監査判断であり、今回modelを作るという意味ではない。
+
+### 公式情報change event
+
+出走表、欠場、展示進入/ST/time、チルト、部品交換、風向/風速/波高、安定板、周回短縮、締切変更を共通のversioned observationとして扱う。
+
+最低field:
+
+- `source_published_at`: source自身が明示した公開/更新時刻。無ければNULL
+- `source_observed_at`: 応答内容を観測できた時刻
+- `first_seen_at`: そのversionを初めて観測した時刻
+- `changed_at`: source時刻が確定する場合はその時刻、不明ならNULL
+- `previous_raw_hash / current_raw_hash`
+- `change_type / change_payload`
+- `source_version`
+- `timing_quality`
+
+現行`official_programs`、`race_weather`、`exhibition_data`、`race_equipment`はrace keyのlatest 1世代であり、変更履歴を表せない。`fetched_at / imported_at`は取得・取込時刻で、公開時刻ではない。
+
+公式の[サイト説明](https://www.boatrace.jp/owpc/pc/extra/about.html)は、翌日出走表の表示開始を通常18時頃・サマー20時頃・ナイター22時頃とするが、これはrace/versionごとの正確な公開時刻ではない。直前情報画面の水面気象には「11R時点」のようなrace相対markerがある一方、壁時計の更新時刻ではない。オッズは公式説明上「オッズ更新時間」を参照する仕様なので、将来parserは表示の有無・値・timezone解決結果を券種とmarket状態ごとに保存し、HTTP観測時刻と分離する。
+
+source時刻が無い場合、真の変更時刻は「前回観測後から`first_seen_at`まで」の区間である。`first_seen_at`を公開時刻と断定せず、`timing_quality=first_seen_bound`と前回観測時刻を保存する。30秒、1分、3分、5分反応は、その境界以後に観測したmarketだけを使う。
+
+### market observation batchと120状態
+
+5画面を取得してもHTTP応答は同時ではない。`market_observation_batch_id`を共通にし、各画面の`request_started_at / observed_at`と、batchの`min_observed_at / max_observed_at / skew_ms`を保存する。skewが許容値を超えたbatchを「同時点市場」と呼ばない。
+
+raw marketの責務:
+
+- 全selectionと`offered / scratched / unavailable / unknown`
+- point oddsまたはsource表示のrange
+- 返還・同着・発売なし
+- source raw hash、parser version、観測時刻
+- 券種別控除率の根拠source・適用期間。未確認はNULL
+- 券種ごとのsource qualityと更新有無
+
+上位3着120状態へのprojectionは派生監査値である。raw evidenceを正本にし、券種間の矛盾や時刻ずれをprojectionで上書きしない。複勝・拡連複のrangeをmidpointへ確定変換しない。券種ごとの制約残差、観測skew、利用したraw observation ID、projection versionを残す。
+
+### 1マークgraphの事前・事後境界
+
+| 項目 | 役割 |
+|---|---|
+| 展示進入、展示ST、展示time、strict-priorコース別ST分布 | レース前特徴候補 |
+| 実進入、実ST、決まり手、着順、事故、結果確定状態 | 結果後の教師・監査label |
+| 1号艇の2/3着残り、隣接艇順位、外艇上位 | 公式結果から作るpost-race共起proxy |
+| 攻撃艇、隣接艇を潰した | 公式telemetryが無いため判定不能 |
+
+勝者を攻撃艇とみなさず、決まり手から艇間因果を後付けしない。pre-race feature tableとpost-race label tableを分け、同じquality codeへ混在させない。
+
+### 選択的不確実性
+
+将来の不確実性snapshotは、120状態集中度、1着entropy、上位2/3艇集合entropy、順序entropy、類似race数、選手×course標本数、入力欠損、券種間不一致、odds変動性、進入不確実性、ST分散、PIT品質、鮮度を対象とする。
+
+各値に`as_of_at / sample_count / missing_reason / source_quality / feature_version`を付ける。結果後に定義した「予測可能だったか」はaudit labelであり、candidate生成時のinputへ戻さない。SKIP model、conformal prediction、券種選択は今回実装しない。
+
+### measurement qualityとFragility前提
+
+展示ST/time、風速・風向・波高、進入、選手snapshot、motor成績、odds、締切残時間について次を観測rowへ持たせる。
+
+- `measurement_quality`
+- `value_precision`
+- `value_min / value_max`
+- `source_disagreement`
+- `late_update_possible`
+- `confidence`
+- raw表示文字列とsource hash
+
+表示丸め以上の精度を生成しない。摂動範囲は当該`observed_at`で既知だったprecision/range/source差だけから作る。将来判明した更新幅を過去へ適用しない。
+
+### 潜在水面状態のstrict-prior evidence
+
+状態modelではなく、対象race前に利用可能なevidence台帳を設計する。
+
+- race時刻・当日順
+- 1コース市場期待と実績の残差
+- 外艇上位、ST平均/分散、風向/風速/波高
+- 決まり手、事故、実進入、安定板、周回短縮
+
+`source_max_event_at < target_event_at`を必須とする。高配当だけを荒れと呼ばず、会場・季節baseline、evidence count、effective sample size、縮小先を保存する。少数raceで確定状態にせず、既存の手動「水面ムード」条件とは別namespace/versionにする。
+
+### Error Atlas
+
+Error Atlasはcandidate時点のmanifestとinput fingerprintを凍結し、結果後に以下を分類する研究台帳である。
+
+- 1/2/3着誤り
+- 上位2/3艇集合は正解・順序のみ誤り
+- 単勝・複勝・2連単・2連複・3連複なら的中
+- T-5価値あり→final-like価値消失
+- 進入変化、ST異常、事故/F/L
+- 入力欠損、PIT不適格
+- 市場もmodelも誤り、市場は正しくmodelだけ誤り
+
+結果を見てBUY条件を変更する探索器にしない。データ層・市場層・model層の失敗を分離する監査labelとしてのみ扱う。final-likeが無い場合、払戻からfinal oddsを推定しない。
+
+## 拡張source-quality taxonomy
+
+| code | 意味 |
+|---|---|
+| `source_timestamp_exact` | source自身の公開/更新時刻がtimezone込みで確定 |
+| `observed_time_only` | source時刻なし。観測時刻のみ |
+| `first_seen_bound` | poll間で初めて変化を観測。公開時刻は区間 |
+| `versioned_raw_exact` | current/previous raw hash付きappend-only観測 |
+| `rounded_display` | 表示丸め単位付きpoint値 |
+| `range_display` | source表示min/max |
+| `derived_strict_prior` | 対象eventより前だけから再構築 |
+| `post_race_label` | 結果後の教師/監査label |
+| `timing_ambiguous` | source日付・timezone・更新時刻を一意化不能 |
+
+欠測理由は少なくとも`not_published / not_observed / not_offered / parse_error / point_in_time_ineligible / stale / timing_ambiguous`を分ける。
+
+## 独自研究軸のPhase割当
+
+| Phase | 保存範囲 |
+|---|---|
+| N1 | 払戻のみ。研究model・featureを追加しない |
+| N2 | 全券種market batch、各response時刻、raw contradiction |
+| N3 | 公式情報change event、measurement quality、beforeinfo versioning |
+| N4 | strict-prior水面evidence、1マーク結果label、Error Atlas |
+| N5 | 120状態projection監査値、不確実性snapshot。既存gate前にbaselineを開始しない |
+| N6以降 | 市場残差、SKIP、Fragility、因果、反映遅延研究は別タスク・別gate |
+
 ## Phase N1の範囲
 
 Phase N1で実装してよいのは全券種払戻基盤だけ。

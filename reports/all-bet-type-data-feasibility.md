@@ -1,6 +1,6 @@
 # 全データ取得可能性・保存設計監査（全券種＋選手PIT、Phase N0）
 
-生成日時: 2026-07-23T09:11:56.309Z
+生成日時: 2026-07-23T12:34:55.149Z
 
 > 読み取り専用監査。DB migration、実収集、予測ロジック、市場残差モデル、券種選択器、production接続は実施していない。
 
@@ -37,7 +37,7 @@
 
 - DB: `data/boat.sqlite`
 - table数: 23
-- odds_timeseries_snapshots: 49,037,546 rows
+- odds_timeseries_snapshots: 49,039,706 rows
 - DB total_changes: before=0, after=0
 - 監査CLIの外部request: 0
 - 監査中DB file変化: あり（並行collector等の外部processと分離）
@@ -79,10 +79,10 @@
 
 | checkpoint | rows | races | minutes_before_close range | captured range |
 |---|---:|---:|---|---|
-| T-10 | 24,096,180 | 2,232 | 6 .. 15 | 2026-06-01T09:15:19.284Z .. 2026-07-23T09:06:38.481Z |
-| T-20 | 19,710,748 | 4,047 | 11 .. 25 | 2026-06-01T09:15:39.905Z .. 2026-07-23T09:06:47.338Z |
-| T-30 | 453,898 | 3,677 | 21 .. 30 | 2026-06-01T09:15:30.661Z .. 2026-07-23T09:06:46.997Z |
-| T-5 | 4,777,200 | 830 | 1 .. 10 | 2026-06-02T00:42:55.010Z .. 2026-07-23T09:06:37.624Z |
+| T-10 | 24,096,540 | 2,235 | 6 .. 15 | 2026-06-01T09:15:19.284Z .. 2026-07-23T09:28:10.542Z |
+| T-20 | 19,711,228 | 4,051 | 11 .. 25 | 2026-06-01T09:15:39.905Z .. 2026-07-23T09:37:30.059Z |
+| T-30 | 454,138 | 3,679 | 21 .. 30 | 2026-06-01T09:15:30.661Z .. 2026-07-23T09:37:30.472Z |
+| T-5 | 4,777,800 | 835 | 1 .. 10 | 2026-06-02T00:42:55.010Z .. 2026-07-23T09:37:19.629Z |
 
 > rowsには修正前の重複保存を含む。race数は存在coverageであり、単一captured_atの完全市場数ではない。完全性は既存 `audit:t5-market-coverage` / `audit:t5-collector-efficiency` を正本にする。
 
@@ -110,7 +110,7 @@
 | racer_course_stats | 9,840 | 1,640 racers、6course完備 1,640 | 2026-06-07T21:35:28.123Z .. 2026-07-13T08:40:09.424Z | races>0 0、win_rateあり 0。n欠落・現在値 |
 | race_entries | 7,132,052 | 1,190,383 races / 2,944 racers | 2000-01-01 .. 2026-06-01 | reg欠損 0、ST欠損 797。strict-prior派生の正本 |
 | 公式番組archive | 7,891 files | — | 2004-06-01 .. 2026-07-23 | 当時番組を再parse可能 |
-| 公式結果archive | 8,163 files | — | 2000-01-01 .. 2026-07-21 | 結果由来rollingを再計算可能 |
+| 公式結果archive | 8,164 files | — | 2000-01-01 .. 2026-07-22 | 結果由来rollingを再計算可能 |
 | レース前HTML cache | 272,671 files | — | 2020-01-01 .. 2026-05-21 | 年齢・支部・性別・体重を当時値で再抽出可能 |
 
 最新番組日 2026-07-23 は 929艇すべてprofile/course statsでcovered。ただし「現在coverage 100%」は過去raceでのPIT適格性を意味しない。
@@ -199,12 +199,154 @@ guard:
 
 選手特徴を現在のBUY/WATCH/SKIPへ追加しない。M1/M3は既存のformal settled gateとN3/N4のPIT基盤が揃うまで開始しない。
 
+## 独自研究軸監査
+
+判定件数: GO 0 / CONDITIONAL 7 / BLOCKED 0 / UNKNOWN 0
+
+| 研究軸 | 判定 | 現在データ | 新規取得 | 過去再構築 | future-only | 推奨Phase | 必要schema | 追加request cost | 主な漏洩リスク |
+|---|---|---|---|---|---|---|---|---|---|
+| 公式情報の市場反映遅延 | **CONDITIONAL** | PARTIAL: beforeinfo系はlatest upsert、3連単oddsはcheckpoint時系列。source公開時刻・変更履歴・全券種同期観測がない | 必要: 公式情報のversioned observationと、変更後lag checkpointごとの全5市場画面 | BLOCKED_FOR_LAG: 保存済みHTMLから値は部分再抽出可能だが、first_seen/changed_atと30秒〜5分反応は再現不可 | 必要: 公開時刻がないsourceのfirst_seen bound、変更後30秒/1分/3分/5分反応 | N2/N3で観測基盤、N5以降で研究 | official_information_observations, official_information_changes, odds_market_observations_v2 | 情報観測はsource page数×poll回数。反応計測は1 changeあたり5市場画面×lag checkpoint数。正確な日次costは変更頻度実測までUNKNOWN | 取得完了時刻を公開時刻と偽装、変更後に取得した値を変更前oddsへ結合、券種間の観測時刻ずれ |
+| 全券種市場整合性 | **CONDITIONAL** | TRIFECTA_ONLY: 7券種の公式画面構造は確認済みだが、live時系列は3連単のみ。複勝・拡連複はrange | 必要: 同一観測batchで5画面・7券種の全selection、発売状態、range、返還状態を保存 | BLOCKED_FOR_ALL_MARKETS: 既存3連単のみ部分可。過去の全券種同時点整合性は再現不可 | 必要: 券種別ノイズ・波及順序・同時点矛盾の評価 | N2で保存、N5以降で120状態投影研究 | market_observation_batches, odds_market_observations_v2, odds_selection_observations_v2, market_projection_audit | 既存設計どおり1 checkpointあたり5 page。投影・制約検査自体は0 request | 異なる観測時刻を同時市場として投影、range midpointの確定値化、返還後marketを事前値へ混入 |
+| 1マーク因果グラフのデータ前提 | **CONDITIONAL** | PARTIAL_PROXY_ONLY: 展示進入/ST、実進入/ST、決まり手、着順、事故は部分〜広範囲に存在。公式の攻撃艇telemetryはない | 必要: 展示・装備のappend-only観測。攻撃艇の公式sourceが見つからない限り因果labelは追加しない | PARTIAL: 実進入→実ST→決まり手→上位3着と共起proxyは再構築可能。攻撃艇・隣接艇を潰した因果は不可 | 必要: 展示の直前versionと当時PIT品質を伴う完全graph input | N3/N4でdata/label、M3で研究 | beforeinfo_observations_v2, first_mark_label_audit, racer_style_features | 既存beforeinfo観測と結果取得を再利用する限り0。追加telemetry sourceはUNKNOWN | 決まり手・実ST・着順をレース前特徴へ混入、勝者を攻撃艇と機械的同一視、共起を因果と断定 |
+| SKIP予測器・選択的予測 | **CONDITIONAL** | PARTIAL: 選手標本数・PIT品質の一部は監査可能だが、全券種120状態分布・券種間不一致・完全な鮮度metadataは未整備 | 必要: 上流のN2/N3観測のみ。SKIP専用の追加外部sourceは不要 | PARTIAL: 既存3連単と結果から一部entropy/類似数は可能。全券種不一致と当時欠損maskは不可 | 必要: 完全な入力欠損mask、観測skew、全券種不一致、forward calibration | N5で監査値、N6以降で研究 | uncertainty_feature_snapshots, market_projection_audit | 上流観測を再利用するため追加0 request | 対象結果で予測可能性labelを最適化、欠損を0補完、将来標本数・将来calibrationを使用 |
+| 入力摂動とFragility Index | **CONDITIONAL** | PARTIAL_VALUES_ONLY: 値は存在するが、表示precision、measurement error、confidence、late update metadataがほぼない | 必要: 同一sourceのraw表示、丸め単位、range、version変更履歴を観測rowへ追加 | PARTIAL_RAW_CACHE_ONLY: raw HTMLが残る範囲は表示precisionを部分再抽出可能。late update順序は不可 | 必要: source間差、更新頻度、late update probabilityの較正 | N2/N3でmetadata、N5以降で研究 | measurement_quality_fields on observation tables, input_perturbation_manifests | raw表示とversionを同じresponseから保存するなら0。source比較を追加する場合はsource数に比例しUNKNOWN | 表示丸めより細かい擬似精度、将来判明した更新幅で過去候補を摂動、source差を誤差と断定 |
+| 潜在水面状態 | **CONDITIONAL** | PARTIAL: 長期結果に実進入/ST/決まり手/事故/着順、直近期間にpre-race風波・安定板・周回短縮がある | 必要: pre-race風向とappend-only観測の継続。状態推定専用の追加requestは不要 | PARTIAL_STRICT_PRIOR: 同日strict-prior結果から市場期待残差以外の多くを再構築可能。市場期待は保存odds範囲のみ | 必要: 完全なpre-race風向、全券種市場期待、観測鮮度付き逐次更新 | N4でstrict-prior台帳、N5以降で研究 | venue_day_evidence_snapshots, water_state_rebuild_manifests | 既存結果・上流pre-race観測を再利用するため追加0 request | 対象race以後の結果、払戻/高配当を荒れ定義に使用、2〜3raceで状態確定、会場・季節差の無視 |
+| Error Atlas | **CONDITIONAL** | CURRENT_TRIFECTA_PAPER_PARTIAL: decision_history、公式上位3着、実進入/ST/事故、3連単T-5、5券種払戻があり現行paper候補は多くを分類可能 | 必要: 単勝・複勝払戻、全券種T-5/final-like、PIT監査reasonの固定保存 | PARTIAL: 既存候補の着順誤り・集合/順序誤り・券種変換的中・事故は再構築可能 | 必要: 全券種T-5価値→final-like価値消失、当時PIT不適格理由、観測時点別市場対モデル比較 | N4で監査台帳、N5/N8で市場・モデル層分類 | error_atlas_entries, error_atlas_evidence | 保存済みdecision/resultを使う分類は0。価格層分類はN2の観測を再利用 | 結果を見てBUY条件を変更、final price欠測を払戻から推測、当時利用不能なfeatureで失敗原因を説明 |
+
+### 特に有望な上位3項目
+
+1. **Error Atlas** — 既存decision_history・公式結果・事故・3連単T-5で現行paper候補の失敗層を最も早く監査でき、追加requestは上流観測の再利用で済む。
+2. **潜在水面状態** — 長期結果から同日strict-prior evidenceを再構築できる。高配当依存でない状態証拠と会場・季節baselineを分離できる。
+3. **SKIP予測器・選択的予測** — 標本数・欠損・PIT品質を保存する設計は他の全研究軸にも共通し、専用外部requestを増やさず将来のSKIP監査基盤になる。
+
+### 公式情報の市場反映遅延
+
+| event | source | source公開時刻 | 根拠 | 現在version | 過去lag | timing quality | 判定 |
+|---|---|---|---|---|---|---|---|
+| 出走表公開・更新 | official_programs/raw program | 正確な時刻は未確認/未保存 | 公式説明は通常18時頃等の概算表示予定。race/versionごとの正確な公開時刻ではない | single_latest | future_only | observed_time_only | **CONDITIONAL** |
+| 欠場 | official program / odds / beforeinfo | 正確な時刻は未確認/未保存 | 監査sampleの表示内容と現保存schemaに個別の壁時計公開/更新時刻なし | partial_latest | future_only | observed_time_only | **CONDITIONAL** |
+| 展示進入 | beforeinfo | 正確な時刻は未確認/未保存 | 監査sampleの表示内容と現保存schemaに個別の壁時計公開/更新時刻なし | single_latest | future_only | observed_time_only | **CONDITIONAL** |
+| 展示ST | beforeinfo | 正確な時刻は未確認/未保存 | 監査sampleの表示内容と現保存schemaに個別の壁時計公開/更新時刻なし | single_latest | future_only | observed_time_only | **CONDITIONAL** |
+| 展示タイム | beforeinfo | 正確な時刻は未確認/未保存 | 監査sampleの表示内容と現保存schemaに個別の壁時計公開/更新時刻なし | single_latest | future_only | observed_time_only | **CONDITIONAL** |
+| チルト | beforeinfo | 正確な時刻は未確認/未保存 | 監査sampleの表示内容と現保存schemaに個別の壁時計公開/更新時刻なし | single_latest | future_only | observed_time_only | **CONDITIONAL** |
+| 部品交換 | beforeinfo | 正確な時刻は未確認/未保存 | 監査sampleの表示内容と現保存schemaに個別の壁時計公開/更新時刻なし | single_latest | future_only | observed_time_only | **CONDITIONAL** |
+| 風向・風速・波高 | beforeinfo | 正確な時刻は未確認/未保存 | 公式画面に「11R時点」等のrace相対markerはあるが、壁時計の公開時刻ではない | single_latest | future_only | observed_time_only | **CONDITIONAL** |
+| 安定板 | beforeinfo | 正確な時刻は未確認/未保存 | 監査sampleの表示内容と現保存schemaに個別の壁時計公開/更新時刻なし | single_latest | future_only | observed_time_only | **CONDITIONAL** |
+| 周回短縮 | beforeinfo | 正確な時刻は未確認/未保存 | 監査sampleの表示内容と現保存schemaに個別の壁時計公開/更新時刻なし | single_latest | future_only | observed_time_only | **CONDITIONAL** |
+| 締切時刻変更 | official program | 正確な時刻は未確認/未保存 | 監査sampleの表示内容と現保存schemaに個別の壁時計公開/更新時刻なし | single_latest | future_only | observed_time_only | **CONDITIONAL** |
+
+- 公式説明は翌日出走表の表示開始を通常18時頃・サマー20時頃・ナイター22時頃とするが、race/version単位の正確な公開時刻ではない。
+- 直前情報sampleは水面気象を「11R時点」のようなrace相対markerで示すが、壁時計の公開時刻を表示しない。
+- 公式説明はlive oddsについて「オッズ更新時間」参照とする。将来parserは表示有無を券種・状態別に保存し、HTTP観測時刻と分離する。
+- 締切時オッズsampleは締切時状態を示すが、最終確定ではなくスタート事故等を反映しない。
+
+現行`official_programs`、`race_weather`、`exhibition_data`、`race_equipment`はrace keyの最新1世代で、source自身の公開時刻と変更versionを保存していない。`fetched_at / imported_at`は観測・取込時刻であり、公開時刻ではない。将来はraw hash付きappend-only observationからchange eventを生成し、source時刻が無ければ`first_seen_bound`として前回観測〜first seenの区間を保持する。
+
+反応lag候補: 30 / 60 / 180 / 300秒。全5市場画面を同一batchで取得しても各HTTP応答時刻は異なるため、batch内skewを保存し、一つの券種だけ遅い場合をraw evidenceとして残す。
+
+### 全券種市場整合性
+
+共通状態は上位3着順序付き120状態。sensorはwin / place / exacta / quinella / wide / trifecta / trio。
+
+- 120状態は非負・総和1
+- win/exacta/trifectaは順序制約
+- quinella/trio/wideは集合制約
+- place/wide rangeをpointへ丸めない
+- 発売なし・欠場・返還・同着を確率0と同一視しない
+- 券種ごとのobserved_atとbatch skewを保持
+- 控除率は公式根拠・適用期間付きで保存し、未知はNULL
+
+各券種を異なるノイズ水準のsensorとして扱うが、今回projection/modelは実装しない。raw point/range、発売状態、返還、同着、observed_at、source hashを正本とし、矛盾した値をprojectionで上書きしない。
+
+### 1マーク因果グラフの境界
+
+| 項目 | 役割 | source | 判定規則 |
+|---|---|---|---|
+| 展示進入 | pre_race_feature | beforeinfoの観測時点付きraw | append-only化後に利用可 |
+| 展示ST | pre_race_feature | beforeinfoの観測時点付きraw | append-only化後に利用可 |
+| 展示タイム | pre_race_feature | beforeinfoの観測時点付きraw | append-only化後に利用可 |
+| コース別ST平均・分散 | pre_race_feature | strict-prior race_entries | n・window・as_of必須 |
+| 実進入 | post_race_label | race_entries.entry_course | 教師/監査専用 |
+| 実ST | post_race_label | race_entries.st/status_code | 教師/監査専用 |
+| 決まり手 | post_race_label | race_conditions.kimarite | 教師/監査専用 |
+| 1号艇の残り方 | post_race_derived_label | 公式着順 | 定義固定で再現可 |
+| 隣接艇の着順変化 | post_race_proxy | 実進入と着順 | baseline比較が必要、因果表現禁止 |
+| 外艇の連動 | post_race_proxy | 実進入と着順 | 共起のみ、因果表現禁止 |
+| 攻撃艇 | undetermined | 公式telemetry未確認 | 勝者・決まり手から主観補完しない |
+
+公式rawで再現できるのは、展示→実進入/ST→決まり手・着順の時系列と共起proxyまで。「攻撃艇」「隣接艇を潰した」は公式telemetryが無い限り判定不能とし、勝者や決まり手から主観で補完しない。
+
+### 選択的不確実性・Fragility
+
+不確実性値は as_of_at, sample_count, missing_reason, source_quality, feature_version を必須とする。対象は state120_concentration, first_place_entropy, top2_set_entropy, top2_order_entropy, top3_set_entropy, top3_order_entropy, similar_race_count, racer_course_sample_count, input_missing_count, cross_market_disagreement, odds_volatility, entry_uncertainty, st_variance, point_in_time_quality, data_freshness_seconds。
+
+Fragility対象は、値だけでなく`measurement_quality / value_precision / value_min / value_max / source_disagreement / late_update_possible`を観測時点付きで保存する。表示丸めより細かい擬似精度を作らない。
+
+### 潜在水面状態
+
+- source_max_event_at < target_event_at
+- 高配当だけを荒れlabelにしない
+- 会場・季節baselineへ縮小可能にする
+- evidence_countとeffective_sample_sizeを保存
+- 少数raceで確定状態にしない
+- 従来の手動水面ムード条件と別namespace/versionにする
+
+状態値自体は今回作らない。対象raceより前のevidenceだけをappendし、会場・季節baseline、evidence count、effective sample sizeを保存できる設計に限定する。
+
+### Error Atlas
+
+分類code: first_place_error, second_place_error, third_place_error, top2_set_correct_order_wrong, top3_set_correct_order_wrong, win_would_hit, place_would_hit, exacta_would_hit, quinella_would_hit, trio_would_hit, value_at_t5_lost_at_final_like, entry_change, abnormal_start, incident_or_fl, missing_input, point_in_time_ineligible, market_and_model_wrong, market_right_model_wrong
+
+Error Atlasは結果後の研究台帳であり、BUY条件探索器ではない。candidate時点のmanifest/input fingerprintを凍結し、データ層・市場層・モデル層のどこが失敗したかを分類する。
+
+### source-quality / point-in-time
+
+| code | meaning |
+|---|---|
+| source_timestamp_exact | source自身の公開/更新時刻が日付・timezone込みで確定 |
+| observed_time_only | source時刻なし。取得観測時刻のみ |
+| first_seen_bound | poll間で初めて変化を観測。真の公開時刻は前回観測後〜first_seenの区間 |
+| versioned_raw_exact | raw hashと前version hashを持つappend-only観測 |
+| rounded_display | 表示丸め単位を保持するpoint値 |
+| range_display | source表示のmin/maxを保持 |
+| derived_strict_prior | 対象eventより前だけからversion付き再構築 |
+| post_race_label | 結果確定後の教師/監査label。事前特徴利用不可 |
+| timing_ambiguous | source日付・timezone・更新時刻を一意に決められない |
+
+- fetched_atをsource_published_atとして扱わない
+- 同一raceの情報とmarketは各observed_atを保持し、batch内時刻skewを検査する
+- change lagはfirst_seen_at以後のmarket observationだけで測る
+- 対象race結果・対象race後情報をpre-race特徴へ入れない
+- post-race labelとpre-race featureを同じ列/qualityで保存しない
+- 派生値はsource_max_event_at、input fingerprint、feature versionを持つ
+- 欠測・発売なし・未観測・PIT不適格を別reason codeにする
+- raw contradictionを正規化処理で上書きしない
+
+### 独自研究軸のrequest cost
+
+| scenario | unit | formula | additional requests | note |
+|---|---|---|---:|---|
+| information-versioning-single-pass | 144-race design day | 144 races × 2 information pages × 1 pass | 288 | 開催数実測ではなく既存N0と同じ144 race設計例。poll追加ごとに同数増える |
+| one-change-four-market-lags | per changed race | 5 market pages × 4 lag checkpoints (30s/1m/3m/5m) | 20 | 情報source再取得分を含まない。変更頻度が未測定なので日次総数はUNKNOWN |
+| derived-research-ledgers | per rebuild | saved raw only | 0 | Error Atlas、strict-prior水面evidence、uncertainty/fragility計算は保存済みrawを再利用 |
+
+### N1以降
+
+- N1: 全券種払戻基盤のみ。独自研究軸のmodel/featureは実装しない。
+- N2: 全券種oddsをbatch/skew付きappend-only観測。市場整合性modelは実装しない。
+- N3: 公式情報change event、measurement quality、beforeinfo versioning。
+- N4: strict-prior水面evidence、1マーク結果label、Error Atlas監査台帳。
+- N5: 120状態raw projection auditと不確実性値。baseline/選択器は既存gate後。
+- N6以降: 市場残差、SKIP、Fragility、因果・市場遅延研究は各gate通過後の別タスク。
+
+今回、モデル、120状態baseline、SKIP予測器、Fragility Index、状態推定、券種選択器は実装していない。
+
 ## 展示・結果原因・事故
 
-- pre-race weather races: 17,301
+- pre-race weather races: 17,306
 - post-race condition races: 1,190,385
 - 両方があるraces: 10,010
-- exhibition races: 17,201
+- exhibition races: 17,206
 - actual course races: 1,190,383
 - actual ST races: 1,190,380
 - status_code races: 77,094
@@ -255,26 +397,26 @@ Phase N0の判定は、払戻基盤を最初の独立実装候補とすること
 | table | rows | races | range | source/provenance columns |
 |---|---:|---:|---|---|
 | app_settings | 1 | — | — | — |
-| decision_history | 444,291 | 444,279 | 2018-01-01 .. 2026-07-23 | source, fetched_at |
-| exhibition_data | 103,048 | 17,201 | 2026-05-30T01:41:24.819Z .. 2026-07-23T08:55:12.638Z | fetched_at, source_type, source_quality |
+| decision_history | 444,296 | 444,284 | 2018-01-01 .. 2026-07-23 | source, fetched_at |
+| exhibition_data | 103,078 | 17,206 | 2026-05-30T01:41:24.819Z .. 2026-07-23T09:28:57.878Z | fetched_at, source_type, source_quality |
 | historical_alternative_odds | 131,187 | 4,301 | 2024-01-01 .. 2026-05-20 | source_type, source_quality, source_url, fetched_at, parser_version, fetch_status |
 | job_locks | 0 | — | — | — |
 | job_runs | 27 | — | 2026-06-02 06:31:48 .. 2026-06-02 06:45:50 | — |
-| manual_odds | 6,624 | 6,624 | — | source |
+| manual_odds | 6,629 | 6,629 | — | source |
 | missing_jobs | 14 | — | 2026-06-02 06:40:15 .. 2026-06-02 06:40:15 | — |
 | motor_boat_stats | 685,523 | 114,356 | 2024-01-01 .. 2026-07-23 | imported_at |
 | notification_log | 19 | 19 | 2026-05-21 07:23:22 .. 2026-07-23 02:19:37 | — |
-| odds_snapshots | 1,800,733 | 277,119 | 2026-05-23T05:11:53.835Z .. 2026-07-23T09:00:22.061Z | source, captured_at |
-| odds_timeseries_snapshots | 49,037,546 | 6,110 | 2026-06-01T09:15:19.284Z .. 2026-07-23T08:59:49.724Z | source, captured_at |
+| odds_snapshots | 1,801,933 | 277,124 | 2026-05-23T05:11:53.835Z .. 2026-07-23T09:40:12.018Z | source, captured_at |
+| odds_timeseries_snapshots | 49,039,706 | 6,115 | 2026-06-01T09:15:19.284Z .. 2026-07-23T09:37:30.472Z | source, captured_at |
 | official_programs | 1,145,194 | 1,145,194 | 2004-06-01 .. 2026-07-23 | source_file, imported_at |
 | paper_roi_candidates | 696 | 543 | 2024-04-01 .. 2025-08-12 | — |
 | push_subscriptions | 0 | — | — .. — | — |
 | race_conditions | 1,190,385 | 1,190,385 | 2000-01-01 .. 2026-06-01 | source, fetched_at |
 | race_entries | 7,132,052 | 1,190,383 | 2000-01-01 .. 2026-06-01 | source, fetched_at |
-| race_equipment | 103,230 | 17,205 | 2026-06-01T03:26:48.714Z .. 2026-07-23T08:55:28.214Z | fetched_at, source_type, source_quality |
+| race_equipment | 103,260 | 17,210 | 2026-06-01T03:26:48.714Z .. 2026-07-23T09:30:13.847Z | fetched_at, source_type, source_quality |
 | race_payouts | 5,871,974 | 1,190,226 | 2000-01-01 .. 2026-06-01 | source, fetched_at |
 | race_results | 1,177,477 | 1,177,477 | 2004-06-01 .. 2026-07-21 | source, fetched_at |
-| race_weather | 17,301 | 17,301 | 2026-05-30T13:02:08.311Z .. 2026-07-23T08:55:28.214Z | fetched_at, source_type, source_quality |
+| race_weather | 17,306 | 17,306 | 2026-05-30T13:02:08.311Z .. 2026-07-23T09:30:13.847Z | fetched_at, source_type, source_quality |
 | racer_course_stats | 9,840 | — | 2026-06-07T21:35:28.123Z .. 2026-07-13T08:40:09.424Z | fetched_at |
 | racer_profiles | 2,660 | — | 2026-07-12T22:54:25.119Z .. 2026-07-19T20:05:27.355Z | fetched_at |
 
