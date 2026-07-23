@@ -1,6 +1,6 @@
 # boat-pon AI作業引継ぎ（正本）
 
-更新: 2026-07-23 16:24 JST
+更新: 2026-07-23 17:21 JST
 
 この文書は、過去チャットを読めない別のAIチャットが現在地を誤解せず再開するための入口である。数値は更新時点のスナップショットなので、作業開始時に下記コマンドで再計測する。
 
@@ -24,6 +24,7 @@
 - 修正前T-5標本は、前checkpointの5分キャッシュを再利用した可能性を完全には除外できない。
 - 正式な収益評価は、2026-07-21 15:15 JST以降に公式networkから直接取得したfuture-only T-5だけでやり直す。
 - DB肥大化の新規増加は抑制済みだが、13.98GiBの原本圧縮は未実施。
+- Phase N0「全券種データ取得可能性・保存設計監査」は読み取り専用で完了した。DB migration、実収集、モデル、production接続は未着手。
 
 ## 絶対にしてはいけないこと
 
@@ -161,6 +162,17 @@ git diff --check
 
 ## 次に進める順序
 
+Phase N0は完了。監査結果は`reports/all-bet-type-data-feasibility.md/json`、取得設計は`docs/all-bet-type-data-acquisition-design.md`、schema案は`docs/all-bet-type-schema-migration-design.md`を正本とする。
+
+Phase N0の確定事項:
+
+- 公式結果ページと既存公式日次成績cacheには7券種の払戻がある。
+- 現DBの払戻はexacta / quinella / wide / trifecta / trioのみで、win / placeは0件。
+- 現行live時系列は`bet_type`なしの3連単専用。全券種を混在させない。
+- place / wideはrange oddsとして保存する必要がある。
+- 売上額・投票口数は公式source未確認でBLOCKED。
+- 既存DB、`app_settings`、launchd、collector頻度、予測/判定は変更していない。
+
 1. `network-only正式cohort`のT-5完全率、確定結果数、実払戻ROIを日次で更新する。
 2. 完成日の日次coverage 80% gateを確認する。修正前を含む累積率だけで合格にしない。
 3. network-only settledが貯まったら、市場のみ・現行モデル・残差モデルを同一race母集団で比較する。
@@ -171,7 +183,7 @@ git diff --check
 
 2023-2024固定履歴モデルと市場の比較器は実装済み。現時点ではα=0が選ばれたため、特徴量追加や本番接続へ進めず、同じ固定条件のformal future蓄積を続ける。
 
-市場残差・全券種選択の次フェーズ構想は`docs/market-residual-ticket-selection-roadmap.md`を正本とする。ただし、次に行うのは現在のformal settled蓄積と本フェーズの完了であり、モデル実装へ直ちに移行しない。別タスクのPhase N0で取得可能性・保存設計を監査し、最低1,000 settled gate到達前に残差モデル学習を始めない。
+市場残差・全券種選択の計画は`docs/market-residual-ticket-selection-roadmap.md`を正本とする。Phase N0は完了したが、最低1,000 settled gate到達前に残差モデル学習を始めない。次の実装候補は別タスクのPhase N1「全券種払戻基盤」であり、N0設計レビューで承認された範囲だけを対象にする。N1へオッズ時系列、予測ロジック、市場残差モデル、券種選択器、production接続を混ぜない。
 
 ## やっても改善にならないこと
 

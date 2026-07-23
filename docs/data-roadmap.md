@@ -8,6 +8,8 @@ boat-pon が予測精度向上のために収集・利用したいデータの�
 - **取得済みデータはキャッシュ前提**（SQLite に保存し、同一 race_id の再取得は原則スキップ）
 - DBやライブ設定を変更する処理は `docs/settings-change-gate.md` のゲートを通すこと
 
+全7券種の取得可能性・保存契約は2026-07-23のPhase N0で監査済み。実測は[`../reports/all-bet-type-data-feasibility.md`](../reports/all-bet-type-data-feasibility.md)、取得設計は[`all-bet-type-data-acquisition-design.md`](all-bet-type-data-acquisition-design.md)を正本とする。現行時系列は3連単専用、払戻は単勝・複勝欠落であり、本ファイルの「OK」を全券種対応済みとは解釈しない。
+
 ---
 
 ## 1. 結果データ

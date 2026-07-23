@@ -4,7 +4,7 @@
 
 この計画は、BUY通知を増やすためではなく、予測確率が市場と実払戻を上回るかを段階的に検証するためのもの。全段階でDB書き込み・本番判定変更・自動投票は行わない。
 
-現在フェーズ終了後の「市場残差モデル＋全券種選択」の詳細計画は、[`market-residual-ticket-selection-roadmap.md`](market-residual-ticket-selection-roadmap.md)を正本とする。現時点の次作業はformal settled固定条件蓄積であり、新計画の実装へ即時移行しない。
+「市場残差モデル＋全券種選択」の詳細計画は、[`market-residual-ticket-selection-roadmap.md`](market-residual-ticket-selection-roadmap.md)を正本とする。Phase N0の取得可能性・保存設計監査は2026-07-23に完了したが、モデル着手gateは変わらない。現時点のモデル側作業はformal settled固定条件蓄積であり、Phase N0完了を市場残差モデル開始理由にしない。
 
 ## 現在地
 

@@ -105,6 +105,7 @@ pnpm review:suite -- --from 2026-01-01 --to 2026-06-03 --split-date 2026-04-01 -
 | `pnpm audit:t5-historical-market-forward` | 2023-2024固定履歴モデルとT-5市場を同一raceのformal futureで比較 |
 | `pnpm analyze:historical-ranking-forward` | 2023-2024番組・展示だけで学習し2025/2026を着順確率・実払戻で固定forward評価 |
 | `pnpm audit:odds-timeseries-storage` | 時系列DBの日別重複率・物理肥大化を読み取り専用監査 |
+| `pnpm audit:all-bet-type-feasibility` | Phase N0の全7券種source・DB/schema・coverage・request budgetを読み取り専用再監査 |
 | `pnpm plan:odds-timeseries-compaction` | 完全市場を保持する時系列compact計画と削減見込みを読み取り専用生成 |
 | `pnpm verify:odds-timeseries-compaction` | compact候補DBをintegrity・保持rows・fingerprintで原本と読み取り専用比較 |
 | `pnpm build:odds-timeseries-compact-candidate` | 人間保守専用。原本を変更せず別候補DBをbackup・compact（確認文字列とauto-odds unload必須） |

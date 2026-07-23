@@ -218,6 +218,8 @@ T-5表示オッズを確定値とせず、T-5から締切までの変化分布�
 
 公式ソース、現在DBの全券種coverage、単勝・複勝払戻欠損、API/HTML構造、リクエスト負荷、保存schema、一意キー、source quality、point-in-time、dry-run、migration案を監査する。この段階ではDB変更、実収集、モデル実装を行わない。
 
+**2026-07-23完了。** 読み取り専用監査は[`../reports/all-bet-type-data-feasibility.md`](../reports/all-bet-type-data-feasibility.md)、取得設計は[`all-bet-type-data-acquisition-design.md`](all-bet-type-data-acquisition-design.md)、schema案は[`all-bet-type-schema-migration-design.md`](all-bet-type-schema-migration-design.md)を正本とする。7券種払戻の公式存在を確認したが、現DBは単勝・複勝が欠落する。live時系列は3連単専用で、売上・投票口数はBLOCKED。DB migration、実収集、モデル、production接続は未着手。次の独立タスクは、承認された範囲だけのPhase N1である。
+
 ### Phase N1: 全券種払戻基盤
 
 単勝・複勝を含む払戻取得、fixture、parser、dry-run、idempotency、同着・返還・不成立、小規模canary、coverage reportを作る。予測ロジックは変更しない。

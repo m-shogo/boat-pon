@@ -247,3 +247,5 @@ npm run dev
 VAPIDキー未設定時は `/api/push/vapid-public-key` が `{ enabled: false }` を返し、UIでも警告表示されます。VAPIDキーは秘密情報なのでGit管理しないでください。
 
 別のAIチャットへ引き継ぐ場合は、まず[`docs/current-ai-handoff.md`](docs/current-ai-handoff.md)を読ませ、`pnpm handoff:ai`で現在のDB・ログ状態を再取得してください。従来の`npm run handoff:claude`も同じ確認コマンドとして残しています。
+
+全7券種の取得可能性・保存設計は、`pnpm audit:all-bet-type-feasibility`で読み取り専用再監査できます。結論と次フェーズの境界は[`reports/all-bet-type-data-feasibility.md`](reports/all-bet-type-data-feasibility.md)を参照してください。
