@@ -13,7 +13,7 @@
 - 残差モデル学習は、T-5全市場と正式結果について既存の最低1,000 settled gateを満たすまで開始しない。
 - production判定への接続は、固定条件のfuture-only検証を通過するまで禁止する。
 
-現在地からの順序は、(1) formal settled固定条件蓄積の継続、(2) 現在フェーズの完了、(3) 別タスクでPhase N0開始、(4) データ収集基盤構築、(5) settled gate到達後の市場baseline・残差モデル、で固定する。
+現在地からの順序は、(1) formal settled固定条件蓄積の継続、(2) 完了したPhase N0設計のレビュー、(3) 別タスクで承認範囲のデータ収集基盤構築、(4) settled gate到達後の市場baseline・残差モデル、で固定する。
 
 ## 中核仮説
 
@@ -218,7 +218,9 @@ T-5表示オッズを確定値とせず、T-5から締切までの変化分布�
 
 公式ソース、現在DBの全券種coverage、単勝・複勝払戻欠損、API/HTML構造、リクエスト負荷、保存schema、一意キー、source quality、point-in-time、dry-run、migration案を監査する。この段階ではDB変更、実収集、モデル実装を行わない。
 
-**2026-07-23完了。** 読み取り専用監査は[`../reports/all-bet-type-data-feasibility.md`](../reports/all-bet-type-data-feasibility.md)、取得設計は[`all-bet-type-data-acquisition-design.md`](all-bet-type-data-acquisition-design.md)、schema案は[`all-bet-type-schema-migration-design.md`](all-bet-type-schema-migration-design.md)を正本とする。7券種払戻の公式存在を確認したが、現DBは単勝・複勝が欠落する。live時系列は3連単専用で、売上・投票口数はBLOCKED。DB migration、実収集、モデル、production接続は未着手。次の独立タスクは、承認された範囲だけのPhase N1である。
+**2026-07-23完了。** 読み取り専用監査は[`../reports/all-bet-type-data-feasibility.md`](../reports/all-bet-type-data-feasibility.md)、取得設計は[`all-bet-type-data-acquisition-design.md`](all-bet-type-data-acquisition-design.md)、schema案は[`all-bet-type-schema-migration-design.md`](all-bet-type-schema-migration-design.md)を正本とする。7券種払戻の公式存在を確認したが、現DBは単勝・複勝が欠落する。live時系列は3連単専用で、売上・投票口数はBLOCKED。
+
+選手PIT監査もN0へ統合した。`official_programs.raw_json`に当時級別・全国/当地勝率・2連率、`race_entries`に結果履歴が残り、strict-priorのコース・recent・pair・style proxyは再構築可能である。一方、`racer_profiles`と`racer_course_stats`は現在値1世代でhistoricalには使えず、3連率、事故率、集計窓・標本数、当日展示・部品交換推移等はsnapshot/append-only設計が必要である。M1はN3/N4のPIT gate、M3はstrict-prior相互作用gateを通過するまで開始しない。DB migration、実収集、モデル、production接続は未着手。次の独立タスクは、承認された範囲だけのPhase N1である。
 
 ### Phase N1: 全券種払戻基盤
 
@@ -230,11 +232,11 @@ T-5表示オッズを確定値とせず、T-5から締切までの変化分布�
 
 ### Phase N3: 物理環境・展示完全化
 
-風向、会場相対風向、展示進入、展示ST、展示タイム、装備、point-in-time品質検査を完成させる。予測ロジックは変更しない。
+風向、会場相対風向、展示進入、展示ST、展示タイム、装備、point-in-time品質検査を完成させる。選手のprofile/period/course-period snapshot、支部・登録期・年齢・性別・直前体重を有効期間と集計窓付きで整備する。予測ロジックは変更しない。
 
 ### Phase N4: 結果原因ラベル
 
-実進入、実ST、決まり手、事故、外れ分解レポートを整える。予測ロジックは変更しない。
+実進入、実ST、決まり手、事故、外れ分解レポートを整える。`race_entries`等から、対象raceより厳格に前だけを使うrecent form、コース別能力、過去同走・直接対戦、戦法・隣接艇相互作用proxyを再構築する。因果や私的人間関係は扱わず、予測ロジックは変更しない。
 
 ### Phase N5: 120通り市場baseline
 

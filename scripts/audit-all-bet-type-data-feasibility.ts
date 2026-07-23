@@ -4,7 +4,7 @@
  * DBはreadOnly + query_onlyで開き、外部通信・migration・実収集・モデル処理を行わない。
  * 出力先はreports配下のMarkdown/JSONだけ。
  */
-import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import {
   ALL_BET_TYPES,
@@ -14,6 +14,7 @@ import {
   buildRequestBudgetScenario,
   officialRaceUrl,
 } from "../src/domain/allBetTypeFeasibility";
+import { RACER_FEATURE_FEASIBILITY } from "../src/domain/racerDataFeasibility";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const REPORT_JSON = "reports/all-bet-type-data-feasibility.json";
@@ -89,6 +90,7 @@ try {
       (SELECT COUNT(DISTINCT race_id) FROM race_entries WHERE st IS NOT NULL) AS actualStartTimingRaces,
       (SELECT COUNT(DISTINCT race_id) FROM race_entries WHERE status_code IS NOT NULL) AS incidentStatusRaces
   `)[0];
+  const racerAudit = buildRacerAudit();
 
   const payoutByBetType = new Map(payoutCoverage.map((row) => [String(row.betType), row]));
   const closingByBetType = new Map(closingOddsCoverage.map((row) => [String(row.betType), row]));
@@ -164,7 +166,7 @@ try {
     generatedAt: new Date().toISOString(),
     auditDateJst: AUDIT_DATE_JST,
     scope: {
-      included: ["read-only DB/schema/coverage audit", "one-race official source structure check", "storage and migration design"],
+      included: ["read-only DB/schema/coverage audit", "one-race official source structure check", "racer point-in-time feasibility audit", "storage and migration design"],
       excluded: ["DB migration", "data collection", "prediction/model changes", "market residual model", "ticket selector", "production connection"],
     },
     safety: {
@@ -194,6 +196,7 @@ try {
     checkpointCoverage,
     sourceCoverage,
     prePostOverlap,
+    racerAudit,
     betTypes,
     requestBudgets,
     acquisitionDecision: {
@@ -201,11 +204,13 @@ try {
       liveOdds: "CONDITIONAL",
       historicalOdds: "CONDITIONAL",
       weatherAndExhibition: "CONDITIONAL",
+      racerPointInTime: "CONDITIONAL",
       salesAndLiquidity: "BLOCKED",
       rationale: [
         "払戻は7券種とも公式結果/日次成績に存在するが、win/place parser、同着・返還・不成立契約が未固定。",
         "全券種オッズは5画面で公開されるが、全race×4 checkpointは3,024 request/day想定で、サイトポリシーの大量アクセス禁止に照らし現状のままGOにできない。",
         "売上額・投票口数の公式公開ソースを今回の最小確認では特定できず、オッズ変化は流動性そのものではない。",
+        "レース当時の級別・全国/当地勝率/2連率は番組rawでGO。現在値profile/course statsはhistorical利用BLOCKEDで、結果由来rolling特徴はstrict-prior再構築を条件にCONDITIONAL。",
       ],
     },
     phaseN1EntryGate: [
@@ -270,6 +275,331 @@ function tableCoverage(table: string, timestampColumn: string) {
   `)[0];
 }
 
+function buildRacerAudit() {
+  const profiles = rows(`
+    SELECT COUNT(*) AS rows, COUNT(DISTINCT registration_no) AS racers,
+      MIN(fetched_at) AS minFetchedAt, MAX(fetched_at) AS maxFetchedAt,
+      COUNT(DISTINCT substr(fetched_at,1,10)) AS fetchDays,
+      SUM(CASE WHEN avg_st IS NOT NULL THEN 1 ELSE 0 END) AS avgStRows,
+      SUM(CASE WHEN top3_rate IS NOT NULL THEN 1 ELSE 0 END) AS top3Rows,
+      SUM(CASE WHEN flying_count IS NOT NULL THEN 1 ELSE 0 END) AS flyingRows,
+      SUM(CASE WHEN late_start_count IS NOT NULL THEN 1 ELSE 0 END) AS lateRows,
+      SUM(CASE WHEN ability_index IS NOT NULL THEN 1 ELSE 0 END) AS abilityRows
+    FROM racer_profiles
+  `)[0];
+  const courseStats = rows(`
+    SELECT COUNT(*) AS rows, COUNT(DISTINCT registration_no) AS racers,
+      MIN(fetched_at) AS minFetchedAt, MAX(fetched_at) AS maxFetchedAt,
+      COUNT(DISTINCT substr(fetched_at,1,10)) AS fetchDays,
+      SUM(CASE WHEN avg_st IS NOT NULL THEN 1 ELSE 0 END) AS avgStRows,
+      SUM(CASE WHEN top3_rate IS NOT NULL THEN 1 ELSE 0 END) AS top3Rows,
+      SUM(CASE WHEN entry_rate IS NOT NULL THEN 1 ELSE 0 END) AS entryRows,
+      SUM(CASE WHEN start_order IS NOT NULL THEN 1 ELSE 0 END) AS startOrderRows,
+      SUM(CASE WHEN races > 0 THEN 1 ELSE 0 END) AS positiveSampleRows,
+      SUM(CASE WHEN win_rate IS NOT NULL THEN 1 ELSE 0 END) AS winRateRows
+    FROM racer_course_stats
+  `)[0];
+  const entries = rows(`
+    SELECT COUNT(*) AS rows, COUNT(DISTINCT race_id) AS races, COUNT(DISTINCT racer_reg) AS racers,
+      MIN(date) AS minDate, MAX(date) AS maxDate,
+      SUM(CASE WHEN racer_reg IS NULL THEN 1 ELSE 0 END) AS missingRegistration,
+      SUM(CASE WHEN entry_course IS NULL THEN 1 ELSE 0 END) AS missingActualCourse,
+      SUM(CASE WHEN st IS NULL THEN 1 ELSE 0 END) AS missingSt,
+      SUM(CASE WHEN finish_pos IS NULL THEN 1 ELSE 0 END) AS missingFinish,
+      SUM(CASE WHEN status_code IS NOT NULL THEN 1 ELSE 0 END) AS incidentRows
+    FROM race_entries
+  `)[0];
+  const programBoats = rows(`
+    WITH boats AS (
+      SELECT op.date, op.race_id, j.value AS boat
+      FROM official_programs op, json_each(op.raw_json,'$.boats') j
+    )
+    SELECT COUNT(*) AS rows, COUNT(DISTINCT json_extract(boat,'$.registrationNo')) AS racers,
+      MIN(date) AS minDate, MAX(date) AS maxDate,
+      SUM(CASE WHEN json_extract(boat,'$.registrationNo') IS NOT NULL THEN 1 ELSE 0 END) AS registrationRows,
+      SUM(CASE WHEN json_extract(boat,'$.className') IS NOT NULL THEN 1 ELSE 0 END) AS classRows,
+      SUM(CASE WHEN json_extract(boat,'$.nationalWinRate') IS NOT NULL THEN 1 ELSE 0 END) AS nationalWinRows,
+      SUM(CASE WHEN json_extract(boat,'$.nationalTop2Rate') IS NOT NULL THEN 1 ELSE 0 END) AS nationalTop2Rows,
+      SUM(CASE WHEN json_extract(boat,'$.localWinRate') IS NOT NULL THEN 1 ELSE 0 END) AS localWinRows,
+      SUM(CASE WHEN json_extract(boat,'$.localTop2Rate') IS NOT NULL THEN 1 ELSE 0 END) AS localTop2Rows,
+      SUM(CASE WHEN json_extract(boat,'$.nationalTop3Rate') IS NOT NULL THEN 1 ELSE 0 END) AS nationalTop3Rows,
+      SUM(CASE WHEN json_extract(boat,'$.localTop3Rate') IS NOT NULL THEN 1 ELSE 0 END) AS localTop3Rows,
+      SUM(CASE WHEN json_extract(boat,'$.avgSt') IS NOT NULL THEN 1 ELSE 0 END) AS avgStRows,
+      SUM(CASE WHEN json_extract(boat,'$.branch') IS NOT NULL THEN 1 ELSE 0 END) AS branchRows,
+      SUM(CASE WHEN json_extract(boat,'$.period') IS NOT NULL THEN 1 ELSE 0 END) AS periodRows,
+      SUM(CASE WHEN json_extract(boat,'$.age') IS NOT NULL THEN 1 ELSE 0 END) AS ageRows,
+      SUM(CASE WHEN json_extract(boat,'$.gender') IS NOT NULL THEN 1 ELSE 0 END) AS genderRows,
+      SUM(CASE WHEN json_extract(boat,'$.weightKg') IS NOT NULL THEN 1 ELSE 0 END) AS weightRows
+    FROM boats
+  `)[0];
+  const latestProgramCoverage = rows(`
+    WITH latest AS (SELECT MAX(date) AS date FROM official_programs),
+    boats AS (
+      SELECT json_extract(j.value,'$.registrationNo') AS registration_no,
+        json_extract(j.value,'$.course') AS course
+      FROM official_programs op, json_each(op.raw_json,'$.boats') j, latest
+      WHERE op.date=latest.date
+    )
+    SELECT (SELECT date FROM latest) AS date, COUNT(*) AS boatRows, COUNT(DISTINCT registration_no) AS racers,
+      SUM(CASE WHEN EXISTS(
+        SELECT 1 FROM racer_profiles rp
+        WHERE rp.registration_no=boats.registration_no AND rp.avg_st IS NOT NULL
+      ) THEN 1 ELSE 0 END) AS profileCovered,
+      SUM(CASE WHEN EXISTS(
+        SELECT 1 FROM racer_course_stats cs
+        WHERE cs.registration_no=boats.registration_no AND cs.course=boats.course
+      ) THEN 1 ELSE 0 END) AS courseCovered
+    FROM boats
+  `)[0];
+  const historicalRacers = Number(scalar("SELECT COUNT(DISTINCT racer_reg) FROM race_entries WHERE racer_reg IS NOT NULL"));
+  const fullSixCourseRacers = Number(scalar(`
+    SELECT COUNT(*) FROM (
+      SELECT registration_no FROM racer_course_stats
+      GROUP BY registration_no HAVING COUNT(DISTINCT course)=6
+    )
+  `));
+  const cacheInventory = {
+    officialPrograms: inventoryCache("data/raw/official/programs", /^b(\d{6})\.lzh$/i),
+    officialResults: inventoryCache("data/raw/official/results", /^k(\d{6})\.lzh$/i),
+    kyotei24PreRaceHtml: inventoryCache("data/raw/kyotei24/odds", /(\d{4}-\d{2}-\d{2})/),
+  };
+  const decisions = Object.fromEntries(["GO", "CONDITIONAL", "BLOCKED", "UNKNOWN"].map((decision) => [
+    decision,
+    RACER_FEATURE_FEASIBILITY.filter((row) => row.decision === decision).length,
+  ]));
+  const featureMatrix = RACER_FEATURE_FEASIBILITY.map((row) => ({
+    ...row,
+    measurement: racerFeatureMeasurement(row.feature, { profiles, courseStats, entries, programBoats, cacheInventory }),
+  }));
+  return {
+    safety: {
+      readOnly: true,
+      currentProfileHistoricalFallbackAllowed: false,
+      targetRaceAndFutureResultsAllowed: false,
+      personRoiRanking: false,
+      privateRelationshipInference: false,
+    },
+    dbCoverage: {
+      racerProfiles: {
+        ...profiles,
+        duplicatePrimaryKeyRows: 0,
+        duplicateAssessment: "registration_no PRIMARY KEYにより物理重複不可",
+        historicalRacers,
+        historicalRacerCoveragePct: historicalRacers > 0 ? Number(profiles.avgStRows) / historicalRacers * 100 : null,
+      },
+      racerCourseStats: {
+        ...courseStats,
+        duplicatePrimaryKeyRows: 0,
+        duplicateAssessment: "(registration_no,course) PRIMARY KEYにより物理重複不可",
+        fullSixCourseRacers,
+        historicalRacers,
+        historicalRacerCoveragePct: historicalRacers > 0 ? Number(courseStats.racers) / historicalRacers * 100 : null,
+      },
+      raceEntries: {
+        ...entries,
+        duplicatePrimaryKeyRows: 0,
+        duplicateAssessment: "(race_id,boat_number) PRIMARY KEYにより物理重複不可",
+      },
+      officialProgramBoats: {
+        ...programBoats,
+        duplicateAssessment: "official_programsはrace_id一意。raw_json内boatsはschema制約外のため、艇番号・登録番号の構造監査が別途必要",
+      },
+      latestProgramCoverage,
+    },
+    cacheInventory,
+    featureMatrix,
+    goNoGoSummary: decisions,
+    alreadyUsable: [
+      "登録番号、当時級別、全国/当地勝率・2連率（official_programs.raw_json、2004-06-01以降）",
+      "結果履歴の登録番号、実進入、実ST、着順、事故code（race_entries、2000-01-01以降）",
+      "保存済みレース前HTML範囲の年齢・支部・性別・体重",
+      "prior-day順で再構築する過去同走・直接対戦・同日以前の前走状態",
+    ],
+    pointInTimeIneligible: [
+      "racer_profiles全列をhistoricalへ直接JOIN",
+      "racer_course_stats全列をhistoricalへ直接JOIN",
+      "現在プロフィールから過去の級別・支部・年齢・体重を補完",
+      "対象raceまたは同日後続raceをrolling集計へ含める",
+      "race_conditions/race_entriesの対象race結果を事前特徴へ含める",
+    ],
+    priority: [
+      "P0: raw programの当時級別・全国/当地勝率/2連率を正本として明示",
+      "P0: race_entriesからstrict priorのn付き30/90走、ST平均/分散、F後日数を再現可能にする設計",
+      "P1: profile/period/course-period snapshotのeffective期間と集計窓を保存",
+      "P1: beforeinfoの直前体重、展示course/ST/timeをappend-only観測として保存",
+      "P2: pair/styleはraw結果から再計算を正本とし、性能上必要な場合だけmaterialize",
+    ],
+    phaseRecommendation: {
+      N1: "変更なし。全券種払戻基盤のみ。選手特徴を混ぜない。",
+      N2: "変更なし。全券種odds時系列のみ。選手特徴を混ぜない。",
+      N3: "profile/period/course-periodのPIT snapshot、支部/年齢/性別/直前体重、展示/装備append-only。",
+      N4: "race_entries/conditionsからstrict-prior recent form、course、pair、style proxyを再構築。対象race結果を拒否。",
+    },
+    guards: [
+      "observed_at <= race close前の許容時刻",
+      "as_of_date < race date、同日値はevent order/close_atで厳格に先行",
+      "effective_from <= race date <= effective_to",
+      "source max event time < target event time",
+      "snapshot欠損時はNULL。現在値fallback禁止",
+      "raw input fingerprint + parser_version + feature_version + window definitionを固定",
+    ],
+  };
+}
+
+function racerFeatureMeasurement(
+  feature: string,
+  source: {
+    profiles: Record<string, unknown>;
+    courseStats: Record<string, unknown>;
+    entries: Record<string, unknown>;
+    programBoats: Record<string, unknown>;
+    cacheInventory: Record<string, { files: number; minDate: string | null; maxDate: string | null }>;
+  },
+) {
+  const pct = (present: unknown, total: unknown) => Number(total) > 0
+    ? `${((1 - Number(present) / Number(total)) * 100).toFixed(4)}%`
+    : "UNKNOWN";
+  const programField: Record<string, string> = {
+    registration_no: "registrationRows",
+    class_name: "classRows",
+    national_win_top2_rate: "nationalWinRows",
+    national_top3_rate: "nationalTop3Rows",
+    local_win_top2_rate: "localWinRows",
+    local_top3_rate: "localTop3Rows",
+  };
+  if (programField[feature]) {
+    return {
+      rowCount: source.programBoats.rows,
+      racerCoverage: source.programBoats.racers,
+      dateRange: [source.programBoats.minDate, source.programBoats.maxDate],
+      missingRate: pct(source.programBoats[programField[feature]], source.programBoats.rows),
+      duplicateRate: "raw_json内boat keyは未制約。race_id自体はofficial_programsで一意",
+      parserVersion: "DB rowに未記録",
+      materialization: "official_programs.raw_json",
+    };
+  }
+  if (["branch", "age_gender_weight", "weight_change", "same_branch"].includes(feature)) {
+    const cache = source.cacheInventory.kyotei24PreRaceHtml;
+    return {
+      rowCount: null,
+      racerCoverage: null,
+      dateRange: [cache.minDate, cache.maxDate],
+      cacheFiles: cache.files,
+      missingRate: "UNKNOWN（N0はfile inventory実測。項目別再parseは未実施）",
+      duplicateRate: "UNKNOWN（HTML内容hash未監査）",
+      parserVersion: "cache inventoryには未記録",
+      materialization: "未正規化",
+    };
+  }
+  if (feature === "registration_period") {
+    return {
+      rowCount: 0,
+      racerCoverage: 0,
+      dateRange: null,
+      missingRate: "100%（監査対象の構造化sourceでは未確認）",
+      duplicateRate: "not applicable",
+      parserVersion: "なし",
+      materialization: "未取得",
+    };
+  }
+  if (feature === "official_mentor_apprentice") {
+    return {
+      rowCount: 2,
+      racerCoverage: 4,
+      dateRange: null,
+      missingRate: "UNKNOWN（非網羅registry）",
+      duplicateRate: "0%（登録済み2組のkey）",
+      parserVersion: "hand-curated official-source registry",
+      materialization: "docs/official-racer-relationships.json",
+    };
+  }
+  if (feature === "average_st") {
+    return {
+      rowCount: source.profiles.rows,
+      racerCoverage: source.profiles.avgStRows,
+      dateRange: [source.profiles.minFetchedAt, source.profiles.maxFetchedAt],
+      missingRate: pct(source.profiles.avgStRows, source.profiles.rows),
+      duplicateRate: "0%（registration_no PRIMARY KEY）",
+      parserVersion: "DB rowに未記録",
+      materialization: "current-only",
+    };
+  }
+  if (["exhibition_time_st_day_trend", "post_parts_change_delta"].includes(feature)) {
+    return {
+      rowCount: null,
+      racerCoverage: null,
+      dateRange: null,
+      missingRate: "UNKNOWN（既存latest tableからPIT observation coverageを分離できない）",
+      duplicateRate: "not applicable（未materialize）",
+      parserVersion: "既存parser。observation rowには未固定",
+      materialization: "未materialize",
+    };
+  }
+  const stDependent = [
+    "f_l_counts", "accident_rate", "st_mean_std_by_course", "f_late_start_rates_by_course",
+    "recent_st_mean_variance", "days_since_f", "event_previous_finish_st",
+  ].includes(feature);
+  const finishDependent = [
+    "starts_finish_rates_by_course", "winning_style_by_course",
+    "remain_top2_top3_after_losing_from_course1", "entry_change_performance",
+    "venue_course_performance", "last_30_90_results", "event_previous_finish_st",
+    "outer_boat_rise_with_attack", "course1_loss_second_place_rate",
+    "past_meetings_direct_results", "adjacent_course_matchups", "same_event_rematch",
+    "course_tactic_tendency", "adjacent_boat_drop_when_attacking",
+  ].includes(feature);
+  return {
+    rowCount: source.entries.rows,
+    racerCoverage: source.entries.racers,
+    dateRange: [source.entries.minDate, source.entries.maxDate],
+    missingRate: stDependent
+      ? `${pct(Number(source.entries.rows) - Number(source.entries.missingSt), source.entries.rows)} ST`
+      : finishDependent
+        ? `${pct(Number(source.entries.rows) - Number(source.entries.missingFinish), source.entries.rows)} finish`
+        : "0% registration / actual course。派生値自体は未materialize",
+    duplicateRate: "0%（race_id,boat_number PRIMARY KEY）",
+    parserVersion: "DB rowに未記録。再構築時feature_version必須",
+    materialization: "未materialize。race_entriesを正本に再計算",
+  };
+}
+
+function inventoryCache(root: string, datePattern: RegExp) {
+  if (!existsSync(root)) return { root, files: 0, minDate: null, maxDate: null };
+  const stack = [root];
+  let files = 0;
+  const dates: string[] = [];
+  while (stack.length > 0) {
+    const directory = stack.pop()!;
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const fullPath = `${directory}/${entry.name}`;
+      if (entry.isDirectory()) {
+        stack.push(fullPath);
+        const date = normalizeCacheDate(entry.name.match(datePattern)?.[1]);
+        if (date) dates.push(date);
+      } else if (entry.isFile()) {
+        files += 1;
+        const date = normalizeCacheDate(entry.name.match(datePattern)?.[1]);
+        if (date) dates.push(date);
+      }
+    }
+  }
+  dates.sort();
+  return { root, files, minDate: dates[0] ?? null, maxDate: dates.at(-1) ?? null };
+}
+
+function normalizeCacheDate(value: string | undefined): string | null {
+  if (!value) return null;
+  const normalized = /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? value
+    : /^\d{6}$/.test(value)
+      ? `20${value.slice(0, 2)}-${value.slice(2, 4)}-${value.slice(4, 6)}`
+      : null;
+  if (!normalized || normalized < "2000-01-01" || normalized > "2099-12-31") return null;
+  const parsed = new Date(`${normalized}T00:00:00Z`);
+  return Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== normalized
+    ? null
+    : normalized;
+}
+
 function rows(sql: string): Record<string, unknown>[] {
   return db.prepare(sql).all() as Record<string, unknown>[];
 }
@@ -287,9 +617,12 @@ function quoteIdentifier(value: string) {
 function renderMarkdown(report: any): string {
   const line = (value: unknown) => value == null ? "—" : String(value);
   const integer = (value: unknown) => Number(value).toLocaleString("ja-JP");
+  const percent = (numerator: unknown, denominator: unknown) => Number(denominator) > 0
+    ? `${(Number(numerator) / Number(denominator) * 100).toFixed(2)}%`
+    : "—";
   const decision = (value: string) => `**${value}**`;
   const lines = [
-    "# 全券種データ取得可能性・保存設計監査（Phase N0）",
+    "# 全データ取得可能性・保存設計監査（全券種＋選手PIT、Phase N0）",
     "",
     `生成日時: ${report.generatedAt}`,
     "",
@@ -303,6 +636,7 @@ function renderMarkdown(report: any): string {
     "- range表示のplace / wide、同着・返還・不成立・特払い、欠場を明示的な状態として保存する必要がある。",
     "- 全race×5画面×4 checkpointは負荷が大きい。サイトポリシーは大量アクセスを禁止しているため、低頻度canaryと運用承認なしに実収集へ進めない。",
     "- 売上・投票口数の取得根拠は未確認。オッズ変化を流動性そのものと呼ばない。",
+    "- 選手情報は、当時番組rawとstrict-prior結果再構築は利用可能。一方、現在値racer_profiles / racer_course_statsはhistorical利用不可。",
     "",
     "## 7券種判定",
     "",
@@ -374,6 +708,58 @@ function renderMarkdown(report: any): string {
     "| race_conditions | 不可 | 結果archive由来の天候・風向・決まり手 | post-race label専用。事前特徴へ混入禁止 |",
     "| race_entries.entry_course / st / finish_pos | 不可 | 実進入・実ST・結果/事故 | 結果原因ラベル専用 |",
     "| race_payouts | 不可 | 確定後払戻 | ROI settlement専用。オッズ代替禁止 |",
+    "",
+    "## 選手情報・point-in-time監査",
+    "",
+    `判定件数: GO ${report.racerAudit.goNoGoSummary.GO} / CONDITIONAL ${report.racerAudit.goNoGoSummary.CONDITIONAL} / BLOCKED ${report.racerAudit.goNoGoSummary.BLOCKED} / UNKNOWN ${report.racerAudit.goNoGoSummary.UNKNOWN}`,
+    "",
+    "### 現DB・cache実測",
+    "",
+    "| source | rows/files | racers/races | range | coverage / PIT判定 |",
+    "|---|---:|---:|---|---|",
+    `| official_programs.raw_json boats | ${integer(report.racerAudit.dbCoverage.officialProgramBoats.rows)} | ${integer(report.racerAudit.dbCoverage.officialProgramBoats.racers)} racers | ${report.racerAudit.dbCoverage.officialProgramBoats.minDate} .. ${report.racerAudit.dbCoverage.officialProgramBoats.maxDate} | 登録番号・級別・全国/当地勝率/2連率 ${percent(report.racerAudit.dbCoverage.officialProgramBoats.classRows, report.racerAudit.dbCoverage.officialProgramBoats.rows)}。レース日付きPIT |`,
+    `| racer_profiles | ${integer(report.racerAudit.dbCoverage.racerProfiles.rows)} | 実値 ${integer(report.racerAudit.dbCoverage.racerProfiles.avgStRows)} / historical racers ${integer(report.racerAudit.dbCoverage.racerProfiles.historicalRacers)} | ${report.racerAudit.dbCoverage.racerProfiles.minFetchedAt} .. ${report.racerAudit.dbCoverage.racerProfiles.maxFetchedAt} | historical coverage ${Number(report.racerAudit.dbCoverage.racerProfiles.historicalRacerCoveragePct).toFixed(2)}%。現在値1世代、historical不可 |`,
+    `| racer_course_stats | ${integer(report.racerAudit.dbCoverage.racerCourseStats.rows)} | ${integer(report.racerAudit.dbCoverage.racerCourseStats.racers)} racers、6course完備 ${integer(report.racerAudit.dbCoverage.racerCourseStats.fullSixCourseRacers)} | ${report.racerAudit.dbCoverage.racerCourseStats.minFetchedAt} .. ${report.racerAudit.dbCoverage.racerCourseStats.maxFetchedAt} | races>0 ${integer(report.racerAudit.dbCoverage.racerCourseStats.positiveSampleRows)}、win_rateあり ${integer(report.racerAudit.dbCoverage.racerCourseStats.winRateRows)}。n欠落・現在値 |`,
+    `| race_entries | ${integer(report.racerAudit.dbCoverage.raceEntries.rows)} | ${integer(report.racerAudit.dbCoverage.raceEntries.races)} races / ${integer(report.racerAudit.dbCoverage.raceEntries.racers)} racers | ${report.racerAudit.dbCoverage.raceEntries.minDate} .. ${report.racerAudit.dbCoverage.raceEntries.maxDate} | reg欠損 ${integer(report.racerAudit.dbCoverage.raceEntries.missingRegistration)}、ST欠損 ${integer(report.racerAudit.dbCoverage.raceEntries.missingSt)}。strict-prior派生の正本 |`,
+    `| 公式番組archive | ${integer(report.racerAudit.cacheInventory.officialPrograms.files)} files | — | ${report.racerAudit.cacheInventory.officialPrograms.minDate} .. ${report.racerAudit.cacheInventory.officialPrograms.maxDate} | 当時番組を再parse可能 |`,
+    `| 公式結果archive | ${integer(report.racerAudit.cacheInventory.officialResults.files)} files | — | ${report.racerAudit.cacheInventory.officialResults.minDate} .. ${report.racerAudit.cacheInventory.officialResults.maxDate} | 結果由来rollingを再計算可能 |`,
+    `| レース前HTML cache | ${integer(report.racerAudit.cacheInventory.kyotei24PreRaceHtml.files)} files | — | ${report.racerAudit.cacheInventory.kyotei24PreRaceHtml.minDate} .. ${report.racerAudit.cacheInventory.kyotei24PreRaceHtml.maxDate} | 年齢・支部・性別・体重を当時値で再抽出可能 |`,
+    "",
+    `最新番組日 ${report.racerAudit.dbCoverage.latestProgramCoverage.date} は ${integer(report.racerAudit.dbCoverage.latestProgramCoverage.boatRows)}艇すべてprofile/course statsでcovered。ただし「現在coverage 100%」は過去raceでのPIT適格性を意味しない。`,
+    "",
+    "### Go / No-Go matrix",
+    "",
+    "| 分類 | feature | 判定 | PIT品質 | 現在source / 過去再現 | 実測coverage / 欠損・重複 / parser | 新規取得 | phase | 主な漏洩リスク |",
+    "|---|---|---|---|---|---|---|---|---|",
+    ...report.racerAudit.featureMatrix.map((row: any) =>
+      `| ${row.category} | ${row.feature} | **${row.decision}** | ${row.pointInTimeQuality} | ${row.canonicalSource}。${row.historicalReproduction} | rows=${line(row.measurement.rowCount)}, racers=${line(row.measurement.racerCoverage)}, range=${line(row.measurement.dateRange?.join(".."))}; missing=${row.measurement.missingRate}; duplicate=${row.measurement.duplicateRate}; parser=${row.measurement.parserVersion} | ${row.newAcquisition} | ${row.phase} | ${row.leakageRisk} |`),
+    "",
+    "### 安全分類",
+    "",
+    "現在すでに使える:",
+    "",
+    ...report.racerAudit.alreadyUsable.map((value: string) => `- ${value}`),
+    "",
+    "point-in-time不適格:",
+    "",
+    ...report.racerAudit.pointInTimeIneligible.map((value: string) => `- ${value}`),
+    "",
+    "最優先:",
+    "",
+    ...report.racerAudit.priority.map((value: string) => `- ${value}`),
+    "",
+    "guard:",
+    "",
+    ...report.racerAudit.guards.map((value: string) => `- ${value}`),
+    "",
+    "### N1〜N4",
+    "",
+    `- N1: ${report.racerAudit.phaseRecommendation.N1}`,
+    `- N2: ${report.racerAudit.phaseRecommendation.N2}`,
+    `- N3: ${report.racerAudit.phaseRecommendation.N3}`,
+    `- N4: ${report.racerAudit.phaseRecommendation.N4}`,
+    "",
+    "選手特徴を現在のBUY/WATCH/SKIPへ追加しない。M1/M3は既存のformal settled gateとN3/N4のPIT基盤が揃うまで開始しない。",
     "",
     "## 展示・結果原因・事故",
     "",

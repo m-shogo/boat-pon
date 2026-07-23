@@ -1,5 +1,11 @@
 # point-in-time 選手能力 feature store 設計案（将来用・今回は実装しない）
 
+> 2026-07-23: Phase N0の全項目監査と保存設計は
+> [`../reports/all-bet-type-data-feasibility.md`](../reports/all-bet-type-data-feasibility.md)、
+> [`all-bet-type-data-acquisition-design.md`](all-bet-type-data-acquisition-design.md)、
+> [`all-bet-type-schema-migration-design.md`](all-bet-type-schema-migration-design.md)
+> へ統合した。本書の旧2table案をそのままmigrationせず、統合設計の6候補とstrict-prior guardを正本にする。
+
 作成: 2026-06-13（データ基盤監査パックの成果物）
 前提: **このドキュメントは設計案のみ。DB変更・migration・decision logic変更は行わない。**
 

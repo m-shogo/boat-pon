@@ -1,4 +1,4 @@
-# 全券種データ取得設計（Phase N0監査結果）
+# 全データ取得可能性・保存設計（全券種＋選手PIT、Phase N0監査結果）
 
 更新: 2026-07-23
 
@@ -11,6 +11,8 @@
 - 公式オッズは5画面に分かれる。3連単以外を現行`odds_timeseries_snapshots`へ入れると、`bet_type`なしで同じselectionが衝突する。
 - 複勝と拡連複はレンジ表示なので、単一`odds`列へ丸めない。
 - 売上額・投票口数は今回の公式race画面とarchiveで確認できず、取得判定はBLOCKED。オッズ変化は流動性proxyにすぎない。
+- 選手情報は、`official_programs.raw_json`にレース当時の級別・全国/当地勝率・2連率が残る一方、`racer_profiles`と`racer_course_stats`は現在値1世代で、過去レースへの直接JOINはpoint-in-time不適格である。
+- `race_entries`からコース別成績、直近30/90走、ST分散、F後日数、過去同走・直接対戦、戦法proxyを対象レースより前だけで再構築できる。ただし、当時プロフィール、集計窓、標本数を持つsnapshotは未整備である。
 - 払戻基盤をPhase N1、オッズ時系列をPhase N2として分離する。
 
 ## 公式source map
@@ -155,6 +157,77 @@ N1/N2で必要な制御:
 - selection別の更新有無
 
 保存時は`metric_kind=proxy`、算出version、入力observation ID、欠測理由を持つ。売上、投票額、資金流入、参加者数と表現しない。
+
+## 選手情報・point-in-time設計
+
+詳細な実測値と項目別判定は監査レポートの「選手情報・point-in-time特徴量監査」とmachine-readable JSONの`racerAudit`を正本とする。項目別判定は`GO / CONDITIONAL / BLOCKED / UNKNOWN`で表し、取得可否と予測利用可否を混同しない。
+
+### 正本と責務
+
+| source | 正本としての責務 | historical利用 |
+|---|---|---|
+| `official_programs.raw_json` | レース日・raceごとの番組原文。登録番号、当時級別、全国/当地勝率・2連率 | GO。保存済みrawをそのまま参照し、現在値で補完しない |
+| `race_entries` | 公式結果由来の登録番号、実進入、実ST、着順、事故code | GO。ただし対象raceより前だけを集計する |
+| `data/raw/kyotei24/odds` | 保存済みレース前HTML。年齢、支部、性別、体重等の原文候補 | CONDITIONAL。観測時刻、対象race、parser versionを確定してから利用 |
+| `racer_profiles` | live用の最新選手集計1世代 | historicalへはBLOCKED。`fetched_at`は値の有効時点ではない |
+| `racer_course_stats` | live用の最新コース集計1世代 | historicalへはBLOCKED。集計期間・標本数が不足し、`races`は実測上すべて0 |
+| `decision_history`内の選手特徴 | 過去の判定監査出力 | 正本にしない。元sourceとfeature versionが追跡できる場合だけ再現性検査に使う |
+| strict-prior再構成処理 | recent/course/pair/style派生値 | raw結果を正本にし、materializeは再計算可能なcacheに限定 |
+
+現在プロフィールが`official_programs.raw_json`を上書きした証拠はない。ただし、現在値tableを過去raceへJOINすれば、級別変更、F/L、能力集計、体重等に未来情報が混入する。historical queryでは既存のlive-only feature除外guardを維持する。
+
+### 現在すでに使える情報
+
+- 2004-06-01以降の番組rawにある登録番号、当時級別、全国/当地勝率・2連率
+- 2000-01-01以降の`race_entries`にある登録番号、実進入、実ST、着順、事故code
+- 保存済みレース前HTML範囲の年齢、支部、性別、体重。ただしraceとの対応・観測時刻を固定するparserが必要
+- strict-prior event順で再構築するコース別標本、直近30/90走、ST平均・分散、F後日数、開催内前走、過去同走、直接対戦
+
+### point-in-time不適格または新規取得が必要な情報
+
+- `racer_profiles` / `racer_course_stats`を過去raceへ直接JOINすること
+- 現在プロフィールで過去の級別、支部、年齢、体重、F/Lを補完すること
+- 全国/当地3連率、事故率、登録期、能力値の対象期間が確認できないまま利用すること
+- コース別の標本数、集計期間、ST標準偏差、F率、大幅遅れ率、当地×コース成績を現在tableだけで復元すること
+- 公式資料で確認できる師弟関係の完全な履歴。確認済み公開資料と公開日以前のraceだけに限定し、欠測を推測しない
+- 部品交換後変化と展示当日推移。append-onlyの`beforeinfo`観測が必要
+
+### strict-prior再構築契約
+
+対象raceを`target`、入力結果を`source`とすると、最低条件は`source.event_at < target.event_at`である。日付だけで比較せず、同日はrace順・締切時刻で厳格に先行させる。対象raceの着順、ST、決まり手、事故および対象race後の結果を入力に含めない。
+
+再構築可能な派生値:
+
+- 選手×1〜6コースの出走数、1/2/3着率、ST平均・分散、F率、大幅遅れ率
+- 逃げ・差し・まくり・まくり差しへの関与、1着を逃した後の2/3着残り率、進入変更時成績
+- 直近30/90走、直近ST平均・分散、F後経過日数、開催内前走着順/ST、同日何走目、前走間隔
+- 過去同走、直接対戦、隣接コース対戦、同開催再戦、1号艇敗戦時の2着残り、攻め連動proxy
+
+戦法・相互作用は公式結果から機械的に再現できるproxyに限る。「攻めたから隣艇が落ちた」のような因果や、私的人間関係、不正推測、個人名別ROIは保存・利用しない。
+
+### snapshotと集計窓
+
+- `fetched_at`: cacheへの取得完了時刻
+- `observed_at`: 値を観測できた時刻
+- `as_of_date`: その値・集計を利用可能とする基準日
+- `effective_from / effective_to`: 級別等の有効期間
+- `period_start / period_end`: 勝率・ST等の集計対象期間
+- `source_max_event_at`: 派生値へ含めた最も新しい入力event
+
+これらを代用し合わない。率だけでなく、標本数、可能ならcount・sum・sum of squaresを保存し、平均・分散・標準偏差を再計算可能にする。集計窓が不明な公開値は`period_kind=source_defined_unknown`として隔離し、自作の30/90走値と同一視しない。
+
+欠測はNULLと`missing_reason`で表し、0、平均、現在値で埋めない。historical backfillとlive観測は`build_mode`で分離し、同じraw fingerprint、parser version、feature version、window definitionから同じ値を再生成できることを要求する。
+
+## 選手情報のPhase割当
+
+| Phase | 範囲 |
+|---|---|
+| N1 | 変更なし。全券種払戻基盤だけ。選手特徴をBUY/WATCH/SKIPへ追加しない |
+| N2 | 変更なし。全券種オッズ時系列だけ。選手特徴を混ぜない |
+| N3 | profile/period/course-period snapshot、支部・登録期・年齢・性別・直前体重、展示・部品交換のappend-only観測 |
+| N4 | `race_entries`等からstrict-prior recent form、コース、pair、style proxyを再構築し、外れ原因ラベルと分離 |
+
+M1の「市場offset＋選手・枠・モーター」はN3/N4のPIT品質gateを通過するまで開始しない。M3の「1マーク展開・相互作用」はstrict-prior再構築と因果でないproxy表現が固定されるまで開始しない。
 
 ## Phase N1の範囲
 

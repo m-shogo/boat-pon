@@ -1,4 +1,4 @@
-# 全券種schema / migration設計（DESIGN ONLY）
+# 全データschema / migration設計（全券種＋選手PIT、DESIGN ONLY）
 
 更新: 2026-07-23
 
@@ -185,6 +185,239 @@ CREATE TABLE beforeinfo_boats_v2 (
 );
 ```
 
+## 選手PIT schema候補
+
+以下も設計レビュー用であり、migrationは適用しない。既存の`official_programs.raw_json`と`race_entries`を生値の正本とし、同じ内容を別tableへ複製しない。`racer_profiles`と`racer_course_stats`はlive最新値の互換tableとして残すが、historical特徴量の正本にはしない。
+
+| 候補 | 責務 | 新設判断 |
+|---|---|---|
+| `racer_profile_snapshots` | 級別、支部、登録期、年齢、性別、体重等の有効時点付き観測 | 必要。raw provenanceを持つappend-only snapshot |
+| `racer_period_stats` | 全国/当地等の期間集計とF/L・事故率 | 必要。公開値と自作rolling値を`period_kind`で分離 |
+| `racer_course_period_stats` | 選手×course×任意venueの標本数・平均・分散・戦法count | 必要。ただし`race_entries`から再計算可能な派生table |
+| `racer_recent_form_snapshots` | target race直前の30/90走、開催内・同日状態 | 条件付き。target race keyed cacheとして再計算可能にする |
+| `racer_pair_history` | target race直前の同走・直接対戦・隣接・同開催再戦 | 条件付き。性能上必要な場合だけmaterialize |
+| `racer_style_features` | 戦法・隣接艇・外艇連動の結果由来proxy | 条件付き。因果・主観ラベルにしない |
+
+```sql
+CREATE TABLE racer_profile_snapshots (
+  id INTEGER PRIMARY KEY,
+  registration_no TEXT NOT NULL,
+  observed_at TEXT NOT NULL,
+  as_of_date TEXT NOT NULL,
+  effective_from TEXT,
+  effective_to TEXT,
+  class_name TEXT,
+  branch TEXT,
+  registration_period INTEGER,
+  age INTEGER,
+  gender TEXT,
+  weight_kg REAL,
+  source_type TEXT NOT NULL,
+  source_quality TEXT NOT NULL,
+  source_reference TEXT NOT NULL,
+  response_sha256 TEXT,
+  parser_version TEXT NOT NULL,
+  build_mode TEXT NOT NULL CHECK (build_mode IN ('historical_backfill','live_observed')),
+  missing_reason TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CHECK (effective_to IS NULL OR effective_from IS NULL OR effective_from <= effective_to),
+  UNIQUE (registration_no, observed_at, source_reference, parser_version)
+);
+
+CREATE INDEX idx_racer_profile_effective
+  ON racer_profile_snapshots
+  (registration_no, effective_from, effective_to, observed_at);
+
+CREATE TABLE racer_period_stats (
+  id INTEGER PRIMARY KEY,
+  registration_no TEXT NOT NULL,
+  venue_scope TEXT NOT NULL,
+  period_kind TEXT NOT NULL,
+  period_start TEXT NOT NULL,
+  period_end TEXT NOT NULL,
+  as_of_date TEXT NOT NULL,
+  observed_at TEXT,
+  sample_count INTEGER,
+  win_count INTEGER,
+  top2_count INTEGER,
+  top3_count INTEGER,
+  win_rate REAL,
+  top2_rate REAL,
+  top3_rate REAL,
+  st_count INTEGER,
+  st_sum REAL,
+  st_sum_squares REAL,
+  avg_st REAL,
+  st_variance REAL,
+  flying_count INTEGER,
+  late_start_count INTEGER,
+  accident_count INTEGER,
+  accident_rate REAL,
+  source_max_event_at TEXT,
+  source_type TEXT NOT NULL,
+  source_quality TEXT NOT NULL,
+  source_reference TEXT NOT NULL,
+  raw_input_fingerprint TEXT,
+  parser_version TEXT NOT NULL,
+  feature_version TEXT NOT NULL,
+  build_mode TEXT NOT NULL CHECK (build_mode IN ('historical_backfill','live_observed')),
+  missing_reason TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CHECK (sample_count IS NULL OR sample_count >= 0),
+  CHECK (period_start = 'UNKNOWN' OR period_end = 'UNKNOWN' OR period_start <= period_end),
+  UNIQUE (
+    registration_no, venue_scope, period_kind, period_start, period_end,
+    as_of_date, source_type, feature_version
+  )
+);
+
+CREATE TABLE racer_course_period_stats (
+  id INTEGER PRIMARY KEY,
+  registration_no TEXT NOT NULL,
+  course INTEGER NOT NULL CHECK (course BETWEEN 1 AND 6),
+  venue_scope TEXT NOT NULL,
+  period_kind TEXT NOT NULL,
+  period_start TEXT NOT NULL,
+  period_end TEXT NOT NULL,
+  as_of_date TEXT NOT NULL,
+  sample_count INTEGER NOT NULL,
+  first_count INTEGER NOT NULL DEFAULT 0,
+  second_count INTEGER NOT NULL DEFAULT 0,
+  third_count INTEGER NOT NULL DEFAULT 0,
+  st_count INTEGER NOT NULL DEFAULT 0,
+  st_sum REAL NOT NULL DEFAULT 0,
+  st_sum_squares REAL NOT NULL DEFAULT 0,
+  flying_count INTEGER NOT NULL DEFAULT 0,
+  large_late_count INTEGER NOT NULL DEFAULT 0,
+  escape_count INTEGER NOT NULL DEFAULT 0,
+  insert_count INTEGER NOT NULL DEFAULT 0,
+  sweep_count INTEGER NOT NULL DEFAULT 0,
+  sweep_insert_count INTEGER NOT NULL DEFAULT 0,
+  missed_first_count INTEGER NOT NULL DEFAULT 0,
+  remain_second_or_third_count INTEGER NOT NULL DEFAULT 0,
+  entry_change_count INTEGER NOT NULL DEFAULT 0,
+  entry_change_top3_count INTEGER NOT NULL DEFAULT 0,
+  source_max_event_at TEXT NOT NULL,
+  raw_input_fingerprint TEXT NOT NULL,
+  source_quality TEXT NOT NULL,
+  parser_version TEXT NOT NULL,
+  feature_version TEXT NOT NULL,
+  missing_reason TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CHECK (sample_count >= 0),
+  UNIQUE (
+    registration_no, course, venue_scope, period_kind, period_start,
+    period_end, as_of_date, feature_version
+  )
+);
+
+CREATE TABLE racer_recent_form_snapshots (
+  target_race_id TEXT NOT NULL,
+  registration_no TEXT NOT NULL,
+  as_of_event_at TEXT NOT NULL,
+  last30_sample_count INTEGER NOT NULL,
+  last90_sample_count INTEGER NOT NULL,
+  last30_top3_count INTEGER,
+  last90_top3_count INTEGER,
+  recent_st_count INTEGER,
+  recent_st_sum REAL,
+  recent_st_sum_squares REAL,
+  days_since_flying INTEGER,
+  event_previous_finish INTEGER,
+  event_previous_st REAL,
+  same_day_race_number INTEGER,
+  seconds_since_previous_race INTEGER,
+  previous_weight_kg REAL,
+  current_weight_kg REAL,
+  weight_change_kg REAL,
+  exhibition_observation_count INTEGER,
+  exhibition_time_trend REAL,
+  exhibition_st_trend REAL,
+  parts_change_observed_at TEXT,
+  source_max_event_at TEXT NOT NULL,
+  raw_input_fingerprint TEXT NOT NULL,
+  source_quality TEXT NOT NULL,
+  parser_version TEXT NOT NULL,
+  feature_version TEXT NOT NULL,
+  missing_reason TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (target_race_id, registration_no, feature_version)
+);
+
+CREATE TABLE racer_pair_history (
+  target_race_id TEXT NOT NULL,
+  registration_no_a TEXT NOT NULL,
+  registration_no_b TEXT NOT NULL,
+  as_of_event_at TEXT NOT NULL,
+  prior_same_race_count INTEGER NOT NULL DEFAULT 0,
+  a_finished_ahead_count INTEGER NOT NULL DEFAULT 0,
+  b_finished_ahead_count INTEGER NOT NULL DEFAULT 0,
+  adjacent_course_count INTEGER NOT NULL DEFAULT 0,
+  same_event_rematch_count INTEGER NOT NULL DEFAULT 0,
+  source_max_event_at TEXT NOT NULL,
+  raw_input_fingerprint TEXT NOT NULL,
+  feature_version TEXT NOT NULL,
+  missing_reason TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CHECK (registration_no_a < registration_no_b),
+  PRIMARY KEY (
+    target_race_id, registration_no_a, registration_no_b, feature_version
+  )
+);
+
+CREATE TABLE racer_style_features (
+  target_race_id TEXT NOT NULL,
+  registration_no TEXT NOT NULL,
+  course INTEGER NOT NULL CHECK (course BETWEEN 1 AND 6),
+  as_of_event_at TEXT NOT NULL,
+  period_kind TEXT NOT NULL,
+  sample_count INTEGER NOT NULL,
+  escape_involvement_count INTEGER NOT NULL DEFAULT 0,
+  insert_involvement_count INTEGER NOT NULL DEFAULT 0,
+  sweep_involvement_count INTEGER NOT NULL DEFAULT 0,
+  sweep_insert_involvement_count INTEGER NOT NULL DEFAULT 0,
+  adjacent_boat_drop_count INTEGER NOT NULL DEFAULT 0,
+  outside_boat_top3_count INTEGER NOT NULL DEFAULT 0,
+  lane1_loss_count INTEGER NOT NULL DEFAULT 0,
+  lane1_loss_remain_second_count INTEGER NOT NULL DEFAULT 0,
+  proxy_definition TEXT NOT NULL,
+  source_max_event_at TEXT NOT NULL,
+  raw_input_fingerprint TEXT NOT NULL,
+  feature_version TEXT NOT NULL,
+  missing_reason TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (target_race_id, registration_no, course, period_kind, feature_version)
+);
+```
+
+率・平均・標準偏差だけを保存しない。可能な限り分子・分母、`st_sum`、`st_sum_squares`を持ち、集計期間と標本数を必須にする。公開sourceが率しか提供しない場合は率を生値として保存し、countを推測しない。
+
+`venue_scope`は全国値を`ALL`、当地値を公式場codeで表し、NULLにしない。SQLiteのUNIQUE制約ではNULL同士が重複可能なため、idempotency keyへ入るscope・period境界には正規化済みsentinelを使う。期間不明の公開値は`period_start / period_end='UNKNOWN'`、`period_kind=source_defined_unknown`と固定した上で、原文・観測時刻・source referenceを保持する。
+
+### point-in-time guard
+
+application/service層とfixture DBの検査で、次を同時に要求する。
+
+```sql
+-- target_race_idから得たrace_date / target_event_atに対する概念検査
+as_of_date <= race_date
+AND (effective_from IS NULL OR effective_from <= race_date)
+AND (effective_to IS NULL OR race_date <= effective_to)
+AND (source_max_event_at IS NULL OR source_max_event_at < target_event_at)
+AND (observed_at IS NULL OR observed_at <= target_feature_cutoff_at)
+```
+
+- `fetched_at`を`effective_from`や`as_of_date`の代用にしない
+- 同日raceは日付比較だけで通さず、締切・race順で対象raceより厳格に前を要求する
+- 対象race自身と対象race後の結果を含むrowはINSERTもreadも拒否する
+- snapshotが無い場合はNULLと`missing_reason`を返し、現在値へfallbackしない
+- 同一選手・同一属性の有効期間重複は検査でBLOCKする
+- historical backfillとlive観測を`build_mode`で分ける
+- raw input fingerprint、source範囲、parser/feature version、window定義をrebuild manifestへ固定する
+- historical再計算後は同一一意キー・同一fingerprintで値が一致することをidempotency testにする
+
+`racer_pair_history`と`racer_style_features`は必須の生データtableではない。まず`race_entries`からread-onlyで再構築し、性能・再現性の必要が確認された場合だけ派生cacheとしてmaterializeする。師弟関係は公式公開資料の別registryと公開日を正本にし、pair tableへ推測値を混ぜない。
+
 ## 一意性とidempotency
 
 - raw responseは`response_sha256`で内容同一性を確認する
@@ -246,6 +479,15 @@ CREATE TABLE beforeinfo_boats_v2 (
 
 - 風向と展示courseをfixtureで固定してから実装
 - pre-raceとpost-raceを同一tableへ混在させない
+- `racer_profile_snapshots`、`racer_period_stats`、`racer_course_period_stats`をfixture DBで設計検証
+- 支部・登録期・年齢・性別・直前体重と当日展示推移をappend-only観測へする
+
+### N4: strict-prior選手派生値
+
+- `racer_recent_form_snapshots`を対象race keyedで再構築
+- pair/styleは先にread-only queryで検証し、必要な場合だけmaterialize
+- `source_max_event_at < target_event_at`の失敗fixtureを必須にする
+- 選手特徴をBUY/WATCH/SKIP条件やモデルへ接続しない
 
 ## migration前後の検査
 

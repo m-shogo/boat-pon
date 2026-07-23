@@ -3,6 +3,10 @@
 作成: 2026-06-13（データ基盤監査パックの成果物）
 根拠: `reports/racer-ability-data-audit.md`（`pnpm report:racer-ability-audit` で再生成）
 
+2026-07-23のPhase N0統合監査は
+[`../reports/all-bet-type-data-feasibility.md`](../reports/all-bet-type-data-feasibility.md)
+とmachine-readable JSONの`racerAudit`を正本とする。特に、対象race・同日後続raceの結果除外、現在値fallback禁止、`fetched_at`と有効時点の分離を優先する。
+
 このドキュメントは「選手能力データを分析・検証に使う前に必ず通すゲート」を定める。
 **BUY条件作成・ROI探索・decision logic変更の許可を与えるものではない。**
 

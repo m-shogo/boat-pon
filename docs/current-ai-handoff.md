@@ -1,6 +1,6 @@
 # boat-pon AI作業引継ぎ（正本）
 
-更新: 2026-07-23 17:21 JST
+更新: 2026-07-23 18:13 JST
 
 この文書は、過去チャットを読めない別のAIチャットが現在地を誤解せず再開するための入口である。数値は更新時点のスナップショットなので、作業開始時に下記コマンドで再計測する。
 
@@ -24,7 +24,7 @@
 - 修正前T-5標本は、前checkpointの5分キャッシュを再利用した可能性を完全には除外できない。
 - 正式な収益評価は、2026-07-21 15:15 JST以降に公式networkから直接取得したfuture-only T-5だけでやり直す。
 - DB肥大化の新規増加は抑制済みだが、13.98GiBの原本圧縮は未実施。
-- Phase N0「全券種データ取得可能性・保存設計監査」は読み取り専用で完了した。DB migration、実収集、モデル、production接続は未着手。
+- Phase N0「全券種＋選手PITデータ取得可能性・保存設計監査」は読み取り専用で完了した。DB migration、実収集、モデル、production接続は未着手。
 
 ## 絶対にしてはいけないこと
 
@@ -171,6 +171,12 @@ Phase N0の確定事項:
 - 現行live時系列は`bet_type`なしの3連単専用。全券種を混在させない。
 - place / wideはrange oddsとして保存する必要がある。
 - 売上額・投票口数は公式source未確認でBLOCKED。
+- `official_programs.raw_json`にはレース当時の登録番号、級別、全国/当地勝率・2連率があり、`race_entries`にはstrict-prior再構築の正本となる実進入、実ST、着順、事故codeがある。
+- `racer_profiles`と`racer_course_stats`は現在値1世代で、`fetched_at`は値の有効時点ではない。historical raceへ直接JOINしない。
+- `racer_course_stats`は全course rowで`races=0`、`win_rate`欠測で、集計期間・標本数・分散を再現できない。現在のlive表示以外の正本にしない。
+- コース別能力、直近30/90走、F後日数、開催内前走、過去同走・直接対戦、戦法proxyは、対象raceより前の`race_entries`だけから再構築可能である。
+- 級別等の有効期間、全国/当地3連率、事故率、当日体重・展示・部品交換推移はN3のsnapshot/append-only観測、recent/pair/style派生値はN4のstrict-prior再構築として設計した。
+- 選手PIT項目別判定は監査JSONの`racerAudit.featureMatrix`、保存案はschema設計の`racer_profile_snapshots`等6候補を正本とする。今回migrationは適用していない。
 - 既存DB、`app_settings`、launchd、collector頻度、予測/判定は変更していない。
 
 1. `network-only正式cohort`のT-5完全率、確定結果数、実払戻ROIを日次で更新する。
@@ -183,7 +189,7 @@ Phase N0の確定事項:
 
 2023-2024固定履歴モデルと市場の比較器は実装済み。現時点ではα=0が選ばれたため、特徴量追加や本番接続へ進めず、同じ固定条件のformal future蓄積を続ける。
 
-市場残差・全券種選択の計画は`docs/market-residual-ticket-selection-roadmap.md`を正本とする。Phase N0は完了したが、最低1,000 settled gate到達前に残差モデル学習を始めない。次の実装候補は別タスクのPhase N1「全券種払戻基盤」であり、N0設計レビューで承認された範囲だけを対象にする。N1へオッズ時系列、予測ロジック、市場残差モデル、券種選択器、production接続を混ぜない。
+市場残差・全券種選択の計画は`docs/market-residual-ticket-selection-roadmap.md`を正本とする。Phase N0は選手PIT監査を含めて完了したが、最低1,000 settled gate到達前に残差モデル学習を始めない。次の実装候補は別タスクのPhase N1「全券種払戻基盤」であり、N0設計レビューで承認された範囲だけを対象にする。N1へ選手特徴、オッズ時系列、予測ロジック、市場残差モデル、券種選択器、production接続を混ぜない。選手snapshotはN3、strict-prior recent/course/pair/styleはN4で整備し、それ以前にM1/M3へ進まない。
 
 ## やっても改善にならないこと
 
