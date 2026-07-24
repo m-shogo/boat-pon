@@ -5,7 +5,7 @@ Boat Pon は、競艇の期待値通知アプリ「Boat EV Notifier」の個人�
 自動購入・自動投票・ログイン情報保存・投票サイト操作は実装しません。  
 BUY / WATCH / SKIP の判定、公式確認リンク、raw/JSON/SQLite保存、後日の検証を目的にします。
 
-研究基盤・全券種市場知能の実装順序は[`docs/research-platform-master-plan.md`](docs/research-platform-master-plan.md)、40件の研究と破綻防止契約は[`docs/research-idea-register.json`](docs/research-idea-register.json)を正本とします。Phase N0は完了し、Stage F0のResearch Replay Foundationはtemp/sidecar vertical sliceを実装済みです。詳細は[`docs/research-replay-foundation.md`](docs/research-replay-foundation.md)を参照してください。F0-Rを通過するまでN1へ進みません。現行formalと新研究shadowの評価系列は分離し、production・自動購入には接続しません。
+研究基盤・全券種市場知能の実装順序は[`docs/research-platform-master-plan.md`](docs/research-platform-master-plan.md)、40件の研究と破綻防止契約は[`docs/research-idea-register.json`](docs/research-idea-register.json)を正本とします。Phase N0、Stage F0、Stage F0-Rは完了しました。F0-Rの独立sidecarはshadow writer/GCともOFFで、live collectorやproductionへ接続していません。詳細は[`docs/research-replay-foundation.md`](docs/research-replay-foundation.md)と[`docs/research-replay-rollout.md`](docs/research-replay-rollout.md)を参照してください。N1はschema/migration再レビューと別承認まで開始しません。
 
 ## 開発
 

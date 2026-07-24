@@ -126,4 +126,4 @@ FC08B、FC12、FC14BはF0-Rであり未実装。FC09、FC10はD1の責務であ�
 - partial migration resumeとold reader rollout
 - human approval
 
-これらを自動開始しない。F0-R完了前にN1へ進まない。
+これらは後続Stage F0-Rで実装・検証し、2026-07-24に`COMPLETE`となった。正本は[`research-replay-rollout.md`](research-replay-rollout.md)と[`../reports/research-replay-rollout-readiness.json`](../reports/research-replay-rollout-readiness.json)。N1は別のschema/migration再レビュー承認まで開始しない。

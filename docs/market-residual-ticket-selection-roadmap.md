@@ -13,7 +13,7 @@
 - 残差モデル学習は、T-5全市場と正式結果について既存の最低1,000 settled gateを満たすまで開始しない。
 - production判定への接続は、固定条件のfuture-only検証を通過するまで禁止する。
 
-現行formal settled固定条件蓄積は継続する。新研究側の順序は`Stage 0 → F0 → F0-R → N1 → D1 → N2 → N3 → N4 → D2 → E1 → E2 → N5 → N6 → N7 → N8`で固定し、次の独立タスクはF0のtemp/sidecar vertical sliceである。
+現行formal settled固定条件蓄積は継続する。新研究側の順序は`Stage 0 → F0 → F0-R → N1 → D1 → N2 → N3 → N4 → D2 → E1 → E2 → N5 → N6 → N7 → N8`で固定する。F0/F0-Rは完了し、次の独立タスク候補はN1 schema/migration再レビューである。N1実装は別承認まで開始しない。
 
 現行benchmarkは`decision_system=legacy_t5_formal`、`strategy_version=legacy-t5-v1`、`evaluation_mode=formal_forward`。これはfixed enrollment protocolのprospective cohortであり、報告時にfrozen analysis snapshotを作る。新方式は`decision_system=market_intelligence`、versioned strategy、`evaluation_mode=shadow_forward`、versioned enrollment/snapshotとする。
 
@@ -226,13 +226,13 @@ T-5表示オッズを確定値とせず、T-5から締切までの変化分布�
 
 独自研究7軸のデータ前提監査も統合した。7軸はすべて`CONDITIONAL`。公式情報の市場反映遅延と全券種市場整合性は、source時刻と観測時刻を分けたversioned future-only取得が必須である。1マークは公式結果から共起proxyまで再構築できるが、攻撃艇・隣接艇への因果は公式telemetryなしでは判定不能。Error Atlas、strict-prior潜在水面evidence、選択的不確実性は既存rawを多く再利用できる有望軸だが、今回modelは実装していない。
 
-### Stage F0: Research Replay Foundation（次の独立タスク）
+### Stage F0: Research Replay Foundation（完了）
 
 N1より前に、immutable capture lifecycle、entity-body raw、parse run、typed observation、Manifestを分離し、raw/semantic二重change判定、raw security、単方向supersession、FC08A/FC14A、golden fixture、PIT/leakage guardを実装する。F0はtemp/sidecarだけで、`data/boat.sqlite`変更、live collector接続、モデルを含めない。
 
 ### Stage F0-R: Research Replay Foundation Rollout
 
-F0 PASS後に、人間承認、DB copy、backup/restore、WAL/lock、crash recovery、disk、rollback、collector非回帰を確認してsidecar rolloutを行う。research writeはoptional shadow、default OFF、別transactionとし、失敗をprimary collectorへ伝播させない。bounded queue、retry/backpressure、kill switch、outbox/replay、health reportを持つ。無承認で`data/boat.sqlite`を変更しない。
+`COMPLETE`。人間承認、DB copy、backup/restore、WAL/lock、crash recovery、disk、rollback、collector非回帰を確認して独立sidecarへrolloutした。research writeはoptional shadow、default OFF、別transactionで、bounded queue、retry/backpressure、kill switch、outbox/replay、health reportを実装した。`data/boat.sqlite`は変更していない。
 
 ### Phase N1: 全券種払戻基盤
 

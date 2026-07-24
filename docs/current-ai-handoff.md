@@ -26,12 +26,13 @@
 - 正式な収益評価は、2026-07-21 15:15 JST以降に公式networkから直接取得したfuture-only T-5だけでやり直す。
 - DB肥大化の新規増加は抑制済みだが、13.98GiBの原本圧縮は未実施。
 - Phase N0「全券種＋選手PIT＋独自研究軸データ取得可能性・保存設計監査」は読み取り専用で完了した。DB migration、実収集、モデル、production接続は未着手。
-- N0後の正本は`docs/research-platform-master-plan.md`、研究40件と破綻防止契約の機械可読台帳は`docs/research-idea-register.json`。Stage F0のtemp/sidecar vertical sliceはMacとLinux CIのgolden hash一致を含め`COMPLETE`。F0-Rは未開始。
+- N0後の正本は`docs/research-platform-master-plan.md`、研究40件と破綻防止契約の機械可読台帳は`docs/research-idea-register.json`。Stage F0とF0-Rは`COMPLETE`。F0-Rは独立sidecar `f0r.2.0`へrollout済みだがshadow writer/GCはOFF、live collectorは未接続。次はN1 schema/migration再レビュー待ち。
 - 現行formalは`legacy_t5_formal / legacy-t5-v1 / formal_forward`の固定benchmark、新方式は`market_intelligence / shadow_forward`として評価系列を分離する。
 
 ## 絶対にしてはいけないこと
 
-- DBへの`INSERT / UPDATE / DELETE / DROP`
+- `data/boat.sqlite`への`INSERT / UPDATE / DELETE / DROP`
+- 明示承認なしのresearch sidecar writer/GC有効化
 - `app_settings`変更
 - 本番decisionロジック・モデル閾値・BudgetRule変更
 - 自動投票、投票サイト操作、ログイン情報保存
@@ -190,7 +191,7 @@ Phase N0の確定事項:
 
 1. 現行`legacy_t5_formal`はfixed enrollment protocolのprospective cohortとして、条件を変えずmembershipをappendする。報告・common comparison時にfrozen analysis snapshotを別作成する。
 2. Stage F0はsidecar schema `f0.1.0`、五層lineage、immutable capture lifecycle、raw/semantic二重判定、raw security、canonical identity、checkpoint freeze、versioned resolver、単方向supersession、FC08A/FC14A、golden fixtureまでtemp DBで実装済み。証跡は`docs/research-replay-foundation.md`と`reports/research-replay-foundation.json`。
-3. F0では`data/boat.sqlite`へwrite connectionを開かず、live collectorへ接続していない。F0完了後も直ちにN1へ進まず、人間承認を含むF0-Rでsidecar rolloutとshadow failure isolationを検証する。
+3. F0-Rで`data/research-replay.sqlite`へexpand-only schemaをrolloutし、FC08B/FC12/FC14Bを検証した。`data/boat.sqlite`はread-only fingerprint監査のみ。shadow writer/GCはOFF、live collector未接続である。
 4. 新方式は`market_intelligence / shadow_forward`として、manifest、decision、ticket、cohort、ROI、gate、reportをLegacyから分離する。
 5. model学習はN5開始gate、production検討はN8と独立production gateまで行わない。
 6. DB圧縮は人間の明示承認後、runbook通り別候補DBで実施する。
@@ -213,9 +214,13 @@ Phase N0の確定事項:
 
 - `src/research-replay/` — F0 sidecar schema、raw store、typed observation、resolver、manifest、PIT guard、canary
 - `scripts/research-replay.ts` — temp既定のF0監査CLI
+- `src/research-replay/rollout.ts` / `readiness.ts` — F0-R outbox、failure isolation、GC、backup/restore、readiness
+- `scripts/research-replay-rollout.ts` — F0-R dry-run/sidecar readiness CLI
 - `tests/fixtures/research-replay/` — sanitized golden fixture
 - `docs/research-replay-foundation.md` — F0 architecture/security/runbookとcontract result
+- `docs/research-replay-rollout.md` — F0-R rollout/rollback正本
 - `reports/research-replay-foundation.md/json` — F0実測
+- `reports/research-replay-rollout-readiness.md/json` — F0-R実測
 
 - `scripts/auto-fetch-odds.ts` — 公式番組母集団、時刻再計算、network-only、並列収集、通知
 - `src/domain/liveOddsFetch.ts` — 締切順、完全checkpoint、並列上限制御

@@ -7,7 +7,7 @@ boat-pon の CLI が増えてきたため、用途別に整理した索引です
 - `fetch:*` / `backfill:*` は外部取得を伴う可能性があります。
 - `report:*` / `check:*` / `audit:*` は基本的に read-only です。
 - 自動投票・ログイン保存・投票サイト操作は入れません。
-- N0後の最上位計画は[`research-platform-master-plan.md`](research-platform-master-plan.md)、研究・破綻防止契約台帳は[`research-idea-register.json`](research-idea-register.json)を参照してください。Stage F0はtemp/sidecar vertical sliceを実装済みで、F0-R完了前にN1へ進みません。
+- N0後の最上位計画は[`research-platform-master-plan.md`](research-platform-master-plan.md)、研究・破綻防止契約台帳は[`research-idea-register.json`](research-idea-register.json)を参照してください。Stage F0/F0-Rは完了し、N1はschema/migration再レビューと別承認待ちです。
 
 ## Research Replay Foundation
 
@@ -22,7 +22,10 @@ boat-pon の CLI が増えてきたため、用途別に整理した索引です
 | `pnpm research:schema:verify` | sidecar version、migration checksum、reader/writer contractを検証 |
 | `pnpm research:golden:verify` | raw/semantic/manifest golden hashを検証 |
 
-F0-Rのlive shadow write/rollout CLIは存在しません。現行formal CLIの出力へ新方式の成績を混ぜません。
+| `pnpm research:rollout:dry-run -- --root=/tmp/boat-pon-f0r` | temp sidecarでF0-R readinessを検証 |
+| `pnpm research:rollout:readiness` | 実sidecarのOFF設定、backup/restore、readiness reportを再検証 |
+
+`research:rollout:readiness`はsidecar・backup・reportへ追記するためread-onlyではありません。外部HTTP、live collector接続、`data/boat.sqlite`書込みは行いません。現行formal CLIの出力へ新方式の成績を混ぜません。
 
 ## 毎日/定期運用
 

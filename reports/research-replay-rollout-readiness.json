@@ -1,0 +1,125 @@
+{
+  "stage": "F0-R",
+  "reportVersion": "f0r-readiness-v1",
+  "status": "COMPLETE",
+  "rolloutMode": "sidecar_shadow_default_off",
+  "sidecarPath": "/Users/m-shogo/Developer/personal/boat-pon/data/research-replay.sqlite",
+  "rawRoot": "/Users/m-shogo/Developer/personal/boat-pon/data/research-replay-raw",
+  "schemaVersion": "f0r.2.0",
+  "schemaVerification": {
+    "base": {
+      "schemaVersion": "f0.1.0",
+      "migrationChecksum": "aa60e8b3bffa11f53cc983774e66f00be7481232e057e325f232cc84ff4ca910",
+      "expectedChecksum": "aa60e8b3bffa11f53cc983774e66f00be7481232e057e325f232cc84ff4ca910",
+      "userVersion": 100,
+      "partialMigration": false,
+      "unknownSchema": false,
+      "readerContract": "f0-reader-v1",
+      "writerContract": "f0-writer-v1",
+      "ok": true
+    },
+    "schemaVersion": "f0r.2.0",
+    "migrationChecksum": "b3ab5d07ed2016ab9a852e3dcb750b0f3524b5a7e028bc19dfd6722d8e17dc33",
+    "expectedChecksum": "b3ab5d07ed2016ab9a852e3dcb750b0f3524b5a7e028bc19dfd6722d8e17dc33",
+    "userVersion": 100,
+    "minimumReaderVersion": "f0-reader-v1",
+    "minimumWriterVersion": "f0-writer-v1",
+    "partialMigration": false,
+    "unknownSchema": false,
+    "oldReaderCompatible": true,
+    "shadowDefaultOff": true,
+    "ok": true
+  },
+  "migrationMs": 1.690125,
+  "humanApproval": {
+    "recorded": true,
+    "source": "codex_user_message:進めて",
+    "scope": "F0-R_START_AND_SIDECAR_ROLLOUT"
+  },
+  "gates": {
+    "f0Complete": true,
+    "dbCopy": true,
+    "backup": true,
+    "restore": true,
+    "walLockIsolation": true,
+    "crashRecovery": true,
+    "diskCapacity": true,
+    "rollback": true,
+    "collectorNonRegression": true,
+    "oldReaderCompatibility": true,
+    "partialMigrationResume": true,
+    "shadowDefaultOff": true,
+    "primaryFailureIsolation": true,
+    "boundedOutbox": true,
+    "operationalGcAudit": true
+  },
+  "backup": {
+    "path": "/Users/m-shogo/Developer/personal/boat-pon/backups/research-replay/backup-20260724034851201.sqlite",
+    "sha256": "e2093ec684c8953f4bf0fd4b559446c8607078723457d3374255a35be71a863a",
+    "bytes": 294912,
+    "quickCheck": "ok",
+    "restoredHashMatches": true
+  },
+  "disk": {
+    "freeBytes": 427755077632,
+    "configuredLowWaterBytes": 2147483648,
+    "configuredQuotaBytes": 1073741824
+  },
+  "shadowHealth": {
+    "config": {
+      "shadowWriteEnabled": false,
+      "operationalGcEnabled": false,
+      "killSwitchEngaged": false,
+      "queueCapacity": 100,
+      "maxRetries": 3,
+      "storageQuotaBytes": 1073741824,
+      "diskLowWaterBytes": 2147483648
+    },
+    "queued": 0,
+    "succeeded": 0,
+    "retrying": 0,
+    "permanentlyFailed": 0,
+    "oldestQueuedAt": null,
+    "rawStorageBytes": 0,
+    "sidecarBytes": 294912,
+    "totalStorageBytes": 294912,
+    "diskFreeBytes": 427755089920,
+    "schemaOk": true
+  },
+  "canary": {
+    "primaryContinuedAfterShadowFailure": true,
+    "outboxReplaySucceeded": true,
+    "unreferencedRawDeleted": true,
+    "rollbackEngagedKillSwitch": true,
+    "crashTransactionRolledBack": true,
+    "walWriterRecovered": true,
+    "partialMigrationResumed": true
+  },
+  "primarySourceBefore": {
+    "exists": true,
+    "schemaHash": "ec4103e96278550441c2b6b992f169618080a91c25f659e923847a66c54ebb92",
+    "appSettingsHash": "e337a1736a88e80f6d4dab66c4c4a87ef97ea1b69f6e655c288e7be1a21c632a",
+    "researchTableCount": 0,
+    "sizeBytes": 15068065792,
+    "modifiedMs": 1784864771923.6316
+  },
+  "primarySourceAfter": {
+    "exists": true,
+    "schemaHash": "ec4103e96278550441c2b6b992f169618080a91c25f659e923847a66c54ebb92",
+    "appSettingsHash": "e337a1736a88e80f6d4dab66c4c4a87ef97ea1b69f6e655c288e7be1a21c632a",
+    "researchTableCount": 0,
+    "sizeBytes": 15068065792,
+    "modifiedMs": 1784864771923.6316
+  },
+  "nonGoals": {
+    "productionDbWritten": false,
+    "liveCollectorConnected": false,
+    "modelImplemented": false,
+    "buyWatchSkipChanged": false,
+    "legacyEvaluationMixed": false,
+    "n1Started": false
+  },
+  "nextStage": "N1_REVIEW_REQUIRES_SEPARATE_APPROVAL",
+  "blockers": [],
+  "generatedAt": "2026-07-24T03:48:51.201Z"
+}
