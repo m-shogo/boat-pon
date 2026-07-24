@@ -40,5 +40,8 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Verify Research Replay golden fixture
+        run: npm run research:golden:verify
+
       - name: Build
         run: npm run build
