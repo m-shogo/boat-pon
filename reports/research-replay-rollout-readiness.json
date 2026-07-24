@@ -1,10 +1,10 @@
 {
   "stage": "F0-R",
-  "reportVersion": "f0r-readiness-v1",
+  "reportVersion": "f0r-readiness-v2",
   "status": "COMPLETE",
   "rolloutMode": "sidecar_shadow_default_off",
-  "sidecarPath": "/Users/m-shogo/Developer/personal/boat-pon/data/research-replay.sqlite",
-  "rawRoot": "/Users/m-shogo/Developer/personal/boat-pon/data/research-replay-raw",
+  "sidecarPath": "data/research-replay.sqlite",
+  "rawRoot": "data/research-replay-raw",
   "schemaVersion": "f0r.2.0",
   "schemaVerification": {
     "base": {
@@ -28,13 +28,34 @@
     "unknownSchema": false,
     "oldReaderCompatible": true,
     "shadowDefaultOff": true,
+    "approvalContractVersion": "f0r-approval-v2",
+    "approvalMigrationChecksum": "38ea1e0ee949cd7f86b7d32aca6b971abc0547d5a09a3c5f38a08fc49d03c17a",
+    "approvalExpectedChecksum": "38ea1e0ee949cd7f86b7d32aca6b971abc0547d5a09a3c5f38a08fc49d03c17a",
+    "approvalSchemaOk": true,
     "ok": true
   },
-  "migrationMs": 1.690125,
+  "migrationMs": 17.517292,
   "humanApproval": {
-    "recorded": true,
-    "source": "codex_user_message:進めて",
-    "scope": "F0-R_START_AND_SIDECAR_ROLLOUT"
+    "valid": true,
+    "resolution": {
+      "resolverVersion": "f0r-approval-resolver-v1",
+      "legacyApprovalCount": 1,
+      "matchingGrantCount": 1,
+      "approvalId": "f0r-hardening-explicit-20260724",
+      "source": "user-explicit-request:F0-R-approval-hardening-and-N1-review",
+      "reference": "codex-task:bdaf2513",
+      "approvedAt": "2026-07-24T04:46:16.000Z",
+      "mode": "production",
+      "approved": true,
+      "code": "APPROVAL_VALID"
+    },
+    "scope": "F0-R_START_AND_SIDECAR_ROLLOUT",
+    "targetStage": "F0-R",
+    "targetSchemaVersion": "f0r.2.0",
+    "targetContractVersion": "f0r-approval-v2",
+    "rolloutStartedAt": "2026-07-24T04:48:13.148Z",
+    "executionMode": "production",
+    "correctionReason": "旧f0r-start-approval-v1はscope/source/timeだけで対象contractを検証できないため不適格。v2の明示grantとappend-only lifecycleを正本とする。"
   },
   "gates": {
     "f0Complete": true,
@@ -51,17 +72,18 @@
     "shadowDefaultOff": true,
     "primaryFailureIsolation": true,
     "boundedOutbox": true,
-    "operationalGcAudit": true
+    "operationalGcAudit": true,
+    "humanApprovalValid": true
   },
   "backup": {
-    "path": "/Users/m-shogo/Developer/personal/boat-pon/backups/research-replay/backup-20260724034851201.sqlite",
-    "sha256": "e2093ec684c8953f4bf0fd4b559446c8607078723457d3374255a35be71a863a",
-    "bytes": 294912,
+    "path": "backups/research-replay/backup-20260724044813152.sqlite",
+    "sha256": "c1eb36dfc8d351284b6daabfe4c24f709ad0eddb72afb7a4bc715372ce35cf58",
+    "bytes": 327680,
     "quickCheck": "ok",
     "restoredHashMatches": true
   },
   "disk": {
-    "freeBytes": 427755077632,
+    "freeBytes": 425526304768,
     "configuredLowWaterBytes": 2147483648,
     "configuredQuotaBytes": 1073741824
   },
@@ -81,9 +103,9 @@
     "permanentlyFailed": 0,
     "oldestQueuedAt": null,
     "rawStorageBytes": 0,
-    "sidecarBytes": 294912,
-    "totalStorageBytes": 294912,
-    "diskFreeBytes": 427755089920,
+    "sidecarBytes": 327680,
+    "totalStorageBytes": 327680,
+    "diskFreeBytes": 425526321152,
     "schemaOk": true
   },
   "canary": {
@@ -100,16 +122,16 @@
     "schemaHash": "ec4103e96278550441c2b6b992f169618080a91c25f659e923847a66c54ebb92",
     "appSettingsHash": "e337a1736a88e80f6d4dab66c4c4a87ef97ea1b69f6e655c288e7be1a21c632a",
     "researchTableCount": 0,
-    "sizeBytes": 15068065792,
-    "modifiedMs": 1784864771923.6316
+    "sizeBytes": 15070986240,
+    "modifiedMs": 1784868371801.0994
   },
   "primarySourceAfter": {
     "exists": true,
     "schemaHash": "ec4103e96278550441c2b6b992f169618080a91c25f659e923847a66c54ebb92",
     "appSettingsHash": "e337a1736a88e80f6d4dab66c4c4a87ef97ea1b69f6e655c288e7be1a21c632a",
     "researchTableCount": 0,
-    "sizeBytes": 15068065792,
-    "modifiedMs": 1784864771923.6316
+    "sizeBytes": 15070986240,
+    "modifiedMs": 1784868371801.0994
   },
   "nonGoals": {
     "productionDbWritten": false,
@@ -119,7 +141,7 @@
     "legacyEvaluationMixed": false,
     "n1Started": false
   },
-  "nextStage": "N1_REVIEW_REQUIRES_SEPARATE_APPROVAL",
+  "nextStage": "N1_IMPLEMENTATION_REQUIRES_SEPARATE_APPROVAL",
   "blockers": [],
-  "generatedAt": "2026-07-24T03:48:51.201Z"
+  "generatedAt": "2026-07-24T04:48:13.152Z"
 }

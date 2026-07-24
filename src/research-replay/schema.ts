@@ -11,6 +11,8 @@ export const ROLLOUT_SCHEMA_VERSION = "f0r.2.0";
 export const ROLLOUT_USER_VERSION = SIDECAR_USER_VERSION;
 export const ROLLOUT_READER_VERSION = "f0r-reader-v1";
 export const ROLLOUT_WRITER_VERSION = "f0r-writer-v1";
+export const APPROVAL_SCHEMA_VERSION = "f0r-approval.1.0";
+export const APPROVAL_CONTRACT_VERSION = "f0r-approval-v2";
 
 const EVIDENCE_TABLES = [
   "capture_attempts",
@@ -398,6 +400,70 @@ END;
 export const F0R_MIGRATION_SQL = `${F0R_LEDGER_SQL}\n${ROLLOUT_SCHEMA}\n${rolloutAppendOnlyTriggers()}\nPRAGMA user_version = ${ROLLOUT_USER_VERSION};`;
 export const F0R_MIGRATION_CHECKSUM = createHash("sha256").update(F0R_MIGRATION_SQL, "utf8").digest("hex");
 
+const APPROVAL_SCHEMA = `
+CREATE TABLE IF NOT EXISTS rollout_approval_grants_v2 (
+  approval_id TEXT PRIMARY KEY,
+  approval_scope TEXT NOT NULL CHECK (length(trim(approval_scope)) > 0),
+  approval_source TEXT NOT NULL CHECK (length(trim(approval_source)) > 0),
+  approval_reference TEXT NOT NULL CHECK (length(trim(approval_reference)) > 0),
+  target_stage TEXT NOT NULL CHECK (length(trim(target_stage)) > 0),
+  target_schema_version TEXT NOT NULL CHECK (length(trim(target_schema_version)) > 0),
+  target_contract_version TEXT NOT NULL CHECK (length(trim(target_contract_version)) > 0),
+  approved_at TEXT NOT NULL CHECK (length(trim(approved_at)) > 0),
+  approval_mode TEXT NOT NULL CHECK (approval_mode IN ('production', 'simulated')),
+  content_hash TEXT NOT NULL CHECK (length(content_hash) = 64),
+  recorded_at TEXT NOT NULL
+) STRICT;
+
+CREATE TABLE IF NOT EXISTS rollout_approval_lifecycle_events_v2 (
+  lifecycle_event_id TEXT PRIMARY KEY,
+  event_kind TEXT NOT NULL CHECK (event_kind IN ('revoked', 'superseded', 'legacy_disqualified')),
+  subject_approval_id TEXT NOT NULL CHECK (length(trim(subject_approval_id)) > 0),
+  replacement_approval_id TEXT CHECK (
+    (event_kind = 'superseded' AND replacement_approval_id IS NOT NULL AND length(trim(replacement_approval_id)) > 0)
+    OR (event_kind <> 'superseded' AND replacement_approval_id IS NULL)
+  ),
+  reason TEXT NOT NULL CHECK (length(trim(reason)) > 0),
+  source TEXT NOT NULL CHECK (length(trim(source)) > 0),
+  reference TEXT NOT NULL CHECK (length(trim(reference)) > 0),
+  occurred_at TEXT NOT NULL CHECK (length(trim(occurred_at)) > 0),
+  content_hash TEXT NOT NULL CHECK (length(content_hash) = 64),
+  recorded_at TEXT NOT NULL
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS rollout_approval_grants_v2_target
+ON rollout_approval_grants_v2(target_stage, target_schema_version, target_contract_version, approved_at);
+
+CREATE INDEX IF NOT EXISTS rollout_approval_lifecycle_v2_subject
+ON rollout_approval_lifecycle_events_v2(subject_approval_id, occurred_at);
+
+CREATE TRIGGER IF NOT EXISTS rollout_approval_grants_v2_append_only_update
+BEFORE UPDATE ON rollout_approval_grants_v2
+BEGIN
+  SELECT RAISE(ABORT, 'rollout_approval_grants_v2 is append-only');
+END;
+CREATE TRIGGER IF NOT EXISTS rollout_approval_grants_v2_append_only_delete
+BEFORE DELETE ON rollout_approval_grants_v2
+BEGIN
+  SELECT RAISE(ABORT, 'rollout_approval_grants_v2 is append-only');
+END;
+CREATE TRIGGER IF NOT EXISTS rollout_approval_lifecycle_events_v2_append_only_update
+BEFORE UPDATE ON rollout_approval_lifecycle_events_v2
+BEGIN
+  SELECT RAISE(ABORT, 'rollout_approval_lifecycle_events_v2 is append-only');
+END;
+CREATE TRIGGER IF NOT EXISTS rollout_approval_lifecycle_events_v2_append_only_delete
+BEFORE DELETE ON rollout_approval_lifecycle_events_v2
+BEGIN
+  SELECT RAISE(ABORT, 'rollout_approval_lifecycle_events_v2 is append-only');
+END;
+`;
+
+export const APPROVAL_MIGRATION_SQL = APPROVAL_SCHEMA;
+export const APPROVAL_MIGRATION_CHECKSUM = createHash("sha256")
+  .update(APPROVAL_MIGRATION_SQL, "utf8")
+  .digest("hex");
+
 export type SchemaVerification = {
   schemaVersion: string | null;
   migrationChecksum: string | null;
@@ -509,6 +575,10 @@ export type RolloutSchemaVerification = {
   unknownSchema: boolean;
   oldReaderCompatible: boolean;
   shadowDefaultOff: boolean;
+  approvalContractVersion: string | null;
+  approvalMigrationChecksum: string | null;
+  approvalExpectedChecksum: string;
+  approvalSchemaOk: boolean;
   ok: boolean;
 };
 
@@ -519,6 +589,7 @@ export function initializeRolloutSchema(db: DatabaseSync, now = new Date().toISO
     SELECT checksum, status FROM rollout_schema_migrations WHERE migration_version = ?
   `).get(ROLLOUT_SCHEMA_VERSION) as { checksum: string; status: string } | undefined;
   if (existing?.status === "applied") {
+    initializeApprovalSchema(db, now);
     const verification = verifyRolloutSchema(db);
     if (!verification.ok) throw new Error(`rollout schema refused: ${JSON.stringify(verification)}`);
     return;
@@ -564,8 +635,50 @@ export function initializeRolloutSchema(db: DatabaseSync, now = new Date().toISO
     db.exec("ROLLBACK");
     throw error;
   }
+  initializeApprovalSchema(db, now);
   const verification = verifyRolloutSchema(db);
   if (!verification.ok) throw new Error(`rollout schema verification failed: ${JSON.stringify(verification)}`);
+}
+
+function initializeApprovalSchema(db: DatabaseSync, now: string): void {
+  const existing = db.prepare(`
+    SELECT checksum, status FROM rollout_schema_migrations WHERE migration_version = ?
+  `).get(APPROVAL_SCHEMA_VERSION) as { checksum: string; status: string } | undefined;
+  if (existing?.status === "applied") {
+    if (existing.checksum !== APPROVAL_MIGRATION_CHECKSUM) {
+      throw new Error("approval migration checksum mismatch");
+    }
+    return;
+  }
+  if (existing && existing.checksum !== APPROVAL_MIGRATION_CHECKSUM) {
+    throw new Error("approval partial migration checksum mismatch");
+  }
+  if (!existing) {
+    db.prepare(`
+      INSERT INTO rollout_schema_migrations
+      (migration_id, migration_version, checksum, applied_at, runtime_version, status)
+      VALUES (?, ?, ?, ?, ?, 'partial')
+    `).run(
+      "rr-f0r-approval-001",
+      APPROVAL_SCHEMA_VERSION,
+      APPROVAL_MIGRATION_CHECKSUM,
+      now,
+      process.version,
+    );
+  }
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.exec(APPROVAL_MIGRATION_SQL);
+    db.prepare(`
+      UPDATE rollout_schema_migrations
+      SET status='applied', applied_at=?, runtime_version=?
+      WHERE migration_version=? AND checksum=?
+    `).run(now, process.version, APPROVAL_SCHEMA_VERSION, APPROVAL_MIGRATION_CHECKSUM);
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
 }
 
 export function verifyRolloutSchema(db: DatabaseSync): RolloutSchemaVerification {
@@ -602,6 +715,20 @@ export function verifyRolloutSchema(db: DatabaseSync): RolloutSchemaVerification
       SELECT shadow_write_enabled value FROM rollout_config_events
       ORDER BY occurred_at DESC, rowid DESC LIMIT 1
     `).get() as { value: number } | undefined)?.value;
+  const approvalMigration = hasTable(db, "rollout_schema_migrations")
+    ? db.prepare(`
+        SELECT migration_version, checksum, status
+        FROM rollout_schema_migrations WHERE migration_version=?
+      `).get(APPROVAL_SCHEMA_VERSION) as {
+        migration_version: string;
+        checksum: string;
+        status: string;
+      } | undefined
+    : undefined;
+  const approvalSchemaOk = approvalMigration?.status === "applied"
+    && approvalMigration.checksum === APPROVAL_MIGRATION_CHECKSUM
+    && hasTable(db, "rollout_approval_grants_v2")
+    && hasTable(db, "rollout_approval_lifecycle_events_v2");
   return {
     base,
     schemaVersion: migration?.migration_version ?? null,
@@ -614,11 +741,16 @@ export function verifyRolloutSchema(db: DatabaseSync): RolloutSchemaVerification
     unknownSchema,
     oldReaderCompatible,
     shadowDefaultOff,
+    approvalContractVersion: approvalSchemaOk ? APPROVAL_CONTRACT_VERSION : null,
+    approvalMigrationChecksum: approvalMigration?.checksum ?? null,
+    approvalExpectedChecksum: APPROVAL_MIGRATION_CHECKSUM,
+    approvalSchemaOk,
     ok: base.ok
       && !partialMigration
       && !unknownSchema
       && migration?.checksum === F0R_MIGRATION_CHECKSUM
-      && oldReaderCompatible,
+      && oldReaderCompatible
+      && approvalSchemaOk,
   };
 }
 

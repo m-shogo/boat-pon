@@ -28,6 +28,7 @@
     "research:golden:verify": "tsx scripts/research-replay.ts golden",
     "research:rollout:dry-run": "tsx scripts/research-replay-rollout.ts --dry-run",
     "research:rollout:readiness": "tsx scripts/research-replay-rollout.ts",
+    "research:approval:record": "tsx scripts/research-replay-approval.ts",
     "dev:web": "vite",
     "dev:api": "tsx watch server/index.ts",
     "import:official": "tsx scripts/import-official-file.ts",

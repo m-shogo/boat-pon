@@ -36,7 +36,9 @@ const report = runF0RReadiness({
   rawRoot,
   primarySourcePath,
   backupDirectory,
-  approvalSource: dryRun ? "local_dry_run" : "codex_user_message:進めて",
+  rolloutStartedAt: new Date().toISOString(),
+  executionMode: dryRun ? "simulated" : "production",
+  reportRoot: dryRun ? deploymentRoot : root,
 });
 
 if (!dryRun || process.argv.includes("--write-reports")) {

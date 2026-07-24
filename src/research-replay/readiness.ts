@@ -9,7 +9,7 @@ import {
 } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { canonicalHash } from "./canonical";
 import { RawStore } from "./rawStore";
@@ -30,8 +30,14 @@ import {
   ROLLOUT_SCHEMA_VERSION,
   verifyRolloutSchema,
 } from "./schema";
+import {
+  f0rApprovalTarget,
+  resolveApproval,
+  type ApprovalMode,
+  type ApprovalResolution,
+} from "./approval";
 
-export const F0R_REPORT_VERSION = "f0r-readiness-v1";
+export const F0R_REPORT_VERSION = "f0r-readiness-v2";
 
 type SourceFingerprint = {
   exists: boolean;
@@ -53,9 +59,15 @@ export type F0RReadinessReport = {
   schemaVerification: ReturnType<typeof verifyRolloutSchema>;
   migrationMs: number;
   humanApproval: {
-    recorded: boolean;
-    source: string;
+    valid: boolean;
+    resolution: ApprovalResolution;
     scope: string;
+    targetStage: string;
+    targetSchemaVersion: string;
+    targetContractVersion: string;
+    rolloutStartedAt: string;
+    executionMode: ApprovalMode;
+    correctionReason: string;
   };
   gates: {
     f0Complete: boolean;
@@ -73,6 +85,7 @@ export type F0RReadinessReport = {
     primaryFailureIsolation: boolean;
     boundedOutbox: boolean;
     operationalGcAudit: boolean;
+    humanApprovalValid: boolean;
   };
   backup: {
     path: string;
@@ -106,7 +119,7 @@ export type F0RReadinessReport = {
     legacyEvaluationMixed: false;
     n1Started: false;
   };
-  nextStage: "N1_REVIEW_REQUIRES_SEPARATE_APPROVAL";
+  nextStage: "N1_IMPLEMENTATION_REQUIRES_SEPARATE_APPROVAL";
   blockers: string[];
   generatedAt: string;
 };
@@ -165,6 +178,7 @@ function reportMarkdown(report: F0RReadinessReport): string {
 - Sidecar schema: \`${report.schemaVersion}\`
 - Shadow write: **OFF**
 - N1: **NOT STARTED**
+- Approval gate: **${report.humanApproval.resolution.code}**
 
 ## Gates
 
@@ -176,6 +190,18 @@ ${gates}
 - \`data/boat.sqlite\`はread-only fingerprint監査だけを行った。
 - live collector、Legacy formal、BUY/WATCH/SKIP、通知、モデルへ接続していない。
 - sidecar writerとoperational GCはdefault OFFである。
+
+## Human approval gate
+
+- resolver: \`${report.humanApproval.resolution.resolverVersion}\`
+- approval id: \`${report.humanApproval.resolution.approvalId ?? "none"}\`
+- source: \`${report.humanApproval.resolution.source ?? "none"}\`
+- reference: \`${report.humanApproval.resolution.reference ?? "none"}\`
+- approved at: \`${report.humanApproval.resolution.approvedAt ?? "none"}\`
+- target: \`${report.humanApproval.targetStage} / ${report.humanApproval.targetSchemaVersion} / ${report.humanApproval.targetContractVersion}\`
+- mode: \`${report.humanApproval.executionMode}\`
+- legacy approval rows: ${report.humanApproval.resolution.legacyApprovalCount}（v2 gateでは承認として扱わない）
+- correction: ${report.humanApproval.correctionReason}
 
 ## Backup / restore
 
@@ -195,8 +221,15 @@ ${gates}
 
 ## Next
 
-N1は自動開始しない。schema/migration再レビューと別の明示承認を待つ。
+N1のschema/migration実装前レビューは完了した。parser、migration適用、外部取得、collector接続は別の明示承認を待つ。
 `;
+}
+
+function reportPath(path: string, root: string): string {
+  const absolute = resolve(path);
+  const rel = relative(resolve(root), absolute);
+  if (rel !== "" && !rel.startsWith("..") && !isAbsolute(rel)) return rel;
+  return `<external>/${absolute.split("/").at(-1) ?? "artifact"}`;
 }
 
 function runRestoredCanary(restoredPath: string, tempRoot: string, now: string): F0RReadinessReport["canary"] {
@@ -311,10 +344,12 @@ export function runF0RReadiness(input: {
   rawRoot: string;
   primarySourcePath: string;
   backupDirectory: string;
-  approvalSource: string;
-  approvedAt?: string;
+  rolloutStartedAt: string;
+  executionMode: ApprovalMode;
+  reportRoot?: string;
+  generatedAt?: string;
 }): F0RReadinessReport {
-  const generatedAt = input.approvedAt ?? new Date().toISOString();
+  const generatedAt = input.generatedAt ?? new Date().toISOString();
   const sidecarPath = resolve(input.sidecarPath);
   const rawRoot = resolve(input.rawRoot);
   const primarySourceBefore = sourceFingerprint(input.primarySourcePath);
@@ -337,18 +372,12 @@ export function runF0RReadiness(input: {
     randomUUID,
     () => generatedAt,
   );
-  const approvalExists = Boolean(db.prepare(`
-    SELECT 1 FROM rollout_approval_events WHERE approval_event_id='f0r-start-approval-v1'
-  `).get());
-  if (!approvalExists) {
-    controller.recordApproval({
-      approvalEventId: "f0r-start-approval-v1",
-      approvalScope: "F0-R_START_AND_SIDECAR_ROLLOUT",
-      approvalSource: input.approvalSource,
-      approvedAt: generatedAt,
-      detail: { productionDbWrite: false, liveShadowWrite: false },
-    });
-  }
+  const approvalTarget = f0rApprovalTarget();
+  const approval = resolveApproval(db, {
+    ...approvalTarget,
+    rolloutStartedAt: input.rolloutStartedAt,
+    executionMode: input.executionMode,
+  });
   const configExists = Boolean(db.prepare(`
     SELECT 1 FROM rollout_config_events WHERE config_event_id='f0r-default-off-v1'
   `).get());
@@ -420,28 +449,35 @@ export function runF0RReadiness(input: {
     primaryFailureIsolation: canary.primaryContinuedAfterShadowFailure,
     boundedOutbox: canary.outboxReplaySucceeded,
     operationalGcAudit: canary.unreferencedRawDeleted,
+    humanApprovalValid: approval.approved,
   };
   const blockers = Object.entries(gates)
     .filter(([, passed]) => !passed)
-    .map(([name]) => name);
+    .map(([name]) => name === "humanApprovalValid" ? approval.code : name);
   return {
     stage: "F0-R",
     reportVersion: F0R_REPORT_VERSION,
     status: blockers.length === 0 ? "COMPLETE" : "BLOCKED",
     rolloutMode: "sidecar_shadow_default_off",
-    sidecarPath,
-    rawRoot,
+    sidecarPath: reportPath(sidecarPath, input.reportRoot ?? process.cwd()),
+    rawRoot: reportPath(rawRoot, input.reportRoot ?? process.cwd()),
     schemaVersion: ROLLOUT_SCHEMA_VERSION,
     schemaVerification: rolloutSchema,
     migrationMs,
     humanApproval: {
-      recorded: true,
-      source: input.approvalSource,
-      scope: "F0-R_START_AND_SIDECAR_ROLLOUT",
+      valid: approval.approved,
+      resolution: approval,
+      scope: approvalTarget.approvalScope,
+      targetStage: approvalTarget.targetStage,
+      targetSchemaVersion: approvalTarget.targetSchemaVersion,
+      targetContractVersion: approvalTarget.targetContractVersion,
+      rolloutStartedAt: input.rolloutStartedAt,
+      executionMode: input.executionMode,
+      correctionReason: "旧f0r-start-approval-v1はscope/source/timeだけで対象contractを検証できないため不適格。v2の明示grantとappend-only lifecycleを正本とする。",
     },
     gates,
     backup: {
-      path: backup.path,
+      path: reportPath(backup.path, input.reportRoot ?? process.cwd()),
       sha256: backup.sha256,
       bytes: backup.bytes,
       quickCheck: backup.quickCheck,
@@ -464,7 +500,7 @@ export function runF0RReadiness(input: {
       legacyEvaluationMixed: false,
       n1Started: false,
     },
-    nextStage: "N1_REVIEW_REQUIRES_SEPARATE_APPROVAL",
+    nextStage: "N1_IMPLEMENTATION_REQUIRES_SEPARATE_APPROVAL",
     blockers,
     generatedAt,
   };

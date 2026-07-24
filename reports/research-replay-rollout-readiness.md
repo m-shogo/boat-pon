@@ -5,6 +5,7 @@
 - Sidecar schema: `f0r.2.0`
 - Shadow write: **OFF**
 - N1: **NOT STARTED**
+- Approval gate: **APPROVAL_VALID**
 
 ## Gates
 
@@ -23,6 +24,7 @@
 - primaryFailureIsolation: PASS
 - boundedOutbox: PASS
 - operationalGcAudit: PASS
+- humanApprovalValid: PASS
 
 ## Deployment boundary
 
@@ -31,10 +33,22 @@
 - live collector、Legacy formal、BUY/WATCH/SKIP、通知、モデルへ接続していない。
 - sidecar writerとoperational GCはdefault OFFである。
 
+## Human approval gate
+
+- resolver: `f0r-approval-resolver-v1`
+- approval id: `f0r-hardening-explicit-20260724`
+- source: `user-explicit-request:F0-R-approval-hardening-and-N1-review`
+- reference: `codex-task:bdaf2513`
+- approved at: `2026-07-24T04:46:16.000Z`
+- target: `F0-R / f0r.2.0 / f0r-approval-v2`
+- mode: `production`
+- legacy approval rows: 1（v2 gateでは承認として扱わない）
+- correction: 旧f0r-start-approval-v1はscope/source/timeだけで対象contractを検証できないため不適格。v2の明示grantとappend-only lifecycleを正本とする。
+
 ## Backup / restore
 
 - quick_check: `ok`
-- backup bytes: 294912
+- backup bytes: 327680
 - backup/restore hash match: true
 
 ## Failure isolation canary
@@ -49,4 +63,4 @@
 
 ## Next
 
-N1は自動開始しない。schema/migration再レビューと別の明示承認を待つ。
+N1のschema/migration実装前レビューは完了した。parser、migration適用、外部取得、collector接続は別の明示承認を待つ。

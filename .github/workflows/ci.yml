@@ -44,7 +44,21 @@ jobs:
         run: npm run research:golden:verify
 
       - name: Verify Research Replay rollout readiness
-        run: npm run research:rollout:dry-run -- --root=/tmp/boat-pon-f0r-ci
+        run: |
+          npm run research:approval:record -- \
+            --event=grant \
+            --root=/tmp/boat-pon-f0r-ci \
+            --sidecar=/tmp/boat-pon-f0r-ci/tmp/research-replay-dry-run.sqlite \
+            --approval-id=ci-simulated-f0r-approval \
+            --scope=F0-R_START_AND_SIDECAR_ROLLOUT \
+            --source=github-actions-simulated \
+            --reference=ci-f0r-readiness \
+            --target-stage=F0-R \
+            --target-schema=f0r.2.0 \
+            --target-contract=f0r-approval-v2 \
+            --approved-at=2026-07-24T00:00:00.000Z \
+            --approval-mode=simulated
+          npm run research:rollout:dry-run -- --root=/tmp/boat-pon-f0r-ci
 
       - name: Build
         run: npm run build

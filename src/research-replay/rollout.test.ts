@@ -10,6 +10,12 @@ import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import { RawStore } from "./rawStore";
 import { runF0RReadiness } from "./readiness";
+import {
+  F0R_APPROVAL_SCOPE,
+  recordApprovalGrant,
+  recordApprovalLifecycle,
+  resolveApproval,
+} from "./approval";
 import { ResearchReplayRepository } from "./repository";
 import {
   backupSidecar,
@@ -28,6 +34,7 @@ import {
   ROLLOUT_SCHEMA_VERSION,
   verifyRolloutSchema,
   verifySidecarSchema,
+  APPROVAL_CONTRACT_VERSION,
 } from "./schema";
 
 type RolloutContext = {
@@ -364,13 +371,30 @@ test("F0-R readinessは独立sidecarだけで全gateを通しprimary fingerprint
     CREATE TABLE decision_history(id INTEGER PRIMARY KEY, decision TEXT);
   `);
   primary.close();
+  const sidecarPath = join(root, "data", "research-replay.sqlite");
+  const approvalDb = openRolloutDatabase(sidecarPath);
+  initializeRolloutSchema(approvalDb, "2026-07-24T01:59:00.000Z");
+  recordApprovalGrant(approvalDb, {
+    approvalId: "explicit-test-approval",
+    approvalScope: F0R_APPROVAL_SCOPE,
+    approvalSource: "test_fixture",
+    approvalReference: "fixture:f0r-readiness",
+    targetStage: "F0-R",
+    targetSchemaVersion: ROLLOUT_SCHEMA_VERSION,
+    targetContractVersion: APPROVAL_CONTRACT_VERSION,
+    approvedAt: "2026-07-24T01:59:30.000Z",
+    approvalMode: "production",
+  }, "2026-07-24T01:59:31.000Z");
+  approvalDb.close();
   const report = runF0RReadiness({
-    sidecarPath: join(root, "data", "research-replay.sqlite"),
+    sidecarPath,
     rawRoot: join(root, "data", "research-replay-raw"),
     primarySourcePath: primaryPath,
     backupDirectory: join(root, "backups"),
-    approvalSource: "test_fixture",
-    approvedAt: "2026-07-24T02:00:00.000Z",
+    rolloutStartedAt: "2026-07-24T02:00:00.000Z",
+    executionMode: "production",
+    reportRoot: root,
+    generatedAt: "2026-07-24T02:00:01.000Z",
   });
   assert.equal(report.status, "COMPLETE");
   assert.equal(report.gates.shadowDefaultOff, true);
@@ -378,5 +402,163 @@ test("F0-R readinessは独立sidecarだけで全gateを通しprimary fingerprint
   assert.equal(report.primarySourceBefore.schemaHash, report.primarySourceAfter.schemaHash);
   assert.equal(report.primarySourceBefore.appSettingsHash, report.primarySourceAfter.appSettingsHash);
   assert.equal(report.nonGoals.productionDbWritten, false);
-  assert.equal(report.nextStage, "N1_REVIEW_REQUIRES_SEPARATE_APPROVAL");
+  assert.equal(report.gates.humanApprovalValid, true);
+  assert.equal(report.humanApproval.resolution.code, "APPROVAL_VALID");
+  assert.equal(report.sidecarPath, "data/research-replay.sqlite");
+  assert.equal(report.nextStage, "N1_IMPLEMENTATION_REQUIRES_SEPARATE_APPROVAL");
+});
+
+test("readinessは承認を生成せず、承認なしをdefault-denyする", (t) => {
+  const root = mkdtempSync(join(tmpdir(), "boat-pon-f0r-no-approval-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const primaryPath = join(root, "primary.sqlite");
+  new DatabaseSync(primaryPath).close();
+  const sidecarPath = join(root, "research.sqlite");
+  const beforeDb = openRolloutDatabase(sidecarPath);
+  initializeRolloutSchema(beforeDb, "2026-07-24T01:00:00.000Z");
+  const before = Number((beforeDb.prepare("SELECT COUNT(*) count FROM rollout_approval_grants_v2").get() as { count: number }).count);
+  beforeDb.close();
+  const report = runF0RReadiness({
+    sidecarPath,
+    rawRoot: join(root, "raw"),
+    primarySourcePath: primaryPath,
+    backupDirectory: join(root, "backup"),
+    rolloutStartedAt: "2026-07-24T02:00:00.000Z",
+    executionMode: "production",
+    reportRoot: root,
+    generatedAt: "2026-07-24T02:00:01.000Z",
+  });
+  const afterDb = openRolloutDatabase(sidecarPath);
+  const after = Number((afterDb.prepare("SELECT COUNT(*) count FROM rollout_approval_grants_v2").get() as { count: number }).count);
+  afterDb.close();
+  assert.equal(report.status, "BLOCKED");
+  assert.equal(report.humanApproval.resolution.code, "HUMAN_APPROVAL_MISSING");
+  assert.equal(after, before);
+});
+
+test("approval v2は必須field、target、時系列、mode、hashを厳格検証する", (t) => {
+  const ctx = rolloutContext();
+  t.after(() => ctx.close());
+  const base = {
+    approvalId: "approval-strict",
+    approvalScope: F0R_APPROVAL_SCOPE,
+    approvalSource: "user-explicit-request",
+    approvalReference: "task:strict",
+    targetStage: "F0-R",
+    targetSchemaVersion: ROLLOUT_SCHEMA_VERSION,
+    targetContractVersion: APPROVAL_CONTRACT_VERSION,
+    approvedAt: "2026-07-24T02:00:00.000Z",
+    approvalMode: "simulated" as const,
+  };
+  assert.throws(() => recordApprovalGrant(ctx.db, { ...base, approvalSource: "" }), /required/);
+  recordApprovalGrant(ctx.db, base);
+  recordApprovalGrant(ctx.db, base);
+  assert.equal((ctx.db.prepare(`
+    SELECT COUNT(*) count FROM rollout_approval_grants_v2 WHERE approval_id=?
+  `).get(base.approvalId) as { count: number }).count, 1);
+  assert.throws(() => recordApprovalGrant(ctx.db, {
+    ...base,
+    approvalReference: "task:conflicting-content",
+  }), /content conflict/);
+  assert.throws(() => ctx.db.prepare(
+    "UPDATE rollout_approval_grants_v2 SET approval_scope='changed' WHERE approval_id=?",
+  ).run(base.approvalId), /append-only/);
+  assert.equal(resolveApproval(ctx.db, {
+    approvalScope: "WRONG_SCOPE",
+    targetStage: "F0-R",
+    targetSchemaVersion: ROLLOUT_SCHEMA_VERSION,
+    targetContractVersion: APPROVAL_CONTRACT_VERSION,
+    rolloutStartedAt: "2026-07-24T02:00:01.000Z",
+    executionMode: "simulated",
+  }).code, "APPROVAL_SCOPE_MISMATCH");
+  assert.equal(resolveApproval(ctx.db, {
+    approvalScope: F0R_APPROVAL_SCOPE,
+    targetStage: "F0-R",
+    targetSchemaVersion: "wrong",
+    targetContractVersion: APPROVAL_CONTRACT_VERSION,
+    rolloutStartedAt: "2026-07-24T02:00:01.000Z",
+    executionMode: "simulated",
+  }).code, "APPROVAL_TARGET_MISMATCH");
+  assert.equal(resolveApproval(ctx.db, {
+    approvalScope: F0R_APPROVAL_SCOPE,
+    targetStage: "F0-R",
+    targetSchemaVersion: ROLLOUT_SCHEMA_VERSION,
+    targetContractVersion: APPROVAL_CONTRACT_VERSION,
+    rolloutStartedAt: "2026-07-24T01:59:59.000Z",
+    executionMode: "simulated",
+  }).code, "APPROVAL_AFTER_ROLLOUT");
+  assert.equal(resolveApproval(ctx.db, {
+    approvalScope: F0R_APPROVAL_SCOPE,
+    targetStage: "F0-R",
+    targetSchemaVersion: ROLLOUT_SCHEMA_VERSION,
+    targetContractVersion: APPROVAL_CONTRACT_VERSION,
+    rolloutStartedAt: "2026-07-24T02:00:01.000Z",
+    executionMode: "production",
+  }).code, "SIMULATED_APPROVAL_NOT_PRODUCTION");
+  ctx.db.exec("DROP TRIGGER rollout_approval_grants_v2_append_only_update");
+  ctx.db.prepare("UPDATE rollout_approval_grants_v2 SET content_hash=? WHERE approval_id=?")
+    .run("0".repeat(64), base.approvalId);
+  assert.equal(resolveApproval(ctx.db, {
+    approvalScope: F0R_APPROVAL_SCOPE,
+    targetStage: "F0-R",
+    targetSchemaVersion: ROLLOUT_SCHEMA_VERSION,
+    targetContractVersion: APPROVAL_CONTRACT_VERSION,
+    rolloutStartedAt: "2026-07-24T02:00:01.000Z",
+    executionMode: "simulated",
+  }).code, "APPROVAL_HASH_INVALID");
+});
+
+test("approval v2のrevoke/supersedeとappend-onlyを検証する", (t) => {
+  const ctx = rolloutContext();
+  t.after(() => ctx.close());
+  const grant = (approvalId: string, approvedAt: string) => recordApprovalGrant(ctx.db, {
+    approvalId,
+    approvalScope: F0R_APPROVAL_SCOPE,
+    approvalSource: "user-explicit-request",
+    approvalReference: `task:${approvalId}`,
+    targetStage: "F0-R",
+    targetSchemaVersion: ROLLOUT_SCHEMA_VERSION,
+    targetContractVersion: APPROVAL_CONTRACT_VERSION,
+    approvedAt,
+    approvalMode: "production",
+  });
+  grant("revoke-me", "2026-07-24T01:00:00.000Z");
+  recordApprovalLifecycle(ctx.db, {
+    lifecycleEventId: "revoke-event",
+    eventKind: "revoked",
+    subjectApprovalId: "revoke-me",
+    replacementApprovalId: null,
+    reason: "scope withdrawn",
+    source: "user-explicit-request",
+    reference: "task:revoke",
+    occurredAt: "2026-07-24T01:01:00.000Z",
+  });
+  assert.throws(() => ctx.db.prepare("DELETE FROM rollout_approval_lifecycle_events_v2").run(), /append-only/);
+  assert.equal(resolveApproval(ctx.db, {
+    approvalScope: F0R_APPROVAL_SCOPE,
+    targetStage: "F0-R",
+    targetSchemaVersion: ROLLOUT_SCHEMA_VERSION,
+    targetContractVersion: APPROVAL_CONTRACT_VERSION,
+    rolloutStartedAt: "2026-07-24T02:00:00.000Z",
+    executionMode: "production",
+  }).code, "APPROVAL_REVOKED");
+  grant("replacement", "2026-07-24T01:02:00.000Z");
+  recordApprovalLifecycle(ctx.db, {
+    lifecycleEventId: "supersede-event",
+    eventKind: "superseded",
+    subjectApprovalId: "revoke-me",
+    replacementApprovalId: "replacement",
+    reason: "corrected approval contract",
+    source: "user-explicit-request",
+    reference: "task:supersede",
+    occurredAt: "2026-07-24T01:03:00.000Z",
+  });
+  assert.equal(resolveApproval(ctx.db, {
+    approvalScope: F0R_APPROVAL_SCOPE,
+    targetStage: "F0-R",
+    targetSchemaVersion: ROLLOUT_SCHEMA_VERSION,
+    targetContractVersion: APPROVAL_CONTRACT_VERSION,
+    rolloutStartedAt: "2026-07-24T02:00:00.000Z",
+    executionMode: "production",
+  }).approvalId, "replacement");
 });
