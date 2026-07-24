@@ -9,14 +9,15 @@
   "stage_order": ["Stage 0", "F0", "F0-R", "N1", "D1", "N2", "N3", "N4", "D2", "E1", "E2", "N5", "N6", "N7", "N8"],
   "stage_results": {
     "F0": {
-      "overall_status": "CONDITIONAL",
+      "overall_status": "COMPLETE",
       "implementation_status": "COMPLETE",
-      "cross_environment_status": "PENDING_CI",
+      "cross_environment_status": "PASS",
       "sidecar_schema_version": "f0.1.0",
       "fixture_version": "rr-golden-fixture-v1",
       "implemented_contract_ids": ["FC01", "FC01A", "FC02", "FC02A", "FC02B", "FC03", "FC04", "FC05", "FC06", "FC07", "FC08A", "FC11", "FC13", "FC13A", "FC14A"],
       "deferred_contract_ids": ["FC08B", "FC12", "FC14B"],
       "evidence": ["docs/research-replay-foundation.md", "reports/research-replay-foundation.json", "reports/research-replay-golden-hash.md"],
+      "cross_environment_evidence": {"ci_run_url": "https://github.com/m-shogo/boat-pon/actions/runs/30060199362", "environment": "ubuntu-latest / Node v24.18.0 / SQLite 3.53.1 / linux-x64", "mismatch": false},
       "next_stage": "F0-R_AFTER_HUMAN_APPROVAL",
       "auto_advance": false
     }

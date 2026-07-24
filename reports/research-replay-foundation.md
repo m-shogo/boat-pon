@@ -1,7 +1,7 @@
 # Stage F0 Research Replay Foundation
 
 - F0 implementation: **COMPLETE**
-- Cross-environment: **PENDING_CI**
+- Cross-environment: **PASS**
 - Sidecar schema: `f0.1.0`
 - Fixture: `rr-golden-fixture-v1`
 - Raw documents / linked captures: 10 / 11
@@ -28,5 +28,4 @@
 
 ## Remaining
 
-- Linux CIのgolden hash結果はpush後にのみ確認可能
 - F0-R live shadow write、outbox、operational GC、backup/restoreは未実装

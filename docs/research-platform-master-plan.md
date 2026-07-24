@@ -13,7 +13,7 @@
 - 市場モデル詳細: [`market-residual-ticket-selection-roadmap.md`](market-residual-ticket-selection-roadmap.md)
 - 現在地: [`current-ai-handoff.md`](current-ai-handoff.md)
 
-Phase N0とStage 0は完了している。Stage F0「Research Replay Foundation」はtemp/sidecar vertical sliceのローカル実装・検証まで完了し、cross-environment golden hashのLinux CI確認待ちである。実装証跡は[`research-replay-foundation.md`](research-replay-foundation.md)と[`../reports/research-replay-foundation.json`](../reports/research-replay-foundation.json)を正本とする。CI確認まではF0総合判定を`CONDITIONAL`とし、F0-R、N1、収集、モデル、production接続へ進まない。
+Phase N0、Stage 0、Stage F0「Research Replay Foundation」は完了している。F0はtemp/sidecar vertical sliceを実装し、MacローカルとGitHub Actions Linux CIでgolden hash一致を確認した。実装証跡は[`research-replay-foundation.md`](research-replay-foundation.md)と[`../reports/research-replay-foundation.json`](../reports/research-replay-foundation.json)を正本とする。F0-R、N1、収集、モデル、production接続へは進んでいない。
 
 ## 2. 現在の確定状態
 
@@ -24,7 +24,7 @@ Phase N0とStage 0は完了している。Stage F0「Research Replay Foundation�
 - 新研究方式はN7・N8の独立gateを通過するまでshadow専用である。
 - production、自動購入、BUY/WATCH/SKIP条件変更は許可されていない。
 - F0 sidecar schema `f0.1.0`、五層lineage、PIT/leakage guard、Evidence Pin、FC08A、FC14A、golden fixtureを実装した。CLI/testの既定はtempであり、永続sidecarとlive collectorには未接続。
-- F0 local implementationは`COMPLETE`、cross-environmentは初回push前の`PENDING_CI`。F0-Rは未開始。
+- F0 implementationとcross-environment golden verificationは`COMPLETE`。F0-Rは未開始。
 
 ## 3. 二つの評価系列を混ぜない
 
@@ -266,7 +266,7 @@ N5開始前には別の`Model Experiment Registry`を必須にする。fixed tra
 - rollback: temp/sidecar DBを隔離し、共有rawと`data/boat.sqlite`を変更せずLegacy経路を維持。
 - 次stage: F0-R。
 - production eligibility: なし。
-- implementation result: temp/sidecar local vertical slice `COMPLETE`。cross-environment Linux CI確認前はoverall `CONDITIONAL`。
+- implementation result: temp/sidecar vertical sliceとMac/Linux cross-environment golden hashを含め`COMPLETE`。
 - implementation evidence: [`research-replay-foundation.md`](research-replay-foundation.md)、[`../reports/research-replay-foundation.json`](../reports/research-replay-foundation.json)、`src/research-replay/`、`tests/fixtures/research-replay/`。
 
 ### Stage F0-R: Research Replay Foundation Rollout
@@ -541,4 +541,4 @@ M1はN3/N4の選手PIT gate、M3は主観を排したstrict-prior label gate、M
 
 ## 11. 次の独立タスク
 
-まずStage F0のLinux CI golden hashを確認し、Macと同一ならF0を最終確定する。不一致ならF0内で原因を修正し、hashを無理由更新しない。その後の候補はF0-Rだが、自動開始せず人間承認を待つ。F0-R完了前にN1へ進まず、`data/boat.sqlite`変更、live collector接続、N1 migration、Error Atlas本体、全券種collector、モデル、Decision Governor、production接続を抱き合わせない。
+次の候補はF0-Rだが、自動開始せず人間承認を待つ。F0-R完了前にN1へ進まず、`data/boat.sqlite`変更、live collector接続、N1 migration、Error Atlas本体、全券種collector、モデル、Decision Governor、production接続を抱き合わせない。

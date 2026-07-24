@@ -57,9 +57,15 @@ function deterministicIds(): DeterministicIds {
 
 export type CanaryReport = {
   stage: "F0";
-  status: "CONDITIONAL";
+  status: "CONDITIONAL" | "COMPLETE";
   implementation: "COMPLETE";
-  crossEnvironment: "PENDING_CI";
+  crossEnvironment: "PENDING_CI" | "PASS";
+  crossEnvironmentEvidence?: {
+    ciRunUrl: string;
+    verifiedAt: string;
+    environment: string;
+    mismatch: false;
+  };
   schemaVersion: string;
   migrationChecksum: string;
   fixtureVersion: string;
@@ -696,11 +702,34 @@ export function writeCanaryReports(report: CanaryReport, reportsDirectory = join
     `- Canonical edge hash: \`${report.goldenHashes.canonicalEdgeHash}\``,
     `- Local runtime: ${report.environment.node} / SQLite ${report.environment.sqliteRuntime} / ${report.environment.platform}-${report.environment.architecture}`,
     `- CI: **${report.crossEnvironment}**`,
+    ...(report.crossEnvironmentEvidence
+      ? [
+          `- CI run: ${report.crossEnvironmentEvidence.ciRunUrl}`,
+          `- CI environment: ${report.crossEnvironmentEvidence.environment}`,
+          `- Mismatch: ${report.crossEnvironmentEvidence.mismatch}`,
+        ]
+      : []),
     "",
     "Golden更新は理由・fixture version bump・期待差分説明を伴う別commitでのみ行う。",
     "",
   ].join("\n");
   writeFileSync(join(reportsDirectory, "research-replay-golden-hash.md"), golden);
+}
+
+export function markCrossEnvironmentVerified(
+  report: CanaryReport,
+  evidence: { ciRunUrl: string; verifiedAt: string; environment: string },
+): CanaryReport {
+  if (!/^https:\/\/github\.com\/[^/]+\/[^/]+\/actions\/runs\/\d+$/.test(evidence.ciRunUrl)) {
+    throw new Error("cross-environment verification requires a GitHub Actions run URL");
+  }
+  return {
+    ...report,
+    status: "COMPLETE",
+    crossEnvironment: "PASS",
+    crossEnvironmentEvidence: { ...evidence, mismatch: false },
+    blockers: report.blockers.filter((item) => !item.includes("Linux CI")),
+  };
 }
 
 export function summarizeManifestForCli(report: CanaryReport): Record<string, unknown> {

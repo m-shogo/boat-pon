@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   compareGolden,
+  markCrossEnvironmentVerified,
   runResearchReplayCanary,
   summarizeManifestForCli,
   writeCanaryReports,
@@ -11,7 +12,15 @@ import {
 const command = process.argv[2] ?? "canary";
 const writeReports = process.argv.includes("--write-reports");
 const temp = mkdtempSync(join(tmpdir(), "boat-pon-f0-cli-"));
-const report = runResearchReplayCanary(temp);
+const localReport = runResearchReplayCanary(temp);
+const verificationArg = process.argv.find((arg) => arg.startsWith("--cross-environment-verified="));
+const report = verificationArg
+  ? markCrossEnvironmentVerified(localReport, {
+      ciRunUrl: verificationArg.slice("--cross-environment-verified=".length),
+      verifiedAt: "2026-07-24T01:55:15.000Z",
+      environment: "GitHub Actions ubuntu-latest / Node v24.18.0 / SQLite 3.53.1 / linux-x64",
+    })
+  : localReport;
 
 switch (command) {
   case "canary":

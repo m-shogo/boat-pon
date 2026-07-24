@@ -4,7 +4,7 @@
 
 ## 結論
 
-Stage F0のtemp/sidecar vertical sliceを実装した。ローカル実装・fixture検証は`COMPLETE`、Linux CIでのcross-environment golden hashは初回push前のため`PENDING_CI`である。CIが同じhashを返すまでF0総合判定は`CONDITIONAL`とし、F0-Rへ進まない。
+Stage F0のtemp/sidecar vertical sliceを実装した。MacローカルとGitHub Actions Linux CIで同一のfixture/raw/semantic/manifest hashを確認し、F0総合判定は`COMPLETE`である。CI証跡は[run 30060199362](https://github.com/m-shogo/boat-pon/actions/runs/30060199362)。F0-Rへは進んでいない。
 
 実測証跡:
 
@@ -111,7 +111,7 @@ pnpm research:golden:verify
 | FC08A | manifest pin、tombstone schema、orphan監査、GC dry-runを実装 |
 | FC11 | temp sidecar隔離を実装。`data/boat.sqlite`非変更を監査 |
 | FC13 | canonical hashを実装 |
-| FC13A | local golden PASS。Linux CIは初回pushまでPENDING |
+| FC13A | MacとLinux CIでgolden hash一致、mismatchなし |
 | FC14A | schema ledger/checksum/default-denyを実装 |
 
 FC08B、FC12、FC14BはF0-Rであり未実装。FC09、FC10はD1の責務である。

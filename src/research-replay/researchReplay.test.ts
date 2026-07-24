@@ -27,6 +27,7 @@ import {
   FIXTURE_AS_OF,
   FIXTURE_DIR,
   FIXTURE_RACE_KEY,
+  markCrossEnvironmentVerified,
   runResearchReplayCanary,
 } from "./canary";
 import {
@@ -657,6 +658,23 @@ test("golden fixtureはexpected raw/semantic/manifest hashと一致する", () =
   const golden = compareGolden(report);
   assert.deepEqual(golden.mismatches, []);
   assert.equal(golden.ok, true);
+});
+
+test("CI証跡付きreportだけがcross-environment COMPLETEになる", () => {
+  const local = runResearchReplayCanary();
+  assert.equal(local.status, "CONDITIONAL");
+  const verified = markCrossEnvironmentVerified(local, {
+    ciRunUrl: "https://github.com/m-shogo/boat-pon/actions/runs/30060199362",
+    verifiedAt: "2026-07-24T01:55:15.000Z",
+    environment: "linux-x64",
+  });
+  assert.equal(verified.status, "COMPLETE");
+  assert.equal(verified.crossEnvironment, "PASS");
+  assert.throws(() => markCrossEnvironmentVerified(local, {
+    ciRunUrl: "https://example.invalid/fake",
+    verifiedAt: "2026-07-24T01:55:15.000Z",
+    environment: "fake",
+  }));
 });
 
 test("fixture bundleはtimezone/float/range/NULL/Unicode/array orderを持つ", () => {
