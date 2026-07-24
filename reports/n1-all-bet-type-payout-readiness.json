@@ -1,0 +1,105 @@
+{
+  "reportVersion": "n1-payout-readiness-v1",
+  "phase": "N1",
+  "reviewStatus": "COMPLETE",
+  "implementationStatus": "NOT_STARTED",
+  "verdict": "CONDITIONAL",
+  "generatedDate": "2026-07-24",
+  "safety": {
+    "primaryDbWrites": 0,
+    "n1MigrationApplied": false,
+    "parserImplemented": false,
+    "externalRequests": 0,
+    "collectorConnected": false,
+    "modelImplemented": false,
+    "productionChanged": false
+  },
+  "storageDecision": {
+    "preferred": "research_replay_sidecar",
+    "boatSqlite": "REJECTED",
+    "n1DedicatedSidecar": "CONDITIONAL_FALLBACK",
+    "migrationTarget": "data/research-replay.sqlite",
+    "ownership": "shared_official_fact_layer",
+    "backupRestore": "reuse_f0r_wal_safe_sidecar_contract",
+    "rollback": "stop_writer_and_restore_sidecar_without_primary_db_change"
+  },
+  "currentEvidence": {
+    "racePayoutRows": 5871974,
+    "raceCount": 1190226,
+    "dateRange": ["2000-01-01", "2026-06-01"],
+    "officialArchiveFiles": 8164,
+    "archiveFileRange": ["k000101.lzh", "k260722.lzh"],
+    "directConsumerFiles": 62,
+    "betTypes": [
+      {"betType":"win","rows":0,"races":0,"status":"MISSING"},
+      {"betType":"place","rows":0,"races":0,"status":"MISSING"},
+      {"betType":"exacta","rows":1186065,"races":1186060,"status":"PRESENT_LEGACY"},
+      {"betType":"quinella","rows":1177355,"races":1177350,"status":"PRESENT_LEGACY"},
+      {"betType":"wide","rows":1168596,"races":1168591,"status":"PRESENT_LEGACY"},
+      {"betType":"trifecta","rows":1170582,"races":1170576,"status":"PRESENT_LEGACY"},
+      {"betType":"trio","rows":1169376,"races":1169370,"status":"PRESENT_LEGACY"}
+    ]
+  },
+  "lineage": ["capture_attempt","raw_document","parse_run","domain_observation","race_settlement","payout_line_or_refund_line"],
+  "sourceMap": [
+    {"source":"official_daily_k_archive","quality":"official_archive","role":"historical_settlement_candidate","currentCoverage":"five_bet_types"},
+    {"source":"official_web_result","quality":"official_web","role":"future_and_correction_observation","currentCoverage":"structure_verified_not_connected"},
+    {"source":"race_payouts","quality":"derived_existing_row","role":"legacy_compatibility_and_reconciliation","currentCoverage":"five_bet_types"}
+  ],
+  "draftMigration": {
+    "identifier": "n1-settlement.0.1-draft",
+    "target": "data/research-replay.sqlite",
+    "mode": "DESIGN_ONLY_NOT_APPLIED",
+    "checksum": null,
+    "checksumReason": "draft_not_frozen"
+  },
+  "settlementStates": ["pending","settled","refunded","partially_refunded","cancelled","no_sale","special_payout","parse_error","source_conflict","corrected"],
+  "draftTables": ["race_settlements_v2","race_payout_lines_v2","race_refund_lines_v2","settlement_evidence_pins_v2"],
+  "fixtureMatrix": [
+    {"id":1,"name":"normal-six-boats-seven-bet-types","expectedState":"settled","payoutLines":"canonical","refundLines":0,"diagnostic":null,"supersession":false,"idempotent":true},
+    {"id":2,"name":"place-two-lines","expectedState":"settled","payoutLines":2,"refundLines":0,"diagnostic":"normal_multiple_lines","supersession":false,"idempotent":true},
+    {"id":3,"name":"wide-three-lines","expectedState":"settled","payoutLines":3,"refundLines":0,"diagnostic":"normal_multiple_lines","supersession":false,"idempotent":true},
+    {"id":4,"name":"dead-heat","expectedState":"settled","payoutLines":"multiple_dead_heat","refundLines":0,"diagnostic":"dead_heat","supersession":false,"idempotent":true},
+    {"id":5,"name":"partial-refund","expectedState":"partially_refunded","payoutLines":"one_or_more","refundLines":"one_or_more","diagnostic":null,"supersession":false,"idempotent":true},
+    {"id":6,"name":"full-refund","expectedState":"refunded","payoutLines":0,"refundLines":"all","diagnostic":null,"supersession":false,"idempotent":true},
+    {"id":7,"name":"race-cancelled","expectedState":"cancelled","payoutLines":0,"refundLines":"source_defined","diagnostic":"cancellation_reason","supersession":false,"idempotent":true},
+    {"id":8,"name":"bet-type-no-sale","expectedState":"no_sale","payoutLines":0,"refundLines":0,"diagnostic":null,"supersession":false,"idempotent":true},
+    {"id":9,"name":"special-payout","expectedState":"special_payout","payoutLines":"special","refundLines":0,"diagnostic":"canonical_selection_null","supersession":false,"idempotent":true},
+    {"id":10,"name":"scratched-boat","expectedState":"source_defined_refund","payoutLines":"source_defined","refundLines":"boat_or_selection","diagnostic":"scratch","supersession":false,"idempotent":true},
+    {"id":11,"name":"pending","expectedState":"pending","payoutLines":0,"refundLines":0,"diagnostic":null,"supersession":true,"idempotent":true},
+    {"id":12,"name":"source-conflict","expectedState":"source_conflict","payoutLines":"preserve_both_observations","refundLines":"source_defined","diagnostic":"conflict","supersession":false,"idempotent":true},
+    {"id":13,"name":"official-correction","expectedState":"corrected","payoutLines":"corrected","refundLines":"corrected","diagnostic":"correction_reason","supersession":true,"idempotent":true},
+    {"id":14,"name":"parser-error","expectedState":"parse_error","payoutLines":0,"refundLines":0,"diagnostic":"parser_error_code","supersession":false,"idempotent":true},
+    {"id":15,"name":"unknown-display","expectedState":"parse_error","payoutLines":0,"refundLines":0,"diagnostic":"unknown_raw_token","supersession":false,"idempotent":true},
+    {"id":16,"name":"duplicate-source-line","expectedState":"source_defined","payoutLines":"semantic_deduplicated","refundLines":"source_defined","diagnostic":"duplicate_warning","supersession":false,"idempotent":true},
+    {"id":17,"name":"html-archive-match","expectedState":"settled","payoutLines":"semantic_match","refundLines":"semantic_match","diagnostic":null,"supersession":false,"idempotent":true},
+    {"id":18,"name":"html-archive-mismatch","expectedState":"source_conflict","payoutLines":"preserve_both_observations","refundLines":"preserve_both_observations","diagnostic":"conflict","supersession":false,"idempotent":true},
+    {"id":19,"name":"invalid-canonical-selection","expectedState":"parse_error","payoutLines":0,"refundLines":0,"diagnostic":"selection_validation_error","supersession":false,"idempotent":true},
+    {"id":20,"name":"pit-ineligible-source","expectedState":"source_defined","payoutLines":"source_defined","refundLines":"source_defined","diagnostic":"point_in_time_ineligible_for_features","supersession":false,"idempotent":true}
+  ],
+  "gates": {
+    "f0rApprovalHardening": "PASS",
+    "f0f0rSchemaCompatibility": "PASS",
+    "storageAndLineage": "PASS",
+    "targetDb": "PASS_RESEARCH_REPLAY_SIDECAR",
+    "stateMachine": "PASS",
+    "canonicalization": "PASS",
+    "migrationRollbackDesign": "PASS",
+    "fixtureMatrixDesign": "PASS",
+    "sourceMap": "PASS",
+    "requestBudget": "PASS",
+    "legacyTableAndRoiUnchanged": "PASS",
+    "shadowWriterAndGc": "PASS_OFF",
+    "fixtureImplementation": "PENDING",
+    "parserDryRun": "PENDING",
+    "fixtureDbMigration": "PENDING",
+    "separateImplementationApproval": "PENDING"
+  },
+  "requestCost": {
+    "review": 0,
+    "fixtureAndTempMigration": 0,
+    "existingArchiveReplay": 0,
+    "futureResultOnlyN0EstimatePerDay": 144
+  },
+  "next": "WAIT_FOR_SEPARATE_N1_IMPLEMENTATION_APPROVAL"
+}

@@ -120,6 +120,8 @@ pnpm review:suite -- --from 2026-01-01 --to 2026-06-03 --split-date 2026-04-01 -
 | `pnpm analyze:t5-residual-forward` | 6月train→7月以降forwardで市場残差モデルを評価 |
 | `pnpm audit:t5-collector-efficiency` | T-10取得済み/T-5欠測・日次coverage・重複保存率を監査 |
 | `pnpm audit:t5-network-only-forward` | network-only T-5正式cohortを同一race・実払戻・logloss/Brierでfuture評価 |
+| `pnpm research:approval:record -- --event=...` | F0-R承認grant/revoke/supersedeを必須field明示でappend（readinessとは分離） |
+| `pnpm verify:n1-payout-review` | N1払戻レビューの7券種・20 fixture・状態機械・禁止scope・文書リンクを検証 |
 | `pnpm audit:t5-historical-market-forward` | 2023-2024固定履歴モデルとT-5市場を同一raceのformal futureで比較 |
 | `pnpm analyze:historical-ranking-forward` | 2023-2024番組・展示だけで学習し2025/2026を着順確率・実払戻で固定forward評価 |
 | `pnpm audit:odds-timeseries-storage` | 時系列DBの日別重複率・物理肥大化を読み取り専用監査 |

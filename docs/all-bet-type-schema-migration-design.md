@@ -758,6 +758,7 @@ Error Atlasは結果後audit専用で、BUY/WATCH/SKIP条件を自動変更し�
 - DDLを実DBへ適用しない
 - fixture DBでmigration、rollback、FK、CHECK、一意制約を検証
 - `PRAGMA foreign_key_check`と`integrity_check`
+- 2026-07-24の実装前再レビューは[`n1-all-bet-type-payout-review.md`](n1-all-bet-type-payout-review.md)を正本とする。判定は`CONDITIONAL`で、保存先はResearch Replay sidecarを推奨。設計DDLは`NOT_APPLIED`
 
 ### N1-B: payout v2だけ作成
 
