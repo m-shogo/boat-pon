@@ -7,6 +7,20 @@
     "priority": ["S", "A", "B", "C", "NONE"]
   },
   "stage_order": ["Stage 0", "F0", "F0-R", "N1", "D1", "N2", "N3", "N4", "D2", "E1", "E2", "N5", "N6", "N7", "N8"],
+  "stage_results": {
+    "F0": {
+      "overall_status": "CONDITIONAL",
+      "implementation_status": "COMPLETE",
+      "cross_environment_status": "PENDING_CI",
+      "sidecar_schema_version": "f0.1.0",
+      "fixture_version": "rr-golden-fixture-v1",
+      "implemented_contract_ids": ["FC01", "FC01A", "FC02", "FC02A", "FC02B", "FC03", "FC04", "FC05", "FC06", "FC07", "FC08A", "FC11", "FC13", "FC13A", "FC14A"],
+      "deferred_contract_ids": ["FC08B", "FC12", "FC14B"],
+      "evidence": ["docs/research-replay-foundation.md", "reports/research-replay-foundation.json", "reports/research-replay-golden-hash.md"],
+      "next_stage": "F0-R_AFTER_HUMAN_APPROVAL",
+      "auto_advance": false
+    }
+  },
   "decision_systems": {
     "legacy": {"decision_system": "legacy_t5_formal", "strategy_version": "legacy-t5-v1", "evaluation_mode": "formal_forward", "cohort": "fixed_enrollment_protocol_with_open_append_only_membership", "analysis": "frozen_snapshot_at_report_time", "production_allowed": false},
     "research": {"decision_system": "market_intelligence", "strategy_version": "versioned", "evaluation_mode": "shadow_forward", "cohort": "versioned_enrollment_protocol", "analysis": "versioned_frozen_snapshot", "production_allowed": false}
@@ -23,7 +37,7 @@
   ],
   "manifest_completeness_states": ["found", "missing", "stale", "rejected", "not_published", "not_observed", "not_offered", "parse_error", "timing_ambiguous", "point_in_time_ineligible"],
   "capture_attempt_event_kinds": ["capture_started", "response_headers_received", "body_completed", "capture_failed", "capture_cancelled"],
-  "capture_failure_reasons": ["http_not_reached", "timeout", "partial_body", "hash_mismatch", "process_crash_incomplete", "cancelled"],
+  "capture_failure_reasons": ["network_not_reached", "timeout", "partial_body", "hash_mismatch", "process_crash_detected", "cancelled", "unsupported_content_type", "body_too_large", "decompression_limit", "unknown_charset"],
   "raw_byte_contract": {"parser_replay_canonical": "entity_body_bytes_after_content_encoding", "wire_body": "optional_auxiliary", "decoded_text": "derived_artifact", "semantic_payload": "versioned_derived_artifact"},
   "raw_change_matrix": [
     {"raw": "unchanged", "semantic": "unchanged", "classification": "no_event"},

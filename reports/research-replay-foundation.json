@@ -1,0 +1,208 @@
+{
+  "stage": "F0",
+  "status": "CONDITIONAL",
+  "implementation": "COMPLETE",
+  "crossEnvironment": "PENDING_CI",
+  "schemaVersion": "f0.1.0",
+  "migrationChecksum": "aa60e8b3bffa11f53cc983774e66f00be7481232e057e325f232cc84ff4ca910",
+  "fixtureVersion": "rr-golden-fixture-v1",
+  "fixtureArchiveHash": "3b06b472471f1025111976ae1ffb6274969603fc735ba15658b296dc45095661",
+  "rawCounts": {
+    "rawDocumentCount": 10,
+    "captureAttemptCount": 15,
+    "captureEventCount": 40,
+    "parseRunCount": 10,
+    "observationCount": 10,
+    "linkedCaptureCount": 11,
+    "dedupRatio": 1.1,
+    "orphanMetadataCount": 0,
+    "orphanBodyCount": 0,
+    "integrityErrorCount": 0,
+    "pinnedCount": 18,
+    "unreferencedCount": 5,
+    "storageBytes": 6584
+  },
+  "captureLifecycle": {
+    "incompleteAttempts": 1,
+    "failureReasons": [
+      "hash_mismatch",
+      "partial_body",
+      "timeout"
+    ],
+    "retryUsesNewAttemptId": true,
+    "logicalRequestGrouping": true
+  },
+  "dedupResult": {
+    "sameBodyDeduplicated": true,
+    "uniqueRawBodies": 10,
+    "linkedCaptures": 11
+  },
+  "parseResult": {
+    "successful": 10,
+    "reparsed": 1,
+    "oldParseRetained": true,
+    "appendOnlySupersession": true
+  },
+  "observationResult": {
+    "count": 10,
+    "typedPayloads": [
+      "beforeinfo",
+      "current_racer_profile",
+      "fixture_only",
+      "historical_closing_odds",
+      "race_result",
+      "race_schedule",
+      "trifecta_market"
+    ]
+  },
+  "manifestResult": {
+    "count": 2,
+    "firstManifestHash": "2a260066a35a90c0ab2a10bf65106c2b54a89cabf1559998080dbdd63cad03c3",
+    "secondManifestHash": "1fb8739355f7da45082dbc0639e935fa06417b1efc7a484646b7d93b85c9d240",
+    "firstManifestUnchanged": true,
+    "checkpointFrozen": true,
+    "completeness": [
+      "race_schedule:found",
+      "trifecta_market:found",
+      "beforeinfo:found"
+    ]
+  },
+  "pitRejectionMatrix": {
+    "obs-current-profile-v1": [
+      "OBSERVATION_AFTER_AS_OF",
+      "FIRST_SEEN_AFTER_AS_OF",
+      "CURRENT_PROFILE_USED_FOR_PAST_RACE",
+      "SOURCE_QUALITY_NOT_ALLOWED",
+      "FIXTURE_USED_AS_LIVE"
+    ],
+    "obs-historical-closing-v1": [
+      "OBSERVATION_AFTER_AS_OF",
+      "FIRST_SEEN_AFTER_AS_OF",
+      "SOURCE_QUALITY_NOT_ALLOWED",
+      "FIXTURE_USED_AS_LIVE",
+      "HISTORICAL_CLOSING_USED_AS_LIVE"
+    ],
+    "obs-result-v1": [
+      "OBSERVATION_AFTER_AS_OF",
+      "SOURCE_PUBLISHED_AFTER_AS_OF",
+      "FIRST_SEEN_AFTER_AS_OF",
+      "POST_RACE_OBSERVATION",
+      "RESULT_ONLY_SOURCE",
+      "SOURCE_QUALITY_NOT_ALLOWED",
+      "FIXTURE_USED_AS_LIVE"
+    ],
+    "obs-beforeinfo-v1": [
+      "SOURCE_QUALITY_NOT_ALLOWED",
+      "FIXTURE_USED_AS_LIVE"
+    ],
+    "obs-fixture-only-v1": [
+      "SOURCE_QUALITY_NOT_ALLOWED",
+      "FIXTURE_USED_AS_LIVE"
+    ],
+    "obs-market-reparse-v2": [
+      "SOURCE_QUALITY_NOT_ALLOWED",
+      "FIXTURE_USED_AS_LIVE"
+    ],
+    "obs-market-v1": [
+      "SOURCE_QUALITY_NOT_ALLOWED",
+      "FIXTURE_USED_AS_LIVE"
+    ],
+    "obs-market-v2": [
+      "SOURCE_QUALITY_NOT_ALLOWED",
+      "FIXTURE_USED_AS_LIVE"
+    ],
+    "obs-schedule-v1": [
+      "SOURCE_QUALITY_NOT_ALLOWED",
+      "FIXTURE_USED_AS_LIVE"
+    ],
+    "obs-schedule-v2": [
+      "SOURCE_QUALITY_NOT_ALLOWED",
+      "FIXTURE_USED_AS_LIVE"
+    ]
+  },
+  "securityChecks": {
+    "authorizationNotStored": true,
+    "cookieNotStored": true,
+    "queryTokenRedacted": true,
+    "contentTypeAllowlist": true,
+    "bodyLimitEnforced": true,
+    "decompressionLimitEnforced": true,
+    "rawFileMode0600": true,
+    "sidecarMode0600": true,
+    "referencedEvidenceRetainedByGcDryRun": true,
+    "noRawBodyInReport": true,
+    "rawSemanticSevenCases": true
+  },
+  "appendOnlyChecks": {
+    "captureAttemptUpdateRejected": true,
+    "observationUpdateRejected": true,
+    "manifestDeleteRejected": true,
+    "supersessionUsesNewRowOnly": true,
+    "referencedEvidenceDeleteRejected": true
+  },
+  "goldenHashes": {
+    "fixtureArchiveHash": "3b06b472471f1025111976ae1ffb6274969603fc735ba15658b296dc45095661",
+    "rawHashes": {
+      "race-schedule.json": "58d6b8c197dd3d3943af92ca5ee50c295c929ce7384002a5ca0e9645600269a1",
+      "trifecta-market.json": "2724b425dd3716d1ae91770fc70140ce0cbc35eb72f061e947949d205a5a5334",
+      "beforeinfo.json": "551315a4fd1e17aed0959651a9bcd760d17ec5ce10c7a661f873433960aba64a",
+      "race-result.json": "33f473b9607f850e2afdd113f1d03b6f21c27c60e74ddfddc5f1f241df65db0c",
+      "current-racer-profile.json": "86f77e1f88db8da5b06f19eb4cd932ee635563d1d95d338cf2a518ae3c281df1",
+      "historical-closing-odds.json": "55aaf229bc09e48e56de86fea597d650c9ce7d04351d79fe345278420683e352",
+      "fixture-only.json": "3c6f317f0546c2c92262db63c85829559a2291f04f3ac2779b67dd08a9f934be",
+      "race-schedule-changed.json": "fc02deffef2cb64b0d01fb42e4339cfcdb6b85c5fddb26f31d509314b03e0fef",
+      "trifecta-market-after-close-change.json": "03d975a08810d97791ae86d069d6083e55369b65645b8d4e02f8241346cd99bc",
+      "canonical-edge-cases.json": "50929604cf334d4787e8bd9d6cc8623d2307a51431c7196c90f3d7187a0b1acb"
+    },
+    "semanticHashes": {
+      "obs-schedule-v1": "4a58d366bed9a762c964efea304d959359a06f4724c857e302c8aeff0c7c0451",
+      "obs-market-v1": "603bec3f739938fe8da0cd7e71a165c786f36dc96c6194f39132624a2684663f",
+      "obs-beforeinfo-v1": "72413679ac8cca1e8ad20d1333609df587786d9cdfd166f4feff1fd39ef6c97e",
+      "obs-result-v1": "bf48a03ae6b358322d491ad7c90fa2966ae711d42cd836658ed84c9e92dd6070",
+      "obs-current-profile-v1": "4252291eb7f11b795e406e05c70c50746168b75923ffd97abfadde2fb07d3da9",
+      "obs-historical-closing-v1": "4f792a2248e452a42812bf613fecf9565a65ba29d808521ba9d03a66934f0ef8",
+      "obs-fixture-only-v1": "b19e1563fef091c25cb349bec80c15ca1d92b660725bbae0ba812630d3eef5b1",
+      "obs-schedule-v2": "bfa4e993a4b86be5d4de04980401bdab57b198944a8f0f520e75ca13b542ab5c",
+      "obs-market-v2": "1f25b557bf02134b1c41e6643253817f19a37ed143861f19ac0ed8ab0e115806"
+    },
+    "manifestHash": "2a260066a35a90c0ab2a10bf65106c2b54a89cabf1559998080dbdd63cad03c3",
+    "canonicalEdgeHash": "562f6089129a64c95848420485247b8506742fecce29fec216c6c8dc6d8eb553"
+  },
+  "schemaVerification": {
+    "schemaVersion": "f0.1.0",
+    "migrationChecksum": "aa60e8b3bffa11f53cc983774e66f00be7481232e057e325f232cc84ff4ca910",
+    "expectedChecksum": "aa60e8b3bffa11f53cc983774e66f00be7481232e057e325f232cc84ff4ca910",
+    "userVersion": 100,
+    "partialMigration": false,
+    "unknownSchema": false,
+    "readerContract": "f0-reader-v1",
+    "writerContract": "f0-writer-v1",
+    "ok": true
+  },
+  "environment": {
+    "node": "v24.15.0",
+    "platform": "darwin",
+    "architecture": "arm64",
+    "sqliteRuntime": "3.51.3"
+  },
+  "performance": {
+    "rawStoreMs": 102.508,
+    "parseMs": 0.827,
+    "manifestMs": 2.567,
+    "replayMs": 135.908,
+    "sidecarBytes": 208896,
+    "rawBytes": 6584,
+    "monthlyProjection": "not estimated: F0 has no approved external request volume"
+  },
+  "nonRegression": {
+    "externalHttpRequests": 0,
+    "liveCollectorConnected": false,
+    "productionDbWritten": false,
+    "predictionLogicChanged": false,
+    "legacyEvaluationMixed": false
+  },
+  "blockers": [
+    "Linux CIのgolden hash結果はpush後にのみ確認可能",
+    "F0-R live shadow write、outbox、operational GC、backup/restoreは未実装"
+  ]
+}

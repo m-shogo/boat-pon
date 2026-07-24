@@ -10,7 +10,7 @@ boat-pon が予測精度向上のために収集・利用したいデータの�
 
 全7券種の取得可能性・保存契約は2026-07-23のPhase N0で監査済み。実測は[`../reports/all-bet-type-data-feasibility.md`](../reports/all-bet-type-data-feasibility.md)、取得設計は[`all-bet-type-data-acquisition-design.md`](all-bet-type-data-acquisition-design.md)を正本とする。現行時系列は3連単専用、払戻は単勝・複勝欠落であり、本ファイルの「OK」を全券種対応済みとは解釈しない。
 
-N0後の実装順序と研究基盤は[`research-platform-master-plan.md`](research-platform-master-plan.md)を最上位正本とする。次はStage F0で、immutable capture lifecycle、capture/raw/parse/domain/manifest分離、raw/semantic二重判定、entity-body replay正本、raw security、canonical identity、checkpoint freeze、versioned resolver、PIT/leakage guardをtemp/sidecar DBで完成させる。F0は`data/boat.sqlite`変更や新規収集を含まず、F0-R通過後にN1へ進む。
+N0後の実装順序と研究基盤は[`research-platform-master-plan.md`](research-platform-master-plan.md)を最上位正本とする。Stage F0はimmutable capture lifecycle、capture/raw/parse/domain/manifest分離、raw/semantic二重判定、entity-body replay正本、raw security、canonical identity、checkpoint freeze、versioned resolver、PIT/leakage guardをtemp/sidecar DBで実装済み。詳細は[`research-replay-foundation.md`](research-replay-foundation.md)。Linux CI golden hash確認まではF0総合`CONDITIONAL`とし、`data/boat.sqlite`変更や新規収集を行わず、F0-R通過前にN1へ進まない。
 
 公式事実層はLegacyと新研究で共有できるが、manifest、feature/model/strategy、decision、ticket、cohort、ROI、gate、reportは共有しない。現行`legacy_t5_formal`と新規`market_intelligence`の評価母集団を混ぜない。
 

@@ -7,9 +7,22 @@ boat-pon の CLI が増えてきたため、用途別に整理した索引です
 - `fetch:*` / `backfill:*` は外部取得を伴う可能性があります。
 - `report:*` / `check:*` / `audit:*` は基本的に read-only です。
 - 自動投票・ログイン保存・投票サイト操作は入れません。
-- N0後の最上位計画は[`research-platform-master-plan.md`](research-platform-master-plan.md)、研究・破綻防止契約台帳は[`research-idea-register.json`](research-idea-register.json)を参照してください。N0は完了し、次の独立実装はStage F0のtemp/sidecar vertical sliceです。F0-R完了前にN1へ進みません。
+- N0後の最上位計画は[`research-platform-master-plan.md`](research-platform-master-plan.md)、研究・破綻防止契約台帳は[`research-idea-register.json`](research-idea-register.json)を参照してください。Stage F0はtemp/sidecar vertical sliceを実装済みで、F0-R完了前にN1へ進みません。
 
-Stage F0/F0-R用CLIはまだ存在しない。既存の`audit:*`をF0実装済みと解釈せず、現行formal CLIの出力へ新方式のshadow成績を混ぜない。
+## Research Replay Foundation
+
+すべてsanitized fixtureとtemp DBだけを使用し、外部HTTPや`data/boat.sqlite`書込みを行いません。
+
+| command | 目的 |
+|---|---|
+| `pnpm research:replay:canary` | 五層lineageのE2E canary |
+| `pnpm research:replay:canary -- --write-reports` | canaryを実行してF0 reportを更新 |
+| `pnpm research:manifest:dry-run` | as-of manifestの採用・拒否・完全性を表示 |
+| `pnpm research:raw-cache:audit` | dedup、orphan、integrity、pin、容量を監査 |
+| `pnpm research:schema:verify` | sidecar version、migration checksum、reader/writer contractを検証 |
+| `pnpm research:golden:verify` | raw/semantic/manifest golden hashを検証 |
+
+F0-Rのlive shadow write/rollout CLIは存在しません。現行formal CLIの出力へ新方式の成績を混ぜません。
 
 ## 毎日/定期運用
 

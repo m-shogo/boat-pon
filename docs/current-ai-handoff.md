@@ -1,6 +1,6 @@
 # boat-pon AI作業引継ぎ（正本）
 
-更新: 2026-07-23 21:42 JST
+更新: 2026-07-24
 
 この文書は、過去チャットを読めない別のAIチャットが現在地を誤解せず再開するための入口である。数値は更新時点のスナップショットなので、作業開始時に下記コマンドで再計測する。
 
@@ -26,7 +26,7 @@
 - 正式な収益評価は、2026-07-21 15:15 JST以降に公式networkから直接取得したfuture-only T-5だけでやり直す。
 - DB肥大化の新規増加は抑制済みだが、13.98GiBの原本圧縮は未実施。
 - Phase N0「全券種＋選手PIT＋独自研究軸データ取得可能性・保存設計監査」は読み取り専用で完了した。DB migration、実収集、モデル、production接続は未着手。
-- N0後の正本は`docs/research-platform-master-plan.md`、研究40件と破綻防止契約の機械可読台帳は`docs/research-idea-register.json`。Stage 0のF0前最終整合修正まで完了し、次の独立タスクはStage F0「Research Replay Foundation」のtemp/sidecar vertical slice。
+- N0後の正本は`docs/research-platform-master-plan.md`、研究40件と破綻防止契約の機械可読台帳は`docs/research-idea-register.json`。Stage F0のtemp/sidecar vertical sliceはローカル実装・検証が完了し、Linux CI golden hash確認待ち。F0総合は`CONDITIONAL`で、F0-Rは未開始。
 - 現行formalは`legacy_t5_formal / legacy-t5-v1 / formal_forward`の固定benchmark、新方式は`market_intelligence / shadow_forward`として評価系列を分離する。
 
 ## 絶対にしてはいけないこと
@@ -189,8 +189,8 @@ Phase N0の確定事項:
 - 既存DB、`app_settings`、launchd、collector頻度、予測/判定は変更していない。
 
 1. 現行`legacy_t5_formal`はfixed enrollment protocolのprospective cohortとして、条件を変えずmembershipをappendする。報告・common comparison時にfrozen analysis snapshotを別作成する。
-2. 新研究側の次の独立実装はStage F0だけ。immutable capture/event lifecycle、capture/raw/parse/domain/manifest分離、raw/semantic二重判定、raw security、canonical identity、checkpoint freeze、versioned resolver、単方向supersession、FC08A/FC14A、golden fixtureをtemp/sidecar DBで検証する。
-3. F0では`data/boat.sqlite`をread-only sourceに限定し、live collectorへ接続しない。F0 PASS後も直ちにN1へ進まず、人間承認を含むF0-Rでsidecar rolloutとshadow failure isolationを検証する。
+2. Stage F0はsidecar schema `f0.1.0`、五層lineage、immutable capture lifecycle、raw/semantic二重判定、raw security、canonical identity、checkpoint freeze、versioned resolver、単方向supersession、FC08A/FC14A、golden fixtureまでtemp DBで実装済み。証跡は`docs/research-replay-foundation.md`と`reports/research-replay-foundation.json`。
+3. F0では`data/boat.sqlite`へwrite connectionを開かず、live collectorへ接続していない。Linux CIのhash一致確認後も直ちにN1へ進まず、人間承認を含むF0-Rでsidecar rolloutとshadow failure isolationを検証する。
 4. 新方式は`market_intelligence / shadow_forward`として、manifest、decision、ticket、cohort、ROI、gate、reportをLegacyから分離する。
 5. model学習はN5開始gate、production検討はN8と独立production gateまで行わない。
 6. DB圧縮は人間の明示承認後、runbook通り別候補DBで実施する。
@@ -210,6 +210,12 @@ Phase N0の確定事項:
 - 修正前T-5とnetwork-only T-5を同じ正式母集団にする
 
 ## 主な実装・資料
+
+- `src/research-replay/` — F0 sidecar schema、raw store、typed observation、resolver、manifest、PIT guard、canary
+- `scripts/research-replay.ts` — temp既定のF0監査CLI
+- `tests/fixtures/research-replay/` — sanitized golden fixture
+- `docs/research-replay-foundation.md` — F0 architecture/security/runbookとcontract result
+- `reports/research-replay-foundation.md/json` — F0実測
 
 - `scripts/auto-fetch-odds.ts` — 公式番組母集団、時刻再計算、network-only、並列収集、通知
 - `src/domain/liveOddsFetch.ts` — 締切順、完全checkpoint、並列上限制御
