@@ -43,5 +43,8 @@ jobs:
       - name: Verify Research Replay golden fixture
         run: npm run research:golden:verify
 
+      - name: Verify Research Replay rollout readiness
+        run: npm run research:rollout:dry-run -- --root=/tmp/boat-pon-f0r-ci
+
       - name: Build
         run: npm run build

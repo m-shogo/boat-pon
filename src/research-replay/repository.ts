@@ -437,19 +437,25 @@ export class ResearchReplayRepository {
   } {
     const scalar = (sql: string): number => Number((this.db.prepare(sql).get() as { count: number }).count);
     const rawRows = this.db.prepare(`
-      SELECT raw_document_id, raw_sha256, storage_path, entity_body_byte_length
-      FROM raw_documents
+      SELECT r.raw_document_id, r.raw_sha256, r.storage_path, r.entity_body_byte_length,
+             EXISTS (
+               SELECT 1 FROM evidence_tombstones t
+               WHERE t.evidence_type='raw_document' AND t.evidence_id=r.raw_document_id
+             ) AS tombstoned
+      FROM raw_documents r
     `).all() as Array<{
       raw_document_id: string;
       raw_sha256: string;
       storage_path: string;
       entity_body_byte_length: number;
+      tombstoned: number;
     }>;
     let orphanMetadataCount = 0;
     let integrityErrorCount = 0;
     let storageBytes = 0;
     const knownPaths = new Set<string>();
     for (const row of rawRows) {
+      if (row.tombstoned) continue;
       knownPaths.add(row.storage_path);
       storageBytes += row.entity_body_byte_length;
       if (!this.rawStore.integrity(row.storage_path, row.raw_sha256, row.entity_body_byte_length)) {

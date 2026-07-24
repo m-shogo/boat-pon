@@ -15,6 +15,7 @@ tmp/
 data/*.sqlite
 data/*.sqlite-shm
 data/*.sqlite-wal
+data/research-replay-raw/
 tsconfig.tsbuildinfo
 data/*.bak*
 data/boat.sqlite.bak*

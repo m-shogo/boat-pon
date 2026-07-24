@@ -198,4 +198,22 @@ export class RawStore {
     ensureWithinRoot(this.root, target);
     return target;
   }
+
+  removeVerified(relativePath: string, expectedHash: string): boolean {
+    if (relativePath !== contentAddressedRelativePath(expectedHash)) throw new Error("raw storage path/hash mismatch");
+    const absolutePath = join(this.root, relativePath);
+    ensureWithinRoot(this.root, absolutePath);
+    rejectSymlinkPath(this.root, absolutePath);
+    if (!existsSync(absolutePath)) return false;
+    const bytes = readFileSync(absolutePath);
+    if (sha256Bytes(bytes) !== expectedHash) throw new Error("hash_mismatch");
+    unlinkSync(absolutePath);
+    const dirFd = openSync(dirname(absolutePath), "r");
+    try {
+      fsyncSync(dirFd);
+    } finally {
+      closeSync(dirFd);
+    }
+    return true;
+  }
 }

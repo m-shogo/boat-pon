@@ -7,6 +7,10 @@ export const SIDECAR_SCHEMA_VERSION = "f0.1.0";
 export const SIDECAR_USER_VERSION = 100;
 export const SIDECAR_READER_VERSION = "f0-reader-v1";
 export const SIDECAR_WRITER_VERSION = "f0-writer-v1";
+export const ROLLOUT_SCHEMA_VERSION = "f0r.2.0";
+export const ROLLOUT_USER_VERSION = SIDECAR_USER_VERSION;
+export const ROLLOUT_READER_VERSION = "f0r-reader-v1";
+export const ROLLOUT_WRITER_VERSION = "f0r-writer-v1";
 
 const EVIDENCE_TABLES = [
   "capture_attempts",
@@ -278,6 +282,122 @@ END;
 export const F0_MIGRATION_SQL = `${CORE_SCHEMA}\n${appendOnlyTriggers()}\nPRAGMA user_version = ${SIDECAR_USER_VERSION};`;
 export const F0_MIGRATION_CHECKSUM = createHash("sha256").update(F0_MIGRATION_SQL, "utf8").digest("hex");
 
+const ROLLOUT_EVENT_TABLES = [
+  "rollout_approval_events",
+  "rollout_config_events",
+  "shadow_outbox_messages",
+  "shadow_delivery_attempts",
+  "operational_audit_events",
+] as const;
+
+export const F0R_LEDGER_SQL = `
+CREATE TABLE IF NOT EXISTS rollout_schema_migrations (
+  migration_id TEXT PRIMARY KEY,
+  migration_version TEXT NOT NULL UNIQUE,
+  checksum TEXT NOT NULL,
+  applied_at TEXT NOT NULL,
+  runtime_version TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('applied', 'partial', 'failed'))
+) STRICT;
+`;
+
+const ROLLOUT_SCHEMA = `
+CREATE TABLE IF NOT EXISTS rollout_schema_contract (
+  schema_version TEXT PRIMARY KEY,
+  minimum_reader_version TEXT NOT NULL,
+  minimum_writer_version TEXT NOT NULL,
+  base_schema_version TEXT NOT NULL,
+  migration_checksum TEXT NOT NULL,
+  created_at TEXT NOT NULL
+) STRICT;
+
+CREATE TABLE IF NOT EXISTS rollout_approval_events (
+  approval_event_id TEXT PRIMARY KEY,
+  approval_scope TEXT NOT NULL,
+  approval_source TEXT NOT NULL,
+  approved_at TEXT NOT NULL,
+  recorded_at TEXT NOT NULL,
+  detail_json TEXT NOT NULL
+) STRICT;
+
+CREATE TABLE IF NOT EXISTS rollout_config_events (
+  config_event_id TEXT PRIMARY KEY,
+  shadow_write_enabled INTEGER NOT NULL CHECK (shadow_write_enabled IN (0, 1)),
+  operational_gc_enabled INTEGER NOT NULL CHECK (operational_gc_enabled IN (0, 1)),
+  kill_switch_engaged INTEGER NOT NULL CHECK (kill_switch_engaged IN (0, 1)),
+  queue_capacity INTEGER NOT NULL CHECK (queue_capacity BETWEEN 1 AND 10000),
+  max_retries INTEGER NOT NULL CHECK (max_retries BETWEEN 0 AND 20),
+  storage_quota_bytes INTEGER NOT NULL CHECK (storage_quota_bytes > 0),
+  disk_low_water_bytes INTEGER NOT NULL CHECK (disk_low_water_bytes >= 0),
+  reason TEXT NOT NULL,
+  occurred_at TEXT NOT NULL,
+  recorded_at TEXT NOT NULL
+) STRICT;
+
+CREATE TABLE IF NOT EXISTS shadow_outbox_messages (
+  outbox_message_id TEXT PRIMARY KEY,
+  idempotency_key TEXT NOT NULL UNIQUE,
+  message_type TEXT NOT NULL,
+  payload_json TEXT NOT NULL,
+  payload_hash TEXT NOT NULL CHECK (length(payload_hash) = 64),
+  enqueued_at TEXT NOT NULL,
+  available_at TEXT NOT NULL,
+  created_at TEXT NOT NULL
+) STRICT;
+
+CREATE TABLE IF NOT EXISTS shadow_delivery_attempts (
+  delivery_attempt_id TEXT PRIMARY KEY,
+  outbox_message_id TEXT NOT NULL REFERENCES shadow_outbox_messages(outbox_message_id) ON DELETE RESTRICT,
+  attempt_no INTEGER NOT NULL CHECK (attempt_no >= 1),
+  outcome TEXT NOT NULL CHECK (outcome IN ('succeeded', 'retryable_failure', 'permanent_failure', 'cancelled')),
+  error_code TEXT,
+  started_at TEXT NOT NULL,
+  completed_at TEXT NOT NULL,
+  next_available_at TEXT,
+  created_at TEXT NOT NULL,
+  UNIQUE (outbox_message_id, attempt_no)
+) STRICT;
+
+CREATE TABLE IF NOT EXISTS operational_audit_events (
+  audit_event_id TEXT PRIMARY KEY,
+  operation_id TEXT NOT NULL,
+  event_kind TEXT NOT NULL CHECK (event_kind IN (
+    'gc_intent', 'gc_deleted', 'gc_recovered', 'gc_rejected',
+    'backup_started', 'backup_completed', 'restore_verified',
+    'rollback_started', 'rollback_completed',
+    'health_snapshot'
+  )),
+  subject_type TEXT NOT NULL,
+  subject_id TEXT NOT NULL,
+  detail_json TEXT NOT NULL,
+  occurred_at TEXT NOT NULL,
+  created_at TEXT NOT NULL
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS shadow_delivery_message_attempt
+ON shadow_delivery_attempts(outbox_message_id, attempt_no);
+CREATE INDEX IF NOT EXISTS operational_audit_operation
+ON operational_audit_events(operation_id, occurred_at);
+`;
+
+function rolloutAppendOnlyTriggers(): string {
+  return ROLLOUT_EVENT_TABLES.map((table) => `
+CREATE TRIGGER IF NOT EXISTS ${table}_append_only_update
+BEFORE UPDATE ON ${table}
+BEGIN
+  SELECT RAISE(ABORT, '${table} is append-only');
+END;
+CREATE TRIGGER IF NOT EXISTS ${table}_append_only_delete
+BEFORE DELETE ON ${table}
+BEGIN
+  SELECT RAISE(ABORT, '${table} is append-only');
+END;
+`).join("\n");
+}
+
+export const F0R_MIGRATION_SQL = `${F0R_LEDGER_SQL}\n${ROLLOUT_SCHEMA}\n${rolloutAppendOnlyTriggers()}\nPRAGMA user_version = ${ROLLOUT_USER_VERSION};`;
+export const F0R_MIGRATION_CHECKSUM = createHash("sha256").update(F0R_MIGRATION_SQL, "utf8").digest("hex");
+
 export type SchemaVerification = {
   schemaVersion: string | null;
   migrationChecksum: string | null;
@@ -295,6 +415,20 @@ export function openSidecarDatabase(path: string): DatabaseSync {
   const db = new DatabaseSync(path);
   chmodSync(path, 0o600);
   db.exec("PRAGMA foreign_keys = ON; PRAGMA trusted_schema = OFF; PRAGMA journal_mode = DELETE; PRAGMA synchronous = FULL;");
+  return db;
+}
+
+export function openRolloutDatabase(path: string): DatabaseSync {
+  mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
+  const db = new DatabaseSync(path);
+  chmodSync(path, 0o600);
+  db.exec(`
+    PRAGMA foreign_keys = ON;
+    PRAGMA trusted_schema = OFF;
+    PRAGMA journal_mode = WAL;
+    PRAGMA synchronous = FULL;
+    PRAGMA busy_timeout = 1000;
+  `);
   return db;
 }
 
@@ -343,10 +477,12 @@ export function verifySidecarSchema(db: DatabaseSync): SchemaVerification {
   const row = db.prepare(`
     SELECT migration_version, checksum, status
     FROM research_schema_migrations
-    ORDER BY applied_at DESC LIMIT 1
-  `).get() as { migration_version: string; checksum: string; status: string } | undefined;
+    WHERE migration_version = ?
+    LIMIT 1
+  `).get(SIDECAR_SCHEMA_VERSION) as { migration_version: string; checksum: string; status: string } | undefined;
   const partialMigration = !row || row.status !== "applied";
-  const unknownSchema = userVersion !== SIDECAR_USER_VERSION || row?.migration_version !== SIDECAR_SCHEMA_VERSION;
+  const unknownSchema = userVersion !== SIDECAR_USER_VERSION
+    || row?.migration_version !== SIDECAR_SCHEMA_VERSION;
   const checksumMatches = row?.checksum === F0_MIGRATION_CHECKSUM;
   return {
     schemaVersion: row?.migration_version ?? null,
@@ -358,6 +494,131 @@ export function verifySidecarSchema(db: DatabaseSync): SchemaVerification {
     readerContract: SIDECAR_READER_VERSION,
     writerContract: SIDECAR_WRITER_VERSION,
     ok: !partialMigration && !unknownSchema && checksumMatches,
+  };
+}
+
+export type RolloutSchemaVerification = {
+  base: SchemaVerification;
+  schemaVersion: string | null;
+  migrationChecksum: string | null;
+  expectedChecksum: string;
+  userVersion: number;
+  minimumReaderVersion: string | null;
+  minimumWriterVersion: string | null;
+  partialMigration: boolean;
+  unknownSchema: boolean;
+  oldReaderCompatible: boolean;
+  shadowDefaultOff: boolean;
+  ok: boolean;
+};
+
+export function initializeRolloutSchema(db: DatabaseSync, now = new Date().toISOString()): void {
+  db.exec(F0R_LEDGER_SQL);
+  initializeSidecarSchema(db, now);
+  const existing = db.prepare(`
+    SELECT checksum, status FROM rollout_schema_migrations WHERE migration_version = ?
+  `).get(ROLLOUT_SCHEMA_VERSION) as { checksum: string; status: string } | undefined;
+  if (existing?.status === "applied") {
+    const verification = verifyRolloutSchema(db);
+    if (!verification.ok) throw new Error(`rollout schema refused: ${JSON.stringify(verification)}`);
+    return;
+  }
+  if (existing && existing.checksum !== F0R_MIGRATION_CHECKSUM) {
+    throw new Error("rollout partial migration checksum mismatch");
+  }
+  if (!existing) {
+    db.prepare(`
+      INSERT INTO rollout_schema_migrations
+      (migration_id, migration_version, checksum, applied_at, runtime_version, status)
+      VALUES (?, ?, ?, ?, ?, 'partial')
+    `).run("rr-f0r-002", ROLLOUT_SCHEMA_VERSION, F0R_MIGRATION_CHECKSUM, now, process.version);
+  }
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.exec(F0R_MIGRATION_SQL);
+    db.prepare(`
+      INSERT INTO rollout_schema_contract
+      (schema_version, minimum_reader_version, minimum_writer_version,
+       base_schema_version, migration_checksum, created_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(schema_version) DO UPDATE SET
+        minimum_reader_version=excluded.minimum_reader_version,
+        minimum_writer_version=excluded.minimum_writer_version,
+        base_schema_version=excluded.base_schema_version,
+        migration_checksum=excluded.migration_checksum
+    `).run(
+      ROLLOUT_SCHEMA_VERSION,
+      SIDECAR_READER_VERSION,
+      SIDECAR_WRITER_VERSION,
+      SIDECAR_SCHEMA_VERSION,
+      F0R_MIGRATION_CHECKSUM,
+      now,
+    );
+    db.prepare(`
+      UPDATE rollout_schema_migrations
+      SET status='applied', applied_at=?, runtime_version=?
+      WHERE migration_version=? AND checksum=?
+    `).run(now, process.version, ROLLOUT_SCHEMA_VERSION, F0R_MIGRATION_CHECKSUM);
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+  const verification = verifyRolloutSchema(db);
+  if (!verification.ok) throw new Error(`rollout schema verification failed: ${JSON.stringify(verification)}`);
+}
+
+export function verifyRolloutSchema(db: DatabaseSync): RolloutSchemaVerification {
+  const base = verifySidecarSchema(db);
+  const userVersion = Number((db.prepare("PRAGMA user_version").get() as { user_version: number }).user_version);
+  const migration = hasTable(db, "research_schema_migrations")
+    && hasTable(db, "rollout_schema_migrations")
+    ? db.prepare(`
+        SELECT migration_version, checksum, status
+        FROM rollout_schema_migrations WHERE migration_version=?
+      `).get(ROLLOUT_SCHEMA_VERSION) as {
+        migration_version: string;
+        checksum: string;
+        status: string;
+      } | undefined
+    : undefined;
+  const contract = hasTable(db, "rollout_schema_contract")
+    ? db.prepare(`
+        SELECT minimum_reader_version, minimum_writer_version
+        FROM rollout_schema_contract WHERE schema_version=?
+      `).get(ROLLOUT_SCHEMA_VERSION) as {
+        minimum_reader_version: string;
+        minimum_writer_version: string;
+      } | undefined
+    : undefined;
+  const partialMigration = !migration || migration.status !== "applied";
+  const unknownSchema = userVersion !== ROLLOUT_USER_VERSION
+    || migration?.migration_version !== ROLLOUT_SCHEMA_VERSION;
+  const oldReaderCompatible = base.ok
+    && contract?.minimum_reader_version === SIDECAR_READER_VERSION
+    && contract?.minimum_writer_version === SIDECAR_WRITER_VERSION;
+  const shadowDefaultOff = !hasTable(db, "rollout_config_events")
+    || !(db.prepare(`
+      SELECT shadow_write_enabled value FROM rollout_config_events
+      ORDER BY occurred_at DESC, rowid DESC LIMIT 1
+    `).get() as { value: number } | undefined)?.value;
+  return {
+    base,
+    schemaVersion: migration?.migration_version ?? null,
+    migrationChecksum: migration?.checksum ?? null,
+    expectedChecksum: F0R_MIGRATION_CHECKSUM,
+    userVersion,
+    minimumReaderVersion: contract?.minimum_reader_version ?? null,
+    minimumWriterVersion: contract?.minimum_writer_version ?? null,
+    partialMigration,
+    unknownSchema,
+    oldReaderCompatible,
+    shadowDefaultOff,
+    ok: base.ok
+      && !partialMigration
+      && !unknownSchema
+      && migration?.checksum === F0R_MIGRATION_CHECKSUM
+      && oldReaderCompatible,
   };
 }
 
