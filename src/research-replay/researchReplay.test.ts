@@ -553,6 +553,66 @@ test("PIT guardはrace mismatch・timing ambiguous・unknown typeをdefault deny
   assert.ok(guard.codes.includes("UNKNOWN_OBSERVATION_TYPE"));
   assert.ok(guard.codes.includes("TIMING_AMBIGUOUS"));
   assert.ok(guard.codes.includes("CANONICAL_RACE_MISMATCH"));
+  const unknownTime = strictPitGuard({
+    observation: {
+      ...base,
+      observation_id: "unknown-time",
+      observation_type: "race_schedule",
+      canonical_race_key: FIXTURE_RACE_KEY,
+      source_observed_at: "2026-07-24T06:15:00.001Z",
+      first_seen_at: FIXTURE_AS_OF,
+      timing_quality: "unknown",
+    },
+    repository: ctx.repository,
+    canonicalRaceKey: FIXTURE_RACE_KEY,
+    asOfAt: FIXTURE_AS_OF,
+    policy: RESOLUTION_POLICIES.research_replay_strict_pre_race,
+  });
+  assert.ok(unknownTime.codes.includes("TIMESTAMP_UNKNOWN"));
+  assert.ok(unknownTime.codes.includes("OBSERVATION_AFTER_AS_OF"));
+});
+
+test("post-race leakage sentinelは結果由来typeを明示registryで拒否する", (t) => {
+  const ctx = context();
+  t.after(() => ctx.close());
+  const postRaceTypes = [
+    "actual_start_timing",
+    "actual_entry",
+    "finish_position",
+    "winning_technique",
+    "payout",
+    "refund_result",
+    "incident_result",
+    "confirmed_race_result",
+    "post_race_weather",
+    "result_derived_label",
+  ];
+  for (const observationType of postRaceTypes) {
+    const guard = strictPitGuard({
+      observation: {
+        observation_id: `post-${observationType}`,
+        canonical_race_key: FIXTURE_RACE_KEY,
+        observation_type: observationType,
+        payload_schema_version: "rr-payload-v1",
+        parse_run_id: "parse",
+        raw_document_id: "raw",
+        source_published_at: FIXTURE_AS_OF,
+        source_observed_at: FIXTURE_AS_OF,
+        first_seen_at: FIXTURE_AS_OF,
+        timing_quality: "source_exact",
+        source_quality: "sanitized_fixture",
+        semantic_payload_hash: "x",
+        parser_version: "rr-parser-test-v1",
+        parse_status: "success",
+      },
+      repository: ctx.repository,
+      canonicalRaceKey: FIXTURE_RACE_KEY,
+      asOfAt: FIXTURE_AS_OF,
+      policy: RESOLUTION_POLICIES.research_replay_strict_pre_race,
+    });
+    assert.ok(guard.codes.includes("POST_RACE_OBSERVATION"), observationType);
+    assert.ok(guard.codes.includes("RESULT_ONLY_SOURCE"), observationType);
+  }
 });
 
 test("manifestはrequired missingをblockedにし暗黙補完しない", (t) => {

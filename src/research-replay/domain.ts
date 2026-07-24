@@ -72,11 +72,21 @@ export type TypedPayload =
   | CurrentRacerProfilePayload
   | FixtureOnlyPayload;
 
-const REGISTRY: Record<ObservationType, ObservationCategory> = {
+const REGISTRY: Record<string, ObservationCategory> = {
   race_schedule: "pre_race",
   trifecta_market: "pre_race",
   beforeinfo: "pre_race",
   race_result: "post_race",
+  actual_start_timing: "post_race",
+  actual_entry: "post_race",
+  finish_position: "post_race",
+  winning_technique: "post_race",
+  payout: "post_race",
+  refund_result: "post_race",
+  incident_result: "post_race",
+  confirmed_race_result: "post_race",
+  post_race_weather: "post_race",
+  result_derived_label: "post_race",
   current_racer_profile: "current_only",
   historical_closing_odds: "historical_closing",
   fixture_only: "fixture_only",
@@ -101,7 +111,7 @@ function assertNullableFinite(value: unknown, field: string): void {
 }
 
 export function observationCategory(type: string): ObservationCategory | null {
-  return Object.prototype.hasOwnProperty.call(REGISTRY, type) ? REGISTRY[type as ObservationType] : null;
+  return Object.prototype.hasOwnProperty.call(REGISTRY, type) ? REGISTRY[type] : null;
 }
 
 export function validateTypedPayload(type: ObservationType, payload: unknown): TypedPayload {
