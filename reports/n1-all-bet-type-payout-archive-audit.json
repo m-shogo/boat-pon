@@ -1,0 +1,26 @@
+{
+  "auditVersion": "n1-archive-audit-v1",
+  "scope": "all_local_k_archives",
+  "externalRequests": 0,
+  "filesDiscovered": 8164,
+  "filesParsed": 8164,
+  "filesFailed": 0,
+  "firstArchive": "k000101.lzh",
+  "lastArchive": "k260722.lzh",
+  "raceRecords": 1194007,
+  "payoutLines": 11514006,
+  "linesByBetType": {
+    "win": 1125870,
+    "place": 2161438,
+    "quinella": 1180976,
+    "exacta": 1189688,
+    "wide": 3508840,
+    "trifecta": 1174202,
+    "trio": 1172992
+  },
+  "schemaFamilies": {
+    "legacy_pre_trifecta": 134,
+    "modern_seven_display": 8030
+  },
+  "errorSamples": []
+}

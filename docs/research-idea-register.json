@@ -38,14 +38,16 @@
       "auto_advance": false
     },
     "N1": {
-      "overall_status": "CONDITIONAL",
+      "overall_status": "N1_A_COMPLETE",
       "review_status": "COMPLETE",
-      "implementation_status": "NOT_STARTED",
+      "implementation_status": "OFFLINE_FOUNDATION_COMPLETE",
       "preferred_target": "data/research-replay.sqlite",
-      "migration_status": "DESIGN_ONLY_NOT_APPLIED",
-      "parser_status": "NOT_IMPLEMENTED",
-      "evidence": ["docs/n1-all-bet-type-payout-review.md", "reports/n1-all-bet-type-payout-readiness.json"],
-      "next_stage": "N1_IMPLEMENTATION_REQUIRES_SEPARATE_APPROVAL",
+      "migration_status": "TEMP_PASS_PERMANENT_NOT_APPLIED",
+      "schema_version": "n1-settlement.0.1",
+      "parser_status": "SEVEN_BET_TYPES_ARCHIVE_AND_SANITIZED_WEB_FIXTURE_PASS",
+      "archive_status": "8164_OF_8164_PASS",
+      "evidence": ["docs/n1-all-bet-type-payout-review.md", "reports/n1-all-bet-type-payout-readiness.json", "reports/n1-all-bet-type-payout-implementation.json"],
+      "next_stage": "N1_PERMANENT_ROLLOUT_REQUIRES_SEPARATE_APPROVAL",
       "auto_advance": false
     }
   },

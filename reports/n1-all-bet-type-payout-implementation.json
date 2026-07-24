@@ -1,0 +1,131 @@
+{
+  "reportVersion": "n1-settlement-implementation-v1",
+  "phase": "N1",
+  "subphase": "N1-A Offline All-Bet-Type Settlement Foundation",
+  "status": "COMPLETE",
+  "permanentRolloutStatus": "NOT_APPLIED",
+  "stateModel": {
+    "settlementStatus": ["pending", "settled", "refunded", "partially_refunded", "cancelled", "no_sale"],
+    "resultKind": ["normal", "dead_heat", "special_payout", "source_defined", "unknown"],
+    "revisionKind": ["initial", "official_correction", "parser_reparse", "source_revision"],
+    "resolutionStatus": ["resolved", "source_conflict", "unresolved", "quarantined"],
+    "parseStatus": ["success", "warning", "error", "unsupported_schema"]
+  },
+  "schema": {
+    "version": "n1-settlement.0.1",
+    "migrationChecksum": "35903ee175dbb31cbc7202aa573a2e1b4f6d58d9b6954cfac4cee0fdfa4eb94d",
+    "tempMigration": "PASS",
+    "partialResume": "PASS",
+    "unknownChecksumDefaultDeny": "PASS",
+    "appendOnlyTriggers": 14,
+    "foreignKeyCheck": "PASS",
+    "integrityCheck": "ok"
+  },
+  "fixtureResults": {
+    "fixtureCases": 20,
+    "passed": 20,
+    "failed": 0,
+    "f0Lineage": "PASS",
+    "evidencePins": "PASS",
+    "idempotency": "PASS",
+    "conflictCountInContractTest": 1,
+    "parseErrorOrUnsupportedCases": 3
+  },
+  "parserCoverage": {
+    "selectionBetTypes": [
+      "win",
+      "place",
+      "exacta",
+      "quinella",
+      "trifecta",
+      "trio",
+      "wide"
+    ],
+    "officialArchiveFixture": "PASS",
+    "sanitizedOfficialWebFixture": "PASS",
+    "winPlaceAvailableInArchiveRaw": true,
+    "multiplePlaceAndWideLines": "PASS",
+    "unsupportedSchemaBehavior": "FAIL_CLOSED"
+  },
+  "archiveResults": {
+    "files": 8164,
+    "parsed": 8164,
+    "failed": 0,
+    "races": 1194007,
+    "payoutLines": 11514006,
+    "modernSevenDisplay": 8030,
+    "legacyPreTrifecta": 134,
+    "unknownSchema": 0
+  },
+  "reconciliation": {
+    "scope": "sanitized_local_fixture_vs_read_only_legacy",
+    "comparedLines": 1440,
+    "exactMatch": 720,
+    "n1Only": 720,
+    "legacyOnly": 0,
+    "payoutMismatch": 0,
+    "autoRepairs": 0
+  },
+  "pointInTime": {
+    "settlementObservationCategory": "post_race",
+    "leakageSentinel": "PASS",
+    "preRaceFeatureEligible": false
+  },
+  "legacyNonRegression": {
+    "racePayoutsWrites": 0,
+    "consumerSwitches": 0,
+    "roiChanges": 0,
+    "predictionChanges": 0
+  },
+  "safety": {
+    "primaryDbWrites": 0,
+    "permanentSidecarApplied": false,
+    "externalRequests": 0,
+    "collectorConnected": false,
+    "shadowWriterEnabledByTask": false,
+    "operationalGcEnabledByTask": false,
+    "phaseN2Started": false,
+    "modelImplemented": false,
+    "productionConnected": false
+  },
+  "verification": {
+    "startTestCount": 442,
+    "endTestCount": 450,
+    "fullTests": "PASS",
+    "typecheck": "PASS",
+    "productionBuild": "PASS",
+    "f0GoldenHash": "PASS",
+    "dbHealth": "PASS",
+    "dataQuality": "PASS",
+    "n1ReviewVerifier": "PASS",
+    "changedDiffSecretScan": "PASS",
+    "fullHistorySecretScan": "PRE_EXISTING_9_FINDINGS",
+    "remoteCi": "PENDING"
+  },
+  "blockers": [
+    "permanent sidecar rollout requires separate approval",
+    "live future result collection requires separate approval"
+  ],
+  "nextApproval": "N1 permanent Research Replay sidecar rollout review; do not start automatically",
+  "localVerification": {
+    "tempMigration": {
+      "mode": "disposable_temp_db",
+      "permanentSidecarWrites": 0,
+      "primaryDbWrites": 0,
+      "schema": {
+        "ok": true,
+        "version": "n1-settlement.0.1",
+        "checksumMatches": true,
+        "appendOnlyTriggerCount": 14
+      },
+      "foreignKeyViolations": 0,
+      "integrityCheck": "ok"
+    },
+    "commands": {
+      "fixtures": "npm run research:n1:payout:fixtures",
+      "migrateTemp": "npm run research:n1:payout:migrate-temp",
+      "archiveDryRun": "npm run research:n1:payout:archive-dry-run",
+      "reconcile": "npm run research:n1:payout:reconcile"
+    }
+  }
+}

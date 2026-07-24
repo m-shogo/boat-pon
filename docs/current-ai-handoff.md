@@ -26,7 +26,7 @@
 - 正式な収益評価は、2026-07-21 15:15 JST以降に公式networkから直接取得したfuture-only T-5だけでやり直す。
 - DB肥大化の新規増加は抑制済みだが、13.98GiBの原本圧縮は未実施。
 - Phase N0「全券種＋選手PIT＋独自研究軸データ取得可能性・保存設計監査」は読み取り専用で完了した。DB migration、実収集、モデル、production接続は未着手。
-- N0後の正本は`docs/research-platform-master-plan.md`、研究40件と破綻防止契約の機械可読台帳は`docs/research-idea-register.json`。Stage F0とF0-Rは`COMPLETE`。F0-Rは独立sidecar `f0r.2.0`へrollout済みで、承認gateを`f0r-approval-v2`へhardeningした。shadow writer/GCはOFF、live collectorは未接続。N1 schema/migration実装前レビューは`docs/n1-all-bet-type-payout-review.md`で`CONDITIONAL`完了、実装は別承認待ち。
+- N0後の正本は`docs/research-platform-master-plan.md`、研究40件と破綻防止契約の機械可読台帳は`docs/research-idea-register.json`。Stage F0とF0-Rは`COMPLETE`。Phase N1-A offline foundationも`COMPLETE`で、schema `n1-settlement.0.1`、20-case fixture、7券種parser、8,164 archive dry-run、Legacy read-only reconciliationを実装済み。永続N1 migration、live collector、N2は別承認待ち。shadow writer/GCはOFF。
 - 現行formalは`legacy_t5_formal / legacy-t5-v1 / formal_forward`の固定benchmark、新方式は`market_intelligence / shadow_forward`として評価系列を分離する。
 
 ## 絶対にしてはいけないこと
@@ -193,9 +193,10 @@ Phase N0の確定事項:
 1. 現行`legacy_t5_formal`はfixed enrollment protocolのprospective cohortとして、条件を変えずmembershipをappendする。報告・common comparison時にfrozen analysis snapshotを別作成する。
 2. Stage F0はsidecar schema `f0.1.0`、五層lineage、immutable capture lifecycle、raw/semantic二重判定、raw security、canonical identity、checkpoint freeze、versioned resolver、単方向supersession、FC08A/FC14A、golden fixtureまでtemp DBで実装済み。証跡は`docs/research-replay-foundation.md`と`reports/research-replay-foundation.json`。
 3. F0-Rで`data/research-replay.sqlite`へexpand-only schemaをrolloutし、FC08B/FC12/FC14Bを検証した。`data/boat.sqlite`はread-only fingerprint監査のみ。shadow writer/GCはOFF、live collector未接続である。
-4. 新方式は`market_intelligence / shadow_forward`として、manifest、decision、ticket、cohort、ROI、gate、reportをLegacyから分離する。
-5. model学習はN5開始gate、production検討はN8と独立production gateまで行わない。
-6. DB圧縮は人間の明示承認後、runbook通り別候補DBで実施する。
+4. N1-A offline foundationは完了した。公式K archive 8,164件は全件parse成功し、1,194,007 race、11,514,006 payout lineを再構築した。Legacy fixture照合は主line 720件一致、N1 only 720件、payout mismatch 0。永続N1 migrationは未適用である。
+5. 新方式は`market_intelligence / shadow_forward`として、manifest、decision、ticket、cohort、ROI、gate、reportをLegacyから分離する。
+6. model学習はN5開始gate、production検討はN8と独立production gateまで行わない。
+7. DB圧縮は人間の明示承認後、runbook通り別候補DBで実施する。
 
 2023-2024固定履歴モデルと市場の比較器は実装済み。現時点ではα=0が選ばれたため、特徴量追加や本番接続へ進めず、同じ固定条件のformal future蓄積を続ける。
 

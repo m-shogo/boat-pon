@@ -1,0 +1,55 @@
+{
+  "reconciliationVersion": "n1-legacy-reconciliation-v1",
+  "scope": "local_sanitized_k_fixture_vs_read_only_legacy",
+  "legacyDbMode": "read_only",
+  "primaryWrites": 0,
+  "comparedLines": 1440,
+  "exactMatch": 720,
+  "n1Only": 720,
+  "legacyOnly": 0,
+  "payoutMismatch": 0,
+  "byBetType": {
+    "win": {
+      "parsed": 144,
+      "exact": 0,
+      "n1Only": 144,
+      "payoutMismatch": 0
+    },
+    "place": {
+      "parsed": 288,
+      "exact": 0,
+      "n1Only": 288,
+      "payoutMismatch": 0
+    },
+    "exacta": {
+      "parsed": 144,
+      "exact": 144,
+      "n1Only": 0,
+      "payoutMismatch": 0
+    },
+    "quinella": {
+      "parsed": 144,
+      "exact": 144,
+      "n1Only": 0,
+      "payoutMismatch": 0
+    },
+    "wide": {
+      "parsed": 432,
+      "exact": 144,
+      "n1Only": 288,
+      "payoutMismatch": 0
+    },
+    "trifecta": {
+      "parsed": 144,
+      "exact": 144,
+      "n1Only": 0,
+      "payoutMismatch": 0
+    },
+    "trio": {
+      "parsed": 144,
+      "exact": 144,
+      "n1Only": 0,
+      "payoutMismatch": 0
+    }
+  }
+}

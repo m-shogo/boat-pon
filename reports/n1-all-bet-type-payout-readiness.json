@@ -2,13 +2,13 @@
   "reportVersion": "n1-payout-readiness-v1",
   "phase": "N1",
   "reviewStatus": "COMPLETE",
-  "implementationStatus": "NOT_STARTED",
-  "verdict": "CONDITIONAL",
+  "implementationStatus": "N1_A_OFFLINE_COMPLETE",
+  "verdict": "COMPLETE_OFFLINE_PERMANENT_NOT_APPLIED",
   "generatedDate": "2026-07-24",
   "safety": {
     "primaryDbWrites": 0,
     "n1MigrationApplied": false,
-    "parserImplemented": false,
+    "parserImplemented": true,
     "externalRequests": 0,
     "collectorConnected": false,
     "modelImplemented": false,
@@ -90,10 +90,10 @@
     "requestBudget": "PASS",
     "legacyTableAndRoiUnchanged": "PASS",
     "shadowWriterAndGc": "PASS_OFF",
-    "fixtureImplementation": "PENDING",
-    "parserDryRun": "PENDING",
-    "fixtureDbMigration": "PENDING",
-    "separateImplementationApproval": "PENDING"
+    "fixtureImplementation": "PASS_20_OF_20",
+    "parserDryRun": "PASS_8164_OF_8164",
+    "fixtureDbMigration": "PASS_TEMP_ONLY",
+    "separateImplementationApproval": "GRANTED_AND_COMPLETED"
   },
   "requestCost": {
     "review": 0,
@@ -101,5 +101,5 @@
     "existingArchiveReplay": 0,
     "futureResultOnlyN0EstimatePerDay": 144
   },
-  "next": "WAIT_FOR_SEPARATE_N1_IMPLEMENTATION_APPROVAL"
+  "next": "WAIT_FOR_SEPARATE_PERMANENT_SIDECAR_ROLLOUT_APPROVAL"
 }

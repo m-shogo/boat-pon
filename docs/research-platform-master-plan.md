@@ -13,7 +13,7 @@
 - 市場モデル詳細: [`market-residual-ticket-selection-roadmap.md`](market-residual-ticket-selection-roadmap.md)
 - 現在地: [`current-ai-handoff.md`](current-ai-handoff.md)
 
-Phase N0、Stage 0、Stage F0「Research Replay Foundation」、Stage F0-R「Research Replay Foundation Rollout」は完了している。F0はtemp/sidecar vertical sliceとMac/Linux golden hash一致、F0-Rは独立sidecar `f0r.2.0`、backup/restore、WAL/lock、crash recovery、failure isolation、operational GC canaryまで確認した。承認gateは`f0r-approval-v2`へhardeningし、readinessによる自己承認を禁止した。F0-R証跡は[`research-replay-rollout.md`](research-replay-rollout.md)と[`../reports/research-replay-rollout-readiness.json`](../reports/research-replay-rollout-readiness.json)を正本とする。N1実装前レビューは[`n1-all-bet-type-payout-review.md`](n1-all-bet-type-payout-review.md)で`CONDITIONAL`まで完了したが、N1実装、収集、モデル、production接続へは進んでいない。
+Phase N0、Stage 0、Stage F0、Stage F0-Rは完了している。F0-Rは独立sidecar `f0r.2.0`、承認gate `f0r-approval-v2`でshadow writer/GCをOFFのまま維持する。Phase N1-Aのoffline foundationも完了し、`n1-settlement.0.1`、20-case fixture、7券種archive/Web fixture parser、8,164 archive dry-run、Legacy read-only照合を実装した。N1 migrationはtemp DBだけで検証し、永続sidecar、collector、N2、model、productionへは進んでいない。
 
 ## 2. 現在の確定状態
 
@@ -26,7 +26,7 @@ Phase N0、Stage 0、Stage F0「Research Replay Foundation」、Stage F0-R「Res
 - F0 sidecar schema `f0.1.0`、五層lineage、PIT/leakage guard、Evidence Pin、FC08A、FC14A、golden fixtureを実装した。CLI/testの既定はtempであり、永続sidecarとlive collectorには未接続。
 - F0 implementationとcross-environment golden verificationは`COMPLETE`。
 - F0-Rは`COMPLETE`。実sidecarのshadow writer/operational GCはdefault `OFF`で、live collectorへ未接続。
-- N1 schema/migration実装前レビューは`CONDITIONAL`で完了。20-case fixture、parser、fixture DB migration、N1実装には別の明示承認が必要。
+- N1-A offline foundationは`COMPLETE`。永続sidecar rolloutとlive collectorは別の明示承認が必要。
 
 ## 3. 二つの評価系列を混ぜない
 
@@ -299,6 +299,8 @@ N5開始前には別の`Model Experiment Registry`を必須にする。fixed tra
 - rollback: 新規派生層を切り離し、raw/Legacy結果を保持。
 - 次stage: D1。
 - production eligibility: 公式事実層のread-only利用のみ。
+- N1-A result: offline foundation `COMPLETE`。schema `n1-settlement.0.1`、20 fixture、7券種parser、temp migration、全8,164 archive dry-run、Legacy reconciliationがPASS。永続rolloutは未適用。
+- evidence: [`../reports/n1-all-bet-type-payout-implementation.md`](../reports/n1-all-bet-type-payout-implementation.md)、[`../reports/n1-all-bet-type-payout-implementation.json`](../reports/n1-all-bet-type-payout-implementation.json)。
 
 ### Stage D1: Diagnostic Ledger Foundation
 
@@ -546,4 +548,4 @@ M1はN3/N4の選手PIT gate、M3は主観を排したstrict-prior label gate、M
 
 ## 11. 次の独立タスク
 
-次の候補はN1のschema/migration再レビューである。F0-R completion gateは通過したが、N1を自動開始しない。別の明示承認前に`data/boat.sqlite`変更、N1 migration、公式7券種収集、Error Atlas本体、全券種odds collector、モデル、Decision Governor、production接続を抱き合わせない。
+次の候補はN1の永続Research Replay sidecar rolloutレビューである。N1-A offline foundationは完了したが自動適用しない。別の明示承認前に`data/boat.sqlite`変更、永続N1 migration、公式7券種live収集、D1/N2、モデル、Decision Governor、production接続を抱き合わせない。

@@ -3,6 +3,8 @@
 更新: 2026-07-24
 状態: **CONDITIONAL / DESIGN REVIEW COMPLETE / NOT_APPLIED**
 
+> 2026-07-24追記: この文書は実装前レビュー時点の記録である。後続の明示承認によりN1-A offline foundationは実装完了した。現在の実装証跡は`reports/n1-all-bet-type-payout-implementation.md/json`を正本とし、永続sidecar migrationは引き続き未適用である。
+
 ## 結論
 
 N1の保存先は **B: Research Replay sidecar (`data/research-replay.sqlite`)** を採用候補とする。既存 `data/boat.sqlite.race_payouts` は互換読取元として維持し、N1の正本には昇格させない。N1 parser、migration適用、外部取得、collector接続は別の明示承認まで開始しない。

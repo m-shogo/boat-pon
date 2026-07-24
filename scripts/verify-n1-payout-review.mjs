@@ -8,10 +8,10 @@ const docPath = join(root, "docs", "n1-all-bet-type-payout-review.md");
 const report = JSON.parse(readFileSync(reportPath, "utf8"));
 const doc = readFileSync(docPath, "utf8");
 
-assert.equal(report.verdict, "CONDITIONAL");
-assert.equal(report.implementationStatus, "NOT_STARTED");
+assert.equal(report.verdict, "COMPLETE_OFFLINE_PERMANENT_NOT_APPLIED");
+assert.equal(report.implementationStatus, "N1_A_OFFLINE_COMPLETE");
 assert.equal(report.safety.n1MigrationApplied, false);
-assert.equal(report.safety.parserImplemented, false);
+assert.equal(report.safety.parserImplemented, true);
 assert.equal(report.safety.externalRequests, 0);
 assert.equal(report.safety.collectorConnected, false);
 assert.equal(report.storageDecision.preferred, "research_replay_sidecar");
@@ -46,7 +46,6 @@ for (const target of markdownLinks.filter((value) => !value.includes("://") && !
 
 for (const forbidden of [
   "n1MigrationApplied\": true",
-  "parserImplemented\": true",
   "collectorConnected\": true",
   "productionChanged\": true",
 ]) {

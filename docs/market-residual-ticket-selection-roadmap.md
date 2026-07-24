@@ -238,6 +238,8 @@ N1より前に、immutable capture lifecycle、entity-body raw、parse run、typ
 
 単勝・複勝を含む払戻取得、fixture、parser、dry-run、idempotency、同着・返還・不成立、小規模canary、coverage reportを作る。予測ロジックは変更しない。
 
+**N1-A offline foundationは2026-07-24に完了。** `n1-settlement.0.1`をtemp DBで検証し、20-case fixture、7券種K archive parser、sanitized Web fixture parser、source conflict、8,164 archive全件dry-run、Legacy read-only reconciliationを実装した。永続sidecar migration、live collector、Legacy切替、N2は未開始で、別承認まで停止する。
+
 ### Phase N2: 全券種オッズ時系列
 
 取得可能な券種からappend-onlyで実装し、checkpoint、重複防止、source分離、rate limit、coverage監視、同値異常検査を持たせる。5画面を`market_observation_batch`で束ねるが、各response時刻とbatch内skewを失わない。point/range、発売なし、返還、raw矛盾を正本として保存する。市場整合性modelや120状態baselineは実装せず、既存3連単収集を壊さず、予測ロジックは変更しない。
