@@ -12,6 +12,8 @@ export type ObservationType =
   | "race_result"
   | "current_racer_profile"
   | "historical_closing_odds"
+  | "settlement_result"
+  | "settlement_parse_diagnostic"
   | "fixture_only";
 
 export type ObservationCategory =
@@ -64,12 +66,21 @@ export type FixtureOnlyPayload = {
   value: string;
 };
 
+export type SettlementObservationPayload = {
+  canonicalRaceKey: string;
+  sourceKind: "official_archive" | "official_web_fixture" | "synthetic_fixture";
+  parseStatus: "success" | "warning" | "error" | "unsupported_schema";
+  candidateCount: number;
+  diagnosticCodes: string[];
+};
+
 export type TypedPayload =
   | RaceSchedulePayload
   | TrifectaMarketPayload
   | BeforeInfoPayload
   | RaceResultPayload
   | CurrentRacerProfilePayload
+  | SettlementObservationPayload
   | FixtureOnlyPayload;
 
 const REGISTRY: Record<string, ObservationCategory> = {
@@ -83,6 +94,8 @@ const REGISTRY: Record<string, ObservationCategory> = {
   winning_technique: "post_race",
   payout: "post_race",
   refund_result: "post_race",
+  settlement_result: "post_race",
+  settlement_parse_diagnostic: "post_race",
   incident_result: "post_race",
   confirmed_race_result: "post_race",
   post_race_weather: "post_race",
@@ -186,6 +199,24 @@ export function validateTypedPayload(type: ObservationType, payload: unknown): T
       assertExactKeys(payload, ["fixtureName", "value"]);
       if (typeof payload.fixtureName !== "string" || typeof payload.value !== "string") throw new Error("invalid fixture payload");
       return payload as FixtureOnlyPayload;
+    }
+    case "settlement_result":
+    case "settlement_parse_diagnostic": {
+      assertExactKeys(payload, ["canonicalRaceKey", "sourceKind", "parseStatus", "candidateCount", "diagnosticCodes"]);
+      parseCanonicalRaceKey(String(payload.canonicalRaceKey));
+      if (!["official_archive", "official_web_fixture", "synthetic_fixture"].includes(String(payload.sourceKind))) {
+        throw new Error("invalid settlement source kind");
+      }
+      if (!["success", "warning", "error", "unsupported_schema"].includes(String(payload.parseStatus))) {
+        throw new Error("invalid settlement parse status");
+      }
+      if (!Number.isInteger(payload.candidateCount) || Number(payload.candidateCount) < 0) {
+        throw new Error("invalid settlement candidate count");
+      }
+      if (!Array.isArray(payload.diagnosticCodes) || payload.diagnosticCodes.some((value) => typeof value !== "string")) {
+        throw new Error("invalid settlement diagnostic codes");
+      }
+      return payload as SettlementObservationPayload;
     }
   }
 }

@@ -1,0 +1,26 @@
+{
+  "fixtureSchemaVersion": "n1-settlement-20-case-v1",
+  "provenance": "synthetic_contract_fixture; no production or personal data",
+  "cases": [
+    {"id":1,"name":"normal-six-boats-seven-bet-types","parseStatus":"success","settlementStatus":"settled","resultKind":"normal","candidateExpected":true},
+    {"id":2,"name":"place-two-lines","parseStatus":"success","settlementStatus":"settled","resultKind":"normal","candidateExpected":true},
+    {"id":3,"name":"wide-three-lines","parseStatus":"success","settlementStatus":"settled","resultKind":"normal","candidateExpected":true},
+    {"id":4,"name":"dead-heat","parseStatus":"success","settlementStatus":"settled","resultKind":"dead_heat","candidateExpected":true},
+    {"id":5,"name":"partial-refund","parseStatus":"success","settlementStatus":"partially_refunded","resultKind":"source_defined","candidateExpected":true},
+    {"id":6,"name":"full-refund","parseStatus":"success","settlementStatus":"refunded","resultKind":"source_defined","candidateExpected":true},
+    {"id":7,"name":"race-cancelled","parseStatus":"success","settlementStatus":"cancelled","resultKind":"source_defined","candidateExpected":true},
+    {"id":8,"name":"bet-type-no-sale","parseStatus":"success","settlementStatus":"no_sale","resultKind":"source_defined","candidateExpected":true},
+    {"id":9,"name":"special-payout","parseStatus":"warning","settlementStatus":"settled","resultKind":"special_payout","candidateExpected":true},
+    {"id":10,"name":"scratched-boat","parseStatus":"warning","settlementStatus":"partially_refunded","resultKind":"source_defined","candidateExpected":true},
+    {"id":11,"name":"pending-then-settled","parseStatus":"success","settlementStatus":"pending","resultKind":"unknown","candidateExpected":true},
+    {"id":12,"name":"source-conflict","parseStatus":"success","settlementStatus":"settled","resultKind":"normal","candidateExpected":true},
+    {"id":13,"name":"official-correction","parseStatus":"success","settlementStatus":"settled","resultKind":"normal","candidateExpected":true},
+    {"id":14,"name":"parser-error","parseStatus":"error","settlementStatus":null,"resultKind":"unknown","candidateExpected":false},
+    {"id":15,"name":"unknown-display","parseStatus":"unsupported_schema","settlementStatus":null,"resultKind":"unknown","candidateExpected":false},
+    {"id":16,"name":"duplicate-source-line","parseStatus":"warning","settlementStatus":"settled","resultKind":"normal","candidateExpected":true},
+    {"id":17,"name":"html-archive-match","parseStatus":"success","settlementStatus":"settled","resultKind":"normal","candidateExpected":true},
+    {"id":18,"name":"html-archive-mismatch","parseStatus":"success","settlementStatus":"settled","resultKind":"normal","candidateExpected":true},
+    {"id":19,"name":"invalid-canonical-selection","parseStatus":"error","settlementStatus":null,"resultKind":"unknown","candidateExpected":false},
+    {"id":20,"name":"pit-ineligible-source","parseStatus":"warning","settlementStatus":"settled","resultKind":"normal","candidateExpected":true}
+  ]
+}

@@ -27,7 +27,7 @@ function normalizeKimarite(raw: string): string | null {
   return k || null;
 }
 
-export type BetType = "exacta" | "quinella" | "wide" | "trifecta" | "trio";
+export type BetType = "win" | "place" | "exacta" | "quinella" | "wide" | "trifecta" | "trio";
 
 export type RacePayout = {
   raceId: string; date: string; venue: string; raceNo: number;
@@ -84,6 +84,7 @@ export function parseOfficialResultDetail(
   let date = defaults.date;
   let raceNo: number | null = null;
   let returned = false;
+  let continuationBetType: "wide" | null = null;
 
   const raceId = () => `${date.replaceAll("-", "")}-${venue}-${String(raceNo).padStart(2, "0")}`;
 
@@ -178,13 +179,35 @@ export function parseOfficialResultDetail(
         returned, source: "official", fetchedAt: defaults.fetchedAt,
       });
     };
+    const win = line.match(/単勝[\s　]+([1-6])[\s　]+([0-9,]+)/);
+    if (win) pushPay("win", win[1], win[2], null);
+    if (line.includes("複勝")) {
+      const tail = line.slice(line.indexOf("複勝") + 2);
+      for (const match of tail.matchAll(/([1-6])[\s　]+([0-9,]+)/g)) {
+        pushPay("place", match[1], match[2], null);
+      }
+    }
+    if (continuationBetType === "wide" && !line.includes("拡連複")) {
+      const continuation = line.match(/^\s+(\d)-(\d)[\s　]+([0-9,]+)[\s　]+人気[\s　]+(\d+)/);
+      if (continuation) {
+        pushPay("wide", `${continuation[1]}-${continuation[2]}`, continuation[3], continuation[4]);
+      } else if (!line.trim()) {
+        continuationBetType = null;
+      }
+    }
     for (const { label, betType } of TWO_DIGIT) {
       const m = line.match(new RegExp(`${label}[\\s　]+(\\d)-(\\d)[\\s　]+([0-9,]+)[\\s　]+人気[\\s　]+(\\d+)`));
-      if (m) pushPay(betType, `${m[1]}-${m[2]}`, m[3], m[4]);
+      if (m) {
+        pushPay(betType, `${m[1]}-${m[2]}`, m[3], m[4]);
+        continuationBetType = betType === "wide" ? "wide" : null;
+      }
     }
     for (const { label, betType } of THREE_DIGIT) {
       const m = line.match(new RegExp(`${label}[\\s　]+(\\d)-(\\d)-(\\d)[\\s　]+([0-9,]+)[\\s　]+人気[\\s　]+(\\d+)`));
-      if (m) pushPay(betType, `${m[1]}-${m[2]}-${m[3]}`, m[4], m[5]);
+      if (m) {
+        continuationBetType = null;
+        pushPay(betType, `${m[1]}-${m[2]}-${m[3]}`, m[4], m[5]);
+      }
     }
     // 旧形式(2000-2002頃, 3連単導入前): 行頭アンカーで「連単/連複」(=2連単/2連複)。
     // 新形式「２連単」は行頭直後が全角２なのでマッチしない。
