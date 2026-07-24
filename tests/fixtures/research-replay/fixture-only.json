@@ -1,0 +1,16 @@
+{
+  "sourceSchemaVersion": "fixture-envelope-v1",
+  "payloadType": "fixture_only",
+  "canonicalRaceKey": "2026-07-24:01:R1",
+  "payload": {
+    "fixtureName": "live-source-rejection-canary",
+    "value": "never-use-for-live"
+  },
+  "sourcePublishedAt": null,
+  "sourceObservedAt": "2026-07-24T06:10:00.000Z",
+  "firstSeenAt": "2026-07-24T06:10:00.000Z",
+  "timingQuality": "observed_only",
+  "sourceQuality": "sanitized_fixture",
+  "measurementQuality": "fixture",
+  "effectiveAt": null
+}

@@ -1,0 +1,19 @@
+{
+  "sourceSchemaVersion": "fixture-envelope-v1",
+  "payloadType": "beforeinfo",
+  "canonicalRaceKey": "2026-07-24:01:R1",
+  "payload": {
+    "exhibitionTime": 6.71,
+    "exhibitionStartTiming": 0.13,
+    "windSpeedMps": 3,
+    "waveHeightCm": null,
+    "observedOnly": true
+  },
+  "sourcePublishedAt": null,
+  "sourceObservedAt": "2026-07-24T06:14:30.000Z",
+  "firstSeenAt": "2026-07-24T06:14:30.000Z",
+  "timingQuality": "observed_only",
+  "sourceQuality": "sanitized_fixture",
+  "measurementQuality": "display_precision",
+  "effectiveAt": null
+}

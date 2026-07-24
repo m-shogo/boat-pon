@@ -1,0 +1,26 @@
+{
+  "sourceSchemaVersion": "fixture-envelope-v1",
+  "payloadType": "trifecta_market",
+  "canonicalRaceKey": "2026-07-24:01:R1",
+  "payload": {
+    "selections": [
+      { "selection": "1-2-3", "odds": 12.5 },
+      { "selection": "1-3-2", "odds": 18.75 },
+      { "selection": "2-1-3", "odds": 31 }
+    ],
+    "scheduledCloseObservationId": "obs-schedule-v1",
+    "scheduledCloseAtSeen": "2026-07-24T06:20:00.000Z",
+    "observedAt": "2026-07-24T06:15:00.000Z",
+    "minutesBeforeCloseAtCapture": 5,
+    "checkpointLabelAtCapture": "T-5",
+    "checkpointPolicyVersion": "t-minus-nearest-v1",
+    "marketKind": "live_checkpoint"
+  },
+  "sourcePublishedAt": null,
+  "sourceObservedAt": "2026-07-24T06:15:00.000Z",
+  "firstSeenAt": "2026-07-24T06:15:00.000Z",
+  "timingQuality": "observed_only",
+  "sourceQuality": "sanitized_fixture",
+  "measurementQuality": "displayed_odds_exact",
+  "effectiveAt": null
+}

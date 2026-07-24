@@ -1,0 +1,18 @@
+{
+  "sourceSchemaVersion": "fixture-envelope-v1",
+  "payloadType": "race_schedule",
+  "canonicalRaceKey": "2026-07-24:01:R1",
+  "payload": {
+    "canonicalRaceKey": "2026-07-24:01:R1",
+    "scheduledCloseAt": "2026-07-24T06:23:00.000Z",
+    "scheduledCloseOriginalOffset": "+09:00",
+    "scheduleStatus": "changed"
+  },
+  "sourcePublishedAt": "2026-07-24T06:16:00.000Z",
+  "sourceObservedAt": "2026-07-24T06:16:01.000Z",
+  "firstSeenAt": "2026-07-24T06:16:01.000Z",
+  "timingQuality": "source_exact",
+  "sourceQuality": "sanitized_fixture",
+  "measurementQuality": "exact_to_second",
+  "effectiveAt": "2026-07-24T06:16:00.000Z"
+}

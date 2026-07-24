@@ -1,0 +1,17 @@
+{
+  "sourceSchemaVersion": "fixture-envelope-v1",
+  "payloadType": "current_racer_profile",
+  "canonicalRaceKey": "2026-07-24:01:R1",
+  "payload": {
+    "registrationNo": "4321",
+    "className": "A1",
+    "profileObservedAt": "2026-08-01T00:00:00.000Z"
+  },
+  "sourcePublishedAt": null,
+  "sourceObservedAt": "2026-08-01T00:00:00.000Z",
+  "firstSeenAt": "2026-08-01T00:00:00.000Z",
+  "timingQuality": "observed_only",
+  "sourceQuality": "sanitized_fixture",
+  "measurementQuality": "current_snapshot_only",
+  "effectiveAt": null
+}

@@ -1,0 +1,14 @@
+{
+  "timezone": {
+    "jst": "2026-07-25T00:00:00+09:00",
+    "utc": "2026-07-24T15:00:00.000Z",
+    "millisecondBefore": "2026-07-24T06:14:59.999Z",
+    "sameMillisecond": "2026-07-24T06:15:00.000Z"
+  },
+  "float": [0, -0.0, 1, 1.25, 0.000001],
+  "range": { "min": 1.2, "max": 1.8, "inclusiveMin": true, "inclusiveMax": false },
+  "nullable": null,
+  "unicode": ["ボート", "ボート", "Ａ１"],
+  "orderedArray": ["1-2-3", "1-3-2"],
+  "unorderedArray": ["wind", "wave", "exhibition"]
+}

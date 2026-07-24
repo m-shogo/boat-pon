@@ -1,0 +1,25 @@
+{
+  "sourceSchemaVersion": "fixture-envelope-v1",
+  "payloadType": "historical_closing_odds",
+  "canonicalRaceKey": "2026-07-24:01:R1",
+  "payload": {
+    "selections": [
+      { "selection": "1-2-3", "odds": 11.8 },
+      { "selection": "1-3-2", "odds": 17.2 }
+    ],
+    "scheduledCloseObservationId": "obs-schedule-v1",
+    "scheduledCloseAtSeen": "2026-07-24T06:20:00.000Z",
+    "observedAt": "2026-07-25T00:00:00.000Z",
+    "minutesBeforeCloseAtCapture": 0,
+    "checkpointLabelAtCapture": "ad-hoc",
+    "checkpointPolicyVersion": "t-minus-nearest-v1",
+    "marketKind": "historical_closing"
+  },
+  "sourcePublishedAt": null,
+  "sourceObservedAt": "2026-07-25T00:00:00.000Z",
+  "firstSeenAt": "2026-07-25T00:00:00.000Z",
+  "timingQuality": "observed_only",
+  "sourceQuality": "sanitized_fixture",
+  "measurementQuality": "historical_closing_only",
+  "effectiveAt": null
+}
