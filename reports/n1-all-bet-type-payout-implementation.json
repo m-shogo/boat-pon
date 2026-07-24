@@ -100,7 +100,11 @@
     "n1ReviewVerifier": "PASS",
     "changedDiffSecretScan": "PASS",
     "fullHistorySecretScan": "PRE_EXISTING_9_FINDINGS",
-    "remoteCi": "PENDING"
+    "remoteCi": {
+      "status": "PASS",
+      "runUrl": "https://github.com/m-shogo/boat-pon/actions/runs/30074956319",
+      "verifiedCommit": "b0e3dc99667d12f3fbc3dd552dfa51cc5ab2fe43"
+    }
   },
   "blockers": [
     "permanent sidecar rollout requires separate approval",

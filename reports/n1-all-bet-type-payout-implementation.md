@@ -80,4 +80,4 @@ npm run research:n1:payout:readiness
 
 Legacy consumer、Legacy ROI、BUY/WATCH/SKIP、予測、collector、shadow writer、operational GC、N2、model、productionには変更を加えていない。次の作業は別承認による永続Research Replay sidecar rolloutとfuture result collectorの設計レビューであり、本タスクでは進めない。
 
-ローカル検証は450 tests、typecheck、production build、F0 golden、DB health、data quality、N1 review verifier、変更diffのsecret scanがPASSした。repository全履歴のgitleaksには既存9 findingが残るが、今回diffは0 finding。remote CIはcommit/push後に別途確認する。
+ローカル検証は450 tests、typecheck、production build、F0 golden、DB health、data quality、N1 review verifier、変更diffのsecret scanがPASSした。repository全履歴のgitleaksには既存9 findingが残るが、今回diffは0 finding。remote CIも[`run 30074956319`](https://github.com/m-shogo/boat-pon/actions/runs/30074956319)でPASSした。
