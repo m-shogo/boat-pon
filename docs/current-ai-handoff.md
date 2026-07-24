@@ -26,13 +26,14 @@
 - 正式な収益評価は、2026-07-21 15:15 JST以降に公式networkから直接取得したfuture-only T-5だけでやり直す。
 - DB肥大化の新規増加は抑制済みだが、13.98GiBの原本圧縮は未実施。
 - Phase N0「全券種＋選手PIT＋独自研究軸データ取得可能性・保存設計監査」は読み取り専用で完了した。DB migration、実収集、モデル、production接続は未着手。
-- N0後の正本は`docs/research-platform-master-plan.md`、研究40件と破綻防止契約の機械可読台帳は`docs/research-idea-register.json`。Stage F0とF0-Rは`COMPLETE`。F0-Rは独立sidecar `f0r.2.0`へrollout済みだがshadow writer/GCはOFF、live collectorは未接続。次はN1 schema/migration再レビュー待ち。
+- N0後の正本は`docs/research-platform-master-plan.md`、研究40件と破綻防止契約の機械可読台帳は`docs/research-idea-register.json`。Stage F0とF0-Rは`COMPLETE`。F0-Rは独立sidecar `f0r.2.0`へrollout済みで、承認gateを`f0r-approval-v2`へhardeningした。shadow writer/GCはOFF、live collectorは未接続。N1 schema/migration実装前レビューは`docs/n1-all-bet-type-payout-review.md`で`CONDITIONAL`完了、実装は別承認待ち。
 - 現行formalは`legacy_t5_formal / legacy-t5-v1 / formal_forward`の固定benchmark、新方式は`market_intelligence / shadow_forward`として評価系列を分離する。
 
 ## 絶対にしてはいけないこと
 
 - `data/boat.sqlite`への`INSERT / UPDATE / DELETE / DROP`
 - 明示承認なしのresearch sidecar writer/GC有効化
+- readiness実行内でhuman approvalを生成・補完・推測すること
 - `app_settings`変更
 - 本番decisionロジック・モデル閾値・BudgetRule変更
 - 自動投票、投票サイト操作、ログイン情報保存

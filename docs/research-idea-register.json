@@ -25,6 +25,8 @@
       "overall_status": "COMPLETE",
       "implementation_status": "COMPLETE",
       "sidecar_schema_version": "f0r.2.0",
+      "approval_contract_version": "f0r-approval-v2",
+      "approval_gate_status": "PASS",
       "rollout_mode": "sidecar_shadow_default_off",
       "implemented_contract_ids": ["FC08B", "FC12", "FC14B"],
       "evidence": ["docs/research-replay-rollout.md", "reports/research-replay-rollout-readiness.json"],
@@ -32,7 +34,18 @@
       "operational_gc_enabled": false,
       "live_collector_connected": false,
       "production_db_written": false,
-      "next_stage": "N1_REVIEW_REQUIRES_SEPARATE_APPROVAL",
+      "next_stage": "N1_IMPLEMENTATION_REQUIRES_SEPARATE_APPROVAL",
+      "auto_advance": false
+    },
+    "N1": {
+      "overall_status": "CONDITIONAL",
+      "review_status": "COMPLETE",
+      "implementation_status": "NOT_STARTED",
+      "preferred_target": "data/research-replay.sqlite",
+      "migration_status": "DESIGN_ONLY_NOT_APPLIED",
+      "parser_status": "NOT_IMPLEMENTED",
+      "evidence": ["docs/n1-all-bet-type-payout-review.md", "reports/n1-all-bet-type-payout-readiness.json"],
+      "next_stage": "N1_IMPLEMENTATION_REQUIRES_SEPARATE_APPROVAL",
       "auto_advance": false
     }
   },

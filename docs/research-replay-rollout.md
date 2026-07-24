@@ -4,7 +4,7 @@
 
 ## 結論
 
-Stage F0-Rは`COMPLETE`である。F0の五層evidence schemaを変更せず、expand-onlyな`f0r.2.0`を独立sidecar `data/research-replay.sqlite`へ適用した。`data/boat.sqlite`はread-only fingerprint監査だけに使用し、schema、`app_settings`、Legacy collector、BUY/WATCH/SKIP、通知、評価系列へ接続していない。
+Stage F0-Rは`COMPLETE`である。F0の五層evidence schemaを変更せず、expand-onlyな`f0r.2.0`を独立sidecar `data/research-replay.sqlite`へ適用した。2026-07-24に承認gateを`f0r-approval-v2`へhardeningし、readiness自身が承認を生成できない構造へ修正した。`data/boat.sqlite`はread-only fingerprint監査だけに使用し、schema、`app_settings`、Legacy collector、BUY/WATCH/SKIP、通知、評価系列へ接続していない。
 
 実測正本:
 
@@ -24,6 +24,20 @@ Stage F0-Rは`COMPLETE`である。F0の五層evidence schemaを変更せず、e
 - Phase N1: 未開始
 
 sidecar、raw、backupはGit管理外である。sidecarに保存したのはschema ledger、F0-R開始承認、default-OFF config、backup/restore/health auditだけで、公式データ収集やdecisionは行っていない。
+
+## Human approval gate v2
+
+承認記録とreadinessを分離した。`research:approval:record`だけがgrant/revoke/supersedeをappendでき、`research:rollout:readiness`はscope、source、reference、target stage/schema/contract、approved_at、mode、content hash、lifecycleを検証するだけで承認rowを作らない。
+
+- contract: `f0r-approval-v2`
+- resolver: `f0r-approval-resolver-v1`
+- grant / lifecycle: append-only
+- production実行: simulated approvalを拒否
+- 承認なし: `BLOCKED / HUMAN_APPROVAL_MISSING`
+- target不一致、rollout後承認、revoked、superseded、hash不一致: default-deny
+- 旧`f0r-start-approval-v1`: target contractやreferenceを検証できないためv2承認として数えない
+
+旧イベントは削除・更新しない。新しい明示grantと、旧イベントを不適格とする訂正lifecycleを追記し、過去の誤った承認扱いを隠さない。
 
 ## Expand-only compatibility
 
@@ -99,6 +113,7 @@ F0-R固有contract `FC08B`、`FC12`、`FC14B`は完了した。
 
 ```sh
 # temp/root指定のreadiness。data/boat.sqliteはread-only監査
+# 先に同じtemp sidecarへ全field明示のsimulated approvalを記録する
 pnpm research:rollout:dry-run -- --root=/tmp/boat-pon-f0r
 
 # 実sidecarのreadiness再検証。新しいbackupとreportを作る
@@ -109,4 +124,4 @@ pnpm research:rollout:readiness
 
 ## 次工程
 
-次候補はPhase N1「全券種払戻基盤」のschema/migration再レビューである。F0-R完了だけではN1実装を自動許可しない。N1のscopeとmigrationを再確認し、別の明示承認を受けるまで停止する。
+Phase N1「全券種払戻基盤」のschema/migration実装前レビューは`CONDITIONAL`で完了した。詳細は[`n1-all-bet-type-payout-review.md`](n1-all-bet-type-payout-review.md)。N1 parser、migration適用、外部取得、collector接続は別の明示承認まで開始しない。

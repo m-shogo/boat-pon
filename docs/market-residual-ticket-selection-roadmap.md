@@ -13,7 +13,7 @@
 - 残差モデル学習は、T-5全市場と正式結果について既存の最低1,000 settled gateを満たすまで開始しない。
 - production判定への接続は、固定条件のfuture-only検証を通過するまで禁止する。
 
-現行formal settled固定条件蓄積は継続する。新研究側の順序は`Stage 0 → F0 → F0-R → N1 → D1 → N2 → N3 → N4 → D2 → E1 → E2 → N5 → N6 → N7 → N8`で固定する。F0/F0-Rは完了し、次の独立タスク候補はN1 schema/migration再レビューである。N1実装は別承認まで開始しない。
+現行formal settled固定条件蓄積は継続する。新研究側の順序は`Stage 0 → F0 → F0-R → N1 → D1 → N2 → N3 → N4 → D2 → E1 → E2 → N5 → N6 → N7 → N8`で固定する。F0/F0-Rは完了し、F0-R承認gateはv2へhardening済み。N1 schema/migration実装前レビューは`CONDITIONAL`で完了した。保存先候補はResearch Replay sidecar、詳細は[`n1-all-bet-type-payout-review.md`](n1-all-bet-type-payout-review.md)。20-case fixture、parser、migration適用は別承認まで開始しない。
 
 現行benchmarkは`decision_system=legacy_t5_formal`、`strategy_version=legacy-t5-v1`、`evaluation_mode=formal_forward`。これはfixed enrollment protocolのprospective cohortであり、報告時にfrozen analysis snapshotを作る。新方式は`decision_system=market_intelligence`、versioned strategy、`evaluation_mode=shadow_forward`、versioned enrollment/snapshotとする。
 

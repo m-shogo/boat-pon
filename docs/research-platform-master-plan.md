@@ -13,7 +13,7 @@
 - 市場モデル詳細: [`market-residual-ticket-selection-roadmap.md`](market-residual-ticket-selection-roadmap.md)
 - 現在地: [`current-ai-handoff.md`](current-ai-handoff.md)
 
-Phase N0、Stage 0、Stage F0「Research Replay Foundation」、Stage F0-R「Research Replay Foundation Rollout」は完了している。F0はtemp/sidecar vertical sliceとMac/Linux golden hash一致、F0-Rは独立sidecar `f0r.2.0`、backup/restore、WAL/lock、crash recovery、failure isolation、operational GC canaryまで確認した。F0-R証跡は[`research-replay-rollout.md`](research-replay-rollout.md)と[`../reports/research-replay-rollout-readiness.json`](../reports/research-replay-rollout-readiness.json)を正本とする。N1、収集、モデル、production接続へは進んでいない。
+Phase N0、Stage 0、Stage F0「Research Replay Foundation」、Stage F0-R「Research Replay Foundation Rollout」は完了している。F0はtemp/sidecar vertical sliceとMac/Linux golden hash一致、F0-Rは独立sidecar `f0r.2.0`、backup/restore、WAL/lock、crash recovery、failure isolation、operational GC canaryまで確認した。承認gateは`f0r-approval-v2`へhardeningし、readinessによる自己承認を禁止した。F0-R証跡は[`research-replay-rollout.md`](research-replay-rollout.md)と[`../reports/research-replay-rollout-readiness.json`](../reports/research-replay-rollout-readiness.json)を正本とする。N1実装前レビューは[`n1-all-bet-type-payout-review.md`](n1-all-bet-type-payout-review.md)で`CONDITIONAL`まで完了したが、N1実装、収集、モデル、production接続へは進んでいない。
 
 ## 2. 現在の確定状態
 
@@ -26,7 +26,7 @@ Phase N0、Stage 0、Stage F0「Research Replay Foundation」、Stage F0-R「Res
 - F0 sidecar schema `f0.1.0`、五層lineage、PIT/leakage guard、Evidence Pin、FC08A、FC14A、golden fixtureを実装した。CLI/testの既定はtempであり、永続sidecarとlive collectorには未接続。
 - F0 implementationとcross-environment golden verificationは`COMPLETE`。
 - F0-Rは`COMPLETE`。実sidecarのshadow writer/operational GCはdefault `OFF`で、live collectorへ未接続。
-- 次候補はN1 schema/migration再レビューであり、N1実装には別の明示承認が必要。
+- N1 schema/migration実装前レビューは`CONDITIONAL`で完了。20-case fixture、parser、fixture DB migration、N1実装には別の明示承認が必要。
 
 ## 3. 二つの評価系列を混ぜない
 
