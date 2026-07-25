@@ -1,6 +1,6 @@
 # boat-pon AI作業引継ぎ（正本）
 
-更新: 2026-07-24
+更新: 2026-07-25
 
 この文書は、過去チャットを読めない別のAIチャットが現在地を誤解せず再開するための入口である。数値は更新時点のスナップショットなので、作業開始時に下記コマンドで再計測する。
 
@@ -26,7 +26,9 @@
 - 正式な収益評価は、2026-07-21 15:15 JST以降に公式networkから直接取得したfuture-only T-5だけでやり直す。
 - DB肥大化の新規増加は抑制済みだが、13.98GiBの原本圧縮は未実施。
 - Phase N0「全券種＋選手PIT＋独自研究軸データ取得可能性・保存設計監査」は読み取り専用で完了した。DB migration、実収集、モデル、production接続は未着手。
-- N0後の正本は`docs/research-platform-master-plan.md`、研究40件と破綻防止契約の機械可読台帳は`docs/research-idea-register.json`。Stage F0とF0-Rは`COMPLETE`。Phase N1-A offline foundationも`COMPLETE`で、schema `n1-settlement.0.1`、20-case fixture、7券種parser、8,164 archive dry-run、Legacy read-only reconciliationを実装済み。永続N1 migration、live collector、N2は別承認待ち。shadow writer/GCはOFF。
+- N0後の正本は`docs/research-platform-master-plan.md`、研究40件と破綻防止契約の機械可読台帳は`docs/research-idea-register.json`。Stage F0とF0-Rは`COMPLETE`。Phase N1-A offline foundationも`COMPLETE`で、schema `n1-settlement.0.1`、20-case fixture、7券種parser、8,164 archive dry-run、Legacy read-only reconciliationを実装済み。
+- Phase N1-B（Permanent Settlement Schema Rollout & Capacity Gate）は`CONDITIONAL`。`n1-settlement.0.1`を永続sidecar `data/research-replay.sqlite`へ**zero-data**で適用済み（全7 table 0件、checksum一致、trigger 14、integrity ok）。実archive stratified sample（75 files / 11,621 races）で容量実測し、full backfill projected DB ≈10.5GB（base）は現1GiB quotaに**収まらない**。evidence pinはDBの約33%（full ≈23M行）でOption B削減を決定。正本は`docs/n1-settlement-permanent-rollout.md`、backfill契約は`docs/n1-settlement-backfill-design.md`。
+- N1-C historical backfill、live collector、N2はquota引き上げ＋evidence pin変更＋別承認待ち。shadow writer/GCはOFF。
 - 現行formalは`legacy_t5_formal / legacy-t5-v1 / formal_forward`の固定benchmark、新方式は`market_intelligence / shadow_forward`として評価系列を分離する。
 
 ## 絶対にしてはいけないこと
@@ -193,7 +195,8 @@ Phase N0の確定事項:
 1. 現行`legacy_t5_formal`はfixed enrollment protocolのprospective cohortとして、条件を変えずmembershipをappendする。報告・common comparison時にfrozen analysis snapshotを別作成する。
 2. Stage F0はsidecar schema `f0.1.0`、五層lineage、immutable capture lifecycle、raw/semantic二重判定、raw security、canonical identity、checkpoint freeze、versioned resolver、単方向supersession、FC08A/FC14A、golden fixtureまでtemp DBで実装済み。証跡は`docs/research-replay-foundation.md`と`reports/research-replay-foundation.json`。
 3. F0-Rで`data/research-replay.sqlite`へexpand-only schemaをrolloutし、FC08B/FC12/FC14Bを検証した。`data/boat.sqlite`はread-only fingerprint監査のみ。shadow writer/GCはOFF、live collector未接続である。
-4. N1-A offline foundationは完了した。公式K archive 8,164件は全件parse成功し、1,194,007 race、11,514,006 payout lineを再構築した。Legacy fixture照合は主line 720件一致、N1 only 720件、payout mismatch 0。永続N1 migrationは未適用である。
+4. N1-A offline foundationは完了した。公式K archive 8,164件は全件parse成功し、1,194,007 race、11,514,006 payout lineを再構築した。Legacy fixture照合は主line 720件一致、N1 only 720件、payout mismatch 0。
+4b. N1-Bで`n1-settlement.0.1`を永続sidecarへzero-dataで適用した（明示承認`N1_PERMANENT_SETTLEMENT_SCHEMA_ROLLOUT`、backup→migration→post-gate→restore-copy canary）。容量benchmarkでfull backfill ≈10.5GBが1GiB quota超過、evidence pin ≈23M行の重複を確認。N1-Cはquota引き上げ＋evidence pin Option B＋別承認まで開始しない。正本`docs/n1-settlement-permanent-rollout.md`。
 5. 新方式は`market_intelligence / shadow_forward`として、manifest、decision、ticket、cohort、ROI、gate、reportをLegacyから分離する。
 6. model学習はN5開始gate、production検討はN8と独立production gateまで行わない。
 7. DB圧縮は人間の明示承認後、runbook通り別候補DBで実施する。
