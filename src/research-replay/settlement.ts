@@ -167,11 +167,23 @@ export function initializeN1SettlementSchema(db: DatabaseSync, now = new Date().
 export function verifyN1SettlementSchema(db: DatabaseSync): {
   ok: boolean; version: string | null; checksumMatches: boolean; appendOnlyTriggerCount: number;
 } {
+  const hasLedger = Boolean(db.prepare(
+    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='n1_schema_migrations'",
+  ).get());
+  if (!hasLedger) {
+    return { ok: false, version: null, checksumMatches: false, appendOnlyTriggerCount: 0 };
+  }
   const row = db.prepare("SELECT migration_version,checksum,status FROM n1_schema_migrations WHERE migration_version=?")
     .get(N1_SETTLEMENT_SCHEMA_VERSION) as { migration_version: string; checksum: string; status: string } | undefined;
+  // N1 settlement tableに限定してtriggerを数える。F0-Rのrollout_approval_*_v2_append_only_*等を混入させない。
+  const expectedTriggers = TABLES.flatMap((table) => [
+    `${table}_append_only_update`,
+    `${table}_append_only_delete`,
+  ]);
+  const placeholders = expectedTriggers.map(() => "?").join(",");
   const triggerCount = Number((db.prepare(
-    `SELECT COUNT(*) count FROM sqlite_master WHERE type='trigger' AND name LIKE '%_v2_append_only_%'`,
-  ).get() as { count: number }).count);
+    `SELECT COUNT(*) count FROM sqlite_master WHERE type='trigger' AND name IN (${placeholders})`,
+  ).get(...expectedTriggers) as { count: number }).count);
   return {
     ok: verifySidecarSchema(db).ok && row?.status === "applied"
       && row.checksum === N1_SETTLEMENT_MIGRATION_CHECKSUM && triggerCount === TABLES.length * 2,
