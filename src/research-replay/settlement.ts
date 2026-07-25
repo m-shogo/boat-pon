@@ -193,6 +193,155 @@ export function verifyN1SettlementSchema(db: DatabaseSync): {
   };
 }
 
+// n1-settlement.0.2: expand-onlyでbackfill checkpoint tableを追加する（N1-Cで使用）。
+// 0.1のtable/triggerは変更しない。checkpointはevent-sourced append-only（1 chunk試行=1 row、
+// 最新rowが有効）。
+export const N1_BACKFILL_SCHEMA_VERSION = "n1-settlement.0.2";
+
+const N1_BACKFILL_SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS n1_settlement_backfill_checkpoints (
+  checkpoint_id TEXT PRIMARY KEY,
+  archive_file TEXT NOT NULL,
+  source_archive_sha256 TEXT NOT NULL CHECK(length(source_archive_sha256)=64),
+  parser_version TEXT NOT NULL,
+  source_schema_family TEXT NOT NULL,
+  first_race_key TEXT,
+  last_race_key TEXT,
+  expected_race_count INTEGER NOT NULL CHECK(expected_race_count>=0),
+  parsed_race_count INTEGER NOT NULL CHECK(parsed_race_count>=0),
+  candidate_count INTEGER NOT NULL CHECK(candidate_count>=0),
+  payout_line_count INTEGER NOT NULL CHECK(payout_line_count>=0),
+  refund_line_count INTEGER NOT NULL CHECK(refund_line_count>=0),
+  transaction_batch_size INTEGER NOT NULL CHECK(transaction_batch_size>=1),
+  resume_token TEXT,
+  state TEXT NOT NULL CHECK(state IN ('completed','failed','quarantined')),
+  retry_count INTEGER NOT NULL CHECK(retry_count>=0),
+  failure_reason TEXT,
+  migration_version TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  completed_at TEXT
+) STRICT;
+CREATE INDEX IF NOT EXISTS n1_backfill_checkpoints_file ON n1_settlement_backfill_checkpoints(archive_file, created_at);
+CREATE TRIGGER IF NOT EXISTS n1_settlement_backfill_checkpoints_append_only_update BEFORE UPDATE ON n1_settlement_backfill_checkpoints BEGIN SELECT RAISE(ABORT,'append-only table'); END;
+CREATE TRIGGER IF NOT EXISTS n1_settlement_backfill_checkpoints_append_only_delete BEFORE DELETE ON n1_settlement_backfill_checkpoints BEGIN SELECT RAISE(ABORT,'append-only table'); END;
+`;
+
+export const N1_BACKFILL_MIGRATION_CHECKSUM = createHash("sha256").update(N1_BACKFILL_SCHEMA_SQL).digest("hex");
+
+// 0.1適用済みの上にexpand-onlyで0.2を積む。0.1未適用なら先に0.1を適用する。
+export function initializeN1BackfillSchema(db: DatabaseSync, now = new Date().toISOString()): void {
+  if (!verifyN1SettlementSchema(db).ok) initializeN1SettlementSchema(db, now);
+  const row = db.prepare("SELECT checksum,status FROM n1_schema_migrations WHERE migration_version=?")
+    .get(N1_BACKFILL_SCHEMA_VERSION) as { checksum: string; status: string } | undefined;
+  if (row?.checksum !== undefined && row.checksum !== N1_BACKFILL_MIGRATION_CHECKSUM) {
+    throw new Error("N1 backfill migration checksum mismatch");
+  }
+  if (row?.status === "applied") return;
+  if (!row) db.prepare(`INSERT INTO n1_schema_migrations VALUES (?,?,?,?,?,'partial')`)
+    .run("rr-n1-settlement-002", N1_BACKFILL_SCHEMA_VERSION, N1_BACKFILL_MIGRATION_CHECKSUM, now, process.version);
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.exec(N1_BACKFILL_SCHEMA_SQL);
+    db.prepare("UPDATE n1_schema_migrations SET status='applied',applied_at=?,runtime_version=? WHERE migration_version=?")
+      .run(now, process.version, N1_BACKFILL_SCHEMA_VERSION);
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+}
+
+export function verifyN1BackfillSchema(db: DatabaseSync): {
+  ok: boolean; version: string | null; checksumMatches: boolean; appendOnlyTriggerCount: number;
+} {
+  const hasTable = Boolean(db.prepare(
+    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='n1_settlement_backfill_checkpoints'",
+  ).get());
+  const hasLedger = Boolean(db.prepare(
+    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='n1_schema_migrations'",
+  ).get());
+  if (!hasLedger || !hasTable) return { ok: false, version: null, checksumMatches: false, appendOnlyTriggerCount: 0 };
+  const row = db.prepare("SELECT migration_version,checksum,status FROM n1_schema_migrations WHERE migration_version=?")
+    .get(N1_BACKFILL_SCHEMA_VERSION) as { migration_version: string; checksum: string; status: string } | undefined;
+  const triggerCount = Number((db.prepare(
+    `SELECT COUNT(*) count FROM sqlite_master WHERE type='trigger' AND name IN
+     ('n1_settlement_backfill_checkpoints_append_only_update','n1_settlement_backfill_checkpoints_append_only_delete')`,
+  ).get() as { count: number }).count);
+  return {
+    ok: verifyN1SettlementSchema(db).ok && row?.status === "applied"
+      && row.checksum === N1_BACKFILL_MIGRATION_CHECKSUM && triggerCount === 2,
+    version: row?.migration_version ?? null,
+    checksumMatches: row?.checksum === N1_BACKFILL_MIGRATION_CHECKSUM,
+    appendOnlyTriggerCount: triggerCount,
+  };
+}
+
+export type BackfillCheckpointInput = {
+  archiveFile: string;
+  sourceArchiveSha256: string;
+  parserVersion: string;
+  sourceSchemaFamily: string;
+  firstRaceKey: string | null;
+  lastRaceKey: string | null;
+  expectedRaceCount: number;
+  parsedRaceCount: number;
+  candidateCount: number;
+  payoutLineCount: number;
+  refundLineCount: number;
+  transactionBatchSize: number;
+  resumeToken: string | null;
+  state: "completed" | "failed" | "quarantined";
+  retryCount: number;
+  failureReason: string | null;
+  createdAt: string;
+  completedAt: string | null;
+};
+
+export class BackfillCheckpointRepository {
+  constructor(private readonly db: DatabaseSync, private readonly idFactory: () => string = randomUUID) {}
+
+  record(input: BackfillCheckpointInput): string {
+    const id = this.idFactory();
+    this.db.prepare(`
+      INSERT INTO n1_settlement_backfill_checkpoints
+      (checkpoint_id, archive_file, source_archive_sha256, parser_version, source_schema_family,
+       first_race_key, last_race_key, expected_race_count, parsed_race_count, candidate_count,
+       payout_line_count, refund_line_count, transaction_batch_size, resume_token, state,
+       retry_count, failure_reason, migration_version, created_at, completed_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    `).run(
+      id, input.archiveFile, input.sourceArchiveSha256, input.parserVersion, input.sourceSchemaFamily,
+      input.firstRaceKey, input.lastRaceKey, input.expectedRaceCount, input.parsedRaceCount, input.candidateCount,
+      input.payoutLineCount, input.refundLineCount, input.transactionBatchSize, input.resumeToken, input.state,
+      input.retryCount, input.failureReason, N1_BACKFILL_SCHEMA_VERSION, canonicalUtcTimestamp(input.createdAt),
+      input.completedAt ? canonicalUtcTimestamp(input.completedAt) : null,
+    );
+    return id;
+  }
+
+  latest(archiveFile: string): { state: string; retryCount: number } | null {
+    const row = this.db.prepare(`
+      SELECT state, retry_count FROM n1_settlement_backfill_checkpoints
+      WHERE archive_file=? ORDER BY created_at DESC, rowid DESC LIMIT 1
+    `).get(archiveFile) as { state: string; retry_count: number } | undefined;
+    return row ? { state: row.state, retryCount: row.retry_count } : null;
+  }
+
+  isCompleted(archiveFile: string): boolean {
+    return this.latest(archiveFile)?.state === "completed";
+  }
+
+  completedCount(): number {
+    return Number((this.db.prepare(`
+      SELECT COUNT(*) c FROM (
+        SELECT archive_file, state,
+               ROW_NUMBER() OVER (PARTITION BY archive_file ORDER BY created_at DESC, rowid DESC) rn
+        FROM n1_settlement_backfill_checkpoints
+      ) WHERE rn=1 AND state='completed'
+    `).get() as { c: number }).c);
+  }
+}
+
 export type CandidateInput = {
   canonicalRaceKey: string;
   betType: SettlementBetType;
@@ -210,6 +359,10 @@ export type CandidateInput = {
   correctionReason?: string | null;
   payouts: Array<{ selection: string; payoutYen: number; popularity?: number | null; lineKind?: "payout" | "special_payout" }>;
   refunds?: Array<{ selection?: string | null; scope: "selection" | "bet_type" | "race"; refundYenPer100?: number | null; reasonCode: string }>;
+  // Option B: falseにするとexplicit evidence pinを保存しない。candidateの
+  // raw_document_id/parse_run_id/observation_id へのON DELETE RESTRICT FKを暗黙GC pinとして扱う。
+  // 既定trueでN1-A挙動を維持。full backfill(N1-C)はfalseで約3行/candidateの重複を削減する。
+  emitEvidencePins?: boolean;
 };
 
 export class SettlementRepository {
@@ -289,11 +442,13 @@ export class SettlementRepository {
         line.selection?.normalized ?? null, line.selection?.canonical ?? null, line.scope,
         line.refundYenPer100 ?? null, line.reasonCode, now,
       ));
-      const evidenceHash = canonicalHash({ rawDocumentId: input.rawDocumentId, parseRunId: input.parseRunId, observationId: input.observationId });
-      const pin = this.db.prepare(`INSERT INTO settlement_evidence_pins_v2 VALUES (?,?,?,?,?,?)`);
-      pin.run(this.idFactory(), candidateId, "raw_document", input.rawDocumentId, evidenceHash, now);
-      pin.run(this.idFactory(), candidateId, "parse_run", input.parseRunId, evidenceHash, now);
-      pin.run(this.idFactory(), candidateId, "domain_observation", input.observationId, evidenceHash, now);
+      if (input.emitEvidencePins ?? true) {
+        const evidenceHash = canonicalHash({ rawDocumentId: input.rawDocumentId, parseRunId: input.parseRunId, observationId: input.observationId });
+        const pin = this.db.prepare(`INSERT INTO settlement_evidence_pins_v2 VALUES (?,?,?,?,?,?)`);
+        pin.run(this.idFactory(), candidateId, "raw_document", input.rawDocumentId, evidenceHash, now);
+        pin.run(this.idFactory(), candidateId, "parse_run", input.parseRunId, evidenceHash, now);
+        pin.run(this.idFactory(), candidateId, "domain_observation", input.observationId, evidenceHash, now);
+      }
       this.db.exec("COMMIT");
     } catch (error) {
       this.db.exec("ROLLBACK");

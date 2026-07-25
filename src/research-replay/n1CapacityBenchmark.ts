@@ -238,6 +238,7 @@ export type CapacityBenchmark = {
   externalRequests: 0;
   primaryDbWrites: 0;
   permanentSidecarWrites: 0;
+  evidencePinMode: "explicit" | "implicit";
   schemaVersion: string;
   migrationChecksum: string;
   sample: SampleSelection;
@@ -269,10 +270,13 @@ export async function runCapacityBenchmark(input: {
   quotaBytes?: number;
   workRoot?: string;
   generatedAt?: string;
+  // "explicit"=candidate毎3 pin(現行/N1-A)、"implicit"=Option B(candidate FKのみ、pin無し)。
+  evidencePinMode?: "explicit" | "implicit";
 }): Promise<CapacityBenchmark> {
   const generatedAt = input.generatedAt ?? new Date().toISOString();
   const quotaBytes = input.quotaBytes ?? 1024 * 1024 * 1024;
   const targetRaces = input.targetRaces ?? 10_000;
+  const emitEvidencePins = (input.evidencePinMode ?? "explicit") === "explicit";
   const sample = selectSampleFiles(input.archiveRoot, targetRaces);
   const work = mkdtempSync(join(input.workRoot ?? tmpdir(), "n1b-capacity-"));
   const dbPath = join(work, "benchmark.sqlite");
@@ -409,14 +413,14 @@ export async function runCapacityBenchmark(input: {
             canonicalRaceKey: raceKey, betType, settlementStatus: status, resultKind,
             revisionKind: "initial", resolutionStatus: "resolved", sourceKind: "official_archive",
             sourceSchemaVersion: family, observationId, parseRunId, rawDocumentId: raw.rawDocumentId,
-            observedAt: generatedAt, payouts: bucket.payouts, refunds: bucket.refunds,
+            observedAt: generatedAt, payouts: bucket.payouts, refunds: bucket.refunds, emitEvidencePins,
           });
           if (!result.inserted) continue;
           counts.settlementCandidates += 1;
           counts.betTypeCandidateCounts[betType] = (counts.betTypeCandidateCounts[betType] ?? 0) + 1;
           counts.payoutLines += bucket.payouts.length;
           counts.refundLines += bucket.refunds.length;
-          counts.evidencePins += 3;
+          counts.evidencePins += emitEvidencePins ? 3 : 0;
           counts.specialPayoutLines += bucket.payouts.filter((line) => line.lineKind === "special_payout").length;
           if (status === "refunded") counts.specialCases.refundedCandidates += 1;
           if (status === "partially_refunded") counts.specialCases.partiallyRefundedCandidates += 1;
@@ -524,6 +528,7 @@ export async function runCapacityBenchmark(input: {
     externalRequests: 0,
     primaryDbWrites: 0,
     permanentSidecarWrites: 0,
+    evidencePinMode: emitEvidencePins ? "explicit" : "implicit",
     schemaVersion: N1_SETTLEMENT_SCHEMA_VERSION,
     migrationChecksum: N1_SETTLEMENT_MIGRATION_CHECKSUM,
     sample,
