@@ -1,0 +1,480 @@
+{
+  "benchmarkVersion": "n1-capacity-benchmark-v1",
+  "externalRequests": 0,
+  "primaryDbWrites": 0,
+  "permanentSidecarWrites": 0,
+  "schemaVersion": "n1-settlement.0.1",
+  "migrationChecksum": "35903ee175dbb31cbc7202aa573a2e1b4f6d58d9b6954cfac4cee0fdfa4eb94d",
+  "sample": {
+    "seed": "n1b-capacity-stratified-v1",
+    "selectionRule": "sort(all k*.lzh); force-include first 6 of 2000s (legacy schema); from each of 2000s/2010s/2020s pick evenly-spaced files until per-bucket quota; deterministic index math, no RNG",
+    "targetRaces": 10000,
+    "files": [
+      {
+        "file": "k000101.lzh",
+        "decade": "2000s"
+      },
+      {
+        "file": "k000102.lzh",
+        "decade": "2000s"
+      },
+      {
+        "file": "k000103.lzh",
+        "decade": "2000s"
+      },
+      {
+        "file": "k000104.lzh",
+        "decade": "2000s"
+      },
+      {
+        "file": "k000105.lzh",
+        "decade": "2000s"
+      },
+      {
+        "file": "k000106.lzh",
+        "decade": "2000s"
+      },
+      {
+        "file": "k000327.lzh",
+        "decade": "2000s"
+      },
+      {
+        "file": "k040712.lzh",
+        "decade": "2000s"
+      },
+      {
+        "file": "k041006.lzh",
+        "decade": "2000s"
+      },
+      {
+        "file": "k041231.lzh",
+        "decade": "2000s"
+      },
+      {
+        "file": "k050327.lzh",
+        "decade": "2000s"
+      },
+      {
+        "file": "k050621.lzh",
+        "decade": "2000s"
+      },
+      {
+        "file": "k050915.lzh",
+        "decade": "2000s"
+      },
+      {
+        "file": "k051210.lzh",
+        "decade": "2000s"
+      },
+      {
+        "file": "k060306.lzh",
+        "decade": "2000s"
+      },
+      {
+        "file": "k060531.lzh",
+        "decade": "2000s"
+      },
+      {
+        "file": "k060825.lzh",
+        "decade": "2000s"
+      },
+      {
+        "file": "k061119.lzh",
+        "decade": "2000s"
+      },
+      {
+        "file": "k070213.lzh",
+        "decade": "2000s"
+      },
+      {
+        "file": "k070510.lzh",
+        "decade": "2000s"
+      },
+      {
+        "file": "k070804.lzh",
+        "decade": "2000s"
+      },
+      {
+        "file": "k071029.lzh",
+        "decade": "2000s"
+      },
+      {
+        "file": "k080123.lzh",
+        "decade": "2000s"
+      },
+      {
+        "file": "k080418.lzh",
+        "decade": "2000s"
+      },
+      {
+        "file": "k080713.lzh",
+        "decade": "2000s"
+      },
+      {
+        "file": "k100101.lzh",
+        "decade": "2010s"
+      },
+      {
+        "file": "k100526.lzh",
+        "decade": "2010s"
+      },
+      {
+        "file": "k101018.lzh",
+        "decade": "2010s"
+      },
+      {
+        "file": "k110312.lzh",
+        "decade": "2010s"
+      },
+      {
+        "file": "k110821.lzh",
+        "decade": "2010s"
+      },
+      {
+        "file": "k120113.lzh",
+        "decade": "2010s"
+      },
+      {
+        "file": "k120606.lzh",
+        "decade": "2010s"
+      },
+      {
+        "file": "k121029.lzh",
+        "decade": "2010s"
+      },
+      {
+        "file": "k130323.lzh",
+        "decade": "2010s"
+      },
+      {
+        "file": "k130815.lzh",
+        "decade": "2010s"
+      },
+      {
+        "file": "k140107.lzh",
+        "decade": "2010s"
+      },
+      {
+        "file": "k140601.lzh",
+        "decade": "2010s"
+      },
+      {
+        "file": "k141024.lzh",
+        "decade": "2010s"
+      },
+      {
+        "file": "k150318.lzh",
+        "decade": "2010s"
+      },
+      {
+        "file": "k150810.lzh",
+        "decade": "2010s"
+      },
+      {
+        "file": "k160102.lzh",
+        "decade": "2010s"
+      },
+      {
+        "file": "k160526.lzh",
+        "decade": "2010s"
+      },
+      {
+        "file": "k161018.lzh",
+        "decade": "2010s"
+      },
+      {
+        "file": "k170312.lzh",
+        "decade": "2010s"
+      },
+      {
+        "file": "k170804.lzh",
+        "decade": "2010s"
+      },
+      {
+        "file": "k171227.lzh",
+        "decade": "2010s"
+      },
+      {
+        "file": "k180521.lzh",
+        "decade": "2010s"
+      },
+      {
+        "file": "k181013.lzh",
+        "decade": "2010s"
+      },
+      {
+        "file": "k190307.lzh",
+        "decade": "2010s"
+      },
+      {
+        "file": "k190730.lzh",
+        "decade": "2010s"
+      },
+      {
+        "file": "k200101.lzh",
+        "decade": "2020s"
+      },
+      {
+        "file": "k200404.lzh",
+        "decade": "2020s"
+      },
+      {
+        "file": "k200707.lzh",
+        "decade": "2020s"
+      },
+      {
+        "file": "k201009.lzh",
+        "decade": "2020s"
+      },
+      {
+        "file": "k210111.lzh",
+        "decade": "2020s"
+      },
+      {
+        "file": "k210415.lzh",
+        "decade": "2020s"
+      },
+      {
+        "file": "k210718.lzh",
+        "decade": "2020s"
+      },
+      {
+        "file": "k211020.lzh",
+        "decade": "2020s"
+      },
+      {
+        "file": "k220122.lzh",
+        "decade": "2020s"
+      },
+      {
+        "file": "k220426.lzh",
+        "decade": "2020s"
+      },
+      {
+        "file": "k220729.lzh",
+        "decade": "2020s"
+      },
+      {
+        "file": "k221031.lzh",
+        "decade": "2020s"
+      },
+      {
+        "file": "k230202.lzh",
+        "decade": "2020s"
+      },
+      {
+        "file": "k230507.lzh",
+        "decade": "2020s"
+      },
+      {
+        "file": "k230809.lzh",
+        "decade": "2020s"
+      },
+      {
+        "file": "k231111.lzh",
+        "decade": "2020s"
+      },
+      {
+        "file": "k240213.lzh",
+        "decade": "2020s"
+      },
+      {
+        "file": "k240517.lzh",
+        "decade": "2020s"
+      },
+      {
+        "file": "k240819.lzh",
+        "decade": "2020s"
+      },
+      {
+        "file": "k241121.lzh",
+        "decade": "2020s"
+      },
+      {
+        "file": "k250223.lzh",
+        "decade": "2020s"
+      },
+      {
+        "file": "k250528.lzh",
+        "decade": "2020s"
+      },
+      {
+        "file": "k250830.lzh",
+        "decade": "2020s"
+      },
+      {
+        "file": "k251202.lzh",
+        "decade": "2020s"
+      },
+      {
+        "file": "k260306.lzh",
+        "decade": "2020s"
+      }
+    ],
+    "strataCounts": {
+      "2000s": 25,
+      "2010s": 25,
+      "2020s": 25
+    }
+  },
+  "counts": {
+    "sampleFiles": 75,
+    "rawDocuments": 75,
+    "rawBytes": 13202530,
+    "parseRuns": 75,
+    "domainObservations": 11621,
+    "settlementCandidates": 74673,
+    "payoutLines": 104404,
+    "refundLines": 4397,
+    "evidencePins": 224019,
+    "specialPayoutLines": 0,
+    "betTypeCandidateCounts": {
+      "win": 10877,
+      "place": 10951,
+      "quinella": 10647,
+      "exacta": 11294,
+      "wide": 10292,
+      "trifecta": 10310,
+      "trio": 10302
+    },
+    "races": 11621,
+    "venuesSeen": 24,
+    "decadesSeen": [
+      "2000s",
+      "2010s",
+      "2020s"
+    ],
+    "schemaFamilies": {
+      "legacy_pre_trifecta": 7,
+      "modern_seven_display": 68
+    },
+    "specialCases": {
+      "refundedCandidates": 2873,
+      "partiallyRefundedCandidates": 0,
+      "multiLinePayoutCandidates": 21398,
+      "specialPayoutCandidates": 0
+    }
+  },
+  "measurements": {
+    "dbPageCount": 24898,
+    "dbPageSize": 4096,
+    "dbBytes": 101982208,
+    "freelistPages": 0,
+    "walPeakBytes": 4206552,
+    "backupBytes": 99340288,
+    "restoreBytes": 99340288,
+    "tablePageBytes": {
+      "asof_resolution_policies": 4096,
+      "capture_attempt_events": 4096,
+      "capture_attempts": 4096,
+      "capture_events_attempt": 4096,
+      "capture_raw_links": 4096,
+      "domain_observations": 4345856,
+      "domain_observations_race_type_time": 909312,
+      "evidence_pins": 4096,
+      "evidence_tombstones": 4096,
+      "n1_schema_migrations": 4096,
+      "parse_runs": 28672,
+      "parse_runs_raw": 4096,
+      "race_asof_manifest_expectations": 4096,
+      "race_asof_manifest_items": 4096,
+      "race_asof_manifests": 4096,
+      "race_identity_aliases": 4096,
+      "race_payout_lines_v2": 8568832,
+      "race_refund_lines_v2": 417792,
+      "raw_documents": 28672,
+      "research_schema_migrations": 4096,
+      "settlement_candidates_v2": 20443136,
+      "settlement_conflict_groups_v2": 4096,
+      "settlement_conflict_members_v2": 4096,
+      "settlement_evidence_pins_v2": 33755136,
+      "settlement_resolution_events_v2": 4096,
+      "sqlite_autoindex_asof_resolution_policies_1": 4096,
+      "sqlite_autoindex_asof_resolution_policies_2": 4096,
+      "sqlite_autoindex_capture_attempt_events_1": 4096,
+      "sqlite_autoindex_capture_attempts_1": 4096,
+      "sqlite_autoindex_capture_raw_links_1": 4096,
+      "sqlite_autoindex_capture_raw_links_2": 4096,
+      "sqlite_autoindex_domain_observations_1": 266240,
+      "sqlite_autoindex_evidence_pins_1": 4096,
+      "sqlite_autoindex_evidence_pins_2": 4096,
+      "sqlite_autoindex_evidence_tombstones_1": 4096,
+      "sqlite_autoindex_n1_schema_migrations_1": 4096,
+      "sqlite_autoindex_n1_schema_migrations_2": 4096,
+      "sqlite_autoindex_parse_runs_1": 4096,
+      "sqlite_autoindex_race_asof_manifest_expectations_1": 4096,
+      "sqlite_autoindex_race_asof_manifest_expectations_2": 4096,
+      "sqlite_autoindex_race_asof_manifest_items_1": 4096,
+      "sqlite_autoindex_race_asof_manifest_items_2": 4096,
+      "sqlite_autoindex_race_asof_manifests_1": 4096,
+      "sqlite_autoindex_race_asof_manifests_2": 4096,
+      "sqlite_autoindex_race_identity_aliases_1": 4096,
+      "sqlite_autoindex_race_identity_aliases_2": 4096,
+      "sqlite_autoindex_race_payout_lines_v2_1": 2064384,
+      "sqlite_autoindex_race_payout_lines_v2_2": 2203648,
+      "sqlite_autoindex_race_refund_lines_v2_1": 86016,
+      "sqlite_autoindex_race_refund_lines_v2_2": 90112,
+      "sqlite_autoindex_raw_documents_1": 4096,
+      "sqlite_autoindex_raw_documents_2": 12288,
+      "sqlite_autoindex_raw_documents_3": 12288,
+      "sqlite_autoindex_research_schema_migrations_1": 4096,
+      "sqlite_autoindex_research_schema_migrations_2": 4096,
+      "sqlite_autoindex_settlement_candidates_v2_1": 1511424,
+      "sqlite_autoindex_settlement_candidates_v2_2": 7667712,
+      "sqlite_autoindex_settlement_conflict_groups_v2_1": 4096,
+      "sqlite_autoindex_settlement_conflict_members_v2_1": 4096,
+      "sqlite_autoindex_settlement_conflict_members_v2_2": 4096,
+      "sqlite_autoindex_settlement_evidence_pins_v2_1": 4595712,
+      "sqlite_autoindex_settlement_evidence_pins_v2_2": 11075584,
+      "sqlite_autoindex_settlement_resolution_events_v2_1": 4096,
+      "sqlite_autoindex_typed_observation_payloads_1": 266240,
+      "sqlite_schema": 36864,
+      "typed_observation_payloads": 3416064
+    },
+    "indexPageBytes": 30879744,
+    "indexOverheadRatio": 0.302795405253434,
+    "evidencePinTableBytes": 33755136,
+    "evidencePinShareOfDb": 0.33099044099927705,
+    "timingsMs": {
+      "migrationMs": 3.05725,
+      "insertMs": 11519.517083,
+      "replayMs": 13.871,
+      "backupMs": 212.792458,
+      "restoreMs": 206.790167
+    }
+  },
+  "projection": {
+    "bytesPerRace": 8775.682643490232,
+    "bytesPerCandidate": 1365.7173007646672,
+    "bytesPerPayoutLine": 976.8036473698326,
+    "bytesPerEvidencePin": 455.2391002548891,
+    "walAmplification": 0.04124790081030605,
+    "backupAmplification": 0.9740943047634348,
+    "projectedFullDbBytes": {
+      "low": 8906492530,
+      "base": 10478226506,
+      "high": 13097783133
+    },
+    "projectedRawStoreBytes": {
+      "low": 1221568489,
+      "base": 1437139399,
+      "high": 1796424249
+    },
+    "projectedBackupBytes": {
+      "low": 8675763649,
+      "base": 10206780764,
+      "high": 12758475955
+    },
+    "projectedTempFreeSpaceBytes": 22393592411,
+    "projectedFullCandidates": 7672325,
+    "projectedFullPayoutLines": 10727055,
+    "projectedFullEvidencePins": 23016974,
+    "currentQuotaBytes": 1073741824,
+    "fitsCurrentQuota": false,
+    "recommendedQuotaBytes": 17128338488,
+    "recommendedLowWaterBytes": 34256676977,
+    "recommendedBackupRetention": 3,
+    "diskFreeBytes": 421502107648
+  },
+  "generatedAt": "2026-07-25T01:15:59.628Z"
+}
