@@ -7,7 +7,7 @@ boat-pon の CLI が増えてきたため、用途別に整理した索引です
 - `fetch:*` / `backfill:*` は外部取得を伴う可能性があります。
 - `report:*` / `check:*` / `audit:*` は基本的に read-only です。
 - 自動投票・ログイン保存・投票サイト操作は入れません。
-- N0後の最上位計画は[`research-platform-master-plan.md`](research-platform-master-plan.md)、研究・破綻防止契約台帳は[`research-idea-register.json`](research-idea-register.json)を参照してください。Stage F0/F0-Rは完了し、N1-A offline foundationは完了、N1-B Permanent Settlement Schema Rolloutは`CONDITIONAL`（`n1-settlement.0.1`を永続sidecarへzero-data適用済み、N1-C backfillはquota/evidence pin/別承認待ち）です。
+- N0後の最上位計画は[`research-platform-master-plan.md`](research-platform-master-plan.md)、研究・破綻防止契約台帳は[`research-idea-register.json`](research-idea-register.json)を参照してください。Stage F0/F0-Rは完了し、N1-A offline foundationは完了、N1-B Permanent Settlement Schema Rolloutは`CONDITIONAL`（`n1-settlement.0.1`を永続sidecarへzero-data適用済み、N1-C backfillはquota/evidence pin/別承認待ち）です。N1-C準備（Option B writer・`n1-settlement.0.2` checkpoint schema・backfill executor）は実装＋temp/restore検証済みで、永続sidecarへの0.2適用と実backfillは未実行です。
 
 ## Research Replay Foundation
 
@@ -125,6 +125,8 @@ pnpm review:suite -- --from 2026-01-01 --to 2026-06-03 --split-date 2026-04-01 -
 | `pnpm research:n1:rollout:capacity -- --write-reports` | N1-B: 実archive stratified sampleで容量・性能・evidence pin冗長を実測しfull backfill projectionを生成 |
 | `pnpm research:n1:rollout:readiness` | N1-B: N1-B明示承認・primary read-only・pre-migration gateを確認（apply=false、承認なしはBLOCKED） |
 | `pnpm research:n1:rollout:apply -- --write-reports` | N1-B: 承認済み時のみ`n1-settlement.0.1`を永続sidecarへzero-data適用（backup→migration→post-gate→restore-copy canary） |
+| `pnpm research:n1:rollout:capacity -- --write-reports` | N1-C準備: explicit/implicit(Option B)を同一sampleで比較し、evidence pin廃止時のDB削減(-48.6%)とprojectionを出力 |
+| `pnpm research:n1:rollout:backfill-sample -- --max-files=3` | N1-C準備: 使い捨てtemp sidecarで実archive sample backfillを検証（Option B pin=0・冪等resume、永続sidecar/primary非接続） |
 | `pnpm audit:t5-historical-market-forward` | 2023-2024固定履歴モデルとT-5市場を同一raceのformal futureで比較 |
 | `pnpm analyze:historical-ranking-forward` | 2023-2024番組・展示だけで学習し2025/2026を着順確率・実払戻で固定forward評価 |
 | `pnpm audit:odds-timeseries-storage` | 時系列DBの日別重複率・物理肥大化を読み取り専用監査 |

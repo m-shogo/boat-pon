@@ -3,6 +3,7 @@
   "externalRequests": 0,
   "primaryDbWrites": 0,
   "permanentSidecarWrites": 0,
+  "evidencePinMode": "explicit",
   "schemaVersion": "n1-settlement.0.1",
   "migrationChecksum": "35903ee175dbb31cbc7202aa573a2e1b4f6d58d9b6954cfac4cee0fdfa4eb94d",
   "sample": {
@@ -436,11 +437,11 @@
     "evidencePinTableBytes": 33755136,
     "evidencePinShareOfDb": 0.33099044099927705,
     "timingsMs": {
-      "migrationMs": 3.05725,
-      "insertMs": 11519.517083,
-      "replayMs": 13.871,
-      "backupMs": 212.792458,
-      "restoreMs": 206.790167
+      "migrationMs": 3.093916,
+      "insertMs": 11499.342292,
+      "replayMs": 6.549208,
+      "backupMs": 209.128458,
+      "restoreMs": 215.88575
     }
   },
   "projection": {
@@ -474,7 +475,23 @@
     "recommendedQuotaBytes": 17128338488,
     "recommendedLowWaterBytes": 34256676977,
     "recommendedBackupRetention": 3,
-    "diskFreeBytes": 421502107648
+    "diskFreeBytes": 419478753280
   },
-  "generatedAt": "2026-07-25T01:15:59.628Z"
+  "generatedAt": "2026-07-25T07:16:35.020Z",
+  "optionBComparison": {
+    "explicitDbBytes": 101982208,
+    "implicitDbBytes": 52379648,
+    "dbBytesReduction": 49602560,
+    "dbBytesReductionRatio": 0.48638444855008434,
+    "explicitProjectedFullDbBase": 10478226506,
+    "implicitProjectedFullDbBase": 5381780085,
+    "implicitProjectedFullDbBand": {
+      "low": 4574513072,
+      "base": 5381780085,
+      "high": 6727225106
+    },
+    "implicitFitsCurrentQuota": false,
+    "implicitRecommendedQuotaBytes": 9802196758,
+    "implicitEvidencePins": 0
+  }
 }

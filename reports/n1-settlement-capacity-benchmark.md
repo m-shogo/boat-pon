@@ -32,7 +32,7 @@
 
 ## Timings (ms)
 
-migration 3.1 / insert 11519.5 / replay 13.9 / backup 212.8 / restore 206.8
+migration 3.1 / insert 11499.3 / replay 6.5 / backup 209.1 / restore 215.9
 
 ## Full-backfill projection (11621 → 8164 files / 1,194,007 races)
 
@@ -49,7 +49,7 @@ migration 3.1 / insert 11519.5 / replay 13.9 / backup 212.8 / restore 206.8
 
 ## Quota verdict
 
-- current quota: 1.00 GiB / disk free: 392.55 GiB
+- current quota: 1.00 GiB / disk free: 390.67 GiB
 - fits current quota: **NO**
 - recommended quota: **15.95 GiB**
 - recommended low-water: 31.90 GiB
@@ -57,3 +57,17 @@ migration 3.1 / insert 11519.5 / replay 13.9 / backup 212.8 / restore 206.8
 
 > evidence pinがDBの約33%を占める。candidate毎に3行の重複pinを保存しており、
 > full backfillで約23.0M行になる。candidate FKを暗黙pinとして扱うOption Bで削減余地がある。
+
+
+## Option B（implicit pin）比較 — evidence pin廃止時
+
+| 指標 | explicit(現行) | implicit(Option B) |
+|---|---:|---:|
+| sample DB bytes | 101982208 | 52379648 |
+| projected full DB base | 9.76 GiB | 5.01 GiB |
+| evidence pins (sample) | 224019 | 0 |
+
+- DB削減: 48.6%（0.05 GiB）
+- Option B projected full DB: base **5.01 GiB**（low 4.26 GiB / high 6.27 GiB）
+- Option Bでも現1GiB quotaには収まらない: **収まらない** / 推奨quota 9.13 GiB
+- N1-C backfillは `emitEvidencePins=false`（candidate FKを暗黙GC pin）で実行する。
