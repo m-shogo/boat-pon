@@ -1,4 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
   runCapacityBenchmark,
@@ -8,6 +9,13 @@ import {
   runN1PermanentRollout,
   type N1PermanentRolloutReport,
 } from "../src/research-replay/n1Rollout";
+import { listArchiveFiles, runBackfill } from "../src/research-replay/n1Backfill";
+import { RawStore } from "../src/research-replay/rawStore";
+import {
+  initializeN1BackfillSchema,
+  verifyN1BackfillSchema,
+} from "../src/research-replay/settlement";
+import { openSidecarDatabase, initializeSidecarSchema } from "../src/research-replay/schema";
 
 const root = resolve(process.cwd());
 const command = process.argv[2] ?? "readiness";
@@ -23,10 +31,29 @@ function gib(bytes: number): string {
   return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GiB`;
 }
 
-function capacityMarkdown(report: CapacityBenchmark): string {
+function capacityMarkdown(report: CapacityBenchmark, optionB?: {
+  explicitDbBytes: number; implicitDbBytes: number; dbBytesReduction: number; dbBytesReductionRatio: number;
+  explicitProjectedFullDbBase: number; implicitProjectedFullDbBase: number;
+  implicitProjectedFullDbBand: { low: number; base: number; high: number };
+  implicitFitsCurrentQuota: boolean; implicitRecommendedQuotaBytes: number; implicitEvidencePins: number;
+}): string {
   const p = report.projection;
   const m = report.measurements;
   const c = report.counts;
+  const optionBSection = optionB ? `
+
+## Option B（implicit pin）比較 — evidence pin廃止時
+
+| 指標 | explicit(現行) | implicit(Option B) |
+|---|---:|---:|
+| sample DB bytes | ${optionB.explicitDbBytes} | ${optionB.implicitDbBytes} |
+| projected full DB base | ${gib(optionB.explicitProjectedFullDbBase)} | ${gib(optionB.implicitProjectedFullDbBase)} |
+| evidence pins (sample) | ${c.evidencePins} | ${optionB.implicitEvidencePins} |
+
+- DB削減: ${(optionB.dbBytesReductionRatio * 100).toFixed(1)}%（${gib(optionB.dbBytesReduction)}）
+- Option B projected full DB: base **${gib(optionB.implicitProjectedFullDbBand.base)}**（low ${gib(optionB.implicitProjectedFullDbBand.low)} / high ${gib(optionB.implicitProjectedFullDbBand.high)}）
+- Option Bでも現1GiB quotaには収まらない: **${optionB.implicitFitsCurrentQuota ? "収まる" : "収まらない"}** / 推奨quota ${gib(optionB.implicitRecommendedQuotaBytes)}
+- N1-C backfillは \`emitEvidencePins=false\`（candidate FKを暗黙GC pin）で実行する。` : "";
   return `# N1 settlement capacity benchmark
 
 - benchmark: \`${report.benchmarkVersion}\`
@@ -86,6 +113,7 @@ migration ${m.timingsMs.migrationMs.toFixed(1)} / insert ${m.timingsMs.insertMs.
 
 > evidence pinがDBの約${((m.evidencePinShareOfDb ?? 0) * 100).toFixed(0)}%を占める。candidate毎に3行の重複pinを保存しており、
 > full backfillで約${(p.projectedFullEvidencePins / 1_000_000).toFixed(1)}M行になる。candidate FKを暗黙pinとして扱うOption Bで削減余地がある。
+${optionBSection}
 `;
 }
 
@@ -152,18 +180,61 @@ async function main(): Promise<void> {
   if (command === "capacity-benchmark") {
     const targetArg = process.argv.find((arg) => arg.startsWith("--target-races="));
     const targetRaces = targetArg ? Number(targetArg.slice("--target-races=".length)) : 10_000;
-    const report = await runCapacityBenchmark({
-      archiveRoot: join(root, "data", "raw", "official", "results"),
-      targetRaces,
-      quotaBytes: 1024 * 1024 * 1024,
-      generatedAt: now,
-    });
+    const archiveRoot = join(root, "data", "raw", "official", "results");
+    const explicit = await runCapacityBenchmark({ archiveRoot, targetRaces, quotaBytes: 1024 * 1024 * 1024, generatedAt: now, evidencePinMode: "explicit" });
+    // Option B(implicit pin)の削減効果を同一sampleで実測する。
+    const implicit = await runCapacityBenchmark({ archiveRoot, targetRaces, quotaBytes: 1024 * 1024 * 1024, generatedAt: now, evidencePinMode: "implicit" });
+    const report = {
+      ...explicit,
+      optionBComparison: {
+        explicitDbBytes: explicit.measurements.dbBytes,
+        implicitDbBytes: implicit.measurements.dbBytes,
+        dbBytesReduction: explicit.measurements.dbBytes - implicit.measurements.dbBytes,
+        dbBytesReductionRatio: 1 - implicit.measurements.dbBytes / explicit.measurements.dbBytes,
+        explicitProjectedFullDbBase: explicit.projection.projectedFullDbBytes.base,
+        implicitProjectedFullDbBase: implicit.projection.projectedFullDbBytes.base,
+        implicitProjectedFullDbBand: implicit.projection.projectedFullDbBytes,
+        implicitFitsCurrentQuota: implicit.projection.fitsCurrentQuota,
+        implicitRecommendedQuotaBytes: implicit.projection.recommendedQuotaBytes,
+        implicitEvidencePins: implicit.counts.evidencePins,
+      },
+    };
     if (writeReports) {
       mkdirSync(join(root, "reports"), { recursive: true });
       writeFileSync(CAPACITY_JSON, `${JSON.stringify(report, null, 2)}\n`);
-      writeFileSync(CAPACITY_MD, capacityMarkdown(report));
+      writeFileSync(CAPACITY_MD, capacityMarkdown(explicit, report.optionBComparison));
     }
-    console.log(JSON.stringify(report.projection, null, 2));
+    console.log(JSON.stringify({ explicit: explicit.projection.projectedFullDbBytes, optionB: report.optionBComparison }, null, 2));
+    return;
+  }
+
+  if (command === "backfill-sample") {
+    // 使い捨てtemp sidecarで実archiveのsample backfillを検証する。永続sidecarとdata/boat.sqliteは触らない。
+    const maxArg = process.argv.find((arg) => arg.startsWith("--max-files="));
+    const maxFiles = maxArg ? Number(maxArg.slice("--max-files=".length)) : 3;
+    const archiveRoot = join(root, "data", "raw", "official", "results");
+    const work = mkdtempSync(join(tmpdir(), "n1-backfill-sample-"));
+    const db = openSidecarDatabase(join(work, "sidecar.sqlite"));
+    db.exec("PRAGMA synchronous = OFF;");
+    initializeSidecarSchema(db, now);
+    initializeN1BackfillSchema(db, now);
+    const files = listArchiveFiles(archiveRoot);
+    const summary = await runBackfill({ db, rawStore: new RawStore(join(work, "raw")), archiveFiles: files, now, maxFiles });
+    const rerun = await runBackfill({ db, rawStore: new RawStore(join(work, "raw")), archiveFiles: files, now, maxFiles });
+    const pins = Number((db.prepare("SELECT COUNT(*) c FROM settlement_evidence_pins_v2").get() as { c: number }).c);
+    const candidates = Number((db.prepare("SELECT COUNT(*) c FROM settlement_candidates_v2").get() as { c: number }).c);
+    const out = {
+      mode: "disposable_temp_db", permanentSidecarWrites: 0, primaryDbWrites: 0,
+      backfillSchemaOk: verifyN1BackfillSchema(db).ok,
+      firstRun: { processedFiles: summary.processedFiles, candidates: summary.candidates, payoutLines: summary.payoutLines, refundLines: summary.refundLines, parsedRaces: summary.parsedRaces, failedFiles: summary.failedFiles },
+      rerunIdempotent: { skippedCompleted: rerun.skippedCompleted, processedFiles: rerun.processedFiles, candidatesUnchanged: candidates === summary.candidates },
+      evidencePinsExplicit: pins,
+      optionBPinsZero: pins === 0,
+      foreignKeyViolations: db.prepare("PRAGMA foreign_key_check").all().length,
+    };
+    db.close();
+    rmSync(work, { recursive: true, force: true });
+    console.log(JSON.stringify(out, null, 2));
     return;
   }
 

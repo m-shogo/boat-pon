@@ -38,6 +38,7 @@
     "research:n1:rollout:capacity": "tsx scripts/research-replay-n1-rollout.ts capacity-benchmark",
     "research:n1:rollout:readiness": "tsx scripts/research-replay-n1-rollout.ts readiness",
     "research:n1:rollout:apply": "tsx scripts/research-replay-n1-rollout.ts apply",
+    "research:n1:rollout:backfill-sample": "tsx scripts/research-replay-n1-rollout.ts backfill-sample",
     "dev:web": "vite",
     "dev:api": "tsx watch server/index.ts",
     "import:official": "tsx scripts/import-official-file.ts",

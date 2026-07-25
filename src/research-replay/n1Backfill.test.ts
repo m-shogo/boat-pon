@@ -1,0 +1,111 @@
+import assert from "node:assert/strict";
+import { existsSync, mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import test from "node:test";
+import { RawStore } from "./rawStore";
+import { initializeSidecarSchema, openSidecarDatabase } from "./schema";
+import {
+  BackfillCheckpointRepository,
+  initializeN1BackfillSchema,
+  initializeN1SettlementSchema,
+  N1_BACKFILL_MIGRATION_CHECKSUM,
+  N1_BACKFILL_SCHEMA_VERSION,
+  verifyN1BackfillSchema,
+  verifyN1SettlementSchema,
+} from "./settlement";
+import { listArchiveFiles, runBackfill } from "./n1Backfill";
+
+const NOW = "2026-07-25T04:00:00.000Z";
+const ARCHIVE_ROOT = join("data", "raw", "official", "results");
+
+function setup() {
+  const root = mkdtempSync(join(tmpdir(), "n1-backfill-test-"));
+  const db = openSidecarDatabase(join(root, "sidecar.sqlite"));
+  db.exec("PRAGMA synchronous = OFF;");
+  initializeSidecarSchema(db, NOW);
+  return { root, db };
+}
+
+test("n1-settlement.0.2 is an expand-only add on top of 0.1 (0.1 unchanged, checkpoint append-only)", () => {
+  const { db } = setup();
+  initializeN1SettlementSchema(db, NOW);
+  assert.equal(verifyN1SettlementSchema(db).ok, true);
+  assert.equal(verifyN1SettlementSchema(db).appendOnlyTriggerCount, 14);
+
+  initializeN1BackfillSchema(db, NOW);
+  // 0.1は不変。
+  assert.equal(verifyN1SettlementSchema(db).ok, true);
+  assert.equal(verifyN1SettlementSchema(db).appendOnlyTriggerCount, 14);
+  const backfill = verifyN1BackfillSchema(db);
+  assert.equal(backfill.ok, true);
+  assert.equal(backfill.version, N1_BACKFILL_SCHEMA_VERSION);
+  assert.equal(backfill.checksumMatches, true);
+  assert.equal(backfill.appendOnlyTriggerCount, 2);
+  assert.equal((db.prepare("PRAGMA foreign_key_check").all()).length, 0);
+  // append-only。
+  db.prepare(`INSERT INTO n1_settlement_backfill_checkpoints
+    (checkpoint_id,archive_file,source_archive_sha256,parser_version,source_schema_family,
+     first_race_key,last_race_key,expected_race_count,parsed_race_count,candidate_count,
+     payout_line_count,refund_line_count,transaction_batch_size,resume_token,state,
+     retry_count,failure_reason,migration_version,created_at,completed_at)
+    VALUES ('c1','k000101.lzh',?,'v1','official_archive',NULL,NULL,0,0,0,0,0,1,NULL,'completed',0,NULL,?,?,?)`)
+    .run("0".repeat(64), N1_BACKFILL_SCHEMA_VERSION, NOW, NOW);
+  assert.throws(() => db.prepare("UPDATE n1_settlement_backfill_checkpoints SET state='failed'").run(), /append-only/);
+  db.close();
+});
+
+test("backfill migration checksum mismatch is default-deny", () => {
+  const { db } = setup();
+  initializeN1SettlementSchema(db, NOW);
+  db.prepare(`INSERT INTO n1_schema_migrations VALUES (?,?,?,?,?,'partial')`)
+    .run("bad", N1_BACKFILL_SCHEMA_VERSION, "0".repeat(64), NOW, process.version);
+  assert.throws(() => initializeN1BackfillSchema(db, NOW), /checksum mismatch/);
+  assert.notEqual(N1_BACKFILL_MIGRATION_CHECKSUM, "0".repeat(64));
+  db.close();
+});
+
+test("checkpoint repository is event-sourced: latest state wins, completedCount counts distinct files", () => {
+  const { db } = setup();
+  initializeN1SettlementSchema(db, NOW);
+  initializeN1BackfillSchema(db, NOW);
+  let seq = 0;
+  const repo = new BackfillCheckpointRepository(db, () => `cp-${++seq}`);
+  const base = {
+    sourceArchiveSha256: "a".repeat(64), parserVersion: "v1", sourceSchemaFamily: "official_archive",
+    firstRaceKey: null, lastRaceKey: null, expectedRaceCount: 0, parsedRaceCount: 0, candidateCount: 0,
+    payoutLineCount: 0, refundLineCount: 0, transactionBatchSize: 1000, resumeToken: null,
+    retryCount: 0, failureReason: null, createdAt: NOW, completedAt: null,
+  };
+  repo.record({ ...base, archiveFile: "k1.lzh", state: "failed", createdAt: "2026-07-25T04:00:00.000Z" });
+  repo.record({ ...base, archiveFile: "k1.lzh", state: "completed", retryCount: 1, createdAt: "2026-07-25T04:05:00.000Z", completedAt: "2026-07-25T04:05:00.000Z" });
+  repo.record({ ...base, archiveFile: "k2.lzh", state: "failed", createdAt: "2026-07-25T04:06:00.000Z" });
+  assert.equal(repo.isCompleted("k1.lzh"), true);
+  assert.equal(repo.isCompleted("k2.lzh"), false);
+  assert.equal(repo.latest("k1.lzh")?.retryCount, 1);
+  assert.equal(repo.completedCount(), 1);
+  db.close();
+});
+
+test("backfill executor ingests sample files, writes zero evidence pins (Option B), and is idempotent", { skip: !existsSync(ARCHIVE_ROOT) }, async () => {
+  const { root, db } = setup();
+  initializeN1SettlementSchema(db, NOW);
+  initializeN1BackfillSchema(db, NOW);
+  const rawStore = new RawStore(join(root, "raw"));
+  const files = listArchiveFiles(ARCHIVE_ROOT).slice(0, 2);
+  const first = await runBackfill({ db, rawStore, archiveFiles: files, now: NOW, maxFiles: 2 });
+  assert.equal(first.processedFiles, 2);
+  assert.ok(first.candidates > 0);
+  // Option B: candidateはあってもexplicit pinは0。
+  const pins = Number((db.prepare("SELECT COUNT(*) c FROM settlement_evidence_pins_v2").get() as { c: number }).c);
+  assert.equal(pins, 0);
+  const candidatesAfterFirst = Number((db.prepare("SELECT COUNT(*) c FROM settlement_candidates_v2").get() as { c: number }).c);
+  // 冪等: 再実行はcheckpoint completedをskipし、candidateは増えない。
+  const second = await runBackfill({ db, rawStore, archiveFiles: files, now: NOW, maxFiles: 2 });
+  assert.equal(second.skippedCompleted, 2);
+  assert.equal(second.processedFiles, 0);
+  const candidatesAfterSecond = Number((db.prepare("SELECT COUNT(*) c FROM settlement_candidates_v2").get() as { c: number }).c);
+  assert.equal(candidatesAfterSecond, candidatesAfterFirst);
+  assert.equal((db.prepare("PRAGMA foreign_key_check").all()).length, 0);
+  db.close();
+});
