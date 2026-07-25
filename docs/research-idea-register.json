@@ -38,16 +38,33 @@
       "auto_advance": false
     },
     "N1": {
-      "overall_status": "N1_A_COMPLETE",
+      "overall_status": "N1_B_CONDITIONAL",
       "review_status": "COMPLETE",
       "implementation_status": "OFFLINE_FOUNDATION_COMPLETE",
       "preferred_target": "data/research-replay.sqlite",
-      "migration_status": "TEMP_PASS_PERMANENT_NOT_APPLIED",
+      "migration_status": "PERMANENT_ZERO_DATA_APPLIED",
       "schema_version": "n1-settlement.0.1",
+      "migration_checksum": "35903ee175dbb31cbc7202aa573a2e1b4f6d58d9b6954cfac4cee0fdfa4eb94d",
       "parser_status": "SEVEN_BET_TYPES_ARCHIVE_AND_SANITIZED_WEB_FIXTURE_PASS",
       "archive_status": "8164_OF_8164_PASS",
-      "evidence": ["docs/n1-all-bet-type-payout-review.md", "reports/n1-all-bet-type-payout-readiness.json", "reports/n1-all-bet-type-payout-implementation.json"],
-      "next_stage": "N1_PERMANENT_ROLLOUT_REQUIRES_SEPARATE_APPROVAL",
+      "n1b": {
+        "status": "CONDITIONAL",
+        "approval_scope": "N1_PERMANENT_SETTLEMENT_SCHEMA_ROLLOUT",
+        "approval_id": "n1b-permanent-settlement-schema-rollout-20260725",
+        "permanent_row_counts_zero": true,
+        "capacity_sample_races": 11621,
+        "projected_full_db_bytes_base": 10478226506,
+        "fits_current_quota": false,
+        "recommended_quota_bytes": 17128338488,
+        "evidence_pin_share_of_db": 0.331,
+        "projected_evidence_pins": 23016974,
+        "evidence_pin_decision": "OPTION_B_CANDIDATE_FK_IMPLICIT_PIN_AT_N1C",
+        "shadow_write_enabled": false,
+        "operational_gc_enabled": false,
+        "historical_backfill_executed": false
+      },
+      "evidence": ["docs/n1-all-bet-type-payout-review.md", "reports/n1-all-bet-type-payout-implementation.json", "docs/n1-settlement-permanent-rollout.md", "docs/n1-settlement-backfill-design.md", "reports/n1-settlement-capacity-benchmark.json", "reports/n1-settlement-permanent-rollout-readiness.json"],
+      "next_stage": "N1C_BACKFILL_REQUIRES_QUOTA_RAISE_EVIDENCE_PIN_OPTION_B_AND_SEPARATE_APPROVAL",
       "auto_advance": false
     }
   },

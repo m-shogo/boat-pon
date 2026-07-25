@@ -26,7 +26,8 @@ Phase N0、Stage 0、Stage F0、Stage F0-Rは完了している。F0-Rは独立s
 - F0 sidecar schema `f0.1.0`、五層lineage、PIT/leakage guard、Evidence Pin、FC08A、FC14A、golden fixtureを実装した。CLI/testの既定はtempであり、永続sidecarとlive collectorには未接続。
 - F0 implementationとcross-environment golden verificationは`COMPLETE`。
 - F0-Rは`COMPLETE`。実sidecarのshadow writer/operational GCはdefault `OFF`で、live collectorへ未接続。
-- N1-A offline foundationは`COMPLETE`。永続sidecar rolloutとlive collectorは別の明示承認が必要。
+- N1-A offline foundationは`COMPLETE`。
+- N1-B Permanent Settlement Schema Rollout & Capacity Gateは`CONDITIONAL`。`n1-settlement.0.1`を永続sidecarへzero-dataで適用済み。実archive sample容量benchmarkでfull backfill ≈10.5GB > 1GiB quota、evidence pin ≈23M行重複を確認。N1-Cはquota引き上げ＋evidence pin Option B＋別承認まで開始しない。正本`docs/n1-settlement-permanent-rollout.md`。
 
 ## 3. 二つの評価系列を混ぜない
 
@@ -299,7 +300,9 @@ N5開始前には別の`Model Experiment Registry`を必須にする。fixed tra
 - rollback: 新規派生層を切り離し、raw/Legacy結果を保持。
 - 次stage: D1。
 - production eligibility: 公式事実層のread-only利用のみ。
-- N1-A result: offline foundation `COMPLETE`。schema `n1-settlement.0.1`、20 fixture、7券種parser、temp migration、全8,164 archive dry-run、Legacy reconciliationがPASS。永続rolloutは未適用。
+- N1-A result: offline foundation `COMPLETE`。schema `n1-settlement.0.1`、20 fixture、7券種parser、temp migration、全8,164 archive dry-run、Legacy reconciliationがPASS。
+- N1-B result: Permanent Settlement Schema Rollout & Capacity Gate `CONDITIONAL`。永続sidecarへzero-dataで`n1-settlement.0.1`適用（全7 table 0件、checksum一致、trigger 14、backup→post-gate→restore-copy canary PASS、primary read-only証明）。容量: sample 11,621 races、bytes/race ≈8,776、projected full DB base ≈10.5GB（8.9–13.1）、evidence pin share ≈33%、projected pin ≈23M。fits 1GiB quota=NO、推奨quota ≈17GB。N1-Cはquota引き上げ＋evidence pin Option B＋別承認待ち。
+- N1-B evidence: [`../reports/n1-settlement-capacity-benchmark.md`](../reports/n1-settlement-capacity-benchmark.md)、[`../reports/n1-settlement-permanent-rollout-readiness.md`](../reports/n1-settlement-permanent-rollout-readiness.md)、[`n1-settlement-permanent-rollout.md`](n1-settlement-permanent-rollout.md)、[`n1-settlement-backfill-design.md`](n1-settlement-backfill-design.md)。
 - evidence: [`../reports/n1-all-bet-type-payout-implementation.md`](../reports/n1-all-bet-type-payout-implementation.md)、[`../reports/n1-all-bet-type-payout-implementation.json`](../reports/n1-all-bet-type-payout-implementation.json)。
 
 ### Stage D1: Diagnostic Ledger Foundation

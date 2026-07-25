@@ -7,7 +7,7 @@ boat-pon の CLI が増えてきたため、用途別に整理した索引です
 - `fetch:*` / `backfill:*` は外部取得を伴う可能性があります。
 - `report:*` / `check:*` / `audit:*` は基本的に read-only です。
 - 自動投票・ログイン保存・投票サイト操作は入れません。
-- N0後の最上位計画は[`research-platform-master-plan.md`](research-platform-master-plan.md)、研究・破綻防止契約台帳は[`research-idea-register.json`](research-idea-register.json)を参照してください。Stage F0/F0-Rは完了し、N1はschema/migration再レビューと別承認待ちです。
+- N0後の最上位計画は[`research-platform-master-plan.md`](research-platform-master-plan.md)、研究・破綻防止契約台帳は[`research-idea-register.json`](research-idea-register.json)を参照してください。Stage F0/F0-Rは完了し、N1-A offline foundationは完了、N1-B Permanent Settlement Schema Rolloutは`CONDITIONAL`（`n1-settlement.0.1`を永続sidecarへzero-data適用済み、N1-C backfillはquota/evidence pin/別承認待ち）です。
 
 ## Research Replay Foundation
 
@@ -122,6 +122,9 @@ pnpm review:suite -- --from 2026-01-01 --to 2026-06-03 --split-date 2026-04-01 -
 | `pnpm audit:t5-network-only-forward` | network-only T-5正式cohortを同一race・実払戻・logloss/Brierでfuture評価 |
 | `pnpm research:approval:record -- --event=...` | F0-R承認grant/revoke/supersedeを必須field明示でappend（readinessとは分離） |
 | `pnpm verify:n1-payout-review` | N1払戻レビューの7券種・20 fixture・状態機械・禁止scope・文書リンクを検証 |
+| `pnpm research:n1:rollout:capacity -- --write-reports` | N1-B: 実archive stratified sampleで容量・性能・evidence pin冗長を実測しfull backfill projectionを生成 |
+| `pnpm research:n1:rollout:readiness` | N1-B: N1-B明示承認・primary read-only・pre-migration gateを確認（apply=false、承認なしはBLOCKED） |
+| `pnpm research:n1:rollout:apply -- --write-reports` | N1-B: 承認済み時のみ`n1-settlement.0.1`を永続sidecarへzero-data適用（backup→migration→post-gate→restore-copy canary） |
 | `pnpm audit:t5-historical-market-forward` | 2023-2024固定履歴モデルとT-5市場を同一raceのformal futureで比較 |
 | `pnpm analyze:historical-ranking-forward` | 2023-2024番組・展示だけで学習し2025/2026を着順確率・実払戻で固定forward評価 |
 | `pnpm audit:odds-timeseries-storage` | 時系列DBの日別重複率・物理肥大化を読み取り専用監査 |

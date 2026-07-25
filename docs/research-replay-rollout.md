@@ -21,7 +21,7 @@ Stage F0-Rは`COMPLETE`である。F0の五層evidence schemaを変更せず、e
 - Operational GC: default `OFF`
 - Live collector接続: なし
 - Production decision/通知/購入接続: なし
-- Phase N1: 未開始
+- Phase N1-B: `n1-settlement.0.1`を永続sidecarへzero-dataで適用済み（N1-C backfillは未実行）
 
 sidecar、raw、backupはGit管理外である。sidecarに保存したのはschema ledger、F0-R開始承認、default-OFF config、backup/restore/health auditだけで、公式データ収集やdecisionは行っていない。
 
@@ -124,4 +124,6 @@ pnpm research:rollout:readiness
 
 ## 次工程
 
-Phase N1「全券種払戻基盤」のschema/migration実装前レビューは`CONDITIONAL`で完了した。詳細は[`n1-all-bet-type-payout-review.md`](n1-all-bet-type-payout-review.md)。N1 parser、migration適用、外部取得、collector接続は別の明示承認まで開始しない。
+Phase N1「全券種払戻基盤」のschema/migration実装前レビューは`CONDITIONAL`で完了した。詳細は[`n1-all-bet-type-payout-review.md`](n1-all-bet-type-payout-review.md)。
+
+Phase N1-A offline foundationは`COMPLETE`、Phase N1-B Permanent Settlement Schema Rollout & Capacity Gateは`CONDITIONAL`である。N1-Bで`n1-settlement.0.1`を永続sidecarへzero-dataで適用し、実archive sampleで容量・evidence pin・backup/restore・primary read-only境界を実測した。full backfill projected DB ≈10.5GBは現1GiB quotaに収まらず、evidence pin ≈23M行の重複をOption Bで削減する方針。詳細は[`n1-settlement-permanent-rollout.md`](n1-settlement-permanent-rollout.md)と[`n1-settlement-backfill-design.md`](n1-settlement-backfill-design.md)。N1-C historical backfill、future collector、外部取得は別の明示承認まで開始しない。
