@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync } from "node:fs";
+import { existsSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -139,7 +139,8 @@ test("re-running apply is idempotent and keeps zero-data", () => {
   assert.ok(Object.values(second.schema.permanentRowCounts).every((count) => count === 0));
 });
 
-test("capacity sample selection is deterministic and stratified", () => {
+// data/ はGit管理外のためCIにはarchiveが存在しない。archive依存はローカルのみで検証する。
+test("capacity sample selection is deterministic and stratified", { skip: !existsSync(ARCHIVE_ROOT) }, () => {
   const a = selectSampleFiles(ARCHIVE_ROOT, 2000);
   const b = selectSampleFiles(ARCHIVE_ROOT, 2000);
   assert.deepEqual(a.files, b.files);
