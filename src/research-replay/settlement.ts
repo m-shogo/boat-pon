@@ -363,6 +363,9 @@ export type CandidateInput = {
   // raw_document_id/parse_run_id/observation_id へのON DELETE RESTRICT FKを暗黙GC pinとして扱う。
   // 既定trueでN1-A挙動を維持。full backfill(N1-C)はfalseで約3行/candidateの重複を削減する。
   emitEvidencePins?: boolean;
+  // trueにするとappendCandidate内でBEGIN/COMMIT/ROLLBACKを発行せず、呼び出し側transactionへ委ねる。
+  // backfillのper-file atomic batch用。既定falseでcandidate毎に自己完結transaction（N1-A挙動不変）。
+  withinTransaction?: boolean;
 };
 
 export class SettlementRepository {
@@ -422,7 +425,10 @@ export class SettlementRepository {
     }
     const candidateId = this.idFactory();
     const now = canonicalUtcTimestamp(input.observedAt);
-    this.db.exec("BEGIN IMMEDIATE");
+    // withinTransaction=trueなら呼び出し側がtransactionを管理する（backfillのper-file atomic batch）。
+    // 既定はfalseでcandidate毎にBEGIN/COMMITする（N1-A挙動不変）。
+    const manageTransaction = !(input.withinTransaction ?? false);
+    if (manageTransaction) this.db.exec("BEGIN IMMEDIATE");
     try {
       this.db.prepare(`INSERT INTO settlement_candidates_v2 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
         candidateId, input.canonicalRaceKey, input.betType, input.settlementStatus, input.resultKind,
@@ -449,9 +455,9 @@ export class SettlementRepository {
         pin.run(this.idFactory(), candidateId, "parse_run", input.parseRunId, evidenceHash, now);
         pin.run(this.idFactory(), candidateId, "domain_observation", input.observationId, evidenceHash, now);
       }
-      this.db.exec("COMMIT");
+      if (manageTransaction) this.db.exec("COMMIT");
     } catch (error) {
-      this.db.exec("ROLLBACK");
+      if (manageTransaction) this.db.exec("ROLLBACK");
       throw error;
     }
     return { candidateId, inserted: true, semanticHash };

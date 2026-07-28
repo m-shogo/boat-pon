@@ -4,8 +4,8 @@
 // 別の明示承認まで起動しない。candidateはOption B（explicit pin無し、candidate FKが暗黙GC pin）。
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import { basename, join } from "node:path";
+import { readdirSync, statfsSync, statSync } from "node:fs";
+import { basename, dirname, join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { canonicalHash } from "./canonical";
 import { semanticPayloadHash } from "./domain";
@@ -114,31 +114,49 @@ export type ArchiveFileResult = {
   candidates: number;
   payoutLines: number;
   refundLines: number;
+  skippedCandidates: number;
   firstRaceKey: string | null;
   lastRaceKey: string | null;
   failureReason: string | null;
 };
 
-// 1 archive fileをsidecarへ投入する。candidateはappendCandidateが内部で1件ずつtransaction化し、
-// 同一observation/bet-type/hashはUNIQUEでno-op（冪等）。pinはOption Bで保存しない。
-export async function ingestArchiveFile(input: {
-  filePath: string;
+type ParsedArchive = {
+  file: string;
+  bytes: Buffer;
+  family: string;
+  parsed: ReturnType<typeof parseOfficialResultDetail>;
+  sha256: string;
+};
+
+// 非同期のunpack/parseはtransaction外で行い、DB書込みだけを同期transaction内に閉じる。
+async function parseArchive(filePath: string): Promise<ParsedArchive> {
+  const bytes = await unpackToBuffer(filePath);
+  const text = new TextDecoder("shift_jis").decode(bytes);
+  return {
+    file: basename(filePath),
+    bytes,
+    family: schemaFamily(text),
+    parsed: parseOfficialResultDetail(text, { date: fileDate(filePath), fetchedAt: "1970-01-01T00:00:00.000Z" }),
+    sha256: createHash("sha256").update(bytes).digest("hex"),
+  };
+}
+
+// 1 archiveの同期ingest。呼び出し側の単一transaction内で実行し（withinTransaction=true）、
+// per-file atomic batchとする。同一observation/bet-type/hashはUNIQUEでno-op（冪等）。pinはOption Bで保存しない。
+function ingestParsedArchive(input: {
+  archive: ParsedArchive;
   replay: ResearchReplayRepository;
   settlement: SettlementRepository;
   db: DatabaseSync;
   now: string;
   idPrefix: string;
-}): Promise<ArchiveFileResult> {
-  const { filePath, replay, settlement, db, now } = input;
-  const file = basename(filePath);
+}): ArchiveFileResult {
+  const { archive, replay, settlement, db, now } = input;
+  const { file, bytes, family, parsed } = archive;
   const result: ArchiveFileResult = {
     archiveFile: file, state: "completed", parsedRaces: 0, candidates: 0,
-    payoutLines: 0, refundLines: 0, firstRaceKey: null, lastRaceKey: null, failureReason: null,
+    payoutLines: 0, refundLines: 0, skippedCandidates: 0, firstRaceKey: null, lastRaceKey: null, failureReason: null,
   };
-  const bytes = await unpackToBuffer(filePath);
-  const text = new TextDecoder("shift_jis").decode(bytes);
-  const family = schemaFamily(text);
-  const parsed = parseOfficialResultDetail(text, { date: fileDate(filePath), fetchedAt: "1970-01-01T00:00:00.000Z" });
   const raw = replay.recordRawDocument({ bytes, contentType: "text/plain", charset: "shift_jis" });
   const parseRunId = `${input.idPrefix}-parse-${raw.rawDocumentId}`;
   db.prepare(`
@@ -206,19 +224,37 @@ export async function ingestArchiveFile(input: {
           canonicalRaceKey: raceKey, betType, settlementStatus: status, resultKind,
           revisionKind: "initial", resolutionStatus: "resolved", sourceKind: "official_archive",
           sourceSchemaVersion: family, observationId, parseRunId, rawDocumentId: raw.rawDocumentId,
-          observedAt: now, payouts: bucket.payouts, refunds: bucket.refunds, emitEvidencePins: false,
+          observedAt: now, payouts: bucket.payouts, refunds: bucket.refunds,
+          emitEvidencePins: false, withinTransaction: true,
         });
         if (!appended.inserted) continue;
         result.candidates += 1;
         result.payoutLines += bucket.payouts.length;
         result.refundLines += bucket.refunds.length;
       } catch {
-        // 異常lineはcandidate生成を拒否しskip（raw/parse/observationは保持）。
+        // 異常lineはcandidate生成を拒否しskip（validationはINSERT前なので部分行を残さない）。
+        result.skippedCandidates += 1;
       }
     }
   }
   return result;
 }
+
+export type BackfillHealthCheck = {
+  atFilesCompleted: number;
+  dbBytes: number;
+  walBytes: number;
+  diskFreeBytes: number;
+  projectedFullDbBytes: number;
+};
+
+export type BackfillStopReason =
+  | "DISK_LOW"
+  | "QUOTA_80PCT"
+  | "PROJECTED_EXCEEDS_QUOTA"
+  | "PRIMARY_DB_CHANGED"
+  | "WAL_ABNORMAL"
+  | null;
 
 export type BackfillRunSummary = {
   executorVersion: string;
@@ -230,13 +266,23 @@ export type BackfillRunSummary = {
   candidates: number;
   payoutLines: number;
   refundLines: number;
+  skippedCandidates: number;
   parsedRaces: number;
   checkpointsRecorded: number;
+  stopped: boolean;
+  stopReason: BackfillStopReason;
+  startCompletedTotal: number;
+  endCompletedTotal: number;
+  dbBytesStart: number | null;
+  dbBytesEnd: number | null;
+  walPeakBytes: number;
+  healthChecks: BackfillHealthCheck[];
   fileResults: ArchiveFileResult[];
 };
 
-// checkpoint駆動でarchive fileを順に処理する。maxFilesで小規模検証（sample）に制限できる。
-// 実8,164 backfillは別承認・quota引き上げ・十分なdisk確認の後にmaxFiles無しで実行する想定。
+// checkpoint駆動でarchive fileを順に処理する。per-fileで単一transaction（atomic batch）。
+// limit=このrunで新規処理する最大file数（milestone gate用）。maxFiles=対象listのslice（sample用）。
+// guardに1つでも抵触したらfile境界で安全停止する。
 export async function runBackfill(input: {
   db: DatabaseSync;
   rawStore: RawStore;
@@ -244,58 +290,152 @@ export async function runBackfill(input: {
   now: string;
   idPrefix?: string;
   maxFiles?: number;
+  limit?: number;
   transactionBatchSize?: number;
+  dbPath?: string;
+  quotaBytes?: number;
+  diskFloorBytes?: number;
+  primaryPath?: string;
+  primaryFingerprint?: { size: number; mtimeMs: number };
+  // strict=size/mtime変化で即停止（並行書込みに厳格）。structural=schema/app_settings hashのみ監視し、
+  // 並行collectorのdata append(size/mtime変化)は許容する（N1 write=0はコード構造で別途保証）。
+  primaryMonitor?: "strict" | "structural";
+  primaryStructuralBaseline?: { schemaHash: string | null; appSettingsHash: string | null };
+  primaryStructuralProbe?: () => { schemaHash: string | null; appSettingsHash: string | null };
+  totalArchiveCount?: number;
+  healthEvery?: number;
+  onProgress?: (completedTotal: number, file: string) => void;
 }): Promise<BackfillRunSummary> {
+  const primaryMonitor = input.primaryMonitor ?? "strict";
   const idPrefix = input.idPrefix ?? "n1bf";
   const checkpoints = new BackfillCheckpointRepository(input.db);
   const replay = new ResearchReplayRepository(input.db, input.rawStore, undefined, () => input.now);
   const settlement = new SettlementRepository(input.db);
   const files = input.maxFiles ? input.archiveFiles.slice(0, input.maxFiles) : input.archiveFiles;
+  const totalArchiveCount = input.totalArchiveCount ?? input.archiveFiles.length;
+  const dbSize = (): number | null => input.dbPath ? statSync(input.dbPath).size : null;
+  const walSize = (): number => { try { return input.dbPath ? statSync(`${input.dbPath}-wal`).size : 0; } catch { return 0; } };
+  const diskFree = (): number => {
+    const target = input.dbPath ? dirname(input.dbPath) : input.rawStore.root;
+    const s = statfsSync(target);
+    return Number(s.bavail) * Number(s.bsize);
+  };
+  const startCompletedTotal = checkpoints.completedCount();
   const summary: BackfillRunSummary = {
     executorVersion: N1_BACKFILL_EXECUTOR_VERSION, externalRequests: 0,
     requestedFiles: files.length, processedFiles: 0, skippedCompleted: 0, failedFiles: 0,
-    candidates: 0, payoutLines: 0, refundLines: 0, parsedRaces: 0, checkpointsRecorded: 0, fileResults: [],
+    candidates: 0, payoutLines: 0, refundLines: 0, skippedCandidates: 0, parsedRaces: 0, checkpointsRecorded: 0,
+    stopped: false, stopReason: null, startCompletedTotal, endCompletedTotal: startCompletedTotal,
+    dbBytesStart: dbSize(), dbBytesEnd: null, walPeakBytes: walSize(), healthChecks: [],
+    fileResults: [],
   };
+  const healthEvery = input.healthEvery ?? 50;
+
+  // guard: file処理前に安全条件を確認。抵触時はstopReasonを返す（停止）。
+  const guard = (): BackfillStopReason => {
+    if (input.diskFloorBytes && diskFree() < input.diskFloorBytes) return "DISK_LOW";
+    const bytes = dbSize();
+    if (input.quotaBytes && bytes !== null && bytes >= input.quotaBytes * 0.8) return "QUOTA_80PCT";
+    const completed = summary.startCompletedTotal + summary.processedFiles;
+    if (input.quotaBytes && bytes !== null && completed > 0) {
+      const projected = (bytes / completed) * totalArchiveCount;
+      if (projected > input.quotaBytes) return "PROJECTED_EXCEEDS_QUOTA";
+    }
+    if (input.primaryPath && primaryMonitor === "strict" && input.primaryFingerprint) {
+      try {
+        const s = statSync(input.primaryPath);
+        if (s.size !== input.primaryFingerprint.size || Math.trunc(s.mtimeMs) !== Math.trunc(input.primaryFingerprint.mtimeMs)) {
+          return "PRIMARY_DB_CHANGED";
+        }
+      } catch { return "PRIMARY_DB_CHANGED"; }
+    }
+    if (primaryMonitor === "structural" && input.primaryStructuralBaseline && input.primaryStructuralProbe) {
+      // structural monitor: size/mtimeの並行data appendは許容し、schema/app_settingsの変化のみ停止。
+      try {
+        const now = input.primaryStructuralProbe();
+        if (now.schemaHash !== input.primaryStructuralBaseline.schemaHash
+          || now.appSettingsHash !== input.primaryStructuralBaseline.appSettingsHash) {
+          return "PRIMARY_DB_CHANGED";
+        }
+      } catch { return "PRIMARY_DB_CHANGED"; }
+    }
+    return null;
+  };
+
+  const recordFailed = (file: string, sha256: string, retryCount: number, reason: string): void => {
+    checkpoints.record({
+      archiveFile: file, sourceArchiveSha256: sha256, parserVersion: N1_SETTLEMENT_PARSER_VERSION,
+      sourceSchemaFamily: "official_archive", firstRaceKey: null, lastRaceKey: null,
+      expectedRaceCount: 0, parsedRaceCount: 0, candidateCount: 0, payoutLineCount: 0, refundLineCount: 0,
+      transactionBatchSize: input.transactionBatchSize ?? 1000, resumeToken: null, state: "failed",
+      retryCount, failureReason: reason.slice(0, 200), createdAt: input.now, completedAt: null,
+    });
+    summary.failedFiles += 1;
+    summary.checkpointsRecorded += 1;
+  };
+
   for (const filePath of files) {
     const file = basename(filePath);
     if (checkpoints.isCompleted(file)) { summary.skippedCompleted += 1; continue; }
+    if (input.limit !== undefined && summary.processedFiles >= input.limit) break;
+
+    const stop = guard();
+    if (stop) { summary.stopped = true; summary.stopReason = stop; break; }
+
     const previous = checkpoints.latest(file);
     const retryCount = previous ? previous.retryCount + 1 : 0;
-    const sha256 = createHash("sha256").update(readFileSync(filePath)).digest("hex");
+
+    // unpack/parseはtransaction外（await）。
+    let archive: ParsedArchive;
     try {
-      const fileResult = await ingestArchiveFile({ filePath, replay, settlement, db: input.db, now: input.now, idPrefix });
+      archive = await parseArchive(filePath);
+    } catch (error) {
+      recordFailed(file, "0".repeat(64), retryCount, error instanceof Error ? error.message : "parse_failed");
+      summary.fileResults.push({ archiveFile: file, state: "failed", parsedRaces: 0, candidates: 0, payoutLines: 0, refundLines: 0, skippedCandidates: 0, firstRaceKey: null, lastRaceKey: null, failureReason: "parse_failed" });
+      continue;
+    }
+
+    // per-file 単一transaction（data + checkpoint をatomicにcommit）。
+    input.db.exec("BEGIN IMMEDIATE");
+    try {
+      const fileResult = ingestParsedArchive({ archive, replay, settlement, db: input.db, now: input.now, idPrefix });
       checkpoints.record({
-        archiveFile: file, sourceArchiveSha256: sha256, parserVersion: N1_SETTLEMENT_PARSER_VERSION,
-        sourceSchemaFamily: "official_archive", firstRaceKey: fileResult.firstRaceKey, lastRaceKey: fileResult.lastRaceKey,
+        archiveFile: file, sourceArchiveSha256: archive.sha256, parserVersion: N1_SETTLEMENT_PARSER_VERSION,
+        sourceSchemaFamily: archive.family, firstRaceKey: fileResult.firstRaceKey, lastRaceKey: fileResult.lastRaceKey,
         expectedRaceCount: fileResult.parsedRaces, parsedRaceCount: fileResult.parsedRaces,
         candidateCount: fileResult.candidates, payoutLineCount: fileResult.payoutLines,
         refundLineCount: fileResult.refundLines, transactionBatchSize: input.transactionBatchSize ?? 1000,
-        resumeToken: null, state: "completed", retryCount, failureReason: null,
+        resumeToken: file, state: "completed", retryCount, failureReason: null,
         createdAt: input.now, completedAt: input.now,
       });
+      input.db.exec("COMMIT");
       summary.processedFiles += 1;
       summary.checkpointsRecorded += 1;
       summary.candidates += fileResult.candidates;
       summary.payoutLines += fileResult.payoutLines;
       summary.refundLines += fileResult.refundLines;
+      summary.skippedCandidates += fileResult.skippedCandidates;
       summary.parsedRaces += fileResult.parsedRaces;
       summary.fileResults.push(fileResult);
+      input.onProgress?.(startCompletedTotal + summary.processedFiles, file);
     } catch (error) {
-      const reason = error instanceof Error ? error.message.slice(0, 200) : "unknown";
-      checkpoints.record({
-        archiveFile: file, sourceArchiveSha256: sha256, parserVersion: N1_SETTLEMENT_PARSER_VERSION,
-        sourceSchemaFamily: "official_archive", firstRaceKey: null, lastRaceKey: null,
-        expectedRaceCount: 0, parsedRaceCount: 0, candidateCount: 0, payoutLineCount: 0, refundLineCount: 0,
-        transactionBatchSize: input.transactionBatchSize ?? 1000, resumeToken: null, state: "failed",
-        retryCount, failureReason: reason, createdAt: input.now, completedAt: null,
-      });
-      summary.failedFiles += 1;
-      summary.checkpointsRecorded += 1;
-      summary.fileResults.push({
-        archiveFile: file, state: "failed", parsedRaces: 0, candidates: 0, payoutLines: 0,
-        refundLines: 0, firstRaceKey: null, lastRaceKey: null, failureReason: reason,
+      try { input.db.exec("ROLLBACK"); } catch { /* already rolled back */ }
+      recordFailed(file, archive.sha256, retryCount, error instanceof Error ? error.message : "ingest_failed");
+      summary.fileResults.push({ archiveFile: file, state: "failed", parsedRaces: 0, candidates: 0, payoutLines: 0, refundLines: 0, skippedCandidates: 0, firstRaceKey: null, lastRaceKey: null, failureReason: error instanceof Error ? error.message.slice(0, 200) : "ingest_failed" });
+    }
+
+    const wal = walSize();
+    if (wal > summary.walPeakBytes) summary.walPeakBytes = wal;
+    if (summary.processedFiles > 0 && summary.processedFiles % healthEvery === 0) {
+      const bytes = dbSize();
+      const completed = startCompletedTotal + summary.processedFiles;
+      summary.healthChecks.push({
+        atFilesCompleted: completed, dbBytes: bytes ?? 0, walBytes: wal, diskFreeBytes: diskFree(),
+        projectedFullDbBytes: bytes !== null && completed > 0 ? Math.round((bytes / completed) * totalArchiveCount) : 0,
       });
     }
   }
+  summary.dbBytesEnd = dbSize();
+  summary.endCompletedTotal = checkpoints.completedCount();
   return summary;
 }
