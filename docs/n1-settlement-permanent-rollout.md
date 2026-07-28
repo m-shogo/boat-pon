@@ -107,14 +107,20 @@ backupから復元したrestore copy上でのみ検証し、完了後に破棄�
 
 8,164 archive full backfill / 永続candidate投入 / payout・refund投入 / future result collector / external HTTP / shadow writer ON / GC ON / primary DB migration / Legacy consumer切替 / Legacy ROI変更 / Phase N2 / model / production / 自動購入。
 
-## N1-C eligibility
+## N1-C eligibility → 実行済み
 
-**CONDITIONAL**。historical backfill開始前に次を満たすこと:
+前提（quota引き上げ・Option B・0.2 checkpoint schema・executor）を満たし、N1-C Persistent Backfillを**実行した**。
 
-1. quotaを ≈17 GB 以上、low-water ≈34 GB へ引き上げる（別 config event、要根拠）。
-2. evidence pin Option B（writer変更＋`n1-settlement.0.2`）を適用する。
-3. backfill chunk/checkpoint executorを実装する（設計は [`n1-settlement-backfill-design.md`](n1-settlement-backfill-design.md)）。
-4. future result collectorは別の明示承認。
+- **Backfill execution: COMPLETE**（実行時manifest 8,167/8,167、現archive 8,168/8,168、failed 0）。
+- **Overall N1-C: CONDITIONAL**（容量上振れ≈9.0GB→quota再評価、primary byte identity再分類、live archive日次incremental）。
+- 正本: [`../reports/n1c-backfill/n1c-final-report.md`](../reports/n1c-backfill/n1c-final-report.md)、runbook: [`n1-settlement-backfill-runbook.md`](n1-settlement-backfill-runbook.md)、GC契約: [`n1-settlement-gc-safety-contract.md`](n1-settlement-gc-safety-contract.md)。
+
+N1-C後のgate（GC・追加ingest前）:
+
+1. quotaを 16 GB 以上、low-water 24 GB 以上へ再引き上げる（最終≈9.0GBに対し10GBは余裕不足）。
+2. operational GC有効化は専用readiness gate + 別承認（GC安全契約参照）。
+3. live archiveの日次incremental backfill運用（同executor、resumable）。
+4. future result collector / N2 / production接続は別の明示承認。
 
 ## CLI
 

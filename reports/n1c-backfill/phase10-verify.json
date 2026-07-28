@@ -1,0 +1,82 @@
+{
+  "phase": "PHASE10_FINAL_VERIFY",
+  "generatedAt": "2026-07-28T01:25:31.259Z",
+  "integrityCheck": "ok",
+  "foreignKeyViolations": 0,
+  "schema": {
+    "v01ok": true,
+    "v01checksum": "35903ee175dbb31cbc7202aa573a2e1b4f6d58d9b6954cfac4cee0fdfa4eb94d",
+    "v02ok": true,
+    "v02checksum": "50d7e605c1ea73973eb4b665e9b4792e7a1b33fae9dc2d3694dc3f9e8e1f01f1",
+    "rolloutOk": true,
+    "appendOnlyTriggers01": 14,
+    "appendOnlyTriggers02": 2
+  },
+  "archiveCoverage": {
+    "total": 8168,
+    "completed": 8167,
+    "failedCount": 0,
+    "failed": [],
+    "coverageComplete": false
+  },
+  "counts": {
+    "candidates": 8153617,
+    "payoutLines": 11072266,
+    "refundLines": 446893,
+    "evidencePins": 0,
+    "observations": 1194523,
+    "parseRuns": 8167,
+    "rawDocuments": 8167,
+    "conflictGroups": 0
+  },
+  "distinctCandidateKeys": 8153617,
+  "duplicateSemanticCandidates": 0,
+  "evidencePinsExplicit": 0,
+  "implicitCandidateFkReferences": 24460851,
+  "byStatus": [
+    {
+      "s": "partially_refunded",
+      "c": 1
+    },
+    {
+      "s": "refunded",
+      "c": 319678
+    },
+    {
+      "s": "settled",
+      "c": 7833938
+    }
+  ],
+  "byBetType": [
+    {
+      "b": "exacta",
+      "c": 1190198
+    },
+    {
+      "b": "place",
+      "c": 1134616
+    },
+    {
+      "b": "quinella",
+      "c": 1181486
+    },
+    {
+      "b": "trifecta",
+      "c": 1174712
+    },
+    {
+      "b": "trio",
+      "c": 1173501
+    },
+    {
+      "b": "wide",
+      "c": 1172722
+    },
+    {
+      "b": "win",
+      "c": 1126382
+    }
+  ],
+  "dbBytes": 9015648256,
+  "result": "INCOMPLETE"
+}

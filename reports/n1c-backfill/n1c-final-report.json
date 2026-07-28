@@ -1,0 +1,125 @@
+{
+  "reportVersion": "n1c-final-report-v1",
+  "generatedAt": "2026-07-28T06:59:53.552Z",
+  "verdict": {
+    "backfillExecution": "COMPLETE",
+    "finalVerification": "COMPLETE",
+    "overall": "CONDITIONAL"
+  },
+  "conditionalReasons": [
+    "archive is live/growing (8164->8167->8168), needs ongoing incremental",
+    "capacity overrun 5.38GB->9.0GB (+67.5%), quota reassessment required before GC/further ingest",
+    "primary byte-identity FAIL (known concurrent racer-stats append); structural/schema/appSettings PASS, N1 primary write=0"
+  ],
+  "manifest": {
+    "fileCountNow": 8168,
+    "totalBytes": 295456988,
+    "manifestSha256": "c44bfb6fdda7728ee2bdc58d48d9378a48617d6ce95b61a84c15a8c2e934c1a1",
+    "runTimeManifestFiles": 8167,
+    "baselineFiles": 8164,
+    "deltaFiles": [
+      "k260723.lzh",
+      "k260724.lzh",
+      "k260725.lzh",
+      "k260726.lzh"
+    ]
+  },
+  "coverage": {
+    "runTimeCompleted": "8167/8167",
+    "currentArchive": "8168/8168",
+    "failed": 0,
+    "unresolvedFailures": 0
+  },
+  "counts": {
+    "candidates": 8154709,
+    "candidates_8167": 8153617,
+    "k260726_candidates": 1092,
+    "payoutLines_8167": 11072266,
+    "refundLines_8167": 446893,
+    "evidencePins": 0,
+    "observations": 1194523,
+    "parseRuns_8167": 8167,
+    "conflictGroups": 0,
+    "implicitCandidateFkReferences_8167": 24460851,
+    "duplicateSemanticCandidates": 0
+  },
+  "schema": {
+    "v01ok": true,
+    "v01checksum": "35903ee175dbb31cbc7202aa573a2e1b4f6d58d9b6954cfac4cee0fdfa4eb94d",
+    "v02ok": true,
+    "v02checksum": "50d7e605c1ea73973eb4b665e9b4792e7a1b33fae9dc2d3694dc3f9e8e1f01f1",
+    "rolloutOk": true,
+    "appendOnlyTriggers01": 14,
+    "appendOnlyTriggers02": 2
+  },
+  "integrity": {
+    "integrityCheck": "ok",
+    "foreignKeyViolations": 0,
+    "note": "full integrity/fk verified on 8167 (verify + final run end-check); k260726 (+1092) atomic FK-enforced increment, redundant full rescan skipped"
+  },
+  "capacity": {
+    "dbFileBytes": 9016954880,
+    "tablesBytes": 5950795776,
+    "indexesBytes": 3066155008,
+    "indexOverheadRatio": 0.34,
+    "avgCandidateTableRowBytes": 411,
+    "avgPayoutLineTableRowBytes": 142,
+    "freelistPages": 0,
+    "walBytes": 0,
+    "shmBytes": 32768,
+    "predictedBytes": 5381780085,
+    "overrunRatio": 0.675,
+    "quotaBytes": 32212254720,
+    "quotaReassessment": "final ~9.0GB; a 10GB quota leaves <1GB headroom (insufficient for GC scratch / additional ingest). Recommend raising quota to >=16GB and low-water >=24GB before enabling GC or any further ingest."
+  },
+  "primaryIdentity": {
+    "primaryByteIdentity": "FAIL",
+    "primaryStructuralIdentity": "PASS",
+    "primarySchemaIdentity": "PASS",
+    "appSettingsIdentity": "PASS",
+    "unexpectedPrimaryMutation": 0,
+    "knownConcurrentMutation": "bulk-fetch-racer-stats.ts appended rows to racer_profiles/racer_course_stats during backfill (independent scheduled job)",
+    "backfillPrimaryWriteEvidence": "none",
+    "twoPointQuiescentStable": true
+  },
+  "legacyComparison": {
+    "sampled": 2000,
+    "exactMatch": 1428,
+    "payoutMismatch": 0,
+    "n1OnlyOrKeyUnmatched": 572
+  },
+  "deterministicRerun": {
+    "processedFiles": 0,
+    "newCandidates": 0,
+    "skippedCompleted": 8168
+  },
+  "migration": {
+    "v01checksum": "35903ee175dbb31cbc7202aa573a2e1b4f6d58d9b6954cfac4cee0fdfa4eb94d",
+    "v02checksum": "50d7e605c1ea73973eb4b665e9b4792e7a1b33fae9dc2d3694dc3f9e8e1f01f1",
+    "objects01Unchanged": true,
+    "checkpointTablePresent": true
+  },
+  "backup": {
+    "sha256": "8f3d25f7f31fb847e3e819f9639981b2970c628c323d0990a3c9eb1e6e03596e",
+    "bytes": 430080,
+    "restoreDrill": "PASS"
+  },
+  "safety": {
+    "primaryDbWrites": 0,
+    "collector": "OFF",
+    "shadowWriter": "OFF",
+    "operationalGc": "OFF",
+    "production": "disconnected",
+    "autoBetting": "none"
+  },
+  "offlineVerification": {
+    "tests": 459,
+    "typecheck": "PASS",
+    "scriptsTypecheck": "PASS",
+    "build": "PASS",
+    "golden": "PASS",
+    "dbHealth": "PASS",
+    "dataValidation": "PASS",
+    "changedDiffSecretScan": "PASS"
+  }
+}

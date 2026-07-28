@@ -1,0 +1,11 @@
+{
+  "phase": "LEGACY_COMPARISON_SAMPLE",
+  "generatedAt": "2026-07-28T06:51:06.755Z",
+  "scope": "N1 sidecar vs boat.sqlite race_payouts (read-only)",
+  "sampled": 2000,
+  "exactMatch": 1428,
+  "payoutMismatch": 0,
+  "n1OnlyOrKeyUnmatched": 572,
+  "mismatchSamples": [],
+  "result": "PASS"
+}

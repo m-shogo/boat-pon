@@ -1,0 +1,1033 @@
+{
+  "phase": "RUN_full8167-structural",
+  "generatedAt": "2026-07-27T01:43:42.312Z",
+  "target": 8167,
+  "limit": 7108,
+  "elapsedMs": 6218868,
+  "primaryMonitor": "structural",
+  "completedBefore": 1059,
+  "completedAfter": 8167,
+  "totalArchiveFiles": 8167,
+  "processedFiles": 7108,
+  "skippedCompleted": 1059,
+  "failedFiles": 0,
+  "candidatesThisRun": 7254677,
+  "payoutLinesThisRun": 9997922,
+  "refundLinesThisRun": 295476,
+  "skippedCandidates": 0,
+  "parsedRacesThisRun": 1046368,
+  "totalCandidates": 8153617,
+  "evidencePins": 0,
+  "stopped": false,
+  "stopReason": null,
+  "integrityCheck": "ok",
+  "foreignKeyViolations": 0,
+  "primaryUnchanged": false,
+  "dbBytes": 9015648256,
+  "projectedFullDbBytes": 9015648256,
+  "quotaBytes": 32212254720,
+  "walPeakBytes": 49069232,
+  "diskFreeBytes": 413101142016,
+  "healthChecks": [
+    {
+      "atFilesCompleted": 1109,
+      "dbBytes": 1057046528,
+      "walBytes": 33318472,
+      "diskFreeBytes": 423766044672,
+      "projectedFullDbBytes": 7784399454
+    },
+    {
+      "atFilesCompleted": 1159,
+      "dbBytes": 1105862656,
+      "walBytes": 33318472,
+      "diskFreeBytes": 423724642304,
+      "projectedFullDbBytes": 7792562823
+    },
+    {
+      "atFilesCompleted": 1209,
+      "dbBytes": 1159294976,
+      "walBytes": 33318472,
+      "diskFreeBytes": 423640428544,
+      "projectedFullDbBytes": 7831234135
+    },
+    {
+      "atFilesCompleted": 1259,
+      "dbBytes": 1207648256,
+      "walBytes": 33318472,
+      "diskFreeBytes": 424583839744,
+      "projectedFullDbBytes": 7833886661
+    },
+    {
+      "atFilesCompleted": 1309,
+      "dbBytes": 1262645248,
+      "walBytes": 33318472,
+      "diskFreeBytes": 423516798976,
+      "projectedFullDbBytes": 7877787426
+    },
+    {
+      "atFilesCompleted": 1359,
+      "dbBytes": 1313673216,
+      "walBytes": 33318472,
+      "diskFreeBytes": 423467220992,
+      "projectedFullDbBytes": 7894605706
+    },
+    {
+      "atFilesCompleted": 1409,
+      "dbBytes": 1364054016,
+      "walBytes": 33318472,
+      "diskFreeBytes": 423406510080,
+      "projectedFullDbBytes": 7906479169
+    },
+    {
+      "atFilesCompleted": 1459,
+      "dbBytes": 1419452416,
+      "walBytes": 34871712,
+      "diskFreeBytes": 423356014592,
+      "projectedFullDbBytes": 7945625690
+    },
+    {
+      "atFilesCompleted": 1509,
+      "dbBytes": 1468497920,
+      "walBytes": 34871712,
+      "diskFreeBytes": 423302414336,
+      "projectedFullDbBytes": 7947794906
+    },
+    {
+      "atFilesCompleted": 1559,
+      "dbBytes": 1516875776,
+      "walBytes": 34871712,
+      "diskFreeBytes": 423240679424,
+      "projectedFullDbBytes": 7946327430
+    },
+    {
+      "atFilesCompleted": 1609,
+      "dbBytes": 1569935360,
+      "walBytes": 34871712,
+      "diskFreeBytes": 423181291520,
+      "projectedFullDbBytes": 7968714783
+    },
+    {
+      "atFilesCompleted": 1659,
+      "dbBytes": 1620348928,
+      "walBytes": 49069232,
+      "diskFreeBytes": 423109066752,
+      "projectedFullDbBytes": 7976726760
+    },
+    {
+      "atFilesCompleted": 1709,
+      "dbBytes": 1674612736,
+      "walBytes": 49069232,
+      "diskFreeBytes": 423046098944,
+      "projectedFullDbBytes": 8002669523
+    },
+    {
+      "atFilesCompleted": 1759,
+      "dbBytes": 1724227584,
+      "walBytes": 49069232,
+      "diskFreeBytes": 422993330176,
+      "projectedFullDbBytes": 8005552404
+    },
+    {
+      "atFilesCompleted": 1809,
+      "dbBytes": 1774452736,
+      "walBytes": 49069232,
+      "diskFreeBytes": 422936190976,
+      "projectedFullDbBytes": 8011031230
+    },
+    {
+      "atFilesCompleted": 1859,
+      "dbBytes": 1827323904,
+      "walBytes": 49069232,
+      "diskFreeBytes": 422874542080,
+      "projectedFullDbBytes": 8027839873
+    },
+    {
+      "atFilesCompleted": 1909,
+      "dbBytes": 1875775488,
+      "walBytes": 49069232,
+      "diskFreeBytes": 422784565248,
+      "projectedFullDbBytes": 8024860351
+    },
+    {
+      "atFilesCompleted": 1959,
+      "dbBytes": 1929519104,
+      "walBytes": 49069232,
+      "diskFreeBytes": 422739333120,
+      "projectedFullDbBytes": 8044095213
+    },
+    {
+      "atFilesCompleted": 2009,
+      "dbBytes": 1982898176,
+      "walBytes": 49069232,
+      "diskFreeBytes": 422680567808,
+      "projectedFullDbBytes": 8060890694
+    },
+    {
+      "atFilesCompleted": 2059,
+      "dbBytes": 2037088256,
+      "walBytes": 49069232,
+      "diskFreeBytes": 422620377088,
+      "projectedFullDbBytes": 8080087318
+    },
+    {
+      "atFilesCompleted": 2109,
+      "dbBytes": 2090037248,
+      "walBytes": 49069232,
+      "diskFreeBytes": 422556807168,
+      "projectedFullDbBytes": 8093567664
+    },
+    {
+      "atFilesCompleted": 2159,
+      "dbBytes": 2143735808,
+      "walBytes": 49069232,
+      "diskFreeBytes": 422499291136,
+      "projectedFullDbBytes": 8109259075
+    },
+    {
+      "atFilesCompleted": 2209,
+      "dbBytes": 2200375296,
+      "walBytes": 49069232,
+      "diskFreeBytes": 422422102016,
+      "projectedFullDbBytes": 8135113193
+    },
+    {
+      "atFilesCompleted": 2259,
+      "dbBytes": 2252902400,
+      "walBytes": 49069232,
+      "diskFreeBytes": 422363693056,
+      "projectedFullDbBytes": 8144955246
+    },
+    {
+      "atFilesCompleted": 2309,
+      "dbBytes": 2308476928,
+      "walBytes": 49069232,
+      "diskFreeBytes": 422301470720,
+      "projectedFullDbBytes": 8165149879
+    },
+    {
+      "atFilesCompleted": 2359,
+      "dbBytes": 2359803904,
+      "walBytes": 49069232,
+      "diskFreeBytes": 422156824576,
+      "projectedFullDbBytes": 8169783164
+    },
+    {
+      "atFilesCompleted": 2409,
+      "dbBytes": 2417860608,
+      "walBytes": 49069232,
+      "diskFreeBytes": 422165041152,
+      "projectedFullDbBytes": 8197039263
+    },
+    {
+      "atFilesCompleted": 2459,
+      "dbBytes": 2470199296,
+      "walBytes": 49069232,
+      "diskFreeBytes": 422105206784,
+      "projectedFullDbBytes": 8204195872
+    },
+    {
+      "atFilesCompleted": 2509,
+      "dbBytes": 2519179264,
+      "walBytes": 49069232,
+      "diskFreeBytes": 420983812096,
+      "projectedFullDbBytes": 8200134336
+    },
+    {
+      "atFilesCompleted": 2559,
+      "dbBytes": 2573742080,
+      "walBytes": 49069232,
+      "diskFreeBytes": 420923170816,
+      "projectedFullDbBytes": 8214049069
+    },
+    {
+      "atFilesCompleted": 2609,
+      "dbBytes": 2626322432,
+      "walBytes": 49069232,
+      "diskFreeBytes": 420861562880,
+      "projectedFullDbBytes": 8221224723
+    },
+    {
+      "atFilesCompleted": 2659,
+      "dbBytes": 2680201216,
+      "walBytes": 49069232,
+      "diskFreeBytes": 420800274432,
+      "projectedFullDbBytes": 8232118590
+    },
+    {
+      "atFilesCompleted": 2709,
+      "dbBytes": 2734096384,
+      "walBytes": 49069232,
+      "diskFreeBytes": 421818081280,
+      "projectedFullDbBytes": 8242659715
+    },
+    {
+      "atFilesCompleted": 2759,
+      "dbBytes": 2793746432,
+      "walBytes": 49069232,
+      "diskFreeBytes": 421737185280,
+      "projectedFullDbBytes": 8269853973
+    },
+    {
+      "atFilesCompleted": 2809,
+      "dbBytes": 2849660928,
+      "walBytes": 49069232,
+      "diskFreeBytes": 421678858240,
+      "projectedFullDbBytes": 8285219224
+    },
+    {
+      "atFilesCompleted": 2859,
+      "dbBytes": 2904735744,
+      "walBytes": 49069232,
+      "diskFreeBytes": 421601275904,
+      "projectedFullDbBytes": 8297648416
+    },
+    {
+      "atFilesCompleted": 2909,
+      "dbBytes": 2966343680,
+      "walBytes": 49069232,
+      "diskFreeBytes": 421545267200,
+      "projectedFullDbBytes": 8327992037
+    },
+    {
+      "atFilesCompleted": 2959,
+      "dbBytes": 3024711680,
+      "walBytes": 49069232,
+      "diskFreeBytes": 421467787264,
+      "projectedFullDbBytes": 8348367790
+    },
+    {
+      "atFilesCompleted": 3009,
+      "dbBytes": 3080007680,
+      "walBytes": 49069232,
+      "diskFreeBytes": 421407109120,
+      "projectedFullDbBytes": 8359728389
+    },
+    {
+      "atFilesCompleted": 3059,
+      "dbBytes": 3134443520,
+      "walBytes": 49069232,
+      "diskFreeBytes": 421352804352,
+      "projectedFullDbBytes": 8368421127
+    },
+    {
+      "atFilesCompleted": 3109,
+      "dbBytes": 3190321152,
+      "walBytes": 49069232,
+      "diskFreeBytes": 421271465984,
+      "projectedFullDbBytes": 8380621695
+    },
+    {
+      "atFilesCompleted": 3159,
+      "dbBytes": 3245617152,
+      "walBytes": 49069232,
+      "diskFreeBytes": 421206372352,
+      "projectedFullDbBytes": 8390932346
+    },
+    {
+      "atFilesCompleted": 3209,
+      "dbBytes": 3299602432,
+      "walBytes": 49069232,
+      "diskFreeBytes": 421147410432,
+      "projectedFullDbBytes": 8397585872
+    },
+    {
+      "atFilesCompleted": 3259,
+      "dbBytes": 3360358400,
+      "walBytes": 49069232,
+      "diskFreeBytes": 419989422080,
+      "projectedFullDbBytes": 8421002471
+    },
+    {
+      "atFilesCompleted": 3309,
+      "dbBytes": 3414122496,
+      "walBytes": 49069232,
+      "diskFreeBytes": 420961226752,
+      "projectedFullDbBytes": 8426454646
+    },
+    {
+      "atFilesCompleted": 3359,
+      "dbBytes": 3468169216,
+      "walBytes": 49069232,
+      "diskFreeBytes": 420942204928,
+      "projectedFullDbBytes": 8432431672
+    },
+    {
+      "atFilesCompleted": 3409,
+      "dbBytes": 3529400320,
+      "walBytes": 49069232,
+      "diskFreeBytes": 420859465728,
+      "projectedFullDbBytes": 8455445120
+    },
+    {
+      "atFilesCompleted": 3459,
+      "dbBytes": 3586662400,
+      "walBytes": 49069232,
+      "diskFreeBytes": 420812652544,
+      "projectedFullDbBytes": 8468422036
+    },
+    {
+      "atFilesCompleted": 3509,
+      "dbBytes": 3642703872,
+      "walBytes": 49069232,
+      "diskFreeBytes": 418588741632,
+      "projectedFullDbBytes": 8478188237
+    },
+    {
+      "atFilesCompleted": 3559,
+      "dbBytes": 3696869376,
+      "walBytes": 49069232,
+      "diskFreeBytes": 418527752192,
+      "projectedFullDbBytes": 8483375160
+    },
+    {
+      "atFilesCompleted": 3609,
+      "dbBytes": 3749556224,
+      "walBytes": 49069232,
+      "diskFreeBytes": 418468794368,
+      "projectedFullDbBytes": 8485072231
+    },
+    {
+      "atFilesCompleted": 3659,
+      "dbBytes": 3808264192,
+      "walBytes": 49069232,
+      "diskFreeBytes": 418408017920,
+      "projectedFullDbBytes": 8500162245
+    },
+    {
+      "atFilesCompleted": 3709,
+      "dbBytes": 3860852736,
+      "walBytes": 49069232,
+      "diskFreeBytes": 418342932480,
+      "projectedFullDbBytes": 8501370799
+    },
+    {
+      "atFilesCompleted": 3759,
+      "dbBytes": 3919872000,
+      "walBytes": 49069232,
+      "diskFreeBytes": 418283008000,
+      "projectedFullDbBytes": 8516518921
+    },
+    {
+      "atFilesCompleted": 3809,
+      "dbBytes": 3974045696,
+      "walBytes": 49069232,
+      "diskFreeBytes": 418299002880,
+      "projectedFullDbBytes": 8520879811
+    },
+    {
+      "atFilesCompleted": 3859,
+      "dbBytes": 4030849024,
+      "walBytes": 49069232,
+      "diskFreeBytes": 418199293952,
+      "projectedFullDbBytes": 8530692920
+    },
+    {
+      "atFilesCompleted": 3909,
+      "dbBytes": 4082397184,
+      "walBytes": 49069232,
+      "diskFreeBytes": 418124455936,
+      "projectedFullDbBytes": 8529275467
+    },
+    {
+      "atFilesCompleted": 3959,
+      "dbBytes": 4135714816,
+      "walBytes": 49069232,
+      "diskFreeBytes": 418083725312,
+      "projectedFullDbBytes": 8531544052
+    },
+    {
+      "atFilesCompleted": 4009,
+      "dbBytes": 4196560896,
+      "walBytes": 49069232,
+      "diskFreeBytes": 418005999616,
+      "projectedFullDbBytes": 8549092751
+    },
+    {
+      "atFilesCompleted": 4059,
+      "dbBytes": 4249108480,
+      "walBytes": 49069232,
+      "diskFreeBytes": 417946161152,
+      "projectedFullDbBytes": 8549511938
+    },
+    {
+      "atFilesCompleted": 4109,
+      "dbBytes": 4308119552,
+      "walBytes": 49069232,
+      "diskFreeBytes": 418944798720,
+      "projectedFullDbBytes": 8562767676
+    },
+    {
+      "atFilesCompleted": 4159,
+      "dbBytes": 4363132928,
+      "walBytes": 49069232,
+      "diskFreeBytes": 418885144576,
+      "projectedFullDbBytes": 8567854442
+    },
+    {
+      "atFilesCompleted": 4209,
+      "dbBytes": 4421627904,
+      "walBytes": 49069232,
+      "diskFreeBytes": 418803023872,
+      "projectedFullDbBytes": 8579575931
+    },
+    {
+      "atFilesCompleted": 4259,
+      "dbBytes": 4473655296,
+      "walBytes": 49069232,
+      "diskFreeBytes": 418693984256,
+      "projectedFullDbBytes": 8578620052
+    },
+    {
+      "atFilesCompleted": 4309,
+      "dbBytes": 4525916160,
+      "walBytes": 49069232,
+      "diskFreeBytes": 418679447552,
+      "projectedFullDbBytes": 8578128865
+    },
+    {
+      "atFilesCompleted": 4359,
+      "dbBytes": 4585070592,
+      "walBytes": 49069232,
+      "diskFreeBytes": 418608754688,
+      "projectedFullDbBytes": 8590564699
+    },
+    {
+      "atFilesCompleted": 4409,
+      "dbBytes": 4638273536,
+      "walBytes": 49069232,
+      "diskFreeBytes": 418562514944,
+      "projectedFullDbBytes": 8591694255
+    },
+    {
+      "atFilesCompleted": 4459,
+      "dbBytes": 4694085632,
+      "walBytes": 49069232,
+      "diskFreeBytes": 418497105920,
+      "projectedFullDbBytes": 8597577339
+    },
+    {
+      "atFilesCompleted": 4509,
+      "dbBytes": 4757831680,
+      "walBytes": 49069232,
+      "diskFreeBytes": 418418151424,
+      "projectedFullDbBytes": 8617700450
+    },
+    {
+      "atFilesCompleted": 4559,
+      "dbBytes": 4813848576,
+      "walBytes": 49069232,
+      "diskFreeBytes": 418359128064,
+      "projectedFullDbBytes": 8623536153
+    },
+    {
+      "atFilesCompleted": 4609,
+      "dbBytes": 4870598656,
+      "walBytes": 49069232,
+      "diskFreeBytes": 418281586688,
+      "projectedFullDbBytes": 8630544418
+    },
+    {
+      "atFilesCompleted": 4659,
+      "dbBytes": 4926607360,
+      "walBytes": 49069232,
+      "diskFreeBytes": 418216570880,
+      "projectedFullDbBytes": 8636102663
+    },
+    {
+      "atFilesCompleted": 4709,
+      "dbBytes": 4982657024,
+      "walBytes": 49069232,
+      "diskFreeBytes": 418160201728,
+      "projectedFullDbBytes": 8641613913
+    },
+    {
+      "atFilesCompleted": 4759,
+      "dbBytes": 5039837184,
+      "walBytes": 49069232,
+      "diskFreeBytes": 418084192256,
+      "projectedFullDbBytes": 8648949418
+    },
+    {
+      "atFilesCompleted": 4809,
+      "dbBytes": 5096816640,
+      "walBytes": 49069232,
+      "diskFreeBytes": 418023829504,
+      "projectedFullDbBytes": 8655791536
+    },
+    {
+      "atFilesCompleted": 4859,
+      "dbBytes": 5158895616,
+      "walBytes": 49069232,
+      "diskFreeBytes": 417950830592,
+      "projectedFullDbBytes": 8671064107
+    },
+    {
+      "atFilesCompleted": 4909,
+      "dbBytes": 5215211520,
+      "walBytes": 49069232,
+      "diskFreeBytes": 417889873920,
+      "projectedFullDbBytes": 8676437662
+    },
+    {
+      "atFilesCompleted": 4959,
+      "dbBytes": 5273919488,
+      "walBytes": 49069232,
+      "diskFreeBytes": 417813356544,
+      "projectedFullDbBytes": 8685642359
+    },
+    {
+      "atFilesCompleted": 5009,
+      "dbBytes": 5327482880,
+      "walBytes": 49069232,
+      "diskFreeBytes": 417753149440,
+      "projectedFullDbBytes": 8686275241
+    },
+    {
+      "atFilesCompleted": 5059,
+      "dbBytes": 5384060928,
+      "walBytes": 49069232,
+      "diskFreeBytes": 417692700672,
+      "projectedFullDbBytes": 8691762324
+    },
+    {
+      "atFilesCompleted": 5109,
+      "dbBytes": 5446836224,
+      "walBytes": 49069232,
+      "diskFreeBytes": 417611317248,
+      "projectedFullDbBytes": 8707048628
+    },
+    {
+      "atFilesCompleted": 5159,
+      "dbBytes": 5504520192,
+      "walBytes": 49069232,
+      "diskFreeBytes": 417538822144,
+      "projectedFullDbBytes": 8713978757
+    },
+    {
+      "atFilesCompleted": 5209,
+      "dbBytes": 5562105856,
+      "walBytes": 49069232,
+      "diskFreeBytes": 417471811584,
+      "projectedFullDbBytes": 8720621717
+    },
+    {
+      "atFilesCompleted": 5259,
+      "dbBytes": 5620944896,
+      "walBytes": 49069232,
+      "diskFreeBytes": 417402990592,
+      "projectedFullDbBytes": 8729084800
+    },
+    {
+      "atFilesCompleted": 5309,
+      "dbBytes": 5679017984,
+      "walBytes": 49069232,
+      "diskFreeBytes": 416268414976,
+      "projectedFullDbBytes": 8736210186
+    },
+    {
+      "atFilesCompleted": 5359,
+      "dbBytes": 5732024320,
+      "walBytes": 49069232,
+      "diskFreeBytes": 416205254656,
+      "projectedFullDbBytes": 8735480989
+    },
+    {
+      "atFilesCompleted": 5409,
+      "dbBytes": 5787410432,
+      "walBytes": 49069232,
+      "diskFreeBytes": 416145178624,
+      "projectedFullDbBytes": 8738358476
+    },
+    {
+      "atFilesCompleted": 5459,
+      "dbBytes": 5852045312,
+      "walBytes": 49069232,
+      "diskFreeBytes": 416066650112,
+      "projectedFullDbBytes": 8755019979
+    },
+    {
+      "atFilesCompleted": 5509,
+      "dbBytes": 5908099072,
+      "walBytes": 49069232,
+      "diskFreeBytes": 415991513088,
+      "projectedFullDbBytes": 8758657673
+    },
+    {
+      "atFilesCompleted": 5559,
+      "dbBytes": 5965742080,
+      "walBytes": 49069232,
+      "diskFreeBytes": 415932145664,
+      "projectedFullDbBytes": 8764564772
+    },
+    {
+      "atFilesCompleted": 5609,
+      "dbBytes": 6022656000,
+      "walBytes": 49069232,
+      "diskFreeBytes": 415872843776,
+      "projectedFullDbBytes": 8769304966
+    },
+    {
+      "atFilesCompleted": 5659,
+      "dbBytes": 6080933888,
+      "walBytes": 49069232,
+      "diskFreeBytes": 415796273152,
+      "projectedFullDbBytes": 8775929857
+    },
+    {
+      "atFilesCompleted": 5709,
+      "dbBytes": 6138957824,
+      "walBytes": 49069232,
+      "diskFreeBytes": 415736553472,
+      "projectedFullDbBytes": 8782075416
+    },
+    {
+      "atFilesCompleted": 5759,
+      "dbBytes": 6191595520,
+      "walBytes": 49069232,
+      "diskFreeBytes": 415670329344,
+      "projectedFullDbBytes": 8780475883
+    },
+    {
+      "atFilesCompleted": 5809,
+      "dbBytes": 6252507136,
+      "walBytes": 49069232,
+      "diskFreeBytes": 416685072384,
+      "projectedFullDbBytes": 8790536371
+    },
+    {
+      "atFilesCompleted": 5859,
+      "dbBytes": 6310809600,
+      "walBytes": 49069232,
+      "diskFreeBytes": 416608473088,
+      "projectedFullDbBytes": 8796788190
+    },
+    {
+      "atFilesCompleted": 5909,
+      "dbBytes": 6368919552,
+      "walBytes": 49069232,
+      "diskFreeBytes": 416552550400,
+      "projectedFullDbBytes": 8802668130
+    },
+    {
+      "atFilesCompleted": 5959,
+      "dbBytes": 6427754496,
+      "walBytes": 49069232,
+      "diskFreeBytes": 416467636224,
+      "projectedFullDbBytes": 8809443022
+    },
+    {
+      "atFilesCompleted": 6009,
+      "dbBytes": 6484688896,
+      "walBytes": 49069232,
+      "diskFreeBytes": 416410083328,
+      "projectedFullDbBytes": 8813522086
+    },
+    {
+      "atFilesCompleted": 6059,
+      "dbBytes": 6542319616,
+      "walBytes": 49069232,
+      "diskFreeBytes": 416344997888,
+      "projectedFullDbBytes": 8818472405
+    },
+    {
+      "atFilesCompleted": 6109,
+      "dbBytes": 6598074368,
+      "walBytes": 49069232,
+      "diskFreeBytes": 416275009536,
+      "projectedFullDbBytes": 8820833747
+    },
+    {
+      "atFilesCompleted": 6159,
+      "dbBytes": 6654377984,
+      "walBytes": 49069232,
+      "diskFreeBytes": 415143505920,
+      "projectedFullDbBytes": 8823884558
+    },
+    {
+      "atFilesCompleted": 6209,
+      "dbBytes": 6718312448,
+      "walBytes": 49069232,
+      "diskFreeBytes": 415063941120,
+      "projectedFullDbBytes": 8836923460
+    },
+    {
+      "atFilesCompleted": 6259,
+      "dbBytes": 6778503168,
+      "walBytes": 49069232,
+      "diskFreeBytes": 414988206080,
+      "projectedFullDbBytes": 8844869048
+    },
+    {
+      "atFilesCompleted": 6309,
+      "dbBytes": 6839836672,
+      "walBytes": 49069232,
+      "diskFreeBytes": 414926409728,
+      "projectedFullDbBytes": 8854168030
+    },
+    {
+      "atFilesCompleted": 6359,
+      "dbBytes": 6894612480,
+      "walBytes": 49069232,
+      "diskFreeBytes": 414865338368,
+      "projectedFullDbBytes": 8854898588
+    },
+    {
+      "atFilesCompleted": 6409,
+      "dbBytes": 6950653952,
+      "walBytes": 49069232,
+      "diskFreeBytes": 415860703232,
+      "projectedFullDbBytes": 8857230586
+    },
+    {
+      "atFilesCompleted": 6459,
+      "dbBytes": 7004463104,
+      "walBytes": 49069232,
+      "diskFreeBytes": 415801729024,
+      "projectedFullDbBytes": 8856703850
+    },
+    {
+      "atFilesCompleted": 6509,
+      "dbBytes": 7061991424,
+      "walBytes": 49069232,
+      "diskFreeBytes": 415740895232,
+      "projectedFullDbBytes": 8860851738
+    },
+    {
+      "atFilesCompleted": 6559,
+      "dbBytes": 7125192704,
+      "walBytes": 49069232,
+      "diskFreeBytes": 415664726016,
+      "projectedFullDbBytes": 8872000124
+    },
+    {
+      "atFilesCompleted": 6609,
+      "dbBytes": 7187308544,
+      "walBytes": 49069232,
+      "diskFreeBytes": 415591219200,
+      "projectedFullDbBytes": 8881638505
+    },
+    {
+      "atFilesCompleted": 6659,
+      "dbBytes": 7246557184,
+      "walBytes": 49069232,
+      "diskFreeBytes": 415532367872,
+      "projectedFullDbBytes": 8887615636
+    },
+    {
+      "atFilesCompleted": 6709,
+      "dbBytes": 7303507968,
+      "walBytes": 49069232,
+      "diskFreeBytes": 415448375296,
+      "projectedFullDbBytes": 8890706450
+    },
+    {
+      "atFilesCompleted": 6759,
+      "dbBytes": 7361708032,
+      "walBytes": 49069232,
+      "diskFreeBytes": 415339454464,
+      "projectedFullDbBytes": 8895261059
+    },
+    {
+      "atFilesCompleted": 6809,
+      "dbBytes": 7421566976,
+      "walBytes": 49069232,
+      "diskFreeBytes": 415176404992,
+      "projectedFullDbBytes": 8901738507
+    },
+    {
+      "atFilesCompleted": 6859,
+      "dbBytes": 7475888128,
+      "walBytes": 49069232,
+      "diskFreeBytes": 415200841728,
+      "projectedFullDbBytes": 8901527678
+    },
+    {
+      "atFilesCompleted": 6909,
+      "dbBytes": 7537565696,
+      "walBytes": 49069232,
+      "diskFreeBytes": 415105032192,
+      "projectedFullDbBytes": 8910015782
+    },
+    {
+      "atFilesCompleted": 6959,
+      "dbBytes": 7596560384,
+      "walBytes": 49069232,
+      "diskFreeBytes": 415056076800,
+      "projectedFullDbBytes": 8915233317
+    },
+    {
+      "atFilesCompleted": 7009,
+      "dbBytes": 7654178816,
+      "walBytes": 49069232,
+      "diskFreeBytes": 413909471232,
+      "projectedFullDbBytes": 8918772776
+    },
+    {
+      "atFilesCompleted": 7059,
+      "dbBytes": 7713456128,
+      "walBytes": 49069232,
+      "diskFreeBytes": 412778098688,
+      "projectedFullDbBytes": 8924181357
+    },
+    {
+      "atFilesCompleted": 7109,
+      "dbBytes": 7774679040,
+      "walBytes": 49069232,
+      "diskFreeBytes": 413779730432,
+      "projectedFullDbBytes": 8931749011
+    },
+    {
+      "atFilesCompleted": 7159,
+      "dbBytes": 7836147712,
+      "walBytes": 49069232,
+      "diskFreeBytes": 414774845440,
+      "projectedFullDbBytes": 8939491321
+    },
+    {
+      "atFilesCompleted": 7209,
+      "dbBytes": 7890305024,
+      "walBytes": 49069232,
+      "diskFreeBytes": 414713274368,
+      "projectedFullDbBytes": 8938843270
+    },
+    {
+      "atFilesCompleted": 7259,
+      "dbBytes": 7945015296,
+      "walBytes": 49069232,
+      "diskFreeBytes": 414654414848,
+      "projectedFullDbBytes": 8938826274
+    },
+    {
+      "atFilesCompleted": 7309,
+      "dbBytes": 8006905856,
+      "walBytes": 49069232,
+      "diskFreeBytes": 414578438144,
+      "projectedFullDbBytes": 8946832689
+    },
+    {
+      "atFilesCompleted": 7359,
+      "dbBytes": 8064692224,
+      "walBytes": 49069232,
+      "diskFreeBytes": 414526930944,
+      "projectedFullDbBytes": 8950175485
+    },
+    {
+      "atFilesCompleted": 7409,
+      "dbBytes": 8124620800,
+      "walBytes": 49069232,
+      "diskFreeBytes": 414450237440,
+      "projectedFullDbBytes": 8955834536
+    },
+    {
+      "atFilesCompleted": 7459,
+      "dbBytes": 8184123392,
+      "walBytes": 49069232,
+      "diskFreeBytes": 414392016896,
+      "projectedFullDbBytes": 8960951299
+    },
+    {
+      "atFilesCompleted": 7509,
+      "dbBytes": 8245264384,
+      "walBytes": 49069232,
+      "diskFreeBytes": 415389126656,
+      "projectedFullDbBytes": 8967781892
+    },
+    {
+      "atFilesCompleted": 7559,
+      "dbBytes": 8299966464,
+      "walBytes": 49069232,
+      "diskFreeBytes": 415330004992,
+      "projectedFullDbBytes": 8967565301
+    },
+    {
+      "atFilesCompleted": 7609,
+      "dbBytes": 8355819520,
+      "walBytes": 49069232,
+      "diskFreeBytes": 415253929984,
+      "projectedFullDbBytes": 8968586939
+    },
+    {
+      "atFilesCompleted": 7659,
+      "dbBytes": 8418693120,
+      "walBytes": 49069232,
+      "diskFreeBytes": 415184752640,
+      "projectedFullDbBytes": 8977081435
+    },
+    {
+      "atFilesCompleted": 7709,
+      "dbBytes": 8477999104,
+      "walBytes": 49069232,
+      "diskFreeBytes": 415098499072,
+      "projectedFullDbBytes": 8981686170
+    },
+    {
+      "atFilesCompleted": 7759,
+      "dbBytes": 8534618112,
+      "walBytes": 49069232,
+      "diskFreeBytes": 414967689216,
+      "projectedFullDbBytes": 8983403289
+    },
+    {
+      "atFilesCompleted": 7809,
+      "dbBytes": 8595906560,
+      "walBytes": 49069232,
+      "diskFreeBytes": 415972519936,
+      "projectedFullDbBytes": 8989981928
+    },
+    {
+      "atFilesCompleted": 7859,
+      "dbBytes": 8660111360,
+      "walBytes": 49069232,
+      "diskFreeBytes": 415892324352,
+      "projectedFullDbBytes": 8999507504
+    },
+    {
+      "atFilesCompleted": 7909,
+      "dbBytes": 8717127680,
+      "walBytes": 49069232,
+      "diskFreeBytes": 415840292864,
+      "projectedFullDbBytes": 9001489665
+    },
+    {
+      "atFilesCompleted": 7959,
+      "dbBytes": 8768188416,
+      "walBytes": 49069232,
+      "diskFreeBytes": 415783378944,
+      "projectedFullDbBytes": 8997335695
+    },
+    {
+      "atFilesCompleted": 8009,
+      "dbBytes": 8828583936,
+      "walBytes": 49069232,
+      "diskFreeBytes": 414631768064,
+      "projectedFullDbBytes": 9002752529
+    },
+    {
+      "atFilesCompleted": 8059,
+      "dbBytes": 8888520704,
+      "walBytes": 49069232,
+      "diskFreeBytes": 414575079424,
+      "projectedFullDbBytes": 9007637249
+    },
+    {
+      "atFilesCompleted": 8109,
+      "dbBytes": 8944005120,
+      "walBytes": 49069232,
+      "diskFreeBytes": 414499213312,
+      "projectedFullDbBytes": 9007977533
+    },
+    {
+      "atFilesCompleted": 8159,
+      "dbBytes": 9005223936,
+      "walBytes": 49069232,
+      "diskFreeBytes": 414438916096,
+      "projectedFullDbBytes": 9014053669
+    }
+  ],
+  "throughputFilesPerSec": 1.14,
+  "failedFileList": [],
+  "gate": "FAIL",
+  "gateFailures": [
+    "PRIMARY_CHANGED"
+  ]
+}

@@ -1,0 +1,155 @@
+{
+  "phase": "CAPACITY_DECOMPOSITION",
+  "generatedAt": "2026-07-28T06:55:54.525Z",
+  "dbFileBytes": 9016954880,
+  "walBytes": 0,
+  "shmBytes": 32768,
+  "pageCount": 2201405,
+  "pageSize": 4096,
+  "pageCountTimesPageSize": 9016954880,
+  "freelistPages": 0,
+  "freelistBytes": 0,
+  "fragmentationRatio": 0,
+  "tablesBytes": 5950795776,
+  "indexesBytes": 3066155008,
+  "indexOverheadRatio": 0.34,
+  "candidates": 8154709,
+  "payoutLines": 11073826,
+  "avgCandidateTableRowBytes": 411,
+  "avgPayoutLineTableRowBytes": 142,
+  "topTables": [
+    {
+      "name": "settlement_candidates_v2",
+      "bytes": 3349286912,
+      "mb": 3194.1
+    },
+    {
+      "name": "race_payout_lines_v2",
+      "bytes": 1567883264,
+      "mb": 1495.3
+    },
+    {
+      "name": "domain_observations",
+      "bytes": 545083392,
+      "mb": 519.8
+    },
+    {
+      "name": "typed_observation_payloads",
+      "bytes": 408809472,
+      "mb": 389.9
+    },
+    {
+      "name": "race_refund_lines_v2",
+      "bytes": 71122944,
+      "mb": 67.8
+    },
+    {
+      "name": "parse_runs",
+      "bytes": 3051520,
+      "mb": 2.9
+    },
+    {
+      "name": "raw_documents",
+      "bytes": 2801664,
+      "mb": 2.7
+    },
+    {
+      "name": "n1_settlement_backfill_checkpoints",
+      "bytes": 2588672,
+      "mb": 2.5
+    },
+    {
+      "name": "sqlite_schema",
+      "bytes": 49152,
+      "mb": 0
+    },
+    {
+      "name": "operational_audit_events",
+      "bytes": 20480,
+      "mb": 0
+    },
+    {
+      "name": "asof_resolution_policies",
+      "bytes": 4096,
+      "mb": 0
+    },
+    {
+      "name": "capture_attempt_events",
+      "bytes": 4096,
+      "mb": 0
+    }
+  ],
+  "topIndexes": [
+    {
+      "name": "sqlite_autoindex_settlement_candidates_v2_2",
+      "bytes": 1193488384,
+      "mb": 1138.2
+    },
+    {
+      "name": "sqlite_autoindex_race_payout_lines_v2_2",
+      "bytes": 582983680,
+      "mb": 556
+    },
+    {
+      "name": "sqlite_autoindex_race_payout_lines_v2_1",
+      "bytes": 560902144,
+      "mb": 534.9
+    },
+    {
+      "name": "sqlite_autoindex_settlement_candidates_v2_1",
+      "bytes": 413495296,
+      "mb": 394.3
+    },
+    {
+      "name": "domain_observations_race_type_time",
+      "bytes": 93564928,
+      "mb": 89.2
+    },
+    {
+      "name": "sqlite_autoindex_domain_observations_1",
+      "bytes": 86044672,
+      "mb": 82.1
+    },
+    {
+      "name": "sqlite_autoindex_typed_observation_payloads_1",
+      "bytes": 86044672,
+      "mb": 82.1
+    },
+    {
+      "name": "sqlite_autoindex_race_refund_lines_v2_2",
+      "bytes": 23293952,
+      "mb": 22.2
+    },
+    {
+      "name": "sqlite_autoindex_race_refund_lines_v2_1",
+      "bytes": 22511616,
+      "mb": 21.5
+    },
+    {
+      "name": "sqlite_autoindex_raw_documents_3",
+      "bytes": 802816,
+      "mb": 0.8
+    },
+    {
+      "name": "sqlite_autoindex_raw_documents_2",
+      "bytes": 688128,
+      "mb": 0.7
+    },
+    {
+      "name": "sqlite_autoindex_parse_runs_1",
+      "bytes": 499712,
+      "mb": 0.5
+    }
+  ],
+  "projectionModel": {
+    "sampleProjectedBaseBytes": 5381780085,
+    "actualBytes": 9016954880,
+    "deltaBytes": 3635174795,
+    "overrunRatio": 0.675,
+    "reason": "sample benchmark was decade-stratified (early legacy files sparse: 4 bet types, fewer races); full archive is dominated by modern all-7-bet-type dense days, raising avg bytes/race. Index overhead (UUID PKs + 64-hex hashes) and per-row STRICT TEXT columns amplify at scale."
+  },
+  "quotaBytes": 32212254720,
+  "quotaHeadroomBytes": 23195299840,
+  "quotaReassessment": "final ~9.0GB; a 10GB quota leaves <1GB headroom (insufficient for GC scratch / additional ingest). Recommend raising quota to >=16GB and low-water >=24GB before enabling GC or any further ingest.",
+  "result": "REPORTED"
+}

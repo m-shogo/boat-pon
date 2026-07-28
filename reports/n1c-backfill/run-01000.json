@@ -1,0 +1,162 @@
+{
+  "phase": "RUN_expansion1000",
+  "generatedAt": "2026-07-27T01:24:16.179Z",
+  "target": 1000,
+  "limit": 900,
+  "elapsedMs": 338384,
+  "completedBefore": 100,
+  "completedAfter": 1000,
+  "totalArchiveFiles": 8167,
+  "processedFiles": 900,
+  "skippedCompleted": 100,
+  "failedFiles": 0,
+  "candidatesThisRun": 802813,
+  "payoutLinesThisRun": 966378,
+  "refundLinesThisRun": 141584,
+  "skippedCandidates": 0,
+  "parsedRacesThisRun": 125815,
+  "totalCandidates": 845813,
+  "evidencePins": 0,
+  "stopped": false,
+  "stopReason": null,
+  "integrityCheck": "ok",
+  "foreignKeyViolations": 0,
+  "primaryUnchanged": true,
+  "dbBytes": 944996352,
+  "projectedFullDbBytes": 7717785207,
+  "quotaBytes": 32212254720,
+  "walPeakBytes": 29664032,
+  "diskFreeBytes": 422905450496,
+  "healthChecks": [
+    {
+      "atFilesCompleted": 150,
+      "dbBytes": 91631616,
+      "walBytes": 11630792,
+      "diskFreeBytes": 426033303552,
+      "projectedFullDbBytes": 4989036052
+    },
+    {
+      "atFilesCompleted": 200,
+      "dbBytes": 138137600,
+      "walBytes": 16842592,
+      "diskFreeBytes": 425962696704,
+      "projectedFullDbBytes": 5640848896
+    },
+    {
+      "atFilesCompleted": 250,
+      "dbBytes": 189042688,
+      "walBytes": 18976752,
+      "diskFreeBytes": 425835085824,
+      "projectedFullDbBytes": 6175646532
+    },
+    {
+      "atFilesCompleted": 300,
+      "dbBytes": 239796224,
+      "walBytes": 21143872,
+      "diskFreeBytes": 425844338688,
+      "projectedFullDbBytes": 6528052538
+    },
+    {
+      "atFilesCompleted": 350,
+      "dbBytes": 291037184,
+      "walBytes": 23937232,
+      "diskFreeBytes": 425776922624,
+      "projectedFullDbBytes": 6791144805
+    },
+    {
+      "atFilesCompleted": 400,
+      "dbBytes": 341467136,
+      "walBytes": 23937232,
+      "diskFreeBytes": 425718583296,
+      "projectedFullDbBytes": 6971905249
+    },
+    {
+      "atFilesCompleted": 450,
+      "dbBytes": 388685824,
+      "walBytes": 23937232,
+      "diskFreeBytes": 425666224128,
+      "projectedFullDbBytes": 7054215832
+    },
+    {
+      "atFilesCompleted": 500,
+      "dbBytes": 440180736,
+      "walBytes": 26351552,
+      "diskFreeBytes": 424532353024,
+      "projectedFullDbBytes": 7189912142
+    },
+    {
+      "atFilesCompleted": 550,
+      "dbBytes": 490123264,
+      "walBytes": 26351552,
+      "diskFreeBytes": 424473960448,
+      "projectedFullDbBytes": 7277884904
+    },
+    {
+      "atFilesCompleted": 600,
+      "dbBytes": 540061696,
+      "walBytes": 28889472,
+      "diskFreeBytes": 424410116096,
+      "projectedFullDbBytes": 7351139785
+    },
+    {
+      "atFilesCompleted": 650,
+      "dbBytes": 591036416,
+      "walBytes": 28889472,
+      "diskFreeBytes": 424353128448,
+      "projectedFullDbBytes": 7426145245
+    },
+    {
+      "atFilesCompleted": 700,
+      "dbBytes": 639262720,
+      "walBytes": 28889472,
+      "diskFreeBytes": 424294662144,
+      "projectedFullDbBytes": 7458369477
+    },
+    {
+      "atFilesCompleted": 750,
+      "dbBytes": 693190656,
+      "walBytes": 29664032,
+      "diskFreeBytes": 424234401792,
+      "projectedFullDbBytes": 7548384117
+    },
+    {
+      "atFilesCompleted": 800,
+      "dbBytes": 742993920,
+      "walBytes": 29664032,
+      "diskFreeBytes": 424177549312,
+      "projectedFullDbBytes": 7585039181
+    },
+    {
+      "atFilesCompleted": 850,
+      "dbBytes": 796266496,
+      "walBytes": 29664032,
+      "diskFreeBytes": 424118439936,
+      "projectedFullDbBytes": 7650715850
+    },
+    {
+      "atFilesCompleted": 900,
+      "dbBytes": 843005952,
+      "walBytes": 29664032,
+      "diskFreeBytes": 424063246336,
+      "projectedFullDbBytes": 7649810678
+    },
+    {
+      "atFilesCompleted": 950,
+      "dbBytes": 895631360,
+      "walBytes": 29664032,
+      "diskFreeBytes": 424001527808,
+      "projectedFullDbBytes": 7699601386
+    },
+    {
+      "atFilesCompleted": 1000,
+      "dbBytes": 944996352,
+      "walBytes": 29664032,
+      "diskFreeBytes": 423943110656,
+      "projectedFullDbBytes": 7717785207
+    }
+  ],
+  "throughputFilesPerSec": 2.66,
+  "failedFileList": [],
+  "gate": "PASS",
+  "gateFailures": []
+}

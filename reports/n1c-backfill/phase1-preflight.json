@@ -1,0 +1,29 @@
+{
+  "phase": "PHASE1_PREFLIGHT",
+  "generatedAt": "2026-07-27T01:18:44.645Z",
+  "filesystem": {
+    "total": 994610155520,
+    "free": 426161057792,
+    "availableGiB": 396.9
+  },
+  "pragmas": {
+    "journal_mode": "wal",
+    "synchronous": 2,
+    "page_size": 4096,
+    "auto_vacuum": 0,
+    "temp_store": 0,
+    "wal_autocheckpoint": 1000
+  },
+  "archiveFiles": 8167,
+  "quotaBefore": 1073741824,
+  "quotaAfter": 32212254720,
+  "diskLowWaterBytes": 17179869184,
+  "shadowWriteEnabled": false,
+  "operationalGcEnabled": false,
+  "killSwitchEngaged": false,
+  "recommendedSafeFreeGiB": "25-30",
+  "diskFloorBytes": 21474836480,
+  "quotaGuardBytes": 32212254720,
+  "stopConditions": [],
+  "result": "PASS"
+}

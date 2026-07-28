@@ -1,0 +1,23 @@
+{
+  "phase": "PHASE2_BACKUP_RESTORE_DRILL",
+  "generatedAt": "2026-07-27T01:19:33.823Z",
+  "backup": {
+    "path": "backups/research-replay/n1c-backup-20260727011933823.sqlite",
+    "sha256": "8f3d25f7f31fb847e3e819f9639981b2970c628c323d0990a3c9eb1e6e03596e",
+    "bytes": 430080,
+    "quickCheck": "ok",
+    "schemaOk": true,
+    "sourceSchemaVersion": "n1-settlement.0.1"
+  },
+  "restoreDrill": {
+    "integrityCheck": "ok",
+    "foreignKeyViolations": 0,
+    "restoredSha256": "8f3d25f7f31fb847e3e819f9639981b2970c628c323d0990a3c9eb1e6e03596e",
+    "hashMatchesBackup": true,
+    "rowCountsMatch": true,
+    "objectCountMatch": true
+  },
+  "rollback": "kill writer, restore backup file over data/research-replay.sqlite (both -wal/-shm removed), reopen read-only, verify quick_check",
+  "retention": "keep >=3 most recent backups under backups/research-replay/ (git-ignored)",
+  "result": "PASS"
+}

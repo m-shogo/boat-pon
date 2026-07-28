@@ -1,0 +1,43 @@
+{
+  "phase": "RUN_pilot100",
+  "generatedAt": "2026-07-27T01:22:52.778Z",
+  "target": 100,
+  "limit": 90,
+  "elapsedMs": 6357,
+  "completedBefore": 10,
+  "completedAfter": 100,
+  "totalArchiveFiles": 8167,
+  "processedFiles": 90,
+  "skippedCompleted": 10,
+  "failedFiles": 0,
+  "candidatesThisRun": 37763,
+  "payoutLinesThisRun": 48253,
+  "refundLinesThisRun": 856,
+  "skippedCandidates": 0,
+  "parsedRacesThisRun": 12458,
+  "totalCandidates": 43000,
+  "evidencePins": 0,
+  "stopped": false,
+  "stopReason": null,
+  "integrityCheck": "ok",
+  "foreignKeyViolations": 0,
+  "primaryUnchanged": true,
+  "dbBytes": 54439936,
+  "projectedFullDbBytes": 4446109573,
+  "quotaBytes": 32212254720,
+  "walPeakBytes": 8606712,
+  "diskFreeBytes": 426095083520,
+  "healthChecks": [
+    {
+      "atFilesCompleted": 60,
+      "dbBytes": 32989184,
+      "walBytes": 8499592,
+      "diskFreeBytes": 426107285504,
+      "projectedFullDbBytes": 4490377762
+    }
+  ],
+  "throughputFilesPerSec": 14.16,
+  "failedFileList": [],
+  "gate": "PASS",
+  "gateFailures": []
+}

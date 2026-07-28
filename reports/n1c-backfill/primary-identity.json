@@ -1,0 +1,34 @@
+{
+  "phase": "PRIMARY_IDENTITY_RECLASSIFICATION",
+  "generatedAt": "2026-07-28T01:56:09.628Z",
+  "phase0Baseline": {
+    "size": 15134183424,
+    "mtimeMs": 1785114446000,
+    "sha256": "a9d76d88d6975d34543f27ac8cc679833b7914216e119bb06e125c595bce7797"
+  },
+  "quiescentNow": {
+    "size": 15152754688,
+    "mtimeMs": 1785201643952,
+    "sha256": "30df0dae19cab42b3d556c6c6703aa1643aab63717ab107270e5f8083dadf3cb"
+  },
+  "twoPointQuiescentStable": true,
+  "primaryByteIdentity": "FAIL",
+  "primaryStructuralIdentity": "PASS",
+  "primarySchemaIdentity": "PASS",
+  "appSettingsIdentity": "PASS",
+  "unexpectedPrimaryMutation": 0,
+  "knownConcurrentMutation": "bulk-fetch-racer-stats.ts appended rows to racer_profiles/racer_course_stats during backfill (independent scheduled job)",
+  "backfillPrimaryWriteEvidence": "none",
+  "backfillPrimaryAccess": {
+    "opensBoatSqlite": false,
+    "accessMode": "statSync fingerprint (metadata only) + read-only probe connection",
+    "probeReadOnlyConnection": true,
+    "probeQueryOnlyEnforced": true,
+    "writeStatementCount": 0,
+    "writeConnectionCount": 0,
+    "attachedDatabases": [],
+    "researchTablesInPrimary": 0
+  },
+  "note": "primary byte identity does NOT hold vs the pre-run snapshot because an unrelated concurrent job appended data; structural/schema/app_settings identity holds and N1-C issued zero writes to the primary (proven by construction: backfill never opens boat.sqlite for writing).",
+  "result": "STRUCTURALLY_IDENTICAL_BYTE_DIVERGED_BY_KNOWN_CONCURRENT_JOB"
+}

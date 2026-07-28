@@ -1,0 +1,37 @@
+{
+  "phase": "MANIFEST",
+  "generatedAt": "2026-07-28T01:52:10.589Z",
+  "archiveRoot": "data/raw/official/results",
+  "fileCount": 8168,
+  "totalBytes": 295456988,
+  "manifestSha256": "c44bfb6fdda7728ee2bdc58d48d9378a48617d6ce95b61a84c15a8c2e934c1a1",
+  "firstFile": "k000101.lzh",
+  "lastFile": "k260726.lzh",
+  "baselineSnapshotFiles": 8164,
+  "baselineLastFile": "k260722.lzh",
+  "delta": 4,
+  "filesBeyondBaseline": [
+    {
+      "file": "k260723.lzh",
+      "bytes": 37499,
+      "sha256": "1f4962c5be79cbb10f38e822e83e2a3c0bdfd98112d310838f93ad96b16d8016"
+    },
+    {
+      "file": "k260724.lzh",
+      "bytes": 43308,
+      "sha256": "b67dd6d2c110c7d7d07477ad4ac96c999c0a5651bf1704ada4f403abe7634f27"
+    },
+    {
+      "file": "k260725.lzh",
+      "bytes": 43077,
+      "sha256": "7b4de7e3ea73e0a74dd77b27b596a3a54beb0f9e5bd29099a8c2577563c71a95"
+    },
+    {
+      "file": "k260726.lzh",
+      "bytes": 36756,
+      "sha256": "840779a090b0d04a78f749b82d2267420a99c9dfa4bb56eb03505b3eeab7f5eb"
+    }
+  ],
+  "deltaExplanation": "daily official K archive grew by the normal daily pipeline after the 2026-07-24 (k260722) snapshot; the extra files are standard daily result archives (not auxiliary/sanitized fixtures, not duplicate paths, not redefinition of target set)",
+  "duplicateBasenames": []
+}

@@ -1,0 +1,39 @@
+{
+  "phase": "PHASE3_MIGRATION_0_2",
+  "generatedAt": "2026-07-27T01:19:40.416Z",
+  "beforeBackfillApplied": false,
+  "objectsBefore": 96,
+  "objectsAfter": 100,
+  "n1_0_1_objects_unchanged": true,
+  "v01": {
+    "version": "n1-settlement.0.1",
+    "checksum": "35903ee175dbb31cbc7202aa573a2e1b4f6d58d9b6954cfac4cee0fdfa4eb94d",
+    "ok": true,
+    "appendOnlyTriggers": 14
+  },
+  "v02": {
+    "version": "n1-settlement.0.2",
+    "checksum": "50d7e605c1ea73973eb4b665e9b4792e7a1b33fae9dc2d3694dc3f9e8e1f01f1",
+    "ok": true,
+    "checksumMatches": true,
+    "appendOnlyTriggers": 2
+  },
+  "checkpointTablePresent": true,
+  "integrityCheck": "ok",
+  "foreignKeyViolations": 0,
+  "tableCount": 33,
+  "indexCount": 60,
+  "triggerCount": 59,
+  "n1DataRowCountsUnchangedZero": true,
+  "rowsAfter": {
+    "settlement_candidates_v2": 0,
+    "race_payout_lines_v2": 0,
+    "race_refund_lines_v2": 0,
+    "settlement_evidence_pins_v2": 0,
+    "settlement_conflict_groups_v2": 0,
+    "settlement_conflict_members_v2": 0,
+    "settlement_resolution_events_v2": 0
+  },
+  "reapplyNoop": true,
+  "result": "PASS"
+}

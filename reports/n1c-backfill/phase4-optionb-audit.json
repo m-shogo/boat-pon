@@ -1,0 +1,18 @@
+{
+  "phase": "PHASE4_OPTION_B_GC_SAFETY_AUDIT",
+  "generatedAt": "2026-07-27T01:22:01.071Z",
+  "checks": {
+    "optionBExplicitPins": 0,
+    "optionAExplicitPins": 3,
+    "candidateFkProtectsRawFromGc": true,
+    "fkRestrictBlocksRawDelete": true,
+    "appendOnlyEnforced": true,
+    "optionABsemanticsIdentical": true,
+    "permanentGcEnabled": false,
+    "permanentShadowEnabled": false,
+    "permanentKillSwitch": false,
+    "gcChecksParseRunAndObservationNotOnlyPins": true
+  },
+  "contract": "docs/n1-settlement-gc-safety-contract.md",
+  "result": "PASS"
+}
