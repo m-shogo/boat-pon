@@ -6,4 +6,4 @@
 - backfillPrimaryWriteEvidence: **none**（boat.sqliteを一度も書込みで開かない）
 - read-only probe: readOnly=true, query_only=true, writeSQL=0, writeConn=0
 - 2点静止安定(size/mtime): true
-- quiescent sha256: `30df0dae19cab42b3d556c6c6703aa1643aab63717ab107270e5f8083dadf3cb`
+- quiescent sha256: `4136cf135de892f77fb692fc2ed8f4a11665fc5f31015c8299d49944fed8fae3`

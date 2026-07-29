@@ -2,17 +2,32 @@
 
 更新: 2026-07-28
 
-## 判定
+## 判定（2026-07-29 closure 更新）
 
-- **Backfill execution: COMPLETE**（run-time manifest 8,167/8,167、post-run incremental k260726 適用で現archive 8,168/8,168）
-- **Final verification: COMPLETE**（integrity/fk/dedup/schema/legacy/reconciliation PASS。詳細下記、k260726増分の全再走査のみ意図的にskip）
+- **Backfill execution: COMPLETE**（現archive 8,168/8,168、failed 0）
+- **Final verification: COMPLETE**（現 8,168 state に対する authoritative full verify を完走: integrity ok / fk 0 / observation-level dup 0 / coverage 8,168/8,168 / schema checksum 一致）
+- **Reconciliation (+5,153): COMPLETE**（unexplainedDelta=0、simMatchesDb=true、parser determinism 0）
+- **N1-C acceptance: CONDITIONAL**
 - **Overall N1-C: CONDITIONAL**
 
-CONDITIONAL の理由（省略不可の3点）:
+2つの verification debt（A: 8,168 authoritative full verify / B: +5,153 完全 reconciliation）は**解消**した。ただし reconciliation が新たな data-quality finding を surface したため、COMPLETE へは昇格しない。
 
-1. **対象差分 8,164→8,167→8,168**: K archive は live で日次増加する。実行時点 manifest は 8,167、現在 8,168。継続的 incremental backfill が前提。
-2. **容量上振れ 5.38GB→約9.0GB（+67%）**: sample 予測モデルが大きく外れた。quota 再評価が必要。
-3. **primary 完全不変は不成立（byte identity FAIL）**: 並行 racer-stats append により。structural/schema/app_settings identity は PASS、N1 の primary write は 0。
+CONDITIONAL の理由:
+
+1. **【新】source archive 重複（COMPLETE を阻む主因）**: 4 file（2008-07-06/07-13, 2009-04-06/07-08）が単一 `.TXT` 内に日次データを物理重複格納。N1 は faithful に取り込み、**race-level 重複 candidate 4,196 / 重複 observation 624 / 重複 line 11,658**（store の約 0.05%）が残る。source-data defect（N1 pipeline bug ではない）・値誤りなし（legacy mismatch 0）・reconciliation で完全説明済み（unexplained=0）だが、race 単位の重複が未解決。正本: [`data-quality-finding-duplicate-source-archives.md`](data-quality-finding-duplicate-source-archives.md)。破壊的修正は行わない。
+2. **対象差分 8,164→8,167→8,168**: K archive は live で日次増加。継続的 incremental backfill が前提。
+3. **容量上振れ 5.38GB→約9.0GB（+67.5%）**: quota 再評価が必要（GC・追加 ingest 前に quota ≥16GB / low-water ≥24GB）。
+4. **primary byte identity FAIL**: 並行 racer-stats append による。structural/schema/app_settings identity は PASS、writer 静止 2 点で安定、N1 の primary write は 0。「primary 完全不変」ではない。
+
+## Closure verification（2026-07-29）
+
+| debt / phase | 結果 | 証跡 |
+|---|---|---|
+| Debt A: 8,168 authoritative full verify | **RESOLVED** | integrity ok / fk 0 / obs-level dup 0 / coverage 8,168/8,168 / pins 0（`phase10-verify.json`） |
+| Debt B: +5,153 reconciliation | **RESOLVED** | unexplainedDelta 0 / simMatchesDb true / parser determinism 0（`reconciliation.json`） |
+| 新 finding: 4-file source 重複 | **報告・未修正** | 4,196 dup candidate / 624 dup obs / 11,658 dup line（`data-quality-finding-...md`） |
+| Phase 3 primary quiescent 2-point | **PASS** | twoPointStable true / structural・schema・appSettings PASS / N1 write none（`primary-identity.json`） |
+| Phase 5 regression | **PASS** | 459 tests / tsc×2 / build / golden / db:health / validate:data / secret scan 0 |
 
 ## 1. 対象差分の確定（8,164 → 8,167 → 8,168）
 

@@ -1,0 +1,79 @@
+{
+  "phase": "SOURCE_RECONCILIATION",
+  "generatedAt": "2026-07-29T00:48:01.712Z",
+  "scope": "read-only re-parse of current archive with identical ingest classification; no writes to sidecar/archive/boat.sqlite",
+  "parseMs": 96518,
+  "archiveFiles": 8168,
+  "lineDefinitions": {
+    "archiveRawParsedLine": "parseOfficialResultDetail(f).payouts.length — 全 RacePayout（returned含む）",
+    "n1StoredLine": "race_payout_lines_v2 + race_refund_lines_v2（post-dedup, per candidate）",
+    "filtered": "venue code不明 / raceNo∉[1,12] のrace、または condition の無い orphan payout line",
+    "dedupRemoved": "candidate内で (canonical,payout,popularity,lineKind) / (canonical,scope,refund,reason) が同一の重複line",
+    "skipped": "appendCandidate validation で拒否される race×betType の全line（実測 skippedCandidates 0）"
+  },
+  "perFilesetRaw": {
+    "s8164": {
+      "files": 8164,
+      "rawParsed": 11514006,
+      "processed": 11525664,
+      "filtered": -11658,
+      "stored": 11514007,
+      "dedupRemoved": 11657,
+      "skipped": 0
+    },
+    "s8167": {
+      "files": 8167,
+      "rawParsed": 11519158,
+      "processed": 11530816,
+      "filtered": -11658,
+      "stored": 11519159,
+      "dedupRemoved": 11657,
+      "skipped": 0
+    },
+    "all": {
+      "files": 8168,
+      "rawParsed": 11520718,
+      "processed": 11532376,
+      "filtered": -11658,
+      "stored": 11520719,
+      "dedupRemoved": 11657,
+      "skipped": 0
+    }
+  },
+  "sameFilesetReconciliation": {
+    "fileset": "current_8168",
+    "files": 8168,
+    "archiveRawParsedLines": 11520718,
+    "n1StoredLinesSim": 11520719,
+    "n1StoredLinesDbActual": 11520719,
+    "simMatchesDb": true,
+    "categories": {
+      "storedInSidecar": 11520719,
+      "dedupRemovedDuplicateSourceLines": 11657,
+      "skippedInvalidStateCandidateLines": 0,
+      "venueOrRaceNoFilteredOrOrphanLines": -11658
+    },
+    "explainedDelta": -1,
+    "delta": -1,
+    "unexplainedDelta": 0
+  },
+  "historicalDeltaReconciliation": {
+    "n1StoredLines_8167": 11519159,
+    "referenceArchiveLines_8164": 11514006,
+    "statedDelta": 5153,
+    "categories": {
+      "newDailyFiles_k260723_25_lines": 5152,
+      "minus_venueOrRaceNoFilteredOrOrphan_8167": 11658,
+      "minus_dedupRemovedDuplicateSource_8167": -11657,
+      "minus_skippedInvalidStateCandidate_8167": 0,
+      "parserDeterminism_8164_vs_reference": 0
+    },
+    "explainedDelta": 5153,
+    "unexplainedDelta": 0
+  },
+  "valueMismatch": {
+    "legacyComparisonPayoutMismatch": 0,
+    "note": "reports/n1c-backfill/legacy-comparison.json、sample 2,000 で金額不一致0。multiplicity差(件数)とvalue差を分離済み"
+  },
+  "result": "PASS"
+}

@@ -1,6 +1,6 @@
 {
   "phase": "PHASE10_FINAL_VERIFY",
-  "generatedAt": "2026-07-28T01:25:31.259Z",
+  "generatedAt": "2026-07-29T00:39:58.276Z",
   "integrityCheck": "ok",
   "foreignKeyViolations": 0,
   "schema": {
@@ -14,25 +14,25 @@
   },
   "archiveCoverage": {
     "total": 8168,
-    "completed": 8167,
+    "completed": 8168,
     "failedCount": 0,
     "failed": [],
-    "coverageComplete": false
+    "coverageComplete": true
   },
   "counts": {
-    "candidates": 8153617,
-    "payoutLines": 11072266,
+    "candidates": 8154709,
+    "payoutLines": 11073826,
     "refundLines": 446893,
     "evidencePins": 0,
-    "observations": 1194523,
-    "parseRuns": 8167,
-    "rawDocuments": 8167,
+    "observations": 1194679,
+    "parseRuns": 8168,
+    "rawDocuments": 8168,
     "conflictGroups": 0
   },
-  "distinctCandidateKeys": 8153617,
+  "distinctCandidateKeys": 8154709,
   "duplicateSemanticCandidates": 0,
   "evidencePinsExplicit": 0,
-  "implicitCandidateFkReferences": 24460851,
+  "implicitCandidateFkReferences": 24464127,
   "byStatus": [
     {
       "s": "partially_refunded",
@@ -44,39 +44,39 @@
     },
     {
       "s": "settled",
-      "c": 7833938
+      "c": 7835030
     }
   ],
   "byBetType": [
     {
       "b": "exacta",
-      "c": 1190198
+      "c": 1190354
     },
     {
       "b": "place",
-      "c": 1134616
+      "c": 1134772
     },
     {
       "b": "quinella",
-      "c": 1181486
+      "c": 1181642
     },
     {
       "b": "trifecta",
-      "c": 1174712
+      "c": 1174868
     },
     {
       "b": "trio",
-      "c": 1173501
+      "c": 1173657
     },
     {
       "b": "wide",
-      "c": 1172722
+      "c": 1172878
     },
     {
       "b": "win",
-      "c": 1126382
+      "c": 1126538
     }
   ],
-  "dbBytes": 9015648256,
-  "result": "INCOMPLETE"
+  "dbBytes": 9016954880,
+  "result": "COMPLETE"
 }

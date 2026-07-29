@@ -89,3 +89,10 @@ pnpm exec tsx scripts/research-replay-n1-backfill.ts backup
 - integrity ok / fk 0 / semantic duplicate 0 / append-only trigger 14+2。
 - 停止事例: フル実行中に `bulk-fetch-racer-stats.ts` の並行 append で strict guard が `PRIMARY_DB_CHANGED` 停止（1,059件で安全停止・破損なし）→ structural 監視で resume し完走。
 - k260726 以降の日次追加 file は live archive の incremental として同 executor で backfill する。
+
+## Closure verification（2026-07-29）
+
+- Debt A（8,168 authoritative full verify）解消: integrity ok / fk 0 / observation-level dup 0 / coverage 8,168/8,168 / pins 0。
+- Debt B（+5,153 line reconciliation）解消: `analyze-n1c-reconciliation.ts` で archive を再parseし backfill と同一 classification を再現、unexplainedDelta=0 / simMatchesDb=true / parser determinism 0（`reports/n1c-backfill/reconciliation.json`）。
+- **data-quality finding**: 4 source `.lzh`（2008-07-06/07-13, 2009-04-06/07-08）が日次データを intra-file 物理重複格納 → race-level 重複 candidate 4,196 / dup observation 624 / dup line 11,658。source-data defect・値誤りなし・完全説明済み。**破壊的修正はせず**、当該4 file の clean 再取得＋append-only supersession（または下流 race-level dedup）を別承認で行う。正本 `reports/n1c-backfill/data-quality-finding-duplicate-source-archives.md`。
+- この finding のため N1-C acceptance は **CONDITIONAL**（COMPLETE 未昇格）。

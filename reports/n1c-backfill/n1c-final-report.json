@@ -1,14 +1,17 @@
 {
   "reportVersion": "n1c-final-report-v1",
-  "generatedAt": "2026-07-28T06:59:53.552Z",
+  "generatedAt": "2026-07-29T01:21:58.362Z",
   "verdict": {
     "backfillExecution": "COMPLETE",
     "finalVerification": "COMPLETE",
+    "reconciliation": "COMPLETE",
+    "n1cAcceptance": "CONDITIONAL",
     "overall": "CONDITIONAL"
   },
   "conditionalReasons": [
-    "archive is live/growing (8164->8167->8168), needs ongoing incremental",
-    "capacity overrun 5.38GB->9.0GB (+67.5%), quota reassessment required before GC/further ingest",
+    "source archive intra-file duplication in 4 files (2008-2009): 4,196 race-level duplicate candidates / 624 duplicate observations / 11,658 duplicate lines; source-data defect, not N1 bug, values correct, fully explained (unexplained=0), but race-level duplicates remain unresolved",
+    "K archive is live/growing (8164->8167->8168); ongoing incremental backfill required",
+    "capacity overrun 5.38GB->9.0GB (+67.5%); quota reassessment >=16GB / low-water >=24GB before GC or further ingest",
     "primary byte-identity FAIL (known concurrent racer-stats append); structural/schema/appSettings PASS, N1 primary write=0"
   ],
   "manifest": {
@@ -121,5 +124,70 @@
     "dbHealth": "PASS",
     "dataValidation": "PASS",
     "changedDiffSecretScan": "PASS"
+  },
+  "closure2026_07_29": {
+    "debtA_authoritativeVerify8168": {
+      "integrityCheck": "ok",
+      "foreignKeyViolations": 0,
+      "observationLevelDuplicateSemanticCandidates": 0,
+      "coverageComplete": true,
+      "completed": 8168,
+      "total": 8168,
+      "failed": 0,
+      "evidencePins": 0,
+      "candidates": 8154709,
+      "payoutLines": 11073826,
+      "refundLines": 446893,
+      "observations": 1194679
+    },
+    "debtB_reconciliation": {
+      "unexplainedDelta": 0,
+      "simMatchesDb": true,
+      "parserDeterminism_8164_vs_reference": 0,
+      "statedDelta": 5153,
+      "explained": true
+    },
+    "dataQualityFinding": {
+      "type": "source_archive_intra_file_duplication",
+      "affectedFiles": [
+        "k080706.lzh",
+        "k080713.lzh",
+        "k090406.lzh",
+        "k090708.lzh"
+      ],
+      "affectedDates": [
+        "2008-07-06",
+        "2008-07-13",
+        "2009-04-06",
+        "2009-07-08"
+      ],
+      "duplicateObservations": 624,
+      "raceLevelDuplicateCandidates": 4196,
+      "duplicateLines": 11658,
+      "isN1PipelineBug": false,
+      "valueMismatch": 0,
+      "storeFraction": "~0.05%",
+      "report": "reports/n1c-backfill/data-quality-finding-duplicate-source-archives.md",
+      "massFixApplied": false
+    },
+    "primaryQuiescent2Point": {
+      "twoPointQuiescentStable": true,
+      "quiescentByteIdentity_T1_vs_T2": "PASS",
+      "primaryByteIdentity_vs_preRun": "FAIL_known_concurrent_racer_stats",
+      "primaryStructuralIdentity": "PASS",
+      "primarySchemaIdentity": "PASS",
+      "appSettingsIdentity": "PASS",
+      "unexpectedPrimaryMutation": 0,
+      "n1PrimaryWriteEvidence": "none"
+    },
+    "regression": {
+      "tests": 459,
+      "typecheck": "PASS",
+      "scriptsTypecheck": "PASS",
+      "build": "PASS",
+      "golden": "PASS",
+      "dbHealth": "PASS",
+      "dataValidation": "PASS"
+    }
   }
 }
