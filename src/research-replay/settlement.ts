@@ -342,6 +342,126 @@ export class BackfillCheckpointRepository {
   }
 }
 
+// n1-settlement.0.3: expand-onlyでsource-duplicate canonical resolution tableを追加する。
+// 0.1/0.2のtable/trigger/checksumは変更しない。raw provenance（重複observation/candidate）は
+// 削除せず保持し、canonical evaluationで重複copyを1回だけ有効化するためのappend-only mappingを持つ。
+export const N1_CANONICAL_RESOLUTION_SCHEMA_VERSION = "n1-settlement.0.3";
+
+const N1_CANONICAL_RESOLUTION_SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS settlement_source_duplicate_resolutions_v2 (
+  resolution_id TEXT PRIMARY KEY,
+  duplicate_observation_id TEXT NOT NULL REFERENCES domain_observations(observation_id) ON DELETE RESTRICT,
+  canonical_observation_id TEXT NOT NULL REFERENCES domain_observations(observation_id) ON DELETE RESTRICT,
+  canonical_race_key TEXT NOT NULL,
+  raw_document_id TEXT NOT NULL REFERENCES raw_documents(raw_document_id) ON DELETE RESTRICT,
+  source_archive_file TEXT NOT NULL,
+  resolution_kind TEXT NOT NULL CHECK(resolution_kind IN ('source_duplicate')),
+  detection_reason TEXT NOT NULL,
+  duplicate_semantic_digest TEXT NOT NULL CHECK(length(duplicate_semantic_digest)=64),
+  resolver_version TEXT NOT NULL,
+  policy_version TEXT NOT NULL,
+  schema_version TEXT NOT NULL,
+  detected_at TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  CHECK(duplicate_observation_id <> canonical_observation_id),
+  UNIQUE(duplicate_observation_id)
+) STRICT;
+CREATE INDEX IF NOT EXISTS ssdr_canonical_race ON settlement_source_duplicate_resolutions_v2(canonical_race_key);
+CREATE INDEX IF NOT EXISTS ssdr_canonical_obs ON settlement_source_duplicate_resolutions_v2(canonical_observation_id);
+CREATE TRIGGER IF NOT EXISTS settlement_source_duplicate_resolutions_v2_append_only_update BEFORE UPDATE ON settlement_source_duplicate_resolutions_v2 BEGIN SELECT RAISE(ABORT,'append-only table'); END;
+CREATE TRIGGER IF NOT EXISTS settlement_source_duplicate_resolutions_v2_append_only_delete BEFORE DELETE ON settlement_source_duplicate_resolutions_v2 BEGIN SELECT RAISE(ABORT,'append-only table'); END;
+`;
+
+export const N1_CANONICAL_RESOLUTION_MIGRATION_CHECKSUM = createHash("sha256").update(N1_CANONICAL_RESOLUTION_SCHEMA_SQL).digest("hex");
+
+export function initializeN1CanonicalResolutionSchema(db: DatabaseSync, now = new Date().toISOString()): void {
+  if (!verifyN1SettlementSchema(db).ok) initializeN1SettlementSchema(db, now);
+  const row = db.prepare("SELECT checksum,status FROM n1_schema_migrations WHERE migration_version=?")
+    .get(N1_CANONICAL_RESOLUTION_SCHEMA_VERSION) as { checksum: string; status: string } | undefined;
+  if (row?.checksum !== undefined && row.checksum !== N1_CANONICAL_RESOLUTION_MIGRATION_CHECKSUM) {
+    throw new Error("N1 canonical resolution migration checksum mismatch");
+  }
+  if (row?.status === "applied") return;
+  if (!row) db.prepare(`INSERT INTO n1_schema_migrations VALUES (?,?,?,?,?,'partial')`)
+    .run("rr-n1-settlement-003", N1_CANONICAL_RESOLUTION_SCHEMA_VERSION, N1_CANONICAL_RESOLUTION_MIGRATION_CHECKSUM, now, process.version);
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.exec(N1_CANONICAL_RESOLUTION_SCHEMA_SQL);
+    db.prepare("UPDATE n1_schema_migrations SET status='applied',applied_at=?,runtime_version=? WHERE migration_version=?")
+      .run(now, process.version, N1_CANONICAL_RESOLUTION_SCHEMA_VERSION);
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+}
+
+export function verifyN1CanonicalResolutionSchema(db: DatabaseSync): {
+  ok: boolean; version: string | null; checksumMatches: boolean; appendOnlyTriggerCount: number;
+} {
+  const hasTable = Boolean(db.prepare(
+    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='settlement_source_duplicate_resolutions_v2'",
+  ).get());
+  const hasLedger = Boolean(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='n1_schema_migrations'").get());
+  if (!hasLedger || !hasTable) return { ok: false, version: null, checksumMatches: false, appendOnlyTriggerCount: 0 };
+  const row = db.prepare("SELECT migration_version,checksum,status FROM n1_schema_migrations WHERE migration_version=?")
+    .get(N1_CANONICAL_RESOLUTION_SCHEMA_VERSION) as { migration_version: string; checksum: string; status: string } | undefined;
+  const triggerCount = Number((db.prepare(
+    `SELECT COUNT(*) count FROM sqlite_master WHERE type='trigger' AND name IN
+     ('settlement_source_duplicate_resolutions_v2_append_only_update','settlement_source_duplicate_resolutions_v2_append_only_delete')`,
+  ).get() as { count: number }).count);
+  return {
+    ok: verifyN1SettlementSchema(db).ok && row?.status === "applied"
+      && row.checksum === N1_CANONICAL_RESOLUTION_MIGRATION_CHECKSUM && triggerCount === 2,
+    version: row?.migration_version ?? null,
+    checksumMatches: row?.checksum === N1_CANONICAL_RESOLUTION_MIGRATION_CHECKSUM,
+    appendOnlyTriggerCount: triggerCount,
+  };
+}
+
+export type SourceDuplicateResolutionInput = {
+  duplicateObservationId: string;
+  canonicalObservationId: string;
+  canonicalRaceKey: string;
+  rawDocumentId: string;
+  sourceArchiveFile: string;
+  detectionReason: string;
+  duplicateSemanticDigest: string;
+  resolverVersion: string;
+  policyVersion: string;
+  detectedAt: string;
+};
+
+export class SourceDuplicateResolutionRepository {
+  constructor(private readonly db: DatabaseSync, private readonly idFactory: () => string = randomUUID) {}
+
+  // append-only。既に同一 duplicate_observation_id が解決済みなら no-op（冪等）。
+  record(input: SourceDuplicateResolutionInput): { resolutionId: string; inserted: boolean } {
+    const existing = this.db.prepare(
+      "SELECT resolution_id FROM settlement_source_duplicate_resolutions_v2 WHERE duplicate_observation_id=?",
+    ).get(input.duplicateObservationId) as { resolution_id: string } | undefined;
+    if (existing) return { resolutionId: existing.resolution_id, inserted: false };
+    const id = this.idFactory();
+    const now = canonicalUtcTimestamp(input.detectedAt);
+    this.db.prepare(`
+      INSERT INTO settlement_source_duplicate_resolutions_v2
+      (resolution_id, duplicate_observation_id, canonical_observation_id, canonical_race_key,
+       raw_document_id, source_archive_file, resolution_kind, detection_reason,
+       duplicate_semantic_digest, resolver_version, policy_version, schema_version, detected_at, created_at)
+      VALUES (?,?,?,?,?,?, 'source_duplicate', ?,?,?,?,?,?,?)
+    `).run(
+      id, input.duplicateObservationId, input.canonicalObservationId, input.canonicalRaceKey,
+      input.rawDocumentId, input.sourceArchiveFile, input.detectionReason, input.duplicateSemanticDigest,
+      input.resolverVersion, input.policyVersion, N1_CANONICAL_RESOLUTION_SCHEMA_VERSION, now, now,
+    );
+    return { resolutionId: id, inserted: true };
+  }
+
+  resolvedCount(): number {
+    return Number((this.db.prepare("SELECT COUNT(*) c FROM settlement_source_duplicate_resolutions_v2").get() as { c: number }).c);
+  }
+}
+
 export type CandidateInput = {
   canonicalRaceKey: string;
   betType: SettlementBetType;
