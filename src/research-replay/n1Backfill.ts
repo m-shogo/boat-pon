@@ -27,14 +27,14 @@ import {
 
 export const N1_BACKFILL_EXECUTOR_VERSION = "n1-backfill-executor-v1";
 
-const VENUE_CODES: Record<string, string> = {
+export const VENUE_CODES: Record<string, string> = {
   桐生: "01", 戸田: "02", 江戸川: "03", 平和島: "04", 多摩川: "05", 浜名湖: "06",
   蒲郡: "07", 常滑: "08", 津: "09", 三国: "10", びわこ: "11", 住之江: "12",
   尼崎: "13", 鳴門: "14", 丸亀: "15", 児島: "16", 宮島: "17", 徳山: "18",
   下関: "19", 若松: "20", 芦屋: "21", 福岡: "22", 唐津: "23", 大村: "24",
 };
 
-function fileDate(path: string): string {
+export function fileDate(path: string): string {
   const match = basename(path).match(/k(\d{2})(\d{2})(\d{2})\.lzh$/i);
   if (!match) return "1970-01-01";
   const year = Number(match[1]) >= 70 ? `19${match[1]}` : `20${match[1]}`;
@@ -68,17 +68,17 @@ function unpackToBuffer(path: string): Promise<Buffer> {
   });
 }
 
-function schemaFamily(text: string): string {
+export function schemaFamily(text: string): string {
   return text.includes("３連単") && text.includes("単勝") ? "modern_seven_display"
     : text.includes("連単") ? "legacy_pre_trifecta" : "unknown";
 }
 
-type LineBucket = {
+export type LineBucket = {
   payouts: Array<{ selection: string; payoutYen: number; popularity: number | null; lineKind: "payout" | "special_payout" }>;
   refunds: Array<{ selection: string | null; scope: "selection" | "bet_type" | "race"; refundYenPer100: number | null; reasonCode: string }>;
 };
 
-function classifyRaceLines(betType: SettlementBetType, lines: RacePayout[]): LineBucket {
+export function classifyRaceLines(betType: SettlementBetType, lines: RacePayout[]): LineBucket {
   const bucket: LineBucket = { payouts: [], refunds: [] };
   for (const line of lines) {
     if (line.returned || line.payoutYen === null) {
@@ -98,7 +98,7 @@ function classifyRaceLines(betType: SettlementBetType, lines: RacePayout[]): Lin
   return bucket;
 }
 
-function resolveStatus(bucket: LineBucket): SettlementStatus | null {
+export function resolveStatus(bucket: LineBucket): SettlementStatus | null {
   const hasPayout = bucket.payouts.length > 0;
   const hasRefund = bucket.refunds.length > 0;
   if (hasPayout && hasRefund) return "partially_refunded";
