@@ -1,6 +1,6 @@
 {
   "phase": "PHASE10_FINAL_VERIFY",
-  "generatedAt": "2026-07-29T00:39:58.276Z",
+  "generatedAt": "2026-07-29T13:07:46.920Z",
   "integrityCheck": "ok",
   "foreignKeyViolations": 0,
   "schema": {
@@ -8,31 +8,48 @@
     "v01checksum": "35903ee175dbb31cbc7202aa573a2e1b4f6d58d9b6954cfac4cee0fdfa4eb94d",
     "v02ok": true,
     "v02checksum": "50d7e605c1ea73973eb4b665e9b4792e7a1b33fae9dc2d3694dc3f9e8e1f01f1",
+    "v03ok": true,
+    "v03checksum": "94c73e24b2938b772fa0cd989bc74f04de053d3a18e35609512f971bca9ad5ec",
     "rolloutOk": true,
     "appendOnlyTriggers01": 14,
-    "appendOnlyTriggers02": 2
+    "appendOnlyTriggers02": 2,
+    "appendOnlyTriggers03": 2
   },
   "archiveCoverage": {
-    "total": 8168,
-    "completed": 8168,
+    "total": 8170,
+    "completed": 8170,
     "failedCount": 0,
     "failed": [],
     "coverageComplete": true
   },
   "counts": {
-    "candidates": 8154709,
-    "payoutLines": 11073826,
+    "candidates": 8156795,
+    "payoutLines": 11076808,
     "refundLines": 446893,
     "evidencePins": 0,
-    "observations": 1194679,
-    "parseRuns": 8168,
-    "rawDocuments": 8168,
+    "observations": 1194977,
+    "parseRuns": 8170,
+    "rawDocuments": 8170,
     "conflictGroups": 0
   },
-  "distinctCandidateKeys": 8154709,
+  "distinctCandidateKeys": 8156795,
   "duplicateSemanticCandidates": 0,
   "evidencePinsExplicit": 0,
-  "implicitCandidateFkReferences": 24464127,
+  "implicitCandidateFkReferences": 24470385,
+  "rawVsCanonical": {
+    "rawObservations": 1194977,
+    "rawDistinctRaceKeys": 1194353,
+    "rawDuplicateObservations": 624,
+    "activeDuplicateObservations": 0,
+    "rawCandidates": 8156795,
+    "rawDistinctRaceBetHash": 8152599,
+    "rawRaceLevelDuplicateCandidates": 4196,
+    "activeCandidates": 8152599,
+    "activeDistinctRaceBetHash": 8152599,
+    "activeCanonicalRaceLevelDuplicateCandidates": 0,
+    "resolvedDuplicateObservations": 624
+  },
+  "canonicalRaceLevelInvariantOk": true,
   "byStatus": [
     {
       "s": "partially_refunded",
@@ -44,39 +61,39 @@
     },
     {
       "s": "settled",
-      "c": 7835030
+      "c": 7837116
     }
   ],
   "byBetType": [
     {
       "b": "exacta",
-      "c": 1190354
+      "c": 1190652
     },
     {
       "b": "place",
-      "c": 1134772
+      "c": 1135070
     },
     {
       "b": "quinella",
-      "c": 1181642
+      "c": 1181940
     },
     {
       "b": "trifecta",
-      "c": 1174868
+      "c": 1175166
     },
     {
       "b": "trio",
-      "c": 1173657
+      "c": 1173955
     },
     {
       "b": "wide",
-      "c": 1172878
+      "c": 1173176
     },
     {
       "b": "win",
-      "c": 1126538
+      "c": 1126836
     }
   ],
-  "dbBytes": 9016954880,
+  "dbBytes": 9019846656,
   "result": "COMPLETE"
 }

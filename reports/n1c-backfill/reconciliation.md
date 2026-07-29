@@ -1,12 +1,12 @@
 # N1-C source reconciliation
 
 - result: **PASS**
-- archive files: 8168
+- archive files: 8170
 
 ## Same-fileset (8,168) — 恒等 reconciliation
-- archive raw parsed lines: 11520718
-- N1 stored (sim): 11520719 / DB actual: 11520719 / match: true
-- categories: stored 11520719 + dedup 11657 + skipped 0 + filtered -11658
+- archive raw parsed lines: 11523700
+- N1 stored (sim): 11523701 / DB actual: 11523701 / match: true
+- categories: stored 11523701 + dedup 11657 + skipped 0 + filtered -11658
 - **unexplainedDelta: 0**
 
 ## Historical +5,153 (N1 8,167 stored vs reference 8,164=11,514,006)

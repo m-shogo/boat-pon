@@ -1,0 +1,40 @@
+{
+  "phase": "SOURCE_DUPLICATE_RESOLUTION_APPLY",
+  "generatedAt": "2026-07-29T13:01:23.236Z",
+  "resolverVersion": "n1c-source-duplicate-resolver-v1",
+  "policyVersion": "n1c-source-duplicate-policy-v1",
+  "schemaVersion": "n1-settlement.0.3",
+  "schemaChecksum": "94c73e24b2938b772fa0cd989bc74f04de053d3a18e35609512f971bca9ad5ec",
+  "duplicatedRaces": 624,
+  "plannedResolutions": 624,
+  "valueConflicts": 0,
+  "affectedFiles": [
+    "k080706.lzh",
+    "k080713.lzh",
+    "k090406.lzh",
+    "k090708.lzh"
+  ],
+  "rawObservations": 1194977,
+  "rawDuplicateObservations": 624,
+  "rawCandidates": 8156795,
+  "rawRaceLevelDuplicateCandidates": 4196,
+  "projectedActiveDuplicateObservations": 0,
+  "projectedActiveCanonicalRaceLevelDuplicateCandidates": 0,
+  "insertedResolutions": 0,
+  "noopResolutions": 624,
+  "auditAfter": {
+    "rawObservations": 1194977,
+    "rawDistinctRaceKeys": 1194353,
+    "rawDuplicateObservations": 624,
+    "activeDuplicateObservations": 0,
+    "rawCandidates": 8156795,
+    "rawDistinctRaceBetHash": 8152599,
+    "rawRaceLevelDuplicateCandidates": 4196,
+    "activeCandidates": 8152599,
+    "activeDistinctRaceBetHash": 8152599,
+    "activeCanonicalRaceLevelDuplicateCandidates": 0,
+    "resolvedDuplicateObservations": 624
+  },
+  "rawUnchanged": true,
+  "result": "APPLIED"
+}

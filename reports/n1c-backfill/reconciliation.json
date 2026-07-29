@@ -1,9 +1,9 @@
 {
   "phase": "SOURCE_RECONCILIATION",
-  "generatedAt": "2026-07-29T00:48:01.712Z",
+  "generatedAt": "2026-07-29T13:07:13.326Z",
   "scope": "read-only re-parse of current archive with identical ingest classification; no writes to sidecar/archive/boat.sqlite",
-  "parseMs": 96518,
-  "archiveFiles": 8168,
+  "parseMs": 70320,
+  "archiveFiles": 8170,
   "lineDefinitions": {
     "archiveRawParsedLine": "parseOfficialResultDetail(f).payouts.length — 全 RacePayout（returned含む）",
     "n1StoredLine": "race_payout_lines_v2 + race_refund_lines_v2（post-dedup, per candidate）",
@@ -31,24 +31,24 @@
       "skipped": 0
     },
     "all": {
-      "files": 8168,
-      "rawParsed": 11520718,
-      "processed": 11532376,
+      "files": 8170,
+      "rawParsed": 11523700,
+      "processed": 11535358,
       "filtered": -11658,
-      "stored": 11520719,
+      "stored": 11523701,
       "dedupRemoved": 11657,
       "skipped": 0
     }
   },
-  "sameFilesetReconciliation": {
+  "rawReconciliation": {
     "fileset": "current_8168",
-    "files": 8168,
-    "archiveRawParsedLines": 11520718,
-    "n1StoredLinesSim": 11520719,
-    "n1StoredLinesDbActual": 11520719,
+    "files": 8170,
+    "archiveRawParsedLines": 11523700,
+    "n1StoredLinesSim": 11523701,
+    "n1StoredLinesDbActual": 11523701,
     "simMatchesDb": true,
     "categories": {
-      "storedInSidecar": 11520719,
+      "storedInSidecar": 11523701,
       "dedupRemovedDuplicateSourceLines": 11657,
       "skippedInvalidStateCandidateLines": 0,
       "venueOrRaceNoFilteredOrOrphanLines": -11658
@@ -70,6 +70,20 @@
     },
     "explainedDelta": 5153,
     "unexplainedDelta": 0
+  },
+  "canonicalReconciliation": {
+    "note": "raw provenance は保持。source_duplicate resolution で重複 copy を canonical view から除外。",
+    "rawObservations": 1194977,
+    "activeObservations": 1194353,
+    "rawDuplicateObservations": 624,
+    "activeDuplicateObservations": 0,
+    "rawCandidates": 8156795,
+    "activeCandidates": 8152599,
+    "sourceDuplicateExcludedCandidates": 4196,
+    "rawRaceLevelDuplicateCandidates": 4196,
+    "activeCanonicalRaceLevelDuplicateCandidates": 0,
+    "resolvedDuplicateObservations": 624,
+    "unexplainedCanonicalDelta": 0
   },
   "valueMismatch": {
     "legacyComparisonPayoutMismatch": 0,

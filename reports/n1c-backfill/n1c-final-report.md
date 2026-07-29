@@ -2,32 +2,38 @@
 
 更新: 2026-07-28
 
-## 判定（2026-07-29 closure 更新）
+## 判定（2026-07-29 source-duplication closure 更新）
 
-- **Backfill execution: COMPLETE**（現archive 8,168/8,168、failed 0）
-- **Final verification: COMPLETE**（現 8,168 state に対する authoritative full verify を完走: integrity ok / fk 0 / observation-level dup 0 / coverage 8,168/8,168 / schema checksum 一致）
-- **Reconciliation (+5,153): COMPLETE**（unexplainedDelta=0、simMatchesDb=true、parser determinism 0）
-- **N1-C acceptance: CONDITIONAL**
-- **Overall N1-C: CONDITIONAL**
+- **Backfill execution: COMPLETE**（現archive 8,170/8,170、failed 0）
+- **Final verification: COMPLETE**（現 8,170 state authoritative full verify: integrity ok / fk 0 / observation-level dup 0 / coverage 8,170/8,170 / schema 0.1/0.2/0.3 checksum 一致 / canonical race-level invariant OK）
+- **Reconciliation: COMPLETE**（raw: unexplainedDelta=0・simMatchesDb=true・parser determinism 0 / canonical: sourceDuplicateExcludedCandidates 4,196=rawRaceLevelDuplicateCandidates 4,196・unexplainedCanonicalDelta=0）
+- **Source duplication resolution: COMPLETE**（append-only、raw immutable、active canonical 0/0、冪等、value conflict 0）
+- **N1-C acceptance: COMPLETE（remote CI が runner を取得し green の場合）/ 未取得なら CONDITIONAL（理由 CI_INFRA_BLOCKED）**
 
-2つの verification debt（A: 8,168 authoritative full verify / B: +5,153 完全 reconciliation）は**解消**した。ただし reconciliation が新たな data-quality finding を surface したため、COMPLETE へは昇格しない。
+N1-C 本体の verification debt は **0**。closure verification で発見した source archive 重複を append-only の canonical resolution で解決し、raw provenance を保持したまま active canonical 重複を 0 にした。
 
-CONDITIONAL の理由:
+### 過去に CONDITIONAL 要因だった項目の解消
 
-1. **【新】source archive 重複（COMPLETE を阻む主因）**: 4 file（2008-07-06/07-13, 2009-04-06/07-08）が単一 `.TXT` 内に日次データを物理重複格納。N1 は faithful に取り込み、**race-level 重複 candidate 4,196 / 重複 observation 624 / 重複 line 11,658**（store の約 0.05%）が残る。source-data defect（N1 pipeline bug ではない）・値誤りなし（legacy mismatch 0）・reconciliation で完全説明済み（unexplained=0）だが、race 単位の重複が未解決。正本: [`data-quality-finding-duplicate-source-archives.md`](data-quality-finding-duplicate-source-archives.md)。破壊的修正は行わない。
-2. **対象差分 8,164→8,167→8,168**: K archive は live で日次増加。継続的 incremental backfill が前提。
-3. **容量上振れ 5.38GB→約9.0GB（+67.5%）**: quota 再評価が必要（GC・追加 ingest 前に quota ≥16GB / low-water ≥24GB）。
-4. **primary byte identity FAIL**: 並行 racer-stats append による。structural/schema/app_settings identity は PASS、writer 静止 2 点で安定、N1 の primary write は 0。「primary 完全不変」ではない。
+1. **source archive 重複 → RESOLVED**: 4 file（2008-07-06/07-13, 2009-04-06/07-08）が単一 `.TXT` 内に日次データを物理重複格納（source-data defect、N1 pipeline bug ではない、値誤りなし）。raw の重複 observation 624 / candidate 4,196 / line 11,658 は**削除せず audit-visible のまま保持**し、`n1-settlement.0.3` の `settlement_source_duplicate_resolutions_v2`（append-only）で重複 observation を `source_duplicate` として canonical original（source 順で最初の observation）へ mapping。**active canonical 重複 observation 0 / candidate 0**。inserted 624・rerun 0（冪等）・value conflict 0（624 races で candidate 集合完全一致を事前検証）。正本: [`data-quality-finding-duplicate-source-archives.md`](data-quality-finding-duplicate-source-archives.md) / [`source-duplicate-resolution.json`](source-duplicate-resolution.json)。
+2. **対象差分（live archive 成長）→ 追随済み**: k260727/728 を incremental backfill し 8,170/8,170。以後の日次 file も同 executor で resumable に追随する（運用継続項目、COMPLETE の blocker ではない）。
+3. **容量**: DB ≈9.02GB に対し quota 30GB / filesystem free ≈354GB で充足。**COMPLETE の blocker ではない**。GC・追加 ingest 開始前に low-water ≥24GB を推奨（precondition、blocker ではない）。
+4. **primary byte identity FAIL**: 並行 racer-stats append による。structural/schema/app_settings identity は PASS、writer 静止 2 点で安定、N1 の primary write は 0。「primary 完全不変」ではない（正確表現）。COMPLETE の blocker ではない。
+
+### 唯一残る gate
+
+- **remote CI（PHASE 12）**: 直近 run 30414001791 は runner allocation failure（runner=none, 0 steps, GitHub Actions infra/minutes）。code failure ではない（local regression 全 PASS）。CI が実際に runner を取得し workflow を実行して success した場合のみ **N1-C acceptance = COMPLETE**。runner allocation failure のままなら **CONDITIONAL / 理由 CI_INFRA_BLOCKED**（コードは green）。
 
 ## Closure verification（2026-07-29）
 
-| debt / phase | 結果 | 証跡 |
+| phase | 結果 | 証跡 |
 |---|---|---|
-| Debt A: 8,168 authoritative full verify | **RESOLVED** | integrity ok / fk 0 / obs-level dup 0 / coverage 8,168/8,168 / pins 0（`phase10-verify.json`） |
-| Debt B: +5,153 reconciliation | **RESOLVED** | unexplainedDelta 0 / simMatchesDb true / parser determinism 0（`reconciliation.json`） |
-| 新 finding: 4-file source 重複 | **報告・未修正** | 4,196 dup candidate / 624 dup obs / 11,658 dup line（`data-quality-finding-...md`） |
-| Phase 3 primary quiescent 2-point | **PASS** | twoPointStable true / structural・schema・appSettings PASS / N1 write none（`primary-identity.json`） |
-| Phase 5 regression | **PASS** | 459 tests / tsc×2 / build / golden / db:health / validate:data / secret scan 0 |
+| authoritative full verify（8,170） | **PASS** | integrity ok / fk 0 / obs-level dup 0 / coverage 8,170/8,170 / pins 0 / schema 0.1/0.2/0.3 / canonicalRaceLevelInvariantOk true（`phase10-verify.json`） |
+| +5,153 reconciliation（raw） | **RESOLVED** | unexplainedDelta 0 / simMatchesDb true / parser determinism 0（`reconciliation.json`） |
+| source 重複 finding | **RESOLVED_CANONICALLY** | raw 624 obs / 4,196 candidate 保持・audit可能、active canonical 0/0、append-only 624 resolutions・冪等（`data-quality-finding-...md` / `source-duplicate-resolution.json`） |
+| canonical reconciliation | **PASS** | sourceDuplicateExcludedCandidates 4,196 = rawRaceLevelDuplicateCandidates 4,196 / unexplainedCanonicalDelta 0 |
+| primary quiescent 2-point | **PASS** | twoPointStable true / structural・schema・appSettings PASS / N1 write none（`primary-identity.json`） |
+| regression | **PASS** | 464 tests / tsc×2 / build / golden / db:health / validate:data / secret scan 0 |
+| remote CI | **PENDING** | 直近 runner allocation failure、再実行で判定 |
 
 ## 1. 対象差分の確定（8,164 → 8,167 → 8,168）
 

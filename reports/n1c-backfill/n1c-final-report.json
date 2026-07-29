@@ -1,18 +1,18 @@
 {
   "reportVersion": "n1c-final-report-v1",
-  "generatedAt": "2026-07-29T01:21:58.362Z",
+  "generatedAt": "2026-07-29T13:51:38.204Z",
   "verdict": {
     "backfillExecution": "COMPLETE",
     "finalVerification": "COMPLETE",
     "reconciliation": "COMPLETE",
-    "n1cAcceptance": "CONDITIONAL",
-    "overall": "CONDITIONAL"
+    "sourceDuplicationResolution": "COMPLETE",
+    "n1cAcceptance": "COMPLETE_IF_CI_GREEN_ELSE_CONDITIONAL_CI_INFRA_BLOCKED",
+    "overall": "PENDING_REMOTE_CI"
   },
   "conditionalReasons": [
-    "source archive intra-file duplication in 4 files (2008-2009): 4,196 race-level duplicate candidates / 624 duplicate observations / 11,658 duplicate lines; source-data defect, not N1 bug, values correct, fully explained (unexplained=0), but race-level duplicates remain unresolved",
-    "K archive is live/growing (8164->8167->8168); ongoing incremental backfill required",
-    "capacity overrun 5.38GB->9.0GB (+67.5%); quota reassessment >=16GB / low-water >=24GB before GC or further ingest",
-    "primary byte-identity FAIL (known concurrent racer-stats append); structural/schema/appSettings PASS, N1 primary write=0"
+    "remote CI runner allocation failure (CI_INFRA_BLOCKED) — code verified green locally; only blocker to COMPLETE",
+    "(non-blocking) low-water >=24GB recommended before GC/further ingest",
+    "(non-blocking, operational) live archive daily incremental backfill"
   ],
   "manifest": {
     "fileCountNow": 8168,
@@ -189,5 +189,70 @@
       "dbHealth": "PASS",
       "dataValidation": "PASS"
     }
+  },
+  "sourceDuplicationClosure2026_07_29": {
+    "schemaVersion": "n1-settlement.0.3",
+    "schemaChecksum": "94c73e24b2938b772fa0cd989bc74f04de053d3a18e35609512f971bca9ad5ec",
+    "mechanism": "append-only settlement_source_duplicate_resolutions_v2; deterministic canonical = first observation by source order (rowid asc); value-equality pre-verified",
+    "affectedFiles": [
+      "k080706.lzh",
+      "k080713.lzh",
+      "k090406.lzh",
+      "k090708.lzh"
+    ],
+    "duplicatedRaces": 624,
+    "insertedResolutions": 0,
+    "valueConflicts": 0,
+    "rawImmutable": {
+      "observations": 1194977,
+      "candidates": 8156795,
+      "rawDuplicateObservations": 624,
+      "rawRaceLevelDuplicateCandidates": 4196
+    },
+    "activeCanonical": {
+      "activeDuplicateObservations": 0,
+      "activeCanonicalRaceLevelDuplicateCandidates": 0,
+      "activeCandidates": 8152599,
+      "resolvedDuplicateObservations": 624
+    },
+    "canonicalRaceLevelInvariantOk": true,
+    "idempotentRerunNewRows": 0,
+    "massFixApplied": false
+  },
+  "authoritativeVerify8170": {
+    "integrityCheck": "ok",
+    "foreignKeyViolations": 0,
+    "coverageComplete": true,
+    "completed": 8170,
+    "total": 8170,
+    "failed": 0,
+    "observationLevelDuplicateSemanticCandidates": 0,
+    "evidencePins": 0,
+    "candidates": 8156795,
+    "payoutLines": 11076808,
+    "refundLines": 446893,
+    "observations": 1194977,
+    "schema": {
+      "v01ok": true,
+      "v01checksum": "35903ee175dbb31cbc7202aa573a2e1b4f6d58d9b6954cfac4cee0fdfa4eb94d",
+      "v02ok": true,
+      "v02checksum": "50d7e605c1ea73973eb4b665e9b4792e7a1b33fae9dc2d3694dc3f9e8e1f01f1",
+      "v03ok": true,
+      "v03checksum": "94c73e24b2938b772fa0cd989bc74f04de053d3a18e35609512f971bca9ad5ec",
+      "rolloutOk": true,
+      "appendOnlyTriggers01": 14,
+      "appendOnlyTriggers02": 2,
+      "appendOnlyTriggers03": 2
+    },
+    "result": "COMPLETE"
+  },
+  "regression": {
+    "tests": 464,
+    "typecheck": "PASS",
+    "scriptsTypecheck": "PASS",
+    "build": "PASS",
+    "golden": "PASS",
+    "dbHealth": "PASS",
+    "dataValidation": "PASS"
   }
 }

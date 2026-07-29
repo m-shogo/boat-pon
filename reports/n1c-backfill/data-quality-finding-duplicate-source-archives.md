@@ -1,8 +1,10 @@
 # N1-C data-quality finding — 4 source archive files に intra-file 重複
 
 更新: 2026-07-29
+status: **DISCOVERED → RESOLVED_CANONICALLY**（append-only source_duplicate resolution 適用済み）
 分類: **source-data defect（N1 pipeline bug ではない）/ 値誤りなし / reconciliation で完全説明済み（unexplainedDelta=0）**
-判定影響: **Overall N1-C を CONDITIONAL に留める根拠**
+
+> raw source defect は歴史的事実として保持する（「なかったこと」にしない）。raw provenance（重複 observation/candidate）は削除せず、canonical evaluation で重複 copy を 1 回だけ有効化する append-only mapping（`settlement_source_duplicate_resolutions_v2`, `n1-settlement.0.3`）で解決した。
 
 ## 概要
 
@@ -36,18 +38,26 @@
 - `filtered(-11,658)` はこの source 重複による over-processing、`dedupRemoved(11,657)` は別 race の intra-candidate 重複行で、両者は**別 race 由来**だが規模がほぼ一致し、line count は net +1（実質一致）。
 - **unexplainedDelta = 0**：本 finding も含めて完全に説明済み。`simMatchesDb=true` で sim と DB 実測が一致。
 
-## 修正提案（本 closure では実施しない）
+## Resolution（append-only canonical resolution・2026-07-29 適用）
 
-破壊的操作（DELETE/VACUUM/mass-fix）は行わない。以下を別タスク・別承認で検討する。
+破壊的操作（DELETE/UPDATE/VACUUM/mass-fix）は一切行わない。raw は immutable。
 
-1. 当該 4 `.lzh` を source から clean 版で再取得し、SHA を比較して重複格納の有無を確定。
-2. clean 版で置換後、当該 4 file を対象に append-only の supersession/quarantine（重複 observation を `source_conflict`/`corrected` ではなく「intra-file duplicate」理由で無効化）で重複 candidate を論理的に除外。
-3. あるいは下流集計側で race-level（canonical_race_key, bet_type, semantic_hash）dedup を適用。
+- schema `n1-settlement.0.3`（expand-only、0.1/0.2 byte 不変）で `settlement_source_duplicate_resolutions_v2`（append-only）を追加。
+- 決定的 canonical: 各 race の source 順で最初の observation（`domain_observations.rowid` 昇順）を canonical original とし、後続の重複 observation を `source_duplicate` として mapping。timestamp/実行順の偶然に依存しない。
+- value-equality を事前検証: 624 races すべてで 2 observation の candidate 集合（bet_type, semantic_hash）が完全一致（groups_with_count_ne_2=0）→ exact source duplicate。値が異なる場合は resolution せず conflict/停止（本件は 0 conflict）。
+- 適用結果（`source-duplicate-resolution.json`）: inserted resolutions **624**、re-run で **0 new（冪等）**。
+- **raw 不変**: observations 1,194,679 / candidates 8,154,709 unchanged、rawDuplicateObservations **624**・rawRaceLevelDuplicateCandidates **4,196** は audit-visible のまま保持。
+- **canonical active**: activeDuplicateObservations **0** / activeCanonicalRaceLevelDuplicateCandidates **0**。sourceDuplicateExcludedCandidates 4,196 = rawRaceLevelDuplicateCandidates 4,196、unexplainedCanonicalDelta **0**。
 
-いずれも本 N1-C closure の scope 外であり、実施前に scope・affected rows・手順を提示して承認を得る。
+## 恒久 invariant（PHASE 3）
+
+canonical race-level uniqueness を quality gate へ昇格:
+
+- raw（source 忠実）: race-level 重複は存在してよい（現 4,196、audit 可能）。
+- **active canonical（source_duplicate 除外）: 必ず 0**。`verify` / reconciliation analyzer に組込済み。将来 source archive に同種 duplication が入っても無言で二重計上しない（future ingest guard `detectExactDuplicateObservationsInRaw`、value 差は conflict/revision path へ）。
 
 ## 判定
 
-- Debt A（8,168 full verify）: 解消（integrity/fk/observation-level dedup/coverage）。
-- Debt B（+5,153 reconciliation）: 解消（unexplainedDelta=0、parser determinism 0）。
-- 本 finding により store に race-level 重複が残るため、**N1-C acceptance は COMPLETE に昇格せず CONDITIONAL**。source-data 由来・値誤りなし・完全説明済みだが、未解決の data-quality item として明記する。
+- Debt A（authoritative full verify）/ Debt B（+5,153 reconciliation）: 解消済み。
+- 本 finding: **RESOLVED_CANONICALLY**（raw 保持・canonical active 0・append-only・冪等・値誤りなし）。
+- 残る CONDITIONAL 要因は N1-C 本体の debt ではなく、live-archive の日次 incremental 運用と remote CI の runner allocation 状態に依存する。

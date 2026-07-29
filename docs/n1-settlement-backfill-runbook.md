@@ -23,12 +23,26 @@ pnpm exec tsx scripts/research-replay-n1-backfill.ts run --target=100   --primar
 pnpm exec tsx scripts/research-replay-n1-backfill.ts run --target=1000  --primary-monitor=structural
 pnpm exec tsx scripts/research-replay-n1-backfill.ts run --target=8167  --primary-monitor=structural
 # PHASE 10 検証・分解
-pnpm exec tsx scripts/research-replay-n1-backfill.ts verify           # integrity/fk/dedup/coverage/schema
+pnpm exec tsx scripts/research-replay-n1-backfill.ts verify           # integrity/fk/dedup/coverage/schema/canonical invariant
 pnpm exec tsx scripts/research-replay-n1-backfill.ts manifest         # 開始時 manifest（file数・総bytes・SHA）
 pnpm exec tsx scripts/research-replay-n1-backfill.ts capacity         # 容量 dbstat 分解
 pnpm exec tsx scripts/research-replay-n1-backfill.ts primary-identity # primary不変契約 再分類
 pnpm exec tsx scripts/research-replay-n1-backfill.ts legacy-compare --sample=2000
+# source-duplicate canonical resolution（append-only）
+pnpm exec tsx scripts/research-replay-n1-backfill.ts resolve-source-duplicates            # dry-run（read-only、plan確認）
+pnpm exec tsx scripts/research-replay-n1-backfill.ts resolve-source-duplicates --apply     # append-only 適用（冪等）
+pnpm exec tsx scripts/analyze-n1c-reconciliation.ts                                        # raw + canonical reconciliation
 ```
+
+## Schema / migration history
+
+| version | checksum | 内容 | 適用 |
+|---|---|---|---|
+| `n1-settlement.0.1` | `35903ee1…` | settlement 7 table + evidence pins + conflict/resolution（append-only 14 trigger） | 永続適用済み（N1-B） |
+| `n1-settlement.0.2` | `50d7e605…` | backfill checkpoint table（expand-only、append-only 2 trigger） | 永続適用済み（N1-C） |
+| `n1-settlement.0.3` | `94c73e24…` | `settlement_source_duplicate_resolutions_v2`（expand-only、append-only 2 trigger、source-duplicate canonical mapping） | 永続適用済み（N1-C source-duplication closure） |
+
+各 version は expand-only で下位 version の object を byte 単位で変更しない。checksum 不一致・unknown version・partial は default-deny。
 
 レポートは `reports/n1c-backfill/*.json|md` に保存される。
 
@@ -94,5 +108,12 @@ pnpm exec tsx scripts/research-replay-n1-backfill.ts backup
 
 - Debt A（8,168 authoritative full verify）解消: integrity ok / fk 0 / observation-level dup 0 / coverage 8,168/8,168 / pins 0。
 - Debt B（+5,153 line reconciliation）解消: `analyze-n1c-reconciliation.ts` で archive を再parseし backfill と同一 classification を再現、unexplainedDelta=0 / simMatchesDb=true / parser determinism 0（`reports/n1c-backfill/reconciliation.json`）。
-- **data-quality finding**: 4 source `.lzh`（2008-07-06/07-13, 2009-04-06/07-08）が日次データを intra-file 物理重複格納 → race-level 重複 candidate 4,196 / dup observation 624 / dup line 11,658。source-data defect・値誤りなし・完全説明済み。**破壊的修正はせず**、当該4 file の clean 再取得＋append-only supersession（または下流 race-level dedup）を別承認で行う。正本 `reports/n1c-backfill/data-quality-finding-duplicate-source-archives.md`。
-- この finding のため N1-C acceptance は **CONDITIONAL**（COMPLETE 未昇格）。
+- **data-quality finding**: 4 source `.lzh`（2008-07-06/07-13, 2009-04-06/07-08）が日次データを intra-file 物理重複格納 → race-level 重複 candidate 4,196 / dup observation 624 / dup line 11,658。source-data defect・値誤りなし・完全説明済み。
+
+## Source-duplication closure（2026-07-29、append-only）
+
+- `n1-settlement.0.3` で `settlement_source_duplicate_resolutions_v2`（append-only）を追加し、624 races の重複 observation を `source_duplicate` として canonical original（source 順で最初の observation）へ mapping。
+- raw 不変（observations 1,194,679 / candidates 8,154,709、raw 重複 624/4,196 は audit 可能）。active canonical 重複 **0/0**。inserted 624・rerun 0（冪等）・value conflict 0。
+- 恒久 invariant: `verify` と reconciliation analyzer が active canonical race-level 重複 = 0 を強制。future ingest guard（`detectExactDuplicateObservationsInRaw`）で同種 duplication を検出（value 差は conflict path）。
+- その後 live-archive の日次追加 k260727/728 を incremental backfill（8,170/8,170）。新 file に重複なし。
+- 正本 `reports/n1c-backfill/data-quality-finding-duplicate-source-archives.md` / `reports/n1c-backfill/source-duplicate-resolution.json`。
