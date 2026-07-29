@@ -16,11 +16,14 @@ import {
   N1_BACKFILL_SCHEMA_VERSION,
   N1_SETTLEMENT_MIGRATION_CHECKSUM,
   N1_SETTLEMENT_SCHEMA_VERSION,
+  N1_CANONICAL_RESOLUTION_MIGRATION_CHECKSUM,
   BackfillCheckpointRepository,
   verifyN1BackfillSchema,
+  verifyN1CanonicalResolutionSchema,
   verifyN1SettlementSchema,
 } from "../src/research-replay/settlement";
 import { listArchiveFiles, runBackfill } from "../src/research-replay/n1Backfill";
+import { auditCanonicalDuplicates } from "../src/research-replay/n1CanonicalResolution";
 
 const root = resolve(process.cwd());
 const command = process.argv[2] ?? "preflight";
@@ -287,7 +290,9 @@ function verify(): void {
   const fk = db.prepare("PRAGMA foreign_key_check").all().length;
   const n1v = verifyN1SettlementSchema(db);
   const bfv = verifyN1BackfillSchema(db);
+  const crv = verifyN1CanonicalResolutionSchema(db);
   const rolloutOk = verifyRolloutSchema(db).ok;
+  const canonicalAudit = crv.ok ? auditCanonicalDuplicates(db) : null;
   const completed = checkpoints.completedCount();
   const failedRows = db.prepare(`
     SELECT archive_file, state FROM (
@@ -315,14 +320,20 @@ function verify(): void {
   db.close();
 
   const coverageComplete = completed === files.length && failedRows.length === 0;
-  const pass = integrity === "ok" && fk === 0 && n1v.ok && bfv.ok && rolloutOk && counts.evidencePins === 0 && dupCandidates === 0 && coverageComplete;
+  // canonical invariant: active（source_duplicate 除外後）の race-level 重複は 0 でなければならない。
+  const canonicalOk = crv.ok && canonicalAudit !== null
+    && canonicalAudit.activeDuplicateObservations === 0
+    && canonicalAudit.activeCanonicalRaceLevelDuplicateCandidates === 0;
+  const pass = integrity === "ok" && fk === 0 && n1v.ok && bfv.ok && crv.ok && rolloutOk
+    && counts.evidencePins === 0 && dupCandidates === 0 && coverageComplete && canonicalOk;
   const payload = {
     phase: "PHASE10_FINAL_VERIFY", generatedAt: NOW,
     integrityCheck: integrity, foreignKeyViolations: fk,
-    schema: { v01ok: n1v.ok, v01checksum: N1_SETTLEMENT_MIGRATION_CHECKSUM, v02ok: bfv.ok, v02checksum: N1_BACKFILL_MIGRATION_CHECKSUM, rolloutOk, appendOnlyTriggers01: n1v.appendOnlyTriggerCount, appendOnlyTriggers02: bfv.appendOnlyTriggerCount },
+    schema: { v01ok: n1v.ok, v01checksum: N1_SETTLEMENT_MIGRATION_CHECKSUM, v02ok: bfv.ok, v02checksum: N1_BACKFILL_MIGRATION_CHECKSUM, v03ok: crv.ok, v03checksum: N1_CANONICAL_RESOLUTION_MIGRATION_CHECKSUM, rolloutOk, appendOnlyTriggers01: n1v.appendOnlyTriggerCount, appendOnlyTriggers02: bfv.appendOnlyTriggerCount, appendOnlyTriggers03: crv.appendOnlyTriggerCount },
     archiveCoverage: { total: files.length, completed, failedCount: failedRows.length, failed: failedRows, coverageComplete },
     counts, distinctCandidateKeys, duplicateSemanticCandidates: dupCandidates,
     evidencePinsExplicit: counts.evidencePins, implicitCandidateFkReferences: implicitFkRefs,
+    rawVsCanonical: canonicalAudit, canonicalRaceLevelInvariantOk: canonicalOk,
     byStatus, byBetType, dbBytes,
     result: pass ? "COMPLETE" : "INCOMPLETE",
   };
@@ -571,6 +582,68 @@ function legacyCompare(): void {
   if (mismatch !== 0) process.exitCode = 1;
 }
 
+// PHASE 5: source-duplicate canonical resolution（append-only）。dry-run 既定、--apply で適用。
+async function resolveSourceDuplicates(): Promise<void> {
+  const apply = process.argv.includes("--apply");
+  const { planSourceDuplicateResolution, applySourceDuplicateResolution, auditCanonicalDuplicates } =
+    await import("../src/research-replay/n1CanonicalResolution");
+  const { initializeN1CanonicalResolutionSchema, verifyN1CanonicalResolutionSchema, N1_CANONICAL_RESOLUTION_MIGRATION_CHECKSUM } =
+    await import("../src/research-replay/settlement");
+  const db = openRolloutDatabase(SIDECAR);
+  const rawObs = Number((db.prepare("SELECT COUNT(*) c FROM domain_observations").get() as { c: number }).c);
+  const rawDistinctRaces = Number((db.prepare("SELECT COUNT(DISTINCT canonical_race_key) c FROM domain_observations").get() as { c: number }).c);
+  const rawCandidates = Number((db.prepare("SELECT COUNT(*) c FROM settlement_candidates_v2").get() as { c: number }).c);
+  const rawDistinctRBH = Number((db.prepare("SELECT COUNT(*) c FROM (SELECT DISTINCT canonical_race_key,bet_type,semantic_hash FROM settlement_candidates_v2)").get() as { c: number }).c);
+  const plan = planSourceDuplicateResolution(db);
+  const affectedFiles = [...new Set(plan.plannedResolutions.map((p) => p.sourceArchiveFile))].sort();
+
+  const base = {
+    phase: apply ? "SOURCE_DUPLICATE_RESOLUTION_APPLY" : "SOURCE_DUPLICATE_RESOLUTION_DRYRUN",
+    generatedAt: NOW, resolverVersion: plan.resolverVersion, policyVersion: plan.policyVersion,
+    schemaVersion: "n1-settlement.0.3", schemaChecksum: N1_CANONICAL_RESOLUTION_MIGRATION_CHECKSUM,
+    duplicatedRaces: plan.duplicatedRaces, plannedResolutions: plan.plannedResolutions.length,
+    valueConflicts: plan.valueConflicts.length, affectedFiles,
+    rawObservations: rawObs, rawDuplicateObservations: rawObs - rawDistinctRaces,
+    rawCandidates, rawRaceLevelDuplicateCandidates: rawCandidates - rawDistinctRBH,
+    projectedActiveDuplicateObservations: 0, projectedActiveCanonicalRaceLevelDuplicateCandidates: 0,
+  };
+  if (plan.valueConflicts.length > 0) {
+    const payload = { ...base, result: "BLOCKED", blocker: "VALUE_CONFLICTS", conflictSamples: plan.valueConflicts.slice(0, 10) };
+    writeReport("source-duplicate-resolution", payload, `# source-duplicate resolution\n\n- result: **BLOCKED** value conflicts=${plan.valueConflicts.length}\n`);
+    console.log(JSON.stringify(payload, null, 2));
+    db.close();
+    process.exitCode = 1;
+    return;
+  }
+  if (!apply) {
+    const payload = { ...base, result: "DRY_RUN_OK", note: "no write. --apply to append resolutions." };
+    writeReport("source-duplicate-resolution-dryrun", payload, `# source-duplicate resolution (dry-run)\n\n- planned resolutions: ${plan.plannedResolutions.length} / conflicts: 0\n- affected files: ${affectedFiles.join(", ")}\n- raw dup observations: ${base.rawDuplicateObservations} / raw race-level dup candidates: ${base.rawRaceLevelDuplicateCandidates}\n- projected active canonical duplicates: 0 / 0\n`);
+    console.log(JSON.stringify(payload, null, 2));
+    db.close();
+    return;
+  }
+  // apply
+  initializeN1CanonicalResolutionSchema(db, NOW);
+  if (!verifyN1CanonicalResolutionSchema(db).ok) { db.close(); throw new Error("0.3 schema not ok after migration"); }
+  const applied = applySourceDuplicateResolution(db, plan, NOW);
+  const auditAfter = auditCanonicalDuplicates(db);
+  db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
+  db.close();
+  const invariantsOk = auditAfter.activeDuplicateObservations === 0
+    && auditAfter.activeCanonicalRaceLevelDuplicateCandidates === 0
+    && auditAfter.rawDuplicateObservations === base.rawDuplicateObservations
+    && auditAfter.rawRaceLevelDuplicateCandidates === base.rawRaceLevelDuplicateCandidates
+    && auditAfter.rawObservations === rawObs && auditAfter.rawCandidates === rawCandidates;
+  const payload = {
+    ...base, insertedResolutions: applied.inserted, noopResolutions: applied.noop,
+    auditAfter, rawUnchanged: auditAfter.rawObservations === rawObs && auditAfter.rawCandidates === rawCandidates,
+    result: invariantsOk ? "APPLIED" : "REVIEW",
+  };
+  writeReport("source-duplicate-resolution", payload, `# source-duplicate resolution (apply)\n\n- result: **${payload.result}**\n- inserted resolutions: ${applied.inserted} / noop: ${applied.noop}\n- raw observations ${auditAfter.rawObservations} (unchanged) / raw candidates ${auditAfter.rawCandidates} (unchanged)\n- raw dup observations ${auditAfter.rawDuplicateObservations} / raw race-level dup candidates ${auditAfter.rawRaceLevelDuplicateCandidates}\n- **active dup observations ${auditAfter.activeDuplicateObservations} / active canonical race-level dup candidates ${auditAfter.activeCanonicalRaceLevelDuplicateCandidates}**\n`);
+  console.log(JSON.stringify(payload, null, 2));
+  if (!invariantsOk) process.exitCode = 1;
+}
+
 async function main(): Promise<void> {
   if (command === "preflight") return preflight();
   if (command === "backup") return backup();
@@ -582,6 +655,7 @@ async function main(): Promise<void> {
   if (command === "capacity") return capacity();
   if (command === "primary-identity") return primaryIdentity();
   if (command === "legacy-compare") return legacyCompare();
+  if (command === "resolve-source-duplicates") return resolveSourceDuplicates();
   throw new Error(`unknown command: ${command}`);
 }
 await main();

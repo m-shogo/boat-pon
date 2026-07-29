@@ -20,6 +20,7 @@ import {
   parseSettlementSelection,
   type SettlementBetType,
 } from "../src/research-replay/settlement";
+import { auditCanonicalDuplicates } from "../src/research-replay/n1CanonicalResolution";
 import type { RacePayout } from "../src/domain/officialResultDetailParser";
 
 const root = resolve(process.cwd());
@@ -156,6 +157,9 @@ async function main(): Promise<void> {
   const db = new DatabaseSync(`file:${SIDECAR}?immutable=1`, { readOnly: true } as never);
   const dbPayout = Number((db.prepare("SELECT COUNT(*) c FROM race_payout_lines_v2").get() as { c: number }).c);
   const dbRefund = Number((db.prepare("SELECT COUNT(*) c FROM race_refund_lines_v2").get() as { c: number }).c);
+  // canonical audit（source_duplicate resolution 適用済みなら active counts を取得）。
+  const has03 = Boolean(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='settlement_source_duplicate_resolutions_v2'").get());
+  const canonical = has03 ? auditCanonicalDuplicates(db) : null;
   db.close();
   const dbStored = dbPayout + dbRefund;
 
@@ -209,10 +213,27 @@ async function main(): Promise<void> {
       skipped: "appendCandidate validation で拒否される race×betType の全line（実測 skippedCandidates 0）",
     },
     perFilesetRaw: { s8164, s8167, all },
-    sameFilesetReconciliation: sameFileset,
+    rawReconciliation: sameFileset,
     historicalDeltaReconciliation: historical,
+    // raw（source 忠実）と canonical（source_duplicate resolution 適用後の有効 view）を分離。
+    canonicalReconciliation: canonical === null ? null : {
+      note: "raw provenance は保持。source_duplicate resolution で重複 copy を canonical view から除外。",
+      rawObservations: canonical.rawObservations,
+      activeObservations: canonical.rawObservations - canonical.resolvedDuplicateObservations,
+      rawDuplicateObservations: canonical.rawDuplicateObservations,
+      activeDuplicateObservations: canonical.activeDuplicateObservations,
+      rawCandidates: canonical.rawCandidates,
+      activeCandidates: canonical.activeCandidates,
+      sourceDuplicateExcludedCandidates: canonical.rawCandidates - canonical.activeCandidates,
+      rawRaceLevelDuplicateCandidates: canonical.rawRaceLevelDuplicateCandidates,
+      activeCanonicalRaceLevelDuplicateCandidates: canonical.activeCanonicalRaceLevelDuplicateCandidates,
+      resolvedDuplicateObservations: canonical.resolvedDuplicateObservations,
+      unexplainedCanonicalDelta: (canonical.rawCandidates - canonical.activeCandidates) - canonical.rawRaceLevelDuplicateCandidates,
+    },
     valueMismatch: { legacyComparisonPayoutMismatch: 0, note: "reports/n1c-backfill/legacy-comparison.json、sample 2,000 で金額不一致0。multiplicity差(件数)とvalue差を分離済み" },
-    result: sameFileset.unexplainedDelta === 0 && historical.unexplainedDelta === 0 && sameFileset.simMatchesDb ? "PASS" : "REVIEW",
+    result: sameFileset.unexplainedDelta === 0 && historical.unexplainedDelta === 0 && sameFileset.simMatchesDb
+      && (canonical === null || (canonical.activeDuplicateObservations === 0 && canonical.activeCanonicalRaceLevelDuplicateCandidates === 0
+        && (canonical.rawCandidates - canonical.activeCandidates) === canonical.rawRaceLevelDuplicateCandidates)) ? "PASS" : "REVIEW",
   };
   mkdirSync(REPORT_DIR, { recursive: true });
   writeFileSync(join(REPORT_DIR, "reconciliation.json"), `${JSON.stringify(payload, null, 2)}\n`);
