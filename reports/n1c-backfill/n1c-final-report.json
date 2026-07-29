@@ -1,13 +1,14 @@
 {
   "reportVersion": "n1c-final-report-v1",
-  "generatedAt": "2026-07-29T13:51:38.204Z",
+  "generatedAt": "2026-07-29T13:54:59.938Z",
   "verdict": {
     "backfillExecution": "COMPLETE",
     "finalVerification": "COMPLETE",
     "reconciliation": "COMPLETE",
     "sourceDuplicationResolution": "COMPLETE",
-    "n1cAcceptance": "COMPLETE_IF_CI_GREEN_ELSE_CONDITIONAL_CI_INFRA_BLOCKED",
-    "overall": "PENDING_REMOTE_CI"
+    "n1cAcceptance": "CONDITIONAL",
+    "overall": "CONDITIONAL",
+    "n1cAcceptanceReason": "CI_INFRA_BLOCKED"
   },
   "conditionalReasons": [
     "remote CI runner allocation failure (CI_INFRA_BLOCKED) — code verified green locally; only blocker to COMPLETE",
@@ -254,5 +255,17 @@
     "golden": "PASS",
     "dbHealth": "PASS",
     "dataValidation": "PASS"
+  },
+  "remoteCi": {
+    "runId": "30458083742",
+    "conclusion": "failure",
+    "runnerAllocated": false,
+    "stepsExecuted": 0,
+    "classification": "CI_INFRA_BLOCKED (GitHub Actions runner allocation / minutes / infrastructure; not a code failure)",
+    "attemptsAcrossSessions": "~6",
+    "localRegression": "all PASS",
+    "workflowUnchangedSinceLastSuccess": true,
+    "actionsEnabled": true,
+    "requiresUserAction": "check GitHub Actions minutes/billing or await GHA infra recovery, then re-run CI on HEAD"
   }
 }

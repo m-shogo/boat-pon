@@ -8,9 +8,10 @@
 - **Final verification: COMPLETE**（現 8,170 state authoritative full verify: integrity ok / fk 0 / observation-level dup 0 / coverage 8,170/8,170 / schema 0.1/0.2/0.3 checksum 一致 / canonical race-level invariant OK）
 - **Reconciliation: COMPLETE**（raw: unexplainedDelta=0・simMatchesDb=true・parser determinism 0 / canonical: sourceDuplicateExcludedCandidates 4,196=rawRaceLevelDuplicateCandidates 4,196・unexplainedCanonicalDelta=0）
 - **Source duplication resolution: COMPLETE**（append-only、raw immutable、active canonical 0/0、冪等、value conflict 0）
-- **N1-C acceptance: COMPLETE（remote CI が runner を取得し green の場合）/ 未取得なら CONDITIONAL（理由 CI_INFRA_BLOCKED）**
+- **N1-C acceptance: CONDITIONAL（理由 CI_INFRA_BLOCKED）**
+- **Overall N1-C: CONDITIONAL（CI_INFRA_BLOCKED のみ）**
 
-N1-C 本体の verification debt は **0**。closure verification で発見した source archive 重複を append-only の canonical resolution で解決し、raw provenance を保持したまま active canonical 重複を 0 にした。
+N1-C 本体の verification debt は **0**。closure verification で発見した source archive 重複を append-only の canonical resolution で解決し、raw provenance を保持したまま active canonical 重複を 0 にした。全 local gate（verify COMPLETE / canonical invariant / reconciliation / primary isolation / 464 tests / build / golden / db:health / validate:data / secret scan）が PASS。**COMPLETE を阻む唯一の要因は remote CI の runner allocation failure（infra、code failure ではない）**であり、GitHub Actions minutes/billing 等のユーザー操作または GHA infra 復旧後に HEAD で CI を再実行し success すれば COMPLETE となる。
 
 ### 過去に CONDITIONAL 要因だった項目の解消
 
@@ -19,9 +20,11 @@ N1-C 本体の verification debt は **0**。closure verification で発見し�
 3. **容量**: DB ≈9.02GB に対し quota 30GB / filesystem free ≈354GB で充足。**COMPLETE の blocker ではない**。GC・追加 ingest 開始前に low-water ≥24GB を推奨（precondition、blocker ではない）。
 4. **primary byte identity FAIL**: 並行 racer-stats append による。structural/schema/app_settings identity は PASS、writer 静止 2 点で安定、N1 の primary write は 0。「primary 完全不変」ではない（正確表現）。COMPLETE の blocker ではない。
 
-### 唯一残る gate
+### 唯一残る gate: remote CI（CI_INFRA_BLOCKED）
 
-- **remote CI（PHASE 12）**: 直近 run 30414001791 は runner allocation failure（runner=none, 0 steps, GitHub Actions infra/minutes）。code failure ではない（local regression 全 PASS）。CI が実際に runner を取得し workflow を実行して success した場合のみ **N1-C acceptance = COMPLETE**。runner allocation failure のままなら **CONDITIONAL / 理由 CI_INFRA_BLOCKED**（コードは green）。
+- run 30458083742（HEAD `4555cd4`）ほか計 ~6 回の attempt すべて **runner allocation failure**（conclusion=failure, steps=0, runner=""）。
+- Actions は enabled、workflow ci.yml は最後の成功以降 **未変更**、local regression は全 PASS → **code failure ではなく GitHub Actions の runner allocation / minutes / infrastructure の問題**。
+- 復旧手順（ユーザー操作）: GitHub Actions の minutes/billing を確認、または GHA infra 復旧を待ち、HEAD で CI を再実行して success を確認する。success した時点で N1-C acceptance = COMPLETE。
 
 ## Closure verification（2026-07-29）
 
