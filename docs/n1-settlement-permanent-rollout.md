@@ -117,7 +117,7 @@ backupから復元したrestore copy上でのみ検証し、完了後に破棄�
 
 N1-C後のgate（GC・追加ingest前）:
 
-1. quotaを 16 GB 以上、low-water 24 GB 以上へ再引き上げる（最終≈9.0GBに対し10GBは余裕不足）。
+1. quota は **30 GB 適用済み**（最終 DB ≈9.0GB に対し充足、daily incremental ≈0.42GB/year で数十年 headroom）。追加の quota 引き上げは不要。GC・大規模追加 ingest 前に disk low-water を 16→24 GB 以上へ推奨（precondition、blocker ではない）。
 2. operational GC有効化は専用readiness gate + 別承認（GC安全契約参照）。
 3. live archiveの日次incremental backfill運用（同executor、resumable）。
 4. future result collector / N2 / production接続は別の明示承認。

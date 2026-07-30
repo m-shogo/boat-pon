@@ -1,0 +1,274 @@
+{
+  "phase": "ARCHIVE_DATA_QUALITY_SCAN",
+  "generatedAt": "2026-07-30T02:15:19.311Z",
+  "scope": "read-only re-parse of all K archives; no DB/source mutation",
+  "parseMs": 47877,
+  "archiveFiles": 8170,
+  "medianDecompressedBytes": 169136,
+  "totalRaces": 1194353,
+  "totalPayoutLines": 11523700,
+  "findings": {
+    "duplicateDaySections": {
+      "classification": "CONFIRMED",
+      "count": 4,
+      "files": [
+        {
+          "file": "k080706.lzh",
+          "dupConditions": 180
+        },
+        {
+          "file": "k080713.lzh",
+          "dupConditions": 204
+        },
+        {
+          "file": "k090406.lzh",
+          "dupConditions": 144
+        },
+        {
+          "file": "k090708.lzh",
+          "dupConditions": 96
+        }
+      ],
+      "note": "resolved via source_duplicate canonical resolution (n1-settlement.0.3)"
+    },
+    "parseErrors": {
+      "classification": "EXPECTED",
+      "count": 0,
+      "files": []
+    },
+    "zeroRaceFiles": {
+      "classification": "SUSPECTED",
+      "count": 3,
+      "files": [
+        "k040830.lzh",
+        "k110313.lzh",
+        "k110314.lzh"
+      ]
+    },
+    "invalidVenue": {
+      "classification": "EXPECTED",
+      "count": 0,
+      "sample": []
+    },
+    "invalidRaceNo": {
+      "classification": "EXPECTED",
+      "count": 0,
+      "sample": []
+    },
+    "oversizedDecompressed": {
+      "classification": "UNKNOWN",
+      "threshold": ">270617B (1.6x median)",
+      "count": 156,
+      "files": [
+        {
+          "file": "k040805.lzh",
+          "bytes": 291362,
+          "dupConditions": 0
+        },
+        {
+          "file": "k040813.lzh",
+          "bytes": 291883,
+          "dupConditions": 0
+        },
+        {
+          "file": "k040814.lzh",
+          "bytes": 320278,
+          "dupConditions": 0
+        },
+        {
+          "file": "k040815.lzh",
+          "bytes": 306428,
+          "dupConditions": 0
+        },
+        {
+          "file": "k041022.lzh",
+          "bytes": 275547,
+          "dupConditions": 0
+        },
+        {
+          "file": "k041023.lzh",
+          "bytes": 289798,
+          "dupConditions": 0
+        },
+        {
+          "file": "k041024.lzh",
+          "bytes": 290481,
+          "dupConditions": 0
+        },
+        {
+          "file": "k041105.lzh",
+          "bytes": 276469,
+          "dupConditions": 0
+        },
+        {
+          "file": "k041106.lzh",
+          "bytes": 275505,
+          "dupConditions": 0
+        },
+        {
+          "file": "k041204.lzh",
+          "bytes": 276772,
+          "dupConditions": 0
+        },
+        {
+          "file": "k041230.lzh",
+          "bytes": 292101,
+          "dupConditions": 0
+        },
+        {
+          "file": "k041231.lzh",
+          "bytes": 277880,
+          "dupConditions": 0
+        },
+        {
+          "file": "k050103.lzh",
+          "bytes": 292887,
+          "dupConditions": 0
+        },
+        {
+          "file": "k050104.lzh",
+          "bytes": 292491,
+          "dupConditions": 0
+        },
+        {
+          "file": "k050319.lzh",
+          "bytes": 276570,
+          "dupConditions": 0
+        },
+        {
+          "file": "k050429.lzh",
+          "bytes": 278756,
+          "dupConditions": 0
+        },
+        {
+          "file": "k050430.lzh",
+          "bytes": 290462,
+          "dupConditions": 0
+        },
+        {
+          "file": "k050503.lzh",
+          "bytes": 306095,
+          "dupConditions": 0
+        },
+        {
+          "file": "k050504.lzh",
+          "bytes": 304068,
+          "dupConditions": 0
+        },
+        {
+          "file": "k050804.lzh",
+          "bytes": 277662,
+          "dupConditions": 0
+        }
+      ]
+    },
+    "undersizedDecompressed": {
+      "classification": "UNKNOWN",
+      "threshold": "<42284B (0.25x median)",
+      "count": 35,
+      "files": [
+        {
+          "file": "k000127.lzh",
+          "bytes": 31561,
+          "races": 35
+        },
+        {
+          "file": "k000320.lzh",
+          "bytes": 42164,
+          "races": 48
+        },
+        {
+          "file": "k000321.lzh",
+          "bytes": 41676,
+          "races": 48
+        },
+        {
+          "file": "k000508.lzh",
+          "bytes": 41596,
+          "races": 48
+        },
+        {
+          "file": "k040628.lzh",
+          "bytes": 42172,
+          "races": 36
+        },
+        {
+          "file": "k040730.lzh",
+          "bytes": 42252,
+          "races": 36
+        },
+        {
+          "file": "k040826.lzh",
+          "bytes": 42268,
+          "races": 36
+        },
+        {
+          "file": "k040827.lzh",
+          "bytes": 42260,
+          "races": 36
+        },
+        {
+          "file": "k040830.lzh",
+          "bytes": 2816,
+          "races": 0
+        },
+        {
+          "file": "k040907.lzh",
+          "bytes": 29600,
+          "races": 24
+        },
+        {
+          "file": "k041018.lzh",
+          "bytes": 42148,
+          "races": 36
+        },
+        {
+          "file": "k041028.lzh",
+          "bytes": 42236,
+          "races": 36
+        },
+        {
+          "file": "k041101.lzh",
+          "bytes": 42204,
+          "races": 36
+        },
+        {
+          "file": "k041129.lzh",
+          "bytes": 42120,
+          "races": 36
+        },
+        {
+          "file": "k041220.lzh",
+          "bytes": 28064,
+          "races": 24
+        },
+        {
+          "file": "k041221.lzh",
+          "bytes": 28092,
+          "races": 24
+        },
+        {
+          "file": "k041222.lzh",
+          "bytes": 14108,
+          "races": 12
+        },
+        {
+          "file": "k041223.lzh",
+          "bytes": 14108,
+          "races": 12
+        },
+        {
+          "file": "k050530.lzh",
+          "bytes": 42260,
+          "races": 36
+        },
+        {
+          "file": "k050627.lzh",
+          "bytes": 42172,
+          "races": 36
+        }
+      ]
+    }
+  },
+  "result": "SCANNED"
+}
