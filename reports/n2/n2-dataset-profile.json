@@ -1,0 +1,195 @@
+{
+  "phase": "N2_DATASET_PROTOTYPE_AND_PROFILE",
+  "generatedAt": "2026-07-30T03:03:06.547Z",
+  "scope": "read-only N1 sidecar; no features (label side only); no model training; no persistent dataset",
+  "totalCandidates": 8156795,
+  "eligibleCandidates": 7833298,
+  "eligibleRatio": 0.9603,
+  "eligibilityByReason": {
+    "excluded_refunded": 319301,
+    "eligible": 7833298,
+    "excluded_source_duplicate": 4196
+  },
+  "byStatus": {
+    "refunded": 319678,
+    "settled": 7837116,
+    "partially_refunded": 1
+  },
+  "byBetType": {
+    "exacta": {
+      "eligible": 1131502,
+      "total": 1190652,
+      "eligibleRatio": 0.9503
+    },
+    "place": {
+      "eligible": 1106127,
+      "total": 1135070,
+      "eligibleRatio": 0.9745
+    },
+    "quinella": {
+      "eligible": 1123236,
+      "total": 1181940,
+      "eligibleRatio": 0.9503
+    },
+    "win": {
+      "eligible": 1126289,
+      "total": 1126836,
+      "eligibleRatio": 0.9995
+    },
+    "trifecta": {
+      "eligible": 1115508,
+      "total": 1175166,
+      "eligibleRatio": 0.9492
+    },
+    "trio": {
+      "eligible": 1115502,
+      "total": 1173955,
+      "eligibleRatio": 0.9502
+    },
+    "wide": {
+      "eligible": 1115134,
+      "total": 1173176,
+      "eligibleRatio": 0.9505
+    }
+  },
+  "byYear": {
+    "2000": {
+      "eligible": 56150,
+      "total": 57122,
+      "eligibleRatio": 0.983
+    },
+    "2004": {
+      "eligible": 165880,
+      "total": 190837,
+      "eligibleRatio": 0.8692
+    },
+    "2005": {
+      "eligible": 289333,
+      "total": 331906,
+      "eligibleRatio": 0.8717
+    },
+    "2006": {
+      "eligible": 288613,
+      "total": 331905,
+      "eligibleRatio": 0.8696
+    },
+    "2007": {
+      "eligible": 305360,
+      "total": 341776,
+      "eligibleRatio": 0.8935
+    },
+    "2008": {
+      "eligible": 306306,
+      "total": 339706,
+      "eligibleRatio": 0.9017
+    },
+    "2009": {
+      "eligible": 321088,
+      "total": 351677,
+      "eligibleRatio": 0.913
+    },
+    "2010": {
+      "eligible": 327231,
+      "total": 353841,
+      "eligibleRatio": 0.9248
+    },
+    "2011": {
+      "eligible": 329260,
+      "total": 350479,
+      "eligibleRatio": 0.9395
+    },
+    "2012": {
+      "eligible": 355897,
+      "total": 374287,
+      "eligibleRatio": 0.9509
+    },
+    "2013": {
+      "eligible": 356853,
+      "total": 372634,
+      "eligibleRatio": 0.9577
+    },
+    "2014": {
+      "eligible": 356021,
+      "total": 366723,
+      "eligibleRatio": 0.9708
+    },
+    "2015": {
+      "eligible": 360612,
+      "total": 367637,
+      "eligibleRatio": 0.9809
+    },
+    "2016": {
+      "eligible": 374903,
+      "total": 379445,
+      "eligibleRatio": 0.988
+    },
+    "2017": {
+      "eligible": 378710,
+      "total": 381074,
+      "eligibleRatio": 0.9938
+    },
+    "2018": {
+      "eligible": 379723,
+      "total": 381111,
+      "eligibleRatio": 0.9964
+    },
+    "2019": {
+      "eligible": 380211,
+      "total": 381347,
+      "eligibleRatio": 0.997
+    },
+    "2020": {
+      "eligible": 383304,
+      "total": 383828,
+      "eligibleRatio": 0.9986
+    },
+    "2021": {
+      "eligible": 383945,
+      "total": 384340,
+      "eligibleRatio": 0.999
+    },
+    "2022": {
+      "eligible": 388523,
+      "total": 388794,
+      "eligibleRatio": 0.9993
+    },
+    "2023": {
+      "eligible": 387154,
+      "total": 387453,
+      "eligibleRatio": 0.9992
+    },
+    "2024": {
+      "eligible": 386977,
+      "total": 387284,
+      "eligibleRatio": 0.9992
+    },
+    "2025": {
+      "eligible": 385717,
+      "total": 385921,
+      "eligibleRatio": 0.9995
+    },
+    "2026": {
+      "eligible": 185527,
+      "total": 185668,
+      "eligibleRatio": 0.9992
+    }
+  },
+  "prototype": {
+    "datasetContractVersion": "n2-dataset-contract-v1",
+    "n1SchemaChecksums": {
+      "v01": "35903ee175dbb31cbc7202aa573a2e1b4f6d58d9b6954cfac4cee0fdfa4eb94d",
+      "v02": "50d7e605c1ea73973eb4b665e9b4792e7a1b33fae9dc2d3694dc3f9e8e1f01f1",
+      "v03": "94c73e24b2938b772fa0cd989bc74f04de053d3a18e35609512f971bca9ad5ec"
+    },
+    "labelSource": "N1 canonical active settlement (source_duplicate excluded, resolved only)",
+    "prototypeMonth": "2026-05",
+    "prototypeEligibleRows": 28637,
+    "prototypeExclusions": {
+      "excluded_refunded": 36
+    },
+    "labelDigest": "0b6d8003c535903847816c4a6e2c32865535cdee8a698ecf280c750201493f9a",
+    "deterministicRebuild": true
+  },
+  "pitProof": "prototype contains only post-race canonical labels (the TARGET); no pre-race feature columns → no feature leakage possible in label-only prototype. Feature join must pass validateFeaturePIT (n2DatasetContract) at build time.",
+  "result": "OK"
+}
