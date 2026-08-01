@@ -198,10 +198,63 @@ test("adversarial: post-race/future/closing odds as feature are rejected", () =>
   // future settlement-derived feature as of after cutoff
   assert.equal(validateFeaturePIT({ featureKey: "raceResult", pitClass: "historical_safe", availableAt: "2026-05-20T06:00:00.000Z" }, CUTOFF, "historical").usable, false);
   // closing odds as training feature
-  assert.equal(validateOddsUsage("closing", "feature").usable, false);
-  assert.equal(validateOddsUsage("post_race_imputed", "feature").usable, false);
+  const beforeCutoff = {
+    capturedAt: "2026-05-20T04:59:30.000Z",
+    availableAt: "2026-05-20T04:59:00.000Z",
+    decisionCutoff: CUTOFF,
+  };
+  assert.equal(validateOddsUsage({ kind: "closing", role: "feature", ...beforeCutoff }).usable, false);
+  assert.equal(validateOddsUsage({ kind: "post_race_imputed", role: "feature", ...beforeCutoff }).usable, false);
   // closing odds as evaluation is allowed (price evaluation only)
-  assert.equal(validateOddsUsage("closing", "evaluation").usable, true);
+  assert.deepEqual(validateOddsUsage({
+    kind: "closing",
+    role: "evaluation",
+    capturedAt: "2026-05-20T05:01:00.000Z",
+    availableAt: "2026-05-20T05:00:30.000Z",
+    decisionCutoff: CUTOFF,
+  }), { usable: true, reason: "closing_odds_for_price_evaluation_only" });
   // live checkpoint before cutoff usable as feature
-  assert.equal(validateOddsUsage("live_checkpoint", "feature").usable, true);
+  assert.deepEqual(validateOddsUsage({ kind: "live_checkpoint", role: "feature", ...beforeCutoff }), {
+    usable: true,
+    reason: "odds_safe",
+  });
+});
+
+test("odds PIT: live checkpoint validates capture, availability and cutoff atomically", () => {
+  const base = {
+    kind: "live_checkpoint" as const,
+    role: "feature" as const,
+    availableAt: "2026-05-20T04:59:00.000Z",
+    decisionCutoff: CUTOFF,
+  };
+  // cutoff equality is inclusive.
+  assert.equal(validateOddsUsage({ ...base, capturedAt: CUTOFF }).usable, true);
+  assert.equal(validateOddsUsage({ ...base, capturedAt: "2026-05-20T05:00:00.001Z" }).reason,
+    "excluded_odds_capture_after_cutoff");
+  assert.equal(validateOddsUsage({
+    ...base,
+    capturedAt: CUTOFF,
+    availableAt: "2026-05-20T05:00:00.001Z",
+  }).reason, "excluded_odds_available_after_cutoff");
+  assert.equal(validateOddsUsage({
+    ...base,
+    capturedAt: "2026-05-20T04:58:00.000Z",
+    availableAt: "2026-05-20T04:59:00.000Z",
+  }).reason, "excluded_odds_available_after_capture");
+  assert.equal(validateOddsUsage({ ...base, capturedAt: null }).reason, "excluded_odds_unknown_timestamp");
+  assert.equal(validateOddsUsage({ ...base, capturedAt: CUTOFF, decisionCutoff: "invalid" }).reason,
+    "excluded_odds_unknown_timestamp");
+});
+
+test("odds role: decision uses the same PIT guard and unknown/post-race fail closed", () => {
+  const base = {
+    capturedAt: "2026-05-20T04:59:30.000Z",
+    availableAt: "2026-05-20T04:59:00.000Z",
+    decisionCutoff: CUTOFF,
+  };
+  assert.equal(validateOddsUsage({ kind: "live_checkpoint", role: "decision", ...base }).usable, true);
+  assert.equal(validateOddsUsage({ kind: "closing", role: "decision", ...base }).reason,
+    "excluded_odds_kind_for_role");
+  assert.equal(validateOddsUsage({ kind: "unknown", role: "evaluation", ...base }).usable, false);
+  assert.equal(validateOddsUsage({ kind: "post_race_imputed", role: "evaluation", ...base }).usable, false);
 });
