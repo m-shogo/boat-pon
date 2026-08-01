@@ -53,7 +53,9 @@ label source: N1 canonical **active** settlement（`source_duplicate` 除外・`
 - feature key重複、provenance欠損、未来feature、非canonical/重複/不正/未来odds、必須oddsのselection欠損をreason code付きで拒否する。
 - unsafe inputが1件でもあればcandidate全体を`excluded`として0行を返す。部分的に安全な行だけを残すsilent dropは禁止。
 - ineligible settlementはtraining rowを生成しない。
-- builder version: `n2-feature-dataset-builder-v1`。unit tests 7/7、targeted strict typecheck PASS。
+- builder version: `n2-feature-dataset-builder-v1`。unit tests 8/8、targeted strict typecheck PASS。
+
+`n2FeatureSourceAdapter.ts`はlegacy primary DB rowをbuilder inputへ変換する純関数境界である。`official_programs.imported_at`やrace dateをsource availabilityへ代用せず、F0の`sourceAvailableAt / observationId / rawDocumentId`が揃う場合だけhistorical-safe observationへ昇格する。oddsもcaptured_atだけでraw lineageがない行、bet_type不明行をfail-closedにする。legacy trifectaの暗黙補完は明示optionなしでは行わない。adapter versionは`n2-feature-source-adapter-v1`、tests 6/6 PASS。
 
 ## 2. Target Contract
 
