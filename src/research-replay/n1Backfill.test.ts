@@ -11,10 +11,12 @@ import {
   initializeN1SettlementSchema,
   N1_BACKFILL_MIGRATION_CHECKSUM,
   N1_BACKFILL_SCHEMA_VERSION,
+  N1_SETTLEMENT_PARSER_VERSION,
   verifyN1BackfillSchema,
   verifyN1SettlementSchema,
 } from "./settlement";
-import { listArchiveFiles, runBackfill } from "./n1Backfill";
+import { classifyRaceLines, listArchiveFiles, resolveStatus, runBackfill } from "./n1Backfill";
+import { parseOfficialResultDetail } from "../domain/officialResultDetailParser";
 
 const NOW = "2026-07-25T04:00:00.000Z";
 const ARCHIVE_ROOT = join("data", "raw", "official", "results");
@@ -108,4 +110,70 @@ test("backfill executor ingests sample files, writes zero evidence pins (Option 
   assert.equal(candidatesAfterSecond, candidatesAfterFirst);
   assert.equal((db.prepare("PRAGMA foreign_key_check").all()).length, 0);
   db.close();
+});
+
+
+test("archive special payout stays bet-type scoped and does not contaminate later payout lines", () => {
+  const source = [
+    "桐生［成績］",
+    "ボートレース桐生 2026/ 6/ 30",
+    " 1R 予選 H1800m 晴 風 北 1m 波 1cm",
+    "単勝     特払い     70",
+    "２連単   1-2   500   人気   1",
+    "３連単   1-2-3   1,200   人気   2",
+  ].join("\n");
+
+  const parsed = parseOfficialResultDetail(source, {
+    date: "2026-06-30",
+    fetchedAt: NOW,
+  });
+
+  assert.equal(N1_SETTLEMENT_PARSER_VERSION, "n1-settlement-parser-v2");
+  assert.equal(parsed.conditions.length, 1);
+  assert.equal(parsed.conditions[0].returned, false);
+
+  const special = parsed.payouts.find((line) => line.betType === "win");
+  assert.ok(special);
+  assert.equal(special.combination, "特払");
+  assert.equal(special.payoutYen, 70);
+  assert.equal(special.returned, false);
+
+  const exacta = parsed.payouts.find((line) => line.betType === "exacta");
+  const trifecta = parsed.payouts.find((line) => line.betType === "trifecta");
+  assert.ok(exacta);
+  assert.ok(trifecta);
+  assert.equal(exacta.returned, false);
+  assert.equal(trifecta.returned, false);
+
+  const bucket = classifyRaceLines("win", [special]);
+  assert.equal(bucket.refunds.length, 0);
+  assert.deepEqual(bucket.payouts, [{
+    selection: "特払",
+    payoutYen: 70,
+    popularity: null,
+    lineKind: "special_payout",
+  }]);
+  assert.equal(resolveStatus(bucket), "settled");
+});
+
+test("archive no-contest remains a race-wide return sentinel", () => {
+  const source = [
+    "桐生［成績］",
+    "ボートレース桐生 2026/ 6/ 30",
+    " 1R 予選 H1800m 晴 風 北 1m 波 1cm",
+    "不成立",
+    "単勝     1     100",
+  ].join("\n");
+
+  const parsed = parseOfficialResultDetail(source, {
+    date: "2026-06-30",
+    fetchedAt: NOW,
+  });
+
+  assert.equal(parsed.conditions[0].returned, true);
+  assert.equal(parsed.payouts[0].returned, true);
+  const bucket = classifyRaceLines("win", parsed.payouts);
+  assert.equal(bucket.payouts.length, 0);
+  assert.equal(bucket.refunds.length, 1);
+  assert.equal(resolveStatus(bucket), "refunded");
 });
