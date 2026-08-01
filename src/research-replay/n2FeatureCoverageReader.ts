@@ -63,7 +63,7 @@ export function canonicalN2CoverageRaceKey(row: Pick<N2CoverageRaceRow, "raceId"
   const raceNo = String(row.raceNo).padStart(2, "0");
   const expectedRaceId = `${row.date.replaceAll("-", "")}-${row.venue}-${raceNo}`;
   if (row.raceId !== expectedRaceId) throw new Error(`N2_COVERAGE_PROGRAM_RACE_ID_MISMATCH:${row.raceId}`);
-  return `${row.date}:${row.venue}:${raceNo}`;
+  return `${row.date}:${row.venue}:R${row.raceNo}`;
 }
 
 function expectedProgramKeys(): string[] {
