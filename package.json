@@ -35,6 +35,7 @@
     "research:n1:payout:archive-dry-run": "tsx scripts/research-replay-n1-payout.ts archive-dry-run",
     "research:n1:payout:reconcile": "tsx scripts/research-replay-n1-payout.ts reconcile",
     "research:n1:payout:readiness": "tsx scripts/research-replay-n1-payout.ts readiness",
+    "audit:n2:archive-refund-semantics": "tsx scripts/audit-archive-refund-semantics.ts",
     "research:n1:rollout:capacity": "tsx scripts/research-replay-n1-rollout.ts capacity-benchmark",
     "research:n1:rollout:readiness": "tsx scripts/research-replay-n1-rollout.ts readiness",
     "research:n1:rollout:apply": "tsx scripts/research-replay-n1-rollout.ts apply",
