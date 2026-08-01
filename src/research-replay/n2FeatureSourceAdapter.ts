@@ -32,7 +32,7 @@ export type SourceAdapterResult<T> =
   | { status: "adapted"; value: T }
   | { status: "excluded"; reason: string };
 
-const RAW_PROGRAM_FEATURE_KEYS = [
+export const N2_OFFICIAL_PROGRAM_FEATURE_KEYS = [
   "className",
   "nationalWinRate",
   "nationalTop2Rate",
@@ -70,7 +70,7 @@ export function adaptOfficialProgramFeatures(row: OfficialProgramSourceRow): Sou
 
   const observations: N2FeatureObservation[] = [];
   for (const boat of [...snapshot.boats].sort((a, b) => a.course - b.course)) {
-    for (const key of RAW_PROGRAM_FEATURE_KEYS) {
+    for (const key of N2_OFFICIAL_PROGRAM_FEATURE_KEYS) {
       observations.push({
         featureKey: `boat.${boat.course}.${key}`,
         value: boat[key] ?? null,
