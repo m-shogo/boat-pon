@@ -51,6 +51,7 @@ export type OfficialProgramIngestResult = {
 export type OfficialProgramCaptureResult = OfficialProgramIngestResult & {
   captureAttemptId: string;
   bodyCompletedEventId: string;
+  reusedObservation: boolean;
 };
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -293,7 +294,17 @@ export function captureOfficialProgramObservation(input: {
     bodyCompletedEventId,
     linkedAt: bodyCompletedAt,
   });
-  const parse = input.repository.parseTypedRawDocument({
+  const reusable = raw.deduplicated
+    ? input.repository.findReusableTypedObservation({
+      rawDocumentId: raw.rawDocumentId,
+      canonicalRaceKey: input.canonicalRaceKey,
+      parserName: "n2-official-program",
+      parserVersion: N2_OFFICIAL_PROGRAM_PARSER_VERSION,
+      sourceSchemaVersion: N2_OFFICIAL_PROGRAM_SOURCE_SCHEMA_VERSION,
+      payloadType: "official_program",
+    })
+    : null;
+  const parse = reusable ?? input.repository.parseTypedRawDocument({
     rawDocumentId: raw.rawDocumentId,
     parseRunId: input.parseRunId,
     observationId: input.observationId,
@@ -315,6 +326,7 @@ export function captureOfficialProgramObservation(input: {
     rawSha256: raw.rawSha256,
     relativePath: raw.relativePath,
     parse,
+    reusedObservation: reusable !== null,
   };
 }
 
