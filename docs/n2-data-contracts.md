@@ -65,6 +65,8 @@ F0 typed registryは`official_program`を`pre_race` observationとして明示�
 
 `ResearchReplayRepository.parseTypedRawDocument`は、content-addressed storeへ保存済みのbyte-exact rawを必ず再読込してtyped parserを実行し、parse runとobservation/payloadの保存を共通化する。`ingestOfficialProgramObservation`はprimary `raw_json`そのものをraw evidenceとして記録し、正規化envelopeをraw原本として偽装しない。parse/validation失敗も`parse_runs.status=error`として残し、domain observationとtyped payloadは0件のままにする。temp sidecar→typed payload→immutable coverage reader E2Eは2/2 PASS（正常rawは42/42 verified、不正rawはpartial write 0）、関連回帰を含む対象tests 9/9・targeted strict typecheck PASS。これはoffline adapterであり、live collector writerは引き続きOFFである。
 
+`captureOfficialProgramObservation`はtemp/offline collector adapterとして、`capture_attempt → capture_started → response_headers_received → byte-exact raw → body_completed → capture_raw_link → parse_run → domain_observation → typed payload`を一周させる。request/event時刻は単調増加、`source_observed_at = body_completed_at`、body eventのbyte countとraw実サイズ、body event/attempt所有関係、link時刻をrepositoryでfail-closed検証する。URL secretと非allowlist headerは保存しない。parse失敗はcapture成功と分離し、raw/link/error parse runを保持してobservationを作らない。新規collector E2E 3/3、関連回帰込み12/12・targeted strict typecheck PASS。実collector writerは引き続きOFF。
+
 ## 2. Target Contract
 
 raw truth を直接 target にしない。canonical active settlement からのみ導出（`deriveBetLabel`）。段階分離:
