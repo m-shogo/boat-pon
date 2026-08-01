@@ -155,6 +155,10 @@ primary DB schemaを再監査し、`official_programs`には`imported_at`しか�
 - 実DB/sidecar write: 0
 - 未確認: 実sidecarからのcoverage event生成・実join率
 
+## Non-blocking hardening: immutable dual-DB coverage reader
+
+`n2-feature-coverage-reader-v1`を追加し、primary `official_programs`とF0 evidence sidecarを別々に`immutable=1/readOnly`で開いて、1raceあたり42 official-program feature eventを生成する。race identityの曖昧変換は拒否し、`official_program` evidence 0件・複数件・検証不合格を理由別excludedとして明示する。隔離SQLite E2E 3/3とtargeted strict typecheckがPASSし、reader前後の両DB SHA-256一致も確認した。実DB入力がないため実join率は未確認。
+
 ## 次gate
 
 1. `--limit=20` smoke scan + full repo unit/typecheck
