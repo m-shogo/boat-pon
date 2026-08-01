@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { buildN2FeatureDatasetRows } from "./n2FeatureDatasetBuilder";
 import { adaptLiveOddsRows, adaptOfficialProgramFeatures, type OddsTimeseriesSourceRow } from "./n2FeatureSourceAdapter";
+import { verifyN2FeatureLineage, type N2FeatureLineageEvidenceRow } from "./n2FeatureLineage";
 
 const PROGRAM_RAW = JSON.stringify({ boats: [{
   course: 1,
@@ -15,18 +16,35 @@ const PROGRAM_RAW = JSON.stringify({ boats: [{
   boatTop2Rate: 38.4,
 }] });
 
+function verifiedLineage(observationType: string, sourceObservedAt = "2026-05-20T03:59:00.000Z") {
+  const row: N2FeatureLineageEvidenceRow = {
+    observationId: `obs-${observationType}`, canonicalRaceKey: "2026-05-20:01:01", observationType,
+    observationRawDocumentId: `raw-${observationType}`, sourcePublishedAt: "2026-05-20T03:58:00.000Z",
+    sourceObservedAt, firstSeenAt: new Date(Date.parse(sourceObservedAt) + 1_000).toISOString(),
+    timingQuality: "source_exact", sourceQuality: "official_public", parseRawDocumentId: `raw-${observationType}`,
+    parseStatus: "success", rawDocumentId: `raw-${observationType}`, integrityStatus: "verified",
+    securityScanStatus: "passed", parserReplayEligible: 1,
+  };
+  const result = verifyN2FeatureLineage({
+    canonicalRaceKey: row.canonicalRaceKey, observationId: row.observationId,
+    rawDocumentId: row.rawDocumentId, allowedObservationTypes: [observationType],
+  }, row);
+  if (result.status !== "verified") throw new Error(result.reason);
+  return result.lineage;
+}
+
 test("program adapter: imported_at is never substituted for unknown source availability", () => {
   const result = adaptOfficialProgramFeatures({
     raceId: "race-1", rawJson: PROGRAM_RAW, sourceFile: "program.json", importedAt: "2026-05-20T04:00:00.000Z",
-    lineage: { sourceAvailableAt: null, observationId: null, rawDocumentId: null },
+    lineage: null,
   });
-  assert.deepEqual(result, { status: "excluded", reason: "excluded_unknown_program_source_availability" });
+  assert.deepEqual(result, { status: "excluded", reason: "excluded_unverified_program_lineage" });
 });
 
 test("program adapter: trusted lineage emits only raw historical-safe feature observations", () => {
   const result = adaptOfficialProgramFeatures({
     raceId: "race-1", rawJson: PROGRAM_RAW, sourceFile: "program.json", importedAt: "2026-05-20T04:00:00.000Z",
-    lineage: { sourceAvailableAt: "2026-05-20T03:59:00.000Z", observationId: "obs-program", rawDocumentId: "raw-program" },
+    lineage: verifiedLineage("official_program"),
   });
   assert.equal(result.status, "adapted");
   if (result.status !== "adapted") return;
@@ -38,17 +56,18 @@ test("program adapter: trusted lineage emits only raw historical-safe feature ob
 test("program adapter: source availability after import is inconsistent", () => {
   const result = adaptOfficialProgramFeatures({
     raceId: "race-1", rawJson: PROGRAM_RAW, sourceFile: "program.json", importedAt: "2026-05-20T04:00:00.000Z",
-    lineage: { sourceAvailableAt: "2026-05-20T04:00:00.001Z", observationId: "obs", rawDocumentId: "raw" },
+    lineage: { ...verifiedLineage("official_program"), sourceAvailableAt: "2026-05-20T04:00:00.001Z" },
   });
   assert.equal(result.status, "excluded");
   if (result.status === "excluded") assert.equal(result.reason, "excluded_program_available_after_import");
 });
 
 function odds(over: Partial<OddsTimeseriesSourceRow> = {}): OddsTimeseriesSourceRow {
+  const capturedAt = over.capturedAt ?? "2026-05-20T04:59:00.000Z";
   return {
     id: 1, raceId: "race-1", betType: "exacta", betSelection: "1-2", odds: 5.2,
-    capturedAt: "2026-05-20T04:59:00.000Z", source: "official",
-    observationId: "obs-odds", rawDocumentId: "raw-odds", ...over,
+    capturedAt, source: "official",
+    lineage: verifiedLineage("trifecta_market", capturedAt), ...over,
   };
 }
 
@@ -57,12 +76,19 @@ test("odds adapter: legacy row without bet_type is not inferred for exacta", () 
   assert.deepEqual(result, { status: "excluded", reason: "excluded_unknown_odds_bet_type" });
 });
 
-test("odds adapter: raw lineage is mandatory", () => {
-  const result = adaptLiveOddsRows({ rows: [odds({ rawDocumentId: null })], expectedBetType: "exacta" });
-  assert.deepEqual(result, { status: "excluded", reason: "excluded_missing_odds_lineage" });
+test("odds adapter: verified raw lineage is mandatory", () => {
+  const result = adaptLiveOddsRows({ rows: [odds({ lineage: null })], expectedBetType: "exacta" });
+  assert.deepEqual(result, { status: "excluded", reason: "excluded_unverified_odds_lineage" });
 });
 
-test("adapter + builder: capturedAt equality is conservative and future odds still fail PIT", () => {
+test("odds adapter: captured_at must identify the same F0 observation instant", () => {
+  const result = adaptLiveOddsRows({ rows: [odds({
+    lineage: verifiedLineage("trifecta_market", "2026-05-20T04:58:59.000Z"),
+  })], expectedBetType: "exacta" });
+  assert.deepEqual(result, { status: "excluded", reason: "excluded_odds_capture_lineage_mismatch" });
+});
+
+test("adapter + builder: verified future odds still fail PIT", () => {
   const adapted = adaptLiveOddsRows({ rows: [odds({ capturedAt: "2026-05-20T05:00:00.001Z" })], expectedBetType: "exacta" });
   assert.equal(adapted.status, "adapted");
   if (adapted.status !== "adapted") return;
