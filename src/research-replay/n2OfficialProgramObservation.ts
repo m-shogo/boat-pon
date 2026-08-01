@@ -6,7 +6,7 @@ import {
   type OfficialProgramPayload,
 } from "./domain";
 import { canonicalUtcTimestamp } from "./canonical";
-import type { ParseResult, ResearchReplayRepository } from "./repository";
+import type { CaptureFailureReason, ParseResult, ResearchReplayRepository } from "./repository";
 
 export const N2_OFFICIAL_PROGRAM_SOURCE_SCHEMA_VERSION = "official-program-primary-raw-v1";
 export const N2_OFFICIAL_PROGRAM_PARSER_VERSION = "n2-official-program-parser-v1";
@@ -46,6 +46,11 @@ export type OfficialProgramIngestResult = {
   rawSha256: string;
   relativePath: string;
   parse: ParseResult;
+};
+
+export type OfficialProgramCaptureResult = OfficialProgramIngestResult & {
+  captureAttemptId: string;
+  bodyCompletedEventId: string;
 };
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -174,6 +179,138 @@ export function ingestOfficialProgramObservation(input: {
     }),
   });
   return {
+    rawDocumentId: raw.rawDocumentId,
+    rawSha256: raw.rawSha256,
+    relativePath: raw.relativePath,
+    parse,
+  };
+}
+
+
+function rawFailureReason(error: unknown): CaptureFailureReason {
+  const message = error instanceof Error ? error.message : "";
+  const known: CaptureFailureReason[] = [
+    "partial_body",
+    "hash_mismatch",
+    "unsupported_content_type",
+    "body_too_large",
+    "decompression_limit",
+    "unknown_charset",
+  ];
+  return known.find((reason) => message.includes(reason)) ?? "partial_body";
+}
+
+export function captureOfficialProgramObservation(input: {
+  repository: ResearchReplayRepository;
+  logicalRequestGroupId: string;
+  canonicalRaceKey: string;
+  sourceUrl: string;
+  requestStartedAt: string;
+  responseHeadersReceivedAt: string;
+  bodyCompletedAt: string;
+  sourcePublishedAt: string | null;
+  sourceObservedAt: string;
+  firstSeenAt: string;
+  rawJson: string;
+  httpStatus: number;
+  responseHeaders?: Record<string, string>;
+  captureAttemptId?: string;
+  captureStartedEventId?: string;
+  responseHeadersEventId?: string;
+  bodyCompletedEventId?: string;
+  failureEventId?: string;
+  rawDocumentId?: string;
+  parseRunId?: string;
+  observationId?: string;
+}): OfficialProgramCaptureResult {
+  const requestStartedAt = canonicalUtcTimestamp(input.requestStartedAt);
+  const responseHeadersReceivedAt = canonicalUtcTimestamp(input.responseHeadersReceivedAt);
+  const bodyCompletedAt = canonicalUtcTimestamp(input.bodyCompletedAt);
+  const sourceObservedAt = canonicalUtcTimestamp(input.sourceObservedAt);
+  if (Date.parse(responseHeadersReceivedAt) < Date.parse(requestStartedAt)
+    || Date.parse(bodyCompletedAt) < Date.parse(responseHeadersReceivedAt)) {
+    throw new Error("official program capture time order invalid");
+  }
+  if (bodyCompletedAt !== sourceObservedAt) {
+    throw new Error("official program observation must equal completed body time");
+  }
+
+  const captureAttemptId = input.repository.createCaptureAttempt({
+    captureAttemptId: input.captureAttemptId,
+    logicalRequestGroupId: input.logicalRequestGroupId,
+    canonicalRaceKey: input.canonicalRaceKey,
+    sourceUrl: input.sourceUrl,
+    method: "GET",
+    requestStartedAt,
+    sourceType: "official_program",
+  });
+  input.repository.addCaptureEvent({
+    eventId: input.captureStartedEventId,
+    captureAttemptId,
+    eventKind: "capture_started",
+    occurredAt: requestStartedAt,
+  });
+  input.repository.addCaptureEvent({
+    eventId: input.responseHeadersEventId,
+    captureAttemptId,
+    eventKind: "response_headers_received",
+    occurredAt: responseHeadersReceivedAt,
+    httpStatus: input.httpStatus,
+    responseHeaders: input.responseHeaders,
+  });
+
+  let raw: ReturnType<ResearchReplayRepository["recordRawDocument"]>;
+  try {
+    raw = input.repository.recordRawDocument({
+      rawDocumentId: input.rawDocumentId,
+      bytes: Buffer.from(input.rawJson, "utf8"),
+      contentType: "application/json",
+      charset: "utf-8",
+      retentionClass: "research_evidence",
+    });
+  } catch (error) {
+    input.repository.addCaptureEvent({
+      eventId: input.failureEventId,
+      captureAttemptId,
+      eventKind: "capture_failed",
+      occurredAt: bodyCompletedAt,
+      failureReason: rawFailureReason(error),
+    });
+    throw error;
+  }
+
+  const bodyCompletedEventId = input.repository.addCaptureEvent({
+    eventId: input.bodyCompletedEventId,
+    captureAttemptId,
+    eventKind: "body_completed",
+    occurredAt: bodyCompletedAt,
+    httpStatus: input.httpStatus,
+    byteCount: Buffer.byteLength(input.rawJson, "utf8"),
+  });
+  input.repository.linkCaptureToRaw({
+    captureAttemptId,
+    rawDocumentId: raw.rawDocumentId,
+    bodyCompletedEventId,
+    linkedAt: bodyCompletedAt,
+  });
+  const parse = input.repository.parseTypedRawDocument({
+    rawDocumentId: raw.rawDocumentId,
+    parseRunId: input.parseRunId,
+    observationId: input.observationId,
+    parserName: "n2-official-program",
+    parserVersion: N2_OFFICIAL_PROGRAM_PARSER_VERSION,
+    expectedSourceSchemaVersion: N2_OFFICIAL_PROGRAM_SOURCE_SCHEMA_VERSION,
+    parse: (bytes) => buildOfficialProgramObservationEnvelope({
+      canonicalRaceKey: input.canonicalRaceKey,
+      rawJson: bytes.toString("utf8"),
+      sourcePublishedAt: input.sourcePublishedAt,
+      sourceObservedAt,
+      firstSeenAt: input.firstSeenAt,
+    }),
+  });
+  return {
+    captureAttemptId,
+    bodyCompletedEventId,
     rawDocumentId: raw.rawDocumentId,
     rawSha256: raw.rawSha256,
     relativePath: raw.relativePath,
