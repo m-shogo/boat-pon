@@ -558,7 +558,7 @@ M1はN3/N4の選手PIT gate、M3は主観を排したstrict-prior label gate、M
 ## 12. N2 current completion ledger
 
 - completed: official_programのtemp五層lineage、byte/time/link integrity、stored-raw parser、primary semantic照合、immutable coverage reader、same-raw retry dedup。HTTP retryはcapture履歴を保持するが同一semantic domain eventを二重生成しない。
-- current: live writer接続前のfailure isolation・single-writer・rollback/circuit-breaker境界。
+- completed追加: capture failureをterminal attemptとして保持し、同一logical groupの新attempt retryだけがraw/parse/observationを生成するfailure isolation。F0-R既存のprimary非伝播・outbox retry・rollback/kill switchと整合。\n- current: official_program shadow outbox message contract、single-writer/idempotency key、primary collector非伝播の統合temp E2E。
 - blocked: raw archive全件scanner実行、約319,301 excluded_refunded候補とのreconciliation、実F0 sidecar coverage、全7券種live typed market observation。
-- evidence: collector E2E 5/5、関連targeted regression 21/21、strict TypeScript PASS。code `20b2b55a` / `1f5bd37f` / `ffe26203`。
-- next: raw入力があれば`ARCHIVE_REFUND_SEMANTICS_AUDIT`を再開し、なければtemp shadow writerの失敗非伝播とrollbackを固定する。実collector writer、model、BUY/WATCH/SKIP、productionはOFFを維持する。
+- evidence: collector E2E 6/6、今回のprogram/coverage regression 12/12、strict TypeScript PASS。retry dedup code `20b2b55a` / `1f5bd37f`、failure isolation code `8861a396` / `fd1a1077`。
+- next: raw入力があれば`ARCHIVE_REFUND_SEMANTICS_AUDIT`を再開し、なければofficial_program payloadを既存F0-R outboxへ安全に接続するtemp統合を実装する。実collector writer、model、BUY/WATCH/SKIP、productionはOFFを維持する。
