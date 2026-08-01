@@ -66,9 +66,9 @@ raw truth を直接 target にしない。canonical active settlement からの�
 - special payout: 券種別実額を `specialPayoutYenPer100` で渡し、全selectionを `outcome=special_payout / hit=null` にする。通常のwinning selectionへ推測変換しない。
 - cancel/no_sale: label 不成立（除外）。unsettled/conflict/unknown: fail-closed 除外。
 - target contract version: `n2-target-contract-v2`。
-- state fixture は `n2DatasetContract.test.ts` で固定（全7券種212 selection、hit/loss、部分返還、特払い、各除外理由、ineligible→void/null）。対象契約testは10件PASS。
+- state fixture は `n2DatasetContract.test.ts` で固定（全7券種212 selection、hit/loss、部分返還、特払い、各除外理由、ineligible→void/null）。対象契約testは12件PASS。
 
-## 4. Odds Timing Contract（`validateOddsUsage`）
+## 4. Odds Timing Contract（atomic `validateOddsUsage`）
 
 | role | 使用可 odds | 禁止 |
 |---|---|---|
@@ -77,6 +77,11 @@ raw truth を直接 target にしない。canonical active settlement からの�
 | decision | 意思決定時点で available な odds | closing / post_race |
 
 - final/closing odds を **training feature に入れない**。closing は「価格評価専用」と明示。
+- `validateOddsUsage` は `kind / role / capturedAt / availableAt / decisionCutoff` を単一inputで検証する。kindだけの事前判定は禁止。
+- live checkpointは `capturedAt <= decisionCutoff` かつ `availableAt <= decisionCutoff`。境界一致は許可し、1msでも未来なら拒否する。
+- provenance整合性として `availableAt <= capturedAt` を必須にする。欠損・不正時刻・未来時刻・unknown/post-race kindはreason code付きでfail-closed。
+- closingは時刻の妥当性と`availableAt <= capturedAt`を満たす場合でもevaluation専用。feature/decisionには使用できない。
+- feature PIT contract version: `n2-feature-pit-contract-v2`。
 - 既知バイアス（CLAUDE.md）: `current_odds` は締切前暫定で約14.94pt の楽観バイアス、gap≥10pt では current_odds 判断を信頼しない。実払戻（N1 `payout_yen`）を label/財務評価の主基準にする。
 
 ## 5. 温度・coverage 制約（N2 が前提にすること）
