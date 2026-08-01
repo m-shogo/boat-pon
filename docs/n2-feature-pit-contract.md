@@ -10,7 +10,7 @@ feature は `available_at <= decision_cutoff`（通常 race lock time）を満�
 
 oddsはkind判定と時刻判定を分離しない。`validateOddsUsage`へ`kind / role / capturedAt / availableAt / decisionCutoff`を同時に渡し、live checkpointではcapture/availabilityの双方がcutoff以下、かつavailabilityがcapture以下であることを強制する。closingは妥当な時刻を持つ価格評価専用で、feature/decisionには使用しない。contract versionは`n2-feature-pit-contract-v2`。
 
-`n2FeatureDatasetBuilder.ts`は両PIT guardをselection-level build pathへ接続済み。既知のlive-only keyはnamespaced keyでもcallerがclassを偽装できず、unsafeなfeature/oddsが一つでもあればcandidate全体を0行でfail-closedにする。`n2FeatureSourceAdapter.ts`はlegacy row変換境界を実装済みだが、primary DBにはsource availability/raw lineageがないため、F0 evidenceへjoinできない行は昇格しない。coverage/provenance実測は未実行。
+`n2FeatureDatasetBuilder.ts`は両PIT guardをselection-level build pathへ接続済み。既知のlive-only keyはnamespaced keyでもcallerがclassを偽装できず、unsafeなfeature/oddsが一つでもあればcandidate全体を0行でfail-closedにする。`n2FeatureLineage.ts`はF0 observation/parse/rawのread-only JOINと証拠鎖検証を実装し、`n2FeatureSourceAdapter.ts`はverified lineage以外を拒否する。現F0 typed observation registryには`official_program`がなく、全券種market observationも未整備のため、実join/coverageは引き続き未確認。
 
 ## Feature 分類（既存 `programFeatureSafety.ts` を継承）
 
