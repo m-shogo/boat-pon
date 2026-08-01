@@ -320,6 +320,8 @@ N5開始前には別の`Model Experiment Registry`を必須にする。fixed tra
 
 ### Phase N2: Synchronized All-Market Observations
 
+現在地（2026-08-02）: `official_program`はbyte-exact primary rawをtemp F0 sidecarのparse/domain/typed lineageへ通し、immutable coverage readerで42/42を検証できるoffline ingest E2Eまで実装済み。不正rawはerror parse runだけを残す。live writerはOFF、実coverageと全7券種同期市場は未確認/未整備であり、N2完了gateは未達。
+
 - 開始gate: D1完了、request budget・kill switch・運用承認。
 - 入力: 全券種source map、Observation Envelope、race cutoff。
 - scope: 同一batchの全selection観測、range odds、sale/refund state、観測skew、raw hash。
