@@ -4,7 +4,7 @@
 import type { SettlementStatus, ResolutionStatus } from "./settlement";
 
 export const N2_DATASET_CONTRACT_VERSION = "n2-dataset-contract-v1";
-export const N2_TARGET_CONTRACT_VERSION = "n2-target-contract-v1";
+export const N2_TARGET_CONTRACT_VERSION = "n2-target-contract-v2";
 export const N2_FEATURE_PIT_CONTRACT_VERSION = "n2-feature-pit-contract-v1";
 
 // ===== eligibility（settlement state → dataset 採否） =====
@@ -59,24 +59,62 @@ export type BetSelectionLabelInput = {
   betSelection: string;        // 評価対象の買い目 canonical（例 "1-2-3"）
   winningSelections: string[]; // 当該 candidate の payout line canonical 群（同着/複勝/wide で複数）
   payoutYenBySelection: Record<string, number>; // canonical → payout_yen（100円あたり）
+  // 一部返還はcandidate全体を除外せず、返還対象selectionだけをlossから分離する。
+  refundedSelections?: string[];
+  refundYenBySelection?: Record<string, number | null>;
+  // 特払いは的中selectionを持たない券種別financial outcome。通常hitへ推測変換しない。
+  specialPayoutYenPer100?: number | null;
 };
+
+export type BetLabelOutcome = "hit" | "loss" | "refund" | "special_payout" | "void";
 
 export type BetLabel = {
   eligible: boolean;
   reason: EligibilityCode;
-  hit: 0 | 1 | null;           // classification target。ineligible は null（loss 扱いしない）
-  payoutYenPer100: number | null; // financial target。hit 時の払戻、miss は 0、ineligible は null
+  outcome: BetLabelOutcome;
+  hit: 0 | 1 | null;           // refund/special_payout/void は null（classification loss にしない）
+  payoutYenPer100: number | null; // financial target。refund/special_payoutは実額、voidはnull
 };
 
 // hit/miss は canonical active settlement の payout line からのみ導出。
 // refund を loss、unresolved を loss として扱わない（fail-closed で null）。
 export function deriveBetLabel(input: BetSelectionLabelInput): BetLabel {
   if (!input.eligibility.eligible) {
-    return { eligible: false, reason: input.eligibility.reason, hit: null, payoutYenPer100: null };
+    return {
+      eligible: false,
+      reason: input.eligibility.reason,
+      outcome: "void",
+      hit: null,
+      payoutYenPer100: null,
+    };
+  }
+  if (input.refundedSelections?.includes(input.betSelection)) {
+    return {
+      eligible: true,
+      reason: "eligible",
+      outcome: "refund",
+      hit: null,
+      payoutYenPer100: input.refundYenBySelection?.[input.betSelection] ?? null,
+    };
+  }
+  if (input.specialPayoutYenPer100 != null) {
+    return {
+      eligible: true,
+      reason: "eligible",
+      outcome: "special_payout",
+      hit: null,
+      payoutYenPer100: input.specialPayoutYenPer100,
+    };
   }
   const hit = input.winningSelections.includes(input.betSelection) ? 1 : 0;
   const payout = hit ? (input.payoutYenBySelection[input.betSelection] ?? 0) : 0;
-  return { eligible: true, reason: "eligible", hit, payoutYenPer100: payout };
+  return {
+    eligible: true,
+    reason: "eligible",
+    outcome: hit ? "hit" : "loss",
+    hit,
+    payoutYenPer100: payout,
+  };
 }
 
 // ===== feature PIT contract（available_at <= decision cutoff、fail-closed） =====
