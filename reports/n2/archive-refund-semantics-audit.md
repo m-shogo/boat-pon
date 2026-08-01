@@ -68,6 +68,14 @@ scanner実装commit:
 - `6e242b5353889bb7e2a62bec52148774dd247ec7` — full archive scanner
 - `13d77eecd256252bf57f6aa79bbf9aaeada70442` — package command
 
+## 検証
+
+- v1/v2 synthetic archiveをNode 24のTypeScript strip実行でruntime smoke: **PASS**
+- v1: 特払い券種lineなし、後続exacta/trifectaがreturned=true
+- v2: win special_payout=70、後続exacta/trifectaはreturned=false
+- 新規scanner/helper/testの構文check: **PASS**
+- full unit/typecheck/build: **PENDING**（GitHub Actions run/status未生成、raw archiveを持つlocal checkout未接続）
+
 ## 次gate
 
 1. `--limit=20` smoke scan + unit/typecheck
