@@ -1,0 +1,12 @@
+{
+  "canonicalRaceKey": "2026-05-20:01:R1",
+  "observedAt": "2026-05-20T02:30:00.000Z",
+  "boats": [
+    { "course": 1, "registrationNo": "4001", "className": "A1", "nationalWinRate": 7.1, "nationalTop2Rate": 55.2, "localWinRate": 6.8, "localTop2Rate": 50.1, "motorTop2Rate": 40.2, "boatTop2Rate": 38.4 },
+    { "course": 2, "registrationNo": "4002", "className": "A2", "nationalWinRate": 6.2, "nationalTop2Rate": 44.1, "localWinRate": 6.0, "localTop2Rate": 42.3, "motorTop2Rate": 35.1, "boatTop2Rate": 36.0 },
+    { "course": 3, "registrationNo": "4003", "className": "B1", "nationalWinRate": 5.4, "nationalTop2Rate": 35.0, "localWinRate": 5.1, "localTop2Rate": 32.2, "motorTop2Rate": 31.0, "boatTop2Rate": 30.4 },
+    { "course": 4, "registrationNo": "4004", "className": "B2", "nationalWinRate": 4.2, "nationalTop2Rate": 25.0, "localWinRate": 4.0, "localTop2Rate": 22.2, "motorTop2Rate": 28.0, "boatTop2Rate": 29.4 },
+    { "course": 5, "registrationNo": "4005", "className": null, "nationalWinRate": null, "nationalTop2Rate": null, "localWinRate": null, "localTop2Rate": null, "motorTop2Rate": null, "boatTop2Rate": null },
+    { "course": 6, "registrationNo": "4006", "className": "B1", "nationalWinRate": 5.0, "nationalTop2Rate": 30.0, "localWinRate": 4.8, "localTop2Rate": 28.0, "motorTop2Rate": 33.0, "boatTop2Rate": 32.0 }
+  ]
+}
