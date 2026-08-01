@@ -63,6 +63,8 @@ F0 typed registryは`official_program`を`pre_race` observationとして明示�
 
 `n2OfficialProgramObservation.ts`はprimary `raw_json`を`official-program-primary-raw-v1`として決定順typed payloadへ正規化し、`n2-official-program-parser-v1` envelopeを生成する。数値文字列は有限値へ正規化する一方、`null`/空文字は0へ置換せずnullを維持し、非数値・重複course・範囲外rate・published>observed>firstSeenの時刻矛盾をfail-closedにする。coverage readerはF0 lineageだけでなく`typed_observation_payloads`をJOINし、domain/typed双方のpayload type・schema・hash、canonical identity、observed_at、primary rawのsemantic payloadが全一致する場合だけ42 featureをverifiedへ昇格する。typed payload欠落・hash不一致・primary差異はreason code付きで全featureを除外する。program parser tests 3/3、program reader E2E 4/4、共通欠損rate regression 3/3を含む対象tests 17/17、targeted strict typecheck PASS。実sidecarへのcollector writeと実coverageは未実行である。
 
+`ResearchReplayRepository.parseTypedRawDocument`は、content-addressed storeへ保存済みのbyte-exact rawを必ず再読込してtyped parserを実行し、parse runとobservation/payloadの保存を共通化する。`ingestOfficialProgramObservation`はprimary `raw_json`そのものをraw evidenceとして記録し、正規化envelopeをraw原本として偽装しない。parse/validation失敗も`parse_runs.status=error`として残し、domain observationとtyped payloadは0件のままにする。temp sidecar→typed payload→immutable coverage reader E2Eは2/2 PASS（正常rawは42/42 verified、不正rawはpartial write 0）、関連回帰を含む対象tests 9/9・targeted strict typecheck PASS。これはoffline adapterであり、live collector writerは引き続きOFFである。
+
 ## 2. Target Contract
 
 raw truth を直接 target にしない。canonical active settlement からのみ導出（`deriveBetLabel`）。段階分離:
