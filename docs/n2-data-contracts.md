@@ -27,6 +27,23 @@ label source: N1 canonical **active** settlement（`source_duplicate` 除外・`
 
 - 実測分布（`../reports/n2/n2-dataset-profile.json`）: 全 8,156,795 candidate 中 **eligible 7,833,298（96.03%）**、excluded_refunded 319,301、excluded_source_duplicate 4,196。
 
+## 1.1 Full selection space
+
+`enumerateBetSelections` はN1 canonical規則と同じ艇番1〜6・券種別arity・ordered/unordered規則で、各candidateの全selectionを決定順に列挙する。
+
+| bet type | semantics | selections |
+|---|---|---:|
+| win | 1艇 | 6 |
+| place | 1艇 | 6 |
+| exacta | 順序あり2艇 | 30 |
+| quinella | 順序なし2艇 | 15 |
+| wide | 順序なし2艇 | 15 |
+| trifecta | 順序あり3艇 | 120 |
+| trio | 順序なし3艇 | 20 |
+| **total** | 7券種 | **212** |
+
+`deriveSelectionLevelLabels` は列挙した全selectionを `deriveBetLabel` に通す。候補単位のwinning集合digestだけをdataset prototypeとは扱わない。実DBの券種別class balance・的中率・payout分布は、archive semantics再集計後のselection-level profileで確定する。
+
 ## 2. Target Contract
 
 raw truth を直接 target にしない。canonical active settlement からのみ導出（`deriveBetLabel`）。段階分離:
@@ -49,7 +66,7 @@ raw truth を直接 target にしない。canonical active settlement からの�
 - special payout: 券種別実額を `specialPayoutYenPer100` で渡し、全selectionを `outcome=special_payout / hit=null` にする。通常のwinning selectionへ推測変換しない。
 - cancel/no_sale: label 不成立（除外）。unsettled/conflict/unknown: fail-closed 除外。
 - target contract version: `n2-target-contract-v2`。
-- state fixture は `n2DatasetContract.test.ts` で固定（hit/loss、部分返還、特払い、各除外理由、ineligible→void/null）。
+- state fixture は `n2DatasetContract.test.ts` で固定（全7券種212 selection、hit/loss、部分返還、特払い、各除外理由、ineligible→void/null）。対象契約testは10件PASS。
 
 ## 4. Odds Timing Contract（`validateOddsUsage`）
 
