@@ -111,3 +111,13 @@ raw truth を直接 target にしない。canonical active settlement からの�
 
 - **temporal coverage gap**: local archive は **2001–2003 が欠落**、2000 は部分（131 files）。usable historical range は実質 **2004–2026（+部分2000）**。詳細 `../docs/missing-dates.md` / `../reports/n2/n2-dataset-profile.json`。
 - **eligibility drift**: eligible 比率が 2004–2006 ≈87% → 2020+ ≈99.9% と drift（早期の返還/除外率が高い）。N2 の split/評価は era drift を考慮する（[`n2-evaluation-and-split.md`](n2-evaluation-and-split.md)）。
+
+## official_program shadow outbox contract v1
+
+- message type: `n2.official_program.capture.v1`
+- outbox payloadはprimary `raw_json`本文を複製せず、primary record IDと期待SHA-256、capture時刻、canonical race identityだけを持つ。
+- producerはenqueue前にofficial_program semantic contractを検証し、URLをredact、response headerをallowlist化する。
+- idempotency keyはmessage type × canonical race × request_started_at × raw SHA-256。同一HTTP attemptの再enqueueは同一messageを返し、別時刻のretry attemptは別messageとしてcapture履歴を保持する。
+- consumerはprimary rowを再読込し、期待SHA-256一致前にはsidecarへcapture evidenceを一切書かない。欠落・改変・unknown field・非allowlist headerはfail-closed。
+- live writerはdefault OFF。backpressure、quota、kill switch、consumer失敗はprimary collector結果へ伝播させない。
+
