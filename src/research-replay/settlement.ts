@@ -4,7 +4,8 @@ import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import { verifySidecarSchema } from "./schema";
 
 export const N1_SETTLEMENT_SCHEMA_VERSION = "n1-settlement.0.1";
-export const N1_SETTLEMENT_PARSER_VERSION = "n1-settlement-parser-v1";
+// v2: archive「特払い」をrace-wide返還と分離し、券種別special_payoutとして保持する。
+export const N1_SETTLEMENT_PARSER_VERSION = "n1-settlement-parser-v2";
 
 export const BET_TYPES = ["win", "place", "exacta", "quinella", "trifecta", "trio", "wide"] as const;
 export type SettlementBetType = typeof BET_TYPES[number];
