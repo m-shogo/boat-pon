@@ -144,6 +144,26 @@ export class ResearchReplayRepository {
     const terminalFailure = input.eventKind === "capture_failed" || input.eventKind === "capture_cancelled";
     if (terminalFailure && !input.failureReason) throw new Error("failure reason required for terminal failure");
     if (!terminalFailure && input.failureReason) throw new Error("failure reason only allowed on failure/cancelled");
+    if (input.eventKind === "body_completed" && input.byteCount == null) {
+      throw new Error("byte count required for completed body");
+    }
+    const occurredAt = canonicalUtcTimestamp(input.occurredAt);
+    const attempt = this.db.prepare(`
+      SELECT request_started_at FROM capture_attempts WHERE capture_attempt_id = ?
+    `).get(input.captureAttemptId) as { request_started_at: string } | undefined;
+    if (!attempt) throw new Error("capture attempt missing");
+    if (Date.parse(occurredAt) < Date.parse(attempt.request_started_at)) {
+      throw new Error("capture event precedes request start");
+    }
+    const latest = this.db.prepare(`
+      SELECT occurred_at FROM capture_attempt_events
+      WHERE capture_attempt_id = ?
+      ORDER BY occurred_at DESC, event_id DESC
+      LIMIT 1
+    `).get(input.captureAttemptId) as { occurred_at: string } | undefined;
+    if (latest && Date.parse(occurredAt) < Date.parse(latest.occurred_at)) {
+      throw new Error("capture event time regressed");
+    }
     const id = input.eventId ?? this.idFactory();
     this.db.prepare(`
       INSERT INTO capture_attempt_events
@@ -154,7 +174,7 @@ export class ResearchReplayRepository {
       id,
       input.captureAttemptId,
       input.eventKind,
-      canonicalUtcTimestamp(input.occurredAt),
+      occurredAt,
       input.httpStatus ?? null,
       input.failureReason ?? null,
       input.responseHeaders ? safeJson(allowlistedHeaders(input.responseHeaders)) : null,
@@ -259,10 +279,27 @@ export class ResearchReplayRepository {
     linkedAt: string;
   }): void {
     const event = this.db.prepare(`
-      SELECT capture_attempt_id, event_kind FROM capture_attempt_events WHERE event_id = ?
-    `).get(input.bodyCompletedEventId) as { capture_attempt_id: string; event_kind: string } | undefined;
+      SELECT e.capture_attempt_id, e.event_kind, e.occurred_at, e.byte_count,
+             r.entity_body_byte_length
+      FROM capture_attempt_events e
+      JOIN raw_documents r ON r.raw_document_id = ?
+      WHERE e.event_id = ?
+    `).get(input.rawDocumentId, input.bodyCompletedEventId) as {
+      capture_attempt_id: string;
+      event_kind: string;
+      occurred_at: string;
+      byte_count: number | null;
+      entity_body_byte_length: number;
+    } | undefined;
     if (!event || event.capture_attempt_id !== input.captureAttemptId || event.event_kind !== "body_completed") {
       throw new Error("body completed event does not belong to capture");
+    }
+    if (event.byte_count === null || event.byte_count !== event.entity_body_byte_length) {
+      throw new Error("body completed byte count does not match raw document");
+    }
+    const linkedAt = canonicalUtcTimestamp(input.linkedAt);
+    if (Date.parse(linkedAt) < Date.parse(event.occurred_at)) {
+      throw new Error("raw link precedes body completion");
     }
     this.db.prepare(`
       INSERT INTO capture_raw_links
@@ -272,7 +309,7 @@ export class ResearchReplayRepository {
       input.captureAttemptId,
       input.rawDocumentId,
       input.bodyCompletedEventId,
-      canonicalUtcTimestamp(input.linkedAt),
+      linkedAt,
     );
   }
 
