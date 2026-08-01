@@ -80,9 +80,12 @@ const SPECIAL_PAYOUT_LABELS: Record<string, BetType> = {
   "３連複": "trio",
 };
 
-export function parseOfficialResultDetail(
+type OfficialResultDetailSemantics = "v2" | "legacy_v1_audit";
+
+function parseOfficialResultDetailWithSemantics(
   text: string,
   defaults: { date: string; fetchedAt: string },
+  semantics: OfficialResultDetailSemantics,
 ): ParsedResultDetail {
   const conditions: RaceCondition[] = [];
   const entries: RaceEntry[] = [];
@@ -143,7 +146,10 @@ export function parseOfficialResultDetail(
 
     // 「不成立」はrace-wide返還だが、「特払い」は券種別の払戻（通常70円）であり返還ではない。
     // 特払いをここでreturnedにすると、同じrace内の後続の正常払戻までrefundへ汚染する。
-    if (raceNo != null && line.includes("不成立")) {
+    if (raceNo != null && (
+      line.includes("不成立")
+      || (semantics === "legacy_v1_audit" && line.includes("特払い"))
+    )) {
       returned = true;
       if (conditions.length > 0 && conditions[conditions.length - 1].raceNo === raceNo) {
         conditions[conditions.length - 1].returned = true;
@@ -195,7 +201,7 @@ export function parseOfficialResultDetail(
     const specialPayout = line.match(
       /(単勝|複勝|２連単|２連複|拡連複|３連単|３連複)[\s　]+特払(?:い)?[\s　]+([0-9,]+)/,
     );
-    if (specialPayout) {
+    if (semantics === "v2" && specialPayout) {
       pushPay(SPECIAL_PAYOUT_LABELS[specialPayout[1]], "特払", specialPayout[2], null);
       continue;
     }
@@ -244,4 +250,20 @@ export function parseOfficialResultDetail(
   }
 
   return { conditions, entries, payouts };
+}
+
+export function parseOfficialResultDetail(
+  text: string,
+  defaults: { date: string; fetchedAt: string },
+): ParsedResultDetail {
+  return parseOfficialResultDetailWithSemantics(text, defaults, "v2");
+}
+
+// 旧v1の分類影響を同一rawで再現するread-only audit専用入口。
+// production/backfillからは使用せず、修正前後の差分scannerだけが利用する。
+export function parseOfficialResultDetailLegacyV1ForAudit(
+  text: string,
+  defaults: { date: string; fetchedAt: string },
+): ParsedResultDetail {
+  return parseOfficialResultDetailWithSemantics(text, defaults, "legacy_v1_audit");
 }
