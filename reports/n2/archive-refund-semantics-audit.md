@@ -167,6 +167,10 @@ primary DB schemaを再監査し、`official_programs`には`imported_at`しか�
 
 coverage readerが生成していた`YYYY-MM-DD:venue:2桁raceNo`はF0 identity正本`YYYY-MM-DD:venue:RraceNo`と一致せず、実sidecar joinを常に0件にする確定bugだった。shared race-key helperとprogram/odds E2E fixtureを正本形式へ訂正した。さらにF0 registryへstrict `official_program / pre_race` payloadを追加し、1〜6艇の一意course、登録番号、級別、各rate、canonical identity、source observed時刻、exact keysを検証する。不足艇はpayloadで保持しcoverageでは欠損featureとして明示除外する。golden semantic hashを固定し、契約3/3を含む対象tests 10/10、targeted strict typecheckがPASS。実collector生成・primary raw_json値照合・実coverageは未確認であり、fixture結果を実測へ昇格しない。
 
+## Non-blocking hardening: official-program parser + semantic reconciliation
+
+共通`programFeatures` parserの`Number(value)`は`null`と空文字を0へ変換し、欠損rateを「実値0」として特徴補正へ入れ得た。null/undefined/blankはnullのまま保持し、実値0だけを0として残す回帰testを追加した。`n2-official-program-parser-v1`はprimary rawからtyped payload/envelopeを決定的に生成し、非数値・重複course・rate範囲・source時刻順序をfail-closedにする。immutable coverage readerはF0証拠鎖だけでは昇格せず、typed payload rowの存在、domain/typed schema/hash、canonical identity、observed_at、primary rawのsemantic一致を要求する。missing typed payloadとprimary差異のE2Eを追加し、対象17/17 testsとtargeted strict typecheckがPASS。実sidecar/primary DB writeは0で、実collector接続・実profileは未確認。
+
 ## 次gate
 
 1. `--limit=20` smoke scan + full repo unit/typecheck
