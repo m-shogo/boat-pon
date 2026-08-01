@@ -84,9 +84,21 @@ raw archiveが未接続でも確定できる別のlabel契約bugを修正した�
 - special payoutもwinning selectionを持たないため、旧契約のままselection列挙すると全件lossになり得た
 - target contractを `n2-target-contract-v2` へ上げ、`outcome=hit/loss/refund/special_payout/void` を追加
 - refund / special_payout / void は `hit=null`。financial targetだけに実返還/特払額を保持し、金額不明を100円へ推測補完しない
-- Node 24 contract test: 8 pass / 0 fail
+- Node 24 contract test: 10 pass / 0 fail
 
 commit: `947f9224153f23130181f212a9a7a0dad5b45e9d` (contract), `4aefcee1f4caf9a005d7507eea83022aeaa56b01` (test), `a32fc1f1d407e9fc8ce7e3aecc1deef65f9e591a` (docs)
+
+## Selection-level prototype foundation
+
+- 全7券種のcanonical selection空間を決定順で列挙: win 6 / place 6 / exacta 30 / quinella 15 / trifecta 120 / trio 20 / wide 15（計212）
+- ordered券種は順列、unordered券種は昇順組合せ、艇番重複なし
+- `deriveSelectionLevelLabels`で全selectionを実際に`deriveBetLabel`へ通す
+- exacta fixtureで通常=1 hit+29 loss、部分返還=1 hit+1 refund+28 loss、特払い=30 special_payout、全返還=30 voidを固定
+- targeted TypeScript strict check: PASS / Node 24 contract tests: 10 pass
+
+commit: `3b32ab33b45f679dda64a41935cd281585afad94` (enumerator), `a7be4cf057ff15094a0bba3067336f3cac2ac2c1` (tests)
+
+実DBの券種別class balance・hit率・payout分布はまだ未生成。既存candidate-level profileをselection-level実測と呼ばない。
 
 ## 次gate
 
