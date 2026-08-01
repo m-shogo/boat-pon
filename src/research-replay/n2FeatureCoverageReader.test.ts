@@ -84,7 +84,7 @@ function createFixture(): { dir: string; primaryPath: string; sidecarPath: strin
   sidecar.prepare("INSERT INTO parse_runs VALUES (?, ?, ?)")
     .run("parse-program-2004", "raw-program-2004", "success");
   sidecar.prepare(`INSERT INTO domain_observations VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
-    "obs-program-2004", "2004-01-01:01:01", "official_program", "raw-program-2004", "parse-program-2004",
+    "obs-program-2004", "2004-01-01:01:R1", "official_program", "raw-program-2004", "parse-program-2004",
     "2004-01-01T01:00:00Z", "2004-01-01T01:02:00Z", "2004-01-01T01:03:00Z", "source_exact", "official_public",
   );
   sidecar.close();
@@ -134,7 +134,7 @@ test("multiple official_program evidence rows fail closed as ambiguous", () => {
     sidecar.prepare("INSERT INTO parse_runs VALUES (?, ?, ?)")
       .run("parse-program-2004-b", "raw-program-2004-b", "success");
     sidecar.prepare(`INSERT INTO domain_observations VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
-      "obs-program-2004-b", "2004-01-01:01:01", "official_program", "raw-program-2004-b", "parse-program-2004-b",
+      "obs-program-2004-b", "2004-01-01:01:R1", "official_program", "raw-program-2004-b", "parse-program-2004-b",
       "2004-01-01T01:00:00Z", "2004-01-01T01:02:00Z", "2004-01-01T01:03:00Z", "source_exact", "official_public",
     );
     sidecar.close();
