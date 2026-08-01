@@ -29,7 +29,7 @@ design/contract/enforcement/prototype を実装（[`n2-data-contracts.md`](n2-da
 | D. feature PIT | **READY(enforcement) / PARTIAL(feature 接続)** | `validateFeaturePIT` + 既存 `programFeatureSafety.ts`。実 feature build 接続は N2 実装時 |
 | E. odds PIT/timing | **READY** | `validateOddsUsage`（feature=live_checkpoint のみ、closing=eval 専用） |
 | F. unresolved settlement handling | **CONDITIONAL** | conflict/cancel/source_duplicateはfail-closed。部分返還labelは修正済みだがarchive明示返還のraw監査が未完了 |
-| G. dataset reproducibility | **PARTIAL** | 現prototypeは同一メモリ配列の再hash。DBを閉じて再読込する独立rebuildは未実装 |
+| G. dataset reproducibility | **READY(code) / PENDING(real data run)** | immutable DBをclose後、別connectionで入力を再読込する独立rebuild script実装。隔離SQLite fixtureでPASS、実sidecar実行は未確認 |
 | H. split policy | **READY(設計)** | time-based・race-level group・coverage gap/era drift 尊重 |
 | I. leakage validator | **READY** | `n2DatasetContract.test.ts` + 既存 `check:point-in-time-safety` |
 | J. evaluation contract | **READY(設計)** | predictive/financial 分離・bootstrap・CLAUDE.md ROI 基準 |
@@ -45,7 +45,8 @@ overall: **N2_FEATURE_BUILDER_SCAFFOLD_READY = YES / N2_LABEL_TRUTH_READY = NO**
 1. feature dataset builder（boat.sqlite official_programs/odds を N1 label へ join、build path に `validateFeaturePIT`/`validateOddsUsage`/`stripLiveOnlyRacerFeatures` を必須化）。
 2. 実 feature の available_at 付与（historical_safe=race日、odds=snapshot 時刻、集計=集計 cutoff）。
 3. feature store 容量見積り。
-4. archive/canonical label truthと独立rebuildを通過後、offline training gateへ進む。
+4. 実sidecarでselection profile独立rebuildを実行し、archive/canonical label truth訂正後に再生成する。
+5. 上記を通過後、offline training gateへ進む。
 
 ## 禁止（本フェーズ）
 
