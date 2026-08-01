@@ -22,3 +22,31 @@ test("1着艇の選手/モーター特徴量で推定率を保守的に補正す
   assert.ok(featureAdjustmentForSelection(strong, [1, 2, 3]) > 1);
   assert.ok(featureAdjustmentForSelection(weak, [1, 2, 3]) < 1);
 });
+
+test("欠損rateを0へ変換せずnullのまま保持する", () => {
+  const features = extractProgramFeatures({
+    boats: [{
+      course: 1,
+      nationalWinRate: null,
+      nationalTop2Rate: "",
+      localWinRate: undefined,
+      localTop2Rate: "   ",
+      motorTop2Rate: "not-a-number",
+      boatTop2Rate: 0,
+    }],
+  });
+  assert.deepEqual(features.boats[0], {
+    course: 1,
+    registrationNo: undefined,
+    racerName: undefined,
+    className: undefined,
+    nationalWinRate: null,
+    nationalTop2Rate: null,
+    localWinRate: null,
+    localTop2Rate: null,
+    motorNo: undefined,
+    motorTop2Rate: null,
+    boatNo: undefined,
+    boatTop2Rate: 0,
+  });
+});
