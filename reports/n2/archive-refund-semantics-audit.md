@@ -212,3 +212,10 @@ raw archive/実sidecar未接続中の独立sliceとして、同一公式番組ra
 raw archive未接続中の独立sliceとして、公式番組取得のtimeout等を成功captureと混ぜないadapterとE2Eを追加した。失敗attemptは`capture_started → capture_failed`でterminalとなり、後から`body_completed`を追加して成功へ反転できない。retryは同じ`logical_request_group_id`を持つ新attemptで行い、成功retryだけがraw/link/parse/domain observationを生成する。
 
 fixture結果: 2 attempts（failed 1 / succeeded 1）、raw link 1、raw 1、parse 1、observation 1。collector E2E 6/6、program/coverage回帰12/12、targeted strict TypeScript PASS。F0-Rの既存`runPrimaryWithOptionalShadow`、outbox retry、rollback/kill switchと役割を重複させず、live writerはOFFを維持する。本変更はarchive集計値・実DB・予測・BUY条件へ影響しない。
+
+## 2026-08-02 official_program shadow outbox slice
+
+archive raw入力は今回も到達不能で、year × bet_type × event_kind、約319,301候補、eligible 87%→99.9%の再集計は未確認のままである。既存profileをtraining truthへ昇格しない。
+
+非ブロック作業として、公式番組captureを既存F0-R outboxへ接続するcontractを実装した。outboxはraw本文を保持せずprimary record IDと期待SHA-256を保持し、consumerはprimary raw再読込後のbyte hash一致前にcapture evidenceを書かない。default OFF、exact retry idempotency、一回配送、raw改変fail-closed、backpressureのprimary非伝播をtemp E2Eで固定した。実DB、live writer、予測、BUY条件は変更していない。
+
