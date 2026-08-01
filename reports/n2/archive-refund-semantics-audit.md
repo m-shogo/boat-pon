@@ -159,6 +159,10 @@ primary DB schemaを再監査し、`official_programs`には`imported_at`しか�
 
 `n2-feature-coverage-reader-v1`を追加し、primary `official_programs`とF0 evidence sidecarを別々に`immutable=1/readOnly`で開いて、1raceあたり42 official-program feature eventを生成する。race identityの曖昧変換は拒否し、`official_program` evidence 0件・複数件・検証不合格を理由別excludedとして明示する。隔離SQLite E2E 3/3とtargeted strict typecheckがPASSし、reader前後の両DB SHA-256一致も確認した。実DB入力がないため実join率は未確認。
 
+## Non-blocking hardening: immutable trifecta market coverage reader
+
+`n2-odds-coverage-reader-v1`を追加し、primary race universeとF0 typed `trifecta_market`をimmutable/read-onlyで結合する。指定checkpointごとに3連単120selectionを分母化し、payload type/schema/hash、lineage、observed_at、selection spaceを検証する。bet_typeなしlegacy oddsは推測昇格しない。隔離SQLite E2E 4/4、targeted strict typecheck、reader前後DB SHA-256一致がPASS。実sidecar coverageと全券種live marketは未確認/未整備。
+
 ## 次gate
 
 1. `--limit=20` smoke scan + full repo unit/typecheck
