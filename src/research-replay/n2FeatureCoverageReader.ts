@@ -10,6 +10,10 @@ import {
   N2_OFFICIAL_PROGRAM_FEATURE_KEYS,
   type OfficialProgramSourceRow,
 } from "./n2FeatureSourceAdapter";
+import {
+  verifyOfficialProgramTypedPayload,
+  type OfficialProgramTypedPayloadRow,
+} from "./n2OfficialProgramObservation";
 
 export const N2_FEATURE_COVERAGE_READER_VERSION = "n2-feature-coverage-reader-v1";
 
@@ -28,6 +32,9 @@ SELECT
   o.observation_id AS observationId,
   o.canonical_race_key AS canonicalRaceKey,
   o.observation_type AS observationType,
+  o.payload_type AS domainPayloadType,
+  o.payload_schema_version AS domainPayloadSchemaVersion,
+  o.semantic_payload_hash AS domainSemanticPayloadHash,
   o.raw_document_id AS observationRawDocumentId,
   o.source_published_at AS sourcePublishedAt,
   o.source_observed_at AS sourceObservedAt,
@@ -39,10 +46,15 @@ SELECT
   r.raw_document_id AS rawDocumentId,
   r.integrity_status AS integrityStatus,
   r.security_scan_status AS securityScanStatus,
-  r.parser_replay_eligible AS parserReplayEligible
+  r.parser_replay_eligible AS parserReplayEligible,
+  t.payload_type AS typedPayloadType,
+  t.payload_schema_version AS typedPayloadSchemaVersion,
+  t.payload_json AS typedPayloadJson,
+  t.payload_hash AS typedPayloadHash
 FROM domain_observations o
 JOIN parse_runs p ON p.parse_run_id = o.parse_run_id
 JOIN raw_documents r ON r.raw_document_id = o.raw_document_id
+LEFT JOIN typed_observation_payloads t ON t.observation_id = o.observation_id
 WHERE o.canonical_race_key = ? AND o.observation_type = 'official_program'
 ORDER BY o.observation_id
 `;
@@ -86,7 +98,7 @@ function excludedProgramEvents(canonicalKey: string, reason: string): N2FeatureC
 
 function eventsForProgram(
   row: N2CoverageRaceRow,
-  evidenceRows: N2FeatureLineageEvidenceRow[],
+  evidenceRows: Array<N2FeatureLineageEvidenceRow & OfficialProgramTypedPayloadRow>,
 ): N2FeatureCoverageEvent[] {
   const canonicalKey = canonicalN2CoverageRaceKey(row);
   if (evidenceRows.length === 0) return excludedProgramEvents(canonicalKey, "excluded_lineage_not_found");
@@ -100,6 +112,16 @@ function eventsForProgram(
     allowedObservationTypes: ["official_program"],
   }, evidence);
   if (verification.status === "excluded") return excludedProgramEvents(canonicalKey, verification.reason);
+
+  const payloadVerification = verifyOfficialProgramTypedPayload({
+    canonicalRaceKey: canonicalKey,
+    sourceObservedAt: evidence.sourceObservedAt,
+    primaryRawJson: row.rawJson,
+    row: evidence,
+  });
+  if (payloadVerification.status === "excluded") {
+    return excludedProgramEvents(canonicalKey, payloadVerification.reason);
+  }
 
   const sourceRow: OfficialProgramSourceRow = {
     raceId: row.raceId,
@@ -165,7 +187,9 @@ export function readOfficialProgramCoverageEvents(input: {
     const events: N2FeatureCoverageEvent[] = [];
     for (const row of rows) {
       const canonicalKey = canonicalN2CoverageRaceKey(row);
-      const evidenceRows = lineage.all(canonicalKey) as unknown as N2FeatureLineageEvidenceRow[];
+      const evidenceRows = lineage.all(canonicalKey) as unknown as Array<
+        N2FeatureLineageEvidenceRow & OfficialProgramTypedPayloadRow
+      >;
       events.push(...eventsForProgram(row, evidenceRows));
     }
     return events;
