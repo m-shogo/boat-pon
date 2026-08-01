@@ -117,7 +117,15 @@ raw archive未接続中の独立sliceとして、旧`validateOddsUsage(kind, rol
 
 - Node 24 contract tests: 12 pass / 0 fail
 - targeted TypeScript strict check: PASS
-- feature builderへの接続: PENDING
+- selection builderへの接続: COMPLETE / 実DB adapter: PENDING
+
+## Non-blocking hardening: feature dataset builder scaffold
+
+selection-level label、feature PIT、atomic odds PIT、provenanceを一つの純関数build pathへ接続した。known live-only keyのclass laundering、未来feature/odds、非canonical odds、必須odds欠損、provenance欠損はcandidate全体0行でfail-closedにする。DB read adapter、永続dataset、trainingには未接続。
+
+- builder unit tests: 7 pass / 0 fail
+- targeted TypeScript strict check: PASS
+- archive再集計値・DB・productionへの影響: なし
 
 ## 次gate
 
