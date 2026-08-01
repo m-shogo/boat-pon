@@ -122,6 +122,11 @@ test("capture and raw-link time/byte inconsistencies fail closed", () => {
       eventKind: "capture_started",
       occurredAt: "2003-12-31T23:59:59Z",
     }), /precedes request start/);
+    assert.throws(() => ctx.repository.addCaptureEvent({
+      captureAttemptId: attempt,
+      eventKind: "body_completed",
+      occurredAt: "2004-01-01T01:00:01Z",
+    }), /byte count required/);
     const bodyEvent = ctx.repository.addCaptureEvent({
       captureAttemptId: attempt,
       eventKind: "body_completed",
