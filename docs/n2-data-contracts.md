@@ -44,6 +44,17 @@ label source: N1 canonical **active** settlement（`source_duplicate` 除外・`
 
 `deriveSelectionLevelLabels` は列挙した全selectionを `deriveBetLabel` に通す。`buildN2SelectionProfile` は券種別outcome、classification分母、hit率、正の払戻分布（min/p50/p90/p99/max/mean）、安定digestを集計し、矛盾するpayout/refund/special金額をfail-closedにする。`pnpm profile:n2:selection-labels -- --month=YYYY-MM` はimmutable sidecarをcloseを挟んで独立に2回openし、DB/入力再読込後の一致を検証する。現sidecarはparser v1 observationを含むため出力を `STALE_ARCHIVE_SEMANTICS` と明示し、archive監査完了前は学習truthにしない。
 
+## 1.2 Feature dataset builder scaffold
+
+`buildN2FeatureDatasetRows`（`n2FeatureDatasetBuilder.ts`）はeligibleなcandidateを全selection行へ展開し、label・feature値・feature provenance・selection別live oddsを結合する純関数である。DB read adapter、永続dataset、model trainingには未接続。
+
+- featureは`validateFeaturePIT`、oddsはatomic `validateOddsUsage`を必ず同じbuild pathで通す。
+- known live-only keyを`historical_safe`として渡すclass launderingを拒否する。
+- feature key重複、provenance欠損、未来feature、非canonical/重複/不正/未来odds、必須oddsのselection欠損をreason code付きで拒否する。
+- unsafe inputが1件でもあればcandidate全体を`excluded`として0行を返す。部分的に安全な行だけを残すsilent dropは禁止。
+- ineligible settlementはtraining rowを生成しない。
+- builder version: `n2-feature-dataset-builder-v1`。unit tests 7/7、targeted strict typecheck PASS。
+
 ## 2. Target Contract
 
 raw truth を直接 target にしない。canonical active settlement からのみ導出（`deriveBetLabel`）。段階分離:
