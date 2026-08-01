@@ -26,7 +26,7 @@ design/contract/enforcement/prototype を実装（[`n2-data-contracts.md`](n2-da
 | A. canonical settlement truth | **CONDITIONAL** | structural integrity/active uniquenessはPASS。`ARCHIVE_REFUND_SEMANTICS_AUDIT`のraw再集計・supersession未完了 |
 | B. training dataset contract | **READY(scaffold+verified-lineage contract) / PROFILE STALE** | selection builder + F0 observation/parse/raw read-only JOIN検証 + source adapterを実装。unsafe/未検証lineageはcandidate全体0行。実DB join未実行。96.03%はparser v1由来を含み再集計までtruthにしない |
 | C. target definition | **READY(enforcement)** | target v2、7券種212 selection列挙、`hit/loss/refund/special_payout/void`、12 contract tests PASS |
-| D. feature PIT | **READY(enforcement+lineage verifier) / BLOCKED(real observations)** | namespaced class laundering拒否。F0証拠鎖を検証するread-only JOIN契約実装。現typed registryにofficial_program observationなし |
+| D. feature PIT | **READY(enforcement+lineage+coverage profiler) / BLOCKED(real observations)** | namespaced class laundering拒否。F0証拠鎖JOINとfeature×年代coverage集計を実装。現typed registryにofficial_program observationなし、実profileはPENDING |
 | E. odds PIT/timing | **READY(enforcement+lineage verifier) / BLOCKED(all-bet observations)** | captured_at=F0 source_observed_atを必須化し、availabilityはverified evidence由来。bet_type不明legacy rowは拒否。現F0 marketはtrifecta中心 |
 | F. unresolved settlement handling | **CONDITIONAL** | conflict/cancel/source_duplicateはfail-closed。部分返還labelは修正済みだがarchive明示返還のraw監査が未完了 |
 | G. dataset reproducibility | **READY(code) / PENDING(real data run)** | immutable DBをclose後、別connectionで入力を再読込する独立rebuild script実装。隔離SQLite fixtureでPASS、実sidecar実行は未確認 |
@@ -42,7 +42,7 @@ overall: **N2_FEATURE_BUILDER_SCAFFOLD_READY = YES / N2_LABEL_TRUTH_READY = NO**
 
 ## 実 feature 接続までの残タスク
 
-1. `N2_FEATURE_LINEAGE_READONLY_SQL`を実sidecarへ適用し、primary DB rowとF0 evidenceの実join率・不一致理由をfeature/年代別に集計するreader/report。
+1. `N2_FEATURE_LINEAGE_READONLY_SQL`を実sidecarへ適用してcoverage eventを生成し、`profile:n2:feature-coverage`で実join率・不一致理由をfeature/年代別に確定する（profile core/CLIは実装済み、実入力待ち）。
 2. 実 feature の available_at 付与（historical_safe=source availability必須、race日/imported_at代用禁止、odds=capture時刻を保守的境界、集計=集計 cutoff）。
 3. feature store 容量見積り。
 4. 実sidecarでselection profile独立rebuildを実行し、archive/canonical label truth訂正後に再生成する。
