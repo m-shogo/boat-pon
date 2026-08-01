@@ -7,6 +7,7 @@ export const CHECKPOINT_POLICY_VERSION = "t-minus-nearest-v1";
 
 export type ObservationType =
   | "race_schedule"
+  | "official_program"
   | "trifecta_market"
   | "beforeinfo"
   | "race_result"
@@ -28,6 +29,24 @@ export type RaceSchedulePayload = {
   scheduledCloseAt: string;
   scheduledCloseOriginalOffset: string;
   scheduleStatus: "scheduled" | "changed" | "cancelled";
+};
+
+export type OfficialProgramBoatPayload = {
+  course: number;
+  registrationNo: string | null;
+  className: "A1" | "A2" | "B1" | "B2" | null;
+  nationalWinRate: number | null;
+  nationalTop2Rate: number | null;
+  localWinRate: number | null;
+  localTop2Rate: number | null;
+  motorTop2Rate: number | null;
+  boatTop2Rate: number | null;
+};
+
+export type OfficialProgramPayload = {
+  canonicalRaceKey: string;
+  observedAt: string;
+  boats: OfficialProgramBoatPayload[];
 };
 
 export type TrifectaMarketPayload = {
@@ -76,6 +95,7 @@ export type SettlementObservationPayload = {
 
 export type TypedPayload =
   | RaceSchedulePayload
+  | OfficialProgramPayload
   | TrifectaMarketPayload
   | BeforeInfoPayload
   | RaceResultPayload
@@ -85,6 +105,7 @@ export type TypedPayload =
 
 const REGISTRY: Record<string, ObservationCategory> = {
   race_schedule: "pre_race",
+  official_program: "pre_race",
   trifecta_market: "pre_race",
   beforeinfo: "pre_race",
   race_result: "post_race",
@@ -123,6 +144,11 @@ function assertNullableFinite(value: unknown, field: string): void {
   }
 }
 
+function assertNullableRate(value: unknown, field: string, maximum: number): void {
+  assertNullableFinite(value, field);
+  if (typeof value === "number" && (value < 0 || value > maximum)) throw new Error(`${field} out of range`);
+}
+
 export function observationCategory(type: string): ObservationCategory | null {
   return Object.prototype.hasOwnProperty.call(REGISTRY, type) ? REGISTRY[type] : null;
 }
@@ -137,6 +163,38 @@ export function validateTypedPayload(type: ObservationType, payload: unknown): T
       if (!/^[+-]\d{2}:\d{2}$/.test(String(payload.scheduledCloseOriginalOffset))) throw new Error("invalid original offset");
       if (!["scheduled", "changed", "cancelled"].includes(String(payload.scheduleStatus))) throw new Error("invalid schedule status");
       return payload as RaceSchedulePayload;
+    }
+    case "official_program": {
+      assertExactKeys(payload, ["canonicalRaceKey", "observedAt", "boats"]);
+      parseCanonicalRaceKey(String(payload.canonicalRaceKey));
+      canonicalUtcTimestamp(String(payload.observedAt));
+      if (!Array.isArray(payload.boats) || payload.boats.length < 1 || payload.boats.length > 6) {
+        throw new Error("official program boats must contain 1..6 entries");
+      }
+      const courses = new Set<number>();
+      for (const item of payload.boats) {
+        if (!isRecord(item)) throw new Error("invalid official program boat");
+        assertExactKeys(item, [
+          "course", "registrationNo", "className", "nationalWinRate", "nationalTop2Rate",
+          "localWinRate", "localTop2Rate", "motorTop2Rate", "boatTop2Rate",
+        ]);
+        if (!Number.isInteger(item.course) || Number(item.course) < 1 || Number(item.course) > 6
+          || courses.has(Number(item.course))) throw new Error("invalid or duplicate official program course");
+        courses.add(Number(item.course));
+        if (item.registrationNo !== null && !/^\d{4}$/.test(String(item.registrationNo))) {
+          throw new Error("invalid official program registration number");
+        }
+        if (item.className !== null && !["A1", "A2", "B1", "B2"].includes(String(item.className))) {
+          throw new Error("invalid official program class");
+        }
+        assertNullableRate(item.nationalWinRate, "nationalWinRate", 10);
+        assertNullableRate(item.nationalTop2Rate, "nationalTop2Rate", 100);
+        assertNullableRate(item.localWinRate, "localWinRate", 10);
+        assertNullableRate(item.localTop2Rate, "localTop2Rate", 100);
+        assertNullableRate(item.motorTop2Rate, "motorTop2Rate", 100);
+        assertNullableRate(item.boatTop2Rate, "boatTop2Rate", 100);
+      }
+      return payload as OfficialProgramPayload;
     }
     case "trifecta_market":
     case "historical_closing_odds": {
