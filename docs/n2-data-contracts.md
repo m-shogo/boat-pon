@@ -42,7 +42,7 @@ label source: N1 canonical **active** settlement（`source_duplicate` 除外・`
 | trio | 順序なし3艇 | 20 |
 | **total** | 7券種 | **212** |
 
-`deriveSelectionLevelLabels` は列挙した全selectionを `deriveBetLabel` に通す。候補単位のwinning集合digestだけをdataset prototypeとは扱わない。実DBの券種別class balance・的中率・payout分布は、archive semantics再集計後のselection-level profileで確定する。
+`deriveSelectionLevelLabels` は列挙した全selectionを `deriveBetLabel` に通す。`buildN2SelectionProfile` は券種別outcome、classification分母、hit率、正の払戻分布（min/p50/p90/p99/max/mean）、安定digestを集計し、矛盾するpayout/refund/special金額をfail-closedにする。`pnpm profile:n2:selection-labels -- --month=YYYY-MM` はimmutable sidecarをcloseを挟んで独立に2回openし、DB/入力再読込後の一致を検証する。現sidecarはparser v1 observationを含むため出力を `STALE_ARCHIVE_SEMANTICS` と明示し、archive監査完了前は学習truthにしない。
 
 ## 2. Target Contract
 
