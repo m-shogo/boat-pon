@@ -51,6 +51,18 @@ test("builder: known live-only key cannot be laundered as historical_safe", () =
   assert.equal(result.rows.length, 0);
 });
 
+test("builder: namespaced live-only key cannot bypass classification", () => {
+  const result = buildN2FeatureDatasetRows(base({ features: [{
+    featureKey: "boat.1.courseAvgSt",
+    value: 0.14,
+    pitClass: "historical_safe",
+    availableAt: "2026-05-20T04:00:00.000Z",
+    observationId: "obs-leak-prefixed",
+    rawDocumentId: "raw-leak-prefixed",
+  }] }));
+  assert.equal(result.exclusions[0].reason, "excluded_feature_class_mismatch");
+});
+
 test("builder: future feature excludes the entire candidate rather than silently dropping it", () => {
   const result = buildN2FeatureDatasetRows(base({ features: [{
     featureKey: "nationalWinRate",
