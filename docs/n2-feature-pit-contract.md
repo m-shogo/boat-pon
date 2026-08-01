@@ -12,6 +12,8 @@ oddsはkind判定と時刻判定を分離しない。`validateOddsUsage`へ`kind
 
 `n2FeatureDatasetBuilder.ts`は両PIT guardをselection-level build pathへ接続済み。既知のlive-only keyはnamespaced keyでもcallerがclassを偽装できず、unsafeなfeature/oddsが一つでもあればcandidate全体を0行でfail-closedにする。`n2FeatureLineage.ts`はF0 observation/parse/rawのread-only JOINと証拠鎖検証を実装し、`n2FeatureSourceAdapter.ts`はverified lineage以外を拒否する。現F0 typed observation registryには`official_program`がなく、全券種market observationも未整備のため、実join/coverageは引き続き未確認。
 
+coverage/provenanceは`n2FeatureCoverage.ts`で年代・feature・odds selection別に集計する。分母はrace×source kind×keyで固定し、未検証lineageを黙ってdropしない。実eventが0件なら`PENDING_REAL_DATA`となり、coverage 0%を実測結果として昇格しない。
+
 ## Feature 分類（既存 `programFeatureSafety.ts` を継承）
 
 | class | 例（feature key） | source | N2 historical 使用 |
