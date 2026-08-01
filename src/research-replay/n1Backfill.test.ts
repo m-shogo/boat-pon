@@ -16,7 +16,11 @@ import {
   verifyN1SettlementSchema,
 } from "./settlement";
 import { classifyRaceLines, listArchiveFiles, resolveStatus, runBackfill } from "./n1Backfill";
-import { parseOfficialResultDetail } from "../domain/officialResultDetailParser";
+import {
+  parseOfficialResultDetail,
+  parseOfficialResultDetailLegacyV1ForAudit,
+} from "../domain/officialResultDetailParser";
+import { compareRefundSemantics } from "./n1RefundSemanticsAudit";
 
 const NOW = "2026-07-25T04:00:00.000Z";
 const ARCHIVE_ROOT = join("data", "raw", "official", "results");
@@ -123,10 +127,9 @@ test("archive special payout stays bet-type scoped and does not contaminate late
     "３連単   1-2-3   1,200   人気   2",
   ].join("\n");
 
-  const parsed = parseOfficialResultDetail(source, {
-    date: "2026-06-30",
-    fetchedAt: NOW,
-  });
+  const defaults = { date: "2026-06-30", fetchedAt: NOW };
+  const parsed = parseOfficialResultDetail(source, defaults);
+  const legacy = parseOfficialResultDetailLegacyV1ForAudit(source, defaults);
 
   assert.equal(N1_SETTLEMENT_PARSER_VERSION, "n1-settlement-parser-v2");
   assert.equal(parsed.conditions.length, 1);
@@ -154,6 +157,23 @@ test("archive special payout stays bet-type scoped and does not contaminate late
     lineKind: "special_payout",
   }]);
   assert.equal(resolveStatus(bucket), "settled");
+
+  assert.equal(legacy.payouts.some((line) => line.betType === "win"), false);
+  assert.equal(legacy.payouts.find((line) => line.betType === "exacta")?.returned, true);
+  assert.equal(legacy.payouts.find((line) => line.betType === "trifecta")?.returned, true);
+
+  const comparison = compareRefundSemantics(legacy, parsed);
+  assert.deepEqual(
+    comparison.changedRows.map((row) => [row.betType, row.eventKind]),
+    [
+      ["exacta", "false_refund_reclassified"],
+      ["trifecta", "false_refund_reclassified"],
+      ["win", "special_payout_added"],
+    ],
+  );
+  assert.equal(comparison.legacyRefundCandidates, 2);
+  assert.equal(comparison.currentRefundCandidates, 0);
+  assert.equal(comparison.currentSpecialPayoutCandidates, 1);
 });
 
 test("archive no-contest remains a race-wide return sentinel", () => {
