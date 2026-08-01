@@ -10,13 +10,13 @@ feature は `available_at <= decision_cutoff`（通常 race lock time）を満�
 
 oddsはkind判定と時刻判定を分離しない。`validateOddsUsage`へ`kind / role / capturedAt / availableAt / decisionCutoff`を同時に渡し、live checkpointではcapture/availabilityの双方がcutoff以下、かつavailabilityがcapture以下であることを強制する。closingは妥当な時刻を持つ価格評価専用で、feature/decisionには使用しない。contract versionは`n2-feature-pit-contract-v2`。
 
-`n2FeatureDatasetBuilder.ts`は両PIT guardをselection-level build pathへ接続済み。既知のlive-only keyはcallerがclassを偽装しても拒否し、unsafeなfeature/oddsが一つでもあればcandidate全体を0行でfail-closedにする。実DBからfeature observationを作るread-only adapterとcoverage/provenance集計は未実装。
+`n2FeatureDatasetBuilder.ts`は両PIT guardをselection-level build pathへ接続済み。既知のlive-only keyはnamespaced keyでもcallerがclassを偽装できず、unsafeなfeature/oddsが一つでもあればcandidate全体を0行でfail-closedにする。`n2FeatureSourceAdapter.ts`はlegacy row変換境界を実装済みだが、primary DBにはsource availability/raw lineageがないため、F0 evidenceへjoinできない行は昇格しない。coverage/provenance実測は未実行。
 
 ## Feature 分類（既存 `programFeatureSafety.ts` を継承）
 
 | class | 例（feature key） | source | N2 historical 使用 |
 |---|---|---|---|
-| `historical_safe` | className, nationalWinRate, nationalTop2Rate, localWinRate, localTop2Rate, motorTop2Rate, boatTop2Rate, venueMotorTop2Rate, venueBoatTop2Rate | official_programs.raw_json（出走表＝前売時点で公表）+ motor_boat_stats | 使用可（race日キーで当時値） |
+| `historical_safe` | className, nationalWinRate, nationalTop2Rate, localWinRate, localTop2Rate, motorTop2Rate, boatTop2Rate, venueMotorTop2Rate, venueBoatTop2Rate | official_programs.raw_json（出走表）+ motor_boat_stats | source availability + immutable observation/raw lineageがありcutoff以前の場合のみ使用可。race日/imported_atだけでは不可 |
 | `live_only` | courseAvgSt, courseTop3Rate, courseEntryRate, courseStartOrder, flyingCount, lateStartCount, exhibitionStResidual | racer_profiles / racer_course_stats（現在値スナップショット1世代） | **historical では常に除外**（`validateFeaturePIT` が `excluded_live_only_in_historical`） |
 | `odds_timed` | trifecta_market / current_odds / closing odds | odds snapshot | timing で分岐（[`n2-data-contracts.md`](n2-data-contracts.md) §4） |
 | `unknown` | available_at 不明の任意 feature | — | **fail-closed 除外** |
