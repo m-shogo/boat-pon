@@ -111,6 +111,14 @@ commit: `3b32ab33b45f679dda64a41935cd281585afad94` (enumerator), `a7be4cf057ff15
 
 commit: `2e4dcbfb7aec033b615a432b9678ddfe0edad644` (builder), `368787bf6524034a8410890b70ffd1a6794e853d` (tests), `e3e5c9fb7465a185e3daa43b966a0a51bbf07dbe` (DB reader), `b5c6beccd3c44b00ebe0030264edf275e78d8665` (strict type fix)
 
+## Non-blocking hardening: odds atomic PIT guard
+
+raw archive未接続中の独立sliceとして、旧`validateOddsUsage(kind, role)`がlive checkpointの実時刻を検証しない契約不一致を修正した。新guardはkind/role/capturedAt/availableAt/decisionCutoffを一体で検証し、cutoff後・時刻矛盾・欠損をfail-closedにする。closingは価格評価専用のまま。本変更はarchive再集計値、DB、production判定へ影響しない。
+
+- Node 24 contract tests: 12 pass / 0 fail
+- targeted TypeScript strict check: PASS
+- feature builderへの接続: PENDING
+
 ## 次gate
 
 1. `--limit=20` smoke scan + full repo unit/typecheck
