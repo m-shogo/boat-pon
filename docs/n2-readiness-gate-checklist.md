@@ -24,10 +24,10 @@ design/contract/enforcement/prototype を実装（[`n2-data-contracts.md`](n2-da
 | gate | 状態 | 根拠 |
 |---|---|---|
 | A. canonical settlement truth | **CONDITIONAL** | structural integrity/active uniquenessはPASS。`ARCHIVE_REFUND_SEMANTICS_AUDIT`のraw再集計・supersession未完了 |
-| B. training dataset contract | **READY(enforcement) / PROFILE STALE** | fail-closed契約は実装済み。96.03%はparser v1由来を含み再集計までtruthにしない |
+| B. training dataset contract | **READY(scaffold) / PROFILE STALE** | selection-level feature builder純関数を実装。unsafe inputはcandidate全体0行、provenance必須。実DB adapter未接続。96.03%はparser v1由来を含み再集計までtruthにしない |
 | C. target definition | **READY(enforcement)** | target v2、7券種212 selection列挙、`hit/loss/refund/special_payout/void`、12 contract tests PASS |
-| D. feature PIT | **READY(enforcement) / PARTIAL(feature 接続)** | `validateFeaturePIT` + 既存 `programFeatureSafety.ts`。実 feature build 接続は N2 実装時 |
-| E. odds PIT/timing | **READY(enforcement) / PARTIAL(builder接続)** | atomic `validateOddsUsage`がkind/role/capturedAt/availableAt/cutoffを一体検証。live checkpointの未来値・時刻矛盾をfail-closed、closing=eval専用。実builder接続は未完了 |
+| D. feature PIT | **READY(enforcement+scaffold) / PARTIAL(DB adapter)** | `validateFeaturePIT` + 既存 `programFeatureSafety.ts`をselection builderへ接続。class laundering拒否。実DB observation adapter未接続 |
+| E. odds PIT/timing | **READY(enforcement+scaffold) / PARTIAL(DB adapter)** | atomic guardをselection builderへ接続。未来値・時刻矛盾・非canonical/必須selection欠損をfail-closed。実odds reader未接続 |
 | F. unresolved settlement handling | **CONDITIONAL** | conflict/cancel/source_duplicateはfail-closed。部分返還labelは修正済みだがarchive明示返還のraw監査が未完了 |
 | G. dataset reproducibility | **READY(code) / PENDING(real data run)** | immutable DBをclose後、別connectionで入力を再読込する独立rebuild script実装。隔離SQLite fixtureでPASS、実sidecar実行は未確認 |
 | H. split policy | **READY(設計)** | time-based・race-level group・coverage gap/era drift 尊重 |
@@ -42,7 +42,7 @@ overall: **N2_FEATURE_BUILDER_SCAFFOLD_READY = YES / N2_LABEL_TRUTH_READY = NO**
 
 ## 実 feature 接続までの残タスク
 
-1. feature dataset builder（boat.sqlite official_programs/odds を N1 label へ join、build path に `validateFeaturePIT`/`validateOddsUsage`/`stripLiveOnlyRacerFeatures` を必須化）。
+1. read-only DB adapter（boat.sqlite official_programs/oddsをfeature observationへ変換し、実装済みbuilderでN1 labelへjoin）。
 2. 実 feature の available_at 付与（historical_safe=race日、odds=snapshot 時刻、集計=集計 cutoff）。
 3. feature store 容量見積り。
 4. 実sidecarでselection profile独立rebuildを実行し、archive/canonical label truth訂正後に再生成する。
