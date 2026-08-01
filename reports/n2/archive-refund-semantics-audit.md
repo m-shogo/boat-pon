@@ -137,6 +137,15 @@ primary DB schemaを再監査し、`official_programs`には`imported_at`しか�
 - namespaced live-only feature keyのclass launderingを拒否
 - adapter tests 6/6、builder regression 8/8、targeted strict typecheck PASS
 
+## Non-blocking hardening: verified F0 feature lineage
+
+旧source adapterは`observationId/rawDocumentId`が非空ならlineage済みと扱い、F0の実証拠鎖を検証していなかった。`n2-feature-lineage-v1`を追加し、read-only SQLで`domain_observations → parse_runs → raw_documents`を結び、race/type/raw chain、parse success、raw integrity/security/replay eligibility、official source、時刻品質・順序をすべて満たす場合だけadapterへ昇格する。oddsはlegacy captured_atとF0 source_observed_atの一致も必須。
+
+- lineage tests: 6 pass / adapter integration tests: 7 pass
+- targeted TypeScript strict check: PASS
+- 実DB/sidecar write: 0
+- 未確認: 実sidecar join率、feature×年代coverage。現typed registryにofficial_programがなく、全券種market observationも未整備
+
 ## 次gate
 
 1. `--limit=20` smoke scan + full repo unit/typecheck
