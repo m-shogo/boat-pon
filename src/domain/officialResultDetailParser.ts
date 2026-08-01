@@ -70,6 +70,15 @@ const THREE_DIGIT: Array<{ label: string; betType: BetType }> = [
   { label: "３連単", betType: "trifecta" },
   { label: "３連複", betType: "trio" },
 ];
+const SPECIAL_PAYOUT_LABELS: Record<string, BetType> = {
+  単勝: "win",
+  複勝: "place",
+  "２連単": "exacta",
+  "２連複": "quinella",
+  拡連複: "wide",
+  "３連単": "trifecta",
+  "３連複": "trio",
+};
 
 export function parseOfficialResultDetail(
   text: string,
@@ -132,7 +141,9 @@ export function parseOfficialResultDetail(
       continue;
     }
 
-    if (raceNo != null && (line.includes("不成立") || line.includes("特払い"))) {
+    // 「不成立」はrace-wide返還だが、「特払い」は券種別の払戻（通常70円）であり返還ではない。
+    // 特払いをここでreturnedにすると、同じrace内の後続の正常払戻までrefundへ汚染する。
+    if (raceNo != null && line.includes("不成立")) {
       returned = true;
       if (conditions.length > 0 && conditions[conditions.length - 1].raceNo === raceNo) {
         conditions[conditions.length - 1].returned = true;
@@ -179,6 +190,15 @@ export function parseOfficialResultDetail(
         returned, source: "official", fetchedAt: defaults.fetchedAt,
       });
     };
+    // 的中票0の特払いは、その券種を買った全selectionへの払戻。返還（100円）とは分離し、
+    // sourceに明記された金額だけをspecial_payoutとして保持する（値の推測補完はしない）。
+    const specialPayout = line.match(
+      /(単勝|複勝|２連単|２連複|拡連複|３連単|３連複)[\s　]+特払(?:い)?[\s　]+([0-9,]+)/,
+    );
+    if (specialPayout) {
+      pushPay(SPECIAL_PAYOUT_LABELS[specialPayout[1]], "特払", specialPayout[2], null);
+      continue;
+    }
     const win = line.match(/単勝[\s　]+([1-6])[\s　]+([0-9,]+)/);
     if (win) pushPay("win", win[1], win[2], null);
     if (line.includes("複勝")) {
