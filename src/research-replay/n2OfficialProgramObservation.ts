@@ -6,6 +6,7 @@ import {
   type OfficialProgramPayload,
 } from "./domain";
 import { canonicalUtcTimestamp } from "./canonical";
+import type { ParseResult, ResearchReplayRepository } from "./repository";
 
 export const N2_OFFICIAL_PROGRAM_SOURCE_SCHEMA_VERSION = "official-program-primary-raw-v1";
 export const N2_OFFICIAL_PROGRAM_PARSER_VERSION = "n2-official-program-parser-v1";
@@ -39,6 +40,13 @@ export type OfficialProgramTypedPayloadRow = {
 export type OfficialProgramPayloadVerification =
   | { status: "verified"; payload: OfficialProgramPayload }
   | { status: "excluded"; reason: string };
+
+export type OfficialProgramIngestResult = {
+  rawDocumentId: string;
+  rawSha256: string;
+  relativePath: string;
+  parse: ParseResult;
+};
 
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -129,6 +137,47 @@ export function buildOfficialProgramObservationEnvelope(input: {
     sourceQuality: "official_public",
     measurementQuality: "official_program_raw",
     effectiveAt: sourcePublishedAt,
+  };
+}
+
+export function ingestOfficialProgramObservation(input: {
+  repository: ResearchReplayRepository;
+  rawJson: string;
+  canonicalRaceKey: string;
+  sourcePublishedAt: string | null;
+  sourceObservedAt: string;
+  firstSeenAt: string;
+  rawDocumentId?: string;
+  parseRunId?: string;
+  observationId?: string;
+}): OfficialProgramIngestResult {
+  const raw = input.repository.recordRawDocument({
+    rawDocumentId: input.rawDocumentId,
+    bytes: Buffer.from(input.rawJson, "utf8"),
+    contentType: "application/json",
+    charset: "utf-8",
+    retentionClass: "research_evidence",
+  });
+  const parse = input.repository.parseTypedRawDocument({
+    rawDocumentId: raw.rawDocumentId,
+    parseRunId: input.parseRunId,
+    observationId: input.observationId,
+    parserName: "n2-official-program",
+    parserVersion: N2_OFFICIAL_PROGRAM_PARSER_VERSION,
+    expectedSourceSchemaVersion: N2_OFFICIAL_PROGRAM_SOURCE_SCHEMA_VERSION,
+    parse: (bytes) => buildOfficialProgramObservationEnvelope({
+      canonicalRaceKey: input.canonicalRaceKey,
+      rawJson: bytes.toString("utf8"),
+      sourcePublishedAt: input.sourcePublishedAt,
+      sourceObservedAt: input.sourceObservedAt,
+      firstSeenAt: input.firstSeenAt,
+    }),
+  });
+  return {
+    rawDocumentId: raw.rawDocumentId,
+    rawSha256: raw.rawSha256,
+    relativePath: raw.relativePath,
+    parse,
   };
 }
 
