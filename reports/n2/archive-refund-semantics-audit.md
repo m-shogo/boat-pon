@@ -127,6 +127,16 @@ selection-level label、feature PIT、atomic odds PIT、provenanceを一つの�
 - targeted TypeScript strict check: PASS
 - archive再集計値・DB・productionへの影響: なし
 
+## Non-blocking hardening: legacy feature source adapter
+
+primary DB schemaを再監査し、`official_programs`には`imported_at`しかなくsource availability/raw lineageがないこと、`odds_timeseries_snapshots`にはcaptured_atがある一方available_at/raw lineageがなく、既存schemaではbet_typeも固定されていないことを確認した。これらを推測補完しないpure adapterを追加した。
+
+- programのrace date/imported_atをsource availabilityへ代用しない
+- F0 observation/raw lineageがないprogram/odds rowはfail-closed
+- bet_type不明legacy oddsをexacta/quinellaへ推測しない
+- namespaced live-only feature keyのclass launderingを拒否
+- adapter tests 6/6、builder regression 8/8、targeted strict typecheck PASS
+
 ## 次gate
 
 1. `--limit=20` smoke scan + full repo unit/typecheck
