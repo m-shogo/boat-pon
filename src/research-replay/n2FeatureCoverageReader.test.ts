@@ -7,6 +7,8 @@ import test from "node:test";
 import { DatabaseSync } from "node:sqlite";
 import { buildN2FeatureCoverageProfile } from "./n2FeatureCoverage";
 import { readOfficialProgramCoverageEvents } from "./n2FeatureCoverageReader";
+import { PAYLOAD_SCHEMA_VERSION, semanticPayloadHash } from "./domain";
+import { buildOfficialProgramPayload } from "./n2OfficialProgramObservation";
 
 function programRaw(): string {
   return JSON.stringify({
@@ -26,6 +28,25 @@ function programRaw(): string {
 
 function sha256(path: string): string {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
+}
+
+function insertProgramObservation(db: DatabaseSync, suffix: string): void {
+  const canonicalRaceKey = "2004-01-01:01:R1";
+  const observedAt = "2004-01-01T01:02:00Z";
+  const payload = buildOfficialProgramPayload({ canonicalRaceKey, observedAt, rawJson: programRaw() });
+  const hash = semanticPayloadHash("official_program", payload);
+  db.prepare("INSERT INTO raw_documents VALUES (?, ?, ?, ?)")
+    .run(`raw-program-${suffix}`, "verified", "passed", 1);
+  db.prepare("INSERT INTO parse_runs VALUES (?, ?, ?)")
+    .run(`parse-program-${suffix}`, `raw-program-${suffix}`, "success");
+  db.prepare(`INSERT INTO domain_observations VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+    `obs-program-${suffix}`, canonicalRaceKey, "official_program", "official_program", PAYLOAD_SCHEMA_VERSION,
+    hash, `raw-program-${suffix}`, `parse-program-${suffix}`,
+    "2004-01-01T01:00:00Z", observedAt, "2004-01-01T01:03:00Z", "source_exact", "official_public",
+  );
+  db.prepare("INSERT INTO typed_observation_payloads VALUES (?, ?, ?, ?, ?)").run(
+    `obs-program-${suffix}`, "official_program", PAYLOAD_SCHEMA_VERSION, JSON.stringify(payload), hash,
+  );
 }
 
 function createFixture(): { dir: string; primaryPath: string; sidecarPath: string } {
@@ -70,6 +91,9 @@ function createFixture(): { dir: string; primaryPath: string; sidecarPath: strin
       observation_id TEXT PRIMARY KEY,
       canonical_race_key TEXT NOT NULL,
       observation_type TEXT NOT NULL,
+      payload_type TEXT NOT NULL,
+      payload_schema_version TEXT NOT NULL,
+      semantic_payload_hash TEXT NOT NULL,
       raw_document_id TEXT NOT NULL,
       parse_run_id TEXT NOT NULL,
       source_published_at TEXT,
@@ -78,15 +102,15 @@ function createFixture(): { dir: string; primaryPath: string; sidecarPath: strin
       timing_quality TEXT NOT NULL,
       source_quality TEXT NOT NULL
     );
+    CREATE TABLE typed_observation_payloads (
+      observation_id TEXT PRIMARY KEY,
+      payload_type TEXT NOT NULL,
+      payload_schema_version TEXT NOT NULL,
+      payload_json TEXT NOT NULL,
+      payload_hash TEXT NOT NULL
+    );
   `);
-  sidecar.prepare("INSERT INTO raw_documents VALUES (?, ?, ?, ?)")
-    .run("raw-program-2004", "verified", "passed", 1);
-  sidecar.prepare("INSERT INTO parse_runs VALUES (?, ?, ?)")
-    .run("parse-program-2004", "raw-program-2004", "success");
-  sidecar.prepare(`INSERT INTO domain_observations VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
-    "obs-program-2004", "2004-01-01:01:R1", "official_program", "raw-program-2004", "parse-program-2004",
-    "2004-01-01T01:00:00Z", "2004-01-01T01:02:00Z", "2004-01-01T01:03:00Z", "source_exact", "official_public",
-  );
+  insertProgramObservation(sidecar, "2004");
   sidecar.close();
   return { dir, primaryPath, sidecarPath };
 }
@@ -129,14 +153,7 @@ test("multiple official_program evidence rows fail closed as ambiguous", () => {
   const fixture = createFixture();
   try {
     const sidecar = new DatabaseSync(fixture.sidecarPath);
-    sidecar.prepare("INSERT INTO raw_documents VALUES (?, ?, ?, ?)")
-      .run("raw-program-2004-b", "verified", "passed", 1);
-    sidecar.prepare("INSERT INTO parse_runs VALUES (?, ?, ?)")
-      .run("parse-program-2004-b", "raw-program-2004-b", "success");
-    sidecar.prepare(`INSERT INTO domain_observations VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
-      "obs-program-2004-b", "2004-01-01:01:R1", "official_program", "raw-program-2004-b", "parse-program-2004-b",
-      "2004-01-01T01:00:00Z", "2004-01-01T01:02:00Z", "2004-01-01T01:03:00Z", "source_exact", "official_public",
-    );
+    insertProgramObservation(sidecar, "2004-b");
     sidecar.close();
     const events = readOfficialProgramCoverageEvents({
       primaryDbPath: fixture.primaryPath,
@@ -146,6 +163,48 @@ test("multiple official_program evidence rows fail closed as ambiguous", () => {
     });
     assert.equal(events.length, 42);
     assert.ok(events.every((event) => event.exclusionReason === "excluded_lineage_ambiguous_match"));
+  } finally {
+    rmSync(fixture.dir, { recursive: true, force: true });
+  }
+});
+
+test("missing typed payload and primary payload mismatch are explicit exclusions", () => {
+  const fixture = createFixture();
+  try {
+    const sidecar = new DatabaseSync(fixture.sidecarPath);
+    sidecar.exec("DELETE FROM typed_observation_payloads WHERE observation_id = 'obs-program-2004'");
+    sidecar.close();
+    let events = readOfficialProgramCoverageEvents({
+      primaryDbPath: fixture.primaryPath,
+      sidecarDbPath: fixture.sidecarPath,
+      dateFrom: "2004-01-01",
+      dateTo: "2004-01-01",
+    });
+    assert.ok(events.every((event) => event.exclusionReason === "excluded_program_typed_payload_missing"));
+
+    const sidecarRestore = new DatabaseSync(fixture.sidecarPath);
+    const payload = buildOfficialProgramPayload({
+      canonicalRaceKey: "2004-01-01:01:R1",
+      observedAt: "2004-01-01T01:02:00Z",
+      rawJson: programRaw(),
+    });
+    const hash = semanticPayloadHash("official_program", payload);
+    sidecarRestore.prepare("INSERT INTO typed_observation_payloads VALUES (?, ?, ?, ?, ?)").run(
+      "obs-program-2004", "official_program", PAYLOAD_SCHEMA_VERSION, JSON.stringify(payload), hash,
+    );
+    sidecarRestore.close();
+    const primary = new DatabaseSync(fixture.primaryPath);
+    const changed = JSON.parse(programRaw()) as { boats: Array<Record<string, unknown>> };
+    changed.boats[0].nationalWinRate = 9.9;
+    primary.prepare("UPDATE official_programs SET raw_json = ? WHERE date = '2004-01-01'").run(JSON.stringify(changed));
+    primary.close();
+    events = readOfficialProgramCoverageEvents({
+      primaryDbPath: fixture.primaryPath,
+      sidecarDbPath: fixture.sidecarPath,
+      dateFrom: "2004-01-01",
+      dateTo: "2004-01-01",
+    });
+    assert.ok(events.every((event) => event.exclusionReason === "excluded_program_primary_payload_mismatch"));
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
   }
