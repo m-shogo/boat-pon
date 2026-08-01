@@ -562,3 +562,13 @@ M1はN3/N4の選手PIT gate、M3は主観を排したstrict-prior label gate、M
 - blocked: raw archive全件scanner実行、約319,301 excluded_refunded候補とのreconciliation、実F0 sidecar coverage、全7券種live typed market observation。
 - evidence: collector E2E 6/6、今回のprogram/coverage regression 12/12、strict TypeScript PASS。retry dedup code `20b2b55a` / `1f5bd37f`、failure isolation code `8861a396` / `fd1a1077`。
 - next: raw入力があれば`ARCHIVE_REFUND_SEMANTICS_AUDIT`を再開し、なければofficial_program payloadを既存F0-R outboxへ安全に接続するtemp統合を実装する。実collector writer、model、BUY/WATCH/SKIP、productionはOFFを維持する。
+
+### 2026-08-02 N2 official_program shadow outbox
+
+- 既存F0-Rのoutbox、retry、backpressure、kill switch、primary failure isolationを再利用し、official_program capture用の別queueを作らなかった。
+- outbox payloadはraw本文を複製せずprimary record ID＋期待SHA-256を保存する。consumerはprimary rowを再読込し、byte hash一致前にはF0 evidenceを作らない。
+- URL/header sanitization、strict payload decoder、同一attempt idempotency、別retry attemptの履歴分離を実装した。
+- temp E2E 5件と関連回帰17件、targeted strict TypeScriptを通過した。
+- live writerはOFF。実sidecar接続はapproval、backup/restore、canary、rollback rehearsalまでBLOCKED。
+- archive refund全件再集計はraw入力不足で未完了。N2 label truthはREADYへ変更しない。
+
