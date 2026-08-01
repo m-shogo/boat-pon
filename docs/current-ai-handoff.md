@@ -263,3 +263,24 @@ Phase N0の確定事項:
 本タスクの差分はcommit・pushしてcleanにする。次回開始時は`git status --short`と`git rev-parse HEAD origin/main`を再確認する。その後に新しい未追跡・変更済みファイルがあればユーザー所有として扱い、広範なrevert・reset・checkoutをしない。
 
 `pnpm handoff:ai`のguard結果と実運転状態は分けて確認する。収集ジョブはlaunchdの終了コードと`data/logs/auto-odds.log`を正本にする。
+
+## 2026-08-02 N2 official_program retry/dedup
+
+completed:
+
+- 同一公式番組rawを再取得すると、raw自体はdedupされてもparse/domain observationが毎回追加され、同一raceのlineageが複数件となって42 featureすべてambiguous除外になる不具合を再現した。
+- `ResearchReplayRepository.findReusableTypedObservation`を追加し、同一canonical race・raw・parser/source schema・payload typeの未supersede成功証拠が一意で、parse/domain/typed hashとschemaが一致する場合だけ既存parse/observationを再利用する。
+- retryのcapture attempt/event/raw linkは各回分を保持する。same-race retry fixtureは2 attempts / 2 links / 1 raw / 1 parse / 1 observation。rawが同じでも別raceなら再利用せず2 observations。
+- collector E2E 5/5、program ingest/parser/coverage/odds回帰込み21/21、targeted strict TypeScript PASS。
+- code commits: `20b2b55a59c7bf050725ea1f0a87a378b0216ebe`, `1f5bd37f0a60d5af303711cadfa6569c18331ab2`, `ffe26203f9638f0e364faec56366587606701f18`。
+
+current / blocked:
+
+- `ARCHIVE_REFUND_SEMANTICS_AUDIT`のparser/label修正とscannerは実装済みだが、raw archive/実sidecarがこの実行環境になく、year × bet_type × event_kind、約319,301候補、eligible 87%→99.9%のread-only再集計は未完了。既存profileはtraining truthへ昇格しない。
+- official_program live writerはOFF。今回のadapterはtemp/offline境界のみで、実collector・primary DB・production decisionを変更していない。
+
+next:
+
+1. raw archive/実sidecarへ到達できればrefund scannerとcanonical reconciliationを最優先で実行する。
+2. 到達できなければ、capture failure→新attempt retry成功のfailure isolation、single-writer境界、shadow writer rollback/circuit breakerをtemp E2Eで固定する。
+3. 実writer接続は明示gate、backup/restore、canary、primary collector非伝播を満たすまで行わない。
