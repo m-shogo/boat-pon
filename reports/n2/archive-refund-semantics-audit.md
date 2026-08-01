@@ -206,3 +206,9 @@ raw archive/実sidecar未接続中の独立sliceとして、同一公式番組ra
 - collector E2E 5/5、program/coverage/odds関連回帰込み21/21、targeted strict TypeScript PASS。
 
 本変更はarchive refund再集計値、既存DB、production予測、BUY条件を変更しない。
+
+## Non-blocking hardening: capture failure retry isolation
+
+raw archive未接続中の独立sliceとして、公式番組取得のtimeout等を成功captureと混ぜないadapterとE2Eを追加した。失敗attemptは`capture_started → capture_failed`でterminalとなり、後から`body_completed`を追加して成功へ反転できない。retryは同じ`logical_request_group_id`を持つ新attemptで行い、成功retryだけがraw/link/parse/domain observationを生成する。
+
+fixture結果: 2 attempts（failed 1 / succeeded 1）、raw link 1、raw 1、parse 1、observation 1。collector E2E 6/6、program/coverage回帰12/12、targeted strict TypeScript PASS。F0-Rの既存`runPrimaryWithOptionalShadow`、outbox retry、rollback/kill switchと役割を重複させず、live writerはOFFを維持する。本変更はarchive集計値・実DB・予測・BUY条件へ影響しない。
