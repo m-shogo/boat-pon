@@ -193,3 +193,16 @@ temp collector adapterで`capture_attempt/events → raw_document/link → parse
 - 実DB、primary DB、sidecar、archiveへのwriteなし
 - existing v1 evidenceの削除・上書きなし
 - collector、production判定、BUY/WATCH/SKIP、自動投票への変更なし
+
+## Non-blocking hardening: official program retry dedup
+
+raw archive/実sidecar未接続中の独立sliceとして、同一公式番組rawのHTTP retryが同じraceへparse/domain observationを重複生成し、immutable coverage readerを`excluded_lineage_ambiguous_match`へ落とす不具合をfixtureで再現・修正した。
+
+- retryごとの`capture_attempt`、capture events、`capture_raw_link`はappend-onlyで保持する。
+- byte-exact rawはcontent hashで1件へdedupする。
+- 同一canonical race・raw・parser version・source schema・payload typeで、未supersedeの成功typed observationが一意かつparse/domain/typed hash・schema整合する場合だけ再利用する。
+- 候補複数やintegrity不一致はfail-closed。rawが同じでもcanonical raceが異なれば新しいparse/observationを作る。
+- fixture結果: same-race retry = 2 attempts / 2 raw links / 1 raw / 1 parse / 1 observation。different-race same bytes = 1 raw / 2 observations。
+- collector E2E 5/5、program/coverage/odds関連回帰込み21/21、targeted strict TypeScript PASS。
+
+本変更はarchive refund再集計値、既存DB、production予測、BUY条件を変更しない。
