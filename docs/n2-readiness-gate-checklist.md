@@ -52,3 +52,16 @@ overall: **N2_FEATURE_BUILDER_SCAFFOLD_READY = YES / N2_LABEL_TRUTH_READY = NO**
 ## 禁止（本フェーズ）
 
 label truth gate通過前のmodel training/tuning、BUY/WATCH/SKIP logic変更、production接続、automatic bettingは禁止。offline code/test/read-only dataset・評価基盤は安全境界内で段階実装する。
+
+### official_program shadow outbox（temp evidence）
+
+- [x] 既存F0-R outboxを再利用し、新しい並行queueを作らない
+- [x] default OFFではprimary成功・outbox 0件
+- [x] raw本文をoutboxへ複製せずprimary record ID＋期待SHA-256を保存
+- [x] URL secret除去、header allowlist、strict payload decoder
+- [x] 同一attemptはidempotent、別retry attemptは別message
+- [x] primary raw hash不一致はcapture row作成前にfail-closed
+- [x] succeeded messageは再配送しない
+- [x] backpressure時もprimary collector成功を維持
+- [ ] live collector接続、実sidecar shadow canary、承認済みrollback rehearsal（BLOCKED / writer OFF）
+
