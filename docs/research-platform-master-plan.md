@@ -554,3 +554,11 @@ M1はN3/N4の選手PIT gate、M3は主観を排したstrict-prior label gate、M
 ## 11. 次の独立タスク
 
 次の候補はN1の永続Research Replay sidecar rolloutレビューである。N1-A offline foundationは完了したが自動適用しない。別の明示承認前に`data/boat.sqlite`変更、永続N1 migration、公式7券種live収集、D1/N2、モデル、Decision Governor、production接続を抱き合わせない。
+
+## 12. N2 current completion ledger
+
+- completed: official_programのtemp五層lineage、byte/time/link integrity、stored-raw parser、primary semantic照合、immutable coverage reader、same-raw retry dedup。HTTP retryはcapture履歴を保持するが同一semantic domain eventを二重生成しない。
+- current: live writer接続前のfailure isolation・single-writer・rollback/circuit-breaker境界。
+- blocked: raw archive全件scanner実行、約319,301 excluded_refunded候補とのreconciliation、実F0 sidecar coverage、全7券種live typed market observation。
+- evidence: collector E2E 5/5、関連targeted regression 21/21、strict TypeScript PASS。code `20b2b55a` / `1f5bd37f` / `ffe26203`。
+- next: raw入力があれば`ARCHIVE_REFUND_SEMANTICS_AUDIT`を再開し、なければtemp shadow writerの失敗非伝播とrollbackを固定する。実collector writer、model、BUY/WATCH/SKIP、productionはOFFを維持する。
