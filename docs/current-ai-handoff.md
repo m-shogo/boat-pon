@@ -294,3 +294,26 @@ next:
 - commits: `8861a3963e961695c1c34f0109f1bcb7ffe5d425`, `fd1a1077f91cf57a27852b986632ed03bbc22a27`。
 
 next: raw入力があればarchive refund scannerを最優先。なければofficial_program shadow outbox message contractとsingle-writer/idempotency keyをtempで接続し、primary collectorへ失敗が伝播しない統合E2Eへ進む。live writerはOFF。
+
+## 2026-08-02 N2 official_program shadow outbox
+
+completed:
+
+- `n2.official_program.capture.v1`を既存F0-R outboxへ接続した。
+- outboxはraw本文を複製せず、primary record ID、期待SHA-256、canonical race/capture時刻、redact済みURL、allowlist済みheaderを保持する。
+- consumerはprimary rawを再読込し、byte hash一致前にはcapture attemptを含むsidecar evidenceを一切作らない。
+- idempotencyはrace × request_started_at × raw hash。同一attemptは既存messageを返し、別時刻retryは別messageとなる。
+- temp E2E: default OFF、exact retry idempotency、一回配送、primary raw改変fail-closed、backpressure primary非伝播の5/5 PASS。関連program/coverage回帰込み17/17 PASS、targeted strict TypeScript PASS。
+- code commits: `d4c07b0d2524bf744b3d7f49d216c4c746a23dd5`, `c8c1cd2b24ba361da5af60b261359bc30374d9df`。
+
+current / blocked:
+
+- live writerはOFF。実DB、primary collector、予測、BUY条件は変更していない。
+- archive raw/実sidecarが未接続のためrefund scanner実数、約319,301候補、eligible率差、実coverageは未確認。既存N2 profileはtraining truthへ昇格しない。
+
+next:
+
+1. raw archiveへ到達できればrefund scannerとcanonical reconciliationを最優先で実行する。
+2. 入力がなければ、outbox consumerのmixed message routing、permanent failure/circuit breaker、kill-switch rollbackをtemp統合で固定する。
+3. 実writer接続は明示approval、backup/restore、canary、primary非伝播、rollback rehearsalが揃うまで行わない。
+
