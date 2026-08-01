@@ -3,6 +3,9 @@ import test from "node:test";
 import {
   classifyEligibility,
   deriveBetLabel,
+  deriveSelectionLevelLabels,
+  enumerateBetSelections,
+  N2_SELECTION_COUNT_BY_BET_TYPE,
   validateFeaturePIT,
   validateOddsUsage,
   type CandidateEligibilityInput,
@@ -91,6 +94,86 @@ test("target: partial refund and special payout are financial outcomes, never cl
   assert.equal(unknownRefundAmount.outcome, "refund");
   assert.equal(unknownRefundAmount.hit, null);
   assert.equal(unknownRefundAmount.payoutYenPer100, null);
+});
+
+test("selection space: 7 bet types enumerate exactly 212 unique canonical selections", () => {
+  const expected = {
+    win: 6,
+    place: 6,
+    exacta: 30,
+    quinella: 15,
+    trifecta: 120,
+    trio: 20,
+    wide: 15,
+  } as const;
+  let total = 0;
+  for (const [betType, count] of Object.entries(expected)) {
+    const selections = enumerateBetSelections(betType as keyof typeof expected);
+    assert.equal(selections.length, count);
+    assert.equal(new Set(selections).size, count);
+    assert.equal(N2_SELECTION_COUNT_BY_BET_TYPE[betType as keyof typeof expected], count);
+    total += selections.length;
+  }
+  assert.equal(total, 212);
+  assert.deepEqual(enumerateBetSelections("win"), ["1", "2", "3", "4", "5", "6"]);
+  assert.equal(enumerateBetSelections("exacta").includes("2-1"), true);
+  assert.equal(enumerateBetSelections("quinella").includes("2-1"), false);
+  assert.equal(enumerateBetSelections("quinella").includes("1-2"), true);
+  assert.equal(enumerateBetSelections("trifecta").includes("1-1-2"), false);
+  assert.equal(enumerateBetSelections("trio").every((selection) => {
+    const boats = selection.split("-").map(Number);
+    return boats[0] < boats[1] && boats[1] < boats[2];
+  }), true);
+});
+
+test("selection-level labels: every exacta selection passes deriveBetLabel with exhaustive outcomes", () => {
+  const eligibility = { eligible: true, reason: "eligible" as const };
+  const normal = deriveSelectionLevelLabels({
+    betType: "exacta",
+    eligibility,
+    winningSelections: ["1-2"],
+    payoutYenBySelection: { "1-2": 500 },
+  });
+  assert.equal(normal.length, 30);
+  assert.equal(normal.filter((row) => row.outcome === "hit").length, 1);
+  assert.equal(normal.filter((row) => row.outcome === "loss").length, 29);
+  assert.equal(normal.find((row) => row.betSelection === "1-2")?.payoutYenPer100, 500);
+
+  const partial = deriveSelectionLevelLabels({
+    betType: "exacta",
+    eligibility,
+    winningSelections: ["1-2"],
+    payoutYenBySelection: { "1-2": 500 },
+    refundedSelections: ["2-1"],
+    refundYenBySelection: { "2-1": 100 },
+  });
+  assert.deepEqual(
+    Object.fromEntries(["hit", "loss", "refund"].map((outcome) => [
+      outcome,
+      partial.filter((row) => row.outcome === outcome).length,
+    ])),
+    { hit: 1, loss: 28, refund: 1 },
+  );
+  assert.equal(partial.find((row) => row.betSelection === "2-1")?.hit, null);
+
+  const special = deriveSelectionLevelLabels({
+    betType: "exacta",
+    eligibility,
+    winningSelections: [],
+    payoutYenBySelection: {},
+    specialPayoutYenPer100: 70,
+  });
+  assert.equal(special.every((row) =>
+    row.outcome === "special_payout" && row.hit === null && row.payoutYenPer100 === 70), true);
+
+  const voided = deriveSelectionLevelLabels({
+    betType: "exacta",
+    eligibility: { eligible: false, reason: "excluded_refunded" },
+    winningSelections: [],
+    payoutYenBySelection: {},
+  });
+  assert.equal(voided.every((row) =>
+    row.outcome === "void" && row.hit === null && row.payoutYenPer100 === null), true);
 });
 
 test("feature PIT: available_at boundary is inclusive at cutoff, future rejected, unknown fail-closed", () => {
