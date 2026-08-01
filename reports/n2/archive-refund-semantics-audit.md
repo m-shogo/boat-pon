@@ -175,6 +175,10 @@ coverage readerが生成していた`YYYY-MM-DD:venue:2桁raceNo`はF0 identity�
 
 既存F0 fixture parserはraw document自体がenvelopeである前提だったため、そのまま公式番組へ流用すると正規化envelopeをraw原本として保存する危険があった。repositoryへbyte-exact rawを再読込する共通typed parser経路を追加し、official-program adapterはprimary `raw_json`そのものをraw storeへ保存してからtyped payloadを生成する。temp sidecar E2Eでraw byte一致、parse/domain/typed lineage、coverage 42/42 verifiedを確認。不正JSONは`parse_runs.status=error`だけを残し、observation/payloadは0件。新規2/2、関連回帰込み9/9、targeted strict typecheck PASS。実DB・live collectorは変更していない。
 
+## Non-blocking hardening: complete official-program capture lineage
+
+temp collector adapterで`capture_attempt/events → raw_document/link → parse_run → domain_observation → typed payload`を接続した。汎用repositoryがbody eventのbyte count欠落やraw実サイズ不一致、request以前/前event以前の時刻、body eventの別attempt所属、body完了前linkを許し得たため、すべてfail-closed検証へ修正。URL secret・非allowlist headerは保存しない。parse errorはcapture成功としてraw/linkを保持し、取得failureと混同しない。collector E2E 3/3、関連回帰込み12/12、targeted strict typecheck PASS。実collectorと永続sidecarは変更していない。
+
 ## 次gate
 
 1. `--limit=20` smoke scan + full repo unit/typecheck
