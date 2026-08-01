@@ -100,7 +100,7 @@ test("F0 trifecta T-5 is verified while legacy odds without bet_type is never pr
     insertMarket({
       sidecarPath: fixture.sidecarPath,
       suffix: "complete",
-      raceKey: "2026-05-20:01:01",
+      raceKey: "2026-05-20:01:R1",
       observedAt: "2026-05-20T02:55:00Z",
       payloadJson: payload("2026-05-20T02:55:00Z"),
     });
@@ -130,7 +130,7 @@ test("incomplete typed market preserves per-selection exclusion", () => {
     insertMarket({
       sidecarPath: fixture.sidecarPath,
       suffix: "partial",
-      raceKey: "2026-05-20:01:01",
+      raceKey: "2026-05-20:01:R1",
       observedAt: "2026-05-20T02:55:00Z",
       payloadJson: payload("2026-05-20T02:55:00Z", selections),
     });
@@ -151,7 +151,7 @@ test("two observations for the same checkpoint fail closed", () => {
     for (const suffix of ["a", "b"]) insertMarket({
       sidecarPath: fixture.sidecarPath,
       suffix,
-      raceKey: "2026-05-20:01:01",
+      raceKey: "2026-05-20:01:R1",
       observedAt: "2026-05-20T02:55:00Z",
       payloadJson: payload("2026-05-20T02:55:00Z"),
     });
@@ -172,7 +172,7 @@ test("typed payload hash mismatch is rejected", () => {
     insertMarket({
       sidecarPath: fixture.sidecarPath,
       suffix: "hash-mismatch",
-      raceKey: "2026-05-20:01:01",
+      raceKey: "2026-05-20:01:R1",
       observedAt: "2026-05-20T02:55:00Z",
       payloadJson: payload("2026-05-20T02:55:00Z"),
       payloadHash: "same-at-insert",
