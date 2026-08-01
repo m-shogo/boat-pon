@@ -5,7 +5,7 @@ import type { SettlementBetType, SettlementStatus, ResolutionStatus } from "./se
 
 export const N2_DATASET_CONTRACT_VERSION = "n2-dataset-contract-v1";
 export const N2_TARGET_CONTRACT_VERSION = "n2-target-contract-v2";
-export const N2_FEATURE_PIT_CONTRACT_VERSION = "n2-feature-pit-contract-v1";
+export const N2_FEATURE_PIT_CONTRACT_VERSION = "n2-feature-pit-contract-v2";
 
 // ===== eligibility（settlement state → dataset 採否） =====
 export type EligibilityCode =
@@ -236,18 +236,55 @@ export function validateFeaturePIT(
 export type OddsRole = "feature" | "evaluation" | "decision";
 export type OddsKind = "live_checkpoint" | "closing" | "post_race_imputed" | "unknown";
 
-// training-time feature に closing/post-race odds を入れない。closing は evaluation 専用。
-export function validateOddsUsage(kind: OddsKind, role: OddsRole): { usable: boolean; reason: string } {
-  if (role === "feature") {
-    if (kind === "live_checkpoint") return { usable: true, reason: "live_checkpoint_before_cutoff_ok" };
-    return { usable: false, reason: `feature role forbids ${kind} odds (leakage/imputation risk)` };
+export type OddsUsageInput = {
+  kind: OddsKind;
+  role: OddsRole;
+  capturedAt: string | null;       // 実際に値を取得した時刻
+  availableAt: string | null;      // source上で値が利用可能になった時刻
+  decisionCutoff: string | null;   // feature/decision/live checkpoint評価のPIT境界
+};
+
+export type OddsUsageReason =
+  | "odds_safe"
+  | "closing_odds_for_price_evaluation_only"
+  | "excluded_odds_kind_for_role"
+  | "excluded_odds_unknown_timestamp"
+  | "excluded_odds_available_after_capture"
+  | "excluded_odds_capture_after_cutoff"
+  | "excluded_odds_available_after_cutoff";
+
+export type OddsUsageResult = { usable: boolean; reason: OddsUsageReason };
+
+// kindだけを検査すると未来のlive checkpointを許可できてしまうため、kind/role/三時刻を
+// 必ず同じ呼出しで検証する。closingはpost-cutoffでも価格評価専用としてのみ許可する。
+export function validateOddsUsage(input: OddsUsageInput): OddsUsageResult {
+  const kindAllowed = input.kind === "live_checkpoint"
+    || (input.role === "evaluation" && input.kind === "closing");
+  if (!kindAllowed) return { usable: false, reason: "excluded_odds_kind_for_role" };
+
+  const captured = input.capturedAt === null ? Number.NaN : Date.parse(input.capturedAt);
+  const available = input.availableAt === null ? Number.NaN : Date.parse(input.availableAt);
+  if (!Number.isFinite(captured) || !Number.isFinite(available)) {
+    return { usable: false, reason: "excluded_odds_unknown_timestamp" };
   }
-  if (role === "evaluation") {
-    if (kind === "closing") return { usable: true, reason: "closing_odds_for_price_evaluation_only" };
-    if (kind === "live_checkpoint") return { usable: true, reason: "checkpoint_odds_ok_for_eval" };
-    return { usable: false, reason: `evaluation forbids ${kind}` };
+  if (input.kind === "live_checkpoint") {
+    const cutoff = input.decisionCutoff === null ? Number.NaN : Date.parse(input.decisionCutoff);
+    if (!Number.isFinite(cutoff)) {
+      return { usable: false, reason: "excluded_odds_unknown_timestamp" };
+    }
+    if (captured > cutoff) {
+      return { usable: false, reason: "excluded_odds_capture_after_cutoff" };
+    }
+    if (available > cutoff) {
+      return { usable: false, reason: "excluded_odds_available_after_cutoff" };
+    }
   }
-  // decision: 意思決定時点で available だった odds のみ
-  if (kind === "live_checkpoint") return { usable: true, reason: "available_at_decision" };
-  return { usable: false, reason: `decision forbids ${kind}` };
+  // source availabilityがcaptureより未来なら、観測provenanceが自己矛盾している。
+  if (available > captured) {
+    return { usable: false, reason: "excluded_odds_available_after_capture" };
+  }
+
+  return input.kind === "closing"
+    ? { usable: true, reason: "closing_odds_for_price_evaluation_only" }
+    : { usable: true, reason: "odds_safe" };
 }
