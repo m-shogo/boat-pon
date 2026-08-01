@@ -100,6 +100,17 @@ commit: `3b32ab33b45f679dda64a41935cd281585afad94` (enumerator), `a7be4cf057ff15
 
 実DBの券種別class balance・hit率・payout分布はまだ未生成。既存candidate-level profileをselection-level実測と呼ばない。
 
+## Independent selection profile rebuild
+
+- `buildN2SelectionProfile`: 全selectionのoutcome/class balance/hit率/正の払戻分布/digestを純関数集計
+- payout・special payout・refundの金額競合はfail-closed
+- `profile:n2:selection-labels`: immutable sidecarを独立に2回openし、1回目close後のDB/入力再読込でdigest・件数・券種別profileを比較
+- 現sidecarの出力は必ず`STALE_ARCHIVE_SEMANTICS`。archive訂正前にtraining truthへ昇格しない
+- isolated SQLite end-to-end fixture: 4 candidates / 120 selections / independent rebuild PASS
+- profile unit tests: 4 pass / targeted strict typecheck: PASS / script syntax: PASS
+
+commit: `2e4dcbfb7aec033b615a432b9678ddfe0edad644` (builder), `368787bf6524034a8410890b70ffd1a6794e853d` (tests), `e3e5c9fb7465a185e3daa43b966a0a51bbf07dbe` (DB reader), `b5c6beccd3c44b00ebe0030264edf275e78d8665` (strict type fix)
+
 ## 次gate
 
 1. `--limit=20` smoke scan + full repo unit/typecheck
