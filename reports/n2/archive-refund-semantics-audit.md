@@ -1,7 +1,7 @@
 # Archive refund semantics audit
 
 更新: 2026-08-01  
-状態: **CODE_PATH_FIXED / RAW_ARCHIVE_IMPACT_PENDING**
+状態: **SCANNER_IMPLEMENTED / RAW_ARCHIVE_IMPACT_PENDING**
 
 ## 結論
 
@@ -46,11 +46,33 @@
 
 したがって、既存profileの約87%→99.9%を制度差・実返還率driftとして学習設計に使わない。N2 label truthはfull raw reparse差分が終わるまで未確定。
 
+## v1/v2差分scanner
+
+実装済み:
+
+- `parseOfficialResultDetailLegacyV1ForAudit`: production既定をv2のまま維持し、旧bugを監査専用に再現
+- `compareRefundSemantics`: unchanged候補を全件保持せず、変更行と集計値だけを返す
+- `scripts/audit-archive-refund-semantics.ts`: immutable K archiveをv1/v2でread-only二重parse
+- `pnpm audit:n2:archive-refund-semantics`: full scan
+- `pnpm audit:n2:archive-refund-semantics -- --limit=20`: smoke scan
+- 出力: `reports/n2/archive-refund-semantics-diff.json/.md`
+- 集計軸: `year × bet_type × event_kind`
+- event: `special_payout_added` / `false_refund_reclassified` / `other_change`
+- N2 profileの319,301件はcanonical candidate-levelなので、raw scanner値と即時同一視せずsource-duplicate resolution後にreconciliationする
+
+scanner実装commit:
+
+- `b7c03a3f267ee2479063eb63f5f9581db294ec55` — v1 audit-only parser
+- `35150b4832096ad3eb11146a489f4dfe66e15672` — pure semantics comparator
+- `a9f08b1e1d301aa6907141fc7cc99edc0c7bde18` — v1/v2 regression assertions
+- `6e242b5353889bb7e2a62bec52148774dd247ec7` — full archive scanner
+- `13d77eecd256252bf57f6aa79bbf9aaeada70442` — package command
+
 ## 次gate
 
-1. v1/v2を同じraw archiveへread-onlyで適用する差分scannerを追加
-2. `year × bet_type × event_kind` で、v1 refund / v2 special_payout / true no-contest / unchangedを集計
-3. raw archive全件で再parseし、319,301候補とのreconciliationを取る
+1. `--limit=20` smoke scan + unit/typecheck
+2. raw archive全件を再parseし、`year × bet_type × event_kind`を確定
+3. 319,301候補とのcanonical/source-duplicate reconciliationを取る
 4. append-only `parser_reparse` / supersession計画をtemp copyで検証
 5. corrected canonical label profileを独立DB再読込で再生成
 6. その後にselection-level N2 prototypeへ進む
