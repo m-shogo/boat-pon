@@ -165,7 +165,7 @@ primary DB schemaを再監査し、`official_programs`には`imported_at`しか�
 
 ## Non-blocking hardening: canonical F0 identity + official-program typed payload
 
-coverage readerが生成していた`YYYY-MM-DD:venue:2桁raceNo`はF0 identity正本`YYYY-MM-DD:venue:RraceNo`と一致せず、実sidecar joinを常に0件にする確定bugだった。shared race-key helperとprogram/odds E2E fixtureを正本形式へ訂正した。さらにF0 registryへstrict `official_program / pre_race` payloadを追加し、6艇の一意course、登録番号、級別、各rate、canonical identity、source observed時刻、exact keysを検証する。golden semantic hashを固定し、契約3/3を含む対象tests 10/10、targeted strict typecheckがPASS。実collector生成・primary raw_json値照合・実coverageは未確認であり、fixture結果を実測へ昇格しない。
+coverage readerが生成していた`YYYY-MM-DD:venue:2桁raceNo`はF0 identity正本`YYYY-MM-DD:venue:RraceNo`と一致せず、実sidecar joinを常に0件にする確定bugだった。shared race-key helperとprogram/odds E2E fixtureを正本形式へ訂正した。さらにF0 registryへstrict `official_program / pre_race` payloadを追加し、1〜6艇の一意course、登録番号、級別、各rate、canonical identity、source observed時刻、exact keysを検証する。不足艇はpayloadで保持しcoverageでは欠損featureとして明示除外する。golden semantic hashを固定し、契約3/3を含む対象tests 10/10、targeted strict typecheckがPASS。実collector生成・primary raw_json値照合・実coverageは未確認であり、fixture結果を実測へ昇格しない。
 
 ## 次gate
 
