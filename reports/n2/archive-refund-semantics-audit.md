@@ -146,6 +146,15 @@ primary DB schemaを再監査し、`official_programs`には`imported_at`しか�
 - 実DB/sidecar write: 0
 - 未確認: 実sidecar join率、feature×年代coverage。現typed registryにofficial_programがなく、全券種market observationも未整備
 
+## Non-blocking hardening: feature coverage/provenance profile
+
+`n2-feature-coverage-v1`を追加し、race×source kind×keyを分母として年代/feature別coverage、provenance完備数、unique observation/raw、availability basis、除外理由、決定的digestを集計する。重複分母・不完全verified event・ambiguous excluded eventはfail-closed。実入力0件は`PENDING_REAL_DATA`+exit 2とし、空profileを実測成功へ昇格しない。
+
+- unit tests: 6 pass / targeted TypeScript strict check: PASS
+- CLI no-input smoke: `PENDING_REAL_DATA`, exit 2（期待通り）
+- 実DB/sidecar write: 0
+- 未確認: 実sidecarからのcoverage event生成・実join率
+
 ## 次gate
 
 1. `--limit=20` smoke scan + full repo unit/typecheck
