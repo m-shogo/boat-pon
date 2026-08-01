@@ -37,6 +37,7 @@
     "research:n1:payout:readiness": "tsx scripts/research-replay-n1-payout.ts readiness",
     "audit:n2:archive-refund-semantics": "tsx scripts/audit-archive-refund-semantics.ts",
     "profile:n2:selection-labels": "tsx scripts/profile-n2-selection-labels.ts",
+    "profile:n2:feature-coverage": "tsx scripts/profile-n2-feature-coverage.ts",
     "research:n1:rollout:capacity": "tsx scripts/research-replay-n1-rollout.ts capacity-benchmark",
     "research:n1:rollout:readiness": "tsx scripts/research-replay-n1-rollout.ts readiness",
     "research:n1:rollout:apply": "tsx scripts/research-replay-n1-rollout.ts apply",
