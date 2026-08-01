@@ -460,6 +460,82 @@ export class ResearchReplayRepository {
     return { parseRunId, observationId, status, semanticPayloadHash: semanticHash, errorCode };
   }
 
+  findReusableTypedObservation(input: {
+    rawDocumentId: string;
+    canonicalRaceKey: string;
+    parserName: string;
+    parserVersion: string;
+    sourceSchemaVersion: string;
+    payloadType: ObservationType;
+  }): ParseResult | null {
+    parseCanonicalRaceKey(input.canonicalRaceKey);
+    const rows = this.db.prepare(`
+      SELECT
+        p.parse_run_id,
+        p.status,
+        p.semantic_payload_hash AS parse_hash,
+        o.observation_id,
+        o.semantic_payload_hash AS observation_hash,
+        t.payload_hash,
+        t.payload_schema_version
+      FROM parse_runs p
+      JOIN domain_observations o ON o.parse_run_id = p.parse_run_id
+      JOIN typed_observation_payloads t ON t.observation_id = o.observation_id
+      WHERE p.raw_document_id = ?
+        AND p.parser_name = ?
+        AND p.parser_version = ?
+        AND p.source_schema_version = ?
+        AND p.payload_type = ?
+        AND p.status IN ('success', 'warning')
+        AND o.raw_document_id = p.raw_document_id
+        AND o.canonical_race_key = ?
+        AND o.observation_type = ?
+        AND o.payload_type = ?
+        AND t.payload_type = ?
+        AND NOT EXISTS (
+          SELECT 1 FROM parse_runs successor WHERE successor.supersedes_id = p.parse_run_id
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM domain_observations successor WHERE successor.supersedes_id = o.observation_id
+        )
+      ORDER BY p.completed_at, p.parse_run_id
+    `).all(
+      input.rawDocumentId,
+      input.parserName,
+      input.parserVersion,
+      input.sourceSchemaVersion,
+      input.payloadType,
+      input.canonicalRaceKey,
+      input.payloadType,
+      input.payloadType,
+      input.payloadType,
+    ) as Array<{
+      parse_run_id: string;
+      status: "success" | "warning";
+      parse_hash: string;
+      observation_id: string;
+      observation_hash: string;
+      payload_hash: string;
+      payload_schema_version: string;
+    }>;
+    if (rows.length === 0) return null;
+    if (rows.length > 1) throw new Error("REUSABLE_TYPED_OBSERVATION_AMBIGUOUS");
+    const row = rows[0];
+    if (row.payload_schema_version !== PAYLOAD_SCHEMA_VERSION
+      || row.parse_hash !== row.observation_hash
+      || row.parse_hash !== row.payload_hash) {
+      throw new Error("REUSABLE_TYPED_OBSERVATION_INTEGRITY_MISMATCH");
+    }
+    this.loadTypedPayload(row.observation_id);
+    return {
+      parseRunId: row.parse_run_id,
+      observationId: row.observation_id,
+      status: row.status,
+      semanticPayloadHash: row.parse_hash,
+      errorCode: null,
+    };
+  }
+
   loadTypedPayload(observationId: string): { type: ObservationType; payload: unknown } {
     const row = this.db.prepare(`
       SELECT payload_type, payload_schema_version, payload_json, payload_hash
