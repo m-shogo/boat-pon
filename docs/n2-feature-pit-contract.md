@@ -1,6 +1,6 @@
 # N2 Feature Point-in-Time (PIT) Contract
 
-更新: 2026-08-01
+更新: 2026-08-02
 状態: 設計＋enforcement（既存 `programFeatureSafety.ts` を N2 へ統合）
 enforcement: [`../src/research-replay/n2DatasetContract.ts`](../src/research-replay/n2DatasetContract.ts) `validateFeaturePIT`、既存 [`../src/domain/programFeatureSafety.ts`](../src/domain/programFeatureSafety.ts)、既存 gate [`racer-ability-feature-safety.md`](racer-ability-feature-safety.md)
 
@@ -10,7 +10,7 @@ feature は `available_at <= decision_cutoff`（通常 race lock time）を満�
 
 oddsはkind判定と時刻判定を分離しない。`validateOddsUsage`へ`kind / role / capturedAt / availableAt / decisionCutoff`を同時に渡し、live checkpointではcapture/availabilityの双方がcutoff以下、かつavailabilityがcapture以下であることを強制する。closingは妥当な時刻を持つ価格評価専用で、feature/decisionには使用しない。contract versionは`n2-feature-pit-contract-v2`。
 
-`n2FeatureDatasetBuilder.ts`は両PIT guardをselection-level build pathへ接続済み。既知のlive-only keyはnamespaced keyでもcallerがclassを偽装できず、unsafeなfeature/oddsが一つでもあればcandidate全体を0行でfail-closedにする。`n2FeatureLineage.ts`はF0 observation/parse/rawのread-only JOINと証拠鎖検証を実装し、`n2FeatureSourceAdapter.ts`はverified lineage以外を拒否する。現F0 typed observation registryには`official_program`がなく、全券種market observationも未整備のため、実join/coverageは引き続き未確認。
+`n2FeatureDatasetBuilder.ts`は両PIT guardをselection-level build pathへ接続済み。既知のlive-only keyはnamespaced keyでもcallerがclassを偽装できず、unsafeなfeature/oddsが一つでもあればcandidate全体を0行でfail-closedにする。`n2FeatureLineage.ts`はF0 observation/parse/rawのread-only JOINと証拠鎖検証を実装し、`n2FeatureSourceAdapter.ts`はverified lineage以外を拒否する。F0 typed observation registryにはstrictな`official_program` pre-race payload契約を追加済みで、canonical join identityは`YYYY-MM-DD:venue:RraceNo`に固定した。実collectorによるobservation生成、primary payloadとの値一致、全券種market observationは未整備のため、実join/coverageは引き続き未確認。
 
 coverage/provenanceは`n2FeatureCoverage.ts`で年代・feature・odds selection別に集計する。分母はrace×source kind×keyで固定し、未検証lineageを黙ってdropしない。実eventが0件なら`PENDING_REAL_DATA`となり、coverage 0%を実測結果として昇格しない。
 
