@@ -1,12 +1,14 @@
 # N2 Feature Point-in-Time (PIT) Contract
 
-更新: 2026-07-30
+更新: 2026-08-01
 状態: 設計＋enforcement（既存 `programFeatureSafety.ts` を N2 へ統合）
 enforcement: [`../src/research-replay/n2DatasetContract.ts`](../src/research-replay/n2DatasetContract.ts) `validateFeaturePIT`、既存 [`../src/domain/programFeatureSafety.ts`](../src/domain/programFeatureSafety.ts)、既存 gate [`racer-ability-feature-safety.md`](racer-ability-feature-safety.md)
 
 ## 原則
 
 feature は `available_at <= decision_cutoff`（通常 race lock time）を満たす場合のみ使用可。**race date だけで安全判定しない**（同日後続 race や post-race 更新の逆流を防ぐ）。`available_at` 不明は **fail-closed（除外）**。同一 millisecond は inclusive。
+
+oddsはkind判定と時刻判定を分離しない。`validateOddsUsage`へ`kind / role / capturedAt / availableAt / decisionCutoff`を同時に渡し、live checkpointではcapture/availabilityの双方がcutoff以下、かつavailabilityがcapture以下であることを強制する。closingは妥当な時刻を持つ価格評価専用で、feature/decisionには使用しない。contract versionは`n2-feature-pit-contract-v2`。
 
 ## Feature 分類（既存 `programFeatureSafety.ts` を継承）
 
@@ -49,4 +51,6 @@ prototype（`prototype-n2-dataset.ts`）で label digest の決定的再生成�
 - live_only feature を historical で使用 → `excluded_live_only_in_historical`
 - post-race settlement-derived feature（cutoff 後 available）→ 除外
 - closing/post_race odds を feature role → 拒否、evaluation role → closing のみ許可
+- live checkpointのcapturedAt/availableAtがcutoffより1msでも未来 → 拒否
+- availableAt > capturedAt、時刻欠損、不正timestamp → reason code付きfail-closed
 - 既存 static scan `pnpm check:point-in-time-safety` を N2 dataset build 前に必須化する。
