@@ -36,16 +36,61 @@ test("eligibility: conflict/unresolved/source_duplicate fail closed", () => {
 test("target: hit/miss/payout derived only from canonical winning selections; ineligible → null (never loss)", () => {
   const eligible = { eligible: true, reason: "eligible" as const };
   const hit = deriveBetLabel({ eligibility: eligible, betSelection: "1-2-3", winningSelections: ["1-2-3"], payoutYenBySelection: { "1-2-3": 4200 } });
-  assert.deepEqual(hit, { eligible: true, reason: "eligible", hit: 1, payoutYenPer100: 4200 });
+  assert.deepEqual(hit, { eligible: true, reason: "eligible", outcome: "hit", hit: 1, payoutYenPer100: 4200 });
   const miss = deriveBetLabel({ eligibility: eligible, betSelection: "1-2-4", winningSelections: ["1-2-3"], payoutYenBySelection: { "1-2-3": 4200 } });
-  assert.deepEqual(miss, { eligible: true, reason: "eligible", hit: 0, payoutYenPer100: 0 });
+  assert.deepEqual(miss, { eligible: true, reason: "eligible", outcome: "loss", hit: 0, payoutYenPer100: 0 });
   // 同着など複数 winning
   const multi = deriveBetLabel({ eligibility: eligible, betSelection: "2-3", winningSelections: ["1-2", "2-3"], payoutYenBySelection: { "1-2": 150, "2-3": 200 } });
   assert.equal(multi.hit, 1);
   assert.equal(multi.payoutYenPer100, 200);
   // ineligible → null（loss ではない）
   const inelig = deriveBetLabel({ eligibility: { eligible: false, reason: "excluded_refunded" }, betSelection: "1-2-3", winningSelections: [], payoutYenBySelection: {} });
-  assert.deepEqual(inelig, { eligible: false, reason: "excluded_refunded", hit: null, payoutYenPer100: null });
+  assert.deepEqual(inelig, { eligible: false, reason: "excluded_refunded", outcome: "void", hit: null, payoutYenPer100: null });
+});
+
+test("target: partial refund and special payout are financial outcomes, never classification losses", () => {
+  const eligible = { eligible: true, reason: "eligible" as const };
+  const refunded = deriveBetLabel({
+    eligibility: eligible,
+    betSelection: "1-2-4",
+    winningSelections: ["1-2-3"],
+    payoutYenBySelection: { "1-2-3": 4200 },
+    refundedSelections: ["1-2-4"],
+    refundYenBySelection: { "1-2-4": 100 },
+  });
+  assert.deepEqual(refunded, {
+    eligible: true,
+    reason: "eligible",
+    outcome: "refund",
+    hit: null,
+    payoutYenPer100: 100,
+  });
+
+  const special = deriveBetLabel({
+    eligibility: eligible,
+    betSelection: "3-5",
+    winningSelections: [],
+    payoutYenBySelection: {},
+    specialPayoutYenPer100: 70,
+  });
+  assert.deepEqual(special, {
+    eligible: true,
+    reason: "eligible",
+    outcome: "special_payout",
+    hit: null,
+    payoutYenPer100: 70,
+  });
+
+  const unknownRefundAmount = deriveBetLabel({
+    eligibility: eligible,
+    betSelection: "2",
+    winningSelections: [],
+    payoutYenBySelection: {},
+    refundedSelections: ["2"],
+  });
+  assert.equal(unknownRefundAmount.outcome, "refund");
+  assert.equal(unknownRefundAmount.hit, null);
+  assert.equal(unknownRefundAmount.payoutYenPer100, null);
 });
 
 test("feature PIT: available_at boundary is inclusive at cutoff, future rejected, unknown fail-closed", () => {
