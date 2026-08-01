@@ -1,7 +1,7 @@
 // N2 training dataset contract（設計＋enforcement、model trainingは行わない）。
 // N1 canonical active settlement を label source とし、eligibility / target / PIT を fail-closed で判定する。
 // 純関数のみ。DB/production/model へは接続しない。
-import type { SettlementStatus, ResolutionStatus } from "./settlement";
+import type { SettlementBetType, SettlementStatus, ResolutionStatus } from "./settlement";
 
 export const N2_DATASET_CONTRACT_VERSION = "n2-dataset-contract-v1";
 export const N2_TARGET_CONTRACT_VERSION = "n2-target-contract-v2";
@@ -115,6 +115,74 @@ export function deriveBetLabel(input: BetSelectionLabelInput): BetLabel {
     hit,
     payoutYenPer100: payout,
   };
+}
+
+// ===== full selection space（race × bet_type × bet_selection） =====
+export const N2_SELECTION_COUNT_BY_BET_TYPE: Readonly<Record<SettlementBetType, number>> = {
+  win: 6,
+  place: 6,
+  exacta: 30,
+  quinella: 15,
+  trifecta: 120,
+  trio: 20,
+  wide: 15,
+};
+
+const N2_SELECTION_ARITY: Readonly<Record<SettlementBetType, 1 | 2 | 3>> = {
+  win: 1,
+  place: 1,
+  exacta: 2,
+  quinella: 2,
+  trifecta: 3,
+  trio: 3,
+  wide: 2,
+};
+
+const N2_UNORDERED_BET_TYPES = new Set<SettlementBetType>(["quinella", "wide", "trio"]);
+
+// N1 canonical selectionと同じく艇番1〜6、ordered券種は順列、unordered券種は昇順組合せ。
+// 返却順も固定し、dataset digest/rebuildがruntimeのSet順等に依存しないようにする。
+export function enumerateBetSelections(betType: SettlementBetType): string[] {
+  const arity = N2_SELECTION_ARITY[betType];
+  const unordered = N2_UNORDERED_BET_TYPES.has(betType);
+  const selections: string[] = [];
+
+  const visit = (prefix: number[]): void => {
+    if (prefix.length === arity) {
+      selections.push(prefix.join("-"));
+      return;
+    }
+    const minimum = unordered && prefix.length > 0 ? prefix[prefix.length - 1] + 1 : 1;
+    for (let boat = minimum; boat <= 6; boat += 1) {
+      if (prefix.includes(boat)) continue;
+      visit([...prefix, boat]);
+    }
+  };
+
+  visit([]);
+  const expected = N2_SELECTION_COUNT_BY_BET_TYPE[betType];
+  if (selections.length !== expected || new Set(selections).size !== expected) {
+    throw new Error(`N2_SELECTION_SPACE_INVARIANT:${betType}:${selections.length}/${expected}`);
+  }
+  return selections;
+}
+
+export type SelectionLevelLabelInput = Omit<BetSelectionLabelInput, "betSelection"> & {
+  betType: SettlementBetType;
+};
+
+export type SelectionLevelLabel = BetLabel & {
+  betType: SettlementBetType;
+  betSelection: string;
+};
+
+// candidate-level summaryではなく、全selectionを実際にderiveBetLabelへ通す唯一の入口。
+export function deriveSelectionLevelLabels(input: SelectionLevelLabelInput): SelectionLevelLabel[] {
+  return enumerateBetSelections(input.betType).map((betSelection) => ({
+    betType: input.betType,
+    betSelection,
+    ...deriveBetLabel({ ...input, betSelection }),
+  }));
 }
 
 // ===== feature PIT contract（available_at <= decision cutoff、fail-closed） =====
