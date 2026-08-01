@@ -144,7 +144,7 @@ primary DB schemaを再監査し、`official_programs`には`imported_at`しか�
 - lineage tests: 6 pass / adapter integration tests: 7 pass
 - targeted TypeScript strict check: PASS
 - 実DB/sidecar write: 0
-- 未確認: 実sidecar join率、feature×年代coverage。現typed registryにofficial_programがなく、全券種market observationも未整備
+- 未確認: 実sidecar join率、feature×年代coverage。`official_program` typed契約は追加済みだが実collector observationがなく、全券種market observationも未整備
 
 ## Non-blocking hardening: feature coverage/provenance profile
 
@@ -162,6 +162,10 @@ primary DB schemaを再監査し、`official_programs`には`imported_at`しか�
 ## Non-blocking hardening: immutable trifecta market coverage reader
 
 `n2-odds-coverage-reader-v1`を追加し、primary race universeとF0 typed `trifecta_market`をimmutable/read-onlyで結合する。指定checkpointごとに3連単120selectionを分母化し、payload type/schema/hash、lineage、observed_at、selection spaceを検証する。bet_typeなしlegacy oddsは推測昇格しない。隔離SQLite E2E 4/4、targeted strict typecheck、reader前後DB SHA-256一致がPASS。実sidecar coverageと全券種live marketは未確認/未整備。
+
+## Non-blocking hardening: canonical F0 identity + official-program typed payload
+
+coverage readerが生成していた`YYYY-MM-DD:venue:2桁raceNo`はF0 identity正本`YYYY-MM-DD:venue:RraceNo`と一致せず、実sidecar joinを常に0件にする確定bugだった。shared race-key helperとprogram/odds E2E fixtureを正本形式へ訂正した。さらにF0 registryへstrict `official_program / pre_race` payloadを追加し、6艇の一意course、登録番号、級別、各rate、canonical identity、source observed時刻、exact keysを検証する。golden semantic hashを固定し、契約3/3を含む対象tests 10/10、targeted strict typecheckがPASS。実collector生成・primary raw_json値照合・実coverageは未確認であり、fixture結果を実測へ昇格しない。
 
 ## 次gate
 
