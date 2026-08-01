@@ -10,6 +10,8 @@ feature は `available_at <= decision_cutoff`（通常 race lock time）を満�
 
 oddsはkind判定と時刻判定を分離しない。`validateOddsUsage`へ`kind / role / capturedAt / availableAt / decisionCutoff`を同時に渡し、live checkpointではcapture/availabilityの双方がcutoff以下、かつavailabilityがcapture以下であることを強制する。closingは妥当な時刻を持つ価格評価専用で、feature/decisionには使用しない。contract versionは`n2-feature-pit-contract-v2`。
 
+`n2FeatureDatasetBuilder.ts`は両PIT guardをselection-level build pathへ接続済み。既知のlive-only keyはcallerがclassを偽装しても拒否し、unsafeなfeature/oddsが一つでもあればcandidate全体を0行でfail-closedにする。実DBからfeature observationを作るread-only adapterとcoverage/provenance集計は未実装。
+
 ## Feature 分類（既存 `programFeatureSafety.ts` を継承）
 
 | class | 例（feature key） | source | N2 historical 使用 |
