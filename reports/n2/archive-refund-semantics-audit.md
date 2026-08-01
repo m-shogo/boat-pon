@@ -76,9 +76,21 @@ scanner実装commit:
 - 新規scanner/helper/testの構文check: **PASS**
 - full unit/typecheck/build: **PENDING**（GitHub Actions run/status未生成、raw archiveを持つlocal checkout未接続）
 
+## Non-blocking label hardening
+
+raw archiveが未接続でも確定できる別のlabel契約bugを修正した。
+
+- `partially_refunded` はeligibleだが、旧 `deriveBetLabel` は返還対象selectionを受け取れず `hit=0 / payout=0` にしていた
+- special payoutもwinning selectionを持たないため、旧契約のままselection列挙すると全件lossになり得た
+- target contractを `n2-target-contract-v2` へ上げ、`outcome=hit/loss/refund/special_payout/void` を追加
+- refund / special_payout / void は `hit=null`。financial targetだけに実返還/特払額を保持し、金額不明を100円へ推測補完しない
+- Node 24 contract test: 8 pass / 0 fail
+
+commit: `947f9224153f23130181f212a9a7a0dad5b45e9d` (contract), `4aefcee1f4caf9a005d7507eea83022aeaa56b01` (test), `a32fc1f1d407e9fc8ce7e3aecc1deef65f9e591a` (docs)
+
 ## 次gate
 
-1. `--limit=20` smoke scan + unit/typecheck
+1. `--limit=20` smoke scan + full repo unit/typecheck
 2. raw archive全件を再parseし、`year × bet_type × event_kind`を確定
 3. 319,301候補とのcanonical/source-duplicate reconciliationを取る
 4. append-only `parser_reparse` / supersession計画をtemp copyで検証
