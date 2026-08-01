@@ -284,3 +284,13 @@ next:
 1. raw archive/実sidecarへ到達できればrefund scannerとcanonical reconciliationを最優先で実行する。
 2. 到達できなければ、capture failure→新attempt retry成功のfailure isolation、single-writer境界、shadow writer rollback/circuit breakerをtemp E2Eで固定する。
 3. 実writer接続は明示gate、backup/restore、canary、primary collector非伝播を満たすまで行わない。
+
+### Capture failure retry isolation
+
+- `recordOfficialProgramCaptureFailure`を追加し、network/timeout/partial-body系失敗をrawのないterminal capture attemptとして記録する。
+- schemaの`capture_event_no_after_terminal` triggerが失敗後のbody追加を拒否することをcollector fixtureで明示検証した。retryは同じlogical groupの新attemptで、失敗履歴を上書きしない。
+- E2E: failed 1 + succeeded retry 1 / link 1 / raw 1 / parse 1 / observation 1。collector 6/6、今回の関連回帰12/12、strict TypeScript PASS。
+- F0-Rにはprimary失敗非伝播、idempotent outbox retry、rollback/kill switchが既にあるため、新しい並行機構は作っていない。
+- commits: `8861a3963e961695c1c34f0109f1bcb7ffe5d425`, `fd1a1077f91cf57a27852b986632ed03bbc22a27`。
+
+next: raw入力があればarchive refund scannerを最優先。なければofficial_program shadow outbox message contractとsingle-writer/idempotency keyをtempで接続し、primary collectorへ失敗が伝播しない統合E2Eへ進む。live writerはOFF。
