@@ -288,6 +288,27 @@ export class ResearchReplayRepository {
     correctionKind?: string | null;
     correctionReason?: string | null;
   }): ParseResult {
+    return this.parseTypedRawDocument({
+      ...input,
+      parserName: input.parserName ?? "research-replay-fixture-json",
+      expectedSourceSchemaVersion: input.expectedSourceSchemaVersion ?? "fixture-envelope-v1",
+      parse: (bytes) => JSON.parse(bytes.toString("utf8")) as FixtureEnvelope,
+    });
+  }
+
+  parseTypedRawDocument(input: {
+    parseRunId?: string;
+    observationId?: string;
+    rawDocumentId: string;
+    parserName: string;
+    parserVersion: string;
+    expectedSourceSchemaVersion: string;
+    parse: (bytes: Buffer) => FixtureEnvelope;
+    supersedesParseRunId?: string | null;
+    supersedesObservationId?: string | null;
+    correctionKind?: string | null;
+    correctionReason?: string | null;
+  }): ParseResult {
     const raw = this.db.prepare(`
       SELECT raw_sha256, storage_path FROM raw_documents WHERE raw_document_id = ?
     `).get(input.rawDocumentId) as { raw_sha256: string; storage_path: string } | undefined;
@@ -301,8 +322,8 @@ export class ResearchReplayRepository {
     let semanticHash: string | null = null;
     let warningCodes: string[] = [];
     try {
-      envelope = JSON.parse(bytes.toString("utf8")) as FixtureEnvelope;
-      if (envelope.sourceSchemaVersion !== (input.expectedSourceSchemaVersion ?? "fixture-envelope-v1")) {
+      envelope = input.parse(bytes);
+      if (envelope.sourceSchemaVersion !== input.expectedSourceSchemaVersion) {
         status = "unknown_schema";
         errorCode = "UNKNOWN_SOURCE_SCHEMA";
       } else {
@@ -327,7 +348,7 @@ export class ResearchReplayRepository {
     `).run(
       parseRunId,
       input.rawDocumentId,
-      input.parserName ?? "research-replay-fixture-json",
+      input.parserName,
       input.parserVersion,
       envelope?.sourceSchemaVersion ?? "unreadable",
       CANONICALIZATION_VERSION,
