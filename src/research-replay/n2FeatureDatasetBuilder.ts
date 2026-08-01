@@ -93,8 +93,10 @@ const HISTORICAL_SAFE_KEYS = new Set<string>(HISTORICAL_SAFE_FEATURE_KEYS);
 
 // known keyのclassをcallerが偽装してPIT guardを迂回することを禁止する。
 function classificationMatches(feature: N2FeatureObservation): boolean {
-  if (LIVE_ONLY_KEYS.has(feature.featureKey)) return feature.pitClass === "live_only";
-  if (HISTORICAL_SAFE_KEYS.has(feature.featureKey)) return feature.pitClass === "historical_safe";
+  // boat.1.courseAvgSt のようなnamespaced keyでもbase keyを検査し、prefixによるlaunderingを防ぐ。
+  const baseKey = feature.featureKey.split(".").at(-1) ?? feature.featureKey;
+  if (LIVE_ONLY_KEYS.has(baseKey)) return feature.pitClass === "live_only";
+  if (HISTORICAL_SAFE_KEYS.has(baseKey)) return feature.pitClass === "historical_safe";
   return true;
 }
 
