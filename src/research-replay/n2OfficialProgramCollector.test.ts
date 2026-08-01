@@ -101,6 +101,93 @@ test("parse failure remains a successful capture with an error parse run", () =>
   }
 });
 
+test("same raw retry preserves both capture histories without duplicate observations", () => {
+  const ctx = context();
+  try {
+    const first = captureOfficialProgramObservation({
+      ...captureInput(ctx.repository),
+      captureAttemptId: "capture-program-first",
+      captureStartedEventId: "event-started-first",
+      responseHeadersEventId: "event-headers-first",
+      bodyCompletedEventId: "event-body-first",
+      rawDocumentId: "raw-program-first",
+      parseRunId: "parse-program-first",
+      observationId: "obs-program-first",
+    });
+    const second = captureOfficialProgramObservation({
+      ...captureInput(ctx.repository),
+      requestStartedAt: "2004-01-01T01:02:58Z",
+      responseHeadersReceivedAt: "2004-01-01T01:02:59Z",
+      bodyCompletedAt: "2004-01-01T01:03:00Z",
+      sourceObservedAt: "2004-01-01T01:03:00Z",
+      firstSeenAt: "2004-01-01T01:04:00Z",
+      captureAttemptId: "capture-program-retry",
+      captureStartedEventId: "event-started-retry",
+      responseHeadersEventId: "event-headers-retry",
+      bodyCompletedEventId: "event-body-retry",
+      rawDocumentId: "raw-program-retry",
+      parseRunId: "parse-program-retry",
+      observationId: "obs-program-retry",
+    });
+
+    assert.equal(first.reusedObservation, false);
+    assert.equal(second.rawDocumentId, first.rawDocumentId);
+    assert.equal(second.reusedObservation, true);
+    assert.equal(second.parse.parseRunId, first.parse.parseRunId);
+    assert.equal(second.parse.observationId, first.parse.observationId);
+    assert.equal((ctx.db.prepare("SELECT COUNT(*) AS n FROM capture_attempts").get() as { n: number }).n, 2);
+    assert.equal((ctx.db.prepare("SELECT COUNT(*) AS n FROM capture_raw_links").get() as { n: number }).n, 2);
+    assert.equal((ctx.db.prepare("SELECT COUNT(*) AS n FROM raw_documents").get() as { n: number }).n, 1);
+    assert.equal((ctx.db.prepare("SELECT COUNT(*) AS n FROM parse_runs").get() as { n: number }).n, 1);
+    assert.equal((ctx.db.prepare("SELECT COUNT(*) AS n FROM domain_observations").get() as { n: number }).n, 1);
+  } finally {
+    ctx.db.close();
+    rmSync(ctx.dir, { recursive: true, force: true });
+  }
+});
+
+test("same bytes for a different race never reuse external race identity", () => {
+  const ctx = context();
+  try {
+    const first = captureOfficialProgramObservation({
+      ...captureInput(ctx.repository),
+      captureAttemptId: "capture-r1",
+      captureStartedEventId: "event-started-r1",
+      responseHeadersEventId: "event-headers-r1",
+      bodyCompletedEventId: "event-body-r1",
+      rawDocumentId: "raw-r1",
+      parseRunId: "parse-r1",
+      observationId: "obs-r1",
+    });
+    const second = captureOfficialProgramObservation({
+      ...captureInput(ctx.repository),
+      logicalRequestGroupId: "program-20040101-01-02",
+      canonicalRaceKey: "2004-01-01:01:R2",
+      requestStartedAt: "2004-01-01T01:02:58Z",
+      responseHeadersReceivedAt: "2004-01-01T01:02:59Z",
+      bodyCompletedAt: "2004-01-01T01:03:00Z",
+      sourceObservedAt: "2004-01-01T01:03:00Z",
+      firstSeenAt: "2004-01-01T01:04:00Z",
+      captureAttemptId: "capture-r2",
+      captureStartedEventId: "event-started-r2",
+      responseHeadersEventId: "event-headers-r2",
+      bodyCompletedEventId: "event-body-r2",
+      rawDocumentId: "raw-r2",
+      parseRunId: "parse-r2",
+      observationId: "obs-r2",
+    });
+
+    assert.equal(second.rawDocumentId, first.rawDocumentId);
+    assert.equal(second.reusedObservation, false);
+    assert.notEqual(second.parse.observationId, first.parse.observationId);
+    assert.equal((ctx.db.prepare("SELECT COUNT(*) AS n FROM raw_documents").get() as { n: number }).n, 1);
+    assert.equal((ctx.db.prepare("SELECT COUNT(*) AS n FROM domain_observations").get() as { n: number }).n, 2);
+  } finally {
+    ctx.db.close();
+    rmSync(ctx.dir, { recursive: true, force: true });
+  }
+});
+
 test("capture and raw-link time/byte inconsistencies fail closed", () => {
   const ctx = context();
   try {
