@@ -54,6 +54,12 @@ export type OfficialProgramCaptureResult = OfficialProgramIngestResult & {
   reusedObservation: boolean;
 };
 
+export type OfficialProgramCaptureFailureResult = {
+  captureAttemptId: string;
+  failureEventId: string;
+  state: "failed";
+};
+
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -199,6 +205,48 @@ function rawFailureReason(error: unknown): CaptureFailureReason {
     "unknown_charset",
   ];
   return known.find((reason) => message.includes(reason)) ?? "partial_body";
+}
+
+export function recordOfficialProgramCaptureFailure(input: {
+  repository: ResearchReplayRepository;
+  logicalRequestGroupId: string;
+  canonicalRaceKey: string;
+  sourceUrl: string;
+  requestStartedAt: string;
+  failedAt: string;
+  failureReason: Exclude<CaptureFailureReason, "cancelled" | "process_crash_detected">;
+  captureAttemptId?: string;
+  captureStartedEventId?: string;
+  failureEventId?: string;
+}): OfficialProgramCaptureFailureResult {
+  const requestStartedAt = canonicalUtcTimestamp(input.requestStartedAt);
+  const failedAt = canonicalUtcTimestamp(input.failedAt);
+  if (Date.parse(failedAt) < Date.parse(requestStartedAt)) {
+    throw new Error("official program failure precedes request start");
+  }
+  const captureAttemptId = input.repository.createCaptureAttempt({
+    captureAttemptId: input.captureAttemptId,
+    logicalRequestGroupId: input.logicalRequestGroupId,
+    canonicalRaceKey: input.canonicalRaceKey,
+    sourceUrl: input.sourceUrl,
+    method: "GET",
+    requestStartedAt,
+    sourceType: "official_program",
+  });
+  input.repository.addCaptureEvent({
+    eventId: input.captureStartedEventId,
+    captureAttemptId,
+    eventKind: "capture_started",
+    occurredAt: requestStartedAt,
+  });
+  const failureEventId = input.repository.addCaptureEvent({
+    eventId: input.failureEventId,
+    captureAttemptId,
+    eventKind: "capture_failed",
+    occurredAt: failedAt,
+    failureReason: input.failureReason,
+  });
+  return { captureAttemptId, failureEventId, state: "failed" };
 }
 
 export function captureOfficialProgramObservation(input: {
