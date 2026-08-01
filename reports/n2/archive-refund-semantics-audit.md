@@ -171,6 +171,10 @@ coverage readerが生成していた`YYYY-MM-DD:venue:2桁raceNo`はF0 identity�
 
 共通`programFeatures` parserの`Number(value)`は`null`と空文字を0へ変換し、欠損rateを「実値0」として特徴補正へ入れ得た。null/undefined/blankはnullのまま保持し、実値0だけを0として残す回帰testを追加した。`n2-official-program-parser-v1`はprimary rawからtyped payload/envelopeを決定的に生成し、非数値・重複course・rate範囲・source時刻順序をfail-closedにする。immutable coverage readerはF0証拠鎖だけでは昇格せず、typed payload rowの存在、domain/typed schema/hash、canonical identity、observed_at、primary rawのsemantic一致を要求する。missing typed payloadとprimary差異のE2Eを追加し、対象17/17 testsとtargeted strict typecheckがPASS。実sidecar/primary DB writeは0で、実collector接続・実profileは未確認。
 
+## Non-blocking hardening: byte-exact official-program F0 ingest
+
+既存F0 fixture parserはraw document自体がenvelopeである前提だったため、そのまま公式番組へ流用すると正規化envelopeをraw原本として保存する危険があった。repositoryへbyte-exact rawを再読込する共通typed parser経路を追加し、official-program adapterはprimary `raw_json`そのものをraw storeへ保存してからtyped payloadを生成する。temp sidecar E2Eでraw byte一致、parse/domain/typed lineage、coverage 42/42 verifiedを確認。不正JSONは`parse_runs.status=error`だけを残し、observation/payloadは0件。新規2/2、関連回帰込み9/9、targeted strict typecheck PASS。実DB・live collectorは変更していない。
+
 ## 次gate
 
 1. `--limit=20` smoke scan + full repo unit/typecheck
