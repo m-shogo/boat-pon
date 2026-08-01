@@ -3,7 +3,10 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { captureOfficialProgramObservation } from "./n2OfficialProgramObservation";
+import {
+  captureOfficialProgramObservation,
+  recordOfficialProgramCaptureFailure,
+} from "./n2OfficialProgramObservation";
 import { RawStore } from "./rawStore";
 import { ResearchReplayRepository } from "./repository";
 import { initializeSidecarSchema, openSidecarDatabase } from "./schema";
@@ -236,3 +239,52 @@ test("capture and raw-link time/byte inconsistencies fail closed", () => {
     rmSync(ctx.dir, { recursive: true, force: true });
   }
 });
+
+test("failed attempt is terminal and retry uses a new isolated attempt", () => {
+  const ctx = context();
+  try {
+    const failed = recordOfficialProgramCaptureFailure({
+      repository: ctx.repository,
+      captureAttemptId: "capture-failed",
+      logicalRequestGroupId: "program-20040101-01-01",
+      canonicalRaceKey: "2004-01-01:01:R1",
+      sourceUrl: "https://example.invalid/program",
+      requestStartedAt: "2004-01-01T01:00:00Z",
+      failedAt: "2004-01-01T01:00:01Z",
+      failureReason: "timeout",
+      captureStartedEventId: "failed-start",
+      failureEventId: "failed-terminal",
+    });
+    assert.equal(failed.state, "failed");
+    assert.equal(ctx.repository.captureState(failed.captureAttemptId), "failed");
+    assert.throws(() => ctx.repository.addCaptureEvent({
+      eventId: "illegal-late-body",
+      captureAttemptId: failed.captureAttemptId,
+      eventKind: "body_completed",
+      occurredAt: "2004-01-01T01:00:02Z",
+      byteCount: Buffer.byteLength(programRaw(), "utf8"),
+    }), /already terminal/);
+
+    const retry = captureOfficialProgramObservation({
+      ...captureInput(ctx.repository),
+      captureAttemptId: "capture-retry-success",
+      captureStartedEventId: "retry-start",
+      responseHeadersEventId: "retry-headers",
+      bodyCompletedEventId: "retry-body",
+      rawDocumentId: "retry-raw",
+      parseRunId: "retry-parse",
+      observationId: "retry-observation",
+    });
+    assert.equal(ctx.repository.captureState(failed.captureAttemptId), "failed");
+    assert.equal(ctx.repository.captureState(retry.captureAttemptId), "succeeded");
+    assert.equal((ctx.db.prepare("SELECT COUNT(*) AS n FROM capture_attempts").get() as { n: number }).n, 2);
+    assert.equal((ctx.db.prepare("SELECT COUNT(*) AS n FROM capture_raw_links").get() as { n: number }).n, 1);
+    assert.equal((ctx.db.prepare("SELECT COUNT(*) AS n FROM raw_documents").get() as { n: number }).n, 1);
+    assert.equal((ctx.db.prepare("SELECT COUNT(*) AS n FROM parse_runs").get() as { n: number }).n, 1);
+    assert.equal((ctx.db.prepare("SELECT COUNT(*) AS n FROM domain_observations").get() as { n: number }).n, 1);
+  } finally {
+    ctx.db.close();
+    rmSync(ctx.dir, { recursive: true, force: true });
+  }
+});
+
