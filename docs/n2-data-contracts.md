@@ -57,6 +57,8 @@ label source: N1 canonical **active** settlement（`source_duplicate` 除外・`
 
 `n2FeatureSourceAdapter.ts`はlegacy primary DB rowをbuilder inputへ変換する純関数境界である。`official_programs.imported_at`やrace dateをsource availabilityへ代用しない。`n2FeatureLineage.ts`のread-only SQLでF0 `domain_observations → parse_runs → raw_documents`を結び、race/type/raw ID三者一致、parse success、raw integrity/security/replay eligibility、official source、確定またはobserved-only時刻を検証した`n2-feature-lineage-v1`だけを昇格する。ID文字列の存在だけではlineageと認めない。oddsはcaptured_atとF0 source_observed_atの一致も必須で、available_atはverified evidenceから取得する。legacy trifectaの暗黙補完は明示optionなしでは行わない。lineage tests 6/6、adapter tests 7/7 PASS。
 
+`n2FeatureCoverage.ts`はrace×source kind×feature keyを分母として、年代別・feature別のverified/excluded、coverage、provenance完備数、unique observation/raw数、availability basis、除外理由を決定順で集計しSHA-256 digestを固定する。同一分母の重複、不完全なverified provenance、ambiguousなexcluded eventはfail-closed。`pnpm profile:n2:feature-coverage -- --input=<events.json>`でread-only入力をprofile化する。実入力0件は`PENDING_REAL_DATA`かつexit 2、fixtureは`FIXTURE_ONLY`で、実測と混同しない。profile tests 6/6 PASS。
+
 ## 2. Target Contract
 
 raw truth を直接 target にしない。canonical active settlement からのみ導出（`deriveBetLabel`）。段階分離:
