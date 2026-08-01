@@ -187,16 +187,19 @@ export function buildN2SelectionProfile(
   const digest = createHash("sha256");
   const outcomes = emptyOutcomes();
   const eligibilityByReason = {} as Record<EligibilityCode, number>;
-  const byBetMutable = Object.fromEntries(BET_TYPES.map((betType) => [betType, {
-    candidates: 0,
-    eligibleCandidates: 0,
-    selections: 0,
-    outcomes: emptyOutcomes(),
-    classificationRows: 0,
-    hits: 0,
-    hitRate: null,
-    positivePayouts: [],
-  }])) as Record<SettlementBetType, MutableBetProfile>;
+  const byBetMutable = BET_TYPES.reduce((profiles, betType) => {
+    profiles[betType] = {
+      candidates: 0,
+      eligibleCandidates: 0,
+      selections: 0,
+      outcomes: emptyOutcomes(),
+      classificationRows: 0,
+      hits: 0,
+      hitRate: null,
+      positivePayouts: [],
+    };
+    return profiles;
+  }, {} as Record<SettlementBetType, MutableBetProfile>);
 
   let eligibleCandidateCount = 0;
   let selectionCount = 0;
