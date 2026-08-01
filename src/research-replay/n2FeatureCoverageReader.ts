@@ -13,7 +13,7 @@ import {
 
 export const N2_FEATURE_COVERAGE_READER_VERSION = "n2-feature-coverage-reader-v1";
 
-type OfficialProgramDbRow = {
+export type N2CoverageRaceRow = {
   raceId: string;
   date: string;
   venue: string;
@@ -47,12 +47,12 @@ WHERE o.canonical_race_key = ? AND o.observation_type = 'official_program'
 ORDER BY o.observation_id
 `;
 
-function openImmutable(path: string): DatabaseSync {
+export function openN2CoverageDbImmutable(path: string): DatabaseSync {
   const uri = `${pathToFileURL(path).href}?immutable=1`;
   return new DatabaseSync(uri, { readOnly: true } as never);
 }
 
-function canonicalRaceKey(row: OfficialProgramDbRow): string {
+export function canonicalN2CoverageRaceKey(row: Pick<N2CoverageRaceRow, "raceId" | "date" | "venue" | "raceNo">): string {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(row.date) || !Number.isFinite(Date.parse(`${row.date}T00:00:00Z`))) {
     throw new Error(`N2_COVERAGE_INVALID_PROGRAM_DATE:${row.raceId}`);
   }
@@ -85,10 +85,10 @@ function excludedProgramEvents(canonicalKey: string, reason: string): N2FeatureC
 }
 
 function eventsForProgram(
-  row: OfficialProgramDbRow,
+  row: N2CoverageRaceRow,
   evidenceRows: N2FeatureLineageEvidenceRow[],
 ): N2FeatureCoverageEvent[] {
-  const canonicalKey = canonicalRaceKey(row);
+  const canonicalKey = canonicalN2CoverageRaceKey(row);
   if (evidenceRows.length === 0) return excludedProgramEvents(canonicalKey, "excluded_lineage_not_found");
   if (evidenceRows.length > 1) return excludedProgramEvents(canonicalKey, "excluded_lineage_ambiguous_match");
 
@@ -145,8 +145,8 @@ export function readOfficialProgramCoverageEvents(input: {
     || input.dateFrom > input.dateTo) {
     throw new Error("N2_COVERAGE_INVALID_DATE_RANGE");
   }
-  const primary = openImmutable(input.primaryDbPath);
-  const sidecar = openImmutable(input.sidecarDbPath);
+  const primary = openN2CoverageDbImmutable(input.primaryDbPath);
+  const sidecar = openN2CoverageDbImmutable(input.sidecarDbPath);
   try {
     const rows = primary.prepare(`
       SELECT
@@ -160,11 +160,11 @@ export function readOfficialProgramCoverageEvents(input: {
       FROM official_programs
       WHERE date >= ? AND date <= ?
       ORDER BY date, venue, race_no
-    `).all(input.dateFrom, input.dateTo) as unknown as OfficialProgramDbRow[];
+    `).all(input.dateFrom, input.dateTo) as unknown as N2CoverageRaceRow[];
     const lineage = sidecar.prepare(PROGRAM_LINEAGE_SQL);
     const events: N2FeatureCoverageEvent[] = [];
     for (const row of rows) {
-      const canonicalKey = canonicalRaceKey(row);
+      const canonicalKey = canonicalN2CoverageRaceKey(row);
       const evidenceRows = lineage.all(canonicalKey) as unknown as N2FeatureLineageEvidenceRow[];
       events.push(...eventsForProgram(row, evidenceRows));
     }
