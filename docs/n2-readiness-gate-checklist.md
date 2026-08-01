@@ -25,9 +25,9 @@ design/contract/enforcement/prototype を実装（[`n2-data-contracts.md`](n2-da
 |---|---|---|
 | A. canonical settlement truth | **CONDITIONAL** | structural integrity/active uniquenessはPASS。`ARCHIVE_REFUND_SEMANTICS_AUDIT`のraw再集計・supersession未完了 |
 | B. training dataset contract | **READY(enforcement) / PROFILE STALE** | fail-closed契約は実装済み。96.03%はparser v1由来を含み再集計までtruthにしない |
-| C. target definition | **READY(enforcement)** | target v2、7券種212 selection列挙、`hit/loss/refund/special_payout/void`、10 contract tests PASS |
+| C. target definition | **READY(enforcement)** | target v2、7券種212 selection列挙、`hit/loss/refund/special_payout/void`、12 contract tests PASS |
 | D. feature PIT | **READY(enforcement) / PARTIAL(feature 接続)** | `validateFeaturePIT` + 既存 `programFeatureSafety.ts`。実 feature build 接続は N2 実装時 |
-| E. odds PIT/timing | **READY** | `validateOddsUsage`（feature=live_checkpoint のみ、closing=eval 専用） |
+| E. odds PIT/timing | **READY(enforcement) / PARTIAL(builder接続)** | atomic `validateOddsUsage`がkind/role/capturedAt/availableAt/cutoffを一体検証。live checkpointの未来値・時刻矛盾をfail-closed、closing=eval専用。実builder接続は未完了 |
 | F. unresolved settlement handling | **CONDITIONAL** | conflict/cancel/source_duplicateはfail-closed。部分返還labelは修正済みだがarchive明示返還のraw監査が未完了 |
 | G. dataset reproducibility | **READY(code) / PENDING(real data run)** | immutable DBをclose後、別connectionで入力を再読込する独立rebuild script実装。隔離SQLite fixtureでPASS、実sidecar実行は未確認 |
 | H. split policy | **READY(設計)** | time-based・race-level group・coverage gap/era drift 尊重 |
