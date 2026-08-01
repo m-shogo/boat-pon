@@ -1,6 +1,6 @@
 # N2 Data Contracts — dataset / target / settlement-label / odds-timing
 
-更新: 2026-07-30
+更新: 2026-08-01
 状態: **設計＋enforcement 実装（model training は未着手）**
 enforcement: [`../src/research-replay/n2DatasetContract.ts`](../src/research-replay/n2DatasetContract.ts)（純関数、tests: `n2DatasetContract.test.ts`）
 label source: N1 canonical **active** settlement（`source_duplicate` 除外・`resolved` のみ）
@@ -34,8 +34,9 @@ raw truth を直接 target にしない。canonical active settlement からの�
 
 | target | 定義 | source | 備考 |
 |---|---|---|---|
-| `hit`（classification） | bet_selection ∈ canonical winning selections → 1/0 | payout line canonical | ineligible は **null（loss 扱い禁止）** |
-| `payoutYenPer100`（financial） | hit 時の払戻（100円あたり）、miss は 0 | payout_yen | refund は財務 target 側で別扱い |
+| `outcome` | `hit / loss / refund / special_payout / void` | canonical payout/refund line | classificationとfinancial事象を分離 |
+| `hit`（classification） | bet_selection ∈ canonical winning selections → 1/0 | payout line canonical | refund / special_payout / void は **null（loss 扱い禁止）** |
+| `payoutYenPer100`（financial） | hit時の払戻、lossは0、refund/special_payoutは実額 | payout/refund line | 金額不明のrefundはnull（100円を推測しない） |
 
 - 券種別 semantics: win/place=艇番、exacta/quinella/wide=2艇、trifecta/trio=3艇（順序あり/なしは N1 canonical に従う）。同着は複数 winning selection（`deriveBetLabel` は複数一致で hit=1・該当 payout を採用）。
 - class balance（実測、eligible 比率）: win 99.95% / place 97.45% / exacta 95.03% / quinella 95.03% / trifecta 94.92% / trio 95.02% / wide 95.05%（refund 率が多艇券種で高い）。hit 率自体は券種で大きく異なる（trifecta ≪ win）ため **券種別 target/calibration を必須**とする。
@@ -44,9 +45,11 @@ raw truth を直接 target にしない。canonical active settlement からの�
 
 - **canonical active** のみ使用（`source_duplicate` は label を二重計上しない — active view で除外済み、resolved 624）。
 - revision: 現行 canonical resolution を使用、reproducibility のため schema/resolution version を manifest に固定。
-- refund: hit/miss target と financial-return target で意味を分ける（refund を miss/loss にしない）。
+- refund: `refundedSelections` とselection別実返還額を渡し、対象selectionを `outcome=refund / hit=null` にする。candidateが `partially_refunded` でも非返還selectionだけが通常のhit/lossになる。
+- special payout: 券種別実額を `specialPayoutYenPer100` で渡し、全selectionを `outcome=special_payout / hit=null` にする。通常のwinning selectionへ推測変換しない。
 - cancel/no_sale: label 不成立（除外）。unsettled/conflict/unknown: fail-closed 除外。
-- state fixture は `n2DatasetContract.test.ts` で固定（settled→eligible、各除外理由、ineligible→null）。
+- target contract version: `n2-target-contract-v2`。
+- state fixture は `n2DatasetContract.test.ts` で固定（hit/loss、部分返還、特払い、各除外理由、ineligible→void/null）。
 
 ## 4. Odds Timing Contract（`validateOddsUsage`）
 
