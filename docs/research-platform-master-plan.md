@@ -616,3 +616,13 @@ M1はN3/N4の選手PIT gate、M3は主観を排したstrict-prior label gate、M
 - thresholdはコード内でproduction値を推測せず、policy versionと全値をcaller必須入力にした。出力は決定的digestとPASS/WARN/BLOCKED理由を持ち、message payloadを含めない。
 - temp E2Eでexhaustion marker、集計値、threshold reasons、同一digest、read中write 0、malformed diagnostics拒否を確認した。対象18 tests、targeted strict TypeScript PASS。schema migrationなし。
 - live writer、実sidecar threshold approval/canaryは未実施。archive refund再集計とN2 label truthはBLOCKEDのまま。
+
+
+### 2026-08-02 F0-R immutable operability CLI / approval binding
+
+- `shadow-operability-policy-v1`のstrict decoderとJSON Schemaを追加し、未知field・欠落threshold・不正範囲をdefault denyする。
+- policy canonical digestを既存append-only approval grantのtarget contractへ埋め込み、未承認、simulated→production流用、revoked/superseded、policy改変をread-only resolverでBLOCKEDにする。新しい承認schemaは追加しない。
+- CLI `pnpm report:shadow:operability -- --sidecar=<snapshot> --policy=<json> --as-of=<UTC> --mode=<simulated|production>`を追加した。PASS=0、WARN=2、BLOCKED=3。
+- CLIは`immutable=1/readOnly/query_only`で開き、非空WALがあるactive DBを拒否してquiescent snapshotを要求する。
+- temp E2Eでapproval lifecycle、policy digest binding、CLI決定性、active WAL拒否を確認。新規4 testsを含む対象7/7とtargeted strict TypeScriptがPASS。
+- production threshold/approvalは未作成。live writer、実sidecar canary、archive refund再集計、N2 label truthはBLOCKEDのまま。
