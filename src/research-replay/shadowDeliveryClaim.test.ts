@@ -64,6 +64,7 @@ test("two consumers cannot deliver the same outbox message concurrently", () => 
         examined: 1,
         contended: 1,
         skippedAfterClaim: 0,
+        handlerDeadlineExceeded: 0,
       });
       deliveriesA += 1;
     });
