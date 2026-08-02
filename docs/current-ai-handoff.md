@@ -317,3 +317,26 @@ next:
 2. 入力がなければ、outbox consumerのmixed message routing、permanent failure/circuit breaker、kill-switch rollbackをtemp統合で固定する。
 3. 実writer接続は明示approval、backup/restore、canary、primary非伝播、rollback rehearsalが揃うまで行わない。
 
+## 2026-08-02 mixed shadow routing / rollback
+
+completed:
+
+- F0-R `drain`へ明示的なpermanent failure分類を追加した。
+- `ShadowMessageRouter`を追加し、message typeごとに一意のhandlerへ配送する。duplicate登録は拒否する。
+- unknown typeとmalformed official_program payloadは初回でpermanent failure。capture evidenceを作らずretry枠も消費しない。
+- 通常のhandler例外は従来どおりbackoff retryし、次回成功できる。
+- rollback後はshadow OFF＋kill switch ONとなり、queue/historyを保持したままdelivery 0件。
+- routing E2E 5/5、official program/coverage回帰込み22/22、targeted strict TypeScript PASS。
+- code commits: `ee867b5d44d12a54455857601aa512f88c4684a7`, `f4277414bbb33a571c03a90e7c13fd52bec1fab9`, `05e22bad37100ed29ad366acf9ddafffe80e00a2`, `c047684e6f676759618ec7916b5d1ac4dae1b512`。
+
+current / blocked:
+
+- raw archive/実sidecar未接続。約319,301候補、year × bet_type × event_kind、eligible率差、実coverageは未確認。
+- live writer、実DB、primary collector、予測、BUY条件は変更していない。
+
+next:
+
+1. raw入力があればarchive refund scannerとcanonical reconciliationを最優先。
+2. 入力がなければoutbox delivery lease/claimの並行consumer競合を監査し、二重配送を防ぐsingle-writer claimをtemp E2Eで固定する。
+3. 実writer接続はapproval、backup/restore、canary、rollback rehearsal完了まで行わない。
+
