@@ -340,3 +340,26 @@ next:
 2. 入力がなければoutbox delivery lease/claimの並行consumer競合を監査し、二重配送を防ぐsingle-writer claimをtemp E2Eで固定する。
 3. 実writer接続はapproval、backup/restore、canary、rollback rehearsal完了まで行わない。
 
+## 2026-08-02 shadow delivery single-writer claim
+
+completed:
+
+- F0-R outboxの候補read→handler→attempt append間で、二consumerが同一messageを二重配送できる競合を再現・修正した。
+- messageごとに`BEGIN IMMEDIATE`を取得し、lock後にconfig、terminal state、availabilityを再読込する。
+- handlerとdelivery attempt appendを同一transaction境界に置き、競合consumerはdelivery/failure attemptを作らずskipする。
+- typed observation内部の`BEGIN IMMEDIATE`をsavepointへ変更し、通常実行とclaim transaction内実行の両方を維持した。
+- 二接続fixture: A delivery 1 / B delivery 0 / attempt 1。A一時失敗時もB 0 / retry attempt 1。
+- claim/official program/coverage関連24/24、targeted strict TypeScript PASS。
+- code commits: `56c09addf070c1e4092ac4b15312b06caf663c69`, `f74a2d1f2669aef9267f7acb1ef57b3b968cf1f4`, `798a8d251fbc1a1d6efc04762929c5630dc0cc0c`。
+
+current / blocked:
+
+- raw archive/実sidecar未接続。refund実数、約319,301候補、eligible率差、実coverageは未確認。
+- live writer、実DB、collector、予測、BUY条件は変更していない。
+
+next:
+
+1. raw入力があればarchive refund scannerとcanonical reconciliationを最優先。
+2. 入力がなければhandler長時間化・busy contentionのbounded observability、process crash後のclaim rollback/replayをtemp subprocess E2Eで固定する。
+3. 実writerはapproval、backup/restore、canary、rollback rehearsalまでOFF。
+
