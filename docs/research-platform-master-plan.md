@@ -607,3 +607,12 @@ M1はN3/N4の選手PIT gate、M3は主観を排したstrict-prior label gate、M
 - drain counterは整合性検証後、payload非依存のhealth snapshotとして保存できる。不整合counterは拒否する。
 - temp E2Eで部分write後例外、deadline超過、payload非混入を確認。関連35 tests、targeted strict TypeScript PASS。schema migrationなし。
 - DB外部副作用handler、live writer、実sidecar canaryは未許可。archive refund再集計とN2 label truthはBLOCKEDのまま。
+
+
+### 2026-08-02 F0-R read-only operability gate
+
+- retry上限到達と明示的permanent failureが同じerror codeへ潰れ、後から設定を変更すると安全に再分類できない不具合を修正した。将来の上限到達は固定`SHADOW_RETRY_EXHAUSTED`としてappendする。
+- `shadow-operability-v1`はsidecarをread-only集計し、queued/ready、oldest age、retrying、permanent、retry exhaustion、contention、handler deadlineを明示policy thresholdへ照合する。
+- thresholdはコード内でproduction値を推測せず、policy versionと全値をcaller必須入力にした。出力は決定的digestとPASS/WARN/BLOCKED理由を持ち、message payloadを含めない。
+- temp E2Eでexhaustion marker、集計値、threshold reasons、同一digest、read中write 0、malformed diagnostics拒否を確認した。対象18 tests、targeted strict TypeScript PASS。schema migrationなし。
+- live writer、実sidecar threshold approval/canaryは未実施。archive refund再集計とN2 label truthはBLOCKEDのまま。
