@@ -65,3 +65,13 @@ label truth gate通過前のmodel training/tuning、BUY/WATCH/SKIP logic変更�
 - [x] backpressure時もprimary collector成功を維持
 - [ ] live collector接続、実sidecar shadow canary、承認済みrollback rehearsal（BLOCKED / writer OFF）
 
+### Mixed outbox routing / rollback（temp evidence）
+
+- [x] message typeごとの明示router、duplicate handler登録拒否
+- [x] official_programと別messageの混在queueを各handlerへ一度だけ配送
+- [x] 未知typeは初回でpermanent failure、retry枠を消費しない
+- [x] malformed official_program payloadはcapture evidence作成前にpermanent failure
+- [x] 一時handler障害はbackoff後に再試行し成功可能
+- [x] rollback後はqueued messageを保持したままdelivery 0件
+- [ ] 実sidecarでのmixed canary、kill-switch/restore rehearsal（BLOCKED / live writer OFF）
+
