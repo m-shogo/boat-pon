@@ -128,3 +128,11 @@ raw truth を直接 target にしない。canonical active settlement からの�
 - primary row未到達など回復可能性があるsource read failureと一時的handler failureだけを指数backoff retryする。
 - rollbackはshadow writerをOFF、kill switchをONにし、queued messageとdelivery historyを削除・更新せず配送を停止する。
 
+## Shadow delivery single-writer contract
+
+- 各outbox messageは`BEGIN IMMEDIATE`取得後にterminal state、availability、kill switchを再読込してからhandlerへ渡す。
+- 別consumerがwrite claimを保持中なら配送せず、そのmessageへfailure attemptを追加しない。
+- handler完了とdelivery attempt appendを同一transaction境界に置き、commit後に別consumerが再確認する。
+- process crashで未commit transactionはSQLite rollbackされ、messageは再配送可能。handlerはidempotentであることを引き続き必須とする。
+- typed observationの内部atomic writeはsavepoint化し、通常実行と外側claim transactionの両方で同じ原子性を維持する。
+
