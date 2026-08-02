@@ -136,3 +136,10 @@ pnpm research:rollout:readiness
 Phase N1「全券種払戻基盤」のschema/migration実装前レビューは`CONDITIONAL`で完了した。詳細は[`n1-all-bet-type-payout-review.md`](n1-all-bet-type-payout-review.md)。
 
 Phase N1-A offline foundationは`COMPLETE`、Phase N1-B Permanent Settlement Schema Rollout & Capacity Gateは`CONDITIONAL`である。N1-Bで`n1-settlement.0.1`を永続sidecarへzero-dataで適用し、実archive sampleで容量・evidence pin・backup/restore・primary read-only境界を実測した。full backfill projected DB ≈10.5GBは現1GiB quotaに収まらず、evidence pin ≈23M行の重複をOption Bで削減する方針。詳細は[`n1-settlement-permanent-rollout.md`](n1-settlement-permanent-rollout.md)と[`n1-settlement-backfill-design.md`](n1-settlement-backfill-design.md)。N1-C historical backfill、future collector、外部取得は別の明示承認まで開始しない。
+
+
+## Read-only operability gate
+
+`shadow-operability-v1`はoutbox message/最新attemptと、指定windowの`shadow_outbox_drain` health snapshotだけを読む。queued、ready、oldest age、retrying、permanent failure、retry exhaustion、contention rate、handler deadlineを集約し、versioned policyの明示thresholdへ照合する。出力はPASS/WARN/BLOCKEDと理由、決定的digestであり、message payloadを含めない。
+
+retry上限到達は将来attemptから`SHADOW_RETRY_EXHAUSTED`を保存する。過去rowを現configから推測して書き換えない。malformed timestamp/diagnostics/counterはfail-closed。production thresholdのdefaultは設けず、実sidecar canary前にpolicy承認・rollback条件を別途固定する。このreportのPASSだけでlive writerを許可しない。
