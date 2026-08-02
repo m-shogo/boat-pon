@@ -408,3 +408,26 @@ next:
 1. raw入力があればarchive refund scannerとcanonical reconciliationを最優先。
 2. 入力がなければoutbox滞留・retry exhaustion・contention/deadline counterをまとめるread-only operability reportとthreshold gateを実装する。
 3. 実writerはapproval、backup/restore、canary、rollback rehearsalまでOFF。
+
+
+## 2026-08-02 F0-R read-only operability gate
+
+completed:
+
+- retry上限到達を固定`SHADOW_RETRY_EXHAUSTED`で保存し、明示的permanent failureと設定変更後も区別可能にした。
+- `shadowOperability.ts`を追加。outbox backlog/ready/age、retrying、permanent、retry exhaustionと、指定windowのcontention/deadline診断をread-onlyで集約する。
+- threshold値はproduction推測を避け、versioned policyとしてcaller必須入力。PASS/WARN/BLOCKED理由と決定的digestを返しpayloadは出力しない。
+- exact marker、集計、threshold、digest再現、read中write 0、malformed診断fail-closedを含む新規3 testsがPASS。関連対象18/18、targeted strict TypeScript PASS。
+- code commits: `94cb22a1a7c582cf41aaa7e2964230c68173196b`, `ee923bd93bda0676cee8ff2f97895c4c85013d7c`, `55bc0305a8cd7342b2814f484846c964310367bb`。
+
+current / blocked:
+
+- raw archive/実sidecar未接続。refund実数、約319,301候補、eligible率差、実coverageは未確認。
+- live writer、実DB、collector、予測、BUY条件は変更していない。
+- 実運用thresholdは未承認。fixture thresholdをproduction policyへ昇格しない。
+
+next:
+
+1. raw入力があればarchive refund scannerとcanonical reconciliationを最優先。
+2. 入力がなければoperability reportのimmutable/read-only CLIと、実sidecar policy file schema/approval境界を実装する。
+3. 実writerはapproval、backup/restore、canary、rollback rehearsalまでOFF。
