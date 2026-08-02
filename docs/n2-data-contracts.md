@@ -121,3 +121,10 @@ raw truth を直接 target にしない。canonical active settlement からの�
 - consumerはprimary rowを再読込し、期待SHA-256一致前にはsidecarへcapture evidenceを一切書かない。欠落・改変・unknown field・非allowlist headerはfail-closed。
 - live writerはdefault OFF。backpressure、quota、kill switch、consumer失敗はprimary collector結果へ伝播させない。
 
+## Shadow message routing / failure classification
+
+- outbox consumerはmessage typeごとの明示handler registryを通す。未登録typeをofficial_program handlerへ誤配送しない。
+- 未知message type、既知typeのfield/schema/header/reference形式不正は決定的エラーとして初回で`permanent_failure`にする。
+- primary row未到達など回復可能性があるsource read failureと一時的handler failureだけを指数backoff retryする。
+- rollbackはshadow writerをOFF、kill switchをONにし、queued messageとdelivery historyを削除・更新せず配送を停止する。
+
