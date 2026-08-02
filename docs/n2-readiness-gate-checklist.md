@@ -83,5 +83,7 @@ label truth gate通過前のmodel training/tuning、BUY/WATCH/SKIP logic変更�
 - [x] 同一messageのdelivery attemptは1件
 - [x] handler一時失敗でも競合consumerは実行せずretry attempt 1件
 - [x] typed observation内部writeをsavepoint化し、外側／内側transaction双方を検証
-- [ ] 実sidecarの複数process canaryとcrash kill rehearsal（BLOCKED / live writer OFF）
+- [x] `drainWithDiagnostics`でexamined 1 / contended 1を返し、queue空とwrite-lock競合を区別
+- [x] subprocess `process.exit(77)`で未commit handler side effect / delivery attempt 0、再open後queued 1→success 1
+- [ ] 実sidecarの複数process canaryと承認済みcrash kill rehearsal（BLOCKED / live writer OFF）
 
