@@ -598,3 +598,12 @@ M1はN3/N4の選手PIT gate、M3は主観を排したstrict-prior label gate、M
 - DB再open後もmessageはqueuedで、安全な再配送がsuccess attempt 1件だけを作る。
 - 関連32 tests、targeted strict TypeScript PASS。schema migrationなし。
 - live writer、実sidecar複数process canary、承認済みcrash rehearsalは未実施。archive refund再集計とN2 label truthはBLOCKEDのまま。
+
+### 2026-08-02 F0-R atomic handler / bounded runtime boundary
+
+- handler例外時に同一transactionの部分DB writeまでcommitし得たfailure isolation defectを、handler専用savepointで修正した。
+- handler成功時だけsavepointをreleaseし、例外・deadline超過時はhandler side effectをrollbackした後、retry/permanent attemptをappendする。
+- monotonic wall-time budget、協調cancellation context、return後deadline確認を実装した。同期処理を外部preemptするものではない。
+- drain counterは整合性検証後、payload非依存のhealth snapshotとして保存できる。不整合counterは拒否する。
+- temp E2Eで部分write後例外、deadline超過、payload非混入を確認。関連35 tests、targeted strict TypeScript PASS。schema migrationなし。
+- DB外部副作用handler、live writer、実sidecar canaryは未許可。archive refund再集計とN2 label truthはBLOCKEDのまま。
