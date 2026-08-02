@@ -236,3 +236,10 @@ raw archive入力は今回も存在せず、year × bet_type × event_kind、約
 raw archive入力は今回も存在せず、refund実数監査は未確認である。非ブロック監査で、handlerが同じtransaction内へ部分書込みした後に例外を投げると、旧実装はretry attemptと一緒にその部分書込みもcommitし得る不具合を確定した。handler専用savepointを追加し、例外・deadline超過時はhandler DB side effectをrollbackしてからfailure attemptだけをappendするよう修正した。
 
 monotonic wall-time budget、協調cancellation、return後deadline確認、`SHADOW_HANDLER_DEADLINE_EXCEEDED`分類、counter-only health snapshot、不整合診断拒否をtemp E2Eで固定した。関連35/35 tests、targeted strict TypeScript、whitespace check PASS。同期handlerの強制preemptionやDB外部副作用rollbackは保証せず、live writerはOFFを維持する。schema、実DB、collector、予測、BUY条件の変更はない。
+
+
+## 2026-08-02 shadow operability gate slice
+
+raw archive入力は今回も存在せず、year × bet_type × event_kind、約319,301候補、eligible率差は未確認である。非ブロック作業で、retry上限到達が通常のerror名だけで保存され、明示的permanent failureと後から安全に区別できない不具合を修正した。将来の上限到達を`SHADOW_RETRY_EXHAUSTED`で固定し、既存rowを現configから推測しない。
+
+read-only `shadow-operability-v1`はbacklog/ready/age/retry/permanent/exhaustionとcontention/deadlineをversioned thresholdへ照合し、PASS/WARN/BLOCKED理由と決定的digestを返す。payload非包含、read中write 0、malformed diagnostics fail-closedをtemp E2Eで確認した。対象18/18 tests、targeted strict TypeScript PASS。schema、実DB、live writer、collector、予測、BUY条件の変更はない。
