@@ -230,3 +230,9 @@ raw archive入力は今回も存在せず、refund実数監査は未確認であ
 ## 2026-08-02 shadow contention observability / crash recovery slice
 
 raw archive入力は今回も存在せず、year × bet_type × event_kind、約319,301候補、eligible率差は未確認である。非ブロック作業として、競合consumerの安全なskipがqueue空と同じ戻り値になる運用上の盲点を、互換性を維持した`drainWithDiagnostics`（examined / contended / skippedAfterClaim）で可視化した。さらに別Node processをhandler transaction中に`process.exit(77)`で終了し、handler内DB side effectとdelivery attemptがともにrollbackされ、再open後にqueued messageを1回だけ成功再配送できることをE2Eで確認した。関連32/32 tests、targeted strict TypeScript PASS。schema migration、実DB、live writer、予測、BUY条件の変更はない。
+
+## 2026-08-02 shadow handler atomicity / deadline slice
+
+raw archive入力は今回も存在せず、refund実数監査は未確認である。非ブロック監査で、handlerが同じtransaction内へ部分書込みした後に例外を投げると、旧実装はretry attemptと一緒にその部分書込みもcommitし得る不具合を確定した。handler専用savepointを追加し、例外・deadline超過時はhandler DB side effectをrollbackしてからfailure attemptだけをappendするよう修正した。
+
+monotonic wall-time budget、協調cancellation、return後deadline確認、`SHADOW_HANDLER_DEADLINE_EXCEEDED`分類、counter-only health snapshot、不整合診断拒否をtemp E2Eで固定した。関連35/35 tests、targeted strict TypeScript、whitespace check PASS。同期handlerの強制preemptionやDB外部副作用rollbackは保証せず、live writerはOFFを維持する。schema、実DB、collector、予測、BUY条件の変更はない。
