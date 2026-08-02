@@ -59,6 +59,18 @@ export type ShadowHealth = {
 
 type IdFactory = () => string;
 
+export class PermanentShadowDeliveryError extends Error {
+  readonly permanent = true;
+
+  constructor(errorCode: string, message: string) {
+    if (!/^[A-Z][A-Z0-9_]{2,63}$/.test(errorCode)) {
+      throw new Error("invalid permanent shadow delivery error code");
+    }
+    super(message);
+    this.name = errorCode;
+  }
+}
+
 function nowIso(): string {
   return new Date().toISOString();
 }
@@ -317,7 +329,7 @@ export class RolloutController {
         succeeded += 1;
       } catch (error) {
         errorCode = error instanceof Error ? error.name || "SHADOW_WRITE_FAILED" : "SHADOW_WRITE_FAILED";
-        if (attemptNo > config.maxRetries) {
+        if (error instanceof PermanentShadowDeliveryError || attemptNo > config.maxRetries) {
           outcome = "permanent_failure";
           permanentlyFailed += 1;
         } else {
