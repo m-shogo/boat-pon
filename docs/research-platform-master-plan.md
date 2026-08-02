@@ -590,3 +590,11 @@ M1はN3/N4の選手PIT gate、M3は主観を排したstrict-prior label gate、M
 - 関連24 tests、targeted strict TypeScript PASS。schema migrationなし。
 - live writerと実sidecar canaryは未実施。archive refund再集計とN2 label truthはBLOCKEDのまま。
 
+### 2026-08-02 F0-R bounded contention observability / process-crash replay
+
+- single-writer claimのwrite-lock競合をqueue空と区別する`drainWithDiagnostics`を追加した。既存`drain`の戻り値は変更しない。
+- 診断値はexamined、contended、lock後state再確認skipをrun単位で返し、競合をdelivery failure rowへ誤記録しない。
+- 別Node processをhandler transaction中に強制終了するtemp E2Eで、未commit handler side effectとdelivery attemptがともにrollbackすることを確認した。
+- DB再open後もmessageはqueuedで、安全な再配送がsuccess attempt 1件だけを作る。
+- 関連32 tests、targeted strict TypeScript PASS。schema migrationなし。
+- live writer、実sidecar複数process canary、承認済みcrash rehearsalは未実施。archive refund再集計とN2 label truthはBLOCKEDのまま。
