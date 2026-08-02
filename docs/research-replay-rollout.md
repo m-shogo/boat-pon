@@ -143,3 +143,18 @@ Phase N1-A offline foundationは`COMPLETE`、Phase N1-B Permanent Settlement Sch
 `shadow-operability-v1`はoutbox message/最新attemptと、指定windowの`shadow_outbox_drain` health snapshotだけを読む。queued、ready、oldest age、retrying、permanent failure、retry exhaustion、contention rate、handler deadlineを集約し、versioned policyの明示thresholdへ照合する。出力はPASS/WARN/BLOCKEDと理由、決定的digestであり、message payloadを含めない。
 
 retry上限到達は将来attemptから`SHADOW_RETRY_EXHAUSTED`を保存する。過去rowを現configから推測して書き換えない。malformed timestamp/diagnostics/counterはfail-closed。production thresholdのdefaultは設けず、実sidecar canary前にpolicy承認・rollback条件を別途固定する。このreportのPASSだけでlive writerを許可しない。
+
+
+## Operability policy approval / CLI
+
+policy fileは`config/shadow-operability-policy.schema.json`へ適合し、全thresholdを明示する。policy canonical digestはapproval target contract `shadow-operability-policy-v1:<digest>`へ埋め込む。既存append-only approval grant/lifecycle resolverを使い、simulated grantはproduction modeで無効、revoked/superseded grantも無効である。policy変更時は別digestへの新approvalが必要になる。
+
+```sh
+pnpm report:shadow:operability -- \
+  --sidecar=/path/to/quiescent-snapshot.sqlite \
+  --policy=/path/to/approved-policy.json \
+  --as-of=2026-08-02T05:00:00.000Z \
+  --mode=simulated
+```
+
+CLIはsidecarを`immutable=1/readOnly/query_only`で開き、非空`-wal`を検出した場合は拒否する。active writer DBを直接監査せず、checkpoint済みquiescent snapshotを使う。exit codeはPASS=0、WARN=2、BLOCKED=3。report PASSはwriter許可ではなく、production approval、snapshot identity、canary、rollback rehearsalを別gateとして要求する。
