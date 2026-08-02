@@ -70,6 +70,15 @@ Outboxは次を満たす。
 
 現在はlive collectorへ接続しておらず、実sidecarのshadow writerは`OFF`である。Failure isolationとoutbox replayはrestore copy上のsanitized canaryだけで検証した。
 
+### Handler atomicity / bounded runtime
+
+- delivery handlerを専用SQLite savepointで囲み、handler例外またはdeadline超過では同一接続上の部分書込みをrollbackしてからfailure attemptをappendする。
+- 既定wall-time budgetは30秒。1ms〜300秒の範囲でrun単位に指定し、monotonic clockで判定する。
+- handler contextの`throwIfCancelled`による協調停止と、return直後の強制deadline確認を行う。同期handler自体を外部からpreemptできるとは主張しない。
+- DB外部副作用はrollback対象外のため、このhandler境界では禁止する。別processや外部serviceが必要なら独立した冪等key・reconciliation・kill switchを要求する。
+- drain診断は件数counterだけをhealth snapshotへ集約し、message payloadやsource URL/headerをoperational evidenceへ複製しない。
+
+
 ## Retention / GC
 
 Operational GCは完全未参照rawだけを対象とする。manifest pin、capture link、parse run、domain observationのいずれかが存在するrawは候補にしない。
