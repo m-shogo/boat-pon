@@ -223,3 +223,7 @@ archive raw入力は今回も到達不能で、year × bet_type × event_kind、
 
 raw archive入力は今回も存在せず、archive refund実数再集計は未確認である。非ブロック作業として、F0-R outboxの決定的エラーがmax retryまで滞留する問題を修正した。message type router、初回permanent failure、一時障害backoff retry、kill-switch rollback後の配送停止をtemp E2Eで固定した。queued messageとappend-only delivery historyはrollbackで削除しない。実DB、live writer、予測、BUY条件は変更していない。
 
+## 2026-08-02 shadow delivery single-writer slice
+
+raw archive入力は今回も存在せず、refund実数監査は未確認である。非ブロック作業として、二つのconsumerが同一outbox rowをhandler実行前に読み、二重配送できる競合を修正した。messageごとの`BEGIN IMMEDIATE`、lock後state再読込、handler＋attempt appendのtransaction境界を追加した。typed observation内部atomic writeはsavepointへ変更し、claim transaction内でも動作する。schema migration、実DB、live writer、予測、BUY条件の変更はない。
+
