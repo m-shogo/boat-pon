@@ -109,3 +109,15 @@ label truth gate通過前のmodel training/tuning、BUY/WATCH/SKIP logic変更�
 - [x] reportへmessage payloadを含めず、read中のDB change 0
 - [x] malformed historical diagnosticsをfail-closed
 - [ ] 実sidecar policy approval、immutable CLI、shadow canary（BLOCKED / live writer OFF）
+
+
+### Shadow operability policy / immutable CLI（temp evidence）
+
+- [x] strict policy decoder＋JSON Schema、unknown field/default drift拒否
+- [x] policy canonical digestをappend-only approval targetへ結合
+- [x] missing / target mismatch / revoked / superseded approvalをBLOCKED
+- [x] simulated approvalをproduction modeで拒否
+- [x] immutable/read-only/query-only CLI、明示`as-of`必須
+- [x] active WAL拒否、quiescent snapshot限定
+- [x] PASS 0 / WARN 2 / BLOCKED 3のmachine-readable exit contract
+- [ ] production threshold approval、snapshot identity binding、実sidecar canary（BLOCKED / live writer OFF）
