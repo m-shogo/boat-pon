@@ -134,5 +134,7 @@ raw truth を直接 target にしない。canonical active settlement からの�
 - 別consumerがwrite claimを保持中なら配送せず、そのmessageへfailure attemptを追加しない。
 - handler完了とdelivery attempt appendを同一transaction境界に置き、commit後に別consumerが再確認する。
 - process crashで未commit transactionはSQLite rollbackされ、messageは再配送可能。handlerはidempotentであることを引き続き必須とする。
+- 既存`drain`の戻り値契約は維持し、`drainWithDiagnostics`だけが`examined / contended / skippedAfterClaim`を返す。write lock競合をqueue空と区別でき、競合自体をfailure attemptとして永続化しない。
+- subprocessをhandler transaction中に強制終了するfixtureで、未commitのhandler DB side effectとdelivery attemptがともに0へrollbackし、同じmessageを再配送して1回だけsuccessにできることを固定する。
 - typed observationの内部atomic writeはsavepoint化し、通常実行と外側claim transactionの両方で同じ原子性を維持する。
 
