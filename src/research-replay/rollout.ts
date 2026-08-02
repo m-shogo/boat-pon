@@ -79,6 +79,13 @@ function safeJson(value: unknown): string {
   return JSON.stringify(value ?? null);
 }
 
+function isSqliteBusy(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const candidate = error as { code?: unknown; message?: unknown };
+  return candidate.code === "SQLITE_BUSY"
+    || (typeof candidate.message === "string" && /database is locked|database is busy/i.test(candidate.message));
+}
+
 function assertSafeOperationalPayload(value: unknown, path = "$"): void {
   if (Array.isArray(value)) {
     value.forEach((child, index) => assertSafeOperationalPayload(child, `${path}[${index}]`));
@@ -314,47 +321,76 @@ export class RolloutController {
     let succeeded = 0;
     let retrying = 0;
     let permanentlyFailed = 0;
-    for (const row of candidates) {
-      const attemptNo = row.attempt_count + 1;
-      const startedAt = this.clock();
-      let outcome: "succeeded" | "retryable_failure" | "permanent_failure" = "succeeded";
-      let errorCode: string | null = null;
-      let nextAvailableAt: string | null = null;
+    for (const candidate of candidates) {
       try {
-        handler({
-          outboxMessageId: row.outbox_message_id,
-          messageType: row.message_type,
-          payload: JSON.parse(row.payload_json) as unknown,
-        });
-        succeeded += 1;
+        this.db.exec("BEGIN IMMEDIATE");
       } catch (error) {
-        errorCode = error instanceof Error ? error.name || "SHADOW_WRITE_FAILED" : "SHADOW_WRITE_FAILED";
-        if (error instanceof PermanentShadowDeliveryError || attemptNo > config.maxRetries) {
-          outcome = "permanent_failure";
-          permanentlyFailed += 1;
-        } else {
-          outcome = "retryable_failure";
-          const backoffMs = Math.min(60_000, 1000 * 2 ** (attemptNo - 1));
-          nextAvailableAt = new Date(new Date(startedAt).getTime() + backoffMs).toISOString();
-          retrying += 1;
-        }
+        if (isSqliteBusy(error)) continue;
+        throw error;
       }
-      this.db.prepare(`
-        INSERT INTO shadow_delivery_attempts
-        (delivery_attempt_id, outbox_message_id, attempt_no, outcome, error_code,
-         started_at, completed_at, next_available_at, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(
-        this.idFactory(),
-        row.outbox_message_id,
-        attemptNo,
-        outcome,
-        errorCode,
-        startedAt,
-        this.clock(),
-        nextAvailableAt,
-        this.clock(),
-      );
+      try {
+        const activeConfig = this.currentConfig();
+        const row = this.currentOutboxRows().find(
+          (current) => current.outbox_message_id === candidate.outbox_message_id,
+        );
+        const currentNow = this.clock();
+        if (!activeConfig.shadowWriteEnabled
+          || activeConfig.killSwitchEngaged
+          || !row
+          || ["succeeded", "permanent_failure", "cancelled"].includes(row.last_outcome ?? "")
+          || (row.next_available_at ?? row.available_at) > currentNow) {
+          this.db.exec("COMMIT");
+          continue;
+        }
+        const attemptNo = row.attempt_count + 1;
+        const startedAt = currentNow;
+        let outcome: "succeeded" | "retryable_failure" | "permanent_failure" = "succeeded";
+        let errorCode: string | null = null;
+        let nextAvailableAt: string | null = null;
+        try {
+          handler({
+            outboxMessageId: row.outbox_message_id,
+            messageType: row.message_type,
+            payload: JSON.parse(row.payload_json) as unknown,
+          });
+          succeeded += 1;
+        } catch (error) {
+          errorCode = error instanceof Error ? error.name || "SHADOW_WRITE_FAILED" : "SHADOW_WRITE_FAILED";
+          if (error instanceof PermanentShadowDeliveryError || attemptNo > activeConfig.maxRetries) {
+            outcome = "permanent_failure";
+            permanentlyFailed += 1;
+          } else {
+            outcome = "retryable_failure";
+            const backoffMs = Math.min(60_000, 1000 * 2 ** (attemptNo - 1));
+            nextAvailableAt = new Date(new Date(startedAt).getTime() + backoffMs).toISOString();
+            retrying += 1;
+          }
+        }
+        this.db.prepare(`
+          INSERT INTO shadow_delivery_attempts
+          (delivery_attempt_id, outbox_message_id, attempt_no, outcome, error_code,
+           started_at, completed_at, next_available_at, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          this.idFactory(),
+          row.outbox_message_id,
+          attemptNo,
+          outcome,
+          errorCode,
+          startedAt,
+          this.clock(),
+          nextAvailableAt,
+          this.clock(),
+        );
+        this.db.exec("COMMIT");
+      } catch (error) {
+        try {
+          this.db.exec("ROLLBACK");
+        } catch {
+          // Preserve the original failure when the transaction already ended.
+        }
+        throw error;
+      }
     }
     return { succeeded, retrying, permanentlyFailed };
   }
