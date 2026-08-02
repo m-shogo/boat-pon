@@ -5,7 +5,11 @@ import {
   type OfficialProgramCaptureResult,
 } from "./n2OfficialProgramObservation";
 import { allowlistedHeaders, redactSourceUrl } from "./rawStore";
-import { RolloutController, type EnqueueResult } from "./rollout";
+import {
+  PermanentShadowDeliveryError,
+  RolloutController,
+  type EnqueueResult,
+} from "./rollout";
 import type { ResearchReplayRepository } from "./repository";
 
 export const N2_OFFICIAL_PROGRAM_SHADOW_MESSAGE_TYPE = "n2.official_program.capture.v1";
@@ -46,6 +50,12 @@ export class OfficialProgramShadowSourceError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "OFFICIAL_PROGRAM_SHADOW_SOURCE_INVALID";
+  }
+}
+
+class OfficialProgramShadowPayloadError extends PermanentShadowDeliveryError {
+  constructor(message: string) {
+    super("OFFICIAL_PROGRAM_SHADOW_PAYLOAD_INVALID", message);
   }
 }
 
@@ -119,7 +129,7 @@ export function enqueueOfficialProgramShadow(
 
 function decodePayload(value: unknown): OfficialProgramShadowPayload {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new OfficialProgramShadowSourceError("official program shadow payload must be an object");
+    throw new OfficialProgramShadowPayloadError("official program shadow payload must be an object");
   }
   const record = value as Record<string, unknown>;
   const expected = [
@@ -129,7 +139,7 @@ function decodePayload(value: unknown): OfficialProgramShadowPayload {
   ].sort();
   const actual = Object.keys(record).sort();
   if (actual.length !== expected.length || actual.some((key, index) => key !== expected[index])) {
-    throw new OfficialProgramShadowSourceError("official program shadow payload fields invalid");
+    throw new OfficialProgramShadowPayloadError("official program shadow payload fields invalid");
   }
   const textFields = [
     "primaryRecordId", "logicalRequestGroupId", "canonicalRaceKey", "sourceUrl", "requestStartedAt",
@@ -137,7 +147,7 @@ function decodePayload(value: unknown): OfficialProgramShadowPayload {
   ] as const;
   for (const field of textFields) {
     if (typeof record[field] !== "string" || (record[field] as string).trim() === "") {
-      throw new OfficialProgramShadowSourceError(`official program shadow ${field} invalid`);
+      throw new OfficialProgramShadowPayloadError(`official program shadow ${field} invalid`);
     }
   }
   if (record.version !== N2_OFFICIAL_PROGRAM_SHADOW_PAYLOAD_VERSION
@@ -146,17 +156,17 @@ function decodePayload(value: unknown): OfficialProgramShadowPayload {
     || typeof record.responseHeaders !== "object"
     || record.responseHeaders === null
     || Array.isArray(record.responseHeaders)) {
-    throw new OfficialProgramShadowSourceError("official program shadow payload contract mismatch");
+    throw new OfficialProgramShadowPayloadError("official program shadow payload contract mismatch");
   }
   const payload = record as OfficialProgramShadowPayload;
   if (!/^[a-f0-9]{64}$/.test(payload.expectedRawSha256)
     || redactSourceUrl(payload.sourceUrl) !== payload.sourceUrl) {
-    throw new OfficialProgramShadowSourceError("official program shadow reference integrity invalid");
+    throw new OfficialProgramShadowPayloadError("official program shadow reference integrity invalid");
   }
   const headers = payload.responseHeaders;
   if (Object.values(headers).some((value) => typeof value !== "string")
     || JSON.stringify(allowlistedHeaders(headers)) !== JSON.stringify(headers)) {
-    throw new OfficialProgramShadowSourceError("official program shadow headers invalid");
+    throw new OfficialProgramShadowPayloadError("official program shadow headers invalid");
   }
   return payload;
 }
@@ -168,7 +178,10 @@ export function handleOfficialProgramShadowMessage(input: {
   loadPrimaryRaw: PrimaryRawLoader;
 }): OfficialProgramCaptureResult {
   if (input.messageType !== N2_OFFICIAL_PROGRAM_SHADOW_MESSAGE_TYPE) {
-    throw new OfficialProgramShadowSourceError("unsupported official program shadow message type");
+    throw new PermanentShadowDeliveryError(
+      "OFFICIAL_PROGRAM_SHADOW_MESSAGE_TYPE_UNSUPPORTED",
+      "unsupported official program shadow message type",
+    );
   }
   const payload = decodePayload(input.payload);
   const rawJson = input.loadPrimaryRaw(payload.primaryRecordId);
