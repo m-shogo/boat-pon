@@ -56,8 +56,15 @@ test("two consumers cannot deliver the same outbox message concurrently", () => 
     let deliveriesA = 0;
     let deliveriesB = 0;
     const resultA = ctx.controllerA.drain(() => {
-      const nested = ctx.controllerB.drain(() => { deliveriesB += 1; });
-      assert.deepEqual(nested, { succeeded: 0, retrying: 0, permanentlyFailed: 0 });
+      const nested = ctx.controllerB.drainWithDiagnostics(() => { deliveriesB += 1; });
+      assert.deepEqual(nested, {
+        succeeded: 0,
+        retrying: 0,
+        permanentlyFailed: 0,
+        examined: 1,
+        contended: 1,
+        skippedAfterClaim: 0,
+      });
       deliveriesA += 1;
     });
     assert.deepEqual(resultA, { succeeded: 1, retrying: 0, permanentlyFailed: 0 });
