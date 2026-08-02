@@ -70,6 +70,22 @@ export type ShadowDrainDiagnostics = ShadowDrainResult & {
   handlerDeadlineExceeded: number;
 };
 
+export function assertShadowDrainDiagnostics(diagnostics: ShadowDrainDiagnostics): void {
+  const counts = Object.values(diagnostics);
+  if (counts.some((value) => !Number.isSafeInteger(value) || value < 0)) {
+    throw new Error("invalid shadow drain diagnostics");
+  }
+  const terminalOrRetrying = diagnostics.succeeded
+    + diagnostics.retrying
+    + diagnostics.permanentlyFailed;
+  if (terminalOrRetrying + diagnostics.contended + diagnostics.skippedAfterClaim !== diagnostics.examined) {
+    throw new Error("inconsistent shadow drain diagnostics");
+  }
+  if (diagnostics.handlerDeadlineExceeded > diagnostics.retrying + diagnostics.permanentlyFailed) {
+    throw new Error("inconsistent shadow deadline diagnostics");
+  }
+}
+
 export type ShadowDeliveryContext = {
   deadlineAtMonotonicMs: number;
   remainingMs: () => number;
@@ -446,7 +462,10 @@ export class RolloutController {
           this.db.exec("RELEASE shadow_delivery_handler");
           errorCode = error instanceof Error ? error.name || "SHADOW_WRITE_FAILED" : "SHADOW_WRITE_FAILED";
           if (error instanceof ShadowDeliveryDeadlineExceededError) handlerDeadlineExceeded += 1;
-          if (error instanceof PermanentShadowDeliveryError || attemptNo > activeConfig.maxRetries) {
+          const explicitlyPermanent = error instanceof PermanentShadowDeliveryError;
+          const retryExhausted = !explicitlyPermanent && attemptNo > activeConfig.maxRetries;
+          if (retryExhausted) errorCode = "SHADOW_RETRY_EXHAUSTED";
+          if (explicitlyPermanent || retryExhausted) {
             outcome = "permanent_failure";
             permanentlyFailed += 1;
           } else {
@@ -718,19 +737,7 @@ export class RolloutController {
     diagnostics: ShadowDrainDiagnostics,
     operationId = this.idFactory(),
   ): ShadowHealth {
-    const counts = Object.values(diagnostics);
-    if (counts.some((value) => !Number.isSafeInteger(value) || value < 0)) {
-      throw new Error("invalid shadow drain diagnostics");
-    }
-    const terminalOrRetrying = diagnostics.succeeded
-      + diagnostics.retrying
-      + diagnostics.permanentlyFailed;
-    if (terminalOrRetrying + diagnostics.contended + diagnostics.skippedAfterClaim !== diagnostics.examined) {
-      throw new Error("inconsistent shadow drain diagnostics");
-    }
-    if (diagnostics.handlerDeadlineExceeded > diagnostics.retrying + diagnostics.permanentlyFailed) {
-      throw new Error("inconsistent shadow deadline diagnostics");
-    }
+    assertShadowDrainDiagnostics(diagnostics);
     const health = this.health();
     this.auditEvent({
       operationId,
