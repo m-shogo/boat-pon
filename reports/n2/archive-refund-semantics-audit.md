@@ -219,3 +219,7 @@ archive raw入力は今回も到達不能で、year × bet_type × event_kind、
 
 非ブロック作業として、公式番組captureを既存F0-R outboxへ接続するcontractを実装した。outboxはraw本文を保持せずprimary record IDと期待SHA-256を保持し、consumerはprimary raw再読込後のbyte hash一致前にcapture evidenceを書かない。default OFF、exact retry idempotency、一回配送、raw改変fail-closed、backpressureのprimary非伝播をtemp E2Eで固定した。実DB、live writer、予測、BUY条件は変更していない。
 
+## 2026-08-02 mixed shadow routing / rollback slice
+
+raw archive入力は今回も存在せず、archive refund実数再集計は未確認である。非ブロック作業として、F0-R outboxの決定的エラーがmax retryまで滞留する問題を修正した。message type router、初回permanent failure、一時障害backoff retry、kill-switch rollback後の配送停止をtemp E2Eで固定した。queued messageとappend-only delivery historyはrollbackで削除しない。実DB、live writer、予測、BUY条件は変更していない。
+
