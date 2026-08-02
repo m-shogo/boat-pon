@@ -138,3 +138,12 @@ raw truth を直接 target にしない。canonical active settlement からの�
 - subprocessをhandler transaction中に強制終了するfixtureで、未commitのhandler DB side effectとdelivery attemptがともに0へrollbackし、同じmessageを再配送して1回だけsuccessにできることを固定する。
 - typed observationの内部atomic writeはsavepoint化し、通常実行と外側claim transactionの両方で同じ原子性を維持する。
 
+## Shadow handler atomicity / deadline contract
+
+- handlerは専用savepoint内で実行する。例外・deadline超過時はhandlerが同じSQLite接続へ行った部分書込みを`ROLLBACK TO`し、その後にretry/permanent delivery attemptだけをappendする。
+- 既定wall-time budgetは30秒、呼出単位で1ms〜300秒に制限して上書きできる。handler contextはmonotonic deadline、remaining time、`throwIfCancelled`を提供する。
+- 同期handlerを別threadからpreemptする契約ではない。協調check時またはreturn直後に超過を検出し、`SHADOW_HANDLER_DEADLINE_EXCEEDED`としてretry分類する。
+- filesystem/network等の外部副作用はSQLite savepointでrollbackできないためhandler内では行わない。必要な場合はoutboxの外に別の冪等・reconciliation契約を持つ。
+- `recordDrainDiagnostics`は検証済みcounterとhealthだけを`health_snapshot`へ保存し、message type/payload/URL/headerを含めない。不整合counterはfail-closed。
+
+
