@@ -418,7 +418,7 @@ completed:
 - `shadowOperability.ts`を追加。outbox backlog/ready/age、retrying、permanent、retry exhaustionと、指定windowのcontention/deadline診断をread-onlyで集約する。
 - threshold値はproduction推測を避け、versioned policyとしてcaller必須入力。PASS/WARN/BLOCKED理由と決定的digestを返しpayloadは出力しない。
 - exact marker、集計、threshold、digest再現、read中write 0、malformed診断fail-closedを含む新規3 testsがPASS。関連対象18/18、targeted strict TypeScript PASS。
-- code commits: `94cb22a1a7c582cf41aaa7e2964230c68173196b`, `ee923bd93bda0676cee8ff2f97895c4c85013d7c`, `55bc0305a8cd7342b2814f484846c964310367bb`。
+- code commits: `94cb22a1a7c582cf41aaa7e2964230c68173196b`, `ee923bd93bda0676cee8ff2f97895c4c85013d7c`, `55bc0305a8cd7342b2814f484846c964310367bb`。正本同期は`b4db2f3f6a44b4fc129b858a8174dfb8b480f37f`まで。
 
 current / blocked:
 
