@@ -441,7 +441,7 @@ completed:
 - policy digestを既存F0-R approval grant/lifecycle resolverへ結合。未承認、simulated approvalのproduction利用、revoked、policy改変をBLOCKEDにした。
 - immutable/read-only/query-only CLIを追加し、active WALがあるDBは拒否してquiescent snapshotだけを受け付ける。exit codeはPASS 0 / WARN 2 / BLOCKED 3。
 - 新規4 testsを含む対象7/7、targeted strict TypeScript、JSON構文、whitespace PASS。
-- code commits: `786f3a328657465430c766564991e842df7aea2c`, `bcc58588743babfadadf255594d027460c922f47`, `18700b19d2d0391e6082106854637158d11d1f39`, `e737facd53e5dd3ea5283ccf43d390d7ce9b62e8`, `f72df68aeb626f4aa021760487392cb249a2aafe`。
+- code commits: `786f3a328657465430c766564991e842df7aea2c`, `bcc58588743babfadadf255594d027460c922f47`, `18700b19d2d0391e6082106854637158d11d1f39`, `e737facd53e5dd3ea5283ccf43d390d7ce9b62e8`, `f72df68aeb626f4aa021760487392cb249a2aafe`。 正本同期は`e8868e689d76491e681e5dd7032d995626c3401f`まで。
 
 current / blocked:
 
