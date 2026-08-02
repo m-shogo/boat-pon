@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://boat-pon.invalid/schema/shadow-operability-policy-v1.json",
+  "title": "Shadow operability threshold policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contractVersion",
+    "policyVersion",
+    "diagnosticsWindowMs",
+    "thresholds"
+  ],
+  "properties": {
+    "contractVersion": {
+      "const": "shadow-operability-policy-v1"
+    },
+    "policyVersion": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{2,63}$"
+    },
+    "diagnosticsWindowMs": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "thresholds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "maxQueued",
+        "maxReadyQueued",
+        "maxOldestQueuedAgeMs",
+        "maxRetrying",
+        "maxPermanentlyFailed",
+        "maxRetryExhausted",
+        "maxContentionRate",
+        "maxHandlerDeadlineExceeded"
+      ],
+      "properties": {
+        "maxQueued": { "type": "integer", "minimum": 0 },
+        "maxReadyQueued": { "type": "integer", "minimum": 0 },
+        "maxOldestQueuedAgeMs": { "type": "integer", "minimum": 0 },
+        "maxRetrying": { "type": "integer", "minimum": 0 },
+        "maxPermanentlyFailed": { "type": "integer", "minimum": 0 },
+        "maxRetryExhausted": { "type": "integer", "minimum": 0 },
+        "maxContentionRate": { "type": "number", "minimum": 0, "maximum": 1 },
+        "maxHandlerDeadlineExceeded": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}
