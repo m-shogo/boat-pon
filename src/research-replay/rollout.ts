@@ -57,6 +57,24 @@ export type ShadowHealth = {
   schemaOk: boolean;
 };
 
+export type ShadowDrainResult = {
+  succeeded: number;
+  retrying: number;
+  permanentlyFailed: number;
+};
+
+export type ShadowDrainDiagnostics = ShadowDrainResult & {
+  examined: number;
+  contended: number;
+  skippedAfterClaim: number;
+};
+
+export type ShadowDeliveryHandler = (message: {
+  outboxMessageId: string;
+  messageType: string;
+  payload: unknown;
+}) => void;
+
 type IdFactory = () => string;
 
 export class PermanentShadowDeliveryError extends Error {
@@ -304,14 +322,23 @@ export class RolloutController {
     return { status: "enqueued", outboxMessageId: id };
   }
 
-  drain(handler: (message: {
-    outboxMessageId: string;
-    messageType: string;
-    payload: unknown;
-  }) => void, limit = 100): { succeeded: number; retrying: number; permanentlyFailed: number } {
+  drain(handler: ShadowDeliveryHandler, limit = 100): ShadowDrainResult {
+    const { examined: _examined, contended: _contended, skippedAfterClaim: _skipped, ...result } =
+      this.drainWithDiagnostics(handler, limit);
+    return result;
+  }
+
+  drainWithDiagnostics(handler: ShadowDeliveryHandler, limit = 100): ShadowDrainDiagnostics {
     const config = this.currentConfig();
     if (!config.shadowWriteEnabled || config.killSwitchEngaged) {
-      return { succeeded: 0, retrying: 0, permanentlyFailed: 0 };
+      return {
+        succeeded: 0,
+        retrying: 0,
+        permanentlyFailed: 0,
+        examined: 0,
+        contended: 0,
+        skippedAfterClaim: 0,
+      };
     }
     const now = this.clock();
     const candidates = this.currentOutboxRows().filter((row) => {
@@ -321,11 +348,18 @@ export class RolloutController {
     let succeeded = 0;
     let retrying = 0;
     let permanentlyFailed = 0;
+    let examined = 0;
+    let contended = 0;
+    let skippedAfterClaim = 0;
     for (const candidate of candidates) {
+      examined += 1;
       try {
         this.db.exec("BEGIN IMMEDIATE");
       } catch (error) {
-        if (isSqliteBusy(error)) continue;
+        if (isSqliteBusy(error)) {
+          contended += 1;
+          continue;
+        }
         throw error;
       }
       try {
@@ -339,6 +373,7 @@ export class RolloutController {
           || !row
           || ["succeeded", "permanent_failure", "cancelled"].includes(row.last_outcome ?? "")
           || (row.next_available_at ?? row.available_at) > currentNow) {
+          skippedAfterClaim += 1;
           this.db.exec("COMMIT");
           continue;
         }
@@ -392,7 +427,7 @@ export class RolloutController {
         throw error;
       }
     }
-    return { succeeded, retrying, permanentlyFailed };
+    return { succeeded, retrying, permanentlyFailed, examined, contended, skippedAfterClaim };
   }
 
   runPrimaryWithOptionalShadow<T>(primary: () => T, shadow: () => void): {
