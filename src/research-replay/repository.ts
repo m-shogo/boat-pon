@@ -408,7 +408,7 @@ export class ResearchReplayRepository {
 
     const observationId = input.observationId ?? this.idFactory();
     const recordedAt = this.clock();
-    this.db.exec("BEGIN IMMEDIATE");
+    this.db.exec("SAVEPOINT typed_observation_write");
     try {
       this.db.prepare(`
         INSERT INTO domain_observations
@@ -452,9 +452,10 @@ export class ResearchReplayRepository {
         semanticHash,
         recordedAt,
       );
-      this.db.exec("COMMIT");
+      this.db.exec("RELEASE SAVEPOINT typed_observation_write");
     } catch (error) {
-      this.db.exec("ROLLBACK");
+      this.db.exec("ROLLBACK TO SAVEPOINT typed_observation_write");
+      this.db.exec("RELEASE SAVEPOINT typed_observation_write");
       throw error;
     }
     return { parseRunId, observationId, status, semanticPayloadHash: semanticHash, errorCode };
