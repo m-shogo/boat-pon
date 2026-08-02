@@ -67,13 +67,27 @@ export type ShadowDrainDiagnostics = ShadowDrainResult & {
   examined: number;
   contended: number;
   skippedAfterClaim: number;
+  handlerDeadlineExceeded: number;
 };
 
-export type ShadowDeliveryHandler = (message: {
-  outboxMessageId: string;
-  messageType: string;
-  payload: unknown;
-}) => void;
+export type ShadowDeliveryContext = {
+  deadlineAtMonotonicMs: number;
+  remainingMs: () => number;
+  throwIfCancelled: () => void;
+};
+
+export type ShadowDeliveryHandler = (
+  message: {
+    outboxMessageId: string;
+    messageType: string;
+    payload: unknown;
+  },
+  context: ShadowDeliveryContext,
+) => void;
+
+export type ShadowDrainOptions = {
+  handlerWallTimeBudgetMs?: number;
+};
 
 type IdFactory = () => string;
 
@@ -86,6 +100,13 @@ export class PermanentShadowDeliveryError extends Error {
     }
     super(message);
     this.name = errorCode;
+  }
+}
+
+export class ShadowDeliveryDeadlineExceededError extends Error {
+  constructor() {
+    super("shadow delivery handler exceeded its wall-time budget");
+    this.name = "SHADOW_HANDLER_DEADLINE_EXCEEDED";
   }
 }
 
@@ -150,6 +171,7 @@ export class RolloutController {
       const stats = statfsSync(rawStore.root);
       return Number(stats.bavail) * Number(stats.bsize);
     },
+    private readonly monotonicNowMs: () => number = () => performance.now(),
   ) {
     const schema = verifyRolloutSchema(db);
     if (!schema.ok) throw new Error(`rollout schema required: ${JSON.stringify(schema)}`);
@@ -322,13 +344,28 @@ export class RolloutController {
     return { status: "enqueued", outboxMessageId: id };
   }
 
-  drain(handler: ShadowDeliveryHandler, limit = 100): ShadowDrainResult {
-    const { examined: _examined, contended: _contended, skippedAfterClaim: _skipped, ...result } =
-      this.drainWithDiagnostics(handler, limit);
+  drain(handler: ShadowDeliveryHandler, limit = 100, options: ShadowDrainOptions = {}): ShadowDrainResult {
+    const {
+      examined: _examined,
+      contended: _contended,
+      skippedAfterClaim: _skipped,
+      handlerDeadlineExceeded: _deadline,
+      ...result
+    } = this.drainWithDiagnostics(handler, limit, options);
     return result;
   }
 
-  drainWithDiagnostics(handler: ShadowDeliveryHandler, limit = 100): ShadowDrainDiagnostics {
+  drainWithDiagnostics(
+    handler: ShadowDeliveryHandler,
+    limit = 100,
+    options: ShadowDrainOptions = {},
+  ): ShadowDrainDiagnostics {
+    const handlerWallTimeBudgetMs = options.handlerWallTimeBudgetMs ?? 30_000;
+    if (!Number.isSafeInteger(handlerWallTimeBudgetMs)
+      || handlerWallTimeBudgetMs < 1
+      || handlerWallTimeBudgetMs > 300_000) {
+      throw new Error("invalid shadow handler wall-time budget");
+    }
     const config = this.currentConfig();
     if (!config.shadowWriteEnabled || config.killSwitchEngaged) {
       return {
@@ -338,6 +375,7 @@ export class RolloutController {
         examined: 0,
         contended: 0,
         skippedAfterClaim: 0,
+        handlerDeadlineExceeded: 0,
       };
     }
     const now = this.clock();
@@ -351,6 +389,7 @@ export class RolloutController {
     let examined = 0;
     let contended = 0;
     let skippedAfterClaim = 0;
+    let handlerDeadlineExceeded = 0;
     for (const candidate of candidates) {
       examined += 1;
       try {
@@ -382,15 +421,31 @@ export class RolloutController {
         let outcome: "succeeded" | "retryable_failure" | "permanent_failure" = "succeeded";
         let errorCode: string | null = null;
         let nextAvailableAt: string | null = null;
+        this.db.exec("SAVEPOINT shadow_delivery_handler");
         try {
+          const deadlineAtMonotonicMs = this.monotonicNowMs() + handlerWallTimeBudgetMs;
+          const context: ShadowDeliveryContext = {
+            deadlineAtMonotonicMs,
+            remainingMs: () => Math.max(0, deadlineAtMonotonicMs - this.monotonicNowMs()),
+            throwIfCancelled: () => {
+              if (this.monotonicNowMs() > deadlineAtMonotonicMs) {
+                throw new ShadowDeliveryDeadlineExceededError();
+              }
+            },
+          };
           handler({
             outboxMessageId: row.outbox_message_id,
             messageType: row.message_type,
             payload: JSON.parse(row.payload_json) as unknown,
-          });
+          }, context);
+          context.throwIfCancelled();
+          this.db.exec("RELEASE shadow_delivery_handler");
           succeeded += 1;
         } catch (error) {
+          this.db.exec("ROLLBACK TO shadow_delivery_handler");
+          this.db.exec("RELEASE shadow_delivery_handler");
           errorCode = error instanceof Error ? error.name || "SHADOW_WRITE_FAILED" : "SHADOW_WRITE_FAILED";
+          if (error instanceof ShadowDeliveryDeadlineExceededError) handlerDeadlineExceeded += 1;
           if (error instanceof PermanentShadowDeliveryError || attemptNo > activeConfig.maxRetries) {
             outcome = "permanent_failure";
             permanentlyFailed += 1;
@@ -427,7 +482,15 @@ export class RolloutController {
         throw error;
       }
     }
-    return { succeeded, retrying, permanentlyFailed, examined, contended, skippedAfterClaim };
+    return {
+      succeeded,
+      retrying,
+      permanentlyFailed,
+      examined,
+      contended,
+      skippedAfterClaim,
+      handlerDeadlineExceeded,
+    };
   }
 
   runPrimaryWithOptionalShadow<T>(primary: () => T, shadow: () => void): {
@@ -647,6 +710,34 @@ export class RolloutController {
       subjectType: "research_sidecar",
       subjectId: "current",
       detail: health,
+    });
+    return health;
+  }
+
+  recordDrainDiagnostics(
+    diagnostics: ShadowDrainDiagnostics,
+    operationId = this.idFactory(),
+  ): ShadowHealth {
+    const counts = Object.values(diagnostics);
+    if (counts.some((value) => !Number.isSafeInteger(value) || value < 0)) {
+      throw new Error("invalid shadow drain diagnostics");
+    }
+    const terminalOrRetrying = diagnostics.succeeded
+      + diagnostics.retrying
+      + diagnostics.permanentlyFailed;
+    if (terminalOrRetrying + diagnostics.contended + diagnostics.skippedAfterClaim !== diagnostics.examined) {
+      throw new Error("inconsistent shadow drain diagnostics");
+    }
+    if (diagnostics.handlerDeadlineExceeded > diagnostics.retrying + diagnostics.permanentlyFailed) {
+      throw new Error("inconsistent shadow deadline diagnostics");
+    }
+    const health = this.health();
+    this.auditEvent({
+      operationId,
+      eventKind: "health_snapshot",
+      subjectType: "shadow_outbox_drain",
+      subjectId: "current",
+      detail: { health, drainDiagnostics: diagnostics },
     });
     return health;
   }
