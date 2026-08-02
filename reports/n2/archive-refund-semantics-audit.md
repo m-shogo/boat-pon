@@ -227,3 +227,6 @@ raw archive入力は今回も存在せず、archive refund実数再集計は未�
 
 raw archive入力は今回も存在せず、refund実数監査は未確認である。非ブロック作業として、二つのconsumerが同一outbox rowをhandler実行前に読み、二重配送できる競合を修正した。messageごとの`BEGIN IMMEDIATE`、lock後state再読込、handler＋attempt appendのtransaction境界を追加した。typed observation内部atomic writeはsavepointへ変更し、claim transaction内でも動作する。schema migration、実DB、live writer、予測、BUY条件の変更はない。
 
+## 2026-08-02 shadow contention observability / crash recovery slice
+
+raw archive入力は今回も存在せず、year × bet_type × event_kind、約319,301候補、eligible率差は未確認である。非ブロック作業として、競合consumerの安全なskipがqueue空と同じ戻り値になる運用上の盲点を、互換性を維持した`drainWithDiagnostics`（examined / contended / skippedAfterClaim）で可視化した。さらに別Node processをhandler transaction中に`process.exit(77)`で終了し、handler内DB side effectとdelivery attemptがともにrollbackされ、再open後にqueued messageを1回だけ成功再配送できることをE2Eで確認した。関連32/32 tests、targeted strict TypeScript PASS。schema migration、実DB、live writer、予測、BUY条件の変更はない。
