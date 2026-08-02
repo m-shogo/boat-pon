@@ -75,3 +75,13 @@ label truth gate通過前のmodel training/tuning、BUY/WATCH/SKIP logic変更�
 - [x] rollback後はqueued messageを保持したままdelivery 0件
 - [ ] 実sidecarでのmixed canary、kill-switch/restore rehearsal（BLOCKED / live writer OFF）
 
+### Shadow delivery single-writer claim（temp evidence）
+
+- [x] 二つの独立SQLite接続が同一messageを同時候補化するfixture
+- [x] consumer A handler中のconsumer B drainはdelivery 0、failure attempt 0
+- [x] A成功後のB再drainもdelivery 0
+- [x] 同一messageのdelivery attemptは1件
+- [x] handler一時失敗でも競合consumerは実行せずretry attempt 1件
+- [x] typed observation内部writeをsavepoint化し、外側／内側transaction双方を検証
+- [ ] 実sidecarの複数process canaryとcrash kill rehearsal（BLOCKED / live writer OFF）
+
