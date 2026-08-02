@@ -97,3 +97,15 @@ label truth gate通過前のmodel training/tuning、BUY/WATCH/SKIP logic変更�
 - [x] health snapshotへcounter/healthのみ保存し、message payloadを含めない
 - [ ] external side effect handlerは未許可。別の冪等/reconciliation契約なしでは接続禁止
 - [ ] 実sidecar canaryと承認済みwall-time/kill rehearsal（BLOCKED / live writer OFF）
+
+
+### Shadow operability report / threshold gate（temp evidence）
+
+- [x] retry exhaustionを固定`SHADOW_RETRY_EXHAUSTED`で明示的permanent failureから分離
+- [x] queued / ready / oldest age / retrying / permanent / exhaustedをread-only集計
+- [x] versioned caller-supplied threshold（production値の暗黙defaultなし）
+- [x] recent drain contention / deadline counter集約とdiagnostics shape整合性検証
+- [x] PASS / WARN / BLOCKEDの明示理由、入力同一時の決定的digest
+- [x] reportへmessage payloadを含めず、read中のDB change 0
+- [x] malformed historical diagnosticsをfail-closed
+- [ ] 実sidecar policy approval、immutable CLI、shadow canary（BLOCKED / live writer OFF）
