@@ -581,3 +581,12 @@ M1はN3/N4の選手PIT gate、M3は主観を排したstrict-prior label gate、M
 - live writerはOFF。実sidecar canary、backup/restore、kill-switch rehearsalは未実施。
 - archive refund全件再集計はraw入力不足で未完了。N2 label truth/readinessは変更しない。
 
+### 2026-08-02 F0-R shadow single-writer claim
+
+- 旧`drain`は候補readとdelivery attempt appendの間にhandlerを実行し、二consumerが同一messageを二重配送できた。
+- message単位のSQLite immediate write claimとlock後state再確認を実装した。競合consumerはmessageを失敗扱いせずskipする。
+- typed observation内部transactionをsavepoint化し、外側claimとのネスト衝突を修正した。
+- 二接続reentrant fixtureで成功／一時失敗双方の二重配送0、attempt 1件を確認した。
+- 関連24 tests、targeted strict TypeScript PASS。schema migrationなし。
+- live writerと実sidecar canaryは未実施。archive refund再集計とN2 label truthはBLOCKEDのまま。
+
