@@ -87,3 +87,13 @@ label truth gate通過前のmodel training/tuning、BUY/WATCH/SKIP logic変更�
 - [x] subprocess `process.exit(77)`で未commit handler side effect / delivery attempt 0、再open後queued 1→success 1
 - [ ] 実sidecarの複数process canaryと承認済みcrash kill rehearsal（BLOCKED / live writer OFF）
 
+### Shadow handler atomicity / deadline（temp evidence）
+
+- [x] handler部分DB write後の例外をsavepoint rollbackし、side effect 0 / retry attempt 1
+- [x] monotonic wall-time budgetと協調`throwIfCancelled`
+- [x] deadline超過を`SHADOW_HANDLER_DEADLINE_EXCEEDED`としてretry分類
+- [x] deadline超過前のhandler DB side effectをrollback
+- [x] drain counter整合性を検証し、不整合snapshotをfail-closed
+- [x] health snapshotへcounter/healthのみ保存し、message payloadを含めない
+- [ ] external side effect handlerは未許可。別の冪等/reconciliation契約なしでは接続禁止
+- [ ] 実sidecar canaryと承認済みwall-time/kill rehearsal（BLOCKED / live writer OFF）
