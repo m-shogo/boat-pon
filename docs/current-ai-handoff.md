@@ -384,3 +384,27 @@ next:
 1. raw入力があればarchive refund scannerとcanonical reconciliationを最優先。
 2. 入力がなければdiagnostic countersをshadow health snapshotへ安全に集約する境界と、handler wall-time budget/cancellation契約をtemp E2Eで固定する。
 3. 実writerはapproval、backup/restore、canary、rollback rehearsalまでOFF。
+
+## 2026-08-02 F0-R atomic handler / deadline boundary
+
+completed:
+
+- handlerが同じSQLite transactionへ部分書込み後に例外を投げると、旧実装がretry attemptと一緒に部分writeもcommitし得る不具合を確定・修正した。
+- handler専用savepointを追加し、例外・deadline超過時はhandler DB side effectをrollbackしてからfailure attemptだけをappendする。
+- 既定30秒、1ms〜300秒のmonotonic wall-time budgetと協調`throwIfCancelled`、return後deadline確認を追加。
+- deadline超過は`SHADOW_HANDLER_DEADLINE_EXCEEDED`としてretry分類。同期handlerの外部preemptionは保証しない。
+- `recordDrainDiagnostics`は整合性検証済みcounter＋healthだけをsnapshot化し、message payloadを保存しない。
+- 関連35/35、targeted strict TypeScript、whitespace check PASS。
+- code commits: `07f6eaa195688234c5fb3fe1698d15641756d4a2`, `a08ec10388505eeac71536185fc5bc3676684187`, `8ae7b9eab67d5e1f358513a8b4d4c7e139fcf296`。
+
+current / blocked:
+
+- raw archive/実sidecar未接続。refund実数、約319,301候補、eligible率差、実coverageは未確認。
+- live writer、実DB、collector、予測、BUY条件は変更していない。
+- DB外部副作用handlerはrollback不能なため未許可。別の冪等/reconciliation契約が必要。
+
+next:
+
+1. raw入力があればarchive refund scannerとcanonical reconciliationを最優先。
+2. 入力がなければoutbox滞留・retry exhaustion・contention/deadline counterをまとめるread-only operability reportとthreshold gateを実装する。
+3. 実writerはapproval、backup/restore、canary、rollback rehearsalまでOFF。
