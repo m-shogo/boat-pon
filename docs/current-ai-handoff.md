@@ -363,3 +363,24 @@ next:
 2. 入力がなければhandler長時間化・busy contentionのbounded observability、process crash後のclaim rollback/replayをtemp subprocess E2Eで固定する。
 3. 実writerはapproval、backup/restore、canary、rollback rehearsalまでOFF。
 
+## 2026-08-02 F0-R contention observability / process-crash replay
+
+completed:
+
+- 既存`drain`契約を維持したまま、`drainWithDiagnostics`で`examined / contended / skippedAfterClaim`を返し、queue空とwrite-lock競合を区別可能にした。
+- 二接続reentrant fixtureはnested consumerでexamined 1 / contended 1 / delivery 0 / failure attempt 0。
+- 別Node processをhandler transaction中に`process.exit(77)`で終了するE2Eを追加。未commit handler audit row 0、delivery attempt 0、再open後queued 1、再配送success 1を確認した。
+- claim/crash/official program/coverage/odds/routing関連32/32、targeted strict TypeScript PASS。
+- code commits: `6f83749c76acd725f93067a610a55619800a98f7`, `f9b256b94ecf26b839e3da9b8041c9eaa31a53a2`, `cf6abeeb18221d653b61b646bca263b78b419e1c`。
+
+current / blocked:
+
+- raw archive/実sidecar未接続。refund実数、約319,301候補、eligible率差、実coverageは未確認。
+- live writer、実DB、collector、予測、BUY条件は変更していない。
+- 実sidecar複数process canaryと承認済みcrash rehearsalは未実施。
+
+next:
+
+1. raw入力があればarchive refund scannerとcanonical reconciliationを最優先。
+2. 入力がなければdiagnostic countersをshadow health snapshotへ安全に集約する境界と、handler wall-time budget/cancellation契約をtemp E2Eで固定する。
+3. 実writerはapproval、backup/restore、canary、rollback rehearsalまでOFF。
