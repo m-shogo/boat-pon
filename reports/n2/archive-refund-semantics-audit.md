@@ -243,3 +243,10 @@ monotonic wall-time budget、協調cancellation、return後deadline確認、`SHA
 raw archive入力は今回も存在せず、year × bet_type × event_kind、約319,301候補、eligible率差は未確認である。非ブロック作業で、retry上限到達が通常のerror名だけで保存され、明示的permanent failureと後から安全に区別できない不具合を修正した。将来の上限到達を`SHADOW_RETRY_EXHAUSTED`で固定し、既存rowを現configから推測しない。
 
 read-only `shadow-operability-v1`はbacklog/ready/age/retry/permanent/exhaustionとcontention/deadlineをversioned thresholdへ照合し、PASS/WARN/BLOCKED理由と決定的digestを返す。payload非包含、read中write 0、malformed diagnostics fail-closedをtemp E2Eで確認した。対象18/18 tests、targeted strict TypeScript PASS。schema、実DB、live writer、collector、予測、BUY条件の変更はない。
+
+
+## 2026-08-02 immutable operability CLI / approval slice
+
+raw archive入力は今回も存在せず、year × bet_type × event_kind、約319,301候補、eligible率差は未確認である。非ブロック作業として、operability threshold policyをstrict schema化し、canonical digestを既存append-only approval grant/lifecycleへ結合した。未承認、simulated→production流用、revoked、policy改変はすべてBLOCKEDになる。
+
+CLIは明示as-ofとmodeを必須にし、quiescent snapshotをimmutable/read-only/query-onlyで開く。active WALは拒否する。新規4 testsを含む対象7/7、targeted strict TypeScript、JSON/whitespace check PASS。production policy/approvalは作成せず、schema、実DB、live writer、collector、予測、BUY条件は変更していない。
