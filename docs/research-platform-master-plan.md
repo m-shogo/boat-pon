@@ -572,3 +572,12 @@ M1はN3/N4の選手PIT gate、M3は主観を排したstrict-prior label gate、M
 - live writerはOFF。実sidecar接続はapproval、backup/restore、canary、rollback rehearsalまでBLOCKED。
 - archive refund全件再集計はraw入力不足で未完了。N2 label truthはREADYへ変更しない。
 
+### 2026-08-02 F0-R mixed routing / failure isolation
+
+- 未知messageやmalformed payloadまでmax retryを消費していたF0-R outboxを、明示的なpermanent delivery errorで分類可能にした。
+- type別handler registryを追加し、official_programと別contractの混在queueを誤consumerへ渡さない。
+- temp E2Eでmixed routing、unknown/malformed即時permanent、一時障害retry→success、rollback後delivery 0を確認した。
+- 新規routingを含む関連22 testsとtargeted strict TypeScriptがPASS。
+- live writerはOFF。実sidecar canary、backup/restore、kill-switch rehearsalは未実施。
+- archive refund全件再集計はraw入力不足で未完了。N2 label truth/readinessは変更しない。
+
