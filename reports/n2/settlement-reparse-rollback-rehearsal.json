@@ -1,0 +1,54 @@
+{
+  "phase": "N2_SETTLEMENT_REPARSE_ROLLBACK_REHEARSAL",
+  "generatedAt": "2026-08-03T06:27:36.929Z",
+  "asOf": "2026-08-01T00:00:00.000Z",
+  "gitSha": "80d61d57b3ba242f7395770219ed01212a5099a8",
+  "target": "/Users/m-shogo/Developer/personal/boat-pon/data/tmp/reparse-full.sqlite",
+  "mode": "simulated",
+  "scope": "resolver-only rollback + append-only reversal + backup/restore on a temp copy; no production/source write",
+  "operationalDisable": {
+    "correctedActive": {
+      "partially_refunded": 1,
+      "refunded": 1554,
+      "settled": 8216200
+    },
+    "rolledBackActive": {
+      "partially_refunded": 1,
+      "refunded": 319301,
+      "settled": 7833297
+    },
+    "rolledBackEqualsOriginalV1Shape": "{\"partially_refunded\":1,\"refunded\":319301,\"settled\":7833297}"
+  },
+  "appendOnlyReversal": {
+    "rollbackStartedFirstInsert": 1,
+    "rollbackCompletedFirstInsert": 1,
+    "rollbackStartedSecondInsert": 0,
+    "doubleRollbackIdempotent": true,
+    "auditUpdateBlocked": true,
+    "auditDeleteBlocked": true,
+    "physicalRowsBefore": 8539698,
+    "physicalRowsAfter": 8539698,
+    "physicalRowsUnchanged": true
+  },
+  "backupRestore": {
+    "backupPath": "/Users/m-shogo/Developer/personal/boat-pon/data/tmp/reparse-rollback-backup.sqlite",
+    "backupHash": "065ca8c70807458c6b81b769f732e84064120199e255255eff016c73be713fbb",
+    "backupQuickCheck": "ok",
+    "backupCorrected": {
+      "partially_refunded": 1,
+      "refunded": 1554,
+      "settled": 8216200
+    },
+    "backupRolledBack": {
+      "partially_refunded": 1,
+      "refunded": 319301,
+      "settled": 7833297
+    },
+    "restorePath": "/Users/m-shogo/Developer/personal/boat-pon/data/tmp/reparse-rollback-restore.sqlite",
+    "restoreHash": "065ca8c70807458c6b81b769f732e84064120199e255255eff016c73be713fbb",
+    "restoreHashMatchesBackup": true,
+    "restoreResolverMatchesTarget": true
+  },
+  "digest": "bb95f227105906b998d1fa46c7a3512580ba8aae22ed658810ea728c2a66cca7",
+  "result": "REHEARSED"
+}

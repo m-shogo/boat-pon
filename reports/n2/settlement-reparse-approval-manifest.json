@@ -1,0 +1,102 @@
+{
+  "manifestSchemaVersion": "n2-settlement-reparse-approval-manifest-v1",
+  "generatedAt": "2026-08-03T06:35:06.905Z",
+  "approvalStatus": "NOT_APPROVED",
+  "realSidecarApply": "NOT_EXECUTED",
+  "productionApproval": "NOT_CREATED",
+  "productionApply": "BLOCKED",
+  "approvalTargetDigest": "647993a11b91c660743d978c853a0b347bca729145bac037f0af1595939abe4e",
+  "binding": {
+    "reparseSchemaVersion": "n2-settlement-reparse-v1",
+    "sourceParserVersion": "n1-settlement-parser-v1",
+    "targetParserVersion": "n1-settlement-parser-v2",
+    "canonicalizationVersion": "rr-c14n-v1",
+    "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND",
+    "snapshotIdentity": {
+      "sourceSha256": "d9b5ddd264ea138f319b04a8fb9398f1048bb2ad3001055ffe319616d6b6cb92",
+      "sourceBytes": 9019846656,
+      "settlementSchema": "n1-settlement.0.3"
+    },
+    "falseRefundCorrections": 317747,
+    "specialPayoutAdditions": 65156,
+    "supersessionRelations": 317747,
+    "appendedCandidates": 382903,
+    "outputDigest": "247310fbd8bc40db54568b0d0d3e84d823fd3da1a551c192cad2ff775a9a090f"
+  },
+  "snapshotIdentity": {
+    "sourceSha256": "d9b5ddd264ea138f319b04a8fb9398f1048bb2ad3001055ffe319616d6b6cb92",
+    "sourceBytes": 9019846656,
+    "settlementSchema": "n1-settlement.0.3"
+  },
+  "measured": {
+    "filesScanned": 8174,
+    "filesIngested": 8167,
+    "filesNotIngested": 7,
+    "parseErrors": 0,
+    "exact": 7834852,
+    "falseRefundCorrections": 317747,
+    "resultKindCorrections": 0,
+    "specialPayoutAdditions": 65156,
+    "ambiguousNonDefect": 0,
+    "unexpectedAdditions": 2,
+    "appendedCandidates": 382903,
+    "supersessionRelations": 317747,
+    "appendedParseRuns": 8167,
+    "appendedObservations": 58542,
+    "activeBefore": {
+      "settled": 7833297,
+      "refunded": 319301,
+      "partially_refunded": 1
+    },
+    "activeAfter": {
+      "settled": 8216200,
+      "refunded": 1554,
+      "partially_refunded": 1
+    },
+    "afterConsistent": true,
+    "logicalActive": {
+      "before": 8152599,
+      "after": 8217755
+    },
+    "physicalRows": {
+      "before": 8156795,
+      "after": 8539698
+    },
+    "ambiguousActiveKeys": 0
+  },
+  "verification": {
+    "fullOutputDigest": "247310fbd8bc40db54568b0d0d3e84d823fd3da1a551c192cad2ff775a9a090f",
+    "fullResult": "REPARSED_WITH_FLAGS",
+    "secondRunAppended": 0,
+    "secondRunSupersessions": 0,
+    "integrity": {
+      "integrityCheck": "ok",
+      "foreignKeyViolations": 0,
+      "orphanPayoutLines": 0,
+      "orphanRefundLines": 0,
+      "ambiguousActiveKeys": 0
+    },
+    "appendOnlyEnforcement": {
+      "updateBlocked": true,
+      "deleteBlocked": true
+    },
+    "canaryDigest": "2902a5a1fa27a6affeee71c91c3046a22c25d34780099af11290c75a68952319",
+    "canaryResult": "REPARSED",
+    "rollbackResult": "REHEARSED",
+    "rollbackDigest": "bb95f227105906b998d1fa46c7a3512580ba8aae22ed658810ea728c2a66cca7",
+    "rollbackRolledBackActive": {
+      "partially_refunded": 1,
+      "refunded": 319301,
+      "settled": 7833297
+    },
+    "rollbackPhysicalUnchanged": true,
+    "backupRestoreMatch": true
+  },
+  "sourceNonPropagation": {
+    "sourceSha256Before": "d9b5ddd264ea138f319b04a8fb9398f1048bb2ad3001055ffe319616d6b6cb92",
+    "sourceSha256After": "d9b5ddd264ea138f319b04a8fb9398f1048bb2ad3001055ffe319616d6b6cb92",
+    "unchanged": true
+  },
+  "requiredApproverAction": "Review this manifest and the apply runbook; if approved, record an explicit append-only approval grant bound to approvalTargetDigest and the snapshot identity, then run the apply with --mode=production only after that grant, backup, canary, and rollback rehearsal are all satisfied.",
+  "gitSha": "98944059aaa36a61592ec1d343cfd199cb152b38"
+}
