@@ -1,74 +1,94 @@
 {
-  "manifestSchemaVersion": "n2-settlement-reparse-approval-manifest-v1",
-  "generatedAt": "2026-08-03T06:35:06.905Z",
+  "manifestSchemaVersion": "n2-settlement-reparse-approval-manifest-v2",
+  "generatedAt": "2026-08-03T07:12:41.338Z",
   "approvalStatus": "NOT_APPROVED",
   "realSidecarApply": "NOT_EXECUTED",
   "productionApproval": "NOT_CREATED",
   "productionApply": "BLOCKED",
-  "approvalTargetDigest": "647993a11b91c660743d978c853a0b347bca729145bac037f0af1595939abe4e",
+  "approvalTargetDigest": "7e38b564d6fa435ef08edfa0a4d67a319b107f9570ad94d289e821394faac12c",
+  "supersedes": [
+    {
+      "manifestSchemaVersion": "n2-settlement-reparse-approval-manifest-v1",
+      "approvalTargetDigest": "647993a11b91c660743d978c853a0b347bca729145bac037f0af1595939abe4e",
+      "reason": "expanded binding (archive inventory, git SHA, contract versions, defect classifications, expected before/after, validity) → new digest"
+    }
+  ],
   "binding": {
-    "reparseSchemaVersion": "n2-settlement-reparse-v1",
-    "sourceParserVersion": "n1-settlement-parser-v1",
-    "targetParserVersion": "n1-settlement-parser-v2",
-    "canonicalizationVersion": "rr-c14n-v1",
-    "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND",
+    "approvalSchemaVersion": "n2-settlement-reparse-approval-manifest-v2",
     "snapshotIdentity": {
       "sourceSha256": "d9b5ddd264ea138f319b04a8fb9398f1048bb2ad3001055ffe319616d6b6cb92",
       "sourceBytes": 9019846656,
-      "settlementSchema": "n1-settlement.0.3"
+      "settlementSchema": "n1-settlement.0.3",
+      "sourceGitSha": "4730bb234d34f125a1ee4dfa6bcf9320c1d722c4"
+    },
+    "archiveInventoryDigest": "ee4023700f2acfe0768e2e9255c64348d985d711ee37dd4bd733aa1239b57ceb",
+    "archiveFileCount": 8174,
+    "parserSourceVersion": "n1-settlement-parser-v1",
+    "parserTargetVersion": "n1-settlement-parser-v2",
+    "canonicalizationVersion": "rr-c14n-v1",
+    "reparseContractVersion": "n2-settlement-reparse-v1",
+    "defectClassifications": {
+      "applied": [
+        "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+      ],
+      "heldOut": [
+        "CONFIRMED_V1_WIN_REFUND_OMISSION"
+      ]
     },
     "falseRefundCorrections": 317747,
     "specialPayoutAdditions": 65156,
-    "supersessionRelations": 317747,
-    "appendedCandidates": 382903,
-    "outputDigest": "247310fbd8bc40db54568b0d0d3e84d823fd3da1a551c192cad2ff775a9a090f"
-  },
-  "snapshotIdentity": {
-    "sourceSha256": "d9b5ddd264ea138f319b04a8fb9398f1048bb2ad3001055ffe319616d6b6cb92",
-    "sourceBytes": 9019846656,
-    "settlementSchema": "n1-settlement.0.3"
-  },
-  "measured": {
-    "filesScanned": 8174,
-    "filesIngested": 8167,
-    "filesNotIngested": 7,
-    "parseErrors": 0,
-    "exact": 7834852,
-    "falseRefundCorrections": 317747,
     "resultKindCorrections": 0,
-    "specialPayoutAdditions": 65156,
+    "manualReviewCount": 2,
     "ambiguousNonDefect": 0,
-    "unexpectedAdditions": 2,
-    "appendedCandidates": 382903,
+    "skippedNotIngested": 7,
     "supersessionRelations": 317747,
-    "appendedParseRuns": 8167,
-    "appendedObservations": 58542,
-    "activeBefore": {
+    "appendedCandidates": 382903,
+    "canaryDigest": "2902a5a1fa27a6affeee71c91c3046a22c25d34780099af11290c75a68952319",
+    "fullDigest": "247310fbd8bc40db54568b0d0d3e84d823fd3da1a551c192cad2ff775a9a090f",
+    "rollbackDigest": "bb95f227105906b998d1fa46c7a3512580ba8aae22ed658810ea728c2a66cca7",
+    "backupRestoreVerified": true,
+    "productionApplyCodeGitSha": "4730bb234d34f125a1ee4dfa6bcf9320c1d722c4",
+    "productionApplyPolicyVersion": "n2-settlement-reparse-apply-gate-v1",
+    "expectedBefore": {
       "settled": 7833297,
       "refunded": 319301,
       "partially_refunded": 1
     },
-    "activeAfter": {
+    "expectedAfter": {
       "settled": 8216200,
       "refunded": 1554,
       "partially_refunded": 1
     },
-    "afterConsistent": true,
-    "logicalActive": {
-      "before": 8152599,
-      "after": 8217755
-    },
-    "physicalRows": {
-      "before": 8156795,
-      "after": 8539698
-    },
-    "ambiguousActiveKeys": 0
+    "rollbackStrategy": "resolver-only disable (ignore reparse parse_run) + append-only reversal; original rows preserved",
+    "approvalScope": "N2_SETTLEMENT_REPARSE_APPLY",
+    "mode": "production",
+    "validityCondition": "valid only while source snapshot SHA-256 and approvalTargetDigest match; single-use per snapshot"
   },
+  "snapshotIdentity": {
+    "sourceSha256": "d9b5ddd264ea138f319b04a8fb9398f1048bb2ad3001055ffe319616d6b6cb92",
+    "sourceBytes": 9019846656,
+    "settlementSchema": "n1-settlement.0.3",
+    "sourceGitSha": "4730bb234d34f125a1ee4dfa6bcf9320c1d722c4"
+  },
+  "productionApplyCodeGitSha": "4730bb234d34f125a1ee4dfa6bcf9320c1d722c4",
+  "heldOutAdditions": [
+    {
+      "raceKey": "2014-03-28:08:R1",
+      "betType": "win",
+      "classification": "CONFIRMED_V1_WIN_REFUND_OMISSION",
+      "autoApplyEligible": false
+    },
+    {
+      "raceKey": "2014-03-28:17:R2",
+      "betType": "win",
+      "classification": "CONFIRMED_V1_WIN_REFUND_OMISSION",
+      "autoApplyEligible": false
+    }
+  ],
   "verification": {
-    "fullOutputDigest": "247310fbd8bc40db54568b0d0d3e84d823fd3da1a551c192cad2ff775a9a090f",
     "fullResult": "REPARSED_WITH_FLAGS",
+    "fullOutputDigest": "247310fbd8bc40db54568b0d0d3e84d823fd3da1a551c192cad2ff775a9a090f",
     "secondRunAppended": 0,
-    "secondRunSupersessions": 0,
     "integrity": {
       "integrityCheck": "ok",
       "foreignKeyViolations": 0,
@@ -81,22 +101,18 @@
       "deleteBlocked": true
     },
     "canaryDigest": "2902a5a1fa27a6affeee71c91c3046a22c25d34780099af11290c75a68952319",
-    "canaryResult": "REPARSED",
     "rollbackResult": "REHEARSED",
     "rollbackDigest": "bb95f227105906b998d1fa46c7a3512580ba8aae22ed658810ea728c2a66cca7",
     "rollbackRolledBackActive": {
       "partially_refunded": 1,
       "refunded": 319301,
       "settled": 7833297
-    },
-    "rollbackPhysicalUnchanged": true,
-    "backupRestoreMatch": true
+    }
   },
   "sourceNonPropagation": {
     "sourceSha256Before": "d9b5ddd264ea138f319b04a8fb9398f1048bb2ad3001055ffe319616d6b6cb92",
-    "sourceSha256After": "d9b5ddd264ea138f319b04a8fb9398f1048bb2ad3001055ffe319616d6b6cb92",
     "unchanged": true
   },
-  "requiredApproverAction": "Review this manifest and the apply runbook; if approved, record an explicit append-only approval grant bound to approvalTargetDigest and the snapshot identity, then run the apply with --mode=production only after that grant, backup, canary, and rollback rehearsal are all satisfied.",
-  "gitSha": "98944059aaa36a61592ec1d343cfd199cb152b38"
+  "requiredApproverAction": "If approving: record an append-only rollout_approval_grants_v2 grant with approval_scope=N2_SETTLEMENT_REPARSE_APPLY, approval_mode=production, target_stage=N2-REPARSE-APPLY, target_schema_version=n1-settlement.0.3@<sourceSha256>, target_contract_version=n2-settlement-reparse-apply-v1:<approvalTargetDigest>, approved_at before apply. Then run apply:n2:settlement-reparse --mode=production; the gate re-checks everything and BLOCKS on any mismatch. Claude must not create this grant.",
+  "gitSha": "4730bb234d34f125a1ee4dfa6bcf9320c1d722c4"
 }

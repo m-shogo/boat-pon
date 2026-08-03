@@ -502,3 +502,25 @@ current / blocked:
 next（最優先を1つ）:
 
 1. 承認者が `approvalTargetDigest` + snapshot identity に束ねた append-only approval grant を記録したら、production apply gate（backup→canary→apply→verify→rollback rehearsal）を実装して実 sidecar へ適用する。承認前は BLOCKED。
+
+## 2026-08-03 reparse production apply gate + 保留2件確定 + 可視化（実適用は未承認）
+
+completed:
+
+- **unexpected_addition 2 件を read-only 調査で完全特定**: `2014-03-28:08:R1/win`・`2014-03-28:17:R2/win`。両者 v2=win 返還・v1 candidate 無し → 分類 **`CONFIRMED_V1_WIN_REFUND_OMISSION`**（win 返還欠落という別 v1 defect、本 special-payout reparse の scope 外）。auto-apply せず hold。正本 `reports/n2/unexpected-additions-audit.json/.md`。この決定で reparse 訂正 scope は不変（full digest `247310fb` 維持）。
+- **classification を versioned contract 化**: `classifyUnexpectedAddition`（enum: CONFIRMED_V1_WIN_REFUND_OMISSION / CONFIRMED_MISSING_SPECIAL_PAYOUT / CONFIRMED_SOURCE_DUPLICATE / MANUAL_REVIEW_REQUIRED …）。auto-apply は特払い defect のみ、それ以外は fail-closed hold。
+- **production apply gate 実装**: `src/research-replay/n2SettlementReparseApply.ts`（`resolveReparseApplyGate`）が既存 append-only approval lifecycle（`resolveApproval`）を再利用し、approval target digest / source snapshot SHA・size / schema / mode=production / code SHA / WAL / disk を束ねて解決。`scripts/apply-settlement-reparse.ts`（`pnpm apply:n2:settlement-reparse`）は gate を immutable/read-only で解決し、承認が無ければ exit 3・write 0。承認済みのみ TOCTOU 再確認後に temp-copy と同一 engine コードパスで append-only 適用。
+- **実 sidecar に対し gate を実測 → BLOCKED（exit 3）**: blocks=`[MANIFEST_MARKED_NOT_APPROVED, APPROVAL_SCOPE_MISMATCH]`。sidecar の approval grant は F0-R・N1-B のみで、`N2_SETTLEMENT_REPARSE_APPLY` scope の grant は存在しない。source SHA-256 `d9b5ddd2…` 実行前後不変・write 0。正本 `reports/n2/settlement-reparse-apply.json`。
+- **approval manifest v2**: 旧 approvalTargetDigest `647993a1…` を superseded とし、新 digest **`7e38b564…`**（source SHA/size/schema/git SHA/archive inventory digest `ee402370…`/parser/canonicalization/contract versions/件数/canary・full・rollback digest/expected before-after/rollback strategy/scope/mode/validity を束ねる）。
+- **可視化成果物**: `reports/n2/settlement-reparse-dashboard.html`（self-contained、Before/After・年別/券種別 SVG・実レース12例・進捗）、`settlement-reparse-before-after.md`、`settlement-reparse-examples.json`。false_refund 317,747・special_addition 65,156・真の返還 1,554・eligible率 約96.03%→約99.98%。
+- 全 598 tests pass、targeted strict typecheck PASS。
+
+current / blocked:
+
+- **有効な production approval は存在しない → production apply BLOCKED / real-sidecar apply NOT EXECUTED**。Claude は承認を作成しない。
+- held-out 2 件（win 返還欠落）は別 defect・別承認の別訂正で扱う（本 reparse では不変更）。
+- production threshold/approval/live writer/collector/prediction/model/BUY・WATCH・SKIP/app_settings/boat.sqlite/production DB schema は未変更。
+
+next（最優先を1つ）:
+
+1. 承認者が `rollout_approval_grants_v2` へ scope=`N2_SETTLEMENT_REPARSE_APPLY` / mode=production / target_schema_version=`n1-settlement.0.3@<sourceSha256>` / target_contract_version=`n2-settlement-reparse-apply-v1:7e38b564…` の append-only grant を記録したら、`pnpm apply:n2:settlement-reparse --mode=production` で gate 経由 backup→apply→verify→rollback readiness を実行する（承認前は BLOCKED）。

@@ -6,7 +6,23 @@
 本書は、v1 parser defect（`V1_SPECIAL_PAYOUT_FALSE_REFUND`）由来の誤 refund candidate を、永続 sidecar
 `data/research-replay.sqlite` へ append-only supersession で訂正するための**承認可能パッケージ**である。
 temp copy 上で完全にリハーサル済みだが、実 sidecar への適用承認は与えられていない。承認 artifact は
-`reports/n2/settlement-reparse-approval-manifest.json`（approvalTargetDigest 付き）。
+`reports/n2/settlement-reparse-approval-manifest.json`（manifest v2, approvalTargetDigest 付き）。
+
+### 2026-08-03 更新（承認 gate 実装・保留2件確定・manifest v2）
+
+- production apply gate `apply:n2:settlement-reparse` を実装。既存 append-only approval lifecycle
+  （`resolveApproval`）を再利用し、`resolveReparseApplyGate` が approval target digest / source snapshot
+  SHA・size / schema / mode=production / code SHA を束ねて解決する。有効な production approval が無ければ BLOCKED。
+- **実 sidecar に対し gate を実行し `BLOCKED`（exit 3）を確認**（`reports/n2/settlement-reparse-apply.json`）:
+  blocks=`[MANIFEST_MARKED_NOT_APPROVED, APPROVAL_SCOPE_MISMATCH]`。sidecar への write は 0（immutable open）。
+- unexpected_addition 2 件を read-only 調査で確定: `2014-03-28:08:R1/win` と `2014-03-28:17:R2/win`、いずれも
+  v2=win 返還・v1 candidate 無し → **`CONFIRMED_V1_WIN_REFUND_OMISSION`**（本 special-payout reparse の scope 外の
+  別 v1 defect）。auto-apply せず hold。正本 `reports/n2/unexpected-additions-audit.json`。
+- approval manifest を v2 へ再固定。旧 approvalTargetDigest `647993a1…` を superseded として記録し、
+  新 digest `7e38b564d6fa435ef08edfa0a4d67a319b107f9570ad94d289e821394faac12c`（source SHA・size・schema・git SHA・
+  archive inventory digest `ee402370…`・parser/canonicalization/contract versions・件数・canary/full/rollback digest・
+  expected before/after・rollback strategy・scope・mode・validity を束ねる）。
+- **有効な production approval は存在しない**（sidecar の approval grant は F0-R と N1-B のみ）。production apply は BLOCKED。
 
 ## 1. 背景と defect
 
@@ -70,8 +86,9 @@ v1 は archive 中の「特払い」を race-wide 返還として扱い、同一
 
 ## 7. 残存リスク
 
-- **unexpected_addition 2 件**: v2 が非特払いの settled candidate を導出したが対応する active v1 candidate が無い 2 (race,bet_type)。
-  適用していない（flag のみ）。適用前に手動レビューし、V1_SPECIAL_PAYOUT_FALSE_REFUND とは別 defect か判定する。
+- **unexpected_addition 2 件（確定）**: `2014-03-28:08:R1/win`・`2014-03-28:17:R2/win`。v2=win 返還、v1 candidate 無し。
+  分類 `CONFIRMED_V1_WIN_REFUND_OMISSION`（v1 が win 返還 candidate を欠落させた別 defect）。本 special-payout reparse の
+  scope 外につき適用しない。将来、別 defect code・別承認で「v1 win 返還欠落」を訂正する場合は独立パッケージにする。
 - **not_ingested 7 files / 未マッチ raw 3 件**: archive バイト列が sidecar raw と不一致（backfill cutoff 後日次・source-duplicate 由来）。
   reparse scope 外。必要なら別途 incremental backfill で扱う。
 - 実 sidecar 適用は WAL/並行 writer が無い quiescent snapshot でのみ行うこと。
@@ -101,7 +118,27 @@ pnpm reparse:n2:settlement -- \
 pnpm reparse:n2:rollback-rehearsal -- --target-sidecar=data/tmp/reparse-verify.sqlite --as-of=2026-08-01T00:00:00.000Z
 
 # 4. （承認後）production apply gate を通した上で実 sidecar へ append-only 適用。
-#    approvalTargetDigest / snapshot SHA-256 / output digest 一致が無ければ BLOCKED。
+pnpm apply:n2:settlement-reparse -- \
+  --sidecar=data/research-replay.sqlite \
+  --archive-root=data/raw/official/results \
+  --manifest=reports/n2/settlement-reparse-approval-manifest.json \
+  --approval-grant=<approval-grant-id> \
+  --as-of=<UTC> --mode=production
+#    gate は approvalTargetDigest / snapshot SHA-256・size / schema / mode / code SHA / WAL / disk を検査し、
+#    有効な production approval（scope=N2_SETTLEMENT_REPARSE_APPLY, mode=production, 非revoked/superseded）が
+#    無ければ exit 3 で BLOCKED、write 0。承認済みのみ TOCTOU 再確認後に append-only 適用。
+```
+
+承認者が承認する場合の grant 記録（Claude は作成しない）:
+
+```text
+rollout_approval_grants_v2 へ append:
+  approval_scope          = N2_SETTLEMENT_REPARSE_APPLY
+  approval_mode           = production
+  target_stage            = N2-REPARSE-APPLY
+  target_schema_version   = n1-settlement.0.3@<sourceSha256>
+  target_contract_version = n2-settlement-reparse-apply-v1:<approvalTargetDigest>
+  approved_at             = <apply 実行より前の UTC>
 ```
 
 ## 9. 適用後の検証（承認・適用後に実施）
@@ -120,5 +157,7 @@ pnpm reparse:n2:rollback-rehearsal -- --target-sidecar=data/tmp/reparse-verify.s
 
 ## 承認対象
 
-- approvalTargetDigest: `reports/n2/settlement-reparse-approval-manifest.json` の `approvalTargetDigest`。
+- approvalTargetDigest（manifest v2）: `7e38b564d6fa435ef08edfa0a4d67a319b107f9570ad94d289e821394faac12c`（旧 `647993a1…` は superseded）。
+- source snapshot SHA-256: `d9b5ddd264ea138f319b04a8fb9398f1048bb2ad3001055ffe319616d6b6cb92` / size 9,019,846,656 / schema `n1-settlement.0.3`。
 - **本パッケージは未承認である**。real-sidecar apply=NOT EXECUTED / production approval=NOT CREATED / production apply=BLOCKED。
+- 可視化: `reports/n2/settlement-reparse-dashboard.html`（Before/After・実レース例・年別/券種別・進捗）、`reports/n2/settlement-reparse-before-after.md`。
