@@ -40,6 +40,22 @@ async function main(): Promise<void> {
   const full = JSON.parse(readFileSync(join(reportDir, "settlement-reparse-full.json"), "utf8"));
   const audit = existsSync(join(reportDir, "unexpected-additions-audit.json"))
     ? JSON.parse(readFileSync(join(reportDir, "unexpected-additions-audit.json"), "utf8")) : { findings: [] };
+  const manifest = existsSync(join(reportDir, "settlement-reparse-approval-manifest.json"))
+    ? JSON.parse(readFileSync(join(reportDir, "settlement-reparse-approval-manifest.json"), "utf8")) : null;
+  const applyReport = existsSync(join(reportDir, "settlement-reparse-apply.json"))
+    ? JSON.parse(readFileSync(join(reportDir, "settlement-reparse-apply.json"), "utf8")) : null;
+  const rollback = existsSync(join(reportDir, "settlement-reparse-rollback-rehearsal.json"))
+    ? JSON.parse(readFileSync(join(reportDir, "settlement-reparse-rollback-rehearsal.json"), "utf8")) : null;
+  const approval = {
+    approvalTargetDigest: manifest?.approvalTargetDigest ?? "n/a",
+    settlementSnapshotIdentity: manifest?.binding?.snapshotIdentity?.settlementSnapshotIdentity ?? "n/a",
+    sourceWholeFileSha: full.identity.sourceSha256,
+    approvalPresent: (applyReport && !String(applyReport?.gate?.approval?.code ?? "").includes("SCOPE_MISMATCH") && applyReport?.gate?.approval?.approved) ? "YES" : "NO",
+    applyExecuted: applyReport?.realSidecarApply === "EXECUTED" ? "YES" : "NO",
+    applyStatus: applyReport?.status ?? "n/a",
+    rollbackReadiness: rollback?.result === "REHEARSED" ? "REHEARSED (v1 restore + backup/restore)" : "n/a",
+    nextHumanAction: "operator が rollout_approval_grants_v2 へ N2_SETTLEMENT_REPARSE_APPLY 承認を append（docs/n2-settlement-reparse-approval-operator-runbook.md）",
+  };
 
   const parseCache = new Map<string, Map<string, V2Cand> | null>();
   async function dayMap(date: string): Promise<Map<string, V2Cand> | null> {
@@ -103,7 +119,7 @@ async function main(): Promise<void> {
   mkdirSync(reportDir, { recursive: true });
   writeFileSync(join(reportDir, "settlement-reparse-before-after.md"), beforeAfterMd(full, examples, eligBefore, eligAfter));
   writeFileSync(join(reportDir, "settlement-reparse-examples.json"), JSON.stringify({ generatedAt: new Date().toISOString(), sourceDigest: full.outputDigest, examples }, null, 2) + "\n");
-  writeFileSync(join(reportDir, "settlement-reparse-dashboard.html"), dashboardHtml(full, examples, eligBefore, eligAfter));
+  writeFileSync(join(reportDir, "settlement-reparse-dashboard.html"), dashboardHtml(full, examples, eligBefore, eligAfter, approval));
   console.log(JSON.stringify({ examples: examples.length, byCategory: countBy(examples.map((e) => e.category.split(":")[0])), wrote: ["settlement-reparse-before-after.md", "settlement-reparse-examples.json", "settlement-reparse-dashboard.html"] }, null, 2));
 }
 
@@ -161,8 +177,18 @@ function bars(data: Array<{ label: string; a: number; b: number }>, aLabel: stri
   }).join("");
   return `<svg viewBox="0 0 ${w} ${h + 42}" width="100%" style="max-width:${w}px">${body}</svg>`;
 }
-function dashboardHtml(full: any, examples: Example[], eligBefore: number, eligAfter: number): string {
+function dashboardHtml(full: any, examples: Example[], eligBefore: number, eligAfter: number, approval: Record<string, string>): string {
   const c = full.counts;
+  const approvalRows = [
+    ["approval target digest (v3)", approval.approvalTargetDigest],
+    ["settlement snapshot identity", approval.settlementSnapshotIdentity],
+    ["source whole-file SHA (advisory)", approval.sourceWholeFileSha],
+    ["approval present", approval.approvalPresent],
+    ["real-sidecar apply executed", approval.applyExecuted],
+    ["apply gate status", approval.applyStatus],
+    ["rollback readiness", approval.rollbackReadiness],
+    ["next human action", approval.nextHumanAction],
+  ];
   const byYear = full.byYear as Array<{ year: string; false_refund: number; special_addition: number }>;
   const byBet = full.byBetType as Array<{ betType: string; false_refund: number; special_addition: number }>;
   const stage = [
@@ -191,6 +217,9 @@ code{font-size:12px}figure{margin:14px 0;overflow-x:auto}</style></head><body>
 <div class="card"><b>${c.unexpected_addition}</b><span>held-out（win返還欠落）</span></div>
 <div class="card"><b>約${(eligBefore * 100).toFixed(2)}% → ${(eligAfter * 100).toFixed(2)}%</b><span>eligible率(settled/active,概算)</span></div>
 </div>
+<h2>Approval readiness</h2>
+<div class="tw"><table><tr><th>項目</th><th>値</th></tr>
+${approvalRows.map(([k, v]) => `<tr><td>${k}</td><td><code>${esc(String(v))}</code></td></tr>`).join("")}</table></div>
 <h2>Before / After（active candidate）</h2>
 <div class="tw"><table><tr><th>指標</th><th>Before</th><th>After</th><th>差分</th></tr>
 <tr><td>refunded</td><td class="n">${full.before.refunded.toLocaleString()}</td><td class="n">${full.afterMeasured.refunded.toLocaleString()}</td><td class="n">-${c.false_refund_correction.toLocaleString()}</td></tr>
