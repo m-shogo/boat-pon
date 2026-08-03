@@ -562,7 +562,9 @@ M1はN3/N4の選手PIT gate、M3は主観を排したstrict-prior label gate、M
 - completed（2026-08-03）: raw archive全件scanner実行と約319,301 excluded_refunded候補のcanonical reconciliation。詳細は下記「2026-08-03 archive refund full scan + canonical reconciliation」。
 - completed（2026-08-03）: append-only settlement reparse を temp copy で完全リハーサルし、承認可能パッケージを作成。false_refund 317,747・special_addition 65,156 を supersession 訂正、active refunded 319,301→1,554、integrity ok、rollback/backup-restore 実演、source write 0。実 sidecar 適用は未承認。詳細は下記「2026-08-03 settlement reparse temp-copy」。
 - completed（2026-08-03）: production apply gate（`apply:n2:settlement-reparse`、`resolveReparseApplyGate` が既存 approval lifecycle を再利用）を実装し、実 sidecar 相手に **BLOCKED（exit 3, write 0）** を実測。unexpected_addition 2 件を `CONFIRMED_V1_WIN_REFUND_OMISSION` と確定（scope 外 hold）。manifest v2（approvalTargetDigest `7e38b564…`）、可視化 dashboard を追加。
-- blocked: 実F0 sidecar coverage、全7券種live typed market observation、corrected label の実 sidecar 適用（有効な production approval が無く BLOCKED。Claude は承認を作成しない）。
+- completed（2026-08-03）: owner 明示承認による production settlement apply 完了（APPLIED / APPROVAL_VALID）。false_refund 317,747・special 65,156 訂正、refunded 319,301→1,554、integrity ok、corrected truth freeze（identity `35356298…`）。held-out 2 件は未適用。
+- completed（2026-08-03）: GitHub dispatch 基盤（self-hosted runner online / workflow_dispatch 専用 workflow / one-shot orchestrator / registries / dashboard / ChatGPT bridge）。schedule/cron/daemon なし。
+- blocked: 実F0 sidecar coverage、全7券種live typed market observation、N2 dataset canary（ChatGPT Scheduled Task から 1 回ずつ依頼）。
 - evidence: collector E2E 6/6、今回のprogram/coverage regression 12/12、strict TypeScript PASS。retry dedup code `20b2b55a` / `1f5bd37f`、failure isolation code `8861a396` / `fd1a1077`。
 - next: append-only `parser_reparse` / supersession を temp copy で検証し、corrected canonical label profile を独立DB再読込で再生成する。実collector writer、model、BUY/WATCH/SKIP、productionはOFFを維持する。
 

@@ -23,7 +23,7 @@ design/contract/enforcement/prototype を実装（[`n2-data-contracts.md`](n2-da
 
 | gate | 状態 | 根拠 |
 |---|---|---|
-| A. canonical settlement truth | **CONDITIONAL** | structural integrity/active uniquenessはPASS。archive↔canonical reconciliation完了（canonical_only=0, false_refund 317,747確定）。corrected `parser_reparse`/supersession を temp copy で完全リハーサル済み（integrity ok, idempotent, rollback可, digest 247310fb）で承認可能パッケージ化。実sidecar適用は `approvalTargetDigest` 束ねた承認 + apply gate で未実施 |
+| A. canonical settlement truth | **READY(applied)** | structural integrity/active uniquenessはPASS。archive↔canonical reconciliation完了（canonical_only=0, false_refund 317,747確定）。corrected `parser_reparse`/supersession を temp copy で完全リハーサル済み（integrity ok, idempotent, rollback可, digest 247310fb）で承認可能パッケージ化。実sidecar適用は `approvalTargetDigest` 束ねた承認 + apply gate で未実施 |
 | B. training dataset contract | **READY(scaffold+verified-lineage contract) / PROFILE STALE** | selection builder + F0 observation/parse/raw read-only JOIN検証 + source adapterを実装。unsafe/未検証lineageはcandidate全体0行。実DB join未実行。96.03%はparser v1誤分類（317,747偽返還）を含み、reconciliationで v2 corrected eligible ≈99.98% と確定したが、実sidecar corrected candidateへ置換するまでtraining truthにしない |
 | C. target definition | **READY(enforcement)** | target v2、7券種212 selection列挙、`hit/loss/refund/special_payout/void`、12 contract tests PASS |
 | D. feature PIT | **READY(enforcement+complete temp capture lineage+retry dedup+immutable coverage reader) / BLOCKED(real observations)** | strict `official_program` parserとprimary照合に加え、tempでcapture attempt/events→byte-exact raw/link→parse/domain/typed payloadを接続。event時刻逆行・byte count不一致・誤linkを拒否し、parse errorをcapture failureと分離。同一raw retryは2 capture/link・1 raw・1 parse/observationを保証し、別race identityは再利用しない。capture失敗はterminal attemptとして隔離し、同じlogical groupの新attemptだけがretry成功できる。collector E2E 6/6、今回の関連tests 12/12 PASS。F0-R既存gateでprimary非伝播・outbox retry・rollback/kill switchも確認済み。実collector sidecar writeと実profileはPENDING |
@@ -47,7 +47,8 @@ overall: **N2_FEATURE_BUILDER_SCAFFOLD_READY = YES / N2_LABEL_TRUTH_READY = NO**
 - 正本: `reports/n2/archive-canonical-reconcile.json/.md`、`reports/n2/archive-refund-semantics-audit.md`。
 - reparse 実装完了（2026-08-03）: temp copy で false_refund 317,747 + special_addition 65,156 を append-only supersession 訂正し、integrity ok / idempotent / rollback可 / source write 0 を実測。承認パッケージ `reports/n2/settlement-reparse-approval-manifest.json`（approvalTargetDigest `647993a1`）+ runbook `docs/n2-settlement-reparse-apply-runbook.md`。
 - production apply gate 実装完了（2026-08-03、`apply:n2:settlement-reparse`）。実 sidecar 相手に gate を実測し **BLOCKED（exit 3, write 0）**（有効な reparse-apply 承認が無い）。保留 unexpected_addition 2 件は `CONFIRMED_V1_WIN_REFUND_OMISSION`（別 defect・scope 外）で hold。approval manifest v2（approvalTargetDigest `7e38b564…`, 旧 `647993a1…` supersede）。可視化 `reports/n2/settlement-reparse-dashboard.html`。
-- 残: 有効な production approval が無いため実 sidecar 未適用。適用まで N2 label truth は READY にしない（N2_DATASET_BLOCKED）。
+- **2026-08-03 適用完了**: owner 承認（grant `n2-settlement-reparse-apply-d9b5ddd2-6e2eb2ab`）で実 sidecar へ append-only 適用。active refunded 319,301→**1,554**、settled→**8,216,200**、integrity ok。corrected truth freeze `reports/n2/corrected-settlement-truth-freeze.json`（identity `35356298…`）。held-out 2 件は未適用。
+- 残: N2 dataset manifest / canary dataset / coverage は未生成（ChatGPT Scheduled Task から 1 回ずつ依頼する）。それまで N2_DATASET_CONDITIONAL。
 
 ## 実 feature 接続までの残タスク
 

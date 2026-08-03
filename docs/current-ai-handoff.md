@@ -543,3 +543,39 @@ current / blocked:
 next（最優先を1つ）:
 
 1. operator が `docs/n2-settlement-reparse-approval-operator-runbook.md` の Step 1 で `N2_SETTLEMENT_REPARSE_APPLY` 承認 grant（target_contract_version=`…:6e2eb2ab…`）を append したら、`pnpm apply:n2:settlement-reparse --mode=production` で gate 経由 apply を実行する。承認前は BLOCKED。
+
+## 2026-08-03 owner 承認による production apply 完了 + dispatch 基盤構築
+
+### settlement 訂正（完了）
+
+- owner `m-shogo` の明示承認（reference `owner-explicit-approval-2026-08-03`）を **operator として** append-only 台帳へ記録した（Claude の自己承認ではない）。grant ID `n2-settlement-reparse-apply-d9b5ddd2-6e2eb2ab`、mode=production、approvedAt=2026-08-03T13:01:48.000Z。
+- 記録前に固定値を全一致確認: approval target digest `6e2eb2ab…`、settlement snapshot identity `a7d68acb…`、schema `n1-settlement.0.3`、archive inventory `ee402370…`、apply code `fa3223b`、before counts。
+- **grant 追記で whole-file SHA は変化（`d9b5ddd2…`→`d5eef1fe…`）したが settlement-content identity は不変**（`a7d68acb…`）。v3 の identity 束縛設計が実運用で正しいと実証された（v2 の whole-file SHA 束縛なら誤 BLOCK していた）。
+- 事前に atomic backup（`VACUUM INTO`、8.7GB、SHA `a2e33a72…`、quick_check ok、gitignored）を取得。
+- **production apply 実行: `APPLIED` / exit 0 / `APPROVAL_VALID`**（55.4 分、files ingested 8,167、parse errors 0）。
+  - false_refund_correction **317,747**、special_payout_addition **65,156**、held-out **2（未適用）**、ambiguous 0、result_kind 0
+  - active: settled 7,833,297 → **8,216,200** / refunded 319,301 → **1,554** / partially_refunded 1
+  - physical rows 8,156,795 → **8,539,698**（append-only、既存 row の UPDATE/DELETE なし）
+  - integrity_check **ok** / FK 0 / orphan 0 / cycle 0 / dangling 0 / ambiguous active 0
+  - 実 DB を独立 SQL でも確認し、期待値と完全一致。WAL は checkpoint 済み（quiescent）。
+- **corrected truth freeze**: `reports/n2/corrected-settlement-truth-freeze.json`。correctedTruthVersion `n2-corrected-settlement-truth-v1`、適用後 settlement identity **`35356298…`**、whole-file SHA `b6184156…`。observed_as_of と corrected_truth_as_of の使い分け契約、backup/rollback 参照を記録。
+- held-out 2 件（`CONFIRMED_V1_WIN_REFUND_OMISSION`: 2014-03-28 常滑R1/win・宮島R2/win）は **適用していない**。別 defect・別承認で扱う。
+
+### dispatch 基盤（完成・毎時ループなし）
+
+- **self-hosted runner 登録済み**: `boat-pon-mac-local`、labels `self-hosted, macOS, ARM64, boat-pon-local`、status **online**、launchd service 起動。job 待機のみで研究処理を自発実行しない。credential/token は Git 非保存（`~/actions-runner-boat-pon`）。
+- **workflow** `.github/workflows/boat-pon-local-research.yml`: `workflow_dispatch` のみ（**`on.schedule` なし**）。ubuntu guard job が repo/actor/ref/event/safety level を検証してから self-hosted job へ渡す。GitHub expression は env 経由のみ。concurrency（cancel-in-progress false）、main 固定 checkout、request 検証、1 task 実行、allowlist commit。
+- **one-shot orchestrator**: `src/automation/researchOrchestrator.ts` + `scripts/run-research-task.ts`（`automation:task/status/validate-request/pause/resume/emergency-stop`）。lock（atomic・stale 検出）、preflight guard、safety level L0–L2 許可 / L3 は既存 grant 必須 / **L4 常時拒否**、failure 分類、path allowlist。ループ・daemon・watch なし。
+- **registries**: task queue（READY 3件）、edge / experiment / rejection / holdout registry、request dirs（pending/claimed/completed/failed）。
+- **有限回テスト（実測）**: strict request validation PASS / 改変 request は digest mismatch で拒否 / **L4 request は `REJECTED_L4` exit 3** / dirty tree・git drift・active WAL・emergency stop・pause がすべて BLOCK / clean tree で `DRY_RUN_OK`。
+- **end-to-end 実行**: `gh workflow run` → guard PASS → self-hosted runner → `DRY_RUN_OK` → `automation/boat-pon-research` へ push（run `30821403218` success）。実行後 runner は idle、**自動再 dispatch なし（run は 1 件のみ）**。
+- **ChatGPT bridge**: `docs/chatgpt-scheduled-task-bridge.md`（Scheduled Task へ貼る prompt、dispatch 経路チェックリスト、結果確認経路、L3/L4 境界、NO_CHANGE 条件）。
+- dashboard: `reports/automation/research-dashboard.html`（runner/GitHub/data/N2/research/latest run）。値が無い項目は 0 を捏造せず NOT_STARTED / NOT_AVAILABLE 表示。
+
+### 未変更（確認済み）
+
+`data/boat.sqlite`・app_settings・collector（既存 launchd は Jul 18 のまま）・production prediction・model・BUY/WATCH/SKIP・production threshold・live writer・operational GC・自動投票/購入。新規 launchd は runner service のみ。GitHub schedule / cron は無い。
+
+next（最優先を1つ）:
+
+1. ChatGPT 側で `docs/chatgpt-scheduled-task-bridge.md` の prompt を Scheduled Task（毎時）へ登録し、`workflow_dispatch` 経路で 1 回ずつ task を依頼する。
