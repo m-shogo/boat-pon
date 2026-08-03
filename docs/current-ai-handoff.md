@@ -1,6 +1,6 @@
 # boat-pon AI作業引継ぎ（正本）
 
-更新: 2026-08-02
+更新: 2026-08-03
 
 この文書は、過去チャットを読めない別のAIチャットが現在地を誤解せず再開するための入口である。数値は更新時点のスナップショットなので、作業開始時に下記コマンドで再計測する。
 
@@ -454,3 +454,26 @@ next:
 1. raw入力があればarchive refund scannerとcanonical reconciliationを最優先。
 2. 入力がなければoperability evidenceへsidecar snapshot SHA-256/size/schema identityを結合し、異なるsnapshotで同じmetrics digestになる曖昧性を解消する。
 3. 実writerはapproval、backup/restore、canary、rollback rehearsalまでOFF。
+
+## 2026-08-03 archive refund full scan + canonical reconciliation（Track A 完了）
+
+completed:
+
+- **raw K archive を発見**: `data/raw/official/results/k*.lzh`（8,174 files、2000-01-01〜2026-08-01、Git管理外）。43GB `data/raw/kyotei24` も存在。`unar` で read-only 解凍。過去 handoff の「raw archive未接続」はこの環境では該当せず、Track A を実施した。
+- **v1/v2 full scan**（`pnpm audit:n2:archive-refund-semantics`、parse errors 0）: v1 refund候補 319,309 → v2 1,558、false_refund_reclassified 317,753、special_payout_added 65,157。
+- **archive↔canonical reconciler を新規実装**（`src/research-replay/n2ArchiveCanonicalReconcile.ts` core + `scripts/reconcile-archive-canonical-settlement.ts` CLI、`pnpm reconcile:n2:archive-canonical`）。archive v2 candidate を永続 sidecar の canonical active candidate（source-duplicate 624 obs 除外、superseded 0）と canonical race identity で突合し、exact_match/status_mismatch/result_kind_mismatch/archive_only/canonical_only/ambiguous_canonical/parse_failure へ fail-closed 分類。固定 contract version、immutable=1/readOnly/query_only、決定的 outputDigest、file 単位 checkpoint resume。
+- **実測（決定的 digest `3055b247e9e3a283836d13de5eda81d14163f6b198fd3cb49e5414ca8d542215`、独立再実行一致）**: canonical active 8,152,599 = exact_match 7,834,852 + status_mismatch 317,747（全て refunded→settled）。result_kind_mismatch 0、archive_only 69,440、**canonical_only 0**、ambiguous 0、parse_failure 0。archive-derived 8,222,039 = exact + status_mismatch + archive_only（v1/v2 scanner の v2 count と完全一致）。coverage: exact 95.29% / archive covered 99.16% / canonical covered **100%**。
+- **319,301 の意味確定**: canonical refunded ≈319,301 の **317,747 は v1 特払いbug由来の偽返還（真は settled）**、真の返還は約 1,554（v2 raw-scan 1,558 と source-duplicate 差分内一致）。v2 corrected eligible ≈ **99.98%**（旧 96.03% は誤分類込み）。era drift（87%→99.9%）は false_refund の年代分布（2005–06 約42–43K/年 → 2020年代 約100–450/年）でほぼ全量説明。
+- **既存 test の pre-existing 破損を修正**: `shadowOperabilityPolicy.test.ts` の `run29/scripts/...` stale path（base 62c36af で ERR_MODULE_NOT_FOUND、CLI test が必ず失敗）を test file 相対解決へ修正。
+- 新規 tests 10/10（reconciler core）、operability CLI test 修正後 4/4、targeted strict typecheck（tsc -b）PASS。
+- code commits: `88a66fce…`（reconciler）, `8deec9c…`（tests）, `e6b1057…`（test path fix）, `c761f5b…`（v1/v2 scan evidence）, `e9911fe…`（reconciliation evidence）。
+
+current / blocked:
+
+- 実 sidecar への corrected `parser_reparse`/supersession（v1 偽返還 candidate を v2 corrected へ置換）は **別承認まで未実施**。本工程は read-only 監査で sidecar を書き換えていない。
+- N2 label truth は上記 corrected candidate 置換まで READY にしない。
+- live writer、実DB（`data/boat.sqlite`）、collector、予測、BUY/WATCH/SKIP、app_settings、production threshold/approval は変更していない。
+
+next（最優先を1つ）:
+
+1. append-only `parser_reparse` / supersession 計画を temp copy（restore copy）で検証し、v1 偽返還 317,747 candidate を v2 corrected（settled + special_payout line）へ置換する設計・canary を固める。実 sidecar への適用は明示承認・backup/restore・canary・primary非伝播が揃うまで行わない。
