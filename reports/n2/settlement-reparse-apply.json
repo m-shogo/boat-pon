@@ -1,0 +1,42 @@
+{
+  "phase": "N2_SETTLEMENT_REPARSE_APPLY",
+  "generatedAt": "2026-08-03T07:15:43.006Z",
+  "gitSha": "4730bb234d34f125a1ee4dfa6bcf9320c1d722c4",
+  "status": "BLOCKED",
+  "realSidecarApply": "NOT_EXECUTED",
+  "writesToSidecar": 0,
+  "reason": "no valid production approval bound to the manifest snapshot/digest; production apply is BLOCKED",
+  "sidecar": "/Users/m-shogo/Developer/personal/boat-pon/data/research-replay.sqlite",
+  "sourceSha256": "d9b5ddd264ea138f319b04a8fb9398f1048bb2ad3001055ffe319616d6b6cb92",
+  "sourceBytes": 9019846656,
+  "settlementSchema": "n1-settlement.0.3",
+  "manifestApprovalTargetDigest": "7e38b564d6fa435ef08edfa0a4d67a319b107f9570ad94d289e821394faac12c",
+  "gate": {
+    "gateVersion": "n2-settlement-reparse-apply-gate-v1",
+    "approved": false,
+    "status": "BLOCKED",
+    "exitCode": 3,
+    "blocks": [
+      "MANIFEST_MARKED_NOT_APPROVED",
+      "APPROVAL_APPROVAL_SCOPE_MISMATCH"
+    ],
+    "approval": {
+      "resolverVersion": "f0r-approval-resolver-v1",
+      "legacyApprovalCount": 1,
+      "matchingGrantCount": 0,
+      "approved": false,
+      "code": "APPROVAL_SCOPE_MISMATCH",
+      "approvalId": null,
+      "source": null,
+      "reference": null,
+      "approvedAt": null,
+      "mode": null
+    },
+    "approvalTargetDigest": "7e38b564d6fa435ef08edfa0a4d67a319b107f9570ad94d289e821394faac12c",
+    "recomputedApprovalTargetDigest": "7e38b564d6fa435ef08edfa0a4d67a319b107f9570ad94d289e821394faac12c"
+  },
+  "blocks": [
+    "MANIFEST_MARKED_NOT_APPROVED",
+    "APPROVAL_APPROVAL_SCOPE_MISMATCH"
+  ]
+}
