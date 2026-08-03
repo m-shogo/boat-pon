@@ -1,42 +1,79 @@
 {
   "phase": "N2_SETTLEMENT_REPARSE_APPLY",
-  "generatedAt": "2026-08-03T08:19:53.521Z",
+  "generatedAt": "2026-08-03T14:01:16.061Z",
   "gitSha": "fa3223b80fca14cf31a0ec6e05f313bc2cb36b63",
-  "status": "BLOCKED",
-  "realSidecarApply": "NOT_EXECUTED",
-  "writesToSidecar": 0,
-  "reason": "no valid production approval bound to the manifest snapshot/digest; production apply is BLOCKED",
+  "status": "APPLIED",
+  "realSidecarApply": "EXECUTED",
   "sidecar": "/Users/m-shogo/Developer/personal/boat-pon/data/research-replay.sqlite",
-  "sourceSha256": "d9b5ddd264ea138f319b04a8fb9398f1048bb2ad3001055ffe319616d6b6cb92",
-  "sourceBytes": 9019846656,
-  "settlementSchema": "n1-settlement.0.3",
-  "manifestApprovalTargetDigest": "6e2eb2abd1453c551d08af9d921fb0f1cb77369172d3c0b1c748948d4aea3fe8",
+  "sourceSha256Before": "d5eef1fefa5670607409aca93f494deb5d6bd9039d01b653449d4bbf99a6328d",
+  "appliedAt": "2026-08-03T13:04:33.000Z",
+  "counts": {
+    "files_scanned": 8175,
+    "files_ingested": 8167,
+    "files_not_ingested": 8,
+    "files_duplicate_source": 0,
+    "parse_errors": 0,
+    "appended_candidates": 382903,
+    "appended_parse_runs": 8167,
+    "appended_observations": 58542,
+    "supersession_relations": 317747,
+    "ambiguous_active": 0,
+    "fr_from_refunded": 317747,
+    "fr_from_partial": 0,
+    "exact": 7834852,
+    "false_refund_correction": 317747,
+    "result_kind_correction": 0,
+    "special_payout_addition": 65156,
+    "ambiguous_non_defect": 0,
+    "unexpected_addition": 2
+  },
+  "before": {
+    "settled": 7833297,
+    "refunded": 319301,
+    "partially_refunded": 1
+  },
+  "afterDelta": {
+    "settled": 8216200,
+    "refunded": 1554,
+    "partially_refunded": 1
+  },
+  "physicalRows": {
+    "before": 8156795,
+    "after": 8539698
+  },
+  "integrity": {
+    "integrityCheck": "ok",
+    "foreignKeyViolations": 0,
+    "orphanPayoutLines": 0,
+    "orphanRefundLines": 0,
+    "ambiguousActiveKeys": 0
+  },
+  "lightIntegrity": {
+    "multipleActiveSuccessors": 0,
+    "selfSupersedingCycles": 0,
+    "danglingSupersedes": 0
+  },
+  "elapsedMs": 3324082,
   "gate": {
     "gateVersion": "n2-settlement-reparse-apply-gate-v1",
-    "approved": false,
-    "status": "BLOCKED",
-    "exitCode": 3,
-    "blocks": [
-      "MANIFEST_MARKED_NOT_APPROVED",
-      "APPROVAL_APPROVAL_SCOPE_MISMATCH"
-    ],
+    "approved": true,
+    "status": "PASS",
+    "exitCode": 0,
+    "blocks": [],
     "approval": {
       "resolverVersion": "f0r-approval-resolver-v1",
       "legacyApprovalCount": 1,
-      "matchingGrantCount": 0,
-      "approved": false,
-      "code": "APPROVAL_SCOPE_MISMATCH",
-      "approvalId": null,
-      "source": null,
-      "reference": null,
-      "approvedAt": null,
-      "mode": null
+      "matchingGrantCount": 1,
+      "approvalId": "n2-settlement-reparse-apply-d9b5ddd2-6e2eb2ab",
+      "source": "owner-explicit-approval:m-shogo",
+      "reference": "owner-explicit-approval-2026-08-03",
+      "approvedAt": "2026-08-03T13:01:48.000Z",
+      "mode": "production",
+      "approved": true,
+      "code": "APPROVAL_VALID"
     },
     "approvalTargetDigest": "6e2eb2abd1453c551d08af9d921fb0f1cb77369172d3c0b1c748948d4aea3fe8",
     "recomputedApprovalTargetDigest": "6e2eb2abd1453c551d08af9d921fb0f1cb77369172d3c0b1c748948d4aea3fe8"
   },
-  "blocks": [
-    "MANIFEST_MARKED_NOT_APPROVED",
-    "APPROVAL_APPROVAL_SCOPE_MISMATCH"
-  ]
+  "outputDigest": "c7faee382eee8671618409ad09a5001f49807350afd682c9c32909f6b0419101"
 }
