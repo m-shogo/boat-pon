@@ -62,7 +62,7 @@ jobs:
           SAFETY: ${{ inputs.safety_level }}
         run: |
           set -euo pipefail
-          # ${{ }} は env 経由でのみ参照し、shell へ直接展開しない。
+          # GitHub expression は env 経由でのみ参照し、shell へ直接展開しない。
           echo "actor=$ACTOR repo=$REPO ref=$REF event=$EVENT safety=$SAFETY"
           [ "$REPO" = "m-shogo/boat-pon" ] || { echo "::error::repo not allowed"; exit 1; }
           [ "$ACTOR" = "m-shogo" ] || { echo "::error::actor not in allowlist"; exit 1; }
