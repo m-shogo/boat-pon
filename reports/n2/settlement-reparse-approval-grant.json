@@ -1,0 +1,62 @@
+{
+  "approvalGrantSchemaVersion": "f0r-approval-v2",
+  "manifestSchemaVersion": "n2-settlement-reparse-approval-manifest-v3",
+  "note": "このJSONの下記『recordedToApprovalTable』のfieldだけが append-only rollout_approval_grants_v2 に記録される。残りは readiness metadata（記録されないが承認判断の根拠）。content_hash は record CLI が grantHash で自動計算する（approvedAt を含むため事前確定不可）。",
+  "recordedToApprovalTable": {
+    "approvalId": "n2-settlement-reparse-apply-d9b5ddd2-6e2eb2ab",
+    "approvalScope": "N2_SETTLEMENT_REPARSE_APPLY",
+    "approvalMode": "production",
+    "targetStage": "N2-REPARSE-APPLY",
+    "targetSchemaVersion": "n1-settlement.0.3@a7d68acb5be241e280508b5ba5a54c14714d27fbba39cb11f2c6d50de843f9cf",
+    "targetContractVersion": "n2-settlement-reparse-apply-v1:6e2eb2abd1453c551d08af9d921fb0f1cb77369172d3c0b1c748948d4aea3fe8",
+    "approvalSource": "<APPROVER_TO_FILL: e.g. human_work_order:<ticket-or-order-id>>",
+    "approvalReference": "<APPROVER_TO_FILL: e.g. work-order URL / signed doc reference>",
+    "approvedAt": "<APPROVER_TO_FILL: UTC ISO8601, MUST be before the apply run>"
+  },
+  "binding": {
+    "approvalTargetDigest": "6e2eb2abd1453c551d08af9d921fb0f1cb77369172d3c0b1c748948d4aea3fe8",
+    "settlementSnapshotIdentity": "a7d68acb5be241e280508b5ba5a54c14714d27fbba39cb11f2c6d50de843f9cf",
+    "sourceSnapshotSha256_advisory": "d9b5ddd264ea138f319b04a8fb9398f1048bb2ad3001055ffe319616d6b6cb92",
+    "sourceSize": 9019846656,
+    "targetSchemaVersion": "n1-settlement.0.3",
+    "archiveInventoryDigest": "ee4023700f2acfe0768e2e9255c64348d985d711ee37dd4bd733aa1239b57ceb",
+    "codeGitSha": "fa3223b80fca14cf31a0ec6e05f313bc2cb36b63",
+    "reparseContractVersion": "n2-settlement-reparse-v1",
+    "parserSourceVersion": "n1-settlement-parser-v1",
+    "parserTargetVersion": "n1-settlement-parser-v2",
+    "canonicalizationVersion": "rr-c14n-v1"
+  },
+  "expected": {
+    "before": {
+      "settled": 7833297,
+      "refunded": 319301,
+      "partially_refunded": 1
+    },
+    "after": {
+      "settled": 8216200,
+      "refunded": 1554,
+      "partially_refunded": 1
+    },
+    "falseRefundCorrections": 317747,
+    "specialPayoutAdditions": 65156,
+    "genuineRefundsRemaining": 1554,
+    "heldOutCount": 2,
+    "heldOutClassification": "CONFIRMED_V1_WIN_REFUND_OMISSION",
+    "heldOutRaces": [
+      "2014-03-28:08:R1/win",
+      "2014-03-28:17:R2/win"
+    ]
+  },
+  "policy": {
+    "validityCondition": "valid only while settlementSnapshotIdentity and approvalTargetDigest match; whole-file SHA/size are advisory (change when the grant is recorded); single-use per settlement snapshot",
+    "expiry": "<APPROVER_TO_FILL: e.g. valid until <UTC>, single-use per snapshot d9b5ddd2…>",
+    "rollbackPolicy": "resolver-only disable (ignore reparse parse_run) + append-only reversal; original rows preserved; see docs/n2-settlement-reparse-apply-runbook.md",
+    "backupRequirement": "atomic VACUUM INTO backup + quick_check + integrity_check + FK check before apply",
+    "canaryRequirement": "fixed deterministic canary cohort + second-run no-op before full apply",
+    "postApplyVerificationRequirement": "integrity_check ok / FK 0 / orphan 0 / cycle 0 / expected counts match / second-run appended 0 / manifest+digest match"
+  },
+  "approverIdentityPlaceholder": "<APPROVER_TO_FILL: name/role of the human approver>",
+  "approvalTimestampPlaceholder": "<APPROVER_TO_FILL: UTC ISO8601 at approval time>",
+  "realSidecarApply": "NOT_EXECUTED (recording this grant does NOT apply; apply is a separate gated run)",
+  "claudeSelfApproval": "PROHIBITED — Claude did not and must not create/record this grant"
+}

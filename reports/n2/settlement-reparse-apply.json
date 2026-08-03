@@ -1,7 +1,7 @@
 {
   "phase": "N2_SETTLEMENT_REPARSE_APPLY",
-  "generatedAt": "2026-08-03T07:15:43.006Z",
-  "gitSha": "4730bb234d34f125a1ee4dfa6bcf9320c1d722c4",
+  "generatedAt": "2026-08-03T08:19:53.521Z",
+  "gitSha": "fa3223b80fca14cf31a0ec6e05f313bc2cb36b63",
   "status": "BLOCKED",
   "realSidecarApply": "NOT_EXECUTED",
   "writesToSidecar": 0,
@@ -10,7 +10,7 @@
   "sourceSha256": "d9b5ddd264ea138f319b04a8fb9398f1048bb2ad3001055ffe319616d6b6cb92",
   "sourceBytes": 9019846656,
   "settlementSchema": "n1-settlement.0.3",
-  "manifestApprovalTargetDigest": "7e38b564d6fa435ef08edfa0a4d67a319b107f9570ad94d289e821394faac12c",
+  "manifestApprovalTargetDigest": "6e2eb2abd1453c551d08af9d921fb0f1cb77369172d3c0b1c748948d4aea3fe8",
   "gate": {
     "gateVersion": "n2-settlement-reparse-apply-gate-v1",
     "approved": false,
@@ -32,8 +32,8 @@
       "approvedAt": null,
       "mode": null
     },
-    "approvalTargetDigest": "7e38b564d6fa435ef08edfa0a4d67a319b107f9570ad94d289e821394faac12c",
-    "recomputedApprovalTargetDigest": "7e38b564d6fa435ef08edfa0a4d67a319b107f9570ad94d289e821394faac12c"
+    "approvalTargetDigest": "6e2eb2abd1453c551d08af9d921fb0f1cb77369172d3c0b1c748948d4aea3fe8",
+    "recomputedApprovalTargetDigest": "6e2eb2abd1453c551d08af9d921fb0f1cb77369172d3c0b1c748948d4aea3fe8"
   },
   "blocks": [
     "MANIFEST_MARKED_NOT_APPROVED",

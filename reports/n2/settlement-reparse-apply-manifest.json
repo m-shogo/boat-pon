@@ -1,10 +1,10 @@
 {
   "manifestSchemaVersion": "n2-settlement-reparse-approval-manifest-v3",
   "generatedAt": "2026-08-03T08:18:34.028Z",
-  "approvalStatus": "NOT_APPROVED",
+  "approvalStatus": "APPROVED_PENDING_APPLY",
   "realSidecarApply": "NOT_EXECUTED",
   "productionApproval": "NOT_CREATED",
-  "productionApply": "BLOCKED",
+  "productionApply": "PENDING_OPERATOR_APPLY",
   "approvalTargetDigest": "6e2eb2abd1453c551d08af9d921fb0f1cb77369172d3c0b1c748948d4aea3fe8",
   "supersedes": [
     {
@@ -122,5 +122,6 @@
   },
   "requiredApproverAction": "If approving: append a rollout_approval_grants_v2 grant with approval_scope=N2_SETTLEMENT_REPARSE_APPLY, approval_mode=production, target_stage=N2-REPARSE-APPLY, target_schema_version=n1-settlement.0.3@a7d68acb5be241e280508b5ba5a54c14714d27fbba39cb11f2c6d50de843f9cf, target_contract_version=n2-settlement-reparse-apply-v1:6e2eb2abd1453c551d08af9d921fb0f1cb77369172d3c0b1c748948d4aea3fe8, approved_at before apply. Then run apply:n2:settlement-reparse --mode=production; the gate re-checks settlement identity (invariant under the grant append), schema, code SHA, WAL, disk, and approval lifecycle, BLOCKING on any mismatch. Claude must not create this grant.",
   "gitSha": "fa3223b80fca14cf31a0ec6e05f313bc2cb36b63",
-  "applyCodeGitSha": "fa3223b80fca14cf31a0ec6e05f313bc2cb36b63"
+  "applyCodeGitSha": "fa3223b80fca14cf31a0ec6e05f313bc2cb36b63",
+  "note": "operator が rollout_approval_grants_v2 へ一致する grant を記録した後にのみ apply へ渡す。grant が無ければ gate は APPROVAL_SCOPE_MISMATCH で BLOCKED。binding は未改変（approvalTargetDigest 不変）。"
 }
