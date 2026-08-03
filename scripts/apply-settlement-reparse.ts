@@ -19,7 +19,7 @@ import {
   applyReparseForDocument, computeAfter, ensureSupersedesIndex, fullIntegrity, lightIntegrity,
   loadActiveState, loadSourceDuplicateSet, newState, physicalRowCount, type RawMeta,
 } from "../src/research-replay/n2SettlementReparseEngine";
-import { resolveReparseApplyGate } from "../src/research-replay/n2SettlementReparseApply";
+import { computeSettlementSnapshotIdentity, resolveReparseApplyGate } from "../src/research-replay/n2SettlementReparseApply";
 
 const root = resolve(process.cwd());
 const arg = (n: string): string | null => {
@@ -87,9 +87,11 @@ async function main(): Promise<void> {
   try {
     roDb.exec("PRAGMA query_only=ON");
     settlementSchema = settlementSchemaOf(roDb);
+    process.stderr.write("[apply] computing settlement snapshot identity (read-only) ...\n");
+    const settlementSnapshotIdentity = computeSettlementSnapshotIdentity(roDb).identity;
     const gate = resolveReparseApplyGate(roDb, {
       manifest,
-      onDisk: { sourceSha256, sourceBytes, settlementSchema, hasActiveWal, diskFreeBytes, neededBytes: sourceBytes + 20e9, codeGitSha },
+      onDisk: { settlementSnapshotIdentity, settlementSchema, sourceSha256, sourceBytes, hasActiveWal, diskFreeBytes, neededBytes: sourceBytes + 20e9, codeGitSha },
       approvalGrantId, executionMode: mode as "production" | "simulated", rolloutStartedAt: new Date().toISOString(),
     });
     roDb.close();

@@ -14,6 +14,7 @@ import {
 const NOW = "2026-08-03T00:00:00.000Z";
 const SOURCE_SHA = "d9b5ddd264ea138f319b04a8fb9398f1048bb2ad3001055ffe319616d6b6cb92";
 const SCHEMA = "n1-settlement.0.3";
+const IDENTITY = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"; // settlement-content identity
 
 function setup(): DatabaseSync {
   const root = mkdtempSync(join(tmpdir(), "reparse-apply-gate-"));
@@ -25,23 +26,23 @@ function setup(): DatabaseSync {
 
 const binding = {
   reparseSchemaVersion: "n2-settlement-reparse-v1",
-  snapshotIdentity: { sourceSha256: SOURCE_SHA, sourceBytes: 9019846656, settlementSchema: SCHEMA },
+  snapshotIdentity: { settlementSnapshotIdentity: IDENTITY, settlementSchema: SCHEMA, sourceSha256: SOURCE_SHA, sourceBytes: 9019846656 },
   falseRefundCorrections: 317747, specialPayoutAdditions: 65156, outputDigest: "247310fb",
 };
 const DIGEST = computeApprovalTargetDigest(binding);
 
 function manifest(overrides: Partial<{ approvalStatus: string; approvalTargetDigest: string; productionApplyCodeGitSha: string | null }> = {}) {
   return {
-    manifestSchemaVersion: "n2-settlement-reparse-approval-manifest-v2",
+    manifestSchemaVersion: "n2-settlement-reparse-approval-manifest-v3",
     approvalStatus: "APPROVAL_INTENT",
     approvalTargetDigest: DIGEST, binding,
     productionApplyCodeGitSha: null,
     ...overrides,
   };
 }
-function onDisk(overrides: Partial<{ sourceSha256: string; sourceBytes: number; settlementSchema: string; hasActiveWal: boolean; diskFreeBytes: number; neededBytes: number; codeGitSha: string | null }> = {}) {
+function onDisk(overrides: Partial<{ settlementSnapshotIdentity: string; sourceSha256: string; sourceBytes: number; settlementSchema: string; hasActiveWal: boolean; diskFreeBytes: number; neededBytes: number; codeGitSha: string | null }> = {}) {
   return {
-    sourceSha256: SOURCE_SHA, sourceBytes: 9019846656, settlementSchema: SCHEMA,
+    settlementSnapshotIdentity: IDENTITY, sourceSha256: SOURCE_SHA, sourceBytes: 9019846656, settlementSchema: SCHEMA,
     hasActiveWal: false, diskFreeBytes: 50e9, neededBytes: 20e9, codeGitSha: null, ...overrides,
   };
 }
@@ -50,7 +51,7 @@ function grant(db: DatabaseSync, opts: { mode?: "production" | "simulated"; appr
   recordApprovalGrant(db, {
     approvalId, approvalScope: REPARSE_APPLY_SCOPE, approvalSource: "human_work_order_reparse_apply",
     approvalReference: "work-order:reparse-apply", targetStage: REPARSE_APPLY_TARGET_STAGE,
-    targetSchemaVersion: reparseApplyTargetSchemaVersion(SCHEMA, SOURCE_SHA),
+    targetSchemaVersion: reparseApplyTargetSchemaVersion(SCHEMA, IDENTITY),
     targetContractVersion: reparseApplyTargetContractVersion(opts.digest ?? DIGEST),
     approvedAt: opts.approvedAt ?? "2026-08-02T00:00:00.000Z", approvalMode: opts.mode ?? "production",
   }, NOW);
@@ -90,19 +91,22 @@ test("manifest digest mismatch → BLOCKED", () => {
   db.close();
 });
 
-test("source snapshot SHA mismatch → BLOCKED", () => {
+test("settlement snapshot identity mismatch → BLOCKED", () => {
   const db = setup();
   grant(db);
-  const r = resolveReparseApplyGate(db, { manifest: manifest(), onDisk: onDisk({ sourceSha256: "1".repeat(64) }), executionMode: "production", rolloutStartedAt: ROLL });
-  assert.ok(r.blocks.includes("SOURCE_SNAPSHOT_SHA_MISMATCH"));
+  const r = resolveReparseApplyGate(db, { manifest: manifest(), onDisk: onDisk({ settlementSnapshotIdentity: "f".repeat(64) }), executionMode: "production", rolloutStartedAt: ROLL });
+  assert.ok(r.blocks.includes("SETTLEMENT_SNAPSHOT_IDENTITY_MISMATCH"));
+  assert.equal(r.approved, false);
   db.close();
 });
 
-test("source size mismatch → BLOCKED", () => {
+test("whole-file SHA/size are advisory (NOT blocking) — grant recording changes them", () => {
   const db = setup();
   grant(db);
-  const r = resolveReparseApplyGate(db, { manifest: manifest(), onDisk: onDisk({ sourceBytes: 123 }), executionMode: "production", rolloutStartedAt: ROLL });
-  assert.ok(r.blocks.includes("SOURCE_SIZE_MISMATCH"));
+  // settlement identity 一致なら、whole-file SHA/size が変わっても PASS（grant 記録で変化するため）。
+  const r = resolveReparseApplyGate(db, { manifest: manifest(), onDisk: onDisk({ sourceSha256: "1".repeat(64), sourceBytes: 123 }), executionMode: "production", rolloutStartedAt: ROLL });
+  assert.deepEqual(r.blocks, []);
+  assert.equal(r.approved, true);
   db.close();
 });
 

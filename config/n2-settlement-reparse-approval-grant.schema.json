@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "n2-settlement-reparse-approval-grant.schema.json",
+  "title": "N2 settlement reparse production apply approval grant (recorded fields)",
+  "description": "rollout_approval_grants_v2 へ append される field。scope/mode/stage は固定 const、schema/contract は snapshot・approval target digest を束ねる pattern、approver 入力 field は非空文字列（placeholder は operator が確定する）。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "approvalId", "approvalScope", "approvalMode", "targetStage",
+    "targetSchemaVersion", "targetContractVersion", "approvalSource", "approvalReference", "approvedAt"
+  ],
+  "properties": {
+    "approvalId": { "type": "string", "minLength": 1 },
+    "approvalScope": { "const": "N2_SETTLEMENT_REPARSE_APPLY" },
+    "approvalMode": { "const": "production" },
+    "targetStage": { "const": "N2-REPARSE-APPLY" },
+    "targetSchemaVersion": { "type": "string", "pattern": "^n1-settlement\\.0\\.3@[0-9a-f]{64}$" },
+    "targetContractVersion": { "type": "string", "pattern": "^n2-settlement-reparse-apply-v1:[0-9a-f]{64}$" },
+    "approvalSource": { "type": "string", "minLength": 1 },
+    "approvalReference": { "type": "string", "minLength": 1 },
+    "approvedAt": { "type": "string", "minLength": 1 }
+  }
+}

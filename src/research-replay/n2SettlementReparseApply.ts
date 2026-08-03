@@ -12,9 +12,13 @@ export const REPARSE_APPLY_TARGET_STAGE = "N2-REPARSE-APPLY";
 export const REPARSE_APPLY_CONTRACT_PREFIX = "n2-settlement-reparse-apply-v1";
 export const REPARSE_APPLY_GATE_VERSION = "n2-settlement-reparse-apply-gate-v1";
 
-// approval grant が bind すべき target 値（source snapshot SHA と approval target digest を束ねる）。
-export function reparseApplyTargetSchemaVersion(settlementSchema: string, sourceSha256: string): string {
-  return `${settlementSchema}@${sourceSha256}`;
+export const SETTLEMENT_SNAPSHOT_IDENTITY_VERSION = "n2-settlement-snapshot-identity-v1";
+
+// approval grant が bind すべき target 値。
+// snapshot 束縛は settlement-content identity（承認 grant / 監査行の append で不変）を使う。
+// whole-file SHA-256 は grant を記録すると変化するため gate の束縛には使わない（advisory のみ）。
+export function reparseApplyTargetSchemaVersion(settlementSchema: string, settlementSnapshotIdentity: string): string {
+  return `${settlementSchema}@${settlementSnapshotIdentity}`;
 }
 export function reparseApplyTargetContractVersion(approvalTargetDigest: string): string {
   return `${REPARSE_APPLY_CONTRACT_PREFIX}:${approvalTargetDigest}`;
@@ -25,18 +29,52 @@ export function computeApprovalTargetDigest(binding: unknown): string {
   return canonicalHash(binding);
 }
 
+// settlement-content snapshot identity。settlement テーブルの DDL と件数分布から決定的に導出し、
+// rollout_approval_grants_v2 / operational_audit_events など settlement 外テーブルへの append では不変。
+// production apply gate は whole-file SHA ではなくこの identity を snapshot 束縛に使う。
+export function computeSettlementSnapshotIdentity(db: DatabaseSync): { identity: string; components: Record<string, unknown> } {
+  const schema = (db.prepare("SELECT migration_version AS v FROM n1_schema_migrations WHERE status='applied' ORDER BY rowid").all() as Array<{ v: string }>).at(-1)?.v ?? "unknown";
+  const ddl = (db.prepare(
+    "SELECT name, sql FROM sqlite_master WHERE type='table' AND name IN ('settlement_candidates_v2','race_payout_lines_v2','race_refund_lines_v2','settlement_source_duplicate_resolutions_v2') ORDER BY name",
+  ).all() as Array<{ name: string; sql: string }>).map((r) => [r.name, r.sql] as const);
+  // 1 スキャンで status × revision × superseded 分布を取得（settlement 変化を検出する強い指紋）。
+  const dist = (db.prepare(
+    "SELECT settlement_status AS s, revision_kind AS r, CASE WHEN supersedes_candidate_id IS NULL THEN 0 ELSE 1 END AS sup, COUNT(*) AS n FROM settlement_candidates_v2 GROUP BY 1,2,3 ORDER BY 1,2,3",
+  ).all() as Array<{ s: string; r: string; sup: number; n: number }>).map((x) => [x.s, x.r, x.sup, Number(x.n)] as const);
+  const one = (sql: string): number => Number((db.prepare(sql).get() as { n: number }).n);
+  const components = {
+    version: SETTLEMENT_SNAPSHOT_IDENTITY_VERSION,
+    settlementSchema: schema,
+    ddl,
+    candidateDistribution: dist,
+    physicalCandidateRows: one("SELECT COUNT(*) AS n FROM settlement_candidates_v2"),
+    payoutLineRows: one("SELECT COUNT(*) AS n FROM race_payout_lines_v2"),
+    refundLineRows: one("SELECT COUNT(*) AS n FROM race_refund_lines_v2"),
+    sourceDuplicateRows: one("SELECT COUNT(*) AS n FROM settlement_source_duplicate_resolutions_v2"),
+  };
+  return { identity: canonicalHash(components), components };
+}
+
 export type ReparseApplyGateInput = {
   manifest: {
     manifestSchemaVersion: string;
     approvalStatus?: string;
     approvalTargetDigest: string;
-    binding: Record<string, unknown> & { snapshotIdentity: { sourceSha256: string; sourceBytes: number; settlementSchema: string } };
+    binding: Record<string, unknown> & {
+      snapshotIdentity: {
+        settlementSnapshotIdentity: string; // 束縛に使う不変 identity
+        settlementSchema: string;
+        sourceSha256?: string;  // advisory（grant 記録で変化しうる）
+        sourceBytes?: number;   // advisory
+      };
+    };
     productionApplyCodeGitSha?: string | null;
   };
   onDisk: {
-    sourceSha256: string;
-    sourceBytes: number;
+    settlementSnapshotIdentity: string;
     settlementSchema: string;
+    sourceSha256: string;  // advisory record
+    sourceBytes: number;   // advisory record
     hasActiveWal: boolean;
     diskFreeBytes: number;
     neededBytes: number;
@@ -74,10 +112,10 @@ export function resolveReparseApplyGate(db: DatabaseSync, input: ReparseApplyGat
     blocks.push("MANIFEST_MARKED_NOT_APPROVED");
   }
 
-  // 2. source snapshot identity（manifest ↔ on-disk）
+  // 2. settlement-content snapshot identity（承認 grant 記録で不変な束縛）。
+  //    whole-file SHA / size は grant 記録で変化するため BLOCK には使わず advisory record のみ。
   const snap = manifest.binding.snapshotIdentity;
-  if (snap.sourceSha256 !== onDisk.sourceSha256) blocks.push("SOURCE_SNAPSHOT_SHA_MISMATCH");
-  if (snap.sourceBytes !== onDisk.sourceBytes) blocks.push("SOURCE_SIZE_MISMATCH");
+  if (snap.settlementSnapshotIdentity !== onDisk.settlementSnapshotIdentity) blocks.push("SETTLEMENT_SNAPSHOT_IDENTITY_MISMATCH");
   if (snap.settlementSchema !== onDisk.settlementSchema) blocks.push("SCHEMA_IDENTITY_MISMATCH");
 
   // 3. quiescence / capacity
@@ -92,7 +130,7 @@ export function resolveReparseApplyGate(db: DatabaseSync, input: ReparseApplyGat
   const approval = resolveApproval(db, {
     approvalScope: REPARSE_APPLY_SCOPE,
     targetStage: REPARSE_APPLY_TARGET_STAGE,
-    targetSchemaVersion: reparseApplyTargetSchemaVersion(snap.settlementSchema, snap.sourceSha256),
+    targetSchemaVersion: reparseApplyTargetSchemaVersion(snap.settlementSchema, snap.settlementSnapshotIdentity),
     targetContractVersion: reparseApplyTargetContractVersion(manifest.approvalTargetDigest),
     rolloutStartedAt: input.rolloutStartedAt,
     executionMode: input.executionMode,
