@@ -246,7 +246,8 @@
     "detect:drift": "tsx scripts/detect-research-drift.ts",
     "daily:research-report": "tsx scripts/daily-research-report.ts",
     "investigate:n2:unexpected-additions": "NODE_OPTIONS=--max-old-space-size=8192 tsx scripts/investigate-unexpected-additions.ts",
-    "apply:n2:settlement-reparse": "NODE_OPTIONS=--max-old-space-size=8192 tsx scripts/apply-settlement-reparse.ts"
+    "apply:n2:settlement-reparse": "NODE_OPTIONS=--max-old-space-size=8192 tsx scripts/apply-settlement-reparse.ts",
+    "report:n2:reparse-dashboard": "tsx scripts/generate-reparse-dashboard.ts"
   },
   "engines": {
     "node": ">=24.0.0"
