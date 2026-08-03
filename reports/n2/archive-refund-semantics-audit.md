@@ -1,6 +1,6 @@
 # Archive refund semantics audit
 
-更新: 2026-08-03  
+更新: 2026-08-03
 状態: **SCANNER_IMPLEMENTED / RAW_ARCHIVE_FULL_SCAN_COMPLETE**
 
 ## 結論
