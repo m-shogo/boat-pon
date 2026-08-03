@@ -1,0 +1,79 @@
+{
+  "freezeSchemaVersion": "n2-corrected-settlement-truth-freeze-v1",
+  "frozenAt": "2026-08-03T14:07:04.991Z",
+  "correctedTruthVersion": "n2-corrected-settlement-truth-v1",
+  "gitSha": "7d47a47b0e0fc73a43a137c4802aba35a333175c",
+  "appliedBy": {
+    "approvalId": "n2-settlement-reparse-apply-d9b5ddd2-6e2eb2ab",
+    "approvalCode": "APPROVAL_VALID",
+    "mode": "production",
+    "approver": "m-shogo",
+    "approvalReference": "owner-explicit-approval-2026-08-03"
+  },
+  "settlementSnapshotIdentityBefore": "a7d68acb5be241e280508b5ba5a54c14714d27fbba39cb11f2c6d50de843f9cf",
+  "settlementSnapshotIdentityAfter": "353562988ef0d5a3f791fa19bfa3b1751fafcd9dd67738d1326895604f023730",
+  "wholeFileSha256After": "b618415667a3beb2f4733c453450e859c6cd487257d9ff376125dd6c83e469c8",
+  "fileBytesAfter": 9762041856,
+  "settlementSchema": "n1-settlement.0.3",
+  "activeCounts": {
+    "partially_refunded": 1,
+    "refunded": 1554,
+    "settled": 8216200
+  },
+  "expectedActiveCounts": {
+    "settled": 8216200,
+    "refunded": 1554,
+    "partially_refunded": 1
+  },
+  "activeCountsMatchExpected": true,
+  "physicalRows": {
+    "before": 8156795,
+    "after": 8539698
+  },
+  "applied": {
+    "falseRefundCorrections": 317747,
+    "specialPayoutAdditions": 65156,
+    "supersessions": 317747,
+    "appendedCandidates": 382903,
+    "parseRuns": 8167,
+    "observations": 58542
+  },
+  "heldOut": {
+    "count": 2,
+    "classification": "CONFIRMED_V1_WIN_REFUND_OMISSION",
+    "races": [
+      "2014-03-28:08:R1/win",
+      "2014-03-28:17:R2/win"
+    ],
+    "applied": false
+  },
+  "integrity": {
+    "integrityCheck": "ok",
+    "foreignKeyViolations": 0,
+    "orphanPayoutLines": 0,
+    "orphanRefundLines": 0,
+    "ambiguousActiveKeys": 0
+  },
+  "lightIntegrity": {
+    "multipleActiveSuccessors": 0,
+    "selfSupersedingCycles": 0,
+    "danglingSupersedes": 0
+  },
+  "applyOutputDigest": "c7faee382eee8671618409ad09a5001f49807350afd682c9c32909f6b0419101",
+  "applyElapsedMs": 3324082,
+  "backup": {
+    "path": "backups/research-replay/pre-reparse-20260803T125641Z.sqlite",
+    "sha256": "a2e33a72059776e5367db23a06db3b56a3b39d389346ed5e4cdc0f3da2f713b4",
+    "note": "pre-apply atomic VACUUM INTO backup; gitignored"
+  },
+  "rollback": {
+    "strategy": "resolver-only disable (ignore reparse parse_run) + append-only reversal; original rows preserved",
+    "runbook": "docs/n2-settlement-reparse-apply-runbook.md",
+    "rehearsalDigest": "bb95f227105906b998d1fa46c7a3512580ba8aae22ed658810ea728c2a66cca7"
+  },
+  "usageContract": {
+    "observedAsOf": "v1 parse_run 由来 observation は履歴として保持される（当時の観測）",
+    "correctedTruthAsOf": "corrected truth は reparse parse_run（parser_name=n2-settlement-reparse）由来 candidate を active resolver が採用した状態",
+    "note": "corrected label を学習/評価に使う場合は correctedTruthVersion を明示する。過去 observation へ逆流させない。"
+  }
+}
