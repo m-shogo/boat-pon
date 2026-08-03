@@ -1,0 +1,123 @@
+# boat-pon local research — one-shot dispatch only.
+#
+# 重要: `on.schedule` は使用しない（禁止）。毎時ループは ChatGPT Scheduled Task 側が
+# 1 回ずつ dispatch する。このworkflowは1 dispatch = 1 task しか実行せず、
+# 自分自身を再 dispatch しない。
+name: boat-pon local research (one-shot)
+
+on:
+  workflow_dispatch:
+    inputs:
+      task_id:
+        description: "TASK-xxx or NEXT"
+        required: true
+        type: string
+      requested_action:
+        description: "run-task | run-next | status-only | dry-run"
+        required: true
+        default: "dry-run"
+        type: choice
+        options: [run-task, run-next, status-only, dry-run]
+      safety_level:
+        description: "L0 | L1 | L2 (L3 requires an existing grant; L4 always rejected)"
+        required: true
+        default: "L0"
+        type: choice
+        options: [L0, L1, L2, L3]
+      authority_sha:
+        description: "expected main SHA (short or full)"
+        required: true
+        type: string
+      max_duration_seconds:
+        description: "60..21600"
+        required: true
+        default: "1800"
+        type: string
+      request_reference:
+        description: "free-form reference (e.g. chatgpt scheduled task run id)"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: boat-pon-local-research
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    # 外部 fork / 非 owner / 非 main からの起動を runner に到達させない。
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      ok: ${{ steps.check.outputs.ok }}
+    steps:
+      - id: check
+        env:
+          ACTOR: ${{ github.actor }}
+          REPO: ${{ github.repository }}
+          REF: ${{ github.ref }}
+          EVENT: ${{ github.event_name }}
+          SAFETY: ${{ inputs.safety_level }}
+        run: |
+          set -euo pipefail
+          # ${{ }} は env 経由でのみ参照し、shell へ直接展開しない。
+          echo "actor=$ACTOR repo=$REPO ref=$REF event=$EVENT safety=$SAFETY"
+          [ "$REPO" = "m-shogo/boat-pon" ] || { echo "::error::repo not allowed"; exit 1; }
+          [ "$ACTOR" = "m-shogo" ] || { echo "::error::actor not in allowlist"; exit 1; }
+          [ "$REF" = "refs/heads/main" ] || { echo "::error::only main is dispatchable"; exit 1; }
+          [ "$EVENT" = "workflow_dispatch" ] || { echo "::error::unsupported event"; exit 1; }
+          case "$SAFETY" in
+            L0|L1|L2|L3) : ;;
+            *) echo "::error::L4 or unknown safety level is never automated"; exit 1 ;;
+          esac
+          echo "ok=true" >> "$GITHUB_OUTPUT"
+
+  run-one-task:
+    needs: guard
+    if: needs.guard.outputs.ok == 'true'
+    runs-on: [self-hosted, macOS, boat-pon-local]
+    timeout-minutes: 120
+    steps:
+      - name: Checkout (main only, no fork code)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Build request from inputs (validated, no shell interpolation)
+        env:
+          TASK_ID: ${{ inputs.task_id }}
+          REQUESTED_ACTION: ${{ inputs.requested_action }}
+          SAFETY_LEVEL: ${{ inputs.safety_level }}
+          AUTHORITY_SHA: ${{ inputs.authority_sha }}
+          MAX_DURATION: ${{ inputs.max_duration_seconds }}
+          REQUEST_REFERENCE: ${{ inputs.request_reference }}
+          RUN_ID: ${{ github.run_id }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          mkdir -p data/tmp/automation
+          node scripts/build-research-request.mjs > data/tmp/automation/request.json
+          echo "--- request ---"; cat data/tmp/automation/request.json
+
+      - name: Validate request (strict schema + digest)
+        run: pnpm automation:validate-request -- --request=data/tmp/automation/request.json
+
+      - name: Run exactly one task
+        run: pnpm automation:task -- --request=data/tmp/automation/request.json
+        env:
+          GITHUB_RUN_ID: ${{ github.run_id }}
+
+      - name: Show status
+        if: always()
+        run: pnpm automation:status || true
+
+      - name: Commit automation results (allowlisted paths only)
+        if: always()
+        env:
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          bash scripts/automation-commit.sh
