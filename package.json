@@ -36,6 +36,7 @@
     "research:n1:payout:reconcile": "tsx scripts/research-replay-n1-payout.ts reconcile",
     "research:n1:payout:readiness": "tsx scripts/research-replay-n1-payout.ts readiness",
     "audit:n2:archive-refund-semantics": "tsx scripts/audit-archive-refund-semantics.ts",
+    "reconcile:n2:archive-canonical": "NODE_OPTIONS=--max-old-space-size=8192 tsx scripts/reconcile-archive-canonical-settlement.ts",
     "profile:n2:selection-labels": "tsx scripts/profile-n2-selection-labels.ts",
     "profile:n2:feature-coverage": "tsx scripts/profile-n2-feature-coverage.ts",
     "report:shadow:operability": "tsx scripts/report-shadow-operability.ts",
