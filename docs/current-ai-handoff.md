@@ -524,3 +524,22 @@ current / blocked:
 next（最優先を1つ）:
 
 1. 承認者が `rollout_approval_grants_v2` へ scope=`N2_SETTLEMENT_REPARSE_APPLY` / mode=production / target_schema_version=`n1-settlement.0.3@<sourceSha256>` / target_contract_version=`n2-settlement-reparse-apply-v1:7e38b564…` の append-only grant を記録したら、`pnpm apply:n2:settlement-reparse --mode=production` で gate 経由 backup→apply→verify→rollback readiness を実行する（承認前は BLOCKED）。
+
+## 2026-08-03 承認 gate を settlement-content identity へ束縛し直し + 人間承認 artifact 完成
+
+completed:
+
+- **設計defect修正（重要）**: production apply gate は whole-file SHA-256/size を snapshot 束縛にしていたが、承認 grant を同一 sidecar へ append すると SHA が変化する（synthetic sidecar で実証: 46eaf337→7ec6861b）ため、承認後に gate が `SOURCE_SNAPSHOT_SHA_MISMATCH` で誤 BLOCK し apply 不能だった。`computeSettlementSnapshotIdentity`（settlement テーブル DDL＋status×revision×superseded 分布＋line/candidate/source_dup 件数）へ束縛を移し、approval/audit append で不変にした。whole-file SHA/size は advisory record のみ。gate test 14/14。commit `fa3223b`。
+- **approval manifest v3**: approvalTargetDigest **`6e2eb2ab…`**（settlement snapshot identity `a7d68acb…` を束ねる）。旧 v1 `647993a1…`・v2 `7e38b564…` を supersede（理由: whole-file SHA 束縛は in-DB approval で apply 不能）。archive inventory `ee402370…`、apply code SHA `fa3223b`。
+- **人間承認 artifact 完成（Claude は grant を作成・記録・実行しない）**: `reports/n2/settlement-reparse-approval-grant.json`（approver identity/approved-at は placeholder）、apply-intent manifest `reports/n2/settlement-reparse-apply-manifest.json`（digest 不変）、JSON Schema `config/n2-settlement-reparse-approval-grant.schema.json`（validation PASS）、operator runbook `docs/n2-settlement-reparse-approval-operator-runbook.md`（record/apply/verify/revoke command + pre/post checklist）。
+- **実 sidecar 相手に apply gate 実測 → BLOCKED（exit 3, write 0）**: blocks=[MANIFEST_MARKED_NOT_APPROVED, APPROVAL_SCOPE_MISMATCH]。settlement identity と code SHA は一致（誤 BLOCK なし）。有効な reparse-apply 承認は存在しない。
+- 可視化 dashboard に Approval readiness（v3 digest / settlement identity / approval present NO / apply executed NO / rollback readiness / next human action）を追加。全 598 tests pass。
+
+current / blocked:
+
+- **有効な production approval は存在しない → production apply BLOCKED / real-sidecar apply NOT EXECUTED**。Claude は自己承認しない。
+- 実 sidecar・boat.sqlite・app_settings・collector・prediction・model・BUY条件・production threshold・live writer は未変更。source settlement data 不変（settlement identity `a7d68acb…`）。
+
+next（最優先を1つ）:
+
+1. operator が `docs/n2-settlement-reparse-approval-operator-runbook.md` の Step 1 で `N2_SETTLEMENT_REPARSE_APPLY` 承認 grant（target_contract_version=`…:6e2eb2ab…`）を append したら、`pnpm apply:n2:settlement-reparse --mode=production` で gate 経由 apply を実行する。承認前は BLOCKED。

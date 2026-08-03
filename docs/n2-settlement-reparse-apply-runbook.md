@@ -155,9 +155,13 @@ rollout_approval_grants_v2 へ append:
 - approvalTargetDigest / snapshot identity 不一致 → BLOCKED。
 - unexpected_addition や ambiguous が想定超 → BLOCKED、手動レビュー。
 
-## 承認対象
+## 承認対象（v3、settlement-content identity 束縛）
 
-- approvalTargetDigest（manifest v2）: `7e38b564d6fa435ef08edfa0a4d67a319b107f9570ad94d289e821394faac12c`（旧 `647993a1…` は superseded）。
-- source snapshot SHA-256: `d9b5ddd264ea138f319b04a8fb9398f1048bb2ad3001055ffe319616d6b6cb92` / size 9,019,846,656 / schema `n1-settlement.0.3`。
-- **本パッケージは未承認である**。real-sidecar apply=NOT EXECUTED / production approval=NOT CREATED / production apply=BLOCKED。
-- 可視化: `reports/n2/settlement-reparse-dashboard.html`（Before/After・実レース例・年別/券種別・進捗）、`reports/n2/settlement-reparse-before-after.md`。
+- **approvalTargetDigest（manifest v3）**: `6e2eb2abd1453c551d08af9d921fb0f1cb77369172d3c0b1c748948d4aea3fe8`。旧 `647993a1…`（v1）・`7e38b564…`（v2）は superseded。
+- **settlement snapshot identity**: `a7d68acb5be241e280508b5ba5a54c14714d27fbba39cb11f2c6d50de843f9cf`（承認 grant/監査 append で不変。gate の snapshot 束縛はこれ）。
+- whole-file SHA-256 `d9b5ddd2…` / size 9,019,846,656 は **advisory**（grant 記録で変化するため束縛に使わない）。schema `n1-settlement.0.3`。
+- apply code Git SHA: `fa3223b80fca14cf31a0ec6e05f313bc2cb36b63`。
+- **設計訂正（v2→v3）**: whole-file SHA/size 束縛は、承認 grant を同一 sidecar へ append すると SHA が変化する（実証済み）ため in-DB approval で apply 不能だった。v3 は settlement-content identity（DDL＋status×revision×superseded 分布＋line/candidate/source_dup 件数）へ束縛を移し、grant append 後も gate が一致する。
+- **本パッケージは未承認である**。real-sidecar apply=NOT EXECUTED / production approval=NOT CREATED / production apply=BLOCKED（gate 実測 exit 3, blocks=[MANIFEST_MARKED_NOT_APPROVED, APPROVAL_SCOPE_MISMATCH], source write 0）。
+- operator 手順は `docs/n2-settlement-reparse-approval-operator-runbook.md`。承認 grant JSON `reports/n2/settlement-reparse-approval-grant.json`、apply-intent manifest `reports/n2/settlement-reparse-apply-manifest.json`、schema `config/n2-settlement-reparse-approval-grant.schema.json`。
+- 可視化: `reports/n2/settlement-reparse-dashboard.html`（Approval readiness・Before/After・実レース例・年別/券種別・進捗）、`reports/n2/settlement-reparse-before-after.md`。
