@@ -1,0 +1,1295 @@
+{
+  "phase": "N2_SETTLEMENT_REPARSE_TEMP_COPY",
+  "reportSchemaVersion": "n2-settlement-reparse-report-v1",
+  "generatedAt": "2026-08-03T08:03:43.824Z",
+  "startedAt": "2026-08-03T07:07:24.767Z",
+  "completedAt": "2026-08-03T08:03:43.825Z",
+  "elapsedMs": 3379058,
+  "gitSha": "1826da6545eca30b3d1c8a3e96a5bc883cd15511",
+  "mode": "simulated",
+  "canary": false,
+  "asOf": "2026-08-01T00:00:00.000Z",
+  "scope": "append-only v2 reparse into an explicit temp copy; source sidecar read-only; no production apply",
+  "contract": {
+    "reparseSchemaVersion": "n2-settlement-reparse-v1",
+    "sourceParserVersion": "n1-settlement-parser-v1",
+    "targetParserVersion": "n1-settlement-parser-v2",
+    "canonicalizationVersion": "rr-c14n-v1",
+    "raceIdentityVersion": "race-identity-v1",
+    "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND",
+    "parserName": "n2-settlement-reparse"
+  },
+  "identity": {
+    "sourcePath": "/Users/m-shogo/Developer/personal/boat-pon/data/research-replay.sqlite",
+    "targetPath": "/Users/m-shogo/Developer/personal/boat-pon/data/tmp/reparse-full2.sqlite",
+    "sourceSha256": "d9b5ddd264ea138f319b04a8fb9398f1048bb2ad3001055ffe319616d6b6cb92",
+    "targetInitialSha256": "d9b5ddd264ea138f319b04a8fb9398f1048bb2ad3001055ffe319616d6b6cb92",
+    "sourceBytes": 9019846656,
+    "targetFinalSha256": "fd0e764109287d5f839ba6fa9ed6e0353166786b5c47492d6533e091e0008edc"
+  },
+  "input": {
+    "archiveRoot": "/Users/m-shogo/Developer/personal/boat-pon/data/raw/official/results",
+    "filesSelected": 8174,
+    "filesDiscovered": 8174,
+    "canaryCohort": false
+  },
+  "counts": {
+    "files_scanned": 8174,
+    "files_ingested": 8167,
+    "files_not_ingested": 7,
+    "files_duplicate_source": 0,
+    "parse_errors": 0,
+    "appended_candidates": 382903,
+    "appended_parse_runs": 8167,
+    "appended_observations": 58542,
+    "supersession_relations": 317747,
+    "ambiguous_active": 0,
+    "fr_from_refunded": 317747,
+    "fr_from_partial": 0,
+    "exact": 7834852,
+    "false_refund_correction": 317747,
+    "result_kind_correction": 0,
+    "special_payout_addition": 65156,
+    "ambiguous_non_defect": 0,
+    "unexpected_addition": 2
+  },
+  "before": {
+    "settled": 7833297,
+    "refunded": 319301,
+    "partially_refunded": 1
+  },
+  "afterDelta": {
+    "settled": 8216200,
+    "refunded": 1554,
+    "partially_refunded": 1
+  },
+  "afterMeasured": {
+    "settled": 8216200,
+    "refunded": 1554,
+    "partially_refunded": 1
+  },
+  "afterConsistent": true,
+  "physicalRows": {
+    "before": 8156795,
+    "after": 8539698
+  },
+  "logicalActive": {
+    "before": 8152599,
+    "after": 8217755
+  },
+  "byYear": [
+    {
+      "year": "2000",
+      "false_refund": 966,
+      "result_kind": 0,
+      "special_addition": 640
+    },
+    {
+      "year": "2004",
+      "false_refund": 24920,
+      "result_kind": 0,
+      "special_addition": 5345
+    },
+    {
+      "year": "2005",
+      "false_refund": 42510,
+      "result_kind": 0,
+      "special_addition": 9083
+    },
+    {
+      "year": "2006",
+      "false_refund": 43222,
+      "result_kind": 0,
+      "special_addition": 9127
+    },
+    {
+      "year": "2007",
+      "false_refund": 36345,
+      "result_kind": 0,
+      "special_addition": 7513
+    },
+    {
+      "year": "2008",
+      "false_refund": 30764,
+      "result_kind": 0,
+      "special_addition": 6379
+    },
+    {
+      "year": "2009",
+      "false_refund": 28875,
+      "result_kind": 0,
+      "special_addition": 5954
+    },
+    {
+      "year": "2010",
+      "false_refund": 26541,
+      "result_kind": 0,
+      "special_addition": 5348
+    },
+    {
+      "year": "2011",
+      "false_refund": 21151,
+      "result_kind": 0,
+      "special_addition": 4098
+    },
+    {
+      "year": "2012",
+      "false_refund": 18326,
+      "result_kind": 0,
+      "special_addition": 3486
+    },
+    {
+      "year": "2013",
+      "false_refund": 15715,
+      "result_kind": 0,
+      "special_addition": 2988
+    },
+    {
+      "year": "2014",
+      "false_refund": 10620,
+      "result_kind": 0,
+      "special_addition": 1985
+    },
+    {
+      "year": "2015",
+      "false_refund": 6964,
+      "result_kind": 0,
+      "special_addition": 1284
+    },
+    {
+      "year": "2016",
+      "false_refund": 4470,
+      "result_kind": 0,
+      "special_addition": 808
+    },
+    {
+      "year": "2017",
+      "false_refund": 2286,
+      "result_kind": 0,
+      "special_addition": 413
+    },
+    {
+      "year": "2018",
+      "false_refund": 1316,
+      "result_kind": 0,
+      "special_addition": 232
+    },
+    {
+      "year": "2019",
+      "false_refund": 1070,
+      "result_kind": 0,
+      "special_addition": 181
+    },
+    {
+      "year": "2020",
+      "false_refund": 443,
+      "result_kind": 0,
+      "special_addition": 76
+    },
+    {
+      "year": "2021",
+      "false_refund": 326,
+      "result_kind": 0,
+      "special_addition": 55
+    },
+    {
+      "year": "2022",
+      "false_refund": 206,
+      "result_kind": 0,
+      "special_addition": 36
+    },
+    {
+      "year": "2023",
+      "false_refund": 233,
+      "result_kind": 0,
+      "special_addition": 39
+    },
+    {
+      "year": "2024",
+      "false_refund": 228,
+      "result_kind": 0,
+      "special_addition": 42
+    },
+    {
+      "year": "2025",
+      "false_refund": 144,
+      "result_kind": 0,
+      "special_addition": 26
+    },
+    {
+      "year": "2026",
+      "false_refund": 106,
+      "result_kind": 0,
+      "special_addition": 18
+    }
+  ],
+  "byBetType": [
+    {
+      "betType": "exacta",
+      "false_refund": 58170,
+      "result_kind": 0,
+      "special_addition": 4
+    },
+    {
+      "betType": "place",
+      "false_refund": 28412,
+      "result_kind": 0,
+      "special_addition": 23154
+    },
+    {
+      "betType": "quinella",
+      "false_refund": 58080,
+      "result_kind": 0,
+      "special_addition": 54
+    },
+    {
+      "betType": "trifecta",
+      "false_refund": 57836,
+      "result_kind": 0,
+      "special_addition": 0
+    },
+    {
+      "betType": "trio",
+      "false_refund": 57829,
+      "result_kind": 0,
+      "special_addition": 12
+    },
+    {
+      "betType": "wide",
+      "false_refund": 57418,
+      "result_kind": 0,
+      "special_addition": 103
+    },
+    {
+      "betType": "win",
+      "false_refund": 2,
+      "result_kind": 0,
+      "special_addition": 41829
+    }
+  ],
+  "secondRun": {
+    "appended": 0,
+    "supersessions": 0
+  },
+  "lightIntegrity": {
+    "multipleActiveSuccessors": 0,
+    "selfSupersedingCycles": 0,
+    "danglingSupersedes": 0
+  },
+  "appendOnlyEnforcement": {
+    "updateBlocked": true,
+    "deleteBlocked": true
+  },
+  "fullIntegrity": {
+    "integrityCheck": "ok",
+    "foreignKeyViolations": 0,
+    "orphanPayoutLines": 0,
+    "orphanRefundLines": 0,
+    "ambiguousActiveKeys": 0
+  },
+  "ambiguousActiveKeys": 0,
+  "correctionSamples": [
+    {
+      "raceKey": "2000-01-01:19:R2",
+      "betType": "place",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-01:19:R2",
+      "betType": "quinella",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-01:19:R6",
+      "betType": "exacta",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-01:19:R6",
+      "betType": "place",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-01:19:R6",
+      "betType": "win",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-02:19:R1",
+      "betType": "place",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-02:19:R1",
+      "betType": "quinella",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-02:19:R1",
+      "betType": "win",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-02:19:R10",
+      "betType": "exacta",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-02:19:R10",
+      "betType": "place",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-02:19:R10",
+      "betType": "win",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-03:09:R1",
+      "betType": "place",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-03:09:R1",
+      "betType": "quinella",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-03:09:R1",
+      "betType": "win",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-03:19:R8",
+      "betType": "exacta",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-03:19:R8",
+      "betType": "place",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-04:17:R7",
+      "betType": "exacta",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-04:17:R7",
+      "betType": "place",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-04:17:R7",
+      "betType": "win",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-04:18:R2",
+      "betType": "place",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-04:18:R2",
+      "betType": "quinella",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-04:18:R2",
+      "betType": "win",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-05:11:R1",
+      "betType": "place",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-05:11:R1",
+      "betType": "quinella",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-05:11:R1",
+      "betType": "win",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-05:11:R6",
+      "betType": "exacta",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-05:11:R6",
+      "betType": "place",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-05:11:R9",
+      "betType": "exacta",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-05:11:R9",
+      "betType": "place",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-05:17:R1",
+      "betType": "place",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-05:17:R1",
+      "betType": "quinella",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-05:17:R1",
+      "betType": "win",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-05:17:R5",
+      "betType": "exacta",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-05:17:R5",
+      "betType": "place",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-05:17:R5",
+      "betType": "win",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-05:20:R1",
+      "betType": "place",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-05:20:R1",
+      "betType": "quinella",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-05:20:R1",
+      "betType": "win",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-06:19:R12",
+      "betType": "exacta",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-06:19:R12",
+      "betType": "place",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-06:19:R12",
+      "betType": "win",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-06:19:R2",
+      "betType": "place",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-06:19:R2",
+      "betType": "quinella",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-06:19:R2",
+      "betType": "win",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-06:19:R7",
+      "betType": "exacta",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-06:19:R7",
+      "betType": "place",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-06:19:R7",
+      "betType": "win",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-06:20:R4",
+      "betType": "exacta",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-06:20:R4",
+      "betType": "place",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-06:20:R4",
+      "betType": "win",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-06:20:R6",
+      "betType": "exacta",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-06:20:R6",
+      "betType": "place",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-06:20:R6",
+      "betType": "win",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-06:20:R9",
+      "betType": "exacta",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-06:20:R9",
+      "betType": "place",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-06:20:R9",
+      "betType": "win",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-07:09:R1",
+      "betType": "place",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-07:09:R1",
+      "betType": "quinella",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-07:09:R11",
+      "betType": "exacta",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-07:09:R11",
+      "betType": "place",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-07:09:R11",
+      "betType": "win",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-07:19:R1",
+      "betType": "place",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-07:19:R1",
+      "betType": "quinella",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-07:19:R1",
+      "betType": "win",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-07:19:R2",
+      "betType": "place",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-07:19:R2",
+      "betType": "quinella",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-07:19:R2",
+      "betType": "win",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-07:19:R3",
+      "betType": "place",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-07:19:R3",
+      "betType": "quinella",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-07:19:R3",
+      "betType": "win",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-07:19:R6",
+      "betType": "exacta",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-07:19:R6",
+      "betType": "place",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-07:19:R6",
+      "betType": "win",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-07:20:R11",
+      "betType": "exacta",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-07:20:R11",
+      "betType": "place",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-07:20:R11",
+      "betType": "win",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-07:20:R6",
+      "betType": "exacta",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-07:20:R6",
+      "betType": "place",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-07:20:R6",
+      "betType": "win",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-08:14:R1",
+      "betType": "place",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-08:14:R1",
+      "betType": "quinella",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-08:14:R1",
+      "betType": "win",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-08:14:R8",
+      "betType": "exacta",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-08:14:R8",
+      "betType": "place",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-08:14:R9",
+      "betType": "exacta",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-08:14:R9",
+      "betType": "place",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-08:14:R9",
+      "betType": "win",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-08:19:R2",
+      "betType": "place",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-08:19:R2",
+      "betType": "quinella",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-08:19:R2",
+      "betType": "win",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-08:19:R4",
+      "betType": "exacta",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-08:19:R4",
+      "betType": "place",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-08:19:R4",
+      "betType": "win",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-09:03:R9",
+      "betType": "exacta",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-09:03:R9",
+      "betType": "place",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-09:03:R9",
+      "betType": "win",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-09:14:R1",
+      "betType": "place",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-09:14:R1",
+      "betType": "quinella",
+      "action": "false_refund_correction",
+      "originalStatus": "refunded",
+      "correctedStatus": "settled",
+      "originalResultKind": "normal",
+      "correctedResultKind": "normal",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-09:14:R1",
+      "betType": "win",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    },
+    {
+      "raceKey": "2000-01-09:14:R3",
+      "betType": "place",
+      "action": "special_payout_addition",
+      "originalStatus": null,
+      "correctedStatus": "settled",
+      "originalResultKind": null,
+      "correctedResultKind": "special_payout",
+      "defectCode": "V1_SPECIAL_PAYOUT_FALSE_REFUND"
+    }
+  ],
+  "outputDigest": "247310fbd8bc40db54568b0d0d3e84d823fd3da1a551c192cad2ff775a9a090f",
+  "result": "REPARSED_WITH_FLAGS"
+}
