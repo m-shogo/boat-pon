@@ -235,7 +235,7 @@ temp collector adapterで`capture_attempt/events → raw_document/link → parse
 1. ~~`--limit=20` smoke scan + full repo unit/typecheck~~ **DONE**（2026-08-03）
 2. ~~raw archive全件を再parseし、`year × bet_type × event_kind`を確定~~ **DONE**（8,174 files、parse errors 0）
 3. ~~319,301候補とのcanonical/source-duplicate reconciliationを取る~~ **DONE**（reconciler、canonical_only=0、false_refund 317,747 確定）
-4. append-only `parser_reparse` / supersession計画をtemp copyで検証（**NEXT**、実 sidecar write は別承認）
+4. ~~append-only `parser_reparse` / supersession計画をtemp copyで検証~~ **DONE**（2026-08-03、full temp-copy reparse digest 247310fb、false_refund 317,747 訂正、integrity ok、rollback可、source write 0。承認パッケージ `docs/n2-settlement-reparse-apply-runbook.md`。実 sidecar write は承認待ち）
 5. corrected canonical label profileを独立DB再読込で再生成
 6. その後にselection-level N2 prototypeへ進む
 

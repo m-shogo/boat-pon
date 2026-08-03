@@ -560,9 +560,19 @@ M1はN3/N4の選手PIT gate、M3は主観を排したstrict-prior label gate、M
 - completed: official_programのtemp五層lineage、byte/time/link integrity、stored-raw parser、primary semantic照合、immutable coverage reader、same-raw retry dedup。HTTP retryはcapture履歴を保持するが同一semantic domain eventを二重生成しない。
 - completed追加: capture failureをterminal attemptとして保持し、同一logical groupの新attempt retryだけがraw/parse/observationを生成するfailure isolation。F0-R既存のprimary非伝播・outbox retry・rollback/kill switchと整合。\n- current: official_program shadow outbox message contract、single-writer/idempotency key、primary collector非伝播の統合temp E2E。
 - completed（2026-08-03）: raw archive全件scanner実行と約319,301 excluded_refunded候補のcanonical reconciliation。詳細は下記「2026-08-03 archive refund full scan + canonical reconciliation」。
-- blocked: 実F0 sidecar coverage、全7券種live typed market observation、corrected label への実 sidecar `parser_reparse`/supersession（別承認）。
+- completed（2026-08-03）: append-only settlement reparse を temp copy で完全リハーサルし、承認可能パッケージを作成。false_refund 317,747・special_addition 65,156 を supersession 訂正、active refunded 319,301→1,554、integrity ok、rollback/backup-restore 実演、source write 0。実 sidecar 適用は未承認。詳細は下記「2026-08-03 settlement reparse temp-copy」。
+- blocked: 実F0 sidecar coverage、全7券種live typed market observation、corrected label の実 sidecar 適用（`approvalTargetDigest` 束ねた承認 + production apply gate 必要）。
 - evidence: collector E2E 6/6、今回のprogram/coverage regression 12/12、strict TypeScript PASS。retry dedup code `20b2b55a` / `1f5bd37f`、failure isolation code `8861a396` / `fd1a1077`。
 - next: append-only `parser_reparse` / supersession を temp copy で検証し、corrected canonical label profile を独立DB再読込で再生成する。実collector writer、model、BUY/WATCH/SKIP、productionはOFFを維持する。
+
+### 2026-08-03 settlement reparse temp-copy（承認可能パッケージ、実適用 未承認）
+
+- v1 parser defect（`V1_SPECIAL_PAYOUT_FALSE_REFUND`）を v2 再parse で append-only supersession 訂正する engine/CLI を実装。実 sidecar を read-only copy し、temp copy へだけ書き込む。
+- full temp-copy reparse（digest `247310fb`）: false_refund_correction 317,747（reconciler と一致）・special_payout_addition 65,156・result_kind 0・ambiguous_non_defect 0・unexpected_addition 2（適用せず）。active refunded 319,301→1,554、settled 7,833,297→8,216,200。physical 8,156,795→8,539,698（append-only）、afterConsistent=true。
+- 検証: integrity_check ok / FK 0 / orphan 0 / ambiguous active 0、second-run appended 0、append-only UPDATE/DELETE blocked。canary（`2902a5a1`）は committed engine で bit 一致再現。
+- rollback rehearsal（`bb95f227`）: resolver-only rollback で v1 original 復元、append-only reversal、backup/restore 一致。source SHA-256 不変（write 0）。
+- 承認: `reports/n2/settlement-reparse-approval-manifest.json`（approvalTargetDigest `647993a1`, NOT_APPROVED）+ `docs/n2-settlement-reparse-apply-runbook.md`。production apply は gate + 承認まで BLOCKED。
+- 実装: `src/research-replay/n2SettlementReparse.ts` + `n2SettlementReparseEngine.ts`（18 tests）、`scripts/reparse-settlement-v2.ts`、`scripts/rehearse-reparse-rollback.ts`。
 
 ### 2026-08-03 archive refund full scan + canonical reconciliation
 

@@ -131,6 +131,10 @@ pnpm research:rollout:readiness
 
 後者は外部HTTPやlive collector接続を行わないが、sidecar、backup、reportへ追記する。日常のhealth checkとして無目的に連続実行しない。
 
+## Settlement reparse rollback（temp copy, 2026-08-03）
+
+N1-C backfill が使った v1 parser の特払い誤分類を訂正する append-only reparse を temp copy で実演した。既存 row を UPDATE/DELETE せず、v2 corrected candidate を supersession append する。rollback は resolver 切替（reparse parse_run 由来 candidate を無視）で v1 original を復元でき、`operational_audit_events` へ `rollback_started/completed` を追記する append-only reversal と、`VACUUM INTO` backup + restore（hash/resolver 一致）を検証した。source `data/research-replay.sqlite` への write は 0。実 sidecar 適用は `approvalTargetDigest` 束ねた承認 + apply gate まで BLOCKED。正本 `docs/n2-settlement-reparse-apply-runbook.md`、`reports/n2/settlement-reparse-*`。
+
 ## 次工程
 
 Phase N1「全券種払戻基盤」のschema/migration実装前レビューは`CONDITIONAL`で完了した。詳細は[`n1-all-bet-type-payout-review.md`](n1-all-bet-type-payout-review.md)。

@@ -478,3 +478,27 @@ current / blocked:
 next（最優先を1つ）:
 
 1. append-only `parser_reparse` / supersession 計画を temp copy（restore copy）で検証し、v1 偽返還 317,747 candidate を v2 corrected（settled + special_payout line）へ置換する設計・canary を固める。実 sidecar への適用は明示承認・backup/restore・canary・primary非伝播が揃うまで行わない。
+
+## 2026-08-03 settlement reparse temp-copy + 承認パッケージ（実適用は未承認）
+
+completed:
+
+- **append-only settlement reparse を実装・temp copy で完全リハーサル**。v1 parser defect（`V1_SPECIAL_PAYOUT_FALSE_REFUND`）を v2 再parse で supersession 訂正する。実 sidecar への書き込みは 0（承認未取得）。
+- 実装: `src/research-replay/n2SettlementReparse.ts`（pure core, 12 tests）+ `n2SettlementReparseEngine.ts`（DB 実行層 + rollback resolver, 6 integration tests）+ `scripts/reparse-settlement-v2.ts`（`pnpm reparse:n2:settlement`）+ `scripts/rehearse-reparse-rollback.ts`（`pnpm reparse:n2:rollback-rehearsal`）。
+- **CLI 安全境界**: source は read-only copy（`--make-copy`）、target は明示 temp copy のみ。source/target 同一・symlink・active WAL を拒否、snapshot SHA-256、chunk/resume、決定的 outputDigest、`--mode=production` は常に BLOCKED。reparse は archive を v2 再parse → hash で sidecar raw_document に照合（backfill gap を自動除外）→ 1回の sequential scan で active map を作り、per-document transaction で append。
+- **full temp-copy reparse（digest `247310fb`）**: false_refund_correction **317,747**（Track A reconciler の status_mismatch と完全一致）・special_payout_addition **65,156**・result_kind 0・ambiguous_non_defect 0・unexpected_addition **2（適用せず flag のみ）**。appended candidates 382,903 / supersessions 317,747 / parse_runs 8,167 / observations 58,542。active refunded **319,301 → 1,554**、settled 7,833,297 → 8,216,200、logical active 8,152,599 → 8,217,755、physical 8,156,795 → 8,539,698（append-only）。afterConsistent=true（delta==full-scan 実測）。
+- **検証**: full integrity `integrity_check=ok / FK 0 / orphan 0 / ambiguous active 0`、second-run appended 0（idempotent）、append-only UPDATE/DELETE blocked。canary（決定的 cohort 46 files, digest `2902a5a1`）は refactor 後の committed engine で bit 一致再現。
+- **rollback rehearsal（`bb95f227`, REHEARSED）**: resolver-only rollback（reparse parse_run を無視）が v1 original（refunded 319,301, settled 7,833,297）を復元、append-only reversal（監査追記・double-rollback idempotent・audit UPDATE/DELETE blocked・physical rows 不変）、backup（VACUUM INTO quick_check=ok）/restore（hash 一致・resolver 一致）。
+- **source 非伝播**: `data/research-replay.sqlite` SHA-256=`d9b5ddd2…` 実行前後で不変、mtime Jul 29、-wal 無し。`data/boat.sqlite` は開いていない（mtime 変化は独立 live collector）。
+- **承認パッケージ**: `reports/n2/settlement-reparse-approval-manifest.json`（approvalTargetDigest `647993a1`, NOT_APPROVED / real-sidecar apply NOT_EXECUTED / production apply BLOCKED）+ `docs/n2-settlement-reparse-apply-runbook.md`。正本 report: `reports/n2/settlement-reparse-full.json/.md`・`settlement-reparse-canary.*`・`settlement-reparse-rollback-rehearsal.*`。
+- 全 583 tests pass、targeted strict typecheck（tsc -b）PASS。
+
+current / blocked:
+
+- **実 sidecar apply は未承認・未実行**。production threshold/approval/live writer/collector/prediction/model/BUY・WATCH・SKIP/app_settings/production DB schema は変更していない。
+- unexpected_addition 2 件（v2 非特払い settled で対応 active v1 無し）は適用せず手動レビュー待ち。not_ingested 7 files / 未マッチ raw 3 件は backfill cutoff・source-duplicate 由来で reparse scope 外。
+- N2 label truth は実 sidecar への corrected candidate 反映（承認後）まで READY にしない。ただし承認可能な訂正パッケージは完成した。
+
+next（最優先を1つ）:
+
+1. 承認者が `approvalTargetDigest` + snapshot identity に束ねた append-only approval grant を記録したら、production apply gate（backup→canary→apply→verify→rollback rehearsal）を実装して実 sidecar へ適用する。承認前は BLOCKED。
