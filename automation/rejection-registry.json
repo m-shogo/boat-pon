@@ -1,0 +1,6 @@
+{
+  "registrySchemaVersion": "rejection-registry-v1",
+  "updatedAt": "2026-08-03T12:57:25.000Z",
+  "note": "棄却された仮説の台帳。再提案時に過去の棄却理由を必ず参照する。",
+  "rejections": []
+}

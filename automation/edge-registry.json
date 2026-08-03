@@ -1,0 +1,6 @@
+{
+  "registrySchemaVersion": "edge-registry-v1",
+  "updatedAt": "2026-08-03T12:57:25.000Z",
+  "note": "Edge 候補台帳。自動化できるのは調査・検証・棄却・shadow 候補化まで。production 昇格は自動化しない。",
+  "edges": []
+}

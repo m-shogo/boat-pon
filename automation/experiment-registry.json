@@ -1,0 +1,6 @@
+{
+  "registrySchemaVersion": "experiment-registry-v1",
+  "updatedAt": "2026-08-03T12:57:25.000Z",
+  "note": "実行済み experiment の append-only 台帳（同一 hypothesis の再検証・多重検定の追跡用）。",
+  "experiments": []
+}
