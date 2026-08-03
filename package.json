@@ -247,7 +247,15 @@
     "daily:research-report": "tsx scripts/daily-research-report.ts",
     "investigate:n2:unexpected-additions": "NODE_OPTIONS=--max-old-space-size=8192 tsx scripts/investigate-unexpected-additions.ts",
     "apply:n2:settlement-reparse": "NODE_OPTIONS=--max-old-space-size=8192 tsx scripts/apply-settlement-reparse.ts",
-    "report:n2:reparse-dashboard": "tsx scripts/generate-reparse-dashboard.ts"
+    "report:n2:reparse-dashboard": "tsx scripts/generate-reparse-dashboard.ts",
+    "automation:task": "tsx scripts/run-research-task.ts task",
+    "automation:status": "tsx scripts/run-research-task.ts status",
+    "automation:validate-request": "tsx scripts/run-research-task.ts validate-request",
+    "automation:pause": "tsx scripts/run-research-task.ts pause",
+    "automation:resume": "tsx scripts/run-research-task.ts resume",
+    "automation:emergency-stop": "tsx scripts/run-research-task.ts emergency-stop",
+    "automation:clear-emergency-stop": "tsx scripts/run-research-task.ts clear-emergency-stop",
+    "report:automation:dashboard": "tsx scripts/generate-automation-dashboard.ts"
   },
   "engines": {
     "node": ">=24.0.0"

@@ -1,0 +1,31 @@
+{
+  "policyVersion": "research-automation-policy-v1",
+  "repoPath": "/Users/m-shogo/Developer/personal/boat-pon",
+  "allowedSafetyLevels": ["L0", "L1", "L2"],
+  "deniedSafetyLevels": ["L3", "L4"],
+  "maxTaskDurationSeconds": 5400,
+  "lock": {
+    "path": "data/tmp/automation/research.lock.json",
+    "staleAfterSeconds": 7200,
+    "heartbeatSeconds": 30
+  },
+  "gitWrite": {
+    "mode": "branch-pr",
+    "branch": "automation/boat-pon-research",
+    "pathAllowlist": [
+      "automation/",
+      "reports/automation/",
+      "docs/automation/"
+    ],
+    "maxFileBytes": 2097152
+  },
+  "guards": {
+    "requireCleanWorkingTree": true,
+    "requireAuthoritySha": true,
+    "rejectActiveWal": true,
+    "minFreeDiskBytes": 21474836480,
+    "emergencyStopPath": "automation/EMERGENCY_STOP",
+    "pausePath": "automation/PAUSED",
+    "forbidScheduleTriggers": true
+  }
+}

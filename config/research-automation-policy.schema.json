@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "research-automation-policy.schema.json",
+  "title": "boat-pon research automation policy",
+  "description": "one-shot research orchestrator の安全境界。schedule/daemon/loop は定義しない（禁止）。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "policyVersion", "repoPath", "allowedSafetyLevels", "deniedSafetyLevels",
+    "maxTaskDurationSeconds", "lock", "gitWrite", "guards"
+  ],
+  "properties": {
+    "policyVersion": { "type": "string", "minLength": 1 },
+    "repoPath": { "type": "string", "minLength": 1 },
+    "allowedSafetyLevels": {
+      "type": "array", "items": { "enum": ["L0", "L1", "L2", "L3"] }, "minItems": 1, "uniqueItems": true
+    },
+    "deniedSafetyLevels": {
+      "type": "array", "items": { "enum": ["L3", "L4"] }, "minItems": 1, "uniqueItems": true
+    },
+    "maxTaskDurationSeconds": { "type": "integer", "minimum": 60, "maximum": 21600 },
+    "lock": {
+      "type": "object", "additionalProperties": false,
+      "required": ["path", "staleAfterSeconds", "heartbeatSeconds"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "staleAfterSeconds": { "type": "integer", "minimum": 60, "maximum": 86400 },
+        "heartbeatSeconds": { "type": "integer", "minimum": 5, "maximum": 600 }
+      }
+    },
+    "gitWrite": {
+      "type": "object", "additionalProperties": false,
+      "required": ["mode", "branch", "pathAllowlist", "maxFileBytes"],
+      "properties": {
+        "mode": { "enum": ["branch-pr", "direct-main"] },
+        "branch": { "type": "string", "minLength": 1 },
+        "pathAllowlist": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1 },
+        "maxFileBytes": { "type": "integer", "minimum": 1024, "maximum": 10485760 }
+      }
+    },
+    "guards": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "requireCleanWorkingTree", "requireAuthoritySha", "rejectActiveWal",
+        "minFreeDiskBytes", "emergencyStopPath", "pausePath", "forbidScheduleTriggers"
+      ],
+      "properties": {
+        "requireCleanWorkingTree": { "type": "boolean" },
+        "requireAuthoritySha": { "type": "boolean" },
+        "rejectActiveWal": { "type": "boolean" },
+        "minFreeDiskBytes": { "type": "integer", "minimum": 0 },
+        "emergencyStopPath": { "type": "string", "minLength": 1 },
+        "pausePath": { "type": "string", "minLength": 1 },
+        "forbidScheduleTriggers": { "const": true }
+      }
+    }
+  }
+}
