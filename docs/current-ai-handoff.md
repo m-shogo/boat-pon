@@ -465,8 +465,9 @@ completed:
 - **実測（決定的 digest `3055b247e9e3a283836d13de5eda81d14163f6b198fd3cb49e5414ca8d542215`、独立再実行一致）**: canonical active 8,152,599 = exact_match 7,834,852 + status_mismatch 317,747（全て refunded→settled）。result_kind_mismatch 0、archive_only 69,440、**canonical_only 0**、ambiguous 0、parse_failure 0。archive-derived 8,222,039 = exact + status_mismatch + archive_only（v1/v2 scanner の v2 count と完全一致）。coverage: exact 95.29% / archive covered 99.16% / canonical covered **100%**。
 - **319,301 の意味確定**: canonical refunded ≈319,301 の **317,747 は v1 特払いbug由来の偽返還（真は settled）**、真の返還は約 1,554（v2 raw-scan 1,558 と source-duplicate 差分内一致）。v2 corrected eligible ≈ **99.98%**（旧 96.03% は誤分類込み）。era drift（87%→99.9%）は false_refund の年代分布（2005–06 約42–43K/年 → 2020年代 約100–450/年）でほぼ全量説明。
 - **既存 test の pre-existing 破損を修正**: `shadowOperabilityPolicy.test.ts` の `run29/scripts/...` stale path（base 62c36af で ERR_MODULE_NOT_FOUND、CLI test が必ず失敗）を test file 相対解決へ修正。
-- 新規 tests 10/10（reconciler core）、operability CLI test 修正後 4/4、targeted strict typecheck（tsc -b）PASS。
+- 新規 tests 10/10（reconciler core）、operability CLI test 修正後 4/4、full suite 565/565、targeted strict typecheck（tsc -b）PASS。
 - code commits: `88a66fce…`（reconciler）, `8deec9c…`（tests）, `e6b1057…`（test path fix）, `c761f5b…`（v1/v2 scan evidence）, `e9911fe…`（reconciliation evidence）。
+- **CI 復旧（重要な記録訂正）**: push 後の GitHub Actions run `30777822213` は **success**（Test/Build 含む全 step green）。従来 handoff/監査の「CI_INFRA_BLOCKED / runner allocation failure」は不正確で、実際は 2026-08-02 の `run29/` stale path test（`shadowOperabilityPolicy.test.ts`）が **Test step を exit 1 で失敗させていた**ことが原因。本工程の test path 修正でCIはHEADで green に戻った。N1-C acceptance の CI 依存 blocker はこの事実で見直し可能（governance 判断は別途）。
 
 current / blocked:
 
