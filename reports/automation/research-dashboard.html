@@ -1,0 +1,36 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>boat-pon automation dashboard</title><style>
+:root{color-scheme:light dark}body{font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:auto;max-width:1100px;padding:24px}
+h1{font-size:20px}h2{font-size:15px;border-bottom:1px solid #8884;padding-bottom:4px;margin-top:24px}
+table{border-collapse:collapse;width:100%;font-size:13px}th,td{border:1px solid #8884;padding:5px 8px;text-align:left}th{background:#8881}
+.tw{overflow-x:auto}code{font-size:12px}.warn{background:#f39c1222;border:1px solid #f39c12;border-radius:8px;padding:10px 14px}
+.ok{background:#2ecc7122;border:1px solid #2ecc71;border-radius:8px;padding:10px 14px}
+.kpi{display:flex;flex-wrap:wrap;gap:12px;margin:12px 0}.card{border:1px solid #8884;border-radius:10px;padding:10px 14px;min-width:140px}
+.card b{display:block;font-size:18px}.card span{color:#888;font-size:12px}.lg{color:#888;font-size:11px}
+</style></head><body>
+<h1>boat-pon automation dashboard</h1>
+<p class="ok">1 dispatch = 1 task。schedule / cron / launchd hourly / daemon loop は<b>存在しない</b>。
+毎時判断は ChatGPT Scheduled Task 側が担当し、runner は job 待機のみ。</p>
+
+<div class="kpi">
+<div class="card"><b>online</b><span>runner status</span></div>
+<div class="card"><b>REJECTED_L4</b><span>last run result</span></div>
+<div class="card"><b>3</b><span>READY tasks</span></div>
+<div class="card"><b>0</b><span>edge ideas</span></div>
+<div class="card"><b>normal</b><span>control state</span></div>
+</div>
+
+<h2>Runner</h2><div class="tw"><table><tr><td>registered</td><td><code>YES</code></td></tr><tr><td>name</td><td><code>boat-pon-mac-local</code></td></tr><tr><td>status</td><td><code>online</code></td></tr><tr><td>busy</td><td><code>false</code></td></tr><tr><td>labels</td><td><code>self-hosted, macOS, ARM64, boat-pon-local</code></td></tr><tr><td>service</td><td><code>launchd (waits for jobs only)</code></td></tr><tr><td>latest workflow</td><td><code>boat-pon-local-research.yml (workflow_dispatch only)</code></td></tr><tr><td>latest request</td><td><code>REQ-l4test</code></td></tr><tr><td>latest task</td><td><code>TASK-N2-001</code></td></tr><tr><td>lock</td><td><code>free</code></td></tr><tr><td>emergency stop</td><td><code>false</code></td></tr><tr><td>paused</td><td><code>false</code></td></tr></table></div>
+
+<h2>GitHub</h2><div class="tw"><table><tr><td>authority SHA</td><td><code>5fede8beaf0dedfd2ca6dd6be028efc78d4ec31d</code></td></tr><tr><td>automation branch</td><td><code>automation/boat-pon-research</code></td></tr><tr><td>git write mode</td><td><code>branch-pr</code></td></tr><tr><td>rolling PR</td><td><code>NOT_STARTED (first automation run で作成)</code></td></tr><tr><td>schedule triggers</td><td><code>NONE (禁止・未使用)</code></td></tr></table></div>
+
+<h2>Data / settlement</h2><div class="tw"><table><tr><td>settlement snapshot identity</td><td><code>353562988ef0d5a3f791fa19bfa3b1751fafcd9dd67738d1326895604f023730</code></td></tr><tr><td>corrected settlement status</td><td><code>APPLIED (corrected truth)</code></td></tr><tr><td>apply executed</td><td><code>EXECUTED</code></td></tr><tr><td>DB size (bytes)</td><td><code>9762041856</code></td></tr><tr><td>WAL</td><td><code>empty</code></td></tr><tr><td>backup</td><td><code>NOT_AVAILABLE</code></td></tr><tr><td>held-out (not applied)</td><td><code>2 (CONFIRMED_V1_WIN_REFUND_OMISSION)</code></td></tr></table></div>
+
+<h2>N2</h2><div class="tw"><table><tr><td>corrected truth freeze</td><td><code>FROZEN</code></td></tr><tr><td>dataset manifest</td><td><code>NOT_STARTED</code></td></tr><tr><td>canary dataset</td><td><code>NOT_STARTED</code></td></tr><tr><td>coverage</td><td><code>NOT_STARTED</code></td></tr><tr><td>PIT guard</td><td><code>IMPLEMENTED (n2DatasetContract / odds atomic PIT)</code></td></tr><tr><td>leakage guard</td><td><code>IMPLEMENTED (leakage sentinel tests)</code></td></tr><tr><td>holdout vault</td><td><code>NOT_STARTED</code></td></tr><tr><td>baseline model</td><td><code>NOT_STARTED</code></td></tr><tr><td>shadow forward</td><td><code>NOT_STARTED</code></td></tr></table></div>
+
+<h2>Research control plane</h2><div class="tw"><table><tr><td>queued tasks (by status)</td><td><code>{"READY":3}</code></td></tr><tr><td>edge registry</td><td><code>0 edges {}</code></td></tr><tr><td>experiment registry</td><td><code>0</code></td></tr><tr><td>rejection registry</td><td><code>0</code></td></tr><tr><td>holdout registry</td><td><code>0</code></td></tr><tr><td>run history files</td><td><code>0</code></td></tr></table></div>
+
+<h2>Latest run</h2><div class="tw"><table><tr><td>request ID</td><td><code>REQ-l4test</code></td></tr><tr><td>task ID</td><td><code>TASK-N2-001</code></td></tr><tr><td>action</td><td><code>run-task</code></td></tr><tr><td>safety level</td><td><code>L4</code></td></tr><tr><td>result</td><td><code>REJECTED_L4</code></td></tr><tr><td>blocks</td><td><code>DIRTY_WORKING_TREE, ACTIVE_WAL, L4_FORBIDDEN</code></td></tr><tr><td>evidence</td><td><code>NOT_AVAILABLE</code></td></tr><tr><td>elapsed (ms)</td><td><code>2390</code></td></tr><tr><td>next candidate</td><td><code>resolve the blocks above; automation は自動再試行しない</code></td></tr></table></div>
+
+<p class="lg">generated 2026-08-03T14:07:27.039Z · self-contained (no external CDN) · 値が無い項目は NOT_STARTED / NOT_AVAILABLE と表示する</p>
+</body></html>
