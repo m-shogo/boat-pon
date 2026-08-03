@@ -59,13 +59,43 @@
 
 出力正本: `reports/n2/archive-refund-semantics-diff.json` / `.md`（year × bet_type × event_kind）。
 
-### 未確定（reconciliation で確定する）
+### Archive ↔ canonical reconciliation（2026-08-03、確定）
 
-- raw-scan candidate-level（319,309, 1,558）と canonical DB active candidate-level の突合（source-duplicate resolution 後の exact 一致率）
-- candidate ごとの DB persisted status（v1）と archive v2 status の差分マップ、および coverage（archive_only / canonical_only）
-- 特払いと実返還が同時に存在するraceの正しいselection-level financial label
+`pnpm reconcile:n2:archive-canonical -- --as-of=2026-08-01T00:00:00.000Z` を実行し、archive v2
+再parse candidate を永続 sidecar の canonical active candidate（source-duplicate 624 obs 除外、
+superseded 0）と canonical race identity で突合した（read-only、DB/archive/sidecar 無変更）。
 
-したがって、既存profileの約87%→99.9%を制度差・実返還率driftとして学習設計に使わない。N2 label truthはarchive↔canonical reconciliationが終わるまで未確定。
+- output digest: `3055b247e9e3a283836d13de5eda81d14163f6b198fd3cb49e5414ca8d542215`（独立再実行で一致・決定的）
+- settlement schema: `n1-settlement.0.3` / parser: `n1-settlement-parser-v2`
+
+| class | count |
+|---|---:|
+| canonical active candidates | 8,152,599 |
+| exact_match | 7,834,852 |
+| status_mismatch（全て refunded→settled = false_refund） | **317,747** |
+| result_kind_mismatch | 0 |
+| archive_only | 69,440 |
+| canonical_only | **0** |
+| ambiguous_canonical | 0 |
+| parse_failure | 0 |
+
+会計は完全に閉じる:
+
+- canonical active 8,152,599 = exact 7,834,852 + status_mismatch 317,747（+0+0）。**canonical_only=0** は N1-C backfill が archive 由来 candidate を 100% coverage していることを独立に裏付ける。
+- archive-derived 8,222,039 = exact 7,834,852 + status_mismatch 317,747 + archive_only 69,440。これは v1/v2 scanner の v2 currentCandidates 8,222,039 と完全一致。
+- archive_only 69,440 は v2 が新規に顕在化した special_payout 系 candidate（v1 では別 candidate 化されず、または返還へ吸収）。券種別では place が最多（23,766）。
+- coverage: exact-match rate **95.29%**、archive covered by canonical **99.16%**、canonical covered by archive **100%**。
+
+**319,301 の意味の確定**: canonical の refunded ≈319,301 のうち **317,747 は v1 特払いbug由来の偽返還（真は settled）**、残る約 1,554 のみが真の返還（v2 raw-scan の 1,558 と source-duplicate 差分内で一致）。したがって v2 基準の eligible 率は 96.03% → 約 **99.98%** 相当。
+
+**era drift の説明**: false_refund は 2005–2006 の約 42,000–43,000/年 から 2020 年代の約 100–450/年 へ単調減少する（2001–2003 は archive 欠落）。旧 profile の「87%→99.9% eligible drift」は制度差・実返還率変化ではなく、ほぼ全量が v1 特払いbug の年代分布で説明できる。2026 の archive_only=4,300 は DB backfill cutoff（k260728）と archive cutoff（k260801）の差による正常な未 backfill 分。
+
+正本: `reports/n2/archive-canonical-reconcile.json` / `.md`（year × bet_type × venue × class、status transition matrix、決定的 digest、raw 本文非包含 sample 200 件）。
+
+### 残る未確定
+
+- 特払いと実返還が同時に存在するraceの正しい selection-level financial label（target contract v2 で outcome=special_payout/refund を分離済みだが、実 selection 展開は N2 label 生成で確定する）
+- N2 label truth は、上記 v1 由来 candidate を v2 corrected に置換する append-only `parser_reparse` / supersession を実 sidecar へ適用するまで確定としない（本工程は read-only 監査であり sidecar を書き換えていない）。
 
 ## v1/v2差分scanner
 
@@ -202,10 +232,10 @@ temp collector adapterで`capture_attempt/events → raw_document/link → parse
 
 ## 次gate
 
-1. `--limit=20` smoke scan + full repo unit/typecheck
-2. raw archive全件を再parseし、`year × bet_type × event_kind`を確定
-3. 319,301候補とのcanonical/source-duplicate reconciliationを取る
-4. append-only `parser_reparse` / supersession計画をtemp copyで検証
+1. ~~`--limit=20` smoke scan + full repo unit/typecheck~~ **DONE**（2026-08-03）
+2. ~~raw archive全件を再parseし、`year × bet_type × event_kind`を確定~~ **DONE**（8,174 files、parse errors 0）
+3. ~~319,301候補とのcanonical/source-duplicate reconciliationを取る~~ **DONE**（reconciler、canonical_only=0、false_refund 317,747 確定）
+4. append-only `parser_reparse` / supersession計画をtemp copyで検証（**NEXT**、実 sidecar write は別承認）
 5. corrected canonical label profileを独立DB再読込で再生成
 6. その後にselection-level N2 prototypeへ進む
 

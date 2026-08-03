@@ -1,0 +1,2474 @@
+{
+  "phase": "N2_ARCHIVE_CANONICAL_SETTLEMENT_RECONCILIATION",
+  "reportSchemaVersion": "n2-archive-canonical-reconcile-report-v1",
+  "generatedAt": "2026-08-03T01:44:45.928Z",
+  "startedAt": "2026-08-03T01:43:54.097Z",
+  "completedAt": "2026-08-03T01:44:45.928Z",
+  "elapsedMs": 51831,
+  "gitSha": "e6b1057579eda3e378d567988cdc9ad8d90dc786",
+  "scope": "read-only reconciliation of v2-parsed K archive vs canonical active settlement candidates; no DB/archive/sidecar mutation",
+  "contract": {
+    "reconcileInputVersion": "n2-archive-canonical-reconcile-v1",
+    "raceIdentityVersion": "race-identity-v1",
+    "eventClassificationVersion": "refund-reconcile-events-v1",
+    "settlementCanonicalizationVersion": "n1-settlement-classify-v2",
+    "parserVersion": "n1-settlement-parser-v2",
+    "settlementSchemaVersion": "n1-settlement.0.3",
+    "asOf": "2026-08-01T00:00:00.000Z"
+  },
+  "input": {
+    "sidecar": "/Users/m-shogo/Developer/personal/boat-pon/data/research-replay.sqlite",
+    "archiveRoot": "/Users/m-shogo/Developer/personal/boat-pon/data/raw/official/results",
+    "archiveFilesDiscovered": 8174,
+    "archiveFilesScanned": 8174,
+    "limited": false,
+    "archiveInventoryDigest": "ee4023700f2acfe0768e2e9255c64348d985d711ee37dd4bd733aa1239b57ceb"
+  },
+  "canonical": {
+    "totalCandidates": 8156795,
+    "activeCandidates": 8152599,
+    "sourceDuplicateObservations": 624,
+    "supersededCandidates": 0,
+    "ambiguousActiveKeys": 0
+  },
+  "totals": {
+    "falseRefund": 317747,
+    "exact_match": 7834852,
+    "status_mismatch": 317747,
+    "result_kind_mismatch": 0,
+    "archive_only": 69440,
+    "canonical_only": 0,
+    "ambiguous_canonical": 0,
+    "parse_failure": 0,
+    "archiveDerivedCandidates": 8222039,
+    "canonicalReconciledCandidates": 8152599
+  },
+  "coverage": {
+    "exactMatchRate": 0.9529086398155008,
+    "archiveCoveredByCanonical": 0.9915544063948127,
+    "canonicalCoveredByArchive": 1
+  },
+  "byYear": [
+    {
+      "key": "2000",
+      "falseRefund": 966,
+      "exact_match": 56156,
+      "status_mismatch": 966,
+      "result_kind_mismatch": 0,
+      "archive_only": 640,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "2004",
+      "falseRefund": 24920,
+      "exact_match": 165917,
+      "status_mismatch": 24920,
+      "result_kind_mismatch": 0,
+      "archive_only": 5345,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "2005",
+      "falseRefund": 42510,
+      "exact_match": 289396,
+      "status_mismatch": 42510,
+      "result_kind_mismatch": 0,
+      "archive_only": 9083,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "2006",
+      "falseRefund": 43222,
+      "exact_match": 288683,
+      "status_mismatch": 43222,
+      "result_kind_mismatch": 0,
+      "archive_only": 9127,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "2007",
+      "falseRefund": 36345,
+      "exact_match": 305431,
+      "status_mismatch": 36345,
+      "result_kind_mismatch": 0,
+      "archive_only": 7513,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "2008",
+      "falseRefund": 30764,
+      "exact_match": 306376,
+      "status_mismatch": 30764,
+      "result_kind_mismatch": 0,
+      "archive_only": 6379,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "2009",
+      "falseRefund": 28875,
+      "exact_match": 321172,
+      "status_mismatch": 28875,
+      "result_kind_mismatch": 0,
+      "archive_only": 5954,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "2010",
+      "falseRefund": 26541,
+      "exact_match": 327300,
+      "status_mismatch": 26541,
+      "result_kind_mismatch": 0,
+      "archive_only": 5348,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "2011",
+      "falseRefund": 21151,
+      "exact_match": 329328,
+      "status_mismatch": 21151,
+      "result_kind_mismatch": 0,
+      "archive_only": 4098,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "2012",
+      "falseRefund": 18326,
+      "exact_match": 355961,
+      "status_mismatch": 18326,
+      "result_kind_mismatch": 0,
+      "archive_only": 3486,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "2013",
+      "falseRefund": 15715,
+      "exact_match": 356919,
+      "status_mismatch": 15715,
+      "result_kind_mismatch": 0,
+      "archive_only": 2988,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "2014",
+      "falseRefund": 10620,
+      "exact_match": 356103,
+      "status_mismatch": 10620,
+      "result_kind_mismatch": 0,
+      "archive_only": 1987,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "2015",
+      "falseRefund": 6964,
+      "exact_match": 360673,
+      "status_mismatch": 6964,
+      "result_kind_mismatch": 0,
+      "archive_only": 1284,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "2016",
+      "falseRefund": 4470,
+      "exact_match": 374975,
+      "status_mismatch": 4470,
+      "result_kind_mismatch": 0,
+      "archive_only": 808,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "2017",
+      "falseRefund": 2286,
+      "exact_match": 378788,
+      "status_mismatch": 2286,
+      "result_kind_mismatch": 0,
+      "archive_only": 413,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "2018",
+      "falseRefund": 1316,
+      "exact_match": 379795,
+      "status_mismatch": 1316,
+      "result_kind_mismatch": 0,
+      "archive_only": 232,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "2019",
+      "falseRefund": 1070,
+      "exact_match": 380277,
+      "status_mismatch": 1070,
+      "result_kind_mismatch": 0,
+      "archive_only": 181,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "2020",
+      "falseRefund": 443,
+      "exact_match": 383385,
+      "status_mismatch": 443,
+      "result_kind_mismatch": 0,
+      "archive_only": 76,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "2021",
+      "falseRefund": 326,
+      "exact_match": 384014,
+      "status_mismatch": 326,
+      "result_kind_mismatch": 0,
+      "archive_only": 55,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "2022",
+      "falseRefund": 206,
+      "exact_match": 388588,
+      "status_mismatch": 206,
+      "result_kind_mismatch": 0,
+      "archive_only": 36,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "2023",
+      "falseRefund": 233,
+      "exact_match": 387220,
+      "status_mismatch": 233,
+      "result_kind_mismatch": 0,
+      "archive_only": 39,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "2024",
+      "falseRefund": 228,
+      "exact_match": 387056,
+      "status_mismatch": 228,
+      "result_kind_mismatch": 0,
+      "archive_only": 42,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "2025",
+      "falseRefund": 144,
+      "exact_match": 385777,
+      "status_mismatch": 144,
+      "result_kind_mismatch": 0,
+      "archive_only": 26,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "2026",
+      "falseRefund": 106,
+      "exact_match": 185562,
+      "status_mismatch": 106,
+      "result_kind_mismatch": 0,
+      "archive_only": 4300,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    }
+  ],
+  "byBetType": [
+    {
+      "key": "exacta",
+      "falseRefund": 58170,
+      "exact_match": 1131858,
+      "status_mismatch": 58170,
+      "result_kind_mismatch": 0,
+      "archive_only": 616,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "place",
+      "falseRefund": 28412,
+      "exact_match": 1106127,
+      "status_mismatch": 28412,
+      "result_kind_mismatch": 0,
+      "archive_only": 23766,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "quinella",
+      "falseRefund": 58080,
+      "exact_match": 1123236,
+      "status_mismatch": 58080,
+      "result_kind_mismatch": 0,
+      "archive_only": 666,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "trifecta",
+      "falseRefund": 57836,
+      "exact_match": 1116706,
+      "status_mismatch": 57836,
+      "result_kind_mismatch": 0,
+      "archive_only": 612,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "trio",
+      "falseRefund": 57829,
+      "exact_match": 1115502,
+      "status_mismatch": 57829,
+      "result_kind_mismatch": 0,
+      "archive_only": 623,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "wide",
+      "falseRefund": 57418,
+      "exact_match": 1115134,
+      "status_mismatch": 57418,
+      "result_kind_mismatch": 0,
+      "archive_only": 714,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "win",
+      "falseRefund": 2,
+      "exact_match": 1126289,
+      "status_mismatch": 2,
+      "result_kind_mismatch": 0,
+      "archive_only": 42443,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    }
+  ],
+  "byVenue": [
+    {
+      "key": "びわこ",
+      "falseRefund": 15784,
+      "exact_match": 301722,
+      "status_mismatch": 15784,
+      "result_kind_mismatch": 0,
+      "archive_only": 3503,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "三国",
+      "falseRefund": 20989,
+      "exact_match": 318708,
+      "status_mismatch": 20989,
+      "result_kind_mismatch": 0,
+      "archive_only": 4613,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "下関",
+      "falseRefund": 26142,
+      "exact_match": 302397,
+      "status_mismatch": 26142,
+      "result_kind_mismatch": 0,
+      "archive_only": 5742,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "丸亀",
+      "falseRefund": 13324,
+      "exact_match": 337161,
+      "status_mismatch": 13324,
+      "result_kind_mismatch": 0,
+      "archive_only": 3059,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "住之江",
+      "falseRefund": 1243,
+      "exact_match": 346013,
+      "status_mismatch": 1243,
+      "result_kind_mismatch": 0,
+      "archive_only": 218,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "児島",
+      "falseRefund": 23566,
+      "exact_match": 318060,
+      "status_mismatch": 23566,
+      "result_kind_mismatch": 0,
+      "archive_only": 5104,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "唐津",
+      "falseRefund": 12106,
+      "exact_match": 334315,
+      "status_mismatch": 12106,
+      "result_kind_mismatch": 0,
+      "archive_only": 2774,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "多摩川",
+      "falseRefund": 3177,
+      "exact_match": 338858,
+      "status_mismatch": 3177,
+      "result_kind_mismatch": 0,
+      "archive_only": 752,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "大村",
+      "falseRefund": 9511,
+      "exact_match": 339866,
+      "status_mismatch": 9511,
+      "result_kind_mismatch": 0,
+      "archive_only": 2253,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "宮島",
+      "falseRefund": 26959,
+      "exact_match": 297815,
+      "status_mismatch": 26959,
+      "result_kind_mismatch": 0,
+      "archive_only": 5781,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "尼崎",
+      "falseRefund": 2209,
+      "exact_match": 340989,
+      "status_mismatch": 2209,
+      "result_kind_mismatch": 0,
+      "archive_only": 563,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "常滑",
+      "falseRefund": 11105,
+      "exact_match": 350523,
+      "status_mismatch": 11105,
+      "result_kind_mismatch": 0,
+      "archive_only": 2511,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "平和島",
+      "falseRefund": 3756,
+      "exact_match": 335077,
+      "status_mismatch": 3756,
+      "result_kind_mismatch": 0,
+      "archive_only": 881,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "徳山",
+      "falseRefund": 19551,
+      "exact_match": 306129,
+      "status_mismatch": 19551,
+      "result_kind_mismatch": 0,
+      "archive_only": 4500,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "戸田",
+      "falseRefund": 6284,
+      "exact_match": 342034,
+      "status_mismatch": 6284,
+      "result_kind_mismatch": 0,
+      "archive_only": 1213,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "桐生",
+      "falseRefund": 3613,
+      "exact_match": 344365,
+      "status_mismatch": 3613,
+      "result_kind_mismatch": 0,
+      "archive_only": 846,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "江戸川",
+      "falseRefund": 10285,
+      "exact_match": 301940,
+      "status_mismatch": 10285,
+      "result_kind_mismatch": 0,
+      "archive_only": 2019,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "津",
+      "falseRefund": 20705,
+      "exact_match": 318415,
+      "status_mismatch": 20705,
+      "result_kind_mismatch": 0,
+      "archive_only": 4230,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "浜名湖",
+      "falseRefund": 4180,
+      "exact_match": 369362,
+      "status_mismatch": 4180,
+      "result_kind_mismatch": 0,
+      "archive_only": 966,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "福岡",
+      "falseRefund": 25089,
+      "exact_match": 315365,
+      "status_mismatch": 25089,
+      "result_kind_mismatch": 0,
+      "archive_only": 5496,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "芦屋",
+      "falseRefund": 18226,
+      "exact_match": 317196,
+      "status_mismatch": 18226,
+      "result_kind_mismatch": 0,
+      "archive_only": 3891,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "若松",
+      "falseRefund": 9911,
+      "exact_match": 339674,
+      "status_mismatch": 9911,
+      "result_kind_mismatch": 0,
+      "archive_only": 2334,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "蒲郡",
+      "falseRefund": 4271,
+      "exact_match": 349954,
+      "status_mismatch": 4271,
+      "result_kind_mismatch": 0,
+      "archive_only": 862,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    },
+    {
+      "key": "鳴門",
+      "falseRefund": 25761,
+      "exact_match": 268914,
+      "status_mismatch": 25761,
+      "result_kind_mismatch": 0,
+      "archive_only": 5329,
+      "canonical_only": 0,
+      "ambiguous_canonical": 0,
+      "parse_failure": 0
+    }
+  ],
+  "statusMatrix": [
+    {
+      "transition": "refunded->settled",
+      "count": 317747
+    }
+  ],
+  "ambiguousKeys": [],
+  "samples": [
+    {
+      "raceKey": "2000-01-01:19:R2",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-01:19:R6",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-01:19:R6",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-02:19:R1",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-02:19:R1",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-02:19:R10",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-02:19:R10",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-06:19:R12",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-06:19:R12",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-06:19:R2",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-06:19:R2",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-06:19:R7",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-06:19:R7",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-06:20:R4",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-06:20:R4",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-06:20:R6",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-06:20:R6",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-06:20:R9",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-06:20:R9",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-08:14:R1",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-08:14:R1",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-08:14:R8",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-08:14:R9",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-08:14:R9",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-08:19:R2",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-08:19:R2",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-08:19:R4",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-08:19:R4",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-07:09:R1",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-07:09:R11",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-07:09:R11",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-07:19:R1",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-07:19:R1",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-07:19:R2",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-07:19:R2",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-07:19:R3",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-07:19:R3",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-07:19:R6",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-07:19:R6",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-07:20:R11",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-07:20:R11",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-07:20:R6",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-07:20:R6",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-05:11:R1",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-05:11:R1",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-05:11:R6",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-05:11:R9",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-05:17:R1",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-05:17:R1",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-05:17:R5",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-05:17:R5",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-05:20:R1",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-05:20:R1",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-03:09:R1",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-03:09:R1",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-03:19:R8",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-09:03:R9",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-09:03:R9",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-09:14:R1",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-09:14:R1",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-09:14:R3",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-09:19:R4",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-09:19:R4",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-09:19:R6",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-09:19:R6",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-09:19:R9",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-04:17:R7",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-04:17:R7",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-04:18:R2",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-04:18:R2",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-14:09:R9",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-14:10:R2",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-14:10:R2",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-14:10:R3",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-14:10:R3",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-14:19:R1",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-14:19:R10",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-14:19:R2",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-14:19:R2",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-14:21:R10",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-14:21:R10",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-10:09:R4",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-10:09:R4",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-10:14:R1",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-10:14:R10",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-10:14:R10",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-13:19:R10",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-13:19:R10",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-13:19:R11",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-13:19:R11",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-13:19:R12",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-13:19:R12",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-13:19:R2",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-13:19:R7",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-13:19:R7",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-13:19:R9",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-13:19:R9",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-12:14:R1",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-12:14:R1",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-12:14:R2",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-11:14:R3",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-11:15:R1",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-17:09:R8",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-17:09:R8",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-17:16:R3",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-17:16:R4",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-17:18:R2",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-17:18:R2",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-16:16:R2",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-16:17:R1",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-16:17:R1",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-16:17:R11",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-16:17:R3",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-16:19:R1",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-16:19:R1",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-16:19:R2",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-16:19:R2",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-16:19:R3",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-15:09:R5",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-15:09:R9",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-15:09:R9",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-15:10:R2",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-15:10:R2",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-15:19:R1",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-15:19:R1",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-19:20:R10",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-19:20:R10",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-19:20:R2",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-19:20:R9",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-19:20:R9",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-19:22:R1",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-19:22:R1",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-19:22:R2",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-18:20:R1",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-18:20:R1",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-20:10:R11",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-20:10:R11",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-20:10:R6",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-20:10:R6",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-20:11:R3",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-20:19:R5",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-20:19:R5",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-20:20:R1",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-20:20:R3",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-20:20:R3",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-20:22:R2",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-20:22:R2",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-20:22:R5",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-20:22:R5",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-22:11:R3",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-22:11:R3",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-22:11:R4",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-22:11:R7",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-22:11:R7",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-22:18:R1",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-22:18:R1",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-22:20:R1",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-22:20:R1",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-22:20:R3",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-22:20:R3",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-22:20:R7",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-21:10:R4",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-21:10:R4",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-21:10:R8",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-21:10:R8",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-21:11:R11",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-21:11:R2",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-21:15:R12",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-21:18:R1",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-24:24:R3",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-24:24:R6",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-24:24:R6",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-23:20:R3",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-23:20:R3",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-23:20:R8",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-23:20:R8",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-23:20:R9",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-23:20:R9",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-29:23:R1",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-29:23:R1",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-29:24:R10",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-29:24:R10",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-29:24:R2",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-29:24:R2",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-29:24:R6",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-31:24:R10",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-31:24:R10",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-31:24:R11",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-30:23:R3",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-30:23:R3",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-30:24:R11",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-30:24:R11",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-30:24:R6",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-01-30:24:R6",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-02-03:10:R10",
+      "betType": "exacta",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-02-03:10:R2",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-02-03:10:R2",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-02-03:22:R2",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-02-03:22:R2",
+      "betType": "quinella",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    },
+    {
+      "raceKey": "2000-02-03:22:R3",
+      "betType": "place",
+      "class": "status_mismatch",
+      "canonicalStatus": "refunded",
+      "canonicalResultKind": "normal",
+      "archiveStatus": "settled",
+      "archiveResultKind": "normal"
+    }
+  ],
+  "parseErrorSamples": [],
+  "outputDigest": "3055b247e9e3a283836d13de5eda81d14163f6b198fd3cb49e5414ca8d542215",
+  "result": "RECONCILED"
+}

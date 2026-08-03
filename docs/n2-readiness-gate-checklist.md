@@ -1,7 +1,7 @@
 # N2 Readiness Gate Checklist（着手前・設計のみ）
 
-更新: 2026-08-01
-状態: **N2 contract hardening中（label truth未確定、model/training未着手）**
+更新: 2026-08-03
+状態: **N2 contract hardening中（archive↔canonical reconciliation完了、label truthは実sidecar corrected reparse待ち、model/training未着手）**
 
 N1-C（全券種 settlement canonical 基盤）完成を受け、N2（市場残差/選手能力等を用いた予測・評価フェーズ）へ進む前に満たすべき gate を、repo・docs・schema・reports から整理する。本書は checklist であり、N2 実装・training・BUY/WATCH/SKIP・threshold 変更・production 接続は一切行わない。
 
@@ -23,22 +23,29 @@ design/contract/enforcement/prototype を実装（[`n2-data-contracts.md`](n2-da
 
 | gate | 状態 | 根拠 |
 |---|---|---|
-| A. canonical settlement truth | **CONDITIONAL** | structural integrity/active uniquenessはPASS。`ARCHIVE_REFUND_SEMANTICS_AUDIT`のraw再集計・supersession未完了 |
-| B. training dataset contract | **READY(scaffold+verified-lineage contract) / PROFILE STALE** | selection builder + F0 observation/parse/raw read-only JOIN検証 + source adapterを実装。unsafe/未検証lineageはcandidate全体0行。実DB join未実行。96.03%はparser v1由来を含み再集計までtruthにしない |
+| A. canonical settlement truth | **CONDITIONAL** | structural integrity/active uniquenessはPASS。archive↔canonical reconciliation完了（canonical_only=0, false_refund 317,747確定）。実sidecarへのcorrected `parser_reparse`/supersession適用は別承認で未実施 |
+| B. training dataset contract | **READY(scaffold+verified-lineage contract) / PROFILE STALE** | selection builder + F0 observation/parse/raw read-only JOIN検証 + source adapterを実装。unsafe/未検証lineageはcandidate全体0行。実DB join未実行。96.03%はparser v1誤分類（317,747偽返還）を含み、reconciliationで v2 corrected eligible ≈99.98% と確定したが、実sidecar corrected candidateへ置換するまでtraining truthにしない |
 | C. target definition | **READY(enforcement)** | target v2、7券種212 selection列挙、`hit/loss/refund/special_payout/void`、12 contract tests PASS |
 | D. feature PIT | **READY(enforcement+complete temp capture lineage+retry dedup+immutable coverage reader) / BLOCKED(real observations)** | strict `official_program` parserとprimary照合に加え、tempでcapture attempt/events→byte-exact raw/link→parse/domain/typed payloadを接続。event時刻逆行・byte count不一致・誤linkを拒否し、parse errorをcapture failureと分離。同一raw retryは2 capture/link・1 raw・1 parse/observationを保証し、別race identityは再利用しない。capture失敗はterminal attemptとして隔離し、同じlogical groupの新attemptだけがretry成功できる。collector E2E 6/6、今回の関連tests 12/12 PASS。F0-R既存gateでprimary非伝播・outbox retry・rollback/kill switchも確認済み。実collector sidecar writeと実profileはPENDING |
 | E. odds PIT/timing | **READY(enforcement+lineage+immutable trifecta coverage reader) / BLOCKED(all-bet observations)** | F0 typed `trifecta_market`をcheckpoint別120selectionへ展開し、payload schema/hash・observed_at・lineage・selection spaceを検証。bet_type不明legacy rowは昇格禁止。E2E 4/4 PASS。全7券種live observationは未整備 |
-| F. unresolved settlement handling | **CONDITIONAL** | conflict/cancel/source_duplicateはfail-closed。部分返還labelは修正済みだがarchive明示返還のraw監査が未完了 |
+| F. unresolved settlement handling | **CONDITIONAL** | conflict/cancel/source_duplicateはfail-closed。部分返還labelは修正済み。archive明示返還のraw監査完了（真の返還≈1,554、v1偽返還317,747と分離確定）。実sidecarへの反映は別承認 |
 | G. dataset reproducibility | **READY(code) / PENDING(real data run)** | immutable DBをclose後、別connectionで入力を再読込する独立rebuild script実装。隔離SQLite fixtureでPASS、実sidecar実行は未確認 |
 | H. split policy | **READY(設計)** | time-based・race-level group・coverage gap/era drift 尊重 |
 | I. leakage validator | **READY** | `n2DatasetContract.test.ts` + 既存 `check:point-in-time-safety` |
 | J. evaluation contract | **READY(設計)** | predictive/financial 分離・bootstrap・CLAUDE.md ROI 基準 |
 | K. market baseline | **READY(設計)** | market-implied / frequency / 既存 policy / trivial |
 | L. calibration | **READY(設計)** | 券種別 bucket + 信頼区間 |
-| M. drift analysis | **CONDITIONAL** | 2001–2003 gapは確定。87%→99.9%はparser v1影響を再集計するまで未確認 |
+| M. drift analysis | **CONDITIONAL** | 2001–2003 gapは確定。87%→99.9% eligible driftは、reconciliationで false_refund の年代分布（2005–06 約42–43K/年 → 2020年代 約100–450/年）がほぼ全量の要因と確定。実返還率driftではない |
 | N. multiple-bet-type policy | **READY(設計)** | 券種別 model 基本 |
 
 overall: **N2_FEATURE_BUILDER_SCAFFOLD_READY = YES / N2_LABEL_TRUTH_READY = NO**。旧 `N2_IMPLEMENTATION_READY=YES` は実装着手準備だけを意味し、dataset完成・学習開始可を意味しない。
+
+## Archive refund label truth（2026-08-03 確定）
+
+- `pnpm audit:n2:archive-refund-semantics`（v1/v2 full scan）と `pnpm reconcile:n2:archive-canonical`（archive↔canonical reconciliation）を実 K archive（8,174 files）へ read-only 適用し完了。
+- canonical refunded ≈319,301 のうち **317,747 が v1 特払いbug由来の偽返還**、真の返還は約 1,554。v2 corrected eligible ≈ **99.98%**（旧 profile 96.03% は v1 誤分類込み）。canonical_only=0（backfill coverage 100%）。
+- 正本: `reports/n2/archive-canonical-reconcile.json/.md`、`reports/n2/archive-refund-semantics-audit.md`。
+- 残: 実 sidecar への append-only `parser_reparse`/supersession（corrected candidate 置換）は別承認。適用まで N2 label truth は READY にしない。
 
 ## 実 feature 接続までの残タスク
 

@@ -559,9 +559,21 @@ M1はN3/N4の選手PIT gate、M3は主観を排したstrict-prior label gate、M
 
 - completed: official_programのtemp五層lineage、byte/time/link integrity、stored-raw parser、primary semantic照合、immutable coverage reader、same-raw retry dedup。HTTP retryはcapture履歴を保持するが同一semantic domain eventを二重生成しない。
 - completed追加: capture failureをterminal attemptとして保持し、同一logical groupの新attempt retryだけがraw/parse/observationを生成するfailure isolation。F0-R既存のprimary非伝播・outbox retry・rollback/kill switchと整合。\n- current: official_program shadow outbox message contract、single-writer/idempotency key、primary collector非伝播の統合temp E2E。
-- blocked: raw archive全件scanner実行、約319,301 excluded_refunded候補とのreconciliation、実F0 sidecar coverage、全7券種live typed market observation。
+- completed（2026-08-03）: raw archive全件scanner実行と約319,301 excluded_refunded候補のcanonical reconciliation。詳細は下記「2026-08-03 archive refund full scan + canonical reconciliation」。
+- blocked: 実F0 sidecar coverage、全7券種live typed market observation、corrected label への実 sidecar `parser_reparse`/supersession（別承認）。
 - evidence: collector E2E 6/6、今回のprogram/coverage regression 12/12、strict TypeScript PASS。retry dedup code `20b2b55a` / `1f5bd37f`、failure isolation code `8861a396` / `fd1a1077`。
-- next: raw入力があれば`ARCHIVE_REFUND_SEMANTICS_AUDIT`を再開し、なければofficial_program payloadを既存F0-R outboxへ安全に接続するtemp統合を実装する。実collector writer、model、BUY/WATCH/SKIP、productionはOFFを維持する。
+- next: append-only `parser_reparse` / supersession を temp copy で検証し、corrected canonical label profile を独立DB再読込で再生成する。実collector writer、model、BUY/WATCH/SKIP、productionはOFFを維持する。
+
+### 2026-08-03 archive refund full scan + canonical reconciliation
+
+- raw K archive を発見（`data/raw/official/results/k*.lzh`、8,174 files、2000–2026、Git管理外）。`unar` で解凍し read-only で処理した。
+- v1/v2 full scan（`pnpm audit:n2:archive-refund-semantics`、parse errors 0）: v1 refund候補 319,309 → v2 1,558、false_refund_reclassified 317,753、special_payout_added 65,157。
+- archive↔canonical reconciler（`pnpm reconcile:n2:archive-canonical`）を新規実装。archive v2 candidate を canonical active candidate（source-duplicate 624 obs 除外、superseded 0）と canonical race identity で突合。
+- 実測（決定的 digest `3055b247…`、独立再実行一致）: exact_match 7,834,852 / status_mismatch 317,747（全て refunded→settled）/ result_kind_mismatch 0 / archive_only 69,440 / **canonical_only 0** / ambiguous 0 / parse_failure 0。
+- 会計閉包: canonical active 8,152,599 = exact + status_mismatch。archive-derived 8,222,039 = exact + status_mismatch + archive_only（v1/v2 scanner の v2 count と一致）。canonical covered by archive **100%** で N1-C backfill の archive coverage を独立確認。
+- 確定: canonical refunded ≈319,301 の **317,747 が v1 特払いbug由来の偽返還**、真の返還は約 1,554。eligible 96.03% → 約 99.98%。era drift（87%→99.9%）はほぼ全量が v1 bug の年代分布で説明される。
+- 実装: `src/research-replay/n2ArchiveCanonicalReconcile.ts`（core, 10 tests）+ `scripts/reconcile-archive-canonical-settlement.ts`（read-only CLI, immutable=1/query_only, deterministic, resumable）。正本 `reports/n2/archive-canonical-reconcile.json/.md`、`reports/n2/archive-refund-semantics-audit.md`。
+- 安全: DB/archive/sidecar への write 0。production threshold/approval/live writer/collector/model/BUY条件/app_settings 変更なし。N2 label truth は実 sidecar corrected reparse まで READY にしない。
 
 ### 2026-08-02 N2 official_program shadow outbox
 
