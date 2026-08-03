@@ -145,6 +145,64 @@ export function decideReparseAction(existing: ExistingActiveCandidate, v2: Deriv
   return "ambiguous_non_defect";
 }
 
+// ---- unexpected_addition / ambiguous 分類（versioned contract）----
+export const ADDITION_CLASSIFICATIONS = [
+  "CONFIRMED_MISSING_SPECIAL_PAYOUT",    // v1 が抑止した特払い（本 reparse が special_payout_addition として扱う）
+  "CONFIRMED_V1_WIN_REFUND_OMISSION",    // v1 が win 返還 candidate を出さなかった別 defect（本 reparse scope 外）
+  "CONFIRMED_V1_PARSER_DEFECT",          // その他の確定 v1 defect（別 scope）
+  "CONFIRMED_BACKFILL_GAP",              // ingested raw に無い race（reparse scope 外）
+  "CONFIRMED_SOURCE_DUPLICATE",          // candidate は在るが全て source_duplicate/superseded
+  "CONFIRMED_IDENTITY_MISMATCH",         // canonical identity 不一致
+  "CONFIRMED_NON_ACTIONABLE",            // 対応不要
+  "MANUAL_REVIEW_REQUIRED",              // 人手判断が必要
+  "UNKNOWN_BLOCKED",                     // 不明・fail-closed
+] as const;
+export type AdditionClassification = (typeof ADDITION_CLASSIFICATIONS)[number];
+
+export type AdditionEvidence = {
+  betType: SettlementBetType;
+  v2Status: SettlementStatus;
+  v2ResultKind: ResultKind;
+  anyCandidateForRaceBet: boolean; // sidecar に当該 race+bet_type の candidate が存在するか
+  anyActiveForRaceBet: boolean;    // うち active（非 source_dup・非 superseded）が存在するか
+};
+export type AdditionDecision = {
+  classification: AdditionClassification;
+  reason: string;
+  autoApplyEligible: boolean; // 本 special-payout reparse で自動適用してよいか（unexpected は常に false）
+};
+
+// unexpected_addition を証拠から決定的に分類する。本 reparse（特払い false-refund 訂正）の
+// scope 外事象は auto-apply しない。期待値合わせで強制訂正しない。
+export function classifyUnexpectedAddition(ev: AdditionEvidence): AdditionDecision {
+  if (!ev.anyCandidateForRaceBet) {
+    if (ev.v2Status === "refunded" || ev.v2Status === "partially_refunded") {
+      return {
+        classification: "CONFIRMED_V1_WIN_REFUND_OMISSION",
+        reason: "no v1 candidate exists for this race+bet_type and v2 derives a refunded candidate: a distinct v1 refund-omission defect, outside the V1_SPECIAL_PAYOUT_FALSE_REFUND reparse scope. Hold for a separately-approved correction.",
+        autoApplyEligible: false,
+      };
+    }
+    return {
+      classification: "MANUAL_REVIEW_REQUIRED",
+      reason: "no v1 candidate exists and v2 derives a non-special settled candidate; not the special-payout defect. Manual review before any separate correction.",
+      autoApplyEligible: false,
+    };
+  }
+  if (!ev.anyActiveForRaceBet) {
+    return {
+      classification: "CONFIRMED_SOURCE_DUPLICATE",
+      reason: "v1 candidate(s) exist but all are source_duplicate/superseded (no active); v2-only appearance is a duplicate-resolution artifact, not a parser defect. Hold out.",
+      autoApplyEligible: false,
+    };
+  }
+  return {
+    classification: "MANUAL_REVIEW_REQUIRED",
+    reason: "active candidate exists yet the decision fell through to unexpected_addition; unexpected. Manual review.",
+    autoApplyEligible: false,
+  };
+}
+
 export function isSupersedingAction(action: ReparseAction): boolean {
   return action === "false_refund_correction" || action === "result_kind_correction";
 }
