@@ -145,7 +145,7 @@ test("CLI opens the sidecar immutable/read-only and returns deterministic PASS",
     writeFileSync(policyPath, `${JSON.stringify(policy, null, 2)}\n`, "utf8");
     ctx.db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
     ctx.db.close();
-    const cli = resolve("run29/scripts/report-shadow-operability.ts");
+    const cli = resolve(import.meta.dirname, "../../scripts/report-shadow-operability.ts");
     const args = [
       ...process.execArgv,
       cli,
