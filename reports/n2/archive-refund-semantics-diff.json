@@ -1,0 +1,2095 @@
+{
+  "phase": "ARCHIVE_REFUND_SEMANTICS_AUDIT",
+  "generatedAt": "2026-08-03T01:26:02.141Z",
+  "startedAt": "2026-08-03T01:24:29.133Z",
+  "elapsedMs": 93008,
+  "scope": "read-only v1/v2 parse of immutable K archives; no DB/archive mutation",
+  "parser": {
+    "legacy": "n1-settlement-parser-v1 behavior (audit-only wrapper)",
+    "current": "n1-settlement-parser-v2"
+  },
+  "archiveRoot": "/Users/m-shogo/Developer/personal/boat-pon/data/raw/official/results",
+  "archiveFilesDiscovered": 8174,
+  "archiveFilesScanned": 8174,
+  "limited": false,
+  "changedFiles": 5261,
+  "parseErrors": 0,
+  "totals": {
+    "legacyCandidates": 8156880,
+    "currentCandidates": 8222039,
+    "legacyRefundCandidates": 319309,
+    "currentRefundCandidates": 1558,
+    "currentSpecialPayoutCandidates": 65160,
+    "unchangedCandidates": 7839127,
+    "unchangedRefundCandidates": 1556,
+    "specialPayoutAdded": 65157,
+    "falseRefundReclassified": 317753,
+    "otherChange": 2,
+    "refundCandidateReduction": 317751
+  },
+  "byYearBetType": [
+    {
+      "year": "2000",
+      "betType": "exacta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 351,
+      "otherChange": 0
+    },
+    {
+      "year": "2000",
+      "betType": "place",
+      "specialPayoutAdded": 225,
+      "falseRefundReclassified": 336,
+      "otherChange": 0
+    },
+    {
+      "year": "2000",
+      "betType": "quinella",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 279,
+      "otherChange": 0
+    },
+    {
+      "year": "2000",
+      "betType": "win",
+      "specialPayoutAdded": 415,
+      "falseRefundReclassified": 0,
+      "otherChange": 0
+    },
+    {
+      "year": "2004",
+      "betType": "exacta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 4702,
+      "otherChange": 0
+    },
+    {
+      "year": "2004",
+      "betType": "place",
+      "specialPayoutAdded": 2219,
+      "falseRefundReclassified": 1463,
+      "otherChange": 0
+    },
+    {
+      "year": "2004",
+      "betType": "quinella",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 4702,
+      "otherChange": 0
+    },
+    {
+      "year": "2004",
+      "betType": "trifecta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 4728,
+      "otherChange": 0
+    },
+    {
+      "year": "2004",
+      "betType": "trio",
+      "specialPayoutAdded": 1,
+      "falseRefundReclassified": 4727,
+      "otherChange": 0
+    },
+    {
+      "year": "2004",
+      "betType": "wide",
+      "specialPayoutAdded": 45,
+      "falseRefundReclassified": 4598,
+      "otherChange": 0
+    },
+    {
+      "year": "2004",
+      "betType": "win",
+      "specialPayoutAdded": 3080,
+      "falseRefundReclassified": 0,
+      "otherChange": 0
+    },
+    {
+      "year": "2005",
+      "betType": "exacta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 7987,
+      "otherChange": 0
+    },
+    {
+      "year": "2005",
+      "betType": "place",
+      "specialPayoutAdded": 3744,
+      "falseRefundReclassified": 2690,
+      "otherChange": 0
+    },
+    {
+      "year": "2005",
+      "betType": "quinella",
+      "specialPayoutAdded": 1,
+      "falseRefundReclassified": 7987,
+      "otherChange": 0
+    },
+    {
+      "year": "2005",
+      "betType": "trifecta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 7995,
+      "otherChange": 0
+    },
+    {
+      "year": "2005",
+      "betType": "trio",
+      "specialPayoutAdded": 2,
+      "falseRefundReclassified": 7994,
+      "otherChange": 0
+    },
+    {
+      "year": "2005",
+      "betType": "wide",
+      "specialPayoutAdded": 27,
+      "falseRefundReclassified": 7857,
+      "otherChange": 0
+    },
+    {
+      "year": "2005",
+      "betType": "win",
+      "specialPayoutAdded": 5309,
+      "falseRefundReclassified": 0,
+      "otherChange": 0
+    },
+    {
+      "year": "2006",
+      "betType": "exacta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 8076,
+      "otherChange": 0
+    },
+    {
+      "year": "2006",
+      "betType": "place",
+      "specialPayoutAdded": 3601,
+      "falseRefundReclassified": 2967,
+      "otherChange": 0
+    },
+    {
+      "year": "2006",
+      "betType": "quinella",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 8076,
+      "otherChange": 0
+    },
+    {
+      "year": "2006",
+      "betType": "trifecta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 8072,
+      "otherChange": 0
+    },
+    {
+      "year": "2006",
+      "betType": "trio",
+      "specialPayoutAdded": 2,
+      "falseRefundReclassified": 8072,
+      "otherChange": 0
+    },
+    {
+      "year": "2006",
+      "betType": "wide",
+      "specialPayoutAdded": 6,
+      "falseRefundReclassified": 7959,
+      "otherChange": 0
+    },
+    {
+      "year": "2006",
+      "betType": "win",
+      "specialPayoutAdded": 5518,
+      "falseRefundReclassified": 0,
+      "otherChange": 0
+    },
+    {
+      "year": "2007",
+      "betType": "exacta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 6714,
+      "otherChange": 0
+    },
+    {
+      "year": "2007",
+      "betType": "place",
+      "specialPayoutAdded": 2897,
+      "falseRefundReclassified": 2824,
+      "otherChange": 0
+    },
+    {
+      "year": "2007",
+      "betType": "quinella",
+      "specialPayoutAdded": 3,
+      "falseRefundReclassified": 6711,
+      "otherChange": 0
+    },
+    {
+      "year": "2007",
+      "betType": "trifecta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 6709,
+      "otherChange": 0
+    },
+    {
+      "year": "2007",
+      "betType": "trio",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 6709,
+      "otherChange": 0
+    },
+    {
+      "year": "2007",
+      "betType": "wide",
+      "specialPayoutAdded": 14,
+      "falseRefundReclassified": 6678,
+      "otherChange": 0
+    },
+    {
+      "year": "2007",
+      "betType": "win",
+      "specialPayoutAdded": 4599,
+      "falseRefundReclassified": 0,
+      "otherChange": 0
+    },
+    {
+      "year": "2008",
+      "betType": "exacta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 5669,
+      "otherChange": 0
+    },
+    {
+      "year": "2008",
+      "betType": "place",
+      "specialPayoutAdded": 2513,
+      "falseRefundReclassified": 2429,
+      "otherChange": 0
+    },
+    {
+      "year": "2008",
+      "betType": "quinella",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 5669,
+      "otherChange": 0
+    },
+    {
+      "year": "2008",
+      "betType": "trifecta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 5668,
+      "otherChange": 0
+    },
+    {
+      "year": "2008",
+      "betType": "trio",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 5667,
+      "otherChange": 0
+    },
+    {
+      "year": "2008",
+      "betType": "wide",
+      "specialPayoutAdded": 4,
+      "falseRefundReclassified": 5662,
+      "otherChange": 0
+    },
+    {
+      "year": "2008",
+      "betType": "win",
+      "specialPayoutAdded": 3862,
+      "falseRefundReclassified": 0,
+      "otherChange": 0
+    },
+    {
+      "year": "2009",
+      "betType": "exacta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 5264,
+      "otherChange": 0
+    },
+    {
+      "year": "2009",
+      "betType": "place",
+      "specialPayoutAdded": 2239,
+      "falseRefundReclassified": 2578,
+      "otherChange": 0
+    },
+    {
+      "year": "2009",
+      "betType": "quinella",
+      "specialPayoutAdded": 2,
+      "falseRefundReclassified": 5263,
+      "otherChange": 0
+    },
+    {
+      "year": "2009",
+      "betType": "trifecta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 5258,
+      "otherChange": 0
+    },
+    {
+      "year": "2009",
+      "betType": "trio",
+      "specialPayoutAdded": 2,
+      "falseRefundReclassified": 5256,
+      "otherChange": 0
+    },
+    {
+      "year": "2009",
+      "betType": "wide",
+      "specialPayoutAdded": 3,
+      "falseRefundReclassified": 5255,
+      "otherChange": 0
+    },
+    {
+      "year": "2009",
+      "betType": "win",
+      "specialPayoutAdded": 3708,
+      "falseRefundReclassified": 1,
+      "otherChange": 0
+    },
+    {
+      "year": "2010",
+      "betType": "exacta",
+      "specialPayoutAdded": 1,
+      "falseRefundReclassified": 4785,
+      "otherChange": 0
+    },
+    {
+      "year": "2010",
+      "betType": "place",
+      "specialPayoutAdded": 1860,
+      "falseRefundReclassified": 2637,
+      "otherChange": 0
+    },
+    {
+      "year": "2010",
+      "betType": "quinella",
+      "specialPayoutAdded": 2,
+      "falseRefundReclassified": 4784,
+      "otherChange": 0
+    },
+    {
+      "year": "2010",
+      "betType": "trifecta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 4778,
+      "otherChange": 0
+    },
+    {
+      "year": "2010",
+      "betType": "trio",
+      "specialPayoutAdded": 1,
+      "falseRefundReclassified": 4777,
+      "otherChange": 0
+    },
+    {
+      "year": "2010",
+      "betType": "wide",
+      "specialPayoutAdded": 2,
+      "falseRefundReclassified": 4779,
+      "otherChange": 0
+    },
+    {
+      "year": "2010",
+      "betType": "win",
+      "specialPayoutAdded": 3482,
+      "falseRefundReclassified": 1,
+      "otherChange": 0
+    },
+    {
+      "year": "2011",
+      "betType": "exacta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 3743,
+      "otherChange": 0
+    },
+    {
+      "year": "2011",
+      "betType": "place",
+      "specialPayoutAdded": 1163,
+      "falseRefundReclassified": 2441,
+      "otherChange": 0
+    },
+    {
+      "year": "2011",
+      "betType": "quinella",
+      "specialPayoutAdded": 4,
+      "falseRefundReclassified": 3743,
+      "otherChange": 0
+    },
+    {
+      "year": "2011",
+      "betType": "trifecta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 3741,
+      "otherChange": 0
+    },
+    {
+      "year": "2011",
+      "betType": "trio",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 3741,
+      "otherChange": 0
+    },
+    {
+      "year": "2011",
+      "betType": "wide",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 3742,
+      "otherChange": 0
+    },
+    {
+      "year": "2011",
+      "betType": "win",
+      "specialPayoutAdded": 2931,
+      "falseRefundReclassified": 0,
+      "otherChange": 0
+    },
+    {
+      "year": "2012",
+      "betType": "exacta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 3215,
+      "otherChange": 0
+    },
+    {
+      "year": "2012",
+      "betType": "place",
+      "specialPayoutAdded": 878,
+      "falseRefundReclassified": 2265,
+      "otherChange": 0
+    },
+    {
+      "year": "2012",
+      "betType": "quinella",
+      "specialPayoutAdded": 4,
+      "falseRefundReclassified": 3212,
+      "otherChange": 0
+    },
+    {
+      "year": "2012",
+      "betType": "trifecta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 3211,
+      "otherChange": 0
+    },
+    {
+      "year": "2012",
+      "betType": "trio",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 3211,
+      "otherChange": 0
+    },
+    {
+      "year": "2012",
+      "betType": "wide",
+      "specialPayoutAdded": 1,
+      "falseRefundReclassified": 3212,
+      "otherChange": 0
+    },
+    {
+      "year": "2012",
+      "betType": "win",
+      "specialPayoutAdded": 2603,
+      "falseRefundReclassified": 0,
+      "otherChange": 0
+    },
+    {
+      "year": "2013",
+      "betType": "exacta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 2755,
+      "otherChange": 0
+    },
+    {
+      "year": "2013",
+      "betType": "place",
+      "specialPayoutAdded": 757,
+      "falseRefundReclassified": 1939,
+      "otherChange": 0
+    },
+    {
+      "year": "2013",
+      "betType": "quinella",
+      "specialPayoutAdded": 4,
+      "falseRefundReclassified": 2753,
+      "otherChange": 0
+    },
+    {
+      "year": "2013",
+      "betType": "trifecta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 2756,
+      "otherChange": 0
+    },
+    {
+      "year": "2013",
+      "betType": "trio",
+      "specialPayoutAdded": 1,
+      "falseRefundReclassified": 2756,
+      "otherChange": 0
+    },
+    {
+      "year": "2013",
+      "betType": "wide",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 2756,
+      "otherChange": 0
+    },
+    {
+      "year": "2013",
+      "betType": "win",
+      "specialPayoutAdded": 2226,
+      "falseRefundReclassified": 0,
+      "otherChange": 0
+    },
+    {
+      "year": "2014",
+      "betType": "exacta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 1855,
+      "otherChange": 0
+    },
+    {
+      "year": "2014",
+      "betType": "place",
+      "specialPayoutAdded": 497,
+      "falseRefundReclassified": 1350,
+      "otherChange": 0
+    },
+    {
+      "year": "2014",
+      "betType": "quinella",
+      "specialPayoutAdded": 3,
+      "falseRefundReclassified": 1854,
+      "otherChange": 0
+    },
+    {
+      "year": "2014",
+      "betType": "trifecta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 1854,
+      "otherChange": 0
+    },
+    {
+      "year": "2014",
+      "betType": "trio",
+      "specialPayoutAdded": 2,
+      "falseRefundReclassified": 1853,
+      "otherChange": 0
+    },
+    {
+      "year": "2014",
+      "betType": "wide",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 1854,
+      "otherChange": 0
+    },
+    {
+      "year": "2014",
+      "betType": "win",
+      "specialPayoutAdded": 1483,
+      "falseRefundReclassified": 0,
+      "otherChange": 2
+    },
+    {
+      "year": "2015",
+      "betType": "exacta",
+      "specialPayoutAdded": 1,
+      "falseRefundReclassified": 1210,
+      "otherChange": 0
+    },
+    {
+      "year": "2015",
+      "betType": "place",
+      "specialPayoutAdded": 299,
+      "falseRefundReclassified": 910,
+      "otherChange": 0
+    },
+    {
+      "year": "2015",
+      "betType": "quinella",
+      "specialPayoutAdded": 5,
+      "falseRefundReclassified": 1209,
+      "otherChange": 0
+    },
+    {
+      "year": "2015",
+      "betType": "trifecta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 1212,
+      "otherChange": 0
+    },
+    {
+      "year": "2015",
+      "betType": "trio",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 1212,
+      "otherChange": 0
+    },
+    {
+      "year": "2015",
+      "betType": "wide",
+      "specialPayoutAdded": 1,
+      "falseRefundReclassified": 1211,
+      "otherChange": 0
+    },
+    {
+      "year": "2015",
+      "betType": "win",
+      "specialPayoutAdded": 978,
+      "falseRefundReclassified": 0,
+      "otherChange": 0
+    },
+    {
+      "year": "2016",
+      "betType": "exacta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 773,
+      "otherChange": 0
+    },
+    {
+      "year": "2016",
+      "betType": "place",
+      "specialPayoutAdded": 167,
+      "falseRefundReclassified": 606,
+      "otherChange": 0
+    },
+    {
+      "year": "2016",
+      "betType": "quinella",
+      "specialPayoutAdded": 3,
+      "falseRefundReclassified": 772,
+      "otherChange": 0
+    },
+    {
+      "year": "2016",
+      "betType": "trifecta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 773,
+      "otherChange": 0
+    },
+    {
+      "year": "2016",
+      "betType": "trio",
+      "specialPayoutAdded": 1,
+      "falseRefundReclassified": 773,
+      "otherChange": 0
+    },
+    {
+      "year": "2016",
+      "betType": "wide",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 773,
+      "otherChange": 0
+    },
+    {
+      "year": "2016",
+      "betType": "win",
+      "specialPayoutAdded": 637,
+      "falseRefundReclassified": 0,
+      "otherChange": 0
+    },
+    {
+      "year": "2017",
+      "betType": "exacta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 391,
+      "otherChange": 0
+    },
+    {
+      "year": "2017",
+      "betType": "place",
+      "specialPayoutAdded": 54,
+      "falseRefundReclassified": 338,
+      "otherChange": 0
+    },
+    {
+      "year": "2017",
+      "betType": "quinella",
+      "specialPayoutAdded": 7,
+      "falseRefundReclassified": 386,
+      "otherChange": 0
+    },
+    {
+      "year": "2017",
+      "betType": "trifecta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 390,
+      "otherChange": 0
+    },
+    {
+      "year": "2017",
+      "betType": "trio",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 390,
+      "otherChange": 0
+    },
+    {
+      "year": "2017",
+      "betType": "wide",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 391,
+      "otherChange": 0
+    },
+    {
+      "year": "2017",
+      "betType": "win",
+      "specialPayoutAdded": 352,
+      "falseRefundReclassified": 0,
+      "otherChange": 0
+    },
+    {
+      "year": "2018",
+      "betType": "exacta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 224,
+      "otherChange": 0
+    },
+    {
+      "year": "2018",
+      "betType": "place",
+      "specialPayoutAdded": 22,
+      "falseRefundReclassified": 202,
+      "otherChange": 0
+    },
+    {
+      "year": "2018",
+      "betType": "quinella",
+      "specialPayoutAdded": 1,
+      "falseRefundReclassified": 224,
+      "otherChange": 0
+    },
+    {
+      "year": "2018",
+      "betType": "trifecta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 222,
+      "otherChange": 0
+    },
+    {
+      "year": "2018",
+      "betType": "trio",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 222,
+      "otherChange": 0
+    },
+    {
+      "year": "2018",
+      "betType": "wide",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 222,
+      "otherChange": 0
+    },
+    {
+      "year": "2018",
+      "betType": "win",
+      "specialPayoutAdded": 209,
+      "falseRefundReclassified": 0,
+      "otherChange": 0
+    },
+    {
+      "year": "2019",
+      "betType": "exacta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 180,
+      "otherChange": 0
+    },
+    {
+      "year": "2019",
+      "betType": "place",
+      "specialPayoutAdded": 10,
+      "falseRefundReclassified": 170,
+      "otherChange": 0
+    },
+    {
+      "year": "2019",
+      "betType": "quinella",
+      "specialPayoutAdded": 1,
+      "falseRefundReclassified": 180,
+      "otherChange": 0
+    },
+    {
+      "year": "2019",
+      "betType": "trifecta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 180,
+      "otherChange": 0
+    },
+    {
+      "year": "2019",
+      "betType": "trio",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 180,
+      "otherChange": 0
+    },
+    {
+      "year": "2019",
+      "betType": "wide",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 180,
+      "otherChange": 0
+    },
+    {
+      "year": "2019",
+      "betType": "win",
+      "specialPayoutAdded": 170,
+      "falseRefundReclassified": 0,
+      "otherChange": 0
+    },
+    {
+      "year": "2020",
+      "betType": "exacta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 74,
+      "otherChange": 0
+    },
+    {
+      "year": "2020",
+      "betType": "place",
+      "specialPayoutAdded": 4,
+      "falseRefundReclassified": 70,
+      "otherChange": 0
+    },
+    {
+      "year": "2020",
+      "betType": "quinella",
+      "specialPayoutAdded": 2,
+      "falseRefundReclassified": 74,
+      "otherChange": 0
+    },
+    {
+      "year": "2020",
+      "betType": "trifecta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 75,
+      "otherChange": 0
+    },
+    {
+      "year": "2020",
+      "betType": "trio",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 75,
+      "otherChange": 0
+    },
+    {
+      "year": "2020",
+      "betType": "wide",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 75,
+      "otherChange": 0
+    },
+    {
+      "year": "2020",
+      "betType": "win",
+      "specialPayoutAdded": 70,
+      "falseRefundReclassified": 0,
+      "otherChange": 0
+    },
+    {
+      "year": "2021",
+      "betType": "exacta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 54,
+      "otherChange": 0
+    },
+    {
+      "year": "2021",
+      "betType": "place",
+      "specialPayoutAdded": 1,
+      "falseRefundReclassified": 53,
+      "otherChange": 0
+    },
+    {
+      "year": "2021",
+      "betType": "quinella",
+      "specialPayoutAdded": 1,
+      "falseRefundReclassified": 54,
+      "otherChange": 0
+    },
+    {
+      "year": "2021",
+      "betType": "trifecta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 55,
+      "otherChange": 0
+    },
+    {
+      "year": "2021",
+      "betType": "trio",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 55,
+      "otherChange": 0
+    },
+    {
+      "year": "2021",
+      "betType": "wide",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 55,
+      "otherChange": 0
+    },
+    {
+      "year": "2021",
+      "betType": "win",
+      "specialPayoutAdded": 53,
+      "falseRefundReclassified": 0,
+      "otherChange": 0
+    },
+    {
+      "year": "2022",
+      "betType": "exacta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 33,
+      "otherChange": 0
+    },
+    {
+      "year": "2022",
+      "betType": "place",
+      "specialPayoutAdded": 1,
+      "falseRefundReclassified": 32,
+      "otherChange": 0
+    },
+    {
+      "year": "2022",
+      "betType": "quinella",
+      "specialPayoutAdded": 3,
+      "falseRefundReclassified": 33,
+      "otherChange": 0
+    },
+    {
+      "year": "2022",
+      "betType": "trifecta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 36,
+      "otherChange": 0
+    },
+    {
+      "year": "2022",
+      "betType": "trio",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 36,
+      "otherChange": 0
+    },
+    {
+      "year": "2022",
+      "betType": "wide",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 36,
+      "otherChange": 0
+    },
+    {
+      "year": "2022",
+      "betType": "win",
+      "specialPayoutAdded": 32,
+      "falseRefundReclassified": 0,
+      "otherChange": 0
+    },
+    {
+      "year": "2023",
+      "betType": "exacta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 39,
+      "otherChange": 0
+    },
+    {
+      "year": "2023",
+      "betType": "place",
+      "specialPayoutAdded": 1,
+      "falseRefundReclassified": 38,
+      "otherChange": 0
+    },
+    {
+      "year": "2023",
+      "betType": "quinella",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 39,
+      "otherChange": 0
+    },
+    {
+      "year": "2023",
+      "betType": "trifecta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 39,
+      "otherChange": 0
+    },
+    {
+      "year": "2023",
+      "betType": "trio",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 39,
+      "otherChange": 0
+    },
+    {
+      "year": "2023",
+      "betType": "wide",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 39,
+      "otherChange": 0
+    },
+    {
+      "year": "2023",
+      "betType": "win",
+      "specialPayoutAdded": 38,
+      "falseRefundReclassified": 0,
+      "otherChange": 0
+    },
+    {
+      "year": "2024",
+      "betType": "exacta",
+      "specialPayoutAdded": 1,
+      "falseRefundReclassified": 37,
+      "otherChange": 0
+    },
+    {
+      "year": "2024",
+      "betType": "place",
+      "specialPayoutAdded": 2,
+      "falseRefundReclassified": 35,
+      "otherChange": 0
+    },
+    {
+      "year": "2024",
+      "betType": "quinella",
+      "specialPayoutAdded": 4,
+      "falseRefundReclassified": 36,
+      "otherChange": 0
+    },
+    {
+      "year": "2024",
+      "betType": "trifecta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 40,
+      "otherChange": 0
+    },
+    {
+      "year": "2024",
+      "betType": "trio",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 40,
+      "otherChange": 0
+    },
+    {
+      "year": "2024",
+      "betType": "wide",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 40,
+      "otherChange": 0
+    },
+    {
+      "year": "2024",
+      "betType": "win",
+      "specialPayoutAdded": 35,
+      "falseRefundReclassified": 0,
+      "otherChange": 0
+    },
+    {
+      "year": "2025",
+      "betType": "exacta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 22,
+      "otherChange": 0
+    },
+    {
+      "year": "2025",
+      "betType": "place",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 22,
+      "otherChange": 0
+    },
+    {
+      "year": "2025",
+      "betType": "quinella",
+      "specialPayoutAdded": 4,
+      "falseRefundReclassified": 22,
+      "otherChange": 0
+    },
+    {
+      "year": "2025",
+      "betType": "trifecta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 26,
+      "otherChange": 0
+    },
+    {
+      "year": "2025",
+      "betType": "trio",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 26,
+      "otherChange": 0
+    },
+    {
+      "year": "2025",
+      "betType": "wide",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 26,
+      "otherChange": 0
+    },
+    {
+      "year": "2025",
+      "betType": "win",
+      "specialPayoutAdded": 22,
+      "falseRefundReclassified": 0,
+      "otherChange": 0
+    },
+    {
+      "year": "2026",
+      "betType": "exacta",
+      "specialPayoutAdded": 1,
+      "falseRefundReclassified": 18,
+      "otherChange": 0
+    },
+    {
+      "year": "2026",
+      "betType": "place",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 18,
+      "otherChange": 0
+    },
+    {
+      "year": "2026",
+      "betType": "quinella",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 19,
+      "otherChange": 0
+    },
+    {
+      "year": "2026",
+      "betType": "trifecta",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 19,
+      "otherChange": 0
+    },
+    {
+      "year": "2026",
+      "betType": "trio",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 19,
+      "otherChange": 0
+    },
+    {
+      "year": "2026",
+      "betType": "wide",
+      "specialPayoutAdded": 0,
+      "falseRefundReclassified": 19,
+      "otherChange": 0
+    },
+    {
+      "year": "2026",
+      "betType": "win",
+      "specialPayoutAdded": 18,
+      "falseRefundReclassified": 0,
+      "otherChange": 0
+    }
+  ],
+  "samples": [
+    {
+      "file": "k000101.lzh",
+      "raceId": "20000101-下関-02",
+      "date": "2000-01-01",
+      "betType": "place",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000101.lzh",
+      "raceId": "20000101-下関-02",
+      "date": "2000-01-01",
+      "betType": "quinella",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000101.lzh",
+      "raceId": "20000101-下関-06",
+      "date": "2000-01-01",
+      "betType": "exacta",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000101.lzh",
+      "raceId": "20000101-下関-06",
+      "date": "2000-01-01",
+      "betType": "place",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000101.lzh",
+      "raceId": "20000101-下関-06",
+      "date": "2000-01-01",
+      "betType": "win",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000102.lzh",
+      "raceId": "20000102-下関-01",
+      "date": "2000-01-02",
+      "betType": "place",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000102.lzh",
+      "raceId": "20000102-下関-01",
+      "date": "2000-01-02",
+      "betType": "quinella",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000102.lzh",
+      "raceId": "20000102-下関-01",
+      "date": "2000-01-02",
+      "betType": "win",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000102.lzh",
+      "raceId": "20000102-下関-10",
+      "date": "2000-01-02",
+      "betType": "exacta",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000102.lzh",
+      "raceId": "20000102-下関-10",
+      "date": "2000-01-02",
+      "betType": "place",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000102.lzh",
+      "raceId": "20000102-下関-10",
+      "date": "2000-01-02",
+      "betType": "win",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000103.lzh",
+      "raceId": "20000103-下関-08",
+      "date": "2000-01-03",
+      "betType": "exacta",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000103.lzh",
+      "raceId": "20000103-下関-08",
+      "date": "2000-01-03",
+      "betType": "place",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000103.lzh",
+      "raceId": "20000103-津-01",
+      "date": "2000-01-03",
+      "betType": "place",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000103.lzh",
+      "raceId": "20000103-津-01",
+      "date": "2000-01-03",
+      "betType": "quinella",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000103.lzh",
+      "raceId": "20000103-津-01",
+      "date": "2000-01-03",
+      "betType": "win",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000104.lzh",
+      "raceId": "20000104-宮島-07",
+      "date": "2000-01-04",
+      "betType": "exacta",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000104.lzh",
+      "raceId": "20000104-宮島-07",
+      "date": "2000-01-04",
+      "betType": "place",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000104.lzh",
+      "raceId": "20000104-宮島-07",
+      "date": "2000-01-04",
+      "betType": "win",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000104.lzh",
+      "raceId": "20000104-徳山-02",
+      "date": "2000-01-04",
+      "betType": "place",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000104.lzh",
+      "raceId": "20000104-徳山-02",
+      "date": "2000-01-04",
+      "betType": "quinella",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000104.lzh",
+      "raceId": "20000104-徳山-02",
+      "date": "2000-01-04",
+      "betType": "win",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000105.lzh",
+      "raceId": "20000105-びわこ-01",
+      "date": "2000-01-05",
+      "betType": "place",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000105.lzh",
+      "raceId": "20000105-びわこ-01",
+      "date": "2000-01-05",
+      "betType": "quinella",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000105.lzh",
+      "raceId": "20000105-びわこ-01",
+      "date": "2000-01-05",
+      "betType": "win",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000105.lzh",
+      "raceId": "20000105-びわこ-06",
+      "date": "2000-01-05",
+      "betType": "exacta",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000105.lzh",
+      "raceId": "20000105-びわこ-06",
+      "date": "2000-01-05",
+      "betType": "place",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000105.lzh",
+      "raceId": "20000105-びわこ-09",
+      "date": "2000-01-05",
+      "betType": "exacta",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000105.lzh",
+      "raceId": "20000105-びわこ-09",
+      "date": "2000-01-05",
+      "betType": "place",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000105.lzh",
+      "raceId": "20000105-宮島-01",
+      "date": "2000-01-05",
+      "betType": "place",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000105.lzh",
+      "raceId": "20000105-宮島-01",
+      "date": "2000-01-05",
+      "betType": "quinella",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000105.lzh",
+      "raceId": "20000105-宮島-01",
+      "date": "2000-01-05",
+      "betType": "win",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000105.lzh",
+      "raceId": "20000105-宮島-05",
+      "date": "2000-01-05",
+      "betType": "exacta",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000105.lzh",
+      "raceId": "20000105-宮島-05",
+      "date": "2000-01-05",
+      "betType": "place",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000105.lzh",
+      "raceId": "20000105-宮島-05",
+      "date": "2000-01-05",
+      "betType": "win",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000105.lzh",
+      "raceId": "20000105-若松-01",
+      "date": "2000-01-05",
+      "betType": "place",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000105.lzh",
+      "raceId": "20000105-若松-01",
+      "date": "2000-01-05",
+      "betType": "quinella",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000105.lzh",
+      "raceId": "20000105-若松-01",
+      "date": "2000-01-05",
+      "betType": "win",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000106.lzh",
+      "raceId": "20000106-下関-02",
+      "date": "2000-01-06",
+      "betType": "place",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000106.lzh",
+      "raceId": "20000106-下関-02",
+      "date": "2000-01-06",
+      "betType": "quinella",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000106.lzh",
+      "raceId": "20000106-下関-02",
+      "date": "2000-01-06",
+      "betType": "win",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000106.lzh",
+      "raceId": "20000106-下関-07",
+      "date": "2000-01-06",
+      "betType": "exacta",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000106.lzh",
+      "raceId": "20000106-下関-07",
+      "date": "2000-01-06",
+      "betType": "place",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000106.lzh",
+      "raceId": "20000106-下関-07",
+      "date": "2000-01-06",
+      "betType": "win",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000106.lzh",
+      "raceId": "20000106-下関-12",
+      "date": "2000-01-06",
+      "betType": "exacta",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000106.lzh",
+      "raceId": "20000106-下関-12",
+      "date": "2000-01-06",
+      "betType": "place",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000106.lzh",
+      "raceId": "20000106-下関-12",
+      "date": "2000-01-06",
+      "betType": "win",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000106.lzh",
+      "raceId": "20000106-若松-04",
+      "date": "2000-01-06",
+      "betType": "exacta",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000106.lzh",
+      "raceId": "20000106-若松-04",
+      "date": "2000-01-06",
+      "betType": "place",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000106.lzh",
+      "raceId": "20000106-若松-04",
+      "date": "2000-01-06",
+      "betType": "win",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000106.lzh",
+      "raceId": "20000106-若松-06",
+      "date": "2000-01-06",
+      "betType": "exacta",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000106.lzh",
+      "raceId": "20000106-若松-06",
+      "date": "2000-01-06",
+      "betType": "place",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000106.lzh",
+      "raceId": "20000106-若松-06",
+      "date": "2000-01-06",
+      "betType": "win",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000106.lzh",
+      "raceId": "20000106-若松-09",
+      "date": "2000-01-06",
+      "betType": "exacta",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000106.lzh",
+      "raceId": "20000106-若松-09",
+      "date": "2000-01-06",
+      "betType": "place",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000106.lzh",
+      "raceId": "20000106-若松-09",
+      "date": "2000-01-06",
+      "betType": "win",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000107.lzh",
+      "raceId": "20000107-下関-01",
+      "date": "2000-01-07",
+      "betType": "place",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000107.lzh",
+      "raceId": "20000107-下関-01",
+      "date": "2000-01-07",
+      "betType": "quinella",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000107.lzh",
+      "raceId": "20000107-下関-01",
+      "date": "2000-01-07",
+      "betType": "win",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000107.lzh",
+      "raceId": "20000107-下関-02",
+      "date": "2000-01-07",
+      "betType": "place",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000107.lzh",
+      "raceId": "20000107-下関-02",
+      "date": "2000-01-07",
+      "betType": "quinella",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000107.lzh",
+      "raceId": "20000107-下関-02",
+      "date": "2000-01-07",
+      "betType": "win",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000107.lzh",
+      "raceId": "20000107-下関-03",
+      "date": "2000-01-07",
+      "betType": "place",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000107.lzh",
+      "raceId": "20000107-下関-03",
+      "date": "2000-01-07",
+      "betType": "quinella",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000107.lzh",
+      "raceId": "20000107-下関-03",
+      "date": "2000-01-07",
+      "betType": "win",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000107.lzh",
+      "raceId": "20000107-下関-06",
+      "date": "2000-01-07",
+      "betType": "exacta",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000107.lzh",
+      "raceId": "20000107-下関-06",
+      "date": "2000-01-07",
+      "betType": "place",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000107.lzh",
+      "raceId": "20000107-下関-06",
+      "date": "2000-01-07",
+      "betType": "win",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000107.lzh",
+      "raceId": "20000107-津-01",
+      "date": "2000-01-07",
+      "betType": "place",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000107.lzh",
+      "raceId": "20000107-津-01",
+      "date": "2000-01-07",
+      "betType": "quinella",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000107.lzh",
+      "raceId": "20000107-津-11",
+      "date": "2000-01-07",
+      "betType": "exacta",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000107.lzh",
+      "raceId": "20000107-津-11",
+      "date": "2000-01-07",
+      "betType": "place",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000107.lzh",
+      "raceId": "20000107-津-11",
+      "date": "2000-01-07",
+      "betType": "win",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000107.lzh",
+      "raceId": "20000107-若松-06",
+      "date": "2000-01-07",
+      "betType": "exacta",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000107.lzh",
+      "raceId": "20000107-若松-06",
+      "date": "2000-01-07",
+      "betType": "place",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000107.lzh",
+      "raceId": "20000107-若松-06",
+      "date": "2000-01-07",
+      "betType": "win",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000107.lzh",
+      "raceId": "20000107-若松-11",
+      "date": "2000-01-07",
+      "betType": "exacta",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000107.lzh",
+      "raceId": "20000107-若松-11",
+      "date": "2000-01-07",
+      "betType": "place",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000107.lzh",
+      "raceId": "20000107-若松-11",
+      "date": "2000-01-07",
+      "betType": "win",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000108.lzh",
+      "raceId": "20000108-下関-02",
+      "date": "2000-01-08",
+      "betType": "place",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000108.lzh",
+      "raceId": "20000108-下関-02",
+      "date": "2000-01-08",
+      "betType": "quinella",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000108.lzh",
+      "raceId": "20000108-下関-02",
+      "date": "2000-01-08",
+      "betType": "win",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000108.lzh",
+      "raceId": "20000108-下関-04",
+      "date": "2000-01-08",
+      "betType": "exacta",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000108.lzh",
+      "raceId": "20000108-下関-04",
+      "date": "2000-01-08",
+      "betType": "place",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000108.lzh",
+      "raceId": "20000108-下関-04",
+      "date": "2000-01-08",
+      "betType": "win",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000108.lzh",
+      "raceId": "20000108-鳴門-01",
+      "date": "2000-01-08",
+      "betType": "place",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000108.lzh",
+      "raceId": "20000108-鳴門-01",
+      "date": "2000-01-08",
+      "betType": "quinella",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000108.lzh",
+      "raceId": "20000108-鳴門-01",
+      "date": "2000-01-08",
+      "betType": "win",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000108.lzh",
+      "raceId": "20000108-鳴門-08",
+      "date": "2000-01-08",
+      "betType": "exacta",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000108.lzh",
+      "raceId": "20000108-鳴門-08",
+      "date": "2000-01-08",
+      "betType": "place",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000108.lzh",
+      "raceId": "20000108-鳴門-09",
+      "date": "2000-01-08",
+      "betType": "exacta",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000108.lzh",
+      "raceId": "20000108-鳴門-09",
+      "date": "2000-01-08",
+      "betType": "place",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000108.lzh",
+      "raceId": "20000108-鳴門-09",
+      "date": "2000-01-08",
+      "betType": "win",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000109.lzh",
+      "raceId": "20000109-下関-04",
+      "date": "2000-01-09",
+      "betType": "exacta",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000109.lzh",
+      "raceId": "20000109-下関-04",
+      "date": "2000-01-09",
+      "betType": "place",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000109.lzh",
+      "raceId": "20000109-下関-04",
+      "date": "2000-01-09",
+      "betType": "win",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000109.lzh",
+      "raceId": "20000109-下関-06",
+      "date": "2000-01-09",
+      "betType": "exacta",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000109.lzh",
+      "raceId": "20000109-下関-06",
+      "date": "2000-01-09",
+      "betType": "place",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000109.lzh",
+      "raceId": "20000109-下関-06",
+      "date": "2000-01-09",
+      "betType": "win",
+      "eventKind": "special_payout_added",
+      "legacyStatus": null,
+      "currentStatus": "settled"
+    },
+    {
+      "file": "k000109.lzh",
+      "raceId": "20000109-下関-09",
+      "date": "2000-01-09",
+      "betType": "exacta",
+      "eventKind": "false_refund_reclassified",
+      "legacyStatus": "refunded",
+      "currentStatus": "settled"
+    }
+  ],
+  "errors": [],
+  "reconciliationReference": {
+    "n2ProfileExcludedRefunded": 319301,
+    "note": "profile is canonical candidate-level; raw scanner totals require source-duplicate canonical reconciliation before exact equality is asserted"
+  },
+  "result": "SCANNED"
+}

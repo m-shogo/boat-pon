@@ -1,7 +1,7 @@
 # Archive refund semantics audit
 
-更新: 2026-08-01  
-状態: **SCANNER_IMPLEMENTED / RAW_ARCHIVE_IMPACT_PENDING**
+更新: 2026-08-03  
+状態: **SCANNER_IMPLEMENTED / RAW_ARCHIVE_FULL_SCAN_COMPLETE**
 
 ## 結論
 
@@ -37,14 +37,35 @@
 - N2 profileの `excluded_refunded=319,301` と早期eraのeligible低下は、v1分類を入力に含む
 - append-only sidecarの既存v1 observation/candidateは、このコード修正だけでは変化しない
 
-### 未確定
+### 実測（2026-08-03、full raw scan 確定）
 
-- 319,301件のうち何件が誤分類か
-- year × bet_type別の誤分類数
-- 2004–2019のeligible driftをこのbugが何%説明するか
+`pnpm audit:n2:archive-refund-semantics` を実 K archive 全件へ適用した（read-only、DB/archive無変更）。
+
+| 指標 | v1（legacy） | v2（current） |
+|---|---:|---:|
+| scanned files | 8,174 / 8,174 | 同左 |
+| parse errors | 0 | 0 |
+| total candidates | 8,156,880 | 8,222,039 |
+| refund candidates | **319,309** | **1,558** |
+| special payout candidates | 0（v1は分類不能） | 65,160 |
+
+- `false_refund_reclassified`: **317,753**（v1で「返還」化していた候補がv2で正常払戻へ復帰）
+- `special_payout_added`: **65,157**（v1が返還化して隠していた特払いをv2が券種別 special_payout として顕在化）
+- `other_change`: 2
+- refund candidate reduction: **317,751**（319,309 → 1,558）
+- changed files: 5,261 / 8,174
+
+つまり canonical DB の refunded ≈319,301 のうち **約 99.5%（317,753）は v1 特払いbug由来の偽返還**であり、真の返還候補は raw-scan candidate-level で **1,558** のみ。eligible 率 96.03% は v1 誤分類を含むため、v2 基準では ~99.98% 相当へ上振れする（正確な canonical eligible 率は archive↔canonical reconciliation で確定する）。
+
+出力正本: `reports/n2/archive-refund-semantics-diff.json` / `.md`（year × bet_type × event_kind）。
+
+### 未確定（reconciliation で確定する）
+
+- raw-scan candidate-level（319,309, 1,558）と canonical DB active candidate-level の突合（source-duplicate resolution 後の exact 一致率）
+- candidate ごとの DB persisted status（v1）と archive v2 status の差分マップ、および coverage（archive_only / canonical_only）
 - 特払いと実返還が同時に存在するraceの正しいselection-level financial label
 
-したがって、既存profileの約87%→99.9%を制度差・実返還率driftとして学習設計に使わない。N2 label truthはfull raw reparse差分が終わるまで未確定。
+したがって、既存profileの約87%→99.9%を制度差・実返還率driftとして学習設計に使わない。N2 label truthはarchive↔canonical reconciliationが終わるまで未確定。
 
 ## v1/v2差分scanner
 
@@ -74,7 +95,7 @@ scanner実装commit:
 - v1: 特払い券種lineなし、後続exacta/trifectaがreturned=true
 - v2: win special_payout=70、後続exacta/trifectaはreturned=false
 - 新規scanner/helper/testの構文check: **PASS**
-- full unit/typecheck/build: **PENDING**（GitHub Actions run/status未生成、raw archiveを持つlocal checkout未接続）
+- full raw scan（8,174 files、read-only、実測）: **PASS**（2026-08-03、parse errors 0）
 
 ## Non-blocking label hardening
 
