@@ -8,6 +8,7 @@ import type {
 import type { SettlementBetType } from "./settlement";
 import {
   candidateKey,
+  classifyUnexpectedAddition,
   decideReparseAction,
   deriveSettlementCandidates,
   isAppendingAction,
@@ -138,6 +139,23 @@ test("decideReparseAction: unexpected_addition when no existing and not special"
 test("decideReparseAction: ambiguous_non_defect when differs but not the defect", () => {
   // settled(normal) existing vs v2 refunded → not the defect direction → do not correct
   assert.equal(decideReparseAction(existing("settled", "normal"), v2("refunded", "normal")), "ambiguous_non_defect");
+});
+
+test("classifyUnexpectedAddition: win-refund omission held out, deterministic", () => {
+  // 実データの2件: no v1 candidate, v2 win refunded → distinct v1 win-refund omission (scope外).
+  const winRefund = classifyUnexpectedAddition({ betType: "win", v2Status: "refunded", v2ResultKind: "normal", anyCandidateForRaceBet: false, anyActiveForRaceBet: false });
+  assert.equal(winRefund.classification, "CONFIRMED_V1_WIN_REFUND_OMISSION");
+  assert.equal(winRefund.autoApplyEligible, false);
+  // 決定的
+  assert.deepEqual(classifyUnexpectedAddition({ betType: "win", v2Status: "refunded", v2ResultKind: "normal", anyCandidateForRaceBet: false, anyActiveForRaceBet: false }), winRefund);
+  // no v1 candidate, v2 settled non-special → manual review
+  assert.equal(classifyUnexpectedAddition({ betType: "trifecta", v2Status: "settled", v2ResultKind: "normal", anyCandidateForRaceBet: false, anyActiveForRaceBet: false }).classification, "MANUAL_REVIEW_REQUIRED");
+  // candidate exists but none active → source duplicate
+  assert.equal(classifyUnexpectedAddition({ betType: "exacta", v2Status: "settled", v2ResultKind: "normal", anyCandidateForRaceBet: true, anyActiveForRaceBet: false }).classification, "CONFIRMED_SOURCE_DUPLICATE");
+  // active exists yet fell through → manual review
+  assert.equal(classifyUnexpectedAddition({ betType: "exacta", v2Status: "settled", v2ResultKind: "normal", anyCandidateForRaceBet: true, anyActiveForRaceBet: true }).classification, "MANUAL_REVIEW_REQUIRED");
+  // いずれも auto-apply 不可
+  for (const s of ["refunded", "settled"] as const) assert.equal(classifyUnexpectedAddition({ betType: "win", v2Status: s, v2ResultKind: "normal", anyCandidateForRaceBet: false, anyActiveForRaceBet: false }).autoApplyEligible, false);
 });
 
 test("action classifiers", () => {
