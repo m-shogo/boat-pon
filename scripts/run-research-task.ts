@@ -148,7 +148,8 @@ try {
   // ---- preflight guards ----
   const queue = JSON.parse(readFileSync(join(root, "automation/task-queue.json"), "utf8"));
   const queueDigest = createHash("sha256").update(JSON.stringify(queue)).digest("hex");
-  const sidecar = join(root, "data/research-replay.sqlite");
+  const dataRoot = policy.dataRoot ? resolve(policy.dataRoot) : root;
+  const sidecar = join(dataRoot, "data/research-replay.sqlite");
   const walPath = `${sidecar}-wal`;
   const st = statfsSync(root);
   const processedIds = existsSync(join(root, "automation/requests/completed"))
@@ -241,7 +242,7 @@ try {
   try {
     exec = executor({
       repoRoot: root, runId, requestId: request.requestId, taskId: task.taskId,
-      sidecarPath: join(root, "data/research-replay.sqlite"),
+      sidecarPath: join(dataRoot, "data/research-replay.sqlite"),
       historyDir: HISTORY_DIR, reportsDir: join(root, "reports/n2"),
       dryRun: false, taskStatuses,
     });

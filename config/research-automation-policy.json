@@ -1,8 +1,15 @@
 {
   "policyVersion": "research-automation-policy-v1",
   "repoPath": "/Users/m-shogo/Developer/personal/boat-pon",
-  "allowedSafetyLevels": ["L0", "L1", "L2"],
-  "deniedSafetyLevels": ["L3", "L4"],
+  "allowedSafetyLevels": [
+    "L0",
+    "L1",
+    "L2"
+  ],
+  "deniedSafetyLevels": [
+    "L3",
+    "L4"
+  ],
   "maxTaskDurationSeconds": 5400,
   "lock": {
     "path": "data/tmp/automation/research.lock.json",
@@ -27,5 +34,7 @@
     "emergencyStopPath": "automation/EMERGENCY_STOP",
     "pausePath": "automation/PAUSED",
     "forbidScheduleTriggers": true
-  }
+  },
+  "dataRoot": "/Users/m-shogo/Developer/personal/boat-pon",
+  "dataRootNote": "実データ（9GB sidecar / 43GB archive）は Git 管理外のため、runner の _work checkout ではなく canonical repo path を read-only で読む。"
 }

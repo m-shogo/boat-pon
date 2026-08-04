@@ -6,53 +6,159 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "policyVersion", "repoPath", "allowedSafetyLevels", "deniedSafetyLevels",
-    "maxTaskDurationSeconds", "lock", "gitWrite", "guards"
+    "policyVersion",
+    "repoPath",
+    "allowedSafetyLevels",
+    "deniedSafetyLevels",
+    "maxTaskDurationSeconds",
+    "lock",
+    "gitWrite",
+    "guards",
+    "dataRoot"
   ],
   "properties": {
-    "policyVersion": { "type": "string", "minLength": 1 },
-    "repoPath": { "type": "string", "minLength": 1 },
+    "policyVersion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "repoPath": {
+      "type": "string",
+      "minLength": 1
+    },
     "allowedSafetyLevels": {
-      "type": "array", "items": { "enum": ["L0", "L1", "L2", "L3"] }, "minItems": 1, "uniqueItems": true
+      "type": "array",
+      "items": {
+        "enum": [
+          "L0",
+          "L1",
+          "L2",
+          "L3"
+        ]
+      },
+      "minItems": 1,
+      "uniqueItems": true
     },
     "deniedSafetyLevels": {
-      "type": "array", "items": { "enum": ["L3", "L4"] }, "minItems": 1, "uniqueItems": true
+      "type": "array",
+      "items": {
+        "enum": [
+          "L3",
+          "L4"
+        ]
+      },
+      "minItems": 1,
+      "uniqueItems": true
     },
-    "maxTaskDurationSeconds": { "type": "integer", "minimum": 60, "maximum": 21600 },
+    "maxTaskDurationSeconds": {
+      "type": "integer",
+      "minimum": 60,
+      "maximum": 21600
+    },
     "lock": {
-      "type": "object", "additionalProperties": false,
-      "required": ["path", "staleAfterSeconds", "heartbeatSeconds"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "staleAfterSeconds",
+        "heartbeatSeconds"
+      ],
       "properties": {
-        "path": { "type": "string", "minLength": 1 },
-        "staleAfterSeconds": { "type": "integer", "minimum": 60, "maximum": 86400 },
-        "heartbeatSeconds": { "type": "integer", "minimum": 5, "maximum": 600 }
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "staleAfterSeconds": {
+          "type": "integer",
+          "minimum": 60,
+          "maximum": 86400
+        },
+        "heartbeatSeconds": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 600
+        }
       }
     },
     "gitWrite": {
-      "type": "object", "additionalProperties": false,
-      "required": ["mode", "branch", "pathAllowlist", "maxFileBytes"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "branch",
+        "pathAllowlist",
+        "maxFileBytes"
+      ],
       "properties": {
-        "mode": { "enum": ["branch-pr", "direct-main"] },
-        "branch": { "type": "string", "minLength": 1 },
-        "pathAllowlist": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1 },
-        "maxFileBytes": { "type": "integer", "minimum": 1024, "maximum": 10485760 }
+        "mode": {
+          "enum": [
+            "branch-pr",
+            "direct-main"
+          ]
+        },
+        "branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pathAllowlist": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1
+        },
+        "maxFileBytes": {
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 10485760
+        }
       }
     },
     "guards": {
-      "type": "object", "additionalProperties": false,
+      "type": "object",
+      "additionalProperties": false,
       "required": [
-        "requireCleanWorkingTree", "requireAuthoritySha", "rejectActiveWal",
-        "minFreeDiskBytes", "emergencyStopPath", "pausePath", "forbidScheduleTriggers"
+        "requireCleanWorkingTree",
+        "requireAuthoritySha",
+        "rejectActiveWal",
+        "minFreeDiskBytes",
+        "emergencyStopPath",
+        "pausePath",
+        "forbidScheduleTriggers"
       ],
       "properties": {
-        "requireCleanWorkingTree": { "type": "boolean" },
-        "requireAuthoritySha": { "type": "boolean" },
-        "rejectActiveWal": { "type": "boolean" },
-        "minFreeDiskBytes": { "type": "integer", "minimum": 0 },
-        "emergencyStopPath": { "type": "string", "minLength": 1 },
-        "pausePath": { "type": "string", "minLength": 1 },
-        "forbidScheduleTriggers": { "const": true }
+        "requireCleanWorkingTree": {
+          "type": "boolean"
+        },
+        "requireAuthoritySha": {
+          "type": "boolean"
+        },
+        "rejectActiveWal": {
+          "type": "boolean"
+        },
+        "minFreeDiskBytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "emergencyStopPath": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pausePath": {
+          "type": "string",
+          "minLength": 1
+        },
+        "forbidScheduleTriggers": {
+          "const": true
+        }
       }
+    },
+    "dataRoot": {
+      "type": "string",
+      "minLength": 1
+    },
+    "dataRootNote": {
+      "type": "string"
     }
   }
 }
