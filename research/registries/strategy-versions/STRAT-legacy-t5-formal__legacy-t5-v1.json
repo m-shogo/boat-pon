@@ -1,0 +1,15 @@
+{
+  "strategyId": "STRAT-legacy-t5-formal",
+  "version": "legacy-t5-v1",
+  "datasetVersion": "production-current",
+  "featureVersion": "production-current",
+  "modelVersion": "production-current",
+  "decisionRuleVersion": "src/domain/decision.ts@current",
+  "ticketSelectorVersion": "production-current",
+  "changeType": "observation_only",
+  "changeReason": "Current BUY を研究 registry に観測登録（挙動変更なし・reconciliation のみ追加）。BUY 条件・app_settings・production は変更しない。",
+  "adoptedDiscoveryIds": [],
+  "createdAt": "2026-08-05T00:00:00Z",
+  "_digest": "f3facc3b91e05c0ea435639cf5cc418ca35dbd56221254d3647fa0ca15410bc3",
+  "_recordedAt": "2026-08-04T15:38:31.865Z"
+}

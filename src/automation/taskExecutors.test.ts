@@ -4,7 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { DatabaseSync } from "node:sqlite";
-import { EXECUTORS, isExecutorImplemented, resolveExecutor, runDatasetCanary, runHoldoutFreeze, runPlannerNext, runReadonlyAnalysis, runReadonlyAudit, type ExecutorContext } from "./taskExecutors";
+import { existsSync } from "node:fs";
+import { EXECUTORS, isExecutorImplemented, resolveExecutor, runDatasetCanary, runDatasetExpand, runHoldoutFreeze, runPlannerNext, runReadonlyAnalysis, runReadonlyAudit, type ExecutorContext } from "./taskExecutors";
 
 // 最小の settlement fixture DB を作る（実 sidecar は触らない）。
 function makeFixture(opts: { rows: Array<{ k: string; b: string; s: string; rk?: string; dup?: boolean; superseded?: boolean }> }): string {
@@ -50,7 +51,7 @@ function ctx(sidecarPath: string, over: Partial<ExecutorContext> = {}): Executor
 
 test("registry resolves only allowlisted task types", () => {
   assert.deepEqual(Object.keys(EXECUTORS).sort(), [
-    "dataset-canary", "dataset-inventory", "feature-coverage-audit", "holdout-freeze",
+    "dataset-canary", "dataset-expand", "dataset-inventory", "feature-coverage-audit", "holdout-freeze",
     "planner-next", "readonly-analysis", "readonly-audit",
   ]);
   assert.equal(resolveExecutor("dataset-canary").code, "OK");
@@ -140,6 +141,33 @@ test("planner-next proposes BLOCKED_EXECUTOR_PENDING tasks and never auto-dispat
   assert.equal((r.summary as any).autoDispatch, false);
   assert.equal((r.summary as any).candidateCount, 1);
   assert.equal((r.summary as any).candidates[0].proposedTaskId, "TASK-B");
+});
+
+test("dataset-expand (SDK vertical slice) PASSes and builds a manifest", () => {
+  const p = makeFixture({ rows: [
+    { k: "2020-06-05:12:R1", b: "trifecta", s: "settled" },
+    { k: "2021-06-05:12:R2", b: "exacta", s: "settled" },
+    { k: "2022-06-05:12:R3", b: "win", s: "refunded" },
+  ] });
+  const r = runDatasetExpand(ctx(p)); // ctx() は dryRun:true
+  assert.equal(r.result, "PASS");
+  const s = r.summary as any;
+  assert.equal(s.datasetManifestVersion, "n2-dataset-manifest-v1");
+  assert.equal(s.totalRaces, 3);
+  assert.equal(s.yearSpan.count, 3);
+  assert.equal((s.pit ?? { pit: true }).pit, true); // SDK が PIT guarantee を通した
+});
+
+test("dataset-expand records Experiment + Discovery lineage when not dry-run", () => {
+  const p = makeFixture({ rows: [{ k: "2024-06-05:12:R1", b: "trifecta", s: "settled" }] });
+  const c = ctx(p, { dryRun: false });
+  const r = runDatasetExpand(c);
+  assert.equal(r.result, "PASS");
+  assert.ok(r.outputs.some((o) => o.startsWith("research/registries/experiments/")));
+  assert.ok(r.outputs.some((o) => o.startsWith("research/registries/discoveries/")));
+  // 実際に registry file が append された
+  const exp = r.outputs.find((o) => o.includes("/experiments/"))!;
+  assert.equal(existsSync(join(c.repoRoot, exp)), true);
 });
 
 test("isExecutorImplemented distinguishes registered from pending task types", () => {

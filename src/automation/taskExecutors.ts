@@ -10,6 +10,8 @@ import { canonicalHash } from "../research-replay/canonical";
 import {
   N2_DATASET_CONTRACT_VERSION, N2_FEATURE_PIT_CONTRACT_VERSION, N2_TARGET_CONTRACT_VERSION,
 } from "../research-replay/n2DatasetContract";
+import { runExecutorLifecycle, type ExecutorSpec, type SdkContext } from "../research/governance/executorSdk";
+import { appendRecord } from "../research/governance/registryStore";
 
 export const EXECUTOR_REGISTRY_VERSION = "n2-task-executor-registry-v1";
 
@@ -508,6 +510,81 @@ export const runPlannerNext: Executor = (ctx) => {
   return { result: "PASS", executorVersion: EXECUTOR_REGISTRY_VERSION, summary, outputs, outputDigest, blocks: [] };
 };
 
+// ---- TASK-N2-EXPAND (dataset-expand): 正式 Phase N2 の vertical slice ----
+// SDK lifecycle を通して read-only で全期間 dataset manifest を生成し、Experiment + Discovery を
+// append-only registry に記録する（EXP→Discovery の lineage を実証）。実 sidecar へ write しない。
+export const runDatasetExpand: Executor = (ctx) => {
+  const spec: ExecutorSpec = {
+    name: "dataset-expand", safetyLevel: "L0", implemented: true,
+    inputContract: () => {
+      const b = assertQuiescent(ctx.sidecarPath);
+      if (!loadFreeze(ctx.repoRoot)) b.push("CORRECTED_TRUTH_FREEZE_MISSING");
+      return { ok: b.length === 0, errors: b };
+    },
+    pitGuarantee: () => ({ pit: true, sameRaceLeakage: false, futureLeakage: false }),
+    executeReadOnly: () => {
+      const freeze = loadFreeze(ctx.repoRoot)!;
+      const db = openReadOnly(ctx.sidecarPath);
+      try {
+        const active = `LEFT JOIN settlement_source_duplicate_resolutions_v2 d ON d.duplicate_observation_id = c.observation_id
+          WHERE d.duplicate_observation_id IS NULL
+            AND NOT EXISTS (SELECT 1 FROM settlement_candidates_v2 s2 WHERE s2.supersedes_candidate_id = c.candidate_id)`;
+        const byYear = db.prepare(`SELECT substr(c.canonical_race_key,1,4) y, COUNT(*) n, COUNT(DISTINCT c.canonical_race_key) r
+          FROM settlement_candidates_v2 c ${active} GROUP BY 1 ORDER BY 1`).all() as Array<{ y: string; n: number; r: number }>;
+        const totalCandidates = byYear.reduce((s, x) => s + Number(x.n), 0);
+        const totalRaces = byYear.reduce((s, x) => s + Number(x.r), 0);
+        const years = byYear.map((x) => x.y);
+        const manifest = {
+          datasetManifestVersion: "n2-dataset-manifest-v1",
+          datasetVersion: `n2-corrected-${years[0] ?? "na"}_${years[years.length - 1] ?? "na"}`,
+          correctedTruthVersion: freeze.correctedTruthVersion,
+          sourceSettlementIdentity: freeze.settlementSnapshotIdentityAfter,
+          totalActiveCandidates: totalCandidates,
+          totalRaces,
+          yearSpan: years.length ? { from: years[0], to: years[years.length - 1], count: years.length } : null,
+          byYear: Object.fromEntries(byYear.map((x) => [x.y, { candidates: Number(x.n), races: Number(x.r) }])),
+          holdoutExcluded: HELD_OUT_RACES,
+          readOnly: true,
+          timeSplitContract: "reports/n2/n2-holdout-freeze.json（train<2022 / val 2022-2024 / test 2024-2026）",
+        };
+        return { outputs: ["reports/n2/n2-dataset-manifest.json"], digest: canonicalHash(manifest), summary: manifest };
+      } finally { db.close(); }
+    },
+  };
+  const sdkCtx: SdkContext = { repoRoot: ctx.repoRoot, runId: ctx.runId, taskId: ctx.taskId, dataRoot: ctx.repoRoot, dryRun: ctx.dryRun, writeAllowlist: ["reports/n2/", "research/registries/"] };
+  const outcome = runExecutorLifecycle(spec, sdkCtx);
+  if (outcome.result !== "PASS") {
+    return { result: outcome.result === "ENGINEERING_REQUIRED" ? "BLOCKED" : outcome.result as ExecutorResult["result"], executorVersion: EXECUTOR_REGISTRY_VERSION, summary: outcome.summary, outputs: outcome.outputs, outputDigest: outcome.digest || canonicalHash(outcome.summary), blocks: outcome.blocks };
+  }
+  const outputs: string[] = [];
+  if (!ctx.dryRun) {
+    mkdirSync(ctx.reportsDir, { recursive: true });
+    const payload = { ...outcome.summary, runId: ctx.runId, requestId: ctx.requestId, taskId: ctx.taskId, executorVersion: EXECUTOR_REGISTRY_VERSION, generatedAt: new Date().toISOString(), outputDigest: outcome.digest };
+    writeFileSync(join(ctx.reportsDir, "n2-dataset-manifest.json"), `${JSON.stringify(payload, null, 2)}\n`);
+    outputs.push("reports/n2/n2-dataset-manifest.json");
+    // lineage: Experiment + Discovery を append-only registry に記録（決定的 id）。
+    const regRoot = join(ctx.repoRoot, "research/registries");
+    const expId = `EXP-dataset-expand-${(outcome.digest || "0").slice(0, 8)}`;
+    const discId = `DISC-dataset-coverage-${(outcome.digest || "0").slice(0, 8)}`;
+    appendRecord(regRoot, "experiments", {
+      experimentId: expId, researchQuestion: "corrected dataset の全期間 coverage と時間 split を確定できるか",
+      rationale: "baseline/評価の前提となる dataset manifest を固定する", hypothesis: "corrected truth は 2000-2026 を安定 coverage する",
+      dataSnapshot: (outcome.summary as any).datasetVersion, trialFamilyId: "TF-dataset-foundation", totalTrialCount: 1, testedConditions: 1,
+      discoveryPeriod: "all", validationPeriod: "n/a", holdoutPolicy: "untouched-2-races", primaryMetric: "coverage",
+      secondaryMetrics: ["race_count"], minimumSample: 1, stoppingRule: "single manifest", successCondition: "manifest 生成",
+      rejectionCondition: "空 cohort", multiplicityFamily: "TF-dataset-foundation", evidenceStage: "exploration", status: "completed", createdAt: new Date().toISOString(),
+    });
+    appendRecord(regRoot, "discoveries", {
+      discoveryId: discId, sourceExperimentIds: [expId], sourceStrategyId: null, sourceStrategyVersion: null,
+      finding: `corrected dataset は ${(outcome.summary as any).totalRaces} races / ${(outcome.summary as any).totalActiveCandidates} candidates を coverage`,
+      mechanismHypothesis: "settlement reparse による訂正済み truth", evidenceLevel: "strong", shareClass: "GLOBAL_FACT",
+      scope: "全期間・全券種", knownConfounders: [], trialFamilyId: "TF-dataset-foundation", trialCountAtDiscovery: 1, adoptedBy: [], rejectedBy: [], createdAt: new Date().toISOString(),
+    });
+    outputs.push(`research/registries/experiments/${expId}.json`, `research/registries/discoveries/${discId}.json`);
+  }
+  return { result: "PASS", executorVersion: EXECUTOR_REGISTRY_VERSION, summary: outcome.summary, outputs, outputDigest: outcome.digest, blocks: [] };
+};
+
 // ---- registry（allowlist）----
 export const EXECUTORS: Readonly<Record<string, Executor>> = Object.freeze({
   "dataset-canary": runDatasetCanary,
@@ -517,15 +594,17 @@ export const EXECUTORS: Readonly<Record<string, Executor>> = Object.freeze({
   "holdout-freeze": runHoldoutFreeze,
   "feature-coverage-audit": runFeatureCoverageAudit,
   "planner-next": runPlannerNext,
+  "dataset-expand": runDatasetExpand,
 });
 
 // catalog が参照し得る全 taskType（未実装は BLOCKED_EXECUTOR_PENDING として catalog 側で据え置く）。
 // READY 化してよいのは EXECUTORS に載っている taskType のみ。
 export const KNOWN_TASK_TYPES = [
   "dataset-canary", "readonly-analysis", "readonly-audit", "dataset-inventory", "holdout-freeze",
-  "feature-coverage-audit", "planner-next",
-  // 以下は未実装（feature/odds データ未接続）。catalog では BLOCKED_EXECUTOR_PENDING。
-  "dataset-expand", "pit-audit", "baseline-market", "baseline-historical", "baseline-common-cohort",
+  "feature-coverage-audit", "planner-next", "dataset-expand",
+  // 以下は未実装（feature/odds データ未接続）。catalog では BLOCKED_EXECUTOR_PENDING、
+  // 実行されれば SDK が ENGINEERING_REQUIRED を返す（planner を無限反復させない）。
+  "pit-audit", "baseline-market", "baseline-historical", "baseline-common-cohort",
   "evaluation-metrics", "edge-hypothesis-scan", "edge-historical-test", "confounder-audit",
 ] as const;
 export function isExecutorImplemented(taskType: string): boolean {
