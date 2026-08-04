@@ -118,10 +118,10 @@
   },
   "readOnly": true,
   "note": "全期間 active settlement candidate の棚卸し（source-dup / superseded 除外）。feature/odds は本 sidecar 外。",
-  "runId": "30910683255",
-  "requestId": "REQ-20260804-138cdf69ca",
+  "runId": "30911155086",
+  "requestId": "REQ-20260804-9c5e3ad55c",
   "taskId": "TASK-N2-004",
   "executorVersion": "n2-task-executor-registry-v1",
-  "generatedAt": "2026-08-04T12:50:34.957Z",
+  "generatedAt": "2026-08-04T12:56:29.368Z",
   "outputDigest": "5661e0072617bfe0d3658915e454d7d3c656db87686004a49e06dc39b836f04f"
 }

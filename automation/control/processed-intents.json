@@ -1,6 +1,15 @@
 {
   "ledgerSchemaVersion": "processed-intents-v1",
-  "updatedAt": "2026-08-04T09:33:31.782Z",
-  "intentIds": [],
-  "entries": []
+  "updatedAt": "2026-08-04T12:56:29.371Z",
+  "intentIds": [
+    "INTENT-20260804-9c5e3ad55c"
+  ],
+  "entries": [
+    {
+      "intentId": "INTENT-20260804-9c5e3ad55c",
+      "requestId": "REQ-20260804-9c5e3ad55c",
+      "result": "PASS",
+      "recordedAt": "2026-08-04T12:56:29.371Z"
+    }
+  ]
 }

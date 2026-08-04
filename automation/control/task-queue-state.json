@@ -1,8 +1,8 @@
 {
   "stateSchemaVersion": "research-queue-state-v1",
-  "stateVersion": 1,
+  "stateVersion": 4,
   "catalogVersion": "2026-08-04-n2-foundation-v1",
-  "updatedAt": "2026-08-04T09:33:31.782Z",
+  "updatedAt": "2026-08-04T12:56:29.369Z",
   "tasks": {
     "TASK-N2-001": {
       "status": "PASS",
@@ -47,16 +47,20 @@
       "updatedAt": "2026-08-04T09:33:31.782Z"
     },
     "TASK-N2-004": {
-      "status": "READY",
+      "status": "PASS",
       "taskDefinitionVersion": 1,
-      "authoritySha": null,
-      "attemptCount": 0,
+      "authoritySha": "63c641acf44b6cd926638a9cc341e60b35b9b766",
+      "attemptCount": 1,
       "maxAttempts": 3,
-      "evidenceLinks": [],
-      "resultDigest": null,
+      "evidenceLinks": [
+        "reports/automation/history/30911155086-TASK-N2-004.json",
+        "reports/n2/n2-dataset-inventory.json"
+      ],
+      "resultDigest": "5661e0072617bfe0d3658915e454d7d3c656db87686004a49e06dc39b836f04f",
       "lastFailure": null,
       "checkpoint": null,
-      "updatedAt": "2026-08-04T09:33:31.782Z"
+      "updatedAt": "2026-08-04T12:56:29.369Z",
+      "nextDecision": "依存 task を次回 dispatch 候補にする（自動起動しない）"
     },
     "TASK-N2-005": {
       "status": "READY",
