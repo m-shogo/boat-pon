@@ -7,9 +7,10 @@ import {
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import {
-  ORCHESTRATOR_VERSION, STATUS_SCHEMA_VERSION, classifyFailure, decideSafety, preflight, validateRequest,
-  type SafetyLevel, type TaskRequest,
+  ORCHESTRATOR_VERSION, STATUS_SCHEMA_VERSION, canTransition, classifyFailure, decideSafety, preflight, validateRequest,
+  type SafetyLevel, type TaskRequest, type TaskStatus,
 } from "../src/automation/researchOrchestrator";
+import { resolveExecutor, type ExecutorResult } from "../src/automation/taskExecutors";
 
 const root = resolve(process.cwd());
 const arg = (n: string): string | null => {
@@ -182,26 +183,87 @@ try {
     finish("TASK_NOT_READY", 3, { lastRequestId: request.requestId, lastTaskId: task.taskId, blocks: [`TASK_STATUS_${task.status}`], elapsedMs: Date.now() - startedMs });
   }
 
-  // 実タスク実行は allowlist された command のみ（arbitrary shell 禁止）。
-  // 現時点では L0/L1/L2 の read-only 集計・canary を将来接続する枠のみを用意し、
-  // 未接続 task は NO_CHANGE として明示的に終了する（失敗を PASS 扱いしない）。
+  // 実タスク実行は allowlist registry の executor のみ（arbitrary shell / free-form command 禁止）。
   const runId = process.env.GITHUB_RUN_ID ?? `local-${Date.now()}`;
   mkdirSync(HISTORY_DIR, { recursive: true });
+  const { executor, code } = resolveExecutor(task.taskType);
+  if (!executor) {
+    // 未登録 taskType は BLOCK。queue は READY のまま維持し、NO_CHANGE を成功扱いにしない。
+    const evidence = {
+      runId, requestId: request.requestId, taskId: task.taskId, taskType: task.taskType,
+      safetyLevel: request.safetyLevel, startedAt: new Date(startedMs).toISOString(), completedAt: nowIso(),
+      executed: false, result: "BLOCKED", blocks: [code],
+      reason: `no executor registered for taskType=${task.taskType}; task stays READY`,
+      authoritySha: request.authoritySha,
+    };
+    writeFileSync(join(HISTORY_DIR, `${runId}-${task.taskId}.json`), `${JSON.stringify(evidence, null, 2)}\n`);
+    finish("BLOCKED", 3, {
+      lastRequestId: request.requestId, lastTaskId: task.taskId, lastAction: request.requestedAction,
+      lastSafetyLevel: request.safetyLevel, authoritySha: request.authoritySha, blocks: [code],
+      elapsedMs: Date.now() - startedMs, evidencePath: `reports/automation/history/${runId}-${task.taskId}.json`,
+      nextCandidate: pickNext(queue),
+    });
+  }
+
+  // queue: READY → CLAIMED → RUNNING（atomic write）。
+  const taskStatuses: Record<string, string> = Object.fromEntries(queue.tasks.map((t: any) => [t.taskId, t.status]));
+  updateTask(queue, task.taskId, { status: "CLAIMED", attemptCount: (task.attemptCount ?? 0) + 1, workflowRunId: runId, requestId: request.requestId, authoritySha: request.authoritySha });
+  updateTask(queue, task.taskId, { status: "RUNNING" });
+
+  let exec: ExecutorResult;
+  try {
+    exec = executor({
+      repoRoot: root, runId, requestId: request.requestId, taskId: task.taskId,
+      sidecarPath: join(root, "data/research-replay.sqlite"),
+      historyDir: HISTORY_DIR, reportsDir: join(root, "reports/n2"),
+      dryRun: false, taskStatuses,
+    });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    const attempts = (task.attemptCount ?? 0) + 1;
+    const maxAttempts = task.retryPolicy?.maxAttempts ?? 3;
+    const finalStatus = attempts >= maxAttempts ? "FAILED_FINAL" : "FAILED_RETRYABLE";
+    updateTask(queue, task.taskId, { status: finalStatus, lastFailure: { code: "EXECUTOR_EXCEPTION", message: message.slice(0, 300), at: nowIso() } });
+    const evidence = { runId, requestId: request.requestId, taskId: task.taskId, taskType: task.taskType, result: finalStatus, error: message.slice(0, 300), completedAt: nowIso() };
+    writeFileSync(join(HISTORY_DIR, `${runId}-${task.taskId}.json`), `${JSON.stringify(evidence, null, 2)}\n`);
+    finish(finalStatus, 1, {
+      lastRequestId: request.requestId, lastTaskId: task.taskId, lastSafetyLevel: request.safetyLevel,
+      authoritySha: request.authoritySha, blocks: ["EXECUTOR_EXCEPTION"], elapsedMs: Date.now() - startedMs,
+      evidencePath: `reports/automation/history/${runId}-${task.taskId}.json`, nextCandidate: pickNext(queue),
+    });
+  }
+
+  // 実行結果に応じて queue を厳密遷移させる（PASS のときだけ PASS へ）。
+  const attempts = (task.attemptCount ?? 0) + 1;
+  const maxAttempts = task.retryPolicy?.maxAttempts ?? 3;
+  const nextStatus = exec.result === "PASS" ? "PASS"
+    : exec.result === "CONDITIONAL" ? "CONDITIONAL"
+      : exec.result === "BLOCKED" ? "BLOCKED"
+        : attempts >= maxAttempts ? "FAILED_FINAL" : "FAILED_RETRYABLE";
+  const evidencePath = `reports/automation/history/${runId}-${task.taskId}.json`;
+  updateTask(queue, task.taskId, {
+    status: nextStatus,
+    evidenceLinks: [...new Set([...(task.evidenceLinks ?? []), evidencePath, ...exec.outputs])],
+    executorVersion: exec.executorVersion, resultDigest: exec.outputDigest,
+    lastFailure: exec.blocks.length ? { code: exec.blocks[0], at: nowIso() } : null,
+    nextDecision: exec.result === "PASS" ? "依存 task を次回 dispatch の候補にする（自動起動しない）" : `blocks: ${exec.blocks.join(",") || "none"}`,
+  });
+
   const evidence = {
     runId, requestId: request.requestId, taskId: task.taskId, taskType: task.taskType,
-    safetyLevel: request.safetyLevel, startedAt: new Date(startedMs).toISOString(), completedAt: nowIso(),
-    executed: false,
-    result: "NO_CHANGE",
-    reason: "task executor is not wired for this taskType yet; orchestrator intentionally performs no work rather than reporting false success",
-    authoritySha: request.authoritySha,
+    safetyLevel: request.safetyLevel, executorVersion: exec.executorVersion,
+    startedAt: new Date(startedMs).toISOString(), completedAt: nowIso(),
+    executed: true, result: exec.result, blocks: exec.blocks, outputs: exec.outputs,
+    outputDigest: exec.outputDigest, summary: exec.summary, authoritySha: request.authoritySha,
+    elapsedMs: Date.now() - startedMs,
   };
   writeFileSync(join(HISTORY_DIR, `${runId}-${task.taskId}.json`), `${JSON.stringify(evidence, null, 2)}\n`);
 
-  finish("NO_CHANGE", 0, {
+  finish(exec.result, exec.result === "PASS" || exec.result === "CONDITIONAL" ? 0 : exec.result === "BLOCKED" ? 3 : 1, {
     lastRequestId: request.requestId, lastTaskId: task.taskId, lastAction: request.requestedAction,
-    lastSafetyLevel: request.safetyLevel, authoritySha: request.authoritySha, blocks: [],
-    elapsedMs: Date.now() - startedMs, evidencePath: `reports/automation/history/${runId}-${task.taskId}.json`,
-    nextCandidate: pickNext(queue),
+    lastSafetyLevel: request.safetyLevel, authoritySha: request.authoritySha, blocks: exec.blocks,
+    elapsedMs: Date.now() - startedMs, evidencePath, outputs: exec.outputs, outputDigest: exec.outputDigest,
+    taskStatus: nextStatus, nextCandidate: pickNext(queue),
   });
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error);
@@ -211,6 +273,24 @@ try {
 }
 
 function pickNext(queue: any): string {
-  const next = queue.tasks.find((t: any) => t.status === "READY");
-  return next ? `${next.taskId}: ${next.title}（自動起動しない。次回 dispatch で 1 回だけ依頼する）` : "no READY task";
+  const next = queue.tasks.find((t: any) => t.status === "READY"
+    && (t.dependencies ?? []).every((d: string) => queue.tasks.find((x: any) => x.taskId === d)?.status === "PASS"));
+  return next ? `${next.taskId}: ${next.title}（自動起動しない。次回 dispatch で 1 回だけ依頼する）` : "no dispatchable READY task";
+}
+
+// task queue の atomic 更新（tmp write → rename）。状態遷移は canTransition で検証する。
+function updateTask(queue: any, taskId: string, patch: Record<string, unknown>): void {
+  const task = queue.tasks.find((t: any) => t.taskId === taskId);
+  if (!task) throw new Error(`task not found in queue: ${taskId}`);
+  if (typeof patch.status === "string" && patch.status !== task.status) {
+    if (!canTransition(task.status as TaskStatus, patch.status as TaskStatus)) {
+      throw new Error(`illegal task transition: ${task.status} -> ${patch.status}`);
+    }
+  }
+  Object.assign(task, patch, { updatedAt: nowIso() });
+  queue.updatedAt = nowIso();
+  const queuePath = join(root, "automation/task-queue.json");
+  const tmp = `${queuePath}.${randomUUID()}.tmp`;
+  writeFileSync(tmp, `${JSON.stringify(queue, null, 2)}\n`);
+  renameSync(tmp, queuePath);
 }
