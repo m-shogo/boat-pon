@@ -1,6 +1,6 @@
 {
   "queueSchemaVersion": "research-task-queue-v1",
-  "updatedAt": "2026-08-04T01:05:19.749Z",
+  "updatedAt": "2026-08-04T04:39:10.894Z",
   "note": "ChatGPT Scheduled Task が次の 1 task を選ぶための queue。1 dispatch = 1 task。L3 は事前 grant 必須、L4 は常時拒否。",
   "tasks": [
     {
@@ -58,16 +58,16 @@
         "reports/automation/history/<runId>-eligibility.json"
       ],
       "maxDurationSeconds": 1800,
-      "status": "PASS",
+      "status": "READY",
       "checkpoint": null,
-      "attemptCount": 1,
+      "attemptCount": 0,
       "lastFailure": null,
       "retryPolicy": {
         "maxAttempts": 3,
         "retryableOnly": true
       },
       "createdAt": "2026-08-03T12:57:25.000Z",
-      "updatedAt": "2026-08-04T00:54:52.203Z",
+      "updatedAt": "2026-08-04T04:39:10.893Z",
       "evidenceLinks": [
         "reports/automation/history/local-1785804821586-TASK-N2-002.json",
         "reports/n2/n2-corrected-eligibility.json"
