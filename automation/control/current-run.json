@@ -1,21 +1,21 @@
 {
   "runSchemaVersion": "current-run-v1",
-  "updatedAt": "2026-08-04T14:27:30.237Z",
+  "updatedAt": "2026-08-04T15:00:08.065Z",
   "lastResult": "PASS",
-  "lastRequestId": "REQ-20260804-a4n206x7p9",
-  "lastIntentId": "INTENT-20260804-a4n206x7p9",
-  "lastTaskId": "TASK-N2-006",
+  "lastRequestId": "REQ-20260804-b7k3m9q2x4",
+  "lastIntentId": "INTENT-20260804-b7k3m9q2x4",
+  "lastTaskId": "TASK-PLANNER-NEXT",
   "lastSafetyLevel": "L0",
-  "authoritySha": "2ef50c99f6f5baa5053595e7c3ab62515df8d3ae",
-  "stateVersion": 15,
-  "stateDigest": "1e6b18c26252a94f0e0435d9eb9d015960bd820b7ed49944c6969e63fd971b23",
+  "authoritySha": "72b1e13550264e1c325541de7763fb61fdd54a04",
+  "stateVersion": 19,
+  "stateDigest": "ffbbf997ce8637b27e675fb3dc26b0a43c5d94eee37e66131f0ac13d72dfb39c",
   "blocks": [],
-  "elapsedMs": 1336148,
-  "evidencePath": "reports/automation/history/30917058393-TASK-N2-006.json",
+  "elapsedMs": 559,
+  "evidencePath": "reports/automation/history/30921804343-TASK-PLANNER-NEXT.json",
   "outputs": [
-    "reports/n2/n2-feature-coverage-audit.json"
+    "automation/control/planner-candidates.json"
   ],
-  "outputDigest": "e57c6f17e27332f2dc7ae791a8b7b4ee8277d8d047048eef9a2061b3bcae3930",
+  "outputDigest": "e0c56315c6bbe2a5df2efd668a69fc3334340a82af84358a47337d8b922da53f",
   "taskStatus": "PASS",
   "nextCandidate": "TASK-PLANNER-NEXT: queue planner: 次候補提案（自動起動しない。次回 dispatch で 1 回だけ依頼する）"
 }

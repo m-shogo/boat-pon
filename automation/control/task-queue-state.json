@@ -1,8 +1,8 @@
 {
   "stateSchemaVersion": "research-queue-state-v1",
-  "stateVersion": 14,
+  "stateVersion": 18,
   "catalogVersion": "2026-08-04-n2-foundation-v1",
-  "updatedAt": "2026-08-04T14:27:30.234Z",
+  "updatedAt": "2026-08-04T15:00:08.063Z",
   "tasks": {
     "TASK-N2-001": {
       "status": "PASS",
@@ -97,17 +97,18 @@
     "TASK-PLANNER-NEXT": {
       "status": "READY",
       "taskDefinitionVersion": 1,
-      "authoritySha": "c61ad1d28931dd62b43258c856381c4d85e536b1",
-      "attemptCount": 1,
+      "authoritySha": "72b1e13550264e1c325541de7763fb61fdd54a04",
+      "attemptCount": 2,
       "maxAttempts": 3,
       "evidenceLinks": [
         "reports/automation/history/30912235903-TASK-PLANNER-NEXT.json",
-        "automation/control/planner-candidates.json"
+        "automation/control/planner-candidates.json",
+        "reports/automation/history/30921804343-TASK-PLANNER-NEXT.json"
       ],
       "resultDigest": "e0c56315c6bbe2a5df2efd668a69fc3334340a82af84358a47337d8b922da53f",
       "lastFailure": null,
       "checkpoint": null,
-      "updatedAt": "2026-08-04T13:07:47.965Z",
+      "updatedAt": "2026-08-04T15:00:08.063Z",
       "nextDecision": "依存 task を次回 dispatch 候補にする（自動起動しない）"
     }
   }

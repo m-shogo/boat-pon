@@ -1,12 +1,12 @@
 {
   "plannerCandidatesSchemaVersion": "planner-candidates-v1",
   "plannerVersion": "n2-planner-v1",
-  "readyTaskCount": 2,
+  "readyTaskCount": 1,
   "blockedExecutorPendingCount": 9,
   "candidateCount": 9,
   "candidates": [
     {
-      "candidateId": "CAND-30912235903-1",
+      "candidateId": "CAND-30921804343-1",
       "proposedTaskId": "TASK-N2-010",
       "title": "corrected dataset 年代拡張",
       "objective": "corrected dataset を全期間へ拡張し manifest 化",
@@ -19,10 +19,10 @@
       "reason": "executor 未実装。実装後に READY 化できる候補。",
       "duplicateCheck": "catalog 内 taskId で一意",
       "invalidationCondition": "対応 executor が実装され、catalog defaultStatus が READY になったら本候補は解消",
-      "proposedAt": "2026-08-04T13:07:47.957Z"
+      "proposedAt": "2026-08-04T15:00:08.056Z"
     },
     {
-      "candidateId": "CAND-30912235903-2",
+      "candidateId": "CAND-30921804343-2",
       "proposedTaskId": "TASK-N2-011",
       "title": "PIT 再検証",
       "objective": "feature join 後の point-in-time / same-race leakage を再検証",
@@ -35,10 +35,10 @@
       "reason": "executor 未実装。実装後に READY 化できる候補。",
       "duplicateCheck": "catalog 内 taskId で一意",
       "invalidationCondition": "対応 executor が実装され、catalog defaultStatus が READY になったら本候補は解消",
-      "proposedAt": "2026-08-04T13:07:47.957Z"
+      "proposedAt": "2026-08-04T15:00:08.056Z"
     },
     {
-      "candidateId": "CAND-30912235903-3",
+      "candidateId": "CAND-30921804343-3",
       "proposedTaskId": "TASK-N2-020",
       "title": "market-only baseline",
       "objective": "市場オッズのみの baseline を common cohort で評価",
@@ -52,10 +52,10 @@
       "reason": "executor 未実装。実装後に READY 化できる候補。",
       "duplicateCheck": "catalog 内 taskId で一意",
       "invalidationCondition": "対応 executor が実装され、catalog defaultStatus が READY になったら本候補は解消",
-      "proposedAt": "2026-08-04T13:07:47.957Z"
+      "proposedAt": "2026-08-04T15:00:08.056Z"
     },
     {
-      "candidateId": "CAND-30912235903-4",
+      "candidateId": "CAND-30921804343-4",
       "proposedTaskId": "TASK-N2-021",
       "title": "historical-only baseline",
       "objective": "履歴特徴のみの baseline を common cohort で評価",
@@ -69,10 +69,10 @@
       "reason": "executor 未実装。実装後に READY 化できる候補。",
       "duplicateCheck": "catalog 内 taskId で一意",
       "invalidationCondition": "対応 executor が実装され、catalog defaultStatus が READY になったら本候補は解消",
-      "proposedAt": "2026-08-04T13:07:47.957Z"
+      "proposedAt": "2026-08-04T15:00:08.056Z"
     },
     {
-      "candidateId": "CAND-30912235903-5",
+      "candidateId": "CAND-30921804343-5",
       "proposedTaskId": "TASK-N2-022",
       "title": "common cohort baseline 比較",
       "objective": "market / historical / legacy を同一 cohort で比較",
@@ -86,10 +86,10 @@
       "reason": "executor 未実装。実装後に READY 化できる候補。",
       "duplicateCheck": "catalog 内 taskId で一意",
       "invalidationCondition": "対応 executor が実装され、catalog defaultStatus が READY になったら本候補は解消",
-      "proposedAt": "2026-08-04T13:07:47.957Z"
+      "proposedAt": "2026-08-04T15:00:08.056Z"
     },
     {
-      "candidateId": "CAND-30912235903-6",
+      "candidateId": "CAND-30921804343-6",
       "proposedTaskId": "TASK-N2-030",
       "title": "evaluation metrics",
       "objective": "logloss/Brier/calibration/coverage/ROI/drawdown を算出",
@@ -102,10 +102,10 @@
       "reason": "executor 未実装。実装後に READY 化できる候補。",
       "duplicateCheck": "catalog 内 taskId で一意",
       "invalidationCondition": "対応 executor が実装され、catalog defaultStatus が READY になったら本候補は解消",
-      "proposedAt": "2026-08-04T13:07:47.957Z"
+      "proposedAt": "2026-08-04T15:00:08.056Z"
     },
     {
-      "candidateId": "CAND-30912235903-7",
+      "candidateId": "CAND-30921804343-7",
       "proposedTaskId": "TASK-N2-040",
       "title": "edge hypothesis scan",
       "objective": "player/course/ST/exhibition/motor/weather 等の edge 仮説を走査",
@@ -118,10 +118,10 @@
       "reason": "executor 未実装。実装後に READY 化できる候補。",
       "duplicateCheck": "catalog 内 taskId で一意",
       "invalidationCondition": "対応 executor が実装され、catalog defaultStatus が READY になったら本候補は解消",
-      "proposedAt": "2026-08-04T13:07:47.957Z"
+      "proposedAt": "2026-08-04T15:00:08.056Z"
     },
     {
-      "candidateId": "CAND-30912235903-8",
+      "candidateId": "CAND-30921804343-8",
       "proposedTaskId": "TASK-N2-041",
       "title": "edge historical test",
       "objective": "edge 仮説を歴史データで検定（forward 昇格はしない）",
@@ -134,10 +134,10 @@
       "reason": "executor 未実装。実装後に READY 化できる候補。",
       "duplicateCheck": "catalog 内 taskId で一意",
       "invalidationCondition": "対応 executor が実装され、catalog defaultStatus が READY になったら本候補は解消",
-      "proposedAt": "2026-08-04T13:07:47.957Z"
+      "proposedAt": "2026-08-04T15:00:08.056Z"
     },
     {
-      "candidateId": "CAND-30912235903-9",
+      "candidateId": "CAND-30921804343-9",
       "proposedTaskId": "TASK-N2-042",
       "title": "confounder / rejection audit",
       "objective": "交絡と棄却根拠を監査し rejection registry を更新",
@@ -150,13 +150,13 @@
       "reason": "executor 未実装。実装後に READY 化できる候補。",
       "duplicateCheck": "catalog 内 taskId で一意",
       "invalidationCondition": "対応 executor が実装され、catalog defaultStatus が READY になったら本候補は解消",
-      "proposedAt": "2026-08-04T13:07:47.957Z"
+      "proposedAt": "2026-08-04T15:00:08.056Z"
     }
   ],
   "autoDispatch": false,
   "note": "planner は候補を提案するだけ。自動実行・自動 dispatch は行わない。READY task がある間は補充不要。",
-  "runId": "30912235903",
-  "requestId": "REQ-20260804-72b865c0e6",
-  "generatedAt": "2026-08-04T13:07:47.965Z",
+  "runId": "30921804343",
+  "requestId": "REQ-20260804-b7k3m9q2x4",
+  "generatedAt": "2026-08-04T15:00:08.063Z",
   "outputDigest": "e0c56315c6bbe2a5df2efd668a69fc3334340a82af84358a47337d8b922da53f"
 }
