@@ -1,0 +1,217 @@
+{
+  "correctedTruthVersion": "n2-corrected-settlement-truth-v1",
+  "sourceSettlementIdentity": "353562988ef0d5a3f791fa19bfa3b1751fafcd9dd67738d1326895604f023730",
+  "correctedEligibleRate": 0.9998107755707003,
+  "totals": {
+    "total": 8217755,
+    "settled": 8216200,
+    "refunded": 1554
+  },
+  "byYear": {
+    "2000": {
+      "total": 57762,
+      "settled": 57756,
+      "refunded": 6,
+      "eligibleRate": 0.9998961254804196
+    },
+    "2004": {
+      "total": 196182,
+      "settled": 196145,
+      "refunded": 37,
+      "eligibleRate": 0.9998113996187213
+    },
+    "2005": {
+      "total": 340989,
+      "settled": 340926,
+      "refunded": 63,
+      "eligibleRate": 0.9998152433069688
+    },
+    "2006": {
+      "total": 341032,
+      "settled": 340962,
+      "refunded": 70,
+      "eligibleRate": 0.9997947406694973
+    },
+    "2007": {
+      "total": 349289,
+      "settled": 349218,
+      "refunded": 71,
+      "eligibleRate": 0.9997967299285119
+    },
+    "2008": {
+      "total": 343519,
+      "settled": 343448,
+      "refunded": 70,
+      "eligibleRate": 0.9997933156535738
+    },
+    "2009": {
+      "total": 356001,
+      "settled": 355917,
+      "refunded": 84,
+      "eligibleRate": 0.9997640456066135
+    },
+    "2010": {
+      "total": 359189,
+      "settled": 359120,
+      "refunded": 69,
+      "eligibleRate": 0.9998079005760199
+    },
+    "2011": {
+      "total": 354577,
+      "settled": 354509,
+      "refunded": 68,
+      "eligibleRate": 0.9998082221915127
+    },
+    "2012": {
+      "total": 377773,
+      "settled": 377709,
+      "refunded": 64,
+      "eligibleRate": 0.9998305860927065
+    },
+    "2013": {
+      "total": 375622,
+      "settled": 375556,
+      "refunded": 66,
+      "eligibleRate": 0.9998242914419283
+    },
+    "2014": {
+      "total": 368708,
+      "settled": 368626,
+      "refunded": 82,
+      "eligibleRate": 0.9997776017878647
+    },
+    "2015": {
+      "total": 368921,
+      "settled": 368860,
+      "refunded": 61,
+      "eligibleRate": 0.9998346529473789
+    },
+    "2016": {
+      "total": 380253,
+      "settled": 380181,
+      "refunded": 72,
+      "eligibleRate": 0.9998106523814407
+    },
+    "2017": {
+      "total": 381487,
+      "settled": 381409,
+      "refunded": 78,
+      "eligibleRate": 0.9997955369383491
+    },
+    "2018": {
+      "total": 381343,
+      "settled": 381271,
+      "refunded": 72,
+      "eligibleRate": 0.9998111935973651
+    },
+    "2019": {
+      "total": 381528,
+      "settled": 381462,
+      "refunded": 66,
+      "eligibleRate": 0.9998270113857961
+    },
+    "2020": {
+      "total": 383904,
+      "settled": 383823,
+      "refunded": 81,
+      "eligibleRate": 0.9997890097524381
+    },
+    "2021": {
+      "total": 384395,
+      "settled": 384326,
+      "refunded": 69,
+      "eligibleRate": 0.999820497144864
+    },
+    "2022": {
+      "total": 388830,
+      "settled": 388765,
+      "refunded": 65,
+      "eligibleRate": 0.9998328318288198
+    },
+    "2023": {
+      "total": 387492,
+      "settled": 387426,
+      "refunded": 66,
+      "eligibleRate": 0.9998296739029451
+    },
+    "2024": {
+      "total": 387326,
+      "settled": 387247,
+      "refunded": 79,
+      "eligibleRate": 0.9997960374464921
+    },
+    "2025": {
+      "total": 385947,
+      "settled": 385887,
+      "refunded": 60,
+      "eligibleRate": 0.9998445382397065
+    },
+    "2026": {
+      "total": 185686,
+      "settled": 185651,
+      "refunded": 35,
+      "eligibleRate": 0.9998115097530239
+    }
+  },
+  "byBetType": {
+    "exacta": {
+      "total": 1190032,
+      "settled": 1189676,
+      "refunded": 356
+    },
+    "place": {
+      "total": 1157693,
+      "settled": 1157692,
+      "refunded": 0
+    },
+    "quinella": {
+      "total": 1181370,
+      "settled": 1181370,
+      "refunded": 0
+    },
+    "trifecta": {
+      "total": 1174542,
+      "settled": 1173344,
+      "refunded": 1198
+    },
+    "trio": {
+      "total": 1173343,
+      "settled": 1173343,
+      "refunded": 0
+    },
+    "wide": {
+      "total": 1172655,
+      "settled": 1172655,
+      "refunded": 0
+    },
+    "win": {
+      "total": 1168120,
+      "settled": 1168120,
+      "refunded": 0
+    }
+  },
+  "legacyComparison": {
+    "legacyEligibleRate": 0.9603,
+    "legacySource": "reports/n2/n2-dataset-profile.json (v1 parser 由来, 誤分類を含む)",
+    "deltaPoints": 3.9510775570700263,
+    "note": "legacy は v1 特払い bug 由来の偽返還 317,747 件を含む。corrected はそれを訂正済み。historical 集計であり forward 結果ではない。"
+  },
+  "specialPayoutImpact": {
+    "additions": 65156,
+    "note": "v1 が抑止していた特払い candidate を v2 で顕在化"
+  },
+  "genuineRefundImpact": {
+    "remaining": 1554,
+    "note": "真の返還は維持（訂正対象外）"
+  },
+  "sourceCoverage": {
+    "note": "corrected truth freeze の active candidate 全体"
+  },
+  "forwardResultClaim": false,
+  "runId": "local-1785804821586",
+  "requestId": "REQ-run-local002b",
+  "taskId": "TASK-N2-002",
+  "executorVersion": "n2-task-executor-registry-v1",
+  "generatedAt": "2026-08-04T00:54:52.203Z",
+  "outputDigest": "18692aadd06828daa418803769f160ef42669838dd77c8ba51f0bfe3901c63da"
+}

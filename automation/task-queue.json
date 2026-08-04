@@ -1,6 +1,6 @@
 {
   "queueSchemaVersion": "research-task-queue-v1",
-  "updatedAt": "2026-08-04T00:52:44.725Z",
+  "updatedAt": "2026-08-04T00:54:52.203Z",
   "note": "ChatGPT Scheduled Task が次の 1 task を選ぶための queue。1 dispatch = 1 task。L3 は事前 grant 必須、L4 は常時拒否。",
   "tasks": [
     {
@@ -50,7 +50,7 @@
       "dependencies": [
         "TASK-N2-001"
       ],
-      "authoritySha": null,
+      "authoritySha": "ba3cd8e",
       "requiredInputs": [
         "corrected settlement truth freeze"
       ],
@@ -58,18 +58,25 @@
         "reports/automation/history/<runId>-eligibility.json"
       ],
       "maxDurationSeconds": 1800,
-      "status": "READY",
+      "status": "PASS",
       "checkpoint": null,
-      "attemptCount": 0,
+      "attemptCount": 1,
       "lastFailure": null,
       "retryPolicy": {
         "maxAttempts": 3,
         "retryableOnly": true
       },
       "createdAt": "2026-08-03T12:57:25.000Z",
-      "updatedAt": "2026-08-03T12:57:25.000Z",
-      "evidenceLinks": [],
-      "nextDecision": "drift 確定後に baseline cohort を固定する"
+      "updatedAt": "2026-08-04T00:54:52.203Z",
+      "evidenceLinks": [
+        "reports/automation/history/local-1785804821586-TASK-N2-002.json",
+        "reports/n2/n2-corrected-eligibility.json"
+      ],
+      "nextDecision": "依存 task を次回 dispatch の候補にする（自動起動しない）",
+      "workflowRunId": "local-1785804821586",
+      "requestId": "REQ-run-local002b",
+      "executorVersion": "n2-task-executor-registry-v1",
+      "resultDigest": "18692aadd06828daa418803769f160ef42669838dd77c8ba51f0bfe3901c63da"
     },
     {
       "taskId": "TASK-N2-003",
