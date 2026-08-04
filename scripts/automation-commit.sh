@@ -43,11 +43,20 @@ done
 git config user.name "boat-pon-automation"
 git config user.email "automation@boat-pon.invalid"
 
+# 結果ファイルを先に stash して branch 切替の衝突を避ける（checkout が
+# "local changes would be overwritten" で失敗するのを防ぐ）。
+git stash push --include-untracked --quiet -- "${ALLOWED_PREFIXES[@]}" 2>/dev/null || true
+STASHED=$(git stash list | head -1 | grep -c "stash@{0}" || true)
+
 git fetch origin --quiet
 if git show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
   git checkout -B "$BRANCH" "origin/$BRANCH" --quiet
 else
   git checkout -B "$BRANCH" --quiet
+fi
+
+if [ "$STASHED" = "1" ]; then
+  git stash pop --quiet || { echo "::error::failed to restore automation results"; exit 1; }
 fi
 
 for prefix in "${ALLOWED_PREFIXES[@]}"; do
@@ -65,3 +74,6 @@ TASK_ID="$(node -e "try{const s=require('./reports/automation/current-status.jso
 git commit -q -m "report(automation): research run ${RUN_ID:-local} (request ${REQ_ID}, task ${TASK_ID})"
 git push origin "$BRANCH" --quiet
 echo "pushed to $BRANCH"
+
+# 次回 run のために main へ戻す（runner の作業ツリーを既定状態に保つ）。
+git checkout main --quiet || true
