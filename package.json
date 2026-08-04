@@ -256,7 +256,10 @@
     "automation:emergency-stop": "tsx scripts/run-research-task.ts emergency-stop",
     "automation:clear-emergency-stop": "tsx scripts/run-research-task.ts clear-emergency-stop",
     "report:automation:dashboard": "tsx scripts/generate-automation-dashboard.ts",
-    "automation:build-request": "tsx scripts/build-request-cli.ts"
+    "automation:build-request": "tsx scripts/build-request-cli.ts",
+    "automation:intent-task": "tsx scripts/run-intent-task.ts",
+    "automation:guard-intent": "tsx scripts/guard-intent-push.ts",
+    "automation:build-intent": "tsx scripts/build-intent-cli.ts"
   },
   "engines": {
     "node": ">=24.0.0"
