@@ -2,22 +2,25 @@
   "statusSchemaVersion": "research-automation-status-v1",
   "orchestratorVersion": "research-orchestrator-v1",
   "updatedAt": "2026-08-03T13:11:03.880Z",
-  "lastResult": "DRY_RUN_OK",
-  "lastRequestId": "REQ-20260804-3a6e94fcf4",
-  "lastTaskId": "TASK-N2-001",
-  "lastAction": "dry-run",
+  "lastResult": "PASS",
+  "lastRequestId": "REQ-20260804-138cdf69ca",
+  "lastTaskId": "TASK-N2-004",
+  "lastAction": "run-task",
   "lastSafetyLevel": "L0",
-  "authoritySha": "73ea377",
+  "authoritySha": "b0cbe03136c61574baf5da85e53d8fe7b4e1865c",
   "blocks": [],
   "failureClasses": [
     "NON_RETRYABLE"
   ],
-  "elapsedMs": 452,
-  "nextCandidate": "no dispatchable READY task",
-  "evidencePath": "reports/automation/history/local-1785804913314-TASK-N2-003.json",
+  "elapsedMs": 142130,
+  "nextCandidate": "TASK-N2-005: untouched holdout freeze + time split（自動起動しない。次回 dispatch で 1 回だけ依頼する）",
+  "evidencePath": "reports/automation/history/30910683255-TASK-N2-004.json",
   "outputs": [
-    "reports/n2/n2-win-refund-omission-audit.json"
+    "reports/n2/n2-dataset-inventory.json"
   ],
-  "outputDigest": "bd4bed76312255dd5434dc9668346ecb139934b05df2c48d86e8bece781987aa",
-  "taskStatus": "PASS"
+  "outputDigest": "5661e0072617bfe0d3658915e454d7d3c656db87686004a49e06dc39b836f04f",
+  "taskStatus": "PASS",
+  "lastIntentId": "INTENT-20260804-138cdf69ca",
+  "stateVersion": 5,
+  "stateDigest": "ef9d4d92937be2b0f8699e9820ec43bdee3a67f5fe9827a17354fd77df912641"
 }

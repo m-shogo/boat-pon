@@ -1,0 +1,142 @@
+{
+  "runId": "30910683255",
+  "requestId": "REQ-20260804-138cdf69ca",
+  "intentId": "INTENT-20260804-138cdf69ca",
+  "taskId": "TASK-N2-004",
+  "taskType": "dataset-inventory",
+  "safetyLevel": "L0",
+  "executorVersion": "n2-task-executor-registry-v1",
+  "executed": true,
+  "result": "PASS",
+  "blocks": [],
+  "outputs": [
+    "reports/n2/n2-dataset-inventory.json"
+  ],
+  "outputDigest": "5661e0072617bfe0d3658915e454d7d3c656db87686004a49e06dc39b836f04f",
+  "summary": {
+    "correctedTruthVersion": "n2-corrected-settlement-truth-v1",
+    "sourceSettlementIdentity": "353562988ef0d5a3f791fa19bfa3b1751fafcd9dd67738d1326895604f023730",
+    "totalActiveCandidates": 8217755,
+    "totalRaces": 1194209,
+    "rawRaceKeyRange": {
+      "from": "2000-01-01:06:R1",
+      "to": "2026-07-28:24:R9",
+      "note": "exclusion 抜きの全体範囲。active はこの内側。"
+    },
+    "yearCount": 24,
+    "byYear": {
+      "2000": {
+        "candidates": 57762,
+        "races": 18788
+      },
+      "2004": {
+        "candidates": 196182,
+        "races": 29561
+      },
+      "2005": {
+        "candidates": 340989,
+        "races": 51077
+      },
+      "2006": {
+        "candidates": 341032,
+        "races": 50639
+      },
+      "2007": {
+        "candidates": 349289,
+        "races": 51062
+      },
+      "2008": {
+        "candidates": 343519,
+        "races": 49874
+      },
+      "2009": {
+        "candidates": 356001,
+        "races": 51392
+      },
+      "2010": {
+        "candidates": 359189,
+        "races": 51861
+      },
+      "2011": {
+        "candidates": 354577,
+        "races": 50869
+      },
+      "2012": {
+        "candidates": 377773,
+        "races": 54103
+      },
+      "2013": {
+        "candidates": 375622,
+        "races": 53761
+      },
+      "2014": {
+        "candidates": 368708,
+        "races": 52721
+      },
+      "2015": {
+        "candidates": 368921,
+        "races": 52733
+      },
+      "2016": {
+        "candidates": 380253,
+        "races": 54352
+      },
+      "2017": {
+        "candidates": 381487,
+        "races": 54533
+      },
+      "2018": {
+        "candidates": 381343,
+        "races": 54507
+      },
+      "2019": {
+        "candidates": 381528,
+        "races": 54531
+      },
+      "2020": {
+        "candidates": 383904,
+        "races": 54880
+      },
+      "2021": {
+        "candidates": 384395,
+        "races": 54946
+      },
+      "2022": {
+        "candidates": 388830,
+        "races": 55572
+      },
+      "2023": {
+        "candidates": 387492,
+        "races": 55381
+      },
+      "2024": {
+        "candidates": 387326,
+        "races": 55364
+      },
+      "2025": {
+        "candidates": 385947,
+        "races": 55161
+      },
+      "2026": {
+        "candidates": 185686,
+        "races": 26541
+      }
+    },
+    "byBetType": {
+      "exacta": 1190032,
+      "place": 1157693,
+      "quinella": 1181370,
+      "trifecta": 1174542,
+      "trio": 1173343,
+      "wide": 1172655,
+      "win": 1168120
+    },
+    "readOnly": true,
+    "note": "全期間 active settlement candidate の棚卸し（source-dup / superseded 除外）。feature/odds は本 sidecar 外。"
+  },
+  "authoritySha": "b0cbe03136c61574baf5da85e53d8fe7b4e1865c",
+  "idempotencyKey": "6729f48704bef48b5baf54d69fd5bd588764409a98786f53af2bd70dda0e1a30",
+  "startedAt": "2026-08-04T12:48:12.829Z",
+  "completedAt": "2026-08-04T12:50:34.958Z",
+  "elapsedMs": 142129
+}
