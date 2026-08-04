@@ -1,0 +1,22 @@
+{
+  "auditContractVersion": "n2-settlement-coverage-v1",
+  "settledCandidates": 8220019,
+  "settledWithPayoutLines": 8220019,
+  "payoutLineCoverage": 1,
+  "refundedCandidates": 319678,
+  "refundedWithRefundLines": 319678,
+  "refundLineCoverage": 1,
+  "missingness": {
+    "settledMissingPayoutLines": 0,
+    "refundedMissingRefundLines": 0,
+    "note": "settled は payout line、refunded は refund line を持つべき。欠落は dataset 品質フラグ。"
+  },
+  "scope": "settlement schema のみ（feature/odds は本 sidecar 外＝別 dataRoot 未接続）",
+  "readOnly": true,
+  "runId": "30917058393",
+  "requestId": "REQ-20260804-a4n206x7p9",
+  "taskId": "TASK-N2-006",
+  "executorVersion": "n2-task-executor-registry-v1",
+  "generatedAt": "2026-08-04T14:27:30.232Z",
+  "outputDigest": "e57c6f17e27332f2dc7ae791a8b7b4ee8277d8d047048eef9a2061b3bcae3930"
+}
