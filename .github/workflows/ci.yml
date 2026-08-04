@@ -93,7 +93,8 @@ jobs:
           echo "no large artifacts under research"
       - name: No production/BUY connection in research code
         run: |
-          if git grep -nE 'app_settings|auto_vote|auto_purchase|production_writer|live_odds_writer' -- 'src/research/**'; then
+          # executorSdk（guard 定義本体）と test は marker 文字列を正当に含むため除外する。
+          if git grep -nE 'app_settings|auto_vote|auto_purchase|production_writer|live_odds_writer' -- 'src/research/**' ':!src/research/governance/executorSdk.ts' ':!src/research/governance/executorSdk.test.ts'; then
             echo "::error::research code references production/BUY markers"; exit 1
           fi
           echo "research code has no production/BUY connection"
