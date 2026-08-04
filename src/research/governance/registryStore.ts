@@ -65,8 +65,7 @@ export type AppendResult = {
   code: "OK" | "ALREADY_RECORDED" | "INVALID" | "DUPLICATE" | "CONFLICT" | "WRITE_FAILED";
 };
 
-// 厳格 append-only API。既存 file は内容が同一でも DUPLICATE として拒否する。
-export function appendRecord(root: string, kind: RegistryKind, record: Record<string, unknown>): AppendResult {
+function appendNew(root: string, kind: RegistryKind, record: Record<string, unknown>): AppendResult {
   const cfg = REGISTRY[kind];
   const v = cfg.validate(record);
   if (!v.valid) return { ok: false, errors: v.errors, code: "INVALID" };
@@ -79,6 +78,11 @@ export function appendRecord(root: string, kind: RegistryKind, record: Record<st
   } catch (e) {
     return { ok: false, path, errors: [e instanceof Error ? e.message : String(e)], code: "WRITE_FAILED" };
   }
+}
+
+// 明示的に重複を拒否したい管理処理向け。
+export function appendRecordStrict(root: string, kind: RegistryKind, record: Record<string, unknown>): AppendResult {
+  return appendNew(root, kind, record);
 }
 
 // Executor retry 用。既存recordのcanonical bodyが同一なら安全な再実行として成功、異なるならfail-closed。
@@ -101,7 +105,14 @@ export function appendRecordIdempotent(root: string, kind: RegistryKind, record:
       return { ok: false, path, errors: [`registry conflict: unreadable existing record: ${e instanceof Error ? e.message : String(e)}`], code: "CONFLICT" };
     }
   }
-  return appendRecord(root, kind, record);
+  return appendNew(root, kind, record);
+}
+
+// 既存executor互換API。戻り値を見落としても不正・競合・write失敗は例外で停止する。
+export function appendRecord(root: string, kind: RegistryKind, record: Record<string, unknown>): AppendResult {
+  const result = appendRecordIdempotent(root, kind, record);
+  if (!result.ok) throw new Error(`${result.code}: ${result.errors.join("; ")}`);
+  return result;
 }
 
 export function listRecords<T = Record<string, unknown>>(root: string, kind: RegistryKind): T[] {
