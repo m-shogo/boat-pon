@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # automation 結果を allowlist path だけ、automation branch へ safe commit / push する。
 # force push / reset / 無関係 path / 大容量 file / DB / archive は拒否する。
+# branch 切替で結果を失わないよう、対象 file を一時領域へ退避してから切り替える。
 set -euo pipefail
 
 BRANCH="automation/boat-pon-research"
@@ -8,20 +9,22 @@ ALLOWED_PREFIXES=("automation/" "reports/automation/" "docs/automation/" "report
 MAX_BYTES=2097152
 
 cd "$(git rev-parse --show-toplevel)"
+REPO_ROOT="$(pwd)"
 
 # 変更 path を取得（untracked 含む）。
-mapfile -t CHANGED < <(git status --porcelain | awk '{print $NF}' | sort -u)
+mapfile -t CHANGED < <(git status --porcelain | sed 's/^...//' | sed 's/^"//;s/"$//' | sort -u)
 if [ "${#CHANGED[@]}" -eq 0 ]; then
   echo "NO_CHANGE: nothing to commit"
   exit 0
 fi
 
+# allowlist / 安全性検査。
+KEEP=()
 for path in "${CHANGED[@]}"; do
+  [ -z "$path" ] && continue
   allowed=false
   for prefix in "${ALLOWED_PREFIXES[@]}"; do
-    case "$path" in
-      "$prefix"*) allowed=true ;;
-    esac
+    case "$path" in "$prefix"*) allowed=true ;; esac
   done
   if [ "$allowed" != true ]; then
     echo "::error::path not in allowlist, refusing to commit: $path"
@@ -37,20 +40,29 @@ for path in "${CHANGED[@]}"; do
     if [ "$size" -gt "$MAX_BYTES" ]; then
       echo "::error::file too large ($size bytes): $path"; exit 1
     fi
+    KEEP+=("$path")
   fi
+done
+
+if [ "${#KEEP[@]}" -eq 0 ]; then
+  echo "NO_CHANGE: no allowlisted files to commit"
+  exit 0
+fi
+
+# 結果を一時領域へ退避（branch 切替で失わないため）。
+STAGE="$(mktemp -d)"
+trap 'rm -rf "$STAGE"' EXIT
+for path in "${KEEP[@]}"; do
+  mkdir -p "$STAGE/$(dirname "$path")"
+  cp "$path" "$STAGE/$path"
 done
 
 git config user.name "boat-pon-automation"
 git config user.email "automation@boat-pon.invalid"
 
-# 結果ファイルを先に stash して branch 切替の衝突を避ける（checkout が
-# "local changes would be overwritten" で失敗するのを防ぐ）。
-# 変更が無ければ stash しない（stash pop の失敗を避ける）。
-STASHED=0
-if [ -n "$(git status --porcelain)" ]; then
-  git stash push --include-untracked --quiet -m "automation-results" || { echo "::error::stash failed"; exit 1; }
-  STASHED=1
-fi
+# 作業ツリーを clean にしてから branch を切り替える（結果は STAGE にある）。
+git checkout -- . 2>/dev/null || true
+git clean -fdq -- automation reports docs 2>/dev/null || true
 
 git fetch origin --quiet
 if git show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
@@ -59,16 +71,16 @@ else
   git checkout -B "$BRANCH" --quiet
 fi
 
-if [ "$STASHED" = "1" ]; then
-  git stash pop --quiet || { echo "::error::failed to restore automation results"; exit 1; }
-fi
-
-for prefix in "${ALLOWED_PREFIXES[@]}"; do
-  git add -- "$prefix"* 2>/dev/null || true
+# 退避した結果を書き戻す。
+for path in "${KEEP[@]}"; do
+  mkdir -p "$(dirname "$REPO_ROOT/$path")"
+  cp "$STAGE/$path" "$REPO_ROOT/$path"
+  git add -- "$path"
 done
 
 if git diff --cached --quiet; then
   echo "NO_CHANGE: nothing staged after allowlist filter"
+  git checkout main --quiet || true
   exit 0
 fi
 
