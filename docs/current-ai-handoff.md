@@ -579,3 +579,27 @@ next（最優先を1つ）:
 next（最優先を1つ）:
 
 1. ChatGPT 側で `docs/chatgpt-scheduled-task-bridge.md` の prompt を Scheduled Task（毎時）へ登録し、`workflow_dispatch` 経路で 1 回ずつ task を依頼する。
+
+## 2026-08-04 ChatGPT request-file dispatch + 実 executor 接続（毎時 schedule 未登録）
+
+completed:
+
+- **実 task executor を接続**（`src/automation/taskExecutors.ts`）。allowlist registry で taskType→executor を静的解決し、未登録は `EXECUTOR_NOT_REGISTERED` で BLOCK（queue は READY 維持、NO_CHANGE を成功扱いにしない）。prototype pollution 経由の解決も拒否。全 executor は read-only（`policy.dataRoot` から immutable open、active WAL 拒否、実 sidecar write 0）。
+- **TASK-N2-001 dataset-canary（L2）実測 PASS**: 固定月 cohort 2024-06、races **4,662** / candidates **32,626** / eligible **32,622（99.99%）** / excluded 4（genuine refund）/ source duplicate 0 / superseded 21 / held-out 除外規則あり。PIT PASS・leakage PASS。digest `5799f38c…`（local と runner で一致＝決定的）。出力 `reports/n2/n2-dataset-canary.json/.md`。
+- **TASK-N2-002 readonly-analysis（L0）実測 PASS**: corrected eligible 率 **99.98%**（active 8,217,755 / settled 8,216,200 / refunded 1,554）、legacy 96.03% から **+3.95pt**。年代別も 2000〜2026 で 99.98〜99.99% と安定。`forwardResultClaim: false`（historical 集計であり forward 結果ではない）。出力 `reports/n2/n2-corrected-eligibility.json`。
+- **TASK-N2-003 readonly-audit（L0）実測 PASS**: held-out 2 件の lineage、defect mechanism（v1 は win 返還 candidate 自体を生成しない＝特払い bug とは別機序）、影響範囲 scan **26,089 races**（上限候補）、`proposedDefectCode: V1_WIN_REFUND_OMISSION`、auto-correction 不可・別承認必要・**production apply 未実行**。出力 `reports/n2/n2-win-refund-omission-audit.json`。
+- **queue state machine を実結果へ接続**: `READY→CLAIMED→RUNNING→PASS/CONDITIONAL/BLOCKED/FAILED_*` を `canTransition` 検証付き atomic 更新。attemptCount・evidenceLinks・runId・requestId・executorVersion・resultDigest・nextDecision を記録。依存未達は CLAIM しない（N2-002 は N2-001 が PASS でなければ BLOCK、実測で確認）。
+- **ChatGPT 用 request-file dispatch を実装**（`.github/workflows/boat-pon-request-file-dispatch.yml`）。`push` / `main` / `automation/requests/pending/*.json` のみ、**`on.schedule` なし**。guard（ubuntu）が repo/actor/branch/event、**1 push 1 request**、modified/deleted 拒否、path traversal・symlink・非 .json・サイズ、strict schema、filename↔requestId、`requestDigest`/`queueDigest`/`authoritySha`、replay registry、CLAIMED/RUNNING 重複、L4 拒否・L3 grant 必須を検証。runner 側でも path を再検証。
+- **request builder**: `pnpm automation:build-request`（canonicalization は既存式を再利用）+ `automation/request-template.json`。
+- **有限回 E2E（実測）**: request file commit → guard PASS → self-hosted runner → 1 task 実行 → `automation/boat-pon-research` へ結果 commit → runner idle。TASK-N2-001（run 30878214593, PASS, digest 5799f38c…）、TASK-N2-002（run 30878413662, PASS）、TASK-N2-003（run 30878594429, PASS）、最終 clean run（run 30878719144, **success**）。**自動再 dispatch なし**（run は依頼ごとに 1 件）。
+- guard 実証: stale authoritySha 拒否、DIRTY_WORKING_TREE、GIT_DRIFT、dependency 未達 BLOCK、L4 `REJECTED_L4` exit 3、tamper 時 digest mismatch、emergency stop / pause。
+- 全 **619 tests pass**（automation 21 tests を CI の test glob へ追加）、typecheck・CI green。
+
+current / blocked:
+
+- 毎時 schedule は**未登録**（ChatGPT 側で登録する）。repo に schedule/cron/launchd hourly/daemon は無い。
+- held-out 2 件は未適用のまま（別 defect・別承認）。実 sidecar・boat.sqlite・app_settings・collector・prediction・model・BUY 条件・production threshold・live writer は未変更。
+
+next（最優先を1つ）:
+
+1. ChatGPT の Scheduled Task に `docs/chatgpt-scheduled-task-bridge.md` の最終 prompt を毎時で登録する（第一経路 = request file commit）。
