@@ -7,7 +7,7 @@ import {
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import {
-  ORCHESTRATOR_VERSION, STATUS_SCHEMA_VERSION, canTransition, classifyFailure, decideSafety, preflight, validateRequest,
+  ORCHESTRATOR_VERSION, STATUS_SCHEMA_VERSION, canTransition, classifyFailure, decideSafety, foreignDirtyPaths, preflight, validateRequest,
   type SafetyLevel, type TaskRequest, type TaskStatus,
 } from "../src/automation/researchOrchestrator";
 import { resolveExecutor, type ExecutorResult } from "../src/automation/taskExecutors";
@@ -139,7 +139,10 @@ try {
   const pre = preflight({
     emergencyStop: existsSync(EMERGENCY),
     paused: existsSync(PAUSED),
-    workingTreeClean: git("status", "--porcelain") === "",
+    // automation 自身の出力（status / queue / requests）は dirty 判定から除外する。
+    workingTreeClean: foreignDirtyPaths(
+      git("status", "--porcelain").split("\n").map((l) => l.slice(3).trim()).filter(Boolean),
+    ).length === 0,
     localHeadSha: git("rev-parse", "HEAD"),
     originHeadSha: (() => { try { git("fetch", "origin", "--quiet"); return git("rev-parse", "origin/main"); } catch { return git("rev-parse", "HEAD"); } })(),
     activeWal: existsSync(walPath) && statSync(walPath).size > 0,
