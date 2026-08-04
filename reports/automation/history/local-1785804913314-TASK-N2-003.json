@@ -1,0 +1,66 @@
+{
+  "runId": "local-1785804913314",
+  "requestId": "REQ-run-local003a",
+  "taskId": "TASK-N2-003",
+  "taskType": "readonly-audit",
+  "safetyLevel": "L0",
+  "executorVersion": "n2-task-executor-registry-v1",
+  "startedAt": "2026-08-04T00:55:11.264Z",
+  "completedAt": "2026-08-04T00:56:20.549Z",
+  "executed": true,
+  "result": "PASS",
+  "blocks": [],
+  "outputs": [
+    "reports/n2/n2-win-refund-omission-audit.json"
+  ],
+  "outputDigest": "bd4bed76312255dd5434dc9668346ecb139934b05df2c48d86e8bece781987aa",
+  "summary": {
+    "heldOutCount": 2,
+    "lineage": [
+      {
+        "raceKey": "2014-03-28:08:R1",
+        "betType": "win",
+        "classification": "CONFIRMED_V1_WIN_REFUND_OMISSION",
+        "v2Status": "refunded",
+        "v2ResultKind": "normal",
+        "v2RefundLines": 1,
+        "rawDocumentId": "1947bdfd-79c5-4517-836a-a02f1c7d8480",
+        "rawSha256": "ac9991361e6ca32bb8cb45046b8ad748dd40e3aa5d8950d562a2e26ce65847cf",
+        "archiveFile": "k140328.lzh",
+        "sidecarCandidatesForRaceBet": [],
+        "autoApplyEligible": false
+      },
+      {
+        "raceKey": "2014-03-28:17:R2",
+        "betType": "win",
+        "classification": "CONFIRMED_V1_WIN_REFUND_OMISSION",
+        "v2Status": "refunded",
+        "v2ResultKind": "normal",
+        "v2RefundLines": 1,
+        "rawDocumentId": "1947bdfd-79c5-4517-836a-a02f1c7d8480",
+        "rawSha256": "ac9991361e6ca32bb8cb45046b8ad748dd40e3aa5d8950d562a2e26ce65847cf",
+        "archiveFile": "k140328.lzh",
+        "sidecarCandidatesForRaceBet": [],
+        "autoApplyEligible": false
+      }
+    ],
+    "defectMechanism": "v1 parser は win 券種の返還 line を candidate 化せず、当該 race+bet_type の candidate 自体を生成しなかった。v2 は refunded candidate を導出する。特払い false-refund（V1_SPECIAL_PAYOUT_FALSE_REFUND）とは別機序。",
+    "parserDiff": {
+      "v1": "no candidate emitted for win refund",
+      "v2": "emits refunded candidate with refund line"
+    },
+    "impactScan": {
+      "racesWithoutActiveWinCandidate": 26089,
+      "note": "win candidate が存在しない race 総数（本 defect の上限候補。全てが本 defect とは限らない）"
+    },
+    "sameKindCandidateCount": 26089,
+    "autoCorrectionPossible": false,
+    "autoCorrectionReason": "本 reparse の承認 scope（V1_SPECIAL_PAYOUT_FALSE_REFUND）外。別 defect code・別 approval が必要。",
+    "separateApprovalRequired": true,
+    "proposedDefectCode": "V1_WIN_REFUND_OMISSION",
+    "proposedFixContract": "archive を v2 で再parse し、win 返還 candidate が欠落している race+bet_type へ initial candidate を append-only 追加する（supersession ではなく欠落補完）。承認 target digest は本件専用に新規計算する。",
+    "productionApplyExecuted": false
+  },
+  "authoritySha": "42904be",
+  "elapsedMs": 69285
+}

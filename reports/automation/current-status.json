@@ -3,21 +3,21 @@
   "orchestratorVersion": "research-orchestrator-v1",
   "updatedAt": "2026-08-03T13:11:03.880Z",
   "lastResult": "PASS",
-  "lastRequestId": "REQ-run-local002b",
-  "lastTaskId": "TASK-N2-002",
+  "lastRequestId": "REQ-run-local003a",
+  "lastTaskId": "TASK-N2-003",
   "lastAction": "run-task",
   "lastSafetyLevel": "L0",
-  "authoritySha": "ba3cd8e",
+  "authoritySha": "42904be",
   "blocks": [],
   "failureClasses": [
     "NON_RETRYABLE"
   ],
-  "elapsedMs": 72681,
-  "nextCandidate": "TASK-N2-003: held-out win 返還欠落 2 件の別 defect 調査 package を作る（自動起動しない。次回 dispatch で 1 回だけ依頼する）",
-  "evidencePath": "reports/automation/history/local-1785804821586-TASK-N2-002.json",
+  "elapsedMs": 69285,
+  "nextCandidate": "no dispatchable READY task",
+  "evidencePath": "reports/automation/history/local-1785804913314-TASK-N2-003.json",
   "outputs": [
-    "reports/n2/n2-corrected-eligibility.json"
+    "reports/n2/n2-win-refund-omission-audit.json"
   ],
-  "outputDigest": "18692aadd06828daa418803769f160ef42669838dd77c8ba51f0bfe3901c63da",
+  "outputDigest": "bd4bed76312255dd5434dc9668346ecb139934b05df2c48d86e8bece781987aa",
   "taskStatus": "PASS"
 }
