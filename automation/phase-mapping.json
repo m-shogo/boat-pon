@@ -1,8 +1,8 @@
 {
-  "phaseMappingVersion": "research-phase-mapping-v1",
-  "updatedAt": "2026-08-05T00:00:00Z",
-  "note": "legacy task ID から正式 Phase への alias/migration。履歴は削除しない。既存 TASK-N2-* は保持しつつ正式 Phase を付与する。",
-  "authorityNote": "正式 Phase 定義の正本は docs/research-platform-master-plan.md。本 mapping は task ID の対応表。",
+  "phaseMappingVersion": "research-phase-mapping-v2",
+  "updatedAt": "2026-08-04T16:15:00Z",
+  "note": "legacy task IDから正式Phaseへのalias/migration。履歴は削除しない。既存TASK-N2-*は保持しつつ正式Phaseを付与する。",
+  "authorityNote": "正式Phase定義の正本はdocs/research-platform-master-plan.md。本mappingはtask IDの対応表。",
   "phases": {
     "N2": "synchronized all-market observation",
     "N3": "racer / pre-race snapshot",
@@ -22,7 +22,7 @@
     { "legacy": "TASK-N2-004", "phase": "N2", "role": "dataset inventory", "status": "PASS", "retainHistory": true },
     { "legacy": "TASK-N2-005", "phase": "N2", "role": "holdout freeze + time split", "status": "PASS", "retainHistory": true },
     { "legacy": "TASK-N2-006", "phase": "N2", "role": "settlement coverage audit", "status": "PASS", "retainHistory": true },
-    { "legacy": "TASK-N2-010", "phase": "N2", "role": "dataset-expand", "alias": "TASK-N2-EXPAND", "status": "implemented", "retainHistory": true },
+    { "legacy": "TASK-N2-010", "phase": "N2", "role": "dataset-expand", "alias": "TASK-N2-EXPAND", "status": "implemented_ready", "retainHistory": true },
     { "legacy": "TASK-N2-011", "phase": "N4", "role": "PIT audit (post feature join)", "status": "engineering_required", "retainHistory": true },
     { "legacy": "TASK-N2-020", "phase": "N5", "role": "market-only baseline", "status": "engineering_required", "retainHistory": true },
     { "legacy": "TASK-N2-021", "phase": "N5", "role": "historical/racer baseline", "status": "engineering_required", "retainHistory": true },
