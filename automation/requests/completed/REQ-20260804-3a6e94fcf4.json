@@ -1,0 +1,13 @@
+{
+  "requestId": "REQ-20260804-3a6e94fcf4",
+  "result": "DRY_RUN_OK",
+  "recordedAt": "2026-08-04T04:48:10.697Z",
+  "workflowRunId": "30878719144",
+  "failureClass": null,
+  "taskId": "TASK-N2-001",
+  "blocks": [],
+  "evidencePath": null,
+  "outputs": [],
+  "outputDigest": null,
+  "taskStatus": null
+}
