@@ -1,6 +1,6 @@
 {
   "queueSchemaVersion": "research-task-queue-v1",
-  "updatedAt": "2026-08-04T04:45:02.597Z",
+  "updatedAt": "2026-08-04T04:47:40.744Z",
   "note": "ChatGPT Scheduled Task が次の 1 task を選ぶための queue。1 dispatch = 1 task。L3 は事前 grant 必須、L4 は常時拒否。",
   "tasks": [
     {
@@ -95,7 +95,7 @@
         "reports/automation/history/<runId>-win-refund-omission.json"
       ],
       "maxDurationSeconds": 1800,
-      "status": "READY",
+      "status": "PASS",
       "checkpoint": null,
       "attemptCount": 0,
       "lastFailure": null,
@@ -104,13 +104,14 @@
         "retryableOnly": true
       },
       "createdAt": "2026-08-03T12:57:25.000Z",
-      "updatedAt": "2026-08-04T04:45:02.596Z",
+      "updatedAt": "2026-08-04T04:47:40.743Z",
       "evidenceLinks": [
         "reports/n2/unexpected-additions-audit.json",
         "reports/automation/history/local-1785804913314-TASK-N2-003.json",
-        "reports/n2/n2-win-refund-omission-audit.json"
+        "reports/n2/n2-win-refund-omission-audit.json",
+        "reports/automation/history/30878594429-TASK-N2-003.json"
       ],
-      "nextDecision": "依存 task を次回 dispatch の候補にする（自動起動しない）",
+      "nextDecision": "runner 実行で PASS。別 defect V1_WIN_REFUND_OMISSION の調査 package を作成（実適用なし）",
       "workflowRunId": "local-1785804913314",
       "requestId": "REQ-run-local003a",
       "executorVersion": "n2-task-executor-registry-v1",
