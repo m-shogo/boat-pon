@@ -62,3 +62,38 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  research-governance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Research governance check (schema/lineage/clean-room/holdout/separation/production-isolation)
+        run: npm run research:governance-check
+      - name: Secret scan (research + governance config)
+        run: |
+          if git grep -nE 'ghp_[0-9A-Za-z]{20}|github_pat_[0-9A-Za-z_]{20}|-----BEGIN [A-Z ]*PRIVATE KEY-----|AKIA[0-9A-Z]{16}|xox[baprs]-[0-9A-Za-z-]{10}' -- 'src/research/**' 'config/research-governance/**' 'research/**' 'scripts/research-governance-check.ts'; then
+            echo "::error::secret-like token found under research paths"; exit 1
+          fi
+          echo "no secrets under research paths"
+      - name: No large DB/raw/model artifact under research
+        run: |
+          if git ls-files 'research/**' 'config/research-governance/**' | grep -E '\.(sqlite|sqlite-.*|duckdb|parquet|lzh|zip|bin|model)$'; then
+            echo "::error::large/binary artifact tracked under research"; exit 1
+          fi
+          echo "no large artifacts under research"
+      - name: No production/BUY connection in research code
+        run: |
+          if git grep -nE 'app_settings|auto_vote|auto_purchase|production_writer|live_odds_writer' -- 'src/research/**'; then
+            echo "::error::research code references production/BUY markers"; exit 1
+          fi
+          echo "research code has no production/BUY connection"

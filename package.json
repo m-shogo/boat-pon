@@ -259,7 +259,8 @@
     "automation:build-request": "tsx scripts/build-request-cli.ts",
     "automation:intent-task": "tsx scripts/run-intent-task.ts",
     "automation:guard-intent": "tsx scripts/guard-intent-push.ts",
-    "automation:build-intent": "tsx scripts/build-intent-cli.ts"
+    "automation:build-intent": "tsx scripts/build-intent-cli.ts",
+    "research:governance-check": "tsx scripts/research-governance-check.ts"
   },
   "engines": {
     "node": ">=24.0.0"
