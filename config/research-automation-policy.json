@@ -22,7 +22,10 @@
     "pathAllowlist": [
       "automation/",
       "reports/automation/",
-      "docs/automation/"
+      "docs/automation/",
+      "reports/n2/n2-dataset-canary.",
+      "reports/n2/n2-corrected-eligibility.",
+      "reports/n2/n2-win-refund-omission-audit."
     ],
     "maxFileBytes": 2097152
   },

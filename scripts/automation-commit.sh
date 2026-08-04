@@ -4,7 +4,7 @@
 set -euo pipefail
 
 BRANCH="automation/boat-pon-research"
-ALLOWED_PREFIXES=("automation/" "reports/automation/" "docs/automation/")
+ALLOWED_PREFIXES=("automation/" "reports/automation/" "docs/automation/" "reports/n2/n2-dataset-canary." "reports/n2/n2-corrected-eligibility." "reports/n2/n2-win-refund-omission-audit.")
 MAX_BYTES=2097152
 
 cd "$(git rev-parse --show-toplevel)"
@@ -45,7 +45,7 @@ git config user.email "automation@boat-pon.invalid"
 
 # 結果ファイルを先に stash して branch 切替の衝突を避ける（checkout が
 # "local changes would be overwritten" で失敗するのを防ぐ）。
-git stash push --include-untracked --quiet -- "${ALLOWED_PREFIXES[@]}" 2>/dev/null || true
+git stash push --include-untracked --quiet -- "automation/" "reports/" "docs/automation/" 2>/dev/null || true
 STASHED=$(git stash list | head -1 | grep -c "stash@{0}" || true)
 
 git fetch origin --quiet
@@ -60,7 +60,7 @@ if [ "$STASHED" = "1" ]; then
 fi
 
 for prefix in "${ALLOWED_PREFIXES[@]}"; do
-  [ -e "$prefix" ] && git add -- "$prefix" || true
+  git add -- "$prefix"* 2>/dev/null || true
 done
 
 if git diff --cached --quiet; then
