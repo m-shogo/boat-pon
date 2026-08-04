@@ -140,8 +140,12 @@ try {
     emergencyStop: existsSync(EMERGENCY),
     paused: existsSync(PAUSED),
     // automation 自身の出力（status / queue / requests）は dirty 判定から除外する。
+    // git helper は出力全体を trim するため、porcelain の status 2文字を正規表現で外す
+    // （先頭行だけ 1 文字ずれる slice(3) は使わない）。
     workingTreeClean: foreignDirtyPaths(
-      git("status", "--porcelain").split("\n").map((l) => l.slice(3).trim()).filter(Boolean),
+      git("status", "--porcelain").split("\n")
+        .map((l) => l.replace(/^\s*\S{1,2}\s+/, "").trim())
+        .filter(Boolean),
     ).length === 0,
     localHeadSha: git("rev-parse", "HEAD"),
     originHeadSha: (() => { try { git("fetch", "origin", "--quiet"); return git("rev-parse", "origin/main"); } catch { return git("rev-parse", "HEAD"); } })(),
