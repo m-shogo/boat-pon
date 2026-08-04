@@ -1,0 +1,98 @@
+{
+  "stateSchemaVersion": "research-queue-state-v1",
+  "stateVersion": 1,
+  "catalogVersion": "2026-08-04-n2-foundation-v1",
+  "updatedAt": "2026-08-04T09:33:31.782Z",
+  "tasks": {
+    "TASK-N2-001": {
+      "status": "PASS",
+      "taskDefinitionVersion": 1,
+      "authoritySha": "94f57f5",
+      "attemptCount": 1,
+      "maxAttempts": 3,
+      "evidenceLinks": [
+        "reports/automation/history/30878214593-TASK-N2-001.json"
+      ],
+      "resultDigest": "5799f38c4eb273632b204be0686190fbd1b80f57c7177f1b1f8c326b31ee91d4",
+      "lastFailure": null,
+      "checkpoint": null,
+      "updatedAt": "2026-08-04T09:33:31.782Z"
+    },
+    "TASK-N2-002": {
+      "status": "PASS",
+      "taskDefinitionVersion": 1,
+      "authoritySha": null,
+      "attemptCount": 1,
+      "maxAttempts": 3,
+      "evidenceLinks": [
+        "reports/automation/history/30878413662-TASK-N2-002.json"
+      ],
+      "resultDigest": null,
+      "lastFailure": null,
+      "checkpoint": null,
+      "updatedAt": "2026-08-04T09:33:31.782Z"
+    },
+    "TASK-N2-003": {
+      "status": "PASS",
+      "taskDefinitionVersion": 1,
+      "authoritySha": null,
+      "attemptCount": 1,
+      "maxAttempts": 3,
+      "evidenceLinks": [
+        "reports/automation/history/30878594429-TASK-N2-003.json"
+      ],
+      "resultDigest": null,
+      "lastFailure": null,
+      "checkpoint": null,
+      "updatedAt": "2026-08-04T09:33:31.782Z"
+    },
+    "TASK-N2-004": {
+      "status": "READY",
+      "taskDefinitionVersion": 1,
+      "authoritySha": null,
+      "attemptCount": 0,
+      "maxAttempts": 3,
+      "evidenceLinks": [],
+      "resultDigest": null,
+      "lastFailure": null,
+      "checkpoint": null,
+      "updatedAt": "2026-08-04T09:33:31.782Z"
+    },
+    "TASK-N2-005": {
+      "status": "READY",
+      "taskDefinitionVersion": 1,
+      "authoritySha": null,
+      "attemptCount": 0,
+      "maxAttempts": 3,
+      "evidenceLinks": [],
+      "resultDigest": null,
+      "lastFailure": null,
+      "checkpoint": null,
+      "updatedAt": "2026-08-04T09:33:31.782Z"
+    },
+    "TASK-N2-006": {
+      "status": "READY",
+      "taskDefinitionVersion": 1,
+      "authoritySha": null,
+      "attemptCount": 0,
+      "maxAttempts": 3,
+      "evidenceLinks": [],
+      "resultDigest": null,
+      "lastFailure": null,
+      "checkpoint": null,
+      "updatedAt": "2026-08-04T09:33:31.782Z"
+    },
+    "TASK-PLANNER-NEXT": {
+      "status": "READY",
+      "taskDefinitionVersion": 1,
+      "authoritySha": null,
+      "attemptCount": 0,
+      "maxAttempts": 3,
+      "evidenceLinks": [],
+      "resultDigest": null,
+      "lastFailure": null,
+      "checkpoint": null,
+      "updatedAt": "2026-08-04T09:33:31.782Z"
+    }
+  }
+}

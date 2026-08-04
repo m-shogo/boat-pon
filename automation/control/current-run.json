@@ -1,0 +1,9 @@
+{
+  "runSchemaVersion": "current-run-v1",
+  "updatedAt": "2026-08-04T09:33:31.782Z",
+  "lastResult": "PASS",
+  "lastRunId": "30878594429",
+  "lastTaskId": "TASK-N2-003",
+  "lastRequestId": "REQ-20260804-46393c12ed",
+  "note": "control state seeded; authority=automation branch"
+}

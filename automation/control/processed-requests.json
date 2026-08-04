@@ -1,0 +1,9 @@
+{
+  "ledgerSchemaVersion": "processed-requests-v1",
+  "updatedAt": "2026-08-04T09:33:31.782Z",
+  "requestIds": [
+    "REQ-20260804-3a6e94fcf4",
+    "REQ-20260804-46393c12ed"
+  ],
+  "idempotencyKeys": {}
+}
