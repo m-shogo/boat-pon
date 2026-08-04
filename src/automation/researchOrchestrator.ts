@@ -131,6 +131,8 @@ export const AUTOMATION_OUTPUT_PREFIXES = [
   "reports/automation/", "automation/task-queue.json", "automation/requests/",
   // control state（automation branch 正本）を working tree に materialize したもの。
   "automation/control/",
+  // intent workflow が runner の working tree に置く一時 file（dirty 判定から除外）。
+  "canonical-request.json", ".automation-branch-base",
   // executor が生成する研究成果物（N2 レポート）も automation 出力として扱う。
   "reports/n2/n2-dataset-canary.", "reports/n2/n2-corrected-eligibility.", "reports/n2/n2-win-refund-omission-audit.",
   "reports/n2/n2-dataset-inventory.", "reports/n2/n2-holdout-freeze.", "reports/n2/n2-feature-coverage-audit.",
