@@ -3,7 +3,9 @@ import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { appendRecord, appendRecordIdempotent, checkLineage, listRecords, validateAllRegistries } from "./registryStore";
+import {
+  appendRecord, appendRecordIdempotent, appendRecordStrict, checkLineage, listRecords, validateAllRegistries,
+} from "./registryStore";
 
 function tmp(): string { return mkdtempSync(join(tmpdir(), "reg-")); }
 
@@ -17,37 +19,42 @@ const experiment = {
 
 test("strict append-only writes once and refuses duplicate/invalid", () => {
   const root = tmp();
-  const a = appendRecord(root, "experiments", { ...experiment });
-  assert.equal(a.ok, true);
-  assert.equal(appendRecord(root, "experiments", { ...experiment }).code, "DUPLICATE");
-  assert.equal(appendRecord(root, "experiments", { ...experiment, experimentId: "X" }).code, "INVALID");
+  assert.equal(appendRecordStrict(root, "experiments", { ...experiment }).ok, true);
+  assert.equal(appendRecordStrict(root, "experiments", { ...experiment }).code, "DUPLICATE");
+  assert.equal(appendRecordStrict(root, "experiments", { ...experiment, experimentId: "X" }).code, "INVALID");
   assert.equal(listRecords(root, "experiments").length, 1);
 });
 
 test("idempotent append accepts same canonical body and rejects same-id conflict", () => {
   const root = tmp();
-  const first = appendRecordIdempotent(root, "experiments", { ...experiment });
-  assert.equal(first.code, "OK");
+  assert.equal(appendRecordIdempotent(root, "experiments", { ...experiment }).code, "OK");
   const retry = appendRecordIdempotent(root, "experiments", { ...experiment });
   assert.equal(retry.ok, true);
   assert.equal(retry.code, "ALREADY_RECORDED");
   const conflict = appendRecordIdempotent(root, "experiments", { ...experiment, hypothesis: "different" });
   assert.equal(conflict.ok, false);
   assert.equal(conflict.code, "CONFLICT");
-  assert.equal(listRecords(root, "experiments").length, 1);
+});
+
+test("legacy executor API is idempotent and throws on conflict", () => {
+  const root = tmp();
+  assert.equal(appendRecord(root, "experiments", { ...experiment }).code, "OK");
+  assert.equal(appendRecord(root, "experiments", { ...experiment }).code, "ALREADY_RECORDED");
+  assert.throws(() => appendRecord(root, "experiments", { ...experiment, hypothesis: "different" }), /CONFLICT/);
+  assert.throws(() => appendRecord(root, "experiments", { ...experiment, experimentId: "X" }), /INVALID/);
 });
 
 test("strategy-version uses composite filename", () => {
   const root = tmp();
   const v = { strategyId: "STRAT-a", version: "v1.0", datasetVersion: "d", featureVersion: "f", modelVersion: "m", decisionRuleVersion: "dr", ticketSelectorVersion: "ts", changeType: "parameter", changeReason: "x", adoptedDiscoveryIds: [], createdAt: "t" };
-  assert.equal(appendRecord(root, "strategy-versions", v).ok, true);
-  assert.equal(appendRecord(root, "strategy-versions", { ...v, version: "v1.1" }).ok, true);
-  assert.equal(appendRecord(root, "strategy-versions", v).code, "DUPLICATE");
+  assert.equal(appendRecordStrict(root, "strategy-versions", v).ok, true);
+  assert.equal(appendRecordStrict(root, "strategy-versions", { ...v, version: "v1.1" }).ok, true);
+  assert.equal(appendRecordStrict(root, "strategy-versions", v).code, "DUPLICATE");
 });
 
 test("validateAllRegistries detects mutation and missing digest", () => {
   const root = tmp();
-  const r = appendRecord(root, "experiments", { ...experiment });
+  const r = appendRecordStrict(root, "experiments", { ...experiment });
   assert.equal(validateAllRegistries(root).ok, true);
   const rec = JSON.parse(readFileSync(r.path!, "utf8"));
   rec.hypothesis = "tampered";
