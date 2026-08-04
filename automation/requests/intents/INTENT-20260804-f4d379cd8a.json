@@ -1,0 +1,11 @@
+{
+  "intentSchemaVersion": "research-dispatch-intent-v1",
+  "intentId": "INTENT-20260804-f4d379cd8a",
+  "taskId": "TASK-N2-005",
+  "requestedAction": "run-task",
+  "safetyLevel": "L0",
+  "expectedAuthoritySha": "ece4298",
+  "maxDurationSeconds": 1800,
+  "requestedBy": "chatgpt-scheduled-task",
+  "requestReference": "e2e-holdout-freeze"
+}
