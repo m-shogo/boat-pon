@@ -1,0 +1,28 @@
+{
+  "experimentId": "EXP-example-001",
+  "researchQuestion": "市場残差は将来収益と相関するか",
+  "rationale": "効率的市場からの逸脱を探索",
+  "hypothesis": "締切前オッズ残差が正の期待値を持つ",
+  "dataSnapshot": "n2-inventory-v1",
+  "trialFamilyId": "TF-market-residual",
+  "totalTrialCount": 12,
+  "testedConditions": 12,
+  "discoveryPeriod": "..2022-01",
+  "validationPeriod": "2022-01..2024-01",
+  "holdoutPolicy": "untouched-2-races",
+  "primaryMetric": "logloss",
+  "secondaryMetrics": [
+    "roi_lower_bound",
+    "clv"
+  ],
+  "minimumSample": 5000,
+  "stoppingRule": "n>=5000 or family exhausted",
+  "successCondition": "logloss<market_baseline & roi_lb>1.0",
+  "rejectionCondition": "no calibration improvement",
+  "multiplicityFamily": "TF-market-residual",
+  "evidenceStage": "discovery",
+  "status": "completed",
+  "createdAt": "2026-08-05T00:00:00Z",
+  "_digest": "f9d1afbb17c22c9444c02389db0b9a6fbdb809c5fdce1388501a55f2ed7d9f31",
+  "_recordedAt": "2026-08-04T15:35:45.160Z"
+}

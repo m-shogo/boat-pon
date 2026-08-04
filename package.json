@@ -20,7 +20,7 @@
     "import:kyotei24": "tsx scripts/import-kyotei24.ts",
     "db:init": "tsx scripts/init-db.ts",
     "pretest": "npm run fable:build",
-    "test": "node --test --import tsx src/domain/*.test.ts src/research-replay/*.test.ts src/automation/*.test.ts src/view-models/*.test.ts src/presentation/*.test.ts src/renderers/fable/*.test.ts src/renderers/fable-fsharp/*.test.ts",
+    "test": "node --test --import tsx src/domain/*.test.ts src/research-replay/*.test.ts src/automation/*.test.ts src/research/governance/*.test.ts src/view-models/*.test.ts src/presentation/*.test.ts src/renderers/fable/*.test.ts src/renderers/fable-fsharp/*.test.ts",
     "research:replay:canary": "tsx scripts/research-replay.ts canary",
     "research:manifest:dry-run": "tsx scripts/research-replay.ts manifest",
     "research:raw-cache:audit": "tsx scripts/research-replay.ts audit",

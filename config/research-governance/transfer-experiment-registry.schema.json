@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "transfer-experiment.schema.json",
+  "title": "Transfer Experiment",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "transferId",
+    "sourceDiscoveryId",
+    "targetStrategyId",
+    "baseVersion",
+    "candidateVersion",
+    "untouchedHoldout",
+    "shadowForward",
+    "result"
+  ],
+  "properties": {
+    "transferId": {
+      "type": "string",
+      "pattern": "^XFER-[0-9A-Za-z._-]{1,80}$"
+    },
+    "sourceDiscoveryId": {
+      "type": "string",
+      "pattern": "^DISC-"
+    },
+    "targetStrategyId": {
+      "type": "string",
+      "pattern": "^STRAT-"
+    },
+    "result": {
+      "enum": [
+        "pending",
+        "accepted",
+        "rejected"
+      ]
+    }
+  }
+}

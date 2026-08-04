@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "rejection.schema.json",
+  "title": "Rejection",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "rejectionId",
+    "subjectType",
+    "subjectId",
+    "reason",
+    "evidenceStage"
+  ],
+  "properties": {
+    "rejectionId": {
+      "type": "string",
+      "pattern": "^REJ-[0-9A-Za-z._-]{1,80}$"
+    },
+    "subjectType": {
+      "enum": [
+        "experiment",
+        "discovery",
+        "strategy",
+        "transfer"
+      ]
+    },
+    "subjectId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidenceStage": {
+      "enum": [
+        "exploration",
+        "discovery",
+        "validation",
+        "holdout",
+        "shadow_forward",
+        "future_only"
+      ]
+    }
+  }
+}

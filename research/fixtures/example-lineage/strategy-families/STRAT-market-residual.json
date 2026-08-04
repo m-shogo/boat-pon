@@ -1,0 +1,22 @@
+{
+  "strategyId": "STRAT-market-residual",
+  "strategyName": "market residual",
+  "coreThesis": "市場価格の残差に期待値がある",
+  "mechanismHypothesis": "遅い情報の価格反映遅延",
+  "parentExperimentIds": [
+    "EXP-example-001"
+  ],
+  "knowledgePolicy": "OPEN_COMMONS",
+  "cleanRoomPolicy": {
+    "isolated": false,
+    "allowedShareClasses": [
+      "GLOBAL_FACT",
+      "RESEARCH_METHOD",
+      "REUSABLE_CANDIDATE"
+    ]
+  },
+  "decisionSystem": "market_intelligence",
+  "createdAt": "2026-08-05T00:00:00Z",
+  "_digest": "c138a4b2a0cf4d93ef5459a1ff2117a78da3108453ffce880562872d17057806",
+  "_recordedAt": "2026-08-04T15:35:45.163Z"
+}

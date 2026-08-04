@@ -1,0 +1,21 @@
+{
+  "transferId": "XFER-example-001",
+  "sourceDiscoveryId": "DISC-example-001",
+  "targetStrategyId": "STRAT-market-residual",
+  "baseVersion": "v0.1",
+  "candidateVersion": "v0.2",
+  "historicalComparison": "logloss -0.3%",
+  "validation": "pending",
+  "untouchedHoldout": "未適用",
+  "shadowForward": "未開始",
+  "calibration": "pending",
+  "roiLowerBound": null,
+  "maxHitRemoval": "top2-exclusion 予定",
+  "drawdown": "pending",
+  "coverage": "pending",
+  "diversityImpact": "未測定",
+  "result": "pending",
+  "createdAt": "2026-08-05T00:00:00Z",
+  "_digest": "c82bfdf674b9ebd707910b26816298d2d97dfe40bde88d859e679c68e80cc756",
+  "_recordedAt": "2026-08-04T15:35:45.163Z"
+}
