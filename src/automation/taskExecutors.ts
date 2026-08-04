@@ -57,7 +57,8 @@ function assertQuiescent(sidecarPath: string): string[] {
   return blocks;
 }
 
-function loadFreeze(repoRoot: string): Record<string, any> | null {
+// Runtimeではnullを返し得るため全callerが明示guardする。戻り型anyはguard後の既存契約を維持するための境界型。
+function loadFreeze(repoRoot: string): any {
   const path = join(repoRoot, "reports/n2/corrected-settlement-truth-freeze.json");
   return existsSync(path) ? JSON.parse(readFileSync(path, "utf8")) : null;
 }
