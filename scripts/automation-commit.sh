@@ -45,8 +45,12 @@ git config user.email "automation@boat-pon.invalid"
 
 # 結果ファイルを先に stash して branch 切替の衝突を避ける（checkout が
 # "local changes would be overwritten" で失敗するのを防ぐ）。
-git stash push --include-untracked --quiet -- "automation/" "reports/" "docs/automation/" 2>/dev/null || true
-STASHED=$(git stash list | head -1 | grep -c "stash@{0}" || true)
+# 変更が無ければ stash しない（stash pop の失敗を避ける）。
+STASHED=0
+if [ -n "$(git status --porcelain)" ]; then
+  git stash push --include-untracked --quiet -m "automation-results" || { echo "::error::stash failed"; exit 1; }
+  STASHED=1
+fi
 
 git fetch origin --quiet
 if git show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then

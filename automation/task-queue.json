@@ -1,6 +1,6 @@
 {
   "queueSchemaVersion": "research-task-queue-v1",
-  "updatedAt": "2026-08-04T04:39:10.894Z",
+  "updatedAt": "2026-08-04T04:41:07.753Z",
   "note": "ChatGPT Scheduled Task が次の 1 task を選ぶための queue。1 dispatch = 1 task。L3 は事前 grant 必須、L4 は常時拒否。",
   "tasks": [
     {
@@ -19,7 +19,7 @@
         "reports/automation/history/<runId>-dataset-canary.json"
       ],
       "maxDurationSeconds": 3600,
-      "status": "READY",
+      "status": "PASS",
       "checkpoint": null,
       "attemptCount": 0,
       "lastFailure": null,
@@ -28,14 +28,15 @@
         "retryableOnly": true
       },
       "createdAt": "2026-08-03T12:57:25.000Z",
-      "updatedAt": "2026-08-04T01:05:19.748Z",
+      "updatedAt": "2026-08-04T04:41:07.752Z",
       "evidenceLinks": [
         "reports/n2/settlement-reparse-apply.json",
         "reports/automation/history/local-1785804764069-TASK-N2-001.json",
         "reports/n2/n2-dataset-canary.json",
-        "reports/n2/n2-dataset-canary.md"
+        "reports/n2/n2-dataset-canary.md",
+        "reports/automation/history/30878214593-TASK-N2-001.json"
       ],
-      "nextDecision": "依存 task を次回 dispatch の候補にする（自動起動しない）",
+      "nextDecision": "runner 実行で PASS（digest 5799f38c…）。依存 task を次回 dispatch 候補にする",
       "workflowRunId": "local-1785804764069",
       "requestId": "REQ-run-localcanary5",
       "executorVersion": "n2-task-executor-registry-v1",
