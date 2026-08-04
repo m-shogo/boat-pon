@@ -1,6 +1,6 @@
 {
   "queueSchemaVersion": "research-task-queue-v1",
-  "updatedAt": "2026-08-03T12:57:25.000Z",
+  "updatedAt": "2026-08-04T00:52:44.725Z",
   "note": "ChatGPT Scheduled Task が次の 1 task を選ぶための queue。1 dispatch = 1 task。L3 は事前 grant 必須、L4 は常時拒否。",
   "tasks": [
     {
@@ -10,19 +10,36 @@
       "taskType": "dataset-canary",
       "safetyLevel": "L2",
       "dependencies": [],
-      "authoritySha": null,
-      "requiredInputs": ["corrected settlement truth freeze", "official_program lineage"],
-      "expectedOutputs": ["reports/automation/history/<runId>-dataset-canary.json"],
+      "authoritySha": "0d61129",
+      "requiredInputs": [
+        "corrected settlement truth freeze",
+        "official_program lineage"
+      ],
+      "expectedOutputs": [
+        "reports/automation/history/<runId>-dataset-canary.json"
+      ],
       "maxDurationSeconds": 3600,
-      "status": "READY",
+      "status": "PASS",
       "checkpoint": null,
-      "attemptCount": 0,
+      "attemptCount": 1,
       "lastFailure": null,
-      "retryPolicy": { "maxAttempts": 3, "retryableOnly": true },
+      "retryPolicy": {
+        "maxAttempts": 3,
+        "retryableOnly": true
+      },
       "createdAt": "2026-08-03T12:57:25.000Z",
-      "updatedAt": "2026-08-03T12:57:25.000Z",
-      "evidenceLinks": ["reports/n2/settlement-reparse-apply.json"],
-      "nextDecision": "canary PASS なら年代別 coverage 拡大を次 task 候補にする"
+      "updatedAt": "2026-08-04T00:52:44.725Z",
+      "evidenceLinks": [
+        "reports/n2/settlement-reparse-apply.json",
+        "reports/automation/history/local-1785804764069-TASK-N2-001.json",
+        "reports/n2/n2-dataset-canary.json",
+        "reports/n2/n2-dataset-canary.md"
+      ],
+      "nextDecision": "依存 task を次回 dispatch の候補にする（自動起動しない）",
+      "workflowRunId": "local-1785804764069",
+      "requestId": "REQ-run-localcanary5",
+      "executorVersion": "n2-task-executor-registry-v1",
+      "resultDigest": "5799f38c4eb273632b204be0686190fbd1b80f57c7177f1b1f8c326b31ee91d4"
     },
     {
       "taskId": "TASK-N2-002",
@@ -30,16 +47,25 @@
       "objective": "訂正後 settlement で eligible 率・年代別 drift を read-only 集計し、旧 96.03% 系数値を置換する",
       "taskType": "readonly-analysis",
       "safetyLevel": "L0",
-      "dependencies": ["TASK-N2-001"],
+      "dependencies": [
+        "TASK-N2-001"
+      ],
       "authoritySha": null,
-      "requiredInputs": ["corrected settlement truth freeze"],
-      "expectedOutputs": ["reports/automation/history/<runId>-eligibility.json"],
+      "requiredInputs": [
+        "corrected settlement truth freeze"
+      ],
+      "expectedOutputs": [
+        "reports/automation/history/<runId>-eligibility.json"
+      ],
       "maxDurationSeconds": 1800,
       "status": "READY",
       "checkpoint": null,
       "attemptCount": 0,
       "lastFailure": null,
-      "retryPolicy": { "maxAttempts": 3, "retryableOnly": true },
+      "retryPolicy": {
+        "maxAttempts": 3,
+        "retryableOnly": true
+      },
       "createdAt": "2026-08-03T12:57:25.000Z",
       "updatedAt": "2026-08-03T12:57:25.000Z",
       "evidenceLinks": [],
@@ -53,17 +79,26 @@
       "safetyLevel": "L0",
       "dependencies": [],
       "authoritySha": null,
-      "requiredInputs": ["reports/n2/unexpected-additions-audit.json"],
-      "expectedOutputs": ["reports/automation/history/<runId>-win-refund-omission.json"],
+      "requiredInputs": [
+        "reports/n2/unexpected-additions-audit.json"
+      ],
+      "expectedOutputs": [
+        "reports/automation/history/<runId>-win-refund-omission.json"
+      ],
       "maxDurationSeconds": 1800,
       "status": "READY",
       "checkpoint": null,
       "attemptCount": 0,
       "lastFailure": null,
-      "retryPolicy": { "maxAttempts": 2, "retryableOnly": true },
+      "retryPolicy": {
+        "maxAttempts": 2,
+        "retryableOnly": true
+      },
       "createdAt": "2026-08-03T12:57:25.000Z",
       "updatedAt": "2026-08-03T12:57:25.000Z",
-      "evidenceLinks": ["reports/n2/unexpected-additions-audit.json"],
+      "evidenceLinks": [
+        "reports/n2/unexpected-additions-audit.json"
+      ],
       "nextDecision": "別 defect と確定したら独立 approval package へ進む（自動適用しない）"
     }
   ]

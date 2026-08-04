@@ -1,0 +1,79 @@
+{
+  "runId": "local-1785804764069",
+  "requestId": "REQ-run-localcanary5",
+  "taskId": "TASK-N2-001",
+  "taskType": "dataset-canary",
+  "safetyLevel": "L2",
+  "executorVersion": "n2-task-executor-registry-v1",
+  "startedAt": "2026-08-04T00:52:41.999Z",
+  "completedAt": "2026-08-04T00:52:44.725Z",
+  "executed": true,
+  "result": "PASS",
+  "blocks": [],
+  "outputs": [
+    "reports/n2/n2-dataset-canary.json",
+    "reports/n2/n2-dataset-canary.md"
+  ],
+  "outputDigest": "5799f38c4eb273632b204be0686190fbd1b80f57c7177f1b1f8c326b31ee91d4",
+  "summary": {
+    "datasetContractVersion": "n2-dataset-contract-v1",
+    "targetContractVersion": "n2-target-contract-v2",
+    "featurePitContractVersion": "n2-feature-pit-contract-v2",
+    "correctedTruthVersion": "n2-corrected-settlement-truth-v1",
+    "sourceSettlementIdentity": "353562988ef0d5a3f791fa19bfa3b1751fafcd9dd67738d1326895604f023730",
+    "cohort": {
+      "definition": "fixed-month cohort: 2024-06 (deterministic, no random sampling)",
+      "fromRaceKey": "2024-06-01:",
+      "toRaceKeyExclusive": "2024-07-01:"
+    },
+    "raceCount": 4662,
+    "candidateCount": 32626,
+    "correctedTruthCandidates": 25,
+    "eligibleCount": 32622,
+    "excludedCount": 4,
+    "exclusionReasons": {
+      "excluded_refunded": 4
+    },
+    "heldOutExcluded": 0,
+    "heldOutRaces": [
+      "2014-03-28:08:R1",
+      "2014-03-28:17:R2"
+    ],
+    "sourceDuplicateExcluded": 0,
+    "supersededExcluded": 21,
+    "eligibleRate": 0.999877398393919,
+    "byStatus": {
+      "settled": 32622,
+      "refunded": 4
+    },
+    "byBetType": {
+      "exacta": 4662,
+      "place": 4662,
+      "quinella": 4662,
+      "trifecta": 4662,
+      "trio": 4658,
+      "wide": 4658,
+      "win": 4662
+    },
+    "pit": {
+      "mode": "historical",
+      "featureSourcesRead": [],
+      "postRaceFeatureRead": false,
+      "result": "PASS"
+    },
+    "leakage": {
+      "sameRaceLabelBorrow": false,
+      "futureCandidateRead": false,
+      "result": "PASS"
+    },
+    "timeSplit": {
+      "policy": "time-based, race-level group; canary is a single fixed month and is NOT a train/test split"
+    },
+    "featureAvailability": "NOT_APPLICABLE (label-only canary; feature join is a later task)",
+    "missingness": {
+      "note": "settlement labels only; feature missingness is out of scope for this canary"
+    }
+  },
+  "authoritySha": "0d61129",
+  "elapsedMs": 2726
+}
