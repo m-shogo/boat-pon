@@ -167,6 +167,7 @@ try {
         .filter(Boolean),
     ).length === 0,
     localHeadSha: git("rev-parse", "HEAD"),
+    parentShas: (() => { try { return [git("rev-parse", "HEAD^")]; } catch { return []; } })(),
     originHeadSha: (() => { try { git("fetch", "origin", "--quiet"); return git("rev-parse", "origin/main"); } catch { return git("rev-parse", "HEAD"); } })(),
     activeWal: existsSync(walPath) && statSync(walPath).size > 0,
     freeDiskBytes: Number(st.bavail) * Number(st.bsize),

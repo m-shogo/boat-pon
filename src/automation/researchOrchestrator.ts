@@ -145,6 +145,8 @@ export type PreflightInput = {
   paused: boolean;
   workingTreeClean: boolean;
   localHeadSha: string;
+  /** HEAD の親 SHA（request commit で main が進んだ場合の authority 許容範囲） */
+  parentShas?: string[];
   originHeadSha: string;
   activeWal: boolean;
   freeDiskBytes: number;
@@ -164,9 +166,14 @@ export function preflight(input: PreflightInput): PreflightResult {
   if (input.paused) blocks.push("AUTOMATION_PAUSED");
   if (!input.workingTreeClean) blocks.push("DIRTY_WORKING_TREE");
   if (input.localHeadSha !== input.originHeadSha) blocks.push("GIT_DRIFT_LOCAL_VS_ORIGIN");
-  if (!input.localHeadSha.startsWith(input.authoritySha) && !input.authoritySha.startsWith(input.localHeadSha)) {
-    blocks.push("AUTHORITY_SHA_MISMATCH");
-  }
+  // authority SHA は HEAD だけでなく、その親（request commit の直前）も許容する。
+  // request file を commit する行為自体が main を 1 つ進めるため、request が参照した
+  // authority は正当に「HEAD の親」になり得る。これより古い authority は BLOCK する。
+  const acceptableAuthority = [input.localHeadSha, ...(input.parentShas ?? [])].filter(Boolean);
+  const authorityOk = acceptableAuthority.some(
+    (sha) => sha.startsWith(input.authoritySha) || input.authoritySha.startsWith(sha),
+  );
+  if (!authorityOk) blocks.push("AUTHORITY_SHA_MISMATCH");
   if (input.activeWal) blocks.push("ACTIVE_WAL");
   if (input.freeDiskBytes < input.minFreeDiskBytes) blocks.push("INSUFFICIENT_DISK");
   if (input.queueDigest !== input.requestQueueDigest) blocks.push("QUEUE_DIGEST_MISMATCH");

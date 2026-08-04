@@ -111,6 +111,17 @@ test("preflight blocks emergency stop / pause / dirty tree / drift / WAL / disk 
   assert.ok(pf({ alreadyProcessedRequestIds: ["REQ-0001"] }).blocks.includes("REQUEST_REPLAY"));
 });
 
+test("authority SHA accepts HEAD or its parent (request commit advances main)", () => {
+  const head = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  const parent = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+  // HEAD 一致
+  assert.deepEqual(pf({ localHeadSha: head, originHeadSha: head, parentShas: [parent], authoritySha: head.slice(0,7) }).blocks, []);
+  // parent 一致（request を commit して main が 1 つ進んだ正当ケース）
+  assert.deepEqual(pf({ localHeadSha: head, originHeadSha: head, parentShas: [parent], authoritySha: parent.slice(0,7) }).blocks, []);
+  // それより古い authority は BLOCK
+  assert.ok(pf({ localHeadSha: head, originHeadSha: head, parentShas: [parent], authoritySha: "cccccccc".slice(0,7) }).blocks.includes("AUTHORITY_SHA_MISMATCH"));
+});
+
 test("task status transitions are constrained", () => {
   assert.equal(canTransition("READY", "CLAIMED"), true);
   assert.equal(canTransition("CLAIMED", "RUNNING"), true);
