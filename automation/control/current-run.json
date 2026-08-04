@@ -1,21 +1,21 @@
 {
   "runSchemaVersion": "current-run-v1",
-  "updatedAt": "2026-08-04T12:59:20.936Z",
+  "updatedAt": "2026-08-04T13:07:47.967Z",
   "lastResult": "PASS",
-  "lastRequestId": "REQ-20260804-f4d379cd8a",
-  "lastIntentId": "INTENT-20260804-f4d379cd8a",
-  "lastTaskId": "TASK-N2-005",
+  "lastRequestId": "REQ-20260804-72b865c0e6",
+  "lastIntentId": "INTENT-20260804-72b865c0e6",
+  "lastTaskId": "TASK-PLANNER-NEXT",
   "lastSafetyLevel": "L0",
-  "authoritySha": "ace1d6a33b6b5f5d27635735f1fce28cd958372a",
-  "stateVersion": 8,
-  "stateDigest": "277f6589b187a36da506b3892e257bbb1004ba8d956eef6461e4119871951440",
+  "authoritySha": "c61ad1d28931dd62b43258c856381c4d85e536b1",
+  "stateVersion": 12,
+  "stateDigest": "b66d00f2edfdc58b1a6eddc5d414e56f3ead9c30e5978d838aa7cb781e20fa79",
   "blocks": [],
-  "elapsedMs": 877,
-  "evidencePath": "reports/automation/history/30911554985-TASK-N2-005.json",
+  "elapsedMs": 671,
+  "evidencePath": "reports/automation/history/30912235903-TASK-PLANNER-NEXT.json",
   "outputs": [
-    "reports/n2/n2-holdout-freeze.json"
+    "automation/control/planner-candidates.json"
   ],
-  "outputDigest": "ddb081c1048a3ee017339503a2644403014f39077962599f5702b31c34c2dddc",
+  "outputDigest": "e0c56315c6bbe2a5df2efd668a69fc3334340a82af84358a47337d8b922da53f",
   "taskStatus": "PASS",
   "nextCandidate": "TASK-N2-006: settlement coverage / missingness audit（自動起動しない。次回 dispatch で 1 回だけ依頼する）"
 }
