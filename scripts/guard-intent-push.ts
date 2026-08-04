@@ -28,12 +28,30 @@ const commitAuthor = (process.env.COMMIT_AUTHOR ?? "").trim();
 const commitCommitter = (process.env.COMMIT_COMMITTER ?? "").trim();
 const eventName = (process.env.EVENT ?? "").trim();
 const repo = (process.env.REPO ?? "").trim();
+// connector probe 用: 観測した actor/author/committer/event を sanitized evidence として
+// 常に step summary へ記録する（allowlist 判定の前に。actor 未許可でも安全に残る）。
+const sanitize = (s: string): string => s.replace(/[^0-9A-Za-z._\-\[\]]/g, "").slice(0, 64);
+const actorEvidence = {
+  observedActor: sanitize(actor), observedAuthor: sanitize(commitAuthor), observedCommitter: sanitize(commitCommitter),
+  event: sanitize(eventName), repository: sanitize(repo), afterSha: after.slice(0, 12),
+};
+if (process.env.GITHUB_STEP_SUMMARY) {
+  writeFileSync(process.env.GITHUB_STEP_SUMMARY,
+    `### boat-pon actor evidence (connector probe)\n\n\`\`\`json\n${JSON.stringify(actorEvidence, null, 2)}\n\`\`\`\n`
+    + `\n> 未許可 actor の場合はここに表示された \`observedActor\` を config/actor-allowlist-policy.json に明示追加する。\n`,
+    { flag: "a" });
+}
+out("observed_actor", actorEvidence.observedActor);
+out("observed_author", actorEvidence.observedAuthor);
+out("observed_committer", actorEvidence.observedCommitter);
+
 if (repo !== actorPolicy.repository) fail(`repo not allowed: ${repo}`);
 if (eventName !== "push") fail(`only push events are allowed (got ${eventName})`);
+if (actorPolicy.rules?.pullRequestEventAllowed === false && /pull_request/.test(eventName)) fail("pull_request events are not allowed");
 const allowed = new Set<string>((actorPolicy.allowedActors ?? []).filter((a: any) => a.verified === true).map((a: any) => a.actor));
 if (!allowed.has(actor)) {
-  fail(`actor not in verified allowlist: ${actor}. actor/author=${commitAuthor}/committer=${commitCommitter}. `
-    + `probe intent で actor を確認し config/actor-allowlist-policy.json に明示追加するまで許可しない。`);
+  fail(`actor not in verified allowlist: ${actor}. observed actor/author=${actorEvidence.observedAuthor}/committer=${actorEvidence.observedCommitter}. `
+    + `probe intent で actor を確認し config/actor-allowlist-policy.json に明示追加するまで許可しない（safe BLOCK）。`);
 }
 
 // ---- push diff: 追加された intent が exactly one であること ----
