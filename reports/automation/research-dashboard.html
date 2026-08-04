@@ -1,36 +1,87 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>boat-pon automation dashboard</title><style>
-:root{color-scheme:light dark}body{font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:auto;max-width:1100px;padding:24px}
-h1{font-size:20px}h2{font-size:15px;border-bottom:1px solid #8884;padding-bottom:4px;margin-top:24px}
-table{border-collapse:collapse;width:100%;font-size:13px}th,td{border:1px solid #8884;padding:5px 8px;text-align:left}th{background:#8881}
-.tw{overflow-x:auto}code{font-size:12px}.warn{background:#f39c1222;border:1px solid #f39c12;border-radius:8px;padding:10px 14px}
-.ok{background:#2ecc7122;border:1px solid #2ecc71;border-radius:8px;padding:10px 14px}
-.kpi{display:flex;flex-wrap:wrap;gap:12px;margin:12px 0}.card{border:1px solid #8884;border-radius:10px;padding:10px 14px;min-width:140px}
-.card b{display:block;font-size:18px}.card span{color:#888;font-size:12px}.lg{color:#888;font-size:11px}
-</style></head><body>
-<h1>boat-pon automation dashboard</h1>
-<p class="ok">1 dispatch = 1 task。schedule / cron / launchd hourly / daemon loop は<b>存在しない</b>。
-毎時判断は ChatGPT Scheduled Task 側が担当し、runner は job 待機のみ。</p>
+:root{color-scheme:light dark}body{font-family:ui-sans-serif,system-ui,-apple-system,"Hiragino Sans",sans-serif;margin:0;padding:1.2rem;line-height:1.5}
+h1{font-size:1.3rem}h2{font-size:1.05rem;margin-top:1.6rem;border-bottom:2px solid #8884;padding-bottom:.2rem}
+table{border-collapse:collapse;width:100%;margin:.5rem 0;font-size:.86rem}th,td{border:1px solid #8884;padding:.3rem .5rem;text-align:left;vertical-align:top}
+th{background:#8881;white-space:nowrap}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1rem}
+.pass{color:#0a0;font-weight:600}.ready{color:#06c;font-weight:600}.blocked{color:#c60}.fail{color:#c00;font-weight:600}.other{color:#888}
+.pill{display:inline-block;padding:.1rem .5rem;border-radius:1rem;background:#8882;font-size:.8rem}code{font-size:.82rem}
+.note{color:#888;font-size:.8rem}.overflow{overflow-x:auto}</style></head><body>
+<h1>boat-pon automation research dashboard</h1>
+<p class="note">生成: 2026-08-04T13:06:30.866Z / 1 dispatch = 1 task / schedule・cron・daemon なし / 状態正本 = automation branch</p>
 
-<div class="kpi">
-<div class="card"><b>online</b><span>runner status</span></div>
-<div class="card"><b>PASS</b><span>last run result</span></div>
-<div class="card"><b>0</b><span>READY tasks</span></div>
-<div class="card"><b>0</b><span>edge ideas</span></div>
-<div class="card"><b>normal</b><span>control state</span></div>
+<div class="grid">
+<div><h2>Control plane</h2><table>
+<tr><th>main SHA</th><td><code>6f90faab1a21</code></td></tr>
+<tr><th>automation branch SHA</th><td><code>3877b18b3031</code></td></tr>
+<tr><th>task catalog version</th><td>2026-08-04-n2-foundation-v1</td></tr>
+<tr><th>queue state version</th><td>7</td></tr>
+<tr><th>processed intents</th><td>2</td></tr>
+<tr><th>processed requests</th><td>4</td></tr>
+<tr><th>idempotency keys</th><td>2</td></tr>
+<tr><th>last result</th><td><b>PASS</b></td></tr>
+<tr><th>next READY (dispatchable)</th><td>TASK-N2-006, TASK-PLANNER-NEXT</td></tr>
+<tr><th>planner status</th><td>0 candidates</td></tr>
+</table></div>
+
+<div><h2>Runner plane</h2><table>
+<tr><th>online</th><td>online</td></tr>
+<tr><th>busy</th><td>false</td></tr>
+<tr><th>last run</th><td>NOT_AVAILABLE</td></tr>
+<tr><th>last request</th><td>REQ-20260804-f4d379cd8a</td></tr>
+<tr><th>last intent</th><td>INTENT-20260804-f4d379cd8a</td></tr>
+<tr><th>last task</th><td>TASK-N2-005</td></tr>
+<tr><th>elapsed</th><td>877 ms</td></tr>
+<tr><th>lock</th><td>free</td></tr>
+</table></div>
+
+<div><h2>Safety plane</h2><table>
+<tr><th>allowed safety</th><td>L0, L1, L2</td></tr>
+<tr><th>L3 grants</th><td>existing-grant-required（無ければ exit 3）</td></tr>
+<tr><th>L4</th><td>DISABLED（常時拒否）</td></tr>
+<tr><th>sidecar write</th><td>NONE（read-only executors）</td></tr>
+<tr><th>WAL</th><td>empty</td></tr>
+<tr><th>emergency stop</th><td>false</td></tr>
+<tr><th>paused</th><td>false</td></tr>
+<tr><th>replay guard</th><td>processed-intents / processed-requests + idempotency key</td></tr>
+<tr><th>actor allowlist</th><td>m-shogo <span class='note'>(wildcard/org/fork 禁止)</span></td></tr>
+<tr><th>corrected truth</th><td>n2-corrected-settlement-truth-v1</td></tr>
+</table></div>
 </div>
 
-<h2>Runner</h2><div class="tw"><table><tr><td>registered</td><td><code>YES</code></td></tr><tr><td>name</td><td><code>boat-pon-mac-local</code></td></tr><tr><td>status</td><td><code>online</code></td></tr><tr><td>busy</td><td><code>false</code></td></tr><tr><td>labels</td><td><code>self-hosted, macOS, ARM64, boat-pon-local</code></td></tr><tr><td>service</td><td><code>launchd (waits for jobs only)</code></td></tr><tr><td>latest workflow</td><td><code>boat-pon-local-research.yml (workflow_dispatch only)</code></td></tr><tr><td>latest request</td><td><code>REQ-run-local003a</code></td></tr><tr><td>latest task</td><td><code>TASK-N2-003</code></td></tr><tr><td>lock</td><td><code>free</code></td></tr><tr><td>emergency stop</td><td><code>false</code></td></tr><tr><td>paused</td><td><code>false</code></td></tr></table></div>
+<h2>Research tasks（定義=main / 状態=automation branch）</h2>
+<p><span class="pill">PASS 5</span> <span class="pill">READY 2</span> <span class="pill">BLOCKED_EXECUTOR_PENDING 9</span> <span class="pill">FAILED 0</span></p>
+<div class="overflow"><table><thead><tr><th>taskId</th><th>taskType</th><th>safety</th><th>status</th><th>deps</th><th>resultDigest</th></tr></thead><tbody>
+<tr><td>TASK-N2-001</td><td>dataset-canary</td><td>L2</td><td class="pass">PASS</td><td>-</td><td>5799f38c4eb2</td></tr>
+<tr><td>TASK-N2-002</td><td>readonly-analysis</td><td>L0</td><td class="pass">PASS</td><td>TASK-N2-001</td><td>NOT_AVAILABLE</td></tr>
+<tr><td>TASK-N2-003</td><td>readonly-audit</td><td>L0</td><td class="pass">PASS</td><td>-</td><td>NOT_AVAILABLE</td></tr>
+<tr><td>TASK-N2-004</td><td>dataset-inventory</td><td>L0</td><td class="pass">PASS</td><td>-</td><td>5661e0072617</td></tr>
+<tr><td>TASK-N2-005</td><td>holdout-freeze</td><td>L0</td><td class="pass">PASS</td><td>TASK-N2-004</td><td>ddb081c1048a</td></tr>
+<tr><td>TASK-N2-006</td><td>feature-coverage-audit</td><td>L0</td><td class="ready">READY</td><td>TASK-N2-004</td><td>NOT_AVAILABLE</td></tr>
+<tr><td>TASK-PLANNER-NEXT</td><td>planner-next</td><td>L0</td><td class="ready">READY</td><td>-</td><td>NOT_AVAILABLE</td></tr>
+<tr><td>TASK-N2-010</td><td>dataset-expand</td><td>L0</td><td class="blocked">BLOCKED_EXECUTOR_PENDING</td><td>TASK-N2-004</td><td>NOT_AVAILABLE</td></tr>
+<tr><td>TASK-N2-011</td><td>pit-audit</td><td>L0</td><td class="blocked">BLOCKED_EXECUTOR_PENDING</td><td>TASK-N2-010</td><td>NOT_AVAILABLE</td></tr>
+<tr><td>TASK-N2-020</td><td>baseline-market</td><td>L0</td><td class="blocked">BLOCKED_EXECUTOR_PENDING</td><td>TASK-N2-011, TASK-N2-005</td><td>NOT_AVAILABLE</td></tr>
+<tr><td>TASK-N2-021</td><td>baseline-historical</td><td>L0</td><td class="blocked">BLOCKED_EXECUTOR_PENDING</td><td>TASK-N2-011, TASK-N2-005</td><td>NOT_AVAILABLE</td></tr>
+<tr><td>TASK-N2-022</td><td>baseline-common-cohort</td><td>L0</td><td class="blocked">BLOCKED_EXECUTOR_PENDING</td><td>TASK-N2-020, TASK-N2-021</td><td>NOT_AVAILABLE</td></tr>
+<tr><td>TASK-N2-030</td><td>evaluation-metrics</td><td>L0</td><td class="blocked">BLOCKED_EXECUTOR_PENDING</td><td>TASK-N2-022</td><td>NOT_AVAILABLE</td></tr>
+<tr><td>TASK-N2-040</td><td>edge-hypothesis-scan</td><td>L0</td><td class="blocked">BLOCKED_EXECUTOR_PENDING</td><td>TASK-N2-030</td><td>NOT_AVAILABLE</td></tr>
+<tr><td>TASK-N2-041</td><td>edge-historical-test</td><td>L0</td><td class="blocked">BLOCKED_EXECUTOR_PENDING</td><td>TASK-N2-040</td><td>NOT_AVAILABLE</td></tr>
+<tr><td>TASK-N2-042</td><td>confounder-audit</td><td>L0</td><td class="blocked">BLOCKED_EXECUTOR_PENDING</td><td>TASK-N2-041</td><td>NOT_AVAILABLE</td></tr>
+</tbody></table></div>
 
-<h2>GitHub</h2><div class="tw"><table><tr><td>authority SHA</td><td><code>21f620e4a8aa1a8d9d968a8c9324c3ddd50ff0ec</code></td></tr><tr><td>automation branch</td><td><code>automation/boat-pon-research</code></td></tr><tr><td>git write mode</td><td><code>branch-pr</code></td></tr><tr><td>rolling PR</td><td><code>NOT_STARTED (first automation run で作成)</code></td></tr><tr><td>schedule triggers</td><td><code>NONE (禁止・未使用)</code></td></tr></table></div>
+<h2>Planner candidates（自動 dispatch しない）</h2>
+<div class="overflow"><table><thead><tr><th>proposedTaskId</th><th>taskType</th><th>safety</th><th>reason</th></tr></thead><tbody>
+<tr><td colspan="4">NOT_STARTED</td></tr>
+</tbody></table></div>
 
-<h2>Data / settlement</h2><div class="tw"><table><tr><td>settlement snapshot identity</td><td><code>353562988ef0d5a3f791fa19bfa3b1751fafcd9dd67738d1326895604f023730</code></td></tr><tr><td>corrected settlement status</td><td><code>APPLIED (corrected truth)</code></td></tr><tr><td>apply executed</td><td><code>EXECUTED</code></td></tr><tr><td>DB size (bytes)</td><td><code>9762041856</code></td></tr><tr><td>WAL</td><td><code>empty</code></td></tr><tr><td>backup</td><td><code>NOT_AVAILABLE</code></td></tr><tr><td>held-out (not applied)</td><td><code>2 (CONFIRMED_V1_WIN_REFUND_OMISSION)</code></td></tr></table></div>
-
-<h2>N2</h2><div class="tw"><table><tr><td>corrected truth freeze</td><td><code>FROZEN</code></td></tr><tr><td>dataset manifest</td><td><code>NOT_STARTED</code></td></tr><tr><td>canary dataset</td><td><code>NOT_STARTED</code></td></tr><tr><td>coverage</td><td><code>NOT_STARTED</code></td></tr><tr><td>PIT guard</td><td><code>IMPLEMENTED (n2DatasetContract / odds atomic PIT)</code></td></tr><tr><td>leakage guard</td><td><code>IMPLEMENTED (leakage sentinel tests)</code></td></tr><tr><td>holdout vault</td><td><code>NOT_STARTED</code></td></tr><tr><td>baseline model</td><td><code>NOT_STARTED</code></td></tr><tr><td>shadow forward</td><td><code>NOT_STARTED</code></td></tr></table></div>
-
-<h2>Research control plane</h2><div class="tw"><table><tr><td>queued tasks (by status)</td><td><code>{"PASS":3}</code></td></tr><tr><td>edge registry</td><td><code>0 edges {}</code></td></tr><tr><td>experiment registry</td><td><code>0</code></td></tr><tr><td>rejection registry</td><td><code>0</code></td></tr><tr><td>holdout registry</td><td><code>0</code></td></tr><tr><td>run history files</td><td><code>3</code></td></tr></table></div>
-
-<h2>Latest run</h2><div class="tw"><table><tr><td>request ID</td><td><code>REQ-run-local003a</code></td></tr><tr><td>task ID</td><td><code>TASK-N2-003</code></td></tr><tr><td>action</td><td><code>run-task</code></td></tr><tr><td>safety level</td><td><code>L0</code></td></tr><tr><td>result</td><td><code>PASS</code></td></tr><tr><td>blocks</td><td><code>none</code></td></tr><tr><td>evidence</td><td><code>reports/automation/history/local-1785804913314-TASK-N2-003.json</code></td></tr><tr><td>elapsed (ms)</td><td><code>69285</code></td></tr><tr><td>next candidate</td><td><code>no dispatchable READY task</code></td></tr></table></div>
-
-<p class="lg">generated 2026-08-04T04:50:34.048Z · self-contained (no external CDN) · 値が無い項目は NOT_STARTED / NOT_AVAILABLE と表示する</p>
+<h2>Research registries</h2>
+<table>
+<tr><th>edge registry</th><td>0 edges</td></tr>
+<tr><th>experiment registry</th><td>0 experiments</td></tr>
+<tr><th>rejection registry</th><td>0 rejections</td></tr>
+<tr><th>holdout registry</th><td>0 vaults</td></tr>
+<tr><th>shadow-forward</th><td>NOT_STARTED（baseline/evaluation 後）</td></tr>
+</table>
+<p class="note">production 昇格・BUY 条件・app_settings・sidecar write は本 automation の対象外（禁止）。</p>
 </body></html>

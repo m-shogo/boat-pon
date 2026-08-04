@@ -603,3 +603,34 @@ current / blocked:
 next（最優先を1つ）:
 
 1. ChatGPT の Scheduled Task に `docs/chatgpt-scheduled-task-bridge.md` の最終 prompt を毎時で登録する（第一経路 = request file commit）。
+
+## 2026-08-04 (2) ChatGPT intent 方式へ移行（hash 不要・状態一本化・planner）
+
+completed（7 課題を解消）:
+
+1. **ChatGPT hash 依存を除去**: 最小 intent（`automation/requests/intents/INTENT-*.json`, hash 無し）を ChatGPT が 1 件 commit するだけ。`queueDigest`/`requestDigest`/canonical request は **ubuntu guard**（`scripts/guard-intent-push.ts`）が生成。`src/automation/dispatchIntent.ts`（validateIntent / buildCanonicalRequest / computeIdempotencyKey）+ schema + CLI。
+2. **actor 検証**: `config/actor-allowlist-policy.json`（versioned, wildcard/org/fork/PR 禁止）。guard は actor/author/committer/event を sanitized evidence として Step Summary + output に常時記録し、未許可は **safe BLOCK**。connector probe で実 actor を確認して追加する運用。
+3. **状態正本の一本化**: main=`automation/task-catalog.json`（immutable 定義）、`automation/boat-pon-research`=`automation/control/`（task-queue-state / processed-intents / processed-requests / current-run / planner-candidates）。main の `automation/task-queue.json` は凍結（`_deprecated`）。二重 queue 廃止。`src/automation/taskCatalog.ts`（merge / dispatchable / stateDigest）。
+4. **replay を branch ledger に束縛**: guard/runner が `processed-intents`/`processed-requests`（branch 正本）を参照。idempotency key（task+defVer+authority+stateVer+executorVer+inputIdentity+safety）。同 key の成功は再実行せず既存 evidence を返す。構造防御（added-only+immutable+1-push-1）併用。
+5. **長期 task catalog**: N2-004 dataset-inventory / N2-005 holdout-freeze / N2-006 feature-coverage-audit（実装済 READY）+ dataset-expand/pit-audit/baseline-*/evaluation/edge-* 9 件を `BLOCKED_EXECUTOR_PENDING`（未実装。READY 化しない）。16 tasks。
+6. **queue planner**: `TASK-PLANNER-NEXT`（recurring, L0）+ `planner-next` executor →`planner-candidates.json`。自動 dispatch・自動実行なし。READY 枯渇時の補充経路。
+7. **intent workflow + CAS**: `.github/workflows/boat-pon-intent-dispatch.yml`（push main intents/*.json、`on.schedule` 無し、`concurrency: boat-pon-local-research`）。runner は branch から control state を materialize→1 task→CAS(base SHA 不変)で branch へ commit。request-file dispatch は DEPRECATED stub 化。
+
+実 runner E2E（intent 経由・実測）:
+
+- dry-run（TASK-N2-004, run 30897974330）→ `DRY_RUN_OK`。
+- **TASK-N2-004 dataset-inventory PASS**（run 30911155086）: 全期間 races **1,194,209** / active candidates **8,217,755** / 24 years、digest 5661e007。state を branch へ commit（stateVersion 4）、ledger 更新。
+- **TASK-N2-005 holdout-freeze PASS**（run 30911554985, dep 満たし後）: deterministic、holdout 2 件恒久固定、time split 宣言。
+- 負例: 既 PASS の TASK-N2-004 再 dispatch → **guard が BLOCK**（`task not READY: TASK-N2-004=PASS`）、runner 起動せず。
+- runner idle・自動再 dispatch なし（1 intent = 1 run）。
+
+検証: full tests（automation modules 追加）PASS、typecheck・build・CI green。schedule/cron/新規 launchd なし。
+
+current:
+
+- 状態: N2-001..005 PASS、**N2-006（feature-coverage-audit, 実装済）+ TASK-PLANNER-NEXT が READY**。次の real READY task あり。
+- held-out 2 件未適用。sidecar/boat.sqlite/app_settings/prediction/BUY/production 未変更。
+
+next（1 手）:
+
+1. このチャットの ChatGPT connector から probe intent（`automation/requests/intents/INTENT-connector-probe-1.json`）を 1 回 commit → 実 actor を `config/actor-allowlist-policy.json` に追加 → 毎時 Scheduled Task 登録。RESULT=CHATGPT_CONNECTOR_PROBE_READY。

@@ -1,54 +1,91 @@
-# boat-pon research dispatch runbook
+# boat-pon research dispatch runbook（intent 方式）
 
 更新: 2026-08-04
 
 ## 経路
 
-| 経路 | trigger | 用途 | 状態 |
-|---|---|---|---|
-| request file commit | `push` main `automation/requests/pending/*.json` | **ChatGPT Scheduled Task の第一経路** | 実装・E2E 実証済み |
-| workflow_dispatch | 手動 / gh CLI | operator の手動実行 | 実装済み（ChatGPT からは起動不可） |
+| 経路 | trigger | 状態 |
+|---|---|---|
+| **intent dispatch**（正式） | `push` main `automation/requests/intents/*.json` | 実装・E2E 実証済み |
+| request-file dispatch | — | **DEPRECATED**（stub 化。push trigger 廃止） |
 
-**`on.schedule` / cron / launchd hourly / daemon は存在しない（禁止）。** 1 dispatch = 1 task。workflow は自分自身を再 dispatch しない。
+**`on.schedule` / cron / launchd hourly / daemon は無い（禁止）。** 1 dispatch = 1 task。workflow は自分を再 dispatch しない。
+
+## 正本の分離（二重 queue なし）
+
+| 置き場所 | 内容 |
+|---|---|
+| **main（immutable 定義）** | `automation/task-catalog.json`（task 定義）、schema、policy、workflow、code、immutable intent |
+| **`automation/boat-pon-research`（可変状態の正本）** | `automation/control/task-queue-state.json`（status）、`processed-intents.json` / `processed-requests.json`（ledger）、`current-run.json`、`planner-candidates.json`、reports、dashboard |
+
+- main の `automation/task-queue.json` は **凍結（`_deprecated`）**。dispatch 判断に使わない。
+- ChatGPT は main catalog + branch state を読んで判断し、状態は runner だけが branch へ書く。
 
 ## 1 回の流れ
 
-1. request JSON を `automation/requests/pending/REQ-<id>.json` として main へ commit（1 件のみ）
-2. `boat-pon-request-file-dispatch.yml` が起動（guard job → self-hosted runner job）
-3. guard（ubuntu）が repo/actor/branch/event/追加件数/path/schema/digest/replay/safety を検証
-4. runner が `automation:validate-request` → `automation:task` を実行（1 task のみ）
-5. executor registry が taskType を解決（未登録は `EXECUTOR_NOT_REGISTERED` で BLOCK）
-6. queue を `READY→CLAIMED→RUNNING→PASS/CONDITIONAL/BLOCKED/FAILED_*` へ atomic 遷移
-7. 結果・証拠を `automation/boat-pon-research` branch へ commit（allowlist path のみ）
-8. request outcome を `automation/requests/completed|failed/` へ記録（replay 防止）
-9. runner は idle へ戻る。**次 task を自動起動しない**
+1. ChatGPT が `automation/requests/intents/INTENT-<id>.json` を main へ 1 件 commit（hash 不要）。
+2. `boat-pon-intent-dispatch.yml` 起動（guard job → runner job、`concurrency: boat-pon-local-research`, `cancel-in-progress:false`）。
+3. **ubuntu guard**（`scripts/guard-intent-push.ts`）:
+   - actor policy（verified allowlist、wildcard/org/fork/PR 禁止）+ actor evidence 記録
+   - exactly-one-added / immutable / path / filename↔intentId / strict schema / size / symlink
+   - `expectedAuthoritySha` を最新 main（after/parent）に前方一致
+   - catalog + branch-state を merge → task 存在・READY・deps PASS・not RUNNING
+   - replay: `processed-intents` / `processed-requests` に intentId/requestId が無い
+   - safety（L4 拒否、L3 grant 必須）
+   - `queueDigest = computeStateDigest(state)`・`requestDigest` を計算し **canonical request** を artifact 出力
+4. **self-hosted runner**（`scripts/run-intent-task.ts`）:
+   - automation branch から control state を materialize（base SHA を記録）
+   - canonical request を再検証 → preflight（emergency/pause/dirty/drift/WAL/disk/queueDigest CAS/replay）
+   - idempotency key（task+defVer+authority+stateVer+executorVer+inputIdentity+safety）。同 key の成功があれば再実行せず既存 evidence を返す
+   - executor registry 解決（未登録は `EXECUTOR_NOT_REGISTERED` で BLOCK）
+   - state を `READY→CLAIMED→RUNNING→PASS/…` と atomic 遷移（`canTransition` 検証、stateVersion++）
+   - recurring task（planner）は成功後 READY へ戻す
+   - evidence / report / ledger を書き、`automation-commit.sh` が **CAS（base SHA 不変）** を確認して branch へ commit
+   - runner は idle。次 task を自動起動しない
 
-## Executor registry
+## Executor registry（allowlist）
 
-| taskType | executor | safety | 出力 |
+| taskType | 状態 | safety | 出力 |
 |---|---|---|---|
-| `dataset-canary` | N2 dataset canary（corrected truth, 固定月 cohort） | L2 | `reports/n2/n2-dataset-canary.json/.md` |
-| `readonly-analysis` | corrected eligible 率・年代 drift 再集計 | L0 | `reports/n2/n2-corrected-eligibility.json` |
-| `readonly-audit` | held-out win 返還欠落の別 defect 調査 | L0 | `reports/n2/n2-win-refund-omission-audit.json` |
+| `dataset-canary` | 実装済 | L2 | reports/n2/n2-dataset-canary.json |
+| `readonly-analysis` | 実装済 | L0 | reports/n2/n2-corrected-eligibility.json |
+| `readonly-audit` | 実装済 | L0 | reports/n2/n2-win-refund-omission-audit.json |
+| `dataset-inventory` | 実装済 | L0 | reports/n2/n2-dataset-inventory.json |
+| `holdout-freeze` | 実装済 | L0 | reports/n2/n2-holdout-freeze.json |
+| `feature-coverage-audit` | 実装済 | L0 | reports/n2/n2-feature-coverage-audit.json |
+| `planner-next` | 実装済（recurring） | L0 | automation/control/planner-candidates.json |
+| `dataset-expand` / `pit-audit` / `baseline-*` / `evaluation-metrics` / `edge-*` / `confounder-audit` | **未実装** | L0 | catalog で `BLOCKED_EXECUTOR_PENDING`（READY 化しない） |
 
-未登録 taskType は `EXECUTOR_NOT_REGISTERED` で BLOCK し、queue は READY のまま維持する。
-**NO_CHANGE を成功扱いにしない。** executor はすべて read-only（実 sidecar へ write しない）。
-実データは `policy.dataRoot`（canonical repo path）から read-only で読む。
+- 全 executor は **read-only**（実 sidecar へ write しない）。実データは `policy.dataRoot`（canonical repo path）から immutable open。
+- arbitrary shell 禁止。free-form prompt を command 化しない。未実装 taskType が READY に混ざらないよう catalog 生成時に検査する。
 
-## 安全境界
+## Replay / idempotency
 
-- L0/L1/L2 のみ自動実行。L3 は既存 approval grant 必須（無ければ exit 3）。**L4 は常時拒否**。
-- guard は fork / PR / 非 owner / 非 main / 複数 request / modified・deleted request / traversal / symlink を拒否。
-- git write は allowlist path のみ、DB/archive/model artifact/大容量は拒否、force push・reset なし。
-- 実行結果は automation branch へ。main へ研究結果を直接 push しない（request file は main、結果は branch）。
+- **intent replay**: `processed-intents.json` の intentId 再利用を guard が拒否。
+- **request replay**: `processed-requests.json` の requestId 再利用を guard/runner が拒否。
+- **構造防御**: intent は added-only + immutable + 1-push-1-file。処理済み intentId の再投入は modified/no-op となり guard が拒否。
+- **idempotency key**: 同 key の成功があれば再実行せず既存 evidence を返す（workflow rerun / failed job rerun の二重実行防止）。
+- **CAS**: materialize 時の branch base SHA から進んでいたら commit を fail-closed（concurrent 変更を clobber しない）。
+
+## Queue planner（枯渇対策・自動実行なし）
+
+- `TASK-PLANNER-NEXT`（recurring, L0）: READY が枯れたとき ChatGPT が選ぶ。`planner-next` executor が
+  `BLOCKED_EXECUTOR_PENDING` 群を次候補として `automation/control/planner-candidates.json` に提案する。
+- planner は **提案のみ**。自動 dispatch・自動実行・無限生成はしない。READY がある間は補充不要。
 
 ## 手動 command
 
 ```bash
-pnpm automation:build-request -- --task-id=TASK-N2-001 --requested-action=run-task --safety-level=L2 --write
-pnpm automation:validate-request -- --request=<path>
-pnpm automation:task -- --request=<path>
-pnpm automation:status
-pnpm automation:pause / resume / emergency-stop / clear-emergency-stop
+node --import tsx scripts/build-intent-cli.ts --task-id=TASK-N2-006 --requested-action=run-task --safety-level=L0 --write
+pnpm automation:guard-intent        # guard（通常は workflow が実行）
+pnpm automation:intent-task -- --request=canonical-request.json --intent-id=<id>
 pnpm report:automation:dashboard
+pnpm automation:pause / resume / emergency-stop / clear-emergency-stop
 ```
+
+## 関連ドキュメント
+
+- `docs/chatgpt-scheduled-task-bridge.md` — Scheduled Task 用 prompt + connector probe
+- `docs/current-ai-handoff.md` — 実装履歴と現状
+- `config/research-dispatch-intent.schema.json` / `research-task-catalog.schema.json` / `research-task-request.schema.json`
+- `config/actor-allowlist-policy.json` — actor 許可（wildcard/org/fork 禁止）
