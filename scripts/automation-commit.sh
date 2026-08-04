@@ -18,10 +18,16 @@ if [ "${#CHANGED[@]}" -eq 0 ]; then
   exit 0
 fi
 
+# intent workflow が置く一時 file は commit 対象外（skip）。
+TRANSIENT=("canonical-request.json" ".automation-branch-base")
+
 # allowlist / 安全性検査。
 KEEP=()
 for path in "${CHANGED[@]}"; do
   [ -z "$path" ] && continue
+  skip=false
+  for tr in "${TRANSIENT[@]}"; do [ "$path" = "$tr" ] && skip=true; done
+  [ "$skip" = true ] && continue
   allowed=false
   for prefix in "${ALLOWED_PREFIXES[@]}"; do
     case "$path" in "$prefix"*) allowed=true ;; esac
