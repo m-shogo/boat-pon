@@ -1,21 +1,15 @@
 {
   "runSchemaVersion": "current-run-v1",
-  "updatedAt": "2026-08-04T13:07:47.967Z",
-  "lastResult": "PASS",
-  "lastRequestId": "REQ-20260804-72b865c0e6",
-  "lastIntentId": "INTENT-20260804-72b865c0e6",
+  "updatedAt": "2026-08-04T13:44:16.751Z",
+  "lastResult": "DRY_RUN_OK",
+  "lastRequestId": "REQ-connector-probe-1",
+  "lastIntentId": "INTENT-connector-probe-1",
   "lastTaskId": "TASK-PLANNER-NEXT",
   "lastSafetyLevel": "L0",
-  "authoritySha": "c61ad1d28931dd62b43258c856381c4d85e536b1",
-  "stateVersion": 12,
+  "authoritySha": "83bb64c1ad6101f2dfcb8e9487826330623359d6",
+  "stateVersion": 11,
   "stateDigest": "b66d00f2edfdc58b1a6eddc5d414e56f3ead9c30e5978d838aa7cb781e20fa79",
   "blocks": [],
-  "elapsedMs": 671,
-  "evidencePath": "reports/automation/history/30912235903-TASK-PLANNER-NEXT.json",
-  "outputs": [
-    "automation/control/planner-candidates.json"
-  ],
-  "outputDigest": "e0c56315c6bbe2a5df2efd668a69fc3334340a82af84358a47337d8b922da53f",
-  "taskStatus": "PASS",
+  "elapsedMs": 874,
   "nextCandidate": "TASK-N2-006: settlement coverage / missingness audit（自動起動しない。次回 dispatch で 1 回だけ依頼する）"
 }
