@@ -1,0 +1,15 @@
+{
+  "requestId": "REQ-20260804-46393c12ed",
+  "result": "PASS",
+  "recordedAt": "2026-08-04T04:46:44.605Z",
+  "workflowRunId": "30878594429",
+  "failureClass": null,
+  "taskId": "TASK-N2-003",
+  "blocks": [],
+  "evidencePath": "reports/automation/history/30878594429-TASK-N2-003.json",
+  "outputs": [
+    "reports/n2/n2-win-refund-omission-audit.json"
+  ],
+  "outputDigest": "bd4bed76312255dd5434dc9668346ecb139934b05df2c48d86e8bece781987aa",
+  "taskStatus": "PASS"
+}

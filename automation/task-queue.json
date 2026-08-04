@@ -1,6 +1,6 @@
 {
   "queueSchemaVersion": "research-task-queue-v1",
-  "updatedAt": "2026-08-03T12:57:25.000Z",
+  "updatedAt": "2026-08-04T04:46:44.604Z",
   "note": "ChatGPT Scheduled Task が次の 1 task を選ぶための queue。1 dispatch = 1 task。L3 は事前 grant 必須、L4 は常時拒否。",
   "tasks": [
     {
@@ -10,19 +10,37 @@
       "taskType": "dataset-canary",
       "safetyLevel": "L2",
       "dependencies": [],
-      "authoritySha": null,
-      "requiredInputs": ["corrected settlement truth freeze", "official_program lineage"],
-      "expectedOutputs": ["reports/automation/history/<runId>-dataset-canary.json"],
+      "authoritySha": "0d61129",
+      "requiredInputs": [
+        "corrected settlement truth freeze",
+        "official_program lineage"
+      ],
+      "expectedOutputs": [
+        "reports/automation/history/<runId>-dataset-canary.json"
+      ],
       "maxDurationSeconds": 3600,
-      "status": "READY",
+      "status": "PASS",
       "checkpoint": null,
       "attemptCount": 0,
       "lastFailure": null,
-      "retryPolicy": { "maxAttempts": 3, "retryableOnly": true },
+      "retryPolicy": {
+        "maxAttempts": 3,
+        "retryableOnly": true
+      },
       "createdAt": "2026-08-03T12:57:25.000Z",
-      "updatedAt": "2026-08-03T12:57:25.000Z",
-      "evidenceLinks": ["reports/n2/settlement-reparse-apply.json"],
-      "nextDecision": "canary PASS なら年代別 coverage 拡大を次 task 候補にする"
+      "updatedAt": "2026-08-04T04:41:07.752Z",
+      "evidenceLinks": [
+        "reports/n2/settlement-reparse-apply.json",
+        "reports/automation/history/local-1785804764069-TASK-N2-001.json",
+        "reports/n2/n2-dataset-canary.json",
+        "reports/n2/n2-dataset-canary.md",
+        "reports/automation/history/30878214593-TASK-N2-001.json"
+      ],
+      "nextDecision": "runner 実行で PASS（digest 5799f38c…）。依存 task を次回 dispatch 候補にする",
+      "workflowRunId": "local-1785804764069",
+      "requestId": "REQ-run-localcanary5",
+      "executorVersion": "n2-task-executor-registry-v1",
+      "resultDigest": "5799f38c4eb273632b204be0686190fbd1b80f57c7177f1b1f8c326b31ee91d4"
     },
     {
       "taskId": "TASK-N2-002",
@@ -30,20 +48,37 @@
       "objective": "訂正後 settlement で eligible 率・年代別 drift を read-only 集計し、旧 96.03% 系数値を置換する",
       "taskType": "readonly-analysis",
       "safetyLevel": "L0",
-      "dependencies": ["TASK-N2-001"],
-      "authoritySha": null,
-      "requiredInputs": ["corrected settlement truth freeze"],
-      "expectedOutputs": ["reports/automation/history/<runId>-eligibility.json"],
+      "dependencies": [
+        "TASK-N2-001"
+      ],
+      "authoritySha": "ba3cd8e",
+      "requiredInputs": [
+        "corrected settlement truth freeze"
+      ],
+      "expectedOutputs": [
+        "reports/automation/history/<runId>-eligibility.json"
+      ],
       "maxDurationSeconds": 1800,
-      "status": "READY",
+      "status": "PASS",
       "checkpoint": null,
       "attemptCount": 0,
       "lastFailure": null,
-      "retryPolicy": { "maxAttempts": 3, "retryableOnly": true },
+      "retryPolicy": {
+        "maxAttempts": 3,
+        "retryableOnly": true
+      },
       "createdAt": "2026-08-03T12:57:25.000Z",
-      "updatedAt": "2026-08-03T12:57:25.000Z",
-      "evidenceLinks": [],
-      "nextDecision": "drift 確定後に baseline cohort を固定する"
+      "updatedAt": "2026-08-04T04:44:47.264Z",
+      "evidenceLinks": [
+        "reports/automation/history/local-1785804821586-TASK-N2-002.json",
+        "reports/n2/n2-corrected-eligibility.json",
+        "reports/automation/history/30878413662-TASK-N2-002.json"
+      ],
+      "nextDecision": "runner 実行で PASS。corrected eligible 率 99.98% を確定",
+      "workflowRunId": "local-1785804821586",
+      "requestId": "REQ-run-local002b",
+      "executorVersion": "n2-task-executor-registry-v1",
+      "resultDigest": "18692aadd06828daa418803769f160ef42669838dd77c8ba51f0bfe3901c63da"
     },
     {
       "taskId": "TASK-N2-003",
@@ -52,19 +87,35 @@
       "taskType": "readonly-audit",
       "safetyLevel": "L0",
       "dependencies": [],
-      "authoritySha": null,
-      "requiredInputs": ["reports/n2/unexpected-additions-audit.json"],
-      "expectedOutputs": ["reports/automation/history/<runId>-win-refund-omission.json"],
+      "authoritySha": "3d2d31d",
+      "requiredInputs": [
+        "reports/n2/unexpected-additions-audit.json"
+      ],
+      "expectedOutputs": [
+        "reports/automation/history/<runId>-win-refund-omission.json"
+      ],
       "maxDurationSeconds": 1800,
-      "status": "READY",
+      "status": "PASS",
       "checkpoint": null,
-      "attemptCount": 0,
+      "attemptCount": 1,
       "lastFailure": null,
-      "retryPolicy": { "maxAttempts": 2, "retryableOnly": true },
+      "retryPolicy": {
+        "maxAttempts": 2,
+        "retryableOnly": true
+      },
       "createdAt": "2026-08-03T12:57:25.000Z",
-      "updatedAt": "2026-08-03T12:57:25.000Z",
-      "evidenceLinks": ["reports/n2/unexpected-additions-audit.json"],
-      "nextDecision": "別 defect と確定したら独立 approval package へ進む（自動適用しない）"
+      "updatedAt": "2026-08-04T04:46:44.604Z",
+      "evidenceLinks": [
+        "reports/n2/unexpected-additions-audit.json",
+        "reports/automation/history/local-1785804913314-TASK-N2-003.json",
+        "reports/n2/n2-win-refund-omission-audit.json",
+        "reports/automation/history/30878594429-TASK-N2-003.json"
+      ],
+      "nextDecision": "依存 task を次回 dispatch の候補にする（自動起動しない）",
+      "workflowRunId": "30878594429",
+      "requestId": "REQ-20260804-46393c12ed",
+      "executorVersion": "n2-task-executor-registry-v1",
+      "resultDigest": "bd4bed76312255dd5434dc9668346ecb139934b05df2c48d86e8bece781987aa"
     }
   ]
 }
