@@ -1,0 +1,17 @@
+{
+  "requestSchemaVersion": "research-task-request-v1",
+  "requestId": "REQ-20260804-3a6e94fcf4",
+  "taskId": "TASK-N2-001",
+  "requestedAction": "dry-run",
+  "safetyLevel": "L0",
+  "authoritySha": "73ea377",
+  "queueDigest": "c4978606f4360a008f568bb32e0721d69727fa23bd33784fddf53d518aaccf48",
+  "createdAt": "2026-08-04T04:47:46.662Z",
+  "requestedBy": "chatgpt-scheduled-task",
+  "maxDurationSeconds": 1800,
+  "expectedOutput": "reports/automation/current-status.json",
+  "approvalRequirement": "none",
+  "requestReference": "e2e-clean-final",
+  "dryRun": true,
+  "requestDigest": "8f7cb634d0f1b4f3da0fea5217318526fd639535fb93b766b2874dfa0ab1c15f"
+}
