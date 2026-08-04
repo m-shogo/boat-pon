@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { DatabaseSync } from "node:sqlite";
-import { EXECUTORS, resolveExecutor, runDatasetCanary, runReadonlyAnalysis, runReadonlyAudit, type ExecutorContext } from "./taskExecutors";
+import { EXECUTORS, isExecutorImplemented, resolveExecutor, runDatasetCanary, runHoldoutFreeze, runPlannerNext, runReadonlyAnalysis, runReadonlyAudit, type ExecutorContext } from "./taskExecutors";
 
 // 最小の settlement fixture DB を作る（実 sidecar は触らない）。
 function makeFixture(opts: { rows: Array<{ k: string; b: string; s: string; rk?: string; dup?: boolean; superseded?: boolean }> }): string {
@@ -49,7 +49,10 @@ function ctx(sidecarPath: string, over: Partial<ExecutorContext> = {}): Executor
 }
 
 test("registry resolves only allowlisted task types", () => {
-  assert.deepEqual(Object.keys(EXECUTORS).sort(), ["dataset-canary", "readonly-analysis", "readonly-audit"]);
+  assert.deepEqual(Object.keys(EXECUTORS).sort(), [
+    "dataset-canary", "dataset-inventory", "feature-coverage-audit", "holdout-freeze",
+    "planner-next", "readonly-analysis", "readonly-audit",
+  ]);
   assert.equal(resolveExecutor("dataset-canary").code, "OK");
   assert.equal(resolveExecutor("rm -rf /").code, "EXECUTOR_NOT_REGISTERED");
   assert.equal(resolveExecutor("rm -rf /").executor, null);
@@ -110,6 +113,40 @@ test("readonly-audit BLOCKs when the source audit report is missing", () => {
   const r = runReadonlyAudit(ctx(p));
   assert.equal(r.result, "BLOCKED");
   assert.ok(r.blocks.includes("UNEXPECTED_ADDITIONS_AUDIT_MISSING"));
+});
+
+test("holdout-freeze is deterministic and dependency-gated on TASK-N2-004", () => {
+  const p = makeFixture({ rows: [{ k: "2024-06-05:12:R1", b: "trifecta", s: "settled" }] });
+  const blocked = runHoldoutFreeze(ctx(p, { taskStatuses: { "TASK-N2-004": "READY" } }));
+  assert.equal(blocked.result, "BLOCKED");
+  assert.ok(blocked.blocks.some((b) => b.startsWith("DEPENDENCY_NOT_SATISFIED:TASK-N2-004")));
+  const a = runHoldoutFreeze(ctx(p, { taskStatuses: { "TASK-N2-004": "PASS" } }));
+  const b = runHoldoutFreeze(ctx(p, { taskStatuses: { "TASK-N2-004": "PASS" } }));
+  assert.equal(a.result, "PASS");
+  assert.equal(a.outputDigest, b.outputDigest); // deterministic
+  assert.equal((a.summary as any).productionApplyExecuted, false);
+  assert.deepEqual((a.summary as any).untouchedHoldoutRaces, ["2014-03-28:08:R1", "2014-03-28:17:R2"]);
+});
+
+test("planner-next proposes BLOCKED_EXECUTOR_PENDING tasks and never auto-dispatches", () => {
+  const p = makeFixture({ rows: [{ k: "2024-06-05:12:R1", b: "trifecta", s: "settled" }] });
+  const r = runPlannerNext(ctx(p, {
+    mergedTasks: [
+      { taskId: "TASK-A", status: "READY", taskType: "dataset-inventory" },
+      { taskId: "TASK-B", status: "BLOCKED_EXECUTOR_PENDING", taskType: "baseline-market", title: "m", objective: "o", safetyLevel: "L0" },
+    ],
+  }));
+  assert.equal(r.result, "PASS");
+  assert.equal((r.summary as any).autoDispatch, false);
+  assert.equal((r.summary as any).candidateCount, 1);
+  assert.equal((r.summary as any).candidates[0].proposedTaskId, "TASK-B");
+});
+
+test("isExecutorImplemented distinguishes registered from pending task types", () => {
+  assert.equal(isExecutorImplemented("dataset-inventory"), true);
+  assert.equal(isExecutorImplemented("planner-next"), true);
+  assert.equal(isExecutorImplemented("baseline-market"), false);
+  assert.equal(isExecutorImplemented("nope"), false);
 });
 
 test("executors never claim production apply", () => {

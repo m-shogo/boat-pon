@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "research-dispatch-intent.schema.json",
+  "title": "boat-pon ChatGPT dispatch intent (minimal, no hashing)",
+  "description": "ChatGPT Scheduled Task が commit する最小 intent。SHA-256 / canonical JSON hash は要求しない。queueDigest / requestDigest / canonical request は GitHub 側 guard が生成する。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "intentSchemaVersion", "intentId", "taskId", "requestedAction", "safetyLevel",
+    "expectedAuthoritySha", "maxDurationSeconds", "requestedBy", "requestReference"
+  ],
+  "properties": {
+    "intentSchemaVersion": { "const": "research-dispatch-intent-v1" },
+    "intentId": { "type": "string", "pattern": "^INTENT-[0-9A-Za-z._-]{4,64}$" },
+    "taskId": { "type": "string", "pattern": "^(TASK-[0-9A-Za-z._-]{1,64}|NEXT)$" },
+    "requestedAction": { "enum": ["run-task", "dry-run", "plan-next"] },
+    "safetyLevel": { "enum": ["L0", "L1", "L2", "L3"] },
+    "expectedAuthoritySha": { "type": "string", "pattern": "^[0-9a-f]{7,40}$" },
+    "maxDurationSeconds": { "type": "integer", "minimum": 60, "maximum": 21600 },
+    "requestedBy": { "type": "string", "minLength": 1 },
+    "requestReference": { "type": "string", "minLength": 1 },
+    "approvalGrantId": { "type": "string", "minLength": 1 }
+  }
+}

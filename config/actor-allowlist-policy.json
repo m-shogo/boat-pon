@@ -1,0 +1,31 @@
+{
+  "actorPolicyVersion": "actor-allowlist-policy-v1",
+  "updatedAt": "2026-08-04T00:00:00Z",
+  "repository": "m-shogo/boat-pon",
+  "note": "self-hosted runner を起動できる push actor の明示 allowlist。wildcard / org 全体 / external fork / PR event は禁止。追加は明示的な policy 変更のみ。",
+  "allowedActors": [
+    {
+      "actor": "m-shogo",
+      "kind": "repository-owner",
+      "verified": true,
+      "note": "owner の直接 push（開発・手動運用）。"
+    }
+  ],
+  "pendingVerification": [
+    {
+      "actor": "UNVERIFIED_CHATGPT_CONNECTOR",
+      "kind": "github-app-or-integration",
+      "verified": false,
+      "note": "ChatGPT GitHub connector の create_file による commit actor は未確認。probe intent を 1 回実行して actor / author / committer を sanitized evidence として記録し、その値をここに明示追加するまで許可しない。"
+    }
+  ],
+  "rules": {
+    "wildcardAllowed": false,
+    "organizationWideAllowed": false,
+    "externalForkAllowed": false,
+    "pullRequestEventAllowed": false,
+    "pullRequestTargetAllowed": false,
+    "requirePushEvent": true,
+    "requireExplicitPolicyChangeToAdd": true
+  }
+}

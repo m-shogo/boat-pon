@@ -129,8 +129,11 @@ export function decideSafety(
 // 次回実行が永久に BLOCK されるのを防ぐ）。これ以外の変更は従来どおり DIRTY_WORKING_TREE。
 export const AUTOMATION_OUTPUT_PREFIXES = [
   "reports/automation/", "automation/task-queue.json", "automation/requests/",
+  // control state（automation branch 正本）を working tree に materialize したもの。
+  "automation/control/",
   // executor が生成する研究成果物（N2 レポート）も automation 出力として扱う。
   "reports/n2/n2-dataset-canary.", "reports/n2/n2-corrected-eligibility.", "reports/n2/n2-win-refund-omission-audit.",
+  "reports/n2/n2-dataset-inventory.", "reports/n2/n2-holdout-freeze.", "reports/n2/n2-feature-coverage-audit.",
 ] as const;
 export function isAutomationOutputPath(path: string): boolean {
   return AUTOMATION_OUTPUT_PREFIXES.some((p) => path === p || path.startsWith(p));
