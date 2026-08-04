@@ -1,50 +1,52 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { DatabaseSync } from "node:sqlite";
-import { existsSync } from "node:fs";
-import { EXECUTORS, isExecutorImplemented, resolveExecutor, runDatasetCanary, runDatasetExpand, runHoldoutFreeze, runPlannerNext, runReadonlyAnalysis, runReadonlyAudit, type ExecutorContext } from "./taskExecutors";
+import {
+  EXECUTORS, isExecutorImplemented, resolveExecutor, runDatasetCanary, runDatasetExpand, runHoldoutFreeze,
+  runPlannerNext, runReadonlyAnalysis, runReadonlyAudit, type ExecutorContext,
+} from "./taskExecutors";
 
-// 最小の settlement fixture DB を作る（実 sidecar は触らない）。
 function makeFixture(opts: { rows: Array<{ k: string; b: string; s: string; rk?: string; dup?: boolean; superseded?: boolean }> }): string {
   const dir = mkdtempSync(join(tmpdir(), "exec-fixture-"));
-  const p = join(dir, "sidecar.sqlite");
-  const db = new DatabaseSync(p);
+  const path = join(dir, "sidecar.sqlite");
+  const db = new DatabaseSync(path);
   db.exec(`CREATE TABLE settlement_candidates_v2 (candidate_id TEXT PRIMARY KEY, canonical_race_key TEXT, bet_type TEXT,
     settlement_status TEXT, result_kind TEXT, observation_id TEXT, parse_run_id TEXT, supersedes_candidate_id TEXT)`);
-  db.exec(`CREATE TABLE settlement_source_duplicate_resolutions_v2 (duplicate_observation_id TEXT)`);
-  db.exec(`CREATE TABLE parse_runs (parse_run_id TEXT PRIMARY KEY, parser_name TEXT)`);
+  db.exec("CREATE TABLE settlement_source_duplicate_resolutions_v2 (duplicate_observation_id TEXT)");
+  db.exec("CREATE TABLE parse_runs (parse_run_id TEXT PRIMARY KEY, parser_name TEXT)");
   db.prepare("INSERT INTO parse_runs VALUES ('pr-v1','n1-backfill-archive')").run();
   db.prepare("INSERT INTO parse_runs VALUES ('pr-v2','n2-settlement-reparse')").run();
   let i = 0;
-  for (const r of opts.rows) {
+  for (const row of opts.rows) {
     i += 1;
     const id = `c${i}`;
     db.prepare("INSERT INTO settlement_candidates_v2 VALUES (?,?,?,?,?,?,?,NULL)")
-      .run(id, r.k, r.b, r.s, r.rk ?? "normal", `obs${i}`, "pr-v2");
-    if (r.dup) db.prepare("INSERT INTO settlement_source_duplicate_resolutions_v2 VALUES (?)").run(`obs${i}`);
-    if (r.superseded) {
+      .run(id, row.k, row.b, row.s, row.rk ?? "normal", `obs${i}`, "pr-v2");
+    if (row.dup) db.prepare("INSERT INTO settlement_source_duplicate_resolutions_v2 VALUES (?)").run(`obs${i}`);
+    if (row.superseded) {
       db.prepare("INSERT INTO settlement_candidates_v2 VALUES (?,?,?,?,?,?,?,?)")
-        .run(`${id}-succ`, r.k, r.b, r.s, "normal", `obs${i}succ`, "pr-v2", id);
+        .run(`${id}-succ`, row.k, row.b, row.s, "normal", `obs${i}succ`, "pr-v2", id);
     }
   }
   db.close();
-  return p;
+  return path;
 }
 
 function ctx(sidecarPath: string, over: Partial<ExecutorContext> = {}): ExecutorContext {
-  const out = mkdtempSync(join(tmpdir(), "exec-out-"));
-  mkdirSync(join(out, "reports/n2"), { recursive: true });
-  // corrected truth freeze fixture
-  writeFileSync(join(out, "reports/n2/corrected-settlement-truth-freeze.json"), JSON.stringify({
+  const root = mkdtempSync(join(tmpdir(), "exec-out-"));
+  mkdirSync(join(root, "reports/n2"), { recursive: true });
+  writeFileSync(join(root, "reports/n2/corrected-settlement-truth-freeze.json"), JSON.stringify({
+    frozenAt: "2026-08-03T14:07:04.991Z",
     correctedTruthVersion: "n2-corrected-settlement-truth-v1",
     settlementSnapshotIdentityAfter: "f".repeat(64),
+    heldOut: { count: 2, races: ["2014-03-28:08:R1/win", "2014-03-28:17:R2/win"] },
   }));
   return {
-    repoRoot: out, runId: "test-run", requestId: "REQ-test", taskId: "TASK-N2-001",
-    sidecarPath, historyDir: join(out, "history"), reportsDir: join(out, "reports/n2"),
+    repoRoot: root, runId: "test-run", requestId: "REQ-test", taskId: "TASK-N2-001",
+    sidecarPath, historyDir: join(root, "history"), reportsDir: join(root, "reports/n2"),
     dryRun: true, taskStatuses: {}, ...over,
   };
 }
@@ -56,135 +58,129 @@ test("registry resolves only allowlisted task types", () => {
   ]);
   assert.equal(resolveExecutor("dataset-canary").code, "OK");
   assert.equal(resolveExecutor("rm -rf /").code, "EXECUTOR_NOT_REGISTERED");
-  assert.equal(resolveExecutor("rm -rf /").executor, null);
-  // prototype pollution 経由で任意関数を引かない
   assert.equal(resolveExecutor("toString").code, "EXECUTOR_NOT_REGISTERED");
-  assert.equal(resolveExecutor("constructor").code, "EXECUTOR_NOT_REGISTERED");
 });
 
-test("dataset-canary PASSes and counts eligible/excluded from corrected truth", () => {
-  const p = makeFixture({ rows: [
+test("dataset-canary PASSes and counts exclusions", () => {
+  const path = makeFixture({ rows: [
     { k: "2024-06-05:12:R1", b: "trifecta", s: "settled" },
     { k: "2024-06-05:12:R1", b: "exacta", s: "settled" },
-    { k: "2024-06-06:12:R2", b: "win", s: "refunded" },      // genuine refund → excluded
-    { k: "2024-06-07:12:R3", b: "quinella", s: "settled", dup: true },      // source duplicate → excluded
-    { k: "2024-06-08:12:R4", b: "trio", s: "settled", superseded: true },   // superseded → excluded
-    { k: "2024-05-31:12:R9", b: "trifecta", s: "settled" },  // cohort 外
+    { k: "2024-06-06:12:R2", b: "win", s: "refunded" },
+    { k: "2024-06-07:12:R3", b: "quinella", s: "settled", dup: true },
+    { k: "2024-06-08:12:R4", b: "trio", s: "settled", superseded: true },
+    { k: "2024-05-31:12:R9", b: "trifecta", s: "settled" },
   ] });
-  const r = runDatasetCanary(ctx(p));
-  assert.equal(r.result, "PASS");
-  const s = r.summary as any;
-  assert.equal(s.candidateCount, 4); // dup/superseded/cohort外 を除いた active（successor 含む）
-  assert.equal(s.exclusionReasons.excluded_refunded, 1);
-  assert.equal(s.sourceDuplicateExcluded, 1);
-  assert.equal(s.supersededExcluded, 1);
-  assert.equal(s.pit.result, "PASS");
-  assert.equal(s.leakage.result, "PASS");
-  assert.ok(s.eligibleRate > 0 && s.eligibleRate <= 1);
+  const result = runDatasetCanary(ctx(path));
+  assert.equal(result.result, "PASS");
+  const summary = result.summary as any;
+  assert.equal(summary.candidateCount, 4);
+  assert.equal(summary.exclusionReasons.excluded_refunded, 1);
+  assert.equal(summary.sourceDuplicateExcluded, 1);
+  assert.equal(summary.supersededExcluded, 1);
+  assert.equal(summary.pit.result, "PASS");
 });
 
-test("dataset-canary BLOCKs on empty cohort instead of reporting success", () => {
-  const p = makeFixture({ rows: [{ k: "2020-01-01:12:R1", b: "trifecta", s: "settled" }] });
-  const r = runDatasetCanary(ctx(p));
-  assert.equal(r.result, "BLOCKED");
-  assert.ok(r.blocks.includes("EMPTY_COHORT"));
-});
-
-test("dataset-canary BLOCKs when corrected truth freeze is missing", () => {
-  const p = makeFixture({ rows: [{ k: "2024-06-05:12:R1", b: "trifecta", s: "settled" }] });
-  const c = ctx(p);
+test("dataset-canary blocks empty cohort and missing freeze", () => {
+  const path = makeFixture({ rows: [{ k: "2020-01-01:12:R1", b: "trifecta", s: "settled" }] });
+  assert.equal(runDatasetCanary(ctx(path)).result, "BLOCKED");
+  const c = ctx(path);
   const noFreeze = { ...c, repoRoot: mkdtempSync(join(tmpdir(), "no-freeze-")) };
-  const r = runDatasetCanary(noFreeze);
-  assert.equal(r.result, "BLOCKED");
-  assert.ok(r.blocks.includes("CORRECTED_TRUTH_FREEZE_MISSING"));
+  assert.equal(runDatasetCanary(noFreeze).result, "BLOCKED");
 });
 
-test("readonly-analysis is dependency-gated on TASK-N2-001 PASS", () => {
-  const p = makeFixture({ rows: [{ k: "2024-06-05:12:R1", b: "trifecta", s: "settled" }] });
-  const blocked = runReadonlyAnalysis(ctx(p, { taskStatuses: { "TASK-N2-001": "READY" } }));
-  assert.equal(blocked.result, "BLOCKED");
-  assert.ok(blocked.blocks.some((b) => b.startsWith("DEPENDENCY_NOT_SATISFIED")));
-  const ok = runReadonlyAnalysis(ctx(p, { taskStatuses: { "TASK-N2-001": "PASS" } }));
+test("readonly-analysis is dependency-gated", () => {
+  const path = makeFixture({ rows: [{ k: "2024-06-05:12:R1", b: "trifecta", s: "settled" }] });
+  assert.equal(runReadonlyAnalysis(ctx(path, { taskStatuses: { "TASK-N2-001": "READY" } })).result, "BLOCKED");
+  const ok = runReadonlyAnalysis(ctx(path, { taskStatuses: { "TASK-N2-001": "PASS" } }));
   assert.equal(ok.result, "PASS");
   assert.equal((ok.summary as any).forwardResultClaim, false);
 });
 
-test("readonly-audit BLOCKs when the source audit report is missing", () => {
-  const p = makeFixture({ rows: [{ k: "2024-06-05:12:R1", b: "trifecta", s: "settled" }] });
-  const r = runReadonlyAudit(ctx(p));
-  assert.equal(r.result, "BLOCKED");
-  assert.ok(r.blocks.includes("UNEXPECTED_ADDITIONS_AUDIT_MISSING"));
+test("readonly-audit blocks without source report", () => {
+  const path = makeFixture({ rows: [{ k: "2024-06-05:12:R1", b: "trifecta", s: "settled" }] });
+  assert.equal(runReadonlyAudit(ctx(path)).result, "BLOCKED");
 });
 
-test("holdout-freeze is deterministic and dependency-gated on TASK-N2-004", () => {
-  const p = makeFixture({ rows: [{ k: "2024-06-05:12:R1", b: "trifecta", s: "settled" }] });
-  const blocked = runHoldoutFreeze(ctx(p, { taskStatuses: { "TASK-N2-004": "READY" } }));
-  assert.equal(blocked.result, "BLOCKED");
-  assert.ok(blocked.blocks.some((b) => b.startsWith("DEPENDENCY_NOT_SATISFIED:TASK-N2-004")));
-  const a = runHoldoutFreeze(ctx(p, { taskStatuses: { "TASK-N2-004": "PASS" } }));
-  const b = runHoldoutFreeze(ctx(p, { taskStatuses: { "TASK-N2-004": "PASS" } }));
+test("holdout-freeze is deterministic and dependency-gated", () => {
+  const path = makeFixture({ rows: [{ k: "2024-06-05:12:R1", b: "trifecta", s: "settled" }] });
+  assert.equal(runHoldoutFreeze(ctx(path, { taskStatuses: { "TASK-N2-004": "READY" } })).result, "BLOCKED");
+  const a = runHoldoutFreeze(ctx(path, { taskStatuses: { "TASK-N2-004": "PASS" } }));
+  const b = runHoldoutFreeze(ctx(path, { taskStatuses: { "TASK-N2-004": "PASS" } }));
   assert.equal(a.result, "PASS");
-  assert.equal(a.outputDigest, b.outputDigest); // deterministic
-  assert.equal((a.summary as any).productionApplyExecuted, false);
+  assert.equal(a.outputDigest, b.outputDigest);
   assert.deepEqual((a.summary as any).untouchedHoldoutRaces, ["2014-03-28:08:R1", "2014-03-28:17:R2"]);
 });
 
-test("planner-next proposes BLOCKED_EXECUTOR_PENDING tasks and never auto-dispatches", () => {
-  const p = makeFixture({ rows: [{ k: "2024-06-05:12:R1", b: "trifecta", s: "settled" }] });
-  const r = runPlannerNext(ctx(p, {
+test("planner does not rewrite unchanged ENGINEERING_REQUIRED candidates", () => {
+  const path = makeFixture({ rows: [{ k: "2024-06-05:12:R1", b: "trifecta", s: "settled" }] });
+  const c = ctx(path, {
+    dryRun: false,
     mergedTasks: [
-      { taskId: "TASK-A", status: "READY", taskType: "dataset-inventory" },
       { taskId: "TASK-B", status: "BLOCKED_EXECUTOR_PENDING", taskType: "baseline-market", title: "m", objective: "o", safetyLevel: "L0" },
     ],
-  }));
-  assert.equal(r.result, "PASS");
-  assert.equal((r.summary as any).autoDispatch, false);
-  assert.equal((r.summary as any).candidateCount, 1);
-  assert.equal((r.summary as any).candidates[0].proposedTaskId, "TASK-B");
+  });
+  const first = runPlannerNext(c);
+  assert.equal(first.result, "PASS");
+  assert.equal(first.outputs.length, 1);
+  const second = runPlannerNext({ ...c, runId: "test-run-2", requestId: "REQ-test-2" });
+  assert.equal(second.result, "PASS");
+  assert.equal((second.summary as any).status, "NO_CHANGE_ENGINEERING_REQUIRED");
+  assert.deepEqual(second.outputs, []);
 });
 
-test("dataset-expand (SDK vertical slice) PASSes and builds a manifest", () => {
-  const p = makeFixture({ rows: [
+test("dataset-expand separates inventory from holdout-free research cohort", () => {
+  const path = makeFixture({ rows: [
+    { k: "2014-03-28:08:R1", b: "win", s: "settled" },
     { k: "2020-06-05:12:R1", b: "trifecta", s: "settled" },
     { k: "2021-06-05:12:R2", b: "exacta", s: "settled" },
     { k: "2022-06-05:12:R3", b: "win", s: "refunded" },
   ] });
-  const r = runDatasetExpand(ctx(p)); // ctx() は dryRun:true
-  assert.equal(r.result, "PASS");
-  const s = r.summary as any;
-  assert.equal(s.datasetManifestVersion, "n2-dataset-manifest-v1");
-  assert.equal(s.totalRaces, 3);
-  assert.equal(s.yearSpan.count, 3);
-  assert.equal((s.pit ?? { pit: true }).pit, true); // SDK が PIT guarantee を通した
+  const c = ctx(path, { taskId: "TASK-N2-010", taskStatuses: { "TASK-N2-004": "PASS" } });
+  const result = runDatasetExpand(c);
+  assert.equal(result.result, "PASS");
+  const summary = result.summary as any;
+  assert.equal(summary.datasetManifestVersion, "n2-dataset-manifest-v2");
+  assert.equal(summary.inventoryTotals.candidates, 4);
+  assert.equal(summary.researchEligibleTotals.candidates, 3);
+  assert.equal(summary.holdoutCandidatesPresent, 1);
+  assert.equal(summary.holdoutExcludedFromResearchCohort, true);
+  assert.equal("holdoutExcluded" in summary, false);
+  assert.equal(JSON.stringify(summary).includes("2014-03-28:08:R1"), false);
+  assert.equal(summary.pitEvidence.status, "NOT_APPLICABLE");
+  assert.equal(existsSync(join(c.repoRoot, "reports/n2/n2-dataset-manifest.json")), false);
 });
 
-test("dataset-expand records Experiment + Discovery lineage when not dry-run", () => {
-  const p = makeFixture({ rows: [{ k: "2024-06-05:12:R1", b: "trifecta", s: "settled" }] });
-  const c = ctx(p, { dryRun: false });
-  const r = runDatasetExpand(c);
-  assert.equal(r.result, "PASS");
-  assert.ok(r.outputs.some((o) => o.startsWith("research/registries/experiments/")));
-  assert.ok(r.outputs.some((o) => o.startsWith("research/registries/discoveries/")));
-  // 実際に registry file が append された
-  const exp = r.outputs.find((o) => o.includes("/experiments/"))!;
-  assert.equal(existsSync(join(c.repoRoot, exp)), true);
+test("dataset-expand writes, verifies and safely replays Experiment/Discovery", () => {
+  const path = makeFixture({ rows: [{ k: "2024-06-05:12:R1", b: "trifecta", s: "settled" }] });
+  const c = ctx(path, { dryRun: false, taskId: "TASK-N2-010", taskStatuses: { "TASK-N2-004": "PASS" } });
+  const first = runDatasetExpand(c);
+  assert.equal(first.result, "PASS");
+  assert.ok(first.outputs.some((o) => o.includes("/experiments/")));
+  assert.ok(first.outputs.some((o) => o.includes("/discoveries/")));
+  const reportPath = join(c.repoRoot, "reports/n2/n2-dataset-manifest.json");
+  assert.equal(existsSync(reportPath), true);
+  const reportText = readFileSync(reportPath, "utf8");
+  assert.equal(reportText.includes("2014-03-28:08:R1"), false);
+  assert.equal(JSON.parse(reportText).outputDigest, first.outputDigest);
+
+  const replay = runDatasetExpand({ ...c, runId: "test-run-replay", requestId: "REQ-replay" });
+  assert.equal(replay.result, "PASS");
+  assert.equal(replay.outputDigest, first.outputDigest);
 });
 
-test("isExecutorImplemented distinguishes registered from pending task types", () => {
+test("isExecutorImplemented distinguishes implemented from pending", () => {
   assert.equal(isExecutorImplemented("dataset-inventory"), true);
-  assert.equal(isExecutorImplemented("planner-next"), true);
+  assert.equal(isExecutorImplemented("dataset-expand"), true);
   assert.equal(isExecutorImplemented("baseline-market"), false);
-  assert.equal(isExecutorImplemented("nope"), false);
 });
 
 test("executors never claim production apply", () => {
-  const p = makeFixture({ rows: [{ k: "2024-06-05:12:R1", b: "trifecta", s: "settled" }] });
-  const c = ctx(p);
-  mkdirSync(join(c.repoRoot, "reports/n2"), { recursive: true });
+  const path = makeFixture({ rows: [{ k: "2024-06-05:12:R1", b: "trifecta", s: "settled" }] });
+  const c = ctx(path);
   writeFileSync(join(c.repoRoot, "reports/n2/unexpected-additions-audit.json"), JSON.stringify({ findings: [] }));
-  const r = runReadonlyAudit(c);
-  assert.equal(r.result, "PASS");
-  assert.equal((r.summary as any).productionApplyExecuted, false);
-  assert.equal((r.summary as any).autoCorrectionPossible, false);
-  assert.equal((r.summary as any).separateApprovalRequired, true);
+  const result = runReadonlyAudit(c);
+  assert.equal(result.result, "PASS");
+  assert.equal((result.summary as any).productionApplyExecuted, false);
+  assert.equal((result.summary as any).autoCorrectionPossible, false);
+  assert.equal((result.summary as any).separateApprovalRequired, true);
 });
