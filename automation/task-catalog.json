@@ -1,7 +1,7 @@
 {
   "catalogSchemaVersion": "research-task-catalog-v1",
   "catalogVersion": "2026-08-04-n2-foundation-v1",
-  "updatedAt": "2026-08-04T05:46:25.704Z",
+  "updatedAt": "2026-08-04T09:42:13.255Z",
   "note": "task 定義の正本（main, immutable）。可変 status は automation branch の queue-state。ChatGPT は本 catalog + branch state を読んで 1 件 dispatch する。",
   "tasks": [
     {
@@ -141,7 +141,8 @@
       "expectedOutputs": [
         "automation/control/planner-candidates.json"
       ],
-      "defaultStatus": "READY"
+      "defaultStatus": "READY",
+      "recurring": true
     },
     {
       "taskDefinitionVersion": 1,

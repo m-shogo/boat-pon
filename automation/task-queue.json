@@ -117,5 +117,6 @@
       "executorVersion": "n2-task-executor-registry-v1",
       "resultDigest": "bd4bed76312255dd5434dc9668346ecb139934b05df2c48d86e8bece781987aa"
     }
-  ]
+  ],
+  "_deprecated": "非 authority。可変状態の正本は automation branch の automation/control/task-queue-state.json。定義は automation/task-catalog.json。この file は凍結され dispatch に使われない。"
 }

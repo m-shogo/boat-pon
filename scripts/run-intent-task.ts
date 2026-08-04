@@ -255,6 +255,10 @@ try {
     lastFailure: exec.blocks.length ? { code: exec.blocks[0], at: nowIso() } : null,
     nextDecision: exec.result === "PASS" ? "依存 task を次回 dispatch 候補にする（自動起動しない）" : `blocks: ${exec.blocks.join(",") || "none"}`,
   });
+  // recurring task（planner 等）は成功後に READY へ戻す（次回も dispatch 可能に。自動起動はしない）。
+  if (task.recurring && (nextStatus === "PASS" || nextStatus === "CONDITIONAL")) {
+    updateState(task.taskId, { status: "READY" }, true);
+  }
   writeJsonAtomic(join(HISTORY_DIR, `${runId}-${task.taskId}.json`), {
     runId, requestId: request.requestId, intentId, taskId: task.taskId, taskType: task.taskType, safetyLevel: request.safetyLevel,
     executorVersion: exec.executorVersion, executed: true, result: exec.result, blocks: exec.blocks, outputs: exec.outputs,
@@ -284,10 +288,11 @@ function pickNext(merged: ReturnType<typeof mergeCatalogAndState>): string {
 }
 
 // state を atomic 更新（canTransition 検証 + stateVersion++ + CAS 用 digest）。
-function updateState(taskId: string, patch: Record<string, unknown>): void {
+// force=true は recurring task の PASS→READY リセット専用（通常遷移では使わない）。
+function updateState(taskId: string, patch: Record<string, unknown>, force = false): void {
   const cur = state.tasks[taskId];
   if (!cur) throw new Error(`state entry not found: ${taskId}`);
-  if (typeof patch.status === "string" && patch.status !== cur.status) {
+  if (!force && typeof patch.status === "string" && patch.status !== cur.status) {
     if (!canTransition(cur.status, patch.status as TaskStatus)) throw new Error(`illegal transition ${cur.status} -> ${patch.status}`);
   }
   Object.assign(cur, patch, { updatedAt: nowIso() });

@@ -5,7 +5,7 @@
 set -euo pipefail
 
 BRANCH="automation/boat-pon-research"
-ALLOWED_PREFIXES=("automation/" "reports/automation/" "docs/automation/" "reports/n2/n2-dataset-canary." "reports/n2/n2-corrected-eligibility." "reports/n2/n2-win-refund-omission-audit.")
+ALLOWED_PREFIXES=("automation/control/" "automation/requests/" "reports/automation/" "docs/automation/" "reports/n2/n2-dataset-canary." "reports/n2/n2-corrected-eligibility." "reports/n2/n2-win-refund-omission-audit." "reports/n2/n2-dataset-inventory." "reports/n2/n2-holdout-freeze." "reports/n2/n2-feature-coverage-audit.")
 MAX_BYTES=2097152
 
 cd "$(git rev-parse --show-toplevel)"
@@ -65,6 +65,18 @@ git checkout -- . 2>/dev/null || true
 git clean -fdq -- automation reports docs 2>/dev/null || true
 
 git fetch origin --quiet
+# compare-and-swap: materialize 時点の automation branch base SHA から進んでいたら
+# control state を上書きせず fail-closed（concurrent 変更の silent clobber を防ぐ）。
+if [ -f .automation-branch-base ]; then
+  BASE_SHA="$(cat .automation-branch-base)"
+  CUR_SHA="$(git rev-parse "origin/$BRANCH" 2>/dev/null || echo none)"
+  if [ "$BASE_SHA" != "$CUR_SHA" ]; then
+    echo "::error::automation branch advanced during run ($BASE_SHA -> $CUR_SHA); CAS conflict, refusing to clobber. re-dispatch to retry."
+    rm -f .automation-branch-base
+    exit 1
+  fi
+  rm -f .automation-branch-base
+fi
 if git show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
   git checkout -B "$BRANCH" "origin/$BRANCH" --quiet
 else

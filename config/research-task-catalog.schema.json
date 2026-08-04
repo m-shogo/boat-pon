@@ -5,38 +5,128 @@
   "description": "task の定義。可変 status は持たない（状態は automation branch の queue-state が正本）。",
   "type": "object",
   "additionalProperties": false,
-  "required": ["catalogSchemaVersion", "catalogVersion", "updatedAt", "tasks"],
+  "required": [
+    "catalogSchemaVersion",
+    "catalogVersion",
+    "updatedAt",
+    "tasks"
+  ],
   "properties": {
-    "catalogSchemaVersion": { "const": "research-task-catalog-v1" },
-    "catalogVersion": { "type": "string", "minLength": 1 },
-    "updatedAt": { "type": "string", "minLength": 10 },
-    "note": { "type": "string" },
+    "catalogSchemaVersion": {
+      "const": "research-task-catalog-v1"
+    },
+    "catalogVersion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "updatedAt": {
+      "type": "string",
+      "minLength": 10
+    },
+    "note": {
+      "type": "string"
+    },
     "tasks": {
       "type": "array",
       "items": {
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "taskId", "taskDefinitionVersion", "title", "objective", "taskType", "executor",
-          "safetyLevel", "dependencies", "maxDurationSeconds", "expectedInputs", "expectedOutputs",
-          "estimatedDurationSeconds", "defaultStatus", "valueOfInformation", "invalidationCondition"
+          "taskId",
+          "taskDefinitionVersion",
+          "title",
+          "objective",
+          "taskType",
+          "executor",
+          "safetyLevel",
+          "dependencies",
+          "maxDurationSeconds",
+          "expectedInputs",
+          "expectedOutputs",
+          "estimatedDurationSeconds",
+          "defaultStatus",
+          "valueOfInformation",
+          "invalidationCondition"
         ],
         "properties": {
-          "taskId": { "type": "string", "pattern": "^TASK-[0-9A-Za-z._-]{1,64}$" },
-          "taskDefinitionVersion": { "type": "integer", "minimum": 1 },
-          "title": { "type": "string", "minLength": 1 },
-          "objective": { "type": "string", "minLength": 1 },
-          "taskType": { "type": "string", "minLength": 1 },
-          "executor": { "type": "string", "minLength": 1 },
-          "safetyLevel": { "enum": ["L0", "L1", "L2", "L3", "L4"] },
-          "dependencies": { "type": "array", "items": { "type": "string" } },
-          "maxDurationSeconds": { "type": "integer", "minimum": 60, "maximum": 21600 },
-          "expectedInputs": { "type": "array", "items": { "type": "string" } },
-          "expectedOutputs": { "type": "array", "items": { "type": "string" } },
-          "estimatedDurationSeconds": { "type": "integer", "minimum": 0 },
-          "defaultStatus": { "enum": ["READY", "BLOCKED_EXECUTOR_PENDING", "BLOCKED_DEPENDENCY"] },
-          "valueOfInformation": { "type": "string", "minLength": 1 },
-          "invalidationCondition": { "type": "string", "minLength": 1 }
+          "taskId": {
+            "type": "string",
+            "pattern": "^TASK-[0-9A-Za-z._-]{1,64}$"
+          },
+          "taskDefinitionVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "objective": {
+            "type": "string",
+            "minLength": 1
+          },
+          "taskType": {
+            "type": "string",
+            "minLength": 1
+          },
+          "executor": {
+            "type": "string",
+            "minLength": 1
+          },
+          "safetyLevel": {
+            "enum": [
+              "L0",
+              "L1",
+              "L2",
+              "L3",
+              "L4"
+            ]
+          },
+          "dependencies": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "maxDurationSeconds": {
+            "type": "integer",
+            "minimum": 60,
+            "maximum": 21600
+          },
+          "expectedInputs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "expectedOutputs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "estimatedDurationSeconds": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "defaultStatus": {
+            "enum": [
+              "READY",
+              "BLOCKED_EXECUTOR_PENDING",
+              "BLOCKED_DEPENDENCY"
+            ]
+          },
+          "valueOfInformation": {
+            "type": "string",
+            "minLength": 1
+          },
+          "invalidationCondition": {
+            "type": "string",
+            "minLength": 1
+          },
+          "recurring": {
+            "type": "boolean"
+          }
         }
       }
     }

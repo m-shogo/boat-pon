@@ -33,6 +33,8 @@ export type TaskDefinition = {
   defaultStatus: DefaultStatus;
   valueOfInformation: string;
   invalidationCondition: string;
+  /** true の task は成功後に READY へ戻る（planner 等の恒久 task）。同一入力では no-op。 */
+  recurring?: boolean;
 };
 
 export type TaskCatalog = {
@@ -95,6 +97,7 @@ export function validateCatalog(input: unknown): { valid: boolean; errors: strin
     if (!Array.isArray(t.expectedOutputs)) errors.push(`${at}.expectedOutputs invalid`);
     if (!Number.isInteger(t.estimatedDurationSeconds) || (t.estimatedDurationSeconds as number) < 0) errors.push(`${at}.estimatedDurationSeconds invalid`);
     if (!DEFAULT_STATUSES.includes(t.defaultStatus as DefaultStatus)) errors.push(`${at}.defaultStatus invalid`);
+    if ("recurring" in t && typeof t.recurring !== "boolean") errors.push(`${at}.recurring must be boolean`);
   }
   // dependency 参照先が catalog に存在すること。
   for (const t of c.tasks as TaskDefinition[]) {

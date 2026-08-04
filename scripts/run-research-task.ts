@@ -119,6 +119,11 @@ if (mode === "emergency-stop") { mkdirSync(dirname(EMERGENCY), { recursive: true
 if (mode === "clear-emergency-stop") { rmSync(EMERGENCY, { force: true }); console.log("EMERGENCY_STOP_CLEARED"); process.exit(0); }
 
 // ---- validate-request / task ----
+// NOTE: task/validate-request モードは request-file 経路（DEPRECATED）用。
+// 現行の正式経路は scripts/run-intent-task.ts（intent 方式・automation branch 状態）。
+if (mode === "task") {
+  console.error("DEPRECATED: use run-intent-task.ts (intent dispatch). request-file task mode は凍結。");
+}
 const requestPath = arg("request");
 if (!requestPath) throw new Error("--request=<request.json> は必須です");
 const raw = JSON.parse(readFileSync(resolve(requestPath), "utf8"));
