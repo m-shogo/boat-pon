@@ -1,21 +1,21 @@
 {
   "runSchemaVersion": "current-run-v1",
-  "updatedAt": "2026-08-04T12:56:29.373Z",
+  "updatedAt": "2026-08-04T12:59:20.936Z",
   "lastResult": "PASS",
-  "lastRequestId": "REQ-20260804-9c5e3ad55c",
-  "lastIntentId": "INTENT-20260804-9c5e3ad55c",
-  "lastTaskId": "TASK-N2-004",
+  "lastRequestId": "REQ-20260804-f4d379cd8a",
+  "lastIntentId": "INTENT-20260804-f4d379cd8a",
+  "lastTaskId": "TASK-N2-005",
   "lastSafetyLevel": "L0",
-  "authoritySha": "63c641acf44b6cd926638a9cc341e60b35b9b766",
-  "stateVersion": 5,
-  "stateDigest": "ef9d4d92937be2b0f8699e9820ec43bdee3a67f5fe9827a17354fd77df912641",
+  "authoritySha": "ace1d6a33b6b5f5d27635735f1fce28cd958372a",
+  "stateVersion": 8,
+  "stateDigest": "277f6589b187a36da506b3892e257bbb1004ba8d956eef6461e4119871951440",
   "blocks": [],
-  "elapsedMs": 140529,
-  "evidencePath": "reports/automation/history/30911155086-TASK-N2-004.json",
+  "elapsedMs": 877,
+  "evidencePath": "reports/automation/history/30911554985-TASK-N2-005.json",
   "outputs": [
-    "reports/n2/n2-dataset-inventory.json"
+    "reports/n2/n2-holdout-freeze.json"
   ],
-  "outputDigest": "5661e0072617bfe0d3658915e454d7d3c656db87686004a49e06dc39b836f04f",
+  "outputDigest": "ddb081c1048a3ee017339503a2644403014f39077962599f5702b31c34c2dddc",
   "taskStatus": "PASS",
-  "nextCandidate": "TASK-N2-005: untouched holdout freeze + time split（自動起動しない。次回 dispatch で 1 回だけ依頼する）"
+  "nextCandidate": "TASK-N2-006: settlement coverage / missingness audit（自動起動しない。次回 dispatch で 1 回だけ依頼する）"
 }
