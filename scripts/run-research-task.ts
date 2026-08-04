@@ -81,8 +81,27 @@ function acquireLock(owner: Record<string, unknown>): boolean {
 }
 const releaseLock = (): void => { rmSync(LOCK_PATH, { force: true }); };
 
+// request の outcome を記録する。main 上の pending file は immutable として残し、
+// processed registry（completed/failed）に outcome JSON を書いて replay を防ぐ。
+function recordRequestOutcome(requestId: string | null, result: string, extra: Record<string, unknown>): void {
+  if (!requestId) return;
+  const terminal = ["PASS", "CONDITIONAL", "BLOCKED", "FAILED", "FAILED_FINAL", "FAILED_RETRYABLE", "DRY_RUN_OK", "REJECTED_L4", "TASK_NOT_FOUND", "TASK_NOT_READY"];
+  if (!terminal.includes(result)) return;
+  const dir = join(root, ["PASS", "CONDITIONAL", "DRY_RUN_OK"].includes(result) ? "automation/requests/completed" : "automation/requests/failed");
+  mkdirSync(dir, { recursive: true });
+  const outcome = {
+    requestId, result, recordedAt: nowIso(),
+    workflowRunId: process.env.GITHUB_RUN_ID ?? null,
+    failureClass: result === "PASS" || result === "CONDITIONAL" || result === "DRY_RUN_OK" ? null : classifyFailure(String((extra.blocks as string[] | undefined)?.[0] ?? "RUNTIME_ERROR")),
+    taskId: extra.lastTaskId ?? null, blocks: extra.blocks ?? [], evidencePath: extra.evidencePath ?? null,
+    outputs: extra.outputs ?? [], outputDigest: extra.outputDigest ?? null, taskStatus: extra.taskStatus ?? null,
+  };
+  writeFileSync(join(dir, `${requestId}.json`), `${JSON.stringify(outcome, null, 2)}\n`);
+}
+
 function finish(result: string, exitCode: number, extra: Record<string, unknown> = {}): never {
   writeStatus({ lastResult: result, ...extra });
+  recordRequestOutcome((extra.lastRequestId as string | undefined) ?? null, result, extra);
   releaseLock();
   console.log(JSON.stringify({ result, exitCode, ...extra }, null, 2));
   process.exit(exitCode);

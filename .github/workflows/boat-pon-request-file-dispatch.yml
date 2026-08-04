@@ -1,0 +1,88 @@
+# boat-pon request-file dispatch — ChatGPT Scheduled Task の正式経路。
+#
+# ChatGPT が automation/requests/pending/REQ-*.json を main へ 1 件 commit すると、
+# self-hosted runner で 1 task だけ実行する。`on.schedule` は使用しない（禁止）。
+# workflow は自分自身を再 dispatch しない。
+name: boat-pon request-file dispatch (one-shot)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "automation/requests/pending/*.json"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: boat-pon-local-research
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    # runner へ到達する前に ubuntu 上で actor / branch / event / 追加 file を検証する。
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      ok: ${{ steps.check.outputs.ok }}
+      request_path: ${{ steps.check.outputs.request_path }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 2
+      - id: check
+        env:
+          ACTOR: ${{ github.actor }}
+          REPO: ${{ github.repository }}
+          REF: ${{ github.ref }}
+          EVENT: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          echo "actor=$ACTOR repo=$REPO ref=$REF event=$EVENT"
+          [ "$REPO" = "m-shogo/boat-pon" ] || { echo "::error::repo not allowed"; exit 1; }
+          [ "$ACTOR" = "m-shogo" ] || { echo "::error::actor not in allowlist"; exit 1; }
+          [ "$REF" = "refs/heads/main" ] || { echo "::error::only main"; exit 1; }
+          [ "$EVENT" = "push" ] || { echo "::error::unsupported event"; exit 1; }
+          node scripts/guard-request-file-push.mjs >> "$GITHUB_OUTPUT"
+
+  run-one-task:
+    needs: guard
+    if: needs.guard.outputs.ok == 'true'
+    runs-on: [self-hosted, macOS, boat-pon-local]
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Validate request (strict schema + digest)
+        env:
+          REQUEST_PATH: ${{ needs.guard.outputs.request_path }}
+        run: |
+          set -euo pipefail
+          # path は guard 側で allowlist 済み。値は env 経由でのみ渡す。
+          node scripts/assert-request-path.mjs "$REQUEST_PATH"
+          pnpm automation:validate-request -- --request="$REQUEST_PATH"
+
+      - name: Run exactly one task
+        env:
+          REQUEST_PATH: ${{ needs.guard.outputs.request_path }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          pnpm automation:task -- --request="$REQUEST_PATH"
+
+      - name: Show status
+        if: always()
+        run: pnpm automation:status || true
+
+      - name: Commit results to automation branch
+        if: always()
+        env:
+          RUN_ID: ${{ github.run_id }}
+          REQUEST_PATH: ${{ needs.guard.outputs.request_path }}
+        run: bash scripts/automation-commit.sh

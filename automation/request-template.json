@@ -1,0 +1,16 @@
+{
+  "_comment": "ChatGPT Scheduled Task 用テンプレート。requestId/authoritySha/queueDigest/createdAt/requestDigest は毎回計算する。実際のファイルからこの _comment を削除すること（unknown field は拒否される）。",
+  "requestSchemaVersion": "research-task-request-v1",
+  "requestId": "REQ-YYYYMMDD-<10hex>",
+  "taskId": "TASK-N2-00X",
+  "requestedAction": "run-task",
+  "safetyLevel": "L0",
+  "authoritySha": "<origin/main short sha>",
+  "queueDigest": "<sha256 of automation/task-queue.json bytes as JSON.stringify(parsed)>",
+  "createdAt": "<ISO8601 UTC>",
+  "requestedBy": "chatgpt-scheduled-task",
+  "maxDurationSeconds": 1800,
+  "expectedOutput": "reports/automation/current-status.json",
+  "approvalRequirement": "none",
+  "requestDigest": "<sha256 of canonical JSON without requestDigest>"
+}

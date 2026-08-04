@@ -255,7 +255,8 @@
     "automation:resume": "tsx scripts/run-research-task.ts resume",
     "automation:emergency-stop": "tsx scripts/run-research-task.ts emergency-stop",
     "automation:clear-emergency-stop": "tsx scripts/run-research-task.ts clear-emergency-stop",
-    "report:automation:dashboard": "tsx scripts/generate-automation-dashboard.ts"
+    "report:automation:dashboard": "tsx scripts/generate-automation-dashboard.ts",
+    "automation:build-request": "tsx scripts/build-request-cli.ts"
   },
   "engines": {
     "node": ">=24.0.0"
