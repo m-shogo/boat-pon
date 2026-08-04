@@ -76,9 +76,15 @@ const queue = JSON.parse(readFileSync("automation/task-queue.json", "utf8"));
 const queueDigest = createHash("sha256").update(JSON.stringify(queue)).digest("hex");
 if (queueDigest !== request.queueDigest) fail(`queueDigest mismatch (expected ${queueDigest})`);
 
-// authority SHA 検証: main の現在 SHA と前方一致すること（古い authority では実行しない）。
-if (!after.startsWith(request.authoritySha) && !request.authoritySha.startsWith(after)) {
-  fail(`stale authoritySha: request=${request.authoritySha} main=${after.slice(0, 12)}`);
+// authority SHA 検証。
+// request を commit する行為自体が main を進めるため、request が見ていた authority は
+// 「この push の直前 SHA（= before / parent）」になる。after または before のどちらかに
+// 前方一致すれば有効とし、それ以外（もっと古い authority）は stale として拒否する。
+const parent = execFileSync("git", ["rev-parse", `${after}^`], { encoding: "utf8" }).trim();
+const acceptable = [after, parent, before].filter((s) => /^[0-9a-f]{40}$/.test(s));
+const authorityOk = acceptable.some((sha) => sha.startsWith(request.authoritySha) || request.authoritySha.startsWith(sha));
+if (!authorityOk) {
+  fail(`stale authoritySha: request=${request.authoritySha} main=${after.slice(0, 12)} parent=${parent.slice(0, 12)}`);
 }
 
 // replay 防止: processed registry（completed/failed）に同じ requestId があれば拒否。
