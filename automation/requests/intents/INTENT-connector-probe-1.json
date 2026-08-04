@@ -1,0 +1,11 @@
+{
+  "intentSchemaVersion": "research-dispatch-intent-v1",
+  "intentId": "INTENT-connector-probe-1",
+  "taskId": "TASK-PLANNER-NEXT",
+  "requestedAction": "dry-run",
+  "safetyLevel": "L0",
+  "expectedAuthoritySha": "c61ad1d",
+  "maxDurationSeconds": 1800,
+  "requestedBy": "chatgpt-scheduled-task",
+  "requestReference": "connector-probe-1"
+}
