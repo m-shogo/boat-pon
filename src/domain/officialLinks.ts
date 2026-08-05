@@ -1,4 +1,4 @@
-const venueCodes: Record<string, string> = {
+const venueCodes: Readonly<Record<string, string>> = Object.freeze({
   桐生: "01",
   戸田: "02",
   江戸川: "03",
@@ -23,10 +23,14 @@ const venueCodes: Record<string, string> = {
   福岡: "22",
   唐津: "23",
   大村: "24",
-};
+});
+
+export function officialVenueCode(venue: string): string | null {
+  return venueCodes[venue] ?? null;
+}
 
 export function officialOddsUrl(date: string, venue: string, raceNo: number): string {
-  const jcd = venueCodes[venue];
+  const jcd = officialVenueCode(venue);
   const hd = date.replaceAll("-", "");
   if (!jcd) return "https://www.boatrace.jp/";
   return `https://www.boatrace.jp/owpc/pc/race/odds3t?rno=${raceNo}&jcd=${jcd}&hd=${hd}`;
