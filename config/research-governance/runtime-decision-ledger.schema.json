@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://boat-pon.local/schema/runtime-decision-ledger.0.1.json",
+  "title": "Boat Pon Runtime Decision Ledger 0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "recordId",
+    "decisionId",
+    "canonicalRaceId",
+    "sourceDecisionHistoryId",
+    "decisionSystem",
+    "strategyVersion",
+    "modelVersion",
+    "featureVersion",
+    "manifestId",
+    "cohortId",
+    "evaluationMode",
+    "ticketType",
+    "selection",
+    "decision",
+    "decisionAt",
+    "oddsObservedAt",
+    "scheduledCloseAtSeen",
+    "currentOdds",
+    "requiredOdds",
+    "estimatedHitRate",
+    "rawEstimatedHitRate",
+    "expectedValue",
+    "recommendedStakeYen",
+    "sampleSize",
+    "reasons",
+    "warnings",
+    "dataCompleteness",
+    "notificationEligible",
+    "notificationDedupeKey",
+    "sourceRowDigest"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "runtime-decision-ledger.0.1" },
+    "recordId": { "type": "string", "minLength": 1 },
+    "decisionId": { "type": "string", "minLength": 1 },
+    "canonicalRaceId": { "type": "string", "minLength": 1 },
+    "sourceDecisionHistoryId": {
+      "oneOf": [
+        { "type": "integer", "minimum": 1 },
+        { "type": "null" }
+      ]
+    },
+    "decisionSystem": { "type": "string", "minLength": 1 },
+    "strategyVersion": { "type": "string", "minLength": 1 },
+    "modelVersion": { "type": "string", "minLength": 1 },
+    "featureVersion": { "type": "string", "minLength": 1 },
+    "manifestId": { "type": "string", "minLength": 1 },
+    "cohortId": { "type": "string", "minLength": 1 },
+    "evaluationMode": {
+      "enum": ["formal_forward", "shadow_forward", "historical", "validation", "future_only"]
+    },
+    "ticketType": { "type": "string", "minLength": 1 },
+    "selection": { "type": "string", "minLength": 1 },
+    "decision": { "enum": ["BUY", "WATCH", "SKIP"] },
+    "decisionAt": { "type": "string", "format": "date-time" },
+    "oddsObservedAt": {
+      "oneOf": [
+        { "type": "string", "format": "date-time" },
+        { "type": "null" }
+      ]
+    },
+    "scheduledCloseAtSeen": { "type": "string", "format": "date-time" },
+    "currentOdds": {
+      "oneOf": [
+        { "type": "number", "exclusiveMinimum": 0 },
+        { "type": "null" }
+      ]
+    },
+    "requiredOdds": {
+      "oneOf": [
+        { "type": "number", "exclusiveMinimum": 0 },
+        { "type": "null" }
+      ]
+    },
+    "estimatedHitRate": {
+      "oneOf": [
+        { "type": "number", "minimum": 0, "maximum": 1 },
+        { "type": "null" }
+      ]
+    },
+    "rawEstimatedHitRate": {
+      "oneOf": [
+        { "type": "number", "minimum": 0, "maximum": 1 },
+        { "type": "null" }
+      ]
+    },
+    "expectedValue": {
+      "oneOf": [
+        { "type": "number" },
+        { "type": "null" }
+      ]
+    },
+    "recommendedStakeYen": { "type": "integer", "minimum": 0 },
+    "sampleSize": { "type": "integer", "minimum": 0 },
+    "reasons": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "warnings": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "dataCompleteness": { "enum": ["complete", "partial", "blocked"] },
+    "notificationEligible": { "type": "boolean" },
+    "notificationDedupeKey": {
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        { "type": "null" }
+      ]
+    },
+    "sourceRowDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{64}$"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "decision": { "const": "BUY" } },
+        "required": ["decision"]
+      },
+      "then": {
+        "properties": {
+          "dataCompleteness": { "const": "complete" },
+          "currentOdds": { "type": "number", "exclusiveMinimum": 0 },
+          "requiredOdds": { "type": "number", "exclusiveMinimum": 0 },
+          "estimatedHitRate": { "type": "number", "minimum": 0, "maximum": 1 },
+          "expectedValue": { "type": "number" },
+          "recommendedStakeYen": { "type": "integer", "minimum": 1 },
+          "oddsObservedAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "notificationEligible": { "const": true } },
+        "required": ["notificationEligible"]
+      },
+      "then": {
+        "properties": {
+          "decision": { "const": "BUY" },
+          "notificationDedupeKey": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  ]
+}
