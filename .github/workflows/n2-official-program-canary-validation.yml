@@ -39,3 +39,51 @@ jobs:
           node --test --import tsx \
             src/research-replay/n2OfficialProgramCanary.test.ts \
             src/research-replay/n2OfficialProgramCanaryReader.test.ts
+
+      - name: Inspect real Mac canary eligibility without writes
+        run: |
+          set -euo pipefail
+          node --import tsx --input-type=module <<'NODE'
+          import { execFileSync } from "node:child_process";
+          import { readFileSync } from "node:fs";
+          import { buildOfficialProgramCanaryManifest } from "./src/research-replay/n2OfficialProgramCanary.ts";
+          import { readOfficialProgramCanarySource } from "./src/research-replay/n2OfficialProgramCanaryReader.ts";
+
+          const policy = JSON.parse(readFileSync("config/research-automation-policy.json", "utf8"));
+          const codeGitSha = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+          const read = readOfficialProgramCanarySource({
+            primaryDbPath: `${policy.dataRoot}/data/boat.sqlite`,
+          });
+          const manifest = buildOfficialProgramCanaryManifest({
+            rows: read.rows,
+            cohort: read.cohort,
+            sourceReadTruncated: read.truncated,
+            maxRaces: 20,
+            codeGitSha,
+            generatedAt: `${read.cohort.dateTo}T23:59:59.000Z`,
+          });
+          const exclusionReasons = {};
+          for (const item of manifest.excluded) {
+            exclusionReasons[item.reason] = (exclusionReasons[item.reason] ?? 0) + 1;
+          }
+          const serialized = JSON.stringify(manifest);
+          if (serialized.includes("rawJson") || serialized.includes(policy.dataRoot)) {
+            throw new Error("PRIVATE_SOURCE_MATERIAL_LEAKED_INTO_MANIFEST");
+          }
+          if (read.primaryWriteCount !== 0 || !read.readOnly || !read.queryOnly) {
+            throw new Error("PRIMARY_READ_ONLY_CONTRACT_FAILED");
+          }
+          console.log("N2_OFFICIAL_PROGRAM_CANARY_REAL_DB");
+          console.log(JSON.stringify({
+            cohort: read.cohort,
+            sourceRows: manifest.binding.sourceRowCount,
+            eligibleRows: manifest.binding.eligibleRowCount,
+            excludedRows: manifest.binding.excludedCount,
+            selectedRows: manifest.binding.items.length,
+            exclusionReasons,
+            truncated: read.truncated,
+            manifestDigest: manifest.manifestDigest,
+            primaryWriteCount: read.primaryWriteCount,
+          }, null, 2));
+          NODE
+          test -z "$(git status --porcelain)"
