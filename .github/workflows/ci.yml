@@ -40,6 +40,9 @@ jobs:
       - name: Verify product/public one-way boundaries
         run: node scripts/verify-product-boundaries.mjs
 
+      - name: Verify BUY/LINE learning boundaries
+        run: node scripts/verify-buy-line-learning-boundaries.mjs
+
       - name: Test
         run: npm test
 
