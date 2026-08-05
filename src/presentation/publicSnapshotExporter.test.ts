@@ -83,7 +83,7 @@ test("export command writes one verified sanitized snapshot", async () => {
 
     const serialized = JSON.stringify(output);
     assert.doesNotMatch(serialized, /Users\/example|private\.sqlite/);
-    assert.doesNotMatch(serialized, /selection|stake|currentOdds|requiredOdds/i);
+    assert.deepEqual(findForbiddenKeys(output), []);
     assert.doesNotMatch(result.stdout, new RegExp(root.replaceAll("\\", "\\\\")));
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -92,4 +92,21 @@ test("export command writes one verified sanitized snapshot", async () => {
 
 async function writeJson(path: string, value: unknown): Promise<void> {
   await writeFile(path, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+}
+
+function findForbiddenKeys(value: unknown, found: string[] = []): string[] {
+  if (Array.isArray(value)) {
+    value.forEach((item) => findForbiddenKeys(item, found));
+    return found;
+  }
+  if (typeof value !== "object" || value === null) return found;
+
+  for (const [key, child] of Object.entries(value)) {
+    const normalized = key.toLowerCase().replaceAll("_", "").replaceAll("-", "");
+    if (["selection", "recommendedamount", "currentodds", "requiredodds", "stake"].some((item) => normalized.includes(item))) {
+      found.push(key);
+    }
+    findForbiddenKeys(child, found);
+  }
+  return found;
 }
