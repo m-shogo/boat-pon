@@ -7,6 +7,12 @@ export const N2_OBSERVATION_INGEST_READINESS_READER_VERSION = "n2-observation-in
 const CANARY_DAY_COUNT = 7;
 const COMPLETE_TRIFECTA_SELECTION_COUNT = 120;
 
+type RolloutRow = {
+  shadow_write_enabled: number;
+  operational_gc_enabled: number;
+  kill_switch_engaged: number;
+};
+
 export type N2ObservationIngestReadinessReadResult = {
   input: N2ObservationIngestReadinessInput;
   sourceIdentity: {
@@ -33,13 +39,13 @@ function tableExists(db: DatabaseSync, table: string): boolean {
 
 function tableColumns(db: DatabaseSync, table: string): string[] {
   const quoted = `"${table.replaceAll('"', '""')}"`;
-  return (db.prepare(`PRAGMA table_info(${quoted})`).all() as Array<{ name: string }>).map((row) => row.name);
+  return (db.prepare(`PRAGMA table_info(${quoted})`).all() as unknown as Array<{ name: string }>).map((row) => row.name);
 }
 
 function countTable(db: DatabaseSync, table: string): number {
   if (!tableExists(db, table)) return 0;
   const quoted = `"${table.replaceAll('"', '""')}"`;
-  return Number((db.prepare(`SELECT COUNT(*) n FROM ${quoted}`).get() as { n: number }).n);
+  return Number((db.prepare(`SELECT COUNT(*) n FROM ${quoted}`).get() as unknown as { n: number }).n);
 }
 
 function subtractUtcDays(date: string, days: number): string {
@@ -55,7 +61,7 @@ function compactDate(date: string): string {
 
 function latestProgramDate(primary: DatabaseSync): string {
   if (!tableExists(primary, "official_programs")) throw new Error("N2_READINESS_OFFICIAL_PROGRAMS_TABLE_MISSING");
-  const row = primary.prepare("SELECT MAX(date) maxDate FROM official_programs").get() as { maxDate: string | null };
+  const row = primary.prepare("SELECT MAX(date) maxDate FROM official_programs").get() as unknown as { maxDate: string | null };
   if (!row.maxDate || !/^\d{4}-\d{2}-\d{2}$/.test(row.maxDate)) {
     throw new Error("N2_READINESS_OFFICIAL_PROGRAMS_EMPTY");
   }
@@ -77,7 +83,7 @@ function readOfficialProgramCounts(primary: DatabaseSync, dateFrom: string, date
                THEN 1 ELSE 0 END) eligibleRows
     FROM official_programs
     WHERE date >= ? AND date <= ?
-  `).get(dateFrom, dateTo) as Record<string, number>;
+  `).get(dateFrom, dateTo) as unknown as Record<string, number>;
   return {
     totalRows: Number(row.totalRows ?? 0),
     eligibleRows: Number(row.eligibleRows ?? 0),
@@ -144,7 +150,7 @@ function readTrifectaMarketCounts(
       SUM(CASE WHEN bet_selection IS NOT NULL AND LENGTH(TRIM(bet_selection))=3 AND odds>0 THEN 1 ELSE 0 END) validSelectionRows
     FROM ${quoted}
     WHERE SUBSTR(race_id,1,8) >= ? AND SUBSTR(race_id,1,8) <= ? AND bet_type='trifecta'
-  `).get(fromCompact, toCompact) as Record<string, number>;
+  `).get(fromCompact, toCompact) as unknown as Record<string, number>;
 
   const completeSnapshotCount = Number((primary.prepare(`
     SELECT COUNT(*) n FROM (
@@ -158,7 +164,7 @@ function readTrifectaMarketCounts(
       GROUP BY race_id, captured_at${hasCheckpoint ? ", checkpoint_label" : ""}
       HAVING COUNT(*)=? AND COUNT(DISTINCT bet_selection)=?
     )
-  `).get(fromCompact, toCompact, COMPLETE_TRIFECTA_SELECTION_COUNT, COMPLETE_TRIFECTA_SELECTION_COUNT) as { n: number }).n);
+  `).get(fromCompact, toCompact, COMPLETE_TRIFECTA_SELECTION_COUNT, COMPLETE_TRIFECTA_SELECTION_COUNT) as unknown as { n: number }).n);
 
   return {
     sourceTablePresent: true,
@@ -176,20 +182,26 @@ function readTrifectaMarketCounts(
 function observationCount(sidecar: DatabaseSync, observationType: string): number {
   if (!tableExists(sidecar, "domain_observations")) return 0;
   return Number((sidecar.prepare("SELECT COUNT(*) n FROM domain_observations WHERE observation_type=?")
-    .get(observationType) as { n: number }).n);
+    .get(observationType) as unknown as { n: number }).n);
 }
 
 function latestRollout(sidecar: DatabaseSync): N2ObservationIngestReadinessInput["rollout"] {
-  const row = tableExists(sidecar, "rollout_config_events")
-    ? (sidecar.prepare(`
-        SELECT shadow_write_enabled, operational_gc_enabled, kill_switch_engaged
-        FROM rollout_config_events ORDER BY occurred_at DESC, rowid DESC LIMIT 1
-      `).get() as { shadow_write_enabled: number; operational_gc_enabled: number; kill_switch_engaged: number } | undefined)
-    : undefined;
-  const approvalScopes = tableExists(sidecar, "rollout_approval_grants_v2")
-    ? (sidecar.prepare("SELECT DISTINCT approval_scope FROM rollout_approval_grants_v2 ORDER BY approval_scope").all()
-      as Array<{ approval_scope: string }>).map((item) => item.approval_scope)
-    : [];
+  let row: RolloutRow | undefined;
+  if (tableExists(sidecar, "rollout_config_events")) {
+    row = sidecar.prepare(`
+      SELECT shadow_write_enabled, operational_gc_enabled, kill_switch_engaged
+      FROM rollout_config_events ORDER BY occurred_at DESC, rowid DESC LIMIT 1
+    `).get() as unknown as RolloutRow | undefined;
+  }
+
+  let approvalScopes: string[] = [];
+  if (tableExists(sidecar, "rollout_approval_grants_v2")) {
+    const rows = sidecar.prepare(
+      "SELECT DISTINCT approval_scope FROM rollout_approval_grants_v2 ORDER BY approval_scope",
+    ).all() as unknown as Array<{ approval_scope: string }>;
+    approvalScopes = rows.map((item) => item.approval_scope);
+  }
+
   return {
     shadowWriteEnabled: Boolean(row?.shadow_write_enabled),
     operationalGcEnabled: Boolean(row?.operational_gc_enabled),
