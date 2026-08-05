@@ -154,7 +154,8 @@ envCheck("buildGreen", "READINESS_BUILD", "P0");
 envCheck("governanceGreen", "READINESS_GOVERNANCE", "P0");
 envCheck("goldenGreen", "READINESS_GOLDEN", "P1");
 envCheck("ciGreen", "READINESS_CI", "P0");
-envCheck("prMerged", "READINESS_PR_MERGED", "P1");
+// prMerged はマージ「行為」であり PASS 判定の前提ではない（循環回避）。informational field として記録。
+const prMergedInfo = process.env.READINESS_PR_MERGED ?? "pending";
 
 // ---- verdict ----
 const { verdict, unresolvedBlockers } = computeVerdict(checks);
@@ -165,7 +166,7 @@ const body = {
   stateInfo, migrationIdempotency: migrationIdempotent ? "NO_CHANGE" : "CHANGES_PENDING",
   disk: { freeBytes, totalBytes, freeRatio: disk.freeRatio, level: disk.level },
   checks, verdict, unresolvedBlockers, pendingTask: "TASK-N2-010 (READY, dataset-expand)",
-  evidenceLinks: evidence,
+  prMerged: prMergedInfo, evidenceLinks: evidence,
 };
 const outputDigest = readinessDigest({ ...body, checks: checks.map((c) => ({ name: c.name, status: c.status })) });
 const artifact = { ...body, outputDigest, evaluatedAt: new Date().toISOString() };
