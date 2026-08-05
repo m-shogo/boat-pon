@@ -72,7 +72,7 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Materialize control state from automation branch
+      - name: Materialize control state and dataset authority from automation branch
         env:
           BRANCH: automation/boat-pon-research
         run: |
@@ -80,11 +80,15 @@ jobs:
           git fetch origin "$BRANCH" --quiet
           # CAS 用に materialize 時点の branch base SHA を記録する。
           git rev-parse "origin/$BRANCH" > .automation-branch-base
-          mkdir -p automation/control
+          mkdir -p automation/control reports/n2
           for f in task-queue-state processed-intents processed-requests current-run planner-candidates; do
             git show "origin/$BRANCH:automation/control/$f.json" > "automation/control/$f.json"
           done
+          # N2-011以降はN2-010が固定したmanifest identityを入力正本として使う。
+          # 欠落・壊れた参照はexecutor側でも再検証し、推測値へfallbackしない。
+          git show "origin/$BRANCH:reports/n2/n2-dataset-manifest.json" > reports/n2/n2-dataset-manifest.json
           ls -1 automation/control
+          test -s reports/n2/n2-dataset-manifest.json
 
       - name: Download canonical request
         uses: actions/download-artifact@v4
