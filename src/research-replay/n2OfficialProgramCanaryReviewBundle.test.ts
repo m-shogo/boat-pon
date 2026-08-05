@@ -7,6 +7,8 @@ import {
 import {
   assertOfficialProgramCanaryReviewBundle,
   buildOfficialProgramCanaryReviewBundle,
+  N2_OFFICIAL_PROGRAM_CANARY_REVIEW_BUNDLE_VERSION,
+  N2_OFFICIAL_PROGRAM_CANARY_REVIEW_POLICY_VERSION,
 } from "./n2OfficialProgramCanaryReviewBundle";
 
 const SHA = "1234567890abcdef1234567890abcdef12345678";
@@ -44,13 +46,13 @@ function rows(count = 20): OfficialProgramCanarySourceRow[] {
   });
 }
 
-function manifest(count = 20) {
+function manifest(count = 20, generatedAt = "2004-01-08T00:00:00Z") {
   return buildOfficialProgramCanaryManifest({
     rows: rows(count),
     cohort: { dateFrom: "2004-01-01", dateTo: "2004-01-07" },
     maxRaces: 20,
     codeGitSha: SHA,
-    generatedAt: "2004-01-08T00:00:00Z",
+    generatedAt,
   });
 }
 
@@ -75,18 +77,38 @@ function bundle(overrides: Partial<Parameters<typeof buildOfficialProgramCanaryR
 
 test("exact 20-race bundle is ready only for human review and never authorizes apply", () => {
   const result = bundle();
+  assert.equal(result.bundleVersion, N2_OFFICIAL_PROGRAM_CANARY_REVIEW_BUNDLE_VERSION);
+  assert.equal(result.binding.reviewPolicyVersion, N2_OFFICIAL_PROGRAM_CANARY_REVIEW_POLICY_VERSION);
   assert.equal(result.status, "READY_FOR_HUMAN_REVIEW");
   assert.equal(result.writeAuthorized, false);
   assert.equal(result.productionApplyExecuted, false);
   assert.equal(result.humanApprovalCreated, false);
   assert.equal(result.binding.executionContract.productionApplyAuthorized, false);
+  assert.equal(result.binding.executionContract.manifestGeneratedAtMustNotExceedBundleGeneratedAt, true);
   assert.equal(result.binding.executionContract.requiredCheckoutSha, SHA);
   assert.equal(result.binding.executionContract.hardMaximumRaceCount, 20);
+  assert.equal(result.binding.manifestGeneratedAt, result.manifest.generatedAt);
+  assert.equal(Date.parse(result.manifest.generatedAt) <= Date.parse(result.generatedAt), true);
   assert.equal(result.binding.rollbackContract.automaticDeleteAllowed, false);
   assert.doesNotThrow(() => assertOfficialProgramCanaryReviewBundle(result));
   const serialized = JSON.stringify(result);
   assert.equal(serialized.includes("rawJson"), false);
   assert.equal(serialized.includes("/private/cache"), false);
+});
+
+test("a future-dated manifest cannot become a review bundle", () => {
+  assert.throws(() => bundle({
+    manifest: manifest(20, "2004-01-08T00:00:01Z"),
+    generatedAt: "2004-01-08T00:00:00Z",
+  }), /MANIFEST_GENERATED_AT_AFTER_BUNDLE_GENERATED_AT/);
+
+  const result = bundle();
+  const tampered = structuredClone(result);
+  tampered.manifest.generatedAt = "2004-01-08T00:00:01.000Z";
+  assert.throws(
+    () => assertOfficialProgramCanaryReviewBundle(tampered),
+    /MANIFEST_GENERATED_AT_AFTER_BUNDLE_GENERATED_AT/,
+  );
 });
 
 test("incomplete selection, existing observations, active approval and runtime hazards block review", () => {
@@ -111,6 +133,9 @@ test("SHA mismatch and binding tampering fail closed", () => {
   const tampered = structuredClone(result);
   tampered.binding.executionContract.productionApplyAuthorized = true as false;
   assert.throws(() => assertOfficialProgramCanaryReviewBundle(tampered), /SAFETY_CONTRACT/);
+  const timeBindingTampered = structuredClone(result);
+  timeBindingTampered.binding.manifestGeneratedAt = "2004-01-07T23:59:59.000Z";
+  assert.throws(() => assertOfficialProgramCanaryReviewBundle(timeBindingTampered), /SAFETY_CONTRACT/);
   const digestTampered = structuredClone(result);
   digestTampered.bundleDigest = "0".repeat(64);
   assert.throws(() => assertOfficialProgramCanaryReviewBundle(digestTampered), /DIGEST_MISMATCH/);
