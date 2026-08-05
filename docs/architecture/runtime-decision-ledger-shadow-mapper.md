@@ -3,6 +3,7 @@
 Status: implemented as read-only/shadow-only
 Date: 2026-08-05
 Depends on: `runtime-decision-ledger.0.1`
+Bounded evidence authority: `docs/architecture/runtime-decision-ledger-bounded-evidence.md`
 
 ## Purpose
 
@@ -15,6 +16,8 @@ The mapper is an evidence-reconciliation tool. It is not a backfill writer, sele
 - pure mapper and reconciliation: `src/research/governance/runtimeDecisionLedgerMapper.ts`
 - mapper tests: `src/research/governance/runtimeDecisionLedgerMapper.test.ts`
 - read-only report command: `scripts/report-runtime-decision-ledger-shadow.ts`
+- sanitized bounded evidence: `src/research/governance/runtimeDecisionLedgerShadowEvidence.ts`
+- evidence JSON Schema: `config/research-governance/runtime-decision-ledger-shadow-evidence.schema.json`
 
 ## Read-only execution
 
@@ -25,17 +28,19 @@ The report command:
 3. applies a short `busy_timeout`;
 4. reads `decision_history` joined to `official_programs`;
 5. maps and validates records in memory;
-6. writes only an optional external JSON artifact using atomic rename and mode `0600`.
+6. writes only optional external research artifacts.
 
 It never imports `server/db.ts`, because `openDb()` migrates and seeds the operational database. It contains no `INSERT`, `UPDATE`, `DELETE`, schema migration, LINE send or public-deploy path.
+
+Ad-hoc `--output` remains a private full report. Bounded mode is enabled by `--evidence-output` or `--private-store-dir` and applies stricter date, row-limit, WAL, privacy and append-only rules defined in the bounded evidence authority.
 
 ## Source field inventory
 
 | Ledger meaning | Source | Rule |
 |---|---|---|
 | source identity | `decision_history.id` | positive integer required |
-| canonical race | `decision_history.race_id` | preserved verbatim |
-| ticket | `bet_type`, `selection` | required |
+| canonical race | `decision_history.race_id` | preserved verbatim in private ledger only |
+| ticket | `bet_type`, `selection` | required; selection excluded from sanitized evidence |
 | decision | `decision` | only BUY/WATCH/SKIP |
 | decision time | `created_at` | SQLite UTC timestamp normalized to ISO |
 | odds observation | `fetched_at` | must be timezone-explicit or SQLite UTC; must not be later than `created_at` |
@@ -75,17 +80,20 @@ A missing program row or timestamp is also unresolved. No close time is guessed.
 
 Exact duplicate rows are counted and deduplicated. Conflicting duplicates fail closed.
 
-The report includes:
+The private report includes:
 
 - source count;
 - unique mapped count;
 - exact duplicate count;
-- unresolved count/reasons;
-- rejected count/reasons;
+- unresolved count/reasons and source IDs;
+- rejected count/reasons and source IDs;
 - conflict count/details;
-- deterministic digest of the ordered record set.
+- deterministic digest of the ordered record set;
+- mapped ledger records unless `--summary-only` is selected.
 
-## Example
+The sanitized bounded evidence includes only aggregate counts, rates, reason taxonomy and digests.
+
+## Ad-hoc example
 
 ```bash
 npx tsx scripts/report-runtime-decision-ledger-shadow.ts \
@@ -99,18 +107,22 @@ npx tsx scripts/report-runtime-decision-ledger-shadow.ts \
 
 The generated artifact is private operational/research evidence. Do not commit it to Git or publish it to Cloudflare.
 
+For a retainable bounded run, use the command and rules in `runtime-decision-ledger-bounded-evidence.md`. Bounded mode never permits `--line-eligible` and never prints the full private record set.
+
 ## Current limitations
 
 - No operational persistence table exists for the Runtime Decision Ledger.
 - Existing updated rows may remain unresolved because no immutable per-update history exists.
 - The program table does not retain every historical close-time version.
-- Notification eligibility is recorded only when explicitly enabled; delivery state remains in `notification_log`.
+- Notification eligibility is recorded only in ad-hoc mode when explicitly enabled; delivery state remains in `notification_log`.
 - Strategy/manifest/cohort identities are shadow labels until future formal authorities are connected.
+- The real Mac-local mapped/unresolved/rejected/conflict counts have not yet been measured by Chat/GitHub execution.
 
 ## Next safe slice
 
-1. run this report against the local DB using bounded date/model/run-kind cohorts;
-2. inspect mapped/unresolved/rejected/conflict counts;
-3. add a fixture-backed source completeness report;
-4. only then design an isolated append-only ledger store;
-5. persistence failure must remain unable to affect BUY or LINE.
+1. merge and verify the bounded evidence implementation;
+2. run one finite date/model/run-kind cohort on the Mac-local DB;
+3. retain the private append-only report plus sanitized evidence summary;
+4. classify dominant unresolved reasons;
+5. only then design an isolated permanent append-only ledger store;
+6. persistence failure must remain unable to affect BUY or LINE.

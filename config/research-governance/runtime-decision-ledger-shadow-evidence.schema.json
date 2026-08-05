@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://boat-pon.local/schema/runtime-decision-ledger-shadow-evidence.0.1.json",
+  "title": "Boat Pon Runtime Decision Ledger Shadow Evidence 0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "generatedAt",
+    "verdict",
+    "sourceDescriptorDigest",
+    "contextDigest",
+    "scope",
+    "source",
+    "reconciliation",
+    "completeness",
+    "privacy",
+    "safety",
+    "contentDigest"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "runtime-decision-ledger-shadow-evidence.0.1" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "verdict": { "enum": ["PASS", "CONDITIONAL", "FAILED"] },
+    "sourceDescriptorDigest": { "$ref": "#/$defs/sha256" },
+    "contextDigest": { "$ref": "#/$defs/sha256" },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runKind", "modelVersion", "from", "to", "limit", "returnedRows", "limitReached", "bounded"],
+      "properties": {
+        "runKind": { "type": "string", "minLength": 1 },
+        "modelVersion": { "type": "string", "minLength": 1 },
+        "from": { "oneOf": [{ "type": "string", "format": "date" }, { "type": "null" }] },
+        "to": { "oneOf": [{ "type": "string", "format": "date" }, { "type": "null" }] },
+        "limit": { "type": "integer", "minimum": 1, "maximum": 5000 },
+        "returnedRows": { "type": "integer", "minimum": 0 },
+        "limitReached": { "type": "boolean" },
+        "bounded": { "const": true }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fileSizeBytes",
+        "modifiedTimeMs",
+        "sqliteSchemaVersion",
+        "sqliteUserVersion",
+        "pageCount",
+        "pageSizeBytes",
+        "freelistCount",
+        "journalMode",
+        "walPresent",
+        "readOnly",
+        "queryOnly"
+      ],
+      "properties": {
+        "fileSizeBytes": { "type": "integer", "minimum": 0 },
+        "modifiedTimeMs": { "type": "number", "minimum": 0 },
+        "sqliteSchemaVersion": { "type": "integer", "minimum": 0 },
+        "sqliteUserVersion": { "type": "integer", "minimum": 0 },
+        "pageCount": { "type": "integer", "minimum": 0 },
+        "pageSizeBytes": { "type": "integer", "minimum": 1 },
+        "freelistCount": { "type": "integer", "minimum": 0 },
+        "journalMode": { "type": "string", "minLength": 1 },
+        "walPresent": { "const": false },
+        "readOnly": { "const": true },
+        "queryOnly": { "const": true }
+      }
+    },
+    "reconciliation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "sourceRows",
+        "mappedUnique",
+        "exactDuplicates",
+        "unresolvedCount",
+        "rejectedCount",
+        "conflictCount",
+        "recordsDigest"
+      ],
+      "properties": {
+        "status": { "enum": ["PASS", "CONDITIONAL", "FAILED"] },
+        "sourceRows": { "type": "integer", "minimum": 0 },
+        "mappedUnique": { "type": "integer", "minimum": 0 },
+        "exactDuplicates": { "type": "integer", "minimum": 0 },
+        "unresolvedCount": { "type": "integer", "minimum": 0 },
+        "rejectedCount": { "type": "integer", "minimum": 0 },
+        "conflictCount": { "type": "integer", "minimum": 0 },
+        "recordsDigest": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "completeness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mappedRate",
+        "unresolvedRate",
+        "rejectedRate",
+        "conflictRate",
+        "unresolvedReasonCounts",
+        "rejectedReasonCounts",
+        "taxonomyCounts"
+      ],
+      "properties": {
+        "mappedRate": { "$ref": "#/$defs/rateOrNull" },
+        "unresolvedRate": { "$ref": "#/$defs/rateOrNull" },
+        "rejectedRate": { "$ref": "#/$defs/rateOrNull" },
+        "conflictRate": { "$ref": "#/$defs/rateOrNull" },
+        "unresolvedReasonCounts": { "$ref": "#/$defs/countMap" },
+        "rejectedReasonCounts": { "$ref": "#/$defs/countMap" },
+        "taxonomyCounts": { "$ref": "#/$defs/countMap" }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rawRecordsIncluded",
+        "sourceRowIdsIncluded",
+        "raceIdsIncluded",
+        "selectionsIncluded",
+        "absolutePathsIncluded",
+        "localDbPathIncluded",
+        "outcomeColumnsRead"
+      ],
+      "properties": {
+        "rawRecordsIncluded": { "const": false },
+        "sourceRowIdsIncluded": { "const": false },
+        "raceIdsIncluded": { "const": false },
+        "selectionsIncluded": { "const": false },
+        "absolutePathsIncluded": { "const": false },
+        "localDbPathIncluded": { "const": false },
+        "outcomeColumnsRead": { "const": false }
+      }
+    },
+    "safety": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operationalDbWrites",
+        "notificationWrites",
+        "lineSends",
+        "appSettingsReads",
+        "publicWrites",
+        "productionPromotion"
+      ],
+      "properties": {
+        "operationalDbWrites": { "const": 0 },
+        "notificationWrites": { "const": 0 },
+        "lineSends": { "const": 0 },
+        "appSettingsReads": { "const": 0 },
+        "publicWrites": { "const": 0 },
+        "productionPromotion": { "const": false }
+      }
+    },
+    "contentDigest": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "rateOrNull": {
+      "oneOf": [
+        { "type": "number", "minimum": 0, "maximum": 1 },
+        { "type": "null" }
+      ]
+    },
+    "countMap": {
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    }
+  }
+}
