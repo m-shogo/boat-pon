@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://boat-pon.example/schemas/public-dashboard-snapshot-v1.schema.json",
+  "title": "Boat Pon Public Dashboard Snapshot v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "generatedAt",
+    "dataAsOf",
+    "modelVersion",
+    "integrity",
+    "status",
+    "metrics",
+    "pipeline",
+    "registries",
+    "dataQuality",
+    "methodologyReferences"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "public-dashboard-snapshot-v1" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "dataAsOf": { "type": "string", "format": "date-time" },
+    "modelVersion": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "digest"],
+      "properties": {
+        "algorithm": { "const": "sha256" },
+        "digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["currentPhase", "readiness", "lastRunAt", "nextTask", "runner", "snapshotFreshness"],
+      "properties": {
+        "currentPhase": { "type": ["string", "null"] },
+        "readiness": { "$ref": "#/$defs/statusValue" },
+        "lastRunAt": { "type": ["string", "null"], "format": "date-time" },
+        "nextTask": { "type": ["string", "null"] },
+        "runner": { "$ref": "#/$defs/statusValue" },
+        "snapshotFreshness": { "enum": ["FRESH", "STALE", "NOT_AVAILABLE"] }
+      }
+    },
+    "metrics": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label", "value", "unit", "sampleSize", "period", "basis"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+          "label": { "type": "string" },
+          "value": { "type": ["number", "string", "null"] },
+          "unit": { "type": ["string", "null"] },
+          "sampleSize": { "type": ["integer", "null"], "minimum": 0 },
+          "period": { "type": ["string", "null"] },
+          "basis": { "enum": ["historical", "forward", "paper-live", "data-quality", "not-available"] },
+          "maxHitExcludedValue": { "type": ["number", "string", "null"] }
+        }
+      }
+    },
+    "pipeline": {
+      "type": "array",
+      "maxItems": 200,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["taskId", "label", "status", "dependencies", "evidence"],
+        "properties": {
+          "taskId": { "type": "string" },
+          "label": { "type": "string" },
+          "status": { "$ref": "#/$defs/statusValue" },
+          "dependencies": { "type": "array", "items": { "type": "string" }, "maxItems": 50 },
+          "evidence": { "type": "array", "items": { "type": "string" }, "maxItems": 20 }
+        }
+      }
+    },
+    "registries": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["experiments", "discoveries", "rejections"],
+      "properties": {
+        "experiments": { "type": ["integer", "null"], "minimum": 0 },
+        "discoveries": { "type": ["integer", "null"], "minimum": 0 },
+        "rejections": { "type": ["integer", "null"], "minimum": 0 }
+      }
+    },
+    "dataQuality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["coverageStatus", "pitStatus", "holdoutStatus", "commonCohortStatus", "notes"],
+      "properties": {
+        "coverageStatus": { "$ref": "#/$defs/statusValue" },
+        "pitStatus": { "$ref": "#/$defs/statusValue" },
+        "holdoutStatus": { "$ref": "#/$defs/statusValue" },
+        "commonCohortStatus": { "$ref": "#/$defs/statusValue" },
+        "notes": { "type": "array", "items": { "type": "string" }, "maxItems": 50 }
+      }
+    },
+    "methodologyReferences": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["label", "path"],
+        "properties": {
+          "label": { "type": "string" },
+          "path": { "type": "string", "pattern": "^/" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "statusValue": {
+      "enum": [
+        "PASS",
+        "READY",
+        "RUNNING",
+        "BLOCKED",
+        "ENGINEERING_REQUIRED",
+        "NOT_AVAILABLE",
+        "NOT_STARTED",
+        "NOT_APPLICABLE"
+      ]
+    }
+  }
+}
