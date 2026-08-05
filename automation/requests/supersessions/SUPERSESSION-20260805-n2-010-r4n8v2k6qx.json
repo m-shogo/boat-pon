@@ -1,0 +1,21 @@
+{
+  "supersessionSchemaVersion": "research-intent-supersession-v1",
+  "supersessionId": "SUPERSESSION-20260805-n2-010-r4n8v2k6qx",
+  "taskId": "TASK-N2-010",
+  "replacementIntentId": "INTENT-20260805-r4n8v2k6qx",
+  "supersededIntents": [
+    {
+      "intentId": "INTENT-20260805-k8m2q7v4pz",
+      "expectedAuthoritySha": "56f0b47",
+      "reason": "AUTHORITY_SHA_MISMATCH"
+    },
+    {
+      "intentId": "INTENT-20260805-z7m4q2p8kx",
+      "expectedAuthoritySha": "1184fa4",
+      "reason": "AUTHORITY_SHA_MISMATCH"
+    }
+  ],
+  "observedAuthoritySha": "00c6f4bcf891e00d0f8b6ffdb11727ca626b30b1",
+  "createdAt": "2026-08-05T08:41:00.000Z",
+  "requestedBy": "chatgpt-interactive"
+}
