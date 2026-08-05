@@ -1,7 +1,7 @@
 {
   "catalogSchemaVersion": "research-task-catalog-v1",
-  "catalogVersion": "2026-08-05-n2-governance-v3",
-  "updatedAt": "2026-08-05T13:05:00.000Z",
+  "catalogVersion": "2026-08-05-n2-governance-v4",
+  "updatedAt": "2026-08-05T13:47:00.000Z",
   "note": "task定義の正本（main, immutable）。可変statusはautomation branchのqueue-state。ChatGPTは本catalog + branch stateを読み、実装済みREADY taskを1件だけdispatchする。",
   "tasks": [
     {
@@ -146,21 +146,22 @@
       "defaultStatus": "READY"
     },
     {
-      "taskDefinitionVersion": 2,
+      "taskDefinitionVersion": 3,
       "dependencies": ["TASK-N2-010"],
       "maxDurationSeconds": 3600,
       "expectedInputs": [
-        "reports/n2/n2-dataset-manifest.json from automation authority",
+        "N2-010 n2-dataset-manifest-v2 core summary digest from automation authority",
+        "strictly validated SDK PIT envelope outside the producer core digest",
         "read-only primary boat.sqlite",
         "read-only research-replay.sqlite",
         "official_program and trifecta_market observation lineage"
       ],
       "estimatedDurationSeconds": 300,
       "valueOfInformation": "high",
-      "invalidationCondition": "PIT audit contract、reader query、dataset manifest identity、またはofficial_program/trifecta_market timing semanticsが変わったら再定義",
+      "invalidationCondition": "PIT audit executor contract、manifest core-digest/PIT-envelope boundary、reader query、dataset identity、またはofficial_program/trifecta_market timing semanticsが変わったら再定義",
       "taskId": "TASK-N2-011",
       "title": "PIT再検証",
-      "objective": "official programとlive market feature joinのpoint-in-time、same-race leakage、lineage、ambiguous timingをread-onlyで再検証",
+      "objective": "N2-010 manifestのcore digestとSDK PIT envelopeを別々に検証した上で、official programとlive market feature joinのpoint-in-time、same-race leakage、lineage、ambiguous timingをread-onlyで再検証",
       "taskType": "pit-audit",
       "executor": "pit-audit",
       "safetyLevel": "L0",
