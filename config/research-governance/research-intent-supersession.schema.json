@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://boat-pon.local/schemas/research-intent-supersession.schema.json",
+  "title": "Boat Pon Research Intent Supersession",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "supersessionSchemaVersion",
+    "supersessionId",
+    "taskId",
+    "replacementIntentId",
+    "supersededIntents",
+    "observedAuthoritySha",
+    "createdAt",
+    "requestedBy"
+  ],
+  "properties": {
+    "supersessionSchemaVersion": {
+      "const": "research-intent-supersession-v1"
+    },
+    "supersessionId": {
+      "type": "string",
+      "pattern": "^SUPERSESSION-[0-9A-Za-z._-]{4,96}$"
+    },
+    "taskId": {
+      "type": "string",
+      "pattern": "^(TASK-[0-9A-Za-z._-]{1,64}|NEXT)$"
+    },
+    "replacementIntentId": {
+      "type": "string",
+      "pattern": "^INTENT-[0-9A-Za-z._-]{4,64}$"
+    },
+    "supersededIntents": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["intentId", "expectedAuthoritySha", "reason"],
+        "properties": {
+          "intentId": {
+            "type": "string",
+            "pattern": "^INTENT-[0-9A-Za-z._-]{4,64}$"
+          },
+          "expectedAuthoritySha": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{7,40}$"
+          },
+          "reason": {
+            "const": "AUTHORITY_SHA_MISMATCH"
+          }
+        }
+      }
+    },
+    "observedAuthoritySha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "requestedBy": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    }
+  }
+}

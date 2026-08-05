@@ -102,22 +102,40 @@ Chat/GitHub-only execution has not run the private Mac-local `data/boat.sqlite`,
 
 The isolated permanent Runtime Decision Ledger store remains a later design decision. It must not be added before real bounded evidence shows which identities and timestamps are recoverable.
 
+### N2 control-plane recovery — stale intent supersession
+
+The previous N2-010 intents were not merely waiting:
+
+- `INTENT-20260805-k8m2q7v4pz` referenced authority `56f0b47`;
+- `INTENT-20260805-z7m4q2p8kx` referenced authority `1184fa4`;
+- current authority before the recovery slice was `00c6f4bcf891e00d0f8b6ffdb11727ca626b30b1`.
+
+Because the guard accepts only current main or its immediate parent, both old intents are terminally stale and cannot execute successfully.
+
+Current recovery slice:
+
+```text
+strict supersession contract + schema
+-> equivalent-unprocessed-intent guard
+-> immutable supersession record for both stale intents
+-> one replacement intent INTENT-20260805-r4n8v2k6qx
+-> PR CI
+-> merge-triggered one-shot workflow
+-> automation branch result readback
+```
+
+The replacement is allowed only when the old authority is stale and a matching supersession record exists. A still-current unprocessed intent remains a hard duplicate block.
+
+Detailed authority: `docs/operations/n2-stale-intent-supersession-2026-08-05.md`.
+
 ## Scheduled N2 lane
 
-Latest observed authority state after PR #25 merged:
+State observed before the recovery PR merges:
 
 - N2-001 through N2-006: `PASS`;
-- N2-010: authority remains `READY`, `attemptCount=0`, no evidence links;
-- valid main intent `INTENT-20260805-z7m4q2p8kx` exists for N2-010;
-- that intent is absent from the processed-intent ledger;
-- therefore current status is `PENDING_RUNNER` / `PENDING_WORKFLOW_CONFIRMATION`, not PASS or confirmed failure;
+- N2-010 queue state: `READY`, `attemptCount=0`, no evidence links;
+- old N2-010 intent files remain immutable and absent from the processed-intent ledger;
+- replacement intent `INTENT-20260805-r4n8v2k6qx` is included in the recovery slice;
 - N2-011 and later remain `BLOCKED_EXECUTOR_PENDING`.
 
-Safeguard added on 2026-08-05:
-
-- the enabled hourly `Boat Pon N2研究` task checks valid unprocessed main intents before every write;
-- while an equivalent unprocessed intent exists, it creates no new intent even if queue state remains READY;
-- repeated PENDING_RUNNER state produces no hourly notification;
-- existing intent files and automation branch state remain immutable from the ChatGPT control plane.
-
-Detailed authority: `docs/operations/n2-pending-intent-safety-2026-08-05.md`.
+The enabled hourly task must treat valid supersession records as terminal for pending-intent detection. It must continue to block any active unprocessed equivalent and must not create another N2-010 intent while the replacement is unprocessed.
