@@ -1,5 +1,5 @@
-import { existsSync, readFileSync, statSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { existsSync, lstatSync, readFileSync, statSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { canonicalHash } from "../research-replay/canonical";
 import { buildN2PitAuditSummary } from "../research-replay/n2PitAudit";
 import { readN2PitAuditObservations } from "../research-replay/n2PitAuditReader";
@@ -15,6 +15,8 @@ import type { Executor, ExecutorResult } from "./taskExecutors";
 export const N2_PIT_AUDIT_EXECUTOR_VERSION = "n2-pit-audit-executor-v1";
 const REPORT_RELATIVE_PATH = "reports/n2/n2-pit-audit.json";
 const MANIFEST_RELATIVE_PATH = "reports/n2/n2-dataset-manifest.json";
+const MANIFEST_PATH_ENV = "BOAT_PON_N2_DATASET_MANIFEST_PATH";
+const MAX_MANIFEST_BYTES = 2_097_152;
 const PRIMARY_DB_FILENAME = "boat.sqlite";
 
 function dbBlocks(path: string, code: string): string[] {
@@ -23,15 +25,26 @@ function dbBlocks(path: string, code: string): string[] {
   return existsSync(wal) && statSync(wal).size > 0 ? [`${code}_ACTIVE_WAL`] : [];
 }
 
+function resolveManifestPath(repoRoot: string): string {
+  const configured = process.env[MANIFEST_PATH_ENV]?.trim();
+  return configured ? resolve(configured) : join(repoRoot, MANIFEST_RELATIVE_PATH);
+}
+
 function loadAndValidateManifest(repoRoot: string): {
   ok: boolean;
   errors: string[];
   outputDigest: string | null;
   datasetVersion: string | null;
 } {
-  const path = join(repoRoot, MANIFEST_RELATIVE_PATH);
+  const path = resolveManifestPath(repoRoot);
   if (!existsSync(path)) {
     return { ok: false, errors: ["N2_DATASET_MANIFEST_MISSING"], outputDigest: null, datasetVersion: null };
+  }
+  if (lstatSync(path).isSymbolicLink()) {
+    return { ok: false, errors: ["N2_DATASET_MANIFEST_SYMLINK"], outputDigest: null, datasetVersion: null };
+  }
+  if (statSync(path).size > MAX_MANIFEST_BYTES) {
+    return { ok: false, errors: ["N2_DATASET_MANIFEST_TOO_LARGE"], outputDigest: null, datasetVersion: null };
   }
   let parsed: Record<string, unknown>;
   try {

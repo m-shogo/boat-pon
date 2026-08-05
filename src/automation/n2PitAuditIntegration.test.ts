@@ -25,10 +25,12 @@ test("N2-011 catalog, registry and phase mapping are aligned", () => {
   assert.equal(alias?.status, "implemented_ready");
 });
 
-test("one-shot workflow materializes the exact N2-010 manifest authority", () => {
+test("one-shot workflow materializes the exact N2-010 manifest outside the worktree", () => {
   const workflow = readFileSync(".github/workflows/boat-pon-intent-dispatch.yml", "utf8");
   assert.match(workflow, /origin\/\$BRANCH:reports\/n2\/n2-dataset-manifest\.json/);
-  assert.match(workflow, /test -s reports\/n2\/n2-dataset-manifest\.json/);
+  assert.match(workflow, /\$RUNNER_TEMP\/n2-dataset-manifest\.json/);
+  assert.match(workflow, /BOAT_PON_N2_DATASET_MANIFEST_PATH:/);
+  assert.doesNotMatch(workflow, /> reports\/n2\/n2-dataset-manifest\.json/);
   assert.doesNotMatch(workflow, /\bschedule:/);
   assert.doesNotMatch(workflow, /workflow_dispatch:/);
 });
