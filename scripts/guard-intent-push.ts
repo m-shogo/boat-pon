@@ -8,7 +8,14 @@
 //       replay(processed ledgers) / equivalent pending intent / safety。すべて fail-closed。
 import { execFileSync } from "node:child_process";
 import { existsSync, lstatSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
-import { INTENT_ID_RE, buildCanonicalRequest, isIntentProcessed, isRequestReplay, validateIntent } from "../src/automation/dispatchIntent";
+import {
+  INTENT_ID_RE,
+  buildCanonicalRequest,
+  isIntentProcessed,
+  isRequestReplay,
+  validateIntent,
+  type DispatchIntent,
+} from "../src/automation/dispatchIntent";
 import {
   analyzeEquivalentUnprocessedIntents,
   validateIntentSupersession,
@@ -115,34 +122,33 @@ if (isIntentProcessed(processedIntents, intent.intentId)) fail(`replayed intentI
 if (isRequestReplay(processedRequests, requestId)) fail(`replayed requestId: ${requestId}`);
 
 // ---- 同一 task の未処理 intent: active は拒否、stale は明示 supersession のみ許可 ----
-const allIntents = readdirSync(INTENTS_DIR)
+const allIntents: DispatchIntent[] = readdirSync(INTENTS_DIR)
   .filter((name) => /^INTENT-[0-9A-Za-z._-]{4,64}\.json$/.test(name))
-  .map((name) => {
+  .map((name): DispatchIntent => {
     const candidatePath = `${INTENTS_DIR}/${name}`;
     let raw: unknown;
     try { raw = JSON.parse(readFileSync(candidatePath, "utf8")); }
     catch { fail(`existing intent is not valid JSON: ${candidatePath}`); }
     const validation = validateIntent(raw);
-    const candidateIntent = validation.intent;
-    if (!validation.valid || candidateIntent === null) {
+    if (!validation.valid || validation.intent === null) {
       fail(`invalid existing intent ${candidatePath}: ${validation.errors.join("; ")}`);
     }
-    return candidateIntent;
+    return validation.intent as DispatchIntent;
   });
 
 const supersessions: IntentSupersession[] = existsSync(SUPERSESSIONS_DIR)
   ? readdirSync(SUPERSESSIONS_DIR)
       .filter((name) => /^SUPERSESSION-[0-9A-Za-z._-]{4,96}\.json$/.test(name))
-      .map((name) => {
+      .map((name): IntentSupersession => {
         const supersessionPath = `${SUPERSESSIONS_DIR}/${name}`;
         let raw: unknown;
         try { raw = JSON.parse(readFileSync(supersessionPath, "utf8")); }
         catch { fail(`supersession is not valid JSON: ${supersessionPath}`); }
         const validation = validateIntentSupersession(raw);
-        const parsedSupersession = validation.supersession;
-        if (!validation.valid || parsedSupersession === null) {
+        if (!validation.valid || validation.supersession === null) {
           fail(`invalid supersession ${supersessionPath}: ${validation.errors.join("; ")}`);
         }
+        const parsedSupersession = validation.supersession as IntentSupersession;
         if (name !== `${parsedSupersession.supersessionId}.json`) {
           fail(`supersession filename must match supersessionId: ${supersessionPath}`);
         }
