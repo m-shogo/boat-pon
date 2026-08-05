@@ -220,12 +220,12 @@ export function buildN2PitAuditSummary(observations: N2PitAuditObservation[]): N
   }
 
   const excludedCount = results.length - verifiedSafeCount;
-  const status = sameRaceViolationCount > 0 || futureViolationCount > 0
+  const status: N2PitAuditSummary["status"] = sameRaceViolationCount > 0 || futureViolationCount > 0
     ? "FAILED"
     : observations.length === 0 || excludedCount > 0
       ? "CONDITIONAL"
       : "PASS";
-  const reasonClassCounts = {
+  const reasonClassCounts: Record<N2PitAuditReasonClass, number> = {
     safe: reasonClasses.get("safe") ?? 0,
     same_race_leakage: reasonClasses.get("same_race_leakage") ?? 0,
     future_leakage: reasonClasses.get("future_leakage") ?? 0,
@@ -233,10 +233,10 @@ export function buildN2PitAuditSummary(observations: N2PitAuditObservation[]): N
     lineage_exclusion: reasonClasses.get("lineage_exclusion") ?? 0,
     source_not_allowed: reasonClasses.get("source_not_allowed") ?? 0,
   };
-  const withoutOutputDigest = {
+  const withoutOutputDigest: Omit<N2PitAuditSummary, "outputDigest"> = {
     auditVersion: N2_PIT_AUDIT_VERSION,
     status,
-    dataStatus: observations.length === 0 ? "PENDING_REAL_DATA" as const : "REAL_DATA" as const,
+    dataStatus: observations.length === 0 ? "PENDING_REAL_DATA" : "REAL_DATA",
     auditedObservationCount: observations.length,
     verifiedSafeCount,
     excludedCount,
