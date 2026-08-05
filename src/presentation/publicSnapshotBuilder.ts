@@ -135,8 +135,9 @@ export function buildPublicDashboardSnapshot(
   });
 
   const activeTask = pipeline.find((task) => task.status === "RUNNING")
+    ?? pipeline.find((task) => task.status === "READY" && task.taskId !== "TASK-PLANNER-NEXT")
+    ?? pipeline.find((task) => task.status === "ENGINEERING_REQUIRED" && task.taskId !== "TASK-PLANNER-NEXT")
     ?? pipeline.find((task) => task.status === "READY")
-    ?? pipeline.find((task) => task.status === "ENGINEERING_REQUIRED")
     ?? null;
   const readinessPending = isRecord(input.readiness) ? stringValue(input.readiness.pendingTask) : null;
   const currentRunAt = sourceUpdatedAt(input.currentRun);
