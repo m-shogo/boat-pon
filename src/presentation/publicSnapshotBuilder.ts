@@ -3,6 +3,7 @@ import {
   type PublicDashboardSnapshot,
   type PublicResearchStatus,
 } from "./publicSnapshot";
+import { DEFAULT_PUBLIC_SNAPSHOT_MAX_AGE_MS } from "./publicSnapshotTransport";
 
 export type PublicSnapshotBuilderInput = {
   catalog: unknown;
@@ -118,7 +119,8 @@ function readinessCheckStatus(value: unknown, checkName: string): PublicResearch
 export function buildPublicDashboardSnapshot(
   input: PublicSnapshotBuilderInput,
 ): PublicDashboardSnapshot {
-  if (!Number.isFinite(Date.parse(input.generatedAt))) throw new Error("generatedAt must be a valid date-time");
+  const generatedAtMs = Date.parse(input.generatedAt);
+  if (!Number.isFinite(generatedAtMs)) throw new Error("generatedAt must be a valid date-time");
   if (!input.modelVersion.trim()) throw new Error("modelVersion is required");
 
   const catalog = parseCatalog(input.catalog);
@@ -146,6 +148,10 @@ export function buildPublicDashboardSnapshot(
     currentRunAt,
     sourceUpdatedAt(input.readiness),
   ], input.generatedAt);
+  const dataAsOfMs = Date.parse(dataAsOf);
+  const declaredFreshness = generatedAtMs - dataAsOfMs > DEFAULT_PUBLIC_SNAPSHOT_MAX_AGE_MS
+    ? "STALE"
+    : "FRESH";
 
   const pitTask = queue.tasks.get("TASK-N2-011");
   const commonCohortTask = queue.tasks.get("TASK-N2-022");
@@ -165,7 +171,7 @@ export function buildPublicDashboardSnapshot(
       lastRunAt: currentRunAt,
       nextTask: activeTask?.taskId ?? readinessPending,
       runner: runnerStatus(input.currentRun),
-      snapshotFreshness: "FRESH",
+      snapshotFreshness: declaredFreshness,
     },
     metrics: [],
     pipeline,
