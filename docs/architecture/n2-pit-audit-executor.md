@@ -1,6 +1,6 @@
 # N2 PIT Audit Executor
 
-Status: registered integration; queue migration and one-shot execution pending
+Status: registered; queue migrated; first dispatch blocked before execution by dirty-worktree input materialization
 Task: `TASK-N2-011`
 Safety: L0, read-only
 Date: 2026-08-05
@@ -31,6 +31,7 @@ It does not train a model, alter a dataset, write either SQLite database, change
   - `src/research-replay/n2PitAudit.test.ts`
   - `src/research-replay/n2PitAuditReader.test.ts`
   - `src/automation/n2PitAuditExecutor.test.ts`
+  - `src/automation/n2PitAuditExternalManifest.test.ts`
   - `src/automation/n2PitAuditRegistration.test.ts`
   - `src/automation/n2PitAuditIntegration.test.ts`
 
@@ -42,7 +43,7 @@ The previous executor file is preserved byte-for-byte as `taskExecutorsCore.ts`.
 pit-audit -> runN2PitAuditExecutor
 ```
 
-Arbitrary task types continue to return `EXECUTOR_NOT_REGISTERED`. The global registry identity advances to `n2-task-executor-registry-v3` so N2-011 cannot reuse an older idempotency identity.
+Arbitrary task types continue to return `EXECUTOR_NOT_REGISTERED`. The global registry identity is `n2-task-executor-registry-v3`, so N2-011 cannot reuse an older idempotency identity.
 
 ## Source boundary
 
@@ -113,35 +114,42 @@ The executor requires:
 - manifest output-digest recomputation success;
 - holdout exclusion confirmed;
 - manifest marked read-only;
+- manifest is a regular file, not a symlink, and no larger than 2 MiB;
 - `data/research-replay.sqlite` present with no active WAL;
 - sibling `data/boat.sqlite` present with no active WAL.
 
 Both databases are opened through immutable read-only URIs with `PRAGMA query_only=ON`. The reader is bounded at 100,000 observations and detects truncation with `limit + 1`.
 
-The one-shot workflow materializes the exact dataset manifest from `automation/boat-pon-research` alongside the control state. It does not fall back to a main-branch fixture or regenerate the manifest.
+The one-shot workflow reads the exact dataset manifest from `automation/boat-pon-research`, writes it to `$RUNNER_TEMP/n2-dataset-manifest.json`, and passes the absolute path through `BOAT_PON_N2_DATASET_MANIFEST_PATH`. It does not place this dynamic authority artifact inside the Git worktree, weaken `DIRTY_WORKING_TREE`, fall back to a main-branch fixture or regenerate the manifest.
+
+The executor retains the repository-relative manifest path only as a test/local fallback when the environment variable is absent.
+
+## First dispatch record
+
+Merged intent `INTENT-20260805-m7p3v9k2qx` was guarded successfully on Mac recovery run `31010313396`. The task did not reach the executor. Preflight returned:
+
+```text
+BLOCKED: DIRTY_WORKING_TREE
+```
+
+Root cause: the first integration wrote the automation-branch manifest to `reports/n2/n2-dataset-manifest.json` before runner preflight. The dirty-tree guard behaved correctly. The blocked run left N2-011 `READY`, attempt count `0`, evidence empty and the intent unprocessed.
+
+The fix moves only that input to `RUNNER_TEMP`; it does not add the manifest path to the dirty-tree allowlist.
 
 ## Queue migration
 
-After this integration reaches `main`, the automation branch may be changed only when all of these exact preconditions still hold:
+The automation branch migration completed from catalog v2/state v22 to catalog v3/state v23 under blob-SHA CAS. It changed only:
 
-1. `TASK-N2-010.status` is `PASS`;
-2. `TASK-N2-011.status` is `BLOCKED_EXECUTOR_PENDING`;
-3. `TASK-N2-011.taskDefinitionVersion` is `1`;
-4. `TASK-N2-011.attemptCount` is `0`;
-5. `TASK-N2-011.evidenceLinks` is empty;
-6. catalog definition `2` is `READY` and `pit-audit` resolves as implemented;
-7. the queue-state blob SHA has not changed since readback.
+- catalog version;
+- queue state version/timestamps;
+- N2-011 status from `BLOCKED_EXECUTOR_PENDING` to `READY`;
+- N2-011 task definition version from `1` to `2`.
 
-The migration changes only:
+Authority, attempts, evidence, result digest, failure and checkpoint remained empty. The blocked first dispatch did not consume or mutate this task entry.
 
-- catalog version to `2026-08-05-n2-governance-v3`;
-- queue `stateVersion += 1`;
-- queue `updatedAt`;
-- N2-011 status to `READY`;
-- N2-011 task definition version to `2`;
-- N2-011 `updatedAt`.
+## Retry authority
 
-Authority, attempts, evidence, result digest, failure and checkpoint remain empty. Reapplying the migration to the already-migrated state is a no-op; any different starting state blocks.
+The first intent is immutable and remains unprocessed. After this fix reaches main, it must not be edited or silently reused against a newer main SHA. A strict stale-intent supersession record and exactly one replacement intent are required. Existing actor, authority, queue, dependency, replay and one-shot guards remain authoritative.
 
 ## Runtime non-interference
 
