@@ -64,16 +64,37 @@ No operational DB write, permanent ledger table, automatic backfill, Current BUY
 
 ### G2-C — Bounded shadow evidence and source completeness
 
-Next safe sequence:
+Branch: `agent/runtime-decision-ledger-bounded-evidence`
+
+Implemented in the current slice:
+
+- strict `runtime-decision-ledger-shadow-evidence.0.1` TypeScript contract and validator;
+- matching JSON Schema;
+- finite date range and maximum 5,000-row evidence cohort;
+- `limit + 1` truncation detection rather than silent partial PASS;
+- active SQLite WAL fail-closed guard without checkpoint/removal;
+- SQLite structural source descriptor and digest without local DB path;
+- aggregate mapped/unresolved/rejected/conflict counts and rates;
+- unresolved/rejected reason counts and stable reason taxonomy;
+- sanitized evidence with no raw records, row IDs, race IDs, selections, outcome columns or absolute paths;
+- local private append-only store with directory `0700`, file `0600`, exclusive create and deterministic identity;
+- `data/private/` Git ignore;
+- end-to-end temporary SQLite fixture test covering real command execution, evidence validation, private record retention and idempotent replay;
+- architecture and operating documentation.
+
+Still required before G2-C evidence is complete:
 
 ```text
-bounded local shadow run
--> completeness/reconciliation evidence
--> unresolved-field classification
--> isolated append-only store design
+PR CI and review
+-> merge to main
+-> bounded Mac-local DB execution
+-> measured completeness/reconciliation evidence
+-> dominant unresolved-field classification
 ```
 
-The bounded run requires the Mac-local private SQLite evidence and must use the merged read-only/query-only command. Chat/GitHub-only execution must not claim that run has occurred.
+Chat/GitHub-only execution does not claim the Mac-local run, mapped count or evidence verdict has occurred.
+
+The isolated permanent Runtime Decision Ledger store remains a later design decision. It must not be added before real bounded evidence shows which identities and timestamps are recoverable.
 
 ## Scheduled N2 lane
 
@@ -88,7 +109,7 @@ Latest observed authority state:
 
 Safeguard added on 2026-08-05:
 
-- the enabled hourly `Boat Pon N2研究` task now checks valid unprocessed main intents before every write;
+- the enabled hourly `Boat Pon N2研究` task checks valid unprocessed main intents before every write;
 - while an equivalent unprocessed intent exists, it creates no new intent even if queue state remains READY;
 - repeated PENDING_RUNNER state produces no hourly notification;
 - existing intent files and automation branch state remain immutable from the ChatGPT control plane.
