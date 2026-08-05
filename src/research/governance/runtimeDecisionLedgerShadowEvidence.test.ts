@@ -72,7 +72,7 @@ test("builds sanitized conditional evidence without row identities", () => {
   assert.equal(evidence.completeness.mappedRate, 0.5);
   assert.deepEqual(evidence.completeness.taxonomyCounts, { temporal_provenance: 1 });
   const serialized = JSON.stringify(evidence);
-  assert.doesNotMatch(serialized, /decision-history:99|sourceDecisionHistoryId|canonicalRaceId|selection/);
+  assert.doesNotMatch(serialized, /decision-history:99|sourceDecisionHistoryId|canonicalRaceId|"selection":|1-2-3/);
   assert.equal(evidence.privacy.rawRecordsIncluded, false);
   assert.equal(evidence.safety.operationalDbWrites, 0);
 });
