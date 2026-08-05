@@ -61,6 +61,36 @@ The manifest is capped at 20 races and binds:
 
 Raw JSON and local source paths are never included in the manifest. A truncated source read cannot produce a manifest.
 
+## TASK-N2-013 review bundle
+
+`TASK-N2-013` is an L0/read-only task that converts the live manifest candidate into a review artifact. It runs only after `TASK-N2-012` is `PASS`.
+
+The bundle seals:
+
+- the exact 20 selected primary identities;
+- the exact checkout `HEAD` used by the executor;
+- the manifest digest and code SHA;
+- the exact source-specific approval target;
+- current official-program and trifecta-market observation counts;
+- current global shadow and kill-switch state;
+- current approval-resolution result;
+- the hard maximum of 20 races;
+- the `EXISTING_CACHE` lineage mode;
+- append-only rollback and quarantine requirements.
+
+A task-level `PASS` means only that the bundle was generated, verified and stored. The bundle always contains:
+
+```text
+writeAuthorized: false
+productionApplyExecuted: false
+humanApprovalCreated: false
+executionContract.productionApplyAuthorized: false
+```
+
+The bundle may report `READY_FOR_HUMAN_REVIEW`, but that status is not a write approval. A later canary must check out the exact sealed SHA and independently resolve a human production approval for the exact manifest digest at apply time.
+
+The review task opens both SQLite databases immutable/query-only, does not call the canary apply function, does not create approval rows and does not modify rollout state.
+
 ## Approval contract
 
 A write requires one active production approval with exact values derived from the manifest digest:
@@ -128,11 +158,12 @@ Tests and Mac rehearsal write only to temporary sidecar/raw-store paths and veri
 
 Before a real production-sidecar canary:
 
-1. generate and persist one reviewed manifest from the current main SHA;
-2. review its counts, exclusions and selected identities without exposing raw payloads;
-3. define rollback and evidence paths;
-4. create one human production approval bound to that exact digest;
-5. run once with a hard maximum of 20;
-6. verify sidecar lineage, PIT audit visibility and idempotent replay;
-7. keep global shadow writes disabled;
-8. rerun `TASK-N2-011` only after both official-program and trifecta-market observations are non-zero.
+1. generate and persist one `TASK-N2-013` review bundle from the current checkout SHA;
+2. review its counts, exclusions, exact 20 identities, manifest digest and approval target without exposing raw payloads;
+3. review the no-delete rollback and quarantine/supersession path;
+4. create one human production approval bound to that exact digest only after explicit authorization;
+5. check out the exact sealed SHA and rerun all runtime gates;
+6. run once with a hard maximum of 20;
+7. verify sidecar lineage, PIT audit visibility and idempotent replay;
+8. keep global shadow writes disabled;
+9. do not consume `TASK-N2-011`'s final attempt until both official-program and trifecta-market observations are non-zero.
