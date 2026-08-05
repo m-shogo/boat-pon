@@ -18,15 +18,16 @@ const executorSource = readFileSync(
 );
 
 test("TASK-N2-013 catalog, registry and phase mapping are aligned", () => {
-  assert.equal(catalog.catalogVersion, "2026-08-05-n2-governance-v6");
+  assert.equal(catalog.catalogVersion, "2026-08-06-n2-governance-v7");
   const task = catalog.tasks.find((entry: { taskId: string }) => entry.taskId === "TASK-N2-013");
   assert.ok(task);
-  assert.equal(task.taskDefinitionVersion, 1);
+  assert.equal(task.taskDefinitionVersion, 2);
   assert.deepEqual(task.dependencies, ["TASK-N2-012"]);
   assert.equal(task.taskType, "official-program-canary-review-bundle");
   assert.equal(task.executor, "official-program-canary-review-bundle");
   assert.equal(task.safetyLevel, "L0");
   assert.equal(task.defaultStatus, "READY");
+  assert.match(String(task.invalidationCondition), /generation-time contract/);
   assert.deepEqual(task.expectedOutputs, [
     "reports/n2/n2-official-program-canary-review-bundle.json",
   ]);
@@ -56,7 +57,7 @@ test("automation evidence allowlist is exact and does not authorize DB or approv
   assert.equal(commitScript.includes('"*.sqlite"'), false);
 });
 
-test("review bundle and executor remain read-only and never claim production apply", () => {
+test("review bundle and executor remain read-only and bind factual generation time", () => {
   for (const required of [
     "writeAuthorized: false",
     "productionApplyExecuted: false",
@@ -64,15 +65,20 @@ test("review bundle and executor remain read-only and never claim production app
     "productionApplyAuthorized: false",
     "automaticDeleteAllowed: false",
     "exactProductionApprovalRequired: true",
+    "manifestGeneratedAtMustNotExceedBundleGeneratedAt: true",
+    "MANIFEST_GENERATED_AT_AFTER_BUNDLE_GENERATED_AT",
   ]) {
     assert.ok(bundleSource.includes(required), `missing safety contract: ${required}`);
   }
+  assert.ok(executorSource.includes("const generatedAt = new Date().toISOString()"));
+  assert.ok(executorSource.includes("generatedAt,"));
   assert.ok(executorSource.includes("openImmutable"));
   assert.ok(executorSource.includes("PRAGMA query_only=ON"));
   assert.ok(executorSource.includes("primaryDatabaseWriteCount: 0"));
   assert.ok(executorSource.includes("sidecarDatabaseWriteCount: 0"));
   assert.ok(executorSource.includes("approvalWriteCount: 0"));
   assert.ok(executorSource.includes("productionApplyExecuted: false"));
+  assert.equal(executorSource.includes("source.cohort.dateTo}T23:59:59"), false);
   assert.equal(executorSource.includes("recordApprovalGrant"), false);
   assert.equal(executorSource.includes("applyOfficialProgramCanary"), false);
 });
