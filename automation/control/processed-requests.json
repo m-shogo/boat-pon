@@ -1,6 +1,6 @@
 {
   "ledgerSchemaVersion": "processed-requests-v1",
-  "updatedAt": "2026-08-05T13:43:41.962Z",
+  "updatedAt": "2026-08-05T14:02:03.503Z",
   "requestIds": [
     "REQ-20260804-3a6e94fcf4",
     "REQ-20260804-46393c12ed",
@@ -10,7 +10,8 @@
     "REQ-20260804-a4n206x7p9",
     "REQ-20260804-b7k3m9q2x4",
     "REQ-20260805-r4n8v2k6qx",
-    "REQ-20260805-q9v4m2k7px"
+    "REQ-20260805-q9v4m2k7px",
+    "REQ-20260805-x6n2p8v4km"
   ],
   "idempotencyKeys": {
     "45e0743ea270d085b2a9cd3e2e5f41e2bb4b08e176a75c10919b2270e2e3aeb5": {
@@ -54,6 +55,12 @@
       "result": "BLOCKED",
       "evidencePath": "reports/automation/history/31011585102-TASK-N2-011.json",
       "recordedAt": "2026-08-05T13:43:41.962Z"
+    },
+    "086b94083c1fca56daa0f9b23acaa02049cada9575fe947129bf1953762dae83": {
+      "requestId": "REQ-20260805-x6n2p8v4km",
+      "result": "CONDITIONAL",
+      "evidencePath": "reports/automation/history/31013100745-TASK-N2-011.json",
+      "recordedAt": "2026-08-05T14:02:03.503Z"
     }
   }
 }

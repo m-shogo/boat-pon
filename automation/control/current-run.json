@@ -1,22 +1,21 @@
 {
   "runSchemaVersion": "current-run-v1",
-  "updatedAt": "2026-08-05T13:43:41.963Z",
-  "lastResult": "BLOCKED",
-  "lastRequestId": "REQ-20260805-q9v4m2k7px",
-  "lastIntentId": "INTENT-20260805-q9v4m2k7px",
+  "updatedAt": "2026-08-05T14:02:03.505Z",
+  "lastResult": "CONDITIONAL",
+  "lastRequestId": "REQ-20260805-x6n2p8v4km",
+  "lastIntentId": "INTENT-20260805-x6n2p8v4km",
   "lastTaskId": "TASK-N2-011",
   "lastSafetyLevel": "L0",
-  "authoritySha": "f92f87f6f285e75cdf9109e75bd2c081dbf39f36",
-  "stateVersion": 27,
-  "stateDigest": "728bf941928823e5b89f665246363472ceaeadfa1555735bdb98c55d47e0cc7d",
-  "blocks": [
-    "INPUT_CONTRACT",
-    "N2_DATASET_MANIFEST_OUTPUT_DIGEST_MISMATCH"
+  "authoritySha": "b8d7104483f3299a7b13a26e5d53c57f7bfe3334",
+  "stateVersion": 31,
+  "stateDigest": "68d6770a500348e8da6686334de38b03cdf7b68ce76cb7c8ce62ac20428ad142",
+  "blocks": [],
+  "elapsedMs": 2627,
+  "evidencePath": "reports/automation/history/31013100745-TASK-N2-011.json",
+  "outputs": [
+    "reports/n2/n2-pit-audit.json"
   ],
-  "elapsedMs": 647,
-  "evidencePath": "reports/automation/history/31011585102-TASK-N2-011.json",
-  "outputs": [],
-  "outputDigest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-  "taskStatus": "BLOCKED",
+  "outputDigest": "2f6da81d776d931e2df7cf27856fe081c85c5f08af6092818d19f4257c15d746",
+  "taskStatus": "CONDITIONAL",
   "nextCandidate": "TASK-PLANNER-NEXT: queue planner: 次候補提案（自動起動しない。次回 dispatch で 1 回だけ依頼する）"
 }

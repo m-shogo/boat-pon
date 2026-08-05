@@ -1,8 +1,8 @@
 {
   "stateSchemaVersion": "research-queue-state-v1",
-  "stateVersion": 27,
+  "stateVersion": 30,
   "catalogVersion": "2026-08-05-n2-governance-v4",
-  "updatedAt": "2026-08-05T13:58:00.000Z",
+  "updatedAt": "2026-08-05T14:02:03.502Z",
   "tasks": {
     "TASK-N2-001": {
       "status": "PASS",
@@ -130,19 +130,21 @@
       "nextDecision": "依存 task を次回 dispatch 候補にする（自動起動しない）"
     },
     "TASK-N2-011": {
-      "status": "READY",
+      "status": "CONDITIONAL",
       "taskDefinitionVersion": 3,
-      "authoritySha": null,
-      "attemptCount": 1,
+      "authoritySha": "b8d7104483f3299a7b13a26e5d53c57f7bfe3334",
+      "attemptCount": 2,
       "maxAttempts": 3,
       "evidenceLinks": [
-        "reports/automation/history/31011585102-TASK-N2-011.json"
+        "reports/automation/history/31011585102-TASK-N2-011.json",
+        "reports/automation/history/31013100745-TASK-N2-011.json",
+        "reports/n2/n2-pit-audit.json"
       ],
-      "resultDigest": null,
+      "resultDigest": "2f6da81d776d931e2df7cf27856fe081c85c5f08af6092818d19f4257c15d746",
       "lastFailure": null,
       "checkpoint": null,
-      "updatedAt": "2026-08-05T13:58:00.000Z",
-      "nextDecision": "definition v3 retry after manifest core-digest / SDK PIT-envelope contract correction; prior BLOCK evidence retained"
+      "updatedAt": "2026-08-05T14:02:03.502Z",
+      "nextDecision": "blocks: none"
     },
     "TASK-N2-020": {
       "status": "BLOCKED_EXECUTOR_PENDING",
