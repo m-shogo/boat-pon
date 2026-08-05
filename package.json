@@ -260,7 +260,8 @@
     "automation:intent-task": "tsx scripts/run-intent-task.ts",
     "automation:guard-intent": "tsx scripts/guard-intent-push.ts",
     "automation:build-intent": "tsx scripts/build-intent-cli.ts",
-    "research:governance-check": "tsx scripts/research-governance-check.ts"
+    "research:governance-check": "tsx scripts/research-governance-check.ts",
+    "automation:reconcile": "tsx scripts/reconcile-catalog-state.ts"
   },
   "engines": {
     "node": ">=24.0.0"
