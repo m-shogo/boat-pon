@@ -25,8 +25,12 @@ const venueCodes: Readonly<Record<string, string>> = Object.freeze({
   大村: "24",
 });
 
+const canonicalVenueCodePattern = /^(0[1-9]|1\d|2[0-4])$/;
+
 export function officialVenueCode(venue: string): string | null {
-  return venueCodes[venue] ?? null;
+  const normalized = venue.trim();
+  if (canonicalVenueCodePattern.test(normalized)) return normalized;
+  return venueCodes[normalized] ?? null;
 }
 
 export function officialOddsUrl(date: string, venue: string, raceNo: number): string {
