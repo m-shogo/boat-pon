@@ -1,8 +1,8 @@
 {
   "stateSchemaVersion": "research-queue-state-v1",
-  "stateVersion": 30,
-  "catalogVersion": "2026-08-05-n2-governance-v4",
-  "updatedAt": "2026-08-05T14:02:03.502Z",
+  "stateVersion": 31,
+  "catalogVersion": "2026-08-05-n2-governance-v5",
+  "updatedAt": "2026-08-05T14:41:00.000Z",
   "tasks": {
     "TASK-N2-001": {
       "status": "PASS",
@@ -145,6 +145,19 @@
       "checkpoint": null,
       "updatedAt": "2026-08-05T14:02:03.502Z",
       "nextDecision": "blocks: none"
+    },
+    "TASK-N2-012": {
+      "status": "READY",
+      "taskDefinitionVersion": 1,
+      "authoritySha": null,
+      "attemptCount": 0,
+      "maxAttempts": 3,
+      "evidenceLinks": [],
+      "resultDigest": null,
+      "lastFailure": null,
+      "checkpoint": null,
+      "updatedAt": "2026-08-05T14:41:00.000Z",
+      "nextDecision": "run read-only readiness; do not enable writes or consume the final N2-011 attempt"
     },
     "TASK-N2-020": {
       "status": "BLOCKED_EXECUTOR_PENDING",
