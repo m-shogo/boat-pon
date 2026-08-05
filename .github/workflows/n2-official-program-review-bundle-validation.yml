@@ -97,7 +97,11 @@ jobs:
             throw new Error("REAL_MANIFEST_COUNTS_CHANGED");
           }
           if (report.binding.approvalPreview.approved !== false
-            || report.binding.approvalPreview.code !== "HUMAN_APPROVAL_MISSING") {
+            || report.binding.approvalPreview.approvalId !== null
+            || typeof report.binding.approvalPreview.code !== "string"
+            || report.binding.approvalPreview.code === "APPROVED"
+            || !Array.isArray(report.binding.approvalPreview.blocks)
+            || report.binding.approvalPreview.blocks.length === 0) {
             throw new Error(`UNEXPECTED_APPROVAL_PREVIEW:${JSON.stringify(report.binding.approvalPreview)}`);
           }
           if (report.binding.authoritySha !== report.manifest.binding.codeGitSha
