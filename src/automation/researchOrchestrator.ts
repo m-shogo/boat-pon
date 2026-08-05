@@ -15,6 +15,9 @@ export type SafetyLevel = (typeof SAFETY_LEVELS)[number];
 export const TASK_STATUSES = [
   "READY", "CLAIMED", "RUNNING", "CHECKPOINTED", "PASS", "CONDITIONAL",
   "BLOCKED", "FAILED_RETRYABLE", "FAILED_FINAL", "CANCELLED",
+  // catalog defaultStatus 由来の擬似状態。reconciliation で state へ追加される（executor 未実装/依存未達）。
+  // dispatchable ではない。executor 実装後に明示 migration で READY へ遷移し得る。
+  "BLOCKED_EXECUTOR_PENDING", "BLOCKED_DEPENDENCY",
 ] as const;
 export type TaskStatus = (typeof TASK_STATUSES)[number];
 
@@ -194,6 +197,9 @@ const ALLOWED_TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
   CHECKPOINTED: ["RUNNING", "FAILED_RETRYABLE", "FAILED_FINAL", "CANCELLED"],
   PASS: [], CONDITIONAL: ["READY"], BLOCKED: ["READY", "CANCELLED"],
   FAILED_RETRYABLE: ["READY", "FAILED_FINAL", "CANCELLED"], FAILED_FINAL: [], CANCELLED: [],
+  // executor 実装 / 依存解消は明示 migration で READY へ（自動遷移はしない）。
+  BLOCKED_EXECUTOR_PENDING: ["READY", "BLOCKED_DEPENDENCY", "CANCELLED"],
+  BLOCKED_DEPENDENCY: ["READY", "BLOCKED_EXECUTOR_PENDING", "CANCELLED"],
 };
 export function canTransition(from: TaskStatus, to: TaskStatus): boolean {
   return ALLOWED_TRANSITIONS[from]?.includes(to) ?? false;

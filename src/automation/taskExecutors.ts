@@ -305,10 +305,16 @@ export const runPlannerNext: Executor = (ctx) => {
   const merged = ctx.mergedTasks ?? [];
   const readyCount = merged.filter((t) => t.status === "READY" && t.taskId !== "TASK-PLANNER-NEXT").length;
   const pending = readyCount > 0 ? [] : merged.filter((t) => t.status === "BLOCKED_EXECUTOR_PENDING");
-  const candidates = pending.map((t, i) => ({
-    candidateId: `CAND-${ctx.runId}-${i + 1}`, proposedTaskId: t.taskId, title: t.title ?? t.taskId,
-    objective: t.objective ?? "", taskType: t.taskType, executorType: t.taskType, safetyLevel: t.safetyLevel ?? "L0",
-    dependencies: t.dependencies ?? [], reason: "ENGINEERING_REQUIRED", duplicateCheck: "catalog taskId",
+  // ENGINEERING_REQUIRED handoff: candidate は機械可読な engineering requirement を兼ねる。
+  // candidateId / requirementId は proposedTaskId で安定（毎時 duplicate を作らない）。timestamp は
+  // 含めない（同一候補集合で byte-identical → NO_CHANGE → 再 commit しない）。
+  const candidates = pending.map((t) => ({
+    candidateId: `CAND-${t.taskId}`, requirementId: `ENG-${t.taskId}`, proposedTaskId: t.taskId, title: t.title ?? t.taskId,
+    objective: t.objective ?? "", taskType: t.taskType, executorType: t.taskType, neededExecutor: t.taskType,
+    safetyLevel: t.safetyLevel ?? "L0", dependencies: t.dependencies ?? [], blocker: "EXECUTOR_NOT_IMPLEMENTED",
+    expectedFiles: [`src/automation/taskExecutors.ts (${t.taskType})`],
+    acceptanceCriteria: "executor 実装 + fixture/E2E PASS + catalog readiness consistency (defaultStatus READY)",
+    evidenceLinks: [], status: "PROPOSED", reason: "ENGINEERING_REQUIRED", duplicateCheck: "catalog taskId",
   }));
   const normalized = candidates.map((c) => ({ proposedTaskId: c.proposedTaskId, taskType: c.taskType, dependencies: c.dependencies }));
   const dir = ctx.controlDir ?? join(ctx.repoRoot, "automation/control");
