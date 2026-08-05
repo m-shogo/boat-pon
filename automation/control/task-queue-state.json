@@ -1,8 +1,8 @@
 {
   "stateSchemaVersion": "research-queue-state-v1",
-  "stateVersion": 23,
+  "stateVersion": 26,
   "catalogVersion": "2026-08-05-n2-governance-v3",
-  "updatedAt": "2026-08-05T13:21:49.000Z",
+  "updatedAt": "2026-08-05T13:43:41.961Z",
   "tasks": {
     "TASK-N2-001": {
       "status": "PASS",
@@ -130,16 +130,22 @@
       "nextDecision": "依存 task を次回 dispatch 候補にする（自動起動しない）"
     },
     "TASK-N2-011": {
-      "status": "READY",
+      "status": "BLOCKED",
       "taskDefinitionVersion": 2,
-      "authoritySha": null,
-      "attemptCount": 0,
+      "authoritySha": "f92f87f6f285e75cdf9109e75bd2c081dbf39f36",
+      "attemptCount": 1,
       "maxAttempts": 3,
-      "evidenceLinks": [],
-      "resultDigest": null,
-      "lastFailure": null,
+      "evidenceLinks": [
+        "reports/automation/history/31011585102-TASK-N2-011.json"
+      ],
+      "resultDigest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "lastFailure": {
+        "code": "INPUT_CONTRACT",
+        "at": "2026-08-05T13:43:41.961Z"
+      },
       "checkpoint": null,
-      "updatedAt": "2026-08-05T13:21:49.000Z"
+      "updatedAt": "2026-08-05T13:43:41.961Z",
+      "nextDecision": "blocks: INPUT_CONTRACT,N2_DATASET_MANIFEST_OUTPUT_DIGEST_MISMATCH"
     },
     "TASK-N2-020": {
       "status": "BLOCKED_EXECUTOR_PENDING",

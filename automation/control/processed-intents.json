@@ -1,13 +1,14 @@
 {
   "ledgerSchemaVersion": "processed-intents-v1",
-  "updatedAt": "2026-08-05T12:37:12.490Z",
+  "updatedAt": "2026-08-05T13:43:41.962Z",
   "intentIds": [
     "INTENT-20260804-9c5e3ad55c",
     "INTENT-20260804-f4d379cd8a",
     "INTENT-20260804-72b865c0e6",
     "INTENT-20260804-a4n206x7p9",
     "INTENT-20260804-b7k3m9q2x4",
-    "INTENT-20260805-r4n8v2k6qx"
+    "INTENT-20260805-r4n8v2k6qx",
+    "INTENT-20260805-q9v4m2k7px"
   ],
   "entries": [
     {
@@ -45,6 +46,12 @@
       "requestId": "REQ-20260805-r4n8v2k6qx",
       "result": "PASS",
       "recordedAt": "2026-08-05T12:37:12.490Z"
+    },
+    {
+      "intentId": "INTENT-20260805-q9v4m2k7px",
+      "requestId": "REQ-20260805-q9v4m2k7px",
+      "result": "BLOCKED",
+      "recordedAt": "2026-08-05T13:43:41.962Z"
     }
   ]
 }

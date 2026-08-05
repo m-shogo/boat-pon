@@ -1,0 +1,23 @@
+{
+  "runId": "31011585102",
+  "requestId": "REQ-20260805-q9v4m2k7px",
+  "intentId": "INTENT-20260805-q9v4m2k7px",
+  "taskId": "TASK-N2-011",
+  "taskType": "pit-audit",
+  "safetyLevel": "L0",
+  "executorVersion": "n2-pit-audit-executor-v1",
+  "executed": true,
+  "result": "BLOCKED",
+  "blocks": [
+    "INPUT_CONTRACT",
+    "N2_DATASET_MANIFEST_OUTPUT_DIGEST_MISMATCH"
+  ],
+  "outputs": [],
+  "outputDigest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+  "summary": {},
+  "authoritySha": "f92f87f6f285e75cdf9109e75bd2c081dbf39f36",
+  "idempotencyKey": "9653237f96964936eb4918309aa57dcd77d826dfc338eb8613cf12f7000e7c65",
+  "startedAt": "2026-08-05T13:43:41.315Z",
+  "completedAt": "2026-08-05T13:43:41.962Z",
+  "elapsedMs": 647
+}

@@ -3,26 +3,25 @@
   "orchestratorVersion": "research-orchestrator-v1",
   "updatedAt": "2026-08-03T13:11:03.880Z",
   "lastResult": "BLOCKED",
-  "lastRequestId": "REQ-20260805-m7p3v9k2qx",
+  "lastRequestId": "REQ-20260805-q9v4m2k7px",
   "lastTaskId": "TASK-N2-011",
   "lastAction": "run-task",
   "lastSafetyLevel": "L0",
-  "authoritySha": "45dda41061bbbc7d648140845743d0ded7521946",
+  "authoritySha": "f92f87f6f285e75cdf9109e75bd2c081dbf39f36",
   "blocks": [
-    "DIRTY_WORKING_TREE"
+    "INPUT_CONTRACT",
+    "N2_DATASET_MANIFEST_OUTPUT_DIGEST_MISMATCH"
   ],
   "failureClasses": [
     "NON_RETRYABLE"
   ],
-  "elapsedMs": 681,
-  "nextCandidate": "resolve the blocks above; automation は自動再試行しない",
-  "evidencePath": "reports/automation/history/local-1785804913314-TASK-N2-003.json",
-  "outputs": [
-    "reports/n2/n2-win-refund-omission-audit.json"
-  ],
-  "outputDigest": "bd4bed76312255dd5434dc9668346ecb139934b05df2c48d86e8bece781987aa",
-  "taskStatus": "PASS",
-  "lastIntentId": "INTENT-20260805-m7p3v9k2qx",
-  "stateVersion": 23,
-  "stateDigest": "37b7c63f9b1558b9191e740cf0a75d5a430ce483bd58a7620ea3f2bd898318e2"
+  "elapsedMs": 647,
+  "nextCandidate": "TASK-PLANNER-NEXT: queue planner: 次候補提案（自動起動しない。次回 dispatch で 1 回だけ依頼する）",
+  "evidencePath": "reports/automation/history/31011585102-TASK-N2-011.json",
+  "outputs": [],
+  "outputDigest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+  "taskStatus": "BLOCKED",
+  "lastIntentId": "INTENT-20260805-q9v4m2k7px",
+  "stateVersion": 27,
+  "stateDigest": "728bf941928823e5b89f665246363472ceaeadfa1555735bdb98c55d47e0cc7d"
 }
