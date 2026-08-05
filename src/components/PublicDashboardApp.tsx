@@ -55,6 +55,7 @@ export function PublicDashboardApp() {
             <ul>
               <li>検証できない値を0や最新値として補完しません。</li>
               <li>署名とschemaを確認できないsnapshotは表示しません。</li>
+              <li>最新snapshotが壊れた場合も、検証済みlast-known-goodだけへ退避します。</li>
               <li>Current BUYやLINEの判断経路から完全に分離します。</li>
               <li>公開サイトが停止しても日々の運用へ影響しません。</li>
             </ul>
@@ -75,6 +76,7 @@ export function PublicDashboardApp() {
           />
           <ResearchCommandCenter
             snapshot={publicSnapshot.snapshot}
+            source={publicSnapshot.source}
             observedFreshness={publicSnapshot.observedFreshness}
             loading={publicSnapshot.loading}
             errors={publicSnapshot.errors}
