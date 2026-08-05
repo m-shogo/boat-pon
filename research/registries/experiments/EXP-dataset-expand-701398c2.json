@@ -1,0 +1,27 @@
+{
+  "experimentId": "EXP-dataset-expand-701398c2",
+  "researchQuestion": "corrected datasetの全期間coverageとsplitを固定できるか",
+  "rationale": "baseline前提のmanifestを固定する",
+  "hypothesis": "corrected truthは全期間を安定coverageする",
+  "dataSnapshot": "n2-corrected-2000_2026",
+  "trialFamilyId": "TF-dataset-foundation",
+  "totalTrialCount": 1,
+  "testedConditions": 1,
+  "discoveryPeriod": "inventory-all",
+  "validationPeriod": "not-applicable",
+  "holdoutPolicy": "n2-win-refund-omission-holdout-v1",
+  "primaryMetric": "coverage",
+  "secondaryMetrics": [
+    "race_count"
+  ],
+  "minimumSample": 1,
+  "stoppingRule": "single deterministic manifest",
+  "successCondition": "non-empty manifest",
+  "rejectionCondition": "empty cohort",
+  "multiplicityFamily": "TF-dataset-foundation",
+  "evidenceStage": "exploration",
+  "status": "completed",
+  "createdAt": "2026-08-03T14:07:04.991Z",
+  "_digest": "f52e75eaf6af92f160f0df5284004c4360229f9d9728470b925016a081824a90",
+  "_recordedAt": "2026-08-05T12:37:12.482Z"
+}

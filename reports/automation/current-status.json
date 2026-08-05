@@ -2,24 +2,27 @@
   "statusSchemaVersion": "research-automation-status-v1",
   "orchestratorVersion": "research-orchestrator-v1",
   "updatedAt": "2026-08-03T13:11:03.880Z",
-  "lastResult": "FAILED",
-  "lastRequestId": "REQ-run-local003a",
-  "lastTaskId": "TASK-N2-003",
+  "lastResult": "PASS",
+  "lastRequestId": "REQ-20260805-r4n8v2k6qx",
+  "lastTaskId": "TASK-N2-010",
   "lastAction": "run-task",
   "lastSafetyLevel": "L0",
-  "authoritySha": "42904be",
-  "blocks": [
-    "state entry not found: TASK-N2-010"
-  ],
+  "authoritySha": "864e720e91ce146a134d1ed1873fc53477512323",
+  "blocks": [],
   "failureClasses": [
-    "RETRYABLE"
+    "NON_RETRYABLE"
   ],
-  "elapsedMs": 527,
-  "nextCandidate": "no dispatchable READY task",
-  "evidencePath": "reports/automation/history/local-1785804913314-TASK-N2-003.json",
+  "elapsedMs": 36938,
+  "nextCandidate": "TASK-PLANNER-NEXT: queue planner: 次候補提案（自動起動しない。次回 dispatch で 1 回だけ依頼する）",
+  "evidencePath": "reports/automation/history/30991353245-TASK-N2-010.json",
   "outputs": [
-    "reports/n2/n2-win-refund-omission-audit.json"
+    "reports/n2/n2-dataset-manifest.json",
+    "research/registries/experiments/EXP-dataset-expand-701398c2.json",
+    "research/registries/discoveries/DISC-dataset-coverage-701398c2.json"
   ],
-  "outputDigest": "bd4bed76312255dd5434dc9668346ecb139934b05df2c48d86e8bece781987aa",
-  "taskStatus": "PASS"
+  "outputDigest": "701398c2e82a5c5468de41b8c6de5e5cad8ccae026c10ee83f1ab57acafe34c9",
+  "taskStatus": "PASS",
+  "lastIntentId": "INTENT-20260805-r4n8v2k6qx",
+  "stateVersion": 23,
+  "stateDigest": "2383c6efae281b65a869450d6d57078c6f745d0a09c00565e3fa2ad98b4bd984"
 }

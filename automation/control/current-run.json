@@ -1,12 +1,23 @@
 {
   "runSchemaVersion": "current-run-v1",
-  "updatedAt": "2026-08-05T01:01:36.346Z",
-  "lastResult": "FAILED",
-  "blocks": [
-    "state entry not found: TASK-N2-010"
+  "updatedAt": "2026-08-05T12:37:12.491Z",
+  "lastResult": "PASS",
+  "lastRequestId": "REQ-20260805-r4n8v2k6qx",
+  "lastIntentId": "INTENT-20260805-r4n8v2k6qx",
+  "lastTaskId": "TASK-N2-010",
+  "lastSafetyLevel": "L0",
+  "authoritySha": "864e720e91ce146a134d1ed1873fc53477512323",
+  "stateVersion": 23,
+  "stateDigest": "2383c6efae281b65a869450d6d57078c6f745d0a09c00565e3fa2ad98b4bd984",
+  "blocks": [],
+  "elapsedMs": 36938,
+  "evidencePath": "reports/automation/history/30991353245-TASK-N2-010.json",
+  "outputs": [
+    "reports/n2/n2-dataset-manifest.json",
+    "research/registries/experiments/EXP-dataset-expand-701398c2.json",
+    "research/registries/discoveries/DISC-dataset-coverage-701398c2.json"
   ],
-  "failureClasses": [
-    "RETRYABLE"
-  ],
-  "elapsedMs": 527
+  "outputDigest": "701398c2e82a5c5468de41b8c6de5e5cad8ccae026c10ee83f1ab57acafe34c9",
+  "taskStatus": "PASS",
+  "nextCandidate": "TASK-PLANNER-NEXT: queue planner: 次候補提案（自動起動しない。次回 dispatch で 1 回だけ依頼する）"
 }
