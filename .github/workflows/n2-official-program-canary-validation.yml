@@ -81,6 +81,9 @@ jobs:
             excludedRows: manifest.binding.excludedCount,
             selectedRows: manifest.binding.items.length,
             exclusionReasons,
+            identitySamples: read.rows.slice(0, 5).map(({ raceId, date, venue, raceNo }) => ({
+              raceId, date, venue, raceNo,
+            })),
             truncated: read.truncated,
             manifestDigest: manifest.manifestDigest,
             primaryWriteCount: read.primaryWriteCount,
