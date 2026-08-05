@@ -123,8 +123,11 @@ const allIntents = readdirSync(INTENTS_DIR)
     try { raw = JSON.parse(readFileSync(candidatePath, "utf8")); }
     catch { fail(`existing intent is not valid JSON: ${candidatePath}`); }
     const validation = validateIntent(raw);
-    if (!validation.valid || !validation.intent) fail(`invalid existing intent ${candidatePath}: ${validation.errors.join("; ")}`);
-    return validation.intent;
+    const candidateIntent = validation.intent;
+    if (!validation.valid || candidateIntent === null) {
+      fail(`invalid existing intent ${candidatePath}: ${validation.errors.join("; ")}`);
+    }
+    return candidateIntent;
   });
 
 const supersessions: IntentSupersession[] = existsSync(SUPERSESSIONS_DIR)
@@ -136,13 +139,14 @@ const supersessions: IntentSupersession[] = existsSync(SUPERSESSIONS_DIR)
         try { raw = JSON.parse(readFileSync(supersessionPath, "utf8")); }
         catch { fail(`supersession is not valid JSON: ${supersessionPath}`); }
         const validation = validateIntentSupersession(raw);
-        if (!validation.valid || !validation.supersession) {
+        const parsedSupersession = validation.supersession;
+        if (!validation.valid || parsedSupersession === null) {
           fail(`invalid supersession ${supersessionPath}: ${validation.errors.join("; ")}`);
         }
-        if (name !== `${validation.supersession.supersessionId}.json`) {
+        if (name !== `${parsedSupersession.supersessionId}.json`) {
           fail(`supersession filename must match supersessionId: ${supersessionPath}`);
         }
-        return validation.supersession;
+        return parsedSupersession;
       })
   : [];
 
