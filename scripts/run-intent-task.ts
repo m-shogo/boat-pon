@@ -16,7 +16,7 @@ import {
   foreignDirtyPaths, preflight, validateRequest, type SafetyLevel, type TaskStatus,
 } from "../src/automation/researchOrchestrator";
 import {
-  computeStateDigest, mergeCatalogAndState, resolveTask, validateCatalog, validateQueueState,
+  computeStateDigest, mergeCatalogAndState, reconcileCatalogState, resolveTask, validateCatalog, validateQueueState,
   type QueueState,
 } from "../src/automation/taskCatalog";
 import { computeIdempotencyKey, findIdempotentSuccess, type ProcessedRequestLedger } from "../src/automation/dispatchIntent";
@@ -124,7 +124,8 @@ const catalog = catalogV.catalog;
 const stateRaw = readJson(STATE_PATH);
 const stateV = validateQueueState(stateRaw);
 if (!stateV.valid || !stateV.state) finish("BLOCKED", 3, { blocks: ["STATE_INVALID", ...stateV.errors], lastRequestId: request.requestId });
-const state: QueueState = stateV.state;
+// reconcile で新規 catalog task を state へ追加できるよう再代入可能にする（既存 entry は保存）。
+let state: QueueState = stateV.state;
 const stateDigest = computeStateDigest(state);
 
 // ---- lock ----
@@ -207,6 +208,25 @@ try {
       authoritySha: request.authoritySha, stateVersion: state.stateVersion, stateDigest, blocks: [],
       elapsedMs: Date.now() - startedMs, nextCandidate: pickNext(merged),
     });
+  }
+
+  // ---- catalog-state reconciliation（task 実行前・非 dry-run のみ書き込み）----
+  // catalog(main) に在り state(branch) に無い task（例: 追加直後の TASK-N2-010）へ state entry を
+  // 追加する。既存 entry・PASS・証拠は保存。updateState が "state entry not found" で失敗するのを防ぐ。
+  // dry-run はここへ到達しない（上で短絡）ため state write は起きない（#dry-run no write）。
+  {
+    const rec = reconcileCatalogState(catalog, state, {});
+    if (rec.changed) {
+      state = rec.nextState;                 // updateState はこの state を参照する
+      writeJsonAtomic(STATE_PATH, state);    // atomic。end-of-run commit が branch へ push する
+      const migDir = join(root, "reports/automation/migrations");
+      mkdirSync(migDir, { recursive: true });
+      writeJsonAtomic(join(migDir, `reconcile-${runId}.json`), {
+        reconciliationVersion: "catalog-state-reconcile-v1", runId, requestId: request.requestId,
+        toCatalogVersion: catalog.catalogVersion, toStateVersion: state.stateVersion,
+        added: rec.plan.added, staleDefinition: rec.plan.staleDefinition, orphaned: rec.plan.orphaned, at: nowIso(),
+      });
+    }
   }
 
   // ---- executor 解決 ----
