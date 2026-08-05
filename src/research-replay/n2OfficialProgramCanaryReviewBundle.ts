@@ -7,9 +7,9 @@ import {
 } from "./n2OfficialProgramCanary";
 
 export const N2_OFFICIAL_PROGRAM_CANARY_REVIEW_BUNDLE_VERSION =
-  "n2-official-program-canary-review-bundle-v1";
+  "n2-official-program-canary-review-bundle-v2";
 export const N2_OFFICIAL_PROGRAM_CANARY_REVIEW_POLICY_VERSION =
-  "n2-official-program-canary-review-policy-v1";
+  "n2-official-program-canary-review-policy-v2";
 
 export type OfficialProgramCanaryReviewStatus =
   | "READY_FOR_HUMAN_REVIEW"
@@ -31,6 +31,7 @@ export type OfficialProgramCanaryReviewBundleBinding = {
   authoritySha: string;
   manifestDigest: string;
   manifestCodeGitSha: string;
+  manifestGeneratedAt: string;
   selectedRaceCount: number;
   approvalTarget: ReturnType<typeof officialProgramCanaryApprovalTarget>;
   currentOfficialProgramObservationCount: number;
@@ -44,6 +45,7 @@ export type OfficialProgramCanaryReviewBundleBinding = {
     hardMaximumRaceCount: typeof N2_OFFICIAL_PROGRAM_CANARY_MAX_RACES;
     exactManifestDigestRequired: true;
     exactProductionApprovalRequired: true;
+    manifestGeneratedAtMustNotExceedBundleGeneratedAt: true;
     globalShadowWriteMustRemainDisabled: true;
     primaryDatabaseMustRemainReadOnly: true;
     productionApplyAuthorized: false;
@@ -72,6 +74,18 @@ export type OfficialProgramCanaryReviewBundle = {
 
 function assertNonNegativeInteger(value: number, code: string): void {
   if (!Number.isSafeInteger(value) || value < 0) throw new Error(code);
+}
+
+function canonicalGenerationTimes(input: {
+  manifestGeneratedAt: string;
+  bundleGeneratedAt: string;
+}): { manifestGeneratedAt: string; bundleGeneratedAt: string } {
+  const manifestGeneratedAt = canonicalUtcTimestamp(input.manifestGeneratedAt);
+  const bundleGeneratedAt = canonicalUtcTimestamp(input.bundleGeneratedAt);
+  if (Date.parse(manifestGeneratedAt) > Date.parse(bundleGeneratedAt)) {
+    throw new Error("MANIFEST_GENERATED_AT_AFTER_BUNDLE_GENERATED_AT");
+  }
+  return { manifestGeneratedAt, bundleGeneratedAt };
 }
 
 function deriveReviewStatus(input: {
@@ -136,7 +150,10 @@ export function buildOfficialProgramCanaryReviewBundle(input: {
     || input.approvalPreview.blocks.some((block) => typeof block !== "string")) {
     throw new Error("INVALID_APPROVAL_PREVIEW");
   }
-  const generatedAt = canonicalUtcTimestamp(input.generatedAt);
+  const times = canonicalGenerationTimes({
+    manifestGeneratedAt: input.manifest.generatedAt,
+    bundleGeneratedAt: input.generatedAt,
+  });
   const review = deriveReviewStatus({
     selectedRaceCount: input.manifest.binding.items.length,
     officialObservationCount: input.currentOfficialProgramObservationCount,
@@ -151,6 +168,7 @@ export function buildOfficialProgramCanaryReviewBundle(input: {
     authoritySha: input.authoritySha,
     manifestDigest: input.manifest.manifestDigest,
     manifestCodeGitSha: input.manifest.binding.codeGitSha,
+    manifestGeneratedAt: times.manifestGeneratedAt,
     selectedRaceCount: input.manifest.binding.items.length,
     approvalTarget,
     currentOfficialProgramObservationCount: input.currentOfficialProgramObservationCount,
@@ -169,6 +187,7 @@ export function buildOfficialProgramCanaryReviewBundle(input: {
       hardMaximumRaceCount: N2_OFFICIAL_PROGRAM_CANARY_MAX_RACES,
       exactManifestDigestRequired: true,
       exactProductionApprovalRequired: true,
+      manifestGeneratedAtMustNotExceedBundleGeneratedAt: true,
       globalShadowWriteMustRemainDisabled: true,
       primaryDatabaseMustRemainReadOnly: true,
       productionApplyAuthorized: false,
@@ -182,7 +201,7 @@ export function buildOfficialProgramCanaryReviewBundle(input: {
   };
   const bundle: OfficialProgramCanaryReviewBundle = {
     bundleVersion: N2_OFFICIAL_PROGRAM_CANARY_REVIEW_BUNDLE_VERSION,
-    generatedAt,
+    generatedAt: times.bundleGeneratedAt,
     status: review.status,
     writeAuthorized: false,
     productionApplyExecuted: false,
@@ -210,16 +229,21 @@ export function assertOfficialProgramCanaryReviewBundle(
     || bundle.binding.reviewPolicyVersion !== N2_OFFICIAL_PROGRAM_CANARY_REVIEW_POLICY_VERSION) {
     throw new Error("REVIEW_BUNDLE_VERSION_MISMATCH");
   }
-  canonicalUtcTimestamp(bundle.generatedAt);
+  const times = canonicalGenerationTimes({
+    manifestGeneratedAt: bundle.manifest.generatedAt,
+    bundleGeneratedAt: bundle.generatedAt,
+  });
   assertOfficialProgramCanaryManifest(bundle.manifest);
   if (bundle.writeAuthorized !== false
     || bundle.productionApplyExecuted !== false
     || bundle.humanApprovalCreated !== false
     || bundle.binding.executionContract.productionApplyAuthorized !== false
+    || bundle.binding.executionContract.manifestGeneratedAtMustNotExceedBundleGeneratedAt !== true
     || bundle.binding.executionContract.hardMaximumRaceCount !== N2_OFFICIAL_PROGRAM_CANARY_MAX_RACES
     || bundle.binding.executionContract.requiredCheckoutSha !== bundle.binding.authoritySha
     || bundle.binding.manifestDigest !== bundle.manifest.manifestDigest
     || bundle.binding.manifestCodeGitSha !== bundle.manifest.binding.codeGitSha
+    || bundle.binding.manifestGeneratedAt !== times.manifestGeneratedAt
     || bundle.binding.authoritySha !== bundle.manifest.binding.codeGitSha) {
     throw new Error("REVIEW_BUNDLE_SAFETY_CONTRACT_MISMATCH");
   }

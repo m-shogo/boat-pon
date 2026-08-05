@@ -16,7 +16,7 @@ test("TASK-N2-012 catalog, registry and phase mapping are aligned", () => {
   };
   const task = catalog.tasks.find((candidate) => candidate.taskId === "TASK-N2-012");
   assert.ok(task);
-  assert.equal(catalog.catalogVersion, "2026-08-05-n2-governance-v6");
+  assert.equal(catalog.catalogVersion, "2026-08-06-n2-governance-v7");
   assert.equal(task.taskDefinitionVersion, 1);
   assert.equal(task.defaultStatus, "READY");
   assert.equal(task.taskType, "observation-ingest-readiness");
