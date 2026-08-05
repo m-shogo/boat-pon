@@ -4,6 +4,7 @@
 // taskExecutorsCore.ts. This facade extends only the allowlisted resolution
 // path with separately reviewed N2 executors.
 import { runN2ObservationIngestReadinessExecutor } from "./n2ObservationIngestReadinessExecutor";
+import { runN2OfficialProgramCanaryReviewBundleExecutor } from "./n2OfficialProgramCanaryReviewBundleExecutor";
 import { runN2PitAuditExecutor } from "./n2PitAuditExecutor";
 import {
   CANARY_COHORT,
@@ -35,11 +36,12 @@ export {
 };
 export type { Executor, ExecutorContext, ExecutorResult };
 
-export const EXECUTOR_REGISTRY_VERSION = "n2-task-executor-registry-v4";
+export const EXECUTOR_REGISTRY_VERSION = "n2-task-executor-registry-v5";
 
 export const KNOWN_TASK_TYPES = [
   ...CORE_KNOWN_TASK_TYPES,
   "observation-ingest-readiness",
+  "official-program-canary-review-bundle",
 ] as const;
 
 // Compatibility export for existing callers/tests that inspect the legacy core
@@ -50,6 +52,7 @@ const REGISTERED_EXECUTORS: Readonly<Record<string, Executor>> = Object.freeze({
   ...CORE_EXECUTORS,
   "pit-audit": runN2PitAuditExecutor,
   "observation-ingest-readiness": runN2ObservationIngestReadinessExecutor,
+  "official-program-canary-review-bundle": runN2OfficialProgramCanaryReviewBundleExecutor,
 });
 
 export function isExecutorImplemented(taskType: string): boolean {

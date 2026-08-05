@@ -16,7 +16,7 @@ test("TASK-N2-012 catalog, registry and phase mapping are aligned", () => {
   };
   const task = catalog.tasks.find((candidate) => candidate.taskId === "TASK-N2-012");
   assert.ok(task);
-  assert.equal(catalog.catalogVersion, "2026-08-05-n2-governance-v5");
+  assert.equal(catalog.catalogVersion, "2026-08-05-n2-governance-v6");
   assert.equal(task.taskDefinitionVersion, 1);
   assert.equal(task.defaultStatus, "READY");
   assert.equal(task.taskType, "observation-ingest-readiness");
@@ -25,7 +25,7 @@ test("TASK-N2-012 catalog, registry and phase mapping are aligned", () => {
   assert.deepEqual(task.dependencies, ["TASK-N2-010"]);
   assert.deepEqual(task.expectedOutputs, ["reports/n2/n2-observation-ingest-readiness.json"]);
 
-  assert.equal(EXECUTOR_REGISTRY_VERSION, "n2-task-executor-registry-v4");
+  assert.equal(EXECUTOR_REGISTRY_VERSION, "n2-task-executor-registry-v5");
   assert.equal(KNOWN_TASK_TYPES.includes("observation-ingest-readiness"), true);
   assert.equal(isExecutorImplemented("observation-ingest-readiness"), true);
   assert.equal(resolveExecutor("observation-ingest-readiness").executor, runN2ObservationIngestReadinessExecutor);
@@ -34,7 +34,7 @@ test("TASK-N2-012 catalog, registry and phase mapping are aligned", () => {
     phaseMappingVersion: string;
     legacyTaskAliases: Array<Record<string, unknown>>;
   };
-  assert.equal(mapping.phaseMappingVersion, "research-phase-mapping-v4");
+  assert.equal(mapping.phaseMappingVersion, "research-phase-mapping-v5");
   const alias = mapping.legacyTaskAliases.find((candidate) => candidate.legacy === "TASK-N2-012");
   assert.equal(alias?.phase, "N4");
   assert.equal(alias?.status, "implemented_ready");
