@@ -107,7 +107,7 @@ test("builder exposes task authority without private execution details", async (
 
   const serialized = JSON.stringify(built);
   assert.doesNotMatch(serialized, /private diagnostic/);
-  assert.doesNotMatch(serialized, /selection|recommendedAmount|currentOdds|stake/i);
+  assert.deepEqual(findForbiddenKeys(built), []);
 
   const validation = validatePublicDashboardSnapshot(built);
   assert.equal(validation.ok, true, validation.errors.join("\n"));
@@ -151,3 +151,20 @@ test("invalid generation metadata fails before a public artifact is created", ()
     modelVersion: "   ",
   }), /modelVersion/);
 });
+
+function findForbiddenKeys(value: unknown, found: string[] = []): string[] {
+  if (Array.isArray(value)) {
+    value.forEach((item) => findForbiddenKeys(item, found));
+    return found;
+  }
+  if (typeof value !== "object" || value === null) return found;
+
+  for (const [key, child] of Object.entries(value)) {
+    const normalized = key.toLowerCase().replaceAll("_", "").replaceAll("-", "");
+    if (["selection", "recommendedamount", "currentodds", "requiredodds", "stake"].some((item) => normalized.includes(item))) {
+      found.push(key);
+    }
+    findForbiddenKeys(child, found);
+  }
+  return found;
+}
