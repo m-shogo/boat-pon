@@ -3,6 +3,7 @@ import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { build as viteBuild } from "vite";
 import fixture from "./fixtures/public-dashboard-snapshot-v1.json";
 import type { PublicDashboardSnapshot } from "./publicSnapshot";
 import {
@@ -85,6 +86,39 @@ test("isolated public deploy bundle contains only allowlisted verified files", a
   }
 });
 
+test("real isolated Vite build excludes the operational application", async () => {
+  const root = await mkdtemp(join(tmpdir(), "boat-pon-public-vite-"));
+  const dist = join(root, "dist");
+  const output = join(root, "output");
+  try {
+    await viteBuild({
+      configFile: "vite.public.config.ts",
+      logLevel: "silent",
+      build: {
+        outDir: dist,
+        emptyOutDir: true,
+      },
+    });
+
+    const manifest = await assemblePublicDashboardDeploy({
+      distDir: dist,
+      staticDir: "public-site",
+      outputDir: output,
+    });
+    const index = await readFile(join(output, "index.html"), "utf8");
+
+    assert.match(index, /id="public-root"/);
+    assert.doesNotMatch(index, /id="root"/);
+    assert.ok(manifest.files.some((file) => file.path.startsWith("assets/") && file.path.endsWith(".js")));
+    assert.equal(manifest.files.some((file) => file.path === "app.html"), false);
+
+    const verified = await verifyPublicDashboardDeploy(output);
+    assert.equal(verified.ok, true, verified.errors.join("\n"));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("private files and post-manifest tampering fail closed", async () => {
   const fixtureRoot = await makeFixtureRoot();
   try {
@@ -151,10 +185,12 @@ test("real public-site support files remain copyable without symlinks", async ()
       readFile(join(root, "public-site", "_headers"), "utf8"),
       readFile(join(root, "public-site", "_redirects"), "utf8"),
       readFile(join(root, "public-site", "404.html"), "utf8"),
+      readFile(join(root, "public-site", "assets", "public-404.css"), "utf8"),
     ]);
     assert.match(files[0], /Content-Security-Policy/);
     assert.match(files[1], /public-dashboard\.html/);
     assert.match(files[2], /noindex/);
+    assert.match(files[3], /\.notFound/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
