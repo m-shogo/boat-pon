@@ -32,3 +32,22 @@ test("Runtime Decision Ledger shadow report opens SQLite read-only and query-onl
   ];
   for (const token of forbiddenTokens) assert.equal(source.includes(token), false, `forbidden dependency marker: ${token}`);
 });
+
+test("bounded evidence is finite, quiescent and excludes outcome/delivery columns", () => {
+  assert.match(source, /bounded evidence requires both --from and --to/);
+  assert.match(source, /bounded evidence requires --limit <= 5000/);
+  assert.match(source, /bounded evidence refused: active SQLite WAL/);
+  assert.match(source, /params\.push\(args\.limit \+ 1\)/);
+  assert.match(source, /fetched\.slice\(0, args\.limit\)/);
+  assert.doesNotMatch(source, /dh\.(?:result|payout_yen|actually_bought|stake_yen)\b/);
+  assert.equal(source.includes("notification_log"), false);
+});
+
+test("private evidence store is append-only and owner-readable", () => {
+  assert.match(source, /flag: "wx"/);
+  assert.match(source, /mode: 0o600/);
+  assert.match(source, /mode: 0o700/);
+  assert.match(source, /append-only private store conflict/);
+  assert.match(source, /sourceDescriptorDigest\.slice\(0, 12\)/);
+  assert.match(source, /contentDigest\.slice\(0, 12\)/);
+});
