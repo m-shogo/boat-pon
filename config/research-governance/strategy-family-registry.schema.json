@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "strategy-family.schema.json",
+  "title": "Strategy Family",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "strategyId",
+    "strategyName",
+    "coreThesis",
+    "mechanismHypothesis",
+    "knowledgePolicy",
+    "decisionSystem"
+  ],
+  "properties": {
+    "strategyId": {
+      "type": "string",
+      "pattern": "^STRAT-[0-9A-Za-z._-]{1,80}$"
+    },
+    "strategyName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "coreThesis": {
+      "type": "string",
+      "minLength": 1
+    },
+    "mechanismHypothesis": {
+      "type": "string",
+      "minLength": 1
+    },
+    "knowledgePolicy": {
+      "enum": [
+        "OPEN_COMMONS",
+        "CLEAN_ROOM"
+      ]
+    },
+    "decisionSystem": {
+      "enum": [
+        "legacy_t5_formal",
+        "market_intelligence"
+      ]
+    },
+    "cleanRoomPolicy": {
+      "type": "object"
+    }
+  }
+}

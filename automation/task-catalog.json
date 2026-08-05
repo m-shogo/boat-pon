@@ -1,8 +1,8 @@
 {
   "catalogSchemaVersion": "research-task-catalog-v1",
-  "catalogVersion": "2026-08-04-n2-foundation-v1",
-  "updatedAt": "2026-08-04T09:42:13.255Z",
-  "note": "task 定義の正本（main, immutable）。可変 status は automation branch の queue-state。ChatGPT は本 catalog + branch state を読んで 1 件 dispatch する。",
+  "catalogVersion": "2026-08-05-n2-governance-v2",
+  "updatedAt": "2026-08-04T16:15:00.000Z",
+  "note": "task定義の正本（main, immutable）。可変statusはautomation branchのqueue-state。ChatGPTは本catalog + branch stateを読み、実装済みREADY taskを1件だけdispatchする。",
   "tasks": [
     {
       "taskDefinitionVersion": 1,
@@ -11,37 +11,31 @@
       "expectedInputs": [],
       "estimatedDurationSeconds": 120,
       "valueOfInformation": "high",
-      "invalidationCondition": "対応 executor / データ契約が変わったら再定義",
+      "invalidationCondition": "対応executor / データ契約が変わったら再定義",
       "taskId": "TASK-N2-001",
       "title": "N2 dataset canary",
-      "objective": "corrected truth の固定月 cohort で dataset canary（PIT/leakage）を検証",
+      "objective": "corrected truthの固定月cohortでdataset canary（PIT/leakage）を検証",
       "taskType": "dataset-canary",
       "executor": "dataset-canary",
       "safetyLevel": "L2",
-      "expectedOutputs": [
-        "reports/n2/n2-dataset-canary.json"
-      ],
+      "expectedOutputs": ["reports/n2/n2-dataset-canary.json"],
       "defaultStatus": "READY"
     },
     {
       "taskDefinitionVersion": 1,
-      "dependencies": [
-        "TASK-N2-001"
-      ],
+      "dependencies": ["TASK-N2-001"],
       "maxDurationSeconds": 3600,
       "expectedInputs": [],
       "estimatedDurationSeconds": 60,
       "valueOfInformation": "high",
-      "invalidationCondition": "対応 executor / データ契約が変わったら再定義",
+      "invalidationCondition": "対応executor / データ契約が変わったら再定義",
       "taskId": "TASK-N2-002",
-      "title": "corrected eligible 率 / 年代 drift",
-      "objective": "corrected truth の eligible 率と年代 drift を再集計",
+      "title": "corrected eligible率 / 年代drift",
+      "objective": "corrected truthのeligible率と年代driftを再集計",
       "taskType": "readonly-analysis",
       "executor": "readonly-analysis",
       "safetyLevel": "L0",
-      "expectedOutputs": [
-        "reports/n2/n2-corrected-eligibility.json"
-      ],
+      "expectedOutputs": ["reports/n2/n2-corrected-eligibility.json"],
       "defaultStatus": "READY"
     },
     {
@@ -51,16 +45,14 @@
       "expectedInputs": [],
       "estimatedDurationSeconds": 40,
       "valueOfInformation": "medium",
-      "invalidationCondition": "対応 executor / データ契約が変わったら再定義",
+      "invalidationCondition": "対応executor / データ契約が変わったら再定義",
       "taskId": "TASK-N2-003",
-      "title": "win 返還欠落の別 defect 調査",
-      "objective": "held-out 2 件の win 返還欠落を別 defect として調査（適用しない）",
+      "title": "win返還欠落の別defect調査",
+      "objective": "held-out 2件のwin返還欠落を別defectとして調査（適用しない）",
       "taskType": "readonly-audit",
       "executor": "readonly-audit",
       "safetyLevel": "L0",
-      "expectedOutputs": [
-        "reports/n2/n2-win-refund-omission-audit.json"
-      ],
+      "expectedOutputs": ["reports/n2/n2-win-refund-omission-audit.json"],
       "defaultStatus": "READY"
     },
     {
@@ -70,58 +62,48 @@
       "expectedInputs": [],
       "estimatedDurationSeconds": 60,
       "valueOfInformation": "high",
-      "invalidationCondition": "対応 executor / データ契約が変わったら再定義",
+      "invalidationCondition": "対応executor / データ契約が変わったら再定義",
       "taskId": "TASK-N2-004",
       "title": "full-period dataset inventory",
-      "objective": "全期間 active settlement candidate を年・券種で棚卸し",
+      "objective": "全期間active settlement candidateを年・券種で棚卸し",
       "taskType": "dataset-inventory",
       "executor": "dataset-inventory",
       "safetyLevel": "L0",
-      "expectedOutputs": [
-        "reports/n2/n2-dataset-inventory.json"
-      ],
+      "expectedOutputs": ["reports/n2/n2-dataset-inventory.json"],
       "defaultStatus": "READY"
     },
     {
       "taskDefinitionVersion": 1,
-      "dependencies": [
-        "TASK-N2-004"
-      ],
+      "dependencies": ["TASK-N2-004"],
       "maxDurationSeconds": 3600,
       "expectedInputs": [],
       "estimatedDurationSeconds": 10,
       "valueOfInformation": "high",
-      "invalidationCondition": "対応 executor / データ契約が変わったら再定義",
+      "invalidationCondition": "対応executor / データ契約が変わったら再定義",
       "taskId": "TASK-N2-005",
       "title": "untouched holdout freeze + time split",
-      "objective": "触れない holdout(win 返還欠落 2 件)を恒久固定し time-based split 境界を宣言",
+      "objective": "触れないholdout(win返還欠落2件)を恒久固定し、半開区間のtime-based split境界を宣言",
       "taskType": "holdout-freeze",
       "executor": "holdout-freeze",
       "safetyLevel": "L0",
-      "expectedOutputs": [
-        "reports/n2/n2-holdout-freeze.json"
-      ],
+      "expectedOutputs": ["reports/n2/n2-holdout-freeze.json"],
       "defaultStatus": "READY"
     },
     {
       "taskDefinitionVersion": 1,
-      "dependencies": [
-        "TASK-N2-004"
-      ],
+      "dependencies": ["TASK-N2-004"],
       "maxDurationSeconds": 3600,
       "expectedInputs": [],
       "estimatedDurationSeconds": 40,
       "valueOfInformation": "medium",
-      "invalidationCondition": "対応 executor / データ契約が変わったら再定義",
+      "invalidationCondition": "対応executor / データ契約が変わったら再定義",
       "taskId": "TASK-N2-006",
       "title": "settlement coverage / missingness audit",
-      "objective": "settled/refunded の payout/refund line coverage と欠落を監査",
+      "objective": "settled/refundedのpayout/refund line coverageと欠落を監査",
       "taskType": "feature-coverage-audit",
       "executor": "feature-coverage-audit",
       "safetyLevel": "L0",
-      "expectedOutputs": [
-        "reports/n2/n2-feature-coverage-audit.json"
-      ],
+      "expectedOutputs": ["reports/n2/n2-feature-coverage-audit.json"],
       "defaultStatus": "READY"
     },
     {
@@ -131,209 +113,172 @@
       "expectedInputs": [],
       "estimatedDurationSeconds": 5,
       "valueOfInformation": "medium",
-      "invalidationCondition": "READY task が存在する間は補充不要",
+      "invalidationCondition": "READY taskが存在する間は補充不要。同じENGINEERING_REQUIRED候補集合ならNO_CHANGEで再commitしない",
       "taskId": "TASK-PLANNER-NEXT",
       "title": "queue planner: 次候補提案",
-      "objective": "READY task が枯れたとき次に価値の高い候補を提案（自動 dispatch しない）",
+      "objective": "READY taskが枯れたとき、次に実装すべき候補を提案する。自動dispatchしない",
       "taskType": "planner-next",
       "executor": "planner-next",
       "safetyLevel": "L0",
-      "expectedOutputs": [
-        "automation/control/planner-candidates.json"
-      ],
+      "expectedOutputs": ["automation/control/planner-candidates.json"],
       "defaultStatus": "READY",
       "recurring": true
     },
     {
-      "taskDefinitionVersion": 1,
-      "dependencies": [
-        "TASK-N2-004"
-      ],
+      "taskDefinitionVersion": 2,
+      "dependencies": ["TASK-N2-004"],
       "maxDurationSeconds": 3600,
-      "expectedInputs": [],
-      "estimatedDurationSeconds": 300,
-      "valueOfInformation": "medium",
-      "invalidationCondition": "対応 executor / データ契約が変わったら再定義",
+      "expectedInputs": [
+        "reports/n2/corrected-settlement-truth-freeze.json",
+        "reports/n2/n2-holdout-freeze.json",
+        "read-only settlement sidecar"
+      ],
+      "estimatedDurationSeconds": 600,
+      "valueOfInformation": "high",
+      "invalidationCondition": "n2-dataset-manifest-v2、holdout set、corrected truth identity、またはdataset-expand executorが変わったら再定義",
       "taskId": "TASK-N2-010",
-      "title": "corrected dataset 年代拡張",
-      "objective": "corrected dataset を全期間へ拡張し manifest 化",
+      "title": "corrected dataset年代拡張",
+      "objective": "全期間inventoryとuntouched holdout除外済みresearch-eligible cohortを分離し、readback検証済みmanifestとEXP→Discovery lineageを生成",
       "taskType": "dataset-expand",
       "executor": "dataset-expand",
       "safetyLevel": "L0",
-      "expectedOutputs": [
-        "reports/n2/n2-dataset-manifest.json"
-      ],
-      "defaultStatus": "BLOCKED_EXECUTOR_PENDING"
+      "expectedOutputs": ["reports/n2/n2-dataset-manifest.json"],
+      "defaultStatus": "READY"
     },
     {
       "taskDefinitionVersion": 1,
-      "dependencies": [
-        "TASK-N2-010"
-      ],
+      "dependencies": ["TASK-N2-010"],
       "maxDurationSeconds": 3600,
       "expectedInputs": [],
       "estimatedDurationSeconds": 300,
       "valueOfInformation": "medium",
-      "invalidationCondition": "対応 executor / データ契約が変わったら再定義",
+      "invalidationCondition": "対応executor / データ契約が変わったら再定義",
       "taskId": "TASK-N2-011",
-      "title": "PIT 再検証",
-      "objective": "feature join 後の point-in-time / same-race leakage を再検証",
+      "title": "PIT再検証",
+      "objective": "feature join後のpoint-in-time / same-race leakageを再検証",
       "taskType": "pit-audit",
       "executor": "pit-audit",
       "safetyLevel": "L0",
-      "expectedOutputs": [
-        "reports/n2/n2-pit-audit.json"
-      ],
+      "expectedOutputs": ["reports/n2/n2-pit-audit.json"],
       "defaultStatus": "BLOCKED_EXECUTOR_PENDING"
     },
     {
       "taskDefinitionVersion": 1,
-      "dependencies": [
-        "TASK-N2-011",
-        "TASK-N2-005"
-      ],
+      "dependencies": ["TASK-N2-011", "TASK-N2-005"],
       "maxDurationSeconds": 3600,
       "expectedInputs": [],
       "estimatedDurationSeconds": 300,
       "valueOfInformation": "medium",
-      "invalidationCondition": "対応 executor / データ契約が変わったら再定義",
+      "invalidationCondition": "対応executor / データ契約が変わったら再定義",
       "taskId": "TASK-N2-020",
       "title": "market-only baseline",
-      "objective": "市場オッズのみの baseline を common cohort で評価",
+      "objective": "市場オッズのみのbaselineをcommon cohortで評価",
       "taskType": "baseline-market",
       "executor": "baseline-market",
       "safetyLevel": "L0",
-      "expectedOutputs": [
-        "reports/n2/n2-baseline-market.json"
-      ],
+      "expectedOutputs": ["reports/n2/n2-baseline-market.json"],
       "defaultStatus": "BLOCKED_EXECUTOR_PENDING"
     },
     {
       "taskDefinitionVersion": 1,
-      "dependencies": [
-        "TASK-N2-011",
-        "TASK-N2-005"
-      ],
+      "dependencies": ["TASK-N2-011", "TASK-N2-005"],
       "maxDurationSeconds": 3600,
       "expectedInputs": [],
       "estimatedDurationSeconds": 300,
       "valueOfInformation": "medium",
-      "invalidationCondition": "対応 executor / データ契約が変わったら再定義",
+      "invalidationCondition": "対応executor / データ契約が変わったら再定義",
       "taskId": "TASK-N2-021",
       "title": "historical-only baseline",
-      "objective": "履歴特徴のみの baseline を common cohort で評価",
+      "objective": "履歴特徴のみのbaselineをcommon cohortで評価",
       "taskType": "baseline-historical",
       "executor": "baseline-historical",
       "safetyLevel": "L0",
-      "expectedOutputs": [
-        "reports/n2/n2-baseline-historical.json"
-      ],
+      "expectedOutputs": ["reports/n2/n2-baseline-historical.json"],
       "defaultStatus": "BLOCKED_EXECUTOR_PENDING"
     },
     {
       "taskDefinitionVersion": 1,
-      "dependencies": [
-        "TASK-N2-020",
-        "TASK-N2-021"
-      ],
+      "dependencies": ["TASK-N2-020", "TASK-N2-021"],
       "maxDurationSeconds": 3600,
       "expectedInputs": [],
       "estimatedDurationSeconds": 300,
       "valueOfInformation": "medium",
-      "invalidationCondition": "対応 executor / データ契約が変わったら再定義",
+      "invalidationCondition": "対応executor / データ契約が変わったら再定義",
       "taskId": "TASK-N2-022",
-      "title": "common cohort baseline 比較",
-      "objective": "market / historical / legacy を同一 cohort で比較",
+      "title": "common cohort baseline比較",
+      "objective": "market / historical / legacyを同一cohortで比較",
       "taskType": "baseline-common-cohort",
       "executor": "baseline-common-cohort",
       "safetyLevel": "L0",
-      "expectedOutputs": [
-        "reports/n2/n2-baseline-common-cohort.json"
-      ],
+      "expectedOutputs": ["reports/n2/n2-baseline-common-cohort.json"],
       "defaultStatus": "BLOCKED_EXECUTOR_PENDING"
     },
     {
       "taskDefinitionVersion": 1,
-      "dependencies": [
-        "TASK-N2-022"
-      ],
+      "dependencies": ["TASK-N2-022"],
       "maxDurationSeconds": 3600,
       "expectedInputs": [],
       "estimatedDurationSeconds": 300,
       "valueOfInformation": "medium",
-      "invalidationCondition": "対応 executor / データ契約が変わったら再定義",
+      "invalidationCondition": "対応executor / データ契約が変わったら再定義",
       "taskId": "TASK-N2-030",
       "title": "evaluation metrics",
-      "objective": "logloss/Brier/calibration/coverage/ROI/drawdown を算出",
+      "objective": "logloss/Brier/calibration/coverage/ROI/drawdownを算出",
       "taskType": "evaluation-metrics",
       "executor": "evaluation-metrics",
       "safetyLevel": "L0",
-      "expectedOutputs": [
-        "reports/n2/n2-evaluation-metrics.json"
-      ],
+      "expectedOutputs": ["reports/n2/n2-evaluation-metrics.json"],
       "defaultStatus": "BLOCKED_EXECUTOR_PENDING"
     },
     {
       "taskDefinitionVersion": 1,
-      "dependencies": [
-        "TASK-N2-030"
-      ],
+      "dependencies": ["TASK-N2-030"],
       "maxDurationSeconds": 3600,
       "expectedInputs": [],
       "estimatedDurationSeconds": 300,
       "valueOfInformation": "medium",
-      "invalidationCondition": "対応 executor / データ契約が変わったら再定義",
+      "invalidationCondition": "対応executor / データ契約が変わったら再定義",
       "taskId": "TASK-N2-040",
       "title": "edge hypothesis scan",
-      "objective": "player/course/ST/exhibition/motor/weather 等の edge 仮説を走査",
+      "objective": "player/course/ST/exhibition/motor/weather等のedge仮説を走査",
       "taskType": "edge-hypothesis-scan",
       "executor": "edge-hypothesis-scan",
       "safetyLevel": "L0",
-      "expectedOutputs": [
-        "reports/n2/n2-edge-hypothesis-scan.json"
-      ],
+      "expectedOutputs": ["reports/n2/n2-edge-hypothesis-scan.json"],
       "defaultStatus": "BLOCKED_EXECUTOR_PENDING"
     },
     {
       "taskDefinitionVersion": 1,
-      "dependencies": [
-        "TASK-N2-040"
-      ],
+      "dependencies": ["TASK-N2-040"],
       "maxDurationSeconds": 3600,
       "expectedInputs": [],
       "estimatedDurationSeconds": 300,
       "valueOfInformation": "medium",
-      "invalidationCondition": "対応 executor / データ契約が変わったら再定義",
+      "invalidationCondition": "対応executor / データ契約が変わったら再定義",
       "taskId": "TASK-N2-041",
       "title": "edge historical test",
-      "objective": "edge 仮説を歴史データで検定（forward 昇格はしない）",
+      "objective": "edge仮説を歴史データで検定（forward昇格はしない）",
       "taskType": "edge-historical-test",
       "executor": "edge-historical-test",
       "safetyLevel": "L0",
-      "expectedOutputs": [
-        "reports/n2/n2-edge-historical-test.json"
-      ],
+      "expectedOutputs": ["reports/n2/n2-edge-historical-test.json"],
       "defaultStatus": "BLOCKED_EXECUTOR_PENDING"
     },
     {
       "taskDefinitionVersion": 1,
-      "dependencies": [
-        "TASK-N2-041"
-      ],
+      "dependencies": ["TASK-N2-041"],
       "maxDurationSeconds": 3600,
       "expectedInputs": [],
       "estimatedDurationSeconds": 300,
       "valueOfInformation": "medium",
-      "invalidationCondition": "対応 executor / データ契約が変わったら再定義",
+      "invalidationCondition": "対応executor / データ契約が変わったら再定義",
       "taskId": "TASK-N2-042",
       "title": "confounder / rejection audit",
-      "objective": "交絡と棄却根拠を監査し rejection registry を更新",
+      "objective": "交絡と棄却根拠を監査しrejection registryを更新",
       "taskType": "confounder-audit",
       "executor": "confounder-audit",
       "safetyLevel": "L0",
-      "expectedOutputs": [
-        "reports/n2/n2-confounder-audit.json"
-      ],
+      "expectedOutputs": ["reports/n2/n2-confounder-audit.json"],
       "defaultStatus": "BLOCKED_EXECUTOR_PENDING"
     }
   ]

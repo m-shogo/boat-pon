@@ -244,6 +244,12 @@ try {
   }
 
   // ---- 結果を state へ反映 ----
+  // 防御: runner は dry-run で executor を呼ばない（上で DRY_RUN_OK に短絡）ため、executor から
+  // DRY_RUN_OK が返ることは正常系では起きない。万一返ったら PASS 遷移させず BLOCK する（fail-closed）。
+  if ((exec.result as string) === "DRY_RUN_OK") {
+    updateState(task.taskId, { status: "BLOCKED", lastFailure: { code: "UNEXPECTED_DRY_RUN_RESULT", at: nowIso() } });
+    finish("BLOCKED", 3, { lastRequestId: request.requestId, lastIntentId: intentId, lastTaskId: task.taskId, authoritySha: request.authoritySha, stateVersion: state.stateVersion, stateDigest, blocks: ["UNEXPECTED_DRY_RUN_RESULT"], elapsedMs: Date.now() - startedMs, nextCandidate: pickNext(merged) });
+  }
   const attempts = state.tasks[task.taskId]?.attemptCount ?? 1;
   const maxAttempts = state.tasks[task.taskId]?.maxAttempts ?? 3;
   const nextStatus: TaskStatus = exec.result === "PASS" ? "PASS" : exec.result === "CONDITIONAL" ? "CONDITIONAL" : exec.result === "BLOCKED" ? "BLOCKED" : attempts >= maxAttempts ? "FAILED_FINAL" : "FAILED_RETRYABLE";

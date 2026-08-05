@@ -1,0 +1,92 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "experiment.schema.json",
+  "title": "Research Experiment",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "experimentId",
+    "researchQuestion",
+    "hypothesis",
+    "trialFamilyId",
+    "totalTrialCount",
+    "primaryMetric",
+    "stoppingRule",
+    "successCondition",
+    "rejectionCondition",
+    "multiplicityFamily",
+    "evidenceStage",
+    "status"
+  ],
+  "properties": {
+    "experimentId": {
+      "type": "string",
+      "pattern": "^EXP-[0-9A-Za-z._-]{1,80}$"
+    },
+    "researchQuestion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "hypothesis": {
+      "type": "string",
+      "minLength": 1
+    },
+    "trialFamilyId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "totalTrialCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "testedConditions": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "primaryMetric": {
+      "type": "string",
+      "minLength": 1
+    },
+    "secondaryMetrics": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "stoppingRule": {
+      "type": "string",
+      "minLength": 1
+    },
+    "successCondition": {
+      "type": "string",
+      "minLength": 1
+    },
+    "rejectionCondition": {
+      "type": "string",
+      "minLength": 1
+    },
+    "multiplicityFamily": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidenceStage": {
+      "enum": [
+        "exploration",
+        "discovery",
+        "validation",
+        "holdout",
+        "shadow_forward",
+        "future_only"
+      ]
+    },
+    "status": {
+      "enum": [
+        "proposed",
+        "running",
+        "completed",
+        "rejected",
+        "inconclusive"
+      ]
+    }
+  }
+}

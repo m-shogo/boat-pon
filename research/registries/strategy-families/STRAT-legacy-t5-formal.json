@@ -1,0 +1,19 @@
+{
+  "strategyId": "STRAT-legacy-t5-formal",
+  "strategyName": "Current BUY (legacy T5 formal)",
+  "coreThesis": "既存研究成果から形成された現行 BUY/WATCH/SKIP 方式。研究基準の固定 benchmark として存続する。",
+  "mechanismHypothesis": "既存 decision ロジック（本 registry では変更・再ラベルしない）",
+  "parentExperimentIds": [],
+  "knowledgePolicy": "OPEN_COMMONS",
+  "cleanRoomPolicy": {
+    "isolated": false,
+    "allowedShareClasses": [
+      "GLOBAL_FACT",
+      "RESEARCH_METHOD"
+    ]
+  },
+  "decisionSystem": "legacy_t5_formal",
+  "createdAt": "2026-08-05T00:00:00Z",
+  "_digest": "5a0d5648222710ee0b5251e6333feec23862cf8f69ea586dbbe9e40f0eac447e",
+  "_recordedAt": "2026-08-04T15:38:31.856Z"
+}

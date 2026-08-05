@@ -2,6 +2,16 @@
 
 最終更新: 2026-07-24
 
+## 0. 研究ガバナンス正本への参照（2026-08-05 追加）
+
+本マスタープランは Phase・評価契約の正本であり、その上に研究ガバナンス層を置く。権威順は `docs/adr/README.md` を参照:
+絶対安全条件 > ADR-0001..0004 > 本マスタープラン > governance docs > schema/実装 > 運用 runbook。
+
+- ガバナンス: `docs/research-strategy-governance.md` / `docs/edge-discovery-system.md` / `docs/research-storage-architecture.md` / `docs/research-automation-operating-model.md`
+- Registry（individual-file / append-only）: `research/registries/` + `src/research/governance/` + `config/research-governance/`
+- Phase mapping（legacy→formal, 履歴保持）: `automation/phase-mapping.json`
+- CI 強制: `pnpm research:governance-check`
+
 ## 1. 正本としての位置づけ
 
 本書は、Phase N0完了後の研究アイデア、選手情報point-in-time監査、全券種市場構想、実装順序、評価系列の分離を統合した最上位の正本である。個別の取得・schema・モデル設計は既存文書を詳細正本として残し、順序や境界が競合した場合は本書を優先する。

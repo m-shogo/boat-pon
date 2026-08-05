@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "promotion.schema.json",
+  "title": "Promotion",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "promotionId",
+    "strategyId",
+    "toState",
+    "humanApproval",
+    "productionConnection"
+  ],
+  "properties": {
+    "promotionId": {
+      "type": "string",
+      "pattern": "^PROMO-[0-9A-Za-z._-]{1,80}$"
+    },
+    "strategyId": {
+      "type": "string",
+      "pattern": "^STRAT-"
+    },
+    "toState": {
+      "enum": [
+        "candidate",
+        "shadow",
+        "challenger",
+        "active_research",
+        "rejected",
+        "archived"
+      ]
+    },
+    "humanApproval": {
+      "type": "object"
+    },
+    "productionConnection": {
+      "const": false
+    }
+  }
+}

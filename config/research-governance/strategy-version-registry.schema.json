@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "strategy-version.schema.json",
+  "title": "Strategy Version",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "strategyId",
+    "version",
+    "datasetVersion",
+    "featureVersion",
+    "modelVersion",
+    "decisionRuleVersion",
+    "ticketSelectorVersion",
+    "changeType",
+    "changeReason"
+  ],
+  "properties": {
+    "strategyId": {
+      "type": "string",
+      "pattern": "^STRAT-[0-9A-Za-z._-]{1,80}$"
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "changeType": {
+      "enum": [
+        "new_family",
+        "same_thesis_improvement",
+        "parameter",
+        "observation_only"
+      ]
+    },
+    "adoptedDiscoveryIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

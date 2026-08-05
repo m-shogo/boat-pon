@@ -1,0 +1,35 @@
+{
+  "phaseMappingVersion": "research-phase-mapping-v2",
+  "updatedAt": "2026-08-04T16:15:00Z",
+  "note": "legacy task IDから正式Phaseへのalias/migration。履歴は削除しない。既存TASK-N2-*は保持しつつ正式Phaseを付与する。",
+  "authorityNote": "正式Phase定義の正本はdocs/research-platform-master-plan.md。本mappingはtask IDの対応表。",
+  "phases": {
+    "N2": "synchronized all-market observation",
+    "N3": "racer / pre-race snapshot",
+    "N4": "strict-prior feature",
+    "D2": "market diagnostics",
+    "E1": "event capture",
+    "E2": "market reaction",
+    "N5": "market-only baseline",
+    "N6": "residual model",
+    "N7": "selective prediction / ticket strategy",
+    "N8": "future-only validation"
+  },
+  "legacyTaskAliases": [
+    { "legacy": "TASK-N2-001", "phase": "N2", "role": "dataset canary", "status": "PASS", "retainHistory": true },
+    { "legacy": "TASK-N2-002", "phase": "N2", "role": "corrected eligibility", "status": "PASS", "retainHistory": true },
+    { "legacy": "TASK-N2-003", "phase": "N2", "role": "win-refund omission audit", "status": "PASS", "retainHistory": true },
+    { "legacy": "TASK-N2-004", "phase": "N2", "role": "dataset inventory", "status": "PASS", "retainHistory": true },
+    { "legacy": "TASK-N2-005", "phase": "N2", "role": "holdout freeze + time split", "status": "PASS", "retainHistory": true },
+    { "legacy": "TASK-N2-006", "phase": "N2", "role": "settlement coverage audit", "status": "PASS", "retainHistory": true },
+    { "legacy": "TASK-N2-010", "phase": "N2", "role": "dataset-expand", "alias": "TASK-N2-EXPAND", "status": "implemented_ready", "retainHistory": true },
+    { "legacy": "TASK-N2-011", "phase": "N4", "role": "PIT audit (post feature join)", "status": "engineering_required", "retainHistory": true },
+    { "legacy": "TASK-N2-020", "phase": "N5", "role": "market-only baseline", "status": "engineering_required", "retainHistory": true },
+    { "legacy": "TASK-N2-021", "phase": "N5", "role": "historical/racer baseline", "status": "engineering_required", "retainHistory": true },
+    { "legacy": "TASK-N2-022", "phase": "N5", "role": "common cohort comparison", "status": "engineering_required", "retainHistory": true },
+    { "legacy": "TASK-N2-030", "phase": "N7", "role": "evaluation metrics", "status": "engineering_required", "retainHistory": true },
+    { "legacy": "TASK-N2-040", "phase": "E2", "role": "edge hypothesis scan", "status": "engineering_required", "retainHistory": true },
+    { "legacy": "TASK-N2-041", "phase": "E2", "role": "historical edge test", "status": "engineering_required", "retainHistory": true },
+    { "legacy": "TASK-N2-042", "phase": "D2", "role": "confounder audit", "status": "engineering_required", "retainHistory": true }
+  ]
+}

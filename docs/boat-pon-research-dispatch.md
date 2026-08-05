@@ -89,3 +89,16 @@ pnpm automation:pause / resume / emergency-stop / clear-emergency-stop
 - `docs/current-ai-handoff.md` — 実装履歴と現状
 - `config/research-dispatch-intent.schema.json` / `research-task-catalog.schema.json` / `research-task-request.schema.json`
 - `config/actor-allowlist-policy.json` — actor 許可（wildcard/org/fork 禁止）
+
+## 研究ガバナンス・3 レーン（2026-08-05 追加）
+
+ChatGPT Scheduled Task の運用は 3 レーンに正式化された（`docs/research-automation-operating-model.md`）:
+
+- **Hourly Execution Lane**: 実装済み executor の 1 task を実行。未実装は ENGINEERING_REQUIRED で停止。
+- **Daily Discovery Lane**: 未探索 taxonomy から `EXP-*` を最大 1〜3 件提案（自動採用・自動昇格なし）。
+- **Weekly Governance Lane**: trial count / 多重検定 / holdout 汚染 / overlap / clean-room 違反 / Edge decay /
+  Current BUY 混入 / ENGINEERING_REQUIRED 一覧を点検。
+
+正本: `docs/adr/`（authority order）/ `docs/research-strategy-governance.md` / `docs/edge-discovery-system.md` /
+`docs/research-storage-architecture.md`。Registry: `research/registries/`（append-only, CI 強制）。
+CI: `pnpm research:governance-check`（clean-room / holdout / lineage / 分離 / production 非接続）。

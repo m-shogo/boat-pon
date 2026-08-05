@@ -1,0 +1,24 @@
+{
+  "discoveryId": "DISC-example-001",
+  "sourceExperimentIds": [
+    "EXP-example-001"
+  ],
+  "sourceStrategyId": null,
+  "sourceStrategyVersion": null,
+  "finding": "締切前オッズ残差に弱い正の情報がある",
+  "mechanismHypothesis": "遅い資金の情報が締切直前に価格へ入る",
+  "evidenceLevel": "moderate",
+  "shareClass": "REUSABLE_CANDIDATE",
+  "scope": "全会場・3連単",
+  "knownConfounders": [
+    "締切時刻差",
+    "会場流動性"
+  ],
+  "trialFamilyId": "TF-market-residual",
+  "trialCountAtDiscovery": 12,
+  "adoptedBy": [],
+  "rejectedBy": [],
+  "createdAt": "2026-08-05T00:00:00Z",
+  "_digest": "65846d41b0f8ca68ecc00045407e42364cccebf173af1eba6c7761339001eef1",
+  "_recordedAt": "2026-08-04T15:35:45.163Z"
+}

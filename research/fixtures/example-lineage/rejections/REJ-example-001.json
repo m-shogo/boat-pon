@@ -1,0 +1,11 @@
+{
+  "rejectionId": "REJ-example-001",
+  "subjectType": "experiment",
+  "subjectId": "EXP-legacy-bruteforce-001",
+  "reason": "仮説・メカニズム無しの条件総当たり。Edge 発見の要件（反証条件）を満たさない",
+  "evidenceStage": "exploration",
+  "trialFamilyId": null,
+  "createdAt": "2026-08-05T00:00:00Z",
+  "_digest": "d41e2ed606918d0f78e92e5da04d1f55c7dad47e0774bc27504688dffea3537d",
+  "_recordedAt": "2026-08-04T15:35:45.163Z"
+}
