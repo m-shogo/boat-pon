@@ -36,13 +36,14 @@ Delivered:
 - JSON Schema and alignment tests;
 - no operational persistence or behavior change.
 
-## In progress
-
 ### G2-B — Read-only Runtime Decision Ledger shadow mapper
 
-Branch: `agent/runtime-decision-ledger-shadow-mapper`
+Merged to main:
 
-Delivered in this slice:
+- merge SHA: `d2e763bb1018857a36cb4d2badb217498d356a86`
+- PR: `#23`
+
+Delivered:
 
 - explicit `decision_history` source-field inventory;
 - deterministic pure mapper into `runtime-decision-ledger.0.1`;
@@ -54,20 +55,16 @@ Delivered in this slice:
 - reconciliation counts and ordered record-set digest;
 - read-only/query-only SQLite report command;
 - atomic private JSON output with mode `0600`;
-- tests that reject SQL write verbs and protected dependency markers.
+- SQL-write and protected-dependency safety tests;
+- full CI, Research Replay, governance and build PASS.
 
-Not included:
+No operational DB write, permanent ledger table, automatic backfill, Current BUY/model/selector change, LINE delivery-state change, Outcome Learning linkage, Cloudflare projection or production promotion was introduced.
 
-- operational DB write or migration;
-- permanent ledger table;
-- automatic backfill;
-- Current BUY/model/selector change;
-- LINE delivery-state change;
-- Outcome Learning linkage;
-- Cloudflare/public projection;
-- production promotion.
+## In progress
 
-Next G2 slice after this merges:
+### G2-C — Bounded shadow evidence and source completeness
+
+Next safe sequence:
 
 ```text
 bounded local shadow run
@@ -76,12 +73,24 @@ bounded local shadow run
 -> isolated append-only store design
 ```
 
+The bounded run requires the Mac-local private SQLite evidence and must use the merged read-only/query-only command. Chat/GitHub-only execution must not claim that run has occurred.
+
 ## Scheduled N2 lane
 
-Latest observed automation authority state during G2-B:
+Latest observed authority state:
 
-- N2-001 through N2-006: PASS;
-- N2-010: existing intent committed, authority remains `READY`, `attemptCount=0`, no evidence links;
-- N2-011 and later: `BLOCKED_EXECUTOR_PENDING`.
+- N2-001 through N2-006: `PASS`;
+- N2-010: authority remains `READY`, `attemptCount=0`, no evidence links;
+- valid main intent `INTENT-20260805-z7m4q2p8kx` exists for N2-010;
+- that intent is absent from the processed-intent ledger;
+- therefore current status is `PENDING_RUNNER` / `PENDING_WORKFLOW_CONFIRMATION`, not PASS or confirmed failure;
+- N2-011 and later remain `BLOCKED_EXECUTOR_PENDING`.
 
-The engineering lane has not created a duplicate N2-010 intent and has not modified automation authority state.
+Safeguard added on 2026-08-05:
+
+- the enabled hourly `Boat Pon N2研究` task now checks valid unprocessed main intents before every write;
+- while an equivalent unprocessed intent exists, it creates no new intent even if queue state remains READY;
+- repeated PENDING_RUNNER state produces no hourly notification;
+- existing intent files and automation branch state remain immutable from the ChatGPT control plane.
+
+Detailed authority: `docs/operations/n2-pending-intent-safety-2026-08-05.md`.
