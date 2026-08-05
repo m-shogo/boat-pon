@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, renameSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import {
   reconcileDecisionHistoryRowsToRuntimeLedger,
@@ -7,6 +7,12 @@ import {
   type RuntimeDecisionLedgerMappingContext,
 } from "../src/research/governance/runtimeDecisionLedgerMapper";
 import type { RuntimeEvaluationMode } from "../src/research/governance/runtimeDecisionLedger";
+import {
+  buildRuntimeDecisionLedgerShadowEvidence,
+  validateRuntimeDecisionLedgerShadowEvidence,
+  type RuntimeDecisionLedgerShadowEvidence,
+  type RuntimeDecisionLedgerShadowSourceDescriptor,
+} from "../src/research/governance/runtimeDecisionLedgerShadowEvidence";
 
 type Args = {
   dbPath: string;
@@ -16,9 +22,17 @@ type Args = {
   modelVersion: string;
   limit: number;
   output: string | null;
+  evidenceOutput: string | null;
+  privateStoreDir: string | null;
   summaryOnly: boolean;
   lineEligible: boolean;
+  boundedEvidence: boolean;
   context: RuntimeDecisionLedgerMappingContext;
+};
+
+type QueryResult = {
+  rows: DecisionHistoryShadowRow[];
+  limitReached: boolean;
 };
 
 function valueAfter(args: string[], name: string): string | null {
@@ -50,17 +64,37 @@ function parseEvaluationMode(value: string | null, runKind: string): RuntimeEval
   return resolved as RuntimeEvaluationMode;
 }
 
+function validateDate(value: string | null, name: string): void {
+  if (value == null) return;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(Date.parse(`${value}T00:00:00Z`))) {
+    throw new Error(`${name} must be YYYY-MM-DD`);
+  }
+}
+
 function parseArgs(argv: string[]): Args {
   const runKind = required(argv, "--run-kind");
   const modelVersion = required(argv, "--model-version");
   const from = valueAfter(argv, "--from");
   const to = valueAfter(argv, "--to");
+  validateDate(from, "--from");
+  validateDate(to, "--to");
+  if (from && to && from > to) throw new Error("--from must not be after --to");
+
   const limitValue = Number(valueAfter(argv, "--limit") ?? "1000");
   if (!Number.isInteger(limitValue) || limitValue < 1 || limitValue > 100_000) {
     throw new Error("--limit must be an integer between 1 and 100000");
   }
   const lineEligible = hasFlag(argv, "--line-eligible");
   if (lineEligible && runKind !== "paper-live") throw new Error("--line-eligible is only allowed with --run-kind paper-live");
+
+  const evidenceOutput = valueAfter(argv, "--evidence-output");
+  const privateStoreDir = valueAfter(argv, "--private-store-dir");
+  const boundedEvidence = evidenceOutput != null || privateStoreDir != null;
+  if (boundedEvidence) {
+    if (!from || !to) throw new Error("bounded evidence requires both --from and --to");
+    if (limitValue > 5000) throw new Error("bounded evidence requires --limit <= 5000");
+    if (lineEligible) throw new Error("bounded evidence never records LINE eligibility");
+  }
 
   const scope = `${modelVersion}:${runKind}:${from ?? "all"}:${to ?? "all"}`;
   return {
@@ -71,8 +105,11 @@ function parseArgs(argv: string[]): Args {
     modelVersion,
     limit: limitValue,
     output: valueAfter(argv, "--output"),
+    evidenceOutput,
+    privateStoreDir,
     summaryOnly: hasFlag(argv, "--summary-only"),
     lineEligible,
+    boundedEvidence,
     context: {
       decisionSystem: valueAfter(argv, "--decision-system") ?? `decision-history-shadow:${runKind}`,
       strategyVersion: valueAfter(argv, "--strategy-version") ?? `shadow:${modelVersion}:${runKind}`,
@@ -85,7 +122,7 @@ function parseArgs(argv: string[]): Args {
   };
 }
 
-function queryRows(db: DatabaseSync, args: Args): DecisionHistoryShadowRow[] {
+function queryRows(db: DatabaseSync, args: Args): QueryResult {
   const where = ["dh.run_kind = ?", "dh.model_version = ?"];
   const params: Array<string | number> = [args.runKind, args.modelVersion];
   if (args.from) {
@@ -96,9 +133,9 @@ function queryRows(db: DatabaseSync, args: Args): DecisionHistoryShadowRow[] {
     where.push("dh.date <= ?");
     params.push(args.to);
   }
-  params.push(args.limit);
+  params.push(args.limit + 1);
 
-  return db.prepare(`
+  const fetched = db.prepare(`
 SELECT
   dh.id,
   dh.race_id,
@@ -131,6 +168,11 @@ WHERE ${where.join(" AND ")}
 ORDER BY dh.id ASC
 LIMIT ?
 `).all(...params) as DecisionHistoryShadowRow[];
+
+  return {
+    rows: fetched.slice(0, args.limit),
+    limitReached: fetched.length > args.limit,
+  };
 }
 
 function atomicWrite(path: string, contents: string): void {
@@ -139,6 +181,51 @@ function atomicWrite(path: string, contents: string): void {
   const temp = `${absolute}.tmp-${process.pid}`;
   writeFileSync(temp, contents, { encoding: "utf8", mode: 0o600 });
   renameSync(temp, absolute);
+}
+
+function appendPrivateStore(
+  directory: string,
+  payload: Record<string, unknown>,
+  evidence: RuntimeDecisionLedgerShadowEvidence,
+): string {
+  const absoluteDir = resolve(directory);
+  mkdirSync(absoluteDir, { recursive: true, mode: 0o700 });
+  const filename = `runtime-decision-shadow-${evidence.sourceDescriptorDigest.slice(0, 12)}-${evidence.contentDigest.slice(0, 12)}.json`;
+  const path = join(absoluteDir, filename);
+  const contents = `${JSON.stringify(payload, null, 2)}\n`;
+  try {
+    writeFileSync(path, contents, { encoding: "utf8", mode: 0o600, flag: "wx" });
+  } catch (error) {
+    const code = error instanceof Error && "code" in error ? String((error as NodeJS.ErrnoException).code) : "";
+    if (code !== "EEXIST") throw error;
+    const existing = JSON.parse(readFileSync(path, "utf8")) as Record<string, any>;
+    if (existing.evidence?.contentDigest !== evidence.contentDigest) {
+      throw new Error(`append-only private store conflict: ${path}`);
+    }
+  }
+  return path;
+}
+
+function pragmaValue(db: DatabaseSync, name: string): unknown {
+  const row = db.prepare(`PRAGMA ${name}`).get() as Record<string, unknown> | undefined;
+  return row ? Object.values(row)[0] : null;
+}
+
+function sourceDescriptor(db: DatabaseSync, dbPath: string, walPresent: boolean): RuntimeDecisionLedgerShadowSourceDescriptor {
+  const stat = statSync(dbPath);
+  return {
+    fileSizeBytes: stat.size,
+    modifiedTimeMs: stat.mtimeMs,
+    sqliteSchemaVersion: Number(pragmaValue(db, "schema_version")),
+    sqliteUserVersion: Number(pragmaValue(db, "user_version")),
+    pageCount: Number(pragmaValue(db, "page_count")),
+    pageSizeBytes: Number(pragmaValue(db, "page_size")),
+    freelistCount: Number(pragmaValue(db, "freelist_count")),
+    journalMode: String(pragmaValue(db, "journal_mode") ?? "unknown"),
+    walPresent,
+    readOnly: true,
+    queryOnly: true,
+  };
 }
 
 function usage(): string {
@@ -151,14 +238,17 @@ function usage(): string {
     "  --db <path>                 default: BOAT_PON_DB_PATH or data/boat.sqlite",
     "  --from YYYY-MM-DD --to YYYY-MM-DD",
     "  --limit <1..100000>         default: 1000",
-    "  --output <path>             atomic mode-0600 JSON output",
-    "  --summary-only              omit mapped records from printed/output JSON",
-    "  --line-eligible             paper-live only; records eligibility, never sends LINE",
+    "  --output <path>             legacy atomic full private JSON output",
+    "  --evidence-output <path>    sanitized bounded evidence; requires date range and limit <= 5000",
+    "  --private-store-dir <dir>   append-only full private store; requires date range and limit <= 5000",
+    "  --summary-only              omit mapped records from ad-hoc printed/output JSON",
+    "  --line-eligible             paper-live ad-hoc only; never allowed for bounded evidence",
     "  --evaluation-mode <mode>    inferred for known run kinds",
     "  --decision-system <id> --strategy-version <id> --feature-version <id>",
     "  --manifest-id <id> --cohort-id <id>",
     "",
-    "This command opens SQLite read-only and enables PRAGMA query_only. It never changes BUY, LINE, or DB state.",
+    "Bounded evidence refuses an active SQLite WAL and never includes raw rows, race IDs, selections or local paths.",
+    "The command opens SQLite read-only and enables PRAGMA query_only. It never changes BUY, LINE or DB state.",
   ].join("\n");
 }
 
@@ -170,16 +260,22 @@ function main(): void {
 
   const args = parseArgs(process.argv.slice(2));
   if (!existsSync(args.dbPath)) throw new Error(`DB not found: ${args.dbPath}`);
+  const walPath = `${args.dbPath}-wal`;
+  const walPresent = existsSync(walPath) && statSync(walPath).size > 0;
+  if (args.boundedEvidence && walPresent) {
+    throw new Error("bounded evidence refused: active SQLite WAL");
+  }
 
   const db = new DatabaseSync(args.dbPath, { readOnly: true });
   db.exec("PRAGMA query_only = ON;");
   db.exec("PRAGMA busy_timeout = 5000;");
   try {
-    const rows = queryRows(db, args);
-    const reconciliation = reconcileDecisionHistoryRowsToRuntimeLedger(rows, args.context);
-    const payload = {
-      schemaVersion: "runtime-decision-ledger-shadow-report.0.1",
-      generatedAt: new Date().toISOString(),
+    const generatedAt = new Date().toISOString();
+    const queried = queryRows(db, args);
+    const reconciliation = reconcileDecisionHistoryRowsToRuntimeLedger(queried.rows, args.context);
+    const payload: Record<string, unknown> = {
+      schemaVersion: "runtime-decision-ledger-shadow-report.0.2",
+      generatedAt,
       source: {
         dbPath: args.dbPath,
         queryOnly: true,
@@ -188,16 +284,43 @@ function main(): void {
         from: args.from,
         to: args.to,
         limit: args.limit,
+        limitReached: queried.limitReached,
       },
       context: args.context,
       reconciliation: args.summaryOnly
         ? { ...reconciliation, records: [] }
         : reconciliation,
     };
+
+    let evidence: RuntimeDecisionLedgerShadowEvidence | null = null;
+    if (args.boundedEvidence) {
+      evidence = buildRuntimeDecisionLedgerShadowEvidence({
+        generatedAt,
+        source: sourceDescriptor(db, args.dbPath, walPresent),
+        scope: {
+          runKind: args.runKind,
+          modelVersion: args.modelVersion,
+          from: args.from,
+          to: args.to,
+          limit: args.limit,
+          returnedRows: reconciliation.sourceRows,
+          limitReached: queried.limitReached,
+          bounded: true,
+        },
+        context: args.context,
+        reconciliation,
+      });
+      const validation = validateRuntimeDecisionLedgerShadowEvidence(evidence);
+      if (!validation.valid) throw new Error(`bounded evidence validation failed: ${validation.errors.join("; ")}`);
+      payload.evidence = evidence;
+      if (args.evidenceOutput) atomicWrite(args.evidenceOutput, `${JSON.stringify(evidence, null, 2)}\n`);
+      if (args.privateStoreDir) appendPrivateStore(args.privateStoreDir, payload, evidence);
+    }
+
     const json = `${JSON.stringify(payload, null, 2)}\n`;
     if (args.output) atomicWrite(args.output, json);
-    console.log(json.trimEnd());
-    if (reconciliation.status === "FAILED") process.exitCode = 2;
+    console.log(JSON.stringify(evidence ?? payload, null, 2));
+    if (evidence?.verdict === "FAILED" || reconciliation.status === "FAILED") process.exitCode = 2;
   } finally {
     db.close();
   }
