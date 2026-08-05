@@ -5,7 +5,8 @@ import { canonicalHash, canonicalUtcTimestamp, sha256Bytes } from "./canonical";
 import { canonicalRaceKey } from "./identity";
 import {
   buildOfficialProgramObservationEnvelope,
-  captureOfficialProgramObservation,
+  N2_OFFICIAL_PROGRAM_PARSER_VERSION,
+  N2_OFFICIAL_PROGRAM_SOURCE_SCHEMA_VERSION,
 } from "./n2OfficialProgramObservation";
 import type { ResearchReplayRepository } from "./repository";
 import {
@@ -94,6 +95,11 @@ export type OfficialProgramCanaryApplyResult = {
   primaryWriteCount: 0;
   sidecarWriteAuthorized: true;
   globalShadowWriteEnabled: false;
+};
+
+type CachedCaptureResult = {
+  observationId: string;
+  reusedObservation: boolean;
 };
 
 function validGitSha(value: string): boolean {
@@ -317,6 +323,74 @@ export function verifyOfficialProgramCanaryPrimaryRows(
   return map;
 }
 
+function captureCachedOfficialProgram(input: {
+  repository: ResearchReplayRepository;
+  manifestDigest: string;
+  item: OfficialProgramCanaryManifestItem;
+  row: OfficialProgramCanarySourceRow;
+}): CachedCaptureResult {
+  const timestamp = input.item.sourceObservedAt;
+  const captureAttemptId = input.repository.createCaptureAttempt({
+    logicalRequestGroupId: `n2-official-program-canary:${input.manifestDigest}`,
+    canonicalRaceKey: input.item.canonicalRaceKey,
+    sourceUrl: `primary-cache://official_programs/${encodeURIComponent(input.item.primaryRecordId)}`,
+    method: "EXISTING_CACHE",
+    requestStartedAt: timestamp,
+    sourceType: "official_program",
+  });
+  input.repository.addCaptureEvent({
+    captureAttemptId,
+    eventKind: "capture_started",
+    occurredAt: timestamp,
+  });
+  const raw = input.repository.recordRawDocument({
+    bytes: Buffer.from(input.row.rawJson, "utf8"),
+    contentType: "application/json",
+    charset: "utf-8",
+    retentionClass: "research_evidence",
+  });
+  const bodyCompletedEventId = input.repository.addCaptureEvent({
+    captureAttemptId,
+    eventKind: "body_completed",
+    occurredAt: timestamp,
+    byteCount: Buffer.byteLength(input.row.rawJson, "utf8"),
+  });
+  input.repository.linkCaptureToRaw({
+    captureAttemptId,
+    rawDocumentId: raw.rawDocumentId,
+    bodyCompletedEventId,
+    linkedAt: timestamp,
+  });
+
+  const reusable = raw.deduplicated
+    ? input.repository.findReusableTypedObservation({
+      rawDocumentId: raw.rawDocumentId,
+      canonicalRaceKey: input.item.canonicalRaceKey,
+      parserName: "n2-official-program",
+      parserVersion: N2_OFFICIAL_PROGRAM_PARSER_VERSION,
+      sourceSchemaVersion: N2_OFFICIAL_PROGRAM_SOURCE_SCHEMA_VERSION,
+      payloadType: "official_program",
+    })
+    : null;
+  const parse = reusable ?? input.repository.parseTypedRawDocument({
+    rawDocumentId: raw.rawDocumentId,
+    parserName: "n2-official-program",
+    parserVersion: N2_OFFICIAL_PROGRAM_PARSER_VERSION,
+    expectedSourceSchemaVersion: N2_OFFICIAL_PROGRAM_SOURCE_SCHEMA_VERSION,
+    parse: (bytes) => buildOfficialProgramObservationEnvelope({
+      canonicalRaceKey: input.item.canonicalRaceKey,
+      rawJson: bytes.toString("utf8"),
+      sourcePublishedAt: null,
+      sourceObservedAt: timestamp,
+      firstSeenAt: timestamp,
+    }),
+  });
+  if (!parse.observationId || (parse.status !== "success" && parse.status !== "warning")) {
+    throw new Error(`CANARY_PARSE_FAILED:${input.item.primaryRecordId}`);
+  }
+  return { observationId: parse.observationId, reusedObservation: reusable !== null };
+}
+
 export function applyOfficialProgramCanary(input: {
   db: DatabaseSync;
   repository: ResearchReplayRepository;
@@ -344,26 +418,14 @@ export function applyOfficialProgramCanary(input: {
       continue;
     }
     const row = rows.get(item.primaryRecordId)!;
-    const capture = captureOfficialProgramObservation({
+    const capture = captureCachedOfficialProgram({
       repository: input.repository,
-      logicalRequestGroupId: `n2-official-program-canary:${input.manifest.manifestDigest}`,
-      canonicalRaceKey: item.canonicalRaceKey,
-      sourceUrl: `primary-cache://official_programs/${encodeURIComponent(item.primaryRecordId)}`,
-      method: "EXISTING_CACHE",
-      requestStartedAt: item.sourceObservedAt,
-      responseHeadersReceivedAt: item.sourceObservedAt,
-      bodyCompletedAt: item.sourceObservedAt,
-      sourcePublishedAt: null,
-      sourceObservedAt: item.sourceObservedAt,
-      firstSeenAt: item.sourceObservedAt,
-      rawJson: row.rawJson,
-      httpStatus: null,
-      responseHeaders: {},
+      manifestDigest: input.manifest.manifestDigest,
+      item,
+      row,
     });
-    if (capture.parse.status !== "success" && capture.parse.status !== "warning") {
-      throw new Error(`CANARY_PARSE_FAILED:${item.primaryRecordId}`);
-    }
-    insertedCount += 1;
+    if (capture.reusedObservation) reusedCount += 1;
+    else insertedCount += 1;
   }
 
   return {
