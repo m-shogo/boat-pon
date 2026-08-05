@@ -1,0 +1,87 @@
+name: Recover N2-011 definition v3 intent
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/recover-n2-011-definition-v3.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: boat-pon-local-research
+  cancel-in-progress: false
+
+jobs:
+  replay-merged-intent:
+    runs-on: [self-hosted, macOS, boat-pon-local]
+    timeout-minutes: 180
+    steps:
+      - name: Checkout canonical main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Install guard dependencies
+        run: |
+          set -euo pipefail
+          corepack enable
+          pnpm install --frozen-lockfile --prod=false
+
+      - name: Assert immutable merged event
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "b8d7104483f3299a7b13a26e5d53c57f7bfe3334"
+          test "$(git rev-parse HEAD^)" = "cf81bdd5268978ac87014a46c5c5e5ca02624fce"
+          test -f automation/requests/intents/INTENT-20260805-x6n2p8v4km.json
+
+      - id: guard
+        name: Replay canonical push guard
+        env:
+          ACTOR: m-shogo
+          REPO: m-shogo/boat-pon
+          EVENT: push
+          BEFORE_SHA: cf81bdd5268978ac87014a46c5c5e5ca02624fce
+          AFTER_SHA: b8d7104483f3299a7b13a26e5d53c57f7bfe3334
+          COMMIT_AUTHOR: m-shogo
+          COMMIT_COMMITTER: web-flow
+          CANONICAL_REQUEST_PATH: canonical-request.json
+        run: pnpm automation:guard-intent
+
+      - name: Materialize control state and external dataset authority
+        if: steps.guard.outputs.ok == 'true'
+        env:
+          BRANCH: automation/boat-pon-research
+        run: |
+          set -euo pipefail
+          git fetch origin "$BRANCH" --quiet
+          git rev-parse "origin/$BRANCH" > .automation-branch-base
+          mkdir -p automation/control "$RUNNER_TEMP"
+          for f in task-queue-state processed-intents processed-requests current-run planner-candidates; do
+            git show "origin/$BRANCH:automation/control/$f.json" > "automation/control/$f.json"
+          done
+          git show "origin/$BRANCH:reports/n2/n2-dataset-manifest.json" > "$RUNNER_TEMP/n2-dataset-manifest.json"
+          test -s "$RUNNER_TEMP/n2-dataset-manifest.json"
+
+      - name: Run exactly one N2-011 task
+        if: steps.guard.outputs.ok == 'true'
+        env:
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          INTENT_ID: ${{ steps.guard.outputs.intent_id }}
+          BOAT_PON_N2_DATASET_MANIFEST_PATH: ${{ runner.temp }}/n2-dataset-manifest.json
+        run: |
+          set -euo pipefail
+          node scripts/assert-canonical-request.mjs canonical-request.json
+          pnpm automation:intent-task -- --request=canonical-request.json --intent-id="$INTENT_ID"
+
+      - name: Show status
+        if: always()
+        run: cat reports/automation/current-status.json || true
+
+      - name: Commit control state and evidence to automation branch
+        if: steps.guard.outputs.ok == 'true' && always()
+        env:
+          RUN_ID: ${{ github.run_id }}
+        run: bash scripts/automation-commit.sh
