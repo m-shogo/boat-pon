@@ -58,15 +58,14 @@ Delivered:
 - SQL-write and protected-dependency safety tests;
 - full CI, Research Replay, governance and build PASS.
 
-No operational DB write, permanent ledger table, automatic backfill, Current BUY/model/selector change, LINE delivery-state change, Outcome Learning linkage, Cloudflare projection or production promotion was introduced.
+### G2-C1 — Bounded shadow evidence execution contract
 
-## In progress
+Merged to main:
 
-### G2-C — Bounded shadow evidence and source completeness
+- merge SHA: `108754541e30da369cc8ab857318cfc8eb3fde37`
+- PR: `#25`
 
-Branch: `agent/runtime-decision-ledger-bounded-evidence`
-
-Implemented in the current slice:
+Delivered:
 
 - strict `runtime-decision-ledger-shadow-evidence.0.1` TypeScript contract and validator;
 - matching JSON Schema;
@@ -80,25 +79,32 @@ Implemented in the current slice:
 - local private append-only store with directory `0700`, file `0600`, exclusive create and deterministic identity;
 - `data/private/` Git ignore;
 - end-to-end temporary SQLite fixture test covering real command execution, evidence validation, private record retention and idempotent replay;
-- architecture and operating documentation.
+- architecture and operating documentation;
+- full CI, Research Replay, governance and build PASS.
 
-Still required before G2-C evidence is complete:
+No operational DB write, permanent ledger table, automatic backfill, Current BUY/model/selector change, LINE delivery-state change, Outcome Learning linkage, Cloudflare projection or production promotion was introduced by G2-A through G2-C1.
+
+## In progress
+
+### G2-C2 — Mac-local bounded evidence measurement
+
+Required sequence:
 
 ```text
-PR CI and review
--> merge to main
--> bounded Mac-local DB execution
+bounded Mac-local DB execution
+-> private append-only full report
+-> sanitized validated evidence summary
 -> measured completeness/reconciliation evidence
 -> dominant unresolved-field classification
 ```
 
-Chat/GitHub-only execution does not claim the Mac-local run, mapped count or evidence verdict has occurred.
+Chat/GitHub-only execution has not run the private Mac-local `data/boat.sqlite`, so no real mapped count, unresolved count, rejected count, conflict count or evidence verdict is claimed yet.
 
 The isolated permanent Runtime Decision Ledger store remains a later design decision. It must not be added before real bounded evidence shows which identities and timestamps are recoverable.
 
 ## Scheduled N2 lane
 
-Latest observed authority state:
+Latest observed authority state after PR #25 merged:
 
 - N2-001 through N2-006: `PASS`;
 - N2-010: authority remains `READY`, `attemptCount=0`, no evidence links;
