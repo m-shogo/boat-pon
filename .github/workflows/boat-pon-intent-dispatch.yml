@@ -80,15 +80,15 @@ jobs:
           git fetch origin "$BRANCH" --quiet
           # CAS 用に materialize 時点の branch base SHA を記録する。
           git rev-parse "origin/$BRANCH" > .automation-branch-base
-          mkdir -p automation/control reports/n2
+          mkdir -p automation/control "$RUNNER_TEMP"
           for f in task-queue-state processed-intents processed-requests current-run planner-candidates; do
             git show "origin/$BRANCH:automation/control/$f.json" > "automation/control/$f.json"
           done
           # N2-011以降はN2-010が固定したmanifest identityを入力正本として使う。
-          # 欠落・壊れた参照はexecutor側でも再検証し、推測値へfallbackしない。
-          git show "origin/$BRANCH:reports/n2/n2-dataset-manifest.json" > reports/n2/n2-dataset-manifest.json
+          # repo外へ置き、dirty-tree guardを緩めない。executor側でversion/digest/holdout/readOnlyを再検証する。
+          git show "origin/$BRANCH:reports/n2/n2-dataset-manifest.json" > "$RUNNER_TEMP/n2-dataset-manifest.json"
           ls -1 automation/control
-          test -s reports/n2/n2-dataset-manifest.json
+          test -s "$RUNNER_TEMP/n2-dataset-manifest.json"
 
       - name: Download canonical request
         uses: actions/download-artifact@v4
@@ -99,6 +99,7 @@ jobs:
         env:
           GITHUB_RUN_ID: ${{ github.run_id }}
           INTENT_ID: ${{ needs.guard.outputs.intent_id }}
+          BOAT_PON_N2_DATASET_MANIFEST_PATH: ${{ runner.temp }}/n2-dataset-manifest.json
         run: |
           set -euo pipefail
           node scripts/assert-canonical-request.mjs canonical-request.json
