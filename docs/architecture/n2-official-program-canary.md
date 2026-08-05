@@ -70,6 +70,7 @@ The bundle seals:
 - the exact 20 selected primary identities;
 - the exact checkout `HEAD` used by the executor;
 - the manifest digest and code SHA;
+- the factual manifest generation timestamp;
 - the exact source-specific approval target;
 - current official-program and trifecta-market observation counts;
 - current global shadow and kill-switch state;
@@ -90,6 +91,20 @@ executionContract.productionApplyAuthorized: false
 The bundle may report `READY_FOR_HUMAN_REVIEW`, but that status is not a write approval. A later canary must check out the exact sealed SHA and independently resolve a human production approval for the exact manifest digest at apply time.
 
 The review task opens both SQLite databases immutable/query-only, does not call the canary apply function, does not create approval rows and does not modify rollout state.
+
+### Factual generation-time contract
+
+Definition v1 incorrectly used the cohort end date at `23:59:59Z` as `manifest.generatedAt`. During the first real execution, that value was later than the actual execution time. The selected cohort, hashes and approval target were not changed by this issue, but the timestamp did not describe when the manifest was generated and therefore must not be used for human approval.
+
+Definition v2 captures one actual executor timestamp and uses it for both the manifest and review bundle. The validator requires:
+
+```text
+manifest.generatedAt <= bundle.generatedAt
+binding.manifestGeneratedAt == manifest.generatedAt
+executionContract.manifestGeneratedAtMustNotExceedBundleGeneratedAt == true
+```
+
+A future-dated manifest now fails before a review bundle can be created. The v1 history remains immutable evidence and is superseded by the separately executed v2 task result; it is not deleted or silently rewritten.
 
 ## Approval contract
 
@@ -158,12 +173,13 @@ Tests and Mac rehearsal write only to temporary sidecar/raw-store paths and veri
 
 Before a real production-sidecar canary:
 
-1. generate and persist one `TASK-N2-013` review bundle from the current checkout SHA;
-2. review its counts, exclusions, exact 20 identities, manifest digest and approval target without exposing raw payloads;
-3. review the no-delete rollback and quarantine/supersession path;
-4. create one human production approval bound to that exact digest only after explicit authorization;
-5. check out the exact sealed SHA and rerun all runtime gates;
-6. run once with a hard maximum of 20;
-7. verify sidecar lineage, PIT audit visibility and idempotent replay;
-8. keep global shadow writes disabled;
-9. do not consume `TASK-N2-011`'s final attempt until both official-program and trifecta-market observations are non-zero.
+1. generate and persist one definition-v2 `TASK-N2-013` review bundle from the current checkout SHA;
+2. verify that manifest and bundle generation timestamps are factual and non-future;
+3. review its counts, exclusions, exact 20 identities, manifest digest and approval target without exposing raw payloads;
+4. review the no-delete rollback and quarantine/supersession path;
+5. create one human production approval bound to that exact digest only after explicit authorization;
+6. check out the exact sealed SHA and rerun all runtime gates;
+7. run once with a hard maximum of 20;
+8. verify sidecar lineage, PIT audit visibility and idempotent replay;
+9. keep global shadow writes disabled;
+10. do not consume `TASK-N2-011`'s final attempt until both official-program and trifecta-market observations are non-zero.
