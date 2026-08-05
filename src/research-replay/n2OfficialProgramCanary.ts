@@ -16,11 +16,17 @@ import {
 } from "./schema";
 
 export const N2_OFFICIAL_PROGRAM_CANARY_MANIFEST_VERSION = "n2-official-program-canary-manifest-v1";
+export const N2_OFFICIAL_PROGRAM_CANARY_SELECTION_POLICY_VERSION = "n2-official-program-canary-selection-v1";
 export const N2_OFFICIAL_PROGRAM_CANARY_CONTRACT_PREFIX = "n2-official-program-observation-canary-v1";
 export const N2_OFFICIAL_PROGRAM_CANARY_GATE_VERSION = "n2-official-program-canary-gate-v1";
 export const N2_OFFICIAL_PROGRAM_CANARY_APPROVAL_SCOPE = "N2_OFFICIAL_PROGRAM_OBSERVATION_CANARY";
 export const N2_OFFICIAL_PROGRAM_CANARY_TARGET_STAGE = "N2-OFFICIAL-PROGRAM-CANARY";
 export const N2_OFFICIAL_PROGRAM_CANARY_MAX_RACES = 20;
+
+export type OfficialProgramCanaryCohort = {
+  dateFrom: string;
+  dateTo: string;
+};
 
 export type OfficialProgramCanarySourceRow = {
   raceId: string;
@@ -45,9 +51,20 @@ export type OfficialProgramCanaryManifestItem = {
   sourceReferenceSha256: string;
 };
 
+export type OfficialProgramCanaryExclusion = {
+  primaryRecordId: string;
+  reason: string;
+};
+
 export type OfficialProgramCanaryManifestBinding = {
   manifestVersion: typeof N2_OFFICIAL_PROGRAM_CANARY_MANIFEST_VERSION;
+  selectionPolicyVersion: typeof N2_OFFICIAL_PROGRAM_CANARY_SELECTION_POLICY_VERSION;
   primaryTable: "official_programs";
+  cohort: OfficialProgramCanaryCohort;
+  sourceRowCount: number;
+  eligibleRowCount: number;
+  excludedCount: number;
+  excludedDigest: string;
   maxRaces: number;
   codeGitSha: string;
   items: OfficialProgramCanaryManifestItem[];
@@ -58,7 +75,7 @@ export type OfficialProgramCanaryManifest = {
   generatedAt: string;
   binding: OfficialProgramCanaryManifestBinding;
   manifestDigest: string;
-  excluded: Array<{ primaryRecordId: string; reason: string }>;
+  excluded: OfficialProgramCanaryExclusion[];
 };
 
 export type OfficialProgramCanaryGateInput = {
@@ -106,6 +123,24 @@ function validGitSha(value: string): boolean {
   return /^[a-f0-9]{7,40}$/.test(value);
 }
 
+function validDate(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value)
+    && Number.isFinite(Date.parse(`${value}T00:00:00.000Z`));
+}
+
+function assertCohort(cohort: OfficialProgramCanaryCohort): void {
+  if (!validDate(cohort.dateFrom) || !validDate(cohort.dateTo) || cohort.dateFrom > cohort.dateTo) {
+    throw new Error("INVALID_CANARY_COHORT");
+  }
+}
+
+function canonicalDatabaseTimestamp(value: string): string {
+  const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)
+    ? `${value.replace(" ", "T")}Z`
+    : value;
+  return canonicalUtcTimestamp(normalized);
+}
+
 function closeAtUtc(date: string, closeAt: string): string {
   const time = /^\d{2}:\d{2}$/.test(closeAt) ? `${closeAt}:00`
     : /^\d{2}:\d{2}:\d{2}$/.test(closeAt) ? closeAt : null;
@@ -115,8 +150,12 @@ function closeAtUtc(date: string, closeAt: string): string {
   return new Date(parsed).toISOString();
 }
 
-function normalizeSourceRow(row: OfficialProgramCanarySourceRow): OfficialProgramCanaryManifestItem {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(row.date)) throw new Error("INVALID_RACE_DATE");
+function normalizeSourceRow(
+  row: OfficialProgramCanarySourceRow,
+  cohort: OfficialProgramCanaryCohort,
+): OfficialProgramCanaryManifestItem {
+  if (!validDate(row.date)) throw new Error("INVALID_RACE_DATE");
+  if (row.date < cohort.dateFrom || row.date > cohort.dateTo) throw new Error("OUTSIDE_COHORT");
   if (!Number.isInteger(row.raceNo) || row.raceNo < 1 || row.raceNo > 12) throw new Error("INVALID_RACE_NO");
   const venueCode = officialVenueCode(row.venue);
   if (venueCode === null) throw new Error("UNKNOWN_VENUE");
@@ -125,7 +164,7 @@ function normalizeSourceRow(row: OfficialProgramCanarySourceRow): OfficialProgra
   if (row.sourceFile.trim() === "") throw new Error("SOURCE_REFERENCE_MISSING");
   if (row.rawJson.trim() === "") throw new Error("RAW_JSON_MISSING");
 
-  const sourceObservedAt = canonicalUtcTimestamp(row.importedAt);
+  const sourceObservedAt = canonicalDatabaseTimestamp(row.importedAt);
   const decisionCutoff = closeAtUtc(row.date, row.closeAt);
   if (Date.parse(sourceObservedAt) >= Date.parse(decisionCutoff)) {
     throw new Error("POST_CUTOFF_PRIMARY_IMPORT");
@@ -154,10 +193,14 @@ function normalizeSourceRow(row: OfficialProgramCanarySourceRow): OfficialProgra
 
 export function buildOfficialProgramCanaryManifest(input: {
   rows: OfficialProgramCanarySourceRow[];
+  cohort: OfficialProgramCanaryCohort;
+  sourceReadTruncated?: boolean;
   maxRaces?: number;
   codeGitSha: string;
   generatedAt: string;
 }): OfficialProgramCanaryManifest {
+  assertCohort(input.cohort);
+  if (input.sourceReadTruncated === true) throw new Error("CANARY_SOURCE_READ_TRUNCATED");
   const maxRaces = input.maxRaces ?? N2_OFFICIAL_PROGRAM_CANARY_MAX_RACES;
   if (!Number.isInteger(maxRaces) || maxRaces < 1 || maxRaces > N2_OFFICIAL_PROGRAM_CANARY_MAX_RACES) {
     throw new Error("INVALID_CANARY_MAX_RACES");
@@ -165,7 +208,7 @@ export function buildOfficialProgramCanaryManifest(input: {
   if (!validGitSha(input.codeGitSha)) throw new Error("INVALID_CODE_GIT_SHA");
   const generatedAt = canonicalUtcTimestamp(input.generatedAt);
   const included: OfficialProgramCanaryManifestItem[] = [];
-  const excluded: OfficialProgramCanaryManifest["excluded"] = [];
+  const excluded: OfficialProgramCanaryExclusion[] = [];
   const seenRaceIds = new Set<string>();
 
   for (const row of [...input.rows].sort((left, right) =>
@@ -176,7 +219,7 @@ export function buildOfficialProgramCanaryManifest(input: {
     if (seenRaceIds.has(row.raceId)) throw new Error(`DUPLICATE_PRIMARY_RACE:${row.raceId}`);
     seenRaceIds.add(row.raceId);
     try {
-      included.push(normalizeSourceRow(row));
+      included.push(normalizeSourceRow(row, input.cohort));
     } catch (error) {
       excluded.push({
         primaryRecordId: row.raceId,
@@ -188,7 +231,13 @@ export function buildOfficialProgramCanaryManifest(input: {
   const items = included.slice(0, maxRaces);
   const binding: OfficialProgramCanaryManifestBinding = {
     manifestVersion: N2_OFFICIAL_PROGRAM_CANARY_MANIFEST_VERSION,
+    selectionPolicyVersion: N2_OFFICIAL_PROGRAM_CANARY_SELECTION_POLICY_VERSION,
     primaryTable: "official_programs",
+    cohort: { ...input.cohort },
+    sourceRowCount: input.rows.length,
+    eligibleRowCount: included.length,
+    excludedCount: excluded.length,
+    excludedDigest: canonicalHash(excluded),
     maxRaces,
     codeGitSha: input.codeGitSha,
     items,
@@ -205,8 +254,22 @@ export function buildOfficialProgramCanaryManifest(input: {
 export function assertOfficialProgramCanaryManifest(manifest: OfficialProgramCanaryManifest): void {
   if (manifest.manifestVersion !== N2_OFFICIAL_PROGRAM_CANARY_MANIFEST_VERSION
     || manifest.binding.manifestVersion !== N2_OFFICIAL_PROGRAM_CANARY_MANIFEST_VERSION
+    || manifest.binding.selectionPolicyVersion !== N2_OFFICIAL_PROGRAM_CANARY_SELECTION_POLICY_VERSION
     || manifest.binding.primaryTable !== "official_programs") {
     throw new Error("CANARY_MANIFEST_VERSION_MISMATCH");
+  }
+  assertCohort(manifest.binding.cohort);
+  if (!Number.isSafeInteger(manifest.binding.sourceRowCount)
+    || !Number.isSafeInteger(manifest.binding.eligibleRowCount)
+    || !Number.isSafeInteger(manifest.binding.excludedCount)
+    || manifest.binding.sourceRowCount < 0
+    || manifest.binding.eligibleRowCount < manifest.binding.items.length
+    || manifest.binding.excludedCount !== manifest.excluded.length
+    || manifest.binding.sourceRowCount !== manifest.binding.eligibleRowCount + manifest.binding.excludedCount) {
+    throw new Error("CANARY_MANIFEST_COUNT_MISMATCH");
+  }
+  if (manifest.binding.excludedDigest !== canonicalHash(manifest.excluded)) {
+    throw new Error("CANARY_MANIFEST_EXCLUSION_DIGEST_MISMATCH");
   }
   if (!Number.isInteger(manifest.binding.maxRaces)
     || manifest.binding.maxRaces < 1
@@ -227,6 +290,8 @@ export function assertOfficialProgramCanaryManifest(manifest: OfficialProgramCan
     ids.add(item.primaryRecordId);
     if (!/^[a-f0-9]{64}$/.test(item.rawSha256)
       || !/^[a-f0-9]{64}$/.test(item.sourceReferenceSha256)
+      || item.date < manifest.binding.cohort.dateFrom
+      || item.date > manifest.binding.cohort.dateTo
       || item.canonicalRaceKey !== canonicalRaceKey(item.date, item.venueCode, item.raceNo)
       || Date.parse(item.sourceObservedAt) >= Date.parse(item.decisionCutoff)) {
       throw new Error("CANARY_MANIFEST_ITEM_INVALID");
@@ -315,7 +380,7 @@ export function verifyOfficialProgramCanaryPrimaryRows(
   for (const item of manifest.binding.items) {
     const row = map.get(item.primaryRecordId);
     if (!row) throw new Error(`PRIMARY_ROW_MISSING:${item.primaryRecordId}`);
-    const normalized = normalizeSourceRow(row);
+    const normalized = normalizeSourceRow(row, manifest.binding.cohort);
     if (canonicalHash(normalized) !== canonicalHash(item)) {
       throw new Error(`PRIMARY_ROW_DRIFT:${item.primaryRecordId}`);
     }
