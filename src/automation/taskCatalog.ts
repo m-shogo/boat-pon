@@ -178,3 +178,67 @@ export function resolveTask(merged: MergedTask[], taskId: string): { task: Merge
   if (!t) return { task: null, reason: `task not found in catalog: ${taskId}` };
   return { task: t, reason: "resolved by id" };
 }
+
+export const DEFAULT_MAX_ATTEMPTS = 3;
+
+export type ReconcilePlan = {
+  added: Array<{ taskId: string; status: string; taskDefinitionVersion: number }>;
+  preserved: string[];
+  staleDefinition: Array<{ taskId: string; stateDefinitionVersion: number; catalogDefinitionVersion: number }>;
+  orphaned: string[];
+  catalogVersionChanged: boolean;
+};
+export type ReconcileResult = { changed: boolean; plan: ReconcilePlan; nextState: QueueState };
+
+// catalog（main, 正）と queue-state（automation branch）を reconcile する純関数。
+// 決定的・冪等・fail-safe。既存 state entry は一切変更しない（PASS / attemptCount / evidence を保存）。
+// - catalog に在り state に無い task → defaultStatus で追加
+// - state に在り catalog に無い task → ORPHANED（残す・dispatch しない・削除しない）
+// - taskDefinitionVersion が catalog より古い → staleDefinition 診断（自動で READY へ戻さない）
+// - 変更が無ければ changed=false（stateVersion を進めない・入力 state をそのまま返す = NO_CHANGE）
+export function reconcileCatalogState(
+  catalog: TaskCatalog, state: QueueState, opts: { now?: string; maxAttempts?: number } = {},
+): ReconcileResult {
+  const now = opts.now ?? new Date().toISOString();
+  const maxAttempts = opts.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
+  const catalogById = new Map(catalog.tasks.map((t) => [t.taskId, t]));
+
+  const added: ReconcilePlan["added"] = [];
+  const preserved: string[] = [];
+  const staleDefinition: ReconcilePlan["staleDefinition"] = [];
+  const orphaned: string[] = [];
+
+  // 既存 entry を verbatim 保存（順序も安定化のため id 昇順で再構築）。
+  const nextTasks: Record<string, TaskState> = {};
+  for (const id of Object.keys(state.tasks).sort()) {
+    nextTasks[id] = { ...state.tasks[id] };
+    const def = catalogById.get(id);
+    if (!def) { orphaned.push(id); continue; }
+    preserved.push(id);
+    if (state.tasks[id].taskDefinitionVersion < def.taskDefinitionVersion) {
+      staleDefinition.push({ taskId: id, stateDefinitionVersion: state.tasks[id].taskDefinitionVersion, catalogDefinitionVersion: def.taskDefinitionVersion });
+    }
+  }
+  // catalog 順（決定的）に、state に無い task を defaultStatus で追加。
+  for (const def of catalog.tasks) {
+    if (def.taskId in nextTasks) continue;
+    nextTasks[def.taskId] = {
+      status: def.defaultStatus as TaskStatus,
+      taskDefinitionVersion: def.taskDefinitionVersion,
+      authoritySha: null, attemptCount: 0, maxAttempts,
+      evidenceLinks: [], resultDigest: null, lastFailure: null, checkpoint: null, updatedAt: now,
+    };
+    added.push({ taskId: def.taskId, status: def.defaultStatus, taskDefinitionVersion: def.taskDefinitionVersion });
+  }
+
+  const catalogVersionChanged = state.catalogVersion !== catalog.catalogVersion;
+  const changed = added.length > 0 || catalogVersionChanged;
+  const plan: ReconcilePlan = { added, preserved, staleDefinition, orphaned, catalogVersionChanged };
+
+  if (!changed) return { changed: false, plan, nextState: state };
+  const nextState: QueueState = {
+    ...state, tasks: nextTasks, catalogVersion: catalog.catalogVersion,
+    stateVersion: state.stateVersion + 1, updatedAt: now,
+  };
+  return { changed: true, plan, nextState };
+}
