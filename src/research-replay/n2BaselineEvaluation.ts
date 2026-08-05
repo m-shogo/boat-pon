@@ -407,7 +407,7 @@ export function compareN2BaselinesOnCommonCohort(input: {
   const excludedOutsideCommonCohort = Object.fromEntries(
     baselineIds.map((baselineId) => [baselineId, input.baselines[baselineId].length - commonIdentities.length]),
   );
-  const status = conflicts.length > 0
+  const status: N2CommonCohortComparison["status"] = conflicts.length > 0
     ? "CONFLICT"
     : baselineIds.length < 2
       ? "INVALID"
@@ -415,8 +415,8 @@ export function compareN2BaselinesOnCommonCohort(input: {
         ? "INSUFFICIENT_COMMON_COHORT"
         : "COMPARABLE";
   const commonCohortDigest = canonicalHash(commonIdentities);
-  const withoutDigest = {
-    comparisonVersion: "n2-common-cohort-comparison-v1" as const,
+  const withoutDigest: Omit<N2CommonCohortComparison, "outputDigest"> = {
+    comparisonVersion: "n2-common-cohort-comparison-v1",
     status,
     baselineIds,
     inputCounts,
