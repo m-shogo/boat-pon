@@ -16,7 +16,9 @@ import { appendRecordIdempotent } from "../research/governance/registryStore";
 export const EXECUTOR_REGISTRY_VERSION = "n2-task-executor-registry-v2";
 
 export type ExecutorResult = {
-  result: "PASS" | "CONDITIONAL" | "BLOCKED" | "FAILED";
+  // DRY_RUN_OK は SDK 経由 executor を dry-run で呼んだ場合のみ（runner は dry-run で executor を呼ばない）。
+  // queue-state を PASS へ遷移させない非永続結果。
+  result: "PASS" | "DRY_RUN_OK" | "CONDITIONAL" | "BLOCKED" | "FAILED";
   executorVersion: string;
   summary: Record<string, unknown>;
   outputs: string[];
@@ -451,7 +453,8 @@ export const runDatasetExpand: Executor = (ctx) => {
       const rel = (path: string | undefined) => path ? path.replace(`${sdk.repoRoot}/`, "") : "";
       return { ok: true, errors: [], outputs: [...outputs, rel(exp.path), rel(disc.path)].filter(Boolean) };
     },
-    transitionState: (_sdk, _art, outputs) => ({ ok: true, errors: [], outputs }),
+    // queue-state は変更しない（外部 orchestrator=runner が単独で担当）。evidence 完成の確認のみ。
+    finalizeEvidence: (_sdk, _art, outputs) => ({ ok: true, errors: [], outputs }),
   };
   const outcome = runExecutorLifecycle(spec, sdkCtx);
   const result: ExecutorResult["result"] = outcome.result === "ENGINEERING_REQUIRED" ? "BLOCKED" : outcome.result;

@@ -31,7 +31,7 @@ const okSpec = (o: Partial<ExecutorSpec> = {}): ExecutorSpec => ({
   },
   verifyArtifacts: (ctx, art, outputs) => verifyJsonReadback(join(ctx.repoRoot, outputs[0]), art.digest),
   recordEvidence: (_ctx, _art, outputs) => ({ ok: true, errors: [], outputs }),
-  transitionState: (_ctx, _art, outputs) => ({ ok: true, errors: [], outputs }),
+  finalizeEvidence: (_ctx, _art, outputs) => ({ ok: true, errors: [], outputs }),
   ...o,
 });
 
@@ -47,18 +47,48 @@ test("happy path passes only after write, readback, evidence, transition", () =>
   assert.equal(r.result, "PASS");
   assert.deepEqual(r.lifecycle, [
     "prepare", "validateInputs", "executeReadOnly", "validatePitEvidence", "writeArtifacts",
-    "verifyArtifactsByReadback", "recordEvidence", "transitionState",
+    "verifyArtifactsByReadback", "recordEvidence", "finalizeEvidence",
   ]);
   assert.equal(existsSync(join(ctx.repoRoot, "reports/n2/demo.json")), true);
+  // Review C: SDK は queue-state を変更しない（外部 orchestrator の責務）。
+  assert.equal(r.stateTransitionOwner, "EXTERNAL_ORCHESTRATOR");
+  assert.equal(r.stateTransitionPerformedByExecutor, false);
 });
 
-test("dry-run creates no file and does not claim write stages", () => {
+test("dry-run returns DRY_RUN_OK (never PASS), creates no file, no write stages", () => {
   const ctx = makeCtx(true);
   const r = runExecutorLifecycle(okSpec(), ctx);
-  assert.equal(r.result, "PASS");
+  assert.equal(r.result, "DRY_RUN_OK"); // Review A: dry-run is not PASS
+  assert.notEqual(r.result, "PASS");
   assert.deepEqual(r.lifecycle, ["prepare", "validateInputs", "executeReadOnly", "validatePitEvidence", "dryRunComplete"]);
   assert.equal(existsSync(join(ctx.repoRoot, "reports/n2/demo.json")), false);
   assert.deepEqual(r.outputs, []);
+});
+
+test("Review B: evidence output escaping the allowlist is BLOCKED (not PASS)", () => {
+  for (const bad of ["../outside.json", "/etc/passwd", "automation/control/task-queue-state.json", "app_settings.json"]) {
+    const r = runExecutorLifecycle(okSpec({
+      recordEvidence: (_ctx, _art, outputs) => ({ ok: true, errors: [], outputs: [...outputs, bad] }),
+    }), makeCtx());
+    assert.equal(r.result, "BLOCKED", `evidence ${bad} must BLOCK`);
+    assert.ok(r.blocks.includes("EVIDENCE_WRITE_SCOPE_VIOLATION"), `evidence ${bad} block reason`);
+  }
+});
+
+test("Review B: allowed evidence paths (research/registries, reports/n2) PASS", () => {
+  const ctx = { ...makeCtx(), writeAllowlist: ["reports/n2/", "research/registries/"] };
+  const r = runExecutorLifecycle(okSpec({
+    recordEvidence: (_ctx, _art, outputs) => ({ ok: true, errors: [], outputs: [...outputs, "research/registries/experiments/EXP-x.json"] }),
+  }), ctx);
+  assert.equal(r.result, "PASS");
+});
+
+test("Review B: finalizeEvidence output escaping the allowlist is BLOCKED", () => {
+  const r = runExecutorLifecycle(okSpec({
+    finalizeEvidence: (_ctx, _art, outputs) => ({ ok: true, errors: [], outputs: [...outputs, "../evil.json"] }),
+  }), makeCtx());
+  assert.equal(r.result, "BLOCKED");
+  assert.ok(r.blocks.includes("FINALIZE_WRITE_SCOPE_VIOLATION"));
 });
 
 test("non-dry executor without lifecycle callbacks is blocked", () => {
@@ -89,14 +119,14 @@ test("missing or mismatched artifact cannot return PASS", () => {
   assert.equal(mismatch.result, "FAILED");
 });
 
-test("evidence and state transition failures cannot return PASS", () => {
+test("evidence and finalize failures cannot return PASS", () => {
   const evidence = runExecutorLifecycle(okSpec({ recordEvidence: () => ({ ok: false, errors: ["registry conflict"] }) }), makeCtx());
   assert.equal(evidence.result, "FAILED");
   assert.ok(evidence.blocks.includes("EVIDENCE_RECORD_FAILED"));
 
-  const state = runExecutorLifecycle(okSpec({ transitionState: () => ({ ok: false, errors: ["CAS conflict"] }) }), makeCtx());
-  assert.equal(state.result, "FAILED");
-  assert.ok(state.blocks.includes("STATE_TRANSITION_FAILED"));
+  const finalize = runExecutorLifecycle(okSpec({ finalizeEvidence: () => ({ ok: false, errors: ["verify failed"] }) }), makeCtx());
+  assert.equal(finalize.result, "FAILED");
+  assert.ok(finalize.blocks.includes("EVIDENCE_FINALIZE_FAILED"));
 });
 
 test("PIT evidence is required and violations are blocked", () => {

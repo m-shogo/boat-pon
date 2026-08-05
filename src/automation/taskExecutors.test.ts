@@ -135,9 +135,10 @@ test("dataset-expand separates inventory from holdout-free research cohort", () 
     { k: "2021-06-05:12:R2", b: "exacta", s: "settled" },
     { k: "2022-06-05:12:R3", b: "win", s: "refunded" },
   ] });
-  const c = ctx(path, { taskId: "TASK-N2-010", taskStatuses: { "TASK-N2-004": "PASS" } });
+  const c = ctx(path, { taskId: "TASK-N2-010", taskStatuses: { "TASK-N2-004": "PASS" } }); // ctx() は dryRun:true
   const result = runDatasetExpand(c);
-  assert.equal(result.result, "PASS");
+  // Review A: dry-run は PASS ではなく DRY_RUN_OK。separation の summary は算出されるが write しない。
+  assert.equal(result.result, "DRY_RUN_OK");
   const summary = result.summary as any;
   assert.equal(summary.datasetManifestVersion, "n2-dataset-manifest-v2");
   assert.equal(summary.inventoryTotals.candidates, 4);

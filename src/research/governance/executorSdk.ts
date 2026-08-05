@@ -9,9 +9,11 @@ import {
 import { createHash } from "node:crypto";
 import { dirname } from "node:path";
 
-export const EXECUTOR_SDK_VERSION = "research-executor-sdk-v2";
+export const EXECUTOR_SDK_VERSION = "research-executor-sdk-v3";
 
-export type SdkResult = "PASS" | "CONDITIONAL" | "BLOCKED" | "FAILED" | "ENGINEERING_REQUIRED";
+// DRY_RUN_OK は dry-run 専用の非永続結果。SDK は dry-run で PASS を返さない（PASS 誤認の防止）。
+// queue-state への PASS 遷移は外部 orchestrator（runner）だけが行う（SDK は行わない）。
+export type SdkResult = "PASS" | "DRY_RUN_OK" | "CONDITIONAL" | "BLOCKED" | "FAILED" | "ENGINEERING_REQUIRED";
 
 export type SdkContext = {
   repoRoot: string;
@@ -56,8 +58,17 @@ export type ExecutorSpec = {
   writeArtifacts?: (ctx: SdkContext, artifact: ArtifactRecord) => StageResult;
   verifyArtifacts?: (ctx: SdkContext, artifact: ArtifactRecord, writtenOutputs: string[]) => StageResult;
   recordEvidence?: (ctx: SdkContext, artifact: ArtifactRecord, writtenOutputs: string[]) => StageResult;
-  transitionState?: (ctx: SdkContext, artifact: ArtifactRecord, writtenOutputs: string[]) => StageResult;
+  /**
+   * evidence 完成後の最終検証コールバック。**queue-state を変更してはならない**。
+   * queue-state の CAS / PASS 遷移 / current-run / processed ledger は外部 orchestrator（runner）が
+   * 単独で担当する（責任境界: ADR-0005 / docs/research-automation-operating-model.md）。
+   * 旧名 transitionState は誤解を招くため finalizeEvidence に改名した。
+   */
+  finalizeEvidence?: (ctx: SdkContext, artifact: ArtifactRecord, writtenOutputs: string[]) => StageResult;
 };
+
+// SDK は artifact + evidence の完成までを保証する。queue-state 遷移は外部 orchestrator が行う。
+export const STATE_TRANSITION_OWNER = "EXTERNAL_ORCHESTRATOR" as const;
 
 export type SdkOutcome = {
   result: SdkResult;
@@ -68,6 +79,9 @@ export type SdkOutcome = {
   summary: Record<string, unknown>;
   blocks: string[];
   lifecycle: string[];
+  /** 責任境界の明示: SDK は queue-state を変更しない。 */
+  stateTransitionOwner: typeof STATE_TRANSITION_OWNER;
+  stateTransitionPerformedByExecutor: false;
 };
 
 export function checkWriteScope(writtenPaths: string[], allowlist: string[]): { ok: boolean; violations: string[] } {
@@ -186,6 +200,8 @@ export function runExecutorLifecycle(spec: ExecutorSpec, ctx: SdkContext): SdkOu
     summary: {},
     blocks: [],
     lifecycle,
+    stateTransitionOwner: STATE_TRANSITION_OWNER,
+    stateTransitionPerformedByExecutor: false,
   };
 
   if (!spec.implemented) {
@@ -221,11 +237,13 @@ export function runExecutorLifecycle(spec: ExecutorSpec, ctx: SdkContext): SdkOu
   base.summary = { ...artifact.summary, pitEvidence };
 
   if (ctx.dryRun) {
+    // dry-run は write/evidence/finalize を一切実行せず、PASS も返さない（PASS 誤認防止）。
+    // 外部 orchestrator は DRY_RUN_OK を通常 PASS と区別して非永続に扱う。
     lifecycle.push("dryRunComplete");
-    return { ...base, result: "PASS", outputs: [] };
+    return { ...base, result: "DRY_RUN_OK", outputs: [] };
   }
 
-  if (!spec.writeArtifacts || !spec.verifyArtifacts || !spec.recordEvidence || !spec.transitionState) {
+  if (!spec.writeArtifacts || !spec.verifyArtifacts || !spec.recordEvidence || !spec.finalizeEvidence) {
     return failed(base, "BLOCKED", ["INCOMPLETE_EXECUTOR_LIFECYCLE_CALLBACKS"], base.summary);
   }
 
@@ -244,10 +262,18 @@ export function runExecutorLifecycle(spec: ExecutorSpec, ctx: SdkContext): SdkOu
   const evidence = spec.recordEvidence(ctx, { ...artifact, digest, summary: base.summary }, writtenOutputs);
   if (!evidence.ok) return failed(base, "FAILED", ["EVIDENCE_RECORD_FAILED", ...evidence.errors], base.summary, writtenOutputs);
   const evidenceOutputs = evidence.outputs ?? writtenOutputs;
+  // Review B: recordEvidence が返した output にも write-scope を再適用する（fail-closed）。
+  // traversal / 絶対 path / production / 許可外 automation-control が混ざったら PASS にしない。
+  const evidenceScope = checkWriteScope(evidenceOutputs, ctx.writeAllowlist);
+  if (!evidenceScope.ok) return failed(base, "BLOCKED", ["EVIDENCE_WRITE_SCOPE_VIOLATION", ...evidenceScope.violations], base.summary, evidenceOutputs);
 
-  lifecycle.push("transitionState");
-  const transition = spec.transitionState(ctx, { ...artifact, digest, summary: base.summary }, evidenceOutputs);
-  if (!transition.ok) return failed(base, "FAILED", ["STATE_TRANSITION_FAILED", ...transition.errors], base.summary, evidenceOutputs);
+  lifecycle.push("finalizeEvidence");
+  const finalized = spec.finalizeEvidence(ctx, { ...artifact, digest, summary: base.summary }, evidenceOutputs);
+  if (!finalized.ok) return failed(base, "FAILED", ["EVIDENCE_FINALIZE_FAILED", ...finalized.errors], base.summary, evidenceOutputs);
+  const finalOutputs = finalized.outputs ?? evidenceOutputs;
+  // Review B: finalizeEvidence が返した output にも write-scope を再適用する（fail-closed）。
+  const finalScope = checkWriteScope(finalOutputs, ctx.writeAllowlist);
+  if (!finalScope.ok) return failed(base, "BLOCKED", ["FINALIZE_WRITE_SCOPE_VIOLATION", ...finalScope.violations], base.summary, finalOutputs);
 
-  return { ...base, result: "PASS", outputs: transition.outputs ?? evidenceOutputs };
+  return { ...base, result: "PASS", outputs: finalOutputs };
 }
