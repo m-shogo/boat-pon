@@ -181,10 +181,10 @@ function observationCount(sidecar: DatabaseSync, observationType: string): numbe
 
 function latestRollout(sidecar: DatabaseSync): N2ObservationIngestReadinessInput["rollout"] {
   const row = tableExists(sidecar, "rollout_config_events")
-    ? sidecar.prepare(`
+    ? (sidecar.prepare(`
         SELECT shadow_write_enabled, operational_gc_enabled, kill_switch_engaged
         FROM rollout_config_events ORDER BY occurred_at DESC, rowid DESC LIMIT 1
-      `).get() as { shadow_write_enabled: number; operational_gc_enabled: number; kill_switch_engaged: number } | undefined
+      `).get() as { shadow_write_enabled: number; operational_gc_enabled: number; kill_switch_engaged: number } | undefined)
     : undefined;
   const approvalScopes = tableExists(sidecar, "rollout_approval_grants_v2")
     ? (sidecar.prepare("SELECT DISTINCT approval_scope FROM rollout_approval_grants_v2 ORDER BY approval_scope").all()
