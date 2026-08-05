@@ -48,26 +48,22 @@ test("valid supersession passes strict validation", () => {
   assert.equal(result.supersession?.replacementIntentId, "INTENT-20260805-new1234567");
 });
 
-test("supersession rejects unknown fields, duplicate entries and self-reference", () => {
-  const raw = {
-    ...supersession(),
-    queueDigest: "forbidden",
-    supersededIntents: [
-      {
-        intentId: "INTENT-20260805-new1234567",
-        expectedAuthoritySha: "1184fa4",
-        reason: "AUTHORITY_SHA_MISMATCH",
-      },
-      {
-        intentId: "INTENT-20260805-new1234567",
-        expectedAuthoritySha: "1184fa4",
-        reason: "AUTHORITY_SHA_MISMATCH",
-      },
-    ],
-  };
-  const result = validateIntentSupersession(raw);
+test("supersession rejects unknown top-level fields before deeper decoding", () => {
+  const result = validateIntentSupersession({ ...supersession(), queueDigest: "forbidden" });
   assert.equal(result.valid, false);
-  assert.match(result.errors.join("\n"), /unknown field: queueDigest/);
+  assert.deepEqual(result.errors, ["unknown field: queueDigest"]);
+});
+
+test("supersession rejects duplicate entries and replacement self-reference", () => {
+  const selfEntry = {
+    intentId: "INTENT-20260805-new1234567",
+    expectedAuthoritySha: "1184fa4",
+    reason: "AUTHORITY_SHA_MISMATCH" as const,
+  };
+  const result = validateIntentSupersession(supersession({
+    supersededIntents: [selfEntry, { ...selfEntry }],
+  }));
+  assert.equal(result.valid, false);
   assert.match(result.errors.join("\n"), /replacement intent cannot supersede itself/);
   assert.match(result.errors.join("\n"), /duplicate superseded intentId/);
 });
