@@ -1,0 +1,109 @@
+name: Recover TASK-N2-013 v2 canonical execution
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/recover-n2-013-v2-canonical.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: boat-pon-local-research
+  cancel-in-progress: false
+
+jobs:
+  replay-merged-intent:
+    runs-on: [self-hosted, macOS, boat-pon-local]
+    timeout-minutes: 180
+    steps:
+      - name: Checkout canonical main
+        uses: actions/checkout@v4
+        with:
+          ref: 81e46cc9e39690652120b84aac1fa9c331f7129f
+          fetch-depth: 0
+
+      - name: Install guard dependencies
+        run: |
+          set -euo pipefail
+          corepack enable
+          pnpm install --frozen-lockfile --prod=false
+
+      - name: Assert immutable merged event
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "81e46cc9e39690652120b84aac1fa9c331f7129f"
+          test "$(git rev-parse HEAD^1)" = "c09a9f96fc1043339c5ded59cd2e06a9ea503dde"
+          test -f automation/requests/intents/INTENT-20260806-r7m2v9k4qx.json
+
+      - id: guard
+        name: Replay canonical push guard
+        env:
+          ACTOR: m-shogo
+          REPO: m-shogo/boat-pon
+          EVENT: push
+          BEFORE_SHA: c09a9f96fc1043339c5ded59cd2e06a9ea503dde
+          AFTER_SHA: 81e46cc9e39690652120b84aac1fa9c331f7129f
+          COMMIT_AUTHOR: m-shogo
+          COMMIT_COMMITTER: web-flow
+          CANONICAL_REQUEST_PATH: canonical-request.json
+        run: pnpm automation:guard-intent
+
+      - name: Materialize automation authority
+        if: steps.guard.outputs.ok == 'true'
+        env:
+          BRANCH: automation/boat-pon-research
+        run: |
+          set -euo pipefail
+          git fetch origin "$BRANCH" --quiet
+          git rev-parse "origin/$BRANCH" > .automation-branch-base
+          mkdir -p automation/control
+          for f in task-queue-state processed-intents processed-requests current-run planner-candidates; do
+            git show "origin/$BRANCH:automation/control/$f.json" > "automation/control/$f.json"
+          done
+
+      - name: Run exactly one TASK-N2-013 v2
+        if: steps.guard.outputs.ok == 'true'
+        env:
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          INTENT_ID: ${{ steps.guard.outputs.intent_id }}
+        run: |
+          set -euo pipefail
+          node scripts/assert-canonical-request.mjs canonical-request.json
+          pnpm automation:intent-task -- --request=canonical-request.json --intent-id="$INTENT_ID"
+
+      - name: Verify factual-time bundle before commit
+        if: steps.guard.outputs.ok == 'true'
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          const p = 'reports/n2/n2-official-program-canary-review-bundle.json';
+          const r = JSON.parse(readFileSync(p, 'utf8'));
+          if (r.bundleVersion !== 'n2-official-program-canary-review-bundle-v2') throw new Error('NOT_V2');
+          if (r.manifest.generatedAt !== r.generatedAt) throw new Error('GENERATION_TIME_MISMATCH');
+          if (Date.parse(r.manifest.generatedAt) > Date.now() + 1000) throw new Error('FUTURE_GENERATED_AT');
+          if (r.status !== 'READY_FOR_HUMAN_REVIEW') throw new Error(`BAD_STATUS:${r.status}`);
+          if (r.writeAuthorized !== false || r.productionApplyExecuted !== false || r.humanApprovalCreated !== false) {
+            throw new Error('WRITE_AUTHORIZATION_LEAK');
+          }
+          if (r.manifest.binding.items.length !== 20) throw new Error('CANARY_COUNT_NOT_20');
+          console.log(JSON.stringify({
+            bundleVersion: r.bundleVersion,
+            generatedAt: r.generatedAt,
+            manifestDigest: r.manifest.manifestDigest,
+            selectedRaceCount: r.manifest.binding.items.length,
+            status: r.status,
+          }, null, 2));
+          NODE
+
+      - name: Show status
+        if: always()
+        run: cat reports/automation/current-status.json || true
+
+      - name: Commit control state and evidence to automation branch
+        if: steps.guard.outputs.ok == 'true' && always()
+        env:
+          RUN_ID: ${{ github.run_id }}
+        run: bash scripts/automation-commit.sh
