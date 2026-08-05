@@ -4,6 +4,14 @@ Status: implementation foundation / no production deployment
 
 Date: 2026-08-05
 
+Integrated prerequisites on `main`:
+
+- verified public snapshot transport;
+- standalone public dashboard shell;
+- verified last-known-good publication and browser fallback.
+
+The remaining change in this slice is the deploy-preview bundle and its audit path. Production deployment remains disabled.
+
 ## Purpose
 
 Build a deploy-ready, auditable static directory for the Boat Pon public research dashboard without including the existing local application, operational APIs, Current BUY, LINE, databases, sidecar data, credentials or automation control files.
@@ -114,7 +122,7 @@ This work does not modify or invoke:
 
 ## Later activation
 
-After the N2-010 coordination hold is cleared and PR #31 -> #32 -> #33 -> this slice are merged in order:
+After this slice is merged:
 
 1. dispatch the preview workflow;
 2. download and independently verify `deploy-manifest.json`;
