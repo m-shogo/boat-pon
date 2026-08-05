@@ -1,0 +1,198 @@
+name: Diagnose N2 observation availability
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/diagnose-n2-observation-availability.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: diagnose-n2-observation-availability
+  cancel-in-progress: true
+
+jobs:
+  diagnose:
+    runs-on: [self-hosted, macOS, boat-pon-local]
+    timeout-minutes: 30
+    steps:
+      - name: Checkout canonical main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Assert canonical authority
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "b8d7104483f3299a7b13a26e5d53c57f7bfe3334"
+          test -z "$(git status --porcelain)"
+
+      - name: Aggregate read-only availability diagnosis
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { existsSync, readFileSync, statSync } from "node:fs";
+          import { pathToFileURL } from "node:url";
+          import { DatabaseSync } from "node:sqlite";
+
+          const policy = JSON.parse(readFileSync("config/research-automation-policy.json", "utf8"));
+          const root = policy.dataRoot;
+          const paths = {
+            primary: `${root}/data/boat.sqlite`,
+            sidecar: `${root}/data/research-replay.sqlite`,
+          };
+
+          const blocked = [];
+          for (const [label, path] of Object.entries(paths)) {
+            if (!existsSync(path)) blocked.push(`${label.toUpperCase()}_NOT_FOUND`);
+            const wal = `${path}-wal`;
+            if (existsSync(wal) && statSync(wal).size > 0) blocked.push(`${label.toUpperCase()}_ACTIVE_WAL`);
+          }
+          if (blocked.length > 0) {
+            console.log(JSON.stringify({ status: "BLOCKED", blocked }, null, 2));
+            process.exit(2);
+          }
+
+          const quote = (name) => `"${String(name).replaceAll('"', '""')}"`;
+          const open = (path) => {
+            const db = new DatabaseSync(`${pathToFileURL(path).href}?immutable=1`, { readOnly: true });
+            db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=5000;");
+            return db;
+          };
+          const tableNames = (db) => db.prepare(`
+            SELECT name FROM sqlite_master
+            WHERE type='table' AND name NOT LIKE 'sqlite_%'
+            ORDER BY name
+          `).all().map((row) => String(row.name));
+          const columns = (db, table) => db.prepare(`PRAGMA table_info(${quote(table)})`).all()
+            .map((row) => String(row.name));
+          const count = (db, table) => Number(db.prepare(`SELECT COUNT(*) n FROM ${quote(table)}`).get().n);
+          const has = (tables, name) => tables.includes(name);
+          const groupCounts = (db, table, column) => db.prepare(`
+            SELECT ${quote(column)} value, COUNT(*) n
+            FROM ${quote(table)}
+            GROUP BY ${quote(column)}
+            ORDER BY n DESC, value
+            LIMIT 50
+          `).all().map((row) => ({ value: row.value === null ? null : String(row.value), count: Number(row.n) }));
+          const range = (db, table, column) => db.prepare(`
+            SELECT MIN(${quote(column)}) minValue, MAX(${quote(column)}) maxValue
+            FROM ${quote(table)}
+          `).get();
+
+          const primary = open(paths.primary);
+          const sidecar = open(paths.sidecar);
+          try {
+            const primaryTables = tableNames(primary);
+            const sidecarTables = tableNames(sidecar);
+            const relevant = /program|odds|market|capture|shadow|outbox|rollout|observation|parse|raw_document|payload/i;
+
+            const summarizeRelevant = (db, tables) => tables
+              .filter((name) => relevant.test(name))
+              .slice(0, 60)
+              .map((name) => ({ table: name, count: count(db, name), columns: columns(db, name) }));
+
+            const domain = has(sidecarTables, "domain_observations")
+              ? {
+                  total: count(sidecar, "domain_observations"),
+                  byType: groupCounts(sidecar, "domain_observations", "observation_type"),
+                  observedRange: range(sidecar, "domain_observations", "source_observed_at"),
+                  firstSeenRange: range(sidecar, "domain_observations", "first_seen_at"),
+                }
+              : { missing: true };
+
+            const parseRuns = has(sidecarTables, "parse_runs")
+              ? {
+                  total: count(sidecar, "parse_runs"),
+                  byParser: columns(sidecar, "parse_runs").includes("parser_name")
+                    ? groupCounts(sidecar, "parse_runs", "parser_name") : [],
+                  byStatus: columns(sidecar, "parse_runs").includes("status")
+                    ? groupCounts(sidecar, "parse_runs", "status") : [],
+                }
+              : { missing: true };
+
+            const officialPrograms = has(primaryTables, "official_programs")
+              ? {
+                  total: count(primary, "official_programs"),
+                  dateRange: columns(primary, "official_programs").includes("date")
+                    ? range(primary, "official_programs", "date") : null,
+                  rawJsonPresent: columns(primary, "official_programs").includes("raw_json")
+                    ? Number(primary.prepare(`SELECT COUNT(*) n FROM official_programs WHERE raw_json IS NOT NULL AND LENGTH(raw_json)>0`).get().n)
+                    : null,
+                  closeAtPresent: columns(primary, "official_programs").includes("close_at")
+                    ? Number(primary.prepare(`SELECT COUNT(*) n FROM official_programs WHERE close_at IS NOT NULL AND TRIM(close_at)<>''`).get().n)
+                    : null,
+                }
+              : { missing: true };
+
+            const primaryOddsTables = primaryTables.filter((name) => /odds|market/i.test(name));
+            const primaryOdds = primaryOddsTables.map((table) => {
+              const cols = columns(primary, table);
+              const summary = { table, count: count(primary, table), columns: cols };
+              if (cols.includes("captured_at")) summary.capturedRange = range(primary, table, "captured_at");
+              if (cols.includes("bet_type")) summary.byBetType = groupCounts(primary, table, "bet_type");
+              if (cols.includes("source")) summary.bySource = groupCounts(primary, table, "source");
+              return summary;
+            });
+
+            const queueLike = sidecarTables.filter((name) => /shadow|outbox|rollout|queue|capture/i.test(name));
+            const sidecarDelivery = queueLike.map((table) => {
+              const cols = columns(sidecar, table);
+              const summary = { table, count: count(sidecar, table), columns: cols };
+              for (const column of ["message_type", "status", "state", "source_type", "event_kind", "failure_reason"]) {
+                if (cols.includes(column)) summary[`by_${column}`] = groupCounts(sidecar, table, column);
+              }
+              return summary;
+            });
+
+            const officialProgramObservationCount = domain.byType?.find((row) => row.value === "official_program")?.count ?? 0;
+            const trifectaMarketObservationCount = domain.byType?.find((row) => row.value === "trifecta_market")?.count ?? 0;
+            const primaryProgramCount = officialPrograms.total ?? 0;
+            const primaryOddsCount = primaryOdds.reduce((sum, table) => sum + table.count, 0);
+
+            const conclusions = [];
+            if ((domain.total ?? 0) === 0) conclusions.push("SIDECAR_DOMAIN_OBSERVATIONS_EMPTY");
+            if (primaryProgramCount > 0 && officialProgramObservationCount === 0) {
+              conclusions.push("PRIMARY_PROGRAM_EXISTS_BUT_OFFICIAL_PROGRAM_OBSERVATION_NOT_INGESTED");
+            }
+            if (primaryOddsCount > 0 && trifectaMarketObservationCount === 0) {
+              conclusions.push("PRIMARY_ODDS_EXISTS_BUT_TRIFECTA_MARKET_OBSERVATION_NOT_INGESTED");
+            }
+            if (queueLike.length === 0) conclusions.push("NO_SIDECAR_SHADOW_OR_CAPTURE_QUEUE_TABLE_DISCOVERED");
+
+            console.log("N2_OBSERVATION_AVAILABILITY_DIAGNOSTIC");
+            console.log(JSON.stringify({
+              status: "PASS_READ_ONLY_DIAGNOSTIC",
+              readOnly: true,
+              queryOnly: true,
+              writesExecuted: 0,
+              primary: {
+                relevantTables: summarizeRelevant(primary, primaryTables),
+                officialPrograms,
+                odds: primaryOdds,
+              },
+              sidecar: {
+                relevantTables: summarizeRelevant(sidecar, sidecarTables),
+                domainObservations: domain,
+                parseRuns,
+                deliveryAndCapture: sidecarDelivery,
+              },
+              auditedSourceAvailability: {
+                officialProgramObservationCount,
+                trifectaMarketObservationCount,
+                primaryProgramCount,
+                primaryOddsCount,
+              },
+              conclusions,
+            }, null, 2));
+          } finally {
+            sidecar.close();
+            primary.close();
+          }
+          NODE
+
+      - name: Confirm no repository mutation
+        run: test -z "$(git status --porcelain)"
