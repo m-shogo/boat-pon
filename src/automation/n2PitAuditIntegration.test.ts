@@ -10,7 +10,7 @@ test("N2-011 catalog, registry and phase mapping are aligned", () => {
   };
   const task = catalog.tasks.find((candidate) => candidate.taskId === "TASK-N2-011");
   assert.ok(task);
-  assert.equal(catalog.catalogVersion, "2026-08-05-n2-governance-v4");
+  assert.equal(catalog.catalogVersion, "2026-08-05-n2-governance-v5");
   assert.equal(task.taskDefinitionVersion, 3);
   assert.equal(task.defaultStatus, "READY");
   assert.equal(task.taskType, "pit-audit");
