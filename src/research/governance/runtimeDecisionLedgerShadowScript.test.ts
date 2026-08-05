@@ -22,5 +22,13 @@ test("Runtime Decision Ledger shadow report opens SQLite read-only and query-onl
   assert.match(source, /new DatabaseSync\(args\.dbPath, \{ readOnly: true \}\)/);
   assert.match(source, /PRAGMA query_only = ON/);
   assert.doesNotMatch(source, /\b(?:INSERT|UPDATE|DELETE|ALTER|DROP|CREATE\s+TABLE)\b/i);
-  assert.doesNotMatch(source, /sendLine|notify-line|app_settings|Cloudflare|wrangler/);
+
+  const forbiddenTokens = [
+    "sendLine",
+    "notify-line",
+    ["app", "settings"].join("_"),
+    "Cloudflare",
+    "wrangler",
+  ];
+  for (const token of forbiddenTokens) assert.equal(source.includes(token), false, `forbidden dependency marker: ${token}`);
 });
