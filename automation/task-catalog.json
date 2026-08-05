@@ -1,7 +1,7 @@
 {
   "catalogSchemaVersion": "research-task-catalog-v1",
-  "catalogVersion": "2026-08-05-n2-governance-v5",
-  "updatedAt": "2026-08-05T14:25:00.000Z",
+  "catalogVersion": "2026-08-05-n2-governance-v6",
+  "updatedAt": "2026-08-05T15:45:00.000Z",
   "note": "task定義の正本（main, immutable）。可変statusはautomation branchのqueue-state。ChatGPTは本catalog + branch stateを読み、実装済みREADY taskを1件だけdispatchする。",
   "tasks": [
     {
@@ -188,6 +188,29 @@
       "executor": "observation-ingest-readiness",
       "safetyLevel": "L0",
       "expectedOutputs": ["reports/n2/n2-observation-ingest-readiness.json"],
+      "defaultStatus": "READY"
+    },
+    {
+      "taskDefinitionVersion": 1,
+      "dependencies": ["TASK-N2-012"],
+      "maxDurationSeconds": 3600,
+      "expectedInputs": [
+        "read-only primary boat.sqlite",
+        "read-only research-replay.sqlite",
+        "latest seven-day official_program source rows",
+        "bounded official-program canary foundation",
+        "current rollout and source-specific approval state"
+      ],
+      "estimatedDurationSeconds": 120,
+      "valueOfInformation": "high",
+      "invalidationCondition": "official-program canary manifest、review bundle、approval target、primary identity、rollout state、またはexecutor contractが変わったら再定義",
+      "taskId": "TASK-N2-013",
+      "title": "official-program canary review bundle",
+      "objective": "実20件のofficial_program canary manifest、実行checkout SHA、approval target、rollback条件をread-onlyで固定し、人間レビュー可能なbundleを生成。承認作成・production applyは行わない",
+      "taskType": "official-program-canary-review-bundle",
+      "executor": "official-program-canary-review-bundle",
+      "safetyLevel": "L0",
+      "expectedOutputs": ["reports/n2/n2-official-program-canary-review-bundle.json"],
       "defaultStatus": "READY"
     },
     {
