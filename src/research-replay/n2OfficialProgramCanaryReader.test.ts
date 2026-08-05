@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync, statSync } from "node:fs";
+import { mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -109,14 +109,12 @@ test("missing schema and an active WAL fail closed", () => {
 
   const walPath = join(dir, "active-wal.sqlite");
   const writer = createPrimary(walPath);
+  insertRow(writer, { raceId: "20040110-01-01", date: "2004-01-10" });
+  writer.close();
+  writeFileSync(`${walPath}-wal`, Buffer.from("non-empty-active-wal-fixture"));
   try {
-    writer.exec("PRAGMA journal_mode=WAL");
-    writer.exec("BEGIN IMMEDIATE");
-    insertRow(writer, { raceId: "20040110-01-01", date: "2004-01-10" });
     assert.throws(() => readOfficialProgramCanarySource({ primaryDbPath: walPath }), /PRIMARY_DB_ACTIVE_WAL/);
-    writer.exec("ROLLBACK");
   } finally {
-    writer.close();
     rmSync(dir, { recursive: true, force: true });
   }
 });
