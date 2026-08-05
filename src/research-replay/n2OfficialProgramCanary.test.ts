@@ -254,7 +254,8 @@ test("exact production approval permits a bounded existing-cache capture and rep
       method: string;
       source_type: string;
     };
-    assert.deepEqual(capture, { method: "EXISTING_CACHE", source_type: "official_program" });
+    assert.equal(capture.method, "EXISTING_CACHE");
+    assert.equal(capture.source_type, "official_program");
     const observation = ctx.db.prepare(`
       SELECT observation_type, source_published_at, timing_quality, source_quality
       FROM domain_observations
@@ -264,12 +265,10 @@ test("exact production approval permits a bounded existing-cache capture and rep
       timing_quality: string;
       source_quality: string;
     };
-    assert.deepEqual(observation, {
-      observation_type: "official_program",
-      source_published_at: null,
-      timing_quality: "observed_only",
-      source_quality: "official_public",
-    });
+    assert.equal(observation.observation_type, "official_program");
+    assert.equal(observation.source_published_at, null);
+    assert.equal(observation.timing_quality, "observed_only");
+    assert.equal(observation.source_quality, "official_public");
 
     const replay = applyOfficialProgramCanary({
       db: ctx.db,
