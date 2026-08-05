@@ -1,4 +1,4 @@
-name: Diagnose N2 observation availability
+name: Diagnose N2 observation rollout state
 
 on:
   pull_request:
@@ -16,7 +16,7 @@ concurrency:
 jobs:
   diagnose:
     runs-on: [self-hosted, macOS, boat-pon-local]
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - name: Checkout canonical main
         uses: actions/checkout@v4
@@ -30,138 +30,84 @@ jobs:
           test "$(git rev-parse HEAD)" = "b8d7104483f3299a7b13a26e5d53c57f7bfe3334"
           test -z "$(git status --porcelain)"
 
-      - name: Aggregate bounded read-only diagnosis
+      - name: Read rollout state and production wiring
         run: |
           set -euo pipefail
           node --input-type=module <<'NODE'
           import { existsSync, readFileSync, statSync } from "node:fs";
           import { pathToFileURL } from "node:url";
           import { DatabaseSync } from "node:sqlite";
+          import { execFileSync } from "node:child_process";
 
           const policy = JSON.parse(readFileSync("config/research-automation-policy.json", "utf8"));
-          const paths = {
-            primary: `${policy.dataRoot}/data/boat.sqlite`,
-            sidecar: `${policy.dataRoot}/data/research-replay.sqlite`,
-          };
-          const blocked = [];
-          for (const [label, path] of Object.entries(paths)) {
-            if (!existsSync(path)) blocked.push(`${label.toUpperCase()}_NOT_FOUND`);
-            const wal = `${path}-wal`;
-            if (existsSync(wal) && statSync(wal).size > 0) blocked.push(`${label.toUpperCase()}_ACTIVE_WAL`);
-          }
-          if (blocked.length) {
-            console.log(JSON.stringify({ status: "BLOCKED", blocked }, null, 2));
+          const sidecarPath = `${policy.dataRoot}/data/research-replay.sqlite`;
+          const wal = `${sidecarPath}-wal`;
+          if (!existsSync(sidecarPath) || (existsSync(wal) && statSync(wal).size > 0)) {
+            console.log(JSON.stringify({ status: "BLOCKED", reason: !existsSync(sidecarPath) ? "SIDECAR_NOT_FOUND" : "SIDECAR_ACTIVE_WAL" }, null, 2));
             process.exit(2);
           }
-
-          const quote = (name) => `"${String(name).replaceAll('"', '""')}"`;
-          const open = (path) => {
-            const db = new DatabaseSync(`${pathToFileURL(path).href}?immutable=1`, { readOnly: true });
-            db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=5000;");
-            return db;
-          };
-          const tableNames = (db) => db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name`)
-            .all().map((row) => String(row.name));
-          const columns = (db, table) => db.prepare(`PRAGMA table_info(${quote(table)})`).all().map((row) => String(row.name));
-          const exactCount = (db, table) => Number(db.prepare(`SELECT COUNT(*) n FROM ${quote(table)}`).get().n);
-          const hasRows = (db, table) => Number(db.prepare(`SELECT EXISTS(SELECT 1 FROM ${quote(table)} LIMIT 1) n`).get().n) === 1;
-          const groupCounts = (db, table, column) => db.prepare(`
-            SELECT ${quote(column)} value, COUNT(*) n FROM ${quote(table)}
-            GROUP BY ${quote(column)} ORDER BY n DESC, value LIMIT 50
-          `).all().map((row) => ({ value: row.value === null ? null : String(row.value), count: Number(row.n) }));
-          const range = (db, table, column) => db.prepare(`SELECT MIN(${quote(column)}) minValue, MAX(${quote(column)}) maxValue FROM ${quote(table)}`).get();
-          const summarizeMetadata = (db, tables, matcher) => tables.filter((name) => matcher.test(name)).slice(0, 80)
-            .map((table) => ({ table, hasRows: hasRows(db, table), columns: columns(db, table) }));
-
-          const primary = open(paths.primary);
-          const sidecar = open(paths.sidecar);
+          const db = new DatabaseSync(`${pathToFileURL(sidecarPath).href}?immutable=1`, { readOnly: true });
+          db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=5000;");
           try {
-            const primaryTables = tableNames(primary);
-            const sidecarTables = tableNames(sidecar);
-            const hasPrimary = (name) => primaryTables.includes(name);
-            const hasSidecar = (name) => sidecarTables.includes(name);
-
-            const domain = hasSidecar("domain_observations") ? {
-              total: exactCount(sidecar, "domain_observations"),
-              byType: groupCounts(sidecar, "domain_observations", "observation_type"),
-              observedRange: range(sidecar, "domain_observations", "source_observed_at"),
-            } : { missing: true };
-            const parseRuns = hasSidecar("parse_runs") ? {
-              total: exactCount(sidecar, "parse_runs"),
-              byParser: columns(sidecar, "parse_runs").includes("parser_name") ? groupCounts(sidecar, "parse_runs", "parser_name") : [],
-              byStatus: columns(sidecar, "parse_runs").includes("status") ? groupCounts(sidecar, "parse_runs", "status") : [],
-            } : { missing: true };
-            const sidecarCoreCounts = Object.fromEntries([
-              "raw_documents", "typed_observation_payloads", "capture_attempts", "capture_events",
-            ].filter(hasSidecar).map((table) => [table, exactCount(sidecar, table)]));
-
-            const officialPrograms = hasPrimary("official_programs") ? {
-              total: exactCount(primary, "official_programs"),
-              dateRange: columns(primary, "official_programs").includes("date") ? range(primary, "official_programs", "date") : null,
-              rawJsonPresent: columns(primary, "official_programs").includes("raw_json")
-                ? Number(primary.prepare(`SELECT COUNT(*) n FROM official_programs WHERE raw_json IS NOT NULL AND LENGTH(raw_json)>0`).get().n) : null,
-              closeAtPresent: columns(primary, "official_programs").includes("close_at")
-                ? Number(primary.prepare(`SELECT COUNT(*) n FROM official_programs WHERE close_at IS NOT NULL AND TRIM(close_at)<>''`).get().n) : null,
-            } : { missing: true };
-
-            const oddsTables = primaryTables.filter((name) => /odds|market/i.test(name));
-            const oddsMetadata = oddsTables.map((table) => ({ table, hasRows: hasRows(primary, table), columns: columns(primary, table) }));
-            const canonicalOdds = hasPrimary("odds_timeseries") ? {
-              total: exactCount(primary, "odds_timeseries"),
-              capturedRange: columns(primary, "odds_timeseries").includes("captured_at") ? range(primary, "odds_timeseries", "captured_at") : null,
-              byBetType: columns(primary, "odds_timeseries").includes("bet_type") ? groupCounts(primary, "odds_timeseries", "bet_type") : [],
-            } : { missing: true };
-
-            const queueTables = sidecarTables.filter((name) => /shadow|outbox|rollout|queue|capture/i.test(name));
-            const queueSummary = queueTables.map((table) => {
-              const cols = columns(sidecar, table);
-              const summary = { table, count: exactCount(sidecar, table), columns: cols };
-              for (const column of ["message_type", "status", "state", "source_type", "event_kind", "failure_reason"]) {
-                if (cols.includes(column)) summary[`by_${column}`] = groupCounts(sidecar, table, column);
+            const latestConfig = db.prepare(`
+              SELECT shadow_write_enabled, operational_gc_enabled, kill_switch_engaged,
+                     queue_capacity, max_retries, storage_quota_bytes, disk_low_water_bytes,
+                     reason, occurred_at
+              FROM rollout_config_events
+              ORDER BY occurred_at DESC, rowid DESC LIMIT 1
+            `).get() ?? null;
+            const approvalScopes = db.prepare(`
+              SELECT approval_scope value, COUNT(*) n
+              FROM rollout_approval_events GROUP BY approval_scope ORDER BY value
+            `).all().map((row) => ({ value: String(row.value), count: Number(row.n) }));
+            const grantScopes = db.prepare(`
+              SELECT approval_scope value, target_stage, approval_mode, COUNT(*) n
+              FROM rollout_approval_grants_v2
+              GROUP BY approval_scope, target_stage, approval_mode
+              ORDER BY approval_scope, target_stage, approval_mode
+            `).all().map((row) => ({
+              scope: String(row.value),
+              targetStage: String(row.target_stage),
+              approvalMode: String(row.approval_mode),
+              count: Number(row.n),
+            }));
+            const queueCounts = {
+              outbox: Number(db.prepare("SELECT COUNT(*) n FROM shadow_outbox_messages").get().n),
+              deliveryAttempts: Number(db.prepare("SELECT COUNT(*) n FROM shadow_delivery_attempts").get().n),
+              captureAttempts: Number(db.prepare("SELECT COUNT(*) n FROM capture_attempts").get().n),
+            };
+            const gitFiles = (pattern) => {
+              try {
+                return execFileSync("git", ["grep", "-l", pattern, "--", "src", "scripts", "server", "package.json"], { encoding: "utf8" })
+                  .trim().split("\n").filter(Boolean).filter((path) => !/\.test\./.test(path));
+              } catch {
+                return [];
               }
-              return summary;
-            });
-
-            const officialProgramObservationCount = domain.byType?.find((row) => row.value === "official_program")?.count ?? 0;
-            const trifectaMarketObservationCount = domain.byType?.find((row) => row.value === "trifecta_market")?.count ?? 0;
-            const primaryProgramCount = officialPrograms.total ?? 0;
-            const primaryOddsPresent = oddsMetadata.some((table) => table.hasRows);
-            const conclusions = [];
-            if ((domain.total ?? 0) === 0) conclusions.push("SIDECAR_DOMAIN_OBSERVATIONS_EMPTY");
-            if (primaryProgramCount > 0 && officialProgramObservationCount === 0) conclusions.push("PRIMARY_PROGRAM_EXISTS_BUT_OFFICIAL_PROGRAM_OBSERVATION_NOT_INGESTED");
-            if (primaryOddsPresent && trifectaMarketObservationCount === 0) conclusions.push("PRIMARY_ODDS_EXISTS_BUT_TRIFECTA_MARKET_OBSERVATION_NOT_INGESTED");
-            if (queueTables.length === 0) conclusions.push("NO_SIDECAR_SHADOW_OR_CAPTURE_QUEUE_TABLE_DISCOVERED");
-
-            console.log("N2_OBSERVATION_AVAILABILITY_DIAGNOSTIC");
+            };
+            const officialCaptureFiles = gitFiles("captureOfficialProgramObservation");
+            const officialShadowFiles = gitFiles("runPrimaryWithOfficialProgramShadow");
+            const trifectaWriterFiles = gitFiles("trifecta_market").filter((path) => !/n2PitAudit|n2FeatureSourceAdapter/.test(path));
+            console.log("N2_OBSERVATION_ROLLOUT_DIAGNOSTIC");
             console.log(JSON.stringify({
               status: "PASS_READ_ONLY_DIAGNOSTIC",
               readOnly: true,
               queryOnly: true,
               writesExecuted: 0,
-              primary: {
-                officialPrograms,
-                canonicalOdds,
-                oddsTableMetadata: oddsMetadata,
-                relevantTableMetadata: summarizeMetadata(primary, primaryTables, /program|odds|market/i),
+              latestConfig,
+              approvalScopes,
+              grantScopes,
+              queueCounts,
+              productionWiring: {
+                officialCaptureFiles,
+                officialShadowFiles,
+                trifectaWriterFiles,
+                officialCaptureProductionCallerCount: officialCaptureFiles.filter((path) => !path.endsWith("n2OfficialProgramObservation.ts")).length,
+                officialShadowProductionCallerCount: officialShadowFiles.filter((path) => !path.endsWith("n2OfficialProgramShadow.ts")).length,
+                trifectaWriterProductionCallerCount: trifectaWriterFiles.length,
               },
-              sidecar: {
-                domainObservations: domain,
-                parseRuns,
-                coreCounts: sidecarCoreCounts,
-                deliveryAndCapture: queueSummary,
-                relevantTableMetadata: summarizeMetadata(sidecar, sidecarTables, /capture|shadow|outbox|rollout|queue|observation|parse|raw_document|payload/i),
-              },
-              auditedSourceAvailability: {
-                officialProgramObservationCount,
-                trifectaMarketObservationCount,
-                primaryProgramCount,
-                primaryOddsPresent,
-              },
-              conclusions,
             }, null, 2));
           } finally {
-            sidecar.close();
-            primary.close();
+            db.close();
           }
           NODE
 
