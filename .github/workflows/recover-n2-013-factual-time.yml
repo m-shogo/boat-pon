@@ -1,0 +1,84 @@
+name: Recover TASK-N2-013 factual-time review bundle
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/recover-n2-013-factual-time.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: boat-pon-local-research
+  cancel-in-progress: false
+
+jobs:
+  replay-merged-intent:
+    runs-on: [self-hosted, macOS, boat-pon-local]
+    timeout-minutes: 180
+    steps:
+      - name: Checkout canonical main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          corepack enable
+          pnpm install --frozen-lockfile --prod=false
+
+      - name: Assert immutable merged event
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "b6f567e2e5ffcc5f43bb80febed298745c2987e1"
+          test "$(git rev-parse HEAD^)" = "c09a9f96fc1043339c5ded59cd2e06a9ea503dde"
+          test -f automation/requests/intents/INTENT-20260806-r7m2v9k4qx.json
+
+      - id: guard
+        name: Replay canonical push guard
+        env:
+          ACTOR: m-shogo
+          REPO: m-shogo/boat-pon
+          EVENT: push
+          BEFORE_SHA: c09a9f96fc1043339c5ded59cd2e06a9ea503dde
+          AFTER_SHA: b6f567e2e5ffcc5f43bb80febed298745c2987e1
+          COMMIT_AUTHOR: m-shogo
+          COMMIT_COMMITTER: web-flow
+          CANONICAL_REQUEST_PATH: canonical-request.json
+        run: pnpm automation:guard-intent
+
+      - name: Materialize automation authority
+        if: steps.guard.outputs.ok == 'true'
+        env:
+          BRANCH: automation/boat-pon-research
+        run: |
+          set -euo pipefail
+          git fetch origin "$BRANCH" --quiet
+          git rev-parse "origin/$BRANCH" > .automation-branch-base
+          mkdir -p automation/control
+          for f in task-queue-state processed-intents processed-requests current-run planner-candidates; do
+            git show "origin/$BRANCH:automation/control/$f.json" > "automation/control/$f.json"
+          done
+
+      - name: Run exactly one TASK-N2-013 definition v2
+        if: steps.guard.outputs.ok == 'true'
+        env:
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          INTENT_ID: ${{ steps.guard.outputs.intent_id }}
+        run: |
+          set -euo pipefail
+          node scripts/assert-canonical-request.mjs canonical-request.json
+          pnpm automation:intent-task -- --request=canonical-request.json --intent-id="$INTENT_ID"
+
+      - name: Show status
+        if: always()
+        run: cat reports/automation/current-status.json || true
+
+      - name: Commit control state and evidence
+        if: steps.guard.outputs.ok == 'true' && always()
+        env:
+          RUN_ID: ${{ github.run_id }}
+        run: bash scripts/automation-commit.sh
