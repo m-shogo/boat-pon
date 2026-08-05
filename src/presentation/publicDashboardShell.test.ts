@@ -33,8 +33,9 @@ test("public shell is read-only and does not import the operational API", async 
   assert.doesNotMatch(source, /from\s+["'][^"']*(?:api|server|domain|decision|production)[^"']*["']/i);
   assert.doesNotMatch(source, /\/api\//i);
   assert.doesNotMatch(source, /\b(?:POST|PUT|PATCH|DELETE)\b/);
-  assert.doesNotMatch(source, /auto(?:matic)?[- ]?(?:bet|purchase)|自動投票|自動購入/i);
+  assert.doesNotMatch(source, /<form\b|onSubmit=|onClick=/i);
   assert.match(source, /read-only|閲覧専用/i);
+  assert.match(source, /自動投票なし/);
   assert.match(source, /利益を保証しません/);
 });
 
