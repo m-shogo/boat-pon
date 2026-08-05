@@ -1,21 +1,42 @@
 import type { ReactNode } from "react";
-import fixture from "../presentation/fixtures/public-dashboard-snapshot-v1.json";
 import {
-  validatePublicDashboardSnapshot,
   type PublicDashboardSnapshot,
   type PublicResearchStatus,
 } from "../presentation/publicSnapshot";
+import type { PublicSnapshotFreshness } from "../presentation/publicSnapshotTransport";
 import { GlossaryTip } from "./GlossaryTip";
 import "../public-dashboard.css";
 
-const fixtureValidation = validatePublicDashboardSnapshot(fixture);
-const sanitizedFixture = fixtureValidation.ok ? fixture as unknown as PublicDashboardSnapshot : null;
-
 export function ResearchCommandCenter({
-  snapshot = sanitizedFixture,
+  snapshot = null,
+  observedFreshness = snapshot?.status.snapshotFreshness ?? "NOT_AVAILABLE",
+  loading = false,
+  errors = [],
+  warnings = [],
 }: {
   snapshot?: PublicDashboardSnapshot | null;
+  observedFreshness?: PublicSnapshotFreshness;
+  loading?: boolean;
+  errors?: string[];
+  warnings?: string[];
 }) {
+  if (loading) {
+    return (
+      <section className="researchCommandCenter" aria-label="Research Command Center" aria-busy="true">
+        <header className="commandCenterHeader">
+          <div>
+            <p className="eyebrow">SANITIZED PUBLIC SNAPSHOT</p>
+            <h2>Research Command Center</h2>
+          </div>
+          <StatusBadge status="NOT_AVAILABLE" />
+        </header>
+        <div className="commandCenterNotice" role="status">
+          公開snapshotのschema・完全性・鮮度を検証しています。
+        </div>
+      </section>
+    );
+  }
+
   if (!snapshot) {
     return (
       <section className="researchCommandCenter" aria-label="Research Command Center">
@@ -27,7 +48,8 @@ export function ResearchCommandCenter({
           <StatusBadge status="NOT_AVAILABLE" />
         </header>
         <div className="commandCenterNotice danger" role="alert">
-          公開snapshotを検証できません。値を推測せず、last-known-goodまたはNOT_AVAILABLEを表示します。
+          {publicSnapshotMessage(errors[0])}
+          値を推測せず、検証済みsnapshotが取得できるまでNOT_AVAILABLEとして扱います。
         </div>
       </section>
     );
@@ -44,9 +66,15 @@ export function ResearchCommandCenter({
         <StatusBadge status={snapshot.status.readiness} />
       </header>
 
-      {snapshot.status.snapshotFreshness !== "FRESH" && (
+      {observedFreshness !== "FRESH" && (
         <div className="commandCenterNotice warn" role="status">
-          snapshot freshness: <strong>{snapshot.status.snapshotFreshness}</strong>。古い値を最新値として扱わないでください。
+          snapshot freshness: <strong>{observedFreshness}</strong>。古い値を最新値として扱いません。
+        </div>
+      )}
+
+      {warnings.length > 0 && (
+        <div className="commandCenterNotice warn" role="status">
+          snapshot内の鮮度表示とブラウザ側の観測が一致しないため、ブラウザ側の判定を優先しています。
         </div>
       )}
 
@@ -153,4 +181,13 @@ function formatDateTime(value: string | null): string | null {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return "NOT_AVAILABLE";
   return parsed.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" });
+}
+
+function publicSnapshotMessage(error: string | undefined): string {
+  if (!error) return "公開snapshotはまだ生成されていません。";
+  if (error.startsWith("HTTP_")) return "公開snapshotを取得できませんでした。";
+  if (error === "NETWORK_ERROR") return "公開snapshotへの接続に失敗しました。";
+  if (error === "FUTURE_DATA_AS_OF") return "未来時刻のsnapshotを拒否しました。";
+  if (error === "INVALID_OR_UNVERIFIED_SNAPSHOT") return "公開snapshotのschemaまたは完全性検証に失敗しました。";
+  return "公開snapshotを安全に読み込めませんでした。";
 }
