@@ -1,6 +1,6 @@
 # N2 PIT Audit Executor
 
-Status: registered; queue migrated; first dispatch blocked before execution by dirty-worktree input materialization
+Status: registered; two guarded BLOCK records retained; manifest digest contract v3 under validation
 Task: `TASK-N2-011`
 Safety: L0, read-only
 Date: 2026-08-05
@@ -43,7 +43,56 @@ The previous executor file is preserved byte-for-byte as `taskExecutorsCore.ts`.
 pit-audit -> runN2PitAuditExecutor
 ```
 
-Arbitrary task types continue to return `EXECUTOR_NOT_REGISTERED`. The global registry identity is `n2-task-executor-registry-v3`, so N2-011 cannot reuse an older idempotency identity.
+Arbitrary task types continue to return `EXECUTOR_NOT_REGISTERED`. The global registry identity is `n2-task-executor-registry-v3`. The N2-011 task definition advances independently to v3 for the corrected manifest-consumer contract.
+
+## Dataset manifest integrity boundary
+
+N2-010 and the Executor SDK create the persisted manifest in two stages:
+
+```text
+N2-010 artifact core summary
+  -> canonical outputDigest fixed
+  -> SDK validates and appends pitEvidence
+  -> run/request/task/executor/generatedAt metadata appended
+  -> JSON persisted
+```
+
+N2-011 therefore validates two distinct integrity layers.
+
+### Core-summary digest
+
+The canonical digest is recomputed after excluding only:
+
+```text
+runId
+requestId
+taskId
+executorVersion
+generatedAt
+outputDigest
+pitEvidence
+```
+
+Every dataset identity, coverage, holdout, split and read-only field remains inside the digest. A core mutation fails with `N2_DATASET_MANIFEST_OUTPUT_DIGEST_MISMATCH`.
+
+### SDK PIT envelope
+
+`pitEvidence` is not ignored. It is validated separately and must exactly prove that settlement inventory is not a prediction-time feature join:
+
+```text
+status = NOT_APPLICABLE
+validatorId = settlement-inventory-pit-applicability
+validatorVersion = v1
+checkedRecordCount = inventoryTotals.candidates
+sameRaceViolationCount = 0
+futureViolationCount = 0
+ambiguousTimingCount = 0
+evidencePath = null
+evidenceDigest = null
+notApplicableReason = settlement inventory does not join prediction-time features
+```
+
+Missing, contradictory, mismatched or non-zero PIT envelope fields block before any database audit. This separation matches the producer lifecycle without weakening integrity.
 
 ## Source boundary
 
@@ -101,7 +150,7 @@ Official program availability is validated with `validateFeaturePIT`. Live trife
 - `PASS`: at least one real observation exists and every audited observation is safe;
 - `CONDITIONAL`: no real observation exists, or one or more observations are excluded without a demonstrated future/same-race leak;
 - `FAILED` in the pure summary: future or same-race leakage exists;
-- `BLOCKED` in the executor: SDK PIT evidence detects a future, same-race, ambiguous or truncated audit condition.
+- `BLOCKED` in the executor: input, SDK PIT, future, same-race, ambiguous or truncated evidence fails closed.
 
 The executor writes `reports/n2/n2-pit-audit.json` only after input, PIT and write-scope checks pass. A future/same-race violation is retained in runner history and is not mislabeled PASS.
 
@@ -110,10 +159,11 @@ The executor writes `reports/n2/n2-pit-audit.json` only after input, PIT and wri
 The executor requires:
 
 - `TASK-N2-010=PASS` in the task-state view;
-- a valid `n2-dataset-manifest-v2` artifact;
-- manifest output-digest recomputation success;
+- a valid `n2-dataset-manifest-v2` core summary and SDK PIT envelope;
+- manifest core output-digest recomputation success;
 - holdout exclusion confirmed;
 - manifest marked read-only;
+- valid non-negative `inventoryTotals.candidates`;
 - manifest is a regular file, not a symlink, and no larger than 2 MiB;
 - `data/research-replay.sqlite` present with no active WAL;
 - sibling `data/boat.sqlite` present with no active WAL.
@@ -122,34 +172,39 @@ Both databases are opened through immutable read-only URIs with `PRAGMA query_on
 
 The one-shot workflow reads the exact dataset manifest from `automation/boat-pon-research`, writes it to `$RUNNER_TEMP/n2-dataset-manifest.json`, and passes the absolute path through `BOAT_PON_N2_DATASET_MANIFEST_PATH`. It does not place this dynamic authority artifact inside the Git worktree, weaken `DIRTY_WORKING_TREE`, fall back to a main-branch fixture or regenerate the manifest.
 
-The executor retains the repository-relative manifest path only as a test/local fallback when the environment variable is absent.
+## Guarded execution records
 
-## First dispatch record
+### Run 31010313396 — preflight BLOCK
 
-Merged intent `INTENT-20260805-m7p3v9k2qx` was guarded successfully on Mac recovery run `31010313396`. The task did not reach the executor. Preflight returned:
+Intent `INTENT-20260805-m7p3v9k2qx` passed the canonical guard. The task did not reach the executor:
 
 ```text
 BLOCKED: DIRTY_WORKING_TREE
 ```
 
-Root cause: the first integration wrote the automation-branch manifest to `reports/n2/n2-dataset-manifest.json` before runner preflight. The dirty-tree guard behaved correctly. The blocked run left N2-011 `READY`, attempt count `0`, evidence empty and the intent unprocessed.
+Root cause: the first integration materialized the automation-branch manifest inside the Git worktree. The guard behaved correctly. The input was moved to `RUNNER_TEMP`; no dirty-tree exception was added.
 
-The fix moves only that input to `RUNNER_TEMP`; it does not add the manifest path to the dirty-tree allowlist.
+### Run 31011585102 — input-contract BLOCK
 
-## Queue migration
+Replacement intent `INTENT-20260805-q9v4m2k7px` passed guard, preflight and external-manifest materialization, then reached the executor and returned:
 
-The automation branch migration completed from catalog v2/state v22 to catalog v3/state v23 under blob-SHA CAS. It changed only:
+```text
+BLOCKED:
+- INPUT_CONTRACT
+- N2_DATASET_MANIFEST_OUTPUT_DIGEST_MISMATCH
+```
 
-- catalog version;
-- queue state version/timestamps;
-- N2-011 status from `BLOCKED_EXECUTOR_PENDING` to `READY`;
-- N2-011 task definition version from `1` to `2`.
+No real observation query was executed. Root cause: the consumer recomputed the N2-010 core digest with the SDK-appended `pitEvidence` still included. The blocked result is processed and retained as attempt 1 evidence.
 
-Authority, attempts, evidence, result digest, failure and checkpoint remained empty. The blocked first dispatch did not consume or mutate this task entry.
+## Retry migration
 
-## Retry authority
+After the corrected v3 definition reaches main, automation queue migration must use the current queue blob SHA as CAS and preserve:
 
-The first intent is immutable and remains unprocessed. After this fix reaches main, it must not be edited or silently reused against a newer main SHA. A strict stale-intent supersession record and exactly one replacement intent are required. Existing actor, authority, queue, dependency, replay and one-shot guards remain authoritative.
+- `attemptCount: 1`;
+- the existing blocked evidence link;
+- `maxAttempts: 3`.
+
+It changes only the catalog version, state version/timestamps and N2-011 definition/status fields. N2-011 becomes READY definition v3 with authority/result/failure cleared for a new attempt; prior evidence remains append-only. A new immutable intent is required because the previous replacement intent is processed as BLOCKED.
 
 ## Runtime non-interference
 

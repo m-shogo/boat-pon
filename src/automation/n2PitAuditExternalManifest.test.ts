@@ -70,21 +70,38 @@ function createSidecar(path: string): void {
   }
 }
 
-function writeManifest(path: string): void {
-  const stable: Record<string, unknown> = {
+function validPitEvidence(candidateCount: number): Record<string, unknown> {
+  return {
+    status: "NOT_APPLICABLE",
+    validatorId: "settlement-inventory-pit-applicability",
+    validatorVersion: "v1",
+    checkedRecordCount: candidateCount,
+    sameRaceViolationCount: 0,
+    futureViolationCount: 0,
+    ambiguousTimingCount: 0,
+    evidencePath: null,
+    evidenceDigest: null,
+    notApplicableReason: "settlement inventory does not join prediction-time features",
+  };
+}
+
+function writeManifest(path: string, mutatePit: Record<string, unknown> = {}): void {
+  const core: Record<string, unknown> = {
     datasetManifestVersion: "n2-dataset-manifest-v2",
     datasetVersion: "n2-corrected-2000_2026",
+    inventoryTotals: { candidates: 1, races: 1 },
     holdoutExcludedFromResearchCohort: true,
     readOnly: true,
   };
   writeFileSync(path, `${JSON.stringify({
-    ...stable,
+    ...core,
+    pitEvidence: { ...validPitEvidence(1), ...mutatePit },
     runId: "manifest-run",
     requestId: "manifest-request",
     taskId: "TASK-N2-010",
     executorVersion: "n2-task-executor-registry-v2",
     generatedAt: "2026-08-05T00:00:00.000Z",
-    outputDigest: canonicalHash(stable),
+    outputDigest: canonicalHash(core),
   }, null, 2)}\n`);
 }
 
@@ -130,6 +147,7 @@ test("external verified manifest is read without creating a worktree input file"
     assert.equal(existsSync(join(root, "reports/n2/n2-dataset-manifest.json")), false);
     const report = JSON.parse(readFileSync(join(root, "reports/n2/n2-pit-audit.json"), "utf8")) as Record<string, unknown>;
     assert.equal(report.datasetVersion, "n2-corrected-2000_2026");
+    assert.equal(report.datasetManifestPitCheckedRecordCount, 1);
   } finally {
     restoreEnv(previous);
     rmSync(root, { recursive: true, force: true });
@@ -147,6 +165,23 @@ test("external manifest symlink is rejected fail-closed", () => {
     const result = runN2PitAuditExecutor(context);
     assert.equal(result.result, "BLOCKED");
     assert.match(result.blocks.join("\n"), /N2_DATASET_MANIFEST_SYMLINK/);
+  } finally {
+    restoreEnv(previous);
+    rmSync(root, { recursive: true, force: true });
+    rmSync(externalRoot, { recursive: true, force: true });
+  }
+});
+
+test("external manifest PIT violation is rejected even when core digest is valid", () => {
+  const { root, externalRoot, context, manifestPath } = setup();
+  const previous = process.env[MANIFEST_ENV];
+  try {
+    writeManifest(manifestPath, { futureViolationCount: 1 });
+    process.env[MANIFEST_ENV] = manifestPath;
+    const result = runN2PitAuditExecutor(context);
+    assert.equal(result.result, "BLOCKED");
+    assert.match(result.blocks.join("\n"), /N2_DATASET_MANIFEST_PIT_FUTURE_VIOLATION/);
+    assert.doesNotMatch(result.blocks.join("\n"), /OUTPUT_DIGEST_MISMATCH/);
   } finally {
     restoreEnv(previous);
     rmSync(root, { recursive: true, force: true });

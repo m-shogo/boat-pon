@@ -52,23 +52,45 @@ function createSidecar(path: string, mode: "safe" | "future" | "empty"): void {
   } finally { db.close(); }
 }
 
-function writeManifest(root: string, mutate: Record<string, unknown> = {}): void {
-  const stable: Record<string, unknown> = {
+function validPitEvidence(candidateCount: number): Record<string, unknown> {
+  return {
+    status: "NOT_APPLICABLE",
+    validatorId: "settlement-inventory-pit-applicability",
+    validatorVersion: "v1",
+    checkedRecordCount: candidateCount,
+    sameRaceViolationCount: 0,
+    futureViolationCount: 0,
+    ambiguousTimingCount: 0,
+    evidencePath: null,
+    evidenceDigest: null,
+    notApplicableReason: "settlement inventory does not join prediction-time features",
+  };
+}
+
+function writeManifest(
+  root: string,
+  mutateCore: Record<string, unknown> = {},
+  mutatePit: Record<string, unknown> = {},
+): void {
+  const core: Record<string, unknown> = {
     datasetManifestVersion: "n2-dataset-manifest-v2",
     datasetVersion: "n2-corrected-2014_2026",
+    inventoryTotals: { candidates: 1, races: 1 },
     holdoutExcludedFromResearchCohort: true,
     readOnly: true,
-    ...mutate,
+    ...mutateCore,
   };
+  const candidateCount = Number((core.inventoryTotals as Record<string, unknown>).candidates);
   mkdirSync(join(root, "reports/n2"), { recursive: true });
   writeFileSync(join(root, "reports/n2/n2-dataset-manifest.json"), `${JSON.stringify({
-    ...stable,
+    ...core,
+    pitEvidence: { ...validPitEvidence(candidateCount), ...mutatePit },
     runId: "manifest-run",
     requestId: "manifest-request",
     taskId: "TASK-N2-010",
     executorVersion: "n2-task-executor-registry-v2",
     generatedAt: "2026-08-05T00:00:00.000Z",
-    outputDigest: canonicalHash(stable),
+    outputDigest: canonicalHash(core),
   }, null, 2)}\n`);
 }
 
@@ -106,6 +128,9 @@ test("safe real PIT evidence writes a verified PASS report", () => {
     const report = JSON.parse(readFileSync(reportPath, "utf8")) as Record<string, any>;
     assert.equal(report.status, "PASS");
     assert.equal(report.auditedObservationCount, 1);
+    assert.equal(report.executorContractVersion, "n2-pit-audit-executor-v2");
+    assert.equal(report.datasetManifestPitValidatorId, "settlement-inventory-pit-applicability");
+    assert.equal(report.datasetManifestPitCheckedRecordCount, 1);
     assert.equal(report.pitEvidence.status, "PASS");
     assert.equal(report.pitEvidence.futureViolationCount, 0);
     assert.equal(report.sidecarWriteCount, 0);
@@ -159,7 +184,7 @@ test("active WAL blocks without checkpointing or deleting it", () => {
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
-test("manifest identity and digest are fail-closed", () => {
+test("manifest core identity and digest are fail-closed", () => {
   const { root, context } = setup("safe");
   try {
     const path = join(root, "reports/n2/n2-dataset-manifest.json");
@@ -169,6 +194,16 @@ test("manifest identity and digest are fail-closed", () => {
     const result = runN2PitAuditExecutor(context);
     assert.equal(result.result, "BLOCKED");
     assert.match(result.blocks.join("\n"), /N2_DATASET_MANIFEST_OUTPUT_DIGEST_MISMATCH/);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("manifest SDK PIT envelope is independently fail-closed", () => {
+  const { root, context } = setup("safe");
+  try {
+    writeManifest(root, {}, { checkedRecordCount: 2 });
+    const result = runN2PitAuditExecutor(context);
+    assert.equal(result.result, "BLOCKED");
+    assert.match(result.blocks.join("\n"), /N2_DATASET_MANIFEST_PIT_CHECKED_COUNT_MISMATCH/);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
