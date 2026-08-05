@@ -1,11 +1,11 @@
 # boat-pon automation status
 
 - updated: 2026-08-03T13:11:03.880Z
-- last result: **PASS**
-- last request: REQ-20260805-r4n8v2k6qx / task: TASK-N2-010 / intent: INTENT-20260805-r4n8v2k6qx
-- safety: L0 / authority SHA: 864e720e91ce146a134d1ed1873fc53477512323
-- state version: 23 / state digest: 2383c6efae281b65a869450d6d57078c6f745d0a09c00565e3fa2ad98b4bd984
-- blocks: none
+- last result: **BLOCKED**
+- last request: REQ-20260805-m7p3v9k2qx / task: TASK-N2-011 / intent: INTENT-20260805-m7p3v9k2qx
+- safety: L0 / authority SHA: 45dda41061bbbc7d648140845743d0ded7521946
+- state version: 23 / state digest: 37b7c63f9b1558b9191e740cf0a75d5a430ce483bd58a7620ea3f2bd898318e2
+- blocks: DIRTY_WORKING_TREE
 - idempotent reuse: NOT_AVAILABLE
-- next candidate: TASK-PLANNER-NEXT: queue planner: 次候補提案（自動起動しない。次回 dispatch で 1 回だけ依頼する）
+- next candidate: resolve the blocks above; automation は自動再試行しない
 - note: 1 dispatch = 1 task。schedule/daemon/loop なし。状態正本は automation branch。
