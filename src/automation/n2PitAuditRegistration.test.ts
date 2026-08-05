@@ -8,7 +8,7 @@ import {
 import { runN2PitAuditExecutor } from "./n2PitAuditExecutor";
 
 test("N2-011 PIT audit is registered only through the allowlisted resolver", () => {
-  assert.equal(EXECUTOR_REGISTRY_VERSION, "n2-task-executor-registry-v4");
+  assert.equal(EXECUTOR_REGISTRY_VERSION, "n2-task-executor-registry-v5");
   assert.equal(isExecutorImplemented("pit-audit"), true);
   assert.equal(resolveExecutor("pit-audit").code, "OK");
   assert.equal(resolveExecutor("pit-audit").executor, runN2PitAuditExecutor);
