@@ -105,6 +105,8 @@ export type OfficialProgramCanaryGateResult = {
 };
 
 export type OfficialProgramCanaryApplyResult = {
+  gateVersion: typeof N2_OFFICIAL_PROGRAM_CANARY_GATE_VERSION;
+  approvalId: string;
   manifestDigest: string;
   selectedCount: number;
   insertedCount: number;
@@ -211,11 +213,7 @@ export function buildOfficialProgramCanaryManifest(input: {
   const excluded: OfficialProgramCanaryExclusion[] = [];
   const seenRaceIds = new Set<string>();
 
-  for (const row of [...input.rows].sort((left, right) =>
-    left.date.localeCompare(right.date)
-    || left.venue.localeCompare(right.venue)
-    || left.raceNo - right.raceNo
-    || left.raceId.localeCompare(right.raceId))) {
+  for (const row of [...input.rows].sort((left, right) => left.raceId.localeCompare(right.raceId, "en"))) {
     if (seenRaceIds.has(row.raceId)) throw new Error(`DUPLICATE_PRIMARY_RACE:${row.raceId}`);
     seenRaceIds.add(row.raceId);
     try {
@@ -312,6 +310,16 @@ export function officialProgramCanaryApprovalTarget(manifestDigest: string) {
   } as const;
 }
 
+function approvalTargetForGate(manifestDigest: string) {
+  if (/^[a-f0-9]{64}$/.test(manifestDigest)) return officialProgramCanaryApprovalTarget(manifestDigest);
+  return {
+    approvalScope: N2_OFFICIAL_PROGRAM_CANARY_APPROVAL_SCOPE,
+    targetStage: N2_OFFICIAL_PROGRAM_CANARY_TARGET_STAGE,
+    targetSchemaVersion: `${ROLLOUT_SCHEMA_VERSION}@${SIDECAR_SCHEMA_VERSION}`,
+    targetContractVersion: "invalid-canary-manifest-digest",
+  } as const;
+}
+
 export function resolveOfficialProgramCanaryGate(
   db: DatabaseSync,
   input: OfficialProgramCanaryGateInput,
@@ -339,9 +347,8 @@ export function resolveOfficialProgramCanaryGate(
     blocks.push("CODE_SHA_MISMATCH");
   }
 
-  const target = officialProgramCanaryApprovalTarget(input.manifest.manifestDigest);
   const approval = resolveApproval(db, {
-    ...target,
+    ...approvalTargetForGate(input.manifest.manifestDigest),
     rolloutStartedAt: input.rolloutStartedAt,
     executionMode: input.executionMode,
   });
@@ -461,11 +468,16 @@ export function applyOfficialProgramCanary(input: {
   repository: ResearchReplayRepository;
   manifest: OfficialProgramCanaryManifest;
   primaryRows: OfficialProgramCanarySourceRow[];
-  gate: OfficialProgramCanaryGateResult;
+  gateInput: Omit<OfficialProgramCanaryGateInput, "manifest">;
 }): OfficialProgramCanaryApplyResult {
-  if (!input.gate.approved || input.gate.manifestDigest !== input.manifest.manifestDigest) {
-    throw new Error("CANARY_GATE_NOT_APPROVED");
+  const gate = resolveOfficialProgramCanaryGate(input.db, {
+    manifest: input.manifest,
+    ...input.gateInput,
+  });
+  if (!gate.approved || gate.recomputedManifestDigest !== input.manifest.manifestDigest) {
+    throw new Error(`CANARY_GATE_NOT_APPROVED:${gate.blocks.join(",")}`);
   }
+  if (!gate.approval.approvalId) throw new Error("CANARY_APPROVAL_ID_MISSING");
   const rows = verifyOfficialProgramCanaryPrimaryRows(input.manifest, input.primaryRows);
   let insertedCount = 0;
   let reusedCount = 0;
@@ -494,6 +506,8 @@ export function applyOfficialProgramCanary(input: {
   }
 
   return {
+    gateVersion: gate.gateVersion,
+    approvalId: gate.approval.approvalId,
     manifestDigest: input.manifest.manifestDigest,
     selectedCount: input.manifest.binding.items.length,
     insertedCount,
