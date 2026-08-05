@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import fixture from "../presentation/fixtures/public-dashboard-snapshot-v1.json";
 import {
   validatePublicDashboardSnapshot,
@@ -8,7 +9,7 @@ import { GlossaryTip } from "./GlossaryTip";
 import "../public-dashboard.css";
 
 const fixtureValidation = validatePublicDashboardSnapshot(fixture);
-const sanitizedFixture = fixtureValidation.ok ? fixture as PublicDashboardSnapshot : null;
+const sanitizedFixture = fixtureValidation.ok ? fixture as unknown as PublicDashboardSnapshot : null;
 
 export function ResearchCommandCenter({
   snapshot = sanitizedFixture,
@@ -127,15 +128,15 @@ export function ResearchCommandCenter({
   );
 }
 
-function StatusCard({ label, value }: { label: React.ReactNode; value: string | null }) {
+function StatusCard({ label, value }: { label: ReactNode; value: string | null }) {
   return <div className="commandStatusCard"><span>{label}</span><strong>{value ?? "NOT_AVAILABLE"}</strong></div>;
 }
 
-function RegistryCard({ label, value }: { label: React.ReactNode; value: number | null }) {
+function RegistryCard({ label, value }: { label: ReactNode; value: number | null }) {
   return <div className="registryCard"><span>{label}</span><strong>{value ?? "NOT_AVAILABLE"}</strong></div>;
 }
 
-function QualityCard({ label, status }: { label: React.ReactNode; status: PublicResearchStatus }) {
+function QualityCard({ label, status }: { label: ReactNode; status: PublicResearchStatus }) {
   return <div className="qualityCard"><span>{label}</span><StatusBadge status={status} /></div>;
 }
 
