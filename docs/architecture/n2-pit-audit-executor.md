@@ -1,6 +1,6 @@
 # N2 PIT Audit Executor
 
-Status: implementation foundation; not registered in the live executor allowlist
+Status: registered integration; queue migration and one-shot execution pending
 Task: `TASK-N2-011`
 Safety: L0, read-only
 Date: 2026-08-05
@@ -25,10 +25,24 @@ It does not train a model, alter a dataset, write either SQLite database, change
 - pure audit core: `src/research-replay/n2PitAudit.ts`
 - immutable SQLite reader: `src/research-replay/n2PitAuditReader.ts`
 - standalone executor: `src/automation/n2PitAuditExecutor.ts`
+- preserved legacy executor core: `src/automation/taskExecutorsCore.ts`
+- canonical registry facade: `src/automation/taskExecutors.ts`
 - pure and SQLite tests:
   - `src/research-replay/n2PitAudit.test.ts`
   - `src/research-replay/n2PitAuditReader.test.ts`
   - `src/automation/n2PitAuditExecutor.test.ts`
+  - `src/automation/n2PitAuditRegistration.test.ts`
+  - `src/automation/n2PitAuditIntegration.test.ts`
+
+## Registration boundary
+
+The previous executor file is preserved byte-for-byte as `taskExecutorsCore.ts`. The canonical `taskExecutors.ts` facade re-exports the existing implementations and extends only the allowlisted resolver with:
+
+```text
+pit-audit -> runN2PitAuditExecutor
+```
+
+Arbitrary task types continue to return `EXECUTOR_NOT_REGISTERED`. The global registry identity advances to `n2-task-executor-registry-v3` so N2-011 cannot reuse an older idempotency identity.
 
 ## Source boundary
 
@@ -104,11 +118,41 @@ The executor requires:
 
 Both databases are opened through immutable read-only URIs with `PRAGMA query_only=ON`. The reader is bounded at 100,000 observations and detects truncation with `limit + 1`.
 
-## Current integration boundary
+The one-shot workflow materializes the exact dataset manifest from `automation/boat-pon-research` alongside the control state. It does not fall back to a main-branch fixture or regenerate the manifest.
 
-This branch intentionally does not modify `EXECUTORS`, task catalog or automation queue state while N2-010 remains unprocessed. Registration and the explicit `BLOCKED_EXECUTOR_PENDING -> READY` migration are separate steps after:
+## Queue migration
 
-1. the replacement N2-010 intent reaches a verified terminal result;
-2. the dataset manifest and lineage are read back;
-3. this foundation passes full CI;
-4. the integration diff can be applied without advancing `main` underneath an already queued self-hosted run.
+After this integration reaches `main`, the automation branch may be changed only when all of these exact preconditions still hold:
+
+1. `TASK-N2-010.status` is `PASS`;
+2. `TASK-N2-011.status` is `BLOCKED_EXECUTOR_PENDING`;
+3. `TASK-N2-011.taskDefinitionVersion` is `1`;
+4. `TASK-N2-011.attemptCount` is `0`;
+5. `TASK-N2-011.evidenceLinks` is empty;
+6. catalog definition `2` is `READY` and `pit-audit` resolves as implemented;
+7. the queue-state blob SHA has not changed since readback.
+
+The migration changes only:
+
+- catalog version to `2026-08-05-n2-governance-v3`;
+- queue `stateVersion += 1`;
+- queue `updatedAt`;
+- N2-011 status to `READY`;
+- N2-011 task definition version to `2`;
+- N2-011 `updatedAt`.
+
+Authority, attempts, evidence, result digest, failure and checkpoint remain empty. Reapplying the migration to the already-migrated state is a no-op; any different starting state blocks.
+
+## Runtime non-interference
+
+Registration, migration and execution do not modify:
+
+- Current BUY or selector/model parameters;
+- LINE content, timing or delivery state;
+- operational database schema or rows;
+- `app_settings`;
+- sidecar or primary database contents;
+- holdout contents;
+- production approval;
+- Cloudflare deployment;
+- automated betting.
