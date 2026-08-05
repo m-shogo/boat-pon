@@ -5,8 +5,12 @@
     "src/components/ResearchCommandCenter.tsx",
     "src/components/GlossaryTip.tsx"
   ],
+  "publicSourceFiles": [
+    "src/presentation/publicSnapshot.ts",
+    "src/presentation/publicSnapshot.test.ts",
+    "src/presentation/glossary.ts"
+  ],
   "publicSourceRoots": [
-    "src/presentation",
     "apps/portal/public",
     "packages/public-contracts/src",
     "packages/glossary/src"
