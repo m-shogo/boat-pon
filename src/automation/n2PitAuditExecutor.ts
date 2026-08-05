@@ -61,6 +61,10 @@ function asRecord(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
+function isNonNegativeInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0;
+}
+
 function validateDatasetPitEnvelope(parsed: Record<string, unknown>, expectedCount: number | null): {
   evidence: DatasetPitEvidence | null;
   errors: string[];
@@ -73,7 +77,7 @@ function validateDatasetPitEnvelope(parsed: Record<string, unknown>, expectedCou
   if (raw.status !== "NOT_APPLICABLE") errors.push("N2_DATASET_MANIFEST_PIT_STATUS_INVALID");
   if (raw.validatorId !== DATASET_PIT_VALIDATOR_ID) errors.push("N2_DATASET_MANIFEST_PIT_VALIDATOR_ID_MISMATCH");
   if (raw.validatorVersion !== DATASET_PIT_VALIDATOR_VERSION) errors.push("N2_DATASET_MANIFEST_PIT_VALIDATOR_VERSION_MISMATCH");
-  if (!Number.isInteger(raw.checkedRecordCount) || (raw.checkedRecordCount as number) < 0) {
+  if (!isNonNegativeInteger(raw.checkedRecordCount)) {
     errors.push("N2_DATASET_MANIFEST_PIT_CHECKED_COUNT_INVALID");
   } else if (expectedCount !== null && raw.checkedRecordCount !== expectedCount) {
     errors.push("N2_DATASET_MANIFEST_PIT_CHECKED_COUNT_MISMATCH");
@@ -83,7 +87,7 @@ function validateDatasetPitEnvelope(parsed: Record<string, unknown>, expectedCou
     ["futureViolationCount", "N2_DATASET_MANIFEST_PIT_FUTURE_VIOLATION"],
     ["ambiguousTimingCount", "N2_DATASET_MANIFEST_PIT_AMBIGUOUS_TIMING"],
   ] as const) {
-    if (!Number.isInteger(raw[field]) || raw[field] !== 0) errors.push(code);
+    if (!isNonNegativeInteger(raw[field]) || raw[field] !== 0) errors.push(code);
   }
   if (raw.evidencePath !== null) errors.push("N2_DATASET_MANIFEST_PIT_EVIDENCE_PATH_INVALID");
   if (raw.evidenceDigest !== null) errors.push("N2_DATASET_MANIFEST_PIT_EVIDENCE_DIGEST_INVALID");
@@ -149,9 +153,8 @@ function loadAndValidateManifest(repoRoot: string): {
   if (parsed.readOnly !== true) errors.push("N2_DATASET_MANIFEST_NOT_READ_ONLY");
 
   const inventoryTotals = asRecord(parsed.inventoryTotals);
-  const candidateCount = inventoryTotals && Number.isInteger(inventoryTotals.candidates)
-    && (inventoryTotals.candidates as number) >= 0
-    ? inventoryTotals.candidates as number
+  const candidateCount = inventoryTotals && isNonNegativeInteger(inventoryTotals.candidates)
+    ? inventoryTotals.candidates
     : null;
   if (candidateCount === null) errors.push("N2_DATASET_MANIFEST_INVENTORY_CANDIDATES_INVALID");
 
