@@ -2,6 +2,8 @@
   "schemaVersion": "product-boundary-policy-v1",
   "authority": "docs/architecture/public-non-interference-contract.md",
   "publicBrowserFiles": [
+    "src/public-main.tsx",
+    "src/components/PublicDashboardApp.tsx",
     "src/components/ResearchCommandCenter.tsx",
     "src/components/GlossaryTip.tsx",
     "src/components/usePublicDashboardSnapshot.ts"
@@ -29,9 +31,16 @@
   ],
   "allowedBrowserImportPatterns": [
     "^react$",
+    "^react-dom/client$",
     "^\\.\\.\\/presentation\\/",
+    "^\\.\\/presentation\\/",
+    "^\\.\\/components\\/PublicDashboardApp$",
+    "^\\.\\/PublicDashboardApp$",
+    "^\\.\\/ResearchCommandCenter$",
+    "^\\.\\/usePublicDashboardSnapshot$",
     "^\\.\\/GlossaryTip$",
     "^\\.\\/Tooltip$",
+    "^\\.\\/public-portal\\.css$",
     "^\\.\\.\\/public-dashboard\\.css$"
   ],
   "forbiddenImportFragments": [
