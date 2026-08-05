@@ -5,6 +5,7 @@ import {
   renderLiveCandidateHealth,
   type FableHypothesisCard,
 } from "../renderers/fable-fsharp/generated/Renderer.js";
+import { ResearchCommandCenter } from "./ResearchCommandCenter";
 
 const STATUS_LABEL: Record<string, string> = {
   "testing-historical": "履歴検証中",
@@ -46,50 +47,54 @@ export function ResearchLab({ candidateRows, racePrograms }: { candidateRows: nu
     return board.cards.filter((card) => !isRejectedStatus(card.status));
   }, [board, status]);
 
-  if (error) return <div className="errorBox">研究レジストリを読み込めません: {error}</div>;
-  if (!board) return <div className="loading">Fable Research Labを読み込み中...</div>;
-
   return (
-    <section className="researchLab" aria-label="Fable Research Lab">
-      <header className="researchLabHeader">
-        <div>
-          <p className="eyebrow">REAL FABLE / READ-ONLY RESEARCH VIEW</p>
-          <h2>仮説を増やすより、弱い仮説を早く捨てる</h2>
-          <p>F#で研究レジストリを表示用に変換。ROI・採否・設定は再計算せず、既存の根拠とブロック理由を見える化します。</p>
-        </div>
-        <div className="researchLabFilters" role="group" aria-label="仮説フィルター">
-          <button className={status === "active" ? "active" : ""} onClick={() => setStatus("active")}>継続中</button>
-          <button className={status === "rejected" ? "active" : ""} onClick={() => setStatus("rejected")}>棄却・凍結</button>
-          <button className={status === "all" ? "active" : ""} onClick={() => setStatus("all")}>すべて</button>
-        </div>
-      </header>
+    <>
+      <ResearchCommandCenter />
+      {error && <div className="errorBox">研究レジストリを読み込めません: {error}</div>}
+      {!error && !board && <div className="loading">Fable Research Labを読み込み中...</div>}
+      {!error && board && (
+        <section className="researchLab" aria-label="Fable Research Lab">
+          <header className="researchLabHeader">
+            <div>
+              <p className="eyebrow">REAL FABLE / READ-ONLY RESEARCH VIEW</p>
+              <h2>仮説を増やすより、弱い仮説を早く捨てる</h2>
+              <p>F#で研究レジストリを表示用に変換。ROI・採否・設定は再計算せず、既存の根拠とブロック理由を見える化します。</p>
+            </div>
+            <div className="researchLabFilters" role="group" aria-label="仮説フィルター">
+              <button className={status === "active" ? "active" : ""} onClick={() => setStatus("active")}>継続中</button>
+              <button className={status === "rejected" ? "active" : ""} onClick={() => setStatus("rejected")}>棄却・凍結</button>
+              <button className={status === "all" ? "active" : ""} onClick={() => setStatus("all")}>すべて</button>
+            </div>
+          </header>
 
-      <div className="researchLabSummary">
-        <Summary label="仮説総数" value={board.summary.total} />
-        <Summary label="監視・検証中" value={board.summary.monitoring} />
-        <Summary label="採用可能" value={board.summary.adoptionAllowed} />
-        <Summary label="採用ブロック" value={board.summary.blocked} />
-        <Summary label="棄却" value={board.summary.rejected} />
-      </div>
+          <div className="researchLabSummary">
+            <Summary label="仮説総数" value={board.summary.total} />
+            <Summary label="監視・検証中" value={board.summary.monitoring} />
+            <Summary label="採用可能" value={board.summary.adoptionAllowed} />
+            <Summary label="採用ブロック" value={board.summary.blocked} />
+            <Summary label="棄却" value={board.summary.rejected} />
+          </div>
 
-      <div className={`candidateMultiplicityAudit tone-${candidateHealth.tone}`}>
-        <div>
-          <span>候補多重度監査</span>
-          <strong>{candidateHealth.rowsPerRace.toFixed(1)} 行 / レース</strong>
-        </div>
-        <p>
-          candidate {candidateHealth.candidateRows.toLocaleString()}行 / 番組 {candidateHealth.racePrograms.toLocaleString()}レース。
-          {candidateHealth.hasMultiplicity
-            ? " 1レース複数候補が展開されています。live判定へ接続する前に、モデル最上位1件へ絞るpaper検証が必要です。"
-            : " 候補行とレース数は1対1です。"}
-        </p>
-      </div>
+          <div className={`candidateMultiplicityAudit tone-${candidateHealth.tone}`}>
+            <div>
+              <span>候補多重度監査</span>
+              <strong>{candidateHealth.rowsPerRace.toFixed(1)} 行 / レース</strong>
+            </div>
+            <p>
+              candidate {candidateHealth.candidateRows.toLocaleString()}行 / 番組 {candidateHealth.racePrograms.toLocaleString()}レース。
+              {candidateHealth.hasMultiplicity
+                ? " 1レース複数候補が展開されています。live判定へ接続する前に、モデル最上位1件へ絞るpaper検証が必要です。"
+                : " 候補行とレース数は1対1です。"}
+            </p>
+          </div>
 
-      <div className="hypothesisGrid">
-        {cards.map((card) => <HypothesisCard key={card.id} card={card} />)}
-      </div>
-      {cards.length === 0 && <p className="researchEmpty">該当する仮説はありません。</p>}
-    </section>
+          <div className="hypothesisGrid">
+            {cards.map((card) => <HypothesisCard key={card.id} card={card} />)}
+          </div>
+          {cards.length === 0 && <p className="researchEmpty">該当する仮説はありません。</p>}
+        </section>
+      )}
+    </>
   );
 }
 

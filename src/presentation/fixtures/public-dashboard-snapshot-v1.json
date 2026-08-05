@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "public-dashboard-snapshot-v1",
+  "generatedAt": "2026-08-05T05:15:45.389Z",
+  "dataAsOf": "2026-08-05T05:15:45.389Z",
+  "modelVersion": "research-public-fixture-v1",
+  "integrity": {
+    "algorithm": "sha256",
+    "digest": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "status": {
+    "currentPhase": "N2 dataset expansion readiness",
+    "readiness": "READY",
+    "lastRunAt": "2026-08-05T05:15:45.389Z",
+    "nextTask": "TASK-N2-010",
+    "runner": "NOT_AVAILABLE",
+    "snapshotFreshness": "STALE"
+  },
+  "metrics": [],
+  "pipeline": [
+    {
+      "taskId": "TASK-N2-001..006",
+      "label": "N2 foundation and governance prerequisites",
+      "status": "PASS",
+      "dependencies": [],
+      "evidence": ["pre-schedule-readiness-v1"]
+    },
+    {
+      "taskId": "TASK-N2-010",
+      "label": "Dataset expansion",
+      "status": "READY",
+      "dependencies": ["TASK-N2-001..006"],
+      "evidence": ["pre-schedule-readiness-v1"]
+    }
+  ],
+  "registries": {
+    "experiments": null,
+    "discoveries": null,
+    "rejections": null
+  },
+  "dataQuality": {
+    "coverageStatus": "NOT_AVAILABLE",
+    "pitStatus": "PASS",
+    "holdoutStatus": "PASS",
+    "commonCohortStatus": "NOT_AVAILABLE",
+    "notes": [
+      "This fixture is sanitized and intentionally contains no exact BUY candidate data.",
+      "Registry counts and live runner state are not inferred when unavailable."
+    ]
+  },
+  "methodologyReferences": [
+    {
+      "label": "Public / Owner data classification",
+      "path": "/methodology/public-private-boundary"
+    },
+    {
+      "label": "Point-in-time and holdout principles",
+      "path": "/methodology/research-safety"
+    }
+  ]
+}
