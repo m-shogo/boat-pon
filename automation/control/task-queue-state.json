@@ -1,8 +1,8 @@
 {
   "stateSchemaVersion": "research-queue-state-v1",
-  "stateVersion": 31,
+  "stateVersion": 34,
   "catalogVersion": "2026-08-05-n2-governance-v5",
-  "updatedAt": "2026-08-05T14:41:00.000Z",
+  "updatedAt": "2026-08-05T15:00:38.622Z",
   "tasks": {
     "TASK-N2-001": {
       "status": "PASS",
@@ -147,17 +147,20 @@
       "nextDecision": "blocks: none"
     },
     "TASK-N2-012": {
-      "status": "READY",
+      "status": "PASS",
       "taskDefinitionVersion": 1,
-      "authoritySha": null,
-      "attemptCount": 0,
+      "authoritySha": "e7930da54905eeb1c24e8dcdfc44a98a05ee775b",
+      "attemptCount": 1,
       "maxAttempts": 3,
-      "evidenceLinks": [],
-      "resultDigest": null,
+      "evidenceLinks": [
+        "reports/automation/history/31018081731-TASK-N2-012.json",
+        "reports/n2/n2-observation-ingest-readiness.json"
+      ],
+      "resultDigest": "48fb6f5b589870c8a362364d14132f5db3d4a7e624788694b8f40df4c46f7105",
       "lastFailure": null,
       "checkpoint": null,
-      "updatedAt": "2026-08-05T14:41:00.000Z",
-      "nextDecision": "run read-only readiness; do not enable writes or consume the final N2-011 attempt"
+      "updatedAt": "2026-08-05T15:00:38.622Z",
+      "nextDecision": "依存 task を次回 dispatch 候補にする（自動起動しない）"
     },
     "TASK-N2-020": {
       "status": "BLOCKED_EXECUTOR_PENDING",

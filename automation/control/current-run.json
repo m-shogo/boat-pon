@@ -1,21 +1,21 @@
 {
   "runSchemaVersion": "current-run-v1",
-  "updatedAt": "2026-08-05T14:02:03.505Z",
-  "lastResult": "CONDITIONAL",
-  "lastRequestId": "REQ-20260805-x6n2p8v4km",
-  "lastIntentId": "INTENT-20260805-x6n2p8v4km",
-  "lastTaskId": "TASK-N2-011",
+  "updatedAt": "2026-08-05T15:00:38.624Z",
+  "lastResult": "PASS",
+  "lastRequestId": "REQ-20260805-z4m8q2v6kn",
+  "lastIntentId": "INTENT-20260805-z4m8q2v6kn",
+  "lastTaskId": "TASK-N2-012",
   "lastSafetyLevel": "L0",
-  "authoritySha": "b8d7104483f3299a7b13a26e5d53c57f7bfe3334",
-  "stateVersion": 31,
-  "stateDigest": "68d6770a500348e8da6686334de38b03cdf7b68ce76cb7c8ce62ac20428ad142",
+  "authoritySha": "e7930da54905eeb1c24e8dcdfc44a98a05ee775b",
+  "stateVersion": 35,
+  "stateDigest": "6dac513fdf9364f5b6fbe7a5750a9595a2c7184578b0537ddace3482312577c2",
   "blocks": [],
-  "elapsedMs": 2627,
-  "evidencePath": "reports/automation/history/31013100745-TASK-N2-011.json",
+  "elapsedMs": 2665,
+  "evidencePath": "reports/automation/history/31018081731-TASK-N2-012.json",
   "outputs": [
-    "reports/n2/n2-pit-audit.json"
+    "reports/n2/n2-observation-ingest-readiness.json"
   ],
-  "outputDigest": "2f6da81d776d931e2df7cf27856fe081c85c5f08af6092818d19f4257c15d746",
-  "taskStatus": "CONDITIONAL",
+  "outputDigest": "48fb6f5b589870c8a362364d14132f5db3d4a7e624788694b8f40df4c46f7105",
+  "taskStatus": "PASS",
   "nextCandidate": "TASK-PLANNER-NEXT: queue planner: 次候補提案（自動起動しない。次回 dispatch で 1 回だけ依頼する）"
 }
