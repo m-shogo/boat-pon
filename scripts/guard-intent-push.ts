@@ -5,13 +5,19 @@
 //
 // 検証: exactly-one-added intent / immutable / path / filename↔intentId / strict schema /
 //       actor policy / expectedAuthoritySha / task 存在・READY・deps PASS・not RUNNING /
-//       replay(processed ledgers) / safety。すべて fail-closed。
+//       replay(processed ledgers) / equivalent pending intent / safety。すべて fail-closed。
 import { execFileSync } from "node:child_process";
-import { existsSync, lstatSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { INTENT_ID_RE, buildCanonicalRequest, isIntentProcessed, isRequestReplay, validateIntent } from "../src/automation/dispatchIntent";
+import {
+  analyzeEquivalentUnprocessedIntents,
+  validateIntentSupersession,
+  type IntentSupersession,
+} from "../src/automation/intentSupersession";
 import { computeStateDigest, mergeCatalogAndState, resolveTask, validateCatalog, validateQueueState } from "../src/automation/taskCatalog";
 
 const INTENTS_DIR = "automation/requests/intents";
+const SUPERSESSIONS_DIR = "automation/requests/supersessions";
 const AUTOMATION_BRANCH = "automation/boat-pon-research";
 const MAX_BYTES = 65536;
 const out = (k: string, v: string): void => { if (process.env.GITHUB_OUTPUT) writeFileSync(process.env.GITHUB_OUTPUT, `${k}=${v}\n`, { flag: "a" }); };
@@ -107,6 +113,53 @@ const processedRequests = (() => { try { return showBranch("automation/control/p
 const requestId = `REQ-${intent.intentId.replace(/^INTENT-/, "")}`;
 if (isIntentProcessed(processedIntents, intent.intentId)) fail(`replayed intentId: ${intent.intentId}`);
 if (isRequestReplay(processedRequests, requestId)) fail(`replayed requestId: ${requestId}`);
+
+// ---- 同一 task の未処理 intent: active は拒否、stale は明示 supersession のみ許可 ----
+const allIntents = readdirSync(INTENTS_DIR)
+  .filter((name) => /^INTENT-[0-9A-Za-z._-]{4,64}\.json$/.test(name))
+  .map((name) => {
+    const candidatePath = `${INTENTS_DIR}/${name}`;
+    let raw: unknown;
+    try { raw = JSON.parse(readFileSync(candidatePath, "utf8")); }
+    catch { fail(`existing intent is not valid JSON: ${candidatePath}`); }
+    const validation = validateIntent(raw);
+    if (!validation.valid || !validation.intent) fail(`invalid existing intent ${candidatePath}: ${validation.errors.join("; ")}`);
+    return validation.intent;
+  });
+
+const supersessions: IntentSupersession[] = existsSync(SUPERSESSIONS_DIR)
+  ? readdirSync(SUPERSESSIONS_DIR)
+      .filter((name) => /^SUPERSESSION-[0-9A-Za-z._-]{4,96}\.json$/.test(name))
+      .map((name) => {
+        const supersessionPath = `${SUPERSESSIONS_DIR}/${name}`;
+        let raw: unknown;
+        try { raw = JSON.parse(readFileSync(supersessionPath, "utf8")); }
+        catch { fail(`supersession is not valid JSON: ${supersessionPath}`); }
+        const validation = validateIntentSupersession(raw);
+        if (!validation.valid || !validation.supersession) {
+          fail(`invalid supersession ${supersessionPath}: ${validation.errors.join("; ")}`);
+        }
+        if (name !== `${validation.supersession.supersessionId}.json`) {
+          fail(`supersession filename must match supersessionId: ${supersessionPath}`);
+        }
+        return validation.supersession;
+      })
+  : [];
+
+const equivalent = analyzeEquivalentUnprocessedIntents({
+  currentIntent: intent,
+  allIntents,
+  processedIntentIds: Array.isArray(processedIntents.intentIds) ? processedIntents.intentIds : [],
+  supersessions,
+  acceptableAuthorityShas: acceptable,
+});
+if (equivalent.blockingIntentIds.length > 0) {
+  fail(`equivalent unprocessed intent exists without valid stale supersession: ${equivalent.blockingIntentIds.join(",")}`);
+}
+if (equivalent.supersededIntentIds.length > 0) {
+  console.error(`stale intent supersession accepted: ${equivalent.supersededIntentIds.join(",")} -> ${intent.intentId}`);
+  out("superseded_intent_ids", equivalent.supersededIntentIds.join(","));
+}
 
 // ---- task 解決（catalog+state）+ READY / deps / not RUNNING ----
 const merged = mergeCatalogAndState(catV.catalog!, state);
