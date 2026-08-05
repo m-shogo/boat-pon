@@ -37,6 +37,9 @@ jobs:
             exit 1
           fi
 
+      - name: Verify product/public one-way boundaries
+        run: node scripts/verify-product-boundaries.mjs
+
       - name: Test
         run: npm test
 

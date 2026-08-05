@@ -1,0 +1,103 @@
+{
+  "schemaVersion": "product-boundary-policy-v1",
+  "authority": "docs/architecture/public-non-interference-contract.md",
+  "publicBrowserFiles": [
+    "src/components/ResearchCommandCenter.tsx",
+    "src/components/GlossaryTip.tsx"
+  ],
+  "publicSourceFiles": [
+    "src/presentation/publicSnapshot.ts",
+    "src/presentation/publicSnapshot.test.ts",
+    "src/presentation/glossary.ts"
+  ],
+  "publicSourceRoots": [
+    "apps/portal/public",
+    "packages/public-contracts/src",
+    "packages/glossary/src"
+  ],
+  "optionalPaths": [
+    "apps/portal/public",
+    "packages/public-contracts/src",
+    "packages/glossary/src"
+  ],
+  "allowedBrowserImportPatterns": [
+    "^react$",
+    "^\\.\\.\\/presentation\\/",
+    "^\\.\\/GlossaryTip$",
+    "^\\.\\/Tooltip$",
+    "^\\.\\.\\/public-dashboard\\.css$"
+  ],
+  "forbiddenImportFragments": [
+    "/server/",
+    "../server",
+    "../../server",
+    "/domain/",
+    "../domain",
+    "../../domain",
+    "/decision/",
+    "../decision",
+    "../../decision",
+    "/production/",
+    "../production",
+    "../../production",
+    "better-sqlite3",
+    "sqlite3",
+    "notify-line",
+    "notificationWriter",
+    "app_settings",
+    "automation/requests",
+    "sidecar"
+  ],
+  "forbiddenBrowserPatterns": [
+    {
+      "id": "SIDE_EFFECT_DASHBOARD_ENDPOINT",
+      "pattern": "fetch\\s*\\(\\s*[\"'`]\\/api\\/dashboard"
+    },
+    {
+      "id": "OWNER_API_FROM_PUBLIC_BROWSER",
+      "pattern": "fetch\\s*\\(\\s*[\"'`]\\/api\\/owner"
+    },
+    {
+      "id": "BROWSER_WRITE_METHOD",
+      "pattern": "method\\s*:\\s*[\"'`](POST|PUT|PATCH|DELETE)[\"'`]"
+    },
+    {
+      "id": "PROCESS_ENV_IN_PUBLIC_BROWSER",
+      "pattern": "\\bprocess\\.env\\b"
+    },
+    {
+      "id": "PUBLIC_WEBSOCKET",
+      "pattern": "\\bnew\\s+WebSocket\\b"
+    },
+    {
+      "id": "PUBLIC_EVENT_SOURCE",
+      "pattern": "\\bnew\\s+EventSource\\b"
+    },
+    {
+      "id": "XMLHTTPREQUEST",
+      "pattern": "\\bXMLHttpRequest\\b"
+    }
+  ],
+  "protectedAuthoritativePaths": [
+    "src/domain",
+    "src/decision",
+    "src/production",
+    "server/db.ts",
+    "server/index.ts",
+    "scripts/notify-line.ts",
+    "automation/task-catalog.json",
+    "automation/phase-mapping.json",
+    "automation/requests",
+    "config/app_settings",
+    "data",
+    "research/registries"
+  ],
+  "requiredPrinciples": [
+    "LINE is independently actionable",
+    "Public export is not awaited by Current BUY or LINE",
+    "Public requests never reach the Mac data plane",
+    "Public failure degrades only Public Web",
+    "Public analytics and advertisements never feed BUY decisions",
+    "Public Web can be deleted without changing authoritative operation"
+  ]
+}
