@@ -1,0 +1,48 @@
+name: N2-011 replacement guard validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/n2-011-replacement-guard-validation.yml"
+      - "automation/requests/intents/INTENT-20260805-q9v4m2k7px.json"
+      - "automation/requests/supersessions/SUPERSESSION-20260805-n2-011-q9v4m2k7px.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: n2-011-replacement-guard-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate-guard:
+    runs-on: [self-hosted, macOS, boat-pon-local]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: cb90ea51f6383a37b393b38a0a16271786dd75df
+          fetch-depth: 0
+
+      - name: Install guard dependencies
+        run: |
+          set -euo pipefail
+          corepack enable
+          pnpm install --frozen-lockfile --prod=false
+
+      - name: Replay prospective push guard only
+        env:
+          ACTOR: m-shogo
+          REPO: m-shogo/boat-pon
+          EVENT: push
+          BEFORE_SHA: 5dedf08410865eed28e51590912677c765ad5fd2
+          AFTER_SHA: cb90ea51f6383a37b393b38a0a16271786dd75df
+          COMMIT_AUTHOR: m-shogo
+          COMMIT_COMMITTER: web-flow
+          CANONICAL_REQUEST_PATH: canonical-request.json
+        run: |
+          set -euo pipefail
+          pnpm automation:guard-intent
+          node scripts/assert-canonical-request.mjs canonical-request.json
+          node -e 'const r=require("./canonical-request.json"); if(r.taskId!=="TASK-N2-011"||r.requestId!=="REQ-20260805-q9v4m2k7px"||r.safetyLevel!=="L0") process.exit(1)'
