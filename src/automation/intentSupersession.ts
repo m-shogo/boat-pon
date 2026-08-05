@@ -123,6 +123,27 @@ export type EquivalentIntentAnalysis = {
   supersededIntentIds: string[];
 };
 
+function hasDurableSupersession(input: {
+  candidate: DispatchIntent;
+  allIntentsById: Map<string, DispatchIntent>;
+  supersessions: IntentSupersession[];
+}): boolean {
+  return input.supersessions.some((record) => {
+    if (record.taskId !== input.candidate.taskId) return false;
+    const replacement = input.allIntentsById.get(record.replacementIntentId);
+    if (!replacement) return false;
+    if (replacement.intentId === input.candidate.intentId) return false;
+    if (replacement.taskId !== input.candidate.taskId) return false;
+    if (replacement.requestedAction !== input.candidate.requestedAction) return false;
+    if (!authorityMatches(replacement.expectedAuthoritySha, [record.observedAuthoritySha])) return false;
+    return record.supersededIntents.some((entry) =>
+      entry.intentId === input.candidate.intentId &&
+      entry.expectedAuthoritySha === input.candidate.expectedAuthoritySha &&
+      entry.reason === "AUTHORITY_SHA_MISMATCH"
+    );
+  });
+}
+
 export function analyzeEquivalentUnprocessedIntents(input: {
   currentIntent: DispatchIntent;
   allIntents: DispatchIntent[];
@@ -131,6 +152,7 @@ export function analyzeEquivalentUnprocessedIntents(input: {
   acceptableAuthorityShas: string[];
 }): EquivalentIntentAnalysis {
   const processed = new Set(input.processedIntentIds);
+  const allIntentsById = new Map(input.allIntents.map((intent) => [intent.intentId, intent]));
   const blockingIntentIds: string[] = [];
   const supersededIntentIds: string[] = [];
 
@@ -140,24 +162,20 @@ export function analyzeEquivalentUnprocessedIntents(input: {
     if (candidate.requestedAction !== input.currentIntent.requestedAction) continue;
     if (processed.has(candidate.intentId)) continue;
 
+    // A still-current equivalent intent is active work and can never be superseded.
     if (authorityMatches(candidate.expectedAuthoritySha, input.acceptableAuthorityShas)) {
       blockingIntentIds.push(candidate.intentId);
       continue;
     }
 
-    const superseded = input.supersessions.some((record) =>
-      record.taskId === input.currentIntent.taskId &&
-      record.replacementIntentId === input.currentIntent.intentId &&
-      authorityMatches(record.observedAuthoritySha, input.acceptableAuthorityShas) &&
-      record.supersededIntents.some((entry) =>
-        entry.intentId === candidate.intentId &&
-        entry.expectedAuthoritySha === candidate.expectedAuthoritySha &&
-        entry.reason === "AUTHORITY_SHA_MISMATCH",
-      ),
-    );
-
-    if (superseded) supersededIntentIds.push(candidate.intentId);
-    else blockingIntentIds.push(candidate.intentId);
+    // A merged strict supersession is a durable terminal classification. Its validity is
+    // anchored to the immutable replacement intent and the authority observed when that
+    // replacement was created, not to whatever main SHA happens to be current later.
+    if (hasDurableSupersession({ candidate, allIntentsById, supersessions: input.supersessions })) {
+      supersededIntentIds.push(candidate.intentId);
+    } else {
+      blockingIntentIds.push(candidate.intentId);
+    }
   }
 
   return {
