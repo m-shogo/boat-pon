@@ -38,3 +38,12 @@ Edge Taxonomy の未探索領域から新しい Experiment を提案する（自
 未実装 executor（`pit-audit` / `baseline-*` / `evaluation-metrics` / `edge-*` / `confounder-audit`）は
 catalog で `BLOCKED_EXECUTOR_PENDING`。誤って dispatch されても SDK が `ENGINEERING_REQUIRED` を返して停止する。
 実装は `docs/research-platform-master-plan.md` の Phase 依存順（N2→N3→N4→N5→N6→N7→N8, D2/E1/E2）に従う。
+
+## Executor SDK と Orchestrator の責任境界（ADR-0005）
+
+- **Executor SDK**: artifact + evidence の完成までを保証（read-only / write-scope / PIT / readback）。
+  **queue-state を変更しない**。dry-run は `DRY_RUN_OK`（PASS ではない・write なし）。
+- **Orchestrator（runner）**: queue-state CAS・`READY→…→PASS/FAILED/BLOCKED` 遷移・current-run・
+  processed ledger を **単独で** 担当。dry-run intent は executor を呼ばず短絡し task status を変えない。
+- artifact/evidence が成功しても orchestrator の CAS が失敗すれば task は PASS にならない（fail-closed）。
+- state transition は 1 回だけ。replay/idempotency で二重遷移しない。
