@@ -22,7 +22,7 @@
     { "legacy": "TASK-N2-004", "phase": "N2", "role": "dataset inventory", "status": "PASS", "retainHistory": true },
     { "legacy": "TASK-N2-005", "phase": "N2", "role": "holdout freeze + time split", "status": "PASS", "retainHistory": true },
     { "legacy": "TASK-N2-006", "phase": "N2", "role": "settlement coverage audit", "status": "PASS", "retainHistory": true },
-    { "legacy": "TASK-N2-010", "phase": "N2", "role": "dataset-expand", "alias": "TASK-N2-EXPAND", "status": "PASS", "retainHistory": true },
+    { "legacy": "TASK-N2-010", "phase": "N2", "role": "dataset-expand", "alias": "TASK-N2-EXPAND", "status": "implemented_ready", "retainHistory": true },
     { "legacy": "TASK-N2-011", "phase": "N4", "role": "PIT audit (post feature join)", "status": "implemented_ready", "retainHistory": true },
     { "legacy": "TASK-N2-020", "phase": "N5", "role": "market-only baseline", "status": "engineering_required", "retainHistory": true },
     { "legacy": "TASK-N2-021", "phase": "N5", "role": "historical/racer baseline", "status": "engineering_required", "retainHistory": true },
