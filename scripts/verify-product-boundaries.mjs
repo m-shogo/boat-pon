@@ -26,6 +26,7 @@ try {
 
 const requiredArrays = [
   "publicBrowserFiles",
+  "publicSourceFiles",
   "publicSourceRoots",
   "optionalPaths",
   "allowedBrowserImportPatterns",
@@ -99,10 +100,12 @@ const publicFiles = new Set();
 for (const root of policy.publicSourceRoots) {
   for (const file of collectSourceFiles(root)) publicFiles.add(file);
 }
-for (const file of policy.publicBrowserFiles) {
+for (const file of [...policy.publicSourceFiles, ...policy.publicBrowserFiles]) {
   const absolutePath = resolve(repoRoot, file);
   if (!existsSync(absolutePath)) {
-    fail(`required public browser file is missing: ${file}`);
+    fail(`required declared public source is missing: ${file}`);
+  } else if (!sourceExtensions.has(extname(absolutePath))) {
+    fail(`declared public source has unsupported extension: ${file}`);
   } else {
     publicFiles.add(absolutePath);
   }
@@ -144,6 +147,7 @@ for (const absolutePath of publicFiles) {
 
 const normalizedPublicPaths = [
   ...policy.publicSourceRoots,
+  ...policy.publicSourceFiles,
   ...policy.publicBrowserFiles,
 ].map((value) => `${toPosix(value).replace(/\/$/, "")}/`);
 
@@ -161,6 +165,6 @@ if (policy.requiredPrinciples.length < 6) {
 }
 
 if (!process.exitCode) {
-  console.log(`product boundary check passed (${publicFiles.size} public source files scanned)`);
+  console.log(`product boundary check passed (${publicFiles.size} declared public source files scanned)`);
   console.log("LINE/Current BUY remain upstream of optional public publication by policy.");
 }
