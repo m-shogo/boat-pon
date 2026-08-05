@@ -16,6 +16,7 @@
     "src/presentation/publicSnapshotBuilder.ts",
     "src/presentation/publicSnapshotBuilder.test.ts",
     "src/presentation/publicSnapshotExporter.test.ts",
+    "src/presentation/publicDashboardShell.test.ts",
     "src/presentation/glossary.ts",
     "scripts/export-public-dashboard-snapshot.ts"
   ],
