@@ -36,7 +36,13 @@
     "minFreeDiskBytes": 21474836480,
     "emergencyStopPath": "automation/EMERGENCY_STOP",
     "pausePath": "automation/PAUSED",
-    "forbidScheduleTriggers": true
+    "forbidScheduleTriggers": true,
+    "diskThresholds": {
+      "warningFreeBytes": 21474836480,
+      "warningFreeRatio": 0.15,
+      "criticalFreeBytes": 10737418240,
+      "criticalFreeRatio": 0.08
+    }
   },
   "dataRoot": "/Users/m-shogo/Developer/personal/boat-pon",
   "dataRootNote": "実データ（9GB sidecar / 43GB archive）は Git 管理外のため、runner の _work checkout ではなく canonical repo path を read-only で読む。"
