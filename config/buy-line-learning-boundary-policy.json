@@ -1,0 +1,48 @@
+{
+  "policyVersion": "buy-line-learning-boundary-v1",
+  "authorityRoadmap": "docs/roadmaps/safe-growth-implementation-roadmap-2026-08-05.md",
+  "requiredFiles": [
+    "docs/roadmaps/safe-growth-implementation-roadmap-2026-08-05.md",
+    "src/domain/buyLineMessageContract.ts",
+    "src/domain/buyLineMessageContract.test.ts"
+  ],
+  "requiredRoadmapMarkers": [
+    "Current BUY conditions remain frozen",
+    "do not create another N2-010 intent",
+    "Runtime Decision Ledger",
+    "Outcome Learning Ledger",
+    "Forward Evaluation Vault",
+    "Automatic public projection"
+  ],
+  "protectedOperationalFiles": [
+    "scripts/notify-line.ts",
+    "src/domain/lineMessaging.ts",
+    "src/domain/liveMonitor.ts",
+    "src/domain/buyLineMessageContract.ts"
+  ],
+  "forbiddenOperationalImportFragments": [
+    "/research/",
+    "../research",
+    "src/research",
+    "publicSnapshot",
+    "presentation/public",
+    "cloudflare",
+    "wrangler",
+    "analytics",
+    "advertising"
+  ],
+  "researchRoots": [
+    "src/research"
+  ],
+  "forbiddenResearchImportFragments": [
+    "lineMessaging",
+    "notify-line",
+    "liveMonitor",
+    "buyLineMessageContract",
+    "server/db",
+    "appSettings",
+    "app_settings",
+    "production",
+    "publicSnapshot"
+  ]
+}
