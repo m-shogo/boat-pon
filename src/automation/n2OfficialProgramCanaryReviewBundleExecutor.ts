@@ -22,7 +22,7 @@ import {
 import type { Executor, ExecutorResult } from "./taskExecutors";
 
 export const N2_OFFICIAL_PROGRAM_CANARY_REVIEW_EXECUTOR_VERSION =
-  "n2-official-program-canary-review-executor-v1";
+  "n2-official-program-canary-review-executor-v2";
 const REPORT_RELATIVE_PATH = "reports/n2/n2-official-program-canary-review-bundle.json";
 const PRIMARY_DB_FILENAME = "boat.sqlite";
 
@@ -69,6 +69,7 @@ export const runN2OfficialProgramCanaryReviewBundleExecutor: Executor = (ctx) =>
       return { ok: errors.length === 0, errors };
     },
     executeReadOnly: () => {
+      const generatedAt = new Date().toISOString();
       const codeGitSha = checkoutSha(ctx.repoRoot);
       const source = readOfficialProgramCanarySource({ primaryDbPath });
       const manifest = buildOfficialProgramCanaryManifest({
@@ -77,7 +78,7 @@ export const runN2OfficialProgramCanaryReviewBundleExecutor: Executor = (ctx) =>
         sourceReadTruncated: source.truncated,
         maxRaces: 20,
         codeGitSha,
-        generatedAt: `${source.cohort.dateTo}T23:59:59.000Z`,
+        generatedAt,
       });
       const readinessRead = readN2ObservationIngestReadiness({
         primaryDbPath,
@@ -89,7 +90,7 @@ export const runN2OfficialProgramCanaryReviewBundleExecutor: Executor = (ctx) =>
         const gatePreview = resolveOfficialProgramCanaryGate(sidecar, {
           manifest,
           executionMode: "production",
-          rolloutStartedAt: new Date().toISOString(),
+          rolloutStartedAt: generatedAt,
           onDisk: {
             codeGitSha,
             hasActiveWal: false,
@@ -102,7 +103,7 @@ export const runN2OfficialProgramCanaryReviewBundleExecutor: Executor = (ctx) =>
         const bundle = buildOfficialProgramCanaryReviewBundle({
           manifest,
           authoritySha: codeGitSha,
-          generatedAt: new Date().toISOString(),
+          generatedAt,
           currentOfficialProgramObservationCount: readiness.sidecar.officialProgramObservationCount,
           currentTrifectaMarketObservationCount: readiness.sidecar.trifectaMarketObservationCount,
           currentGlobalShadowWriteEnabled: readiness.rollout.shadowWriteEnabled,
