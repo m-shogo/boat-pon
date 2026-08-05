@@ -16,6 +16,13 @@
     "packages/public-contracts/src",
     "packages/glossary/src"
   ],
+  "allowedBrowserImportPatterns": [
+    "^react$",
+    "^\\.\\.\\/presentation\\/",
+    "^\\.\\/GlossaryTip$",
+    "^\\.\\/Tooltip$",
+    "^\\.\\.\\/public-dashboard\\.css$"
+  ],
   "forbiddenImportFragments": [
     "/server/",
     "../server",
