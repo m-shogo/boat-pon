@@ -6,6 +6,7 @@ import {
   type FableHypothesisCard,
 } from "../renderers/fable-fsharp/generated/Renderer.js";
 import { ResearchCommandCenter } from "./ResearchCommandCenter";
+import { usePublicDashboardSnapshot } from "./usePublicDashboardSnapshot";
 
 const STATUS_LABEL: Record<string, string> = {
   "testing-historical": "履歴検証中",
@@ -28,6 +29,7 @@ export function ResearchLab({ candidateRows, racePrograms }: { candidateRows: nu
   const [registry, setRegistry] = useState<ResearchHypothesisRegistry | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState("active");
+  const publicSnapshot = usePublicDashboardSnapshot();
 
   useEffect(() => {
     fetchResearchHypotheses().then(setRegistry).catch((reason) => {
@@ -49,7 +51,13 @@ export function ResearchLab({ candidateRows, racePrograms }: { candidateRows: nu
 
   return (
     <>
-      <ResearchCommandCenter />
+      <ResearchCommandCenter
+        snapshot={publicSnapshot.snapshot}
+        observedFreshness={publicSnapshot.observedFreshness}
+        loading={publicSnapshot.loading}
+        errors={publicSnapshot.errors}
+        warnings={publicSnapshot.warnings}
+      />
       {error && <div className="errorBox">研究レジストリを読み込めません: {error}</div>}
       {!error && !board && <div className="loading">Fable Research Labを読み込み中...</div>}
       {!error && board && (

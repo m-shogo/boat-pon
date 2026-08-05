@@ -3,12 +3,19 @@
   "authority": "docs/architecture/public-non-interference-contract.md",
   "publicBrowserFiles": [
     "src/components/ResearchCommandCenter.tsx",
-    "src/components/GlossaryTip.tsx"
+    "src/components/GlossaryTip.tsx",
+    "src/components/usePublicDashboardSnapshot.ts"
   ],
   "publicSourceFiles": [
     "src/presentation/publicSnapshot.ts",
     "src/presentation/publicSnapshot.test.ts",
-    "src/presentation/glossary.ts"
+    "src/presentation/publicSnapshotTransport.ts",
+    "src/presentation/publicSnapshotTransport.test.ts",
+    "src/presentation/publicSnapshotBuilder.ts",
+    "src/presentation/publicSnapshotBuilder.test.ts",
+    "src/presentation/publicSnapshotExporter.test.ts",
+    "src/presentation/glossary.ts",
+    "scripts/export-public-dashboard-snapshot.ts"
   ],
   "publicSourceRoots": [
     "apps/portal/public",
