@@ -109,7 +109,7 @@ test("stale equivalent intent blocks without a matching supersession", () => {
   assert.deepEqual(analysis.supersededIntentIds, []);
 });
 
-test("stale equivalent intent is replaced only by a current matching supersession", () => {
+test("stale equivalent intent is replaced only by a matching immutable replacement binding", () => {
   const current = intent();
   const staleOld = intent({ intentId: "INTENT-20260805-old1234567", expectedAuthoritySha: "1184fa4" });
   const analysis = analyzeEquivalentUnprocessedIntents({
@@ -121,6 +121,44 @@ test("stale equivalent intent is replaced only by a current matching supersessio
   });
   assert.deepEqual(analysis.blockingIntentIds, []);
   assert.deepEqual(analysis.supersededIntentIds, [staleOld.intentId]);
+});
+
+test("supersession remains terminal after main advances and its replacement is processed", () => {
+  const old = intent({ intentId: "INTENT-20260805-old1234567", expectedAuthoritySha: "1184fa4" });
+  const replacement = intent();
+  const future = intent({
+    intentId: "INTENT-20260806-future12345",
+    expectedAuthoritySha: "bbbbbbb",
+    requestReference: "REQ-20260806-future12345",
+  });
+  const analysis = analyzeEquivalentUnprocessedIntents({
+    currentIntent: future,
+    allIntents: [old, replacement, future],
+    processedIntentIds: [replacement.intentId],
+    supersessions: [supersession()],
+    acceptableAuthorityShas: ["bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"],
+  });
+  assert.deepEqual(analysis.blockingIntentIds, []);
+  assert.deepEqual(analysis.supersededIntentIds, [old.intentId]);
+});
+
+test("unprocessed stale replacement blocks a later intent even when older intent is terminal", () => {
+  const old = intent({ intentId: "INTENT-20260805-old1234567", expectedAuthoritySha: "1184fa4" });
+  const replacement = intent();
+  const future = intent({
+    intentId: "INTENT-20260806-future12345",
+    expectedAuthoritySha: "bbbbbbb",
+    requestReference: "REQ-20260806-future12345",
+  });
+  const analysis = analyzeEquivalentUnprocessedIntents({
+    currentIntent: future,
+    allIntents: [old, replacement, future],
+    processedIntentIds: [],
+    supersessions: [supersession()],
+    acceptableAuthorityShas: ["bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"],
+  });
+  assert.deepEqual(analysis.blockingIntentIds, [replacement.intentId]);
+  assert.deepEqual(analysis.supersededIntentIds, [old.intentId]);
 });
 
 test("processed equivalent intent is ignored", () => {
@@ -136,7 +174,7 @@ test("processed equivalent intent is ignored", () => {
   assert.deepEqual(analysis, { blockingIntentIds: [], supersededIntentIds: [] });
 });
 
-test("supersession observed against an older authority does not unlock replacement", () => {
+test("supersession whose observed authority does not bind to replacement remains invalid", () => {
   const current = intent();
   const staleOld = intent({ intentId: "INTENT-20260805-old1234567", expectedAuthoritySha: "1184fa4" });
   const analysis = analyzeEquivalentUnprocessedIntents({
@@ -145,6 +183,23 @@ test("supersession observed against an older authority does not unlock replaceme
     processedIntentIds: [],
     supersessions: [supersession({ observedAuthoritySha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" })],
     acceptableAuthorityShas: ["00c6f4bcf891e00d0f8b6ffdb11727ca626b30b1"],
+  });
+  assert.deepEqual(analysis.blockingIntentIds, [staleOld.intentId]);
+});
+
+test("supersession pointing to a missing replacement remains invalid", () => {
+  const current = intent({
+    intentId: "INTENT-20260806-future12345",
+    expectedAuthoritySha: "bbbbbbb",
+    requestReference: "REQ-20260806-future12345",
+  });
+  const staleOld = intent({ intentId: "INTENT-20260805-old1234567", expectedAuthoritySha: "1184fa4" });
+  const analysis = analyzeEquivalentUnprocessedIntents({
+    currentIntent: current,
+    allIntents: [staleOld, current],
+    processedIntentIds: [],
+    supersessions: [supersession()],
+    acceptableAuthorityShas: ["bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"],
   });
   assert.deepEqual(analysis.blockingIntentIds, [staleOld.intentId]);
 });
