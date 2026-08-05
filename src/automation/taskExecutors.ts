@@ -2,12 +2,13 @@
 //
 // The original executor implementations remain byte-for-byte preserved in
 // taskExecutorsCore.ts. This facade extends only the allowlisted resolution
-// path with the separately reviewed N2 PIT audit executor.
+// path with separately reviewed N2 executors.
+import { runN2ObservationIngestReadinessExecutor } from "./n2ObservationIngestReadinessExecutor";
 import { runN2PitAuditExecutor } from "./n2PitAuditExecutor";
 import {
   CANARY_COHORT,
   EXECUTORS as CORE_EXECUTORS,
-  KNOWN_TASK_TYPES,
+  KNOWN_TASK_TYPES as CORE_KNOWN_TASK_TYPES,
   runDatasetCanary,
   runDatasetExpand,
   runDatasetInventory,
@@ -23,7 +24,6 @@ import {
 
 export {
   CANARY_COHORT,
-  KNOWN_TASK_TYPES,
   runDatasetCanary,
   runDatasetExpand,
   runDatasetInventory,
@@ -35,15 +35,21 @@ export {
 };
 export type { Executor, ExecutorContext, ExecutorResult };
 
-export const EXECUTOR_REGISTRY_VERSION = "n2-task-executor-registry-v3";
+export const EXECUTOR_REGISTRY_VERSION = "n2-task-executor-registry-v4";
+
+export const KNOWN_TASK_TYPES = [
+  ...CORE_KNOWN_TASK_TYPES,
+  "observation-ingest-readiness",
+] as const;
 
 // Compatibility export for existing callers/tests that inspect the legacy core
-// list. Runtime resolution below is the authority and includes pit-audit.
+// list. Runtime resolution below is the authority and includes reviewed N2 additions.
 export const EXECUTORS: Readonly<Record<string, Executor>> = CORE_EXECUTORS;
 
 const REGISTERED_EXECUTORS: Readonly<Record<string, Executor>> = Object.freeze({
   ...CORE_EXECUTORS,
   "pit-audit": runN2PitAuditExecutor,
+  "observation-ingest-readiness": runN2ObservationIngestReadinessExecutor,
 });
 
 export function isExecutorImplemented(taskType: string): boolean {
