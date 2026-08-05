@@ -19,9 +19,14 @@
     "src/presentation/publicSnapshotPublisher.ts",
     "src/presentation/publicSnapshotPublisher.test.ts",
     "src/presentation/publicDashboardShell.test.ts",
+    "src/presentation/publicDeployBundle.ts",
+    "src/presentation/publicDeployBundle.test.ts",
     "src/presentation/glossary.ts",
     "scripts/export-public-dashboard-snapshot.ts",
-    "scripts/publish-public-dashboard-snapshot.ts"
+    "scripts/publish-public-dashboard-snapshot.ts",
+    "scripts/assemble-public-dashboard-deploy.ts",
+    "scripts/verify-public-dashboard-deploy.ts",
+    "vite.public.config.ts"
   ],
   "publicSourceRoots": [
     "apps/portal/public",
