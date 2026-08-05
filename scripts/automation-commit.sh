@@ -5,7 +5,7 @@
 set -euo pipefail
 
 BRANCH="automation/boat-pon-research"
-ALLOWED_PREFIXES=("automation/control/" "automation/requests/" "reports/automation/" "docs/automation/" "reports/n2/n2-dataset-canary." "reports/n2/n2-corrected-eligibility." "reports/n2/n2-win-refund-omission-audit." "reports/n2/n2-dataset-inventory." "reports/n2/n2-holdout-freeze." "reports/n2/n2-feature-coverage-audit." "reports/n2/n2-dataset-manifest." "reports/n2/n2-pit-audit." "reports/n2/n2-observation-ingest-readiness." "research/registries/experiments/" "research/registries/discoveries/")
+ALLOWED_PREFIXES=("automation/control/" "automation/requests/" "reports/automation/" "docs/automation/" "reports/n2/n2-dataset-canary." "reports/n2/n2-corrected-eligibility." "reports/n2/n2-win-refund-omission-audit." "reports/n2/n2-dataset-inventory." "reports/n2/n2-holdout-freeze." "reports/n2/n2-feature-coverage-audit." "reports/n2/n2-dataset-manifest." "reports/n2/n2-pit-audit." "reports/n2/n2-observation-ingest-readiness." "reports/n2/n2-official-program-canary-review-bundle." "research/registries/experiments/" "research/registries/discoveries/")
 MAX_BYTES=2097152
 
 cd "$(git rev-parse --show-toplevel)"
