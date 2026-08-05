@@ -1,0 +1,242 @@
+{
+  "readinessSchemaVersion": "pre-schedule-readiness-v1",
+  "mainSha": "014337cd478e2a5e46a14b05b2ce21b382f7326f",
+  "automationSha": "bb4a4d5c471bff74295a9d58038dd91f6d181dc7",
+  "localHead": "cc3a38897e6ef6d43a0dcf8e59261ba9c42bb29a",
+  "runnerVersion": "research-executor-sdk-v3",
+  "catalogVersion": "2026-08-05-n2-governance-v2",
+  "stateVersion": 19,
+  "stateInfo": "stateVersion=19 catalogVersion=2026-08-05-n2-governance-v2",
+  "migrationIdempotency": "NO_CHANGE",
+  "disk": {
+    "freeBytes": 432736268288,
+    "totalBytes": 994610155520,
+    "freeRatio": 0.4350812887706317,
+    "level": "ok"
+  },
+  "checks": [
+    {
+      "name": "mainShaFetched",
+      "status": "PASS",
+      "severity": "P0",
+      "detail": "014337cd478e"
+    },
+    {
+      "name": "automationShaFetched",
+      "status": "PASS",
+      "severity": "P0",
+      "detail": "bb4a4d5c471b"
+    },
+    {
+      "name": "workingTreeClean",
+      "status": "PASS",
+      "severity": "P2",
+      "detail": "clean"
+    },
+    {
+      "name": "catalogSchemaValid",
+      "status": "PASS",
+      "severity": "P0",
+      "detail": "valid"
+    },
+    {
+      "name": "queueStateSchemaValid",
+      "status": "PASS",
+      "severity": "P0",
+      "detail": "valid"
+    },
+    {
+      "name": "catalogVersionMatch",
+      "status": "PASS",
+      "severity": "P0",
+      "detail": "2026-08-05-n2-governance-v2 vs 2026-08-05-n2-governance-v2"
+    },
+    {
+      "name": "migrationIdempotentNoChange",
+      "status": "PASS",
+      "severity": "P0",
+      "detail": "NO_CHANGE"
+    },
+    {
+      "name": "n2_001to006_PASS",
+      "status": "PASS",
+      "severity": "P0",
+      "detail": "all PASS"
+    },
+    {
+      "name": "n2_010_READY_v2",
+      "status": "PASS",
+      "severity": "P0",
+      "detail": "READY v2"
+    },
+    {
+      "name": "n2_011plus_BLOCKED",
+      "status": "PASS",
+      "severity": "P1",
+      "detail": "8/8 blocked"
+    },
+    {
+      "name": "failedIntentHistoryPreserved",
+      "status": "PASS",
+      "severity": "P0",
+      "detail": "not replayed into ledger"
+    },
+    {
+      "name": "datasetExpandNotYetRun",
+      "status": "PASS",
+      "severity": "P2",
+      "detail": "no manifest yet"
+    },
+    {
+      "name": "diskStatus",
+      "status": "PASS",
+      "severity": "P2",
+      "detail": "403GB free (43.5%) level=ok"
+    },
+    {
+      "name": "sidecarExists",
+      "status": "PASS",
+      "severity": "P0",
+      "detail": "9.09GB"
+    },
+    {
+      "name": "walQuiescent",
+      "status": "PASS",
+      "severity": "P0",
+      "detail": "quiescent"
+    },
+    {
+      "name": "sidecarReadOnlyOpen",
+      "status": "PASS",
+      "severity": "P0",
+      "detail": "immutable=1 + query_only"
+    },
+    {
+      "name": "sidecarWriteRejected",
+      "status": "PASS",
+      "severity": "P0",
+      "detail": "write blocked"
+    },
+    {
+      "name": "sidecarSchemaExpectedTables",
+      "status": "PASS",
+      "severity": "P0",
+      "detail": "all present"
+    },
+    {
+      "name": "sidecarReadSmoke",
+      "status": "PASS",
+      "severity": "P1",
+      "detail": "schema_version=107, read 1 row ok"
+    },
+    {
+      "name": "inventoryQueryPlanOk",
+      "status": "PASS",
+      "severity": "P2",
+      "detail": "2 plan rows (not executed)"
+    },
+    {
+      "name": "correctedTruthFreezePresent",
+      "status": "PASS",
+      "severity": "P0",
+      "detail": "present"
+    },
+    {
+      "name": "holdoutFreezePresent",
+      "status": "PASS",
+      "severity": "P1",
+      "detail": "on automation branch"
+    },
+    {
+      "name": "currentBuyIsolation",
+      "status": "PASS",
+      "severity": "P0",
+      "detail": "no Current BUY files changed"
+    },
+    {
+      "name": "productionIsolation",
+      "status": "PASS",
+      "severity": "P0",
+      "detail": "no production files changed"
+    },
+    {
+      "name": "appSettingsIsolation",
+      "status": "PASS",
+      "severity": "P0",
+      "detail": "readiness code has no app_settings connection"
+    },
+    {
+      "name": "secretScan",
+      "status": "PASS",
+      "severity": "P0",
+      "detail": "no secrets"
+    },
+    {
+      "name": "holdoutRawKeyIsolation",
+      "status": "PASS",
+      "severity": "P0",
+      "detail": "2 holdout races kept as setId/digest only (not emitted here)"
+    },
+    {
+      "name": "backupRestoreMetadataSmoke",
+      "status": "PASS",
+      "severity": "P1",
+      "detail": "3 metadata files restore+digest verified (large DB not copied)"
+    },
+    {
+      "name": "branchHeadUnchanged",
+      "status": "PASS",
+      "severity": "P0",
+      "detail": "bb4a4d5c == bb4a4d5c"
+    },
+    {
+      "name": "noManifestGenerated",
+      "status": "PASS",
+      "severity": "P0",
+      "detail": "no dataset-expand artifact written"
+    },
+    {
+      "name": "testsGreen",
+      "status": "PASS",
+      "severity": "P0",
+      "detail": "PASS"
+    },
+    {
+      "name": "typecheckGreen",
+      "status": "PASS",
+      "severity": "P0",
+      "detail": "PASS"
+    },
+    {
+      "name": "buildGreen",
+      "status": "PASS",
+      "severity": "P0",
+      "detail": "PASS"
+    },
+    {
+      "name": "governanceGreen",
+      "status": "PASS",
+      "severity": "P0",
+      "detail": "PASS"
+    },
+    {
+      "name": "goldenGreen",
+      "status": "PASS",
+      "severity": "P1",
+      "detail": "PASS"
+    },
+    {
+      "name": "ciGreen",
+      "status": "PASS",
+      "severity": "P0",
+      "detail": "GREEN"
+    }
+  ],
+  "verdict": "PASS",
+  "unresolvedBlockers": [],
+  "pendingTask": "TASK-N2-010 (READY, dataset-expand)",
+  "prMerged": "pending",
+  "evidenceLinks": [],
+  "outputDigest": "593b442b43706fdf34fedff51cd4e33597e5f277145fa764e1f22964b70fe672",
+  "evaluatedAt": "2026-08-05T05:15:45.389Z"
+}
