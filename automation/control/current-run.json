@@ -1,21 +1,12 @@
 {
   "runSchemaVersion": "current-run-v1",
-  "updatedAt": "2026-08-04T15:00:08.065Z",
-  "lastResult": "PASS",
-  "lastRequestId": "REQ-20260804-b7k3m9q2x4",
-  "lastIntentId": "INTENT-20260804-b7k3m9q2x4",
-  "lastTaskId": "TASK-PLANNER-NEXT",
-  "lastSafetyLevel": "L0",
-  "authoritySha": "72b1e13550264e1c325541de7763fb61fdd54a04",
-  "stateVersion": 19,
-  "stateDigest": "ffbbf997ce8637b27e675fb3dc26b0a43c5d94eee37e66131f0ac13d72dfb39c",
-  "blocks": [],
-  "elapsedMs": 559,
-  "evidencePath": "reports/automation/history/30921804343-TASK-PLANNER-NEXT.json",
-  "outputs": [
-    "automation/control/planner-candidates.json"
+  "updatedAt": "2026-08-05T01:01:36.346Z",
+  "lastResult": "FAILED",
+  "blocks": [
+    "state entry not found: TASK-N2-010"
   ],
-  "outputDigest": "e0c56315c6bbe2a5df2efd668a69fc3334340a82af84358a47337d8b922da53f",
-  "taskStatus": "PASS",
-  "nextCandidate": "TASK-PLANNER-NEXT: queue planner: 次候補提案（自動起動しない。次回 dispatch で 1 回だけ依頼する）"
+  "failureClasses": [
+    "RETRYABLE"
+  ],
+  "elapsedMs": 527
 }
