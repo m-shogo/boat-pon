@@ -1,0 +1,16 @@
+{
+  "supersessionSchemaVersion": "research-intent-supersession-v1",
+  "supersessionId": "SUPERSESSION-20260805-n2-011-q9v4m2k7px",
+  "taskId": "TASK-N2-011",
+  "replacementIntentId": "INTENT-20260805-q9v4m2k7px",
+  "supersededIntents": [
+    {
+      "intentId": "INTENT-20260805-m7p3v9k2qx",
+      "expectedAuthoritySha": "56a0a0f",
+      "reason": "AUTHORITY_SHA_MISMATCH"
+    }
+  ],
+  "observedAuthoritySha": "5dedf08410865eed28e51590912677c765ad5fd2",
+  "createdAt": "2026-08-05T13:39:00.000Z",
+  "requestedBy": "chatgpt-interactive"
+}
