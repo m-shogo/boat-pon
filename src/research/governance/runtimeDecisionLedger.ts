@@ -101,6 +101,14 @@ function isNullableFiniteNumber(value: unknown): value is number | null {
   return value === null || (typeof value === "number" && Number.isFinite(value));
 }
 
+function isNonNegativeInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0;
+}
+
+function isPositiveInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value > 0;
+}
+
 function parseInstant(value: unknown, field: string, errors: string[]): number | null {
   if (!isNonEmptyString(value)) {
     errors.push(`${field} must be a non-empty ISO timestamp`);
@@ -171,9 +179,11 @@ export function validateRuntimeDecisionLedgerRecord(value: unknown): RuntimeDeci
   ] as const) {
     if (!isNonEmptyString(value[field])) errors.push(`${field} must be a non-empty string`);
   }
+  if (isNonEmptyString(value.sourceRowDigest) && !/^[0-9a-f]{64}$/i.test(value.sourceRowDigest)) {
+    errors.push("sourceRowDigest must be a SHA-256 hex digest");
+  }
 
-  if (value.sourceDecisionHistoryId !== null
-    && (!Number.isInteger(value.sourceDecisionHistoryId) || Number(value.sourceDecisionHistoryId) < 1)) {
+  if (value.sourceDecisionHistoryId !== null && !isPositiveInteger(value.sourceDecisionHistoryId)) {
     errors.push("sourceDecisionHistoryId must be a positive integer or null");
   }
 
@@ -201,10 +211,10 @@ export function validateRuntimeDecisionLedgerRecord(value: unknown): RuntimeDeci
   validateProbability(value.estimatedHitRate, "estimatedHitRate", errors);
   validateProbability(value.rawEstimatedHitRate, "rawEstimatedHitRate", errors);
 
-  if (!Number.isInteger(value.recommendedStakeYen) || Number(value.recommendedStakeYen) < 0) {
+  if (!isNonNegativeInteger(value.recommendedStakeYen)) {
     errors.push("recommendedStakeYen must be a non-negative integer");
   }
-  if (!Number.isInteger(value.sampleSize) || Number(value.sampleSize) < 0) {
+  if (!isNonNegativeInteger(value.sampleSize)) {
     errors.push("sampleSize must be a non-negative integer");
   }
   validateStringArray(value.reasons, "reasons", errors);
@@ -227,7 +237,7 @@ export function validateRuntimeDecisionLedgerRecord(value: unknown): RuntimeDeci
     if (value.requiredOdds === null) errors.push("BUY requires requiredOdds");
     if (value.estimatedHitRate === null) errors.push("BUY requires estimatedHitRate");
     if (value.expectedValue === null) errors.push("BUY requires expectedValue");
-    if (!Number.isInteger(value.recommendedStakeYen) || Number(value.recommendedStakeYen) <= 0) {
+    if (!isPositiveInteger(value.recommendedStakeYen)) {
       errors.push("BUY requires recommendedStakeYen greater than 0");
     }
     if (value.oddsObservedAt === null) errors.push("BUY requires oddsObservedAt");
