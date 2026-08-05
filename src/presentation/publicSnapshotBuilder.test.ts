@@ -132,6 +132,19 @@ test("builder maps running task ahead of ready tasks", () => {
   assert.equal(built.status.runner, "RUNNING");
 });
 
+test("builder declares stale authority instead of refreshing it by generation time", () => {
+  const built = buildPublicDashboardSnapshot({
+    catalog,
+    queueState,
+    readiness,
+    currentRun,
+    generatedAt: "2026-08-05T12:01:00.000Z",
+    modelVersion: "boat-pon-main:864e720",
+  });
+  assert.equal(built.dataAsOf, "2026-08-05T09:00:00.000Z");
+  assert.equal(built.status.snapshotFreshness, "STALE");
+});
+
 test("invalid generation metadata fails before a public artifact is created", () => {
   assert.throws(() => buildPublicDashboardSnapshot({
     catalog,

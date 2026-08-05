@@ -43,7 +43,7 @@ test("sealed snapshot verifies and content tampering fails", async () => {
   assert.match(rejected.errors.join("\n"), /digest mismatch/);
 });
 
-test("network loader returns a verified fresh snapshot", async () => {
+test("network loader returns a verified fresh latest snapshot", async () => {
   const sealed = await sealPublicDashboardSnapshot(fixtureSnapshot());
   const nowMs = Date.parse(sealed.dataAsOf) + 60_000;
   const result = await loadPublicDashboardSnapshot({
@@ -52,7 +52,7 @@ test("network loader returns a verified fresh snapshot", async () => {
     fetcher: async () => response(sealed),
   });
 
-  assert.equal(result.source, "network");
+  assert.equal(result.source, "latest");
   assert.equal(result.observedFreshness, "FRESH");
   assert.equal(result.snapshot?.integrity.digest, sealed.integrity.digest);
   assert.deepEqual(result.errors, []);
@@ -69,15 +69,58 @@ test("network loader derives stale state without mutating the signed snapshot", 
     fetcher: async () => response(sealed),
   });
 
+  assert.equal(result.source, "latest");
   assert.equal(result.observedFreshness, "STALE");
   assert.equal(result.snapshot?.status.snapshotFreshness, "STALE");
   assert.deepEqual(result.warnings, []);
 });
 
-test("invalid, unsigned, future and unavailable snapshots fail closed", async () => {
+test("invalid latest falls back to a separately verified last-known-good snapshot", async () => {
+  const lastKnownGood = fixtureSnapshot();
+  lastKnownGood.status.snapshotFreshness = "STALE";
+  const sealedLastKnownGood = await sealPublicDashboardSnapshot(lastKnownGood);
+  const requested: string[] = [];
+
+  const result = await loadPublicDashboardSnapshot({
+    nowMs: Date.parse(sealedLastKnownGood.dataAsOf) + 3 * 60 * 60_000,
+    maxAgeMs: 2 * 60 * 60_000,
+    fetcher: async (url) => {
+      requested.push(url);
+      if (url.endsWith("latest.json")) return response({}, 503);
+      return response(sealedLastKnownGood);
+    },
+  });
+
+  assert.deepEqual(requested, [
+    "/public-data/latest.json",
+    "/public-data/last-known-good.json",
+  ]);
+  assert.equal(result.source, "last-known-good");
+  assert.equal(result.observedFreshness, "STALE");
+  assert.equal(result.snapshot?.integrity.digest, sealedLastKnownGood.integrity.digest);
+  assert.deepEqual(result.errors, []);
+  assert.deepEqual(result.warnings, ["USING_LAST_KNOWN_GOOD", "LATEST_HTTP_503"]);
+});
+
+test("invalid latest and invalid last-known-good fail closed with both causes", async () => {
+  const result = await loadPublicDashboardSnapshot({
+    fetcher: async (url) => url.endsWith("latest.json")
+      ? response({}, 503)
+      : response(fixtureSnapshot()),
+  });
+  assert.equal(result.snapshot, null);
+  assert.equal(result.source, "not-available");
+  assert.deepEqual(result.errors, [
+    "LATEST_HTTP_503",
+    "LAST_KNOWN_GOOD_INVALID_OR_UNVERIFIED_SNAPSHOT",
+  ]);
+});
+
+test("invalid, unsigned, future and unavailable snapshots fail closed when fallback is disabled", async () => {
   const unsigned = fixtureSnapshot();
   const unsignedResult = await loadPublicDashboardSnapshot({
     nowMs: Date.parse(unsigned.dataAsOf),
+    fallbackUrl: null,
     fetcher: async () => response(unsigned),
   });
   assert.equal(unsignedResult.snapshot, null);
@@ -90,18 +133,21 @@ test("invalid, unsigned, future and unavailable snapshots fail closed", async ()
   const futureResult = await loadPublicDashboardSnapshot({
     nowMs: Date.parse("2026-08-05T05:00:00.000Z"),
     maxFutureSkewMs: 5 * 60_000,
+    fallbackUrl: null,
     fetcher: async () => response(sealedFuture),
   });
   assert.equal(futureResult.snapshot, null);
   assert.deepEqual(futureResult.errors, ["FUTURE_DATA_AS_OF"]);
 
   const httpResult = await loadPublicDashboardSnapshot({
+    fallbackUrl: null,
     fetcher: async () => response({}, 503),
   });
   assert.equal(httpResult.observedFreshness, "NOT_AVAILABLE");
   assert.deepEqual(httpResult.errors, ["HTTP_503"]);
 
   const networkResult = await loadPublicDashboardSnapshot({
+    fallbackUrl: null,
     fetcher: async () => {
       throw new Error("offline");
     },

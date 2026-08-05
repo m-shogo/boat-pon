@@ -16,9 +16,12 @@
     "src/presentation/publicSnapshotBuilder.ts",
     "src/presentation/publicSnapshotBuilder.test.ts",
     "src/presentation/publicSnapshotExporter.test.ts",
+    "src/presentation/publicSnapshotPublisher.ts",
+    "src/presentation/publicSnapshotPublisher.test.ts",
     "src/presentation/publicDashboardShell.test.ts",
     "src/presentation/glossary.ts",
-    "scripts/export-public-dashboard-snapshot.ts"
+    "scripts/export-public-dashboard-snapshot.ts",
+    "scripts/publish-public-dashboard-snapshot.ts"
   ],
   "publicSourceRoots": [
     "apps/portal/public",

@@ -3,18 +3,23 @@ import {
   type PublicDashboardSnapshot,
   type PublicResearchStatus,
 } from "../presentation/publicSnapshot";
-import type { PublicSnapshotFreshness } from "../presentation/publicSnapshotTransport";
+import type {
+  PublicSnapshotFreshness,
+  PublicSnapshotSource,
+} from "../presentation/publicSnapshotTransport";
 import { GlossaryTip } from "./GlossaryTip";
 import "../public-dashboard.css";
 
 export function ResearchCommandCenter({
   snapshot = null,
+  source = snapshot ? "latest" : "not-available",
   observedFreshness = snapshot?.status.snapshotFreshness ?? "NOT_AVAILABLE",
   loading = false,
   errors = [],
   warnings = [],
 }: {
   snapshot?: PublicDashboardSnapshot | null;
+  source?: PublicSnapshotSource;
   observedFreshness?: PublicSnapshotFreshness;
   loading?: boolean;
   errors?: string[];
@@ -66,19 +71,27 @@ export function ResearchCommandCenter({
         <StatusBadge status={snapshot.status.readiness} />
       </header>
 
+      {source === "last-known-good" && (
+        <div className="commandCenterNotice warn" role="status">
+          最新snapshotを安全に確認できなかったため、直前に検証・公開済みのlast-known-goodを表示しています。
+          最新状態とは限りません。
+        </div>
+      )}
+
       {observedFreshness !== "FRESH" && (
         <div className="commandCenterNotice warn" role="status">
           snapshot freshness: <strong>{observedFreshness}</strong>。古い値を最新値として扱いません。
         </div>
       )}
 
-      {warnings.length > 0 && (
+      {warnings.includes("DECLARED_FRESHNESS_MISMATCH") && (
         <div className="commandCenterNotice warn" role="status">
           snapshot内の鮮度表示とブラウザ側の観測が一致しないため、ブラウザ側の判定を優先しています。
         </div>
       )}
 
       <div className="commandCenterMeta" aria-label="research status summary">
+        <StatusCard label="Snapshot source" value={snapshotSourceLabel(source)} />
         <StatusCard label="Current Phase" value={snapshot.status.currentPhase} />
         <StatusCard label="Last run" value={formatDateTime(snapshot.status.lastRunAt)} />
         <StatusCard label="Next task" value={snapshot.status.nextTask} />
@@ -183,11 +196,19 @@ function formatDateTime(value: string | null): string | null {
   return parsed.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" });
 }
 
+function snapshotSourceLabel(source: PublicSnapshotSource): string {
+  if (source === "latest") return "LATEST VERIFIED";
+  if (source === "last-known-good") return "LAST-KNOWN-GOOD";
+  return "NOT_AVAILABLE";
+}
+
 function publicSnapshotMessage(error: string | undefined): string {
   if (!error) return "公開snapshotはまだ生成されていません。";
-  if (error.startsWith("HTTP_")) return "公開snapshotを取得できませんでした。";
-  if (error === "NETWORK_ERROR") return "公開snapshotへの接続に失敗しました。";
-  if (error === "FUTURE_DATA_AS_OF") return "未来時刻のsnapshotを拒否しました。";
-  if (error === "INVALID_OR_UNVERIFIED_SNAPSHOT") return "公開snapshotのschemaまたは完全性検証に失敗しました。";
+  if (error.includes("HTTP_")) return "最新・last-known-goodの公開snapshotを取得できませんでした。";
+  if (error.includes("NETWORK_ERROR")) return "公開snapshotへの接続に失敗しました。";
+  if (error.includes("FUTURE_DATA_AS_OF")) return "未来時刻のsnapshotを拒否しました。";
+  if (error.includes("INVALID_OR_UNVERIFIED_SNAPSHOT")) {
+    return "公開snapshotのschemaまたは完全性検証に失敗しました。";
+  }
   return "公開snapshotを安全に読み込めませんでした。";
 }

@@ -53,6 +53,7 @@ export function ResearchLab({ candidateRows, racePrograms }: { candidateRows: nu
     <>
       <ResearchCommandCenter
         snapshot={publicSnapshot.snapshot}
+        source={publicSnapshot.source}
         observedFreshness={publicSnapshot.observedFreshness}
         loading={publicSnapshot.loading}
         errors={publicSnapshot.errors}
