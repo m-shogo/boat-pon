@@ -8,6 +8,7 @@ import {
   applyOfficialProgramCanary,
   assertOfficialProgramCanaryManifest,
   buildOfficialProgramCanaryManifest,
+  N2_OFFICIAL_PROGRAM_CANARY_GATE_VERSION,
   N2_OFFICIAL_PROGRAM_CANARY_MAX_RACES,
   officialProgramCanaryApprovalTarget,
   resolveOfficialProgramCanaryGate,
@@ -20,6 +21,14 @@ import { initializeRolloutSchema, openRolloutDatabase } from "./schema";
 
 const CODE_SHA = "1234567890abcdef1234567890abcdef12345678";
 const COHORT = { dateFrom: "2004-01-01", dateTo: "2004-01-07" } as const;
+
+type GateOverrides = Partial<{
+  executionMode: "production" | "simulated";
+  hasActiveWal: boolean;
+  shadowWriteEnabled: boolean;
+  killSwitchEngaged: boolean;
+  codeGitSha: string | null;
+}>;
 
 function raw(rate = 6): string {
   return JSON.stringify({
@@ -68,12 +77,11 @@ function context() {
   const db = openRolloutDatabase(join(dir, "sidecar.sqlite"));
   initializeRolloutSchema(db, "2004-01-01T00:00:00.000Z");
   let sequence = 0;
-  const clock = () => "2004-01-01T01:00:00.000Z";
   const repository = new ResearchReplayRepository(
     db,
     new RawStore(join(dir, "raw")),
     () => `canary-${++sequence}`,
-    clock,
+    () => "2004-01-01T01:00:00.000Z",
   );
   return {
     dir,
@@ -96,15 +104,8 @@ function manifest(rows: OfficialProgramCanarySourceRow[], maxRaces = 20): Offici
   });
 }
 
-function gateInput(value: OfficialProgramCanaryManifest, overrides: Partial<{
-  executionMode: "production" | "simulated";
-  hasActiveWal: boolean;
-  shadowWriteEnabled: boolean;
-  killSwitchEngaged: boolean;
-  codeGitSha: string | null;
-}> = {}) {
+function runtimeGateInput(overrides: GateOverrides = {}) {
   return {
-    manifest: value,
     executionMode: overrides.executionMode ?? "production",
     rolloutStartedAt: "2004-01-01T02:00:00.000Z",
     onDisk: {
@@ -116,6 +117,10 @@ function gateInput(value: OfficialProgramCanaryManifest, overrides: Partial<{
       killSwitchEngaged: overrides.killSwitchEngaged ?? false,
     },
   } as const;
+}
+
+function gateInput(value: OfficialProgramCanaryManifest, overrides: GateOverrides = {}) {
+  return { manifest: value, ...runtimeGateInput(overrides) } as const;
 }
 
 function approve(db: ReturnType<typeof openRolloutDatabase>, value: OfficialProgramCanaryManifest, input: {
@@ -163,7 +168,7 @@ test("manifest deterministically binds the source universe and selects at most 2
   assert.equal(serialized.includes("/private/cache"), false);
 });
 
-test("truncated source reads, oversized cohorts and exclusion tampering fail closed", () => {
+test("truncated source reads, oversized cohorts and manifest tampering fail closed", () => {
   assert.throws(() => buildOfficialProgramCanaryManifest({
     rows: [row()],
     cohort: COHORT,
@@ -174,9 +179,21 @@ test("truncated source reads, oversized cohorts and exclusion tampering fail clo
   assert.throws(() => manifest([row()], 21), /INVALID_CANARY_MAX_RACES/);
 
   const value = manifest([row()]);
-  const tampered = structuredClone(value);
-  tampered.excluded.push({ primaryRecordId: "fake", reason: "fake" });
-  assert.throws(() => assertOfficialProgramCanaryManifest(tampered), /COUNT_MISMATCH|EXCLUSION_DIGEST/);
+  const exclusionTampered = structuredClone(value);
+  exclusionTampered.excluded.push({ primaryRecordId: "fake", reason: "fake" });
+  assert.throws(() => assertOfficialProgramCanaryManifest(exclusionTampered), /COUNT_MISMATCH|EXCLUSION_DIGEST/);
+
+  const ctx = context();
+  try {
+    const digestTampered = structuredClone(value);
+    digestTampered.manifestDigest = "invalid";
+    const gate = resolveOfficialProgramCanaryGate(ctx.db, gateInput(digestTampered));
+    assert.equal(gate.approved, false);
+    assert.equal(gate.status, "BLOCKED");
+    assert.ok(gate.blocks.includes("CANARY_MANIFEST_DIGEST_MISMATCH"));
+  } finally {
+    ctx.close();
+  }
 });
 
 test("missing or simulated approval and runtime hazards block before any sidecar write", () => {
@@ -192,7 +209,7 @@ test("missing or simulated approval and runtime hazards block before any sidecar
       repository: ctx.repository,
       manifest: value,
       primaryRows: rows,
-      gate: missing,
+      gateInput: runtimeGateInput(),
     }), /CANARY_GATE_NOT_APPROVED/);
 
     approve(ctx.db, value, {
@@ -239,9 +256,11 @@ test("exact production approval permits a bounded existing-cache capture and rep
       repository: ctx.repository,
       manifest: value,
       primaryRows: rows,
-      gate,
+      gateInput: runtimeGateInput(),
     });
     assert.deepEqual(first, {
+      gateVersion: N2_OFFICIAL_PROGRAM_CANARY_GATE_VERSION,
+      approvalId: "approval-production",
       manifestDigest: value.manifestDigest,
       selectedCount: 1,
       insertedCount: 1,
@@ -275,7 +294,7 @@ test("exact production approval permits a bounded existing-cache capture and rep
       repository: ctx.repository,
       manifest: value,
       primaryRows: rows,
-      gate,
+      gateInput: runtimeGateInput(),
     });
     assert.equal(replay.insertedCount, 0);
     assert.equal(replay.reusedCount, 1);
@@ -304,7 +323,7 @@ test("primary raw drift is rejected before capture evidence is written", () => {
       repository: ctx.repository,
       manifest: value,
       primaryRows: drifted,
-      gate,
+      gateInput: runtimeGateInput(),
     }), /PRIMARY_ROW_DRIFT/);
     assert.equal((ctx.db.prepare("SELECT COUNT(*) n FROM domain_observations").get() as { n: number }).n, 0);
     assert.equal((ctx.db.prepare("SELECT COUNT(*) n FROM capture_attempts").get() as { n: number }).n, 0);
