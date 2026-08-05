@@ -53,5 +53,5 @@ test("readiness documentation forbids automatic write activation and preserves N
   assert.match(doc, /autoEnableShadowWrite: false/);
   assert.match(doc, /at most 20 races/);
   assert.match(doc, /Only then use the final N2-011 attempt/);
-  assert.doesNotMatch(doc, /enable global writes automatically\./i);
+  assert.match(doc, /do not enable global writes automatically/i);
 });
