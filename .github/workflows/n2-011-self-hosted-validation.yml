@@ -1,15 +1,23 @@
 name: N2-011 self-hosted validation
 
 on:
-  push:
-    branches:
-      - agent/n2-011-integration
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/n2-011-self-hosted-validation.yml"
+      - ".github/workflows/boat-pon-intent-dispatch.yml"
+      - "automation/task-catalog.json"
+      - "automation/phase-mapping.json"
+      - "scripts/automation-commit.sh"
+      - "scripts/research-governance-check.ts"
+      - "src/automation/**"
+      - "src/research-replay/n2PitAudit*.ts"
 
 permissions:
   contents: read
 
 concurrency:
-  group: n2-011-integration-validation
+  group: n2-011-integration-validation-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
@@ -19,7 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: agent/n2-011-integration
+          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
 
       - name: Install dependencies
