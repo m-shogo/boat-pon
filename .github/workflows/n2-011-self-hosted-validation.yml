@@ -1,0 +1,51 @@
+name: N2-011 self-hosted validation
+
+on:
+  push:
+    branches:
+      - agent/n2-011-integration
+
+permissions:
+  contents: read
+
+concurrency:
+  group: n2-011-integration-validation
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: [self-hosted, macOS, boat-pon-local]
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/n2-011-integration
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          corepack enable
+          pnpm install --frozen-lockfile --prod=false
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: N2-011 targeted tests
+        run: |
+          node --test --import tsx \
+            src/automation/taskExecutors.test.ts \
+            src/automation/n2PitAuditExecutor.test.ts \
+            src/automation/n2PitAuditRegistration.test.ts \
+            src/automation/n2PitAuditIntegration.test.ts \
+            src/research-replay/n2PitAudit.test.ts \
+            src/research-replay/n2PitAuditReader.test.ts
+
+      - name: Research governance
+        run: pnpm exec tsx scripts/research-governance-check.ts
+
+      - name: Full tests
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
