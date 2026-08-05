@@ -1,8 +1,8 @@
 {
   "stateSchemaVersion": "research-queue-state-v1",
-  "stateVersion": 22,
-  "catalogVersion": "2026-08-05-n2-governance-v2",
-  "updatedAt": "2026-08-05T12:37:12.490Z",
+  "stateVersion": 23,
+  "catalogVersion": "2026-08-05-n2-governance-v3",
+  "updatedAt": "2026-08-05T13:21:49.000Z",
   "tasks": {
     "TASK-N2-001": {
       "status": "PASS",
@@ -130,8 +130,8 @@
       "nextDecision": "依存 task を次回 dispatch 候補にする（自動起動しない）"
     },
     "TASK-N2-011": {
-      "status": "BLOCKED_EXECUTOR_PENDING",
-      "taskDefinitionVersion": 1,
+      "status": "READY",
+      "taskDefinitionVersion": 2,
       "authoritySha": null,
       "attemptCount": 0,
       "maxAttempts": 3,
@@ -139,7 +139,7 @@
       "resultDigest": null,
       "lastFailure": null,
       "checkpoint": null,
-      "updatedAt": "2026-08-05T03:50:30.173Z"
+      "updatedAt": "2026-08-05T13:21:49.000Z"
     },
     "TASK-N2-020": {
       "status": "BLOCKED_EXECUTOR_PENDING",
