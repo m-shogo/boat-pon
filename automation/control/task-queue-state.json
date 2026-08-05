@@ -1,8 +1,8 @@
 {
   "stateSchemaVersion": "research-queue-state-v1",
-  "stateVersion": 38,
-  "catalogVersion": "2026-08-05-n2-governance-v6",
-  "updatedAt": "2026-08-05T16:07:41.937Z",
+  "stateVersion": 39,
+  "catalogVersion": "2026-08-06-n2-governance-v7",
+  "updatedAt": "2026-08-05T16:23:00.000Z",
   "tasks": {
     "TASK-N2-001": {
       "status": "PASS",
@@ -163,20 +163,20 @@
       "nextDecision": "依存 task を次回 dispatch 候補にする（自動起動しない）"
     },
     "TASK-N2-013": {
-      "status": "PASS",
-      "taskDefinitionVersion": 1,
-      "authoritySha": "536fcbdf54025f0733a2658f6420a40ae34ceb49",
+      "status": "READY",
+      "taskDefinitionVersion": 2,
+      "authoritySha": null,
       "attemptCount": 1,
       "maxAttempts": 3,
       "evidenceLinks": [
         "reports/automation/history/31023735923-TASK-N2-013.json",
         "reports/n2/n2-official-program-canary-review-bundle.json"
       ],
-      "resultDigest": "b4d77ba2b5430aae3a4a7bc61b3dbdb498843fed4aec9c0a3201776cd61f05b7",
+      "resultDigest": null,
       "lastFailure": null,
       "checkpoint": null,
-      "updatedAt": "2026-08-05T16:07:41.937Z",
-      "nextDecision": "依存 task を次回 dispatch 候補にする（自動起動しない）"
+      "updatedAt": "2026-08-05T16:23:00.000Z",
+      "nextDecision": "definition v2 factual-time review bundle rerun required; v1 evidence retained"
     },
     "TASK-N2-020": {
       "status": "BLOCKED_EXECUTOR_PENDING",
