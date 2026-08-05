@@ -111,6 +111,30 @@ test("holdout-freeze is deterministic and dependency-gated", () => {
   assert.deepEqual((a.summary as any).untouchedHoldoutRaces, ["2014-03-28:08:R1", "2014-03-28:17:R2"]);
 });
 
+test("planner excludes READY tasks (N2-010) from candidates; only proposes when no READY tasks", () => {
+  const path = makeFixture({ rows: [{ k: "2024-06-05:12:R1", b: "trifecta", s: "settled" }] });
+  // N2-010 READY present → readyCount>0 → no candidates (planner does not propose while READY exists).
+  const withReady = runPlannerNext(ctx(path, { dryRun: false, mergedTasks: [
+    { taskId: "TASK-N2-010", status: "READY", taskType: "dataset-expand" },
+    { taskId: "TASK-N2-011", status: "BLOCKED_EXECUTOR_PENDING", taskType: "pit-audit", safetyLevel: "L0" },
+  ] }));
+  assert.equal((withReady.summary as any).candidateCount, 0);
+  assert.ok(!JSON.stringify(withReady.summary).includes("TASK-N2-010")); // #26 N2-010 not a candidate
+
+  // no READY tasks (only recurring PLANNER-NEXT) → propose N2-011+ as ENGINEERING_REQUIRED handoff.
+  const noReady = runPlannerNext(ctx(path, { dryRun: true, mergedTasks: [
+    { taskId: "TASK-PLANNER-NEXT", status: "READY", taskType: "planner-next" },
+    { taskId: "TASK-N2-011", status: "BLOCKED_EXECUTOR_PENDING", taskType: "pit-audit", safetyLevel: "L0", dependencies: ["TASK-N2-010"] },
+  ] }));
+  const cand = (noReady.summary as any).candidates;
+  assert.equal(cand.length, 1);
+  assert.equal(cand[0].proposedTaskId, "TASK-N2-011");
+  assert.equal(cand[0].requirementId, "ENG-TASK-N2-011"); // handoff id (stable)
+  assert.equal(cand[0].blocker, "EXECUTOR_NOT_IMPLEMENTED");
+  assert.equal(cand[0].status, "PROPOSED");
+  assert.equal(cand[0].neededExecutor, "pit-audit");
+});
+
 test("planner does not rewrite unchanged ENGINEERING_REQUIRED candidates", () => {
   const path = makeFixture({ rows: [{ k: "2024-06-05:12:R1", b: "trifecta", s: "settled" }] });
   const c = ctx(path, {

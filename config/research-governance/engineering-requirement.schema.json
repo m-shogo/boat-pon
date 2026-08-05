@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "engineering-requirement.schema.json",
+  "title": "ENGINEERING_REQUIRED handoff record",
+  "description": "ChatGPT Scheduled Task が未実装 executor / runner 不具合を検出したとき Claude Code へ渡す機械可読 handoff。planner-candidates.json の candidate としても表現される。同一 blocker では毎時新規レコードを増やさない（requirementId で安定）。",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["requirementId", "proposedTaskId", "blocker", "neededExecutor", "safetyLevel", "status"],
+  "properties": {
+    "requirementId": { "type": "string", "pattern": "^ENG-TASK-[0-9A-Za-z._-]{1,64}$" },
+    "proposedTaskId": { "type": "string", "pattern": "^TASK-[0-9A-Za-z._-]{1,64}$" },
+    "blocker": { "enum": ["EXECUTOR_NOT_IMPLEMENTED", "RUNNER_DEFECT", "SCHEMA_MISSING", "DATA_SOURCE_MISSING"] },
+    "neededExecutor": { "type": "string", "minLength": 1 },
+    "dependencies": { "type": "array", "items": { "type": "string" } },
+    "safetyLevel": { "enum": ["L0", "L1", "L2", "L3"] },
+    "expectedFiles": { "type": "array", "items": { "type": "string" } },
+    "acceptanceCriteria": { "type": "string" },
+    "evidenceLinks": { "type": "array", "items": { "type": "string" } },
+    "status": { "enum": ["PROPOSED", "ACKNOWLEDGED", "IN_ENGINEERING", "MERGED", "READY_FOR_SCHEDULE", "RESOLVED", "SUPERSEDED"] },
+    "firstDetectedAt": { "type": "string" },
+    "lastChangedAt": { "type": "string" }
+  }
+}
