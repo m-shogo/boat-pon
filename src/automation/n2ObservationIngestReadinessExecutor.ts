@@ -51,9 +51,12 @@ export const runN2ObservationIngestReadinessExecutor: Executor = (ctx) => {
         sidecarDbPath: ctx.sidecarPath,
       });
       const readiness = buildN2ObservationIngestReadiness(read.input);
+      const checkedSourceRecordCount = readiness.officialProgram.sourceRows
+        + readiness.trifectaMarket.sourceRows;
       const summary = {
         ...readiness,
         sourceIdentity: read.sourceIdentity,
+        checkedSourceRecordCount,
         executorContractVersion: N2_OBSERVATION_INGEST_READINESS_EXECUTOR_VERSION,
         readOnly: true,
         queryOnly: true,
@@ -71,8 +74,7 @@ export const runN2ObservationIngestReadinessExecutor: Executor = (ctx) => {
       status: "NOT_APPLICABLE",
       validatorId: "n2-observation-ingest-readiness-pit-applicability",
       validatorVersion: N2_OBSERVATION_INGEST_READINESS_EXECUTOR_VERSION,
-      checkedRecordCount: Number(artifact.summary.officialProgram?.sourceRows ?? 0)
-        + Number(artifact.summary.trifectaMarket?.sourceRows ?? 0),
+      checkedRecordCount: Number(artifact.summary.checkedSourceRecordCount ?? 0),
       sameRaceViolationCount: 0,
       futureViolationCount: 0,
       ambiguousTimingCount: 0,
