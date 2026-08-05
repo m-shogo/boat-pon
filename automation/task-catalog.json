@@ -1,7 +1,7 @@
 {
   "catalogSchemaVersion": "research-task-catalog-v1",
-  "catalogVersion": "2026-08-05-n2-governance-v6",
-  "updatedAt": "2026-08-05T15:45:00.000Z",
+  "catalogVersion": "2026-08-06-n2-governance-v7",
+  "updatedAt": "2026-08-05T16:20:00.000Z",
   "note": "task定義の正本（main, immutable）。可変statusはautomation branchのqueue-state。ChatGPTは本catalog + branch stateを読み、実装済みREADY taskを1件だけdispatchする。",
   "tasks": [
     {
@@ -191,7 +191,7 @@
       "defaultStatus": "READY"
     },
     {
-      "taskDefinitionVersion": 1,
+      "taskDefinitionVersion": 2,
       "dependencies": ["TASK-N2-012"],
       "maxDurationSeconds": 3600,
       "expectedInputs": [
@@ -199,14 +199,15 @@
         "read-only research-replay.sqlite",
         "latest seven-day official_program source rows",
         "bounded official-program canary foundation",
-        "current rollout and source-specific approval state"
+        "current rollout and source-specific approval state",
+        "one factual execution timestamp shared by manifest and review bundle"
       ],
       "estimatedDurationSeconds": 120,
       "valueOfInformation": "high",
-      "invalidationCondition": "official-program canary manifest、review bundle、approval target、primary identity、rollout state、またはexecutor contractが変わったら再定義",
+      "invalidationCondition": "official-program canary manifest、review bundle、generation-time contract、approval target、primary identity、rollout state、またはexecutor contractが変わったら再定義",
       "taskId": "TASK-N2-013",
       "title": "official-program canary review bundle",
-      "objective": "実20件のofficial_program canary manifest、実行checkout SHA、approval target、rollback条件をread-onlyで固定し、人間レビュー可能なbundleを生成。承認作成・production applyは行わない",
+      "objective": "実20件のofficial_program canary manifest、実行checkout SHA、事実に即した生成時刻、approval target、rollback条件をread-onlyで固定し、人間レビュー可能なbundleを生成。承認作成・production applyは行わない",
       "taskType": "official-program-canary-review-bundle",
       "executor": "official-program-canary-review-bundle",
       "safetyLevel": "L0",
