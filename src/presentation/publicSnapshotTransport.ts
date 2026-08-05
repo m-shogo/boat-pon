@@ -9,6 +9,7 @@ export const DEFAULT_PUBLIC_SNAPSHOT_MAX_AGE_MS = 2 * 60 * 60 * 1_000;
 export const DEFAULT_PUBLIC_SNAPSHOT_FUTURE_SKEW_MS = 5 * 60 * 1_000;
 
 export type PublicSnapshotFreshness = "FRESH" | "STALE" | "NOT_AVAILABLE";
+export type PublicSnapshotSource = "latest" | "last-known-good" | "not-available";
 
 export type PublicSnapshotFetchResponse = {
   ok: boolean;
@@ -26,7 +27,7 @@ export type PublicSnapshotFetcher = (
 
 export type PublicSnapshotLoadResult = {
   snapshot: PublicDashboardSnapshot | null;
-  source: "network" | "not-available";
+  source: PublicSnapshotSource;
   observedFreshness: PublicSnapshotFreshness;
   errors: string[];
   warnings: string[];
@@ -104,48 +105,107 @@ export async function verifyPublicDashboardSnapshotIntegrity(
 
 export async function loadPublicDashboardSnapshot(options: {
   url?: string;
+  fallbackUrl?: string | null;
   fetcher?: PublicSnapshotFetcher;
   nowMs?: number;
   maxAgeMs?: number;
   maxFutureSkewMs?: number;
 } = {}): Promise<PublicSnapshotLoadResult> {
   const url = options.url ?? "/public-data/latest.json";
+  const fallbackUrl = options.fallbackUrl === undefined
+    ? "/public-data/last-known-good.json"
+    : options.fallbackUrl;
   const fetcher = options.fetcher ?? (globalThis.fetch as PublicSnapshotFetcher | undefined);
   const nowMs = options.nowMs ?? Date.now();
   const maxAgeMs = options.maxAgeMs ?? DEFAULT_PUBLIC_SNAPSHOT_MAX_AGE_MS;
   const maxFutureSkewMs = options.maxFutureSkewMs ?? DEFAULT_PUBLIC_SNAPSHOT_FUTURE_SKEW_MS;
 
-  if (!fetcher) return unavailable("FETCH_UNAVAILABLE");
-  if (!Number.isFinite(nowMs) || !Number.isFinite(maxAgeMs) || maxAgeMs <= 0) {
-    return unavailable("INVALID_FRESHNESS_CONFIGURATION");
+  if (!fetcher) return unavailable(["FETCH_UNAVAILABLE"]);
+  if (
+    !Number.isFinite(nowMs)
+    || !Number.isFinite(maxAgeMs)
+    || maxAgeMs <= 0
+    || !Number.isFinite(maxFutureSkewMs)
+    || maxFutureSkewMs < 0
+  ) {
+    return unavailable(["INVALID_FRESHNESS_CONFIGURATION"]);
   }
 
+  const latest = await loadFromUrl({
+    url,
+    source: "latest",
+    fetcher,
+    nowMs,
+    maxAgeMs,
+    maxFutureSkewMs,
+  });
+  if (latest.snapshot) return latest;
+  if (!fallbackUrl || fallbackUrl === url) return latest;
+
+  const lastKnownGood = await loadFromUrl({
+    url: fallbackUrl,
+    source: "last-known-good",
+    fetcher,
+    nowMs,
+    maxAgeMs,
+    maxFutureSkewMs,
+  });
+  if (lastKnownGood.snapshot) {
+    return {
+      ...lastKnownGood,
+      errors: [],
+      warnings: [
+        "USING_LAST_KNOWN_GOOD",
+        ...latest.errors.map((error) => `LATEST_${error}`),
+        ...lastKnownGood.warnings,
+      ],
+    };
+  }
+
+  return unavailable([
+    ...latest.errors.map((error) => `LATEST_${error}`),
+    ...lastKnownGood.errors.map((error) => `LAST_KNOWN_GOOD_${error}`),
+  ]);
+}
+
+async function loadFromUrl(options: {
+  url: string;
+  source: Exclude<PublicSnapshotSource, "not-available">;
+  fetcher: PublicSnapshotFetcher;
+  nowMs: number;
+  maxAgeMs: number;
+  maxFutureSkewMs: number;
+}): Promise<PublicSnapshotLoadResult> {
   let response: PublicSnapshotFetchResponse;
   try {
-    response = await fetcher(url, {
+    response = await options.fetcher(options.url, {
       cache: "no-store",
       headers: { accept: "application/json" },
     });
   } catch {
-    return unavailable("NETWORK_ERROR");
+    return unavailable(["NETWORK_ERROR"]);
   }
 
-  if (!response.ok) return unavailable(`HTTP_${response.status}`);
+  if (!response.ok) return unavailable([`HTTP_${response.status}`]);
 
   let value: unknown;
   try {
     value = await response.json();
   } catch {
-    return unavailable("INVALID_JSON");
+    return unavailable(["INVALID_JSON"]);
   }
 
   const verified = await verifyPublicDashboardSnapshotIntegrity(value);
-  if (!verified.ok || !verified.snapshot) return unavailable("INVALID_OR_UNVERIFIED_SNAPSHOT");
+  if (!verified.ok || !verified.snapshot) return unavailable(["INVALID_OR_UNVERIFIED_SNAPSHOT"]);
 
   const dataAsOfMs = Date.parse(verified.snapshot.dataAsOf);
-  if (dataAsOfMs - nowMs > maxFutureSkewMs) return unavailable("FUTURE_DATA_AS_OF");
+  if (dataAsOfMs - options.nowMs > options.maxFutureSkewMs) {
+    return unavailable(["FUTURE_DATA_AS_OF"]);
+  }
 
-  const observedFreshness: PublicSnapshotFreshness = nowMs - dataAsOfMs > maxAgeMs ? "STALE" : "FRESH";
+  const observedFreshness: PublicSnapshotFreshness = options.nowMs - dataAsOfMs > options.maxAgeMs
+    ? "STALE"
+    : "FRESH";
   const warnings: string[] = [];
   if (verified.snapshot.status.snapshotFreshness !== observedFreshness) {
     warnings.push("DECLARED_FRESHNESS_MISMATCH");
@@ -153,19 +213,19 @@ export async function loadPublicDashboardSnapshot(options: {
 
   return {
     snapshot: verified.snapshot,
-    source: "network",
+    source: options.source,
     observedFreshness,
     errors: [],
     warnings,
   };
 }
 
-function unavailable(error: string): PublicSnapshotLoadResult {
+function unavailable(errors: string[]): PublicSnapshotLoadResult {
   return {
     snapshot: null,
     source: "not-available",
     observedFreshness: "NOT_AVAILABLE",
-    errors: [error],
+    errors,
     warnings: [],
   };
 }
