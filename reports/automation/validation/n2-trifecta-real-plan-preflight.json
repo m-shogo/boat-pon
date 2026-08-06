@@ -1,0 +1,72 @@
+{
+  "evidenceSchemaVersion": "n2-trifecta-real-plan-preflight-evidence-v1",
+  "status": "PASS",
+  "workflowRunId": 31088554057,
+  "workflowJobId": 92573747147,
+  "validatedCommit": "6228a77927d435a0730ef77b65ed01ec5c0212d5",
+  "artifactId": 8962460954,
+  "artifactDigest": "sha256:567f2878b006f978253e5c2a4a9fa23a731d8b89ff7596fa5c8e55eb3cfd547a",
+  "generatedAt": "2026-08-06T09:20:11.316Z",
+  "now": "2026-08-06T09:20:11.314Z",
+  "executionLocation": "Mac self-hosted",
+  "source": {
+    "primaryDbPath": "<canonical-data-root>/data/boat.sqlite",
+    "immutable": true,
+    "readOnly": true,
+    "queryOnly": true,
+    "walBytesBefore": 0,
+    "walBytesAfter": 0,
+    "bytesBefore": 15314477056,
+    "bytesAfter": 15314477056,
+    "modifiedMsBefore": 1786007821612.6785,
+    "modifiedMsAfter": 1786007821612.6785,
+    "metadataUnchanged": true
+  },
+  "inventory": {
+    "requestedDateFrom": "2026-08-06",
+    "discoveredDateCount": 1,
+    "discoveredVenueDayCount": 10,
+    "readableCandidatePlanCount": 10,
+    "blockedCandidatePlanCount": 0,
+    "candidateBlockerCounts": {}
+  },
+  "selection": {
+    "selectedDate": "2026-08-06",
+    "selectedVenueCode": "19",
+    "selectedRaceCount": 4,
+    "selectedRaceIds": [
+      "20260806-19-09",
+      "20260806-19-10",
+      "20260806-19-11",
+      "20260806-19-12"
+    ],
+    "earliestCheckpointAt": "2026-08-06T09:44:00.000Z",
+    "requestBudget": 16,
+    "checkpointLabels": [
+      "T-30",
+      "T-20",
+      "T-10",
+      "T-5"
+    ],
+    "planDigest": "870fa890ad7ae23ed75373fb1ac096b7a2bf620ea133e74bbef3220b737bec7c",
+    "planEvidencePath": "reports/n2/n2-trifecta-private-capture-plan-20260806-19.json"
+  },
+  "approvalCreated": false,
+  "networkExecuted": false,
+  "rawPersisted": false,
+  "databaseWriteCount": 0,
+  "primaryDbWriteCount": 0,
+  "sidecarWriteCount": 0,
+  "currentBuyChanged": false,
+  "lineChanged": false,
+  "publicPublished": false,
+  "automatedBettingChanged": false,
+  "productionApplyExecuted": false,
+  "outputDigest": "1c65933c79aa056e957fcab888afe4ce998d163681c26d2e7bcb885d2d002417",
+  "typecheckFailureOnOriginalHead": {
+    "runId": 31088552797,
+    "failureCode": "NULLABLE_SELECTED_PLAN_DIGEST_TYPE_ONLY",
+    "runtimePreflightAffected": false,
+    "fixedCommit": "3dfe41ed7a842879ef2dd8b0fc7259689aafc8d9"
+  }
+}
