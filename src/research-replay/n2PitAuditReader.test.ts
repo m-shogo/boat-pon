@@ -7,11 +7,14 @@ import test from "node:test";
 import { buildN2PitAuditSummary } from "./n2PitAudit";
 import {
   decisionCutoffFromProgram,
+  programIdentityMatchesCanonicalKey,
   raceIdFromCanonicalN2Key,
   readN2PitAuditObservations,
 } from "./n2PitAuditReader";
 
-function createPrimary(path: string, includeProgram = true): void {
+type PrimaryIdentity = "venue_label" | "venue_code" | "both";
+
+function createPrimary(path: string, includeProgram = true, identity: PrimaryIdentity = "venue_label"): void {
   const db = new DatabaseSync(path);
   try {
     db.exec(`
@@ -24,8 +27,13 @@ function createPrimary(path: string, includeProgram = true): void {
       );
     `);
     if (includeProgram) {
-      db.prepare(`INSERT INTO official_programs(race_id,date,venue,race_no,close_at) VALUES(?,?,?,?,?)`)
-        .run("20240601-01-01", "2024-06-01", "01", 1, "10:00");
+      const insert = db.prepare(`INSERT INTO official_programs(race_id,date,venue,race_no,close_at) VALUES(?,?,?,?,?)`);
+      if (identity === "venue_label" || identity === "both") {
+        insert.run("20240601-桐生-01", "2024-06-01", "桐生", 1, "10:00");
+      }
+      if (identity === "venue_code" || identity === "both") {
+        insert.run("20240601-01-01", "2024-06-01", "01", 1, "10:00");
+      }
     }
   } finally {
     db.close();
@@ -88,26 +96,39 @@ function createSidecar(path: string, observationCount = 2): void {
   }
 }
 
-test("canonical key converts to primary race id", () => {
+test("canonical key converts to legacy code-form primary race id", () => {
   assert.equal(raceIdFromCanonicalN2Key("2024-06-01:01:R1"), "20240601-01-01");
   assert.equal(raceIdFromCanonicalN2Key("2024-06-01:24:R12"), "20240601-24-12");
   assert.equal(raceIdFromCanonicalN2Key("invalid"), null);
+  assert.equal(raceIdFromCanonicalN2Key("2024-06-01:25:R1"), null);
   assert.equal(raceIdFromCanonicalN2Key("2024-06-01:01:R13"), null);
 });
 
-test("program close time is normalized from JST and identity checked", () => {
-  const row = { raceId: "20240601-01-01", date: "2024-06-01", venue: "01", raceNo: 1, closeAt: "10:00" };
-  assert.equal(decisionCutoffFromProgram(row, "2024-06-01:01:R1"), "2024-06-01T01:00:00.000Z");
-  assert.equal(decisionCutoffFromProgram({ ...row, raceId: "wrong" }, "2024-06-01:01:R1"), null);
-  assert.equal(decisionCutoffFromProgram({ ...row, closeAt: "bad" }, "2024-06-01:01:R1"), null);
+test("program identity accepts exact venue-label and venue-code encodings only", () => {
+  const label = { raceId: "20240601-桐生-01", date: "2024-06-01", venue: "桐生", raceNo: 1, closeAt: "10:00" };
+  const code = { raceId: "20240601-01-01", date: "2024-06-01", venue: "01", raceNo: 1, closeAt: "10:00" };
+  assert.equal(programIdentityMatchesCanonicalKey(label, "2024-06-01:01:R1"), true);
+  assert.equal(programIdentityMatchesCanonicalKey(code, "2024-06-01:01:R1"), true);
+  assert.equal(programIdentityMatchesCanonicalKey({ ...label, raceId: "20240601-01-01" }, "2024-06-01:01:R1"), true);
+  assert.equal(programIdentityMatchesCanonicalKey({ ...label, venue: "戸田" }, "2024-06-01:01:R1"), false);
+  assert.equal(programIdentityMatchesCanonicalKey({ ...label, raceId: "wrong" }, "2024-06-01:01:R1"), false);
 });
 
-test("reader opens both DBs read-only and yields safe audit observations", () => {
+test("program close time is normalized from JST for both primary identity encodings", () => {
+  const label = { raceId: "20240601-桐生-01", date: "2024-06-01", venue: "桐生", raceNo: 1, closeAt: "10:00" };
+  const code = { raceId: "20240601-01-01", date: "2024-06-01", venue: "01", raceNo: 1, closeAt: "10:00" };
+  assert.equal(decisionCutoffFromProgram(label, "2024-06-01:01:R1"), "2024-06-01T01:00:00.000Z");
+  assert.equal(decisionCutoffFromProgram(code, "2024-06-01:01:R1"), "2024-06-01T01:00:00.000Z");
+  assert.equal(decisionCutoffFromProgram({ ...label, raceId: "wrong" }, "2024-06-01:01:R1"), null);
+  assert.equal(decisionCutoffFromProgram({ ...label, closeAt: "bad" }, "2024-06-01:01:R1"), null);
+});
+
+test("reader resolves the real primary venue-label identity read-only", () => {
   const dir = mkdtempSync(join(tmpdir(), "n2-pit-reader-"));
   try {
     const primary = join(dir, "boat.sqlite");
     const sidecar = join(dir, "research-replay.sqlite");
-    createPrimary(primary);
+    createPrimary(primary, true, "venue_label");
     createSidecar(sidecar);
     const result = readN2PitAuditObservations({ primaryDbPath: primary, sidecarDbPath: sidecar });
     assert.equal(result.readOnly, true);
@@ -120,6 +141,38 @@ test("reader opens both DBs read-only and yields safe audit observations", () =>
     assert.equal(summary.status, "PASS");
     assert.equal(summary.checkedFeatureCount, 1);
     assert.equal(summary.checkedOddsCount, 1);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("reader preserves support for legacy venue-code primary identities", () => {
+  const dir = mkdtempSync(join(tmpdir(), "n2-pit-reader-"));
+  try {
+    const primary = join(dir, "boat.sqlite");
+    const sidecar = join(dir, "research-replay.sqlite");
+    createPrimary(primary, true, "venue_code");
+    createSidecar(sidecar, 1);
+    const result = readN2PitAuditObservations({ primaryDbPath: primary, sidecarDbPath: sidecar });
+    assert.equal(result.observations[0].decisionCutoff, "2024-06-01T01:00:00.000Z");
+    assert.equal(buildN2PitAuditSummary(result.observations).status, "PASS");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("multiple matching primary identities fail closed as ambiguous", () => {
+  const dir = mkdtempSync(join(tmpdir(), "n2-pit-reader-"));
+  try {
+    const primary = join(dir, "boat.sqlite");
+    const sidecar = join(dir, "research-replay.sqlite");
+    createPrimary(primary, true, "both");
+    createSidecar(sidecar, 1);
+    const result = readN2PitAuditObservations({ primaryDbPath: primary, sidecarDbPath: sidecar });
+    assert.equal(result.observations[0].decisionCutoff, null);
+    const summary = buildN2PitAuditSummary(result.observations);
+    assert.equal(summary.status, "CONDITIONAL");
+    assert.equal(summary.ambiguousTimingCount, 1);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
