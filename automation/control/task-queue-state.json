@@ -1,8 +1,8 @@
 {
   "stateSchemaVersion": "research-queue-state-v1",
-  "stateVersion": 42,
+  "stateVersion": 43,
   "catalogVersion": "2026-08-06-n2-governance-v7",
-  "updatedAt": "2026-08-06T00:49:01.358Z",
+  "updatedAt": "2026-08-06T01:28:48.279Z",
   "tasks": {
     "TASK-N2-001": {
       "status": "PASS",
@@ -163,9 +163,9 @@
       "nextDecision": "依存 task を次回 dispatch 候補にする（自動起動しない）"
     },
     "TASK-N2-013": {
-      "status": "PASS",
+      "status": "READY",
       "taskDefinitionVersion": 2,
-      "authoritySha": "81e46cc9e39690652120b84aac1fa9c331f7129f",
+      "authoritySha": null,
       "attemptCount": 2,
       "maxAttempts": 3,
       "evidenceLinks": [
@@ -173,11 +173,11 @@
         "reports/n2/n2-official-program-canary-review-bundle.json",
         "reports/automation/history/31057606124-TASK-N2-013.json"
       ],
-      "resultDigest": "4cfc1e04a3915bfcec14e21989fb3acaff728482824d779ba36ebdf50ec2f8c3",
+      "resultDigest": null,
       "lastFailure": null,
       "checkpoint": null,
-      "updatedAt": "2026-08-06T00:49:01.358Z",
-      "nextDecision": "依存 task を次回 dispatch 候補にする（自動起動しない）"
+      "updatedAt": "2026-08-06T01:28:48.279Z",
+      "nextDecision": "source universe changed after the reviewed bundle and the cancelled pre-approval canary; final read-only review regeneration required before any production approval"
     },
     "TASK-N2-020": {
       "status": "BLOCKED_EXECUTOR_PENDING",
