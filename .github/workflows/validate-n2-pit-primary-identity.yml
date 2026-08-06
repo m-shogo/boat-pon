@@ -1,0 +1,85 @@
+name: Validate N2 PIT primary identity
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/validate-n2-pit-primary-identity.yml"
+      - "src/research-replay/n2PitAuditReader.ts"
+      - "src/research-replay/n2PitAuditReader.test.ts"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: n2-pit-primary-identity-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: [self-hosted, macOS, boat-pon-local]
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          corepack enable
+          pnpm install --frozen-lockfile --prod=false
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Run PIT reader and audit tests
+        run: node --test --import tsx src/research-replay/n2PitAuditReader.test.ts src/research-replay/n2PitAudit.test.ts
+
+      - name: Validate real production observations read-only
+        run: |
+          set -euo pipefail
+          node --import tsx --input-type=module <<'NODE'
+          import { existsSync, readFileSync, statSync } from "node:fs";
+          import { join } from "node:path";
+          import { buildN2PitAuditSummary } from "./src/research-replay/n2PitAudit.ts";
+          import { readN2PitAuditObservations } from "./src/research-replay/n2PitAuditReader.ts";
+
+          const policy = JSON.parse(readFileSync("config/research-automation-policy.json", "utf8"));
+          const primary = join(policy.dataRoot, "data", "boat.sqlite");
+          const sidecar = join(policy.dataRoot, "data", "research-replay.sqlite");
+          for (const path of [primary, sidecar]) {
+            const wal = `${path}-wal`;
+            if (existsSync(wal) && statSync(wal).size > 0) throw new Error(`ACTIVE_WAL:${wal}`);
+          }
+          const result = readN2PitAuditObservations({ primaryDbPath: primary, sidecarDbPath: sidecar });
+          const summary = buildN2PitAuditSummary(result.observations);
+          const cutoffCount = result.observations.filter((item) => item.decisionCutoff !== null).length;
+          console.log(JSON.stringify({
+            readerVersion: "n2-pit-audit-reader-v2",
+            returnedObservationCount: result.returnedObservationCount,
+            cutoffCount,
+            truncated: result.truncated,
+            summary,
+          }, null, 2));
+          if (result.returnedObservationCount !== 20
+            || cutoffCount !== 20
+            || result.truncated
+            || summary.status !== "PASS"
+            || summary.checkedFeatureCount !== 20
+            || summary.checkedOddsCount !== 0
+            || summary.ambiguousTimingCount !== 0
+            || summary.violationCount !== 0) {
+            throw new Error("REAL_N2_PIT_IDENTITY_VALIDATION_FAILED");
+          }
+          NODE
+
+      - name: Research governance
+        run: pnpm research:governance:check
+
+      - name: Full repository tests
+        run: pnpm test
+
+      - name: Production build
+        run: pnpm build
