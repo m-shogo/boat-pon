@@ -1,8 +1,9 @@
 import { DatabaseSync } from "node:sqlite";
 import { pathToFileURL } from "node:url";
+import { officialVenueCode } from "../domain/officialLinks";
 import type { N2PitAuditObservation } from "./n2PitAudit";
 
-export const N2_PIT_AUDIT_READER_VERSION = "n2-pit-audit-reader-v1";
+export const N2_PIT_AUDIT_READER_VERSION = "n2-pit-audit-reader-v2";
 export const N2_PIT_AUDIT_MAX_OBSERVATIONS = 100_000;
 
 export type N2PitAuditReadResult = {
@@ -21,6 +22,12 @@ type ProgramCutoffRow = {
   venue: string;
   raceNo: number;
   closeAt: string | null;
+};
+type CanonicalN2Key = {
+  date: string;
+  compactDate: string;
+  venueCode: string;
+  raceNo: number;
 };
 
 const FEATURE_OBSERVATION_SQL = `
@@ -55,23 +62,50 @@ function openImmutable(path: string): DatabaseSync {
   return db;
 }
 
-export function raceIdFromCanonicalN2Key(canonicalRaceKey: string): string | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2}):(\d{2}):R(\d{1,2})$/.exec(canonicalRaceKey);
+function parseCanonicalN2Key(canonicalRaceKey: string): CanonicalN2Key | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2}):(0[1-9]|1\d|2[0-4]):R(\d{1,2})$/.exec(canonicalRaceKey);
   if (!match) return null;
   const raceNo = Number(match[5]);
   if (!Number.isInteger(raceNo) || raceNo < 1 || raceNo > 12) return null;
-  return `${match[1]}${match[2]}${match[3]}-${match[4]}-${String(raceNo).padStart(2, "0")}`;
+  return {
+    date: `${match[1]}-${match[2]}-${match[3]}`,
+    compactDate: `${match[1]}${match[2]}${match[3]}`,
+    venueCode: match[4],
+    raceNo,
+  };
+}
+
+export function raceIdFromCanonicalN2Key(canonicalRaceKey: string): string | null {
+  const parsed = parseCanonicalN2Key(canonicalRaceKey);
+  return parsed === null
+    ? null
+    : `${parsed.compactDate}-${parsed.venueCode}-${String(parsed.raceNo).padStart(2, "0")}`;
+}
+
+export function programIdentityMatchesCanonicalKey(
+  row: ProgramCutoffRow | null,
+  expectedCanonicalRaceKey: string,
+): boolean {
+  if (row === null) return false;
+  const parsed = parseCanonicalN2Key(expectedCanonicalRaceKey);
+  if (parsed === null
+    || row.date !== parsed.date
+    || !Number.isInteger(row.raceNo)
+    || row.raceNo !== parsed.raceNo) {
+    return false;
+  }
+  const normalizedVenue = row.venue.trim();
+  if (officialVenueCode(normalizedVenue) !== parsed.venueCode) return false;
+  const raceSuffix = String(parsed.raceNo).padStart(2, "0");
+  const acceptedRaceIds = new Set([
+    `${parsed.compactDate}-${parsed.venueCode}-${raceSuffix}`,
+    `${parsed.compactDate}-${normalizedVenue}-${raceSuffix}`,
+  ]);
+  return acceptedRaceIds.has(row.raceId);
 }
 
 export function decisionCutoffFromProgram(row: ProgramCutoffRow | null, expectedCanonicalRaceKey: string): string | null {
-  if (row === null || row.closeAt === null) return null;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(row.date) || !/^\d{2}$/.test(row.venue)
-    || !Number.isInteger(row.raceNo) || row.raceNo < 1 || row.raceNo > 12) return null;
-  const expectedRaceId = raceIdFromCanonicalN2Key(expectedCanonicalRaceKey);
-  if (expectedRaceId === null || row.raceId !== expectedRaceId) return null;
-  const canonical = `${row.date}:${row.venue}:R${row.raceNo}`;
-  if (canonical !== expectedCanonicalRaceKey) return null;
-
+  if (!programIdentityMatchesCanonicalKey(row, expectedCanonicalRaceKey) || row?.closeAt === null) return null;
   const close = row.closeAt.trim();
   const time = /^\d{2}:\d{2}$/.test(close) ? `${close}:00`
     : /^\d{2}:\d{2}:\d{2}$/.test(close) ? close : null;
@@ -96,18 +130,25 @@ export function readN2PitAuditObservations(input: {
     const sourceRows = sidecar.prepare(FEATURE_OBSERVATION_SQL).all(limit + 1) as unknown as SourceObservationRow[];
     const truncated = sourceRows.length > limit;
     const boundedRows = truncated ? sourceRows.slice(0, limit) : sourceRows;
-    const program = primary.prepare(`
+    const programCandidates = primary.prepare(`
       SELECT race_id AS raceId, date, venue, race_no AS raceNo, close_at AS closeAt
       FROM official_programs
-      WHERE race_id = ?
+      WHERE date = ? AND race_no = ?
+      ORDER BY race_id
     `);
     const cutoffCache = new Map<string, string | null>();
     const observations = boundedRows.map((row): N2PitAuditObservation => {
       let cutoff = cutoffCache.get(row.canonicalRaceKey);
       if (cutoff === undefined) {
-        const raceId = raceIdFromCanonicalN2Key(row.canonicalRaceKey);
-        const programRow = raceId === null ? null : program.get(raceId) as ProgramCutoffRow | undefined;
-        cutoff = decisionCutoffFromProgram(programRow ?? null, row.canonicalRaceKey);
+        const parsed = parseCanonicalN2Key(row.canonicalRaceKey);
+        const candidates = parsed === null
+          ? []
+          : programCandidates.all(parsed.date, parsed.raceNo) as unknown as ProgramCutoffRow[];
+        const matchingRows = candidates.filter((candidate) =>
+          programIdentityMatchesCanonicalKey(candidate, row.canonicalRaceKey));
+        cutoff = matchingRows.length === 1
+          ? decisionCutoffFromProgram(matchingRows[0], row.canonicalRaceKey)
+          : null;
         cutoffCache.set(row.canonicalRaceKey, cutoff);
       }
       return { ...row, decisionCutoff: cutoff };
