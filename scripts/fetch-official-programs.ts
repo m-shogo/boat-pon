@@ -205,6 +205,10 @@ async function downloadFile(url: string, dest: string) {
   if (buf.length > MAX_ARCHIVE_BYTES) {
     throw new Error(`response too large: ${buf.length} > ${MAX_ARCHIVE_BYTES}`);
   }
+  const archiveMethod = buf.subarray(2, 7).toString("ascii");
+  if (!/^-lh[0-9d]-$/u.test(archiveMethod)) {
+    throw new Error(`LZH archive method header invalid: ${JSON.stringify(archiveMethod)}`);
+  }
   await writeFile(dest, buf);
 }
 
