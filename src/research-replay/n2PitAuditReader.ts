@@ -105,7 +105,9 @@ export function programIdentityMatchesCanonicalKey(
 }
 
 export function decisionCutoffFromProgram(row: ProgramCutoffRow | null, expectedCanonicalRaceKey: string): string | null {
-  if (!programIdentityMatchesCanonicalKey(row, expectedCanonicalRaceKey) || row?.closeAt === null) return null;
+  if (row === null || !programIdentityMatchesCanonicalKey(row, expectedCanonicalRaceKey) || row.closeAt === null) {
+    return null;
+  }
   const close = row.closeAt.trim();
   const time = /^\d{2}:\d{2}$/.test(close) ? `${close}:00`
     : /^\d{2}:\d{2}:\d{2}$/.test(close) ? close : null;
