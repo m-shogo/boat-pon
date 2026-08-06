@@ -78,7 +78,7 @@ jobs:
           NODE
 
       - name: Research governance
-        run: pnpm research:governance:check
+        run: pnpm research:governance-check
 
       - name: Full repository tests
         run: pnpm test
