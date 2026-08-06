@@ -18,7 +18,7 @@ const executorSource = readFileSync(
 );
 
 test("TASK-N2-013 catalog, registry and phase mapping are aligned", () => {
-  assert.equal(catalog.catalogVersion, "2026-08-06-n2-governance-v7");
+  assert.equal(catalog.catalogVersion, "2026-08-06-n2-governance-v8");
   const task = catalog.tasks.find((entry: { taskId: string }) => entry.taskId === "TASK-N2-013");
   assert.ok(task);
   assert.equal(task.taskDefinitionVersion, 2);
