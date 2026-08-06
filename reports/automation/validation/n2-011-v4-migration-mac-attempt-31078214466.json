@@ -1,0 +1,33 @@
+{
+  "evidenceSchemaVersion": "n2-011-v4-migration-mac-validation-attempt-v1",
+  "workflowRunId": 31078214466,
+  "workflowJobId": 92540820208,
+  "validatedCommit": "f4ed851499c579cf4ded5831dee7b84c72bee756",
+  "executionLocation": "Mac self-hosted",
+  "runnerName": "boat-pon-mac-local",
+  "result": "FAILED_WORKFLOW_CONFIGURATION",
+  "failureCode": "NPM_SCRIPT_NOT_FOUND",
+  "failureDetail": "temporary workflow invoked research:readiness, which is not defined; the repository command is research:rollout:readiness",
+  "completedChecks": {
+    "isolatedChangeBoundary": "PASS",
+    "runnerStateVersionAlignment": "PASS",
+    "typecheck": "PASS",
+    "targetedMigrationTests": "PASS_4_OF_4",
+    "fullRepositoryTests": "PASS_831_SKIP_2_FAIL_0",
+    "researchGovernance": "PASS",
+    "productBoundary": "PASS",
+    "buyLineBoundary": "PASS",
+    "researchReplayGolden": "PASS"
+  },
+  "notExecutedChecks": [
+    "researchRolloutReadiness",
+    "productionBuild",
+    "dbRuntimeWriteGuard",
+    "successEvidenceCommit"
+  ],
+  "dbWriteCount": "NOT_VERIFIED",
+  "approvalCreated": false,
+  "productionApplyExecuted": false,
+  "retryPolicy": "one corrected workflow retry; no TASK-N2-011 attempt was created or consumed",
+  "recordedAt": "2026-08-06T06:46:00.000Z"
+}
