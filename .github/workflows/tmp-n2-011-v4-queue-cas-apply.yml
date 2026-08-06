@@ -1,0 +1,151 @@
+name: temporary N2-011 v4 queue CAS apply
+
+on:
+  push:
+    branches:
+      - agent/n2-011-v4-queue-cas-apply-runner
+
+permissions:
+  contents: write
+
+concurrency:
+  group: n2-011-v4-queue-cas-apply
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      AUTHORITY_BRANCH: automation/boat-pon-research
+      TARGET_BRANCH: agent/n2-011-v4-queue-cas-migration-apply
+      EXPECTED_QUEUE_BLOB_SHA: 4454c51d49310c6b2fe824778fe946f11a89e16f
+    steps:
+      - name: Checkout tested migration implementation
+        uses: actions/checkout@v4
+        with:
+          ref: agent/n2-011-v4-queue-cas-apply-runner
+          fetch-depth: 0
+
+      - name: Capture exact automation authority
+        id: authority
+        run: |
+          set -euo pipefail
+          git fetch origin "$AUTHORITY_BRANCH" --quiet
+          AUTHORITY_SHA="$(git rev-parse "origin/$AUTHORITY_BRANCH")"
+          QUEUE_BLOB_SHA="$(git rev-parse "origin/$AUTHORITY_BRANCH:automation/control/task-queue-state.json")"
+          CURRENT_RUN_BLOB_SHA="$(git rev-parse "origin/$AUTHORITY_BRANCH:automation/control/current-run.json")"
+          if [ "$QUEUE_BLOB_SHA" != "$EXPECTED_QUEUE_BLOB_SHA" ]; then
+            echo "::error::queue blob authority drift: expected $EXPECTED_QUEUE_BLOB_SHA, got $QUEUE_BLOB_SHA"
+            exit 1
+          fi
+          if git ls-remote --exit-code --heads origin "$TARGET_BRANCH" >/dev/null 2>&1; then
+            echo "::error::target branch already exists; refuse overwrite"
+            exit 1
+          fi
+          echo "authority_sha=$AUTHORITY_SHA" >> "$GITHUB_OUTPUT"
+          echo "queue_blob_sha=$QUEUE_BLOB_SHA" >> "$GITHUB_OUTPUT"
+          echo "current_run_blob_sha=$CURRENT_RUN_BLOB_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Install
+        run: npm ci
+
+      - name: Validate migration implementation
+        run: |
+          set -euo pipefail
+          npm run typecheck
+          node --import tsx --test src/automation/n2QueueMigration.test.ts src/automation/runIntentStateVersion.test.ts
+
+      - name: Apply exact-CAS migration in isolated main checkout
+        run: |
+          set -euo pipefail
+          npx tsx scripts/migrate-n2-011-v4-queue.ts \
+            --apply \
+            --expected-queue-blob-sha="$EXPECTED_QUEUE_BLOB_SHA"
+          EVIDENCE_PATH="$(find reports/automation/migrations -maxdepth 1 -type f -name 'n2-011-v4-cas-*.json' -print)"
+          if [ -z "$EVIDENCE_PATH" ] || [ "$(printf '%s\n' "$EVIDENCE_PATH" | sed '/^$/d' | wc -l | tr -d ' ')" != "1" ]; then
+            echo "::error::expected exactly one migration evidence file"
+            find reports/automation/migrations -maxdepth 1 -type f -print || true
+            exit 1
+          fi
+          echo "EVIDENCE_PATH=$EVIDENCE_PATH" >> "$GITHUB_ENV"
+
+      - name: Materialize dedicated automation-derived branch
+        env:
+          AUTHORITY_SHA: ${{ steps.authority.outputs.authority_sha }}
+        run: |
+          set -euo pipefail
+          WORKTREE="$RUNNER_TEMP/n2-011-automation-authority"
+          git worktree add -b "$TARGET_BRANCH" "$WORKTREE" "$AUTHORITY_SHA"
+          mkdir -p "$WORKTREE/automation/control" "$WORKTREE/$(dirname "$EVIDENCE_PATH")"
+          cp automation/control/task-queue-state.json "$WORKTREE/automation/control/task-queue-state.json"
+          cp automation/control/current-run.json "$WORKTREE/automation/control/current-run.json"
+          cp "$EVIDENCE_PATH" "$WORKTREE/$EVIDENCE_PATH"
+
+          export WORKTREE
+          node --import tsx - <<'NODE'
+          import { readFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          import { computeStateDigest, validateQueueState } from './src/automation/taskCatalog.ts';
+          import { migrateN2011QueueToV4 } from './src/automation/n2QueueMigration.ts';
+
+          const queue = JSON.parse(readFileSync(join(process.env.WORKTREE, 'automation/control/task-queue-state.json'), 'utf8'));
+          const currentRun = JSON.parse(readFileSync(join(process.env.WORKTREE, 'automation/control/current-run.json'), 'utf8'));
+          const validation = validateQueueState(queue);
+          if (!validation.valid || !validation.state) throw new Error(`queue invalid: ${validation.errors.join('; ')}`);
+          const state = validation.state;
+          if (state.catalogVersion !== '2026-08-06-n2-governance-v8') throw new Error('catalogVersion is not v8');
+          if (state.stateVersion !== 48 || currentRun.stateVersion !== 48) throw new Error('queue/current-run stateVersion must both be 48');
+          if (currentRun.stateDigest !== computeStateDigest(state)) throw new Error('current-run digest mismatch');
+          const task = state.tasks['TASK-N2-011'];
+          if (task.status !== 'READY' || task.taskDefinitionVersion !== 4 || task.attemptCount !== 2 || task.maxAttempts !== 3) {
+            throw new Error('TASK-N2-011 migrated state mismatch');
+          }
+          if (task.authoritySha !== null || task.resultDigest !== null || task.lastFailure !== null || task.checkpoint !== null) {
+            throw new Error('TASK-N2-011 cleared fields mismatch');
+          }
+          const canary = state.tasks['TASK-N2-013'];
+          if (canary.status !== 'PASS' || canary.attemptCount !== 3 || canary.maxAttempts !== 3) {
+            throw new Error('TASK-N2-013 was reopened or altered');
+          }
+          const replay = migrateN2011QueueToV4(queue, currentRun, { now: '2026-08-06T07:00:00.000Z' });
+          if (replay.changed) throw new Error('migration replay was not NO_CHANGE');
+          NODE
+
+          cd "$WORKTREE"
+          STATUS_PATHS="$(git status --porcelain | sed -E 's/^.. //')"
+          printf '%s\n' "$STATUS_PATHS"
+          EXPECTED_PATHS="$(printf '%s\n' automation/control/current-run.json automation/control/task-queue-state.json "$EVIDENCE_PATH" | sort)"
+          ACTUAL_PATHS="$(printf '%s\n' "$STATUS_PATHS" | sed '/^$/d' | sort)"
+          if [ "$ACTUAL_PATHS" != "$EXPECTED_PATHS" ]; then
+            echo "::error::migration branch contains unexpected paths"
+            diff -u <(printf '%s\n' "$EXPECTED_PATHS") <(printf '%s\n' "$ACTUAL_PATHS") || true
+            exit 1
+          fi
+
+      - name: Recheck authority CAS and push migration branch
+        env:
+          AUTHORITY_SHA: ${{ steps.authority.outputs.authority_sha }}
+        run: |
+          set -euo pipefail
+          git fetch origin "$AUTHORITY_BRANCH" --quiet
+          CURRENT_AUTHORITY_SHA="$(git rev-parse "origin/$AUTHORITY_BRANCH")"
+          CURRENT_QUEUE_BLOB_SHA="$(git rev-parse "origin/$AUTHORITY_BRANCH:automation/control/task-queue-state.json")"
+          if [ "$CURRENT_AUTHORITY_SHA" != "$AUTHORITY_SHA" ]; then
+            echo "::error::automation authority advanced: $AUTHORITY_SHA -> $CURRENT_AUTHORITY_SHA"
+            exit 1
+          fi
+          if [ "$CURRENT_QUEUE_BLOB_SHA" != "$EXPECTED_QUEUE_BLOB_SHA" ]; then
+            echo "::error::queue blob advanced: $EXPECTED_QUEUE_BLOB_SHA -> $CURRENT_QUEUE_BLOB_SHA"
+            exit 1
+          fi
+
+          WORKTREE="$RUNNER_TEMP/n2-011-automation-authority"
+          cd "$WORKTREE"
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add automation/control/task-queue-state.json automation/control/current-run.json "$EVIDENCE_PATH"
+          git diff --cached --check
+          git commit -m 'chore(automation): migrate TASK-N2-011 queue authority to v4'
+          git push origin "HEAD:$TARGET_BRANCH"
+          echo "migration_commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
