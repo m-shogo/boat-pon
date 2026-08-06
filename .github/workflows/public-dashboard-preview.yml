@@ -2,6 +2,9 @@ name: public dashboard preview artifact
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - agent/public-dashboard-deploy-preview
 
 permissions:
   contents: read
