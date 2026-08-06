@@ -403,7 +403,7 @@ export function buildN2TrifectaMarketFoundation(input: {
     proposedObservationId: candidate.proposedObservationId,
     selectionCount: N2_TRIFECTA_SELECTION_COUNT,
   }));
-  const manifestCore = {
+  const manifestCore: Omit<N2TrifectaMarketCanaryManifest, "manifestDigest"> = {
     manifestVersion: N2_TRIFECTA_MARKET_CANARY_MANIFEST_VERSION as typeof N2_TRIFECTA_MARKET_CANARY_MANIFEST_VERSION,
     sourceType: "trifecta_market" as const,
     approvalScope: N2_TRIFECTA_MARKET_APPROVAL_SCOPE,
@@ -424,7 +424,7 @@ export function buildN2TrifectaMarketFoundation(input: {
     && entries.length > 0
     ? "READY_FOR_HUMAN_REVIEW" as const
     : "BLOCKED_NOT_READY_FOR_CANARY" as const;
-  const reviewCore = {
+  const reviewCore: Omit<N2TrifectaMarketFoundationSummary, "reviewBundleDigest"> = {
     foundationVersion: N2_TRIFECTA_MARKET_FOUNDATION_VERSION as typeof N2_TRIFECTA_MARKET_FOUNDATION_VERSION,
     status,
     sourceType: "trifecta_market" as const,
