@@ -1,0 +1,52 @@
+name: Temporary broaden install runner label
+
+on:
+  push:
+    branches:
+      - ops/install-n2-trifecta-local-capture-agent
+    paths:
+      - .github/workflows/tmp-broaden-install-runner-label.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ops/install-n2-trifecta-local-capture-agent
+          fetch-depth: 0
+
+      - name: Broaden standard runner labels and remove workflow
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('.github/workflows/tmp-install-n2-trifecta-local-capture-agent.yml')
+          source = path.read_text()
+          replacements = [
+              ('  cancel-in-progress: false', '  cancel-in-progress: true'),
+              ('    runs-on: [self-hosted, macOS, boat-pon-local]', '    runs-on: [self-hosted, macOS]'),
+          ]
+          for old, new in replacements:
+              count = source.count(old)
+              if count != 1:
+                  raise SystemExit(f'exact replacement count must be 1 for {old!r}, got {count}')
+              source = source.replace(old, new)
+          path.write_text(source)
+          Path('.github/workflows/tmp-broaden-install-runner-label.yml').unlink()
+          PY
+
+      - name: Commit exact workflow adjustment
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/tmp-install-n2-trifecta-local-capture-agent.yml \
+            .github/workflows/tmp-broaden-install-runner-label.yml
+          git commit -m "fix(ops): accept standard macOS self-hosted runner labels"
+          git push origin HEAD:ops/install-n2-trifecta-local-capture-agent
