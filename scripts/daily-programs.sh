@@ -1,5 +1,6 @@
 #!/bin/bash
-# 今日までの番組表を補完する。launchd から毎朝呼ばれる。
+# 過去14日を補完しつつ、当日の公式番組だけは毎回原子的に再取得する。
+# launchd から低頻度の固定時刻で呼ばれる。
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -18,6 +19,11 @@ run_tsx() {
   fi
 }
 
-echo "${LOG_PREFIX} fetch:official-programs ${FROM}..${TODAY}"
+echo "${LOG_PREFIX} fetch:official-programs ${FROM}..${TODAY} (force current day)"
 export BOAT_PON_SKIP_EXISTING=1
+export BOAT_PON_FORCE_PROGRAM_REFRESH_DATES="$TODAY"
 run_tsx scripts/fetch-official-programs.ts "$FROM" "$TODAY"
+
+echo "${LOG_PREFIX} verify current-day program inventory"
+export BOAT_PON_PROGRAM_READINESS_MAX_AGE_MINUTES=180
+run_tsx scripts/check-official-program-live-readiness.ts "$TODAY"
