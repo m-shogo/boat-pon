@@ -233,7 +233,7 @@ export function buildN2TrifectaOddsCheckpointPlan(input: {
     : [];
 
   const core = {
-    planVersion: N2_TRIFECTA_ODDS_CHECKPOINT_COLLECTION_VERSION,
+    planVersion: N2_TRIFECTA_ODDS_CHECKPOINT_COLLECTION_VERSION as typeof N2_TRIFECTA_ODDS_CHECKPOINT_COLLECTION_VERSION,
     stage: input.stage,
     raceCount: normalizedBlockers.length === 0 ? input.races.length : 0,
     venueDayCount: normalizedBlockers.length === 0 ? venueDays.size : 0,
