@@ -1,0 +1,75 @@
+name: temporary N2-011 v4 migration validation
+
+on:
+  push:
+    branches:
+      - agent/n2-011-v4-cas-migration-tool
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tmp-n2-011-v4-migration-validation
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: [self-hosted, macOS, boat-pon-local]
+    timeout-minutes: 120
+    steps:
+      - name: Checkout exact branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/n2-011-v4-cas-migration-tool
+          fetch-depth: 0
+
+      - name: Assert isolated change boundary
+        run: |
+          set -euo pipefail
+          git diff --name-only origin/main...HEAD | tee /tmp/n2-011-migration-files.txt
+          grep -Fxq 'src/automation/n2QueueMigration.ts' /tmp/n2-011-migration-files.txt
+          grep -Fxq 'src/automation/n2QueueMigration.test.ts' /tmp/n2-011-migration-files.txt
+          grep -Fxq 'scripts/migrate-n2-011-v4-queue.ts' /tmp/n2-011-migration-files.txt
+          if grep -E '^(src/(domain|decision|app_settings|production|sidecar)/|data/|backups/)' /tmp/n2-011-migration-files.txt; then
+            echo '::error::forbidden production/data path changed'
+            exit 1
+          fi
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Targeted migration tests
+        run: node --import tsx --test src/automation/n2QueueMigration.test.ts
+
+      - name: Full repository tests
+        run: npm test
+
+      - name: Research governance
+        run: npm run research:governance-check
+
+      - name: Product and BUY/LINE boundaries
+        run: |
+          node scripts/verify-product-boundaries.mjs
+          node scripts/verify-buy-line-learning-boundaries.mjs
+
+      - name: Research Replay golden and readiness
+        run: |
+          npm run research:golden:verify
+          npm run research:readiness
+
+      - name: Production build
+        run: npm run build
+
+      - name: Assert no DB/runtime writes
+        if: always()
+        run: |
+          set -euo pipefail
+          if git status --porcelain | grep -E '(^| )((data|backups)/|.*\.sqlite(-wal|-shm)?$)'; then
+            echo '::error::DB/runtime files changed during validation'
+            git status --short
+            exit 1
+          fi
+          git status --short
