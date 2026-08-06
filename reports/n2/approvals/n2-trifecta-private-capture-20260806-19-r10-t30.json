@@ -1,0 +1,32 @@
+{
+  "approvalVersion": "n2-trifecta-odds-capture-approval-v1",
+  "approvalId": "APR-N2-TRI-ODDS-user-authorized-20260806-19-r10-t30",
+  "scope": "N2_TRIFECTA_ODDS_PRIVATE_CHECKPOINT_CAPTURE",
+  "stage": "ONE_VENUE_REVIEW",
+  "manifestDigest": "870fa890ad7ae23ed75373fb1ac096b7a2bf620ea133e74bbef3220b737bec7c",
+  "issuedAt": "2026-08-06T09:54:00.000Z",
+  "expiresAt": "2026-08-06T10:20:00.000Z",
+  "maxRequests": 16,
+  "privateResearchOnly": true,
+  "publicRedistributionAuthorized": false,
+  "databaseWriteAuthorized": false,
+  "currentBuyConnectionAuthorized": false,
+  "lineConnectionAuthorized": false,
+  "authorizationBasis": "The user explicitly requested acquisition of valuable odds data for private research. This approval is limited to the next exact checkpoint after the first canary execution state is isolated by ledger and checkpoint identity.",
+  "target": {
+    "date": "2026-08-06",
+    "venueCode": "19",
+    "raceNo": 10,
+    "checkpointLabel": "T-30",
+    "targetCaptureAt": "2026-08-06T10:17:00.000Z"
+  },
+  "networkRequestCeilingForThisCanary": 1,
+  "approvalDoesNotAuthorize": [
+    "database writes",
+    "Current BUY changes",
+    "LINE changes",
+    "public publishing",
+    "automated betting",
+    "retrying a failed checkpoint"
+  ]
+}
