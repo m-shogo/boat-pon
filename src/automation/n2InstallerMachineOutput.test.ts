@@ -19,9 +19,10 @@ test("immutable runtime npm install output is captured before final JSON", () =>
   );
 });
 
-test("installer has one final structured stdout disposition", () => {
+test("installer keeps explicit JSON dispositions and isolated print-only plist output", () => {
   const consoleLogs = installer.match(/console\.log\(/gu) ?? [];
-  assert.equal(consoleLogs.length, 2);
-  assert.match(installer, /console\.log\(JSON\.stringify\(\{/u);
+  const structuredLogs = installer.match(/console\.log\(JSON\.stringify\(\{/gu) ?? [];
+  assert.equal(consoleLogs.length, 3);
+  assert.equal(structuredLogs.length, 2);
   assert.match(installer, /if \(printOnly\) console\.log\(plist\)/u);
 });
