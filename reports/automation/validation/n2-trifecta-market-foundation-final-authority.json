@@ -1,0 +1,45 @@
+{
+  "evidenceSchemaVersion": "n2-trifecta-market-foundation-final-authority-v1",
+  "workflowRunId": 31084318117,
+  "validatedBranchHeadBeforeCommit": "da93e9bf2f580ba1517b5e54d7f175c62945f47d",
+  "executionLocation": "GitHub-hosted authority finalization",
+  "result": "PASS",
+  "errors": [],
+  "foundationState": "BLOCKED_NOT_READY_FOR_CANARY",
+  "dataStatus": "NO_SOURCE_ROWS",
+  "latestSuccessfulMacValidationRunId": 31083858112,
+  "latestSuccessfulMacValidationCommit": "19a12ce2bf87562eb5950cfd417775dc23a7fe26",
+  "transientWalBlockedRuns": [
+    31082678987,
+    31083857785
+  ],
+  "recoveredReadOnlyRuns": [
+    31082994311,
+    31083858112
+  ],
+  "failureClassification": "TRANSIENT_PRIMARY_WAL_CONTENTION_FAIL_CLOSED",
+  "retryDecision": "NO_IMMEDIATE_DB_RETRY; preserve blocked state until a separately scheduled quiescent preflight",
+  "taskAttemptConsumed": false,
+  "writeAuthorized": false,
+  "approvalCreated": false,
+  "productionApplyExecuted": false,
+  "primaryDbWriteCount": 0,
+  "sidecarWriteCount": 0,
+  "trifectaMarketObservationCount": 0,
+  "manifestEntryCount": 0,
+  "checks": {
+    "reportStatus": true,
+    "dataStatus": true,
+    "macValidation": true,
+    "sourceRowsZero": true,
+    "manifestEntriesZero": true,
+    "observationsZero": true,
+    "writeDisabled": true,
+    "approvalAbsent": true,
+    "productionApplyAbsent": true,
+    "dbWritesZero": true,
+    "dbMetadataUnchanged": true,
+    "shadowWriteOff": true
+  },
+  "generatedAt": "2026-08-06T08:17:59.320746Z"
+}

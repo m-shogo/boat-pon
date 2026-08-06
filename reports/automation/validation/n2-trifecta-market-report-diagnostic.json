@@ -1,0 +1,174 @@
+{
+  "evidenceSchemaVersion": "n2-trifecta-market-report-diagnostic-v1",
+  "workflowRunId": 31083857630,
+  "validatedCommit": "273ff42a267eae8f6c2ba2089f69927df0449561",
+  "reportExitCode": 0,
+  "stdout": "{\n  \"reportVersion\": \"n2-trifecta-market-foundation-report-v1\",\n  \"generatedAt\": \"2026-08-06T08:11:18.734Z\",\n  \"status\": \"BLOCKED_NOT_READY_FOR_CANARY\",\n  \"dataStatus\": \"NO_SOURCE_ROWS\",\n  \"sourceType\": \"trifecta_market\",\n  \"inventory\": {\n    \"readerVersion\": \"n2-trifecta-market-source-inventory-reader-v1\",\n    \"cohort\": {\n      \"dateFrom\": \"2026-07-31\",\n      \"dateTo\": \"2026-08-06\",\n      \"dayCount\": 7\n    },\n    \"sourceTable\": \"odds_timeseries_snapshots\",\n    \"sourceTablePresent\": true,\n    \"columns\": [\n      \"captured_at\",\n      \"checkpoint_label\",\n      \"created_at\",\n      \"id\",\n      \"minutes_before_close\",\n      \"odds\",\n      \"popularity\",\n      \"race_id\",\n      \"selection\",\n      \"source\"\n    ],\n    \"totalRows\": 0,\n    \"raceCount\": 0,\n    \"checkpointCount\": 0,\n    \"completeSnapshotCount\": 0,\n    \"rawDocumentIdColumnPresent\": false,\n    \"rawPayloadColumnPresent\": false,\n    \"rawPayloadDigestColumnPresent\": false,\n    \"parseRunIdColumnPresent\": false,\n    \"sourceUrlColumnPresent\": false,\n    \"capturedAtColumnPresent\": true,\n    \"availableAtColumnPresent\": false,\n    \"decisionCutoffColumnPresent\": false,\n    \"checkpointLabelColumnPresent\": true\n  },\n  \"foundation\": {\n    \"foundationVersion\": \"n2-trifecta-market-foundation-v1\",\n    \"status\": \"BLOCKED_NOT_READY_FOR_CANARY\",\n    \"sourceType\": \"trifecta_market\",\n    \"writeAuthorized\": false,\n    \"autoCreateApproval\": false,\n    \"autoEnableShadowWrite\": false,\n    \"productionApplyExecuted\": false,\n    \"inventory\": {\n      \"readerVersion\": \"n2-trifecta-market-source-inventory-reader-v1\",\n      \"cohort\": {\n        \"dateFrom\": \"2026-07-31\",\n        \"dateTo\": \"2026-08-06\",\n        \"dayCount\": 7\n      },\n      \"sourceTable\": \"odds_timeseries_snapshots\",\n      \"sourceTablePresent\": true,\n      \"columns\": [\n        \"captured_at\",\n        \"checkpoint_label\",\n        \"created_at\",\n        \"id\",\n        \"minutes_before_close\",\n        \"odds\",\n        \"popularity\",\n        \"race_id\",\n        \"selection\",\n        \"source\"\n      ],\n      \"totalRows\": 0,\n      \"raceCount\": 0,\n      \"checkpointCount\": 0,\n      \"completeSnapshotCount\": 0,\n      \"rawDocumentIdColumnPresent\": false,\n      \"rawPayloadColumnPresent\": false,\n      \"rawPayloadDigestColumnPresent\": false,\n      \"parseRunIdColumnPresent\": false,\n      \"sourceUrlColumnPresent\": false,\n      \"capturedAtColumnPresent\": true,\n      \"availableAtColumnPresent\": false,\n      \"decisionCutoffColumnPresent\": false,\n      \"checkpointLabelColumnPresent\": true\n    },\n    \"inventoryBlockers\": [\n      \"SOURCE_ROWS_EMPTY\",\n      \"SOURCE_RACES_EMPTY\",\n      \"CHECKPOINTS_EMPTY\",\n      \"COMPLETE_120_SELECTION_SNAPSHOT_EMPTY\",\n      \"RAW_DOCUMENT_ID_COLUMN_MISSING\",\n      \"RAW_PAYLOAD_COLUMN_MISSING\",\n      \"RAW_PAYLOAD_DIGEST_COLUMN_MISSING\",\n      \"PARSE_RUN_ID_COLUMN_MISSING\",\n      \"AVAILABLE_AT_COLUMN_MISSING\",\n      \"DECISION_CUTOFF_COLUMN_MISSING\"\n    ],\n    \"candidateCount\": 0,\n    \"safeCandidateCount\": 0,\n    \"blockedCandidateCount\": 0,\n    \"duplicateCheckpointIdentities\": [],\n    \"candidateAudits\": [],\n    \"canaryManifest\": {\n      \"manifestVersion\": \"n2-trifecta-market-canary-manifest-v1\",\n      \"sourceType\": \"trifecta_market\",\n      \"approvalScope\": \"N2_TRIFECTA_MARKET_OBSERVATION_CANARY\",\n      \"writeAuthorized\": false,\n      \"productionApplyExecuted\": false,\n      \"requestedMaxRaces\": 20,\n      \"boundedMaxRaces\": 20,\n      \"entryCount\": 0,\n      \"entries\": [],\n      \"manifestDigest\": \"01b8d1ab5c848223db708abdd644652c28147670a528e95d0a6a1d606cad1440\"\n    },\n    \"rollbackAndRevokeConditions\": [\n      \"active WAL or mutable DB access detected\",\n      \"manifest digest, source schema, raw payload digest, or checkpoint identity drift\",\n      \"missing or expired source-specific approval\",\n      \"any availableAt/capturedAt/decisionCutoff PIT ordering violation\",\n      \"incomplete or duplicate 120-selection payload\",\n      \"raw document, parse run, or proposed observation lineage mismatch\",\n      \"insert/reuse/write counts differ from reviewed manifest\",\n      \"primary DB write count is non-zero\",\n      \"sidecar writes occur outside the approved bounded canary transaction\",\n      \"idempotent replay changes observation identity or payload digest\",\n      \"post-apply read-only verification fails\"\n    ],\n    \"idempotentReplayContract\": {\n      \"identityFields\": [\n        \"raceId\",\n        \"checkpointLabel\",\n        \"capturedAt\",\n        \"rawDocumentId\",\n        \"rawPayloadDigest\",\n        \"parseRunId\",\n        \"proposedObservationId\"\n      ],\n      \"replayRule\": \"same identity and payload digest => reuse; identity collision with different digest => block\",\n      \"duplicateCheckpointRule\": \"duplicate checkpoint identity => block whole review bundle\"\n    },\n    \"readOnlyVerificationContract\": {\n      \"primaryDbMode\": \"immutable/query-only\",\n      \"sidecarDbMode\": \"immutable/query-only\",\n      \"primaryDbWriteCount\": 0,\n      \"sidecarWriteCount\": 0,\n      \"requireNoActiveWal\": true,\n      \"requireManifestDigestMatch\": true,\n      \"requireObservationCountUnchanged\": true,\n      \"requireApprovalRevokedAfterApply\": true\n    },\n    \"reviewBundleDigest\": \"69388babf88a119100f61d370bf5b8e6719582c353168a9ad9ce2ab42821cc53\"\n  },\n  \"existingState\": {\n    \"trifectaMarketObservationCount\": 0,\n    \"captureAttemptCount\": 20,\n    \"shadowWriteEnabled\": false,\n    \"operationalGcEnabled\": false,\n    \"killSwitchEngaged\": false,\n    \"approvalPresent\": false\n  },\n  \"sourceCandidatesMaterialized\": 0,\n  \"sourceCandidatePolicy\": \"aggregate odds rows are inventory only and are never relabeled as raw official documents\",\n  \"writeAuthorized\": false,\n  \"approvalCreated\": false,\n  \"productionApplyExecuted\": false,\n  \"primaryDbWriteCount\": 0,\n  \"sidecarWriteCount\": 0,\n  \"dbMetadataUnchanged\": true,\n  \"dbEvidence\": {\n    \"primaryBefore\": {\n      \"exists\": true,\n      \"bytes\": 15313305600,\n      \"modifiedMs\": 1786003623889.9023,\n      \"walBytes\": 0\n    },\n    \"primaryAfter\": {\n      \"exists\": true,\n      \"bytes\": 15313305600,\n      \"modifiedMs\": 1786003623889.9023,\n      \"walBytes\": 0\n    },\n    \"sidecarBefore\": {\n      \"exists\": true,\n      \"bytes\": 9762127872,\n      \"modifiedMs\": 1785980955954.9895,\n      \"walBytes\": 0\n    },\n    \"sidecarAfter\": {\n      \"exists\": true,\n      \"bytes\": 9762127872,\n      \"modifiedMs\": 1785980955954.9895,\n      \"walBytes\": 0\n    }\n  },\n  \"outputDigest\": \"06a34ff5af267e8f365c86116aa1aa8ee4f316baeff9a3fee654d767bb93cbeb\"\n}\n",
+  "stderr": "",
+  "primary": {
+    "path": "/Users/m-shogo/Developer/personal/boat-pon/data/boat.sqlite",
+    "exists": true,
+    "bytes": 15313305600,
+    "walBytes": 0
+  },
+  "sidecar": {
+    "path": "/Users/m-shogo/Developer/personal/boat-pon/data/research-replay.sqlite",
+    "exists": true,
+    "bytes": 9762127872,
+    "walBytes": 0
+  },
+  "tables": {
+    "odds_timeseries_snapshots": [
+      {
+        "cid": 0,
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": 0,
+        "dflt_value": null,
+        "pk": 1
+      },
+      {
+        "cid": 1,
+        "name": "race_id",
+        "type": "TEXT",
+        "notnull": 1,
+        "dflt_value": null,
+        "pk": 0
+      },
+      {
+        "cid": 2,
+        "name": "selection",
+        "type": "TEXT",
+        "notnull": 1,
+        "dflt_value": null,
+        "pk": 0
+      },
+      {
+        "cid": 3,
+        "name": "odds",
+        "type": "REAL",
+        "notnull": 1,
+        "dflt_value": null,
+        "pk": 0
+      },
+      {
+        "cid": 4,
+        "name": "popularity",
+        "type": "INTEGER",
+        "notnull": 0,
+        "dflt_value": null,
+        "pk": 0
+      },
+      {
+        "cid": 5,
+        "name": "source",
+        "type": "TEXT",
+        "notnull": 1,
+        "dflt_value": null,
+        "pk": 0
+      },
+      {
+        "cid": 6,
+        "name": "captured_at",
+        "type": "TEXT",
+        "notnull": 1,
+        "dflt_value": "CURRENT_TIMESTAMP",
+        "pk": 0
+      },
+      {
+        "cid": 7,
+        "name": "minutes_before_close",
+        "type": "INTEGER",
+        "notnull": 0,
+        "dflt_value": null,
+        "pk": 0
+      },
+      {
+        "cid": 8,
+        "name": "checkpoint_label",
+        "type": "TEXT",
+        "notnull": 0,
+        "dflt_value": null,
+        "pk": 0
+      },
+      {
+        "cid": 9,
+        "name": "created_at",
+        "type": "TEXT",
+        "notnull": 1,
+        "dflt_value": "CURRENT_TIMESTAMP",
+        "pk": 0
+      }
+    ],
+    "official_programs": [
+      {
+        "cid": 0,
+        "name": "race_id",
+        "type": "TEXT",
+        "notnull": 0,
+        "dflt_value": null,
+        "pk": 1
+      },
+      {
+        "cid": 1,
+        "name": "date",
+        "type": "TEXT",
+        "notnull": 1,
+        "dflt_value": null,
+        "pk": 0
+      },
+      {
+        "cid": 2,
+        "name": "venue",
+        "type": "TEXT",
+        "notnull": 1,
+        "dflt_value": null,
+        "pk": 0
+      },
+      {
+        "cid": 3,
+        "name": "race_no",
+        "type": "INTEGER",
+        "notnull": 1,
+        "dflt_value": null,
+        "pk": 0
+      },
+      {
+        "cid": 4,
+        "name": "close_at",
+        "type": "TEXT",
+        "notnull": 1,
+        "dflt_value": null,
+        "pk": 0
+      },
+      {
+        "cid": 5,
+        "name": "source_file",
+        "type": "TEXT",
+        "notnull": 1,
+        "dflt_value": null,
+        "pk": 0
+      },
+      {
+        "cid": 6,
+        "name": "raw_json",
+        "type": "TEXT",
+        "notnull": 1,
+        "dflt_value": null,
+        "pk": 0
+      },
+      {
+        "cid": 7,
+        "name": "imported_at",
+        "type": "TEXT",
+        "notnull": 1,
+        "dflt_value": "CURRENT_TIMESTAMP",
+        "pk": 0
+      }
+    ]
+  },
+  "queryError": null,
+  "taskAttemptConsumed": false,
+  "approvalCreated": false,
+  "productionApplyExecuted": false
+}
