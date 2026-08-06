@@ -1,0 +1,43 @@
+name: temporary sync public dashboard preview
+
+on:
+  push:
+    branches:
+      - agent/public-dashboard-deploy-preview
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tmp-sync-public-dashboard-preview
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: ${{ github.event.head_commit.message != 'chore(public): sync preview with latest main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/public-dashboard-deploy-preview
+          fetch-depth: 0
+
+      - name: Merge latest main without force
+        run: |
+          set -euo pipefail
+          git fetch origin main --quiet
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          set +e
+          git merge --no-ff --no-edit origin/main
+          code=$?
+          set -e
+          if [ "$code" -ne 0 ]; then
+            echo '::error::main merge produced conflicts'
+            git diff --name-only --diff-filter=U
+            git status --short
+            exit "$code"
+          fi
+          git commit --amend -m 'chore(public): sync preview with latest main'
+          git push origin HEAD:agent/public-dashboard-deploy-preview
