@@ -33,7 +33,7 @@ export const GLOSSARY_TERMS = {
   intent: term("intent", "intent", "研究runnerへ渡す、実行したい1回分の正式な依頼です。", "誰が何をどの安全レベルで実行したかを追跡できます。", "taskId、authority SHA、safety level、処理済み状態を見ます。", "intentを書けば必ず実行されると考えることです。guardで拒否される場合があります。", "TASK-N2-010をL0で1回実行するJSON依頼。"),
   runner: term("runner", "runner", "研究taskを実際に実行するMac側の処理環境です。", "GitHub上の依頼だけでは大容量local dataを読めないためです。", "online/busy、last run、lock、failure classを確認します。", "runner onlineを研究結果PASSと同じ意味にすることです。", "self-hosted runnerがsidecarをread-onlyで開く。"),
   queueState: term("queue-state", "queue-state", "各研究taskのREADY・PASS・BLOCKEDなどの実行状態を保持する正本です。", "依存関係と再実行を安全に管理できます。", "catalog versionとの一致とstale definitionを確認します。", "mainのtask定義とautomation branchの状態を手動で混ぜることです。", "TASK-N2-010=READY、依存TASK-N2-001..006=PASS。"),
-  sidecar: term("sidecar", "sidecar", "本体DBと分離した研究用の大容量SQLiteデータです。", "研究処理を本番判断・設定から隔離できます。", "read-only、schema version、WAL状態、容量を確認します。", "公開Webから直接接続してよいDBだと考えることです。", "9GBのresearch-replay.sqliteをMacでimmutable read。"),
+  sidecar: term("sidecar", "sidecar", "本体DBと分離した研究用の大容量SQLiteデータです。", "研究処理を本番判断・設定から隔離できます。", "read-only、schema version、WAL状態、容量を確認します。", "公開Webから直接接続してよいDBだと考えることです。", "Mac上の研究用sidecarをimmutable read。"),
   wal: term("wal", "WAL", "SQLiteが変更途中の内容を一時的に保持するログファイルです。", "active WALがあるDBをコピー・解析すると整合性問題が起きる可能性があります。", "quiescentか、正しい接続方法かを確認します。", "WALファイルがあれば必ず破損していると考えることです。", "research guardはactive WAL時に開始を拒否。"),
   safetyLevels: term("safety-levels", "L0〜L4", "研究自動化の変更リスクを段階で表す分類です。", "安全なread-only作業と、本番影響のある作業を同じ権限で実行しないためです。", "L0/L1/L2は許可範囲、L3は明示grant、L4は常時拒否などpolicyを確認します。", "数字が大きいほど研究品質が高いレベルだと考えることです。", "L0=read-only、L4=自動購入など禁止領域。")
 } satisfies Record<string, GlossaryTerm>;
