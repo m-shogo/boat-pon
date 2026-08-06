@@ -1,6 +1,6 @@
 {
   "evidenceSchemaVersion": "boat-pon-self-hosted-runner-recovery-v1",
-  "status": "IMPLEMENTED_PENDING_CI",
+  "status": "PASS",
   "baseMainSha": "9e5ed14664cbb4c93e30560ea4c2250ad2563dbf",
   "branch": "fix/boat-pon-self-hosted-runner-recovery",
   "defaultRunnerDirectory": "/Users/m-shogo/actions-runner-boat-pon",
@@ -26,6 +26,23 @@
     "serviceReinstalled": false,
     "sudoUsed": false
   },
+  "checks": {
+    "typecheck": "PASS",
+    "diagnosisReadOnlyFixture": "PASS",
+    "explicitStartRequiredFixture": "PASS",
+    "missingRegistrationFailClosedFixture": "PASS",
+    "stoppedServiceSingleStartFixture": "PASS",
+    "alreadyRunningNoRestartFixture": "PASS",
+    "forbiddenCommandStaticScan": "PASS",
+    "fullRepositoryTests": "PASS",
+    "researchGovernance": "PASS",
+    "secretScan": "PASS",
+    "productPublicBoundary": "PASS",
+    "buyLineBoundary": "PASS",
+    "researchReplayGolden": "PASS",
+    "researchReplayReadiness": "PASS",
+    "productionBuild": "PASS"
+  },
   "protectedBoundaries": {
     "currentBuyChanged": false,
     "lineChanged": false,
@@ -35,6 +52,6 @@
     "productionApplyExecuted": false
   },
   "realRunnerRecoveryExecutedByThisPr": false,
-  "ciRunId": null,
-  "ciConclusion": null
+  "ciRunId": 31110244050,
+  "ciConclusion": "success"
 }
