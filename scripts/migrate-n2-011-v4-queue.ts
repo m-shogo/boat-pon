@@ -56,7 +56,7 @@ const die = (message: string): never => {
 // 1. Validate immutable main catalog authority.
 const catalogValidation = validateCatalog(JSON.parse(readFileSync(join(root, "automation/task-catalog.json"), "utf8")));
 if (!catalogValidation.valid || !catalogValidation.catalog) die(`catalog invalid: ${catalogValidation.errors.join("; ")}`);
-const catalog = catalogValidation.catalog;
+const catalog = catalogValidation.catalog!;
 if (catalog.catalogVersion !== N2_011_TARGET_CATALOG_VERSION) {
   die(`catalog must be ${N2_011_TARGET_CATALOG_VERSION} (got ${catalog.catalogVersion})`);
 }
@@ -139,7 +139,7 @@ const writtenQueueValidation = validateQueueState(writtenQueue);
 if (!writtenQueueValidation.valid || !writtenQueueValidation.state) {
   die(`written queue invalid: ${writtenQueueValidation.errors.join("; ")}`);
 }
-const writtenState = writtenQueueValidation.state;
+const writtenState = writtenQueueValidation.state!;
 if (writtenState.catalogVersion !== N2_011_TARGET_CATALOG_VERSION) die("written catalogVersion mismatch");
 if (writtenCurrentRun.stateVersion !== writtenState.stateVersion) die("queue/current-run stateVersion mismatch after write");
 if (writtenCurrentRun.stateDigest !== computeStateDigest(writtenState)) die("current-run stateDigest mismatch after write");
