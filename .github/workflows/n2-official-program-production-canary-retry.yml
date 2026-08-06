@@ -1,0 +1,489 @@
+name: N2 official-program production canary retry
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/n2-official-program-production-canary-retry.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: boat-pon-local-research
+  cancel-in-progress: false
+
+jobs:
+  apply-bounded-canary:
+    runs-on: [self-hosted, macOS, boat-pon-local]
+    timeout-minutes: 180
+    steps:
+      - name: Checkout exact reviewed code
+        uses: actions/checkout@v4
+        with:
+          ref: 772f3684797598ef05ae28b5606a0533da58ebe8
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          corepack enable
+          pnpm install --frozen-lockfile --prod=false
+
+      - name: Materialize exact current-source bundle
+        env:
+          BRANCH: automation/boat-pon-research
+          BUNDLE_PATH: ${{ runner.temp }}/n2-official-program-canary-review-bundle.json
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "772f3684797598ef05ae28b5606a0533da58ebe8"
+          git fetch origin "$BRANCH" --quiet
+          git show "origin/$BRANCH:reports/n2/n2-official-program-canary-review-bundle.json" > "$BUNDLE_PATH"
+          test -s "$BUNDLE_PATH"
+
+      - name: Verify backup, approve, apply, replay and revoke
+        id: apply
+        continue-on-error: true
+        env:
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          REVIEW_BUNDLE_PATH: ${{ runner.temp }}/n2-official-program-canary-review-bundle.json
+          REPORT_PATH: ${{ runner.temp }}/n2-official-program-canary-apply.json
+          SEALED_SHA: 772f3684797598ef05ae28b5606a0533da58ebe8
+          EXPECTED_MANIFEST_DIGEST: 151c34786e29ca80838da0fe3b2eb3326ee343d0a3656e8f20666af14d1b3a85
+          RETAINED_BACKUP_NAME: n2-official-program-canary-31058847357-1785977909393.sqlite
+          EXPECTED_BACKUP_BYTES: "9418084352"
+          EXPECTED_SIDECAR_BYTES: "9762041856"
+          EXPECTED_SIDECAR_MTIME_MS_FLOOR: "1785765804074"
+          USER_APPROVED_AT: 2026-08-05T23:43:00.000Z
+          USER_APPROVAL_REFERENCE: chatgpt:boat-pon:user-confirmation:2026-08-06T08:43+09:00;continued:2026-08-06T10:12+09:00
+        run: |
+          set -euo pipefail
+          node --import tsx --input-type=module <<'NODE'
+          import { createHash } from "node:crypto";
+          import { createReadStream } from "node:fs";
+          import {
+            existsSync,
+            lstatSync,
+            readFileSync,
+            statfsSync,
+            statSync,
+            writeFileSync,
+          } from "node:fs";
+          import { basename, join, relative } from "node:path";
+          import { pathToFileURL } from "node:url";
+          import { execFileSync } from "node:child_process";
+          import { DatabaseSync } from "node:sqlite";
+          import {
+            recordApprovalGrant,
+            recordApprovalLifecycle,
+            resolveApproval,
+          } from "./src/research-replay/approval.ts";
+          import { canonicalHash } from "./src/research-replay/canonical.ts";
+          import {
+            applyOfficialProgramCanary,
+            buildOfficialProgramCanaryManifest,
+            officialProgramCanaryApprovalTarget,
+          } from "./src/research-replay/n2OfficialProgramCanary.ts";
+          import { readOfficialProgramCanarySource } from "./src/research-replay/n2OfficialProgramCanaryReader.ts";
+          import { assertOfficialProgramCanaryReviewBundle } from "./src/research-replay/n2OfficialProgramCanaryReviewBundle.ts";
+          import { buildN2ObservationIngestReadiness } from "./src/research-replay/n2ObservationIngestReadiness.ts";
+          import { readN2ObservationIngestReadiness } from "./src/research-replay/n2ObservationIngestReadinessReader.ts";
+          import { RawStore } from "./src/research-replay/rawStore.ts";
+          import { ResearchReplayRepository } from "./src/research-replay/repository.ts";
+          import { openRolloutDatabase, verifyRolloutSchema } from "./src/research-replay/schema.ts";
+
+          const reportPath = process.env.REPORT_PATH;
+          const runId = process.env.GITHUB_RUN_ID;
+          const sealedSha = process.env.SEALED_SHA;
+          const expectedDigest = process.env.EXPECTED_MANIFEST_DIGEST;
+          let stage = "INITIALIZE";
+          let report = {
+            reportVersion: "n2-official-program-production-canary-v2",
+            status: "FAILED",
+            runId,
+            stage,
+            sourceCheckoutSha: sealedSha,
+            manifestDigest: expectedDigest,
+            selectedRaceCount: 20,
+            failure: null,
+            approval: { granted: false, revoked: false, approvalId: null, lifecycleEventId: null, postRevokeCode: null },
+            backup: null,
+            firstApply: null,
+            idempotentReplay: null,
+            before: null,
+            afterApply: null,
+            afterRevoke: null,
+            primaryDatabase: { writeCount: 0, metadataChangedDuringRun: null },
+            globalShadowWriteEnabled: false,
+            killSwitchEngaged: false,
+            n2PitAuditRetried: false,
+            currentBuyChanged: false,
+            lineChanged: false,
+            automaticBettingChanged: false,
+          };
+          const persistReport = () => writeFileSync(reportPath, `${JSON.stringify({ ...report, stage }, null, 2)}\n`, { mode: 0o600 });
+          const count = (db, sql, ...params) => Number(db.prepare(sql).get(...params).n);
+          const hashFile = (path) => new Promise((resolve, reject) => {
+            const hash = createHash("sha256");
+            const stream = createReadStream(path);
+            stream.on("data", (chunk) => hash.update(chunk));
+            stream.on("error", reject);
+            stream.on("end", () => resolve(hash.digest("hex")));
+          });
+          const openImmutable = (path) => {
+            const db = new DatabaseSync(`${pathToFileURL(path).href}?immutable=1`, { readOnly: true });
+            db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=5000");
+            return db;
+          };
+          const walBytes = (path) => {
+            const wal = `${path}-wal`;
+            return existsSync(wal) ? statSync(wal).size : 0;
+          };
+
+          let db = null;
+          let approvalGranted = false;
+          let approvalRevoked = false;
+          let approvalId = null;
+          let lifecycleId = null;
+          try {
+            stage = "VERIFY_CHECKOUT_AND_BUNDLE";
+            const checkoutSha = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+            if (checkoutSha !== sealedSha) throw new Error(`SEALED_SHA_MISMATCH:${checkoutSha}`);
+            const policy = JSON.parse(readFileSync("config/research-automation-policy.json", "utf8"));
+            const dataRoot = policy.dataRoot;
+            const primaryPath = join(dataRoot, "data", "boat.sqlite");
+            const sidecarPath = join(dataRoot, "data", "research-replay.sqlite");
+            const rawRoot = join(dataRoot, "data", "research-replay-raw");
+            const backupPath = join(dataRoot, "data", "backups", process.env.RETAINED_BACKUP_NAME);
+            const bundle = JSON.parse(readFileSync(process.env.REVIEW_BUNDLE_PATH, "utf8"));
+            assertOfficialProgramCanaryReviewBundle(bundle);
+            if (bundle.bundleVersion !== "n2-official-program-canary-review-bundle-v2"
+              || bundle.status !== "READY_FOR_HUMAN_REVIEW"
+              || bundle.reviewBlocks.length !== 0
+              || bundle.manifest.manifestDigest !== expectedDigest
+              || bundle.manifest.binding.items.length !== 20
+              || bundle.binding.authoritySha !== sealedSha
+              || bundle.binding.manifestCodeGitSha !== sealedSha
+              || bundle.binding.executionContract.requiredCheckoutSha !== sealedSha
+              || bundle.manifest.generatedAt !== bundle.generatedAt
+              || bundle.binding.manifestGeneratedAt !== bundle.generatedAt
+              || Date.parse(bundle.generatedAt) > Date.now() + 1000
+              || bundle.writeAuthorized !== false
+              || bundle.productionApplyExecuted !== false
+              || bundle.humanApprovalCreated !== false
+              || bundle.binding.executionContract.productionApplyAuthorized !== false) {
+              throw new Error("REVIEW_BUNDLE_CONTRACT_MISMATCH");
+            }
+            if (!existsSync(primaryPath) || !existsSync(sidecarPath)) throw new Error("REQUIRED_DB_MISSING");
+            if (walBytes(primaryPath) > 0 || walBytes(sidecarPath) > 0) throw new Error("ACTIVE_WAL");
+
+            stage = "VERIFY_RETAINED_BACKUP_AND_SIDECAR_IDENTITY";
+            const sidecarBeforeStat = statSync(sidecarPath);
+            if (sidecarBeforeStat.size !== Number(process.env.EXPECTED_SIDECAR_BYTES)
+              || Math.trunc(sidecarBeforeStat.mtimeMs) !== Number(process.env.EXPECTED_SIDECAR_MTIME_MS_FLOOR)) {
+              throw new Error(`SIDECAR_CHANGED_SINCE_DIAGNOSTIC:${sidecarBeforeStat.size}:${Math.trunc(sidecarBeforeStat.mtimeMs)}`);
+            }
+            if (!existsSync(backupPath) || !lstatSync(backupPath).isFile() || lstatSync(backupPath).isSymbolicLink()) {
+              throw new Error("RETAINED_BACKUP_INVALID_PATH");
+            }
+            const backupStat = statSync(backupPath);
+            if (backupStat.size !== Number(process.env.EXPECTED_BACKUP_BYTES)) throw new Error("RETAINED_BACKUP_SIZE_MISMATCH");
+            const backupDb = openImmutable(backupPath);
+            let backupQuickCheck;
+            let backupSchemaOk;
+            try {
+              backupQuickCheck = backupDb.prepare("PRAGMA quick_check").get().quick_check;
+              backupSchemaOk = verifyRolloutSchema(backupDb).ok;
+            } finally {
+              backupDb.close();
+            }
+            if (backupQuickCheck !== "ok" || backupSchemaOk !== true) throw new Error("RETAINED_BACKUP_VERIFICATION_FAILED");
+            const backupSha256 = await hashFile(backupPath);
+            report.backup = {
+              path: relative(dataRoot, backupPath),
+              fileName: basename(backupPath),
+              bytes: backupStat.size,
+              sha256: backupSha256,
+              quickCheck: backupQuickCheck,
+              schemaOk: backupSchemaOk,
+              retained: true,
+              reusedFromCancelledPreApprovalRun: true,
+            };
+
+            stage = "VERIFY_CURRENT_SOURCE_AND_RUNTIME";
+            const source = readOfficialProgramCanarySource({ primaryDbPath: primaryPath });
+            if (!source.readOnly || !source.queryOnly || source.truncated) throw new Error("PRIMARY_READER_NOT_IMMUTABLE");
+            const freshManifest = buildOfficialProgramCanaryManifest({
+              rows: source.rows,
+              cohort: source.cohort,
+              sourceReadTruncated: source.truncated,
+              maxRaces: 20,
+              codeGitSha: checkoutSha,
+              generatedAt: bundle.manifest.generatedAt,
+            });
+            if (freshManifest.manifestDigest !== expectedDigest
+              || canonicalHash(freshManifest) !== canonicalHash(bundle.manifest)) {
+              throw new Error("PRIMARY_SOURCE_UNIVERSE_DRIFTED_SINCE_FINAL_REVIEW");
+            }
+            const readiness = buildN2ObservationIngestReadiness(readN2ObservationIngestReadiness({
+              primaryDbPath: primaryPath,
+              sidecarDbPath: sidecarPath,
+            }).input);
+            if (readiness.sidecar.officialProgramObservationCount !== 0
+              || readiness.sidecar.trifectaMarketObservationCount !== 0
+              || readiness.rollout.shadowWriteEnabled !== false
+              || readiness.rollout.killSwitchEngaged !== false) {
+              throw new Error("CURRENT_RUNTIME_STATE_NOT_CANARY_READY");
+            }
+            const free = statfsSync(dataRoot);
+            const diskFreeBytes = Number(free.bavail) * Number(free.bsize);
+            if (!Number.isSafeInteger(diskFreeBytes) || diskFreeBytes < 2 * 1024 * 1024 * 1024) {
+              throw new Error("INSUFFICIENT_DISK");
+            }
+
+            stage = "OPEN_SIDECAR_AND_VERIFY_PRESTATE";
+            const primaryBefore = statSync(primaryPath);
+            db = openRolloutDatabase(sidecarPath);
+            if (!verifyRolloutSchema(db).ok) throw new Error("SIDECAR_SCHEMA_INVALID");
+            const approvalTarget = officialProgramCanaryApprovalTarget(expectedDigest);
+            if (canonicalHash(approvalTarget) !== canonicalHash(bundle.binding.approvalTarget)) throw new Error("APPROVAL_TARGET_DRIFT");
+            const before = {
+              officialProgramObservations: count(db, "SELECT COUNT(*) n FROM domain_observations WHERE observation_type='official_program'"),
+              trifectaMarketObservations: count(db, "SELECT COUNT(*) n FROM domain_observations WHERE observation_type='trifecta_market'"),
+              captureAttempts: count(db, "SELECT COUNT(*) n FROM capture_attempts"),
+              approvalGrants: count(db, "SELECT COUNT(*) n FROM rollout_approval_grants_v2"),
+              approvalLifecycleEvents: count(db, "SELECT COUNT(*) n FROM rollout_approval_lifecycle_events_v2"),
+              exactDigestApprovals: count(db, `SELECT COUNT(*) n FROM rollout_approval_grants_v2
+                WHERE approval_scope=? AND target_stage=? AND target_schema_version=? AND target_contract_version=?`,
+                approvalTarget.approvalScope, approvalTarget.targetStage,
+                approvalTarget.targetSchemaVersion, approvalTarget.targetContractVersion),
+            };
+            report.before = before;
+            if (before.officialProgramObservations !== 0 || before.trifectaMarketObservations !== 0 || before.exactDigestApprovals !== 0) {
+              throw new Error("PRESTATE_NOT_EMPTY_OR_APPROVAL_ALREADY_EXISTS");
+            }
+
+            stage = "GRANT_ONE_SHOT_APPROVAL";
+            const digestPrefix = expectedDigest.slice(0, 12);
+            approvalId = `APR-N2-OP-${digestPrefix}-${runId}`;
+            lifecycleId = `LIF-N2-OP-${digestPrefix}-${runId}`;
+            const rolloutStartedAt = new Date().toISOString();
+            recordApprovalGrant(db, {
+              approvalId,
+              ...approvalTarget,
+              approvalSource: "chatgpt-interactive-human",
+              approvalReference: `${process.env.USER_APPROVAL_REFERENCE};workflow-run:${runId}`,
+              approvedAt: process.env.USER_APPROVED_AT,
+              approvalMode: "production",
+            }, rolloutStartedAt);
+            approvalGranted = true;
+            report.approval = { ...report.approval, granted: true, approvalId };
+
+            stage = "APPLY_20_AND_REPLAY";
+            const repository = new ResearchReplayRepository(db, new RawStore(rawRoot));
+            const gateInput = {
+              executionMode: "production",
+              rolloutStartedAt,
+              approvalGrantId: approvalId,
+              onDisk: {
+                codeGitSha: checkoutSha,
+                hasActiveWal: false,
+                diskFreeBytes,
+                neededBytes: 64 * 1024 * 1024,
+                shadowWriteEnabled: false,
+                killSwitchEngaged: false,
+              },
+            };
+            const firstApply = applyOfficialProgramCanary({ db, repository, manifest: bundle.manifest, primaryRows: source.rows, gateInput });
+            if (firstApply.selectedCount !== 20 || firstApply.insertedCount !== 20 || firstApply.reusedCount !== 0
+              || firstApply.primaryWriteCount !== 0 || firstApply.globalShadowWriteEnabled !== false) {
+              throw new Error(`FIRST_APPLY_RESULT_INVALID:${JSON.stringify(firstApply)}`);
+            }
+            const replay = applyOfficialProgramCanary({ db, repository, manifest: bundle.manifest, primaryRows: source.rows, gateInput });
+            if (replay.selectedCount !== 20 || replay.insertedCount !== 0 || replay.reusedCount !== 20) {
+              throw new Error(`IDEMPOTENT_REPLAY_INVALID:${JSON.stringify(replay)}`);
+            }
+            report.firstApply = firstApply;
+            report.idempotentReplay = replay;
+
+            stage = "VERIFY_APPLY_AND_REVOKE";
+            const selectedKeys = bundle.manifest.binding.items.map((item) => item.canonicalRaceKey);
+            const placeholders = selectedKeys.map(() => "?").join(",");
+            const afterApply = {
+              officialProgramObservations: count(db, "SELECT COUNT(*) n FROM domain_observations WHERE observation_type='official_program'"),
+              selectedObservationCount: count(db, `SELECT COUNT(*) n FROM domain_observations
+                WHERE observation_type='official_program' AND canonical_race_key IN (${placeholders})`, ...selectedKeys),
+              trifectaMarketObservations: count(db, "SELECT COUNT(*) n FROM domain_observations WHERE observation_type='trifecta_market'"),
+              captureAttempts: count(db, "SELECT COUNT(*) n FROM capture_attempts"),
+              approvalGrants: count(db, "SELECT COUNT(*) n FROM rollout_approval_grants_v2"),
+              approvalLifecycleEvents: count(db, "SELECT COUNT(*) n FROM rollout_approval_lifecycle_events_v2"),
+              quickCheck: db.prepare("PRAGMA quick_check").get().quick_check,
+            };
+            report.afterApply = afterApply;
+            if (afterApply.officialProgramObservations !== 20 || afterApply.selectedObservationCount !== 20
+              || afterApply.trifectaMarketObservations !== 0
+              || afterApply.captureAttempts - before.captureAttempts !== 20
+              || afterApply.approvalGrants - before.approvalGrants !== 1
+              || afterApply.approvalLifecycleEvents !== before.approvalLifecycleEvents
+              || afterApply.quickCheck !== "ok") {
+              throw new Error(`POST_APPLY_VERIFICATION_FAILED:${JSON.stringify(afterApply)}`);
+            }
+            const completedAt = new Date().toISOString();
+            recordApprovalLifecycle(db, {
+              lifecycleEventId: lifecycleId,
+              eventKind: "revoked",
+              subjectApprovalId: approvalId,
+              replacementApprovalId: null,
+              reason: "one-shot bounded official-program canary completed; approval reuse forbidden",
+              source: "chatgpt-interactive-human",
+              reference: `${process.env.USER_APPROVAL_REFERENCE};workflow-run:${runId}`,
+              occurredAt: completedAt,
+            }, completedAt);
+            approvalRevoked = true;
+            const postRevoke = resolveApproval(db, {
+              ...approvalTarget,
+              rolloutStartedAt: completedAt,
+              executionMode: "production",
+            });
+            const afterRevoke = {
+              approvalGrants: count(db, "SELECT COUNT(*) n FROM rollout_approval_grants_v2"),
+              approvalLifecycleEvents: count(db, "SELECT COUNT(*) n FROM rollout_approval_lifecycle_events_v2"),
+              approved: postRevoke.approved,
+              code: postRevoke.code,
+            };
+            report.afterRevoke = afterRevoke;
+            if (afterRevoke.approvalGrants - before.approvalGrants !== 1
+              || afterRevoke.approvalLifecycleEvents - before.approvalLifecycleEvents !== 1
+              || afterRevoke.approved !== false || afterRevoke.code !== "APPROVAL_REVOKED") {
+              throw new Error(`APPROVAL_REVOCATION_INVALID:${JSON.stringify(afterRevoke)}`);
+            }
+            report.approval = {
+              granted: true,
+              revoked: true,
+              approvalId,
+              lifecycleEventId: lifecycleId,
+              postRevokeCode: postRevoke.code,
+            };
+
+            stage = "VERIFY_PRIMARY_SELECTED_ROWS_UNCHANGED";
+            const sourceAfter = readOfficialProgramCanarySource({ primaryDbPath: primaryPath });
+            const finalManifest = buildOfficialProgramCanaryManifest({
+              rows: sourceAfter.rows,
+              cohort: sourceAfter.cohort,
+              sourceReadTruncated: sourceAfter.truncated,
+              maxRaces: 20,
+              codeGitSha: checkoutSha,
+              generatedAt: bundle.manifest.generatedAt,
+            });
+            if (finalManifest.manifestDigest !== expectedDigest) throw new Error("PRIMARY_SELECTED_SOURCE_CHANGED_DURING_APPLY");
+            const primaryAfter = statSync(primaryPath);
+            report.primaryDatabase = {
+              writeCount: 0,
+              sizeBytesBefore: primaryBefore.size,
+              sizeBytesAfter: primaryAfter.size,
+              modifiedMsBefore: primaryBefore.mtimeMs,
+              modifiedMsAfter: primaryAfter.mtimeMs,
+              metadataChangedDuringRun: primaryBefore.size !== primaryAfter.size || primaryBefore.mtimeMs !== primaryAfter.mtimeMs,
+            };
+            report.status = "PASS";
+            report.executedAt = completedAt;
+            report.reviewBundleVersion = bundle.bundleVersion;
+            report.reviewBundleDigest = bundle.bundleDigest;
+            report.sidecarDatabase = {
+              sizeBytesBefore: sidecarBeforeStat.size,
+              sizeBytesAfter: statSync(sidecarPath).size,
+              officialProgramObservationCount: afterApply.officialProgramObservations,
+              trifectaMarketObservationCount: afterApply.trifectaMarketObservations,
+            };
+          } catch (error) {
+            const failureAt = new Date().toISOString();
+            if (db && approvalGranted && !approvalRevoked && approvalId) {
+              try {
+                const failLifecycleId = `${lifecycleId}-FAIL`;
+                recordApprovalLifecycle(db, {
+                  lifecycleEventId: failLifecycleId,
+                  eventKind: "revoked",
+                  subjectApprovalId: approvalId,
+                  replacementApprovalId: null,
+                  reason: `one-shot canary failed; approval revoked: ${error instanceof Error ? error.message.slice(0, 240) : "unknown"}`,
+                  source: "automation-fail-closed",
+                  reference: `workflow-run:${runId}`,
+                  occurredAt: failureAt,
+                }, failureAt);
+                approvalRevoked = true;
+                report.approval = { granted: true, revoked: true, approvalId, lifecycleEventId: failLifecycleId, postRevokeCode: "FAIL_CLOSED_REVOKE_RECORDED" };
+              } catch (revokeError) {
+                report.approval = { granted: true, revoked: false, approvalId, lifecycleEventId: null, postRevokeCode: "REVOCATION_FAILED" };
+                report.revocationFailure = revokeError instanceof Error ? revokeError.message : String(revokeError);
+              }
+            }
+            report.status = "FAILED";
+            report.failedAt = failureAt;
+            report.failure = error instanceof Error ? { name: error.name, message: error.message } : { name: "UNKNOWN", message: String(error) };
+          } finally {
+            if (db) db.close();
+            persistReport();
+          }
+          console.log(JSON.stringify({
+            status: report.status,
+            stage,
+            manifestDigest: report.manifestDigest,
+            selectedRaceCount: report.selectedRaceCount,
+            insertedCount: report.firstApply?.insertedCount ?? 0,
+            replayReusedCount: report.idempotentReplay?.reusedCount ?? 0,
+            approvalGranted: report.approval.granted,
+            approvalRevoked: report.approval.revoked,
+            backupSha256: report.backup?.sha256 ?? null,
+            failure: report.failure,
+          }, null, 2));
+          if (report.status !== "PASS") process.exit(1);
+          NODE
+
+      - name: Show sanitized result
+        if: always()
+        env:
+          REPORT_PATH: ${{ runner.temp }}/n2-official-program-canary-apply.json
+        run: |
+          set -euo pipefail
+          test -s "$REPORT_PATH"
+          cat "$REPORT_PATH"
+          cat "$REPORT_PATH" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Persist sanitized evidence to automation authority
+        if: always()
+        env:
+          BRANCH: automation/boat-pon-research
+          REPORT_PATH: ${{ runner.temp }}/n2-official-program-canary-apply.json
+          EVIDENCE_PATH: reports/n2/n2-official-program-canary-apply.json
+        run: |
+          set -euo pipefail
+          test -s "$REPORT_PATH"
+          success=false
+          for attempt in 1 2 3; do
+            git fetch origin "$BRANCH" --quiet
+            base="$(git rev-parse "origin/$BRANCH")"
+            work="$RUNNER_TEMP/n2-canary-retry-evidence-$attempt"
+            rm -rf "$work"
+            git worktree add --detach "$work" "$base" >/dev/null
+            mkdir -p "$work/$(dirname "$EVIDENCE_PATH")"
+            cp "$REPORT_PATH" "$work/$EVIDENCE_PATH"
+            (
+              cd "$work"
+              git config user.name "boat-pon-research-bot"
+              git config user.email "boat-pon-research-bot@users.noreply.github.com"
+              git add "$EVIDENCE_PATH"
+              git commit -m "evidence(n2): record official-program production canary retry" >/dev/null
+              git push --force-with-lease="refs/heads/$BRANCH:$base" origin "HEAD:$BRANCH"
+            ) && success=true || true
+            git worktree remove --force "$work" >/dev/null 2>&1 || true
+            if [ "$success" = true ]; then break; fi
+          done
+          test "$success" = true
+
+      - name: Assert production canary PASS
+        if: always()
+        env:
+          REPORT_PATH: ${{ runner.temp }}/n2-official-program-canary-apply.json
+        run: |
+          set -euo pipefail
+          node -e 'const r=require(process.env.REPORT_PATH); if(r.status!=="PASS"||r.firstApply?.insertedCount!==20||r.idempotentReplay?.reusedCount!==20||r.approval?.revoked!==true) process.exit(1)'
