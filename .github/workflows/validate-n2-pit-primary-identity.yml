@@ -70,7 +70,9 @@ jobs:
             || summary.checkedFeatureCount !== 20
             || summary.checkedOddsCount !== 0
             || summary.ambiguousTimingCount !== 0
-            || summary.violationCount !== 0) {
+            || summary.sameRaceViolationCount !== 0
+            || summary.futureViolationCount !== 0
+            || summary.verifiedSafeCount !== 20) {
             throw new Error("REAL_N2_PIT_IDENTITY_VALIDATION_FAILED");
           }
           NODE
