@@ -1,6 +1,6 @@
 {
   "reportVersion": "n2-trifecta-market-foundation-report-v1",
-  "generatedAt": "2026-08-06T07:59:13.573Z",
+  "generatedAt": "2026-08-06T08:12:58.021Z",
   "status": "BLOCKED_NOT_READY_FOR_CANARY",
   "dataStatus": "NO_SOURCE_ROWS",
   "sourceType": "trifecta_market",
@@ -168,14 +168,14 @@
   "dbEvidence": {
     "primaryBefore": {
       "exists": true,
-      "bytes": 15313072128,
-      "modifiedMs": 1786002885119.015,
+      "bytes": 15313403904,
+      "modifiedMs": 1786003946190.0195,
       "walBytes": 0
     },
     "primaryAfter": {
       "exists": true,
-      "bytes": 15313072128,
-      "modifiedMs": 1786002885119.015,
+      "bytes": 15313403904,
+      "modifiedMs": 1786003946190.0195,
       "walBytes": 0
     },
     "sidecarBefore": {
@@ -191,5 +191,5 @@
       "walBytes": 0
     }
   },
-  "outputDigest": "9b1d1c18f487e1d8571ca4b0084a695a90a111e5e5dcabee40214b05609cd0f1"
+  "outputDigest": "e2d3dc2b721464b076020b8b9a472a365d08b2f4fa7d41f4a2627b8e3ecf011f"
 }

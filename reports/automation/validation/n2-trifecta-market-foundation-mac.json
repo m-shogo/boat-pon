@@ -1,8 +1,8 @@
 {
   "evidenceSchemaVersion": "n2-trifecta-market-foundation-mac-validation-v1",
-  "workflowRunId": 31082994196,
+  "workflowRunId": 31083858112,
   "workflowRunAttempt": 1,
-  "validatedCommit": "b2a07d140792edbe6477d5c3b4f74a38a47e72c5",
+  "validatedCommit": "19a12ce2bf87562eb5950cfd417775dc23a7fe26",
   "executionLocation": "Mac self-hosted",
   "runner": {
     "name": "boat-pon-mac-local",
@@ -55,5 +55,5 @@
     "immutableRealDataInventory": "PASS",
     "fixtureOnlyProductionPassRejected": "PASS"
   },
-  "generatedAt": "2026-08-06T07:59:15.795900Z"
+  "generatedAt": "2026-08-06T08:13:00.552642Z"
 }
