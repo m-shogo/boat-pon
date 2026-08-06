@@ -13,6 +13,7 @@ import { dirname, join, resolve } from "node:path";
 
 import {
   N2_TRIFECTA_LOCAL_CAPTURE_LAUNCH_AGENT_LABEL,
+  assertN2TrifectaCanonicalInstallRoot,
   buildN2TrifectaLocalCaptureAuthorization,
   buildN2TrifectaLocalCaptureLaunchAgentPlist,
 } from "../src/research-replay/n2TrifectaLocalCaptureLaunchAgent";
@@ -41,6 +42,13 @@ const uninstall = process.argv.includes("--uninstall");
 const authorize = process.argv.includes("--authorize");
 const renew = process.argv.includes("--renew");
 const authorizationDays = Number(argument("days") ?? "30");
+const canonicalRepoRoot = resolve(String(policy.repoPath ?? repoRoot));
+
+assertN2TrifectaCanonicalInstallRoot({
+  currentRepoRoot: repoRoot,
+  configuredRepoRoot: canonicalRepoRoot,
+  printOnly,
+});
 
 function argument(name: string): string | null {
   const inline = process.argv.find((value) => value.startsWith(`--${name}=`));
@@ -95,6 +103,20 @@ if (uninstall) {
 if (process.platform !== "darwin" && !printOnly) {
   throw new Error("INSTALL_REQUIRES_MACOS");
 }
+if (!printOnly && !uninstall) {
+  const branch = spawnSync("/usr/bin/git", ["-C", repoRoot, "branch", "--show-current"], {
+    encoding: "utf8",
+  });
+  if (branch.status !== 0 || branch.stdout.trim() !== "main") {
+    throw new Error("INSTALL_REQUIRES_MAIN_BRANCH");
+  }
+  const status = spawnSync("/usr/bin/git", ["-C", repoRoot, "status", "--porcelain"], {
+    encoding: "utf8",
+  });
+  if (status.status !== 0 || status.stdout.trim()) {
+    throw new Error("INSTALL_REQUIRES_CLEAN_WORKTREE");
+  }
+}
 if (!existsSync(tsxCliPath)) throw new Error("TSX_CLI_NOT_FOUND_RUN_NPM_CI_FIRST");
 if (!existsSync(tickScriptPath)) throw new Error("TICK_SCRIPT_NOT_FOUND");
 
@@ -122,6 +144,7 @@ const plist = buildN2TrifectaLocalCaptureLaunchAgentPlist({
   tsxCliPath,
   tickScriptPath,
   workingDirectory: repoRoot,
+  canonicalRepoRoot,
   dataRoot,
   authorizationPath,
   stdoutPath: join(logsPath, "stdout.log"),

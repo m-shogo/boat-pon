@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   N2_TRIFECTA_LOCAL_CAPTURE_LAUNCH_AGENT_LABEL,
   N2_TRIFECTA_LOCAL_CAPTURE_START_INTERVAL_SECONDS,
+  assertN2TrifectaCanonicalInstallRoot,
   buildN2TrifectaLocalCaptureAuthorization,
   buildN2TrifectaLocalCaptureLaunchAgentPlist,
 } from "./n2TrifectaLocalCaptureLaunchAgent.js";
@@ -70,4 +71,26 @@ test("launch agent XML escapes paths", () => {
   });
   assert.match(plist, /a&amp;b/);
   assert.doesNotMatch(plist, /a&b/);
+});
+
+
+test("installer rejects disposable runner worktrees but print-only remains portable", () => {
+  assert.throws(
+    () => assertN2TrifectaCanonicalInstallRoot({
+      currentRepoRoot: "/Users/test/actions-runner/_work/boat-pon/boat-pon",
+      configuredRepoRoot: "/Users/test/Developer/personal/boat-pon",
+      printOnly: false,
+    }),
+    /INSTALL_REQUIRES_CANONICAL_REPO/,
+  );
+  assert.doesNotThrow(() => assertN2TrifectaCanonicalInstallRoot({
+    currentRepoRoot: "/Users/test/Developer/personal/boat-pon",
+    configuredRepoRoot: "/Users/test/Developer/personal/boat-pon",
+    printOnly: false,
+  }));
+  assert.doesNotThrow(() => assertN2TrifectaCanonicalInstallRoot({
+    currentRepoRoot: "/tmp/preview",
+    configuredRepoRoot: "/Users/test/Developer/personal/boat-pon",
+    printOnly: true,
+  }));
 });

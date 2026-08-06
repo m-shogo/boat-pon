@@ -1,6 +1,6 @@
 # N2 Trifecta Local Private Capture Service
 
-Status: implementation and fixture validation; installation on the user's Mac remains an explicit local action  
+Status: hardened implementation and fixture validation; installation on the user's Mac remains an explicit canonical-repository action  
 Source: BOAT RACE official trifecta odds HTML  
 Scope: private research, one venue per day  
 Checkpoints: T-30 / T-20 / T-10 / T-5  
@@ -202,3 +202,29 @@ This service does not update Current BUY, selector/model parameters, decision hi
 - `src/research-replay/n2TrifectaLocalCaptureLaunchAgent.test.ts`
 - `scripts/run-n2-trifecta-local-capture-tick.ts`
 - `scripts/install-n2-trifecta-local-capture-agent.ts`
+
+
+## v1.1 hardening
+
+Before first installation, the service was hardened in four areas:
+
+- installation is rejected unless it runs from the configured canonical repository path;
+- non-preview installation requires the canonical repository to be on `main` with a clean working tree;
+- `latest.json` is atomically replaced on every tick, while append-only event reports are created only when the operational event changes or an executor run occurs;
+- launchd output is quiet for unchanged events, preventing 30-second `NO_CHANGE` and repeated blocker log amplification;
+- concurrent daily-selection and checkpoint-reservation creation treats `EEXIST` as the intended duplicate guard;
+- an empty current-day official-program inventory is a stable `NO_CHANGE`, not a crash loop.
+
+The replaceable operational status is stored at:
+
+```text
+data/private/trifecta-capture/status/latest.json
+```
+
+Event reports are deduplicated by event digest:
+
+```text
+data/private/trifecta-capture/reports/YYYY-MM-DD/<event-digest>.json
+```
+
+A one-time GitHub self-hosted install workflow must `cd` into the canonical repository and update it to the reviewed main SHA before invoking the installer. Running the installer directly from an Actions `_work` checkout is intentionally rejected.

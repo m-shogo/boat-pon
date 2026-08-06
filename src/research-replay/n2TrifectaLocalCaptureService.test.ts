@@ -295,3 +295,84 @@ test("active primary WAL blocks before network and remains byte-for-byte untouch
     assert.equal(after.mtimeMs, before.mtimeMs);
   });
 });
+
+
+test("stable no-due ticks keep one event report and one replaceable latest status", async () => {
+  await withTempRoot(async (root, dbPath) => {
+    const first = await runN2TrifectaLocalCaptureTick({
+      dataRoot: root,
+      primaryDbPath: dbPath,
+      authorization: authorization(),
+      now: "2026-08-06T00:00:00.000Z",
+    });
+    const second = await runN2TrifectaLocalCaptureTick({
+      dataRoot: root,
+      primaryDbPath: dbPath,
+      authorization: authorization(),
+      now: "2026-08-06T00:00:30.000Z",
+    });
+    assert.equal(first.status, "NO_CHANGE");
+    assert.equal(first.eventChanged, true);
+    assert.ok(first.reportRelativePath);
+    assert.equal(second.status, "NO_CHANGE");
+    assert.equal(second.eventChanged, false);
+    assert.equal(second.reportRelativePath, null);
+    assert.equal(first.latestStatusRelativePath, second.latestStatusRelativePath);
+    assert.equal(existsSync(join(root, second.latestStatusRelativePath)), true);
+    const reportDir = join(root, "data/private/trifecta-capture/reports/2026-08-06");
+    assert.equal(readdirSync(reportDir).filter((name) => name.endsWith(".json")).length, 1);
+  });
+});
+
+test("repeated active WAL blocker is event-deduplicated and never reaches network", async () => {
+  await withTempRoot(async (root, dbPath) => {
+    writeFileSync(`${dbPath}-wal`, "active-wal");
+    let fetchCount = 0;
+    const input = {
+      dataRoot: root,
+      primaryDbPath: dbPath,
+      authorization: authorization(),
+      fetcher: async () => {
+        fetchCount += 1;
+        throw new Error("network must remain blocked");
+      },
+    };
+    const first = await runN2TrifectaLocalCaptureTick({
+      ...input,
+      now: "2026-08-06T00:35:00.000Z",
+    });
+    const second = await runN2TrifectaLocalCaptureTick({
+      ...input,
+      now: "2026-08-06T00:35:30.000Z",
+    });
+    assert.equal(first.status, "BLOCKED");
+    assert.equal(first.eventChanged, true);
+    assert.ok(first.reportRelativePath);
+    assert.equal(second.status, "BLOCKED");
+    assert.equal(second.eventChanged, false);
+    assert.equal(second.reportRelativePath, null);
+    assert.equal(fetchCount, 0);
+  });
+});
+
+test("an empty official program inventory returns stable NO_CHANGE instead of throwing", async () => {
+  await withTempRoot(async (root, dbPath) => {
+    const db = new DatabaseSync(dbPath);
+    try {
+      db.exec("DELETE FROM official_programs");
+    } finally {
+      db.close();
+    }
+    const report = await runN2TrifectaLocalCaptureTick({
+      dataRoot: root,
+      primaryDbPath: dbPath,
+      authorization: authorization(),
+      now: "2026-08-06T00:00:00.000Z",
+    });
+    assert.equal(report.status, "NO_CHANGE");
+    assert.deepEqual(report.blockers, []);
+    assert.equal(report.selectedVenueCode, null);
+    assert.equal(report.executorReport, null);
+    assert.equal(report.eventChanged, true);
+  });
+});

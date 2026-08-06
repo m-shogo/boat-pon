@@ -42,6 +42,17 @@ function plistString(value: string): string {
   return `<string>${xmlEscape(value)}</string>`;
 }
 
+export function assertN2TrifectaCanonicalInstallRoot(input: {
+  currentRepoRoot: string;
+  configuredRepoRoot: string;
+  printOnly: boolean;
+}): void {
+  if (input.printOnly) return;
+  if (resolve(input.currentRepoRoot) !== resolve(input.configuredRepoRoot)) {
+    throw new Error("INSTALL_REQUIRES_CANONICAL_REPO");
+  }
+}
+
 export function buildN2TrifectaLocalCaptureAuthorization(input: {
   now: string;
   authorizationDays: number;

@@ -29,6 +29,8 @@ const authorizationPath = resolve(
 );
 const now = process.env.BOAT_PON_LOCAL_CAPTURE_NOW?.trim()
   || new Date().toISOString();
+const forceJson = process.argv.includes("--json")
+  || process.env.BOAT_PON_LOCAL_CAPTURE_VERBOSE === "1";
 
 function readAuthorization(path: string): N2TrifectaLocalCaptureAuthorization {
   if (!existsSync(path)) throw new Error("LOCAL_CAPTURE_AUTHORIZATION_NOT_FOUND");
@@ -55,7 +57,7 @@ const report = await runN2TrifectaLocalCaptureTick({
   now,
 });
 
-console.log(JSON.stringify({
+const summary = {
   reportVersion: report.reportVersion,
   status: report.status,
   blockers: report.blockers,
@@ -69,7 +71,10 @@ console.log(JSON.stringify({
   networkRequestCount: report.executorReport?.networkRequestCount ?? 0,
   capturedCount: report.executorReport?.capturedCount ?? 0,
   blockedEvidenceCount: report.executorReport?.blockedEvidenceCount ?? 0,
+  eventDigest: report.eventDigest,
+  eventChanged: report.eventChanged,
   reportRelativePath: report.reportRelativePath,
+  latestStatusRelativePath: report.latestStatusRelativePath,
   databaseWriteCount: report.databaseWriteCount,
   primaryDbWriteCount: report.primaryDbWriteCount,
   sidecarWriteCount: report.sidecarWriteCount,
@@ -78,6 +83,10 @@ console.log(JSON.stringify({
   publicPublished: report.publicPublished,
   automatedBettingChanged: report.automatedBettingChanged,
   productionApplyExecuted: report.productionApplyExecuted,
-}, null, 2));
+};
+
+if (forceJson || report.eventChanged || report.executorReport != null) {
+  console.log(JSON.stringify(summary, null, 2));
+}
 
 if (report.status === "BLOCKED") process.exitCode = 3;
