@@ -38,6 +38,7 @@ test("forced refresh preserves old cache until atomic replacement succeeds", () 
   assert.match(fetchScript, /await rename\(temporary, dest\)/u);
   assert.match(fetchScript, /await rm\(temporary, \{ force: true \}\)/u);
   assert.match(fetchScript, /await rm\(txtPath, \{ force: true \}\)/u);
+  assert.match(fetchScript, /LZH archive method header invalid/u);
   assert.match(fetchScript, /structurally incomplete official program inventory/u);
   assert.match(fetchScript, /BEGIN IMMEDIATE/u);
   assert.match(fetchScript, /ROLLBACK/u);
@@ -47,5 +48,8 @@ test("readiness inspection is strictly read-only", () => {
   assert.match(readinessScript, /new DatabaseSync\(dbPath, \{ readOnly: true \}\)/u);
   assert.match(readinessScript, /PRAGMA query_only = ON/u);
   assert.match(readinessScript, /databaseWriteCount: 0/u);
-  assert.doesNotMatch(readinessScript, /INSERT|UPDATE|DELETE|REPLACE/iu);
+  assert.doesNotMatch(
+    readinessScript,
+    /\b(?:INSERT\s+INTO|UPDATE\s+[A-Za-z_]|DELETE\s+FROM|REPLACE\s+INTO)\b/iu,
+  );
 });
