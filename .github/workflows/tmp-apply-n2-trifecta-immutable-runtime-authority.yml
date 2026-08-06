@@ -1,0 +1,10 @@
+name: Immutable runtime patch placeholder
+
+on:
+  workflow_dispatch:
+
+jobs:
+  placeholder:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo "base pull-request workflow applies the reviewed patch"
