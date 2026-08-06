@@ -1,6 +1,6 @@
 {
   "evidenceSchemaVersion": "n2-trifecta-immutable-runtime-authority-v1",
-  "status": "IMPLEMENTED_PENDING_CI",
+  "status": "PASS",
   "baseMainSha": "2c100f8aed6403bd8fc9fd43da0f2ea129857216",
   "branch": "fix/n2-trifecta-immutable-runtime-authority",
   "collectionAuthorizationPreserved": true,
@@ -29,6 +29,6 @@
   "publicPublished": false,
   "automatedBettingChanged": false,
   "productionApplyExecuted": false,
-  "ciRunId": null,
-  "ciConclusion": null
+  "ciRunId": 31116043018,
+  "ciConclusion": "SUCCESS"
 }
