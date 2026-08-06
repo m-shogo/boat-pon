@@ -1,13 +1,13 @@
 {
   "bundleVersion": "n2-official-program-canary-review-bundle-v2",
-  "generatedAt": "2026-08-06T00:48:59.032Z",
+  "generatedAt": "2026-08-06T01:38:20.672Z",
   "status": "READY_FOR_HUMAN_REVIEW",
   "writeAuthorized": false,
   "productionApplyExecuted": false,
   "humanApprovalCreated": false,
   "manifest": {
     "manifestVersion": "n2-official-program-canary-manifest-v1",
-    "generatedAt": "2026-08-06T00:48:59.032Z",
+    "generatedAt": "2026-08-06T01:38:20.672Z",
     "binding": {
       "manifestVersion": "n2-official-program-canary-manifest-v1",
       "selectionPolicyVersion": "n2-official-program-canary-selection-v1",
@@ -21,7 +21,7 @@
       "excludedCount": 2,
       "excludedDigest": "08703c6e556c0e1a24c95f9f39fd0e9c647f3d808027c1d7fd76432e8903decc",
       "maxRaces": 20,
-      "codeGitSha": "81e46cc9e39690652120b84aac1fa9c331f7129f",
+      "codeGitSha": "772f3684797598ef05ae28b5606a0533da58ebe8",
       "items": [
         {
           "primaryRecordId": "20260731-びわこ-01",
@@ -265,7 +265,7 @@
         }
       ]
     },
-    "manifestDigest": "5df2599d813aa95050c7f3251e5f61df5e2f37cd52b152ef8552af4a88d14c07",
+    "manifestDigest": "151c34786e29ca80838da0fe3b2eb3326ee343d0a3656e8f20666af14d1b3a85",
     "excluded": [
       {
         "primaryRecordId": "20260801-三国-01",
@@ -280,16 +280,16 @@
   "binding": {
     "bundleVersion": "n2-official-program-canary-review-bundle-v2",
     "reviewPolicyVersion": "n2-official-program-canary-review-policy-v2",
-    "authoritySha": "81e46cc9e39690652120b84aac1fa9c331f7129f",
-    "manifestDigest": "5df2599d813aa95050c7f3251e5f61df5e2f37cd52b152ef8552af4a88d14c07",
-    "manifestCodeGitSha": "81e46cc9e39690652120b84aac1fa9c331f7129f",
-    "manifestGeneratedAt": "2026-08-06T00:48:59.032Z",
+    "authoritySha": "772f3684797598ef05ae28b5606a0533da58ebe8",
+    "manifestDigest": "151c34786e29ca80838da0fe3b2eb3326ee343d0a3656e8f20666af14d1b3a85",
+    "manifestCodeGitSha": "772f3684797598ef05ae28b5606a0533da58ebe8",
+    "manifestGeneratedAt": "2026-08-06T01:38:20.672Z",
     "selectedRaceCount": 20,
     "approvalTarget": {
       "approvalScope": "N2_OFFICIAL_PROGRAM_OBSERVATION_CANARY",
       "targetStage": "N2-OFFICIAL-PROGRAM-CANARY",
       "targetSchemaVersion": "f0r.2.0@f0.1.0",
-      "targetContractVersion": "n2-official-program-observation-canary-v1:5df2599d813aa95050c7f3251e5f61df5e2f37cd52b152ef8552af4a88d14c07:f0r-approval-v2"
+      "targetContractVersion": "n2-official-program-observation-canary-v1:151c34786e29ca80838da0fe3b2eb3326ee343d0a3656e8f20666af14d1b3a85:f0r-approval-v2"
     },
     "currentOfficialProgramObservationCount": 0,
     "currentTrifectaMarketObservationCount": 0,
@@ -304,7 +304,7 @@
       ]
     },
     "executionContract": {
-      "requiredCheckoutSha": "81e46cc9e39690652120b84aac1fa9c331f7129f",
+      "requiredCheckoutSha": "772f3684797598ef05ae28b5606a0533da58ebe8",
       "sourceMode": "EXISTING_CACHE",
       "hardMaximumRaceCount": 20,
       "exactManifestDigestRequired": true,
@@ -321,7 +321,7 @@
       "requireSeparateReviewedQuarantineOrSupersession": true
     }
   },
-  "bundleDigest": "4cfc1e04a3915bfcec14e21989fb3acaff728482824d779ba36ebdf50ec2f8c3",
+  "bundleDigest": "d79b170d7d70eda5e635ced0a5346b8a6e4c3b2dba173a53306baa94ddbe289c",
   "reviewBlocks": [],
   "nextActions": [
     "Review the exact 20 selected identities, exclusion counts, manifest digest and required checkout SHA.",
@@ -352,9 +352,9 @@
     "evidenceDigest": null,
     "notApplicableReason": "review bundle generation does not join outcomes or authorize prediction-time writes"
   },
-  "runId": "31057606124",
-  "requestId": "REQ-20260806-r7m2v9k4qx",
+  "runId": "31063301882",
+  "requestId": "REQ-20260806-z4m8v2q7rx",
   "taskId": "TASK-N2-013",
   "executorVersion": "n2-official-program-canary-review-executor-v2",
-  "outputDigest": "4cfc1e04a3915bfcec14e21989fb3acaff728482824d779ba36ebdf50ec2f8c3"
+  "outputDigest": "d79b170d7d70eda5e635ced0a5346b8a6e4c3b2dba173a53306baa94ddbe289c"
 }

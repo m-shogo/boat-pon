@@ -3,24 +3,24 @@
   "orchestratorVersion": "research-orchestrator-v1",
   "updatedAt": "2026-08-03T13:11:03.880Z",
   "lastResult": "PASS",
-  "lastRequestId": "REQ-20260806-r7m2v9k4qx",
+  "lastRequestId": "REQ-20260806-z4m8v2q7rx",
   "lastTaskId": "TASK-N2-013",
   "lastAction": "run-task",
   "lastSafetyLevel": "L0",
-  "authoritySha": "81e46cc9e39690652120b84aac1fa9c331f7129f",
+  "authoritySha": "772f3684797598ef05ae28b5606a0533da58ebe8",
   "blocks": [],
   "failureClasses": [
     "NON_RETRYABLE"
   ],
-  "elapsedMs": 2818,
+  "elapsedMs": 2494,
   "nextCandidate": "TASK-PLANNER-NEXT: queue planner: 次候補提案（自動起動しない。次回 dispatch で 1 回だけ依頼する）",
-  "evidencePath": "reports/automation/history/31057606124-TASK-N2-013.json",
+  "evidencePath": "reports/automation/history/31063301882-TASK-N2-013.json",
   "outputs": [
     "reports/n2/n2-official-program-canary-review-bundle.json"
   ],
-  "outputDigest": "4cfc1e04a3915bfcec14e21989fb3acaff728482824d779ba36ebdf50ec2f8c3",
+  "outputDigest": "d79b170d7d70eda5e635ced0a5346b8a6e4c3b2dba173a53306baa94ddbe289c",
   "taskStatus": "PASS",
-  "lastIntentId": "INTENT-20260806-r7m2v9k4qx",
-  "stateVersion": 43,
-  "stateDigest": "956af72ca3f72bda5f13a83f6ce7024cd4a7e4b1d1949bf6298cf860e8e0ad5d"
+  "lastIntentId": "INTENT-20260806-z4m8v2q7rx",
+  "stateVersion": 47,
+  "stateDigest": "806941380c48160557d19ec3f6ef19b12f6b4f3a9143bbcc3e7ff5119ab87673"
 }
