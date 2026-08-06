@@ -1,0 +1,11 @@
+{
+  "name": "Boat Pon Research Dashboard",
+  "short_name": "Boat Pon",
+  "description": "Boat Ponの公開可能な研究状態を表示する閲覧専用ダッシュボードです。",
+  "lang": "ja",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4f7f6",
+  "theme_color": "#0b6958"
+}
