@@ -1,6 +1,6 @@
 {
   "evidenceSchemaVersion": "n2-trifecta-odds-checkpoint-policy-v1",
-  "status": "IMPLEMENTED_PENDING_CI",
+  "status": "PASS",
   "baseMainSha": "847b8edb7080a49b997107430001af23ed0d9a15",
   "branch": "agent/n2-trifecta-raw-capture-canary",
   "source": "boatrace_official_trifecta_odds_html",
@@ -50,6 +50,17 @@
     "lineChanged": false,
     "automatedBettingChanged": false
   },
-  "ciRunId": null,
-  "ciConclusion": null
+  "checks": {
+    "typecheck": "PASS",
+    "targetedAndFullTests": "PASS",
+    "researchGovernance": "PASS",
+    "secretScan": "PASS",
+    "productPublicBoundary": "PASS",
+    "buyLineBoundary": "PASS",
+    "researchReplayGolden": "PASS",
+    "researchReplayReadiness": "PASS",
+    "productionBuild": "PASS"
+  },
+  "ciRunId": 31086531794,
+  "ciConclusion": "success"
 }
