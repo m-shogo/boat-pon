@@ -1,0 +1,55 @@
+name: Temporary add runner recovery package scripts
+
+on:
+  push:
+    branches:
+      - fix/boat-pon-self-hosted-runner-recovery
+    paths:
+      - .github/workflows/tmp-add-runner-recovery-package-scripts.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/tmp-add-runner-recovery-package-scripts.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/boat-pon-self-hosted-runner-recovery
+          fetch-depth: 0
+
+      - name: Add exact package commands and self-delete
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+
+          path = Path('package.json')
+          package = json.loads(path.read_text())
+          scripts = package.setdefault('scripts', {})
+          expected = {
+              'runner:diagnose': 'bash scripts/diagnose-boat-pon-self-hosted-runner.sh',
+              'runner:recover': 'bash scripts/recover-boat-pon-self-hosted-runner.sh --start',
+          }
+          for key, value in expected.items():
+              existing = scripts.get(key)
+              if existing not in (None, value):
+                  raise SystemExit(f'{key} already has unexpected value: {existing}')
+              scripts[key] = value
+          path.write_text(json.dumps(package, ensure_ascii=False, indent=2) + '\n')
+          Path('.github/workflows/tmp-add-runner-recovery-package-scripts.yml').unlink()
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json .github/workflows/tmp-add-runner-recovery-package-scripts.yml
+          git commit -m "chore(automation): expose runner recovery commands"
+          git push origin HEAD:fix/boat-pon-self-hosted-runner-recovery
