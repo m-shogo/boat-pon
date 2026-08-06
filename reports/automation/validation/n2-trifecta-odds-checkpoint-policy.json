@@ -1,0 +1,66 @@
+{
+  "evidenceSchemaVersion": "n2-trifecta-odds-checkpoint-policy-v1",
+  "status": "PASS",
+  "baseMainSha": "847b8edb7080a49b997107430001af23ed0d9a15",
+  "branch": "agent/n2-trifecta-raw-capture-canary",
+  "source": "boatrace_official_trifecta_odds_html",
+  "privateResearchOnly": true,
+  "canonicalCheckpoints": ["T-30", "T-20", "T-10", "T-5"],
+  "allRacesInReviewedPlan": true,
+  "allSelectionsPerRequest": 120,
+  "stage0": {
+    "venueDays": 1,
+    "maxRaces": 12,
+    "checkpoints": ["T-10"],
+    "maxRequests": 12
+  },
+  "stage1": {
+    "venueDays": 1,
+    "maxRaces": 12,
+    "checkpoints": ["T-30", "T-20", "T-10", "T-5"],
+    "maxRequests": 48
+  },
+  "stage2": {
+    "maxVenueDays": 12,
+    "maxRaces": 144,
+    "checkpoints": ["T-30", "T-20", "T-10", "T-5"],
+    "maxRequests": 576
+  },
+  "requestBoundary": {
+    "concurrency": 1,
+    "minInterRequestMs": 10000,
+    "immediateRetryAuthorized": false,
+    "blindFiveMinutePollingAuthorized": false
+  },
+  "rawBoundary": {
+    "appendOnly": true,
+    "localPrivateOnly": true,
+    "gitCommitAuthorized": false,
+    "publicPublishAuthorized": false
+  },
+  "runtimeBoundary": {
+    "networkExecuted": false,
+    "rawPersisted": false,
+    "databaseWriteAuthorized": false,
+    "primaryDbWriteCount": 0,
+    "sidecarWriteCount": 0,
+    "approvalCreated": false,
+    "productionApplyExecuted": false,
+    "currentBuyChanged": false,
+    "lineChanged": false,
+    "automatedBettingChanged": false
+  },
+  "checks": {
+    "typecheck": "PASS",
+    "targetedAndFullTests": "PASS",
+    "researchGovernance": "PASS",
+    "secretScan": "PASS",
+    "productPublicBoundary": "PASS",
+    "buyLineBoundary": "PASS",
+    "researchReplayGolden": "PASS",
+    "researchReplayReadiness": "PASS",
+    "productionBuild": "PASS"
+  },
+  "ciRunId": 31086531794,
+  "ciConclusion": "success"
+}
