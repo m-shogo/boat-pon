@@ -12,8 +12,13 @@ import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
 import {
+  buildN2TrifectaImmutableRuntimeAuthorityBinding,
+  type N2TrifectaImmutableRuntimeAuthorityBinding,
+} from "../src/research-replay/n2TrifectaImmutableRuntimeAuthority";
+import {
   N2_TRIFECTA_LOCAL_CAPTURE_LAUNCH_AGENT_LABEL,
   assertN2TrifectaCanonicalInstallRoot,
+  buildN2TrifectaImmutableRuntimeRoot,
   buildN2TrifectaLocalCaptureAuthorization,
   buildN2TrifectaLocalCaptureLaunchAgentPlist,
 } from "../src/research-replay/n2TrifectaLocalCaptureLaunchAgent";
@@ -29,20 +34,23 @@ const dataRoot = resolve(
 );
 const privateRoot = join(dataRoot, "data/private/trifecta-capture");
 const authorizationPath = join(privateRoot, "authorization.json");
+const runtimeAuthorityPath = join(privateRoot, "runtime-authority.json");
 const logsPath = join(privateRoot, "logs");
 const launchAgentsPath = join(homedir(), "Library/LaunchAgents");
 const plistPath = join(
   launchAgentsPath,
   `${N2_TRIFECTA_LOCAL_CAPTURE_LAUNCH_AGENT_LABEL}.plist`,
 );
-const tsxCliPath = join(repoRoot, "node_modules/tsx/dist/cli.mjs");
-const tickScriptPath = join(repoRoot, "scripts/run-n2-trifecta-local-capture-tick.ts");
 const printOnly = process.argv.includes("--print-only");
 const uninstall = process.argv.includes("--uninstall");
 const authorize = process.argv.includes("--authorize");
 const renew = process.argv.includes("--renew");
 const authorizationDays = Number(argument("days") ?? "30");
 const canonicalRepoRoot = resolve(String(policy.repoPath ?? repoRoot));
+const releasesRoot = resolve(
+  argument("runtime-releases-root")
+    ?? join(homedir(), "Library/Application Support/BoatPon/trifecta-private-capture/releases"),
+);
 
 assertN2TrifectaCanonicalInstallRoot({
   currentRepoRoot: repoRoot,
@@ -57,28 +65,62 @@ function argument(name: string): string | null {
   return index >= 0 ? process.argv[index + 1] ?? null : null;
 }
 
-function runLaunchctl(args: string[], allowFailure = false): void {
-  const result = spawnSync("/bin/launchctl", args, {
+function run(command: string, args: string[], options: {
+  cwd?: string;
+  allowFailure?: boolean;
+  capture?: boolean;
+} = {}): { status: number | null; stdout: string } {
+  const result = spawnSync(command, args, {
+    cwd: options.cwd,
     encoding: "utf8",
-    stdio: allowFailure ? "pipe" : "inherit",
+    stdio: options.capture || options.allowFailure
+      ? ["ignore", "pipe", "pipe"]
+      : "inherit",
   });
-  if (!allowFailure && result.status !== 0) {
-    throw new Error(`launchctl ${args.join(" ")} failed with ${result.status}`);
+  if (!options.allowFailure && result.status !== 0) {
+    throw new Error(`${command} ${args.join(" ")} failed with ${result.status}`);
   }
+  return { status: result.status, stdout: result.stdout?.trim() ?? "" };
 }
 
-function readExistingAuthorization(): N2TrifectaLocalCaptureAuthorization | null {
-  if (!existsSync(authorizationPath)) return null;
-  if (lstatSync(authorizationPath).isSymbolicLink()) {
-    throw new Error("AUTHORIZATION_SYMLINK_NOT_ALLOWED");
+function git(args: string[], options: { cwd?: string; allowFailure?: boolean } = {}) {
+  return run("git", args, { ...options, capture: true });
+}
+
+function runLaunchctl(args: string[], allowFailure = false): void {
+  run("/bin/launchctl", args, { allowFailure });
+}
+
+function readPrivateJson<T>(path: string): T | null {
+  if (!existsSync(path)) return null;
+  if (lstatSync(path).isSymbolicLink()) {
+    throw new Error("PRIVATE_AUTHORITY_SYMLINK_NOT_ALLOWED");
   }
-  return JSON.parse(readFileSync(authorizationPath, "utf8")) as N2TrifectaLocalCaptureAuthorization;
+  return JSON.parse(readFileSync(path, "utf8")) as T;
 }
 
 function writePrivate(path: string, content: string): void {
   mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
   writeFileSync(path, content, { encoding: "utf8", mode: 0o600 });
   chmodSync(path, 0o600);
+}
+
+function verifyImmutableRuntime(runtimeRoot: string, authoritySha: string): void {
+  if (!existsSync(runtimeRoot)) throw new Error("IMMUTABLE_RUNTIME_NOT_FOUND");
+  if (lstatSync(runtimeRoot).isSymbolicLink()) {
+    throw new Error("IMMUTABLE_RUNTIME_SYMLINK_NOT_ALLOWED");
+  }
+  const head = git(["rev-parse", "HEAD"], { cwd: runtimeRoot });
+  if (head.stdout !== authoritySha) throw new Error("IMMUTABLE_RUNTIME_SHA_MISMATCH");
+  const symbolic = git(["symbolic-ref", "-q", "HEAD"], {
+    cwd: runtimeRoot,
+    allowFailure: true,
+  });
+  if (symbolic.status !== 1) throw new Error("IMMUTABLE_RUNTIME_MUST_BE_DETACHED");
+  const status = git(["status", "--porcelain", "--untracked-files=no"], {
+    cwd: runtimeRoot,
+  });
+  if (status.stdout) throw new Error("IMMUTABLE_RUNTIME_TRACKED_FILES_DIRTY");
 }
 
 if (uninstall) {
@@ -94,6 +136,8 @@ if (uninstall) {
     label: N2_TRIFECTA_LOCAL_CAPTURE_LAUNCH_AGENT_LABEL,
     plistRemoved: !printOnly,
     authorizationPreserved: true,
+    runtimeAuthorityPreserved: true,
+    immutableRuntimePreserved: true,
     rawEvidencePreserved: true,
     dataRoot,
   }, null, 2));
@@ -103,24 +147,48 @@ if (uninstall) {
 if (process.platform !== "darwin" && !printOnly) {
   throw new Error("INSTALL_REQUIRES_MACOS");
 }
-if (!printOnly && !uninstall) {
-  const branch = spawnSync("/usr/bin/git", ["-C", repoRoot, "branch", "--show-current"], {
-    encoding: "utf8",
-  });
-  if (branch.status !== 0 || branch.stdout.trim() !== "main") {
-    throw new Error("INSTALL_REQUIRES_MAIN_BRANCH");
-  }
-  const status = spawnSync("/usr/bin/git", ["-C", repoRoot, "status", "--porcelain"], {
-    encoding: "utf8",
-  });
-  if (status.status !== 0 || status.stdout.trim()) {
-    throw new Error("INSTALL_REQUIRES_CLEAN_WORKTREE");
+if (!printOnly) {
+  const branch = git(["branch", "--show-current"], { cwd: repoRoot });
+  if (branch.stdout !== "main") throw new Error("INSTALL_REQUIRES_MAIN_BRANCH");
+  const status = git(["status", "--porcelain"], { cwd: repoRoot });
+  if (status.stdout) throw new Error("INSTALL_REQUIRES_CLEAN_WORKTREE");
+}
+
+const authoritySha = git(["rev-parse", "HEAD"], { cwd: repoRoot }).stdout;
+const runtimeRoot = buildN2TrifectaImmutableRuntimeRoot({
+  releasesRoot,
+  authoritySha,
+  canonicalRepoRoot,
+});
+const runtimeTsxCliPath = join(runtimeRoot, "node_modules/tsx/dist/cli.mjs");
+const runtimeTickScriptPath = join(runtimeRoot, "scripts/run-n2-trifecta-local-capture-tick.ts");
+const existingAuthorization = readPrivateJson<N2TrifectaLocalCaptureAuthorization>(authorizationPath);
+const existingRuntimeAuthority =
+  readPrivateJson<N2TrifectaImmutableRuntimeAuthorityBinding>(runtimeAuthorityPath);
+
+if (existingAuthorization && !renew) {
+  if (!existingRuntimeAuthority
+    || existingRuntimeAuthority.authorizationId !== existingAuthorization.authorizationId
+    || existingRuntimeAuthority.issuedAt !== existingAuthorization.issuedAt
+    || existingRuntimeAuthority.expiresAt !== existingAuthorization.expiresAt
+    || existingRuntimeAuthority.authoritySha !== authoritySha
+    || resolve(existingRuntimeAuthority.runtimeRoot) !== runtimeRoot) {
+    throw new Error("EXISTING_AUTHORIZATION_REQUIRES_EXPLICIT_RENEWAL_FOR_RUNTIME_AUTHORITY");
   }
 }
-if (!existsSync(tsxCliPath)) throw new Error("TSX_CLI_NOT_FOUND_RUN_NPM_CI_FIRST");
-if (!existsSync(tickScriptPath)) throw new Error("TICK_SCRIPT_NOT_FOUND");
 
-const existingAuthorization = readExistingAuthorization();
+if (!printOnly) {
+  mkdirSync(releasesRoot, { recursive: true, mode: 0o700 });
+  if (!existsSync(runtimeRoot)) {
+    git(["worktree", "add", "--detach", runtimeRoot, authoritySha], { cwd: repoRoot });
+  }
+  verifyImmutableRuntime(runtimeRoot, authoritySha);
+  run("npm", ["ci"], { cwd: runtimeRoot });
+  verifyImmutableRuntime(runtimeRoot, authoritySha);
+  if (!existsSync(runtimeTsxCliPath)) throw new Error("IMMUTABLE_RUNTIME_TSX_CLI_NOT_FOUND");
+  if (!existsSync(runtimeTickScriptPath)) throw new Error("IMMUTABLE_RUNTIME_TICK_SCRIPT_NOT_FOUND");
+}
+
 let authorization = existingAuthorization;
 if (!existingAuthorization) {
   if (!authorize) throw new Error("NEW_INSTALL_REQUIRES_EXPLICIT_--authorize");
@@ -136,16 +204,24 @@ if (!existingAuthorization) {
   });
 }
 if (!authorization) throw new Error("AUTHORIZATION_UNRESOLVED");
+const runtimeAuthority = buildN2TrifectaImmutableRuntimeAuthorityBinding({
+  authorization,
+  authoritySha,
+  runtimeRoot,
+});
 
 mkdirSync(privateRoot, { recursive: true, mode: 0o700 });
 mkdirSync(logsPath, { recursive: true, mode: 0o700 });
 const plist = buildN2TrifectaLocalCaptureLaunchAgentPlist({
   nodePath: process.execPath,
-  tsxCliPath,
-  tickScriptPath,
-  workingDirectory: repoRoot,
+  tsxCliPath: runtimeTsxCliPath,
+  tickScriptPath: runtimeTickScriptPath,
+  workingDirectory: runtimeRoot,
+  authoritySha,
+  runtimeRoot,
   dataRoot,
   authorizationPath,
+  runtimeAuthorityPath,
   stdoutPath: join(logsPath, "stdout.log"),
   stderrPath: join(logsPath, "stderr.log"),
 });
@@ -153,6 +229,7 @@ const plist = buildN2TrifectaLocalCaptureLaunchAgentPlist({
 if (!printOnly) {
   if (!existingAuthorization || renew) {
     writePrivate(authorizationPath, `${JSON.stringify(authorization, null, 2)}\n`);
+    writePrivate(runtimeAuthorityPath, `${JSON.stringify(runtimeAuthority, null, 2)}\n`);
   }
   mkdirSync(launchAgentsPath, { recursive: true });
   writeFileSync(plistPath, plist, { encoding: "utf8", mode: 0o644 });
@@ -169,6 +246,10 @@ console.log(JSON.stringify({
   authorizationId: authorization.authorizationId,
   authorizationIssuedAt: authorization.issuedAt,
   authorizationExpiresAt: authorization.expiresAt,
+  authoritySha: runtimeAuthority.authoritySha,
+  runtimeRoot: runtimeAuthority.runtimeRoot,
+  runtimeDetached: true,
+  runtimeTrackedWorktreeClean: true,
   stage: authorization.stage,
   maxRequestsPerDay: authorization.maxRequestsPerDay,
   checkpoints: authorization.checkpointLabels,
@@ -180,7 +261,9 @@ console.log(JSON.stringify({
   automatedBettingAuthorized: authorization.automatedBettingAuthorized,
   dataRoot,
   authorizationPath,
+  runtimeAuthorityPath,
   plistPath,
+  oldRuntimeCleanupExecuted: false,
   rawEvidenceUploadedOrPublished: false,
 }, null, 2));
 
