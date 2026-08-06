@@ -1,8 +1,8 @@
 {
   "stateSchemaVersion": "research-queue-state-v1",
-  "stateVersion": 46,
-  "catalogVersion": "2026-08-06-n2-governance-v7",
-  "updatedAt": "2026-08-06T01:38:22.692Z",
+  "stateVersion": 48,
+  "catalogVersion": "2026-08-06-n2-governance-v8",
+  "updatedAt": "2026-08-06T06:56:00.703Z",
   "tasks": {
     "TASK-N2-001": {
       "status": "PASS",
@@ -94,23 +94,6 @@
       "updatedAt": "2026-08-04T14:27:30.234Z",
       "nextDecision": "依存 task を次回 dispatch 候補にする（自動起動しない）"
     },
-    "TASK-PLANNER-NEXT": {
-      "status": "READY",
-      "taskDefinitionVersion": 1,
-      "authoritySha": "72b1e13550264e1c325541de7763fb61fdd54a04",
-      "attemptCount": 2,
-      "maxAttempts": 3,
-      "evidenceLinks": [
-        "reports/automation/history/30912235903-TASK-PLANNER-NEXT.json",
-        "automation/control/planner-candidates.json",
-        "reports/automation/history/30921804343-TASK-PLANNER-NEXT.json"
-      ],
-      "resultDigest": "e0c56315c6bbe2a5df2efd668a69fc3334340a82af84358a47337d8b922da53f",
-      "lastFailure": null,
-      "checkpoint": null,
-      "updatedAt": "2026-08-04T15:00:08.063Z",
-      "nextDecision": "依存 task を次回 dispatch 候補にする（自動起動しない）"
-    },
     "TASK-N2-010": {
       "status": "PASS",
       "taskDefinitionVersion": 2,
@@ -130,9 +113,9 @@
       "nextDecision": "依存 task を次回 dispatch 候補にする（自動起動しない）"
     },
     "TASK-N2-011": {
-      "status": "CONDITIONAL",
-      "taskDefinitionVersion": 3,
-      "authoritySha": "b8d7104483f3299a7b13a26e5d53c57f7bfe3334",
+      "status": "READY",
+      "taskDefinitionVersion": 4,
+      "authoritySha": null,
       "attemptCount": 2,
       "maxAttempts": 3,
       "evidenceLinks": [
@@ -140,10 +123,10 @@
         "reports/automation/history/31013100745-TASK-N2-011.json",
         "reports/n2/n2-pit-audit.json"
       ],
-      "resultDigest": "2f6da81d776d931e2df7cf27856fe081c85c5f08af6092818d19f4257c15d746",
+      "resultDigest": null,
       "lastFailure": null,
       "checkpoint": null,
-      "updatedAt": "2026-08-05T14:02:03.502Z",
+      "updatedAt": "2026-08-06T06:56:00.703Z",
       "nextDecision": "blocks: none"
     },
     "TASK-N2-012": {
@@ -263,6 +246,23 @@
       "lastFailure": null,
       "checkpoint": null,
       "updatedAt": "2026-08-05T03:50:30.173Z"
+    },
+    "TASK-PLANNER-NEXT": {
+      "status": "READY",
+      "taskDefinitionVersion": 1,
+      "authoritySha": "72b1e13550264e1c325541de7763fb61fdd54a04",
+      "attemptCount": 2,
+      "maxAttempts": 3,
+      "evidenceLinks": [
+        "reports/automation/history/30912235903-TASK-PLANNER-NEXT.json",
+        "automation/control/planner-candidates.json",
+        "reports/automation/history/30921804343-TASK-PLANNER-NEXT.json"
+      ],
+      "resultDigest": "e0c56315c6bbe2a5df2efd668a69fc3334340a82af84358a47337d8b922da53f",
+      "lastFailure": null,
+      "checkpoint": null,
+      "updatedAt": "2026-08-04T15:00:08.063Z",
+      "nextDecision": "依存 task を次回 dispatch 候補にする（自動起動しない）"
     }
   }
 }
