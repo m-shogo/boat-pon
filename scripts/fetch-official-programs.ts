@@ -18,6 +18,8 @@ const TMP_DIR = path.join("data", "tmp", "programs");
 const SLEEP_MS = 1500;
 const FETCH_RETRY_COUNT = 2;
 const FETCH_RETRY_DELAY_MS = 3000;
+const FETCH_TIMEOUT_MS = 15_000;
+const MAX_ARCHIVE_BYTES = 20_000_000;
 const MAX_RANGE_DAYS = 10000;
 const DL_ONLY = process.env.BOAT_PON_DL_ONLY === "1";
 const SKIP_EXISTING = process.env.BOAT_PON_SKIP_EXISTING === "1";
@@ -191,10 +193,18 @@ async function replaceDownloadWithRetry(url: string, dest: string): Promise<void
 async function downloadFile(url: string, dest: string) {
   const res = await fetch(url, {
     headers: { "user-agent": "BoatPon/0.1 personal low-frequency cache fetch" },
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText} ${url}`);
+  const declaredBytes = Number(res.headers.get("content-length"));
+  if (Number.isFinite(declaredBytes) && declaredBytes > MAX_ARCHIVE_BYTES) {
+    throw new Error(`response too large: ${declaredBytes} > ${MAX_ARCHIVE_BYTES}`);
+  }
   const buf = Buffer.from(await res.arrayBuffer());
   if (buf.length === 0) throw new Error(`empty response ${url}`);
+  if (buf.length > MAX_ARCHIVE_BYTES) {
+    throw new Error(`response too large: ${buf.length} > ${MAX_ARCHIVE_BYTES}`);
+  }
   await writeFile(dest, buf);
 }
 
