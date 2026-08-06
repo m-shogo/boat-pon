@@ -1,0 +1,360 @@
+{
+  "evidenceSchemaVersion": "n2-011-final-preflight-v1",
+  "status": "PASS",
+  "taskId": "TASK-N2-011",
+  "taskDefinitionVersion": 4,
+  "expectedAttempt": 3,
+  "safetyLevel": "L0",
+  "startedAt": "2026-08-06T07:04:34.060Z",
+  "completedAt": "2026-08-06T07:04:37.420Z",
+  "executionLocation": "Mac self-hosted",
+  "authority": {
+    "mainSha": "1a5a987a4556def67f0f109e7d7bb856aa5d7f28",
+    "automationSha": "ed91c4014fe77cfc4db0176015baec6f113c2008",
+    "queueBlobSha": "420dad547781fb6aa34624b9ec7efc68d3e3546d"
+  },
+  "materialization": {
+    "authorityRoot": "/Users/m-shogo/actions-runner-boat-pon/_work/_temp/boat-pon-n2-011-authority",
+    "manifestPath": "/Users/m-shogo/actions-runner-boat-pon/_work/_temp/boat-pon-n2-011-authority/reports/n2/n2-dataset-manifest.json",
+    "manifestInRunnerTemp": true,
+    "worktreeManifestWritten": false
+  },
+  "checks": {
+    "mainAuthority": {
+      "status": "PASS",
+      "detail": {
+        "observedMainSha": "1a5a987a4556def67f0f109e7d7bb856aa5d7f28",
+        "expectedMainSha": "1a5a987a4556def67f0f109e7d7bb856aa5d7f28"
+      }
+    },
+    "automationAuthority": {
+      "status": "PASS",
+      "detail": {
+        "actualAutomationSha": "ed91c4014fe77cfc4db0176015baec6f113c2008",
+        "expectedAutomationSha": "ed91c4014fe77cfc4db0176015baec6f113c2008"
+      }
+    },
+    "queueBlobAuthority": {
+      "status": "PASS",
+      "detail": {
+        "actualQueueBlobSha": "420dad547781fb6aa34624b9ec7efc68d3e3546d",
+        "expectedQueueBlobSha": "420dad547781fb6aa34624b9ec7efc68d3e3546d"
+      }
+    },
+    "catalogValidation": {
+      "status": "PASS",
+      "detail": {
+        "valid": true,
+        "errors": [],
+        "catalogVersion": "2026-08-06-n2-governance-v8"
+      }
+    },
+    "queueValidation": {
+      "status": "PASS",
+      "detail": {
+        "errors": []
+      }
+    },
+    "queueCurrentRunAlignment": {
+      "status": "PASS",
+      "detail": {
+        "queueStateVersion": 48,
+        "currentRunStateVersion": 48,
+        "currentRunStateDigest": "90b95351b940358ac41f40454174a085088014214378e2128210804750a6860c",
+        "computedQueueDigest": "90b95351b940358ac41f40454174a085088014214378e2128210804750a6860c"
+      }
+    },
+    "taskState": {
+      "status": "PASS",
+      "detail": {
+        "n2010": {
+          "status": "PASS",
+          "taskDefinitionVersion": 2,
+          "authoritySha": "864e720e91ce146a134d1ed1873fc53477512323",
+          "attemptCount": 1,
+          "maxAttempts": 3,
+          "evidenceLinks": [
+            "reports/automation/history/30991353245-TASK-N2-010.json",
+            "reports/n2/n2-dataset-manifest.json",
+            "research/registries/experiments/EXP-dataset-expand-701398c2.json",
+            "research/registries/discoveries/DISC-dataset-coverage-701398c2.json"
+          ],
+          "resultDigest": "701398c2e82a5c5468de41b8c6de5e5cad8ccae026c10ee83f1ab57acafe34c9",
+          "lastFailure": null,
+          "checkpoint": null,
+          "updatedAt": "2026-08-05T12:37:12.490Z",
+          "nextDecision": "依存 task を次回 dispatch 候補にする（自動起動しない）"
+        },
+        "n2011": {
+          "status": "READY",
+          "taskDefinitionVersion": 4,
+          "authoritySha": null,
+          "attemptCount": 2,
+          "maxAttempts": 3,
+          "evidenceLinks": [
+            "reports/automation/history/31011585102-TASK-N2-011.json",
+            "reports/automation/history/31013100745-TASK-N2-011.json",
+            "reports/n2/n2-pit-audit.json"
+          ],
+          "resultDigest": null,
+          "lastFailure": null,
+          "checkpoint": null,
+          "updatedAt": "2026-08-06T06:56:00.703Z",
+          "nextDecision": "blocks: none"
+        },
+        "n2013": {
+          "status": "PASS",
+          "taskDefinitionVersion": 2,
+          "authoritySha": "772f3684797598ef05ae28b5606a0533da58ebe8",
+          "attemptCount": 3,
+          "maxAttempts": 3,
+          "evidenceLinks": [
+            "reports/automation/history/31023735923-TASK-N2-013.json",
+            "reports/n2/n2-official-program-canary-review-bundle.json",
+            "reports/automation/history/31057606124-TASK-N2-013.json",
+            "reports/automation/history/31063301882-TASK-N2-013.json"
+          ],
+          "resultDigest": "d79b170d7d70eda5e635ced0a5346b8a6e4c3b2dba173a53306baa94ddbe289c",
+          "lastFailure": null,
+          "checkpoint": null,
+          "updatedAt": "2026-08-06T01:38:22.692Z",
+          "nextDecision": "依存 task を次回 dispatch 候補にする（自動起動しない）"
+        }
+      }
+    },
+    "noInFlightTask": {
+      "status": "PASS",
+      "detail": {
+        "inFlight": []
+      }
+    },
+    "noEquivalentUnprocessedIntent": {
+      "status": "PASS",
+      "detail": {
+        "equivalentPending": [],
+        "superseded": [
+          "INTENT-20260805-m7p3v9k2qx"
+        ],
+        "processed": [
+          "INTENT-20260805-q9v4m2k7px",
+          "INTENT-20260805-x6n2p8v4km"
+        ],
+        "processedIntentCount": 12,
+        "processedRequestCount": 14,
+        "processedIntentDigest": "e93581c5bdfcf8d115d3634e9d9d6f46d33b366fb162a24a3a8113e8cbe73307",
+        "processedRequestDigest": "53b23289ee1ce723690f15813720ec3154c57828f3d56a6e7d458c46ed4fd616",
+        "plannerCandidatesDigest": "fbfb6ecc4cc029695fda253a385172356257cb7af4a7d05e5be439e3e6585bfd"
+      }
+    },
+    "canonicalWorktreeClean": {
+      "status": "PASS",
+      "detail": {
+        "canonicalRepo": "/Users/m-shogo/Developer/personal/boat-pon",
+        "dirty": []
+      }
+    },
+    "automationLockFree": {
+      "status": "PASS",
+      "detail": {
+        "lockPath": "/Users/m-shogo/Developer/personal/boat-pon/data/tmp/automation/research.lock.json",
+        "exists": false
+      }
+    },
+    "automationNotPaused": {
+      "status": "PASS",
+      "detail": {
+        "emergencyPath": "/Users/m-shogo/Developer/personal/boat-pon/automation/EMERGENCY_STOP",
+        "emergencyStop": false,
+        "pausePath": "/Users/m-shogo/Developer/personal/boat-pon/automation/PAUSED",
+        "paused": false
+      }
+    },
+    "diskCapacity": {
+      "status": "PASS",
+      "detail": {
+        "freeBytes": 406415978496,
+        "minFreeBytes": 21474836480
+      }
+    },
+    "dbFilesPresentAndQuiescent": {
+      "status": "PASS",
+      "detail": {
+        "primary": {
+          "exists": true,
+          "bytes": 15311425536,
+          "modifiedMs": 1785999732694.1875,
+          "walBytes": 0
+        },
+        "sidecar": {
+          "exists": true,
+          "bytes": 9762127872,
+          "modifiedMs": 1785980955954.9895,
+          "walBytes": 0
+        }
+      }
+    },
+    "datasetManifest": {
+      "status": "PASS",
+      "detail": {
+        "path": "n2-dataset-manifest.json",
+        "valid": true,
+        "errors": [],
+        "outputDigest": "701398c2e82a5c5468de41b8c6de5e5cad8ccae026c10ee83f1ab57acafe34c9",
+        "pitCheckedRecordCount": 8217755,
+        "materializedOutsideWorktree": true
+      }
+    },
+    "rolloutSafety": {
+      "status": "PASS",
+      "detail": {
+        "shadowWriteEnabled": false,
+        "operationalGcEnabled": false,
+        "killSwitchEngaged": false,
+        "approvalScopes": [
+          "F0-R_START_AND_SIDECAR_ROLLOUT",
+          "N1_PERMANENT_SETTLEMENT_SCHEMA_ROLLOUT",
+          "N2_OFFICIAL_PROGRAM_OBSERVATION_CANARY",
+          "N2_SETTLEMENT_REPARSE_APPLY"
+        ]
+      }
+    },
+    "officialProgramCanaryMaintained": {
+      "status": "PASS",
+      "detail": {
+        "officialProgramObservationCount": 20,
+        "trifectaMarketObservationCount": 0,
+        "captureAttemptCount": 20,
+        "outboxMessageCount": 0,
+        "deliveryAttemptCount": 0
+      }
+    },
+    "canaryVerificationAuthority": {
+      "status": "PASS",
+      "detail": {
+        "reportVersion": "n2-official-program-canary-verification-v1",
+        "status": "PASS",
+        "verifiedAt": "2026-08-06T02:01:38.644Z",
+        "manifestDigest": "151c34786e29ca80838da0fe3b2eb3326ee343d0a3656e8f20666af14d1b3a85",
+        "selectedRaceCount": 20,
+        "applyEvidenceStatus": "FAILED",
+        "applyEvidenceTerminalStage": "VERIFY_PRIMARY_SELECTED_ROWS_UNCHANGED",
+        "observations": {
+          "officialProgramCount": 20,
+          "selectedObservationCount": 20,
+          "uniqueSelectedRaceCount": 20,
+          "trifectaMarketCount": 0,
+          "captureAttemptCount": 20,
+          "joinedEvidenceCount": 20,
+          "quickCheck": "ok"
+        },
+        "approval": {
+          "approvalId": "APR-N2-OP-151c34786e29-31063550320",
+          "grantPresent": true,
+          "revokePresent": true,
+          "currentApproved": false,
+          "currentCode": "APPROVAL_REVOKED"
+        },
+        "rollout": {
+          "globalShadowWriteEnabled": false,
+          "killSwitchEngaged": false
+        },
+        "primarySourceVerification": {
+          "status": "VERIFIED",
+          "walBytes": 0,
+          "matchingSelectedRows": 20
+        },
+        "productionCanarySemantics": "20_INSERTED_20_REUSED_APPROVAL_REVOKED",
+        "writesPerformedByVerification": false,
+        "n2PitAuditRetried": false,
+        "currentBuyChanged": false,
+        "lineChanged": false,
+        "automaticBettingChanged": false
+      }
+    },
+    "pitReadOnlyPreview": {
+      "status": "PASS",
+      "detail": {
+        "auditVersion": "n2-pit-audit-v1",
+        "status": "PASS",
+        "dataStatus": "REAL_DATA",
+        "auditedObservationCount": 20,
+        "verifiedSafeCount": 20,
+        "excludedCount": 0,
+        "checkedFeatureCount": 20,
+        "checkedOddsCount": 0,
+        "sameRaceViolationCount": 0,
+        "futureViolationCount": 0,
+        "ambiguousTimingCount": 0,
+        "postRaceFeatureRead": false,
+        "allowedSourceTypes": [
+          "official_program",
+          "trifecta_market"
+        ],
+        "reasonClassCounts": {
+          "safe": 20,
+          "same_race_leakage": 0,
+          "future_leakage": 0,
+          "ambiguous_timing": 0,
+          "lineage_exclusion": 0,
+          "source_not_allowed": 0
+        },
+        "reasonCounts": {
+          "pit_safe": 20
+        },
+        "inputDigest": "63ebde1570902b028dcdfa9b14231503d9128d581755e1f538b10040cfb64613",
+        "outputDigest": "9d45a22671a0436018d8f074253dda458bc04708a26b9d8874775d0b950431d3",
+        "reader": {
+          "returnedObservationCount": 20,
+          "truncated": false,
+          "readOnly": true,
+          "queryOnly": true,
+          "sourceTypes": [
+            "official_program",
+            "trifecta_market"
+          ]
+        }
+      }
+    },
+    "dbMetadataUnchanged": {
+      "status": "PASS",
+      "detail": {
+        "primaryBefore": {
+          "exists": true,
+          "bytes": 15311425536,
+          "modifiedMs": 1785999732694.1875,
+          "walBytes": 0
+        },
+        "primaryAfter": {
+          "exists": true,
+          "bytes": 15311425536,
+          "modifiedMs": 1785999732694.1875,
+          "walBytes": 0
+        },
+        "sidecarBefore": {
+          "exists": true,
+          "bytes": 9762127872,
+          "modifiedMs": 1785980955954.9895,
+          "walBytes": 0
+        },
+        "sidecarAfter": {
+          "exists": true,
+          "bytes": 9762127872,
+          "modifiedMs": 1785980955954.9895,
+          "walBytes": 0
+        },
+        "primaryDbWriteCount": 0,
+        "sidecarWriteCount": 0
+      }
+    }
+  },
+  "blockers": [],
+  "primaryDbWriteCount": 0,
+  "sidecarWriteCount": 0,
+  "productionApplyExecuted": false,
+  "approvalCreated": false,
+  "intentCreated": false,
+  "taskAttemptConsumed": false,
+  "workflowRunId": 31079499552,
+  "workflowJob": "preflight",
+  "scriptExitCode": 0
+}
