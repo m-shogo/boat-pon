@@ -1,0 +1,249 @@
+name: Temporary install hardened N2 trifecta capture agent
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/tmp-install-hardened-n2-trifecta-capture-agent.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: install-hardened-n2-trifecta-capture-agent
+  cancel-in-progress: true
+
+jobs:
+  install:
+    runs-on: [self-hosted, macOS]
+    timeout-minutes: 45
+    env:
+      AUTHORITY_SHA: 9e5ed14664cbb4c93e30560ea4c2250ad2563dbf
+      CANONICAL_REPO: /Users/m-shogo/Developer/personal/boat-pon
+    steps:
+      - name: Checkout exact authority for workflow verification
+        uses: actions/checkout@v4
+        with:
+          ref: 9e5ed14664cbb4c93e30560ea4c2250ad2563dbf
+          fetch-depth: 1
+
+      - name: Verify and fast-forward canonical repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$AUTHORITY_SHA"
+          test -d "$CANONICAL_REPO/.git"
+          test "$(git -C "$CANONICAL_REPO" branch --show-current)" = "main"
+          test -z "$(git -C "$CANONICAL_REPO" status --porcelain)"
+          git -C "$CANONICAL_REPO" fetch --no-tags origin main
+          git -C "$CANONICAL_REPO" merge --ff-only "$AUTHORITY_SHA"
+          test "$(git -C "$CANONICAL_REPO" rev-parse HEAD)" = "$AUTHORITY_SHA"
+          test -z "$(git -C "$CANONICAL_REPO" status --porcelain)"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install canonical dependencies
+        working-directory: /Users/m-shogo/Developer/personal/boat-pon
+        run: npm ci
+
+      - name: Record private state before
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "AUTH_PATH=$CANONICAL_REPO/data/private/trifecta-capture/authorization.json" >> "$GITHUB_ENV"
+          echo "PLIST_PATH=$HOME/Library/LaunchAgents/com.boatpon.trifecta-private-capture.plist" >> "$GITHUB_ENV"
+          echo "INSTALL_OUT=$RUNNER_TEMP/n2-hardened-install-output.json" >> "$GITHUB_ENV"
+          echo "TICK_OUT=$RUNNER_TEMP/n2-hardened-install-tick.json" >> "$GITHUB_ENV"
+          echo "SUMMARY_OUT=$RUNNER_TEMP/n2-hardened-install-summary.json" >> "$GITHUB_ENV"
+          echo "LAUNCHCTL_OUT=$RUNNER_TEMP/n2-hardened-install-launchctl.txt" >> "$GITHUB_ENV"
+          node - <<'NODE' > "$RUNNER_TEMP/n2-hardened-install-before.json"
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const root = process.env.CANONICAL_REPO;
+          function meta(file) {
+            const stat = fs.existsSync(file) ? fs.statSync(file) : null;
+            const wal = `${file}-wal`;
+            return {
+              exists: Boolean(stat),
+              bytes: stat?.size ?? null,
+              modifiedMs: stat?.mtimeMs ?? null,
+              walBytes: fs.existsSync(wal) ? fs.statSync(wal).size : 0,
+            };
+          }
+          console.log(JSON.stringify({
+            primary: meta(path.join(root, 'data/boat.sqlite')),
+            sidecar: meta(path.join(root, 'data/research-replay.sqlite')),
+            authorizationExisted: fs.existsSync(path.join(root, 'data/private/trifecta-capture/authorization.json')),
+          }, null, 2));
+          NODE
+
+      - name: Install and renew explicit 30-day private authorization
+        working-directory: /Users/m-shogo/Developer/personal/boat-pon
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "$(git status --porcelain)"
+          npx tsx scripts/install-n2-trifecta-local-capture-agent.ts \
+            --renew --authorize --days 30 > "$INSTALL_OUT"
+
+      - name: Verify launchd registration and canonical paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f "$AUTH_PATH"
+          test -f "$PLIST_PATH"
+          test "$(stat -f '%Lp' "$AUTH_PATH")" = "600"
+          test "$(stat -f '%Lp' "$PLIST_PATH")" = "644"
+          grep -Fq "$CANONICAL_REPO" "$PLIST_PATH"
+          if grep -Fq '/actions-runner-' "$PLIST_PATH"; then
+            echo "::error::LaunchAgent references disposable runner workspace"
+            exit 1
+          fi
+          /bin/launchctl print "gui/$(id -u)/com.boatpon.trifecta-private-capture" > "$LAUNCHCTL_OUT"
+
+      - name: Execute one explicit idempotent verification tick
+        working-directory: /Users/m-shogo/Developer/personal/boat-pon
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          npx tsx scripts/run-n2-trifecta-local-capture-tick.ts --json > "$TICK_OUT"
+          code=$?
+          set -e
+          echo "$code" > "$RUNNER_TEMP/n2-hardened-install-tick-exit.txt"
+          test -s "$TICK_OUT"
+
+      - name: Build sanitized evidence and enforce protected boundaries
+        shell: bash
+        env:
+          WORKFLOW_RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const root = process.env.CANONICAL_REPO;
+          function meta(file) {
+            const stat = fs.existsSync(file) ? fs.statSync(file) : null;
+            const wal = `${file}-wal`;
+            return {
+              exists: Boolean(stat),
+              bytes: stat?.size ?? null,
+              modifiedMs: stat?.mtimeMs ?? null,
+              walBytes: fs.existsSync(wal) ? fs.statSync(wal).size : 0,
+            };
+          }
+          const before = JSON.parse(fs.readFileSync(
+            path.join(process.env.RUNNER_TEMP, 'n2-hardened-install-before.json'), 'utf8'));
+          const install = JSON.parse(fs.readFileSync(process.env.INSTALL_OUT, 'utf8'));
+          const tick = JSON.parse(fs.readFileSync(process.env.TICK_OUT, 'utf8'));
+          const tickExitCode = Number(fs.readFileSync(
+            path.join(process.env.RUNNER_TEMP, 'n2-hardened-install-tick-exit.txt'), 'utf8').trim());
+          const auth = JSON.parse(fs.readFileSync(process.env.AUTH_PATH, 'utf8'));
+          const after = {
+            primary: meta(path.join(root, 'data/boat.sqlite')),
+            sidecar: meta(path.join(root, 'data/research-replay.sqlite')),
+          };
+          const validityDays = (Date.parse(auth.expiresAt) - Date.parse(auth.issuedAt)) / 86400000;
+          const violations = [];
+          if (install.status !== 'INSTALLED') violations.push('INSTALL_NOT_CONFIRMED');
+          if (!(validityDays > 29.9 && validityDays <= 30.01)) violations.push('AUTH_DURATION_INVALID');
+          if (auth.stage !== 'ONE_VENUE_REVIEW' || auth.maxRequestsPerDay !== 48) {
+            violations.push('AUTH_SCOPE_INVALID');
+          }
+          if (JSON.stringify(auth.checkpointLabels) !== JSON.stringify(['T-30','T-20','T-10','T-5'])) {
+            violations.push('CHECKPOINT_POLICY_INVALID');
+          }
+          if (auth.publicRedistributionAuthorized !== false
+            || auth.databaseWriteAuthorized !== false
+            || auth.currentBuyConnectionAuthorized !== false
+            || auth.lineConnectionAuthorized !== false
+            || auth.automatedBettingAuthorized !== false) {
+            violations.push('AUTH_BOUNDARY_WIDENED');
+          }
+          if (tick.databaseWriteCount !== 0
+            || tick.primaryDbWriteCount !== 0
+            || tick.sidecarWriteCount !== 0
+            || tick.currentBuyChanged !== false
+            || tick.lineChanged !== false
+            || tick.publicPublished !== false
+            || tick.automatedBettingChanged !== false
+            || tick.productionApplyExecuted !== false) {
+            violations.push('PROTECTED_BOUNDARY_CHANGED');
+          }
+          const summary = {
+            evidenceSchemaVersion: 'n2-trifecta-hardened-local-install-v1',
+            status: violations.length === 0 ? 'PASS' : 'BLOCKED',
+            violations,
+            workflowRunId: Number(process.env.WORKFLOW_RUN_ID),
+            authoritySha: process.env.AUTHORITY_SHA,
+            canonicalRepoHead: process.env.AUTHORITY_SHA,
+            installStatus: install.status,
+            launchAgentLabel: install.label,
+            launchdRegistered: true,
+            plistUsesCanonicalRepo: true,
+            plistUsesRunnerWorkspace: false,
+            authorization: {
+              version: auth.authorizationVersion,
+              id: auth.authorizationId,
+              issuedAt: auth.issuedAt,
+              expiresAt: auth.expiresAt,
+              validityDays,
+              stage: auth.stage,
+              maxRequestsPerDay: auth.maxRequestsPerDay,
+              checkpoints: auth.checkpointLabels,
+              privateResearchOnly: auth.privateResearchOnly,
+              publicRedistributionAuthorized: auth.publicRedistributionAuthorized,
+              databaseWriteAuthorized: auth.databaseWriteAuthorized,
+              currentBuyConnectionAuthorized: auth.currentBuyConnectionAuthorized,
+              lineConnectionAuthorized: auth.lineConnectionAuthorized,
+              automatedBettingAuthorized: auth.automatedBettingAuthorized,
+            },
+            verificationTick: {
+              exitCode: tickExitCode,
+              status: tick.status,
+              blockers: tick.blockers,
+              eventChanged: tick.eventChanged,
+              selectedVenueCode: tick.selectedVenueCode,
+              selectedRaceCount: tick.selectedRaceCount,
+              dueEntryCount: tick.dueEntryCount,
+              networkRequestCount: tick.networkRequestCount,
+              capturedCount: tick.capturedCount,
+              blockedEvidenceCount: tick.blockedEvidenceCount,
+            },
+            databaseBefore: before,
+            databaseAfter: after,
+            databaseWriteCount: tick.databaseWriteCount,
+            primaryDbWriteCount: tick.primaryDbWriteCount,
+            sidecarWriteCount: tick.sidecarWriteCount,
+            currentBuyChanged: tick.currentBuyChanged,
+            lineChanged: tick.lineChanged,
+            publicPublished: tick.publicPublished,
+            automatedBettingChanged: tick.automatedBettingChanged,
+            productionApplyExecuted: tick.productionApplyExecuted,
+            rawUploadedOrPublished: false,
+          };
+          fs.writeFileSync(process.env.SUMMARY_OUT, `${JSON.stringify(summary, null, 2)}\n`);
+          if (violations.length > 0) throw new Error(violations.join(','));
+          NODE
+
+      - name: Upload sanitized installation evidence only
+        uses: actions/upload-artifact@v4
+        with:
+          name: n2-trifecta-hardened-local-install-sanitized
+          path: |
+            ${{ runner.temp }}/n2-hardened-install-summary.json
+            ${{ runner.temp }}/n2-hardened-install-before.json
+            ${{ runner.temp }}/n2-hardened-install-output.json
+            ${{ runner.temp }}/n2-hardened-install-tick.json
+            ${{ runner.temp }}/n2-hardened-install-tick-exit.txt
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Print sanitized disposition
+        run: cat "$SUMMARY_OUT"
