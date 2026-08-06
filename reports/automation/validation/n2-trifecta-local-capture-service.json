@@ -1,0 +1,70 @@
+{
+  "evidenceSchemaVersion": "n2-trifecta-local-capture-service-v1",
+  "status": "IMPLEMENTED_PENDING_CI",
+  "baseMainSha": "422d568d9caae1069b3e0d2cee6f184f1b43d284",
+  "branch": "agent/n2-trifecta-local-capture-service-canonical",
+  "replacementFor": {
+    "pullRequest": 75,
+    "disposition": "CLOSED_WITHOUT_MERGE",
+    "reason": "SELF_HOSTED_RUNNER_QUEUE_MISSED_EXACT_CHECKPOINT_WINDOWS"
+  },
+  "service": {
+    "version": "n2-trifecta-local-capture-service-v1",
+    "executionModel": "MAC_LAUNCHD_SHORT_TICK",
+    "startIntervalSeconds": 30,
+    "longRunningProcess": false,
+    "githubActionsRequired": false,
+    "selfHostedRunnerRequired": false,
+    "oneNetworkRequestPerTickMaximum": true,
+    "checkpointWindow": {
+      "earlySeconds": 60,
+      "lateSeconds": 120
+    }
+  },
+  "authorization": {
+    "version": "n2-trifecta-local-capture-authorization-v1",
+    "explicitAuthorizeFlagRequired": true,
+    "silentRenewalAllowed": false,
+    "maximumAuthorizationDays": 90,
+    "defaultAuthorizationDays": 30,
+    "stage": "ONE_VENUE_REVIEW",
+    "maxVenueDaysPerDay": 1,
+    "maxRacesPerDay": 12,
+    "maxRequestsPerDay": 48,
+    "checkpoints": ["T-30", "T-20", "T-10", "T-5"],
+    "ephemeralApprovalPerCheckpoint": true,
+    "ephemeralRequestBudget": 1
+  },
+  "storage": {
+    "privateAuthorization": true,
+    "dailyVenueSelection": true,
+    "reservationBeforeNetwork": true,
+    "appendOnlyRaw": true,
+    "appendOnlyEnvelope": true,
+    "passOnlyAcceptedMarker": true,
+    "gitIgnored": true,
+    "rawArtifactUploadAuthorized": false,
+    "publicPublishAuthorized": false
+  },
+  "database": {
+    "officialProgramsImmutableRead": true,
+    "queryOnly": true,
+    "activeWalBlocks": true,
+    "metadataUnchangedRequired": true,
+    "databaseWriteCount": 0,
+    "primaryDbWriteCount": 0,
+    "sidecarWriteCount": 0
+  },
+  "protectedBoundaries": {
+    "currentBuyChanged": false,
+    "lineChanged": false,
+    "publicPublished": false,
+    "automatedBettingChanged": false,
+    "productionApplyExecuted": false
+  },
+  "installationExecuted": false,
+  "realNetworkExecutedByThisPr": false,
+  "realRawPersistedByThisPr": false,
+  "ciRunId": null,
+  "ciConclusion": null
+}
