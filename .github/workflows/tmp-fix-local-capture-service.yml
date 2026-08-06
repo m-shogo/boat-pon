@@ -1,0 +1,54 @@
+name: Temporary fix local capture service
+
+on:
+  push:
+    branches:
+      - agent/n2-trifecta-local-capture-service-canonical
+    paths:
+      - .github/workflows/tmp-fix-local-capture-service.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/n2-trifecta-local-capture-service-canonical
+          fetch-depth: 0
+
+      - name: Apply exact service cleanup and remove workflow
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/research-replay/n2TrifectaLocalCaptureService.ts')
+          source = path.read_text()
+          replacements = [
+              ('import { dirname, join, resolve, sep } from "node:path";',
+               'import { dirname, resolve, sep } from "node:path";'),
+              ('        if (existsSync(reservationAbsolute)) {\n          blockers.push("CHECKPOINT_ALREADY_RESERVED");\n        } else if',
+               '        if (existsSync(reservationAbsolute)) {\n          // A prior reservation is the intended crash-safe duplicate guard.\n        } else if'),
+          ]
+          for old, new in replacements:
+              count = source.count(old)
+              if count != 1:
+                  raise SystemExit(f'exact replacement count must be 1 for {old!r}, got {count}')
+              source = source.replace(old, new)
+          path.write_text(source)
+          Path('.github/workflows/tmp-fix-local-capture-service.yml').unlink()
+          PY
+
+      - name: Commit cleanup
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/research-replay/n2TrifectaLocalCaptureService.ts \
+            .github/workflows/tmp-fix-local-capture-service.yml
+          git commit -m "fix(research): treat reserved odds checkpoint as no-change"
+          git push origin HEAD:agent/n2-trifecta-local-capture-service-canonical
