@@ -1,6 +1,6 @@
 {
   "evidenceSchemaVersion": "n2-trifecta-private-capture-executor-v1",
-  "status": "IMPLEMENTED_CI_RETRY_PENDING",
+  "status": "PASS",
   "baseMainSha": "b9af69e3331d20fd43d0b696626fc62b5dbe6dae",
   "branch": "agent/n2-trifecta-private-capture-executor",
   "executor": {
@@ -55,6 +55,19 @@
     "automatedBettingChanged": false,
     "productionApplyExecuted": false
   },
+  "checks": {
+    "typecheck": "PASS",
+    "privateCaptureFixtures": "PASS",
+    "immutablePlanReaderFixtures": "PASS",
+    "fullRepositoryTests": "PASS",
+    "researchGovernance": "PASS",
+    "secretScan": "PASS",
+    "productPublicBoundary": "PASS",
+    "buyLineBoundary": "PASS",
+    "researchReplayGolden": "PASS",
+    "researchReplayReadiness": "PASS",
+    "productionBuild": "PASS"
+  },
   "validationAttempts": [
     {
       "runId": 31087598909,
@@ -67,10 +80,16 @@
       "result": "ACTION_REQUIRED_NO_JOBS",
       "failureCode": "GITHUB_ACTIONS_BOT_PUSH_RECURSION_SUPPRESSION",
       "logicOrBoundaryFailure": false
+    },
+    {
+      "runId": 31087977061,
+      "result": "PASS",
+      "failureCode": null,
+      "logicOrBoundaryFailure": false
     }
   ],
   "literalFixCommit": "6cd4d48ccff5d17ad363caaa01ed5ace35c3bb71",
   "temporaryWorkflowPresent": false,
-  "ciRunId": null,
-  "ciConclusion": null
+  "ciRunId": 31087977061,
+  "ciConclusion": "success"
 }
