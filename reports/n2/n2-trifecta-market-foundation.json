@@ -1,0 +1,195 @@
+{
+  "reportVersion": "n2-trifecta-market-foundation-report-v1",
+  "generatedAt": "2026-08-06T07:59:13.573Z",
+  "status": "BLOCKED_NOT_READY_FOR_CANARY",
+  "dataStatus": "NO_SOURCE_ROWS",
+  "sourceType": "trifecta_market",
+  "inventory": {
+    "readerVersion": "n2-trifecta-market-source-inventory-reader-v1",
+    "cohort": {
+      "dateFrom": "2026-07-31",
+      "dateTo": "2026-08-06",
+      "dayCount": 7
+    },
+    "sourceTable": "odds_timeseries_snapshots",
+    "sourceTablePresent": true,
+    "columns": [
+      "captured_at",
+      "checkpoint_label",
+      "created_at",
+      "id",
+      "minutes_before_close",
+      "odds",
+      "popularity",
+      "race_id",
+      "selection",
+      "source"
+    ],
+    "totalRows": 0,
+    "raceCount": 0,
+    "checkpointCount": 0,
+    "completeSnapshotCount": 0,
+    "rawDocumentIdColumnPresent": false,
+    "rawPayloadColumnPresent": false,
+    "rawPayloadDigestColumnPresent": false,
+    "parseRunIdColumnPresent": false,
+    "sourceUrlColumnPresent": false,
+    "capturedAtColumnPresent": true,
+    "availableAtColumnPresent": false,
+    "decisionCutoffColumnPresent": false,
+    "checkpointLabelColumnPresent": true
+  },
+  "foundation": {
+    "foundationVersion": "n2-trifecta-market-foundation-v1",
+    "status": "BLOCKED_NOT_READY_FOR_CANARY",
+    "sourceType": "trifecta_market",
+    "writeAuthorized": false,
+    "autoCreateApproval": false,
+    "autoEnableShadowWrite": false,
+    "productionApplyExecuted": false,
+    "inventory": {
+      "readerVersion": "n2-trifecta-market-source-inventory-reader-v1",
+      "cohort": {
+        "dateFrom": "2026-07-31",
+        "dateTo": "2026-08-06",
+        "dayCount": 7
+      },
+      "sourceTable": "odds_timeseries_snapshots",
+      "sourceTablePresent": true,
+      "columns": [
+        "captured_at",
+        "checkpoint_label",
+        "created_at",
+        "id",
+        "minutes_before_close",
+        "odds",
+        "popularity",
+        "race_id",
+        "selection",
+        "source"
+      ],
+      "totalRows": 0,
+      "raceCount": 0,
+      "checkpointCount": 0,
+      "completeSnapshotCount": 0,
+      "rawDocumentIdColumnPresent": false,
+      "rawPayloadColumnPresent": false,
+      "rawPayloadDigestColumnPresent": false,
+      "parseRunIdColumnPresent": false,
+      "sourceUrlColumnPresent": false,
+      "capturedAtColumnPresent": true,
+      "availableAtColumnPresent": false,
+      "decisionCutoffColumnPresent": false,
+      "checkpointLabelColumnPresent": true
+    },
+    "inventoryBlockers": [
+      "SOURCE_ROWS_EMPTY",
+      "SOURCE_RACES_EMPTY",
+      "CHECKPOINTS_EMPTY",
+      "COMPLETE_120_SELECTION_SNAPSHOT_EMPTY",
+      "RAW_DOCUMENT_ID_COLUMN_MISSING",
+      "RAW_PAYLOAD_COLUMN_MISSING",
+      "RAW_PAYLOAD_DIGEST_COLUMN_MISSING",
+      "PARSE_RUN_ID_COLUMN_MISSING",
+      "AVAILABLE_AT_COLUMN_MISSING",
+      "DECISION_CUTOFF_COLUMN_MISSING"
+    ],
+    "candidateCount": 0,
+    "safeCandidateCount": 0,
+    "blockedCandidateCount": 0,
+    "duplicateCheckpointIdentities": [],
+    "candidateAudits": [],
+    "canaryManifest": {
+      "manifestVersion": "n2-trifecta-market-canary-manifest-v1",
+      "sourceType": "trifecta_market",
+      "approvalScope": "N2_TRIFECTA_MARKET_OBSERVATION_CANARY",
+      "writeAuthorized": false,
+      "productionApplyExecuted": false,
+      "requestedMaxRaces": 20,
+      "boundedMaxRaces": 20,
+      "entryCount": 0,
+      "entries": [],
+      "manifestDigest": "01b8d1ab5c848223db708abdd644652c28147670a528e95d0a6a1d606cad1440"
+    },
+    "rollbackAndRevokeConditions": [
+      "active WAL or mutable DB access detected",
+      "manifest digest, source schema, raw payload digest, or checkpoint identity drift",
+      "missing or expired source-specific approval",
+      "any availableAt/capturedAt/decisionCutoff PIT ordering violation",
+      "incomplete or duplicate 120-selection payload",
+      "raw document, parse run, or proposed observation lineage mismatch",
+      "insert/reuse/write counts differ from reviewed manifest",
+      "primary DB write count is non-zero",
+      "sidecar writes occur outside the approved bounded canary transaction",
+      "idempotent replay changes observation identity or payload digest",
+      "post-apply read-only verification fails"
+    ],
+    "idempotentReplayContract": {
+      "identityFields": [
+        "raceId",
+        "checkpointLabel",
+        "capturedAt",
+        "rawDocumentId",
+        "rawPayloadDigest",
+        "parseRunId",
+        "proposedObservationId"
+      ],
+      "replayRule": "same identity and payload digest => reuse; identity collision with different digest => block",
+      "duplicateCheckpointRule": "duplicate checkpoint identity => block whole review bundle"
+    },
+    "readOnlyVerificationContract": {
+      "primaryDbMode": "immutable/query-only",
+      "sidecarDbMode": "immutable/query-only",
+      "primaryDbWriteCount": 0,
+      "sidecarWriteCount": 0,
+      "requireNoActiveWal": true,
+      "requireManifestDigestMatch": true,
+      "requireObservationCountUnchanged": true,
+      "requireApprovalRevokedAfterApply": true
+    },
+    "reviewBundleDigest": "69388babf88a119100f61d370bf5b8e6719582c353168a9ad9ce2ab42821cc53"
+  },
+  "existingState": {
+    "trifectaMarketObservationCount": 0,
+    "captureAttemptCount": 20,
+    "shadowWriteEnabled": false,
+    "operationalGcEnabled": false,
+    "killSwitchEngaged": false,
+    "approvalPresent": false
+  },
+  "sourceCandidatesMaterialized": 0,
+  "sourceCandidatePolicy": "aggregate odds rows are inventory only and are never relabeled as raw official documents",
+  "writeAuthorized": false,
+  "approvalCreated": false,
+  "productionApplyExecuted": false,
+  "primaryDbWriteCount": 0,
+  "sidecarWriteCount": 0,
+  "dbMetadataUnchanged": true,
+  "dbEvidence": {
+    "primaryBefore": {
+      "exists": true,
+      "bytes": 15313072128,
+      "modifiedMs": 1786002885119.015,
+      "walBytes": 0
+    },
+    "primaryAfter": {
+      "exists": true,
+      "bytes": 15313072128,
+      "modifiedMs": 1786002885119.015,
+      "walBytes": 0
+    },
+    "sidecarBefore": {
+      "exists": true,
+      "bytes": 9762127872,
+      "modifiedMs": 1785980955954.9895,
+      "walBytes": 0
+    },
+    "sidecarAfter": {
+      "exists": true,
+      "bytes": 9762127872,
+      "modifiedMs": 1785980955954.9895,
+      "walBytes": 0
+    }
+  },
+  "outputDigest": "9b1d1c18f487e1d8571ca4b0084a695a90a111e5e5dcabee40214b05609cd0f1"
+}
