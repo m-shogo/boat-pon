@@ -1,4 +1,4 @@
-name: Temporary install latest N2 trifecta capture agent
+name: Temporary verify installed N2 trifecta capture agent
 
 on:
   pull_request:
@@ -10,184 +10,171 @@ permissions:
   contents: read
 
 concurrency:
-  group: install-latest-n2-trifecta-capture-agent
+  group: verify-installed-n2-trifecta-capture-agent
   cancel-in-progress: true
 
 jobs:
-  install:
+  verify:
     runs-on: [self-hosted, macOS]
-    timeout-minutes: 45
+    timeout-minutes: 30
     env:
       AUTHORITY_SHA: 2c100f8aed6403bd8fc9fd43da0f2ea129857216
       CANONICAL_REPO: /Users/m-shogo/Developer/personal/boat-pon
+      AGENT_LABEL: com.boatpon.trifecta-private-capture
     steps:
-      - name: Checkout exact authority
+      - name: Checkout exact installed authority
         uses: actions/checkout@v4
         with:
           ref: 2c100f8aed6403bd8fc9fd43da0f2ea129857216
           fetch-depth: 1
-
-      - name: Fast-forward clean canonical main
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$AUTHORITY_SHA"
-          test -d "$CANONICAL_REPO/.git"
-          test "$(git -C "$CANONICAL_REPO" branch --show-current)" = "main"
-          test -z "$(git -C "$CANONICAL_REPO" status --porcelain)"
-          git -C "$CANONICAL_REPO" fetch --no-tags origin main
-          git -C "$CANONICAL_REPO" merge --ff-only "$AUTHORITY_SHA"
-          test "$(git -C "$CANONICAL_REPO" rev-parse HEAD)" = "$AUTHORITY_SHA"
-          test -z "$(git -C "$CANONICAL_REPO" status --porcelain)"
 
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: npm
 
-      - name: Install dependencies in canonical repository
-        working-directory: /Users/m-shogo/Developer/personal/boat-pon
-        run: npm ci
-
-      - name: Record protected state before
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "AUTH_PATH=$CANONICAL_REPO/data/private/trifecta-capture/authorization.json" >> "$GITHUB_ENV"
-          echo "PLIST_PATH=$HOME/Library/LaunchAgents/com.boatpon.trifecta-private-capture.plist" >> "$GITHUB_ENV"
-          echo "INSTALL_OUT=$RUNNER_TEMP/n2-latest-install-output.json" >> "$GITHUB_ENV"
-          echo "TICK_OUT=$RUNNER_TEMP/n2-latest-install-tick.json" >> "$GITHUB_ENV"
-          echo "SUMMARY_OUT=$RUNNER_TEMP/n2-latest-install-summary.json" >> "$GITHUB_ENV"
-          node - <<'NODE' > "$RUNNER_TEMP/n2-latest-install-before.json"
-          const fs = require('node:fs');
-          const path = require('node:path');
-          const root = process.env.CANONICAL_REPO;
-          function meta(file) {
-            const stat = fs.existsSync(file) ? fs.statSync(file) : null;
-            const wal = `${file}-wal`;
-            return { exists: Boolean(stat), bytes: stat?.size ?? null,
-              modifiedMs: stat?.mtimeMs ?? null,
-              walBytes: fs.existsSync(wal) ? fs.statSync(wal).size : 0 };
-          }
-          console.log(JSON.stringify({
-            primary: meta(path.join(root, 'data/boat.sqlite')),
-            sidecar: meta(path.join(root, 'data/research-replay.sqlite')),
-          }, null, 2));
-          NODE
-
-      - name: Install launchd agent with explicit 30-day authorization
+      - name: Verify existing installation and run one idempotent tick
         working-directory: /Users/m-shogo/Developer/personal/boat-pon
         shell: bash
+        env:
+          WORKFLOW_RUN_ID: ${{ github.run_id }}
         run: |
           set -euo pipefail
-          npx tsx scripts/install-n2-trifecta-local-capture-agent.ts \
-            --renew --authorize --days 30 > "$INSTALL_OUT"
+          test "$(git rev-parse HEAD)" = "$AUTHORITY_SHA"
+          test "$(git branch --show-current)" = "main"
+          test -z "$(git status --porcelain)"
 
-      - name: Verify launchd and one idempotent tick
-        working-directory: /Users/m-shogo/Developer/personal/boat-pon
-        shell: bash
-        run: |
-          set -euo pipefail
+          AUTH_PATH="$CANONICAL_REPO/data/private/trifecta-capture/authorization.json"
+          PLIST_PATH="$HOME/Library/LaunchAgents/$AGENT_LABEL.plist"
+          TICK_OUT="$RUNNER_TEMP/n2-installed-agent-verification-tick.json"
+          BEFORE_OUT="$RUNNER_TEMP/n2-installed-agent-verification-before.json"
+
           test -f "$AUTH_PATH"
           test -f "$PLIST_PATH"
           test "$(stat -f '%Lp' "$AUTH_PATH")" = "600"
           test "$(stat -f '%Lp' "$PLIST_PATH")" = "644"
           grep -Fq "$CANONICAL_REPO" "$PLIST_PATH"
           ! grep -Fq '/actions-runner-' "$PLIST_PATH"
-          /bin/launchctl print "gui/$(id -u)/com.boatpon.trifecta-private-capture" \
-            > "$RUNNER_TEMP/n2-latest-install-launchctl.txt"
-          set +e
-          npx tsx scripts/run-n2-trifecta-local-capture-tick.ts --json > "$TICK_OUT"
-          code=$?
-          set -e
-          echo "$code" > "$RUNNER_TEMP/n2-latest-install-tick-exit.txt"
-          test -s "$TICK_OUT"
+          /bin/launchctl print "gui/$(id -u)/$AGENT_LABEL" >/dev/null
 
-      - name: Enforce and upload sanitized evidence
-        shell: bash
-        env:
-          WORKFLOW_RUN_ID: ${{ github.run_id }}
-        run: |
-          set -euo pipefail
-          node - <<'NODE'
+          node - <<'NODE' > "$BEFORE_OUT"
           const fs = require('node:fs');
           const path = require('node:path');
           const root = process.env.CANONICAL_REPO;
           function meta(file) {
             const stat = fs.existsSync(file) ? fs.statSync(file) : null;
             const wal = `${file}-wal`;
-            return { exists: Boolean(stat), bytes: stat?.size ?? null,
+            return {
+              exists: Boolean(stat),
+              bytes: stat?.size ?? null,
               modifiedMs: stat?.mtimeMs ?? null,
-              walBytes: fs.existsSync(wal) ? fs.statSync(wal).size : 0 };
+              walBytes: fs.existsSync(wal) ? fs.statSync(wal).size : 0,
+            };
           }
-          const before = JSON.parse(fs.readFileSync(
-            path.join(process.env.RUNNER_TEMP, 'n2-latest-install-before.json'), 'utf8'));
+          console.log(JSON.stringify({
+            primary: meta(path.join(root, 'data/boat.sqlite')),
+            sidecar: meta(path.join(root, 'data/research-replay.sqlite')),
+          }));
+          NODE
+
+          set +e
+          npx tsx scripts/run-n2-trifecta-local-capture-tick.ts --json > "$TICK_OUT"
+          tick_exit=$?
+          set -e
+          test -s "$TICK_OUT"
+
+          AUTH_PATH="$AUTH_PATH" TICK_OUT="$TICK_OUT" BEFORE_OUT="$BEFORE_OUT" TICK_EXIT="$tick_exit" node - <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const root = process.env.CANONICAL_REPO;
+          function meta(file) {
+            const stat = fs.existsSync(file) ? fs.statSync(file) : null;
+            const wal = `${file}-wal`;
+            return {
+              exists: Boolean(stat),
+              bytes: stat?.size ?? null,
+              modifiedMs: stat?.mtimeMs ?? null,
+              walBytes: fs.existsSync(wal) ? fs.statSync(wal).size : 0,
+            };
+          }
+          const before = JSON.parse(fs.readFileSync(process.env.BEFORE_OUT, 'utf8'));
           const after = {
             primary: meta(path.join(root, 'data/boat.sqlite')),
             sidecar: meta(path.join(root, 'data/research-replay.sqlite')),
           };
-          const install = JSON.parse(fs.readFileSync(process.env.INSTALL_OUT, 'utf8'));
-          const tick = JSON.parse(fs.readFileSync(process.env.TICK_OUT, 'utf8'));
           const auth = JSON.parse(fs.readFileSync(process.env.AUTH_PATH, 'utf8'));
+          const tick = JSON.parse(fs.readFileSync(process.env.TICK_OUT, 'utf8'));
           const validityDays = (Date.parse(auth.expiresAt) - Date.parse(auth.issuedAt)) / 86400000;
           const violations = [];
-          if (install.status !== 'INSTALLED') violations.push('INSTALL_NOT_CONFIRMED');
           if (!(validityDays > 29.9 && validityDays <= 30.01)) violations.push('AUTH_DURATION_INVALID');
           if (auth.stage !== 'ONE_VENUE_REVIEW' || auth.maxRequestsPerDay !== 48) violations.push('AUTH_SCOPE_INVALID');
           if (JSON.stringify(auth.checkpointLabels) !== JSON.stringify(['T-30','T-20','T-10','T-5'])) violations.push('CHECKPOINT_POLICY_INVALID');
-          if (auth.publicRedistributionAuthorized !== false || auth.databaseWriteAuthorized !== false
-            || auth.currentBuyConnectionAuthorized !== false || auth.lineConnectionAuthorized !== false
+          if (auth.privateResearchOnly !== true
+            || auth.publicRedistributionAuthorized !== false
+            || auth.databaseWriteAuthorized !== false
+            || auth.currentBuyConnectionAuthorized !== false
+            || auth.lineConnectionAuthorized !== false
             || auth.automatedBettingAuthorized !== false) violations.push('AUTH_BOUNDARY_WIDENED');
-          if (tick.databaseWriteCount !== 0 || tick.primaryDbWriteCount !== 0 || tick.sidecarWriteCount !== 0
-            || tick.currentBuyChanged !== false || tick.lineChanged !== false || tick.publicPublished !== false
-            || tick.automatedBettingChanged !== false || tick.productionApplyExecuted !== false) {
-            violations.push('PROTECTED_BOUNDARY_CHANGED');
-          }
+          if (tick.databaseWriteCount !== 0
+            || tick.primaryDbWriteCount !== 0
+            || tick.sidecarWriteCount !== 0
+            || tick.currentBuyChanged !== false
+            || tick.lineChanged !== false
+            || tick.publicPublished !== false
+            || tick.automatedBettingChanged !== false
+            || tick.productionApplyExecuted !== false) violations.push('PROTECTED_BOUNDARY_CHANGED');
+          if (JSON.stringify(before) !== JSON.stringify(after)) violations.push('DATABASE_METADATA_CHANGED');
           const summary = {
-            evidenceSchemaVersion: 'n2-trifecta-latest-local-install-v1',
-            status: violations.length ? 'BLOCKED' : 'PASS', violations,
-            workflowRunId: Number(process.env.WORKFLOW_RUN_ID), authoritySha: process.env.AUTHORITY_SHA,
-            installStatus: install.status, launchAgentLabel: install.label, launchdRegistered: true,
-            plistUsesCanonicalRepo: true, plistUsesRunnerWorkspace: false,
-            authorization: { version: auth.authorizationVersion, id: auth.authorizationId,
-              issuedAt: auth.issuedAt, expiresAt: auth.expiresAt, validityDays,
-              stage: auth.stage, maxRequestsPerDay: auth.maxRequestsPerDay,
-              checkpoints: auth.checkpointLabels, privateResearchOnly: auth.privateResearchOnly,
+            evidenceSchemaVersion: 'n2-trifecta-installed-agent-verification-v1',
+            status: violations.length === 0 ? 'PASS' : 'BLOCKED',
+            violations,
+            workflowRunId: Number(process.env.WORKFLOW_RUN_ID),
+            authoritySha: process.env.AUTHORITY_SHA,
+            canonicalRepoCleanMain: true,
+            launchdRegistered: true,
+            plistUsesCanonicalRepo: true,
+            plistUsesRunnerWorkspace: false,
+            authorization: {
+              version: auth.authorizationVersion,
+              issuedAt: auth.issuedAt,
+              expiresAt: auth.expiresAt,
+              validityDays,
+              stage: auth.stage,
+              maxRequestsPerDay: auth.maxRequestsPerDay,
+              checkpoints: auth.checkpointLabels,
+              privateResearchOnly: auth.privateResearchOnly,
               publicRedistributionAuthorized: auth.publicRedistributionAuthorized,
               databaseWriteAuthorized: auth.databaseWriteAuthorized,
               currentBuyConnectionAuthorized: auth.currentBuyConnectionAuthorized,
               lineConnectionAuthorized: auth.lineConnectionAuthorized,
-              automatedBettingAuthorized: auth.automatedBettingAuthorized },
-            verificationTick: { status: tick.status, blockers: tick.blockers,
-              eventChanged: tick.eventChanged, selectedVenueCode: tick.selectedVenueCode,
-              selectedRaceCount: tick.selectedRaceCount, dueEntryCount: tick.dueEntryCount,
-              networkRequestCount: tick.networkRequestCount, capturedCount: tick.capturedCount,
-              blockedEvidenceCount: tick.blockedEvidenceCount },
-            databaseBefore: before, databaseAfter: after,
+              automatedBettingAuthorized: auth.automatedBettingAuthorized,
+              codeAuthorityBound: typeof auth.authoritySha === 'string',
+            },
+            verificationTick: {
+              exitCode: Number(process.env.TICK_EXIT),
+              status: tick.status,
+              blockers: tick.blockers,
+              dateJst: tick.dateJst,
+              selectedVenueCode: tick.selectedVenueCode,
+              selectedRaceCount: tick.selectedRaceCount,
+              dueEntryCount: tick.dueEntryCount,
+              networkRequestCount: tick.networkRequestCount,
+              capturedCount: tick.executorReport?.capturedCount ?? 0,
+              blockedEvidenceCount: tick.executorReport?.blockedEvidenceCount ?? 0,
+            },
+            databaseMetadataUnchanged: JSON.stringify(before) === JSON.stringify(after),
             databaseWriteCount: tick.databaseWriteCount,
             primaryDbWriteCount: tick.primaryDbWriteCount,
             sidecarWriteCount: tick.sidecarWriteCount,
-            currentBuyChanged: tick.currentBuyChanged, lineChanged: tick.lineChanged,
+            currentBuyChanged: tick.currentBuyChanged,
+            lineChanged: tick.lineChanged,
             publicPublished: tick.publicPublished,
             automatedBettingChanged: tick.automatedBettingChanged,
             productionApplyExecuted: tick.productionApplyExecuted,
             rawUploadedOrPublished: false,
           };
-          fs.writeFileSync(process.env.SUMMARY_OUT, `${JSON.stringify(summary, null, 2)}\n`);
-          if (violations.length) throw new Error(violations.join(','));
+          console.log('SANITIZED_INSTALL_VERIFICATION_BEGIN');
+          console.log(JSON.stringify(summary, null, 2));
+          console.log('SANITIZED_INSTALL_VERIFICATION_END');
+          if (violations.length > 0) process.exit(1);
           NODE
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: n2-trifecta-latest-local-install-sanitized
-          path: |
-            ${{ runner.temp }}/n2-latest-install-summary.json
-            ${{ runner.temp }}/n2-latest-install-before.json
-            ${{ runner.temp }}/n2-latest-install-output.json
-            ${{ runner.temp }}/n2-latest-install-tick.json
-            ${{ runner.temp }}/n2-latest-install-tick-exit.txt
-          if-no-files-found: error
-          retention-days: 7
-
-      - name: Print sanitized disposition
-        run: cat "$SUMMARY_OUT"
