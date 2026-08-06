@@ -18,6 +18,8 @@
   "runtimeMismatchEventDeduplicated": true,
   "explicitRenewalRequiredForNewAuthority": true,
   "oldRuntimeCleanupExecuted": false,
+  "currentlyInstalledAgentVersion": "n2-trifecta-local-capture-launch-agent-v1",
+  "currentlyInstalledAgentMigrationPending": true,
   "installationExecuted": false,
   "realNetworkExecuted": false,
   "realRawPersisted": false,
