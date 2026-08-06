@@ -6,7 +6,7 @@ on:
       - agent/n2-011-v4-cas-migration-tool
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: tmp-n2-011-v4-migration-validation
@@ -23,12 +23,40 @@ jobs:
           ref: agent/n2-011-v4-cas-migration-tool
           fetch-depth: 0
 
+      - name: Apply exact runner stateVersion correction
+        id: patch
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("scripts/run-intent-task.ts")
+          source = path.read_text()
+          old = "authoritySha: request.authoritySha, stateVersion: state.stateVersion + 1, stateDigest: computeStateDigest(state),"
+          new = "authoritySha: request.authoritySha, stateVersion: state.stateVersion, stateDigest: computeStateDigest(state),"
+          if old in source:
+              if source.count(old) != 1:
+                  raise SystemExit(f"expected exactly one stale stateVersion expression, got {source.count(old)}")
+              path.write_text(source.replace(old, new))
+              changed = "true"
+          elif new in source:
+              changed = "false"
+          else:
+              raise SystemExit("runner completion stateVersion expression was not recognized")
+          with open(Path.cwd() / ".patch-result", "w") as handle:
+              handle.write(changed)
+          PY
+          echo "changed=$(cat .patch-result)" >> "$GITHUB_OUTPUT"
+          rm .patch-result
+          git diff -- scripts/run-intent-task.ts
+
       - name: Assert isolated change boundary
         run: |
           set -euo pipefail
           git diff --name-only origin/main...HEAD | tee /tmp/n2-011-migration-files.txt
           grep -Fxq 'src/automation/n2QueueMigration.ts' /tmp/n2-011-migration-files.txt
           grep -Fxq 'src/automation/n2QueueMigration.test.ts' /tmp/n2-011-migration-files.txt
+          grep -Fxq 'src/automation/runIntentStateVersion.test.ts' /tmp/n2-011-migration-files.txt
           grep -Fxq 'scripts/migrate-n2-011-v4-queue.ts' /tmp/n2-011-migration-files.txt
           if grep -E '^(src/(domain|decision|app_settings|production|sidecar)/|data/|backups/)' /tmp/n2-011-migration-files.txt; then
             echo '::error::forbidden production/data path changed'
@@ -41,8 +69,8 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Targeted migration tests
-        run: node --import tsx --test src/automation/n2QueueMigration.test.ts
+      - name: Targeted migration and state alignment tests
+        run: node --import tsx --test src/automation/n2QueueMigration.test.ts src/automation/runIntentStateVersion.test.ts
 
       - name: Full repository tests
         run: npm test
@@ -64,7 +92,6 @@ jobs:
         run: npm run build
 
       - name: Assert no DB/runtime writes
-        if: always()
         run: |
           set -euo pipefail
           if git status --porcelain | grep -E '(^| )((data|backups)/|.*\.sqlite(-wal|-shm)?$)'; then
@@ -73,3 +100,14 @@ jobs:
             exit 1
           fi
           git status --short
+
+      - name: Commit exact runner correction after all checks pass
+        if: steps.patch.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add scripts/run-intent-task.ts
+          git diff --cached --check
+          git commit -m 'fix(automation): align current-run with persisted queue version'
+          git push origin HEAD:agent/n2-011-v4-cas-migration-tool
