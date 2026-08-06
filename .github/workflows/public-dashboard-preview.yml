@@ -2,16 +2,12 @@ name: public dashboard preview artifact
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches:
-      - main
-    types: [opened, reopened, synchronize]
 
 permissions:
   contents: read
 
 concurrency:
-  group: public-dashboard-preview-${{ github.event.pull_request.number || github.ref }}
+  group: public-dashboard-preview
   cancel-in-progress: true
 
 jobs:
