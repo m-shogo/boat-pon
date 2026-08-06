@@ -1,6 +1,6 @@
 {
   "evidenceSchemaVersion": "n2-trifecta-local-capture-hardening-v1",
-  "status": "IMPLEMENTED_PENDING_CI",
+  "status": "PASS",
   "baseMainSha": "367991e3c03c444792b5a6ff90dafc0bad6e82ba",
   "branch": "fix/n2-trifecta-local-capture-hardening",
   "canonicalInstallRequired": true,
@@ -14,6 +14,23 @@
   "concurrentSelectionEexistSafe": true,
   "concurrentReservationEexistSafe": true,
   "emptyProgramInventoryNoChange": true,
+  "checks": {
+    "typecheck": "PASS",
+    "stableNoDueEventDeduplication": "PASS",
+    "repeatedWalBlockerDeduplication": "PASS",
+    "emptyProgramInventoryNoChange": "PASS",
+    "canonicalRepositoryGuard": "PASS",
+    "mainAndCleanWorktreeGuards": "PASS",
+    "concurrentSelectionAndReservationEexist": "PASS",
+    "fullRepositoryTests": "PASS",
+    "researchGovernance": "PASS",
+    "secretScan": "PASS",
+    "productPublicBoundary": "PASS",
+    "buyLineBoundary": "PASS",
+    "researchReplayGolden": "PASS",
+    "researchReplayReadiness": "PASS",
+    "productionBuild": "PASS"
+  },
   "installationExecuted": false,
   "realNetworkExecuted": false,
   "realRawPersisted": false,
@@ -23,6 +40,6 @@
   "publicPublished": false,
   "automatedBettingChanged": false,
   "productionApplyExecuted": false,
-  "ciRunId": null,
-  "ciConclusion": null
+  "ciRunId": 31108789246,
+  "ciConclusion": "success"
 }
