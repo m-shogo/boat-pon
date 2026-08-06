@@ -2,8 +2,7 @@ name: Temporary install N2 trifecta local capture agent
 
 on:
   pull_request:
-    branches:
-      - main
+    branches: [main]
     paths:
       - .github/workflows/tmp-install-n2-trifecta-local-capture-agent.yml
 
@@ -12,11 +11,11 @@ permissions:
 
 concurrency:
   group: install-n2-trifecta-local-capture-agent
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   install:
-    runs-on: [self-hosted, macOS, boat-pon-local]
+    runs-on: [self-hosted, macOS]
     timeout-minutes: 30
     steps:
       - name: Checkout exact merged authority
@@ -32,8 +31,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "367991e3c03c444792b5a6ff90dafc0bad6e82ba"
           test -z "$(git status --porcelain)"
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -41,7 +39,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Resolve private paths and record metadata before
+      - name: Resolve paths and record DB metadata before
         shell: bash
         run: |
           set -euo pipefail
@@ -52,22 +50,20 @@ jobs:
           console.log(path.resolve(String(policy.dataRoot ?? policy.repoPath ?? process.cwd())));
           NODE
           )"
-          PRIVATE_ROOT="$DATA_ROOT/data/private/trifecta-capture"
           echo "DATA_ROOT=$DATA_ROOT" >> "$GITHUB_ENV"
-          echo "PRIVATE_ROOT=$PRIVATE_ROOT" >> "$GITHUB_ENV"
-          echo "AUTH_PATH=$PRIVATE_ROOT/authorization.json" >> "$GITHUB_ENV"
+          echo "AUTH_PATH=$DATA_ROOT/data/private/trifecta-capture/authorization.json" >> "$GITHUB_ENV"
           echo "PLIST_PATH=$HOME/Library/LaunchAgents/com.boatpon.trifecta-private-capture.plist" >> "$GITHUB_ENV"
-          echo "BEFORE_PATH=$RUNNER_TEMP/n2-local-capture-install-before.json" >> "$GITHUB_ENV"
-          echo "AFTER_PATH=$RUNNER_TEMP/n2-local-capture-install-after.json" >> "$GITHUB_ENV"
-          echo "INSTALL_PATH=$RUNNER_TEMP/n2-local-capture-install-output.json" >> "$GITHUB_ENV"
-          echo "LAUNCHCTL_PATH=$RUNNER_TEMP/n2-local-capture-launchctl.txt" >> "$GITHUB_ENV"
-          echo "SUMMARY_PATH=$RUNNER_TEMP/n2-local-capture-install-summary.json" >> "$GITHUB_ENV"
+          echo "BEFORE_PATH=$RUNNER_TEMP/n2-local-install-before.json" >> "$GITHUB_ENV"
+          echo "AFTER_PATH=$RUNNER_TEMP/n2-local-install-after.json" >> "$GITHUB_ENV"
+          echo "INSTALL_PATH=$RUNNER_TEMP/n2-local-install-output.json" >> "$GITHUB_ENV"
+          echo "TICK_PATH=$RUNNER_TEMP/n2-local-install-tick.json" >> "$GITHUB_ENV"
+          echo "SUMMARY_PATH=$RUNNER_TEMP/n2-local-install-summary.json" >> "$GITHUB_ENV"
           node - <<'NODE'
           const fs = require('node:fs');
           const path = require('node:path');
           function meta(file) {
-            const wal = `${file}-wal`;
             const stat = fs.existsSync(file) ? fs.statSync(file) : null;
+            const wal = `${file}-wal`;
             return {
               exists: Boolean(stat),
               bytes: stat?.size ?? null,
@@ -75,69 +71,41 @@ jobs:
               walBytes: fs.existsSync(wal) ? fs.statSync(wal).size : 0,
             };
           }
-          function countFiles(root) {
-            if (!fs.existsSync(root)) return 0;
-            let count = 0;
-            for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
-              const child = path.join(root, entry.name);
-              if (entry.isDirectory()) count += countFiles(child);
-              else if (entry.isFile()) count += 1;
-            }
-            return count;
-          }
-          const dataRoot = process.env.DATA_ROOT;
+          const root = process.env.DATA_ROOT;
           const result = {
-            primary: meta(path.join(dataRoot, 'data/boat.sqlite')),
-            sidecar: meta(path.join(dataRoot, 'data/research-replay.sqlite')),
-            privateReportCount: countFiles(path.join(dataRoot, 'data/private/trifecta-capture/reports')),
-            rawFileCount: countFiles(path.join(dataRoot, 'data/raw/research/trifecta-market')),
+            primary: meta(path.join(root, 'data/boat.sqlite')),
+            sidecar: meta(path.join(root, 'data/research-replay.sqlite')),
           };
           fs.writeFileSync(process.env.BEFORE_PATH, `${JSON.stringify(result, null, 2)}\n`);
           NODE
 
-      - name: Install and authorize local capture agent for 30 days
+      - name: Install and authorize for 30 days
         shell: bash
         run: |
           set -euo pipefail
           npx tsx scripts/install-n2-trifecta-local-capture-agent.ts \
-            --authorize \
-            --days 30 \
-            > "$INSTALL_PATH"
+            --authorize --days 30 > "$INSTALL_PATH"
 
-      - name: Verify launchd registration and first tick
+      - name: Verify launchd and execute one idempotent tick
         shell: bash
         run: |
           set -euo pipefail
           test -f "$AUTH_PATH"
           test -f "$PLIST_PATH"
-          AUTH_MODE="$(stat -f '%Lp' "$AUTH_PATH")"
-          PLIST_MODE="$(stat -f '%Lp' "$PLIST_PATH")"
-          test "$AUTH_MODE" = "600"
-          test "$PLIST_MODE" = "644"
-          /bin/launchctl print "gui/$(id -u)/com.boatpon.trifecta-private-capture" > "$LAUNCHCTL_PATH"
-
-          REPORT_DIR="$PRIVATE_ROOT/reports"
-          DEADLINE=$((SECONDS + 20))
-          while [ "$SECONDS" -lt "$DEADLINE" ]; do
-            if find "$REPORT_DIR" -type f -name '*.json' -newer "$INSTALL_PATH" -print -quit 2>/dev/null | grep -q .; then
-              break
-            fi
-            sleep 1
-          done
-
-          # A manual tick is safe and idempotent. It performs no duplicate request
-          # because reservations and the executor attempt ledger are append-only.
+          test "$(stat -f '%Lp' "$AUTH_PATH")" = "600"
+          test "$(stat -f '%Lp' "$PLIST_PATH")" = "644"
+          /bin/launchctl print "gui/$(id -u)/com.boatpon.trifecta-private-capture" \
+            > "$RUNNER_TEMP/n2-local-install-launchctl.txt"
           set +e
-          npx tsx scripts/run-n2-trifecta-local-capture-tick.ts \
-            > "$RUNNER_TEMP/n2-local-capture-manual-tick.json"
-          TICK_CODE=$?
+          npx tsx scripts/run-n2-trifecta-local-capture-tick.ts > "$TICK_PATH"
+          code=$?
           set -e
-          echo "$TICK_CODE" > "$RUNNER_TEMP/n2-local-capture-manual-tick-exit.txt"
+          echo "$code" > "$RUNNER_TEMP/n2-local-install-tick-exit.txt"
 
-      - name: Record metadata after and build sanitized evidence
+      - name: Build and enforce sanitized installation evidence
         shell: bash
         env:
-          VALIDATED_SHA: 367991e3c03c444792b5a6ff90dafc0bad6e82ba
+          VALIDATED_MAIN_SHA: 367991e3c03c444792b5a6ff90dafc0bad6e82ba
           WORKFLOW_RUN_ID: ${{ github.run_id }}
         run: |
           set -euo pipefail
@@ -145,8 +113,8 @@ jobs:
           const fs = require('node:fs');
           const path = require('node:path');
           function meta(file) {
-            const wal = `${file}-wal`;
             const stat = fs.existsSync(file) ? fs.statSync(file) : null;
+            const wal = `${file}-wal`;
             return {
               exists: Boolean(stat),
               bytes: stat?.size ?? null,
@@ -154,136 +122,109 @@ jobs:
               walBytes: fs.existsSync(wal) ? fs.statSync(wal).size : 0,
             };
           }
-          function listFiles(root) {
-            if (!fs.existsSync(root)) return [];
-            const files = [];
-            function walk(dir) {
-              for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-                const child = path.join(dir, entry.name);
-                if (entry.isDirectory()) walk(child);
-                else if (entry.isFile()) files.push(child);
-              }
-            }
-            walk(root);
-            return files;
-          }
-          const dataRoot = process.env.DATA_ROOT;
+          const root = process.env.DATA_ROOT;
           const before = JSON.parse(fs.readFileSync(process.env.BEFORE_PATH, 'utf8'));
-          const install = JSON.parse(fs.readFileSync(process.env.INSTALL_PATH, 'utf8'));
-          const authorization = JSON.parse(fs.readFileSync(process.env.AUTH_PATH, 'utf8'));
-          const manualTick = JSON.parse(fs.readFileSync(
-            path.join(process.env.RUNNER_TEMP, 'n2-local-capture-manual-tick.json'),
-            'utf8',
-          ));
-          const tickCode = Number(fs.readFileSync(
-            path.join(process.env.RUNNER_TEMP, 'n2-local-capture-manual-tick-exit.txt'),
-            'utf8',
-          ).trim());
-          const reportFiles = listFiles(path.join(dataRoot, 'data/private/trifecta-capture/reports'));
-          const rawFiles = listFiles(path.join(dataRoot, 'data/raw/research/trifecta-market'));
           const after = {
-            primary: meta(path.join(dataRoot, 'data/boat.sqlite')),
-            sidecar: meta(path.join(dataRoot, 'data/research-replay.sqlite')),
-            privateReportCount: reportFiles.length,
-            rawFileCount: rawFiles.length,
+            primary: meta(path.join(root, 'data/boat.sqlite')),
+            sidecar: meta(path.join(root, 'data/research-replay.sqlite')),
           };
           fs.writeFileSync(process.env.AFTER_PATH, `${JSON.stringify(after, null, 2)}\n`);
-          const dbMetadataUnchanged = JSON.stringify(before.primary) === JSON.stringify(after.primary)
-            && JSON.stringify(before.sidecar) === JSON.stringify(after.sidecar);
-          const authMs = Date.parse(authorization.expiresAt) - Date.parse(authorization.issuedAt);
-          const authDays = authMs / (24 * 60 * 60 * 1000);
+          const install = JSON.parse(fs.readFileSync(process.env.INSTALL_PATH, 'utf8'));
+          const tick = JSON.parse(fs.readFileSync(process.env.TICK_PATH, 'utf8'));
+          const tickExitCode = Number(fs.readFileSync(
+            path.join(process.env.RUNNER_TEMP, 'n2-local-install-tick-exit.txt'), 'utf8',
+          ).trim());
+          const auth = JSON.parse(fs.readFileSync(process.env.AUTH_PATH, 'utf8'));
+          const validityDays = (Date.parse(auth.expiresAt) - Date.parse(auth.issuedAt)) / 86400000;
+          const dbMetadataUnchanged = JSON.stringify(before) === JSON.stringify(after);
+          const violations = [];
+          if (install.status !== 'INSTALLED') violations.push('INSTALL_NOT_CONFIRMED');
+          if (!dbMetadataUnchanged) violations.push('DATABASE_METADATA_CHANGED');
+          if (!(validityDays > 0 && validityDays <= 30.01)) violations.push('AUTH_DURATION_INVALID');
+          if (auth.stage !== 'ONE_VENUE_REVIEW' || auth.maxRequestsPerDay !== 48) {
+            violations.push('AUTH_SCOPE_INVALID');
+          }
+          if (auth.publicRedistributionAuthorized !== false
+            || auth.databaseWriteAuthorized !== false
+            || auth.currentBuyConnectionAuthorized !== false
+            || auth.lineConnectionAuthorized !== false
+            || auth.automatedBettingAuthorized !== false) {
+            violations.push('AUTH_BOUNDARY_WIDENED');
+          }
+          if (tick.databaseWriteCount !== 0
+            || tick.primaryDbWriteCount !== 0
+            || tick.sidecarWriteCount !== 0
+            || tick.currentBuyChanged !== false
+            || tick.lineChanged !== false
+            || tick.publicPublished !== false
+            || tick.automatedBettingChanged !== false
+            || tick.productionApplyExecuted !== false) {
+            violations.push('PROTECTED_BOUNDARY_CHANGED');
+          }
           const summary = {
             evidenceSchemaVersion: 'n2-trifecta-local-capture-install-v1',
-            status: 'PASS',
+            status: violations.length === 0 ? 'PASS' : 'BLOCKED',
+            violations,
             workflowRunId: Number(process.env.WORKFLOW_RUN_ID),
-            validatedMainSha: process.env.VALIDATED_SHA,
-            launchAgentLabel: install.label,
+            validatedMainSha: process.env.VALIDATED_MAIN_SHA,
             installStatus: install.status,
+            launchAgentLabel: install.label,
             launchdRegistered: true,
             authorization: {
-              version: authorization.authorizationVersion,
-              id: authorization.authorizationId,
-              issuedAt: authorization.issuedAt,
-              expiresAt: authorization.expiresAt,
-              validityDays: authDays,
-              stage: authorization.stage,
-              maxRequestsPerDay: authorization.maxRequestsPerDay,
-              checkpoints: authorization.checkpointLabels,
-              privateResearchOnly: authorization.privateResearchOnly,
-              publicRedistributionAuthorized: authorization.publicRedistributionAuthorized,
-              databaseWriteAuthorized: authorization.databaseWriteAuthorized,
-              currentBuyConnectionAuthorized: authorization.currentBuyConnectionAuthorized,
-              lineConnectionAuthorized: authorization.lineConnectionAuthorized,
-              automatedBettingAuthorized: authorization.automatedBettingAuthorized,
+              version: auth.authorizationVersion,
+              id: auth.authorizationId,
+              issuedAt: auth.issuedAt,
+              expiresAt: auth.expiresAt,
+              validityDays,
+              stage: auth.stage,
+              maxRequestsPerDay: auth.maxRequestsPerDay,
+              checkpoints: auth.checkpointLabels,
+              privateResearchOnly: auth.privateResearchOnly,
+              publicRedistributionAuthorized: auth.publicRedistributionAuthorized,
+              databaseWriteAuthorized: auth.databaseWriteAuthorized,
+              currentBuyConnectionAuthorized: auth.currentBuyConnectionAuthorized,
+              lineConnectionAuthorized: auth.lineConnectionAuthorized,
+              automatedBettingAuthorized: auth.automatedBettingAuthorized,
             },
-            firstManualTick: {
-              exitCode: tickCode,
-              status: manualTick.status,
-              blockers: manualTick.blockers,
-              selectedVenueCode: manualTick.selectedVenueCode,
-              selectedRaceCount: manualTick.selectedRaceCount,
-              dueEntryCount: manualTick.dueEntryCount,
-              networkRequestCount: manualTick.networkRequestCount,
-              capturedCount: manualTick.capturedCount,
-              blockedEvidenceCount: manualTick.blockedEvidenceCount,
+            tick: {
+              exitCode: tickExitCode,
+              status: tick.status,
+              blockers: tick.blockers,
+              selectedVenueCode: tick.selectedVenueCode,
+              selectedRaceCount: tick.selectedRaceCount,
+              dueEntryCount: tick.dueEntryCount,
+              networkRequestCount: tick.networkRequestCount,
+              capturedCount: tick.capturedCount,
+              blockedEvidenceCount: tick.blockedEvidenceCount,
             },
             before,
             after,
             dbMetadataUnchanged,
-            privateReportsAdded: after.privateReportCount - before.privateReportCount,
-            rawFilesAdded: after.rawFileCount - before.rawFileCount,
             rawUploadedOrPublished: false,
-            databaseWriteCount: manualTick.databaseWriteCount,
-            primaryDbWriteCount: manualTick.primaryDbWriteCount,
-            sidecarWriteCount: manualTick.sidecarWriteCount,
-            currentBuyChanged: manualTick.currentBuyChanged,
-            lineChanged: manualTick.lineChanged,
-            publicPublished: manualTick.publicPublished,
-            automatedBettingChanged: manualTick.automatedBettingChanged,
-            productionApplyExecuted: manualTick.productionApplyExecuted,
+            databaseWriteCount: tick.databaseWriteCount,
+            primaryDbWriteCount: tick.primaryDbWriteCount,
+            sidecarWriteCount: tick.sidecarWriteCount,
+            currentBuyChanged: tick.currentBuyChanged,
+            lineChanged: tick.lineChanged,
+            publicPublished: tick.publicPublished,
+            automatedBettingChanged: tick.automatedBettingChanged,
+            productionApplyExecuted: tick.productionApplyExecuted,
           };
-          const violations = [];
-          if (install.status !== 'INSTALLED') violations.push('INSTALL_STATUS_NOT_INSTALLED');
-          if (!dbMetadataUnchanged) violations.push('DATABASE_METADATA_CHANGED');
-          if (!(authDays > 0 && authDays <= 30.01)) violations.push('AUTHORIZATION_DURATION_INVALID');
-          if (authorization.stage !== 'ONE_VENUE_REVIEW') violations.push('AUTHORIZATION_STAGE_INVALID');
-          if (authorization.maxRequestsPerDay !== 48) violations.push('AUTHORIZATION_REQUEST_LIMIT_INVALID');
-          if (authorization.publicRedistributionAuthorized !== false
-            || authorization.databaseWriteAuthorized !== false
-            || authorization.currentBuyConnectionAuthorized !== false
-            || authorization.lineConnectionAuthorized !== false
-            || authorization.automatedBettingAuthorized !== false) {
-            violations.push('AUTHORIZATION_BOUNDARY_WIDENED');
-          }
-          if (manualTick.databaseWriteCount !== 0
-            || manualTick.primaryDbWriteCount !== 0
-            || manualTick.sidecarWriteCount !== 0
-            || manualTick.currentBuyChanged !== false
-            || manualTick.lineChanged !== false
-            || manualTick.publicPublished !== false
-            || manualTick.automatedBettingChanged !== false
-            || manualTick.productionApplyExecuted !== false) {
-            violations.push('PROTECTED_BOUNDARY_CHANGED');
-          }
-          if (violations.length > 0) {
-            summary.status = 'BLOCKED';
-            summary.violations = violations;
-          }
           fs.writeFileSync(process.env.SUMMARY_PATH, `${JSON.stringify(summary, null, 2)}\n`);
           if (violations.length > 0) throw new Error(violations.join(','));
           NODE
 
-      - name: Upload sanitized installation evidence only
+      - name: Upload sanitized evidence only
         uses: actions/upload-artifact@v4
         with:
           name: n2-trifecta-local-capture-install-sanitized
           path: |
-            ${{ runner.temp }}/n2-local-capture-install-summary.json
-            ${{ runner.temp }}/n2-local-capture-install-before.json
-            ${{ runner.temp }}/n2-local-capture-install-after.json
-            ${{ runner.temp }}/n2-local-capture-install-output.json
-            ${{ runner.temp }}/n2-local-capture-manual-tick.json
-            ${{ runner.temp }}/n2-local-capture-manual-tick-exit.txt
+            ${{ runner.temp }}/n2-local-install-summary.json
+            ${{ runner.temp }}/n2-local-install-before.json
+            ${{ runner.temp }}/n2-local-install-after.json
+            ${{ runner.temp }}/n2-local-install-output.json
+            ${{ runner.temp }}/n2-local-install-tick.json
+            ${{ runner.temp }}/n2-local-install-tick-exit.txt
           if-no-files-found: error
           retention-days: 7
 
