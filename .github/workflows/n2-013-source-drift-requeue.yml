@@ -1,0 +1,105 @@
+name: Requeue TASK-N2-013 after source drift
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/n2-013-source-drift-requeue.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: boat-pon-local-research
+  cancel-in-progress: false
+
+jobs:
+  requeue:
+    runs-on: [self-hosted, macOS, boat-pon-local]
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact main
+        uses: actions/checkout@v4
+        with:
+          ref: 81e46cc9e39690652120b84aac1fa9c331f7129f
+          fetch-depth: 0
+
+      - name: CAS migrate only TASK-N2-013 to READY
+        env:
+          BRANCH: automation/boat-pon-research
+          EXPECTED_QUEUE_BLOB: a4360ccffe86ba8ca20da3d532321fbbf5483759
+        run: |
+          set -euo pipefail
+          git fetch origin "$BRANCH" --quiet
+          base="$(git rev-parse "origin/$BRANCH")"
+          actual_blob="$(git rev-parse "origin/$BRANCH:automation/control/task-queue-state.json")"
+          test "$actual_blob" = "$EXPECTED_QUEUE_BLOB"
+          work="$RUNNER_TEMP/n2-013-source-drift-requeue"
+          rm -rf "$work"
+          git worktree add --detach "$work" "$base" >/dev/null
+          WORKTREE="$work" node --input-type=module <<'NODE'
+          import { readFileSync, writeFileSync } from "node:fs";
+          import { join } from "node:path";
+
+          const worktree = process.env.WORKTREE;
+          const path = join(worktree, "automation/control/task-queue-state.json");
+          const state = JSON.parse(readFileSync(path, "utf8"));
+          const task = state.tasks?.["TASK-N2-013"];
+          const n2011 = state.tasks?.["TASK-N2-011"];
+          const n2012 = state.tasks?.["TASK-N2-012"];
+          if (state.stateSchemaVersion !== "research-queue-state-v1"
+            || state.stateVersion !== 42
+            || state.catalogVersion !== "2026-08-06-n2-governance-v7") {
+            throw new Error("QUEUE_AUTHORITY_PRECONDITION_MISMATCH");
+          }
+          if (!task
+            || task.status !== "PASS"
+            || task.taskDefinitionVersion !== 2
+            || task.attemptCount !== 2
+            || task.maxAttempts !== 3
+            || task.authoritySha !== "81e46cc9e39690652120b84aac1fa9c331f7129f"
+            || task.resultDigest !== "4cfc1e04a3915bfcec14e21989fb3acaff728482824d779ba36ebdf50ec2f8c3") {
+            throw new Error("N2_013_PRECONDITION_MISMATCH");
+          }
+          if (!Array.isArray(task.evidenceLinks)
+            || !task.evidenceLinks.includes("reports/automation/history/31057606124-TASK-N2-013.json")) {
+            throw new Error("N2_013_V2_EVIDENCE_MISSING");
+          }
+          if (!n2011 || n2011.status !== "CONDITIONAL" || n2011.attemptCount !== 2) {
+            throw new Error("N2_011_MUST_REMAIN_UNCHANGED");
+          }
+          if (!n2012 || n2012.status !== "PASS") {
+            throw new Error("N2_012_DEPENDENCY_NOT_PASS");
+          }
+          const now = new Date().toISOString();
+          state.stateVersion = 43;
+          state.updatedAt = now;
+          state.tasks["TASK-N2-013"] = {
+            ...task,
+            status: "READY",
+            authoritySha: null,
+            resultDigest: null,
+            lastFailure: null,
+            checkpoint: null,
+            updatedAt: now,
+            nextDecision: "source universe changed after the reviewed bundle and the cancelled pre-approval canary; final read-only review regeneration required before any production approval",
+          };
+          writeFileSync(path, `${JSON.stringify(state, null, 2)}\n`);
+          console.log(JSON.stringify({
+            stateVersion: state.stateVersion,
+            taskId: "TASK-N2-013",
+            status: state.tasks["TASK-N2-013"].status,
+            attemptCount: state.tasks["TASK-N2-013"].attemptCount,
+            evidenceCount: state.tasks["TASK-N2-013"].evidenceLinks.length,
+            n2011Status: state.tasks["TASK-N2-011"].status,
+          }, null, 2));
+          NODE
+          (
+            cd "$work"
+            git config user.name "boat-pon-research-bot"
+            git config user.email "boat-pon-research-bot@users.noreply.github.com"
+            git add automation/control/task-queue-state.json
+            git commit -m "chore(automation): requeue N2-013 after source drift" >/dev/null
+            git push --force-with-lease="refs/heads/$BRANCH:$base" origin "HEAD:$BRANCH"
+          )
+          git worktree remove --force "$work" >/dev/null
