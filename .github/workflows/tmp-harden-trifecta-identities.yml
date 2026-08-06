@@ -1,0 +1,132 @@
+name: temporary harden trifecta identities
+
+on:
+  push:
+    branches:
+      - agent/n2-trifecta-market-readonly-foundation
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tmp-harden-trifecta-identities
+  cancel-in-progress: false
+
+jobs:
+  patch:
+    if: ${{ github.event.head_commit.message != 'fix(research): harden trifecta identity prerequisites' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/n2-trifecta-market-readonly-foundation
+          fetch-depth: 0
+
+      - name: Apply exact identity prerequisite patch
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/research-replay/n2TrifectaMarketFoundation.ts')
+          source = path.read_text()
+          old = '''function buildCheckpointIdentity(candidate: N2TrifectaMarketSnapshotCandidate): string | null {
+            if (!isRaceId(candidate.raceId)
+              || !isNonEmpty(candidate.checkpointLabel)
+              || parseInstant(candidate.capturedAt) === null
+              || !isNonEmpty(candidate.rawDocumentId)) {
+              return null;
+            }
+            return canonicalHash({
+              sourceType: "trifecta_market",
+              raceId: candidate.raceId,
+              checkpointLabel: candidate.checkpointLabel,
+              capturedAt: candidate.capturedAt,
+              rawDocumentId: candidate.rawDocumentId,
+            });
+          }
+
+          function buildIdempotencyKey(
+            candidate: N2TrifectaMarketSnapshotCandidate,
+            checkpointIdentity: string | null,
+          ): string | null {
+            if (!checkpointIdentity || !isSha256(candidate.rawPayloadDigest)) return null;
+            return canonicalHash({
+              checkpointIdentity,
+              rawPayloadDigest: candidate.rawPayloadDigest,
+              parseRunId: candidate.parseRunId,
+              proposedObservationId: candidate.proposedObservationId,
+            });
+          }'''.replace('          ', '')
+          new = '''export function buildN2TrifectaCheckpointIdentity(
+            candidate: N2TrifectaMarketSnapshotCandidate,
+          ): string | null {
+            const identityInputValid = isRaceId(candidate.raceId)
+              && isNonEmpty(candidate.checkpointLabel)
+              && parseInstant(candidate.capturedAt) !== null
+              && isNonEmpty(candidate.rawDocumentId);
+            if (!identityInputValid) return null;
+            return canonicalHash({
+              sourceType: "trifecta_market",
+              raceId: candidate.raceId,
+              checkpointLabel: candidate.checkpointLabel,
+              capturedAt: candidate.capturedAt,
+              rawDocumentId: candidate.rawDocumentId,
+            });
+          }
+
+          export function buildN2TrifectaIdempotencyKey(
+            candidate: N2TrifectaMarketSnapshotCandidate,
+            checkpointIdentity: string | null,
+          ): string | null {
+            const idempotencyInputValid = checkpointIdentity !== null
+              && isSha256(candidate.rawPayloadDigest)
+              && isNonEmpty(candidate.parseRunId)
+              && isNonEmpty(candidate.proposedObservationId);
+            if (!idempotencyInputValid) return null;
+            return canonicalHash({
+              checkpointIdentity,
+              rawPayloadDigest: candidate.rawPayloadDigest,
+              parseRunId: candidate.parseRunId,
+              proposedObservationId: candidate.proposedObservationId,
+            });
+          }'''.replace('          ', '')
+          if source.count(old) != 1:
+              raise SystemExit(f'identity helper block mismatch: {source.count(old)}')
+          source = source.replace(old, new)
+          if source.count('const checkpointIdentity = buildCheckpointIdentity(candidate);') != 1:
+              raise SystemExit('checkpoint call-site mismatch')
+          source = source.replace(
+              'const checkpointIdentity = buildCheckpointIdentity(candidate);',
+              'const checkpointIdentity = buildN2TrifectaCheckpointIdentity(candidate);',
+          )
+          if source.count('const idempotencyKey = buildIdempotencyKey(candidate, checkpointIdentity);') != 1:
+              raise SystemExit('idempotency call-site mismatch')
+          source = source.replace(
+              'const idempotencyKey = buildIdempotencyKey(candidate, checkpointIdentity);',
+              'const idempotencyKey = buildN2TrifectaIdempotencyKey(candidate, checkpointIdentity);',
+          )
+          path.write_text(source)
+          PY
+          git diff --check
+          git diff -- src/research-replay/n2TrifectaMarketFoundation.ts
+
+      - name: Verify exact behavior
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run typecheck
+          node --import tsx --test \
+            src/research-replay/n2TrifectaMarketFoundation.test.ts \
+            src/research-replay/n2TrifectaMarketSourceInventoryReader.test.ts
+
+      - name: Commit correction
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/research-replay/n2TrifectaMarketFoundation.ts
+          git diff --cached --check
+          git commit -m 'fix(research): harden trifecta identity prerequisites'
+          git push origin HEAD:agent/n2-trifecta-market-readonly-foundation
