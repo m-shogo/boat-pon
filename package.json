@@ -262,7 +262,9 @@
     "automation:build-intent": "tsx scripts/build-intent-cli.ts",
     "research:governance-check": "tsx scripts/research-governance-check.ts",
     "automation:reconcile": "tsx scripts/reconcile-catalog-state.ts",
-    "automation:readiness": "tsx scripts/generate-readiness-artifact.ts"
+    "automation:readiness": "tsx scripts/generate-readiness-artifact.ts",
+    "runner:diagnose": "bash scripts/diagnose-boat-pon-self-hosted-runner.sh",
+    "runner:recover": "bash scripts/recover-boat-pon-self-hosted-runner.sh --start"
   },
   "engines": {
     "node": ">=24.0.0"

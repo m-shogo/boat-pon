@@ -1,0 +1,57 @@
+{
+  "evidenceSchemaVersion": "boat-pon-self-hosted-runner-recovery-v1",
+  "status": "PASS",
+  "baseMainSha": "9e5ed14664cbb4c93e30560ea4c2250ad2563dbf",
+  "branch": "fix/boat-pon-self-hosted-runner-recovery",
+  "defaultRunnerDirectory": "/Users/m-shogo/actions-runner-boat-pon",
+  "diagnosis": {
+    "readOnly": true,
+    "registrationMetadataRequired": true,
+    "serviceScriptRequired": true,
+    "serviceStatusChecked": true,
+    "listenerProcessChecked": true,
+    "boundedGithubReachabilityChecked": true,
+    "credentialsPrinted": false
+  },
+  "recovery": {
+    "explicitStartFlagRequired": true,
+    "existingServiceStartOnly": true,
+    "maximumStartCalls": 1,
+    "alreadyRunningRestarted": false,
+    "postStartVerificationRequired": true,
+    "registrationChanged": false,
+    "registrationTokenRequested": false,
+    "configurationExecuted": false,
+    "runnerRemoved": false,
+    "serviceReinstalled": false,
+    "sudoUsed": false
+  },
+  "checks": {
+    "typecheck": "PASS",
+    "diagnosisReadOnlyFixture": "PASS",
+    "explicitStartRequiredFixture": "PASS",
+    "missingRegistrationFailClosedFixture": "PASS",
+    "stoppedServiceSingleStartFixture": "PASS",
+    "alreadyRunningNoRestartFixture": "PASS",
+    "forbiddenCommandStaticScan": "PASS",
+    "fullRepositoryTests": "PASS",
+    "researchGovernance": "PASS",
+    "secretScan": "PASS",
+    "productPublicBoundary": "PASS",
+    "buyLineBoundary": "PASS",
+    "researchReplayGolden": "PASS",
+    "researchReplayReadiness": "PASS",
+    "productionBuild": "PASS"
+  },
+  "protectedBoundaries": {
+    "currentBuyChanged": false,
+    "lineChanged": false,
+    "databaseWriteCount": 0,
+    "publicPublished": false,
+    "automatedBettingChanged": false,
+    "productionApplyExecuted": false
+  },
+  "realRunnerRecoveryExecutedByThisPr": false,
+  "ciRunId": 31110244050,
+  "ciConclusion": "success"
+}
