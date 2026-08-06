@@ -186,13 +186,14 @@ export function buildCanonicalTrifectaSelectionSpace(): string[] {
 const EXPECTED_SELECTIONS = buildCanonicalTrifectaSelectionSpace();
 const EXPECTED_SELECTION_SET = new Set(EXPECTED_SELECTIONS);
 
-function buildCheckpointIdentity(candidate: N2TrifectaMarketSnapshotCandidate): string | null {
-  if (!isRaceId(candidate.raceId)
-    || !isNonEmpty(candidate.checkpointLabel)
-    || parseInstant(candidate.capturedAt) === null
-    || !isNonEmpty(candidate.rawDocumentId)) {
-    return null;
-  }
+export function buildN2TrifectaCheckpointIdentity(
+  candidate: N2TrifectaMarketSnapshotCandidate,
+): string | null {
+  const identityInputValid = isRaceId(candidate.raceId)
+    && isNonEmpty(candidate.checkpointLabel)
+    && parseInstant(candidate.capturedAt) !== null
+    && isNonEmpty(candidate.rawDocumentId);
+  if (!identityInputValid) return null;
   return canonicalHash({
     sourceType: "trifecta_market",
     raceId: candidate.raceId,
@@ -202,11 +203,15 @@ function buildCheckpointIdentity(candidate: N2TrifectaMarketSnapshotCandidate): 
   });
 }
 
-function buildIdempotencyKey(
+export function buildN2TrifectaIdempotencyKey(
   candidate: N2TrifectaMarketSnapshotCandidate,
   checkpointIdentity: string | null,
 ): string | null {
-  if (!checkpointIdentity || !isSha256(candidate.rawPayloadDigest)) return null;
+  const idempotencyInputValid = checkpointIdentity !== null
+    && isSha256(candidate.rawPayloadDigest)
+    && isNonEmpty(candidate.parseRunId)
+    && isNonEmpty(candidate.proposedObservationId);
+  if (!idempotencyInputValid) return null;
   return canonicalHash({
     checkpointIdentity,
     rawPayloadDigest: candidate.rawPayloadDigest,
@@ -262,8 +267,8 @@ export function auditN2TrifectaMarketSnapshot(
   if (!isNonEmpty(candidate.proposedObservationId)) blockers.push("PROPOSED_OBSERVATION_ID_MISSING");
   if (candidate.sourceUrl !== null && !/^https?:\/\//.test(candidate.sourceUrl)) blockers.push("SOURCE_URL_INVALID");
 
-  const checkpointIdentity = buildCheckpointIdentity(candidate);
-  const idempotencyKey = buildIdempotencyKey(candidate, checkpointIdentity);
+  const checkpointIdentity = buildN2TrifectaCheckpointIdentity(candidate);
+  const idempotencyKey = buildN2TrifectaIdempotencyKey(candidate, checkpointIdentity);
   if (!checkpointIdentity) blockers.push("CHECKPOINT_IDENTITY_UNRESOLVED");
   if (!idempotencyKey) blockers.push("IDEMPOTENCY_KEY_UNRESOLVED");
 
@@ -364,27 +369,31 @@ export function buildN2TrifectaMarketFoundation(input: {
     throw new Error(`requestedMaxRaces must be 1..${N2_TRIFECTA_CANARY_MAX_RACES}`);
   }
 
-  const audits = input.candidates.map(auditN2TrifectaMarketSnapshot);
-  const identities = new Map<string, number>();
-  for (const audit of audits) {
-    if (audit.checkpointIdentity) identities.set(audit.checkpointIdentity, (identities.get(audit.checkpointIdentity) ?? 0) + 1);
-  }
-  const duplicateCheckpointIdentities = [...identities.entries()]
-    .filter(([, count]) => count > 1)
-    .map(([identity]) => identity)
-    .sort();
+  const candidateAuditPairs = input.candidates
+  .map((candidate) => ({ candidate, audit: auditN2TrifectaMarketSnapshot(candidate) }))
+  .sort((left, right) => {
+    const identity = (left.audit.checkpointIdentity ?? "").localeCompare(right.audit.checkpointIdentity ?? "");
+    if (identity !== 0) return identity;
+    const race = left.candidate.raceId.localeCompare(right.candidate.raceId);
+    if (race !== 0) return race;
+    const checkpoint = left.candidate.checkpointLabel.localeCompare(right.candidate.checkpointLabel);
+    if (checkpoint !== 0) return checkpoint;
+    const captured = left.candidate.capturedAt.localeCompare(right.candidate.capturedAt);
+    if (captured !== 0) return captured;
+    return left.candidate.proposedObservationId.localeCompare(right.candidate.proposedObservationId);
+  });
+const audits = candidateAuditPairs.map(({ audit }) => audit);
+const identities = new Map<string, number>();
+for (const audit of audits) {
+  if (audit.checkpointIdentity) identities.set(audit.checkpointIdentity, (identities.get(audit.checkpointIdentity) ?? 0) + 1);
+}
+const duplicateCheckpointIdentities = [...identities.entries()]
+  .filter(([, count]) => count > 1)
+  .map(([identity]) => identity)
+  .sort();
 
-  const sourceBlockers = inventoryBlockers(input.inventory);
-  const safePairs = input.candidates
-    .map((candidate, index) => ({ candidate, audit: audits[index] }))
-    .filter(({ audit }) => audit.status === "PASS")
-    .sort((left, right) => {
-      const race = left.candidate.raceId.localeCompare(right.candidate.raceId);
-      if (race !== 0) return race;
-      const checkpoint = left.candidate.checkpointLabel.localeCompare(right.candidate.checkpointLabel);
-      if (checkpoint !== 0) return checkpoint;
-      return left.candidate.capturedAt.localeCompare(right.candidate.capturedAt);
-    });
+const sourceBlockers = inventoryBlockers(input.inventory);
+const safePairs = candidateAuditPairs.filter(({ audit }) => audit.status === "PASS");
 
   const globallyBlocked = sourceBlockers.length > 0 || duplicateCheckpointIdentities.length > 0;
   const selected = globallyBlocked ? [] : safePairs.slice(0, requestedMaxRaces);
