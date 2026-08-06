@@ -10,10 +10,11 @@ permissions:
 
 concurrency:
   group: tmp-n2-011-v4-migration-validation
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   validate:
+    if: ${{ github.event.head_commit.message != 'test: record Mac N2-011 migration validation' }}
     runs-on: [self-hosted, macOS, boat-pon-local]
     timeout-minutes: 120
     steps:
@@ -23,32 +24,14 @@ jobs:
           ref: agent/n2-011-v4-cas-migration-tool
           fetch-depth: 0
 
-      - name: Apply exact runner stateVersion correction
-        id: patch
+      - name: Assert exact runner stateVersion correction
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-
-          path = Path("scripts/run-intent-task.ts")
-          source = path.read_text()
-          old = "authoritySha: request.authoritySha, stateVersion: state.stateVersion + 1, stateDigest: computeStateDigest(state),"
-          new = "authoritySha: request.authoritySha, stateVersion: state.stateVersion, stateDigest: computeStateDigest(state),"
-          if old in source:
-              if source.count(old) != 1:
-                  raise SystemExit(f"expected exactly one stale stateVersion expression, got {source.count(old)}")
-              path.write_text(source.replace(old, new))
-              changed = "true"
-          elif new in source:
-              changed = "false"
-          else:
-              raise SystemExit("runner completion stateVersion expression was not recognized")
-          with open(Path.cwd() / ".patch-result", "w") as handle:
-              handle.write(changed)
-          PY
-          echo "changed=$(cat .patch-result)" >> "$GITHUB_OUTPUT"
-          rm .patch-result
-          git diff -- scripts/run-intent-task.ts
+          grep -Fq 'authoritySha: request.authoritySha, stateVersion: state.stateVersion, stateDigest: computeStateDigest(state),' scripts/run-intent-task.ts
+          if grep -Fq 'stateVersion: state.stateVersion + 1' scripts/run-intent-task.ts; then
+            echo '::error::runner still invents a current-run stateVersion increment'
+            exit 1
+          fi
 
       - name: Assert isolated change boundary
         run: |
@@ -58,6 +41,7 @@ jobs:
           grep -Fxq 'src/automation/n2QueueMigration.test.ts' /tmp/n2-011-migration-files.txt
           grep -Fxq 'src/automation/runIntentStateVersion.test.ts' /tmp/n2-011-migration-files.txt
           grep -Fxq 'scripts/migrate-n2-011-v4-queue.ts' /tmp/n2-011-migration-files.txt
+          grep -Fxq 'scripts/run-intent-task.ts' /tmp/n2-011-migration-files.txt
           if grep -E '^(src/(domain|decision|app_settings|production|sidecar)/|data/|backups/)' /tmp/n2-011-migration-files.txt; then
             echo '::error::forbidden production/data path changed'
             exit 1
@@ -101,13 +85,62 @@ jobs:
           fi
           git status --short
 
-      - name: Commit exact runner correction after all checks pass
-        if: steps.patch.outputs.changed == 'true'
+      - name: Record immutable Mac validation evidence
+        env:
+          WORKFLOW_RUN_ID: ${{ github.run_id }}
+          WORKFLOW_RUN_ATTEMPT: ${{ github.run_attempt }}
+          RUNNER_NAME_VALUE: ${{ runner.name }}
+          RUNNER_OS_VALUE: ${{ runner.os }}
+          RUNNER_ARCH_VALUE: ${{ runner.arch }}
         run: |
           set -euo pipefail
+          mkdir -p reports/automation/validation
+          VALIDATED_COMMIT="$(git rev-parse HEAD)"
+          export VALIDATED_COMMIT
+          python3 - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          evidence = {
+              "evidenceSchemaVersion": "n2-011-v4-migration-mac-validation-v1",
+              "workflowRunId": int(os.environ["WORKFLOW_RUN_ID"]),
+              "workflowRunAttempt": int(os.environ["WORKFLOW_RUN_ATTEMPT"]),
+              "validatedCommit": os.environ["VALIDATED_COMMIT"],
+              "executionLocation": "Mac self-hosted",
+              "runner": {
+                  "name": os.environ["RUNNER_NAME_VALUE"],
+                  "os": os.environ["RUNNER_OS_VALUE"],
+                  "arch": os.environ["RUNNER_ARCH_VALUE"],
+              },
+              "checks": {
+                  "isolatedChangeBoundary": "PASS",
+                  "runnerStateVersionAlignment": "PASS",
+                  "typecheck": "PASS",
+                  "targetedMigrationTests": "PASS",
+                  "fullRepositoryTests": "PASS",
+                  "researchGovernance": "PASS",
+                  "productBoundary": "PASS",
+                  "buyLineBoundary": "PASS",
+                  "researchReplayGolden": "PASS",
+                  "researchReadiness": "PASS",
+                  "productionBuild": "PASS",
+                  "dbRuntimeWriteGuard": "PASS",
+              },
+              "dbWriteCount": 0,
+              "primaryDbWriteCount": 0,
+              "sidecarWriteCount": 0,
+              "approvalCreated": False,
+              "productionApplyExecuted": False,
+              "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+          }
+          path = Path("reports/automation/validation/n2-011-v4-migration-mac.json")
+          path.write_text(json.dumps(evidence, ensure_ascii=False, indent=2) + "\n")
+          PY
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add scripts/run-intent-task.ts
+          git add reports/automation/validation/n2-011-v4-migration-mac.json
           git diff --cached --check
-          git commit -m 'fix(automation): align current-run with persisted queue version'
+          git commit -m 'test: record Mac N2-011 migration validation'
           git push origin HEAD:agent/n2-011-v4-cas-migration-tool
