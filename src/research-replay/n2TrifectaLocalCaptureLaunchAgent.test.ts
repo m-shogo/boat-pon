@@ -5,11 +5,15 @@ import {
   N2_TRIFECTA_LOCAL_CAPTURE_LAUNCH_AGENT_LABEL,
   N2_TRIFECTA_LOCAL_CAPTURE_START_INTERVAL_SECONDS,
   assertN2TrifectaCanonicalInstallRoot,
+  buildN2TrifectaImmutableRuntimeRoot,
   buildN2TrifectaLocalCaptureAuthorization,
   buildN2TrifectaLocalCaptureLaunchAgentPlist,
 } from "./n2TrifectaLocalCaptureLaunchAgent.js";
 
-test("authorization is private, one-venue, bounded and expires within 90 days", () => {
+const SHA = "0123456789abcdef0123456789abcdef01234567";
+const RUNTIME = `/Users/test/Library/Application Support/BoatPon/trifecta-private-capture/releases/${SHA}`;
+
+test("authorization remains private, one-venue, bounded and expires within 90 days", () => {
   const authorization = buildN2TrifectaLocalCaptureAuthorization({
     now: "2026-08-06T12:00:00.000Z",
     authorizationDays: 30,
@@ -36,16 +40,38 @@ test("authorization is private, one-venue, bounded and expires within 90 days", 
   );
 });
 
-test("launch agent runs a short tick every 30 seconds without embedding credentials", () => {
+test("immutable runtime is outside mutable repo and runner workspace", () => {
+  assert.equal(buildN2TrifectaImmutableRuntimeRoot({
+    releasesRoot: "/Users/test/Library/Application Support/BoatPon/trifecta-private-capture/releases",
+    authoritySha: SHA,
+    canonicalRepoRoot: "/Users/test/Developer/personal/boat-pon",
+  }), RUNTIME);
+  assert.throws(() => buildN2TrifectaImmutableRuntimeRoot({
+    releasesRoot: "/Users/test/Developer/personal/boat-pon/releases",
+    authoritySha: SHA,
+    canonicalRepoRoot: "/Users/test/Developer/personal/boat-pon",
+  }), /RUNTIME_MUST_BE_OUTSIDE_CANONICAL_REPO/);
+  assert.throws(() => buildN2TrifectaImmutableRuntimeRoot({
+    releasesRoot: "/Users/test/actions-runner-boat-pon/_work/releases",
+    authoritySha: SHA,
+    canonicalRepoRoot: "/Users/test/Developer/personal/boat-pon",
+  }), /RUNTIME_MUST_NOT_USE_RUNNER_WORKSPACE/);
+});
+
+test("launch agent runs immutable runtime tick every 30 seconds without credentials", () => {
+  const canonical = "/Users/test/Developer/personal/boat-pon";
   const plist = buildN2TrifectaLocalCaptureLaunchAgentPlist({
     nodePath: "/opt/homebrew/bin/node",
-    tsxCliPath: "/Users/test/boat-pon/node_modules/tsx/dist/cli.mjs",
-    tickScriptPath: "/Users/test/boat-pon/scripts/run-n2-trifecta-local-capture-tick.ts",
-    workingDirectory: "/Users/test/boat-pon",
-    dataRoot: "/Users/test/boat-pon",
-    authorizationPath: "/Users/test/boat-pon/data/private/trifecta-capture/authorization.json",
-    stdoutPath: "/Users/test/boat-pon/data/private/trifecta-capture/logs/stdout.log",
-    stderrPath: "/Users/test/boat-pon/data/private/trifecta-capture/logs/stderr.log",
+    tsxCliPath: `${RUNTIME}/node_modules/tsx/dist/cli.mjs`,
+    tickScriptPath: `${RUNTIME}/scripts/run-n2-trifecta-local-capture-tick.ts`,
+    workingDirectory: RUNTIME,
+    authoritySha: SHA,
+    runtimeRoot: RUNTIME,
+    dataRoot: canonical,
+    authorizationPath: `${canonical}/data/private/trifecta-capture/authorization.json`,
+    runtimeAuthorityPath: `${canonical}/data/private/trifecta-capture/runtime-authority.json`,
+    stdoutPath: `${canonical}/data/private/trifecta-capture/logs/stdout.log`,
+    stderrPath: `${canonical}/data/private/trifecta-capture/logs/stderr.log`,
   });
 
   assert.match(plist, new RegExp(N2_TRIFECTA_LOCAL_CAPTURE_LAUNCH_AGENT_LABEL));
@@ -53,26 +79,34 @@ test("launch agent runs a short tick every 30 seconds without embedding credenti
   assert.match(plist, /<key>RunAtLoad<\/key>\s*<true\/>/);
   assert.match(plist, /<key>ProcessType<\/key>\s*<string>Background<\/string>/);
   assert.match(plist, /BOAT_PON_LOCAL_CAPTURE_AUTH_PATH/);
-  assert.match(plist, /data\/private\/trifecta-capture\/authorization\.json/);
+  assert.match(plist, /BOAT_PON_LOCAL_CAPTURE_RUNTIME_AUTH_PATH/);
+  assert.match(plist, /BOAT_PON_LOCAL_CAPTURE_AUTHORITY_SHA/);
+  assert.match(plist, /BOAT_PON_LOCAL_CAPTURE_RUNTIME_ROOT/);
+  assert.match(plist, new RegExp(SHA));
+  assert.match(plist, /Application Support\/BoatPon/);
+  assert.doesNotMatch(plist, /actions-runner-|\/_work\//);
   assert.doesNotMatch(plist, /token|secret|password|Current BUY|LINE_CHANNEL/iu);
   assert.doesNotMatch(plist, /KeepAlive/);
 });
 
-test("launch agent XML escapes paths", () => {
+test("launch agent XML escapes immutable runtime paths", () => {
+  const escapedRuntime = `/Users/a&b/Library/Application Support/BoatPon/releases/${SHA}`;
   const plist = buildN2TrifectaLocalCaptureLaunchAgentPlist({
     nodePath: "/opt/homebrew/bin/node",
-    tsxCliPath: "/Users/a&b/node_modules/tsx/dist/cli.mjs",
-    tickScriptPath: "/Users/a&b/scripts/tick.ts",
-    workingDirectory: "/Users/a&b",
-    dataRoot: "/Users/a&b",
-    authorizationPath: "/Users/a&b/auth.json",
-    stdoutPath: "/Users/a&b/out.log",
-    stderrPath: "/Users/a&b/err.log",
+    tsxCliPath: `${escapedRuntime}/node_modules/tsx/dist/cli.mjs`,
+    tickScriptPath: `${escapedRuntime}/scripts/tick.ts`,
+    workingDirectory: escapedRuntime,
+    authoritySha: SHA,
+    runtimeRoot: escapedRuntime,
+    dataRoot: "/Users/a&b/boat-pon",
+    authorizationPath: "/Users/a&b/boat-pon/auth.json",
+    runtimeAuthorityPath: "/Users/a&b/boat-pon/runtime-auth.json",
+    stdoutPath: "/Users/a&b/boat-pon/out.log",
+    stderrPath: "/Users/a&b/boat-pon/err.log",
   });
   assert.match(plist, /a&amp;b/);
   assert.doesNotMatch(plist, /a&b/);
 });
-
 
 test("installer rejects disposable runner worktrees but print-only remains portable", () => {
   assert.throws(
