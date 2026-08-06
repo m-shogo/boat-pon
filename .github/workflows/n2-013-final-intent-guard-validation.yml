@@ -1,0 +1,47 @@
+name: Validate final N2-013 intent guard
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/n2-013-final-intent-guard-validation.yml"
+      - "automation/requests/intents/INTENT-20260806-z4m8v2q7rx.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: n2-013-final-intent-guard-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: [self-hosted, macOS, boat-pon-local]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          corepack enable
+          pnpm install --frozen-lockfile --prod=false
+
+      - name: Replay canonical push guard only
+        env:
+          ACTOR: m-shogo
+          REPO: m-shogo/boat-pon
+          EVENT: push
+          BEFORE_SHA: 81e46cc9e39690652120b84aac1fa9c331f7129f
+          AFTER_SHA: 78d11bcb110791937d6ce010cb6035d97e70a2f6
+          COMMIT_AUTHOR: m-shogo
+          COMMIT_COMMITTER: web-flow
+          CANONICAL_REQUEST_PATH: canonical-request.json
+        run: |
+          set -euo pipefail
+          pnpm automation:guard-intent
+          node scripts/assert-canonical-request.mjs canonical-request.json
+          node -e 'const r=require("./canonical-request.json"); if(r.taskId!=="TASK-N2-013"||r.requestId!=="REQ-20260806-z4m8v2q7rx"||r.safetyLevel!=="L0") process.exit(1)'
