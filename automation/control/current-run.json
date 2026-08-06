@@ -1,21 +1,21 @@
 {
   "runSchemaVersion": "current-run-v1",
-  "updatedAt": "2026-08-06T06:56:00.703Z",
+  "updatedAt": "2026-08-06T07:10:30.994Z",
   "lastResult": "PASS",
-  "lastRequestId": "REQ-20260806-z4m8v2q7rx",
-  "lastIntentId": "INTENT-20260806-z4m8v2q7rx",
-  "lastTaskId": "TASK-N2-013",
+  "lastRequestId": "REQ-20260806-n2f4p7x3qk",
+  "lastIntentId": "INTENT-20260806-n2f4p7x3qk",
+  "lastTaskId": "TASK-N2-011",
   "lastSafetyLevel": "L0",
-  "authoritySha": "772f3684797598ef05ae28b5606a0533da58ebe8",
-  "stateVersion": 48,
-  "stateDigest": "90b95351b940358ac41f40454174a085088014214378e2128210804750a6860c",
+  "authoritySha": "e8edb830af8c26a76d36f4c5f7802847b2e757af",
+  "stateVersion": 51,
+  "stateDigest": "9f77c0d2506c2cc1e288efe962b416fb1adf9ed72982dfe551e05fed2b82aa09",
   "blocks": [],
-  "elapsedMs": 2494,
-  "evidencePath": "reports/automation/history/31063301882-TASK-N2-013.json",
+  "elapsedMs": 2960,
+  "evidencePath": "reports/automation/history/31079861762-TASK-N2-011.json",
   "outputs": [
-    "reports/n2/n2-official-program-canary-review-bundle.json"
+    "reports/n2/n2-pit-audit.json"
   ],
-  "outputDigest": "d79b170d7d70eda5e635ced0a5346b8a6e4c3b2dba173a53306baa94ddbe289c",
+  "outputDigest": "d790d904bfe75983e3bf3ff94e20ade81463becd34a8f0fbc2be16f92c25144c",
   "taskStatus": "PASS",
   "nextCandidate": "TASK-PLANNER-NEXT: queue planner: 次候補提案（自動起動しない。次回 dispatch で 1 回だけ依頼する）"
 }

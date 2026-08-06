@@ -1,8 +1,8 @@
 {
   "stateSchemaVersion": "research-queue-state-v1",
-  "stateVersion": 48,
+  "stateVersion": 51,
   "catalogVersion": "2026-08-06-n2-governance-v8",
-  "updatedAt": "2026-08-06T06:56:00.703Z",
+  "updatedAt": "2026-08-06T07:10:30.989Z",
   "tasks": {
     "TASK-N2-001": {
       "status": "PASS",
@@ -113,21 +113,22 @@
       "nextDecision": "依存 task を次回 dispatch 候補にする（自動起動しない）"
     },
     "TASK-N2-011": {
-      "status": "READY",
+      "status": "PASS",
       "taskDefinitionVersion": 4,
-      "authoritySha": null,
-      "attemptCount": 2,
+      "authoritySha": "e8edb830af8c26a76d36f4c5f7802847b2e757af",
+      "attemptCount": 3,
       "maxAttempts": 3,
       "evidenceLinks": [
         "reports/automation/history/31011585102-TASK-N2-011.json",
         "reports/automation/history/31013100745-TASK-N2-011.json",
-        "reports/n2/n2-pit-audit.json"
+        "reports/n2/n2-pit-audit.json",
+        "reports/automation/history/31079861762-TASK-N2-011.json"
       ],
-      "resultDigest": null,
+      "resultDigest": "d790d904bfe75983e3bf3ff94e20ade81463becd34a8f0fbc2be16f92c25144c",
       "lastFailure": null,
       "checkpoint": null,
-      "updatedAt": "2026-08-06T06:56:00.703Z",
-      "nextDecision": "blocks: none"
+      "updatedAt": "2026-08-06T07:10:30.989Z",
+      "nextDecision": "依存 task を次回 dispatch 候補にする（自動起動しない）"
     },
     "TASK-N2-012": {
       "status": "PASS",
