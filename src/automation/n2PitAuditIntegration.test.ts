@@ -10,13 +10,15 @@ test("N2-011 catalog, registry and phase mapping are aligned", () => {
   };
   const task = catalog.tasks.find((candidate) => candidate.taskId === "TASK-N2-011");
   assert.ok(task);
-  assert.equal(catalog.catalogVersion, "2026-08-06-n2-governance-v7");
-  assert.equal(task.taskDefinitionVersion, 3);
+  assert.equal(catalog.catalogVersion, "2026-08-06-n2-governance-v8");
+  assert.equal(task.taskDefinitionVersion, 4);
   assert.equal(task.defaultStatus, "READY");
   assert.equal(task.taskType, "pit-audit");
   assert.deepEqual(task.dependencies, ["TASK-N2-010"]);
   assert.deepEqual(task.expectedOutputs, ["reports/n2/n2-pit-audit.json"]);
   assert.match(String(task.invalidationCondition), /core-digest\/PIT-envelope/);
+  assert.match(String(task.invalidationCondition), /reader-v2/);
+  assert.match(JSON.stringify(task.expectedInputs), /verified 20-race official-program production canary/);
   assert.equal(isExecutorImplemented(String(task.executor)), true);
 
   const mapping = JSON.parse(readFileSync("automation/phase-mapping.json", "utf8")) as {

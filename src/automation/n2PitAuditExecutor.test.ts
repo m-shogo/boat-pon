@@ -16,7 +16,7 @@ function createPrimary(path: string): void {
       race_no INTEGER NOT NULL, close_at TEXT
     )`);
     db.prepare(`INSERT INTO official_programs VALUES(?,?,?,?,?)`)
-      .run("20240601-01-01", "2024-06-01", "01", 1, "10:00");
+      .run("20240601-桐生-01", "2024-06-01", "桐生", 1, "10:00");
   } finally { db.close(); }
 }
 
@@ -128,7 +128,7 @@ test("safe real PIT evidence writes a verified PASS report", () => {
     const report = JSON.parse(readFileSync(reportPath, "utf8")) as Record<string, any>;
     assert.equal(report.status, "PASS");
     assert.equal(report.auditedObservationCount, 1);
-    assert.equal(report.executorContractVersion, "n2-pit-audit-executor-v2");
+    assert.equal(report.executorContractVersion, "n2-pit-audit-executor-v3");
     assert.equal(report.datasetManifestPitValidatorId, "settlement-inventory-pit-applicability");
     assert.equal(report.datasetManifestPitCheckedRecordCount, 1);
     assert.equal(report.pitEvidence.status, "PASS");

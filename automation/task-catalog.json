@@ -1,7 +1,7 @@
 {
   "catalogSchemaVersion": "research-task-catalog-v1",
-  "catalogVersion": "2026-08-06-n2-governance-v7",
-  "updatedAt": "2026-08-05T16:20:00.000Z",
+  "catalogVersion": "2026-08-06-n2-governance-v8",
+  "updatedAt": "2026-08-06T02:21:04.584Z",
   "note": "task定義の正本（main, immutable）。可変statusはautomation branchのqueue-state。ChatGPTは本catalog + branch stateを読み、実装済みREADY taskを1件だけdispatchする。",
   "tasks": [
     {
@@ -18,12 +18,16 @@
       "taskType": "dataset-canary",
       "executor": "dataset-canary",
       "safetyLevel": "L2",
-      "expectedOutputs": ["reports/n2/n2-dataset-canary.json"],
+      "expectedOutputs": [
+        "reports/n2/n2-dataset-canary.json"
+      ],
       "defaultStatus": "READY"
     },
     {
       "taskDefinitionVersion": 1,
-      "dependencies": ["TASK-N2-001"],
+      "dependencies": [
+        "TASK-N2-001"
+      ],
       "maxDurationSeconds": 3600,
       "expectedInputs": [],
       "estimatedDurationSeconds": 60,
@@ -35,7 +39,9 @@
       "taskType": "readonly-analysis",
       "executor": "readonly-analysis",
       "safetyLevel": "L0",
-      "expectedOutputs": ["reports/n2/n2-corrected-eligibility.json"],
+      "expectedOutputs": [
+        "reports/n2/n2-corrected-eligibility.json"
+      ],
       "defaultStatus": "READY"
     },
     {
@@ -52,7 +58,9 @@
       "taskType": "readonly-audit",
       "executor": "readonly-audit",
       "safetyLevel": "L0",
-      "expectedOutputs": ["reports/n2/n2-win-refund-omission-audit.json"],
+      "expectedOutputs": [
+        "reports/n2/n2-win-refund-omission-audit.json"
+      ],
       "defaultStatus": "READY"
     },
     {
@@ -69,12 +77,16 @@
       "taskType": "dataset-inventory",
       "executor": "dataset-inventory",
       "safetyLevel": "L0",
-      "expectedOutputs": ["reports/n2/n2-dataset-inventory.json"],
+      "expectedOutputs": [
+        "reports/n2/n2-dataset-inventory.json"
+      ],
       "defaultStatus": "READY"
     },
     {
       "taskDefinitionVersion": 1,
-      "dependencies": ["TASK-N2-004"],
+      "dependencies": [
+        "TASK-N2-004"
+      ],
       "maxDurationSeconds": 3600,
       "expectedInputs": [],
       "estimatedDurationSeconds": 10,
@@ -86,12 +98,16 @@
       "taskType": "holdout-freeze",
       "executor": "holdout-freeze",
       "safetyLevel": "L0",
-      "expectedOutputs": ["reports/n2/n2-holdout-freeze.json"],
+      "expectedOutputs": [
+        "reports/n2/n2-holdout-freeze.json"
+      ],
       "defaultStatus": "READY"
     },
     {
       "taskDefinitionVersion": 1,
-      "dependencies": ["TASK-N2-004"],
+      "dependencies": [
+        "TASK-N2-004"
+      ],
       "maxDurationSeconds": 3600,
       "expectedInputs": [],
       "estimatedDurationSeconds": 40,
@@ -103,7 +119,9 @@
       "taskType": "feature-coverage-audit",
       "executor": "feature-coverage-audit",
       "safetyLevel": "L0",
-      "expectedOutputs": ["reports/n2/n2-feature-coverage-audit.json"],
+      "expectedOutputs": [
+        "reports/n2/n2-feature-coverage-audit.json"
+      ],
       "defaultStatus": "READY"
     },
     {
@@ -120,13 +138,17 @@
       "taskType": "planner-next",
       "executor": "planner-next",
       "safetyLevel": "L0",
-      "expectedOutputs": ["automation/control/planner-candidates.json"],
+      "expectedOutputs": [
+        "automation/control/planner-candidates.json"
+      ],
       "defaultStatus": "READY",
       "recurring": true
     },
     {
       "taskDefinitionVersion": 2,
-      "dependencies": ["TASK-N2-004"],
+      "dependencies": [
+        "TASK-N2-004"
+      ],
       "maxDurationSeconds": 3600,
       "expectedInputs": [
         "reports/n2/corrected-settlement-truth-freeze.json",
@@ -142,35 +164,44 @@
       "taskType": "dataset-expand",
       "executor": "dataset-expand",
       "safetyLevel": "L0",
-      "expectedOutputs": ["reports/n2/n2-dataset-manifest.json"],
+      "expectedOutputs": [
+        "reports/n2/n2-dataset-manifest.json"
+      ],
       "defaultStatus": "READY"
     },
     {
-      "taskDefinitionVersion": 3,
-      "dependencies": ["TASK-N2-010"],
+      "taskDefinitionVersion": 4,
+      "dependencies": [
+        "TASK-N2-010"
+      ],
       "maxDurationSeconds": 3600,
       "expectedInputs": [
         "N2-010 n2-dataset-manifest-v2 core summary digest from automation authority",
         "strictly validated SDK PIT envelope outside the producer core digest",
-        "read-only primary boat.sqlite",
-        "read-only research-replay.sqlite",
+        "read-only primary boat.sqlite with venue-label or canonical venue-code official-program identity",
+        "read-only research-replay.sqlite containing the verified 20-race official-program production canary",
+        "n2-pit-audit-reader-v2 dual-identity cutoff resolution",
         "official_program and trifecta_market observation lineage"
       ],
       "estimatedDurationSeconds": 300,
       "valueOfInformation": "high",
-      "invalidationCondition": "PIT audit executor contract、manifest core-digest/PIT-envelope boundary、reader query、dataset identity、またはofficial_program/trifecta_market timing semanticsが変わったら再定義",
+      "invalidationCondition": "PIT audit executor contract、manifest core-digest/PIT-envelope boundary、reader-v2 identity/cutoff query、dataset identity、verified official-program canary、またはofficial_program/trifecta_market timing semanticsが変わったら再定義",
       "taskId": "TASK-N2-011",
       "title": "PIT再検証",
-      "objective": "N2-010 manifestのcore digestとSDK PIT envelopeを別々に検証した上で、official programとlive market feature joinのpoint-in-time、same-race leakage、lineage、ambiguous timingをread-onlyで再検証",
+      "objective": "N2-010 manifestのcore digestとSDK PIT envelopeを別々に検証し、reader-v2で実primaryの会場名/会場コードidentityを厳格解決した上で、検証済みofficial-program canaryと利用可能なlive-market feature joinのpoint-in-time、same-race leakage、lineage、ambiguous timingをread-onlyで再検証",
       "taskType": "pit-audit",
       "executor": "pit-audit",
       "safetyLevel": "L0",
-      "expectedOutputs": ["reports/n2/n2-pit-audit.json"],
+      "expectedOutputs": [
+        "reports/n2/n2-pit-audit.json"
+      ],
       "defaultStatus": "READY"
     },
     {
       "taskDefinitionVersion": 1,
-      "dependencies": ["TASK-N2-010"],
+      "dependencies": [
+        "TASK-N2-010"
+      ],
       "maxDurationSeconds": 3600,
       "expectedInputs": [
         "read-only primary boat.sqlite",
@@ -187,12 +218,16 @@
       "taskType": "observation-ingest-readiness",
       "executor": "observation-ingest-readiness",
       "safetyLevel": "L0",
-      "expectedOutputs": ["reports/n2/n2-observation-ingest-readiness.json"],
+      "expectedOutputs": [
+        "reports/n2/n2-observation-ingest-readiness.json"
+      ],
       "defaultStatus": "READY"
     },
     {
       "taskDefinitionVersion": 2,
-      "dependencies": ["TASK-N2-012"],
+      "dependencies": [
+        "TASK-N2-012"
+      ],
       "maxDurationSeconds": 3600,
       "expectedInputs": [
         "read-only primary boat.sqlite",
@@ -211,12 +246,17 @@
       "taskType": "official-program-canary-review-bundle",
       "executor": "official-program-canary-review-bundle",
       "safetyLevel": "L0",
-      "expectedOutputs": ["reports/n2/n2-official-program-canary-review-bundle.json"],
+      "expectedOutputs": [
+        "reports/n2/n2-official-program-canary-review-bundle.json"
+      ],
       "defaultStatus": "READY"
     },
     {
       "taskDefinitionVersion": 1,
-      "dependencies": ["TASK-N2-011", "TASK-N2-005"],
+      "dependencies": [
+        "TASK-N2-011",
+        "TASK-N2-005"
+      ],
       "maxDurationSeconds": 3600,
       "expectedInputs": [],
       "estimatedDurationSeconds": 300,
@@ -228,12 +268,17 @@
       "taskType": "baseline-market",
       "executor": "baseline-market",
       "safetyLevel": "L0",
-      "expectedOutputs": ["reports/n2/n2-baseline-market.json"],
+      "expectedOutputs": [
+        "reports/n2/n2-baseline-market.json"
+      ],
       "defaultStatus": "BLOCKED_EXECUTOR_PENDING"
     },
     {
       "taskDefinitionVersion": 1,
-      "dependencies": ["TASK-N2-011", "TASK-N2-005"],
+      "dependencies": [
+        "TASK-N2-011",
+        "TASK-N2-005"
+      ],
       "maxDurationSeconds": 3600,
       "expectedInputs": [],
       "estimatedDurationSeconds": 300,
@@ -245,12 +290,17 @@
       "taskType": "baseline-historical",
       "executor": "baseline-historical",
       "safetyLevel": "L0",
-      "expectedOutputs": ["reports/n2/n2-baseline-historical.json"],
+      "expectedOutputs": [
+        "reports/n2/n2-baseline-historical.json"
+      ],
       "defaultStatus": "BLOCKED_EXECUTOR_PENDING"
     },
     {
       "taskDefinitionVersion": 1,
-      "dependencies": ["TASK-N2-020", "TASK-N2-021"],
+      "dependencies": [
+        "TASK-N2-020",
+        "TASK-N2-021"
+      ],
       "maxDurationSeconds": 3600,
       "expectedInputs": [],
       "estimatedDurationSeconds": 300,
@@ -262,12 +312,16 @@
       "taskType": "baseline-common-cohort",
       "executor": "baseline-common-cohort",
       "safetyLevel": "L0",
-      "expectedOutputs": ["reports/n2/n2-baseline-common-cohort.json"],
+      "expectedOutputs": [
+        "reports/n2/n2-baseline-common-cohort.json"
+      ],
       "defaultStatus": "BLOCKED_EXECUTOR_PENDING"
     },
     {
       "taskDefinitionVersion": 1,
-      "dependencies": ["TASK-N2-022"],
+      "dependencies": [
+        "TASK-N2-022"
+      ],
       "maxDurationSeconds": 3600,
       "expectedInputs": [],
       "estimatedDurationSeconds": 300,
@@ -279,12 +333,16 @@
       "taskType": "evaluation-metrics",
       "executor": "evaluation-metrics",
       "safetyLevel": "L0",
-      "expectedOutputs": ["reports/n2/n2-evaluation-metrics.json"],
+      "expectedOutputs": [
+        "reports/n2/n2-evaluation-metrics.json"
+      ],
       "defaultStatus": "BLOCKED_EXECUTOR_PENDING"
     },
     {
       "taskDefinitionVersion": 1,
-      "dependencies": ["TASK-N2-030"],
+      "dependencies": [
+        "TASK-N2-030"
+      ],
       "maxDurationSeconds": 3600,
       "expectedInputs": [],
       "estimatedDurationSeconds": 300,
@@ -296,12 +354,16 @@
       "taskType": "edge-hypothesis-scan",
       "executor": "edge-hypothesis-scan",
       "safetyLevel": "L0",
-      "expectedOutputs": ["reports/n2/n2-edge-hypothesis-scan.json"],
+      "expectedOutputs": [
+        "reports/n2/n2-edge-hypothesis-scan.json"
+      ],
       "defaultStatus": "BLOCKED_EXECUTOR_PENDING"
     },
     {
       "taskDefinitionVersion": 1,
-      "dependencies": ["TASK-N2-040"],
+      "dependencies": [
+        "TASK-N2-040"
+      ],
       "maxDurationSeconds": 3600,
       "expectedInputs": [],
       "estimatedDurationSeconds": 300,
@@ -313,12 +375,16 @@
       "taskType": "edge-historical-test",
       "executor": "edge-historical-test",
       "safetyLevel": "L0",
-      "expectedOutputs": ["reports/n2/n2-edge-historical-test.json"],
+      "expectedOutputs": [
+        "reports/n2/n2-edge-historical-test.json"
+      ],
       "defaultStatus": "BLOCKED_EXECUTOR_PENDING"
     },
     {
       "taskDefinitionVersion": 1,
-      "dependencies": ["TASK-N2-041"],
+      "dependencies": [
+        "TASK-N2-041"
+      ],
       "maxDurationSeconds": 3600,
       "expectedInputs": [],
       "estimatedDurationSeconds": 300,
@@ -330,7 +396,9 @@
       "taskType": "confounder-audit",
       "executor": "confounder-audit",
       "safetyLevel": "L0",
-      "expectedOutputs": ["reports/n2/n2-confounder-audit.json"],
+      "expectedOutputs": [
+        "reports/n2/n2-confounder-audit.json"
+      ],
       "defaultStatus": "BLOCKED_EXECUTOR_PENDING"
     }
   ]

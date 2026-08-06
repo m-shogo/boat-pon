@@ -1,6 +1,6 @@
 # N2 PIT Audit Executor
 
-Status: registered; two guarded BLOCK records retained; manifest digest contract v3 under validation
+Status: production official-program canary verified; reader-v2 validated; final task definition v4 ready for one guarded audit
 Task: `TASK-N2-011`
 Safety: L0, read-only
 Date: 2026-08-05
@@ -43,7 +43,7 @@ The previous executor file is preserved byte-for-byte as `taskExecutorsCore.ts`.
 pit-audit -> runN2PitAuditExecutor
 ```
 
-Arbitrary task types continue to return `EXECUTOR_NOT_REGISTERED`. The global registry identity is `n2-task-executor-registry-v3`. The N2-011 task definition advances independently to v3 for the corrected manifest-consumer contract.
+Arbitrary task types continue to return `EXECUTOR_NOT_REGISTERED`. The global registry identity is `n2-task-executor-registry-v3`. The N2-011 task definition advances to v4 and executor contract to v3 after the verified 20-race production official-program canary and reader-v2 primary identity correction.
 
 ## Dataset manifest integrity boundary
 
@@ -122,7 +122,7 @@ The cutoff is reconstructed only from a matching `official_programs` identity an
 
 ```text
 canonical key: YYYY-MM-DD:venue:RraceNo
-primary race ID: YYYYMMDD-venue-zeroPaddedRaceNo
+primary race ID: YYYYMMDD-venueLabel-zeroPaddedRaceNo or legacy YYYYMMDD-venueCode-zeroPaddedRaceNo
 close_at: JST HH:mm or HH:mm:ss
 ```
 
@@ -219,3 +219,17 @@ Registration, migration and execution do not modify:
 - production approval;
 - Cloudflare deployment;
 - automated betting.
+
+## Verified production observation foundation (2026-08-06)
+
+- exact manifest digest: `151c34786e29ca80838da0fe3b2eb3326ee343d0a3656e8f20666af14d1b3a85`;
+- official-program observations: 20 unique selected races;
+- capture attempts and joined parse/raw lineage: 20;
+- idempotent replay: 0 inserts / 20 reuses;
+- SQLite quick check: ok;
+- exact production approval: granted once and revoked, current resolution `APPROVAL_REVOKED`;
+- global shadow write: OFF;
+- primary selected rows: 20/20 hash-verified after WAL cleared;
+- trifecta-market observations: 0, therefore the final audit may PASS the observed official-program cohort while recording zero checked odds checkpoints.
+
+Reader v2 resolves both production venue-label IDs and legacy canonical venue-code IDs. Missing, malformed, conflicting or duplicate identities remain fail-closed as ambiguous timing.
