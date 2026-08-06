@@ -1,0 +1,95 @@
+{
+  "evidenceSchemaVersion": "n2-trifecta-private-capture-executor-v1",
+  "status": "PASS",
+  "baseMainSha": "b9af69e3331d20fd43d0b696626fc62b5dbe6dae",
+  "branch": "agent/n2-trifecta-private-capture-executor",
+  "executor": {
+    "version": "n2-trifecta-private-capture-executor-v1",
+    "defaultMode": "dry-run",
+    "explicitExecuteFlagRequired": true,
+    "exactApprovalRequired": true,
+    "manifestDigestBound": true,
+    "requestBudgetBound": true,
+    "approvalExpiryRequired": true,
+    "concurrency": 1,
+    "minInterRequestMs": 10000,
+    "maxAttemptsPerCheckpoint": 1,
+    "immediateRetryAuthorized": false,
+    "stopOnFirstFailure": true,
+    "requestTimeoutMs": 15000,
+    "maxRawBytes": 2000000
+  },
+  "planReader": {
+    "source": "official_programs",
+    "immutable": true,
+    "readOnly": true,
+    "queryOnly": true,
+    "activeWalBlocked": true,
+    "oneVenueDay": true,
+    "maxRaces": 12,
+    "checkpoints": ["T-30", "T-20", "T-10", "T-5"],
+    "maxRequests": 48
+  },
+  "evidenceBoundary": {
+    "attemptStartedBeforeNetwork": true,
+    "appendOnlyLedger": true,
+    "appendOnlyRaw": true,
+    "rawSha256": true,
+    "displayedOddsUpdateTimeRequired": true,
+    "selectionCountRequired": 120,
+    "acceptedMarkerPassOnly": true,
+    "blockedRawRetainedPrivately": true,
+    "gitCommitRawAuthorized": false,
+    "publicPublishAuthorized": false
+  },
+  "runtimeBoundary": {
+    "realNetworkExecuted": false,
+    "realRawPersisted": false,
+    "approvalCreated": false,
+    "databaseWriteCount": 0,
+    "primaryDbWriteCount": 0,
+    "sidecarWriteCount": 0,
+    "currentBuyChanged": false,
+    "lineChanged": false,
+    "publicPublished": false,
+    "automatedBettingChanged": false,
+    "productionApplyExecuted": false
+  },
+  "checks": {
+    "typecheck": "PASS",
+    "privateCaptureFixtures": "PASS",
+    "immutablePlanReaderFixtures": "PASS",
+    "fullRepositoryTests": "PASS",
+    "researchGovernance": "PASS",
+    "secretScan": "PASS",
+    "productPublicBoundary": "PASS",
+    "buyLineBoundary": "PASS",
+    "researchReplayGolden": "PASS",
+    "researchReplayReadiness": "PASS",
+    "productionBuild": "PASS"
+  },
+  "validationAttempts": [
+    {
+      "runId": 31087598909,
+      "result": "FAILED_TYPECHECK",
+      "failureCode": "EXECUTOR_VERSION_LITERAL_WIDENING",
+      "logicOrBoundaryFailure": false
+    },
+    {
+      "runId": 31087894462,
+      "result": "ACTION_REQUIRED_NO_JOBS",
+      "failureCode": "GITHUB_ACTIONS_BOT_PUSH_RECURSION_SUPPRESSION",
+      "logicOrBoundaryFailure": false
+    },
+    {
+      "runId": 31087977061,
+      "result": "PASS",
+      "failureCode": null,
+      "logicOrBoundaryFailure": false
+    }
+  ],
+  "literalFixCommit": "6cd4d48ccff5d17ad363caaa01ed5ace35c3bb71",
+  "temporaryWorkflowPresent": false,
+  "ciRunId": 31087977061,
+  "ciConclusion": "success"
+}
