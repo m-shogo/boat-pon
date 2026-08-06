@@ -143,3 +143,24 @@ npx tsx scripts/report-n2-trifecta-market-foundation.ts
 reads the real primary and sidecar databases through immutable readers and writes only `reports/n2/n2-trifecta-market-foundation.json` in the worktree. It intentionally materializes zero raw snapshot candidates until a reviewed raw-document capture source exists.
 
 No change is made to Current BUY, selector/model parameters, LINE, `app_settings`, primary/sidecar schema or rows, holdout, production approval, Cloudflare, advertising, or automated betting.
+
+## Final validation authority — 2026-08-06
+
+The latest successful Mac validation is workflow run `31083858112`. It confirmed:
+
+- full repository tests, governance, product boundary, BUY/LINE boundary, Research Replay golden, and production build pass;
+- current real-data state is honestly `BLOCKED_NOT_READY_FOR_CANARY` / `NO_SOURCE_ROWS`;
+- source rows, complete checkpoints, canary manifest entries, and `trifecta_market` observations are all zero;
+- primary and sidecar write counts are zero;
+- DB metadata is unchanged;
+- no approval was created and no production apply was executed;
+- global shadow write and operational GC remain off.
+
+Runs `31082678987` and `31083857785` encountered an active primary WAL and stopped before immutable access. Later independent runs `31082994311` and `31083858112` completed read-only with WAL size zero. The failure is classified as transient operational contention, not permission to loop until success. Immediate DB retry is disabled; a future real-data review must begin with a separately scheduled quiescent preflight.
+
+Authority evidence is stored at:
+
+- `reports/automation/validation/n2-trifecta-market-foundation-mac.json`
+- `reports/automation/validation/n2-trifecta-market-report-diagnostic.json`
+- `reports/automation/validation/n2-trifecta-market-foundation-final-authority.json`
+- `reports/n2/n2-trifecta-market-foundation.json`
