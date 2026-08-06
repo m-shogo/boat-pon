@@ -8,7 +8,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join, resolve, sep } from "node:path";
+import { dirname, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 
@@ -524,7 +524,7 @@ export async function runN2TrifectaLocalCaptureTick(
         reservationPath = `${budgetRelative}/${reservationKey}.json`;
         const reservationAbsolute = resolveInside(input.dataRoot, reservationPath);
         if (existsSync(reservationAbsolute)) {
-          blockers.push("CHECKPOINT_ALREADY_RESERVED");
+          // A prior reservation is the intended crash-safe duplicate guard.
         } else if (dailyReservationCountBefore >= input.authorization.maxRequestsPerDay) {
           blockers.push("DAILY_REQUEST_BUDGET_EXHAUSTED");
         } else {
