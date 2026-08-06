@@ -59,6 +59,38 @@ jobs:
             exit 1
           fi
 
+      - name: Capture pre-validation runtime fingerprint
+        if: steps.gate.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          def collect():
+              candidates = []
+              for root_name in ("data", "backups"):
+                  root = Path(root_name)
+                  if root.exists():
+                      candidates.extend(path for path in root.rglob("*") if path.is_file() or path.is_symlink())
+              for pattern in ("*.sqlite", "*.sqlite-wal", "*.sqlite-shm", "*.db", "*.db-wal", "*.db-shm"):
+                  candidates.extend(path for path in Path(".").glob(pattern) if path.is_file() or path.is_symlink())
+              rows = []
+              for path in sorted(set(candidates), key=lambda p: p.as_posix()):
+                  if path.is_symlink():
+                      rows.append({"path": path.as_posix(), "type": "symlink", "target": str(path.readlink())})
+                  else:
+                      body = path.read_bytes()
+                      rows.append({"path": path.as_posix(), "type": "file", "bytes": len(body), "sha256": hashlib.sha256(body).hexdigest()})
+              return rows
+
+          rows = collect()
+          payload = json.dumps(rows, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+          Path("/tmp/n2-runtime-before.json").write_text(json.dumps(rows, ensure_ascii=False, indent=2) + "\n")
+          Path("/tmp/n2-runtime-before.sha256").write_text(hashlib.sha256(payload.encode()).hexdigest() + "\n")
+          PY
+
       - name: Install
         if: steps.gate.outputs.skip != 'true'
         run: npm ci
@@ -85,11 +117,9 @@ jobs:
           node scripts/verify-product-boundaries.mjs
           node scripts/verify-buy-line-learning-boundaries.mjs
 
-      - name: Research Replay golden and readiness
+      - name: Research Replay golden
         if: steps.gate.outputs.skip != 'true'
-        run: |
-          npm run research:golden:verify
-          npm run research:rollout:readiness
+        run: npm run research:golden:verify
 
       - name: Production build
         if: steps.gate.outputs.skip != 'true'
@@ -99,12 +129,47 @@ jobs:
         if: steps.gate.outputs.skip != 'true'
         run: |
           set -euo pipefail
-          if git status --porcelain | grep -E '(^| )((data|backups)/|.*\.sqlite(-wal|-shm)?$)'; then
-            echo '::error::DB/runtime files changed during validation'
+          python3 - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          def collect():
+              candidates = []
+              for root_name in ("data", "backups"):
+                  root = Path(root_name)
+                  if root.exists():
+                      candidates.extend(path for path in root.rglob("*") if path.is_file() or path.is_symlink())
+              for pattern in ("*.sqlite", "*.sqlite-wal", "*.sqlite-shm", "*.db", "*.db-wal", "*.db-shm"):
+                  candidates.extend(path for path in Path(".").glob(pattern) if path.is_file() or path.is_symlink())
+              rows = []
+              for path in sorted(set(candidates), key=lambda p: p.as_posix()):
+                  if path.is_symlink():
+                      rows.append({"path": path.as_posix(), "type": "symlink", "target": str(path.readlink())})
+                  else:
+                      body = path.read_bytes()
+                      rows.append({"path": path.as_posix(), "type": "file", "bytes": len(body), "sha256": hashlib.sha256(body).hexdigest()})
+              return rows
+
+          before = json.loads(Path("/tmp/n2-runtime-before.json").read_text())
+          after = collect()
+          Path("/tmp/n2-runtime-after.json").write_text(json.dumps(after, ensure_ascii=False, indent=2) + "\n")
+          if after != before:
+              print("::error::DB/runtime fingerprint changed during migration validation")
+              print(json.dumps({"before": before, "after": after}, ensure_ascii=False, indent=2))
+              raise SystemExit(1)
+          payload = json.dumps(after, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+          digest = hashlib.sha256(payload.encode()).hexdigest()
+          with open(Path("/tmp/n2-runtime-fingerprint.env"), "w") as handle:
+              handle.write(f"RUNTIME_FINGERPRINT_SHA256={digest}\n")
+              handle.write(f"RUNTIME_FILE_COUNT={len(after)}\n")
+          PY
+          cat /tmp/n2-runtime-fingerprint.env >> "$GITHUB_ENV"
+          if git status --porcelain --untracked-files=all | grep -E '(^| )((data|backups)/|.*\.sqlite(-wal|-shm)?$|.*\.db(-wal|-shm)?$)'; then
+            echo '::error::tracked or untracked DB/runtime files changed during validation'
             git status --short
             exit 1
           fi
-          git status --short
 
       - name: Record immutable Mac validation evidence
         if: steps.gate.outputs.skip != 'true'
@@ -134,7 +199,7 @@ jobs:
               "runner": {
                   "name": os.environ["RUNNER_NAME_VALUE"],
                   "os": os.environ["RUNNER_OS_VALUE"],
-                  "arch": os.environ["RUNNER_ARCH_VALUE"],
+                  "arch": os.environ["RUNNER_ARCH_VALUE"]
               },
               "checks": {
                   "isolatedChangeBoundary": "PASS",
@@ -146,13 +211,16 @@ jobs:
                   "productBoundary": "PASS",
                   "buyLineBoundary": "PASS",
                   "researchReplayGolden": "PASS",
-                  "researchReadiness": "PASS",
+                  "productionRolloutReadiness": "NOT_RUN_APPROVAL_GATED_NOT_REQUIRED",
                   "productionBuild": "PASS",
                   "dbRuntimeWriteGuard": "PASS"
               },
+              "runtimeFingerprintSha256": os.environ["RUNTIME_FINGERPRINT_SHA256"],
+              "runtimeFileCount": int(os.environ["RUNTIME_FILE_COUNT"]),
               "dbWriteCount": 0,
               "primaryDbWriteCount": 0,
               "sidecarWriteCount": 0,
+              "taskAttemptConsumed": False,
               "approvalCreated": False,
               "productionApplyExecuted": False,
               "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
