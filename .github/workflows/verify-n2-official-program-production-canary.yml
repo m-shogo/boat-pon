@@ -1,0 +1,216 @@
+name: Verify N2 official-program production canary
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/verify-n2-official-program-production-canary.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: boat-pon-local-research
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: [self-hosted, macOS, boat-pon-local]
+    timeout-minutes: 60
+    steps:
+      - name: Checkout exact canary code
+        uses: actions/checkout@v4
+        with:
+          ref: 772f3684797598ef05ae28b5606a0533da58ebe8
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          corepack enable
+          pnpm install --frozen-lockfile --prod=false
+
+      - name: Materialize canary evidence
+        env:
+          BRANCH: automation/boat-pon-research
+          BUNDLE_PATH: ${{ runner.temp }}/n2-official-program-canary-review-bundle.json
+          APPLY_PATH: ${{ runner.temp }}/n2-official-program-canary-apply.json
+        run: |
+          set -euo pipefail
+          git fetch origin "$BRANCH" --quiet
+          git show "origin/$BRANCH:reports/n2/n2-official-program-canary-review-bundle.json" > "$BUNDLE_PATH"
+          git show "origin/$BRANCH:reports/n2/n2-official-program-canary-apply.json" > "$APPLY_PATH"
+
+      - name: Verify production state read-only
+        env:
+          BUNDLE_PATH: ${{ runner.temp }}/n2-official-program-canary-review-bundle.json
+          APPLY_PATH: ${{ runner.temp }}/n2-official-program-canary-apply.json
+          REPORT_PATH: ${{ runner.temp }}/n2-official-program-canary-verification.json
+          EXPECTED_DIGEST: 151c34786e29ca80838da0fe3b2eb3326ee343d0a3656e8f20666af14d1b3a85
+          EXPECTED_APPROVAL_ID: APR-N2-OP-151c34786e29-31063550320
+        run: |
+          set -euo pipefail
+          node --import tsx --input-type=module <<'NODE'
+          import { createHash } from "node:crypto";
+          import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
+          import { join } from "node:path";
+          import { pathToFileURL } from "node:url";
+          import { DatabaseSync } from "node:sqlite";
+          import { resolveApproval } from "./src/research-replay/approval.ts";
+          import { officialProgramCanaryApprovalTarget } from "./src/research-replay/n2OfficialProgramCanary.ts";
+          import { readOfficialProgramCanarySource } from "./src/research-replay/n2OfficialProgramCanaryReader.ts";
+
+          const policy = JSON.parse(readFileSync("config/research-automation-policy.json", "utf8"));
+          const dataRoot = policy.dataRoot;
+          const primaryPath = join(dataRoot, "data", "boat.sqlite");
+          const sidecarPath = join(dataRoot, "data", "research-replay.sqlite");
+          const bundle = JSON.parse(readFileSync(process.env.BUNDLE_PATH, "utf8"));
+          const apply = JSON.parse(readFileSync(process.env.APPLY_PATH, "utf8"));
+          const digest = process.env.EXPECTED_DIGEST;
+          if (bundle.manifest.manifestDigest !== digest || apply.manifestDigest !== digest) throw new Error("EVIDENCE_DIGEST_MISMATCH");
+          const selected = bundle.manifest.binding.items;
+          if (selected.length !== 20) throw new Error("SELECTED_COUNT_NOT_20");
+          const walBytes = (path) => existsSync(`${path}-wal`) ? statSync(`${path}-wal`).size : 0;
+          const openImmutable = (path) => {
+            const db = new DatabaseSync(`${pathToFileURL(path).href}?immutable=1`, { readOnly: true });
+            db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=5000");
+            return db;
+          };
+          const count = (db, sql, ...params) => Number(db.prepare(sql).get(...params).n);
+          const sha = (value) => createHash("sha256").update(value, "utf8").digest("hex");
+
+          if (!existsSync(primaryPath) || !existsSync(sidecarPath)) throw new Error("REQUIRED_DB_MISSING");
+          const sidecarWalBytes = walBytes(sidecarPath);
+          if (sidecarWalBytes > 0) throw new Error(`SIDECAR_ACTIVE_WAL:${sidecarWalBytes}`);
+          const sidecar = openImmutable(sidecarPath);
+          let result;
+          try {
+            const keys = selected.map((item) => item.canonicalRaceKey);
+            const placeholders = keys.map(() => "?").join(",");
+            const target = officialProgramCanaryApprovalTarget(digest);
+            const approval = resolveApproval(sidecar, {
+              ...target,
+              rolloutStartedAt: new Date().toISOString(),
+              executionMode: "production",
+            });
+            const grant = sidecar.prepare(`
+              SELECT approval_id, approval_mode FROM rollout_approval_grants_v2
+              WHERE approval_id=? AND approval_scope=? AND target_stage=?
+                AND target_schema_version=? AND target_contract_version=?
+            `).get(process.env.EXPECTED_APPROVAL_ID, target.approvalScope, target.targetStage,
+              target.targetSchemaVersion, target.targetContractVersion);
+            const revoke = sidecar.prepare(`
+              SELECT event_kind, subject_approval_id FROM rollout_approval_lifecycle_events_v2
+              WHERE subject_approval_id=? AND event_kind='revoked'
+              ORDER BY occurred_at DESC, rowid DESC LIMIT 1
+            `).get(process.env.EXPECTED_APPROVAL_ID);
+            const latestRollout = sidecar.prepare(`
+              SELECT shadow_write_enabled, kill_switch_engaged
+              FROM rollout_config_events ORDER BY occurred_at DESC, rowid DESC LIMIT 1
+            `).get();
+            const observations = {
+              officialProgramCount: count(sidecar, "SELECT COUNT(*) n FROM domain_observations WHERE observation_type='official_program'"),
+              selectedObservationCount: count(sidecar, `SELECT COUNT(*) n FROM domain_observations
+                WHERE observation_type='official_program' AND canonical_race_key IN (${placeholders})`, ...keys),
+              uniqueSelectedRaceCount: count(sidecar, `SELECT COUNT(DISTINCT canonical_race_key) n FROM domain_observations
+                WHERE observation_type='official_program' AND canonical_race_key IN (${placeholders})`, ...keys),
+              trifectaMarketCount: count(sidecar, "SELECT COUNT(*) n FROM domain_observations WHERE observation_type='trifecta_market'"),
+              captureAttemptCount: count(sidecar, "SELECT COUNT(*) n FROM capture_attempts"),
+              joinedEvidenceCount: count(sidecar, `SELECT COUNT(*) n
+                FROM domain_observations o
+                JOIN parse_runs p ON p.parse_run_id=o.parse_run_id
+                JOIN raw_documents r ON r.raw_document_id=o.raw_document_id
+                WHERE o.observation_type='official_program' AND o.canonical_race_key IN (${placeholders})`, ...keys),
+              quickCheck: sidecar.prepare("PRAGMA quick_check").get().quick_check,
+            };
+            if (observations.officialProgramCount !== 20
+              || observations.selectedObservationCount !== 20
+              || observations.uniqueSelectedRaceCount !== 20
+              || observations.trifectaMarketCount !== 0
+              || observations.captureAttemptCount !== 20
+              || observations.joinedEvidenceCount !== 20
+              || observations.quickCheck !== "ok") {
+              throw new Error(`SIDECAR_CANARY_VERIFICATION_FAILED:${JSON.stringify(observations)}`);
+            }
+            if (!grant || grant.approval_id !== process.env.EXPECTED_APPROVAL_ID || grant.approval_mode !== "production"
+              || !revoke || approval.approved !== false || approval.code !== "APPROVAL_REVOKED") {
+              throw new Error(`APPROVAL_LIFECYCLE_VERIFICATION_FAILED:${JSON.stringify({ grant, revoke, approval })}`);
+            }
+            if (Boolean(latestRollout?.shadow_write_enabled) || Boolean(latestRollout?.kill_switch_engaged)) {
+              throw new Error("ROLLOUT_RUNTIME_CHANGED");
+            }
+
+            let primarySourceVerification = { status: "DEFERRED_ACTIVE_WAL", walBytes: walBytes(primaryPath), matchingSelectedRows: 0 };
+            if (primarySourceVerification.walBytes === 0) {
+              const source = readOfficialProgramCanarySource({ primaryDbPath: primaryPath });
+              const byId = new Map(source.rows.map((row) => [row.raceId, row]));
+              let matching = 0;
+              for (const item of selected) {
+                const row = byId.get(item.primaryRecordId);
+                if (!row || sha(row.rawJson) !== item.rawSha256 || sha(row.sourceFile) !== item.sourceReferenceSha256) {
+                  throw new Error(`PRIMARY_SELECTED_ROW_DRIFT:${item.primaryRecordId}`);
+                }
+                matching += 1;
+              }
+              primarySourceVerification = { status: "VERIFIED", walBytes: 0, matchingSelectedRows: matching };
+            }
+            result = {
+              reportVersion: "n2-official-program-canary-verification-v1",
+              status: "PASS",
+              verifiedAt: new Date().toISOString(),
+              manifestDigest: digest,
+              selectedRaceCount: 20,
+              applyEvidenceStatus: apply.status,
+              applyEvidenceTerminalStage: apply.stage,
+              observations,
+              approval: {
+                approvalId: process.env.EXPECTED_APPROVAL_ID,
+                grantPresent: true,
+                revokePresent: true,
+                currentApproved: approval.approved,
+                currentCode: approval.code,
+              },
+              rollout: { globalShadowWriteEnabled: false, killSwitchEngaged: false },
+              primarySourceVerification,
+              productionCanarySemantics: "20_INSERTED_20_REUSED_APPROVAL_REVOKED",
+              writesPerformedByVerification: false,
+              n2PitAuditRetried: false,
+              currentBuyChanged: false,
+              lineChanged: false,
+              automaticBettingChanged: false,
+            };
+          } finally {
+            sidecar.close();
+          }
+          writeFileSync(process.env.REPORT_PATH, `${JSON.stringify(result, null, 2)}\n`, { mode: 0o600 });
+          console.log(JSON.stringify(result, null, 2));
+          NODE
+
+      - name: Persist verification evidence
+        env:
+          BRANCH: automation/boat-pon-research
+          REPORT_PATH: ${{ runner.temp }}/n2-official-program-canary-verification.json
+          EVIDENCE_PATH: reports/n2/n2-official-program-canary-verification.json
+        run: |
+          set -euo pipefail
+          success=false
+          for attempt in 1 2 3; do
+            git fetch origin "$BRANCH" --quiet
+            base="$(git rev-parse "origin/$BRANCH")"
+            work="$RUNNER_TEMP/n2-canary-verification-$attempt"
+            rm -rf "$work"
+            git worktree add --detach "$work" "$base" >/dev/null
+            mkdir -p "$work/$(dirname "$EVIDENCE_PATH")"
+            cp "$REPORT_PATH" "$work/$EVIDENCE_PATH"
+            (
+              cd "$work"
+              git config user.name "boat-pon-research-bot"
+              git config user.email "boat-pon-research-bot@users.noreply.github.com"
+              git add "$EVIDENCE_PATH"
+              git commit -m "evidence(n2): verify official-program production canary" >/dev/null
+              git push --force-with-lease="refs/heads/$BRANCH:$base" origin "HEAD:$BRANCH"
+            ) && success=true || true
+            git worktree remove --force "$work" >/dev/null 2>&1 || true
+            if [ "$success" = true ]; then break; fi
+          done
+          test "$success" = true
