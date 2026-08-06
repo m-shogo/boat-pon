@@ -44,7 +44,9 @@ const arg = (name: string): string | null => {
 };
 const expectedQueueBlobSha = arg("expected-queue-blob-sha");
 const git = (...args: string[]): string => execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
-const showBranchRaw = (path: string): string => git("show", `origin/${BRANCH}:${path}`);
+const showBranchRaw = (path: string): string => execFileSync(
+  "git", ["show", `origin/${BRANCH}:${path}`], { cwd: root, encoding: "utf8" },
+);
 const sha256 = (value: string): string => createHash("sha256").update(value).digest("hex");
 const die = (message: string): never => {
   console.error(`::error::${message}`);
