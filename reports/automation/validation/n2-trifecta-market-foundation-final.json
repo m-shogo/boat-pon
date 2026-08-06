@@ -1,0 +1,41 @@
+{
+  "evidenceSchemaVersion": "n2-trifecta-market-foundation-final-validation-v1",
+  "workflowRunId": 31084199116,
+  "workflowRunAttempt": 1,
+  "validatedCommitBeforeEvidence": "2645e2edd0670a44b2ca837bc7cb5c353503f0df",
+  "executionLocation": "Mac self-hosted",
+  "runner": {
+    "name": "boat-pon-mac-local",
+    "os": "macOS",
+    "arch": "ARM64"
+  },
+  "result": "PASS",
+  "errors": [],
+  "reportStatus": "BLOCKED_NOT_READY_FOR_CANARY",
+  "dataStatus": "NO_SOURCE_ROWS",
+  "sourceTable": "odds_timeseries_snapshots",
+  "sourceRows": 0,
+  "sourceRaces": 0,
+  "checkpointCount": 0,
+  "completeSnapshotCount": 0,
+  "manifestEntryCount": 0,
+  "manifestDigest": "01b8d1ab5c848223db708abdd644652c28147670a528e95d0a6a1d606cad1440",
+  "reviewBundleDigest": "69388babf88a119100f61d370bf5b8e6719582c353168a9ad9ce2ab42821cc53",
+  "trifectaMarketObservationCount": 0,
+  "captureAttemptCount": 20,
+  "writeAuthorized": false,
+  "approvalCreated": false,
+  "productionApplyExecuted": false,
+  "primaryDbWriteCount": 0,
+  "sidecarWriteCount": 0,
+  "dbMetadataUnchanged": true,
+  "walBytesAfter": {
+    "primary": 0,
+    "sidecar": 0
+  },
+  "priorActiveWalRunId": 31082678987,
+  "priorRecoveredDiagnosticRunId": 31082994311,
+  "failureClassification": "TRANSIENT_PRIMARY_WAL_CONTENTION_RECOVERED_WITHOUT_RETRYING_A_TASK",
+  "taskAttemptConsumed": false,
+  "generatedAt": "2026-08-06T08:21:49.936831Z"
+}
