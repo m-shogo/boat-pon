@@ -112,6 +112,7 @@ export function migrateN2011QueueToV4(
     toCatalogVersion: N2_011_TARGET_CATALOG_VERSION,
     fromQueueStateVersion: queue.stateVersion,
     fromCurrentRunStateVersion: currentRun.stateVersion,
+    fromQueueDigest,
     preservedEvidenceLinks: [...queue.tasks[N2_011_TASK_ID].evidenceLinks],
     preservedOtherTaskIds: Object.keys(queue.tasks).filter((id) => id !== N2_011_TASK_ID).sort(),
     clearedFields: ["authoritySha", "resultDigest", "lastFailure", "checkpoint"] as N2011QueueMigrationPlan["clearedFields"],
