@@ -1,0 +1,279 @@
+name: Temporary N2 trifecta live private canary
+
+on:
+  push:
+    branches:
+      - agent/n2-trifecta-live-private-canary-20260806-19
+    paths:
+      - .github/workflows/tmp-n2-trifecta-live-private-canary.yml
+      - reports/n2/approvals/n2-trifecta-private-capture-20260806-19.json
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/tmp-n2-trifecta-live-private-canary.yml
+      - reports/n2/approvals/n2-trifecta-private-capture-20260806-19.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: n2-trifecta-live-private-canary-20260806-19
+  cancel-in-progress: false
+
+jobs:
+  capture:
+    runs-on: [self-hosted, macOS, boat-pon-local]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/n2-trifecta-live-private-canary-20260806-19
+          fetch-depth: 1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Resolve private root and immutable inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          DATA_ROOT="$(node - <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const policy = JSON.parse(fs.readFileSync('config/research-automation-policy.json', 'utf8'));
+          console.log(path.resolve(String(policy.dataRoot ?? policy.repoPath ?? process.cwd())));
+          NODE
+          )"
+          echo "DATA_ROOT=$DATA_ROOT" >> "$GITHUB_ENV"
+          echo "PLAN_PATH=$GITHUB_WORKSPACE/reports/n2/n2-trifecta-private-capture-plan-20260806-19.json" >> "$GITHUB_ENV"
+          echo "APPROVAL_PATH=$GITHUB_WORKSPACE/reports/n2/approvals/n2-trifecta-private-capture-20260806-19.json" >> "$GITHUB_ENV"
+          echo "REPORT_PATH=$RUNNER_TEMP/n2-trifecta-live-private-canary-report.json" >> "$GITHUB_ENV"
+          echo "SUMMARY_PATH=$RUNNER_TEMP/n2-trifecta-live-private-canary-summary.json" >> "$GITHUB_ENV"
+          echo "DB_BEFORE_PATH=$RUNNER_TEMP/n2-trifecta-live-private-canary-db-before.json" >> "$GITHUB_ENV"
+          echo "DB_AFTER_PATH=$RUNNER_TEMP/n2-trifecta-live-private-canary-db-after.json" >> "$GITHUB_ENV"
+
+      - name: Record database metadata before
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          function meta(file) {
+            const wal = `${file}-wal`;
+            const stat = fs.existsSync(file) ? fs.statSync(file) : null;
+            return {
+              relativePath: path.relative(process.env.DATA_ROOT, file),
+              exists: Boolean(stat),
+              bytes: stat?.size ?? null,
+              modifiedMs: stat?.mtimeMs ?? null,
+              walBytes: fs.existsSync(wal) ? fs.statSync(wal).size : 0,
+            };
+          }
+          const result = {
+            primary: meta(path.join(process.env.DATA_ROOT, 'data/boat.sqlite')),
+            sidecar: meta(path.join(process.env.DATA_ROOT, 'data/research-replay.sqlite')),
+          };
+          fs.writeFileSync(process.env.DB_BEFORE_PATH, `${JSON.stringify(result, null, 2)}\n`);
+          NODE
+
+      - name: Wait for exact T-30 window and execute at most one request
+        id: execute
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET_MS=1786009440000
+          LATE_MS=1786009560000
+          NOW_MS="$(node -e 'process.stdout.write(String(Date.now()))')"
+
+          if [ "$NOW_MS" -gt "$LATE_MS" ]; then
+            node - <<'NODE'
+            const fs = require('node:fs');
+            const report = {
+              reportVersion: 'n2-trifecta-private-capture-run-v1',
+              executorVersion: 'n2-trifecta-private-capture-executor-v1',
+              status: 'BLOCKED',
+              executionMode: 'execute',
+              startedAt: new Date().toISOString(),
+              completedAt: new Date().toISOString(),
+              manifestDigest: '870fa890ad7ae23ed75373fb1ac096b7a2bf620ea133e74bbef3220b737bec7c',
+              approvalId: 'APR-N2-TRI-ODDS-user-authorized-20260806-19',
+              approvalAudit: { status: 'BLOCKED', blockers: ['CHECKPOINT_WINDOW_MISSED'], networkExecutionAuthorized: false },
+              dueEntryCount: 0,
+              networkRequestCount: 0,
+              capturedCount: 0,
+              blockedEvidenceCount: 0,
+              skippedCount: 16,
+              stoppedEarly: true,
+              blockers: ['CHECKPOINT_WINDOW_MISSED'],
+              entryResults: [],
+              ledgerRelativePath: 'data/raw/research/trifecta-market/ledgers/870fa890ad7ae23ed75373fb1ac096b7a2bf620ea133e74bbef3220b737bec7c.jsonl',
+              databaseWriteCount: 0,
+              primaryDbWriteCount: 0,
+              sidecarWriteCount: 0,
+              currentBuyChanged: false,
+              lineChanged: false,
+              publicPublished: false,
+              automatedBettingChanged: false,
+              productionApplyExecuted: false,
+              outputDigest: null,
+            };
+            fs.writeFileSync(process.env.REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`);
+            NODE
+            echo "executor_exit_code=3" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "$NOW_MS" -lt "$TARGET_MS" ]; then
+            WAIT_SECONDS="$(( (TARGET_MS - NOW_MS + 999) / 1000 ))"
+            echo "Sleeping ${WAIT_SECONDS}s until the exact T-30 checkpoint"
+            sleep "$WAIT_SECONDS"
+          fi
+
+          set +e
+          npx tsx scripts/run-n2-trifecta-private-capture.ts \
+            --execute \
+            --plan "$PLAN_PATH" \
+            --approval "$APPROVAL_PATH" \
+            --root "$DATA_ROOT" \
+            --report "$REPORT_PATH"
+          CODE=$?
+          set -e
+          echo "executor_exit_code=$CODE" >> "$GITHUB_OUTPUT"
+
+      - name: Record database metadata after
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          function meta(file) {
+            const wal = `${file}-wal`;
+            const stat = fs.existsSync(file) ? fs.statSync(file) : null;
+            return {
+              relativePath: path.relative(process.env.DATA_ROOT, file),
+              exists: Boolean(stat),
+              bytes: stat?.size ?? null,
+              modifiedMs: stat?.mtimeMs ?? null,
+              walBytes: fs.existsSync(wal) ? fs.statSync(wal).size : 0,
+            };
+          }
+          const result = {
+            primary: meta(path.join(process.env.DATA_ROOT, 'data/boat.sqlite')),
+            sidecar: meta(path.join(process.env.DATA_ROOT, 'data/research-replay.sqlite')),
+          };
+          fs.writeFileSync(process.env.DB_AFTER_PATH, `${JSON.stringify(result, null, 2)}\n`);
+          NODE
+
+      - name: Build sanitized evidence and enforce boundaries
+        shell: bash
+        env:
+          WORKFLOW_RUN_ID: ${{ github.run_id }}
+          WORKFLOW_JOB: capture
+          EXECUTOR_EXIT_CODE: ${{ steps.execute.outputs.executor_exit_code }}
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const report = JSON.parse(fs.readFileSync(process.env.REPORT_PATH, 'utf8'));
+          const before = JSON.parse(fs.readFileSync(process.env.DB_BEFORE_PATH, 'utf8'));
+          const after = JSON.parse(fs.readFileSync(process.env.DB_AFTER_PATH, 'utf8'));
+          const target = report.entryResults?.find((entry) =>
+            entry.raceIdentity === '20260806-19-09' && entry.checkpointLabel === 'T-30') ?? null;
+          let envelope = null;
+          if (target?.envelopeRelativePath) {
+            const envelopePath = path.resolve(process.env.DATA_ROOT, target.envelopeRelativePath);
+            const root = path.resolve(process.env.DATA_ROOT);
+            if (!envelopePath.startsWith(`${root}${path.sep}`)) throw new Error('ENVELOPE_PATH_ESCAPES_PRIVATE_ROOT');
+            envelope = JSON.parse(fs.readFileSync(envelopePath, 'utf8'));
+          }
+          const dbMetadataUnchanged = JSON.stringify(before) === JSON.stringify(after);
+          const summary = {
+            evidenceSchemaVersion: 'n2-trifecta-live-private-canary-v1',
+            workflowRunId: Number(process.env.WORKFLOW_RUN_ID),
+            workflowJob: process.env.WORKFLOW_JOB,
+            validatedCommit: process.env.GITHUB_SHA,
+            executorExitCode: Number(process.env.EXECUTOR_EXIT_CODE ?? -1),
+            status: report.status,
+            blockers: report.blockers ?? [],
+            planDigest: report.manifestDigest,
+            approvalId: report.approvalId,
+            target: {
+              date: '2026-08-06',
+              venueCode: '19',
+              raceNo: 9,
+              checkpointLabel: 'T-30',
+              targetCaptureAt: '2026-08-06T09:44:00.000Z',
+            },
+            networkRequestCount: report.networkRequestCount,
+            capturedCount: report.capturedCount,
+            blockedEvidenceCount: report.blockedEvidenceCount,
+            targetResult: target?.result ?? null,
+            privateEvidence: envelope ? {
+              rawRelativePath: envelope.rawRelativePath,
+              envelopeRelativePath: envelope.envelopeRelativePath,
+              rawByteLength: envelope.response?.rawByteLength ?? null,
+              rawSha256: envelope.response?.rawSha256 ?? null,
+              fetchedAt: envelope.response?.fetchedAt ?? null,
+              contentType: envelope.response?.contentType ?? null,
+              sourceDisplayedUpdate: envelope.sourceDisplayedUpdate ?? null,
+              parsedSelectionCount: envelope.parsedSelectionCount ?? null,
+              unavailableSelectionCount: envelope.unavailableSelectionCount ?? null,
+              rawDocumentId: envelope.rawDocumentId ?? null,
+              parseRunId: envelope.parseRunId ?? null,
+              proposedObservationId: envelope.proposedObservationId ?? null,
+              snapshotAuditStatus: envelope.snapshotAudit?.status ?? null,
+              pitStatus: envelope.snapshotAudit?.pit?.status ?? null,
+              envelopeStatus: envelope.status,
+              envelopeBlockers: envelope.blockers ?? [],
+            } : null,
+            database: {
+              before,
+              after,
+              metadataUnchanged: dbMetadataUnchanged,
+              databaseWriteCount: report.databaseWriteCount,
+              primaryDbWriteCount: report.primaryDbWriteCount,
+              sidecarWriteCount: report.sidecarWriteCount,
+            },
+            currentBuyChanged: report.currentBuyChanged,
+            lineChanged: report.lineChanged,
+            publicPublished: report.publicPublished,
+            automatedBettingChanged: report.automatedBettingChanged,
+            productionApplyExecuted: report.productionApplyExecuted,
+            rawUploadedAsArtifact: false,
+          };
+          fs.writeFileSync(process.env.SUMMARY_PATH, `${JSON.stringify(summary, null, 2)}\n`);
+
+          const violations = [];
+          if (report.networkRequestCount > 1) violations.push('NETWORK_REQUEST_CEILING_EXCEEDED');
+          if (report.capturedCount > 1) violations.push('CAPTURE_COUNT_CEILING_EXCEEDED');
+          if (!dbMetadataUnchanged) violations.push('DATABASE_METADATA_CHANGED');
+          if (report.databaseWriteCount !== 0 || report.primaryDbWriteCount !== 0 || report.sidecarWriteCount !== 0) violations.push('DATABASE_WRITE_COUNT_NONZERO');
+          if (report.currentBuyChanged || report.lineChanged || report.publicPublished || report.automatedBettingChanged || report.productionApplyExecuted) violations.push('PROTECTED_BOUNDARY_CHANGED');
+          if (violations.length > 0) throw new Error(violations.join(','));
+          NODE
+
+      - name: Upload sanitized canary evidence only
+        uses: actions/upload-artifact@v4
+        with:
+          name: n2-trifecta-live-private-canary-sanitized
+          path: |
+            ${{ runner.temp }}/n2-trifecta-live-private-canary-report.json
+            ${{ runner.temp }}/n2-trifecta-live-private-canary-summary.json
+            ${{ runner.temp }}/n2-trifecta-live-private-canary-db-before.json
+            ${{ runner.temp }}/n2-trifecta-live-private-canary-db-after.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Print sanitized disposition
+        shell: bash
+        run: cat "$SUMMARY_PATH"
