@@ -104,15 +104,28 @@ test("incomplete payload, duplicate selection, bad odds, and PIT inversion fail 
   assert.ok(audit.blockers.includes("NON_POSITIVE_OR_NON_FINITE_ODDS"));
 });
 
-test("missing raw lineage prevents idempotency resolution", () => {
+test("missing payload and parse lineage preserves checkpoint audit but prevents idempotency", () => {
   const audit = auditN2TrifectaMarketSnapshot(candidate(1, {
-    rawDocumentId: "",
     rawPayloadDigest: "not-a-digest",
     parseRunId: "",
     proposedObservationId: "",
   }));
   assert.equal(audit.status, "BLOCKED");
   assert.equal(audit.lineage.status, "BLOCKED");
+  assert.ok(audit.blockers.includes("RAW_PAYLOAD_DIGEST_INVALID"));
+  assert.ok(audit.blockers.includes("PARSE_RUN_ID_MISSING"));
+  assert.ok(audit.blockers.includes("PROPOSED_OBSERVATION_ID_MISSING"));
+  assert.match(audit.checkpointIdentity ?? "", /^[0-9a-f]{64}$/);
+  assert.equal(audit.idempotencyKey, null);
+});
+
+test("missing raw document identity prevents checkpoint and idempotency resolution", () => {
+  const audit = auditN2TrifectaMarketSnapshot(candidate(1, { rawDocumentId: "" }));
+  assert.equal(audit.status, "BLOCKED");
+  assert.equal(audit.lineage.status, "BLOCKED");
+  assert.ok(audit.blockers.includes("RAW_DOCUMENT_ID_MISSING"));
+  assert.ok(audit.blockers.includes("CHECKPOINT_IDENTITY_UNRESOLVED"));
+  assert.ok(audit.blockers.includes("IDEMPOTENCY_KEY_UNRESOLVED"));
   assert.equal(audit.checkpointIdentity, null);
   assert.equal(audit.idempotencyKey, null);
 });
