@@ -217,7 +217,7 @@ export function selectN2TrifectaFuturePlan(input: {
     selectedRaceIds,
     earliestCheckpointAt: selected?.earliestCheckpointAt ?? null,
     plan: selected?.plan ?? null,
-    planDigest: selected?.plan.manifestDigest ?? null,
+    planDigest: selected?.plan?.manifestDigest ?? null,
     approvalCreated: false,
     networkExecuted: false,
     databaseWriteCount: 0,
