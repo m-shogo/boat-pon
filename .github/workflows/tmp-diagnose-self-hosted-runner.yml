@@ -1,0 +1,46 @@
+name: Temporary diagnose self-hosted runner
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/tmp-diagnose-self-hosted-runner.yml
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Query repository runner status
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          set +e
+          gh api "repos/$GITHUB_REPOSITORY/actions/runners" \
+            --jq '{total_count, runners: [.runners[] | {id, name, os, status, busy, labels: [.labels[].name]}]}' \
+            > "$RUNNER_TEMP/self-hosted-runners.json" \
+            2> "$RUNNER_TEMP/self-hosted-runners.stderr.txt"
+          code=$?
+          set -e
+          echo "$code" > "$RUNNER_TEMP/self-hosted-runners.exit-code.txt"
+          if [ "$code" -ne 0 ]; then
+            printf '{"status":"API_UNAVAILABLE","exitCode":%s}\n' "$code" \
+              > "$RUNNER_TEMP/self-hosted-runners.json"
+          fi
+          cat "$RUNNER_TEMP/self-hosted-runners.json"
+
+      - name: Upload sanitized runner diagnosis
+        uses: actions/upload-artifact@v4
+        with:
+          name: self-hosted-runner-diagnosis
+          path: |
+            ${{ runner.temp }}/self-hosted-runners.json
+            ${{ runner.temp }}/self-hosted-runners.stderr.txt
+            ${{ runner.temp }}/self-hosted-runners.exit-code.txt
+          if-no-files-found: error
+          retention-days: 3
