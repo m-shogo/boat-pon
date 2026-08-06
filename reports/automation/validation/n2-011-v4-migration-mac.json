@@ -1,0 +1,35 @@
+{
+  "evidenceSchemaVersion": "n2-011-v4-migration-mac-validation-v1",
+  "workflowRunId": 31078588261,
+  "workflowRunAttempt": 1,
+  "validatedCommit": "4565ae5a116052dad87908c6054a480c04d98628",
+  "executionLocation": "Mac self-hosted",
+  "runner": {
+    "name": "boat-pon-mac-local",
+    "os": "macOS",
+    "arch": "ARM64"
+  },
+  "checks": {
+    "isolatedChangeBoundary": "PASS",
+    "runnerStateVersionAlignment": "PASS",
+    "typecheck": "PASS",
+    "targetedMigrationTests": "PASS",
+    "fullRepositoryTests": "PASS",
+    "researchGovernance": "PASS",
+    "productBoundary": "PASS",
+    "buyLineBoundary": "PASS",
+    "researchReplayGolden": "PASS",
+    "productionRolloutReadiness": "NOT_RUN_APPROVAL_GATED_NOT_REQUIRED",
+    "productionBuild": "PASS",
+    "dbRuntimeWriteGuard": "PASS"
+  },
+  "runtimeFingerprintSha256": "8eb52067785f0384d00c97f44f8171d95270ae5071b4ac652061924ebff1e07c",
+  "runtimeFileCount": 3,
+  "dbWriteCount": 0,
+  "primaryDbWriteCount": 0,
+  "sidecarWriteCount": 0,
+  "taskAttemptConsumed": false,
+  "approvalCreated": false,
+  "productionApplyExecuted": false,
+  "generatedAt": "2026-08-06T06:50:02.300097Z"
+}

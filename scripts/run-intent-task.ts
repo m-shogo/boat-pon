@@ -217,8 +217,8 @@ try {
   {
     const rec = reconcileCatalogState(catalog, state, {});
     if (rec.changed) {
-      state = rec.nextState;                 // updateState はこの state を参照する
-      writeJsonAtomic(STATE_PATH, state);    // atomic。end-of-run commit が branch へ push する
+      state = rec.nextState;
+      writeJsonAtomic(STATE_PATH, state);
       const migDir = join(root, "reports/automation/migrations");
       mkdirSync(migDir, { recursive: true });
       writeJsonAtomic(join(migDir, `reconcile-${runId}.json`), {
@@ -295,7 +295,7 @@ try {
 
   finish(exec.result, exec.result === "PASS" || exec.result === "CONDITIONAL" ? 0 : exec.result === "BLOCKED" ? 3 : 1, {
     lastRequestId: request.requestId, lastIntentId: intentId, lastTaskId: task.taskId, lastSafetyLevel: request.safetyLevel,
-    authoritySha: request.authoritySha, stateVersion: state.stateVersion + 1, stateDigest: computeStateDigest(state),
+    authoritySha: request.authoritySha, stateVersion: state.stateVersion, stateDigest: computeStateDigest(state),
     blocks: exec.blocks, elapsedMs: Date.now() - startedMs, evidencePath, outputs: exec.outputs, outputDigest: exec.outputDigest,
     taskStatus: nextStatus, nextCandidate: pickNext(mergeCatalogAndState(catalog, state)),
   });

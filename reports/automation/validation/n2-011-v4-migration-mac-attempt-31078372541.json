@@ -1,0 +1,49 @@
+{
+  "evidenceSchemaVersion": "n2-011-v4-migration-mac-validation-attempt-v1",
+  "workflowRunId": 31078372541,
+  "workflowJobId": 92541312689,
+  "validatedCommit": "42b2eb8efaf1b9bfca84d965f88bca3fa2553dc6",
+  "executionLocation": "Mac self-hosted",
+  "runnerName": "boat-pon-mac-local",
+  "result": "FAILED_VALIDATION_SCOPE",
+  "failureCode": "UNRELATED_PRODUCTION_READINESS_BLOCKED",
+  "failureDetail": "The temporary migration-validation workflow invoked the production F0-R rollout readiness command. That command correctly failed closed because HUMAN_APPROVAL_MISSING and collectorNonRegression=false. Approval must not be created for this migration validation.",
+  "completedChecks": {
+    "isolatedChangeBoundary": "PASS",
+    "runnerStateVersionAlignment": "PASS",
+    "typecheck": "PASS",
+    "targetedMigrationTests": "PASS_4_OF_4",
+    "fullRepositoryTests": "PASS_831_SKIP_2_FAIL_0",
+    "researchGovernance": "PASS",
+    "productBoundary": "PASS",
+    "buyLineBoundary": "PASS",
+    "researchReplayGolden": "PASS"
+  },
+  "readinessObservation": {
+    "command": "npm run research:rollout:readiness",
+    "status": "BLOCKED",
+    "blockers": [
+      "collectorNonRegression",
+      "HUMAN_APPROVAL_MISSING"
+    ],
+    "shadowWriteEnabled": false,
+    "killSwitchEngaged": false,
+    "productionDbWritten": false,
+    "approvalValid": false
+  },
+  "sideEffectsOfMisScopedCommand": {
+    "temporarySidecarAndBackupCreatedInsideEphemeralRunnerCheckout": true,
+    "operationalPrimaryDbWritten": false,
+    "migrationApplied": false
+  },
+  "notExecutedChecks": [
+    "productionBuild",
+    "postValidationRuntimeFingerprint",
+    "successEvidenceCommit"
+  ],
+  "taskAttemptConsumed": false,
+  "approvalCreated": false,
+  "productionApplyExecuted": false,
+  "retryPolicy": "remove the unrelated approval-gated rollout command; run one corrected migration validation without creating approval",
+  "recordedAt": "2026-08-06T06:50:00.000Z"
+}
