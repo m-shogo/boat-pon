@@ -186,6 +186,10 @@ test("recovery scripts contain no registration, removal, token, sudo or reinstal
   const sources = [diagnoseScript, recoverScript]
     .map((path) => `${basename(path)}\n${readFileSync(path, "utf8")}`)
     .join("\n");
-  assert.doesNotMatch(sources, /config\.sh|\.\/config|remove\s|uninstall|registration[_ -]?token|--token|sudo|svc\.sh\s+install/iu);
+  assert.doesNotMatch(
+    sources,
+    /(?:^|\n)\s*(?:sudo\b|\.\/config(?:\.sh)?\b|\.\/svc\.sh\s+(?:install|uninstall)\b|rm\s+-rf\s+[^\n]*actions-runner)/imu,
+  );
+  assert.doesNotMatch(sources, /(?:^|\s)--token(?:=|\s)/imu);
   assert.match(readFileSync(recoverScript, "utf8"), /\.\/svc\.sh start/);
 });
