@@ -5,6 +5,8 @@ import {
   openSync,
   readFileSync,
   readdirSync,
+  renameSync,
+  rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
@@ -31,7 +33,7 @@ import {
 import { readN2TrifectaPrivateCapturePlan } from "./n2TrifectaPrivateCapturePlanReader";
 
 export const N2_TRIFECTA_LOCAL_CAPTURE_SERVICE_VERSION =
-  "n2-trifecta-local-capture-service-v1" as const;
+  "n2-trifecta-local-capture-service-v1.1" as const;
 export const N2_TRIFECTA_LOCAL_CAPTURE_AUTHORIZATION_VERSION =
   "n2-trifecta-local-capture-authorization-v1" as const;
 export const N2_TRIFECTA_LOCAL_CAPTURE_SELECTION_VERSION =
@@ -39,7 +41,7 @@ export const N2_TRIFECTA_LOCAL_CAPTURE_SELECTION_VERSION =
 export const N2_TRIFECTA_LOCAL_CAPTURE_RESERVATION_VERSION =
   "n2-trifecta-local-capture-reservation-v1" as const;
 export const N2_TRIFECTA_LOCAL_CAPTURE_REPORT_VERSION =
-  "n2-trifecta-local-capture-report-v1" as const;
+  "n2-trifecta-local-capture-report-v1.1" as const;
 
 export type N2TrifectaLocalCaptureAuthorization = {
   authorizationVersion: typeof N2_TRIFECTA_LOCAL_CAPTURE_AUTHORIZATION_VERSION;
@@ -114,6 +116,9 @@ export type N2TrifectaLocalCaptureTickReport = {
   selectionRelativePath: string | null;
   reservationRelativePath: string | null;
   reportRelativePath: string | null;
+  latestStatusRelativePath: string;
+  eventDigest: string;
+  eventChanged: boolean;
   primaryDbMetadataUnchanged: boolean;
   databaseWriteCount: 0;
   primaryDbWriteCount: 0;
@@ -250,9 +255,65 @@ function budgetDirectoryRelativePath(date: string): string {
   return `data/private/trifecta-capture/reservations/${date}`;
 }
 
-function reportRelativePath(now: string, digest: string): string {
-  const timestamp = new Date(Date.parse(now)).toISOString().replaceAll(":", "-");
-  return `data/private/trifecta-capture/reports/${timestamp}-${digest.slice(0, 16)}.json`;
+function reportRelativePath(date: string | null, digest: string): string {
+  return `data/private/trifecta-capture/reports/${date ?? "unknown"}/${digest}.json`;
+}
+
+function latestStatusRelativePath(): string {
+  return "data/private/trifecta-capture/status/latest.json";
+}
+
+function isAlreadyExistsError(error: unknown): boolean {
+  return typeof error === "object"
+    && error !== null
+    && "code" in error
+    && (error as { code?: unknown }).code === "EEXIST";
+}
+
+function errorCode(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error);
+  const normalized = raw.trim().replaceAll(/[^A-Za-z0-9_]+/gu, "_").toUpperCase();
+  return normalized.slice(0, 120) || "UNKNOWN_ERROR";
+}
+
+function writeAtomic(path: string, content: string): void {
+  mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
+  const temporary = `${path}.${process.pid}.${Date.now()}.tmp`;
+  try {
+    writeFileSync(temporary, content, { encoding: "utf8", mode: 0o600 });
+    renameSync(temporary, path);
+  } finally {
+    rmSync(temporary, { force: true });
+  }
+}
+
+function readLatestEventDigest(dataRoot: string): string | null {
+  const path = resolveInside(dataRoot, latestStatusRelativePath());
+  if (!existsSync(path)) return null;
+  try {
+    const latest = readJsonFile<{ eventDigest?: unknown }>(path);
+    return typeof latest.eventDigest === "string" ? latest.eventDigest : null;
+  } catch {
+    return null;
+  }
+}
+
+function validateSelection(
+  selection: N2TrifectaLocalCaptureSelection,
+  input: { date: string; plans: N2TrifectaOddsCheckpointPlan[] },
+): void {
+  if (selection.selectionVersion !== N2_TRIFECTA_LOCAL_CAPTURE_SELECTION_VERSION) {
+    throw new Error("SELECTION_VERSION_MISMATCH");
+  }
+  if (selection.date !== input.date || !VENUE_RE.test(selection.venueCode)) {
+    throw new Error("SELECTION_IDENTITY_INVALID");
+  }
+  const current = input.plans.find(
+    (plan) => plan.entries[0]?.venueCode === selection.venueCode,
+  );
+  if (!current || current.status !== "READY_FOR_PRIVATE_REVIEW") {
+    throw new Error("SELECTED_VENUE_PLAN_UNAVAILABLE");
+  }
 }
 
 function loadOrCreateSelection(input: {
@@ -260,22 +321,17 @@ function loadOrCreateSelection(input: {
   date: string;
   now: string;
   plans: N2TrifectaOddsCheckpointPlan[];
-}): { selection: N2TrifectaLocalCaptureSelection; relativePath: string } {
+}): {
+  selection: N2TrifectaLocalCaptureSelection;
+  relativePath: string;
+  created: boolean;
+} | null {
   const relativePath = selectionRelativePath(input.date);
   const path = resolveInside(input.dataRoot, relativePath);
   if (existsSync(path)) {
     const selection = readJsonFile<N2TrifectaLocalCaptureSelection>(path);
-    if (selection.selectionVersion !== N2_TRIFECTA_LOCAL_CAPTURE_SELECTION_VERSION) {
-      throw new Error("SELECTION_VERSION_MISMATCH");
-    }
-    if (selection.date !== input.date || !VENUE_RE.test(selection.venueCode)) {
-      throw new Error("SELECTION_IDENTITY_INVALID");
-    }
-    const current = input.plans.find((plan) => plan.entries[0]?.venueCode === selection.venueCode);
-    if (!current || current.status !== "READY_FOR_PRIVATE_REVIEW") {
-      throw new Error("SELECTED_VENUE_PLAN_UNAVAILABLE");
-    }
-    return { selection, relativePath };
+    validateSelection(selection, input);
+    return { selection, relativePath, created: false };
   }
 
   const eligible = input.plans
@@ -287,10 +343,12 @@ function loadOrCreateSelection(input: {
         String(right.entries[0]?.targetCaptureAt),
       );
       if (firstAt !== 0) return firstAt;
-      return String(left.entries[0]?.venueCode).localeCompare(String(right.entries[0]?.venueCode));
+      return String(left.entries[0]?.venueCode).localeCompare(
+        String(right.entries[0]?.venueCode),
+      );
     });
   const selected = eligible[0];
-  if (!selected?.entries[0]) throw new Error("NO_ELIGIBLE_VENUE_PLAN");
+  if (!selected?.entries[0]) return null;
   const selection: N2TrifectaLocalCaptureSelection = {
     selectionVersion: N2_TRIFECTA_LOCAL_CAPTURE_SELECTION_VERSION,
     date: input.date,
@@ -300,8 +358,16 @@ function loadOrCreateSelection(input: {
     raceCount: selected.raceCount,
     requestBudget: selected.requestBudget,
   };
-  exclusiveWrite(path, `${JSON.stringify(selection, null, 2)}\n`);
-  return { selection, relativePath };
+  try {
+    exclusiveWrite(path, `${JSON.stringify(selection, null, 2)}
+`);
+    return { selection, relativePath, created: true };
+  } catch (error) {
+    if (!isAlreadyExistsError(error)) throw error;
+    const existing = readJsonFile<N2TrifectaLocalCaptureSelection>(path);
+    validateSelection(existing, input);
+    return { selection: existing, relativePath, created: false };
+  }
 }
 
 export function auditN2TrifectaLocalCaptureAuthorization(input: {
@@ -471,97 +537,121 @@ export async function runN2TrifectaLocalCaptureTick(
   let reservationPath: string | null = null;
 
   if (blockers.length === 0 && date != null && nowMs != null) {
-    const venueCodes = discoverVenueCodes(input.primaryDbPath, date);
-    const plans = venueCodes
-      .map((venueCode) => readN2TrifectaPrivateCapturePlan({
-        primaryDbPath: input.primaryDbPath,
+    try {
+      const venueCodes = discoverVenueCodes(input.primaryDbPath, date);
+      const plans = venueCodes
+        .map((venueCode) => readN2TrifectaPrivateCapturePlan({
+primaryDbPath: input.primaryDbPath,
+date,
+venueCode,
+        }))
+        .filter((result) => result.status === "PASS")
+        .map((result) => result.plan);
+      const selected = loadOrCreateSelection({
+        dataRoot: input.dataRoot,
         date,
-        venueCode,
-      }))
-      .filter((result) => result.status === "PASS")
-      .map((result) => result.plan);
-    const selected = loadOrCreateSelection({
-      dataRoot: input.dataRoot,
-      date,
-      now: input.now,
-      plans,
-    });
-    selectionPath = selected.relativePath;
-    selectedVenueCode = selected.selection.venueCode;
-    const sourcePlan = plans.find(
-      (plan) => plan.entries[0]?.venueCode === selected.selection.venueCode,
-    );
-    if (!sourcePlan) {
-      blockers.push("SELECTED_SOURCE_PLAN_MISSING");
-    } else {
-      selectedSourcePlanDigest = sourcePlan.manifestDigest;
-      selectedRaceCount = sourcePlan.raceCount;
-      const dueEntries = sourcePlan.entries
-        .filter((entry) => isDue(entry, nowMs))
-        .sort((left, right) => {
-          const target = left.targetCaptureAt.localeCompare(right.targetCaptureAt);
-          if (target !== 0) return target;
-          return left.raceNo - right.raceNo;
-        });
-      dueEntryCount = dueEntries.length;
-      selectedEntry = dueEntries[0] ?? null;
-
-      const budgetRelative = budgetDirectoryRelativePath(date);
-      const budgetPath = resolveInside(input.dataRoot, budgetRelative);
-      mkdirSync(budgetPath, { recursive: true, mode: 0o700 });
-      dailyReservationCountBefore = readdirSync(budgetPath)
-        .filter((name) => name.endsWith(".json"))
-        .length;
-      dailyReservationCountAfter = dailyReservationCountBefore;
-
-      if (selectedEntry) {
-        const reservationKey = canonicalHash({
-          authorizationId: input.authorization.authorizationId,
-          raceIdentity: selectedEntry.raceIdentity,
-          checkpointLabel: selectedEntry.checkpointLabel,
-          targetCaptureAt: selectedEntry.targetCaptureAt,
-        });
-        reservationPath = `${budgetRelative}/${reservationKey}.json`;
-        const reservationAbsolute = resolveInside(input.dataRoot, reservationPath);
-        if (existsSync(reservationAbsolute)) {
-          // A prior reservation is the intended crash-safe duplicate guard.
-        } else if (dailyReservationCountBefore >= input.authorization.maxRequestsPerDay) {
-          blockers.push("DAILY_REQUEST_BUDGET_EXHAUSTED");
+        now: input.now,
+        plans,
+      });
+      if (selected) {
+        selectionPath = selected.relativePath;
+        selectedVenueCode = selected.selection.venueCode;
+        const sourcePlan = plans.find(
+(plan) => plan.entries[0]?.venueCode === selected.selection.venueCode,
+        );
+        if (!sourcePlan) {
+blockers.push("SELECTED_SOURCE_PLAN_MISSING");
         } else {
-          const reservation: N2TrifectaLocalCaptureReservation = {
-            reservationVersion: N2_TRIFECTA_LOCAL_CAPTURE_RESERVATION_VERSION,
-            authorizationId: input.authorization.authorizationId,
-            date,
-            venueCode: selectedEntry.venueCode,
-            raceIdentity: selectedEntry.raceIdentity,
-            checkpointLabel: selectedEntry.checkpointLabel,
-            targetCaptureAt: selectedEntry.targetCaptureAt,
-            reservationKey,
-            reservedAt: input.now,
-            networkRequestCeiling: 1,
-          };
-          exclusiveWrite(reservationAbsolute, `${JSON.stringify(reservation, null, 2)}\n`);
-          dailyReservationCountAfter += 1;
-          const singlePlan = buildN2TrifectaSingleEntryPlan({ sourcePlan, entry: selectedEntry });
-          singleEntryPlanDigest = singlePlan.manifestDigest;
-          const approval = buildN2TrifectaEphemeralApproval({
-            authorization: input.authorization,
-            plan: singlePlan,
-            entry: selectedEntry,
-          });
-          ephemeralApprovalId = approval.approvalId;
-          executorReport = await executeN2TrifectaPrivateCapture({
-            plan: singlePlan,
-            approval,
-            rootDir: input.dataRoot,
-            now: input.now,
-            executionMode: "execute",
-            fetcher: input.fetcher,
-            sleep: async () => undefined,
-          });
-          blockers.push(...executorReport.blockers.map((blocker) => `EXECUTOR_${blocker}`));
+selectedSourcePlanDigest = sourcePlan.manifestDigest;
+selectedRaceCount = sourcePlan.raceCount;
+const dueEntries = sourcePlan.entries
+  .filter((entry) => isDue(entry, nowMs))
+  .sort((left, right) => {
+    const target = left.targetCaptureAt.localeCompare(right.targetCaptureAt);
+    if (target !== 0) return target;
+    return left.raceNo - right.raceNo;
+  });
+dueEntryCount = dueEntries.length;
+selectedEntry = dueEntries[0] ?? null;
+
+const budgetRelative = budgetDirectoryRelativePath(date);
+const budgetPath = resolveInside(input.dataRoot, budgetRelative);
+mkdirSync(budgetPath, { recursive: true, mode: 0o700 });
+dailyReservationCountBefore = readdirSync(budgetPath)
+  .filter((name) => name.endsWith(".json"))
+  .length;
+dailyReservationCountAfter = dailyReservationCountBefore;
+
+if (selectedEntry) {
+  const reservationKey = canonicalHash({
+    authorizationId: input.authorization.authorizationId,
+    raceIdentity: selectedEntry.raceIdentity,
+    checkpointLabel: selectedEntry.checkpointLabel,
+    targetCaptureAt: selectedEntry.targetCaptureAt,
+  });
+  reservationPath = `${budgetRelative}/${reservationKey}.json`;
+  const reservationAbsolute = resolveInside(input.dataRoot, reservationPath);
+  let reservationCreated = false;
+  if (!existsSync(reservationAbsolute)) {
+    if (dailyReservationCountBefore >= input.authorization.maxRequestsPerDay) {
+      blockers.push("DAILY_REQUEST_BUDGET_EXHAUSTED");
+    } else {
+      const reservation: N2TrifectaLocalCaptureReservation = {
+        reservationVersion: N2_TRIFECTA_LOCAL_CAPTURE_RESERVATION_VERSION,
+        authorizationId: input.authorization.authorizationId,
+        date,
+        venueCode: selectedEntry.venueCode,
+        raceIdentity: selectedEntry.raceIdentity,
+        checkpointLabel: selectedEntry.checkpointLabel,
+        targetCaptureAt: selectedEntry.targetCaptureAt,
+        reservationKey,
+        reservedAt: input.now,
+        networkRequestCeiling: 1,
+      };
+      try {
+        exclusiveWrite(
+          reservationAbsolute,
+          `${JSON.stringify(reservation, null, 2)}
+`,
+        );
+        reservationCreated = true;
+        dailyReservationCountAfter += 1;
+      } catch (error) {
+        if (!isAlreadyExistsError(error)) throw error;
+      }
+    }
+  }
+
+  if (reservationCreated) {
+    const singlePlan = buildN2TrifectaSingleEntryPlan({
+      sourcePlan,
+      entry: selectedEntry,
+    });
+    singleEntryPlanDigest = singlePlan.manifestDigest;
+    const approval = buildN2TrifectaEphemeralApproval({
+      authorization: input.authorization,
+      plan: singlePlan,
+      entry: selectedEntry,
+    });
+    ephemeralApprovalId = approval.approvalId;
+    executorReport = await executeN2TrifectaPrivateCapture({
+      plan: singlePlan,
+      approval,
+      rootDir: input.dataRoot,
+      now: input.now,
+      executionMode: "execute",
+      fetcher: input.fetcher,
+      sleep: async () => undefined,
+    });
+    blockers.push(
+      ...executorReport.blockers.map((blocker) => `EXECUTOR_${blocker}`),
+    );
+  }
+}
         }
       }
+    } catch (error) {
+      blockers.push(`SERVICE_${errorCode(error)}`);
     }
   }
 
@@ -576,6 +666,24 @@ export async function runN2TrifectaLocalCaptureTick(
     : executorReport?.status === "PASS"
       ? "PASS" as const
       : "NO_CHANGE" as const;
+  const eventDigest = canonicalHash({
+    status,
+    blockers: normalized,
+    dateJst: date,
+    authorizationStatus: authorizationAudit.status,
+    selectedVenueCode,
+    selectedRaceIdentity: selectedEntry?.raceIdentity ?? null,
+    selectedCheckpointLabel: selectedEntry?.checkpointLabel ?? null,
+    executorStatus: executorReport?.status ?? null,
+    executorOutputDigest: executorReport?.outputDigest ?? null,
+    primaryDbMetadataUnchanged: metadataUnchanged,
+  });
+  const previousEventDigest = readLatestEventDigest(input.dataRoot);
+  const eventChanged = previousEventDigest !== eventDigest;
+  const latestPath = latestStatusRelativePath();
+  const eventReportPath = eventChanged || executorReport != null
+    ? reportRelativePath(date, eventDigest)
+    : null;
   const preliminary = {
     reportVersion: N2_TRIFECTA_LOCAL_CAPTURE_REPORT_VERSION,
     serviceVersion: N2_TRIFECTA_LOCAL_CAPTURE_SERVICE_VERSION,
@@ -598,7 +706,10 @@ export async function runN2TrifectaLocalCaptureTick(
     executorReport,
     selectionRelativePath: selectionPath,
     reservationRelativePath: reservationPath,
-    reportRelativePath: null,
+    reportRelativePath: eventReportPath,
+    latestStatusRelativePath: latestPath,
+    eventDigest,
+    eventChanged,
     primaryDbMetadataUnchanged: metadataUnchanged,
     databaseWriteCount: 0 as const,
     primaryDbWriteCount: 0 as const,
@@ -609,12 +720,27 @@ export async function runN2TrifectaLocalCaptureTick(
     automatedBettingChanged: false as const,
     productionApplyExecuted: false as const,
   };
-  const digest = canonicalHash(preliminary);
-  const reportPath = reportRelativePath(input.now, digest);
-  const final = finalizeReport({ ...preliminary, reportRelativePath: reportPath });
-  exclusiveWrite(
-    resolveInside(input.dataRoot, reportPath),
-    `${JSON.stringify(final, null, 2)}\n`,
+  const final = finalizeReport(preliminary);
+  if (eventReportPath) {
+    try {
+      exclusiveWrite(
+        resolveInside(input.dataRoot, eventReportPath),
+        `${JSON.stringify(final, null, 2)}
+`,
+      );
+    } catch (error) {
+      if (!isAlreadyExistsError(error)) throw error;
+    }
+  }
+  writeAtomic(
+    resolveInside(input.dataRoot, latestPath),
+    `${JSON.stringify({
+      latestStatusVersion: "n2-trifecta-local-capture-latest-v1",
+      eventDigest,
+      checkedAt: input.now,
+      report: final,
+    }, null, 2)}
+`,
   );
   return final;
 }
