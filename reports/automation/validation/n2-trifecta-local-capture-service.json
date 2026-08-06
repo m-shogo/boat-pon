@@ -1,6 +1,6 @@
 {
   "evidenceSchemaVersion": "n2-trifecta-local-capture-service-v1",
-  "status": "IMPLEMENTED_PENDING_CI",
+  "status": "PASS",
   "baseMainSha": "422d568d9caae1069b3e0d2cee6f184f1b43d284",
   "branch": "agent/n2-trifecta-local-capture-service-canonical",
   "replacementFor": {
@@ -62,9 +62,22 @@
     "automatedBettingChanged": false,
     "productionApplyExecuted": false
   },
+  "checks": {
+    "typecheck": "PASS",
+    "localCaptureFixtureE2E": "PASS",
+    "launchAgentAndAuthorizationTests": "PASS",
+    "fullRepositoryTests": "PASS",
+    "researchGovernance": "PASS",
+    "secretScan": "PASS",
+    "productPublicBoundary": "PASS",
+    "buyLineBoundary": "PASS",
+    "researchReplayGolden": "PASS",
+    "researchReplayReadiness": "PASS",
+    "productionBuild": "PASS"
+  },
   "installationExecuted": false,
   "realNetworkExecutedByThisPr": false,
   "realRawPersistedByThisPr": false,
-  "ciRunId": null,
-  "ciConclusion": null
+  "ciRunId": 31106473756,
+  "ciConclusion": "success"
 }
