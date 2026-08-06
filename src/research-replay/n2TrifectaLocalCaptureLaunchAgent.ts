@@ -1,4 +1,4 @@
-import { resolve } from "node:path";
+import { resolve, sep } from "node:path";
 
 import {
   N2_TRIFECTA_LOCAL_CAPTURE_AUTHORIZATION_VERSION,
@@ -6,19 +6,24 @@ import {
 } from "./n2TrifectaLocalCaptureService";
 
 export const N2_TRIFECTA_LOCAL_CAPTURE_LAUNCH_AGENT_VERSION =
-  "n2-trifecta-local-capture-launch-agent-v1" as const;
+  "n2-trifecta-local-capture-launch-agent-v2" as const;
 export const N2_TRIFECTA_LOCAL_CAPTURE_LAUNCH_AGENT_LABEL =
   "com.boatpon.trifecta-private-capture" as const;
 export const N2_TRIFECTA_LOCAL_CAPTURE_START_INTERVAL_SECONDS = 30 as const;
 export const N2_TRIFECTA_LOCAL_CAPTURE_MAX_AUTHORIZATION_DAYS = 90 as const;
+
+const SHA_RE = /^[0-9a-f]{40}$/u;
 
 export type N2TrifectaLocalCaptureLaunchAgentInput = {
   nodePath: string;
   tsxCliPath: string;
   tickScriptPath: string;
   workingDirectory: string;
+  authoritySha: string;
+  runtimeRoot: string;
   dataRoot: string;
   authorizationPath: string;
+  runtimeAuthorityPath: string;
   stdoutPath: string;
   stderrPath: string;
 };
@@ -51,6 +56,24 @@ export function assertN2TrifectaCanonicalInstallRoot(input: {
   if (resolve(input.currentRepoRoot) !== resolve(input.configuredRepoRoot)) {
     throw new Error("INSTALL_REQUIRES_CANONICAL_REPO");
   }
+}
+
+export function buildN2TrifectaImmutableRuntimeRoot(input: {
+  releasesRoot: string;
+  authoritySha: string;
+  canonicalRepoRoot: string;
+}): string {
+  if (!SHA_RE.test(input.authoritySha)) throw new Error("RUNTIME_AUTHORITY_SHA_INVALID");
+  const releasesRoot = resolve(input.releasesRoot);
+  const canonicalRepoRoot = resolve(input.canonicalRepoRoot);
+  const runtimeRoot = resolve(releasesRoot, input.authoritySha);
+  if (runtimeRoot === canonicalRepoRoot || runtimeRoot.startsWith(`${canonicalRepoRoot}${sep}`)) {
+    throw new Error("RUNTIME_MUST_BE_OUTSIDE_CANONICAL_REPO");
+  }
+  if (runtimeRoot.includes(`${sep}_work${sep}`) || runtimeRoot.includes("actions-runner-")) {
+    throw new Error("RUNTIME_MUST_NOT_USE_RUNNER_WORKSPACE");
+  }
+  return runtimeRoot;
 }
 
 export function buildN2TrifectaLocalCaptureAuthorization(input: {
@@ -91,18 +114,26 @@ export function buildN2TrifectaLocalCaptureAuthorization(input: {
 export function buildN2TrifectaLocalCaptureLaunchAgentPlist(
   input: N2TrifectaLocalCaptureLaunchAgentInput,
 ): string {
-  const values = Object.values(input);
-  if (values.some((value) => !value.trim())) throw new Error("LAUNCH_AGENT_PATH_EMPTY");
+  if (Object.values(input).some((value) => !value.trim())) {
+    throw new Error("LAUNCH_AGENT_PATH_EMPTY");
+  }
+  if (!SHA_RE.test(input.authoritySha)) throw new Error("LAUNCH_AGENT_AUTHORITY_SHA_INVALID");
   const normalized = {
     nodePath: resolve(input.nodePath),
     tsxCliPath: resolve(input.tsxCliPath),
     tickScriptPath: resolve(input.tickScriptPath),
     workingDirectory: resolve(input.workingDirectory),
+    authoritySha: input.authoritySha,
+    runtimeRoot: resolve(input.runtimeRoot),
     dataRoot: resolve(input.dataRoot),
     authorizationPath: resolve(input.authorizationPath),
+    runtimeAuthorityPath: resolve(input.runtimeAuthorityPath),
     stdoutPath: resolve(input.stdoutPath),
     stderrPath: resolve(input.stderrPath),
   };
+  if (normalized.workingDirectory !== normalized.runtimeRoot) {
+    throw new Error("LAUNCH_AGENT_WORKING_DIRECTORY_MUST_EQUAL_RUNTIME_ROOT");
+  }
   const args = [
     normalized.nodePath,
     normalized.tsxCliPath,
@@ -127,6 +158,12 @@ ${args}
     ${plistString(normalized.dataRoot)}
     <key>BOAT_PON_LOCAL_CAPTURE_AUTH_PATH</key>
     ${plistString(normalized.authorizationPath)}
+    <key>BOAT_PON_LOCAL_CAPTURE_RUNTIME_AUTH_PATH</key>
+    ${plistString(normalized.runtimeAuthorityPath)}
+    <key>BOAT_PON_LOCAL_CAPTURE_AUTHORITY_SHA</key>
+    ${plistString(normalized.authoritySha)}
+    <key>BOAT_PON_LOCAL_CAPTURE_RUNTIME_ROOT</key>
+    ${plistString(normalized.runtimeRoot)}
   </dict>
   <key>RunAtLoad</key>
   <true/>
