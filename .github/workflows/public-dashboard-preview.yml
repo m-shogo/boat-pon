@@ -1,0 +1,51 @@
+name: public dashboard preview artifact
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-dashboard-preview
+  cancel-in-progress: true
+
+jobs:
+  build-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Verify public source boundary
+        run: node scripts/verify-product-boundaries.mjs
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build isolated public dashboard
+        run: npx vite build --config vite.public.config.ts
+
+      - name: Assemble deploy-ready directory
+        run: npx tsx scripts/assemble-public-dashboard-deploy.ts --dist=dist-public-dashboard --static=public-site --output=dist-public-deploy
+
+      - name: Verify deploy-ready directory
+        run: npx tsx scripts/verify-public-dashboard-deploy.ts --dir=dist-public-deploy
+
+      - name: Upload preview artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: boat-pon-public-dashboard-preview
+          path: dist-public-deploy
+          if-no-files-found: error
+          retention-days: 7
