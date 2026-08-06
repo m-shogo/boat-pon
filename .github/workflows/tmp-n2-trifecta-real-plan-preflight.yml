@@ -1,0 +1,63 @@
+name: Temporary N2 trifecta real plan preflight
+
+on:
+  push:
+    branches:
+      - agent/n2-trifecta-real-plan-preflight
+    paths:
+      - .github/workflows/tmp-n2-trifecta-real-plan-preflight.yml
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: [self-hosted, macOS, boat-pon-local]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/n2-trifecta-real-plan-preflight
+          fetch-depth: 1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Run immutable real-plan preflight
+        id: preflight
+        shell: bash
+        run: |
+          set +e
+          export BOAT_PON_PREFLIGHT_REPORT_PATH="$RUNNER_TEMP/n2-trifecta-real-plan-preflight.json"
+          npx tsx scripts/preflight-n2-trifecta-private-plan.ts \
+            > "$RUNNER_TEMP/n2-trifecta-real-plan-preflight.stdout.json" \
+            2> "$RUNNER_TEMP/n2-trifecta-real-plan-preflight.stderr.txt"
+          code=$?
+          echo "$code" > "$RUNNER_TEMP/n2-trifecta-real-plan-preflight.exit-code.txt"
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload preflight evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: n2-trifecta-real-plan-preflight
+          path: |
+            ${{ runner.temp }}/n2-trifecta-real-plan-preflight.json
+            ${{ runner.temp }}/n2-trifecta-real-plan-preflight.stdout.json
+            ${{ runner.temp }}/n2-trifecta-real-plan-preflight.stderr.txt
+            ${{ runner.temp }}/n2-trifecta-real-plan-preflight.exit-code.txt
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Report preflight disposition
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "preflight exit code: ${{ steps.preflight.outputs.exit_code }}"
+          cat "$RUNNER_TEMP/n2-trifecta-real-plan-preflight.json"
