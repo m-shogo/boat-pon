@@ -404,7 +404,7 @@ export function buildN2TrifectaMarketFoundation(input: {
     selectionCount: N2_TRIFECTA_SELECTION_COUNT,
   }));
   const manifestCore = {
-    manifestVersion: N2_TRIFECTA_MARKET_CANARY_MANIFEST_VERSION,
+    manifestVersion: N2_TRIFECTA_MARKET_CANARY_MANIFEST_VERSION as typeof N2_TRIFECTA_MARKET_CANARY_MANIFEST_VERSION,
     sourceType: "trifecta_market" as const,
     approvalScope: N2_TRIFECTA_MARKET_APPROVAL_SCOPE,
     writeAuthorized: false as const,
@@ -425,7 +425,7 @@ export function buildN2TrifectaMarketFoundation(input: {
     ? "READY_FOR_HUMAN_REVIEW" as const
     : "BLOCKED_NOT_READY_FOR_CANARY" as const;
   const reviewCore = {
-    foundationVersion: N2_TRIFECTA_MARKET_FOUNDATION_VERSION,
+    foundationVersion: N2_TRIFECTA_MARKET_FOUNDATION_VERSION as typeof N2_TRIFECTA_MARKET_FOUNDATION_VERSION,
     status,
     sourceType: "trifecta_market" as const,
     writeAuthorized: false as const,
