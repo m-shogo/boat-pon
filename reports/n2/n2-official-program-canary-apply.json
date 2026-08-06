@@ -1,0 +1,86 @@
+{
+  "reportVersion": "n2-official-program-production-canary-v2",
+  "status": "FAILED",
+  "runId": "31063550320",
+  "stage": "VERIFY_PRIMARY_SELECTED_ROWS_UNCHANGED",
+  "sourceCheckoutSha": "772f3684797598ef05ae28b5606a0533da58ebe8",
+  "manifestDigest": "151c34786e29ca80838da0fe3b2eb3326ee343d0a3656e8f20666af14d1b3a85",
+  "selectedRaceCount": 20,
+  "failure": {
+    "name": "Error",
+    "message": "PRIMARY_DB_ACTIVE_WAL"
+  },
+  "approval": {
+    "granted": true,
+    "revoked": true,
+    "approvalId": "APR-N2-OP-151c34786e29-31063550320",
+    "lifecycleEventId": "LIF-N2-OP-151c34786e29-31063550320",
+    "postRevokeCode": "APPROVAL_REVOKED"
+  },
+  "backup": {
+    "path": "data/backups/n2-official-program-canary-31058847357-1785977909393.sqlite",
+    "fileName": "n2-official-program-canary-31058847357-1785977909393.sqlite",
+    "bytes": 9418084352,
+    "sha256": "cc350eb4f8c3bd610970212a644adef319835ad629165806d869cd554d56da12",
+    "quickCheck": "ok",
+    "schemaOk": true,
+    "retained": true,
+    "reusedFromCancelledPreApprovalRun": true
+  },
+  "firstApply": {
+    "gateVersion": "n2-official-program-canary-gate-v1",
+    "approvalId": "APR-N2-OP-151c34786e29-31063550320",
+    "manifestDigest": "151c34786e29ca80838da0fe3b2eb3326ee343d0a3656e8f20666af14d1b3a85",
+    "selectedCount": 20,
+    "insertedCount": 20,
+    "reusedCount": 0,
+    "primaryWriteCount": 0,
+    "sidecarWriteAuthorized": true,
+    "globalShadowWriteEnabled": false
+  },
+  "idempotentReplay": {
+    "gateVersion": "n2-official-program-canary-gate-v1",
+    "approvalId": "APR-N2-OP-151c34786e29-31063550320",
+    "manifestDigest": "151c34786e29ca80838da0fe3b2eb3326ee343d0a3656e8f20666af14d1b3a85",
+    "selectedCount": 20,
+    "insertedCount": 0,
+    "reusedCount": 20,
+    "primaryWriteCount": 0,
+    "sidecarWriteAuthorized": true,
+    "globalShadowWriteEnabled": false
+  },
+  "before": {
+    "officialProgramObservations": 0,
+    "trifectaMarketObservations": 0,
+    "captureAttempts": 0,
+    "approvalGrants": 3,
+    "approvalLifecycleEvents": 1,
+    "exactDigestApprovals": 0
+  },
+  "afterApply": {
+    "officialProgramObservations": 20,
+    "selectedObservationCount": 20,
+    "trifectaMarketObservations": 0,
+    "captureAttempts": 20,
+    "approvalGrants": 4,
+    "approvalLifecycleEvents": 1,
+    "quickCheck": "ok"
+  },
+  "afterRevoke": {
+    "approvalGrants": 4,
+    "approvalLifecycleEvents": 2,
+    "approved": false,
+    "code": "APPROVAL_REVOKED"
+  },
+  "primaryDatabase": {
+    "writeCount": 0,
+    "metadataChangedDuringRun": null
+  },
+  "globalShadowWriteEnabled": false,
+  "killSwitchEngaged": false,
+  "n2PitAuditRetried": false,
+  "currentBuyChanged": false,
+  "lineChanged": false,
+  "automaticBettingChanged": false,
+  "failedAt": "2026-08-06T01:49:15.941Z"
+}
