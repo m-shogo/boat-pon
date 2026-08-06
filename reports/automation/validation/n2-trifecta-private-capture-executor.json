@@ -1,6 +1,6 @@
 {
   "evidenceSchemaVersion": "n2-trifecta-private-capture-executor-v1",
-  "status": "IMPLEMENTED_PENDING_CI",
+  "status": "IMPLEMENTED_CI_RETRY_PENDING",
   "baseMainSha": "b9af69e3331d20fd43d0b696626fc62b5dbe6dae",
   "branch": "agent/n2-trifecta-private-capture-executor",
   "executor": {
@@ -55,6 +55,22 @@
     "automatedBettingChanged": false,
     "productionApplyExecuted": false
   },
+  "validationAttempts": [
+    {
+      "runId": 31087598909,
+      "result": "FAILED_TYPECHECK",
+      "failureCode": "EXECUTOR_VERSION_LITERAL_WIDENING",
+      "logicOrBoundaryFailure": false
+    },
+    {
+      "runId": 31087894462,
+      "result": "ACTION_REQUIRED_NO_JOBS",
+      "failureCode": "GITHUB_ACTIONS_BOT_PUSH_RECURSION_SUPPRESSION",
+      "logicOrBoundaryFailure": false
+    }
+  ],
+  "literalFixCommit": "6cd4d48ccff5d17ad363caaa01ed5ace35c3bb71",
+  "temporaryWorkflowPresent": false,
   "ciRunId": null,
   "ciConclusion": null
 }
