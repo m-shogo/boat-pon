@@ -12,7 +12,7 @@ import {
 } from "../research/governance/executorSdk";
 import type { Executor, ExecutorResult } from "./taskExecutors";
 
-export const N2_PIT_AUDIT_EXECUTOR_VERSION = "n2-pit-audit-executor-v2";
+export const N2_PIT_AUDIT_EXECUTOR_VERSION = "n2-pit-audit-executor-v3";
 const REPORT_RELATIVE_PATH = "reports/n2/n2-pit-audit.json";
 const MANIFEST_RELATIVE_PATH = "reports/n2/n2-dataset-manifest.json";
 const MANIFEST_PATH_ENV = "BOAT_PON_N2_DATASET_MANIFEST_PATH";
