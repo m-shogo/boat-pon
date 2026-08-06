@@ -1,0 +1,172 @@
+name: Diagnose N2 official-program canary cancellation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/n2-official-program-canary-post-cancel-diagnostic.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: boat-pon-local-research
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    runs-on: [self-hosted, macOS, boat-pon-local]
+    timeout-minutes: 60
+    steps:
+      - name: Checkout exact main
+        uses: actions/checkout@v4
+        with:
+          ref: 81e46cc9e39690652120b84aac1fa9c331f7129f
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          corepack enable
+          pnpm install --frozen-lockfile --prod=false
+
+      - name: Diagnose production sidecar read-only
+        env:
+          AUTOMATION_BRANCH: automation/boat-pon-research
+          BUNDLE_PATH: ${{ runner.temp }}/n2-official-program-canary-review-bundle.json
+          FAILED_RUN_ID: "31058847357"
+        run: |
+          set -euo pipefail
+          git fetch origin "$AUTOMATION_BRANCH" --quiet
+          git show "origin/$AUTOMATION_BRANCH:reports/n2/n2-official-program-canary-review-bundle.json" > "$BUNDLE_PATH"
+          node --import tsx --input-type=module <<'NODE'
+          import { existsSync, readdirSync, statSync } from "node:fs";
+          import { join } from "node:path";
+          import { pathToFileURL } from "node:url";
+          import { DatabaseSync } from "node:sqlite";
+          import { readFileSync } from "node:fs";
+          import { resolveApproval } from "./src/research-replay/approval.ts";
+          import { officialProgramCanaryApprovalTarget } from "./src/research-replay/n2OfficialProgramCanary.ts";
+
+          const policy = JSON.parse(readFileSync("config/research-automation-policy.json", "utf8"));
+          const dataRoot = policy.dataRoot;
+          const primaryPath = join(dataRoot, "data", "boat.sqlite");
+          const sidecarPath = join(dataRoot, "data", "research-replay.sqlite");
+          const backupRoot = join(dataRoot, "data", "backups");
+          const bundle = JSON.parse(readFileSync(process.env.BUNDLE_PATH, "utf8"));
+          const selectedKeys = bundle.manifest.binding.items.map((item) => item.canonicalRaceKey);
+          const digest = bundle.manifest.manifestDigest;
+          const approvalTarget = officialProgramCanaryApprovalTarget(digest);
+
+          const walInfo = (path) => {
+            const wal = `${path}-wal`;
+            return { exists: existsSync(wal), bytes: existsSync(wal) ? statSync(wal).size : 0 };
+          };
+          const openImmutable = (path) => {
+            const db = new DatabaseSync(`${pathToFileURL(path).href}?immutable=1`, { readOnly: true });
+            db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=5000");
+            return db;
+          };
+          const count = (db, sql, ...params) => Number(db.prepare(sql).get(...params).n);
+
+          if (!existsSync(primaryPath) || !existsSync(sidecarPath)) throw new Error("REQUIRED_DB_MISSING");
+          const primaryStat = statSync(primaryPath);
+          const sidecarStat = statSync(sidecarPath);
+          const sidecar = openImmutable(sidecarPath);
+          try {
+            const placeholders = selectedKeys.map(() => "?").join(",");
+            const officialProgramCount = count(sidecar,
+              "SELECT COUNT(*) n FROM domain_observations WHERE observation_type='official_program'");
+            const trifectaMarketCount = count(sidecar,
+              "SELECT COUNT(*) n FROM domain_observations WHERE observation_type='trifecta_market'");
+            const selectedObservationCount = selectedKeys.length === 0 ? 0 : count(sidecar,
+              `SELECT COUNT(*) n FROM domain_observations WHERE observation_type='official_program' AND canonical_race_key IN (${placeholders})`,
+              ...selectedKeys);
+            const captureAttemptCount = count(sidecar, "SELECT COUNT(*) n FROM capture_attempts");
+            const matchingGrantRows = sidecar.prepare(`
+              SELECT approval_id, approved_at, approval_mode
+              FROM rollout_approval_grants_v2
+              WHERE approval_scope=? AND target_stage=? AND target_schema_version=? AND target_contract_version=?
+              ORDER BY approved_at, rowid
+            `).all(
+              approvalTarget.approvalScope,
+              approvalTarget.targetStage,
+              approvalTarget.targetSchemaVersion,
+              approvalTarget.targetContractVersion,
+            );
+            const matchingGrantIds = matchingGrantRows.map((row) => row.approval_id);
+            let lifecycleRows = [];
+            if (matchingGrantIds.length > 0) {
+              const lifecyclePlaceholders = matchingGrantIds.map(() => "?").join(",");
+              lifecycleRows = sidecar.prepare(`
+                SELECT event_kind, subject_approval_id, occurred_at
+                FROM rollout_approval_lifecycle_events_v2
+                WHERE subject_approval_id IN (${lifecyclePlaceholders})
+                ORDER BY occurred_at, rowid
+              `).all(...matchingGrantIds);
+            }
+            const approvalResolution = resolveApproval(sidecar, {
+              ...approvalTarget,
+              rolloutStartedAt: new Date().toISOString(),
+              executionMode: "production",
+            });
+            const quickCheck = sidecar.prepare("PRAGMA quick_check").get().quick_check;
+            const backupPrefix = `n2-official-program-canary-${process.env.FAILED_RUN_ID}-`;
+            const backups = existsSync(backupRoot)
+              ? readdirSync(backupRoot)
+                  .filter((name) => name.startsWith(backupPrefix) && name.endsWith(".sqlite"))
+                  .map((name) => ({ name, bytes: statSync(join(backupRoot, name)).size }))
+              : [];
+
+            let classification = "PARTIAL_OR_UNKNOWN";
+            if (officialProgramCount === 0 && matchingGrantRows.length === 0 && lifecycleRows.length === 0) {
+              classification = "NO_PRODUCTION_WRITE_OBSERVED";
+            } else if (selectedObservationCount === 20
+              && matchingGrantRows.length === 1
+              && lifecycleRows.some((row) => row.event_kind === "revoked")
+              && approvalResolution.approved === false
+              && approvalResolution.code === "APPROVAL_REVOKED") {
+              classification = "CANARY_APPLIED_AND_APPROVAL_REVOKED";
+            } else if (matchingGrantRows.length > 0
+              && !lifecycleRows.some((row) => row.event_kind === "revoked")) {
+              classification = "ACTIVE_OR_UNREVOKED_APPROVAL_RISK";
+            }
+
+            const result = {
+              diagnosticVersion: "n2-official-program-post-cancel-diagnostic-v1",
+              classification,
+              failedRunId: process.env.FAILED_RUN_ID,
+              bundleVersion: bundle.bundleVersion,
+              manifestDigest: digest,
+              selectedRaceCount: selectedKeys.length,
+              database: {
+                primary: { bytes: primaryStat.size, modifiedMs: primaryStat.mtimeMs, wal: walInfo(primaryPath) },
+                sidecar: { bytes: sidecarStat.size, modifiedMs: sidecarStat.mtimeMs, wal: walInfo(sidecarPath), quickCheck },
+              },
+              observations: {
+                officialProgramCount,
+                selectedObservationCount,
+                trifectaMarketCount,
+                captureAttemptCount,
+              },
+              approval: {
+                matchingGrantCount: matchingGrantRows.length,
+                matchingGrantIds,
+                lifecycleEventCount: lifecycleRows.length,
+                lifecycleRows,
+                currentResolution: {
+                  approved: approvalResolution.approved,
+                  code: approvalResolution.code,
+                  approvalId: approvalResolution.approvalId,
+                },
+              },
+              retainedBackups: backups,
+              writesPerformedByDiagnostic: false,
+            };
+            console.log("N2_OFFICIAL_PROGRAM_POST_CANCEL_DIAGNOSTIC");
+            console.log(JSON.stringify(result, null, 2));
+            if (classification === "ACTIVE_OR_UNREVOKED_APPROVAL_RISK") process.exitCode = 2;
+          } finally {
+            sidecar.close();
+          }
+          NODE
