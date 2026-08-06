@@ -1,20 +1,20 @@
 name: temporary N2-011 v4 migration validation
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/n2-011-v4-cas-migration-tool
+      - main
+    types: [opened, reopened, synchronize]
 
 permissions:
   contents: write
 
 concurrency:
-  group: tmp-n2-011-v4-migration-validation
+  group: tmp-n2-011-v4-migration-validation-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
   validate:
-    if: ${{ github.event.head_commit.message != 'test: record Mac N2-011 migration validation' }}
     runs-on: [self-hosted, macOS, boat-pon-local]
     timeout-minutes: 120
     steps:
@@ -24,7 +24,18 @@ jobs:
           ref: agent/n2-011-v4-cas-migration-tool
           fetch-depth: 0
 
+      - name: Prevent evidence commit recursion
+        id: gate
+        run: |
+          set -euo pipefail
+          if [ "$(git log -1 --format=%s)" = "test: record Mac N2-011 migration validation" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Assert exact runner stateVersion correction
+        if: steps.gate.outputs.skip != 'true'
         run: |
           set -euo pipefail
           grep -Fq 'authoritySha: request.authoritySha, stateVersion: state.stateVersion, stateDigest: computeStateDigest(state),' scripts/run-intent-task.ts
@@ -34,6 +45,7 @@ jobs:
           fi
 
       - name: Assert isolated change boundary
+        if: steps.gate.outputs.skip != 'true'
         run: |
           set -euo pipefail
           git diff --name-only origin/main...HEAD | tee /tmp/n2-011-migration-files.txt
@@ -48,34 +60,43 @@ jobs:
           fi
 
       - name: Install
+        if: steps.gate.outputs.skip != 'true'
         run: npm ci
 
       - name: Typecheck
+        if: steps.gate.outputs.skip != 'true'
         run: npm run typecheck
 
       - name: Targeted migration and state alignment tests
+        if: steps.gate.outputs.skip != 'true'
         run: node --import tsx --test src/automation/n2QueueMigration.test.ts src/automation/runIntentStateVersion.test.ts
 
       - name: Full repository tests
+        if: steps.gate.outputs.skip != 'true'
         run: npm test
 
       - name: Research governance
+        if: steps.gate.outputs.skip != 'true'
         run: npm run research:governance-check
 
       - name: Product and BUY/LINE boundaries
+        if: steps.gate.outputs.skip != 'true'
         run: |
           node scripts/verify-product-boundaries.mjs
           node scripts/verify-buy-line-learning-boundaries.mjs
 
       - name: Research Replay golden and readiness
+        if: steps.gate.outputs.skip != 'true'
         run: |
           npm run research:golden:verify
           npm run research:readiness
 
       - name: Production build
+        if: steps.gate.outputs.skip != 'true'
         run: npm run build
 
       - name: Assert no DB/runtime writes
+        if: steps.gate.outputs.skip != 'true'
         run: |
           set -euo pipefail
           if git status --porcelain | grep -E '(^| )((data|backups)/|.*\.sqlite(-wal|-shm)?$)'; then
@@ -86,6 +107,7 @@ jobs:
           git status --short
 
       - name: Record immutable Mac validation evidence
+        if: steps.gate.outputs.skip != 'true'
         env:
           WORKFLOW_RUN_ID: ${{ github.run_id }}
           WORKFLOW_RUN_ATTEMPT: ${{ github.run_attempt }}
@@ -135,8 +157,9 @@ jobs:
               "productionApplyExecuted": False,
               "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
           }
-          path = Path("reports/automation/validation/n2-011-v4-migration-mac.json")
-          path.write_text(json.dumps(evidence, ensure_ascii=False, indent=2) + "\n")
+          Path("reports/automation/validation/n2-011-v4-migration-mac.json").write_text(
+              json.dumps(evidence, ensure_ascii=False, indent=2) + "\n"
+          )
           PY
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
