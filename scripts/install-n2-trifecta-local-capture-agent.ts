@@ -144,7 +144,6 @@ const plist = buildN2TrifectaLocalCaptureLaunchAgentPlist({
   tsxCliPath,
   tickScriptPath,
   workingDirectory: repoRoot,
-  canonicalRepoRoot,
   dataRoot,
   authorizationPath,
   stdoutPath: join(logsPath, "stdout.log"),
