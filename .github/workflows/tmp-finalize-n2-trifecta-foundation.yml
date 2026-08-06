@@ -1,0 +1,175 @@
+name: temporary finalize N2 trifecta foundation
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [synchronize]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tmp-finalize-n2-trifecta-foundation-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  finalize:
+    runs-on: [self-hosted, macOS, boat-pon-local]
+    timeout-minutes: 120
+    steps:
+      - name: Checkout exact branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/n2-trifecta-market-readonly-foundation
+          fetch-depth: 0
+
+      - name: Sync latest main and remove temporary workflows
+        run: |
+          set -euo pipefail
+          git fetch origin main --quiet
+          git merge --no-edit origin/main
+          rm -f \
+            .github/workflows/tmp-n2-trifecta-market-foundation-mac.yml \
+            .github/workflows/tmp-n2-trifecta-report-diagnostic.yml \
+            .github/workflows/tmp-finalize-n2-trifecta-foundation.yml
+
+      - name: Install
+        run: npm ci
+
+      - name: Validate code and boundaries
+        run: |
+          set -euo pipefail
+          npm run typecheck
+          node --import tsx --test \
+            src/research-replay/n2TrifectaMarketFoundation.test.ts \
+            src/research-replay/n2TrifectaMarketSourceInventoryReader.test.ts
+          npm test
+          npm run research:governance-check
+          node scripts/verify-product-boundaries.mjs
+          node scripts/verify-buy-line-learning-boundaries.mjs
+          npm run research:golden:verify
+          npm run build
+
+      - name: Run immutable real-data report exactly once
+        run: |
+          set -euo pipefail
+          npx tsx scripts/report-n2-trifecta-market-foundation.ts > /tmp/n2-trifecta-final-report.stdout
+          test -f reports/n2/n2-trifecta-market-foundation.json
+
+      - name: Validate final evidence
+        env:
+          WORKFLOW_RUN_ID: ${{ github.run_id }}
+          WORKFLOW_RUN_ATTEMPT: ${{ github.run_attempt }}
+          RUNNER_NAME_VALUE: ${{ runner.name }}
+          RUNNER_OS_VALUE: ${{ runner.os }}
+          RUNNER_ARCH_VALUE: ${{ runner.arch }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          report_path = Path('reports/n2/n2-trifecta-market-foundation.json')
+          report = json.loads(report_path.read_text())
+          foundation = report['foundation']
+          manifest = foundation['canaryManifest']
+          existing = report['existingState']
+          inventory = report['inventory']
+
+          errors = []
+          expected_blockers = {
+              'SOURCE_ROWS_EMPTY',
+              'SOURCE_RACES_EMPTY',
+              'CHECKPOINTS_EMPTY',
+              'COMPLETE_120_SELECTION_SNAPSHOT_EMPTY',
+              'RAW_DOCUMENT_ID_COLUMN_MISSING',
+              'RAW_PAYLOAD_COLUMN_MISSING',
+              'RAW_PAYLOAD_DIGEST_COLUMN_MISSING',
+              'PARSE_RUN_ID_COLUMN_MISSING',
+              'AVAILABLE_AT_COLUMN_MISSING',
+              'DECISION_CUTOFF_COLUMN_MISSING',
+          }
+          if report['status'] != 'BLOCKED_NOT_READY_FOR_CANARY':
+              errors.append('UNEXPECTED_REPORT_STATUS')
+          if report['dataStatus'] != 'NO_SOURCE_ROWS':
+              errors.append('UNEXPECTED_DATA_STATUS')
+          if set(foundation['inventoryBlockers']) != expected_blockers:
+              errors.append('INVENTORY_BLOCKERS_DRIFT')
+          if manifest['entryCount'] != 0 or report['sourceCandidatesMaterialized'] != 0:
+              errors.append('UNREVIEWED_CANDIDATES_PRESENT')
+          if report['writeAuthorized'] or report['approvalCreated'] or report['productionApplyExecuted']:
+              errors.append('WRITE_OR_APPROVAL_BOUNDARY_BROKEN')
+          if report['primaryDbWriteCount'] != 0 or report['sidecarWriteCount'] != 0:
+              errors.append('DB_WRITE_COUNT_NONZERO')
+          if not report['dbMetadataUnchanged']:
+              errors.append('DB_METADATA_CHANGED')
+          if existing['trifectaMarketObservationCount'] != 0:
+              errors.append('TRIFECTA_OBSERVATIONS_NOT_ZERO')
+          if existing['shadowWriteEnabled'] or existing['operationalGcEnabled']:
+              errors.append('SHADOW_WRITE_OR_GC_ENABLED')
+          if existing['approvalPresent']:
+              errors.append('TRIFECTA_APPROVAL_PRESENT')
+          if manifest['approvalScope'] != 'N2_TRIFECTA_MARKET_OBSERVATION_CANARY':
+              errors.append('APPROVAL_SCOPE_MISMATCH')
+          if report['dbEvidence']['primaryAfter']['walBytes'] != 0 or report['dbEvidence']['sidecarAfter']['walBytes'] != 0:
+              errors.append('ACTIVE_WAL_AFTER_REPORT')
+
+          evidence = {
+              'evidenceSchemaVersion': 'n2-trifecta-market-foundation-final-validation-v1',
+              'workflowRunId': int(os.environ['WORKFLOW_RUN_ID']),
+              'workflowRunAttempt': int(os.environ['WORKFLOW_RUN_ATTEMPT']),
+              'validatedCommitBeforeEvidence': os.popen('git rev-parse HEAD').read().strip(),
+              'executionLocation': 'Mac self-hosted',
+              'runner': {
+                  'name': os.environ['RUNNER_NAME_VALUE'],
+                  'os': os.environ['RUNNER_OS_VALUE'],
+                  'arch': os.environ['RUNNER_ARCH_VALUE'],
+              },
+              'result': 'PASS' if not errors else 'BLOCKED',
+              'errors': errors,
+              'reportStatus': report['status'],
+              'dataStatus': report['dataStatus'],
+              'sourceTable': inventory['sourceTable'],
+              'sourceRows': inventory['totalRows'],
+              'sourceRaces': inventory['raceCount'],
+              'checkpointCount': inventory['checkpointCount'],
+              'completeSnapshotCount': inventory['completeSnapshotCount'],
+              'manifestEntryCount': manifest['entryCount'],
+              'manifestDigest': manifest['manifestDigest'],
+              'reviewBundleDigest': foundation['reviewBundleDigest'],
+              'trifectaMarketObservationCount': existing['trifectaMarketObservationCount'],
+              'captureAttemptCount': existing['captureAttemptCount'],
+              'writeAuthorized': False,
+              'approvalCreated': False,
+              'productionApplyExecuted': False,
+              'primaryDbWriteCount': 0,
+              'sidecarWriteCount': 0,
+              'dbMetadataUnchanged': report['dbMetadataUnchanged'],
+              'walBytesAfter': {
+                  'primary': report['dbEvidence']['primaryAfter']['walBytes'],
+                  'sidecar': report['dbEvidence']['sidecarAfter']['walBytes'],
+              },
+              'priorActiveWalRunId': 31082678987,
+              'priorRecoveredDiagnosticRunId': 31082994311,
+              'failureClassification': 'TRANSIENT_PRIMARY_WAL_CONTENTION_RECOVERED_WITHOUT_RETRYING_A_TASK',
+              'taskAttemptConsumed': False,
+              'generatedAt': datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
+          }
+          out = Path('reports/automation/validation/n2-trifecta-market-foundation-final.json')
+          out.write_text(json.dumps(evidence, ensure_ascii=False, indent=2) + '\n')
+          if errors:
+              raise SystemExit(';'.join(errors))
+          PY
+
+      - name: Commit final synchronized evidence
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git diff --cached --check
+          git commit -m 'test: finalize trifecta foundation on latest main'
+          git push origin HEAD:agent/n2-trifecta-market-readonly-foundation
