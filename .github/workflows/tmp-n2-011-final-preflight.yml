@@ -1,0 +1,144 @@
+name: temporary N2-011 final preflight
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, synchronize]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tmp-n2-011-final-preflight-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  preflight:
+    runs-on: [self-hosted, macOS, boat-pon-local]
+    timeout-minutes: 45
+    env:
+      EXPECTED_MAIN_SHA: 1a5a987a4556def67f0f109e7d7bb856aa5d7f28
+      EXPECTED_AUTOMATION_SHA: ed91c4014fe77cfc4db0176015baec6f113c2008
+      EXPECTED_QUEUE_BLOB_SHA: 420dad547781fb6aa34624b9ec7efc68d3e3546d
+      AUTHORITY_BRANCH: automation/boat-pon-research
+    steps:
+      - name: Checkout exact preflight branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/n2-011-final-preflight
+          fetch-depth: 0
+
+      - name: Prevent evidence commit recursion
+        id: gate
+        run: |
+          set -euo pipefail
+          if [ "$(git log -1 --format=%s)" = "test: record N2-011 final preflight" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Assert isolated preflight boundary
+        if: steps.gate.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+          git diff --name-only origin/main...HEAD | tee /tmp/n2-011-preflight-files.txt
+          grep -Fxq 'scripts/preflight-n2-011-final-audit.ts' /tmp/n2-011-preflight-files.txt
+          if grep -E '^(src/(domain|decision|app_settings|production|sidecar)/|data/|backups/)' /tmp/n2-011-preflight-files.txt; then
+            echo '::error::forbidden production/data path changed'
+            exit 1
+          fi
+
+      - name: Materialize exact automation authority into RUNNER_TEMP
+        if: steps.gate.outputs.skip != 'true'
+        id: authority
+        run: |
+          set -euo pipefail
+          git fetch origin main "$AUTHORITY_BRANCH" --quiet
+          OBSERVED_MAIN_SHA="$(git rev-parse origin/main)"
+          ACTUAL_AUTOMATION_SHA="$(git rev-parse "origin/$AUTHORITY_BRANCH")"
+          ACTUAL_QUEUE_BLOB_SHA="$(git rev-parse "origin/$AUTHORITY_BRANCH:automation/control/task-queue-state.json")"
+          [ "$OBSERVED_MAIN_SHA" = "$EXPECTED_MAIN_SHA" ] || { echo "::error::main drift $EXPECTED_MAIN_SHA -> $OBSERVED_MAIN_SHA"; exit 1; }
+          [ "$ACTUAL_AUTOMATION_SHA" = "$EXPECTED_AUTOMATION_SHA" ] || { echo "::error::automation drift $EXPECTED_AUTOMATION_SHA -> $ACTUAL_AUTOMATION_SHA"; exit 1; }
+          [ "$ACTUAL_QUEUE_BLOB_SHA" = "$EXPECTED_QUEUE_BLOB_SHA" ] || { echo "::error::queue blob drift $EXPECTED_QUEUE_BLOB_SHA -> $ACTUAL_QUEUE_BLOB_SHA"; exit 1; }
+
+          AUTHORITY_ROOT="$RUNNER_TEMP/boat-pon-n2-011-authority"
+          rm -rf "$AUTHORITY_ROOT"
+          for path in \
+            automation/control/task-queue-state.json \
+            automation/control/current-run.json \
+            automation/control/processed-intents.json \
+            automation/control/processed-requests.json \
+            automation/control/planner-candidates.json \
+            reports/n2/n2-dataset-manifest.json \
+            reports/n2/n2-official-program-canary-verification.json; do
+            mkdir -p "$AUTHORITY_ROOT/$(dirname "$path")"
+            git show "origin/$AUTHORITY_BRANCH:$path" > "$AUTHORITY_ROOT/$path"
+          done
+          echo "authority_root=$AUTHORITY_ROOT" >> "$GITHUB_OUTPUT"
+          echo "observed_main_sha=$OBSERVED_MAIN_SHA" >> "$GITHUB_OUTPUT"
+          echo "actual_automation_sha=$ACTUAL_AUTOMATION_SHA" >> "$GITHUB_OUTPUT"
+          echo "actual_queue_blob_sha=$ACTUAL_QUEUE_BLOB_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Install
+        if: steps.gate.outputs.skip != 'true'
+        run: npm ci
+
+      - name: Typecheck
+        if: steps.gate.outputs.skip != 'true'
+        run: npm run typecheck
+
+      - name: Execute read-only preflight
+        if: steps.gate.outputs.skip != 'true'
+        id: run
+        env:
+          BOAT_PON_AUTOMATION_AUTHORITY_ROOT: ${{ steps.authority.outputs.authority_root }}
+          BOAT_PON_EXPECTED_AUTOMATION_SHA: ${{ env.EXPECTED_AUTOMATION_SHA }}
+          BOAT_PON_ACTUAL_AUTOMATION_SHA: ${{ steps.authority.outputs.actual_automation_sha }}
+          BOAT_PON_EXPECTED_QUEUE_BLOB_SHA: ${{ env.EXPECTED_QUEUE_BLOB_SHA }}
+          BOAT_PON_ACTUAL_QUEUE_BLOB_SHA: ${{ steps.authority.outputs.actual_queue_blob_sha }}
+          BOAT_PON_OBSERVED_MAIN_SHA: ${{ steps.authority.outputs.observed_main_sha }}
+          BOAT_PON_EXPECTED_MAIN_SHA: ${{ env.EXPECTED_MAIN_SHA }}
+          BOAT_PON_PREFLIGHT_EVIDENCE_PATH: reports/automation/validation/n2-011-final-preflight.json
+        run: |
+          set +e
+          npx tsx scripts/preflight-n2-011-final-audit.ts
+          CODE=$?
+          set -e
+          echo "exit_code=$CODE" >> "$GITHUB_OUTPUT"
+          test -f reports/automation/validation/n2-011-final-preflight.json
+
+      - name: Commit append-only preflight evidence
+        if: steps.gate.outputs.skip != 'true' && always()
+        env:
+          PREFLIGHT_EXIT_CODE: ${{ steps.run.outputs.exit_code }}
+          PREFLIGHT_RUN_ID: ${{ github.run_id }}
+          PREFLIGHT_JOB: ${{ github.job }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path('reports/automation/validation/n2-011-final-preflight.json')
+          data = json.loads(path.read_text())
+          data['workflowRunId'] = int(os.environ['PREFLIGHT_RUN_ID'])
+          data['workflowJob'] = os.environ['PREFLIGHT_JOB']
+          data['scriptExitCode'] = int(os.environ.get('PREFLIGHT_EXIT_CODE') or 1)
+          path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n')
+          PY
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add reports/automation/validation/n2-011-final-preflight.json
+          git diff --cached --check
+          git commit -m 'test: record N2-011 final preflight'
+          git push origin HEAD:agent/n2-011-final-preflight
+
+      - name: Enforce preflight result
+        if: steps.gate.outputs.skip != 'true' && always()
+        env:
+          PREFLIGHT_EXIT_CODE: ${{ steps.run.outputs.exit_code }}
+        run: |
+          set -euo pipefail
+          [ "${PREFLIGHT_EXIT_CODE:-1}" = "0" ] || { echo "::error::N2-011 preflight blocked; evidence was committed"; exit 1; }
