@@ -1,0 +1,62 @@
+name: Temporary trigger N2 trifecta immutable runtime authority
+
+on:
+  push:
+    branches:
+      - fix/n2-trifecta-immutable-runtime-authority
+    paths:
+      - .github/workflows/tmp-trigger-n2-trifecta-immutable-runtime-authority.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/n2-trifecta-immutable-runtime-authority
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Execute reviewed embedded patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import textwrap
+          source = Path('.github/workflows/tmp-apply-n2-trifecta-immutable-runtime-authority.yml').read_text().splitlines()
+          start = source.index("          python3 - <<'PY'") + 1
+          end = source.index("          PY", start)
+          script = textwrap.dedent("\n".join(source[start:end]))
+          exec(compile(script, '<embedded-immutable-runtime-patch>', 'exec'))
+          PY
+
+      - name: Install and validate
+        run: |
+          npm ci
+          npm run typecheck
+          node --test --import tsx \
+            src/research-replay/n2TrifectaRuntimeAuthority.test.ts \
+            src/research-replay/n2TrifectaLocalCaptureLaunchAgent.test.ts \
+            src/research-replay/n2TrifectaLocalCaptureService.test.ts
+
+      - name: Commit patch and remove temporary workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/tmp-apply-n2-trifecta-immutable-runtime-authority.yml
+          rm .github/workflows/tmp-trigger-n2-trifecta-immutable-runtime-authority.yml
+          git config user.name "boat-pon-automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "fix(research): bind private capture to immutable runtime"
+          git push origin HEAD:fix/n2-trifecta-immutable-runtime-authority
