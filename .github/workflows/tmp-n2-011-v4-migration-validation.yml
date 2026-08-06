@@ -89,7 +89,7 @@ jobs:
         if: steps.gate.outputs.skip != 'true'
         run: |
           npm run research:golden:verify
-          npm run research:readiness
+          npm run research:rollout:readiness
 
       - name: Production build
         if: steps.gate.outputs.skip != 'true'
@@ -148,14 +148,14 @@ jobs:
                   "researchReplayGolden": "PASS",
                   "researchReadiness": "PASS",
                   "productionBuild": "PASS",
-                  "dbRuntimeWriteGuard": "PASS",
+                  "dbRuntimeWriteGuard": "PASS"
               },
               "dbWriteCount": 0,
               "primaryDbWriteCount": 0,
               "sidecarWriteCount": 0,
               "approvalCreated": False,
               "productionApplyExecuted": False,
-              "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+              "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
           }
           Path("reports/automation/validation/n2-011-v4-migration-mac.json").write_text(
               json.dumps(evidence, ensure_ascii=False, indent=2) + "\n"
