@@ -104,3 +104,94 @@ jobs:
             echo "::error::research code references production/BUY markers"; exit 1
           fi
           echo "research code has no production/BUY connection"
+
+  temporary-live-audit-research-durable-knowledge:
+    if: github.event_name == 'pull_request' && github.head_ref == 'ops/live-audit-research-durable-knowledge-6692f25'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout audited scanner
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Checkout automation state branch read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin automation/boat-pon-research
+          rm -rf /tmp/boat-pon-automation-state
+          git worktree add --detach /tmp/boat-pon-automation-state origin/automation/boat-pon-research
+          test -z "$(git -C /tmp/boat-pon-automation-state status --porcelain)"
+          echo "automation_state_sha=$(git -C /tmp/boat-pon-automation-state rev-parse HEAD)"
+      - name: Audit durable knowledge without changing state
+        shell: bash
+        run: |
+          set -euo pipefail
+          before_sha="$(git -C /tmp/boat-pon-automation-state rev-parse HEAD)"
+          before_status="$(git -C /tmp/boat-pon-automation-state status --porcelain)"
+          set +e
+          node --import tsx scripts/audit-research-durable-knowledge-completeness.ts \
+            --repo-root=/tmp/boat-pon-automation-state \
+            --generated-at=2026-08-07T07:05:00.000Z > /tmp/durable-audit.json
+          audit_rc=$?
+          set -e
+          if [ "$audit_rc" -ne 0 ] && [ "$audit_rc" -ne 3 ]; then
+            echo "unexpected audit exit code: $audit_rc"
+            exit "$audit_rc"
+          fi
+          after_sha="$(git -C /tmp/boat-pon-automation-state rev-parse HEAD)"
+          after_status="$(git -C /tmp/boat-pon-automation-state status --porcelain)"
+          test "$before_sha" = "$after_sha"
+          test "$before_status" = "$after_status"
+          test -z "$after_status"
+          python3 - <<'PY'
+          import json
+          p = '/tmp/durable-audit.json'
+          d = json.load(open(p))
+          summary_keys = [
+              'summaryVersion','reportVersion','evidenceRole','generatedAt','status','historyFileCount','assessedRunCount',
+              'passCount','conditionalCount','blockedCount','failedCount','persistedDryRunCount','durableCompleteCount',
+              'strongDurableCompleteCount','incompleteCount','invalidHistoryCount','passWithDurableOutputsCount',
+              'passNoChangeHistoryCount','nonPassDurableHistoryCount','missingOutputReferenceCount','invalidOutputReferenceCount',
+              'mutableSupersededReferenceCount','registryOutputCount','currentOutputDigestMatchCount','earliestCompletedAt',
+              'latestCompletedAt','taskTypeCounts','classificationCounts','automaticPromotionAuthorized','currentBuyConnectionAuthorized',
+              'lineConnectionAuthorized','publicPublishAuthorized','databaseWriteAuthorized','automatedBettingAuthorized',
+              'productionApplyAuthorized','outputDigest'
+          ]
+          out = {k: d.get(k) for k in summary_keys}
+          out['problemRuns'] = [
+              {
+                  'runId': r.get('runId'),
+                  'taskId': r.get('taskId'),
+                  'taskType': r.get('taskType'),
+                  'result': r.get('result'),
+                  'classification': r.get('classification'),
+                  'durableComplete': r.get('durableComplete'),
+                  'strongDurableComplete': r.get('strongDurableComplete'),
+                  'issues': r.get('issues'),
+                  'warnings': r.get('warnings'),
+                  'outputs': [
+                      {
+                          'relativePath': o.get('relativePath'),
+                          'rootClass': o.get('rootClass'),
+                          'integrity': o.get('integrity'),
+                          'exists': o.get('exists'),
+                          'complete': o.get('complete'),
+                          'issues': o.get('issues'),
+                          'warnings': o.get('warnings'),
+                      }
+                      for o in r.get('outputs', []) if (not o.get('complete')) or o.get('warnings')
+                  ],
+              }
+              for r in d.get('runs', []) if (not r.get('strongDurableComplete')) or r.get('issues') or r.get('warnings')
+          ]
+          print(json.dumps(out, ensure_ascii=False, indent=2))
+          PY
