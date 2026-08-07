@@ -1,0 +1,113 @@
+name: Temporary audit N2 heartbeat gaps f7aba8
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/tmp-audit-n2-heartbeat-gaps-f7aba8.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: audit-n2-heartbeat-gaps-f7aba8
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: [self-hosted, macOS]
+    timeout-minutes: 20
+    env:
+      MAIN_SHA: f7aba8a114aa6285b88033e27cf080c3f66ac900
+      CANONICAL_REPO: /Users/m-shogo/Developer/personal/boat-pon
+      CAPTURE_RUNTIME_SHA: 967ad45d1f72b4ad17e036a25926c1e61ba4e091
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: f7aba8a114aa6285b88033e27cf080c3f66ac900
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Fast-forward canonical main without moving immutable capture runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C "$CANONICAL_REPO" branch --show-current)" = main
+          test -z "$(git -C "$CANONICAL_REPO" status --porcelain)"
+          BINDING="$CANONICAL_REPO/data/private/trifecta-capture/runtime-authority.json"
+          test "$(node -p "JSON.parse(require('fs').readFileSync('$BINDING','utf8')).authoritySha")" = "$CAPTURE_RUNTIME_SHA"
+          git -C "$CANONICAL_REPO" fetch origin main
+          git -C "$CANONICAL_REPO" merge --ff-only "$MAIN_SHA"
+          test "$(git -C "$CANONICAL_REPO" rev-parse HEAD)" = "$MAIN_SHA"
+          test -z "$(git -C "$CANONICAL_REPO" status --porcelain)"
+          test "$(node -p "JSON.parse(require('fs').readFileSync('$BINDING','utf8')).authoritySha")" = "$CAPTURE_RUNTIME_SHA"
+      - name: Install audit dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$CANONICAL_REPO"
+          npm ci
+          test -z "$(git status --porcelain --untracked-files=no)"
+      - name: Run sanitized heartbeat gap diagnostic
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPORT="$RUNNER_TEMP/n2-heartbeat-gaps.json"
+          export REPORT
+          cd "$CANONICAL_REPO"
+          set +e
+          BOAT_PON_DATA_ROOT="$CANONICAL_REPO" \
+            node node_modules/tsx/dist/cli.mjs \
+            scripts/report-n2-trifecta-private-heartbeat-gaps.ts > "$REPORT"
+          REPORT_EXIT=$?
+          set -e
+          export REPORT_EXIT
+          test "$REPORT_EXIT" -eq 0 -o "$REPORT_EXIT" -eq 3
+          test -s "$REPORT"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const r = JSON.parse(fs.readFileSync(process.env.REPORT, 'utf8'));
+          const violations = [];
+          if (r.networkRequestCount !== 0 || r.databaseReadCount !== 0 || r.databaseWriteCount !== 0) violations.push('IO_BOUNDARY_CHANGED');
+          if (r.rawOddsValuesRead !== false || r.rawOddsValuesPrinted !== false || r.rawOddsValuesPublished !== false) violations.push('RAW_BOUNDARY_CHANGED');
+          if (r.currentBuyChanged !== false || r.lineChanged !== false || r.publicPublished !== false
+            || r.automatedBettingChanged !== false || r.productionApplyExecuted !== false) violations.push('PROTECTED_BOUNDARY_CHANGED');
+          const summary = {
+            evidenceSchemaVersion: 'n2-heartbeat-gap-live-audit-v1',
+            status: violations.length ? 'BLOCKED' : r.status,
+            blockers: r.blockers,
+            violations,
+            checkedAt: r.checkedAt,
+            date: r.date,
+            historyPresent: r.historyPresent,
+            historyRecordCount: r.historyRecordCount,
+            historyCoverageStartsAt: r.historyCoverageStartsAt,
+            latestRecordedAt: r.latestRecordedAt,
+            latestAgeSeconds: r.latestAgeSeconds,
+            expectedIntervalSeconds: r.expectedIntervalSeconds,
+            gapThresholdSeconds: r.gapThresholdSeconds,
+            significantGapCount: r.significantGapCount,
+            recentSignificantGapCount: r.recentSignificantGapCount,
+            largestGapSeconds: r.largestGapSeconds,
+            currentGapOverThreshold: r.currentGapOverThreshold,
+            latestSignificantGap: r.latestSignificantGap,
+            affectedCheckpointCount: r.affectedCheckpointCount,
+            planStatus: r.planStatus,
+            planBlockers: r.planBlockers,
+            captureRuntimeAuthorityUnchanged: process.env.CAPTURE_RUNTIME_SHA,
+            networkRequestCount: r.networkRequestCount,
+            databaseReadCount: r.databaseReadCount,
+            databaseWriteCount: r.databaseWriteCount,
+            rawOddsValuesRead: r.rawOddsValuesRead,
+            currentBuyChanged: r.currentBuyChanged,
+            lineChanged: r.lineChanged,
+            publicPublished: r.publicPublished,
+            automatedBettingChanged: r.automatedBettingChanged,
+            productionApplyExecuted: r.productionApplyExecuted,
+          };
+          console.log('SANITIZED_N2_HEARTBEAT_GAP_LIVE_AUDIT_BEGIN');
+          console.log(JSON.stringify(summary, null, 2));
+          console.log('SANITIZED_N2_HEARTBEAT_GAP_LIVE_AUDIT_END');
+          if (violations.length) process.exit(1);
+          NODE
