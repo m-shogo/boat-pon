@@ -1,0 +1,87 @@
+name: Audit N2 trifecta operability 20260807
+
+on:
+  push:
+    branches:
+      - ops/audit-n2-trifecta-operability-20260807
+    paths:
+      - .github/workflows/audit-n2-trifecta-operability-20260807.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: audit-n2-trifecta-operability-20260807
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: [self-hosted, macOS, boat-pon-local]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ops/audit-n2-trifecta-operability-20260807
+      - name: Run metadata-only private capture operability audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          CANONICAL="/Users/m-shogo/Developer/personal/boat-pon"
+          cd "$CANONICAL"
+          set +e
+          BOAT_PON_DATA_ROOT="$CANONICAL" node --import tsx \
+            "$GITHUB_WORKSPACE/scripts/report-n2-trifecta-private-capture-operability.ts" \
+            --date 2026-08-07 \
+            > "$RUNNER_TEMP/n2-operability.json"
+          cli_status=$?
+          set -e
+          [ "$cli_status" -eq 0 ] || [ "$cli_status" -eq 3 ]
+          python3 - <<'PY'
+          import json, os
+          p = os.path.join(os.environ["RUNNER_TEMP"], "n2-operability.json")
+          data = json.load(open(p))
+          assert data["networkRequestCount"] == 0
+          assert data["databaseReadCount"] == 0
+          assert data["databaseWriteCount"] == 0
+          assert data["rawOddsValuesRead"] is False
+          assert data["rawOddsValuesPrinted"] is False
+          assert data["rawOddsValuesPublished"] is False
+          assert data["currentBuyChanged"] is False
+          assert data["lineChanged"] is False
+          assert data["publicPublished"] is False
+          assert data["automatedBettingChanged"] is False
+          assert data["productionApplyExecuted"] is False
+          states = {}
+          by_label = {}
+          for item in data["checkpoints"]:
+              states[item["state"]] = states.get(item["state"], 0) + 1
+              label = item["checkpointLabel"]
+              bucket = by_label.setdefault(label, {})
+              bucket[item["state"]] = bucket.get(item["state"], 0) + 1
+          summary = {
+              "status": data["status"],
+              "blockers": data["blockers"],
+              "checkedAt": data["checkedAt"],
+              "date": data["date"],
+              "selectedVenueCode": data["selectedVenueCode"],
+              "authoritySha": data["authoritySha"],
+              "launchdRegistered": data["launchdRegistered"],
+              "authorization": data["authorization"],
+              "heartbeat": data["heartbeat"],
+              "coverage": data["coverage"],
+              "stateCounts": states,
+              "stateCountsByCheckpointLabel": by_label,
+              "storage": data["storage"],
+              "networkRequestCount": 0,
+              "databaseReadCount": 0,
+              "databaseWriteCount": 0,
+              "rawOddsValuesRead": False,
+              "rawOddsValuesPublished": False,
+              "currentBuyChanged": False,
+              "lineChanged": False,
+              "publicPublished": False,
+              "automatedBettingChanged": False,
+              "outputDigest": data["outputDigest"],
+          }
+          print(json.dumps(summary, indent=2, sort_keys=True))
+          PY
