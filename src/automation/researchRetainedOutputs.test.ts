@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import test from "node:test";
@@ -57,5 +57,32 @@ test("automation control output is retained", () => {
     put(root, source, JSON.stringify({ planner: "v1" }) + "\n");
     const result = retainExecutorOutputs({ repoRoot: root, runId: "12345", outputPaths: [source] });
     assert.match(result.historyOutputs[0] ?? "", /^reports\/automation\/retained-outputs\/12345\/[0-9a-f]{64}-planner-candidates\.json$/u);
+  });
+});
+
+test("all mutable sources are validated before any retained file is created", () => {
+  withRoot((root) => {
+    const good = "reports/n2/good.json";
+    const missing = "reports/n2/missing.json";
+    put(root, good, JSON.stringify({ outputDigest: "d".repeat(64) }) + "\n");
+    assert.throws(
+      () => retainExecutorOutputs({ repoRoot: root, runId: "12345", outputPaths: [good, missing] }),
+      /RETAINED_OUTPUT_SOURCE_MISSING/u,
+    );
+    assert.equal(existsSync(join(root, "reports/automation/retained-outputs/12345")), false);
+  });
+});
+
+test("different sources converging to the same retained target are deduplicated", () => {
+  withRoot((root) => {
+    const a = "reports/n2/example.json";
+    const b = "reports/automation/example.json";
+    const content = JSON.stringify({ outputDigest: "e".repeat(64), value: "same" }) + "\n";
+    put(root, a, content);
+    put(root, b, content);
+    const result = retainExecutorOutputs({ repoRoot: root, runId: "12345", outputPaths: [a, b] });
+    assert.equal(result.historyOutputs.length, 1);
+    assert.equal(result.retainedOutputs.length, 1);
+    assert.match(result.historyOutputs[0] ?? "", /^reports\/automation\/retained-outputs\/12345\/[0-9a-f]{64}-example\.json$/u);
   });
 });
