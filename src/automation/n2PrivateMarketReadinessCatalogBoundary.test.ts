@@ -34,7 +34,7 @@ test("readiness catalog remains metadata-only and cannot authorize experiment fr
 test("readiness catalog scans only local private readiness artifacts", () => {
   assert.match(source, /data\/private\/trifecta-market-experiments\/readiness/u);
   assert.match(source, /READINESS_CATALOG_ARTIFACT_DIGEST_MISMATCH/u);
-  assert.match(source, /READINESS_CATALOG_ARTIFACT_FILE_MODE_INVALID/u);
+  assert.match(source, /\(stat\.mode & 0o777\) !== 0o600/u);
   assert.doesNotMatch(source, /\bfetch\s*\(|DatabaseSync|openDb|boat\.sqlite/u);
   assert.match(source, /networkRequestCount:\s*0/u);
   assert.match(source, /databaseReadCount:\s*0/u);

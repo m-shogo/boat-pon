@@ -76,6 +76,7 @@ function readiness(input: {
     heartbeatAffectedCheckpointCount: 0,
     heartbeatCurrentGapOverThreshold: false,
     heartbeatPlanStatus: "PASS" as const,
+    privateResearchOnly: true as const,
     automaticFreezeAuthorized: false as const,
     outcomeDataRead: false as const,
     validationDataRead: false as const,
