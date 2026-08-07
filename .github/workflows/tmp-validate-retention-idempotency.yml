@@ -1,0 +1,120 @@
+name: Temporary durable retention idempotency validation
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    if: github.head_ref == 'ops/validate-retention-idempotency-478ef6a'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout merged main authority
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Materialize real automation state read-only
+        id: state
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin automation/boat-pon-research
+          SOURCE_SHA="$(git rev-parse origin/automation/boat-pon-research)"
+          STATE_DIR="/tmp/boat-pon-retention-idempotency-source"
+          rm -rf "$STATE_DIR" /tmp/boat-pon-retention-idempotency-copy
+          git worktree add --detach "$STATE_DIR" "$SOURCE_SHA"
+          test -z "$(git -C "$STATE_DIR" status --porcelain)"
+          cp -R "$STATE_DIR" /tmp/boat-pon-retention-idempotency-copy
+          echo "source_sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
+          echo "source_before=$SOURCE_SHA"
+
+      - name: Run retention persistence twice on isolated copy
+        env:
+          SOURCE_SHA: ${{ steps.state.outputs.source_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          COPY=/tmp/boat-pon-retention-idempotency-copy
+          MAIN_SHA="$(git rev-parse HEAD)"
+          OBS1="$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
+          OBS2="$(date -u -d '+1 minute' +%Y-%m-%dT%H:%M:%S.000Z)"
+
+          set +e
+          node --import tsx scripts/persist-research-durable-retention-snapshot.ts \
+            --repo-root="$COPY" \
+            --source-state-sha="$SOURCE_SHA" \
+            --main-authority-sha="$MAIN_SHA" \
+            --observed-at="$OBS1" > /tmp/retention-first.json
+          FIRST_RC=$?
+          node --import tsx scripts/persist-research-durable-retention-snapshot.ts \
+            --repo-root="$COPY" \
+            --source-state-sha="$SOURCE_SHA" \
+            --main-authority-sha="$MAIN_SHA" \
+            --observed-at="$OBS2" > /tmp/retention-second.json
+          SECOND_RC=$?
+          set -e
+          for rc in "$FIRST_RC" "$SECOND_RC"; do
+            if [ "$rc" -ne 0 ] && [ "$rc" -ne 3 ]; then
+              echo "::error::unexpected retention exit code: $rc"
+              exit "$rc"
+            fi
+          done
+
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const a = JSON.parse(fs.readFileSync('/tmp/retention-first.json', 'utf8'));
+          const b = JSON.parse(fs.readFileSync('/tmp/retention-second.json', 'utf8'));
+          const allowed = /^reports\/automation\/retention\/durable-knowledge\/\d{4}-\d{2}-\d{2}\/[0-9a-f]{64}\.json$/;
+          if (!allowed.test(a.relativePath) || !allowed.test(b.relativePath)) throw new Error('unsafe retention path');
+          if (a.relativePath !== b.relativePath) throw new Error(`path churn: ${a.relativePath} -> ${b.relativePath}`);
+          if (a.evidenceDigest !== b.evidenceDigest) throw new Error('semantic evidence digest churn');
+          if (b.changed !== false) throw new Error('second persistence must be NO_CHANGE');
+          if (a.auditStatus !== b.auditStatus) throw new Error('audit status drift between identical evidence');
+          for (const key of [
+            'automaticPromotionAuthorized','currentBuyConnectionAuthorized','lineConnectionAuthorized',
+            'publicPublishAuthorized','databaseWriteAuthorized','automatedBettingAuthorized','productionApplyAuthorized'
+          ]) {
+            if (a[key] !== false || b[key] !== false) throw new Error(`protected authority widened: ${key}`);
+          }
+          console.log(JSON.stringify({
+            firstChanged: a.changed,
+            secondChanged: b.changed,
+            relativePath: b.relativePath,
+            auditStatus: b.auditStatus,
+            historyFileCount: b.historyFileCount,
+            durableCompleteCount: b.durableCompleteCount,
+            strongDurableCompleteCount: b.strongDurableCompleteCount,
+            invalidHistoryCount: b.invalidHistoryCount,
+            missingOutputReferenceCount: b.missingOutputReferenceCount,
+            invalidOutputReferenceCount: b.invalidOutputReferenceCount,
+            legacyCompatibilityCount: b.legacyCompatibilityCount,
+            evidenceDigest: b.evidenceDigest,
+          }, null, 2));
+          NODE
+
+      - name: Prove real automation state remained untouched
+        env:
+          SOURCE_SHA: ${{ steps.state.outputs.source_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          STATE_DIR=/tmp/boat-pon-retention-idempotency-source
+          test "$(git -C "$STATE_DIR" rev-parse HEAD)" = "$SOURCE_SHA"
+          test -z "$(git -C "$STATE_DIR" status --porcelain)"
+          git fetch origin automation/boat-pon-research
+          echo "source_state_unchanged_locally=true"
+          echo "remote_state_now=$(git rev-parse origin/automation/boat-pon-research)"
