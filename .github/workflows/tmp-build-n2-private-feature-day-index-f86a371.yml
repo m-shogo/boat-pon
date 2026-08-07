@@ -1,0 +1,142 @@
+name: Temporary build N2 private feature day index f86a371
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/tmp-build-n2-private-feature-day-index-f86a371.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-n2-private-feature-day-index-f86a371
+  cancel-in-progress: false
+
+jobs:
+  build-index:
+    runs-on: [self-hosted, macOS]
+    timeout-minutes: 20
+    env:
+      MAIN_SHA: f86a371049775f8cce59f837db32854a7f22376b
+      CANONICAL_REPO: /Users/m-shogo/Developer/personal/boat-pon
+      CAPTURE_RUNTIME_SHA: 967ad45d1f72b4ad17e036a25926c1e61ba4e091
+      INDEX_DATE: '2026-08-07'
+      VENUE_CODE: '10'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: f86a371049775f8cce59f837db32854a7f22376b
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Fast-forward canonical main without moving immutable collector runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C "$CANONICAL_REPO" branch --show-current)" = main
+          test -z "$(git -C "$CANONICAL_REPO" status --porcelain)"
+          BINDING="$CANONICAL_REPO/data/private/trifecta-capture/runtime-authority.json"
+          test "$(node -p "JSON.parse(require('fs').readFileSync('$BINDING','utf8')).authoritySha")" = "$CAPTURE_RUNTIME_SHA"
+          git -C "$CANONICAL_REPO" fetch origin main
+          git -C "$CANONICAL_REPO" merge --ff-only "$MAIN_SHA"
+          test "$(git -C "$CANONICAL_REPO" rev-parse HEAD)" = "$MAIN_SHA"
+          test -z "$(git -C "$CANONICAL_REPO" status --porcelain)"
+          test "$(node -p "JSON.parse(require('fs').readFileSync('$BINDING','utf8')).authoritySha")" = "$CAPTURE_RUNTIME_SHA"
+      - name: Install local analysis dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$CANONICAL_REPO"
+          npm ci
+          test -z "$(git status --porcelain --untracked-files=no)"
+      - name: Build and verify private day index
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPORT="$RUNNER_TEMP/n2-private-feature-day-index.json"
+          export REPORT
+          cd "$CANONICAL_REPO"
+          BOAT_PON_DATA_ROOT="$CANONICAL_REPO" \
+            node node_modules/tsx/dist/cli.mjs \
+            scripts/build-n2-trifecta-private-market-feature-day-index.ts \
+            --date "$INDEX_DATE" --venue "$VENUE_CODE" --write-private > "$REPORT"
+          test -s "$REPORT"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const crypto = require('node:crypto');
+          const r = JSON.parse(fs.readFileSync(process.env.REPORT, 'utf8'));
+          const violations = [];
+          if (r.summaryVersion !== 'n2-trifecta-private-market-feature-day-index-summary-v1') violations.push('SUMMARY_VERSION');
+          if (r.date !== process.env.INDEX_DATE || r.venueCode !== process.env.VENUE_CODE || r.raceCount !== 12) violations.push('SCOPE');
+          if (r.privateFeatureArtifactsRead !== true || r.rawCaptureEvidenceRead !== false) violations.push('READ_BOUNDARY');
+          if (r.rawOddsValuesPrinted !== false || r.rawOddsValuesPublished !== false) violations.push('RAW_PUBLICATION_BOUNDARY');
+          if (r.networkRequestCount !== 0 || r.databaseReadCount !== 0 || r.databaseWriteCount !== 0) violations.push('IO_BOUNDARY');
+          if (r.currentBuyChanged !== false || r.lineChanged !== false || r.publicPublished !== false
+            || r.automatedBettingChanged !== false || r.productionApplyExecuted !== false) violations.push('PROTECTED_BOUNDARY');
+          if (r.privateIndexWrittenOrReused !== true || typeof r.privateIndexRelativePath !== 'string') violations.push('INDEX_NOT_WRITTEN');
+          if (!Array.isArray(r.races) || r.races.length !== 12) violations.push('RACE_COUNT');
+
+          const expected = `data/private/trifecta-market-features/${process.env.INDEX_DATE}/${process.env.VENUE_CODE}/index.json`;
+          if (r.privateIndexRelativePath !== expected) violations.push('INDEX_PATH');
+          const absolute = path.join(process.env.CANONICAL_REPO, expected);
+          const lst = fs.lstatSync(absolute);
+          const stat = fs.statSync(absolute);
+          if (lst.isSymbolicLink() || !stat.isFile() || (stat.mode & 0o777) !== 0o600) violations.push('INDEX_MODE');
+          const index = JSON.parse(fs.readFileSync(absolute, 'utf8'));
+          if (index.indexVersion !== 'n2-trifecta-private-market-feature-day-index-v1'
+            || index.date !== process.env.INDEX_DATE || index.venueCode !== process.env.VENUE_CODE
+            || index.raceCount !== 12 || index.indexDigest !== r.indexDigest
+            || index.privateResearchOnly !== true || index.publicPublishAuthorized !== false
+            || index.databaseReadCount !== 0 || index.databaseWriteCount !== 0 || index.networkRequestCount !== 0
+            || index.rawCaptureEvidenceRead !== false || index.rawOddsValuesPublished !== false
+            || index.currentBuyConnectionAuthorized !== false || index.lineConnectionAuthorized !== false
+            || index.automatedBettingAuthorized !== false || index.productionApplyAuthorized !== false) {
+            violations.push('INDEX_BOUNDARY');
+          }
+          const serialized = JSON.stringify(index);
+          if (/"sequence"|"snapshots"|"transitions"|"selections"|"odds"/.test(serialized)) violations.push('FEATURE_VECTOR_LEAK');
+          if (!Array.isArray(index.races) || index.races.length !== 12) violations.push('INDEX_RACE_COUNT');
+          const summary = {
+            evidenceSchemaVersion: 'n2-private-feature-day-index-live-v1',
+            status: violations.length ? 'BLOCKED' : r.status,
+            violations,
+            date: r.date,
+            venueCode: r.venueCode,
+            passCount: r.passCount,
+            partialCount: r.partialCount,
+            noDataCount: r.noDataCount,
+            totalSnapshotCount: r.totalSnapshotCount,
+            totalTransitionCount: r.totalTransitionCount,
+            privateIndexChanged: r.privateIndexChanged,
+            indexDigest: r.indexDigest,
+            races: r.races.map((race) => ({
+              raceNo: race.raceNo,
+              status: race.status,
+              availableCheckpoints: race.availableCheckpoints,
+              missingCheckpoints: race.missingCheckpoints,
+              snapshotCount: race.snapshotCount,
+              transitionCount: race.transitionCount,
+              sourceLoadDigest: race.sourceLoadDigest,
+              featureArtifactDigest: race.featureArtifactDigest,
+            })),
+            captureRuntimeAuthorityUnchanged: process.env.CAPTURE_RUNTIME_SHA,
+            networkRequestCount: r.networkRequestCount,
+            databaseReadCount: r.databaseReadCount,
+            databaseWriteCount: r.databaseWriteCount,
+            rawCaptureEvidenceRead: r.rawCaptureEvidenceRead,
+            rawOddsValuesPrinted: r.rawOddsValuesPrinted,
+            rawOddsValuesPublished: r.rawOddsValuesPublished,
+            currentBuyChanged: r.currentBuyChanged,
+            lineChanged: r.lineChanged,
+            publicPublished: r.publicPublished,
+            automatedBettingChanged: r.automatedBettingChanged,
+            productionApplyExecuted: r.productionApplyExecuted,
+          };
+          console.log('SANITIZED_N2_PRIVATE_FEATURE_DAY_INDEX_BEGIN');
+          console.log(JSON.stringify(summary, null, 2));
+          console.log('SANITIZED_N2_PRIVATE_FEATURE_DAY_INDEX_END');
+          if (violations.length) process.exit(1);
+          NODE
