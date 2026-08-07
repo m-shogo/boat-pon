@@ -1,0 +1,78 @@
+name: Fix N2 private market daily readiness self digest
+
+on:
+  push:
+    branches:
+      - feat/n2-private-market-daily-readiness
+    paths:
+      - .github/workflows/tmp-fix-n2-private-market-daily-readiness-self-digest.yml
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/tmp-fix-n2-private-market-daily-readiness-self-digest.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/n2-private-market-daily-readiness
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Require stored day-index self digest before readiness rebuild
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('src/research-replay/n2TrifectaPrivateMarketDailyReadiness.ts')
+          text = path.read_text()
+          old = '''  if (typeof stored.indexDigest !== "string" || !/^[0-9a-f]{64}$/u.test(stored.indexDigest)) {
+            throw new Error("DAILY_READINESS_DAY_INDEX_DIGEST_INVALID");
+          }
+
+          const rebuilt = buildN2TrifectaPrivateMarketFeatureDayIndex({'''
+          new = '''  if (typeof stored.indexDigest !== "string" || !/^[0-9a-f]{64}$/u.test(stored.indexDigest)) {
+            throw new Error("DAILY_READINESS_DAY_INDEX_DIGEST_INVALID");
+          }
+          const storedDigest = stored.indexDigest;
+          const { indexDigest: _storedDigest, ...storedCore } = stored;
+          if (canonicalHash(storedCore) !== storedDigest) {
+            throw new Error("DAILY_READINESS_DAY_INDEX_DIGEST_MISMATCH");
+          }
+
+          const rebuilt = buildN2TrifectaPrivateMarketFeatureDayIndex({'''
+          if old not in text:
+              raise SystemExit('readiness digest anchor not found')
+          text = text.replace(old, new, 1)
+          text = text.replace('''  if (rebuilt.indexDigest !== stored.indexDigest) {
+            throw new Error("DAILY_READINESS_DAY_INDEX_DIGEST_MISMATCH");
+          }''', '''  if (rebuilt.indexDigest !== storedDigest) {
+            throw new Error("DAILY_READINESS_DAY_INDEX_DIGEST_MISMATCH");
+          }''', 1)
+          path.write_text(text)
+          PY
+      - name: Verify focused readiness tests and typecheck
+        run: |
+          node --test --import tsx src/research-replay/n2TrifectaPrivateMarketDailyReadiness.test.ts
+          node --test --import tsx src/automation/n2PrivateMarketDailyReadinessBoundary.test.ts
+          npm run typecheck
+      - name: Commit validated fix and remove one-shot workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/research-replay/n2TrifectaPrivateMarketDailyReadiness.ts
+          git rm .github/workflows/tmp-fix-n2-private-market-daily-readiness-self-digest.yml
+          git commit -m "fix(research): verify readiness day-index self digest"
+          git push origin HEAD:feat/n2-private-market-daily-readiness
