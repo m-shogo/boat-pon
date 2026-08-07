@@ -48,6 +48,7 @@ const writeResult = writePrivate
   ? writeN2TrifectaPrivateMarketExperimentInputManifest({ rootDir, manifest })
   : null;
 
+// Stdout contains lineage/cohort metadata only; feature vectors and labels stay unread here.
 const sanitized = {
   summaryVersion: "n2-trifecta-private-market-experiment-input-summary-v1",
   manifestVersion: manifest.manifestVersion,
