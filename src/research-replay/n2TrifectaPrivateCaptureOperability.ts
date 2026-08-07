@@ -10,7 +10,6 @@ import { resolve, sep } from "node:path";
 import { canonicalHash } from "./canonical";
 import {
   N2_TRIFECTA_PRIVATE_CAPTURE_LATE_WINDOW_SECONDS,
-  type N2TrifectaPrivateCaptureEnvelope,
 } from "./n2TrifectaPrivateCaptureExecutor";
 import {
   readN2TrifectaPrivateDailyPlanCache,
@@ -109,14 +108,33 @@ type LatestStatusLike = {
   report?: Partial<N2TrifectaLocalCaptureTickReport> | unknown;
 };
 
+type AcceptedMarkerLike = {
+  markerVersion?: unknown;
+  checkpointKey?: unknown;
+  raceIdentity?: unknown;
+  checkpointLabel?: unknown;
+  rawSha256?: unknown;
+  rawRelativePath?: unknown;
+  envelopeRelativePath?: unknown;
+  acceptedAt?: unknown;
+  databaseWriteAuthorized?: unknown;
+  productionApplyExecuted?: unknown;
+};
+
 type StorageSummary = {
   fileCount: number;
   bytes: number;
   symlinkCountSkipped: number;
 };
 
+type CaptureEvidenceSummary = {
+  blockersByCheckpoint: Map<string, string[]>;
+  invalidReportCount: number;
+};
+
 const MAX_JSON_BYTES = 2_000_000;
 const SHA_RE = /^[0-9a-f]{40}$/u;
+const SHA256_RE = /^[0-9a-f]{64}$/u;
 
 function parseInstant(value: string): number | null {
   const parsed = Date.parse(value);
@@ -208,27 +226,87 @@ function reservationsByCheckpoint(rootDir: string, date: string): Map<string, N2
     `data/private/trifecta-capture/reservations/${date}`,
   )) {
     const reservation = readPrivateJson<N2TrifectaLocalCaptureReservation>(rootDir, relativePath);
+    if (reservation.date !== date) throw new Error("RESERVATION_DATE_MISMATCH");
     const key = `${reservation.raceIdentity}|${reservation.checkpointLabel}`;
+    if (map.has(key)) throw new Error("RESERVATION_CHECKPOINT_DUPLICATE");
     map.set(key, reservation);
   }
   return map;
 }
 
-function blockedEnvelopeCodes(rootDir: string, relativeDir: string): string[] {
-  const dir = resolveInside(rootDir, relativeDir);
-  if (!existsSync(dir)) return [];
-  const lst = lstatSync(dir);
-  if (lst.isSymbolicLink() || !lst.isDirectory()) return ["CHECKPOINT_DIRECTORY_TYPE_INVALID"];
-  const codes: string[] = [];
-  for (const name of readdirSync(dir).filter((value) => value.endsWith(".envelope.json")).sort()) {
+function captureEvidenceByCheckpoint(rootDir: string, date: string): CaptureEvidenceSummary {
+  const blockersByCheckpoint = new Map<string, string[]>();
+  let invalidReportCount = 0;
+  for (const relativePath of listRegularJsonFiles(
+    rootDir,
+    `data/private/trifecta-capture/reports/${date}`,
+  )) {
+    let report: N2TrifectaLocalCaptureTickReport;
     try {
-      const envelope = readPrivateJson<N2TrifectaPrivateCaptureEnvelope>(rootDir, `${relativeDir}/${name}`);
-      if (envelope.status === "BLOCKED") codes.push(...envelope.blockers);
+      report = readPrivateJson<N2TrifectaLocalCaptureTickReport>(rootDir, relativePath);
     } catch {
-      codes.push("ENVELOPE_METADATA_INVALID");
+      invalidReportCount += 1;
+      continue;
+    }
+    for (const result of report.executorReport?.entryResults ?? []) {
+      if (result.result !== "BLOCKED_EVIDENCE_SAVED") continue;
+      const key = `${result.raceIdentity}|${result.checkpointLabel}`;
+      const existing = blockersByCheckpoint.get(key) ?? [];
+      blockersByCheckpoint.set(
+        key,
+        [...new Set([
+          ...existing,
+          ...(result.blockers.length > 0 ? result.blockers : ["BLOCKED_CAPTURE_REPORTED"]),
+        ])].sort(),
+      );
     }
   }
-  return [...new Set(codes)].sort();
+  return { blockersByCheckpoint, invalidReportCount };
+}
+
+function auditAcceptedMarker(input: {
+  rootDir: string;
+  relativePath: string;
+  directory: string;
+  raceIdentity: string;
+  checkpointLabel: string;
+}): { accepted: boolean; blockers: string[] } {
+  const path = resolveInside(input.rootDir, input.relativePath);
+  if (!existsSync(path)) return { accepted: false, blockers: [] };
+  let marker: AcceptedMarkerLike;
+  try {
+    marker = readPrivateJson<AcceptedMarkerLike>(input.rootDir, input.relativePath);
+  } catch {
+    return { accepted: false, blockers: ["ACCEPTED_MARKER_METADATA_INVALID"] };
+  }
+  const blockers: string[] = [];
+  if (marker.markerVersion !== "n2-trifecta-private-capture-accepted-v1") {
+    blockers.push("ACCEPTED_MARKER_VERSION_INVALID");
+  }
+  if (typeof marker.checkpointKey !== "string" || !SHA256_RE.test(marker.checkpointKey)) {
+    blockers.push("ACCEPTED_MARKER_CHECKPOINT_KEY_INVALID");
+  }
+  if (marker.raceIdentity !== input.raceIdentity) blockers.push("ACCEPTED_MARKER_RACE_IDENTITY_MISMATCH");
+  if (marker.checkpointLabel !== input.checkpointLabel) blockers.push("ACCEPTED_MARKER_CHECKPOINT_LABEL_MISMATCH");
+  if (typeof marker.rawSha256 !== "string" || !SHA256_RE.test(marker.rawSha256)) {
+    blockers.push("ACCEPTED_MARKER_RAW_SHA256_INVALID");
+  }
+  if (typeof marker.rawRelativePath !== "string"
+    || !marker.rawRelativePath.startsWith(`${input.directory}/`)
+    || !marker.rawRelativePath.endsWith(".html")) {
+    blockers.push("ACCEPTED_MARKER_RAW_PATH_INVALID");
+  }
+  if (typeof marker.envelopeRelativePath !== "string"
+    || !marker.envelopeRelativePath.startsWith(`${input.directory}/`)
+    || !marker.envelopeRelativePath.endsWith(".envelope.json")) {
+    blockers.push("ACCEPTED_MARKER_ENVELOPE_PATH_INVALID");
+  }
+  if (typeof marker.acceptedAt !== "string" || parseInstant(marker.acceptedAt) == null) {
+    blockers.push("ACCEPTED_MARKER_ACCEPTED_AT_INVALID");
+  }
+  if (marker.databaseWriteAuthorized !== false) blockers.push("ACCEPTED_MARKER_DATABASE_WRITE_AUTHORITY_INVALID");
+  if (marker.productionApplyExecuted !== false) blockers.push("ACCEPTED_MARKER_PRODUCTION_APPLY_INVALID");
+  return { accepted: blockers.length === 0, blockers: [...new Set(blockers)].sort() };
 }
 
 function findLastSuccessfulTick(rootDir: string, date: string): string | null {
@@ -241,7 +319,7 @@ function findLastSuccessfulTick(rootDir: string, date: string): string | null {
       const parsed = parseInstant(report.completedAt);
       if (parsed != null && (latest == null || parsed > latest)) latest = parsed;
     } catch {
-      // Operability remains best-effort for historical event reports; latest status is audited separately.
+      // The main report audit records malformed metadata separately.
     }
   }
   return latest == null ? null : new Date(latest).toISOString();
@@ -349,10 +427,30 @@ export function buildN2TrifectaPrivateCaptureOperabilityReport(input: {
   }
   if (!latestStatusPresent) blockers.push("LATEST_STATUS_MISSING");
 
-  const reservations = plan ? reservationsByCheckpoint(input.dataRoot, input.date) : new Map();
+  let reservations = new Map<string, N2TrifectaLocalCaptureReservation>();
+  try {
+    reservations = plan ? reservationsByCheckpoint(input.dataRoot, input.date) : new Map();
+  } catch {
+    blockers.push("RESERVATION_METADATA_INVALID");
+  }
+  let captureEvidence: CaptureEvidenceSummary = {
+    blockersByCheckpoint: new Map(),
+    invalidReportCount: 0,
+  };
+  try {
+    captureEvidence = captureEvidenceByCheckpoint(input.dataRoot, input.date);
+  } catch {
+    blockers.push("CAPTURE_REPORT_METADATA_INVALID");
+  }
+  if (captureEvidence.invalidReportCount > 0) blockers.push("CAPTURE_REPORT_METADATA_INVALID");
+
   const checkpoints: N2TrifectaPrivateCaptureOperabilityReport["checkpoints"] = [];
   if (plan && venueCode && nowMs != null) {
-    for (const entry of [...plan.entries].sort((a, b) => a.targetCaptureAt.localeCompare(b.targetCaptureAt))) {
+    for (const entry of [...plan.entries].sort((a, b) => {
+      const target = a.targetCaptureAt.localeCompare(b.targetCaptureAt);
+      if (target !== 0) return target;
+      return a.raceIdentity.localeCompare(b.raceIdentity);
+    })) {
       const directory = checkpointDirectory({
         date: entry.date,
         venueCode: entry.venueCode,
@@ -360,8 +458,21 @@ export function buildN2TrifectaPrivateCaptureOperabilityReport(input: {
         checkpointLabel: entry.checkpointLabel,
       });
       const acceptedPath = `${directory}/accepted.json`;
-      const accepted = existsSync(resolveInside(input.dataRoot, acceptedPath));
-      const envelopeBlockers = accepted ? [] : blockedEnvelopeCodes(input.dataRoot, directory);
+      const acceptedAudit = auditAcceptedMarker({
+        rootDir: input.dataRoot,
+        relativePath: acceptedPath,
+        directory,
+        raceIdentity: entry.raceIdentity,
+        checkpointLabel: entry.checkpointLabel,
+      });
+      if (acceptedAudit.blockers.length > 0) blockers.push(...acceptedAudit.blockers);
+      const evidenceBlockers = acceptedAudit.accepted
+        ? []
+        : captureEvidence.blockersByCheckpoint.get(`${entry.raceIdentity}|${entry.checkpointLabel}`) ?? [];
+      const checkpointBlockers = [...new Set([
+        ...acceptedAudit.blockers,
+        ...evidenceBlockers,
+      ])].sort();
       const reservation = reservations.get(`${entry.raceIdentity}|${entry.checkpointLabel}`) ?? null;
       const targetMs = parseInstant(entry.targetCaptureAt);
       if (targetMs == null) {
@@ -369,8 +480,8 @@ export function buildN2TrifectaPrivateCaptureOperabilityReport(input: {
         continue;
       }
       let state: N2TrifectaCheckpointOperabilityState;
-      if (accepted) state = "ACCEPTED";
-      else if (envelopeBlockers.length > 0) state = "BLOCKED_EVIDENCE";
+      if (acceptedAudit.accepted) state = "ACCEPTED";
+      else if (checkpointBlockers.length > 0) state = "BLOCKED_EVIDENCE";
       else if (reservation) state = "RESERVED_NO_ACCEPTED_EVIDENCE";
       else if (nowMs > targetMs + N2_TRIFECTA_PRIVATE_CAPTURE_LATE_WINDOW_SECONDS * 1_000) {
         state = "MISSED_NO_RESERVATION";
@@ -381,7 +492,7 @@ export function buildN2TrifectaPrivateCaptureOperabilityReport(input: {
         checkpointLabel: entry.checkpointLabel,
         targetCaptureAt: entry.targetCaptureAt,
         state,
-        blockerCodes: envelopeBlockers,
+        blockerCodes: checkpointBlockers,
       });
     }
   }
@@ -408,7 +519,11 @@ export function buildN2TrifectaPrivateCaptureOperabilityReport(input: {
   ].includes(item.state));
   const acceptedMatured = matured.filter((item) => item.state === "ACCEPTED");
   let consecutiveMissedCheckpointCount = 0;
-  for (const checkpoint of [...matured].sort((a, b) => b.targetCaptureAt.localeCompare(a.targetCaptureAt))) {
+  for (const checkpoint of [...matured].sort((a, b) => {
+    const target = b.targetCaptureAt.localeCompare(a.targetCaptureAt);
+    if (target !== 0) return target;
+    return b.raceIdentity.localeCompare(a.raceIdentity);
+  })) {
     if (checkpoint.state !== "MISSED_NO_RESERVATION") break;
     consecutiveMissedCheckpointCount += 1;
   }
