@@ -6,6 +6,11 @@ on:
       - ops/audit-n2-trifecta-operability-20260807
     paths:
       - .github/workflows/audit-n2-trifecta-operability-20260807.yml
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - .github/workflows/audit-n2-trifecta-operability-20260807.yml
 
 permissions:
   contents: read
