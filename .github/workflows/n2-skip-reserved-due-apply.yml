@@ -26,6 +26,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
+      - name: Install test dependencies
+        run: |
+          npm ci
+          npm run fable:restore
       - name: Reserve first unreserved due checkpoint atomically
         shell: bash
         run: |
@@ -40,14 +44,12 @@ jobs:
               raise SystemExit(f'expected reservation selection anchor once, found {count}')
           path.write_text(text.replace(old, new, 1))
           PY
-      - name: Verify focused tests
-        run: |
-          npm ci
-          npm run fable:restore
-          node --test --import tsx \
-            src/research-replay/n2TrifectaReservedDueSelection.test.ts \
-            src/research-replay/n2TrifectaLocalCaptureService.test.ts \
-            src/research-replay/n2TrifectaPrivateDailyPlanIntegration.test.ts
+      - name: Test reserved-due regression
+        run: node --test --import tsx src/research-replay/n2TrifectaReservedDueSelection.test.ts
+      - name: Test existing local capture service
+        run: node --test --import tsx src/research-replay/n2TrifectaLocalCaptureService.test.ts
+      - name: Test daily-plan WAL integration
+        run: node --test --import tsx src/research-replay/n2TrifectaPrivateDailyPlanIntegration.test.ts
       - name: Commit patch and remove one-shot workflow
         shell: bash
         run: |
@@ -57,5 +59,3 @@ jobs:
           git add src/research-replay/n2TrifectaLocalCaptureService.ts
           git commit -m "fix(research): skip reserved due checkpoints"
           git push origin HEAD:fix/n2-trifecta-skip-reserved-due-checkpoints
-
-# retry after PIT fixture correction
