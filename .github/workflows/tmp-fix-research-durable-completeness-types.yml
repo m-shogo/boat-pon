@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - feat/research-durable-knowledge-completeness
-    paths:
-      - .github/workflows/tmp-fix-research-durable-completeness-types.yml
 
 permissions:
   contents: write
@@ -52,7 +50,7 @@ jobs:
           node --test --import tsx src/automation/researchDurableKnowledgeCompleteness.test.ts
           node --test --import tsx src/automation/researchDurableKnowledgeCompletenessBoundary.test.ts
           npm run typecheck
-      - name: Commit validated fix and remove one-shot workflow
+      - name: Commit validated fix and remove temporary trigger files
         shell: bash
         run: |
           set -euo pipefail
@@ -60,5 +58,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add src/automation/researchDurableKnowledgeCompleteness.ts src/automation/researchDurableKnowledgeCompleteness.test.ts
           git rm .github/workflows/tmp-fix-research-durable-completeness-types.yml
+          if [ -f .github/tmp-durable-completeness-trigger.txt ]; then git rm .github/tmp-durable-completeness-trigger.txt; fi
           git commit -m "fix(research): narrow durable completeness literals"
           git push origin HEAD:feat/research-durable-knowledge-completeness
