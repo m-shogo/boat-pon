@@ -6,7 +6,22 @@ import {
   MAC_CAPTURE_HOST_KEEPAWAKE_LABEL,
   auditMacCaptureHostKeepAwakePlist,
   buildMacCaptureHostKeepAwakePlist,
+  resolveMacCaptureHostKeepAwakeAction,
 } from "./macCaptureHostKeepAwake.js";
+
+test("keep-awake requires one explicit enable or disable action", () => {
+  assert.equal(resolveMacCaptureHostKeepAwakeAction(["--enable"]), "ENABLE");
+  assert.equal(resolveMacCaptureHostKeepAwakeAction(["--disable"]), "DISABLE");
+  assert.equal(resolveMacCaptureHostKeepAwakeAction(["--enable", "--print-only"]), "ENABLE");
+  assert.throws(
+    () => resolveMacCaptureHostKeepAwakeAction([]),
+    /KEEPAWAKE_REQUIRES_EXACTLY_ONE/u,
+  );
+  assert.throws(
+    () => resolveMacCaptureHostKeepAwakeAction(["--enable", "--disable"]),
+    /KEEPAWAKE_REQUIRES_EXACTLY_ONE/u,
+  );
+});
 
 test("keep-awake uses only AC-power system-sleep assertion", () => {
   const plist = buildMacCaptureHostKeepAwakePlist({
