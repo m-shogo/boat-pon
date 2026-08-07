@@ -35,7 +35,7 @@ function approval(capturePlan: ReturnType<typeof plan>): N2TrifectaOddsCaptureAp
     manifestDigest: capturePlan.manifestDigest,
     issuedAt: "2026-08-06T00:00:00.000Z",
     expiresAt: "2026-08-06T02:00:00.000Z",
-    maxRequests: 1,
+    maxRequests: capturePlan.requestBudget,
     privateResearchOnly: true,
     publicRedistributionAuthorized: false,
     databaseWriteAuthorized: false,
