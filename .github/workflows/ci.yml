@@ -137,10 +137,13 @@ jobs:
           set -euo pipefail
           before_sha="$(git -C /tmp/boat-pon-automation-state rev-parse HEAD)"
           before_status="$(git -C /tmp/boat-pon-automation-state status --porcelain)"
+          rm -rf /tmp/boat-pon-automation-audit-copy
+          cp -R /tmp/boat-pon-automation-state /tmp/boat-pon-automation-audit-copy
+          rm -f /tmp/boat-pon-automation-audit-copy/reports/automation/history/.gitkeep
           set +e
           node --import tsx scripts/audit-research-durable-knowledge-completeness.ts \
-            --repo-root=/tmp/boat-pon-automation-state \
-            --generated-at=2026-08-07T07:05:00.000Z > /tmp/durable-audit.json
+            --repo-root=/tmp/boat-pon-automation-audit-copy \
+            --generated-at=2026-08-07T07:10:00.000Z > /tmp/durable-audit.json
           audit_rc=$?
           set -e
           if [ "$audit_rc" -ne 0 ] && [ "$audit_rc" -ne 3 ]; then
