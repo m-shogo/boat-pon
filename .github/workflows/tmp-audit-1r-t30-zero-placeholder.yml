@@ -1,0 +1,162 @@
+name: Temporary 1R T-30 zero-placeholder audit
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    if: github.head_ref == 'ops/audit-1r-t30-raw-structure-31247f7'
+    runs-on: [self-hosted, macOS, boat-pon-local]
+    timeout-minutes: 20
+    env:
+      BOAT_PON_DATA_ROOT: /Users/m-shogo/Developer/personal/boat-pon
+    steps:
+      - name: Checkout merged main audit code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Classify saved numeric cells without printing odds values
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET_DIR="$BOAT_PON_DATA_ROOT/data/raw/research/trifecta-market/2026-08-07/10/01/T-30"
+          mapfile -t HTML_FILES < <(find "$TARGET_DIR" -maxdepth 1 -type f -name '*.html' -print | sort)
+          mapfile -t ENVELOPE_FILES < <(find "$TARGET_DIR" -maxdepth 1 -type f -name '*.envelope.json' -print | sort)
+          [ "${#HTML_FILES[@]}" -eq 1 ]
+          [ "${#ENVELOPE_FILES[@]}" -eq 1 ]
+          export RAW_HTML="${HTML_FILES[0]}"
+          export ENVELOPE_JSON="${ENVELOPE_FILES[0]}"
+          node --import tsx - <<'TS'
+          import { createHash } from 'node:crypto';
+          import { readFileSync } from 'node:fs';
+          import * as cheerio from 'cheerio';
+          import { parseAllTrifectaOdds } from './src/domain/oddsParser.ts';
+
+          const raw = readFileSync(process.env.RAW_HTML!);
+          const html = raw.toString('utf8');
+          const envelope = JSON.parse(readFileSync(process.env.ENVELOPE_JSON!, 'utf8'));
+          const rawSha256 = createHash('sha256').update(raw).digest('hex');
+          if (rawSha256 !== envelope.response?.rawSha256) throw new Error('raw/envelope hash mismatch');
+
+          type Cell = { text: string };
+          const $ = cheerio.load(html);
+          function grid(rows: any[]): Cell[][] {
+            const result: Cell[][] = [];
+            const spans = new Map<number, { cell: Cell; remaining: number }>();
+            rows.forEach((tr, rowIndex) => {
+              const row: Cell[] = [];
+              for (const [column, span] of [...spans.entries()].sort(([a],[b]) => a-b)) {
+                row[column] = span.cell;
+                span.remaining -= 1;
+                if (span.remaining <= 0) spans.delete(column);
+              }
+              let column = 0;
+              for (const el of $(tr).find('th, td').toArray()) {
+                while (row[column]) column += 1;
+                const cell = { text: $(el).text().replace(/[\s　]+/g, ' ').trim() };
+                const colspan = Number($(el).attr('colspan') ?? 1);
+                const rowspan = Number($(el).attr('rowspan') ?? 1);
+                const width = Number.isFinite(colspan) && colspan > 0 ? colspan : 1;
+                const height = Number.isFinite(rowspan) && rowspan > 0 ? rowspan : 1;
+                for (let offset = 0; offset < width; offset += 1) {
+                  row[column + offset] = cell;
+                  if (height > 1) spans.set(column + offset, { cell, remaining: height - 1 });
+                }
+                column += width;
+              }
+              result[rowIndex] = row;
+            });
+            return result;
+          }
+
+          const structural = new Set<string>();
+          const positiveNumeric = new Set<string>();
+          const zeroNumeric = new Set<string>();
+          const unavailable = new Set<string>();
+          const other = new Set<string>();
+          for (const table of $('table').toArray()) {
+            const $table = $(table);
+            if ($table.find('.oddsPoint').length === 0) continue;
+            const header = grid($table.find('thead tr').toArray());
+            const body = grid($table.find('tbody tr').toArray());
+            const groups: Array<{ first: number; column: number }> = [];
+            for (const row of header) {
+              for (let column = 0; column < row.length; column += 1) {
+                const value = Number(row[column]?.text.trim());
+                if (Number.isInteger(value) && value >= 1 && value <= 6) groups.push({ first: value, column });
+              }
+            }
+            for (const group of groups) for (const row of body) {
+              const secondCell = row[group.column];
+              const thirdCell = row[group.column + 1];
+              const oddsCell = row[group.column + 2];
+              if (!secondCell || !thirdCell || !oddsCell) continue;
+              const second = Number(secondCell.text.trim());
+              const third = Number(thirdCell.text.trim());
+              if (!Number.isInteger(second) || second < 1 || second > 6) continue;
+              if (!Number.isInteger(third) || third < 1 || third > 6) continue;
+              if (group.first === second || group.first === third || second === third) continue;
+              const key = `${group.first}-${second}-${third}`;
+              structural.add(key);
+              const text = oddsCell.text.trim().replace(/,/g, '');
+              if (/^(?:-|欠場|返還)$/u.test(text)) unavailable.add(key);
+              else if (/^[0-9]+(?:\.[0-9]+)?$/u.test(text)) {
+                const value = Number(text);
+                if (Number.isFinite(value) && value > 0) positiveNumeric.add(key);
+                else if (value === 0) zeroNumeric.add(key);
+                else other.add(key);
+              } else other.add(key);
+            }
+          }
+          const parsed = parseAllTrifectaOdds(html);
+          const parsedKeys = new Set(parsed.keys());
+          const positiveNotParsed = [...positiveNumeric].filter((key) => !parsedKeys.has(key)).sort();
+          const parsedNotPositive = [...parsedKeys].filter((key) => !positiveNumeric.has(key)).sort();
+          const diagnosis = structural.size === 120 && positiveNumeric.size === parsedKeys.size && zeroNumeric.size > 0 && positiveNotParsed.length === 0 && parsedNotPositive.length === 0
+            ? 'SOURCE_ZERO_PLACEHOLDERS_AT_CAPTURE_PARSER_FAIL_CLOSED_CORRECT'
+            : structural.size === 120 && zeroNumeric.size === 0 && positiveNumeric.size === 120 && parsedKeys.size < 120
+              ? 'PARSER_MISSED_POSITIVE_NUMERIC_ROWS'
+              : positiveNotParsed.length > 0
+                ? 'PARSER_MISSED_SOME_POSITIVE_NUMERIC_ROWS'
+                : 'MIXED_OR_OTHER';
+          console.log(JSON.stringify({
+            auditVersion: 'n2-trifecta-1r-t30-zero-placeholder-v1',
+            diagnosis,
+            rawByteLength: raw.length,
+            rawSha256,
+            fetchedAt: envelope.response?.fetchedAt ?? null,
+            displayedAvailableAt: envelope.sourceDisplayedUpdate?.availableAt ?? null,
+            structuralSelectionCount: structural.size,
+            positiveNumericSelectionCount: positiveNumeric.size,
+            zeroNumericSelectionCount: zeroNumeric.size,
+            unavailableSelectionCount: unavailable.size,
+            otherSelectionCount: other.size,
+            currentParserSelectionCount: parsedKeys.size,
+            positiveNumericButNotParsedCount: positiveNotParsed.length,
+            parsedButNotPositiveNumericCount: parsedNotPositive.length,
+            positiveNumericButNotParsedSelections: positiveNotParsed,
+            networkRequestCount: 0,
+            databaseReadCount: 0,
+            databaseWriteCount: 0,
+            rawOddsValuesPrinted: false,
+            rawOddsValuesPublished: false,
+            currentBuyChanged: false,
+            lineChanged: false,
+            publicPublished: false,
+            automatedBettingChanged: false,
+            productionApplyExecuted: false,
+          }, null, 2));
+          TS
+      - name: Prove checkout stayed clean
+        run: test -z "$(git status --porcelain)"
