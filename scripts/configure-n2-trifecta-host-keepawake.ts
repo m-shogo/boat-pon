@@ -13,6 +13,7 @@ import {
   MAC_CAPTURE_HOST_KEEPAWAKE_LABEL,
   auditMacCaptureHostKeepAwakePlist,
   buildMacCaptureHostKeepAwakePlist,
+  resolveMacCaptureHostKeepAwakeAction,
 } from "../src/automation/macCaptureHostKeepAwake";
 import { assertN2TrifectaCanonicalInstallRoot } from "../src/research-replay/n2TrifectaLocalCaptureLaunchAgent";
 
@@ -25,13 +26,8 @@ const dataRoot = resolve(
   process.env.BOAT_PON_DATA_ROOT?.trim()
     || String(policy.dataRoot ?? policy.repoPath ?? repoRoot),
 );
-const enable = process.argv.includes("--enable");
-const disable = process.argv.includes("--disable");
+const action = resolveMacCaptureHostKeepAwakeAction(process.argv.slice(2));
 const printOnly = process.argv.includes("--print-only");
-
-if (Number(enable) + Number(disable) !== 1) {
-  throw new Error("KEEPAWAKE_REQUIRES_EXACTLY_ONE_OF_--enable_OR_--disable");
-}
 
 assertN2TrifectaCanonicalInstallRoot({
   currentRepoRoot: repoRoot,
@@ -80,7 +76,7 @@ const domain = `gui/${process.getuid?.() ?? 0}`;
 const stdoutPath = join(logsRoot, "host-keepawake.stdout.log");
 const stderrPath = join(logsRoot, "host-keepawake.stderr.log");
 
-if (disable) {
+if (action === "DISABLE") {
   if (!printOnly) {
     run("/bin/launchctl", ["bootout", domain, plistPath], true);
     rmSync(plistPath, { force: true });
