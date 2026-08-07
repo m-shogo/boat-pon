@@ -1,0 +1,105 @@
+name: Temporary validate N2 daily readiness 1657f3c
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/tmp-validate-n2-daily-readiness-1657f3c.yml
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: [self-hosted, macOS]
+    timeout-minutes: 20
+    env:
+      BOAT_PON_DATA_ROOT: /Users/m-shogo/Developer/personal/boat-pon
+      CAPTURE_RUNTIME_SHA: 967ad45d1f72b4ad17e036a25926c1e61ba4e091
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 1657f3ca7f2007c671597f027367a705c7072b7c
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: npm ci
+      - name: Verify capture authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          BINDING="$BOAT_PON_DATA_ROOT/data/private/trifecta-capture/runtime-authority.json"
+          test "$(node -p "JSON.parse(require('fs').readFileSync('$BINDING','utf8')).authoritySha")" = "$CAPTURE_RUNTIME_SHA"
+      - name: Build and verify live readiness artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPORT="$RUNNER_TEMP/n2-daily-readiness.json"
+          export REPORT
+          BOAT_PON_DATA_ROOT="$BOAT_PON_DATA_ROOT" \
+            node node_modules/tsx/dist/cli.mjs \
+            scripts/build-n2-trifecta-private-market-daily-readiness.ts \
+            --date 2026-08-07 --venue 10 --write-private > "$REPORT"
+          test -s "$REPORT"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const r = JSON.parse(fs.readFileSync(process.env.REPORT, 'utf8'));
+          const violations = [];
+          if (r.summaryVersion !== 'n2-trifecta-private-market-daily-readiness-summary-v1') violations.push('SUMMARY_VERSION');
+          if (!['PASS','DEGRADED','NO_DATA'].includes(r.status)) violations.push(`STATUS_${r.status}`);
+          if (r.evidenceRole !== 'EXPLORATION_READINESS_ONLY') violations.push('ROLE');
+          if (r.date !== '2026-08-07' || r.venueCode !== '10') violations.push('SCOPE');
+          if (r.completeRaceCount + r.partialRaceCount + r.noDataRaceCount !== 12) violations.push('RACE_COUNTS');
+          if (r.cohortCandidateRaceCount !== r.completeRaceCount || !Array.isArray(r.cohortCandidateRaceIdentities) || r.cohortCandidateRaceIdentities.length !== r.completeRaceCount) violations.push('COHORT');
+          if (r.checkpointCoverageDenominator !== 48 || r.checkpointCoverageNumerator !== r.totalSnapshotCount || r.checkpointCoverageNumerator < 0 || r.checkpointCoverageNumerator > 48) violations.push('COVERAGE');
+          const expectedRatio = Number((r.checkpointCoverageNumerator / 48).toFixed(6));
+          if (r.checkpointCoverageRatio !== expectedRatio) violations.push('COVERAGE_RATIO');
+          if (!/^[0-9a-f]{64}$/.test(r.sourceDayIndexDigest || '') || !/^[0-9a-f]{64}$/.test(r.heartbeatOutputDigest || '') || !/^[0-9a-f]{64}$/.test(r.outputDigest || '')) violations.push('DIGEST');
+          if (r.privateReadinessWrittenOrReused !== true || typeof r.privateReadinessRelativePath !== 'string') violations.push('WRITE');
+          if (r.automaticFreezeAuthorized !== false || r.outcomeDataRead !== false || r.validationDataRead !== false || r.holdoutDataRead !== false) violations.push('EVALUATION_BOUNDARY');
+          if (r.rawCaptureEvidenceRead !== false || r.rawOddsValuesRead !== false || r.rawOddsValuesPrinted !== false || r.rawOddsValuesPublished !== false) violations.push('RAW_BOUNDARY');
+          if (r.networkRequestCount !== 0 || r.databaseReadCount !== 0 || r.databaseWriteCount !== 0) violations.push('IO_BOUNDARY');
+          if (r.currentBuyConnectionAuthorized !== false || r.lineConnectionAuthorized !== false || r.automatedBettingAuthorized !== false || r.publicPublishAuthorized !== false || r.productionApplyAuthorized !== false) violations.push('PROTECTED_BOUNDARY');
+          const artifactPath = path.join(process.env.BOAT_PON_DATA_ROOT, r.privateReadinessRelativePath || '');
+          if (!fs.existsSync(artifactPath)) violations.push('ARTIFACT_MISSING');
+          else {
+            const lst = fs.lstatSync(artifactPath);
+            const stat = fs.statSync(artifactPath);
+            if (lst.isSymbolicLink() || !stat.isFile() || (stat.mode & 0o777) !== 0o600) violations.push('ARTIFACT_MODE');
+            const artifact = JSON.parse(fs.readFileSync(artifactPath, 'utf8'));
+            if (artifact.outputDigest !== r.outputDigest || artifact.sourceDayIndexDigest !== r.sourceDayIndexDigest || artifact.checkpointCoverageNumerator !== r.checkpointCoverageNumerator) violations.push('ARTIFACT_CONTENT');
+            if (/"odds"\s*:|"selections"\s*:|"moves"\s*:|"payout"\s*:|"roi"\s*:/.test(JSON.stringify(artifact))) violations.push('VALUE_LEAK');
+          }
+          const summary = {
+            status: violations.length ? 'BLOCKED' : 'PASS',
+            readinessStatus: r.status,
+            violations,
+            date: r.date,
+            venueCode: r.venueCode,
+            sourceDayIndexDigest: r.sourceDayIndexDigest,
+            sourceDayIndexStatus: r.sourceDayIndexStatus,
+            completeRaceCount: r.completeRaceCount,
+            partialRaceCount: r.partialRaceCount,
+            noDataRaceCount: r.noDataRaceCount,
+            checkpointCoverageNumerator: r.checkpointCoverageNumerator,
+            checkpointCoverageDenominator: r.checkpointCoverageDenominator,
+            checkpointCoverageRatio: r.checkpointCoverageRatio,
+            heartbeatStatus: r.heartbeatStatus,
+            heartbeatHistoryRecordCount: r.heartbeatHistoryRecordCount,
+            heartbeatLatestAgeSeconds: r.heartbeatLatestAgeSeconds,
+            heartbeatSignificantGapCount: r.heartbeatSignificantGapCount,
+            heartbeatRecentSignificantGapCount: r.heartbeatRecentSignificantGapCount,
+            heartbeatAffectedCheckpointCount: r.heartbeatAffectedCheckpointCount,
+            heartbeatCurrentGapOverThreshold: r.heartbeatCurrentGapOverThreshold,
+            heartbeatPlanStatus: r.heartbeatPlanStatus,
+            outputDigest: r.outputDigest,
+            privateReadinessCreated: r.privateReadinessCreated,
+            captureRuntimeAuthorityUnchanged: process.env.CAPTURE_RUNTIME_SHA,
+          };
+          console.log('SANITIZED_N2_DAILY_READINESS_BEGIN');
+          console.log(JSON.stringify(summary, null, 2));
+          console.log('SANITIZED_N2_DAILY_READINESS_END');
+          if (violations.length) process.exit(1);
+          NODE
