@@ -2,6 +2,17 @@ export const MAC_CAPTURE_HOST_KEEPAWAKE_LABEL =
   "com.boatpon.capture-host-keepawake" as const;
 export const MAC_CAPTURE_HOST_CAFFEINATE_PATH = "/usr/bin/caffeinate" as const;
 
+export type MacCaptureHostKeepAwakeAction = "ENABLE" | "DISABLE";
+
+export function resolveMacCaptureHostKeepAwakeAction(args: readonly string[]): MacCaptureHostKeepAwakeAction {
+  const enable = args.includes("--enable");
+  const disable = args.includes("--disable");
+  if (Number(enable) + Number(disable) !== 1) {
+    throw new Error("KEEPAWAKE_REQUIRES_EXACTLY_ONE_OF_--enable_OR_--disable");
+  }
+  return enable ? "ENABLE" : "DISABLE";
+}
+
 function xmlEscape(value: string): string {
   return value
     .replaceAll("&", "&amp;")
