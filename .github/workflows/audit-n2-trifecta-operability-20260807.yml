@@ -100,33 +100,30 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import json, os, glob
+          import glob, json, os
           root = "/Users/m-shogo/Developer/personal/boat-pon"
           plan_path = os.path.join(root, "data/private/trifecta-capture/plans/2026-08-07.json")
           plan = json.load(open(plan_path))
           window_start = "2026-08-07T01:10:00.000Z"
           window_end = "2026-08-07T01:16:00.000Z"
+          reservations = []
+          for path in glob.glob(os.path.join(root, "data/private/trifecta-capture/reservations/2026-08-07/*.json")):
+              try:
+                  reservations.append(json.load(open(path)))
+              except Exception:
+                  pass
           entries = []
           for e in plan["plan"]["entries"]:
               if window_start <= e["targetCaptureAt"] <= window_end:
-                  reservation_key = None
-                  # Locate reservation only by metadata identity; no raw/evidence payload is opened.
-                  for path in glob.glob(os.path.join(root, "data/private/trifecta-capture/reservations/2026-08-07/*.json")):
-                      try:
-                          r = json.load(open(path))
-                      except Exception:
-                          continue
-                      if r.get("raceIdentity") == e["raceIdentity"] and r.get("checkpointLabel") == e["checkpointLabel"]:
-                          reservation_key = {
-                              "reservedAt": r.get("reservedAt"),
-                              "targetCaptureAt": r.get("targetCaptureAt"),
-                          }
-                          break
+                  reservation = next(({
+                      "reservedAt": r.get("reservedAt"),
+                      "targetCaptureAt": r.get("targetCaptureAt"),
+                  } for r in reservations if r.get("raceIdentity") == e["raceIdentity"] and r.get("checkpointLabel") == e["checkpointLabel"]), None)
                   entries.append({
                       "raceIdentity": e["raceIdentity"],
                       "checkpointLabel": e["checkpointLabel"],
                       "targetCaptureAt": e["targetCaptureAt"],
-                      "reservation": reservation_key,
+                      "reservation": reservation,
                   })
           print(json.dumps({
               "windowStart": window_start,
@@ -156,14 +153,17 @@ jobs:
               pos = 0
               values = []
               while pos < len(text):
-                  while pos < len(text) and text[pos].isspace(): pos += 1
-                  if pos >= len(text): break
+                  while pos < len(text) and text[pos].isspace():
+                      pos += 1
+                  if pos >= len(text):
+                      break
                   try:
                       value, next_pos = decoder.raw_decode(text, pos)
                   except Exception:
                       pos += 1
                       continue
-                  if isinstance(value, dict): values.append(value)
+                  if isinstance(value, dict):
+                      values.append(value)
                   pos = next_pos
               return values
 
@@ -191,6 +191,77 @@ jobs:
               "windowEnd": end,
               "stdoutEventSummaries": summaries,
               "stderrBytesTotal": stderr_bytes,
+              "rawOddsValuesRead": False,
+              "databaseReadCount": 0,
+              "networkRequestCount": 0,
+          }, indent=2, sort_keys=True))
+          PY
+
+      - name: Inspect system sleep and launchd evidence for 10:09-10:17 JST
+        shell: bash
+        run: |
+          set -euo pipefail
+          PMSET="$RUNNER_TEMP/pmset.log"
+          /usr/bin/pmset -g log > "$PMSET" || true
+          python3 - <<'PY'
+          import json, os, re, subprocess
+          p = os.path.join(os.environ["RUNNER_TEMP"], "pmset.log")
+          sleep_events = []
+          if os.path.exists(p):
+              for line in open(p, errors="replace"):
+                  if not line.startswith("2026-08-07 10:"):
+                      continue
+                  minute_match = re.match(r"2026-08-07 10:(\d\d):", line)
+                  if not minute_match:
+                      continue
+                  minute = int(minute_match.group(1))
+                  if minute < 9 or minute > 17:
+                      continue
+                  lowered = line.lower()
+                  kind = None
+                  if "darkwake" in lowered:
+                      kind = "DARKWAKE"
+                  elif "wake" in lowered:
+                      kind = "WAKE"
+                  elif "sleep" in lowered:
+                      kind = "SLEEP"
+                  if kind:
+                      sleep_events.append({"timestamp": line[:25].strip(), "kind": kind})
+
+          launchd_events = []
+          cmd = [
+              "/usr/bin/log", "show",
+              "--start", "2026-08-07 10:09:00+09:00",
+              "--end", "2026-08-07 10:17:00+09:00",
+              "--style", "json",
+              "--predicate", 'eventMessage CONTAINS[c] "com.boatpon.trifecta-private-capture"',
+          ]
+          try:
+              completed = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+              for line in completed.stdout.splitlines():
+                  try:
+                      obj = json.loads(line)
+                  except Exception:
+                      continue
+                  msg = str(obj.get("eventMessage", ""))
+                  lower = msg.lower()
+                  classification = "OTHER"
+                  if "spawn" in lower or "launch" in lower or "started" in lower:
+                      classification = "START"
+                  elif "exit" in lower or "terminated" in lower or "stopped" in lower:
+                      classification = "EXIT"
+                  launchd_events.append({
+                      "timestamp": obj.get("timestamp"),
+                      "classification": classification,
+                  })
+          except Exception:
+              pass
+          print(json.dumps({
+              "windowJst": "2026-08-07 10:09:00..10:17:00+09:00",
+              "sleepWakeEvents": sleep_events,
+              "launchdEventCount": len(launchd_events),
+              "launchdEvents": launchd_events,
+              "systemLogMessageBodiesPublished": False,
               "rawOddsValuesRead": False,
               "databaseReadCount": 0,
               "networkRequestCount": 0,
