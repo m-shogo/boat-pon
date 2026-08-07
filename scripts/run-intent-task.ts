@@ -304,7 +304,7 @@ try {
 }
   let historyOutputs: string[];
   try {
-    historyOutputs = retainExecutorOutputs({ repoRoot: root, runId, outputPaths: exec.outputs }).historyOutputs;
+    historyOutputs = retainExecutorOutputs({ repoRoot: root, runId, outputPaths: exec.outputs, historyOutputDigest: exec.outputDigest }).historyOutputs;
   } catch (error) {
     const retentionBlock = "DURABLE_OUTPUT_RETENTION_FAILED";
     const retentionMessage = error instanceof Error ? error.message : String(error);
