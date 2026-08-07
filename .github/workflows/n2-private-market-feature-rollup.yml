@@ -1,0 +1,63 @@
+name: N2 Private Market Feature Rollup
+
+on:
+  schedule:
+    # 08:23-23:23 JST. Derived research only; exact-time execution is not required.
+    - cron: '23 23,0-14 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: n2-private-market-feature-rollup
+  cancel-in-progress: false
+
+jobs:
+  rollup:
+    runs-on: [self-hosted, macOS]
+    timeout-minutes: 20
+    env:
+      BOAT_PON_DATA_ROOT: /Users/m-shogo/Developer/personal/boat-pon
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install rollup dependencies
+        run: npm ci
+      - name: Refresh current private feature artifacts and day index
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d "$BOAT_PON_DATA_ROOT/data/private/trifecta-capture"
+          REPORT="$RUNNER_TEMP/n2-private-market-feature-rollup.json"
+          export REPORT
+          set +e
+          node node_modules/tsx/dist/cli.mjs \
+            scripts/run-n2-trifecta-private-market-feature-rollup.ts > "$REPORT"
+          EXIT_CODE=$?
+          set -e
+          test -s "$REPORT"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const r = JSON.parse(fs.readFileSync(process.env.REPORT, 'utf8'));
+          const violations = [];
+          if (r.summaryVersion !== 'n2-trifecta-private-market-feature-rollup-summary-v1') violations.push('SUMMARY_VERSION');
+          if (r.privateResearchOnly !== true || r.rawOddsValuesPrinted !== false || r.rawOddsValuesPublished !== false) violations.push('PRIVATE_BOUNDARY');
+          if (r.networkRequestCount !== 0 || r.databaseReadCount !== 0 || r.databaseWriteCount !== 0) violations.push('IO_BOUNDARY');
+          if (r.currentBuyChanged !== false || r.lineChanged !== false || r.publicPublished !== false
+            || r.automatedBettingChanged !== false || r.productionApplyExecuted !== false) violations.push('PROTECTED_BOUNDARY');
+          if (/"odds"\s*:|"selections"\s*:|"moves"\s*:/.test(JSON.stringify(r))) violations.push('RAW_VALUE_STDOUT');
+          if (violations.length) {
+            console.error(JSON.stringify({ status: 'BLOCKED', violations }));
+            process.exit(1);
+          }
+          NODE
+          cat "$REPORT"
+          if [ "$EXIT_CODE" -ne 0 ]; then
+            exit "$EXIT_CODE"
+          fi
