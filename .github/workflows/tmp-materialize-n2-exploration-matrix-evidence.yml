@@ -1,0 +1,141 @@
+name: Temporary persist N2 exploration matrix evidence
+
+on:
+  push:
+    branches:
+      - ops/materialize-n2-exploration-matrix-bb5d7cb
+    paths:
+      - .github/workflows/tmp-materialize-n2-exploration-matrix-evidence.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: persist-n2-exploration-matrix-bb5d7cb
+  cancel-in-progress: false
+
+jobs:
+  materialize-and-record:
+    runs-on: [self-hosted, macOS]
+    timeout-minutes: 20
+    env:
+      MAIN_SHA: bb5d7cb3f10d137f3aff32ca5554627d823ea402
+      CANONICAL_REPO: /Users/m-shogo/Developer/personal/boat-pon
+      CAPTURE_RUNTIME_SHA: 967ad45d1f72b4ad17e036a25926c1e61ba4e091
+      MANIFEST_DIGEST: f72810734d5a6b4b0991b6eb00f87301473ebae9a4f14de1e8959106941297d0
+      OPS_BRANCH: ops/materialize-n2-exploration-matrix-bb5d7cb
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ops/materialize-n2-exploration-matrix-bb5d7cb
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Fast-forward canonical main without moving immutable collector runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C "$CANONICAL_REPO" branch --show-current)" = main
+          test -z "$(git -C "$CANONICAL_REPO" status --porcelain)"
+          BINDING="$CANONICAL_REPO/data/private/trifecta-capture/runtime-authority.json"
+          test "$(node -p "JSON.parse(require('fs').readFileSync('$BINDING','utf8')).authoritySha")" = "$CAPTURE_RUNTIME_SHA"
+          git -C "$CANONICAL_REPO" fetch origin main
+          git -C "$CANONICAL_REPO" merge --ff-only "$MAIN_SHA"
+          test "$(git -C "$CANONICAL_REPO" rev-parse HEAD)" = "$MAIN_SHA"
+          test -z "$(git -C "$CANONICAL_REPO" status --porcelain)"
+          test "$(node -p "JSON.parse(require('fs').readFileSync('$BINDING','utf8')).authoritySha")" = "$CAPTURE_RUNTIME_SHA"
+      - name: Install local analysis dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$CANONICAL_REPO"
+          npm ci
+          test -z "$(git status --porcelain --untracked-files=no)"
+      - name: Materialize and save sanitized evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPORT="$RUNNER_TEMP/n2-exploration-matrix-summary.json"
+          EVIDENCE="$RUNNER_TEMP/n2-exploration-matrix-evidence.json"
+          export REPORT EVIDENCE
+          cd "$CANONICAL_REPO"
+          BOAT_PON_DATA_ROOT="$CANONICAL_REPO" \
+            node node_modules/tsx/dist/cli.mjs \
+            scripts/build-n2-trifecta-private-market-exploration-matrix.ts \
+            --manifest "$MANIFEST_DIGEST" --write-private > "$REPORT"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const r = JSON.parse(fs.readFileSync(process.env.REPORT, 'utf8'));
+          const violations = [];
+          if (r.matrixVersion !== 'n2-trifecta-private-market-exploration-matrix-v1') violations.push('VERSION');
+          if (r.evidenceRole !== 'EXPLORATION_ONLY' || r.labelPolicy !== 'NO_OUTCOME_LABELS' || r.coveragePolicy !== 'FULL_TRAJECTORY_ONLY') violations.push('POLICY');
+          if (r.manifestDigest !== process.env.MANIFEST_DIGEST || r.columnCount !== 85 || r.raceCount !== 5) violations.push('SCOPE');
+          if (!Array.isArray(r.columns) || r.columns.length !== 85 || new Set(r.columns).size !== 85) violations.push('COLUMNS');
+          if (!Array.isArray(r.races) || r.races.length !== 5) violations.push('RACES');
+          if (r.matrixValuesPrinted !== false || /"values"\s*:/.test(JSON.stringify(r))) violations.push('STDOUT_VALUES');
+          if (r.rawCaptureEvidenceRead !== false || r.outcomeDataRead !== false || r.validationDataRead !== false || r.holdoutDataRead !== false) violations.push('READ_BOUNDARY');
+          if (r.networkRequestCount !== 0 || r.databaseReadCount !== 0 || r.databaseWriteCount !== 0) violations.push('IO');
+          if (r.currentBuyChanged !== false || r.lineChanged !== false || r.publicPublished !== false || r.automatedBettingChanged !== false || r.productionApplyExecuted !== false) violations.push('PROTECTED');
+          if (!/^[0-9a-f]{64}$/.test(r.matrixDigest || '') || typeof r.privateMatrixRelativePath !== 'string') violations.push('DIGEST_PATH');
+          const expected = `data/private/trifecta-market-experiments/matrices/${process.env.MANIFEST_DIGEST}/${r.matrixDigest}.json`;
+          if (r.privateMatrixRelativePath !== expected) violations.push('PATH');
+          const absolute = path.join(process.env.CANONICAL_REPO, expected);
+          const lst = fs.lstatSync(absolute);
+          const stat = fs.statSync(absolute);
+          if (lst.isSymbolicLink() || !stat.isFile() || (stat.mode & 0o777) !== 0o600) violations.push('MODE');
+          const matrix = JSON.parse(fs.readFileSync(absolute, 'utf8'));
+          if (matrix.matrixDigest !== r.matrixDigest || matrix.raceCount !== 5 || !Array.isArray(matrix.rows) || matrix.rows.length !== 5) violations.push('MATRIX_SHAPE');
+          if (!matrix.rows.every((row) => Array.isArray(row.values) && row.values.length === 85 && row.values.every(Number.isFinite))) violations.push('VALUES_SHAPE');
+          if (/"selections"|"moves"|"favoriteSelection"/.test(JSON.stringify(matrix))) violations.push('SELECTION_LEVEL_LEAK');
+          if (matrix.outcomeDataRead !== false || matrix.validationDataRead !== false || matrix.holdoutDataRead !== false || matrix.currentBuyConnectionAuthorized !== false || matrix.lineConnectionAuthorized !== false || matrix.automatedBettingAuthorized !== false || matrix.productionApplyAuthorized !== false) violations.push('MATRIX_BOUNDARY');
+          const evidence = {
+            evidenceSchemaVersion: 'n2-private-exploration-matrix-live-v1',
+            status: violations.length ? 'BLOCKED' : 'PASS',
+            violations,
+            manifestDigest: r.manifestDigest,
+            matrixDigest: r.matrixDigest,
+            featureSchemaVersion: r.featureSchemaVersion,
+            featureSchemaDigest: r.featureSchemaDigest,
+            columnCount: r.columnCount,
+            raceCount: r.raceCount,
+            raceIdentities: r.races.map((race) => race.raceIdentity),
+            captureRuntimeAuthorityUnchanged: process.env.CAPTURE_RUNTIME_SHA,
+            privateFeatureArtifactsRead: r.privateFeatureArtifactsRead,
+            rawCaptureEvidenceRead: r.rawCaptureEvidenceRead,
+            matrixValuesPrinted: r.matrixValuesPrinted,
+            outcomeDataRead: r.outcomeDataRead,
+            validationDataRead: r.validationDataRead,
+            holdoutDataRead: r.holdoutDataRead,
+            networkRequestCount: r.networkRequestCount,
+            databaseReadCount: r.databaseReadCount,
+            databaseWriteCount: r.databaseWriteCount,
+            currentBuyChanged: r.currentBuyChanged,
+            lineChanged: r.lineChanged,
+            publicPublished: r.publicPublished,
+            automatedBettingChanged: r.automatedBettingChanged,
+            productionApplyExecuted: r.productionApplyExecuted,
+          };
+          fs.writeFileSync(process.env.EVIDENCE, JSON.stringify(evidence, null, 2) + '\n');
+          console.log('SANITIZED_N2_EXPLORATION_MATRIX_BEGIN');
+          console.log(JSON.stringify(evidence, null, 2));
+          console.log('SANITIZED_N2_EXPLORATION_MATRIX_END');
+          if (violations.length) process.exit(1);
+          NODE
+      - name: Commit sanitized evidence to temporary ops branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "$OPS_BRANCH"
+          git checkout -B "$OPS_BRANCH" "origin/$OPS_BRANCH"
+          mkdir -p ops/evidence
+          cp "$RUNNER_TEMP/n2-exploration-matrix-evidence.json" ops/evidence/n2-exploration-matrix-bb5d7cb.json
+          git add ops/evidence/n2-exploration-matrix-bb5d7cb.json
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "ops(evidence): record private exploration matrix verification"
+          git push origin HEAD:"$OPS_BRANCH"
