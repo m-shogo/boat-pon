@@ -1,0 +1,61 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import test from "node:test";
+
+const source = readFileSync(
+  resolve(process.cwd(), "src/automation/researchDurableKnowledgeCompleteness.ts"),
+  "utf8",
+);
+const cli = readFileSync(
+  resolve(process.cwd(), "scripts/audit-research-durable-knowledge-completeness.ts"),
+  "utf8",
+);
+
+test("completeness audit is read-only and isolated from production behavior", () => {
+  assert.match(source, /RESEARCH_KNOWLEDGE_RETENTION_AUDIT_ONLY/u);
+  assert.match(source, /automaticPromotionAuthorized:\s*false/u);
+  assert.match(source, /currentBuyConnectionAuthorized:\s*false/u);
+  assert.match(source, /lineConnectionAuthorized:\s*false/u);
+  assert.match(source, /publicPublishAuthorized:\s*false/u);
+  assert.match(source, /databaseWriteAuthorized:\s*false/u);
+  assert.match(source, /automatedBettingAuthorized:\s*false/u);
+  assert.match(source, /productionApplyAuthorized:\s*false/u);
+  assert.doesNotMatch(source, /DatabaseSync|openDb|\bfetch\s*\(|child_process|execSync|spawnSync/u);
+  assert.doesNotMatch(source, /app_settings|send-line|notify|auto_purchase|auto_vote/u);
+});
+
+test("completeness audit reads only automation history and approved durable output roots", () => {
+  assert.match(source, /reports\/automation\/history/u);
+  assert.match(source, /reports\/n2\//u);
+  assert.match(source, /research\/registries\//u);
+  assert.match(source, /automation\/control\//u);
+  assert.match(source, /DURABLE_KNOWLEDGE_PATH_ESCAPES_ROOT/u);
+  assert.match(source, /HISTORY_OUTPUT_PATH_NOT_APPROVED/u);
+  assert.doesNotMatch(source, /data\/raw|data\/private|boat\.sqlite|sidecar/u);
+});
+
+test("audit distinguishes mutable supersession from append-only registry corruption", () => {
+  assert.match(source, /CURRENT_OUTPUT_DIGEST_SUPERSEDED/u);
+  assert.match(source, /DURABLE_MUTABLE_OUTPUT_SUPERSEDED/u);
+  assert.match(source, /REGISTRY_SELF_DIGEST_VERIFIED/u);
+  assert.match(source, /DURABLE_REGISTRY_SELF_DIGEST_INVALID/u);
+  assert.match(source, /contractDigest/u);
+});
+
+test("persisted dry-run and unmarked PASS without outputs cannot be counted as durable", () => {
+  assert.match(source, /INVALID_PERSISTED_DRY_RUN/u);
+  assert.match(source, /PERSISTED_DRY_RUN_NOT_ALLOWED/u);
+  assert.match(source, /INCOMPLETE_PASS_NO_OUTPUT/u);
+  assert.match(source, /PASS_HAS_NO_DURABLE_OUTPUT/u);
+  assert.match(source, /PASS_NO_CHANGE_HISTORY/u);
+});
+
+test("CLI emits audit metadata only and performs no writes", () => {
+  assert.match(cli, /buildResearchDurableKnowledgeCompletenessReport/u);
+  assert.match(cli, /--repo-root/u);
+  assert.match(cli, /classificationCounts/u);
+  assert.match(cli, /historyContentDigest/u);
+  assert.match(cli, /automaticPromotionAuthorized/u);
+  assert.doesNotMatch(cli, /writeFile|appendFile|mkdir|rename|DatabaseSync|\bfetch\s*\(|send-line|notify/u);
+});
