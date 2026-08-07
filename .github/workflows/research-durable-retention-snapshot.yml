@@ -1,0 +1,171 @@
+name: research durable retention snapshot (one-shot)
+
+on:
+  workflow_dispatch:
+    inputs:
+      request_reference:
+        description: "Optional scheduler/manual reference"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  # Serialize with the research automation writer because both append to
+  # automation/boat-pon-research. No retry or force-push is allowed.
+  group: boat-pon-local-research
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      ok: ${{ steps.check.outputs.ok }}
+    steps:
+      - id: check
+        env:
+          ACTOR: ${{ github.actor }}
+          REPO: ${{ github.repository }}
+          REF: ${{ github.ref }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          [ "$REPO" = "m-shogo/boat-pon" ] || { echo "::error::repo not allowed"; exit 1; }
+          [ "$ACTOR" = "m-shogo" ] || { echo "::error::actor not in allowlist"; exit 1; }
+          [ "$REF" = "refs/heads/main" ] || { echo "::error::only main is dispatchable"; exit 1; }
+          [ "$EVENT" = "workflow_dispatch" ] || { echo "::error::unsupported event"; exit 1; }
+          echo "ok=true" >> "$GITHUB_OUTPUT"
+
+  snapshot:
+    needs: guard
+    if: needs.guard.outputs.ok == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout main audit authority
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Materialize automation state worktree
+        id: state
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin automation/boat-pon-research
+          SOURCE_SHA="$(git rev-parse origin/automation/boat-pon-research)"
+          rm -rf /tmp/boat-pon-retention-state
+          git worktree add --detach /tmp/boat-pon-retention-state "$SOURCE_SHA"
+          test -z "$(git -C /tmp/boat-pon-retention-state status --porcelain)"
+          echo "source_sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
+          echo "source_state_sha=$SOURCE_SHA"
+
+      - name: Build and persist sanitized retention snapshot
+        id: persist
+        env:
+          SOURCE_SHA: ${{ steps.state.outputs.source_sha }}
+          MAIN_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          OBSERVED_AT="$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
+          set +e
+          node --import tsx scripts/persist-research-durable-retention-snapshot.ts \
+            --repo-root=/tmp/boat-pon-retention-state \
+            --source-state-sha="$SOURCE_SHA" \
+            --main-authority-sha="$MAIN_SHA" \
+            --observed-at="$OBSERVED_AT" > /tmp/retention-persist.json
+          AUDIT_RC=$?
+          set -e
+          if [ "$AUDIT_RC" -ne 0 ] && [ "$AUDIT_RC" -ne 3 ]; then
+            cat /tmp/retention-persist.json || true
+            exit "$AUDIT_RC"
+          fi
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const d = JSON.parse(fs.readFileSync('/tmp/retention-persist.json', 'utf8'));
+          const allowed = /^reports\/automation\/retention\/durable-knowledge\/\d{4}-\d{2}-\d{2}\/[0-9a-f]{64}\.json$/;
+          if (!allowed.test(d.relativePath)) throw new Error(`unsafe retention path: ${d.relativePath}`);
+          if (typeof d.changed !== 'boolean') throw new Error('changed must be boolean');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `changed=${d.changed}\nrelative_path=${d.relativePath}\naudit_status=${d.auditStatus}\nevidence_digest=${d.evidenceDigest}\nsnapshot_digest=${d.snapshotDigest}\n`);
+          console.log(JSON.stringify({
+            changed: d.changed,
+            relativePath: d.relativePath,
+            auditStatus: d.auditStatus,
+            historyFileCount: d.historyFileCount,
+            durableCompleteCount: d.durableCompleteCount,
+            strongDurableCompleteCount: d.strongDurableCompleteCount,
+            incompleteCount: d.incompleteCount,
+            invalidHistoryCount: d.invalidHistoryCount,
+            missingOutputReferenceCount: d.missingOutputReferenceCount,
+            invalidOutputReferenceCount: d.invalidOutputReferenceCount,
+            mutableSupersededReferenceCount: d.mutableSupersededReferenceCount,
+            legacyCompatibilityCount: d.legacyCompatibilityCount,
+            nonStrongRuns: d.nonStrongRuns,
+            evidenceDigest: d.evidenceDigest,
+            snapshotDigest: d.snapshotDigest,
+          }, null, 2));
+          NODE
+          echo "audit_rc=$AUDIT_RC" >> "$GITHUB_OUTPUT"
+
+      - name: Verify worktree mutation scope
+        env:
+          CHANGED: ${{ steps.persist.outputs.changed }}
+          EXPECTED_PATH: ${{ steps.persist.outputs.relative_path }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t CHANGED_PATHS < <(git -C /tmp/boat-pon-retention-state status --porcelain -uall | sed 's/^...//' | sort -u)
+          if [ "$CHANGED" = "false" ]; then
+            [ "${#CHANGED_PATHS[@]}" -eq 0 ] || { printf 'unexpected change: %s\n' "${CHANGED_PATHS[@]}"; exit 1; }
+            exit 0
+          fi
+          [ "${#CHANGED_PATHS[@]}" -eq 1 ] || { printf 'unexpected change set: %s\n' "${CHANGED_PATHS[@]}"; exit 1; }
+          [ "${CHANGED_PATHS[0]}" = "$EXPECTED_PATH" ] || { echo "::error::unexpected changed path ${CHANGED_PATHS[0]}"; exit 1; }
+          case "$EXPECTED_PATH" in
+            reports/automation/retention/durable-knowledge/*) : ;;
+            *) echo "::error::retention path outside allowlist"; exit 1 ;;
+          esac
+
+      - name: Append snapshot to automation state with CAS
+        if: steps.persist.outputs.changed == 'true'
+        env:
+          SOURCE_SHA: ${{ steps.state.outputs.source_sha }}
+          EXPECTED_PATH: ${{ steps.persist.outputs.relative_path }}
+          EVIDENCE_DIGEST: ${{ steps.persist.outputs.evidence_digest }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin automation/boat-pon-research
+          REMOTE_SHA="$(git rev-parse origin/automation/boat-pon-research)"
+          if [ "$REMOTE_SHA" != "$SOURCE_SHA" ]; then
+            echo "::error::automation state advanced during retention audit ($SOURCE_SHA -> $REMOTE_SHA); refusing to retry or overwrite"
+            exit 1
+          fi
+          git -C /tmp/boat-pon-retention-state config user.name "boat-pon-retention-audit"
+          git -C /tmp/boat-pon-retention-state config user.email "retention-audit@boat-pon.invalid"
+          git -C /tmp/boat-pon-retention-state add -- "$EXPECTED_PATH"
+          STAGED="$(git -C /tmp/boat-pon-retention-state diff --cached --name-only)"
+          [ "$STAGED" = "$EXPECTED_PATH" ] || { echo "::error::unexpected staged path(s): $STAGED"; exit 1; }
+          DATE_JST="$(echo "$EXPECTED_PATH" | cut -d/ -f5)"
+          git -C /tmp/boat-pon-retention-state commit -q -m "report(automation): durable retention ${DATE_JST} ${EVIDENCE_DIGEST:0:12}"
+          git -C /tmp/boat-pon-retention-state push origin HEAD:automation/boat-pon-research --quiet
+          echo "appended $EXPECTED_PATH"
+
+      - name: Fail visibly after persisting BLOCKED retention evidence
+        if: steps.persist.outputs.audit_rc == '3'
+        run: |
+          echo "::error::durable retention audit is BLOCKED; sanitized snapshot was retained before failing"
+          exit 3
