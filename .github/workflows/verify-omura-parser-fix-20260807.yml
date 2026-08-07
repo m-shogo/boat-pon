@@ -1,0 +1,108 @@
+name: Verify Omura parser fix 20260807
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - .github/workflows/verify-omura-parser-fix-20260807.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-omura-parser-fix-20260807
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Restrict one-shot verification
+        env:
+          ACTOR: ${{ github.actor }}
+          REPO: ${{ github.repository }}
+          EVENT: ${{ github.event_name }}
+          HEAD_REF: ${{ github.head_ref }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          [ "$REPO" = "m-shogo/boat-pon" ]
+          [ "$ACTOR" = "m-shogo" ]
+          [ "$EVENT" = "pull_request" ]
+          [ "$HEAD_REF" = "ops/verify-omura-parser-fix-20260807" ]
+          [ "$BASE_REF" = "main" ]
+
+  verify-real-archive:
+    needs: guard
+    runs-on: [self-hosted, macOS, boat-pon-local]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ops/verify-omura-parser-fix-20260807
+      - name: Parse cached official archive with branch parser read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          CANONICAL="/Users/m-shogo/Developer/personal/boat-pon"
+          ARCHIVE="$CANONICAL/data/raw/official/programs/b260807.lzh"
+          [ -f "$ARCHIVE" ]
+          WORK=$(mktemp -d)
+          trap 'rm -rf "$WORK"' EXIT
+          unar -q -o "$WORK" -f "$ARCHIVE"
+          TXT="$WORK/B260807.TXT"
+          [ -f "$TXT" ]
+          cd "$CANONICAL"
+          BRANCH_WORKSPACE="$GITHUB_WORKSPACE" TXT="$TXT" node --import tsx --input-type=module <<'NODE'
+          import { createHash } from "node:crypto";
+          import { readFileSync } from "node:fs";
+          import { pathToFileURL } from "node:url";
+          import { join } from "node:path";
+
+          const workspace = process.env.BRANCH_WORKSPACE;
+          const parserUrl = pathToFileURL(join(workspace, "src/domain/officialProgramParser.ts")).href;
+          const policyUrl = pathToFileURL(join(workspace, "src/domain/officialProgramRefreshPolicy.ts")).href;
+          const linksUrl = pathToFileURL(join(workspace, "src/domain/officialLinks.ts")).href;
+          const { parseOfficialProgramsText } = await import(parserUrl);
+          const { summarizeOfficialProgramDayInventory } = await import(policyUrl);
+          const { officialVenueCode } = await import(linksUrl);
+
+          const bytes = readFileSync(process.env.TXT);
+          const text = new TextDecoder("shift_jis").decode(bytes);
+          const rows = parseOfficialProgramsText(text, { date: "2026-08-07" });
+          const inventory = summarizeOfficialProgramDayInventory(
+            "2026-08-07",
+            rows.map((row) => ({ date: row.date, venue: row.venue, raceNo: row.raceNo })),
+          );
+          const omuraRaceNos = [...new Set(
+            rows.filter((row) => officialVenueCode(row.venue) === "24").map((row) => row.raceNo),
+          )].sort((a, b) => a - b);
+          const keys = rows.map((row) => `${row.venue}|${row.raceNo}`);
+          const uniqueKeys = new Set(keys);
+          if (!inventory.structurallyComplete) throw new Error("REAL_ARCHIVE_STILL_INCOMPLETE");
+          if (inventory.incompleteVenues.length !== 0) throw new Error("REAL_ARCHIVE_INCOMPLETE_VENUES_REMAIN");
+          if (omuraRaceNos.length !== 12 || omuraRaceNos[11] !== 12) throw new Error("OMURA_12R_STILL_MISSING");
+          if (uniqueKeys.size !== rows.length) throw new Error("VENUE_RACE_DUPLICATE_REMAINS");
+          console.log(JSON.stringify({
+            status: "PASS",
+            date: "2026-08-07",
+            parsedRowCount: rows.length,
+            uniqueVenueRaceKeyCount: uniqueKeys.size,
+            venueCount: inventory.venueCount,
+            structurallyComplete: inventory.structurallyComplete,
+            incompleteVenueCount: inventory.incompleteVenues.length,
+            omuraRaceCount: omuraRaceNos.length,
+            omuraHas12R: omuraRaceNos.includes(12),
+            sourceTextSha256: createHash("sha256").update(bytes).digest("hex"),
+            databaseReadCount: 0,
+            databaseWriteCount: 0,
+            officialRequestCount: 0,
+            rawProgramTextPrinted: false,
+            currentBuyChanged: false,
+            lineChanged: false,
+            publicPublished: false,
+            automatedBettingChanged: false,
+          }, null, 2));
+          NODE
