@@ -1,0 +1,165 @@
+name: Temporary apply research failure history contract
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.head_ref == 'fix/research-failure-history-contract'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout fix branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/research-failure-history-contract
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Patch runner failure history paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('scripts/run-intent-task.ts')
+          text = p.read_text()
+          import_anchor = 'import { EXECUTOR_REGISTRY_VERSION, resolveExecutor, type ExecutorResult } from "../src/automation/taskExecutors";\n'
+          import_line = 'import { buildResearchAutomationFailureHistory } from "../src/automation/researchAutomationFailureHistory";\n'
+          if import_line not in text:
+              if import_anchor not in text:
+                  raise SystemExit('import anchor not found')
+              text = text.replace(import_anchor, import_anchor + import_line, 1)
+
+          old_no_executor = '''  if (!executor) {
+            const evidence = { runId, requestId: request.requestId, intentId, taskId: task.taskId, taskType: task.taskType, executed: false, result: "BLOCKED", blocks: [code], reason: `no executor registered for ${task.taskType}; task stays READY`, at: nowIso() };
+            writeJsonAtomic(join(HISTORY_DIR, `${runId}-${task.taskId}.json`), evidence);
+            appendLedgers(intentId, request.requestId, "BLOCKED", idempotencyKey, `reports/automation/history/${runId}-${task.taskId}.json`);
+            finish("BLOCKED", 3, { lastRequestId: request.requestId, lastIntentId: intentId, lastTaskId: task.taskId, authoritySha: request.authoritySha, stateVersion: state.stateVersion, stateDigest, blocks: [code], elapsedMs: Date.now() - startedMs, evidencePath: `reports/automation/history/${runId}-${task.taskId}.json`, nextCandidate: pickNext(merged) });
+          }
+          '''
+          new_no_executor = '''  if (!executor) {
+            const completedAt = nowIso();
+            const evidencePath = `reports/automation/history/${runId}-${task.taskId}.json`;
+            const evidence = buildResearchAutomationFailureHistory({
+              runId, requestId: request.requestId, intentId, taskId: task.taskId, taskType: task.taskType,
+              safetyLevel: request.safetyLevel as "L0" | "L1" | "L2" | "L3",
+              executorVersion: EXECUTOR_REGISTRY_VERSION, result: "BLOCKED", failureCode: code,
+              finalTaskStatus: task.status, message: `no executor registered for ${task.taskType}; task stays READY`,
+              authoritySha: git("rev-parse", request.authoritySha), idempotencyKey,
+              startedAt: new Date(startedMs).toISOString(), completedAt, elapsedMs: Date.now() - startedMs,
+            });
+            writeJsonAtomic(join(HISTORY_DIR, `${runId}-${task.taskId}.json`), evidence);
+            appendLedgers(intentId, request.requestId, "BLOCKED", idempotencyKey, evidencePath);
+            finish("BLOCKED", 3, { lastRequestId: request.requestId, lastIntentId: intentId, lastTaskId: task.taskId, authoritySha: request.authoritySha, stateVersion: state.stateVersion, stateDigest, blocks: [code], elapsedMs: Date.now() - startedMs, evidencePath, nextCandidate: pickNext(merged) });
+          }
+          '''
+          if old_no_executor in text:
+              text = text.replace(old_no_executor, new_no_executor, 1)
+          elif 'const evidence = buildResearchAutomationFailureHistory({' not in text:
+              raise SystemExit('no-executor anchor not found')
+
+          old_exception = '''  } catch (e) {
+            const message = e instanceof Error ? e.message : String(e);
+            const attempts = (state.tasks[task.taskId]?.attemptCount ?? 1);
+            const finalStatus = attempts >= (state.tasks[task.taskId]?.maxAttempts ?? 3) ? "FAILED_FINAL" : "FAILED_RETRYABLE";
+            updateState(task.taskId, { status: finalStatus, lastFailure: { code: "EXECUTOR_EXCEPTION", message: message.slice(0, 300), at: nowIso() } });
+            const evidencePath = `reports/automation/history/${runId}-${task.taskId}.json`;
+            writeJsonAtomic(join(HISTORY_DIR, `${runId}-${task.taskId}.json`), { runId, requestId: request.requestId, intentId, taskId: task.taskId, result: finalStatus, error: message.slice(0, 300), at: nowIso() });
+            appendLedgers(intentId, request.requestId, finalStatus, idempotencyKey, evidencePath);
+            finish(finalStatus, 1, { lastRequestId: request.requestId, lastIntentId: intentId, lastTaskId: task.taskId, authoritySha: request.authoritySha, stateVersion: state.stateVersion, stateDigest, blocks: ["EXECUTOR_EXCEPTION"], elapsedMs: Date.now() - startedMs, evidencePath, nextCandidate: pickNext(merged) });
+          }
+          '''
+          new_exception = '''  } catch (e) {
+            const message = e instanceof Error ? e.message : String(e);
+            const attempts = (state.tasks[task.taskId]?.attemptCount ?? 1);
+            const finalStatus = attempts >= (state.tasks[task.taskId]?.maxAttempts ?? 3) ? "FAILED_FINAL" : "FAILED_RETRYABLE";
+            updateState(task.taskId, { status: finalStatus, lastFailure: { code: "EXECUTOR_EXCEPTION", message: message.slice(0, 300), at: nowIso() } });
+            const completedAt = nowIso();
+            const evidencePath = `reports/automation/history/${runId}-${task.taskId}.json`;
+            const evidence = buildResearchAutomationFailureHistory({
+              runId, requestId: request.requestId, intentId, taskId: task.taskId, taskType: task.taskType,
+              safetyLevel: request.safetyLevel as "L0" | "L1" | "L2" | "L3",
+              executorVersion: EXECUTOR_REGISTRY_VERSION, result: "FAILED", failureCode: "EXECUTOR_EXCEPTION",
+              finalTaskStatus: finalStatus, message,
+              authoritySha: git("rev-parse", request.authoritySha), idempotencyKey,
+              startedAt: new Date(startedMs).toISOString(), completedAt, elapsedMs: Date.now() - startedMs,
+            });
+            writeJsonAtomic(join(HISTORY_DIR, `${runId}-${task.taskId}.json`), evidence);
+            appendLedgers(intentId, request.requestId, finalStatus, idempotencyKey, evidencePath);
+            finish(finalStatus, 1, { lastRequestId: request.requestId, lastIntentId: intentId, lastTaskId: task.taskId, authoritySha: request.authoritySha, stateVersion: state.stateVersion, stateDigest, blocks: ["EXECUTOR_EXCEPTION"], elapsedMs: Date.now() - startedMs, evidencePath, nextCandidate: pickNext(merged) });
+          }
+          '''
+          if old_exception in text:
+              text = text.replace(old_exception, new_exception, 1)
+          elif 'result: "FAILED", failureCode: "EXECUTOR_EXCEPTION"' not in text:
+              raise SystemExit('exception anchor not found')
+
+          old_dry = '''  if ((exec.result as string) === "DRY_RUN_OK") {
+            updateState(task.taskId, { status: "BLOCKED", lastFailure: { code: "UNEXPECTED_DRY_RUN_RESULT", at: nowIso() } });
+            finish("BLOCKED", 3, { lastRequestId: request.requestId, lastIntentId: intentId, lastTaskId: task.taskId, authoritySha: request.authoritySha, stateVersion: state.stateVersion, stateDigest, blocks: ["UNEXPECTED_DRY_RUN_RESULT"], elapsedMs: Date.now() - startedMs, nextCandidate: pickNext(merged) });
+          }
+          '''
+          new_dry = '''  if ((exec.result as string) === "DRY_RUN_OK") {
+            updateState(task.taskId, { status: "BLOCKED", lastFailure: { code: "UNEXPECTED_DRY_RUN_RESULT", at: nowIso() } });
+            const completedAt = nowIso();
+            const evidencePath = `reports/automation/history/${runId}-${task.taskId}.json`;
+            const evidence = buildResearchAutomationFailureHistory({
+              runId, requestId: request.requestId, intentId, taskId: task.taskId, taskType: task.taskType,
+              safetyLevel: request.safetyLevel as "L0" | "L1" | "L2" | "L3",
+              executorVersion: exec.executorVersion, result: "BLOCKED", failureCode: "UNEXPECTED_DRY_RUN_RESULT",
+              finalTaskStatus: "BLOCKED", message: "executor returned DRY_RUN_OK during non-dry-run execution",
+              authoritySha: git("rev-parse", request.authoritySha), idempotencyKey,
+              startedAt: new Date(startedMs).toISOString(), completedAt, elapsedMs: Date.now() - startedMs,
+            });
+            writeJsonAtomic(join(HISTORY_DIR, `${runId}-${task.taskId}.json`), evidence);
+            appendLedgers(intentId, request.requestId, "BLOCKED", idempotencyKey, evidencePath);
+            finish("BLOCKED", 3, { lastRequestId: request.requestId, lastIntentId: intentId, lastTaskId: task.taskId, authoritySha: request.authoritySha, stateVersion: state.stateVersion, stateDigest, blocks: ["UNEXPECTED_DRY_RUN_RESULT"], elapsedMs: Date.now() - startedMs, evidencePath, nextCandidate: pickNext(merged) });
+          }
+          '''
+          if old_dry in text:
+              text = text.replace(old_dry, new_dry, 1)
+          elif 'failureCode: "UNEXPECTED_DRY_RUN_RESULT"' not in text:
+              raise SystemExit('unexpected-dry-run anchor not found')
+
+          normal_old = '    outputDigest: exec.outputDigest, summary: exec.summary, authoritySha: request.authoritySha, idempotencyKey,\n'
+          normal_new = '    outputDigest: exec.outputDigest, summary: exec.summary, authoritySha: git("rev-parse", request.authoritySha), idempotencyKey,\n'
+          if normal_old in text:
+              text = text.replace(normal_old, normal_new, 1)
+          elif normal_new not in text:
+              raise SystemExit('normal history authority anchor not found')
+
+          p.write_text(text)
+          PY
+
+      - name: Verify focused contract and typecheck
+        run: |
+          node --test --import tsx src/automation/researchAutomationFailureHistory.test.ts
+          node --test --import tsx src/automation/researchAutomationFailureHistoryBoundary.test.ts
+          node --test --import tsx src/automation/researchDurableKnowledgeCompleteness.test.ts
+          npm run typecheck
+
+      - name: Commit validated runner patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- scripts/run-intent-task.ts; then
+            echo "runner already patched"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/run-intent-task.ts
+          git commit -m "fix(research): persist valid failure histories"
+          git push origin HEAD:fix/research-failure-history-contract
