@@ -1,0 +1,89 @@
+name: Temporary audit Mac odds execution gap 2026-08-07
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/tmp-audit-mac-odds-gap-20260807.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tmp-audit-mac-odds-gap-20260807
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: [self-hosted, macOS]
+    timeout-minutes: 10
+    env:
+      CANONICAL_REPO: /Users/m-shogo/Developer/personal/boat-pon
+      NODE_BIN: /Users/m-shogo/.local/share/mise/installs/node/24/bin/node
+    steps:
+      - name: Inspect sleep events and collector tick timestamps
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        run: |
+          set -euo pipefail
+          "$NODE_BIN" <<'NODE'
+          const fs=require('node:fs');
+          const path=require('node:path');
+          const cp=require('node:child_process');
+          const root=process.env.CANONICAL_REPO;
+          const stdoutPath=path.join(root,'data/private/trifecta-capture/logs/stdout.log');
+          const stderrPath=path.join(root,'data/private/trifecta-capture/logs/stderr.log');
+          const focusStart=Date.parse('2026-08-06T23:10:00.000Z');
+          const focusEnd=Date.parse('2026-08-06T23:42:00.000Z');
+          function meta(file){try{const s=fs.statSync(file);return{exists:true,bytes:s.size,modifiedAt:s.mtime.toISOString()};}catch{return{exists:false,bytes:null,modifiedAt:null};}}
+          function extractTicks(file){
+            if(!fs.existsSync(file)) return [];
+            const text=fs.readFileSync(file,'utf8');
+            const times=[];
+            for(const m of text.matchAll(/"now"\s*:\s*"([^"]+)"/gu)){
+              const t=Date.parse(m[1]);
+              if(Number.isFinite(t)&&t>=focusStart&&t<=focusEnd) times.push(m[1]);
+            }
+            return [...new Set(times)].sort();
+          }
+          let powerLines=[];
+          try{
+            const text=cp.execFileSync('/usr/bin/pmset',['-g','log'],{encoding:'utf8',maxBuffer:20_000_000});
+            powerLines=text.split('\n').filter(line=>{
+              if(!line.startsWith('2026-08-07 08:')) return false;
+              return /\b(?:Sleep|Wake|DarkWake|Entering Sleep|Wake from)\b/iu.test(line);
+            }).map(line=>{
+              const timestamp=line.slice(0,19);
+              let event='POWER_EVENT';
+              if(/DarkWake/iu.test(line)) event='DARK_WAKE';
+              else if(/Wake/iu.test(line)) event='WAKE';
+              else if(/Sleep/iu.test(line)) event='SLEEP';
+              return {timestampJst:timestamp,event};
+            });
+          }catch(error){
+            powerLines=[{timestampJst:null,event:'PMSET_LOG_UNAVAILABLE'}];
+          }
+          const ticks=extractTicks(stdoutPath);
+          const gaps=[];
+          for(let i=1;i<ticks.length;i++){
+            const previous=Date.parse(ticks[i-1]);
+            const current=Date.parse(ticks[i]);
+            gaps.push({from:ticks[i-1],to:ticks[i],seconds:(current-previous)/1000});
+          }
+          console.log('SANITIZED_MAC_ODDS_GAP_AUDIT_BEGIN');
+          console.log(JSON.stringify({
+            evidenceSchemaVersion:'mac-odds-gap-audit-v1',
+            focusWindowUtc:['2026-08-06T23:10:00.000Z','2026-08-06T23:42:00.000Z'],
+            focusWindowJst:['2026-08-07 08:10:00','2026-08-07 08:42:00'],
+            stdoutLog:meta(stdoutPath),
+            stderrLog:meta(stderrPath),
+            collectorTickCountInWindow:ticks.length,
+            collectorTickTimes:ticks,
+            collectorTickGaps:gaps,
+            powerEvents08Hour:powerLines,
+            rawOddsValuesRead:false,
+            databaseReadCount:0,
+            databaseWriteCount:0,
+            networkRequestCount:0,
+          },null,2));
+          console.log('SANITIZED_MAC_ODDS_GAP_AUDIT_END');
+          NODE
