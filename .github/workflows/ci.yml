@@ -104,3 +104,9 @@ jobs:
             echo "::error::research code references production/BUY markers"; exit 1
           fi
           echo "research code has no production/BUY connection"
+
+  temporary-apply-immutable-run-outputs:
+    if: github.event_name == 'pull_request' && github.head_ref == 'feat/research-immutable-run-outputs-v3'
+    uses: ./.github/workflows/tmp-validate-immutable-run-outputs-v3.yml
+    permissions:
+      contents: write
