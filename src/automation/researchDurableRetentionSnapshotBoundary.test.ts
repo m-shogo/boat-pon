@@ -59,6 +59,12 @@ test("retention CLI exposes metadata only and cannot invoke product behavior", (
   assert.doesNotMatch(cli, /DatabaseSync|openDb|\bfetch\s*\(|child_process|execSync|spawnSync|send-line|notify|auto_purchase|auto_vote/u);
 });
 
+test("retention workflow binds lineage to the checked-out main authority", () => {
+  assert.match(workflow, /MAIN_SHA="\$\(git rev-parse HEAD\)"/u);
+  assert.match(workflow, /--main-authority-sha="\$MAIN_SHA"/u);
+  assert.doesNotMatch(workflow, /MAIN_SHA:\s*\$\{\{\s*github\.sha\s*\}\}/u);
+});
+
 test("retention workflow is one-shot, serialized, CAS guarded and stages one retention path", () => {
   assert.match(workflow, /workflow_dispatch:/u);
   assert.doesNotMatch(workflow, /\bschedule:/u);
