@@ -116,15 +116,18 @@ try {
     date: requestedDate,
     venueCode,
   }));
-  const plans = planResults
-    .filter((result) => result.status === "PASS")
+  const completePlans = planResults
+    .filter((result) => result.status === "PASS"
+      && result.plan.raceCount === 12
+      && result.plan.requestBudget === 48
+      && result.plan.entries.length === 48)
     .map((result) => result.plan);
-  const incompleteVenueCount = planResults.length - plans.length;
+  const incompleteVenueCount = planResults.length - completePlans.length;
 
   const cache = buildN2TrifectaPrivateDailyPlanCache({
     date: requestedDate,
     generatedAt: now.toISOString(),
-    plans,
+    plans: completePlans,
     source,
   });
   const relativePath = writeN2TrifectaPrivateDailyPlanCache({ dataRoot, cache });
@@ -140,7 +143,7 @@ try {
     status: "PASS",
     date: requestedDate,
     venueInventoryCount: venueCodes.length,
-    completeVenuePlanCount: plans.length,
+    completeVenuePlanCount: completePlans.length,
     incompleteVenueCount,
     selectedVenueCode: cache.venueCode,
     selectedRaceCount: cache.plan.raceCount,
