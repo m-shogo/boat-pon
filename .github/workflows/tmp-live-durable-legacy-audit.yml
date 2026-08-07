@@ -1,0 +1,79 @@
+name: Temporary final durable retention audit
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    if: github.head_ref == 'ops/live-audit-research-durable-legacy-e2ed9af'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout latest scanner
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Checkout automation state read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin automation/boat-pon-research
+          rm -rf /tmp/boat-pon-automation-state
+          git worktree add --detach /tmp/boat-pon-automation-state origin/automation/boat-pon-research
+          test -z "$(git -C /tmp/boat-pon-automation-state status --porcelain)"
+          echo "automation_state_sha=$(git -C /tmp/boat-pon-automation-state rev-parse HEAD)"
+      - name: Run final durable retention audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          before_sha="$(git -C /tmp/boat-pon-automation-state rev-parse HEAD)"
+          before_status="$(git -C /tmp/boat-pon-automation-state status --porcelain)"
+          set +e
+          node --import tsx scripts/audit-research-durable-knowledge-completeness.ts \
+            --repo-root=/tmp/boat-pon-automation-state \
+            --generated-at=2026-08-07T07:45:00.000Z > /tmp/durable-final.json
+          audit_rc=$?
+          set -e
+          if [ "$audit_rc" -ne 0 ] && [ "$audit_rc" -ne 3 ]; then
+            echo "unexpected audit exit code: $audit_rc"
+            exit "$audit_rc"
+          fi
+          after_sha="$(git -C /tmp/boat-pon-automation-state rev-parse HEAD)"
+          after_status="$(git -C /tmp/boat-pon-automation-state status --porcelain)"
+          test "$before_sha" = "$after_sha"
+          test "$before_status" = "$after_status"
+          test -z "$after_status"
+          python3 - <<'PY'
+          import json
+          d = json.load(open('/tmp/durable-final.json'))
+          keys = ['status','historyFileCount','assessedRunCount','passCount','conditionalCount','blockedCount','failedCount','durableCompleteCount','strongDurableCompleteCount','incompleteCount','invalidHistoryCount','passWithDurableOutputsCount','nonPassDurableHistoryCount','missingOutputReferenceCount','invalidOutputReferenceCount','mutableSupersededReferenceCount','registryOutputCount','currentOutputDigestMatchCount','legacyCompatibilityCount','classificationCounts','automaticPromotionAuthorized','currentBuyConnectionAuthorized','lineConnectionAuthorized','publicPublishAuthorized','databaseWriteAuthorized','automatedBettingAuthorized','productionApplyAuthorized','outputDigest']
+          out = {k: d.get(k) for k in keys}
+          out['nonStrongRuns'] = [{'runId': r.get('runId'),'taskId': r.get('taskId'),'classification': r.get('classification'),'durableComplete': r.get('durableComplete'),'strongDurableComplete': r.get('strongDurableComplete'),'issues': r.get('issues'),'warnings': r.get('warnings')} for r in d.get('runs', []) if not r.get('strongDurableComplete')]
+          print(json.dumps(out, ensure_ascii=False, indent=2))
+          assert d['status'] == 'DEGRADED', d['status']
+          assert d['historyFileCount'] == 15
+          assert d['assessedRunCount'] == 15
+          assert d['durableCompleteCount'] == 15
+          assert d['incompleteCount'] == 0
+          assert d['invalidHistoryCount'] == 0
+          assert d['missingOutputReferenceCount'] == 0
+          assert d['invalidOutputReferenceCount'] == 0
+          assert d['legacyCompatibilityCount'] == 1
+          assert d['automaticPromotionAuthorized'] is False
+          assert d['currentBuyConnectionAuthorized'] is False
+          assert d['lineConnectionAuthorized'] is False
+          assert d['publicPublishAuthorized'] is False
+          assert d['databaseWriteAuthorized'] is False
+          assert d['automatedBettingAuthorized'] is False
+          assert d['productionApplyAuthorized'] is False
+          PY
