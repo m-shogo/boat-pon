@@ -1,0 +1,68 @@
+name: Fix N2 readiness catalog v1 contract
+
+on:
+  push:
+    branches:
+      - fix/n2-readiness-catalog-v1-contract
+    paths:
+      - .github/workflows/tmp-fix-n2-readiness-catalog-v1-contract.yml
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/tmp-fix-n2-readiness-catalog-v1-contract.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/n2-readiness-catalog-v1-contract
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Align catalog validator and fixture with authoritative readiness v1
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          source_path = Path('src/research-replay/n2TrifectaPrivateMarketReadinessCatalog.ts')
+          source = source_path.read_text()
+          old = '  if (value.privateResearchOnly !== true || value.automaticFreezeAuthorized !== false\n'
+          new = '  if (value.automaticFreezeAuthorized !== false\n'
+          if source.count(old) != 1:
+              raise SystemExit(f'catalog protected-boundary anchor count={source.count(old)}')
+          source_path.write_text(source.replace(old, new, 1))
+
+          test_path = Path('src/research-replay/n2TrifectaPrivateMarketReadinessCatalog.test.ts')
+          test = test_path.read_text()
+          old_fixture = '    privateResearchOnly: true as const,\n    automaticFreezeAuthorized: false as const,\n'
+          new_fixture = '    automaticFreezeAuthorized: false as const,\n'
+          if test.count(old_fixture) != 1:
+              raise SystemExit(f'fixture contract anchor count={test.count(old_fixture)}')
+          test_path.write_text(test.replace(old_fixture, new_fixture, 1))
+          PY
+      - name: Verify authoritative v1 catalog tests and typecheck
+        run: |
+          node --test --import tsx src/research-replay/n2TrifectaPrivateMarketReadinessCatalog.test.ts
+          node --test --import tsx src/automation/n2PrivateMarketReadinessCatalogBoundary.test.ts
+          npm run typecheck
+      - name: Commit validated fix and remove one-shot workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/research-replay/n2TrifectaPrivateMarketReadinessCatalog.ts src/research-replay/n2TrifectaPrivateMarketReadinessCatalog.test.ts
+          git rm .github/workflows/tmp-fix-n2-readiness-catalog-v1-contract.yml
+          git commit -m "fix(research): align readiness catalog with v1 artifacts"
+          git push origin HEAD:fix/n2-readiness-catalog-v1-contract
