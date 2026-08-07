@@ -1,0 +1,131 @@
+name: Temporary build N2 experiment input 49cc652
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/tmp-build-n2-experiment-input-49cc652.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-n2-experiment-input-49cc652
+  cancel-in-progress: false
+
+jobs:
+  build-manifest:
+    runs-on: [self-hosted, macOS]
+    timeout-minutes: 20
+    env:
+      MAIN_SHA: 49cc652c63cfee633aafd9b61828a1814a8404e9
+      CANONICAL_REPO: /Users/m-shogo/Developer/personal/boat-pon
+      CAPTURE_RUNTIME_SHA: 967ad45d1f72b4ad17e036a25926c1e61ba4e091
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 49cc652c63cfee633aafd9b61828a1814a8404e9
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Fast-forward canonical main without moving immutable collector runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C "$CANONICAL_REPO" branch --show-current)" = main
+          test -z "$(git -C "$CANONICAL_REPO" status --porcelain)"
+          BINDING="$CANONICAL_REPO/data/private/trifecta-capture/runtime-authority.json"
+          test "$(node -p "JSON.parse(require('fs').readFileSync('$BINDING','utf8')).authoritySha")" = "$CAPTURE_RUNTIME_SHA"
+          git -C "$CANONICAL_REPO" fetch origin main
+          git -C "$CANONICAL_REPO" merge --ff-only "$MAIN_SHA"
+          test "$(git -C "$CANONICAL_REPO" rev-parse HEAD)" = "$MAIN_SHA"
+          test -z "$(git -C "$CANONICAL_REPO" status --porcelain)"
+          test "$(node -p "JSON.parse(require('fs').readFileSync('$BINDING','utf8')).authoritySha")" = "$CAPTURE_RUNTIME_SHA"
+      - name: Install local analysis dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$CANONICAL_REPO"
+          npm ci
+          test -z "$(git status --porcelain --untracked-files=no)"
+      - name: Build and verify immutable exploration input manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPORT="$RUNNER_TEMP/n2-experiment-input-summary.json"
+          export REPORT
+          cd "$CANONICAL_REPO"
+          BOAT_PON_DATA_ROOT="$CANONICAL_REPO" \
+            node node_modules/tsx/dist/cli.mjs \
+            scripts/build-n2-trifecta-private-market-experiment-input-manifest.ts \
+            --index 2026-08-07:10 --write-private > "$REPORT"
+          test -s "$REPORT"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const r = JSON.parse(fs.readFileSync(process.env.REPORT, 'utf8'));
+          const violations = [];
+          if (r.summaryVersion !== 'n2-trifecta-private-market-experiment-input-summary-v1') violations.push('SUMMARY_VERSION');
+          if (r.evidenceRole !== 'EXPLORATION_ONLY' || r.coveragePolicy !== 'FULL_TRAJECTORY_ONLY'
+            || r.labelPolicy !== 'NO_OUTCOME_LABELS'
+            || r.selectionPolicy !== 'ALL_PASS_RACES_FROM_EXPLICIT_DAY_INDICES') violations.push('POLICY');
+          if (r.raceCount !== 5 || !Array.isArray(r.races) || r.races.length !== 5) violations.push('RACE_COUNT');
+          if (!r.races.every((race) => Array.isArray(race.checkpointCoverage)
+            && JSON.stringify(race.checkpointCoverage) === JSON.stringify(['T-30','T-20','T-10','T-5']))) violations.push('COVERAGE');
+          if (r.privateFeatureArtifactsRead !== false || r.rawCaptureEvidenceRead !== false
+            || r.outcomeDataRead !== false || r.validationDataRead !== false || r.holdoutDataRead !== false) violations.push('READ_BOUNDARY');
+          if (r.rawOddsValuesPrinted !== false || r.rawOddsValuesPublished !== false) violations.push('RAW_PUBLICATION');
+          if (r.networkRequestCount !== 0 || r.databaseReadCount !== 0 || r.databaseWriteCount !== 0) violations.push('IO_BOUNDARY');
+          if (r.currentBuyChanged !== false || r.lineChanged !== false || r.publicPublished !== false
+            || r.automatedBettingChanged !== false || r.productionApplyExecuted !== false) violations.push('PROTECTED_BOUNDARY');
+          if (r.privateManifestWrittenOrReused !== true || typeof r.privateManifestRelativePath !== 'string'
+            || typeof r.manifestDigest !== 'string' || !/^[0-9a-f]{64}$/.test(r.manifestDigest)) violations.push('MANIFEST_WRITE');
+          const expected = `data/private/trifecta-market-experiments/manifests/${r.manifestDigest}.json`;
+          if (r.privateManifestRelativePath !== expected) violations.push('MANIFEST_PATH');
+          const absolute = path.join(process.env.CANONICAL_REPO, expected);
+          const lst = fs.lstatSync(absolute);
+          const stat = fs.statSync(absolute);
+          if (lst.isSymbolicLink() || !stat.isFile() || (stat.mode & 0o777) !== 0o600) violations.push('MANIFEST_MODE');
+          const manifest = JSON.parse(fs.readFileSync(absolute, 'utf8'));
+          if (manifest.manifestDigest !== r.manifestDigest || manifest.raceCount !== 5
+            || manifest.evidenceRole !== 'EXPLORATION_ONLY' || manifest.coveragePolicy !== 'FULL_TRAJECTORY_ONLY'
+            || manifest.labelPolicy !== 'NO_OUTCOME_LABELS' || manifest.outcomeDataRead !== false
+            || manifest.holdoutDataRead !== false || manifest.validationDataRead !== false
+            || manifest.privateResearchOnly !== true || manifest.publicPublishAuthorized !== false
+            || manifest.currentBuyConnectionAuthorized !== false || manifest.lineConnectionAuthorized !== false
+            || manifest.automatedBettingAuthorized !== false || manifest.productionApplyAuthorized !== false) violations.push('MANIFEST_BOUNDARY');
+          const serialized = JSON.stringify(manifest);
+          if (/"sequence"|"snapshots"|"transitions"|"selections"|"odds"|"payout"|"roi"|"outcome"\s*:/.test(serialized)) violations.push('FORBIDDEN_PAYLOAD');
+          const summary = {
+            evidenceSchemaVersion: 'n2-private-experiment-input-live-v1',
+            status: violations.length ? 'BLOCKED' : 'PASS',
+            violations,
+            manifestDigest: r.manifestDigest,
+            sourceAsOf: r.sourceAsOf,
+            raceCount: r.raceCount,
+            raceIdentities: r.races.map((race) => race.raceIdentity),
+            sourceIndices: r.sourceIndices,
+            privateManifestCreated: r.privateManifestCreated,
+            captureRuntimeAuthorityUnchanged: process.env.CAPTURE_RUNTIME_SHA,
+            privateFeatureArtifactsRead: r.privateFeatureArtifactsRead,
+            rawCaptureEvidenceRead: r.rawCaptureEvidenceRead,
+            outcomeDataRead: r.outcomeDataRead,
+            validationDataRead: r.validationDataRead,
+            holdoutDataRead: r.holdoutDataRead,
+            networkRequestCount: r.networkRequestCount,
+            databaseReadCount: r.databaseReadCount,
+            databaseWriteCount: r.databaseWriteCount,
+            rawOddsValuesPrinted: r.rawOddsValuesPrinted,
+            rawOddsValuesPublished: r.rawOddsValuesPublished,
+            currentBuyChanged: r.currentBuyChanged,
+            lineChanged: r.lineChanged,
+            publicPublished: r.publicPublished,
+            automatedBettingChanged: r.automatedBettingChanged,
+            productionApplyExecuted: r.productionApplyExecuted,
+          };
+          console.log('SANITIZED_N2_EXPERIMENT_INPUT_BEGIN');
+          console.log(JSON.stringify(summary, null, 2));
+          console.log('SANITIZED_N2_EXPERIMENT_INPUT_END');
+          if (violations.length) process.exit(1);
+          NODE
