@@ -1,0 +1,85 @@
+name: Fix research durable completeness types
+
+on:
+  push:
+    branches:
+      - feat/research-durable-knowledge-completeness
+    paths:
+      - .github/workflows/tmp-fix-research-durable-completeness-types.yml
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/tmp-fix-research-durable-completeness-types.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/research-durable-knowledge-completeness
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Fix literal result type and fixture option
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          src = Path('src/automation/researchDurableKnowledgeCompleteness.ts')
+          text = src.read_text()
+          old = '''      result: history.result as string,
+'''
+          if old in text:
+              text = text.replace(old, '''      result: history.result as ResearchAutomationHistoryResult,
+''', 1)
+          else:
+              # Source currently uses the validated local variable in a returned object; narrow only that occurrence.
+              marker = '''      result,
+      executed: true,
+      startedAt: history.startedAt as string,
+      completedAt: history.completedAt as string,
+      outputDigest,
+      outputCount: outputPaths.length,
+      verifiedOutputCount,
+      mutableSupersededReferenceCount: superseded,
+      registryOutputCount,
+      explicitNoChange: noChange,
+      classification: nonPassHasDurableHistory && outputComplete
+'''
+              if marker not in text:
+                  raise SystemExit('non-pass result return anchor not found')
+              text = text.replace(marker, marker.replace('      result,\n', '      result: result as ResearchAutomationHistoryResult,\n'), 1)
+          src.write_text(text)
+
+          test = Path('src/automation/researchDurableKnowledgeCompleteness.test.ts')
+          t = test.read_text()
+          old_call = 'buildResearchDurableKnowledgeCompletenessReport({ rootDir: root } as never)'
+          if old_call not in t:
+              raise SystemExit('fixture root option anchor not found')
+          test.write_text(t.replace(old_call, 'buildResearchDurableKnowledgeCompletenessReport({ repoRoot: root })', 1))
+          PY
+      - name: Verify focused completeness tests and typecheck
+        run: |
+          node --test --import tsx src/automation/researchDurableKnowledgeCompleteness.test.ts
+          node --test --import tsx src/automation/researchDurableKnowledgeCompletenessBoundary.test.ts
+          npm run typecheck
+      - name: Commit validated fix and remove one-shot workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/automation/researchDurableKnowledgeCompleteness.ts src/automation/researchDurableKnowledgeCompleteness.test.ts
+          git rm .github/workflows/tmp-fix-research-durable-completeness-types.yml
+          git commit -m "fix(research): type durable knowledge completeness audit"
+          git push origin HEAD:feat/research-durable-knowledge-completeness
