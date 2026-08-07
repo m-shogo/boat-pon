@@ -44,7 +44,7 @@ function authorization(): N2TrifectaLocalCaptureAuthorization {
   };
 }
 
-function completeOddsHtml(updateTime = "10:00"): string {
+function completeOddsHtml(updateTime = "09:59"): string {
   const pairsByFirst = new Map<number, Array<[number, number]>>();
   for (let first = 1; first <= 6; first += 1) {
     const pairs: Array<[number, number]> = [];
