@@ -1,0 +1,101 @@
+name: Temporary live retention regression audit
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    if: github.head_ref == 'ops/live-audit-retention-regression-ede00c8'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout merged main audit authority
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Materialize current automation state read-only
+        id: state
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin automation/boat-pon-research
+          SOURCE_SHA="$(git rev-parse origin/automation/boat-pon-research)"
+          STATE_DIR=/tmp/boat-pon-retention-regression-state
+          rm -rf "$STATE_DIR"
+          git worktree add --detach "$STATE_DIR" "$SOURCE_SHA"
+          test -z "$(git -C "$STATE_DIR" status --porcelain)"
+          echo "source_sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
+          echo "source_state_sha=$SOURCE_SHA"
+      - name: Audit durable research knowledge with latest scanner
+        env:
+          SOURCE_SHA: ${{ steps.state.outputs.source_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          STATE_DIR=/tmp/boat-pon-retention-regression-state
+          BEFORE_SHA="$(git -C "$STATE_DIR" rev-parse HEAD)"
+          BEFORE_STATUS="$(git -C "$STATE_DIR" status --porcelain)"
+          set +e
+          node --import tsx scripts/audit-research-durable-knowledge-completeness.ts \
+            --repo-root="$STATE_DIR" \
+            --generated-at=2026-08-07T08:50:00.000Z > /tmp/retention-regression.json
+          AUDIT_RC=$?
+          set -e
+          if [ "$AUDIT_RC" -ne 0 ] && [ "$AUDIT_RC" -ne 3 ]; then
+            cat /tmp/retention-regression.json || true
+            exit "$AUDIT_RC"
+          fi
+          AFTER_SHA="$(git -C "$STATE_DIR" rev-parse HEAD)"
+          AFTER_STATUS="$(git -C "$STATE_DIR" status --porcelain)"
+          test "$BEFORE_SHA" = "$AFTER_SHA"
+          test "$BEFORE_STATUS" = "$AFTER_STATUS"
+          test -z "$AFTER_STATUS"
+          test "$BEFORE_SHA" = "$SOURCE_SHA"
+          python3 - <<'PY'
+          import json
+          d = json.load(open('/tmp/retention-regression.json'))
+          assert d['status'] == 'DEGRADED', d['status']
+          assert d['historyFileCount'] >= 15, d['historyFileCount']
+          assert d['assessedRunCount'] == d['historyFileCount']
+          assert d['durableCompleteCount'] == d['assessedRunCount']
+          assert d['strongDurableCompleteCount'] >= 11
+          assert d['incompleteCount'] == 0
+          assert d['invalidHistoryCount'] == 0
+          assert d['missingOutputReferenceCount'] == 0
+          assert d['invalidOutputReferenceCount'] == 0
+          assert d['legacyCompatibilityCount'] == 1
+          for key in [
+              'automaticPromotionAuthorized','currentBuyConnectionAuthorized','lineConnectionAuthorized',
+              'publicPublishAuthorized','databaseWriteAuthorized','automatedBettingAuthorized','productionApplyAuthorized'
+          ]:
+              assert d[key] is False, (key, d[key])
+          out = {key: d.get(key) for key in [
+              'status','historyFileCount','assessedRunCount','durableCompleteCount','strongDurableCompleteCount',
+              'incompleteCount','invalidHistoryCount','missingOutputReferenceCount','invalidOutputReferenceCount',
+              'mutableSupersededReferenceCount','registryOutputCount','currentOutputDigestMatchCount',
+              'legacyCompatibilityCount','classificationCounts','outputDigest'
+          ]}
+          out['protectedAuthoritiesAllFalse'] = True
+          print(json.dumps(out, ensure_ascii=False, indent=2))
+          PY
+      - name: Confirm source checkout remains untouched
+        env:
+          SOURCE_SHA: ${{ steps.state.outputs.source_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          STATE_DIR=/tmp/boat-pon-retention-regression-state
+          test "$(git -C "$STATE_DIR" rev-parse HEAD)" = "$SOURCE_SHA"
+          test -z "$(git -C "$STATE_DIR" status --porcelain)"
+          echo "source_state_unchanged=true"
