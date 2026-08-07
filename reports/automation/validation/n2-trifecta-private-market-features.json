@@ -1,6 +1,6 @@
 {
   "evidenceSchemaVersion": "n2-trifecta-private-market-features-v1",
-  "status": "IMPLEMENTED_PENDING_CI",
+  "status": "PASS",
   "privateAcceptedMarkerRequired": true,
   "rawSha256Reverified": true,
   "envelopePassRequired": true,
@@ -35,6 +35,15 @@
     "rankMovement",
     "marketMassMovement"
   ],
-  "ciRunId": null,
-  "ciConclusion": null
+  "ciRunId": 31134490635,
+  "ciConclusion": "SUCCESS",
+  "typecheck": "PASS",
+  "fullTests": "PASS",
+  "researchReplayGolden": "PASS",
+  "researchReplayReadiness": "PASS",
+  "build": "PASS",
+  "researchGovernance": "PASS",
+  "secretScan": "PASS",
+  "productPublicBoundary": "PASS",
+  "buyLineBoundary": "PASS"
 }
