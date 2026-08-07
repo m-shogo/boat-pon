@@ -31,6 +31,7 @@ import {
   type N2TrifectaPrivateFetcher,
 } from "./n2TrifectaPrivateCaptureExecutor";
 import { readN2TrifectaPrivateCapturePlan } from "./n2TrifectaPrivateCapturePlanReader";
+import { readN2TrifectaPrivateDailyPlanCache } from "./n2TrifectaPrivateDailyPlanCache";
 
 export const N2_TRIFECTA_LOCAL_CAPTURE_SERVICE_VERSION =
   "n2-trifecta-local-capture-service-v1.1" as const;
@@ -519,9 +520,27 @@ export async function runN2TrifectaLocalCaptureTick(
   blockers.push(...authorizationAudit.blockers.map((blocker) => `AUTH_${blocker}`));
   const date = jstDate(input.now);
   const nowMs = parseInstant(input.now);
-  const before = dbMeta(input.primaryDbPath);
-  if (before.walBytes > 0) blockers.push("PRIMARY_DB_ACTIVE_WAL");
   if (date == null || nowMs == null) blockers.push("INVALID_NOW");
+
+  let before: DbMeta | null = null;
+  let primaryDbAccessed = false;
+  let cachedSourcePlan: N2TrifectaOddsCheckpointPlan | null = null;
+  if (blockers.length === 0 && date != null) {
+    const cached = readN2TrifectaPrivateDailyPlanCache({
+      dataRoot: input.dataRoot,
+      expectedDate: date,
+      now: input.now,
+    });
+    if (cached.status === "PASS" && cached.plan) {
+      cachedSourcePlan = cached.plan;
+    } else if (cached.status === "BLOCKED") {
+      blockers.push(...cached.blockers.map((blocker) => `DAILY_PLAN_${blocker}`));
+    } else if (cached.fallbackToPrimaryDbAllowed) {
+      before = dbMeta(input.primaryDbPath);
+      primaryDbAccessed = true;
+      if (before.walBytes > 0) blockers.push("PRIMARY_DB_ACTIVE_WAL");
+    }
+  }
 
   let selectedVenueCode: string | null = null;
   let selectedSourcePlanDigest: string | null = null;
@@ -538,15 +557,16 @@ export async function runN2TrifectaLocalCaptureTick(
 
   if (blockers.length === 0 && date != null && nowMs != null) {
     try {
-      const venueCodes = discoverVenueCodes(input.primaryDbPath, date);
-      const plans = venueCodes
-        .map((venueCode) => readN2TrifectaPrivateCapturePlan({
+      const plans = cachedSourcePlan
+        ? [cachedSourcePlan]
+        : discoverVenueCodes(input.primaryDbPath, date)
+          .map((venueCode) => readN2TrifectaPrivateCapturePlan({
 primaryDbPath: input.primaryDbPath,
 date,
 venueCode,
-        }))
-        .filter((result) => result.status === "PASS")
-        .map((result) => result.plan);
+          }))
+          .filter((result) => result.status === "PASS")
+          .map((result) => result.plan);
       const selected = loadOrCreateSelection({
         dataRoot: input.dataRoot,
         date,
@@ -655,11 +675,14 @@ if (selectedEntry) {
     }
   }
 
-  const after = dbMeta(input.primaryDbPath);
-  const metadataUnchanged = before.bytes === after.bytes
-    && before.modifiedMs === after.modifiedMs
-    && before.walBytes === after.walBytes;
-  if (!metadataUnchanged) blockers.push("PRIMARY_DB_METADATA_CHANGED");
+  let metadataUnchanged = true;
+  if (primaryDbAccessed && before) {
+    const after = dbMeta(input.primaryDbPath);
+    metadataUnchanged = before.bytes === after.bytes
+      && before.modifiedMs === after.modifiedMs
+      && before.walBytes === after.walBytes;
+    if (!metadataUnchanged) blockers.push("PRIMARY_DB_METADATA_CHANGED");
+  }
   const normalized = unique(blockers);
   const status = normalized.length > 0
     ? "BLOCKED" as const
