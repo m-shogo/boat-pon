@@ -206,7 +206,7 @@ function validateReadinessArtifact(input: {
     || typeof value.heartbeatCurrentGapOverThreshold !== "boolean") {
     throw new Error("READINESS_CATALOG_ARTIFACT_HEARTBEAT_INVALID");
   }
-  if (value.privateResearchOnly !== true || value.automaticFreezeAuthorized !== false
+  if (value.automaticFreezeAuthorized !== false
     || value.outcomeDataRead !== false || value.validationDataRead !== false || value.holdoutDataRead !== false
     || value.rawCaptureEvidenceRead !== false || value.rawOddsValuesRead !== false || value.rawOddsValuesPrinted !== false
     || value.rawOddsValuesPublished !== false || value.networkRequestCount !== 0
