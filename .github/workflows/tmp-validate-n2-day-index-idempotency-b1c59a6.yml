@@ -1,0 +1,111 @@
+name: Temporary validate N2 day-index idempotency b1c59a6
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/tmp-validate-n2-day-index-idempotency-b1c59a6.yml
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: [self-hosted, macOS]
+    timeout-minutes: 20
+    env:
+      BOAT_PON_DATA_ROOT: /Users/m-shogo/Developer/personal/boat-pon
+      CAPTURE_RUNTIME_SHA: 967ad45d1f72b4ad17e036a25926c1e61ba4e091
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: b1c59a66552a91756b8ca485f5513804c90e4c95
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Verify capture runtime authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          BINDING="$BOAT_PON_DATA_ROOT/data/private/trifecta-capture/runtime-authority.json"
+          test "$(node -p "JSON.parse(require('fs').readFileSync('$BINDING','utf8')).authoritySha")" = "$CAPTURE_RUNTIME_SHA"
+      - name: Prove semantic idempotency on live private evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          export REPORT_DIR="$RUNNER_TEMP/n2-idempotency"
+          mkdir -p "$REPORT_DIR"
+          stable_pair=""
+          previous=""
+          for attempt in 1 2 3 4; do
+            report="$REPORT_DIR/report-$attempt.json"
+            BOAT_PON_DATA_ROOT="$BOAT_PON_DATA_ROOT" \
+              node node_modules/tsx/dist/cli.mjs \
+              scripts/run-n2-trifecta-private-market-feature-rollup.ts > "$report"
+            test -s "$report"
+            if [ -n "$previous" ]; then
+              stable_pair="$(PREVIOUS="$previous" CURRENT="$report" node - <<'NODE'
+          const fs = require('node:fs');
+          const a = JSON.parse(fs.readFileSync(process.env.PREVIOUS, 'utf8'));
+          const b = JSON.parse(fs.readFileSync(process.env.CURRENT, 'utf8'));
+          const sameEvidence = a.acceptedMarkerCount === b.acceptedMarkerCount
+            && a.loadedSnapshotCount === b.loadedSnapshotCount
+            && a.passCount === b.passCount
+            && a.partialCount === b.partialCount
+            && a.noDataCount === b.noDataCount;
+          const idempotent = sameEvidence
+            && b.artifactChangedCount === 0
+            && b.indexChanged === false
+            && a.indexDigest === b.indexDigest;
+          process.stdout.write(idempotent ? 'PASS' : (sameEvidence ? 'FAIL' : 'RETRY'));
+          NODE
+              )"
+              if [ "$stable_pair" = PASS ]; then break; fi
+              if [ "$stable_pair" = FAIL ]; then
+                echo "stable evidence changed derived index" >&2
+                exit 1
+              fi
+            fi
+            previous="$report"
+            sleep 1
+          done
+          test "$stable_pair" = PASS
+          PREVIOUS="$previous" CURRENT="$report" node - <<'NODE'
+          const fs = require('node:fs');
+          const a = JSON.parse(fs.readFileSync(process.env.PREVIOUS, 'utf8'));
+          const b = JSON.parse(fs.readFileSync(process.env.CURRENT, 'utf8'));
+          const violations = [];
+          if (b.artifactChangedCount !== 0) violations.push('FEATURE_CHANGED');
+          if (b.indexChanged !== false) violations.push('INDEX_CHANGED');
+          if (a.indexDigest !== b.indexDigest) violations.push('DIGEST_CHANGED');
+          if (b.networkRequestCount !== 0 || b.databaseReadCount !== 0 || b.databaseWriteCount !== 0) violations.push('IO_BOUNDARY');
+          if (b.currentBuyChanged !== false || b.lineChanged !== false || b.publicPublished !== false || b.automatedBettingChanged !== false || b.productionApplyExecuted !== false) violations.push('PROTECTED_BOUNDARY');
+          console.log('SANITIZED_N2_DAY_INDEX_IDEMPOTENCY_BEGIN');
+          console.log(JSON.stringify({
+            status: violations.length ? 'BLOCKED' : 'PASS',
+            violations,
+            acceptedMarkerCount: b.acceptedMarkerCount,
+            loadedSnapshotCount: b.loadedSnapshotCount,
+            passCount: b.passCount,
+            partialCount: b.partialCount,
+            noDataCount: b.noDataCount,
+            artifactChangedCount: b.artifactChangedCount,
+            artifactReusedCount: b.artifactReusedCount,
+            indexChanged: b.indexChanged,
+            indexDigest: b.indexDigest,
+            captureRuntimeAuthorityUnchanged: process.env.CAPTURE_RUNTIME_SHA,
+            networkRequestCount: b.networkRequestCount,
+            databaseReadCount: b.databaseReadCount,
+            databaseWriteCount: b.databaseWriteCount,
+            currentBuyChanged: b.currentBuyChanged,
+            lineChanged: b.lineChanged,
+            publicPublished: b.publicPublished,
+            automatedBettingChanged: b.automatedBettingChanged,
+            productionApplyExecuted: b.productionApplyExecuted,
+          }, null, 2));
+          console.log('SANITIZED_N2_DAY_INDEX_IDEMPOTENCY_END');
+          if (violations.length) process.exit(1);
+          NODE
