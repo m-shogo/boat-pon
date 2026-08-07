@@ -1,0 +1,52 @@
+name: Narrow N2 experiment input checkpoint arrays
+
+on:
+  pull_request:
+    branches: [main]
+    types: [synchronize, reopened]
+    paths:
+      - .github/workflows/n2-experiment-input-type-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/n2-trifecta-private-experiment-input-manifest
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Narrow checkpoint arrays before indexed comparison
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('src/research-replay/n2TrifectaPrivateMarketExperimentInputManifest.ts')
+          text = path.read_text()
+          old = '''    if (!Array.isArray(rawRace.availableCheckpoints)\n      || rawRace.availableCheckpoints.length !== 4\n      || CHECKPOINTS.some((checkpoint, indexValue) => rawRace.availableCheckpoints?.[indexValue] !== checkpoint)\n      || !Array.isArray(rawRace.missingCheckpoints) || rawRace.missingCheckpoints.length !== 0) {\n      throw new Error("DAY_INDEX_PASS_COVERAGE_INVALID");\n    }\n'''
+          new = '''    const availableCheckpoints = rawRace.availableCheckpoints;\n    const missingCheckpoints = rawRace.missingCheckpoints;\n    if (!Array.isArray(availableCheckpoints) || !Array.isArray(missingCheckpoints)) {\n      throw new Error("DAY_INDEX_PASS_COVERAGE_INVALID");\n    }\n    if (availableCheckpoints.length !== 4\n      || CHECKPOINTS.some((checkpoint, indexValue) => availableCheckpoints[indexValue] !== checkpoint)\n      || missingCheckpoints.length !== 0) {\n      throw new Error("DAY_INDEX_PASS_COVERAGE_INVALID");\n    }\n'''
+          if text.count(old) != 1:
+              raise SystemExit('expected coverage narrowing anchor once')
+          path.write_text(text.replace(old, new, 1))
+          PY
+      - name: Verify focused tests and typecheck
+        run: |
+          npm ci
+          node --test --import tsx \
+            src/research-replay/n2TrifectaPrivateMarketExperimentInputManifest.test.ts \
+            src/automation/n2PrivateMarketExperimentInputManifestCliBoundary.test.ts
+          npm run typecheck
+      - name: Commit validated type fix and remove one-shot workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/n2-experiment-input-type-fix.yml
+          git add src/research-replay/n2TrifectaPrivateMarketExperimentInputManifest.ts
+          git commit -m "fix(research): narrow experiment input checkpoint arrays"
+          git push origin HEAD:feat/n2-trifecta-private-experiment-input-manifest
