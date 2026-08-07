@@ -1,6 +1,11 @@
 name: Verify Omura parser fix 20260807
 
 on:
+  push:
+    branches:
+      - ops/verify-omura-parser-fix-20260807
+    paths:
+      - .github/workflows/verify-omura-parser-fix-20260807.yml
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened]
@@ -24,15 +29,20 @@ jobs:
           ACTOR: ${{ github.actor }}
           REPO: ${{ github.repository }}
           EVENT: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
           HEAD_REF: ${{ github.head_ref }}
           BASE_REF: ${{ github.base_ref }}
         run: |
           set -euo pipefail
           [ "$REPO" = "m-shogo/boat-pon" ]
           [ "$ACTOR" = "m-shogo" ]
-          [ "$EVENT" = "pull_request" ]
-          [ "$HEAD_REF" = "ops/verify-omura-parser-fix-20260807" ]
-          [ "$BASE_REF" = "main" ]
+          if [ "$EVENT" = "push" ]; then
+            [ "$REF_NAME" = "ops/verify-omura-parser-fix-20260807" ]
+          else
+            [ "$EVENT" = "pull_request" ]
+            [ "$HEAD_REF" = "ops/verify-omura-parser-fix-20260807" ]
+            [ "$BASE_REF" = "main" ]
+          fi
 
   verify-real-archive:
     needs: guard
