@@ -1,3 +1,4 @@
+# second push after workflow registration
 name: Fix research durable completeness types
 
 on:
@@ -37,14 +38,7 @@ jobs:
 
           src = Path('src/automation/researchDurableKnowledgeCompleteness.ts')
           text = src.read_text()
-          old = '''      result: history.result as string,
-'''
-          if old in text:
-              text = text.replace(old, '''      result: history.result as ResearchAutomationHistoryResult,
-''', 1)
-          else:
-              # Source currently uses the validated local variable in a returned object; narrow only that occurrence.
-              marker = '''      result,
+          marker = '''      result,
       executed: true,
       startedAt: history.startedAt as string,
       completedAt: history.completedAt as string,
@@ -56,9 +50,9 @@ jobs:
       explicitNoChange: noChange,
       classification: nonPassHasDurableHistory && outputComplete
 '''
-              if marker not in text:
-                  raise SystemExit('non-pass result return anchor not found')
-              text = text.replace(marker, marker.replace('      result,\n', '      result: result as ResearchAutomationHistoryResult,\n'), 1)
+          if marker not in text:
+              raise SystemExit('non-pass result return anchor not found')
+          text = text.replace(marker, marker.replace('      result,\n', '      result: result as ResearchAutomationHistoryResult,\n'), 1)
           src.write_text(text)
 
           test = Path('src/automation/researchDurableKnowledgeCompleteness.test.ts')
