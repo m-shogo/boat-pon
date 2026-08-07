@@ -1,0 +1,74 @@
+name: N2 Private Market Daily Readiness
+
+on:
+  schedule:
+    - cron: '45 14 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: n2-private-market-daily-readiness
+  cancel-in-progress: false
+
+jobs:
+  readiness:
+    runs-on: [self-hosted, macOS]
+    timeout-minutes: 20
+    env:
+      BOAT_PON_DATA_ROOT: /Users/m-shogo/Developer/personal/boat-pon
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Build private readiness evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPORT="$RUNNER_TEMP/n2-private-market-daily-readiness.json"
+          export REPORT
+          node node_modules/tsx/dist/cli.mjs \
+            scripts/build-n2-trifecta-private-market-daily-readiness.ts \
+            --write-private > "$REPORT"
+          test -s "$REPORT"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const r = JSON.parse(fs.readFileSync(process.env.REPORT, 'utf8'));
+          const violations = [];
+          if (r.summaryVersion !== 'n2-trifecta-private-market-daily-readiness-summary-v1') violations.push('SUMMARY_VERSION');
+          if (!['PASS','DEGRADED','NO_DATA'].includes(r.status)) violations.push(`STATUS_${r.status}`);
+          if (r.evidenceRole !== 'EXPLORATION_READINESS_ONLY') violations.push('EVIDENCE_ROLE');
+          if (r.automaticFreezeAuthorized !== false) violations.push('AUTO_FREEZE');
+          if (r.privateReadinessWrittenOrReused !== true || typeof r.privateReadinessRelativePath !== 'string') violations.push('PRIVATE_WRITE');
+          if (!/^[0-9a-f]{64}$/.test(r.outputDigest || '') || !/^[0-9a-f]{64}$/.test(r.sourceDayIndexDigest || '')) violations.push('DIGEST');
+          if (r.checkpointCoverageDenominator !== 48 || r.checkpointCoverageNumerator < 0 || r.checkpointCoverageNumerator > 48) violations.push('COVERAGE');
+          if (r.completeRaceCount + r.partialRaceCount + r.noDataRaceCount !== 12) violations.push('RACE_COUNTS');
+          if (r.cohortCandidateRaceCount !== r.completeRaceCount) violations.push('COHORT_COUNT');
+          if (r.outcomeDataRead !== false || r.validationDataRead !== false || r.holdoutDataRead !== false) violations.push('EVALUATION_READ_BOUNDARY');
+          if (r.rawCaptureEvidenceRead !== false || r.rawOddsValuesRead !== false || r.rawOddsValuesPrinted !== false || r.rawOddsValuesPublished !== false) violations.push('RAW_BOUNDARY');
+          if (r.networkRequestCount !== 0 || r.databaseReadCount !== 0 || r.databaseWriteCount !== 0) violations.push('IO_BOUNDARY');
+          if (r.currentBuyConnectionAuthorized !== false || r.lineConnectionAuthorized !== false || r.automatedBettingAuthorized !== false || r.publicPublishAuthorized !== false || r.productionApplyAuthorized !== false) violations.push('PROTECTED_BOUNDARY');
+          if (/"odds"\s*:|"selections"\s*:|"moves"\s*:|"payout"\s*:|"roi"\s*:/.test(JSON.stringify(r))) violations.push('VALUE_LEAK');
+          console.log(JSON.stringify({
+            status: violations.length ? 'BLOCKED' : 'PASS',
+            readinessStatus: r.status,
+            date: r.date,
+            venueCode: r.venueCode,
+            sourceDayIndexDigest: r.sourceDayIndexDigest,
+            completeRaceCount: r.completeRaceCount,
+            partialRaceCount: r.partialRaceCount,
+            noDataRaceCount: r.noDataRaceCount,
+            checkpointCoverageNumerator: r.checkpointCoverageNumerator,
+            checkpointCoverageDenominator: r.checkpointCoverageDenominator,
+            heartbeatStatus: r.heartbeatStatus,
+            heartbeatSignificantGapCount: r.heartbeatSignificantGapCount,
+            heartbeatAffectedCheckpointCount: r.heartbeatAffectedCheckpointCount,
+            outputDigest: r.outputDigest,
+            violations,
+          }, null, 2));
+          if (violations.length) process.exit(1);
+          NODE
