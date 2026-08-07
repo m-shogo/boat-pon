@@ -1,0 +1,76 @@
+name: Apply N2 private daily plan cache wiring
+
+on:
+  push:
+    branches:
+      - feat/n2-trifecta-private-daily-plan-cache
+    paths:
+      - .github/workflows/n2-private-daily-plan-cache-apply.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/n2-trifecta-private-daily-plan-cache
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Apply exact cache-first service patch
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/research-replay/n2TrifectaLocalCaptureService.ts')
+          text = path.read_text()
+
+          replacements = [
+            (
+              'import { readN2TrifectaPrivateCapturePlan } from "./n2TrifectaPrivateCapturePlanReader";\n',
+              'import { readN2TrifectaPrivateCapturePlan } from "./n2TrifectaPrivateCapturePlanReader";\nimport { readN2TrifectaPrivateDailyPlanCache } from "./n2TrifectaPrivateDailyPlanCache";\n',
+            ),
+            (
+              '''  const date = jstDate(input.now);\n  const nowMs = parseInstant(input.now);\n  const before = dbMeta(input.primaryDbPath);\n  if (before.walBytes > 0) blockers.push("PRIMARY_DB_ACTIVE_WAL");\n  if (date == null || nowMs == null) blockers.push("INVALID_NOW");\n''',
+              '''  const date = jstDate(input.now);\n  const nowMs = parseInstant(input.now);\n  if (date == null || nowMs == null) blockers.push("INVALID_NOW");\n\n  let before: DbMeta | null = null;\n  let primaryDbAccessed = false;\n  let cachedSourcePlan: N2TrifectaOddsCheckpointPlan | null = null;\n  if (blockers.length === 0 && date != null) {\n    const cached = readN2TrifectaPrivateDailyPlanCache({\n      dataRoot: input.dataRoot,\n      expectedDate: date,\n      now: input.now,\n    });\n    if (cached.status === "PASS" && cached.plan) {\n      cachedSourcePlan = cached.plan;\n    } else if (cached.status === "BLOCKED") {\n      blockers.push(...cached.blockers.map((blocker) => `DAILY_PLAN_${blocker}`));\n    } else if (cached.fallbackToPrimaryDbAllowed) {\n      before = dbMeta(input.primaryDbPath);\n      primaryDbAccessed = true;\n      if (before.walBytes > 0) blockers.push("PRIMARY_DB_ACTIVE_WAL");\n    }\n  }\n''',
+            ),
+            (
+              '''      const venueCodes = discoverVenueCodes(input.primaryDbPath, date);\n      const plans = venueCodes\n        .map((venueCode) => readN2TrifectaPrivateCapturePlan({\nprimaryDbPath: input.primaryDbPath,\ndate,\nvenueCode,\n        }))\n        .filter((result) => result.status === "PASS")\n        .map((result) => result.plan);\n''',
+              '''      const plans = cachedSourcePlan\n        ? [cachedSourcePlan]\n        : discoverVenueCodes(input.primaryDbPath, date)\n          .map((venueCode) => readN2TrifectaPrivateCapturePlan({\nprimaryDbPath: input.primaryDbPath,\ndate,\nvenueCode,\n          }))\n          .filter((result) => result.status === "PASS")\n          .map((result) => result.plan);\n''',
+            ),
+            (
+              '''  const after = dbMeta(input.primaryDbPath);\n  const metadataUnchanged = before.bytes === after.bytes\n    && before.modifiedMs === after.modifiedMs\n    && before.walBytes === after.walBytes;\n  if (!metadataUnchanged) blockers.push("PRIMARY_DB_METADATA_CHANGED");\n''',
+              '''  let metadataUnchanged = true;\n  if (primaryDbAccessed && before) {\n    const after = dbMeta(input.primaryDbPath);\n    metadataUnchanged = before.bytes === after.bytes\n      && before.modifiedMs === after.modifiedMs\n      && before.walBytes === after.walBytes;\n    if (!metadataUnchanged) blockers.push("PRIMARY_DB_METADATA_CHANGED");\n  }\n''',
+            ),
+          ]
+
+          for old, new in replacements:
+            count = text.count(old)
+            if count != 1:
+              raise SystemExit(f'expected exact anchor once, found {count}: {old[:80]!r}')
+            text = text.replace(old, new, 1)
+
+          path.write_text(text)
+          PY
+      - name: Verify focused TypeScript tests
+        run: |
+          npm ci
+          npm run fable:restore
+          node --test --import tsx \
+            src/research-replay/n2TrifectaPrivateDailyPlanCache.test.ts \
+            src/research-replay/n2TrifectaLocalCaptureService.test.ts \
+            src/research-replay/n2TrifectaNoEarlyCheckpointCapture.test.ts
+      - name: Commit exact patch and remove one-shot workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/n2-private-daily-plan-cache-apply.yml
+          git add src/research-replay/n2TrifectaLocalCaptureService.ts
+          git commit -m "feat(research): prefer private daily capture plan"
+          git push origin HEAD:feat/n2-trifecta-private-daily-plan-cache
