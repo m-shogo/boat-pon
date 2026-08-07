@@ -59,11 +59,20 @@ jobs:
           assert data["productionApplyExecuted"] is False
           states = {}
           by_label = {}
+          exception_checkpoints = []
           for item in data["checkpoints"]:
               states[item["state"]] = states.get(item["state"], 0) + 1
               label = item["checkpointLabel"]
               bucket = by_label.setdefault(label, {})
               bucket[item["state"]] = bucket.get(item["state"], 0) + 1
+              if item["state"] in ("MISSED_NO_RESERVATION", "BLOCKED_EVIDENCE", "RESERVED_NO_ACCEPTED_EVIDENCE"):
+                  exception_checkpoints.append({
+                      "raceIdentity": item["raceIdentity"],
+                      "checkpointLabel": item["checkpointLabel"],
+                      "targetCaptureAt": item["targetCaptureAt"],
+                      "state": item["state"],
+                      "blockerCodes": item["blockerCodes"],
+                  })
           summary = {
               "status": data["status"],
               "blockers": data["blockers"],
@@ -77,6 +86,7 @@ jobs:
               "coverage": data["coverage"],
               "stateCounts": states,
               "stateCountsByCheckpointLabel": by_label,
+              "exceptionCheckpoints": exception_checkpoints,
               "storage": data["storage"],
               "networkRequestCount": 0,
               "databaseReadCount": 0,
