@@ -592,7 +592,6 @@ const dueEntries = sourcePlan.entries
     return left.raceNo - right.raceNo;
   });
 dueEntryCount = dueEntries.length;
-selectedEntry = dueEntries[0] ?? null;
 
 const budgetRelative = budgetDirectoryRelativePath(date);
 const budgetPath = resolveInside(input.dataRoot, budgetRelative);
@@ -602,46 +601,50 @@ dailyReservationCountBefore = readdirSync(budgetPath)
   .length;
 dailyReservationCountAfter = dailyReservationCountBefore;
 
-if (selectedEntry) {
+let reservationCreated = false;
+for (const candidate of dueEntries) {
   const reservationKey = canonicalHash({
     authorizationId: input.authorization.authorizationId,
-    raceIdentity: selectedEntry.raceIdentity,
-    checkpointLabel: selectedEntry.checkpointLabel,
-    targetCaptureAt: selectedEntry.targetCaptureAt,
+    raceIdentity: candidate.raceIdentity,
+    checkpointLabel: candidate.checkpointLabel,
+    targetCaptureAt: candidate.targetCaptureAt,
   });
-  reservationPath = `${budgetRelative}/${reservationKey}.json`;
-  const reservationAbsolute = resolveInside(input.dataRoot, reservationPath);
-  let reservationCreated = false;
-  if (!existsSync(reservationAbsolute)) {
-    if (dailyReservationCountBefore >= input.authorization.maxRequestsPerDay) {
-      blockers.push("DAILY_REQUEST_BUDGET_EXHAUSTED");
-    } else {
-      const reservation: N2TrifectaLocalCaptureReservation = {
-        reservationVersion: N2_TRIFECTA_LOCAL_CAPTURE_RESERVATION_VERSION,
-        authorizationId: input.authorization.authorizationId,
-        date,
-        venueCode: selectedEntry.venueCode,
-        raceIdentity: selectedEntry.raceIdentity,
-        checkpointLabel: selectedEntry.checkpointLabel,
-        targetCaptureAt: selectedEntry.targetCaptureAt,
-        reservationKey,
-        reservedAt: input.now,
-        networkRequestCeiling: 1,
-      };
-      try {
-        exclusiveWrite(
-          reservationAbsolute,
-          `${JSON.stringify(reservation, null, 2)}
-`,
-        );
-        reservationCreated = true;
-        dailyReservationCountAfter += 1;
-      } catch (error) {
-        if (!isAlreadyExistsError(error)) throw error;
-      }
-    }
+  const candidateReservationPath = `${budgetRelative}/${reservationKey}.json`;
+  const reservationAbsolute = resolveInside(input.dataRoot, candidateReservationPath);
+  if (existsSync(reservationAbsolute)) continue;
+  if (dailyReservationCountBefore >= input.authorization.maxRequestsPerDay) {
+    blockers.push("DAILY_REQUEST_BUDGET_EXHAUSTED");
+    break;
   }
+  const reservation: N2TrifectaLocalCaptureReservation = {
+    reservationVersion: N2_TRIFECTA_LOCAL_CAPTURE_RESERVATION_VERSION,
+    authorizationId: input.authorization.authorizationId,
+    date,
+    venueCode: candidate.venueCode,
+    raceIdentity: candidate.raceIdentity,
+    checkpointLabel: candidate.checkpointLabel,
+    targetCaptureAt: candidate.targetCaptureAt,
+    reservationKey,
+    reservedAt: input.now,
+    networkRequestCeiling: 1,
+  };
+  try {
+    exclusiveWrite(
+      reservationAbsolute,
+      `${JSON.stringify(reservation, null, 2)}
+`,
+    );
+    selectedEntry = candidate;
+    reservationPath = candidateReservationPath;
+    reservationCreated = true;
+    dailyReservationCountAfter += 1;
+    break;
+  } catch (error) {
+    if (!isAlreadyExistsError(error)) throw error;
+  }
+}
 
+if (selectedEntry) {
   if (reservationCreated) {
     const singlePlan = buildN2TrifectaSingleEntryPlan({
       sourcePlan,
