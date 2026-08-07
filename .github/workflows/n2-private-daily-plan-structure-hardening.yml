@@ -1,0 +1,53 @@
+name: Harden N2 private daily plan structure handling
+
+on:
+  push:
+    branches:
+      - feat/n2-trifecta-private-daily-plan-cache
+    paths:
+      - .github/workflows/n2-private-daily-plan-structure-hardening.yml
+
+permissions:
+  contents: write
+
+jobs:
+  harden:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/n2-trifecta-private-daily-plan-cache
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Make malformed private cache fail closed
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('src/research-replay/n2TrifectaPrivateDailyPlanCache.ts')
+          text = path.read_text()
+          old = '''  const audit = auditN2TrifectaPrivateDailyPlanCache(cache, {\n    expectedDate: input.expectedDate,\n    now: input.now,\n  });\n  return {\n    status: audit.status,\n    blockers: audit.blockers,\n    relativePath,\n    cache,\n    plan: audit.status === "PASS" ? cache.plan : null,\n    fallbackToPrimaryDbAllowed: audit.status === "STALE",\n  };\n}\n'''
+          new = '''  try {\n    const audit = auditN2TrifectaPrivateDailyPlanCache(cache, {\n      expectedDate: input.expectedDate,\n      now: input.now,\n    });\n    return {\n      status: audit.status,\n      blockers: audit.blockers,\n      relativePath,\n      cache,\n      plan: audit.status === "PASS" ? cache.plan : null,\n      fallbackToPrimaryDbAllowed: audit.status === "STALE",\n    };\n  } catch {\n    return {\n      status: "BLOCKED",\n      blockers: ["DAILY_PLAN_STRUCTURE_INVALID"],\n      relativePath,\n      cache: null,\n      plan: null,\n      fallbackToPrimaryDbAllowed: false,\n    };\n  }\n}\n'''
+          count = text.count(old)
+          if count != 1:
+            raise SystemExit(f'expected exact cache reader tail once, found {count}')
+          path.write_text(text.replace(old, new, 1))
+          PY
+      - name: Verify focused tests
+        run: |
+          npm ci
+          npm run fable:restore
+          node --test --import tsx \
+            src/research-replay/n2TrifectaPrivateDailyPlanCache.test.ts \
+            src/research-replay/n2TrifectaPrivateDailyPlanIntegration.test.ts
+      - name: Commit hardening and remove one-shot workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/n2-private-daily-plan-structure-hardening.yml
+          git add src/research-replay/n2TrifectaPrivateDailyPlanCache.ts
+          git commit -m "fix(research): fail closed on malformed daily plan cache"
+          git push origin HEAD:feat/n2-trifecta-private-daily-plan-cache
