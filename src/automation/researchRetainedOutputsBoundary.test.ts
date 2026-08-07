@@ -42,6 +42,19 @@ test("retained output count and aggregate bytes are fail-closed per run", () => 
   assert.ok(materializeIndex > budgetIndex);
 });
 
+test("retained JSON is scanner-compatible before materialization", () => {
+  assert.match(retained, /validateRetainedJsonSource/u);
+  assert.match(retained, /RETAINED_OUTPUT_JSON_INVALID/u);
+  assert.match(retained, /RETAINED_OUTPUT_HISTORY_DIGEST_MISMATCH/u);
+  assert.match(retained, /RETAINED_OUTPUT_HISTORY_DIGEST_INVALID/u);
+  const jsonValidation = retained.indexOf("validateRetainedJsonSource({");
+  const contentDigest = retained.indexOf("const contentDigest = sha256Buffer(content)", jsonValidation);
+  const materialize = retained.indexOf("materializePreparedOutputs(prepared)", contentDigest);
+  assert.ok(jsonValidation >= 0);
+  assert.ok(contentDigest > jsonValidation);
+  assert.ok(materialize > contentDigest);
+});
+
 test("registries remain original append-only evidence instead of being downgraded to copies", () => {
   assert.match(retained, /PASSTHROUGH_IMMUTABLE_ROOTS/u);
   assert.match(retained, /research\/registries\//u);
@@ -56,7 +69,7 @@ test("durable scanner verifies retained path content hash", () => {
   assert.match(scanner, /reports\/automation\/retained-outputs/u);
 });
 
-test("runner calls retention after executor result validation and before terminal state/history write", () => {
+test("runner calls retention with executor digest before terminal state/history write", () => {
   const resultStateIndex = runner.indexOf("// ---- 結果を state へ反映 ----");
   const retainCallIndex = runner.indexOf("retainExecutorOutputs({", resultStateIndex);
   const terminalAttemptsIndex = runner.indexOf("const attempts = state.tasks[task.taskId]?.attemptCount", resultStateIndex);
@@ -65,6 +78,8 @@ test("runner calls retention after executor result validation and before termina
   assert.ok(retainCallIndex > resultStateIndex);
   assert.ok(terminalAttemptsIndex > retainCallIndex);
   assert.ok(historyWriteIndex > terminalAttemptsIndex);
+  const retainCall = runner.slice(retainCallIndex, terminalAttemptsIndex);
+  assert.match(retainCall, /historyOutputDigest:\s*exec\.outputDigest/u);
   assert.match(runner, /DURABLE_OUTPUT_RETENTION_FAILED/u);
   assert.match(runner, /historyOutputs/u);
 });
