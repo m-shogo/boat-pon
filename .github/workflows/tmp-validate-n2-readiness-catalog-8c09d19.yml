@@ -1,0 +1,121 @@
+name: Temporary validate N2 readiness catalog 8c09d19
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/tmp-validate-n2-readiness-catalog-8c09d19.yml
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: [self-hosted, macOS]
+    timeout-minutes: 20
+    env:
+      BOAT_PON_DATA_ROOT: /Users/m-shogo/Developer/personal/boat-pon
+      CAPTURE_RUNTIME_SHA: 967ad45d1f72b4ad17e036a25926c1e61ba4e091
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 8c09d196746fc706324c90598d26958eb2b5be6b
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: npm ci
+      - name: Verify capture authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          BINDING="$BOAT_PON_DATA_ROOT/data/private/trifecta-capture/runtime-authority.json"
+          test "$(node -p "JSON.parse(require('fs').readFileSync('$BINDING','utf8')).authoritySha")" = "$CAPTURE_RUNTIME_SHA"
+      - name: Refresh readiness and prove catalog lineage plus idempotency
+        shell: bash
+        run: |
+          set -euo pipefail
+          READY="$RUNNER_TEMP/readiness.json"
+          C1="$RUNNER_TEMP/catalog-1.json"
+          C2="$RUNNER_TEMP/catalog-2.json"
+          export READY C1 C2
+          BOAT_PON_DATA_ROOT="$BOAT_PON_DATA_ROOT" \
+            node node_modules/tsx/dist/cli.mjs \
+            scripts/build-n2-trifecta-private-market-daily-readiness.ts \
+            --date 2026-08-07 --venue 10 --write-private > "$READY"
+          sleep 1
+          BOAT_PON_DATA_ROOT="$BOAT_PON_DATA_ROOT" \
+            node node_modules/tsx/dist/cli.mjs \
+            scripts/build-n2-trifecta-private-market-readiness-catalog.ts \
+            --write-private > "$C1"
+          sleep 1
+          BOAT_PON_DATA_ROOT="$BOAT_PON_DATA_ROOT" \
+            node node_modules/tsx/dist/cli.mjs \
+            scripts/build-n2-trifecta-private-market-readiness-catalog.ts \
+            --write-private > "$C2"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const r = JSON.parse(fs.readFileSync(process.env.READY, 'utf8'));
+          const a = JSON.parse(fs.readFileSync(process.env.C1, 'utf8'));
+          const b = JSON.parse(fs.readFileSync(process.env.C2, 'utf8'));
+          const violations = [];
+          if (!['PASS','DEGRADED','NO_DATA'].includes(r.status)) violations.push(`READINESS_${r.status}`);
+          if (r.date !== '2026-08-07' || r.venueCode !== '10') violations.push('READINESS_SCOPE');
+          if (r.completeRaceCount + r.partialRaceCount + r.noDataRaceCount !== 12) violations.push('READINESS_COUNTS');
+          if (r.checkpointCoverageDenominator !== 48 || r.checkpointCoverageNumerator !== r.totalSnapshotCount) violations.push('READINESS_COVERAGE');
+          if (r.privateReadinessWrittenOrReused !== true || !/^[0-9a-f]{64}$/.test(r.outputDigest || '')) violations.push('READINESS_WRITE');
+          for (const [name, c] of [['C1',a],['C2',b]]) {
+            if (c.summaryVersion !== 'n2-trifecta-private-market-readiness-catalog-summary-v1') violations.push(`${name}_SUMMARY`);
+            if (c.catalogVersion !== 'n2-trifecta-private-market-readiness-catalog-v1' || c.evidenceRole !== 'EXPLORATION_READINESS_CATALOG_ONLY') violations.push(`${name}_ROLE`);
+            if (!Array.isArray(c.entries) || c.entries.length !== c.entryCount || c.entryCount < 1 || c.sourceArtifactCount < c.entryCount) violations.push(`${name}_COUNTS`);
+            if (!/^[0-9a-f]{64}$/.test(c.catalogDigest || '') || c.privateCatalogWrittenOrReused !== true || typeof c.privateCatalogRelativePath !== 'string') violations.push(`${name}_WRITE`);
+            if (c.automaticFreezeAuthorized !== false || c.outcomeDataRead !== false || c.validationDataRead !== false || c.holdoutDataRead !== false) violations.push(`${name}_EVAL_BOUNDARY`);
+            if (c.rawCaptureEvidenceRead !== false || c.rawOddsValuesRead !== false || c.rawOddsValuesPublished !== false) violations.push(`${name}_RAW_BOUNDARY`);
+            if (c.networkRequestCount !== 0 || c.databaseReadCount !== 0 || c.databaseWriteCount !== 0) violations.push(`${name}_IO`);
+            if (c.currentBuyConnectionAuthorized !== false || c.lineConnectionAuthorized !== false || c.automatedBettingAuthorized !== false || c.publicPublishAuthorized !== false || c.productionApplyAuthorized !== false) violations.push(`${name}_PROTECTED`);
+          }
+          const current = b.entries.find((entry) => entry.date === r.date && entry.venueCode === r.venueCode);
+          if (!current) violations.push('CURRENT_SCOPE_MISSING');
+          else {
+            if (current.readinessDigest !== r.outputDigest || current.latestCheckedAt !== r.checkedAt) violations.push('CURRENT_READINESS_LINEAGE');
+            if (current.sourceDayIndexDigest !== r.sourceDayIndexDigest || current.readinessStatus !== r.status) violations.push('CURRENT_SOURCE_LINEAGE');
+            if (current.completeRaceCount !== r.completeRaceCount || current.partialRaceCount !== r.partialRaceCount || current.noDataRaceCount !== r.noDataRaceCount) violations.push('CURRENT_COUNTS');
+            if (current.checkpointCoverageNumerator !== r.checkpointCoverageNumerator || current.checkpointCoverageRatio !== r.checkpointCoverageRatio) violations.push('CURRENT_COVERAGE');
+          }
+          if (b.privateCatalogChanged !== false) violations.push('SECOND_CATALOG_CHANGED');
+          if (a.catalogDigest !== b.catalogDigest) violations.push('PERSISTED_DIGEST_CHANGED');
+          const catalogPath = path.join(process.env.BOAT_PON_DATA_ROOT, b.privateCatalogRelativePath || '');
+          if (!fs.existsSync(catalogPath)) violations.push('CATALOG_MISSING');
+          else {
+            const lst = fs.lstatSync(catalogPath);
+            const stat = fs.statSync(catalogPath);
+            if (lst.isSymbolicLink() || !stat.isFile() || (stat.mode & 0o777) !== 0o600) violations.push('CATALOG_MODE');
+            const disk = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
+            if (disk.catalogDigest !== b.catalogDigest) violations.push('CATALOG_DISK_DIGEST');
+            if (/"odds"\s*:|"selections"\s*:|"moves"\s*:|"payout"\s*:|"roi"\s*:/.test(JSON.stringify(disk))) violations.push('VALUE_LEAK');
+          }
+          console.log('SANITIZED_N2_READINESS_CATALOG_BEGIN');
+          console.log(JSON.stringify({
+            status: violations.length ? 'BLOCKED' : 'PASS',
+            violations,
+            readinessStatus: r.status,
+            readinessDigest: r.outputDigest,
+            sourceDayIndexDigest: r.sourceDayIndexDigest,
+            completeRaceCount: r.completeRaceCount,
+            partialRaceCount: r.partialRaceCount,
+            noDataRaceCount: r.noDataRaceCount,
+            checkpointCoverageNumerator: r.checkpointCoverageNumerator,
+            checkpointCoverageDenominator: r.checkpointCoverageDenominator,
+            heartbeatStatus: r.heartbeatStatus,
+            sourceArtifactCount: b.sourceArtifactCount,
+            catalogEntryCount: b.entryCount,
+            fullCoverageScopeCount: b.fullCoverageScopeCount,
+            catalogDigest: b.catalogDigest,
+            secondCatalogChanged: b.privateCatalogChanged,
+            currentScopeArtifactCount: current?.scopeArtifactCount ?? null,
+            captureRuntimeAuthorityUnchanged: process.env.CAPTURE_RUNTIME_SHA,
+          }, null, 2));
+          console.log('SANITIZED_N2_READINESS_CATALOG_END');
+          if (violations.length) process.exit(1);
+          NODE
