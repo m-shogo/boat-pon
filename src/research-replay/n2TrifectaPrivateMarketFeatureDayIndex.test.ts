@@ -153,6 +153,70 @@ test("same deterministic index is idempotent", () => {
   });
 });
 
+test("semantically identical index reuses existing digest across generatedAt changes", () => {
+  withRoot((root) => {
+    writeN2TrifectaPrivateMarketFeatureArtifact({
+      rootDir: root,
+      report: syntheticReport({ raceNo: 4, status: "PASS", availableCount: 4 }),
+      generatedAt: "2026-08-07T02:00:00.000Z",
+    });
+    const firstIndex = buildN2TrifectaPrivateMarketFeatureDayIndex({
+      rootDir: root,
+      date: "2026-08-07",
+      venueCode: "10",
+      generatedAt: "2026-08-07T02:05:00.000Z",
+    });
+    const first = writeN2TrifectaPrivateMarketFeatureDayIndex({ rootDir: root, index: firstIndex });
+    const laterIndex = buildN2TrifectaPrivateMarketFeatureDayIndex({
+      rootDir: root,
+      date: "2026-08-07",
+      venueCode: "10",
+      generatedAt: "2026-08-07T02:10:00.000Z",
+    });
+    assert.notEqual(laterIndex.indexDigest, firstIndex.indexDigest);
+    const second = writeN2TrifectaPrivateMarketFeatureDayIndex({ rootDir: root, index: laterIndex });
+    assert.equal(second.changed, false);
+    assert.equal(second.indexDigest, first.indexDigest);
+    const disk = JSON.parse(readFileSync(join(root, second.relativePath), "utf8")) as Record<string, unknown>;
+    assert.equal(disk.indexDigest, first.indexDigest);
+    assert.equal(disk.generatedAt, firstIndex.generatedAt);
+  });
+});
+
+test("tampered existing index is rebuilt instead of semantically reused", () => {
+  withRoot((root) => {
+    writeN2TrifectaPrivateMarketFeatureArtifact({
+      rootDir: root,
+      report: syntheticReport({ raceNo: 4, status: "PASS", availableCount: 4 }),
+      generatedAt: "2026-08-07T02:00:00.000Z",
+    });
+    const firstIndex = buildN2TrifectaPrivateMarketFeatureDayIndex({
+      rootDir: root,
+      date: "2026-08-07",
+      venueCode: "10",
+      generatedAt: "2026-08-07T02:05:00.000Z",
+    });
+    const first = writeN2TrifectaPrivateMarketFeatureDayIndex({ rootDir: root, index: firstIndex });
+    const path = join(root, first.relativePath);
+    const tampered = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
+    tampered.generatedAt = "2026-08-07T02:06:00.000Z";
+    writeFileSync(path, `${JSON.stringify(tampered, null, 2)}\n`, "utf8");
+
+    const laterIndex = buildN2TrifectaPrivateMarketFeatureDayIndex({
+      rootDir: root,
+      date: "2026-08-07",
+      venueCode: "10",
+      generatedAt: "2026-08-07T02:10:00.000Z",
+    });
+    const second = writeN2TrifectaPrivateMarketFeatureDayIndex({ rootDir: root, index: laterIndex });
+    assert.equal(second.changed, true);
+    assert.equal(second.indexDigest, laterIndex.indexDigest);
+    const disk = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
+    assert.equal(disk.indexDigest, laterIndex.indexDigest);
+    assert.equal(disk.generatedAt, laterIndex.generatedAt);
+  });
+});
+
 test("tampered or permission-widened feature artifacts fail closed", () => {
   withRoot((root) => {
     const write = writeN2TrifectaPrivateMarketFeatureArtifact({

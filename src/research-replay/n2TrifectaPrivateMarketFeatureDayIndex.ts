@@ -348,9 +348,24 @@ export function writeN2TrifectaPrivateMarketFeatureDayIndex(input: {
     const stat = statSync(path);
     if (stat.size > 0 && stat.size <= MAX_FEATURE_ARTIFACT_BYTES && (stat.mode & 0o777) === 0o600) {
       try {
-        const current = JSON.parse(readFileSync(path, "utf8")) as { indexDigest?: unknown };
-        if (current.indexDigest === input.index.indexDigest) {
-          return { relativePath, changed: false, indexDigest: input.index.indexDigest, fileMode: 0o600 };
+        const current = JSON.parse(readFileSync(path, "utf8")) as N2TrifectaPrivateMarketFeatureDayIndex;
+        if (typeof current.indexDigest === "string" && /^[0-9a-f]{64}$/u.test(current.indexDigest)
+          && typeof current.generatedAt === "string" && Number.isFinite(Date.parse(current.generatedAt))) {
+          const { indexDigest: currentDigest, ...currentCore } = current;
+          if (canonicalHash(currentCore) === currentDigest) {
+            if (currentDigest === input.index.indexDigest) {
+              return { relativePath, changed: false, indexDigest: currentDigest, fileMode: 0o600 };
+            }
+            const { generatedAt: _currentGeneratedAt, ...currentSemanticCore } = currentCore;
+            const {
+              indexDigest: _nextDigest,
+              generatedAt: _nextGeneratedAt,
+              ...nextSemanticCore
+            } = input.index;
+            if (canonicalHash(currentSemanticCore) === canonicalHash(nextSemanticCore)) {
+              return { relativePath, changed: false, indexDigest: currentDigest, fileMode: 0o600 };
+            }
+          }
         }
       } catch {
         // Derived index is rebuildable from verified feature artifacts.
