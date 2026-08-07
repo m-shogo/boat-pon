@@ -1,0 +1,121 @@
+name: Temporary durable history gitkeep validation
+
+on:
+  pull_request:
+    branches:
+      - ops/tmp-durable-history-gitkeep-base
+
+permissions:
+  contents: write
+
+jobs:
+  validate-and-apply:
+    if: github.head_ref == 'fix/research-durable-history-gitkeep'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout fix branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/research-durable-history-gitkeep
+          fetch-depth: 0
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Patch scanner and tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          src = Path('src/automation/researchDurableKnowledgeCompleteness.ts')
+          text = src.read_text()
+          old = '''  const files = readdirSync(historyDir).sort();
+  const unexpected = files.filter((file) => !/^\\d+-TASK-[0-9A-Za-z._-]+\\.json$/u.test(file));
+  if (unexpected.length > 0) {
+    throw new Error(`DURABLE_KNOWLEDGE_HISTORY_FILENAME_INVALID:${unexpected.join(",")}`);
+  }
+  const runs = files.map((file) => assessHistoryFile({
+'''
+          new = '''  const directoryEntries = readdirSync(historyDir).sort();
+  const historyFiles = directoryEntries.filter((file) => file !== ".gitkeep");
+  const unexpected = historyFiles.filter((file) => !/^\\d+-TASK-[0-9A-Za-z._-]+\\.json$/u.test(file));
+  if (unexpected.length > 0) {
+    throw new Error(`DURABLE_KNOWLEDGE_HISTORY_FILENAME_INVALID:${unexpected.join(",")}`);
+  }
+  const runs = historyFiles.map((file) => assessHistoryFile({
+'''
+          if old not in text:
+              raise SystemExit('history listing anchor not found')
+          text = text.replace(old, new, 1)
+          if '    historyFileCount: files.length,' not in text:
+              raise SystemExit('history count anchor not found')
+          text = text.replace('    historyFileCount: files.length,', '    historyFileCount: historyFiles.length,', 1)
+          src.write_text(text)
+
+          test = Path('src/automation/researchDurableKnowledgeCompleteness.test.ts')
+          t = test.read_text()
+          anchor = '''test("missing history directory returns NO_HISTORY without writes", () => {
+'''
+          if anchor not in t:
+              raise SystemExit('test insertion anchor not found')
+          extra = r'''
+test("history .gitkeep is ignored and not counted", () => {
+  withRoot((root) => {
+    const historyDir = join(root, "reports/automation/history");
+    mkdirSync(historyDir, { recursive: true });
+    writeFileSync(join(historyDir, ".gitkeep"), "", "utf8");
+    const report = buildResearchDurableKnowledgeCompletenessReport({ repoRoot: root });
+    assert.equal(report.status, "NO_HISTORY");
+    assert.equal(report.historyFileCount, 0);
+    assert.equal(report.assessedRunCount, 0);
+  });
+});
+
+test("history .gitkeep plus a valid run counts only the run", () => {
+  withRoot((root) => {
+    const historyDir = join(root, "reports/automation/history");
+    mkdirSync(historyDir, { recursive: true });
+    writeFileSync(join(historyDir, ".gitkeep"), "", "utf8");
+    writeHistory(root, history({ runId: "1010", taskId: "TASK-N2-010", result: "BLOCKED", blocks: ["FIXTURE_BLOCK"] }));
+    const report = buildResearchDurableKnowledgeCompletenessReport({ repoRoot: root });
+    assert.equal(report.historyFileCount, 1);
+    assert.equal(report.assessedRunCount, 1);
+    assert.equal(report.nonPassDurableHistoryCount, 1);
+  });
+});
+
+test("unexpected history directory entries remain fail-closed", () => {
+  withRoot((root) => {
+    const historyDir = join(root, "reports/automation/history");
+    mkdirSync(historyDir, { recursive: true });
+    writeFileSync(join(historyDir, ".gitkeep"), "", "utf8");
+    writeFileSync(join(historyDir, "README.md"), "unexpected", "utf8");
+    assert.throws(() => buildResearchDurableKnowledgeCompletenessReport({ repoRoot: root }), /DURABLE_KNOWLEDGE_HISTORY_FILENAME_INVALID:README\.md/u);
+  });
+});
+
+'''
+          test.write_text(t.replace(anchor, extra + anchor, 1))
+          PY
+      - name: Verify focused regression and typecheck
+        run: |
+          node --test --import tsx src/automation/researchDurableKnowledgeCompleteness.test.ts
+          node --test --import tsx src/automation/researchDurableKnowledgeCompletenessBoundary.test.ts
+          npm run typecheck
+      - name: Restore standard CI and commit validated fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git show origin/main:.github/workflows/ci.yml > .github/workflows/ci.yml
+          rm -f .github/tmp-durable-history-gitkeep-trigger.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/automation/researchDurableKnowledgeCompleteness.ts src/automation/researchDurableKnowledgeCompleteness.test.ts .github/workflows/ci.yml
+          git add -u .github
+          git commit -m "fix(research): ignore durable history gitkeep placeholder"
+          git push origin HEAD:fix/research-durable-history-gitkeep
