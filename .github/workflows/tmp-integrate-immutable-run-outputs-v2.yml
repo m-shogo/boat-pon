@@ -1,0 +1,230 @@
+name: Temporary integrate immutable run outputs v2
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: github.head_ref == 'feat/research-immutable-run-outputs'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/research-immutable-run-outputs
+          fetch-depth: 0
+
+      - name: Merge latest main without conflict fallback
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git merge --no-edit origin/main
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Patch scanner and runner on latest main contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          scanner = Path('src/automation/researchDurableKnowledgeCompleteness.ts')
+          s = scanner.read_text()
+          if '"RETAINED_CONTENT_DIGEST_VERIFIED"' not in s:
+              s = s.replace(
+                  'export type ResearchDurableOutputIntegrity =\n  | "REGISTRY_SELF_DIGEST_VERIFIED"',
+                  'export type ResearchDurableOutputIntegrity =\n  | "RETAINED_CONTENT_DIGEST_VERIFIED"\n  | "REGISTRY_SELF_DIGEST_VERIFIED"',
+                  1,
+              )
+              s = s.replace(
+                  '  rootClass: "REPORT" | "REGISTRY" | "CONTROL";\n',
+                  '  rootClass: "REPORT" | "REGISTRY" | "CONTROL" | "RETAINED";\n',
+                  1,
+              )
+              root_old = '''function outputRootClass(relativePath: string): ResearchDurableOutputAssessment["rootClass"] {
+            if (relativePath.startsWith("research/registries/")) return "REGISTRY";
+          '''
+              root_new = '''function outputRootClass(relativePath: string): ResearchDurableOutputAssessment["rootClass"] {
+            if (relativePath.startsWith("reports/automation/retained-outputs/")) return "RETAINED";
+            if (relativePath.startsWith("research/registries/")) return "REGISTRY";
+          '''
+              if root_old not in s:
+                  raise SystemExit('scanner root classifier anchor missing')
+              s = s.replace(root_old, root_new, 1)
+
+              anchor = '''  const text = readFileSync(absolutePath, "utf8");
+            const contentDigest = sha256Text(text);
+            if (!input.relativePath.endsWith(".json")) {
+          '''
+              retained = '''  const text = readFileSync(absolutePath, "utf8");
+            const contentDigest = sha256Text(text);
+            if (rootClass === "RETAINED") {
+              const retainedMatch = input.relativePath.match(
+                /^reports\\/automation\\/retained-outputs\\/[0-9A-Za-z._-]+\\/([0-9a-f]{64})-[^/]+$/u,
+              );
+              const expectedContentDigest = retainedMatch?.[1] ?? null;
+              if (expectedContentDigest == null) {
+                return {
+                  relativePath: input.relativePath, rootClass, integrity: null, exists: true, regularFile: true,
+                  bytes: stat.size, contentDigest, embeddedDigest: null, historyDigestMatchesEmbedded: null,
+                  complete: false, issues: ["DURABLE_RETAINED_PATH_INVALID"], warnings,
+                };
+              }
+              if (expectedContentDigest !== contentDigest) {
+                return {
+                  relativePath: input.relativePath, rootClass, integrity: null, exists: true, regularFile: true,
+                  bytes: stat.size, contentDigest, embeddedDigest: null, historyDigestMatchesEmbedded: null,
+                  complete: false, issues: ["DURABLE_RETAINED_CONTENT_DIGEST_MISMATCH"], warnings,
+                };
+              }
+              let retainedEmbeddedDigest: string | null = null;
+              if (input.relativePath.endsWith(".json")) {
+                try {
+                  const retainedValue = objectValue(JSON.parse(text) as unknown);
+                  if (!retainedValue) throw new Error("not object");
+                  retainedEmbeddedDigest = typeof retainedValue.outputDigest === "string" && SHA256_RE.test(retainedValue.outputDigest)
+                    ? retainedValue.outputDigest
+                    : null;
+                } catch {
+                  return {
+                    relativePath: input.relativePath, rootClass, integrity: null, exists: true, regularFile: true,
+                    bytes: stat.size, contentDigest, embeddedDigest: null, historyDigestMatchesEmbedded: null,
+                    complete: false, issues: ["DURABLE_OUTPUT_JSON_INVALID"], warnings,
+                  };
+                }
+              }
+              if (retainedEmbeddedDigest != null && retainedEmbeddedDigest !== input.historyOutputDigest) {
+                return {
+                  relativePath: input.relativePath, rootClass, integrity: null, exists: true, regularFile: true,
+                  bytes: stat.size, contentDigest, embeddedDigest: retainedEmbeddedDigest, historyDigestMatchesEmbedded: false,
+                  complete: false, issues: ["DURABLE_RETAINED_HISTORY_DIGEST_MISMATCH"], warnings,
+                };
+              }
+              return {
+                relativePath: input.relativePath, rootClass, integrity: "RETAINED_CONTENT_DIGEST_VERIFIED",
+                exists: true, regularFile: true, bytes: stat.size, contentDigest, embeddedDigest: retainedEmbeddedDigest,
+                historyDigestMatchesEmbedded: retainedEmbeddedDigest == null ? null : true,
+                complete: true, issues, warnings,
+              };
+            }
+            if (!input.relativePath.endsWith(".json")) {
+          '''
+              if anchor not in s:
+                  raise SystemExit('scanner retained assessment anchor missing')
+              s = s.replace(anchor, retained, 1)
+          scanner.write_text(s)
+
+          runner = Path('scripts/run-intent-task.ts')
+          r = runner.read_text()
+          retained_import = 'import { retainExecutorOutputs } from "../src/automation/researchRetainedOutputs";\n'
+          failure_import = 'import { buildResearchAutomationFailureHistory } from "../src/automation/researchAutomationFailureHistory";\n'
+          if retained_import not in r:
+              if failure_import not in r:
+                  raise SystemExit('failure history import anchor missing')
+              r = r.replace(failure_import, failure_import + retained_import, 1)
+
+          if 'const retentionBlock = "DURABLE_OUTPUT_RETENTION_FAILED";' not in r:
+              section = r.find('  // ---- 結果を state へ反映 ----')
+              if section < 0:
+                  raise SystemExit('runner result section missing')
+              attempts = r.find('  const attempts = state.tasks[task.taskId]?.attemptCount ?? 1;', section)
+              if attempts < 0:
+                  raise SystemExit('runner attempts anchor missing')
+              block = '''  let historyOutputs: string[];
+            try {
+              historyOutputs = retainExecutorOutputs({ repoRoot: root, runId, outputPaths: exec.outputs }).historyOutputs;
+            } catch (error) {
+              const retentionBlock = "DURABLE_OUTPUT_RETENTION_FAILED";
+              const retentionMessage = error instanceof Error ? error.message : String(error);
+              const completedAt = nowIso();
+              const retentionEvidencePath = `reports/automation/history/${runId}-${task.taskId}.json`;
+              updateState(task.taskId, {
+                status: "BLOCKED",
+                evidenceLinks: [...new Set([...(state.tasks[task.taskId]?.evidenceLinks ?? []), retentionEvidencePath, ...exec.outputs])],
+                resultDigest: exec.outputDigest,
+                lastFailure: { code: retentionBlock, message: retentionMessage.slice(0, 300), at: completedAt },
+                nextDecision: `blocks: ${retentionBlock}`,
+              });
+              const evidence = buildResearchAutomationFailureHistory({
+                runId, requestId: request.requestId, intentId, taskId: task.taskId, taskType: task.taskType,
+                safetyLevel: request.safetyLevel as "L0" | "L1" | "L2" | "L3",
+                executorVersion: exec.executorVersion, result: "BLOCKED", failureCode: retentionBlock,
+                finalTaskStatus: "BLOCKED", message: retentionMessage,
+                authoritySha: git("rev-parse", request.authoritySha), idempotencyKey,
+                startedAt: new Date(startedMs).toISOString(), completedAt, elapsedMs: Date.now() - startedMs,
+              });
+              writeJsonAtomic(join(HISTORY_DIR, `${runId}-${task.taskId}.json`), evidence);
+              appendLedgers(intentId, request.requestId, "BLOCKED", idempotencyKey, retentionEvidencePath);
+              finish("BLOCKED", 3, {
+                lastRequestId: request.requestId, lastIntentId: intentId, lastTaskId: task.taskId,
+                authoritySha: request.authoritySha, stateVersion: state.stateVersion, stateDigest: computeStateDigest(state),
+                blocks: [retentionBlock], elapsedMs: Date.now() - startedMs, evidencePath: retentionEvidencePath,
+                outputs: exec.outputs, outputDigest: exec.outputDigest, taskStatus: "BLOCKED",
+                nextCandidate: pickNext(mergeCatalogAndState(catalog, state)),
+              });
+            }
+
+          '''
+              r = r[:attempts] + block + r[attempts:]
+
+          old_links = '    evidenceLinks: [...new Set([...(state.tasks[task.taskId]?.evidenceLinks ?? []), evidencePath, ...exec.outputs])],\n'
+          new_links = '    evidenceLinks: [...new Set([...(state.tasks[task.taskId]?.evidenceLinks ?? []), evidencePath, ...exec.outputs, ...historyOutputs])],\n'
+          if old_links in r:
+              r = r.replace(old_links, new_links, 1)
+          elif new_links not in r:
+              raise SystemExit('runner evidenceLinks anchor missing')
+
+          old_history = '    executorVersion: exec.executorVersion, executed: true, result: exec.result, blocks: exec.blocks, outputs: exec.outputs,\n'
+          new_history = '    executorVersion: exec.executorVersion, executed: true, result: exec.result, blocks: exec.blocks, outputs: historyOutputs,\n'
+          if old_history in r:
+              r = r.replace(old_history, new_history, 1)
+          elif new_history not in r:
+              raise SystemExit('runner history outputs anchor missing')
+
+          old_finish = '    blocks: exec.blocks, elapsedMs: Date.now() - startedMs, evidencePath, outputs: exec.outputs, outputDigest: exec.outputDigest,\n'
+          new_finish = '    blocks: exec.blocks, elapsedMs: Date.now() - startedMs, evidencePath, outputs: historyOutputs, outputDigest: exec.outputDigest,\n'
+          if old_finish in r:
+              r = r.replace(old_finish, new_finish, 1)
+          elif new_finish not in r:
+              raise SystemExit('runner finish outputs anchor missing')
+
+          runner.write_text(r)
+          PY
+
+      - name: Verify integrated immutable retention
+        run: |
+          node --test --import tsx src/automation/researchRetainedOutputs.test.ts
+          node --test --import tsx src/automation/researchRetainedOutputScanner.test.ts
+          node --test --import tsx src/automation/researchRetainedOutputsBoundary.test.ts
+          node --test --import tsx src/automation/researchAutomationFailureHistory.test.ts
+          node --test --import tsx src/automation/researchAutomationFailureHistoryBoundary.test.ts
+          node --test --import tsx src/automation/researchDurableKnowledgeCompleteness.test.ts
+          node --test --import tsx src/automation/researchDurableKnowledgeCompletenessBoundary.test.ts
+          npm run typecheck
+
+      - name: Commit validated integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add src/automation/researchDurableKnowledgeCompleteness.ts scripts/run-intent-task.ts
+          if git diff --cached --quiet && git log -1 --format=%B | grep -q '^Merge remote-tracking branch'; then
+            git push origin HEAD:feat/research-immutable-run-outputs
+            exit 0
+          fi
+          git commit -m "feat(research): integrate immutable run retention"
+          git push origin HEAD:feat/research-immutable-run-outputs
