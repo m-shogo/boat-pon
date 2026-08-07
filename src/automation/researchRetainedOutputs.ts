@@ -74,10 +74,33 @@ function safeBasename(relativePath: string): string {
   return value.replace(/[^0-9A-Za-z._-]/gu, "_").slice(0, 160);
 }
 
+function validateRetainedJsonSource(input: {
+  sourceRelativePath: string;
+  content: Buffer;
+  historyOutputDigest: string;
+}): void {
+  if (!input.sourceRelativePath.endsWith(".json")) return;
+  let parsed: Record<string, unknown>;
+  try {
+    const value = JSON.parse(input.content.toString("utf8")) as unknown;
+    if (typeof value !== "object" || value == null || Array.isArray(value)) throw new Error("not object");
+    parsed = value as Record<string, unknown>;
+  } catch {
+    throw new Error(`RETAINED_OUTPUT_JSON_INVALID:${input.sourceRelativePath}`);
+  }
+  const embeddedDigest = typeof parsed.outputDigest === "string" && SHA256_RE.test(parsed.outputDigest)
+    ? parsed.outputDigest
+    : null;
+  if (embeddedDigest != null && embeddedDigest !== input.historyOutputDigest) {
+    throw new Error(`RETAINED_OUTPUT_HISTORY_DIGEST_MISMATCH:${input.sourceRelativePath}`);
+  }
+}
+
 function prepareMutableOutput(input: {
   repoRoot: string;
   runId: string;
   sourceRelativePath: string;
+  historyOutputDigest: string;
 }): PreparedRetainedOutput {
   const sourceAbsolute = resolveInside(input.repoRoot, input.sourceRelativePath);
   if (!existsSync(sourceAbsolute)) throw new Error(`RETAINED_OUTPUT_SOURCE_MISSING:${input.sourceRelativePath}`);
@@ -90,6 +113,11 @@ function prepareMutableOutput(input: {
   }
 
   const content = readFileSync(sourceAbsolute);
+  validateRetainedJsonSource({
+    sourceRelativePath: input.sourceRelativePath,
+    content,
+    historyOutputDigest: input.historyOutputDigest,
+  });
   const contentDigest = sha256Buffer(content);
   if (!SHA256_RE.test(contentDigest)) throw new Error("RETAINED_OUTPUT_CONTENT_DIGEST_INVALID");
   const retainedRelativePath = `${RETAINED_ROOT}/${input.runId}/${contentDigest}-${safeBasename(input.sourceRelativePath)}`;
@@ -155,8 +183,10 @@ export function retainExecutorOutputs(input: {
   repoRoot: string;
   runId: string;
   outputPaths: string[];
+  historyOutputDigest: string;
 }): RetainedExecutorOutputsResult {
   if (!RUN_ID_RE.test(input.runId)) throw new Error("RETAINED_OUTPUT_RUN_ID_INVALID");
+  if (!SHA256_RE.test(input.historyOutputDigest)) throw new Error("RETAINED_OUTPUT_HISTORY_DIGEST_INVALID");
 
   const uniqueOutputPaths = [...new Set(input.outputPaths)];
   if (uniqueOutputPaths.length > MAX_EXECUTOR_OUTPUT_PATHS) {
@@ -178,7 +208,12 @@ export function retainExecutorOutputs(input: {
       continue;
     }
 
-    const prepared = prepareMutableOutput({ repoRoot: input.repoRoot, runId: input.runId, sourceRelativePath: outputPath });
+    const prepared = prepareMutableOutput({
+      repoRoot: input.repoRoot,
+      runId: input.runId,
+      sourceRelativePath: outputPath,
+      historyOutputDigest: input.historyOutputDigest,
+    });
     const prior = preparedByRetainedPath.get(prepared.retainedRelativePath);
     if (prior) {
       if (prior.contentDigest !== prepared.contentDigest || !prior.content.equals(prepared.content)) {
