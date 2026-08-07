@@ -1,0 +1,87 @@
+name: Temporary preview N2 host keep-awake 040419
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/tmp-preview-n2-host-keepawake-040419.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-n2-host-keepawake-040419
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    runs-on: [self-hosted, macOS]
+    timeout-minutes: 20
+    env:
+      AUTHORITY_SHA: 0404192394fb52008f4073d1fcd7f7a114c6ad27
+      CANONICAL_REPO: /Users/m-shogo/Developer/personal/boat-pon
+      CAPTURE_RUNTIME_SHA: 967ad45d1f72b4ad17e036a25926c1e61ba4e091
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 0404192394fb52008f4073d1fcd7f7a114c6ad27
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Fast-forward canonical main without changing capture runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C "$CANONICAL_REPO" branch --show-current)" = main
+          test -z "$(git -C "$CANONICAL_REPO" status --porcelain)"
+          BINDING="$CANONICAL_REPO/data/private/trifecta-capture/runtime-authority.json"
+          test "$(node -p "JSON.parse(require('fs').readFileSync('$BINDING','utf8')).authoritySha")" = "$CAPTURE_RUNTIME_SHA"
+          git -C "$CANONICAL_REPO" fetch origin main
+          git -C "$CANONICAL_REPO" merge --ff-only "$AUTHORITY_SHA"
+          test "$(git -C "$CANONICAL_REPO" rev-parse HEAD)" = "$AUTHORITY_SHA"
+          test -z "$(git -C "$CANONICAL_REPO" status --porcelain)"
+          test "$(node -p "JSON.parse(require('fs').readFileSync('$BINDING','utf8')).authoritySha")" = "$CAPTURE_RUNTIME_SHA"
+      - name: Install preview dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$CANONICAL_REPO"
+          npm ci
+          test -z "$(git status --porcelain --untracked-files=no)"
+      - name: Preview explicit AC-only keep-awake
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/n2-keepawake-preview.txt"
+          export OUT
+          cd "$CANONICAL_REPO"
+          node node_modules/tsx/dist/cli.mjs \
+            scripts/configure-n2-trifecta-host-keepawake.ts \
+            --enable --print-only > "$OUT"
+          test -s "$OUT"
+          grep -Fq '"status": "PRINT_ONLY_ENABLE"' "$OUT"
+          grep -Fq '"explicitOptInRequiredToEnable": true' "$OUT"
+          grep -Fq '"acPowerOnly": true' "$OUT"
+          grep -Fq '"preventsSystemSleep": true' "$OUT"
+          grep -Fq '"preventsDisplaySleep": false' "$OUT"
+          grep -Fq '"simulatesUserActivity": false' "$OUT"
+          grep -Fq '"changesPmset": false' "$OUT"
+          grep -Fq '"requiresSudo": false' "$OUT"
+          grep -Fq '"currentBuyChanged": false' "$OUT"
+          grep -Fq '"lineChanged": false' "$OUT"
+          grep -Fq '"publicPublished": false' "$OUT"
+          grep -Fq '"databaseWriteCount": 0' "$OUT"
+          grep -Fq '<string>/usr/bin/caffeinate</string>' "$OUT"
+          grep -Fq '<string>-s</string>' "$OUT"
+          ! grep -Fq '<string>-i</string>' "$OUT"
+          ! grep -Fq '<string>-d</string>' "$OUT"
+          ! grep -Fq '<string>-m</string>' "$OUT"
+          ! grep -Fq '<string>-u</string>' "$OUT"
+          PLIST="$HOME/Library/LaunchAgents/com.boatpon.capture-host-keepawake.plist"
+          test ! -e "$PLIST"
+          BINDING="$CANONICAL_REPO/data/private/trifecta-capture/runtime-authority.json"
+          test "$(node -p "JSON.parse(require('fs').readFileSync('$BINDING','utf8')).authoritySha")" = "$CAPTURE_RUNTIME_SHA"
+          echo 'SANITIZED_N2_KEEPAWAKE_PREVIEW_BEGIN'
+          echo '{"status":"PASS","previewOnly":true,"acPowerOnly":true,"caffeinate":"/usr/bin/caffeinate -s","plistWrittenOrLoaded":false,"captureRuntimeAuthorityUnchanged":true,"changesPmset":false,"requiresSudo":false,"currentBuyChanged":false,"lineChanged":false,"publicPublished":false,"databaseWriteCount":0}'
+          echo 'SANITIZED_N2_KEEPAWAKE_PREVIEW_END'
