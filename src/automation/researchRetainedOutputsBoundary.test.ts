@@ -19,12 +19,27 @@ test("retained outputs are content-addressed under reports automation only", () 
 
 test("retained output materialization is validate-first, rollback-bounded and deduplicated", () => {
   assert.match(retained, /Phase 1: classify and validate every source before creating any retained file/u);
-  assert.match(retained, /Phase 2: materialize only after every source\/target has been validated/u);
+  assert.match(retained, /Phase 2: materialize only after every source\/target and the aggregate budget have been validated/u);
   assert.match(retained, /preparedByRetainedPath/u);
   assert.match(retained, /historyOutputSet/u);
   assert.match(retained, /created\.reverse\(\)/u);
   assert.match(retained, /unlinkSync\(path\)/u);
   assert.match(retained, /RETAINED_OUTPUT_TARGET_COLLISION/u);
+});
+
+test("retained output count and aggregate bytes are fail-closed per run", () => {
+  assert.match(retained, /MAX_EXECUTOR_OUTPUT_PATHS\s*=\s*64/u);
+  assert.match(retained, /MAX_RETAINED_TOTAL_BYTES\s*=\s*8_388_608/u);
+  assert.match(retained, /RETAINED_OUTPUT_COUNT_EXCEEDED/u);
+  assert.match(retained, /RETAINED_OUTPUT_TOTAL_BYTES_EXCEEDED/u);
+  const countIndex = retained.indexOf("RETAINED_OUTPUT_COUNT_EXCEEDED");
+  const prepareIndex = retained.indexOf("prepareMutableOutput({", countIndex);
+  const budgetIndex = retained.indexOf("RETAINED_OUTPUT_TOTAL_BYTES_EXCEEDED", prepareIndex);
+  const materializeIndex = retained.indexOf("materializePreparedOutputs(prepared)", budgetIndex);
+  assert.ok(countIndex >= 0);
+  assert.ok(prepareIndex > countIndex);
+  assert.ok(budgetIndex > prepareIndex);
+  assert.ok(materializeIndex > budgetIndex);
 });
 
 test("registries remain original append-only evidence instead of being downgraded to copies", () => {
