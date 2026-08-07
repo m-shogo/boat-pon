@@ -1,10 +1,13 @@
-# trigger after workflow registration
 name: Patch N2 day index semantic idempotency
 
 on:
   push:
     branches:
       - fix/n2-day-index-semantic-idempotency
+    paths:
+      - .github/workflows/tmp-patch-n2-day-index-semantic-idempotency.yml
+  pull_request:
+    branches: [main]
     paths:
       - .github/workflows/tmp-patch-n2-day-index-semantic-idempotency.yml
 
