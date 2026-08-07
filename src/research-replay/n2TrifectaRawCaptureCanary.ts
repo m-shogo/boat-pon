@@ -3,6 +3,7 @@ import * as cheerio from "cheerio";
 
 import {
   countUnavailableTrifectaSelections,
+  countZeroTrifectaSelections,
   parseAllTrifectaOdds,
 } from "../domain/oddsParser";
 import { canonicalHash } from "./canonical";
@@ -135,6 +136,7 @@ export type N2TrifectaRawReviewEnvelope = {
   parserVersion: typeof N2_TRIFECTA_RAW_PARSER_VERSION;
   parsedSelectionCount: number;
   unavailableSelectionCount: number;
+  zeroOddsPlaceholderCount: number;
   rawDocumentId: string | null;
   parseRunId: string | null;
   proposedObservationId: string | null;
@@ -454,7 +456,9 @@ export function buildN2TrifectaRawReviewEnvelope(input: {
 
   const parsedOdds = parseAllTrifectaOdds(html);
   const unavailableSelectionCount = countUnavailableTrifectaSelections(html);
+  const zeroOddsPlaceholderCount = countZeroTrifectaSelections(html);
   if (parsedOdds.size !== 120) blockers.push("PARSED_SELECTION_COUNT_NOT_120");
+  if (zeroOddsPlaceholderCount > 0) blockers.push("ZERO_ODDS_PLACEHOLDERS_PRESENT");
   if (unavailableSelectionCount !== 0) {
     blockers.push("UNAVAILABLE_SELECTIONS_PRESENT");
   }
@@ -540,6 +544,7 @@ export function buildN2TrifectaRawReviewEnvelope(input: {
     parserVersion: N2_TRIFECTA_RAW_PARSER_VERSION,
     parsedSelectionCount: parsedOdds.size,
     unavailableSelectionCount,
+    zeroOddsPlaceholderCount,
     rawDocumentId,
     parseRunId,
     proposedObservationId,

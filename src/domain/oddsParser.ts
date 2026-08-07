@@ -189,6 +189,13 @@ function isUnavailableOddsText(text: string): boolean {
   return /^(?:-|欠場|返還)$/u.test(trimmed);
 }
 
+function isZeroOddsText(text: string): boolean {
+  const normalized = text.trim().replace(/,/g, "").replace(/倍$/u, "").trim();
+  if (!/^[0-9]+(?:\.[0-9]+)?$/u.test(normalized)) return false;
+  const value = Number(normalized);
+  return Number.isFinite(value) && value === 0;
+}
+
 function checkGroupedTableCellUnavailable($: cheerio.CheerioAPI, selection: number[]): boolean {
   const [first, second, third] = selection;
   for (const table of $("table").toArray()) {
@@ -326,6 +333,54 @@ export function countUnavailableTrifectaSelections(html: string): number {
   }
 
   return unavailable.size;
+}
+
+/**
+ * 公式グループ表で数値の `0` / `0.0` として残っている未価格プレースホルダ数を返す。
+ * `parseAllTrifectaOdds` はこれらを有効オッズとして取り込まない。診断専用であり、
+ * 0 を利用可能値へ昇格させるものではない。
+ */
+export function countZeroTrifectaSelections(html: string): number {
+  const $ = cheerio.load(html);
+  const zeroSelections = new Set<string>();
+
+  for (const table of $("table").toArray()) {
+    const $table = $(table);
+    if ($table.find(".oddsPoint").length === 0) continue;
+
+    const headerGrid = buildTableGrid($, $table.find("thead tr").toArray());
+    const bodyGrid = buildTableGrid($, $table.find("tbody tr").toArray());
+    if (headerGrid.length === 0 || bodyGrid.length === 0) continue;
+
+    const firstPlaceColumns: Array<{ firstPlace: number; column: number }> = [];
+    for (const row of headerGrid) {
+      for (let column = 0; column < row.length; column += 1) {
+        const value = Number(row[column]?.text.trim());
+        if (Number.isInteger(value) && value >= 1 && value <= 6) {
+          firstPlaceColumns.push({ firstPlace: value, column });
+        }
+      }
+    }
+
+    for (const group of firstPlaceColumns) {
+      for (const row of bodyGrid) {
+        const secondCell = row[group.column];
+        const thirdCell = row[group.column + 1];
+        const oddsCell = row[group.column + 2];
+        if (!secondCell || !thirdCell || !oddsCell) continue;
+        const second = Number(secondCell.text.trim());
+        const third = Number(thirdCell.text.trim());
+        if (!Number.isInteger(second) || second < 1 || second > 6) continue;
+        if (!Number.isInteger(third) || third < 1 || third > 6) continue;
+        if (group.firstPlace === second || group.firstPlace === third || second === third) continue;
+        if (isZeroOddsText(oddsCell.text)) {
+          zeroSelections.add(`${group.firstPlace}-${second}-${third}`);
+        }
+      }
+    }
+  }
+
+  return zeroSelections.size;
 }
 
 function normalizeSelectionText(text: string) {
