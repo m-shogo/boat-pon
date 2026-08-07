@@ -51,8 +51,23 @@ export type N2TrifectaPrivateMarketFeatureArtifactWriteResult = {
 
 type ExistingArtifactLike = {
   featureArtifactVersion?: unknown;
+  generatedAt?: unknown;
   sourceLoadDigest?: unknown;
+  raceIdentity?: unknown;
+  status?: unknown;
+  sequence?: unknown;
+  privateResearchOnly?: unknown;
+  publicPublishAuthorized?: unknown;
+  databaseWriteAuthorized?: unknown;
+  currentBuyConnectionAuthorized?: unknown;
+  lineConnectionAuthorized?: unknown;
+  automatedBettingAuthorized?: unknown;
   artifactDigest?: unknown;
+};
+
+type ExistingArtifactRead = {
+  value: ExistingArtifactLike;
+  mode0600: boolean;
 };
 
 function resolveInside(rootDir: string, relativePath: string): string {
@@ -131,7 +146,7 @@ export function buildN2TrifectaPrivateMarketFeatureArtifact(input: {
   return { ...core, artifactDigest: canonicalHash(core) };
 }
 
-function readExistingArtifact(path: string): ExistingArtifactLike | null {
+function readExistingArtifact(path: string): ExistingArtifactRead | null {
   if (!existsSync(path)) return null;
   const lst = lstatSync(path);
   if (lst.isSymbolicLink() || !lst.isFile()) throw new Error("PRIVATE_FEATURE_EXISTING_FILE_TYPE_INVALID");
@@ -140,10 +155,47 @@ function readExistingArtifact(path: string): ExistingArtifactLike | null {
     throw new Error("PRIVATE_FEATURE_EXISTING_SIZE_INVALID");
   }
   try {
-    return JSON.parse(readFileSync(path, "utf8")) as ExistingArtifactLike;
+    return {
+      value: JSON.parse(readFileSync(path, "utf8")) as ExistingArtifactLike,
+      mode0600: (stat.mode & 0o777) === 0o600,
+    };
   } catch {
     throw new Error("PRIVATE_FEATURE_EXISTING_JSON_INVALID");
   }
+}
+
+function reusableArtifactDigest(input: {
+  existing: ExistingArtifactRead;
+  report: N2TrifectaPrivateMarketFeatureLoadReport & { status: "PASS" | "PARTIAL" };
+}): string | null {
+  const value = input.existing.value;
+  if (!input.existing.mode0600) return null;
+  if (value.featureArtifactVersion !== N2_TRIFECTA_PRIVATE_MARKET_FEATURE_ARTIFACT_VERSION) return null;
+  if (value.sourceLoadDigest !== input.report.outputDigest) return null;
+  if (value.raceIdentity !== input.report.raceIdentity || value.status !== input.report.status) return null;
+  if (typeof value.generatedAt !== "string" || !Number.isFinite(Date.parse(value.generatedAt))) return null;
+  if (typeof value.sequence !== "object" || value.sequence == null) return null;
+  if (value.privateResearchOnly !== true || value.publicPublishAuthorized !== false
+    || value.databaseWriteAuthorized !== false || value.currentBuyConnectionAuthorized !== false
+    || value.lineConnectionAuthorized !== false || value.automatedBettingAuthorized !== false) {
+    return null;
+  }
+  if (typeof value.artifactDigest !== "string" || !/^[0-9a-f]{64}$/u.test(value.artifactDigest)) return null;
+  const core = {
+    featureArtifactVersion: value.featureArtifactVersion,
+    generatedAt: new Date(Date.parse(value.generatedAt)).toISOString(),
+    sourceLoadDigest: value.sourceLoadDigest,
+    raceIdentity: value.raceIdentity,
+    status: value.status,
+    sequence: value.sequence,
+    privateResearchOnly: true as const,
+    publicPublishAuthorized: false as const,
+    databaseWriteAuthorized: false as const,
+    currentBuyConnectionAuthorized: false as const,
+    lineConnectionAuthorized: false as const,
+    automatedBettingAuthorized: false as const,
+  };
+  return canonicalHash(core) === value.artifactDigest ? value.artifactDigest : null;
 }
 
 function atomicMode0600Replace(path: string, content: string): void {
@@ -186,18 +238,17 @@ export function writeN2TrifectaPrivateMarketFeatureArtifact(input: {
   });
   const path = resolveInside(input.rootDir, relativePath);
   const existing = readExistingArtifact(path);
-  if (
-    existing?.featureArtifactVersion === N2_TRIFECTA_PRIVATE_MARKET_FEATURE_ARTIFACT_VERSION
-    && existing.sourceLoadDigest === input.report.outputDigest
-    && typeof existing.artifactDigest === "string"
-    && /^[0-9a-f]{64}$/u.test(existing.artifactDigest)
-  ) {
+  const reusableDigest = existing == null ? null : reusableArtifactDigest({
+    existing,
+    report: input.report,
+  });
+  if (reusableDigest != null) {
     return {
       relativePath,
       changed: false,
       replacedExisting: true,
       sourceLoadDigest: input.report.outputDigest,
-      artifactDigest: existing.artifactDigest,
+      artifactDigest: reusableDigest,
       fileMode: 0o600,
     };
   }
