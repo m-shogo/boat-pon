@@ -22,6 +22,7 @@ import {
 import { computeIdempotencyKey, findIdempotentSuccess, type ProcessedRequestLedger } from "../src/automation/dispatchIntent";
 import { EXECUTOR_REGISTRY_VERSION, resolveExecutor, type ExecutorResult } from "../src/automation/taskExecutors";
 import { buildResearchAutomationFailureHistory } from "../src/automation/researchAutomationFailureHistory";
+import { retainExecutorOutputs } from "../src/automation/researchRetainedOutputs";
 
 const root = resolve(process.cwd());
 const arg = (n: string): string | null => {
@@ -301,13 +302,47 @@ try {
   appendLedgers(intentId, request.requestId, "BLOCKED", idempotencyKey, evidencePath);
   finish("BLOCKED", 3, { lastRequestId: request.requestId, lastIntentId: intentId, lastTaskId: task.taskId, authoritySha: request.authoritySha, stateVersion: state.stateVersion, stateDigest, blocks: ["UNEXPECTED_DRY_RUN_RESULT"], elapsedMs: Date.now() - startedMs, evidencePath, nextCandidate: pickNext(merged) });
 }
+  let historyOutputs: string[];
+  try {
+    historyOutputs = retainExecutorOutputs({ repoRoot: root, runId, outputPaths: exec.outputs }).historyOutputs;
+  } catch (error) {
+    const retentionBlock = "DURABLE_OUTPUT_RETENTION_FAILED";
+    const retentionMessage = error instanceof Error ? error.message : String(error);
+    const completedAt = nowIso();
+    const retentionEvidencePath = `reports/automation/history/${runId}-${task.taskId}.json`;
+    updateState(task.taskId, {
+      status: "BLOCKED",
+      evidenceLinks: [...new Set([...(state.tasks[task.taskId]?.evidenceLinks ?? []), retentionEvidencePath, ...exec.outputs])],
+      resultDigest: exec.outputDigest,
+      lastFailure: { code: retentionBlock, message: retentionMessage.slice(0, 300), at: completedAt },
+      nextDecision: `blocks: ${retentionBlock}`,
+    });
+    const evidence = buildResearchAutomationFailureHistory({
+      runId, requestId: request.requestId, intentId, taskId: task.taskId, taskType: task.taskType,
+      safetyLevel: request.safetyLevel as "L0" | "L1" | "L2" | "L3",
+      executorVersion: exec.executorVersion, result: "BLOCKED", failureCode: retentionBlock,
+      finalTaskStatus: "BLOCKED", message: retentionMessage,
+      authoritySha: git("rev-parse", request.authoritySha), idempotencyKey,
+      startedAt: new Date(startedMs).toISOString(), completedAt, elapsedMs: Date.now() - startedMs,
+    });
+    writeJsonAtomic(join(HISTORY_DIR, `${runId}-${task.taskId}.json`), evidence);
+    appendLedgers(intentId, request.requestId, "BLOCKED", idempotencyKey, retentionEvidencePath);
+    finish("BLOCKED", 3, {
+      lastRequestId: request.requestId, lastIntentId: intentId, lastTaskId: task.taskId,
+      authoritySha: request.authoritySha, stateVersion: state.stateVersion, stateDigest: computeStateDigest(state),
+      blocks: [retentionBlock], elapsedMs: Date.now() - startedMs, evidencePath: retentionEvidencePath,
+      outputs: exec.outputs, outputDigest: exec.outputDigest, taskStatus: "BLOCKED",
+      nextCandidate: pickNext(mergeCatalogAndState(catalog, state)),
+    });
+  }
+
   const attempts = state.tasks[task.taskId]?.attemptCount ?? 1;
   const maxAttempts = state.tasks[task.taskId]?.maxAttempts ?? 3;
   const nextStatus: TaskStatus = exec.result === "PASS" ? "PASS" : exec.result === "CONDITIONAL" ? "CONDITIONAL" : exec.result === "BLOCKED" ? "BLOCKED" : attempts >= maxAttempts ? "FAILED_FINAL" : "FAILED_RETRYABLE";
   const evidencePath = `reports/automation/history/${runId}-${task.taskId}.json`;
   updateState(task.taskId, {
     status: nextStatus,
-    evidenceLinks: [...new Set([...(state.tasks[task.taskId]?.evidenceLinks ?? []), evidencePath, ...exec.outputs])],
+    evidenceLinks: [...new Set([...(state.tasks[task.taskId]?.evidenceLinks ?? []), evidencePath, ...exec.outputs, ...historyOutputs])],
     resultDigest: exec.outputDigest,
     lastFailure: exec.blocks.length ? { code: exec.blocks[0], at: nowIso() } : null,
     nextDecision: exec.result === "PASS" ? "依存 task を次回 dispatch 候補にする（自動起動しない）" : `blocks: ${exec.blocks.join(",") || "none"}`,
@@ -318,7 +353,7 @@ try {
   }
   writeJsonAtomic(join(HISTORY_DIR, `${runId}-${task.taskId}.json`), {
     runId, requestId: request.requestId, intentId, taskId: task.taskId, taskType: task.taskType, safetyLevel: request.safetyLevel,
-    executorVersion: exec.executorVersion, executed: true, result: exec.result, blocks: exec.blocks, outputs: exec.outputs,
+    executorVersion: exec.executorVersion, executed: true, result: exec.result, blocks: exec.blocks, outputs: historyOutputs,
     outputDigest: exec.outputDigest, summary: exec.summary, authoritySha: git("rev-parse", request.authoritySha), idempotencyKey,
     startedAt: new Date(startedMs).toISOString(), completedAt: nowIso(), elapsedMs: Date.now() - startedMs,
   });
@@ -327,7 +362,7 @@ try {
   finish(exec.result, exec.result === "PASS" || exec.result === "CONDITIONAL" ? 0 : exec.result === "BLOCKED" ? 3 : 1, {
     lastRequestId: request.requestId, lastIntentId: intentId, lastTaskId: task.taskId, lastSafetyLevel: request.safetyLevel,
     authoritySha: request.authoritySha, stateVersion: state.stateVersion, stateDigest: computeStateDigest(state),
-    blocks: exec.blocks, elapsedMs: Date.now() - startedMs, evidencePath, outputs: exec.outputs, outputDigest: exec.outputDigest,
+    blocks: exec.blocks, elapsedMs: Date.now() - startedMs, evidencePath, outputs: historyOutputs, outputDigest: exec.outputDigest,
     taskStatus: nextStatus, nextCandidate: pickNext(mergeCatalogAndState(catalog, state)),
   });
 } catch (error) {

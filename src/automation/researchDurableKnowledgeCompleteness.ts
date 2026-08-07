@@ -31,6 +31,7 @@ const ALLOWED_OUTPUT_ROOTS = [
 export type ResearchAutomationHistoryResult = (typeof RESULTS)[number];
 
 export type ResearchDurableOutputIntegrity =
+  | "RETAINED_CONTENT_DIGEST_VERIFIED"
   | "REGISTRY_SELF_DIGEST_VERIFIED"
   | "CURRENT_OUTPUT_DIGEST_MATCH"
   | "CURRENT_OUTPUT_DIGEST_SUPERSEDED"
@@ -39,7 +40,7 @@ export type ResearchDurableOutputIntegrity =
 
 export type ResearchDurableOutputAssessment = {
   relativePath: string;
-  rootClass: "REPORT" | "REGISTRY" | "CONTROL";
+  rootClass: "REPORT" | "REGISTRY" | "CONTROL" | "RETAINED";
   integrity: ResearchDurableOutputIntegrity | null;
   exists: boolean;
   regularFile: boolean;
@@ -177,6 +178,7 @@ function safeRelativeOutputPath(value: unknown): string | null {
 }
 
 function outputRootClass(relativePath: string): ResearchDurableOutputAssessment["rootClass"] {
+  if (relativePath.startsWith("reports/automation/retained-outputs/")) return "RETAINED";
   if (relativePath.startsWith("research/registries/")) return "REGISTRY";
   if (relativePath.startsWith("automation/control/")) return "CONTROL";
   return "REPORT";
@@ -284,6 +286,55 @@ function assessOutput(input: {
   }
   const text = readFileSync(absolutePath, "utf8");
   const contentDigest = sha256Text(text);
+  if (rootClass === "RETAINED") {
+    const retainedMatch = input.relativePath.match(
+      /^reports\/automation\/retained-outputs\/[0-9A-Za-z._-]+\/([0-9a-f]{64})-[^/]+$/u,
+    );
+    const expectedContentDigest = retainedMatch?.[1] ?? null;
+    if (expectedContentDigest == null) {
+      return {
+        relativePath: input.relativePath, rootClass, integrity: null, exists: true, regularFile: true,
+        bytes: stat.size, contentDigest, embeddedDigest: null, historyDigestMatchesEmbedded: null,
+        complete: false, issues: ["DURABLE_RETAINED_PATH_INVALID"], warnings,
+      };
+    }
+    if (expectedContentDigest !== contentDigest) {
+      return {
+        relativePath: input.relativePath, rootClass, integrity: null, exists: true, regularFile: true,
+        bytes: stat.size, contentDigest, embeddedDigest: null, historyDigestMatchesEmbedded: null,
+        complete: false, issues: ["DURABLE_RETAINED_CONTENT_DIGEST_MISMATCH"], warnings,
+      };
+    }
+    let retainedEmbeddedDigest: string | null = null;
+    if (input.relativePath.endsWith(".json")) {
+      try {
+        const retainedValue = objectValue(JSON.parse(text) as unknown);
+        if (!retainedValue) throw new Error("not object");
+        retainedEmbeddedDigest = typeof retainedValue.outputDigest === "string" && SHA256_RE.test(retainedValue.outputDigest)
+          ? retainedValue.outputDigest
+          : null;
+      } catch {
+        return {
+          relativePath: input.relativePath, rootClass, integrity: null, exists: true, regularFile: true,
+          bytes: stat.size, contentDigest, embeddedDigest: null, historyDigestMatchesEmbedded: null,
+          complete: false, issues: ["DURABLE_OUTPUT_JSON_INVALID"], warnings,
+        };
+      }
+    }
+    if (retainedEmbeddedDigest != null && retainedEmbeddedDigest !== input.historyOutputDigest) {
+      return {
+        relativePath: input.relativePath, rootClass, integrity: null, exists: true, regularFile: true,
+        bytes: stat.size, contentDigest, embeddedDigest: retainedEmbeddedDigest, historyDigestMatchesEmbedded: false,
+        complete: false, issues: ["DURABLE_RETAINED_HISTORY_DIGEST_MISMATCH"], warnings,
+      };
+    }
+    return {
+      relativePath: input.relativePath, rootClass, integrity: "RETAINED_CONTENT_DIGEST_VERIFIED",
+      exists: true, regularFile: true, bytes: stat.size, contentDigest, embeddedDigest: retainedEmbeddedDigest,
+      historyDigestMatchesEmbedded: retainedEmbeddedDigest == null ? null : true,
+      complete: true, issues, warnings,
+    };
+  }
   if (!input.relativePath.endsWith(".json")) {
     return {
       relativePath: input.relativePath,
