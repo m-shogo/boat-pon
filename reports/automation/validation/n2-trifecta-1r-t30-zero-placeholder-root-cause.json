@@ -1,0 +1,65 @@
+{
+  "evidenceVersion": "n2-trifecta-1r-t30-zero-placeholder-root-cause-v1",
+  "evidenceRole": "SANITIZED_PRIVATE_RAW_STRUCTURE_ROOT_CAUSE_ONLY",
+  "observedAt": "2026-08-07T09:07:26.921Z",
+  "raceIdentity": "20260807-10-01",
+  "checkpointLabel": "T-30",
+  "diagnosis": "SOURCE_ZERO_PLACEHOLDERS_AT_CAPTURE_PARSER_FAIL_CLOSED_CORRECT",
+  "rawEvidence": {
+    "rawSha256": "4cdf1ab7d8afc44f30819f151d48446c3771c3cf5e5e06eb40b41ff87c7cc08a",
+    "rawByteLength": 46567,
+    "rawOddsValuesIncluded": false,
+    "rawHtmlIncluded": false,
+    "networkRefetchExecuted": false
+  },
+  "timing": {
+    "targetCaptureAt": "2026-08-06T23:02:00.000Z",
+    "fetchedAt": "2026-08-06T23:01:11.606Z",
+    "fetchOffsetFromTargetSeconds": -48.394,
+    "sourceDisplayedAvailableAt": "2026-08-06T23:00:00.000Z",
+    "capturePredatedExactCheckpointHardening": true,
+    "currentEarlyCaptureAllowed": false
+  },
+  "structuralCounts": {
+    "canonicalSelectionCount": 120,
+    "structuralSelectionCount": 120,
+    "positiveNumericSelectionCount": 67,
+    "zeroNumericPlaceholderCount": 53,
+    "unavailableSelectionCount": 0,
+    "otherSelectionCount": 0,
+    "currentParserSelectionCount": 67,
+    "positiveNumericButNotParsedCount": 0,
+    "parsedButNotPositiveNumericCount": 0
+  },
+  "conclusion": {
+    "parserBugFound": false,
+    "sourceSelectionStructureComplete": true,
+    "sourceMarketFullyPricedAtFetch": false,
+    "zeroPlaceholderMustRemainUnusable": true,
+    "retryAuthorized": false,
+    "relaxParserAuthorized": false,
+    "recommendedBehavior": "KEEP_FAIL_CLOSED"
+  },
+  "existingMitigations": [
+    "PR_90_EXACT_CHECKPOINT_NO_EARLY_CAPTURE",
+    "SINGLE_REQUEST_PER_CHECKPOINT_NO_IMMEDIATE_RETRY",
+    "MAX_48_REQUESTS_PER_VENUE_DAY"
+  ],
+  "newDiagnostic": {
+    "field": "zeroOddsPlaceholderCount",
+    "blocker": "ZERO_ODDS_PLACEHOLDERS_PRESENT",
+    "purpose": "DISTINGUISH_SOURCE_NOT_FULLY_PRICED_FROM_PARSER_MISS_WITHOUT_PRINTING_RAW_ODDS"
+  },
+  "protectedBoundaries": {
+    "networkRequestCount": 0,
+    "databaseReadCount": 0,
+    "databaseWriteCount": 0,
+    "rawOddsValuesPrinted": false,
+    "rawOddsValuesPublished": false,
+    "currentBuyChanged": false,
+    "lineChanged": false,
+    "publicPublished": false,
+    "automatedBettingChanged": false,
+    "productionApplyExecuted": false
+  }
+}
