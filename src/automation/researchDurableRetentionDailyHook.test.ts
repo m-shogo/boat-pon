@@ -31,6 +31,15 @@ test("daily retention hook is hosted and never reads Mac private data", () => {
   assert.doesNotMatch(hook, /send-line|notify|auto_purchase|auto_vote|production_writer|live_odds_writer/u);
 });
 
+test("daily retention binds lineage to the checked-out main authority", () => {
+  const start = workflow.indexOf("  daily-retention-snapshot:");
+  assert.ok(start >= 0);
+  const hook = workflow.slice(start);
+  assert.match(hook, /MAIN_SHA="\$\(git rev-parse HEAD\)"/u);
+  assert.match(hook, /--main-authority-sha="\$MAIN_SHA"/u);
+  assert.doesNotMatch(hook, /MAIN_SHA:\s*\$\{\{\s*github\.sha\s*\}\}/u);
+});
+
 test("daily retention hook writes exactly one sanitized retention path with CAS", () => {
   const start = workflow.indexOf("  daily-retention-snapshot:");
   const hook = workflow.slice(start);
