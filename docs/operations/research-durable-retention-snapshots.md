@@ -1,6 +1,6 @@
 # Research Durable Retention Snapshots
 
-Status: one-shot retention evidence operation  
+Status: one-shot retention evidence operation + bounded end-of-day hook  
 Scope: sanitized automation-history retention metadata only  
 Production authority: none
 
@@ -14,17 +14,21 @@ The snapshot is an operational evidence artifact. It does not evaluate ROI, stra
 
 Research execution already uses ChatGPT Scheduled Task / explicit dispatch as the scheduler and intentionally does not use GitHub `on.schedule` for the local research loop.
 
-The retention workflow follows the same rule:
+The standalone retention workflow:
 
 ```text
 .github/workflows/research-durable-retention-snapshot.yml
 ```
 
-is `workflow_dispatch` only. It never redispatches itself and contains no recurrence. The existing scheduler/manual operator may dispatch one retention check when desired.
+is `workflow_dispatch` only. It never redispatches itself and contains no recurrence.
+
+The existing one-shot research workflow also contains an end-of-day retention hook. This does **not** add another scheduler: after each existing dispatch completes, an Ubuntu-hosted follow-up checks the current JST hour. Outside `23` it exits after the time gate. During JST 23:00-23:59 it performs the same bounded retention materialization. Therefore the existing hourly ChatGPT dispatch remains the only recurring trigger and no additional ChatGPT schedule slot is required.
+
+Repeated/manual dispatches within the 23-hour window are safe because same-day identical semantic evidence resolves to the same verified snapshot path and produces `changed=false`.
 
 ## Source and write boundaries
 
-The workflow:
+The retention operation:
 
 1. checks out `main` as the audit-code authority;
 2. fetches `automation/boat-pon-research` into a detached worktree;
@@ -35,12 +39,15 @@ The workflow:
 reports/automation/retention/durable-knowledge/YYYY-MM-DD/<evidenceDigest>.json
 ```
 
-5. CAS-checks the automation branch before committing;
-6. pushes without force and never auto-retries a conflict.
+5. verifies that no other worktree path changed;
+6. CAS-checks the automation branch before committing;
+7. pushes without force and never auto-retries a conflict.
 
 It does not modify `reports/automation/history`, N2 reports, registries, queue/control state, raw/private data, databases, Current BUY, LINE, public output, or production settings.
 
-The retention path is already inside `scripts/automation-commit.sh`'s broad `reports/automation/` allowlist, but this workflow applies a narrower path check and stages exactly one expected file.
+The end-of-day hook runs on `ubuntu-latest`, not the self-hosted Mac, and contains no access to local raw/private market evidence or the primary/sidecar DB.
+
+The retention path is already inside `scripts/automation-commit.sh`'s broad `reports/automation/` allowlist, but the retention operation applies a narrower path check and stages exactly one expected file.
 
 ## Semantic identity and recursion avoidance
 
@@ -70,7 +77,7 @@ retention snapshot commit
   -> no new commit
 ```
 
-When actual history or referenced durable evidence changes, the semantic digest changes and a new append-only snapshot is created.
+When actual history or referenced durable evidence changes, the semantic digest changes and a new append-only snapshot is created. Within a day this can produce more than one snapshot only when the underlying durable evidence actually changed and the retention operation was invoked again; unchanged evidence does not churn.
 
 ## Existing artifact rule
 
@@ -80,9 +87,15 @@ If the semantic path already exists, the file must pass its own snapshot digest 
 
 ## BLOCKED audits
 
-If the completeness audit returns `BLOCKED`, the workflow may still append the sanitized retention snapshot so the negative finding itself is durable. After committing that evidence, the job exits non-zero to remain operationally visible.
+If the completeness audit returns `BLOCKED`, the operation may still append the sanitized retention snapshot so the negative finding itself is durable. After committing that evidence, the job exits non-zero to remain operationally visible.
 
 A structural failure that prevents trustworthy snapshot construction (invalid path, malformed artifact, CAS conflict, parser failure, etc.) produces no state write.
+
+## End-of-day failure semantics
+
+The hook runs after the existing one-shot research task with `always()` semantics because a failed/BLOCKED research attempt can still have valid durable history committed by the existing `if: always()` automation commit step. The retention audit always evaluates the **actual state branch contents**, never the in-memory task result.
+
+If the task's state commit did not reach `automation/boat-pon-research`, the retention hook cannot invent it: it snapshots only what is durably present. A CAS conflict is visible and never retried or force-pushed.
 
 ## Protected boundaries
 
