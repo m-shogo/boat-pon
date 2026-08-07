@@ -30,12 +30,17 @@ test("retention snapshot writes only sanitized retention artifacts", () => {
 test("snapshot identity is semantic and does not use state SHA or observation timestamp", () => {
   const functionStart = source.indexOf("export function computeResearchDurableRetentionEvidenceDigest");
   const functionEnd = source.indexOf("function assertProtectedAuthority", functionStart);
+  const helperStart = source.indexOf("function semanticRun");
+  const helperEnd = source.indexOf("export function computeResearchDurableRetentionEvidenceDigest", helperStart);
   assert.ok(functionStart >= 0 && functionEnd > functionStart);
+  assert.ok(helperStart >= 0 && helperEnd > helperStart);
   const digestFunction = source.slice(functionStart, functionEnd);
+  const semanticRunHelper = source.slice(helperStart, helperEnd);
   assert.doesNotMatch(digestFunction, /sourceStateSha|mainAuthoritySha|firstObservedAt|generatedAt|outputDigest:\s*report\.outputDigest/u);
-  assert.match(digestFunction, /historyContentDigest/u);
-  assert.match(digestFunction, /contentDigest/u);
+  assert.match(digestFunction, /runs:\s*report\.runs\.map\(semanticRun\)/u);
   assert.match(digestFunction, /classificationCounts/u);
+  assert.match(semanticRunHelper, /historyContentDigest/u);
+  assert.match(semanticRunHelper, /contentDigest/u);
 });
 
 test("existing retention evidence is fail-closed and never overwritten", () => {
