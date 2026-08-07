@@ -60,15 +60,74 @@ Missing checkpoints are preserved explicitly. For example T-30 -> T-10 is repres
 
 Partial data is retained for research but is never silently imputed as a complete trajectory.
 
+## Derived artifact lifecycle
+
+Raw HTML, envelopes and accepted markers remain immutable source evidence. The private market-feature JSON is different: it is a deterministic **derived artifact** whose source trajectory can legitimately grow from T-30 to T-20 to T-10 to T-5 during the day.
+
+Therefore a feature artifact is intentionally refreshable when its validated `sourceLoadDigest` changes. Refresh uses a same-directory temporary file, mode 0600, `fsync`, atomic rename and final mode verification. Existing symlink or non-regular targets are rejected.
+
+Current artifact version:
+
+```text
+n2-trifecta-private-market-feature-artifact-v2
+```
+
+The artifact records:
+
+- generation time;
+- exact source-load digest;
+- race identity and PASS/PARTIAL status;
+- full private feature sequence;
+- fixed private-only / no-public / no-DB / no-BUY / no-LINE / no-automated-betting boundaries;
+- artifact digest.
+
+If the source-load digest is unchanged, the writer is idempotent and leaves the existing artifact untouched. Legacy v1 artifacts or earlier PARTIAL artifacts may be atomically replaced by a later validated source digest. `NO_DATA` and `BLOCKED` reports are never written as feature artifacts.
+
+This replaceability does not weaken source evidence: accepted markers and raw capture evidence remain the immutable authority from which the derived artifact can always be rebuilt.
+
 ## Storage and publication boundary
 
-The default CLI prints only a sanitized summary: checkpoint availability, counts, status and digests. It never prints raw odds or the 120-selection feature vectors.
+The default per-race CLI prints only a sanitized summary: checkpoint availability, counts, status and digests. It never prints raw odds or the 120-selection feature vectors.
 
 Full feature artifacts require explicit `--write-private` and are exclusively created mode 0600 under:
 
-`data/private/trifecta-market-features/<date>/<venue>/<race>.json`
+```text
+data/private/trifecta-market-features/<date>/<venue>/<race>.json
+```
 
 No feature artifact is committed or uploaded. This layer has no Current BUY, LINE, public, automated-betting, primary DB, sidecar DB, or production-apply authority.
+
+Per-race usage:
+
+```bash
+npx tsx scripts/build-n2-trifecta-private-market-features.ts \
+  --date 2026-08-07 \
+  --venue 10 \
+  --race 4
+```
+
+Add `--write-private` only when the private derived artifact should be created or refreshed.
+
+## One-venue day batch
+
+For the authorized one-venue review stage, all races 1 through 12 can be evaluated in one bounded local pass:
+
+```bash
+npx tsx scripts/build-n2-trifecta-private-market-feature-day.ts \
+  --date 2026-08-07 \
+  --venue 10
+```
+
+The default batch is read-only apart from the loader's private raw reads and prints only sanitized per-race metadata. With explicit `--write-private`, PASS/PARTIAL races create or refresh their private derived artifacts; NO_DATA races create nothing.
+
+Batch status is fail closed:
+
+- any race `BLOCKED` -> batch `BLOCKED`;
+- all 12 races `PASS` -> batch `PASS`;
+- no available race data -> batch `NO_DATA`;
+- otherwise -> batch `PARTIAL`.
+
+The batch performs no network request or database read/write and never prints or publishes raw odds values or full feature vectors.
 
 ## Research use
 
