@@ -1,8 +1,9 @@
 import { resolve } from "node:path";
 
 import {
-  buildResearchDurableKnowledgeCompletenessReport,
-} from "../src/automation/researchDurableKnowledgeCompleteness";
+  buildResearchDurableKnowledgeCompletenessReportWithLegacyCompatibility,
+  countAttestedLegacyDurableRuns,
+} from "../src/automation/researchDurableKnowledgeLegacyCompatibility";
 
 function argument(name: string): string | null {
   const inline = process.argv.find((value) => value.startsWith(`--${name}=`));
@@ -14,7 +15,7 @@ function argument(name: string): string | null {
 const repoRoot = resolve(argument("repo-root") ?? process.cwd());
 const generatedAtArg = argument("generated-at");
 const generatedAt = generatedAtArg == null ? new Date().toISOString() : new Date(generatedAtArg).toISOString();
-const report = buildResearchDurableKnowledgeCompletenessReport({ repoRoot, generatedAt });
+const report = buildResearchDurableKnowledgeCompletenessReportWithLegacyCompatibility({ repoRoot, generatedAt });
 
 const sanitized = {
   summaryVersion: "research-durable-knowledge-completeness-summary-v1",
@@ -42,6 +43,7 @@ const sanitized = {
   mutableSupersededReferenceCount: report.mutableSupersededReferenceCount,
   registryOutputCount: report.registryOutputCount,
   currentOutputDigestMatchCount: report.currentOutputDigestMatchCount,
+  legacyCompatibilityCount: countAttestedLegacyDurableRuns(report),
   earliestCompletedAt: report.earliestCompletedAt,
   latestCompletedAt: report.latestCompletedAt,
   taskTypeCounts: report.taskTypeCounts,
