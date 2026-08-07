@@ -31,6 +31,7 @@ const writeResult = writePrivate
   ? writeN2TrifectaPrivateMarketFeatureDayIndex({ rootDir, index })
   : null;
 
+// Stdout is intentionally metadata-only; private feature vectors remain on local disk.
 const sanitized = {
   summaryVersion: "n2-trifecta-private-market-feature-day-index-summary-v1",
   status: index.status,
