@@ -1,0 +1,233 @@
+name: N2 trifecta runtime migrate 6e297602
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - .github/workflows/n2-trifecta-runtime-migrate-6e297602.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: n2-trifecta-runtime-migrate-6e297602
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Restrict one-shot migration
+        env:
+          ACTOR: ${{ github.actor }}
+          REPO: ${{ github.repository }}
+          EVENT: ${{ github.event_name }}
+          HEAD_REF: ${{ github.head_ref }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          [ "$REPO" = "m-shogo/boat-pon" ]
+          [ "$ACTOR" = "m-shogo" ]
+          [ "$EVENT" = "pull_request" ]
+          [ "$HEAD_REF" = "ops/n2-trifecta-runtime-migrate-6e297602" ]
+          [ "$BASE_REF" = "main" ]
+
+  migrate:
+    needs: guard
+    runs-on: [self-hosted, macOS, boat-pon-local]
+    timeout-minutes: 30
+    steps:
+      - name: Fast-forward canonical main to reviewed authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Users/m-shogo/Developer/personal/boat-pon"
+          TARGET="6e297602ff34d6cc853ff0e7088ae5a3e56fcfb7"
+          cd "$ROOT"
+          [ "$(git branch --show-current)" = "main" ]
+          [ -z "$(git status --porcelain)" ]
+          git fetch origin main --quiet
+          [ "$(git rev-parse origin/main)" = "$TARGET" ]
+          git merge --ff-only --quiet origin/main
+          [ "$(git rev-parse HEAD)" = "$TARGET" ]
+          [ -z "$(git status --porcelain)" ]
+
+      - name: Snapshot primary DB metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' > "$RUNNER_TEMP/n2-db-before.json"
+          import json, os
+          db = "/Users/m-shogo/Developer/personal/boat-pon/data/boat.sqlite"
+          wal = db + "-wal"
+          st = os.stat(db)
+          out = {"bytes": st.st_size, "mtimeNs": st.st_mtime_ns, "walExists": os.path.exists(wal)}
+          if os.path.exists(wal):
+              w = os.stat(wal)
+              out.update({"walBytes": w.st_size, "walMtimeNs": w.st_mtime_ns})
+          else:
+              out.update({"walBytes": 0, "walMtimeNs": None})
+          print(json.dumps(out, sort_keys=True))
+          PY
+
+      - name: Generate current private daily plan without network
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Users/m-shogo/Developer/personal/boat-pon"
+          cd "$ROOT"
+          if [ ! -f node_modules/tsx/dist/cli.mjs ]; then
+            npm ci --silent >/dev/null
+          fi
+          TODAY=$(TZ=Asia/Tokyo date +%Y-%m-%d)
+          : > "$RUNNER_TEMP/n2-plan-generation.json"
+          ok=0
+          for attempt in 1 2 3 4 5 6; do
+            if node --import tsx scripts/generate-n2-trifecta-private-daily-plan.ts "$TODAY" > "$RUNNER_TEMP/n2-plan-generation.json"; then
+              ok=1
+              break
+            fi
+            blocker=$(python3 - <<'PY'
+          import json, os
+          p = os.environ["RUNNER_TEMP"] + "/n2-plan-generation.json"
+          try:
+              print(json.load(open(p)).get("blocker", "UNKNOWN"))
+          except Exception:
+              print("INVALID_OUTPUT")
+          PY
+          )
+            [ "$blocker" = "PRIMARY_DB_ACTIVE_WAL" ] || break
+            sleep 10
+          done
+          [ "$ok" = "1" ]
+
+      - name: Renew authorization and install reviewed immutable runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Users/m-shogo/Developer/personal/boat-pon"
+          cd "$ROOT"
+          node --import tsx scripts/install-n2-trifecta-local-capture-agent.ts \
+            --renew \
+            --authorize \
+            --days 30 \
+            > "$RUNNER_TEMP/n2-installer.json"
+
+      - name: Verify runtime, launchd, plan and protected boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          sleep 2
+          python3 - <<'PY'
+          import datetime as dt
+          import json
+          import os
+          import subprocess
+
+          root = "/Users/m-shogo/Developer/personal/boat-pon"
+          target = "6e297602ff34d6cc853ff0e7088ae5a3e56fcfb7"
+          private = os.path.join(root, "data/private/trifecta-capture")
+          auth = json.load(open(os.path.join(private, "authorization.json")))
+          binding = json.load(open(os.path.join(private, "runtime-authority.json")))
+          installer = json.load(open(os.path.join(os.environ["RUNNER_TEMP"], "n2-installer.json")))
+          plan_generation = json.load(open(os.path.join(os.environ["RUNNER_TEMP"], "n2-plan-generation.json")))
+          before = json.load(open(os.path.join(os.environ["RUNNER_TEMP"], "n2-db-before.json")))
+
+          db = os.path.join(root, "data/boat.sqlite")
+          wal = db + "-wal"
+          st = os.stat(db)
+          after = {"bytes": st.st_size, "mtimeNs": st.st_mtime_ns, "walExists": os.path.exists(wal)}
+          if os.path.exists(wal):
+              w = os.stat(wal)
+              after.update({"walBytes": w.st_size, "walMtimeNs": w.st_mtime_ns})
+          else:
+              after.update({"walBytes": 0, "walMtimeNs": None})
+
+          assert before == after, "PRIMARY_DB_METADATA_CHANGED_DURING_MIGRATION"
+          assert installer["status"] == "INSTALLED"
+          assert installer["authoritySha"] == target
+          assert auth["stage"] == "ONE_VENUE_REVIEW"
+          assert auth["maxRequestsPerDay"] == 48
+          assert auth["checkpointLabels"] == ["T-30", "T-20", "T-10", "T-5"]
+          assert auth["privateResearchOnly"] is True
+          assert auth["databaseWriteAuthorized"] is False
+          assert auth["currentBuyConnectionAuthorized"] is False
+          assert auth["lineConnectionAuthorized"] is False
+          assert auth["automatedBettingAuthorized"] is False
+          assert binding["authorizationId"] == auth["authorizationId"]
+          assert binding["issuedAt"] == auth["issuedAt"]
+          assert binding["expiresAt"] == auth["expiresAt"]
+          assert binding["authoritySha"] == target
+          assert binding["privateResearchOnly"] is True
+          assert binding["databaseWriteAuthorized"] is False
+          assert binding["currentBuyConnectionAuthorized"] is False
+          assert binding["lineConnectionAuthorized"] is False
+          assert binding["publicPublishAuthorized"] is False
+          assert binding["automatedBettingAuthorized"] is False
+
+          runtime = binding["runtimeRoot"]
+          head = subprocess.check_output(["git", "-C", runtime, "rev-parse", "HEAD"], text=True).strip()
+          assert head == target
+          symbolic = subprocess.run(["git", "-C", runtime, "symbolic-ref", "-q", "HEAD"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+          assert symbolic.returncode == 1
+          tracked = subprocess.check_output(["git", "-C", runtime, "status", "--porcelain", "--untracked-files=no"], text=True).strip()
+          assert tracked == ""
+
+          label = "com.boatpon.trifecta-private-capture"
+          launchd = subprocess.run(["/bin/launchctl", "print", f"gui/{os.getuid()}/{label}"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+          assert launchd.returncode == 0
+
+          assert plan_generation["status"] == "PASS"
+          assert plan_generation["selectedRaceCount"] == 12
+          assert plan_generation["selectedCheckpointCount"] == 48
+          assert plan_generation["requestBudget"] == 48
+          assert plan_generation["databaseWriteCount"] == 0
+          assert plan_generation["currentBuyChanged"] is False
+          assert plan_generation["lineChanged"] is False
+          assert plan_generation["publicPublished"] is False
+          assert plan_generation["automatedBettingChanged"] is False
+          assert plan_generation["rawOddsPublished"] is False
+
+          latest_path = os.path.join(private, "status/latest.json")
+          latest_ok = False
+          latest_status = None
+          if os.path.exists(latest_path):
+              latest = json.load(open(latest_path))
+              report = latest.get("report", {})
+              latest_status = report.get("status")
+              assert report.get("databaseWriteCount") == 0
+              assert report.get("primaryDbWriteCount") == 0
+              assert report.get("sidecarWriteCount") == 0
+              assert report.get("currentBuyChanged") is False
+              assert report.get("lineChanged") is False
+              assert report.get("publicPublished") is False
+              assert report.get("automatedBettingChanged") is False
+              assert report.get("productionApplyExecuted") is False
+              latest_ok = True
+
+          summary = {
+              "status": "PASS",
+              "authoritySha": target,
+              "authorizationExpiresAt": auth["expiresAt"],
+              "runtimeDetached": True,
+              "runtimeTrackedWorktreeClean": True,
+              "launchdRegistered": True,
+              "dailyPlanStatus": plan_generation["status"],
+              "selectedVenueCode": plan_generation["selectedVenueCode"],
+              "selectedRaceCount": plan_generation["selectedRaceCount"],
+              "selectedCheckpointCount": plan_generation["selectedCheckpointCount"],
+              "requestBudget": plan_generation["requestBudget"],
+              "primaryDbMetadataUnchanged": True,
+              "latestPrivateStatusPresent": latest_ok,
+              "latestPrivateStatus": latest_status,
+              "databaseWriteCount": 0,
+              "currentBuyChanged": False,
+              "lineChanged": False,
+              "publicPublished": False,
+              "automatedBettingChanged": False,
+              "rawOddsPublished": False,
+          }
+          print(json.dumps(summary, indent=2, sort_keys=True))
+          PY
