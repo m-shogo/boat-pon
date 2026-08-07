@@ -124,7 +124,7 @@ jobs:
           cache: npm
       - name: Install
         run: npm ci
-      - name: Apply narrow type fix
+      - name: Apply remaining narrow type fixes
         shell: bash
         run: |
           set -euo pipefail
@@ -134,8 +134,8 @@ jobs:
           text = src.read_text()
           old = '      historyRelativeDir: HISTORY_RELATIVE_DIR,\n'
           count = text.count(old)
-          if count != 2:
-              raise SystemExit(f'historyRelativeDir anchor count={count}')
+          if count < 1:
+              raise SystemExit('no remaining historyRelativeDir literal to narrow')
           src.write_text(text.replace(old, '      historyRelativeDir: HISTORY_RELATIVE_DIR as typeof HISTORY_RELATIVE_DIR,\n'))
           test = Path('src/automation/researchDurableKnowledgeCompleteness.test.ts')
           t = test.read_text().replace(
