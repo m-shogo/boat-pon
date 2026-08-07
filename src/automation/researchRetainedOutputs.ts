@@ -6,6 +6,7 @@ import {
   mkdirSync,
   readFileSync,
   renameSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, resolve, sep } from "node:path";
@@ -32,6 +33,11 @@ export type RetainedExecutorOutput = {
 export type RetainedExecutorOutputsResult = {
   historyOutputs: string[];
   retainedOutputs: RetainedExecutorOutput[];
+};
+
+type PreparedRetainedOutput = RetainedExecutorOutput & {
+  retainedAbsolutePath: string;
+  content: Buffer;
 };
 
 function sha256Buffer(value: Buffer): string {
@@ -66,11 +72,11 @@ function safeBasename(relativePath: string): string {
   return value.replace(/[^0-9A-Za-z._-]/gu, "_").slice(0, 160);
 }
 
-function retainOne(input: {
+function prepareMutableOutput(input: {
   repoRoot: string;
   runId: string;
   sourceRelativePath: string;
-}): RetainedExecutorOutput {
+}): PreparedRetainedOutput {
   const sourceAbsolute = resolveInside(input.repoRoot, input.sourceRelativePath);
   if (!existsSync(sourceAbsolute)) throw new Error(`RETAINED_OUTPUT_SOURCE_MISSING:${input.sourceRelativePath}`);
   const stat = lstatSync(sourceAbsolute);
@@ -80,44 +86,67 @@ function retainOne(input: {
   if (stat.size <= 0 || stat.size > MAX_RETAINED_SOURCE_BYTES) {
     throw new Error(`RETAINED_OUTPUT_SOURCE_SIZE_INVALID:${input.sourceRelativePath}`);
   }
+
   const content = readFileSync(sourceAbsolute);
   const contentDigest = sha256Buffer(content);
   if (!SHA256_RE.test(contentDigest)) throw new Error("RETAINED_OUTPUT_CONTENT_DIGEST_INVALID");
   const retainedRelativePath = `${RETAINED_ROOT}/${input.runId}/${contentDigest}-${safeBasename(input.sourceRelativePath)}`;
-  const retainedAbsolute = resolveInside(input.repoRoot, retainedRelativePath);
-  if (existsSync(retainedAbsolute)) {
-    const existingStat = lstatSync(retainedAbsolute);
+  const retainedAbsolutePath = resolveInside(input.repoRoot, retainedRelativePath);
+
+  let changed = true;
+  if (existsSync(retainedAbsolutePath)) {
+    const existingStat = lstatSync(retainedAbsolutePath);
     if (existingStat.isSymbolicLink() || !existingStat.isFile()) {
       throw new Error(`RETAINED_OUTPUT_EXISTING_FILE_TYPE_INVALID:${retainedRelativePath}`);
     }
-    const existing = readFileSync(retainedAbsolute);
+    const existing = readFileSync(retainedAbsolutePath);
     if (sha256Buffer(existing) !== contentDigest || !existing.equals(content)) {
       throw new Error(`RETAINED_OUTPUT_EXISTING_CONTENT_MISMATCH:${retainedRelativePath}`);
     }
-    return {
-      sourceRelativePath: input.sourceRelativePath,
-      retainedRelativePath,
-      contentDigest,
-      bytes: content.length,
-      changed: false,
-    };
+    changed = false;
   }
-  mkdirSync(dirname(retainedAbsolute), { recursive: true });
-  const tempPath = `${retainedAbsolute}.${randomUUID()}.tmp`;
-  writeFileSync(tempPath, content, { mode: 0o644 });
-  renameSync(tempPath, retainedAbsolute);
-  chmodSync(retainedAbsolute, 0o644);
-  const readback = readFileSync(retainedAbsolute);
-  if (sha256Buffer(readback) !== contentDigest || !readback.equals(content)) {
-    throw new Error(`RETAINED_OUTPUT_READBACK_MISMATCH:${retainedRelativePath}`);
-  }
+
   return {
     sourceRelativePath: input.sourceRelativePath,
     retainedRelativePath,
+    retainedAbsolutePath,
     contentDigest,
     bytes: content.length,
-    changed: true,
+    changed,
+    content,
   };
+}
+
+function materializePreparedOutputs(prepared: PreparedRetainedOutput[]): void {
+  const created: string[] = [];
+  try {
+    for (const item of prepared) {
+      if (!item.changed) continue;
+      mkdirSync(dirname(item.retainedAbsolutePath), { recursive: true });
+      const tempPath = `${item.retainedAbsolutePath}.${randomUUID()}.tmp`;
+      try {
+        writeFileSync(tempPath, item.content, { mode: 0o644 });
+        const tempReadback = readFileSync(tempPath);
+        if (sha256Buffer(tempReadback) !== item.contentDigest || !tempReadback.equals(item.content)) {
+          throw new Error(`RETAINED_OUTPUT_TEMP_READBACK_MISMATCH:${item.retainedRelativePath}`);
+        }
+        renameSync(tempPath, item.retainedAbsolutePath);
+        created.push(item.retainedAbsolutePath);
+        chmodSync(item.retainedAbsolutePath, 0o644);
+        const readback = readFileSync(item.retainedAbsolutePath);
+        if (sha256Buffer(readback) !== item.contentDigest || !readback.equals(item.content)) {
+          throw new Error(`RETAINED_OUTPUT_READBACK_MISMATCH:${item.retainedRelativePath}`);
+        }
+      } finally {
+        if (existsSync(tempPath)) unlinkSync(tempPath);
+      }
+    }
+  } catch (error) {
+    for (const path of created.reverse()) {
+      try { unlinkSync(path); } catch { /* best-effort rollback of files created by this call only */ }
+    }
+    throw error;
+  }
 }
 
 export function retainExecutorOutputs(input: {
@@ -126,17 +155,43 @@ export function retainExecutorOutputs(input: {
   outputPaths: string[];
 }): RetainedExecutorOutputsResult {
   if (!RUN_ID_RE.test(input.runId)) throw new Error("RETAINED_OUTPUT_RUN_ID_INVALID");
+
+  // Phase 1: classify and validate every source before creating any retained file.
+  // This prevents a later invalid source from leaving an orphan copy of an earlier source.
   const historyOutputs: string[] = [];
-  const retainedOutputs: RetainedExecutorOutput[] = [];
+  const historyOutputSet = new Set<string>();
+  const preparedByRetainedPath = new Map<string, PreparedRetainedOutput>();
   for (const outputPath of [...new Set(input.outputPaths)]) {
     const classification = sourceClass(outputPath);
     if (classification === "IMMUTABLE") {
-      historyOutputs.push(outputPath);
+      if (!historyOutputSet.has(outputPath)) {
+        historyOutputSet.add(outputPath);
+        historyOutputs.push(outputPath);
+      }
       continue;
     }
-    const retained = retainOne({ repoRoot: input.repoRoot, runId: input.runId, sourceRelativePath: outputPath });
-    retainedOutputs.push(retained);
-    historyOutputs.push(retained.retainedRelativePath);
+
+    const prepared = prepareMutableOutput({ repoRoot: input.repoRoot, runId: input.runId, sourceRelativePath: outputPath });
+    const prior = preparedByRetainedPath.get(prepared.retainedRelativePath);
+    if (prior) {
+      if (prior.contentDigest !== prepared.contentDigest || !prior.content.equals(prepared.content)) {
+        throw new Error(`RETAINED_OUTPUT_TARGET_COLLISION:${prepared.retainedRelativePath}`);
+      }
+    } else {
+      preparedByRetainedPath.set(prepared.retainedRelativePath, prepared);
+    }
+    if (!historyOutputSet.has(prepared.retainedRelativePath)) {
+      historyOutputSet.add(prepared.retainedRelativePath);
+      historyOutputs.push(prepared.retainedRelativePath);
+    }
   }
-  return { historyOutputs, retainedOutputs };
+
+  // Phase 2: materialize only after every source/target has been validated.
+  const prepared = [...preparedByRetainedPath.values()];
+  materializePreparedOutputs(prepared);
+
+  return {
+    historyOutputs,
+    retainedOutputs: prepared.map(({ retainedAbsolutePath: _absolute, content: _content, ...value }) => value),
+  };
 }
