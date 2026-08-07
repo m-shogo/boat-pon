@@ -36,29 +36,23 @@ jobs:
           from pathlib import Path
           path = Path('src/research-replay/n2TrifectaPrivateMarketDailyReadiness.ts')
           text = path.read_text()
-          old = '''  if (typeof stored.indexDigest !== "string" || !/^[0-9a-f]{64}$/u.test(stored.indexDigest)) {
-            throw new Error("DAILY_READINESS_DAY_INDEX_DIGEST_INVALID");
-          }
-
-          const rebuilt = buildN2TrifectaPrivateMarketFeatureDayIndex({'''
-          new = '''  if (typeof stored.indexDigest !== "string" || !/^[0-9a-f]{64}$/u.test(stored.indexDigest)) {
-            throw new Error("DAILY_READINESS_DAY_INDEX_DIGEST_INVALID");
-          }
-          const storedDigest = stored.indexDigest;
+          marker = '  const rebuilt = buildN2TrifectaPrivateMarketFeatureDayIndex({'
+          if text.count(marker) != 1:
+              raise SystemExit(f'readiness rebuild marker count={text.count(marker)}')
+          if 'const storedDigest = stored.indexDigest;' in text:
+              raise SystemExit('stored digest patch already present')
+          insert = '''  const storedDigest = stored.indexDigest;
           const { indexDigest: _storedDigest, ...storedCore } = stored;
           if (canonicalHash(storedCore) !== storedDigest) {
             throw new Error("DAILY_READINESS_DAY_INDEX_DIGEST_MISMATCH");
           }
 
-          const rebuilt = buildN2TrifectaPrivateMarketFeatureDayIndex({'''
-          if old not in text:
-              raise SystemExit('readiness digest anchor not found')
-          text = text.replace(old, new, 1)
-          text = text.replace('''  if (rebuilt.indexDigest !== stored.indexDigest) {
-            throw new Error("DAILY_READINESS_DAY_INDEX_DIGEST_MISMATCH");
-          }''', '''  if (rebuilt.indexDigest !== storedDigest) {
-            throw new Error("DAILY_READINESS_DAY_INDEX_DIGEST_MISMATCH");
-          }''', 1)
+          '''
+          text = text.replace(marker, insert + marker, 1)
+          compare = 'rebuilt.indexDigest !== stored.indexDigest'
+          if text.count(compare) != 1:
+              raise SystemExit(f'readiness compare marker count={text.count(compare)}')
+          text = text.replace(compare, 'rebuilt.indexDigest !== storedDigest', 1)
           path.write_text(text)
           PY
       - name: Verify focused readiness tests and typecheck
