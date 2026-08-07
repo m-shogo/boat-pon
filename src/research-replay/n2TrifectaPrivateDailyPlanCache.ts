@@ -365,16 +365,27 @@ export function readN2TrifectaPrivateDailyPlanCache(input: {
       fallbackToPrimaryDbAllowed: false,
     };
   }
-  const audit = auditN2TrifectaPrivateDailyPlanCache(cache, {
-    expectedDate: input.expectedDate,
-    now: input.now,
-  });
-  return {
-    status: audit.status,
-    blockers: audit.blockers,
-    relativePath,
-    cache,
-    plan: audit.status === "PASS" ? cache.plan : null,
-    fallbackToPrimaryDbAllowed: audit.status === "STALE",
-  };
+  try {
+    const audit = auditN2TrifectaPrivateDailyPlanCache(cache, {
+      expectedDate: input.expectedDate,
+      now: input.now,
+    });
+    return {
+      status: audit.status,
+      blockers: audit.blockers,
+      relativePath,
+      cache,
+      plan: audit.status === "PASS" ? cache.plan : null,
+      fallbackToPrimaryDbAllowed: audit.status === "STALE",
+    };
+  } catch {
+    return {
+      status: "BLOCKED",
+      blockers: ["DAILY_PLAN_STRUCTURE_INVALID"],
+      relativePath,
+      cache: null,
+      plan: null,
+      fallbackToPrimaryDbAllowed: false,
+    };
+  }
 }
