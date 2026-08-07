@@ -25,7 +25,7 @@ const writeResult = writePrivate
   ? writeN2TrifectaPrivateMarketExplorationMatrix({ rootDir, matrix })
   : null;
 
-// Stdout intentionally exposes schema/lineage only. Numeric matrix row values remain private on disk.
+// Stdout intentionally exposes schema and lineage metadata only; all 85 numeric values per race stay in the private matrix file.
 const sanitized = {
   summaryVersion: "n2-trifecta-private-market-exploration-matrix-summary-v1",
   matrixVersion: matrix.matrixVersion,
