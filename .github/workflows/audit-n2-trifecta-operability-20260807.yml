@@ -46,17 +46,20 @@ jobs:
           import json, os
           p = os.path.join(os.environ["RUNNER_TEMP"], "n2-operability.json")
           data = json.load(open(p))
-          assert data["networkRequestCount"] == 0
-          assert data["databaseReadCount"] == 0
-          assert data["databaseWriteCount"] == 0
-          assert data["rawOddsValuesRead"] is False
-          assert data["rawOddsValuesPrinted"] is False
-          assert data["rawOddsValuesPublished"] is False
-          assert data["currentBuyChanged"] is False
-          assert data["lineChanged"] is False
-          assert data["publicPublished"] is False
-          assert data["automatedBettingChanged"] is False
-          assert data["productionApplyExecuted"] is False
+          for key, expected in {
+              "networkRequestCount": 0,
+              "databaseReadCount": 0,
+              "databaseWriteCount": 0,
+              "rawOddsValuesRead": False,
+              "rawOddsValuesPrinted": False,
+              "rawOddsValuesPublished": False,
+              "currentBuyChanged": False,
+              "lineChanged": False,
+              "publicPublished": False,
+              "automatedBettingChanged": False,
+              "productionApplyExecuted": False,
+          }.items():
+              assert data[key] == expected, (key, data[key])
           states = {}
           by_label = {}
           exception_checkpoints = []
@@ -73,7 +76,7 @@ jobs:
                       "state": item["state"],
                       "blockerCodes": item["blockerCodes"],
                   })
-          summary = {
+          print(json.dumps({
               "status": data["status"],
               "blockers": data["blockers"],
               "checkedAt": data["checkedAt"],
@@ -88,88 +91,106 @@ jobs:
               "stateCountsByCheckpointLabel": by_label,
               "exceptionCheckpoints": exception_checkpoints,
               "storage": data["storage"],
-              "networkRequestCount": 0,
-              "databaseReadCount": 0,
-              "databaseWriteCount": 0,
-              "rawOddsValuesRead": False,
-              "rawOddsValuesPublished": False,
-              "currentBuyChanged": False,
-              "lineChanged": False,
-              "publicPublished": False,
-              "automatedBettingChanged": False,
               "outputDigest": data["outputDigest"],
-          }
-          print(json.dumps(summary, indent=2, sort_keys=True))
+          }, indent=2, sort_keys=True))
           PY
 
-      - name: Inspect sanitized tick timeline around post-migration 5R T-5 miss
+      - name: Prove real daily-plan overlap around post-migration 5R T-5 miss
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import glob, json, os
+          import json, os, glob
           root = "/Users/m-shogo/Developer/personal/boat-pon"
-          report_dir = os.path.join(root, "data/private/trifecta-capture/reports/2026-08-07")
+          plan_path = os.path.join(root, "data/private/trifecta-capture/plans/2026-08-07.json")
+          plan = json.load(open(plan_path))
+          window_start = "2026-08-07T01:10:00.000Z"
+          window_end = "2026-08-07T01:16:00.000Z"
+          entries = []
+          for e in plan["plan"]["entries"]:
+              if window_start <= e["targetCaptureAt"] <= window_end:
+                  reservation_key = None
+                  # Locate reservation only by metadata identity; no raw/evidence payload is opened.
+                  for path in glob.glob(os.path.join(root, "data/private/trifecta-capture/reservations/2026-08-07/*.json")):
+                      try:
+                          r = json.load(open(path))
+                      except Exception:
+                          continue
+                      if r.get("raceIdentity") == e["raceIdentity"] and r.get("checkpointLabel") == e["checkpointLabel"]:
+                          reservation_key = {
+                              "reservedAt": r.get("reservedAt"),
+                              "targetCaptureAt": r.get("targetCaptureAt"),
+                          }
+                          break
+                  entries.append({
+                      "raceIdentity": e["raceIdentity"],
+                      "checkpointLabel": e["checkpointLabel"],
+                      "targetCaptureAt": e["targetCaptureAt"],
+                      "reservation": reservation_key,
+                  })
+          print(json.dumps({
+              "windowStart": window_start,
+              "windowEnd": window_end,
+              "entries": entries,
+              "reservationMetadataOnly": True,
+              "rawOddsValuesRead": False,
+              "databaseReadCount": 0,
+              "networkRequestCount": 0,
+          }, indent=2, sort_keys=True))
+          PY
+
+      - name: Inspect launchd summary log around post-migration miss
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os
+          root = "/Users/m-shogo/Developer/personal/boat-pon/data/private/trifecta-capture/logs"
+          stdout_path = os.path.join(root, "stdout.log")
+          stderr_path = os.path.join(root, "stderr.log")
           start = "2026-08-07T01:09:00.000Z"
           end = "2026-08-07T01:17:00.000Z"
-          timeline = []
-          for path in sorted(glob.glob(os.path.join(report_dir, "*.json"))):
-              try:
-                  r = json.load(open(path))
-              except Exception:
-                  continue
-              now = r.get("now") or r.get("startedAt") or ""
-              if not (start <= now <= end):
-                  continue
-              selected = r.get("selectedEntry") or None
-              executor = r.get("executorReport") or None
-              executor_summary = None
-              if isinstance(executor, dict):
-                  executor_summary = {
-                      "status": executor.get("status"),
-                      "dueEntryCount": executor.get("dueEntryCount"),
-                      "networkRequestCount": executor.get("networkRequestCount"),
-                      "capturedCount": executor.get("capturedCount"),
-                      "blockedEvidenceCount": executor.get("blockedEvidenceCount"),
-                      "entryResults": [
-                          {
-                              "raceIdentity": e.get("raceIdentity"),
-                              "checkpointLabel": e.get("checkpointLabel"),
-                              "result": e.get("result"),
-                              "blockers": e.get("blockers", []),
-                          }
-                          for e in executor.get("entryResults", [])
-                      ],
-                  }
-              timeline.append({
-                  "now": r.get("now"),
-                  "startedAt": r.get("startedAt"),
-                  "completedAt": r.get("completedAt"),
-                  "status": r.get("status"),
-                  "blockers": r.get("blockers", []),
-                  "selectedVenueCode": r.get("selectedVenueCode"),
-                  "selectedRaceCount": r.get("selectedRaceCount"),
-                  "dailyReservationCountBefore": r.get("dailyReservationCountBefore"),
-                  "dailyReservationCountAfter": r.get("dailyReservationCountAfter"),
-                  "dueEntryCount": r.get("dueEntryCount"),
-                  "selectedEntry": None if not isinstance(selected, dict) else {
-                      "raceIdentity": selected.get("raceIdentity"),
-                      "checkpointLabel": selected.get("checkpointLabel"),
-                      "targetCaptureAt": selected.get("targetCaptureAt"),
-                  },
-                  "executorReport": executor_summary,
-                  "primaryDbMetadataUnchanged": r.get("primaryDbMetadataUnchanged"),
-                  "databaseWriteCount": r.get("databaseWriteCount"),
-                  "currentBuyChanged": r.get("currentBuyChanged"),
-                  "lineChanged": r.get("lineChanged"),
-                  "publicPublished": r.get("publicPublished"),
-                  "automatedBettingChanged": r.get("automatedBettingChanged"),
-              })
+
+          def decode_stream(text):
+              decoder = json.JSONDecoder()
+              pos = 0
+              values = []
+              while pos < len(text):
+                  while pos < len(text) and text[pos].isspace(): pos += 1
+                  if pos >= len(text): break
+                  try:
+                      value, next_pos = decoder.raw_decode(text, pos)
+                  except Exception:
+                      pos += 1
+                      continue
+                  if isinstance(value, dict): values.append(value)
+                  pos = next_pos
+              return values
+
+          summaries = []
+          if os.path.exists(stdout_path):
+              for value in decode_stream(open(stdout_path, errors="replace").read()):
+                  now = value.get("now")
+                  if not isinstance(now, str) or not (start <= now <= end):
+                      continue
+                  summaries.append({
+                      "now": now,
+                      "status": value.get("status"),
+                      "blockers": value.get("blockers", []),
+                      "selectedRaceIdentity": value.get("selectedRaceIdentity"),
+                      "selectedCheckpointLabel": value.get("selectedCheckpointLabel"),
+                      "dueEntryCount": value.get("dueEntryCount"),
+                      "networkRequestCount": value.get("networkRequestCount"),
+                      "capturedCount": value.get("capturedCount"),
+                      "blockedEvidenceCount": value.get("blockedEvidenceCount"),
+                      "runtimeAuthorityStatus": value.get("runtimeAuthorityStatus"),
+                  })
+          stderr_bytes = os.path.getsize(stderr_path) if os.path.exists(stderr_path) else 0
           print(json.dumps({
               "windowStart": start,
               "windowEnd": end,
-              "reportCount": len(timeline),
-              "timeline": timeline,
+              "stdoutEventSummaries": summaries,
+              "stderrBytesTotal": stderr_bytes,
               "rawOddsValuesRead": False,
               "databaseReadCount": 0,
               "networkRequestCount": 0,
