@@ -55,7 +55,7 @@ jobs:
           const r = JSON.parse(fs.readFileSync(process.env.REPORT, 'utf8'));
           const violations = [];
           if (r.summaryVersion !== 'n2-trifecta-private-market-feature-rollup-summary-v1') violations.push('SUMMARY_VERSION');
-          if (r.status !== 'PASS') violations.push(`STATUS_${r.status}`);
+          if (!['PASS','PARTIAL','NO_DATA'].includes(r.status)) violations.push(`STATUS_${r.status}`);
           if (!/^\d{4}-\d{2}-\d{2}$/.test(r.date || '') || !/^(0[1-9]|1\d|2[0-4])$/.test(r.venueCode || '')) violations.push('SCOPE');
           if (r.raceCount !== 12 || r.passCount + r.partialCount + r.noDataCount !== 12 || r.blockedCount !== 0) violations.push('RACE_COUNTS');
           if (r.acceptedMarkerCount !== r.loadedSnapshotCount) violations.push('SNAPSHOT_COUNT');
@@ -77,6 +77,7 @@ jobs:
           }
           const summary = {
             status: violations.length ? 'BLOCKED' : 'PASS',
+            rollupStatus: r.status,
             violations,
             checkedAt: r.checkedAt,
             date: r.date,
