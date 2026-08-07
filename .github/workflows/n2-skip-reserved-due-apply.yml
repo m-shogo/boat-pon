@@ -57,3 +57,5 @@ jobs:
           git add src/research-replay/n2TrifectaLocalCaptureService.ts
           git commit -m "fix(research): skip reserved due checkpoints"
           git push origin HEAD:fix/n2-trifecta-skip-reserved-due-checkpoints
+
+# retry after PIT fixture correction
