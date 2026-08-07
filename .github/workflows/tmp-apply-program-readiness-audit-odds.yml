@@ -1,0 +1,226 @@
+name: Temporary apply program readiness and audit odds
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/tmp-apply-program-readiness-audit-odds.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apply-program-readiness-audit-odds-20260807
+  cancel-in-progress: true
+
+jobs:
+  apply-and-audit:
+    runs-on: [self-hosted, macOS]
+    timeout-minutes: 20
+    env:
+      AUTHORITY_SHA: c777f64b216b2d07b19a6ddf0580075f52f067bc
+      CANONICAL_REPO: /Users/m-shogo/Developer/personal/boat-pon
+      PROGRAM_AGENT: com.boatpon.daily-programs
+      ODDS_AGENT: com.boatpon.trifecta-private-capture
+    steps:
+      - name: Apply bounded program refresh and audit private odds status
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$CANONICAL_REPO"
+          test "$(git branch --show-current)" = main
+          test -z "$(git status --porcelain)"
+          git fetch --no-tags origin main
+          test "$(git rev-parse origin/main)" = "$AUTHORITY_SHA"
+          git merge --ff-only "$AUTHORITY_SHA"
+          test "$(git rev-parse HEAD)" = "$AUTHORITY_SHA"
+          test -z "$(git status --porcelain)"
+
+          TODAY="$(TZ=Asia/Tokyo date +%Y-%m-%d)"
+          YYMMDD="$(TZ=Asia/Tokyo date +%y%m%d)"
+          START_EPOCH="$(date +%s)"
+          export TODAY
+
+          BEFORE="$RUNNER_TEMP/program-readiness-before.json"
+          AFTER="$RUNNER_TEMP/program-readiness-after.json"
+          READINESS="$RUNNER_TEMP/program-readiness.json"
+          ODDS_STATUS="$RUNNER_TEMP/private-odds-status.json"
+          export BEFORE AFTER READINESS ODDS_STATUS
+
+          node - <<'NODE' > "$BEFORE"
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const { DatabaseSync } = require('node:sqlite');
+          const root = process.env.CANONICAL_REPO;
+          function dbSnapshot(file) {
+            if (!fs.existsSync(file)) return { exists: false };
+            const s = fs.statSync(file);
+            const db = new DatabaseSync(file, { readOnly: true });
+            try {
+              db.exec('PRAGMA query_only = ON');
+              const scalar = (sql) => Number(db.prepare(sql).get().n);
+              return {
+                exists: true, bytes: s.size, modifiedMs: s.mtimeMs,
+                decisionHistoryRows: scalar('SELECT COUNT(*) AS n FROM decision_history'),
+                notificationRows: scalar('SELECT COUNT(*) AS n FROM notification_log'),
+                appSettings: db.prepare('SELECT key, value, updated_at FROM app_settings ORDER BY key').all(),
+                officialProgramRows: scalar('SELECT COUNT(*) AS n FROM official_programs'),
+                todayProgramRows: Number(db.prepare('SELECT COUNT(*) AS n FROM official_programs WHERE date = ?').get(process.env.TODAY).n),
+              };
+            } finally { db.close(); }
+          }
+          const primary = path.join(root, 'data/boat.sqlite');
+          const sidecar = path.join(root, 'data/research-replay.sqlite');
+          const side = fs.existsSync(sidecar) ? fs.statSync(sidecar) : null;
+          console.log(JSON.stringify({ primary: dbSnapshot(primary), sidecar: side ? { exists:true, bytes:side.size, modifiedMs:side.mtimeMs } : { exists:false } }));
+          NODE
+
+          PLIST_SRC="$CANONICAL_REPO/docs/launchd/com.boatpon.daily-programs.plist"
+          PLIST_DST="$HOME/Library/LaunchAgents/$PROGRAM_AGENT.plist"
+          test -f "$PLIST_SRC"
+          test "$(grep -c '<key>Hour</key>' "$PLIST_SRC")" = 5
+          grep -Fq '<integer>1</integer>' "$PLIST_SRC"
+          grep -Fq '<integer>4</integer>' "$PLIST_SRC"
+          grep -Fq '<integer>6</integer>' "$PLIST_SRC"
+          grep -Fq '<integer>7</integer>' "$PLIST_SRC"
+          grep -Fq '<key>RunAtLoad</key>' "$PLIST_SRC"
+          ! grep -Fq '<key>StartInterval</key>' "$PLIST_SRC"
+
+          mkdir -p "$HOME/Library/LaunchAgents"
+          cp "$PLIST_SRC" "$PLIST_DST"
+          chmod 644 "$PLIST_DST"
+          DOMAIN="gui/$(id -u)"
+          /bin/launchctl bootout "$DOMAIN" "$PLIST_DST" >/dev/null 2>&1 || true
+          /bin/launchctl bootstrap "$DOMAIN" "$PLIST_DST"
+          /bin/launchctl print "$DOMAIN/$PROGRAM_AGENT" >/dev/null
+
+          code=1
+          for _ in $(seq 1 36); do
+            set +e
+            node --import tsx scripts/check-official-program-live-readiness.ts "$TODAY" > "$READINESS" 2>/dev/null
+            code=$?
+            set -e
+            if [ "$code" -eq 0 ]; then break; fi
+            sleep 5
+          done
+          test "$code" -eq 0
+          test -s "$READINESS"
+
+          ARCHIVE="$CANONICAL_REPO/data/raw/official/programs/b${YYMMDD}.lzh"
+          test -s "$ARCHIVE"
+          ARCHIVE_MTIME="$(stat -f '%m' "$ARCHIVE")"
+          test "$ARCHIVE_MTIME" -ge "$START_EPOCH"
+
+          node - <<'NODE' > "$AFTER"
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const { DatabaseSync } = require('node:sqlite');
+          const root = process.env.CANONICAL_REPO;
+          function dbSnapshot(file) {
+            if (!fs.existsSync(file)) return { exists: false };
+            const s = fs.statSync(file);
+            const db = new DatabaseSync(file, { readOnly: true });
+            try {
+              db.exec('PRAGMA query_only = ON');
+              const scalar = (sql) => Number(db.prepare(sql).get().n);
+              return {
+                exists: true, bytes: s.size, modifiedMs: s.mtimeMs,
+                decisionHistoryRows: scalar('SELECT COUNT(*) AS n FROM decision_history'),
+                notificationRows: scalar('SELECT COUNT(*) AS n FROM notification_log'),
+                appSettings: db.prepare('SELECT key, value, updated_at FROM app_settings ORDER BY key').all(),
+                officialProgramRows: scalar('SELECT COUNT(*) AS n FROM official_programs'),
+                todayProgramRows: Number(db.prepare('SELECT COUNT(*) AS n FROM official_programs WHERE date = ?').get(process.env.TODAY).n),
+              };
+            } finally { db.close(); }
+          }
+          const primary = path.join(root, 'data/boat.sqlite');
+          const sidecar = path.join(root, 'data/research-replay.sqlite');
+          const side = fs.existsSync(sidecar) ? fs.statSync(sidecar) : null;
+          console.log(JSON.stringify({ primary: dbSnapshot(primary), sidecar: side ? { exists:true, bytes:side.size, modifiedMs:side.mtimeMs } : { exists:false } }));
+          NODE
+
+          /bin/launchctl kickstart -k "$DOMAIN/$ODDS_AGENT"
+          sleep 4
+
+          node - <<'NODE' > "$ODDS_STATUS"
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const root = process.env.CANONICAL_REPO;
+          const privateRoot = path.join(root, 'data/private/trifecta-capture');
+          const latestCandidates = [
+            path.join(privateRoot, 'latest.json'),
+            path.join(privateRoot, 'status/latest.json'),
+          ].filter(fs.existsSync);
+          let latest = null;
+          if (latestCandidates.length) {
+            const raw = JSON.parse(fs.readFileSync(latestCandidates[0], 'utf8'));
+            latest = {
+              status: raw.status ?? null,
+              blockers: raw.blockers ?? [],
+              dateJst: raw.dateJst ?? null,
+              runtimeAuthorityStatus: raw.runtimeAuthorityStatus ?? null,
+              selectedVenueCode: raw.selectedVenueCode ?? null,
+              selectedRaceCount: raw.selectedRaceCount ?? 0,
+              dueEntryCount: raw.dueEntryCount ?? 0,
+              networkRequestCount: raw.networkRequestCount ?? raw.executorReport?.networkRequestCount ?? 0,
+              capturedCount: raw.capturedCount ?? raw.executorReport?.capturedCount ?? 0,
+            };
+          }
+          const acceptedRoot = path.join(root, 'data/raw/research/trifecta-market', process.env.TODAY);
+          let acceptedCount = 0;
+          const checkpointCounts = {};
+          function walk(dir) {
+            if (!fs.existsSync(dir)) return;
+            for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+              const p = path.join(dir, ent.name);
+              if (ent.isDirectory()) walk(p);
+              else if (ent.name === 'accepted.json') {
+                acceptedCount += 1;
+                const parts = p.split(path.sep);
+                const checkpoint = parts.at(-2) ?? 'unknown';
+                checkpointCounts[checkpoint] = (checkpointCounts[checkpoint] ?? 0) + 1;
+              }
+            }
+          }
+          walk(acceptedRoot);
+          console.log(JSON.stringify({ latest, acceptedCount, checkpointCounts }));
+          NODE
+
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const before = JSON.parse(fs.readFileSync(process.env.BEFORE, 'utf8'));
+          const after = JSON.parse(fs.readFileSync(process.env.AFTER, 'utf8'));
+          const readiness = JSON.parse(fs.readFileSync(process.env.READINESS, 'utf8'));
+          const odds = JSON.parse(fs.readFileSync(process.env.ODDS_STATUS, 'utf8'));
+          const protectedUnchanged =
+            before.primary.decisionHistoryRows === after.primary.decisionHistoryRows &&
+            before.primary.notificationRows === after.primary.notificationRows &&
+            JSON.stringify(before.primary.appSettings) === JSON.stringify(after.primary.appSettings) &&
+            JSON.stringify(before.sidecar) === JSON.stringify(after.sidecar);
+          const summary = {
+            evidenceSchemaVersion: 'program-readiness-odds-audit-v1',
+            status: protectedUnchanged && readiness.status === 'PASS' ? 'PASS' : 'BLOCKED',
+            authoritySha: process.env.AUTHORITY_SHA,
+            dateJst: process.env.TODAY,
+            programLaunchdInstalled: true,
+            readinessStatus: readiness.status,
+            venueCount: readiness.venueCount ?? readiness.venues?.length ?? null,
+            raceCount: readiness.raceCount ?? null,
+            earliestCloseAt: readiness.earliestCloseAt ?? null,
+            earliestT30At: readiness.earliestT30At ?? null,
+            primaryDbProgramRowsBefore: before.primary.todayProgramRows,
+            primaryDbProgramRowsAfter: after.primary.todayProgramRows,
+            protectedTablesUnchanged: protectedUnchanged,
+            sidecarMetadataUnchanged: JSON.stringify(before.sidecar) === JSON.stringify(after.sidecar),
+            privateOdds: odds,
+            rawOddsValuesPrinted: false,
+            rawOddsUploadedOrCommitted: false,
+            currentBuyChanged: false,
+            lineChanged: false,
+            automatedBettingChanged: false,
+          };
+          console.log('SANITIZED_PROGRAM_READINESS_ODDS_AUDIT_BEGIN');
+          console.log(JSON.stringify(summary, null, 2));
+          console.log('SANITIZED_PROGRAM_READINESS_ODDS_AUDIT_END');
+          if (summary.status !== 'PASS') process.exit(1);
+          NODE
