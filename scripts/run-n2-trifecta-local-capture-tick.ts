@@ -18,6 +18,10 @@ import {
   runN2TrifectaLocalCaptureTick,
   type N2TrifectaLocalCaptureAuthorization,
 } from "../src/research-replay/n2TrifectaLocalCaptureService";
+import {
+  appendN2TrifectaPrivateHeartbeat,
+  buildN2TrifectaPrivateHeartbeatRecord,
+} from "../src/research-replay/n2TrifectaPrivateHeartbeat";
 
 const repoRoot = resolve(process.cwd());
 const policy = JSON.parse(
@@ -123,6 +127,32 @@ function withLaunchdDeclarationChecks(
   return { ...audit, status: normalized.length === 0 ? "PASS" : "BLOCKED", blockers: normalized };
 }
 
+function heartbeatErrorCode(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error);
+  return raw.trim().replaceAll(/[^A-Za-z0-9_]+/gu, "_").toUpperCase().slice(0, 120)
+    || "UNKNOWN_ERROR";
+}
+
+function recordHeartbeatSafely(input: Parameters<typeof buildN2TrifectaPrivateHeartbeatRecord>[0]): void {
+  try {
+    const record = buildN2TrifectaPrivateHeartbeatRecord(input);
+    appendN2TrifectaPrivateHeartbeat({ dataRoot, record });
+  } catch (error) {
+    // Heartbeat is observability only. Never trade away an otherwise-authorized
+    // capture solely because diagnostic metadata could not be appended.
+    console.error(JSON.stringify({
+      status: "PRIVATE_HEARTBEAT_WRITE_FAILED",
+      errorCode: heartbeatErrorCode(error),
+      rawOddsValuesPublished: false,
+      databaseWriteCount: 0,
+      currentBuyChanged: false,
+      lineChanged: false,
+      publicPublished: false,
+      automatedBettingChanged: false,
+    }));
+  }
+}
+
 const authorization = readPrivateJson<N2TrifectaLocalCaptureAuthorization>(
   authorizationPath,
   "LOCAL_CAPTURE_AUTHORIZATION_NOT_FOUND",
@@ -145,6 +175,13 @@ if (runtimeAudit.status === "BLOCKED") {
     audit: runtimeAudit,
     binding,
     observed,
+  });
+  recordHeartbeatSafely({
+    recordedAt: now,
+    status: "BLOCKED",
+    blockers: runtimeAudit.blockers,
+    authoritySha: binding?.authoritySha ?? null,
+    runtimeAuthorityStatus: "BLOCKED",
   });
   if (forceJson || blocked.eventChanged) console.log(JSON.stringify(blocked, null, 2));
   process.exitCode = 3;
@@ -186,6 +223,21 @@ if (runtimeAudit.status === "BLOCKED") {
     automatedBettingChanged: report.automatedBettingChanged,
     productionApplyExecuted: report.productionApplyExecuted,
   };
+
+  recordHeartbeatSafely({
+    recordedAt: report.now,
+    status: report.status,
+    blockers: report.blockers,
+    authoritySha: binding?.authoritySha ?? null,
+    runtimeAuthorityStatus: "PASS",
+    selectedVenueCode: report.selectedVenueCode,
+    selectedRaceIdentity: report.selectedEntry?.raceIdentity ?? null,
+    selectedCheckpointLabel: report.selectedEntry?.checkpointLabel ?? null,
+    dueEntryCount: report.dueEntryCount,
+    networkRequestCount: report.executorReport?.networkRequestCount ?? 0,
+    capturedCount: report.executorReport?.capturedCount ?? 0,
+    blockedEvidenceCount: report.executorReport?.blockedEvidenceCount ?? 0,
+  });
 
   if (forceJson || report.eventChanged || report.executorReport != null) {
     console.log(JSON.stringify(summary, null, 2));
