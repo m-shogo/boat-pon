@@ -1,0 +1,155 @@
+name: Temporary private market progress audit
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    if: github.head_ref == 'ops/audit-private-market-progress-31247f7'
+    runs-on: [self-hosted, macOS, boat-pon-local]
+    timeout-minutes: 25
+    env:
+      BOAT_PON_DATA_ROOT: /Users/m-shogo/Developer/personal/boat-pon
+    steps:
+      - name: Checkout merged main audit code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Verify private source root exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d "$BOAT_PON_DATA_ROOT/data/private/trifecta-capture"
+          test -d "$BOAT_PON_DATA_ROOT/data/raw/research/trifecta-market"
+      - name: Read sanitized capture operability
+        id: operability
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPORT="$RUNNER_TEMP/private-capture-operability.json"
+          export REPORT
+          set +e
+          node node_modules/tsx/dist/cli.mjs scripts/report-n2-trifecta-private-capture-operability.ts > "$REPORT"
+          RC=$?
+          set -e
+          if [ "$RC" -ne 0 ] && [ "$RC" -ne 3 ]; then
+            echo "::error::unexpected operability exit $RC"
+            exit "$RC"
+          fi
+          test -s "$REPORT"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const r = JSON.parse(fs.readFileSync(process.env.REPORT, 'utf8'));
+          const protectedFalse = [
+            r.networkRequestCount === 0,
+            r.databaseReadCount === 0,
+            r.databaseWriteCount === 0,
+            r.rawOddsValuesRead === false,
+            r.rawOddsValuesPrinted === false,
+            r.rawOddsValuesPublished === false,
+            r.currentBuyChanged === false,
+            r.lineChanged === false,
+            r.publicPublished === false,
+            r.automatedBettingChanged === false,
+            r.productionApplyExecuted === false,
+          ].every(Boolean);
+          if (!protectedFalse) throw new Error('operability boundary violation');
+          if (!/^(PASS|DEGRADED|BLOCKED)$/.test(r.status)) throw new Error('invalid operability status');
+          if (!/^\d{2}$/.test(r.selectedVenueCode ?? '')) throw new Error('selected venue unavailable');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `venue=${r.selectedVenueCode}\ndate=${r.date}\noperability_status=${r.status}\n`);
+          const exceptions = r.checkpoints
+            .filter((c) => !['ACCEPTED','PENDING','DUE_WINDOW_OPEN'].includes(c.state))
+            .map((c) => ({ raceIdentity: c.raceIdentity, checkpointLabel: c.checkpointLabel, targetCaptureAt: c.targetCaptureAt, state: c.state, blockerCodes: c.blockerCodes }));
+          console.log(JSON.stringify({
+            reportVersion: r.reportVersion,
+            status: r.status,
+            blockers: r.blockers,
+            checkedAt: r.checkedAt,
+            date: r.date,
+            selectedVenueCode: r.selectedVenueCode,
+            authoritySha: r.authoritySha,
+            launchdRegistered: r.launchdRegistered,
+            authorization: r.authorization,
+            heartbeat: r.heartbeat,
+            coverage: r.coverage,
+            exceptions,
+            storage: r.storage,
+            protectedBoundariesAllFalse: true,
+            outputDigest: r.outputDigest,
+          }, null, 2));
+          NODE
+      - name: Read private market feature completion without writes
+        env:
+          VENUE: ${{ steps.operability.outputs.venue }}
+          DATE_JST: ${{ steps.operability.outputs.date }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPORT="$RUNNER_TEMP/private-market-feature-day.json"
+          export REPORT
+          set +e
+          node node_modules/tsx/dist/cli.mjs scripts/build-n2-trifecta-private-market-feature-day.ts \
+            --date "$DATE_JST" --venue "$VENUE" > "$REPORT"
+          RC=$?
+          set -e
+          if [ "$RC" -ne 0 ] && [ "$RC" -ne 1 ]; then
+            echo "::error::unexpected feature-day exit $RC"
+            exit "$RC"
+          fi
+          test -s "$REPORT"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const r = JSON.parse(fs.readFileSync(process.env.REPORT, 'utf8'));
+          const serialized = JSON.stringify(r);
+          const violations = [];
+          if (r.privateOutputRequested !== false || r.artifactChangedCount !== 0 || r.artifactReplacedExistingCount !== 0) violations.push('WRITE_REQUESTED');
+          if (r.networkRequestCount !== 0 || r.databaseReadCount !== 0 || r.databaseWriteCount !== 0) violations.push('IO_BOUNDARY');
+          if (r.rawOddsValuesPrinted !== false || r.rawOddsValuesPublished !== false) violations.push('RAW_OUTPUT_BOUNDARY');
+          if (r.currentBuyChanged !== false || r.lineChanged !== false || r.publicPublished !== false || r.automatedBettingChanged !== false || r.productionApplyExecuted !== false) violations.push('PROTECTED_BOUNDARY');
+          if (/"odds"\s*:|"selections"\s*:|"moves"\s*:/.test(serialized)) violations.push('RAW_MARKET_VALUE_IN_REPORT');
+          if (violations.length) throw new Error(`feature boundary violation: ${violations.join(',')}`);
+          console.log(JSON.stringify({
+            summaryVersion: r.summaryVersion,
+            status: r.status,
+            date: r.date,
+            venueCode: r.venueCode,
+            raceCount: r.raceCount,
+            passCount: r.passCount,
+            partialCount: r.partialCount,
+            noDataCount: r.noDataCount,
+            blockedCount: r.blockedCount,
+            loadedSnapshotCount: r.loadedSnapshotCount,
+            transitionCount: r.transitionCount,
+            races: r.races.map((x) => ({
+              raceNo: x.raceNo,
+              raceIdentity: x.raceIdentity,
+              status: x.status,
+              blockers: x.blockers,
+              acceptedMarkerCount: x.acceptedMarkerCount,
+              loadedSnapshotCount: x.loadedSnapshotCount,
+              availableCheckpoints: x.availableCheckpoints,
+              missingCheckpoints: x.missingCheckpoints,
+              transitionCount: x.transitionCount,
+              sourceLoadDigest: x.sourceLoadDigest,
+            })),
+            privateOutputRequested: false,
+            protectedBoundariesAllFalse: true,
+          }, null, 2));
+          NODE
+      - name: Prove repository checkout stayed clean
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "$(git status --porcelain)"
+          echo "checkout_unchanged=true"
