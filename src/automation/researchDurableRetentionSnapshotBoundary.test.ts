@@ -11,6 +11,10 @@ const cli = readFileSync(
   resolve(process.cwd(), "scripts/persist-research-durable-retention-snapshot.ts"),
   "utf8",
 );
+const workflow = readFileSync(
+  resolve(process.cwd(), ".github/workflows/research-durable-retention-snapshot.yml"),
+  "utf8",
+);
 
 test("retention snapshot writes only sanitized retention artifacts", () => {
   assert.match(source, /reports\/automation\/retention\/durable-knowledge/u);
@@ -46,6 +50,26 @@ test("retention CLI exposes metadata only and cannot invoke product behavior", (
   assert.match(cli, /persistResearchDurableRetentionSnapshot/u);
   assert.match(cli, /legacyCompatibilityCount/u);
   assert.match(cli, /nonStrongRuns/u);
-  assert.doesNotMatch(cli, /summary:\s*run|raw|market|odds/u);
+  assert.doesNotMatch(cli, /summary:\s*run|data\/raw|data\/private|market|odds/u);
   assert.doesNotMatch(cli, /DatabaseSync|openDb|\bfetch\s*\(|child_process|execSync|spawnSync|send-line|notify|auto_purchase|auto_vote/u);
+});
+
+test("retention workflow is one-shot, serialized, CAS guarded and stages one retention path", () => {
+  assert.match(workflow, /workflow_dispatch:/u);
+  assert.doesNotMatch(workflow, /\bschedule:/u);
+  assert.match(workflow, /group:\s*boat-pon-local-research/u);
+  assert.match(workflow, /cancel-in-progress:\s*false/u);
+  assert.match(workflow, /automation\/boat-pon-research/u);
+  assert.match(workflow, /REMOTE_SHA.*SOURCE_SHA/u);
+  assert.match(workflow, /refusing to retry or overwrite/u);
+  assert.match(workflow, /push origin HEAD:automation\/boat-pon-research/u);
+  assert.doesNotMatch(workflow, /--force|force-with-lease|workflow_dispatch.*curl|rerun/u);
+  assert.match(workflow, /reports\/automation\/retention\/durable-knowledge/u);
+  assert.match(workflow, /unexpected staged path/u);
+  assert.doesNotMatch(workflow, /reports\/automation\/history.*git add|research\/registries.*git add|reports\/n2.*git add/u);
+});
+
+test("retention workflow preserves protected product boundaries", () => {
+  assert.doesNotMatch(workflow, /data\/raw|data\/private|boat\.sqlite|sidecar|app_settings/u);
+  assert.doesNotMatch(workflow, /send-line|notify|auto_purchase|auto_vote|production_writer|live_odds_writer/u);
 });
