@@ -58,7 +58,7 @@ export type N2TrifectaPrivateMarketFeatureDayIndex = {
   databaseReadCount: 0;
   databaseWriteCount: 0;
   networkRequestCount: 0;
-  rawOddsValuesRead: false;
+  rawCaptureEvidenceRead: false;
   rawOddsValuesPublished: false;
   currentBuyConnectionAuthorized: false;
   lineConnectionAuthorized: false;
@@ -297,7 +297,7 @@ export function buildN2TrifectaPrivateMarketFeatureDayIndex(input: {
     databaseReadCount: 0 as const,
     databaseWriteCount: 0 as const,
     networkRequestCount: 0 as const,
-    rawOddsValuesRead: false as const,
+    rawCaptureEvidenceRead: false as const,
     rawOddsValuesPublished: false as const,
     currentBuyConnectionAuthorized: false as const,
     lineConnectionAuthorized: false as const,
