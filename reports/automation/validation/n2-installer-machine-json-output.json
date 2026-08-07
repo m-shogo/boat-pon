@@ -1,0 +1,22 @@
+{
+  "evidenceSchemaVersion": "n2-installer-machine-json-output-v1",
+  "status": "IMPLEMENTED_PENDING_CI",
+  "baseMainSha": "8d99eab54a7ff243491d46bb4e94f255fd47274b",
+  "branch": "fix/n2-installer-machine-json-output",
+  "cause": "npm ci progress inherited installer stdout before final JSON",
+  "runtimeDependencyOutputCaptured": true,
+  "finalDispositionJsonPreserved": true,
+  "installerBehaviorChanged": false,
+  "authorizationChanged": false,
+  "launchdChanged": false,
+  "realInstallationExecuted": false,
+  "realNetworkExecuted": false,
+  "databaseWriteCount": 0,
+  "currentBuyChanged": false,
+  "lineChanged": false,
+  "publicPublished": false,
+  "automatedBettingChanged": false,
+  "productionApplyExecuted": false,
+  "ciRunId": null,
+  "ciConclusion": null
+}

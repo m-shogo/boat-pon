@@ -183,7 +183,7 @@ if (!printOnly) {
     git(["worktree", "add", "--detach", runtimeRoot, authoritySha], { cwd: repoRoot });
   }
   verifyImmutableRuntime(runtimeRoot, authoritySha);
-  run("npm", ["ci"], { cwd: runtimeRoot });
+  run("npm", ["ci"], { cwd: runtimeRoot, capture: true });
   verifyImmutableRuntime(runtimeRoot, authoritySha);
   if (!existsSync(runtimeTsxCliPath)) throw new Error("IMMUTABLE_RUNTIME_TSX_CLI_NOT_FOUND");
   if (!existsSync(runtimeTickScriptPath)) throw new Error("IMMUTABLE_RUNTIME_TICK_SCRIPT_NOT_FOUND");
