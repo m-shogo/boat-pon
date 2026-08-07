@@ -13,6 +13,8 @@ import { basename, dirname, resolve, sep } from "node:path";
 
 const RETAINED_ROOT = "reports/automation/retained-outputs";
 const MAX_RETAINED_SOURCE_BYTES = 2_097_152;
+const MAX_EXECUTOR_OUTPUT_PATHS = 64;
+const MAX_RETAINED_TOTAL_BYTES = 8_388_608;
 const MUTABLE_OUTPUT_ROOTS = [
   "reports/n2/",
   "reports/automation/",
@@ -156,12 +158,17 @@ export function retainExecutorOutputs(input: {
 }): RetainedExecutorOutputsResult {
   if (!RUN_ID_RE.test(input.runId)) throw new Error("RETAINED_OUTPUT_RUN_ID_INVALID");
 
+  const uniqueOutputPaths = [...new Set(input.outputPaths)];
+  if (uniqueOutputPaths.length > MAX_EXECUTOR_OUTPUT_PATHS) {
+    throw new Error(`RETAINED_OUTPUT_COUNT_EXCEEDED:${uniqueOutputPaths.length}>${MAX_EXECUTOR_OUTPUT_PATHS}`);
+  }
+
   // Phase 1: classify and validate every source before creating any retained file.
   // This prevents a later invalid source from leaving an orphan copy of an earlier source.
   const historyOutputs: string[] = [];
   const historyOutputSet = new Set<string>();
   const preparedByRetainedPath = new Map<string, PreparedRetainedOutput>();
-  for (const outputPath of [...new Set(input.outputPaths)]) {
+  for (const outputPath of uniqueOutputPaths) {
     const classification = sourceClass(outputPath);
     if (classification === "IMMUTABLE") {
       if (!historyOutputSet.has(outputPath)) {
@@ -186,8 +193,13 @@ export function retainExecutorOutputs(input: {
     }
   }
 
-  // Phase 2: materialize only after every source/target has been validated.
   const prepared = [...preparedByRetainedPath.values()];
+  const retainedTotalBytes = prepared.reduce((sum, item) => sum + item.bytes, 0);
+  if (retainedTotalBytes > MAX_RETAINED_TOTAL_BYTES) {
+    throw new Error(`RETAINED_OUTPUT_TOTAL_BYTES_EXCEEDED:${retainedTotalBytes}>${MAX_RETAINED_TOTAL_BYTES}`);
+  }
+
+  // Phase 2: materialize only after every source/target and the aggregate budget have been validated.
   materializePreparedOutputs(prepared);
 
   return {
