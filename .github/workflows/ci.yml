@@ -1,3 +1,4 @@
+# validation sync
 name: CI
 
 on:
@@ -167,34 +168,16 @@ jobs:
     const expectedContentDigest = retainedMatch?.[1] ?? null;
     if (expectedContentDigest == null) {
       return {
-        relativePath: input.relativePath,
-        rootClass,
-        integrity: null,
-        exists: true,
-        regularFile: true,
-        bytes: stat.size,
-        contentDigest,
-        embeddedDigest: null,
-        historyDigestMatchesEmbedded: null,
-        complete: false,
-        issues: ["DURABLE_RETAINED_PATH_INVALID"],
-        warnings,
+        relativePath: input.relativePath, rootClass, integrity: null, exists: true, regularFile: true,
+        bytes: stat.size, contentDigest, embeddedDigest: null, historyDigestMatchesEmbedded: null,
+        complete: false, issues: ["DURABLE_RETAINED_PATH_INVALID"], warnings,
       };
     }
     if (expectedContentDigest !== contentDigest) {
       return {
-        relativePath: input.relativePath,
-        rootClass,
-        integrity: null,
-        exists: true,
-        regularFile: true,
-        bytes: stat.size,
-        contentDigest,
-        embeddedDigest: null,
-        historyDigestMatchesEmbedded: null,
-        complete: false,
-        issues: ["DURABLE_RETAINED_CONTENT_DIGEST_MISMATCH"],
-        warnings,
+        relativePath: input.relativePath, rootClass, integrity: null, exists: true, regularFile: true,
+        bytes: stat.size, contentDigest, embeddedDigest: null, historyDigestMatchesEmbedded: null,
+        complete: false, issues: ["DURABLE_RETAINED_CONTENT_DIGEST_MISMATCH"], warnings,
       };
     }
     let retainedEmbeddedDigest: string | null = null;
@@ -207,50 +190,24 @@ jobs:
           : null;
       } catch {
         return {
-          relativePath: input.relativePath,
-          rootClass,
-          integrity: null,
-          exists: true,
-          regularFile: true,
-          bytes: stat.size,
-          contentDigest,
-          embeddedDigest: null,
-          historyDigestMatchesEmbedded: null,
-          complete: false,
-          issues: ["DURABLE_OUTPUT_JSON_INVALID"],
-          warnings,
+          relativePath: input.relativePath, rootClass, integrity: null, exists: true, regularFile: true,
+          bytes: stat.size, contentDigest, embeddedDigest: null, historyDigestMatchesEmbedded: null,
+          complete: false, issues: ["DURABLE_OUTPUT_JSON_INVALID"], warnings,
         };
       }
     }
     if (retainedEmbeddedDigest != null && retainedEmbeddedDigest !== input.historyOutputDigest) {
       return {
-        relativePath: input.relativePath,
-        rootClass,
-        integrity: null,
-        exists: true,
-        regularFile: true,
-        bytes: stat.size,
-        contentDigest,
-        embeddedDigest: retainedEmbeddedDigest,
-        historyDigestMatchesEmbedded: false,
-        complete: false,
-        issues: ["DURABLE_RETAINED_HISTORY_DIGEST_MISMATCH"],
-        warnings,
+        relativePath: input.relativePath, rootClass, integrity: null, exists: true, regularFile: true,
+        bytes: stat.size, contentDigest, embeddedDigest: retainedEmbeddedDigest, historyDigestMatchesEmbedded: false,
+        complete: false, issues: ["DURABLE_RETAINED_HISTORY_DIGEST_MISMATCH"], warnings,
       };
     }
     return {
-      relativePath: input.relativePath,
-      rootClass,
-      integrity: "RETAINED_CONTENT_DIGEST_VERIFIED",
-      exists: true,
-      regularFile: true,
-      bytes: stat.size,
-      contentDigest,
-      embeddedDigest: retainedEmbeddedDigest,
+      relativePath: input.relativePath, rootClass, integrity: "RETAINED_CONTENT_DIGEST_VERIFIED",
+      exists: true, regularFile: true, bytes: stat.size, contentDigest, embeddedDigest: retainedEmbeddedDigest,
       historyDigestMatchesEmbedded: retainedEmbeddedDigest == null ? null : true,
-      complete: true,
-      issues,
-      warnings,
+      complete: true, issues, warnings,
     };
   }
   if (!input.relativePath.endsWith(".json")) {
@@ -269,49 +226,24 @@ jobs:
 '''
           retention_block = '''  let historyOutputs: string[];
   try {
-    historyOutputs = retainExecutorOutputs({
-      repoRoot: root,
-      runId,
-      outputPaths: exec.outputs,
-    }).historyOutputs;
+    historyOutputs = retainExecutorOutputs({ repoRoot: root, runId, outputPaths: exec.outputs }).historyOutputs;
   } catch {
     const retentionBlock = "DURABLE_OUTPUT_RETENTION_FAILED";
     updateState(task.taskId, { status: "BLOCKED", lastFailure: { code: retentionBlock, at: nowIso() } });
     const retentionEvidencePath = `reports/automation/history/${runId}-${task.taskId}.json`;
     writeJsonAtomic(join(HISTORY_DIR, `${runId}-${task.taskId}.json`), {
-      runId,
-      requestId: request.requestId,
-      intentId,
-      taskId: task.taskId,
-      taskType: task.taskType,
-      safetyLevel: request.safetyLevel,
-      executorVersion: exec.executorVersion,
-      executed: true,
-      result: "BLOCKED",
-      blocks: [retentionBlock],
-      outputs: exec.outputs,
-      outputDigest: exec.outputDigest,
-      summary: { retentionStatus: "BLOCKED", executorResult: exec.result },
-      authoritySha: request.authoritySha,
-      idempotencyKey,
-      startedAt: new Date(startedMs).toISOString(),
-      completedAt: nowIso(),
-      elapsedMs: Date.now() - startedMs,
+      runId, requestId: request.requestId, intentId, taskId: task.taskId, taskType: task.taskType,
+      safetyLevel: request.safetyLevel, executorVersion: exec.executorVersion, executed: true, result: "BLOCKED",
+      blocks: [retentionBlock], outputs: exec.outputs, outputDigest: exec.outputDigest,
+      summary: { retentionStatus: "BLOCKED", executorResult: exec.result }, authoritySha: request.authoritySha,
+      idempotencyKey, startedAt: new Date(startedMs).toISOString(), completedAt: nowIso(), elapsedMs: Date.now() - startedMs,
     });
     appendLedgers(intentId, request.requestId, "BLOCKED", idempotencyKey, retentionEvidencePath);
     finish("BLOCKED", 3, {
-      lastRequestId: request.requestId,
-      lastIntentId: intentId,
-      lastTaskId: task.taskId,
-      authoritySha: request.authoritySha,
-      stateVersion: state.stateVersion,
-      stateDigest: computeStateDigest(state),
-      blocks: [retentionBlock],
-      elapsedMs: Date.now() - startedMs,
-      evidencePath: retentionEvidencePath,
-      outputs: exec.outputs,
-      outputDigest: exec.outputDigest,
-      taskStatus: "BLOCKED",
+      lastRequestId: request.requestId, lastIntentId: intentId, lastTaskId: task.taskId,
+      authoritySha: request.authoritySha, stateVersion: state.stateVersion, stateDigest: computeStateDigest(state),
+      blocks: [retentionBlock], elapsedMs: Date.now() - startedMs, evidencePath: retentionEvidencePath,
+      outputs: exec.outputs, outputDigest: exec.outputDigest, taskStatus: "BLOCKED",
       nextCandidate: pickNext(mergeCatalogAndState(catalog, state)),
     });
   }
