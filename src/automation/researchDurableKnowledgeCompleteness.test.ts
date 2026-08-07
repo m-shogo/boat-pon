@@ -69,7 +69,7 @@ test("PASS with current report digest is strong durable knowledge", () => {
       outputDigest: digest,
       summary: { status: "PASS" },
     }));
-    const report = buildResearchDurableKnowledgeCompletenessReport({ rootDir: root } as never);
+    const report = buildResearchDurableKnowledgeCompletenessReport({ repoRoot: root });
     assert.equal(report.status, "PASS");
     assert.equal(report.durableCompleteCount, 1);
     assert.equal(report.strongDurableCompleteCount, 1);
