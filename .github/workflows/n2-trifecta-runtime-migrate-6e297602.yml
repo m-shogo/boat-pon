@@ -54,7 +54,7 @@ jobs:
           [ "$(git rev-parse HEAD)" = "$TARGET" ]
           [ -z "$(git status --porcelain)" ]
 
-      - name: Snapshot primary DB metadata
+      - name: Snapshot primary DB metadata for observation
         shell: bash
         run: |
           set -euo pipefail
@@ -103,17 +103,113 @@ jobs:
           done
           [ "$ok" = "1" ]
 
-      - name: Renew authorization and install reviewed immutable runtime
+      - name: Install reviewed immutable runtime without unnecessary re-renewal
         shell: bash
         run: |
           set -euo pipefail
           ROOT="/Users/m-shogo/Developer/personal/boat-pon"
+          TARGET="6e297602ff34d6cc853ff0e7088ae5a3e56fcfb7"
+          PRIVATE="$ROOT/data/private/trifecta-capture"
           cd "$ROOT"
-          node --import tsx scripts/install-n2-trifecta-local-capture-agent.ts \
-            --renew \
-            --authorize \
-            --days 30 \
-            > "$RUNNER_TEMP/n2-installer.json"
+          already_bound=$(python3 - <<'PY'
+          import json, os
+          root = "/Users/m-shogo/Developer/personal/boat-pon/data/private/trifecta-capture"
+          target = "6e297602ff34d6cc853ff0e7088ae5a3e56fcfb7"
+          try:
+              binding = json.load(open(os.path.join(root, "runtime-authority.json")))
+              auth = json.load(open(os.path.join(root, "authorization.json")))
+              ok = binding.get("authoritySha") == target and binding.get("authorizationId") == auth.get("authorizationId") and binding.get("issuedAt") == auth.get("issuedAt") and binding.get("expiresAt") == auth.get("expiresAt")
+              print("1" if ok else "0")
+          except Exception:
+              print("0")
+          PY
+          )
+          if [ "$already_bound" = "1" ]; then
+            node --import tsx scripts/install-n2-trifecta-local-capture-agent.ts \
+              > "$RUNNER_TEMP/n2-installer.json"
+          else
+            node --import tsx scripts/install-n2-trifecta-local-capture-agent.ts \
+              --renew \
+              --authorize \
+              --days 30 \
+              > "$RUNNER_TEMP/n2-installer.json"
+          fi
+
+      - name: Prove cache-first runtime requires no primary DB access
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Users/m-shogo/Developer/personal/boat-pon"
+          PRIVATE="$ROOT/data/private/trifecta-capture"
+          RUNTIME=$(python3 - <<'PY'
+          import json
+          p = "/Users/m-shogo/Developer/personal/boat-pon/data/private/trifecta-capture/runtime-authority.json"
+          print(json.load(open(p))["runtimeRoot"])
+          PY
+          )
+          cd "$RUNTIME"
+          node --import tsx --input-type=module <<'NODE' > "$RUNNER_TEMP/n2-cache-first-probe.json"
+          import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+          import { tmpdir } from "node:os";
+          import { dirname, join } from "node:path";
+          import { runN2TrifectaLocalCaptureTick } from "./src/research-replay/n2TrifectaLocalCaptureService.ts";
+
+          const canonicalRoot = "/Users/m-shogo/Developer/personal/boat-pon";
+          const authorization = JSON.parse(readFileSync(join(canonicalRoot, "data/private/trifecta-capture/authorization.json"), "utf8"));
+          const issuedAt = Date.parse(authorization.issuedAt);
+          if (!Number.isFinite(issuedAt)) throw new Error("AUTH_ISSUED_AT_INVALID");
+          const jstDate = (ms) => new Date(ms + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+          const date = jstDate(issuedAt);
+          const sourcePlanPath = join(canonicalRoot, "data/private/trifecta-capture/plans", `${date}.json`);
+          const cached = JSON.parse(readFileSync(sourcePlanPath, "utf8"));
+          const targets = cached.plan.entries.map((entry) => Date.parse(entry.targetCaptureAt)).filter(Number.isFinite);
+          const dayEnd = Date.parse(`${date}T14:59:59.000Z`);
+          let probeMs = issuedAt + 1000;
+          while (probeMs < dayEnd && targets.some((target) => probeMs >= target && probeMs <= target + 120_000)) {
+            probeMs += 30_000;
+          }
+          if (probeMs >= dayEnd) throw new Error("SAFE_NO_DUE_PROBE_TIME_NOT_FOUND");
+
+          const root = mkdtempSync(join(tmpdir(), "boat-pon-cache-first-real-runtime-"));
+          let fetchCount = 0;
+          try {
+            const relativePlan = join("data/private/trifecta-capture/plans", `${date}.json`);
+            const destination = join(root, relativePlan);
+            mkdirSync(dirname(destination), { recursive: true, mode: 0o700 });
+            cpSync(sourcePlanPath, destination);
+            const report = await runN2TrifectaLocalCaptureTick({
+              dataRoot: root,
+              primaryDbPath: join(root, "definitely-does-not-exist.sqlite"),
+              authorization,
+              now: new Date(probeMs).toISOString(),
+              fetcher: async () => {
+                fetchCount += 1;
+                throw new Error("NETWORK_MUST_NOT_RUN_IN_CACHE_FIRST_PROBE");
+              },
+            });
+            if (fetchCount !== 0) throw new Error("CACHE_FIRST_PROBE_NETWORK_USED");
+            if (report.status !== "NO_CHANGE") throw new Error(`CACHE_FIRST_PROBE_STATUS_${report.status}`);
+            if (report.selectedRaceCount !== 12) throw new Error("CACHE_FIRST_PROBE_RACE_COUNT");
+            if (report.primaryDbMetadataUnchanged !== true) throw new Error("CACHE_FIRST_PROBE_DB_METADATA_FLAG");
+            if (report.databaseWriteCount !== 0 || report.primaryDbWriteCount !== 0 || report.sidecarWriteCount !== 0) throw new Error("CACHE_FIRST_PROBE_DB_WRITE");
+            if (report.currentBuyChanged || report.lineChanged || report.publicPublished || report.automatedBettingChanged || report.productionApplyExecuted) throw new Error("CACHE_FIRST_PROBE_PROTECTED_BOUNDARY");
+            console.log(JSON.stringify({
+              status: "PASS",
+              reportStatus: report.status,
+              selectedVenueCode: report.selectedVenueCode,
+              selectedRaceCount: report.selectedRaceCount,
+              networkRequestCount: fetchCount,
+              primaryDbPathExisted: false,
+              databaseWriteCount: 0,
+              currentBuyChanged: false,
+              lineChanged: false,
+              publicPublished: false,
+              automatedBettingChanged: false,
+            }, null, 2));
+          } finally {
+            rmSync(root, { recursive: true, force: true });
+          }
+          NODE
 
       - name: Verify runtime, launchd, plan and protected boundaries
         shell: bash
@@ -121,7 +217,6 @@ jobs:
           set -euo pipefail
           sleep 2
           python3 - <<'PY'
-          import datetime as dt
           import json
           import os
           import subprocess
@@ -133,6 +228,7 @@ jobs:
           binding = json.load(open(os.path.join(private, "runtime-authority.json")))
           installer = json.load(open(os.path.join(os.environ["RUNNER_TEMP"], "n2-installer.json")))
           plan_generation = json.load(open(os.path.join(os.environ["RUNNER_TEMP"], "n2-plan-generation.json")))
+          cache_probe = json.load(open(os.path.join(os.environ["RUNNER_TEMP"], "n2-cache-first-probe.json")))
           before = json.load(open(os.path.join(os.environ["RUNNER_TEMP"], "n2-db-before.json")))
 
           db = os.path.join(root, "data/boat.sqlite")
@@ -144,8 +240,8 @@ jobs:
               after.update({"walBytes": w.st_size, "walMtimeNs": w.st_mtime_ns})
           else:
               after.update({"walBytes": 0, "walMtimeNs": None})
+          whole_workflow_db_metadata_unchanged = before == after
 
-          assert before == after, "PRIMARY_DB_METADATA_CHANGED_DURING_MIGRATION"
           assert installer["status"] == "INSTALLED"
           assert installer["authoritySha"] == target
           assert auth["stage"] == "ONE_VENUE_REVIEW"
@@ -183,12 +279,23 @@ jobs:
           assert plan_generation["selectedRaceCount"] == 12
           assert plan_generation["selectedCheckpointCount"] == 48
           assert plan_generation["requestBudget"] == 48
+          assert plan_generation["primaryDbMetadataUnchanged"] is True
           assert plan_generation["databaseWriteCount"] == 0
           assert plan_generation["currentBuyChanged"] is False
           assert plan_generation["lineChanged"] is False
           assert plan_generation["publicPublished"] is False
           assert plan_generation["automatedBettingChanged"] is False
           assert plan_generation["rawOddsPublished"] is False
+
+          assert cache_probe["status"] == "PASS"
+          assert cache_probe["reportStatus"] == "NO_CHANGE"
+          assert cache_probe["networkRequestCount"] == 0
+          assert cache_probe["primaryDbPathExisted"] is False
+          assert cache_probe["databaseWriteCount"] == 0
+          assert cache_probe["currentBuyChanged"] is False
+          assert cache_probe["lineChanged"] is False
+          assert cache_probe["publicPublished"] is False
+          assert cache_probe["automatedBettingChanged"] is False
 
           latest_path = os.path.join(private, "status/latest.json")
           latest_ok = False
@@ -219,7 +326,10 @@ jobs:
               "selectedRaceCount": plan_generation["selectedRaceCount"],
               "selectedCheckpointCount": plan_generation["selectedCheckpointCount"],
               "requestBudget": plan_generation["requestBudget"],
-              "primaryDbMetadataUnchanged": True,
+              "planGenerationPrimaryDbMetadataUnchanged": plan_generation["primaryDbMetadataUnchanged"],
+              "cacheFirstProbePrimaryDbRequired": False,
+              "cacheFirstProbeNetworkRequestCount": cache_probe["networkRequestCount"],
+              "wholeWorkflowDbMetadataUnchanged": whole_workflow_db_metadata_unchanged,
               "latestPrivateStatusPresent": latest_ok,
               "latestPrivateStatus": latest_status,
               "databaseWriteCount": 0,
