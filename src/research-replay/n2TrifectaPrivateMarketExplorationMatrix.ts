@@ -305,7 +305,9 @@ function readManifest(input: {
   if (!Array.isArray(manifest.sourceIndices) || !Array.isArray(manifest.races)) {
     throw new Error("EXPLORATION_MATRIX_MANIFEST_ARRAYS_INVALID");
   }
-  if (!Number.isSafeInteger(manifest.raceCount) || manifest.raceCount !== manifest.races.length) {
+  const manifestRaceCount = manifest.raceCount;
+  if (typeof manifestRaceCount !== "number" || !Number.isSafeInteger(manifestRaceCount)
+    || manifestRaceCount !== manifest.races.length) {
     throw new Error("EXPLORATION_MATRIX_MANIFEST_RACE_COUNT_INVALID");
   }
   if (manifest.privateResearchOnly !== true || manifest.publicPublishAuthorized !== false
@@ -431,9 +433,9 @@ function readFeatureArtifact(input: {
     || typeof input.race.featureArtifactRelativePath !== "string") {
     throw new Error("EXPLORATION_MATRIX_RACE_LINEAGE_INVALID");
   }
-  if (!Array.isArray(input.race.checkpointCoverage)
-    || input.race.checkpointCoverage.length !== 4
-    || CHECKPOINTS.some((checkpoint, index) => input.race.checkpointCoverage?.[index] !== checkpoint)) {
+  const checkpointCoverage = input.race.checkpointCoverage;
+  if (!Array.isArray(checkpointCoverage) || checkpointCoverage.length !== 4
+    || CHECKPOINTS.some((checkpoint, index) => checkpointCoverage[index] !== checkpoint)) {
     throw new Error("EXPLORATION_MATRIX_RACE_COVERAGE_INVALID");
   }
   const path = resolveInside(input.rootDir, input.race.featureArtifactRelativePath);
@@ -462,13 +464,17 @@ function readFeatureArtifact(input: {
   }
   if (typeof artifact.sequence !== "object" || artifact.sequence == null) throw new Error("EXPLORATION_MATRIX_SEQUENCE_MISSING");
   const sequence = artifact.sequence;
+  const availableCheckpoints = sequence.availableCheckpoints;
+  const missingCheckpoints = sequence.missingCheckpoints;
+  const snapshots = sequence.snapshots;
+  const transitions = sequence.transitions;
   if (sequence.featureVersion !== N2_TRIFECTA_MARKET_FEATURE_VERSION || sequence.status !== "PASS"
     || sequence.raceIdentity !== input.race.raceIdentity || !Array.isArray(sequence.blockers) || sequence.blockers.length !== 0
-    || !Array.isArray(sequence.availableCheckpoints) || sequence.availableCheckpoints.length !== 4
-    || CHECKPOINTS.some((checkpoint, index) => sequence.availableCheckpoints?.[index] !== checkpoint)
-    || !Array.isArray(sequence.missingCheckpoints) || sequence.missingCheckpoints.length !== 0
-    || !Array.isArray(sequence.snapshots) || sequence.snapshots.length !== 4
-    || !Array.isArray(sequence.transitions) || sequence.transitions.length !== 3
+    || !Array.isArray(availableCheckpoints) || availableCheckpoints.length !== 4
+    || CHECKPOINTS.some((checkpoint, index) => availableCheckpoints[index] !== checkpoint)
+    || !Array.isArray(missingCheckpoints) || missingCheckpoints.length !== 0
+    || !Array.isArray(snapshots) || snapshots.length !== 4
+    || !Array.isArray(transitions) || transitions.length !== 3
     || sequence.privateResearchOnly !== true || sequence.publicPublishAuthorized !== false
     || sequence.databaseWriteAuthorized !== false || !canonicalDigestMatches(sequence as Record<string, unknown>, "outputDigest")) {
     throw new Error("EXPLORATION_MATRIX_SEQUENCE_INVALID");
@@ -477,7 +483,7 @@ function readFeatureArtifact(input: {
   const values: number[] = [];
   for (let index = 0; index < CHECKPOINTS.length; index += 1) {
     values.push(...validateSnapshot({
-      snapshot: sequence.snapshots[index] as SnapshotLike,
+      snapshot: snapshots[index] as SnapshotLike,
       raceIdentity: input.race.raceIdentity,
       checkpoint: CHECKPOINTS[index],
     }));
@@ -485,7 +491,7 @@ function readFeatureArtifact(input: {
   for (let index = 0; index < TRANSITIONS.length; index += 1) {
     const [from, to] = TRANSITIONS[index];
     values.push(...validateTransition({
-      transition: sequence.transitions[index] as TransitionLike,
+      transition: transitions[index] as TransitionLike,
       raceIdentity: input.race.raceIdentity,
       from,
       to,
