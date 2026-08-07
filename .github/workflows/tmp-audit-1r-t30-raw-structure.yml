@@ -1,0 +1,199 @@
+name: Temporary 1R T-30 raw structure audit
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    if: github.head_ref == 'ops/audit-1r-t30-raw-structure-31247f7'
+    runs-on: [self-hosted, macOS, boat-pon-local]
+    timeout-minutes: 20
+    env:
+      BOAT_PON_DATA_ROOT: /Users/m-shogo/Developer/personal/boat-pon
+    steps:
+      - name: Checkout merged main audit code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Audit saved 1R T-30 raw offline
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET_DIR="$BOAT_PON_DATA_ROOT/data/raw/research/trifecta-market/2026-08-07/10/01/T-30"
+          test -d "$TARGET_DIR"
+          mapfile -t HTML_FILES < <(find "$TARGET_DIR" -maxdepth 1 -type f -name '*.html' -print | sort)
+          mapfile -t ENVELOPE_FILES < <(find "$TARGET_DIR" -maxdepth 1 -type f -name '*.envelope.json' -print | sort)
+          [ "${#HTML_FILES[@]}" -eq 1 ] || { echo "::error::expected exactly one saved raw HTML, got ${#HTML_FILES[@]}"; exit 1; }
+          [ "${#ENVELOPE_FILES[@]}" -eq 1 ] || { echo "::error::expected exactly one saved envelope, got ${#ENVELOPE_FILES[@]}"; exit 1; }
+          export RAW_HTML="${HTML_FILES[0]}"
+          export ENVELOPE_JSON="${ENVELOPE_FILES[0]}"
+          node --import tsx - <<'TS'
+          import { createHash } from 'node:crypto';
+          import { readFileSync } from 'node:fs';
+          import * as cheerio from 'cheerio';
+          import { parseAllTrifectaOdds, countUnavailableTrifectaSelections } from './src/domain/oddsParser.ts';
+
+          const rawPath = process.env.RAW_HTML!;
+          const envelopePath = process.env.ENVELOPE_JSON!;
+          const raw = readFileSync(rawPath);
+          const html = raw.toString('utf8');
+          const envelope = JSON.parse(readFileSync(envelopePath, 'utf8'));
+          const rawSha256 = createHash('sha256').update(raw).digest('hex');
+          if (rawSha256 !== envelope.response?.rawSha256) throw new Error('saved raw hash does not match envelope');
+          if (envelope.entry?.raceIdentity !== '20260807-10-01' || envelope.entry?.checkpointLabel !== 'T-30') {
+            throw new Error('unexpected envelope identity');
+          }
+
+          type Cell = { text: string };
+          const $ = cheerio.load(html);
+          function grid(rows: any[]): Cell[][] {
+            const result: Cell[][] = [];
+            const spans = new Map<number, { cell: Cell; remaining: number }>();
+            rows.forEach((tr, rowIndex) => {
+              const row: Cell[] = [];
+              for (const [column, span] of [...spans.entries()].sort(([a],[b]) => a-b)) {
+                row[column] = span.cell;
+                span.remaining -= 1;
+                if (span.remaining <= 0) spans.delete(column);
+              }
+              let column = 0;
+              for (const el of $(tr).find('th, td').toArray()) {
+                while (row[column]) column += 1;
+                const cell = { text: $(el).text().replace(/[\s　]+/g, ' ').trim() };
+                const colspan = Number($(el).attr('colspan') ?? 1);
+                const rowspan = Number($(el).attr('rowspan') ?? 1);
+                const width = Number.isFinite(colspan) && colspan > 0 ? colspan : 1;
+                const height = Number.isFinite(rowspan) && rowspan > 0 ? rowspan : 1;
+                for (let offset = 0; offset < width; offset += 1) {
+                  row[column + offset] = cell;
+                  if (height > 1) spans.set(column + offset, { cell, remaining: height - 1 });
+                }
+                column += width;
+              }
+              result[rowIndex] = row;
+            });
+            return result;
+          }
+          const numericLike = (text: string) => /^[0-9][0-9,.]*$/u.test(text.trim());
+          const unavailableLike = (text: string) => /^(?:-|欠場|返還)$/u.test(text.trim());
+          const structuralKeys = new Set<string>();
+          const numericKeys = new Set<string>();
+          const unavailableKeys = new Set<string>();
+          const emptyOrOtherKeys = new Set<string>();
+          const firstPlaceGroups = new Set<number>();
+          let oddsPointTableCount = 0;
+          let bodyRowCount = 0;
+
+          for (const table of $('table').toArray()) {
+            const $table = $(table);
+            if ($table.find('.oddsPoint').length === 0) continue;
+            oddsPointTableCount += 1;
+            const header = grid($table.find('thead tr').toArray());
+            const body = grid($table.find('tbody tr').toArray());
+            bodyRowCount += body.length;
+            const groups: Array<{ first: number; column: number }> = [];
+            for (const row of header) {
+              for (let column = 0; column < row.length; column += 1) {
+                const value = Number(row[column]?.text.trim());
+                if (Number.isInteger(value) && value >= 1 && value <= 6) {
+                  groups.push({ first: value, column });
+                  firstPlaceGroups.add(value);
+                }
+              }
+            }
+            for (const group of groups) {
+              for (const row of body) {
+                const secondCell = row[group.column];
+                const thirdCell = row[group.column + 1];
+                const oddsCell = row[group.column + 2];
+                if (!secondCell || !thirdCell || !oddsCell) continue;
+                const second = Number(secondCell.text.trim());
+                const third = Number(thirdCell.text.trim());
+                if (!Number.isInteger(second) || second < 1 || second > 6) continue;
+                if (!Number.isInteger(third) || third < 1 || third > 6) continue;
+                if (group.first === second || group.first === third || second === third) continue;
+                const key = `${group.first}-${second}-${third}`;
+                structuralKeys.add(key);
+                if (unavailableLike(oddsCell.text)) unavailableKeys.add(key);
+                else if (numericLike(oddsCell.text)) numericKeys.add(key);
+                else emptyOrOtherKeys.add(key);
+              }
+            }
+          }
+
+          const parsed = parseAllTrifectaOdds(html);
+          const unavailableCount = countUnavailableTrifectaSelections(html);
+          const parsedKeys = new Set(parsed.keys());
+          const numericNotParsed = [...numericKeys].filter((key) => !parsedKeys.has(key)).sort();
+          const parsedWithoutNumericStructural = [...parsedKeys].filter((key) => !numericKeys.has(key)).sort();
+          const structuralMissingFromCanonical: string[] = [];
+          for (let a=1;a<=6;a++) for (let b=1;b<=6;b++) for (let c=1;c<=6;c++) {
+            if (a===b || a===c || b===c) continue;
+            const key = `${a}-${b}-${c}`;
+            if (!structuralKeys.has(key)) structuralMissingFromCanonical.push(key);
+          }
+
+          const diagnosis = structuralKeys.size === 120 && numericKeys.size < 120 && numericNotParsed.length === 0
+            ? 'SOURCE_MARKET_NOT_FULLY_NUMERIC_AT_CAPTURE'
+            : structuralKeys.size === 120 && numericKeys.size === 120 && parsedKeys.size < 120
+              ? 'PARSER_MISSED_NUMERIC_SOURCE_ROWS'
+              : structuralKeys.size < 120
+                ? 'SOURCE_TABLE_STRUCTURE_INCOMPLETE_OR_UNRECOGNIZED'
+                : 'MIXED_OR_OTHER';
+
+          const safe = {
+            auditVersion: 'n2-trifecta-1r-t30-offline-structure-v1',
+            diagnosis,
+            rawByteLength: raw.length,
+            rawSha256,
+            savedEnvelopeStatus: envelope.status,
+            savedEnvelopeBlockers: envelope.blockers,
+            savedParsedSelectionCount: envelope.parsedSelectionCount,
+            savedUnavailableSelectionCount: envelope.unavailableSelectionCount,
+            displayedUpdateStatus: envelope.sourceDisplayedUpdate?.status ?? null,
+            displayedAvailableAt: envelope.sourceDisplayedUpdate?.availableAt ?? null,
+            fetchedAt: envelope.response?.fetchedAt ?? null,
+            oddsPointTableCount,
+            bodyRowCount,
+            firstPlaceGroups: [...firstPlaceGroups].sort((a,b)=>a-b),
+            structuralSelectionCount: structuralKeys.size,
+            numericLikeSelectionCount: numericKeys.size,
+            unavailableLikeSelectionCount: unavailableKeys.size,
+            emptyOrOtherSelectionCount: emptyOrOtherKeys.size,
+            currentParserSelectionCount: parsedKeys.size,
+            currentUnavailableSelectionCount: unavailableCount,
+            numericLikeButNotParsedCount: numericNotParsed.length,
+            parsedWithoutNumericStructuralCount: parsedWithoutNumericStructural.length,
+            structuralMissingFromCanonicalCount: structuralMissingFromCanonical.length,
+            numericLikeButNotParsedSelections: numericNotParsed,
+            structuralMissingFromCanonicalSelections: structuralMissingFromCanonical,
+            networkRequestCount: 0,
+            databaseReadCount: 0,
+            databaseWriteCount: 0,
+            rawOddsValuesPrinted: false,
+            rawOddsValuesPublished: false,
+            currentBuyChanged: false,
+            lineChanged: false,
+            publicPublished: false,
+            automatedBettingChanged: false,
+            productionApplyExecuted: false,
+          };
+          console.log(JSON.stringify(safe, null, 2));
+          TS
+      - name: Prove checkout stayed clean
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "$(git status --porcelain)"
+          echo "checkout_unchanged=true"
