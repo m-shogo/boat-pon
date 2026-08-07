@@ -36,7 +36,7 @@ import {
 export const N2_TRIFECTA_PRIVATE_CAPTURE_EXECUTOR_VERSION =
   "n2-trifecta-private-capture-executor-v1" as const;
 export const N2_TRIFECTA_PRIVATE_CAPTURE_MAX_RAW_BYTES = 2_000_000;
-export const N2_TRIFECTA_PRIVATE_CAPTURE_EARLY_WINDOW_SECONDS = 60;
+export const N2_TRIFECTA_PRIVATE_CAPTURE_EARLY_WINDOW_SECONDS = 0;
 export const N2_TRIFECTA_PRIVATE_CAPTURE_LATE_WINDOW_SECONDS = 120;
 
 export type N2TrifectaPrivateFetchResult = {
