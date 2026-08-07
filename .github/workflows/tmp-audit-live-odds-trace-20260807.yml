@@ -1,0 +1,168 @@
+name: Temporary trace live odds capture 2026-08-07
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/tmp-audit-live-odds-trace-20260807.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tmp-audit-live-odds-trace-20260807
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: [self-hosted, macOS]
+    timeout-minutes: 10
+    env:
+      CANONICAL_REPO: /Users/m-shogo/Developer/personal/boat-pon
+      NODE_BIN: /Users/m-shogo/.local/share/mise/installs/node/24/bin/node
+    steps:
+      - name: Trace capture metadata without raw odds
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        run: |
+          set -euo pipefail
+          export DATE_JST="$(TZ=Asia/Tokyo date '+%Y-%m-%d')"
+          export NOW_JST="$(TZ=Asia/Tokyo date '+%Y-%m-%dT%H:%M:%S%z')"
+          "$NODE_BIN" <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const root = process.env.CANONICAL_REPO;
+          const date = process.env.DATE_JST;
+          const privateRoot = path.join(root, 'data/private/trifecta-capture');
+          const captureRoot = path.join(root, 'data/raw/research/trifecta-market', date);
+          const selectionPath = path.join(privateRoot, 'selections', `${date}.json`);
+          const latestPath = path.join(privateRoot, 'status', 'latest.json');
+          const reservationDir = path.join(privateRoot, 'reservations', date);
+          const ledgerRoot = path.join(root, 'data/raw/research/trifecta-market/ledgers');
+
+          function json(file) {
+            try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return null; }
+          }
+          function walk(dir) {
+            const out=[];
+            if (!fs.existsSync(dir)) return out;
+            const stack=[dir];
+            while(stack.length){
+              const current=stack.pop();
+              for(const ent of fs.readdirSync(current,{withFileTypes:true})){
+                const full=path.join(current,ent.name);
+                if(ent.isDirectory()) stack.push(full); else out.push(full);
+              }
+            }
+            return out;
+          }
+          function safeLedger(file) {
+            const events=[];
+            try {
+              for (const line of fs.readFileSync(file,'utf8').split('\n')) {
+                if (!line.trim()) continue;
+                const e=JSON.parse(line);
+                events.push({
+                  event:e.event ?? null,
+                  raceIdentity:e.raceIdentity ?? null,
+                  checkpointLabel:e.checkpointLabel ?? null,
+                  at:e.at ?? null,
+                  result:e.result ?? null,
+                  blockerCodes:Array.isArray(e.blockers)?e.blockers.map(String).map(v=>v.slice(0,120)):[],
+                });
+              }
+            } catch {}
+            return events;
+          }
+
+          const acceptedFiles=walk(captureRoot).filter(f=>path.basename(f)==='accepted.json');
+          const accepted=acceptedFiles.map(file=>{
+            const marker=json(file)??{};
+            const rel=path.relative(captureRoot,file).split(path.sep);
+            return {
+              venueCode:rel[0]??null,
+              raceNo:rel[1]??null,
+              checkpointLabel:rel[2]??marker.checkpointLabel??null,
+              raceIdentity:marker.raceIdentity??null,
+              acceptedAt:marker.acceptedAt??null,
+              rawShaPresent:typeof marker.rawSha256==='string',
+              rawPathPresent:typeof marker.rawRelativePath==='string',
+              envelopePathPresent:typeof marker.envelopeRelativePath==='string',
+            };
+          }).sort((a,b)=>String(a.raceIdentity).localeCompare(String(b.raceIdentity))||String(a.checkpointLabel).localeCompare(String(b.checkpointLabel)));
+
+          const allEnvelopeFiles=walk(captureRoot).filter(f=>f.endsWith('.envelope.json'));
+          const envelopeStatuses=allEnvelopeFiles.map(file=>{
+            const e=json(file)??{};
+            return {
+              raceIdentity:e.entry?.raceIdentity??null,
+              checkpointLabel:e.entry?.checkpointLabel??null,
+              status:e.status??null,
+              blockers:Array.isArray(e.blockers)?e.blockers:[],
+              parsedSelectionCount:e.parsedSelectionCount??null,
+              unavailableSelectionCount:e.unavailableSelectionCount??null,
+            };
+          }).sort((a,b)=>String(a.raceIdentity).localeCompare(String(b.raceIdentity))||String(a.checkpointLabel).localeCompare(String(b.checkpointLabel)));
+
+          const reservations=fs.existsSync(reservationDir)
+            ? fs.readdirSync(reservationDir).filter(n=>n.endsWith('.json')).map(n=>json(path.join(reservationDir,n))).filter(Boolean).map(r=>({
+                raceIdentity:r.raceIdentity??null,
+                checkpointLabel:r.checkpointLabel??null,
+                targetCaptureAt:r.targetCaptureAt??null,
+                reservedAt:r.reservedAt??null,
+                venueCode:r.venueCode??null,
+              })).sort((a,b)=>String(a.targetCaptureAt).localeCompare(String(b.targetCaptureAt)))
+            : [];
+
+          const relevantLedgerEvents=[];
+          for(const file of walk(ledgerRoot).filter(f=>f.endsWith('.jsonl'))){
+            for(const e of safeLedger(file)){
+              if(String(e.raceIdentity??'').startsWith(date.replaceAll('-',''))) relevantLedgerEvents.push(e);
+            }
+          }
+          relevantLedgerEvents.sort((a,b)=>String(a.at).localeCompare(String(b.at)));
+
+          const selection=json(selectionPath);
+          const latest=json(latestPath);
+          const result={
+            evidenceSchemaVersion:'live-odds-capture-trace-v1',
+            dateJst:date,
+            nowJst:process.env.NOW_JST,
+            selection: selection ? {
+              venueCode:selection.venueCode??null,
+              raceCount:selection.raceCount??null,
+              requestBudget:selection.requestBudget??null,
+              selectedAt:selection.selectedAt??null,
+              sourcePlanDigestPresent:typeof selection.sourcePlanDigest==='string',
+            }:null,
+            latestStatus: latest ? {
+              status:latest.status??null,
+              blockers:latest.blockers??[],
+              selectedVenueCode:latest.selectedVenueCode??null,
+              selectedRaceCount:latest.selectedRaceCount??null,
+              dueEntryCount:latest.dueEntryCount??null,
+              selectedRaceIdentity:latest.selectedEntry?.raceIdentity??null,
+              selectedCheckpointLabel:latest.selectedEntry?.checkpointLabel??null,
+              executorStatus:latest.executorReport?.status??null,
+              networkRequestCount:latest.executorReport?.networkRequestCount??0,
+              capturedCount:latest.executorReport?.capturedCount??0,
+              eventChanged:latest.eventChanged??null,
+              completedAt:latest.completedAt??null,
+            }:null,
+            acceptedCount:accepted.length,
+            accepted,
+            envelopeCount:allEnvelopeFiles.length,
+            envelopeStatuses,
+            reservationCount:reservations.length,
+            reservations,
+            ledgerEventCount:relevantLedgerEvents.length,
+            ledgerEvents:relevantLedgerEvents,
+            rawOddsValuesRead:false,
+            rawOddsValuesPrinted:false,
+            databaseReadCount:0,
+            databaseWriteCount:0,
+            networkRequestCount:0,
+          };
+          console.log('SANITIZED_LIVE_ODDS_TRACE_BEGIN');
+          console.log(JSON.stringify(result,null,2));
+          console.log('SANITIZED_LIVE_ODDS_TRACE_END');
+          NODE
