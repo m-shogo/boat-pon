@@ -72,3 +72,60 @@ jobs:
           }, null, 2));
           if (violations.length) process.exit(1);
           NODE
+      - name: Update private readiness catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          READINESS_REPORT="$RUNNER_TEMP/n2-private-market-daily-readiness.json"
+          CATALOG_REPORT="$RUNNER_TEMP/n2-private-market-readiness-catalog.json"
+          export READINESS_REPORT CATALOG_REPORT
+          test -s "$READINESS_REPORT"
+          node node_modules/tsx/dist/cli.mjs \
+            scripts/build-n2-trifecta-private-market-readiness-catalog.ts \
+            --write-private > "$CATALOG_REPORT"
+          test -s "$CATALOG_REPORT"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const r = JSON.parse(fs.readFileSync(process.env.READINESS_REPORT, 'utf8'));
+          const c = JSON.parse(fs.readFileSync(process.env.CATALOG_REPORT, 'utf8'));
+          const violations = [];
+          if (c.summaryVersion !== 'n2-trifecta-private-market-readiness-catalog-summary-v1') violations.push('CATALOG_SUMMARY_VERSION');
+          if (c.catalogVersion !== 'n2-trifecta-private-market-readiness-catalog-v1') violations.push('CATALOG_VERSION');
+          if (c.evidenceRole !== 'EXPLORATION_READINESS_CATALOG_ONLY') violations.push('CATALOG_ROLE');
+          if (!Number.isSafeInteger(c.sourceArtifactCount) || !Number.isSafeInteger(c.entryCount)
+            || c.sourceArtifactCount < c.entryCount || c.entryCount < 1) violations.push('CATALOG_COUNTS');
+          if (!Array.isArray(c.entries) || c.entries.length !== c.entryCount) violations.push('CATALOG_ENTRIES');
+          if (!Number.isSafeInteger(c.fullCoverageScopeCount) || c.fullCoverageScopeCount < 0 || c.fullCoverageScopeCount > c.entryCount) violations.push('FULL_COVERAGE_COUNT');
+          if (!/^[0-9a-f]{64}$/.test(c.catalogDigest || '') || !/^[0-9a-f]{64}$/.test(c.builtCatalogDigest || '')) violations.push('CATALOG_DIGEST');
+          if (c.privateCatalogWrittenOrReused !== true || typeof c.privateCatalogRelativePath !== 'string') violations.push('CATALOG_WRITE');
+          if (c.automaticFreezeAuthorized !== false || c.outcomeDataRead !== false || c.validationDataRead !== false || c.holdoutDataRead !== false) violations.push('CATALOG_EVALUATION_BOUNDARY');
+          if (c.rawCaptureEvidenceRead !== false || c.rawOddsValuesRead !== false || c.rawOddsValuesPublished !== false) violations.push('CATALOG_RAW_BOUNDARY');
+          if (c.networkRequestCount !== 0 || c.databaseReadCount !== 0 || c.databaseWriteCount !== 0) violations.push('CATALOG_IO_BOUNDARY');
+          if (c.currentBuyConnectionAuthorized !== false || c.lineConnectionAuthorized !== false || c.automatedBettingAuthorized !== false || c.publicPublishAuthorized !== false || c.productionApplyAuthorized !== false) violations.push('CATALOG_PROTECTED_BOUNDARY');
+          const current = Array.isArray(c.entries)
+            ? c.entries.find((entry) => entry.date === r.date && entry.venueCode === r.venueCode)
+            : null;
+          if (!current) violations.push('CURRENT_SCOPE_MISSING');
+          else {
+            if (current.readinessDigest !== r.outputDigest || current.latestCheckedAt !== r.checkedAt) violations.push('CURRENT_READINESS_LINEAGE');
+            if (current.sourceDayIndexDigest !== r.sourceDayIndexDigest || current.readinessStatus !== r.status) violations.push('CURRENT_SOURCE_LINEAGE');
+            if (current.completeRaceCount !== r.completeRaceCount || current.partialRaceCount !== r.partialRaceCount || current.noDataRaceCount !== r.noDataRaceCount) violations.push('CURRENT_RACE_COUNTS');
+            if (current.checkpointCoverageNumerator !== r.checkpointCoverageNumerator || current.checkpointCoverageDenominator !== 48 || current.checkpointCoverageRatio !== r.checkpointCoverageRatio) violations.push('CURRENT_COVERAGE');
+          }
+          if (/"odds"\s*:|"selections"\s*:|"moves"\s*:|"payout"\s*:|"roi"\s*:/.test(JSON.stringify(c))) violations.push('CATALOG_VALUE_LEAK');
+          console.log(JSON.stringify({
+            status: violations.length ? 'BLOCKED' : 'PASS',
+            sourceArtifactCount: c.sourceArtifactCount,
+            entryCount: c.entryCount,
+            earliestDate: c.earliestDate,
+            latestDate: c.latestDate,
+            fullCoverageScopeCount: c.fullCoverageScopeCount,
+            currentDate: r.date,
+            currentVenueCode: r.venueCode,
+            currentReadinessDigest: r.outputDigest,
+            catalogDigest: c.catalogDigest,
+            catalogChanged: c.privateCatalogChanged,
+            violations,
+          }, null, 2));
+          if (violations.length) process.exit(1);
+          NODE
