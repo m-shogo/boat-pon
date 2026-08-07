@@ -1,0 +1,91 @@
+name: Temporary audit live odds checkpoint gaps 2026-08-07
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/tmp-audit-live-odds-gaps-20260807.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tmp-audit-live-odds-gaps-20260807
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: [self-hosted, macOS]
+    timeout-minutes: 10
+    env:
+      CANONICAL_REPO: /Users/m-shogo/Developer/personal/boat-pon
+      NODE_BIN: /Users/m-shogo/.local/share/mise/installs/node/24/bin/node
+    steps:
+      - name: Audit private status reports only
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        run: |
+          set -euo pipefail
+          export DATE_JST="$(TZ=Asia/Tokyo date '+%Y-%m-%d')"
+          "$NODE_BIN" <<'NODE'
+          const fs=require('node:fs');
+          const path=require('node:path');
+          const root=process.env.CANONICAL_REPO;
+          const date=process.env.DATE_JST;
+          const reportDir=path.join(root,'data/private/trifecta-capture/reports',date);
+          const reservationDir=path.join(root,'data/private/trifecta-capture/reservations',date);
+          function json(file){try{return JSON.parse(fs.readFileSync(file,'utf8'));}catch{return null;}}
+          const reports=fs.existsSync(reportDir)
+            ? fs.readdirSync(reportDir).filter(n=>n.endsWith('.json')).map(n=>json(path.join(reportDir,n))).filter(Boolean)
+            : [];
+          const summarized=reports.map(r=>({
+            now:r.now??null,
+            startedAt:r.startedAt??null,
+            completedAt:r.completedAt??null,
+            status:r.status??null,
+            blockers:Array.isArray(r.blockers)?r.blockers:[],
+            selectedVenueCode:r.selectedVenueCode??null,
+            selectedRaceCount:r.selectedRaceCount??null,
+            dueEntryCount:r.dueEntryCount??null,
+            selectedRaceIdentity:r.selectedEntry?.raceIdentity??null,
+            selectedCheckpointLabel:r.selectedEntry?.checkpointLabel??null,
+            targetCaptureAt:r.selectedEntry?.targetCaptureAt??null,
+            reservationRelativePathPresent:typeof r.reservationRelativePath==='string',
+            executorStatus:r.executorReport?.status??null,
+            executorNetworkRequestCount:r.executorReport?.networkRequestCount??0,
+            executorCapturedCount:r.executorReport?.capturedCount??0,
+            executorBlockedEvidenceCount:r.executorReport?.blockedEvidenceCount??0,
+            eventChanged:r.eventChanged??null,
+          })).sort((a,b)=>String(a.now).localeCompare(String(b.now)));
+          const reservations=fs.existsSync(reservationDir)
+            ? fs.readdirSync(reservationDir).filter(n=>n.endsWith('.json')).map(n=>json(path.join(reservationDir,n))).filter(Boolean)
+            : [];
+          const targets=reservations.map(r=>({
+            raceIdentity:r.raceIdentity??null,
+            checkpointLabel:r.checkpointLabel??null,
+            targetCaptureAt:r.targetCaptureAt??null,
+            reservedAt:r.reservedAt??null,
+          })).sort((a,b)=>String(a.targetCaptureAt).localeCompare(String(b.targetCaptureAt)));
+          const focusStart=Date.parse('2026-08-06T23:20:00.000Z');
+          const focusEnd=Date.parse('2026-08-06T23:40:30.000Z');
+          const focus=summarized.filter(r=>{
+            const t=Date.parse(r.now??r.completedAt??'');
+            return Number.isFinite(t)&&t>=focusStart&&t<=focusEnd;
+          });
+          const blockerCounts={};
+          for(const r of summarized){for(const b of r.blockers){blockerCounts[b]=(blockerCounts[b]??0)+1;}}
+          console.log('SANITIZED_LIVE_ODDS_GAP_AUDIT_BEGIN');
+          console.log(JSON.stringify({
+            evidenceSchemaVersion:'live-odds-gap-audit-v1',
+            dateJst:date,
+            reportCount:summarized.length,
+            blockerCounts,
+            focusWindowUtc:['2026-08-06T23:20:00.000Z','2026-08-06T23:40:30.000Z'],
+            focusReports:focus,
+            reservationTargets:targets,
+            rawOddsValuesRead:false,
+            networkRequestCount:0,
+            databaseReadCount:0,
+            databaseWriteCount:0,
+          },null,2));
+          console.log('SANITIZED_LIVE_ODDS_GAP_AUDIT_END');
+          NODE
