@@ -1,0 +1,200 @@
+name: Temporary migrate N2 runtime to 967ad45
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/tmp-migrate-n2-runtime-967ad45.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: migrate-n2-runtime-967ad45
+  cancel-in-progress: false
+
+jobs:
+  migrate-and-verify:
+    runs-on: [self-hosted, macOS]
+    timeout-minutes: 30
+    env:
+      AUTHORITY_SHA: 967ad45d1f72b4ad17e036a25926c1e61ba4e091
+      CANONICAL_REPO: /Users/m-shogo/Developer/personal/boat-pon
+      AGENT_LABEL: com.boatpon.trifecta-private-capture
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 967ad45d1f72b4ad17e036a25926c1e61ba4e091
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Fast-forward canonical main to reviewed authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d "$CANONICAL_REPO/.git"
+          test "$(git -C "$CANONICAL_REPO" branch --show-current)" = main
+          test -z "$(git -C "$CANONICAL_REPO" status --porcelain)"
+          git -C "$CANONICAL_REPO" fetch origin main
+          git -C "$CANONICAL_REPO" merge --ff-only "$AUTHORITY_SHA"
+          test "$(git -C "$CANONICAL_REPO" rev-parse HEAD)" = "$AUTHORITY_SHA"
+          test -z "$(git -C "$CANONICAL_REPO" status --porcelain)"
+      - name: Install canonical dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$CANONICAL_REPO"
+          npm ci
+          test -z "$(git status --porcelain --untracked-files=no)"
+      - name: Explicitly renew authorization and bind immutable runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          INSTALL_JSON="$RUNNER_TEMP/n2-runtime-install.json"
+          export INSTALL_JSON
+          cd "$CANONICAL_REPO"
+          node node_modules/tsx/dist/cli.mjs \
+            scripts/install-n2-trifecta-local-capture-agent.ts \
+            --renew --authorize --days 30 > "$INSTALL_JSON"
+          test -s "$INSTALL_JSON"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const v = JSON.parse(fs.readFileSync(process.env.INSTALL_JSON, 'utf8'));
+          const violations = [];
+          if (v.status !== 'INSTALLED') violations.push('INSTALL_STATUS');
+          if (v.authoritySha !== process.env.AUTHORITY_SHA) violations.push('AUTHORITY_SHA');
+          if (v.stage !== 'ONE_VENUE_REVIEW' || v.maxRequestsPerDay !== 48) violations.push('AUTH_SCOPE');
+          if (JSON.stringify(v.checkpoints) !== JSON.stringify(['T-30','T-20','T-10','T-5'])) violations.push('CHECKPOINTS');
+          if (v.privateResearchOnly !== true || v.databaseWriteAuthorized !== false
+            || v.currentBuyConnectionAuthorized !== false || v.lineConnectionAuthorized !== false
+            || v.automatedBettingAuthorized !== false) violations.push('BOUNDARY_WIDENED');
+          if (violations.length) throw new Error(violations.join(','));
+          console.log(JSON.stringify({
+            status: 'PASS', authoritySha: v.authoritySha,
+            authorizationIssuedAt: v.authorizationIssuedAt,
+            authorizationExpiresAt: v.authorizationExpiresAt,
+            stage: v.stage, maxRequestsPerDay: v.maxRequestsPerDay,
+            checkpoints: v.checkpoints, privateResearchOnly: v.privateResearchOnly,
+            databaseWriteAuthorized: v.databaseWriteAuthorized,
+            currentBuyConnectionAuthorized: v.currentBuyConnectionAuthorized,
+            lineConnectionAuthorized: v.lineConnectionAuthorized,
+            automatedBettingAuthorized: v.automatedBettingAuthorized,
+            runtimeDetached: v.runtimeDetached,
+            runtimeTrackedWorktreeClean: v.runtimeTrackedWorktreeClean,
+          }, null, 2));
+          NODE
+      - name: Verify immutable runtime launchd and heartbeat
+        shell: bash
+        run: |
+          set -euo pipefail
+          AUTH_PATH="$CANONICAL_REPO/data/private/trifecta-capture/authorization.json"
+          BINDING_PATH="$CANONICAL_REPO/data/private/trifecta-capture/runtime-authority.json"
+          PLIST_PATH="$HOME/Library/LaunchAgents/$AGENT_LABEL.plist"
+          TICK_JSON="$RUNNER_TEMP/n2-runtime-verify-tick.json"
+          export AUTH_PATH BINDING_PATH PLIST_PATH TICK_JSON
+
+          test "$(stat -f '%Lp' "$AUTH_PATH")" = 600
+          test "$(stat -f '%Lp' "$BINDING_PATH")" = 600
+          test "$(stat -f '%Lp' "$PLIST_PATH")" = 644
+
+          RUNTIME_ROOT="$(node -p "JSON.parse(require('fs').readFileSync(process.env.BINDING_PATH,'utf8')).runtimeRoot")"
+          BOUND_SHA="$(node -p "JSON.parse(require('fs').readFileSync(process.env.BINDING_PATH,'utf8')).authoritySha")"
+          export RUNTIME_ROOT
+          test "$BOUND_SHA" = "$AUTHORITY_SHA"
+          test -d "$RUNTIME_ROOT"
+          test ! -L "$RUNTIME_ROOT"
+          test "$(git -C "$RUNTIME_ROOT" rev-parse HEAD)" = "$AUTHORITY_SHA"
+          test -z "$(git -C "$RUNTIME_ROOT" status --porcelain --untracked-files=no)"
+          ! git -C "$RUNTIME_ROOT" symbolic-ref -q HEAD >/dev/null 2>&1
+          case "$RUNTIME_ROOT" in
+            "$CANONICAL_REPO"|"$CANONICAL_REPO"/*|*actions-runner-*|*/_work/*) exit 1 ;;
+          esac
+          grep -Fq "$RUNTIME_ROOT" "$PLIST_PATH"
+          grep -Fq "$AUTHORITY_SHA" "$PLIST_PATH"
+          grep -Fq "$BINDING_PATH" "$PLIST_PATH"
+          ! grep -Fq '/actions-runner-' "$PLIST_PATH"
+          /bin/launchctl print "gui/$(id -u)/$AGENT_LABEL" >/dev/null
+
+          cd "$RUNTIME_ROOT"
+          set +e
+          BOAT_PON_DATA_ROOT="$CANONICAL_REPO" \
+          BOAT_PON_LOCAL_CAPTURE_AUTH_PATH="$AUTH_PATH" \
+          BOAT_PON_LOCAL_CAPTURE_RUNTIME_AUTH_PATH="$BINDING_PATH" \
+          BOAT_PON_LOCAL_CAPTURE_AUTHORITY_SHA="$AUTHORITY_SHA" \
+          BOAT_PON_LOCAL_CAPTURE_RUNTIME_ROOT="$RUNTIME_ROOT" \
+          node "$RUNTIME_ROOT/node_modules/tsx/dist/cli.mjs" \
+            "$RUNTIME_ROOT/scripts/run-n2-trifecta-local-capture-tick.ts" --json > "$TICK_JSON"
+          TICK_EXIT=$?
+          set -e
+          export TICK_EXIT
+          test -s "$TICK_JSON"
+
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const auth = JSON.parse(fs.readFileSync(process.env.AUTH_PATH, 'utf8'));
+          const binding = JSON.parse(fs.readFileSync(process.env.BINDING_PATH, 'utf8'));
+          const tick = JSON.parse(fs.readFileSync(process.env.TICK_JSON, 'utf8'));
+          const days = (Date.parse(auth.expiresAt) - Date.parse(auth.issuedAt)) / 86400000;
+          const violations = [];
+          if (!(days > 29.9 && days <= 30.01) || auth.stage !== 'ONE_VENUE_REVIEW'
+            || auth.maxRequestsPerDay !== 48) violations.push('AUTH_SCOPE_INVALID');
+          if (binding.authorizationId !== auth.authorizationId || binding.issuedAt !== auth.issuedAt
+            || binding.expiresAt !== auth.expiresAt || binding.authoritySha !== process.env.AUTHORITY_SHA
+            || binding.runtimeRoot !== process.env.RUNTIME_ROOT) violations.push('BINDING_MISMATCH');
+          if (binding.privateResearchOnly !== true || binding.databaseWriteAuthorized !== false
+            || binding.currentBuyConnectionAuthorized !== false || binding.lineConnectionAuthorized !== false
+            || binding.publicPublishAuthorized !== false || binding.automatedBettingAuthorized !== false) {
+            violations.push('BINDING_BOUNDARY_WIDENED');
+          }
+          if (tick.runtimeAuthorityStatus !== 'PASS' || tick.authoritySha !== process.env.AUTHORITY_SHA
+            || tick.runtimeRoot !== process.env.RUNTIME_ROOT) violations.push('TICK_RUNTIME_MISMATCH');
+          if (tick.databaseWriteCount !== 0 || tick.primaryDbWriteCount !== 0 || tick.sidecarWriteCount !== 0
+            || tick.currentBuyChanged !== false || tick.lineChanged !== false || tick.publicPublished !== false
+            || tick.automatedBettingChanged !== false || tick.productionApplyExecuted !== false) {
+            violations.push('PROTECTED_BOUNDARY_CHANGED');
+          }
+          const heartbeatPath = path.join(process.env.CANONICAL_REPO,
+            'data/private/trifecta-capture/heartbeats', `${tick.dateJst}.jsonl`);
+          if (!fs.existsSync(heartbeatPath)) violations.push('HEARTBEAT_MISSING');
+          let heartbeat = null;
+          if (fs.existsSync(heartbeatPath)) {
+            const lines = fs.readFileSync(heartbeatPath, 'utf8').trim().split('\n').filter(Boolean);
+            heartbeat = lines.length ? JSON.parse(lines.at(-1)) : null;
+            if (!heartbeat || heartbeat.authoritySha !== process.env.AUTHORITY_SHA
+              || heartbeat.runtimeAuthorityStatus !== 'PASS'
+              || heartbeat.databaseWriteCount !== 0 || heartbeat.currentBuyChanged !== false
+              || heartbeat.lineChanged !== false || heartbeat.publicPublished !== false
+              || heartbeat.automatedBettingChanged !== false || heartbeat.rawOddsValuesRecorded !== false) {
+              violations.push('HEARTBEAT_BOUNDARY_INVALID');
+            }
+          }
+          const summary = {
+            evidenceSchemaVersion: 'n2-runtime-967ad45-verification-v1',
+            status: violations.length ? 'BLOCKED' : 'PASS', violations,
+            authoritySha: process.env.AUTHORITY_SHA,
+            runtimeDetached: true, trackedWorktreeClean: true,
+            launchdRegistered: true, plistUsesImmutableRuntime: true,
+            authorization: { issuedAt: auth.issuedAt, expiresAt: auth.expiresAt,
+              validityDays: days, stage: auth.stage, maxRequestsPerDay: auth.maxRequestsPerDay,
+              checkpoints: auth.checkpointLabels },
+            verificationTick: { exitCode: Number(process.env.TICK_EXIT), status: tick.status,
+              blockers: tick.blockers, dateJst: tick.dateJst,
+              selectedVenueCode: tick.selectedVenueCode, selectedRaceCount: tick.selectedRaceCount,
+              dueEntryCount: tick.dueEntryCount, networkRequestCount: tick.networkRequestCount,
+              capturedCount: tick.capturedCount, blockedEvidenceCount: tick.blockedEvidenceCount },
+            heartbeatPresent: Boolean(heartbeat),
+            databaseWriteCount: tick.databaseWriteCount,
+            currentBuyChanged: tick.currentBuyChanged,
+            lineChanged: tick.lineChanged,
+            publicPublished: tick.publicPublished,
+            automatedBettingChanged: tick.automatedBettingChanged,
+            productionApplyExecuted: tick.productionApplyExecuted,
+            rawUploadedOrPublished: false,
+          };
+          console.log('SANITIZED_N2_RUNTIME_967AD45_BEGIN');
+          console.log(JSON.stringify(summary, null, 2));
+          console.log('SANITIZED_N2_RUNTIME_967AD45_END');
+          if (violations.length) process.exit(1);
+          NODE
