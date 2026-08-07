@@ -1,0 +1,55 @@
+{
+  "reportVersion": "n2-trifecta-host-sleep-miss-validation-v1",
+  "date": "2026-08-07",
+  "status": "ROOT_CAUSE_CONFIRMED",
+  "scope": "PRIVATE_RESEARCH_OPERABILITY",
+  "missedCheckpoint": {
+    "raceIdentity": "20260807-10-05",
+    "checkpointLabel": "T-5",
+    "targetCaptureAt": "2026-08-07T01:13:00.000Z",
+    "lateWindowEndsAt": "2026-08-07T01:15:00.000Z",
+    "reservationPresent": false
+  },
+  "planAudit": {
+    "onlyDueCandidateInWindow": true,
+    "windowStart": "2026-08-07T01:10:00.000Z",
+    "windowEnd": "2026-08-07T01:16:00.000Z",
+    "overlappingReservationStarvationExplainsThisMiss": false
+  },
+  "runtimeEvidence": {
+    "immutableAuthoritySha": "6e297602ff34d6cc853ff0e7088ae5a3e56fcfb7",
+    "runtimeAuthorityStatus": "PASS",
+    "launchdRegistered": true,
+    "stderrBytesObserved": 0,
+    "firstPostWindowSummaryAt": "2026-08-07T01:15:29.757Z",
+    "firstPostWindowSummaryStatus": "NO_CHANGE",
+    "firstPostWindowDueEntryCount": 0
+  },
+  "hostPowerEvidence": {
+    "sleepObservedAtJst": "2026-08-07T10:09:24+09:00",
+    "wakeObservedAtJst": "2026-08-07T10:15:27+09:00",
+    "checkpointOccurredWhileHostSleeping": true,
+    "wakeAfterLateWindowSeconds": 27,
+    "systemLogMessageBodiesPublished": false
+  },
+  "conclusion": "The post-cache 5R T-5 miss was caused by the Mac host being asleep throughout the checkpoint target and +120 second late window. The private daily plan, WAL decoupling, authorization, immutable runtime, and reservation logic did not reject this checkpoint.",
+  "followUp": {
+    "addAppendOnlyPrivateHeartbeatHistory": true,
+    "keepHostSleepAsDistinctMissReason": true,
+    "considerExplicitAwakeGuardPromotionSeparately": true,
+    "changeMacPowerSettingsAutomatically": false
+  },
+  "protectedBoundaries": {
+    "databaseReadCount": 0,
+    "databaseWriteCount": 0,
+    "rawOddsValuesRead": false,
+    "rawOddsValuesPublished": false,
+    "currentBuyChanged": false,
+    "selectorOrModelChanged": false,
+    "decisionHistoryChanged": false,
+    "lineChanged": false,
+    "publicSurfaceChanged": false,
+    "automatedBettingChanged": false,
+    "productionApplyExecuted": false
+  }
+}
