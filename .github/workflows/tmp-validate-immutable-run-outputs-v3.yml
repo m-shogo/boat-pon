@@ -1,6 +1,7 @@
 name: Temporary immutable run output validation v3
 
 on:
+  workflow_call:
   pull_request:
     branches: [main]
 
