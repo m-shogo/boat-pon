@@ -104,3 +104,136 @@ jobs:
             echo "::error::research code references production/BUY markers"; exit 1
           fi
           echo "research code has no production/BUY connection"
+
+  temporary-live-retention-snapshot:
+    if: github.event_name == 'pull_request' && github.head_ref == 'ops/validate-durable-retention-snapshot-live'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout validation branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Materialize current automation state
+        id: state
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main automation/boat-pon-research
+          MAIN_SHA="$(git rev-parse origin/main)"
+          SOURCE_SHA="$(git rev-parse origin/automation/boat-pon-research)"
+          rm -rf /tmp/boat-pon-retention-live
+          git worktree add --detach /tmp/boat-pon-retention-live "$SOURCE_SHA"
+          test -z "$(git -C /tmp/boat-pon-retention-live status --porcelain)"
+          echo "main_sha=$MAIN_SHA" >> "$GITHUB_OUTPUT"
+          echo "source_sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
+          echo "main_sha=$MAIN_SHA source_sha=$SOURCE_SHA"
+      - name: First persist must materialize one sanitized snapshot
+        id: first
+        env:
+          MAIN_SHA: ${{ steps.state.outputs.main_sha }}
+          SOURCE_SHA: ${{ steps.state.outputs.source_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --import tsx scripts/persist-research-durable-retention-snapshot.ts \
+            --repo-root=/tmp/boat-pon-retention-live \
+            --source-state-sha="$SOURCE_SHA" \
+            --main-authority-sha="$MAIN_SHA" \
+            --observed-at=2026-08-07T08:00:00.000Z > /tmp/retention-first.json
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const d = JSON.parse(fs.readFileSync('/tmp/retention-first.json', 'utf8'));
+          if (d.changed !== true) throw new Error(`expected first materialization, changed=${d.changed}`);
+          if (d.auditStatus !== 'DEGRADED') throw new Error(`unexpected audit status ${d.auditStatus}`);
+          if (d.historyFileCount !== 15 || d.durableCompleteCount !== 15 || d.incompleteCount !== 0 || d.invalidHistoryCount !== 0) throw new Error('unexpected retention counts');
+          if (d.missingOutputReferenceCount !== 0 || d.invalidOutputReferenceCount !== 0 || d.legacyCompatibilityCount !== 1) throw new Error('unexpected retention integrity');
+          if (!/^reports\/automation\/retention\/durable-knowledge\/2026-08-07\/[0-9a-f]{64}\.json$/.test(d.relativePath)) throw new Error(`unexpected path ${d.relativePath}`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `relative_path=${d.relativePath}\nevidence_digest=${d.evidenceDigest}\nsnapshot_digest=${d.snapshotDigest}\n`);
+          console.log(JSON.stringify({
+            changed: d.changed,
+            relativePath: d.relativePath,
+            auditStatus: d.auditStatus,
+            historyFileCount: d.historyFileCount,
+            durableCompleteCount: d.durableCompleteCount,
+            strongDurableCompleteCount: d.strongDurableCompleteCount,
+            incompleteCount: d.incompleteCount,
+            invalidHistoryCount: d.invalidHistoryCount,
+            missingOutputReferenceCount: d.missingOutputReferenceCount,
+            invalidOutputReferenceCount: d.invalidOutputReferenceCount,
+            mutableSupersededReferenceCount: d.mutableSupersededReferenceCount,
+            legacyCompatibilityCount: d.legacyCompatibilityCount,
+            evidenceDigest: d.evidenceDigest,
+            snapshotDigest: d.snapshotDigest,
+          }, null, 2));
+          NODE
+          mapfile -t CHANGED < <(git -C /tmp/boat-pon-retention-live status --porcelain -uall | sed 's/^...//' | sort -u)
+          [ "${#CHANGED[@]}" -eq 1 ]
+          [ "${CHANGED[0]}" = "${{ steps.first.outputs.relative_path }}" ] 2>/dev/null || true
+      - name: CAS commit first snapshot to automation state
+        id: commit
+        env:
+          SOURCE_SHA: ${{ steps.state.outputs.source_sha }}
+          EXPECTED_PATH: ${{ steps.first.outputs.relative_path }}
+          EVIDENCE_DIGEST: ${{ steps.first.outputs.evidence_digest }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin automation/boat-pon-research
+          REMOTE_SHA="$(git rev-parse origin/automation/boat-pon-research)"
+          [ "$REMOTE_SHA" = "$SOURCE_SHA" ] || { echo "::error::CAS conflict $SOURCE_SHA -> $REMOTE_SHA"; exit 1; }
+          CHANGED="$(git -C /tmp/boat-pon-retention-live status --porcelain -uall | sed 's/^...//')"
+          [ "$CHANGED" = "$EXPECTED_PATH" ] || { echo "::error::unexpected changed path: $CHANGED"; exit 1; }
+          git -C /tmp/boat-pon-retention-live config user.name "boat-pon-retention-audit"
+          git -C /tmp/boat-pon-retention-live config user.email "retention-audit@boat-pon.invalid"
+          git -C /tmp/boat-pon-retention-live add -- "$EXPECTED_PATH"
+          [ "$(git -C /tmp/boat-pon-retention-live diff --cached --name-only)" = "$EXPECTED_PATH" ]
+          git -C /tmp/boat-pon-retention-live commit -q -m "report(automation): durable retention 2026-08-07 ${EVIDENCE_DIGEST:0:12}"
+          NEW_SHA="$(git -C /tmp/boat-pon-retention-live rev-parse HEAD)"
+          git -C /tmp/boat-pon-retention-live push origin HEAD:automation/boat-pon-research --quiet
+          echo "new_sha=$NEW_SHA" >> "$GITHUB_OUTPUT"
+          echo "pushed_state_sha=$NEW_SHA"
+      - name: Second persist after state SHA advance must be NO_CHANGE
+        env:
+          MAIN_SHA: ${{ steps.state.outputs.main_sha }}
+          NEW_SOURCE_SHA: ${{ steps.commit.outputs.new_sha }}
+          EXPECTED_PATH: ${{ steps.first.outputs.relative_path }}
+          EXPECTED_EVIDENCE_DIGEST: ${{ steps.first.outputs.evidence_digest }}
+          EXPECTED_SNAPSHOT_DIGEST: ${{ steps.first.outputs.snapshot_digest }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "$(git -C /tmp/boat-pon-retention-live status --porcelain)"
+          node --import tsx scripts/persist-research-durable-retention-snapshot.ts \
+            --repo-root=/tmp/boat-pon-retention-live \
+            --source-state-sha="$NEW_SOURCE_SHA" \
+            --main-authority-sha="$MAIN_SHA" \
+            --observed-at=2026-08-07T08:05:00.000Z > /tmp/retention-second.json
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const d = JSON.parse(fs.readFileSync('/tmp/retention-second.json', 'utf8'));
+          if (d.changed !== false) throw new Error('second persist created churn');
+          if (d.relativePath !== process.env.EXPECTED_PATH) throw new Error('retention path changed after state SHA advance');
+          if (d.evidenceDigest !== process.env.EXPECTED_EVIDENCE_DIGEST) throw new Error('evidence digest changed after state SHA advance');
+          if (d.snapshotDigest !== process.env.EXPECTED_SNAPSHOT_DIGEST) throw new Error('snapshot digest changed after state SHA advance');
+          console.log(JSON.stringify({
+            changed: d.changed,
+            relativePath: d.relativePath,
+            auditStatus: d.auditStatus,
+            evidenceDigest: d.evidenceDigest,
+            snapshotDigest: d.snapshotDigest,
+            sourceStateShaAdvancedWithoutChurn: true,
+          }, null, 2));
+          NODE
+          test -z "$(git -C /tmp/boat-pon-retention-live status --porcelain)"
+          git fetch origin automation/boat-pon-research
+          [ "$(git rev-parse origin/automation/boat-pon-research)" = "$NEW_SOURCE_SHA" ]
