@@ -1,0 +1,33 @@
+{
+  "evidenceSchemaVersion": "n2-private-exploration-matrix-live-v1",
+  "status": "PASS",
+  "violations": [],
+  "manifestDigest": "f72810734d5a6b4b0991b6eb00f87301473ebae9a4f14de1e8959106941297d0",
+  "matrixDigest": "8d25e608184ea776501d5b8ffce689845bc1d1ceea6fd8db84a775e152ec305b",
+  "featureSchemaVersion": "n2-trifecta-private-market-exploration-feature-schema-v1",
+  "featureSchemaDigest": "e11c9ab11f0634b10647f8a2dc7141c240fd44158e67ac56c2ad74814322496b",
+  "columnCount": 85,
+  "raceCount": 5,
+  "raceIdentities": [
+    "20260807-10-04",
+    "20260807-10-06",
+    "20260807-10-07",
+    "20260807-10-08",
+    "20260807-10-09"
+  ],
+  "captureRuntimeAuthorityUnchanged": "967ad45d1f72b4ad17e036a25926c1e61ba4e091",
+  "privateFeatureArtifactsRead": true,
+  "rawCaptureEvidenceRead": false,
+  "matrixValuesPrinted": false,
+  "outcomeDataRead": false,
+  "validationDataRead": false,
+  "holdoutDataRead": false,
+  "networkRequestCount": 0,
+  "databaseReadCount": 0,
+  "databaseWriteCount": 0,
+  "currentBuyChanged": false,
+  "lineChanged": false,
+  "publicPublished": false,
+  "automatedBettingChanged": false,
+  "productionApplyExecuted": false
+}
