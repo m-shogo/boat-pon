@@ -1,0 +1,110 @@
+name: Temporary validate N2 feature rollup d5347a4
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/tmp-validate-n2-feature-rollup-d5347a4.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-n2-feature-rollup-d5347a4
+  cancel-in-progress: false
+
+jobs:
+  validate-rollup:
+    runs-on: [self-hosted, macOS]
+    timeout-minutes: 20
+    env:
+      MAIN_SHA: d5347a4c9a1404a93e3c9f7d2b8042da78b6a5f7
+      DATA_ROOT: /Users/m-shogo/Developer/personal/boat-pon
+      CAPTURE_RUNTIME_SHA: 967ad45d1f72b4ad17e036a25926c1e61ba4e091
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: d5347a4c9a1404a93e3c9f7d2b8042da78b6a5f7
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Verify immutable capture authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          BINDING="$DATA_ROOT/data/private/trifecta-capture/runtime-authority.json"
+          test -f "$BINDING"
+          test "$(node -p "JSON.parse(require('fs').readFileSync('$BINDING','utf8')).authoritySha")" = "$CAPTURE_RUNTIME_SHA"
+      - name: Install analysis dependencies
+        run: npm ci
+      - name: Run and verify local-only feature rollup
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPORT="$RUNNER_TEMP/n2-feature-rollup-live.json"
+          export REPORT
+          BOAT_PON_DATA_ROOT="$DATA_ROOT" \
+            node node_modules/tsx/dist/cli.mjs \
+            scripts/run-n2-trifecta-private-market-feature-rollup.ts > "$REPORT"
+          test -s "$REPORT"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const r = JSON.parse(fs.readFileSync(process.env.REPORT, 'utf8'));
+          const violations = [];
+          if (r.summaryVersion !== 'n2-trifecta-private-market-feature-rollup-summary-v1') violations.push('SUMMARY_VERSION');
+          if (r.status !== 'PASS') violations.push(`STATUS_${r.status}`);
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(r.date || '') || !/^(0[1-9]|1\d|2[0-4])$/.test(r.venueCode || '')) violations.push('SCOPE');
+          if (r.raceCount !== 12 || r.passCount + r.partialCount + r.noDataCount !== 12 || r.blockedCount !== 0) violations.push('RACE_COUNTS');
+          if (r.acceptedMarkerCount !== r.loadedSnapshotCount) violations.push('SNAPSHOT_COUNT');
+          if (r.transitionCount < 0 || r.artifactChangedCount < 0 || r.artifactReusedCount < 0) violations.push('DERIVED_COUNTS');
+          if (r.indexWritten !== true || typeof r.indexRelativePath !== 'string' || !/^[0-9a-f]{64}$/.test(r.indexDigest || '')) violations.push('INDEX_WRITE');
+          if (r.privateResearchOnly !== true || r.rawOddsValuesPrinted !== false || r.rawOddsValuesPublished !== false) violations.push('PRIVATE_BOUNDARY');
+          if (r.networkRequestCount !== 0 || r.databaseReadCount !== 0 || r.databaseWriteCount !== 0) violations.push('IO_BOUNDARY');
+          if (r.currentBuyChanged !== false || r.lineChanged !== false || r.publicPublished !== false || r.automatedBettingChanged !== false || r.productionApplyExecuted !== false) violations.push('PROTECTED_BOUNDARY');
+          if (/"odds"\s*:|"selections"\s*:|"moves"\s*:/.test(JSON.stringify(r))) violations.push('RAW_VALUE_STDOUT');
+          if (!Array.isArray(r.races) || r.races.length !== 12) violations.push('RACE_REPORTS');
+          const indexPath = path.join(process.env.DATA_ROOT, r.indexRelativePath || '');
+          if (!fs.existsSync(indexPath)) violations.push('INDEX_MISSING');
+          else {
+            const lst = fs.lstatSync(indexPath);
+            const stat = fs.statSync(indexPath);
+            if (lst.isSymbolicLink() || !stat.isFile() || (stat.mode & 0o777) !== 0o600) violations.push('INDEX_MODE');
+            const idx = JSON.parse(fs.readFileSync(indexPath, 'utf8'));
+            if (idx.indexDigest !== r.indexDigest || idx.raceCount !== 12 || idx.passCount !== r.passCount || idx.partialCount !== r.partialCount || idx.noDataCount !== r.noDataCount) violations.push('INDEX_CONTENT');
+          }
+          const summary = {
+            status: violations.length ? 'BLOCKED' : 'PASS',
+            violations,
+            checkedAt: r.checkedAt,
+            date: r.date,
+            venueCode: r.venueCode,
+            raceCount: r.raceCount,
+            passCount: r.passCount,
+            partialCount: r.partialCount,
+            noDataCount: r.noDataCount,
+            acceptedMarkerCount: r.acceptedMarkerCount,
+            loadedSnapshotCount: r.loadedSnapshotCount,
+            transitionCount: r.transitionCount,
+            artifactChangedCount: r.artifactChangedCount,
+            artifactReusedCount: r.artifactReusedCount,
+            artifactReplacedExistingCount: r.artifactReplacedExistingCount,
+            indexChanged: r.indexChanged,
+            indexDigest: r.indexDigest,
+            captureRuntimeAuthorityUnchanged: process.env.CAPTURE_RUNTIME_SHA,
+            networkRequestCount: r.networkRequestCount,
+            databaseReadCount: r.databaseReadCount,
+            databaseWriteCount: r.databaseWriteCount,
+            currentBuyChanged: r.currentBuyChanged,
+            lineChanged: r.lineChanged,
+            publicPublished: r.publicPublished,
+            automatedBettingChanged: r.automatedBettingChanged,
+            productionApplyExecuted: r.productionApplyExecuted,
+          };
+          console.log('SANITIZED_N2_FEATURE_ROLLUP_BEGIN');
+          console.log(JSON.stringify(summary, null, 2));
+          console.log('SANITIZED_N2_FEATURE_ROLLUP_END');
+          if (violations.length) process.exit(1);
+          NODE
