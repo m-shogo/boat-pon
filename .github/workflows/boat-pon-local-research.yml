@@ -185,10 +185,10 @@ jobs:
         env:
           SOURCE_SHA: ${{ steps.state.outputs.source_sha }}
           STATE_DIR: ${{ steps.state.outputs.state_dir }}
-          MAIN_SHA: ${{ github.sha }}
         shell: bash
         run: |
           set -euo pipefail
+          MAIN_SHA="$(git rev-parse HEAD)"
           OBSERVED_AT="$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
           set +e
           node --import tsx scripts/persist-research-durable-retention-snapshot.ts \
