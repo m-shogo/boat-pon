@@ -1,11 +1,7 @@
-import {
-  closeSync,
-  mkdirSync,
-  openSync,
-  writeFileSync,
-} from "node:fs";
-import { dirname, resolve, sep } from "node:path";
+import { resolve } from "node:path";
 
+import { writeN2TrifectaPrivateMarketFeatureArtifact } from
+  "../src/research-replay/n2TrifectaPrivateMarketFeatureArtifact";
 import { loadN2TrifectaPrivateMarketFeatures } from
   "../src/research-replay/n2TrifectaPrivateMarketFeatureLoader";
 
@@ -14,25 +10,6 @@ function argument(name: string): string | null {
   if (inline) return inline.slice(name.length + 3);
   const index = process.argv.indexOf(`--${name}`);
   return index >= 0 ? process.argv[index + 1] ?? null : null;
-}
-
-function resolveInside(rootDir: string, relativePath: string): string {
-  const root = resolve(rootDir);
-  const target = resolve(root, relativePath);
-  if (target !== root && !target.startsWith(`${root}${sep}`)) {
-    throw new Error("PRIVATE_FEATURE_PATH_ESCAPES_ROOT");
-  }
-  return target;
-}
-
-function exclusivePrivateWrite(path: string, content: string): void {
-  mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
-  const fd = openSync(path, "wx", 0o600);
-  try {
-    writeFileSync(fd, content, "utf8");
-  } finally {
-    closeSync(fd);
-  }
 }
 
 const date = argument("date");
@@ -52,35 +29,12 @@ const report = loadN2TrifectaPrivateMarketFeatures({
   raceNo,
 });
 
-let privateOutputRelativePath: string | null = null;
-if (writePrivate && (report.status === "PASS" || report.status === "PARTIAL")) {
-  privateOutputRelativePath = [
-    "data",
-    "private",
-    "trifecta-market-features",
-    date,
-    venueCode,
-    `${String(raceNo).padStart(2, "0")}.json`,
-  ].join("/");
-  const privateOutputPath = resolveInside(rootDir, privateOutputRelativePath);
-  exclusivePrivateWrite(privateOutputPath, `${JSON.stringify({
-    featureArtifactVersion: "n2-trifecta-private-market-feature-artifact-v1",
-    generatedAt: new Date().toISOString(),
-    sourceLoadDigest: report.outputDigest,
-    raceIdentity: report.raceIdentity,
-    status: report.status,
-    sequence: report.sequence,
-    privateResearchOnly: true,
-    publicPublishAuthorized: false,
-    databaseWriteAuthorized: false,
-    currentBuyConnectionAuthorized: false,
-    lineConnectionAuthorized: false,
-    automatedBettingAuthorized: false,
-  }, null, 2)}\n`);
-}
+const writeResult = writePrivate && (report.status === "PASS" || report.status === "PARTIAL")
+  ? writeN2TrifectaPrivateMarketFeatureArtifact({ rootDir, report })
+  : null;
 
 const sanitized = {
-  summaryVersion: "n2-trifecta-private-market-feature-summary-v1",
+  summaryVersion: "n2-trifecta-private-market-feature-summary-v2",
   status: report.status,
   blockers: report.blockers,
   date: report.date,
@@ -93,14 +47,23 @@ const sanitized = {
   missingCheckpoints: report.sequence.missingCheckpoints,
   transitionCount: report.sequence.transitions.length,
   sourceLoadDigest: report.outputDigest,
-  privateOutputWritten: privateOutputRelativePath != null,
-  privateOutputRelativePath,
+  privateOutputRequested: writePrivate,
+  privateOutputEligible: report.status === "PASS" || report.status === "PARTIAL",
+  privateOutputWrittenOrReused: writeResult != null,
+  privateOutputChanged: writeResult?.changed ?? false,
+  privateOutputReplacedExisting: writeResult?.replacedExisting ?? false,
+  privateOutputRelativePath: writeResult?.relativePath ?? null,
+  privateArtifactDigest: writeResult?.artifactDigest ?? null,
   networkRequestCount: 0,
   databaseReadCount: 0,
   databaseWriteCount: 0,
   rawOddsValuesPrinted: false,
   rawOddsValuesPublished: false,
-  publicPublishAuthorized: false,
+  currentBuyChanged: false,
+  lineChanged: false,
+  publicPublished: false,
+  automatedBettingChanged: false,
+  productionApplyExecuted: false,
 };
 console.log(JSON.stringify(sanitized, null, 2));
 if (report.status === "BLOCKED") process.exit(1);
