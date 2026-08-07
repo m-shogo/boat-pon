@@ -1,0 +1,67 @@
+name: Narrow N2 private exploration matrix inputs
+
+on:
+  pull_request:
+    branches: [main]
+    types: [synchronize, reopened]
+    paths:
+      - .github/workflows/n2-exploration-matrix-type-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/n2-trifecta-private-exploration-matrix
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Narrow unknown arrays and counts before indexed comparison
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('src/research-replay/n2TrifectaPrivateMarketExplorationMatrix.ts')
+          text = path.read_text()
+          old = '''  if (!Number.isSafeInteger(manifest.raceCount) || manifest.raceCount !== manifest.races.length) {\n    throw new Error("EXPLORATION_MATRIX_MANIFEST_RACE_COUNT_INVALID");\n  }\n'''
+          new = '''  const manifestRaceCount = manifest.raceCount;\n  if (typeof manifestRaceCount !== "number" || !Number.isSafeInteger(manifestRaceCount)\n    || manifestRaceCount !== manifest.races.length) {\n    throw new Error("EXPLORATION_MATRIX_MANIFEST_RACE_COUNT_INVALID");\n  }\n'''
+          if text.count(old) != 1:
+              raise SystemExit('manifest race count anchor mismatch')
+          text = text.replace(old, new, 1)
+
+          old = '''  if (!Array.isArray(input.race.checkpointCoverage)\n    || input.race.checkpointCoverage.length !== 4\n    || CHECKPOINTS.some((checkpoint, index) => input.race.checkpointCoverage?.[index] !== checkpoint)) {\n    throw new Error("EXPLORATION_MATRIX_RACE_COVERAGE_INVALID");\n  }\n'''
+          new = '''  const checkpointCoverage = input.race.checkpointCoverage;\n  if (!Array.isArray(checkpointCoverage) || checkpointCoverage.length !== 4\n    || CHECKPOINTS.some((checkpoint, index) => checkpointCoverage[index] !== checkpoint)) {\n    throw new Error("EXPLORATION_MATRIX_RACE_COVERAGE_INVALID");\n  }\n'''
+          if text.count(old) != 1:
+              raise SystemExit('manifest checkpoint coverage anchor mismatch')
+          text = text.replace(old, new, 1)
+
+          old = '''  const sequence = artifact.sequence;\n  if (sequence.featureVersion !== N2_TRIFECTA_MARKET_FEATURE_VERSION || sequence.status !== "PASS"\n    || sequence.raceIdentity !== input.race.raceIdentity || !Array.isArray(sequence.blockers) || sequence.blockers.length !== 0\n    || !Array.isArray(sequence.availableCheckpoints) || sequence.availableCheckpoints.length !== 4\n    || CHECKPOINTS.some((checkpoint, index) => sequence.availableCheckpoints?.[index] !== checkpoint)\n    || !Array.isArray(sequence.missingCheckpoints) || sequence.missingCheckpoints.length !== 0\n    || !Array.isArray(sequence.snapshots) || sequence.snapshots.length !== 4\n    || !Array.isArray(sequence.transitions) || sequence.transitions.length !== 3\n    || sequence.privateResearchOnly !== true || sequence.publicPublishAuthorized !== false\n    || sequence.databaseWriteAuthorized !== false || !canonicalDigestMatches(sequence as Record<string, unknown>, "outputDigest")) {\n    throw new Error("EXPLORATION_MATRIX_SEQUENCE_INVALID");\n  }\n'''
+          new = '''  const sequence = artifact.sequence;\n  const availableCheckpoints = sequence.availableCheckpoints;\n  const missingCheckpoints = sequence.missingCheckpoints;\n  const snapshots = sequence.snapshots;\n  const transitions = sequence.transitions;\n  if (sequence.featureVersion !== N2_TRIFECTA_MARKET_FEATURE_VERSION || sequence.status !== "PASS"\n    || sequence.raceIdentity !== input.race.raceIdentity || !Array.isArray(sequence.blockers) || sequence.blockers.length !== 0\n    || !Array.isArray(availableCheckpoints) || availableCheckpoints.length !== 4\n    || CHECKPOINTS.some((checkpoint, index) => availableCheckpoints[index] !== checkpoint)\n    || !Array.isArray(missingCheckpoints) || missingCheckpoints.length !== 0\n    || !Array.isArray(snapshots) || snapshots.length !== 4\n    || !Array.isArray(transitions) || transitions.length !== 3\n    || sequence.privateResearchOnly !== true || sequence.publicPublishAuthorized !== false\n    || sequence.databaseWriteAuthorized !== false || !canonicalDigestMatches(sequence as Record<string, unknown>, "outputDigest")) {\n    throw new Error("EXPLORATION_MATRIX_SEQUENCE_INVALID");\n  }\n'''
+          if text.count(old) != 1:
+              raise SystemExit('sequence narrowing anchor mismatch')
+          text = text.replace(old, new, 1)
+          text = text.replace('snapshot: sequence.snapshots[index] as SnapshotLike,', 'snapshot: snapshots[index] as SnapshotLike,')
+          text = text.replace('transition: sequence.transitions[index] as TransitionLike,', 'transition: transitions[index] as TransitionLike,')
+          path.write_text(text)
+          PY
+      - name: Verify focused matrix tests and typecheck
+        run: |
+          npm ci
+          node --test --import tsx \
+            src/research-replay/n2TrifectaPrivateMarketExplorationMatrix.test.ts \
+            src/automation/n2PrivateMarketExplorationMatrixCliBoundary.test.ts
+          npm run typecheck
+      - name: Commit validated type fix and remove one-shot workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/n2-exploration-matrix-type-fix.yml
+          git add src/research-replay/n2TrifectaPrivateMarketExplorationMatrix.ts
+          git commit -m "fix(research): narrow exploration matrix inputs"
+          git push origin HEAD:feat/n2-trifecta-private-exploration-matrix
