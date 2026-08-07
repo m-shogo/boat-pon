@@ -74,7 +74,14 @@ export function parseOfficialProgramsText(
     const line = toHalfWidth(raw).replace(/\t/g, " ");
 
     const detected = extractVenue(raw);
-    if (detected) venue = detected;
+    if (detected && detected !== venue) {
+      // A venue header belongs to the next block. Flush the previous venue's
+      // final race before mutating venue, otherwise its 12R is attributed to
+      // the following venue and can be lost by downstream upsert/deduplication.
+      flushRace();
+      venue = detected;
+      eventTitle = "";
+    }
 
     const eventMatch = raw.match(/^\s{6,}(.{4,})$/);
     if (eventMatch && !raw.includes("番組表") && !raw.includes("電話投票") && !raw.includes("--------")) {
