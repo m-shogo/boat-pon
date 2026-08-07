@@ -101,3 +101,77 @@ jobs:
           }
           print(json.dumps(summary, indent=2, sort_keys=True))
           PY
+
+      - name: Inspect sanitized tick timeline around post-migration 5R T-5 miss
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import glob, json, os
+          root = "/Users/m-shogo/Developer/personal/boat-pon"
+          report_dir = os.path.join(root, "data/private/trifecta-capture/reports/2026-08-07")
+          start = "2026-08-07T01:09:00.000Z"
+          end = "2026-08-07T01:17:00.000Z"
+          timeline = []
+          for path in sorted(glob.glob(os.path.join(report_dir, "*.json"))):
+              try:
+                  r = json.load(open(path))
+              except Exception:
+                  continue
+              now = r.get("now") or r.get("startedAt") or ""
+              if not (start <= now <= end):
+                  continue
+              selected = r.get("selectedEntry") or None
+              executor = r.get("executorReport") or None
+              executor_summary = None
+              if isinstance(executor, dict):
+                  executor_summary = {
+                      "status": executor.get("status"),
+                      "dueEntryCount": executor.get("dueEntryCount"),
+                      "networkRequestCount": executor.get("networkRequestCount"),
+                      "capturedCount": executor.get("capturedCount"),
+                      "blockedEvidenceCount": executor.get("blockedEvidenceCount"),
+                      "entryResults": [
+                          {
+                              "raceIdentity": e.get("raceIdentity"),
+                              "checkpointLabel": e.get("checkpointLabel"),
+                              "result": e.get("result"),
+                              "blockers": e.get("blockers", []),
+                          }
+                          for e in executor.get("entryResults", [])
+                      ],
+                  }
+              timeline.append({
+                  "now": r.get("now"),
+                  "startedAt": r.get("startedAt"),
+                  "completedAt": r.get("completedAt"),
+                  "status": r.get("status"),
+                  "blockers": r.get("blockers", []),
+                  "selectedVenueCode": r.get("selectedVenueCode"),
+                  "selectedRaceCount": r.get("selectedRaceCount"),
+                  "dailyReservationCountBefore": r.get("dailyReservationCountBefore"),
+                  "dailyReservationCountAfter": r.get("dailyReservationCountAfter"),
+                  "dueEntryCount": r.get("dueEntryCount"),
+                  "selectedEntry": None if not isinstance(selected, dict) else {
+                      "raceIdentity": selected.get("raceIdentity"),
+                      "checkpointLabel": selected.get("checkpointLabel"),
+                      "targetCaptureAt": selected.get("targetCaptureAt"),
+                  },
+                  "executorReport": executor_summary,
+                  "primaryDbMetadataUnchanged": r.get("primaryDbMetadataUnchanged"),
+                  "databaseWriteCount": r.get("databaseWriteCount"),
+                  "currentBuyChanged": r.get("currentBuyChanged"),
+                  "lineChanged": r.get("lineChanged"),
+                  "publicPublished": r.get("publicPublished"),
+                  "automatedBettingChanged": r.get("automatedBettingChanged"),
+              })
+          print(json.dumps({
+              "windowStart": start,
+              "windowEnd": end,
+              "reportCount": len(timeline),
+              "timeline": timeline,
+              "rawOddsValuesRead": False,
+              "databaseReadCount": 0,
+              "networkRequestCount": 0,
+          }, indent=2, sort_keys=True))
+          PY
