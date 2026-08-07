@@ -132,11 +132,19 @@ jobs:
           from pathlib import Path
           src = Path('src/automation/researchDurableKnowledgeCompleteness.ts')
           text = src.read_text()
-          old = '      historyRelativeDir: HISTORY_RELATIVE_DIR,\n'
-          count = text.count(old)
-          if count < 1:
-              raise SystemExit('no remaining historyRelativeDir literal to narrow')
-          src.write_text(text.replace(old, '      historyRelativeDir: HISTORY_RELATIVE_DIR as typeof HISTORY_RELATIVE_DIR,\n'))
+          patterns = [
+            '      historyRelativeDir: HISTORY_RELATIVE_DIR,\n',
+            '    historyRelativeDir: HISTORY_RELATIVE_DIR,\n',
+          ]
+          changed = 0
+          for old in patterns:
+            count = text.count(old)
+            if count:
+              text = text.replace(old, old.replace('HISTORY_RELATIVE_DIR,', 'HISTORY_RELATIVE_DIR as typeof HISTORY_RELATIVE_DIR,'))
+              changed += count
+          if changed < 1:
+            raise SystemExit('no remaining historyRelativeDir literal to narrow')
+          src.write_text(text)
           test = Path('src/automation/researchDurableKnowledgeCompleteness.test.ts')
           t = test.read_text().replace(
             'buildResearchDurableKnowledgeCompletenessReport({ rootDir: root } as never)',
