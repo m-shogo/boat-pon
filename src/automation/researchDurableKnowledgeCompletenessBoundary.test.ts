@@ -53,7 +53,7 @@ test("persisted dry-run and unmarked PASS without outputs cannot be counted as d
 
 test("CLI emits audit metadata only and performs no writes", () => {
   assert.match(cli, /buildResearchDurableKnowledgeCompletenessReport/u);
-  assert.match(cli, /--repo-root/u);
+  assert.match(cli, /argument\("repo-root"\)/u);
   assert.match(cli, /classificationCounts/u);
   assert.match(cli, /historyContentDigest/u);
   assert.match(cli, /automaticPromotionAuthorized/u);
