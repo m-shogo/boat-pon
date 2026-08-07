@@ -1,0 +1,252 @@
+name: Audit Omura 12R 20260807
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - .github/workflows/audit-omura-12r-20260807.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: audit-omura-12r-20260807
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Restrict one-shot audit
+        env:
+          ACTOR: ${{ github.actor }}
+          REPO: ${{ github.repository }}
+          EVENT: ${{ github.event_name }}
+          HEAD_REF: ${{ github.head_ref }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          [ "$REPO" = "m-shogo/boat-pon" ]
+          [ "$ACTOR" = "m-shogo" ]
+          [ "$EVENT" = "pull_request" ]
+          [ "$HEAD_REF" = "ops/audit-omura-12r-20260807" ]
+          [ "$BASE_REF" = "main" ]
+
+  audit:
+    needs: guard
+    runs-on: [self-hosted, macOS, boat-pon-local]
+    timeout-minutes: 15
+    steps:
+      - name: Verify canonical reviewed main
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Users/m-shogo/Developer/personal/boat-pon"
+          TARGET="6e297602ff34d6cc853ff0e7088ae5a3e56fcfb7"
+          cd "$ROOT"
+          [ "$(git branch --show-current)" = "main" ]
+          [ "$(git rev-parse HEAD)" = "$TARGET" ]
+          [ -z "$(git status --porcelain)" ]
+
+      - name: Compare read-only DB, cached archive, and one fresh official archive request
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "/Users/m-shogo/Developer/personal/boat-pon"
+          node --import tsx --input-type=module <<'NODE'
+          import { createHash } from "node:crypto";
+          import { execFileSync } from "node:child_process";
+          import {
+            existsSync,
+            mkdtempSync,
+            readFileSync,
+            rmSync,
+            statSync,
+            writeFileSync,
+          } from "node:fs";
+          import { tmpdir } from "node:os";
+          import { join, resolve } from "node:path";
+          import { DatabaseSync } from "node:sqlite";
+          import { officialVenueCode } from "./src/domain/officialLinks.ts";
+          import { parseOfficialProgramsText } from "./src/domain/officialProgramParser.ts";
+          import { summarizeOfficialProgramDayInventory } from "./src/domain/officialProgramRefreshPolicy.ts";
+
+          const DATE = "2026-08-07";
+          const YYMMDD = "260807";
+          const ROOT = "/Users/m-shogo/Developer/personal/boat-pon";
+          const DB_PATH = join(ROOT, "data/boat.sqlite");
+          const CACHED_ARCHIVE = join(ROOT, "data/raw/official/programs", `b${YYMMDD}.lzh`);
+          const MAX_BYTES = 20_000_000;
+          const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
+          const missing = (raceNos) => Array.from({ length: 12 }, (_, i) => i + 1).filter((n) => !raceNos.includes(n));
+          const half = (s) => s
+            .replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0))
+            .replace(/Ｒ/g, "R")
+            .replace(/：/g, ":");
+
+          function extractText(archivePath, workRoot) {
+            const out = join(workRoot, `extract-${Math.random().toString(16).slice(2)}`);
+            execFileSync("mkdir", ["-p", out]);
+            execFileSync("unar", ["-q", "-o", out, "-f", archivePath]);
+            const txt = join(out, `B${YYMMDD}.TXT`);
+            if (!existsSync(txt)) throw new Error("EXTRACTED_TEXT_MISSING");
+            return new TextDecoder("shift_jis").decode(readFileSync(txt));
+          }
+
+          function rawOmuraEvidence(text) {
+            const lines = text.split(/\r?\n/);
+            let start = -1;
+            for (let i = 0; i < lines.length; i += 1) {
+              const compact = lines[i].replace(/[\s　]/g, "");
+              if (compact.includes("ボートレース大村") || compact.includes("大村競艇場")) {
+                start = i;
+                break;
+              }
+            }
+            if (start < 0) return { sectionFound: false, headerRaceNos: [], closeDeadlineRaceNos: [] };
+            let end = lines.length;
+            for (let i = start + 1; i < lines.length; i += 1) {
+              const compact = lines[i].replace(/[\s　]/g, "");
+              if (compact.includes("ボートレース") && !compact.includes("ボートレース大村")) {
+                end = i;
+                break;
+              }
+            }
+            const headerRaceNos = [];
+            const closeDeadlineRaceNos = [];
+            let pendingRaceNo = null;
+            for (const raw of lines.slice(start, end)) {
+              const line = half(raw).replace(/\t/g, " ");
+              const header = line.match(/^[\s 　]*(\d{1,2})R\s+/);
+              if (header) {
+                pendingRaceNo = Number(header[1]);
+                if (!headerRaceNos.includes(pendingRaceNo)) headerRaceNos.push(pendingRaceNo);
+              }
+              if (pendingRaceNo != null && /電話投票締切予定[\s 　]*\d{1,2}[:：]\s*\d{1,2}/.test(line)) {
+                if (!closeDeadlineRaceNos.includes(pendingRaceNo)) closeDeadlineRaceNos.push(pendingRaceNo);
+              }
+            }
+            return {
+              sectionFound: true,
+              headerRaceNos: headerRaceNos.sort((a, b) => a - b),
+              closeDeadlineRaceNos: closeDeadlineRaceNos.sort((a, b) => a - b),
+            };
+          }
+
+          function parsedSummary(text) {
+            const rows = parseOfficialProgramsText(text, { date: DATE });
+            const inventory = summarizeOfficialProgramDayInventory(
+              DATE,
+              rows.map((row) => ({ date: row.date, venue: row.venue, raceNo: row.raceNo })),
+            );
+            const omura = rows.filter((row) => officialVenueCode(row.venue) === "24");
+            const raceNos = [...new Set(omura.map((row) => row.raceNo))].sort((a, b) => a - b);
+            return {
+              totalRows: rows.length,
+              venueCount: inventory.venueCount,
+              structurallyComplete: inventory.structurallyComplete,
+              incompleteVenueCount: inventory.incompleteVenues.length,
+              omura: {
+                raceCount: raceNos.length,
+                raceNos,
+                missingRaceNos: missing(raceNos),
+              },
+            };
+          }
+
+          function dbSummary() {
+            const db = new DatabaseSync(DB_PATH, { readOnly: true });
+            try {
+              db.exec("PRAGMA query_only=ON;");
+              const rows = db.prepare(`
+                SELECT date, venue, race_no AS raceNo
+                FROM official_programs
+                WHERE date = ?
+                ORDER BY venue, race_no
+              `).all(DATE);
+              const inventory = summarizeOfficialProgramDayInventory(DATE, rows);
+              const omura = rows.filter((row) => officialVenueCode(row.venue) === "24");
+              const raceNos = [...new Set(omura.map((row) => Number(row.raceNo)))].sort((a, b) => a - b);
+              return {
+                totalRows: rows.length,
+                venueCount: inventory.venueCount,
+                structurallyComplete: inventory.structurallyComplete,
+                incompleteVenueCount: inventory.incompleteVenues.length,
+                omura: {
+                  raceCount: raceNos.length,
+                  raceNos,
+                  missingRaceNos: missing(raceNos),
+                },
+              };
+            } finally {
+              db.close();
+            }
+          }
+
+          async function freshArchive(workRoot) {
+            const url = "https://www1.mbrace.or.jp/od2/B/202608/b260807.lzh";
+            const response = await fetch(url, {
+              headers: { "user-agent": "BoatPon/0.1 personal low-frequency readiness audit" },
+              signal: AbortSignal.timeout(15_000),
+            });
+            if (!response.ok) throw new Error(`FRESH_HTTP_${response.status}`);
+            const declared = Number(response.headers.get("content-length"));
+            if (Number.isFinite(declared) && declared > MAX_BYTES) throw new Error("FRESH_DECLARED_TOO_LARGE");
+            const bytes = Buffer.from(await response.arrayBuffer());
+            if (bytes.length <= 0 || bytes.length > MAX_BYTES) throw new Error("FRESH_SIZE_INVALID");
+            const method = bytes.subarray(2, 7).toString("ascii");
+            if (!/^-lh[0-9d]-$/u.test(method)) throw new Error("FRESH_LZH_HEADER_INVALID");
+            const path = join(workRoot, "fresh.lzh");
+            writeFileSync(path, bytes, { mode: 0o600 });
+            return { path, bytes, sha256: sha256(bytes) };
+          }
+
+          const workRoot = mkdtempSync(join(tmpdir(), "boat-pon-omura-audit-"));
+          try {
+            if (!existsSync(CACHED_ARCHIVE)) throw new Error("CACHED_ARCHIVE_MISSING");
+            const cachedBytes = readFileSync(CACHED_ARCHIVE);
+            const cachedText = extractText(CACHED_ARCHIVE, workRoot);
+            const fresh = await freshArchive(workRoot);
+            const freshText = extractText(fresh.path, workRoot);
+            const db = dbSummary();
+            const cachedParsed = parsedSummary(cachedText);
+            const freshParsed = parsedSummary(freshText);
+            const cachedRaw = rawOmuraEvidence(cachedText);
+            const freshRaw = rawOmuraEvidence(freshText);
+            const walPath = `${DB_PATH}-wal`;
+            const report = {
+              reportVersion: "official-program-omura-12r-audit-v1",
+              status: "PASS",
+              date: DATE,
+              officialRequestCount: 1,
+              databaseReadOnly: true,
+              databaseWriteCount: 0,
+              primaryDbWalBytesObserved: existsSync(walPath) ? statSync(walPath).size : 0,
+              db,
+              cachedArchive: {
+                bytes: cachedBytes.length,
+                sha256: sha256(cachedBytes),
+                parsed: cachedParsed,
+                rawOmuraEvidence: cachedRaw,
+              },
+              freshArchive: {
+                bytes: fresh.bytes.length,
+                sha256: fresh.sha256,
+                sameAsCached: fresh.sha256 === sha256(cachedBytes),
+                parsed: freshParsed,
+                rawOmuraEvidence: freshRaw,
+              },
+              rawProgramTextPrinted: false,
+              currentBuyChanged: false,
+              lineChanged: false,
+              publicPublished: false,
+              automatedBettingChanged: false,
+              productionApplyExecuted: false,
+            };
+            console.log(JSON.stringify(report, null, 2));
+          } finally {
+            rmSync(workRoot, { recursive: true, force: true });
+          }
+          NODE
