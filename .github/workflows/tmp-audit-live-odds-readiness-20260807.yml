@@ -1,0 +1,197 @@
+name: Temporary audit live odds readiness 2026-08-07
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/tmp-audit-live-odds-readiness-20260807.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tmp-audit-live-odds-readiness-20260807
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: [self-hosted, macOS]
+    timeout-minutes: 15
+    env:
+      CANONICAL_REPO: /Users/m-shogo/Developer/personal/boat-pon
+      NODE_BIN: /Users/m-shogo/.local/share/mise/installs/node/24/bin/node
+      ODDS_AGENT_LABEL: com.boatpon.trifecta-private-capture
+      PROGRAM_PLIST: /Users/m-shogo/Library/LaunchAgents/com.boatpon.daily-programs.plist
+    steps:
+      - name: Read-only live readiness audit
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        run: |
+          set -euo pipefail
+          test -x "$NODE_BIN"
+          test -d "$CANONICAL_REPO/.git"
+          export DATE_JST="$(TZ=Asia/Tokyo date '+%Y-%m-%d')"
+          export NOW_JST="$(TZ=Asia/Tokyo date '+%Y-%m-%dT%H:%M:%S%z')"
+          export ODDS_LAUNCHD_REGISTERED=false
+          if /bin/launchctl print "gui/$(id -u)/$ODDS_AGENT_LABEL" >/dev/null 2>&1; then
+            export ODDS_LAUNCHD_REGISTERED=true
+          fi
+
+          "$NODE_BIN" <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const { DatabaseSync } = require('node:sqlite');
+
+          const root = process.env.CANONICAL_REPO;
+          const date = process.env.DATE_JST;
+          const nowMs = Date.now();
+          const dbPath = path.join(root, 'data/boat.sqlite');
+          const authPath = path.join(root, 'data/private/trifecta-capture/authorization.json');
+          const bindingPath = path.join(root, 'data/private/trifecta-capture/runtime-authority.json');
+          const captureRoot = path.join(root, 'data/raw/research/trifecta-market', date);
+          const programPlistPath = process.env.PROGRAM_PLIST;
+
+          function safeJson(file) {
+            try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return null; }
+          }
+          function fileMeta(file) {
+            try {
+              const s = fs.statSync(file);
+              return { exists: true, bytes: s.size, modifiedAt: s.mtime.toISOString() };
+            } catch { return { exists: false, bytes: null, modifiedAt: null }; }
+          }
+          function walk(rootDir) {
+            const out = [];
+            if (!fs.existsSync(rootDir)) return out;
+            const stack = [rootDir];
+            while (stack.length) {
+              const dir = stack.pop();
+              for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+                const full = path.join(dir, ent.name);
+                if (ent.isDirectory()) stack.push(full);
+                else out.push(full);
+              }
+            }
+            return out;
+          }
+          function checkpointMs(closeAt, minutes) {
+            const hhmmss = String(closeAt).slice(0, 8);
+            const parts = hhmmss.split(':').map(Number);
+            if (parts.length < 2 || parts.some(Number.isNaN)) return null;
+            const [h, m, s = 0] = parts;
+            const closeMs = Date.parse(`${date}T${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}+09:00`);
+            return Number.isFinite(closeMs) ? closeMs - minutes * 60_000 : null;
+          }
+
+          const dbBefore = fileMeta(dbPath);
+          const db = new DatabaseSync(dbPath, { readOnly: true });
+          db.exec('PRAGMA query_only = ON');
+          const rows = db.prepare(`
+            SELECT venue, race_no AS raceNo, close_at AS closeAt, imported_at AS importedAt
+            FROM official_programs
+            WHERE date = ?
+            ORDER BY venue, race_no
+          `).all(date);
+          db.close();
+          const dbAfter = fileMeta(dbPath);
+
+          const byVenue = new Map();
+          for (const row of rows) {
+            const key = String(row.venue);
+            const v = byVenue.get(key) ?? { raceNos: [], closes: [], importedAt: [], futureCheckpoints: 0 };
+            v.raceNos.push(Number(row.raceNo));
+            v.closes.push(String(row.closeAt));
+            v.importedAt.push(String(row.importedAt));
+            for (const mins of [30,20,10,5]) {
+              const ts = checkpointMs(row.closeAt, mins);
+              if (ts != null && ts > nowMs) v.futureCheckpoints += 1;
+            }
+            byVenue.set(key, v);
+          }
+          const venues = [...byVenue.entries()].map(([venue, v]) => {
+            const raceNos = [...new Set(v.raceNos)].sort((a,b)=>a-b);
+            const missing = Array.from({length:12},(_,i)=>i+1).filter(n=>!raceNos.includes(n));
+            return {
+              venue,
+              raceCount: raceNos.length,
+              missingRaceNos: missing,
+              earliestClose: [...v.closes].sort()[0] ?? null,
+              latestClose: [...v.closes].sort().at(-1) ?? null,
+              latestImportedAt: [...v.importedAt].sort().at(-1) ?? null,
+              futureCheckpointCount: v.futureCheckpoints,
+            };
+          }).sort((a,b)=>a.venue.localeCompare(b.venue,'ja'));
+
+          const auth = safeJson(authPath);
+          const binding = safeJson(bindingPath);
+          const files = walk(captureRoot);
+          const accepted = files.filter(f => path.basename(f) === 'accepted.json');
+          const envelopes = files.filter(f => path.basename(f) === 'envelope.json');
+          const rawHtml = files.filter(f => /\.html$/iu.test(path.basename(f)));
+          const blocked = files.filter(f => /blocked.*\.json$/iu.test(path.basename(f)));
+          const acceptedByCheckpoint = {};
+          for (const f of accepted) {
+            const parts = path.relative(captureRoot, f).split(path.sep);
+            const checkpoint = parts.at(-2) ?? 'unknown';
+            acceptedByCheckpoint[checkpoint] = (acceptedByCheckpoint[checkpoint] ?? 0) + 1;
+          }
+
+          let programSchedule = [];
+          if (fs.existsSync(programPlistPath)) {
+            const xml = fs.readFileSync(programPlistPath, 'utf8');
+            const matches = [...xml.matchAll(/<key>Hour<\/key>\s*<integer>(\d+)<\/integer>\s*<key>Minute<\/key>\s*<integer>(\d+)<\/integer>/gu)];
+            programSchedule = matches.map(m => `${m[1].padStart(2,'0')}:${m[2].padStart(2,'0')}`);
+          }
+
+          const result = {
+            evidenceSchemaVersion: 'live-odds-readiness-audit-v1',
+            status: 'READ_ONLY_AUDIT',
+            dateJst: date,
+            nowJst: process.env.NOW_JST,
+            canonicalRepo: {
+              branch: require('node:child_process').execFileSync('git',['-C',root,'branch','--show-current'],{encoding:'utf8'}).trim(),
+              head: require('node:child_process').execFileSync('git',['-C',root,'rev-parse','HEAD'],{encoding:'utf8'}).trim(),
+              dirty: require('node:child_process').execFileSync('git',['-C',root,'status','--porcelain'],{encoding:'utf8'}).trim() !== '',
+            },
+            officialPrograms: {
+              rowCount: rows.length,
+              venueCount: venues.length,
+              structurallyComplete: venues.length > 0 && venues.every(v => v.missingRaceNos.length === 0),
+              futureCheckpointCount: venues.reduce((n,v)=>n+v.futureCheckpointCount,0),
+              venues,
+            },
+            dailyProgramLaunchd: {
+              plistExists: fs.existsSync(programPlistPath),
+              configuredTimes: programSchedule,
+            },
+            privateOddsCollector: {
+              launchdRegistered: process.env.ODDS_LAUNCHD_REGISTERED === 'true',
+              authorizationPresent: Boolean(auth),
+              authorizationExpiresAt: auth?.expiresAt ?? null,
+              stage: auth?.stage ?? null,
+              maxRequestsPerDay: auth?.maxRequestsPerDay ?? null,
+              checkpoints: auth?.checkpointLabels ?? null,
+              runtimeBindingPresent: Boolean(binding),
+              authoritySha: binding?.authoritySha ?? null,
+              runtimeRootBound: typeof binding?.runtimeRoot === 'string',
+            },
+            privateCaptureToday: {
+              acceptedCount: accepted.length,
+              envelopeCount: envelopes.length,
+              rawHtmlCount: rawHtml.length,
+              blockedEvidenceCount: blocked.length,
+              acceptedByCheckpoint,
+              rawValuesRead: false,
+              rawUploadedOrPublished: false,
+            },
+            database: {
+              readOnly: true,
+              queryOnly: true,
+              metadataUnchanged: JSON.stringify(dbBefore) === JSON.stringify(dbAfter),
+              writeCount: 0,
+            },
+          };
+          console.log('SANITIZED_LIVE_ODDS_READINESS_BEGIN');
+          console.log(JSON.stringify(result, null, 2));
+          console.log('SANITIZED_LIVE_ODDS_READINESS_END');
+          if (!result.database.metadataUnchanged) process.exit(1);
+          NODE
