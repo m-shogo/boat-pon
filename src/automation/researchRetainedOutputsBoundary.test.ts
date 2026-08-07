@@ -17,6 +17,16 @@ test("retained outputs are content-addressed under reports automation only", () 
   assert.doesNotMatch(retained, /send-line|notify|auto_purchase|auto_vote|production_writer|live_odds_writer/u);
 });
 
+test("retained output materialization is validate-first, rollback-bounded and deduplicated", () => {
+  assert.match(retained, /Phase 1: classify and validate every source before creating any retained file/u);
+  assert.match(retained, /Phase 2: materialize only after every source\/target has been validated/u);
+  assert.match(retained, /preparedByRetainedPath/u);
+  assert.match(retained, /historyOutputSet/u);
+  assert.match(retained, /created\.reverse\(\)/u);
+  assert.match(retained, /unlinkSync\(path\)/u);
+  assert.match(retained, /RETAINED_OUTPUT_TARGET_COLLISION/u);
+});
+
 test("registries remain original append-only evidence instead of being downgraded to copies", () => {
   assert.match(retained, /PASSTHROUGH_IMMUTABLE_ROOTS/u);
   assert.match(retained, /research\/registries\//u);
@@ -27,17 +37,27 @@ test("durable scanner verifies retained path content hash", () => {
   assert.match(scanner, /"RETAINED"/u);
   assert.match(scanner, /RETAINED_CONTENT_DIGEST_VERIFIED/u);
   assert.match(scanner, /DURABLE_RETAINED_CONTENT_DIGEST_MISMATCH/u);
+  assert.match(scanner, /DURABLE_RETAINED_HISTORY_DIGEST_MISMATCH/u);
   assert.match(scanner, /reports\/automation\/retained-outputs/u);
 });
 
-test("runner retains executor outputs before terminal state and history write", () => {
-  assert.match(runner, /retainExecutorOutputs/u);
-  const retainIndex = runner.indexOf("retainExecutorOutputs");
+test("runner calls retention after executor result validation and before terminal state/history write", () => {
   const resultStateIndex = runner.indexOf("// ---- 結果を state へ反映 ----");
-  const historyWriteIndex = runner.indexOf("writeJsonAtomic(join(HISTORY_DIR", resultStateIndex);
-  assert.ok(retainIndex >= 0);
+  const retainCallIndex = runner.indexOf("retainExecutorOutputs({", resultStateIndex);
+  const terminalAttemptsIndex = runner.indexOf("const attempts = state.tasks[task.taskId]?.attemptCount", resultStateIndex);
+  const historyWriteIndex = runner.indexOf("writeJsonAtomic(join(HISTORY_DIR", terminalAttemptsIndex);
   assert.ok(resultStateIndex >= 0);
-  assert.ok(historyWriteIndex > resultStateIndex);
+  assert.ok(retainCallIndex > resultStateIndex);
+  assert.ok(terminalAttemptsIndex > retainCallIndex);
+  assert.ok(historyWriteIndex > terminalAttemptsIndex);
   assert.match(runner, /DURABLE_OUTPUT_RETENTION_FAILED/u);
   assert.match(runner, /historyOutputs/u);
+});
+
+test("retention failure is fail-closed through the durable failure-history contract", () => {
+  assert.match(runner, /buildResearchAutomationFailureHistory/u);
+  assert.match(runner, /failureCode:\s*retentionBlock/u);
+  assert.match(runner, /finalTaskStatus:\s*"BLOCKED"/u);
+  assert.match(runner, /authoritySha:\s*git\("rev-parse", request\.authoritySha\)/u);
+  assert.match(runner, /evidenceLinks:.*retentionEvidencePath.*exec\.outputs/u);
 });
