@@ -190,10 +190,14 @@ function readDayIndex(input: {
     if (!Number.isSafeInteger(raceNo) || raceNo < 1 || raceNo > 12) throw new Error("DAY_INDEX_PASS_RACE_NO_INVALID");
     const expectedRaceIdentity = `${input.scope.date.replaceAll("-", "")}-${input.scope.venueCode}-${String(raceNo).padStart(2, "0")}`;
     if (rawRace.raceIdentity !== expectedRaceIdentity) throw new Error("DAY_INDEX_PASS_RACE_IDENTITY_INVALID");
-    if (!Array.isArray(rawRace.availableCheckpoints)
-      || rawRace.availableCheckpoints.length !== 4
-      || CHECKPOINTS.some((checkpoint, indexValue) => rawRace.availableCheckpoints?.[indexValue] !== checkpoint)
-      || !Array.isArray(rawRace.missingCheckpoints) || rawRace.missingCheckpoints.length !== 0) {
+    const availableCheckpoints = rawRace.availableCheckpoints;
+    const missingCheckpoints = rawRace.missingCheckpoints;
+    if (!Array.isArray(availableCheckpoints) || !Array.isArray(missingCheckpoints)) {
+      throw new Error("DAY_INDEX_PASS_COVERAGE_INVALID");
+    }
+    if (availableCheckpoints.length !== 4
+      || CHECKPOINTS.some((checkpoint, indexValue) => availableCheckpoints[indexValue] !== checkpoint)
+      || missingCheckpoints.length !== 0) {
       throw new Error("DAY_INDEX_PASS_COVERAGE_INVALID");
     }
     if (typeof rawRace.sourceLoadDigest !== "string" || !/^[0-9a-f]{64}$/u.test(rawRace.sourceLoadDigest)) {
