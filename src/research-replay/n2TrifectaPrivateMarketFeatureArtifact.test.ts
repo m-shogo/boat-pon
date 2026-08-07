@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  chmodSync,
   mkdtempSync,
   mkdirSync,
   readFileSync,
@@ -105,7 +106,7 @@ test("a later source digest atomically replaces an earlier derived PARTIAL artif
   });
 });
 
-test("the same source digest is idempotent and does not rewrite the derived artifact", () => {
+test("the same valid source digest is idempotent and does not rewrite the derived artifact", () => {
   withRoot((root) => {
     const first = writeN2TrifectaPrivateMarketFeatureArtifact({
       rootDir: root,
@@ -126,19 +127,48 @@ test("the same source digest is idempotent and does not rewrite the derived arti
   });
 });
 
+test("the same source digest rebuilds a tampered or overly permissive derived artifact", () => {
+  withRoot((root) => {
+    const source = report({ status: "PASS", digest: "d".repeat(64) });
+    const first = writeN2TrifectaPrivateMarketFeatureArtifact({
+      rootDir: root,
+      report: source,
+      generatedAt: "2026-08-07T02:00:00.000Z",
+    });
+    const path = join(root, first.relativePath);
+    const tampered = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
+    tampered.publicPublishAuthorized = true;
+    writeFileSync(path, `${JSON.stringify(tampered, null, 2)}\n`, "utf8");
+    chmodSync(path, 0o644);
+
+    const repaired = writeN2TrifectaPrivateMarketFeatureArtifact({
+      rootDir: root,
+      report: source,
+      generatedAt: "2026-08-07T02:30:00.000Z",
+    });
+    assert.equal(repaired.changed, true);
+    assert.equal(repaired.replacedExisting, true);
+    assert.equal(statSync(path).mode & 0o777, 0o600);
+    const value = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
+    assert.equal(value.publicPublishAuthorized, false);
+    assert.equal(value.generatedAt, "2026-08-07T02:30:00.000Z");
+    assert.equal(value.sourceLoadDigest, source.outputDigest);
+  });
+});
+
 test("writer rejects non-research statuses and unsafe existing targets", () => {
   withRoot((root) => {
     assert.throws(
       () => writeN2TrifectaPrivateMarketFeatureArtifact({
         rootDir: root,
-        report: report({ status: "NO_DATA", digest: "d".repeat(64) }),
+        report: report({ status: "NO_DATA", digest: "e".repeat(64) }),
       }),
       /PRIVATE_FEATURE_ARTIFACT_REQUIRES_PASS_OR_PARTIAL/u,
     );
     assert.throws(
       () => writeN2TrifectaPrivateMarketFeatureArtifact({
         rootDir: root,
-        report: report({ status: "BLOCKED", digest: "e".repeat(64) }),
+        report: report({ status: "BLOCKED", digest: "f".repeat(64) }),
       }),
       /PRIVATE_FEATURE_ARTIFACT_REQUIRES_PASS_OR_PARTIAL/u,
     );
@@ -156,7 +186,7 @@ test("writer rejects non-research statuses and unsafe existing targets", () => {
     assert.throws(
       () => writeN2TrifectaPrivateMarketFeatureArtifact({
         rootDir: root,
-        report: report({ status: "PASS", digest: "f".repeat(64) }),
+        report: report({ status: "PASS", digest: "0".repeat(64) }),
       }),
       /PRIVATE_FEATURE_EXISTING_FILE_TYPE_INVALID/u,
     );
