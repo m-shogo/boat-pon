@@ -86,3 +86,43 @@ test("different sources converging to the same retained target are deduplicated"
     assert.match(result.historyOutputs[0] ?? "", /^reports\/automation\/retained-outputs\/12345\/[0-9a-f]{64}-example\.json$/u);
   });
 });
+
+test("unique executor output path count is bounded before filesystem reads", () => {
+  withRoot((root) => {
+    const outputs = Array.from({ length: 65 }, (_, index) => `reports/n2/out-${index}.json`);
+    assert.throws(
+      () => retainExecutorOutputs({ repoRoot: root, runId: "12345", outputPaths: outputs }),
+      /RETAINED_OUTPUT_COUNT_EXCEEDED:65>64/u,
+    );
+    assert.equal(existsSync(join(root, "reports/automation/retained-outputs/12345")), false);
+  });
+});
+
+test("duplicate source paths do not consume the output-count budget twice", () => {
+  withRoot((root) => {
+    const source = "reports/n2/example.json";
+    put(root, source, JSON.stringify({ outputDigest: "f".repeat(64) }) + "\n");
+    const result = retainExecutorOutputs({
+      repoRoot: root,
+      runId: "12345",
+      outputPaths: Array.from({ length: 100 }, () => source),
+    });
+    assert.equal(result.historyOutputs.length, 1);
+  });
+});
+
+test("aggregate retained byte budget is checked before materialization", () => {
+  withRoot((root) => {
+    const outputs: string[] = [];
+    for (let index = 0; index < 5; index += 1) {
+      const source = `reports/n2/large-${index}.txt`;
+      put(root, source, `${String(index)}${"x".repeat(1_799_999)}`);
+      outputs.push(source);
+    }
+    assert.throws(
+      () => retainExecutorOutputs({ repoRoot: root, runId: "12345", outputPaths: outputs }),
+      /RETAINED_OUTPUT_TOTAL_BYTES_EXCEEDED/u,
+    );
+    assert.equal(existsSync(join(root, "reports/automation/retained-outputs/12345")), false);
+  });
+});
