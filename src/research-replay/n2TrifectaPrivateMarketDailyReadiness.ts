@@ -151,13 +151,19 @@ function readVerifiedDayIndex(input: {
     throw new Error("DAILY_READINESS_DAY_INDEX_DIGEST_INVALID");
   }
 
+  const storedDigest = stored.indexDigest;
+const { indexDigest: _storedDigest, ...storedCore } = stored;
+if (canonicalHash(storedCore) !== storedDigest) {
+  throw new Error("DAILY_READINESS_DAY_INDEX_DIGEST_MISMATCH");
+}
+
   const rebuilt = buildN2TrifectaPrivateMarketFeatureDayIndex({
     rootDir: input.dataRoot,
     date: input.date,
     venueCode: input.venueCode,
     generatedAt: stored.generatedAt,
   });
-  if (rebuilt.indexDigest !== stored.indexDigest) {
+  if (rebuilt.indexDigest !== storedDigest) {
     throw new Error("DAILY_READINESS_DAY_INDEX_DIGEST_MISMATCH");
   }
   return rebuilt;
