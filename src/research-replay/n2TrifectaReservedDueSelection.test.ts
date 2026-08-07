@@ -78,7 +78,7 @@ function writeJson(root: string, relativePath: string, value: unknown): void {
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
 }
 
-test("already-reserved earliest due checkpoint does not starve the next unreserved due checkpoint", async () => {
+test("already-reserved earliest due checkpoints do not starve the next unreserved due checkpoint", async () => {
   const root = mkdtempSync(join(tmpdir(), "boat-pon-reserved-due-selection-"));
   try {
     const races = Array.from({ length: 12 }, (_, index) => ({
@@ -107,40 +107,52 @@ test("already-reserved earliest due checkpoint does not starve the next unreserv
     });
     writeN2TrifectaPrivateDailyPlanCache({ dataRoot: root, cache });
 
+    const now = "2026-08-07T01:00:30.000Z";
+    const nowMs = Date.parse(now);
     const due = plan.entries
-      .filter((entry) => entry.targetCaptureAt === "2026-08-07T01:00:00.000Z")
-      .sort((left, right) => left.raceNo - right.raceNo);
-    assert.equal(due.length, 2);
-    assert.equal(due[0]?.raceIdentity, "20260807-10-01");
-    assert.equal(due[0]?.checkpointLabel, "T-5");
-    assert.equal(due[1]?.raceIdentity, "20260807-10-02");
-    assert.equal(due[1]?.checkpointLabel, "T-30");
-
-    const first = due[0]!;
-    const auth = authorization();
-    const reservationKey = canonicalHash({
-      authorizationId: auth.authorizationId,
-      raceIdentity: first.raceIdentity,
-      checkpointLabel: first.checkpointLabel,
-      targetCaptureAt: first.targetCaptureAt,
-    });
-    const reservation: N2TrifectaLocalCaptureReservation = {
-      reservationVersion: N2_TRIFECTA_LOCAL_CAPTURE_RESERVATION_VERSION,
-      authorizationId: auth.authorizationId,
-      date: "2026-08-07",
-      venueCode: "10",
-      raceIdentity: first.raceIdentity,
-      checkpointLabel: first.checkpointLabel,
-      targetCaptureAt: first.targetCaptureAt,
-      reservationKey,
-      reservedAt: "2026-08-07T01:00:05.000Z",
-      networkRequestCeiling: 1,
-    };
-    writeJson(
-      root,
-      `data/private/trifecta-capture/reservations/2026-08-07/${reservationKey}.json`,
-      reservation,
+      .filter((entry) => {
+        const targetMs = Date.parse(entry.targetCaptureAt);
+        return targetMs <= nowMs && nowMs <= targetMs + 120_000;
+      })
+      .sort((left, right) => {
+        const target = left.targetCaptureAt.localeCompare(right.targetCaptureAt);
+        if (target !== 0) return target;
+        if (left.raceNo !== right.raceNo) return left.raceNo - right.raceNo;
+        return left.checkpointLabel.localeCompare(right.checkpointLabel);
+      });
+    const desired = due.find(
+      (entry) => entry.raceIdentity === "20260807-10-02" && entry.checkpointLabel === "T-30",
     );
+    assert.ok(desired);
+    const desiredIndex = due.findIndex((entry) => entry.checkpointKey === desired.checkpointKey);
+    assert.ok(desiredIndex > 0, "fixture must have at least one earlier due checkpoint to pre-reserve");
+
+    const auth = authorization();
+    for (const entry of due.slice(0, desiredIndex)) {
+      const reservationKey = canonicalHash({
+        authorizationId: auth.authorizationId,
+        raceIdentity: entry.raceIdentity,
+        checkpointLabel: entry.checkpointLabel,
+        targetCaptureAt: entry.targetCaptureAt,
+      });
+      const reservation: N2TrifectaLocalCaptureReservation = {
+        reservationVersion: N2_TRIFECTA_LOCAL_CAPTURE_RESERVATION_VERSION,
+        authorizationId: auth.authorizationId,
+        date: "2026-08-07",
+        venueCode: "10",
+        raceIdentity: entry.raceIdentity,
+        checkpointLabel: entry.checkpointLabel,
+        targetCaptureAt: entry.targetCaptureAt,
+        reservationKey,
+        reservedAt: "2026-08-07T01:00:05.000Z",
+        networkRequestCeiling: 1,
+      };
+      writeJson(
+        root,
+        `data/private/trifecta-capture/reservations/2026-08-07/${reservationKey}.json`,
+        reservation,
+      );
+    }
 
     let fetchCount = 0;
     const fetcher: N2TrifectaPrivateFetcher = async () => {
@@ -150,7 +162,7 @@ test("already-reserved earliest due checkpoint does not starve the next unreserv
         contentType: "text/html; charset=UTF-8",
         headers: { "content-type": "text/html; charset=UTF-8" },
         rawBytes: Buffer.from(completeOddsHtml(), "utf8"),
-        fetchedAt: "2026-08-07T01:00:30.000Z",
+        fetchedAt: now,
       };
     };
 
@@ -158,16 +170,16 @@ test("already-reserved earliest due checkpoint does not starve the next unreserv
       dataRoot: root,
       primaryDbPath: join(root, "not-used.sqlite"),
       authorization: auth,
-      now: "2026-08-07T01:00:30.000Z",
+      now,
       fetcher,
     });
 
     assert.equal(report.status, "PASS");
-    assert.equal(report.dueEntryCount, 2);
-    assert.equal(report.selectedEntry?.raceIdentity, "20260807-10-02");
-    assert.equal(report.selectedEntry?.checkpointLabel, "T-30");
-    assert.equal(report.dailyReservationCountBefore, 1);
-    assert.equal(report.dailyReservationCountAfter, 2);
+    assert.equal(report.dueEntryCount, due.length);
+    assert.equal(report.selectedEntry?.raceIdentity, desired.raceIdentity);
+    assert.equal(report.selectedEntry?.checkpointLabel, desired.checkpointLabel);
+    assert.equal(report.dailyReservationCountBefore, desiredIndex);
+    assert.equal(report.dailyReservationCountAfter, desiredIndex + 1);
     assert.equal(report.executorReport?.networkRequestCount, 1);
     assert.equal(report.executorReport?.capturedCount, 1);
     assert.equal(fetchCount, 1);
