@@ -1,0 +1,36 @@
+{
+  "reportVersion": "official-program-venue-boundary-parser-validation-v1",
+  "dateObserved": "2026-08-07",
+  "status": "PASS",
+  "incident": {
+    "databaseRowCountBeforeFix": 143,
+    "venueCount": 12,
+    "omuraParsedRaceCountBeforeFix": 11,
+    "omuraMissingRaceNosBeforeFix": [12]
+  },
+  "sourceAudit": {
+    "officialRequestCount": 1,
+    "cachedAndFreshArchiveIdentical": true,
+    "cachedArchiveSha256": "f660fb110a63918274ebfa004177cbc2e077ebc162a3ec8f0a6ca2872e1c36d5",
+    "rawOmuraHeaderRaceNos": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    "rawOmuraCloseDeadlineRaceNos": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    "rawProgramTextPublished": false
+  },
+  "rootCause": "The parser changed venue when the next venue header was encountered before flushing the previous pending final race. The previous venue's 12R could therefore be attributed to the next venue and then disappear through downstream venue/race upsert deduplication.",
+  "fix": {
+    "flushPendingRaceBeforeVenueMutation": true,
+    "resetPerVenueEventTitle": true,
+    "regressionTestAdded": true
+  },
+  "protectedBoundaries": {
+    "networkBehaviorChanged": false,
+    "databaseSchemaChanged": false,
+    "currentBuyChanged": false,
+    "selectorOrModelChanged": false,
+    "decisionHistoryChanged": false,
+    "lineChanged": false,
+    "publicSurfaceChanged": false,
+    "automatedBettingChanged": false,
+    "productionApplyExecuted": false
+  }
+}
