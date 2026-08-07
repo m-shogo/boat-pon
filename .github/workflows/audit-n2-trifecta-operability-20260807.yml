@@ -32,10 +32,11 @@ jobs:
         run: |
           set -euo pipefail
           CANONICAL="/Users/m-shogo/Developer/personal/boat-pon"
-          cd "$CANONICAL"
+          cd "$GITHUB_WORKSPACE"
+          npm ci --silent >/dev/null
           set +e
           BOAT_PON_DATA_ROOT="$CANONICAL" node --import tsx \
-            "$GITHUB_WORKSPACE/scripts/report-n2-trifecta-private-capture-operability.ts" \
+            scripts/report-n2-trifecta-private-capture-operability.ts \
             --date 2026-08-07 \
             > "$RUNNER_TEMP/n2-operability.json"
           cli_status=$?
