@@ -1,4 +1,4 @@
-name: N2 market baseline readiness (post-run)
+name: N2 dormant activation plan (post-run)
 
 on:
   workflow_run:
@@ -9,13 +9,11 @@ permissions:
   contents: read
 
 concurrency:
-  group: boat-pon-n2-market-baseline-readiness
+  group: boat-pon-n2-dormant-activation-plan
   cancel-in-progress: false
 
 jobs:
-  readiness:
-    # Private evidence stays on the canonical Mac data root. This workflow only
-    # emits sanitized counts/status and never mutates queue state or private data.
+  plan:
     if: >-
       github.event.workflow_run.event == 'workflow_dispatch' &&
       github.event.workflow_run.head_branch == 'main' &&
@@ -23,7 +21,7 @@ jobs:
     runs-on: [self-hosted, macOS, boat-pon-local]
     timeout-minutes: 10
     steps:
-      - name: Checkout main readiness authority
+      - name: Checkout main activation authority
         uses: actions/checkout@v4
         with:
           ref: main
@@ -49,56 +47,6 @@ jobs:
 
       - name: Install
         run: npm ci
-
-      - name: Inspect N2 market baseline readiness
-        shell: bash
-        run: |
-          set -euo pipefail
-          set +e
-          node --import tsx scripts/report-n2-market-baseline-readiness.ts \
-            > /tmp/n2-market-baseline-readiness.json
-          RC=$?
-          set -e
-
-          test -s /tmp/n2-market-baseline-readiness.json || {
-            echo "::error::market baseline readiness produced no sanitized summary"
-            exit 1
-          }
-          cat /tmp/n2-market-baseline-readiness.json
-
-          RC="$RC" node - <<'NODE'
-          const fs = require('node:fs');
-          const d = JSON.parse(fs.readFileSync('/tmp/n2-market-baseline-readiness.json', 'utf8'));
-          if (d.n2TaskId !== 'TASK-N2-020') throw new Error('unexpected task id');
-          if (typeof d.n2TaskReady !== 'boolean') throw new Error('n2TaskReady must be boolean');
-          if (!Number.isSafeInteger(d.acceptedT5RaceCount) || d.acceptedT5RaceCount < 0) throw new Error('accepted count invalid');
-          if (!Number.isSafeInteger(d.settledAcceptedT5RaceCount) || d.settledAcceptedT5RaceCount < 0) throw new Error('settled count invalid');
-          if (d.settledAcceptedT5RaceCount > d.acceptedT5RaceCount) throw new Error('settled count exceeds accepted count');
-          for (const key of [
-            'automaticPromotionAuthorized',
-            'currentBuyConnectionAuthorized',
-            'lineConnectionAuthorized',
-            'publicPublishAuthorized',
-            'automatedBettingAuthorized',
-            'productionApplyAuthorized',
-          ]) {
-            if (d[key] !== false) throw new Error(`protected authority changed: ${key}`);
-          }
-          if (d.databaseWriteCount !== 0 || d.networkRequestCount !== 0) throw new Error('readiness widened IO authority');
-          if (d.rawOddsValuesRead !== false || d.rawOddsValuesPrinted !== false || d.rawOddsValuesPublished !== false) {
-            throw new Error('raw odds privacy boundary changed');
-          }
-          if (d.status === 'BLOCKED' && d.n2TaskReady !== false) throw new Error('blocked readiness cannot unlock N2-020');
-          console.log(`readiness_status=${d.status} n2_020_ready=${d.n2TaskReady}`);
-          NODE
-
-          # RC=3 is a fail-closed readiness result (for example active WAL or
-          # evidence-integrity blocker), not a failure of the already-finished
-          # research task. Unexpected execution failures still fail this job.
-          if [ "$RC" -ne 0 ] && [ "$RC" -ne 3 ]; then
-            echo "::error::market baseline readiness execution failed rc=$RC"
-            exit "$RC"
-          fi
 
       - name: Inspect dormant N2 activation plan
         shell: bash
@@ -146,8 +94,6 @@ jobs:
           console.log(`activation_status=${d.status} stage=${d.stage} next_actions=${d.activationActions.length}`);
           NODE
 
-          # CONFLICT is an intentional fail-closed diagnostic, not a mutation
-          # attempt. Unexpected script failures still fail the workflow.
           if [ "$RC" -ne 0 ] && [ "$RC" -ne 3 ]; then
             echo "::error::dormant activation plan execution failed rc=$RC"
             exit "$RC"
