@@ -77,8 +77,7 @@ test("historical rows align to the exact market decision cutoff and become compa
       observationId: `obs-${historicalRow.canonicalRaceKey}-${historicalRow.betSelection}`,
       rawDocumentId: `raw-${historicalRow.canonicalRaceKey}`,
     });
-    assert.equal(built.status, "built");
-    if (built.status !== "built") throw new Error(built.errors.join(","));
+    if (built.status !== "built") assert.fail(built.errors.join(","));
     return built.row;
   });
   const comparison = compareN2BaselinesOnCommonCohort({
