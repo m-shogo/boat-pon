@@ -1,0 +1,193 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import { canonicalHash } from "./canonical";
+import type { N2EdgeHistoricalConfirmationResult } from "./n2EdgeHistoricalConfirmation";
+import type { N2EdgeHoldoutDistributionEvidenceReport } from "./n2EdgeHoldoutDistributionEvidence";
+import { buildN2ConfounderDistributionBridge } from "./n2ConfounderDistributionBridge";
+
+function splitResult(split: "validation" | "test") {
+  return {
+    split,
+    uniqueRaceCount: 220,
+    meanResidual: 0.02,
+    standardError: 0.002,
+    zScore: 10,
+    rawPValue: 1e-8,
+    holmAdjustedPValue: 1e-8,
+    supportSufficient: true,
+    effectSufficient: true,
+    directionMatchesDiscovery: true,
+    statisticallyConfirmed: true,
+  };
+}
+
+function confirmation(
+  hypothesisId: string,
+  verdict: N2EdgeHistoricalConfirmationResult["verdict"] = "HISTORICAL_CONFIRMED",
+): N2EdgeHistoricalConfirmationResult {
+  return {
+    hypothesisId,
+    featureKey: "firstCourse",
+    bucket: "1",
+    discoveryDirection: "underpredicted",
+    validation: splitResult("validation"),
+    test: splitResult("test"),
+    verdict,
+  };
+}
+
+function evidence(input: {
+  hypothesisId?: string;
+  validationRaceCount?: number;
+  testRaceCount?: number;
+  validationVenueCount?: number;
+  testVenueCount?: number;
+  validationMaxVenueShare?: number;
+  testMaxVenueShare?: number;
+  validationYearCount?: number;
+  testYearCount?: number;
+  validationMaxYearShare?: number;
+  testMaxYearShare?: number;
+} = {}): N2EdgeHoldoutDistributionEvidenceReport {
+  const hypothesisId = input.hypothesisId ?? "H-A";
+  const validationRaceCount = input.validationRaceCount ?? 220;
+  const testRaceCount = input.testRaceCount ?? 220;
+  const core = {
+    evidenceVersion: "n2-edge-holdout-distribution-evidence-v1" as const,
+    status: "PASS" as const,
+    blockers: [] as string[],
+    lockedHypothesisCount: 1,
+    inputRaceCount: validationRaceCount + testRaceCount,
+    validationInputRaceCount: validationRaceCount,
+    testInputRaceCount: testRaceCount,
+    hypotheses: [{
+      hypothesisId,
+      validation: {
+        split: "validation" as const,
+        uniqueRaceCount: validationRaceCount,
+        distinctVenueCount: input.validationVenueCount ?? 17,
+        maxVenueRaceCount: 14,
+        maxVenueShare: input.validationMaxVenueShare ?? 14 / validationRaceCount,
+        distinctYearCount: input.validationYearCount ?? 2,
+        maxYearRaceCount: 120,
+        maxYearShare: input.validationMaxYearShare ?? 120 / validationRaceCount,
+      },
+      test: {
+        split: "test" as const,
+        uniqueRaceCount: testRaceCount,
+        distinctVenueCount: input.testVenueCount ?? 17,
+        maxVenueRaceCount: 14,
+        maxVenueShare: input.testMaxVenueShare ?? 14 / testRaceCount,
+        distinctYearCount: input.testYearCount ?? 2,
+        maxYearRaceCount: 120,
+        maxYearShare: input.testMaxYearShare ?? 120 / testRaceCount,
+      },
+    }],
+    privacy: {
+      raceKeysPersisted: false as const,
+      venueCodesPersisted: false as const,
+      yearsPersisted: false as const,
+      perRaceResidualsPersisted: false as const,
+    },
+    authority: {
+      confirmationVerdictChanged: false as const,
+      rejectionRescueAuthorized: false as const,
+      automaticPromotionAuthorized: false as const,
+      forwardLabelsUsed: false as const,
+      currentBuyConnectionAuthorized: false as const,
+      lineConnectionAuthorized: false as const,
+      publicPublishAuthorized: false as const,
+      automatedBettingAuthorized: false as const,
+      productionApplyAuthorized: false as const,
+    },
+  };
+  return { ...core, outputDigest: canonicalHash(core) };
+}
+
+test("missing aggregate evidence keeps confirmed hypotheses blocked without changing verdict", () => {
+  const report = buildN2ConfounderDistributionBridge({
+    confirmationResults: [confirmation("H-A")],
+    distributionEvidence: null,
+  });
+  assert.equal(report.status, "PASS");
+  assert.equal(report.evidenceMode, "aggregate_distribution_missing");
+  assert.equal(report.confirmedBlockedByMissingDistributionCount, 1);
+  assert.equal(report.confounderFlags.length, 1);
+  assert.equal(report.confounderFlags[0].flagId, "distribution-concentration-evidence-missing-v1");
+  assert.equal(report.authority.historicalVerdictChanged, false);
+  assert.equal(report.authority.automaticPromotionAuthorized, false);
+});
+
+test("well-distributed confirmed hypothesis has no blocking concentration flag but still no promotion authority", () => {
+  const report = buildN2ConfounderDistributionBridge({
+    confirmationResults: [confirmation("H-A")],
+    distributionEvidence: evidence(),
+  });
+  assert.equal(report.status, "PASS");
+  assert.equal(report.policy?.status, "PASS");
+  assert.equal(report.confirmedWithoutBlockingConcentrationCount, 1);
+  assert.equal(report.confirmedBlockedByConcentrationCount, 0);
+  assert.deepEqual(report.confounderFlags, []);
+  assert.equal(report.authority.automaticPromotionAuthorized, false);
+});
+
+test("pre-registered concentration failure becomes a blocking confounder", () => {
+  const report = buildN2ConfounderDistributionBridge({
+    confirmationResults: [confirmation("H-A")],
+    distributionEvidence: evidence({ validationVenueCount: 8, validationMaxVenueShare: 0.2 }),
+  });
+  assert.equal(report.status, "PASS");
+  assert.equal(report.confirmedBlockedByConcentrationCount, 1);
+  assert.equal(report.confounderFlags.length, 1);
+  assert.equal(report.confounderFlags[0].flagId, "holdout-distribution-concentration-v1");
+  assert.match(report.confounderFlags[0].detail, /VENUE_BREADTH/u);
+});
+
+test("distribution support below 200 blocks as insufficient evidence, not historical rejection", () => {
+  const report = buildN2ConfounderDistributionBridge({
+    confirmationResults: [confirmation("H-A")],
+    distributionEvidence: evidence({
+      validationRaceCount: 199,
+      validationMaxVenueShare: 12 / 199,
+      validationMaxYearShare: 110 / 199,
+    }),
+  });
+  assert.equal(report.status, "PASS");
+  assert.equal(report.confirmedBlockedByInsufficientDistributionCount, 1);
+  assert.equal(report.confounderFlags[0].flagId, "holdout-distribution-evidence-insufficient-v1");
+  assert.equal(report.authority.rejectedHypothesisRescueAuthorized, false);
+});
+
+test("rejected hypotheses are never rescued or decorated into confirmation by distribution evidence", () => {
+  const report = buildN2ConfounderDistributionBridge({
+    confirmationResults: [confirmation("H-A", "HISTORICAL_REJECTED")],
+    distributionEvidence: evidence(),
+  });
+  assert.equal(report.status, "PASS");
+  assert.deepEqual(report.confounderFlags, []);
+  assert.equal(report.confirmedWithoutBlockingConcentrationCount, 0);
+  assert.equal(report.authority.rejectedHypothesisRescueAuthorized, false);
+});
+
+test("hypothesis-set mismatch and malformed evidence fail closed", () => {
+  const mismatch = buildN2ConfounderDistributionBridge({
+    confirmationResults: [confirmation("H-A")],
+    distributionEvidence: evidence({ hypothesisId: "H-B" }),
+  });
+  assert.equal(mismatch.status, "BLOCKED");
+  assert.ok(mismatch.blockers.includes("CONCENTRATION_POLICY_HYPOTHESIS_SET_MISMATCH"));
+  assert.deepEqual(mismatch.confounderFlags, []);
+
+  const bad = evidence();
+  const malformed: N2EdgeHoldoutDistributionEvidenceReport = {
+    ...bad,
+    authority: { ...bad.authority, forwardLabelsUsed: true as never },
+  };
+  const blocked = buildN2ConfounderDistributionBridge({
+    confirmationResults: [confirmation("H-A")],
+    distributionEvidence: malformed,
+  });
+  assert.equal(blocked.status, "BLOCKED");
+  assert.ok(blocked.blockers.some((item) => item.includes("DISTRIBUTION_EVIDENCE_AUTHORITY_INVALID")));
+});
