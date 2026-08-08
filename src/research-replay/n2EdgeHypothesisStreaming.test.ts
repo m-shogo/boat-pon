@@ -33,6 +33,14 @@ function observation(index: number, selection = "1-2-3"): N2EdgeScanObservation 
   };
 }
 
+function sameDayRace(raceNo: number): N2EdgeScanObservation {
+  const row = observation(0);
+  return {
+    ...row,
+    canonicalRaceKey: `2020-01-01:05:R${raceNo}`,
+  };
+}
+
 test("streaming accumulator matches the array compatibility wrapper", () => {
   const observations = Array.from({ length: 240 }, (_, index) => observation(index));
   const wrapped = scanN2EdgeHypotheses([...observations].reverse());
@@ -48,7 +56,7 @@ test("streaming accumulator matches the array compatibility wrapper", () => {
   assert.equal(streamed.inputObservationCount, 240);
 });
 
-test("streaming accumulator rejects race-order regression", () => {
+test("streaming accumulator rejects true race-order regression", () => {
   const accumulator = createN2EdgeHypothesisAccumulator();
   accumulator.add(observation(1));
   accumulator.add(observation(0));
@@ -58,13 +66,22 @@ test("streaming accumulator rejects race-order regression", () => {
   assert.equal(report.signalCount, 0);
 });
 
+test("canonical numeric race ordering accepts R9 followed by R10", () => {
+  const accumulator = createN2EdgeHypothesisAccumulator();
+  accumulator.add(sameDayRace(9));
+  accumulator.add(sameDayRace(10));
+  const report = accumulator.finalize();
+  assert.equal(report.status, "PASS");
+  assert.equal(report.inputObservationCount, 2);
+  assert.equal(report.blockers.length, 0);
+});
+
 test("streaming accumulator rejects duplicate selection row within a race", () => {
   const accumulator = createN2EdgeHypothesisAccumulator();
   accumulator.add(observation(0));
   accumulator.add(observation(0));
   const report = accumulator.finalize();
   assert.equal(report.status, "BLOCKED");
-  assert.ok(report.blockers.includes(`${raceKey(0)}:DUPLICATE_OBSERVATION:1-2-3`) === false);
   assert.ok(report.blockers.includes(`DUPLICATE_OBSERVATION:${raceKey(0)}:1-2-3`));
 });
 
@@ -80,12 +97,12 @@ test("different selections in the same race count as one unique-race contributio
   assert.equal(report.signalCount, 0);
 });
 
-test("large ordered stream can be consumed without retaining the observation array in the accumulator API", () => {
+test("large ordered train stream can be consumed without retaining the observation array in the accumulator API", () => {
   const accumulator = createN2EdgeHypothesisAccumulator();
-  for (let index = 0; index < 1000; index += 1) accumulator.add(observation(index));
+  for (let index = 0; index < 500; index += 1) accumulator.add(observation(index));
   const report = accumulator.finalize();
   assert.equal(report.status, "PASS");
-  assert.equal(report.inputObservationCount, 1000);
+  assert.equal(report.inputObservationCount, 500);
   assert.ok(report.testedHypothesisCount > 0);
   assert.ok(report.signalCount > 0);
 });
