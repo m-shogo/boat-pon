@@ -45,10 +45,6 @@ const WIN_RATE_CUTS = [4.5, 5.5, 6.5] as const;
 const TRIFECTA_SELECTIONS = new Set(enumerateBetSelections("trifecta"));
 const SELECTION_ROLES = ["first", "second", "third"] as const;
 
-function rolePrefix(role: Exclude<N2EdgeSelectionRole, "race">): string {
-  return `${role[0].toUpperCase()}${role.slice(1)}`;
-}
-
 function roleFeature(
   role: Exclude<N2EdgeSelectionRole, "race">,
   suffix: string,
@@ -244,11 +240,21 @@ export type N2EdgeHypothesisScanReport = {
   outputDigest: string;
 };
 
-type BucketAggregate = {
+type RaceBucket = {
   definition: N2EdgeFeatureDefinition;
   bucket: string;
-  raceResiduals: Map<string, number[]>;
+  residualSum: number;
+  residualCount: number;
 };
+
+type OnlineAggregate = {
+  definition: N2EdgeFeatureDefinition;
+  bucket: string;
+  uniqueRaceCount: number;
+  mean: number;
+  m2: number;
+};
+
 type RawTest = Omit<N2EdgeHypothesis, "hypothesisId" | "holmAdjustedPValue">;
 
 function normalCdf(value: number): number {
@@ -310,6 +316,11 @@ function derivedSelectionFeature(
   };
 }
 
+function compareRaceKeys(left: string, right: string): number {
+  if (left === right) return 0;
+  return left.localeCompare(right);
+}
+
 function commonReportFields(inputCount: number) {
   return {
     discoverySplit: "train" as const,
@@ -344,16 +355,22 @@ function commonReportFields(inputCount: number) {
   };
 }
 
-function reportBlocked(blockers: string[], inputCount: number): N2EdgeHypothesisScanReport {
+function reportBlocked(input: {
+  blockers: string[];
+  inputCount: number;
+  pitExcludedFeatureValueCount?: number;
+  adapterGatedFeatureValueCount?: number;
+  missingFeatureValueCount?: number;
+}): N2EdgeHypothesisScanReport {
   const core = {
     scanVersion: N2_EDGE_HYPOTHESIS_SCAN_VERSION,
     status: "BLOCKED" as const,
-    blockers: [...new Set(blockers)].sort(),
+    blockers: [...new Set(input.blockers)].sort(),
     baselineId: null,
-    ...commonReportFields(inputCount),
-    pitExcludedFeatureValueCount: 0,
-    adapterGatedFeatureValueCount: 0,
-    missingFeatureValueCount: 0,
+    ...commonReportFields(input.inputCount),
+    pitExcludedFeatureValueCount: input.pitExcludedFeatureValueCount ?? 0,
+    adapterGatedFeatureValueCount: input.adapterGatedFeatureValueCount ?? 0,
+    missingFeatureValueCount: input.missingFeatureValueCount ?? 0,
     testedHypothesisCount: 0,
     signalCount: 0,
     signals: [] as N2EdgeHypothesis[],
@@ -361,52 +378,72 @@ function reportBlocked(blockers: string[], inputCount: number): N2EdgeHypothesis
   return { ...core, outputDigest: canonicalHash(core) };
 }
 
-export function scanN2EdgeHypotheses(observations: N2EdgeScanObservation[]): N2EdgeHypothesisScanReport {
-  if (observations.length === 0) return reportBlocked(["NO_DISCOVERY_OBSERVATIONS"], 0);
+export class N2EdgeHypothesisAccumulator {
+  private readonly knownFeatureKeys = new Set(N2_EDGE_FEATURE_DEFINITIONS.map((definition) => definition.featureKey));
+  private readonly blockers: string[] = [];
+  private readonly baselineIds = new Set<string>();
+  private readonly aggregates = new Map<string, OnlineAggregate>();
+  private currentRaceKey: string | null = null;
+  private currentRaceBuckets = new Map<string, RaceBucket>();
+  private currentRaceSelections = new Set<string>();
+  private inputObservationCount = 0;
+  private pitExcludedFeatureValueCount = 0;
+  private adapterGatedFeatureValueCount = 0;
+  private missingFeatureValueCount = 0;
 
-  const blockers: string[] = [];
-  const baselineIds = new Set<string>();
-  const knownFeatureKeys = new Set(N2_EDGE_FEATURE_DEFINITIONS.map((definition) => definition.featureKey));
-  for (const observation of observations) {
-    baselineIds.add(observation.baselineId);
+  add(observation: N2EdgeScanObservation): void {
+    this.inputObservationCount += 1;
+    this.baselineIds.add(observation.baselineId);
+
     const canonicalSplit = splitForN2RaceKey(observation.canonicalRaceKey);
-    if (canonicalSplit === null) blockers.push(`INVALID_RACE_KEY:${observation.canonicalRaceKey}`);
-    else if (observation.split !== canonicalSplit) blockers.push(`SPLIT_MISMATCH:${observation.canonicalRaceKey}:${observation.split}/${canonicalSplit}`);
-    if (observation.split !== "train") blockers.push(`NON_DISCOVERY_SPLIT_PRESENT:${observation.split}`);
-    if (!Number.isFinite(Date.parse(observation.decisionCutoff))) blockers.push("INVALID_DECISION_CUTOFF");
-    if (!TRIFECTA_SELECTIONS.has(observation.betSelection)) blockers.push(`INVALID_TRIFECTA_SELECTION:${observation.betSelection}`);
+    const observationBlockers: string[] = [];
+    if (canonicalSplit === null) observationBlockers.push(`INVALID_RACE_KEY:${observation.canonicalRaceKey}`);
+    else if (observation.split !== canonicalSplit) observationBlockers.push(`SPLIT_MISMATCH:${observation.canonicalRaceKey}:${observation.split}/${canonicalSplit}`);
+    if (observation.split !== "train") observationBlockers.push(`NON_DISCOVERY_SPLIT_PRESENT:${observation.split}`);
+    if (!Number.isFinite(Date.parse(observation.decisionCutoff))) observationBlockers.push("INVALID_DECISION_CUTOFF");
+    if (!TRIFECTA_SELECTIONS.has(observation.betSelection)) observationBlockers.push(`INVALID_TRIFECTA_SELECTION:${observation.betSelection}`);
     if (!Number.isFinite(observation.baselineProbability)
       || observation.baselineProbability < 0
-      || observation.baselineProbability > 1) blockers.push("INVALID_BASELINE_PROBABILITY");
-    if (observation.hit !== 0 && observation.hit !== 1) blockers.push("INVALID_HIT_LABEL");
+      || observation.baselineProbability > 1) observationBlockers.push("INVALID_BASELINE_PROBABILITY");
+    if (observation.hit !== 0 && observation.hit !== 1) observationBlockers.push("INVALID_HIT_LABEL");
     for (const featureKey of Object.keys(observation.features)) {
-      if (!knownFeatureKeys.has(featureKey)) blockers.push(`UNKNOWN_FEATURE_KEY:${featureKey}`);
+      if (!this.knownFeatureKeys.has(featureKey)) observationBlockers.push(`UNKNOWN_FEATURE_KEY:${featureKey}`);
     }
-  }
-  if (baselineIds.size !== 1) blockers.push(`BASELINE_ID_COUNT:${baselineIds.size}/1`);
-  if (blockers.length > 0) return reportBlocked(blockers, observations.length);
 
-  const aggregates = new Map<string, BucketAggregate>();
-  let pitExcludedFeatureValueCount = 0;
-  let adapterGatedFeatureValueCount = 0;
-  let missingFeatureValueCount = 0;
+    if (this.currentRaceKey !== null && compareRaceKeys(observation.canonicalRaceKey, this.currentRaceKey) < 0) {
+      observationBlockers.push(`STREAM_ORDER_REGRESSION:${observation.canonicalRaceKey}<${this.currentRaceKey}`);
+    }
+    if (this.currentRaceKey !== observation.canonicalRaceKey) {
+      this.flushCurrentRace();
+      this.currentRaceKey = observation.canonicalRaceKey;
+      this.currentRaceBuckets = new Map();
+      this.currentRaceSelections = new Set();
+    }
+    if (this.currentRaceSelections.has(observation.betSelection)) {
+      observationBlockers.push(`DUPLICATE_OBSERVATION:${observation.canonicalRaceKey}:${observation.betSelection}`);
+    }
+    this.currentRaceSelections.add(observation.betSelection);
 
-  for (const observation of observations) {
+    if (observationBlockers.length > 0) {
+      this.blockers.push(...observationBlockers);
+      return;
+    }
+
     const residual = observation.hit - observation.baselineProbability;
     for (const definition of N2_EDGE_FEATURE_DEFINITIONS) {
       const feature = derivedSelectionFeature(definition, observation.betSelection, observation.decisionCutoff)
         ?? observation.features[definition.featureKey];
       if (feature == null || feature.value == null) {
-        missingFeatureValueCount += 1;
+        this.missingFeatureValueCount += 1;
         continue;
       }
       if (definition.sourceStatus === "requires_verified_timed_adapter"
         && (feature.adapterVerified !== true || !feature.adapterId?.trim())) {
-        adapterGatedFeatureValueCount += 1;
+        this.adapterGatedFeatureValueCount += 1;
         continue;
       }
       if (feature.pitClass !== definition.expectedPitClass) {
-        pitExcludedFeatureValueCount += 1;
+        this.pitExcludedFeatureValueCount += 1;
         continue;
       }
       const pit = validateFeaturePIT({
@@ -415,105 +452,153 @@ export function scanN2EdgeHypotheses(observations: N2EdgeScanObservation[]): N2E
         availableAt: feature.availableAt,
       }, observation.decisionCutoff, "historical");
       if (!pit.usable) {
-        pitExcludedFeatureValueCount += 1;
+        this.pitExcludedFeatureValueCount += 1;
         continue;
       }
       const bucket = bucketFor(definition, feature.value);
       if (bucket === null) {
-        missingFeatureValueCount += 1;
+        this.missingFeatureValueCount += 1;
         continue;
       }
-      const aggregateKey = `${definition.featureKey}|${bucket}`;
-      const aggregate = aggregates.get(aggregateKey) ?? {
+      const key = `${definition.featureKey}|${bucket}`;
+      const raceBucket = this.currentRaceBuckets.get(key) ?? {
         definition,
         bucket,
-        raceResiduals: new Map<string, number[]>(),
+        residualSum: 0,
+        residualCount: 0,
       };
-      const perRace = aggregate.raceResiduals.get(observation.canonicalRaceKey) ?? [];
-      perRace.push(residual);
-      aggregate.raceResiduals.set(observation.canonicalRaceKey, perRace);
-      aggregates.set(aggregateKey, aggregate);
+      raceBucket.residualSum += residual;
+      raceBucket.residualCount += 1;
+      this.currentRaceBuckets.set(key, raceBucket);
     }
   }
 
-  const rawTests: RawTest[] = [];
-  for (const aggregate of aggregates.values()) {
-    const raceMeans = [...aggregate.raceResiduals.values()].map((values) =>
-      values.reduce((sum, value) => sum + value, 0) / values.length,
+  finalize(): N2EdgeHypothesisScanReport {
+    this.flushCurrentRace();
+    if (this.inputObservationCount === 0) {
+      return reportBlocked({ blockers: ["NO_DISCOVERY_OBSERVATIONS"], inputCount: 0 });
+    }
+    if (this.baselineIds.size !== 1) this.blockers.push(`BASELINE_ID_COUNT:${this.baselineIds.size}/1`);
+    if (this.blockers.length > 0) {
+      return reportBlocked({
+        blockers: this.blockers,
+        inputCount: this.inputObservationCount,
+        pitExcludedFeatureValueCount: this.pitExcludedFeatureValueCount,
+        adapterGatedFeatureValueCount: this.adapterGatedFeatureValueCount,
+        missingFeatureValueCount: this.missingFeatureValueCount,
+      });
+    }
+
+    const rawTests: RawTest[] = [];
+    for (const aggregate of this.aggregates.values()) {
+      if (aggregate.uniqueRaceCount < N2_EDGE_SCAN_MIN_UNIQUE_RACES) continue;
+      const variance = aggregate.uniqueRaceCount <= 1
+        ? 0
+        : aggregate.m2 / (aggregate.uniqueRaceCount - 1);
+      const standardError = Math.sqrt(variance / aggregate.uniqueRaceCount);
+      const zScore = standardError > 0
+        ? aggregate.mean / standardError
+        : aggregate.mean === 0 ? 0 : Math.sign(aggregate.mean) * Number.POSITIVE_INFINITY;
+      rawTests.push({
+        featureKey: aggregate.definition.featureKey,
+        family: aggregate.definition.family,
+        selectionRole: aggregate.definition.selectionRole,
+        bucket: aggregate.bucket,
+        direction: aggregate.mean >= 0 ? "underpredicted" : "overpredicted",
+        uniqueRaceCount: aggregate.uniqueRaceCount,
+        meanResidual: aggregate.mean,
+        standardError,
+        zScore,
+        rawPValue: twoSidedNormalP(zScore),
+        discoverySplit: "train",
+        confirmationSplits: ["validation", "test"],
+        forwardShadowReserved: true,
+      });
+    }
+
+    const ordered = [...rawTests].sort((left, right) =>
+      left.rawPValue - right.rawPValue
+      || left.featureKey.localeCompare(right.featureKey)
+      || left.bucket.localeCompare(right.bucket),
     );
-    if (raceMeans.length < N2_EDGE_SCAN_MIN_UNIQUE_RACES) continue;
-    const meanResidual = raceMeans.reduce((sum, value) => sum + value, 0) / raceMeans.length;
-    const variance = raceMeans.length <= 1
-      ? 0
-      : raceMeans.reduce((sum, value) => sum + ((value - meanResidual) ** 2), 0) / (raceMeans.length - 1);
-    const standardError = Math.sqrt(variance / raceMeans.length);
-    const zScore = standardError > 0
-      ? meanResidual / standardError
-      : meanResidual === 0 ? 0 : Math.sign(meanResidual) * Number.POSITIVE_INFINITY;
-    rawTests.push({
-      featureKey: aggregate.definition.featureKey,
-      family: aggregate.definition.family,
-      selectionRole: aggregate.definition.selectionRole,
-      bucket: aggregate.bucket,
-      direction: meanResidual >= 0 ? "underpredicted" : "overpredicted",
-      uniqueRaceCount: raceMeans.length,
-      meanResidual,
-      standardError,
-      zScore,
-      rawPValue: twoSidedNormalP(zScore),
-      discoverySplit: "train",
-      confirmationSplits: ["validation", "test"],
-      forwardShadowReserved: true,
+    let priorAdjusted = 0;
+    const adjusted: N2EdgeHypothesis[] = ordered.map((candidate, index) => {
+      const adjustedP = Math.min(1, Math.max(priorAdjusted, candidate.rawPValue * (ordered.length - index)));
+      priorAdjusted = adjustedP;
+      const identity = {
+        scanVersion: N2_EDGE_HYPOTHESIS_SCAN_VERSION,
+        featureKey: candidate.featureKey,
+        selectionRole: candidate.selectionRole,
+        bucket: candidate.bucket,
+        direction: candidate.direction,
+        discoverySplit: candidate.discoverySplit,
+        confirmationSplits: candidate.confirmationSplits,
+      };
+      return {
+        ...candidate,
+        hypothesisId: `N2EDGE-${canonicalHash(identity).slice(0, 16)}`,
+        holmAdjustedPValue: adjustedP,
+      };
     });
+    const signals = adjusted
+      .filter((candidate) => candidate.holmAdjustedPValue <= N2_EDGE_SCAN_ALPHA
+        && Math.abs(candidate.meanResidual) >= N2_EDGE_SCAN_MIN_ABSOLUTE_RESIDUAL)
+      .sort((left, right) =>
+        left.holmAdjustedPValue - right.holmAdjustedPValue
+        || Math.abs(right.meanResidual) - Math.abs(left.meanResidual)
+        || left.hypothesisId.localeCompare(right.hypothesisId),
+      )
+      .slice(0, N2_EDGE_SCAN_MAX_SIGNALS);
+
+    const core = {
+      scanVersion: N2_EDGE_HYPOTHESIS_SCAN_VERSION,
+      status: "PASS" as const,
+      blockers: [] as string[],
+      baselineId: [...this.baselineIds][0],
+      ...commonReportFields(this.inputObservationCount),
+      pitExcludedFeatureValueCount: this.pitExcludedFeatureValueCount,
+      adapterGatedFeatureValueCount: this.adapterGatedFeatureValueCount,
+      missingFeatureValueCount: this.missingFeatureValueCount,
+      testedHypothesisCount: adjusted.length,
+      signalCount: signals.length,
+      signals,
+    };
+    return { ...core, outputDigest: canonicalHash(core) };
   }
 
-  const ordered = [...rawTests].sort((left, right) =>
-    left.rawPValue - right.rawPValue
-    || left.featureKey.localeCompare(right.featureKey)
-    || left.bucket.localeCompare(right.bucket),
+  private flushCurrentRace(): void {
+    if (this.currentRaceKey === null || this.currentRaceBuckets.size === 0) return;
+    for (const [key, raceBucket] of this.currentRaceBuckets.entries()) {
+      if (raceBucket.residualCount <= 0) continue;
+      const raceMean = raceBucket.residualSum / raceBucket.residualCount;
+      const aggregate = this.aggregates.get(key) ?? {
+        definition: raceBucket.definition,
+        bucket: raceBucket.bucket,
+        uniqueRaceCount: 0,
+        mean: 0,
+        m2: 0,
+      };
+      aggregate.uniqueRaceCount += 1;
+      const delta = raceMean - aggregate.mean;
+      aggregate.mean += delta / aggregate.uniqueRaceCount;
+      const delta2 = raceMean - aggregate.mean;
+      aggregate.m2 += delta * delta2;
+      this.aggregates.set(key, aggregate);
+    }
+  }
+}
+
+export function createN2EdgeHypothesisAccumulator(): N2EdgeHypothesisAccumulator {
+  return new N2EdgeHypothesisAccumulator();
+}
+
+export function scanN2EdgeHypotheses(observations: N2EdgeScanObservation[]): N2EdgeHypothesisScanReport {
+  const accumulator = createN2EdgeHypothesisAccumulator();
+  const ordered = [...observations].sort((left, right) =>
+    left.canonicalRaceKey.localeCompare(right.canonicalRaceKey)
+    || left.betSelection.localeCompare(right.betSelection)
+    || left.baselineId.localeCompare(right.baselineId),
   );
-  let priorAdjusted = 0;
-  const adjusted: N2EdgeHypothesis[] = ordered.map((candidate, index) => {
-    const adjustedP = Math.min(1, Math.max(priorAdjusted, candidate.rawPValue * (ordered.length - index)));
-    priorAdjusted = adjustedP;
-    const identity = {
-      scanVersion: N2_EDGE_HYPOTHESIS_SCAN_VERSION,
-      featureKey: candidate.featureKey,
-      selectionRole: candidate.selectionRole,
-      bucket: candidate.bucket,
-      direction: candidate.direction,
-      discoverySplit: candidate.discoverySplit,
-      confirmationSplits: candidate.confirmationSplits,
-    };
-    return {
-      ...candidate,
-      hypothesisId: `N2EDGE-${canonicalHash(identity).slice(0, 16)}`,
-      holmAdjustedPValue: adjustedP,
-    };
-  });
-
-  const signals = adjusted
-    .filter((candidate) => candidate.holmAdjustedPValue <= N2_EDGE_SCAN_ALPHA
-      && Math.abs(candidate.meanResidual) >= N2_EDGE_SCAN_MIN_ABSOLUTE_RESIDUAL)
-    .sort((left, right) =>
-      left.holmAdjustedPValue - right.holmAdjustedPValue
-      || Math.abs(right.meanResidual) - Math.abs(left.meanResidual)
-      || left.hypothesisId.localeCompare(right.hypothesisId),
-    )
-    .slice(0, N2_EDGE_SCAN_MAX_SIGNALS);
-
-  const core = {
-    scanVersion: N2_EDGE_HYPOTHESIS_SCAN_VERSION,
-    status: "PASS" as const,
-    blockers: [] as string[],
-    baselineId: [...baselineIds][0],
-    ...commonReportFields(observations.length),
-    pitExcludedFeatureValueCount,
-    adapterGatedFeatureValueCount,
-    missingFeatureValueCount,
-    testedHypothesisCount: adjusted.length,
-    signalCount: signals.length,
-    signals,
-  };
-  return { ...core, outputDigest: canonicalHash(core) };
+  for (const observation of ordered) accumulator.add(observation);
+  return accumulator.finalize();
 }
