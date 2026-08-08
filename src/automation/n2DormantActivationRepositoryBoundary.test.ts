@@ -16,10 +16,10 @@ const expectedTaskTypes: Record<(typeof N2_DORMANT_TASKS)[number], string> = {
   "TASK-N2-020": "baseline-market",
   "TASK-N2-021": "baseline-historical",
   "TASK-N2-022": "baseline-common-cohort",
-  "TASK-N2-030": "metrics-eval",
+  "TASK-N2-030": "evaluation-metrics",
 };
 
-test("all prepared N2 executors remain dormant while catalog says executor pending", () => {
+test("all prepared N2 stages remain dormant while canonical catalog says executor pending", () => {
   const catalog = JSON.parse(
     readFileSync(resolve(process.cwd(), "automation/task-catalog.json"), "utf8"),
   ) as { tasks?: CatalogTask[] };
