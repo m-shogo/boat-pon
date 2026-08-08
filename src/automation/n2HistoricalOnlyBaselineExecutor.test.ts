@@ -6,6 +6,7 @@ import test from "node:test";
 
 import { enumerateBetSelections } from "../research-replay/n2DatasetContract";
 import type { N2HistoricalOnlyBaselineSourceRead } from "../research-replay/n2HistoricalOnlyBaselineSource";
+import type { N2T5DecisionCutoffMetadataRead } from "../research-replay/n2T5DecisionCutoffMetadata";
 import { createN2HistoricalOnlyBaselineExecutor } from "./n2HistoricalOnlyBaselineExecutor";
 import type { ExecutorContext } from "./taskExecutors";
 
@@ -60,6 +61,29 @@ function sourceRead(overrides: Partial<N2HistoricalOnlyBaselineSourceRead> = {})
   };
 }
 
+function cutoffRead(
+  races: N2HistoricalOnlyBaselineSourceRead["evaluationRaces"],
+  overrides: Partial<N2T5DecisionCutoffMetadataRead> = {},
+): N2T5DecisionCutoffMetadataRead {
+  return {
+    readerVersion: "n2-t5-decision-cutoff-metadata-v1",
+    status: "PASS",
+    blockers: [],
+    decisionCutoffByRaceKey: Object.fromEntries(races.map((race) => [
+      race.canonicalRaceKey,
+      `${race.canonicalRaceKey.slice(0, 10)}T03:30:00.000Z`,
+    ])),
+    privateEnvelopeMetadataReadCount: races.length,
+    rawOddsValuesRead: false,
+    networkRequestCount: 0,
+    databaseReadCount: 0,
+    databaseWriteCount: 0,
+    publicPublishAuthorized: false,
+    productionApplyExecuted: false,
+    ...overrides,
+  };
+}
+
 function context(root: string, taskStatuses: Record<string, string> = {
   "TASK-N2-005": "PASS",
   "TASK-N2-011": "PASS",
@@ -82,16 +106,25 @@ function withRoot(fn: (root: string) => void): void {
   try { fn(root); } finally { rmSync(root, { recursive: true, force: true }); }
 }
 
-test("executor writes aggregate historical baseline metrics without row-level labels", () => {
+test("executor writes aggregate historical baseline metrics aligned to T-5 cutoffs", () => {
   withRoot((root) => {
     let readerCalls = 0;
-    const executor = createN2HistoricalOnlyBaselineExecutor(() => {
-      readerCalls += 1;
-      return sourceRead();
-    });
+    let cutoffCalls = 0;
+    const source = sourceRead();
+    const executor = createN2HistoricalOnlyBaselineExecutor(
+      () => {
+        readerCalls += 1;
+        return source;
+      },
+      () => {
+        cutoffCalls += 1;
+        return cutoffRead(source.evaluationRaces);
+      },
+    );
     const result = executor(context(root));
     assert.equal(result.result, "PASS");
     assert.equal(readerCalls, 1);
+    assert.equal(cutoffCalls, 1);
     assert.deepEqual(result.outputs, ["reports/n2/n2-baseline-historical.json"]);
     const reportPath = join(root, "reports/n2/n2-baseline-historical.json");
     assert.equal(existsSync(reportPath), true);
@@ -100,6 +133,7 @@ test("executor writes aggregate historical baseline metrics without row-level la
     assert.equal(report.cohortRaceCount, 20);
     assert.equal(report.predictionRowCount, 2400);
     assert.equal(report.positiveCount, 20);
+    assert.equal(report.alignedDecisionCutoffCount, 20);
     assert.equal(report.currentBuyConnectionAuthorized, false);
     assert.equal(report.lineConnectionAuthorized, false);
     assert.equal(report.publicPublishAuthorized, false);
@@ -149,6 +183,24 @@ test("executor remains blocked when shared cohort readiness is not satisfied", (
     const result = executor(context(root));
     assert.equal(result.result, "BLOCKED");
     assert.ok(result.blocks.some((blocker) => blocker.includes("HISTORICAL_BASELINE_READINESS_ACCUMULATING")));
+    assert.deepEqual(result.outputs, []);
+  });
+});
+
+test("executor fails closed when T-5 cutoff metadata is incomplete", () => {
+  withRoot((root) => {
+    const source = sourceRead();
+    const executor = createN2HistoricalOnlyBaselineExecutor(
+      () => source,
+      () => cutoffRead(source.evaluationRaces, {
+        status: "BLOCKED",
+        blockers: ["2026-08-07:05:R1:DECISION_CUTOFF_INVALID"],
+        decisionCutoffByRaceKey: {},
+      }),
+    );
+    const result = executor(context(root));
+    assert.equal(result.result, "BLOCKED");
+    assert.ok(result.blocks.some((blocker) => blocker.includes("HISTORICAL_BASELINE_CUTOFF_2026-08-07:05:R1:DECISION_CUTOFF_INVALID")));
     assert.deepEqual(result.outputs, []);
   });
 });
