@@ -289,7 +289,12 @@ export function createN2EdgeHypothesisScanExecutor(
     };
 
     const outcome = runExecutorLifecycle(spec, sdkCtx);
-    const result: ExecutorResult["result"] = outcome.result === "ENGINEERING_REQUIRED" ? "BLOCKED" : outcome.result;
+    const undersizedCohort = outcome.result === "FAILED"
+      && outcome.blocks[0] === "EXECUTOR_EXCEPTION"
+      && outcome.blocks[1]?.startsWith("EDGE_COHORT_TOO_SMALL:");
+    const result: ExecutorResult["result"] = undersizedCohort
+      ? "BLOCKED"
+      : outcome.result === "ENGINEERING_REQUIRED" ? "BLOCKED" : outcome.result;
     return {
       result,
       executorVersion: N2_EDGE_HYPOTHESIS_SCAN_EXECUTOR_VERSION,
