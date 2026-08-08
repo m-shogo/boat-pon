@@ -44,6 +44,7 @@ const TOP2_RATE_PERCENT_CUTS = [30, 40, 50] as const;
 const WIN_RATE_CUTS = [4.5, 5.5, 6.5] as const;
 const TRIFECTA_SELECTIONS = new Set(enumerateBetSelections("trifecta"));
 const SELECTION_ROLES = ["first", "second", "third"] as const;
+const RACE_KEY_ORDER_RE = /^(\d{4}-\d{2}-\d{2}):(0[1-9]|1\d|2[0-4]):R([1-9]|1[0-2])$/u;
 
 function roleFeature(
   role: Exclude<N2EdgeSelectionRole, "race">,
@@ -318,7 +319,12 @@ function derivedSelectionFeature(
 
 function compareRaceKeys(left: string, right: string): number {
   if (left === right) return 0;
-  return left.localeCompare(right);
+  const a = RACE_KEY_ORDER_RE.exec(left);
+  const b = RACE_KEY_ORDER_RE.exec(right);
+  if (!a || !b) return left.localeCompare(right);
+  return a[1].localeCompare(b[1])
+    || Number(a[2]) - Number(b[2])
+    || Number(a[3]) - Number(b[3]);
 }
 
 function commonReportFields(inputCount: number) {
@@ -416,7 +422,6 @@ export class N2EdgeHypothesisAccumulator {
     if (this.currentRaceKey !== observation.canonicalRaceKey) {
       this.flushCurrentRace();
       this.currentRaceKey = observation.canonicalRaceKey;
-      this.currentRaceBuckets = new Map();
       this.currentRaceSelections = new Set();
     }
     if (this.currentRaceSelections.has(observation.betSelection)) {
@@ -585,6 +590,7 @@ export class N2EdgeHypothesisAccumulator {
       aggregate.m2 += delta * delta2;
       this.aggregates.set(key, aggregate);
     }
+    this.currentRaceBuckets = new Map();
   }
 }
 
@@ -595,7 +601,7 @@ export function createN2EdgeHypothesisAccumulator(): N2EdgeHypothesisAccumulator
 export function scanN2EdgeHypotheses(observations: N2EdgeScanObservation[]): N2EdgeHypothesisScanReport {
   const accumulator = createN2EdgeHypothesisAccumulator();
   const ordered = [...observations].sort((left, right) =>
-    left.canonicalRaceKey.localeCompare(right.canonicalRaceKey)
+    compareRaceKeys(left.canonicalRaceKey, right.canonicalRaceKey)
     || left.betSelection.localeCompare(right.betSelection)
     || left.baselineId.localeCompare(right.baselineId),
   );
