@@ -3,6 +3,7 @@
 // The original executor implementations remain byte-for-byte preserved in
 // taskExecutorsCore.ts. This facade extends only the allowlisted resolution
 // path with separately reviewed N2 executors.
+import { runN2MarketOnlyBaselineExecutor } from "./n2MarketOnlyBaselineExecutor";
 import { runN2ObservationIngestReadinessExecutor } from "./n2ObservationIngestReadinessExecutor";
 import { runN2OfficialProgramCanaryReviewBundleExecutor } from "./n2OfficialProgramCanaryReviewBundleExecutor";
 import { runN2PitAuditExecutor } from "./n2PitAuditExecutor";
@@ -36,7 +37,7 @@ export {
 };
 export type { Executor, ExecutorContext, ExecutorResult };
 
-export const EXECUTOR_REGISTRY_VERSION = "n2-task-executor-registry-v5";
+export const EXECUTOR_REGISTRY_VERSION = "n2-task-executor-registry-v6";
 
 export const KNOWN_TASK_TYPES = [
   ...CORE_KNOWN_TASK_TYPES,
@@ -53,6 +54,7 @@ const REGISTERED_EXECUTORS: Readonly<Record<string, Executor>> = Object.freeze({
   "pit-audit": runN2PitAuditExecutor,
   "observation-ingest-readiness": runN2ObservationIngestReadinessExecutor,
   "official-program-canary-review-bundle": runN2OfficialProgramCanaryReviewBundleExecutor,
+  "baseline-market": runN2MarketOnlyBaselineExecutor,
 });
 
 export function isExecutorImplemented(taskType: string): boolean {
