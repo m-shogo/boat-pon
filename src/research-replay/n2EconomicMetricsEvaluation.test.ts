@@ -90,7 +90,7 @@ test("forced Top1 ranking ignores market odds while positive-EV policy may use t
   for (const item of races) {
     item.probabilityByBaseline.historical = probabilityMap(winner, 0.2);
     item.marketOddsBySelection[winner] = 2;
-    item.marketOddsBySelection[wrong] = 1000;
+    item.marketOddsBySelection[wrong] = 1001;
     item.probabilityByBaseline.historical[wrong] = 0.001;
   }
   const report = evaluateN2EconomicMetrics({ races });
