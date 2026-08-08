@@ -22,14 +22,16 @@ export type N2EdgeFeatureFamily =
   | "exhibition"
   | "motor_boat"
   | "weather";
-
+export type N2EdgeSelectionRole = "first" | "second" | "third" | "race";
 export type N2EdgeFeatureSourceStatus =
+  | "derived_from_selection"
   | "historical_safe_now"
   | "requires_verified_timed_adapter";
 
 export type N2EdgeFeatureDefinition = {
   featureKey: string;
   family: N2EdgeFeatureFamily;
+  selectionRole: N2EdgeSelectionRole;
   valueType: "categorical" | "numeric";
   allowedCategories?: string[];
   cutPoints?: number[];
@@ -38,87 +40,112 @@ export type N2EdgeFeatureDefinition = {
   missingPolicy: "exclude_feature_value";
 };
 
-const RATE_CUTS = [0.3, 0.4, 0.5] as const;
+const TOP2_RATE_PERCENT_CUTS = [30, 40, 50] as const;
 const WIN_RATE_CUTS = [4.5, 5.5, 6.5] as const;
 const TRIFECTA_SELECTIONS = new Set(enumerateBetSelections("trifecta"));
+const SELECTION_ROLES = ["first", "second", "third"] as const;
+
+function rolePrefix(role: Exclude<N2EdgeSelectionRole, "race">): string {
+  return `${role[0].toUpperCase()}${role.slice(1)}`;
+}
+
+function roleFeature(
+  role: Exclude<N2EdgeSelectionRole, "race">,
+  suffix: string,
+  family: N2EdgeFeatureFamily,
+  valueType: N2EdgeFeatureDefinition["valueType"],
+  options: Pick<N2EdgeFeatureDefinition, "sourceStatus" | "expectedPitClass"> & {
+    allowedCategories?: string[];
+    cutPoints?: number[];
+  },
+): N2EdgeFeatureDefinition {
+  return {
+    featureKey: `${role}${suffix}`,
+    family,
+    selectionRole: role,
+    valueType,
+    allowedCategories: options.allowedCategories,
+    cutPoints: options.cutPoints,
+    sourceStatus: options.sourceStatus,
+    expectedPitClass: options.expectedPitClass,
+    missingPolicy: "exclude_feature_value",
+  };
+}
 
 /**
- * Frozen v1 search space. Current racer snapshot fields are intentionally absent.
- * ST/exhibition/weather are named research families but remain unusable until a
- * dedicated adapter proves immutable source identity and exact pre-cutoff timing.
+ * Frozen v1 search space. Every selection-dependent feature has an explicit
+ * first/second/third role so a later source adapter cannot silently change its
+ * meaning. Course is derived from the canonical trifecta selection itself.
+ * Current racer snapshots are intentionally absent. ST/exhibition/weather are
+ * represented but gated behind separately reviewed, exact pre-cutoff adapters.
  */
 export const N2_EDGE_FEATURE_DEFINITIONS: readonly N2EdgeFeatureDefinition[] = Object.freeze([
-  {
-    featureKey: "course",
-    family: "course",
-    valueType: "categorical",
+  ...SELECTION_ROLES.map((role) => roleFeature(role, "Course", "course", "categorical", {
     allowedCategories: ["1", "2", "3", "4", "5", "6"],
-    sourceStatus: "historical_safe_now",
+    sourceStatus: "derived_from_selection",
     expectedPitClass: "historical_safe",
-    missingPolicy: "exclude_feature_value",
-  },
-  {
-    featureKey: "className",
-    family: "player",
-    valueType: "categorical",
-    allowedCategories: ["A1", "A2", "B1", "B2"],
-    sourceStatus: "historical_safe_now",
-    expectedPitClass: "historical_safe",
-    missingPolicy: "exclude_feature_value",
-  },
-  ...["nationalWinRate", "localWinRate"].map((featureKey): N2EdgeFeatureDefinition => ({
-    featureKey,
-    family: "player",
-    valueType: "numeric",
-    cutPoints: [...WIN_RATE_CUTS],
-    sourceStatus: "historical_safe_now",
-    expectedPitClass: "historical_safe",
-    missingPolicy: "exclude_feature_value",
   })),
-  ...["nationalTop2Rate", "localTop2Rate"].map((featureKey): N2EdgeFeatureDefinition => ({
-    featureKey,
-    family: "player",
-    valueType: "numeric",
-    cutPoints: [...RATE_CUTS],
-    sourceStatus: "historical_safe_now",
-    expectedPitClass: "historical_safe",
-    missingPolicy: "exclude_feature_value",
-  })),
-  ...[
-    "motorTop2Rate",
-    "boatTop2Rate",
-    "venueMotorTop2Rate",
-    "venueBoatTop2Rate",
-  ].map((featureKey): N2EdgeFeatureDefinition => ({
-    featureKey,
-    family: "motor_boat",
-    valueType: "numeric",
-    cutPoints: [...RATE_CUTS],
-    sourceStatus: "historical_safe_now",
-    expectedPitClass: "historical_safe",
-    missingPolicy: "exclude_feature_value",
-  })),
-  {
-    featureKey: "startTiming",
-    family: "start_timing",
-    valueType: "numeric",
-    cutPoints: [0.08, 0.12, 0.16, 0.2],
-    sourceStatus: "requires_verified_timed_adapter",
-    expectedPitClass: "historical_safe",
-    missingPolicy: "exclude_feature_value",
-  },
-  {
-    featureKey: "exhibitionRank",
-    family: "exhibition",
-    valueType: "numeric",
-    cutPoints: [1.5, 2.5, 3.5, 4.5, 5.5],
-    sourceStatus: "requires_verified_timed_adapter",
-    expectedPitClass: "historical_safe",
-    missingPolicy: "exclude_feature_value",
-  },
+  ...SELECTION_ROLES.flatMap((role) => [
+    roleFeature(role, "ClassName", "player", "categorical", {
+      allowedCategories: ["A1", "A2", "B1", "B2"],
+      sourceStatus: "historical_safe_now",
+      expectedPitClass: "historical_safe",
+    }),
+    roleFeature(role, "NationalWinRate", "player", "numeric", {
+      cutPoints: [...WIN_RATE_CUTS],
+      sourceStatus: "historical_safe_now",
+      expectedPitClass: "historical_safe",
+    }),
+    roleFeature(role, "LocalWinRate", "player", "numeric", {
+      cutPoints: [...WIN_RATE_CUTS],
+      sourceStatus: "historical_safe_now",
+      expectedPitClass: "historical_safe",
+    }),
+    roleFeature(role, "NationalTop2Rate", "player", "numeric", {
+      cutPoints: [...TOP2_RATE_PERCENT_CUTS],
+      sourceStatus: "historical_safe_now",
+      expectedPitClass: "historical_safe",
+    }),
+    roleFeature(role, "LocalTop2Rate", "player", "numeric", {
+      cutPoints: [...TOP2_RATE_PERCENT_CUTS],
+      sourceStatus: "historical_safe_now",
+      expectedPitClass: "historical_safe",
+    }),
+    roleFeature(role, "MotorTop2Rate", "motor_boat", "numeric", {
+      cutPoints: [...TOP2_RATE_PERCENT_CUTS],
+      sourceStatus: "historical_safe_now",
+      expectedPitClass: "historical_safe",
+    }),
+    roleFeature(role, "BoatTop2Rate", "motor_boat", "numeric", {
+      cutPoints: [...TOP2_RATE_PERCENT_CUTS],
+      sourceStatus: "historical_safe_now",
+      expectedPitClass: "historical_safe",
+    }),
+    roleFeature(role, "VenueMotorTop2Rate", "motor_boat", "numeric", {
+      cutPoints: [...TOP2_RATE_PERCENT_CUTS],
+      sourceStatus: "historical_safe_now",
+      expectedPitClass: "historical_safe",
+    }),
+    roleFeature(role, "VenueBoatTop2Rate", "motor_boat", "numeric", {
+      cutPoints: [...TOP2_RATE_PERCENT_CUTS],
+      sourceStatus: "historical_safe_now",
+      expectedPitClass: "historical_safe",
+    }),
+    roleFeature(role, "StartTiming", "start_timing", "numeric", {
+      cutPoints: [0.08, 0.12, 0.16, 0.2],
+      sourceStatus: "requires_verified_timed_adapter",
+      expectedPitClass: "historical_safe",
+    }),
+    roleFeature(role, "ExhibitionRank", "exhibition", "numeric", {
+      cutPoints: [1.5, 2.5, 3.5, 4.5, 5.5],
+      sourceStatus: "requires_verified_timed_adapter",
+      expectedPitClass: "historical_safe",
+    }),
+  ]),
   {
     featureKey: "windSpeedMps",
     family: "weather",
+    selectionRole: "race",
     valueType: "numeric",
     cutPoints: [2, 4, 6, 8],
     sourceStatus: "requires_verified_timed_adapter",
@@ -128,6 +155,7 @@ export const N2_EDGE_FEATURE_DEFINITIONS: readonly N2EdgeFeatureDefinition[] = O
   {
     featureKey: "waveHeightCm",
     family: "weather",
+    selectionRole: "race",
     valueType: "numeric",
     cutPoints: [2, 5, 10],
     sourceStatus: "requires_verified_timed_adapter",
@@ -159,6 +187,7 @@ export type N2EdgeHypothesis = {
   hypothesisId: string;
   featureKey: string;
   family: N2EdgeFeatureFamily;
+  selectionRole: N2EdgeSelectionRole;
   bucket: string;
   direction: "underpredicted" | "overpredicted";
   uniqueRaceCount: number;
@@ -182,6 +211,7 @@ export type N2EdgeHypothesisScanReport = {
   forwardShadowReserved: true;
   interactionScanAllowed: false;
   featureDefinitionCount: number;
+  derivedFeatureCount: number;
   historicalSafeFeatureCount: number;
   timedAdapterRequiredFeatureCount: number;
   inputObservationCount: number;
@@ -219,7 +249,6 @@ type BucketAggregate = {
   bucket: string;
   raceResiduals: Map<string, number[]>;
 };
-
 type RawTest = Omit<N2EdgeHypothesis, "hypothesisId" | "holmAdjustedPValue">;
 
 function normalCdf(value: number): number {
@@ -247,9 +276,7 @@ function twoSidedNormalP(zScore: number): number {
 function numericBucket(value: number, cutPoints: number[]): string {
   for (let index = 0; index < cutPoints.length; index += 1) {
     if (value < cutPoints[index]) {
-      return index === 0
-        ? `<${cutPoints[index]}`
-        : `[${cutPoints[index - 1]},${cutPoints[index]})`;
+      return index === 0 ? `<${cutPoints[index]}` : `[${cutPoints[index - 1]},${cutPoints[index]})`;
     }
   }
   return `>=${cutPoints[cutPoints.length - 1]}`;
@@ -265,6 +292,24 @@ function bucketFor(definition: N2EdgeFeatureDefinition, value: string | number):
   return cutPoints.length > 0 ? numericBucket(value, cutPoints) : null;
 }
 
+function derivedSelectionFeature(
+  definition: N2EdgeFeatureDefinition,
+  betSelection: string,
+  decisionCutoff: string,
+): N2EdgeFeatureObservation | null {
+  if (definition.sourceStatus !== "derived_from_selection") return null;
+  const index = definition.selectionRole === "first" ? 0 : definition.selectionRole === "second" ? 1 : 2;
+  const parts = betSelection.split("-");
+  const value = parts[index];
+  return value == null ? null : {
+    value,
+    pitClass: "historical_safe",
+    availableAt: decisionCutoff,
+    adapterId: "canonical-trifecta-selection-v1",
+    adapterVerified: true,
+  };
+}
+
 function commonReportFields(inputCount: number) {
   return {
     discoverySplit: "train" as const,
@@ -272,6 +317,7 @@ function commonReportFields(inputCount: number) {
     forwardShadowReserved: true as const,
     interactionScanAllowed: false as const,
     featureDefinitionCount: N2_EDGE_FEATURE_DEFINITIONS.length,
+    derivedFeatureCount: N2_EDGE_FEATURE_DEFINITIONS.filter((item) => item.sourceStatus === "derived_from_selection").length,
     historicalSafeFeatureCount: N2_EDGE_FEATURE_DEFINITIONS.filter((item) => item.sourceStatus === "historical_safe_now").length,
     timedAdapterRequiredFeatureCount: N2_EDGE_FEATURE_DEFINITIONS.filter((item) => item.sourceStatus === "requires_verified_timed_adapter").length,
     inputObservationCount: inputCount,
@@ -348,7 +394,8 @@ export function scanN2EdgeHypotheses(observations: N2EdgeScanObservation[]): N2E
   for (const observation of observations) {
     const residual = observation.hit - observation.baselineProbability;
     for (const definition of N2_EDGE_FEATURE_DEFINITIONS) {
-      const feature = observation.features[definition.featureKey];
+      const feature = derivedSelectionFeature(definition, observation.betSelection, observation.decisionCutoff)
+        ?? observation.features[definition.featureKey];
       if (feature == null || feature.value == null) {
         missingFeatureValueCount += 1;
         continue;
@@ -406,6 +453,7 @@ export function scanN2EdgeHypotheses(observations: N2EdgeScanObservation[]): N2E
     rawTests.push({
       featureKey: aggregate.definition.featureKey,
       family: aggregate.definition.family,
+      selectionRole: aggregate.definition.selectionRole,
       bucket: aggregate.bucket,
       direction: meanResidual >= 0 ? "underpredicted" : "overpredicted",
       uniqueRaceCount: raceMeans.length,
@@ -425,27 +473,28 @@ export function scanN2EdgeHypotheses(observations: N2EdgeScanObservation[]): N2E
     || left.bucket.localeCompare(right.bucket),
   );
   let priorAdjusted = 0;
-  const adjusted: N2EdgeHypothesis[] = ordered.map((test, index) => {
-    const adjustedP = Math.min(1, Math.max(priorAdjusted, test.rawPValue * (ordered.length - index)));
+  const adjusted: N2EdgeHypothesis[] = ordered.map((candidate, index) => {
+    const adjustedP = Math.min(1, Math.max(priorAdjusted, candidate.rawPValue * (ordered.length - index)));
     priorAdjusted = adjustedP;
     const identity = {
       scanVersion: N2_EDGE_HYPOTHESIS_SCAN_VERSION,
-      featureKey: test.featureKey,
-      bucket: test.bucket,
-      direction: test.direction,
-      discoverySplit: test.discoverySplit,
-      confirmationSplits: test.confirmationSplits,
+      featureKey: candidate.featureKey,
+      selectionRole: candidate.selectionRole,
+      bucket: candidate.bucket,
+      direction: candidate.direction,
+      discoverySplit: candidate.discoverySplit,
+      confirmationSplits: candidate.confirmationSplits,
     };
     return {
-      ...test,
+      ...candidate,
       hypothesisId: `N2EDGE-${canonicalHash(identity).slice(0, 16)}`,
       holmAdjustedPValue: adjustedP,
     };
   });
 
   const signals = adjusted
-    .filter((test) => test.holmAdjustedPValue <= N2_EDGE_SCAN_ALPHA
-      && Math.abs(test.meanResidual) >= N2_EDGE_SCAN_MIN_ABSOLUTE_RESIDUAL)
+    .filter((candidate) => candidate.holmAdjustedPValue <= N2_EDGE_SCAN_ALPHA
+      && Math.abs(candidate.meanResidual) >= N2_EDGE_SCAN_MIN_ABSOLUTE_RESIDUAL)
     .sort((left, right) =>
       left.holmAdjustedPValue - right.holmAdjustedPValue
       || Math.abs(right.meanResidual) - Math.abs(left.meanResidual)
