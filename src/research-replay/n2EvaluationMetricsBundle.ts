@@ -47,6 +47,7 @@ export type N2EvaluationMetricsBundle = {
     historical: string;
     legacy: string;
   };
+  datasetCohortDigest: string;
   settlementSetDigest: string;
   privacy: {
     rowLevelPredictionsPersisted: false;
@@ -93,6 +94,7 @@ function blocked(blockers: string[]): N2EvaluationMetricsBundle {
       historical: canonicalHash("historical-not-built"),
       legacy: canonicalHash("legacy-not-built"),
     },
+    datasetCohortDigest: canonicalHash([]),
     settlementSetDigest: canonicalHash([]),
     privacy: {
       rowLevelPredictionsPersisted: false as const,
@@ -166,9 +168,9 @@ export function buildN2EvaluationMetricsBundle(input: {
   if (market.outputDigest !== common.marketDatasetDigest) digestBlockers.push("MARKET_DATASET_DIGEST_MISMATCH");
   if (historical.outputDigest !== common.historicalDatasetDigest) digestBlockers.push("HISTORICAL_DATASET_DIGEST_MISMATCH");
   if (legacy.outputDigest !== common.legacyDatasetDigest) digestBlockers.push("LEGACY_DATASET_DIGEST_MISMATCH");
-  if (market.cohortDigest !== common.commonCohortDigest
-    || historical.cohortDigest !== common.commonCohortDigest
-    || legacy.cohortDigest !== common.commonCohortDigest) digestBlockers.push("COHORT_DIGEST_MISMATCH");
+  if (market.cohortDigest !== historical.cohortDigest || market.cohortDigest !== legacy.cohortDigest) {
+    digestBlockers.push("DATASET_COHORT_DIGEST_MISMATCH");
+  }
   if (digestBlockers.length > 0) return blocked(digestBlockers);
 
   const settlementByRace = new Map(input.settlements.map((row) => [row.canonicalRaceKey, row]));
@@ -243,6 +245,7 @@ export function buildN2EvaluationMetricsBundle(input: {
       historical: historical.outputDigest,
       legacy: legacy.outputDigest,
     },
+    datasetCohortDigest: market.cohortDigest,
     settlementSetDigest,
     privacy: {
       rowLevelPredictionsPersisted: false as const,
