@@ -30,6 +30,17 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      - name: Checkout automation queue state read-only
+        uses: actions/checkout@v4
+        with:
+          ref: automation/boat-pon-research
+          path: .automation-state-snapshot
+          fetch-depth: 1
+          persist-credentials: false
+          sparse-checkout: |
+            automation/control/task-queue-state.json
+          sparse-checkout-cone-mode: false
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -86,5 +97,58 @@ jobs:
           # research task. Unexpected execution failures still fail this job.
           if [ "$RC" -ne 0 ] && [ "$RC" -ne 3 ]; then
             echo "::error::market baseline readiness execution failed rc=$RC"
+            exit "$RC"
+          fi
+
+      - name: Inspect dormant N2 activation plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          node --import tsx scripts/report-n2-dormant-activation-plan.ts \
+            --state .automation-state-snapshot/automation/control/task-queue-state.json \
+            > /tmp/n2-dormant-activation-plan.json
+          RC=$?
+          set -e
+
+          test -s /tmp/n2-dormant-activation-plan.json || {
+            echo "::error::dormant activation plan produced no sanitized summary"
+            exit 1
+          }
+          cat /tmp/n2-dormant-activation-plan.json
+
+          RC="$RC" node - <<'NODE'
+          const fs = require('node:fs');
+          const d = JSON.parse(fs.readFileSync('/tmp/n2-dormant-activation-plan.json', 'utf8'));
+          if (!['PASS', 'CONFLICT'].includes(d.status)) throw new Error('activation plan status invalid');
+          if (typeof d.stage !== 'string' || d.stage.length === 0) throw new Error('activation plan stage invalid');
+          if (!Array.isArray(d.activationActions)) throw new Error('activation actions invalid');
+          if (d.activationPlanningAttemptDelta !== 0) throw new Error('planner must not consume attempts');
+          for (const taskId of ['TASK-N2-020','TASK-N2-021','TASK-N2-022','TASK-N2-030','TASK-N2-040','TASK-N2-041','TASK-N2-042']) {
+            const task = d.tasks?.[taskId];
+            if (!task) throw new Error(`missing activation task ${taskId}`);
+            if (!Number.isSafeInteger(task.attemptCount) || task.attemptCount < 0) throw new Error(`${taskId} attempt count invalid`);
+            if (!Number.isSafeInteger(task.maxAttempts) || task.maxAttempts < 1) throw new Error(`${taskId} max attempts invalid`);
+          }
+          for (const key of [
+            'automaticMutationAuthorized',
+            'currentBuyConnectionAuthorized',
+            'lineConnectionAuthorized',
+            'publicPublishAuthorized',
+            'automatedBettingAuthorized',
+            'productionApplyAuthorized',
+          ]) {
+            if (d[key] !== false) throw new Error(`protected activation authority changed: ${key}`);
+          }
+          if (d.databaseWriteCount !== 0 || d.networkRequestCount !== 0) throw new Error('activation planner widened IO authority');
+          if (d.rawOddsValuesReadByPlanner !== false) throw new Error('activation planner exposed private odds values');
+          if (d.status === 'CONFLICT' && d.activationActions.length !== 0) throw new Error('conflicted activation plan cannot propose mutations');
+          console.log(`activation_status=${d.status} stage=${d.stage} next_actions=${d.activationActions.length}`);
+          NODE
+
+          # CONFLICT is an intentional fail-closed diagnostic, not a mutation
+          # attempt. Unexpected script failures still fail the workflow.
+          if [ "$RC" -ne 0 ] && [ "$RC" -ne 3 ]; then
+            echo "::error::dormant activation plan execution failed rc=$RC"
             exit "$RC"
           fi
