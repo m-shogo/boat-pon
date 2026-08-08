@@ -190,7 +190,7 @@ export type N2EdgeHypothesis = {
   uniqueRaceCount: number;
   meanResidual: number;
   standardError: number;
-  zScore: number;
+  zScore: number | null;
   rawPValue: number;
   holmAdjustedPValue: number;
   discoverySplit: "train";
@@ -501,9 +501,11 @@ export class N2EdgeHypothesisAccumulator {
         ? 0
         : aggregate.m2 / (aggregate.uniqueRaceCount - 1);
       const standardError = Math.sqrt(variance / aggregate.uniqueRaceCount);
-      const zScore = standardError > 0
-        ? aggregate.mean / standardError
-        : aggregate.mean === 0 ? 0 : Math.sign(aggregate.mean) * Number.POSITIVE_INFINITY;
+      const degenerateNonZero = standardError === 0 && aggregate.mean !== 0;
+      const zScore = degenerateNonZero
+        ? null
+        : standardError > 0 ? aggregate.mean / standardError : 0;
+      const rawPValue = degenerateNonZero ? 0 : twoSidedNormalP(zScore ?? 0);
       rawTests.push({
         featureKey: aggregate.definition.featureKey,
         family: aggregate.definition.family,
@@ -514,7 +516,7 @@ export class N2EdgeHypothesisAccumulator {
         meanResidual: aggregate.mean,
         standardError,
         zScore,
-        rawPValue: twoSidedNormalP(zScore),
+        rawPValue,
         discoverySplit: "train",
         confirmationSplits: ["validation", "test"],
         forwardShadowReserved: true,

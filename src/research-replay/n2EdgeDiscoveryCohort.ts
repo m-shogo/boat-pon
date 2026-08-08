@@ -69,12 +69,22 @@ function unique(values: readonly string[]): string[] {
   return [...new Set(values)].sort();
 }
 
-function parseRaceKey(value: string): { date: string; year: number; venueCode: string } | null {
+function parseRaceKey(value: string): { date: string; year: number; venueCode: string; raceNo: number } | null {
   const match = RACE_KEY_RE.exec(value);
   if (!match) return null;
   const date = `${match[1]}-${match[2]}-${match[3]}`;
   if (!Number.isFinite(Date.parse(`${date}T00:00:00.000Z`))) return null;
-  return { date, year: Number(match[1]), venueCode: match[4] };
+  return { date, year: Number(match[1]), venueCode: match[4], raceNo: Number(match[5]) };
+}
+
+function compareCanonicalRaceKeys(left: string, right: string): number {
+  if (left === right) return 0;
+  const a = parseRaceKey(left);
+  const b = parseRaceKey(right);
+  if (!a || !b) return left.localeCompare(right);
+  return a.date.localeCompare(b.date)
+    || Number(a.venueCode) - Number(b.venueCode)
+    || a.raceNo - b.raceNo;
 }
 
 function rankDigest(canonicalRaceKey: string): string {
@@ -128,7 +138,7 @@ export function buildN2EdgeDiscoveryCohort(
   candidates: N2EdgeDiscoveryRaceCandidate[],
 ): N2EdgeDiscoveryCohortReport {
   const duplicateRaceKeyCount = candidates.length - new Set(candidates.map((item) => item.canonicalRaceKey)).size;
-  const parsed: Array<{ canonicalRaceKey: string; date: string; year: number; venueCode: string }> = [];
+  const parsed: Array<{ canonicalRaceKey: string; date: string; year: number; venueCode: string; raceNo: number }> = [];
   let invalidRaceKeyCount = 0;
   let excludedBefore2004Count = 0;
   let excludedAfterTrainCount = 0;
@@ -176,7 +186,7 @@ export function buildN2EdgeDiscoveryCohort(
       .map((race) => ({ ...race, deterministicRankDigest: rankDigest(race.canonicalRaceKey) }))
       .sort((left, right) =>
         left.deterministicRankDigest.localeCompare(right.deterministicRankDigest)
-        || left.canonicalRaceKey.localeCompare(right.canonicalRaceKey),
+        || compareCanonicalRaceKeys(left.canonicalRaceKey, right.canonicalRaceKey),
       )
       .slice(0, N2_EDGE_DISCOVERY_RACES_PER_VENUE_YEAR);
     selectedByStratum[stratumId] = chosen.length;
@@ -189,7 +199,9 @@ export function buildN2EdgeDiscoveryCohort(
     })));
   }
 
-  selected.sort((left, right) => left.canonicalRaceKey.localeCompare(right.canonicalRaceKey));
+  // The hash rank determines membership only. Downstream streaming consumers
+  // require canonical chronological race order, including numeric R9 < R10.
+  selected.sort((left, right) => compareCanonicalRaceKeys(left.canonicalRaceKey, right.canonicalRaceKey));
   const representedYears = new Set(selected.map((race) => race.year));
   const representedVenues = new Set(selected.map((race) => race.venueCode));
   const cohortDigest = canonicalHash(selected.map((race) => race.canonicalRaceKey));
