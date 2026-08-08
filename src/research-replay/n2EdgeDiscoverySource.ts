@@ -2,7 +2,9 @@ import { existsSync, statSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 
-import { canonicalHash } from "./canonical";
+import { officialVenueCode } from "../domain/officialLinks";
+import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
+import { canonicalRaceKey } from "./identity";
 import {
   N2_EDGE_DISCOVERY_FROM_DATE,
   N2_EDGE_DISCOVERY_TO_DATE,
@@ -12,14 +14,15 @@ import type { N2HistoricalOutcomeRow } from "./n2HistoricalOnlyBaselineDataset";
 export const N2_EDGE_DISCOVERY_SOURCE_VERSION = "n2-edge-discovery-source-v1" as const;
 export const N2_EDGE_DISCOVERY_HISTORY_FROM_DATE = "2003-07-05" as const;
 
-const PRIMARY_RACE_ID_RE = /^(\d{4})(\d{2})(\d{2})-(0[1-9]|1\d|2[0-4])-(0[1-9]|1[0-2])$/u;
 const CANONICAL_RACE_KEY_RE = /^(\d{4}-\d{2}-\d{2}):(0[1-9]|1\d|2[0-4]):R([1-9]|1[0-2])$/u;
 const TRIFECTA_SELECTION_RE = /^[1-6]-[1-6]-[1-6]$/u;
 
 export type N2EdgeDiscoveryCandidate = {
   canonicalRaceKey: string;
   primaryRaceId: string;
+  primaryIdentityEncoding: "venue_label" | "venue_code";
   decisionCutoff: string;
+  sourceObservedAt: string;
 };
 
 export type N2EdgeDiscoverySourceRead = {
@@ -31,11 +34,12 @@ export type N2EdgeDiscoverySourceRead = {
   discoveryToDateInclusive: typeof N2_EDGE_DISCOVERY_TO_DATE;
   historicalOutcomeCount: number;
   officialProgramMetadataCount: number;
+  eligibleProgramMetadataCount: number;
   candidateRaceCount: number;
   missingOfficialProgramCount: number;
   missingCleanWinnerCount: number;
-  primaryRaceIdParseFailureCount: number;
-  decisionCutoffInvalidCount: number;
+  excludedProgramCount: number;
+  excludedProgramReasonCounts: Record<string, number>;
   historicalOutcomes: N2HistoricalOutcomeRow[];
   candidates: N2EdgeDiscoveryCandidate[];
   reads: {
@@ -57,10 +61,23 @@ export type N2EdgeDiscoverySourceRead = {
 };
 
 type WinnerRow = { raceKey: string; winningSelection: string | null };
-type ProgramRow = { raceId: string; closeAt: string };
+type ProgramRow = {
+  raceId: string;
+  date: string;
+  venue: string;
+  raceNo: number;
+  closeAt: string;
+  importedAt: string;
+};
+type NormalizedProgram = ProgramRow & N2EdgeDiscoveryCandidate;
 
 function unique(values: readonly string[]): string[] {
   return [...new Set(values)].sort();
+}
+
+function validDate(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value)
+    && Number.isFinite(Date.parse(`${value}T00:00:00.000Z`));
 }
 
 function validSelection(value: string): boolean {
@@ -68,19 +85,58 @@ function validSelection(value: string): boolean {
   return new Set(value.split("-")).size === 3;
 }
 
-export function canonicalRaceKeyFromPrimaryRaceId(raceId: string): string | null {
-  const match = PRIMARY_RACE_ID_RE.exec(raceId);
-  if (!match) return null;
-  const date = `${match[1]}-${match[2]}-${match[3]}`;
-  if (!Number.isFinite(Date.parse(`${date}T00:00:00.000Z`))) return null;
-  return `${date}:${match[4]}:R${Number(match[5])}`;
+export function canonicalDatabaseTimestamp(value: string): string {
+  const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)
+    ? `${value.replace(" ", "T")}Z`
+    : value;
+  return canonicalUtcTimestamp(normalized);
 }
 
-export function primaryRaceIdFromCanonicalRaceKey(raceKey: string): string | null {
-  const match = CANONICAL_RACE_KEY_RE.exec(raceKey);
-  if (!match) return null;
-  const date = match[1];
-  return `${date.replaceAll("-", "")}-${match[2]}-${String(Number(match[3])).padStart(2, "0")}`;
+export function officialProgramDecisionCutoffUtc(date: string, closeAt: string): string {
+  if (!validDate(date)) throw new Error("INVALID_RACE_DATE");
+  const time = /^\d{2}:\d{2}$/.test(closeAt) ? `${closeAt}:00`
+    : /^\d{2}:\d{2}:\d{2}$/.test(closeAt) ? closeAt : null;
+  if (time === null) throw new Error("INVALID_CLOSE_AT");
+  const parsed = Date.parse(`${date}T${time}+09:00`);
+  if (!Number.isFinite(parsed)) throw new Error("INVALID_CLOSE_AT");
+  return new Date(parsed).toISOString();
+}
+
+function primaryIdentityEncoding(
+  row: ProgramRow,
+  venueCode: string,
+): "venue_label" | "venue_code" {
+  if (!Number.isInteger(row.raceNo) || row.raceNo < 1 || row.raceNo > 12) {
+    throw new Error("INVALID_RACE_NO");
+  }
+  const suffix = String(row.raceNo).padStart(2, "0");
+  const compactDate = row.date.replaceAll("-", "");
+  const venueToken = row.venue.trim();
+  const labelIdentity = `${compactDate}-${venueToken}-${suffix}`;
+  const codeIdentity = `${compactDate}-${venueCode}-${suffix}`;
+  if (row.raceId === labelIdentity) return venueToken === venueCode ? "venue_code" : "venue_label";
+  if (row.raceId === codeIdentity) return "venue_code";
+  throw new Error("RACE_IDENTITY_MISMATCH");
+}
+
+export function normalizeDiscoveryProgramRow(row: ProgramRow): NormalizedProgram {
+  if (!validDate(row.date)) throw new Error("INVALID_RACE_DATE");
+  const venueCode = officialVenueCode(row.venue);
+  if (venueCode === null) throw new Error("UNKNOWN_VENUE");
+  const encoding = primaryIdentityEncoding(row, venueCode);
+  const decisionCutoff = officialProgramDecisionCutoffUtc(row.date, row.closeAt);
+  const sourceObservedAt = canonicalDatabaseTimestamp(row.importedAt);
+  if (Date.parse(sourceObservedAt) >= Date.parse(decisionCutoff)) {
+    throw new Error("POST_CUTOFF_PRIMARY_IMPORT");
+  }
+  return {
+    ...row,
+    canonicalRaceKey: canonicalRaceKey(row.date, venueCode, row.raceNo),
+    primaryRaceId: row.raceId,
+    primaryIdentityEncoding: encoding,
+    decisionCutoff,
+    sourceObservedAt,
+  };
 }
 
 function tableExists(db: DatabaseSync, table: string): boolean {
@@ -178,7 +234,13 @@ function readProgramMetadata(path: string): { rows: ProgramRow[]; blockers: stri
   try {
     if (!tableExists(db, "official_programs")) return { rows: [], blockers: ["PRIMARY_TABLE_MISSING:official_programs"] };
     const rows = db.prepare(`
-      SELECT race_id AS raceId, close_at AS closeAt
+      SELECT
+        race_id AS raceId,
+        date,
+        venue,
+        race_no AS raceNo,
+        close_at AS closeAt,
+        imported_at AS importedAt
       FROM official_programs
       WHERE date >= ? AND date <= ?
       ORDER BY date,race_no,race_id
@@ -195,8 +257,6 @@ function blocked(input: {
   sidecarReads: number;
   historicalOutcomeCount?: number;
   officialProgramMetadataCount?: number;
-  primaryRaceIdParseFailureCount?: number;
-  decisionCutoffInvalidCount?: number;
 }): N2EdgeDiscoverySourceRead {
   const core = {
     readerVersion: N2_EDGE_DISCOVERY_SOURCE_VERSION,
@@ -207,11 +267,12 @@ function blocked(input: {
     discoveryToDateInclusive: N2_EDGE_DISCOVERY_TO_DATE,
     historicalOutcomeCount: input.historicalOutcomeCount ?? 0,
     officialProgramMetadataCount: input.officialProgramMetadataCount ?? 0,
+    eligibleProgramMetadataCount: 0,
     candidateRaceCount: 0,
     missingOfficialProgramCount: 0,
     missingCleanWinnerCount: 0,
-    primaryRaceIdParseFailureCount: input.primaryRaceIdParseFailureCount ?? 0,
-    decisionCutoffInvalidCount: input.decisionCutoffInvalidCount ?? 0,
+    excludedProgramCount: 0,
+    excludedProgramReasonCounts: {} as Record<string, number>,
     historicalOutcomes: [] as N2HistoricalOutcomeRow[],
     candidates: [] as N2EdgeDiscoveryCandidate[],
     reads: {
@@ -278,24 +339,21 @@ export function readN2EdgeDiscoverySource(input: {
   }
 
   const blockers: string[] = [];
-  const programByRace = new Map<string, ProgramRow & { canonicalRaceKey: string }>();
-  let primaryRaceIdParseFailureCount = 0;
-  let decisionCutoffInvalidCount = 0;
+  const programByRace = new Map<string, NormalizedProgram>();
+  const excludedProgramReasonCounts: Record<string, number> = {};
   for (const program of programs.rows) {
-    const canonicalRaceKey = canonicalRaceKeyFromPrimaryRaceId(program.raceId);
-    if (canonicalRaceKey == null) {
-      primaryRaceIdParseFailureCount += 1;
-      continue;
+    try {
+      const normalized = normalizeDiscoveryProgramRow(program);
+      if (programByRace.has(normalized.canonicalRaceKey)) {
+        blockers.push(`${normalized.canonicalRaceKey}:DUPLICATE_ELIGIBLE_OFFICIAL_PROGRAM`);
+        continue;
+      }
+      programByRace.set(normalized.canonicalRaceKey, normalized);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : "UNKNOWN_PROGRAM_METADATA_ERROR";
+      excludedProgramReasonCounts[reason] = (excludedProgramReasonCounts[reason] ?? 0) + 1;
     }
-    if (!Number.isFinite(Date.parse(program.closeAt))) {
-      decisionCutoffInvalidCount += 1;
-      continue;
-    }
-    if (programByRace.has(canonicalRaceKey)) blockers.push(`${canonicalRaceKey}:DUPLICATE_OFFICIAL_PROGRAM`);
-    programByRace.set(canonicalRaceKey, { ...program, canonicalRaceKey });
   }
-  if (primaryRaceIdParseFailureCount > 0) blockers.push(`PRIMARY_RACE_ID_PARSE_FAILURES:${primaryRaceIdParseFailureCount}`);
-  if (decisionCutoffInvalidCount > 0) blockers.push(`DECISION_CUTOFF_INVALID:${decisionCutoffInvalidCount}`);
   if (blockers.length > 0) {
     return blocked({
       blockers,
@@ -303,8 +361,6 @@ export function readN2EdgeDiscoverySource(input: {
       sidecarReads: 1,
       historicalOutcomeCount: historical.rows.length,
       officialProgramMetadataCount: programs.rows.length,
-      primaryRaceIdParseFailureCount,
-      decisionCutoffInvalidCount,
     });
   }
 
@@ -323,8 +379,10 @@ export function readN2EdgeDiscoverySource(input: {
     }
     candidates.push({
       canonicalRaceKey: outcome.canonicalRaceKey,
-      primaryRaceId: program.raceId,
-      decisionCutoff: program.closeAt,
+      primaryRaceId: program.primaryRaceId,
+      primaryIdentityEncoding: program.primaryIdentityEncoding,
+      decisionCutoff: program.decisionCutoff,
+      sourceObservedAt: program.sourceObservedAt,
     });
   }
   let missingCleanWinnerCount = 0;
@@ -332,6 +390,7 @@ export function readN2EdgeDiscoverySource(input: {
     if (!winnerByRace.has(raceKey)) missingCleanWinnerCount += 1;
   }
   candidates.sort((a, b) => a.canonicalRaceKey.localeCompare(b.canonicalRaceKey));
+  const excludedProgramCount = Object.values(excludedProgramReasonCounts).reduce((sum, count) => sum + count, 0);
 
   const core = {
     readerVersion: N2_EDGE_DISCOVERY_SOURCE_VERSION,
@@ -342,11 +401,12 @@ export function readN2EdgeDiscoverySource(input: {
     discoveryToDateInclusive: N2_EDGE_DISCOVERY_TO_DATE,
     historicalOutcomeCount: historical.rows.length,
     officialProgramMetadataCount: programs.rows.length,
+    eligibleProgramMetadataCount: programByRace.size,
     candidateRaceCount: candidates.length,
     missingOfficialProgramCount,
     missingCleanWinnerCount,
-    primaryRaceIdParseFailureCount,
-    decisionCutoffInvalidCount,
+    excludedProgramCount,
+    excludedProgramReasonCounts: Object.fromEntries(Object.entries(excludedProgramReasonCounts).sort(([a], [b]) => a.localeCompare(b))),
     historicalOutcomes: historical.rows,
     candidates,
     reads: {
