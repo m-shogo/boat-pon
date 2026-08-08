@@ -37,7 +37,7 @@ export type N2LegacyTrainingProfile = {
 export type N2LegacyBaselineDataset = {
   datasetVersion: typeof N2_LEGACY_BASELINE_DATASET_VERSION;
   baselineId: typeof N2_LEGACY_BASELINE_ID;
-  modelVersion: typeof N2_LEGACY_MODEL_VERSION;
+  modelVersion: string;
   legacyScope: "boatpon_v3_alpha15_core_probability_surface_without_current_race_features_or_odds";
   status: "PASS" | "BLOCKED";
   blockers: string[];
