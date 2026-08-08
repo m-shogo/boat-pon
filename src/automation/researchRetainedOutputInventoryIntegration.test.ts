@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
 
-import { buildResearchDurableKnowledgeCompletenessReport } from "./researchDurableKnowledgeCompleteness";
+import { buildResearchDurableKnowledgeCompletenessReportWithRetainedInventory } from "./researchDurableKnowledgeRetainedInventory";
 
 const AUTHORITY_SHA = "a".repeat(40);
 const IDEMPOTENCY_KEY = "b".repeat(64);
@@ -54,7 +54,7 @@ function history(root: string, input: { runId: string; outputPath: string }): vo
 test("retained root with no history is BLOCKED as orphan evidence", () => {
   withRoot((root) => {
     retained(root, "123", "report.txt", "retained evidence\n");
-    const report = buildResearchDurableKnowledgeCompletenessReport({ repoRoot: root });
+    const report = buildResearchDurableKnowledgeCompletenessReportWithRetainedInventory({ repoRoot: root });
     assert.equal(report.status, "BLOCKED");
     assert.equal(report.historyFileCount, 0);
     assert.equal(report.retainedOutputFileCount, 1);
@@ -68,7 +68,7 @@ test("same-run history reference accounts for retained evidence", () => {
   withRoot((root) => {
     const outputPath = retained(root, "123", "report.txt", "retained evidence\n");
     history(root, { runId: "123", outputPath });
-    const report = buildResearchDurableKnowledgeCompletenessReport({ repoRoot: root });
+    const report = buildResearchDurableKnowledgeCompletenessReportWithRetainedInventory({ repoRoot: root });
     assert.equal(report.status, "PASS");
     assert.equal(report.durableCompleteCount, 1);
     assert.equal(report.strongDurableCompleteCount, 1);
@@ -84,7 +84,7 @@ test("unreferenced retained file blocks an otherwise valid history", () => {
     const outputPath = retained(root, "123", "report.txt", "retained evidence\n");
     history(root, { runId: "123", outputPath });
     retained(root, "124", "orphan.txt", "orphan evidence\n");
-    const report = buildResearchDurableKnowledgeCompletenessReport({ repoRoot: root });
+    const report = buildResearchDurableKnowledgeCompletenessReportWithRetainedInventory({ repoRoot: root });
     assert.equal(report.status, "BLOCKED");
     assert.equal(report.retainedOutputFileCount, 2);
     assert.equal(report.referencedRetainedOutputCount, 1);
@@ -101,7 +101,7 @@ test("tampered retained file is counted invalid and blocks audit", () => {
     mkdirSync(dirname(absolutePath), { recursive: true });
     writeFileSync(absolutePath, "tampered\n", "utf8");
     history(root, { runId: "123", outputPath });
-    const report = buildResearchDurableKnowledgeCompletenessReport({ repoRoot: root });
+    const report = buildResearchDurableKnowledgeCompletenessReportWithRetainedInventory({ repoRoot: root });
     assert.equal(report.status, "BLOCKED");
     assert.equal(report.invalidRetainedOutputCount, 1);
     assert.equal(report.orphanRetainedOutputCount, 0);
@@ -116,7 +116,7 @@ test("existing history without retained outputs keeps zero inventory counts", ()
     mkdirSync(dirname(absolute), { recursive: true });
     writeFileSync(absolute, "mutable evidence\n", "utf8");
     history(root, { runId: "123", outputPath: mutable });
-    const report = buildResearchDurableKnowledgeCompletenessReport({ repoRoot: root });
+    const report = buildResearchDurableKnowledgeCompletenessReportWithRetainedInventory({ repoRoot: root });
     assert.equal(report.retainedOutputFileCount, 0);
     assert.equal(report.retainedOutputBytes, 0);
     assert.equal(report.referencedRetainedOutputCount, 0);
