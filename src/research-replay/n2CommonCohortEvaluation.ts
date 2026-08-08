@@ -1,6 +1,6 @@
 import {
   compareN2BaselinesOnCommonCohort,
-  type N2BaselineCommonCohortReport,
+  type N2BaselineMetrics,
 } from "./n2BaselineEvaluation";
 import { canonicalHash } from "./canonical";
 import {
@@ -36,7 +36,7 @@ export type N2CommonCohortEvaluation = {
   commonRowCount: number;
   commonPositiveCount: number;
   excludedOutsideCommonCohort: Record<string, number>;
-  baselineMetrics: N2BaselineCommonCohortReport["baselineMetrics"];
+  baselineMetrics: Record<string, N2BaselineMetrics>;
   commonCohortDigest: string;
   comparisonDigest: string;
   marketDatasetDigest: string;
@@ -51,10 +51,11 @@ function blocked(input: {
   historicalDatasetDigest?: string;
   legacyDatasetDigest?: string;
 }): N2CommonCohortEvaluation {
+  const normalizedBlockers = [...new Set(input.blockers)].sort();
   const core = {
     evaluationVersion: N2_COMMON_COHORT_EVALUATION_VERSION,
     status: "BLOCKED" as const,
-    blockers: [...new Set(input.blockers)].sort(),
+    blockers: normalizedBlockers,
     requiredBaselineCount: N2_COMMON_COHORT_REQUIRED_BASELINES,
     requiredCommonRowCount: N2_COMMON_COHORT_REQUIRED_ROWS,
     baselineIds: [] as string[],
@@ -63,9 +64,9 @@ function blocked(input: {
     commonRowCount: 0,
     commonPositiveCount: 0,
     excludedOutsideCommonCohort: {} as Record<string, number>,
-    baselineMetrics: {} as N2BaselineCommonCohortReport["baselineMetrics"],
+    baselineMetrics: {} as Record<string, N2BaselineMetrics>,
     commonCohortDigest: canonicalHash([]),
-    comparisonDigest: canonicalHash({ status: "BLOCKED", blockers: [...new Set(input.blockers)].sort() }),
+    comparisonDigest: canonicalHash({ status: "BLOCKED", blockers: normalizedBlockers }),
     marketDatasetDigest: input.marketDatasetDigest ?? canonicalHash("market-not-built"),
     historicalDatasetDigest: input.historicalDatasetDigest ?? canonicalHash("historical-not-built"),
     legacyDatasetDigest: input.legacyDatasetDigest ?? canonicalHash("legacy-not-built"),
@@ -163,6 +164,21 @@ export function evaluateN2CommonCohort(input: {
   }
 
   const baselineKinds = ["market_only", "historical_only", "legacy"];
+  const baselineMetrics = Object.fromEntries(
+    comparison.baselineIds.map((baselineId) => [baselineId, comparison.reports[baselineId].metrics]),
+  ) as Record<string, N2BaselineMetrics>;
+  const commonPositiveCounts = comparison.baselineIds.map(
+    (baselineId) => comparison.reports[baselineId].metrics.positiveCount,
+  );
+  if (new Set(commonPositiveCounts).size !== 1) {
+    return blocked({
+      blockers: [`COMMON_POSITIVE_COUNT_MISMATCH:${commonPositiveCounts.join(",")}`],
+      marketDatasetDigest: market.outputDigest,
+      historicalDatasetDigest: historical.outputDigest,
+      legacyDatasetDigest: legacy.outputDigest,
+    });
+  }
+
   const core = {
     evaluationVersion: N2_COMMON_COHORT_EVALUATION_VERSION,
     status: "COMPARABLE" as const,
@@ -171,13 +187,13 @@ export function evaluateN2CommonCohort(input: {
     requiredCommonRowCount: N2_COMMON_COHORT_REQUIRED_ROWS,
     baselineIds: comparison.baselineIds,
     baselineKinds,
-    baselineInputRowCounts: comparison.baselineInputRowCounts,
+    baselineInputRowCounts: comparison.inputCounts,
     commonRowCount: comparison.commonRowCount,
-    commonPositiveCount: comparison.commonPositiveCount,
+    commonPositiveCount: commonPositiveCounts[0] ?? 0,
     excludedOutsideCommonCohort: comparison.excludedOutsideCommonCohort,
-    baselineMetrics: comparison.baselineMetrics,
+    baselineMetrics,
     commonCohortDigest: comparison.commonCohortDigest,
-    comparisonDigest: comparison.comparisonDigest,
+    comparisonDigest: comparison.outputDigest,
     marketDatasetDigest: market.outputDigest,
     historicalDatasetDigest: historical.outputDigest,
     legacyDatasetDigest: legacy.outputDigest,
