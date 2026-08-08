@@ -40,31 +40,32 @@ function trainObservation(index: number, overrides: Partial<N2EdgeScanObservatio
     hit: index % 2 === 0 ? 1 : 0,
     baselineId: "historical-discovery-v1",
     baselineProbability: 0.1,
-    features: {
-      course: {
-        value: "1",
-        pitClass: "historical_safe",
-        availableAt: `${date}T03:00:00.000Z`,
-      },
-    },
+    features: {},
     ...overrides,
   };
 }
 
-test("feature registry includes requested families but excludes current snapshot leakage keys", () => {
+test("feature registry has explicit selection roles, correct percent units, and no current snapshot leakage keys", () => {
   const families = new Set(N2_EDGE_FEATURE_DEFINITIONS.map((definition) => definition.family));
   assert.deepEqual(
     [...families].sort(),
     ["course", "exhibition", "motor_boat", "player", "start_timing", "weather"],
   );
+
   const featureKeys = new Set(N2_EDGE_FEATURE_DEFINITIONS.map((definition) => definition.featureKey));
   for (const key of LIVE_ONLY_KEYS) assert.equal(featureKeys.has(key), false, `${key} must stay outside N2 scan v1`);
-
-  for (const key of ["startTiming", "exhibitionRank", "windSpeedMps", "waveHeightCm"]) {
+  for (const key of ["firstCourse", "secondCourse", "thirdCourse"]) {
+    const definition = N2_EDGE_FEATURE_DEFINITIONS.find((candidate) => candidate.featureKey === key);
+    assert.ok(definition);
+    assert.equal(definition.sourceStatus, "derived_from_selection");
+  }
+  for (const key of ["firstStartTiming", "secondExhibitionRank", "windSpeedMps", "waveHeightCm"]) {
     const definition = N2_EDGE_FEATURE_DEFINITIONS.find((candidate) => candidate.featureKey === key);
     assert.ok(definition, `${key} must be represented in the frozen research space`);
     assert.equal(definition.sourceStatus, "requires_verified_timed_adapter");
   }
+  const motor = N2_EDGE_FEATURE_DEFINITIONS.find((candidate) => candidate.featureKey === "firstMotorTop2Rate");
+  assert.deepEqual(motor?.cutPoints, [30, 40, 50]);
 });
 
 test("scanner blocks validation/test/forward labels from discovery", () => {
@@ -75,13 +76,6 @@ test("scanner blocks validation/test/forward labels from discovery", () => {
       canonicalRaceKey: `${validationDate}:01:R1`,
       split: "validation",
       decisionCutoff: `${validationDate}T03:30:00.000Z`,
-      features: {
-        course: {
-          value: "1",
-          pitClass: "historical_safe",
-          availableAt: `${validationDate}T03:00:00.000Z`,
-        },
-      },
     }),
   ]);
   assert.equal(report.status, "BLOCKED");
@@ -97,13 +91,6 @@ test("scanner recomputes canonical split instead of trusting a caller-supplied t
       canonicalRaceKey: `${date}:01:R1`,
       split: "train",
       decisionCutoff: `${date}T03:30:00.000Z`,
-      features: {
-        course: {
-          value: "1",
-          pitClass: "historical_safe",
-          availableAt: `${date}T03:00:00.000Z`,
-        },
-      },
     }),
   ]);
   assert.equal(report.status, "BLOCKED");
@@ -122,23 +109,26 @@ test("unknown current-snapshot feature injection fails closed", () => {
   assert.ok(report.blockers.includes("UNKNOWN_FEATURE_KEY:courseAvgSt"));
 });
 
-test("future feature availability is excluded before hypothesis testing", () => {
+test("future feature availability is excluded before that feature can generate a hypothesis", () => {
   const observations = Array.from({ length: N2_EDGE_SCAN_MIN_UNIQUE_RACES }, (_, index) => {
     const observation = trainObservation(index);
-    observation.features.course.availableAt = `${dateFor(index)}T04:00:00.000Z`;
+    observation.features.firstClassName = {
+      value: "A1",
+      pitClass: "historical_safe",
+      availableAt: `${dateFor(index)}T04:00:00.000Z`,
+    };
     return observation;
   });
   const report = scanN2EdgeHypotheses(observations);
   assert.equal(report.status, "PASS");
   assert.equal(report.pitExcludedFeatureValueCount, observations.length);
-  assert.equal(report.testedHypothesisCount, 0);
-  assert.equal(report.signalCount, 0);
+  assert.equal(report.signals.some((signal) => signal.featureKey === "firstClassName"), false);
 });
 
 test("ST/exhibition/weather stay adapter-gated even when their timestamp looks pre-cutoff", () => {
   const observations = Array.from({ length: N2_EDGE_SCAN_MIN_UNIQUE_RACES }, (_, index) => {
     const observation = trainObservation(index);
-    observation.features.startTiming = {
+    observation.features.firstStartTiming = {
       value: 0.05,
       pitClass: "historical_safe",
       availableAt: `${dateFor(index)}T03:00:00.000Z`,
@@ -150,13 +140,13 @@ test("ST/exhibition/weather stay adapter-gated even when their timestamp looks p
   const report = scanN2EdgeHypotheses(observations);
   assert.equal(report.status, "PASS");
   assert.equal(report.adapterGatedFeatureValueCount, observations.length);
-  assert.equal(report.signals.some((signal) => signal.featureKey === "startTiming"), false);
+  assert.equal(report.signals.some((signal) => signal.featureKey === "firstStartTiming"), false);
 });
 
 test("verified pre-cutoff timed adapter may participate in the frozen univariate scan", () => {
   const observations = Array.from({ length: N2_EDGE_SCAN_MIN_UNIQUE_RACES }, (_, index) => {
     const observation = trainObservation(index);
-    observation.features.startTiming = {
+    observation.features.firstStartTiming = {
       value: 0.05,
       pitClass: "historical_safe",
       availableAt: `${dateFor(index)}T03:00:00.000Z`,
@@ -168,8 +158,7 @@ test("verified pre-cutoff timed adapter may participate in the frozen univariate
   const report = scanN2EdgeHypotheses(observations);
   assert.equal(report.status, "PASS");
   assert.equal(report.adapterGatedFeatureValueCount, 0);
-  assert.ok(report.testedHypothesisCount >= 2);
-  assert.ok(report.signals.some((signal) => signal.featureKey === "startTiming"));
+  assert.ok(report.signals.some((signal) => signal.featureKey === "firstStartTiming"));
 });
 
 test("strong train-only residual survives race-level support and Holm correction", () => {
@@ -178,8 +167,9 @@ test("strong train-only residual survives race-level support and Holm correction
   assert.equal(report.status, "PASS");
   assert.equal(report.baselineId, "historical-discovery-v1");
   assert.equal(report.multipleTesting.method, "Holm-Bonferroni");
-  const signal = report.signals.find((candidate) => candidate.featureKey === "course" && candidate.bucket === "1");
+  const signal = report.signals.find((candidate) => candidate.featureKey === "firstCourse" && candidate.bucket === "1");
   assert.ok(signal);
+  assert.equal(signal.selectionRole, "first");
   assert.equal(signal.uniqueRaceCount, 240);
   assert.equal(signal.direction, "underpredicted");
   assert.ok(signal.holmAdjustedPValue <= 0.05);
@@ -200,7 +190,7 @@ test("selection-row duplication cannot substitute for the minimum unique-race su
   assert.equal(report.signalCount, 0);
 });
 
-test("scan output is deterministic and carries no product authority", () => {
+test("scan output is deterministic and carries no raw rows or product authority", () => {
   const observations = Array.from({ length: 220 }, (_, index) => trainObservation(index));
   const first = scanN2EdgeHypotheses(observations);
   const second = scanN2EdgeHypotheses([...observations].reverse());
