@@ -21,7 +21,7 @@ function writeDiscovery(root:string,signals:N2EdgeHypothesis[]){const path=join(
 function source():N2EdgeHoldoutSourceRead{
  const outcomes:Array<{canonicalRaceKey:string;winningSelection:string}>=[]; const candidates:N2EdgeHoldoutSourceRead["candidates"]=[];
  for(let v=1;v<=17;v++){const venue=String(v).padStart(2,"0");
-  for(let i=0;i<36;i++){const d=date("2021-12-01",Math.floor(i/12));outcomes.push({canonicalRaceKey:`${d}:${venue}:R${i%12+1}`,winningSelection:"1-2-3"});}
+  for(const warmBase of ["2021-12-01","2023-12-01"]){for(let i=0;i<36;i++){const d=date(warmBase,Math.floor(i/12));outcomes.push({canonicalRaceKey:`${d}:${venue}:R${i%12+1}`,winningSelection:"1-2-3"});}}
   for(const [base,yearTag] of [["2022-01-10","v"],["2024-01-10","t"]] as const){for(let i=0;i<13;i++){const d=date(base,Math.floor(i/12));const r=i%12+1;const key=`${d}:${venue}:R${r}`;outcomes.push({canonicalRaceKey:key,winningSelection:i%2===0?"1-2-3":"2-1-3"});candidates.push({canonicalRaceKey:key,primaryRaceId:`${d.replaceAll("-","")}-${venue}-${String(r).padStart(2,"0")}`,primaryIdentityEncoding:"venue_code",decisionCutoff:`${d}T05:00:00.000Z`,sourceObservedAt:`${d}T00:00:00.000Z`});}}
  }
  outcomes.sort((a,b)=>a.canonicalRaceKey.localeCompare(b.canonicalRaceKey));candidates.sort((a,b)=>a.canonicalRaceKey.localeCompare(b.canonicalRaceKey));
