@@ -52,6 +52,27 @@ test("input order cannot change the selected cohort", () => {
   assert.deepEqual(first.races, second.races);
 });
 
+test("selected races use canonical numeric race order so R9 precedes R10", () => {
+  const candidates = raceKeysForStratum(2020, "01", 12)
+    .map((canonicalRaceKey) => ({ canonicalRaceKey }));
+  const report = buildN2EdgeDiscoveryCohort(candidates);
+  assert.equal(report.status, "PASS");
+  assert.deepEqual(report.races.map((race) => race.canonicalRaceKey), [
+    "2020-01-01:01:R1",
+    "2020-01-01:01:R2",
+    "2020-01-01:01:R3",
+    "2020-01-01:01:R4",
+    "2020-01-01:01:R5",
+    "2020-01-01:01:R6",
+    "2020-01-01:01:R7",
+    "2020-01-01:01:R8",
+    "2020-01-01:01:R9",
+    "2020-01-01:01:R10",
+    "2020-01-01:01:R11",
+    "2020-01-01:01:R12",
+  ]);
+});
+
 test("2001-2003 coverage gap and post-train dates are excluded before sampling", () => {
   const candidates = [
     { canonicalRaceKey: "2003-12-31:01:R1" },
