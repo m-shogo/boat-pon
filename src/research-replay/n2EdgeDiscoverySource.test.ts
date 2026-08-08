@@ -126,7 +126,7 @@ test("normalization matches the reviewed official-program canary on its known 20
     codeGitSha: "1234567890abcdef1234567890abcdef12345678",
     generatedAt: "2026-08-06T00:00:00.000Z",
   });
-  assert.equal(manifest.binding.itemCount, 1);
+  assert.equal(manifest.binding.items.length, 1);
   const item = manifest.binding.items[0];
   assert.equal(normalized.canonicalRaceKey, item.canonicalRaceKey);
   assert.equal(normalized.primaryIdentityEncoding, item.primaryIdentityEncoding);
