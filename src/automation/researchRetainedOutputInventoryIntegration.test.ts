@@ -6,10 +6,16 @@ import { dirname, join } from "node:path";
 import test from "node:test";
 
 import { buildResearchDurableKnowledgeCompletenessReportWithRetainedInventory } from "./researchDurableKnowledgeRetainedInventory";
+import {
+  buildResearchDurableRetentionSnapshotWithRetainedInventory,
+  persistResearchDurableRetentionSnapshotWithRetainedInventory,
+} from "./researchDurableRetentionSnapshotRetainedInventory";
 
 const AUTHORITY_SHA = "a".repeat(40);
 const IDEMPOTENCY_KEY = "b".repeat(64);
 const HISTORY_OUTPUT_DIGEST = "c".repeat(64);
+const SOURCE_STATE_SHA = "d".repeat(40);
+const MAIN_AUTHORITY_SHA = "e".repeat(40);
 
 function withRoot(fn: (root: string) => void): void {
   const root = mkdtempSync(join(tmpdir(), "boat-pon-retained-inventory-integration-"));
@@ -64,7 +70,7 @@ test("retained root with no history is BLOCKED as orphan evidence", () => {
   });
 });
 
-test("same-run history reference accounts for retained evidence", () => {
+test("same-run history reference accounts for retained evidence and persists retention snapshot", () => {
   withRoot((root) => {
     const outputPath = retained(root, "123", "report.txt", "retained evidence\n");
     history(root, { runId: "123", outputPath });
@@ -76,6 +82,23 @@ test("same-run history reference accounts for retained evidence", () => {
     assert.equal(report.referencedRetainedOutputCount, 1);
     assert.equal(report.orphanRetainedOutputCount, 0);
     assert.equal(report.invalidRetainedOutputCount, 0);
+
+    const snapshot = buildResearchDurableRetentionSnapshotWithRetainedInventory({
+      report,
+      sourceStateSha: SOURCE_STATE_SHA,
+      mainAuthoritySha: MAIN_AUTHORITY_SHA,
+      firstObservedAt: "2026-08-07T14:00:00.000Z",
+    });
+    assert.equal(snapshot.retainedOutputFileCount, 1);
+    assert.equal(snapshot.referencedRetainedOutputCount, 1);
+    assert.equal(snapshot.orphanRetainedOutputCount, 0);
+    assert.equal(snapshot.invalidRetainedOutputCount, 0);
+    const firstPersist = persistResearchDurableRetentionSnapshotWithRetainedInventory({ repoRoot: root, snapshot });
+    assert.equal(firstPersist.changed, true);
+    assert.equal(firstPersist.snapshot.retainedOutputFileCount, 1);
+    const replayPersist = persistResearchDurableRetentionSnapshotWithRetainedInventory({ repoRoot: root, snapshot });
+    assert.equal(replayPersist.changed, false);
+    assert.equal(replayPersist.snapshot.referencedRetainedOutputCount, 1);
   });
 });
 
