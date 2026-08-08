@@ -181,7 +181,8 @@ test("executor appends only rejected hypotheses, blocks confirmed promotion, and
     assert.equal(confirmed.disposition, "CONFIRMED_WITH_BLOCKING_CONFOUNDER");
     assert.equal(confirmed.promotionAuthorized, false);
     assert.equal(confirmed.confounderFlags[0].flagId, "distribution-concentration-evidence-missing-v1");
-    assert.equal(report.confounderCoverage.confirmedHypothesisPromotionBlockedUntilDistributionAudit, true);
+    assert.equal(report.confounderCoverage.aggregateDistributionEvidenceAvailable, false);
+    assert.equal(report.confounderCoverage.confirmedBlockedByMissingDistributionCount, 1);
     assert.equal(report.confounderCoverage.rejectedHypothesisRescueAllowed, false);
 
     const second = executor({ ...context(root), runId: "run-n2-042-retry" });
