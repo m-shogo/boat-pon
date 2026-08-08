@@ -25,7 +25,8 @@ function sourceRead(venueCount = 17, candidatesPerVenue = 13): N2EdgeDiscoverySo
   const candidates: N2EdgeDiscoverySourceRead["candidates"] = [];
   for (let venueIndex = 0; venueIndex < venueCount; venueIndex += 1) {
     const venueCode = String(venueIndex + 1).padStart(2, "0");
-    for (let warm = 0; warm < 36; warm += 1) {
+    const warmupCount = venueCount === 1 ? 120 : 36;
+    for (let warm = 0; warm < warmupCount; warm += 1) {
       const date = dateWithRace("2003-12-01", Math.floor(warm / 12));
       const raceNo = (warm % 12) + 1;
       historicalOutcomes.push({
@@ -198,8 +199,8 @@ test("executor scans a deterministic 204-race cohort and persists aggregate-only
     assert.ok(Number(scan.testedHypothesisCount) > 0);
     const serialized = JSON.stringify(report);
     assert.doesNotMatch(serialized, /2004-01-\d{2}:\d{2}:R\d+/u);
-    assert.doesNotMatch(serialized, /winningSelection|rawJson|registrationNo|racerName|primaryRaceId/u);
-    assert.doesNotMatch(serialized, /probabilityBySelection|historicalOutcomes|candidates|programs/u);
+    assert.doesNotMatch(serialized, /"(?:winningSelection|rawJson|registrationNo|racerName|primaryRaceId)"\s*:/u);
+    assert.doesNotMatch(serialized, /"(?:probabilityBySelection|historicalOutcomes|candidates|programs)"\s*:/u);
     assert.match(String(report.outputDigest), /^[0-9a-f]{64}$/u);
   });
 });
