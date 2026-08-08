@@ -1,12 +1,12 @@
 import { resolve } from "node:path";
 
 import {
-  buildResearchDurableKnowledgeCompletenessReportWithLegacyCompatibility,
-} from "../src/automation/researchDurableKnowledgeLegacyCompatibility";
+  buildResearchDurableKnowledgeCompletenessReportWithLegacyCompatibilityAndRetainedInventory,
+} from "../src/automation/researchDurableKnowledgeRetainedInventory";
 import {
-  buildResearchDurableRetentionSnapshot,
-  persistResearchDurableRetentionSnapshot,
-} from "../src/automation/researchDurableRetentionSnapshot";
+  buildResearchDurableRetentionSnapshotWithRetainedInventory,
+  persistResearchDurableRetentionSnapshotWithRetainedInventory,
+} from "../src/automation/researchDurableRetentionSnapshotRetainedInventory";
 
 function argument(name: string): string | null {
   const inline = process.argv.find((value) => value.startsWith(`--${name}=`));
@@ -27,17 +27,17 @@ const mainAuthoritySha = required("main-authority-sha");
 const observedAtArg = argument("observed-at");
 const observedAt = observedAtArg == null ? new Date().toISOString() : new Date(observedAtArg).toISOString();
 
-const report = buildResearchDurableKnowledgeCompletenessReportWithLegacyCompatibility({
+const report = buildResearchDurableKnowledgeCompletenessReportWithLegacyCompatibilityAndRetainedInventory({
   repoRoot,
   generatedAt: observedAt,
 });
-const snapshot = buildResearchDurableRetentionSnapshot({
+const snapshot = buildResearchDurableRetentionSnapshotWithRetainedInventory({
   report,
   sourceStateSha,
   mainAuthoritySha,
   firstObservedAt: observedAt,
 });
-const persisted = persistResearchDurableRetentionSnapshot({ repoRoot, snapshot });
+const persisted = persistResearchDurableRetentionSnapshotWithRetainedInventory({ repoRoot, snapshot });
 
 console.log(JSON.stringify({
   summaryVersion: "research-durable-retention-persist-summary-v1",
@@ -57,6 +57,11 @@ console.log(JSON.stringify({
   missingOutputReferenceCount: persisted.snapshot.missingOutputReferenceCount,
   invalidOutputReferenceCount: persisted.snapshot.invalidOutputReferenceCount,
   mutableSupersededReferenceCount: persisted.snapshot.mutableSupersededReferenceCount,
+  retainedOutputFileCount: persisted.snapshot.retainedOutputFileCount,
+  retainedOutputBytes: persisted.snapshot.retainedOutputBytes,
+  referencedRetainedOutputCount: persisted.snapshot.referencedRetainedOutputCount,
+  orphanRetainedOutputCount: persisted.snapshot.orphanRetainedOutputCount,
+  invalidRetainedOutputCount: persisted.snapshot.invalidRetainedOutputCount,
   legacyCompatibilityCount: persisted.snapshot.legacyCompatibilityCount,
   nonStrongRuns: persisted.snapshot.nonStrongRuns.map((run) => ({
     runId: run.runId,
