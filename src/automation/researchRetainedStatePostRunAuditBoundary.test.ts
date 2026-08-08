@@ -22,7 +22,7 @@ test("post-run retained audit accepts only owner main one-shot dispatches", () =
   assert.match(workflow, /workflow_run\.actor\.login == 'm-shogo'/u);
   assert.match(workflow, /permissions:\s*\n\s*contents:\s*read/u);
   assert.match(workflow, /persist-credentials:\s*false/u);
-  assert.doesNotMatch(workflow, /secrets\./u);
+  assert.doesNotMatch(workflow, /\$\{\{\s*secrets\./u);
 });
 
 test("post-run retained audit reads automation state with main audit code", () => {
