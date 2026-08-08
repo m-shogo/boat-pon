@@ -1,9 +1,11 @@
 import { resolve } from "node:path";
 
 import {
-  buildResearchDurableKnowledgeCompletenessReportWithLegacyCompatibility,
   countAttestedLegacyDurableRuns,
 } from "../src/automation/researchDurableKnowledgeLegacyCompatibility";
+import {
+  buildResearchDurableKnowledgeCompletenessReportWithLegacyCompatibilityAndRetainedInventory,
+} from "../src/automation/researchDurableKnowledgeRetainedInventory";
 
 function argument(name: string): string | null {
   const inline = process.argv.find((value) => value.startsWith(`--${name}=`));
@@ -15,7 +17,7 @@ function argument(name: string): string | null {
 const repoRoot = resolve(argument("repo-root") ?? process.cwd());
 const generatedAtArg = argument("generated-at");
 const generatedAt = generatedAtArg == null ? new Date().toISOString() : new Date(generatedAtArg).toISOString();
-const report = buildResearchDurableKnowledgeCompletenessReportWithLegacyCompatibility({ repoRoot, generatedAt });
+const report = buildResearchDurableKnowledgeCompletenessReportWithLegacyCompatibilityAndRetainedInventory({ repoRoot, generatedAt });
 
 const sanitized = {
   summaryVersion: "research-durable-knowledge-completeness-summary-v1",
@@ -43,6 +45,11 @@ const sanitized = {
   mutableSupersededReferenceCount: report.mutableSupersededReferenceCount,
   registryOutputCount: report.registryOutputCount,
   currentOutputDigestMatchCount: report.currentOutputDigestMatchCount,
+  retainedOutputFileCount: report.retainedOutputFileCount,
+  retainedOutputBytes: report.retainedOutputBytes,
+  referencedRetainedOutputCount: report.referencedRetainedOutputCount,
+  orphanRetainedOutputCount: report.orphanRetainedOutputCount,
+  invalidRetainedOutputCount: report.invalidRetainedOutputCount,
   legacyCompatibilityCount: countAttestedLegacyDurableRuns(report),
   earliestCompletedAt: report.earliestCompletedAt,
   latestCompletedAt: report.latestCompletedAt,
