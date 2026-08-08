@@ -103,7 +103,7 @@ export function buildN2MetricsDefinition(): N2MetricsDefinition {
       exactLabelMatchRequired: true as const,
       exactDecisionCutoffMatchRequired: true as const,
       predictionCoverageFormula: "valid_common_prediction_rows / required_prediction_rows" as const,
-      requiredPredictionCoverage: 1,
+      requiredPredictionCoverage: 1 as const,
     },
     predictiveMetrics: {
       canonicalEvaluator: "evaluateN2Baseline" as const,
