@@ -1,13 +1,16 @@
 import { canonicalHash } from "../research-replay/canonical";
 
 export const N2_DORMANT_ACTIVATION_CONTRACT_VERSION =
-  "n2-dormant-activation-contract-v1" as const;
+  "n2-dormant-activation-contract-v2" as const;
 
 export const N2_DORMANT_TASKS = [
   "TASK-N2-020",
   "TASK-N2-021",
   "TASK-N2-022",
   "TASK-N2-030",
+  "TASK-N2-040",
+  "TASK-N2-041",
+  "TASK-N2-042",
 ] as const;
 
 export type N2DormantTaskId = typeof N2_DORMANT_TASKS[number];
@@ -27,11 +30,24 @@ export type N2DormantActivationStage =
   | "ACTIVATE_COMMON_COHORT"
   | "WAITING_COMMON_COHORT_PASS"
   | "ACTIVATE_METRICS"
+  | "WAITING_METRICS_PASS"
+  | "ACTIVATE_EDGE_SCAN"
+  | "WAITING_EDGE_SCAN_PASS"
+  | "ACTIVATE_HISTORICAL_TEST"
+  | "WAITING_HISTORICAL_TEST_PASS"
+  | "ACTIVATE_CONFOUNDER_AUDIT"
+  | "WAITING_CONFOUNDER_AUDIT_PASS"
   | "COMPLETE"
   | "CONFLICT";
 
 export type N2DormantActivationAction = {
-  activationGroupId: "n2-baselines" | "n2-common-cohort" | "n2-metrics";
+  activationGroupId:
+    | "n2-baselines"
+    | "n2-common-cohort"
+    | "n2-metrics"
+    | "n2-edge-scan"
+    | "n2-historical-test"
+    | "n2-confounder-audit";
   taskIds: N2DormantTaskId[];
   requiredAtomicChanges: Array<
     | "register_executor"
@@ -58,6 +74,9 @@ export type N2DormantActivationPlan = {
     baselinePairActivatesTogether: true;
     commonCohortRequiresBothBaselinesPass: true;
     metricsRequiresCommonCohortPass: true;
+    edgeScanRequiresMetricsPass: true;
+    historicalTestRequiresEdgeScanPass: true;
+    confounderAuditRequiresHistoricalTestPass: true;
     activationPlanningConsumesAttempt: false;
   };
   automaticPromotionAuthorized: false;
@@ -101,6 +120,11 @@ function action(
   };
 }
 
+function dormant(taskId: N2DormantTaskId, catalogDefaultStatuses: Record<N2DormantTaskId, string>, runtimeExecutorRegistered: Record<N2DormantTaskId, boolean>): boolean {
+  return catalogDefaultStatuses[taskId] === "BLOCKED_EXECUTOR_PENDING"
+    && !runtimeExecutorRegistered[taskId];
+}
+
 export function buildN2DormantActivationPlan(input: {
   readinessStatus: string;
   taskStatuses: Readonly<Record<string, string | undefined>>;
@@ -111,10 +135,7 @@ export function buildN2DormantActivationPlan(input: {
     N2_DORMANT_TASKS.map((taskId) => [taskId, normalizeStatus(input.taskStatuses[taskId])]),
   ) as Record<N2DormantTaskId, N2DormantTaskStatus>;
   const catalogDefaultStatuses = Object.fromEntries(
-    N2_DORMANT_TASKS.map((taskId) => [
-      taskId,
-      input.catalogDefaultStatuses[taskId] ?? "UNKNOWN",
-    ]),
+    N2_DORMANT_TASKS.map((taskId) => [taskId, input.catalogDefaultStatuses[taskId] ?? "UNKNOWN"]),
   ) as Record<N2DormantTaskId, string>;
   const runtimeExecutorRegistered = Object.fromEntries(
     N2_DORMANT_TASKS.map((taskId) => [taskId, input.runtimeExecutorRegistered[taskId] === true]),
@@ -127,50 +148,74 @@ export function buildN2DormantActivationPlan(input: {
     if (defaultStatus === "BLOCKED_EXECUTOR_PENDING" && registered) {
       blockers.push(`${taskId}:REGISTERED_WHILE_BLOCKED_EXECUTOR_PENDING`);
     }
-    if (defaultStatus !== "BLOCKED_EXECUTOR_PENDING" && !registered
-      && taskStatuses[taskId] !== "PASS") {
+    if (defaultStatus !== "BLOCKED_EXECUTOR_PENDING" && !registered && taskStatuses[taskId] !== "PASS") {
       blockers.push(`${taskId}:CATALOG_ACTIVATED_WITHOUT_EXECUTOR`);
     }
   }
 
   const baseline020Pass = taskStatuses["TASK-N2-020"] === "PASS";
   const baseline021Pass = taskStatuses["TASK-N2-021"] === "PASS";
-  if (baseline020Pass !== baseline021Pass) {
-    blockers.push("BASELINE_PAIR_PASS_STATE_DIVERGED");
-  }
+  if (baseline020Pass !== baseline021Pass) blockers.push("BASELINE_PAIR_PASS_STATE_DIVERGED");
   if (taskStatuses["TASK-N2-022"] === "PASS" && !(baseline020Pass && baseline021Pass)) {
     blockers.push("COMMON_COHORT_PASS_WITHOUT_BOTH_BASELINES_PASS");
   }
   if (taskStatuses["TASK-N2-030"] === "PASS" && taskStatuses["TASK-N2-022"] !== "PASS") {
     blockers.push("METRICS_PASS_WITHOUT_COMMON_COHORT_PASS");
   }
+  if (taskStatuses["TASK-N2-040"] === "PASS" && taskStatuses["TASK-N2-030"] !== "PASS") {
+    blockers.push("EDGE_SCAN_PASS_WITHOUT_METRICS_PASS");
+  }
+  if (taskStatuses["TASK-N2-041"] === "PASS" && taskStatuses["TASK-N2-040"] !== "PASS") {
+    blockers.push("HISTORICAL_TEST_PASS_WITHOUT_EDGE_SCAN_PASS");
+  }
+  if (taskStatuses["TASK-N2-042"] === "PASS" && taskStatuses["TASK-N2-041"] !== "PASS") {
+    blockers.push("CONFOUNDER_AUDIT_PASS_WITHOUT_HISTORICAL_TEST_PASS");
+  }
 
   let stage: N2DormantActivationStage;
   let activationActions: N2DormantActivationAction[] = [];
   if (blockers.length > 0) {
     stage = "CONFLICT";
-  } else if (taskStatuses["TASK-N2-030"] === "PASS") {
+  } else if (taskStatuses["TASK-N2-042"] === "PASS") {
     stage = "COMPLETE";
-  } else if (taskStatuses["TASK-N2-022"] === "PASS") {
-    if (runtimeExecutorRegistered["TASK-N2-030"]
-      || catalogDefaultStatuses["TASK-N2-030"] !== "BLOCKED_EXECUTOR_PENDING") {
-      stage = "WAITING_COMMON_COHORT_PASS";
+  } else if (taskStatuses["TASK-N2-041"] === "PASS") {
+    if (dormant("TASK-N2-042", catalogDefaultStatuses, runtimeExecutorRegistered)) {
+      stage = "ACTIVATE_CONFOUNDER_AUDIT";
+      activationActions = [action("n2-confounder-audit", ["TASK-N2-042"])];
     } else {
+      stage = "WAITING_CONFOUNDER_AUDIT_PASS";
+    }
+  } else if (taskStatuses["TASK-N2-040"] === "PASS") {
+    if (dormant("TASK-N2-041", catalogDefaultStatuses, runtimeExecutorRegistered)) {
+      stage = "ACTIVATE_HISTORICAL_TEST";
+      activationActions = [action("n2-historical-test", ["TASK-N2-041"])];
+    } else {
+      stage = "WAITING_HISTORICAL_TEST_PASS";
+    }
+  } else if (taskStatuses["TASK-N2-030"] === "PASS") {
+    if (dormant("TASK-N2-040", catalogDefaultStatuses, runtimeExecutorRegistered)) {
+      stage = "ACTIVATE_EDGE_SCAN";
+      activationActions = [action("n2-edge-scan", ["TASK-N2-040"])];
+    } else {
+      stage = "WAITING_EDGE_SCAN_PASS";
+    }
+  } else if (taskStatuses["TASK-N2-022"] === "PASS") {
+    if (dormant("TASK-N2-030", catalogDefaultStatuses, runtimeExecutorRegistered)) {
       stage = "ACTIVATE_METRICS";
       activationActions = [action("n2-metrics", ["TASK-N2-030"])];
+    } else {
+      stage = "WAITING_METRICS_PASS";
     }
   } else if (baseline020Pass && baseline021Pass) {
-    if (runtimeExecutorRegistered["TASK-N2-022"]
-      || catalogDefaultStatuses["TASK-N2-022"] !== "BLOCKED_EXECUTOR_PENDING") {
-      stage = "WAITING_COMMON_COHORT_PASS";
-    } else {
+    if (dormant("TASK-N2-022", catalogDefaultStatuses, runtimeExecutorRegistered)) {
       stage = "ACTIVATE_COMMON_COHORT";
       activationActions = [action("n2-common-cohort", ["TASK-N2-022"])];
+    } else {
+      stage = "WAITING_COMMON_COHORT_PASS";
     }
   } else if (input.readinessStatus === "READY_FOR_N2_020") {
     const bothDormant = ["TASK-N2-020", "TASK-N2-021"].every((taskId) =>
-      catalogDefaultStatuses[taskId as N2DormantTaskId] === "BLOCKED_EXECUTOR_PENDING"
-      && !runtimeExecutorRegistered[taskId as N2DormantTaskId],
+      dormant(taskId as N2DormantTaskId, catalogDefaultStatuses, runtimeExecutorRegistered),
     );
     if (bothDormant) {
       stage = "ACTIVATE_BASELINES";
@@ -198,6 +243,9 @@ export function buildN2DormantActivationPlan(input: {
       baselinePairActivatesTogether: true as const,
       commonCohortRequiresBothBaselinesPass: true as const,
       metricsRequiresCommonCohortPass: true as const,
+      edgeScanRequiresMetricsPass: true as const,
+      historicalTestRequiresEdgeScanPass: true as const,
+      confounderAuditRequiresHistoricalTestPass: true as const,
       activationPlanningConsumesAttempt: false as const,
     },
     automaticPromotionAuthorized: false as const,

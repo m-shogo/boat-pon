@@ -17,6 +17,9 @@ const expectedTaskTypes: Record<(typeof N2_DORMANT_TASKS)[number], string> = {
   "TASK-N2-021": "baseline-historical",
   "TASK-N2-022": "baseline-common-cohort",
   "TASK-N2-030": "evaluation-metrics",
+  "TASK-N2-040": "edge-hypothesis-scan",
+  "TASK-N2-041": "edge-historical-test",
+  "TASK-N2-042": "confounder-audit",
 };
 
 test("all prepared N2 stages remain dormant while canonical catalog says executor pending", () => {
