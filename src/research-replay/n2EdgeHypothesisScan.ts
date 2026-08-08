@@ -1,9 +1,13 @@
 import { canonicalHash } from "./canonical";
 import {
+  enumerateBetSelections,
   validateFeaturePIT,
   type FeaturePITClass,
-  type N2EvaluationSplit,
 } from "./n2DatasetContract";
+import {
+  splitForN2RaceKey,
+  type N2EvaluationSplit,
+} from "./n2BaselineEvaluation";
 
 export const N2_EDGE_HYPOTHESIS_SCAN_VERSION = "n2-edge-hypothesis-scan-v1" as const;
 export const N2_EDGE_SCAN_ALPHA = 0.05;
@@ -36,12 +40,12 @@ export type N2EdgeFeatureDefinition = {
 
 const RATE_CUTS = [0.3, 0.4, 0.5] as const;
 const WIN_RATE_CUTS = [4.5, 5.5, 6.5] as const;
+const TRIFECTA_SELECTIONS = new Set(enumerateBetSelections("trifecta"));
 
 /**
- * Frozen v1 search space. It deliberately includes ST/exhibition/weather as
- * named research families, but marks them adapter-gated until a source proves
- * exact available_at <= decisionCutoff. Current racer snapshot fields are not
- * registered and therefore fail closed if a caller tries to inject them.
+ * Frozen v1 search space. Current racer snapshot fields are intentionally absent.
+ * ST/exhibition/weather are named research families but remain unusable until a
+ * dedicated adapter proves immutable source identity and exact pre-cutoff timing.
  */
 export const N2_EDGE_FEATURE_DEFINITIONS: readonly N2EdgeFeatureDefinition[] = Object.freeze([
   {
@@ -62,10 +66,7 @@ export const N2_EDGE_FEATURE_DEFINITIONS: readonly N2EdgeFeatureDefinition[] = O
     expectedPitClass: "historical_safe",
     missingPolicy: "exclude_feature_value",
   },
-  ...[
-    "nationalWinRate",
-    "localWinRate",
-  ].map((featureKey): N2EdgeFeatureDefinition => ({
+  ...["nationalWinRate", "localWinRate"].map((featureKey): N2EdgeFeatureDefinition => ({
     featureKey,
     family: "player",
     valueType: "numeric",
@@ -74,10 +75,7 @@ export const N2_EDGE_FEATURE_DEFINITIONS: readonly N2EdgeFeatureDefinition[] = O
     expectedPitClass: "historical_safe",
     missingPolicy: "exclude_feature_value",
   })),
-  ...[
-    "nationalTop2Rate",
-    "localTop2Rate",
-  ].map((featureKey): N2EdgeFeatureDefinition => ({
+  ...["nationalTop2Rate", "localTop2Rate"].map((featureKey): N2EdgeFeatureDefinition => ({
     featureKey,
     family: "player",
     valueType: "numeric",
@@ -142,6 +140,8 @@ export type N2EdgeFeatureObservation = {
   value: string | number | null;
   pitClass: FeaturePITClass;
   availableAt: string | null;
+  adapterId?: string | null;
+  adapterVerified?: boolean;
 };
 
 export type N2EdgeScanObservation = {
@@ -186,6 +186,7 @@ export type N2EdgeHypothesisScanReport = {
   timedAdapterRequiredFeatureCount: number;
   inputObservationCount: number;
   pitExcludedFeatureValueCount: number;
+  adapterGatedFeatureValueCount: number;
   missingFeatureValueCount: number;
   testedHypothesisCount: number;
   signalCount: number;
@@ -222,7 +223,9 @@ type BucketAggregate = {
 type RawTest = Omit<N2EdgeHypothesis, "hypothesisId" | "holmAdjustedPValue">;
 
 function normalCdf(value: number): number {
-  // Abramowitz-Stegun approximation, deterministic and sufficient for screening.
+  if (value === Number.POSITIVE_INFINITY) return 1;
+  if (value === Number.NEGATIVE_INFINITY) return 0;
+  if (!Number.isFinite(value)) return Number.NaN;
   const sign = value < 0 ? -1 : 1;
   const x = Math.abs(value) / Math.sqrt(2);
   const t = 1 / (1 + 0.3275911 * x);
@@ -236,7 +239,8 @@ function normalCdf(value: number): number {
 }
 
 function twoSidedNormalP(zScore: number): number {
-  if (!Number.isFinite(zScore)) return 1;
+  if (Number.isNaN(zScore)) return 1;
+  if (Math.abs(zScore) === Number.POSITIVE_INFINITY) return 0;
   return Math.min(1, Math.max(0, 2 * (1 - normalCdf(Math.abs(zScore)))));
 }
 
@@ -261,12 +265,8 @@ function bucketFor(definition: N2EdgeFeatureDefinition, value: string | number):
   return cutPoints.length > 0 ? numericBucket(value, cutPoints) : null;
 }
 
-function reportBlocked(blockers: string[], inputCount: number): N2EdgeHypothesisScanReport {
-  const core = {
-    scanVersion: N2_EDGE_HYPOTHESIS_SCAN_VERSION,
-    status: "BLOCKED" as const,
-    blockers: [...new Set(blockers)].sort(),
-    baselineId: null,
+function commonReportFields(inputCount: number) {
+  return {
     discoverySplit: "train" as const,
     confirmationSplits: ["validation", "test"] as ["validation", "test"],
     forwardShadowReserved: true as const,
@@ -275,11 +275,6 @@ function reportBlocked(blockers: string[], inputCount: number): N2EdgeHypothesis
     historicalSafeFeatureCount: N2_EDGE_FEATURE_DEFINITIONS.filter((item) => item.sourceStatus === "historical_safe_now").length,
     timedAdapterRequiredFeatureCount: N2_EDGE_FEATURE_DEFINITIONS.filter((item) => item.sourceStatus === "requires_verified_timed_adapter").length,
     inputObservationCount: inputCount,
-    pitExcludedFeatureValueCount: 0,
-    missingFeatureValueCount: 0,
-    testedHypothesisCount: 0,
-    signalCount: 0,
-    signals: [] as N2EdgeHypothesis[],
     multipleTesting: {
       method: "Holm-Bonferroni" as const,
       familyWiseAlpha: N2_EDGE_SCAN_ALPHA,
@@ -301,6 +296,22 @@ function reportBlocked(blockers: string[], inputCount: number): N2EdgeHypothesis
       productionApplyAuthorized: false as const,
     },
   };
+}
+
+function reportBlocked(blockers: string[], inputCount: number): N2EdgeHypothesisScanReport {
+  const core = {
+    scanVersion: N2_EDGE_HYPOTHESIS_SCAN_VERSION,
+    status: "BLOCKED" as const,
+    blockers: [...new Set(blockers)].sort(),
+    baselineId: null,
+    ...commonReportFields(inputCount),
+    pitExcludedFeatureValueCount: 0,
+    adapterGatedFeatureValueCount: 0,
+    missingFeatureValueCount: 0,
+    testedHypothesisCount: 0,
+    signalCount: 0,
+    signals: [] as N2EdgeHypothesis[],
+  };
   return { ...core, outputDigest: canonicalHash(core) };
 }
 
@@ -312,8 +323,12 @@ export function scanN2EdgeHypotheses(observations: N2EdgeScanObservation[]): N2E
   const knownFeatureKeys = new Set(N2_EDGE_FEATURE_DEFINITIONS.map((definition) => definition.featureKey));
   for (const observation of observations) {
     baselineIds.add(observation.baselineId);
+    const canonicalSplit = splitForN2RaceKey(observation.canonicalRaceKey);
+    if (canonicalSplit === null) blockers.push(`INVALID_RACE_KEY:${observation.canonicalRaceKey}`);
+    else if (observation.split !== canonicalSplit) blockers.push(`SPLIT_MISMATCH:${observation.canonicalRaceKey}:${observation.split}/${canonicalSplit}`);
     if (observation.split !== "train") blockers.push(`NON_DISCOVERY_SPLIT_PRESENT:${observation.split}`);
     if (!Number.isFinite(Date.parse(observation.decisionCutoff))) blockers.push("INVALID_DECISION_CUTOFF");
+    if (!TRIFECTA_SELECTIONS.has(observation.betSelection)) blockers.push(`INVALID_TRIFECTA_SELECTION:${observation.betSelection}`);
     if (!Number.isFinite(observation.baselineProbability)
       || observation.baselineProbability < 0
       || observation.baselineProbability > 1) blockers.push("INVALID_BASELINE_PROBABILITY");
@@ -327,6 +342,7 @@ export function scanN2EdgeHypotheses(observations: N2EdgeScanObservation[]): N2E
 
   const aggregates = new Map<string, BucketAggregate>();
   let pitExcludedFeatureValueCount = 0;
+  let adapterGatedFeatureValueCount = 0;
   let missingFeatureValueCount = 0;
 
   for (const observation of observations) {
@@ -335,6 +351,11 @@ export function scanN2EdgeHypotheses(observations: N2EdgeScanObservation[]): N2E
       const feature = observation.features[definition.featureKey];
       if (feature == null || feature.value == null) {
         missingFeatureValueCount += 1;
+        continue;
+      }
+      if (definition.sourceStatus === "requires_verified_timed_adapter"
+        && (feature.adapterVerified !== true || !feature.adapterId?.trim())) {
+        adapterGatedFeatureValueCount += 1;
         continue;
       }
       if (feature.pitClass !== definition.expectedPitClass) {
@@ -379,7 +400,9 @@ export function scanN2EdgeHypotheses(observations: N2EdgeScanObservation[]): N2E
       ? 0
       : raceMeans.reduce((sum, value) => sum + ((value - meanResidual) ** 2), 0) / (raceMeans.length - 1);
     const standardError = Math.sqrt(variance / raceMeans.length);
-    const zScore = standardError > 0 ? meanResidual / standardError : 0;
+    const zScore = standardError > 0
+      ? meanResidual / standardError
+      : meanResidual === 0 ? 0 : Math.sign(meanResidual) * Number.POSITIVE_INFINITY;
     rawTests.push({
       featureKey: aggregate.definition.featureKey,
       family: aggregate.definition.family,
@@ -435,39 +458,13 @@ export function scanN2EdgeHypotheses(observations: N2EdgeScanObservation[]): N2E
     status: "PASS" as const,
     blockers: [] as string[],
     baselineId: [...baselineIds][0],
-    discoverySplit: "train" as const,
-    confirmationSplits: ["validation", "test"] as ["validation", "test"],
-    forwardShadowReserved: true as const,
-    interactionScanAllowed: false as const,
-    featureDefinitionCount: N2_EDGE_FEATURE_DEFINITIONS.length,
-    historicalSafeFeatureCount: N2_EDGE_FEATURE_DEFINITIONS.filter((item) => item.sourceStatus === "historical_safe_now").length,
-    timedAdapterRequiredFeatureCount: N2_EDGE_FEATURE_DEFINITIONS.filter((item) => item.sourceStatus === "requires_verified_timed_adapter").length,
-    inputObservationCount: observations.length,
+    ...commonReportFields(observations.length),
     pitExcludedFeatureValueCount,
+    adapterGatedFeatureValueCount,
     missingFeatureValueCount,
     testedHypothesisCount: adjusted.length,
     signalCount: signals.length,
     signals,
-    multipleTesting: {
-      method: "Holm-Bonferroni" as const,
-      familyWiseAlpha: N2_EDGE_SCAN_ALPHA,
-      minUniqueRaces: N2_EDGE_SCAN_MIN_UNIQUE_RACES,
-      minAbsoluteResidual: N2_EDGE_SCAN_MIN_ABSOLUTE_RESIDUAL,
-      maxSignals: N2_EDGE_SCAN_MAX_SIGNALS,
-    },
-    authority: {
-      roiUsedForDiscovery: false as const,
-      payoutUsedForDiscovery: false as const,
-      validationLabelsUsedForDiscovery: false as const,
-      testLabelsUsedForDiscovery: false as const,
-      forwardLabelsUsedForDiscovery: false as const,
-      automaticPromotionAuthorized: false as const,
-      currentBuyConnectionAuthorized: false as const,
-      lineConnectionAuthorized: false as const,
-      publicPublishAuthorized: false as const,
-      automatedBettingAuthorized: false as const,
-      productionApplyAuthorized: false as const,
-    },
   };
   return { ...core, outputDigest: canonicalHash(core) };
 }
