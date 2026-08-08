@@ -47,7 +47,7 @@ function canonicalJson(value: unknown): string {
 }
 
 function assertCount(value: unknown, field: string): asserts value is number {
-  if (!Number.isSafeInteger(value) || (value as number) < 0) {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) {
     throw new Error(`DURABLE_RETENTION_RETAINED_INVENTORY_COUNT_INVALID:${field}`);
   }
 }
@@ -61,6 +61,9 @@ function validateExtendedSnapshot(
   assertCount(value.referencedRetainedOutputCount, "referencedRetainedOutputCount");
   assertCount(value.orphanRetainedOutputCount, "orphanRetainedOutputCount");
   assertCount(value.invalidRetainedOutputCount, "invalidRetainedOutputCount");
+  if (value.referencedRetainedOutputCount > value.retainedOutputFileCount) {
+    throw new Error("DURABLE_RETENTION_RETAINED_REFERENCE_COUNT_INVALID");
+  }
   return value as ResearchDurableRetentionSnapshotWithRetainedInventory;
 }
 
