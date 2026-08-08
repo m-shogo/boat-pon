@@ -16,9 +16,10 @@ test("post-run retained audit is event-driven and consumes no scheduler slot", (
   assert.doesNotMatch(workflow, /workflow_dispatch:/u);
 });
 
-test("post-run retained audit accepts only main one-shot dispatches", () => {
+test("post-run retained audit accepts only owner main one-shot dispatches", () => {
   assert.match(workflow, /workflow_run\.event == 'workflow_dispatch'/u);
   assert.match(workflow, /workflow_run\.head_branch == 'main'/u);
+  assert.match(workflow, /workflow_run\.actor\.login == 'm-shogo'/u);
   assert.match(workflow, /permissions:\s*\n\s*contents:\s*read/u);
   assert.match(workflow, /persist-credentials:\s*false/u);
   assert.doesNotMatch(workflow, /secrets\./u);
