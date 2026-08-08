@@ -174,7 +174,7 @@ export function buildN2EvaluationMetricsBundle(input: {
   const settlementByRace = new Map(input.settlements.map((row) => [row.canonicalRaceKey, row]));
   const marketSourceByRace = new Map(input.marketSources.map((row) => [row.canonicalRaceKey, row]));
   const evaluationByRace = new Map(input.evaluationRaces.map((row) => [row.canonicalRaceKey, row]));
-  const probabilityMaps = {
+  const probabilityMaps: Record<string, Map<string, Record<string, number>>> = {
     [market.baselineId]: rowsToProbabilityMap(market.rows),
     [historical.baselineId]: rowsToProbabilityMap(historical.rows),
     [legacy.baselineId]: rowsToProbabilityMap(legacy.rows),
@@ -182,7 +182,7 @@ export function buildN2EvaluationMetricsBundle(input: {
 
   const blockers: string[] = [];
   const economicRaces: N2EconomicEvaluationRace[] = [];
-  const cohortRaceKeys = [...marketSourceByRace.keys()].sort();
+  const cohortRaceKeys = [...new Set(market.rows.map((row) => row.canonicalRaceKey))].sort();
   for (const canonicalRaceKey of cohortRaceKeys) {
     const source = marketSourceByRace.get(canonicalRaceKey);
     const settlement = settlementByRace.get(canonicalRaceKey);
@@ -221,8 +221,7 @@ export function buildN2EvaluationMetricsBundle(input: {
   if (economic.status !== "PASS") return blocked(economic.blockers.map((item) => `ECONOMIC:${item}`));
 
   const settlementSetDigest = canonicalHash(
-    [...input.settlements]
-      .sort((left, right) => left.canonicalRaceKey.localeCompare(right.canonicalRaceKey)),
+    [...input.settlements].sort((left, right) => left.canonicalRaceKey.localeCompare(right.canonicalRaceKey)),
   );
   const core = {
     bundleVersion: N2_EVALUATION_METRICS_BUNDLE_VERSION,
