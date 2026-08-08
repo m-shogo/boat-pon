@@ -140,9 +140,15 @@ function rawResult(
   }
   const variance = stats.count <= 1 ? 0 : stats.m2 / (stats.count - 1);
   const standardError = Math.sqrt(variance / stats.count);
-  const zScore = standardError > 0
-    ? stats.mean / standardError
-    : stats.mean === 0 ? 0 : Math.sign(stats.mean) * Number.POSITIVE_INFINITY;
+  // A non-zero constant residual has zero estimated sampling variance. The
+  // corresponding z statistic is mathematically unbounded, but Infinity is not
+  // a valid canonical JSON number. Preserve the significance semantics with
+  // p=0 while representing the undefined finite z statistic as null.
+  const degenerateNonZero = standardError === 0 && stats.mean !== 0;
+  const zScore = degenerateNonZero
+    ? null
+    : standardError > 0 ? stats.mean / standardError : 0;
+  const rawPValue = degenerateNonZero ? 0 : twoSidedNormalP(zScore ?? 0);
   const directionMatchesDiscovery = direction === "underpredicted" ? stats.mean > 0 : stats.mean < 0;
   return {
     split,
@@ -150,7 +156,7 @@ function rawResult(
     meanResidual: stats.mean,
     standardError,
     zScore,
-    rawPValue: twoSidedNormalP(zScore),
+    rawPValue,
     supportSufficient,
     effectSufficient: Math.abs(stats.mean) >= N2_EDGE_SCAN_MIN_ABSOLUTE_RESIDUAL,
     directionMatchesDiscovery,
