@@ -1,0 +1,140 @@
+name: research retained state audit (post-run)
+
+on:
+  workflow_run:
+    workflows: ["boat-pon local research (one-shot)"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: boat-pon-retained-state-audit
+  cancel-in-progress: false
+
+jobs:
+  audit-retained-state:
+    # workflow_run has a privileged execution context, so accept only the owner-controlled
+    # one-shot workflow dispatched from main. This job is read-only and receives no secrets.
+    if: >-
+      github.event.workflow_run.event == 'workflow_dispatch' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout main audit authority
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Materialize automation state read-only
+        id: state
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin automation/boat-pon-research
+          SOURCE_SHA="$(git rev-parse origin/automation/boat-pon-research)"
+          STATE_DIR="/tmp/boat-pon-post-run-retained-audit-${{ github.run_id }}"
+          rm -rf "$STATE_DIR"
+          git worktree add --detach "$STATE_DIR" "$SOURCE_SHA"
+          test -z "$(git -C "$STATE_DIR" status --porcelain)"
+          echo "source_sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
+          echo "state_dir=$STATE_DIR" >> "$GITHUB_OUTPUT"
+          echo "automation_state_sha=$SOURCE_SHA"
+
+      - name: Audit full retained state
+        env:
+          STATE_DIR: ${{ steps.state.outputs.state_dir }}
+          SOURCE_SHA: ${{ steps.state.outputs.source_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          OBSERVED_AT="$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
+          set +e
+          node --import tsx scripts/audit-research-durable-knowledge-completeness.ts \
+            --repo-root="$STATE_DIR" \
+            --generated-at="$OBSERVED_AT" > /tmp/retained-state-audit.json
+          AUDIT_RC=$?
+          set -e
+
+          test -s /tmp/retained-state-audit.json || {
+            echo "::error::retained-state audit produced no summary"
+            exit 1
+          }
+
+          SOURCE_SHA="$SOURCE_SHA" node - <<'NODE'
+          const fs = require('node:fs');
+          const d = JSON.parse(fs.readFileSync('/tmp/retained-state-audit.json', 'utf8'));
+          const counts = [
+            'historyFileCount',
+            'durableCompleteCount',
+            'strongDurableCompleteCount',
+            'incompleteCount',
+            'invalidHistoryCount',
+            'missingOutputReferenceCount',
+            'invalidOutputReferenceCount',
+            'mutableSupersededReferenceCount',
+            'retainedOutputFileCount',
+            'retainedOutputBytes',
+            'referencedRetainedOutputCount',
+            'orphanRetainedOutputCount',
+            'invalidRetainedOutputCount',
+            'legacyCompatibilityCount',
+          ];
+          for (const key of counts) {
+            if (!Number.isSafeInteger(d[key]) || d[key] < 0) throw new Error(`invalid ${key}`);
+          }
+          if (d.referencedRetainedOutputCount > d.retainedOutputFileCount) {
+            throw new Error('referenced retained count exceeds retained file count');
+          }
+          for (const key of [
+            'automaticPromotionAuthorized',
+            'currentBuyConnectionAuthorized',
+            'lineConnectionAuthorized',
+            'publicPublishAuthorized',
+            'databaseWriteAuthorized',
+            'automatedBettingAuthorized',
+            'productionApplyAuthorized',
+          ]) {
+            if (d[key] !== false) throw new Error(`protected authority changed: ${key}`);
+          }
+          console.log(JSON.stringify({
+            sourceStateSha: process.env.SOURCE_SHA,
+            status: d.status,
+            historyFileCount: d.historyFileCount,
+            durableCompleteCount: d.durableCompleteCount,
+            strongDurableCompleteCount: d.strongDurableCompleteCount,
+            incompleteCount: d.incompleteCount,
+            invalidHistoryCount: d.invalidHistoryCount,
+            missingOutputReferenceCount: d.missingOutputReferenceCount,
+            invalidOutputReferenceCount: d.invalidOutputReferenceCount,
+            mutableSupersededReferenceCount: d.mutableSupersededReferenceCount,
+            retainedOutputFileCount: d.retainedOutputFileCount,
+            retainedOutputBytes: d.retainedOutputBytes,
+            referencedRetainedOutputCount: d.referencedRetainedOutputCount,
+            orphanRetainedOutputCount: d.orphanRetainedOutputCount,
+            invalidRetainedOutputCount: d.invalidRetainedOutputCount,
+            legacyCompatibilityCount: d.legacyCompatibilityCount,
+            outputDigest: d.outputDigest,
+          }, null, 2));
+          NODE
+
+          if [ "$AUDIT_RC" -eq 3 ]; then
+            echo "::error::automation retained-state audit is BLOCKED"
+            exit 3
+          fi
+          if [ "$AUDIT_RC" -ne 0 ]; then
+            echo "::error::automation retained-state audit failed with rc=$AUDIT_RC"
+            exit "$AUDIT_RC"
+          fi
