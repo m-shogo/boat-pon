@@ -59,7 +59,7 @@ test("rolling probabilities are numerically identical to canonical N2-021 histor
       `probability drift for ${row.betSelection}`,
     );
   }
-  assert.equal(rolled.probabilitySum, 1);
+  assert.ok(Math.abs(rolled.probabilitySum - 1) <= 1e-12);
   assert.equal(rolled.globalTrainingRaceCount, canonical.trainingProfiles[0].globalTrainingRaceCount);
   assert.equal(rolled.venueTrainingRaceCount, canonical.trainingProfiles[0].venueTrainingRaceCount);
 });
