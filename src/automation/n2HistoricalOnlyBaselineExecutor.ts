@@ -2,6 +2,9 @@ import { dirname, join } from "node:path";
 
 import { canonicalHash } from "../research-replay/canonical";
 import {
+  alignN2HistoricalBaselineToDecisionCutoffs,
+} from "../research-replay/n2HistoricalCommonCohortAlignment";
+import {
   N2_HISTORICAL_GLOBAL_LAPLACE_ALPHA,
   N2_HISTORICAL_LOOKBACK_DAYS,
   N2_HISTORICAL_MIN_GLOBAL_TRAINING_RACES,
@@ -13,6 +16,10 @@ import {
   readN2HistoricalOnlyBaselineSources,
   type N2HistoricalOnlyBaselineSourceRead,
 } from "../research-replay/n2HistoricalOnlyBaselineSource";
+import {
+  readN2T5DecisionCutoffMetadata,
+  type N2T5DecisionCutoffMetadataRead,
+} from "../research-replay/n2T5DecisionCutoffMetadata";
 import {
   atomicWriteJson,
   runExecutorLifecycle,
@@ -27,6 +34,7 @@ export const N2_HISTORICAL_ONLY_BASELINE_EXECUTOR_VERSION =
 const REPORT_RELATIVE_PATH = "reports/n2/n2-baseline-historical.json";
 
 type HistoricalSourceReader = typeof readN2HistoricalOnlyBaselineSources;
+type DecisionCutoffReader = typeof readN2T5DecisionCutoffMetadata;
 
 function sanitizedSource(read: N2HistoricalOnlyBaselineSourceRead): Record<string, unknown> {
   return {
@@ -51,12 +59,30 @@ function sanitizedSource(read: N2HistoricalOnlyBaselineSourceRead): Record<strin
   };
 }
 
+function sanitizedCutoffMetadata(read: N2T5DecisionCutoffMetadataRead): Record<string, unknown> {
+  return {
+    readerVersion: read.readerVersion,
+    status: read.status,
+    blockers: read.blockers,
+    alignedRaceCount: Object.keys(read.decisionCutoffByRaceKey).length,
+    privateEnvelopeMetadataReadCount: read.privateEnvelopeMetadataReadCount,
+    rawOddsValuesRead: read.rawOddsValuesRead,
+    networkRequestCount: read.networkRequestCount,
+    databaseReadCount: read.databaseReadCount,
+    databaseWriteCount: read.databaseWriteCount,
+    publicPublishAuthorized: read.publicPublishAuthorized,
+    productionApplyExecuted: read.productionApplyExecuted,
+  };
+}
+
 export function createN2HistoricalOnlyBaselineExecutor(
   sourceReader: HistoricalSourceReader = readN2HistoricalOnlyBaselineSources,
+  decisionCutoffReader: DecisionCutoffReader = readN2T5DecisionCutoffMetadata,
 ): Executor {
   return (ctx) => {
     const dataRoot = dirname(dirname(ctx.sidecarPath));
     let sourceRead: N2HistoricalOnlyBaselineSourceRead | null = null;
+    let cutoffRead: N2T5DecisionCutoffMetadataRead | null = null;
     const sdkCtx: SdkContext = {
       repoRoot: ctx.repoRoot,
       runId: ctx.runId,
@@ -80,20 +106,36 @@ export function createN2HistoricalOnlyBaselineExecutor(
         sourceRead = sourceReader({ dataRoot, sidecarDbPath: ctx.sidecarPath });
         if (sourceRead.status !== "PASS") {
           errors.push(...sourceRead.blockers.map((blocker) => `HISTORICAL_BASELINE_${blocker}`));
+          return { ok: false, errors };
+        }
+        cutoffRead = decisionCutoffReader({
+          dataRoot,
+          raceKeys: sourceRead.evaluationRaces.map((row) => row.canonicalRaceKey),
+        });
+        if (cutoffRead.status !== "PASS") {
+          errors.push(...cutoffRead.blockers.map((blocker) => `HISTORICAL_BASELINE_CUTOFF_${blocker}`));
         }
         return { ok: errors.length === 0, errors };
       },
       executeReadOnly: () => {
-        if (!sourceRead || sourceRead.status !== "PASS") {
+        if (!sourceRead || sourceRead.status !== "PASS" || !cutoffRead || cutoffRead.status !== "PASS") {
           throw new Error("HISTORICAL_BASELINE_SOURCE_NOT_READY");
         }
-        const dataset = buildN2HistoricalOnlyBaselineDataset({
+        const baseDataset = buildN2HistoricalOnlyBaselineDataset({
           training: sourceRead.training,
           evaluationRaces: sourceRead.evaluationRaces,
         });
-        if (dataset.status !== "PASS") {
-          throw new Error(`HISTORICAL_BASELINE_DATASET_BLOCKED:${dataset.blockers.join(",")}`);
+        if (baseDataset.status !== "PASS") {
+          throw new Error(`HISTORICAL_BASELINE_DATASET_BLOCKED:${baseDataset.blockers.join(",")}`);
         }
+        const alignment = alignN2HistoricalBaselineToDecisionCutoffs({
+          dataset: baseDataset,
+          decisionCutoffByRaceKey: cutoffRead.decisionCutoffByRaceKey,
+        });
+        if (alignment.status !== "PASS") {
+          throw new Error(`HISTORICAL_BASELINE_CUTOFF_ALIGNMENT_BLOCKED:${alignment.blockers.join(",")}`);
+        }
+        const dataset = alignment.dataset;
         const globalCounts = dataset.trainingProfiles.map((profile) => profile.globalTrainingRaceCount);
         const venueCounts = dataset.trainingProfiles.map((profile) => profile.venueTrainingRaceCount);
         const trainingDigests = [...new Set(dataset.trainingProfiles.map((profile) => profile.trainingSnapshotDigest))].sort();
@@ -116,6 +158,8 @@ export function createN2HistoricalOnlyBaselineExecutor(
           metricsBySplit: dataset.evaluation.metricsBySplit,
           rowSetDigest: dataset.evaluation.rowSetDigest,
           cohortDigest: dataset.cohortDigest,
+          decisionCutoffAlignmentVersion: alignment.alignmentVersion,
+          alignedDecisionCutoffCount: alignment.alignedDecisionCutoffCount,
           modelConfig: {
             lookbackDays: N2_HISTORICAL_LOOKBACK_DAYS,
             globalLaplaceAlpha: N2_HISTORICAL_GLOBAL_LAPLACE_ALPHA,
@@ -137,14 +181,16 @@ export function createN2HistoricalOnlyBaselineExecutor(
             maximumVenueTrainingRaceCount: Math.max(...venueCounts),
           },
           source: sanitizedSource(sourceRead),
+          decisionCutoffMetadata: sanitizedCutoffMetadata(cutoffRead),
           pit: {
             trainingBoundary: "race_date < evaluation_date",
-            predictionTime: "00:00 JST on evaluation date",
+            predictionAvailableAt: "00:00 JST on evaluation date",
+            decisionCutoff: "same accepted T-5 cutoff as market baseline",
             checkedPredictionRowCount: dataset.rowCount,
             sameRaceLabelBorrow: false,
             sameDayLabelBorrow: false,
             futureLabelRead: false,
-            marketFeatureRead: false,
+            marketOddsValueRead: false,
             liveOnlyFeatureRead: false,
             result: "PASS",
           },
