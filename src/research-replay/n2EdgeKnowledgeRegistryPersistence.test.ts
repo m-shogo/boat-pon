@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -60,6 +60,7 @@ function auditItem(
 function plan(input: {
   verdict?: N2EdgeHistoricalConfirmationResult["verdict"];
   disposition?: N2ConfounderAuditItem["disposition"];
+  confounderDigest?: string;
 } = {}) {
   const verdict = input.verdict ?? "HISTORICAL_CONFIRMED";
   const disposition = input.disposition ?? "CONFIRMED_PENDING_CONFOUNDER_REVIEW";
@@ -68,7 +69,7 @@ function plan(input: {
     auditItem: auditItem(disposition, verdict),
     scanArtifactDigest: DIGEST_A,
     historicalTestArtifactDigest: DIGEST_B,
-    confounderAuditArtifactDigest: DIGEST_C,
+    confounderAuditArtifactDigest: input.confounderDigest ?? DIGEST_C,
     testedConditionCount: 40,
     totalTrialCount: 40,
     createdAt: "2026-08-08T12:00:00.000Z",
@@ -136,23 +137,29 @@ test("exact retry is idempotent and creates no duplicate registry records", () =
   });
 });
 
-test("rejected and insufficient outcomes persist only the governed Experiment, never Discovery", () => {
+test("historical rejection persists only a rejected Experiment, never Discovery", () => {
   withRoot((root, registryRoot) => {
-    for (const [verdict, disposition, expectedStatus] of [
-      ["HISTORICAL_REJECTED", "REJECT_AND_REGISTER", "rejected"],
-      ["INSUFFICIENT_HOLDOUT", "INSUFFICIENT_HOLDOUT", "inconclusive"],
-    ] as const) {
-      const current = plan({ verdict, disposition });
-      const outcome = persistN2EdgeKnowledgeLineage({ repoRoot: root, registryRoot, plan: current, writeIntent: N2_EDGE_KNOWLEDGE_REGISTRY_WRITE_INTENT });
-      assert.equal(outcome.status, "PASS");
-      assert.equal(outcome.experiment.appended, true);
-      assert.equal(outcome.discovery.recordId, null);
-      assert.equal(outcome.discovery.appended, false);
-      const file = `${current.experiment!.experimentId}.json`;
-      const stored = JSON.parse(readFileSync(join(registryRoot, "experiments", file), "utf8"));
-      assert.equal(stored.status, expectedStatus);
-    }
-    assert.equal(readdirSync(join(registryRoot, "discoveries")).filter((name) => name.endsWith(".json")).length, 0);
+    const current = plan({ verdict: "HISTORICAL_REJECTED", disposition: "REJECT_AND_REGISTER", confounderDigest: "d".repeat(64) });
+    const outcome = persistN2EdgeKnowledgeLineage({ repoRoot: root, registryRoot, plan: current, writeIntent: N2_EDGE_KNOWLEDGE_REGISTRY_WRITE_INTENT });
+    assert.equal(outcome.status, "PASS");
+    assert.equal(outcome.experiment.appended, true);
+    assert.equal(outcome.discovery.recordId, null);
+    const stored = JSON.parse(readFileSync(join(registryRoot, "experiments", `${current.experiment!.experimentId}.json`), "utf8"));
+    assert.equal(stored.status, "rejected");
+    assert.equal(existsSync(join(registryRoot, "discoveries")), false);
+  });
+});
+
+test("insufficient holdout persists only an inconclusive Experiment, never Discovery", () => {
+  withRoot((root, registryRoot) => {
+    const current = plan({ verdict: "INSUFFICIENT_HOLDOUT", disposition: "INSUFFICIENT_HOLDOUT", confounderDigest: "e".repeat(64) });
+    const outcome = persistN2EdgeKnowledgeLineage({ repoRoot: root, registryRoot, plan: current, writeIntent: N2_EDGE_KNOWLEDGE_REGISTRY_WRITE_INTENT });
+    assert.equal(outcome.status, "PASS");
+    assert.equal(outcome.experiment.appended, true);
+    assert.equal(outcome.discovery.recordId, null);
+    const stored = JSON.parse(readFileSync(join(registryRoot, "experiments", `${current.experiment!.experimentId}.json`), "utf8"));
+    assert.equal(stored.status, "inconclusive");
+    assert.equal(existsSync(join(registryRoot, "discoveries")), false);
   });
 });
 
@@ -163,7 +170,7 @@ test("blocking confounder persists completed Experiment but never Discovery", ()
     assert.equal(outcome.status, "PASS");
     assert.equal(outcome.experiment.appended, true);
     assert.equal(outcome.discovery.recordId, null);
-    assert.equal(readdirSync(join(registryRoot, "discoveries")).filter((name) => name.endsWith(".json")).length, 0);
+    assert.equal(existsSync(join(registryRoot, "discoveries")), false);
   });
 });
 
