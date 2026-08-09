@@ -28,3 +28,9 @@ test("discovery strategy provenance is all-or-nothing before append", () => {
   assert.equal(validateDiscovery(discovery({ sourceStrategyId: null, sourceStrategyVersion: "v1.0" })).valid, false);
   assert.equal(validateDiscovery(discovery({ sourceStrategyId: "EXP-wrong", sourceStrategyVersion: "v1.0" })).valid, false);
 });
+
+test("discovery source experiments use the EXP identity namespace before append", () => {
+  assert.equal(validateDiscovery(discovery({ sourceExperimentIds: ["EXP-a", "EXP-b"] })).valid, true);
+  assert.equal(validateDiscovery(discovery({ sourceExperimentIds: ["DISC-wrong"] })).valid, false);
+  assert.equal(validateDiscovery(discovery({ sourceExperimentIds: ["EXP-a", "STRAT-wrong"] })).valid, false);
+});

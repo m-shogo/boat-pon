@@ -21,7 +21,8 @@
     "sourceExperimentIds": {
       "type": "array",
       "items": {
-        "type": "string"
+        "type": "string",
+        "pattern": "^EXP-[0-9A-Za-z._-]{1,80}$"
       }
     },
     "finding": {
