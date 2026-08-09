@@ -14,7 +14,6 @@ export const CONTRACT_DIGEST_VERSION = "canonical-v2";
 // ---- 共有分類（発見の共有スコープ）----
 export const SHARE_CLASSES = ["GLOBAL_FACT", "RESEARCH_METHOD", "REUSABLE_CANDIDATE", "STRATEGY_LOCAL"] as const;
 export type ShareClass = (typeof SHARE_CLASSES)[number];
-// clean-room で共有可能なのは方式非依存の事実・手法・安全知見のみ。
 export const CLEAN_ROOM_SHAREABLE: ReadonlySet<ShareClass> = new Set(["GLOBAL_FACT", "RESEARCH_METHOD"]);
 
 // ---- 証拠段階（評価系列を混ぜないための識別）----
@@ -66,27 +65,23 @@ function canonicalizeDigestValue(value: unknown): unknown {
   return value;
 }
 
-// v1 compatibility only. JSON.stringify の replacer 配列が nested key を落とす旧挙動を
-// 既存 append-only record の検証専用として固定する。新規 record 生成には使わない。
 export function legacyContractDigest(obj: Record<string, unknown>): string {
   const rest = stripDigestMetadata(obj);
   return digestHex(JSON.stringify(rest, Object.keys(rest).sort()));
 }
 
-// canonical-v2 digest（lineage / evidence 用）。nested object も再帰的に key 順を正規化する。
 export function contractDigest(obj: Record<string, unknown>): string {
   const rest = stripDigestMetadata(obj);
   return digestHex(JSON.stringify(canonicalizeDigestValue(rest)));
 }
 
-// ---- Experiment 契約 ----
 export type Experiment = {
-  experimentId: string;              // EXP-<id>（中立的に開始）
+  experimentId: string;
   researchQuestion: string;
   rationale: string;
   hypothesis: string;
-  dataSnapshot: string;              // manifest / dataset version 識別
-  trialFamilyId: string;             // 多重検定 family
+  dataSnapshot: string;
+  trialFamilyId: string;
   totalTrialCount: number;
   testedConditions: number;
   discoveryPeriod: string;
@@ -119,9 +114,8 @@ export function validateExperiment(x: unknown): Validation {
   return err(errors);
 }
 
-// ---- Discovery 契約 ----
 export type Discovery = {
-  discoveryId: string;               // DISC-<id>
+  discoveryId: string;
   sourceExperimentIds: string[];
   sourceStrategyId: string | null;
   sourceStrategyVersion: string | null;
@@ -133,7 +127,7 @@ export type Discovery = {
   knownConfounders: string[];
   trialFamilyId: string;
   trialCountAtDiscovery: number;
-  adoptedBy: string[];               // Transfer Experiment 経由でのみ増える
+  adoptedBy: string[];
   rejectedBy: string[];
   createdAt: string;
 };
@@ -160,16 +154,15 @@ export function validateDiscovery(x: unknown): Validation {
   return err(errors);
 }
 
-// ---- Strategy Family 契約 ----
 export type StrategyFamily = {
-  strategyId: string;                // STRAT-<id>
-  strategyName: string;              // 仮説ラベル（証明ではない）
+  strategyId: string;
+  strategyName: string;
   coreThesis: string;
   mechanismHypothesis: string;
   parentExperimentIds: string[];
   knowledgePolicy: KnowledgePolicy;
   cleanRoomPolicy: { isolated: boolean; allowedShareClasses: ShareClass[] };
-  decisionSystem: DecisionSystem;    // legacy_t5_formal（Current BUY）or market_intelligence
+  decisionSystem: DecisionSystem;
   createdAt: string;
 };
 export function validateStrategyFamily(x: unknown): Validation {
@@ -183,7 +176,6 @@ export function validateStrategyFamily(x: unknown): Validation {
   if (!DECISION_SYSTEMS.includes(s.decisionSystem as DecisionSystem)) errors.push("invalid decisionSystem");
   const cr = s.cleanRoomPolicy as any;
   if (!cr || typeof cr.isolated !== "boolean" || !isArr(cr.allowedShareClasses)) errors.push("cleanRoomPolicy invalid");
-  // clean-room family は STRATEGY_LOCAL / REUSABLE_CANDIDATE を共有許可に含めてはならない。
   if (cr && cr.isolated && isArr(cr.allowedShareClasses)) {
     const bad = (cr.allowedShareClasses as ShareClass[]).filter((c) => !CLEAN_ROOM_SHAREABLE.has(c));
     if (bad.length) errors.push(`clean-room family cannot share: ${bad.join(",")}`);
@@ -191,10 +183,9 @@ export function validateStrategyFamily(x: unknown): Validation {
   return err(errors);
 }
 
-// ---- Strategy Version 契約（version と promotion を混同しない）----
 export type StrategyVersion = {
   strategyId: string;
-  version: string;                   // v<major>.<minor>
+  version: string;
   datasetVersion: string;
   featureVersion: string;
   modelVersion: string;
@@ -216,9 +207,8 @@ export function validateStrategyVersion(x: unknown): Validation {
   return err(errors);
 }
 
-// ---- Transfer Experiment 契約（Discovery を他方式へ入れる唯一の経路）----
 export type TransferExperiment = {
-  transferId: string;                // XFER-<id>
+  transferId: string;
   sourceDiscoveryId: string;
   targetStrategyId: string;
   baseVersion: string;
@@ -247,16 +237,15 @@ export function validateTransferExperiment(x: unknown): Validation {
   return err(errors);
 }
 
-// ---- Promotion 契約（人間承認必須。research result を production approval にしない）----
 export type Promotion = {
-  promotionId: string;               // PROMO-<id>
+  promotionId: string;
   strategyId: string;
   fromVersion: string;
   toState: PromotionState;
   transferExperimentIds: string[];
   evidenceDigests: string[];
   humanApproval: { approved: boolean; approver: string | null; approvedAt: string | null; note: string };
-  productionConnection: false;       // 常に false（型でも禁止）
+  productionConnection: false;
   createdAt: string;
 };
 export function validatePromotion(x: unknown): Validation {
@@ -264,6 +253,10 @@ export function validatePromotion(x: unknown): Validation {
   const p = x as Record<string, unknown>; const errors: string[] = [];
   if (!isId(p.promotionId, "PROMO")) errors.push("promotionId must match PROMO-*");
   if (!isId(p.strategyId, "STRAT")) errors.push("strategyId must match STRAT-*");
+  if (!isStr(p.fromVersion)) errors.push("fromVersion required");
+  if (!isArr(p.transferExperimentIds)) errors.push("transferExperimentIds must be array");
+  if (isArr(p.transferExperimentIds) && p.transferExperimentIds.some((id) => !isId(id, "XFER"))) errors.push("transferExperimentIds must contain only XFER-* ids");
+  if (!isArr(p.evidenceDigests)) errors.push("evidenceDigests must be array");
   if (!PROMOTION_STATES.includes(p.toState as PromotionState)) errors.push("invalid toState");
   if ((p as any).productionConnection !== false) errors.push("productionConnection must be false");
   const ha = p.humanApproval as any;
@@ -272,7 +265,6 @@ export function validatePromotion(x: unknown): Validation {
     if (!isStr(ha.approver)) errors.push("approved humanApproval requires approver");
     if (!isStr(ha.approvedAt)) errors.push("approved humanApproval requires approvedAt");
   }
-  // active_research/challenger 昇格は人間承認 + transfer 証拠が必須。
   if (["active_research", "challenger"].includes(p.toState as string)) {
     if (!ha?.approved) errors.push("promotion to active_research/challenger requires human approval");
     if (!isArr(p.transferExperimentIds) || (p.transferExperimentIds as unknown[]).length === 0) errors.push("promotion requires transferExperimentIds");
@@ -280,9 +272,8 @@ export function validatePromotion(x: unknown): Validation {
   return err(errors);
 }
 
-// ---- Rejection 契約（棄却・negative result を保存）----
 export type Rejection = {
-  rejectionId: string;               // REJ-<id>
+  rejectionId: string;
   subjectType: "experiment" | "discovery" | "strategy" | "transfer";
   subjectId: string;
   reason: string;
@@ -313,8 +304,6 @@ export function validateRejection(x: unknown): Validation {
   return err(errors);
 }
 
-// ---- clean-room 違反検査（family 間の STRATEGY_LOCAL / REUSABLE 漏洩）----
-// clean-room family が非共有 shareClass の discovery を adopt していたら違反。
 export function detectCleanRoomViolations(
   families: StrategyFamily[], discoveries: Discovery[], versions: StrategyVersion[],
 ): Array<{ strategyId: string; discoveryId: string; shareClass: ShareClass; reason: string }> {
@@ -333,7 +322,6 @@ export function detectCleanRoomViolations(
   return violations;
 }
 
-// ---- lineage: adopt は Transfer Experiment 経由でのみ許可（自動採用不可を構造化）----
 export function detectUnauthorizedAdoptions(
   discoveries: Discovery[], transfers: TransferExperiment[],
 ): Array<{ discoveryId: string; strategyId: string; reason: string }> {
