@@ -48,3 +48,30 @@ test("validateAllRegistries reports record symlinks as integrity problems", () =
   assert.equal(result.ok, false);
   assert.ok(result.problems.some((p) => p.file === "EXP-0001.json" && p.errors.some((e) => e.includes("registry symlink forbidden (record)"))));
 });
+
+test("listRecords refuses a non-directory registry kind container", () => {
+  const root = tmp();
+  writeFileSync(join(root, "experiments"), "not-a-directory\n");
+  assert.throws(() => listRecords(root, "experiments"), /registry container must be directory \(kind\)/);
+});
+
+test("idempotent append refuses a non-regular existing record before reading it", () => {
+  const root = tmp();
+  const experiments = join(root, "experiments");
+  mkdirSync(join(experiments, "EXP-0001.json"), { recursive: true });
+
+  const result = appendRecordIdempotent(root, "experiments", experiment);
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "CONFLICT");
+  assert.match(result.errors.join("\n"), /registry record must be regular file/);
+});
+
+test("validateAllRegistries reports non-regular record entries as integrity problems", () => {
+  const root = tmp();
+  const experiments = join(root, "experiments");
+  mkdirSync(join(experiments, "EXP-0001.json"), { recursive: true });
+
+  const result = validateAllRegistries(root);
+  assert.equal(result.ok, false);
+  assert.ok(result.problems.some((p) => p.file === "EXP-0001.json" && p.errors.some((e) => e.includes("registry record must be regular file"))));
+});
