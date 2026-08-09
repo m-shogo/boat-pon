@@ -6,7 +6,11 @@ import { isExecutorImplemented } from "../src/automation/taskExecutors";
 import { detectCleanRoomViolations, detectUnauthorizedAdoptions } from "../src/research/governance/contracts";
 import { checkLineage, listRecords, validateAllRegistries } from "../src/research/governance/registryStore";
 import { checkProductionIsolation } from "../src/research/governance/executorSdk";
-import { listJsonFilesFailClosed, readGovernanceFileUtf8 } from "../src/research/governance/safeFs";
+import {
+  assertGovernanceDirectorySafe,
+  listJsonFilesFailClosed,
+  readGovernanceFileUtf8,
+} from "../src/research/governance/safeFs";
 
 const root = resolve(process.cwd());
 const REG = join(root, "research/registries");
@@ -82,16 +86,21 @@ if (!existsSync(catalogPath)) {
 const HOLDOUT_FREEZE = join(root, "reports/n2/n2-holdout-freeze.json");
 let holdoutRaces: string[] = [];
 if (existsSync(HOLDOUT_FREEZE)) {
-  try { holdoutRaces = JSON.parse(readFileSync(HOLDOUT_FREEZE, "utf8")).untouchedHoldoutRaces ?? []; }
-  catch { problems.push("holdout freeze is not valid JSON"); }
+  try { holdoutRaces = JSON.parse(readGovernanceFileUtf8(HOLDOUT_FREEZE)).untouchedHoldoutRaces ?? []; }
+  catch { problems.push("holdout freeze is not valid JSON or is not a safe regular file"); }
 }
 if (holdoutRaces.length) {
   const allowFiles = new Set(["n2-holdout-freeze.json", "n2-win-refund-omission-audit.json", "n2-dataset-canary.json", "n2-dataset-canary.md"]);
   const n2dir = join(root, "reports/n2");
   if (existsSync(n2dir)) {
-    for (const file of readdirSync(n2dir).filter((x) => x.endsWith(".json") && !allowFiles.has(x))) {
-      const text = readFileSync(join(n2dir, file), "utf8");
-      for (const race of holdoutRaces) if (text.includes(race)) problems.push(`holdout contamination: ${race} in reports/n2/${file}`);
+    try {
+      assertGovernanceDirectorySafe(n2dir);
+      for (const file of readdirSync(n2dir).filter((x) => x.endsWith(".json") && !allowFiles.has(x))) {
+        const text = readGovernanceFileUtf8(join(n2dir, file));
+        for (const race of holdoutRaces) if (text.includes(race)) problems.push(`holdout contamination: ${race} in reports/n2/${file}`);
+      }
+    } catch (error) {
+      problems.push(`holdout audit filesystem check failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   ok("holdout raw-key isolation");
