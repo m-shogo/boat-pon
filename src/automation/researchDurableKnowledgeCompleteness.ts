@@ -8,7 +8,7 @@ import {
 import { join, resolve, sep } from "node:path";
 
 import { contractDigest } from "../research/governance/contracts";
-import { readGovernanceFileUtf8 } from "../research/governance/safeFs";
+import { readGovernanceFileUtf8Bounded } from "../research/governance/safeFs";
 
 export const RESEARCH_DURABLE_KNOWLEDGE_COMPLETENESS_VERSION =
   "research-durable-knowledge-completeness-v1" as const;
@@ -284,7 +284,7 @@ function assessOutput(input: {
       warnings,
     };
   }
-  const text = readGovernanceFileUtf8(absolutePath);
+  const text = readGovernanceFileUtf8Bounded(absolutePath, MAX_OUTPUT_BYTES).text;
   const contentDigest = sha256Text(text);
   if (rootClass === "RETAINED") {
     const retainedMatch = input.relativePath.match(
@@ -496,7 +496,7 @@ function assessHistoryFile(input: {
       issues: ["HISTORY_FILE_SIZE_OR_TYPE_INVALID"],
     });
   }
-  const text = readGovernanceFileUtf8(absolutePath);
+  const text = readGovernanceFileUtf8Bounded(absolutePath, MAX_HISTORY_BYTES).text;
   const contentDigest = sha256Text(text);
   let history: HistoryLike;
   try {
