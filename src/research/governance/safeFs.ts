@@ -10,7 +10,7 @@ import {
 import { join } from "node:path";
 import { TextDecoder } from "node:util";
 
-const STRICT_UTF8_DECODER = new TextDecoder("utf-8", { fatal: true });
+const STRICT_UTF8_DECODER = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
 
 export function assertGovernanceDirectorySafe(path: string): void {
   const stat = lstatSync(path);
