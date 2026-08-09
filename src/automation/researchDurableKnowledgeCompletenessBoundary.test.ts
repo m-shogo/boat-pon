@@ -60,13 +60,15 @@ test("persisted dry-run and unmarked PASS without outputs cannot be counted as d
   assert.match(source, /PASS_NO_CHANGE_HISTORY/u);
 });
 
-test("legacy compatibility is read-only, exact-scope, and never grants production authority", () => {
+test("legacy compatibility is read-only, exact-scope, descriptor-bound, and never grants production authority", () => {
   assert.match(legacySource, /30878594429-TASK-N2-003\.json/u);
   assert.match(legacySource, /REQ-20260804-46393c12ed/u);
   assert.match(legacySource, /3d2d31d/u);
   assert.match(legacySource, /bd4bed76312255dd5434dc9668346ecb139934b05df2c48d86e8bece781987aa/u);
   assert.match(legacySource, /LEGACY_HISTORY_V0_ATTESTED_NO_INTENT_IDEMPOTENCY_FULL_SHA/u);
   assert.match(legacySource, /strongDurableComplete:\s*false/u);
+  assert.match(legacySource, /readGovernanceFileUtf8/u);
+  assert.doesNotMatch(legacySource, /readFileSync\(path/u);
   assert.doesNotMatch(legacySource, /writeFile|appendFile|mkdir|rename|DatabaseSync|\bfetch\s*\(|child_process|execSync|spawnSync/u);
   assert.doesNotMatch(legacySource, /data\/raw|data\/private|boat\.sqlite|sidecar|app_settings|send-line|notify|auto_purchase|auto_vote/u);
 });
