@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -54,10 +54,11 @@ test("pre-registered concentration failure remains blocking",()=>withRoot(root=>
   assert.equal(report.authority.automaticPromotionAuthorized,false);
 }));
 
-test("historically rejected hypothesis is registered even when distribution is broad",()=>withRoot(root=>{
+test("historically rejected hypothesis fails closed until a canonical rejection subject exists",()=>withRoot(root=>{
   const result=confirmationResult("H-REJECTED","HISTORICAL_REJECTED");writeArtifact(root,result,distribution("H-REJECTED"));
-  const outcome=createN2ConfounderAuditExecutor()(context(root));assert.equal(outcome.result,"PASS");
-  const registryDir=join(root,"research/registries/rejections");const files=readdirSync(registryDir).filter(name=>name.endsWith(".json"));assert.equal(files.length,1);
-  const record=JSON.parse(readFileSync(join(registryDir,files[0]),"utf8"));assert.equal(record.subjectId,"H-REJECTED");
-  const report=JSON.parse(readFileSync(join(root,"reports/n2/n2-confounder-audit.json"),"utf8")) as any;assert.equal(report.rejectedCount,1);assert.equal(report.confounderCoverage.rejectedHypothesisRescueAllowed,false);
+  const outcome=createN2ConfounderAuditExecutor()(context(root));
+  assert.equal(outcome.result,"BLOCKED");
+  assert.ok(outcome.blocks.some(blocker=>blocker.includes("REJECTION_SUBJECT_ID_MISMATCH")&&blocker.includes(":discovery:H-REJECTED")));
+  assert.equal(existsSync(join(root,"research")),false);
+  assert.equal(existsSync(join(root,"reports/n2/n2-confounder-audit.json")),false);
 }));
