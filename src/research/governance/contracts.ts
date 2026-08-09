@@ -145,6 +145,7 @@ export function validateDiscovery(x: unknown): Validation {
   for (const f of DISC_FIELDS) if (!(f in d)) errors.push(`missing ${f}`);
   if (!isId(d.discoveryId, "DISC")) errors.push("discoveryId must match DISC-*");
   if (!isArr(d.sourceExperimentIds) || (d.sourceExperimentIds as unknown[]).length === 0) errors.push("sourceExperimentIds required");
+  if (isArr(d.sourceExperimentIds) && d.sourceExperimentIds.some((id) => !isId(id, "EXP"))) errors.push("sourceExperimentIds must contain only EXP-* ids");
   if (d.sourceStrategyId === null) {
     if (d.sourceStrategyVersion !== null) errors.push("sourceStrategyId/sourceStrategyVersion must both be null or both be set");
   } else {
