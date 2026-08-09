@@ -245,12 +245,21 @@ export function checkLineage(root: string): { ok: boolean; problems: string[] } 
   const expIds = new Set(experiments.map((e) => e.experimentId));
   const discIds = new Set(discoveries.map((d) => d.discoveryId));
   const familyIds = new Set(families.map((f) => f.strategyId));
+  const versionIds = new Set(versions.map((v) => `${v.strategyId}|${v.version}`));
   const xferIds = new Set(transfers.map((t) => t.transferId));
 
   for (const f of families) for (const eid of f.parentExperimentIds ?? []) if (!expIds.has(eid)) problems.push(`strategy family ${f.strategyId} references missing experiment ${eid}`);
   for (const v of versions) if (!familyIds.has(v.strategyId)) problems.push(`strategy version ${v.strategyId}/${v.version} references missing strategy family ${v.strategyId}`);
   for (const d of discoveries) for (const eid of d.sourceExperimentIds ?? []) if (!expIds.has(eid)) problems.push(`discovery ${d.discoveryId} references missing experiment ${eid}`);
-  for (const t of transfers) if (!discIds.has(t.sourceDiscoveryId)) problems.push(`transfer ${t.transferId} references missing discovery ${t.sourceDiscoveryId}`);
-  for (const p of promotions) for (const xid of p.transferExperimentIds ?? []) if (!xferIds.has(xid)) problems.push(`promotion ${p.promotionId} references missing transfer ${xid}`);
+  for (const t of transfers) {
+    if (!discIds.has(t.sourceDiscoveryId)) problems.push(`transfer ${t.transferId} references missing discovery ${t.sourceDiscoveryId}`);
+    if (!familyIds.has(t.targetStrategyId)) problems.push(`transfer ${t.transferId} references missing strategy family ${t.targetStrategyId}`);
+    if (!versionIds.has(`${t.targetStrategyId}|${t.baseVersion}`)) problems.push(`transfer ${t.transferId} references missing base strategy version ${t.targetStrategyId}/${t.baseVersion}`);
+  }
+  for (const p of promotions) {
+    if (!familyIds.has(p.strategyId)) problems.push(`promotion ${p.promotionId} references missing strategy family ${p.strategyId}`);
+    if (!versionIds.has(`${p.strategyId}|${p.fromVersion}`)) problems.push(`promotion ${p.promotionId} references missing strategy version ${p.strategyId}/${p.fromVersion}`);
+    for (const xid of p.transferExperimentIds ?? []) if (!xferIds.has(xid)) problems.push(`promotion ${p.promotionId} references missing transfer ${xid}`);
+  }
   return { ok: problems.length === 0, problems };
 }
