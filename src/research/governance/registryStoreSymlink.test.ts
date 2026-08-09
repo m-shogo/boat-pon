@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
+import { linkSync, mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -74,4 +74,31 @@ test("validateAllRegistries reports non-regular record entries as integrity prob
   const result = validateAllRegistries(root);
   assert.equal(result.ok, false);
   assert.ok(result.problems.some((p) => p.file === "EXP-0001.json" && p.errors.some((e) => e.includes("registry record must be regular file"))));
+});
+
+test("idempotent append refuses an existing record hardlink before reading shared inode content", () => {
+  const root = tmp();
+  const experiments = join(root, "experiments");
+  mkdirSync(experiments, { recursive: true });
+  const outside = join(tmp(), "outside.json");
+  writeFileSync(outside, JSON.stringify({ ...experiment, _digest: "forged" }));
+  linkSync(outside, join(experiments, "EXP-0001.json"));
+
+  const result = appendRecordIdempotent(root, "experiments", experiment);
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "CONFLICT");
+  assert.match(result.errors.join("\n"), /registry record hardlink forbidden/);
+});
+
+test("validateAllRegistries reports hardlinked records as integrity problems", () => {
+  const root = tmp();
+  const experiments = join(root, "experiments");
+  mkdirSync(experiments, { recursive: true });
+  const outside = join(tmp(), "outside.json");
+  writeFileSync(outside, "{}\n");
+  linkSync(outside, join(experiments, "EXP-0001.json"));
+
+  const result = validateAllRegistries(root);
+  assert.equal(result.ok, false);
+  assert.ok(result.problems.some((p) => p.file === "EXP-0001.json" && p.errors.some((e) => e.includes("registry record hardlink forbidden"))));
 });
