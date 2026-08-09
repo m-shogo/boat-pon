@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { linkSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -43,6 +43,32 @@ test("idempotent append accepts same canonical body and rejects same-id conflict
   const conflict = appendRecordIdempotent(root, "experiments", { ...experiment, hypothesis: "different" });
   assert.equal(conflict.ok, false);
   assert.equal(conflict.code, "CONFLICT");
+});
+
+test("registry reads reject symlink records at open time", () => {
+  const root = tmp();
+  const outside = join(root, "outside.json");
+  const kindDir = join(root, "experiments");
+  mkdirSync(kindDir, { recursive: true });
+  writeFileSync(outside, "{}\n");
+  symlinkSync(outside, join(kindDir, "EXP-0001.json"));
+
+  assert.throws(() => listRecords(root, "experiments"), /registry symlink forbidden \(record\)/);
+  const v = validateAllRegistries(root);
+  assert.equal(v.ok, false);
+  assert.ok(v.problems.some((p) => p.errors.some((e) => e.includes("registry symlink forbidden (record)"))));
+});
+
+test("registry reads reject hardlinked records on the opened inode", () => {
+  const root = tmp();
+  const result = appendRecordStrict(root, "experiments", { ...experiment });
+  const outside = join(root, "outside-hardlink.json");
+  linkSync(result.path!, outside);
+
+  const retry = appendRecordIdempotent(root, "experiments", { ...experiment });
+  assert.equal(retry.ok, false);
+  assert.equal(retry.code, "CONFLICT");
+  assert.ok(retry.errors.some((e) => e.includes("registry record hardlink forbidden")));
 });
 
 test("legacy unversioned records remain readable without rewriting append-only history", () => {
