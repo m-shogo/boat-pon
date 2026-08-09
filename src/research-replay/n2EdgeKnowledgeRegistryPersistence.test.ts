@@ -229,3 +229,21 @@ test("explicit reviewed write intent and zero execution authority are mandatory"
     assert.ok(authority.blockers.includes("LINEAGE_PLAN_EXECUTION_AUTHORITY_INVALID"));
   });
 });
+
+test("registry root outside the repository allowlist blocks before any filesystem write", () => {
+  withRoot((root) => {
+    const outsideRegistryRoot = join(root, "research/registries-evil");
+    const current = plan();
+    const outcome = persistN2EdgeKnowledgeLineage({
+      repoRoot: root,
+      registryRoot: outsideRegistryRoot,
+      plan: current,
+      writeIntent: N2_EDGE_KNOWLEDGE_REGISTRY_WRITE_INTENT,
+    });
+    assert.equal(outcome.status, "BLOCKED");
+    assert.deepEqual(outcome.blockers, ["KNOWLEDGE_REGISTRY_ROOT_OUTSIDE_ALLOWLIST"]);
+    assert.equal(outcome.experiment.appended, false);
+    assert.equal(outcome.discovery.appended, false);
+    assert.equal(existsSync(outsideRegistryRoot), false);
+  });
+});
