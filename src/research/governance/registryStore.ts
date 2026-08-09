@@ -8,8 +8,8 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import {
-  contractDigest, validateDiscovery, validateExperiment, validatePromotion, validateRejection,
-  validateStrategyFamily, validateStrategyVersion, validateTransferExperiment, type Validation,
+  CONTRACT_DIGEST_VERSION, contractDigest, legacyContractDigest, validateDiscovery, validateExperiment, validatePromotion,
+  validateRejection, validateStrategyFamily, validateStrategyVersion, validateTransferExperiment, type Validation,
 } from "./contracts";
 
 export type RegistryKind =
@@ -36,8 +36,19 @@ function fileName(kind: RegistryKind, rec: Record<string, unknown>): string {
 }
 
 function stripMetadata(rec: Record<string, unknown>): Record<string, unknown> {
-  const { _digest, _recordedAt, ...body } = rec;
+  const { _digest, _digestVersion, _recordedAt, ...body } = rec;
   return body;
+}
+
+function verifyStoredDigest(rec: Record<string, unknown>, body: Record<string, unknown>): string | null {
+  if (typeof rec._digest !== "string") return "missing _digest";
+  if (rec._digestVersion === undefined) {
+    return rec._digest === legacyContractDigest(body) ? null : "legacy digest mismatch (record mutated after append)";
+  }
+  if (rec._digestVersion !== CONTRACT_DIGEST_VERSION) {
+    return `unsupported _digestVersion: ${String(rec._digestVersion)}`;
+  }
+  return rec._digest === contractDigest(body) ? null : "digest mismatch (record mutated after append)";
 }
 
 function assertRegistryDirectorySafe(path: string, role: string): void {
@@ -115,7 +126,12 @@ function appendNew(root: string, kind: RegistryKind, record: Record<string, unkn
   }
   const path = join(root, kind, fileName(kind, record));
   if (existsSync(path)) return { ok: false, errors: [`append-only: record already exists: ${path}`], code: "DUPLICATE", path };
-  const withDigest = { ...record, _digest: contractDigest(record), _recordedAt: new Date().toISOString() };
+  const withDigest = {
+    ...record,
+    _digest: contractDigest(record),
+    _digestVersion: CONTRACT_DIGEST_VERSION,
+    _recordedAt: new Date().toISOString(),
+  };
   try {
     atomicCreateUtf8(path, `${JSON.stringify(withDigest, null, 2)}\n`);
     return { ok: true, path, errors: [], code: "OK" };
@@ -146,8 +162,11 @@ export function appendRecordIdempotent(root: string, kind: RegistryKind, record:
       assertRegistryRecordSafe(path);
       const existing = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
       const body = stripMetadata(existing);
-      const storedDigest = typeof existing._digest === "string" ? existing._digest : contractDigest(body);
-      if (storedDigest === expectedDigest && contractDigest(body) === expectedDigest) {
+      const storedDigestProblem = verifyStoredDigest(existing, body);
+      if (storedDigestProblem) {
+        return { ok: false, path, errors: [`registry conflict: ${storedDigestProblem}: ${path}`], code: "CONFLICT" };
+      }
+      if (contractDigest(body) === expectedDigest) {
         return { ok: true, path, errors: [], code: "ALREADY_RECORDED" };
       }
       return { ok: false, path, errors: [`registry conflict: same id has different body: ${path}`], code: "CONFLICT" };
@@ -202,8 +221,8 @@ export function validateAllRegistries(root: string): { ok: boolean; problems: Ar
       const body = stripMetadata(rec);
       const v = REGISTRY[kind].validate(body);
       if (!v.valid) problems.push({ kind, file: f, errors: v.errors });
-      if (typeof rec._digest !== "string") problems.push({ kind, file: f, errors: ["missing _digest"] });
-      else if (rec._digest !== contractDigest(body)) problems.push({ kind, file: f, errors: ["digest mismatch (record mutated after append)"] });
+      const digestProblem = verifyStoredDigest(rec, body);
+      if (digestProblem) problems.push({ kind, file: f, errors: [digestProblem] });
       const expected = fileName(kind, body);
       if (f !== expected) problems.push({ kind, file: f, errors: [`filename should be ${expected}`] });
     }

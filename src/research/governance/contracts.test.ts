@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  CLEAN_ROOM_SHAREABLE, contractDigest, detectCleanRoomViolations, detectUnauthorizedAdoptions,
+  CLEAN_ROOM_SHAREABLE, contractDigest, detectCleanRoomViolations, detectUnauthorizedAdoptions, legacyContractDigest,
   validateDiscovery, validateExperiment, validatePromotion, validateRejection, validateStrategyFamily,
   validateStrategyVersion, validateTransferExperiment,
   type Discovery, type StrategyFamily, type StrategyVersion, type TransferExperiment,
@@ -41,7 +41,6 @@ const fam = (o: Record<string, unknown> = {}): StrategyFamily => ({
 });
 test("strategy family + clean-room policy constraint", () => {
   assert.equal(validateStrategyFamily(fam()).valid, true);
-  // clean-room family が REUSABLE を共有許可に含めたら不正
   assert.equal(validateStrategyFamily(fam({ knowledgePolicy: "CLEAN_ROOM", cleanRoomPolicy: { isolated: true, allowedShareClasses: ["GLOBAL_FACT", "REUSABLE_CANDIDATE"] } })).valid, false);
   assert.equal(validateStrategyFamily(fam({ knowledgePolicy: "CLEAN_ROOM", cleanRoomPolicy: { isolated: true, allowedShareClasses: ["GLOBAL_FACT", "RESEARCH_METHOD"] } })).valid, true);
 });
@@ -68,11 +67,8 @@ test("transfer experiment validation", () => {
 test("promotion requires human approval + transfer for active_research; production always false", () => {
   const base = { promotionId: "PROMO-1", strategyId: "STRAT-market-resid", fromVersion: "v1.0", evidenceDigests: [], productionConnection: false, createdAt: "2026-08-05T00:00:00Z" };
   assert.equal(validatePromotion({ ...base, toState: "candidate", transferExperimentIds: [], humanApproval: { approved: false, approver: null, approvedAt: null, note: "" } }).valid, true);
-  // active_research without approval → invalid
   assert.equal(validatePromotion({ ...base, toState: "active_research", transferExperimentIds: ["XFER-0001"], humanApproval: { approved: false, approver: null, approvedAt: null, note: "" } }).valid, false);
-  // active_research with approval + transfer → valid
   assert.equal(validatePromotion({ ...base, toState: "active_research", transferExperimentIds: ["XFER-0001"], humanApproval: { approved: true, approver: "m-shogo", approvedAt: "t", note: "ok" } }).valid, true);
-  // productionConnection true → invalid
   assert.equal(validatePromotion({ ...base, toState: "candidate", transferExperimentIds: [], productionConnection: true as any, humanApproval: { approved: false, approver: null, approvedAt: null, note: "" } }).valid, false);
 });
 
@@ -103,4 +99,32 @@ test("CLEAN_ROOM_SHAREABLE excludes strategy-local classes; digest stable", () =
   assert.equal(CLEAN_ROOM_SHAREABLE.has("REUSABLE_CANDIDATE"), false);
   assert.equal(CLEAN_ROOM_SHAREABLE.has("GLOBAL_FACT"), true);
   assert.equal(contractDigest({ a: 1, b: 2 }), contractDigest({ b: 2, a: 1 }));
+});
+
+test("contractDigest canonicalizes nested objects and arrays while detecting nested mutations", () => {
+  const left = {
+    promotionId: "PROMO-1",
+    humanApproval: { approved: true, approver: "m-shogo", note: "ok" },
+    evidence: [{ digest: "a", meta: { stage: "holdout", version: 1 } }],
+  };
+  const reordered = {
+    evidence: [{ meta: { version: 1, stage: "holdout" }, digest: "a" }],
+    humanApproval: { note: "ok", approver: "m-shogo", approved: true },
+    promotionId: "PROMO-1",
+  };
+  const mutated = {
+    ...left,
+    humanApproval: { ...left.humanApproval, approved: false },
+  };
+
+  assert.equal(contractDigest(left), contractDigest(reordered));
+  assert.notEqual(contractDigest(left), contractDigest(mutated));
+  assert.equal(contractDigest({ ...left, _digest: "old", _digestVersion: "canonical-v2", _recordedAt: "t" }), contractDigest(left));
+});
+
+test("legacyContractDigest stays byte-compatible with pre-v2 nested omission", () => {
+  const left = { strategyId: "STRAT-a", cleanRoomPolicy: { isolated: false, allowedShareClasses: ["GLOBAL_FACT"] } };
+  const mutatedNested = { strategyId: "STRAT-a", cleanRoomPolicy: { isolated: true, allowedShareClasses: ["RESEARCH_METHOD"] } };
+  assert.equal(legacyContractDigest(left), legacyContractDigest(mutatedNested));
+  assert.notEqual(contractDigest(left), contractDigest(mutatedNested));
 });
