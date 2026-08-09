@@ -145,6 +145,12 @@ export function validateDiscovery(x: unknown): Validation {
   for (const f of DISC_FIELDS) if (!(f in d)) errors.push(`missing ${f}`);
   if (!isId(d.discoveryId, "DISC")) errors.push("discoveryId must match DISC-*");
   if (!isArr(d.sourceExperimentIds) || (d.sourceExperimentIds as unknown[]).length === 0) errors.push("sourceExperimentIds required");
+  if (d.sourceStrategyId === null) {
+    if (d.sourceStrategyVersion !== null) errors.push("sourceStrategyId/sourceStrategyVersion must both be null or both be set");
+  } else {
+    if (!isId(d.sourceStrategyId, "STRAT")) errors.push("sourceStrategyId must match STRAT-* when set");
+    if (!isStr(d.sourceStrategyVersion)) errors.push("sourceStrategyId/sourceStrategyVersion must both be null or both be set");
+  }
   if (!isStr(d.finding) || !isStr(d.mechanismHypothesis) || !isStr(d.scope)) errors.push("finding/mechanismHypothesis/scope required");
   if (!["weak", "moderate", "strong"].includes(d.evidenceLevel as string)) errors.push("invalid evidenceLevel");
   if (!SHARE_CLASSES.includes(d.shareClass as ShareClass)) errors.push("invalid shareClass");
