@@ -9,6 +9,7 @@
 import { createHash } from "node:crypto";
 
 export const GOVERNANCE_CONTRACT_VERSION = "research-governance-v1";
+export const CONTRACT_DIGEST_VERSION = "canonical-v2";
 
 // ---- 共有分類（発見の共有スコープ）----
 export const SHARE_CLASSES = ["GLOBAL_FACT", "RESEARCH_METHOD", "REUSABLE_CANDIDATE", "STRATEGY_LOCAL"] as const;
@@ -40,6 +41,19 @@ const isStr = (x: unknown): x is string => typeof x === "string" && x.length > 0
 const isArr = (x: unknown): x is unknown[] => Array.isArray(x);
 const isId = (x: unknown, prefix: string): boolean => typeof x === "string" && new RegExp(`^${prefix}-[0-9A-Za-z._-]{1,80}$`).test(x);
 
+function digestHex(serialized: string): string {
+  return createHash("sha256").update(serialized).digest("hex");
+}
+
+function stripDigestMetadata(obj: Record<string, unknown>): Record<string, unknown> {
+  const { _digest, _digestVersion, _recordedAt, ...rest } = obj as Record<string, unknown> & {
+    _digest?: unknown;
+    _digestVersion?: unknown;
+    _recordedAt?: unknown;
+  };
+  return rest;
+}
+
 function canonicalizeDigestValue(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonicalizeDigestValue);
   if (value !== null && typeof value === "object") {
@@ -52,11 +66,17 @@ function canonicalizeDigestValue(value: unknown): unknown {
   return value;
 }
 
-// canonical digest（lineage / evidence 用）。
+// v1 compatibility only. JSON.stringify の replacer 配列が nested key を落とす旧挙動を
+// 既存 append-only record の検証専用として固定する。新規 record 生成には使わない。
+export function legacyContractDigest(obj: Record<string, unknown>): string {
+  const rest = stripDigestMetadata(obj);
+  return digestHex(JSON.stringify(rest, Object.keys(rest).sort()));
+}
+
+// canonical-v2 digest（lineage / evidence 用）。nested object も再帰的に key 順を正規化する。
 export function contractDigest(obj: Record<string, unknown>): string {
-  const { _digest, ...rest } = obj as Record<string, unknown> & { _digest?: unknown };
-  const stable = JSON.stringify(canonicalizeDigestValue(rest));
-  return createHash("sha256").update(stable).digest("hex");
+  const rest = stripDigestMetadata(obj);
+  return digestHex(JSON.stringify(canonicalizeDigestValue(rest)));
 }
 
 // ---- Experiment 契約 ----
