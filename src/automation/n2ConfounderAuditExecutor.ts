@@ -255,7 +255,9 @@ export function createN2ConfounderAuditExecutor(): Executor {
             executorVersion: N2_CONFOUNDER_AUDIT_EXECUTOR_VERSION, generatedAt: new Date().toISOString(), outputDigest: artifact.digest,
           }, true);
           return { ok: true, errors: [], outputs: [REPORT_RELATIVE_PATH, ...unique(registryOutputs)] };
-        } catch (error) { return { ok: false, errors: [error instanceof Error ? error.message : String(error)], outputs: registryOutputs };
+        } catch (error) {
+          return { ok: false, errors: [error instanceof Error ? error.message : String(error)], outputs: registryOutputs };
+        }
       },
       verifyArtifacts: (sdk, artifact) => verifyJsonReadback(join(sdk.repoRoot, REPORT_RELATIVE_PATH), artifact.digest),
       recordEvidence: (_sdk, _artifact, outputs) => ({ ok: true, errors: [], outputs }),
