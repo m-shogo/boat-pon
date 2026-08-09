@@ -3,7 +3,7 @@
 // 巨大な単一 JSON に集約しない。1 record = 1 file。既存 record の上書きは拒否（append-only）。
 // production / DB / sidecar に触れない。純粋な file システム操作のみ。
 import {
-  closeSync, existsSync, fsyncSync, linkSync, mkdirSync, openSync, readFileSync, readdirSync, unlinkSync,
+  closeSync, existsSync, fsyncSync, linkSync, lstatSync, mkdirSync, openSync, readFileSync, readdirSync, unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
@@ -38,6 +38,21 @@ function fileName(kind: RegistryKind, rec: Record<string, unknown>): string {
 function stripMetadata(rec: Record<string, unknown>): Record<string, unknown> {
   const { _digest, _recordedAt, ...body } = rec;
   return body;
+}
+
+function assertNotSymlink(path: string, role: string): void {
+  if (existsSync(path) && lstatSync(path).isSymbolicLink()) {
+    throw new Error(`registry symlink forbidden (${role}): ${path}`);
+  }
+}
+
+function assertRegistryContainerSafe(root: string, kind: RegistryKind): void {
+  assertNotSymlink(root, "root");
+  assertNotSymlink(join(root, kind), "kind");
+}
+
+function assertRegistryRecordSafe(path: string): void {
+  assertNotSymlink(path, "record");
 }
 
 function atomicCreateUtf8(path: string, content: string): void {
@@ -78,6 +93,11 @@ function appendNew(root: string, kind: RegistryKind, record: Record<string, unkn
   const cfg = REGISTRY[kind];
   const v = cfg.validate(record);
   if (!v.valid) return { ok: false, errors: v.errors, code: "INVALID" };
+  try {
+    assertRegistryContainerSafe(root, kind);
+  } catch (e) {
+    return { ok: false, errors: [e instanceof Error ? e.message : String(e)], code: "WRITE_FAILED" };
+  }
   const path = join(root, kind, fileName(kind, record));
   if (existsSync(path)) return { ok: false, errors: [`append-only: record already exists: ${path}`], code: "DUPLICATE", path };
   const withDigest = { ...record, _digest: contractDigest(record), _recordedAt: new Date().toISOString() };
@@ -99,10 +119,16 @@ export function appendRecordIdempotent(root: string, kind: RegistryKind, record:
   const cfg = REGISTRY[kind];
   const v = cfg.validate(record);
   if (!v.valid) return { ok: false, errors: v.errors, code: "INVALID" };
+  try {
+    assertRegistryContainerSafe(root, kind);
+  } catch (e) {
+    return { ok: false, errors: [e instanceof Error ? e.message : String(e)], code: "CONFLICT" };
+  }
   const path = join(root, kind, fileName(kind, record));
   const expectedDigest = contractDigest(record);
   if (existsSync(path)) {
     try {
+      assertRegistryRecordSafe(path);
       const existing = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
       const body = stripMetadata(existing);
       const storedDigest = typeof existing._digest === "string" ? existing._digest : contractDigest(body);
@@ -125,21 +151,39 @@ export function appendRecord(root: string, kind: RegistryKind, record: Record<st
 }
 
 export function listRecords<T = Record<string, unknown>>(root: string, kind: RegistryKind): T[] {
+  assertRegistryContainerSafe(root, kind);
   const dir = join(root, kind);
   if (!existsSync(dir)) return [];
   return readdirSync(dir).filter((f) => f.endsWith(".json")).sort()
-    .map((f) => JSON.parse(readFileSync(join(dir, f), "utf8")) as T);
+    .map((f) => {
+      const path = join(dir, f);
+      assertRegistryRecordSafe(path);
+      return JSON.parse(readFileSync(path, "utf8")) as T;
+    });
 }
 
 export function validateAllRegistries(root: string): { ok: boolean; problems: Array<{ kind: string; file: string; errors: string[] }> } {
   const problems: Array<{ kind: string; file: string; errors: string[] }> = [];
   for (const kind of Object.keys(REGISTRY) as RegistryKind[]) {
+    try {
+      assertRegistryContainerSafe(root, kind);
+    } catch (e) {
+      problems.push({ kind, file: "<registry>", errors: [e instanceof Error ? e.message : String(e)] });
+      continue;
+    }
     const dir = join(root, kind);
     if (!existsSync(dir)) continue;
     for (const f of readdirSync(dir).filter((x) => x.endsWith(".json"))) {
       let rec: Record<string, unknown>;
-      try { rec = JSON.parse(readFileSync(join(dir, f), "utf8")) as Record<string, unknown>; }
-      catch { problems.push({ kind, file: f, errors: ["not valid JSON"] }); continue; }
+      try {
+        const path = join(dir, f);
+        assertRegistryRecordSafe(path);
+        rec = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
+      }
+      catch (e) {
+        problems.push({ kind, file: f, errors: [e instanceof Error && e.message.includes("registry symlink forbidden") ? e.message : "not valid JSON"] });
+        continue;
+      }
       const body = stripMetadata(rec);
       const v = REGISTRY[kind].validate(body);
       if (!v.valid) problems.push({ kind, file: f, errors: v.errors });
