@@ -3,7 +3,11 @@ import { linkSync, mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { listJsonFilesFailClosed, readGovernanceFileUtf8 } from "./safeFs";
+import {
+  assertGovernanceDirectorySafe,
+  listJsonFilesFailClosed,
+  readGovernanceFileUtf8,
+} from "./safeFs";
 
 function tmp(): string { return mkdtempSync(join(tmpdir(), "gov-fs-")); }
 
@@ -25,6 +29,15 @@ test("governance scan rejects symlinked directories before traversal", () => {
   symlinkSync(outside, join(root, "linked"), "dir");
 
   assert.throws(() => listJsonFilesFailClosed(root), /governance scan symlink forbidden/);
+});
+
+test("direct governance directory guard rejects a symlinked root", () => {
+  const root = tmp();
+  const outside = tmp();
+  const linked = join(root, "reports-n2");
+  symlinkSync(outside, linked, "dir");
+
+  assert.throws(() => assertGovernanceDirectorySafe(linked), /governance scan symlink forbidden/);
 });
 
 test("governance scan rejects symlinked JSON files", () => {
