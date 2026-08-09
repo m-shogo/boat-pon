@@ -70,9 +70,6 @@ function assertRegistryContainerSafe(root: string, kind: RegistryKind): void {
 function readRegistryRecordUtf8(path: string): string {
   let fd: number | null = null;
   try {
-    // O_NOFOLLOW closes the record-level lstat -> read TOCTOU window for
-    // symlink swaps. O_NONBLOCK prevents a raced FIFO/device replacement from
-    // blocking before fstat can reject it. The read stays bound to this fd.
     fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
     const stat = fstatSync(fd);
     if (!stat.isFile()) {
@@ -103,9 +100,6 @@ function atomicCreateUtf8(path: string, content: string): void {
     closeSync(fd);
     fd = null;
     try {
-      // Publishing with a hard link is atomic and never replaces an existing
-      // destination. Unlike renameSync(), a concurrent writer that wins the
-      // target path causes EEXIST instead of violating append-only semantics.
       linkSync(temp, path);
     } catch (error) {
       if (error instanceof Error && "code" in error && error.code === "EEXIST") {
@@ -151,12 +145,10 @@ function appendNew(root: string, kind: RegistryKind, record: Record<string, unkn
   }
 }
 
-// 明示的に重複を拒否したい管理処理向け。
 export function appendRecordStrict(root: string, kind: RegistryKind, record: Record<string, unknown>): AppendResult {
   return appendNew(root, kind, record);
 }
 
-// Executor retry 用。既存recordのcanonical bodyが同一なら安全な再実行として成功、異なるならfail-closed。
 export function appendRecordIdempotent(root: string, kind: RegistryKind, record: Record<string, unknown>): AppendResult {
   const cfg = REGISTRY[kind];
   const v = cfg.validate(record);
@@ -187,7 +179,6 @@ export function appendRecordIdempotent(root: string, kind: RegistryKind, record:
   return appendNew(root, kind, record);
 }
 
-// 既存executor互換API。戻り値を見落としても不正・競合・write失敗は例外で停止する。
 export function appendRecord(root: string, kind: RegistryKind, record: Record<string, unknown>): AppendResult {
   const result = appendRecordIdempotent(root, kind, record);
   if (!result.ok) throw new Error(`${result.code}: ${result.errors.join("; ")}`);
@@ -247,9 +238,18 @@ export function checkLineage(root: string): { ok: boolean; problems: string[] } 
   const familyIds = new Set(families.map((f) => f.strategyId));
   const versionIds = new Set(versions.map((v) => `${v.strategyId}|${v.version}`));
   const xferIds = new Set(transfers.map((t) => t.transferId));
+  const acceptedAdoptions = new Set(
+    transfers.filter((t) => t.result === "accepted").map((t) => `${t.sourceDiscoveryId}|${t.targetStrategyId}`),
+  );
 
   for (const f of families) for (const eid of f.parentExperimentIds ?? []) if (!expIds.has(eid)) problems.push(`strategy family ${f.strategyId} references missing experiment ${eid}`);
-  for (const v of versions) if (!familyIds.has(v.strategyId)) problems.push(`strategy version ${v.strategyId}/${v.version} references missing strategy family ${v.strategyId}`);
+  for (const v of versions) {
+    if (!familyIds.has(v.strategyId)) problems.push(`strategy version ${v.strategyId}/${v.version} references missing strategy family ${v.strategyId}`);
+    for (const did of v.adoptedDiscoveryIds ?? []) {
+      if (!discIds.has(did)) problems.push(`strategy version ${v.strategyId}/${v.version} references missing adopted discovery ${did}`);
+      else if (!acceptedAdoptions.has(`${did}|${v.strategyId}`)) problems.push(`strategy version ${v.strategyId}/${v.version} adopted ${did} without accepted transfer`);
+    }
+  }
   for (const d of discoveries) for (const eid of d.sourceExperimentIds ?? []) if (!expIds.has(eid)) problems.push(`discovery ${d.discoveryId} references missing experiment ${eid}`);
   for (const t of transfers) {
     if (!discIds.has(t.sourceDiscoveryId)) problems.push(`transfer ${t.transferId} references missing discovery ${t.sourceDiscoveryId}`);
