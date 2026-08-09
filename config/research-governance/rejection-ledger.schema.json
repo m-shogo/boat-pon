@@ -42,5 +42,23 @@
         "future_only"
       ]
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "subjectType": { "const": "experiment" } }, "required": ["subjectType"] },
+      "then": { "properties": { "subjectId": { "pattern": "^EXP-[0-9A-Za-z._-]{1,80}$" } } }
+    },
+    {
+      "if": { "properties": { "subjectType": { "const": "discovery" } }, "required": ["subjectType"] },
+      "then": { "properties": { "subjectId": { "pattern": "^DISC-[0-9A-Za-z._-]{1,80}$" } } }
+    },
+    {
+      "if": { "properties": { "subjectType": { "const": "strategy" } }, "required": ["subjectType"] },
+      "then": { "properties": { "subjectId": { "pattern": "^STRAT-[0-9A-Za-z._-]{1,80}$" } } }
+    },
+    {
+      "if": { "properties": { "subjectType": { "const": "transfer" } }, "required": ["subjectType"] },
+      "then": { "properties": { "subjectId": { "pattern": "^XFER-[0-9A-Za-z._-]{1,80}$" } } }
+    }
+  ]
 }

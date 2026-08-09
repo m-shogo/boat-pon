@@ -72,9 +72,15 @@ test("promotion requires human approval + transfer for active_research; producti
   assert.equal(validatePromotion({ ...base, toState: "candidate", transferExperimentIds: [], productionConnection: true as any, humanApproval: { approved: false, approver: null, approvedAt: null, note: "" } }).valid, false);
 });
 
-test("rejection validation", () => {
-  assert.equal(validateRejection({ rejectionId: "REJ-1", subjectType: "experiment", subjectId: "EXP-1", reason: "no effect", evidenceStage: "validation", trialFamilyId: "TF-1", createdAt: "t" }).valid, true);
-  assert.equal(validateRejection({ rejectionId: "X", subjectType: "experiment", subjectId: "EXP-1", reason: "r", evidenceStage: "validation", trialFamilyId: null, createdAt: "t" }).valid, false);
+test("rejection validation enforces subject identity namespace", () => {
+  const base = { rejectionId: "REJ-1", reason: "no effect", evidenceStage: "validation", trialFamilyId: "TF-1", createdAt: "t" };
+  assert.equal(validateRejection({ ...base, subjectType: "experiment", subjectId: "EXP-1" }).valid, true);
+  assert.equal(validateRejection({ ...base, subjectType: "discovery", subjectId: "DISC-1" }).valid, true);
+  assert.equal(validateRejection({ ...base, subjectType: "strategy", subjectId: "STRAT-1" }).valid, true);
+  assert.equal(validateRejection({ ...base, subjectType: "transfer", subjectId: "XFER-1" }).valid, true);
+  assert.equal(validateRejection({ ...base, subjectType: "discovery", subjectId: "H-1" }).valid, false);
+  assert.equal(validateRejection({ ...base, subjectType: "experiment", subjectId: "DISC-1" }).valid, false);
+  assert.equal(validateRejection({ ...base, rejectionId: "X", subjectType: "experiment", subjectId: "EXP-1" }).valid, false);
 });
 
 test("clean-room violation: isolated family adopting non-shareable discovery", () => {
