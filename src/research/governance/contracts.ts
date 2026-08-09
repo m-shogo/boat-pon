@@ -290,15 +290,8 @@ export function validateRejection(x: unknown): Validation {
   if (typeof x !== "object" || x === null) return err(["rejection must be object"]);
   const r = x as Record<string, unknown>; const errors: string[] = [];
   if (!isId(r.rejectionId, "REJ")) errors.push("rejectionId must match REJ-*");
-  const subjectPrefixes: Record<string, string> = {
-    experiment: "EXP",
-    discovery: "DISC",
-    strategy: "STRAT",
-    transfer: "XFER",
-  };
-  if (!(r.subjectType as string in subjectPrefixes)) errors.push("invalid subjectType");
-  else if (!isId(r.subjectId, subjectPrefixes[r.subjectType as string])) errors.push(`subjectId must match ${subjectPrefixes[r.subjectType as string]}-* for ${String(r.subjectType)}`);
-  if (!isStr(r.reason)) errors.push("reason required");
+  if (!["experiment", "discovery", "strategy", "transfer"].includes(r.subjectType as string)) errors.push("invalid subjectType");
+  if (!isStr(r.subjectId) || !isStr(r.reason)) errors.push("subjectId/reason required");
   if (!EVIDENCE_STAGES.includes(r.evidenceStage as EvidenceStage)) errors.push("invalid evidenceStage");
   return err(errors);
 }
