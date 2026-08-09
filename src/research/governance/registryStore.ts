@@ -3,8 +3,8 @@
 // 巨大な単一 JSON に集約しない。1 record = 1 file。既存 record の上書きは拒否（append-only）。
 // production / DB / sidecar に触れない。純粋な file システム操作のみ。
 import {
-  closeSync, existsSync, fsyncSync, linkSync, lstatSync, mkdirSync, openSync, readFileSync, readdirSync, unlinkSync,
-  writeFileSync,
+  closeSync, constants, existsSync, fstatSync, fsyncSync, linkSync, lstatSync, mkdirSync, openSync, readFileSync,
+  readdirSync, unlinkSync, writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
 import {
@@ -67,17 +67,28 @@ function assertRegistryContainerSafe(root: string, kind: RegistryKind): void {
   assertRegistryDirectorySafe(join(root, kind), "kind");
 }
 
-function assertRegistryRecordSafe(path: string): void {
-  if (!existsSync(path)) return;
-  const stat = lstatSync(path);
-  if (stat.isSymbolicLink()) {
-    throw new Error(`registry symlink forbidden (record): ${path}`);
-  }
-  if (!stat.isFile()) {
-    throw new Error(`registry record must be regular file: ${path}`);
-  }
-  if (stat.nlink !== 1) {
-    throw new Error(`registry record hardlink forbidden: ${path}`);
+function readRegistryRecordUtf8(path: string): string {
+  let fd: number | null = null;
+  try {
+    // O_NOFOLLOW closes the record-level lstat -> read TOCTOU window for
+    // symlink swaps. O_NONBLOCK prevents a raced FIFO/device replacement from
+    // blocking before fstat can reject it. The read stays bound to this fd.
+    fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+    const stat = fstatSync(fd);
+    if (!stat.isFile()) {
+      throw new Error(`registry record must be regular file: ${path}`);
+    }
+    if (stat.nlink !== 1) {
+      throw new Error(`registry record hardlink forbidden: ${path}`);
+    }
+    return readFileSync(fd, "utf8");
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ELOOP") {
+      throw new Error(`registry symlink forbidden (record): ${path}`);
+    }
+    throw error;
+  } finally {
+    if (fd !== null) closeSync(fd);
   }
 }
 
@@ -159,8 +170,7 @@ export function appendRecordIdempotent(root: string, kind: RegistryKind, record:
   const expectedDigest = contractDigest(record);
   if (existsSync(path)) {
     try {
-      assertRegistryRecordSafe(path);
-      const existing = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
+      const existing = JSON.parse(readRegistryRecordUtf8(path)) as Record<string, unknown>;
       const body = stripMetadata(existing);
       const storedDigestProblem = verifyStoredDigest(existing, body);
       if (storedDigestProblem) {
@@ -189,11 +199,7 @@ export function listRecords<T = Record<string, unknown>>(root: string, kind: Reg
   const dir = join(root, kind);
   if (!existsSync(dir)) return [];
   return readdirSync(dir).filter((f) => f.endsWith(".json")).sort()
-    .map((f) => {
-      const path = join(dir, f);
-      assertRegistryRecordSafe(path);
-      return JSON.parse(readFileSync(path, "utf8")) as T;
-    });
+    .map((f) => JSON.parse(readRegistryRecordUtf8(join(dir, f))) as T);
 }
 
 export function validateAllRegistries(root: string): { ok: boolean; problems: Array<{ kind: string; file: string; errors: string[] }> } {
@@ -210,9 +216,7 @@ export function validateAllRegistries(root: string): { ok: boolean; problems: Ar
     for (const f of readdirSync(dir).filter((x) => x.endsWith(".json"))) {
       let rec: Record<string, unknown>;
       try {
-        const path = join(dir, f);
-        assertRegistryRecordSafe(path);
-        rec = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
+        rec = JSON.parse(readRegistryRecordUtf8(join(dir, f))) as Record<string, unknown>;
       }
       catch (e) {
         problems.push({ kind, file: f, errors: [e instanceof Error && (e.message.includes("registry symlink forbidden") || e.message.includes("registry record must be regular file") || e.message.includes("registry record hardlink forbidden")) ? e.message : "not valid JSON"] });
