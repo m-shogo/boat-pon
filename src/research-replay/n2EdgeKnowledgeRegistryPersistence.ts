@@ -1,3 +1,4 @@
+import { existsSync, lstatSync } from "node:fs";
 import { relative, resolve } from "node:path";
 
 import {
@@ -56,6 +57,22 @@ function registryRootPreflightBlocker(repoRoot: string, registryRoot: string): s
   const actualRegistryRoot = resolve(registryRoot);
   if (actualRegistryRoot !== expectedRegistryRoot) {
     return "KNOWLEDGE_REGISTRY_ROOT_OUTSIDE_ALLOWLIST";
+  }
+
+  const symlinkSensitivePaths = [
+    resolve(repoRoot, "research"),
+    expectedRegistryRoot,
+    resolve(expectedRegistryRoot, "experiments"),
+    resolve(expectedRegistryRoot, "discoveries"),
+  ];
+  try {
+    for (const path of symlinkSensitivePaths) {
+      if (existsSync(path) && lstatSync(path).isSymbolicLink()) {
+        return "KNOWLEDGE_REGISTRY_SYMLINK_COMPONENT";
+      }
+    }
+  } catch {
+    return "KNOWLEDGE_REGISTRY_PREFLIGHT_STAT_FAILED";
   }
   return null;
 }
