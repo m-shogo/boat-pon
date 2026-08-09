@@ -9,18 +9,18 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 
-function assertRealDirectory(path: string): void {
+export function assertGovernanceDirectorySafe(path: string): void {
   const stat = lstatSync(path);
   if (stat.isSymbolicLink()) throw new Error(`governance scan symlink forbidden: ${path}`);
   if (!stat.isDirectory()) throw new Error(`governance scan container must be directory: ${path}`);
 }
 
 export function listJsonFilesFailClosed(root: string): string[] {
-  assertRealDirectory(root);
+  assertGovernanceDirectorySafe(root);
   const files: string[] = [];
 
   const walk = (current: string): void => {
-    assertRealDirectory(current);
+    assertGovernanceDirectorySafe(current);
     for (const entry of readdirSync(current)) {
       const full = join(current, entry);
       const stat = lstatSync(full);
