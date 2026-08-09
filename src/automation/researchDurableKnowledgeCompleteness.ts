@@ -2,13 +2,13 @@ import { createHash } from "node:crypto";
 import {
   existsSync,
   lstatSync,
-  readFileSync,
   readdirSync,
   statSync,
 } from "node:fs";
 import { join, resolve, sep } from "node:path";
 
 import { contractDigest } from "../research/governance/contracts";
+import { readGovernanceFileUtf8 } from "../research/governance/safeFs";
 
 export const RESEARCH_DURABLE_KNOWLEDGE_COMPLETENESS_VERSION =
   "research-durable-knowledge-completeness-v1" as const;
@@ -284,7 +284,7 @@ function assessOutput(input: {
       warnings,
     };
   }
-  const text = readFileSync(absolutePath, "utf8");
+  const text = readGovernanceFileUtf8(absolutePath);
   const contentDigest = sha256Text(text);
   if (rootClass === "RETAINED") {
     const retainedMatch = input.relativePath.match(
@@ -496,7 +496,7 @@ function assessHistoryFile(input: {
       issues: ["HISTORY_FILE_SIZE_OR_TYPE_INVALID"],
     });
   }
-  const text = readFileSync(absolutePath, "utf8");
+  const text = readGovernanceFileUtf8(absolutePath);
   const contentDigest = sha256Text(text);
   let history: HistoryLike;
   try {

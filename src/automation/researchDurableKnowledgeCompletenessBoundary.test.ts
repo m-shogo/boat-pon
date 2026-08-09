@@ -39,6 +39,11 @@ test("completeness audit reads only automation history and approved durable outp
   assert.doesNotMatch(source, /data\/raw|data\/private|boat\.sqlite|sidecar/u);
 });
 
+test("durable history and output content use descriptor-bound reads", () => {
+  assert.match(source, /readGovernanceFileUtf8/u);
+  assert.doesNotMatch(source, /readFileSync\(absolutePath/u);
+});
+
 test("audit distinguishes mutable supersession from append-only registry corruption", () => {
   assert.match(source, /CURRENT_OUTPUT_DIGEST_SUPERSEDED/u);
   assert.match(source, /DURABLE_MUTABLE_OUTPUT_SUPERSEDED/u);
