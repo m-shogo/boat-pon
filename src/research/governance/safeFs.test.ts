@@ -7,6 +7,7 @@ import {
   assertGovernanceDirectorySafe,
   listJsonFilesFailClosed,
   readGovernanceFileUtf8,
+  readGovernanceFileUtf8Bounded,
 } from "./safeFs";
 
 function tmp(): string { return mkdtempSync(join(tmpdir(), "gov-fs-")); }
@@ -67,4 +68,13 @@ test("descriptor-bound governance reads reject hardlinks", () => {
   linkSync(source, alias);
 
   assert.throws(() => readGovernanceFileUtf8(alias), /governance scan hardlink forbidden/);
+});
+
+test("bounded descriptor reads enforce the opened inode byte limit", () => {
+  const root = tmp();
+  const path = join(root, "bounded.json");
+  writeFileSync(path, "12345", "utf8");
+
+  assert.deepEqual(readGovernanceFileUtf8Bounded(path, 5), { text: "12345", bytes: 5 });
+  assert.throws(() => readGovernanceFileUtf8Bounded(path, 4), /governance scan file exceeds byte limit/);
 });
