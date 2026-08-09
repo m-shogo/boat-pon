@@ -177,6 +177,8 @@ export function validateStrategyFamily(x: unknown): Validation {
   const s = x as Record<string, unknown>; const errors: string[] = [];
   if (!isId(s.strategyId, "STRAT")) errors.push("strategyId must match STRAT-*");
   for (const f of ["strategyName", "coreThesis", "mechanismHypothesis"]) if (!isStr(s[f])) errors.push(`${f} required`);
+  if (!isArr(s.parentExperimentIds)) errors.push("parentExperimentIds must be array");
+  if (isArr(s.parentExperimentIds) && s.parentExperimentIds.some((id) => !isId(id, "EXP"))) errors.push("parentExperimentIds must contain only EXP-* ids");
   if (!KNOWLEDGE_POLICIES.includes(s.knowledgePolicy as KnowledgePolicy)) errors.push("invalid knowledgePolicy");
   if (!DECISION_SYSTEMS.includes(s.decisionSystem as DecisionSystem)) errors.push("invalid decisionSystem");
   const cr = s.cleanRoomPolicy as any;
@@ -210,6 +212,7 @@ export function validateStrategyVersion(x: unknown): Validation {
   for (const f of ["version", "datasetVersion", "featureVersion", "modelVersion", "decisionRuleVersion", "ticketSelectorVersion", "changeReason"]) if (!isStr(v[f])) errors.push(`${f} required`);
   if (!["new_family", "same_thesis_improvement", "parameter", "observation_only"].includes(v.changeType as string)) errors.push("invalid changeType");
   if (!isArr(v.adoptedDiscoveryIds)) errors.push("adoptedDiscoveryIds must be array");
+  if (isArr(v.adoptedDiscoveryIds) && v.adoptedDiscoveryIds.some((id) => !isId(id, "DISC"))) errors.push("adoptedDiscoveryIds must contain only DISC-* ids");
   return err(errors);
 }
 
