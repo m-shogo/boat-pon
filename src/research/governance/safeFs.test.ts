@@ -49,6 +49,16 @@ test("governance scan rejects symlinked JSON files", () => {
   assert.throws(() => listJsonFilesFailClosed(root), /governance scan symlink forbidden/);
 });
 
+test("descriptor-bound governance reads reject symlinks", () => {
+  const root = tmp();
+  const outside = join(tmp(), "outside.json");
+  const alias = join(root, "alias.json");
+  writeFileSync(outside, "{}\n");
+  symlinkSync(outside, alias);
+
+  assert.throws(() => readGovernanceFileUtf8(alias), /governance scan symlink forbidden/);
+});
+
 test("descriptor-bound governance reads reject hardlinks", () => {
   const root = tmp();
   const source = join(root, "source.json");
