@@ -1,6 +1,6 @@
 // boat-pon 研究ガバナンス CI チェック（read-only・fail-closed）。
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { isExecutorImplemented } from "../src/automation/taskExecutors";
 import { detectCleanRoomViolations, detectUnauthorizedAdoptions } from "../src/research/governance/contracts";
@@ -48,7 +48,7 @@ const mappingPath = join(root, "automation/phase-mapping.json");
 if (!existsSync(catalogPath)) {
   problems.push("automation/task-catalog.json missing");
 } else {
-  const catalog = JSON.parse(readFileSync(catalogPath, "utf8")) as { tasks?: Array<Record<string, any>> };
+  const catalog = JSON.parse(readGovernanceFileUtf8(catalogPath)) as { tasks?: Array<Record<string, any>> };
   const tasks = catalog.tasks ?? [];
   const ids = new Set<string>();
   for (const task of tasks) {
@@ -69,7 +69,7 @@ if (!existsSync(catalogPath)) {
   ok("task catalog / executor readiness");
 
   if (existsSync(mappingPath)) {
-    const mapping = JSON.parse(readFileSync(mappingPath, "utf8")) as { legacyTaskAliases?: Array<Record<string, any>> };
+    const mapping = JSON.parse(readGovernanceFileUtf8(mappingPath)) as { legacyTaskAliases?: Array<Record<string, any>> };
     const mapped = new Map((mapping.legacyTaskAliases ?? []).map((x) => [x.legacy, x]));
     for (const task of tasks.filter((t) => /^TASK-(N2|N3|N4|N5|N6|N7|N8|D2|E1|E2)-/.test(String(t.taskId)))) {
       if (!mapped.has(task.taskId)) problems.push(`phase mapping missing task: ${task.taskId}`);
