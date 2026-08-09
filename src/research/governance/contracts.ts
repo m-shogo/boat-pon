@@ -258,6 +258,10 @@ export function validatePromotion(x: unknown): Validation {
   if ((p as any).productionConnection !== false) errors.push("productionConnection must be false");
   const ha = p.humanApproval as any;
   if (!ha || typeof ha.approved !== "boolean") errors.push("humanApproval.approved required");
+  if (ha?.approved) {
+    if (!isStr(ha.approver)) errors.push("approved humanApproval requires approver");
+    if (!isStr(ha.approvedAt)) errors.push("approved humanApproval requires approvedAt");
+  }
   // active_research/challenger 昇格は人間承認 + transfer 証拠が必須。
   if (["active_research", "challenger"].includes(p.toState as string)) {
     if (!ha?.approved) errors.push("promotion to active_research/challenger requires human approval");
