@@ -13,7 +13,8 @@
     "decisionRuleVersion",
     "ticketSelectorVersion",
     "changeType",
-    "changeReason"
+    "changeReason",
+    "adoptedDiscoveryIds"
   ],
   "properties": {
     "strategyId": {
@@ -35,7 +36,8 @@
     "adoptedDiscoveryIds": {
       "type": "array",
       "items": {
-        "type": "string"
+        "type": "string",
+        "pattern": "^DISC-[0-9A-Za-z._-]{1,80}$"
       }
     }
   }

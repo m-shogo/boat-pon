@@ -41,6 +41,7 @@ const fam = (o: Record<string, unknown> = {}): StrategyFamily => ({
 });
 test("strategy family + clean-room policy constraint", () => {
   assert.equal(validateStrategyFamily(fam()).valid, true);
+  assert.equal(validateStrategyFamily(fam({ parentExperimentIds: ["DISC-0001"] })).valid, false);
   assert.equal(validateStrategyFamily(fam({ knowledgePolicy: "CLEAN_ROOM", cleanRoomPolicy: { isolated: true, allowedShareClasses: ["GLOBAL_FACT", "REUSABLE_CANDIDATE"] } })).valid, false);
   assert.equal(validateStrategyFamily(fam({ knowledgePolicy: "CLEAN_ROOM", cleanRoomPolicy: { isolated: true, allowedShareClasses: ["GLOBAL_FACT", "RESEARCH_METHOD"] } })).valid, true);
 });
@@ -51,6 +52,7 @@ const ver = (o: Record<string, unknown> = {}): StrategyVersion => ({
 });
 test("strategy version validation", () => {
   assert.equal(validateStrategyVersion(ver()).valid, true);
+  assert.equal(validateStrategyVersion(ver({ adoptedDiscoveryIds: ["EXP-0001"] })).valid, false);
   assert.equal(validateStrategyVersion(ver({ changeType: "wat" })).valid, false);
 });
 

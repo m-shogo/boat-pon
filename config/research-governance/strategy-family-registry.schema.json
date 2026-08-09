@@ -9,6 +9,7 @@
     "strategyName",
     "coreThesis",
     "mechanismHypothesis",
+    "parentExperimentIds",
     "knowledgePolicy",
     "decisionSystem"
   ],
@@ -28,6 +29,13 @@
     "mechanismHypothesis": {
       "type": "string",
       "minLength": 1
+    },
+    "parentExperimentIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^EXP-[0-9A-Za-z._-]{1,80}$"
+      }
     },
     "knowledgePolicy": {
       "enum": [
