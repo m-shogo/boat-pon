@@ -8,6 +8,9 @@ import {
   readdirSync,
 } from "node:fs";
 import { join } from "node:path";
+import { TextDecoder } from "node:util";
+
+const STRICT_UTF8_DECODER = new TextDecoder("utf-8", { fatal: true });
 
 export function assertGovernanceDirectorySafe(path: string): void {
   const stat = lstatSync(path);
@@ -56,7 +59,13 @@ function readGovernanceFileDescriptor(path: string, maxBytes?: number): { text: 
     if (maxBytes !== undefined && bytes > maxBytes) {
       throw new Error(`governance scan file exceeds byte limit: ${path}`);
     }
-    return { text: content.toString("utf8"), bytes };
+    let text: string;
+    try {
+      text = STRICT_UTF8_DECODER.decode(content);
+    } catch {
+      throw new Error(`governance scan invalid utf8: ${path}`);
+    }
+    return { text, bytes };
   } catch (error) {
     if (error instanceof Error && "code" in error && error.code === "ELOOP") {
       throw new Error(`governance scan symlink forbidden: ${path}`);
