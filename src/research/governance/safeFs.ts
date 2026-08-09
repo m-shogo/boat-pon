@@ -51,12 +51,12 @@ function readGovernanceFileDescriptor(path: string, maxBytes?: number): { text: 
     if (maxBytes !== undefined && stat.size > maxBytes) {
       throw new Error(`governance scan file exceeds byte limit: ${path}`);
     }
-    const text = readFileSync(fd, "utf8");
-    const bytes = Buffer.byteLength(text, "utf8");
+    const content = readFileSync(fd);
+    const bytes = content.byteLength;
     if (maxBytes !== undefined && bytes > maxBytes) {
       throw new Error(`governance scan file exceeds byte limit: ${path}`);
     }
-    return { text, bytes };
+    return { text: content.toString("utf8"), bytes };
   } catch (error) {
     if (error instanceof Error && "code" in error && error.code === "ELOOP") {
       throw new Error(`governance scan symlink forbidden: ${path}`);
