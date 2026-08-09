@@ -65,6 +65,9 @@ function assertRegistryRecordSafe(path: string): void {
   if (!stat.isFile()) {
     throw new Error(`registry record must be regular file: ${path}`);
   }
+  if (stat.nlink !== 1) {
+    throw new Error(`registry record hardlink forbidden: ${path}`);
+  }
 }
 
 function atomicCreateUtf8(path: string, content: string): void {
@@ -193,7 +196,7 @@ export function validateAllRegistries(root: string): { ok: boolean; problems: Ar
         rec = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
       }
       catch (e) {
-        problems.push({ kind, file: f, errors: [e instanceof Error && (e.message.includes("registry symlink forbidden") || e.message.includes("registry record must be regular file")) ? e.message : "not valid JSON"] });
+        problems.push({ kind, file: f, errors: [e instanceof Error && (e.message.includes("registry symlink forbidden") || e.message.includes("registry record must be regular file") || e.message.includes("registry record hardlink forbidden")) ? e.message : "not valid JSON"] });
         continue;
       }
       const body = stripMetadata(rec);
