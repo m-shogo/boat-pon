@@ -49,6 +49,11 @@ const promotion = {
   productionConnection: false, createdAt: "2026-08-09T00:00:00Z",
 };
 
+const rejection = {
+  rejectionId: "REJ-lineage", subjectType: "experiment", subjectId: "EXP-root", reason: "negative result",
+  evidenceStage: "validation", trialFamilyId: "TF-1", createdAt: "2026-08-09T00:00:00Z",
+};
+
 test("strategy family lineage requires every parent experiment", () => {
   const root = tmp();
   appendRecord(root, "experiments", experiment);
@@ -89,6 +94,40 @@ test("strategy versions require accepted transfer before adoption", () => {
   const lineage = checkLineage(root);
   assert.equal(lineage.ok, false);
   assert.ok(lineage.problems.some((problem) => problem.includes("strategy version STRAT-lineage/v1.0 adopted DISC-lineage without accepted transfer")));
+});
+
+test("discoveries with strategy provenance require an existing source family and version", () => {
+  const root = tmp();
+  appendRecord(root, "experiments", experiment);
+  appendRecord(root, "discoveries", { ...discovery, sourceStrategyId: "STRAT-missing", sourceStrategyVersion: "v9.9" });
+
+  const lineage = checkLineage(root);
+  assert.equal(lineage.ok, false);
+  assert.ok(lineage.problems.some((problem) => problem.includes("discovery DISC-lineage references missing source strategy family STRAT-missing")));
+  assert.ok(lineage.problems.some((problem) => problem.includes("discovery DISC-lineage references missing source strategy version STRAT-missing/v9.9")));
+});
+
+test("discovery strategy provenance must provide strategy and version together", () => {
+  const root = tmp();
+  appendRecord(root, "experiments", experiment);
+  appendRecord(root, "strategy-families", family);
+  appendRecord(root, "discoveries", { ...discovery, sourceStrategyId: "STRAT-lineage", sourceStrategyVersion: null });
+  appendRecord(root, "discoveries", { ...discovery, discoveryId: "DISC-version-only", sourceStrategyVersion: "v1.0" });
+
+  const lineage = checkLineage(root);
+  assert.equal(lineage.ok, false);
+  assert.ok(lineage.problems.some((problem) => problem.includes("discovery DISC-lineage is missing source strategy version for STRAT-lineage")));
+  assert.ok(lineage.problems.some((problem) => problem.includes("discovery DISC-version-only has source strategy version without source strategy")));
+});
+
+test("discovery strategy provenance passes when source family and version exist", () => {
+  const root = tmp();
+  appendRecord(root, "experiments", experiment);
+  appendRecord(root, "strategy-families", family);
+  appendRecord(root, "strategy-versions", version);
+  appendRecord(root, "discoveries", { ...discovery, sourceStrategyId: "STRAT-lineage", sourceStrategyVersion: "v1.0" });
+
+  assert.equal(checkLineage(root).ok, true);
 });
 
 test("transfers require an existing target strategy and base version", () => {
@@ -151,6 +190,25 @@ test("active research promotions require accepted transfer evidence", () => {
   const lineage = checkLineage(root);
   assert.equal(lineage.ok, false);
   assert.ok(lineage.problems.some((problem) => problem.includes("promotion PROMO-lineage requires accepted transfer XFER-lineage for active_research")));
+});
+
+test("rejections require an existing subject of the declared type", () => {
+  const root = tmp();
+  appendRecord(root, "rejections", { ...rejection, subjectType: "strategy", subjectId: "STRAT-missing" });
+  appendRecord(root, "rejections", { ...rejection, rejectionId: "REJ-transfer", subjectType: "transfer", subjectId: "XFER-missing" });
+
+  const lineage = checkLineage(root);
+  assert.equal(lineage.ok, false);
+  assert.ok(lineage.problems.some((problem) => problem.includes("rejection REJ-lineage references missing strategy STRAT-missing")));
+  assert.ok(lineage.problems.some((problem) => problem.includes("rejection REJ-transfer references missing transfer XFER-missing")));
+});
+
+test("rejection lineage passes when the declared subject exists", () => {
+  const root = tmp();
+  appendRecord(root, "experiments", experiment);
+  appendRecord(root, "rejections", rejection);
+
+  assert.equal(checkLineage(root).ok, true);
 });
 
 test("strategy adoption lineage passes after an accepted transfer", () => {
