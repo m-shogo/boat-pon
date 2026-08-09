@@ -22,6 +22,12 @@ const REPORT_RELATIVE_PATH = "reports/n2/n2-confounder-audit.json";
 const HISTORICAL_REPORT_RELATIVE_PATH = "reports/n2/n2-edge-historical-test.json";
 const REGISTRY_ROOT_RELATIVE_PATH = "research/registries";
 const REJECTION_TRIAL_FAMILY = "N2-EDGE-V1";
+const REJECTION_SUBJECT_PREFIX: Record<Rejection["subjectType"], string> = {
+  experiment: "EXP",
+  discovery: "DISC",
+  strategy: "STRAT",
+  transfer: "XFER",
+};
 
 export type N2HistoricalTestArtifact = {
   status: "PASS";
@@ -42,6 +48,13 @@ function unique(values: readonly string[]): string[] { return [...new Set(values
 function digestMatches<T extends { outputDigest: string }>(value: T): boolean {
   const { outputDigest, ...body } = value;
   return isDigest(outputDigest) && canonicalHash(body) === outputDigest;
+}
+function rejectionSubjectIdentityBlocker(record: Rejection): string | null {
+  const prefix = REJECTION_SUBJECT_PREFIX[record.subjectType];
+  const valid = new RegExp(`^${prefix}-[0-9A-Za-z._-]{1,80}$`, "u").test(record.subjectId);
+  return valid
+    ? null
+    : `REJECTION_SUBJECT_ID_MISMATCH:${record.rejectionId}:${record.subjectType}:${record.subjectId}`;
 }
 
 export function readN2HistoricalTestArtifact(repoRoot: string): {
@@ -111,6 +124,13 @@ export function preflightN2RejectionRegistry(registryRoot: string, planned: read
   const blockers: string[] = [];
   const plannedIds = planned.map((record) => record.rejectionId);
   if (new Set(plannedIds).size !== plannedIds.length) blockers.push("DUPLICATE_PLANNED_REJECTION_ID");
+  for (const record of planned) {
+    const blocker = rejectionSubjectIdentityBlocker(record);
+    if (blocker) blockers.push(blocker);
+  }
+  if (blockers.length > 0) {
+    return { ok: false, blockers: unique(blockers), alreadyRecordedCount: 0 };
+  }
   let existing: Record<string, unknown>[];
   try { existing = listRecords<Record<string, unknown>>(registryRoot, "rejections"); }
   catch (error) {
@@ -235,7 +255,9 @@ export function createN2ConfounderAuditExecutor(): Executor {
             executorVersion: N2_CONFOUNDER_AUDIT_EXECUTOR_VERSION, generatedAt: new Date().toISOString(), outputDigest: artifact.digest,
           }, true);
           return { ok: true, errors: [], outputs: [REPORT_RELATIVE_PATH, ...unique(registryOutputs)] };
-        } catch (error) { return { ok: false, errors: [error instanceof Error ? error.message : String(error)], outputs: registryOutputs }; }
+        } catch (error) {
+          return { ok: false, errors: [error instanceof Error ? error.message : String(error)], outputs: registryOutputs };
+        }
       },
       verifyArtifacts: (sdk, artifact) => verifyJsonReadback(join(sdk.repoRoot, REPORT_RELATIVE_PATH), artifact.digest),
       recordEvidence: (_sdk, _artifact, outputs) => ({ ok: true, errors: [], outputs }),

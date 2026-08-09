@@ -4,7 +4,6 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
-  readdirSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -17,8 +16,10 @@ import type {
   N2EdgeHistoricalConfirmationReport,
   N2EdgeHistoricalConfirmationResult,
 } from "../research-replay/n2EdgeHistoricalConfirmation";
+import { contractDigest, type Rejection } from "../research/governance/contracts";
 import {
   createN2ConfounderAuditExecutor,
+  preflightN2RejectionRegistry,
   readN2HistoricalTestArtifact,
 } from "./n2ConfounderAuditExecutor";
 import type { ExecutorContext } from "./taskExecutors";
@@ -130,6 +131,19 @@ function context(root: string, status = "PASS"): ExecutorContext {
   };
 }
 
+function validDiscoveryRejection(overrides: Partial<Rejection> = {}): Rejection {
+  return {
+    rejectionId: "REJ-N2-valid-subject",
+    subjectType: "discovery",
+    subjectId: "DISC-valid-subject",
+    reason: "fixture rejection",
+    evidenceStage: "holdout",
+    trialFamilyId: "N2-EDGE-V1",
+    createdAt: "2026-08-08T07:00:00.000Z",
+    ...overrides,
+  };
+}
+
 function withRoot(fn: (root: string) => void): void {
   const root = mkdtempSync(join(tmpdir(), "boat-pon-n2-confounder-audit-"));
   try {
@@ -149,7 +163,7 @@ test("dependency is checked before reading N2-041 artifact", () => {
   });
 });
 
-test("executor appends only rejected hypotheses, blocks confirmed promotion, and exposes durable registry output", () => {
+test("executor fails closed before appending hypothesis IDs as discovery rejections", () => {
   withRoot((root) => {
     const results = [
       result("H-REJECT", "HISTORICAL_REJECTED"),
@@ -158,71 +172,46 @@ test("executor appends only rejected hypotheses, blocks confirmed promotion, and
     ];
     writeHistoricalArtifact(root, results);
     const executor = createN2ConfounderAuditExecutor();
-    const first = executor(context(root));
-    assert.equal(first.result, "PASS");
-    assert.equal(first.outputs[0], "reports/n2/n2-confounder-audit.json");
-    assert.equal(first.outputs.length, 2);
-    assert.match(first.outputs[1], /^research\/registries\/rejections\/REJ-N2-[0-9a-f]{12}-[0-9a-f]{12}\.json$/u);
-
-    const registryDir = join(root, "research/registries/rejections");
-    const files = readdirSync(registryDir).filter((name) => name.endsWith(".json"));
-    assert.equal(files.length, 1);
-    const rejection = JSON.parse(readFileSync(join(registryDir, files[0]), "utf8")) as Record<string, unknown>;
-    assert.equal(rejection.subjectId, "H-REJECT");
-    assert.equal(rejection.subjectType, "discovery");
-    assert.equal(rejection.evidenceStage, "holdout");
-    assert.match(String(rejection.rejectionId), /^REJ-N2-[0-9a-f]{12}-[0-9a-f]{12}$/u);
-
-    const report = JSON.parse(readFileSync(join(root, "reports/n2/n2-confounder-audit.json"), "utf8")) as any;
-    assert.equal(report.rejectedCount, 1);
-    assert.equal(report.insufficientCount, 1);
-    assert.equal(report.confirmedBlockedCount, 1);
-    const confirmed = report.audit.items.find((item: any) => item.hypothesisId === "H-CONFIRMED");
-    assert.equal(confirmed.disposition, "CONFIRMED_WITH_BLOCKING_CONFOUNDER");
-    assert.equal(confirmed.promotionAuthorized, false);
-    assert.equal(confirmed.confounderFlags[0].flagId, "distribution-concentration-evidence-missing-v1");
-    assert.equal(report.confounderCoverage.aggregateDistributionEvidenceAvailable, false);
-    assert.equal(report.confounderCoverage.confirmedBlockedByMissingDistributionCount, 1);
-    assert.equal(report.confounderCoverage.rejectedHypothesisRescueAllowed, false);
-
-    const second = executor({ ...context(root), runId: "run-n2-042-retry" });
-    assert.equal(second.result, "PASS");
-    assert.equal(second.outputs.length, 2);
-    assert.equal(readdirSync(registryDir).filter((name) => name.endsWith(".json")).length, 1);
-  });
-});
-
-test("conflicting append-only rejection body fails closed before any rewrite", () => {
-  withRoot((root) => {
-    writeHistoricalArtifact(root, [result("H-REJECT", "HISTORICAL_REJECTED")]);
-    const executor = createN2ConfounderAuditExecutor();
-    const first = executor(context(root));
-    assert.equal(first.result, "PASS");
-    const registryDir = join(root, "research/registries/rejections");
-    const file = readdirSync(registryDir).find((name) => name.endsWith(".json"));
-    assert.ok(file);
-    const path = join(registryDir, file);
-    const stored = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
-    stored.reason = "tampered reason";
-    writeFileSync(path, `${JSON.stringify(stored, null, 2)}\n`, "utf8");
-
-    const second = executor({ ...context(root), runId: "run-n2-042-conflict" });
-    assert.equal(second.result, "BLOCKED");
-    assert.ok(second.blocks.some((blocker) => blocker.includes("REJECTION_REGISTRY_CONFLICT")));
-  });
-});
-
-test("malformed append-only registry blocks cleanly instead of crashing runner", () => {
-  withRoot((root) => {
-    writeHistoricalArtifact(root, [result("H-REJECT", "HISTORICAL_REJECTED")]);
-    const registryDir = join(root, "research/registries/rejections");
-    mkdirSync(registryDir, { recursive: true });
-    writeFileSync(join(registryDir, "broken.json"), "{not-json", "utf8");
-    const executor = createN2ConfounderAuditExecutor();
     const outcome = executor(context(root));
     assert.equal(outcome.result, "BLOCKED");
-    assert.ok(outcome.blocks.some((blocker) => blocker.includes("REJECTION_REGISTRY_READ_FAILED")));
+    assert.ok(outcome.blocks.some((blocker) => blocker.includes("REJECTION_SUBJECT_ID_MISMATCH") && blocker.includes(":discovery:H-REJECT")));
     assert.equal(existsSync(join(root, "reports/n2/n2-confounder-audit.json")), false);
+    assert.equal(existsSync(join(root, "research")), false, "invalid subject identity must block before registry side effects");
+  });
+});
+
+test("well-typed discovery rejection keeps append-only conflict detection", () => {
+  withRoot((root) => {
+    const registryRoot = join(root, "research/registries");
+    const planned = validDiscoveryRejection();
+    const first = preflightN2RejectionRegistry(registryRoot, [planned]);
+    assert.equal(first.ok, true);
+
+    const registryDir = join(registryRoot, "rejections");
+    mkdirSync(registryDir, { recursive: true });
+    const conflictingBody = { ...planned, reason: "different immutable reason" } as Record<string, unknown>;
+    writeFileSync(join(registryDir, `${planned.rejectionId}.json`), `${JSON.stringify({
+      ...conflictingBody,
+      _digestVersion: "canonical-v2",
+      _digest: contractDigest(conflictingBody),
+      _recordedAt: "2026-08-08T07:01:00.000Z",
+    }, null, 2)}\n`, "utf8");
+
+    const second = preflightN2RejectionRegistry(registryRoot, [planned]);
+    assert.equal(second.ok, false);
+    assert.ok(second.blockers.some((blocker) => blocker.includes("REJECTION_REGISTRY_CONFLICT")));
+  });
+});
+
+test("malformed append-only registry blocks cleanly for a well-typed planned subject", () => {
+  withRoot((root) => {
+    const registryRoot = join(root, "research/registries");
+    const registryDir = join(registryRoot, "rejections");
+    mkdirSync(registryDir, { recursive: true });
+    writeFileSync(join(registryDir, "broken.json"), "{not-json", "utf8");
+    const outcome = preflightN2RejectionRegistry(registryRoot, [validDiscoveryRejection()]);
+    assert.equal(outcome.ok, false);
+    assert.ok(outcome.blockers.some((blocker) => blocker.includes("REJECTION_REGISTRY_READ_FAILED")));
   });
 });
 
