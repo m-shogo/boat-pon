@@ -1,4 +1,4 @@
-import { existsSync, lstatSync } from "node:fs";
+import { existsSync, lstatSync, readdirSync } from "node:fs";
 import { relative, resolve } from "node:path";
 
 import {
@@ -69,6 +69,16 @@ function registryRootPreflightBlocker(repoRoot: string, registryRoot: string): s
     for (const path of symlinkSensitivePaths) {
       if (existsSync(path) && lstatSync(path).isSymbolicLink()) {
         return "KNOWLEDGE_REGISTRY_SYMLINK_COMPONENT";
+      }
+    }
+
+    for (const kind of ["experiments", "discoveries"] as const) {
+      const dir = resolve(expectedRegistryRoot, kind);
+      if (!existsSync(dir)) continue;
+      for (const entry of readdirSync(dir).filter((name) => name.endsWith(".json"))) {
+        if (lstatSync(resolve(dir, entry)).isSymbolicLink()) {
+          return "KNOWLEDGE_REGISTRY_SYMLINK_RECORD";
+        }
       }
     }
   } catch {
