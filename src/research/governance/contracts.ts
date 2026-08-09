@@ -264,6 +264,10 @@ export function validatePromotion(x: unknown): Validation {
   const p = x as Record<string, unknown>; const errors: string[] = [];
   if (!isId(p.promotionId, "PROMO")) errors.push("promotionId must match PROMO-*");
   if (!isId(p.strategyId, "STRAT")) errors.push("strategyId must match STRAT-*");
+  if (!isStr(p.fromVersion)) errors.push("fromVersion required");
+  if (!isArr(p.transferExperimentIds)) errors.push("transferExperimentIds must be array");
+  if (isArr(p.transferExperimentIds) && p.transferExperimentIds.some((id) => !isId(id, "XFER"))) errors.push("transferExperimentIds must contain only XFER-* ids");
+  if (!isArr(p.evidenceDigests)) errors.push("evidenceDigests must be array");
   if (!PROMOTION_STATES.includes(p.toState as PromotionState)) errors.push("invalid toState");
   if ((p as any).productionConnection !== false) errors.push("productionConnection must be false");
   const ha = p.humanApproval as any;
