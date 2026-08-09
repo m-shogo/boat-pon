@@ -3,7 +3,7 @@
 // 巨大な単一 JSON に集約しない。1 record = 1 file。既存 record の上書きは拒否（append-only）。
 // production / DB / sidecar に触れない。純粋な file システム操作のみ。
 import {
-  closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, readdirSync, renameSync, unlinkSync,
+  closeSync, existsSync, fsyncSync, linkSync, mkdirSync, openSync, readFileSync, readdirSync, unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
@@ -50,8 +50,17 @@ function atomicCreateUtf8(path: string, content: string): void {
     fsyncSync(fd);
     closeSync(fd);
     fd = null;
-    if (existsSync(path)) throw new Error(`append-only target already exists: ${path}`);
-    renameSync(temp, path);
+    try {
+      // Publishing with a hard link is atomic and never replaces an existing
+      // destination. Unlike renameSync(), a concurrent writer that wins the
+      // target path causes EEXIST instead of violating append-only semantics.
+      linkSync(temp, path);
+    } catch (error) {
+      if (error instanceof Error && "code" in error && error.code === "EEXIST") {
+        throw new Error(`append-only target already exists: ${path}`);
+      }
+      throw error;
+    }
   } finally {
     if (fd !== null) closeSync(fd);
     if (existsSync(temp)) unlinkSync(temp);
