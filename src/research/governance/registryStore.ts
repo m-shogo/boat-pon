@@ -246,7 +246,7 @@ export function checkLineage(root: string): { ok: boolean; problems: string[] } 
   const discIds = new Set(discoveries.map((d) => d.discoveryId));
   const familyIds = new Set(families.map((f) => f.strategyId));
   const versionIds = new Set(versions.map((v) => `${v.strategyId}|${v.version}`));
-  const xferIds = new Set(transfers.map((t) => t.transferId));
+  const xferById = new Map(transfers.map((t) => [t.transferId, t]));
   const acceptedAdoptions = new Set(
     transfers.filter((t) => t.result === "accepted").map((t) => `${t.sourceDiscoveryId}|${t.targetStrategyId}`),
   );
@@ -268,7 +268,15 @@ export function checkLineage(root: string): { ok: boolean; problems: string[] } 
   for (const p of promotions) {
     if (!familyIds.has(p.strategyId)) problems.push(`promotion ${p.promotionId} references missing strategy family ${p.strategyId}`);
     if (!versionIds.has(`${p.strategyId}|${p.fromVersion}`)) problems.push(`promotion ${p.promotionId} references missing strategy version ${p.strategyId}/${p.fromVersion}`);
-    for (const xid of p.transferExperimentIds ?? []) if (!xferIds.has(xid)) problems.push(`promotion ${p.promotionId} references missing transfer ${xid}`);
+    for (const xid of p.transferExperimentIds ?? []) {
+      const transfer = xferById.get(xid);
+      if (!transfer) {
+        problems.push(`promotion ${p.promotionId} references missing transfer ${xid}`);
+        continue;
+      }
+      if (transfer.targetStrategyId !== p.strategyId) problems.push(`promotion ${p.promotionId} references transfer ${xid} for different strategy ${transfer.targetStrategyId}`);
+      if (["active_research", "challenger"].includes(p.toState) && transfer.result !== "accepted") problems.push(`promotion ${p.promotionId} requires accepted transfer ${xid} for ${p.toState}`);
+    }
   }
   return { ok: problems.length === 0, problems };
 }

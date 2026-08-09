@@ -116,6 +116,43 @@ test("promotions require an existing strategy and source version", () => {
   assert.ok(lineage.problems.some((problem) => problem.includes("promotion PROMO-lineage references missing strategy version STRAT-lineage/v1.0")));
 });
 
+test("promotions cannot cite transfer evidence from another strategy", () => {
+  const root = tmp();
+  const otherFamily = { ...family, strategyId: "STRAT-other", strategyName: "other" };
+  const otherVersion = { ...version, strategyId: "STRAT-other" };
+  const otherTransfer = { ...transfer, transferId: "XFER-other", targetStrategyId: "STRAT-other" };
+  appendRecord(root, "experiments", experiment);
+  appendRecord(root, "discoveries", discovery);
+  appendRecord(root, "strategy-families", family);
+  appendRecord(root, "strategy-families", otherFamily);
+  appendRecord(root, "strategy-versions", version);
+  appendRecord(root, "strategy-versions", otherVersion);
+  appendRecord(root, "transfer-experiments", otherTransfer);
+  appendRecord(root, "promotions", { ...promotion, transferExperimentIds: ["XFER-other"] });
+
+  const lineage = checkLineage(root);
+  assert.equal(lineage.ok, false);
+  assert.ok(lineage.problems.some((problem) => problem.includes("promotion PROMO-lineage references transfer XFER-other for different strategy STRAT-other")));
+});
+
+test("active research promotions require accepted transfer evidence", () => {
+  const root = tmp();
+  appendRecord(root, "experiments", experiment);
+  appendRecord(root, "discoveries", discovery);
+  appendRecord(root, "strategy-families", family);
+  appendRecord(root, "strategy-versions", version);
+  appendRecord(root, "transfer-experiments", { ...transfer, result: "pending" });
+  appendRecord(root, "promotions", {
+    ...promotion,
+    toState: "active_research",
+    humanApproval: { approved: true, approver: "reviewer", approvedAt: "2026-08-09T00:00:00Z", note: "approved" },
+  });
+
+  const lineage = checkLineage(root);
+  assert.equal(lineage.ok, false);
+  assert.ok(lineage.problems.some((problem) => problem.includes("promotion PROMO-lineage requires accepted transfer XFER-lineage for active_research")));
+});
+
 test("strategy adoption lineage passes after an accepted transfer", () => {
   const root = tmp();
   appendRecord(root, "experiments", experiment);
