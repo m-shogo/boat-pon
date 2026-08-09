@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { CONTRACT_DIGEST_VERSION, legacyContractDigest } from "./contracts";
 import {
   appendRecord, appendRecordIdempotent, appendRecordStrict, checkLineage, listRecords, validateAllRegistries,
 } from "./registryStore";
@@ -25,6 +26,14 @@ test("strict append-only writes once and refuses duplicate/invalid", () => {
   assert.equal(listRecords(root, "experiments").length, 1);
 });
 
+test("new records declare canonical digest version", () => {
+  const root = tmp();
+  const result = appendRecordStrict(root, "experiments", { ...experiment });
+  const stored = JSON.parse(readFileSync(result.path!, "utf8"));
+  assert.equal(stored._digestVersion, CONTRACT_DIGEST_VERSION);
+  assert.equal(validateAllRegistries(root).ok, true);
+});
+
 test("idempotent append accepts same canonical body and rejects same-id conflict", () => {
   const root = tmp();
   assert.equal(appendRecordIdempotent(root, "experiments", { ...experiment }).code, "OK");
@@ -34,6 +43,26 @@ test("idempotent append accepts same canonical body and rejects same-id conflict
   const conflict = appendRecordIdempotent(root, "experiments", { ...experiment, hypothesis: "different" });
   assert.equal(conflict.ok, false);
   assert.equal(conflict.code, "CONFLICT");
+});
+
+test("legacy unversioned records remain readable without rewriting append-only history", () => {
+  const root = tmp();
+  const kindDir = join(root, "strategy-families");
+  mkdirSync(kindDir, { recursive: true });
+  const legacyBody = {
+    strategyId: "STRAT-legacy", strategyName: "legacy", coreThesis: "c", mechanismHypothesis: "m",
+    parentExperimentIds: [], knowledgePolicy: "OPEN_COMMONS",
+    cleanRoomPolicy: { isolated: false, allowedShareClasses: ["GLOBAL_FACT", "RESEARCH_METHOD"] },
+    decisionSystem: "legacy_t5_formal", createdAt: "t",
+  };
+  const path = join(kindDir, "STRAT-legacy.json");
+  writeFileSync(path, `${JSON.stringify({ ...legacyBody, _digest: legacyContractDigest(legacyBody), _recordedAt: "old" }, null, 2)}\n`);
+
+  assert.equal(validateAllRegistries(root).ok, true);
+  const retry = appendRecordIdempotent(root, "strategy-families", legacyBody);
+  assert.equal(retry.ok, true);
+  assert.equal(retry.code, "ALREADY_RECORDED");
+  assert.equal(JSON.parse(readFileSync(path, "utf8"))._digestVersion, undefined);
 });
 
 test("legacy executor API is idempotent and throws on conflict", () => {
@@ -62,6 +91,17 @@ test("validateAllRegistries detects mutation and missing digest", () => {
   const v = validateAllRegistries(root);
   assert.equal(v.ok, false);
   assert.ok(v.problems.some((p) => p.errors.some((e) => e.includes("digest mismatch"))));
+});
+
+test("unknown digest versions fail closed", () => {
+  const root = tmp();
+  const r = appendRecordStrict(root, "experiments", { ...experiment });
+  const rec = JSON.parse(readFileSync(r.path!, "utf8"));
+  rec._digestVersion = "future-v999";
+  writeFileSync(r.path!, JSON.stringify(rec, null, 2));
+  const v = validateAllRegistries(root);
+  assert.equal(v.ok, false);
+  assert.ok(v.problems.some((p) => p.errors.some((e) => e.includes("unsupported _digestVersion"))));
 });
 
 test("checkLineage flags dangling references", () => {
