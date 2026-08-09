@@ -1,4 +1,4 @@
-import { relative } from "node:path";
+import { relative, resolve } from "node:path";
 
 import {
   contractDigest,
@@ -49,6 +49,15 @@ function unique(values: readonly string[]): string[] {
 function stripMetadata(record: Record<string, unknown>): Record<string, unknown> {
   const { _digest, _recordedAt, ...body } = record;
   return body;
+}
+
+function registryRootPreflightBlocker(repoRoot: string, registryRoot: string): string | null {
+  const expectedRegistryRoot = resolve(repoRoot, "research/registries");
+  const actualRegistryRoot = resolve(registryRoot);
+  if (actualRegistryRoot !== expectedRegistryRoot) {
+    return "KNOWLEDGE_REGISTRY_ROOT_OUTSIDE_ALLOWLIST";
+  }
+  return null;
 }
 
 function relativeRegistryPath(repoRoot: string, absolutePath: string, kind: "experiments" | "discoveries"): string {
@@ -135,6 +144,9 @@ export function persistN2EdgeKnowledgeLineage(input: {
   plan: N2EdgeKnowledgeLineagePlan;
   writeIntent: typeof N2_EDGE_KNOWLEDGE_REGISTRY_WRITE_INTENT;
 }): N2EdgeKnowledgeRegistryPersistenceResult {
+  const registryRootBlocker = registryRootPreflightBlocker(input.repoRoot, input.registryRoot);
+  if (registryRootBlocker) return blocked([registryRootBlocker]);
+
   const blockers: string[] = [];
   if (input.writeIntent !== N2_EDGE_KNOWLEDGE_REGISTRY_WRITE_INTENT) blockers.push("WRITE_INTENT_INVALID");
   if (input.plan.status !== "PASS") blockers.push("LINEAGE_PLAN_NOT_PASS");
