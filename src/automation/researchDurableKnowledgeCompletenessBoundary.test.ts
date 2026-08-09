@@ -39,8 +39,9 @@ test("completeness audit reads only automation history and approved durable outp
   assert.doesNotMatch(source, /data\/raw|data\/private|boat\.sqlite|sidecar/u);
 });
 
-test("durable history and output content use descriptor-bound reads", () => {
-  assert.match(source, /readGovernanceFileUtf8/u);
+test("durable history and output content use bounded descriptor-bound reads", () => {
+  assert.match(source, /readGovernanceFileUtf8Bounded\(absolutePath, MAX_OUTPUT_BYTES\)/u);
+  assert.match(source, /readGovernanceFileUtf8Bounded\(absolutePath, MAX_HISTORY_BYTES\)/u);
   assert.doesNotMatch(source, /readFileSync\(absolutePath/u);
 });
 
