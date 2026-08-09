@@ -40,19 +40,31 @@ function stripMetadata(rec: Record<string, unknown>): Record<string, unknown> {
   return body;
 }
 
-function assertNotSymlink(path: string, role: string): void {
-  if (existsSync(path) && lstatSync(path).isSymbolicLink()) {
+function assertRegistryDirectorySafe(path: string, role: string): void {
+  if (!existsSync(path)) return;
+  const stat = lstatSync(path);
+  if (stat.isSymbolicLink()) {
     throw new Error(`registry symlink forbidden (${role}): ${path}`);
+  }
+  if (!stat.isDirectory()) {
+    throw new Error(`registry container must be directory (${role}): ${path}`);
   }
 }
 
 function assertRegistryContainerSafe(root: string, kind: RegistryKind): void {
-  assertNotSymlink(root, "root");
-  assertNotSymlink(join(root, kind), "kind");
+  assertRegistryDirectorySafe(root, "root");
+  assertRegistryDirectorySafe(join(root, kind), "kind");
 }
 
 function assertRegistryRecordSafe(path: string): void {
-  assertNotSymlink(path, "record");
+  if (!existsSync(path)) return;
+  const stat = lstatSync(path);
+  if (stat.isSymbolicLink()) {
+    throw new Error(`registry symlink forbidden (record): ${path}`);
+  }
+  if (!stat.isFile()) {
+    throw new Error(`registry record must be regular file: ${path}`);
+  }
 }
 
 function atomicCreateUtf8(path: string, content: string): void {
@@ -181,7 +193,7 @@ export function validateAllRegistries(root: string): { ok: boolean; problems: Ar
         rec = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
       }
       catch (e) {
-        problems.push({ kind, file: f, errors: [e instanceof Error && e.message.includes("registry symlink forbidden") ? e.message : "not valid JSON"] });
+        problems.push({ kind, file: f, errors: [e instanceof Error && (e.message.includes("registry symlink forbidden") || e.message.includes("registry record must be regular file")) ? e.message : "not valid JSON"] });
         continue;
       }
       const body = stripMetadata(rec);
