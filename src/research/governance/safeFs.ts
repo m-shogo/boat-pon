@@ -38,14 +38,20 @@ export function listJsonFilesFailClosed(root: string): string[] {
   return files;
 }
 
-export function readGovernanceFileUtf8(path: string): string {
+function readGovernanceFileDescriptor(path: string, maxBytes?: number): { text: string; bytes: number } {
+  if (maxBytes !== undefined && (!Number.isSafeInteger(maxBytes) || maxBytes < 0)) {
+    throw new Error(`governance scan byte limit invalid: ${path}`);
+  }
   let fd: number | null = null;
   try {
     fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
     const stat = fstatSync(fd);
     if (!stat.isFile()) throw new Error(`governance scan file must be regular: ${path}`);
     if (stat.nlink !== 1) throw new Error(`governance scan hardlink forbidden: ${path}`);
-    return readFileSync(fd, "utf8");
+    if (maxBytes !== undefined && stat.size > maxBytes) {
+      throw new Error(`governance scan file exceeds byte limit: ${path}`);
+    }
+    return { text: readFileSync(fd, "utf8"), bytes: stat.size };
   } catch (error) {
     if (error instanceof Error && "code" in error && error.code === "ELOOP") {
       throw new Error(`governance scan symlink forbidden: ${path}`);
@@ -54,4 +60,12 @@ export function readGovernanceFileUtf8(path: string): string {
   } finally {
     if (fd !== null) closeSync(fd);
   }
+}
+
+export function readGovernanceFileUtf8(path: string): string {
+  return readGovernanceFileDescriptor(path).text;
+}
+
+export function readGovernanceFileUtf8Bounded(path: string, maxBytes: number): { text: string; bytes: number } {
+  return readGovernanceFileDescriptor(path, maxBytes);
 }
