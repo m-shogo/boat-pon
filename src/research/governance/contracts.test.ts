@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  CLEAN_ROOM_SHAREABLE, contractDigest, detectCleanRoomViolations, detectUnauthorizedAdoptions,
+  CLEAN_ROOM_SHAREABLE, contractDigest, detectCleanRoomViolations, detectUnauthorizedAdoptions, legacyContractDigest,
   validateDiscovery, validateExperiment, validatePromotion, validateRejection, validateStrategyFamily,
   validateStrategyVersion, validateTransferExperiment,
   type Discovery, type StrategyFamily, type StrategyVersion, type TransferExperiment,
@@ -119,5 +119,12 @@ test("contractDigest canonicalizes nested objects and arrays while detecting nes
 
   assert.equal(contractDigest(left), contractDigest(reordered));
   assert.notEqual(contractDigest(left), contractDigest(mutated));
-  assert.equal(contractDigest({ ...left, _digest: "old" }), contractDigest(left));
+  assert.equal(contractDigest({ ...left, _digest: "old", _digestVersion: "canonical-v2", _recordedAt: "t" }), contractDigest(left));
+});
+
+test("legacyContractDigest stays byte-compatible with pre-v2 nested omission", () => {
+  const left = { strategyId: "STRAT-a", cleanRoomPolicy: { isolated: false, allowedShareClasses: ["GLOBAL_FACT"] } };
+  const mutatedNested = { strategyId: "STRAT-a", cleanRoomPolicy: { isolated: true, allowedShareClasses: ["RESEARCH_METHOD"] } };
+  assert.equal(legacyContractDigest(left), legacyContractDigest(mutatedNested));
+  assert.notEqual(contractDigest(left), contractDigest(mutatedNested));
 });
