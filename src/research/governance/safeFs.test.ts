@@ -70,6 +70,15 @@ test("descriptor-bound governance reads reject hardlinks", () => {
   assert.throws(() => readGovernanceFileUtf8(alias), /governance scan hardlink forbidden/);
 });
 
+test("descriptor-bound governance reads reject malformed UTF-8", () => {
+  const root = tmp();
+  const path = join(root, "invalid.json");
+  writeFileSync(path, Buffer.from([0x7b, 0x22, 0x78, 0x22, 0x3a, 0x22, 0xc3, 0x28, 0x22, 0x7d]));
+
+  assert.throws(() => readGovernanceFileUtf8(path), /governance scan invalid utf8/);
+  assert.throws(() => readGovernanceFileUtf8Bounded(path, 10), /governance scan invalid utf8/);
+});
+
 test("bounded descriptor reads enforce the opened inode byte limit", () => {
   const root = tmp();
   const path = join(root, "bounded.json");
