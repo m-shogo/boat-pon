@@ -7,9 +7,13 @@
   "required": [
     "promotionId",
     "strategyId",
+    "fromVersion",
     "toState",
+    "transferExperimentIds",
+    "evidenceDigests",
     "humanApproval",
-    "productionConnection"
+    "productionConnection",
+    "createdAt"
   ],
   "properties": {
     "promotionId": {
@@ -18,7 +22,11 @@
     },
     "strategyId": {
       "type": "string",
-      "pattern": "^STRAT-"
+      "pattern": "^STRAT-[0-9A-Za-z._-]{1,80}$"
+    },
+    "fromVersion": {
+      "type": "string",
+      "minLength": 1
     },
     "toState": {
       "enum": [
@@ -30,11 +38,29 @@
         "archived"
       ]
     },
+    "transferExperimentIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^XFER-[0-9A-Za-z._-]{1,80}$"
+      }
+    },
+    "evidenceDigests": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
     "humanApproval": {
       "type": "object"
     },
     "productionConnection": {
       "const": false
+    },
+    "createdAt": {
+      "type": "string",
+      "minLength": 1
     }
   }
 }
