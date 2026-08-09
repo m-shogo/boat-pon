@@ -1,11 +1,12 @@
 // boat-pon 研究ガバナンス CI チェック（read-only・fail-closed）。
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { isExecutorImplemented } from "../src/automation/taskExecutors";
 import { detectCleanRoomViolations, detectUnauthorizedAdoptions } from "../src/research/governance/contracts";
 import { checkLineage, listRecords, validateAllRegistries } from "../src/research/governance/registryStore";
 import { checkProductionIsolation } from "../src/research/governance/executorSdk";
+import { listJsonFilesFailClosed, readGovernanceFileUtf8 } from "../src/research/governance/safeFs";
 
 const root = resolve(process.cwd());
 const REG = join(root, "research/registries");
@@ -113,19 +114,18 @@ function stripProse(value: unknown): unknown {
 for (const relative of ["config/research-governance", "research/registries"]) {
   const dir = join(root, relative);
   if (!existsSync(dir)) continue;
-  const scan = (current: string): void => {
-    for (const entry of readdirSync(current)) {
-      const full = join(current, entry);
-      if (statSync(full).isDirectory()) { scan(full); continue; }
-      if (!entry.endsWith(".json")) continue;
+  try {
+    for (const full of listJsonFilesFailClosed(dir)) {
+      const text = readGovernanceFileUtf8(full);
       let structural: string;
-      try { structural = JSON.stringify(stripProse(JSON.parse(readFileSync(full, "utf8")))); }
-      catch { structural = readFileSync(full, "utf8"); }
+      try { structural = JSON.stringify(stripProse(JSON.parse(text))); }
+      catch { structural = text; }
       const isolation = checkProductionIsolation(structural);
       if (!isolation.ok) problems.push(`production marker in ${full}: ${isolation.markers.join(",")}`);
     }
-  };
-  scan(dir);
+  } catch (error) {
+    problems.push(`production isolation scan failed (${relative}): ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 ok("production isolation");
 
