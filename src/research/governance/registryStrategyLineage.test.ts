@@ -111,13 +111,15 @@ test("discovery strategy provenance must provide strategy and version together",
   const root = tmp();
   appendRecord(root, "experiments", experiment);
   appendRecord(root, "strategy-families", family);
-  appendRecord(root, "discoveries", { ...discovery, sourceStrategyId: "STRAT-lineage", sourceStrategyVersion: null });
-  appendRecord(root, "discoveries", { ...discovery, discoveryId: "DISC-version-only", sourceStrategyVersion: "v1.0" });
 
-  const lineage = checkLineage(root);
-  assert.equal(lineage.ok, false);
-  assert.ok(lineage.problems.some((problem) => problem.includes("discovery DISC-lineage is missing source strategy version for STRAT-lineage")));
-  assert.ok(lineage.problems.some((problem) => problem.includes("discovery DISC-version-only has source strategy version without source strategy")));
+  assert.throws(
+    () => appendRecord(root, "discoveries", { ...discovery, sourceStrategyId: "STRAT-lineage", sourceStrategyVersion: null }),
+    /INVALID: sourceStrategyId\/sourceStrategyVersion must both be null or both be set/u,
+  );
+  assert.throws(
+    () => appendRecord(root, "discoveries", { ...discovery, discoveryId: "DISC-version-only", sourceStrategyVersion: "v1.0" }),
+    /INVALID: sourceStrategyId\/sourceStrategyVersion must both be null or both be set/u,
+  );
 });
 
 test("discovery strategy provenance passes when source family and version exist", () => {
