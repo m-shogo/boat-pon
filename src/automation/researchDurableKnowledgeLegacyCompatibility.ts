@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
-import { lstatSync, readFileSync } from "node:fs";
+import { lstatSync } from "node:fs";
 import { resolve, sep } from "node:path";
 
+import { readGovernanceFileUtf8 } from "../research/governance/safeFs";
 import {
   buildResearchDurableKnowledgeCompletenessReport,
   type ResearchDurableKnowledgeCompletenessReport,
@@ -88,7 +89,7 @@ function readRegularText(repoRoot: string, relativePath: string, maxBytes: numbe
   try {
     const stat = lstatSync(path);
     if (stat.isSymbolicLink() || !stat.isFile() || stat.size > maxBytes) return null;
-    return readFileSync(path, "utf8");
+    return readGovernanceFileUtf8(path);
   } catch {
     return null;
   }
