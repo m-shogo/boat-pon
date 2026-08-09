@@ -247,9 +247,18 @@ export function checkLineage(root: string): { ok: boolean; problems: string[] } 
   const familyIds = new Set(families.map((f) => f.strategyId));
   const versionIds = new Set(versions.map((v) => `${v.strategyId}|${v.version}`));
   const xferIds = new Set(transfers.map((t) => t.transferId));
+  const acceptedAdoptions = new Set(
+    transfers.filter((t) => t.result === "accepted").map((t) => `${t.sourceDiscoveryId}|${t.targetStrategyId}`),
+  );
 
   for (const f of families) for (const eid of f.parentExperimentIds ?? []) if (!expIds.has(eid)) problems.push(`strategy family ${f.strategyId} references missing experiment ${eid}`);
-  for (const v of versions) if (!familyIds.has(v.strategyId)) problems.push(`strategy version ${v.strategyId}/${v.version} references missing strategy family ${v.strategyId}`);
+  for (const v of versions) {
+    if (!familyIds.has(v.strategyId)) problems.push(`strategy version ${v.strategyId}/${v.version} references missing strategy family ${v.strategyId}`);
+    for (const did of v.adoptedDiscoveryIds ?? []) {
+      if (!discIds.has(did)) problems.push(`strategy version ${v.strategyId}/${v.version} references missing adopted discovery ${did}`);
+      else if (!acceptedAdoptions.has(`${did}|${v.strategyId}`)) problems.push(`strategy version ${v.strategyId}/${v.version} adopted ${did} without accepted transfer`);
+    }
+  }
   for (const d of discoveries) for (const eid of d.sourceExperimentIds ?? []) if (!expIds.has(eid)) problems.push(`discovery ${d.discoveryId} references missing experiment ${eid}`);
   for (const t of transfers) {
     if (!discIds.has(t.sourceDiscoveryId)) problems.push(`transfer ${t.transferId} references missing discovery ${t.sourceDiscoveryId}`);

@@ -68,6 +68,29 @@ test("strategy versions require an existing strategy family", () => {
   assert.ok(lineage.problems.some((problem) => problem.includes("strategy version STRAT-lineage/v1.0 references missing strategy family STRAT-lineage")));
 });
 
+test("strategy versions reject missing adopted discoveries", () => {
+  const root = tmp();
+  appendRecord(root, "experiments", experiment);
+  appendRecord(root, "strategy-families", family);
+  appendRecord(root, "strategy-versions", { ...version, adoptedDiscoveryIds: ["DISC-missing"] });
+
+  const lineage = checkLineage(root);
+  assert.equal(lineage.ok, false);
+  assert.ok(lineage.problems.some((problem) => problem.includes("strategy version STRAT-lineage/v1.0 references missing adopted discovery DISC-missing")));
+});
+
+test("strategy versions require accepted transfer before adoption", () => {
+  const root = tmp();
+  appendRecord(root, "experiments", experiment);
+  appendRecord(root, "discoveries", discovery);
+  appendRecord(root, "strategy-families", family);
+  appendRecord(root, "strategy-versions", { ...version, adoptedDiscoveryIds: ["DISC-lineage"] });
+
+  const lineage = checkLineage(root);
+  assert.equal(lineage.ok, false);
+  assert.ok(lineage.problems.some((problem) => problem.includes("strategy version STRAT-lineage/v1.0 adopted DISC-lineage without accepted transfer")));
+});
+
 test("transfers require an existing target strategy and base version", () => {
   const root = tmp();
   appendRecord(root, "experiments", experiment);
@@ -91,6 +114,18 @@ test("promotions require an existing strategy and source version", () => {
   assert.equal(lineage.ok, false);
   assert.ok(lineage.problems.some((problem) => problem.includes("promotion PROMO-lineage references missing strategy family STRAT-lineage")));
   assert.ok(lineage.problems.some((problem) => problem.includes("promotion PROMO-lineage references missing strategy version STRAT-lineage/v1.0")));
+});
+
+test("strategy adoption lineage passes after an accepted transfer", () => {
+  const root = tmp();
+  appendRecord(root, "experiments", experiment);
+  appendRecord(root, "discoveries", discovery);
+  appendRecord(root, "strategy-families", family);
+  appendRecord(root, "strategy-versions", version);
+  appendRecord(root, "transfer-experiments", transfer);
+  appendRecord(root, "strategy-versions", { ...version, version: "v1.1", adoptedDiscoveryIds: ["DISC-lineage"] });
+
+  assert.equal(checkLineage(root).ok, true);
 });
 
 test("strategy, transfer, and promotion lineage passes when parents exist", () => {
