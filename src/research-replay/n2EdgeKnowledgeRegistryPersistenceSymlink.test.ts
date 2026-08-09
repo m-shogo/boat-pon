@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -53,6 +53,32 @@ test("experiments directory symlink is blocked before registry reads or writes",
 
     assert.equal(outcome.status, "BLOCKED");
     assert.deepEqual(outcome.blockers, ["KNOWLEDGE_REGISTRY_SYMLINK_COMPONENT"]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(outside, { recursive: true, force: true });
+  }
+});
+
+test("symlinked JSON record is blocked before registry reads or plan inspection", () => {
+  const root = mkdtempSync(join(tmpdir(), "boat-pon-n2-registry-symlink-record-"));
+  const outside = mkdtempSync(join(tmpdir(), "boat-pon-n2-registry-record-outside-"));
+  try {
+    const registryRoot = join(root, "research/registries");
+    const experimentsDir = join(registryRoot, "experiments");
+    mkdirSync(experimentsDir, { recursive: true });
+    const outsideRecord = join(outside, "outside.json");
+    writeFileSync(outsideRecord, "{\"sensitive\":true}\n", "utf8");
+    symlinkSync(outsideRecord, join(experimentsDir, "linked.json"), "file");
+
+    const outcome = persistN2EdgeKnowledgeLineage({
+      repoRoot: root,
+      registryRoot,
+      plan: invalidPlanThatMustNotBeRead(),
+      writeIntent: N2_EDGE_KNOWLEDGE_REGISTRY_WRITE_INTENT,
+    });
+
+    assert.equal(outcome.status, "BLOCKED");
+    assert.deepEqual(outcome.blockers, ["KNOWLEDGE_REGISTRY_SYMLINK_RECORD"]);
   } finally {
     rmSync(root, { recursive: true, force: true });
     rmSync(outside, { recursive: true, force: true });
