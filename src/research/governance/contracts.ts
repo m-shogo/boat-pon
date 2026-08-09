@@ -40,10 +40,22 @@ const isStr = (x: unknown): x is string => typeof x === "string" && x.length > 0
 const isArr = (x: unknown): x is unknown[] => Array.isArray(x);
 const isId = (x: unknown, prefix: string): boolean => typeof x === "string" && new RegExp(`^${prefix}-[0-9A-Za-z._-]{1,80}$`).test(x);
 
+function canonicalizeDigestValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalizeDigestValue);
+  if (value !== null && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const key of Object.keys(value as Record<string, unknown>).sort()) {
+      out[key] = canonicalizeDigestValue((value as Record<string, unknown>)[key]);
+    }
+    return out;
+  }
+  return value;
+}
+
 // canonical digest（lineage / evidence 用）。
 export function contractDigest(obj: Record<string, unknown>): string {
   const { _digest, ...rest } = obj as Record<string, unknown> & { _digest?: unknown };
-  const stable = JSON.stringify(rest, Object.keys(rest).sort());
+  const stable = JSON.stringify(canonicalizeDigestValue(rest));
   return createHash("sha256").update(stable).digest("hex");
 }
 
