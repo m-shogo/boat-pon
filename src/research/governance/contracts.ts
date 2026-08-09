@@ -287,12 +287,25 @@ export type Rejection = {
   trialFamilyId: string | null;
   createdAt: string;
 };
+const REJECTION_SUBJECT_PREFIX: Record<Rejection["subjectType"], string> = {
+  experiment: "EXP",
+  discovery: "DISC",
+  strategy: "STRAT",
+  transfer: "XFER",
+};
 export function validateRejection(x: unknown): Validation {
   if (typeof x !== "object" || x === null) return err(["rejection must be object"]);
   const r = x as Record<string, unknown>; const errors: string[] = [];
   if (!isId(r.rejectionId, "REJ")) errors.push("rejectionId must match REJ-*");
-  if (!["experiment", "discovery", "strategy", "transfer"].includes(r.subjectType as string)) errors.push("invalid subjectType");
-  if (!isStr(r.subjectId) || !isStr(r.reason)) errors.push("subjectId/reason required");
+  if (!["experiment", "discovery", "strategy", "transfer"].includes(r.subjectType as string)) {
+    errors.push("invalid subjectType");
+  } else {
+    const subjectType = r.subjectType as Rejection["subjectType"];
+    if (!isId(r.subjectId, REJECTION_SUBJECT_PREFIX[subjectType])) {
+      errors.push(`subjectId must match ${REJECTION_SUBJECT_PREFIX[subjectType]}-* for ${subjectType}`);
+    }
+  }
+  if (!isStr(r.reason)) errors.push("reason required");
   if (!EVIDENCE_STAGES.includes(r.evidenceStage as EvidenceStage)) errors.push("invalid evidenceStage");
   return err(errors);
 }
