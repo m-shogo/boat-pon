@@ -114,8 +114,8 @@ test("processed intent entries must stay aligned with intentIds", () => {
   const valid = {
     intentIds: ["INTENT-20260804-a", "INTENT-20260804-b"],
     entries: [
-      { intentId: "INTENT-20260804-a", requestId: "REQ-a", result: "PASS", recordedAt: "2026-08-04T05:00:00.000Z" },
-      { intentId: "INTENT-20260804-b", requestId: "REQ-b", result: "BLOCKED", recordedAt: "2026-08-04T05:01:00.000Z" },
+      { intentId: "INTENT-20260804-a", requestId: "REQ-20260804-a", result: "PASS", recordedAt: "2026-08-04T05:00:00.000Z" },
+      { intentId: "INTENT-20260804-b", requestId: "REQ-20260804-b", result: "BLOCKED", recordedAt: "2026-08-04T05:01:00.000Z" },
     ],
   };
   assert.equal(isIntentProcessed(valid, "INTENT-20260804-a"), true);
@@ -123,6 +123,7 @@ test("processed intent entries must stay aligned with intentIds", () => {
   assert.equal(isIntentProcessed({ ...valid, entries: valid.entries.slice(0, 1) }, "INTENT-20260804-c"), true);
   assert.equal(isIntentProcessed({ ...valid, entries: [valid.entries[0], valid.entries[0]] }, "INTENT-20260804-c"), true);
   assert.equal(isIntentProcessed({ ...valid, entries: [{ ...valid.entries[0], intentId: "INTENT-20260804-c" }, valid.entries[1]] }, "INTENT-20260804-c"), true);
+  assert.equal(isIntentProcessed({ ...valid, entries: [{ ...valid.entries[0], requestId: "REQ-20260804-wrong" }, valid.entries[1]] }, "INTENT-20260804-c"), true);
   assert.equal(isIntentProcessed({ ...valid, entries: [{ ...valid.entries[0], recordedAt: "not-a-time" }, valid.entries[1]] }, "INTENT-20260804-c"), true);
 });
 
