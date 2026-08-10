@@ -59,7 +59,7 @@ export function validateIntent(input: unknown): { valid: boolean; errors: string
   if (typeof raw.requestedBy !== "string" || raw.requestedBy.trim() === "") errors.push("invalid requestedBy");
   if (typeof raw.requestReference !== "string" || raw.requestReference.trim() === "") errors.push("invalid requestReference");
   if ("approvalGrantId" in raw && (typeof raw.approvalGrantId !== "string" || raw.approvalGrantId.trim() === "")) errors.push("invalid approvalGrantId");
-  if (errors.length > 0) return { valid: false, errors: [], intent: raw as unknown as DispatchIntent };
+  if (errors.length > 0) return { valid: false, errors, intent: null };
   return { valid: true, errors: [], intent: raw as unknown as DispatchIntent };
 }
 
