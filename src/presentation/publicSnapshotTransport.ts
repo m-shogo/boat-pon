@@ -92,7 +92,16 @@ export async function verifyPublicDashboardSnapshotIntegrity(
   if (!validation.ok) return { ok: false, errors: validation.errors, snapshot: null };
 
   const snapshot = value as PublicDashboardSnapshot;
-  const expected = await computePublicDashboardSnapshotDigest(snapshot);
+  let expected: string;
+  try {
+    expected = await computePublicDashboardSnapshotDigest(snapshot);
+  } catch {
+    return {
+      ok: false,
+      errors: ["snapshot canonicalization failed"],
+      snapshot: null,
+    };
+  }
   if (expected !== snapshot.integrity.digest) {
     return {
       ok: false,
