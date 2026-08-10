@@ -92,6 +92,40 @@ function assertSourceParentCanonicalInsideRepo(repoRoot: string, sourceAbsolute:
   }
 }
 
+function assertTargetParentCanonicalInsideRepo(
+  repoRoot: string,
+  retainedAbsolutePath: string,
+  retainedRelativePath: string,
+): boolean {
+  const lexicalRoot = resolve(repoRoot);
+  const lexicalParent = dirname(resolve(retainedAbsolutePath));
+  const relativeParent = relative(lexicalRoot, lexicalParent);
+  if (relativeParent === ".." || relativeParent.startsWith(`..${sep}`) || relativeParent.startsWith("/")) {
+    throw new Error(`RETAINED_OUTPUT_TARGET_PATH_ESCAPES_ROOT:${retainedRelativePath}`);
+  }
+
+  const canonicalRoot = realpathSync.native(lexicalRoot);
+  let probe = lexicalParent;
+  while (true) {
+    try {
+      const canonicalProbe = realpathSync.native(probe);
+      const relativeProbe = relative(lexicalRoot, probe);
+      if (relativeProbe === ".." || relativeProbe.startsWith(`..${sep}`) || relativeProbe.startsWith("/")) {
+        throw new Error(`RETAINED_OUTPUT_TARGET_PATH_ESCAPES_ROOT:${retainedRelativePath}`);
+      }
+      if (canonicalProbe !== resolve(canonicalRoot, relativeProbe)) {
+        throw new Error(`RETAINED_OUTPUT_TARGET_PATH_ALIAS:${retainedRelativePath}`);
+      }
+      return probe === lexicalParent;
+    } catch (error) {
+      if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
+      const parent = dirname(probe);
+      if (parent === probe) throw new Error(`RETAINED_OUTPUT_TARGET_PATH_ALIAS:${retainedRelativePath}`);
+      probe = parent;
+    }
+  }
+}
+
 function sourceClass(relativePath: string): "MUTABLE" | "IMMUTABLE" {
   if (relativePath.startsWith(`${RETAINED_ROOT}/`)) return "IMMUTABLE";
   if (PASSTHROUGH_IMMUTABLE_ROOTS.some((root) => relativePath.startsWith(root))) return "IMMUTABLE";
@@ -238,8 +272,13 @@ function prepareMutableOutput(input: {
   if (!SHA256_RE.test(contentDigest)) throw new Error("RETAINED_OUTPUT_CONTENT_DIGEST_INVALID");
   const retainedRelativePath = `${RETAINED_ROOT}/${input.runId}/${contentDigest}-${safeBasename(input.sourceRelativePath)}`;
   const retainedAbsolutePath = resolveInside(input.repoRoot, retainedRelativePath);
+  const targetParentExists = assertTargetParentCanonicalInsideRepo(
+    input.repoRoot,
+    retainedAbsolutePath,
+    retainedRelativePath,
+  );
 
-  const changed = !existingRetainedTargetMatches({
+  const changed = !targetParentExists || !existingRetainedTargetMatches({
     retainedAbsolutePath,
     retainedRelativePath,
     expectedContent: content,
@@ -297,12 +336,16 @@ function verifyPublishedRetainedTarget(item: PreparedRetainedOutput): void {
   }
 }
 
-function materializePreparedOutputs(prepared: PreparedRetainedOutput[]): void {
+function materializePreparedOutputs(repoRoot: string, prepared: PreparedRetainedOutput[]): void {
   const created: string[] = [];
   try {
     for (const item of prepared) {
       if (!item.changed) continue;
+      assertTargetParentCanonicalInsideRepo(repoRoot, item.retainedAbsolutePath, item.retainedRelativePath);
       mkdirSync(dirname(item.retainedAbsolutePath), { recursive: true });
+      if (!assertTargetParentCanonicalInsideRepo(repoRoot, item.retainedAbsolutePath, item.retainedRelativePath)) {
+        throw new Error(`RETAINED_OUTPUT_TARGET_PARENT_MISSING:${item.retainedRelativePath}`);
+      }
       const tempPath = `${item.retainedAbsolutePath}.${randomUUID()}.tmp`;
       let tempFd: number | null = null;
       try {
@@ -430,7 +473,7 @@ export function retainExecutorOutputs(input: {
   }
 
   // Phase 2: materialize only after every source/target and the aggregate budget have been validated.
-  materializePreparedOutputs(prepared);
+  materializePreparedOutputs(input.repoRoot, prepared);
 
   return {
     historyOutputs,
