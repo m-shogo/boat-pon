@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -12,8 +12,9 @@ test("publisher replaces malformed last-known-good JSON with a valid candidate",
   const root = await mkdtemp(join(tmpdir(), "boat-pon-public-malformed-lkg-"));
   try {
     const candidatePath = join(root, "candidate.json");
-    const latestPath = join(root, "public-data", "latest.json");
-    const lastKnownGoodPath = join(root, "public-data", "last-known-good.json");
+    const publicDataDir = join(root, "public-data");
+    const latestPath = join(publicDataDir, "latest.json");
+    const lastKnownGoodPath = join(publicDataDir, "last-known-good.json");
 
     const snapshot = structuredClone(fixture) as PublicDashboardSnapshot;
     snapshot.generatedAt = "2026-08-11T00:00:00.000Z";
@@ -22,6 +23,7 @@ test("publisher replaces malformed last-known-good JSON with a valid candidate",
     snapshot.integrity.digest = "0".repeat(64);
     const candidate = await sealPublicDashboardSnapshot(snapshot);
 
+    await mkdir(publicDataDir, { recursive: true });
     await writeFile(candidatePath, `${JSON.stringify(candidate, null, 2)}\n`, "utf8");
     await writeFile(lastKnownGoodPath, "{ malformed", "utf8");
 
