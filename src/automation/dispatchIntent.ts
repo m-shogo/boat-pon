@@ -171,6 +171,9 @@ function assertIdempotencyLedgerValid(ledger: ProcessedRequestLedger): void {
       || ("evidencePath" in value && typeof value.evidencePath !== "string")) {
       throw new Error("malformed processed request ledger: idempotency entry");
     }
+    if (!ledger.requestIds.includes(value.requestId)) {
+      throw new Error("malformed processed request ledger: idempotency requestId not recorded");
+    }
   }
 }
 
