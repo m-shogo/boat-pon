@@ -207,9 +207,16 @@ async function loadFromUrl(options: {
   const verified = await verifyPublicDashboardSnapshotIntegrity(value);
   if (!verified.ok || !verified.snapshot) return unavailable(["INVALID_OR_UNVERIFIED_SNAPSHOT"]);
 
+  const generatedAtMs = Date.parse(verified.snapshot.generatedAt);
   const dataAsOfMs = Date.parse(verified.snapshot.dataAsOf);
+  if (generatedAtMs - options.nowMs > options.maxFutureSkewMs) {
+    return unavailable(["FUTURE_GENERATED_AT"]);
+  }
   if (dataAsOfMs - options.nowMs > options.maxFutureSkewMs) {
     return unavailable(["FUTURE_DATA_AS_OF"]);
+  }
+  if (dataAsOfMs > generatedAtMs + options.maxFutureSkewMs) {
+    return unavailable(["DATA_AFTER_GENERATION"]);
   }
 
   const observedFreshness: PublicSnapshotFreshness = options.nowMs - dataAsOfMs > options.maxAgeMs
