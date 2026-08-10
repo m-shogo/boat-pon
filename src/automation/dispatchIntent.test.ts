@@ -102,7 +102,7 @@ test("ledger replay + idempotent-success lookups", () => {
   assert.equal(isRequestReplay({ requestIds: ["REQ-a"], idempotencyKeys: {} }, "REQ-a"), true);
   const successKey = "a".repeat(64);
   const failureKey = "b".repeat(64);
-  const led = { requestIds: [], idempotencyKeys: {
+  const led = { requestIds: ["REQ-1", "REQ-2"], idempotencyKeys: {
     [successKey]: { requestId: "REQ-1", result: "PASS", recordedAt: "2026-08-04T05:00:00.000Z" },
     [failureKey]: { requestId: "REQ-2", result: "FAILED_FINAL", recordedAt: "2026-08-04T05:01:00.000Z" },
   } };
@@ -135,4 +135,8 @@ test("malformed idempotency ledgers block lookup before execution", () => {
     requestIds: ["REQ-1", "REQ-1"],
     idempotencyKeys: {},
   } as any, key), /malformed processed request ledger/);
+  assert.throws(() => findIdempotentSuccess({
+    requestIds: [],
+    idempotencyKeys: { [key]: { requestId: "REQ-orphan", result: "PASS", recordedAt: "2026-08-04T05:00:00.000Z" } },
+  } as any, key), /idempotency requestId not recorded/);
 });
