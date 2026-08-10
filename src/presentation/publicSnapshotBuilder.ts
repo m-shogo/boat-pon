@@ -2,6 +2,7 @@ import {
   PUBLIC_SNAPSHOT_SCHEMA_VERSION,
   type PublicDashboardSnapshot,
   type PublicResearchStatus,
+  validatePublicDashboardSnapshot,
 } from "./publicSnapshot";
 import {
   DEFAULT_PUBLIC_SNAPSHOT_FUTURE_SKEW_MS,
@@ -186,7 +187,7 @@ export function buildPublicDashboardSnapshot(
   const pitTask = queue.tasks.get("TASK-N2-011");
   const commonCohortTask = queue.tasks.get("TASK-N2-022");
 
-  return {
+  const snapshot: PublicDashboardSnapshot = {
     schemaVersion: PUBLIC_SNAPSHOT_SCHEMA_VERSION,
     generatedAt: input.generatedAt,
     dataAsOf,
@@ -232,4 +233,10 @@ export function buildPublicDashboardSnapshot(
       },
     ],
   };
+
+  const validation = validatePublicDashboardSnapshot(snapshot);
+  if (!validation.ok) {
+    throw new Error(`public snapshot builder produced invalid output: ${validation.errors.join("; ")}`);
+  }
+  return snapshot;
 }
