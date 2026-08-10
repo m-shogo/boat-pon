@@ -296,7 +296,7 @@ try {
   });
   writeJsonAtomic(join(HISTORY_DIR, `${runId}-${task.taskId}.json`), evidence);
   appendLedgers(intentId, request.requestId, "BLOCKED", idempotencyKey, evidencePath);
-  finish("BLOCKED", 3, { lastRequestId: request.requestId, lastIntentId: intentId, lastTaskId: task.taskId, authoritySha: request.authoritySha, stateVersion: state.stateVersion, stateDigest, blocks: [code], elapsedMs: Date.now() - startedMs, evidencePath, nextCandidate: pickNext(merged) });
+  finish("BLOCKED", 3, { lastRequestId: request.requestId, lastIntentId: intentId, lastTaskId: task.taskId, authoritySha: request.authoritySha, stateVersion: state.stateVersion, stateDigest, blocks: [code], elapsedMs: Date.now() - startedMs, evidencePath, nextCandidate: pickNext(mergeCatalogAndState(catalog, state)) });
 }
 
   // ---- state: READY → CLAIMED → RUNNING ----
@@ -330,7 +330,7 @@ try {
   });
   writeJsonAtomic(join(HISTORY_DIR, `${runId}-${task.taskId}.json`), evidence);
   appendLedgers(intentId, request.requestId, finalStatus, idempotencyKey, evidencePath);
-  finish(finalStatus, 1, { lastRequestId: request.requestId, lastIntentId: intentId, lastTaskId: task.taskId, authoritySha: request.authoritySha, stateVersion: state.stateVersion, stateDigest, blocks: ["EXECUTOR_EXCEPTION"], elapsedMs: Date.now() - startedMs, evidencePath, nextCandidate: pickNext(merged) });
+  finish(finalStatus, 1, { lastRequestId: request.requestId, lastIntentId: intentId, lastTaskId: task.taskId, authoritySha: request.authoritySha, stateVersion: state.stateVersion, stateDigest: computeStateDigest(state), blocks: ["EXECUTOR_EXCEPTION"], elapsedMs: Date.now() - startedMs, evidencePath, nextCandidate: pickNext(mergeCatalogAndState(catalog, state)) });
 }
 
   // ---- 結果を state へ反映 ----
@@ -350,7 +350,7 @@ try {
   });
   writeJsonAtomic(join(HISTORY_DIR, `${runId}-${task.taskId}.json`), evidence);
   appendLedgers(intentId, request.requestId, "BLOCKED", idempotencyKey, evidencePath);
-  finish("BLOCKED", 3, { lastRequestId: request.requestId, lastIntentId: intentId, lastTaskId: task.taskId, authoritySha: request.authoritySha, stateVersion: state.stateVersion, stateDigest, blocks: ["UNEXPECTED_DRY_RUN_RESULT"], elapsedMs: Date.now() - startedMs, evidencePath, nextCandidate: pickNext(merged) });
+  finish("BLOCKED", 3, { lastRequestId: request.requestId, lastIntentId: intentId, lastTaskId: task.taskId, authoritySha: request.authoritySha, stateVersion: state.stateVersion, stateDigest: computeStateDigest(state), blocks: ["UNEXPECTED_DRY_RUN_RESULT"], elapsedMs: Date.now() - startedMs, evidencePath, nextCandidate: pickNext(mergeCatalogAndState(catalog, state)) });
 }
   let historyOutputs: string[];
   try {
@@ -397,9 +397,10 @@ try {
     lastFailure: exec.blocks.length ? { code: exec.blocks[0], at: nowIso() } : null,
     nextDecision: exec.result === "PASS" ? "依存 task を次回 dispatch 候補にする（自動起動しない）" : `blocks: ${exec.blocks.join(",") || "none"}`,
   });
-  // recurring task（planner 等）は成功後に READY へ戻す（次回も dispatch 可能に。自動起動はしない）。
+  // recurring task（planner 等）は成功後に READY へ戻し、成功済みcycleのattempt budgetを持ち越さない。
+  // 次回も明示dispatch可能だが、自動起動はしない。
   if (task.recurring && (nextStatus === "PASS" || nextStatus === "CONDITIONAL")) {
-    updateState(task.taskId, { status: "READY" }, true);
+    updateState(task.taskId, { status: "READY", attemptCount: 0 }, true);
   }
   writeJsonAtomic(join(HISTORY_DIR, `${runId}-${task.taskId}.json`), {
     runId, requestId: request.requestId, intentId, taskId: task.taskId, taskType: task.taskType, safetyLevel: request.safetyLevel,
@@ -409,11 +410,12 @@ try {
   });
   appendLedgers(intentId, request.requestId, exec.result, idempotencyKey, evidencePath);
 
+  const finalTaskStatus = state.tasks[task.taskId]?.status ?? nextStatus;
   finish(exec.result, exec.result === "PASS" || exec.result === "CONDITIONAL" ? 0 : exec.result === "BLOCKED" ? 3 : 1, {
     lastRequestId: request.requestId, lastIntentId: intentId, lastTaskId: task.taskId, lastSafetyLevel: request.safetyLevel,
     authoritySha: request.authoritySha, stateVersion: state.stateVersion, stateDigest: computeStateDigest(state),
     blocks: exec.blocks, elapsedMs: Date.now() - startedMs, evidencePath, outputs: historyOutputs, outputDigest: exec.outputDigest,
-    taskStatus: nextStatus, nextCandidate: pickNext(mergeCatalogAndState(catalog, state)),
+    taskStatus: finalTaskStatus, nextCandidate: pickNext(mergeCatalogAndState(catalog, state)),
   });
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error);
