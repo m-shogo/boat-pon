@@ -141,10 +141,31 @@ function isValidUniqueStringIdArray(value: unknown): value is string[] {
     && new Set(value).size === value.length;
 }
 
+function isProcessedIntentLedgerValid(ledger: ProcessedIntentLedger): boolean {
+  const raw = ledger as unknown as Record<string, unknown>;
+  if (!isValidUniqueStringIdArray(raw.intentIds)) return false;
+  if (!("entries" in raw) || raw.entries === undefined) return true;
+  if (!Array.isArray(raw.entries) || raw.entries.length !== ledger.intentIds.length) return false;
+
+  const seen = new Set<string>();
+  for (const value of raw.entries) {
+    if (!isRecord(value)
+      || typeof value.intentId !== "string" || !INTENT_ID_RE.test(value.intentId)
+      || typeof value.requestId !== "string" || value.requestId.trim() === ""
+      || typeof value.result !== "string" || value.result.trim() === ""
+      || typeof value.recordedAt !== "string" || Number.isNaN(Date.parse(value.recordedAt))) {
+      return false;
+    }
+    if (seen.has(value.intentId) || !ledger.intentIds.includes(value.intentId)) return false;
+    seen.add(value.intentId);
+  }
+  return seen.size === ledger.intentIds.length;
+}
+
 export function isIntentProcessed(ledger: ProcessedIntentLedger | null, intentId: string): boolean {
   if (!ledger) return false;
   // A present-but-malformed replay ledger must never be interpreted as "not processed".
-  if (!isValidUniqueStringIdArray((ledger as unknown as Record<string, unknown>).intentIds)) return true;
+  if (!isProcessedIntentLedgerValid(ledger)) return true;
   return ledger.intentIds.includes(intentId);
 }
 export function isRequestReplay(ledger: ProcessedRequestLedger | null, requestId: string): boolean {
