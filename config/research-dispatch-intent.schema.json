@@ -20,5 +20,11 @@
     "requestedBy": { "type": "string", "minLength": 1 },
     "requestReference": { "type": "string", "minLength": 1 },
     "approvalGrantId": { "type": "string", "minLength": 1 }
-  }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "requestedAction": { "const": "plan-next" } } },
+      "then": { "properties": { "taskId": { "const": "NEXT" } } }
+    }
+  ]
 }
