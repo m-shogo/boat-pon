@@ -86,6 +86,8 @@ export function validateCatalog(input: unknown): { valid: boolean; errors: strin
   for (const field of Object.keys(c)) if (!CATALOG_FIELDS.has(field)) errors.push(`unknown catalog field: ${field}`);
   if (c.catalogSchemaVersion !== CATALOG_SCHEMA_VERSION) errors.push(`catalogSchemaVersion must be ${CATALOG_SCHEMA_VERSION}`);
   if (typeof c.catalogVersion !== "string" || c.catalogVersion.trim() === "") errors.push("invalid catalogVersion");
+  if (typeof c.updatedAt !== "string" || c.updatedAt.length < 10) errors.push("invalid updatedAt");
+  if ("note" in c && typeof c.note !== "string") errors.push("invalid note");
   if (!Array.isArray(c.tasks)) { errors.push("tasks must be an array"); return { valid: false, errors, catalog: null }; }
   const ids = new Set<string>();
   for (const [i, t0] of (c.tasks as unknown[]).entries()) {
