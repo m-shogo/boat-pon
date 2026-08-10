@@ -103,6 +103,36 @@ export function validateCatalog(input: unknown): { valid: boolean; errors: strin
   for (const t of c.tasks as TaskDefinition[]) {
     for (const d of t.dependencies ?? []) if (!ids.has(d)) errors.push(`task ${t.taskId} depends on unknown ${d}`);
   }
+  // dependency graph はDAGでなければならない。cycle/self-dependencyは永久deadlockになるためfail-closed。
+  const graph = new Map<string, string[]>();
+  for (const t0 of c.tasks as unknown[]) {
+    if (typeof t0 !== "object" || t0 === null || Array.isArray(t0)) continue;
+    const t = t0 as Record<string, unknown>;
+    if (typeof t.taskId !== "string" || !TASKID_RE.test(t.taskId)) continue;
+    if (!Array.isArray(t.dependencies) || (t.dependencies as unknown[]).some((d) => typeof d !== "string")) continue;
+    graph.set(t.taskId, t.dependencies as string[]);
+  }
+  const visiting = new Set<string>();
+  const visited = new Set<string>();
+  const visit = (id: string, path: string[]): boolean => {
+    if (visiting.has(id)) {
+      const cycleStart = path.indexOf(id);
+      const cycle = [...(cycleStart >= 0 ? path.slice(cycleStart) : path), id];
+      errors.push(`dependency cycle: ${cycle.join(" -> ")}`);
+      return true;
+    }
+    if (visited.has(id)) return false;
+    visiting.add(id);
+    for (const dependency of graph.get(id) ?? []) {
+      if (graph.has(dependency) && visit(dependency, [...path, id])) return true;
+    }
+    visiting.delete(id);
+    visited.add(id);
+    return false;
+  };
+  for (const id of [...graph.keys()].sort()) {
+    if (visit(id, [])) break;
+  }
   if (errors.length > 0) return { valid: false, errors, catalog: null };
   return { valid: true, errors: [], catalog: c as unknown as TaskCatalog };
 }
