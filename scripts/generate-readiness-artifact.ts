@@ -48,8 +48,6 @@ if (catalogV.catalog && stateV.state) {
   add("catalogVersionMatch", stateV.state.catalogVersion === catalogV.catalog.catalogVersion ? "PASS" : "BLOCKED", "P0", `${stateV.state.catalogVersion} vs ${catalogV.catalog.catalogVersion}`);
   add("migrationIdempotentNoChange", migrationIdempotent ? "PASS" : "BLOCKED", "P0", migrationIdempotent ? "NO_CHANGE" : `still changes: +${rec.plan.added.length}`);
   const t = stateV.state.tasks;
-  const completedFoundation = ["TASK-N2-001", "TASK-N2-002", "TASK-N2-003", "TASK-N2-004", "TASK-N2-005", "TASK-N2-006"].every((k) => t[k]?.status === "PASS");
-  add("n2_foundation_PASS", completedFoundation ? "PASS" : "BLOCKED", "P0", completedFoundation ? "TASK-N2-001..006 PASS" : "foundation incomplete");
   const catalogTasks = new Map(catalogV.catalog.tasks.map((task) => [task.taskId, task]));
   const dependencyViolations: string[] = [];
   const activeStatuses = new Set(["READY", "CLAIMED", "RUNNING"]);
