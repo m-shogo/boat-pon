@@ -129,6 +129,7 @@ test("processed intent entries must stay aligned with intentIds", () => {
 });
 
 test("malformed replay ledgers fail closed instead of reopening work", () => {
+  const key = "a".repeat(64);
   assert.equal(isIntentProcessed({ intentIds: null } as any, "INTENT-aaaa"), true);
   assert.equal(isIntentProcessed({ intentIds: ["INTENT-aaaa", "INTENT-aaaa"] } as any, "INTENT-bbbb"), true);
   assert.equal(isIntentProcessed({ intentIds: ["INTENT-aaaa", 7] } as any, "INTENT-bbbb"), true);
@@ -137,6 +138,11 @@ test("malformed replay ledgers fail closed instead of reopening work", () => {
   assert.equal(isRequestReplay({ requestIds: ["REQ-aaaa", "REQ-aaaa"], idempotencyKeys: {} } as any, "REQ-bbbb"), true);
   assert.equal(isRequestReplay({ requestIds: ["REQ-aaaa", false], idempotencyKeys: {} } as any, "REQ-bbbb"), true);
   assert.equal(isRequestReplay({ requestIds: ["wrong-namespace"], idempotencyKeys: {} } as any, "REQ-bbbb"), true);
+  assert.equal(isRequestReplay({ requestIds: [], idempotencyKeys: null } as any, "REQ-bbbb"), true);
+  assert.equal(isRequestReplay({
+    requestIds: [],
+    idempotencyKeys: { [key]: { requestId: "REQ-orphan", result: "PASS", recordedAt: "2026-08-04T05:00:00.000Z" } },
+  } as any, "REQ-bbbb"), true);
 });
 
 test("malformed idempotency ledgers block lookup before execution", () => {
