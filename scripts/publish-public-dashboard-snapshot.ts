@@ -76,6 +76,7 @@ async function readOptionalJson(path: string): Promise<unknown | undefined> {
     return await readJson(path);
   } catch (error) {
     if (isErrno(error, "ENOENT")) return undefined;
+    if (error instanceof SyntaxError) return null;
     throw error;
   }
 }
