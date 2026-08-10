@@ -150,9 +150,10 @@ function isProcessedIntentLedgerValid(ledger: ProcessedIntentLedger): boolean {
   if (!Array.isArray(raw.entries) || raw.entries.length !== ledger.intentIds.length) return false;
 
   const seen = new Set<string>();
-  for (const value of raw.entries) {
+  for (const [index, value] of raw.entries.entries()) {
     if (!isRecord(value)
       || typeof value.intentId !== "string" || !INTENT_ID_RE.test(value.intentId)
+      || value.intentId !== ledger.intentIds[index]
       || typeof value.requestId !== "string" || value.requestId !== `REQ-${value.intentId.replace(/^INTENT-/, "")}`
       || typeof value.result !== "string" || value.result.trim() === ""
       || typeof value.recordedAt !== "string" || Number.isNaN(Date.parse(value.recordedAt))) {
