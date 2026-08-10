@@ -137,7 +137,8 @@ if (intentId !== expectedIntentId) {
     blocks: ["INTENT_REQUEST_LINEAGE_MISMATCH"],
   });
 }
-const dryRun = request.dryRun === true || request.requestedAction === "dry-run";
+const statusOnly = request.requestedAction === "status-only";
+const dryRun = !statusOnly && (request.dryRun === true || request.requestedAction === "dry-run");
 const startedMs = Date.now();
 
 // ---- catalog + state をロード ----
@@ -229,6 +230,18 @@ try {
   const resolved = resolveTask(merged, request.taskId);
   if (!resolved.task) finish("TASK_NOT_FOUND", 3, { lastRequestId: request.requestId, lastTaskId: request.taskId, blocks: ["TASK_NOT_FOUND"], elapsedMs: Date.now() - startedMs });
   const task = resolved.task;
+
+  // status-only はqueue/attempt/executorを一切変更せず、現在状態だけを返す。
+  // READY / dependency / stale-definition gate は実行可否のためのものなのでread-only照会には適用しない。
+  if (statusOnly) {
+    finish("DRY_RUN_OK", 0, {
+      lastRequestId: request.requestId, lastIntentId: intentId, lastTaskId: task.taskId, lastSafetyLevel: request.safetyLevel,
+      authoritySha: request.authoritySha, stateVersion: state.stateVersion, stateDigest, blocks: [],
+      taskStatus: task.status, staleDefinition: task.staleDefinition, elapsedMs: Date.now() - startedMs,
+      nextCandidate: pickNext(merged),
+    });
+  }
+
   if (task.staleDefinition) finish("BLOCKED", 3, { lastRequestId: request.requestId, lastTaskId: task.taskId, blocks: ["STALE_TASK_DEFINITION"], elapsedMs: Date.now() - startedMs, nextCandidate: "rebase/revalidation 待ち" });
   if (task.status !== "READY") finish("TASK_NOT_READY", 3, { lastRequestId: request.requestId, lastTaskId: task.taskId, blocks: [`TASK_STATUS_${task.status}`], elapsedMs: Date.now() - startedMs });
   const depsOk = (task.dependencies ?? []).every((d) => merged.find((x) => x.taskId === d)?.status === "PASS");
