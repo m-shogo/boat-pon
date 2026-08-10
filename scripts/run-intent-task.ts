@@ -19,7 +19,7 @@ import {
   computeStateDigest, mergeCatalogAndState, reconcileCatalogState, resolveTask, validateCatalog, validateQueueState,
   type QueueState,
 } from "../src/automation/taskCatalog";
-import { computeIdempotencyKey, findIdempotentSuccess, type ProcessedRequestLedger } from "../src/automation/dispatchIntent";
+import { computeIdempotencyKey, findIdempotentSuccess, isIntentProcessed, isRequestReplay, type ProcessedRequestLedger } from "../src/automation/dispatchIntent";
 import { EXECUTOR_REGISTRY_VERSION, resolveExecutor, type ExecutorResult } from "../src/automation/taskExecutors";
 import { buildResearchAutomationFailureHistory } from "../src/automation/researchAutomationFailureHistory";
 import { retainExecutorOutputs } from "../src/automation/researchRetainedOutputs";
@@ -395,20 +395,26 @@ function updateState(taskId: string, patch: Record<string, unknown>, force = fal
 
 // processed ledger（automation branch 正本）へ append。intent / request / idempotency を記録。
 function appendLedgers(intentId: string, requestId: string, result: string, idempotencyKey: string, evidencePath?: string): void {
-  const intents = readJson(PROCESSED_INT) ?? { ledgerSchemaVersion: "processed-intents-v1", intentIds: [], entries: [] };
-  if (!intents.intentIds.includes(intentId)) {
-    intents.intentIds.push(intentId);
-    intents.entries.push({ intentId, requestId, result, recordedAt: nowIso() });
-  }
-  intents.updatedAt = nowIso();
-  writeJsonAtomic(PROCESSED_INT, intents);
+  const intents = readJson(PROCESSED_INT);
+  const reqs: ProcessedRequestLedger | null = readJson(PROCESSED_REQ);
+  if (!intents) throw new Error("missing processed intent ledger during append");
+  if (!reqs) throw new Error("missing processed request ledger during append");
+  if (isIntentProcessed(intents, intentId)) throw new Error("processed intent ledger is malformed or intent is already recorded");
+  if (isRequestReplay(reqs, requestId)) throw new Error("processed request ledger is malformed or request is already recorded");
+  // Full idempotency-map validation must happen before either ledger is mutated.
+  findIdempotentSuccess(reqs, idempotencyKey);
 
-  const reqs = readJson(PROCESSED_REQ) ?? { ledgerSchemaVersion: "processed-requests-v1", requestIds: [], idempotencyKeys: {} };
-  if (!reqs.requestIds.includes(requestId)) reqs.requestIds.push(requestId);
+  intents.intentIds.push(intentId);
+  intents.entries.push({ intentId, requestId, result, recordedAt: nowIso() });
+  intents.updatedAt = nowIso();
+
+  reqs.requestIds.push(requestId);
   // idempotency: first writer is canonical; reuse must not rewrite the successful provenance record.
   if (!(idempotencyKey in reqs.idempotencyKeys)) {
     reqs.idempotencyKeys[idempotencyKey] = { requestId, result, evidencePath, recordedAt: nowIso() };
   }
   reqs.updatedAt = nowIso();
+
+  writeJsonAtomic(PROCESSED_INT, intents);
   writeJsonAtomic(PROCESSED_REQ, reqs);
 }
