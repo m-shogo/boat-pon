@@ -38,6 +38,8 @@ const REQUEST_ID_RE = /^REQ-[0-9A-Za-z._-]{4,64}$/;
 const TASKID_RE = /^(TASK-[0-9A-Za-z._-]{1,64}|NEXT)$/;
 const AUTOMATION_HISTORY_PATH_RE = /^reports\/automation\/history\/[0-9A-Za-z._-]+-TASK-[0-9A-Za-z._-]+\.json$/;
 const PROCESSED_RESULTS = new Set(["PASS", "DRY_RUN_OK", "CONDITIONAL", "BLOCKED", "FAILED", "FAILED_RETRYABLE", "FAILED_FINAL"]);
+const PROCESSED_INTENT_SCHEMA_VERSION = "processed-intents-v1";
+const PROCESSED_REQUEST_SCHEMA_VERSION = "processed-requests-v1";
 const PROCESSED_INTENT_LEDGER_KEYS = new Set(["ledgerSchemaVersion", "updatedAt", "intentIds", "entries"]);
 const PROCESSED_INTENT_ENTRY_KEYS = new Set(["intentId", "requestId", "result", "recordedAt"]);
 const PROCESSED_REQUEST_LEDGER_KEYS = new Set(["ledgerSchemaVersion", "updatedAt", "requestIds", "idempotencyKeys"]);
@@ -146,6 +148,12 @@ function hasOnlyKeys(value: Record<string, unknown>, allowed: Set<string>): bool
   return Object.keys(value).every((key) => allowed.has(key));
 }
 
+function hasValidOptionalMetadata(raw: Record<string, unknown>, schemaVersion: string): boolean {
+  if ("ledgerSchemaVersion" in raw && raw.ledgerSchemaVersion !== schemaVersion) return false;
+  if ("updatedAt" in raw && (typeof raw.updatedAt !== "string" || Number.isNaN(Date.parse(raw.updatedAt)))) return false;
+  return true;
+}
+
 function isValidUniqueIdArray(value: unknown, pattern: RegExp): value is string[] {
   return Array.isArray(value)
     && value.every((id) => typeof id === "string" && pattern.test(id))
@@ -154,7 +162,7 @@ function isValidUniqueIdArray(value: unknown, pattern: RegExp): value is string[
 
 function isProcessedIntentLedgerValid(ledger: ProcessedIntentLedger): boolean {
   const raw = ledger as unknown as Record<string, unknown>;
-  if (!hasOnlyKeys(raw, PROCESSED_INTENT_LEDGER_KEYS)) return false;
+  if (!hasOnlyKeys(raw, PROCESSED_INTENT_LEDGER_KEYS) || !hasValidOptionalMetadata(raw, PROCESSED_INTENT_SCHEMA_VERSION)) return false;
   if (!isValidUniqueIdArray(raw.intentIds, INTENT_ID_RE)) return false;
   if (!("entries" in raw) || raw.entries === undefined) return false;
   if (!Array.isArray(raw.entries) || raw.entries.length !== ledger.intentIds.length) return false;
@@ -195,8 +203,8 @@ export function isRequestReplay(ledger: ProcessedRequestLedger | null, requestId
 
 function assertIdempotencyLedgerValid(ledger: ProcessedRequestLedger): void {
   const raw = ledger as unknown as Record<string, unknown>;
-  if (!hasOnlyKeys(raw, PROCESSED_REQUEST_LEDGER_KEYS)) {
-    throw new Error("malformed processed request ledger: unknown field");
+  if (!hasOnlyKeys(raw, PROCESSED_REQUEST_LEDGER_KEYS) || !hasValidOptionalMetadata(raw, PROCESSED_REQUEST_SCHEMA_VERSION)) {
+    throw new Error("malformed processed request ledger: metadata or unknown field");
   }
   if (!isValidUniqueIdArray(raw.requestIds, REQUEST_ID_RE)) {
     throw new Error("malformed processed request ledger: requestIds");
