@@ -95,6 +95,9 @@ export type CanonicalRequestInput = {
 export function buildCanonicalRequest(input: CanonicalRequestInput): { request: TaskRequest; errors: string[] } {
   const { intent, task } = input;
   const errors: string[] = [];
+  if (!input.authoritySha.startsWith(intent.expectedAuthoritySha)) {
+    errors.push(`intent expectedAuthoritySha ${intent.expectedAuthoritySha} does not match authority ${input.authoritySha}`);
+  }
   // intent と catalog の safety 整合（intent が catalog より緩い safety を主張したら拒否）。
   const order = ["L0", "L1", "L2", "L3", "L4"];
   if (order.indexOf(intent.safetyLevel) < order.indexOf(task.safetyLevel)) {
