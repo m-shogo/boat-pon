@@ -65,6 +65,21 @@ test("canonical request rejects intent claiming lower safety than catalog", () =
   assert.ok(errors.some((e) => e.includes("below catalog safety")));
 });
 
+test("canonical request rejects intent duration above the catalog task cap", () => {
+  const cappedTask = { ...task, maxDurationSeconds: 600 };
+  const { errors } = buildCanonicalRequest({
+    intent: validateIntent(intent({ maxDurationSeconds: 601 })).intent!, authoritySha: "a".repeat(40),
+    queueDigest: "a".repeat(64), createdAt: "2026-08-04T05:00:00.000Z", task: cappedTask,
+  });
+  assert.ok(errors.some((e) => e.includes("exceeds catalog maxDurationSeconds")));
+
+  const withinCap = buildCanonicalRequest({
+    intent: validateIntent(intent({ maxDurationSeconds: 600 })).intent!, authoritySha: "a".repeat(40),
+    queueDigest: "a".repeat(64), createdAt: "2026-08-04T05:00:00.000Z", task: cappedTask,
+  });
+  assert.deepEqual(withinCap.errors, []);
+});
+
 test("dry-run intent sets dryRun and stays valid", () => {
   const { request } = buildCanonicalRequest({
     intent: validateIntent(intent({ requestedAction: "dry-run" })).intent!, authoritySha: "a".repeat(40),
