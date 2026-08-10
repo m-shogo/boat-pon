@@ -130,6 +130,7 @@ export function validateQueueState(input: unknown): { valid: boolean; errors: st
     if (Number.isInteger(v.attemptCount) && Number.isInteger(v.maxAttempts) && (v.attemptCount as number) > (v.maxAttempts as number)) {
       errors.push(`state ${id}.attemptCount exceeds maxAttempts`);
     }
+    if ("evidenceLinks" in v && (!Array.isArray(v.evidenceLinks) || (v.evidenceLinks as unknown[]).some((link) => typeof link !== "string"))) errors.push(`state ${id}.evidenceLinks invalid`);
   }
   if (errors.length > 0) return { valid: false, errors, state: null };
   return { valid: true, errors: [], state: s as unknown as QueueState };
