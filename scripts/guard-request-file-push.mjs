@@ -55,6 +55,12 @@ for (const k of REQUIRED) if (!(k in request)) fail(`missing field: ${k}`);
 for (const k of Object.keys(request)) if (!ALLOWED.has(k)) fail(`unknown field: ${k}`);
 if (request.requestSchemaVersion !== "research-task-request-v1") fail("unsupported requestSchemaVersion");
 
+// status-only は runner に専用の非実行分岐が無いため、外部 request では fail-closed。
+// 明示的な status-only executor-free path が実装されるまで契約へ戻さない。
+if (!["run-task", "run-next", "dry-run"].includes(request.requestedAction)) {
+  fail(`unsupported requestedAction: ${request.requestedAction}`);
+}
+
 // filename と requestId の一致。
 const expectedName = `${PENDING_DIR}/${request.requestId}.json`;
 if (path !== expectedName) fail(`filename must match requestId (expected ${expectedName})`);
