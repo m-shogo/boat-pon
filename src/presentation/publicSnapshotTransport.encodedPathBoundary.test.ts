@@ -51,3 +51,27 @@ test("integrity verification rejects encoded methodology path controls", async (
   assert.equal(result.snapshot, null);
   assert.match(result.errors.join("\n"), /encoded path control is forbidden/);
 });
+
+test("integrity verification rejects double-encoded evidence path controls", async () => {
+  const snapshot = snapshotWithEvidence("reports/n2/%252e%252e%252fprivate.json");
+  snapshot.integrity.digest = await computePublicDashboardSnapshotDigest(snapshot);
+
+  const result = await verifyPublicDashboardSnapshotIntegrity(snapshot);
+  assert.equal(result.ok, false);
+  assert.equal(result.snapshot, null);
+  assert.match(result.errors.join("\n"), /encoded path control is forbidden/);
+});
+
+test("integrity verification rejects double-encoded methodology path controls", async () => {
+  const snapshot = structuredClone(fixture) as PublicDashboardSnapshot;
+  snapshot.methodologyReferences = [{
+    label: "double encoded private path",
+    path: "/methodology/%252e%252e%252fautomation%252fcontrol%252fprivate",
+  }];
+  snapshot.integrity.digest = await computePublicDashboardSnapshotDigest(snapshot);
+
+  const result = await verifyPublicDashboardSnapshotIntegrity(snapshot);
+  assert.equal(result.ok, false);
+  assert.equal(result.snapshot, null);
+  assert.match(result.errors.join("\n"), /encoded path control is forbidden/);
+});
