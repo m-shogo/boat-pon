@@ -72,3 +72,35 @@ test("duplicate request provenance across idempotency keys fails closed", () => 
   assert.throws(() => findIdempotentSuccess(duplicateProvenance as any, duplicateKey), /duplicate requestId provenance/);
   assert.throws(() => assertReplayLedgersConsistent(intentLedger, duplicateProvenance as any), /duplicate requestId provenance/);
 });
+
+test("processed intent result must match canonical request provenance when present", () => {
+  const conflictingIntent = {
+    ...intentLedger,
+    entries: [{ ...intentLedger.entries[0], result: "BLOCKED" }],
+  };
+  assert.throws(
+    () => assertReplayLedgersConsistent(conflictingIntent as any, requestLedger),
+    /result differs from request provenance/,
+  );
+});
+
+test("idempotent reuse request without its own provenance entry remains valid", () => {
+  const reusedIntentLedger = {
+    ...intentLedger,
+    intentIds: [...intentLedger.intentIds, "INTENT-20260806-reuse2"],
+    entries: [
+      ...intentLedger.entries,
+      {
+        intentId: "INTENT-20260806-reuse2",
+        requestId: "REQ-20260806-reuse2",
+        result: "PASS",
+        recordedAt: "2026-08-06T07:11:00.000Z",
+      },
+    ],
+  };
+  const reusedRequestLedger = {
+    ...requestLedger,
+    requestIds: [...requestLedger.requestIds, "REQ-20260806-reuse2"],
+  };
+  assert.doesNotThrow(() => assertReplayLedgersConsistent(reusedIntentLedger, reusedRequestLedger));
+});
