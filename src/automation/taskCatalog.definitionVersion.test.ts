@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { dispatchableTasks, mergeCatalogAndState, type QueueState, type TaskCatalog } from "./taskCatalog";
+import { dispatchableTasks, mergeCatalogAndState, reconcileCatalogState, type QueueState, type TaskCatalog } from "./taskCatalog";
 
 const catalog: TaskCatalog = {
   catalogSchemaVersion: "research-task-catalog-v1",
@@ -34,4 +34,10 @@ test("definition version mismatch is stale in either direction", () => {
 
 test("future queue definition version cannot become dispatchable", () => {
   assert.deepEqual(dispatchableTasks(mergeCatalogAndState(catalog, state(3))), []);
+});
+
+test("reconcile reports definition version mismatch in either direction", () => {
+  assert.deepEqual(reconcileCatalogState(catalog, state(2)).plan.staleDefinition, []);
+  assert.equal(reconcileCatalogState(catalog, state(1)).plan.staleDefinition[0]?.taskId, "TASK-N2-001");
+  assert.equal(reconcileCatalogState(catalog, state(3)).plan.staleDefinition[0]?.taskId, "TASK-N2-001");
 });
