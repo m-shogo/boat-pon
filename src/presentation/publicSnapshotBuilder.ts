@@ -3,7 +3,10 @@ import {
   type PublicDashboardSnapshot,
   type PublicResearchStatus,
 } from "./publicSnapshot";
-import { DEFAULT_PUBLIC_SNAPSHOT_MAX_AGE_MS } from "./publicSnapshotTransport";
+import {
+  DEFAULT_PUBLIC_SNAPSHOT_FUTURE_SKEW_MS,
+  DEFAULT_PUBLIC_SNAPSHOT_MAX_AGE_MS,
+} from "./publicSnapshotTransport";
 
 export type PublicSnapshotBuilderInput = {
   catalog: unknown;
@@ -112,15 +115,21 @@ function isRfc3339DateTime(value: string): boolean {
   return RFC3339_TIMESTAMP_RE.test(value) && Number.isFinite(Date.parse(value));
 }
 
-function sourceUpdatedAt(value: unknown): string | null {
+function sourceUpdatedAt(value: unknown, maxTimestampMs: number): string | null {
   if (!isRecord(value)) return null;
   const candidate = stringValue(value.updatedAt) ?? stringValue(value.evaluatedAt);
-  return candidate && isRfc3339DateTime(candidate) ? candidate : null;
+  return candidate
+    && isRfc3339DateTime(candidate)
+    && Date.parse(candidate) <= maxTimestampMs
+    ? candidate
+    : null;
 }
 
-function latestIso(values: Array<string | null>, fallback: string): string {
+function latestIso(values: Array<string | null>, fallback: string, maxTimestampMs: number): string {
   const valid = values
-    .filter((value): value is string => value !== null && isRfc3339DateTime(value))
+    .filter((value): value is string => value !== null
+      && isRfc3339DateTime(value)
+      && Date.parse(value) <= maxTimestampMs)
     .sort((a, b) => Date.parse(b) - Date.parse(a));
   return valid[0] ?? fallback;
 }
@@ -162,12 +171,13 @@ export function buildPublicDashboardSnapshot(
     ?? pipeline.find((task) => task.status === "READY")
     ?? null;
   const readinessPending = isRecord(input.readiness) ? stringValue(input.readiness.pendingTask) : null;
-  const currentRunAt = sourceUpdatedAt(input.currentRun);
+  const maxSourceTimestampMs = generatedAtMs + DEFAULT_PUBLIC_SNAPSHOT_FUTURE_SKEW_MS;
+  const currentRunAt = sourceUpdatedAt(input.currentRun, maxSourceTimestampMs);
   const dataAsOf = latestIso([
     queue.updatedAt,
     currentRunAt,
-    sourceUpdatedAt(input.readiness),
-  ], input.generatedAt);
+    sourceUpdatedAt(input.readiness, maxSourceTimestampMs),
+  ], input.generatedAt, maxSourceTimestampMs);
   const dataAsOfMs = Date.parse(dataAsOf);
   const declaredFreshness = generatedAtMs - dataAsOfMs > DEFAULT_PUBLIC_SNAPSHOT_MAX_AGE_MS
     ? "STALE"
