@@ -83,22 +83,32 @@ function renderStatusMd(s: Record<string, any>): string {
 }
 
 // ---- lock（atomic single-flight）----
+let LOCK_TOKEN: string | null = null;
 function acquireLock(owner: Record<string, unknown>): boolean {
   mkdirSync(dirname(LOCK_PATH), { recursive: true });
-  if (existsSync(LOCK_PATH)) {
-    try {
-      const cur = JSON.parse(readFileSync(LOCK_PATH, "utf8"));
-      const age = (Date.now() - Date.parse(cur.heartbeatAt ?? cur.acquiredAt)) / 1000;
-      if (age < policy.lock.staleAfterSeconds) return false;
-      writeFileSync(`${LOCK_PATH}.stale-${Date.now()}.json`, JSON.stringify(cur, null, 2));
-    } catch { /* malformed lock は stale */ }
-    rmSync(LOCK_PATH, { force: true });
+  const lockToken = randomUUID();
+  const payload = `${JSON.stringify({ ...owner, lockToken, acquiredAt: nowIso(), heartbeatAt: nowIso() }, null, 2)}\n`;
+  try {
+    // wx = O_CREAT|O_EXCL: a concurrent runner cannot replace an existing lock.
+    writeFileSync(LOCK_PATH, payload, { flag: "wx" });
+    LOCK_TOKEN = lockToken;
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "EEXIST") return false;
+    throw error;
   }
-  const tmp = `${LOCK_PATH}.${randomUUID()}.tmp`;
-  writeFileSync(tmp, `${JSON.stringify({ ...owner, acquiredAt: nowIso(), heartbeatAt: nowIso() }, null, 2)}\n`);
-  try { renameSync(tmp, LOCK_PATH); return true; } catch { rmSync(tmp, { force: true }); return false; }
 }
-const releaseLock = (): void => { rmSync(LOCK_PATH, { force: true }); };
+function releaseLock(): void {
+  const token = LOCK_TOKEN;
+  LOCK_TOKEN = null;
+  if (!token) return;
+  try {
+    const current = JSON.parse(readFileSync(LOCK_PATH, "utf8"));
+    if (current.lockToken === token) rmSync(LOCK_PATH, { force: true });
+  } catch {
+    // Ownership cannot be proven: keep the lock fail-closed for explicit recovery.
+  }
+}
 
 let LOCKED = false;
 function finish(result: string, exitCode: number, extra: Record<string, unknown> = {}): never {
