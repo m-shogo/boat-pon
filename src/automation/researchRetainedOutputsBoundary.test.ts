@@ -62,7 +62,7 @@ test("retained output count and aggregate bytes are fail-closed per run", () => 
   const countIndex = retained.indexOf("RETAINED_OUTPUT_COUNT_EXCEEDED");
   const prepareIndex = retained.indexOf("prepareMutableOutput({", countIndex);
   const budgetIndex = retained.indexOf("RETAINED_OUTPUT_TOTAL_BYTES_EXCEEDED", prepareIndex);
-  const materializeIndex = retained.indexOf("materializePreparedOutputs(prepared)", budgetIndex);
+  const materializeIndex = retained.indexOf("materializePreparedOutputs(input.repoRoot, prepared)", budgetIndex);
   assert.ok(countIndex >= 0);
   assert.ok(prepareIndex > countIndex);
   assert.ok(budgetIndex > prepareIndex);
@@ -76,7 +76,7 @@ test("retained JSON is scanner-compatible before materialization", () => {
   assert.match(retained, /RETAINED_OUTPUT_HISTORY_DIGEST_INVALID/u);
   const jsonValidation = retained.indexOf("validateRetainedJsonSource({");
   const contentDigest = retained.indexOf("const contentDigest = sha256Buffer(content)", jsonValidation);
-  const materialize = retained.indexOf("materializePreparedOutputs(prepared)", contentDigest);
+  const materialize = retained.indexOf("materializePreparedOutputs(input.repoRoot, prepared)", contentDigest);
   assert.ok(jsonValidation >= 0);
   assert.ok(contentDigest > jsonValidation);
   assert.ok(materialize > contentDigest);
