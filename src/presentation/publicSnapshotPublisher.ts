@@ -42,15 +42,22 @@ export async function validatePublicSnapshotForPublication(options: {
     if (existing.ok && existing.snapshot) {
       const existingGeneratedAt = Date.parse(existing.snapshot.generatedAt);
       const existingDataAsOf = Date.parse(existing.snapshot.dataAsOf);
-      if (candidateDataAsOf < existingDataAsOf) return blocked("CANDIDATE_ROLLBACK_DATA_AS_OF");
-      if (candidateDataAsOf === existingDataAsOf && candidateGeneratedAt < existingGeneratedAt) {
-        return blocked("CANDIDATE_ROLLBACK_GENERATED_AT");
-      }
-      if (
-        candidateDataAsOf === existingDataAsOf
-        && candidate.snapshot.integrity.digest === existing.snapshot.integrity.digest
-      ) {
-        warnings.push("CANDIDATE_IDENTICAL_TO_LAST_KNOWN_GOOD");
+      const existingTimestampInvalid = existingGeneratedAt - nowMs > maxFutureSkewMs
+        || existingDataAsOf - nowMs > maxFutureSkewMs
+        || existingDataAsOf > existingGeneratedAt + maxFutureSkewMs;
+      if (existingTimestampInvalid) {
+        warnings.push("EXISTING_LAST_KNOWN_GOOD_INVALID_REPLACED");
+      } else {
+        if (candidateDataAsOf < existingDataAsOf) return blocked("CANDIDATE_ROLLBACK_DATA_AS_OF");
+        if (candidateDataAsOf === existingDataAsOf && candidateGeneratedAt < existingGeneratedAt) {
+          return blocked("CANDIDATE_ROLLBACK_GENERATED_AT");
+        }
+        if (
+          candidateDataAsOf === existingDataAsOf
+          && candidate.snapshot.integrity.digest === existing.snapshot.integrity.digest
+        ) {
+          warnings.push("CANDIDATE_IDENTICAL_TO_LAST_KNOWN_GOOD");
+        }
       }
     } else {
       warnings.push("EXISTING_LAST_KNOWN_GOOD_INVALID_REPLACED");
