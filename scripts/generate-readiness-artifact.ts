@@ -61,6 +61,16 @@ if (catalogV.catalog && stateV.state) {
     if (unmet.length > 0) dependencyViolations.push(`${taskId}:${unmet.join(",")}`);
   }
   add("n2_active_dependencies_satisfied", dependencyViolations.length === 0 ? "PASS" : "BLOCKED", "P0", dependencyViolations.length === 0 ? "all active tasks have PASS dependencies" : dependencyViolations.join("; "));
+  const completedDependencyViolations: string[] = [];
+  const completedStatuses = new Set(["CHECKPOINTED", "PASS", "CONDITIONAL"]);
+  for (const [taskId, stateTask] of Object.entries(t)) {
+    if (!completedStatuses.has((stateTask as any).status)) continue;
+    const task = catalogTasks.get(taskId);
+    if (!task) { completedDependencyViolations.push(`${taskId}:missing-catalog`); continue; }
+    const unmet = task.dependencies.filter((dep) => t[dep]?.status !== "PASS");
+    if (unmet.length > 0) completedDependencyViolations.push(`${taskId}:${unmet.join(",")}`);
+  }
+  add("n2_completed_dependencies_satisfied", completedDependencyViolations.length === 0 ? "PASS" : "BLOCKED", "P0", completedDependencyViolations.length === 0 ? "all completed tasks have PASS dependencies" : completedDependencyViolations.join("; "));
   const currentReady = Object.entries(t).filter(([, v]) => (v as any).status === "READY").map(([k]) => k).sort();
   pendingTask = currentReady.length > 0 ? currentReady.join(", ") : "none";
   add("n2_current_ready_inventory", "PASS", "P2", pendingTask);
