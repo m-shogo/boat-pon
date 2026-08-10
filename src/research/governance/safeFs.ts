@@ -5,12 +5,14 @@ import {
   lstatSync,
   openSync,
   readFileSync,
+  readSync,
   readdirSync,
 } from "node:fs";
 import { join } from "node:path";
 import { TextDecoder } from "node:util";
 
 const STRICT_UTF8_DECODER = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
+const BOUNDED_READ_CHUNK_BYTES = 64 * 1024;
 
 export function assertGovernanceDirectorySafe(path: string): void {
   const stat = lstatSync(path);
@@ -41,6 +43,27 @@ export function listJsonFilesFailClosed(root: string): string[] {
   return files;
 }
 
+function readDescriptorBounded(fd: number, path: string, maxBytes: number): Buffer {
+  const chunks: Buffer[] = [];
+  let totalBytes = 0;
+
+  while (true) {
+    const remainingWithSentinel = maxBytes - totalBytes + 1;
+    const chunkSize = Math.min(BOUNDED_READ_CHUNK_BYTES, remainingWithSentinel);
+    const chunk = Buffer.allocUnsafe(chunkSize);
+    const bytesRead = readSync(fd, chunk, 0, chunk.length, null);
+    if (bytesRead === 0) break;
+
+    totalBytes += bytesRead;
+    if (totalBytes > maxBytes) {
+      throw new Error(`governance scan file exceeds byte limit: ${path}`);
+    }
+    chunks.push(chunk.subarray(0, bytesRead));
+  }
+
+  return Buffer.concat(chunks, totalBytes);
+}
+
 function readGovernanceFileDescriptor(path: string, maxBytes?: number): { text: string; bytes: number } {
   if (maxBytes !== undefined && (!Number.isSafeInteger(maxBytes) || maxBytes < 0)) {
     throw new Error(`governance scan byte limit invalid: ${path}`);
@@ -54,11 +77,8 @@ function readGovernanceFileDescriptor(path: string, maxBytes?: number): { text: 
     if (maxBytes !== undefined && stat.size > maxBytes) {
       throw new Error(`governance scan file exceeds byte limit: ${path}`);
     }
-    const content = readFileSync(fd);
+    const content = maxBytes === undefined ? readFileSync(fd) : readDescriptorBounded(fd, path, maxBytes);
     const bytes = content.byteLength;
-    if (maxBytes !== undefined && bytes > maxBytes) {
-      throw new Error(`governance scan file exceeds byte limit: ${path}`);
-    }
     let text: string;
     try {
       text = STRICT_UTF8_DECODER.decode(content);
