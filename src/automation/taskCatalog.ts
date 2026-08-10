@@ -118,9 +118,18 @@ export function validateQueueState(input: unknown): { valid: boolean; errors: st
   if (typeof s.catalogVersion !== "string") errors.push("invalid catalogVersion");
   if (typeof s.tasks !== "object" || s.tasks === null || Array.isArray(s.tasks)) { errors.push("tasks must be an object map"); return { valid: false, errors, state: null }; }
   for (const [id, v0] of Object.entries(s.tasks as Record<string, unknown>)) {
+    if (typeof v0 !== "object" || v0 === null || Array.isArray(v0)) {
+      errors.push(`state ${id} must be an object`);
+      continue;
+    }
     const v = v0 as Record<string, unknown>;
     if (!TASK_STATUSES.includes(v.status as TaskStatus)) errors.push(`state ${id}.status invalid: ${v.status}`);
+    if (!Number.isInteger(v.taskDefinitionVersion) || (v.taskDefinitionVersion as number) < 1) errors.push(`state ${id}.taskDefinitionVersion invalid`);
     if (!Number.isInteger(v.attemptCount) || (v.attemptCount as number) < 0) errors.push(`state ${id}.attemptCount invalid`);
+    if (!Number.isInteger(v.maxAttempts) || (v.maxAttempts as number) < 1) errors.push(`state ${id}.maxAttempts invalid`);
+    if (Number.isInteger(v.attemptCount) && Number.isInteger(v.maxAttempts) && (v.attemptCount as number) > (v.maxAttempts as number)) {
+      errors.push(`state ${id}.attemptCount exceeds maxAttempts`);
+    }
   }
   if (errors.length > 0) return { valid: false, errors, state: null };
   return { valid: true, errors: [], state: s as unknown as QueueState };
