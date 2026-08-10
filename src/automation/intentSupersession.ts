@@ -135,6 +135,9 @@ function hasDurableSupersession(input: {
     if (replacement.intentId === input.candidate.intentId) return false;
     if (replacement.taskId !== input.candidate.taskId) return false;
     if (replacement.requestedAction !== input.candidate.requestedAction) return false;
+    if (replacement.safetyLevel !== input.candidate.safetyLevel) return false;
+    if (replacement.maxDurationSeconds !== input.candidate.maxDurationSeconds) return false;
+    if ((replacement.approvalGrantId ?? null) !== (input.candidate.approvalGrantId ?? null)) return false;
     if (!authorityMatches(replacement.expectedAuthoritySha, [record.observedAuthoritySha])) return false;
     return record.supersededIntents.some((entry) =>
       entry.intentId === input.candidate.intentId &&
