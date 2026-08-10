@@ -127,7 +127,8 @@ const grep = (pattern: string, paths: string[]): string => { try { return execFi
 const buyDiff = git("diff", "--name-only", "origin/main...HEAD").split("\n").filter((f) => /src\/domain|decision|app_settings|ticket|prediction/.test(f));
 add("currentBuyIsolation", buyDiff.length === 0 ? "PASS" : "BLOCKED", "P0", buyDiff.length ? buyDiff.join(",") : "no Current BUY files changed");
 add("productionIsolation", buyDiff.length === 0 ? "PASS" : "BLOCKED", "P0", "no production files changed");
-add("appSettingsIsolation", grep("app_settings", ["src/automation/readiness.ts", "scripts/generate-readiness-artifact.ts"]) === "" ? "PASS" : "PASS", "P0", "readiness code has no app_settings connection");
+const appSettingsHits = grep("app_settings", ["src/automation/readiness.ts", "scripts/generate-readiness-artifact.ts"]).split("\n").filter((line) => line && !line.includes("appSettingsHits = grep"));
+add("appSettingsIsolation", appSettingsHits.length === 0 ? "PASS" : "BLOCKED", "P0", appSettingsHits.length === 0 ? "no app_settings references" : `${appSettingsHits.length} forbidden reference(s)`);
 const secretHit = grep("ghp_[0-9A-Za-z]{20}|github_pat_[0-9A-Za-z_]{20}|-----BEGIN [A-Z ]*PRIVATE KEY-----|AKIA[0-9A-Z]{16}", ["src/", "scripts/", "config/", "reports/automation/"]);
 add("secretScan", secretHit === "" ? "PASS" : "BLOCKED", "P0", secretHit === "" ? "no secrets" : "secret-like token found");
 const holdoutRawKeys = (holdoutFreeze?.untouchedHoldoutRaces ?? []) as string[];
