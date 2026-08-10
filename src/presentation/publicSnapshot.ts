@@ -136,12 +136,16 @@ const SECRET_VALUE_PATTERNS = [
   /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/,
 ];
 
+const RFC3339_TIMESTAMP_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function isIsoDate(value: unknown): value is string {
-  return typeof value === "string" && Number.isFinite(Date.parse(value));
+  return typeof value === "string"
+    && RFC3339_TIMESTAMP_RE.test(value)
+    && Number.isFinite(Date.parse(value));
 }
 
 function isNullableString(value: unknown): value is string | null {
