@@ -33,6 +33,28 @@ test("public snapshot rejects malformed nested records instead of accepting arra
   }
 });
 
+test("public snapshot enforces schema cardinality and identifier bounds at runtime", () => {
+  const cases: Array<[string, (value: Record<string, any>) => void, RegExp]> = [
+    ["model version", (value) => { value.modelVersion = "x".repeat(121); }, /modelVersion: string with length 1\.\.120 required/],
+    ["metric id", (value) => { value.metrics[0].id = "Bad_ID"; }, /metrics\[0\]\.id: invalid metric id/],
+    ["metrics count", (value) => { value.metrics = Array.from({ length: 101 }, () => structuredClone(value.metrics[0])); }, /metrics: max 100 items/],
+    ["pipeline count", (value) => { value.pipeline = Array.from({ length: 201 }, () => structuredClone(value.pipeline[0])); }, /pipeline: max 200 items/],
+    ["dependency count", (value) => { value.pipeline[0].dependencies = Array.from({ length: 51 }, (_, index) => `TASK-${index}`); }, /dependencies: max 50 items/],
+    ["evidence count", (value) => { value.pipeline[0].evidence = Array.from({ length: 21 }, (_, index) => `/evidence/${index}`); }, /evidence: max 20 items/],
+    ["notes count", (value) => { value.dataQuality.notes = Array.from({ length: 51 }, () => "note"); }, /dataQuality\.notes: max 50 items/],
+    ["methodology count", (value) => { value.methodologyReferences = Array.from({ length: 51 }, () => ({ label: "doc", path: "/docs/research.md" })); }, /methodologyReferences: max 50 items/],
+    ["methodology path", (value) => { value.methodologyReferences[0].path = "docs/research.md"; }, /methodologyReferences\[0\]\.path: root-relative path required/],
+  ];
+
+  for (const [label, mutate, expected] of cases) {
+    const value = snapshot();
+    mutate(value);
+    const result = validatePublicDashboardSnapshot(value);
+    assert.equal(result.ok, false, label);
+    assert.match(result.errors.join("\n"), expected, label);
+  }
+});
+
 test("canonical sanitized public fixture remains valid under strict nested validation", () => {
   const result = validatePublicDashboardSnapshot(snapshot());
   assert.equal(result.ok, true, result.errors.join("\n"));
