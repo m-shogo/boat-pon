@@ -10,6 +10,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import {
   INTENT_ID_RE,
+  assertReplayLedgersConsistent,
   buildCanonicalRequest,
   isIntentProcessed,
   isRequestReplay,
@@ -113,8 +114,10 @@ const showBranch = (p: string): any => {
 const stV = validateQueueState(showBranch("automation/control/task-queue-state.json"));
 if (!stV.valid || !stV.state) fail(`invalid queue state: ${stV.errors.join("; ")}`);
 const state = stV.state!;
-const processedIntents = (() => { try { return showBranch("automation/control/processed-intents.json"); } catch { return { intentIds: [] }; } })();
-const processedRequests = (() => { try { return showBranch("automation/control/processed-requests.json"); } catch { return { requestIds: [], idempotencyKeys: {} }; } })();
+const processedIntents = showBranch("automation/control/processed-intents.json");
+const processedRequests = showBranch("automation/control/processed-requests.json");
+try { assertReplayLedgersConsistent(processedIntents, processedRequests); }
+catch { fail("processed replay ledgers are inconsistent"); }
 
 // ---- replay: 同 intentId / requestId ----
 const requestId = `REQ-${intent.intentId.replace(/^INTENT-/, "")}`;
