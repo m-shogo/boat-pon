@@ -205,7 +205,7 @@ export type ReconcileResult = { changed: boolean; plan: ReconcilePlan; nextState
 // 決定的・冪等・fail-safe。既存 state entry は一切変更しない（PASS / attemptCount / evidence を保存）。
 // - catalog に在り state に無い task → defaultStatus で追加
 // - state に在り catalog に無い task → ORPHANED（残す・dispatch しない・削除しない）
-// - taskDefinitionVersion が catalog より古い → staleDefinition 診断（自動で READY へ戻さない）
+// - taskDefinitionVersion が catalog と不一致 → staleDefinition 診断（自動で READY へ戻さない）
 // - 変更が無ければ changed=false（stateVersion を進めない・入力 state をそのまま返す = NO_CHANGE）
 export function reconcileCatalogState(
   catalog: TaskCatalog, state: QueueState, opts: { now?: string; maxAttempts?: number } = {},
@@ -226,7 +226,7 @@ export function reconcileCatalogState(
     const def = catalogById.get(id);
     if (!def) { orphaned.push(id); continue; }
     preserved.push(id);
-    if (state.tasks[id].taskDefinitionVersion < def.taskDefinitionVersion) {
+    if (state.tasks[id].taskDefinitionVersion !== def.taskDefinitionVersion) {
       staleDefinition.push({ taskId: id, stateDefinitionVersion: state.tasks[id].taskDefinitionVersion, catalogDefinitionVersion: def.taskDefinitionVersion });
     }
   }
