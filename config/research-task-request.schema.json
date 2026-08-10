@@ -14,7 +14,7 @@
     "requestSchemaVersion": { "const": "research-task-request-v1" },
     "requestId": { "type": "string", "pattern": "^REQ-[0-9A-Za-z._-]{4,64}$" },
     "taskId": { "type": "string", "pattern": "^(TASK-[0-9A-Za-z._-]{1,64}|NEXT)$" },
-    "requestedAction": { "enum": ["run-task", "run-next", "dry-run"] },
+    "requestedAction": { "enum": ["run-task", "run-next", "status-only", "dry-run"] },
     "safetyLevel": { "enum": ["L0", "L1", "L2", "L3", "L4"] },
     "authoritySha": { "type": "string", "pattern": "^[0-9a-f]{7,40}$" },
     "queueDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
@@ -29,6 +29,10 @@
     "requestDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
   },
   "allOf": [
+    {
+      "if": { "properties": { "requestedAction": { "const": "run-next" } } },
+      "then": { "properties": { "taskId": { "const": "NEXT" } } }
+    },
     {
       "if": { "properties": { "safetyLevel": { "const": "L3" } } },
       "then": {

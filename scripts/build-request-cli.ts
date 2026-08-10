@@ -24,7 +24,9 @@ const maxDurationSeconds = Number(arg("max-duration-seconds") ?? "1800");
 const write = process.argv.includes("--write");
 
 if (!/^(TASK-[0-9A-Za-z._-]{1,64}|NEXT)$/.test(taskId)) fail("task-id");
-if (!["run-task", "run-next", "dry-run"].includes(requestedAction)) fail("requested-action");
+if (!["run-task", "run-next", "status-only", "dry-run"].includes(requestedAction)) fail("requested-action");
+if (requestedAction === "run-next" && taskId !== "NEXT") fail("run-next requires task-id NEXT");
+if (taskId === "NEXT" && !["status-only", "dry-run"].includes(requestedAction)) fail("executing NEXT requires intent dispatch");
 if (!["L0", "L1", "L2", "L3"].includes(safetyLevel)) fail("safety-level (L4 is never automated)");
 if (!Number.isInteger(maxDurationSeconds) || maxDurationSeconds < 60 || maxDurationSeconds > 21600) fail("max-duration-seconds");
 
