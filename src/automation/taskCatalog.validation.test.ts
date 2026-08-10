@@ -16,8 +16,13 @@ function validTask(over: Record<string, unknown> = {}) {
   return {
     status: "READY",
     taskDefinitionVersion: 1,
+    authoritySha: null,
     attemptCount: 0,
     maxAttempts: 3,
+    evidenceLinks: [],
+    resultDigest: null,
+    lastFailure: null,
+    checkpoint: null,
     updatedAt: "2026-08-10T00:00:00Z",
     ...over,
   };
@@ -25,6 +30,16 @@ function validTask(over: Record<string, unknown> = {}) {
 
 test("queue state accepts valid task execution bounds", () => {
   assert.equal(validateQueueState(queue(validTask())).valid, true);
+});
+
+test("queue state requires the complete canonical task-state shape", () => {
+  for (const field of ["authoritySha", "evidenceLinks", "resultDigest", "lastFailure", "checkpoint"] as const) {
+    const task = validTask() as Record<string, unknown>;
+    delete task[field];
+    const result = validateQueueState(queue(task));
+    assert.equal(result.valid, false, field);
+    assert.match(result.errors.join("\n"), new RegExp(`${field} required`));
+  }
 });
 
 test("queue state rejects invalid authority metadata", () => {
@@ -62,7 +77,7 @@ test("queue state rejects attemptCount above maxAttempts", () => {
   assert.equal(validateQueueState(queue(validTask({ attemptCount: 4, maxAttempts: 3 }))).valid, false);
 });
 
-test("queue state rejects malformed evidence links when present", () => {
+test("queue state rejects malformed evidence links", () => {
   assert.equal(validateQueueState(queue(validTask({ evidenceLinks: {} }))).valid, false);
   assert.equal(validateQueueState(queue(validTask({ evidenceLinks: "reports/automation/history/x.json" }))).valid, false);
   assert.equal(validateQueueState(queue(validTask({ evidenceLinks: ["reports/automation/history/x.json", 7] }))).valid, false);
