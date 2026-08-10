@@ -37,6 +37,9 @@ export const INTENT_ID_RE = /^INTENT-[0-9A-Za-z._-]{4,64}$/;
 const REQUEST_ID_RE = /^REQ-[0-9A-Za-z._-]{4,64}$/;
 const TASKID_RE = /^(TASK-[0-9A-Za-z._-]{1,64}|NEXT)$/;
 const AUTOMATION_HISTORY_PATH_RE = /^reports\/automation\/history\/[0-9A-Za-z._-]+-TASK-[0-9A-Za-z._-]+\.json$/;
+const RFC3339_TIMESTAMP_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+const isValidTimestamp = (value: unknown): value is string =>
+  typeof value === "string" && RFC3339_TIMESTAMP_RE.test(value) && Number.isFinite(Date.parse(value));
 const PROCESSED_RESULTS = new Set(["PASS", "DRY_RUN_OK", "CONDITIONAL", "BLOCKED", "FAILED", "FAILED_RETRYABLE", "FAILED_FINAL"]);
 const PROCESSED_INTENT_SCHEMA_VERSION = "processed-intents-v1";
 const PROCESSED_REQUEST_SCHEMA_VERSION = "processed-requests-v1";
@@ -152,7 +155,7 @@ function hasOnlyKeys(value: Record<string, unknown>, allowed: Set<string>): bool
 
 function hasValidOptionalMetadata(raw: Record<string, unknown>, schemaVersion: string): boolean {
   if ("ledgerSchemaVersion" in raw && raw.ledgerSchemaVersion !== schemaVersion) return false;
-  if ("updatedAt" in raw && (typeof raw.updatedAt !== "string" || Number.isNaN(Date.parse(raw.updatedAt)))) return false;
+  if ("updatedAt" in raw && !isValidTimestamp(raw.updatedAt)) return false;
   return true;
 }
 
@@ -177,7 +180,7 @@ function isProcessedIntentLedgerValid(ledger: ProcessedIntentLedger): boolean {
       || value.intentId !== ledger.intentIds[index]
       || typeof value.requestId !== "string" || value.requestId !== `REQ-${value.intentId.replace(/^INTENT-/, "")}`
       || typeof value.result !== "string" || !PROCESSED_RESULTS.has(value.result)
-      || typeof value.recordedAt !== "string" || Number.isNaN(Date.parse(value.recordedAt))) {
+      || !isValidTimestamp(value.recordedAt)) {
       return false;
     }
     if (seen.has(value.intentId) || !ledger.intentIds.includes(value.intentId)) return false;
@@ -220,7 +223,7 @@ function assertIdempotencyLedgerValid(ledger: ProcessedRequestLedger): void {
     }
     if (typeof value.requestId !== "string" || !REQUEST_ID_RE.test(value.requestId)
       || typeof value.result !== "string" || !PROCESSED_RESULTS.has(value.result)
-      || typeof value.recordedAt !== "string" || Number.isNaN(Date.parse(value.recordedAt))
+      || !isValidTimestamp(value.recordedAt)
       || ("evidencePath" in value && (typeof value.evidencePath !== "string" || !AUTOMATION_HISTORY_PATH_RE.test(value.evidencePath)))) {
       throw new Error("malformed processed request ledger: idempotency entry");
     }
