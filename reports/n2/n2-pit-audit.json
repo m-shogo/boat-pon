@@ -1,0 +1,65 @@
+{
+  "auditVersion": "n2-pit-audit-v1",
+  "status": "PASS",
+  "dataStatus": "REAL_DATA",
+  "auditedObservationCount": 20,
+  "verifiedSafeCount": 20,
+  "excludedCount": 0,
+  "checkedFeatureCount": 20,
+  "checkedOddsCount": 0,
+  "sameRaceViolationCount": 0,
+  "futureViolationCount": 0,
+  "ambiguousTimingCount": 0,
+  "postRaceFeatureRead": false,
+  "allowedSourceTypes": [
+    "official_program",
+    "trifecta_market"
+  ],
+  "reasonClassCounts": {
+    "safe": 20,
+    "same_race_leakage": 0,
+    "future_leakage": 0,
+    "ambiguous_timing": 0,
+    "lineage_exclusion": 0,
+    "source_not_allowed": 0
+  },
+  "reasonCounts": {
+    "pit_safe": 20
+  },
+  "inputDigest": "63ebde1570902b028dcdfa9b14231503d9128d581755e1f538b10040cfb64613",
+  "outputDigest": "d790d904bfe75983e3bf3ff94e20ade81463becd34a8f0fbc2be16f92c25144c",
+  "executorContractVersion": "n2-pit-audit-executor-v3",
+  "datasetVersion": "n2-corrected-2000_2026",
+  "datasetManifestOutputDigest": "701398c2e82a5c5468de41b8c6de5e5cad8ccae026c10ee83f1ab57acafe34c9",
+  "datasetManifestPitValidatorId": "settlement-inventory-pit-applicability",
+  "datasetManifestPitCheckedRecordCount": 8217755,
+  "boundedObservationLimit": 100000,
+  "returnedObservationCount": 20,
+  "truncated": false,
+  "readOnly": true,
+  "queryOnly": true,
+  "sourceTypesRead": [
+    "official_program",
+    "trifecta_market"
+  ],
+  "sidecarWriteCount": 0,
+  "primaryDbWriteCount": 0,
+  "productionApplyExecuted": false,
+  "pitEvidence": {
+    "status": "PASS",
+    "validatorId": "n2-pit-audit",
+    "validatorVersion": "n2-pit-audit-executor-v3",
+    "checkedRecordCount": 20,
+    "sameRaceViolationCount": 0,
+    "futureViolationCount": 0,
+    "ambiguousTimingCount": 0,
+    "evidencePath": "reports/n2/n2-pit-audit.json",
+    "evidenceDigest": "d790d904bfe75983e3bf3ff94e20ade81463becd34a8f0fbc2be16f92c25144c",
+    "notApplicableReason": null
+  },
+  "runId": "31079861762",
+  "requestId": "REQ-20260806-n2f4p7x3qk",
+  "taskId": "TASK-N2-011",
+  "executorVersion": "n2-pit-audit-executor-v3",
+  "generatedAt": "2026-08-06T07:10:30.984Z"
+}

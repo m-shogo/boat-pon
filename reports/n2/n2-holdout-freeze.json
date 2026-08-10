@@ -1,0 +1,35 @@
+{
+  "holdoutContractVersion": "n2-holdout-freeze-v1",
+  "correctedTruthVersion": "n2-corrected-settlement-truth-v1",
+  "untouchedHoldoutRaces": [
+    "2014-03-28:08:R1",
+    "2014-03-28:17:R2"
+  ],
+  "untouchedHoldoutRule": "この 2 race は production にも dataset にも適用しない。別 defect(V1_WIN_REFUND_OMISSION) の別承認まで永久に据え置く。",
+  "timeSplit": {
+    "policy": "time-based, race-level group split（漏洩防止のため race 単位で分割）",
+    "train": {
+      "toRaceKeyExclusive": "2022-01-01:"
+    },
+    "validation": {
+      "fromRaceKey": "2022-01-01:",
+      "toRaceKeyExclusive": "2024-01-01:"
+    },
+    "test": {
+      "fromRaceKey": "2024-01-01:",
+      "toRaceKeyExclusive": "2026-01-01:"
+    },
+    "forwardShadow": {
+      "fromRaceKey": "2026-01-01:",
+      "note": "shadow-forward 用。production 反映はしない。"
+    }
+  },
+  "productionApplyExecuted": false,
+  "note": "read-only・deterministic。実 sidecar への write なし。",
+  "runId": "30911554985",
+  "requestId": "REQ-20260804-f4d379cd8a",
+  "taskId": "TASK-N2-005",
+  "executorVersion": "n2-task-executor-registry-v1",
+  "generatedAt": "2026-08-04T12:59:20.935Z",
+  "outputDigest": "ddb081c1048a3ee017339503a2644403014f39077962599f5702b31c34c2dddc"
+}

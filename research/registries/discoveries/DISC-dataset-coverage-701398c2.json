@@ -1,0 +1,21 @@
+{
+  "discoveryId": "DISC-dataset-coverage-701398c2",
+  "sourceExperimentIds": [
+    "EXP-dataset-expand-701398c2"
+  ],
+  "sourceStrategyId": null,
+  "sourceStrategyVersion": null,
+  "finding": "corrected dataset inventory=1194209 races/8217755 candidates; eligible=1194209/8217755",
+  "mechanismHypothesis": "settlement reparseによる訂正済みtruth",
+  "evidenceLevel": "strong",
+  "shareClass": "GLOBAL_FACT",
+  "scope": "全期間・全券種",
+  "knownConfounders": [],
+  "trialFamilyId": "TF-dataset-foundation",
+  "trialCountAtDiscovery": 1,
+  "adoptedBy": [],
+  "rejectedBy": [],
+  "createdAt": "2026-08-03T14:07:04.991Z",
+  "_digest": "7e9c6ac37c0b9e8fff740baef832a6e1235fec9bc6afe508666d53137a13edb2",
+  "_recordedAt": "2026-08-05T12:37:12.485Z"
+}

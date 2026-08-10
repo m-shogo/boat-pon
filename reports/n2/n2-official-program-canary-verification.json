@@ -1,0 +1,40 @@
+{
+  "reportVersion": "n2-official-program-canary-verification-v1",
+  "status": "PASS",
+  "verifiedAt": "2026-08-06T02:01:38.644Z",
+  "manifestDigest": "151c34786e29ca80838da0fe3b2eb3326ee343d0a3656e8f20666af14d1b3a85",
+  "selectedRaceCount": 20,
+  "applyEvidenceStatus": "FAILED",
+  "applyEvidenceTerminalStage": "VERIFY_PRIMARY_SELECTED_ROWS_UNCHANGED",
+  "observations": {
+    "officialProgramCount": 20,
+    "selectedObservationCount": 20,
+    "uniqueSelectedRaceCount": 20,
+    "trifectaMarketCount": 0,
+    "captureAttemptCount": 20,
+    "joinedEvidenceCount": 20,
+    "quickCheck": "ok"
+  },
+  "approval": {
+    "approvalId": "APR-N2-OP-151c34786e29-31063550320",
+    "grantPresent": true,
+    "revokePresent": true,
+    "currentApproved": false,
+    "currentCode": "APPROVAL_REVOKED"
+  },
+  "rollout": {
+    "globalShadowWriteEnabled": false,
+    "killSwitchEngaged": false
+  },
+  "primarySourceVerification": {
+    "status": "VERIFIED",
+    "walBytes": 0,
+    "matchingSelectedRows": 20
+  },
+  "productionCanarySemantics": "20_INSERTED_20_REUSED_APPROVAL_REVOKED",
+  "writesPerformedByVerification": false,
+  "n2PitAuditRetried": false,
+  "currentBuyChanged": false,
+  "lineChanged": false,
+  "automaticBettingChanged": false
+}

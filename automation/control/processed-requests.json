@@ -1,0 +1,101 @@
+{
+  "ledgerSchemaVersion": "processed-requests-v1",
+  "updatedAt": "2026-08-06T07:10:30.992Z",
+  "requestIds": [
+    "REQ-20260804-3a6e94fcf4",
+    "REQ-20260804-46393c12ed",
+    "REQ-20260804-9c5e3ad55c",
+    "REQ-20260804-f4d379cd8a",
+    "REQ-20260804-72b865c0e6",
+    "REQ-20260804-a4n206x7p9",
+    "REQ-20260804-b7k3m9q2x4",
+    "REQ-20260805-r4n8v2k6qx",
+    "REQ-20260805-q9v4m2k7px",
+    "REQ-20260805-x6n2p8v4km",
+    "REQ-20260805-z4m8q2v6kn",
+    "REQ-20260806-k8v3m7q2rx",
+    "REQ-20260806-r7m2v9k4qx",
+    "REQ-20260806-z4m8v2q7rx",
+    "REQ-20260806-n2f4p7x3qk"
+  ],
+  "idempotencyKeys": {
+    "45e0743ea270d085b2a9cd3e2e5f41e2bb4b08e176a75c10919b2270e2e3aeb5": {
+      "requestId": "REQ-20260804-9c5e3ad55c",
+      "result": "PASS",
+      "evidencePath": "reports/automation/history/30911155086-TASK-N2-004.json",
+      "recordedAt": "2026-08-04T12:56:29.371Z"
+    },
+    "17a2c17ea4acb5f628021e6023afee2cd13d847ff265ab6b812dddf887165e96": {
+      "requestId": "REQ-20260804-f4d379cd8a",
+      "result": "PASS",
+      "evidencePath": "reports/automation/history/30911554985-TASK-N2-005.json",
+      "recordedAt": "2026-08-04T12:59:20.936Z"
+    },
+    "6250a776c6b657538f2e45d7df2f53dac3e1be21c533cfe8c6904f8ca497ae7c": {
+      "requestId": "REQ-20260804-72b865c0e6",
+      "result": "PASS",
+      "evidencePath": "reports/automation/history/30912235903-TASK-PLANNER-NEXT.json",
+      "recordedAt": "2026-08-04T13:07:47.966Z"
+    },
+    "c680e3101acf016ffc54374fb44bd801f55ba099892ff34cc039b254052fce14": {
+      "requestId": "REQ-20260804-a4n206x7p9",
+      "result": "PASS",
+      "evidencePath": "reports/automation/history/30917058393-TASK-N2-006.json",
+      "recordedAt": "2026-08-04T14:27:30.236Z"
+    },
+    "37b87cd9ab5ed58a71079e552997e9d7bee71f00625253c66fe28965393cd165": {
+      "requestId": "REQ-20260804-b7k3m9q2x4",
+      "result": "PASS",
+      "evidencePath": "reports/automation/history/30921804343-TASK-PLANNER-NEXT.json",
+      "recordedAt": "2026-08-04T15:00:08.064Z"
+    },
+    "fab1f3f0b4ddf117ab62827a93f751c91a315565413f2abcd634ff0bed93daf4": {
+      "requestId": "REQ-20260805-r4n8v2k6qx",
+      "result": "PASS",
+      "evidencePath": "reports/automation/history/30991353245-TASK-N2-010.json",
+      "recordedAt": "2026-08-05T12:37:12.491Z"
+    },
+    "9653237f96964936eb4918309aa57dcd77d826dfc338eb8613cf12f7000e7c65": {
+      "requestId": "REQ-20260805-q9v4m2k7px",
+      "result": "BLOCKED",
+      "evidencePath": "reports/automation/history/31011585102-TASK-N2-011.json",
+      "recordedAt": "2026-08-05T13:43:41.962Z"
+    },
+    "086b94083c1fca56daa0f9b23acaa02049cada9575fe947129bf1953762dae83": {
+      "requestId": "REQ-20260805-x6n2p8v4km",
+      "result": "CONDITIONAL",
+      "evidencePath": "reports/automation/history/31013100745-TASK-N2-011.json",
+      "recordedAt": "2026-08-05T14:02:03.503Z"
+    },
+    "5759dec8936414e41f7be3ecee192d4aa9d42329d1acd65db0b2d09fa3fcbd45": {
+      "requestId": "REQ-20260805-z4m8q2v6kn",
+      "result": "PASS",
+      "evidencePath": "reports/automation/history/31018081731-TASK-N2-012.json",
+      "recordedAt": "2026-08-05T15:00:38.623Z"
+    },
+    "857e8622a4634c17b8cb5c00f62fb826304941f3834bd95a7883011a89dd24e7": {
+      "requestId": "REQ-20260806-k8v3m7q2rx",
+      "result": "PASS",
+      "evidencePath": "reports/automation/history/31023735923-TASK-N2-013.json",
+      "recordedAt": "2026-08-05T16:07:41.939Z"
+    },
+    "784f7c2344aee8b9f48195b04d8bc9ae9bc1642e36169a8eb55aecace64cbad8": {
+      "requestId": "REQ-20260806-r7m2v9k4qx",
+      "result": "PASS",
+      "evidencePath": "reports/automation/history/31057606124-TASK-N2-013.json",
+      "recordedAt": "2026-08-06T00:49:01.359Z"
+    },
+    "6f5e41cf6e362b4971fb2a7fd2cedc4b1ba775836c4788ea4e60144aa3fbfb08": {
+      "requestId": "REQ-20260806-z4m8v2q7rx",
+      "result": "PASS",
+      "evidencePath": "reports/automation/history/31063301882-TASK-N2-013.json",
+      "recordedAt": "2026-08-06T01:38:22.693Z"
+    },
+    "00b65407b75d445105cdfc4e5d8c8fc22b990bbcc48e38bee50879b1357cb8d8": {
+      "requestId": "REQ-20260806-n2f4p7x3qk",
+      "result": "PASS",
+      "evidencePath": "reports/automation/history/31079861762-TASK-N2-011.json",
+      "recordedAt": "2026-08-06T07:10:30.992Z"
+    }
+  }
+}

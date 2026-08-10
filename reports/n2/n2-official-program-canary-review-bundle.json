@@ -1,0 +1,360 @@
+{
+  "bundleVersion": "n2-official-program-canary-review-bundle-v2",
+  "generatedAt": "2026-08-06T01:38:20.672Z",
+  "status": "READY_FOR_HUMAN_REVIEW",
+  "writeAuthorized": false,
+  "productionApplyExecuted": false,
+  "humanApprovalCreated": false,
+  "manifest": {
+    "manifestVersion": "n2-official-program-canary-manifest-v1",
+    "generatedAt": "2026-08-06T01:38:20.672Z",
+    "binding": {
+      "manifestVersion": "n2-official-program-canary-manifest-v1",
+      "selectionPolicyVersion": "n2-official-program-canary-selection-v1",
+      "primaryTable": "official_programs",
+      "cohort": {
+        "dateFrom": "2026-07-31",
+        "dateTo": "2026-08-06"
+      },
+      "sourceRowCount": 1001,
+      "eligibleRowCount": 999,
+      "excludedCount": 2,
+      "excludedDigest": "08703c6e556c0e1a24c95f9f39fd0e9c647f3d808027c1d7fd76432e8903decc",
+      "maxRaces": 20,
+      "codeGitSha": "772f3684797598ef05ae28b5606a0533da58ebe8",
+      "items": [
+        {
+          "primaryRecordId": "20260731-びわこ-01",
+          "primaryIdentityEncoding": "venue_label",
+          "canonicalRaceKey": "2026-07-31:11:R1",
+          "date": "2026-07-31",
+          "venueCode": "11",
+          "raceNo": 1,
+          "decisionCutoff": "2026-07-31T01:40:00.000Z",
+          "sourceObservedAt": "2026-07-30T23:01:33.000Z",
+          "rawSha256": "e472ca5d92210413953656f32830050a27e7ce838fcee377a8b1ed8ef8eec04b",
+          "sourceReferenceSha256": "ed974f6c59dc7c3cf123ae1cec28678b672068a4507e504bc4ae47721e30bc1b"
+        },
+        {
+          "primaryRecordId": "20260731-びわこ-02",
+          "primaryIdentityEncoding": "venue_label",
+          "canonicalRaceKey": "2026-07-31:11:R2",
+          "date": "2026-07-31",
+          "venueCode": "11",
+          "raceNo": 2,
+          "decisionCutoff": "2026-07-31T02:10:00.000Z",
+          "sourceObservedAt": "2026-07-30T23:01:33.000Z",
+          "rawSha256": "1d58cf988b2d805dd69d84314b2dc23141582113c96ce8ba9fdf8d7c5dfb59a1",
+          "sourceReferenceSha256": "ed974f6c59dc7c3cf123ae1cec28678b672068a4507e504bc4ae47721e30bc1b"
+        },
+        {
+          "primaryRecordId": "20260731-びわこ-03",
+          "primaryIdentityEncoding": "venue_label",
+          "canonicalRaceKey": "2026-07-31:11:R3",
+          "date": "2026-07-31",
+          "venueCode": "11",
+          "raceNo": 3,
+          "decisionCutoff": "2026-07-31T02:40:00.000Z",
+          "sourceObservedAt": "2026-07-30T23:01:33.000Z",
+          "rawSha256": "71a8adef55377982fc3784b72a9521ca3469e17c0429d54bede043d0ca73213e",
+          "sourceReferenceSha256": "ed974f6c59dc7c3cf123ae1cec28678b672068a4507e504bc4ae47721e30bc1b"
+        },
+        {
+          "primaryRecordId": "20260731-びわこ-04",
+          "primaryIdentityEncoding": "venue_label",
+          "canonicalRaceKey": "2026-07-31:11:R4",
+          "date": "2026-07-31",
+          "venueCode": "11",
+          "raceNo": 4,
+          "decisionCutoff": "2026-07-31T03:11:00.000Z",
+          "sourceObservedAt": "2026-07-30T23:01:33.000Z",
+          "rawSha256": "0e4ebb43a569050a6872582a61f00ab31892cfd0b318de20cbeee7657f310251",
+          "sourceReferenceSha256": "ed974f6c59dc7c3cf123ae1cec28678b672068a4507e504bc4ae47721e30bc1b"
+        },
+        {
+          "primaryRecordId": "20260731-びわこ-05",
+          "primaryIdentityEncoding": "venue_label",
+          "canonicalRaceKey": "2026-07-31:11:R5",
+          "date": "2026-07-31",
+          "venueCode": "11",
+          "raceNo": 5,
+          "decisionCutoff": "2026-07-31T03:43:00.000Z",
+          "sourceObservedAt": "2026-07-30T23:01:33.000Z",
+          "rawSha256": "9bed1113df0a7c5e8341f588348ea44ffd6852d7e78b3c0c80ea09fb3e1ceaad",
+          "sourceReferenceSha256": "ed974f6c59dc7c3cf123ae1cec28678b672068a4507e504bc4ae47721e30bc1b"
+        },
+        {
+          "primaryRecordId": "20260731-びわこ-06",
+          "primaryIdentityEncoding": "venue_label",
+          "canonicalRaceKey": "2026-07-31:11:R6",
+          "date": "2026-07-31",
+          "venueCode": "11",
+          "raceNo": 6,
+          "decisionCutoff": "2026-07-31T04:14:00.000Z",
+          "sourceObservedAt": "2026-07-30T23:01:33.000Z",
+          "rawSha256": "7c53e1e8538fd9c919f92521905b6100d95e66cc16cb326cdf1f0f8bea184ece",
+          "sourceReferenceSha256": "ed974f6c59dc7c3cf123ae1cec28678b672068a4507e504bc4ae47721e30bc1b"
+        },
+        {
+          "primaryRecordId": "20260731-びわこ-07",
+          "primaryIdentityEncoding": "venue_label",
+          "canonicalRaceKey": "2026-07-31:11:R7",
+          "date": "2026-07-31",
+          "venueCode": "11",
+          "raceNo": 7,
+          "decisionCutoff": "2026-07-31T04:45:00.000Z",
+          "sourceObservedAt": "2026-07-30T23:01:33.000Z",
+          "rawSha256": "bc298d6a978e3ad7e31f289b2b0bd02d358c455fbf28f6d89170a677e6bc9a32",
+          "sourceReferenceSha256": "ed974f6c59dc7c3cf123ae1cec28678b672068a4507e504bc4ae47721e30bc1b"
+        },
+        {
+          "primaryRecordId": "20260731-びわこ-08",
+          "primaryIdentityEncoding": "venue_label",
+          "canonicalRaceKey": "2026-07-31:11:R8",
+          "date": "2026-07-31",
+          "venueCode": "11",
+          "raceNo": 8,
+          "decisionCutoff": "2026-07-31T05:16:00.000Z",
+          "sourceObservedAt": "2026-07-30T23:01:33.000Z",
+          "rawSha256": "b073aeb19673320033df0e65d732fdfaca3e3f286120c02ed938f3f52ea41de0",
+          "sourceReferenceSha256": "ed974f6c59dc7c3cf123ae1cec28678b672068a4507e504bc4ae47721e30bc1b"
+        },
+        {
+          "primaryRecordId": "20260731-びわこ-09",
+          "primaryIdentityEncoding": "venue_label",
+          "canonicalRaceKey": "2026-07-31:11:R9",
+          "date": "2026-07-31",
+          "venueCode": "11",
+          "raceNo": 9,
+          "decisionCutoff": "2026-07-31T05:48:00.000Z",
+          "sourceObservedAt": "2026-07-30T23:01:33.000Z",
+          "rawSha256": "66540d01ae6861ce171a6bc62a6cd6a4c991f0991bf00af297a9a1fe2afad1d5",
+          "sourceReferenceSha256": "ed974f6c59dc7c3cf123ae1cec28678b672068a4507e504bc4ae47721e30bc1b"
+        },
+        {
+          "primaryRecordId": "20260731-びわこ-10",
+          "primaryIdentityEncoding": "venue_label",
+          "canonicalRaceKey": "2026-07-31:11:R10",
+          "date": "2026-07-31",
+          "venueCode": "11",
+          "raceNo": 10,
+          "decisionCutoff": "2026-07-31T06:22:00.000Z",
+          "sourceObservedAt": "2026-07-30T23:01:33.000Z",
+          "rawSha256": "de37967d236c2fcb28966bb57781ce0d2e808145001173cf67ffc9f1ef088682",
+          "sourceReferenceSha256": "ed974f6c59dc7c3cf123ae1cec28678b672068a4507e504bc4ae47721e30bc1b"
+        },
+        {
+          "primaryRecordId": "20260731-びわこ-11",
+          "primaryIdentityEncoding": "venue_label",
+          "canonicalRaceKey": "2026-07-31:11:R11",
+          "date": "2026-07-31",
+          "venueCode": "11",
+          "raceNo": 11,
+          "decisionCutoff": "2026-07-31T06:58:00.000Z",
+          "sourceObservedAt": "2026-07-30T23:01:33.000Z",
+          "rawSha256": "e8a24c4ead7d9ed7153c7501f527ba31a2289cefa7e821062017ad36d1827aaa",
+          "sourceReferenceSha256": "ed974f6c59dc7c3cf123ae1cec28678b672068a4507e504bc4ae47721e30bc1b"
+        },
+        {
+          "primaryRecordId": "20260731-びわこ-12",
+          "primaryIdentityEncoding": "venue_label",
+          "canonicalRaceKey": "2026-07-31:11:R12",
+          "date": "2026-07-31",
+          "venueCode": "11",
+          "raceNo": 12,
+          "decisionCutoff": "2026-07-31T07:24:00.000Z",
+          "sourceObservedAt": "2026-07-30T23:01:33.000Z",
+          "rawSha256": "b04135ea965a499c556b40cab6302c1484dccb30cecb6627407bdfa7111f1037",
+          "sourceReferenceSha256": "ed974f6c59dc7c3cf123ae1cec28678b672068a4507e504bc4ae47721e30bc1b"
+        },
+        {
+          "primaryRecordId": "20260731-三国-01",
+          "primaryIdentityEncoding": "venue_label",
+          "canonicalRaceKey": "2026-07-31:10:R1",
+          "date": "2026-07-31",
+          "venueCode": "10",
+          "raceNo": 1,
+          "decisionCutoff": "2026-07-30T23:32:00.000Z",
+          "sourceObservedAt": "2026-07-30T23:01:33.000Z",
+          "rawSha256": "4a76a2e4a9bc4bb66ad4e7cddc8b3eb9097b7a050c83c247bfec0e883e18de6b",
+          "sourceReferenceSha256": "ed974f6c59dc7c3cf123ae1cec28678b672068a4507e504bc4ae47721e30bc1b"
+        },
+        {
+          "primaryRecordId": "20260731-三国-02",
+          "primaryIdentityEncoding": "venue_label",
+          "canonicalRaceKey": "2026-07-31:10:R2",
+          "date": "2026-07-31",
+          "venueCode": "10",
+          "raceNo": 2,
+          "decisionCutoff": "2026-07-30T23:58:00.000Z",
+          "sourceObservedAt": "2026-07-30T23:01:33.000Z",
+          "rawSha256": "aa0e425e47a11a577473cdae88cd1d42690bd1aa794914af5253f0877fe54373",
+          "sourceReferenceSha256": "ed974f6c59dc7c3cf123ae1cec28678b672068a4507e504bc4ae47721e30bc1b"
+        },
+        {
+          "primaryRecordId": "20260731-三国-03",
+          "primaryIdentityEncoding": "venue_label",
+          "canonicalRaceKey": "2026-07-31:10:R3",
+          "date": "2026-07-31",
+          "venueCode": "10",
+          "raceNo": 3,
+          "decisionCutoff": "2026-07-31T00:24:00.000Z",
+          "sourceObservedAt": "2026-07-30T23:01:33.000Z",
+          "rawSha256": "830e3d07fc05132908899b66bbb881cbcfd4c58b2b5f186b1f1838b8cfde235f",
+          "sourceReferenceSha256": "ed974f6c59dc7c3cf123ae1cec28678b672068a4507e504bc4ae47721e30bc1b"
+        },
+        {
+          "primaryRecordId": "20260731-三国-04",
+          "primaryIdentityEncoding": "venue_label",
+          "canonicalRaceKey": "2026-07-31:10:R4",
+          "date": "2026-07-31",
+          "venueCode": "10",
+          "raceNo": 4,
+          "decisionCutoff": "2026-07-31T00:50:00.000Z",
+          "sourceObservedAt": "2026-07-30T23:01:33.000Z",
+          "rawSha256": "ac82c2e030893ae98819779d09d301035070df86978f13af88244a19d8a3d0c6",
+          "sourceReferenceSha256": "ed974f6c59dc7c3cf123ae1cec28678b672068a4507e504bc4ae47721e30bc1b"
+        },
+        {
+          "primaryRecordId": "20260731-三国-05",
+          "primaryIdentityEncoding": "venue_label",
+          "canonicalRaceKey": "2026-07-31:10:R5",
+          "date": "2026-07-31",
+          "venueCode": "10",
+          "raceNo": 5,
+          "decisionCutoff": "2026-07-31T01:16:00.000Z",
+          "sourceObservedAt": "2026-07-30T23:01:33.000Z",
+          "rawSha256": "68689b0ae911c1ae914a5492f370864ae43a99ec85eb323b4cbd9d4a11bf06be",
+          "sourceReferenceSha256": "ed974f6c59dc7c3cf123ae1cec28678b672068a4507e504bc4ae47721e30bc1b"
+        },
+        {
+          "primaryRecordId": "20260731-三国-06",
+          "primaryIdentityEncoding": "venue_label",
+          "canonicalRaceKey": "2026-07-31:10:R6",
+          "date": "2026-07-31",
+          "venueCode": "10",
+          "raceNo": 6,
+          "decisionCutoff": "2026-07-31T01:44:00.000Z",
+          "sourceObservedAt": "2026-07-30T23:01:33.000Z",
+          "rawSha256": "9ddae440c3385e3be3a0bf7fc22ecff74c6c03797eeeefa5b45f659f48f633ed",
+          "sourceReferenceSha256": "ed974f6c59dc7c3cf123ae1cec28678b672068a4507e504bc4ae47721e30bc1b"
+        },
+        {
+          "primaryRecordId": "20260731-三国-07",
+          "primaryIdentityEncoding": "venue_label",
+          "canonicalRaceKey": "2026-07-31:10:R7",
+          "date": "2026-07-31",
+          "venueCode": "10",
+          "raceNo": 7,
+          "decisionCutoff": "2026-07-31T02:14:00.000Z",
+          "sourceObservedAt": "2026-07-30T23:01:33.000Z",
+          "rawSha256": "5a35732755b2218196b7082a72d69f4abce4d9e9933daf616b13866798b3d4ac",
+          "sourceReferenceSha256": "ed974f6c59dc7c3cf123ae1cec28678b672068a4507e504bc4ae47721e30bc1b"
+        },
+        {
+          "primaryRecordId": "20260731-三国-08",
+          "primaryIdentityEncoding": "venue_label",
+          "canonicalRaceKey": "2026-07-31:10:R8",
+          "date": "2026-07-31",
+          "venueCode": "10",
+          "raceNo": 8,
+          "decisionCutoff": "2026-07-31T02:44:00.000Z",
+          "sourceObservedAt": "2026-07-30T23:01:33.000Z",
+          "rawSha256": "d59e3c9da5dc90a597d431b17bed8cba4e8011e625ffe0c924a6cc126b2c02ea",
+          "sourceReferenceSha256": "ed974f6c59dc7c3cf123ae1cec28678b672068a4507e504bc4ae47721e30bc1b"
+        }
+      ]
+    },
+    "manifestDigest": "151c34786e29ca80838da0fe3b2eb3326ee343d0a3656e8f20666af14d1b3a85",
+    "excluded": [
+      {
+        "primaryRecordId": "20260801-三国-01",
+        "reason": "POST_CUTOFF_PRIMARY_IMPORT"
+      },
+      {
+        "primaryRecordId": "20260801-唐津-01",
+        "reason": "POST_CUTOFF_PRIMARY_IMPORT"
+      }
+    ]
+  },
+  "binding": {
+    "bundleVersion": "n2-official-program-canary-review-bundle-v2",
+    "reviewPolicyVersion": "n2-official-program-canary-review-policy-v2",
+    "authoritySha": "772f3684797598ef05ae28b5606a0533da58ebe8",
+    "manifestDigest": "151c34786e29ca80838da0fe3b2eb3326ee343d0a3656e8f20666af14d1b3a85",
+    "manifestCodeGitSha": "772f3684797598ef05ae28b5606a0533da58ebe8",
+    "manifestGeneratedAt": "2026-08-06T01:38:20.672Z",
+    "selectedRaceCount": 20,
+    "approvalTarget": {
+      "approvalScope": "N2_OFFICIAL_PROGRAM_OBSERVATION_CANARY",
+      "targetStage": "N2-OFFICIAL-PROGRAM-CANARY",
+      "targetSchemaVersion": "f0r.2.0@f0.1.0",
+      "targetContractVersion": "n2-official-program-observation-canary-v1:151c34786e29ca80838da0fe3b2eb3326ee343d0a3656e8f20666af14d1b3a85:f0r-approval-v2"
+    },
+    "currentOfficialProgramObservationCount": 0,
+    "currentTrifectaMarketObservationCount": 0,
+    "currentGlobalShadowWriteEnabled": false,
+    "currentKillSwitchEngaged": false,
+    "approvalPreview": {
+      "approved": false,
+      "code": "APPROVAL_SCOPE_MISMATCH",
+      "approvalId": null,
+      "blocks": [
+        "APPROVAL_APPROVAL_SCOPE_MISMATCH"
+      ]
+    },
+    "executionContract": {
+      "requiredCheckoutSha": "772f3684797598ef05ae28b5606a0533da58ebe8",
+      "sourceMode": "EXISTING_CACHE",
+      "hardMaximumRaceCount": 20,
+      "exactManifestDigestRequired": true,
+      "exactProductionApprovalRequired": true,
+      "manifestGeneratedAtMustNotExceedBundleGeneratedAt": true,
+      "globalShadowWriteMustRemainDisabled": true,
+      "primaryDatabaseMustRemainReadOnly": true,
+      "productionApplyAuthorized": false
+    },
+    "rollbackContract": {
+      "automaticDeleteAllowed": false,
+      "appendOnlyEvidenceRetained": true,
+      "stopFutureCanaryOnAnyFailure": true,
+      "requireSeparateReviewedQuarantineOrSupersession": true
+    }
+  },
+  "bundleDigest": "d79b170d7d70eda5e635ced0a5346b8a6e4c3b2dba173a53306baa94ddbe289c",
+  "reviewBlocks": [],
+  "nextActions": [
+    "Review the exact 20 selected identities, exclusion counts, manifest digest and required checkout SHA.",
+    "Do not create an approval until the rollback and evidence review is complete.",
+    "Any later apply must check out the exact authority SHA and re-resolve the exact production approval at apply time.",
+    "Keep global shadow writes disabled and do not consume N2-011's final attempt yet."
+  ],
+  "sourceIdentity": {
+    "primaryTable": "official_programs",
+    "sourceReaderVersion": "n2-official-program-canary-reader-v1",
+    "readinessReaderVersion": "n2-observation-ingest-readiness-reader-v1"
+  },
+  "sourceReadOnly": true,
+  "sourceQueryOnly": true,
+  "primaryDatabaseWriteCount": 0,
+  "sidecarDatabaseWriteCount": 0,
+  "approvalWriteCount": 0,
+  "executorContractVersion": "n2-official-program-canary-review-executor-v2",
+  "pitEvidence": {
+    "status": "NOT_APPLICABLE",
+    "validatorId": "n2-official-program-canary-review-pit-applicability",
+    "validatorVersion": "n2-official-program-canary-review-executor-v2",
+    "checkedRecordCount": 1001,
+    "sameRaceViolationCount": 0,
+    "futureViolationCount": 0,
+    "ambiguousTimingCount": 0,
+    "evidencePath": null,
+    "evidenceDigest": null,
+    "notApplicableReason": "review bundle generation does not join outcomes or authorize prediction-time writes"
+  },
+  "runId": "31063301882",
+  "requestId": "REQ-20260806-z4m8v2q7rx",
+  "taskId": "TASK-N2-013",
+  "executorVersion": "n2-official-program-canary-review-executor-v2",
+  "outputDigest": "d79b170d7d70eda5e635ced0a5346b8a6e4c3b2dba173a53306baa94ddbe289c"
+}
