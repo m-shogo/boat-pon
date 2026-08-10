@@ -309,7 +309,7 @@ try {
   });
   writeJsonAtomic(join(HISTORY_DIR, `${runId}-${task.taskId}.json`), evidence);
   appendLedgers(intentId, request.requestId, "BLOCKED", idempotencyKey, evidencePath);
-  finish("BLOCKED", 3, { lastRequestId: request.requestId, lastIntentId: intentId, lastTaskId: task.taskId, authoritySha: request.authoritySha, stateVersion: state.stateVersion, stateDigest, blocks: [code], elapsedMs: Date.now() - startedMs, evidencePath, nextCandidate: pickNext(mergeCatalogAndState(catalog, state)) });
+  finish("BLOCKED", 3, { lastRequestId: request.requestId, lastIntentId: intentId, lastTaskId: task.taskId, authoritySha: request.authoritySha, stateVersion: state.stateVersion, stateDigest: computeStateDigest(state), blocks: [code], elapsedMs: Date.now() - startedMs, evidencePath, nextCandidate: pickNext(mergeCatalogAndState(catalog, state)) });
 }
 
   // ---- state: READY → CLAIMED → RUNNING ----
