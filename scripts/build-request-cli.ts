@@ -51,7 +51,7 @@ const request: Record<string, unknown> = {
   expectedOutput: "reports/automation/current-status.json",
   approvalRequirement: safetyLevel === "L3" ? "existing-grant-required" : "none",
   ...(requestReference ? { requestReference } : {}),
-  ...(requestedAction === "dry-run" ? { dryRun: true } : {}),
+  ...(["dry-run", "status-only"].includes(requestedAction) ? { dryRun: true } : {}),
 };
 request.requestDigest = createHash("sha256")
   .update(JSON.stringify(request, Object.keys(request).sort())).digest("hex");
