@@ -29,11 +29,11 @@ const validRequestLedger = {
 
 test("processed intent ledger rejects date-only timestamps fail-closed", () => {
   assert.equal(isIntentProcessed(validIntentLedger, "INTENT-bbbb"), false);
-  assert.equal(isIntentProcessed({ ...validIntentLedger, updatedAt: "2026-08-10" }, "INTENT-bbbb"), true);
+  assert.equal(isIntentProcessed({ ...validIntentLedger, updatedAt: "2026-08-10" } as any, "INTENT-bbbb"), true);
   assert.equal(isIntentProcessed({
     ...validIntentLedger,
     entries: [{ ...validIntentLedger.entries[0], recordedAt: "2026-08-10" }],
-  }, "INTENT-bbbb"), true);
+  } as any, "INTENT-bbbb"), true);
 });
 
 test("processed request ledger rejects date-only timestamps fail-closed", () => {
