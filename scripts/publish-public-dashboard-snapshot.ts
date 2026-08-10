@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { lstat, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { validatePublicSnapshotForPublication } from "../src/presentation/publicSnapshotPublisher";
 
 const args = parseArgs(process.argv.slice(2));
@@ -41,6 +41,10 @@ async function writePairAtomically(options: {
   lastKnownGoodPath: string;
   body: string;
 }): Promise<void> {
+  if (resolve(options.latestPath) === resolve(options.lastKnownGoodPath)) {
+    throw new Error("latest and last-known-good targets must be distinct");
+  }
+
   const latestDirectory = dirname(options.latestPath);
   const lastKnownGoodDirectory = dirname(options.lastKnownGoodPath);
   await Promise.all([
