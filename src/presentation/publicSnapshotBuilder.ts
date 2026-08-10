@@ -33,7 +33,6 @@ type QueueTask = {
 const PUBLIC_EVIDENCE_PREFIXES = [
   "reports/automation/history/",
   "reports/n2/",
-  "research/registries/",
 ] as const;
 const ENCODED_PATH_CONTROL_RE = /%(?:00|25|2e|2f|5c)/i;
 const RFC3339_TIMESTAMP_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
