@@ -27,7 +27,7 @@ if (!/^(TASK-[0-9A-Za-z._-]{1,64}|NEXT)$/.test(taskId)) fail("task-id");
 if (!["run-task", "run-next", "status-only", "dry-run"].includes(requestedAction)) fail("requested-action");
 if (requestedAction === "run-next" && taskId !== "NEXT") fail("run-next requires task-id NEXT");
 if (taskId === "NEXT" && !["status-only", "dry-run"].includes(requestedAction)) fail("executing NEXT requires intent dispatch");
-if (!["L0", "L1", "L2", "L3"].includes(safetyLevel)) fail("safety-level (L4 is never automated)");
+if (!["L0", "L1", "L2"].includes(safetyLevel)) fail("safety-level (legacy builder supports L0/L1/L2 only; L3 requires intent dispatch with a pre-existing grant; L4 is never automated)");
 if (!Number.isInteger(maxDurationSeconds) || maxDurationSeconds < 60 || maxDurationSeconds > 21600) fail("max-duration-seconds");
 
 // authority SHA は origin/main の現在値を既定にする（明示指定も可）。
@@ -49,7 +49,7 @@ const request: Record<string, unknown> = {
   requestId, taskId, requestedAction, safetyLevel, authoritySha, queueDigest,
   createdAt: new Date().toISOString(), requestedBy, maxDurationSeconds,
   expectedOutput: "reports/automation/current-status.json",
-  approvalRequirement: safetyLevel === "L3" ? "existing-grant-required" : "none",
+  approvalRequirement: "none",
   ...(requestReference ? { requestReference } : {}),
   ...(["dry-run", "status-only"].includes(requestedAction) ? { dryRun: true } : {}),
 };
