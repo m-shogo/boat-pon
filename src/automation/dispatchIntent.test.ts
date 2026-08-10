@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { validateRequest } from "./researchOrchestrator";
 import {
-  INTENT_SCHEMA_VERSION, buildCanonicalRequest, computeIdempotencyKey, findIdempotentSuccess,
+  INTENT_SCHEMA_VERSION, assertReplayLedgersConsistent, buildCanonicalRequest, computeIdempotencyKey, findIdempotentSuccess,
   isIntentProcessed, isRequestReplay, validateIntent,
 } from "./dispatchIntent";
 import type { MergedTask } from "./taskCatalog";
@@ -126,6 +126,27 @@ test("processed intent entries must stay aligned with intentIds", () => {
   assert.equal(isIntentProcessed({ ...valid, entries: [{ ...valid.entries[0], intentId: "INTENT-20260804-c" }, valid.entries[1]] }, "INTENT-20260804-c"), true);
   assert.equal(isIntentProcessed({ ...valid, entries: [{ ...valid.entries[0], requestId: "REQ-20260804-wrong" }, valid.entries[1]] }, "INTENT-20260804-c"), true);
   assert.equal(isIntentProcessed({ ...valid, entries: [{ ...valid.entries[0], recordedAt: "not-a-time" }, valid.entries[1]] }, "INTENT-20260804-c"), true);
+});
+
+test("cross-ledger lineage rejects an intent entry missing from processed requests", () => {
+  const intents = {
+    intentIds: ["INTENT-20260804-a"],
+    entries: [{ intentId: "INTENT-20260804-a", requestId: "REQ-20260804-a", result: "PASS", recordedAt: "2026-08-04T05:00:00.000Z" }],
+  };
+  assert.doesNotThrow(() => assertReplayLedgersConsistent(intents, { requestIds: ["REQ-legacy", "REQ-20260804-a"], idempotencyKeys: {} }));
+  assert.throws(
+    () => assertReplayLedgersConsistent(intents, { requestIds: ["REQ-legacy"], idempotencyKeys: {} }),
+    /cross-ledger mismatch/,
+  );
+});
+
+test("cross-ledger lineage fails closed on missing or malformed ledgers", () => {
+  const intents = { intentIds: [], entries: [] };
+  const requests = { requestIds: [], idempotencyKeys: {} };
+  assert.throws(() => assertReplayLedgersConsistent(null, requests), /missing processed intent ledger/);
+  assert.throws(() => assertReplayLedgersConsistent(intents, null), /missing processed request ledger/);
+  assert.throws(() => assertReplayLedgersConsistent({ intentIds: [] } as any, requests), /malformed processed intent ledger/);
+  assert.throws(() => assertReplayLedgersConsistent(intents, { requestIds: [], idempotencyKeys: null } as any), /malformed processed request ledger/);
 });
 
 test("malformed replay ledgers fail closed instead of reopening work", () => {
