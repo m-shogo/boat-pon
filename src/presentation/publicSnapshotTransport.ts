@@ -40,18 +40,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function encodedPathControlErrors(snapshot: PublicDashboardSnapshot): string[] {
   const errors: string[] = [];
-  snapshot.pipeline.forEach((task, taskIndex) => {
-    task.evidence.forEach((path, evidenceIndex) => {
-      if (ENCODED_PATH_CONTROL_RE.test(path)) {
-        errors.push(`$.pipeline[${taskIndex}].evidence[${evidenceIndex}]: encoded path control is forbidden`);
-      }
-    });
-  });
-  snapshot.methodologyReferences.forEach((reference, index) => {
-    if (ENCODED_PATH_CONTROL_RE.test(reference.path)) {
-      errors.push(`$.methodologyReferences[${index}].path: encoded path control is forbidden`);
+  const visit = (value: unknown, path: string): void => {
+    if (Array.isArray(value)) {
+      value.forEach((item, index) => visit(item, `${path}[${index}]`));
+      return;
     }
-  });
+    if (isRecord(value)) {
+      Object.entries(value).forEach(([key, child]) => visit(child, `${path}.${key}`));
+      return;
+    }
+    if (typeof value === "string" && ENCODED_PATH_CONTROL_RE.test(value)) {
+      errors.push(`${path}: encoded path control is forbidden`);
+    }
+  };
+  visit(snapshot, "$");
   return errors;
 }
 
