@@ -104,3 +104,12 @@ test("ledger replay + idempotent-success lookups", () => {
   assert.equal(findIdempotentSuccess(led, "k1")?.requestId, "REQ-1");
   assert.equal(findIdempotentSuccess(led, "k2"), null); // failures are not idempotent successes
 });
+
+test("malformed replay ledgers fail closed instead of reopening work", () => {
+  assert.equal(isIntentProcessed({ intentIds: null } as any, "INTENT-a"), true);
+  assert.equal(isIntentProcessed({ intentIds: ["INTENT-a", "INTENT-a"] } as any, "INTENT-b"), true);
+  assert.equal(isIntentProcessed({ intentIds: ["INTENT-a", 7] } as any, "INTENT-b"), true);
+  assert.equal(isRequestReplay({ requestIds: null, idempotencyKeys: {} } as any, "REQ-a"), true);
+  assert.equal(isRequestReplay({ requestIds: ["REQ-a", "REQ-a"], idempotencyKeys: {} } as any, "REQ-b"), true);
+  assert.equal(isRequestReplay({ requestIds: ["REQ-a", false], idempotencyKeys: {} } as any, "REQ-b"), true);
+});
