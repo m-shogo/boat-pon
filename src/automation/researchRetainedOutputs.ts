@@ -1,9 +1,9 @@
 import { createHash, randomUUID } from "node:crypto";
 import {
-  chmodSync,
   closeSync,
   constants,
   existsSync,
+  fchmodSync,
   fstatSync,
   linkSync,
   mkdirSync,
@@ -232,6 +232,46 @@ function prepareMutableOutput(input: {
   };
 }
 
+function verifyPublishedRetainedTarget(item: PreparedRetainedOutput): void {
+  let fd: number | null = null;
+  try {
+    fd = openSync(item.retainedAbsolutePath, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+    const stat = fstatSync(fd);
+    if (!stat.isFile() || stat.nlink !== 2) {
+      throw new Error(`RETAINED_OUTPUT_READBACK_FILE_TYPE_INVALID:${item.retainedRelativePath}`);
+    }
+    if (stat.size !== item.content.length) {
+      throw new Error(`RETAINED_OUTPUT_READBACK_MISMATCH:${item.retainedRelativePath}`);
+    }
+
+    const chunks: Buffer[] = [];
+    let totalBytes = 0;
+    while (true) {
+      const remainingWithSentinel = item.content.length - totalBytes + 1;
+      const chunk = Buffer.allocUnsafe(Math.min(RETAINED_READ_CHUNK_BYTES, remainingWithSentinel));
+      const bytesRead = readSync(fd, chunk, 0, chunk.length, null);
+      if (bytesRead === 0) break;
+      totalBytes += bytesRead;
+      if (totalBytes > item.content.length) {
+        throw new Error(`RETAINED_OUTPUT_READBACK_MISMATCH:${item.retainedRelativePath}`);
+      }
+      chunks.push(chunk.subarray(0, bytesRead));
+    }
+    const readback = Buffer.concat(chunks, totalBytes);
+    if (sha256Buffer(readback) !== item.contentDigest || !readback.equals(item.content)) {
+      throw new Error(`RETAINED_OUTPUT_READBACK_MISMATCH:${item.retainedRelativePath}`);
+    }
+    fchmodSync(fd, 0o644);
+  } catch (error) {
+    if (error instanceof Error && "code" in error && (error.code === "ENOENT" || error.code === "ELOOP")) {
+      throw new Error(`RETAINED_OUTPUT_READBACK_FILE_TYPE_INVALID:${item.retainedRelativePath}`);
+    }
+    throw error;
+  } finally {
+    if (fd !== null) closeSync(fd);
+  }
+}
+
 function materializePreparedOutputs(prepared: PreparedRetainedOutput[]): void {
   const created: string[] = [];
   try {
@@ -256,11 +296,7 @@ function materializePreparedOutputs(prepared: PreparedRetainedOutput[]): void {
           throw error;
         }
         created.push(item.retainedAbsolutePath);
-        chmodSync(item.retainedAbsolutePath, 0o644);
-        const readback = readFileSync(item.retainedAbsolutePath);
-        if (sha256Buffer(readback) !== item.contentDigest || !readback.equals(item.content)) {
-          throw new Error(`RETAINED_OUTPUT_READBACK_MISMATCH:${item.retainedRelativePath}`);
-        }
+        verifyPublishedRetainedTarget(item);
       } finally {
         if (existsSync(tempPath)) unlinkSync(tempPath);
       }
