@@ -171,7 +171,9 @@ export function mergeCatalogAndState(catalog: TaskCatalog, state: QueueState): M
 }
 
 // dispatch 可能な task: status=READY かつ全 dependency が PASS。
+// ただしどこか1件でも definition drift があれば、queue authority 全体をfail-closedにする。
 export function dispatchableTasks(merged: MergedTask[]): MergedTask[] {
+  if (merged.some((t) => t.staleDefinition)) return [];
   const byId = new Map(merged.map((t) => [t.taskId, t]));
   return merged.filter((t) =>
     t.status === "READY"
@@ -187,6 +189,9 @@ export function resolveTask(merged: MergedTask[], taskId: string): { task: Merge
   }
   const t = merged.find((x) => x.taskId === taskId);
   if (!t) return { task: null, reason: `task not found in catalog: ${taskId}` };
+  if (merged.some((x) => x.staleDefinition)) {
+    return { task: t.staleDefinition ? t : { ...t, staleDefinition: true }, reason: "global task definition drift blocks dispatch" };
+  }
   return { task: t, reason: "resolved by id" };
 }
 
