@@ -44,3 +44,10 @@ test("queue state rejects invalid attempt ceilings", () => {
 test("queue state rejects attemptCount above maxAttempts", () => {
   assert.equal(validateQueueState(queue(validTask({ attemptCount: 4, maxAttempts: 3 }))).valid, false);
 });
+
+test("queue state rejects malformed evidence links when present", () => {
+  assert.equal(validateQueueState(queue(validTask({ evidenceLinks: {} }))).valid, false);
+  assert.equal(validateQueueState(queue(validTask({ evidenceLinks: "reports/automation/history/x.json" }))).valid, false);
+  assert.equal(validateQueueState(queue(validTask({ evidenceLinks: ["reports/automation/history/x.json", 7] }))).valid, false);
+  assert.equal(validateQueueState(queue(validTask({ evidenceLinks: ["reports/automation/history/x.json"] }))).valid, true);
+});
