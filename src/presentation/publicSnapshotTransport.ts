@@ -7,7 +7,7 @@ import {
 export const PUBLIC_SNAPSHOT_DIGEST_PLACEHOLDER = "0".repeat(64);
 export const DEFAULT_PUBLIC_SNAPSHOT_MAX_AGE_MS = 2 * 60 * 60 * 1_000;
 export const DEFAULT_PUBLIC_SNAPSHOT_FUTURE_SKEW_MS = 5 * 60 * 1_000;
-const ENCODED_PATH_CONTROL_RE = /%(?:00|2e|2f|5c)/i;
+const ENCODED_PATH_CONTROL_RE = /%(?:00|25|2e|2f|5c)/i;
 
 export type PublicSnapshotFreshness = "FRESH" | "STALE" | "NOT_AVAILABLE";
 export type PublicSnapshotSource = "latest" | "last-known-good" | "not-available";
