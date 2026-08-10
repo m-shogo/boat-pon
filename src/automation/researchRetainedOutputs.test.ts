@@ -141,6 +141,21 @@ test("invalid retained JSON is rejected before materialization", () => {
   });
 });
 
+test("malformed UTF-8 retained JSON is rejected before lossy decoding", () => {
+  withRoot((root) => {
+    const source = "reports/n2/malformed-utf8.json";
+    const path = join(root, source);
+    mkdirSync(join(path, ".."), { recursive: true });
+    writeFileSync(path, Buffer.concat([
+      Buffer.from('{"value":"', "utf8"),
+      Buffer.from([0xc3, 0x28]),
+      Buffer.from('"}\n', "utf8"),
+    ]));
+    assert.throws(() => retain(root, [source]), /RETAINED_OUTPUT_JSON_INVALID_UTF8/u);
+    assert.equal(existsSync(join(root, "reports/automation/retained-outputs/12345")), false);
+  });
+});
+
 test("JSON array is rejected because scanner requires an object", () => {
   withRoot((root) => {
     const source = "reports/n2/array.json";

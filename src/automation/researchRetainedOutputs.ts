@@ -10,6 +10,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, resolve, sep } from "node:path";
+import { TextDecoder } from "node:util";
 
 const RETAINED_ROOT = "reports/automation/retained-outputs";
 const MAX_RETAINED_SOURCE_BYTES = 2_097_152;
@@ -23,6 +24,7 @@ const MUTABLE_OUTPUT_ROOTS = [
 const PASSTHROUGH_IMMUTABLE_ROOTS = ["research/registries/"] as const;
 const RUN_ID_RE = /^[0-9A-Za-z._-]+$/u;
 const SHA256_RE = /^[0-9a-f]{64}$/u;
+const STRICT_UTF8_DECODER = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
 
 export type RetainedExecutorOutput = {
   sourceRelativePath: string;
@@ -80,9 +82,15 @@ function validateRetainedJsonSource(input: {
   historyOutputDigest: string;
 }): void {
   if (!input.sourceRelativePath.endsWith(".json")) return;
+  let decoded: string;
+  try {
+    decoded = STRICT_UTF8_DECODER.decode(input.content);
+  } catch {
+    throw new Error(`RETAINED_OUTPUT_JSON_INVALID_UTF8:${input.sourceRelativePath}`);
+  }
   let parsed: Record<string, unknown>;
   try {
-    const value = JSON.parse(input.content.toString("utf8")) as unknown;
+    const value = JSON.parse(decoded) as unknown;
     if (typeof value !== "object" || value == null || Array.isArray(value)) throw new Error("not object");
     parsed = value as Record<string, unknown>;
   } catch {
