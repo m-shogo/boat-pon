@@ -456,6 +456,8 @@ function appendLedgers(intentId: string, requestId: string, result: string, idem
   }
   reqs.updatedAt = nowIso();
 
-  writeJsonAtomic(PROCESSED_INT, intents);
+  // Persist request replay authority first. If the process stops between writes, the
+  // request remains durably replay-blocked while the one-way intent -> request invariant stays valid.
   writeJsonAtomic(PROCESSED_REQ, reqs);
+  writeJsonAtomic(PROCESSED_INT, intents);
 }
