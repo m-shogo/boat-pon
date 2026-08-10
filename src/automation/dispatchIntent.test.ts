@@ -97,8 +97,8 @@ test("idempotency key is stable and input-sensitive", () => {
 });
 
 test("ledger replay + idempotent-success lookups", () => {
-  assert.equal(isIntentProcessed({ intentIds: ["INTENT-aaaa"] }, "INTENT-aaaa"), true);
-  assert.equal(isIntentProcessed({ intentIds: [] }, "INTENT-aaaa"), false);
+  assert.equal(isIntentProcessed({ intentIds: ["INTENT-aaaa"], entries: [{ intentId: "INTENT-aaaa", requestId: "REQ-aaaa", result: "PASS", recordedAt: "2026-08-04T05:00:00.000Z" }] }, "INTENT-aaaa"), true);
+  assert.equal(isIntentProcessed({ intentIds: [], entries: [] }, "INTENT-aaaa"), false);
   assert.equal(isRequestReplay({ requestIds: ["REQ-aaaa"], idempotencyKeys: {} }, "REQ-aaaa"), true);
   const successKey = "a".repeat(64);
   const failureKey = "b".repeat(64);
@@ -120,6 +120,7 @@ test("processed intent entries must stay aligned with intentIds", () => {
   };
   assert.equal(isIntentProcessed(valid, "INTENT-20260804-a"), true);
   assert.equal(isIntentProcessed(valid, "INTENT-20260804-c"), false);
+  assert.equal(isIntentProcessed({ intentIds: [] }, "INTENT-20260804-c"), true);
   assert.equal(isIntentProcessed({ ...valid, entries: valid.entries.slice(0, 1) }, "INTENT-20260804-c"), true);
   assert.equal(isIntentProcessed({ ...valid, entries: [valid.entries[0], valid.entries[0]] }, "INTENT-20260804-c"), true);
   assert.equal(isIntentProcessed({ ...valid, entries: [{ ...valid.entries[0], intentId: "INTENT-20260804-c" }, valid.entries[1]] }, "INTENT-20260804-c"), true);
