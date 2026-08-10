@@ -68,27 +68,27 @@ function resolveInside(repoRoot: string, relativePath: string): string {
   return target;
 }
 
-function assertExistingPathCanonicalInsideRepo(repoRoot: string, absolutePath: string, relativePath: string): void {
+function assertSourceParentCanonicalInsideRepo(repoRoot: string, sourceAbsolute: string, sourceRelativePath: string): void {
   const lexicalRoot = resolve(repoRoot);
-  const lexicalTarget = resolve(absolutePath);
-  const relativeTarget = relative(lexicalRoot, lexicalTarget);
-  if (relativeTarget === ".." || relativeTarget.startsWith(`..${sep}`) || relativeTarget.startsWith("/")) {
-    throw new Error(`RETAINED_OUTPUT_SOURCE_PATH_ESCAPES_ROOT:${relativePath}`);
+  const lexicalParent = dirname(resolve(sourceAbsolute));
+  const relativeParent = relative(lexicalRoot, lexicalParent);
+  if (relativeParent === ".." || relativeParent.startsWith(`..${sep}`) || relativeParent.startsWith("/")) {
+    throw new Error(`RETAINED_OUTPUT_SOURCE_PATH_ESCAPES_ROOT:${sourceRelativePath}`);
   }
   let canonicalRoot: string;
-  let canonicalTarget: string;
+  let canonicalParent: string;
   try {
     canonicalRoot = realpathSync.native(lexicalRoot);
-    canonicalTarget = realpathSync.native(lexicalTarget);
+    canonicalParent = realpathSync.native(lexicalParent);
   } catch (error) {
     if (error instanceof Error && "code" in error && error.code === "ENOENT") {
-      throw new Error(`RETAINED_OUTPUT_SOURCE_MISSING:${relativePath}`);
+      throw new Error(`RETAINED_OUTPUT_SOURCE_MISSING:${sourceRelativePath}`);
     }
     throw error;
   }
-  const expectedCanonicalTarget = resolve(canonicalRoot, relativeTarget);
-  if (canonicalTarget !== expectedCanonicalTarget) {
-    throw new Error(`RETAINED_OUTPUT_SOURCE_PATH_ALIAS:${relativePath}`);
+  const expectedCanonicalParent = resolve(canonicalRoot, relativeParent);
+  if (canonicalParent !== expectedCanonicalParent) {
+    throw new Error(`RETAINED_OUTPUT_SOURCE_PATH_ALIAS:${sourceRelativePath}`);
   }
 }
 
@@ -227,7 +227,7 @@ function prepareMutableOutput(input: {
   historyOutputDigest: string;
 }): PreparedRetainedOutput {
   const sourceAbsolute = resolveInside(input.repoRoot, input.sourceRelativePath);
-  assertExistingPathCanonicalInsideRepo(input.repoRoot, sourceAbsolute, input.sourceRelativePath);
+  assertSourceParentCanonicalInsideRepo(input.repoRoot, sourceAbsolute, input.sourceRelativePath);
   const content = readRetainedSourceBounded(sourceAbsolute, input.sourceRelativePath);
   validateRetainedJsonSource({
     sourceRelativePath: input.sourceRelativePath,
