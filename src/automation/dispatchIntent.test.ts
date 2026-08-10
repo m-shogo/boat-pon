@@ -100,9 +100,14 @@ test("ledger replay + idempotent-success lookups", () => {
   assert.equal(isIntentProcessed({ intentIds: ["INTENT-a"] }, "INTENT-a"), true);
   assert.equal(isIntentProcessed({ intentIds: [] }, "INTENT-a"), false);
   assert.equal(isRequestReplay({ requestIds: ["REQ-a"], idempotencyKeys: {} }, "REQ-a"), true);
-  const led = { requestIds: [], idempotencyKeys: { k1: { requestId: "REQ-1", result: "PASS", recordedAt: "t" }, k2: { requestId: "REQ-2", result: "FAILED_FINAL", recordedAt: "t" } } };
-  assert.equal(findIdempotentSuccess(led, "k1")?.requestId, "REQ-1");
-  assert.equal(findIdempotentSuccess(led, "k2"), null); // failures are not idempotent successes
+  const successKey = "a".repeat(64);
+  const failureKey = "b".repeat(64);
+  const led = { requestIds: [], idempotencyKeys: {
+    [successKey]: { requestId: "REQ-1", result: "PASS", recordedAt: "2026-08-04T05:00:00.000Z" },
+    [failureKey]: { requestId: "REQ-2", result: "FAILED_FINAL", recordedAt: "2026-08-04T05:01:00.000Z" },
+  } };
+  assert.equal(findIdempotentSuccess(led, successKey)?.requestId, "REQ-1");
+  assert.equal(findIdempotentSuccess(led, failureKey), null); // failures are not idempotent successes
 });
 
 test("malformed replay ledgers fail closed instead of reopening work", () => {
@@ -112,4 +117,21 @@ test("malformed replay ledgers fail closed instead of reopening work", () => {
   assert.equal(isRequestReplay({ requestIds: null, idempotencyKeys: {} } as any, "REQ-a"), true);
   assert.equal(isRequestReplay({ requestIds: ["REQ-a", "REQ-a"], idempotencyKeys: {} } as any, "REQ-b"), true);
   assert.equal(isRequestReplay({ requestIds: ["REQ-a", false], idempotencyKeys: {} } as any, "REQ-b"), true);
+});
+
+test("malformed idempotency ledgers block lookup before execution", () => {
+  const key = "a".repeat(64);
+  assert.throws(() => findIdempotentSuccess({ requestIds: [], idempotencyKeys: null } as any, key), /malformed processed request ledger/);
+  assert.throws(() => findIdempotentSuccess({
+    requestIds: [],
+    idempotencyKeys: { bad: { requestId: "REQ-1", result: "PASS", recordedAt: "2026-08-04T05:00:00.000Z" } },
+  } as any, key), /malformed processed request ledger/);
+  assert.throws(() => findIdempotentSuccess({
+    requestIds: [],
+    idempotencyKeys: { [key]: { requestId: "REQ-1", result: "PASS" } },
+  } as any, key), /malformed processed request ledger/);
+  assert.throws(() => findIdempotentSuccess({
+    requestIds: ["REQ-1", "REQ-1"],
+    idempotencyKeys: {},
+  } as any, key), /malformed processed request ledger/);
 });

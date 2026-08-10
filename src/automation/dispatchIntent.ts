@@ -130,6 +130,10 @@ export type ProcessedRequestLedger = {
   idempotencyKeys: Record<string, { requestId: string; result: string; evidencePath?: string; recordedAt: string }>;
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
 function isValidUniqueStringIdArray(value: unknown): value is string[] {
   return Array.isArray(value)
     && value.every((id) => typeof id === "string" && id.length > 0)
@@ -148,9 +152,34 @@ export function isRequestReplay(ledger: ProcessedRequestLedger | null, requestId
   if (!isValidUniqueStringIdArray((ledger as unknown as Record<string, unknown>).requestIds)) return true;
   return ledger.requestIds.includes(requestId);
 }
+
+function assertIdempotencyLedgerValid(ledger: ProcessedRequestLedger): void {
+  const raw = ledger as unknown as Record<string, unknown>;
+  if (!isValidUniqueStringIdArray(raw.requestIds)) {
+    throw new Error("malformed processed request ledger: requestIds");
+  }
+  if (!isRecord(raw.idempotencyKeys)) {
+    throw new Error("malformed processed request ledger: idempotencyKeys");
+  }
+  for (const [key, value] of Object.entries(raw.idempotencyKeys)) {
+    if (!/^[0-9a-f]{64}$/.test(key) || !isRecord(value)) {
+      throw new Error("malformed processed request ledger: idempotency entry");
+    }
+    if (typeof value.requestId !== "string" || value.requestId.trim() === ""
+      || typeof value.result !== "string" || value.result.trim() === ""
+      || typeof value.recordedAt !== "string" || Number.isNaN(Date.parse(value.recordedAt))
+      || ("evidencePath" in value && typeof value.evidencePath !== "string")) {
+      throw new Error("malformed processed request ledger: idempotency entry");
+    }
+  }
+}
+
 // 同じ idempotency key の PASS/CONDITIONAL/DRY_RUN_OK 結果があれば再実行しない。
 export function findIdempotentSuccess(ledger: ProcessedRequestLedger | null, key: string): { requestId: string; result: string; evidencePath?: string } | null {
-  const hit = ledger?.idempotencyKeys?.[key];
+  if (!ledger) return null;
+  // run-intent-task calls this before executor invocation; throwing here blocks execution on ledger corruption.
+  assertIdempotencyLedgerValid(ledger);
+  const hit = ledger.idempotencyKeys[key];
   if (hit && ["PASS", "CONDITIONAL", "DRY_RUN_OK"].includes(hit.result)) return hit;
   return null;
 }
