@@ -10,9 +10,13 @@ const lastKnownGoodPath = required(args, "last-known-good");
 const nowMs = args.now ? Date.parse(args.now) : Date.now();
 
 const candidate = await readCandidateJson(candidatePath);
-const existingLastKnownGood = await readOptionalJson(lastKnownGoodPath);
+const [existingLatest, existingLastKnownGood] = await Promise.all([
+  readOptionalJson(latestPath),
+  readOptionalJson(lastKnownGoodPath),
+]);
 const validation = await validatePublicSnapshotForPublication({
   candidate,
+  existingLatest,
   existingLastKnownGood,
   nowMs,
 });
