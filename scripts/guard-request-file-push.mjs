@@ -73,8 +73,15 @@ if (path !== expectedName) fail(`filename must match requestId (expected ${expec
 
 // safety level: L0/L1/L2 のみ自動許可。L3 は grant 必須、L4 は常時拒否。
 if (request.safetyLevel === "L4") fail("L4 is never automated");
-if (request.safetyLevel === "L3" && request.approvalRequirement !== "existing-grant-required") {
-  fail("L3 requires approvalRequirement=existing-grant-required");
+if (request.safetyLevel === "L3") {
+  if (request.approvalRequirement !== "existing-grant-required") {
+    fail("L3 requires approvalRequirement=existing-grant-required");
+  }
+  if (typeof request.approvalGrantId !== "string" || request.approvalGrantId.trim() === "") {
+    fail("L3 requires approvalGrantId");
+  }
+} else if (request.approvalRequirement !== "none") {
+  fail("non-L3 requires approvalRequirement=none");
 }
 if (!["L0", "L1", "L2", "L3"].includes(request.safetyLevel)) fail("invalid safetyLevel");
 
