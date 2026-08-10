@@ -1,11 +1,16 @@
 import { createHash, randomUUID } from "node:crypto";
 import {
   chmodSync,
+  closeSync,
+  constants,
   existsSync,
+  fstatSync,
   linkSync,
   lstatSync,
   mkdirSync,
+  openSync,
   readFileSync,
+  readSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -16,6 +21,7 @@ const RETAINED_ROOT = "reports/automation/retained-outputs";
 const MAX_RETAINED_SOURCE_BYTES = 2_097_152;
 const MAX_EXECUTOR_OUTPUT_PATHS = 64;
 const MAX_RETAINED_TOTAL_BYTES = 8_388_608;
+const RETAINED_READ_CHUNK_BYTES = 64 * 1024;
 const MUTABLE_OUTPUT_ROOTS = [
   "reports/n2/",
   "reports/automation/",
@@ -76,6 +82,46 @@ function safeBasename(relativePath: string): string {
   return value.replace(/[^0-9A-Za-z._-]/gu, "_").slice(0, 160);
 }
 
+function readRetainedSourceBounded(sourceAbsolute: string, sourceRelativePath: string): Buffer {
+  let fd: number | null = null;
+  try {
+    fd = openSync(sourceAbsolute, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+    const stat = fstatSync(fd);
+    if (!stat.isFile() || stat.nlink !== 1) {
+      throw new Error(`RETAINED_OUTPUT_SOURCE_FILE_TYPE_INVALID:${sourceRelativePath}`);
+    }
+    if (stat.size <= 0 || stat.size > MAX_RETAINED_SOURCE_BYTES) {
+      throw new Error(`RETAINED_OUTPUT_SOURCE_SIZE_INVALID:${sourceRelativePath}`);
+    }
+
+    const chunks: Buffer[] = [];
+    let totalBytes = 0;
+    while (true) {
+      const remainingWithSentinel = MAX_RETAINED_SOURCE_BYTES - totalBytes + 1;
+      const chunk = Buffer.allocUnsafe(Math.min(RETAINED_READ_CHUNK_BYTES, remainingWithSentinel));
+      const bytesRead = readSync(fd, chunk, 0, chunk.length, null);
+      if (bytesRead === 0) break;
+      totalBytes += bytesRead;
+      if (totalBytes > MAX_RETAINED_SOURCE_BYTES) {
+        throw new Error(`RETAINED_OUTPUT_SOURCE_SIZE_INVALID:${sourceRelativePath}`);
+      }
+      chunks.push(chunk.subarray(0, bytesRead));
+    }
+    if (totalBytes <= 0) throw new Error(`RETAINED_OUTPUT_SOURCE_SIZE_INVALID:${sourceRelativePath}`);
+    return Buffer.concat(chunks, totalBytes);
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      throw new Error(`RETAINED_OUTPUT_SOURCE_MISSING:${sourceRelativePath}`);
+    }
+    if (error instanceof Error && "code" in error && error.code === "ELOOP") {
+      throw new Error(`RETAINED_OUTPUT_SOURCE_FILE_TYPE_INVALID:${sourceRelativePath}`);
+    }
+    throw error;
+  } finally {
+    if (fd !== null) closeSync(fd);
+  }
+}
+
 function validateRetainedJsonSource(input: {
   sourceRelativePath: string;
   content: Buffer;
@@ -111,16 +157,7 @@ function prepareMutableOutput(input: {
   historyOutputDigest: string;
 }): PreparedRetainedOutput {
   const sourceAbsolute = resolveInside(input.repoRoot, input.sourceRelativePath);
-  if (!existsSync(sourceAbsolute)) throw new Error(`RETAINED_OUTPUT_SOURCE_MISSING:${input.sourceRelativePath}`);
-  const stat = lstatSync(sourceAbsolute);
-  if (stat.isSymbolicLink() || !stat.isFile()) {
-    throw new Error(`RETAINED_OUTPUT_SOURCE_FILE_TYPE_INVALID:${input.sourceRelativePath}`);
-  }
-  if (stat.size <= 0 || stat.size > MAX_RETAINED_SOURCE_BYTES) {
-    throw new Error(`RETAINED_OUTPUT_SOURCE_SIZE_INVALID:${input.sourceRelativePath}`);
-  }
-
-  const content = readFileSync(sourceAbsolute);
+  const content = readRetainedSourceBounded(sourceAbsolute, input.sourceRelativePath);
   validateRetainedJsonSource({
     sourceRelativePath: input.sourceRelativePath,
     content,
