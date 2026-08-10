@@ -87,6 +87,8 @@ export function validateRequest(input: unknown): RequestValidation {
   if (!Number.isInteger(raw.maxDurationSeconds) || (raw.maxDurationSeconds as number) < 60 || (raw.maxDurationSeconds as number) > 21600) errors.push("invalid maxDurationSeconds");
   if (typeof raw.expectedOutput !== "string" || raw.expectedOutput.trim() === "") errors.push("invalid expectedOutput");
   if (raw.approvalRequirement !== "none" && raw.approvalRequirement !== "existing-grant-required") errors.push("invalid approvalRequirement");
+  if ("approvalGrantId" in raw && (typeof raw.approvalGrantId !== "string" || raw.approvalGrantId.trim() === "")) errors.push("invalid approvalGrantId");
+  if ("requestReference" in raw && (typeof raw.requestReference !== "string" || raw.requestReference.trim() === "")) errors.push("invalid requestReference");
   if (typeof raw.requestDigest !== "string" || !/^[0-9a-f]{64}$/.test(raw.requestDigest)) errors.push("invalid requestDigest");
   if ("dryRun" in raw && typeof raw.dryRun !== "boolean") errors.push("dryRun must be boolean");
   if (errors.length > 0) return { valid: false, errors, request: null };
