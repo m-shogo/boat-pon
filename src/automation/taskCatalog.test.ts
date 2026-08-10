@@ -35,8 +35,8 @@ test("catalog rejects duplicate ids, unknown dependency, bad safety, bad default
 });
 
 test("queue state validation", () => {
-  assert.equal(validateQueueState(state({ "TASK-N2-001": { status: "PASS", taskDefinitionVersion: 1, attemptCount: 1, maxAttempts: 3 } })).valid, true);
-  assert.equal(validateQueueState(state({ "TASK-N2-001": { status: "WAT", taskDefinitionVersion: 1, attemptCount: 1, maxAttempts: 3 } })).valid, false);
+  assert.equal(validateQueueState(state({ "TASK-N2-001": { status: "PASS", taskDefinitionVersion: 1, attemptCount: 1, maxAttempts: 3, updatedAt: "2026-08-04T00:00:00Z" } })).valid, true);
+  assert.equal(validateQueueState(state({ "TASK-N2-001": { status: "WAT", taskDefinitionVersion: 1, attemptCount: 1, maxAttempts: 3, updatedAt: "2026-08-04T00:00:00Z" } })).valid, false);
 });
 
 test("merge: state-less task falls back to defaultStatus; stale definition flagged", () => {
