@@ -38,6 +38,12 @@ const REQUEST_ID_RE = /^REQ-[0-9A-Za-z._-]{4,64}$/;
 const TASKID_RE = /^(TASK-[0-9A-Za-z._-]{1,64}|NEXT)$/;
 const AUTOMATION_HISTORY_PATH_RE = /^reports\/automation\/history\/[0-9A-Za-z._-]+-TASK-[0-9A-Za-z._-]+\.json$/;
 const PROCESSED_RESULTS = new Set(["PASS", "DRY_RUN_OK", "CONDITIONAL", "BLOCKED", "FAILED", "FAILED_RETRYABLE", "FAILED_FINAL"]);
+const PROCESSED_INTENT_SCHEMA_VERSION = "processed-intents-v1";
+const PROCESSED_REQUEST_SCHEMA_VERSION = "processed-requests-v1";
+const PROCESSED_INTENT_LEDGER_KEYS = new Set(["ledgerSchemaVersion", "updatedAt", "intentIds", "entries"]);
+const PROCESSED_INTENT_ENTRY_KEYS = new Set(["intentId", "requestId", "result", "recordedAt"]);
+const PROCESSED_REQUEST_LEDGER_KEYS = new Set(["ledgerSchemaVersion", "updatedAt", "requestIds", "idempotencyKeys"]);
+const IDEMPOTENCY_ENTRY_KEYS = new Set(["requestId", "result", "evidencePath", "recordedAt"]);
 
 // strict intent decode。unknown field / hash 系 field はすべて拒否（ChatGPT に hash を作らせない）。
 export function validateIntent(input: unknown): { valid: boolean; errors: string[]; intent: DispatchIntent | null } {
@@ -138,6 +144,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+function hasOnlyKeys(value: Record<string, unknown>, allowed: Set<string>): boolean {
+  return Object.keys(value).every((key) => allowed.has(key));
+}
+
+function hasValidOptionalMetadata(raw: Record<string, unknown>, schemaVersion: string): boolean {
+  if ("ledgerSchemaVersion" in raw && raw.ledgerSchemaVersion !== schemaVersion) return false;
+  if ("updatedAt" in raw && (typeof raw.updatedAt !== "string" || Number.isNaN(Date.parse(raw.updatedAt)))) return false;
+  return true;
+}
+
 function isValidUniqueIdArray(value: unknown, pattern: RegExp): value is string[] {
   return Array.isArray(value)
     && value.every((id) => typeof id === "string" && pattern.test(id))
@@ -146,6 +162,7 @@ function isValidUniqueIdArray(value: unknown, pattern: RegExp): value is string[
 
 function isProcessedIntentLedgerValid(ledger: ProcessedIntentLedger): boolean {
   const raw = ledger as unknown as Record<string, unknown>;
+  if (!hasOnlyKeys(raw, PROCESSED_INTENT_LEDGER_KEYS) || !hasValidOptionalMetadata(raw, PROCESSED_INTENT_SCHEMA_VERSION)) return false;
   if (!isValidUniqueIdArray(raw.intentIds, INTENT_ID_RE)) return false;
   if (!("entries" in raw) || raw.entries === undefined) return false;
   if (!Array.isArray(raw.entries) || raw.entries.length !== ledger.intentIds.length) return false;
@@ -153,6 +170,7 @@ function isProcessedIntentLedgerValid(ledger: ProcessedIntentLedger): boolean {
   const seen = new Set<string>();
   for (const [index, value] of raw.entries.entries()) {
     if (!isRecord(value)
+      || !hasOnlyKeys(value, PROCESSED_INTENT_ENTRY_KEYS)
       || typeof value.intentId !== "string" || !INTENT_ID_RE.test(value.intentId)
       || value.intentId !== ledger.intentIds[index]
       || typeof value.requestId !== "string" || value.requestId !== `REQ-${value.intentId.replace(/^INTENT-/, "")}`
@@ -185,6 +203,9 @@ export function isRequestReplay(ledger: ProcessedRequestLedger | null, requestId
 
 function assertIdempotencyLedgerValid(ledger: ProcessedRequestLedger): void {
   const raw = ledger as unknown as Record<string, unknown>;
+  if (!hasOnlyKeys(raw, PROCESSED_REQUEST_LEDGER_KEYS) || !hasValidOptionalMetadata(raw, PROCESSED_REQUEST_SCHEMA_VERSION)) {
+    throw new Error("malformed processed request ledger: metadata or unknown field");
+  }
   if (!isValidUniqueIdArray(raw.requestIds, REQUEST_ID_RE)) {
     throw new Error("malformed processed request ledger: requestIds");
   }
@@ -192,7 +213,7 @@ function assertIdempotencyLedgerValid(ledger: ProcessedRequestLedger): void {
     throw new Error("malformed processed request ledger: idempotencyKeys");
   }
   for (const [key, value] of Object.entries(raw.idempotencyKeys)) {
-    if (!/^[0-9a-f]{64}$/.test(key) || !isRecord(value)) {
+    if (!/^[0-9a-f]{64}$/.test(key) || !isRecord(value) || !hasOnlyKeys(value, IDEMPOTENCY_ENTRY_KEYS)) {
       throw new Error("malformed processed request ledger: idempotency entry");
     }
     if (typeof value.requestId !== "string" || !REQUEST_ID_RE.test(value.requestId)
