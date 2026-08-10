@@ -76,6 +76,11 @@ const TASK_DEFINITION_FIELDS = new Set([
   "dependencies", "maxDurationSeconds", "expectedInputs", "expectedOutputs", "estimatedDurationSeconds",
   "defaultStatus", "valueOfInformation", "invalidationCondition", "recurring",
 ]);
+const QUEUE_STATE_FIELDS = new Set(["stateSchemaVersion", "stateVersion", "catalogVersion", "updatedAt", "tasks"]);
+const TASK_STATE_FIELDS = new Set([
+  "status", "taskDefinitionVersion", "authoritySha", "attemptCount", "maxAttempts", "evidenceLinks",
+  "resultDigest", "lastFailure", "checkpoint", "updatedAt", "nextDecision",
+]);
 
 export function validateCatalog(input: unknown): { valid: boolean; errors: string[]; catalog: TaskCatalog | null } {
   const errors: string[] = [];
@@ -160,6 +165,7 @@ export function validateQueueState(input: unknown): { valid: boolean; errors: st
     return { valid: false, errors: ["state must be an object"], state: null };
   }
   const s = input as Record<string, unknown>;
+  for (const field of Object.keys(s)) if (!QUEUE_STATE_FIELDS.has(field)) errors.push(`unknown state field: ${field}`);
   if (s.stateSchemaVersion !== QUEUE_STATE_SCHEMA_VERSION) errors.push(`stateSchemaVersion must be ${QUEUE_STATE_SCHEMA_VERSION}`);
   if (!Number.isInteger(s.stateVersion) || (s.stateVersion as number) < 0) errors.push("invalid stateVersion");
   if (typeof s.catalogVersion !== "string" || s.catalogVersion.trim() === "") errors.push("invalid catalogVersion");
@@ -172,6 +178,7 @@ export function validateQueueState(input: unknown): { valid: boolean; errors: st
       continue;
     }
     const v = v0 as Record<string, unknown>;
+    for (const field of Object.keys(v)) if (!TASK_STATE_FIELDS.has(field)) errors.push(`state ${id} unknown field: ${field}`);
     if (!TASK_STATUSES.includes(v.status as TaskStatus)) errors.push(`state ${id}.status invalid: ${v.status}`);
     if (!Number.isInteger(v.taskDefinitionVersion) || (v.taskDefinitionVersion as number) < 1) errors.push(`state ${id}.taskDefinitionVersion invalid`);
     if (!Number.isInteger(v.attemptCount) || (v.attemptCount as number) < 0) errors.push(`state ${id}.attemptCount invalid`);
