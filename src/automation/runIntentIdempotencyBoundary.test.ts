@@ -23,3 +23,16 @@ test("runner validates both durable replay ledgers before appending either one",
   assert.ok(append.indexOf("isRequestReplay(reqs, requestId)") < append.indexOf("writeJsonAtomic(PROCESSED_INT, intents)"));
   assert.ok(append.indexOf("findIdempotentSuccess(reqs, idempotencyKey)") < append.indexOf("writeJsonAtomic(PROCESSED_INT, intents)"));
 });
+
+test("runner validates the processed-intent ledger before consuming an attempt", () => {
+  const source = readFileSync("scripts/run-intent-task.ts", "utf8");
+  const guard = source.indexOf("if (!processedInt || isIntentProcessed(processedInt, intentId))");
+  const claim = source.indexOf('status: "CLAIMED"');
+  const executor = source.indexOf("exec = executor(");
+
+  assert.ok(guard >= 0, "processed-intent ledger guard must exist");
+  assert.ok(guard < claim, "processed-intent ledger guard must run before READY -> CLAIMED attempt consumption");
+  assert.ok(guard < executor, "processed-intent ledger guard must run before executor invocation");
+  assert.match(source, /PROCESSED_INTENT_LEDGER_MISSING/);
+  assert.match(source, /PROCESSED_INTENT_LEDGER_INVALID_OR_REPLAY/);
+});
