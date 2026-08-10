@@ -60,6 +60,9 @@ if (!["run-task", "run-next", "status-only", "dry-run"].includes(request.request
 if (request.requestedAction === "run-next" && request.taskId !== "NEXT") {
   fail("run-next requires taskId=NEXT");
 }
+if (request.taskId === "NEXT" && !["status-only", "dry-run"].includes(request.requestedAction)) {
+  fail("executing NEXT requires intent dispatch");
+}
 
 // filename と requestId の一致。
 const expectedName = `${PENDING_DIR}/${request.requestId}.json`;
