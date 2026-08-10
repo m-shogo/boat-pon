@@ -72,6 +72,8 @@ const failedIntentPreserved = !pInt.intentIds.some((x: string) => x.includes("k8
 add("failedIntentHistoryPreserved", failedIntentPreserved ? "PASS" : "BLOCKED", "P0", failedIntentPreserved ? "not replayed into ledger" : "leaked into ledger");
 
 // ---- 4. dataset-expand artifact may exist after completed research; readiness must not freeze an old phase ----
+const localManifestPath = join(root, "reports/n2/n2-dataset-manifest.json");
+const localManifestBefore = existsSync(localManifestPath);
 let manifestPresent = false;
 try { showBranch("reports/n2/n2-dataset-manifest.json"); manifestPresent = true; } catch { manifestPresent = false; }
 add("datasetExpandArtifactObserved", "PASS", "P2", manifestPresent ? "manifest exists" : "manifest absent");
@@ -147,7 +149,8 @@ try {
 git("fetch", "origin", "--quiet", BRANCH);
 const branchShaAfter = git("rev-parse", `origin/${BRANCH}`);
 add("branchHeadUnchanged", branchShaAfter === branchShaBefore ? "PASS" : "BLOCKED", "P0", `${branchShaBefore.slice(0, 8)} == ${branchShaAfter.slice(0, 8)}`);
-add("noManifestGenerated", "PASS", "P0", "readiness generation does not create dataset-expand artifacts");
+const localManifestAfter = existsSync(localManifestPath);
+add("noManifestGenerated", localManifestAfter === localManifestBefore ? "PASS" : "BLOCKED", "P0", `dataset manifest presence ${localManifestBefore ? "present" : "absent"} -> ${localManifestAfter ? "present" : "absent"}`);
 
 const envCheck = (name: string, envKey: string, severity: Severity): void => {
   const v = (process.env[envKey] ?? "").toUpperCase();
