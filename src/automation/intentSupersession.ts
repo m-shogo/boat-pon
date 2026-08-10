@@ -26,6 +26,7 @@ const INTENT_ID_RE = /^INTENT-[0-9A-Za-z._-]{4,64}$/;
 const SUPERSESSION_ID_RE = /^SUPERSESSION-[0-9A-Za-z._-]{4,96}$/;
 const TASK_ID_RE = /^(TASK-[0-9A-Za-z._-]{1,64}|NEXT)$/;
 const SHA_RE = /^[0-9a-f]{7,40}$/;
+const RFC3339_DATE_TIME_RE = /^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[Zz]|[+-]\d{2}:\d{2})$/;
 const TOP_LEVEL_KEYS = new Set([
   "supersessionSchemaVersion",
   "supersessionId",
@@ -76,7 +77,7 @@ export function validateIntentSupersession(
   if (typeof input.observedAuthoritySha !== "string" || !/^[0-9a-f]{40}$/.test(input.observedAuthoritySha)) {
     errors.push("observedAuthoritySha must be a full 40-character SHA");
   }
-  if (typeof input.createdAt !== "string" || Number.isNaN(Date.parse(input.createdAt))) {
+  if (typeof input.createdAt !== "string" || !RFC3339_DATE_TIME_RE.test(input.createdAt) || Number.isNaN(Date.parse(input.createdAt))) {
     errors.push("invalid createdAt");
   }
   if (typeof input.requestedBy !== "string" || input.requestedBy.trim() === "" || input.requestedBy.length > 128) {
