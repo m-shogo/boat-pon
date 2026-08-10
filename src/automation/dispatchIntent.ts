@@ -37,6 +37,7 @@ export const INTENT_ID_RE = /^INTENT-[0-9A-Za-z._-]{4,64}$/;
 const REQUEST_ID_RE = /^REQ-[0-9A-Za-z._-]{4,64}$/;
 const TASKID_RE = /^(TASK-[0-9A-Za-z._-]{1,64}|NEXT)$/;
 const AUTOMATION_HISTORY_PATH_RE = /^reports\/automation\/history\/[0-9A-Za-z._-]+-TASK-[0-9A-Za-z._-]+\.json$/;
+const PROCESSED_RESULTS = new Set(["PASS", "DRY_RUN_OK", "CONDITIONAL", "BLOCKED", "FAILED_RETRYABLE", "FAILED_FINAL"]);
 
 // strict intent decode。unknown field / hash 系 field はすべて拒否（ChatGPT に hash を作らせない）。
 export function validateIntent(input: unknown): { valid: boolean; errors: string[]; intent: DispatchIntent | null } {
@@ -155,7 +156,7 @@ function isProcessedIntentLedgerValid(ledger: ProcessedIntentLedger): boolean {
       || typeof value.intentId !== "string" || !INTENT_ID_RE.test(value.intentId)
       || value.intentId !== ledger.intentIds[index]
       || typeof value.requestId !== "string" || value.requestId !== `REQ-${value.intentId.replace(/^INTENT-/, "")}`
-      || typeof value.result !== "string" || value.result.trim() === ""
+      || typeof value.result !== "string" || !PROCESSED_RESULTS.has(value.result)
       || typeof value.recordedAt !== "string" || Number.isNaN(Date.parse(value.recordedAt))) {
       return false;
     }
@@ -195,7 +196,7 @@ function assertIdempotencyLedgerValid(ledger: ProcessedRequestLedger): void {
       throw new Error("malformed processed request ledger: idempotency entry");
     }
     if (typeof value.requestId !== "string" || !REQUEST_ID_RE.test(value.requestId)
-      || typeof value.result !== "string" || value.result.trim() === ""
+      || typeof value.result !== "string" || !PROCESSED_RESULTS.has(value.result)
       || typeof value.recordedAt !== "string" || Number.isNaN(Date.parse(value.recordedAt))
       || ("evidencePath" in value && (typeof value.evidencePath !== "string" || !AUTOMATION_HISTORY_PATH_RE.test(value.evidencePath)))) {
       throw new Error("malformed processed request ledger: idempotency entry");
