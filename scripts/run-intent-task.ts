@@ -405,8 +405,10 @@ function appendLedgers(intentId: string, requestId: string, result: string, idem
 
   const reqs = readJson(PROCESSED_REQ) ?? { ledgerSchemaVersion: "processed-requests-v1", requestIds: [], idempotencyKeys: {} };
   if (!reqs.requestIds.includes(requestId)) reqs.requestIds.push(requestId);
-  // idempotency: 成功結果のみ再利用可能な形で記録（失敗は記録するが reuse されない）。
-  reqs.idempotencyKeys[idempotencyKey] = { requestId, result, evidencePath, recordedAt: nowIso() };
+  // idempotency: first writer is canonical; reuse must not rewrite the successful provenance record.
+  if (!(idempotencyKey in reqs.idempotencyKeys)) {
+    reqs.idempotencyKeys[idempotencyKey] = { requestId, result, evidencePath, recordedAt: nowIso() };
+  }
   reqs.updatedAt = nowIso();
   writeJsonAtomic(PROCESSED_REQ, reqs);
 }
