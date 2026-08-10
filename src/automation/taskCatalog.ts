@@ -160,11 +160,11 @@ export type MergedTask = TaskDefinition & {
 };
 
 // catalog（定義）と state（状態）を合成する。state に無い task は defaultStatus を状態とする。
-// state.taskDefinitionVersion < catalog の場合は staleDefinition=true（revalidation 待ち）。
+// state.taskDefinitionVersion が catalog と一致しない場合は staleDefinition=true（revalidation 待ち）。
 export function mergeCatalogAndState(catalog: TaskCatalog, state: QueueState): MergedTask[] {
   return catalog.tasks.map((def) => {
     const st = state.tasks[def.taskId] ?? null;
-    const staleDefinition = st != null && st.taskDefinitionVersion < def.taskDefinitionVersion;
+    const staleDefinition = st != null && st.taskDefinitionVersion !== def.taskDefinitionVersion;
     const status = st ? st.status : (def.defaultStatus as MergedTask["status"]);
     return { ...def, status, state: st, staleDefinition };
   });
