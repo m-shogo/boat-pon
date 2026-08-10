@@ -1,0 +1,306 @@
+{
+  "datasetManifestVersion": "n2-dataset-manifest-v2",
+  "datasetVersion": "n2-corrected-2000_2026",
+  "correctedTruthVersion": "n2-corrected-settlement-truth-v1",
+  "sourceSettlementIdentity": "353562988ef0d5a3f791fa19bfa3b1751fafcd9dd67738d1326895604f023730",
+  "inventoryTotals": {
+    "candidates": 8217755,
+    "races": 1194209
+  },
+  "researchEligibleTotals": {
+    "candidates": 8217755,
+    "races": 1194209
+  },
+  "totalActiveCandidates": 8217755,
+  "totalRaces": 1194209,
+  "yearSpan": {
+    "from": "2000",
+    "to": "2026",
+    "count": 24
+  },
+  "byYear": {
+    "2000": {
+      "inventory": {
+        "candidates": 57762,
+        "races": 18788
+      },
+      "researchEligible": {
+        "candidates": 57762,
+        "races": 18788
+      }
+    },
+    "2004": {
+      "inventory": {
+        "candidates": 196182,
+        "races": 29561
+      },
+      "researchEligible": {
+        "candidates": 196182,
+        "races": 29561
+      }
+    },
+    "2005": {
+      "inventory": {
+        "candidates": 340989,
+        "races": 51077
+      },
+      "researchEligible": {
+        "candidates": 340989,
+        "races": 51077
+      }
+    },
+    "2006": {
+      "inventory": {
+        "candidates": 341032,
+        "races": 50639
+      },
+      "researchEligible": {
+        "candidates": 341032,
+        "races": 50639
+      }
+    },
+    "2007": {
+      "inventory": {
+        "candidates": 349289,
+        "races": 51062
+      },
+      "researchEligible": {
+        "candidates": 349289,
+        "races": 51062
+      }
+    },
+    "2008": {
+      "inventory": {
+        "candidates": 343519,
+        "races": 49874
+      },
+      "researchEligible": {
+        "candidates": 343519,
+        "races": 49874
+      }
+    },
+    "2009": {
+      "inventory": {
+        "candidates": 356001,
+        "races": 51392
+      },
+      "researchEligible": {
+        "candidates": 356001,
+        "races": 51392
+      }
+    },
+    "2010": {
+      "inventory": {
+        "candidates": 359189,
+        "races": 51861
+      },
+      "researchEligible": {
+        "candidates": 359189,
+        "races": 51861
+      }
+    },
+    "2011": {
+      "inventory": {
+        "candidates": 354577,
+        "races": 50869
+      },
+      "researchEligible": {
+        "candidates": 354577,
+        "races": 50869
+      }
+    },
+    "2012": {
+      "inventory": {
+        "candidates": 377773,
+        "races": 54103
+      },
+      "researchEligible": {
+        "candidates": 377773,
+        "races": 54103
+      }
+    },
+    "2013": {
+      "inventory": {
+        "candidates": 375622,
+        "races": 53761
+      },
+      "researchEligible": {
+        "candidates": 375622,
+        "races": 53761
+      }
+    },
+    "2014": {
+      "inventory": {
+        "candidates": 368708,
+        "races": 52721
+      },
+      "researchEligible": {
+        "candidates": 368708,
+        "races": 52721
+      }
+    },
+    "2015": {
+      "inventory": {
+        "candidates": 368921,
+        "races": 52733
+      },
+      "researchEligible": {
+        "candidates": 368921,
+        "races": 52733
+      }
+    },
+    "2016": {
+      "inventory": {
+        "candidates": 380253,
+        "races": 54352
+      },
+      "researchEligible": {
+        "candidates": 380253,
+        "races": 54352
+      }
+    },
+    "2017": {
+      "inventory": {
+        "candidates": 381487,
+        "races": 54533
+      },
+      "researchEligible": {
+        "candidates": 381487,
+        "races": 54533
+      }
+    },
+    "2018": {
+      "inventory": {
+        "candidates": 381343,
+        "races": 54507
+      },
+      "researchEligible": {
+        "candidates": 381343,
+        "races": 54507
+      }
+    },
+    "2019": {
+      "inventory": {
+        "candidates": 381528,
+        "races": 54531
+      },
+      "researchEligible": {
+        "candidates": 381528,
+        "races": 54531
+      }
+    },
+    "2020": {
+      "inventory": {
+        "candidates": 383904,
+        "races": 54880
+      },
+      "researchEligible": {
+        "candidates": 383904,
+        "races": 54880
+      }
+    },
+    "2021": {
+      "inventory": {
+        "candidates": 384395,
+        "races": 54946
+      },
+      "researchEligible": {
+        "candidates": 384395,
+        "races": 54946
+      }
+    },
+    "2022": {
+      "inventory": {
+        "candidates": 388830,
+        "races": 55572
+      },
+      "researchEligible": {
+        "candidates": 388830,
+        "races": 55572
+      }
+    },
+    "2023": {
+      "inventory": {
+        "candidates": 387492,
+        "races": 55381
+      },
+      "researchEligible": {
+        "candidates": 387492,
+        "races": 55381
+      }
+    },
+    "2024": {
+      "inventory": {
+        "candidates": 387326,
+        "races": 55364
+      },
+      "researchEligible": {
+        "candidates": 387326,
+        "races": 55364
+      }
+    },
+    "2025": {
+      "inventory": {
+        "candidates": 385947,
+        "races": 55161
+      },
+      "researchEligible": {
+        "candidates": 385947,
+        "races": 55161
+      }
+    },
+    "2026": {
+      "inventory": {
+        "candidates": 185686,
+        "races": 26541
+      },
+      "researchEligible": {
+        "candidates": 185686,
+        "races": 26541
+      }
+    }
+  },
+  "holdoutSetId": "n2-win-refund-omission-holdout-v1",
+  "holdoutSetDigest": "8157b9ab3171a640ccb0ed1df762884f71859473da33db667d915f0a2fa3aeab",
+  "holdoutCount": 2,
+  "holdoutCandidatesPresent": 0,
+  "holdoutExcludedFromResearchCohort": true,
+  "splitProtocolVersion": "n2-time-split-v2",
+  "splitBoundaries": {
+    "train": {
+      "fromInclusive": null,
+      "toExclusive": "2022-01-01:"
+    },
+    "validation": {
+      "fromInclusive": "2022-01-01:",
+      "toExclusive": "2024-01-01:"
+    },
+    "test": {
+      "fromInclusive": "2024-01-01:",
+      "toExclusive": "2026-01-01:"
+    },
+    "forwardShadow": {
+      "fromInclusive": "2026-01-01:",
+      "toExclusive": null
+    }
+  },
+  "readOnly": true,
+  "pitEvidence": {
+    "status": "NOT_APPLICABLE",
+    "validatorId": "settlement-inventory-pit-applicability",
+    "validatorVersion": "v1",
+    "checkedRecordCount": 8217755,
+    "sameRaceViolationCount": 0,
+    "futureViolationCount": 0,
+    "ambiguousTimingCount": 0,
+    "evidencePath": null,
+    "evidenceDigest": null,
+    "notApplicableReason": "settlement inventory does not join prediction-time features"
+  },
+  "runId": "30991353245",
+  "requestId": "REQ-20260805-r4n8v2k6qx",
+  "taskId": "TASK-N2-010",
+  "executorVersion": "n2-task-executor-registry-v2",
+  "generatedAt": "2026-08-05T12:37:12.477Z",
+  "outputDigest": "701398c2e82a5c5468de41b8c6de5e5cad8ccae026c10ee83f1ab57acafe34c9"
+}

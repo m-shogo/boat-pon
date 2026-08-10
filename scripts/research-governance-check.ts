@@ -82,7 +82,10 @@ if (!existsSync(catalogPath)) {
   }
 }
 
-// Untouched holdout race keys may only appear in the freeze/audit authorities.
+// Untouched holdout race keys may only appear in explicit freeze/audit authorities.
+// These legacy settlement-reparse artifacts predate n2-holdout-freeze.json and are
+// immutable evidence that explicitly documents the same two quarantined races.
+// Keep the allowlist exact: every other N2 JSON remains fail-closed.
 const HOLDOUT_FREEZE = join(root, "reports/n2/n2-holdout-freeze.json");
 let holdoutRaces: string[] = [];
 if (existsSync(HOLDOUT_FREEZE)) {
@@ -90,7 +93,18 @@ if (existsSync(HOLDOUT_FREEZE)) {
   catch { problems.push("holdout freeze is not valid JSON or is not a safe regular file"); }
 }
 if (holdoutRaces.length) {
-  const allowFiles = new Set(["n2-holdout-freeze.json", "n2-win-refund-omission-audit.json", "n2-dataset-canary.json", "n2-dataset-canary.md"]);
+  const allowFiles = new Set([
+    "n2-holdout-freeze.json",
+    "n2-win-refund-omission-audit.json",
+    "n2-dataset-canary.json",
+    "n2-dataset-canary.md",
+    "corrected-settlement-truth-freeze.json",
+    "settlement-reparse-apply-manifest.json",
+    "settlement-reparse-approval-grant.json",
+    "settlement-reparse-approval-manifest.json",
+    "settlement-reparse-examples.json",
+    "unexpected-additions-audit.json",
+  ]);
   const n2dir = join(root, "reports/n2");
   if (existsSync(n2dir)) {
     try {

@@ -1,0 +1,89 @@
+{
+  "snapshotVersion": "research-durable-retention-snapshot-v1",
+  "retentionPolicyVersion": "research-durable-retention-policy-v1",
+  "evidenceRole": "RESEARCH_KNOWLEDGE_RETENTION_SNAPSHOT_ONLY",
+  "effectiveDateJst": "2026-08-07",
+  "firstObservedAt": "2026-08-07T08:00:00.000Z",
+  "sourceStateShaAtFirstObservation": "e49f945d3a38692225d3730488b847986cf5a8cb",
+  "mainAuthorityShaAtFirstObservation": "00f91d502b2575d25252ebe88a8e16ef26cc5888",
+  "auditReportVersion": "research-durable-knowledge-completeness-v1",
+  "auditStatus": "DEGRADED",
+  "evidenceDigest": "8cbc2525db05acea34e52ea1460eff6a68b3b123b39bc69c074f359fad6da5c4",
+  "historyFileCount": 15,
+  "assessedRunCount": 15,
+  "durableCompleteCount": 15,
+  "strongDurableCompleteCount": 11,
+  "incompleteCount": 0,
+  "invalidHistoryCount": 0,
+  "missingOutputReferenceCount": 0,
+  "invalidOutputReferenceCount": 0,
+  "mutableSupersededReferenceCount": 3,
+  "legacyCompatibilityCount": 1,
+  "classificationCounts": {
+    "PASS_DURABLE_OUTPUTS": 13,
+    "PASS_NO_CHANGE_HISTORY": 0,
+    "NON_PASS_DURABLE_HISTORY": 2,
+    "INCOMPLETE_PASS_NO_OUTPUT": 0,
+    "INVALID_PERSISTED_DRY_RUN": 0,
+    "INVALID_HISTORY": 0,
+    "INCOMPLETE_OUTPUT_REFERENCE": 0
+  },
+  "nonStrongRuns": [
+    {
+      "runId": "30878594429",
+      "taskId": "TASK-N2-003",
+      "taskType": "readonly-audit",
+      "result": "PASS",
+      "classification": "PASS_DURABLE_OUTPUTS",
+      "durableComplete": true,
+      "strongDurableComplete": false,
+      "warnings": [
+        "LEGACY_HISTORY_V0_ATTESTED_NO_INTENT_IDEMPOTENCY_FULL_SHA"
+      ]
+    },
+    {
+      "runId": "31013100745",
+      "taskId": "TASK-N2-011",
+      "taskType": "pit-audit",
+      "result": "CONDITIONAL",
+      "classification": "NON_PASS_DURABLE_HISTORY",
+      "durableComplete": true,
+      "strongDurableComplete": false,
+      "warnings": [
+        "reports/n2/n2-pit-audit.json:DURABLE_MUTABLE_OUTPUT_SUPERSEDED"
+      ]
+    },
+    {
+      "runId": "31023735923",
+      "taskId": "TASK-N2-013",
+      "taskType": "official-program-canary-review-bundle",
+      "result": "PASS",
+      "classification": "PASS_DURABLE_OUTPUTS",
+      "durableComplete": true,
+      "strongDurableComplete": false,
+      "warnings": [
+        "reports/n2/n2-official-program-canary-review-bundle.json:DURABLE_MUTABLE_OUTPUT_SUPERSEDED"
+      ]
+    },
+    {
+      "runId": "31057606124",
+      "taskId": "TASK-N2-013",
+      "taskType": "official-program-canary-review-bundle",
+      "result": "PASS",
+      "classification": "PASS_DURABLE_OUTPUTS",
+      "durableComplete": true,
+      "strongDurableComplete": false,
+      "warnings": [
+        "reports/n2/n2-official-program-canary-review-bundle.json:DURABLE_MUTABLE_OUTPUT_SUPERSEDED"
+      ]
+    }
+  ],
+  "automaticPromotionAuthorized": false,
+  "currentBuyConnectionAuthorized": false,
+  "lineConnectionAuthorized": false,
+  "publicPublishAuthorized": false,
+  "databaseWriteAuthorized": false,
+  "automatedBettingAuthorized": false,
+  "productionApplyAuthorized": false,
+  "snapshotDigest": "8bafc00fa549dc1e19ee0ab7e92967656836d4d8e666e5bd2534174510fb5f3a"
+}

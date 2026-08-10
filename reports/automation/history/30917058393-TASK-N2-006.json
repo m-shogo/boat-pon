@@ -1,0 +1,37 @@
+{
+  "runId": "30917058393",
+  "requestId": "REQ-20260804-a4n206x7p9",
+  "intentId": "INTENT-20260804-a4n206x7p9",
+  "taskId": "TASK-N2-006",
+  "taskType": "feature-coverage-audit",
+  "safetyLevel": "L0",
+  "executorVersion": "n2-task-executor-registry-v1",
+  "executed": true,
+  "result": "PASS",
+  "blocks": [],
+  "outputs": [
+    "reports/n2/n2-feature-coverage-audit.json"
+  ],
+  "outputDigest": "e57c6f17e27332f2dc7ae791a8b7b4ee8277d8d047048eef9a2061b3bcae3930",
+  "summary": {
+    "auditContractVersion": "n2-settlement-coverage-v1",
+    "settledCandidates": 8220019,
+    "settledWithPayoutLines": 8220019,
+    "payoutLineCoverage": 1,
+    "refundedCandidates": 319678,
+    "refundedWithRefundLines": 319678,
+    "refundLineCoverage": 1,
+    "missingness": {
+      "settledMissingPayoutLines": 0,
+      "refundedMissingRefundLines": 0,
+      "note": "settled は payout line、refunded は refund line を持つべき。欠落は dataset 品質フラグ。"
+    },
+    "scope": "settlement schema のみ（feature/odds は本 sidecar 外＝別 dataRoot 未接続）",
+    "readOnly": true
+  },
+  "authoritySha": "2ef50c99f6f5baa5053595e7c3ab62515df8d3ae",
+  "idempotencyKey": "c680e3101acf016ffc54374fb44bd801f55ba099892ff34cc039b254052fce14",
+  "startedAt": "2026-08-04T14:05:14.088Z",
+  "completedAt": "2026-08-04T14:27:30.235Z",
+  "elapsedMs": 1336147
+}

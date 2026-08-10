@@ -1,0 +1,74 @@
+{
+  "reconciliationVersion": "catalog-state-reconcile-v1",
+  "baseBranchSha": "6f04df5b918c222324427b2198793c486c889e6b",
+  "at": "2026-08-05T03:50:30.173Z",
+  "fromCatalogVersion": "2026-08-04-n2-foundation-v1",
+  "toCatalogVersion": "2026-08-05-n2-governance-v2",
+  "fromStateVersion": 18,
+  "toStateVersion": 19,
+  "fromStateDigest": "ffbbf997ce8637b27e675fb3dc26b0a43c5d94eee37e66131f0ac13d72dfb39c",
+  "toStateDigest": "b33b819377faa38fa89d0ed353d2614ab15a7b0d290db2572c807f75eca4deca",
+  "changed": true,
+  "plan": {
+    "added": [
+      {
+        "taskId": "TASK-N2-010",
+        "status": "READY",
+        "taskDefinitionVersion": 2
+      },
+      {
+        "taskId": "TASK-N2-011",
+        "status": "BLOCKED_EXECUTOR_PENDING",
+        "taskDefinitionVersion": 1
+      },
+      {
+        "taskId": "TASK-N2-020",
+        "status": "BLOCKED_EXECUTOR_PENDING",
+        "taskDefinitionVersion": 1
+      },
+      {
+        "taskId": "TASK-N2-021",
+        "status": "BLOCKED_EXECUTOR_PENDING",
+        "taskDefinitionVersion": 1
+      },
+      {
+        "taskId": "TASK-N2-022",
+        "status": "BLOCKED_EXECUTOR_PENDING",
+        "taskDefinitionVersion": 1
+      },
+      {
+        "taskId": "TASK-N2-030",
+        "status": "BLOCKED_EXECUTOR_PENDING",
+        "taskDefinitionVersion": 1
+      },
+      {
+        "taskId": "TASK-N2-040",
+        "status": "BLOCKED_EXECUTOR_PENDING",
+        "taskDefinitionVersion": 1
+      },
+      {
+        "taskId": "TASK-N2-041",
+        "status": "BLOCKED_EXECUTOR_PENDING",
+        "taskDefinitionVersion": 1
+      },
+      {
+        "taskId": "TASK-N2-042",
+        "status": "BLOCKED_EXECUTOR_PENDING",
+        "taskDefinitionVersion": 1
+      }
+    ],
+    "preserved": [
+      "TASK-N2-001",
+      "TASK-N2-002",
+      "TASK-N2-003",
+      "TASK-N2-004",
+      "TASK-N2-005",
+      "TASK-N2-006",
+      "TASK-PLANNER-NEXT"
+    ],
+    "staleDefinition": [],
+    "orphaned": [],
+    "catalogVersionChanged": true
+  },
+  "writtenDigest": "639cc4b5c11ad8045f2f3fbe916e19587ed62031c4b0d4f0c5cfffaf51a53d4d"
+}

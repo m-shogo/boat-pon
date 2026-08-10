@@ -1,0 +1,178 @@
+{
+  "runId": "30921804343",
+  "requestId": "REQ-20260804-b7k3m9q2x4",
+  "intentId": "INTENT-20260804-b7k3m9q2x4",
+  "taskId": "TASK-PLANNER-NEXT",
+  "taskType": "planner-next",
+  "safetyLevel": "L0",
+  "executorVersion": "n2-task-executor-registry-v1",
+  "executed": true,
+  "result": "PASS",
+  "blocks": [],
+  "outputs": [
+    "automation/control/planner-candidates.json"
+  ],
+  "outputDigest": "e0c56315c6bbe2a5df2efd668a69fc3334340a82af84358a47337d8b922da53f",
+  "summary": {
+    "plannerVersion": "n2-planner-v1",
+    "readyTaskCount": 1,
+    "blockedExecutorPendingCount": 9,
+    "candidateCount": 9,
+    "candidates": [
+      {
+        "candidateId": "CAND-30921804343-1",
+        "proposedTaskId": "TASK-N2-010",
+        "title": "corrected dataset 年代拡張",
+        "objective": "corrected dataset を全期間へ拡張し manifest 化",
+        "taskType": "dataset-expand",
+        "executorType": "dataset-expand",
+        "safetyLevel": "L0",
+        "dependencies": [
+          "TASK-N2-004"
+        ],
+        "reason": "executor 未実装。実装後に READY 化できる候補。",
+        "duplicateCheck": "catalog 内 taskId で一意",
+        "invalidationCondition": "対応 executor が実装され、catalog defaultStatus が READY になったら本候補は解消",
+        "proposedAt": "2026-08-04T15:00:08.056Z"
+      },
+      {
+        "candidateId": "CAND-30921804343-2",
+        "proposedTaskId": "TASK-N2-011",
+        "title": "PIT 再検証",
+        "objective": "feature join 後の point-in-time / same-race leakage を再検証",
+        "taskType": "pit-audit",
+        "executorType": "pit-audit",
+        "safetyLevel": "L0",
+        "dependencies": [
+          "TASK-N2-010"
+        ],
+        "reason": "executor 未実装。実装後に READY 化できる候補。",
+        "duplicateCheck": "catalog 内 taskId で一意",
+        "invalidationCondition": "対応 executor が実装され、catalog defaultStatus が READY になったら本候補は解消",
+        "proposedAt": "2026-08-04T15:00:08.056Z"
+      },
+      {
+        "candidateId": "CAND-30921804343-3",
+        "proposedTaskId": "TASK-N2-020",
+        "title": "market-only baseline",
+        "objective": "市場オッズのみの baseline を common cohort で評価",
+        "taskType": "baseline-market",
+        "executorType": "baseline-market",
+        "safetyLevel": "L0",
+        "dependencies": [
+          "TASK-N2-011",
+          "TASK-N2-005"
+        ],
+        "reason": "executor 未実装。実装後に READY 化できる候補。",
+        "duplicateCheck": "catalog 内 taskId で一意",
+        "invalidationCondition": "対応 executor が実装され、catalog defaultStatus が READY になったら本候補は解消",
+        "proposedAt": "2026-08-04T15:00:08.056Z"
+      },
+      {
+        "candidateId": "CAND-30921804343-4",
+        "proposedTaskId": "TASK-N2-021",
+        "title": "historical-only baseline",
+        "objective": "履歴特徴のみの baseline を common cohort で評価",
+        "taskType": "baseline-historical",
+        "executorType": "baseline-historical",
+        "safetyLevel": "L0",
+        "dependencies": [
+          "TASK-N2-011",
+          "TASK-N2-005"
+        ],
+        "reason": "executor 未実装。実装後に READY 化できる候補。",
+        "duplicateCheck": "catalog 内 taskId で一意",
+        "invalidationCondition": "対応 executor が実装され、catalog defaultStatus が READY になったら本候補は解消",
+        "proposedAt": "2026-08-04T15:00:08.056Z"
+      },
+      {
+        "candidateId": "CAND-30921804343-5",
+        "proposedTaskId": "TASK-N2-022",
+        "title": "common cohort baseline 比較",
+        "objective": "market / historical / legacy を同一 cohort で比較",
+        "taskType": "baseline-common-cohort",
+        "executorType": "baseline-common-cohort",
+        "safetyLevel": "L0",
+        "dependencies": [
+          "TASK-N2-020",
+          "TASK-N2-021"
+        ],
+        "reason": "executor 未実装。実装後に READY 化できる候補。",
+        "duplicateCheck": "catalog 内 taskId で一意",
+        "invalidationCondition": "対応 executor が実装され、catalog defaultStatus が READY になったら本候補は解消",
+        "proposedAt": "2026-08-04T15:00:08.056Z"
+      },
+      {
+        "candidateId": "CAND-30921804343-6",
+        "proposedTaskId": "TASK-N2-030",
+        "title": "evaluation metrics",
+        "objective": "logloss/Brier/calibration/coverage/ROI/drawdown を算出",
+        "taskType": "evaluation-metrics",
+        "executorType": "evaluation-metrics",
+        "safetyLevel": "L0",
+        "dependencies": [
+          "TASK-N2-022"
+        ],
+        "reason": "executor 未実装。実装後に READY 化できる候補。",
+        "duplicateCheck": "catalog 内 taskId で一意",
+        "invalidationCondition": "対応 executor が実装され、catalog defaultStatus が READY になったら本候補は解消",
+        "proposedAt": "2026-08-04T15:00:08.056Z"
+      },
+      {
+        "candidateId": "CAND-30921804343-7",
+        "proposedTaskId": "TASK-N2-040",
+        "title": "edge hypothesis scan",
+        "objective": "player/course/ST/exhibition/motor/weather 等の edge 仮説を走査",
+        "taskType": "edge-hypothesis-scan",
+        "executorType": "edge-hypothesis-scan",
+        "safetyLevel": "L0",
+        "dependencies": [
+          "TASK-N2-030"
+        ],
+        "reason": "executor 未実装。実装後に READY 化できる候補。",
+        "duplicateCheck": "catalog 内 taskId で一意",
+        "invalidationCondition": "対応 executor が実装され、catalog defaultStatus が READY になったら本候補は解消",
+        "proposedAt": "2026-08-04T15:00:08.056Z"
+      },
+      {
+        "candidateId": "CAND-30921804343-8",
+        "proposedTaskId": "TASK-N2-041",
+        "title": "edge historical test",
+        "objective": "edge 仮説を歴史データで検定（forward 昇格はしない）",
+        "taskType": "edge-historical-test",
+        "executorType": "edge-historical-test",
+        "safetyLevel": "L0",
+        "dependencies": [
+          "TASK-N2-040"
+        ],
+        "reason": "executor 未実装。実装後に READY 化できる候補。",
+        "duplicateCheck": "catalog 内 taskId で一意",
+        "invalidationCondition": "対応 executor が実装され、catalog defaultStatus が READY になったら本候補は解消",
+        "proposedAt": "2026-08-04T15:00:08.056Z"
+      },
+      {
+        "candidateId": "CAND-30921804343-9",
+        "proposedTaskId": "TASK-N2-042",
+        "title": "confounder / rejection audit",
+        "objective": "交絡と棄却根拠を監査し rejection registry を更新",
+        "taskType": "confounder-audit",
+        "executorType": "confounder-audit",
+        "safetyLevel": "L0",
+        "dependencies": [
+          "TASK-N2-041"
+        ],
+        "reason": "executor 未実装。実装後に READY 化できる候補。",
+        "duplicateCheck": "catalog 内 taskId で一意",
+        "invalidationCondition": "対応 executor が実装され、catalog defaultStatus が READY になったら本候補は解消",
+        "proposedAt": "2026-08-04T15:00:08.056Z"
+      }
+    ],
+    "autoDispatch": false,
+    "note": "planner は候補を提案するだけ。自動実行・自動 dispatch は行わない。READY task がある間は補充不要。"
+  },
+  "authoritySha": "72b1e13550264e1c325541de7763fb61fdd54a04",
+  "idempotencyKey": "37b87cd9ab5ed58a71079e552997e9d7bee71f00625253c66fe28965393cd165",
+  "startedAt": "2026-08-04T15:00:07.506Z",
+  "completedAt": "2026-08-04T15:00:08.064Z",
+  "elapsedMs": 558
+}

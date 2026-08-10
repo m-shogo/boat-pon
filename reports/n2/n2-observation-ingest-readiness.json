@@ -1,0 +1,95 @@
+{
+  "readinessVersion": "n2-observation-ingest-readiness-v1",
+  "cohort": {
+    "dateFrom": "2026-07-30",
+    "dateTo": "2026-08-05",
+    "dayCount": 7
+  },
+  "overallStatus": "BLOCKED_NOT_READY_FOR_WRITE",
+  "writeAuthorized": false,
+  "autoEnableShadowWrite": false,
+  "recommendedCanaryMaxRaces": 20,
+  "officialProgram": {
+    "status": "BLOCKED_NOT_READY",
+    "dataAvailable": true,
+    "currentObservationCount": 0,
+    "blockers": [
+      "SHADOW_WRITE_DISABLED",
+      "APPROVAL_REQUIRED:N2_OFFICIAL_PROGRAM_OBSERVATION_CANARY",
+      "OFFICIAL_PROGRAM_PRODUCTION_CALLER_NOT_CONNECTED"
+    ],
+    "sourceRows": 1013,
+    "eligibleRows": 1013,
+    "rawPayloadCoverage": 1
+  },
+  "trifectaMarket": {
+    "status": "BLOCKED_NOT_READY",
+    "dataAvailable": false,
+    "currentObservationCount": 0,
+    "blockers": [
+      "SHADOW_WRITE_DISABLED",
+      "APPROVAL_REQUIRED:N2_TRIFECTA_MARKET_OBSERVATION_CANARY",
+      "TRIFECTA_MARKET_SOURCE_EMPTY",
+      "TRIFECTA_MARKET_COMPLETE_SNAPSHOT_EMPTY",
+      "TRIFECTA_MARKET_RAW_LINEAGE_UNAVAILABLE",
+      "TRIFECTA_MARKET_WRITER_NOT_IMPLEMENTED"
+    ],
+    "sourceRows": 0,
+    "sourceRaceCount": 0,
+    "completeSnapshotCount": 0,
+    "rawLineageCapable": false
+  },
+  "rollout": {
+    "shadowWriteEnabled": false,
+    "operationalGcEnabled": false,
+    "killSwitchEngaged": false,
+    "approvalScopes": [
+      "F0-R_START_AND_SIDECAR_ROLLOUT",
+      "N1_PERMANENT_SETTLEMENT_SCHEMA_ROLLOUT",
+      "N2_SETTLEMENT_REPARSE_APPLY"
+    ]
+  },
+  "sidecar": {
+    "officialProgramObservationCount": 0,
+    "trifectaMarketObservationCount": 0,
+    "captureAttemptCount": 0,
+    "outboxMessageCount": 0,
+    "deliveryAttemptCount": 0
+  },
+  "nextActions": [
+    "Implement an approval-gated bounded official-program canary writer; do not enable global shadow writes.",
+    "Capture live trifecta raw source documents before creating market observations; do not relabel aggregate primary rows as raw official evidence.",
+    "Implement a trifecta-market raw capture and typed-observation writer with exact checkpoint and selection-space validation.",
+    "Keep shadow_write_enabled=false until a source-specific canary approval and rollback plan exist.",
+    "Rerun TASK-N2-011 only after both official_program and trifecta_market observations are non-zero."
+  ],
+  "sourceIdentity": {
+    "oddsSourceTable": "odds_timeseries_snapshots",
+    "readerVersion": "n2-observation-ingest-readiness-reader-v1"
+  },
+  "checkedSourceRecordCount": 1013,
+  "executorContractVersion": "n2-observation-ingest-readiness-executor-v1",
+  "readOnly": true,
+  "queryOnly": true,
+  "primaryDbWriteCount": 0,
+  "sidecarWriteCount": 0,
+  "productionApplyExecuted": false,
+  "pitEvidence": {
+    "status": "NOT_APPLICABLE",
+    "validatorId": "n2-observation-ingest-readiness-pit-applicability",
+    "validatorVersion": "n2-observation-ingest-readiness-executor-v1",
+    "checkedRecordCount": 1013,
+    "sameRaceViolationCount": 0,
+    "futureViolationCount": 0,
+    "ambiguousTimingCount": 0,
+    "evidencePath": null,
+    "evidenceDigest": null,
+    "notApplicableReason": "readiness inventory does not join labels or emit prediction features"
+  },
+  "runId": "31018081731",
+  "requestId": "REQ-20260805-z4m8q2v6kn",
+  "taskId": "TASK-N2-012",
+  "executorVersion": "n2-observation-ingest-readiness-executor-v1",
+  "generatedAt": "2026-08-05T15:00:38.617Z",
+  "outputDigest": "48fb6f5b589870c8a362364d14132f5db3d4a7e624788694b8f40df4c46f7105"
+}

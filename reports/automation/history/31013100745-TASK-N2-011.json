@@ -1,0 +1,79 @@
+{
+  "runId": "31013100745",
+  "requestId": "REQ-20260805-x6n2p8v4km",
+  "intentId": "INTENT-20260805-x6n2p8v4km",
+  "taskId": "TASK-N2-011",
+  "taskType": "pit-audit",
+  "safetyLevel": "L0",
+  "executorVersion": "n2-pit-audit-executor-v2",
+  "executed": true,
+  "result": "CONDITIONAL",
+  "blocks": [],
+  "outputs": [
+    "reports/n2/n2-pit-audit.json"
+  ],
+  "outputDigest": "2f6da81d776d931e2df7cf27856fe081c85c5f08af6092818d19f4257c15d746",
+  "summary": {
+    "auditVersion": "n2-pit-audit-v1",
+    "status": "CONDITIONAL",
+    "dataStatus": "PENDING_REAL_DATA",
+    "auditedObservationCount": 0,
+    "verifiedSafeCount": 0,
+    "excludedCount": 0,
+    "checkedFeatureCount": 0,
+    "checkedOddsCount": 0,
+    "sameRaceViolationCount": 0,
+    "futureViolationCount": 0,
+    "ambiguousTimingCount": 0,
+    "postRaceFeatureRead": false,
+    "allowedSourceTypes": [
+      "official_program",
+      "trifecta_market"
+    ],
+    "reasonClassCounts": {
+      "safe": 0,
+      "same_race_leakage": 0,
+      "future_leakage": 0,
+      "ambiguous_timing": 0,
+      "lineage_exclusion": 0,
+      "source_not_allowed": 0
+    },
+    "reasonCounts": {},
+    "inputDigest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "outputDigest": "e6ae41da32d4d1c6d843d7a6e59b9b31d558ba0c4cfca4fa19bfd5762dde4d4a",
+    "executorContractVersion": "n2-pit-audit-executor-v2",
+    "datasetVersion": "n2-corrected-2000_2026",
+    "datasetManifestOutputDigest": "701398c2e82a5c5468de41b8c6de5e5cad8ccae026c10ee83f1ab57acafe34c9",
+    "datasetManifestPitValidatorId": "settlement-inventory-pit-applicability",
+    "datasetManifestPitCheckedRecordCount": 8217755,
+    "boundedObservationLimit": 100000,
+    "returnedObservationCount": 0,
+    "truncated": false,
+    "readOnly": true,
+    "queryOnly": true,
+    "sourceTypesRead": [
+      "official_program",
+      "trifecta_market"
+    ],
+    "sidecarWriteCount": 0,
+    "primaryDbWriteCount": 0,
+    "productionApplyExecuted": false,
+    "pitEvidence": {
+      "status": "PASS",
+      "validatorId": "n2-pit-audit",
+      "validatorVersion": "n2-pit-audit-executor-v2",
+      "checkedRecordCount": 0,
+      "sameRaceViolationCount": 0,
+      "futureViolationCount": 0,
+      "ambiguousTimingCount": 0,
+      "evidencePath": "reports/n2/n2-pit-audit.json",
+      "evidenceDigest": "2f6da81d776d931e2df7cf27856fe081c85c5f08af6092818d19f4257c15d746",
+      "notApplicableReason": null
+    }
+  },
+  "authoritySha": "b8d7104483f3299a7b13a26e5d53c57f7bfe3334",
+  "idempotencyKey": "086b94083c1fca56daa0f9b23acaa02049cada9575fe947129bf1953762dae83",
+  "startedAt": "2026-08-05T14:02:00.877Z",
+  "completedAt": "2026-08-05T14:02:03.502Z",
+  "elapsedMs": 2626
+}

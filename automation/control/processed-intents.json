@@ -1,0 +1,99 @@
+{
+  "ledgerSchemaVersion": "processed-intents-v1",
+  "updatedAt": "2026-08-06T07:10:30.991Z",
+  "intentIds": [
+    "INTENT-20260804-9c5e3ad55c",
+    "INTENT-20260804-f4d379cd8a",
+    "INTENT-20260804-72b865c0e6",
+    "INTENT-20260804-a4n206x7p9",
+    "INTENT-20260804-b7k3m9q2x4",
+    "INTENT-20260805-r4n8v2k6qx",
+    "INTENT-20260805-q9v4m2k7px",
+    "INTENT-20260805-x6n2p8v4km",
+    "INTENT-20260805-z4m8q2v6kn",
+    "INTENT-20260806-k8v3m7q2rx",
+    "INTENT-20260806-r7m2v9k4qx",
+    "INTENT-20260806-z4m8v2q7rx",
+    "INTENT-20260806-n2f4p7x3qk"
+  ],
+  "entries": [
+    {
+      "intentId": "INTENT-20260804-9c5e3ad55c",
+      "requestId": "REQ-20260804-9c5e3ad55c",
+      "result": "PASS",
+      "recordedAt": "2026-08-04T12:56:29.371Z"
+    },
+    {
+      "intentId": "INTENT-20260804-f4d379cd8a",
+      "requestId": "REQ-20260804-f4d379cd8a",
+      "result": "PASS",
+      "recordedAt": "2026-08-04T12:59:20.935Z"
+    },
+    {
+      "intentId": "INTENT-20260804-72b865c0e6",
+      "requestId": "REQ-20260804-72b865c0e6",
+      "result": "PASS",
+      "recordedAt": "2026-08-04T13:07:47.966Z"
+    },
+    {
+      "intentId": "INTENT-20260804-a4n206x7p9",
+      "requestId": "REQ-20260804-a4n206x7p9",
+      "result": "PASS",
+      "recordedAt": "2026-08-04T14:27:30.236Z"
+    },
+    {
+      "intentId": "INTENT-20260804-b7k3m9q2x4",
+      "requestId": "REQ-20260804-b7k3m9q2x4",
+      "result": "PASS",
+      "recordedAt": "2026-08-04T15:00:08.064Z"
+    },
+    {
+      "intentId": "INTENT-20260805-r4n8v2k6qx",
+      "requestId": "REQ-20260805-r4n8v2k6qx",
+      "result": "PASS",
+      "recordedAt": "2026-08-05T12:37:12.490Z"
+    },
+    {
+      "intentId": "INTENT-20260805-q9v4m2k7px",
+      "requestId": "REQ-20260805-q9v4m2k7px",
+      "result": "BLOCKED",
+      "recordedAt": "2026-08-05T13:43:41.962Z"
+    },
+    {
+      "intentId": "INTENT-20260805-x6n2p8v4km",
+      "requestId": "REQ-20260805-x6n2p8v4km",
+      "result": "CONDITIONAL",
+      "recordedAt": "2026-08-05T14:02:03.503Z"
+    },
+    {
+      "intentId": "INTENT-20260805-z4m8q2v6kn",
+      "requestId": "REQ-20260805-z4m8q2v6kn",
+      "result": "PASS",
+      "recordedAt": "2026-08-05T15:00:38.623Z"
+    },
+    {
+      "intentId": "INTENT-20260806-k8v3m7q2rx",
+      "requestId": "REQ-20260806-k8v3m7q2rx",
+      "result": "PASS",
+      "recordedAt": "2026-08-05T16:07:41.938Z"
+    },
+    {
+      "intentId": "INTENT-20260806-r7m2v9k4qx",
+      "requestId": "REQ-20260806-r7m2v9k4qx",
+      "result": "PASS",
+      "recordedAt": "2026-08-06T00:49:01.359Z"
+    },
+    {
+      "intentId": "INTENT-20260806-z4m8v2q7rx",
+      "requestId": "REQ-20260806-z4m8v2q7rx",
+      "result": "PASS",
+      "recordedAt": "2026-08-06T01:38:22.693Z"
+    },
+    {
+      "intentId": "INTENT-20260806-n2f4p7x3qk",
+      "requestId": "REQ-20260806-n2f4p7x3qk",
+      "result": "PASS",
+      "recordedAt": "2026-08-06T07:10:30.991Z"
+    }
+  ]
+}
