@@ -36,3 +36,15 @@ test("runner validates the processed-intent ledger before consuming an attempt",
   assert.match(source, /PROCESSED_INTENT_LEDGER_MISSING/);
   assert.match(source, /PROCESSED_INTENT_LEDGER_INVALID_OR_REPLAY/);
 });
+
+test("runner rejects an intent id that does not match the canonical request id", () => {
+  const source = readFileSync("scripts/run-intent-task.ts", "utf8");
+  const lineageGuard = source.indexOf("if (intentId !== expectedIntentId)");
+  const lock = source.indexOf("if (!acquireLock(");
+  const claim = source.indexOf('status: "CLAIMED"');
+
+  assert.ok(lineageGuard >= 0, "intent/request lineage guard must exist");
+  assert.ok(lineageGuard < lock, "lineage mismatch must fail before lock/state work");
+  assert.ok(lineageGuard < claim, "lineage mismatch must fail before attempt consumption");
+  assert.match(source, /INTENT_REQUEST_LINEAGE_MISMATCH/);
+});
