@@ -42,7 +42,7 @@ test("integrity verification rejects encoded methodology path controls", async (
   const snapshot = structuredClone(fixture) as PublicDashboardSnapshot;
   snapshot.methodologyReferences = [{
     label: "encoded private path",
-    path: "/methodology/%2e%2e/automation/control/private",
+    path: "/methodology/%2e%2e%2fautomation%2fcontrol%2fprivate",
   }];
   snapshot.integrity.digest = await computePublicDashboardSnapshotDigest(snapshot);
 
