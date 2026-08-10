@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { dispatchableTasks, mergeCatalogAndState, reconcileCatalogState, type QueueState, type TaskCatalog } from "./taskCatalog";
+import { dispatchableTasks, mergeCatalogAndState, reconcileCatalogState, resolveTask, type QueueState, type TaskCatalog } from "./taskCatalog";
 
 const catalog: TaskCatalog = {
   catalogSchemaVersion: "research-task-catalog-v1",
@@ -65,4 +65,29 @@ test("any definition drift blocks unrelated catalog reconciliation", () => {
   assert.equal(result.plan.staleDefinition[0]?.taskId, "TASK-N2-001");
   assert.equal(result.plan.added[0]?.taskId, "TASK-N2-002");
   assert.equal(result.plan.catalogVersionChanged, true);
+});
+
+test("definition drift in one task blocks dispatch of an otherwise current task", () => {
+  const expandedCatalog: TaskCatalog = {
+    ...catalog,
+    tasks: [
+      ...catalog.tasks,
+      {
+        ...catalog.tasks[0],
+        taskId: "TASK-N2-002",
+        taskDefinitionVersion: 1,
+      },
+    ],
+  };
+  const mixedState = state(1);
+  mixedState.tasks["TASK-N2-002"] = {
+    status: "READY", taskDefinitionVersion: 1, authoritySha: null, attemptCount: 0, maxAttempts: 3,
+    evidenceLinks: [], resultDigest: null, lastFailure: null, checkpoint: null, updatedAt: "2026-08-10T00:00:00Z",
+  };
+  const merged = mergeCatalogAndState(expandedCatalog, mixedState);
+  assert.deepEqual(dispatchableTasks(merged), []);
+  const resolved = resolveTask(merged, "TASK-N2-002");
+  assert.equal(resolved.task?.taskId, "TASK-N2-002");
+  assert.equal(resolved.task?.staleDefinition, true);
+  assert.equal(resolved.reason, "global task definition drift blocks dispatch");
 });
