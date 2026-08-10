@@ -9,10 +9,11 @@ import {
   mkdirSync,
   openSync,
   readSync,
+  realpathSync,
   unlinkSync,
   writeSync,
 } from "node:fs";
-import { basename, dirname, resolve, sep } from "node:path";
+import { basename, dirname, relative, resolve, sep } from "node:path";
 import { TextDecoder } from "node:util";
 
 const RETAINED_ROOT = "reports/automation/retained-outputs";
@@ -65,6 +66,30 @@ function resolveInside(repoRoot: string, relativePath: string): string {
     throw new Error("RETAINED_OUTPUT_PATH_ESCAPES_ROOT");
   }
   return target;
+}
+
+function assertSourceParentCanonicalInsideRepo(repoRoot: string, sourceAbsolute: string, sourceRelativePath: string): void {
+  const lexicalRoot = resolve(repoRoot);
+  const lexicalParent = dirname(resolve(sourceAbsolute));
+  const relativeParent = relative(lexicalRoot, lexicalParent);
+  if (relativeParent === ".." || relativeParent.startsWith(`..${sep}`) || relativeParent.startsWith("/")) {
+    throw new Error(`RETAINED_OUTPUT_SOURCE_PATH_ESCAPES_ROOT:${sourceRelativePath}`);
+  }
+  let canonicalRoot: string;
+  let canonicalParent: string;
+  try {
+    canonicalRoot = realpathSync.native(lexicalRoot);
+    canonicalParent = realpathSync.native(lexicalParent);
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      throw new Error(`RETAINED_OUTPUT_SOURCE_MISSING:${sourceRelativePath}`);
+    }
+    throw error;
+  }
+  const expectedCanonicalParent = resolve(canonicalRoot, relativeParent);
+  if (canonicalParent !== expectedCanonicalParent) {
+    throw new Error(`RETAINED_OUTPUT_SOURCE_PATH_ALIAS:${sourceRelativePath}`);
+  }
 }
 
 function sourceClass(relativePath: string): "MUTABLE" | "IMMUTABLE" {
@@ -202,6 +227,7 @@ function prepareMutableOutput(input: {
   historyOutputDigest: string;
 }): PreparedRetainedOutput {
   const sourceAbsolute = resolveInside(input.repoRoot, input.sourceRelativePath);
+  assertSourceParentCanonicalInsideRepo(input.repoRoot, sourceAbsolute, input.sourceRelativePath);
   const content = readRetainedSourceBounded(sourceAbsolute, input.sourceRelativePath);
   validateRetainedJsonSource({
     sourceRelativePath: input.sourceRelativePath,
