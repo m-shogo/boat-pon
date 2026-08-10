@@ -179,6 +179,12 @@ function readRetainedSourceBounded(sourceAbsolute: string, sourceRelativePath: s
   }
 }
 
+function assertImmutableOutputReadable(repoRoot: string, sourceRelativePath: string): void {
+  const sourceAbsolute = resolveInside(repoRoot, sourceRelativePath);
+  assertSourceParentCanonicalInsideRepo(repoRoot, sourceAbsolute, sourceRelativePath);
+  readRetainedSourceBounded(sourceAbsolute, sourceRelativePath);
+}
+
 function existingRetainedTargetMatches(input: {
   retainedAbsolutePath: string;
   retainedRelativePath: string;
@@ -439,6 +445,7 @@ export function retainExecutorOutputs(input: {
   for (const outputPath of uniqueOutputPaths) {
     const classification = sourceClass(outputPath);
     if (classification === "IMMUTABLE") {
+      assertImmutableOutputReadable(input.repoRoot, outputPath);
       if (!historyOutputSet.has(outputPath)) {
         historyOutputSet.add(outputPath);
         historyOutputs.push(outputPath);
