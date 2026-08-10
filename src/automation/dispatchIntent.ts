@@ -151,7 +151,7 @@ function isProcessedIntentLedgerValid(ledger: ProcessedIntentLedger): boolean {
   for (const value of raw.entries) {
     if (!isRecord(value)
       || typeof value.intentId !== "string" || !INTENT_ID_RE.test(value.intentId)
-      || typeof value.requestId !== "string" || value.requestId.trim() === ""
+      || typeof value.requestId !== "string" || value.requestId !== `REQ-${value.intentId.replace(/^INTENT-/, "")}`
       || typeof value.result !== "string" || value.result.trim() === ""
       || typeof value.recordedAt !== "string" || Number.isNaN(Date.parse(value.recordedAt))) {
       return false;
