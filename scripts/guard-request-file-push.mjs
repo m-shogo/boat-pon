@@ -113,11 +113,13 @@ for (const dir of ["automation/requests/completed", "automation/requests/failed"
   }
 }
 
-// task 存在と状態の確認（RUNNING/CLAIMED の重複依頼を防ぐ）。
+// task 存在と状態の確認（実行 action の RUNNING/CLAIMED 重複依頼だけを防ぐ）。
 if (request.taskId !== "NEXT") {
   const task = queue.tasks.find((t) => t.taskId === request.taskId);
   if (!task) fail(`task not found in queue: ${request.taskId}`);
-  if (["CLAIMED", "RUNNING"].includes(task.status)) fail(`task already in progress: ${task.status}`);
+  if (!["status-only", "dry-run"].includes(request.requestedAction) && ["CLAIMED", "RUNNING"].includes(task.status)) {
+    fail(`task already in progress: ${task.status}`);
+  }
 }
 
 console.log(`ok=true`);
