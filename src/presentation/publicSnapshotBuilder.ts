@@ -27,6 +27,7 @@ type QueueTask = {
 };
 
 const PUBLIC_EVIDENCE_PREFIXES = ["reports/", "research/registries/"] as const;
+const RFC3339_TIMESTAMP_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -107,14 +108,19 @@ function runnerStatus(value: unknown): PublicResearchStatus {
   return "NOT_AVAILABLE";
 }
 
+function isRfc3339DateTime(value: string): boolean {
+  return RFC3339_TIMESTAMP_RE.test(value) && Number.isFinite(Date.parse(value));
+}
+
 function sourceUpdatedAt(value: unknown): string | null {
   if (!isRecord(value)) return null;
-  return stringValue(value.updatedAt) ?? stringValue(value.evaluatedAt);
+  const candidate = stringValue(value.updatedAt) ?? stringValue(value.evaluatedAt);
+  return candidate && isRfc3339DateTime(candidate) ? candidate : null;
 }
 
 function latestIso(values: Array<string | null>, fallback: string): string {
   const valid = values
-    .filter((value): value is string => value !== null && Number.isFinite(Date.parse(value)))
+    .filter((value): value is string => value !== null && isRfc3339DateTime(value))
     .sort((a, b) => Date.parse(b) - Date.parse(a));
   return valid[0] ?? fallback;
 }
@@ -130,10 +136,7 @@ export function buildPublicDashboardSnapshot(
   input: PublicSnapshotBuilderInput,
 ): PublicDashboardSnapshot {
   const generatedAtMs = Date.parse(input.generatedAt);
-  if (
-    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(input.generatedAt)
-    || !Number.isFinite(generatedAtMs)
-  ) {
+  if (!isRfc3339DateTime(input.generatedAt) || !Number.isFinite(generatedAtMs)) {
     throw new Error("generatedAt must be an RFC3339 date-time");
   }
   if (!input.modelVersion.trim() || input.modelVersion.length > 120) {
