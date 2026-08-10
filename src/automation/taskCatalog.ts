@@ -118,6 +118,7 @@ export function validateQueueState(input: unknown): { valid: boolean; errors: st
   if (typeof s.catalogVersion !== "string") errors.push("invalid catalogVersion");
   if (typeof s.tasks !== "object" || s.tasks === null || Array.isArray(s.tasks)) { errors.push("tasks must be an object map"); return { valid: false, errors, state: null }; }
   for (const [id, v0] of Object.entries(s.tasks as Record<string, unknown>)) {
+    if (!TASKID_RE.test(id)) errors.push(`state task id invalid: ${id}`);
     if (typeof v0 !== "object" || v0 === null || Array.isArray(v0)) {
       errors.push(`state ${id} must be an object`);
       continue;

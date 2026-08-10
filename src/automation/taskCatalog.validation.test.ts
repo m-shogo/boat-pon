@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { QUEUE_STATE_SCHEMA_VERSION, validateQueueState } from "./taskCatalog";
 
-function queue(task: unknown) {
+function queue(task: unknown, taskId = "TASK-N2-001") {
   return {
     stateSchemaVersion: QUEUE_STATE_SCHEMA_VERSION,
     stateVersion: 1,
     catalogVersion: "v1",
     updatedAt: "2026-08-10T00:00:00Z",
-    tasks: { "TASK-N2-001": task },
+    tasks: { [taskId]: task },
   };
 }
 
@@ -24,6 +24,12 @@ function validTask(over: Record<string, unknown> = {}) {
 
 test("queue state accepts valid task execution bounds", () => {
   assert.equal(validateQueueState(queue(validTask())).valid, true);
+});
+
+test("queue state rejects malformed task ids", () => {
+  assert.equal(validateQueueState(queue(validTask(), "N2-001")).valid, false);
+  assert.equal(validateQueueState(queue(validTask(), "../TASK-N2-001")).valid, false);
+  assert.equal(validateQueueState(queue(validTask(), "TASK-")).valid, false);
 });
 
 test("queue state rejects non-object task entries", () => {
