@@ -37,7 +37,7 @@ export const INTENT_ID_RE = /^INTENT-[0-9A-Za-z._-]{4,64}$/;
 const REQUEST_ID_RE = /^REQ-[0-9A-Za-z._-]{4,64}$/;
 const TASKID_RE = /^(TASK-[0-9A-Za-z._-]{1,64}|NEXT)$/;
 const AUTOMATION_HISTORY_PATH_RE = /^reports\/automation\/history\/[0-9A-Za-z._-]+-TASK-[0-9A-Za-z._-]+\.json$/;
-const PROCESSED_RESULTS = new Set(["PASS", "DRY_RUN_OK", "CONDITIONAL", "BLOCKED", "FAILED_RETRYABLE", "FAILED_FINAL"]);
+const PROCESSED_RESULTS = new Set(["PASS", "DRY_RUN_OK", "CONDITIONAL", "BLOCKED", "FAILED", "FAILED_RETRYABLE", "FAILED_FINAL"]);
 
 // strict intent decode。unknown field / hash 系 field はすべて拒否（ChatGPT に hash を作らせない）。
 export function validateIntent(input: unknown): { valid: boolean; errors: string[]; intent: DispatchIntent | null } {
