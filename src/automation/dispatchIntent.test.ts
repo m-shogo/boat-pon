@@ -110,6 +110,22 @@ test("ledger replay + idempotent-success lookups", () => {
   assert.equal(findIdempotentSuccess(led, failureKey), null);
 });
 
+test("processed intent entries must stay aligned with intentIds", () => {
+  const valid = {
+    intentIds: ["INTENT-20260804-a", "INTENT-20260804-b"],
+    entries: [
+      { intentId: "INTENT-20260804-a", requestId: "REQ-a", result: "PASS", recordedAt: "2026-08-04T05:00:00.000Z" },
+      { intentId: "INTENT-20260804-b", requestId: "REQ-b", result: "BLOCKED", recordedAt: "2026-08-04T05:01:00.000Z" },
+    ],
+  };
+  assert.equal(isIntentProcessed(valid, "INTENT-20260804-a"), true);
+  assert.equal(isIntentProcessed(valid, "INTENT-20260804-c"), false);
+  assert.equal(isIntentProcessed({ ...valid, entries: valid.entries.slice(0, 1) }, "INTENT-20260804-c"), true);
+  assert.equal(isIntentProcessed({ ...valid, entries: [valid.entries[0], valid.entries[0]] }, "INTENT-20260804-c"), true);
+  assert.equal(isIntentProcessed({ ...valid, entries: [{ ...valid.entries[0], intentId: "INTENT-20260804-c" }, valid.entries[1]] }, "INTENT-20260804-c"), true);
+  assert.equal(isIntentProcessed({ ...valid, entries: [{ ...valid.entries[0], recordedAt: "not-a-time" }, valid.entries[1]] }, "INTENT-20260804-c"), true);
+});
+
 test("malformed replay ledgers fail closed instead of reopening work", () => {
   assert.equal(isIntentProcessed({ intentIds: null } as any, "INTENT-a"), true);
   assert.equal(isIntentProcessed({ intentIds: ["INTENT-a", "INTENT-a"] } as any, "INTENT-b"), true);
