@@ -1,7 +1,10 @@
 import { createHash } from "node:crypto";
 import { access, cp, lstat, mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import { basename, extname, join, relative, resolve, sep } from "node:path";
-import { verifyPublicDashboardSnapshotIntegrity } from "./publicSnapshotTransport";
+import {
+  DEFAULT_PUBLIC_SNAPSHOT_FUTURE_SKEW_MS,
+  verifyPublicDashboardSnapshotIntegrity,
+} from "./publicSnapshotTransport";
 
 export const PUBLIC_DEPLOY_MANIFEST_VERSION = "public-dashboard-deploy-manifest-v1";
 
@@ -193,6 +196,7 @@ async function verifyOptionalSnapshots(root: string, files: Set<string>, errors:
   const present = [...OPTIONAL_PUBLIC_DATA_FILES].filter((path) => files.has(path));
   if (present.length === 1) errors.push("latest.json and last-known-good.json must be published together");
 
+  const nowMs = Date.now();
   const snapshots: Array<{ path: string; dataAsOf: number; generatedAt: number }> = [];
   for (const path of present) {
     try {
@@ -210,6 +214,18 @@ async function verifyOptionalSnapshots(root: string, files: Set<string>, errors:
       }
       if (!Number.isFinite(generatedAt)) {
         errors.push(`${path} has an invalid generatedAt`);
+        continue;
+      }
+      if (generatedAt - nowMs > DEFAULT_PUBLIC_SNAPSHOT_FUTURE_SKEW_MS) {
+        errors.push(`${path} generatedAt is in the future`);
+        continue;
+      }
+      if (dataAsOf - nowMs > DEFAULT_PUBLIC_SNAPSHOT_FUTURE_SKEW_MS) {
+        errors.push(`${path} dataAsOf is in the future`);
+        continue;
+      }
+      if (dataAsOf > generatedAt + DEFAULT_PUBLIC_SNAPSHOT_FUTURE_SKEW_MS) {
+        errors.push(`${path} dataAsOf is after generatedAt`);
         continue;
       }
       snapshots.push({ path, dataAsOf, generatedAt });
