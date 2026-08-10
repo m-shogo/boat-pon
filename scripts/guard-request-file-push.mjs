@@ -54,11 +54,11 @@ const ALLOWED = new Set([...REQUIRED, "approvalGrantId", "requestReference", "dr
 for (const k of REQUIRED) if (!(k in request)) fail(`missing field: ${k}`);
 for (const k of Object.keys(request)) if (!ALLOWED.has(k)) fail(`unknown field: ${k}`);
 if (request.requestSchemaVersion !== "research-task-request-v1") fail("unsupported requestSchemaVersion");
-
-// status-only は runner に専用の非実行分岐が無いため、外部 request では fail-closed。
-// 明示的な status-only executor-free path が実装されるまで契約へ戻さない。
-if (!["run-task", "run-next", "dry-run"].includes(request.requestedAction)) {
+if (!["run-task", "run-next", "status-only", "dry-run"].includes(request.requestedAction)) {
   fail(`unsupported requestedAction: ${request.requestedAction}`);
+}
+if (request.requestedAction === "run-next" && request.taskId !== "NEXT") {
+  fail("run-next requires taskId=NEXT");
 }
 
 // filename と requestId の一致。
