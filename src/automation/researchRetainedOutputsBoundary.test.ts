@@ -27,6 +27,20 @@ test("retained output materialization is validate-first, rollback-bounded and de
   assert.match(retained, /RETAINED_OUTPUT_TARGET_COLLISION/u);
 });
 
+test("retained publish readback is descriptor-bound after atomic publication", () => {
+  assert.match(retained, /function verifyPublishedRetainedTarget/u);
+  const helperStart = retained.indexOf("function verifyPublishedRetainedTarget");
+  const materializeStart = retained.indexOf("function materializePreparedOutputs", helperStart);
+  const helper = retained.slice(helperStart, materializeStart);
+  assert.match(helper, /openSync\(item\.retainedAbsolutePath, constants\.O_RDONLY \| constants\.O_NOFOLLOW \| constants\.O_NONBLOCK\)/u);
+  assert.match(helper, /fstatSync\(fd\)/u);
+  assert.match(helper, /stat\.nlink !== 2/u);
+  assert.match(helper, /readSync\(fd/u);
+  assert.match(helper, /fchmodSync\(fd, 0o644\)/u);
+  assert.doesNotMatch(retained, /chmodSync\(item\.retainedAbsolutePath/u);
+  assert.doesNotMatch(retained, /readFileSync\(item\.retainedAbsolutePath/u);
+});
+
 test("retained output count and aggregate bytes are fail-closed per run", () => {
   assert.match(retained, /MAX_EXECUTOR_OUTPUT_PATHS\s*=\s*64/u);
   assert.match(retained, /MAX_RETAINED_TOTAL_BYTES\s*=\s*8_388_608/u);
