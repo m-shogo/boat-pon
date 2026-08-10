@@ -25,6 +25,10 @@
     {
       "if": { "properties": { "requestedAction": { "const": "plan-next" } } },
       "then": { "properties": { "taskId": { "const": "NEXT" } } }
+    },
+    {
+      "if": { "properties": { "safetyLevel": { "const": "L3" } } },
+      "then": { "required": ["approvalGrantId"] }
     }
   ]
 }
