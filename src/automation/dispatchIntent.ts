@@ -172,8 +172,12 @@ export function isIntentProcessed(ledger: ProcessedIntentLedger | null, intentId
 }
 export function isRequestReplay(ledger: ProcessedRequestLedger | null, requestId: string): boolean {
   if (!ledger) return false;
-  // Fail closed on structural corruption so a broken ledger cannot reopen a request.
-  if (!isValidUniqueIdArray((ledger as unknown as Record<string, unknown>).requestIds, REQUEST_ID_RE)) return true;
+  // Replay checks must fail closed on corruption in either requestIds or the idempotency map.
+  try {
+    assertIdempotencyLedgerValid(ledger);
+  } catch {
+    return true;
+  }
   return ledger.requestIds.includes(requestId);
 }
 
