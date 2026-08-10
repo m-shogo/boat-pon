@@ -205,6 +205,26 @@ function assertIdempotencyLedgerValid(ledger: ProcessedRequestLedger): void {
   }
 }
 
+// A completed intent is only durable when its canonical request is also present in the
+// processed-request ledger. The reverse is intentionally not required because legacy
+// request-only history predates the intent ledger.
+export function assertReplayLedgersConsistent(
+  intents: ProcessedIntentLedger | null,
+  requests: ProcessedRequestLedger | null,
+): void {
+  if (!intents) throw new Error("missing processed intent ledger");
+  if (!isProcessedIntentLedgerValid(intents)) throw new Error("malformed processed intent ledger");
+  if (!requests) throw new Error("missing processed request ledger");
+  assertIdempotencyLedgerValid(requests);
+
+  const requestIds = new Set(requests.requestIds);
+  for (const entry of intents.entries as Record<string, unknown>[]) {
+    if (!requestIds.has(entry.requestId as string)) {
+      throw new Error("cross-ledger mismatch: processed intent requestId not recorded");
+    }
+  }
+}
+
 // 同じ idempotency key の PASS/CONDITIONAL/DRY_RUN_OK 結果があれば再実行しない。
 export function findIdempotentSuccess(ledger: ProcessedRequestLedger | null, key: string): { requestId: string; result: string; evidencePath?: string } | null {
   if (!ledger) throw new Error("missing processed request ledger");
