@@ -130,11 +130,23 @@ export type ProcessedRequestLedger = {
   idempotencyKeys: Record<string, { requestId: string; result: string; evidencePath?: string; recordedAt: string }>;
 };
 
+function isValidUniqueStringIdArray(value: unknown): value is string[] {
+  return Array.isArray(value)
+    && value.every((id) => typeof id === "string" && id.length > 0)
+    && new Set(value).size === value.length;
+}
+
 export function isIntentProcessed(ledger: ProcessedIntentLedger | null, intentId: string): boolean {
-  return !!ledger && Array.isArray(ledger.intentIds) && ledger.intentIds.includes(intentId);
+  if (!ledger) return false;
+  // A present-but-malformed replay ledger must never be interpreted as "not processed".
+  if (!isValidUniqueStringIdArray((ledger as unknown as Record<string, unknown>).intentIds)) return true;
+  return ledger.intentIds.includes(intentId);
 }
 export function isRequestReplay(ledger: ProcessedRequestLedger | null, requestId: string): boolean {
-  return !!ledger && Array.isArray(ledger.requestIds) && ledger.requestIds.includes(requestId);
+  if (!ledger) return false;
+  // Fail closed on structural corruption so a broken ledger cannot reopen a request.
+  if (!isValidUniqueStringIdArray((ledger as unknown as Record<string, unknown>).requestIds)) return true;
+  return ledger.requestIds.includes(requestId);
 }
 // 同じ idempotency key の PASS/CONDITIONAL/DRY_RUN_OK 結果があれば再実行しない。
 export function findIdempotentSuccess(ledger: ProcessedRequestLedger | null, key: string): { requestId: string; result: string; evidencePath?: string } | null {
