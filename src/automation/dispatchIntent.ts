@@ -176,7 +176,7 @@ function assertIdempotencyLedgerValid(ledger: ProcessedRequestLedger): void {
 
 // 同じ idempotency key の PASS/CONDITIONAL/DRY_RUN_OK 結果があれば再実行しない。
 export function findIdempotentSuccess(ledger: ProcessedRequestLedger | null, key: string): { requestId: string; result: string; evidencePath?: string } | null {
-  if (!ledger) return null;
+  if (!ledger) throw new Error("missing processed request ledger");
   // run-intent-task calls this before executor invocation; throwing here blocks execution on ledger corruption.
   assertIdempotencyLedgerValid(ledger);
   const hit = ledger.idempotencyKeys[key];

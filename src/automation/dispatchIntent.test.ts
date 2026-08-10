@@ -121,6 +121,7 @@ test("malformed replay ledgers fail closed instead of reopening work", () => {
 
 test("malformed idempotency ledgers block lookup before execution", () => {
   const key = "a".repeat(64);
+  assert.throws(() => findIdempotentSuccess(null, key), /missing processed request ledger/);
   assert.throws(() => findIdempotentSuccess({ requestIds: [], idempotencyKeys: null } as any, key), /malformed processed request ledger/);
   assert.throws(() => findIdempotentSuccess({
     requestIds: [],
