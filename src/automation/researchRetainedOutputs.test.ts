@@ -115,6 +115,25 @@ test("mutable retained sources reject symlinked parent directories", () => {
   });
 });
 
+test("retained targets reject symlinked parent directories before materialization", () => {
+  withRoot((root) => {
+    const outside = mkdtempSync(join(tmpdir(), "retained-target-outside-"));
+    try {
+      const source = "reports/n2/target-parent.json";
+      put(root, source, JSON.stringify({ value: "inside" }) + "\n");
+      symlinkSync(outside, join(root, "reports/automation"), "dir");
+
+      assert.throws(
+        () => retain(root, [source]),
+        /RETAINED_OUTPUT_TARGET_PATH_ALIAS/u,
+      );
+      assert.equal(existsSync(join(outside, "retained-outputs")), false);
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+});
+
 test("existing retained targets reject symlink and hardlink aliases", () => {
   withRoot((root) => {
     const source = "reports/n2/existing.json";
