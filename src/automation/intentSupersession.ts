@@ -79,7 +79,7 @@ export function validateIntentSupersession(
   if (typeof input.createdAt !== "string" || Number.isNaN(Date.parse(input.createdAt))) {
     errors.push("invalid createdAt");
   }
-  if (typeof input.requestedBy !== "string" || input.requestedBy.trim() === "") {
+  if (typeof input.requestedBy !== "string" || input.requestedBy.trim() === "" || input.requestedBy.length > 128) {
     errors.push("invalid requestedBy");
   }
 
