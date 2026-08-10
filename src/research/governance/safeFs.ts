@@ -8,7 +8,7 @@ import {
   readSync,
   readdirSync,
 } from "node:fs";
-import { join } from "node:path";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { TextDecoder } from "node:util";
 
 const STRICT_UTF8_DECODER = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
@@ -43,6 +43,24 @@ export function listJsonFilesFailClosed(root: string): string[] {
   return files;
 }
 
+function assertGovernanceReadParentsSafe(path: string): void {
+  const cwd = resolve(process.cwd());
+  const absolutePath = resolve(path);
+  const relativePath = relative(cwd, absolutePath);
+  if (!relativePath || relativePath === ".." || relativePath.startsWith(`..${sep}`) || isAbsolute(relativePath)) {
+    return;
+  }
+
+  const parentParts = relativePath.split(sep).slice(0, -1);
+  let current = cwd;
+  for (const part of parentParts) {
+    current = join(current, part);
+    const stat = lstatSync(current);
+    if (stat.isSymbolicLink()) throw new Error(`governance scan parent symlink forbidden: ${current}`);
+    if (!stat.isDirectory()) throw new Error(`governance scan parent must be directory: ${current}`);
+  }
+}
+
 function readDescriptorBounded(fd: number, path: string, maxBytes: number): Buffer {
   const chunks: Buffer[] = [];
   let totalBytes = 0;
@@ -68,6 +86,7 @@ function readGovernanceFileDescriptor(path: string, maxBytes?: number): { text: 
   if (maxBytes !== undefined && (!Number.isSafeInteger(maxBytes) || maxBytes < 0)) {
     throw new Error(`governance scan byte limit invalid: ${path}`);
   }
+  assertGovernanceReadParentsSafe(path);
   let fd: number | null = null;
   try {
     fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
