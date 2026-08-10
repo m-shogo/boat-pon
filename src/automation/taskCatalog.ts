@@ -97,8 +97,8 @@ export function validateCatalog(input: unknown): { valid: boolean; errors: strin
     if (!SAFETY.has(t.safetyLevel as string)) errors.push(`${at}.safetyLevel invalid`);
     if (!Array.isArray(t.dependencies) || (t.dependencies as unknown[]).some((d) => typeof d !== "string")) errors.push(`${at}.dependencies invalid`);
     if (!Number.isInteger(t.maxDurationSeconds) || (t.maxDurationSeconds as number) < 60 || (t.maxDurationSeconds as number) > 21600) errors.push(`${at}.maxDurationSeconds invalid`);
-    if (!Array.isArray(t.expectedInputs)) errors.push(`${at}.expectedInputs invalid`);
-    if (!Array.isArray(t.expectedOutputs)) errors.push(`${at}.expectedOutputs invalid`);
+    if (!Array.isArray(t.expectedInputs) || (t.expectedInputs as unknown[]).some((value) => typeof value !== "string")) errors.push(`${at}.expectedInputs invalid`);
+    if (!Array.isArray(t.expectedOutputs) || (t.expectedOutputs as unknown[]).some((value) => typeof value !== "string")) errors.push(`${at}.expectedOutputs invalid`);
     if (!Number.isInteger(t.estimatedDurationSeconds) || (t.estimatedDurationSeconds as number) < 0) errors.push(`${at}.estimatedDurationSeconds invalid`);
     if (!DEFAULT_STATUSES.includes(t.defaultStatus as DefaultStatus)) errors.push(`${at}.defaultStatus invalid`);
     if ("recurring" in t && typeof t.recurring !== "boolean") errors.push(`${at}.recurring must be boolean`);
