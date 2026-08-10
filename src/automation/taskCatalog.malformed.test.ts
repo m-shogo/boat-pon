@@ -60,3 +60,13 @@ test("catalog rejects non-string expected input and output entries", () => {
     assert.ok(result.errors.some((error) => error.includes(`tasks[0].${field} invalid`)));
   }
 });
+
+test("catalog rejects unknown top-level and task definition fields", () => {
+  const withUnknownCatalogField = validateCatalog({ ...catalog([validTask()]), hiddenControl: true });
+  assert.equal(withUnknownCatalogField.valid, false);
+  assert.ok(withUnknownCatalogField.errors.some((error) => error.includes("unknown catalog field: hiddenControl")));
+
+  const withUnknownTaskField = validateCatalog(catalog([validTask({ hiddenControl: true })]));
+  assert.equal(withUnknownTaskField.valid, false);
+  assert.ok(withUnknownTaskField.errors.some((error) => error.includes("tasks[0] unknown field: hiddenControl")));
+});
