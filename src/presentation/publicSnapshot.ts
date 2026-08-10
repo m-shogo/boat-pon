@@ -125,7 +125,7 @@ const ABSOLUTE_PATH_PATTERNS = [
 const PRIVATE_RELATIVE_PATH_PATTERNS = [
   /(?:^|[\s"'])automation\/control\//,
   /(?:^|[\s"'])automation\/requests\//,
-  /(?:^|[\s"'])(?:\.\.\/)+/,
+  /(?:^|\/)\.\.(?:\/|$)/,
   /(?:^|[\s"'])data\/(?:private|raw)\//,
 ];
 
