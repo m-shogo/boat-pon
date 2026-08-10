@@ -36,16 +36,20 @@ test("canonical replay ledger field sets remain valid", () => {
   assert.equal(findIdempotentSuccess(requestLedger, key)?.requestId, "REQ-20260806-safe1");
 });
 
-test("unknown processed-intent fields fail closed", () => {
+test("unknown processed-intent fields and metadata drift fail closed", () => {
   assert.equal(isIntentProcessed({ ...intentLedger, hiddenAuthority: true } as any, "INTENT-20260806-new1"), true);
+  assert.equal(isIntentProcessed({ ...intentLedger, ledgerSchemaVersion: "processed-intents-v2" } as any, "INTENT-20260806-new1"), true);
+  assert.equal(isIntentProcessed({ ...intentLedger, updatedAt: "not-a-time" } as any, "INTENT-20260806-new1"), true);
   assert.equal(isIntentProcessed({
     ...intentLedger,
     entries: [{ ...intentLedger.entries[0], hiddenAuthority: true }],
   } as any, "INTENT-20260806-new1"), true);
 });
 
-test("unknown processed-request fields fail closed", () => {
+test("unknown processed-request fields and metadata drift fail closed", () => {
   assert.equal(isRequestReplay({ ...requestLedger, hiddenAuthority: true } as any, "REQ-20260806-new1"), true);
+  assert.equal(isRequestReplay({ ...requestLedger, ledgerSchemaVersion: "processed-requests-v2" } as any, "REQ-20260806-new1"), true);
+  assert.equal(isRequestReplay({ ...requestLedger, updatedAt: "not-a-time" } as any, "REQ-20260806-new1"), true);
   assert.throws(() => findIdempotentSuccess({
     ...requestLedger,
     idempotencyKeys: { [key]: { ...requestLedger.idempotencyKeys[key], hiddenAuthority: true } },
