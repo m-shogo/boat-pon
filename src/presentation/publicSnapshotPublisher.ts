@@ -40,8 +40,12 @@ export async function validatePublicSnapshotForPublication(options: {
   if (options.existingLastKnownGood !== undefined) {
     const existing = await verifyPublicDashboardSnapshotIntegrity(options.existingLastKnownGood);
     if (existing.ok && existing.snapshot) {
+      const existingGeneratedAt = Date.parse(existing.snapshot.generatedAt);
       const existingDataAsOf = Date.parse(existing.snapshot.dataAsOf);
       if (candidateDataAsOf < existingDataAsOf) return blocked("CANDIDATE_ROLLBACK_DATA_AS_OF");
+      if (candidateDataAsOf === existingDataAsOf && candidateGeneratedAt < existingGeneratedAt) {
+        return blocked("CANDIDATE_ROLLBACK_GENERATED_AT");
+      }
       if (
         candidateDataAsOf === existingDataAsOf
         && candidate.snapshot.integrity.digest === existing.snapshot.integrity.digest
