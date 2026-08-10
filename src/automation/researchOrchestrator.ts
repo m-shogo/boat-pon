@@ -82,7 +82,7 @@ export function validateRequest(input: unknown): RequestValidation {
   if (!SAFETY_LEVELS.includes(raw.safetyLevel as SafetyLevel)) errors.push("invalid safetyLevel");
   if (typeof raw.authoritySha !== "string" || !/^[0-9a-f]{7,40}$/.test(raw.authoritySha)) errors.push("invalid authoritySha");
   if (typeof raw.queueDigest !== "string" || !/^[0-9a-f]{64}$/.test(raw.queueDigest)) errors.push("invalid queueDigest");
-  if (typeof raw.createdAt !== "string" || Number.isNaN(Date.parse(raw.createdAt))) errors.push("invalid createdAt");
+  if (typeof raw.createdAt !== "string" || raw.createdAt.length < 20 || Number.isNaN(Date.parse(raw.createdAt))) errors.push("invalid createdAt");
   if (typeof raw.requestedBy !== "string" || raw.requestedBy.trim() === "") errors.push("invalid requestedBy");
   if (!Number.isInteger(raw.maxDurationSeconds) || (raw.maxDurationSeconds as number) < 60 || (raw.maxDurationSeconds as number) > 21600) errors.push("invalid maxDurationSeconds");
   if (typeof raw.expectedOutput !== "string" || raw.expectedOutput.trim() === "") errors.push("invalid expectedOutput");
