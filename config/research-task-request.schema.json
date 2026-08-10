@@ -27,5 +27,17 @@
     "requestReference": { "type": "string", "minLength": 1 },
     "dryRun": { "type": "boolean" },
     "requestDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
-  }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "safetyLevel": { "const": "L3" } } },
+      "then": {
+        "required": ["approvalGrantId"],
+        "properties": { "approvalRequirement": { "const": "existing-grant-required" } }
+      },
+      "else": {
+        "properties": { "approvalRequirement": { "const": "none" } }
+      }
+    }
+  ]
 }
