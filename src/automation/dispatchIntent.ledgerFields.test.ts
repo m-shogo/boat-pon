@@ -55,3 +55,20 @@ test("unknown processed-request fields and metadata drift fail closed", () => {
     idempotencyKeys: { [key]: { ...requestLedger.idempotencyKeys[key], hiddenAuthority: true } },
   } as any, key), /malformed processed request ledger/);
 });
+
+test("duplicate request provenance across idempotency keys fails closed", () => {
+  const duplicateKey = "b".repeat(64);
+  const duplicateProvenance = {
+    ...requestLedger,
+    idempotencyKeys: {
+      ...requestLedger.idempotencyKeys,
+      [duplicateKey]: {
+        ...requestLedger.idempotencyKeys[key],
+        result: "BLOCKED",
+      },
+    },
+  };
+  assert.equal(isRequestReplay(duplicateProvenance as any, "REQ-20260806-new1"), true);
+  assert.throws(() => findIdempotentSuccess(duplicateProvenance as any, duplicateKey), /duplicate requestId provenance/);
+  assert.throws(() => assertReplayLedgersConsistent(intentLedger, duplicateProvenance as any), /duplicate requestId provenance/);
+});
