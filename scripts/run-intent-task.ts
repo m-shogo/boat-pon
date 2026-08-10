@@ -439,8 +439,7 @@ try {
 
 // ---- helpers ----
 function pickNext(merged: ReturnType<typeof mergeCatalogAndState>): string {
-  const byId = new Map(merged.map((t) => [t.taskId, t]));
-  const next = merged.find((t) => t.status === "READY" && !t.staleDefinition && (t.dependencies ?? []).every((d) => byId.get(d)?.status === "PASS"));
+  const next = resolveTask(merged, "NEXT").task;
   return next ? `${next.taskId}: ${next.title}（自動起動しない。次回 dispatch で 1 回だけ依頼する）` : "no dispatchable READY task（TASK-PLANNER-NEXT で補充可）";
 }
 
