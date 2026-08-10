@@ -217,6 +217,7 @@ function assertIdempotencyLedgerValid(ledger: ProcessedRequestLedger): void {
   if (!isRecord(raw.idempotencyKeys)) {
     throw new Error("malformed processed request ledger: idempotencyKeys");
   }
+  const seenIdempotencyRequestIds = new Set<string>();
   for (const [key, value] of Object.entries(raw.idempotencyKeys)) {
     if (!/^[0-9a-f]{64}$/.test(key) || !isRecord(value) || !hasOnlyKeys(value, IDEMPOTENCY_ENTRY_KEYS)) {
       throw new Error("malformed processed request ledger: idempotency entry");
@@ -227,6 +228,10 @@ function assertIdempotencyLedgerValid(ledger: ProcessedRequestLedger): void {
       || ("evidencePath" in value && (typeof value.evidencePath !== "string" || !AUTOMATION_HISTORY_PATH_RE.test(value.evidencePath)))) {
       throw new Error("malformed processed request ledger: idempotency entry");
     }
+    if (seenIdempotencyRequestIds.has(value.requestId)) {
+      throw new Error("malformed processed request ledger: duplicate requestId provenance");
+    }
+    seenIdempotencyRequestIds.add(value.requestId);
     if (!ledger.requestIds.includes(value.requestId)) {
       throw new Error("malformed processed request ledger: idempotency requestId not recorded");
     }
