@@ -25,6 +25,16 @@ test("runner validates both durable replay ledgers before appending either one",
   assert.ok(append.indexOf("findIdempotentSuccess(reqs, idempotencyKey)") < append.indexOf("writeJsonAtomic(PROCESSED_INT, intents)"));
 });
 
+test("runner persists request replay authority before intent lineage", () => {
+  const source = readFileSync("scripts/run-intent-task.ts", "utf8");
+  const append = source.slice(source.indexOf("function appendLedgers("));
+  const requestWrite = append.indexOf("writeJsonAtomic(PROCESSED_REQ, reqs)");
+  const intentWrite = append.indexOf("writeJsonAtomic(PROCESSED_INT, intents)");
+
+  assert.ok(requestWrite >= 0 && intentWrite >= 0, "both replay ledgers must be persisted");
+  assert.ok(requestWrite < intentWrite, "request replay authority must persist first so an interrupted append stays fail-closed without breaking intent -> request lineage");
+});
+
 test("runner validates cross-ledger lineage before consuming an attempt", () => {
   const source = readFileSync("scripts/run-intent-task.ts", "utf8");
   const guard = source.indexOf("assertReplayLedgersConsistent(processedInt, processedReq)");
