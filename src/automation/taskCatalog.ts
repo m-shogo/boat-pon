@@ -69,6 +69,9 @@ export type QueueState = {
 
 // ---- catalog validation（strict, fail-closed）----
 const TASKID_RE = /^TASK-[0-9A-Za-z._-]{1,64}$/;
+const RFC3339_TIMESTAMP_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+const isValidTimestamp = (value: unknown): value is string =>
+  typeof value === "string" && RFC3339_TIMESTAMP_RE.test(value) && Number.isFinite(Date.parse(value));
 const SAFETY = new Set(["L0", "L1", "L2", "L3", "L4"]);
 const CATALOG_FIELDS = new Set(["catalogSchemaVersion", "catalogVersion", "updatedAt", "note", "tasks"]);
 const TASK_DEFINITION_FIELDS = new Set([
@@ -81,6 +84,7 @@ const TASK_STATE_FIELDS = new Set([
   "status", "taskDefinitionVersion", "authoritySha", "attemptCount", "maxAttempts", "evidenceLinks",
   "resultDigest", "lastFailure", "checkpoint", "updatedAt", "nextDecision",
 ]);
+const LAST_FAILURE_FIELDS = new Set(["code", "at", "message"]);
 
 export function validateCatalog(input: unknown): { valid: boolean; errors: string[]; catalog: TaskCatalog | null } {
   const errors: string[] = [];
@@ -169,7 +173,7 @@ export function validateQueueState(input: unknown): { valid: boolean; errors: st
   if (s.stateSchemaVersion !== QUEUE_STATE_SCHEMA_VERSION) errors.push(`stateSchemaVersion must be ${QUEUE_STATE_SCHEMA_VERSION}`);
   if (!Number.isInteger(s.stateVersion) || (s.stateVersion as number) < 0) errors.push("invalid stateVersion");
   if (typeof s.catalogVersion !== "string" || s.catalogVersion.trim() === "") errors.push("invalid catalogVersion");
-  if (typeof s.updatedAt !== "string" || s.updatedAt.trim() === "") errors.push("invalid updatedAt");
+  if (!isValidTimestamp(s.updatedAt)) errors.push("invalid updatedAt");
   if (typeof s.tasks !== "object" || s.tasks === null || Array.isArray(s.tasks)) { errors.push("tasks must be an object map"); return { valid: false, errors, state: null }; }
   for (const [id, v0] of Object.entries(s.tasks as Record<string, unknown>)) {
     if (!TASKID_RE.test(id)) errors.push(`state task id invalid: ${id}`);
@@ -189,6 +193,19 @@ export function validateQueueState(input: unknown): { valid: boolean; errors: st
     if ("authoritySha" in v && v.authoritySha !== null && (typeof v.authoritySha !== "string" || !/^[0-9a-f]{7,40}$/.test(v.authoritySha))) errors.push(`state ${id}.authoritySha invalid`);
     if ("resultDigest" in v && v.resultDigest !== null && (typeof v.resultDigest !== "string" || !/^[0-9a-f]{64}$/.test(v.resultDigest))) errors.push(`state ${id}.resultDigest invalid`);
     if ("evidenceLinks" in v && (!Array.isArray(v.evidenceLinks) || (v.evidenceLinks as unknown[]).some((link) => typeof link !== "string"))) errors.push(`state ${id}.evidenceLinks invalid`);
+    if (!isValidTimestamp(v.updatedAt)) errors.push(`state ${id}.updatedAt invalid`);
+    if ("nextDecision" in v && (typeof v.nextDecision !== "string" || v.nextDecision.trim() === "")) errors.push(`state ${id}.nextDecision invalid`);
+    if ("lastFailure" in v && v.lastFailure !== null) {
+      if (typeof v.lastFailure !== "object" || Array.isArray(v.lastFailure)) {
+        errors.push(`state ${id}.lastFailure invalid`);
+      } else {
+        const failure = v.lastFailure as Record<string, unknown>;
+        for (const field of Object.keys(failure)) if (!LAST_FAILURE_FIELDS.has(field)) errors.push(`state ${id}.lastFailure unknown field: ${field}`);
+        if (typeof failure.code !== "string" || failure.code.trim() === "") errors.push(`state ${id}.lastFailure.code invalid`);
+        if (!isValidTimestamp(failure.at)) errors.push(`state ${id}.lastFailure.at invalid`);
+        if ("message" in failure && typeof failure.message !== "string") errors.push(`state ${id}.lastFailure.message invalid`);
+      }
+    }
   }
   if (errors.length > 0) return { valid: false, errors, state: null };
   return { valid: true, errors: [], state: s as unknown as QueueState };
