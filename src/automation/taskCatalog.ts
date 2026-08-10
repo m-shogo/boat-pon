@@ -211,7 +211,6 @@ export type ReconcileResult = { changed: boolean; plan: ReconcilePlan; nextState
 // - catalog に在り state に無い task → defaultStatus で追加
 // - state に在り catalog に無い task → ORPHANED（残す・dispatch しない・削除しない）
 // - taskDefinitionVersion が catalog と不一致 → staleDefinition 診断（自動で READY へ戻さない）
-// - definition drift が1件でもあれば reconcile 自体を NO_CHANGE にして、別task追加やcatalogVersion更新も止める
 // - 変更が無ければ changed=false（stateVersion を進めない・入力 state をそのまま返す = NO_CHANGE）
 export function reconcileCatalogState(
   catalog: TaskCatalog, state: QueueState, opts: { now?: string; maxAttempts?: number } = {},
@@ -249,10 +248,9 @@ export function reconcileCatalogState(
   }
 
   const catalogVersionChanged = state.catalogVersion !== catalog.catalogVersion;
-  const plan: ReconcilePlan = { added, preserved, staleDefinition, orphaned, catalogVersionChanged };
-  if (staleDefinition.length > 0) return { changed: false, plan, nextState: state };
-
   const changed = added.length > 0 || catalogVersionChanged;
+  const plan: ReconcilePlan = { added, preserved, staleDefinition, orphaned, catalogVersionChanged };
+
   if (!changed) return { changed: false, plan, nextState: state };
   const nextState: QueueState = {
     ...state, tasks: nextTasks, catalogVersion: catalog.catalogVersion,
