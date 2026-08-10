@@ -84,6 +84,10 @@ const TASK_STATE_FIELDS = new Set([
   "status", "taskDefinitionVersion", "authoritySha", "attemptCount", "maxAttempts", "evidenceLinks",
   "resultDigest", "lastFailure", "checkpoint", "updatedAt", "nextDecision",
 ]);
+const TASK_STATE_REQUIRED_FIELDS = [
+  "status", "taskDefinitionVersion", "authoritySha", "attemptCount", "maxAttempts", "evidenceLinks",
+  "resultDigest", "lastFailure", "checkpoint", "updatedAt",
+] as const;
 const LAST_FAILURE_FIELDS = new Set(["code", "at", "message"]);
 
 export function validateCatalog(input: unknown): { valid: boolean; errors: string[]; catalog: TaskCatalog | null } {
@@ -183,6 +187,7 @@ export function validateQueueState(input: unknown): { valid: boolean; errors: st
     }
     const v = v0 as Record<string, unknown>;
     for (const field of Object.keys(v)) if (!TASK_STATE_FIELDS.has(field)) errors.push(`state ${id} unknown field: ${field}`);
+    for (const field of TASK_STATE_REQUIRED_FIELDS) if (!(field in v)) errors.push(`state ${id}.${field} required`);
     if (!TASK_STATUSES.includes(v.status as TaskStatus)) errors.push(`state ${id}.status invalid: ${v.status}`);
     if (!Number.isInteger(v.taskDefinitionVersion) || (v.taskDefinitionVersion as number) < 1) errors.push(`state ${id}.taskDefinitionVersion invalid`);
     if (!Number.isInteger(v.attemptCount) || (v.attemptCount as number) < 0) errors.push(`state ${id}.attemptCount invalid`);

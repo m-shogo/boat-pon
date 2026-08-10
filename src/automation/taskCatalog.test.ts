@@ -20,6 +20,21 @@ function catalog(tasks: Record<string, unknown>[], version = "v1"): TaskCatalog 
 function state(tasks: Record<string, unknown>): QueueState {
   return { stateSchemaVersion: QUEUE_STATE_SCHEMA_VERSION, stateVersion: 1, catalogVersion: "v1", updatedAt: "2026-08-04T00:00:00Z", tasks } as unknown as QueueState;
 }
+function completeTask(status: string, overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    status,
+    taskDefinitionVersion: 1,
+    authoritySha: null,
+    attemptCount: 0,
+    maxAttempts: 3,
+    evidenceLinks: [],
+    resultDigest: null,
+    lastFailure: null,
+    checkpoint: null,
+    updatedAt: "2026-08-04T00:00:00Z",
+    ...overrides,
+  };
+}
 
 test("valid catalog passes", () => {
   const r = validateCatalog(catalog([def(), def({ taskId: "TASK-N2-002", dependencies: ["TASK-N2-001"] })]));
@@ -35,8 +50,8 @@ test("catalog rejects duplicate ids, unknown dependency, bad safety, bad default
 });
 
 test("queue state validation", () => {
-  assert.equal(validateQueueState(state({ "TASK-N2-001": { status: "PASS", taskDefinitionVersion: 1, attemptCount: 1, maxAttempts: 3, updatedAt: "2026-08-04T00:00:00Z" } })).valid, true);
-  assert.equal(validateQueueState(state({ "TASK-N2-001": { status: "WAT", taskDefinitionVersion: 1, attemptCount: 1, maxAttempts: 3, updatedAt: "2026-08-04T00:00:00Z" } })).valid, false);
+  assert.equal(validateQueueState(state({ "TASK-N2-001": completeTask("PASS", { attemptCount: 1 }) })).valid, true);
+  assert.equal(validateQueueState(state({ "TASK-N2-001": completeTask("WAT", { attemptCount: 1 }) })).valid, false);
 });
 
 test("merge: state-less task falls back to defaultStatus; stale definition flagged", () => {
