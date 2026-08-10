@@ -35,6 +35,7 @@ const ALLOWED = new Set<string>([...REQUIRED, ...OPTIONAL]);
 
 export const INTENT_ID_RE = /^INTENT-[0-9A-Za-z._-]{4,64}$/;
 const TASKID_RE = /^(TASK-[0-9A-Za-z._-]{1,64}|NEXT)$/;
+const AUTOMATION_HISTORY_PATH_RE = /^reports\/automation\/history\/[0-9A-Za-z._-]+-TASK-[0-9A-Za-z._-]+\.json$/;
 
 // strict intent decode。unknown field / hash 系 field はすべて拒否（ChatGPT に hash を作らせない）。
 export function validateIntent(input: unknown): { valid: boolean; errors: string[]; intent: DispatchIntent | null } {
@@ -168,7 +169,7 @@ function assertIdempotencyLedgerValid(ledger: ProcessedRequestLedger): void {
     if (typeof value.requestId !== "string" || value.requestId.trim() === ""
       || typeof value.result !== "string" || value.result.trim() === ""
       || typeof value.recordedAt !== "string" || Number.isNaN(Date.parse(value.recordedAt))
-      || ("evidencePath" in value && typeof value.evidencePath !== "string")) {
+      || ("evidencePath" in value && (typeof value.evidencePath !== "string" || !AUTOMATION_HISTORY_PATH_RE.test(value.evidencePath)))) {
       throw new Error("malformed processed request ledger: idempotency entry");
     }
     if (!ledger.requestIds.includes(value.requestId)) {
