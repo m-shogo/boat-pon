@@ -34,6 +34,13 @@
       "then": { "properties": { "taskId": { "const": "NEXT" } } }
     },
     {
+      "if": { "properties": { "requestedAction": { "const": "status-only" } } },
+      "then": {
+        "required": ["dryRun"],
+        "properties": { "dryRun": { "const": true } }
+      }
+    },
+    {
       "if": { "properties": { "safetyLevel": { "const": "L3" } } },
       "then": {
         "required": ["approvalGrantId"],
