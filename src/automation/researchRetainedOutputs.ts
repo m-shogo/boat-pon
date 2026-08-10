@@ -2,10 +2,10 @@ import { createHash, randomUUID } from "node:crypto";
 import {
   chmodSync,
   existsSync,
+  linkSync,
   lstatSync,
   mkdirSync,
   readFileSync,
-  renameSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -160,7 +160,16 @@ function materializePreparedOutputs(prepared: PreparedRetainedOutput[]): void {
         if (sha256Buffer(tempReadback) !== item.contentDigest || !tempReadback.equals(item.content)) {
           throw new Error(`RETAINED_OUTPUT_TEMP_READBACK_MISMATCH:${item.retainedRelativePath}`);
         }
-        renameSync(tempPath, item.retainedAbsolutePath);
+        try {
+          // Hard-link publication is atomic and never replaces an immutable retained target.
+          // A concurrent creator is a fail-closed race, not permission to overwrite evidence.
+          linkSync(tempPath, item.retainedAbsolutePath);
+        } catch (error) {
+          if (error instanceof Error && "code" in error && error.code === "EEXIST") {
+            throw new Error(`RETAINED_OUTPUT_TARGET_RACE:${item.retainedRelativePath}`);
+          }
+          throw error;
+        }
         created.push(item.retainedAbsolutePath);
         chmodSync(item.retainedAbsolutePath, 0o644);
         const readback = readFileSync(item.retainedAbsolutePath);
