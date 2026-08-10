@@ -251,9 +251,17 @@ export function assertReplayLedgersConsistent(
   assertIdempotencyLedgerValid(requests);
 
   const requestIds = new Set(requests.requestIds);
+  const provenanceResults = new Map(
+    Object.values(requests.idempotencyKeys).map((entry) => [entry.requestId, entry.result] as const),
+  );
   for (const entry of intents.entries as Record<string, unknown>[]) {
-    if (!requestIds.has(entry.requestId as string)) {
+    const requestId = entry.requestId as string;
+    if (!requestIds.has(requestId)) {
       throw new Error("cross-ledger mismatch: processed intent requestId not recorded");
+    }
+    const provenanceResult = provenanceResults.get(requestId);
+    if (provenanceResult !== undefined && provenanceResult !== entry.result) {
+      throw new Error("cross-ledger mismatch: processed intent result differs from request provenance");
     }
   }
 }
