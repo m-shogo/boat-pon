@@ -77,7 +77,7 @@ test("unknown top-level fields and owner payloads are rejected", () => {
   value.owner = { manualPurchase: true };
   const result = validatePublicDashboardSnapshot(value);
   assert.equal(result.ok, false);
-  assert.match(result.errors.join("\n"), /unknown top-level key/);
+  assert.match(result.errors.join("\n"), /\$\.owner: unknown key/);
   assert.match(result.errors.join("\n"), /manualpurchase/i);
 });
 
