@@ -4,7 +4,6 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, lstatSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { join } from "node:path";
 
 const PENDING_DIR = "automation/requests/pending";
 const MAX_BYTES = 65536;
@@ -45,6 +44,7 @@ if (statSync(path).size > MAX_BYTES) fail(`request file too large: ${statSync(pa
 
 let request;
 try { request = JSON.parse(readFileSync(path, "utf8")); } catch { fail("request file is not valid JSON"); }
+if (typeof request !== "object" || request === null || Array.isArray(request)) fail("request must be a JSON object");
 
 // strict schema（orchestrator と同一契約を再実装せず、必須 field / 値域だけ guard 側でも確認）。
 const REQUIRED = ["requestSchemaVersion", "requestId", "taskId", "requestedAction", "safetyLevel",
@@ -63,8 +63,11 @@ if (request.requestedAction === "run-next" && request.taskId !== "NEXT") {
 if (request.taskId === "NEXT" && !["status-only", "dry-run"].includes(request.requestedAction)) {
   fail("executing NEXT requires intent dispatch");
 }
-if (request.requestedAction === "status-only" && request.dryRun !== true) {
-  fail("status-only requires dryRun=true");
+if (["status-only", "dry-run"].includes(request.requestedAction) && request.dryRun !== true) {
+  fail(`${request.requestedAction} requires dryRun=true`);
+}
+if (["run-task", "run-next"].includes(request.requestedAction) && "dryRun" in request) {
+  fail(`${request.requestedAction} must not carry dryRun`);
 }
 
 // filename と requestId の一致。
