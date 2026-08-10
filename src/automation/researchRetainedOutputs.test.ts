@@ -96,6 +96,27 @@ test("mutable retained sources reject symlinks and hardlinks", () => {
   });
 });
 
+test("existing retained targets reject symlink and hardlink aliases", () => {
+  withRoot((root) => {
+    const source = "reports/n2/existing.json";
+    const digest = "7".repeat(64);
+    const content = JSON.stringify({ outputDigest: digest, value: "stable" }) + "\n";
+    put(root, source, content);
+    const first = retain(root, [source], digest);
+    const retained = join(root, first.historyOutputs[0] ?? "");
+
+    rmSync(retained);
+    symlinkSync(join(root, source), retained);
+    assert.throws(() => retain(root, [source], digest), /RETAINED_OUTPUT_EXISTING_FILE_TYPE_INVALID/u);
+
+    rmSync(retained);
+    const decoy = "reports/n2/existing-decoy.json";
+    put(root, decoy, content);
+    linkSync(join(root, decoy), retained);
+    assert.throws(() => retain(root, [source], digest), /RETAINED_OUTPUT_EXISTING_FILE_TYPE_INVALID/u);
+  });
+});
+
 test("different sources converging to the same retained target are deduplicated", () => {
   withRoot((root) => {
     const a = "reports/n2/example.json";
