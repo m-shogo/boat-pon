@@ -9,7 +9,7 @@ const latestPath = required(args, "latest");
 const lastKnownGoodPath = required(args, "last-known-good");
 const nowMs = args.now ? Date.parse(args.now) : Date.now();
 
-const candidate = await readJson(candidatePath);
+const candidate = await readCandidateJson(candidatePath);
 const existingLastKnownGood = await readOptionalJson(lastKnownGoodPath);
 const validation = await validatePublicSnapshotForPublication({
   candidate,
@@ -69,6 +69,15 @@ async function writePairAtomically(options: {
 
 async function readJson(path: string): Promise<unknown> {
   return JSON.parse(await readFile(path, "utf8")) as unknown;
+}
+
+async function readCandidateJson(path: string): Promise<unknown> {
+  try {
+    return await readJson(path);
+  } catch (error) {
+    if (error instanceof SyntaxError) return null;
+    throw error;
+  }
 }
 
 async function readOptionalJson(path: string): Promise<unknown | undefined> {
