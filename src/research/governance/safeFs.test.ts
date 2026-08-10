@@ -41,6 +41,21 @@ test("direct governance directory guard rejects a symlinked root", () => {
   assert.throws(() => assertGovernanceDirectorySafe(linked), /governance scan symlink forbidden/);
 });
 
+test("governance directory guard rejects cwd-contained parent symlinks", (t) => {
+  const root = mkdtempSync(join(process.cwd(), ".gov-fs-dir-parent-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const outside = tmp();
+  const nested = join(outside, "history");
+  mkdirSync(nested);
+  const aliasDir = join(root, "linked");
+  symlinkSync(outside, aliasDir, "dir");
+
+  assert.throws(
+    () => assertGovernanceDirectorySafe(join(aliasDir, "history")),
+    /governance scan parent symlink forbidden/,
+  );
+});
+
 test("governance scan rejects symlinked JSON files", () => {
   const root = tmp();
   const outside = join(tmp(), "outside.json");
