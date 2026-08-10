@@ -142,7 +142,21 @@ try {
   const walPath = `${sidecar}-wal`;
   const st = statfsSync(root);
   const processedReq: ProcessedRequestLedger | null = readJson(PROCESSED_REQ);
+  const processedInt = readJson(PROCESSED_INT);
   const processedIds = processedReq?.requestIds ?? [];
+
+  // A missing, malformed, or replayed processed-intent ledger must block before any
+  // READY -> CLAIMED transition so governance corruption never consumes an attempt.
+  if (!processedInt || isIntentProcessed(processedInt, intentId)) {
+    finish("BLOCKED", 3, {
+      lastRequestId: request.requestId,
+      lastIntentId: intentId,
+      lastTaskId: request.taskId,
+      blocks: [!processedInt ? "PROCESSED_INTENT_LEDGER_MISSING" : "PROCESSED_INTENT_LEDGER_INVALID_OR_REPLAY"],
+      elapsedMs: Date.now() - startedMs,
+      nextCandidate: "repair the processed-intent ledger; automation は自動再試行しない",
+    });
+  }
 
   // ---- preflight guards ----
   const pre = preflight({
