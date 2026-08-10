@@ -122,6 +122,13 @@ const ABSOLUTE_PATH_PATTERNS = [
   /(?:^|[\s"'])file:\/\//i,
 ];
 
+const PRIVATE_RELATIVE_PATH_PATTERNS = [
+  /(?:^|[\s"'])automation\/control\//,
+  /(?:^|[\s"'])automation\/requests\//,
+  /(?:^|\/)\.\.(?:\/|$)/,
+  /(?:^|[\s"'])data\/(?:private|raw)\//,
+];
+
 const SECRET_VALUE_PATTERNS = [
   /\bgh[opusr]_[A-Za-z0-9_]{20,}\b/,
   /\b(?:Bearer|Basic)\s+[A-Za-z0-9._~+/=-]{16,}\b/i,
@@ -164,6 +171,9 @@ function scanValue(value: unknown, path: string, errors: string[]): void {
   if (typeof value !== "string") return;
   if (ABSOLUTE_PATH_PATTERNS.some((pattern) => pattern.test(value))) {
     errors.push(`${path}: absolute/local path is forbidden`);
+  }
+  if (PRIVATE_RELATIVE_PATH_PATTERNS.some((pattern) => pattern.test(value))) {
+    errors.push(`${path}: private relative path is forbidden`);
   }
   if (SECRET_VALUE_PATTERNS.some((pattern) => pattern.test(value))) {
     errors.push(`${path}: secret-like value is forbidden`);
