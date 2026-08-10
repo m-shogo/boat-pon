@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, linkSync, mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import test from "node:test";
@@ -76,6 +76,22 @@ test("all mutable sources are validated before any retained file is created", ()
       () => retain(root, [good, missing], digest),
       /RETAINED_OUTPUT_SOURCE_MISSING/u,
     );
+    assert.equal(existsSync(join(root, "reports/automation/retained-outputs/12345")), false);
+  });
+});
+
+test("mutable retained sources reject symlinks and hardlinks", () => {
+  withRoot((root) => {
+    const real = "reports/n2/real.json";
+    const symlink = "reports/n2/symlink.json";
+    const hardlink = "reports/n2/hardlink.json";
+    const content = JSON.stringify({ value: 1 }) + "\n";
+    put(root, real, content);
+    symlinkSync(join(root, real), join(root, symlink));
+    assert.throws(() => retain(root, [symlink]), /RETAINED_OUTPUT_SOURCE_FILE_TYPE_INVALID/u);
+
+    linkSync(join(root, real), join(root, hardlink));
+    assert.throws(() => retain(root, [hardlink]), /RETAINED_OUTPUT_SOURCE_FILE_TYPE_INVALID/u);
     assert.equal(existsSync(join(root, "reports/automation/retained-outputs/12345")), false);
   });
 });
