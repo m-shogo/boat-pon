@@ -115,7 +115,15 @@ if (!validation.valid || !validation.request) {
   finish("INVALID_REQUEST", 3, { blocks: validation.errors, lastRequestId: raw?.requestId ?? null });
 }
 const request = validation.request;
-const intentId = arg("intent-id") ?? request.requestId.replace(/^REQ-/, "INTENT-");
+const expectedIntentId = request.requestId.replace(/^REQ-/, "INTENT-");
+const intentId = arg("intent-id") ?? expectedIntentId;
+if (intentId !== expectedIntentId) {
+  finish("INVALID_REQUEST", 3, {
+    lastRequestId: request.requestId,
+    lastIntentId: intentId,
+    blocks: ["INTENT_REQUEST_LINEAGE_MISMATCH"],
+  });
+}
 const dryRun = request.dryRun === true || request.requestedAction === "dry-run";
 const startedMs = Date.now();
 
