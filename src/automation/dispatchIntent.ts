@@ -97,6 +97,9 @@ export function buildCanonicalRequest(input: CanonicalRequestInput): { request: 
   if (order.indexOf(intent.safetyLevel) < order.indexOf(task.safetyLevel)) {
     errors.push(`intent safety ${intent.safetyLevel} is below catalog safety ${task.safetyLevel}`);
   }
+  if (intent.maxDurationSeconds > task.maxDurationSeconds) {
+    errors.push(`intent maxDurationSeconds ${intent.maxDurationSeconds} exceeds catalog maxDurationSeconds ${task.maxDurationSeconds}`);
+  }
   const requestedAction = intent.requestedAction === "plan-next" ? "run-task" : intent.requestedAction;
   const requestId = `REQ-${intent.intentId.replace(/^INTENT-/, "")}`;
   const base: Omit<TaskRequest, "requestDigest"> = {
