@@ -40,9 +40,9 @@ test("public snapshot keeps only explicitly allowlisted evidence families", () =
   assert.deepEqual(snapshot.pipeline[0].evidence, [
     "reports/automation/history/30912235903-TASK-PLANNER-NEXT.json",
     "reports/n2/n2-dataset-inventory.json",
-    "research/registries/experiments/EXP-safe.json",
   ]);
   const serialized = JSON.stringify(snapshot);
+  assert.doesNotMatch(serialized, /research\/registries/);
   assert.doesNotMatch(serialized, /automation\/control\/planner-candidates/);
   assert.doesNotMatch(serialized, /reports\/private/);
   assert.doesNotMatch(serialized, /reports\/automation\/validation/);
