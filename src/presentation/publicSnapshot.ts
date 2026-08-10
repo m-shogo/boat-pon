@@ -315,7 +315,7 @@ export function validatePublicDashboardSnapshot(value: unknown): PublicSnapshotV
   if (!isRecord(value.registries)) {
     errors.push("$.registries: object required");
   } else {
-    validateExactKeys(value.registries, REGISTRY_KEYS, [...REGISTRY_KEYS], "$.registristries", errors);
+    validateExactKeys(value.registries, REGISTRY_KEYS, [...REGISTRY_KEYS], "$.registries", errors);
     for (const key of REGISTRY_KEYS) {
       if (!isNullableCount(value.registries[key])) errors.push(`$.registries.${key}: non-negative integer or null required`);
     }
