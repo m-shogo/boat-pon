@@ -19,7 +19,10 @@ import {
   computeStateDigest, mergeCatalogAndState, reconcileCatalogState, resolveTask, validateCatalog, validateQueueState,
   type QueueState,
 } from "../src/automation/taskCatalog";
-import { computeIdempotencyKey, findIdempotentSuccess, isIntentProcessed, isRequestReplay, type ProcessedRequestLedger } from "../src/automation/dispatchIntent";
+import {
+  assertReplayLedgersConsistent, computeIdempotencyKey, findIdempotentSuccess, isIntentProcessed, isRequestReplay,
+  type ProcessedRequestLedger,
+} from "../src/automation/dispatchIntent";
 import { EXECUTOR_REGISTRY_VERSION, resolveExecutor, type ExecutorResult } from "../src/automation/taskExecutors";
 import { buildResearchAutomationFailureHistory } from "../src/automation/researchAutomationFailureHistory";
 import { retainExecutorOutputs } from "../src/automation/researchRetainedOutputs";
@@ -152,6 +155,21 @@ try {
   const processedReq: ProcessedRequestLedger | null = readJson(PROCESSED_REQ);
   const processedInt = readJson(PROCESSED_INT);
   const processedIds = processedReq?.requestIds ?? [];
+
+  // Both durable replay ledgers must describe the same completed intent lineage before
+  // any READY -> CLAIMED transition. This catches a crash after only one ledger write.
+  try {
+    assertReplayLedgersConsistent(processedInt, processedReq);
+  } catch {
+    finish("BLOCKED", 3, {
+      lastRequestId: request.requestId,
+      lastIntentId: intentId,
+      lastTaskId: request.taskId,
+      blocks: ["REPLAY_LEDGER_CROSS_CHECK_FAILED"],
+      elapsedMs: Date.now() - startedMs,
+      nextCandidate: "repair replay ledger lineage; automation は自動再試行しない",
+    });
+  }
 
   // A missing, malformed, or replayed processed-intent ledger must block before any
   // READY -> CLAIMED transition so governance corruption never consumes an attempt.
@@ -421,6 +439,7 @@ function appendLedgers(intentId: string, requestId: string, result: string, idem
   const reqs: ProcessedRequestLedger | null = readJson(PROCESSED_REQ);
   if (!intents) throw new Error("missing processed intent ledger during append");
   if (!reqs) throw new Error("missing processed request ledger during append");
+  assertReplayLedgersConsistent(intents, reqs);
   if (isIntentProcessed(intents, intentId)) throw new Error("processed intent ledger is malformed or intent is already recorded");
   if (isRequestReplay(reqs, requestId)) throw new Error("processed request ledger is malformed or request is already recorded");
   // Full idempotency-map validation must happen before either ledger is mutated.
