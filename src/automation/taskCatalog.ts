@@ -186,6 +186,8 @@ export function validateQueueState(input: unknown): { valid: boolean; errors: st
     if (Number.isInteger(v.attemptCount) && Number.isInteger(v.maxAttempts) && (v.attemptCount as number) > (v.maxAttempts as number)) {
       errors.push(`state ${id}.attemptCount exceeds maxAttempts`);
     }
+    if ("authoritySha" in v && v.authoritySha !== null && (typeof v.authoritySha !== "string" || !/^[0-9a-f]{7,40}$/.test(v.authoritySha))) errors.push(`state ${id}.authoritySha invalid`);
+    if ("resultDigest" in v && v.resultDigest !== null && (typeof v.resultDigest !== "string" || !/^[0-9a-f]{64}$/.test(v.resultDigest))) errors.push(`state ${id}.resultDigest invalid`);
     if ("evidenceLinks" in v && (!Array.isArray(v.evidenceLinks) || (v.evidenceLinks as unknown[]).some((link) => typeof link !== "string"))) errors.push(`state ${id}.evidenceLinks invalid`);
   }
   if (errors.length > 0) return { valid: false, errors, state: null };

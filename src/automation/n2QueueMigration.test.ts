@@ -15,7 +15,7 @@ function task(status: TaskState["status"], over: Partial<TaskState> = {}): TaskS
     attemptCount: 1,
     maxAttempts: 3,
     evidenceLinks: ["reports/automation/history/original.json"],
-    resultDigest: "original-digest",
+    resultDigest: "0".repeat(64),
     lastFailure: null,
     checkpoint: null,
     updatedAt: "2026-08-06T00:00:00.000Z",
