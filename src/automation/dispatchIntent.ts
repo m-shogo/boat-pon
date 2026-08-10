@@ -146,7 +146,7 @@ function isValidUniqueIdArray(value: unknown, pattern: RegExp): value is string[
 function isProcessedIntentLedgerValid(ledger: ProcessedIntentLedger): boolean {
   const raw = ledger as unknown as Record<string, unknown>;
   if (!isValidUniqueIdArray(raw.intentIds, INTENT_ID_RE)) return false;
-  if (!("entries" in raw) || raw.entries === undefined) return true;
+  if (!("entries" in raw) || raw.entries === undefined) return false;
   if (!Array.isArray(raw.entries) || raw.entries.length !== ledger.intentIds.length) return false;
 
   const seen = new Set<string>();
