@@ -26,6 +26,15 @@ test("queue state accepts valid task execution bounds", () => {
   assert.equal(validateQueueState(queue(validTask())).valid, true);
 });
 
+test("queue state rejects invalid authority metadata", () => {
+  assert.equal(validateQueueState({ ...queue(validTask()), catalogVersion: "" }).valid, false);
+  assert.equal(validateQueueState({ ...queue(validTask()), catalogVersion: "   " }).valid, false);
+  const missingUpdatedAt = queue(validTask()) as Record<string, unknown>;
+  delete missingUpdatedAt.updatedAt;
+  assert.equal(validateQueueState(missingUpdatedAt).valid, false);
+  assert.equal(validateQueueState({ ...queue(validTask()), updatedAt: "" }).valid, false);
+});
+
 test("queue state rejects malformed task ids", () => {
   assert.equal(validateQueueState(queue(validTask(), "N2-001")).valid, false);
   assert.equal(validateQueueState(queue(validTask(), "../TASK-N2-001")).valid, false);
