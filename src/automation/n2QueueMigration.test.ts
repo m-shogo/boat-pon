@@ -120,3 +120,16 @@ test("N2-011 migration fails closed when the final attempt budget or completed c
   reopenedCanary.tasks["TASK-N2-013"].status = "READY";
   assert.throws(() => migrateN2011QueueToV4(reopenedCanary, currentRun(reopenedCanary)), /must remain PASS at attempt 3\/3/);
 });
+
+test("N2-011 migration rejects malformed current-run timestamps", () => {
+  const before = queue();
+  const base = currentRun(before);
+  for (const updatedAt of ["not-a-time", "2026-08-06", "2026-08-06T01:38:22"]) {
+    assert.throws(
+      () => migrateN2011QueueToV4(before, { ...base, updatedAt }),
+      /current-run updatedAt invalid/,
+      updatedAt,
+    );
+  }
+  assert.doesNotThrow(() => migrateN2011QueueToV4(before, { ...base, updatedAt: "2026-08-06T10:38:22+09:00" }));
+});

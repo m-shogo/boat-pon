@@ -35,6 +35,8 @@ export type N2011QueueMigrationResult = {
   plan: N2011QueueMigrationPlan;
 };
 
+const RFC3339_TIMESTAMP_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+
 function cloneTask(task: TaskState): TaskState {
   return {
     ...task,
@@ -51,7 +53,7 @@ function validateCurrentRun(input: unknown): CurrentRunState {
   if (run.runSchemaVersion !== "current-run-v1") throw new Error("current-run schema mismatch");
   if (!Number.isInteger(run.stateVersion) || (run.stateVersion as number) < 0) throw new Error("current-run stateVersion invalid");
   if (typeof run.stateDigest !== "string" || !/^[0-9a-f]{64}$/.test(run.stateDigest)) throw new Error("current-run stateDigest invalid");
-  if (typeof run.updatedAt !== "string" || run.updatedAt.trim() === "") throw new Error("current-run updatedAt invalid");
+  if (typeof run.updatedAt !== "string" || !RFC3339_TIMESTAMP_RE.test(run.updatedAt) || !Number.isFinite(Date.parse(run.updatedAt))) throw new Error("current-run updatedAt invalid");
   return run as CurrentRunState;
 }
 
