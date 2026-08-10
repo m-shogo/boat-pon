@@ -108,13 +108,14 @@ function runnerStatus(value: unknown): PublicResearchStatus {
   return "NOT_AVAILABLE";
 }
 
-function sourceUpdatedAt(value: unknown): string | null {
-  if (!isRecord(value)) return null;
-  return stringValue(value.updatedAt) ?? stringValue(value.evaluatedAt);
-}
-
 function isRfc3339DateTime(value: string): boolean {
   return RFC3339_TIMESTAMP_RE.test(value) && Number.isFinite(Date.parse(value));
+}
+
+function sourceUpdatedAt(value: unknown): string | null {
+  if (!isRecord(value)) return null;
+  const candidate = stringValue(value.updatedAt) ?? stringValue(value.evaluatedAt);
+  return candidate && isRfc3339DateTime(candidate) ? candidate : null;
 }
 
 function latestIso(values: Array<string | null>, fallback: string): string {
