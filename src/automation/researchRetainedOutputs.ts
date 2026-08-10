@@ -9,10 +9,11 @@ import {
   mkdirSync,
   openSync,
   readSync,
+  realpathSync,
   unlinkSync,
   writeSync,
 } from "node:fs";
-import { basename, dirname, resolve, sep } from "node:path";
+import { basename, dirname, relative, resolve, sep } from "node:path";
 import { TextDecoder } from "node:util";
 
 const RETAINED_ROOT = "reports/automation/retained-outputs";
@@ -65,6 +66,30 @@ function resolveInside(repoRoot: string, relativePath: string): string {
     throw new Error("RETAINED_OUTPUT_PATH_ESCAPES_ROOT");
   }
   return target;
+}
+
+function assertExistingPathCanonicalInsideRepo(repoRoot: string, absolutePath: string, relativePath: string): void {
+  const lexicalRoot = resolve(repoRoot);
+  const lexicalTarget = resolve(absolutePath);
+  const relativeTarget = relative(lexicalRoot, lexicalTarget);
+  if (relativeTarget === ".." || relativeTarget.startsWith(`..${sep}`) || relativeTarget.startsWith("/")) {
+    throw new Error(`RETAINED_OUTPUT_SOURCE_PATH_ESCAPES_ROOT:${relativePath}`);
+  }
+  let canonicalRoot: string;
+  let canonicalTarget: string;
+  try {
+    canonicalRoot = realpathSync.native(lexicalRoot);
+    canonicalTarget = realpathSync.native(lexicalTarget);
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      throw new Error(`RETAINED_OUTPUT_SOURCE_MISSING:${relativePath}`);
+    }
+    throw error;
+  }
+  const expectedCanonicalTarget = resolve(canonicalRoot, relativeTarget);
+  if (canonicalTarget !== expectedCanonicalTarget) {
+    throw new Error(`RETAINED_OUTPUT_SOURCE_PATH_ALIAS:${relativePath}`);
+  }
 }
 
 function sourceClass(relativePath: string): "MUTABLE" | "IMMUTABLE" {
@@ -202,6 +227,7 @@ function prepareMutableOutput(input: {
   historyOutputDigest: string;
 }): PreparedRetainedOutput {
   const sourceAbsolute = resolveInside(input.repoRoot, input.sourceRelativePath);
+  assertExistingPathCanonicalInsideRepo(input.repoRoot, sourceAbsolute, input.sourceRelativePath);
   const content = readRetainedSourceBounded(sourceAbsolute, input.sourceRelativePath);
   validateRetainedJsonSource({
     sourceRelativePath: input.sourceRelativePath,
