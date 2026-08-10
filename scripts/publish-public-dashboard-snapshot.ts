@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { lstat, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { lstat, mkdir, readFile, realpath, rename, rm, writeFile } from "node:fs/promises";
+import { basename, dirname, join, resolve } from "node:path";
 import { validatePublicSnapshotForPublication } from "../src/presentation/publicSnapshotPublisher";
 
 const args = parseArgs(process.argv.slice(2));
@@ -51,6 +51,15 @@ async function writePairAtomically(options: {
     mkdir(latestDirectory, { recursive: true }),
     mkdir(lastKnownGoodDirectory, { recursive: true }),
   ]);
+
+  const [canonicalLatestPath, canonicalLastKnownGoodPath] = await Promise.all([
+    canonicalTargetPath(options.latestPath),
+    canonicalTargetPath(options.lastKnownGoodPath),
+  ]);
+  if (canonicalLatestPath === canonicalLastKnownGoodPath) {
+    throw new Error("latest and last-known-good targets must be distinct");
+  }
+
   await Promise.all([
     assertPublishTarget(options.latestPath),
     assertPublishTarget(options.lastKnownGoodPath),
@@ -73,6 +82,11 @@ async function writePairAtomically(options: {
       rm(lastKnownGoodTemp, { force: true }),
     ]);
   }
+}
+
+async function canonicalTargetPath(path: string): Promise<string> {
+  const resolvedPath = resolve(path);
+  return join(await realpath(dirname(resolvedPath)), basename(resolvedPath));
 }
 
 async function assertPublishTarget(path: string): Promise<void> {
