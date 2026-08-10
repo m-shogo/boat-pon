@@ -15,6 +15,7 @@ const STRICT_UTF8_DECODER = new TextDecoder("utf-8", { fatal: true, ignoreBOM: t
 const BOUNDED_READ_CHUNK_BYTES = 64 * 1024;
 
 export function assertGovernanceDirectorySafe(path: string): void {
+  assertGovernanceReadParentsSafe(path);
   const stat = lstatSync(path);
   if (stat.isSymbolicLink()) throw new Error(`governance scan symlink forbidden: ${path}`);
   if (!stat.isDirectory()) throw new Error(`governance scan container must be directory: ${path}`);
