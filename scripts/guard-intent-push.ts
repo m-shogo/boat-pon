@@ -7,7 +7,7 @@
 //       actor policy / expectedAuthoritySha / task 存在・READY・deps PASS・not RUNNING /
 //       replay(processed ledgers) / equivalent pending intent / safety。すべて fail-closed。
 import { execFileSync } from "node:child_process";
-import { existsSync, lstatSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import {
   INTENT_ID_RE,
   buildCanonicalRequest,
@@ -22,6 +22,7 @@ import {
   type IntentSupersession,
 } from "../src/automation/intentSupersession";
 import { computeStateDigest, mergeCatalogAndState, resolveTask, validateCatalog, validateQueueState } from "../src/automation/taskCatalog";
+import { assertGovernanceDirectorySafe, readGovernanceFileUtf8Bounded } from "../src/research/governance/safeFs";
 
 const INTENTS_DIR = "automation/requests/intents";
 const SUPERSESSIONS_DIR = "automation/requests/supersessions";
@@ -84,11 +85,10 @@ const path = changes[0].path;
 if (path.includes("..") || path.startsWith("/")) fail(`unsafe path: ${path}`);
 if (!/^automation\/requests\/intents\/INTENT-[0-9A-Za-z._-]{4,64}\.json$/.test(path)) fail(`path must be ${INTENTS_DIR}/INTENT-<id>.json (got ${path})`);
 if (!existsSync(path)) fail(`intent file missing: ${path}`);
-if (lstatSync(path).isSymbolicLink()) fail("symlink intent file is not allowed");
-if (statSync(path).size > MAX_BYTES) fail(`intent file too large: ${statSync(path).size} bytes`);
 
 let rawIntent: unknown;
-try { rawIntent = JSON.parse(readFileSync(path, "utf8")); } catch { fail("intent file is not valid JSON"); }
+try { rawIntent = JSON.parse(readGovernanceFileUtf8Bounded(path, MAX_BYTES).text); }
+catch (error) { fail(`intent file is not safe valid JSON: ${error instanceof Error ? error.message : String(error)}`); }
 const iv = validateIntent(rawIntent);
 if (!iv.valid || !iv.intent) fail(`invalid intent: ${iv.errors.join("; ")}`);
 const intent = iv.intent!;
@@ -122,13 +122,15 @@ if (isIntentProcessed(processedIntents, intent.intentId)) fail(`replayed intentI
 if (isRequestReplay(processedRequests, requestId)) fail(`replayed requestId: ${requestId}`);
 
 // ---- 同一 task の未処理 intent: active は拒否、stale は明示 supersession のみ許可 ----
+try { assertGovernanceDirectorySafe(INTENTS_DIR); }
+catch (error) { fail(`intent directory is unsafe: ${error instanceof Error ? error.message : String(error)}`); }
 const allIntents: DispatchIntent[] = readdirSync(INTENTS_DIR)
   .filter((name) => /^INTENT-[0-9A-Za-z._-]{4,64}\.json$/.test(name))
   .map((name): DispatchIntent => {
     const candidatePath = `${INTENTS_DIR}/${name}`;
     let raw: unknown;
-    try { raw = JSON.parse(readFileSync(candidatePath, "utf8")); }
-    catch { fail(`existing intent is not valid JSON: ${candidatePath}`); }
+    try { raw = JSON.parse(readGovernanceFileUtf8Bounded(candidatePath, MAX_BYTES).text); }
+    catch (error) { fail(`existing intent is not safe valid JSON: ${candidatePath}: ${error instanceof Error ? error.message : String(error)}`); }
     const validation = validateIntent(raw);
     if (!validation.valid || validation.intent === null) {
       fail(`invalid existing intent ${candidatePath}: ${validation.errors.join("; ")}`);
@@ -136,25 +138,28 @@ const allIntents: DispatchIntent[] = readdirSync(INTENTS_DIR)
     return validation.intent as DispatchIntent;
   });
 
-const supersessions: IntentSupersession[] = existsSync(SUPERSESSIONS_DIR)
-  ? readdirSync(SUPERSESSIONS_DIR)
-      .filter((name) => /^SUPERSESSION-[0-9A-Za-z._-]{4,96}\.json$/.test(name))
-      .map((name): IntentSupersession => {
-        const supersessionPath = `${SUPERSESSIONS_DIR}/${name}`;
-        let raw: unknown;
-        try { raw = JSON.parse(readFileSync(supersessionPath, "utf8")); }
-        catch { fail(`supersession is not valid JSON: ${supersessionPath}`); }
-        const validation = validateIntentSupersession(raw);
-        if (!validation.valid || validation.supersession === null) {
-          fail(`invalid supersession ${supersessionPath}: ${validation.errors.join("; ")}`);
-        }
-        const parsedSupersession = validation.supersession as IntentSupersession;
-        if (name !== `${parsedSupersession.supersessionId}.json`) {
-          fail(`supersession filename must match supersessionId: ${supersessionPath}`);
-        }
-        return parsedSupersession;
-      })
-  : [];
+let supersessions: IntentSupersession[] = [];
+if (existsSync(SUPERSESSIONS_DIR)) {
+  try { assertGovernanceDirectorySafe(SUPERSESSIONS_DIR); }
+  catch (error) { fail(`supersession directory is unsafe: ${error instanceof Error ? error.message : String(error)}`); }
+  supersessions = readdirSync(SUPERSESSIONS_DIR)
+    .filter((name) => /^SUPERSESSION-[0-9A-Za-z._-]{4,96}\.json$/.test(name))
+    .map((name): IntentSupersession => {
+      const supersessionPath = `${SUPERSESSIONS_DIR}/${name}`;
+      let raw: unknown;
+      try { raw = JSON.parse(readGovernanceFileUtf8Bounded(supersessionPath, MAX_BYTES).text); }
+      catch (error) { fail(`supersession is not safe valid JSON: ${supersessionPath}: ${error instanceof Error ? error.message : String(error)}`); }
+      const validation = validateIntentSupersession(raw);
+      if (!validation.valid || validation.supersession === null) {
+        fail(`invalid supersession ${supersessionPath}: ${validation.errors.join("; ")}`);
+      }
+      const parsedSupersession = validation.supersession as IntentSupersession;
+      if (name !== `${parsedSupersession.supersessionId}.json`) {
+        fail(`supersession filename must match supersessionId: ${supersessionPath}`);
+      }
+      return parsedSupersession;
+    });
+}
 
 const equivalent = analyzeEquivalentUnprocessedIntents({
   currentIntent: intent,
