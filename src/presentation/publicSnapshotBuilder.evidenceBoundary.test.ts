@@ -26,20 +26,27 @@ function build(evidenceLinks: string[]) {
   });
 }
 
-test("public snapshot keeps public evidence and drops private control paths", () => {
+test("public snapshot keeps only explicitly allowlisted evidence families", () => {
   const snapshot = build([
     "reports/automation/history/30912235903-TASK-PLANNER-NEXT.json",
     "reports/n2/n2-dataset-inventory.json",
     "research/registries/experiments/EXP-safe.json",
     "automation/control/planner-candidates.json",
+    "reports/private/raw-t5.json",
+    "reports/automation/validation/internal-preflight.json",
+    "reports/other/unknown.json",
   ]);
 
   assert.deepEqual(snapshot.pipeline[0].evidence, [
     "reports/automation/history/30912235903-TASK-PLANNER-NEXT.json",
     "reports/n2/n2-dataset-inventory.json",
-    "research/registries/experiments/EXP-safe.json",
   ]);
-  assert.doesNotMatch(JSON.stringify(snapshot), /automation\/control\/planner-candidates/);
+  const serialized = JSON.stringify(snapshot);
+  assert.doesNotMatch(serialized, /research\/registries/);
+  assert.doesNotMatch(serialized, /automation\/control\/planner-candidates/);
+  assert.doesNotMatch(serialized, /reports\/private/);
+  assert.doesNotMatch(serialized, /reports\/automation\/validation/);
+  assert.doesNotMatch(serialized, /reports\/other/);
 });
 
 test("public snapshot drops absolute and traversal evidence paths", () => {
