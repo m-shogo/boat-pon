@@ -193,7 +193,7 @@ async function verifyOptionalSnapshots(root: string, files: Set<string>, errors:
   const present = [...OPTIONAL_PUBLIC_DATA_FILES].filter((path) => files.has(path));
   if (present.length === 1) errors.push("latest.json and last-known-good.json must be published together");
 
-  const snapshots: Array<{ path: string; dataAsOf: number }> = [];
+  const snapshots: Array<{ path: string; dataAsOf: number; generatedAt: number }> = [];
   for (const path of present) {
     try {
       const value = JSON.parse(await readFile(join(root, ...path.split("/")), "utf8")) as unknown;
@@ -203,11 +203,16 @@ async function verifyOptionalSnapshots(root: string, files: Set<string>, errors:
         continue;
       }
       const dataAsOf = Date.parse(verified.snapshot.dataAsOf);
+      const generatedAt = Date.parse(verified.snapshot.generatedAt);
       if (!Number.isFinite(dataAsOf)) {
         errors.push(`${path} has an invalid dataAsOf`);
         continue;
       }
-      snapshots.push({ path, dataAsOf });
+      if (!Number.isFinite(generatedAt)) {
+        errors.push(`${path} has an invalid generatedAt`);
+        continue;
+      }
+      snapshots.push({ path, dataAsOf, generatedAt });
     } catch (error) {
       errors.push(`${path} is invalid JSON: ${messageOf(error)}`);
     }
@@ -217,6 +222,14 @@ async function verifyOptionalSnapshots(root: string, files: Set<string>, errors:
   const fallback = snapshots.find((item) => item.path.endsWith("last-known-good.json"));
   if (latest && fallback && latest.dataAsOf < fallback.dataAsOf) {
     errors.push("latest.json is older than last-known-good.json");
+  }
+  if (
+    latest
+    && fallback
+    && latest.dataAsOf === fallback.dataAsOf
+    && latest.generatedAt < fallback.generatedAt
+  ) {
+    errors.push("latest.json generation is older than last-known-good.json");
   }
 }
 
