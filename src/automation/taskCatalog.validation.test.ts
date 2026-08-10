@@ -18,6 +18,7 @@ function validTask(over: Record<string, unknown> = {}) {
     taskDefinitionVersion: 1,
     attemptCount: 0,
     maxAttempts: 3,
+    updatedAt: "2026-08-10T00:00:00Z",
     ...over,
   };
 }
@@ -33,6 +34,7 @@ test("queue state rejects invalid authority metadata", () => {
   delete missingUpdatedAt.updatedAt;
   assert.equal(validateQueueState(missingUpdatedAt).valid, false);
   assert.equal(validateQueueState({ ...queue(validTask()), updatedAt: "" }).valid, false);
+  assert.equal(validateQueueState({ ...queue(validTask()), updatedAt: "2026-08-10" }).valid, false);
 });
 
 test("queue state rejects malformed task ids", () => {
@@ -65,4 +67,27 @@ test("queue state rejects malformed evidence links when present", () => {
   assert.equal(validateQueueState(queue(validTask({ evidenceLinks: "reports/automation/history/x.json" }))).valid, false);
   assert.equal(validateQueueState(queue(validTask({ evidenceLinks: ["reports/automation/history/x.json", 7] }))).valid, false);
   assert.equal(validateQueueState(queue(validTask({ evidenceLinks: ["reports/automation/history/x.json"] }))).valid, true);
+});
+
+test("queue state requires RFC3339 task timestamps", () => {
+  assert.equal(validateQueueState(queue(validTask({ updatedAt: "2026-08-10" }))).valid, false);
+  assert.equal(validateQueueState(queue(validTask({ updatedAt: "not-a-time" }))).valid, false);
+  assert.equal(validateQueueState(queue(validTask({ updatedAt: "2026-08-10T00:00:00+09:00" }))).valid, true);
+});
+
+test("queue state validates lastFailure structure fail-closed", () => {
+  assert.equal(validateQueueState(queue(validTask({ lastFailure: null }))).valid, true);
+  assert.equal(validateQueueState(queue(validTask({ lastFailure: "boom" }))).valid, false);
+  assert.equal(validateQueueState(queue(validTask({ lastFailure: { code: "", at: "2026-08-10T00:00:00Z" } }))).valid, false);
+  assert.equal(validateQueueState(queue(validTask({ lastFailure: { code: "EXECUTOR_EXCEPTION", at: "2026-08-10" } }))).valid, false);
+  assert.equal(validateQueueState(queue(validTask({ lastFailure: { code: "EXECUTOR_EXCEPTION", at: "2026-08-10T00:00:00Z", message: 7 } }))).valid, false);
+  assert.equal(validateQueueState(queue(validTask({ lastFailure: { code: "EXECUTOR_EXCEPTION", at: "2026-08-10T00:00:00Z", extra: true } }))).valid, false);
+  assert.equal(validateQueueState(queue(validTask({ lastFailure: { code: "EXECUTOR_EXCEPTION", at: "2026-08-10T00:00:00Z", message: "boom" } }))).valid, true);
+});
+
+test("queue state validates nextDecision when present", () => {
+  assert.equal(validateQueueState(queue(validTask({ nextDecision: "依存 task を次回 dispatch 候補にする（自動起動しない）" }))).valid, true);
+  assert.equal(validateQueueState(queue(validTask({ nextDecision: "" }))).valid, false);
+  assert.equal(validateQueueState(queue(validTask({ nextDecision: "   " }))).valid, false);
+  assert.equal(validateQueueState(queue(validTask({ nextDecision: 7 }))).valid, false);
 });
