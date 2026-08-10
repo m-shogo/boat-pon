@@ -19,7 +19,7 @@ if (!/^(TASK-[0-9A-Za-z._-]{1,64}|NEXT)$/.test(taskId)) fail("task_id");
 if (!["run-task", "run-next", "status-only", "dry-run"].includes(requestedAction)) fail("requested_action");
 if (requestedAction === "run-next" && taskId !== "NEXT") fail("run-next requires task_id NEXT");
 if (taskId === "NEXT" && !["status-only", "dry-run"].includes(requestedAction)) fail("executing NEXT requires intent dispatch");
-if (!["L0", "L1", "L2", "L3"].includes(safetyLevel)) fail("safety_level (L4 is never automated)");
+if (!["L0", "L1", "L2"].includes(safetyLevel)) fail("safety_level (legacy builder supports L0/L1/L2 only; L3 requires intent dispatch with a pre-existing grant; L4 is never automated)");
 if (!/^[0-9a-f]{7,40}$/.test(authoritySha)) fail("authority_sha");
 const maxDurationSeconds = Number(maxDurationRaw);
 if (!Number.isInteger(maxDurationSeconds) || maxDurationSeconds < 60 || maxDurationSeconds > 21600) fail("max_duration_seconds");
@@ -42,7 +42,7 @@ const request = {
   requestedBy: `github-actions:${actor}`,
   maxDurationSeconds,
   expectedOutput: "reports/automation/current-status.json",
-  approvalRequirement: safetyLevel === "L3" ? "existing-grant-required" : "none",
+  approvalRequirement: "none",
   ...(requestReference ? { requestReference } : {}),
   ...(["dry-run", "status-only"].includes(requestedAction) ? { dryRun: true } : {}),
 };
