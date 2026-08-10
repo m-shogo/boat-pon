@@ -167,7 +167,9 @@ function isNonEmptyString(value: unknown): value is string {
 }
 
 function isNullablePublicValue(value: unknown): value is number | string | null {
-  return value === null || typeof value === "number" || typeof value === "string";
+  return value === null
+    || typeof value === "string"
+    || (typeof value === "number" && Number.isFinite(value));
 }
 
 function isNullableCount(value: unknown): value is number | null {
@@ -280,13 +282,13 @@ export function validatePublicDashboardSnapshot(value: unknown): PublicSnapshotV
       validateExactKeys(metric, METRIC_KEYS, METRIC_REQUIRED_KEYS, path, errors);
       if (typeof metric.id !== "string" || !METRIC_ID_RE.test(metric.id)) errors.push(`${path}.id: invalid metric id`);
       if (!isNonEmptyString(metric.label)) errors.push(`${path}.label: non-empty string required`);
-      if (!isNullablePublicValue(metric.value)) errors.push(`${path}.value: number, string or null required`);
+      if (!isNullablePublicValue(metric.value)) errors.push(`${path}.value: finite number, string or null required`);
       if (!isNullableString(metric.unit)) errors.push(`${path}.unit: string or null required`);
       if (!isNullableCount(metric.sampleSize)) errors.push(`${path}.sampleSize: non-negative integer or null required`);
       if (!isNullableString(metric.period)) errors.push(`${path}.period: string or null required`);
       if (typeof metric.basis !== "string" || !METRIC_BASES.has(metric.basis)) errors.push(`${path}.basis: invalid value`);
       if ("maxHitExcludedValue" in metric && !isNullablePublicValue(metric.maxHitExcludedValue)) {
-        errors.push(`${path}.maxHitExcludedValue: number, string or null required`);
+        errors.push(`${path}.maxHitExcludedValue: finite number, string or null required`);
       }
     });
   }

@@ -31,14 +31,16 @@ function response(value: unknown): ReturnType<PublicSnapshotFetcher> {
   });
 }
 
-test("integrity verifier fails closed when canonicalization rejects a validator-accepted value", async () => {
+test("integrity verifier rejects non-finite values during structured validation", async () => {
   const result = await verifyPublicDashboardSnapshotIntegrity(nonFiniteSnapshot());
   assert.equal(result.ok, false);
   assert.equal(result.snapshot, null);
-  assert.deepEqual(result.errors, ["snapshot canonicalization failed"]);
+  assert.deepEqual(result.errors, [
+    "$.metrics[0].value: finite number, string or null required",
+  ]);
 });
 
-test("snapshot loader converts canonicalization failure into unavailable instead of throwing", async () => {
+test("snapshot loader converts non-finite validation failure into unavailable instead of throwing", async () => {
   const result = await loadPublicDashboardSnapshot({
     fallbackUrl: null,
     fetcher: async () => response(nonFiniteSnapshot()),
