@@ -89,6 +89,7 @@ const REGISTRY_KEYS = new Set(["experiments", "discoveries", "rejections"]);
 const DATA_QUALITY_KEYS = new Set(["coverageStatus", "pitStatus", "holdoutStatus", "commonCohortStatus", "notes"]);
 const METHODOLOGY_REFERENCE_KEYS = new Set(["label", "path"]);
 const METRIC_BASES = new Set(["historical", "forward", "paper-live", "data-quality", "not-available"]);
+const METRIC_ID_RE = /^[a-z0-9][a-z0-9-]*$/;
 
 const STATUS_VALUES = new Set<PublicResearchStatus>([
   "PASS",
@@ -235,8 +236,8 @@ export function validatePublicDashboardSnapshot(value: unknown): PublicSnapshotV
   }
   if (!isIsoDate(value.generatedAt)) errors.push("$.generatedAt: invalid date-time");
   if (!isIsoDate(value.dataAsOf)) errors.push("$.dataAsOf: invalid date-time");
-  if (typeof value.modelVersion !== "string" || value.modelVersion.length === 0) {
-    errors.push("$.modelVersion: non-empty string required");
+  if (typeof value.modelVersion !== "string" || value.modelVersion.length < 1 || value.modelVersion.length > 120) {
+    errors.push("$.modelVersion: string with length 1..120 required");
   }
 
   if (!isRecord(value.integrity)) {
@@ -268,6 +269,7 @@ export function validatePublicDashboardSnapshot(value: unknown): PublicSnapshotV
   if (!Array.isArray(value.metrics)) {
     errors.push("$.metrics: array required");
   } else {
+    if (value.metrics.length > 100) errors.push("$.metrics: max 100 items");
     value.metrics.forEach((metric, index) => {
       const path = `$.metrics[${index}]`;
       if (!isRecord(metric)) {
@@ -275,7 +277,7 @@ export function validatePublicDashboardSnapshot(value: unknown): PublicSnapshotV
         return;
       }
       validateExactKeys(metric, METRIC_KEYS, METRIC_REQUIRED_KEYS, path, errors);
-      if (!isNonEmptyString(metric.id)) errors.push(`${path}.id: non-empty string required`);
+      if (typeof metric.id !== "string" || !METRIC_ID_RE.test(metric.id)) errors.push(`${path}.id: invalid metric id`);
       if (!isNonEmptyString(metric.label)) errors.push(`${path}.label: non-empty string required`);
       if (!isNullablePublicValue(metric.value)) errors.push(`${path}.value: number, string or null required`);
       if (!isNullableString(metric.unit)) errors.push(`${path}.unit: string or null required`);
@@ -291,6 +293,7 @@ export function validatePublicDashboardSnapshot(value: unknown): PublicSnapshotV
   if (!Array.isArray(value.pipeline)) {
     errors.push("$.pipeline: array required");
   } else {
+    if (value.pipeline.length > 200) errors.push("$.pipeline: max 200 items");
     value.pipeline.forEach((item, index) => {
       const path = `$.pipeline[${index}]`;
       if (!isRecord(item)) {
@@ -302,7 +305,9 @@ export function validatePublicDashboardSnapshot(value: unknown): PublicSnapshotV
       if (!isNonEmptyString(item.label)) errors.push(`${path}.label: non-empty string required`);
       if (!isPublicStatus(item.status)) errors.push(`${path}.status: invalid status`);
       if (!isStringArray(item.dependencies)) errors.push(`${path}.dependencies: string array required`);
+      else if (item.dependencies.length > 50) errors.push(`${path}.dependencies: max 50 items`);
       if (!isStringArray(item.evidence)) errors.push(`${path}.evidence: string array required`);
+      else if (item.evidence.length > 20) errors.push(`${path}.evidence: max 20 items`);
     });
   }
 
@@ -323,11 +328,13 @@ export function validatePublicDashboardSnapshot(value: unknown): PublicSnapshotV
       if (!isPublicStatus(value.dataQuality[key])) errors.push(`$.dataQuality.${key}: invalid status`);
     }
     if (!isStringArray(value.dataQuality.notes)) errors.push("$.dataQuality.notes: string array required");
+    else if (value.dataQuality.notes.length > 50) errors.push("$.dataQuality.notes: max 50 items");
   }
 
   if (!Array.isArray(value.methodologyReferences)) {
     errors.push("$.methodologyReferences: array required");
   } else {
+    if (value.methodologyReferences.length > 50) errors.push("$.methodologyReferences: max 50 items");
     value.methodologyReferences.forEach((reference, index) => {
       const path = `$.methodologyReferences[${index}]`;
       if (!isRecord(reference)) {
@@ -336,7 +343,7 @@ export function validatePublicDashboardSnapshot(value: unknown): PublicSnapshotV
       }
       validateExactKeys(reference, METHODOLOGY_REFERENCE_KEYS, [...METHODOLOGY_REFERENCE_KEYS], path, errors);
       if (!isNonEmptyString(reference.label)) errors.push(`${path}.label: non-empty string required`);
-      if (!isNonEmptyString(reference.path)) errors.push(`${path}.path: non-empty string required`);
+      if (!isNonEmptyString(reference.path) || !reference.path.startsWith("/")) errors.push(`${path}.path: root-relative path required`);
     });
   }
 
