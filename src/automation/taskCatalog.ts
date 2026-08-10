@@ -70,6 +70,12 @@ export type QueueState = {
 // ---- catalog validation（strict, fail-closed）----
 const TASKID_RE = /^TASK-[0-9A-Za-z._-]{1,64}$/;
 const SAFETY = new Set(["L0", "L1", "L2", "L3", "L4"]);
+const CATALOG_FIELDS = new Set(["catalogSchemaVersion", "catalogVersion", "updatedAt", "note", "tasks"]);
+const TASK_DEFINITION_FIELDS = new Set([
+  "taskId", "taskDefinitionVersion", "title", "objective", "taskType", "executor", "safetyLevel",
+  "dependencies", "maxDurationSeconds", "expectedInputs", "expectedOutputs", "estimatedDurationSeconds",
+  "defaultStatus", "valueOfInformation", "invalidationCondition", "recurring",
+]);
 
 export function validateCatalog(input: unknown): { valid: boolean; errors: string[]; catalog: TaskCatalog | null } {
   const errors: string[] = [];
@@ -77,6 +83,7 @@ export function validateCatalog(input: unknown): { valid: boolean; errors: strin
     return { valid: false, errors: ["catalog must be an object"], catalog: null };
   }
   const c = input as Record<string, unknown>;
+  for (const field of Object.keys(c)) if (!CATALOG_FIELDS.has(field)) errors.push(`unknown catalog field: ${field}`);
   if (c.catalogSchemaVersion !== CATALOG_SCHEMA_VERSION) errors.push(`catalogSchemaVersion must be ${CATALOG_SCHEMA_VERSION}`);
   if (typeof c.catalogVersion !== "string" || c.catalogVersion.trim() === "") errors.push("invalid catalogVersion");
   if (!Array.isArray(c.tasks)) { errors.push("tasks must be an array"); return { valid: false, errors, catalog: null }; }
@@ -88,6 +95,7 @@ export function validateCatalog(input: unknown): { valid: boolean; errors: strin
       continue;
     }
     const t = t0 as Record<string, unknown>;
+    for (const field of Object.keys(t)) if (!TASK_DEFINITION_FIELDS.has(field)) errors.push(`${at} unknown field: ${field}`);
     if (typeof t.taskId !== "string" || !TASKID_RE.test(t.taskId)) errors.push(`${at}.taskId invalid`);
     else { if (ids.has(t.taskId)) errors.push(`${at}.taskId duplicate: ${t.taskId}`); ids.add(t.taskId); }
     if (!Number.isInteger(t.taskDefinitionVersion) || (t.taskDefinitionVersion as number) < 1) errors.push(`${at}.taskDefinitionVersion invalid`);
