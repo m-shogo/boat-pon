@@ -49,8 +49,8 @@ test("canonical request is valid per orchestrator schema and preserves intent se
   assert.equal(request.taskId, "TASK-N2-004");
   assert.equal(request.safetyLevel, "L0");
   assert.equal(request.requestedAction, "run-task");
-  assert.equal(request.requestId, "REQ-20260804-abcdef0123"); // derived from intentId
-  assert.equal(request.expectedOutput, "reports/n2/n2-dataset-inventory.json"); // from catalog
+  assert.equal(request.requestId, "REQ-20260804-abcdef0123");
+  assert.equal(request.expectedOutput, "reports/n2/n2-dataset-inventory.json");
   const v = validateRequest(request as unknown as Record<string, unknown>);
   assert.deepEqual(v.errors, []);
   assert.equal(v.valid, true);
@@ -103,11 +103,11 @@ test("ledger replay + idempotent-success lookups", () => {
   const successKey = "a".repeat(64);
   const failureKey = "b".repeat(64);
   const led = { requestIds: ["REQ-1", "REQ-2"], idempotencyKeys: {
-    [successKey]: { requestId: "REQ-1", result: "PASS", recordedAt: "2026-08-04T05:00:00.000Z" },
+    [successKey]: { requestId: "REQ-1", result: "PASS", evidencePath: "reports/automation/history/123-TASK-N2-004.json", recordedAt: "2026-08-04T05:00:00.000Z" },
     [failureKey]: { requestId: "REQ-2", result: "FAILED_FINAL", recordedAt: "2026-08-04T05:01:00.000Z" },
   } };
   assert.equal(findIdempotentSuccess(led, successKey)?.requestId, "REQ-1");
-  assert.equal(findIdempotentSuccess(led, failureKey), null); // failures are not idempotent successes
+  assert.equal(findIdempotentSuccess(led, failureKey), null);
 });
 
 test("malformed replay ledgers fail closed instead of reopening work", () => {
@@ -139,4 +139,10 @@ test("malformed idempotency ledgers block lookup before execution", () => {
     requestIds: [],
     idempotencyKeys: { [key]: { requestId: "REQ-orphan", result: "PASS", recordedAt: "2026-08-04T05:00:00.000Z" } },
   } as any, key), /idempotency requestId not recorded/);
+  for (const evidencePath of ["/tmp/private.json", "../private.json", "reports/automation/history/../../private.json"]) {
+    assert.throws(() => findIdempotentSuccess({
+      requestIds: ["REQ-1"],
+      idempotencyKeys: { [key]: { requestId: "REQ-1", result: "PASS", evidencePath, recordedAt: "2026-08-04T05:00:00.000Z" } },
+    } as any, key), /malformed processed request ledger/);
+  }
 });
