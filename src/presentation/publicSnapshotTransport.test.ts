@@ -116,6 +116,34 @@ test("invalid latest and invalid last-known-good fail closed with both causes", 
   ]);
 });
 
+test("loader rejects impossible snapshot timestamps after integrity verification", async () => {
+  const generatedInFuture = fixtureSnapshot();
+  generatedInFuture.generatedAt = "2026-08-05T06:00:00.000Z";
+  generatedInFuture.dataAsOf = "2026-08-05T05:00:00.000Z";
+  const sealedGeneratedInFuture = await sealPublicDashboardSnapshot(generatedInFuture);
+  const generatedInFutureResult = await loadPublicDashboardSnapshot({
+    nowMs: Date.parse("2026-08-05T05:00:00.000Z"),
+    maxFutureSkewMs: 5 * 60_000,
+    fallbackUrl: null,
+    fetcher: async () => response(sealedGeneratedInFuture),
+  });
+  assert.equal(generatedInFutureResult.snapshot, null);
+  assert.deepEqual(generatedInFutureResult.errors, ["FUTURE_GENERATED_AT"]);
+
+  const dataAfterGeneration = fixtureSnapshot();
+  dataAfterGeneration.generatedAt = "2026-08-05T04:00:00.000Z";
+  dataAfterGeneration.dataAsOf = "2026-08-05T05:00:00.000Z";
+  const sealedDataAfterGeneration = await sealPublicDashboardSnapshot(dataAfterGeneration);
+  const dataAfterGenerationResult = await loadPublicDashboardSnapshot({
+    nowMs: Date.parse("2026-08-05T05:01:00.000Z"),
+    maxFutureSkewMs: 5 * 60_000,
+    fallbackUrl: null,
+    fetcher: async () => response(sealedDataAfterGeneration),
+  });
+  assert.equal(dataAfterGenerationResult.snapshot, null);
+  assert.deepEqual(dataAfterGenerationResult.errors, ["DATA_AFTER_GENERATION"]);
+});
+
 test("invalid, unsigned, future and unavailable snapshots fail closed when fallback is disabled", async () => {
   const unsigned = fixtureSnapshot();
   const unsignedResult = await loadPublicDashboardSnapshot({
@@ -137,7 +165,7 @@ test("invalid, unsigned, future and unavailable snapshots fail closed when fallb
     fetcher: async () => response(sealedFuture),
   });
   assert.equal(futureResult.snapshot, null);
-  assert.deepEqual(futureResult.errors, ["FUTURE_DATA_AS_OF"]);
+  assert.deepEqual(futureResult.errors, ["FUTURE_GENERATED_AT"]);
 
   const httpResult = await loadPublicDashboardSnapshot({
     fallbackUrl: null,
