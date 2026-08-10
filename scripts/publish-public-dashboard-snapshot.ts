@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { validatePublicSnapshotForPublication } from "../src/presentation/publicSnapshotPublisher";
 
@@ -47,6 +47,10 @@ async function writePairAtomically(options: {
     mkdir(latestDirectory, { recursive: true }),
     mkdir(lastKnownGoodDirectory, { recursive: true }),
   ]);
+  await Promise.all([
+    assertPublishTarget(options.latestPath),
+    assertPublishTarget(options.lastKnownGoodPath),
+  ]);
 
   const token = randomUUID();
   const latestTemp = join(latestDirectory, `.latest-${token}.tmp`);
@@ -64,6 +68,18 @@ async function writePairAtomically(options: {
       rm(latestTemp, { force: true }),
       rm(lastKnownGoodTemp, { force: true }),
     ]);
+  }
+}
+
+async function assertPublishTarget(path: string): Promise<void> {
+  try {
+    const info = await lstat(path);
+    if (!info.isFile() || info.isSymbolicLink()) {
+      throw new Error(`public snapshot target must be a regular file: ${path}`);
+    }
+  } catch (error) {
+    if (isErrno(error, "ENOENT")) return;
+    throw error;
   }
 }
 
