@@ -130,6 +130,7 @@ export type ProcessedIntentLedger = { intentIds: string[]; entries?: Record<stri
 export type ProcessedRequestLedger = {
   requestIds: string[];
   idempotencyKeys: Record<string, { requestId: string; result: string; evidencePath?: string; recordedAt: string }>;
+  updatedAt?: string;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
