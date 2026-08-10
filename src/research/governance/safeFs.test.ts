@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { linkSync, mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
+import { linkSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -58,6 +58,20 @@ test("descriptor-bound governance reads reject symlinks", () => {
   symlinkSync(outside, alias);
 
   assert.throws(() => readGovernanceFileUtf8(alias), /governance scan symlink forbidden/);
+});
+
+test("descriptor-bound governance reads reject cwd-contained parent symlinks", (t) => {
+  const root = mkdtempSync(join(process.cwd(), ".gov-fs-parent-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const outside = tmp();
+  writeFileSync(join(outside, "outside.json"), "{}\n");
+  const aliasDir = join(root, "linked");
+  symlinkSync(outside, aliasDir, "dir");
+
+  assert.throws(
+    () => readGovernanceFileUtf8Bounded(join(aliasDir, "outside.json"), 1024),
+    /governance scan parent symlink forbidden/,
+  );
 });
 
 test("descriptor-bound governance reads reject hardlinks", () => {
