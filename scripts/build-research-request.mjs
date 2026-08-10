@@ -18,6 +18,7 @@ const actor = env("ACTOR") || "unknown";
 if (!/^(TASK-[0-9A-Za-z._-]{1,64}|NEXT)$/.test(taskId)) fail("task_id");
 if (!["run-task", "run-next", "status-only", "dry-run"].includes(requestedAction)) fail("requested_action");
 if (requestedAction === "run-next" && taskId !== "NEXT") fail("run-next requires task_id NEXT");
+if (taskId === "NEXT" && !["status-only", "dry-run"].includes(requestedAction)) fail("executing NEXT requires intent dispatch");
 if (!["L0", "L1", "L2", "L3"].includes(safetyLevel)) fail("safety_level (L4 is never automated)");
 if (!/^[0-9a-f]{7,40}$/.test(authoritySha)) fail("authority_sha");
 const maxDurationSeconds = Number(maxDurationRaw);
