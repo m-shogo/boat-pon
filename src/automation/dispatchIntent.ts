@@ -165,14 +165,14 @@ function isProcessedIntentLedgerValid(ledger: ProcessedIntentLedger): boolean {
 }
 
 export function isIntentProcessed(ledger: ProcessedIntentLedger | null, intentId: string): boolean {
-  if (!ledger) return false;
-  // A present-but-malformed replay ledger must never be interpreted as "not processed".
+  if (!ledger) return true;
+  // A missing or malformed replay ledger must never be interpreted as "not processed".
   if (!isProcessedIntentLedgerValid(ledger)) return true;
   return ledger.intentIds.includes(intentId);
 }
 export function isRequestReplay(ledger: ProcessedRequestLedger | null, requestId: string): boolean {
-  if (!ledger) return false;
-  // Replay checks must fail closed on corruption in either requestIds or the idempotency map.
+  if (!ledger) return true;
+  // Replay checks must fail closed on missing/corrupt requestIds or idempotency state.
   try {
     assertIdempotencyLedgerValid(ledger);
   } catch {
