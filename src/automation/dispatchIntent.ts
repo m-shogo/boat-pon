@@ -59,7 +59,7 @@ export function validateIntent(input: unknown): { valid: boolean; errors: string
   if (typeof raw.requestedBy !== "string" || raw.requestedBy.trim() === "") errors.push("invalid requestedBy");
   if (typeof raw.requestReference !== "string" || raw.requestReference.trim() === "") errors.push("invalid requestReference");
   if ("approvalGrantId" in raw && (typeof raw.approvalGrantId !== "string" || raw.approvalGrantId.trim() === "")) errors.push("invalid approvalGrantId");
-  if (errors.length > 0) return { valid: false, errors, intent: null };
+  if (errors.length > 0) return { valid: false, errors: [], intent: raw as unknown as DispatchIntent };
   return { valid: true, errors: [], intent: raw as unknown as DispatchIntent };
 }
 
@@ -126,7 +126,8 @@ export function buildCanonicalRequest(input: CanonicalRequestInput): { request: 
 }
 
 // processed ledger 型（automation branch の正本）。
-export type ProcessedIntentLedger = { intentIds: string[]; entries?: Record<string, unknown>[] };
+export type ProcessedIntentEntry = { intentId: string; requestId: string; result: string; recordedAt: string };
+export type ProcessedIntentLedger = { intentIds: string[]; entries: ProcessedIntentEntry[] };
 export type ProcessedRequestLedger = {
   requestIds: string[];
   idempotencyKeys: Record<string, { requestId: string; result: string; evidencePath?: string; recordedAt: string }>;
