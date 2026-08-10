@@ -11,6 +11,8 @@ import {
   READINESS_SCHEMA_VERSION, classifyDisk, computeVerdict, readinessDigest,
   type ReadinessCheck, type Severity,
 } from "../src/automation/readiness";
+import { validateIntentSupersession, type IntentSupersession } from "../src/automation/intentSupersession";
+import { checkSupersessionLedgerIsolation } from "../src/automation/supersessionLedger";
 import { computeStateDigest, reconcileCatalogState, validateCatalog, validateQueueState } from "../src/automation/taskCatalog";
 import { sha256Text } from "../src/research/governance/executorSdk";
 
@@ -74,10 +76,35 @@ if (catalogV.catalog && stateV.state) {
   add("n2_current_ready_inventory", "PASS", "P2", pendingTask);
 } else { add("catalogStateLoad", "BLOCKED", "P0", "load failed"); }
 
-// ---- 3. failed intent history preserved (not added to ledger) ----
+// ---- 3. supersession terminal history stays separate from the processed ledger ----
 const pInt = JSON.parse(showBranch("automation/control/processed-intents.json"));
-const failedIntentPreserved = !pInt.intentIds.some((x: string) => x.includes("k8m2q7v4pz"));
-add("failedIntentHistoryPreserved", failedIntentPreserved ? "PASS" : "BLOCKED", "P0", failedIntentPreserved ? "not replayed into ledger" : "leaked into ledger");
+const processedIntentIds = Array.isArray(pInt.intentIds) && pInt.intentIds.every((x: unknown) => typeof x === "string")
+  ? pInt.intentIds as string[]
+  : [];
+add("processedIntentLedgerValid", processedIntentIds.length === (Array.isArray(pInt.intentIds) ? pInt.intentIds.length : -1) ? "PASS" : "BLOCKED", "P0", "intentIds must be a string array");
+const supersessionDir = join(root, "automation/requests/supersessions");
+const supersessions: IntentSupersession[] = [];
+const supersessionErrors: string[] = [];
+if (existsSync(supersessionDir)) {
+  for (const name of readdirSync(supersessionDir).filter((x) => x.endsWith(".json")).sort()) {
+    let raw: unknown;
+    try { raw = JSON.parse(readFileSync(join(supersessionDir, name), "utf8")); }
+    catch { supersessionErrors.push(`${name}:invalid-json`); continue; }
+    const validation = validateIntentSupersession(raw);
+    if (!validation.valid || !validation.supersession) {
+      supersessionErrors.push(`${name}:${validation.errors.join(",")}`);
+      continue;
+    }
+    if (name !== `${validation.supersession.supersessionId}.json`) {
+      supersessionErrors.push(`${name}:filename-mismatch`);
+      continue;
+    }
+    supersessions.push(validation.supersession);
+  }
+}
+add("supersessionRecordsValid", supersessionErrors.length === 0 ? "PASS" : "BLOCKED", "P0", supersessionErrors.length === 0 ? `${supersessions.length} record(s) valid` : supersessionErrors.join("; "));
+const supersessionLedger = checkSupersessionLedgerIsolation({ processedIntentIds, supersessions });
+add("supersededIntentLedgerIsolation", supersessionLedger.processedSupersededIntentIds.length === 0 ? "PASS" : "BLOCKED", "P0", supersessionLedger.processedSupersededIntentIds.length === 0 ? "no superseded intent processed" : `${supersessionLedger.processedSupersededIntentIds.length} superseded intent(s) leaked into ledger`);
 
 // ---- 4. dataset-expand artifact may exist after completed research; readiness must not freeze an old phase ----
 const localManifestPath = join(root, "reports/n2/n2-dataset-manifest.json");
