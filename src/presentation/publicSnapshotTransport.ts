@@ -7,6 +7,7 @@ import {
 export const PUBLIC_SNAPSHOT_DIGEST_PLACEHOLDER = "0".repeat(64);
 export const DEFAULT_PUBLIC_SNAPSHOT_MAX_AGE_MS = 2 * 60 * 60 * 1_000;
 export const DEFAULT_PUBLIC_SNAPSHOT_FUTURE_SKEW_MS = 5 * 60 * 1_000;
+const ENCODED_PATH_CONTROL_RE = /%(?:00|2e|2f|5c)/i;
 
 export type PublicSnapshotFreshness = "FRESH" | "STALE" | "NOT_AVAILABLE";
 export type PublicSnapshotSource = "latest" | "last-known-good" | "not-available";
@@ -35,6 +36,23 @@ export type PublicSnapshotLoadResult = {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function encodedPathControlErrors(snapshot: PublicDashboardSnapshot): string[] {
+  const errors: string[] = [];
+  snapshot.pipeline.forEach((task, taskIndex) => {
+    task.evidence.forEach((path, evidenceIndex) => {
+      if (ENCODED_PATH_CONTROL_RE.test(path)) {
+        errors.push(`$.pipeline[${taskIndex}].evidence[${evidenceIndex}]: encoded path control is forbidden`);
+      }
+    });
+  });
+  snapshot.methodologyReferences.forEach((reference, index) => {
+    if (ENCODED_PATH_CONTROL_RE.test(reference.path)) {
+      errors.push(`$.methodologyReferences[${index}].path: encoded path control is forbidden`);
+    }
+  });
+  return errors;
 }
 
 export function canonicalizePublicSnapshotValue(value: unknown): string {
@@ -79,6 +97,8 @@ export async function sealPublicDashboardSnapshot(
   snapshot: PublicDashboardSnapshot,
 ): Promise<PublicDashboardSnapshot> {
   assertPublicDashboardSnapshot(snapshot);
+  const pathErrors = encodedPathControlErrors(snapshot);
+  if (pathErrors.length > 0) throw new Error(pathErrors.join("\n"));
   const sealed = publicSnapshotDigestPayload(snapshot);
   sealed.integrity.digest = await computePublicDashboardSnapshotDigest(sealed);
   assertPublicDashboardSnapshot(sealed);
@@ -92,6 +112,9 @@ export async function verifyPublicDashboardSnapshotIntegrity(
   if (!validation.ok) return { ok: false, errors: validation.errors, snapshot: null };
 
   const snapshot = value as PublicDashboardSnapshot;
+  const pathErrors = encodedPathControlErrors(snapshot);
+  if (pathErrors.length > 0) return { ok: false, errors: pathErrors, snapshot: null };
+
   let expected: string;
   try {
     expected = await computePublicDashboardSnapshotDigest(snapshot);
