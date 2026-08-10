@@ -19,9 +19,22 @@ test("runner validates both durable replay ledgers before appending either one",
   assert.doesNotMatch(append, /readJson\(PROCESSED_(?:INT|REQ)\)\s*\?\?/, "missing ledgers must not be recreated as empty history");
   assert.match(append, /if \(!intents\) throw new Error\("missing processed intent ledger during append"\)/);
   assert.match(append, /if \(!reqs\) throw new Error\("missing processed request ledger during append"\)/);
+  assert.ok(append.indexOf("assertReplayLedgersConsistent(intents, reqs)") < append.indexOf("writeJsonAtomic(PROCESSED_INT, intents)"));
   assert.ok(append.indexOf("isIntentProcessed(intents, intentId)") < append.indexOf("writeJsonAtomic(PROCESSED_INT, intents)"));
   assert.ok(append.indexOf("isRequestReplay(reqs, requestId)") < append.indexOf("writeJsonAtomic(PROCESSED_INT, intents)"));
   assert.ok(append.indexOf("findIdempotentSuccess(reqs, idempotencyKey)") < append.indexOf("writeJsonAtomic(PROCESSED_INT, intents)"));
+});
+
+test("runner validates cross-ledger lineage before consuming an attempt", () => {
+  const source = readFileSync("scripts/run-intent-task.ts", "utf8");
+  const guard = source.indexOf("assertReplayLedgersConsistent(processedInt, processedReq)");
+  const claim = source.indexOf('status: "CLAIMED"');
+  const executor = source.indexOf("exec = executor(");
+
+  assert.ok(guard >= 0, "cross-ledger lineage guard must exist");
+  assert.ok(guard < claim, "cross-ledger lineage guard must run before READY -> CLAIMED attempt consumption");
+  assert.ok(guard < executor, "cross-ledger lineage guard must run before executor invocation");
+  assert.match(source, /REPLAY_LEDGER_CROSS_CHECK_FAILED/);
 });
 
 test("runner validates the processed-intent ledger before consuming an attempt", () => {
