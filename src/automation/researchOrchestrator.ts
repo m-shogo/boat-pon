@@ -94,6 +94,8 @@ export function validateRequest(input: unknown): RequestValidation {
   if ("requestReference" in raw && (typeof raw.requestReference !== "string" || raw.requestReference.trim() === "")) errors.push("invalid requestReference");
   if (typeof raw.requestDigest !== "string" || !/^[0-9a-f]{64}$/.test(raw.requestDigest)) errors.push("invalid requestDigest");
   if ("dryRun" in raw && typeof raw.dryRun !== "boolean") errors.push("dryRun must be boolean");
+  if (raw.requestedAction === "run-next" && raw.taskId !== "NEXT") errors.push("run-next requires taskId NEXT");
+  if (raw.requestedAction === "status-only" && raw.dryRun !== true) errors.push("status-only requires dryRun true");
   if (errors.length > 0) return { valid: false, errors, request: null };
 
   const expected = computeRequestDigest(raw);
