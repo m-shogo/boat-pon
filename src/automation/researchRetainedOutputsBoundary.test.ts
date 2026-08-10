@@ -41,6 +41,19 @@ test("retained publish readback is descriptor-bound after atomic publication", (
   assert.doesNotMatch(retained, /readFileSync\(item\.retainedAbsolutePath/u);
 });
 
+test("retained temp staging is exclusive and verified through the created descriptor", () => {
+  const materializeStart = retained.indexOf("function materializePreparedOutputs");
+  const materialize = retained.slice(materializeStart);
+  assert.match(materialize, /constants\.O_CREAT \| constants\.O_EXCL \| constants\.O_RDWR \| constants\.O_NOFOLLOW/u);
+  assert.match(materialize, /RETAINED_OUTPUT_TEMP_RACE/u);
+  assert.match(materialize, /writeSync\(\s*tempFd/u);
+  assert.match(materialize, /fstatSync\(tempFd\)/u);
+  assert.match(materialize, /tempStat\.nlink !== 1/u);
+  assert.match(materialize, /readSync\(tempFd/u);
+  assert.doesNotMatch(retained, /writeFileSync\(tempPath/u);
+  assert.doesNotMatch(retained, /readFileSync\(tempPath/u);
+});
+
 test("retained output count and aggregate bytes are fail-closed per run", () => {
   assert.match(retained, /MAX_EXECUTOR_OUTPUT_PATHS\s*=\s*64/u);
   assert.match(retained, /MAX_RETAINED_TOTAL_BYTES\s*=\s*8_388_608/u);

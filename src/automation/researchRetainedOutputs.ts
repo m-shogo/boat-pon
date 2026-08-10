@@ -8,10 +8,9 @@ import {
   linkSync,
   mkdirSync,
   openSync,
-  readFileSync,
   readSync,
   unlinkSync,
-  writeFileSync,
+  writeSync,
 } from "node:fs";
 import { basename, dirname, resolve, sep } from "node:path";
 import { TextDecoder } from "node:util";
@@ -279,9 +278,48 @@ function materializePreparedOutputs(prepared: PreparedRetainedOutput[]): void {
       if (!item.changed) continue;
       mkdirSync(dirname(item.retainedAbsolutePath), { recursive: true });
       const tempPath = `${item.retainedAbsolutePath}.${randomUUID()}.tmp`;
+      let tempFd: number | null = null;
       try {
-        writeFileSync(tempPath, item.content, { mode: 0o644 });
-        const tempReadback = readFileSync(tempPath);
+        try {
+          tempFd = openSync(
+            tempPath,
+            constants.O_CREAT | constants.O_EXCL | constants.O_RDWR | constants.O_NOFOLLOW,
+            0o644,
+          );
+        } catch (error) {
+          if (error instanceof Error && "code" in error && error.code === "EEXIST") {
+            throw new Error(`RETAINED_OUTPUT_TEMP_RACE:${item.retainedRelativePath}`);
+          }
+          throw error;
+        }
+
+        let totalWritten = 0;
+        while (totalWritten < item.content.length) {
+          const bytesWritten = writeSync(
+            tempFd,
+            item.content,
+            totalWritten,
+            item.content.length - totalWritten,
+            totalWritten,
+          );
+          if (bytesWritten <= 0) throw new Error(`RETAINED_OUTPUT_TEMP_WRITE_FAILED:${item.retainedRelativePath}`);
+          totalWritten += bytesWritten;
+        }
+        const tempStat = fstatSync(tempFd);
+        if (!tempStat.isFile() || tempStat.nlink !== 1 || tempStat.size !== item.content.length) {
+          throw new Error(`RETAINED_OUTPUT_TEMP_FILE_TYPE_INVALID:${item.retainedRelativePath}`);
+        }
+
+        const chunks: Buffer[] = [];
+        let totalBytes = 0;
+        while (totalBytes < item.content.length) {
+          const chunk = Buffer.allocUnsafe(Math.min(RETAINED_READ_CHUNK_BYTES, item.content.length - totalBytes));
+          const bytesRead = readSync(tempFd, chunk, 0, chunk.length, totalBytes);
+          if (bytesRead === 0) break;
+          totalBytes += bytesRead;
+          chunks.push(chunk.subarray(0, bytesRead));
+        }
+        const tempReadback = Buffer.concat(chunks, totalBytes);
         if (sha256Buffer(tempReadback) !== item.contentDigest || !tempReadback.equals(item.content)) {
           throw new Error(`RETAINED_OUTPUT_TEMP_READBACK_MISMATCH:${item.retainedRelativePath}`);
         }
@@ -298,6 +336,7 @@ function materializePreparedOutputs(prepared: PreparedRetainedOutput[]): void {
         created.push(item.retainedAbsolutePath);
         verifyPublishedRetainedTarget(item);
       } finally {
+        if (tempFd !== null) closeSync(tempFd);
         if (existsSync(tempPath)) unlinkSync(tempPath);
       }
     }
