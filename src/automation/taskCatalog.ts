@@ -82,8 +82,12 @@ export function validateCatalog(input: unknown): { valid: boolean; errors: strin
   if (!Array.isArray(c.tasks)) { errors.push("tasks must be an array"); return { valid: false, errors, catalog: null }; }
   const ids = new Set<string>();
   for (const [i, t0] of (c.tasks as unknown[]).entries()) {
-    const t = t0 as Record<string, unknown>;
     const at = `tasks[${i}]`;
+    if (typeof t0 !== "object" || t0 === null || Array.isArray(t0)) {
+      errors.push(`${at} must be an object`);
+      continue;
+    }
+    const t = t0 as Record<string, unknown>;
     if (typeof t.taskId !== "string" || !TASKID_RE.test(t.taskId)) errors.push(`${at}.taskId invalid`);
     else { if (ids.has(t.taskId)) errors.push(`${at}.taskId duplicate: ${t.taskId}`); ids.add(t.taskId); }
     if (!Number.isInteger(t.taskDefinitionVersion) || (t.taskDefinitionVersion as number) < 1) errors.push(`${at}.taskDefinitionVersion invalid`);
@@ -100,8 +104,11 @@ export function validateCatalog(input: unknown): { valid: boolean; errors: strin
     if ("recurring" in t && typeof t.recurring !== "boolean") errors.push(`${at}.recurring must be boolean`);
   }
   // dependency 参照先が catalog に存在すること。
-  for (const t of c.tasks as TaskDefinition[]) {
-    for (const d of t.dependencies ?? []) if (!ids.has(d)) errors.push(`task ${t.taskId} depends on unknown ${d}`);
+  for (const t0 of c.tasks as unknown[]) {
+    if (typeof t0 !== "object" || t0 === null || Array.isArray(t0)) continue;
+    const t = t0 as Record<string, unknown>;
+    if (typeof t.taskId !== "string" || !Array.isArray(t.dependencies)) continue;
+    for (const d of t.dependencies) if (typeof d === "string" && !ids.has(d)) errors.push(`task ${t.taskId} depends on unknown ${d}`);
   }
   // dependency graph はDAGでなければならない。cycle/self-dependencyは永久deadlockになるためfail-closed。
   const graph = new Map<string, string[]>();
