@@ -60,6 +60,7 @@ export function validateIntent(input: unknown): { valid: boolean; errors: string
   if (typeof raw.intentId !== "string" || !INTENT_ID_RE.test(raw.intentId)) errors.push("invalid intentId");
   if (typeof raw.taskId !== "string" || !TASKID_RE.test(raw.taskId)) errors.push("invalid taskId");
   if (!INTENT_ACTIONS.includes(raw.requestedAction as IntentAction)) errors.push("invalid requestedAction");
+  if (raw.requestedAction === "plan-next" && raw.taskId !== "NEXT") errors.push("plan-next requires taskId NEXT");
   if (!["L0", "L1", "L2", "L3"].includes(raw.safetyLevel as string)) errors.push("invalid safetyLevel (L4 never; use L0/L1/L2/L3)");
   if (typeof raw.expectedAuthoritySha !== "string" || !/^[0-9a-f]{7,40}$/.test(raw.expectedAuthoritySha)) errors.push("invalid expectedAuthoritySha");
   if (!Number.isInteger(raw.maxDurationSeconds) || (raw.maxDurationSeconds as number) < 60 || (raw.maxDurationSeconds as number) > 21600) errors.push("invalid maxDurationSeconds");
