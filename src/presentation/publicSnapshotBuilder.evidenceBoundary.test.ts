@@ -53,3 +53,15 @@ test("public snapshot drops absolute and traversal evidence paths", () => {
 
   assert.deepEqual(snapshot.pipeline[0].evidence, []);
 });
+
+test("public snapshot drops percent-encoded path control evidence", () => {
+  const snapshot = build([
+    "reports/n2/%2e%2e/private.json",
+    "reports/n2/%2E%2E%2Fprivate.json",
+    "reports/n2/safe%2f..%2fprivate.json",
+    "reports/n2/safe%5c..%5cprivate.json",
+    "reports/n2/safe%00private.json",
+  ]);
+
+  assert.deepEqual(snapshot.pipeline[0].evidence, []);
+});
