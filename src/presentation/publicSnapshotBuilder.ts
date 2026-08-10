@@ -31,6 +31,7 @@ type QueueTask = {
 };
 
 const PUBLIC_EVIDENCE_PREFIXES = ["reports/", "research/registries/"] as const;
+const ENCODED_PATH_CONTROL_RE = /%(?:00|2e|2f|5c)/i;
 const RFC3339_TIMESTAMP_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -47,7 +48,7 @@ function stringArray(value: unknown): string[] {
 
 function publicEvidenceArray(value: unknown): string[] {
   return stringArray(value).filter((path) => {
-    if (!path || path.startsWith("/") || path.includes("\0")) return false;
+    if (!path || path.startsWith("/") || path.includes("\0") || ENCODED_PATH_CONTROL_RE.test(path)) return false;
     if (path.split("/").some((part) => part === "..")) return false;
     return PUBLIC_EVIDENCE_PREFIXES.some((prefix) => path.startsWith(prefix));
   });
