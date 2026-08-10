@@ -46,6 +46,9 @@ const report = {
 };
 console.log(JSON.stringify(report, null, 2));
 
+if (plan.staleDefinition.length > 0) {
+  die(`task definition mismatch requires explicit revalidation: ${plan.staleDefinition.map((item) => `${item.taskId}:${item.stateDefinitionVersion}->${item.catalogDefinitionVersion}`).join(", ")}`);
+}
 if (!changed) { console.error("NO_CHANGE: catalog and queue-state already reconciled; no commit"); process.exit(0); }
 if (!apply) { console.error("DRY_RUN: changes above are NOT written (pass --apply to migrate the automation branch)"); process.exit(0); }
 
