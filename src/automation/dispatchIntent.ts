@@ -83,10 +83,10 @@ export function computeIdempotencyKey(parts: {
 
 export type CanonicalRequestInput = {
   intent: DispatchIntent;
-  authoritySha: string;
-  queueDigest: string;
-  createdAt: string;
-  task: MergedTask;
+  authoritySha: string;      // guard が確認した最新 main SHA
+  queueDigest: string;       // guard が state から計算した digest
+  createdAt: string;         // guard が付与
+  task: MergedTask;          // catalog の task 定義（expectedOutput / safety の正本）
 };
 
 // intent の「意味」を変えずに canonical request を生成する。
@@ -94,6 +94,7 @@ export type CanonicalRequestInput = {
 export function buildCanonicalRequest(input: CanonicalRequestInput): { request: TaskRequest; errors: string[] } {
   const { intent, task } = input;
   const errors: string[] = [];
+  // intent と catalog の safety 整合（intent が catalog より緩い safety を主張したら拒否）。
   const order = ["L0", "L1", "L2", "L3", "L4"];
   if (order.indexOf(intent.safetyLevel) < order.indexOf(task.safetyLevel)) {
     errors.push(`intent safety ${intent.safetyLevel} is below catalog safety ${task.safetyLevel}`);
@@ -124,6 +125,7 @@ export function buildCanonicalRequest(input: CanonicalRequestInput): { request: 
   return { request: { ...base, requestDigest }, errors };
 }
 
+// processed ledger 型（automation branch の正本）。
 export type ProcessedIntentLedger = { intentIds: string[]; entries?: Record<string, unknown>[] };
 export type ProcessedRequestLedger = {
   requestIds: string[];
@@ -163,11 +165,13 @@ function isProcessedIntentLedgerValid(ledger: ProcessedIntentLedger): boolean {
 
 export function isIntentProcessed(ledger: ProcessedIntentLedger | null, intentId: string): boolean {
   if (!ledger) return false;
+  // A present-but-malformed replay ledger must never be interpreted as "not processed".
   if (!isProcessedIntentLedgerValid(ledger)) return true;
   return ledger.intentIds.includes(intentId);
 }
 export function isRequestReplay(ledger: ProcessedRequestLedger | null, requestId: string): boolean {
   if (!ledger) return false;
+  // Fail closed on structural corruption so a broken ledger cannot reopen a request.
   if (!isValidUniqueIdArray((ledger as unknown as Record<string, unknown>).requestIds, REQUEST_ID_RE)) return true;
   return ledger.requestIds.includes(requestId);
 }
@@ -196,8 +200,10 @@ function assertIdempotencyLedgerValid(ledger: ProcessedRequestLedger): void {
   }
 }
 
+// 同じ idempotency key の PASS/CONDITIONAL/DRY_RUN_OK 結果があれば再実行しない。
 export function findIdempotentSuccess(ledger: ProcessedRequestLedger | null, key: string): { requestId: string; result: string; evidencePath?: string } | null {
   if (!ledger) throw new Error("missing processed request ledger");
+  // run-intent-task calls this before executor invocation; throwing here blocks execution on ledger corruption.
   assertIdempotencyLedgerValid(ledger);
   const hit = ledger.idempotencyKeys[key];
   if (hit && ["PASS", "CONDITIONAL", "DRY_RUN_OK"].includes(hit.result)) return hit;
