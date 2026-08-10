@@ -26,6 +26,8 @@ type QueueTask = {
   updatedAt: string | null;
 };
 
+const PUBLIC_EVIDENCE_PREFIXES = ["reports/", "research/registries/"] as const;
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -36,6 +38,14 @@ function stringValue(value: unknown): string | null {
 
 function stringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+function publicEvidenceArray(value: unknown): string[] {
+  return stringArray(value).filter((path) => {
+    if (!path || path.startsWith("/") || path.includes("\0")) return false;
+    if (path.split("/").some((part) => part === "..")) return false;
+    return PUBLIC_EVIDENCE_PREFIXES.some((prefix) => path.startsWith(prefix));
+  });
 }
 
 function parseCatalog(value: unknown): CatalogTask[] {
@@ -59,7 +69,7 @@ function parseQueue(value: unknown): { updatedAt: string | null; tasks: Map<stri
       if (!status) continue;
       tasks.set(taskId, {
         status,
-        evidenceLinks: stringArray(rawTask.evidenceLinks),
+        evidenceLinks: publicEvidenceArray(rawTask.evidenceLinks),
         updatedAt: stringValue(rawTask.updatedAt),
       });
     }
