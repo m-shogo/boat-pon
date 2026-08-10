@@ -70,3 +70,19 @@ test("catalog rejects unknown top-level and task definition fields", () => {
   assert.equal(withUnknownTaskField.valid, false);
   assert.ok(withUnknownTaskField.errors.some((error) => error.includes("tasks[0] unknown field: hiddenControl")));
 });
+
+test("catalog rejects invalid metadata fields", () => {
+  const missingUpdatedAt = catalog([validTask()]) as Record<string, unknown>;
+  delete missingUpdatedAt.updatedAt;
+  const missing = validateCatalog(missingUpdatedAt);
+  assert.equal(missing.valid, false);
+  assert.ok(missing.errors.some((error) => error.includes("invalid updatedAt")));
+
+  const short = validateCatalog({ ...catalog([validTask()]), updatedAt: "short" });
+  assert.equal(short.valid, false);
+  assert.ok(short.errors.some((error) => error.includes("invalid updatedAt")));
+
+  const badNote = validateCatalog({ ...catalog([validTask()]), note: 42 });
+  assert.equal(badNote.valid, false);
+  assert.ok(badNote.errors.some((error) => error.includes("invalid note")));
+});
