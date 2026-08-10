@@ -6,7 +6,6 @@ import {
   existsSync,
   fstatSync,
   linkSync,
-  lstatSync,
   mkdirSync,
   openSync,
   readFileSync,
@@ -122,6 +121,53 @@ function readRetainedSourceBounded(sourceAbsolute: string, sourceRelativePath: s
   }
 }
 
+function existingRetainedTargetMatches(input: {
+  retainedAbsolutePath: string;
+  retainedRelativePath: string;
+  expectedContent: Buffer;
+  expectedDigest: string;
+}): boolean {
+  let fd: number | null = null;
+  try {
+    fd = openSync(input.retainedAbsolutePath, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+    const stat = fstatSync(fd);
+    if (!stat.isFile() || stat.nlink !== 1) {
+      throw new Error(`RETAINED_OUTPUT_EXISTING_FILE_TYPE_INVALID:${input.retainedRelativePath}`);
+    }
+    if (stat.size !== input.expectedContent.length) {
+      throw new Error(`RETAINED_OUTPUT_EXISTING_CONTENT_MISMATCH:${input.retainedRelativePath}`);
+    }
+
+    const chunks: Buffer[] = [];
+    let totalBytes = 0;
+    const maxBytes = input.expectedContent.length;
+    while (true) {
+      const remainingWithSentinel = maxBytes - totalBytes + 1;
+      const chunk = Buffer.allocUnsafe(Math.min(RETAINED_READ_CHUNK_BYTES, remainingWithSentinel));
+      const bytesRead = readSync(fd, chunk, 0, chunk.length, null);
+      if (bytesRead === 0) break;
+      totalBytes += bytesRead;
+      if (totalBytes > maxBytes) {
+        throw new Error(`RETAINED_OUTPUT_EXISTING_CONTENT_MISMATCH:${input.retainedRelativePath}`);
+      }
+      chunks.push(chunk.subarray(0, bytesRead));
+    }
+    const existing = Buffer.concat(chunks, totalBytes);
+    if (sha256Buffer(existing) !== input.expectedDigest || !existing.equals(input.expectedContent)) {
+      throw new Error(`RETAINED_OUTPUT_EXISTING_CONTENT_MISMATCH:${input.retainedRelativePath}`);
+    }
+    return true;
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return false;
+    if (error instanceof Error && "code" in error && error.code === "ELOOP") {
+      throw new Error(`RETAINED_OUTPUT_EXISTING_FILE_TYPE_INVALID:${input.retainedRelativePath}`);
+    }
+    throw error;
+  } finally {
+    if (fd !== null) closeSync(fd);
+  }
+}
+
 function validateRetainedJsonSource(input: {
   sourceRelativePath: string;
   content: Buffer;
@@ -168,18 +214,12 @@ function prepareMutableOutput(input: {
   const retainedRelativePath = `${RETAINED_ROOT}/${input.runId}/${contentDigest}-${safeBasename(input.sourceRelativePath)}`;
   const retainedAbsolutePath = resolveInside(input.repoRoot, retainedRelativePath);
 
-  let changed = true;
-  if (existsSync(retainedAbsolutePath)) {
-    const existingStat = lstatSync(retainedAbsolutePath);
-    if (existingStat.isSymbolicLink() || !existingStat.isFile()) {
-      throw new Error(`RETAINED_OUTPUT_EXISTING_FILE_TYPE_INVALID:${retainedRelativePath}`);
-    }
-    const existing = readFileSync(retainedAbsolutePath);
-    if (sha256Buffer(existing) !== contentDigest || !existing.equals(content)) {
-      throw new Error(`RETAINED_OUTPUT_EXISTING_CONTENT_MISMATCH:${retainedRelativePath}`);
-    }
-    changed = false;
-  }
+  const changed = !existingRetainedTargetMatches({
+    retainedAbsolutePath,
+    retainedRelativePath,
+    expectedContent: content,
+    expectedDigest: contentDigest,
+  });
 
   return {
     sourceRelativePath: input.sourceRelativePath,
