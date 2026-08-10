@@ -80,6 +80,15 @@ const TOP_LEVEL_ALLOWLIST = new Set([
   "dataQuality",
   "methodologyReferences",
 ]);
+const INTEGRITY_KEYS = new Set(["algorithm", "digest"]);
+const STATUS_KEYS = new Set(["currentPhase", "readiness", "lastRunAt", "nextTask", "runner", "snapshotFreshness"]);
+const METRIC_KEYS = new Set(["id", "label", "value", "unit", "sampleSize", "period", "basis", "maxHitExcludedValue"]);
+const METRIC_REQUIRED_KEYS = ["id", "label", "value", "unit", "sampleSize", "period", "basis"] as const;
+const PIPELINE_KEYS = new Set(["taskId", "label", "status", "dependencies", "evidence"]);
+const REGISTRY_KEYS = new Set(["experiments", "discoveries", "rejections"]);
+const DATA_QUALITY_KEYS = new Set(["coverageStatus", "pitStatus", "holdoutStatus", "commonCohortStatus", "notes"]);
+const METHODOLOGY_REFERENCE_KEYS = new Set(["label", "path"]);
+const METRIC_BASES = new Set(["historical", "forward", "paper-live", "data-quality", "not-available"]);
 
 const STATUS_VALUES = new Set<PublicResearchStatus>([
   "PASS",
@@ -152,8 +161,39 @@ function isNullableString(value: unknown): value is string | null {
   return value === null || typeof value === "string";
 }
 
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim() !== "";
+}
+
+function isNullablePublicValue(value: unknown): value is number | string | null {
+  return value === null || typeof value === "number" || typeof value === "string";
+}
+
+function isNullableCount(value: unknown): value is number | null {
+  return value === null || (Number.isInteger(value) && (value as number) >= 0);
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
 function isPublicStatus(value: unknown): value is PublicResearchStatus {
   return typeof value === "string" && STATUS_VALUES.has(value as PublicResearchStatus);
+}
+
+function validateExactKeys(
+  value: Record<string, unknown>,
+  allowed: Set<string>,
+  required: readonly string[],
+  path: string,
+  errors: string[],
+): void {
+  for (const key of Object.keys(value)) {
+    if (!allowed.has(key)) errors.push(`${path}.${key}: unknown key`);
+  }
+  for (const key of required) {
+    if (!(key in value)) errors.push(`${path}.${key}: required`);
+  }
 }
 
 function scanValue(value: unknown, path: string, errors: string[]): void {
@@ -188,12 +228,7 @@ export function validatePublicDashboardSnapshot(value: unknown): PublicSnapshotV
   const errors: string[] = [];
   if (!isRecord(value)) return { ok: false, errors: ["snapshot must be an object"] };
 
-  for (const key of Object.keys(value)) {
-    if (!TOP_LEVEL_ALLOWLIST.has(key)) errors.push(`$.${key}: unknown top-level key`);
-  }
-  for (const key of TOP_LEVEL_ALLOWLIST) {
-    if (!(key in value)) errors.push(`$.${key}: required`);
-  }
+  validateExactKeys(value, TOP_LEVEL_ALLOWLIST, [...TOP_LEVEL_ALLOWLIST], "$", errors);
 
   if (value.schemaVersion !== PUBLIC_SNAPSHOT_SCHEMA_VERSION) {
     errors.push(`$.schemaVersion: expected ${PUBLIC_SNAPSHOT_SCHEMA_VERSION}`);
@@ -207,6 +242,7 @@ export function validatePublicDashboardSnapshot(value: unknown): PublicSnapshotV
   if (!isRecord(value.integrity)) {
     errors.push("$.integrity: object required");
   } else {
+    validateExactKeys(value.integrity, INTEGRITY_KEYS, [...INTEGRITY_KEYS], "$.integrity", errors);
     if (value.integrity.algorithm !== "sha256") errors.push("$.integrity.algorithm: expected sha256");
     if (typeof value.integrity.digest !== "string" || !/^[a-f0-9]{64}$/.test(value.integrity.digest)) {
       errors.push("$.integrity.digest: expected 64 lowercase hex characters");
@@ -216,6 +252,7 @@ export function validatePublicDashboardSnapshot(value: unknown): PublicSnapshotV
   if (!isRecord(value.status)) {
     errors.push("$.status: object required");
   } else {
+    validateExactKeys(value.status, STATUS_KEYS, [...STATUS_KEYS], "$.status", errors);
     if (!isNullableString(value.status.currentPhase)) errors.push("$.status.currentPhase: string or null required");
     if (!isPublicStatus(value.status.readiness)) errors.push("$.status.readiness: invalid status");
     if (!(value.status.lastRunAt === null || isIsoDate(value.status.lastRunAt))) {
@@ -228,11 +265,80 @@ export function validatePublicDashboardSnapshot(value: unknown): PublicSnapshotV
     }
   }
 
-  if (!Array.isArray(value.metrics)) errors.push("$.metrics: array required");
-  if (!Array.isArray(value.pipeline)) errors.push("$.pipeline: array required");
-  if (!isRecord(value.registries)) errors.push("$.registries: object required");
-  if (!isRecord(value.dataQuality)) errors.push("$.dataQuality: object required");
-  if (!Array.isArray(value.methodologyReferences)) errors.push("$.methodologyReferences: array required");
+  if (!Array.isArray(value.metrics)) {
+    errors.push("$.metrics: array required");
+  } else {
+    value.metrics.forEach((metric, index) => {
+      const path = `$.metrics[${index}]`;
+      if (!isRecord(metric)) {
+        errors.push(`${path}: object required`);
+        return;
+      }
+      validateExactKeys(metric, METRIC_KEYS, METRIC_REQUIRED_KEYS, path, errors);
+      if (!isNonEmptyString(metric.id)) errors.push(`${path}.id: non-empty string required`);
+      if (!isNonEmptyString(metric.label)) errors.push(`${path}.label: non-empty string required`);
+      if (!isNullablePublicValue(metric.value)) errors.push(`${path}.value: number, string or null required`);
+      if (!isNullableString(metric.unit)) errors.push(`${path}.unit: string or null required`);
+      if (!isNullableCount(metric.sampleSize)) errors.push(`${path}.sampleSize: non-negative integer or null required`);
+      if (!isNullableString(metric.period)) errors.push(`${path}.period: string or null required`);
+      if (typeof metric.basis !== "string" || !METRIC_BASES.has(metric.basis)) errors.push(`${path}.basis: invalid value`);
+      if ("maxHitExcludedValue" in metric && !isNullablePublicValue(metric.maxHitExcludedValue)) {
+        errors.push(`${path}.maxHitExcludedValue: number, string or null required`);
+      }
+    });
+  }
+
+  if (!Array.isArray(value.pipeline)) {
+    errors.push("$.pipeline: array required");
+  } else {
+    value.pipeline.forEach((item, index) => {
+      const path = `$.pipeline[${index}]`;
+      if (!isRecord(item)) {
+        errors.push(`${path}: object required`);
+        return;
+      }
+      validateExactKeys(item, PIPELINE_KEYS, [...PIPELINE_KEYS], path, errors);
+      if (!isNonEmptyString(item.taskId)) errors.push(`${path}.taskId: non-empty string required`);
+      if (!isNonEmptyString(item.label)) errors.push(`${path}.label: non-empty string required`);
+      if (!isPublicStatus(item.status)) errors.push(`${path}.status: invalid status`);
+      if (!isStringArray(item.dependencies)) errors.push(`${path}.dependencies: string array required`);
+      if (!isStringArray(item.evidence)) errors.push(`${path}.evidence: string array required`);
+    });
+  }
+
+  if (!isRecord(value.registries)) {
+    errors.push("$.registries: object required");
+  } else {
+    validateExactKeys(value.registries, REGISTRY_KEYS, [...REGISTRY_KEYS], "$.registries", errors);
+    for (const key of REGISTRY_KEYS) {
+      if (!isNullableCount(value.registries[key])) errors.push(`$.registries.${key}: non-negative integer or null required`);
+    }
+  }
+
+  if (!isRecord(value.dataQuality)) {
+    errors.push("$.dataQuality: object required");
+  } else {
+    validateExactKeys(value.dataQuality, DATA_QUALITY_KEYS, [...DATA_QUALITY_KEYS], "$.dataQuality", errors);
+    for (const key of ["coverageStatus", "pitStatus", "holdoutStatus", "commonCohortStatus"] as const) {
+      if (!isPublicStatus(value.dataQuality[key])) errors.push(`$.dataQuality.${key}: invalid status`);
+    }
+    if (!isStringArray(value.dataQuality.notes)) errors.push("$.dataQuality.notes: string array required");
+  }
+
+  if (!Array.isArray(value.methodologyReferences)) {
+    errors.push("$.methodologyReferences: array required");
+  } else {
+    value.methodologyReferences.forEach((reference, index) => {
+      const path = `$.methodologyReferences[${index}]`;
+      if (!isRecord(reference)) {
+        errors.push(`${path}: object required`);
+        return;
+      }
+      validateExactKeys(reference, METHODOLOGY_REFERENCE_KEYS, [...METHODOLOGY_REFERENCE_KEYS], path, errors);
+      if (!isNonEmptyString(reference.label)) errors.push(`${path}.label: non-empty string required`);
+      if (!isNonEmptyString(reference.path)) errors.push(`${path}.path: non-empty string required`);
+    });
+  }
 
   scanValue(value, "$", errors);
   return { ok: errors.length === 0, errors };
