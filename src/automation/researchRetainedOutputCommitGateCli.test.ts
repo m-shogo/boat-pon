@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, truncateSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import test from "node:test";
@@ -67,6 +67,16 @@ test("CLI rejects missing or non-terminal history results", () => {
     assert.throws(() => runGate(root, runId), /RETAINED_COMMIT_HISTORY_RESULT_INVALID:.*:missing/u);
     put(root, history, `${JSON.stringify({ runId, taskId, outputs: [], result: "RUNNING" })}\n`);
     assert.throws(() => runGate(root, runId), /RETAINED_COMMIT_HISTORY_RESULT_INVALID:.*:RUNNING/u);
+  });
+});
+
+test("CLI rejects oversized retained history before parsing", () => {
+  withRepo((root) => {
+    const runId = "12345";
+    const history = `reports/automation/history/${runId}-${taskId}.json`;
+    put(root, history, "{}\n");
+    truncateSync(join(root, history), 8_000_001);
+    assert.throws(() => runGate(root, runId), /RETAINED_COMMIT_HISTORY_JSON_INVALID/u);
   });
 });
 
