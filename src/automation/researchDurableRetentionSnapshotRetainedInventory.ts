@@ -64,6 +64,12 @@ function validateExtendedSnapshot(
   if (value.referencedRetainedOutputCount > value.retainedOutputFileCount) {
     throw new Error("DURABLE_RETENTION_RETAINED_REFERENCE_COUNT_INVALID");
   }
+  if (
+    (value.orphanRetainedOutputCount > 0 || value.invalidRetainedOutputCount > 0)
+    && value.auditStatus !== "BLOCKED"
+  ) {
+    throw new Error("DURABLE_RETENTION_RETAINED_INVENTORY_STATUS_INVALID");
+  }
   return value as ResearchDurableRetentionSnapshotWithRetainedInventory;
 }
 
