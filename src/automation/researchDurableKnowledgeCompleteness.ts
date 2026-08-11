@@ -673,6 +673,7 @@ function assessHistoryFile(input: {
     ? ((history.blocks as string[]).length > 0 || Object.keys(history.summary as Record<string, unknown>).length > 0 || outputPaths.length > 0)
     : (history.blocks as string[]).length > 0;
   const outputComplete = outputIssues.length === 0;
+  const allOutputsStrong = outputs.every(hasStrongOutputIntegrity);
   return {
     historyRelativePath: input.historyRelativePath,
     historyContentDigest: contentDigest,
@@ -695,7 +696,7 @@ function assessHistoryFile(input: {
       ? "NON_PASS_DURABLE_HISTORY"
       : "INCOMPLETE_OUTPUT_REFERENCE",
     durableComplete: nonPassHasDurableHistory && outputComplete,
-    strongDurableComplete: nonPassHasDurableHistory && outputComplete && superseded === 0,
+    strongDurableComplete: nonPassHasDurableHistory && outputComplete && allOutputsStrong,
     issues: [
       ...(!nonPassHasDurableHistory ? ["NONPASS_DURABLE_EVIDENCE_EMPTY"] : []),
       ...outputIssues,
