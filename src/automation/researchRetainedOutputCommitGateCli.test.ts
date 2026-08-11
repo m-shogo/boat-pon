@@ -49,6 +49,28 @@ test("CLI accepts an untracked retained output referenced by same-run history", 
   });
 });
 
+test("CLI rejects cross-run retained output lineage", () => {
+  withRepo((root) => {
+    const runId = "12345";
+    const output = `reports/automation/retained-outputs/${runId}/${"c".repeat(64)}-report.json`;
+    const otherOutput = `reports/automation/retained-outputs/99999/${"d".repeat(64)}-report.json`;
+    const history = `reports/automation/history/${runId}-TASK-N2-011.json`;
+    put(root, output, "{}\n");
+    put(root, history, `${JSON.stringify({ runId, outputs: [output, otherOutput] })}\n`);
+    assert.throws(() => runGate(root, runId), /RETAINED_COMMIT_HISTORY_RETAINED_RUN_ID_MISMATCH/u);
+  });
+});
+
+test("CLI rejects history-only cross-run retained output lineage", () => {
+  withRepo((root) => {
+    const historyRunId = "12345";
+    const otherOutput = `reports/automation/retained-outputs/99999/${"e".repeat(64)}-report.json`;
+    const history = `reports/automation/history/${historyRunId}-TASK-N2-011.json`;
+    put(root, history, `${JSON.stringify({ runId: historyRunId, outputs: [otherOutput] })}\n`);
+    assert.throws(() => runGate(root, "77777"), /RETAINED_COMMIT_HISTORY_RETAINED_RUN_ID_MISMATCH/u);
+  });
+});
+
 test("CLI rejects an orphan retained output before git staging", () => {
   withRepo((root) => {
     const runId = "12345";

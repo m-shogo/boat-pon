@@ -19,13 +19,50 @@ export function validateRetainedOutputCommit(input: {
   const changed = [...new Set(input.changedPaths.filter(Boolean))];
   const retained = changed.filter((path) => path.startsWith(RETAINED_PREFIX));
   const histories = changed.filter((path) => path.startsWith(HISTORY_PREFIX));
-  if (retained.length === 0) {
-    return { retainedPathCount: 0, historyPathCount: histories.length, referencedRetainedPathCount: 0, runIds: [] };
-  }
 
   const expectedRunId = input.expectedRunId?.trim() || null;
   if (expectedRunId != null && expectedRunId !== "local" && !RUN_ID_RE.test(expectedRunId)) {
     throw new Error("RETAINED_COMMIT_EXPECTED_RUN_ID_INVALID");
+  }
+
+  const parsedHistories = new Map<string, { runId: string; outputs: string[] }>();
+  for (const historyPath of histories) {
+    const historyMatch = historyPath.match(HISTORY_RE);
+    if (!historyMatch) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_PATH_INVALID:${historyPath}`);
+    }
+    const pathRunId = historyMatch[1] ?? "";
+    let history: Record<string, unknown>;
+    try {
+      const parsed = JSON.parse(input.readText(historyPath)) as unknown;
+      if (typeof parsed !== "object" || parsed == null || Array.isArray(parsed)) throw new Error("not object");
+      history = parsed as Record<string, unknown>;
+    } catch {
+      throw new Error(`RETAINED_COMMIT_HISTORY_JSON_INVALID:${historyPath}`);
+    }
+    if (String(history.runId ?? "") !== pathRunId) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_RUN_ID_MISMATCH:${historyPath}`);
+    }
+    if (!Array.isArray(history.outputs) || history.outputs.some((value) => typeof value !== "string")) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_OUTPUTS_INVALID:${historyPath}`);
+    }
+    const outputs = history.outputs as string[];
+    for (const output of outputs) {
+      if (!output.startsWith(RETAINED_PREFIX)) continue;
+      const retainedMatch = output.match(RETAINED_RE);
+      if (!retainedMatch) {
+        throw new Error(`RETAINED_COMMIT_HISTORY_RETAINED_PATH_INVALID:${historyPath}:${output}`);
+      }
+      const outputRunId = retainedMatch[1] ?? "";
+      if (outputRunId !== pathRunId) {
+        throw new Error(`RETAINED_COMMIT_HISTORY_RETAINED_RUN_ID_MISMATCH:${historyPath}:${outputRunId}!=${pathRunId}`);
+      }
+    }
+    parsedHistories.set(historyPath, { runId: pathRunId, outputs });
+  }
+
+  if (retained.length === 0) {
+    return { retainedPathCount: 0, historyPathCount: histories.length, referencedRetainedPathCount: 0, runIds: [] };
   }
 
   const retainedByRun = new Map<string, string[]>();
@@ -43,26 +80,13 @@ export function validateRetainedOutputCommit(input: {
 
   let referencedRetainedPathCount = 0;
   for (const [runId, runRetainedPaths] of retainedByRun) {
-    const runHistoryPaths = histories.filter((path) => path.match(HISTORY_RE)?.[1] === runId);
+    const runHistoryPaths = histories.filter((path) => parsedHistories.get(path)?.runId === runId);
     if (runHistoryPaths.length !== 1) {
       throw new Error(`RETAINED_COMMIT_HISTORY_COUNT_INVALID:${runId}:${runHistoryPaths.length}`);
     }
     const historyPath = runHistoryPaths[0] ?? "";
-    let history: Record<string, unknown>;
-    try {
-      const parsed = JSON.parse(input.readText(historyPath)) as unknown;
-      if (typeof parsed !== "object" || parsed == null || Array.isArray(parsed)) throw new Error("not object");
-      history = parsed as Record<string, unknown>;
-    } catch {
-      throw new Error(`RETAINED_COMMIT_HISTORY_JSON_INVALID:${historyPath}`);
-    }
-    if (String(history.runId ?? "") !== runId) {
-      throw new Error(`RETAINED_COMMIT_HISTORY_RUN_ID_MISMATCH:${historyPath}`);
-    }
-    if (!Array.isArray(history.outputs) || history.outputs.some((value) => typeof value !== "string")) {
-      throw new Error(`RETAINED_COMMIT_HISTORY_OUTPUTS_INVALID:${historyPath}`);
-    }
-    const outputSet = new Set(history.outputs as string[]);
+    const outputs = parsedHistories.get(historyPath)?.outputs ?? [];
+    const outputSet = new Set(outputs);
     for (const path of runRetainedPaths) {
       if (!outputSet.has(path)) throw new Error(`RETAINED_COMMIT_ORPHAN:${path}`);
       referencedRetainedPathCount += 1;

@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import test from "node:test";
 
 const gate = readFileSync(resolve(process.cwd(), "src/automation/researchRetainedOutputCommitGate.ts"), "utf8");
-const cli = readFileSync(resolve(process.cwd(), "scripts/check-research-retained-output-commit.ts"), "utf8");
+const cli = readFileSync(resolve(process.cwd(), "scripts/check-research-retained-output-commit.mjs"), "utf8");
 const commit = readFileSync(resolve(process.cwd(), "scripts/automation-commit.sh"), "utf8");
 
 test("commit gate is metadata-only and isolated from product/private behavior", () => {
@@ -16,10 +16,11 @@ test("commit gate is metadata-only and isolated from product/private behavior", 
   assert.doesNotMatch(gate, /writeFile|appendFile|rename|unlink|DatabaseSync|\bfetch\s*\(/u);
 });
 
-test("CLI inspects only git changes under retained-output and history roots", () => {
+test("trusted CLI inspects only git changes under retained-output and history roots", () => {
   assert.match(cli, /reports\/automation\/retained-outputs/u);
   assert.match(cli, /reports\/automation\/history/u);
-  assert.match(cli, /gitLines\(\["diff", "--name-only"/u);
+  assert.match(cli, /const TRUSTED_GIT_BIN = process\.env\.TRUSTED_GIT_BIN/u);
+  assert.match(cli, /gitLines\(\["diff", "--no-ext-diff", "--name-only"/u);
   assert.match(cli, /gitLines\(\["ls-files", "--others"/u);
   assert.doesNotMatch(cli, /writeFile|appendFile|rename|unlink|rmSync|DatabaseSync|\bfetch\s*\(/u);
   assert.match(cli, /currentBuyConnectionAuthorized:\s*false/u);
