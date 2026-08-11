@@ -313,6 +313,11 @@ async function validateManifest(root: string, manifest: PublicDeployManifest, ac
 
   for (const entry of validEntries) {
     const absolute = join(root, ...entry.path.split("/"));
+    const info = await lstat(absolute);
+    if (info.isSymbolicLink() || !info.isFile()) {
+      errors.push(`manifest file must be a regular file: ${entry.path}`);
+      continue;
+    }
     const content = await readFile(absolute);
     const digest = createHash("sha256").update(content).digest("hex");
     if (entry.bytes !== content.byteLength) errors.push(`manifest byte count mismatch: ${entry.path}`);
