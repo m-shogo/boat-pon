@@ -54,6 +54,20 @@ test("terminal history cannot claim retained output from another run", () => {
   );
 });
 
+test("history-only change cannot claim retained output from another run", () => {
+  const historyPath = history("123");
+  assert.throws(
+    () => validateRetainedOutputCommit({
+      changedPaths: [historyPath],
+      expectedRunId: "456",
+      readText: reader({
+        [historyPath]: { runId: "123", outputs: [retained("999")] },
+      }),
+    }),
+    /RETAINED_COMMIT_HISTORY_RETAINED_RUN_ID_MISMATCH/u,
+  );
+});
+
 test("terminal history rejects malformed retained-output references", () => {
   const output = retained("123");
   const historyPath = history("123");
