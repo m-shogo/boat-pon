@@ -5,8 +5,8 @@ import test from "node:test";
 
 const source = readFileSync(join(process.cwd(), "src/automation/researchRetainedOutputInventory.ts"), "utf8");
 
-test("retained inventory binds hashing reads to the validated file descriptor", () => {
-  assert.match(source, /openSync\(path, fsConstants\.O_RDONLY \| fsConstants\.O_NOFOLLOW\)/u);
+test("retained inventory binds hashing reads to a nonblocking validated file descriptor", () => {
+  assert.match(source, /openSync\(path, fsConstants\.O_RDONLY \| fsConstants\.O_NOFOLLOW \| fsConstants\.O_NONBLOCK\)/u);
   assert.match(source, /const stat = fstatSync\(fd\)/u);
   assert.match(source, /stat\.dev !== expectedStat\.dev/u);
   assert.match(source, /stat\.ino !== expectedStat\.ino/u);
