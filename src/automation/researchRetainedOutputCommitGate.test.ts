@@ -64,7 +64,7 @@ test("history-only change cannot claim retained output from another run", () => 
         [historyPath]: { runId: "123", outputs: [retained("999")] },
       }),
     }),
-    /RETAINED_COMMIT_HISTORY_RETAINED_RUN_ID_MISMATCH/u,
+    /RETAINED_COMMIT_HISTORY_RUN_ID_MISMATCH:123!=456/u,
   );
 });
 
@@ -113,7 +113,7 @@ test("wrong workflow run cannot commit another run retained output", () => {
       expectedRunId: "123",
       readText: reader({ [historyPath]: { runId: "124", outputs: [output] } }),
     }),
-    /RETAINED_COMMIT_RUN_ID_MISMATCH/u,
+    /RETAINED_COMMIT_HISTORY_RUN_ID_MISMATCH:124!=123/u,
   );
 });
 

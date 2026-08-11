@@ -67,7 +67,16 @@ test("CLI rejects history-only cross-run retained output lineage", () => {
     const otherOutput = `reports/automation/retained-outputs/99999/${"e".repeat(64)}-report.json`;
     const history = `reports/automation/history/${historyRunId}-TASK-N2-011.json`;
     put(root, history, `${JSON.stringify({ runId: historyRunId, outputs: [otherOutput] })}\n`);
-    assert.throws(() => runGate(root, "77777"), /RETAINED_COMMIT_HISTORY_RETAINED_RUN_ID_MISMATCH/u);
+    assert.throws(() => runGate(root, "77777"), /RETAINED_COMMIT_HISTORY_RUN_ID_MISMATCH:12345!=77777/u);
+  });
+});
+
+test("CLI rejects history-only evidence for another workflow run even without retained outputs", () => {
+  withRepo((root) => {
+    const historyRunId = "12345";
+    const history = `reports/automation/history/${historyRunId}-TASK-N2-011.json`;
+    put(root, history, `${JSON.stringify({ runId: historyRunId, outputs: [], result: "PASS" })}\n`);
+    assert.throws(() => runGate(root, "77777"), /RETAINED_COMMIT_HISTORY_RUN_ID_MISMATCH:12345!=77777/u);
   });
 });
 
