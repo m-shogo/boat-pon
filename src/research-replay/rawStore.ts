@@ -4,11 +4,11 @@ import {
   existsSync,
   fstatSync,
   fsyncSync,
+  linkSync,
   lstatSync,
   mkdirSync,
   openSync,
   readFileSync,
-  renameSync,
   statSync,
   unlinkSync,
   writeSync,
@@ -153,8 +153,25 @@ export class RawStore {
       throw error;
     }
     closeSync(fd);
-    renameSync(tempPath, absolutePath);
-    chmodSync(absolutePath, 0o600);
+    try {
+      linkSync(tempPath, absolutePath);
+    } catch (error) {
+      unlinkSync(tempPath);
+      if (error instanceof Error && "code" in error && error.code === "EEXIST") {
+        const existing = readFileSync(absolutePath);
+        if (sha256Bytes(existing) !== rawSha256) throw new Error("hash_mismatch");
+        return {
+          rawSha256,
+          byteLength: input.bytes.byteLength,
+          relativePath,
+          absolutePath,
+          deduplicated: true,
+          decompressionRatio: ratio,
+        };
+      }
+      throw error;
+    }
+    unlinkSync(tempPath);
     const dirFd = openSync(dirname(absolutePath), "r");
     try {
       fsyncSync(dirFd);
