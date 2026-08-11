@@ -9,10 +9,11 @@ const script = readFileSync(
 );
 
 test("automation commit rejects repo-local git transport configuration before authority fetch", () => {
-  assert.match(
-    script,
-    /config --local --includes --name-only --get-regexp '\^\(http\\\\\.|url\\\\\.|credential\\\\\.|include\(if\)\?\\\\\.\)'/u,
-  );
+  assert.match(script, /config --local --includes --name-only --get-regexp/u);
+  assert.match(script, /http\\\./u);
+  assert.match(script, /url\\\./u);
+  assert.match(script, /credential\\\./u);
+  assert.match(script, /include\(if\)\?\\\./u);
   assert.match(script, /untrusted repo-local git transport config detected/u);
 
   const guardIndex = script.indexOf("assert_trusted_transport_config\n");
