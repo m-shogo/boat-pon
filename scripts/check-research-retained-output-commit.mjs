@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync, realpathSync } from "node:fs";
+import { lstatSync, readFileSync, realpathSync } from "node:fs";
 import { resolve } from "node:path";
 
 const RETAINED_PREFIX = "reports/automation/retained-outputs/";
@@ -197,7 +197,14 @@ const changedPaths = [...new Set([
 const result = validateRetainedOutputCommit({
   changedPaths,
   expectedRunId: requestedRunId,
-  readText: (relativePath) => readFileSync(resolve(repoRoot, relativePath), "utf8"),
+  readText: (relativePath) => {
+    const absolutePath = resolve(repoRoot, relativePath);
+    const stat = lstatSync(absolutePath);
+    if (stat.isSymbolicLink() || !stat.isFile()) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_FILE_TYPE_INVALID:${relativePath}`);
+    }
+    return readFileSync(absolutePath, "utf8");
+  },
 });
 
 console.log(JSON.stringify({
