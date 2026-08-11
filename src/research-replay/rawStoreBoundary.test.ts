@@ -12,8 +12,8 @@ test("raw store publishes content-addressed blobs with no-replace semantics", ()
   assert.doesNotMatch(source, /renameSync\(tempPath, absolutePath\)/u);
 });
 
-test("raw store reads through an O_NOFOLLOW file descriptor", () => {
-  assert.match(source, /openSync\(path, fsConstants\.O_RDONLY \| fsConstants\.O_NOFOLLOW\)/u);
+test("raw store reads through a nonblocking O_NOFOLLOW file descriptor", () => {
+  assert.match(source, /openSync\(path, fsConstants\.O_RDONLY \| fsConstants\.O_NOFOLLOW \| fsConstants\.O_NONBLOCK\)/u);
   assert.match(source, /const stat = fstatSync\(fd\)/u);
   assert.match(source, /if \(!stat\.isFile\(\)\) throw new Error\("raw file type rejected"\)/u);
   assert.match(source, /return readFileSync\(fd\)/u);
