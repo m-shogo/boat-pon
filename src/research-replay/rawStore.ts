@@ -82,6 +82,10 @@ function ensureWithinRoot(root: string, candidate: string): void {
 
 function rejectSymlinkPath(root: string, target: string): void {
   const resolvedRoot = resolve(root);
+  if (!existsSync(resolvedRoot)) throw new Error("raw root missing");
+  const rootStat = lstatSync(resolvedRoot);
+  if (rootStat.isSymbolicLink()) throw new Error("raw root must not be a symlink");
+  if (!rootStat.isDirectory()) throw new Error("raw root must be a directory");
   let cursor = dirname(target);
   while (cursor.startsWith(resolvedRoot) && cursor !== resolvedRoot) {
     if (existsSync(cursor) && lstatSync(cursor).isSymbolicLink()) throw new Error("raw symlink path rejected");
