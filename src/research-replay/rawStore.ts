@@ -95,7 +95,7 @@ function rejectSymlinkPath(root: string, target: string): void {
 }
 
 function readRawFileNoFollow(path: string): Buffer {
-  const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+  const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW | fsConstants.O_NONBLOCK);
   try {
     const stat = fstatSync(fd);
     if (!stat.isFile()) throw new Error("raw file type rejected");
