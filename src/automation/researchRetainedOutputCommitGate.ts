@@ -5,15 +5,10 @@ const HISTORY_RE = /^reports\/automation\/history\/([0-9A-Za-z._-]+)-(TASK-[0-9A
 const RETAINED_RE = /^reports\/automation\/retained-outputs\/([0-9A-Za-z._-]+)\/[^/]+$/u;
 const TERMINAL_RESULTS = new Set([
   "PASS",
+  "DRY_RUN_OK",
   "CONDITIONAL",
   "BLOCKED",
   "FAILED",
-  "FAILED_FINAL",
-  "FAILED_RETRYABLE",
-  "DRY_RUN_OK",
-  "REJECTED_L4",
-  "TASK_NOT_FOUND",
-  "TASK_NOT_READY",
 ]);
 
 export type RetainedOutputCommitGateResult = {
