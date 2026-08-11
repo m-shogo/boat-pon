@@ -13,6 +13,7 @@ export type PublicSnapshotPublicationResult = {
 
 export async function validatePublicSnapshotForPublication(options: {
   candidate: unknown;
+  existingLatest?: unknown;
   existingLastKnownGood?: unknown;
   nowMs?: number;
   maxFutureSkewMs?: number;
@@ -37,30 +38,37 @@ export async function validatePublicSnapshotForPublication(options: {
   }
 
   const warnings: string[] = [];
-  if (options.existingLastKnownGood !== undefined) {
-    const existing = await verifyPublicDashboardSnapshotIntegrity(options.existingLastKnownGood);
-    if (existing.ok && existing.snapshot) {
-      const existingGeneratedAt = Date.parse(existing.snapshot.generatedAt);
-      const existingDataAsOf = Date.parse(existing.snapshot.dataAsOf);
-      const existingTimestampInvalid = existingGeneratedAt - nowMs > maxFutureSkewMs
-        || existingDataAsOf - nowMs > maxFutureSkewMs
-        || existingDataAsOf > existingGeneratedAt + maxFutureSkewMs;
-      if (existingTimestampInvalid) {
-        warnings.push("EXISTING_LAST_KNOWN_GOOD_INVALID_REPLACED");
-      } else {
-        if (candidateDataAsOf < existingDataAsOf) return blocked("CANDIDATE_ROLLBACK_DATA_AS_OF");
-        if (candidateDataAsOf === existingDataAsOf && candidateGeneratedAt < existingGeneratedAt) {
-          return blocked("CANDIDATE_ROLLBACK_GENERATED_AT");
-        }
-        if (
-          candidateDataAsOf === existingDataAsOf
-          && candidate.snapshot.integrity.digest === existing.snapshot.integrity.digest
-        ) {
-          warnings.push("CANDIDATE_IDENTICAL_TO_LAST_KNOWN_GOOD");
-        }
-      }
-    } else {
-      warnings.push("EXISTING_LAST_KNOWN_GOOD_INVALID_REPLACED");
+  for (const [source, existingValue] of [
+    ["latest", options.existingLatest],
+    ["last-known-good", options.existingLastKnownGood],
+  ] as const) {
+    if (existingValue === undefined) continue;
+
+    const existing = await verifyPublicDashboardSnapshotIntegrity(existingValue);
+    if (!existing.ok || !existing.snapshot) {
+      warnings.push(existingInvalidWarning(source));
+      continue;
+    }
+
+    const existingGeneratedAt = Date.parse(existing.snapshot.generatedAt);
+    const existingDataAsOf = Date.parse(existing.snapshot.dataAsOf);
+    const existingTimestampInvalid = existingGeneratedAt - nowMs > maxFutureSkewMs
+      || existingDataAsOf - nowMs > maxFutureSkewMs
+      || existingDataAsOf > existingGeneratedAt + maxFutureSkewMs;
+    if (existingTimestampInvalid) {
+      warnings.push(existingInvalidWarning(source));
+      continue;
+    }
+
+    if (candidateDataAsOf < existingDataAsOf) return blocked(rollbackDataAsOfError(source));
+    if (candidateDataAsOf === existingDataAsOf && candidateGeneratedAt < existingGeneratedAt) {
+      return blocked(rollbackGeneratedAtError(source));
+    }
+    if (
+      candidateDataAsOf === existingDataAsOf
+      && candidate.snapshot.integrity.digest === existing.snapshot.integrity.digest
+    ) {
+      warnings.push(identicalWarning(source));
     }
   }
 
@@ -70,6 +78,24 @@ export async function validatePublicSnapshotForPublication(options: {
     errors: [],
     warnings,
   };
+}
+
+function existingInvalidWarning(source: "latest" | "last-known-good"): string {
+  return source === "latest"
+    ? "EXISTING_LATEST_INVALID_REPLACED"
+    : "EXISTING_LAST_KNOWN_GOOD_INVALID_REPLACED";
+}
+
+function rollbackDataAsOfError(source: "latest" | "last-known-good"): string {
+  return source === "latest" ? "CANDIDATE_ROLLBACK_LATEST_DATA_AS_OF" : "CANDIDATE_ROLLBACK_DATA_AS_OF";
+}
+
+function rollbackGeneratedAtError(source: "latest" | "last-known-good"): string {
+  return source === "latest" ? "CANDIDATE_ROLLBACK_LATEST_GENERATED_AT" : "CANDIDATE_ROLLBACK_GENERATED_AT";
+}
+
+function identicalWarning(source: "latest" | "last-known-good"): string {
+  return source === "latest" ? "CANDIDATE_IDENTICAL_TO_LATEST" : "CANDIDATE_IDENTICAL_TO_LAST_KNOWN_GOOD";
 }
 
 function blocked(error: string): PublicSnapshotPublicationResult {
