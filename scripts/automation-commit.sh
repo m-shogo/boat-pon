@@ -51,10 +51,10 @@ unset NODE_OPTIONS NODE_PATH BASH_ENV ENV LD_PRELOAD LD_LIBRARY_PATH
 export GIT_CONFIG_NOSYSTEM=1
 export GIT_CONFIG_GLOBAL=/dev/null
 
-# task code は同じ worktree を使うため、repo-local git hooks / fsmonitor を信頼しない。
-# post-checkout / pre-commit / pre-push 等から CAS・index・push credential 境界を変更させない。
+# task code は同じ worktree を使うため、repo-local git hooks / fsmonitor / commit signing を信頼しない。
+# post-checkout / pre-commit / pre-push / gpg.program 等から CAS・index・push credential 境界を変更させない。
 git_no_hooks() {
-  "$TRUSTED_GIT_BIN" -c core.hooksPath=/dev/null -c core.fsmonitor=false "$@"
+  "$TRUSTED_GIT_BIN" -c core.hooksPath=/dev/null -c core.fsmonitor=false -c commit.gpgSign=false "$@"
 }
 
 # task は .git/config を変更できるため、固定 URL を使っても url.*.insteadOf や
