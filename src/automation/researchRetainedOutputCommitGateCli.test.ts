@@ -7,11 +7,13 @@ import test from "node:test";
 
 const repoRoot = resolve(process.cwd());
 const gateCli = resolve(repoRoot, "scripts/check-research-retained-output-commit.mjs");
+const trustedGitBin = execFileSync("which", ["git"], { encoding: "utf8" }).trim();
+assert.ok(trustedGitBin.startsWith("/"), "test runtime must resolve git to an absolute path");
 
 function withRepo(fn: (root: string) => void): void {
   const root = mkdtempSync(join(tmpdir(), "boat-pon-retained-commit-gate-"));
   try {
-    execFileSync("git", ["init", "-q"], { cwd: root });
+    execFileSync(trustedGitBin, ["init", "-q"], { cwd: root });
     fn(root);
   } finally {
     rmSync(root, { recursive: true, force: true });
@@ -28,6 +30,7 @@ function runGate(root: string, runId: string): string {
   return execFileSync(process.execPath, [gateCli, `--run-id=${runId}`], {
     cwd: root,
     encoding: "utf8",
+    env: { ...process.env, TRUSTED_GIT_BIN: trustedGitBin },
   });
 }
 
@@ -51,8 +54,8 @@ test("CLI rejects an orphan retained output before git staging", () => {
     const runId = "12345";
     const output = `reports/automation/retained-outputs/${runId}/${"b".repeat(64)}-report.json`;
     put(root, output, "{}\n");
-    assert.throws(() => runGate(root, runId), /Command failed/u);
-    const status = execFileSync("git", ["status", "--porcelain", "-uall"], { cwd: root, encoding: "utf8" });
+    assert.throws(() => runGate(root, runId), /RETAINED_COMMIT_HISTORY_COUNT_INVALID/u);
+    const status = execFileSync(trustedGitBin, ["status", "--porcelain", "-uall"], { cwd: root, encoding: "utf8" });
     assert.match(status, /reports\/automation\/retained-outputs\/12345/u);
   });
 });
