@@ -12,7 +12,7 @@ on:
       - "automation/requests/intents/*.json"
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: boat-pon-local-research
@@ -64,6 +64,8 @@ jobs:
   run-one-task:
     needs: guard
     if: needs.guard.outputs.ok == 'true'
+    permissions:
+      contents: write
     runs-on: [self-hosted, macOS, boat-pon-local]
     timeout-minutes: 180
     steps:
