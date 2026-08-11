@@ -39,6 +39,36 @@ test("same-run terminal history must reference every retained output", () => {
   assert.deepEqual(result.runIds, ["123"]);
 });
 
+test("terminal history cannot claim retained output from another run", () => {
+  const output = retained("123");
+  const historyPath = history("123");
+  assert.throws(
+    () => validateRetainedOutputCommit({
+      changedPaths: [output, historyPath],
+      expectedRunId: "123",
+      readText: reader({
+        [historyPath]: { runId: "123", outputs: [output, retained("999")] },
+      }),
+    }),
+    /RETAINED_COMMIT_HISTORY_RETAINED_RUN_ID_MISMATCH/u,
+  );
+});
+
+test("terminal history rejects malformed retained-output references", () => {
+  const output = retained("123");
+  const historyPath = history("123");
+  assert.throws(
+    () => validateRetainedOutputCommit({
+      changedPaths: [output, historyPath],
+      expectedRunId: "123",
+      readText: reader({
+        [historyPath]: { runId: "123", outputs: [output, "reports/automation/retained-outputs/123/nested/report.json"] },
+      }),
+    }),
+    /RETAINED_COMMIT_HISTORY_RETAINED_PATH_INVALID/u,
+  );
+});
+
 test("orphan retained output is rejected", () => {
   const output = retained("123");
   const historyPath = history("123");
