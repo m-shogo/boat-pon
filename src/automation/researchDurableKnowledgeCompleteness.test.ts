@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
@@ -263,6 +263,33 @@ test("history files cannot be reused as durable outputs", () => {
     assert.equal(report.invalidHistoryCount, 1);
     assert.equal(report.runs[0].classification, "INVALID_HISTORY");
     assert.match(report.runs[0].issues.join("\n"), /HISTORY_OUTPUT_PATH_NOT_APPROVED/u);
+  });
+});
+
+test("symlinked history is invalid instead of being followed", () => {
+  withRoot((root) => {
+    const outside = mkdtempSync(join(tmpdir(), "boat-pon-durable-history-target-"));
+    try {
+      const value = history({
+        runId: "1011",
+        taskId: "TASK-N2-011",
+        result: "PASS",
+        summary: { status: "NO_CHANGE", noChange: true },
+      });
+      const target = join(outside, "history.json");
+      writeFileSync(target, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+      const link = join(root, "reports/automation/history/1011-TASK-N2-011.json");
+      mkdirSync(dirname(link), { recursive: true });
+      symlinkSync(target, link);
+
+      const report = buildResearchDurableKnowledgeCompletenessReport({ repoRoot: root });
+      assert.equal(report.status, "BLOCKED");
+      assert.equal(report.invalidHistoryCount, 1);
+      assert.equal(report.runs[0].classification, "INVALID_HISTORY");
+      assert.match(report.runs[0].issues.join("\n"), /HISTORY_FILE_SIZE_OR_TYPE_INVALID/u);
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
   });
 });
 
