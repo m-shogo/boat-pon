@@ -6,6 +6,7 @@ import test from "node:test";
 import { assemblePublicDashboardDeploy, verifyPublicDashboardDeploy } from "./publicDeployBundle";
 
 const OVERSIZE_BYTES = 8 * 1024 * 1024 + 1;
+const FORBIDDEN_MARKER = "/api/owner";
 
 test("deploy verifier stops reading a file after the size gate fails", async () => {
   const root = await mkdtemp(join(tmpdir(), "boat-pon-public-oversize-read-"));
@@ -35,7 +36,8 @@ test("deploy verifier stops reading a file after the size gate fails", async () 
       outputDir: output,
     });
 
-    const oversized = `${"x".repeat(OVERSIZE_BYTES - 12)}/api/owner`;
+    const oversized = `${"x".repeat(OVERSIZE_BYTES - FORBIDDEN_MARKER.length)}${FORBIDDEN_MARKER}`;
+    assert.equal(Buffer.byteLength(oversized), OVERSIZE_BYTES);
     await writeFile(join(output, "assets", "public.js"), oversized, "utf8");
 
     const verified = await verifyPublicDashboardDeploy(output);
