@@ -24,6 +24,9 @@ export function validateRetainedOutputCommit(input: {
   if (expectedRunId != null && expectedRunId !== "local" && !RUN_ID_RE.test(expectedRunId)) {
     throw new Error("RETAINED_COMMIT_EXPECTED_RUN_ID_INVALID");
   }
+  if (expectedRunId != null && expectedRunId !== "local" && histories.length > 1) {
+    throw new Error(`RETAINED_COMMIT_HISTORY_COUNT_INVALID:${expectedRunId}:${histories.length}`);
+  }
 
   const parsedHistories = new Map<string, { runId: string; outputs: string[] }>();
   for (const historyPath of histories) {
