@@ -9,7 +9,9 @@ test("intent workflow restores trusted commit helpers before exposing the push t
   const workflow = readFileSync(workflowPath, "utf8");
   const restoreStep = workflow.indexOf("- name: Restore trusted automation commit helpers");
   const tokenBinding = workflow.indexOf("BOAT_PON_AUTOMATION_PUSH_TOKEN: ${{ github.token }}");
-  const trustedCheckout = workflow.indexOf("git checkout \"${GITHUB_SHA}\" --");
+  const trustedCheckout = workflow.indexOf(
+    '"$TRUSTED_GIT_BIN" -c core.hooksPath=/dev/null -c core.fsmonitor=false checkout "${GITHUB_SHA}" --',
+  );
 
   assert.notEqual(restoreStep, -1);
   assert.notEqual(trustedCheckout, -1);
@@ -19,5 +21,5 @@ test("intent workflow restores trusted commit helpers before exposing the push t
   assert.match(workflow, /if: always\(\) && steps\.restore_commit_helper\.outcome == 'success'/);
   assert.match(workflow, /persist-credentials: false/);
   assert.doesNotMatch(workflow, /http\.https:\/\/github\.com\/\.extraheader/);
-  assert.match(workflow, /run: bash scripts\/automation-commit\.sh/);
+  assert.match(workflow, /exec \/bin\/bash scripts\/automation-commit\.sh/);
 });
