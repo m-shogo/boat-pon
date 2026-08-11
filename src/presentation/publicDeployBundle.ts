@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import { access, cp, lstat, mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
-import { basename, extname, join, relative, resolve, sep } from "node:path";
+import { access, cp, lstat, mkdir, readFile, readdir, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
+import { basename, dirname, extname, join, relative, resolve, sep } from "node:path";
 import {
   DEFAULT_PUBLIC_SNAPSHOT_FUTURE_SKEW_MS,
   verifyPublicDashboardSnapshotIntegrity,
@@ -86,6 +86,11 @@ export async function assemblePublicDashboardDeploy(options: {
   assertDistinctDirectories(distDir, staticDir, outputDir);
   await requireDirectory(distDir, "distDir");
   await requireDirectory(staticDir, "staticDir");
+  assertDistinctDirectories(
+    await canonicalDirectoryTarget(distDir),
+    await canonicalDirectoryTarget(staticDir),
+    await canonicalDirectoryTarget(outputDir),
+  );
 
   await rm(outputDir, { recursive: true, force: true });
   await mkdir(outputDir, { recursive: true });
@@ -389,6 +394,10 @@ function assertDistinctDirectories(...directories: string[]): void {
       }
     }
   }
+}
+
+async function canonicalDirectoryTarget(path: string): Promise<string> {
+  return join(await realpath(dirname(path)), basename(path));
 }
 
 async function requireDirectory(path: string, label: string): Promise<void> {
