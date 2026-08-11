@@ -19,12 +19,6 @@ if [ "${#CHANGED[@]}" -eq 0 ]; then
   exit 0
 fi
 
-# Immutable retained outputs are commit-eligible only when the same run's new
-# terminal history references every retained path. This closes the crash window
-# between retained-file materialization and terminal history persistence: an
-# orphan retained file is never pushed to the automation state branch.
-node --import tsx scripts/check-research-retained-output-commit.ts --run-id="${RUN_ID:-local}"
-
 # intent workflow が置く一時 file は commit 対象外（skip）。
 TRANSIENT=("canonical-request.json" ".automation-branch-base")
 
@@ -64,6 +58,11 @@ for path in "${CHANGED[@]}"; do
     KEEP+=("$path")
   fi
 done
+
+# Immutable retained outputs are commit-eligible only when the same run's new
+# terminal history references every retained path. Run this only after path and
+# symlink validation so its history reads cannot traverse an unsafe candidate.
+node --import tsx scripts/check-research-retained-output-commit.ts --run-id="${RUN_ID:-local}"
 
 if [ "${#KEEP[@]}" -eq 0 ]; then
   echo "NO_CHANGE: no allowlisted files to commit"
