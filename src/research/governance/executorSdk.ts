@@ -3,11 +3,11 @@
 // PASS は実体を伴う write/readback/evidence/state transition の完了後だけ返す。
 // dry-run は一切 write せず、plan と入力・PIT evidence の検査だけを行う。
 import {
-  closeSync, constants, existsSync, fstatSync, fsyncSync, linkSync, mkdirSync, openSync, readFileSync, renameSync,
+  closeSync, constants, existsSync, fstatSync, fsyncSync, linkSync, lstatSync, mkdirSync, openSync, readFileSync, renameSync,
   unlinkSync, writeFileSync,
 } from "node:fs";
 import { createHash } from "node:crypto";
-import { dirname } from "node:path";
+import { dirname, resolve } from "node:path";
 
 export const EXECUTOR_SDK_VERSION = "research-executor-sdk-v3";
 
@@ -110,7 +110,31 @@ export function sha256Text(text: string): string {
   return createHash("sha256").update(text).digest("hex");
 }
 
+function assertRealDirectoryAncestors(path: string): void {
+  const parents: string[] = [];
+  let cursor = resolve(dirname(path));
+  while (true) {
+    parents.push(cursor);
+    const parent = dirname(cursor);
+    if (parent === cursor) break;
+    cursor = parent;
+  }
+
+  for (const parent of parents.reverse()) {
+    try {
+      const stat = lstatSync(parent);
+      if (stat.isSymbolicLink() || !stat.isDirectory()) {
+        throw new Error(`parent path must be a real directory: ${parent}`);
+      }
+    } catch (error) {
+      if (error instanceof Error && "code" in error && error.code === "ENOENT") continue;
+      throw error;
+    }
+  }
+}
+
 export function atomicWriteUtf8(path: string, content: string, allowReplace = false): void {
+  assertRealDirectoryAncestors(path);
   mkdirSync(dirname(path), { recursive: true });
   const temp = `${path}.tmp-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
   let fd: number | null = null;
