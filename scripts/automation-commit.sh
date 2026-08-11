@@ -242,6 +242,10 @@ while IFS= read -r -d '' staged_path; do
   fi
 done < <(git_no_hooks diff --cached --name-only -z)
 
+# git add は task-controlled clean filter を実行し得るため、fetch 前の検査だけでは不十分。
+# filter の副作用で repo-local transport config が再注入されても、commit/push 境界へ進ませない。
+assert_trusted_transport_config
+
 if git_no_hooks diff --cached --quiet; then
   echo "NO_CHANGE: nothing staged after allowlist filter"
   git_no_hooks checkout main --quiet || true
