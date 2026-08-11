@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import test from "node:test";
@@ -30,5 +30,24 @@ test("explicit replace remains available for mutable executor artifacts", () => 
     assert.deepEqual(JSON.parse(readFileSync(path, "utf8")), { generation: 2 });
   } finally {
     rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("atomic write rejects a symlinked parent directory", () => {
+  const root = mkdtempSync(join(tmpdir(), "boat-pon-sdk-parent-symlink-"));
+  const outside = mkdtempSync(join(tmpdir(), "boat-pon-sdk-parent-symlink-outside-"));
+  try {
+    const linkedParent = join(root, "retained");
+    symlinkSync(outside, linkedParent, "dir");
+    const path = join(linkedParent, "artifact.json");
+
+    assert.throws(
+      () => atomicWriteJson(path, { generation: 1 }),
+      /parent path must be a real directory/u,
+    );
+    assert.equal(existsSync(join(outside, "artifact.json")), false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(outside, { recursive: true, force: true });
   }
 });
