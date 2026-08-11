@@ -1,5 +1,14 @@
 import { createHash } from "node:crypto";
-import { existsSync, lstatSync, readdirSync, readFileSync } from "node:fs";
+import {
+  closeSync,
+  constants as fsConstants,
+  existsSync,
+  fstatSync,
+  lstatSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+} from "node:fs";
 import { dirname, resolve, sep } from "node:path";
 
 export const RESEARCH_RETAINED_OUTPUT_INVENTORY_VERSION =
@@ -76,6 +85,30 @@ function invalidEntry(input: {
     valid: false,
     issues: input.issues,
   };
+}
+
+function readValidatedRetainedFile(path: string, expectedStat: ReturnType<typeof lstatSync>): Buffer | null {
+  let fd: number;
+  try {
+    fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+  } catch {
+    return null;
+  }
+  try {
+    const stat = fstatSync(fd);
+    if (
+      !stat.isFile()
+      || stat.nlink !== 1
+      || stat.dev !== expectedStat.dev
+      || stat.ino !== expectedStat.ino
+      || stat.size !== expectedStat.size
+    ) {
+      return null;
+    }
+    return readFileSync(fd);
+  } finally {
+    closeSync(fd);
+  }
 }
 
 export function inventoryResearchRetainedOutputs(input: {
@@ -177,7 +210,17 @@ export function inventoryResearchRetainedOutputs(input: {
         continue;
       }
 
-      const content = readFileSync(absolutePath);
+      const content = readValidatedRetainedFile(absolutePath, stat);
+      if (content === null) {
+        entries.push(invalidEntry({
+          relativePath,
+          runId: runDirent.name,
+          expectedContentDigest,
+          bytes: stat.size,
+          issues: ["RETAINED_INVENTORY_FILE_CHANGED_DURING_READ"],
+        }));
+        continue;
+      }
       const contentDigest = sha256(content);
       if (contentDigest !== expectedContentDigest) {
         entries.push({
