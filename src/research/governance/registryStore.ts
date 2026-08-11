@@ -51,9 +51,39 @@ function verifyStoredDigest(rec: Record<string, unknown>, body: Record<string, u
   return rec._digest === contractDigest(body) ? null : "digest mismatch (record mutated after append)";
 }
 
+function lstatRegistryPath(path: string): ReturnType<typeof lstatSync> | null {
+  try {
+    return lstatSync(path);
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+function assertRegistryAncestorsSafe(path: string): void {
+  const ancestors: string[] = [];
+  let cursor = dirname(path);
+  while (true) {
+    ancestors.push(cursor);
+    const parent = dirname(cursor);
+    if (parent === cursor) break;
+    cursor = parent;
+  }
+  for (const ancestor of ancestors.reverse()) {
+    const stat = lstatRegistryPath(ancestor);
+    if (!stat) continue;
+    if (stat.isSymbolicLink()) {
+      throw new Error(`registry ancestor symlink forbidden: ${ancestor}`);
+    }
+    if (!stat.isDirectory()) {
+      throw new Error(`registry ancestor must be directory: ${ancestor}`);
+    }
+  }
+}
+
 function assertRegistryDirectorySafe(path: string, role: string): void {
-  if (!existsSync(path)) return;
-  const stat = lstatSync(path);
+  const stat = lstatRegistryPath(path);
+  if (!stat) return;
   if (stat.isSymbolicLink()) {
     throw new Error(`registry symlink forbidden (${role}): ${path}`);
   }
@@ -63,6 +93,7 @@ function assertRegistryDirectorySafe(path: string, role: string): void {
 }
 
 function assertRegistryContainerSafe(root: string, kind: RegistryKind): void {
+  assertRegistryAncestorsSafe(root);
   assertRegistryDirectorySafe(root, "root");
   assertRegistryDirectorySafe(join(root, kind), "kind");
 }
