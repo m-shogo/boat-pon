@@ -124,6 +124,28 @@ function resolveInside(rootDir: string, relativePath: string): string {
   return target;
 }
 
+function assertSafeParentPath(rootDir: string, absolutePath: string): void {
+  const root = resolve(rootDir);
+  const parents: string[] = [];
+  let current = dirname(absolutePath);
+  while (current !== root) {
+    if (!current.startsWith(`${root}${sep}`)) {
+      throw new Error("DURABLE_RETENTION_PATH_ESCAPES_ROOT");
+    }
+    parents.push(current);
+    const next = dirname(current);
+    if (next === current) throw new Error("DURABLE_RETENTION_PATH_ESCAPES_ROOT");
+    current = next;
+  }
+  for (const parent of parents.reverse()) {
+    if (!existsSync(parent)) continue;
+    const stat = lstatSync(parent);
+    if (stat.isSymbolicLink() || !stat.isDirectory()) {
+      throw new Error("DURABLE_RETENTION_PARENT_PATH_INVALID");
+    }
+  }
+}
+
 function semanticRun(run: ResearchDurableRunAssessment): Record<string, unknown> {
   return {
     historyRelativePath: run.historyRelativePath,
@@ -319,6 +341,7 @@ export function persistResearchDurableRetentionSnapshot(input: {
 }): ResearchDurableRetentionPersistResult {
   const relativePath = durableRetentionSnapshotRelativePath(input.snapshot);
   const absolutePath = resolveInside(input.repoRoot, relativePath);
+  assertSafeParentPath(input.repoRoot, absolutePath);
   if (existsSync(absolutePath)) {
     const stat = lstatSync(absolutePath);
     if (stat.isSymbolicLink() || !stat.isFile() || stat.size > MAX_EXISTING_SNAPSHOT_BYTES) {

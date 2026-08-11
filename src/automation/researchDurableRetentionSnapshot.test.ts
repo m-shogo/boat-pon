@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import test from "node:test";
@@ -205,6 +205,29 @@ test("tampered existing snapshot fails closed instead of overwriting", () => {
       () => persistResearchDurableRetentionSnapshot({ repoRoot: root, snapshot }),
       /DURABLE_RETENTION_SNAPSHOT_SELF_DIGEST_INVALID/u,
     );
+  });
+});
+
+test("parent symlink is rejected before retention snapshot write", () => {
+  withRoot((root) => {
+    const outside = mkdtempSync(join(tmpdir(), "boat-pon-retention-outside-"));
+    try {
+      mkdirSync(join(root, "reports/automation"), { recursive: true });
+      symlinkSync(outside, join(root, "reports/automation/retention"));
+      const snapshot = buildResearchDurableRetentionSnapshot({
+        report: report(),
+        sourceStateSha: SOURCE_SHA,
+        mainAuthoritySha: MAIN_SHA,
+        firstObservedAt: "2026-08-07T07:40:00.000Z",
+      });
+      assert.throws(
+        () => persistResearchDurableRetentionSnapshot({ repoRoot: root, snapshot }),
+        /DURABLE_RETENTION_PARENT_PATH_INVALID/u,
+      );
+      assert.deepEqual(readdirSync(outside), []);
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
   });
 });
 
