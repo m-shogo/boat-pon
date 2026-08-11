@@ -106,7 +106,7 @@ git config user.email "automation@boat-pon.invalid"
 
 # 作業ツリーを clean にしてから branch を切り替える（結果は STAGE にある）。
 git checkout -- . 2>/dev/null || true
-git clean -fdq -- automation reports docs 2>/dev/null || true
+git clean -fdq -- automation reports docs research 2>/dev/null || true
 
 git fetch origin --quiet
 # compare-and-swap: materialize 時点の automation branch base SHA から進んでいたら
