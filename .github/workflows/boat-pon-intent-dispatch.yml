@@ -81,17 +81,25 @@ jobs:
           BRANCH: automation/boat-pon-research
         run: |
           set -euo pipefail
-          git fetch origin "$BRANCH" --quiet
+          TRUSTED_GIT_BIN="$(command -v git)"
+          TRUSTED_NODE_BIN="$(command -v node)"
+          case "$TRUSTED_GIT_BIN" in /*) ;; *) echo "::error::trusted git path is not absolute"; exit 1 ;; esac
+          case "$TRUSTED_NODE_BIN" in /*) ;; *) echo "::error::trusted node path is not absolute"; exit 1 ;; esac
+          test -x "$TRUSTED_GIT_BIN"
+          test -x "$TRUSTED_NODE_BIN"
+          echo "trusted_git_bin=$TRUSTED_GIT_BIN" >> "$GITHUB_OUTPUT"
+          echo "trusted_node_bin=$TRUSTED_NODE_BIN" >> "$GITHUB_OUTPUT"
+          "$TRUSTED_GIT_BIN" fetch origin "$BRANCH" --quiet
           # CAS authority は task-writable worktree ではなく、この trusted step の output に固定する。
-          BASE_SHA="$(git rev-parse "origin/$BRANCH")"
+          BASE_SHA="$("$TRUSTED_GIT_BIN" rev-parse "origin/$BRANCH")"
           echo "branch_base_sha=$BASE_SHA" >> "$GITHUB_OUTPUT"
           mkdir -p automation/control "$RUNNER_TEMP"
           for f in task-queue-state processed-intents processed-requests current-run planner-candidates; do
-            git show "origin/$BRANCH:automation/control/$f.json" > "automation/control/$f.json"
+            "$TRUSTED_GIT_BIN" show "origin/$BRANCH:automation/control/$f.json" > "automation/control/$f.json"
           done
           # N2-011以降はN2-010が固定したmanifest identityを入力正本として使う。
           # repo外へ置き、dirty-tree guardを緩めない。executor側でversion/digest/holdout/readOnlyを再検証する。
-          git show "origin/$BRANCH:reports/n2/n2-dataset-manifest.json" > "$RUNNER_TEMP/n2-dataset-manifest.json"
+          "$TRUSTED_GIT_BIN" show "origin/$BRANCH:reports/n2/n2-dataset-manifest.json" > "$RUNNER_TEMP/n2-dataset-manifest.json"
           ls -1 automation/control
           test -s "$RUNNER_TEMP/n2-dataset-manifest.json"
 
@@ -117,9 +125,16 @@ jobs:
       - name: Restore trusted automation commit helpers
         id: restore_commit_helper
         if: always()
+        env:
+          BASH_ENV: /dev/null
+          ENV: /dev/null
+          PATH: /usr/bin:/bin:/usr/sbin:/sbin
+          TRUSTED_GIT_BIN: ${{ steps.materialize_authority.outputs.trusted_git_bin }}
         run: |
           set -euo pipefail
-          git checkout "${GITHUB_SHA}" -- \
+          case "$TRUSTED_GIT_BIN" in /*) ;; *) echo "::error::trusted git path is not absolute"; exit 1 ;; esac
+          test -x "$TRUSTED_GIT_BIN"
+          "$TRUSTED_GIT_BIN" -c core.hooksPath=/dev/null -c core.fsmonitor=false checkout "${GITHUB_SHA}" -- \
             scripts/automation-commit.sh \
             scripts/check-research-retained-output-commit.mjs \
             scripts/check-research-retained-output-commit.ts \
@@ -128,7 +143,14 @@ jobs:
       - name: Commit control state + results to automation branch
         if: always() && steps.restore_commit_helper.outcome == 'success'
         env:
+          BASH_ENV: /dev/null
+          ENV: /dev/null
+          NODE_OPTIONS: ""
+          NODE_PATH: ""
+          PATH: /usr/bin:/bin:/usr/sbin:/sbin
           RUN_ID: ${{ github.run_id }}
           EXPECTED_AUTOMATION_BRANCH_BASE: ${{ steps.materialize_authority.outputs.branch_base_sha }}
+          TRUSTED_GIT_BIN: ${{ steps.materialize_authority.outputs.trusted_git_bin }}
+          TRUSTED_NODE_BIN: ${{ steps.materialize_authority.outputs.trusted_node_bin }}
           BOAT_PON_AUTOMATION_PUSH_TOKEN: ${{ github.token }}
-        run: bash scripts/automation-commit.sh
+        run: /bin/bash scripts/automation-commit.sh
