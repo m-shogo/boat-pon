@@ -6,7 +6,7 @@ import {
   lstatSync,
   openSync,
   readdirSync,
-  readFileSync,
+  readSync,
 } from "node:fs";
 import type { Stats } from "node:fs";
 import { dirname, resolve, sep } from "node:path";
@@ -16,6 +16,7 @@ export const RESEARCH_RETAINED_OUTPUT_INVENTORY_VERSION =
 
 const RETAINED_ROOT = "reports/automation/retained-outputs";
 const MAX_RETAINED_FILE_BYTES = 2_097_152;
+const RETAINED_READ_CHUNK_BYTES = 64 * 1024;
 const RUN_ID_RE = /^(?!\.{1,2}$)[0-9A-Za-z._-]+$/u;
 const RETAINED_FILE_RE = /^([0-9a-f]{64})-((?!\.{1,2}$)[0-9A-Za-z._-]{1,160})$/u;
 
@@ -109,10 +110,25 @@ function readValidatedRetainedFile(path: string, expectedStat: Stats): Buffer | 
       || stat.dev !== expectedStat.dev
       || stat.ino !== expectedStat.ino
       || stat.size !== expectedStat.size
+      || stat.size <= 0
+      || stat.size > MAX_RETAINED_FILE_BYTES
     ) {
       return null;
     }
-    return readFileSync(fd);
+
+    const chunks: Buffer[] = [];
+    let totalBytes = 0;
+    while (true) {
+      const remainingWithSentinel = expectedStat.size - totalBytes + 1;
+      const chunk = Buffer.allocUnsafe(Math.min(RETAINED_READ_CHUNK_BYTES, remainingWithSentinel));
+      const bytesRead = readSync(fd, chunk, 0, chunk.length, null);
+      if (bytesRead === 0) break;
+      totalBytes += bytesRead;
+      if (totalBytes > expectedStat.size || totalBytes > MAX_RETAINED_FILE_BYTES) return null;
+      chunks.push(chunk.subarray(0, bytesRead));
+    }
+    if (totalBytes !== expectedStat.size) return null;
+    return Buffer.concat(chunks, totalBytes);
   } finally {
     closeSync(fd);
   }
