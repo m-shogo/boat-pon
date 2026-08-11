@@ -392,7 +392,8 @@ function assertDistinctDirectories(...directories: string[]): void {
 }
 
 async function requireDirectory(path: string, label: string): Promise<void> {
-  const info = await stat(path);
+  const info = await lstat(path);
+  if (info.isSymbolicLink()) throw new Error(`${label} must not be a symbolic link: ${path}`);
   if (!info.isDirectory()) throw new Error(`${label} is not a directory: ${path}`);
 }
 
