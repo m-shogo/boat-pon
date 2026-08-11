@@ -12,7 +12,7 @@ const workflow = readFileSync(
 test("trusted retained-output gate does not load task-controlled tsx dependencies", () => {
   assert.match(
     helper,
-    /node scripts\/check-research-retained-output-commit\.mjs --run-id=/u,
+    /"\$TRUSTED_NODE_BIN" scripts\/check-research-retained-output-commit\.mjs --run-id=/u,
   );
   assert.doesNotMatch(helper, /node --import tsx scripts\/check-research-retained-output-commit/u);
   assert.match(workflow, /scripts\/check-research-retained-output-commit\.mjs/u);

@@ -10,6 +10,14 @@ PUSH_TOKEN="${BOAT_PON_AUTOMATION_PUSH_TOKEN:-}"
 unset BOAT_PON_AUTOMATION_PUSH_TOKEN
 EXPECTED_BASE_SHA="${EXPECTED_AUTOMATION_BRANCH_BASE:-}"
 unset EXPECTED_AUTOMATION_BRANCH_BASE
+TRUSTED_GIT_BIN="${TRUSTED_GIT_BIN:-}"
+TRUSTED_NODE_BIN="${TRUSTED_NODE_BIN:-}"
+case "$TRUSTED_GIT_BIN" in /*) ;; *) echo "::error::missing or invalid trusted git binary path"; exit 1 ;; esac
+case "$TRUSTED_NODE_BIN" in /*) ;; *) echo "::error::missing or invalid trusted node binary path"; exit 1 ;; esac
+if [ ! -x "$TRUSTED_GIT_BIN" ] || [ ! -x "$TRUSTED_NODE_BIN" ]; then
+  echo "::error::trusted git/node binary is not executable"
+  exit 1
+fi
 
 BRANCH="automation/boat-pon-research"
 AUTHORITY_REMOTE_URL="https://github.com/m-shogo/boat-pon.git"
@@ -29,15 +37,16 @@ ALLOWED_EXACT=(
 )
 MAX_BYTES=2097152
 
-# task code は同じ job で動き、$GITHUB_ENV 経由で後続 step の環境を変更できる。
-# GIT_* は git dir/worktree/config/helper 等を差し替えられ、proxy 環境変数は canonical HTTPS URL を
-# 別 endpoint へ中継できるため、trusted git invocation より前に task-controlled transport 環境を破棄する。
+# task code は同じ job で動き、$GITHUB_ENV / $GITHUB_PATH 経由で後続 step の実行環境を変更できる。
+# trusted helper は task-controlled PATH・Git/Node preload・dynamic-loader・proxy 環境を継承しない。
+export PATH=/usr/bin:/bin:/usr/sbin:/sbin
 while IFS= read -r env_name; do
   case "$env_name" in
-    GIT_*) unset "$env_name" ;;
+    GIT_*|DYLD_*) unset "$env_name" ;;
   esac
 done < <(compgen -e)
 unset HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY http_proxy https_proxy all_proxy no_proxy
+unset NODE_OPTIONS NODE_PATH BASH_ENV ENV LD_PRELOAD LD_LIBRARY_PATH
 # self-hosted runner の user/system git config も task が永続変更できるため、trusted helper では参照しない。
 export GIT_CONFIG_NOSYSTEM=1
 export GIT_CONFIG_GLOBAL=/dev/null
@@ -45,7 +54,7 @@ export GIT_CONFIG_GLOBAL=/dev/null
 # task code は同じ worktree を使うため、repo-local git hooks / fsmonitor を信頼しない。
 # post-checkout / pre-commit / pre-push 等から CAS・index・push credential 境界を変更させない。
 git_no_hooks() {
-  git -c core.hooksPath=/dev/null -c core.fsmonitor=false "$@"
+  "$TRUSTED_GIT_BIN" -c core.hooksPath=/dev/null -c core.fsmonitor=false "$@"
 }
 
 # task は .git/config を変更できるため、固定 URL を使っても url.*.insteadOf や
@@ -124,7 +133,7 @@ done
 # symlink validation so its history reads cannot traverse an unsafe candidate.
 # This trusted boundary intentionally uses a dependency-free Node script so task-controlled
 # node_modules/tsx cannot bypass the retained-output gate after task execution.
-node scripts/check-research-retained-output-commit.mjs --run-id="${RUN_ID:-local}"
+"$TRUSTED_NODE_BIN" scripts/check-research-retained-output-commit.mjs --run-id="${RUN_ID:-local}"
 
 if [ "${#KEEP[@]}" -eq 0 ]; then
   echo "NO_CHANGE: no allowlisted files to commit"
@@ -226,8 +235,8 @@ if git_no_hooks diff --cached --quiet; then
   exit 0
 fi
 
-REQ_ID="$(node -e "try{const s=require('./reports/automation/current-status.json');process.stdout.write(String(s.lastRequestId??'none'))}catch{process.stdout.write('none')}" 2>/dev/null || echo none)"
-TASK_ID="$(node -e "try{const s=require('./reports/automation/current-status.json');process.stdout.write(String(s.lastTaskId??'none'))}catch{process.stdout.write('none')}" 2>/dev/null || echo none)"
+REQ_ID="$("$TRUSTED_NODE_BIN" -e "try{const s=require('./reports/automation/current-status.json');process.stdout.write(String(s.lastRequestId??'none'))}catch{process.stdout.write('none')}" 2>/dev/null || echo none)"
+TASK_ID="$("$TRUSTED_NODE_BIN" -e "try{const s=require('./reports/automation/current-status.json');process.stdout.write(String(s.lastTaskId??'none'))}catch{process.stdout.write('none')}" 2>/dev/null || echo none)"
 
 git_no_hooks commit -q -m "report(automation): research run ${RUN_ID:-local} (request ${REQ_ID}, task ${TASK_ID})"
 if [ -n "$PUSH_TOKEN" ]; then
