@@ -5,13 +5,15 @@ import {
   fstatSync,
   lstatSync,
   openSync,
-  readFileSync,
+  readSync,
   realpathSync,
 } from "node:fs";
 import { dirname, resolve, sep } from "node:path";
 
 const RETAINED_PREFIX = "reports/automation/retained-outputs/";
 const HISTORY_PREFIX = "reports/automation/history/";
+const MAX_HISTORY_BYTES = 8_000_000;
+const HISTORY_READ_CHUNK_BYTES = 64 * 1024;
 const RUN_ID_RE = /^(?!\.{1,2}$)[0-9A-Za-z._-]+$/u;
 const GITHUB_RUN_ID_RE = /^[0-9]+$/u;
 const HISTORY_RE = /^reports\/automation\/history\/([0-9A-Za-z._-]+)-(TASK-[0-9A-Za-z._-]+)\.json$/u;
@@ -205,6 +207,9 @@ function readValidatedHistoryText(repoRoot, relativePath) {
   if (expectedStat.isSymbolicLink() || !expectedStat.isFile() || expectedStat.nlink !== 1) {
     throw new Error(`RETAINED_COMMIT_HISTORY_FILE_TYPE_INVALID:${relativePath}`);
   }
+  if (expectedStat.size > MAX_HISTORY_BYTES) {
+    throw new Error(`RETAINED_COMMIT_HISTORY_SIZE_INVALID:${relativePath}`);
+  }
 
   let fd = null;
   try {
@@ -219,7 +224,27 @@ function readValidatedHistoryText(repoRoot, relativePath) {
     ) {
       throw new Error(`RETAINED_COMMIT_HISTORY_FILE_CHANGED_DURING_READ:${relativePath}`);
     }
-    return readFileSync(fd, "utf8");
+    if (stat.size > MAX_HISTORY_BYTES) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_SIZE_INVALID:${relativePath}`);
+    }
+
+    const chunks = [];
+    let totalBytes = 0;
+    while (true) {
+      const remainingWithSentinel = MAX_HISTORY_BYTES - totalBytes + 1;
+      const chunk = Buffer.allocUnsafe(Math.min(HISTORY_READ_CHUNK_BYTES, remainingWithSentinel));
+      const bytesRead = readSync(fd, chunk, 0, chunk.length, null);
+      if (bytesRead === 0) break;
+      totalBytes += bytesRead;
+      if (totalBytes > MAX_HISTORY_BYTES) {
+        throw new Error(`RETAINED_COMMIT_HISTORY_SIZE_INVALID:${relativePath}`);
+      }
+      chunks.push(chunk.subarray(0, bytesRead));
+    }
+    if (totalBytes !== stat.size) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_FILE_CHANGED_DURING_READ:${relativePath}`);
+    }
+    return Buffer.concat(chunks, totalBytes).toString("utf8");
   } catch (error) {
     if (error instanceof Error && "code" in error && (error.code === "ENOENT" || error.code === "ELOOP")) {
       throw new Error(`RETAINED_COMMIT_HISTORY_FILE_TYPE_INVALID:${relativePath}`);
