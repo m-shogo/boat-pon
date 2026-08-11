@@ -102,6 +102,7 @@ export async function assemblePublicDashboardDeploy(options: {
       canonicalOutputDir,
     );
     await validateSnapshotInputs(snapshotDir);
+    await validateSnapshotSemantics(snapshotDir);
   }
 
   await validateCopyTreeSource(distDir);
@@ -516,6 +517,50 @@ async function validateSnapshotInputs(snapshotDir: string): Promise<void> {
   }
   if (present.length === 1) {
     throw new Error("latest.json and last-known-good.json must be supplied together");
+  }
+}
+
+async function validateSnapshotSemantics(snapshotDir: string): Promise<void> {
+  const latestPath = join(snapshotDir, "latest.json");
+  if (!(await pathExists(latestPath))) return;
+
+  const nowMs = Date.now();
+  const snapshots = new Map<string, { dataAsOf: number; generatedAt: number }>();
+  for (const name of ["latest.json", "last-known-good.json"] as const) {
+    const source = join(snapshotDir, name);
+    let value: unknown;
+    try {
+      value = JSON.parse(await readFile(source, "utf8")) as unknown;
+    } catch (error) {
+      throw new Error(`${name} is invalid JSON: ${messageOf(error)}`);
+    }
+    const verified = await verifyPublicDashboardSnapshotIntegrity(value);
+    if (!verified.ok || !verified.snapshot) {
+      throw new Error(`${name} failed snapshot integrity verification`);
+    }
+    const dataAsOf = Date.parse(verified.snapshot.dataAsOf);
+    const generatedAt = Date.parse(verified.snapshot.generatedAt);
+    if (!Number.isFinite(dataAsOf)) throw new Error(`${name} has an invalid dataAsOf`);
+    if (!Number.isFinite(generatedAt)) throw new Error(`${name} has an invalid generatedAt`);
+    if (generatedAt - nowMs > DEFAULT_PUBLIC_SNAPSHOT_FUTURE_SKEW_MS) {
+      throw new Error(`${name} generatedAt is in the future`);
+    }
+    if (dataAsOf - nowMs > DEFAULT_PUBLIC_SNAPSHOT_FUTURE_SKEW_MS) {
+      throw new Error(`${name} dataAsOf is in the future`);
+    }
+    if (dataAsOf > generatedAt + DEFAULT_PUBLIC_SNAPSHOT_FUTURE_SKEW_MS) {
+      throw new Error(`${name} dataAsOf is after generatedAt`);
+    }
+    snapshots.set(name, { dataAsOf, generatedAt });
+  }
+
+  const latest = snapshots.get("latest.json")!;
+  const fallback = snapshots.get("last-known-good.json")!;
+  if (latest.dataAsOf < fallback.dataAsOf) {
+    throw new Error("latest.json is older than last-known-good.json");
+  }
+  if (latest.dataAsOf === fallback.dataAsOf && latest.generatedAt < fallback.generatedAt) {
+    throw new Error("latest.json generation is older than last-known-good.json");
   }
 }
 
