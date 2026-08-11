@@ -2,7 +2,7 @@ const RETAINED_PREFIX = "reports/automation/retained-outputs/";
 const HISTORY_PREFIX = "reports/automation/history/";
 const RUN_ID_RE = /^[0-9A-Za-z._-]+$/u;
 const HISTORY_RE = /^reports\/automation\/history\/([0-9A-Za-z._-]+)-(TASK-[0-9A-Za-z._-]+)\.json$/u;
-const RETAINED_RE = /^reports\/automation\/retained-outputs\/([0-9A-Za-z._-]+)\/[^/]+$/u;
+const RETAINED_RE = /^reports\/automation\/retained-outputs\/([0-9A-Za-z._-]+)\/[0-9a-f]{64}-[0-9A-Za-z._-]{1,160}$/u;
 const TERMINAL_RESULTS = new Set([
   "PASS",
   "CONDITIONAL",
