@@ -27,7 +27,7 @@ const MUTABLE_OUTPUT_ROOTS = [
   "automation/control/",
 ] as const;
 const PASSTHROUGH_IMMUTABLE_ROOTS = ["research/registries/"] as const;
-const RUN_ID_RE = /^[0-9A-Za-z._-]+$/u;
+const RUN_ID_RE = /^(?!\.{1,2}$)[0-9A-Za-z._-]+$/u;
 const SHA256_RE = /^[0-9a-f]{64}$/u;
 const STRICT_UTF8_DECODER = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
 
