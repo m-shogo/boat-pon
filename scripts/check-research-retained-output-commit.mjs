@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { lstatSync, readFileSync, realpathSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve, sep } from "node:path";
 
 const RETAINED_PREFIX = "reports/automation/retained-outputs/";
 const HISTORY_PREFIX = "reports/automation/history/";
@@ -161,6 +161,29 @@ function validateRetainedOutputCommit(input) {
   };
 }
 
+function assertHistoryParentDirectories(repoRoot, relativePath) {
+  const absolutePath = resolve(repoRoot, relativePath);
+  if (absolutePath !== repoRoot && !absolutePath.startsWith(`${repoRoot}${sep}`)) {
+    throw new Error(`RETAINED_COMMIT_HISTORY_PATH_ESCAPES_ROOT:${relativePath}`);
+  }
+  let cursor = dirname(absolutePath);
+  while (cursor !== repoRoot) {
+    if (!cursor.startsWith(`${repoRoot}${sep}`)) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_PATH_ESCAPES_ROOT:${relativePath}`);
+    }
+    const stat = lstatSync(cursor);
+    if (stat.isSymbolicLink() || !stat.isDirectory()) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_PARENT_INVALID:${relativePath}`);
+    }
+    const parent = dirname(cursor);
+    if (parent === cursor) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_PATH_ESCAPES_ROOT:${relativePath}`);
+    }
+    cursor = parent;
+  }
+  return absolutePath;
+}
+
 const requestedRunId = argument("run-id");
 if (process.env.GITHUB_ACTIONS === "true") {
   const githubRunId = (process.env.GITHUB_RUN_ID ?? "").trim();
@@ -198,7 +221,7 @@ const result = validateRetainedOutputCommit({
   changedPaths,
   expectedRunId: requestedRunId,
   readText: (relativePath) => {
-    const absolutePath = resolve(repoRoot, relativePath);
+    const absolutePath = assertHistoryParentDirectories(repoRoot, relativePath);
     const stat = lstatSync(absolutePath);
     if (stat.isSymbolicLink() || !stat.isFile()) {
       throw new Error(`RETAINED_COMMIT_HISTORY_FILE_TYPE_INVALID:${relativePath}`);
