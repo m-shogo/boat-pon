@@ -144,6 +144,7 @@ export async function verifyPublicDashboardDeploy(directory: string): Promise<Pu
 
   const files = await listFiles(root);
   const fileSet = new Set(files);
+  const regularFiles = new Set<string>();
 
   for (const required of REQUIRED_ROOT_FILES) {
     if (!fileSet.has(required)) errors.push(`missing required public file: ${required}`);
@@ -157,6 +158,7 @@ export async function verifyPublicDashboardDeploy(directory: string): Promise<Pu
       continue;
     }
     if (!info.isFile()) continue;
+    regularFiles.add(path);
     if (info.size > MAX_PUBLIC_FILE_BYTES) errors.push(`public file exceeds 8 MiB: ${path}`);
 
     if (!isAllowedPublicPath(path)) errors.push(`non-allowlisted public file: ${path}`);
@@ -173,7 +175,7 @@ export async function verifyPublicDashboardDeploy(directory: string): Promise<Pu
     }
   }
 
-  if (fileSet.has("index.html")) {
+  if (regularFiles.has("index.html")) {
     const index = await readFile(join(root, "index.html"), "utf8");
     if (!/id="public-root"/.test(index)) errors.push("index.html is not the public dashboard entry");
     if (/\/src\/public-main\.tsx/.test(index)) errors.push("index.html still references unbuilt TypeScript source");
@@ -182,10 +184,10 @@ export async function verifyPublicDashboardDeploy(directory: string): Promise<Pu
     }
   }
 
-  await verifyOptionalSnapshots(root, fileSet, errors);
+  await verifyOptionalSnapshots(root, regularFiles, errors);
 
   let manifest: PublicDeployManifest | null = null;
-  if (fileSet.has("deploy-manifest.json")) {
+  if (regularFiles.has("deploy-manifest.json")) {
     try {
       manifest = JSON.parse(await readFile(join(root, "deploy-manifest.json"), "utf8")) as PublicDeployManifest;
       errors.push(...await validateManifest(root, manifest, files));
