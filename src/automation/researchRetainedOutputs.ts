@@ -187,6 +187,10 @@ function readRetainedSourceBounded(sourceAbsolute: string, sourceRelativePath: s
       }
       chunks.push(chunk.subarray(0, bytesRead));
     }
+    const postReadStat = fstatSync(fd);
+    if (postReadStat.size !== stat.size || totalBytes !== stat.size) {
+      throw new Error(`RETAINED_OUTPUT_SOURCE_CHANGED_DURING_READ:${sourceRelativePath}`);
+    }
     if (totalBytes <= 0) throw new Error(`RETAINED_OUTPUT_SOURCE_SIZE_INVALID:${sourceRelativePath}`);
     return Buffer.concat(chunks, totalBytes);
   } catch (error) {
