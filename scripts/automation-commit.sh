@@ -8,6 +8,8 @@ set -euo pipefail
 # 以降の node/git 等 child process へ raw token を継承させず、push 1 command だけの header に使う。
 PUSH_TOKEN="${BOAT_PON_AUTOMATION_PUSH_TOKEN:-}"
 unset BOAT_PON_AUTOMATION_PUSH_TOKEN
+EXPECTED_BASE_SHA="${EXPECTED_AUTOMATION_BRANCH_BASE:-}"
+unset EXPECTED_AUTOMATION_BRANCH_BASE
 
 BRANCH="automation/boat-pon-research"
 ALLOWED_PREFIXES=("automation/control/" "automation/requests/" "reports/automation/" "docs/automation/" "research/registries/experiments/" "research/registries/discoveries/")
@@ -47,7 +49,7 @@ if [ "${#CHANGED[@]}" -eq 0 ]; then
 fi
 
 # intent workflow が置く一時 file は commit 対象外（skip）。
-TRANSIENT=("canonical-request.json" ".automation-branch-base")
+TRANSIENT=("canonical-request.json")
 
 # allowlist / 安全性検査。
 KEEP=()
@@ -99,6 +101,13 @@ if [ "${#KEEP[@]}" -eq 0 ]; then
   exit 0
 fi
 
+# materialize step が固定した automation branch SHA 以外は CAS authority として受け入れない。
+# task-writable worktree file は参照しない。
+if ! [[ "$EXPECTED_BASE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+  echo "::error::missing or invalid trusted automation branch base SHA"
+  exit 1
+fi
+
 # 結果を一時領域へ退避（branch 切替で失わないため）。
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
@@ -115,17 +124,12 @@ git_no_hooks checkout -- . 2>/dev/null || true
 git_no_hooks clean -fdq -- automation reports docs research 2>/dev/null || true
 
 git_no_hooks fetch origin --quiet
-# compare-and-swap: materialize 時点の automation branch base SHA から進んでいたら
+# compare-and-swap: materialize 時点の trusted step output から branch が進んでいたら
 # control state を上書きせず fail-closed（concurrent 変更の silent clobber を防ぐ）。
-if [ -f .automation-branch-base ]; then
-  BASE_SHA="$(cat .automation-branch-base)"
-  CUR_SHA="$(git_no_hooks rev-parse "origin/$BRANCH" 2>/dev/null || echo none)"
-  if [ "$BASE_SHA" != "$CUR_SHA" ]; then
-    echo "::error::automation branch advanced during run ($BASE_SHA -> $CUR_SHA); CAS conflict, refusing to clobber. re-dispatch to retry."
-    rm -f .automation-branch-base
-    exit 1
-  fi
-  rm -f .automation-branch-base
+CUR_SHA="$(git_no_hooks rev-parse "origin/$BRANCH" 2>/dev/null || echo none)"
+if [ "$EXPECTED_BASE_SHA" != "$CUR_SHA" ]; then
+  echo "::error::automation branch advanced during run ($EXPECTED_BASE_SHA -> $CUR_SHA); CAS conflict, refusing to clobber. re-dispatch to retry."
+  exit 1
 fi
 if git_no_hooks show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
   git_no_hooks checkout -B "$BRANCH" "origin/$BRANCH" --quiet
