@@ -87,8 +87,8 @@ function validateRetainedOutputCommit(input) {
 const repoRoot = resolve(process.cwd());
 const relevantRoots = ["reports/automation/retained-outputs", "reports/automation/history"];
 const changedPaths = [...new Set([
-  ...gitLines(["diff", "--name-only", "--", ...relevantRoots]),
-  ...gitLines(["diff", "--cached", "--name-only", "--", ...relevantRoots]),
+  ...gitLines(["diff", "--no-ext-diff", "--name-only", "--", ...relevantRoots]),
+  ...gitLines(["diff", "--cached", "--no-ext-diff", "--name-only", "--", ...relevantRoots]),
   ...gitLines(["ls-files", "--others", "--exclude-standard", "--", ...relevantRoots]),
 ])].sort();
 
