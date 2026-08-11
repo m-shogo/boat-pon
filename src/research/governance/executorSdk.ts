@@ -3,8 +3,8 @@
 // PASS は実体を伴う write/readback/evidence/state transition の完了後だけ返す。
 // dry-run は一切 write せず、plan と入力・PIT evidence の検査だけを行う。
 import {
-  closeSync, existsSync, fsyncSync, linkSync, mkdirSync, openSync, readFileSync, renameSync, unlinkSync,
-  writeFileSync,
+  closeSync, constants, existsSync, fstatSync, fsyncSync, linkSync, mkdirSync, openSync, readFileSync, renameSync,
+  unlinkSync, writeFileSync,
 } from "node:fs";
 import { createHash } from "node:crypto";
 import { dirname } from "node:path";
@@ -147,16 +147,29 @@ export function atomicWriteJson(path: string, value: unknown, allowReplace = fal
 }
 
 export function verifyJsonReadback(path: string, expectedOutputDigest?: string): StageResult {
-  if (!existsSync(path)) return { ok: false, errors: [`artifact missing: ${path}`] };
+  let fd: number | null = null;
   try {
-    const text = readFileSync(path, "utf8");
+    fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+    const stat = fstatSync(fd);
+    if (!stat.isFile() || stat.nlink !== 1) {
+      throw new Error(`artifact must be a single-link regular file: ${path}`);
+    }
+    const text = readFileSync(fd, "utf8");
     const parsed = JSON.parse(text) as Record<string, unknown>;
     if (expectedOutputDigest && parsed.outputDigest !== expectedOutputDigest) {
       return { ok: false, errors: [`artifact outputDigest mismatch: ${path}`] };
     }
     return { ok: true, errors: [] };
   } catch (e) {
+    if (e instanceof Error && "code" in e && e.code === "ENOENT") {
+      return { ok: false, errors: [`artifact missing: ${path}`] };
+    }
+    if (e instanceof Error && "code" in e && e.code === "ELOOP") {
+      return { ok: false, errors: [`artifact readback failed: ${path}: symlink forbidden`] };
+    }
     return { ok: false, errors: [`artifact readback failed: ${path}: ${e instanceof Error ? e.message : String(e)}`] };
+  } finally {
+    if (fd !== null) closeSync(fd);
   }
 }
 
