@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, symlink, unlink } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -7,12 +7,29 @@ import { assemblePublicDashboardDeploy, verifyPublicDashboardDeploy } from "./pu
 
 test("deploy verifier does not follow a symlink while hashing manifest entries", async () => {
   const root = await mkdtemp(join(tmpdir(), "boat-pon-public-manifest-symlink-"));
+  const dist = join(root, "dist");
   const output = join(root, "output");
   const targetDirectory = join(root, "external-directory");
 
   try {
+    await mkdir(join(dist, "assets"), { recursive: true });
+    await Promise.all([
+      writeFile(join(dist, "public-dashboard.html"), [
+        "<!doctype html>",
+        "<html><head>",
+        '<link rel="stylesheet" href="/assets/public.css">',
+        '<link rel="manifest" href="/manifest.webmanifest">',
+        "</head><body>",
+        '<div id="public-root"></div>',
+        '<script type="module" src="/assets/public.js"></script>',
+        "</body></html>",
+      ].join(""), "utf8"),
+      writeFile(join(dist, "assets", "public.js"), "console.log('public dashboard');\n", "utf8"),
+      writeFile(join(dist, "assets", "public.css"), "body{margin:0}\n", "utf8"),
+    ]);
+
     await assemblePublicDashboardDeploy({
-      distDir: "dist-public",
+      distDir: dist,
       staticDir: "public-site",
       outputDir: output,
     });
