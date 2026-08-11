@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { existsSync, lstatSync, readdirSync, readFileSync } from "node:fs";
-import { resolve, sep } from "node:path";
+import { dirname, resolve, sep } from "node:path";
 
 export const RESEARCH_RETAINED_OUTPUT_INVENTORY_VERSION =
   "research-retained-output-inventory-v1" as const;
@@ -44,6 +44,22 @@ function resolveInside(repoRoot: string, relativePath: string): string {
   return target;
 }
 
+function hasSafeParentPath(repoRoot: string, absolutePath: string): boolean {
+  const root = resolve(repoRoot);
+  let current = dirname(absolutePath);
+  while (current !== root) {
+    if (!current.startsWith(`${root}${sep}`)) return false;
+    if (existsSync(current)) {
+      const stat = lstatSync(current);
+      if (stat.isSymbolicLink() || !stat.isDirectory()) return false;
+    }
+    const next = dirname(current);
+    if (next === current) return false;
+    current = next;
+  }
+  return true;
+}
+
 function invalidEntry(input: {
   relativePath: string;
   runId?: string | null;
@@ -66,6 +82,21 @@ export function inventoryResearchRetainedOutputs(input: {
   repoRoot: string;
 }): ResearchRetainedOutputInventory {
   const rootPath = resolveInside(input.repoRoot, RETAINED_ROOT);
+  if (!hasSafeParentPath(input.repoRoot, rootPath)) {
+    return {
+      inventoryVersion: RESEARCH_RETAINED_OUTPUT_INVENTORY_VERSION,
+      retainedRoot: RETAINED_ROOT,
+      rootPresent: true,
+      fileCount: 0,
+      totalBytes: 0,
+      validFileCount: 0,
+      invalidFileCount: 1,
+      entries: [invalidEntry({
+        relativePath: RETAINED_ROOT,
+        issues: ["RETAINED_INVENTORY_ROOT_PARENT_INVALID"],
+      })],
+    };
+  }
   if (!existsSync(rootPath)) {
     return {
       inventoryVersion: RESEARCH_RETAINED_OUTPUT_INVENTORY_VERSION,
