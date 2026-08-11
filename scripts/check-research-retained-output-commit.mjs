@@ -42,6 +42,7 @@ function gitLines(args) {
 
 function approvedOutputPath(value) {
   if (!value || value.startsWith("/") || value.includes("\0")) return false;
+  if (value.startsWith(HISTORY_PREFIX)) return false;
   if (value.split("/").some((part) => part === "..")) return false;
   return ALLOWED_OUTPUT_ROOTS.some((root) => value.startsWith(root));
 }
