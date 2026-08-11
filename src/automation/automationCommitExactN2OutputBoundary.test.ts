@@ -7,6 +7,8 @@ import test from "node:test";
 
 const repoRoot = resolve(process.cwd());
 const commitScript = resolve(repoRoot, "scripts/automation-commit.sh");
+const trustedGitBin = execFileSync("sh", ["-c", "command -v git"], { encoding: "utf8" }).trim();
+const trustedNodeBin = process.execPath;
 
 test("automation commit rejects unexpected suffixes beside named N2 outputs", () => {
   const cwd = mkdtempSync(join(tmpdir(), "boat-pon-automation-exact-n2-"));
@@ -24,7 +26,12 @@ test("automation commit rejects unexpected suffixes beside named N2 outputs", ()
     const result = spawnSync("bash", [commitScript], {
       cwd,
       encoding: "utf8",
-      env: { ...process.env, RUN_ID: "test" },
+      env: {
+        ...process.env,
+        RUN_ID: "test",
+        TRUSTED_GIT_BIN: trustedGitBin,
+        TRUSTED_NODE_BIN: trustedNodeBin,
+      },
     });
 
     assert.notEqual(result.status, 0);
