@@ -61,12 +61,13 @@ test("existing retention evidence is fail-closed, bounded, and never overwritten
   assert.match(source, /DURABLE_RETENTION_EXISTING_EVIDENCE_DIGEST_MISMATCH/u);
 });
 
-test("new retention evidence is installed without replacement semantics", () => {
+test("new retention evidence is validated and installed without replacement semantics", () => {
+  assert.match(source, /const snapshot = validateResearchDurableRetentionSnapshot\(input\.snapshot\)/u);
   assert.match(source, /chmodSync\(tmpPath, 0o644\)/u);
   assert.match(source, /chmodSync\(tmpPath, 0o644\);\s*try \{\s*linkSync\(tmpPath, absolutePath\)/u);
   assert.match(source, /linkSync\(tmpPath, absolutePath\)/u);
   assert.match(source, /error\.code === "EEXIST"/u);
-  assert.match(source, /return persistResearchDurableRetentionSnapshot\(input\)/u);
+  assert.match(source, /return persistResearchDurableRetentionSnapshot\(\{ repoRoot: input\.repoRoot, snapshot \}\)/u);
   assert.doesNotMatch(source, /chmodSync\(absolutePath/u);
   assert.doesNotMatch(source, /renameSync\(tmpPath, absolutePath\)/u);
 });
