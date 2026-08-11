@@ -57,9 +57,12 @@ test("existing retention evidence is fail-closed and never overwritten", () => {
 });
 
 test("new retention evidence is installed without replacement semantics", () => {
+  assert.match(source, /chmodSync\(tmpPath, 0o644\)/u);
+  assert.match(source, /chmodSync\(tmpPath, 0o644\);\s*try \{\s*linkSync\(tmpPath, absolutePath\)/u);
   assert.match(source, /linkSync\(tmpPath, absolutePath\)/u);
   assert.match(source, /error\.code === "EEXIST"/u);
   assert.match(source, /return persistResearchDurableRetentionSnapshot\(input\)/u);
+  assert.doesNotMatch(source, /chmodSync\(absolutePath/u);
   assert.doesNotMatch(source, /renameSync\(tmpPath, absolutePath\)/u);
 });
 
