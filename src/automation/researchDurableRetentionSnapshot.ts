@@ -13,6 +13,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
+import { TextDecoder } from "node:util";
 
 import type {
   ResearchDurableKnowledgeCompletenessReport,
@@ -30,6 +31,7 @@ const SHA256_RE = /^[0-9a-f]{64}$/u;
 const GIT_SHA_RE = /^[0-9a-f]{40}$/u;
 const MAX_EXISTING_SNAPSHOT_BYTES = 2_000_000;
 const EXISTING_SNAPSHOT_READ_CHUNK_BYTES = 64 * 1024;
+const STRICT_UTF8_DECODER = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
 
 export type ResearchDurableRetentionNonStrongRun = {
   runId: string | null;
@@ -196,7 +198,11 @@ function readExistingSnapshotText(absolutePath: string): string | null {
     if (postReadStat.size !== stat.size || totalBytes !== stat.size) {
       throw new Error("DURABLE_RETENTION_EXISTING_SNAPSHOT_INVALID");
     }
-    return Buffer.concat(chunks, totalBytes).toString("utf8");
+    try {
+      return STRICT_UTF8_DECODER.decode(Buffer.concat(chunks, totalBytes));
+    } catch {
+      throw new Error("DURABLE_RETENTION_EXISTING_SNAPSHOT_UTF8_INVALID");
+    }
   } finally {
     closeSync(fd);
   }
