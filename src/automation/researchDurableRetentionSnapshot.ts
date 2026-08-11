@@ -1,9 +1,13 @@
 import { createHash, randomUUID } from "node:crypto";
 import {
   chmodSync,
+  closeSync,
+  constants as fsConstants,
+  fstatSync,
   linkSync,
   lstatSync,
   mkdirSync,
+  openSync,
   readFileSync,
   unlinkSync,
   writeFileSync,
@@ -152,6 +156,28 @@ function assertSafeParentPath(rootDir: string, absolutePath: string): void {
     if (stat.isSymbolicLink() || !stat.isDirectory()) {
       throw new Error("DURABLE_RETENTION_PARENT_PATH_INVALID");
     }
+  }
+}
+
+function readExistingSnapshotText(absolutePath: string): string | null {
+  let fd: number;
+  try {
+    fd = openSync(absolutePath, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return null;
+    if (error instanceof Error && "code" in error && error.code === "ELOOP") {
+      throw new Error("DURABLE_RETENTION_EXISTING_SNAPSHOT_INVALID");
+    }
+    throw error;
+  }
+  try {
+    const stat = fstatSync(fd);
+    if (!stat.isFile() || stat.nlink !== 1 || stat.size > MAX_EXISTING_SNAPSHOT_BYTES) {
+      throw new Error("DURABLE_RETENTION_EXISTING_SNAPSHOT_INVALID");
+    }
+    return readFileSync(fd, "utf8");
+  } finally {
+    closeSync(fd);
   }
 }
 
@@ -351,14 +377,11 @@ export function persistResearchDurableRetentionSnapshot(input: {
   const relativePath = durableRetentionSnapshotRelativePath(input.snapshot);
   const absolutePath = resolveInside(input.repoRoot, relativePath);
   assertSafeParentPath(input.repoRoot, absolutePath);
-  const existingStat = lstatIfPresent(absolutePath);
-  if (existingStat) {
-    if (existingStat.isSymbolicLink() || !existingStat.isFile() || existingStat.nlink !== 1 || existingStat.size > MAX_EXISTING_SNAPSHOT_BYTES) {
-      throw new Error("DURABLE_RETENTION_EXISTING_SNAPSHOT_INVALID");
-    }
+  const existingText = readExistingSnapshotText(absolutePath);
+  if (existingText !== null) {
     let parsed: unknown;
     try {
-      parsed = JSON.parse(readFileSync(absolutePath, "utf8"));
+      parsed = JSON.parse(existingText);
     } catch {
       throw new Error("DURABLE_RETENTION_EXISTING_SNAPSHOT_JSON_INVALID");
     }
