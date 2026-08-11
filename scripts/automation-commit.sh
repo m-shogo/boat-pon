@@ -211,6 +211,23 @@ else
   git_no_hooks checkout -B "$BRANCH" --quiet
 fi
 
+# authority branch への切替後は destination tree が task worktree と異なるため、
+# writeback 直前に symlink / non-file destination を再検査する。
+for path in "${KEEP[@]}"; do
+  probe="$path"
+  while [ "$probe" != "." ] && [ "$probe" != "/" ]; do
+    if [ -L "$REPO_ROOT/$probe" ]; then
+      echo "::error::refusing authority write through symbolic link: $probe (candidate: $path)"
+      exit 1
+    fi
+    probe="$(dirname "$probe")"
+  done
+  if [ -e "$REPO_ROOT/$path" ] && [ ! -f "$REPO_ROOT/$path" ]; then
+    echo "::error::authority destination is not a regular file: $path"
+    exit 1
+  fi
+done
+
 # 退避した結果を書き戻す。
 for path in "${KEEP[@]}"; do
   mkdir -p "$(dirname "$REPO_ROOT/$path")"
