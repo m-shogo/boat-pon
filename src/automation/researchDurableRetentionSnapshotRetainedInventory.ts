@@ -102,7 +102,11 @@ export function persistResearchDurableRetentionSnapshotWithRetainedInventory(inp
   repoRoot: string;
   snapshot: ResearchDurableRetentionSnapshotWithRetainedInventory;
 }): ResearchDurableRetentionPersistResultWithRetainedInventory {
-  const persisted = persistResearchDurableRetentionSnapshot(input);
+  const validatedInput = validateExtendedSnapshot(input.snapshot);
+  const persisted = persistResearchDurableRetentionSnapshot({
+    repoRoot: input.repoRoot,
+    snapshot: validatedInput,
+  });
   return {
     ...persisted,
     snapshot: validateExtendedSnapshot(persisted.snapshot),
