@@ -394,6 +394,7 @@ export function persistResearchDurableRetentionSnapshot(input: {
   mkdirSync(dirname(absolutePath), { recursive: true });
   const tmpPath = `${absolutePath}.${randomUUID()}.tmp`;
   writeFileSync(tmpPath, `${JSON.stringify(input.snapshot, null, 2)}\n`, { encoding: "utf8", mode: 0o644 });
+  chmodSync(tmpPath, 0o644);
   try {
     linkSync(tmpPath, absolutePath);
   } catch (error) {
@@ -404,6 +405,5 @@ export function persistResearchDurableRetentionSnapshot(input: {
     throw error;
   }
   unlinkSync(tmpPath);
-  chmodSync(absolutePath, 0o644);
   return { changed: true, relativePath, snapshot: input.snapshot };
 }
