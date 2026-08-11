@@ -7,6 +7,11 @@ const HISTORY_PREFIX = "reports/automation/history/";
 const RUN_ID_RE = /^[0-9A-Za-z._-]+$/u;
 const HISTORY_RE = /^reports\/automation\/history\/([0-9A-Za-z._-]+)-TASK-[0-9A-Za-z._-]+\.json$/u;
 const RETAINED_RE = /^reports\/automation\/retained-outputs\/([0-9A-Za-z._-]+)\/[^/]+$/u;
+const TRUSTED_GIT_BIN = process.env.TRUSTED_GIT_BIN ?? "";
+
+if (!TRUSTED_GIT_BIN.startsWith("/")) {
+  throw new Error("RETAINED_COMMIT_TRUSTED_GIT_INVALID");
+}
 
 function argument(name) {
   const inline = process.argv.find((value) => value.startsWith(`--${name}=`));
@@ -16,7 +21,7 @@ function argument(name) {
 }
 
 function gitLines(args) {
-  const output = execFileSync("git", ["-c", "core.hooksPath=/dev/null", "-c", "core.fsmonitor=false", ...args], {
+  const output = execFileSync(TRUSTED_GIT_BIN, ["-c", "core.hooksPath=/dev/null", "-c", "core.fsmonitor=false", ...args], {
     encoding: "utf8",
   });
   return output.split("\n").map((value) => value.trim()).filter(Boolean);
