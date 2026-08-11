@@ -134,6 +134,10 @@ jobs:
         env:
           BASH_ENV: /dev/null
           ENV: /dev/null
+          LD_PRELOAD: ""
+          LD_LIBRARY_PATH: ""
+          NODE_OPTIONS: ""
+          NODE_PATH: ""
           PERL5OPT: ""
           PERL5LIB: ""
           PATH: /usr/bin:/bin:/usr/sbin:/sbin
@@ -141,6 +145,14 @@ jobs:
           TRUSTED_GIT_SHA256: ${{ steps.materialize_authority.outputs.trusted_git_sha256 }}
         run: |
           set -euo pipefail
+          while IFS= read -r env_name; do
+            case "$env_name" in
+              GIT_*|DYLD_*) unset "$env_name" ;;
+            esac
+          done < <(compgen -e)
+          unset HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY http_proxy https_proxy all_proxy no_proxy
+          export GIT_CONFIG_NOSYSTEM=1
+          export GIT_CONFIG_GLOBAL=/dev/null
           case "$TRUSTED_GIT_BIN" in /*) ;; *) echo "::error::trusted git path is not absolute"; exit 1 ;; esac
           test -x "$TRUSTED_GIT_BIN"
           CURRENT_GIT_SHA256="$(/usr/bin/shasum -a 256 "$TRUSTED_GIT_BIN" | /usr/bin/awk '{print $1}')"
@@ -159,6 +171,8 @@ jobs:
         env:
           BASH_ENV: /dev/null
           ENV: /dev/null
+          LD_PRELOAD: ""
+          LD_LIBRARY_PATH: ""
           NODE_OPTIONS: ""
           NODE_PATH: ""
           PERL5OPT: ""
