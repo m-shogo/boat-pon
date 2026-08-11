@@ -173,6 +173,7 @@ export function atomicWriteJson(path: string, value: unknown, allowReplace = fal
 export function verifyJsonReadback(path: string, expectedOutputDigest?: string): StageResult {
   let fd: number | null = null;
   try {
+    assertRealDirectoryAncestors(path);
     fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
     const stat = fstatSync(fd);
     if (!stat.isFile() || stat.nlink !== 1) {
