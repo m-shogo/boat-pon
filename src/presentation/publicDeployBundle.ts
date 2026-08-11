@@ -111,6 +111,7 @@ export async function assemblePublicDashboardDeploy(options: {
   if (await pathExists(join(distDir, "index.html"))) {
     throw new Error("isolated public build unexpectedly contains index.html");
   }
+  await assertNoDeployDestinationCollisions(distDir, staticDir, snapshotDir);
 
   await rm(outputDir, { recursive: true, force: true });
   await mkdir(outputDir, { recursive: true });
@@ -392,6 +393,36 @@ function scanForbiddenText(
   for (const [label, pattern] of patterns) {
     if (pattern.test(text)) errors.push(`${path} contains forbidden ${label}`);
   }
+}
+
+async function assertNoDeployDestinationCollisions(
+  distDir: string,
+  staticDir: string,
+  snapshotDir: string | null,
+): Promise<void> {
+  const destinations = new Map<string, string>();
+  const register = (destination: string, origin: string) => {
+    const previous = destinations.get(destination);
+    if (previous) {
+      throw new Error(`deploy source destination collision: ${destination} (${previous} vs ${origin})`);
+    }
+    destinations.set(destination, origin);
+  };
+
+  for (const path of await listFiles(distDir)) {
+    register(path === "public-dashboard.html" ? "index.html" : path, `dist:${path}`);
+  }
+  for (const path of await listFiles(staticDir)) {
+    register(path, `static:${path}`);
+  }
+  if (snapshotDir) {
+    for (const name of ["latest.json", "last-known-good.json"] as const) {
+      if (await pathExists(join(snapshotDir, name))) {
+        register(`public-data/${name}`, `snapshot:${name}`);
+      }
+    }
+  }
+  register("deploy-manifest.json", "generated:deploy-manifest.json");
 }
 
 async function validateCopyTreeSource(source: string): Promise<void> {
