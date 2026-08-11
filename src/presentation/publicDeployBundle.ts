@@ -104,6 +104,14 @@ export async function assemblePublicDashboardDeploy(options: {
     await validateSnapshotInputs(snapshotDir);
   }
 
+  await validateCopyTreeSource(distDir);
+  await validateCopyTreeSource(staticDir);
+  const sourceViteEntry = join(distDir, "public-dashboard.html");
+  await requireFile(sourceViteEntry, "isolated Vite public-dashboard.html entry");
+  if (await pathExists(join(distDir, "index.html"))) {
+    throw new Error("isolated public build unexpectedly contains index.html");
+  }
+
   await rm(outputDir, { recursive: true, force: true });
   await mkdir(outputDir, { recursive: true });
   await copyTreeWithoutSymlinks(distDir, outputDir);
@@ -383,6 +391,19 @@ function scanForbiddenText(
 ): void {
   for (const [label, pattern] of patterns) {
     if (pattern.test(text)) errors.push(`${path} contains forbidden ${label}`);
+  }
+}
+
+async function validateCopyTreeSource(source: string): Promise<void> {
+  const entries = await readdir(source, { withFileTypes: true });
+  for (const entry of entries) {
+    const sourcePath = join(source, entry.name);
+    const info = await lstat(sourcePath);
+    if (info.isSymbolicLink()) throw new Error(`refusing to copy symbolic link: ${sourcePath}`);
+    if (entry.isDirectory()) await validateCopyTreeSource(sourcePath);
+    else if (entry.isFile()) {
+      if (info.size > MAX_PUBLIC_FILE_BYTES) throw new Error(`refusing to copy oversized public file: ${sourcePath}`);
+    } else throw new Error(`unsupported public build entry: ${sourcePath}`);
   }
 }
 
