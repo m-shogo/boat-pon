@@ -11,11 +11,11 @@ test("automation commit cleans allowlisted research registry roots before branch
 
   assert.match(
     source,
-    /git clean -fdq -- automation reports docs research 2>\/dev\/null \|\| true/,
+    /git_no_hooks clean -fdq -- automation reports docs research 2>\/dev\/null \|\| true/,
   );
   assert.ok(
-    source.indexOf("git clean -fdq -- automation reports docs research") <
-      source.indexOf("git checkout -B \"$BRANCH\""),
+    source.indexOf("git_no_hooks clean -fdq -- automation reports docs research") <
+      source.indexOf("git_no_hooks checkout -B \"$BRANCH\""),
     "registry cleanup must happen before switching to the automation branch",
   );
 });

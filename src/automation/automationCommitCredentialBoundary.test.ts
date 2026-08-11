@@ -10,7 +10,7 @@ test("automation commit removes raw push token before child processes and authen
   const capture = script.indexOf('PUSH_TOKEN="${BOAT_PON_AUTOMATION_PUSH_TOKEN:-}"');
   const unset = script.indexOf("unset BOAT_PON_AUTOMATION_PUSH_TOKEN");
   const retainedGate = script.indexOf("node --import tsx scripts/check-research-retained-output-commit.ts");
-  const authenticatedPush = script.indexOf('git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth_header" push origin "$BRANCH" --quiet');
+  const authenticatedPush = script.indexOf('git_no_hooks -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth_header" push origin "$BRANCH" --quiet');
 
   assert.notEqual(capture, -1);
   assert.notEqual(unset, -1);
@@ -19,5 +19,5 @@ test("automation commit removes raw push token before child processes and authen
   assert.ok(capture < unset);
   assert.ok(unset < retainedGate);
   assert.ok(retainedGate < authenticatedPush);
-  assert.doesNotMatch(script, /git config --local http\.https:\/\/github\.com\/\.extraheader/);
+  assert.doesNotMatch(script, /git(?:_no_hooks)? config --local http\.https:\/\/github\.com\/\.extraheader/);
 });

@@ -25,7 +25,13 @@ ALLOWED_EXACT=(
 )
 MAX_BYTES=2097152
 
-cd "$(git rev-parse --show-toplevel)"
+# task code は同じ worktree を使うため、repo-local git hooks / fsmonitor を信頼しない。
+# post-checkout / pre-commit / pre-push 等から CAS・index・push credential 境界を変更させない。
+git_no_hooks() {
+  git -c core.hooksPath=/dev/null -c core.fsmonitor=false "$@"
+}
+
+cd "$(git_no_hooks rev-parse --show-toplevel)"
 REPO_ROOT="$(pwd)"
 
 # 変更 path を取得（untracked 含む）。-uall で新規ディレクトリを個別 file まで展開する
@@ -34,7 +40,7 @@ REPO_ROOT="$(pwd)"
 CHANGED=()
 while IFS= read -r changed_path; do
   CHANGED+=("$changed_path")
-done < <(git status --porcelain -uall | sed 's/^...//' | sed 's/^"//;s/"$//' | sort -u)
+done < <(git_no_hooks status --porcelain -uall | sed 's/^...//' | sed 's/^"//;s/"$//' | sort -u)
 if [ "${#CHANGED[@]}" -eq 0 ]; then
   echo "NO_CHANGE: nothing to commit"
   exit 0
@@ -101,19 +107,19 @@ for path in "${KEEP[@]}"; do
   cp "$path" "$STAGE/$path"
 done
 
-git config user.name "boat-pon-automation"
-git config user.email "automation@boat-pon.invalid"
+git_no_hooks config user.name "boat-pon-automation"
+git_no_hooks config user.email "automation@boat-pon.invalid"
 
 # 作業ツリーを clean にしてから branch を切り替える（結果は STAGE にある）。
-git checkout -- . 2>/dev/null || true
-git clean -fdq -- automation reports docs research 2>/dev/null || true
+git_no_hooks checkout -- . 2>/dev/null || true
+git_no_hooks clean -fdq -- automation reports docs research 2>/dev/null || true
 
-git fetch origin --quiet
+git_no_hooks fetch origin --quiet
 # compare-and-swap: materialize 時点の automation branch base SHA から進んでいたら
 # control state を上書きせず fail-closed（concurrent 変更の silent clobber を防ぐ）。
 if [ -f .automation-branch-base ]; then
   BASE_SHA="$(cat .automation-branch-base)"
-  CUR_SHA="$(git rev-parse "origin/$BRANCH" 2>/dev/null || echo none)"
+  CUR_SHA="$(git_no_hooks rev-parse "origin/$BRANCH" 2>/dev/null || echo none)"
   if [ "$BASE_SHA" != "$CUR_SHA" ]; then
     echo "::error::automation branch advanced during run ($BASE_SHA -> $CUR_SHA); CAS conflict, refusing to clobber. re-dispatch to retry."
     rm -f .automation-branch-base
@@ -121,36 +127,36 @@ if [ -f .automation-branch-base ]; then
   fi
   rm -f .automation-branch-base
 fi
-if git show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
-  git checkout -B "$BRANCH" "origin/$BRANCH" --quiet
+if git_no_hooks show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
+  git_no_hooks checkout -B "$BRANCH" "origin/$BRANCH" --quiet
 else
-  git checkout -B "$BRANCH" --quiet
+  git_no_hooks checkout -B "$BRANCH" --quiet
 fi
 
 # 退避した結果を書き戻す。
 for path in "${KEEP[@]}"; do
   mkdir -p "$(dirname "$REPO_ROOT/$path")"
   cp "$STAGE/$path" "$REPO_ROOT/$path"
-  git add -- "$path"
+  git_no_hooks add -- "$path"
 done
 
-if git diff --cached --quiet; then
+if git_no_hooks diff --cached --quiet; then
   echo "NO_CHANGE: nothing staged after allowlist filter"
-  git checkout main --quiet || true
+  git_no_hooks checkout main --quiet || true
   exit 0
 fi
 
 REQ_ID="$(node -e "try{const s=require('./reports/automation/current-status.json');process.stdout.write(String(s.lastRequestId??'none'))}catch{process.stdout.write('none')}" 2>/dev/null || echo none)"
 TASK_ID="$(node -e "try{const s=require('./reports/automation/current-status.json');process.stdout.write(String(s.lastTaskId??'none'))}catch{process.stdout.write('none')}" 2>/dev/null || echo none)"
 
-git commit -q -m "report(automation): research run ${RUN_ID:-local} (request ${REQ_ID}, task ${TASK_ID})"
+git_no_hooks commit -q -m "report(automation): research run ${RUN_ID:-local} (request ${REQ_ID}, task ${TASK_ID})"
 if [ -n "$PUSH_TOKEN" ]; then
   auth_header="$(printf 'x-access-token:%s' "$PUSH_TOKEN" | base64 | tr -d '\n')"
-  git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth_header" push origin "$BRANCH" --quiet
+  git_no_hooks -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth_header" push origin "$BRANCH" --quiet
 else
-  git push origin "$BRANCH" --quiet
+  git_no_hooks push origin "$BRANCH" --quiet
 fi
 echo "pushed to $BRANCH"
 
 # 次回 run のために main へ戻す（runner の作業ツリーを既定状態に保つ）。
-git checkout main --quiet || true
+git_no_hooks checkout main --quiet || true

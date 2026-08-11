@@ -29,8 +29,8 @@ test("CLI inspects only git changes under retained-output and history roots", ()
 test("automation commit runs retained gate before staging, cleaning or branch switching", () => {
   const gateIndex = commit.indexOf("check-research-retained-output-commit.ts");
   const stageIndex = commit.indexOf('STAGE="$(mktemp -d)"');
-  const cleanIndex = commit.indexOf("git clean -fdq -- automation reports docs");
-  const checkoutBranchIndex = commit.indexOf('git checkout -B "$BRANCH"');
+  const cleanIndex = commit.indexOf("git_no_hooks clean -fdq -- automation reports docs research");
+  const checkoutBranchIndex = commit.indexOf('git_no_hooks checkout -B "$BRANCH"');
   assert.ok(gateIndex >= 0);
   assert.ok(stageIndex > gateIndex);
   assert.ok(cleanIndex > stageIndex);
