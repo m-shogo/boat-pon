@@ -45,7 +45,7 @@ test("snapshot identity is semantic and does not use state SHA or observation ti
 
 test("existing retention evidence is fail-closed and never overwritten", () => {
   assert.match(source, /const existingText = readExistingSnapshotText\(absolutePath\)/u);
-  assert.match(source, /openSync\(absolutePath, fsConstants\.O_RDONLY \| fsConstants\.O_NOFOLLOW\)/u);
+  assert.match(source, /fsConstants\.O_RDONLY \| fsConstants\.O_NOFOLLOW \| fsConstants\.O_NONBLOCK/u);
   assert.match(source, /const stat = fstatSync\(fd\)/u);
   assert.match(source, /!stat\.isFile\(\) \|\| stat\.nlink !== 1 \|\| stat\.size > MAX_EXISTING_SNAPSHOT_BYTES/u);
   assert.match(source, /return readFileSync\(fd, "utf8"\)/u);
