@@ -133,6 +133,29 @@ function sourceClass(relativePath: string): "MUTABLE" | "IMMUTABLE" {
   throw new Error(`RETAINED_OUTPUT_SOURCE_NOT_ALLOWED:${relativePath}`);
 }
 
+function validateImmutableOutputReference(repoRoot: string, sourceRelativePath: string): void {
+  const sourceAbsolute = resolveInside(repoRoot, sourceRelativePath);
+  assertSourceParentCanonicalInsideRepo(repoRoot, sourceAbsolute, sourceRelativePath);
+  let fd: number | null = null;
+  try {
+    fd = openSync(sourceAbsolute, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+    const stat = fstatSync(fd);
+    if (!stat.isFile() || stat.nlink !== 1) {
+      throw new Error(`RETAINED_OUTPUT_IMMUTABLE_FILE_TYPE_INVALID:${sourceRelativePath}`);
+    }
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      throw new Error(`RETAINED_OUTPUT_IMMUTABLE_MISSING:${sourceRelativePath}`);
+    }
+    if (error instanceof Error && "code" in error && error.code === "ELOOP") {
+      throw new Error(`RETAINED_OUTPUT_IMMUTABLE_FILE_TYPE_INVALID:${sourceRelativePath}`);
+    }
+    throw error;
+  } finally {
+    if (fd !== null) closeSync(fd);
+  }
+}
+
 function safeBasename(relativePath: string): string {
   const value = basename(relativePath);
   if (!value || value === "." || value === "..") throw new Error("RETAINED_OUTPUT_BASENAME_INVALID");
@@ -447,6 +470,7 @@ export function retainExecutorOutputs(input: {
   for (const outputPath of uniqueOutputPaths) {
     const classification = sourceClass(outputPath);
     if (classification === "IMMUTABLE") {
+      validateImmutableOutputReference(input.repoRoot, outputPath);
       if (!historyOutputSet.has(outputPath)) {
         historyOutputSet.add(outputPath);
         historyOutputs.push(outputPath);
