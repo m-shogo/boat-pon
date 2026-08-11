@@ -15,7 +15,7 @@ test("automation commit preserves immutable research outputs against authority b
   );
   assert.match(
     script,
-    /git_no_hooks fetch origin "refs\/heads\/\$BRANCH:refs\/remotes\/origin\/\$BRANCH" --quiet/u,
+    /git_no_hooks fetch "\$AUTHORITY_REMOTE_URL" "refs\/heads\/\$BRANCH:refs\/remotes\/origin\/\$BRANCH" --quiet/u,
   );
   assert.match(script, /git_no_hooks cat-file -e "origin\/\$BRANCH:\$path"/u);
   assert.match(script, /git_no_hooks hash-object --no-filters "\$STAGE\/\$path"/u);
