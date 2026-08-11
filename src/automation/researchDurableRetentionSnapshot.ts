@@ -344,7 +344,7 @@ export function persistResearchDurableRetentionSnapshot(input: {
   assertSafeParentPath(input.repoRoot, absolutePath);
   if (existsSync(absolutePath)) {
     const stat = lstatSync(absolutePath);
-    if (stat.isSymbolicLink() || !stat.isFile() || stat.size > MAX_EXISTING_SNAPSHOT_BYTES) {
+    if (stat.isSymbolicLink() || !stat.isFile() || stat.nlink !== 1 || stat.size > MAX_EXISTING_SNAPSHOT_BYTES) {
       throw new Error("DURABLE_RETENTION_EXISTING_SNAPSHOT_INVALID");
     }
     let parsed: unknown;
