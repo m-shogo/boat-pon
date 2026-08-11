@@ -161,8 +161,11 @@ export async function verifyPublicDashboardDeploy(directory: string): Promise<Pu
       errors.push(`non-regular public entry is forbidden: ${path}`);
       continue;
     }
+    if (info.size > MAX_PUBLIC_FILE_BYTES) {
+      errors.push(`public file exceeds 8 MiB: ${path}`);
+      continue;
+    }
     regularFiles.add(path);
-    if (info.size > MAX_PUBLIC_FILE_BYTES) errors.push(`public file exceeds 8 MiB: ${path}`);
 
     if (!isAllowedPublicPath(path)) errors.push(`non-allowlisted public file: ${path}`);
     if (path.endsWith(".map")) errors.push(`source maps are forbidden: ${path}`);
@@ -323,6 +326,7 @@ async function validateManifest(root: string, manifest: PublicDeployManifest, ac
       errors.push(`manifest file must be a regular file: ${entry.path}`);
       continue;
     }
+    if (info.size > MAX_PUBLIC_FILE_BYTES) continue;
     const content = await readFile(absolute);
     const digest = createHash("sha256").update(content).digest("hex");
     if (entry.bytes !== content.byteLength) errors.push(`manifest byte count mismatch: ${entry.path}`);
