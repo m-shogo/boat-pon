@@ -397,7 +397,27 @@ function assertDistinctDirectories(...directories: string[]): void {
 }
 
 async function canonicalDirectoryTarget(path: string): Promise<string> {
-  return join(await realpath(dirname(path)), basename(path));
+  const unresolved = [basename(path)];
+  let parent = dirname(path);
+
+  while (true) {
+    try {
+      return join(await realpath(parent), ...unresolved);
+    } catch (error) {
+      if (!isEnoent(error)) throw error;
+      const nextParent = dirname(parent);
+      if (nextParent === parent) throw error;
+      unresolved.unshift(basename(parent));
+      parent = nextParent;
+    }
+  }
+}
+
+function isEnoent(error: unknown): boolean {
+  return typeof error === "object"
+    && error !== null
+    && "code" in error
+    && (error as { code?: unknown }).code === "ENOENT";
 }
 
 async function requireDirectory(path: string, label: string): Promise<void> {
