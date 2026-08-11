@@ -36,3 +36,30 @@ test("invalid retained-inventory counts are rejected before snapshot publication
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("inventory blockers cannot be published with a non-blocked audit status", () => {
+  const root = mkdtempSync(join(tmpdir(), "boat-pon-retention-inventory-status-"));
+  try {
+    const report = buildResearchDurableKnowledgeCompletenessReportWithRetainedInventory({ repoRoot: root });
+    assert.notEqual(report.status, "BLOCKED");
+    const inconsistentReport = {
+      ...report,
+      orphanRetainedOutputCount: 1,
+    } as typeof report;
+    const snapshot = buildResearchDurableRetentionSnapshotWithRetainedInventory({
+      report: inconsistentReport,
+      sourceStateSha: "d".repeat(40),
+      mainAuthoritySha: "e".repeat(40),
+      firstObservedAt: "2026-08-07T14:00:00.000Z",
+    });
+    const relativePath = durableRetentionSnapshotRelativePath(snapshot);
+
+    assert.throws(
+      () => persistResearchDurableRetentionSnapshotWithRetainedInventory({ repoRoot: root, snapshot }),
+      /DURABLE_RETENTION_RETAINED_INVENTORY_STATUS_INVALID/u,
+    );
+    assert.equal(existsSync(join(root, relativePath)), false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
