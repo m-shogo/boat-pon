@@ -10,7 +10,19 @@ PUSH_TOKEN="${BOAT_PON_AUTOMATION_PUSH_TOKEN:-}"
 unset BOAT_PON_AUTOMATION_PUSH_TOKEN
 
 BRANCH="automation/boat-pon-research"
-ALLOWED_PREFIXES=("automation/control/" "automation/requests/" "reports/automation/" "docs/automation/" "reports/n2/n2-dataset-canary." "reports/n2/n2-corrected-eligibility." "reports/n2/n2-win-refund-omission-audit." "reports/n2/n2-dataset-inventory." "reports/n2/n2-holdout-freeze." "reports/n2/n2-feature-coverage-audit." "reports/n2/n2-dataset-manifest." "reports/n2/n2-pit-audit." "reports/n2/n2-observation-ingest-readiness." "reports/n2/n2-official-program-canary-review-bundle." "research/registries/experiments/" "research/registries/discoveries/")
+ALLOWED_PREFIXES=("automation/control/" "automation/requests/" "reports/automation/" "docs/automation/" "research/registries/experiments/" "research/registries/discoveries/")
+ALLOWED_EXACT=(
+  "reports/n2/n2-dataset-canary.json"
+  "reports/n2/n2-corrected-eligibility.json"
+  "reports/n2/n2-win-refund-omission-audit.json"
+  "reports/n2/n2-dataset-inventory.json"
+  "reports/n2/n2-holdout-freeze.json"
+  "reports/n2/n2-feature-coverage-audit.json"
+  "reports/n2/n2-dataset-manifest.json"
+  "reports/n2/n2-pit-audit.json"
+  "reports/n2/n2-observation-ingest-readiness.json"
+  "reports/n2/n2-official-program-canary-review-bundle.json"
+)
 MAX_BYTES=2097152
 
 cd "$(git rev-parse --show-toplevel)"
@@ -39,6 +51,9 @@ for path in "${CHANGED[@]}"; do
   for tr in "${TRANSIENT[@]}"; do [ "$path" = "$tr" ] && skip=true; done
   [ "$skip" = true ] && continue
   allowed=false
+  for exact in "${ALLOWED_EXACT[@]}"; do
+    [ "$path" = "$exact" ] && allowed=true
+  done
   for prefix in "${ALLOWED_PREFIXES[@]}"; do
     case "$path" in "$prefix"*) allowed=true ;; esac
   done
