@@ -122,7 +122,9 @@ done
 # Immutable retained outputs are commit-eligible only when the same run's new
 # terminal history references every retained path. Run this only after path and
 # symlink validation so its history reads cannot traverse an unsafe candidate.
-node --import tsx scripts/check-research-retained-output-commit.ts --run-id="${RUN_ID:-local}"
+# This trusted boundary intentionally uses a dependency-free Node script so task-controlled
+# node_modules/tsx cannot bypass the retained-output gate after task execution.
+node scripts/check-research-retained-output-commit.mjs --run-id="${RUN_ID:-local}"
 
 if [ "${#KEEP[@]}" -eq 0 ]; then
   echo "NO_CHANGE: no allowlisted files to commit"

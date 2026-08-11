@@ -121,6 +121,7 @@ jobs:
           set -euo pipefail
           git checkout "${GITHUB_SHA}" -- \
             scripts/automation-commit.sh \
+            scripts/check-research-retained-output-commit.mjs \
             scripts/check-research-retained-output-commit.ts \
             src/automation/researchRetainedOutputCommitGate.ts
 

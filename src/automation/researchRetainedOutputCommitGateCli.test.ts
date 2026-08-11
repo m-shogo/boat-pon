@@ -6,8 +6,7 @@ import { dirname, join, resolve } from "node:path";
 import test from "node:test";
 
 const repoRoot = resolve(process.cwd());
-const tsxCli = resolve(repoRoot, "node_modules/tsx/dist/cli.mjs");
-const gateCli = resolve(repoRoot, "scripts/check-research-retained-output-commit.ts");
+const gateCli = resolve(repoRoot, "scripts/check-research-retained-output-commit.mjs");
 
 function withRepo(fn: (root: string) => void): void {
   const root = mkdtempSync(join(tmpdir(), "boat-pon-retained-commit-gate-"));
@@ -26,7 +25,7 @@ function put(root: string, relativePath: string, content: string): void {
 }
 
 function runGate(root: string, runId: string): string {
-  return execFileSync(process.execPath, [tsxCli, gateCli, `--run-id=${runId}`], {
+  return execFileSync(process.execPath, [gateCli, `--run-id=${runId}`], {
     cwd: root,
     encoding: "utf8",
   });
