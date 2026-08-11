@@ -87,8 +87,14 @@ jobs:
           case "$TRUSTED_NODE_BIN" in /*) ;; *) echo "::error::trusted node path is not absolute"; exit 1 ;; esac
           test -x "$TRUSTED_GIT_BIN"
           test -x "$TRUSTED_NODE_BIN"
+          TRUSTED_GIT_SHA256="$(/usr/bin/shasum -a 256 "$TRUSTED_GIT_BIN" | /usr/bin/awk '{print $1}')"
+          TRUSTED_NODE_SHA256="$(/usr/bin/shasum -a 256 "$TRUSTED_NODE_BIN" | /usr/bin/awk '{print $1}')"
+          case "$TRUSTED_GIT_SHA256" in *[!0-9a-f]*|???????????????????????????????????????????????????????????????) echo "::error::trusted git digest invalid"; exit 1 ;; esac
+          case "$TRUSTED_NODE_SHA256" in *[!0-9a-f]*|???????????????????????????????????????????????????????????????) echo "::error::trusted node digest invalid"; exit 1 ;; esac
           echo "trusted_git_bin=$TRUSTED_GIT_BIN" >> "$GITHUB_OUTPUT"
           echo "trusted_node_bin=$TRUSTED_NODE_BIN" >> "$GITHUB_OUTPUT"
+          echo "trusted_git_sha256=$TRUSTED_GIT_SHA256" >> "$GITHUB_OUTPUT"
+          echo "trusted_node_sha256=$TRUSTED_NODE_SHA256" >> "$GITHUB_OUTPUT"
           "$TRUSTED_GIT_BIN" fetch origin "$BRANCH" --quiet
           # CAS authority は task-writable worktree ではなく、この trusted step の output に固定する。
           BASE_SHA="$("$TRUSTED_GIT_BIN" rev-parse "origin/$BRANCH")"
@@ -128,12 +134,20 @@ jobs:
         env:
           BASH_ENV: /dev/null
           ENV: /dev/null
+          PERL5OPT: ""
+          PERL5LIB: ""
           PATH: /usr/bin:/bin:/usr/sbin:/sbin
           TRUSTED_GIT_BIN: ${{ steps.materialize_authority.outputs.trusted_git_bin }}
+          TRUSTED_GIT_SHA256: ${{ steps.materialize_authority.outputs.trusted_git_sha256 }}
         run: |
           set -euo pipefail
           case "$TRUSTED_GIT_BIN" in /*) ;; *) echo "::error::trusted git path is not absolute"; exit 1 ;; esac
           test -x "$TRUSTED_GIT_BIN"
+          CURRENT_GIT_SHA256="$(/usr/bin/shasum -a 256 "$TRUSTED_GIT_BIN" | /usr/bin/awk '{print $1}')"
+          if [ "$CURRENT_GIT_SHA256" != "$TRUSTED_GIT_SHA256" ]; then
+            echo "::error::trusted git binary changed after task execution"
+            exit 1
+          fi
           "$TRUSTED_GIT_BIN" -c core.hooksPath=/dev/null -c core.fsmonitor=false checkout "${GITHUB_SHA}" -- \
             scripts/automation-commit.sh \
             scripts/check-research-retained-output-commit.mjs \
@@ -147,10 +161,14 @@ jobs:
           ENV: /dev/null
           NODE_OPTIONS: ""
           NODE_PATH: ""
+          PERL5OPT: ""
+          PERL5LIB: ""
           PATH: /usr/bin:/bin:/usr/sbin:/sbin
           RUN_ID: ${{ github.run_id }}
           EXPECTED_AUTOMATION_BRANCH_BASE: ${{ steps.materialize_authority.outputs.branch_base_sha }}
           TRUSTED_GIT_BIN: ${{ steps.materialize_authority.outputs.trusted_git_bin }}
           TRUSTED_NODE_BIN: ${{ steps.materialize_authority.outputs.trusted_node_bin }}
+          TRUSTED_GIT_SHA256: ${{ steps.materialize_authority.outputs.trusted_git_sha256 }}
+          TRUSTED_NODE_SHA256: ${{ steps.materialize_authority.outputs.trusted_node_sha256 }}
           BOAT_PON_AUTOMATION_PUSH_TOKEN: ${{ github.token }}
         run: /bin/bash scripts/automation-commit.sh
