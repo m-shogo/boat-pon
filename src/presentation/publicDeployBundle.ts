@@ -111,8 +111,13 @@ export async function assemblePublicDashboardDeploy(options: {
     await mkdir(target, { recursive: true });
     for (const name of ["latest.json", "last-known-good.json"] as const) {
       const source = join(snapshotDir, name);
-      if (!await pathExists(source)) continue;
-      const sourceInfo = await lstat(source);
+      let sourceInfo;
+      try {
+        sourceInfo = await lstat(source);
+      } catch (error) {
+        if (isEnoent(error)) continue;
+        throw error;
+      }
       if (sourceInfo.isSymbolicLink() || !sourceInfo.isFile()) {
         throw new Error(`snapshot input must be a regular file: ${source}`);
       }
