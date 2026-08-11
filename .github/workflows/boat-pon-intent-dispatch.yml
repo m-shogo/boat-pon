@@ -89,8 +89,8 @@ jobs:
           test -x "$TRUSTED_NODE_BIN"
           TRUSTED_GIT_SHA256="$(/usr/bin/shasum -a 256 "$TRUSTED_GIT_BIN" | /usr/bin/awk '{print $1}')"
           TRUSTED_NODE_SHA256="$(/usr/bin/shasum -a 256 "$TRUSTED_NODE_BIN" | /usr/bin/awk '{print $1}')"
-          case "$TRUSTED_GIT_SHA256" in *[!0-9a-f]*|???????????????????????????????????????????????????????????????) echo "::error::trusted git digest invalid"; exit 1 ;; esac
-          case "$TRUSTED_NODE_SHA256" in *[!0-9a-f]*|???????????????????????????????????????????????????????????????) echo "::error::trusted node digest invalid"; exit 1 ;; esac
+          if ! [[ "$TRUSTED_GIT_SHA256" =~ ^[0-9a-f]{64}$ ]]; then echo "::error::trusted git digest invalid"; exit 1; fi
+          if ! [[ "$TRUSTED_NODE_SHA256" =~ ^[0-9a-f]{64}$ ]]; then echo "::error::trusted node digest invalid"; exit 1; fi
           echo "trusted_git_bin=$TRUSTED_GIT_BIN" >> "$GITHUB_OUTPUT"
           echo "trusted_node_bin=$TRUSTED_NODE_BIN" >> "$GITHUB_OUTPUT"
           echo "trusted_git_sha256=$TRUSTED_GIT_SHA256" >> "$GITHUB_OUTPUT"
@@ -171,4 +171,10 @@ jobs:
           TRUSTED_GIT_SHA256: ${{ steps.materialize_authority.outputs.trusted_git_sha256 }}
           TRUSTED_NODE_SHA256: ${{ steps.materialize_authority.outputs.trusted_node_sha256 }}
           BOAT_PON_AUTOMATION_PUSH_TOKEN: ${{ github.token }}
-        run: /bin/bash scripts/automation-commit.sh
+        run: |
+          set -euo pipefail
+          CURRENT_GIT_SHA256="$(/usr/bin/shasum -a 256 "$TRUSTED_GIT_BIN" | /usr/bin/awk '{print $1}')"
+          CURRENT_NODE_SHA256="$(/usr/bin/shasum -a 256 "$TRUSTED_NODE_BIN" | /usr/bin/awk '{print $1}')"
+          if [ "$CURRENT_GIT_SHA256" != "$TRUSTED_GIT_SHA256" ]; then echo "::error::trusted git binary changed after task execution"; exit 1; fi
+          if [ "$CURRENT_NODE_SHA256" != "$TRUSTED_NODE_SHA256" ]; then echo "::error::trusted node binary changed after task execution"; exit 1; fi
+          exec /bin/bash scripts/automation-commit.sh
