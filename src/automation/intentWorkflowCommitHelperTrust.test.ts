@@ -10,20 +10,23 @@ test("intent workflow restores pre-task helper bytes before exposing the push to
   const materializeStep = workflow.indexOf("- name: Materialize control state and dataset authority from automation branch");
   const taskStep = workflow.indexOf("- name: Run exactly one task");
   const restoreStep = workflow.indexOf("- name: Restore trusted automation commit helpers");
+  const commitStep = workflow.indexOf("- name: Commit control state + results to automation branch");
   const tokenBinding = workflow.indexOf("BOAT_PON_AUTOMATION_PUSH_TOKEN: ${{ github.token }}");
   const helperCapture = workflow.indexOf('capture_helper "commit_script" "scripts/automation-commit.sh"');
 
   assert.notEqual(materializeStep, -1);
   assert.notEqual(taskStep, -1);
   assert.notEqual(restoreStep, -1);
+  assert.notEqual(commitStep, -1);
   assert.notEqual(tokenBinding, -1);
   assert.notEqual(helperCapture, -1);
   assert.ok(materializeStep < helperCapture);
   assert.ok(helperCapture < taskStep);
   assert.ok(taskStep < restoreStep);
-  assert.ok(restoreStep < tokenBinding);
+  assert.ok(restoreStep < commitStep);
+  assert.ok(commitStep < tokenBinding);
 
-  const restoreSegment = workflow.slice(restoreStep, tokenBinding);
+  const restoreSegment = workflow.slice(restoreStep, commitStep);
   const sanitizeEnvironment = restoreSegment.indexOf('GIT_*|DYLD_*) unset "$env_name"');
   const restoreCall = restoreSegment.indexOf(
     'restore_helper "scripts/automation-commit.sh" "$COMMIT_SCRIPT_B64" "$COMMIT_SCRIPT_SHA256" "$COMMIT_SCRIPT_MODE"',
@@ -42,6 +45,8 @@ test("intent workflow restores pre-task helper bytes before exposing the push to
 
   assert.match(restoreSegment, /LD_PRELOAD: ""/u);
   assert.match(restoreSegment, /LD_LIBRARY_PATH: ""/u);
+  assert.match(restoreSegment, /DYLD_INSERT_LIBRARIES: ""/u);
+  assert.match(restoreSegment, /DYLD_LIBRARY_PATH: ""/u);
   assert.match(restoreSegment, /NODE_OPTIONS: ""/u);
   assert.match(restoreSegment, /NODE_PATH: ""/u);
   assert.match(workflow, /if: always\(\) && steps\.restore_commit_helper\.outcome == 'success'/u);
