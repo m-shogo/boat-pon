@@ -188,6 +188,33 @@ test("same semantic evidence is append-only idempotent even when state SHA advan
   });
 });
 
+test("existing snapshot must match its canonical retention path", () => {
+  withRoot((root) => {
+    const expected = buildResearchDurableRetentionSnapshot({
+      report: report(),
+      sourceStateSha: SOURCE_SHA,
+      mainAuthoritySha: MAIN_SHA,
+      firstObservedAt: "2026-08-08T07:40:00.000Z",
+    });
+    const misplaced = buildResearchDurableRetentionSnapshot({
+      report: report(),
+      sourceStateSha: SOURCE_SHA,
+      mainAuthoritySha: MAIN_SHA,
+      firstObservedAt: "2026-08-07T07:40:00.000Z",
+    });
+    assert.equal(misplaced.evidenceDigest, expected.evidenceDigest);
+    assert.notEqual(misplaced.effectiveDateJst, expected.effectiveDateJst);
+    const expectedPath = join(root, durableRetentionSnapshotRelativePath(expected));
+    mkdirSync(join(expectedPath, ".."), { recursive: true });
+    writeFileSync(expectedPath, `${JSON.stringify(misplaced, null, 2)}\n`, "utf8");
+
+    assert.throws(
+      () => persistResearchDurableRetentionSnapshot({ repoRoot: root, snapshot: expected }),
+      /DURABLE_RETENTION_EXISTING_SNAPSHOT_PATH_MISMATCH/u,
+    );
+  });
+});
+
 test("tampered existing snapshot fails closed instead of overwriting", () => {
   withRoot((root) => {
     const snapshot = buildResearchDurableRetentionSnapshot({
