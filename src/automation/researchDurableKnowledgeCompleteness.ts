@@ -185,6 +185,12 @@ function outputRootClass(relativePath: string): ResearchDurableOutputAssessment[
   return "REPORT";
 }
 
+function hasStrongOutputIntegrity(output: ResearchDurableOutputAssessment): boolean {
+  return output.integrity === "RETAINED_CONTENT_DIGEST_VERIFIED"
+    || output.integrity === "REGISTRY_SELF_DIGEST_VERIFIED"
+    || output.integrity === "CURRENT_OUTPUT_DIGEST_MATCH";
+}
+
 function objectValue(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value != null && !Array.isArray(value)
     ? value as Record<string, unknown>
@@ -635,6 +641,7 @@ function assessHistoryFile(input: {
       };
     }
     const allOutputsComplete = verifiedOutputCount === outputPaths.length;
+    const allOutputsStrong = outputs.every(hasStrongOutputIntegrity);
     return {
       historyRelativePath: input.historyRelativePath,
       historyContentDigest: contentDigest,
@@ -655,7 +662,7 @@ function assessHistoryFile(input: {
       explicitNoChange: noChange,
       classification: allOutputsComplete ? "PASS_DURABLE_OUTPUTS" : "INCOMPLETE_OUTPUT_REFERENCE",
       durableComplete: allOutputsComplete,
-      strongDurableComplete: allOutputsComplete && superseded === 0,
+      strongDurableComplete: allOutputsComplete && allOutputsStrong,
       issues: outputIssues,
       warnings: outputWarnings,
       outputs,
