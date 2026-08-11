@@ -69,15 +69,19 @@ if (!allowed.has(actor)) {
     + `probe intent で actor を確認し config/actor-allowlist-policy.json に明示追加するまで許可しない（safe BLOCK）。`);
 }
 
-// ---- push diff: 追加された intent が exactly one であること ----
+// ---- push diff: 追加された intent が exactly one であり、他の main 変更を混ぜないこと ----
 let diff: string;
 try {
   const base = /^[0-9a-f]{40}$/.test(before) && before !== "0".repeat(40) ? before : `${after}^`;
   diff = execFileSync("git", ["diff", "--name-status", base, after], { encoding: "utf8" });
 } catch { fail("cannot compute push diff"); }
-const changes = diff!.split("\n").map((l) => l.trim()).filter(Boolean)
-  .map((l) => { const [status, ...rest] = l.split(/\s+/); return { status, path: rest[rest.length - 1] }; })
-  .filter((c) => c.path.startsWith(`${INTENTS_DIR}/`));
+const allChanges = diff!.split("\n").map((l) => l.trim()).filter(Boolean)
+  .map((l) => { const [status, ...rest] = l.split(/\s+/); return { status, path: rest[rest.length - 1] }; });
+const foreignChanges = allChanges.filter((c) => !c.path.startsWith(`${INTENTS_DIR}/`));
+if (foreignChanges.length > 0) {
+  fail(`intent dispatch push must contain only ${INTENTS_DIR}/ changes (got ${foreignChanges.map((c) => `${c.status}:${c.path}`).join(",")})`);
+}
+const changes = allChanges.filter((c) => c.path.startsWith(`${INTENTS_DIR}/`));
 if (changes.length === 0) fail("no intent file change in this push");
 for (const c of changes) if (c.status !== "A") fail(`intent files are immutable; refused status=${c.status} path=${c.path}`);
 if (changes.length !== 1) fail(`exactly one new intent per push is allowed (got ${changes.length})`);
