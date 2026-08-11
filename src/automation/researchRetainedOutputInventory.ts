@@ -16,7 +16,7 @@ export const RESEARCH_RETAINED_OUTPUT_INVENTORY_VERSION =
 
 const RETAINED_ROOT = "reports/automation/retained-outputs";
 const MAX_RETAINED_FILE_BYTES = 2_097_152;
-const RUN_ID_RE = /^[0-9A-Za-z._-]+$/u;
+const RUN_ID_RE = /^(?!\.{1,2}$)[0-9A-Za-z._-]+$/u;
 const RETAINED_FILE_RE = /^([0-9a-f]{64})-((?!\.{1,2}$)[0-9A-Za-z._-]{1,160})$/u;
 
 export type ResearchRetainedOutputInventoryEntry = {
