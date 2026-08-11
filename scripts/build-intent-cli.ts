@@ -6,13 +6,38 @@ import { join, resolve } from "node:path";
 import { INTENT_SCHEMA_VERSION, validateIntent } from "../src/automation/dispatchIntent";
 
 const root = resolve(process.cwd());
+const fail = (message: string): never => {
+  console.error(`invalid input: ${message}`);
+  process.exit(1);
+};
+const VALUE_ARGS = new Set([
+  "expected-authority-sha",
+  "intent-id",
+  "task-id",
+  "requested-action",
+  "safety-level",
+  "max-duration-seconds",
+  "requested-by",
+  "request-reference",
+  "approval-grant-id",
+]);
+
+validateCliArgs(process.argv.slice(2));
+
 const arg = (n: string, d?: string): string | undefined => {
   const hit = process.argv.find((v) => v.startsWith(`--${n}=`));
   return hit ? hit.slice(n.length + 3) : d;
 };
 const git = (...a: string[]): string => execFileSync("git", a, { cwd: root, encoding: "utf8" }).trim();
 
-const authority = (arg("expected-authority-sha") ?? (() => { try { git("fetch", "origin", "--quiet"); return git("rev-parse", "--short", "origin/main"); } catch { return git("rev-parse", "--short", "HEAD"); } })()).toLowerCase();
+const authority = (arg("expected-authority-sha") ?? (() => {
+  try {
+    git("fetch", "origin", "--quiet");
+    return git("rev-parse", "--short", "origin/main");
+  } catch {
+    return fail("unable to refresh origin/main authority");
+  }
+})()).toLowerCase();
 const rand = Math.random().toString(16).slice(2, 12).padEnd(10, "0");
 const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
 const intent = {
@@ -38,3 +63,25 @@ if (process.argv.includes("--write")) {
   console.error(`wrote ${p}`);
 }
 console.log(JSON.stringify(intent, null, 2));
+
+function validateCliArgs(values: string[]): void {
+  const seen = new Set<string>();
+  for (const token of values) {
+    if (token === "--write") {
+      if (seen.has("write")) fail("duplicate argument: --write");
+      seen.add("write");
+      continue;
+    }
+    if (!token.startsWith("--") || !token.includes("=")) {
+      fail(`invalid argument: ${token}`);
+    }
+
+    const equalsIndex = token.indexOf("=");
+    const name = token.slice(2, equalsIndex);
+    const value = token.slice(equalsIndex + 1);
+    if (!VALUE_ARGS.has(name)) fail(`unknown argument: --${name}`);
+    if (seen.has(name)) fail(`duplicate argument: --${name}`);
+    if (!value) fail(`--${name} requires a value`);
+    seen.add(name);
+  }
+}
