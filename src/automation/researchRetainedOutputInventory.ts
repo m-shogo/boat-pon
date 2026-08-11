@@ -2,7 +2,6 @@ import { createHash } from "node:crypto";
 import {
   closeSync,
   constants as fsConstants,
-  existsSync,
   fstatSync,
   lstatSync,
   openSync,
@@ -54,15 +53,22 @@ function resolveInside(repoRoot: string, relativePath: string): string {
   return target;
 }
 
+function lstatIfPresent(path: string): Stats | null {
+  try {
+    return lstatSync(path);
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
 function hasSafeParentPath(repoRoot: string, absolutePath: string): boolean {
   const root = resolve(repoRoot);
   let current = dirname(absolutePath);
   while (current !== root) {
     if (!current.startsWith(`${root}${sep}`)) return false;
-    if (existsSync(current)) {
-      const stat = lstatSync(current);
-      if (stat.isSymbolicLink() || !stat.isDirectory()) return false;
-    }
+    const stat = lstatIfPresent(current);
+    if (stat && (stat.isSymbolicLink() || !stat.isDirectory())) return false;
     const next = dirname(current);
     if (next === current) return false;
     current = next;
@@ -131,7 +137,8 @@ export function inventoryResearchRetainedOutputs(input: {
       })],
     };
   }
-  if (!existsSync(rootPath)) {
+  const rootStat = lstatIfPresent(rootPath);
+  if (!rootStat) {
     return {
       inventoryVersion: RESEARCH_RETAINED_OUTPUT_INVENTORY_VERSION,
       retainedRoot: RETAINED_ROOT,
@@ -144,7 +151,6 @@ export function inventoryResearchRetainedOutputs(input: {
     };
   }
 
-  const rootStat = lstatSync(rootPath);
   if (rootStat.isSymbolicLink() || !rootStat.isDirectory()) {
     const entry = invalidEntry({
       relativePath: RETAINED_ROOT,

@@ -92,6 +92,30 @@ test("retained inventory rejects symlinked parent directories", () => {
   });
 });
 
+test("retained inventory rejects dangling symlinked parent directories", () => {
+  withRoot((root) => {
+    mkdirSync(join(root, "reports"), { recursive: true });
+    symlinkSync(join(root, "missing-automation"), join(root, "reports/automation"));
+
+    const inventory = inventoryResearchRetainedOutputs({ repoRoot: root });
+    assert.equal(inventory.rootPresent, true);
+    assert.equal(inventory.invalidFileCount, 1);
+    assert.deepEqual(inventory.entries[0]?.issues, ["RETAINED_INVENTORY_ROOT_PARENT_INVALID"]);
+  });
+});
+
+test("retained inventory rejects a dangling retained root symlink", () => {
+  withRoot((root) => {
+    mkdirSync(join(root, "reports/automation"), { recursive: true });
+    symlinkSync(join(root, "missing-retained-root"), join(root, "reports/automation/retained-outputs"));
+
+    const inventory = inventoryResearchRetainedOutputs({ repoRoot: root });
+    assert.equal(inventory.rootPresent, true);
+    assert.equal(inventory.invalidFileCount, 1);
+    assert.deepEqual(inventory.entries[0]?.issues, ["RETAINED_INVENTORY_ROOT_INVALID"]);
+  });
+});
+
 test("symlink retained evidence is never followed", () => {
   withRoot((root) => {
     const outside = join(root, "outside.txt");
