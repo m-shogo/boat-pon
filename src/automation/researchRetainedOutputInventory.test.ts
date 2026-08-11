@@ -68,6 +68,30 @@ test("invalid run directory and filename are fail-closed", () => {
   });
 });
 
+test("retained inventory rejects symlinked parent directories", () => {
+  withRoot((root) => {
+    const outsideAutomation = mkdtempSync(join(tmpdir(), "boat-pon-retained-parent-outside-"));
+    try {
+      const content = "outside retained evidence\n";
+      const digest = createHash("sha256").update(content).digest("hex");
+      const outsideRun = join(outsideAutomation, "retained-outputs/123");
+      mkdirSync(outsideRun, { recursive: true });
+      writeFileSync(join(outsideRun, `${digest}-report.txt`), content, "utf8");
+      mkdirSync(join(root, "reports"), { recursive: true });
+      symlinkSync(outsideAutomation, join(root, "reports/automation"));
+
+      const inventory = inventoryResearchRetainedOutputs({ repoRoot: root });
+      assert.equal(inventory.rootPresent, true);
+      assert.equal(inventory.fileCount, 0);
+      assert.equal(inventory.validFileCount, 0);
+      assert.equal(inventory.invalidFileCount, 1);
+      assert.deepEqual(inventory.entries[0]?.issues, ["RETAINED_INVENTORY_ROOT_PARENT_INVALID"]);
+    } finally {
+      rmSync(outsideAutomation, { recursive: true, force: true });
+    }
+  });
+});
+
 test("symlink retained evidence is never followed", () => {
   withRoot((root) => {
     const outside = join(root, "outside.txt");
