@@ -127,9 +127,4 @@ jobs:
         env:
           RUN_ID: ${{ github.run_id }}
           BOAT_PON_AUTOMATION_PUSH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          auth_header="$(printf 'x-access-token:%s' "$BOAT_PON_AUTOMATION_PUSH_TOKEN" | base64 | tr -d '\n')"
-          git config --local http.https://github.com/.extraheader "AUTHORIZATION: basic $auth_header"
-          trap 'git config --local --unset-all http.https://github.com/.extraheader >/dev/null 2>&1 || true' EXIT
-          bash scripts/automation-commit.sh
+        run: bash scripts/automation-commit.sh
