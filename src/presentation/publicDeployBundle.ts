@@ -157,7 +157,10 @@ export async function verifyPublicDashboardDeploy(directory: string): Promise<Pu
       errors.push(`symbolic links are forbidden: ${path}`);
       continue;
     }
-    if (!info.isFile()) continue;
+    if (!info.isFile()) {
+      errors.push(`non-regular public entry is forbidden: ${path}`);
+      continue;
+    }
     regularFiles.add(path);
     if (info.size > MAX_PUBLIC_FILE_BYTES) errors.push(`public file exceeds 8 MiB: ${path}`);
 
