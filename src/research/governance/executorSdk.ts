@@ -3,7 +3,7 @@
 // PASS は実体を伴う write/readback/evidence/state transition の完了後だけ返す。
 // dry-run は一切 write せず、plan と入力・PIT evidence の検査だけを行う。
 import {
-  closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, unlinkSync,
+  closeSync, existsSync, fsyncSync, linkSync, mkdirSync, openSync, readFileSync, renameSync, unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { createHash } from "node:crypto";
@@ -120,8 +120,20 @@ export function atomicWriteUtf8(path: string, content: string, allowReplace = fa
     fsyncSync(fd);
     closeSync(fd);
     fd = null;
-    if (!allowReplace && existsSync(path)) throw new Error(`target already exists: ${path}`);
-    renameSync(temp, path);
+    if (allowReplace) {
+      renameSync(temp, path);
+    } else {
+      try {
+        // Publish atomically without ever replacing an append-only destination.
+        // A concurrent creator wins with EEXIST instead of being overwritten by renameSync().
+        linkSync(temp, path);
+      } catch (error) {
+        if (error instanceof Error && "code" in error && error.code === "EEXIST") {
+          throw new Error(`target already exists: ${path}`);
+        }
+        throw error;
+      }
+    }
   } finally {
     if (fd !== null) closeSync(fd);
     if (existsSync(temp)) unlinkSync(temp);
