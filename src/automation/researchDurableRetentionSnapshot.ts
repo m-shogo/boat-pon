@@ -1,10 +1,11 @@
 import { createHash, randomUUID } from "node:crypto";
 import {
   chmodSync,
+  linkSync,
   lstatSync,
   mkdirSync,
   readFileSync,
-  renameSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
@@ -370,7 +371,16 @@ export function persistResearchDurableRetentionSnapshot(input: {
   mkdirSync(dirname(absolutePath), { recursive: true });
   const tmpPath = `${absolutePath}.${randomUUID()}.tmp`;
   writeFileSync(tmpPath, `${JSON.stringify(input.snapshot, null, 2)}\n`, { encoding: "utf8", mode: 0o644 });
-  renameSync(tmpPath, absolutePath);
+  try {
+    linkSync(tmpPath, absolutePath);
+  } catch (error) {
+    unlinkSync(tmpPath);
+    if (error instanceof Error && "code" in error && error.code === "EEXIST") {
+      return persistResearchDurableRetentionSnapshot(input);
+    }
+    throw error;
+  }
+  unlinkSync(tmpPath);
   chmodSync(absolutePath, 0o644);
   return { changed: true, relativePath, snapshot: input.snapshot };
 }
