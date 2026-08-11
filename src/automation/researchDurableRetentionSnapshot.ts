@@ -415,9 +415,13 @@ export function persistResearchDurableRetentionSnapshot(input: {
     }
     return { changed: false, relativePath, snapshot: existing };
   }
+  const snapshotText = `${JSON.stringify(input.snapshot, null, 2)}\n`;
+  if (Buffer.byteLength(snapshotText, "utf8") > MAX_EXISTING_SNAPSHOT_BYTES) {
+    throw new Error("DURABLE_RETENTION_SNAPSHOT_TOO_LARGE");
+  }
   mkdirSync(dirname(absolutePath), { recursive: true });
   const tmpPath = `${absolutePath}.${randomUUID()}.tmp`;
-  writeFileSync(tmpPath, `${JSON.stringify(input.snapshot, null, 2)}\n`, { encoding: "utf8", mode: 0o644 });
+  writeFileSync(tmpPath, snapshotText, { encoding: "utf8", mode: 0o644 });
   chmodSync(tmpPath, 0o644);
   try {
     linkSync(tmpPath, absolutePath);
