@@ -13,6 +13,7 @@ unset EXPECTED_AUTOMATION_BRANCH_BASE
 
 BRANCH="automation/boat-pon-research"
 ALLOWED_PREFIXES=("automation/control/" "automation/requests/" "reports/automation/" "docs/automation/" "research/registries/experiments/" "research/registries/discoveries/")
+IMMUTABLE_PREFIXES=("reports/automation/history/" "reports/automation/retained-outputs/" "research/registries/experiments/" "research/registries/discoveries/")
 ALLOWED_EXACT=(
   "reports/n2/n2-dataset-canary.json"
   "reports/n2/n2-corrected-eligibility.json"
@@ -123,7 +124,8 @@ git_no_hooks config user.email "automation@boat-pon.invalid"
 git_no_hooks checkout -- . 2>/dev/null || true
 git_no_hooks clean -fdq -- automation reports docs research 2>/dev/null || true
 
-git_no_hooks fetch origin --quiet
+# task-controlled remote fetch refspec を使わず、authority branch ref を明示して更新する。
+git_no_hooks fetch origin "refs/heads/$BRANCH:refs/remotes/origin/$BRANCH" --quiet
 # compare-and-swap: materialize 時点の trusted step output から branch が進んでいたら
 # control state を上書きせず fail-closed（concurrent 変更の silent clobber を防ぐ）。
 CUR_SHA="$(git_no_hooks rev-parse "origin/$BRANCH" 2>/dev/null || echo none)"
@@ -131,6 +133,25 @@ if [ "$EXPECTED_BASE_SHA" != "$CUR_SHA" ]; then
   echo "::error::automation branch advanced during run ($EXPECTED_BASE_SHA -> $CUR_SHA); CAS conflict, refusing to clobber. re-dispatch to retry."
   exit 1
 fi
+
+# history / retained output / registry は append-only。authority branch に既存の同一pathがある場合、
+# taskが内容を書き換えることを許可せず、完全同一bytesだけをidempotentとして受け入れる。
+for path in "${KEEP[@]}"; do
+  immutable=false
+  for prefix in "${IMMUTABLE_PREFIXES[@]}"; do
+    case "$path" in "$prefix"*) immutable=true ;; esac
+  done
+  [ "$immutable" = true ] || continue
+  if git_no_hooks cat-file -e "origin/$BRANCH:$path" 2>/dev/null; then
+    authority_hash="$(git_no_hooks rev-parse "origin/$BRANCH:$path")"
+    source_hash="$(git_no_hooks hash-object --no-filters "$STAGE/$path")"
+    if [ "$authority_hash" != "$source_hash" ]; then
+      echo "::error::refusing to rewrite immutable research output: $path"
+      exit 1
+    fi
+  fi
+done
+
 if git_no_hooks show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
   git_no_hooks checkout -B "$BRANCH" "origin/$BRANCH" --quiet
 else
