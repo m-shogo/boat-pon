@@ -45,8 +45,12 @@ if (!Number.isInteger(maxDurationSeconds) || maxDurationSeconds < 60 || maxDurat
 
 // authority SHA は origin/main の現在値を既定にする（明示指定も可）。
 const authoritySha = (arg("authority-sha") ?? (() => {
-  try { execFileSync("git", ["fetch", "origin", "--quiet"], { cwd: root }); } catch { /* offline ok */ }
-  return execFileSync("git", ["rev-parse", "--short", "origin/main"], { cwd: root, encoding: "utf8" }).trim();
+  try {
+    execFileSync("git", ["fetch", "origin", "--quiet"], { cwd: root });
+    return execFileSync("git", ["rev-parse", "--short", "origin/main"], { cwd: root, encoding: "utf8" }).trim();
+  } catch {
+    return fail("unable to refresh origin/main authority");
+  }
 })()).toLowerCase();
 if (!/^[0-9a-f]{7,40}$/.test(authoritySha)) fail("authority-sha");
 
