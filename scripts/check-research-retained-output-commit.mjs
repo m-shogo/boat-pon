@@ -74,7 +74,19 @@ function validateRetainedOutputCommit(input) {
     if (!Array.isArray(history.outputs) || history.outputs.some((value) => typeof value !== "string")) {
       throw new Error(`RETAINED_COMMIT_HISTORY_OUTPUTS_INVALID:${historyPath}`);
     }
-    const outputSet = new Set(history.outputs);
+    const outputs = history.outputs;
+    for (const output of outputs) {
+      if (!output.startsWith(RETAINED_PREFIX)) continue;
+      const retainedMatch = output.match(RETAINED_RE);
+      if (!retainedMatch) {
+        throw new Error(`RETAINED_COMMIT_HISTORY_RETAINED_PATH_INVALID:${historyPath}:${output}`);
+      }
+      const outputRunId = retainedMatch[1] ?? "";
+      if (outputRunId !== runId) {
+        throw new Error(`RETAINED_COMMIT_HISTORY_RETAINED_RUN_ID_MISMATCH:${historyPath}:${outputRunId}!=${runId}`);
+      }
+    }
+    const outputSet = new Set(outputs);
     for (const path of runRetainedPaths) {
       if (!outputSet.has(path)) throw new Error(`RETAINED_COMMIT_ORPHAN:${path}`);
       referencedRetainedPathCount += 1;
