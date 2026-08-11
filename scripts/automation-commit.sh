@@ -4,6 +4,11 @@
 # branch 切替で結果を失わないよう、対象 file を一時領域へ退避してから切り替える。
 set -euo pipefail
 
+# GitHub Actions の write token はこの trusted helper だけが受け取り、即座に環境から外す。
+# 以降の node/git 等 child process へ raw token を継承させず、push 直前だけ git header に使う。
+PUSH_TOKEN="${BOAT_PON_AUTOMATION_PUSH_TOKEN:-}"
+unset BOAT_PON_AUTOMATION_PUSH_TOKEN
+
 BRANCH="automation/boat-pon-research"
 ALLOWED_PREFIXES=("automation/control/" "automation/requests/" "reports/automation/" "docs/automation/" "reports/n2/n2-dataset-canary." "reports/n2/n2-corrected-eligibility." "reports/n2/n2-win-refund-omission-audit." "reports/n2/n2-dataset-inventory." "reports/n2/n2-holdout-freeze." "reports/n2/n2-feature-coverage-audit." "reports/n2/n2-dataset-manifest." "reports/n2/n2-pit-audit." "reports/n2/n2-observation-ingest-readiness." "reports/n2/n2-official-program-canary-review-bundle." "research/registries/experiments/" "research/registries/discoveries/")
 MAX_BYTES=2097152
@@ -124,7 +129,21 @@ REQ_ID="$(node -e "try{const s=require('./reports/automation/current-status.json
 TASK_ID="$(node -e "try{const s=require('./reports/automation/current-status.json');process.stdout.write(String(s.lastTaskId??'none'))}catch{process.stdout.write('none')}" 2>/dev/null || echo none)"
 
 git commit -q -m "report(automation): research run ${RUN_ID:-local} (request ${REQ_ID}, task ${TASK_ID})"
-git push origin "$BRANCH" --quiet
+if [ -n "$PUSH_TOKEN" ]; then
+  auth_header="$(printf 'x-access-token:%s' "$PUSH_TOKEN" | base64 | tr -d '\n')"
+  git config --local http.https://github.com/.extraheader "AUTHORIZATION: basic $auth_header"
+fi
+if git push origin "$BRANCH" --quiet; then
+  push_status=0
+else
+  push_status=$?
+fi
+if [ -n "$PUSH_TOKEN" ]; then
+  git config --local --unset-all http.https://github.com/.extraheader >/dev/null 2>&1 || true
+fi
+if [ "$push_status" -ne 0 ]; then
+  exit "$push_status"
+fi
 echo "pushed to $BRANCH"
 
 # 次回 run のために main へ戻す（runner の作業ツリーを既定状態に保つ）。
