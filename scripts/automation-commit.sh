@@ -5,7 +5,7 @@
 set -euo pipefail
 
 # GitHub Actions の write token はこの trusted helper だけが受け取り、即座に環境から外す。
-# 以降の node/git 等 child process へ raw token を継承させず、push 直前だけ git header に使う。
+# 以降の node/git 等 child process へ raw token を継承させず、push 1 command だけの header に使う。
 PUSH_TOKEN="${BOAT_PON_AUTOMATION_PUSH_TOKEN:-}"
 unset BOAT_PON_AUTOMATION_PUSH_TOKEN
 
@@ -131,18 +131,9 @@ TASK_ID="$(node -e "try{const s=require('./reports/automation/current-status.jso
 git commit -q -m "report(automation): research run ${RUN_ID:-local} (request ${REQ_ID}, task ${TASK_ID})"
 if [ -n "$PUSH_TOKEN" ]; then
   auth_header="$(printf 'x-access-token:%s' "$PUSH_TOKEN" | base64 | tr -d '\n')"
-  git config --local http.https://github.com/.extraheader "AUTHORIZATION: basic $auth_header"
-fi
-if git push origin "$BRANCH" --quiet; then
-  push_status=0
+  git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth_header" push origin "$BRANCH" --quiet
 else
-  push_status=$?
-fi
-if [ -n "$PUSH_TOKEN" ]; then
-  git config --local --unset-all http.https://github.com/.extraheader >/dev/null 2>&1 || true
-fi
-if [ "$push_status" -ne 0 ]; then
-  exit "$push_status"
+  git push origin "$BRANCH" --quiet
 fi
 echo "pushed to $BRANCH"
 
