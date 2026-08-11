@@ -248,6 +248,24 @@ test("missing referenced output degrades a PASS run", () => {
   });
 });
 
+test("history files cannot be reused as durable outputs", () => {
+  withRoot((root) => {
+    const value = history({
+      runId: "1010",
+      taskId: "TASK-N2-010",
+      result: "PASS",
+      outputs: ["reports/automation/history/1010-TASK-N2-010.json"],
+      summary: { status: "PASS" },
+    });
+    writeHistory(root, value);
+    const report = buildResearchDurableKnowledgeCompletenessReport({ repoRoot: root });
+    assert.equal(report.status, "BLOCKED");
+    assert.equal(report.invalidHistoryCount, 1);
+    assert.equal(report.runs[0].classification, "INVALID_HISTORY");
+    assert.match(report.runs[0].issues.join("\n"), /HISTORY_OUTPUT_PATH_NOT_APPROVED/u);
+  });
+});
+
 test("missing history directory returns NO_HISTORY without writes", () => {
   withRoot((root) => {
     const report = buildResearchDurableKnowledgeCompletenessReport({ repoRoot: root });
