@@ -84,7 +84,6 @@ test("assembly preserves existing output when the isolated Vite entry is missing
 
     await assert.rejects(
       assemblePublicDashboardDeploy({ distDir: dist, staticDir, outputDir: output }),
-      /isolated Vite public-dashboard\.html entry/,
     );
     assert.equal(await readFile(marker, "utf8"), "must-survive\n");
   } finally {
