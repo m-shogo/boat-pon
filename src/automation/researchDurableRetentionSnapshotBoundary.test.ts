@@ -52,6 +52,13 @@ test("existing retention evidence is fail-closed and never overwritten", () => {
   assert.match(source, /DURABLE_RETENTION_EXISTING_EVIDENCE_DIGEST_MISMATCH/u);
 });
 
+test("new retention evidence is installed without replacement semantics", () => {
+  assert.match(source, /linkSync\(tmpPath, absolutePath\)/u);
+  assert.match(source, /error\.code === "EEXIST"/u);
+  assert.match(source, /return persistResearchDurableRetentionSnapshot\(input\)/u);
+  assert.doesNotMatch(source, /renameSync\(tmpPath, absolutePath\)/u);
+});
+
 test("retention CLI exposes metadata only and cannot invoke product behavior", () => {
   assert.match(cli, /buildResearchDurableKnowledgeCompletenessReportWithLegacyCompatibility/u);
   assert.match(cli, /persistResearchDurableRetentionSnapshot/u);
