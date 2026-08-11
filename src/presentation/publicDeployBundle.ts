@@ -82,15 +82,26 @@ export async function assemblePublicDashboardDeploy(options: {
   const distDir = resolve(options.distDir);
   const staticDir = resolve(options.staticDir);
   const outputDir = resolve(options.outputDir);
+  const snapshotDir = options.snapshotDir ? resolve(options.snapshotDir) : null;
 
   assertDistinctDirectories(distDir, staticDir, outputDir);
   await requireDirectory(distDir, "distDir");
   await requireDirectory(staticDir, "staticDir");
-  assertDistinctDirectories(
-    await canonicalDirectoryTarget(distDir),
-    await canonicalDirectoryTarget(staticDir),
-    await canonicalDirectoryTarget(outputDir),
-  );
+  const canonicalDistDir = await canonicalDirectoryTarget(distDir);
+  const canonicalStaticDir = await canonicalDirectoryTarget(staticDir);
+  const canonicalOutputDir = await canonicalDirectoryTarget(outputDir);
+  assertDistinctDirectories(canonicalDistDir, canonicalStaticDir, canonicalOutputDir);
+
+  if (snapshotDir) {
+    await requireDirectory(snapshotDir, "snapshotDir");
+    assertSnapshotDirectoryIsolation(snapshotDir, distDir, staticDir, outputDir);
+    assertSnapshotDirectoryIsolation(
+      await canonicalDirectoryTarget(snapshotDir),
+      canonicalDistDir,
+      canonicalStaticDir,
+      canonicalOutputDir,
+    );
+  }
 
   await rm(outputDir, { recursive: true, force: true });
   await mkdir(outputDir, { recursive: true });
@@ -104,9 +115,7 @@ export async function assemblePublicDashboardDeploy(options: {
 
   await copyTreeWithoutSymlinks(staticDir, outputDir);
 
-  if (options.snapshotDir) {
-    const snapshotDir = resolve(options.snapshotDir);
-    await requireDirectory(snapshotDir, "snapshotDir");
+  if (snapshotDir) {
     const target = join(outputDir, "public-data");
     await mkdir(target, { recursive: true });
     for (const name of ["latest.json", "last-known-good.json"] as const) {
@@ -416,6 +425,19 @@ function assertDistinctDirectories(...directories: string[]): void {
       if (left.startsWith(`${right}${sep}`) || right.startsWith(`${left}${sep}`)) {
         throw new Error("dist, static and output directories must not contain one another");
       }
+    }
+  }
+}
+
+function assertSnapshotDirectoryIsolation(snapshotDir: string, ...directories: string[]): void {
+  const snapshot = resolve(snapshotDir);
+  for (const directory of directories.map((value) => resolve(value))) {
+    if (
+      snapshot === directory
+      || snapshot.startsWith(`${directory}${sep}`)
+      || directory.startsWith(`${snapshot}${sep}`)
+    ) {
+      throw new Error("snapshot directory must be distinct from deploy input/output directories and must not contain one another");
     }
   }
 }
