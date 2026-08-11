@@ -3,6 +3,18 @@ const HISTORY_PREFIX = "reports/automation/history/";
 const RUN_ID_RE = /^[0-9A-Za-z._-]+$/u;
 const HISTORY_RE = /^reports\/automation\/history\/([0-9A-Za-z._-]+)-(TASK-[0-9A-Za-z._-]+)\.json$/u;
 const RETAINED_RE = /^reports\/automation\/retained-outputs\/([0-9A-Za-z._-]+)\/[^/]+$/u;
+const TERMINAL_RESULTS = new Set([
+  "PASS",
+  "CONDITIONAL",
+  "BLOCKED",
+  "FAILED",
+  "FAILED_FINAL",
+  "FAILED_RETRYABLE",
+  "DRY_RUN_OK",
+  "REJECTED_L4",
+  "TASK_NOT_FOUND",
+  "TASK_NOT_READY",
+]);
 
 export type RetainedOutputCommitGateResult = {
   retainedPathCount: number;
@@ -52,6 +64,10 @@ export function validateRetainedOutputCommit(input: {
     }
     if (String(history.taskId ?? "") !== pathTaskId) {
       throw new Error(`RETAINED_COMMIT_HISTORY_TASK_ID_MISMATCH:${historyPath}`);
+    }
+    const historyResult = String(history.result ?? "");
+    if (!TERMINAL_RESULTS.has(historyResult)) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_RESULT_INVALID:${historyPath}:${historyResult || "missing"}`);
     }
     if (!Array.isArray(history.outputs) || history.outputs.some((value) => typeof value !== "string")) {
       throw new Error(`RETAINED_COMMIT_HISTORY_OUTPUTS_INVALID:${historyPath}`);
