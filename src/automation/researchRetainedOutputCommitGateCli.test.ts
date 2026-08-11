@@ -80,6 +80,17 @@ test("CLI rejects history-only evidence for another workflow run even without re
   });
 });
 
+test("CLI rejects two terminal histories from one workflow run", () => {
+  withRepo((root) => {
+    const runId = "12345";
+    const first = `reports/automation/history/${runId}-TASK-N2-011.json`;
+    const second = `reports/automation/history/${runId}-TASK-N2-012.json`;
+    put(root, first, `${JSON.stringify({ runId, outputs: [], result: "PASS" })}\n`);
+    put(root, second, `${JSON.stringify({ runId, outputs: [], result: "PASS" })}\n`);
+    assert.throws(() => runGate(root, runId), /RETAINED_COMMIT_HISTORY_COUNT_INVALID:12345:2/u);
+  });
+});
+
 test("CLI rejects an orphan retained output before git staging", () => {
   withRepo((root) => {
     const runId = "12345";
