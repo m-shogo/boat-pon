@@ -1,5 +1,13 @@
 import { execFileSync } from "node:child_process";
-import { lstatSync, readFileSync, realpathSync } from "node:fs";
+import {
+  closeSync,
+  constants as fsConstants,
+  fstatSync,
+  lstatSync,
+  openSync,
+  readFileSync,
+  realpathSync,
+} from "node:fs";
 import { dirname, resolve, sep } from "node:path";
 
 const RETAINED_PREFIX = "reports/automation/retained-outputs/";
@@ -184,6 +192,37 @@ function assertHistoryParentDirectories(repoRoot, relativePath) {
   return absolutePath;
 }
 
+function readValidatedHistoryText(repoRoot, relativePath) {
+  const absolutePath = assertHistoryParentDirectories(repoRoot, relativePath);
+  const expectedStat = lstatSync(absolutePath);
+  if (expectedStat.isSymbolicLink() || !expectedStat.isFile() || expectedStat.nlink !== 1) {
+    throw new Error(`RETAINED_COMMIT_HISTORY_FILE_TYPE_INVALID:${relativePath}`);
+  }
+
+  let fd = null;
+  try {
+    fd = openSync(absolutePath, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW | fsConstants.O_NONBLOCK);
+    const stat = fstatSync(fd);
+    if (
+      !stat.isFile()
+      || stat.nlink !== 1
+      || stat.dev !== expectedStat.dev
+      || stat.ino !== expectedStat.ino
+      || stat.size !== expectedStat.size
+    ) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_FILE_CHANGED_DURING_READ:${relativePath}`);
+    }
+    return readFileSync(fd, "utf8");
+  } catch (error) {
+    if (error instanceof Error && "code" in error && (error.code === "ENOENT" || error.code === "ELOOP")) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_FILE_TYPE_INVALID:${relativePath}`);
+    }
+    throw error;
+  } finally {
+    if (fd !== null) closeSync(fd);
+  }
+}
+
 const requestedRunId = argument("run-id");
 if (process.env.GITHUB_ACTIONS === "true") {
   const githubRunId = (process.env.GITHUB_RUN_ID ?? "").trim();
@@ -220,14 +259,7 @@ const changedPaths = [...new Set([
 const result = validateRetainedOutputCommit({
   changedPaths,
   expectedRunId: requestedRunId,
-  readText: (relativePath) => {
-    const absolutePath = assertHistoryParentDirectories(repoRoot, relativePath);
-    const stat = lstatSync(absolutePath);
-    if (stat.isSymbolicLink() || !stat.isFile()) {
-      throw new Error(`RETAINED_COMMIT_HISTORY_FILE_TYPE_INVALID:${relativePath}`);
-    }
-    return readFileSync(absolutePath, "utf8");
-  },
+  readText: (relativePath) => readValidatedHistoryText(repoRoot, relativePath),
 });
 
 console.log(JSON.stringify({
