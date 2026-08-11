@@ -8,7 +8,7 @@ import {
   lstatSync,
   mkdirSync,
   openSync,
-  readFileSync,
+  readSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -29,6 +29,7 @@ const RETENTION_RELATIVE_DIR = "reports/automation/retention/durable-knowledge";
 const SHA256_RE = /^[0-9a-f]{64}$/u;
 const GIT_SHA_RE = /^[0-9a-f]{40}$/u;
 const MAX_EXISTING_SNAPSHOT_BYTES = 2_000_000;
+const EXISTING_SNAPSHOT_READ_CHUNK_BYTES = 64 * 1024;
 
 export type ResearchDurableRetentionNonStrongRun = {
   runId: string | null;
@@ -178,7 +179,24 @@ function readExistingSnapshotText(absolutePath: string): string | null {
     if (!stat.isFile() || stat.nlink !== 1 || stat.size > MAX_EXISTING_SNAPSHOT_BYTES) {
       throw new Error("DURABLE_RETENTION_EXISTING_SNAPSHOT_INVALID");
     }
-    return readFileSync(fd, "utf8");
+    const chunks: Buffer[] = [];
+    let totalBytes = 0;
+    while (true) {
+      const remainingWithSentinel = MAX_EXISTING_SNAPSHOT_BYTES - totalBytes + 1;
+      const chunk = Buffer.allocUnsafe(Math.min(EXISTING_SNAPSHOT_READ_CHUNK_BYTES, remainingWithSentinel));
+      const bytesRead = readSync(fd, chunk, 0, chunk.length, null);
+      if (bytesRead === 0) break;
+      totalBytes += bytesRead;
+      if (totalBytes > MAX_EXISTING_SNAPSHOT_BYTES) {
+        throw new Error("DURABLE_RETENTION_EXISTING_SNAPSHOT_INVALID");
+      }
+      chunks.push(chunk.subarray(0, bytesRead));
+    }
+    const postReadStat = fstatSync(fd);
+    if (postReadStat.size !== stat.size || totalBytes !== stat.size) {
+      throw new Error("DURABLE_RETENTION_EXISTING_SNAPSHOT_INVALID");
+    }
+    return Buffer.concat(chunks, totalBytes).toString("utf8");
   } finally {
     closeSync(fd);
   }
