@@ -101,6 +101,7 @@ export async function assemblePublicDashboardDeploy(options: {
       canonicalStaticDir,
       canonicalOutputDir,
     );
+    await validateSnapshotInputs(snapshotDir);
   }
 
   await rm(outputDir, { recursive: true, force: true });
@@ -439,6 +440,30 @@ function assertSnapshotDirectoryIsolation(snapshotDir: string, ...directories: s
     ) {
       throw new Error("snapshot directory must be distinct from deploy input/output directories and must not contain one another");
     }
+  }
+}
+
+async function validateSnapshotInputs(snapshotDir: string): Promise<void> {
+  const present: string[] = [];
+  for (const name of ["latest.json", "last-known-good.json"] as const) {
+    const source = join(snapshotDir, name);
+    let sourceInfo;
+    try {
+      sourceInfo = await lstat(source);
+    } catch (error) {
+      if (isEnoent(error)) continue;
+      throw error;
+    }
+    if (sourceInfo.isSymbolicLink() || !sourceInfo.isFile()) {
+      throw new Error(`snapshot input must be a regular file: ${source}`);
+    }
+    if (sourceInfo.size > MAX_PUBLIC_FILE_BYTES) {
+      throw new Error(`refusing to copy oversized public snapshot: ${source}`);
+    }
+    present.push(name);
+  }
+  if (present.length === 1) {
+    throw new Error("latest.json and last-known-good.json must be supplied together");
   }
 }
 
