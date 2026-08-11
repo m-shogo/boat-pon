@@ -95,6 +95,27 @@ jobs:
           echo "trusted_node_bin=$TRUSTED_NODE_BIN" >> "$GITHUB_OUTPUT"
           echo "trusted_git_sha256=$TRUSTED_GIT_SHA256" >> "$GITHUB_OUTPUT"
           echo "trusted_node_sha256=$TRUSTED_NODE_SHA256" >> "$GITHUB_OUTPUT"
+
+          # post-task persistence helper は task 実行前の exact bytes/mode を step output に固定する。
+          # task-writable worktree / RUNNER_TEMP を復元時の authority として信用しない。
+          capture_helper() {
+            key="$1"
+            path="$2"
+            digest="$(/usr/bin/shasum -a 256 "$path" | /usr/bin/awk '{print $1}')"
+            mode="$(/usr/bin/stat -f '%Lp' "$path")"
+            encoded="$(/usr/bin/base64 < "$path" | /usr/bin/tr -d '\n')"
+            if ! [[ "$digest" =~ ^[0-9a-f]{64}$ ]]; then echo "::error::trusted helper digest invalid: $path"; exit 1; fi
+            if ! [[ "$mode" =~ ^[0-7]{3,4}$ ]]; then echo "::error::trusted helper mode invalid: $path"; exit 1; fi
+            if [ -z "$encoded" ]; then echo "::error::trusted helper bytes missing: $path"; exit 1; fi
+            echo "${key}_sha256=$digest" >> "$GITHUB_OUTPUT"
+            echo "${key}_mode=$mode" >> "$GITHUB_OUTPUT"
+            echo "${key}_b64=$encoded" >> "$GITHUB_OUTPUT"
+          }
+          capture_helper "commit_script" "scripts/automation-commit.sh"
+          capture_helper "retained_gate_mjs" "scripts/check-research-retained-output-commit.mjs"
+          capture_helper "retained_gate_ts" "scripts/check-research-retained-output-commit.ts"
+          capture_helper "retained_gate_core" "src/automation/researchRetainedOutputCommitGate.ts"
+
           "$TRUSTED_GIT_BIN" fetch origin "$BRANCH" --quiet
           # CAS authority は task-writable worktree ではなく、この trusted step の output に固定する。
           BASE_SHA="$("$TRUSTED_GIT_BIN" rev-parse "origin/$BRANCH")"
@@ -136,35 +157,73 @@ jobs:
           ENV: /dev/null
           LD_PRELOAD: ""
           LD_LIBRARY_PATH: ""
+          DYLD_INSERT_LIBRARIES: ""
+          DYLD_LIBRARY_PATH: ""
+          DYLD_FRAMEWORK_PATH: ""
+          DYLD_FALLBACK_LIBRARY_PATH: ""
+          DYLD_FALLBACK_FRAMEWORK_PATH: ""
           NODE_OPTIONS: ""
           NODE_PATH: ""
           PERL5OPT: ""
           PERL5LIB: ""
           PATH: /usr/bin:/bin:/usr/sbin:/sbin
-          TRUSTED_GIT_BIN: ${{ steps.materialize_authority.outputs.trusted_git_bin }}
-          TRUSTED_GIT_SHA256: ${{ steps.materialize_authority.outputs.trusted_git_sha256 }}
+          COMMIT_SCRIPT_B64: ${{ steps.materialize_authority.outputs.commit_script_b64 }}
+          COMMIT_SCRIPT_SHA256: ${{ steps.materialize_authority.outputs.commit_script_sha256 }}
+          COMMIT_SCRIPT_MODE: ${{ steps.materialize_authority.outputs.commit_script_mode }}
+          RETAINED_GATE_MJS_B64: ${{ steps.materialize_authority.outputs.retained_gate_mjs_b64 }}
+          RETAINED_GATE_MJS_SHA256: ${{ steps.materialize_authority.outputs.retained_gate_mjs_sha256 }}
+          RETAINED_GATE_MJS_MODE: ${{ steps.materialize_authority.outputs.retained_gate_mjs_mode }}
+          RETAINED_GATE_TS_B64: ${{ steps.materialize_authority.outputs.retained_gate_ts_b64 }}
+          RETAINED_GATE_TS_SHA256: ${{ steps.materialize_authority.outputs.retained_gate_ts_sha256 }}
+          RETAINED_GATE_TS_MODE: ${{ steps.materialize_authority.outputs.retained_gate_ts_mode }}
+          RETAINED_GATE_CORE_B64: ${{ steps.materialize_authority.outputs.retained_gate_core_b64 }}
+          RETAINED_GATE_CORE_SHA256: ${{ steps.materialize_authority.outputs.retained_gate_core_sha256 }}
+          RETAINED_GATE_CORE_MODE: ${{ steps.materialize_authority.outputs.retained_gate_core_mode }}
         run: |
           set -euo pipefail
+          umask 077
           while IFS= read -r env_name; do
             case "$env_name" in
               GIT_*|DYLD_*) unset "$env_name" ;;
             esac
           done < <(compgen -e)
           unset HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY http_proxy https_proxy all_proxy no_proxy
-          export GIT_CONFIG_NOSYSTEM=1
-          export GIT_CONFIG_GLOBAL=/dev/null
-          case "$TRUSTED_GIT_BIN" in /*) ;; *) echo "::error::trusted git path is not absolute"; exit 1 ;; esac
-          test -x "$TRUSTED_GIT_BIN"
-          CURRENT_GIT_SHA256="$(/usr/bin/shasum -a 256 "$TRUSTED_GIT_BIN" | /usr/bin/awk '{print $1}')"
-          if [ "$CURRENT_GIT_SHA256" != "$TRUSTED_GIT_SHA256" ]; then
-            echo "::error::trusted git binary changed after task execution"
-            exit 1
-          fi
-          "$TRUSTED_GIT_BIN" -c core.hooksPath=/dev/null -c core.fsmonitor=false checkout "${GITHUB_SHA}" -- \
-            scripts/automation-commit.sh \
-            scripts/check-research-retained-output-commit.mjs \
-            scripts/check-research-retained-output-commit.ts \
-            src/automation/researchRetainedOutputCommitGate.ts
+
+          for dir in scripts src src/automation; do
+            if [ ! -d "$dir" ] || [ -L "$dir" ]; then
+              echo "::error::trusted helper parent is not a real directory: $dir"
+              exit 1
+            fi
+          done
+
+          restore_helper() {
+            path="$1"
+            encoded="$2"
+            expected_digest="$3"
+            expected_mode="$4"
+            if ! [[ "$expected_digest" =~ ^[0-9a-f]{64}$ ]]; then echo "::error::trusted helper digest output invalid: $path"; exit 1; fi
+            if ! [[ "$expected_mode" =~ ^[0-7]{3,4}$ ]]; then echo "::error::trusted helper mode output invalid: $path"; exit 1; fi
+            if [ -z "$encoded" ]; then echo "::error::trusted helper byte output missing: $path"; exit 1; fi
+            tmp="$(/usr/bin/mktemp "$RUNNER_TEMP/boat-pon-helper.XXXXXX")"
+            if ! printf '%s' "$encoded" | /usr/bin/base64 -D > "$tmp"; then
+              /bin/rm -f "$tmp"
+              echo "::error::trusted helper decode failed: $path"
+              exit 1
+            fi
+            actual_digest="$(/usr/bin/shasum -a 256 "$tmp" | /usr/bin/awk '{print $1}')"
+            if [ "$actual_digest" != "$expected_digest" ]; then
+              /bin/rm -f "$tmp"
+              echo "::error::trusted helper bytes changed after task execution: $path"
+              exit 1
+            fi
+            /bin/chmod "$expected_mode" "$tmp"
+            /bin/mv -f "$tmp" "$path"
+          }
+
+          restore_helper "scripts/automation-commit.sh" "$COMMIT_SCRIPT_B64" "$COMMIT_SCRIPT_SHA256" "$COMMIT_SCRIPT_MODE"
+          restore_helper "scripts/check-research-retained-output-commit.mjs" "$RETAINED_GATE_MJS_B64" "$RETAINED_GATE_MJS_SHA256" "$RETAINED_GATE_MJS_MODE"
+          restore_helper "scripts/check-research-retained-output-commit.ts" "$RETAINED_GATE_TS_B64" "$RETAINED_GATE_TS_SHA256" "$RETAINED_GATE_TS_MODE"
+          restore_helper "src/automation/researchRetainedOutputCommitGate.ts" "$RETAINED_GATE_CORE_B64" "$RETAINED_GATE_CORE_SHA256" "$RETAINED_GATE_CORE_MODE"
 
       - name: Commit control state + results to automation branch
         if: always() && steps.restore_commit_helper.outcome == 'success'
@@ -173,6 +232,11 @@ jobs:
           ENV: /dev/null
           LD_PRELOAD: ""
           LD_LIBRARY_PATH: ""
+          DYLD_INSERT_LIBRARIES: ""
+          DYLD_LIBRARY_PATH: ""
+          DYLD_FRAMEWORK_PATH: ""
+          DYLD_FALLBACK_LIBRARY_PATH: ""
+          DYLD_FALLBACK_FRAMEWORK_PATH: ""
           NODE_OPTIONS: ""
           NODE_PATH: ""
           PERL5OPT: ""
