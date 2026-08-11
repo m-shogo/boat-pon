@@ -377,8 +377,10 @@ async function copyTreeWithoutSymlinks(source: string, destination: string): Pro
     const info = await lstat(sourcePath);
     if (info.isSymbolicLink()) throw new Error(`refusing to copy symbolic link: ${sourcePath}`);
     if (entry.isDirectory()) await copyTreeWithoutSymlinks(sourcePath, destinationPath);
-    else if (entry.isFile()) await cp(sourcePath, destinationPath, { force: true });
-    else throw new Error(`unsupported public build entry: ${sourcePath}`);
+    else if (entry.isFile()) {
+      if (info.size > MAX_PUBLIC_FILE_BYTES) throw new Error(`refusing to copy oversized public file: ${sourcePath}`);
+      await cp(sourcePath, destinationPath, { force: true });
+    } else throw new Error(`unsupported public build entry: ${sourcePath}`);
   }
 }
 
