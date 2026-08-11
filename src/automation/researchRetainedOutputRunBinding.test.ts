@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { validateRetainedOutputCommit } from "./researchRetainedOutputCommitGate";
 
-const history = (runId: string) => `reports/automation/history/${runId}-TASK-N2-011.json`;
+const history = (runId: string, taskId = "TASK-N2-011") => `reports/automation/history/${runId}-${taskId}.json`;
 
 function reader(files: Record<string, unknown>): (path: string) => string {
   return (path) => JSON.stringify(files[path]);
@@ -33,5 +33,36 @@ test("same-run history-only commit remains valid", () => {
     }),
   });
   assert.equal(result.historyPathCount, 1);
+  assert.equal(result.retainedPathCount, 0);
+});
+
+test("one workflow run cannot persist two terminal histories", () => {
+  const first = history("123", "TASK-N2-011");
+  const second = history("123", "TASK-N2-012");
+  assert.throws(
+    () => validateRetainedOutputCommit({
+      changedPaths: [first, second],
+      expectedRunId: "123",
+      readText: reader({
+        [first]: { runId: "123", outputs: [], result: "PASS" },
+        [second]: { runId: "123", outputs: [], result: "PASS" },
+      }),
+    }),
+    /RETAINED_COMMIT_HISTORY_COUNT_INVALID:123:2/u,
+  );
+});
+
+test("local mode can inspect multiple histories without pretending to be one workflow run", () => {
+  const first = history("local-a", "TASK-N2-011");
+  const second = history("local-b", "TASK-N2-012");
+  const result = validateRetainedOutputCommit({
+    changedPaths: [first, second],
+    expectedRunId: "local",
+    readText: reader({
+      [first]: { runId: "local-a", outputs: [], result: "PASS" },
+      [second]: { runId: "local-b", outputs: [], result: "PASS" },
+    }),
+  });
+  assert.equal(result.historyPathCount, 2);
   assert.equal(result.retainedPathCount, 0);
 });
