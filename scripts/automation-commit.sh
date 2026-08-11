@@ -144,6 +144,30 @@ for path in "${KEEP[@]}"; do
   git_no_hooks add -- "$path"
 done
 
+# task-controlled attributes / clean filters が git add 中に index を拡張・変換しても、
+# allowlist外pathや退避元bytesと異なるblobは commit 前に必ず拒否する。
+while IFS= read -r -d '' staged_path; do
+  expected=false
+  for path in "${KEEP[@]}"; do
+    [ "$staged_path" = "$path" ] && expected=true
+  done
+  if [ "$expected" != true ]; then
+    echo "::error::unexpected staged path after allowlist staging: $staged_path"
+    exit 1
+  fi
+  source_path="$STAGE/$staged_path"
+  if [ ! -f "$source_path" ]; then
+    echo "::error::missing staged source copy: $staged_path"
+    exit 1
+  fi
+  source_hash="$(git_no_hooks hash-object --no-filters "$source_path")"
+  index_hash="$(git_no_hooks rev-parse ":$staged_path" 2>/dev/null || echo none)"
+  if [ "$source_hash" != "$index_hash" ]; then
+    echo "::error::staged blob differs from validated source bytes: $staged_path"
+    exit 1
+  fi
+done < <(git_no_hooks diff --cached --name-only -z)
+
 if git_no_hooks diff --cached --quiet; then
   echo "NO_CHANGE: nothing staged after allowlist filter"
   git_no_hooks checkout main --quiet || true
