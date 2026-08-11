@@ -48,6 +48,11 @@ test("post-task restore uses pre-task bytes while token-bearing commit keeps tru
   assert.match(restore, /ENV: \/dev\/null/u);
   assert.match(restore, /LD_PRELOAD: ""/u);
   assert.match(restore, /LD_LIBRARY_PATH: ""/u);
+  assert.match(restore, /DYLD_INSERT_LIBRARIES: ""/u);
+  assert.match(restore, /DYLD_LIBRARY_PATH: ""/u);
+  assert.match(restore, /DYLD_FRAMEWORK_PATH: ""/u);
+  assert.match(restore, /DYLD_FALLBACK_LIBRARY_PATH: ""/u);
+  assert.match(restore, /DYLD_FALLBACK_FRAMEWORK_PATH: ""/u);
   assert.match(restore, /PERL5OPT: ""/u);
   assert.match(restore, /PATH: \/usr\/bin:\/bin:\/usr\/sbin:\/sbin/u);
   assert.match(restore, /COMMIT_SCRIPT_B64: \$\{\{ steps\.materialize_authority\.outputs\.commit_script_b64 \}\}/u);
@@ -58,6 +63,13 @@ test("post-task restore uses pre-task bytes while token-bearing commit keeps tru
   assert.doesNotMatch(restore, /git checkout/u);
 
   assert.match(commit, /BASH_ENV: \/dev\/null/u);
+  assert.match(commit, /LD_PRELOAD: ""/u);
+  assert.match(commit, /LD_LIBRARY_PATH: ""/u);
+  assert.match(commit, /DYLD_INSERT_LIBRARIES: ""/u);
+  assert.match(commit, /DYLD_LIBRARY_PATH: ""/u);
+  assert.match(commit, /DYLD_FRAMEWORK_PATH: ""/u);
+  assert.match(commit, /DYLD_FALLBACK_LIBRARY_PATH: ""/u);
+  assert.match(commit, /DYLD_FALLBACK_FRAMEWORK_PATH: ""/u);
   assert.match(commit, /NODE_OPTIONS: ""/u);
   assert.match(commit, /NODE_PATH: ""/u);
   assert.match(commit, /PATH: \/usr\/bin:\/bin:\/usr\/sbin:\/sbin/u);
