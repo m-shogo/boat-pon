@@ -72,3 +72,41 @@ test("JSON without outputDigest is durable but not strong", () => {
     assert.equal(report.runs[0].outputs[0].integrity, "JSON_PRESENT_NO_OUTPUT_DIGEST");
   });
 });
+
+test("non-pass plain text output is durable but not strong without digest binding", () => {
+  withRoot((root) => {
+    const runId = "1103";
+    const taskId = `TASK-N2-${runId}`;
+    writeText(root, "reports/n2/nonpass.txt", "negative research evidence\n");
+    writeText(root, `reports/automation/history/${runId}-${taskId}.json`, `${JSON.stringify({
+      runId,
+      requestId: `REQ-${runId}`,
+      intentId: `INTENT-${runId}`,
+      taskId,
+      taskType: "readonly-audit",
+      safetyLevel: "L0",
+      executorVersion: "fixture-executor-v1",
+      executed: true,
+      result: "BLOCKED",
+      blocks: ["FIXTURE_BLOCK"],
+      outputs: ["reports/n2/nonpass.txt"],
+      outputDigest: "a".repeat(64),
+      summary: { status: "BLOCKED" },
+      authoritySha: "b".repeat(40),
+      idempotencyKey: "c".repeat(64),
+      startedAt: "2026-08-11T01:00:00.000Z",
+      completedAt: "2026-08-11T01:00:01.000Z",
+      elapsedMs: 1000,
+    }, null, 2)}\n`);
+
+    const report = buildResearchDurableKnowledgeCompletenessReport({ repoRoot: root });
+
+    assert.equal(report.status, "PASS");
+    assert.equal(report.durableCompleteCount, 1);
+    assert.equal(report.strongDurableCompleteCount, 0);
+    assert.equal(report.runs[0].classification, "NON_PASS_DURABLE_HISTORY");
+    assert.equal(report.runs[0].durableComplete, true);
+    assert.equal(report.runs[0].strongDurableComplete, false);
+    assert.equal(report.runs[0].outputs[0].integrity, "TEXT_PRESENT");
+  });
+});
