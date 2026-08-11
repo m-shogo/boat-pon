@@ -9,6 +9,7 @@ import {
   readdirSync,
   readFileSync,
 } from "node:fs";
+import type { Stats } from "node:fs";
 import { dirname, resolve, sep } from "node:path";
 
 export const RESEARCH_RETAINED_OUTPUT_INVENTORY_VERSION =
@@ -87,7 +88,7 @@ function invalidEntry(input: {
   };
 }
 
-function readValidatedRetainedFile(path: string, expectedStat: ReturnType<typeof lstatSync>): Buffer | null {
+function readValidatedRetainedFile(path: string, expectedStat: Stats): Buffer | null {
   let fd: number;
   try {
     fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
