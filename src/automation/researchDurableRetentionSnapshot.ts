@@ -1,7 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import {
   chmodSync,
-  existsSync,
   lstatSync,
   mkdirSync,
   readFileSync,
@@ -124,6 +123,15 @@ function resolveInside(rootDir: string, relativePath: string): string {
   return target;
 }
 
+function lstatIfPresent(path: string): ReturnType<typeof lstatSync> | null {
+  try {
+    return lstatSync(path);
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
 function assertSafeParentPath(rootDir: string, absolutePath: string): void {
   const root = resolve(rootDir);
   const parents: string[] = [];
@@ -138,8 +146,8 @@ function assertSafeParentPath(rootDir: string, absolutePath: string): void {
     current = next;
   }
   for (const parent of parents.reverse()) {
-    if (!existsSync(parent)) continue;
-    const stat = lstatSync(parent);
+    const stat = lstatIfPresent(parent);
+    if (!stat) continue;
     if (stat.isSymbolicLink() || !stat.isDirectory()) {
       throw new Error("DURABLE_RETENTION_PARENT_PATH_INVALID");
     }
@@ -342,9 +350,9 @@ export function persistResearchDurableRetentionSnapshot(input: {
   const relativePath = durableRetentionSnapshotRelativePath(input.snapshot);
   const absolutePath = resolveInside(input.repoRoot, relativePath);
   assertSafeParentPath(input.repoRoot, absolutePath);
-  if (existsSync(absolutePath)) {
-    const stat = lstatSync(absolutePath);
-    if (stat.isSymbolicLink() || !stat.isFile() || stat.nlink !== 1 || stat.size > MAX_EXISTING_SNAPSHOT_BYTES) {
+  const existingStat = lstatIfPresent(absolutePath);
+  if (existingStat) {
+    if (existingStat.isSymbolicLink() || !existingStat.isFile() || existingStat.nlink !== 1 || existingStat.size > MAX_EXISTING_SNAPSHOT_BYTES) {
       throw new Error("DURABLE_RETENTION_EXISTING_SNAPSHOT_INVALID");
     }
     let parsed: unknown;

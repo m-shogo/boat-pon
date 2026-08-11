@@ -44,7 +44,9 @@ test("snapshot identity is semantic and does not use state SHA or observation ti
 });
 
 test("existing retention evidence is fail-closed and never overwritten", () => {
-  assert.match(source, /if \(existsSync\(absolutePath\)\)/u);
+  assert.match(source, /const existingStat = lstatIfPresent\(absolutePath\)/u);
+  assert.match(source, /if \(existingStat\)/u);
+  assert.match(source, /existingStat\.isSymbolicLink\(\)/u);
   assert.match(source, /validateResearchDurableRetentionSnapshot/u);
   assert.match(source, /return \{ changed: false/u);
   assert.match(source, /DURABLE_RETENTION_EXISTING_EVIDENCE_DIGEST_MISMATCH/u);
