@@ -82,8 +82,9 @@ async function writePairAtomically(options: {
       writeFile(latestTemp, options.body, { encoding: "utf8", flag: "wx" }),
       writeFile(lastKnownGoodTemp, options.body, { encoding: "utf8", flag: "wx" }),
     ]);
-    await rename(lastKnownGoodTemp, options.lastKnownGoodPath);
+    // Advance latest first so an interruption can only leave latest >= last-known-good.
     await rename(latestTemp, options.latestPath);
+    await rename(lastKnownGoodTemp, options.lastKnownGoodPath);
   } finally {
     await Promise.all([
       rm(latestTemp, { force: true }),
