@@ -18,4 +18,6 @@ test("intent workflow restores trusted commit helpers before exposing the push t
   assert.ok(trustedCheckout < tokenBinding);
   assert.match(workflow, /if: always\(\) && steps\.restore_commit_helper\.outcome == 'success'/);
   assert.match(workflow, /persist-credentials: false/);
+  assert.doesNotMatch(workflow, /http\.https:\/\/github\.com\/\.extraheader/);
+  assert.match(workflow, /run: bash scripts\/automation-commit\.sh/);
 });
