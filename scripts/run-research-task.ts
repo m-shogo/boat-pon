@@ -117,7 +117,6 @@ if (mode === "pause") { mkdirSync(dirname(PAUSED), { recursive: true }); writeFi
 if (mode === "resume") { rmSync(PAUSED, { force: true }); console.log("RESUMED"); process.exit(0); }
 if (mode === "emergency-stop") { mkdirSync(dirname(EMERGENCY), { recursive: true }); writeFileSync(EMERGENCY, `emergency stop at ${nowIso()}\n`); console.log("EMERGENCY_STOP_SET"); process.exit(0); }
 if (mode === "clear-emergency-stop") { rmSync(EMERGENCY, { force: true }); console.log("EMERGENCY_STOP_CLEARED"); process.exit(0); }
-
 // ---- validate-request / task ----
 // NOTE: task/validate-request モードは request-file 経路（DEPRECATED）用。
 // 現行の正式経路は scripts/run-intent-task.ts（intent 方式・automation branch 状態）。
@@ -174,7 +173,7 @@ try {
     ).length === 0,
     localHeadSha: git("rev-parse", "HEAD"),
     parentShas: (() => { try { return [git("rev-parse", "HEAD^")]; } catch { return []; } })(),
-    originHeadSha: (() => { try { git("fetch", "origin", "--quiet"); return git("rev-parse", "origin/main"); } catch { return git("rev-parse", "HEAD"); } })(),
+    originHeadSha: (() => { try { git("fetch", "origin", "--quiet"); return git("rev-parse", "origin/main"); } catch { return ""; } })(),
     activeWal: existsSync(walPath) && statSync(walPath).size > 0,
     freeDiskBytes: Number(st.bavail) * Number(st.bsize),
     minFreeDiskBytes: policy.guards.minFreeDiskBytes,
@@ -237,7 +236,6 @@ try {
       nextCandidate: pickNext(queue),
     });
   }
-
   // queue: READY → CLAIMED → RUNNING（atomic write）。
   const taskStatuses: Record<string, string> = Object.fromEntries(queue.tasks.map((t: any) => [t.taskId, t.status]));
   updateTask(queue, task.taskId, { status: "CLAIMED", attemptCount: (task.attemptCount ?? 0) + 1, workflowRunId: runId, requestId: request.requestId, authoritySha: request.authoritySha });
