@@ -6,7 +6,7 @@ const RETAINED_PREFIX = "reports/automation/retained-outputs/";
 const HISTORY_PREFIX = "reports/automation/history/";
 const RUN_ID_RE = /^[0-9A-Za-z._-]+$/u;
 const GITHUB_RUN_ID_RE = /^[0-9]+$/u;
-const HISTORY_RE = /^reports\/automation\/history\/([0-9A-Za-z._-]+)-TASK-[0-9A-Za-z._-]+\.json$/u;
+const HISTORY_RE = /^reports\/automation\/history\/([0-9A-Za-z._-]+)-(TASK-[0-9A-Za-z._-]+)\.json$/u;
 const RETAINED_RE = /^reports\/automation\/retained-outputs\/([0-9A-Za-z._-]+)\/[^/]+$/u;
 const TRUSTED_GIT_BIN = process.env.TRUSTED_GIT_BIN ?? "";
 
@@ -48,6 +48,7 @@ function validateRetainedOutputCommit(input) {
       throw new Error(`RETAINED_COMMIT_HISTORY_PATH_INVALID:${historyPath}`);
     }
     const pathRunId = historyMatch[1] ?? "";
+    const pathTaskId = historyMatch[2] ?? "";
     if (expectedRunId != null && expectedRunId !== "local" && pathRunId !== expectedRunId) {
       throw new Error(`RETAINED_COMMIT_HISTORY_RUN_ID_MISMATCH:${pathRunId}!=${expectedRunId}`);
     }
@@ -61,6 +62,9 @@ function validateRetainedOutputCommit(input) {
     }
     if (String(history.runId ?? "") !== pathRunId) {
       throw new Error(`RETAINED_COMMIT_HISTORY_RUN_ID_MISMATCH:${historyPath}`);
+    }
+    if (String(history.taskId ?? "") !== pathTaskId) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_TASK_ID_MISMATCH:${historyPath}`);
     }
     if (!Array.isArray(history.outputs) || history.outputs.some((value) => typeof value !== "string")) {
       throw new Error(`RETAINED_COMMIT_HISTORY_OUTPUTS_INVALID:${historyPath}`);
