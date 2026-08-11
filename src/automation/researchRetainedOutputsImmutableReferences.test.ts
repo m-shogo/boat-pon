@@ -28,6 +28,7 @@ function retain(root: string, outputPaths: string[]) {
 
 test("immutable registry references must exist before entering terminal history", () => {
   withRoot((root) => {
+    put(root, "research/registries/experiments/existing.json");
     assert.throws(
       () => retain(root, ["research/registries/experiments/missing.json"]),
       /RETAINED_OUTPUT_IMMUTABLE_MISSING/u,
