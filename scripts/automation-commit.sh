@@ -29,6 +29,19 @@ ALLOWED_EXACT=(
 )
 MAX_BYTES=2097152
 
+# task code は同じ job で動き、$GITHUB_ENV 経由で後続 step の環境を変更できる。
+# GIT_* は git dir/worktree/config/helper 等を差し替えられ、proxy 環境変数は canonical HTTPS URL を
+# 別 endpoint へ中継できるため、trusted git invocation より前に task-controlled transport 環境を破棄する。
+while IFS= read -r env_name; do
+  case "$env_name" in
+    GIT_*) unset "$env_name" ;;
+  esac
+done < <(compgen -e)
+unset HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY http_proxy https_proxy all_proxy no_proxy
+# self-hosted runner の user/system git config も task が永続変更できるため、trusted helper では参照しない。
+export GIT_CONFIG_NOSYSTEM=1
+export GIT_CONFIG_GLOBAL=/dev/null
+
 # task code は同じ worktree を使うため、repo-local git hooks / fsmonitor を信頼しない。
 # post-checkout / pre-commit / pre-push 等から CAS・index・push credential 境界を変更させない。
 git_no_hooks() {
