@@ -4,7 +4,6 @@ import {
   fstatSync,
   lstatSync,
   openSync,
-  readFileSync,
   readSync,
   readdirSync,
 } from "node:fs";
@@ -97,8 +96,13 @@ function readGovernanceFileDescriptor(path: string, maxBytes?: number): { text: 
     if (maxBytes !== undefined && stat.size > maxBytes) {
       throw new Error(`governance scan file exceeds byte limit: ${path}`);
     }
-    const content = maxBytes === undefined ? readFileSync(fd) : readDescriptorBounded(fd, path, maxBytes);
+    const readLimit = maxBytes === undefined ? stat.size : Math.min(maxBytes, stat.size);
+    const content = readDescriptorBounded(fd, path, readLimit);
     const bytes = content.byteLength;
+    const postReadStat = fstatSync(fd);
+    if (postReadStat.size !== stat.size || bytes !== stat.size) {
+      throw new Error(`governance scan file changed during read: ${path}`);
+    }
     let text: string;
     try {
       text = STRICT_UTF8_DECODER.decode(content);
