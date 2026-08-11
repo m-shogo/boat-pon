@@ -7,9 +7,10 @@ import test from "node:test";
 
 const repoRoot = resolve(process.cwd());
 const script = resolve(repoRoot, "scripts/build-intent-cli.ts");
+const tsxLoader = import.meta.resolve("tsx");
 
 function run(args: string[], cwd = repoRoot) {
-  return spawnSync(process.execPath, ["--import", "tsx", script, ...args], {
+  return spawnSync(process.execPath, ["--import", tsxLoader, script, ...args], {
     cwd,
     encoding: "utf8",
   });
