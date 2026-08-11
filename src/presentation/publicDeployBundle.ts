@@ -116,6 +116,9 @@ export async function assemblePublicDashboardDeploy(options: {
       if (sourceInfo.isSymbolicLink() || !sourceInfo.isFile()) {
         throw new Error(`snapshot input must be a regular file: ${source}`);
       }
+      if (sourceInfo.size > MAX_PUBLIC_FILE_BYTES) {
+        throw new Error(`refusing to copy oversized public snapshot: ${source}`);
+      }
       await cp(source, join(target, name), { force: true });
     }
   }
