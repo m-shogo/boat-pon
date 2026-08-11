@@ -27,6 +27,16 @@ test("trusted CLI inspects only git changes under retained-output and history ro
   assert.match(cli, /productionApplyAuthorized:\s*false/u);
 });
 
+test("trusted CLI binds history validation and readback to one file descriptor", () => {
+  assert.match(cli, /openSync\(absolutePath, fsConstants\.O_RDONLY \| fsConstants\.O_NOFOLLOW \| fsConstants\.O_NONBLOCK\)/u);
+  assert.match(cli, /const stat = fstatSync\(fd\)/u);
+  assert.match(cli, /stat\.dev !== expectedStat\.dev/u);
+  assert.match(cli, /stat\.ino !== expectedStat\.ino/u);
+  assert.match(cli, /stat\.size !== expectedStat\.size/u);
+  assert.match(cli, /return readFileSync\(fd, "utf8"\)/u);
+  assert.doesNotMatch(cli, /return readFileSync\(absolutePath, "utf8"\)/u);
+});
+
 test("automation commit runs retained gate before staging, cleaning or branch switching", () => {
   const gateIndex = commit.indexOf("check-research-retained-output-commit.mjs");
   const stageIndex = commit.indexOf('STAGE="$(mktemp -d)"');
