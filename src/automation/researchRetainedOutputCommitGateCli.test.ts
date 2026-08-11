@@ -26,11 +26,20 @@ function put(root: string, relativePath: string, content: string): void {
   writeFileSync(path, content, "utf8");
 }
 
-function runGate(root: string, runId: string): string {
+function runGate(
+  root: string,
+  runId: string,
+  github: { actions?: boolean; runId?: string } = {},
+): string {
   return execFileSync(process.execPath, [gateCli, `--run-id=${runId}`], {
     cwd: root,
     encoding: "utf8",
-    env: { ...process.env, TRUSTED_GIT_BIN: trustedGitBin },
+    env: {
+      ...process.env,
+      TRUSTED_GIT_BIN: trustedGitBin,
+      GITHUB_ACTIONS: github.actions ? "true" : "false",
+      GITHUB_RUN_ID: github.runId ?? "",
+    },
   });
 }
 
@@ -46,6 +55,37 @@ test("CLI accepts an untracked retained output referenced by same-run history", 
     assert.equal(value.referencedRetainedPathCount, 1);
     assert.equal(value.currentBuyConnectionAuthorized, false);
     assert.equal(value.productionApplyAuthorized, false);
+  });
+});
+
+test("CLI binds trusted run ID to the GitHub Actions run context", () => {
+  withRepo((root) => {
+    const runId = "12345";
+    const history = `reports/automation/history/${runId}-TASK-N2-011.json`;
+    put(root, history, `${JSON.stringify({ runId, outputs: [], result: "PASS" })}\n`);
+    const value = JSON.parse(runGate(root, runId, { actions: true, runId })) as Record<string, unknown>;
+    assert.equal(value.historyPathCount, 1);
+    assert.throws(
+      () => runGate(root, "77777", { actions: true, runId }),
+      /RETAINED_COMMIT_GITHUB_RUN_ID_MISMATCH:77777!=12345/u,
+    );
+    assert.throws(
+      () => runGate(root, "local", { actions: true, runId }),
+      /RETAINED_COMMIT_GITHUB_RUN_ID_MISMATCH:local!=12345/u,
+    );
+  });
+});
+
+test("CLI fails closed when GitHub Actions run identity is missing or malformed", () => {
+  withRepo((root) => {
+    assert.throws(
+      () => runGate(root, "12345", { actions: true, runId: "" }),
+      /RETAINED_COMMIT_GITHUB_RUN_ID_INVALID/u,
+    );
+    assert.throws(
+      () => runGate(root, "12345", { actions: true, runId: "not-numeric" }),
+      /RETAINED_COMMIT_GITHUB_RUN_ID_INVALID/u,
+    );
   });
 });
 

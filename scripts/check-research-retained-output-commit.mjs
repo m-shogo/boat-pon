@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 const RETAINED_PREFIX = "reports/automation/retained-outputs/";
 const HISTORY_PREFIX = "reports/automation/history/";
 const RUN_ID_RE = /^[0-9A-Za-z._-]+$/u;
+const GITHUB_RUN_ID_RE = /^[0-9]+$/u;
 const HISTORY_RE = /^reports\/automation\/history\/([0-9A-Za-z._-]+)-TASK-[0-9A-Za-z._-]+\.json$/u;
 const RETAINED_RE = /^reports\/automation\/retained-outputs\/([0-9A-Za-z._-]+)\/[^/]+$/u;
 const TRUSTED_GIT_BIN = process.env.TRUSTED_GIT_BIN ?? "";
@@ -119,6 +120,17 @@ function validateRetainedOutputCommit(input) {
   };
 }
 
+const requestedRunId = argument("run-id");
+if (process.env.GITHUB_ACTIONS === "true") {
+  const githubRunId = (process.env.GITHUB_RUN_ID ?? "").trim();
+  if (!GITHUB_RUN_ID_RE.test(githubRunId)) {
+    throw new Error("RETAINED_COMMIT_GITHUB_RUN_ID_INVALID");
+  }
+  if (requestedRunId !== githubRunId) {
+    throw new Error(`RETAINED_COMMIT_GITHUB_RUN_ID_MISMATCH:${requestedRunId ?? "missing"}!=${githubRunId}`);
+  }
+}
+
 const repoRoot = resolve(process.cwd());
 const relevantRoots = ["reports/automation/retained-outputs", "reports/automation/history"];
 const changedPaths = [...new Set([
@@ -129,7 +141,7 @@ const changedPaths = [...new Set([
 
 const result = validateRetainedOutputCommit({
   changedPaths,
-  expectedRunId: argument("run-id"),
+  expectedRunId: requestedRunId,
   readText: (relativePath) => readFileSync(resolve(repoRoot, relativePath), "utf8"),
 });
 
