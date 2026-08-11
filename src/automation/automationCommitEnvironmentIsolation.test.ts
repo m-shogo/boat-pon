@@ -22,7 +22,7 @@ test("automation commit sanitizes task-controlled runtime before trusted git/nod
   assert.match(script, /TRUSTED_NODE_BIN="\$\{TRUSTED_NODE_BIN:-\}"/u);
 
   const sanitizeIndex = script.indexOf("export PATH=/usr/bin:/bin:/usr/sbin:/sbin");
-  const firstTrustedGitIndex = script.indexOf('cd "$(git_no_hooks rev-parse --show-toplevel)"');
+  const firstTrustedGitIndex = script.indexOf('GIT_TOP_LEVEL="$(git_no_hooks rev-parse --show-toplevel)"');
   const retainedGateIndex = script.indexOf('"$TRUSTED_NODE_BIN" scripts/check-research-retained-output-commit.mjs');
   assert.notEqual(sanitizeIndex, -1);
   assert.notEqual(firstTrustedGitIndex, -1);

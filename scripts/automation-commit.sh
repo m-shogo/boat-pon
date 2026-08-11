@@ -70,8 +70,21 @@ assert_trusted_transport_config() {
   fi
 }
 
-cd "$(git_no_hooks rev-parse --show-toplevel)"
-REPO_ROOT="$(pwd)"
+# task-controlled .git/config の core.worktree 等で Git が別 worktree を authority として
+# 解釈しても、trusted helper 開始時の physical cwd から逸脱した top-level は受け入れない。
+START_REPO_ROOT="$(pwd -P)"
+GIT_TOP_LEVEL="$(git_no_hooks rev-parse --show-toplevel)"
+if [ ! -d "$GIT_TOP_LEVEL" ]; then
+  echo "::error::git top-level is not a directory; refusing untrusted worktree identity"
+  exit 1
+fi
+GIT_TOP_LEVEL_PHYSICAL="$(cd "$GIT_TOP_LEVEL" && pwd -P)"
+if [ "$GIT_TOP_LEVEL_PHYSICAL" != "$START_REPO_ROOT" ]; then
+  echo "::error::git top-level escaped trusted physical cwd; refusing untrusted worktree identity"
+  exit 1
+fi
+cd "$START_REPO_ROOT"
+REPO_ROOT="$START_REPO_ROOT"
 
 # 変更 path を取得（untracked 含む）。-uall で新規ディレクトリを個別 file まで展開する
 # （git は全 untracked な新規 dir を "dir/" に畳むため、-uall が無いと control/ を取りこぼす）。
