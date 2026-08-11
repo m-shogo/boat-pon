@@ -5,7 +5,6 @@ const HISTORY_RE = /^reports\/automation\/history\/([0-9A-Za-z._-]+)-(TASK-[0-9A
 const RETAINED_RE = /^reports\/automation\/retained-outputs\/([0-9A-Za-z._-]+)\/[^/]+$/u;
 const TERMINAL_RESULTS = new Set([
   "PASS",
-  "DRY_RUN_OK",
   "CONDITIONAL",
   "BLOCKED",
   "FAILED",

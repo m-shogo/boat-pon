@@ -18,11 +18,11 @@ function validate(result: string): void {
   });
 }
 
-test("retained history result contract matches durable history results", () => {
-  for (const result of ["PASS", "DRY_RUN_OK", "CONDITIONAL", "BLOCKED", "FAILED"]) {
+test("retained history result contract rejects persisted dry runs", () => {
+  for (const result of ["PASS", "CONDITIONAL", "BLOCKED", "FAILED"]) {
     assert.doesNotThrow(() => validate(result), result);
   }
-  for (const result of ["FAILED_FINAL", "FAILED_RETRYABLE", "REJECTED_L4", "TASK_NOT_FOUND", "TASK_NOT_READY"]) {
+  for (const result of ["DRY_RUN_OK", "FAILED_FINAL", "FAILED_RETRYABLE", "REJECTED_L4", "TASK_NOT_FOUND", "TASK_NOT_READY"]) {
     assert.throws(() => validate(result), /RETAINED_COMMIT_HISTORY_RESULT_INVALID/u, result);
   }
 });
