@@ -68,6 +68,16 @@ test("invalid run directory and filename are fail-closed", () => {
   });
 });
 
+test("dot-only retained basenames are not canonical writer output", () => {
+  withRoot((root) => {
+    put(root, "reports/automation/retained-outputs/123/<digest>-.", "one\n");
+    put(root, "reports/automation/retained-outputs/123/<digest>-..", "two\n");
+    const inventory = inventoryResearchRetainedOutputs({ repoRoot: root });
+    assert.equal(inventory.invalidFileCount, 2);
+    assert.ok(inventory.entries.every((entry) => entry.issues.includes("RETAINED_INVENTORY_FILENAME_INVALID")));
+  });
+});
+
 test("retained inventory rejects symlinked parent directories", () => {
   withRoot((root) => {
     const outsideAutomation = mkdtempSync(join(tmpdir(), "boat-pon-retained-parent-outside-"));
