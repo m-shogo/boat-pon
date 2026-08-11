@@ -91,7 +91,7 @@ function invalidEntry(input: {
 function readValidatedRetainedFile(path: string, expectedStat: Stats): Buffer | null {
   let fd: number;
   try {
-    fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+    fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW | fsConstants.O_NONBLOCK);
   } catch {
     return null;
   }
