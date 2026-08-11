@@ -54,6 +54,20 @@ test("retained temp staging is exclusive and verified through the created descri
   assert.doesNotMatch(retained, /readFileSync\(tempPath/u);
 });
 
+test("retained publication EEXIST is idempotent only for an exact immutable target", () => {
+  const materializeStart = retained.indexOf("function materializePreparedOutputs");
+  const materialize = retained.slice(materializeStart);
+  const raceIndex = materialize.indexOf('error.code === "EEXIST"');
+  const existingCheckIndex = materialize.indexOf("existingRetainedTargetMatches({", raceIndex);
+  const continueIndex = materialize.indexOf("continue;", existingCheckIndex);
+  assert.ok(raceIndex >= 0);
+  assert.ok(existingCheckIndex > raceIndex);
+  assert.ok(continueIndex > existingCheckIndex);
+  assert.match(materialize.slice(existingCheckIndex, continueIndex), /expectedContent:\s*item\.content/u);
+  assert.match(materialize.slice(existingCheckIndex, continueIndex), /expectedDigest:\s*item\.contentDigest/u);
+  assert.match(materialize.slice(existingCheckIndex, continueIndex), /RETAINED_OUTPUT_TARGET_RACE/u);
+});
+
 test("retained output count and aggregate bytes are fail-closed per run", () => {
   assert.match(retained, /MAX_EXECUTOR_OUTPUT_PATHS\s*=\s*64/u);
   assert.match(retained, /MAX_RETAINED_TOTAL_BYTES\s*=\s*8_388_608/u);
