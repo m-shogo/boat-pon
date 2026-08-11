@@ -4,23 +4,27 @@ import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 import test from "node:test";
 
+import { buildResearchDurableKnowledgeCompletenessReport } from "./researchDurableKnowledgeCompleteness";
 import {
+  buildResearchDurableRetentionSnapshot,
   durableRetentionSnapshotRelativePath,
   persistResearchDurableRetentionSnapshot,
   type ResearchDurableRetentionSnapshot,
 } from "./researchDurableRetentionSnapshot";
 
-function minimalSnapshot(): ResearchDurableRetentionSnapshot {
-  return {
-    effectiveDateJst: "2026-08-08",
-    evidenceDigest: "a".repeat(64),
-  } as ResearchDurableRetentionSnapshot;
+function minimalSnapshot(repoRoot: string): ResearchDurableRetentionSnapshot {
+  return buildResearchDurableRetentionSnapshot({
+    report: buildResearchDurableKnowledgeCompletenessReport({ repoRoot }),
+    sourceStateSha: "d".repeat(40),
+    mainAuthoritySha: "e".repeat(40),
+    firstObservedAt: "2026-08-07T14:00:00.000Z",
+  });
 }
 
 test("dangling final snapshot symlink is rejected instead of replaced", () => {
   const root = mkdtempSync(join(tmpdir(), "boat-pon-retention-dangling-final-"));
   try {
-    const snapshot = minimalSnapshot();
+    const snapshot = minimalSnapshot(root);
     const relativePath = durableRetentionSnapshotRelativePath(snapshot);
     const absolutePath = join(root, relativePath);
     const missingTarget = join(root, "missing-snapshot-target.json");
@@ -41,7 +45,7 @@ test("dangling final snapshot symlink is rejected instead of replaced", () => {
 test("dangling parent symlink is rejected before snapshot directories are created", () => {
   const root = mkdtempSync(join(tmpdir(), "boat-pon-retention-dangling-parent-"));
   try {
-    const snapshot = minimalSnapshot();
+    const snapshot = minimalSnapshot(root);
     const retentionDir = join(root, "reports/automation/retention");
     const missingTarget = join(root, "missing-retention-target");
     mkdirSync(dirname(retentionDir), { recursive: true });

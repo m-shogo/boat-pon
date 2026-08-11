@@ -395,7 +395,8 @@ export function persistResearchDurableRetentionSnapshot(input: {
   repoRoot: string;
   snapshot: ResearchDurableRetentionSnapshot;
 }): ResearchDurableRetentionPersistResult {
-  const relativePath = durableRetentionSnapshotRelativePath(input.snapshot);
+  const snapshot = validateResearchDurableRetentionSnapshot(input.snapshot);
+  const relativePath = durableRetentionSnapshotRelativePath(snapshot);
   const absolutePath = resolveInside(input.repoRoot, relativePath);
   assertSafeParentPath(input.repoRoot, absolutePath);
   const existingText = readExistingSnapshotText(absolutePath);
@@ -410,12 +411,12 @@ export function persistResearchDurableRetentionSnapshot(input: {
     if (durableRetentionSnapshotRelativePath(existing) !== relativePath) {
       throw new Error("DURABLE_RETENTION_EXISTING_SNAPSHOT_PATH_MISMATCH");
     }
-    if (existing.evidenceDigest !== input.snapshot.evidenceDigest) {
+    if (existing.evidenceDigest !== snapshot.evidenceDigest) {
       throw new Error("DURABLE_RETENTION_EXISTING_EVIDENCE_DIGEST_MISMATCH");
     }
     return { changed: false, relativePath, snapshot: existing };
   }
-  const snapshotText = `${JSON.stringify(input.snapshot, null, 2)}\n`;
+  const snapshotText = `${JSON.stringify(snapshot, null, 2)}\n`;
   if (Buffer.byteLength(snapshotText, "utf8") > MAX_EXISTING_SNAPSHOT_BYTES) {
     throw new Error("DURABLE_RETENTION_SNAPSHOT_TOO_LARGE");
   }
@@ -428,10 +429,10 @@ export function persistResearchDurableRetentionSnapshot(input: {
   } catch (error) {
     unlinkSync(tmpPath);
     if (error instanceof Error && "code" in error && error.code === "EEXIST") {
-      return persistResearchDurableRetentionSnapshot(input);
+      return persistResearchDurableRetentionSnapshot({ repoRoot: input.repoRoot, snapshot });
     }
     throw error;
   }
   unlinkSync(tmpPath);
-  return { changed: true, relativePath, snapshot: input.snapshot };
+  return { changed: true, relativePath, snapshot };
 }
