@@ -112,8 +112,10 @@ export class RawStore {
   constructor(root: string) {
     this.root = resolve(root);
     mkdirSync(this.root, { recursive: true, mode: 0o700 });
+    const rootStat = lstatSync(this.root);
+    if (rootStat.isSymbolicLink()) throw new Error("raw root must not be a symlink");
+    if (!rootStat.isDirectory()) throw new Error("raw root must be a directory");
     chmodSync(this.root, 0o700);
-    if (lstatSync(this.root).isSymbolicLink()) throw new Error("raw root must not be a symlink");
   }
 
   write(input: RawWriteInput): RawWriteResult {
