@@ -394,11 +394,19 @@ function materializePreparedOutputs(repoRoot: string, prepared: PreparedRetained
         }
         try {
           // Hard-link publication is atomic and never replaces an immutable retained target.
-          // A concurrent creator is a fail-closed race, not permission to overwrite evidence.
           linkSync(tempPath, item.retainedAbsolutePath);
         } catch (error) {
           if (error instanceof Error && "code" in error && error.code === "EEXIST") {
-            throw new Error(`RETAINED_OUTPUT_TARGET_RACE:${item.retainedRelativePath}`);
+            const matchesExisting = existingRetainedTargetMatches({
+              retainedAbsolutePath: item.retainedAbsolutePath,
+              retainedRelativePath: item.retainedRelativePath,
+              expectedContent: item.content,
+              expectedDigest: item.contentDigest,
+            });
+            if (!matchesExisting) {
+              throw new Error(`RETAINED_OUTPUT_TARGET_RACE:${item.retainedRelativePath}`);
+            }
+            continue;
           }
           throw error;
         }
