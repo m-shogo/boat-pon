@@ -12,7 +12,7 @@ import { dirname, resolve, sep } from "node:path";
 
 const RETAINED_PREFIX = "reports/automation/retained-outputs/";
 const HISTORY_PREFIX = "reports/automation/history/";
-const RUN_ID_RE = /^[0-9A-Za-z._-]+$/u;
+const RUN_ID_RE = /^(?!\.{1,2}$)[0-9A-Za-z._-]+$/u;
 const GITHUB_RUN_ID_RE = /^[0-9]+$/u;
 const HISTORY_RE = /^reports\/automation\/history\/([0-9A-Za-z._-]+)-(TASK-[0-9A-Za-z._-]+)\.json$/u;
 const RETAINED_RE = /^reports\/automation\/retained-outputs\/([0-9A-Za-z._-]+)\/[0-9a-f]{64}-(?!\.{1,2}$)[0-9A-Za-z._-]{1,160}$/u;
@@ -76,6 +76,9 @@ function validateRetainedOutputCommit(input) {
     }
     const pathRunId = historyMatch[1] ?? "";
     const pathTaskId = historyMatch[2] ?? "";
+    if (!RUN_ID_RE.test(pathRunId)) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_PATH_INVALID:${historyPath}`);
+    }
     if (expectedRunId != null && expectedRunId !== "local" && pathRunId !== expectedRunId) {
       throw new Error(`RETAINED_COMMIT_HISTORY_RUN_ID_MISMATCH:${pathRunId}!=${expectedRunId}`);
     }
@@ -122,6 +125,9 @@ function validateRetainedOutputCommit(input) {
         throw new Error(`RETAINED_COMMIT_HISTORY_RETAINED_PATH_INVALID:${historyPath}:${output}`);
       }
       const outputRunId = retainedMatch[1] ?? "";
+      if (!RUN_ID_RE.test(outputRunId)) {
+        throw new Error(`RETAINED_COMMIT_HISTORY_RETAINED_PATH_INVALID:${historyPath}:${output}`);
+      }
       if (outputRunId !== pathRunId) {
         throw new Error(`RETAINED_COMMIT_HISTORY_RETAINED_RUN_ID_MISMATCH:${historyPath}:${outputRunId}!=${pathRunId}`);
       }
@@ -138,6 +144,7 @@ function validateRetainedOutputCommit(input) {
     const match = path.match(RETAINED_RE);
     if (!match) throw new Error(`RETAINED_COMMIT_PATH_INVALID:${path}`);
     const runId = match[1] ?? "";
+    if (!RUN_ID_RE.test(runId)) throw new Error(`RETAINED_COMMIT_PATH_INVALID:${path}`);
     if (expectedRunId != null && expectedRunId !== "local" && runId !== expectedRunId) {
       throw new Error(`RETAINED_COMMIT_RUN_ID_MISMATCH:${runId}!=${expectedRunId}`);
     }
