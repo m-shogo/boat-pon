@@ -12,9 +12,11 @@ test("automation commit routes every git command through trusted callback isolat
     .split("\n")
     .filter((line) => /^\s*git(?:\s|$)/u.test(line));
 
-  assert.deepEqual(directGitLines, [
-    '  git -c core.hooksPath=/dev/null -c core.fsmonitor=false "$@"',
-  ]);
+  assert.deepEqual(directGitLines, []);
+  assert.match(
+    source,
+    /"\$TRUSTED_GIT_BIN" -c core\.hooksPath=\/dev\/null -c core\.fsmonitor=false "\$@"/u,
+  );
   assert.match(source, /git_no_hooks checkout -- \. /u);
   assert.match(source, /git_no_hooks commit -q -m/u);
   assert.match(
