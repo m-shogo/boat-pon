@@ -48,10 +48,14 @@ for path in "${CHANGED[@]}"; do
     *.sqlite|*.sqlite-*|*.lzh|*.zip|*.model|*.bin)
       echo "::error::refusing to commit DB/archive/model artifact: $path"; exit 1 ;;
   esac
-  if [ -L "$path" ]; then
-    echo "::error::refusing to commit symbolic link: $path"
-    exit 1
-  fi
+  probe="$path"
+  while [ "$probe" != "." ] && [ "$probe" != "/" ]; do
+    if [ -L "$probe" ]; then
+      echo "::error::refusing to commit through symbolic link: $probe (candidate: $path)"
+      exit 1
+    fi
+    probe="$(dirname "$probe")"
+  done
   if [ -f "$path" ]; then
     size=$(wc -c < "$path" | tr -d ' ')
     if [ "$size" -gt "$MAX_BYTES" ]; then
