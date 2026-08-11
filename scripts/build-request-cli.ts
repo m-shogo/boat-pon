@@ -7,13 +7,26 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 const root = resolve(process.cwd());
+const fail = (m: string): never => { console.error(`invalid input: ${m}`); process.exit(1); };
+const VALUE_ARGS = new Set([
+  "task-id",
+  "requested-action",
+  "safety-level",
+  "request-reference",
+  "requested-by",
+  "max-duration-seconds",
+  "authority-sha",
+  "request-id",
+]);
+
+validateCliArgs(process.argv.slice(2));
+
 const arg = (n: string): string | null => {
   const d = process.argv.find((v) => v.startsWith(`--${n}=`));
   if (d) return d.slice(n.length + 3);
   const i = process.argv.indexOf(`--${n}`);
   return i >= 0 ? process.argv[i + 1] ?? null : null;
 };
-const fail = (m: string): never => { console.error(`invalid input: ${m}`); process.exit(1); };
 
 const taskId = arg("task-id") ?? fail("--task-id");
 const requestedAction = arg("requested-action") ?? "run-task";
@@ -64,3 +77,33 @@ if (write) {
   console.error(`wrote ${outPath}`);
 }
 process.stdout.write(body);
+
+function validateCliArgs(values: string[]): void {
+  const seen = new Set<string>();
+  for (let i = 0; i < values.length; i += 1) {
+    const token = values[i]!;
+    if (!token.startsWith("--")) fail(`unknown positional argument: ${token}`);
+
+    if (token === "--write") {
+      if (seen.has("write")) fail("duplicate argument: --write");
+      seen.add("write");
+      continue;
+    }
+    if (token.startsWith("--write=")) fail("--write does not accept a value");
+
+    const equalsIndex = token.indexOf("=");
+    const name = token.slice(2, equalsIndex >= 0 ? equalsIndex : undefined);
+    if (!VALUE_ARGS.has(name)) fail(`unknown argument: --${name}`);
+    if (seen.has(name)) fail(`duplicate argument: --${name}`);
+    seen.add(name);
+
+    if (equalsIndex >= 0) {
+      if (!token.slice(equalsIndex + 1)) fail(`--${name} requires a value`);
+      continue;
+    }
+
+    const next = values[i + 1];
+    if (!next || next.startsWith("--")) fail(`--${name} requires a value`);
+    i += 1;
+  }
+}
