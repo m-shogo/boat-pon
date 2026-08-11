@@ -25,10 +25,10 @@ ALLOWED_EXACT=(
 )
 MAX_BYTES=2097152
 
-# task code は同じ worktree を使うため、repo-local git hooks を信頼しない。
+# task code は同じ worktree を使うため、repo-local git hooks / fsmonitor を信頼しない。
 # post-checkout / pre-commit / pre-push 等から CAS・index・push credential 境界を変更させない。
 git_no_hooks() {
-  git -c core.hooksPath=/dev/null "$@"
+  git -c core.hooksPath=/dev/null -c core.fsmonitor=false "$@"
 }
 
 cd "$(git_no_hooks rev-parse --show-toplevel)"
