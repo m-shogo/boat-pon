@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { linkSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
@@ -79,6 +79,22 @@ test("symlink retained evidence is never followed", () => {
     const inventory = inventoryResearchRetainedOutputs({ repoRoot: root });
     assert.equal(inventory.invalidFileCount, 1);
     assert.ok(inventory.entries[0]?.issues.includes("RETAINED_INVENTORY_FILE_TYPE_INVALID"));
+    assert.equal(inventory.entries[0]?.contentDigest, null);
+  });
+});
+
+test("hardlinked retained evidence is rejected before hashing", () => {
+  withRoot((root) => {
+    const content = "shared retained evidence\n";
+    const outside = join(root, "outside.txt");
+    writeFileSync(outside, content, "utf8");
+    const runDir = join(root, "reports/automation/retained-outputs/123");
+    mkdirSync(runDir, { recursive: true });
+    const digest = createHash("sha256").update(content).digest("hex");
+    linkSync(outside, join(runDir, `${digest}-report.txt`));
+    const inventory = inventoryResearchRetainedOutputs({ repoRoot: root });
+    assert.equal(inventory.invalidFileCount, 1);
+    assert.ok(inventory.entries[0]?.issues.includes("RETAINED_INVENTORY_FILE_LINK_COUNT_INVALID"));
     assert.equal(inventory.entries[0]?.contentDigest, null);
   });
 });
