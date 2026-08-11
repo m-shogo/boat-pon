@@ -52,7 +52,9 @@ test("existing retention evidence is fail-closed, bounded, and never overwritten
   assert.match(source, /readSync\(fd, chunk, 0, chunk\.length, null\)/u);
   assert.match(source, /totalBytes > MAX_EXISTING_SNAPSHOT_BYTES/u);
   assert.match(source, /postReadStat\.size !== stat\.size \|\| totalBytes !== stat\.size/u);
-  assert.match(source, /Buffer\.concat\(chunks, totalBytes\)\.toString\("utf8"\)/u);
+  assert.match(source, /new TextDecoder\("utf-8", \{ fatal: true, ignoreBOM: true \}\)/u);
+  assert.match(source, /STRICT_UTF8_DECODER\.decode\(Buffer\.concat\(chunks, totalBytes\)\)/u);
+  assert.match(source, /DURABLE_RETENTION_EXISTING_SNAPSHOT_UTF8_INVALID/u);
   assert.match(source, /finally \{\s*closeSync\(fd\)/u);
   assert.doesNotMatch(source, /readFileSync\(fd/u);
   assert.doesNotMatch(source, /readFileSync\(absolutePath/u);
