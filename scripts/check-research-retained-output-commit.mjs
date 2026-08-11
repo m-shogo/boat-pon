@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { resolve } from "node:path";
 
 const RETAINED_PREFIX = "reports/automation/retained-outputs/";
@@ -131,7 +131,21 @@ if (process.env.GITHUB_ACTIONS === "true") {
   }
 }
 
-const repoRoot = resolve(process.cwd());
+const repoRoot = realpathSync(process.cwd());
+const gitTopLevels = gitLines(["rev-parse", "--show-toplevel"]);
+if (gitTopLevels.length !== 1) {
+  throw new Error("RETAINED_COMMIT_WORKTREE_IDENTITY_INVALID");
+}
+let gitRepoRoot;
+try {
+  gitRepoRoot = realpathSync(resolve(gitTopLevels[0]));
+} catch {
+  throw new Error("RETAINED_COMMIT_WORKTREE_IDENTITY_INVALID");
+}
+if (gitRepoRoot !== repoRoot) {
+  throw new Error(`RETAINED_COMMIT_WORKTREE_MISMATCH:${gitRepoRoot}!=${repoRoot}`);
+}
+
 const relevantRoots = ["reports/automation/retained-outputs", "reports/automation/history"];
 const changedPaths = [...new Set([
   ...gitLines(["diff", "--no-ext-diff", "--name-only", "--", ...relevantRoots]),
