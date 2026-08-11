@@ -130,6 +130,7 @@ export function inventoryResearchRetainedOutputs(input: {
       const expectedContentDigest = match?.[1] ?? null;
       const issues: string[] = [];
       if (fileDirent.isSymbolicLink() || !stat.isFile()) issues.push("RETAINED_INVENTORY_FILE_TYPE_INVALID");
+      if (stat.isFile() && stat.nlink !== 1) issues.push("RETAINED_INVENTORY_FILE_LINK_COUNT_INVALID");
       if (!match) issues.push("RETAINED_INVENTORY_FILENAME_INVALID");
       if (stat.isFile() && (stat.size <= 0 || stat.size > MAX_RETAINED_FILE_BYTES)) {
         issues.push("RETAINED_INVENTORY_FILE_SIZE_INVALID");
