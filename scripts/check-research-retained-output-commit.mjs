@@ -44,6 +44,9 @@ function validateRetainedOutputCommit(input) {
       throw new Error(`RETAINED_COMMIT_HISTORY_PATH_INVALID:${historyPath}`);
     }
     const pathRunId = historyMatch[1] ?? "";
+    if (expectedRunId != null && expectedRunId !== "local" && pathRunId !== expectedRunId) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_RUN_ID_MISMATCH:${pathRunId}!=${expectedRunId}`);
+    }
     let history;
     try {
       const parsed = JSON.parse(input.readText(historyPath));
