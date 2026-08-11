@@ -67,6 +67,9 @@ export function validateRetainedOutputCommit(input: {
       throw new Error(`RETAINED_COMMIT_HISTORY_OUTPUTS_INVALID:${historyPath}`);
     }
     const outputs = history.outputs as string[];
+    if (new Set(outputs).size !== outputs.length) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_OUTPUTS_DUPLICATE:${historyPath}`);
+    }
     for (const output of outputs) {
       if (!output.startsWith(RETAINED_PREFIX)) continue;
       const retainedMatch = output.match(RETAINED_RE);
