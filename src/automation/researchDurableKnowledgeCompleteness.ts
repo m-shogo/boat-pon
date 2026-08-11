@@ -494,8 +494,8 @@ function assessHistoryFile(input: {
   historyRelativePath: string;
 }): ResearchDurableRunAssessment {
   const absolutePath = resolveInside(input.repoRoot, input.historyRelativePath);
-  const stat = statSync(absolutePath);
-  if (!stat.isFile() || stat.size <= 0 || stat.size > MAX_HISTORY_BYTES) {
+  const stat = lstatSync(absolutePath);
+  if (stat.isSymbolicLink() || !stat.isFile() || stat.size <= 0 || stat.size > MAX_HISTORY_BYTES) {
     return invalidRunAssessment({
       relativePath: input.historyRelativePath,
       contentDigest: "",
