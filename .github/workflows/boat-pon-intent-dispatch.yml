@@ -112,8 +112,18 @@ jobs:
         if: always()
         run: cat reports/automation/current-status.json || true
 
-      - name: Commit control state + results to automation branch
+      - name: Restore trusted automation commit helpers
+        id: restore_commit_helper
         if: always()
+        run: |
+          set -euo pipefail
+          git checkout "${GITHUB_SHA}" -- \
+            scripts/automation-commit.sh \
+            scripts/check-research-retained-output-commit.ts \
+            src/automation/researchRetainedOutputCommitGate.ts
+
+      - name: Commit control state + results to automation branch
+        if: always() && steps.restore_commit_helper.outcome == 'success'
         env:
           RUN_ID: ${{ github.run_id }}
           BOAT_PON_AUTOMATION_PUSH_TOKEN: ${{ github.token }}
