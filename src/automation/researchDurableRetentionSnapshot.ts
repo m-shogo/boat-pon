@@ -162,7 +162,10 @@ function assertSafeParentPath(rootDir: string, absolutePath: string): void {
 function readExistingSnapshotText(absolutePath: string): string | null {
   let fd: number;
   try {
-    fd = openSync(absolutePath, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+    fd = openSync(
+      absolutePath,
+      fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW | fsConstants.O_NONBLOCK,
+    );
   } catch (error) {
     if (error instanceof Error && "code" in error && error.code === "ENOENT") return null;
     if (error instanceof Error && "code" in error && error.code === "ELOOP") {
