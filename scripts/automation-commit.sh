@@ -13,7 +13,11 @@ REPO_ROOT="$(pwd)"
 
 # 変更 path を取得（untracked 含む）。-uall で新規ディレクトリを個別 file まで展開する
 # （git は全 untracked な新規 dir を "dir/" に畳むため、-uall が無いと control/ を取りこぼす）。
-mapfile -t CHANGED < <(git status --porcelain -uall | sed 's/^...//' | sed 's/^"//;s/"$//' | sort -u)
+# macOS 標準 Bash 3.2 に無い mapfile は使わず、配列へ1行ずつ追加する。
+CHANGED=()
+while IFS= read -r changed_path; do
+  CHANGED+=("$changed_path")
+done < <(git status --porcelain -uall | sed 's/^...//' | sed 's/^"//;s/"$//' | sort -u)
 if [ "${#CHANGED[@]}" -eq 0 ]; then
   echo "NO_CHANGE: nothing to commit"
   exit 0
