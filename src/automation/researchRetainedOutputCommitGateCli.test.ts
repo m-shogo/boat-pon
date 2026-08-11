@@ -44,18 +44,29 @@ function runGate(
   });
 }
 
-test("CLI accepts an untracked retained output referenced by same-run history", () => {
+test("CLI accepts an untracked retained output referenced by same-run terminal history", () => {
   withRepo((root) => {
     const runId = "12345";
     const output = `reports/automation/retained-outputs/${runId}/${"a".repeat(64)}-report.json`;
     const history = `reports/automation/history/${runId}-${taskId}.json`;
     put(root, output, "{}\n");
-    put(root, history, `${JSON.stringify({ runId, taskId, outputs: [output] })}\n`);
+    put(root, history, `${JSON.stringify({ runId, taskId, outputs: [output], result: "PASS" })}\n`);
     const value = JSON.parse(runGate(root, runId)) as Record<string, unknown>;
     assert.equal(value.retainedPathCount, 1);
     assert.equal(value.referencedRetainedPathCount, 1);
     assert.equal(value.currentBuyConnectionAuthorized, false);
     assert.equal(value.productionApplyAuthorized, false);
+  });
+});
+
+test("CLI rejects missing or non-terminal history results", () => {
+  withRepo((root) => {
+    const runId = "12345";
+    const history = `reports/automation/history/${runId}-${taskId}.json`;
+    put(root, history, `${JSON.stringify({ runId, taskId, outputs: [] })}\n`);
+    assert.throws(() => runGate(root, runId), /RETAINED_COMMIT_HISTORY_RESULT_INVALID:.*:missing/u);
+    put(root, history, `${JSON.stringify({ runId, taskId, outputs: [], result: "RUNNING" })}\n`);
+    assert.throws(() => runGate(root, runId), /RETAINED_COMMIT_HISTORY_RESULT_INVALID:.*:RUNNING/u);
   });
 });
 
@@ -97,7 +108,7 @@ test("CLI rejects cross-run retained output lineage", () => {
     const otherOutput = `reports/automation/retained-outputs/99999/${"d".repeat(64)}-report.json`;
     const history = `reports/automation/history/${runId}-${taskId}.json`;
     put(root, output, "{}\n");
-    put(root, history, `${JSON.stringify({ runId, taskId, outputs: [output, otherOutput] })}\n`);
+    put(root, history, `${JSON.stringify({ runId, taskId, outputs: [output, otherOutput], result: "PASS" })}\n`);
     assert.throws(() => runGate(root, runId), /RETAINED_COMMIT_HISTORY_RETAINED_RUN_ID_MISMATCH/u);
   });
 });
@@ -107,7 +118,7 @@ test("CLI rejects history-only cross-run retained output lineage", () => {
     const historyRunId = "12345";
     const otherOutput = `reports/automation/retained-outputs/99999/${"e".repeat(64)}-report.json`;
     const history = `reports/automation/history/${historyRunId}-${taskId}.json`;
-    put(root, history, `${JSON.stringify({ runId: historyRunId, taskId, outputs: [otherOutput] })}\n`);
+    put(root, history, `${JSON.stringify({ runId: historyRunId, taskId, outputs: [otherOutput], result: "PASS" })}\n`);
     assert.throws(() => runGate(root, "77777"), /RETAINED_COMMIT_HISTORY_RUN_ID_MISMATCH:12345!=77777/u);
   });
 });
