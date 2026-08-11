@@ -1,6 +1,7 @@
 import {
   chmodSync,
   closeSync,
+  constants as fsConstants,
   existsSync,
   fstatSync,
   fsyncSync,
@@ -89,6 +90,17 @@ function rejectSymlinkPath(root: string, target: string): void {
   if (existsSync(target) && lstatSync(target).isSymbolicLink()) throw new Error("raw symlink target rejected");
 }
 
+function readRawFileNoFollow(path: string): Buffer {
+  const fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+  try {
+    const stat = fstatSync(fd);
+    if (!stat.isFile()) throw new Error("raw file type rejected");
+    return readFileSync(fd);
+  } finally {
+    closeSync(fd);
+  }
+}
+
 export function contentAddressedRelativePath(hash: string): string {
   if (!/^[a-f0-9]{64}$/.test(hash)) throw new Error("invalid raw hash path");
   return join("sha256", hash.slice(0, 2), hash.slice(2, 4), hash);
@@ -128,7 +140,7 @@ export class RawStore {
     chmodSync(dirname(absolutePath), 0o700);
 
     if (existsSync(absolutePath)) {
-      const existing = readFileSync(absolutePath);
+      const existing = readRawFileNoFollow(absolutePath);
       if (sha256Bytes(existing) !== rawSha256) throw new Error("hash_mismatch");
       return {
         rawSha256,
@@ -158,7 +170,7 @@ export class RawStore {
     } catch (error) {
       unlinkSync(tempPath);
       if (error instanceof Error && "code" in error && error.code === "EEXIST") {
-        const existing = readFileSync(absolutePath);
+        const existing = readRawFileNoFollow(absolutePath);
         if (sha256Bytes(existing) !== rawSha256) throw new Error("hash_mismatch");
         return {
           rawSha256,
@@ -193,7 +205,7 @@ export class RawStore {
     const absolutePath = join(this.root, relativePath);
     ensureWithinRoot(this.root, absolutePath);
     rejectSymlinkPath(this.root, absolutePath);
-    const bytes = readFileSync(absolutePath);
+    const bytes = readRawFileNoFollow(absolutePath);
     if (sha256Bytes(bytes) !== expectedHash) throw new Error("hash_mismatch");
     return bytes;
   }
@@ -222,7 +234,7 @@ export class RawStore {
     ensureWithinRoot(this.root, absolutePath);
     rejectSymlinkPath(this.root, absolutePath);
     if (!existsSync(absolutePath)) return false;
-    const bytes = readFileSync(absolutePath);
+    const bytes = readRawFileNoFollow(absolutePath);
     if (sha256Bytes(bytes) !== expectedHash) throw new Error("hash_mismatch");
     unlinkSync(absolutePath);
     const dirFd = openSync(dirname(absolutePath), "r");
