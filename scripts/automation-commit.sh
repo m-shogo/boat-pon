@@ -12,6 +12,7 @@ EXPECTED_BASE_SHA="${EXPECTED_AUTOMATION_BRANCH_BASE:-}"
 unset EXPECTED_AUTOMATION_BRANCH_BASE
 
 BRANCH="automation/boat-pon-research"
+AUTHORITY_REMOTE_URL="https://github.com/m-shogo/boat-pon.git"
 ALLOWED_PREFIXES=("automation/control/" "automation/requests/" "reports/automation/" "docs/automation/" "research/registries/experiments/" "research/registries/discoveries/")
 IMMUTABLE_PREFIXES=("reports/automation/history/" "reports/automation/retained-outputs/" "research/registries/experiments/" "research/registries/discoveries/")
 ALLOWED_EXACT=(
@@ -124,8 +125,8 @@ git_no_hooks config user.email "automation@boat-pon.invalid"
 git_no_hooks checkout -- . 2>/dev/null || true
 git_no_hooks clean -fdq -- automation reports docs research 2>/dev/null || true
 
-# task-controlled remote fetch refspec を使わず、authority branch ref を明示して更新する。
-git_no_hooks fetch origin "refs/heads/$BRANCH:refs/remotes/origin/$BRANCH" --quiet
+# task-controlled remote.origin.* をauthorityとして使わず、trusted GitHub repository URLへ直接fetchする。
+git_no_hooks fetch "$AUTHORITY_REMOTE_URL" "refs/heads/$BRANCH:refs/remotes/origin/$BRANCH" --quiet
 # compare-and-swap: materialize 時点の trusted step output から branch が進んでいたら
 # control state を上書きせず fail-closed（concurrent 変更の silent clobber を防ぐ）。
 CUR_SHA="$(git_no_hooks rev-parse "origin/$BRANCH" 2>/dev/null || echo none)"
@@ -201,9 +202,9 @@ TASK_ID="$(node -e "try{const s=require('./reports/automation/current-status.jso
 git_no_hooks commit -q -m "report(automation): research run ${RUN_ID:-local} (request ${REQ_ID}, task ${TASK_ID})"
 if [ -n "$PUSH_TOKEN" ]; then
   auth_header="$(printf 'x-access-token:%s' "$PUSH_TOKEN" | base64 | tr -d '\n')"
-  git_no_hooks -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth_header" push origin "$BRANCH" --quiet
+  git_no_hooks -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth_header" push "$AUTHORITY_REMOTE_URL" "$BRANCH" --quiet
 else
-  git_no_hooks push origin "$BRANCH" --quiet
+  git_no_hooks push "$AUTHORITY_REMOTE_URL" "$BRANCH" --quiet
 fi
 echo "pushed to $BRANCH"
 
