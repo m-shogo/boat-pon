@@ -9,7 +9,7 @@ test("automation commit removes raw push token before child processes and authen
   const script = readFileSync(scriptPath, "utf8");
   const capture = script.indexOf('PUSH_TOKEN="${BOAT_PON_AUTOMATION_PUSH_TOKEN:-}"');
   const unset = script.indexOf("unset BOAT_PON_AUTOMATION_PUSH_TOKEN");
-  const retainedGate = script.indexOf("node scripts/check-research-retained-output-commit.mjs");
+  const retainedGate = script.indexOf('"$TRUSTED_NODE_BIN" scripts/check-research-retained-output-commit.mjs');
   const authenticatedPush = script.indexOf('git_no_hooks -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth_header" push "$AUTHORITY_REMOTE_URL" "$BRANCH" --quiet');
 
   assert.notEqual(capture, -1);
