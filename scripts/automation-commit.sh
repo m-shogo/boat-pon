@@ -35,6 +35,19 @@ git_no_hooks() {
   git -c core.hooksPath=/dev/null -c core.fsmonitor=false "$@"
 }
 
+# task は .git/config を変更できるため、固定 URL を使っても url.*.insteadOf や
+# http.* / credential.* で transport を別 endpoint / proxy / helper へ向けられる。
+# trusted fetch/push の直前に repo-local transport config が一切無いことを要求する。
+assert_trusted_transport_config() {
+  local unsafe
+  unsafe="$(git_no_hooks config --local --includes --name-only --get-regexp '^(http\.|url\.|credential\.|include(if)?\.)' 2>/dev/null || true)"
+  if [ -n "$unsafe" ]; then
+    echo "::error::untrusted repo-local git transport config detected; refusing authority network operation"
+    printf '%s\n' "$unsafe" >&2
+    exit 1
+  fi
+}
+
 cd "$(git_no_hooks rev-parse --show-toplevel)"
 REPO_ROOT="$(pwd)"
 
@@ -125,6 +138,8 @@ git_no_hooks config user.email "automation@boat-pon.invalid"
 git_no_hooks checkout -- . 2>/dev/null || true
 git_no_hooks clean -fdq -- automation reports docs research 2>/dev/null || true
 
+# task-controlled transport config で canonical repository URL 自体を rewrite/proxy させない。
+assert_trusted_transport_config
 # task-controlled remote.origin.* をauthorityとして使わず、trusted GitHub repository URLへ直接fetchする。
 git_no_hooks fetch "$AUTHORITY_REMOTE_URL" "refs/heads/$BRANCH:refs/remotes/origin/$BRANCH" --quiet
 # compare-and-swap: materialize 時点の trusted step output から branch が進んでいたら
