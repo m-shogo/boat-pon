@@ -386,6 +386,9 @@ export function persistResearchDurableRetentionSnapshot(input: {
       throw new Error("DURABLE_RETENTION_EXISTING_SNAPSHOT_JSON_INVALID");
     }
     const existing = validateResearchDurableRetentionSnapshot(parsed);
+    if (durableRetentionSnapshotRelativePath(existing) !== relativePath) {
+      throw new Error("DURABLE_RETENTION_EXISTING_SNAPSHOT_PATH_MISMATCH");
+    }
     if (existing.evidenceDigest !== input.snapshot.evidenceDigest) {
       throw new Error("DURABLE_RETENTION_EXISTING_EVIDENCE_DIGEST_MISMATCH");
     }
