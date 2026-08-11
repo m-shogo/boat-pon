@@ -9,6 +9,12 @@ const TERMINAL_RESULTS = new Set([
   "BLOCKED",
   "FAILED",
 ]);
+const ALLOWED_OUTPUT_ROOTS = [
+  "reports/n2/",
+  "reports/automation/",
+  "research/registries/",
+  "automation/control/",
+] as const;
 
 export type RetainedOutputCommitGateResult = {
   retainedPathCount: number;
@@ -16,6 +22,12 @@ export type RetainedOutputCommitGateResult = {
   referencedRetainedPathCount: number;
   runIds: string[];
 };
+
+function approvedOutputPath(value: string): boolean {
+  if (!value || value.startsWith("/") || value.includes("\0")) return false;
+  if (value.split("/").some((part) => part === "..")) return false;
+  return ALLOWED_OUTPUT_ROOTS.some((root) => value.startsWith(root));
+}
 
 export function validateRetainedOutputCommit(input: {
   changedPaths: string[];
@@ -71,6 +83,9 @@ export function validateRetainedOutputCommit(input: {
       throw new Error(`RETAINED_COMMIT_HISTORY_OUTPUTS_DUPLICATE:${historyPath}`);
     }
     for (const output of outputs) {
+      if (!approvedOutputPath(output)) {
+        throw new Error(`RETAINED_COMMIT_HISTORY_OUTPUT_PATH_NOT_APPROVED:${historyPath}:${output}`);
+      }
       if (!output.startsWith(RETAINED_PREFIX)) continue;
       const retainedMatch = output.match(RETAINED_RE);
       if (!retainedMatch) {
