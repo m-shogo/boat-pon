@@ -1,7 +1,7 @@
 // workflow inputs（env 経由）から strict request JSON を組み立てる。
 // shell へ ${{ }} を展開せず、値はすべて env から読み、形式検証してから JSON 化する。
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readSafeUtf8 } from "./read-safe-utf8.mjs";
 
 const env = (name) => (process.env[name] ?? "").trim();
 const fail = (msg) => { console.error(`invalid input: ${msg}`); process.exit(1); };
@@ -27,7 +27,12 @@ if (requestReference && !/^[0-9A-Za-z._:/# -]{1,200}$/.test(requestReference)) f
 if (!/^[0-9A-Za-z-]{1,64}$/.test(runId)) fail("run id");
 if (!/^[0-9A-Za-z._-]{1,64}$/.test(actor)) fail("actor");
 
-const queue = JSON.parse(readFileSync("automation/task-queue.json", "utf8"));
+let queue;
+try {
+  queue = JSON.parse(readSafeUtf8("automation/task-queue.json", { label: "task queue", baseDir: process.cwd() }));
+} catch (error) {
+  fail(`task queue: ${error instanceof Error ? error.message : String(error)}`);
+}
 const queueDigest = createHash("sha256").update(JSON.stringify(queue)).digest("hex");
 
 const request = {
