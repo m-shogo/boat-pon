@@ -173,7 +173,12 @@ if (!catalogValidation.valid || !catalogValidation.catalog) {
         }, null, 2));
         process.exitCode = 3;
       } else {
-        const readinessRead = readN2MarketBaselineReadiness({ dataRoot, sidecarDbPath });
+        let readinessRead: ReturnType<typeof readN2MarketBaselineReadiness>;
+        try {
+          readinessRead = readN2MarketBaselineReadiness({ dataRoot, sidecarDbPath });
+        } catch {
+          exitAuthorityReadConflict("READINESS_READ_FAILED");
+        }
         const readiness = buildN2MarketBaselineReadinessReport({
           acceptedT5RaceKeys: readinessRead.acceptedT5RaceKeys,
           settledRaceKeys: readinessRead.settledRaceKeys,
