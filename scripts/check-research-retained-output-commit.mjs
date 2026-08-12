@@ -60,6 +60,12 @@ function approvedOutputPath(value) {
   return ALLOWED_OUTPUT_ROOTS.some((root) => value.startsWith(root));
 }
 
+function parseInstant(value) {
+  if (typeof value !== "string") return null;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function validateRetainedOutputCommit(input) {
   const changed = [...new Set(input.changedPaths.filter(Boolean))];
   const retained = changed.filter((path) => path.startsWith(RETAINED_PREFIX));
@@ -152,6 +158,35 @@ function validateRetainedOutputCommit(input) {
     }
     if (typeof history.summary !== "object" || history.summary == null || Array.isArray(history.summary)) {
       throw new Error(`RETAINED_COMMIT_HISTORY_SUMMARY_INVALID:${historyPath}`);
+    }
+    if (typeof history.requestId !== "string" || history.requestId.length === 0) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_REQUEST_ID_INVALID:${historyPath}`);
+    }
+    if (typeof history.intentId !== "string" || history.intentId.length === 0) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_INTENT_ID_INVALID:${historyPath}`);
+    }
+    if (typeof history.taskType !== "string" || history.taskType.length === 0) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_TASK_TYPE_INVALID:${historyPath}`);
+    }
+    if (typeof history.safetyLevel !== "string" || !/^L[0-3]$/u.test(history.safetyLevel)) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_SAFETY_LEVEL_INVALID:${historyPath}`);
+    }
+    if (typeof history.executorVersion !== "string" || history.executorVersion.length === 0) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_EXECUTOR_VERSION_INVALID:${historyPath}`);
+    }
+    const startedAtMs = parseInstant(history.startedAt);
+    if (startedAtMs == null) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_STARTED_AT_INVALID:${historyPath}`);
+    }
+    const completedAtMs = parseInstant(history.completedAt);
+    if (completedAtMs == null) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_COMPLETED_AT_INVALID:${historyPath}`);
+    }
+    if (completedAtMs < startedAtMs) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_TIME_ORDER_INVALID:${historyPath}`);
+    }
+    if (!Number.isSafeInteger(history.elapsedMs) || history.elapsedMs < 0) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_ELAPSED_MS_INVALID:${historyPath}`);
     }
     parsedHistories.set(historyPath, { runId: pathRunId, outputs });
   }
