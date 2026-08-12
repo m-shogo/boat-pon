@@ -77,16 +77,17 @@ export function validateRetainedOutputCommit(input: {
     } catch {
       throw new Error(`RETAINED_COMMIT_HISTORY_JSON_INVALID:${historyPath}`);
     }
-    if (String(history.runId ?? "") !== pathRunId) {
+    if (typeof history.runId !== "string" || history.runId !== pathRunId) {
       throw new Error(`RETAINED_COMMIT_HISTORY_RUN_ID_MISMATCH:${historyPath}`);
     }
-    if (String(history.taskId ?? "") !== pathTaskId) {
+    if (typeof history.taskId !== "string" || history.taskId !== pathTaskId) {
       throw new Error(`RETAINED_COMMIT_HISTORY_TASK_ID_MISMATCH:${historyPath}`);
     }
-    const historyResult = String(history.result ?? "");
-    if (!TERMINAL_RESULTS.has(historyResult)) {
+    if (typeof history.result !== "string" || !TERMINAL_RESULTS.has(history.result)) {
+      const historyResult = typeof history.result === "string" ? history.result : "";
       throw new Error(`RETAINED_COMMIT_HISTORY_RESULT_INVALID:${historyPath}:${historyResult || "missing"}`);
     }
+    const historyResult = history.result;
     if (!Array.isArray(history.blocks) || history.blocks.some((value) => typeof value !== "string")) {
       throw new Error(`RETAINED_COMMIT_HISTORY_BLOCKS_INVALID:${historyPath}`);
     }
