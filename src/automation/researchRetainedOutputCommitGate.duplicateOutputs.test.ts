@@ -17,7 +17,7 @@ test("retained history rejects duplicate output references", () => {
     () => validateRetainedOutputCommit({
       changedPaths: [output, history],
       expectedRunId: runId,
-      readText: () => JSON.stringify({ runId, taskId, result: "PASS", outputs: [output, output] }),
+      readText: () => JSON.stringify({ runId, taskId, result: "PASS", blocks: [], outputs: [output, output] }),
     }),
     /RETAINED_COMMIT_HISTORY_OUTPUTS_DUPLICATE/u,
   );
@@ -31,7 +31,7 @@ test("trusted CLI rejects duplicate output references", () => {
     execFileSync(trustedGitBin, ["init", "-q"], { cwd: root });
     for (const [relativePath, content] of [
       [output, "{}\n"],
-      [history, `${JSON.stringify({ runId, taskId, result: "PASS", outputs: [output, output] })}\n`],
+      [history, `${JSON.stringify({ runId, taskId, result: "PASS", blocks: [], outputs: [output, output] })}\n`],
     ] as const) {
       const absolutePath = join(root, relativePath);
       mkdirSync(dirname(absolutePath), { recursive: true });

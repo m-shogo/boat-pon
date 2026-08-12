@@ -79,13 +79,14 @@ export function validateRetainedOutputCommit(input: {
     if (!TERMINAL_RESULTS.has(historyResult)) {
       throw new Error(`RETAINED_COMMIT_HISTORY_RESULT_INVALID:${historyPath}:${historyResult || "missing"}`);
     }
-    if (Array.isArray(history.blocks)) {
-      if (historyResult === "PASS" && history.blocks.length > 0) {
-        throw new Error(`RETAINED_COMMIT_HISTORY_PASS_HAS_BLOCKS:${historyPath}`);
-      }
-      if ((historyResult === "BLOCKED" || historyResult === "FAILED") && history.blocks.length === 0) {
-        throw new Error(`RETAINED_COMMIT_HISTORY_NONPASS_BLOCKS_EMPTY:${historyPath}`);
-      }
+    if (!Array.isArray(history.blocks) || history.blocks.some((value) => typeof value !== "string")) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_BLOCKS_INVALID:${historyPath}`);
+    }
+    if (historyResult === "PASS" && history.blocks.length > 0) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_PASS_HAS_BLOCKS:${historyPath}`);
+    }
+    if ((historyResult === "BLOCKED" || historyResult === "FAILED") && history.blocks.length === 0) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_NONPASS_BLOCKS_EMPTY:${historyPath}`);
     }
     if (!Array.isArray(history.outputs) || history.outputs.some((value) => typeof value !== "string")) {
       throw new Error(`RETAINED_COMMIT_HISTORY_OUTPUTS_INVALID:${historyPath}`);

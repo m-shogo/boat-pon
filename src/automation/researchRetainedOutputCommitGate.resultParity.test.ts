@@ -6,6 +6,7 @@ import { validateRetainedOutputCommit } from "./researchRetainedOutputCommitGate
 const path = "reports/automation/history/12345-TASK-N2-011.json";
 
 function validate(result: string): void {
+  const blocks = result === "BLOCKED" || result === "FAILED" ? ["terminal-block"] : [];
   validateRetainedOutputCommit({
     changedPaths: [path],
     expectedRunId: "12345",
@@ -13,6 +14,7 @@ function validate(result: string): void {
       runId: "12345",
       taskId: "TASK-N2-011",
       outputs: [],
+      blocks,
       result,
     }),
   });
