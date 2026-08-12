@@ -195,6 +195,7 @@ function appendPrivateStore(
     filename,
     contents: `${JSON.stringify(payload, null, 2)}\n`,
     expectedEvidenceDigest: evidence.contentDigest,
+    validateExistingEvidence: (value) => validateRuntimeDecisionLedgerShadowEvidence(value).valid,
   });
 }
 
