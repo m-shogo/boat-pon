@@ -104,3 +104,67 @@ for (const status of ["READY", "CLAIMED", "RUNNING", "CHECKPOINTED"] as const) {
     assert.equal(plan.productionApplyAuthorized, false);
   });
 }
+
+for (const status of [
+  "CONDITIONAL",
+  "BLOCKED",
+  "FAILED_RETRYABLE",
+  "FAILED_FINAL",
+  "CANCELLED",
+  "BLOCKED_DEPENDENCY",
+] as const) {
+  test(`activation report rejects non-dormant queue state ${status} while catalog and executor remain dormant`, () => {
+    const queueTasks = queue();
+    queueTasks["TASK-N2-020"].status = status;
+
+    const report = buildN2DormantActivationReport({
+      readiness: readiness(),
+      catalogTasks: catalog(),
+      queueTasks,
+      runtimeRegisteredByTaskId: registered(),
+    });
+
+    assert.equal(report.status, "CONFLICT");
+    assert.equal(report.stage, "CONFLICT");
+    assert.ok(report.blockers.includes(
+      "TASK-N2-020:QUEUE_NON_DORMANT_WHILE_CATALOG_AND_EXECUTOR_DORMANT",
+    ));
+    assert.deepEqual(report.activationActions, []);
+    assert.equal(report.activationPlanningAttemptDelta, 0);
+    assert.equal(report.currentBuyConnectionAuthorized, false);
+    assert.equal(report.lineConnectionAuthorized, false);
+    assert.equal(report.publicPublishAuthorized, false);
+    assert.equal(report.automatedBettingAuthorized, false);
+    assert.equal(report.productionApplyAuthorized, false);
+  });
+
+  test(`direct activation planner rejects non-dormant queue state ${status} while catalog and executor remain dormant`, () => {
+    const taskStatuses = Object.fromEntries(
+      N2_DORMANT_TASKS.map((taskId) => [taskId, "BLOCKED_EXECUTOR_PENDING"]),
+    );
+    taskStatuses["TASK-N2-020"] = status;
+    const catalogDefaultStatuses = Object.fromEntries(
+      N2_DORMANT_TASKS.map((taskId) => [taskId, "BLOCKED_EXECUTOR_PENDING"]),
+    );
+
+    const plan = buildN2DormantActivationPlan({
+      readinessStatus: "READY_FOR_N2_020",
+      taskStatuses,
+      catalogDefaultStatuses,
+      runtimeExecutorRegistered: registered(),
+    });
+
+    assert.equal(plan.status, "CONFLICT");
+    assert.equal(plan.stage, "CONFLICT");
+    assert.ok(plan.blockers.includes(
+      "TASK-N2-020:QUEUE_NON_DORMANT_WHILE_CATALOG_AND_EXECUTOR_DORMANT",
+    ));
+    assert.deepEqual(plan.activationActions, []);
+    assert.equal(plan.invariants.activationPlanningConsumesAttempt, false);
+    assert.equal(plan.currentBuyConnectionAuthorized, false);
+    assert.equal(plan.lineConnectionAuthorized, false);
+    assert.equal(plan.publicPublishAuthorized, false);
+    assert.equal(plan.automatedBettingAuthorized, false);
+    assert.equal(plan.productionApplyAuthorized, false);
+  });
+}
