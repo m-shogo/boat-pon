@@ -184,17 +184,37 @@ export function buildN2DormantActivationPlan(input: {
     blockers.push("BASELINE_PAIR_ACTIVATION_STATE_DIVERGED");
   }
   if (baseline020Pass !== baseline021Pass) blockers.push("BASELINE_PAIR_PASS_STATE_DIVERGED");
+  if (activated("TASK-N2-022", catalogDefaultStatuses, runtimeExecutorRegistered)
+    && !(baseline020Pass && baseline021Pass)) {
+    blockers.push("COMMON_COHORT_ACTIVATED_WITHOUT_BOTH_BASELINES_PASS");
+  }
   if (taskStatuses["TASK-N2-022"] === "PASS" && !(baseline020Pass && baseline021Pass)) {
     blockers.push("COMMON_COHORT_PASS_WITHOUT_BOTH_BASELINES_PASS");
+  }
+  if (activated("TASK-N2-030", catalogDefaultStatuses, runtimeExecutorRegistered)
+    && taskStatuses["TASK-N2-022"] !== "PASS") {
+    blockers.push("METRICS_ACTIVATED_WITHOUT_COMMON_COHORT_PASS");
   }
   if (taskStatuses["TASK-N2-030"] === "PASS" && taskStatuses["TASK-N2-022"] !== "PASS") {
     blockers.push("METRICS_PASS_WITHOUT_COMMON_COHORT_PASS");
   }
+  if (activated("TASK-N2-040", catalogDefaultStatuses, runtimeExecutorRegistered)
+    && taskStatuses["TASK-N2-030"] !== "PASS") {
+    blockers.push("EDGE_SCAN_ACTIVATED_WITHOUT_METRICS_PASS");
+  }
   if (taskStatuses["TASK-N2-040"] === "PASS" && taskStatuses["TASK-N2-030"] !== "PASS") {
     blockers.push("EDGE_SCAN_PASS_WITHOUT_METRICS_PASS");
   }
+  if (activated("TASK-N2-041", catalogDefaultStatuses, runtimeExecutorRegistered)
+    && taskStatuses["TASK-N2-040"] !== "PASS") {
+    blockers.push("HISTORICAL_TEST_ACTIVATED_WITHOUT_EDGE_SCAN_PASS");
+  }
   if (taskStatuses["TASK-N2-041"] === "PASS" && taskStatuses["TASK-N2-040"] !== "PASS") {
     blockers.push("HISTORICAL_TEST_PASS_WITHOUT_EDGE_SCAN_PASS");
+  }
+  if (activated("TASK-N2-042", catalogDefaultStatuses, runtimeExecutorRegistered)
+    && taskStatuses["TASK-N2-041"] !== "PASS") {
+    blockers.push("CONFOUNDER_AUDIT_ACTIVATED_WITHOUT_HISTORICAL_TEST_PASS");
   }
   if (taskStatuses["TASK-N2-042"] === "PASS" && taskStatuses["TASK-N2-041"] !== "PASS") {
     blockers.push("CONFOUNDER_AUDIT_PASS_WITHOUT_HISTORICAL_TEST_PASS");
