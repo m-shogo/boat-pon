@@ -40,7 +40,10 @@ test("completeness audit reads only automation history and approved durable outp
 });
 
 test("durable history and output content use bounded descriptor-bound reads", () => {
-  assert.match(source, /readGovernanceFileUtf8Bounded\(absolutePath, MAX_OUTPUT_BYTES\)/u);
+  assert.match(source, /const MAX_OUTPUT_BYTES = 32_000_000/u);
+  assert.match(source, /const MAX_RETAINED_OUTPUT_BYTES = 2_097_152/u);
+  assert.match(source, /const maxOutputBytes = rootClass === "RETAINED" \? MAX_RETAINED_OUTPUT_BYTES : MAX_OUTPUT_BYTES/u);
+  assert.match(source, /readGovernanceFileUtf8Bounded\(absolutePath, maxOutputBytes\)/u);
   assert.match(source, /readGovernanceFileUtf8Bounded\(absolutePath, MAX_HISTORY_BYTES\)/u);
   assert.doesNotMatch(source, /readFileSync\(absolutePath/u);
 });
