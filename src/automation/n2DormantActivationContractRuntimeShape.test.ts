@@ -70,3 +70,23 @@ for (const malformed of [undefined, "FAILED", "NOT_A_STATUS"] as const) {
     assert.equal(plan.productionApplyAuthorized, false);
   });
 }
+
+test("direct planner rejects noncanonical readiness status", () => {
+  const plan = buildN2DormantActivationPlan({
+    readinessStatus: "READY",
+    taskStatuses: blockedTaskStatuses(),
+    catalogDefaultStatuses: blockedCatalog(),
+    runtimeExecutorRegistered: unregistered(),
+  });
+
+  assert.equal(plan.status, "CONFLICT");
+  assert.equal(plan.stage, "CONFLICT");
+  assert.ok(plan.blockers.includes("READINESS_STATUS_INVALID"));
+  assert.deepEqual(plan.activationActions, []);
+  assert.equal(plan.invariants.activationPlanningConsumesAttempt, false);
+  assert.equal(plan.currentBuyConnectionAuthorized, false);
+  assert.equal(plan.lineConnectionAuthorized, false);
+  assert.equal(plan.publicPublishAuthorized, false);
+  assert.equal(plan.automatedBettingAuthorized, false);
+  assert.equal(plan.productionApplyAuthorized, false);
+});
