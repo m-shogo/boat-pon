@@ -16,6 +16,16 @@ import { DEFAULT_STATUSES } from "./taskCatalog";
 export const N2_DORMANT_ACTIVATION_REPORT_VERSION =
   "n2-dormant-activation-report-v1" as const;
 
+const N2_DORMANT_TASK_TYPES: Record<N2DormantTaskId, string> = {
+  "TASK-N2-020": "baseline-market",
+  "TASK-N2-021": "baseline-historical",
+  "TASK-N2-022": "baseline-common-cohort",
+  "TASK-N2-030": "evaluation-metrics",
+  "TASK-N2-040": "edge-hypothesis-scan",
+  "TASK-N2-041": "edge-historical-test",
+  "TASK-N2-042": "confounder-audit",
+};
+
 export type N2ActivationCatalogTask = {
   taskId: string;
   taskType: string;
@@ -151,6 +161,9 @@ export function buildN2DormantActivationReport(input: {
     const registered = runtimeRegistrationValue === true;
     if (!catalogTask) blockers.push(`${taskId}:CATALOG_TASK_MISSING`);
     if (!queueTask) blockers.push(`${taskId}:QUEUE_TASK_MISSING`);
+    if (catalogTask && catalogTask.taskType !== N2_DORMANT_TASK_TYPES[taskId]) {
+      blockers.push(`${taskId}:CATALOG_TASK_TYPE_MISMATCH`);
+    }
     if (catalogTask && !DEFAULT_STATUSES.includes(catalogTask.defaultStatus as (typeof DEFAULT_STATUSES)[number])) {
       blockers.push(`${taskId}:CATALOG_DEFAULT_STATUS_INVALID`);
     }
