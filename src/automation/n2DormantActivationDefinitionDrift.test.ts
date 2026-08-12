@@ -104,19 +104,28 @@ test("N2 activation rejects catalog and queue moving together beyond the pinned 
 test("N2 activation rejects queue state from a different catalog version", () => {
   const mismatchedState = queue();
   mismatchedState.catalogVersion = "v0";
-  assert.deepEqual(findN2DormantTaskDefinitionDrift(catalog(), mismatchedState), ["CATALOG_VERSION_MISMATCH"]);
+  assert.deepEqual(
+    findN2DormantTaskDefinitionDrift(catalog(), mismatchedState),
+    ["CATALOG_VERSION_MISMATCH"],
+  );
 });
 
 test("N2 activation fails closed before readiness when a catalog task is missing", () => {
   const missingCatalogTask = catalog();
   missingCatalogTask.tasks = missingCatalogTask.tasks.filter((task) => task.taskId !== "TASK-N2-021");
-  assert.deepEqual(findN2DormantTaskDefinitionDrift(missingCatalogTask, queue()), ["TASK-N2-021:CATALOG_TASK_MISSING"]);
+  assert.deepEqual(
+    findN2DormantTaskDefinitionDrift(missingCatalogTask, queue()),
+    ["TASK-N2-021:CATALOG_TASK_MISSING"],
+  );
 });
 
 test("N2 activation fails closed before readiness when a queue task is missing", () => {
   const missingQueueTask = queue();
   delete missingQueueTask.tasks["TASK-N2-021"];
-  assert.deepEqual(findN2DormantTaskDefinitionDrift(catalog(), missingQueueTask), ["TASK-N2-021:QUEUE_TASK_MISSING"]);
+  assert.deepEqual(
+    findN2DormantTaskDefinitionDrift(catalog(), missingQueueTask),
+    ["TASK-N2-021:QUEUE_TASK_MISSING"],
+  );
 });
 
 test("N2 activation fails closed before readiness when a catalog task type drifts", () => {
@@ -124,7 +133,11 @@ test("N2 activation fails closed before readiness when a catalog task type drift
   const task = mismatchedCatalog.tasks.find((entry) => entry.taskId === "TASK-N2-020");
   assert.ok(task);
   task.taskType = "baseline-historical";
-  assert.deepEqual(findN2DormantTaskDefinitionDrift(mismatchedCatalog, queue()), ["TASK-N2-020:CATALOG_TASK_TYPE_MISMATCH"]);
+
+  assert.deepEqual(
+    findN2DormantTaskDefinitionDrift(mismatchedCatalog, queue()),
+    ["TASK-N2-020:CATALOG_TASK_TYPE_MISMATCH"],
+  );
 });
 
 test("N2 activation fails closed before readiness when a catalog executor drifts", () => {
@@ -132,7 +145,11 @@ test("N2 activation fails closed before readiness when a catalog executor drifts
   const task = mismatchedCatalog.tasks.find((entry) => entry.taskId === "TASK-N2-020");
   assert.ok(task);
   task.executor = "baseline-historical";
-  assert.deepEqual(findN2DormantTaskDefinitionDrift(mismatchedCatalog, queue()), ["TASK-N2-020:CATALOG_EXECUTOR_MISMATCH"]);
+
+  assert.deepEqual(
+    findN2DormantTaskDefinitionDrift(mismatchedCatalog, queue()),
+    ["TASK-N2-020:CATALOG_EXECUTOR_MISMATCH"],
+  );
 });
 
 test("N2 activation fails closed before readiness when catalog safety level drifts", () => {
@@ -140,7 +157,11 @@ test("N2 activation fails closed before readiness when catalog safety level drif
   const task = mismatchedCatalog.tasks.find((entry) => entry.taskId === "TASK-N2-020");
   assert.ok(task);
   task.safetyLevel = "L1";
-  assert.deepEqual(findN2DormantTaskDefinitionDrift(mismatchedCatalog, queue()), ["TASK-N2-020:CATALOG_SAFETY_LEVEL_MISMATCH"]);
+
+  assert.deepEqual(
+    findN2DormantTaskDefinitionDrift(mismatchedCatalog, queue()),
+    ["TASK-N2-020:CATALOG_SAFETY_LEVEL_MISMATCH"],
+  );
 });
 
 test("N2 activation fails closed before readiness when catalog max duration drifts", () => {
@@ -148,7 +169,11 @@ test("N2 activation fails closed before readiness when catalog max duration drif
   const task = mismatchedCatalog.tasks.find((entry) => entry.taskId === "TASK-N2-020");
   assert.ok(task);
   task.maxDurationSeconds = 7200;
-  assert.deepEqual(findN2DormantTaskDefinitionDrift(mismatchedCatalog, queue()), ["TASK-N2-020:CATALOG_MAX_DURATION_MISMATCH"]);
+
+  assert.deepEqual(
+    findN2DormantTaskDefinitionDrift(mismatchedCatalog, queue()),
+    ["TASK-N2-020:CATALOG_MAX_DURATION_MISMATCH"],
+  );
 });
 
 test("N2 activation fails closed before readiness when catalog recurring lifecycle drifts", () => {
@@ -156,7 +181,11 @@ test("N2 activation fails closed before readiness when catalog recurring lifecyc
   const task = mismatchedCatalog.tasks.find((entry) => entry.taskId === "TASK-N2-020");
   assert.ok(task);
   task.recurring = true;
-  assert.deepEqual(findN2DormantTaskDefinitionDrift(mismatchedCatalog, queue()), ["TASK-N2-020:CATALOG_RECURRING_MISMATCH"]);
+
+  assert.deepEqual(
+    findN2DormantTaskDefinitionDrift(mismatchedCatalog, queue()),
+    ["TASK-N2-020:CATALOG_RECURRING_MISMATCH"],
+  );
 });
 
 test("N2 activation fails closed before readiness when catalog expected outputs drift", () => {
@@ -164,7 +193,11 @@ test("N2 activation fails closed before readiness when catalog expected outputs 
   const task = mismatchedCatalog.tasks.find((entry) => entry.taskId === "TASK-N2-020");
   assert.ok(task);
   task.expectedOutputs = ["public/n2-baseline-market.json"];
-  assert.deepEqual(findN2DormantTaskDefinitionDrift(mismatchedCatalog, queue()), ["TASK-N2-020:CATALOG_EXPECTED_OUTPUTS_MISMATCH"]);
+
+  assert.deepEqual(
+    findN2DormantTaskDefinitionDrift(mismatchedCatalog, queue()),
+    ["TASK-N2-020:CATALOG_EXPECTED_OUTPUTS_MISMATCH"],
+  );
 });
 
 test("N2 activation fails closed before readiness when catalog activates while queue remains dormant", () => {
@@ -172,6 +205,7 @@ test("N2 activation fails closed before readiness when catalog activates while q
   const task = mismatchedCatalog.tasks.find((entry) => entry.taskId === "TASK-N2-020");
   assert.ok(task);
   task.defaultStatus = "READY";
+
   assert.deepEqual(
     findN2DormantTaskDefinitionDrift(mismatchedCatalog, queue(), { "TASK-N2-020": true }),
     ["TASK-N2-020:CATALOG_STATUS_MISMATCH_WHILE_QUEUE_DORMANT"],
@@ -185,6 +219,7 @@ test("N2 activation fails closed before readiness when catalog and queue activat
   assert.ok(task);
   task.defaultStatus = "READY";
   activeState.tasks["TASK-N2-020"].status = "READY";
+
   assert.deepEqual(
     findN2DormantTaskDefinitionDrift(activeCatalog, activeState, { "TASK-N2-020": false }),
     ["TASK-N2-020:RUNTIME_EXECUTOR_MISSING_WHILE_CATALOG_AND_QUEUE_ACTIVE"],
@@ -198,7 +233,11 @@ test("N2 activation preflight preserves a valid atomic active state", () => {
   assert.ok(task);
   task.defaultStatus = "READY";
   activeState.tasks["TASK-N2-020"].status = "READY";
-  assert.deepEqual(findN2DormantTaskDefinitionDrift(activeCatalog, activeState, { "TASK-N2-020": true }), []);
+
+  assert.deepEqual(
+    findN2DormantTaskDefinitionDrift(activeCatalog, activeState, { "TASK-N2-020": true }),
+    [],
+  );
 });
 
 test("N2 activation fails closed before readiness when catalog dependencies drift", () => {
@@ -206,11 +245,18 @@ test("N2 activation fails closed before readiness when catalog dependencies drif
   const task = mismatchedCatalog.tasks.find((entry) => entry.taskId === "TASK-N2-022");
   assert.ok(task);
   task.dependencies = ["TASK-N2-020"];
-  assert.deepEqual(findN2DormantTaskDefinitionDrift(mismatchedCatalog, queue()), ["TASK-N2-022:CATALOG_DEPENDENCIES_MISMATCH"]);
+
+  assert.deepEqual(
+    findN2DormantTaskDefinitionDrift(mismatchedCatalog, queue()),
+    ["TASK-N2-022:CATALOG_DEPENDENCIES_MISMATCH"],
+  );
 });
 
 test("N2 activation fails closed before readiness when dormant execution residue is present", () => {
-  const cases: Array<{ mutate: (state: QueueState) => void; blocker: string }> = [
+  const cases: Array<{
+    mutate: (state: QueueState) => void;
+    blocker: string;
+  }> = [
     {
       mutate: (state) => { state.tasks["TASK-N2-020"].authoritySha = "deadbeef"; },
       blocker: "TASK-N2-020:DORMANT_AUTHORITY_SHA_PRESENT",
@@ -224,6 +270,7 @@ test("N2 activation fails closed before readiness when dormant execution residue
       blocker: "TASK-N2-020:DORMANT_RESULT_DIGEST_PRESENT",
     },
   ];
+
   for (const scenario of cases) {
     const state = queue();
     scenario.mutate(state);
