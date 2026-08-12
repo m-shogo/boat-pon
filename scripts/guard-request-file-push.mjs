@@ -42,7 +42,7 @@ if (!/^automation\/requests\/pending\/REQ-[0-9A-Za-z._-]{4,64}\.json$/.test(path
 if (!existsSync(path)) fail(`request file missing: ${path}`);
 
 let request;
-try { request = JSON.parse(readSafeUtf8(path, { maxBytes: MAX_BYTES, label: "request file" })); }
+try { request = JSON.parse(readSafeUtf8(path, { maxBytes: MAX_BYTES, label: "request file", baseDir: process.cwd() })); }
 catch (error) { fail(`request file is not safe valid JSON: ${error instanceof Error ? error.message : String(error)}`); }
 if (typeof request !== "object" || request === null || Array.isArray(request)) fail("request must be a JSON object");
 
@@ -95,7 +95,7 @@ if (expectedDigest !== requestDigest) fail(`requestDigest mismatch (expected ${e
 
 // queue digest 検証（commit 時点の queue と一致すること）。
 let queue;
-try { queue = JSON.parse(readSafeUtf8("automation/task-queue.json", { label: "task queue" })); }
+try { queue = JSON.parse(readSafeUtf8("automation/task-queue.json", { label: "task queue", baseDir: process.cwd() })); }
 catch (error) { fail(`task queue is not safe valid JSON: ${error instanceof Error ? error.message : String(error)}`); }
 const queueDigest = createHash("sha256").update(JSON.stringify(queue)).digest("hex");
 if (queueDigest !== request.queueDigest) fail(`queueDigest mismatch (expected ${queueDigest})`);
