@@ -84,12 +84,12 @@ if (!catalogValidation.valid || !catalogValidation.catalog) {
     stateRaw = JSON.parse(
       readGovernanceFileUtf8Bounded(statePath, MAX_N2_ACTIVATION_AUTHORITY_BYTES).text,
     );
-  } catch (error) {
+  } catch {
     console.log(JSON.stringify({
       reportVersion: "n2-dormant-activation-report-v1",
       status: "CONFLICT",
       stage: "CONFLICT",
-      blockers: [`QUEUE_STATE_READ_FAILED:${error instanceof Error ? error.message.slice(0, 160) : "UNKNOWN"}`],
+      blockers: ["QUEUE_STATE_READ_FAILED"],
       activationActions: [],
       activationPlanningAttemptDelta: 0,
       automaticMutationAuthorized: false,
