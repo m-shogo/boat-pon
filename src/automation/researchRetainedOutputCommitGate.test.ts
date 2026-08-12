@@ -32,7 +32,7 @@ test("same-run terminal history must reference every retained output", () => {
     changedPaths: [output, historyPath, "reports/automation/current-status.json"],
     expectedRunId: "123",
     readText: reader({
-      [historyPath]: { runId: "123", taskId, outputs: [output], result: "PASS", blocks: [] },
+      [historyPath]: { runId: "123", taskId, outputs: [output], result: "PASS", blocks: [], executed: true },
     }),
   });
   assert.equal(result.retainedPathCount, 1);
@@ -68,7 +68,7 @@ test("terminal history cannot claim retained output from another run", () => {
       changedPaths: [output, historyPath],
       expectedRunId: "123",
       readText: reader({
-        [historyPath]: { runId: "123", taskId, outputs: [output, retained("999")], result: "PASS", blocks: [] },
+        [historyPath]: { runId: "123", taskId, outputs: [output, retained("999")], result: "PASS", blocks: [], executed: true },
       }),
     }),
     /RETAINED_COMMIT_HISTORY_RETAINED_RUN_ID_MISMATCH/u,
@@ -82,7 +82,7 @@ test("history-only change cannot claim retained output from another run", () => 
       changedPaths: [historyPath],
       expectedRunId: "456",
       readText: reader({
-        [historyPath]: { runId: "123", taskId, outputs: [retained("999")], result: "PASS", blocks: [] },
+        [historyPath]: { runId: "123", taskId, outputs: [retained("999")], result: "PASS", blocks: [], executed: true },
       }),
     }),
     /RETAINED_COMMIT_HISTORY_RUN_ID_MISMATCH:123!=456/u,
@@ -97,7 +97,7 @@ test("terminal history rejects malformed retained-output references", () => {
       changedPaths: [output, historyPath],
       expectedRunId: "123",
       readText: reader({
-        [historyPath]: { runId: "123", taskId, outputs: [output, "reports/automation/retained-outputs/123/nested/report.json"], result: "PASS", blocks: [] },
+        [historyPath]: { runId: "123", taskId, outputs: [output, "reports/automation/retained-outputs/123/nested/report.json"], result: "PASS", blocks: [], executed: true },
       }),
     }),
     /RETAINED_COMMIT_HISTORY_RETAINED_PATH_INVALID/u,
@@ -111,7 +111,7 @@ test("orphan retained output is rejected", () => {
     () => validateRetainedOutputCommit({
       changedPaths: [output, historyPath],
       expectedRunId: "123",
-      readText: reader({ [historyPath]: { runId: "123", taskId, outputs: [], result: "PASS", blocks: [] } }),
+      readText: reader({ [historyPath]: { runId: "123", taskId, outputs: [], result: "PASS", blocks: [], executed: true } }),
     }),
     /RETAINED_COMMIT_ORPHAN/u,
   );
@@ -132,7 +132,7 @@ test("wrong workflow run cannot commit another run retained output", () => {
     () => validateRetainedOutputCommit({
       changedPaths: [output, historyPath],
       expectedRunId: "123",
-      readText: reader({ [historyPath]: { runId: "124", taskId, outputs: [output], result: "PASS", blocks: [] } }),
+      readText: reader({ [historyPath]: { runId: "124", taskId, outputs: [output], result: "PASS", blocks: [], executed: true } }),
     }),
     /RETAINED_COMMIT_HISTORY_RUN_ID_MISMATCH:124!=123/u,
   );
@@ -144,7 +144,7 @@ test("duplicate changed paths are normalized", () => {
   const result = validateRetainedOutputCommit({
     changedPaths: [output, output, historyPath, historyPath],
     expectedRunId: "123",
-    readText: reader({ [historyPath]: { runId: "123", taskId, outputs: [output], result: "PASS", blocks: [] } }),
+    readText: reader({ [historyPath]: { runId: "123", taskId, outputs: [output], result: "PASS", blocks: [], executed: true } }),
   });
   assert.equal(result.retainedPathCount, 1);
   assert.equal(result.historyPathCount, 1);
@@ -165,7 +165,7 @@ test("malformed or mismatched history fails closed", () => {
     () => validateRetainedOutputCommit({
       changedPaths: [output, historyPath],
       expectedRunId: "123",
-      readText: reader({ [historyPath]: { runId: "999", taskId, outputs: [output], result: "PASS", blocks: [] } }),
+      readText: reader({ [historyPath]: { runId: "999", taskId, outputs: [output], result: "PASS", blocks: [], executed: true } }),
     }),
     /RETAINED_COMMIT_HISTORY_RUN_ID_MISMATCH/u,
   );
@@ -178,7 +178,7 @@ test("local mode derives run identity from retained paths", () => {
   const result = validateRetainedOutputCommit({
     changedPaths: [output, historyPath],
     expectedRunId: "local",
-    readText: reader({ [historyPath]: { runId, taskId, outputs: [output], result: "PASS", blocks: [] } }),
+    readText: reader({ [historyPath]: { runId, taskId, outputs: [output], result: "PASS", blocks: [], executed: true } }),
   });
   assert.deepEqual(result.runIds, [runId]);
 });
