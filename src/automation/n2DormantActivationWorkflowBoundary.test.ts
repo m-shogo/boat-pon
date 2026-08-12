@@ -35,7 +35,7 @@ test("post-run N2 readiness workflow reads automation state without adding a sch
   }
 });
 
-test("activation report CLI is read-only and uses descriptor-bound governance reads for authority inputs", () => {
+test("activation report CLI is read-only and preflights authority plus runtime before private readiness", () => {
   const script = readFileSync(
     resolve(process.cwd(), "scripts/report-n2-dormant-activation-plan.ts"),
     "utf8",
@@ -49,6 +49,14 @@ test("activation report CLI is read-only and uses descriptor-bound governance re
   assert.match(script, /buildN2DormantActivationReport/u);
   assert.match(script, /readGovernanceFileUtf8Bounded/u);
   assert.match(script, /MAX_N2_ACTIVATION_AUTHORITY_BYTES/u);
+  assert.ok(
+    script.indexOf("const runtimeRegisteredByTaskId") < script.indexOf("const readinessRead"),
+    "runtime registration must be inspected before private readiness",
+  );
+  assert.ok(
+    script.indexOf("const definitionDrift") < script.indexOf("const readinessRead"),
+    "definition/runtime drift must fail closed before private readiness",
+  );
   assert.doesNotMatch(script, /readFileSync/u);
   assert.doesNotMatch(script, /writeFileSync|renameSync|rmSync|appendFileSync/u);
   assert.doesNotMatch(script, /fetch\(|https?:\/\//u);
