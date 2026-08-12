@@ -15,6 +15,7 @@ export const RESEARCH_DURABLE_KNOWLEDGE_COMPLETENESS_VERSION =
 
 const HISTORY_RELATIVE_DIR = "reports/automation/history";
 const MAX_HISTORY_BYTES = 8_000_000;
+const MAX_HISTORY_OUTPUT_PATHS = 64;
 const MAX_OUTPUT_BYTES = 32_000_000;
 const SHA256_RE = /^[0-9a-f]{64}$/u;
 const GIT_SHA_RE = /^[0-9a-f]{40}$/u;
@@ -553,6 +554,7 @@ function assessHistoryFile(input: {
     if (safeOutputs.some((value) => value == null)) issues.push("HISTORY_OUTPUT_PATH_NOT_APPROVED");
     const strings = history.outputs.filter((value): value is string => typeof value === "string");
     if (new Set(strings).size !== strings.length) issues.push("HISTORY_OUTPUT_PATH_DUPLICATE");
+    if (strings.length > MAX_HISTORY_OUTPUT_PATHS) issues.push("HISTORY_OUTPUT_COUNT_EXCEEDED");
     if (typeof history.runId === "string" && RUN_ID_RE.test(history.runId)) {
       for (const output of strings) {
         if (!output.startsWith("reports/automation/retained-outputs/")) continue;
