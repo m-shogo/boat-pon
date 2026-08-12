@@ -49,12 +49,15 @@ test("activation report CLI is read-only and preflights authority plus runtime b
   assert.match(script, /buildN2DormantActivationReport/u);
   assert.match(script, /readGovernanceFileUtf8Bounded/u);
   assert.match(script, /MAX_N2_ACTIVATION_AUTHORITY_BYTES/u);
+  assert.match(script, /exitAuthorityReadConflict\("READINESS_READ_FAILED"\)/u);
+  const readinessCallIndex = script.indexOf("readinessRead = readN2MarketBaselineReadiness");
+  assert.notEqual(readinessCallIndex, -1, "private readiness must use the guarded reader call");
   assert.ok(
-    script.indexOf("const runtimeRegisteredByTaskId") < script.indexOf("const readinessRead"),
+    script.indexOf("const runtimeRegisteredByTaskId") < readinessCallIndex,
     "runtime registration must be inspected before private readiness",
   );
   assert.ok(
-    script.indexOf("const definitionDrift") < script.indexOf("const readinessRead"),
+    script.indexOf("const definitionDrift") < readinessCallIndex,
     "definition/runtime drift must fail closed before private readiness",
   );
   assert.doesNotMatch(script, /readFileSync/u);
