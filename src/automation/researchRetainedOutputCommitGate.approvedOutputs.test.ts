@@ -13,9 +13,10 @@ const history = `reports/automation/history/${runId}-${taskId}.json`;
 const approved = "reports/n2/example.json";
 const unapproved = "private/raw-t5.json";
 const traversal = "reports/n2/../private/raw-t5.json";
+const outputDigest = "a".repeat(64);
 
 function historyText(outputs: string[]): string {
-  return JSON.stringify({ runId, taskId, result: "PASS", blocks: [], executed: true, outputs });
+  return JSON.stringify({ runId, taskId, result: "PASS", blocks: [], executed: true, outputDigest, outputs });
 }
 
 test("retained history accepts only durable-audit approved output roots", () => {
