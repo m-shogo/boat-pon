@@ -13,13 +13,14 @@ const output = `reports/automation/retained-outputs/${runId}/${"a".repeat(64)}-r
 const history = `reports/automation/history/${runId}-${taskId}.json`;
 const outputDigest = "a".repeat(64);
 const idempotencyKey = "b".repeat(64);
+const authoritySha = "c".repeat(40);
 
 test("retained history rejects duplicate output references", () => {
   assert.throws(
     () => validateRetainedOutputCommit({
       changedPaths: [output, history],
       expectedRunId: runId,
-      readText: () => JSON.stringify({ runId, taskId, result: "PASS", blocks: [], executed: true, outputDigest, idempotencyKey, outputs: [output, output] }),
+      readText: () => JSON.stringify({ runId, taskId, result: "PASS", blocks: [], executed: true, outputDigest, idempotencyKey, authoritySha, outputs: [output, output] }),
     }),
     /RETAINED_COMMIT_HISTORY_OUTPUTS_DUPLICATE/u,
   );
@@ -33,7 +34,7 @@ test("trusted CLI rejects duplicate output references", () => {
     execFileSync(trustedGitBin, ["init", "-q"], { cwd: root });
     for (const [relativePath, content] of [
       [output, "{}\n"],
-      [history, `${JSON.stringify({ runId, taskId, result: "PASS", blocks: [], executed: true, outputDigest, idempotencyKey, outputs: [output, output] })}\n`],
+      [history, `${JSON.stringify({ runId, taskId, result: "PASS", blocks: [], executed: true, outputDigest, idempotencyKey, authoritySha, outputs: [output, output] })}\n`],
     ] as const) {
       const absolutePath = join(root, relativePath);
       mkdirSync(dirname(absolutePath), { recursive: true });

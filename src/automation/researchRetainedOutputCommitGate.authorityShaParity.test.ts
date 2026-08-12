@@ -11,10 +11,10 @@ const runId = "12345";
 const taskId = "TASK-N2-011";
 const historyPath = `reports/automation/history/${runId}-${taskId}.json`;
 const outputDigest = "a".repeat(64);
-const validIdempotencyKey = "b".repeat(64);
-const authoritySha = "c".repeat(40);
+const idempotencyKey = "b".repeat(64);
+const validAuthoritySha = "c".repeat(40);
 
-function history(idempotencyKey: unknown): string {
+function history(authoritySha: unknown): string {
   return JSON.stringify({
     runId,
     taskId,
@@ -28,33 +28,33 @@ function history(idempotencyKey: unknown): string {
   });
 }
 
-test("retained gate requires a canonical lowercase sha256 idempotency key", () => {
-  for (const idempotencyKey of [undefined, "b".repeat(63), "B".repeat(64), `${validIdempotencyKey}0`]) {
+test("retained gate requires a canonical lowercase git authority sha", () => {
+  for (const authoritySha of [undefined, "c".repeat(39), "C".repeat(40), `${validAuthoritySha}0`]) {
     assert.throws(
       () => validateRetainedOutputCommit({
         changedPaths: [historyPath],
         expectedRunId: runId,
-        readText: () => history(idempotencyKey),
+        readText: () => history(authoritySha),
       }),
-      /RETAINED_COMMIT_HISTORY_IDEMPOTENCY_KEY_INVALID/u,
+      /RETAINED_COMMIT_HISTORY_AUTHORITY_SHA_INVALID/u,
     );
   }
   assert.doesNotThrow(() => validateRetainedOutputCommit({
     changedPaths: [historyPath],
     expectedRunId: runId,
-    readText: () => history(validIdempotencyKey),
+    readText: () => history(validAuthoritySha),
   }));
 });
 
-test("trusted CLI rejects retained history with a malformed idempotency key", () => {
-  const root = mkdtempSync(join(tmpdir(), "boat-pon-retained-idempotency-key-"));
+test("trusted CLI rejects retained history with a malformed authority sha", () => {
+  const root = mkdtempSync(join(tmpdir(), "boat-pon-retained-authority-sha-"));
   const trustedGitBin = execFileSync("which", ["git"], { encoding: "utf8" }).trim();
   const gateCli = resolve(process.cwd(), "scripts/check-research-retained-output-commit.mjs");
   try {
     execFileSync(trustedGitBin, ["init", "-q"], { cwd: root });
     const absoluteHistory = join(root, historyPath);
     mkdirSync(dirname(absoluteHistory), { recursive: true });
-    writeFileSync(absoluteHistory, `${history("not-a-sha256")}\n`, "utf8");
+    writeFileSync(absoluteHistory, `${history("not-a-git-sha")}\n`, "utf8");
 
     assert.throws(
       () => execFileSync(process.execPath, [gateCli, `--run-id=${runId}`], {
@@ -67,7 +67,7 @@ test("trusted CLI rejects retained history with a malformed idempotency key", ()
           GITHUB_RUN_ID: "",
         },
       }),
-      /RETAINED_COMMIT_HISTORY_IDEMPOTENCY_KEY_INVALID/u,
+      /RETAINED_COMMIT_HISTORY_AUTHORITY_SHA_INVALID/u,
     );
   } finally {
     rmSync(root, { recursive: true, force: true });

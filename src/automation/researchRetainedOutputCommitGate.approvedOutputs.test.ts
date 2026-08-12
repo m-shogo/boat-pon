@@ -15,9 +15,10 @@ const unapproved = "private/raw-t5.json";
 const traversal = "reports/n2/../private/raw-t5.json";
 const outputDigest = "a".repeat(64);
 const idempotencyKey = "b".repeat(64);
+const authoritySha = "c".repeat(40);
 
 function historyText(outputs: string[]): string {
-  return JSON.stringify({ runId, taskId, result: "PASS", blocks: [], executed: true, outputDigest, idempotencyKey, outputs });
+  return JSON.stringify({ runId, taskId, result: "PASS", blocks: [], executed: true, outputDigest, idempotencyKey, authoritySha, outputs });
 }
 
 test("retained history accepts only durable-audit approved output roots", () => {

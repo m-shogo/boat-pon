@@ -6,6 +6,7 @@ import { validateRetainedOutputCommit } from "./researchRetainedOutputCommitGate
 const path = "reports/automation/history/12345-TASK-N2-011.json";
 const outputDigest = "a".repeat(64);
 const idempotencyKey = "b".repeat(64);
+const authoritySha = "c".repeat(40);
 
 function validate(result: string): void {
   const blocks = result === "BLOCKED" || result === "FAILED" ? ["terminal-block"] : [];
@@ -20,6 +21,7 @@ function validate(result: string): void {
       executed: true,
       outputDigest,
       idempotencyKey,
+      authoritySha,
       result,
     }),
   });
