@@ -105,6 +105,14 @@ test("duplicate or invalid race keys fail closed rather than silently deduplicat
   assert.equal(invalid.status, "BLOCKED");
   assert.ok(invalid.blockers.includes("INVALID_RACE_KEYS:1"));
   assert.equal(invalid.selectedRaceCount, 0);
+
+  const impossible = buildN2EdgeDiscoveryCohort([{ canonicalRaceKey: "2020-02-30:01:R1" }]);
+  assert.equal(impossible.status, "BLOCKED");
+  assert.deepEqual(impossible.blockers, ["INVALID_RACE_KEYS:1"]);
+  assert.equal(impossible.invalidRaceKeyCount, 1);
+  assert.equal(impossible.excludedBefore2004Count, 0);
+  assert.equal(impossible.excludedAfterTrainCount, 0);
+  assert.equal(impossible.selectedRaceCount, 0);
 });
 
 test("full policy has a hard upper bound of 5,184 races / 622,080 selection rows", () => {
