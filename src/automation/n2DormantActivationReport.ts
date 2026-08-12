@@ -71,6 +71,10 @@ export function buildN2DormantActivationReport(input: {
   const catalogById = new Map(input.catalogTasks.map((task) => [task.taskId, task]));
   if (catalogById.size !== input.catalogTasks.length) blockers.push("CATALOG_DUPLICATE_TASK_ID");
 
+  const { outputDigest: readinessOutputDigest, ...readinessCore } = input.readiness;
+  if (typeof readinessOutputDigest !== "string" || canonicalHash(readinessCore) !== readinessOutputDigest) {
+    blockers.push("READINESS_OUTPUT_DIGEST_INVALID");
+  }
   const readinessSaysReady = input.readiness.status === "READY_FOR_N2_020";
   if (input.readiness.n2TaskReady !== readinessSaysReady) {
     blockers.push("READINESS_TASK_READY_STATE_INCONSISTENT");
