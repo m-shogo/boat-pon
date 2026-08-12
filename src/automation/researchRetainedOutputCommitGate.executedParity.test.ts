@@ -10,9 +10,10 @@ import { validateRetainedOutputCommit } from "./researchRetainedOutputCommitGate
 const runId = "12345";
 const taskId = "TASK-N2-011";
 const historyPath = `reports/automation/history/${runId}-${taskId}.json`;
+const outputDigest = "a".repeat(64);
 
 function history(executed: unknown): string {
-  return JSON.stringify({ runId, taskId, result: "PASS", blocks: [], executed, outputs: [] });
+  return JSON.stringify({ runId, taskId, result: "PASS", blocks: [], executed, outputDigest, outputs: [] });
 }
 
 test("retained gate requires terminal history to have executed true", () => {
