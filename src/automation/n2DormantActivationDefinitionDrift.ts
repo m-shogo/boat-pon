@@ -70,6 +70,11 @@ export function findN2DormantTaskDefinitionDrift(
     if (catalogTask && queueTask && catalogTask.taskDefinitionVersion !== queueTask.taskDefinitionVersion) {
       issues.push(`${taskId}:TASK_DEFINITION_VERSION_MISMATCH`);
     }
+    if (catalogTask?.defaultStatus === "BLOCKED_EXECUTOR_PENDING"
+      && queueTask
+      && queueTask.status !== "BLOCKED_EXECUTOR_PENDING") {
+      issues.push(`${taskId}:QUEUE_STATUS_MISMATCH_WHILE_CATALOG_DORMANT`);
+    }
     if (queueTask?.status === "BLOCKED_EXECUTOR_PENDING") {
       if (queueTask.attemptCount !== 0) issues.push(`${taskId}:DORMANT_ATTEMPT_COUNT_NOT_ZERO`);
       if (queueTask.maxAttempts !== N2_DORMANT_MAX_ATTEMPTS) issues.push(`${taskId}:DORMANT_MAX_ATTEMPTS_MISMATCH`);
