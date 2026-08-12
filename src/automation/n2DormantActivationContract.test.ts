@@ -125,6 +125,23 @@ test("PASS while catalog remains dormant is a fail-closed conflict", () => {
   assert.deepEqual(plan.activationActions, []);
 });
 
+test("PASS with activated catalog but missing executor is a fail-closed conflict", () => {
+  const statuses = blockedTaskStatuses();
+  statuses["TASK-N2-020"] = "PASS";
+  statuses["TASK-N2-021"] = "PASS";
+  const plan = buildN2DormantActivationPlan({
+    readinessStatus: "READY_FOR_N2_020",
+    taskStatuses: statuses,
+    catalogDefaultStatuses: catalogWithActivated("TASK-N2-020", "TASK-N2-021"),
+    runtimeExecutorRegistered: unregistered(),
+  });
+  assert.equal(plan.status, "CONFLICT");
+  assert.equal(plan.stage, "CONFLICT");
+  assert.ok(plan.blockers.includes("TASK-N2-020:CATALOG_ACTIVATED_WITHOUT_EXECUTOR"));
+  assert.ok(plan.blockers.includes("TASK-N2-021:CATALOG_ACTIVATED_WITHOUT_EXECUTOR"));
+  assert.deepEqual(plan.activationActions, []);
+});
+
 test("baseline PASS divergence is a fail-closed conflict", () => {
   const statuses = blockedTaskStatuses();
   statuses["TASK-N2-020"] = "PASS";
