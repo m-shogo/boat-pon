@@ -195,6 +195,24 @@ test("primary durable output reads reject repo-internal parent symlinks", () => 
   });
 });
 
+test("primary durable history enumeration rejects repo-internal parent symlinks", () => {
+  withRoot((root) => {
+    const outside = mkdtempSync(join(tmpdir(), "boat-pon-durable-history-parent-"));
+    try {
+      mkdirSync(join(outside, "automation", "history"), { recursive: true });
+      writeFileSync(join(outside, "automation", "history", "private-name.json"), "{}\n", "utf8");
+      symlinkSync(outside, join(root, "reports"), "dir");
+
+      assert.throws(
+        () => buildResearchDurableKnowledgeCompletenessReport({ repoRoot: root }),
+        /^Error: DURABLE_KNOWLEDGE_HISTORY_DIR_INVALID$/u,
+      );
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+});
+
 test("PASS no-change run is durable from immutable history alone", () => {
   withRoot((root) => {
     writeHistory(root, history({
