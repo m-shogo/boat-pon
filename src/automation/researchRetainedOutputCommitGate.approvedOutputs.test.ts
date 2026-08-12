@@ -8,6 +8,8 @@ import test from "node:test";
 import { validateRetainedOutputCommit } from "./researchRetainedOutputCommitGate";
 
 const runId = "12345";
+const requestId = "REQ-test";
+const intentId = "INTENT-test";
 const taskId = "TASK-N2-011";
 const history = `reports/automation/history/${runId}-${taskId}.json`;
 const approved = "reports/n2/example.json";
@@ -18,26 +20,13 @@ const idempotencyKey = "b".repeat(64);
 const authoritySha = "c".repeat(40);
 
 function historyText(outputs: string[]): string {
-  return JSON.stringify({ runId, taskId, result: "PASS", blocks: [], executed: true, outputDigest, idempotencyKey, authoritySha, outputs });
+  return JSON.stringify({ runId, requestId, intentId, taskId, result: "PASS", blocks: [], executed: true, outputDigest, idempotencyKey, authoritySha, outputs });
 }
 
 test("retained history accepts only durable-audit approved output roots", () => {
-  assert.doesNotThrow(() => validateRetainedOutputCommit({
-    changedPaths: [history],
-    expectedRunId: runId,
-    readText: () => historyText([approved]),
-  }));
-
+  assert.doesNotThrow(() => validateRetainedOutputCommit({ changedPaths: [history], expectedRunId: runId, readText: () => historyText([approved]) }));
   for (const output of [unapproved, traversal, "/reports/n2/absolute.json", history]) {
-    assert.throws(
-      () => validateRetainedOutputCommit({
-        changedPaths: [history],
-        expectedRunId: runId,
-        readText: () => historyText([output]),
-      }),
-      /RETAINED_COMMIT_HISTORY_OUTPUT_PATH_NOT_APPROVED/u,
-      output,
-    );
+    assert.throws(() => validateRetainedOutputCommit({ changedPaths: [history], expectedRunId: runId, readText: () => historyText([output]) }), /RETAINED_COMMIT_HISTORY_OUTPUT_PATH_NOT_APPROVED/u, output);
   }
 });
 
@@ -50,23 +39,8 @@ test("trusted CLI rejects an append-only history with an unapproved output refer
     const absoluteHistory = join(root, history);
     mkdirSync(dirname(absoluteHistory), { recursive: true });
     writeFileSync(absoluteHistory, `${historyText([unapproved])}\n`, "utf8");
-
-    assert.throws(
-      () => execFileSync(process.execPath, [gateCli, `--run-id=${runId}`], {
-        cwd: root,
-        encoding: "utf8",
-        env: {
-          ...process.env,
-          TRUSTED_GIT_BIN: trustedGitBin,
-          GITHUB_ACTIONS: "false",
-          GITHUB_RUN_ID: "",
-        },
-      }),
-      /RETAINED_COMMIT_HISTORY_OUTPUT_PATH_NOT_APPROVED/u,
-    );
-  } finally {
-    rmSync(root, { recursive: true, force: true });
-  }
+    assert.throws(() => execFileSync(process.execPath, [gateCli, `--run-id=${runId}`], { cwd: root, encoding: "utf8", env: { ...process.env, TRUSTED_GIT_BIN: trustedGitBin, GITHUB_ACTIONS: "false", GITHUB_RUN_ID: "" } }), /RETAINED_COMMIT_HISTORY_OUTPUT_PATH_NOT_APPROVED/u);
+  } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
 test("trusted CLI rejects history self-reference as durable output", () => {
@@ -78,21 +52,6 @@ test("trusted CLI rejects history self-reference as durable output", () => {
     const absoluteHistory = join(root, history);
     mkdirSync(dirname(absoluteHistory), { recursive: true });
     writeFileSync(absoluteHistory, `${historyText([history])}\n`, "utf8");
-
-    assert.throws(
-      () => execFileSync(process.execPath, [gateCli, `--run-id=${runId}`], {
-        cwd: root,
-        encoding: "utf8",
-        env: {
-          ...process.env,
-          TRUSTED_GIT_BIN: trustedGitBin,
-          GITHUB_ACTIONS: "false",
-          GITHUB_RUN_ID: "",
-        },
-      }),
-      /RETAINED_COMMIT_HISTORY_OUTPUT_PATH_NOT_APPROVED/u,
-    );
-  } finally {
-    rmSync(root, { recursive: true, force: true });
-  }
+    assert.throws(() => execFileSync(process.execPath, [gateCli, `--run-id=${runId}`], { cwd: root, encoding: "utf8", env: { ...process.env, TRUSTED_GIT_BIN: trustedGitBin, GITHUB_ACTIONS: "false", GITHUB_RUN_ID: "" } }), /RETAINED_COMMIT_HISTORY_OUTPUT_PATH_NOT_APPROVED/u);
+  } finally { rmSync(root, { recursive: true, force: true }); }
 });
