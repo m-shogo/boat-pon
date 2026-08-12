@@ -442,13 +442,13 @@ const changedPaths = [...new Set([
   ...gitLines(["ls-files", "--others", "--exclude-standard", "--", ...relevantRoots]),
 ])].sort();
 
-validateChangedRetainedContentDigests(repoRoot, changedPaths);
-
 const result = validateRetainedOutputCommit({
   changedPaths,
   expectedRunId: requestedRunId,
   readText: (relativePath) => readValidatedHistoryText(repoRoot, relativePath),
 });
+
+validateChangedRetainedContentDigests(repoRoot, changedPaths);
 
 console.log(JSON.stringify({
   gateVersion: "research-retained-output-commit-gate-v1",
