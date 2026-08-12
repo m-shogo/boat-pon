@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { canonicalHash } from "../research-replay/canonical";
 import { buildN2MarketBaselineReadinessReport } from "../research-replay/n2MarketBaselineReadiness";
 import { N2_DORMANT_TASKS } from "./n2DormantActivationContract";
 import { buildN2DormantActivationReport } from "./n2DormantActivationReport";
@@ -142,4 +143,30 @@ test("attempt counts cannot exceed max attempts", () => {
   });
   assert.equal(report.status, "CONFLICT");
   assert.ok(report.blockers.includes("TASK-N2-020:MAX_ATTEMPTS_INVALID"));
+});
+
+test("digest-valid unknown readiness status is a fail-closed conflict", () => {
+  const valid = readiness(5);
+  const forgedWithStaleDigest = { ...valid, status: "NOT_A_READINESS_STATUS" };
+  const { outputDigest: _staleDigest, ...forgedCore } = forgedWithStaleDigest;
+  const forged = {
+    ...forgedWithStaleDigest,
+    outputDigest: canonicalHash(forgedCore),
+  } as unknown as typeof valid;
+  const report = buildN2DormantActivationReport({
+    readiness: forged,
+    catalogTasks: catalog(),
+    queueTasks: queue(),
+    runtimeRegisteredByTaskId: registered(),
+  });
+  assert.equal(report.status, "CONFLICT");
+  assert.equal(report.stage, "CONFLICT");
+  assert.ok(report.blockers.includes("READINESS_STATUS_INVALID"));
+  assert.deepEqual(report.activationActions, []);
+  assert.equal(report.activationPlanningAttemptDelta, 0);
+  assert.equal(report.currentBuyConnectionAuthorized, false);
+  assert.equal(report.lineConnectionAuthorized, false);
+  assert.equal(report.publicPublishAuthorized, false);
+  assert.equal(report.automatedBettingAuthorized, false);
+  assert.equal(report.productionApplyAuthorized, false);
 });

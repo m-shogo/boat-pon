@@ -1,5 +1,6 @@
 import { canonicalHash } from "../research-replay/canonical";
 import {
+  N2_MARKET_BASELINE_READINESS_STATUSES,
   N2_MARKET_BASELINE_READINESS_VERSION,
   type N2MarketBaselineReadinessReport,
 } from "../research-replay/n2MarketBaselineReadiness";
@@ -81,6 +82,11 @@ export function buildN2DormantActivationReport(input: {
   if (input.readiness.reportVersion !== N2_MARKET_BASELINE_READINESS_VERSION
     || input.readiness.n2TaskId !== "TASK-N2-020") {
     blockers.push("READINESS_IDENTITY_INVALID");
+  }
+  if (!N2_MARKET_BASELINE_READINESS_STATUSES.includes(
+    input.readiness.status as (typeof N2_MARKET_BASELINE_READINESS_STATUSES)[number],
+  )) {
+    blockers.push("READINESS_STATUS_INVALID");
   }
   if (input.readiness.automaticPromotionAuthorized !== false
     || input.readiness.currentBuyConnectionAuthorized !== false
