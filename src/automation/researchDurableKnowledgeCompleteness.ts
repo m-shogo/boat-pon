@@ -17,6 +17,7 @@ const HISTORY_RELATIVE_DIR = "reports/automation/history";
 const MAX_HISTORY_BYTES = 8_000_000;
 const MAX_HISTORY_OUTPUT_PATHS = 64;
 const MAX_OUTPUT_BYTES = 32_000_000;
+const MAX_RETAINED_OUTPUT_BYTES = 2_097_152;
 const SHA256_RE = /^[0-9a-f]{64}$/u;
 const GIT_SHA_RE = /^[0-9a-f]{40}$/u;
 const RUN_ID_RE = /^[0-9]+$/u;
@@ -277,7 +278,8 @@ function assessOutput(input: {
     };
   }
   const stat = statSync(absolutePath);
-  if (stat.size <= 0 || stat.size > MAX_OUTPUT_BYTES) {
+  const maxOutputBytes = rootClass === "RETAINED" ? MAX_RETAINED_OUTPUT_BYTES : MAX_OUTPUT_BYTES;
+  if (stat.size <= 0 || stat.size > maxOutputBytes) {
     return {
       relativePath: input.relativePath,
       rootClass,
@@ -293,7 +295,7 @@ function assessOutput(input: {
       warnings,
     };
   }
-  const text = readGovernanceFileUtf8Bounded(absolutePath, MAX_OUTPUT_BYTES).text;
+  const text = readGovernanceFileUtf8Bounded(absolutePath, maxOutputBytes).text;
   const contentDigest = sha256Text(text);
   if (rootClass === "RETAINED") {
     const retainedMatch = input.relativePath.match(
