@@ -75,3 +75,35 @@ test("dormant N2 attempt drift blocks activation without consuming another attem
   assert.equal(report.networkRequestCount, 0);
   assert.equal(report.rawOddsValuesReadByPlanner, false);
 });
+
+test("dormant N2 retry-budget drift blocks activation without consuming an attempt", () => {
+  const queueTasks = queue();
+  queueTasks["TASK-N2-020"] = {
+    ...queueTasks["TASK-N2-020"],
+    maxAttempts: 4,
+  };
+
+  const report = buildN2DormantActivationReport({
+    readiness: readiness(),
+    catalogTasks: catalog(),
+    queueTasks,
+    runtimeRegisteredByTaskId: registered(),
+  });
+
+  assert.equal(report.status, "CONFLICT");
+  assert.equal(report.stage, "CONFLICT");
+  assert.ok(report.blockers.includes("TASK-N2-020:MAX_ATTEMPTS_MISMATCH"));
+  assert.deepEqual(report.activationActions, []);
+  assert.equal(report.tasks["TASK-N2-020"].attemptCount, 0);
+  assert.equal(report.tasks["TASK-N2-020"].maxAttempts, 4);
+  assert.equal(report.activationPlanningAttemptDelta, 0);
+  assert.equal(report.automaticMutationAuthorized, false);
+  assert.equal(report.currentBuyConnectionAuthorized, false);
+  assert.equal(report.lineConnectionAuthorized, false);
+  assert.equal(report.publicPublishAuthorized, false);
+  assert.equal(report.automatedBettingAuthorized, false);
+  assert.equal(report.productionApplyAuthorized, false);
+  assert.equal(report.databaseWriteCount, 0);
+  assert.equal(report.networkRequestCount, 0);
+  assert.equal(report.rawOddsValuesReadByPlanner, false);
+});
