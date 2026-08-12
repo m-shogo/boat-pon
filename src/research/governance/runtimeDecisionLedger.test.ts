@@ -108,6 +108,18 @@ test("Runtime Decision Ledger rejects public/analytics fields and non-BUY notifi
   assert.ok(result.errors.includes("notificationEligible may only be true for BUY decisions"));
 });
 
+test("Runtime Decision Ledger rejects notification identity on ineligible records", () => {
+  const record = validBuyRecord();
+  record.decision = "WATCH";
+  record.recommendedStakeYen = 0;
+  record.notificationEligible = false;
+  record.notificationDedupeKey = "line:should-not-exist";
+
+  const result = validateRuntimeDecisionLedgerRecord(record);
+  assert.equal(result.valid, false);
+  assert.ok(result.errors.includes("notificationDedupeKey must be null when notificationEligible=false"));
+});
+
 test("Runtime Decision Ledger requires valid source identity and digest", () => {
   const record = validBuyRecord();
   record.sourceDecisionHistoryId = 0;
