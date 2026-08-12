@@ -89,7 +89,7 @@ function readRegularText(repoRoot: string, relativePath: string, maxBytes: numbe
   try {
     const stat = lstatSync(path);
     if (stat.isSymbolicLink() || !stat.isFile() || stat.size > maxBytes) return null;
-    return readGovernanceFileUtf8Bounded(path, maxBytes).text;
+    return readGovernanceFileUtf8Bounded(path, maxBytes, repoRoot).text;
   } catch {
     return null;
   }

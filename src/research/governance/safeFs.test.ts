@@ -89,6 +89,40 @@ test("descriptor-bound governance reads reject cwd-contained parent symlinks", (
   );
 });
 
+test("trusted-root reads reject parent symlinks even when the root is outside cwd", () => {
+  const root = tmp();
+  const outside = tmp();
+  writeFileSync(join(outside, "outside.json"), "{}\n");
+  const aliasDir = join(root, "linked");
+  symlinkSync(outside, aliasDir, "dir");
+
+  assert.throws(
+    () => readGovernanceFileUtf8Bounded(join(aliasDir, "outside.json"), 1024, root),
+    /governance scan parent symlink forbidden/,
+  );
+});
+
+test("trusted-root reads reject targets outside the trusted root", () => {
+  const root = tmp();
+  const outside = join(tmp(), "outside.json");
+  writeFileSync(outside, "{}\n");
+
+  assert.throws(
+    () => readGovernanceFileUtf8Bounded(outside, 1024, root),
+    /governance scan path outside trusted root/,
+  );
+});
+
+test("trusted-root reads allow regular descendants without inspecting ambient parents", () => {
+  const root = tmp();
+  const nested = join(root, "reports", "history");
+  mkdirSync(nested, { recursive: true });
+  const path = join(nested, "run.json");
+  writeFileSync(path, "{}\n");
+
+  assert.deepEqual(readGovernanceFileUtf8Bounded(path, 1024, root), { text: "{}\n", bytes: 3 });
+});
+
 test("descriptor-bound governance reads reject hardlinks", () => {
   const root = tmp();
   const source = join(root, "source.json");

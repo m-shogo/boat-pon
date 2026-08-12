@@ -43,16 +43,19 @@ export function listJsonFilesFailClosed(root: string): string[] {
   return files;
 }
 
-function assertGovernanceReadParentsSafe(path: string): void {
-  const cwd = resolve(process.cwd());
+function assertGovernanceReadParentsSafe(path: string, trustedRoot?: string): void {
+  const anchor = resolve(trustedRoot ?? process.cwd());
   const absolutePath = resolve(path);
-  const relativePath = relative(cwd, absolutePath);
+  const relativePath = relative(anchor, absolutePath);
   if (!relativePath || relativePath === ".." || relativePath.startsWith(`..${sep}`) || isAbsolute(relativePath)) {
+    if (trustedRoot !== undefined && absolutePath !== anchor) {
+      throw new Error(`governance scan path outside trusted root: ${path}`);
+    }
     return;
   }
 
   const parentParts = relativePath.split(sep).slice(0, -1);
-  let current = cwd;
+  let current = anchor;
   for (const part of parentParts) {
     current = join(current, part);
     const stat = lstatSync(current);
@@ -82,11 +85,15 @@ function readDescriptorBounded(fd: number, path: string, maxBytes: number): Buff
   return Buffer.concat(chunks, totalBytes);
 }
 
-function readGovernanceFileDescriptor(path: string, maxBytes?: number): { text: string; bytes: number } {
+function readGovernanceFileDescriptor(
+  path: string,
+  maxBytes?: number,
+  trustedRoot?: string,
+): { text: string; bytes: number } {
   if (maxBytes !== undefined && (!Number.isSafeInteger(maxBytes) || maxBytes < 0)) {
     throw new Error(`governance scan byte limit invalid: ${path}`);
   }
-  assertGovernanceReadParentsSafe(path);
+  assertGovernanceReadParentsSafe(path, trustedRoot);
   let fd: number | null = null;
   try {
     fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
@@ -120,10 +127,14 @@ function readGovernanceFileDescriptor(path: string, maxBytes?: number): { text: 
   }
 }
 
-export function readGovernanceFileUtf8(path: string): string {
-  return readGovernanceFileDescriptor(path).text;
+export function readGovernanceFileUtf8(path: string, trustedRoot?: string): string {
+  return readGovernanceFileDescriptor(path, undefined, trustedRoot).text;
 }
 
-export function readGovernanceFileUtf8Bounded(path: string, maxBytes: number): { text: string; bytes: number } {
-  return readGovernanceFileDescriptor(path, maxBytes);
+export function readGovernanceFileUtf8Bounded(
+  path: string,
+  maxBytes: number,
+  trustedRoot?: string,
+): { text: string; bytes: number } {
+  return readGovernanceFileDescriptor(path, maxBytes, trustedRoot);
 }
