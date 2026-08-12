@@ -168,6 +168,33 @@ test("tampered registry output blocks completeness", () => {
   });
 });
 
+test("primary durable output reads reject repo-internal parent symlinks", () => {
+  withRoot((root) => {
+    const outside = mkdtempSync(join(tmpdir(), "boat-pon-durable-output-target-"));
+    try {
+      const linkedDir = join(root, "reports/n2/linked");
+      mkdirSync(dirname(linkedDir), { recursive: true });
+      writeJson(outside, "example.json", { reportVersion: "v1", outputDigest: "5".repeat(64) });
+      symlinkSync(outside, linkedDir, "dir");
+      writeHistory(root, history({
+        runId: "1012",
+        taskId: "TASK-N2-012",
+        result: "PASS",
+        outputs: ["reports/n2/linked/example.json"],
+        outputDigest: "5".repeat(64),
+        summary: { status: "PASS" },
+      }));
+
+      assert.throws(
+        () => buildResearchDurableKnowledgeCompletenessReport({ repoRoot: root }),
+        /governance scan parent symlink forbidden/u,
+      );
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+});
+
 test("PASS no-change run is durable from immutable history alone", () => {
   withRoot((root) => {
     writeHistory(root, history({
