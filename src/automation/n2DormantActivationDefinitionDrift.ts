@@ -76,9 +76,20 @@ export function findN2DormantTaskDefinitionDrift(
       && queueTask.status !== "BLOCKED_EXECUTOR_PENDING") {
       issues.push(`${taskId}:QUEUE_STATUS_MISMATCH_WHILE_CATALOG_DORMANT`);
     }
+    if (queueTask?.status === "BLOCKED_EXECUTOR_PENDING"
+      && catalogTask
+      && catalogTask.defaultStatus !== "BLOCKED_EXECUTOR_PENDING") {
+      issues.push(`${taskId}:CATALOG_STATUS_MISMATCH_WHILE_QUEUE_DORMANT`);
+    }
     if (catalogTask?.defaultStatus === "BLOCKED_EXECUTOR_PENDING"
       && runtimeRegisteredByTaskId[taskId] === true) {
       issues.push(`${taskId}:RUNTIME_EXECUTOR_REGISTERED_WHILE_CATALOG_DORMANT`);
+    }
+    if (catalogTask && queueTask
+      && catalogTask.defaultStatus !== "BLOCKED_EXECUTOR_PENDING"
+      && queueTask.status !== "BLOCKED_EXECUTOR_PENDING"
+      && runtimeRegisteredByTaskId[taskId] !== true) {
+      issues.push(`${taskId}:RUNTIME_EXECUTOR_MISSING_WHILE_CATALOG_AND_QUEUE_ACTIVE`);
     }
     if (queueTask?.status === "BLOCKED_EXECUTOR_PENDING") {
       if (queueTask.attemptCount !== 0) issues.push(`${taskId}:DORMANT_ATTEMPT_COUNT_NOT_ZERO`);
