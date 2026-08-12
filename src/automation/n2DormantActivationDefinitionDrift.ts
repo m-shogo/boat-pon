@@ -28,6 +28,9 @@ export function findN2DormantTaskDefinitionDrift(
     if (catalogTask && catalogTask.taskType !== N2_DORMANT_TASK_TYPES[taskId]) {
       issues.push(`${taskId}:CATALOG_TASK_TYPE_MISMATCH`);
     }
+    if (catalogTask && catalogTask.executor !== N2_DORMANT_TASK_TYPES[taskId]) {
+      issues.push(`${taskId}:CATALOG_EXECUTOR_MISMATCH`);
+    }
     if (catalogTask && queueTask && catalogTask.taskDefinitionVersion !== queueTask.taskDefinitionVersion) {
       issues.push(`${taskId}:TASK_DEFINITION_VERSION_MISMATCH`);
     }
