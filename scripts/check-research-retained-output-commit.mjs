@@ -16,6 +16,7 @@ const RETAINED_PREFIX = "reports/automation/retained-outputs/";
 const HISTORY_PREFIX = "reports/automation/history/";
 const MAX_HISTORY_BYTES = 8_000_000;
 const MAX_RETAINED_BYTES = 2_097_152;
+const MAX_RETAINED_TOTAL_BYTES = 8_388_608;
 const MAX_HISTORY_OUTPUT_PATHS = 64;
 const HISTORY_READ_CHUNK_BYTES = 64 * 1024;
 const RETAINED_READ_CHUNK_BYTES = 64 * 1024;
@@ -400,6 +401,7 @@ function readValidatedRetainedBytes(repoRoot, relativePath) {
 }
 
 function validateChangedRetainedContentDigests(repoRoot, changedPaths) {
+  let totalRetainedBytes = 0;
   for (const relativePath of changedPaths) {
     if (!relativePath.startsWith(RETAINED_PREFIX)) continue;
     const match = relativePath.match(RETAINED_RE);
@@ -409,6 +411,10 @@ function validateChangedRetainedContentDigests(repoRoot, changedPaths) {
     const actualDigest = createHash("sha256").update(content).digest("hex");
     if (actualDigest !== expectedDigest) {
       throw new Error(`RETAINED_COMMIT_CONTENT_DIGEST_MISMATCH:${relativePath}`);
+    }
+    totalRetainedBytes += content.length;
+    if (totalRetainedBytes > MAX_RETAINED_TOTAL_BYTES) {
+      throw new Error(`RETAINED_COMMIT_TOTAL_BYTES_EXCEEDED:${totalRetainedBytes}>${MAX_RETAINED_TOTAL_BYTES}`);
     }
   }
 }
