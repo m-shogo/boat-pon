@@ -201,7 +201,7 @@ export function validateRuntimeDecisionLedgerRecord(value: unknown): RuntimeDeci
   ] as const) {
     if (!isNonEmptyString(value[field])) errors.push(`${field} must be a non-empty string`);
   }
-  if (isNonEmptyString(value.sourceRowDigest) && !/^[0-9a-f]{64}$/i.test(value.sourceRowDigest)) {
+  if (isNonEmptyString(value.sourceRowDigest) && !/^[0-9a-f]{64}$/.test(value.sourceRowDigest)) {
     errors.push("sourceRowDigest must be a SHA-256 hex digest");
   }
 
