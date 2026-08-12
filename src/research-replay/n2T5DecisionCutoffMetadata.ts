@@ -67,6 +67,11 @@ function unique(values: readonly string[]): string[] {
   return [...new Set(values)].sort();
 }
 
+function isCanonicalCalendarDate(date: string): boolean {
+  const value = Date.parse(`${date}T00:00:00.000Z`);
+  return Number.isFinite(value) && new Date(value).toISOString().slice(0, 10) === date;
+}
+
 function expectedMetadataLocation(raceKey: string): {
   date: string;
   venue: string;
@@ -75,7 +80,7 @@ function expectedMetadataLocation(raceKey: string): {
   directory: string;
 } | null {
   const match = RACE_KEY_RE.exec(raceKey);
-  if (!match) return null;
+  if (!match || !isCanonicalCalendarDate(match[1])) return null;
   const raceDir = String(Number(match[3])).padStart(2, "0");
   return {
     date: match[1],
