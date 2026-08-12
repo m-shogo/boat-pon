@@ -166,6 +166,11 @@ export function buildN2DormantActivationPlan(input: {
     if (!DEFAULT_STATUSES.includes(defaultStatus as DefaultStatus)) {
       blockers.push(`${taskId}:CATALOG_DEFAULT_STATUS_INVALID`);
     }
+    if (["READY", "CLAIMED", "RUNNING", "CHECKPOINTED"].includes(taskStatus)
+      && defaultStatus === "BLOCKED_EXECUTOR_PENDING"
+      && !registered) {
+      blockers.push(`${taskId}:QUEUE_ACTIVATED_WHILE_CATALOG_AND_EXECUTOR_DORMANT`);
+    }
     if (defaultStatus === "BLOCKED_EXECUTOR_PENDING" && registered) {
       blockers.push(`${taskId}:REGISTERED_WHILE_BLOCKED_EXECUTOR_PENDING`);
     }
