@@ -112,6 +112,7 @@ export function buildN2DormantActivationReport(input: {
   if (readinessCountsValid) {
     const expectedStatus = classifyN2MarketBaselineReadiness({
       blockerCount: input.readiness.blockers.length,
+      integrityBlockedRaceCount: input.readiness.integrityBlockedRaceCount,
       acceptedT5RaceCount: input.readiness.acceptedT5RaceCount,
       settledAcceptedT5RaceCount: input.readiness.settledAcceptedT5RaceCount,
       minimumSettledRaceCount: input.readiness.minimumSettledRaceCount,
@@ -129,7 +130,8 @@ export function buildN2DormantActivationReport(input: {
   if (input.readiness.blockers.length > 0 && input.readiness.status !== "BLOCKED") {
     blockers.push("READINESS_BLOCKERS_WITH_NONBLOCKED_STATUS");
   }
-  if (input.readiness.status === "BLOCKED" && input.readiness.blockers.length === 0) {
+  if (input.readiness.status === "BLOCKED" && input.readiness.blockers.length === 0
+    && input.readiness.integrityBlockedRaceCount === 0) {
     blockers.push("READINESS_BLOCKED_WITHOUT_BLOCKER");
   }
 
