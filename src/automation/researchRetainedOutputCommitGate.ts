@@ -32,6 +32,10 @@ function approvedOutputPath(value: string): boolean {
   return ALLOWED_OUTPUT_ROOTS.some((root) => value.startsWith(root));
 }
 
+function nonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
 export function validateRetainedOutputCommit(input: {
   changedPaths: string[];
   expectedRunId?: string | null;
@@ -76,6 +80,12 @@ export function validateRetainedOutputCommit(input: {
     }
     if (String(history.taskId ?? "") !== pathTaskId) {
       throw new Error(`RETAINED_COMMIT_HISTORY_TASK_ID_MISMATCH:${historyPath}`);
+    }
+    if (!nonEmptyString(history.requestId)) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_REQUEST_ID_INVALID:${historyPath}`);
+    }
+    if (!nonEmptyString(history.intentId)) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_INTENT_ID_INVALID:${historyPath}`);
     }
     const historyResult = String(history.result ?? "");
     if (!TERMINAL_RESULTS.has(historyResult)) {
