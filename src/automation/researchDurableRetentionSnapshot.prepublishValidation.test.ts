@@ -144,3 +144,48 @@ test("self-digest-valid retention snapshots with inconsistent classifications ar
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("self-digest-valid retention snapshots cannot classify incomplete history as durable", () => {
+  const root = mkdtempSync(join(tmpdir(), "boat-pon-retention-classification-semantics-"));
+  try {
+    const report = buildResearchDurableKnowledgeCompletenessReport({ repoRoot: root });
+    const snapshot = buildResearchDurableRetentionSnapshot({
+      report,
+      sourceStateSha: "d".repeat(40),
+      mainAuthoritySha: "e".repeat(40),
+      firstObservedAt: "2026-08-07T14:00:00.000Z",
+    });
+    const invalid = withValidSelfDigest({
+      ...snapshot,
+      historyFileCount: 1,
+      assessedRunCount: 1,
+      durableCompleteCount: 1,
+      strongDurableCompleteCount: 0,
+      incompleteCount: 0,
+      invalidHistoryCount: 0,
+      classificationCounts: {
+        ...snapshot.classificationCounts,
+        INVALID_HISTORY: 1,
+      },
+      nonStrongRuns: [{
+        runId: null,
+        taskId: null,
+        taskType: null,
+        result: null,
+        classification: "INVALID_HISTORY",
+        durableComplete: true,
+        strongDurableComplete: false,
+        warnings: [],
+      }],
+    });
+    const relativePath = durableRetentionSnapshotRelativePath(invalid);
+
+    assert.throws(
+      () => persistResearchDurableRetentionSnapshot({ repoRoot: root, snapshot: invalid }),
+      /DURABLE_RETENTION_DURABLE_CLASSIFICATION_COUNT_MISMATCH/u,
+    );
+    assert.equal(existsSync(join(root, relativePath)), false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

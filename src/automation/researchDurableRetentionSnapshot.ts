@@ -179,6 +179,15 @@ function assertSnapshotSchemaInvariants(object: Record<string, unknown>): void {
   if (classificationTotal !== object.assessedRunCount) {
     throw new Error("DURABLE_RETENTION_CLASSIFICATION_COUNT_MISMATCH");
   }
+  const durableClassificationCount = (classificationCounts.PASS_DURABLE_OUTPUTS as number)
+    + (classificationCounts.PASS_NO_CHANGE_HISTORY as number)
+    + (classificationCounts.NON_PASS_DURABLE_HISTORY as number);
+  if (durableClassificationCount !== object.durableCompleteCount) {
+    throw new Error("DURABLE_RETENTION_DURABLE_CLASSIFICATION_COUNT_MISMATCH");
+  }
+  if (classificationCounts.INVALID_HISTORY !== object.invalidHistoryCount) {
+    throw new Error("DURABLE_RETENTION_INVALID_HISTORY_CLASSIFICATION_MISMATCH");
+  }
   if (!Array.isArray(object.nonStrongRuns)) throw new Error("DURABLE_RETENTION_NON_STRONG_RUNS_INVALID");
   if (object.nonStrongRuns.length !== (object.assessedRunCount as number) - (object.strongDurableCompleteCount as number)) {
     throw new Error("DURABLE_RETENTION_NON_STRONG_RUN_COUNT_MISMATCH");
