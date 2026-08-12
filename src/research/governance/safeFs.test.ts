@@ -56,6 +56,19 @@ test("governance directory guard rejects cwd-contained parent symlinks", (t) => 
   );
 });
 
+test("trusted-root directory guards reject parent symlinks outside cwd", () => {
+  const root = tmp();
+  const outside = tmp();
+  mkdirSync(join(outside, "history"));
+  const aliasDir = join(root, "linked");
+  symlinkSync(outside, aliasDir, "dir");
+
+  assert.throws(
+    () => assertGovernanceDirectorySafe(join(aliasDir, "history"), root),
+    /governance scan parent symlink forbidden/,
+  );
+});
+
 test("governance scan rejects symlinked JSON files", () => {
   const root = tmp();
   const outside = join(tmp(), "outside.json");
