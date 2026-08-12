@@ -76,6 +76,21 @@ export function buildN2DormantActivationReport(input: {
     blockers.push("READINESS_OUTPUT_DIGEST_INVALID");
   }
   const readinessSaysReady = input.readiness.status === "READY_FOR_N2_020";
+  const readinessCountsValid = Number.isSafeInteger(input.readiness.minimumSettledRaceCount)
+    && input.readiness.minimumSettledRaceCount >= 1
+    && Number.isSafeInteger(input.readiness.acceptedT5RaceCount)
+    && input.readiness.acceptedT5RaceCount >= 0
+    && Number.isSafeInteger(input.readiness.settledAcceptedT5RaceCount)
+    && input.readiness.settledAcceptedT5RaceCount >= 0
+    && input.readiness.settledAcceptedT5RaceCount <= input.readiness.acceptedT5RaceCount
+    && Number.isSafeInteger(input.readiness.integrityBlockedRaceCount)
+    && input.readiness.integrityBlockedRaceCount >= 0;
+  if (!readinessCountsValid) blockers.push("READINESS_COUNTS_INVALID");
+  if (readinessSaysReady && readinessCountsValid
+    && (input.readiness.settledAcceptedT5RaceCount < input.readiness.minimumSettledRaceCount
+      || input.readiness.integrityBlockedRaceCount > 0)) {
+    blockers.push("READINESS_READY_COUNTS_INCONSISTENT");
+  }
   if (input.readiness.n2TaskReady !== readinessSaysReady) {
     blockers.push("READINESS_TASK_READY_STATE_INCONSISTENT");
   }
