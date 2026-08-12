@@ -88,6 +88,7 @@ const EVALUATION_MODES = new Set<RuntimeEvaluationMode>([
   "future_only",
 ]);
 const COMPLETENESS = new Set<RuntimeDataCompleteness>(["complete", "partial", "blocked"]);
+const EXACT_INSTANT_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/u;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value != null && typeof value === "object" && !Array.isArray(value);
@@ -110,8 +111,8 @@ function isPositiveInteger(value: unknown): value is number {
 }
 
 function parseInstant(value: unknown, field: string, errors: string[]): number | null {
-  if (!isNonEmptyString(value)) {
-    errors.push(`${field} must be a non-empty ISO timestamp`);
+  if (!isNonEmptyString(value) || !EXACT_INSTANT_RE.test(value)) {
+    errors.push(`${field} must be a timezone-bound ISO timestamp`);
     return null;
   }
   const parsed = Date.parse(value);
