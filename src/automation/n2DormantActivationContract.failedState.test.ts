@@ -20,7 +20,7 @@ function blockedStatuses(): Record<string, string> {
 
 test("failed dormant baseline state never produces an activation action", () => {
   const statuses = blockedStatuses();
-  statuses["TASK-N2-020"] = "FAILED";
+  statuses["TASK-N2-020"] = "FAILED_FINAL";
 
   const plan = buildN2DormantActivationPlan({
     readinessStatus: "READY_FOR_N2_020",
@@ -29,6 +29,7 @@ test("failed dormant baseline state never produces an activation action", () => 
     runtimeExecutorRegistered: unregistered(),
   });
 
+  assert.equal(plan.status, "PASS");
   assert.equal(plan.stage, "WAITING_BASELINES_PASS");
   assert.deepEqual(plan.activationActions, []);
   assert.equal(plan.automaticPromotionAuthorized, false);

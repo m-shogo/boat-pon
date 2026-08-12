@@ -1,4 +1,5 @@
 import { canonicalHash } from "../research-replay/canonical";
+import { TASK_STATUSES, type TaskStatus } from "./researchOrchestrator";
 
 export const N2_DORMANT_ACTIVATION_CONTRACT_VERSION =
   "n2-dormant-activation-contract-v2" as const;
@@ -14,14 +15,7 @@ export const N2_DORMANT_TASKS = [
 ] as const;
 
 export type N2DormantTaskId = typeof N2_DORMANT_TASKS[number];
-export type N2DormantTaskStatus =
-  | "READY"
-  | "PASS"
-  | "BLOCKED"
-  | "BLOCKED_EXECUTOR_PENDING"
-  | "FAILED"
-  | "RUNNING"
-  | "UNKNOWN";
+export type N2DormantTaskStatus = TaskStatus | "UNKNOWN";
 
 export type N2DormantActivationStage =
   | "WAITING_PRIVATE_COHORT"
@@ -90,17 +84,8 @@ export type N2DormantActivationPlan = {
 };
 
 function normalizeStatus(value: string | undefined): N2DormantTaskStatus {
-  switch (value) {
-    case "READY":
-    case "PASS":
-    case "BLOCKED":
-    case "BLOCKED_EXECUTOR_PENDING":
-    case "FAILED":
-    case "RUNNING":
-      return value;
-    default:
-      return "UNKNOWN";
-  }
+  if (TASK_STATUSES.includes(value as TaskStatus)) return value as TaskStatus;
+  return "UNKNOWN";
 }
 
 function action(
@@ -165,6 +150,9 @@ export function buildN2DormantActivationPlan(input: {
     const taskStatus = taskStatuses[taskId];
     const defaultStatus = catalogDefaultStatuses[taskId];
     const registered = runtimeExecutorRegistered[taskId];
+    if (taskStatus === "UNKNOWN") {
+      blockers.push(`${taskId}:QUEUE_STATUS_INVALID`);
+    }
     if (defaultStatus === "BLOCKED_EXECUTOR_PENDING" && registered) {
       blockers.push(`${taskId}:REGISTERED_WHILE_BLOCKED_EXECUTOR_PENDING`);
     }
