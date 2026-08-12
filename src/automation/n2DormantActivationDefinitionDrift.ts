@@ -65,6 +65,9 @@ export function findN2DormantTaskDefinitionDrift(
     if (catalogTask && catalogTask.safetyLevel !== "L0") {
       issues.push(`${taskId}:CATALOG_SAFETY_LEVEL_MISMATCH`);
     }
+    if (catalogTask && catalogTask.defaultStatus !== "BLOCKED_EXECUTOR_PENDING") {
+      issues.push(`${taskId}:CATALOG_DEFAULT_STATUS_MISMATCH`);
+    }
     if (catalogTask && !sameDependencySet(catalogTask.dependencies, N2_DORMANT_TASK_DEPENDENCIES[taskId])) {
       issues.push(`${taskId}:CATALOG_DEPENDENCIES_MISMATCH`);
     }
