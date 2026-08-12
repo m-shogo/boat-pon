@@ -81,15 +81,22 @@ test("20 clean settled races exposes exactly the atomic baseline activation acti
 });
 
 test("report follows later PASS state while preserving zero planner attempt delta", () => {
+  const passedTaskIds = ["TASK-N2-020", "TASK-N2-021", "TASK-N2-022", "TASK-N2-030"] as const;
   const q = queue();
-  for (const taskId of ["TASK-N2-020", "TASK-N2-021", "TASK-N2-022", "TASK-N2-030"] as const) {
+  const c = catalog();
+  const reg = registered();
+  for (const taskId of passedTaskIds) {
     q[taskId] = { ...q[taskId], status: "PASS", attemptCount: 1 };
+    const catalogTask = c.find((item) => item.taskId === taskId);
+    assert.ok(catalogTask);
+    catalogTask.defaultStatus = "READY";
+    reg[taskId] = true;
   }
   const report = buildN2DormantActivationReport({
     readiness: readiness(20),
-    catalogTasks: catalog(),
+    catalogTasks: c,
     queueTasks: q,
-    runtimeRegisteredByTaskId: registered(),
+    runtimeRegisteredByTaskId: reg,
   });
   assert.equal(report.status, "PASS");
   assert.equal(report.stage, "ACTIVATE_EDGE_SCAN");

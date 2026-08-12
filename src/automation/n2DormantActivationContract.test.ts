@@ -10,8 +10,20 @@ function blockedCatalog(): Record<string, string> {
   return Object.fromEntries(N2_DORMANT_TASKS.map((taskId) => [taskId, "BLOCKED_EXECUTOR_PENDING"]));
 }
 
+function catalogWithActivated(...taskIds: string[]): Record<string, string> {
+  const catalog = blockedCatalog();
+  for (const taskId of taskIds) catalog[taskId] = "READY";
+  return catalog;
+}
+
 function unregistered(): Record<string, boolean> {
   return Object.fromEntries(N2_DORMANT_TASKS.map((taskId) => [taskId, false]));
+}
+
+function registeredFor(...taskIds: string[]): Record<string, boolean> {
+  const registered = unregistered();
+  for (const taskId of taskIds) registered[taskId] = true;
+  return registered;
 }
 
 function blockedTaskStatuses(): Record<string, string> {
@@ -50,47 +62,66 @@ test("READY_FOR_N2_020 yields one atomic baseline-pair activation action", () =>
   assert.equal(plan.activationActions[0].automaticMutationAuthorized, false);
 });
 
-test("both baseline PASS states unlock only the common-cohort activation", () => {
+test("both activated baseline PASS states unlock only the common-cohort activation", () => {
   const statuses = blockedTaskStatuses();
   statuses["TASK-N2-020"] = "PASS";
   statuses["TASK-N2-021"] = "PASS";
   const plan = buildN2DormantActivationPlan({
     readinessStatus: "READY_FOR_N2_020",
     taskStatuses: statuses,
-    catalogDefaultStatuses: blockedCatalog(),
-    runtimeExecutorRegistered: unregistered(),
+    catalogDefaultStatuses: catalogWithActivated("TASK-N2-020", "TASK-N2-021"),
+    runtimeExecutorRegistered: registeredFor("TASK-N2-020", "TASK-N2-021"),
   });
   assert.equal(plan.status, "PASS");
   assert.equal(plan.stage, "ACTIVATE_COMMON_COHORT");
   assert.deepEqual(plan.activationActions[0].taskIds, ["TASK-N2-022"]);
 });
 
-test("common-cohort PASS unlocks only metrics activation", () => {
+test("activated common-cohort PASS unlocks only metrics activation", () => {
   const statuses = blockedTaskStatuses();
   statuses["TASK-N2-020"] = "PASS";
   statuses["TASK-N2-021"] = "PASS";
   statuses["TASK-N2-022"] = "PASS";
+  const activated = ["TASK-N2-020", "TASK-N2-021", "TASK-N2-022"];
   const plan = buildN2DormantActivationPlan({
     readinessStatus: "READY_FOR_N2_020",
     taskStatuses: statuses,
-    catalogDefaultStatuses: blockedCatalog(),
-    runtimeExecutorRegistered: unregistered(),
+    catalogDefaultStatuses: catalogWithActivated(...activated),
+    runtimeExecutorRegistered: registeredFor(...activated),
   });
   assert.equal(plan.status, "PASS");
   assert.equal(plan.stage, "ACTIVATE_METRICS");
   assert.deepEqual(plan.activationActions[0].taskIds, ["TASK-N2-030"]);
 });
 
-test("metrics PASS marks the dormant activation chain complete", () => {
+test("fully activated PASS chain is complete", () => {
   const statuses = Object.fromEntries(N2_DORMANT_TASKS.map((taskId) => [taskId, "PASS"]));
+  const activated = [...N2_DORMANT_TASKS];
+  const plan = buildN2DormantActivationPlan({
+    readinessStatus: "READY_FOR_N2_020",
+    taskStatuses: statuses,
+    catalogDefaultStatuses: catalogWithActivated(...activated),
+    runtimeExecutorRegistered: registeredFor(...activated),
+  });
+  assert.equal(plan.status, "PASS");
+  assert.equal(plan.stage, "COMPLETE");
+  assert.deepEqual(plan.activationActions, []);
+});
+
+test("PASS while catalog remains dormant is a fail-closed conflict", () => {
+  const statuses = blockedTaskStatuses();
+  statuses["TASK-N2-020"] = "PASS";
+  statuses["TASK-N2-021"] = "PASS";
   const plan = buildN2DormantActivationPlan({
     readinessStatus: "READY_FOR_N2_020",
     taskStatuses: statuses,
     catalogDefaultStatuses: blockedCatalog(),
     runtimeExecutorRegistered: unregistered(),
   });
-  assert.equal(plan.status, "PASS");
-  assert.equal(plan.stage, "COMPLETE");
+  assert.equal(plan.status, "CONFLICT");
+  assert.equal(plan.stage, "CONFLICT");
+  assert.ok(plan.blockers.includes("TASK-N2-020:PASS_WHILE_CATALOG_DORMANT"));
+  assert.ok(plan.blockers.includes("TASK-N2-021:PASS_WHILE_CATALOG_DORMANT"));
   assert.deepEqual(plan.activationActions, []);
 });
 
@@ -100,8 +131,8 @@ test("baseline PASS divergence is a fail-closed conflict", () => {
   const plan = buildN2DormantActivationPlan({
     readinessStatus: "READY_FOR_N2_020",
     taskStatuses: statuses,
-    catalogDefaultStatuses: blockedCatalog(),
-    runtimeExecutorRegistered: unregistered(),
+    catalogDefaultStatuses: catalogWithActivated("TASK-N2-020"),
+    runtimeExecutorRegistered: registeredFor("TASK-N2-020"),
   });
   assert.equal(plan.status, "CONFLICT");
   assert.equal(plan.stage, "CONFLICT");
