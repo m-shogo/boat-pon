@@ -14,7 +14,12 @@ function reader(files: Record<string, unknown>): (path: string) => string {
 
 const evidence = (runId: string, taskId: string) => ({
   runId,
+  requestId: "REQ-test",
+  intentId: "INTENT-test",
   taskId,
+  taskType: "pit-audit",
+  safetyLevel: "L0",
+  executorVersion: "test-executor-v1",
   outputs: [],
   result: "PASS",
   blocks: [],
@@ -23,6 +28,9 @@ const evidence = (runId: string, taskId: string) => ({
   summary: {},
   idempotencyKey,
   authoritySha,
+  startedAt: "2026-08-12T00:00:00.000Z",
+  completedAt: "2026-08-12T00:00:01.000Z",
+  elapsedMs: 1000,
 });
 
 test("history-only commit cannot create terminal evidence for another workflow run", () => {
