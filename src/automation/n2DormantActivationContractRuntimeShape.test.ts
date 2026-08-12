@@ -14,6 +14,10 @@ function blockedCatalog(): Record<string, string> {
   return Object.fromEntries(N2_DORMANT_TASKS.map((taskId) => [taskId, "BLOCKED_EXECUTOR_PENDING"]));
 }
 
+function unregistered(): Record<string, boolean> {
+  return Object.fromEntries(N2_DORMANT_TASKS.map((taskId) => [taskId, false]));
+}
+
 for (const malformed of [undefined, "false"] as const) {
   test(`direct planner rejects malformed runtime registration ${String(malformed)}`, () => {
     const runtime = Object.fromEntries(N2_DORMANT_TASKS.map((taskId) => [taskId, false])) as Record<string, unknown>;
@@ -30,6 +34,33 @@ for (const malformed of [undefined, "false"] as const) {
     assert.equal(plan.status, "CONFLICT");
     assert.equal(plan.stage, "CONFLICT");
     assert.ok(plan.blockers.includes("TASK-N2-020:RUNTIME_REGISTRATION_STATE_INVALID"));
+    assert.deepEqual(plan.activationActions, []);
+    assert.equal(plan.invariants.activationPlanningConsumesAttempt, false);
+    assert.equal(plan.currentBuyConnectionAuthorized, false);
+    assert.equal(plan.lineConnectionAuthorized, false);
+    assert.equal(plan.publicPublishAuthorized, false);
+    assert.equal(plan.automatedBettingAuthorized, false);
+    assert.equal(plan.productionApplyAuthorized, false);
+  });
+}
+
+for (const malformed of [undefined, "FAILED", "NOT_A_STATUS"] as const) {
+  test(`direct planner rejects noncanonical queue status ${String(malformed)}`, () => {
+    const statuses = blockedTaskStatuses() as Record<string, string | undefined>;
+    if (malformed === undefined) delete statuses["TASK-N2-020"];
+    else statuses["TASK-N2-020"] = malformed;
+
+    const plan = buildN2DormantActivationPlan({
+      readinessStatus: "READY_FOR_N2_020",
+      taskStatuses: statuses,
+      catalogDefaultStatuses: blockedCatalog(),
+      runtimeExecutorRegistered: unregistered(),
+    });
+
+    assert.equal(plan.status, "CONFLICT");
+    assert.equal(plan.stage, "CONFLICT");
+    assert.ok(plan.blockers.includes("TASK-N2-020:QUEUE_STATUS_INVALID"));
+    assert.equal(plan.taskStatuses["TASK-N2-020"], "UNKNOWN");
     assert.deepEqual(plan.activationActions, []);
     assert.equal(plan.invariants.activationPlanningConsumesAttempt, false);
     assert.equal(plan.currentBuyConnectionAuthorized, false);
