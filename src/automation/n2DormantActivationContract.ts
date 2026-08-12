@@ -171,6 +171,18 @@ export function buildN2DormantActivationPlan(input: {
       && !registered) {
       blockers.push(`${taskId}:QUEUE_ACTIVATED_WHILE_CATALOG_AND_EXECUTOR_DORMANT`);
     }
+    if ([
+      "CONDITIONAL",
+      "BLOCKED",
+      "FAILED_RETRYABLE",
+      "FAILED_FINAL",
+      "CANCELLED",
+      "BLOCKED_DEPENDENCY",
+    ].includes(taskStatus)
+      && defaultStatus === "BLOCKED_EXECUTOR_PENDING"
+      && !registered) {
+      blockers.push(`${taskId}:QUEUE_NON_DORMANT_WHILE_CATALOG_AND_EXECUTOR_DORMANT`);
+    }
     if (defaultStatus === "BLOCKED_EXECUTOR_PENDING" && registered) {
       blockers.push(`${taskId}:REGISTERED_WHILE_BLOCKED_EXECUTOR_PENDING`);
     }
