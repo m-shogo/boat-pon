@@ -124,7 +124,8 @@ function raceDate(canonicalRaceKey: string): string | null {
   const date = `${match[1]}-${match[2]}-${match[3]}`;
   const venue = Number(match[4]);
   const raceNo = Number(match[5]);
-  if (!Number.isFinite(Date.parse(`${date}T00:00:00Z`))) return null;
+  const parsedDate = Date.parse(`${date}T00:00:00Z`);
+  if (!Number.isFinite(parsedDate) || new Date(parsedDate).toISOString().slice(0, 10) !== date) return null;
   if (!Number.isInteger(venue) || venue < 1 || venue > 24) return null;
   if (!Number.isInteger(raceNo) || raceNo < 1 || raceNo > 12) return null;
   return date;
@@ -197,7 +198,7 @@ export function validateN2BaselineRow(row: N2BaselinePredictionRow): N2BaselineV
   } else if (row.provenance.kind === "historical_only") {
     const source = row.provenance;
     if (!source.modelVersion || !source.featureContractVersion) errors.push("historical model identity is required");
-    if (!RACE_KEY_RE.test(source.trainingToRaceKeyExclusive)) errors.push("invalid trainingToRaceKeyExclusive");
+    if (raceDate(source.trainingToRaceKeyExclusive) === null) errors.push("invalid trainingToRaceKeyExclusive");
     if (source.trainingToRaceKeyExclusive > row.canonicalRaceKey) errors.push("historical training boundary reaches evaluation row");
     if (!SHA256_RE.test(source.trainingSnapshotDigest)) errors.push("invalid trainingSnapshotDigest");
   } else {
