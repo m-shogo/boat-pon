@@ -52,6 +52,11 @@ test("train/forward dates are excluded and invalid/duplicates fail closed", () =
   assert.equal(duplicate.status,"BLOCKED");
   const invalid=buildN2EdgeHoldoutCohort([{canonicalRaceKey:"bad"}]);
   assert.equal(invalid.status,"BLOCKED");
+  const impossible=buildN2EdgeHoldoutCohort([{canonicalRaceKey:"2024-02-30:01:R1"}]);
+  assert.equal(impossible.status,"BLOCKED");
+  assert.equal(impossible.invalidRaceKeyCount,1);
+  assert.equal(impossible.excludedOutsideHoldoutCount,0);
+  assert.deepEqual(impossible.blockers,["INVALID_RACE_KEYS:1"]);
 });
 
 test("policy hard cap is 576 races per split",()=>{
