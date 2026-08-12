@@ -4,6 +4,7 @@ import {
   type N2MarketBaselineReadinessStatus,
 } from "../research-replay/n2MarketBaselineReadiness";
 import { TASK_STATUSES, type TaskStatus } from "./researchOrchestrator";
+import { DEFAULT_STATUSES, type DefaultStatus } from "./taskCatalog";
 
 export const N2_DORMANT_ACTIVATION_CONTRACT_VERSION =
   "n2-dormant-activation-contract-v2" as const;
@@ -161,6 +162,9 @@ export function buildN2DormantActivationPlan(input: {
     const registered = runtimeExecutorRegistered[taskId];
     if (taskStatus === "UNKNOWN") {
       blockers.push(`${taskId}:QUEUE_STATUS_INVALID`);
+    }
+    if (!DEFAULT_STATUSES.includes(defaultStatus as DefaultStatus)) {
+      blockers.push(`${taskId}:CATALOG_DEFAULT_STATUS_INVALID`);
     }
     if (defaultStatus === "BLOCKED_EXECUTOR_PENDING" && registered) {
       blockers.push(`${taskId}:REGISTERED_WHILE_BLOCKED_EXECUTOR_PENDING`);
