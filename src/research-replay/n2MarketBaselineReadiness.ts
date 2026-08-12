@@ -53,6 +53,20 @@ function uniqueDates(raceKeys: readonly string[]): string[] {
   return [...new Set(raceKeys.map(raceDate).filter((value): value is string => value != null))].sort();
 }
 
+export function classifyN2MarketBaselineReadiness(input: {
+  blockerCount: number;
+  acceptedT5RaceCount: number;
+  settledAcceptedT5RaceCount: number;
+  minimumSettledRaceCount: number;
+}): N2MarketBaselineReadinessStatus {
+  if (input.blockerCount > 0) return "BLOCKED";
+  if (input.acceptedT5RaceCount === 0) return "NO_PRIVATE_MARKET_DATA";
+  if (input.settledAcceptedT5RaceCount === 0) return "WAITING_FOR_SETTLEMENT";
+  return input.settledAcceptedT5RaceCount < input.minimumSettledRaceCount
+    ? "ACCUMULATING"
+    : "READY_FOR_N2_020";
+}
+
 export function buildN2MarketBaselineReadinessReport(input: {
   acceptedT5RaceKeys: readonly string[];
   settledRaceKeys: readonly string[];
@@ -84,16 +98,12 @@ export function buildN2MarketBaselineReadinessReport(input: {
   const acceptedDates = uniqueDates(accepted);
   const settledDates = uniqueDates(settled);
   const unsettledAcceptedT5RaceCount = accepted.length - settled.length;
-
-  const status: N2MarketBaselineReadinessStatus = blockers.length > 0
-    ? "BLOCKED"
-    : accepted.length === 0
-      ? "NO_PRIVATE_MARKET_DATA"
-      : settled.length === 0
-        ? "WAITING_FOR_SETTLEMENT"
-        : settled.length < minimumSettledRaceCount
-          ? "ACCUMULATING"
-          : "READY_FOR_N2_020";
+  const status = classifyN2MarketBaselineReadiness({
+    blockerCount: blockers.length,
+    acceptedT5RaceCount: accepted.length,
+    settledAcceptedT5RaceCount: settled.length,
+    minimumSettledRaceCount,
+  });
 
   const core = {
     reportVersion: N2_MARKET_BASELINE_READINESS_VERSION,
