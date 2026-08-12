@@ -165,3 +165,29 @@ test("N2 activation fails closed before readiness when catalog dependencies drif
     ["TASK-N2-022:CATALOG_DEPENDENCIES_MISMATCH"],
   );
 });
+
+test("N2 activation fails closed before readiness when dormant execution residue is present", () => {
+  const cases: Array<{
+    mutate: (state: QueueState) => void;
+    blocker: string;
+  }> = [
+    {
+      mutate: (state) => { state.tasks["TASK-N2-020"].authoritySha = "deadbeef"; },
+      blocker: "TASK-N2-020:DORMANT_AUTHORITY_SHA_PRESENT",
+    },
+    {
+      mutate: (state) => { state.tasks["TASK-N2-020"].evidenceLinks = ["reports/automation/history/1-TASK-N2-020.json"]; },
+      blocker: "TASK-N2-020:DORMANT_EVIDENCE_PRESENT",
+    },
+    {
+      mutate: (state) => { state.tasks["TASK-N2-020"].resultDigest = "a".repeat(64); },
+      blocker: "TASK-N2-020:DORMANT_RESULT_DIGEST_PRESENT",
+    },
+  ];
+
+  for (const scenario of cases) {
+    const state = queue();
+    scenario.mutate(state);
+    assert.deepEqual(findN2DormantTaskDefinitionDrift(catalog(), state), [scenario.blocker]);
+  }
+});
