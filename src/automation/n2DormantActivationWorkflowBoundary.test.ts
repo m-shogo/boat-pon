@@ -42,6 +42,7 @@ test("activation report CLI is read-only and uses validated catalog/queue state 
   );
   assert.match(script, /validateCatalog/u);
   assert.match(script, /validateQueueState/u);
+  assert.match(script, /findN2DormantTaskDefinitionDrift/u);
   assert.match(script, /readN2MarketBaselineReadiness/u);
   assert.match(script, /buildN2MarketBaselineReadinessReport/u);
   assert.match(script, /isExecutorImplemented/u);
