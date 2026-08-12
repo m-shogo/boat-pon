@@ -1,5 +1,8 @@
 import { canonicalHash } from "../research-replay/canonical";
-import type { N2MarketBaselineReadinessReport } from "../research-replay/n2MarketBaselineReadiness";
+import {
+  N2_MARKET_BASELINE_READINESS_VERSION,
+  type N2MarketBaselineReadinessReport,
+} from "../research-replay/n2MarketBaselineReadiness";
 import {
   N2_DORMANT_TASKS,
   buildN2DormantActivationPlan,
@@ -74,6 +77,19 @@ export function buildN2DormantActivationReport(input: {
   const { outputDigest: readinessOutputDigest, ...readinessCore } = input.readiness;
   if (typeof readinessOutputDigest !== "string" || canonicalHash(readinessCore) !== readinessOutputDigest) {
     blockers.push("READINESS_OUTPUT_DIGEST_INVALID");
+  }
+  if (input.readiness.reportVersion !== N2_MARKET_BASELINE_READINESS_VERSION
+    || input.readiness.n2TaskId !== "TASK-N2-020") {
+    blockers.push("READINESS_IDENTITY_INVALID");
+  }
+  if (input.readiness.automaticPromotionAuthorized !== false
+    || input.readiness.currentBuyConnectionAuthorized !== false
+    || input.readiness.lineConnectionAuthorized !== false
+    || input.readiness.publicPublishAuthorized !== false
+    || input.readiness.databaseWriteAuthorized !== false
+    || input.readiness.automatedBettingAuthorized !== false
+    || input.readiness.productionApplyAuthorized !== false) {
+    blockers.push("READINESS_PROTECTED_AUTHORITY_INVALID");
   }
   const readinessSaysReady = input.readiness.status === "READY_FOR_N2_020";
   const readinessCountsValid = Number.isSafeInteger(input.readiness.minimumSettledRaceCount)
