@@ -88,7 +88,7 @@ const EVALUATION_MODES = new Set<RuntimeEvaluationMode>([
   "future_only",
 ]);
 const COMPLETENESS = new Set<RuntimeDataCompleteness>(["complete", "partial", "blocked"]);
-const EXACT_INSTANT_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/u;
+const EXACT_INSTANT_RE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-](\d{2}):(\d{2}))$/u;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value != null && typeof value === "object" && !Array.isArray(value);
@@ -110,14 +110,35 @@ function isPositiveInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value > 0;
 }
 
+function isLeapYear(year: number): boolean {
+  return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+}
+
+function isExactInstant(value: string): boolean {
+  const match = EXACT_INSTANT_RE.exec(value);
+  if (!match) return false;
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText, offsetHourText, offsetMinuteText] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  const second = Number(secondText);
+  if (month < 1 || month > 12 || hour > 23 || minute > 59 || second > 59) return false;
+  const daysInMonth = [31, isLeapYear(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1];
+  if (day < 1 || day > daysInMonth) return false;
+  if (offsetHourText !== undefined && (Number(offsetHourText) > 23 || Number(offsetMinuteText) > 59)) return false;
+  return true;
+}
+
 function parseInstant(value: unknown, field: string, errors: string[]): number | null {
-  if (!isNonEmptyString(value) || !EXACT_INSTANT_RE.test(value)) {
-    errors.push(`${field} must be a timezone-bound ISO timestamp`);
+  if (!isNonEmptyString(value) || !isExactInstant(value)) {
+    errors.push(`${field} must be a valid timezone-bound ISO timestamp`);
     return null;
   }
   const parsed = Date.parse(value);
   if (!Number.isFinite(parsed)) {
-    errors.push(`${field} must be a valid ISO timestamp`);
+    errors.push(`${field} must be a valid timezone-bound ISO timestamp`);
     return null;
   }
   return parsed;
