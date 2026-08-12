@@ -76,6 +76,20 @@ test("reader blocks a cutoff outside the race's JST date", () => {
   });
 });
 
+test("reader rejects impossible race-key calendar dates before private metadata reads", () => {
+  withRoot((root) => {
+    const read = readN2T5DecisionCutoffMetadata({
+      dataRoot: root,
+      raceKeys: ["2026-02-30:05:R1"],
+    });
+    assert.equal(read.status, "BLOCKED");
+    assert.deepEqual(read.blockers, ["2026-02-30:05:R1:RACE_KEY_INVALID"]);
+    assert.deepEqual(read.decisionCutoffByRaceKey, {});
+    assert.equal(read.privateEnvelopeMetadataReadCount, 0);
+    assert.equal(read.rawOddsValuesRead, false);
+  });
+});
+
 test("reader rejects envelope paths outside the expected private T-5 directory", () => {
   withRoot((root) => {
     writeMetadata(root, { envelopeRelativePath: "data/raw/research/other.envelope.json" });
