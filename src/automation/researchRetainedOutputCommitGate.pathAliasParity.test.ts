@@ -15,37 +15,14 @@ const idempotencyKey = "b".repeat(64);
 const authoritySha = "c".repeat(40);
 
 function history(outputs: string[]): string {
-  return JSON.stringify({
-    runId,
-    taskId,
-    result: "PASS",
-    blocks: [],
-    executed: true,
-    outputDigest,
-    idempotencyKey,
-    authoritySha,
-    outputs,
-  });
+  return JSON.stringify({ runId, taskId, result: "PASS", blocks: [], executed: true, outputDigest, summary: {}, idempotencyKey, authoritySha, outputs });
 }
 
 test("retained gate rejects noncanonical output path aliases", () => {
-  assert.doesNotThrow(() => validateRetainedOutputCommit({
-    changedPaths: [historyPath],
-    expectedRunId: runId,
-    readText: () => history(["reports/n2/report.json"]),
-  }));
-
-  for (const alias of [
-    "reports/n2/./report.json",
-    "reports/n2//report.json",
-    "reports/n2/report.json/",
-  ]) {
+  assert.doesNotThrow(() => validateRetainedOutputCommit({ changedPaths: [historyPath], expectedRunId: runId, readText: () => history(["reports/n2/report.json"]) }));
+  for (const alias of ["reports/n2/./report.json", "reports/n2//report.json", "reports/n2/report.json/"]) {
     assert.throws(
-      () => validateRetainedOutputCommit({
-        changedPaths: [historyPath],
-        expectedRunId: runId,
-        readText: () => history(["reports/n2/report.json", alias]),
-      }),
+      () => validateRetainedOutputCommit({ changedPaths: [historyPath], expectedRunId: runId, readText: () => history(["reports/n2/report.json", alias]) }),
       /RETAINED_COMMIT_HISTORY_OUTPUT_PATH_NOT_APPROVED/u,
     );
   }
@@ -59,25 +36,8 @@ test("trusted CLI rejects output path aliases before retained history commit", (
     execFileSync(trustedGitBin, ["init", "-q"], { cwd: root });
     const absoluteHistory = join(root, historyPath);
     mkdirSync(dirname(absoluteHistory), { recursive: true });
-    writeFileSync(
-      absoluteHistory,
-      `${history(["reports/n2/report.json", "reports/n2/./report.json"])}\n`,
-      "utf8",
-    );
-
-    assert.throws(
-      () => execFileSync(process.execPath, [gateCli, `--run-id=${runId}`], {
-        cwd: root,
-        encoding: "utf8",
-        env: {
-          ...process.env,
-          TRUSTED_GIT_BIN: trustedGitBin,
-          GITHUB_ACTIONS: "false",
-          GITHUB_RUN_ID: "",
-        },
-      }),
-      /RETAINED_COMMIT_HISTORY_OUTPUT_PATH_NOT_APPROVED/u,
-    );
+    writeFileSync(absoluteHistory, `${history(["reports/n2/report.json", "reports/n2/./report.json"])}\n`, "utf8");
+    assert.throws(() => execFileSync(process.execPath, [gateCli, `--run-id=${runId}`], { cwd: root, encoding: "utf8", env: { ...process.env, TRUSTED_GIT_BIN: trustedGitBin, GITHUB_ACTIONS: "false", GITHUB_RUN_ID: "" } }), /RETAINED_COMMIT_HISTORY_OUTPUT_PATH_NOT_APPROVED/u);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

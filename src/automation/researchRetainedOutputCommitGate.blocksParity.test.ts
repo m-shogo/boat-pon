@@ -15,15 +15,11 @@ const idempotencyKey = "b".repeat(64);
 const authoritySha = "c".repeat(40);
 
 function history(result: string, blocks: unknown): string {
-  return JSON.stringify({ runId, taskId, result, blocks, executed: true, outputDigest, idempotencyKey, authoritySha, outputs: [] });
+  return JSON.stringify({ runId, taskId, result, blocks, executed: true, outputDigest, summary: {}, idempotencyKey, authoritySha, outputs: [] });
 }
 
 function validate(result: string, blocks: unknown): void {
-  validateRetainedOutputCommit({
-    changedPaths: [historyPath],
-    expectedRunId: runId,
-    readText: () => history(result, blocks),
-  });
+  validateRetainedOutputCommit({ changedPaths: [historyPath], expectedRunId: runId, readText: () => history(result, blocks) });
 }
 
 test("retained gate rejects terminal result/block contradictions", () => {
@@ -49,35 +45,9 @@ test("trusted CLI rejects contradictory and malformed terminal blocks before com
     const absoluteHistory = join(root, historyPath);
     mkdirSync(dirname(absoluteHistory), { recursive: true });
     writeFileSync(absoluteHistory, `${history("PASS", ["unexpected"])}\n`, "utf8");
-
-    assert.throws(
-      () => execFileSync(process.execPath, [gateCli, `--run-id=${runId}`], {
-        cwd: root,
-        encoding: "utf8",
-        env: {
-          ...process.env,
-          TRUSTED_GIT_BIN: trustedGitBin,
-          GITHUB_ACTIONS: "false",
-          GITHUB_RUN_ID: "",
-        },
-      }),
-      /RETAINED_COMMIT_HISTORY_PASS_HAS_BLOCKS/u,
-    );
-
+    assert.throws(() => execFileSync(process.execPath, [gateCli, `--run-id=${runId}`], { cwd: root, encoding: "utf8", env: { ...process.env, TRUSTED_GIT_BIN: trustedGitBin, GITHUB_ACTIONS: "false", GITHUB_RUN_ID: "" } }), /RETAINED_COMMIT_HISTORY_PASS_HAS_BLOCKS/u);
     writeFileSync(absoluteHistory, `${history("BLOCKED", "dependency-not-ready")}\n`, "utf8");
-    assert.throws(
-      () => execFileSync(process.execPath, [gateCli, `--run-id=${runId}`], {
-        cwd: root,
-        encoding: "utf8",
-        env: {
-          ...process.env,
-          TRUSTED_GIT_BIN: trustedGitBin,
-          GITHUB_ACTIONS: "false",
-          GITHUB_RUN_ID: "",
-        },
-      }),
-      /RETAINED_COMMIT_HISTORY_BLOCKS_INVALID/u,
-    );
+    assert.throws(() => execFileSync(process.execPath, [gateCli, `--run-id=${runId}`], { cwd: root, encoding: "utf8", env: { ...process.env, TRUSTED_GIT_BIN: trustedGitBin, GITHUB_ACTIONS: "false", GITHUB_RUN_ID: "" } }), /RETAINED_COMMIT_HISTORY_BLOCKS_INVALID/u);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

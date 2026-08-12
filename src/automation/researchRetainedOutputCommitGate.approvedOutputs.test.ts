@@ -18,7 +18,7 @@ const idempotencyKey = "b".repeat(64);
 const authoritySha = "c".repeat(40);
 
 function historyText(outputs: string[]): string {
-  return JSON.stringify({ runId, taskId, result: "PASS", blocks: [], executed: true, outputDigest, idempotencyKey, authoritySha, outputs });
+  return JSON.stringify({ runId, taskId, result: "PASS", blocks: [], executed: true, outputDigest, summary: {}, idempotencyKey, authoritySha, outputs });
 }
 
 test("retained history accepts only durable-audit approved output roots", () => {
@@ -55,12 +55,7 @@ test("trusted CLI rejects an append-only history with an unapproved output refer
       () => execFileSync(process.execPath, [gateCli, `--run-id=${runId}`], {
         cwd: root,
         encoding: "utf8",
-        env: {
-          ...process.env,
-          TRUSTED_GIT_BIN: trustedGitBin,
-          GITHUB_ACTIONS: "false",
-          GITHUB_RUN_ID: "",
-        },
+        env: { ...process.env, TRUSTED_GIT_BIN: trustedGitBin, GITHUB_ACTIONS: "false", GITHUB_RUN_ID: "" },
       }),
       /RETAINED_COMMIT_HISTORY_OUTPUT_PATH_NOT_APPROVED/u,
     );
@@ -83,12 +78,7 @@ test("trusted CLI rejects history self-reference as durable output", () => {
       () => execFileSync(process.execPath, [gateCli, `--run-id=${runId}`], {
         cwd: root,
         encoding: "utf8",
-        env: {
-          ...process.env,
-          TRUSTED_GIT_BIN: trustedGitBin,
-          GITHUB_ACTIONS: "false",
-          GITHUB_RUN_ID: "",
-        },
+        env: { ...process.env, TRUSTED_GIT_BIN: trustedGitBin, GITHUB_ACTIONS: "false", GITHUB_RUN_ID: "" },
       }),
       /RETAINED_COMMIT_HISTORY_OUTPUT_PATH_NOT_APPROVED/u,
     );

@@ -53,7 +53,7 @@ test("CLI accepts an untracked retained output referenced by same-run terminal h
     const output = `reports/automation/retained-outputs/${runId}/${"a".repeat(64)}-report.json`;
     const history = `reports/automation/history/${runId}-${taskId}.json`;
     put(root, output, "{}\n");
-    put(root, history, `${JSON.stringify({ runId, taskId, outputs: [output], result: "PASS", blocks: [], executed: true, outputDigest, idempotencyKey, authoritySha })}\n`);
+    put(root, history, `${JSON.stringify({ runId, taskId, outputs: [output], result: "PASS", blocks: [], executed: true, outputDigest, summary: {}, idempotencyKey, authoritySha })}\n`);
     const value = JSON.parse(runGate(root, runId)) as Record<string, unknown>;
     assert.equal(value.retainedPathCount, 1);
     assert.equal(value.referencedRetainedPathCount, 1);
@@ -87,7 +87,7 @@ test("CLI binds trusted run ID to the GitHub Actions run context", () => {
   withRepo((root) => {
     const runId = "12345";
     const history = `reports/automation/history/${runId}-${taskId}.json`;
-    put(root, history, `${JSON.stringify({ runId, taskId, outputs: [], result: "PASS", blocks: [], executed: true, outputDigest, idempotencyKey, authoritySha })}\n`);
+    put(root, history, `${JSON.stringify({ runId, taskId, outputs: [], result: "PASS", blocks: [], executed: true, outputDigest, summary: {}, idempotencyKey, authoritySha })}\n`);
     const value = JSON.parse(runGate(root, runId, { actions: true, runId })) as Record<string, unknown>;
     assert.equal(value.historyPathCount, 1);
     assert.throws(

@@ -12,17 +12,24 @@ function reader(files: Record<string, unknown>): (path: string) => string {
   return (path) => JSON.stringify(files[path]);
 }
 
+const evidence = (runId: string, taskId: string) => ({
+  runId,
+  taskId,
+  outputs: [],
+  result: "PASS",
+  blocks: [],
+  executed: true,
+  outputDigest,
+  summary: {},
+  idempotencyKey,
+  authoritySha,
+});
+
 test("history-only commit cannot create terminal evidence for another workflow run", () => {
   const taskId = "TASK-N2-011";
   const historyPath = history("123", taskId);
   assert.throws(
-    () => validateRetainedOutputCommit({
-      changedPaths: [historyPath],
-      expectedRunId: "456",
-      readText: reader({
-        [historyPath]: { runId: "123", taskId, outputs: [], result: "PASS", blocks: [], executed: true, outputDigest, idempotencyKey, authoritySha },
-      }),
-    }),
+    () => validateRetainedOutputCommit({ changedPaths: [historyPath], expectedRunId: "456", readText: reader({ [historyPath]: evidence("123", taskId) }) }),
     /RETAINED_COMMIT_HISTORY_RUN_ID_MISMATCH:123!=456/u,
   );
 });
@@ -30,13 +37,7 @@ test("history-only commit cannot create terminal evidence for another workflow r
 test("same-run history-only commit remains valid", () => {
   const taskId = "TASK-N2-011";
   const historyPath = history("123", taskId);
-  const result = validateRetainedOutputCommit({
-    changedPaths: [historyPath],
-    expectedRunId: "123",
-    readText: reader({
-      [historyPath]: { runId: "123", taskId, outputs: [], result: "PASS", blocks: [], executed: true, outputDigest, idempotencyKey, authoritySha },
-    }),
-  });
+  const result = validateRetainedOutputCommit({ changedPaths: [historyPath], expectedRunId: "123", readText: reader({ [historyPath]: evidence("123", taskId) }) });
   assert.equal(result.historyPathCount, 1);
   assert.equal(result.retainedPathCount, 0);
 });
@@ -50,10 +51,7 @@ test("one workflow run cannot persist two terminal histories", () => {
     () => validateRetainedOutputCommit({
       changedPaths: [first, second],
       expectedRunId: "123",
-      readText: reader({
-        [first]: { runId: "123", taskId: firstTaskId, outputs: [], result: "PASS", blocks: [], executed: true, outputDigest, idempotencyKey, authoritySha },
-        [second]: { runId: "123", taskId: secondTaskId, outputs: [], result: "PASS", blocks: [], executed: true, outputDigest, idempotencyKey, authoritySha },
-      }),
+      readText: reader({ [first]: evidence("123", firstTaskId), [second]: evidence("123", secondTaskId) }),
     }),
     /RETAINED_COMMIT_HISTORY_COUNT_INVALID:123:2/u,
   );
@@ -62,13 +60,7 @@ test("one workflow run cannot persist two terminal histories", () => {
 test("history task identity must match its append-only filename", () => {
   const historyPath = history("123", "TASK-N2-011");
   assert.throws(
-    () => validateRetainedOutputCommit({
-      changedPaths: [historyPath],
-      expectedRunId: "123",
-      readText: reader({
-        [historyPath]: { runId: "123", taskId: "TASK-N2-012", outputs: [], result: "PASS", blocks: [], executed: true, outputDigest, idempotencyKey, authoritySha },
-      }),
-    }),
+    () => validateRetainedOutputCommit({ changedPaths: [historyPath], expectedRunId: "123", readText: reader({ [historyPath]: evidence("123", "TASK-N2-012") }) }),
     /RETAINED_COMMIT_HISTORY_TASK_ID_MISMATCH/u,
   );
 });
@@ -81,10 +73,7 @@ test("local mode can inspect multiple histories without pretending to be one wor
   const result = validateRetainedOutputCommit({
     changedPaths: [first, second],
     expectedRunId: "local",
-    readText: reader({
-      [first]: { runId: "local-a", taskId: firstTaskId, outputs: [], result: "PASS", blocks: [], executed: true, outputDigest, idempotencyKey, authoritySha },
-      [second]: { runId: "local-b", taskId: secondTaskId, outputs: [], result: "PASS", blocks: [], executed: true, outputDigest, idempotencyKey, authoritySha },
-    }),
+    readText: reader({ [first]: evidence("local-a", firstTaskId), [second]: evidence("local-b", secondTaskId) }),
   });
   assert.equal(result.historyPathCount, 2);
   assert.equal(result.retainedPathCount, 0);

@@ -150,6 +150,9 @@ function validateRetainedOutputCommit(input) {
         throw new Error(`RETAINED_COMMIT_HISTORY_RETAINED_RUN_ID_MISMATCH:${historyPath}:${outputRunId}!=${pathRunId}`);
       }
     }
+    if (typeof history.summary !== "object" || history.summary == null || Array.isArray(history.summary)) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_SUMMARY_INVALID:${historyPath}`);
+    }
     parsedHistories.set(historyPath, { runId: pathRunId, outputs });
   }
 

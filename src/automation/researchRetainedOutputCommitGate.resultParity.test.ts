@@ -20,6 +20,7 @@ function validate(result: string): void {
       blocks,
       executed: true,
       outputDigest,
+      summary: {},
       idempotencyKey,
       authoritySha,
       result,
