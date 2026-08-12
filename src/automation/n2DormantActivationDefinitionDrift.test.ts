@@ -32,7 +32,7 @@ function catalog(): TaskCatalog {
     updatedAt: "2026-08-12T00:00:00Z",
     tasks: N2_DORMANT_TASKS.map((taskId) => ({
       taskId,
-      taskDefinitionVersion: 2,
+      taskDefinitionVersion: 1,
       title: "market baseline",
       objective: "o",
       taskType: taskTypes[taskId],
@@ -50,7 +50,7 @@ function catalog(): TaskCatalog {
   };
 }
 
-function queue(taskDefinitionVersion = 2): QueueState {
+function queue(taskDefinitionVersion = 1): QueueState {
   return {
     stateSchemaVersion: "research-queue-state-v1",
     stateVersion: 1,
@@ -71,21 +71,23 @@ function queue(taskDefinitionVersion = 2): QueueState {
   };
 }
 
-test("N2 activation rejects stale queue definition version", () => {
+test("N2 activation rejects queue definition version drift", () => {
   assert.deepEqual(
-    findN2DormantTaskDefinitionDrift(catalog(), queue(1)),
+    findN2DormantTaskDefinitionDrift(catalog(), queue(2)),
     N2_DORMANT_TASKS.map((taskId) => `${taskId}:TASK_DEFINITION_VERSION_MISMATCH`),
   );
 });
 
-test("N2 activation accepts matching definition version", () => {
+test("N2 activation accepts canonical definition versions", () => {
   assert.deepEqual(findN2DormantTaskDefinitionDrift(catalog(), queue()), []);
 });
 
-test("N2 activation rejects future queue definition version too", () => {
+test("N2 activation rejects catalog and queue moving together beyond the pinned contract", () => {
+  const futureCatalog = catalog();
+  for (const task of futureCatalog.tasks) task.taskDefinitionVersion = 2;
   assert.deepEqual(
-    findN2DormantTaskDefinitionDrift(catalog(), queue(3)),
-    N2_DORMANT_TASKS.map((taskId) => `${taskId}:TASK_DEFINITION_VERSION_MISMATCH`),
+    findN2DormantTaskDefinitionDrift(futureCatalog, queue(2)),
+    N2_DORMANT_TASKS.map((taskId) => `${taskId}:CATALOG_TASK_DEFINITION_VERSION_MISMATCH`),
   );
 });
 

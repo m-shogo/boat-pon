@@ -11,6 +11,16 @@ const N2_DORMANT_TASK_TYPES: Record<N2DormantTaskId, string> = {
   "TASK-N2-042": "confounder-audit",
 };
 
+const N2_DORMANT_TASK_DEFINITION_VERSIONS: Record<N2DormantTaskId, number> = {
+  "TASK-N2-020": 1,
+  "TASK-N2-021": 1,
+  "TASK-N2-022": 1,
+  "TASK-N2-030": 1,
+  "TASK-N2-040": 1,
+  "TASK-N2-041": 1,
+  "TASK-N2-042": 1,
+};
+
 const N2_DORMANT_TASK_DEPENDENCIES: Record<N2DormantTaskId, readonly string[]> = {
   "TASK-N2-020": ["TASK-N2-011", "TASK-N2-005"],
   "TASK-N2-021": ["TASK-N2-011", "TASK-N2-005"],
@@ -40,6 +50,9 @@ export function findN2DormantTaskDefinitionDrift(
     const queueTask = state.tasks[taskId];
     if (!catalogTask) issues.push(`${taskId}:CATALOG_TASK_MISSING`);
     if (!queueTask) issues.push(`${taskId}:QUEUE_TASK_MISSING`);
+    if (catalogTask && catalogTask.taskDefinitionVersion !== N2_DORMANT_TASK_DEFINITION_VERSIONS[taskId]) {
+      issues.push(`${taskId}:CATALOG_TASK_DEFINITION_VERSION_MISMATCH`);
+    }
     if (catalogTask && catalogTask.taskType !== N2_DORMANT_TASK_TYPES[taskId]) {
       issues.push(`${taskId}:CATALOG_TASK_TYPE_MISMATCH`);
     }
