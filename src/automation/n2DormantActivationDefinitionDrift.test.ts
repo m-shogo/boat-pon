@@ -154,15 +154,43 @@ test("N2 activation fails closed before readiness when catalog safety level drif
   );
 });
 
-test("N2 activation fails closed before readiness when catalog default status drifts", () => {
+test("N2 activation fails closed before readiness when catalog activates while queue remains dormant", () => {
   const mismatchedCatalog = catalog();
   const task = mismatchedCatalog.tasks.find((entry) => entry.taskId === "TASK-N2-020");
   assert.ok(task);
   task.defaultStatus = "READY";
 
   assert.deepEqual(
-    findN2DormantTaskDefinitionDrift(mismatchedCatalog, queue()),
-    ["TASK-N2-020:CATALOG_DEFAULT_STATUS_MISMATCH"],
+    findN2DormantTaskDefinitionDrift(mismatchedCatalog, queue(), { "TASK-N2-020": true }),
+    ["TASK-N2-020:CATALOG_STATUS_MISMATCH_WHILE_QUEUE_DORMANT"],
+  );
+});
+
+test("N2 activation fails closed before readiness when catalog and queue activate without runtime executor", () => {
+  const activeCatalog = catalog();
+  const activeState = queue();
+  const task = activeCatalog.tasks.find((entry) => entry.taskId === "TASK-N2-020");
+  assert.ok(task);
+  task.defaultStatus = "READY";
+  activeState.tasks["TASK-N2-020"].status = "READY";
+
+  assert.deepEqual(
+    findN2DormantTaskDefinitionDrift(activeCatalog, activeState, { "TASK-N2-020": false }),
+    ["TASK-N2-020:RUNTIME_EXECUTOR_MISSING_WHILE_CATALOG_AND_QUEUE_ACTIVE"],
+  );
+});
+
+test("N2 activation preflight preserves a valid atomic active state", () => {
+  const activeCatalog = catalog();
+  const activeState = queue();
+  const task = activeCatalog.tasks.find((entry) => entry.taskId === "TASK-N2-020");
+  assert.ok(task);
+  task.defaultStatus = "READY";
+  activeState.tasks["TASK-N2-020"].status = "READY";
+
+  assert.deepEqual(
+    findN2DormantTaskDefinitionDrift(activeCatalog, activeState, { "TASK-N2-020": true }),
+    [],
   );
 });
 
