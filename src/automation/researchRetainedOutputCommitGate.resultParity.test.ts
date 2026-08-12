@@ -15,7 +15,12 @@ function validate(result: string): void {
     expectedRunId: "12345",
     readText: () => JSON.stringify({
       runId: "12345",
+      requestId: "REQ-test",
+      intentId: "INTENT-test",
       taskId: "TASK-N2-011",
+      taskType: "pit-audit",
+      safetyLevel: "L0",
+      executorVersion: "test-executor-v1",
       outputs: [],
       blocks,
       executed: true,
@@ -24,6 +29,9 @@ function validate(result: string): void {
       idempotencyKey,
       authoritySha,
       result,
+      startedAt: "2026-08-12T00:00:00.000Z",
+      completedAt: "2026-08-12T00:00:01.000Z",
+      elapsedMs: 1000,
     }),
   });
 }
