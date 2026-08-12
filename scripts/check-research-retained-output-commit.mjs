@@ -9,6 +9,7 @@ import {
   realpathSync,
 } from "node:fs";
 import { dirname, resolve, sep } from "node:path";
+import { TextDecoder } from "node:util";
 
 const RETAINED_PREFIX = "reports/automation/retained-outputs/";
 const HISTORY_PREFIX = "reports/automation/history/";
@@ -244,7 +245,11 @@ function readValidatedHistoryText(repoRoot, relativePath) {
     if (totalBytes !== stat.size) {
       throw new Error(`RETAINED_COMMIT_HISTORY_FILE_CHANGED_DURING_READ:${relativePath}`);
     }
-    return Buffer.concat(chunks, totalBytes).toString("utf8");
+    try {
+      return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(Buffer.concat(chunks, totalBytes));
+    } catch {
+      throw new Error(`RETAINED_COMMIT_HISTORY_UTF8_INVALID:${relativePath}`);
+    }
   } catch (error) {
     if (error instanceof Error && "code" in error && (error.code === "ENOENT" || error.code === "ELOOP")) {
       throw new Error(`RETAINED_COMMIT_HISTORY_FILE_TYPE_INVALID:${relativePath}`);
