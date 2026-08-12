@@ -32,6 +32,18 @@ const GIT_SHA_RE = /^[0-9a-f]{40}$/u;
 const MAX_EXISTING_SNAPSHOT_BYTES = 2_000_000;
 const EXISTING_SNAPSHOT_READ_CHUNK_BYTES = 64 * 1024;
 const STRICT_UTF8_DECODER = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
+const AUDIT_REPORT_VERSION = "research-durable-knowledge-completeness-v1";
+const AUDIT_STATUSES = new Set(["PASS", "DEGRADED", "BLOCKED", "NO_HISTORY"]);
+const RUN_CLASSIFICATIONS = [
+  "PASS_DURABLE_OUTPUTS",
+  "PASS_NO_CHANGE_HISTORY",
+  "NON_PASS_DURABLE_HISTORY",
+  "INCOMPLETE_PASS_NO_OUTPUT",
+  "INVALID_PERSISTED_DRY_RUN",
+  "INVALID_HISTORY",
+  "INCOMPLETE_OUTPUT_REFERENCE",
+] as const;
+const RUN_CLASSIFICATION_SET = new Set<string>(RUN_CLASSIFICATIONS);
 
 export type ResearchDurableRetentionNonStrongRun = {
   runId: string | null;
@@ -144,6 +156,44 @@ function assertSnapshotCountInvariants(object: Record<string, unknown>): void {
   }
   if (invalidHistoryCount > assessedRunCount) {
     throw new Error("DURABLE_RETENTION_INVALID_HISTORY_COUNT_INVALID");
+  }
+}
+
+function assertSnapshotSchemaInvariants(object: Record<string, unknown>): void {
+  if (object.auditReportVersion !== AUDIT_REPORT_VERSION) {
+    throw new Error("DURABLE_RETENTION_AUDIT_REPORT_VERSION_INVALID");
+  }
+  if (typeof object.auditStatus !== "string" || !AUDIT_STATUSES.has(object.auditStatus)) {
+    throw new Error("DURABLE_RETENTION_AUDIT_STATUS_INVALID");
+  }
+  const classificationCounts = objectValue(object.classificationCounts);
+  if (!classificationCounts) throw new Error("DURABLE_RETENTION_CLASSIFICATION_COUNTS_INVALID");
+  let classificationTotal = 0;
+  for (const classification of RUN_CLASSIFICATIONS) {
+    const count = classificationCounts[classification];
+    if (typeof count !== "number" || !Number.isSafeInteger(count) || count < 0) {
+      throw new Error(`DURABLE_RETENTION_CLASSIFICATION_COUNT_INVALID:${classification}`);
+    }
+    classificationTotal += count;
+  }
+  if (classificationTotal !== object.assessedRunCount) {
+    throw new Error("DURABLE_RETENTION_CLASSIFICATION_COUNT_MISMATCH");
+  }
+  if (!Array.isArray(object.nonStrongRuns)) throw new Error("DURABLE_RETENTION_NON_STRONG_RUNS_INVALID");
+  if (object.nonStrongRuns.length !== (object.assessedRunCount as number) - (object.strongDurableCompleteCount as number)) {
+    throw new Error("DURABLE_RETENTION_NON_STRONG_RUN_COUNT_MISMATCH");
+  }
+  for (const value of object.nonStrongRuns) {
+    const run = objectValue(value);
+    if (!run || run.strongDurableComplete !== false || typeof run.durableComplete !== "boolean") {
+      throw new Error("DURABLE_RETENTION_NON_STRONG_RUN_INVALID");
+    }
+    if (typeof run.classification !== "string" || !RUN_CLASSIFICATION_SET.has(run.classification)) {
+      throw new Error("DURABLE_RETENTION_NON_STRONG_RUN_CLASSIFICATION_INVALID");
+    }
+    if (!Array.isArray(run.warnings) || !run.warnings.every((warning) => typeof warning === "string")) {
+      throw new Error("DURABLE_RETENTION_NON_STRONG_RUN_WARNINGS_INVALID");
+    }
   }
 }
 
@@ -422,6 +472,7 @@ export function validateResearchDurableRetentionSnapshot(value: unknown): Resear
   const { snapshotDigest, ...core } = object;
   if (sha256Text(canonicalJson(core)) !== snapshotDigest) throw new Error("DURABLE_RETENTION_SNAPSHOT_SELF_DIGEST_INVALID");
   assertSnapshotCountInvariants(object);
+  assertSnapshotSchemaInvariants(object);
   for (const flag of [
     "automaticPromotionAuthorized",
     "currentBuyConnectionAuthorized",
@@ -433,7 +484,6 @@ export function validateResearchDurableRetentionSnapshot(value: unknown): Resear
   ]) {
     if (object[flag] !== false) throw new Error(`DURABLE_RETENTION_PROTECTED_FLAG_INVALID:${flag}`);
   }
-  if (!Array.isArray(object.nonStrongRuns)) throw new Error("DURABLE_RETENTION_NON_STRONG_RUNS_INVALID");
   return object as ResearchDurableRetentionSnapshot;
 }
 
