@@ -120,6 +120,9 @@ function validateRetainedOutputCommit(input) {
     if (typeof history.outputDigest !== "string" || !SHA256_RE.test(history.outputDigest)) {
       throw new Error(`RETAINED_COMMIT_HISTORY_OUTPUT_DIGEST_INVALID:${historyPath}`);
     }
+    if (typeof history.summary !== "object" || history.summary == null || Array.isArray(history.summary)) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_SUMMARY_INVALID:${historyPath}`);
+    }
     if (typeof history.idempotencyKey !== "string" || !SHA256_RE.test(history.idempotencyKey)) {
       throw new Error(`RETAINED_COMMIT_HISTORY_IDEMPOTENCY_KEY_INVALID:${historyPath}`);
     }
