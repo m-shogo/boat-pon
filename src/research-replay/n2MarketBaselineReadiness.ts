@@ -3,13 +3,16 @@ import { canonicalHash } from "./canonical";
 export const N2_MARKET_BASELINE_READINESS_VERSION =
   "n2-market-baseline-readiness-v1" as const;
 export const N2_MARKET_BASELINE_MIN_SETTLED_RACES = 20;
+export const N2_MARKET_BASELINE_READINESS_STATUSES = [
+  "BLOCKED",
+  "NO_PRIVATE_MARKET_DATA",
+  "WAITING_FOR_SETTLEMENT",
+  "ACCUMULATING",
+  "READY_FOR_N2_020",
+] as const;
 
 export type N2MarketBaselineReadinessStatus =
-  | "BLOCKED"
-  | "NO_PRIVATE_MARKET_DATA"
-  | "WAITING_FOR_SETTLEMENT"
-  | "ACCUMULATING"
-  | "READY_FOR_N2_020";
+  (typeof N2_MARKET_BASELINE_READINESS_STATUSES)[number];
 
 export type N2MarketBaselineReadinessReport = {
   reportVersion: typeof N2_MARKET_BASELINE_READINESS_VERSION;
