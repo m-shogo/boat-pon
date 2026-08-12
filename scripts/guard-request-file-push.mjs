@@ -3,7 +3,8 @@
 // strict schema・digest 一致・未処理」であることを検証する。1 つでも外れたら BLOCK。
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, lstatSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
+import { readSafeUtf8 } from "./read-safe-utf8.mjs";
 
 const PENDING_DIR = "automation/requests/pending";
 const MAX_BYTES = 65536;
@@ -39,11 +40,10 @@ const path = pendingChanges[0].path;
 if (path.includes("..") || path.startsWith("/")) fail(`unsafe path: ${path}`);
 if (!/^automation\/requests\/pending\/REQ-[0-9A-Za-z._-]{4,64}\.json$/.test(path)) fail(`path must be ${PENDING_DIR}/REQ-<id>.json (got ${path})`);
 if (!existsSync(path)) fail(`request file missing: ${path}`);
-if (lstatSync(path).isSymbolicLink()) fail("symlink request file is not allowed");
-if (statSync(path).size > MAX_BYTES) fail(`request file too large: ${statSync(path).size} bytes`);
 
 let request;
-try { request = JSON.parse(readFileSync(path, "utf8")); } catch { fail("request file is not valid JSON"); }
+try { request = JSON.parse(readSafeUtf8(path, { maxBytes: MAX_BYTES, label: "request file", baseDir: process.cwd() })); }
+catch (error) { fail(`request file is not safe valid JSON: ${error instanceof Error ? error.message : String(error)}`); }
 if (typeof request !== "object" || request === null || Array.isArray(request)) fail("request must be a JSON object");
 
 // strict schema（orchestrator と同一契約を再実装せず、必須 field / 値域だけ guard 側でも確認）。
@@ -94,7 +94,9 @@ const expectedDigest = createHash("sha256").update(JSON.stringify(rest, Object.k
 if (expectedDigest !== requestDigest) fail(`requestDigest mismatch (expected ${expectedDigest})`);
 
 // queue digest 検証（commit 時点の queue と一致すること）。
-const queue = JSON.parse(readFileSync("automation/task-queue.json", "utf8"));
+let queue;
+try { queue = JSON.parse(readSafeUtf8("automation/task-queue.json", { label: "task queue", baseDir: process.cwd() })); }
+catch (error) { fail(`task queue is not safe valid JSON: ${error instanceof Error ? error.message : String(error)}`); }
 const queueDigest = createHash("sha256").update(JSON.stringify(queue)).digest("hex");
 if (queueDigest !== request.queueDigest) fail(`queueDigest mismatch (expected ${queueDigest})`);
 
