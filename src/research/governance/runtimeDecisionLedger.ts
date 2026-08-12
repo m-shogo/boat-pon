@@ -252,6 +252,9 @@ export function validateRuntimeDecisionLedgerRecord(value: unknown): RuntimeDeci
   if (value.notificationEligible === true && !isNonEmptyString(value.notificationDedupeKey)) {
     errors.push("notificationEligible BUY requires notificationDedupeKey");
   }
+  if (value.notificationEligible === false && value.notificationDedupeKey !== null) {
+    errors.push("notificationDedupeKey must be null when notificationEligible=false");
+  }
 
   if (value.decision === "BUY") {
     if (value.dataCompleteness !== "complete") errors.push("BUY requires dataCompleteness=complete");
