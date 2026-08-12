@@ -263,7 +263,7 @@ try {
     });
   }
 
-  const runId = process.env.GITHUB_RUN_ID ?? `local-${Date.now()}`;
+  const runId = process.env.GITHUB_RUN_ID ?? String(Date.now());
   mkdirSync(HISTORY_DIR, { recursive: true });
 
   // ---- dry-run: 実行せず承認可否だけ返す ----
