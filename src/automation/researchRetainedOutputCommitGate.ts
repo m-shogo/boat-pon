@@ -88,6 +88,9 @@ export function validateRetainedOutputCommit(input: {
     if ((historyResult === "BLOCKED" || historyResult === "FAILED") && history.blocks.length === 0) {
       throw new Error(`RETAINED_COMMIT_HISTORY_NONPASS_BLOCKS_EMPTY:${historyPath}`);
     }
+    if (history.executed !== true) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_EXECUTED_NOT_TRUE:${historyPath}`);
+    }
     if (!Array.isArray(history.outputs) || history.outputs.some((value) => typeof value !== "string")) {
       throw new Error(`RETAINED_COMMIT_HISTORY_OUTPUTS_INVALID:${historyPath}`);
     }
