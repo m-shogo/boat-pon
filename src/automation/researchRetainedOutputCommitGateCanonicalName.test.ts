@@ -68,7 +68,7 @@ test("trusted retained commit gate rejects noncanonical retained filenames", () 
           GITHUB_RUN_ID: "",
         },
       }),
-      /RETAINED_COMMIT_PATH_INVALID/u,
+      /RETAINED_COMMIT_HISTORY_RETAINED_PATH_INVALID/u,
     );
   } finally {
     rmSync(root, { recursive: true, force: true });
@@ -100,7 +100,7 @@ test("trusted retained commit gate rejects a dot-only retained basename", () => 
           GITHUB_RUN_ID: "",
         },
       }),
-      /RETAINED_COMMIT_PATH_INVALID/u,
+      /RETAINED_COMMIT_HISTORY_RETAINED_PATH_INVALID/u,
     );
   } finally {
     rmSync(root, { recursive: true, force: true });
