@@ -15,6 +15,16 @@ const taskTypes: Record<(typeof N2_DORMANT_TASKS)[number], string> = {
   "TASK-N2-042": "confounder-audit",
 };
 
+const dependencies: Record<(typeof N2_DORMANT_TASKS)[number], string[]> = {
+  "TASK-N2-020": ["TASK-N2-011", "TASK-N2-005"],
+  "TASK-N2-021": ["TASK-N2-011", "TASK-N2-005"],
+  "TASK-N2-022": ["TASK-N2-020", "TASK-N2-021"],
+  "TASK-N2-030": ["TASK-N2-022"],
+  "TASK-N2-040": ["TASK-N2-030"],
+  "TASK-N2-041": ["TASK-N2-040"],
+  "TASK-N2-042": ["TASK-N2-041"],
+};
+
 function catalog(): TaskCatalog {
   return {
     catalogSchemaVersion: "research-task-catalog-v1",
@@ -28,7 +38,7 @@ function catalog(): TaskCatalog {
       taskType: taskTypes[taskId],
       executor: taskTypes[taskId],
       safetyLevel: "L0",
-      dependencies: [],
+      dependencies: [...dependencies[taskId]],
       maxDurationSeconds: 3600,
       expectedInputs: [],
       expectedOutputs: [],
@@ -127,5 +137,17 @@ test("N2 activation fails closed before readiness when a catalog executor drifts
   assert.deepEqual(
     findN2DormantTaskDefinitionDrift(mismatchedCatalog, queue()),
     ["TASK-N2-020:CATALOG_EXECUTOR_MISMATCH"],
+  );
+});
+
+test("N2 activation fails closed before readiness when catalog dependencies drift", () => {
+  const mismatchedCatalog = catalog();
+  const task = mismatchedCatalog.tasks.find((entry) => entry.taskId === "TASK-N2-022");
+  assert.ok(task);
+  task.dependencies = ["TASK-N2-020"];
+
+  assert.deepEqual(
+    findN2DormantTaskDefinitionDrift(mismatchedCatalog, queue()),
+    ["TASK-N2-022:CATALOG_DEPENDENCIES_MISMATCH"],
   );
 });
