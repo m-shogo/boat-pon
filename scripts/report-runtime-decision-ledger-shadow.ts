@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { existsSync, mkdirSync, renameSync, statSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import {
   reconcileDecisionHistoryRowsToRuntimeLedger,
@@ -13,6 +13,7 @@ import {
   type RuntimeDecisionLedgerShadowEvidence,
   type RuntimeDecisionLedgerShadowSourceDescriptor,
 } from "../src/research/governance/runtimeDecisionLedgerShadowEvidence";
+import { appendPrivateJsonStore } from "../src/research/governance/privateAppendOnlyJsonStore";
 
 type Args = {
   dbPath: string;
@@ -188,22 +189,14 @@ function appendPrivateStore(
   payload: Record<string, unknown>,
   evidence: RuntimeDecisionLedgerShadowEvidence,
 ): string {
-  const absoluteDir = resolve(directory);
-  mkdirSync(absoluteDir, { recursive: true, mode: 0o700 });
   const filename = `runtime-decision-shadow-${evidence.sourceDescriptorDigest.slice(0, 12)}-${evidence.contentDigest.slice(0, 12)}.json`;
-  const path = join(absoluteDir, filename);
-  const contents = `${JSON.stringify(payload, null, 2)}\n`;
-  try {
-    writeFileSync(path, contents, { encoding: "utf8", mode: 0o600, flag: "wx" });
-  } catch (error) {
-    const code = error instanceof Error && "code" in error ? String((error as NodeJS.ErrnoException).code) : "";
-    if (code !== "EEXIST") throw error;
-    const existing = JSON.parse(readFileSync(path, "utf8")) as Record<string, any>;
-    if (existing.evidence?.contentDigest !== evidence.contentDigest) {
-      throw new Error(`append-only private store conflict: ${path}`);
-    }
-  }
-  return path;
+  return appendPrivateJsonStore({
+    directory,
+    filename,
+    contents: `${JSON.stringify(payload, null, 2)}\n`,
+    expectedEvidenceDigest: evidence.contentDigest,
+    validateExistingEvidence: (value) => validateRuntimeDecisionLedgerShadowEvidence(value).valid,
+  });
 }
 
 function pragmaValue(db: DatabaseSync, name: string): unknown {
