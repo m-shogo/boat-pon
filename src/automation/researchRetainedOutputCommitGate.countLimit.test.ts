@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import assert from "node:assert/strict";
+import test from "node:test";
 import { validateRetainedOutputCommit } from "./researchRetainedOutputCommitGate";
 
 const RUN_ID = "123456789";
@@ -28,30 +29,32 @@ function history(outputs: string[]): string {
   });
 }
 
-describe("validateRetainedOutputCommit retained count ceiling", () => {
-  it("accepts the canonical producer ceiling of 64 retained paths", () => {
-    const retained = Array.from(
-      { length: 64 },
-      (_, index) => `reports/automation/retained-outputs/${RUN_ID}/${DIGEST}-output-${index}.json`,
-    );
+test("validateRetainedOutputCommit accepts the canonical producer ceiling of 64 retained paths", () => {
+  const retained = Array.from(
+    { length: 64 },
+    (_, index) => `reports/automation/retained-outputs/${RUN_ID}/${DIGEST}-output-${index}.json`,
+  );
 
-    expect(validateRetainedOutputCommit({
+  const result = validateRetainedOutputCommit({
+    changedPaths: [HISTORY_PATH, ...retained],
+    expectedRunId: RUN_ID,
+    readText: () => history(retained),
+  });
+  assert.equal(result.retainedPathCount, 64);
+});
+
+test("validateRetainedOutputCommit rejects 65 canonical referenced retained paths", () => {
+  const retained = Array.from(
+    { length: 65 },
+    (_, index) => `reports/automation/retained-outputs/${RUN_ID}/${DIGEST}-output-${index}.json`,
+  );
+
+  assert.throws(
+    () => validateRetainedOutputCommit({
       changedPaths: [HISTORY_PATH, ...retained],
       expectedRunId: RUN_ID,
       readText: () => history(retained),
-    }).retainedPathCount).toBe(64);
-  });
-
-  it("rejects 65 retained paths even when every path is canonical and referenced", () => {
-    const retained = Array.from(
-      { length: 65 },
-      (_, index) => `reports/automation/retained-outputs/${RUN_ID}/${DIGEST}-output-${index}.json`,
-    );
-
-    expect(() => validateRetainedOutputCommit({
-      changedPaths: [HISTORY_PATH, ...retained],
-      expectedRunId: RUN_ID,
-      readText: () => history(retained),
-    })).toThrow("RETAINED_COMMIT_COUNT_EXCEEDED:65>64");
-  });
+    }),
+    /RETAINED_COMMIT_COUNT_EXCEEDED:65>64/u,
+  );
 });
