@@ -209,6 +209,23 @@ function appendNew(root: string, kind: RegistryKind, record: Record<string, unkn
   }
 }
 
+function resolveExistingIdempotentRecord(path: string, expectedDigest: string): AppendResult {
+  try {
+    const existing = JSON.parse(readRegistryRecordUtf8(path)) as Record<string, unknown>;
+    const body = stripMetadata(existing);
+    const storedDigestProblem = verifyStoredDigest(existing, body);
+    if (storedDigestProblem) {
+      return { ok: false, path, errors: [`registry conflict: ${storedDigestProblem}: ${path}`], code: "CONFLICT" };
+    }
+    if (contractDigest(body) === expectedDigest) {
+      return { ok: true, path, errors: [], code: "ALREADY_RECORDED" };
+    }
+    return { ok: false, path, errors: [`registry conflict: same id has different body: ${path}`], code: "CONFLICT" };
+  } catch (e) {
+    return { ok: false, path, errors: [`registry conflict: unreadable existing record: ${e instanceof Error ? e.message : String(e)}`], code: "CONFLICT" };
+  }
+}
+
 // 明示的に重複を拒否したい管理処理向け。
 export function appendRecordStrict(root: string, kind: RegistryKind, record: Record<string, unknown>): AppendResult {
   return appendNew(root, kind, record);
@@ -226,23 +243,17 @@ export function appendRecordIdempotent(root: string, kind: RegistryKind, record:
   }
   const path = join(root, kind, fileName(kind, record));
   const expectedDigest = contractDigest(record);
-  if (existsSync(path)) {
-    try {
-      const existing = JSON.parse(readRegistryRecordUtf8(path)) as Record<string, unknown>;
-      const body = stripMetadata(existing);
-      const storedDigestProblem = verifyStoredDigest(existing, body);
-      if (storedDigestProblem) {
-        return { ok: false, path, errors: [`registry conflict: ${storedDigestProblem}: ${path}`], code: "CONFLICT" };
-      }
-      if (contractDigest(body) === expectedDigest) {
-        return { ok: true, path, errors: [], code: "ALREADY_RECORDED" };
-      }
-      return { ok: false, path, errors: [`registry conflict: same id has different body: ${path}`], code: "CONFLICT" };
-    } catch (e) {
-      return { ok: false, path, errors: [`registry conflict: unreadable existing record: ${e instanceof Error ? e.message : String(e)}`], code: "CONFLICT" };
-    }
+  if (existsSync(path)) return resolveExistingIdempotentRecord(path, expectedDigest);
+
+  const created = appendNew(root, kind, record);
+  if (created.ok) return created;
+  if (created.code === "DUPLICATE") return resolveExistingIdempotentRecord(path, expectedDigest);
+  if (created.code === "WRITE_FAILED" && existsSync(path)) {
+    // A concurrent idempotent writer may win between our absence check and
+    // atomic hard-link publication. Re-validate the winner; never overwrite it.
+    return resolveExistingIdempotentRecord(path, expectedDigest);
   }
-  return appendNew(root, kind, record);
+  return created;
 }
 
 // 既存executor互換API。戻り値を見落としても不正・競合・write失敗は例外で停止する。
