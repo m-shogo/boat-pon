@@ -108,13 +108,33 @@ function finiteOrNull(value: unknown): value is number | null {
   return value === null || (typeof value === "number" && Number.isFinite(value));
 }
 
+function isLeapYear(year: number): boolean {
+  return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+}
+
+function hasValidCalendarDateTime(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})(?:T| )(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?/.exec(value);
+  if (!match) return false;
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  const second = Number(secondText);
+  if (month < 1 || month > 12 || hour > 23 || minute > 59 || second > 59) return false;
+  const daysInMonth = [31, isLeapYear(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1];
+  return day >= 1 && day <= daysInMonth;
+}
+
 function normalizeUtcTimestamp(value: string): string | null {
   const trimmed = value.trim();
   if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(trimmed)) {
+    if (!hasValidCalendarDateTime(trimmed)) return null;
     const parsed = Date.parse(`${trimmed.replace(" ", "T")}Z`);
     return Number.isFinite(parsed) ? new Date(parsed).toISOString() : null;
   }
-  if (!/(?:Z|[+-]\d{2}:\d{2})$/i.test(trimmed)) return null;
+  if (!/(?:Z|[+-]\d{2}:\d{2})$/i.test(trimmed) || !hasValidCalendarDateTime(trimmed)) return null;
   const parsed = Date.parse(trimmed);
   return Number.isFinite(parsed) ? new Date(parsed).toISOString() : null;
 }
@@ -122,11 +142,15 @@ function normalizeUtcTimestamp(value: string): string | null {
 function normalizeCloseTimestamp(date: string, closeAt: string): string | null {
   const trimmed = closeAt.trim();
   if (/^\d{2}:\d{2}$/.test(trimmed)) {
-    const parsed = Date.parse(`${date}T${trimmed}:00+09:00`);
+    const source = `${date}T${trimmed}:00+09:00`;
+    if (!hasValidCalendarDateTime(source)) return null;
+    const parsed = Date.parse(source);
     return Number.isFinite(parsed) ? new Date(parsed).toISOString() : null;
   }
   if (/^\d{2}:\d{2}:\d{2}$/.test(trimmed)) {
-    const parsed = Date.parse(`${date}T${trimmed}+09:00`);
+    const source = `${date}T${trimmed}+09:00`;
+    if (!hasValidCalendarDateTime(source)) return null;
+    const parsed = Date.parse(source);
     return Number.isFinite(parsed) ? new Date(parsed).toISOString() : null;
   }
   return normalizeUtcTimestamp(trimmed);
