@@ -149,13 +149,19 @@ export function buildN2DormantActivationPlan(input: {
 
   const blockers: string[] = [];
   for (const taskId of N2_DORMANT_TASKS) {
+    const taskStatus = taskStatuses[taskId];
     const defaultStatus = catalogDefaultStatuses[taskId];
     const registered = runtimeExecutorRegistered[taskId];
     if (defaultStatus === "BLOCKED_EXECUTOR_PENDING" && registered) {
       blockers.push(`${taskId}:REGISTERED_WHILE_BLOCKED_EXECUTOR_PENDING`);
     }
-    if (defaultStatus !== "BLOCKED_EXECUTOR_PENDING" && !registered && taskStatuses[taskId] !== "PASS") {
+    if (defaultStatus !== "BLOCKED_EXECUTOR_PENDING" && !registered && taskStatus !== "PASS") {
       blockers.push(`${taskId}:CATALOG_ACTIVATED_WITHOUT_EXECUTOR`);
+    }
+    if (taskStatus === "BLOCKED_EXECUTOR_PENDING"
+      && defaultStatus !== "BLOCKED_EXECUTOR_PENDING"
+      && registered) {
+      blockers.push(`${taskId}:QUEUE_DORMANT_WHILE_CATALOG_AND_EXECUTOR_ACTIVE`);
     }
   }
 
