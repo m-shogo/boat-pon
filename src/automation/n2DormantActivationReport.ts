@@ -169,6 +169,12 @@ export function buildN2DormantActivationReport(input: {
     }
     if (queueTask && (!Number.isSafeInteger(queueTask.attemptCount) || queueTask.attemptCount < 0)) blockers.push(`${taskId}:ATTEMPT_COUNT_INVALID`);
     if (queueTask && (!Number.isSafeInteger(queueTask.maxAttempts) || queueTask.maxAttempts < 1 || queueTask.attemptCount > queueTask.maxAttempts)) blockers.push(`${taskId}:MAX_ATTEMPTS_INVALID`);
+    if (queueTask?.status === "BLOCKED_EXECUTOR_PENDING"
+      && catalogTask?.defaultStatus === "BLOCKED_EXECUTOR_PENDING"
+      && !registered
+      && queueTask.attemptCount !== 0) {
+      blockers.push(`${taskId}:DORMANT_ATTEMPT_COUNT_NOT_ZERO`);
+    }
     taskStatuses[taskId] = queueTask?.status ?? "UNKNOWN";
     catalogDefaultStatuses[taskId] = catalogTask?.defaultStatus ?? "UNKNOWN";
     runtimeExecutorRegistered[taskId] = registered;
