@@ -17,7 +17,12 @@ const validAuthoritySha = "c".repeat(40);
 function history(authoritySha: unknown): string {
   return JSON.stringify({
     runId,
+    requestId: "REQ-test",
+    intentId: "INTENT-test",
     taskId,
+    taskType: "pit-audit",
+    safetyLevel: "L0",
+    executorVersion: "test-executor-v1",
     result: "PASS",
     blocks: [],
     executed: true,
@@ -26,6 +31,9 @@ function history(authoritySha: unknown): string {
     idempotencyKey,
     authoritySha,
     outputs: [],
+    startedAt: "2026-08-12T00:00:00.000Z",
+    completedAt: "2026-08-12T00:00:01.000Z",
+    elapsedMs: 1000,
   });
 }
 
