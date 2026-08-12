@@ -25,6 +25,16 @@ const dependencies: Record<(typeof N2_DORMANT_TASKS)[number], string[]> = {
   "TASK-N2-042": ["TASK-N2-041"],
 };
 
+const expectedOutputs: Record<(typeof N2_DORMANT_TASKS)[number], string[]> = {
+  "TASK-N2-020": ["reports/n2/n2-baseline-market.json"],
+  "TASK-N2-021": ["reports/n2/n2-baseline-historical.json"],
+  "TASK-N2-022": ["reports/n2/n2-baseline-common-cohort.json"],
+  "TASK-N2-030": ["reports/n2/n2-evaluation-metrics.json"],
+  "TASK-N2-040": ["reports/n2/n2-edge-hypothesis-scan.json"],
+  "TASK-N2-041": ["reports/n2/n2-edge-historical-test.json"],
+  "TASK-N2-042": ["reports/n2/n2-confounder-audit.json"],
+};
+
 function catalog(): TaskCatalog {
   return {
     catalogSchemaVersion: "research-task-catalog-v1",
@@ -41,7 +51,7 @@ function catalog(): TaskCatalog {
       dependencies: [...dependencies[taskId]],
       maxDurationSeconds: 3600,
       expectedInputs: [],
-      expectedOutputs: [],
+      expectedOutputs: [...expectedOutputs[taskId]],
       estimatedDurationSeconds: 60,
       defaultStatus: "BLOCKED_EXECUTOR_PENDING",
       valueOfInformation: "v",
@@ -151,6 +161,18 @@ test("N2 activation fails closed before readiness when catalog safety level drif
   assert.deepEqual(
     findN2DormantTaskDefinitionDrift(mismatchedCatalog, queue()),
     ["TASK-N2-020:CATALOG_SAFETY_LEVEL_MISMATCH"],
+  );
+});
+
+test("N2 activation fails closed before readiness when catalog expected outputs drift", () => {
+  const mismatchedCatalog = catalog();
+  const task = mismatchedCatalog.tasks.find((entry) => entry.taskId === "TASK-N2-020");
+  assert.ok(task);
+  task.expectedOutputs = ["public/n2-baseline-market.json"];
+
+  assert.deepEqual(
+    findN2DormantTaskDefinitionDrift(mismatchedCatalog, queue()),
+    ["TASK-N2-020:CATALOG_EXPECTED_OUTPUTS_MISMATCH"],
   );
 });
 
