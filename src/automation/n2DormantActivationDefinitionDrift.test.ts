@@ -164,6 +164,18 @@ test("N2 activation fails closed before readiness when catalog safety level drif
   );
 });
 
+test("N2 activation fails closed before readiness when catalog max duration drifts", () => {
+  const mismatchedCatalog = catalog();
+  const task = mismatchedCatalog.tasks.find((entry) => entry.taskId === "TASK-N2-020");
+  assert.ok(task);
+  task.maxDurationSeconds = 7200;
+
+  assert.deepEqual(
+    findN2DormantTaskDefinitionDrift(mismatchedCatalog, queue()),
+    ["TASK-N2-020:CATALOG_MAX_DURATION_MISMATCH"],
+  );
+});
+
 test("N2 activation fails closed before readiness when catalog expected outputs drift", () => {
   const mismatchedCatalog = catalog();
   const task = mismatchedCatalog.tasks.find((entry) => entry.taskId === "TASK-N2-020");

@@ -2,6 +2,7 @@ import { N2_DORMANT_TASKS, type N2DormantTaskId } from "./n2DormantActivationCon
 import type { QueueState, TaskCatalog } from "./taskCatalog";
 
 const N2_DORMANT_MAX_ATTEMPTS = 3;
+const N2_DORMANT_MAX_DURATION_SECONDS = 3600;
 
 const N2_DORMANT_TASK_TYPES: Record<N2DormantTaskId, string> = {
   "TASK-N2-020": "baseline-market",
@@ -74,6 +75,9 @@ export function findN2DormantTaskDefinitionDrift(
     }
     if (catalogTask && catalogTask.safetyLevel !== "L0") {
       issues.push(`${taskId}:CATALOG_SAFETY_LEVEL_MISMATCH`);
+    }
+    if (catalogTask && catalogTask.maxDurationSeconds !== N2_DORMANT_MAX_DURATION_SECONDS) {
+      issues.push(`${taskId}:CATALOG_MAX_DURATION_MISMATCH`);
     }
     if (catalogTask && !sameStringSet(catalogTask.dependencies, N2_DORMANT_TASK_DEPENDENCIES[taskId])) {
       issues.push(`${taskId}:CATALOG_DEPENDENCIES_MISMATCH`);
