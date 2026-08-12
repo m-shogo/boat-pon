@@ -59,6 +59,9 @@ export function findN2DormantTaskDefinitionDrift(
     if (catalogTask && catalogTask.executor !== N2_DORMANT_TASK_TYPES[taskId]) {
       issues.push(`${taskId}:CATALOG_EXECUTOR_MISMATCH`);
     }
+    if (catalogTask && catalogTask.safetyLevel !== "L0") {
+      issues.push(`${taskId}:CATALOG_SAFETY_LEVEL_MISMATCH`);
+    }
     if (catalogTask && !sameDependencySet(catalogTask.dependencies, N2_DORMANT_TASK_DEPENDENCIES[taskId])) {
       issues.push(`${taskId}:CATALOG_DEPENDENCIES_MISMATCH`);
     }
