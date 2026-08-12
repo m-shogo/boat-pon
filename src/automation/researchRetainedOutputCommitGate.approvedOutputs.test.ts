@@ -18,7 +18,26 @@ const idempotencyKey = "b".repeat(64);
 const authoritySha = "c".repeat(40);
 
 function historyText(outputs: string[]): string {
-  return JSON.stringify({ runId, taskId, result: "PASS", blocks: [], executed: true, outputDigest, summary: {}, idempotencyKey, authoritySha, outputs });
+  return JSON.stringify({
+    runId,
+    requestId: "REQ-test",
+    intentId: "INTENT-test",
+    taskId,
+    taskType: "pit-audit",
+    safetyLevel: "L0",
+    executorVersion: "test-executor-v1",
+    result: "PASS",
+    blocks: [],
+    executed: true,
+    outputDigest,
+    summary: {},
+    idempotencyKey,
+    authoritySha,
+    outputs,
+    startedAt: "2026-08-12T00:00:00.000Z",
+    completedAt: "2026-08-12T00:00:01.000Z",
+    elapsedMs: 1000,
+  });
 }
 
 test("retained history accepts only durable-audit approved output roots", () => {
