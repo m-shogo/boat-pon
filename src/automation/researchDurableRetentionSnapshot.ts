@@ -108,6 +108,45 @@ function canonicalJson(value: unknown): string {
   return JSON.stringify(canonical(value));
 }
 
+function assertSnapshotCountInvariants(object: Record<string, unknown>): void {
+  const countFields = [
+    "historyFileCount",
+    "assessedRunCount",
+    "durableCompleteCount",
+    "strongDurableCompleteCount",
+    "incompleteCount",
+    "invalidHistoryCount",
+    "missingOutputReferenceCount",
+    "invalidOutputReferenceCount",
+    "mutableSupersededReferenceCount",
+    "legacyCompatibilityCount",
+  ] as const;
+  for (const field of countFields) {
+    const value = object[field];
+    if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) {
+      throw new Error(`DURABLE_RETENTION_COUNT_INVALID:${field}`);
+    }
+  }
+  const historyFileCount = object.historyFileCount as number;
+  const assessedRunCount = object.assessedRunCount as number;
+  const durableCompleteCount = object.durableCompleteCount as number;
+  const strongDurableCompleteCount = object.strongDurableCompleteCount as number;
+  const incompleteCount = object.incompleteCount as number;
+  const invalidHistoryCount = object.invalidHistoryCount as number;
+  if (historyFileCount !== assessedRunCount) {
+    throw new Error("DURABLE_RETENTION_HISTORY_COUNT_MISMATCH");
+  }
+  if (durableCompleteCount + incompleteCount !== assessedRunCount) {
+    throw new Error("DURABLE_RETENTION_COMPLETENESS_COUNT_MISMATCH");
+  }
+  if (strongDurableCompleteCount > durableCompleteCount) {
+    throw new Error("DURABLE_RETENTION_STRONG_COUNT_INVALID");
+  }
+  if (invalidHistoryCount > assessedRunCount) {
+    throw new Error("DURABLE_RETENTION_INVALID_HISTORY_COUNT_INVALID");
+  }
+}
+
 function parseInstant(value: string): number {
   const parsed = Date.parse(value);
   if (!Number.isFinite(parsed)) throw new Error("DURABLE_RETENTION_FIRST_OBSERVED_AT_INVALID");
@@ -382,6 +421,7 @@ export function validateResearchDurableRetentionSnapshot(value: unknown): Resear
   if (typeof object.snapshotDigest !== "string" || !SHA256_RE.test(object.snapshotDigest)) throw new Error("DURABLE_RETENTION_SNAPSHOT_DIGEST_INVALID");
   const { snapshotDigest, ...core } = object;
   if (sha256Text(canonicalJson(core)) !== snapshotDigest) throw new Error("DURABLE_RETENTION_SNAPSHOT_SELF_DIGEST_INVALID");
+  assertSnapshotCountInvariants(object);
   for (const flag of [
     "automaticPromotionAuthorized",
     "currentBuyConnectionAuthorized",
