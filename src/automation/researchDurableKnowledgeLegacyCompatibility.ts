@@ -137,16 +137,13 @@ function legacyOutputAssessment(repoRoot: string, history: Record<string, unknow
   delete reportPayload.generatedAt;
   delete reportPayload.outputDigest;
   if (!canonicalEqual(summary, reportPayload)) return null;
-  const statPath = resolveInside(repoRoot, LEGACY_V0_OUTPUT_PATH);
-  if (!statPath) return null;
-  const stat = lstatSync(statPath);
   return {
     relativePath: LEGACY_V0_OUTPUT_PATH,
     rootClass: "REPORT",
     integrity: "CURRENT_OUTPUT_DIGEST_MATCH",
     exists: true,
     regularFile: true,
-    bytes: stat.size,
+    bytes: Buffer.byteLength(text, "utf8"),
     contentDigest: sha256Text(text),
     embeddedDigest: LEGACY_V0.outputDigest,
     historyDigestMatchesEmbedded: true,
