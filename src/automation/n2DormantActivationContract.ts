@@ -167,6 +167,9 @@ export function buildN2DormantActivationPlan(input: {
 
   const baseline020Pass = taskStatuses["TASK-N2-020"] === "PASS";
   const baseline021Pass = taskStatuses["TASK-N2-021"] === "PASS";
+  const baseline020Dormant = dormant("TASK-N2-020", taskStatuses, catalogDefaultStatuses, runtimeExecutorRegistered);
+  const baseline021Dormant = dormant("TASK-N2-021", taskStatuses, catalogDefaultStatuses, runtimeExecutorRegistered);
+  if (baseline020Dormant !== baseline021Dormant) blockers.push("BASELINE_PAIR_ACTIVATION_STATE_DIVERGED");
   if (baseline020Pass !== baseline021Pass) blockers.push("BASELINE_PAIR_PASS_STATE_DIVERGED");
   if (taskStatuses["TASK-N2-022"] === "PASS" && !(baseline020Pass && baseline021Pass)) {
     blockers.push("COMMON_COHORT_PASS_WITHOUT_BOTH_BASELINES_PASS");
@@ -226,9 +229,7 @@ export function buildN2DormantActivationPlan(input: {
       stage = "WAITING_COMMON_COHORT_PASS";
     }
   } else if (input.readinessStatus === "READY_FOR_N2_020") {
-    const bothDormant = ["TASK-N2-020", "TASK-N2-021"].every((taskId) =>
-      dormant(taskId as N2DormantTaskId, taskStatuses, catalogDefaultStatuses, runtimeExecutorRegistered),
-    );
+    const bothDormant = baseline020Dormant && baseline021Dormant;
     if (bothDormant) {
       stage = "ACTIVATE_BASELINES";
       activationActions = [action("n2-baselines", ["TASK-N2-020", "TASK-N2-021"])];
