@@ -67,7 +67,8 @@ function parseEvaluationMode(value: string | null, runKind: string): RuntimeEval
 
 function validateDate(value: string | null, name: string): void {
   if (value == null) return;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(Date.parse(`${value}T00:00:00Z`))) {
+  const parsed = /^\d{4}-\d{2}-\d{2}$/.test(value) ? Date.parse(`${value}T00:00:00Z`) : Number.NaN;
+  if (!Number.isFinite(parsed) || new Date(parsed).toISOString().slice(0, 10) !== value) {
     throw new Error(`${name} must be YYYY-MM-DD`);
   }
 }
