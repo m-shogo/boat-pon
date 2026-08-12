@@ -183,7 +183,7 @@ export function buildN2DormantActivationPlan(input: {
   const baseline021Dormant = dormant("TASK-N2-021", taskStatuses, catalogDefaultStatuses, runtimeExecutorRegistered);
   const baseline020Activated = activated("TASK-N2-020", catalogDefaultStatuses, runtimeExecutorRegistered);
   const baseline021Activated = activated("TASK-N2-021", catalogDefaultStatuses, runtimeExecutorRegistered);
-  if ((baseline020Activated && baseline021Dormant) || (baseline021Activated && baseline020Dormant)) {
+  if (baseline020Activated !== baseline021Activated) {
     blockers.push("BASELINE_PAIR_ACTIVATION_STATE_DIVERGED");
   }
   if (baseline020Pass !== baseline021Pass) blockers.push("BASELINE_PAIR_PASS_STATE_DIVERGED");
