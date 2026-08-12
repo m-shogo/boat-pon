@@ -90,3 +90,15 @@ test("N2 activation preflight rejects dormant retry-budget drift before readines
     ["TASK-N2-020:DORMANT_MAX_ATTEMPTS_MISMATCH"],
   );
 });
+
+for (const status of ["CONDITIONAL", "FAILED_FINAL", "BLOCKED_DEPENDENCY"] as const) {
+  test(`N2 activation preflight rejects ${status} queue state while catalog remains dormant`, () => {
+    const state = queue();
+    state.tasks["TASK-N2-020"].status = status;
+
+    assert.deepEqual(
+      findN2DormantTaskDefinitionDrift(catalog(), state),
+      ["TASK-N2-020:QUEUE_STATUS_MISMATCH_WHILE_CATALOG_DORMANT"],
+    );
+  });
+}
