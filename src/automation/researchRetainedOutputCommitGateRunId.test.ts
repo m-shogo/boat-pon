@@ -13,8 +13,8 @@ function historyText(runId: string): string {
   return JSON.stringify({ runId, taskId, result: "PASS", blocks: [], outputs: [] });
 }
 
-test("retained commit gate rejects dot-only history run ids in local inspection mode", () => {
-  for (const runId of [".", ".."]) {
+test("retained commit gate rejects noncanonical history run ids in local inspection mode", () => {
+  for (const runId of [".", "..", "local-run", "123abc"]) {
     const historyPath = `reports/automation/history/${runId}-${taskId}.json`;
     assert.throws(
       () => validateRetainedOutputCommit({
@@ -27,8 +27,8 @@ test("retained commit gate rejects dot-only history run ids in local inspection 
   }
 });
 
-test("retained commit gate rejects dot-only explicit expected run ids", () => {
-  for (const runId of [".", ".."]) {
+test("retained commit gate rejects noncanonical explicit expected run ids", () => {
+  for (const runId of [".", "..", "local-run", "123abc"]) {
     assert.throws(
       () => validateRetainedOutputCommit({
         changedPaths: [],
@@ -40,16 +40,16 @@ test("retained commit gate rejects dot-only explicit expected run ids", () => {
   }
 });
 
-test("trusted retained commit gate rejects dot-only history run ids in local mode", () => {
+test("trusted retained commit gate rejects noncanonical history run ids in local mode", () => {
   const root = mkdtempSync(join(tmpdir(), "boat-pon-retained-run-id-gate-"));
   const trustedGitBin = execFileSync("which", ["git"], { encoding: "utf8" }).trim();
   const gateCli = resolve(process.cwd(), "scripts/check-research-retained-output-commit.mjs");
-  const historyPath = `reports/automation/history/.-${taskId}.json`;
+  const historyPath = `reports/automation/history/local-run-${taskId}.json`;
   try {
     execFileSync(trustedGitBin, ["init", "-q"], { cwd: root });
     const absoluteHistory = join(root, historyPath);
     mkdirSync(dirname(absoluteHistory), { recursive: true });
-    writeFileSync(absoluteHistory, `${historyText(".")}\n`, "utf8");
+    writeFileSync(absoluteHistory, `${historyText("local-run")}\n`, "utf8");
 
     assert.throws(
       () => execFileSync(process.execPath, [gateCli, "--run-id=local"], {
