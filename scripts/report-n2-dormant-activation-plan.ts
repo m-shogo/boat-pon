@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { isExecutorImplemented } from "../src/automation/taskExecutors";
@@ -16,6 +15,9 @@ import {
   buildN2DormantActivationReport,
 } from "../src/automation/n2DormantActivationReport";
 import {
+  readGovernanceFileUtf8Bounded,
+} from "../src/research/governance/safeFs";
+import {
   buildN2MarketBaselineReadinessReport,
 } from "../src/research-replay/n2MarketBaselineReadiness";
 import {
@@ -23,6 +25,8 @@ import {
 } from "../src/research-replay/n2MarketBaselineReadinessReader";
 
 type AutomationPolicy = { dataRoot?: unknown };
+
+const MAX_N2_ACTIVATION_AUTHORITY_BYTES = 2_000_000;
 
 function arg(name: string): string | null {
   const inline = process.argv.find((value) => value.startsWith(`--${name}=`));
@@ -33,7 +37,10 @@ function arg(name: string): string | null {
 
 const repoRoot = resolve(process.cwd());
 const policy = JSON.parse(
-  readFileSync(resolve(repoRoot, "config/research-automation-policy.json"), "utf8"),
+  readGovernanceFileUtf8Bounded(
+    resolve(repoRoot, "config/research-automation-policy.json"),
+    MAX_N2_ACTIVATION_AUTHORITY_BYTES,
+  ).text,
 ) as AutomationPolicy;
 const configuredDataRoot = process.env.BOAT_PON_DATA_ROOT?.trim()
   || (typeof policy.dataRoot === "string" ? policy.dataRoot.trim() : "")
@@ -45,7 +52,12 @@ const sidecarDbPath = resolve(
 );
 const statePath = resolve(arg("state") ?? resolve(repoRoot, "automation/control/task-queue-state.json"));
 
-const catalogRaw = JSON.parse(readFileSync(resolve(repoRoot, "automation/task-catalog.json"), "utf8"));
+const catalogRaw = JSON.parse(
+  readGovernanceFileUtf8Bounded(
+    resolve(repoRoot, "automation/task-catalog.json"),
+    MAX_N2_ACTIVATION_AUTHORITY_BYTES,
+  ).text,
+);
 const catalogValidation = validateCatalog(catalogRaw);
 if (!catalogValidation.valid || !catalogValidation.catalog) {
   console.log(JSON.stringify({
@@ -69,7 +81,9 @@ if (!catalogValidation.valid || !catalogValidation.catalog) {
 } else {
   let stateRaw: unknown;
   try {
-    stateRaw = JSON.parse(readFileSync(statePath, "utf8"));
+    stateRaw = JSON.parse(
+      readGovernanceFileUtf8Bounded(statePath, MAX_N2_ACTIVATION_AUTHORITY_BYTES).text,
+    );
   } catch (error) {
     console.log(JSON.stringify({
       reportVersion: "n2-dormant-activation-report-v1",
