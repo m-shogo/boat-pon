@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { buildN2MarketBaselineReadinessReport } from "../research-replay/n2MarketBaselineReadiness";
-import { N2_DORMANT_TASKS } from "./n2DormantActivationContract";
+import {
+  N2_DORMANT_TASKS,
+  buildN2DormantActivationPlan,
+} from "./n2DormantActivationContract";
 import { buildN2DormantActivationReport } from "./n2DormantActivationReport";
 
 const taskTypes: Record<(typeof N2_DORMANT_TASKS)[number], string> = {
@@ -69,5 +72,35 @@ for (const status of ["READY", "CLAIMED", "RUNNING", "CHECKPOINTED"] as const) {
     assert.equal(report.publicPublishAuthorized, false);
     assert.equal(report.automatedBettingAuthorized, false);
     assert.equal(report.productionApplyAuthorized, false);
+  });
+
+  test(`direct activation planner rejects queue-first partial activation in ${status}`, () => {
+    const taskStatuses = Object.fromEntries(
+      N2_DORMANT_TASKS.map((taskId) => [taskId, "BLOCKED_EXECUTOR_PENDING"]),
+    );
+    taskStatuses["TASK-N2-020"] = status;
+    const catalogDefaultStatuses = Object.fromEntries(
+      N2_DORMANT_TASKS.map((taskId) => [taskId, "BLOCKED_EXECUTOR_PENDING"]),
+    );
+
+    const plan = buildN2DormantActivationPlan({
+      readinessStatus: "READY_FOR_N2_020",
+      taskStatuses,
+      catalogDefaultStatuses,
+      runtimeExecutorRegistered: registered(),
+    });
+
+    assert.equal(plan.status, "CONFLICT");
+    assert.equal(plan.stage, "CONFLICT");
+    assert.ok(plan.blockers.includes(
+      "TASK-N2-020:QUEUE_ACTIVATED_WHILE_CATALOG_AND_EXECUTOR_DORMANT",
+    ));
+    assert.deepEqual(plan.activationActions, []);
+    assert.equal(plan.invariants.activationPlanningConsumesAttempt, false);
+    assert.equal(plan.currentBuyConnectionAuthorized, false);
+    assert.equal(plan.lineConnectionAuthorized, false);
+    assert.equal(plan.publicPublishAuthorized, false);
+    assert.equal(plan.automatedBettingAuthorized, false);
+    assert.equal(plan.productionApplyAuthorized, false);
   });
 }
