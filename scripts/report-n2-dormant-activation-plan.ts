@@ -10,6 +10,9 @@ import {
   N2_DORMANT_TASKS,
 } from "../src/automation/n2DormantActivationContract";
 import {
+  findN2DormantTaskDefinitionDrift,
+} from "../src/automation/n2DormantActivationDefinitionDrift";
+import {
   buildN2DormantActivationReport,
 } from "../src/automation/n2DormantActivationReport";
 import {
@@ -110,36 +113,61 @@ if (!catalogValidation.valid || !catalogValidation.catalog) {
       }, null, 2));
       process.exitCode = 3;
     } else {
-      const readinessRead = readN2MarketBaselineReadiness({ dataRoot, sidecarDbPath });
-      const readiness = buildN2MarketBaselineReadinessReport({
-        acceptedT5RaceKeys: readinessRead.acceptedT5RaceKeys,
-        settledRaceKeys: readinessRead.settledRaceKeys,
-        integrityBlockedRaceKeys: readinessRead.integrityBlockedRaceKeys,
-        sourceBlockers: readinessRead.sourceBlockers,
-      });
-      const catalogTasks = catalogValidation.catalog.tasks
-        .filter((task) => (N2_DORMANT_TASKS as readonly string[]).includes(task.taskId))
-        .map((task) => ({ taskId: task.taskId, taskType: task.taskType, defaultStatus: task.defaultStatus }));
-      const runtimeRegisteredByTaskId = Object.fromEntries(catalogTasks.map((task) => [
-        task.taskId,
-        isExecutorImplemented(task.taskType),
-      ]));
-      const queueTasks = Object.fromEntries(N2_DORMANT_TASKS.map((taskId) => {
-        const state = stateValidation.state!.tasks[taskId];
-        return [taskId, state ? {
-          status: state.status,
-          attemptCount: state.attemptCount,
-          maxAttempts: state.maxAttempts,
-        } : undefined];
-      }));
-      const report = buildN2DormantActivationReport({
-        readiness,
-        catalogTasks,
-        queueTasks,
-        runtimeRegisteredByTaskId,
-      });
-      console.log(JSON.stringify(report, null, 2));
-      if (report.status === "CONFLICT" || readiness.status === "BLOCKED") process.exitCode = 3;
+      const definitionDrift = findN2DormantTaskDefinitionDrift(
+        catalogValidation.catalog,
+        stateValidation.state,
+      );
+      if (definitionDrift.length > 0) {
+        console.log(JSON.stringify({
+          reportVersion: "n2-dormant-activation-report-v1",
+          status: "CONFLICT",
+          stage: "CONFLICT",
+          blockers: definitionDrift,
+          activationActions: [],
+          activationPlanningAttemptDelta: 0,
+          automaticMutationAuthorized: false,
+          currentBuyConnectionAuthorized: false,
+          lineConnectionAuthorized: false,
+          publicPublishAuthorized: false,
+          automatedBettingAuthorized: false,
+          productionApplyAuthorized: false,
+          databaseWriteCount: 0,
+          networkRequestCount: 0,
+          rawOddsValuesReadByPlanner: false,
+        }, null, 2));
+        process.exitCode = 3;
+      } else {
+        const readinessRead = readN2MarketBaselineReadiness({ dataRoot, sidecarDbPath });
+        const readiness = buildN2MarketBaselineReadinessReport({
+          acceptedT5RaceKeys: readinessRead.acceptedT5RaceKeys,
+          settledRaceKeys: readinessRead.settledRaceKeys,
+          integrityBlockedRaceKeys: readinessRead.integrityBlockedRaceKeys,
+          sourceBlockers: readinessRead.sourceBlockers,
+        });
+        const catalogTasks = catalogValidation.catalog.tasks
+          .filter((task) => (N2_DORMANT_TASKS as readonly string[]).includes(task.taskId))
+          .map((task) => ({ taskId: task.taskId, taskType: task.taskType, defaultStatus: task.defaultStatus }));
+        const runtimeRegisteredByTaskId = Object.fromEntries(catalogTasks.map((task) => [
+          task.taskId,
+          isExecutorImplemented(task.taskType),
+        ]));
+        const queueTasks = Object.fromEntries(N2_DORMANT_TASKS.map((taskId) => {
+          const state = stateValidation.state!.tasks[taskId];
+          return [taskId, state ? {
+            status: state.status,
+            attemptCount: state.attemptCount,
+            maxAttempts: state.maxAttempts,
+          } : undefined];
+        }));
+        const report = buildN2DormantActivationReport({
+          readiness,
+          catalogTasks,
+          queueTasks,
+          runtimeRegisteredByTaskId,
+        });
+        console.log(JSON.stringify(report, null, 2));
+        if (report.status === "CONFLICT" || readiness.status === "BLOCKED") process.exitCode = 3;
+      }
     }
   }
 }
