@@ -147,7 +147,8 @@ export function buildN2DormantActivationReport(input: {
   for (const taskId of N2_DORMANT_TASKS) {
     const catalogTask = catalogById.get(taskId);
     const queueTask = input.queueTasks[taskId];
-    const registered = input.runtimeRegisteredByTaskId[taskId] === true;
+    const runtimeRegistrationValue = input.runtimeRegisteredByTaskId[taskId] as unknown;
+    const registered = runtimeRegistrationValue === true;
     if (!catalogTask) blockers.push(`${taskId}:CATALOG_TASK_MISSING`);
     if (!queueTask) blockers.push(`${taskId}:QUEUE_TASK_MISSING`);
     if (catalogTask && !DEFAULT_STATUSES.includes(catalogTask.defaultStatus as (typeof DEFAULT_STATUSES)[number])) {
@@ -156,8 +157,10 @@ export function buildN2DormantActivationReport(input: {
     if (queueTask && !TASK_STATUSES.includes(queueTask.status as (typeof TASK_STATUSES)[number])) {
       blockers.push(`${taskId}:QUEUE_STATUS_INVALID`);
     }
-    if (input.runtimeRegisteredByTaskId[taskId] === undefined) {
+    if (runtimeRegistrationValue === undefined) {
       blockers.push(`${taskId}:RUNTIME_REGISTRATION_STATE_MISSING`);
+    } else if (typeof runtimeRegistrationValue !== "boolean") {
+      blockers.push(`${taskId}:RUNTIME_REGISTRATION_STATE_INVALID`);
     }
     if (queueTask && ["READY", "CLAIMED", "RUNNING", "CHECKPOINTED"].includes(queueTask.status)
       && catalogTask?.defaultStatus === "BLOCKED_EXECUTOR_PENDING"
