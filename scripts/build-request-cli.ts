@@ -3,8 +3,9 @@
 // canonical JSON の SHA-256）。ループ・schedule は持たない。
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { assertGovernanceDirectorySafe, readGovernanceFileUtf8 } from "../src/research/governance/safeFs";
 
 const root = resolve(process.cwd());
 const fail = (m: string): never => { console.error(`invalid input: ${m}`); process.exit(1); };
@@ -54,7 +55,12 @@ const authoritySha = (arg("authority-sha") ?? (() => {
 })()).toLowerCase();
 if (!/^[0-9a-f]{7,40}$/.test(authoritySha)) fail("authority-sha");
 
-const queue = JSON.parse(readFileSync(join(root, "automation/task-queue.json"), "utf8"));
+let queue: unknown;
+try {
+  queue = JSON.parse(readGovernanceFileUtf8(join(root, "automation/task-queue.json")));
+} catch (error) {
+  fail(`unable to read task queue safely: ${error instanceof Error ? error.message : String(error)}`);
+}
 const queueDigest = createHash("sha256").update(JSON.stringify(queue)).digest("hex");
 
 const suffix = createHash("sha256").update(`${taskId}|${Date.now()}|${authoritySha}`).digest("hex").slice(0, 10);
@@ -73,11 +79,20 @@ const request: Record<string, unknown> = {
 request.requestDigest = createHash("sha256")
   .update(JSON.stringify(request, Object.keys(request).sort())).digest("hex");
 
-const outPath = join(root, "automation/requests/pending", `${requestId}.json`);
+const requestsDir = join(root, "automation/requests");
+const pendingDir = join(requestsDir, "pending");
+const outPath = join(pendingDir, `${requestId}.json`);
 const body = `${JSON.stringify(request, null, 2)}\n`;
 if (write) {
-  mkdirSync(join(root, "automation/requests/pending"), { recursive: true });
-  writeFileSync(outPath, body);
+  try {
+    assertGovernanceDirectorySafe(requestsDir);
+    mkdirSync(pendingDir, { recursive: true });
+    assertGovernanceDirectorySafe(pendingDir);
+    writeFileSync(outPath, body, { flag: "wx" });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "EEXIST") fail(`request already exists: ${requestId}`);
+    fail(`unable to write request safely: ${error instanceof Error ? error.message : String(error)}`);
+  }
   console.error(`wrote ${outPath}`);
 }
 process.stdout.write(body);

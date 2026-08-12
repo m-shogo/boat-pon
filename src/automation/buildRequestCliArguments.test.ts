@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
@@ -58,6 +58,32 @@ test("legacy request builder does not use a stale origin/main ref when fetch fai
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /unable to refresh origin\/main authority/);
     assert.equal(result.stdout, "");
+  } finally {
+    rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
+test("legacy request builder never overwrites an existing pending request", () => {
+  const cwd = mkdtempSync(join(tmpdir(), "boat-pon-request-cli-no-replace-"));
+  try {
+    const pendingDir = join(cwd, "automation/requests/pending");
+    mkdirSync(pendingDir, { recursive: true });
+    writeFileSync(join(cwd, "automation/task-queue.json"), "{\"tasks\":[]}\n", "utf8");
+    const requestId = "REQ-existing-request";
+    const existingPath = join(pendingDir, `${requestId}.json`);
+    writeFileSync(existingPath, "ORIGINAL\n", "utf8");
+
+    const result = run([
+      "--task-id=TASK-N2-020",
+      "--requested-action=status-only",
+      "--authority-sha=0123456789abcdef0123456789abcdef01234567",
+      `--request-id=${requestId}`,
+      "--write",
+    ], cwd);
+
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /request already exists: REQ-existing-request/);
+    assert.equal(readFileSync(existingPath, "utf8"), "ORIGINAL\n");
   } finally {
     rmSync(cwd, { recursive: true, force: true });
   }
