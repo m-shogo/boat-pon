@@ -8,6 +8,8 @@ import test from "node:test";
 import { validateRetainedOutputCommit } from "./researchRetainedOutputCommitGate";
 
 const runId = "12345";
+const requestId = "REQ-test";
+const intentId = "INTENT-test";
 const taskId = "TASK-N2-011";
 const historyPath = `reports/automation/history/${runId}-${taskId}.json`;
 const outputDigest = "a".repeat(64);
@@ -17,6 +19,8 @@ const validAuthoritySha = "c".repeat(40);
 function history(authoritySha: unknown): string {
   return JSON.stringify({
     runId,
+    requestId,
+    intentId,
     taskId,
     result: "PASS",
     blocks: [],
