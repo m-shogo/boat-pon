@@ -53,6 +53,25 @@ test("private append-only store accepts an exact evidence replay without replaci
   });
 });
 
+test("private append-only store rejects altered replay bytes even when the embedded digest matches", () => {
+  withRoot((root) => {
+    const directory = join(root, "private");
+    appendPrivateJsonStore({
+      directory,
+      filename: FILENAME,
+      contents: CONTENTS,
+      expectedEvidenceDigest: DIGEST,
+    });
+    const altered = `${JSON.stringify({ evidence: { contentDigest: DIGEST }, private: false })}\n`;
+
+    assert.throws(
+      () => appendPrivateJsonStore({ directory, filename: FILENAME, contents: altered, expectedEvidenceDigest: DIGEST }),
+      /existing evidence differs/,
+    );
+    assert.equal(readFileSync(join(directory, FILENAME), "utf8"), CONTENTS);
+  });
+});
+
 test("private append-only store rejects a permissive pre-existing directory", () => {
   withRoot((root) => {
     const directory = join(root, "private");
