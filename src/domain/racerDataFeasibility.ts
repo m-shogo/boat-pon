@@ -67,6 +67,8 @@ export function isRacerSnapshotEligibleForRace(input: {
 }): boolean {
   const observedDate = input.observedAt.slice(0, 10);
   if (!isDate(input.raceDate) || !isDate(input.asOfDate) || !isDate(observedDate)) return false;
+  if (input.effectiveFrom && !isDate(input.effectiveFrom)) return false;
+  if (input.effectiveTo && !isDate(input.effectiveTo)) return false;
   const cutoffTimestamp = Date.parse(input.targetFeatureCutoffAt);
   const observedTimestamp = Date.parse(input.observedAt);
   if (!Number.isFinite(cutoffTimestamp) || !Number.isFinite(observedTimestamp)) return false;
@@ -94,5 +96,7 @@ function row(
 }
 
 function isDate(value: string) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(`${value}T00:00:00Z`));
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = Date.parse(`${value}T00:00:00Z`);
+  return Number.isFinite(parsed) && new Date(parsed).toISOString().slice(0, 10) === value;
 }
