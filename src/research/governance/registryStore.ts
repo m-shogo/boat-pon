@@ -3,10 +3,11 @@
 // 巨大な単一 JSON に集約しない。1 record = 1 file。既存 record の上書きは拒否（append-only）。
 // production / DB / sidecar に触れない。純粋な file システム操作のみ。
 import {
-  closeSync, constants, existsSync, fstatSync, fsyncSync, linkSync, lstatSync, mkdirSync, openSync, readFileSync,
+  closeSync, constants, existsSync, fstatSync, fsyncSync, linkSync, lstatSync, mkdirSync, openSync, readSync,
   readdirSync, unlinkSync, writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
+import { TextDecoder } from "node:util";
 import {
   CONTRACT_DIGEST_VERSION, contractDigest, legacyContractDigest, validateDiscovery, validateExperiment, validatePromotion,
   validateRejection, validateStrategyFamily, validateStrategyVersion, validateTransferExperiment, type Validation,
@@ -27,6 +28,8 @@ const REGISTRY: Record<RegistryKind, { idField: string; validate: (x: unknown) =
 };
 
 export const REGISTRY_ROOT_DEFAULT = "research/registries";
+const REGISTRY_READ_CHUNK_BYTES = 64 * 1024;
+const STRICT_UTF8_DECODER = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
 
 function fileName(kind: RegistryKind, rec: Record<string, unknown>): string {
   const cfg = REGISTRY[kind];
@@ -112,7 +115,31 @@ function readRegistryRecordUtf8(path: string): string {
     if (stat.nlink !== 1) {
       throw new Error(`registry record hardlink forbidden: ${path}`);
     }
-    return readFileSync(fd, "utf8");
+    if (!Number.isSafeInteger(stat.size) || stat.size < 0) {
+      throw new Error(`registry record size invalid: ${path}`);
+    }
+    const chunks: Buffer[] = [];
+    let totalBytes = 0;
+    while (true) {
+      const remainingWithSentinel = stat.size - totalBytes + 1;
+      const chunk = Buffer.allocUnsafe(Math.min(REGISTRY_READ_CHUNK_BYTES, remainingWithSentinel));
+      const bytesRead = readSync(fd, chunk, 0, chunk.length, null);
+      if (bytesRead === 0) break;
+      totalBytes += bytesRead;
+      if (totalBytes > stat.size) {
+        throw new Error(`registry record changed during read: ${path}`);
+      }
+      chunks.push(chunk.subarray(0, bytesRead));
+    }
+    const postReadStat = fstatSync(fd);
+    if (postReadStat.size !== stat.size || totalBytes !== stat.size) {
+      throw new Error(`registry record changed during read: ${path}`);
+    }
+    try {
+      return STRICT_UTF8_DECODER.decode(Buffer.concat(chunks, totalBytes));
+    } catch {
+      throw new Error(`registry record invalid utf8: ${path}`);
+    }
   } catch (error) {
     if (error instanceof Error && "code" in error && error.code === "ELOOP") {
       throw new Error(`registry symlink forbidden (record): ${path}`);
@@ -250,7 +277,14 @@ export function validateAllRegistries(root: string): { ok: boolean; problems: Ar
         rec = JSON.parse(readRegistryRecordUtf8(join(dir, f))) as Record<string, unknown>;
       }
       catch (e) {
-        problems.push({ kind, file: f, errors: [e instanceof Error && (e.message.includes("registry symlink forbidden") || e.message.includes("registry record must be regular file") || e.message.includes("registry record hardlink forbidden")) ? e.message : "not valid JSON"] });
+        problems.push({ kind, file: f, errors: [e instanceof Error && (
+          e.message.includes("registry symlink forbidden")
+          || e.message.includes("registry record must be regular file")
+          || e.message.includes("registry record hardlink forbidden")
+          || e.message.includes("registry record size invalid")
+          || e.message.includes("registry record changed during read")
+          || e.message.includes("registry record invalid utf8")
+        ) ? e.message : "not valid JSON"] });
         continue;
       }
       const body = stripMetadata(rec);
