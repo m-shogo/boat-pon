@@ -35,7 +35,7 @@ test("post-run N2 readiness workflow reads automation state without adding a sch
   }
 });
 
-test("activation report CLI is read-only and uses validated catalog/queue state plus runtime registry", () => {
+test("activation report CLI is read-only and uses descriptor-bound governance reads for authority inputs", () => {
   const script = readFileSync(
     resolve(process.cwd(), "scripts/report-n2-dormant-activation-plan.ts"),
     "utf8",
@@ -47,6 +47,9 @@ test("activation report CLI is read-only and uses validated catalog/queue state 
   assert.match(script, /buildN2MarketBaselineReadinessReport/u);
   assert.match(script, /isExecutorImplemented/u);
   assert.match(script, /buildN2DormantActivationReport/u);
+  assert.match(script, /readGovernanceFileUtf8Bounded/u);
+  assert.match(script, /MAX_N2_ACTIVATION_AUTHORITY_BYTES/u);
+  assert.doesNotMatch(script, /readFileSync/u);
   assert.doesNotMatch(script, /writeFileSync|renameSync|rmSync|appendFileSync/u);
   assert.doesNotMatch(script, /fetch\(|https?:\/\//u);
   assert.doesNotMatch(script, /rawOddsValues(?:\s*:|\s*=)/u);
