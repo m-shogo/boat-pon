@@ -12,9 +12,10 @@ const taskId = "TASK-N2-011";
 const historyPath = `reports/automation/history/${runId}-${taskId}.json`;
 const outputDigest = "a".repeat(64);
 const idempotencyKey = "b".repeat(64);
+const authoritySha = "c".repeat(40);
 
 function history(executed: unknown): string {
-  return JSON.stringify({ runId, taskId, result: "PASS", blocks: [], executed, outputDigest, idempotencyKey, outputs: [] });
+  return JSON.stringify({ runId, taskId, result: "PASS", blocks: [], executed, outputDigest, idempotencyKey, authoritySha, outputs: [] });
 }
 
 test("retained gate requires terminal history to have executed true", () => {
