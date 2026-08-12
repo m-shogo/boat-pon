@@ -90,6 +90,9 @@ export function buildN2DormantActivationReport(input: {
     const queueTask = input.queueTasks[taskId];
     if (!catalogTask) blockers.push(`${taskId}:CATALOG_TASK_MISSING`);
     if (!queueTask) blockers.push(`${taskId}:QUEUE_TASK_MISSING`);
+    if (input.runtimeRegisteredByTaskId[taskId] === undefined) {
+      blockers.push(`${taskId}:RUNTIME_REGISTRATION_STATE_MISSING`);
+    }
     if (queueTask && (!Number.isSafeInteger(queueTask.attemptCount) || queueTask.attemptCount < 0)) blockers.push(`${taskId}:ATTEMPT_COUNT_INVALID`);
     if (queueTask && (!Number.isSafeInteger(queueTask.maxAttempts) || queueTask.maxAttempts < 1 || queueTask.attemptCount > queueTask.maxAttempts)) blockers.push(`${taskId}:MAX_ATTEMPTS_INVALID`);
     const registered = input.runtimeRegisteredByTaskId[taskId] === true;

@@ -81,3 +81,26 @@ test("activation report rejects source blockers hidden behind READY status", () 
   assert.deepEqual(report.activationActions, []);
   assert.equal(report.activationPlanningAttemptDelta, 0);
 });
+
+test("activation report fails closed when runtime registration state is missing", () => {
+  const runtimeRegisteredByTaskId = registered();
+  delete runtimeRegisteredByTaskId["TASK-N2-020"];
+
+  const report = buildN2DormantActivationReport({
+    readiness: readyReadiness(),
+    catalogTasks: catalog(),
+    queueTasks: queue(),
+    runtimeRegisteredByTaskId,
+  });
+
+  assert.equal(report.status, "CONFLICT");
+  assert.equal(report.stage, "CONFLICT");
+  assert.ok(report.blockers.includes("TASK-N2-020:RUNTIME_REGISTRATION_STATE_MISSING"));
+  assert.deepEqual(report.activationActions, []);
+  assert.equal(report.activationPlanningAttemptDelta, 0);
+  assert.equal(report.currentBuyConnectionAuthorized, false);
+  assert.equal(report.lineConnectionAuthorized, false);
+  assert.equal(report.publicPublishAuthorized, false);
+  assert.equal(report.automatedBettingAuthorized, false);
+  assert.equal(report.productionApplyAuthorized, false);
+});
