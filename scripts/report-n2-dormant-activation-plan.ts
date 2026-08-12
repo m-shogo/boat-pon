@@ -127,9 +127,17 @@ if (!catalogValidation.valid || !catalogValidation.catalog) {
       }, null, 2));
       process.exitCode = 3;
     } else {
+      const catalogTasks = catalogValidation.catalog.tasks
+        .filter((task) => (N2_DORMANT_TASKS as readonly string[]).includes(task.taskId))
+        .map((task) => ({ taskId: task.taskId, taskType: task.taskType, defaultStatus: task.defaultStatus }));
+      const runtimeRegisteredByTaskId = Object.fromEntries(catalogTasks.map((task) => [
+        task.taskId,
+        isExecutorImplemented(task.taskType),
+      ]));
       const definitionDrift = findN2DormantTaskDefinitionDrift(
         catalogValidation.catalog,
         stateValidation.state,
+        runtimeRegisteredByTaskId,
       );
       if (definitionDrift.length > 0) {
         console.log(JSON.stringify({
@@ -158,13 +166,6 @@ if (!catalogValidation.valid || !catalogValidation.catalog) {
           integrityBlockedRaceKeys: readinessRead.integrityBlockedRaceKeys,
           sourceBlockers: readinessRead.sourceBlockers,
         });
-        const catalogTasks = catalogValidation.catalog.tasks
-          .filter((task) => (N2_DORMANT_TASKS as readonly string[]).includes(task.taskId))
-          .map((task) => ({ taskId: task.taskId, taskType: task.taskType, defaultStatus: task.defaultStatus }));
-        const runtimeRegisteredByTaskId = Object.fromEntries(catalogTasks.map((task) => [
-          task.taskId,
-          isExecutorImplemented(task.taskType),
-        ]));
         const queueTasks = Object.fromEntries(N2_DORMANT_TASKS.map((taskId) => {
           const state = stateValidation.state!.tasks[taskId];
           return [taskId, state ? {
