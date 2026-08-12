@@ -15,6 +15,8 @@ function validate(result: string): void {
     expectedRunId: "12345",
     readText: () => JSON.stringify({
       runId: "12345",
+      requestId: "REQ-test",
+      intentId: "INTENT-test",
       taskId: "TASK-N2-011",
       outputs: [],
       blocks,
