@@ -98,6 +98,10 @@ export function buildN2DormantActivationReport(input: {
     || input.readiness.productionApplyAuthorized !== false) {
     blockers.push("READINESS_PROTECTED_AUTHORITY_INVALID");
   }
+  const readinessBlockersValid = Array.isArray(input.readiness.blockers)
+    && input.readiness.blockers.every((blocker) => typeof blocker === "string");
+  const readinessBlockers = readinessBlockersValid ? input.readiness.blockers : [];
+  if (!readinessBlockersValid) blockers.push("READINESS_BLOCKERS_INVALID");
   const readinessSaysReady = input.readiness.status === "READY_FOR_N2_020";
   const readinessCountsValid = Number.isSafeInteger(input.readiness.minimumSettledRaceCount)
     && input.readiness.minimumSettledRaceCount >= 1
@@ -111,7 +115,7 @@ export function buildN2DormantActivationReport(input: {
   if (!readinessCountsValid) blockers.push("READINESS_COUNTS_INVALID");
   if (readinessCountsValid) {
     const expectedStatus = classifyN2MarketBaselineReadiness({
-      blockerCount: input.readiness.blockers.length,
+      blockerCount: readinessBlockers.length,
       integrityBlockedRaceCount: input.readiness.integrityBlockedRaceCount,
       acceptedT5RaceCount: input.readiness.acceptedT5RaceCount,
       settledAcceptedT5RaceCount: input.readiness.settledAcceptedT5RaceCount,
@@ -127,10 +131,10 @@ export function buildN2DormantActivationReport(input: {
   if (input.readiness.n2TaskReady !== readinessSaysReady) {
     blockers.push("READINESS_TASK_READY_STATE_INCONSISTENT");
   }
-  if (input.readiness.blockers.length > 0 && input.readiness.status !== "BLOCKED") {
+  if (readinessBlockers.length > 0 && input.readiness.status !== "BLOCKED") {
     blockers.push("READINESS_BLOCKERS_WITH_NONBLOCKED_STATUS");
   }
-  if (input.readiness.status === "BLOCKED" && input.readiness.blockers.length === 0
+  if (input.readiness.status === "BLOCKED" && readinessBlockers.length === 0
     && input.readiness.integrityBlockedRaceCount === 0) {
     blockers.push("READINESS_BLOCKED_WITHOUT_BLOCKER");
   }
@@ -181,7 +185,7 @@ export function buildN2DormantActivationReport(input: {
     runtimeExecutorRegistered,
   });
   blockers.push(...plan.blockers);
-  if (input.readiness.status === "BLOCKED") blockers.push(...input.readiness.blockers.map((blocker) => `READINESS:${blocker}`));
+  if (input.readiness.status === "BLOCKED") blockers.push(...readinessBlockers.map((blocker) => `READINESS:${blocker}`));
 
   const core = {
     reportVersion: N2_DORMANT_ACTIVATION_REPORT_VERSION,
