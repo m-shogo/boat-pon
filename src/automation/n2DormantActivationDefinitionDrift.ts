@@ -41,6 +41,7 @@ function sameDependencySet(actual: readonly string[], expected: readonly string[
 export function findN2DormantTaskDefinitionDrift(
   catalog: TaskCatalog,
   state: QueueState,
+  runtimeRegisteredByTaskId: Readonly<Record<string, boolean | undefined>> = {},
 ): string[] {
   const issues: string[] = [];
   if (catalog.catalogVersion !== state.catalogVersion) {
@@ -74,6 +75,10 @@ export function findN2DormantTaskDefinitionDrift(
       && queueTask
       && queueTask.status !== "BLOCKED_EXECUTOR_PENDING") {
       issues.push(`${taskId}:QUEUE_STATUS_MISMATCH_WHILE_CATALOG_DORMANT`);
+    }
+    if (catalogTask?.defaultStatus === "BLOCKED_EXECUTOR_PENDING"
+      && runtimeRegisteredByTaskId[taskId] === true) {
+      issues.push(`${taskId}:RUNTIME_EXECUTOR_REGISTERED_WHILE_CATALOG_DORMANT`);
     }
     if (queueTask?.status === "BLOCKED_EXECUTOR_PENDING") {
       if (queueTask.attemptCount !== 0) issues.push(`${taskId}:DORMANT_ATTEMPT_COUNT_NOT_ZERO`);
