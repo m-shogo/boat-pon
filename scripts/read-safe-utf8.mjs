@@ -1,4 +1,4 @@
-import { closeSync, constants, fstatSync, lstatSync, openSync, readSync } from "node:fs";
+import { closeSync, constants, fstatSync, lstatSync, openSync, readSync, readdirSync } from "node:fs";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { TextDecoder } from "node:util";
 
@@ -25,6 +25,24 @@ function assertParentsSafe(path, baseDir, label) {
     if (stat.isSymbolicLink()) throw new Error(`${label} parent symlink forbidden: ${current}`);
     if (!stat.isDirectory()) throw new Error(`${label} parent must be a directory: ${current}`);
   }
+}
+
+export function listSafeDirectoryNames(path, options = {}) {
+  const label = options.label ?? "directory";
+  const baseDir = options.baseDir ?? null;
+  const allowMissing = options.allowMissing === true;
+  assertParentsSafe(path, baseDir, label);
+
+  let stat;
+  try {
+    stat = lstatSync(path);
+  } catch (error) {
+    if (allowMissing && error instanceof Error && "code" in error && error.code === "ENOENT") return [];
+    throw error;
+  }
+  if (stat.isSymbolicLink()) throw new Error(`${label} symlink forbidden: ${path}`);
+  if (!stat.isDirectory()) throw new Error(`${label} must be a directory: ${path}`);
+  return readdirSync(path);
 }
 
 export function readSafeUtf8(path, options = {}) {
