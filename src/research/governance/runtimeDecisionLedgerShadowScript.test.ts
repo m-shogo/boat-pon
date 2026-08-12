@@ -47,6 +47,7 @@ test("private evidence store delegates append-only safety to the hardened store"
   assert.match(source, /import \{ appendPrivateJsonStore \} from "\.\.\/src\/research\/governance\/privateAppendOnlyJsonStore"/);
   assert.match(source, /appendPrivateJsonStore\(\{/);
   assert.match(source, /expectedEvidenceDigest: evidence\.contentDigest/);
+  assert.match(source, /validateExistingEvidence: \(value\) => validateRuntimeDecisionLedgerShadowEvidence\(value\)\.valid/);
   assert.match(source, /sourceDescriptorDigest\.slice\(0, 12\)/);
   assert.match(source, /contentDigest\.slice\(0, 12\)/);
   assert.doesNotMatch(source, /readFileSync\(path, "utf8"\)/);
