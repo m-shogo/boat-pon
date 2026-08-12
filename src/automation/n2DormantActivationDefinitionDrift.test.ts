@@ -5,6 +5,16 @@ import { N2_DORMANT_TASKS } from "./n2DormantActivationContract";
 import { findN2DormantTaskDefinitionDrift } from "./n2DormantActivationDefinitionDrift";
 import type { QueueState, TaskCatalog } from "./taskCatalog";
 
+const taskTypes: Record<(typeof N2_DORMANT_TASKS)[number], string> = {
+  "TASK-N2-020": "baseline-market",
+  "TASK-N2-021": "baseline-historical",
+  "TASK-N2-022": "baseline-common-cohort",
+  "TASK-N2-030": "evaluation-metrics",
+  "TASK-N2-040": "edge-hypothesis-scan",
+  "TASK-N2-041": "edge-historical-test",
+  "TASK-N2-042": "confounder-audit",
+};
+
 function catalog(): TaskCatalog {
   return {
     catalogSchemaVersion: "research-task-catalog-v1",
@@ -15,8 +25,8 @@ function catalog(): TaskCatalog {
       taskDefinitionVersion: 2,
       title: "market baseline",
       objective: "o",
-      taskType: "baseline-market",
-      executor: "baseline-market",
+      taskType: taskTypes[taskId],
+      executor: taskTypes[taskId],
       safetyLevel: "L0",
       dependencies: [],
       maxDurationSeconds: 3600,
@@ -93,5 +103,17 @@ test("N2 activation fails closed before readiness when a queue task is missing",
   assert.deepEqual(
     findN2DormantTaskDefinitionDrift(catalog(), missingQueueTask),
     ["TASK-N2-021:QUEUE_TASK_MISSING"],
+  );
+});
+
+test("N2 activation fails closed before readiness when a catalog task type drifts", () => {
+  const mismatchedCatalog = catalog();
+  const task = mismatchedCatalog.tasks.find((entry) => entry.taskId === "TASK-N2-020");
+  assert.ok(task);
+  task.taskType = "baseline-historical";
+
+  assert.deepEqual(
+    findN2DormantTaskDefinitionDrift(mismatchedCatalog, queue()),
+    ["TASK-N2-020:CATALOG_TASK_TYPE_MISMATCH"],
   );
 });
