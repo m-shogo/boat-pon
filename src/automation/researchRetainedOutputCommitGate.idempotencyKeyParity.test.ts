@@ -12,6 +12,7 @@ const taskId = "TASK-N2-011";
 const historyPath = `reports/automation/history/${runId}-${taskId}.json`;
 const outputDigest = "a".repeat(64);
 const validIdempotencyKey = "b".repeat(64);
+const authoritySha = "c".repeat(40);
 
 function history(idempotencyKey: unknown): string {
   return JSON.stringify({
@@ -22,6 +23,7 @@ function history(idempotencyKey: unknown): string {
     executed: true,
     outputDigest,
     idempotencyKey,
+    authoritySha,
     outputs: [],
   });
 }
