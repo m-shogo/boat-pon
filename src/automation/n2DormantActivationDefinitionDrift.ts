@@ -33,7 +33,17 @@ const N2_DORMANT_TASK_DEPENDENCIES: Record<N2DormantTaskId, readonly string[]> =
   "TASK-N2-042": ["TASK-N2-041"],
 };
 
-function sameDependencySet(actual: readonly string[], expected: readonly string[]): boolean {
+const N2_DORMANT_EXPECTED_OUTPUTS: Record<N2DormantTaskId, readonly string[]> = {
+  "TASK-N2-020": ["reports/n2/n2-baseline-market.json"],
+  "TASK-N2-021": ["reports/n2/n2-baseline-historical.json"],
+  "TASK-N2-022": ["reports/n2/n2-baseline-common-cohort.json"],
+  "TASK-N2-030": ["reports/n2/n2-evaluation-metrics.json"],
+  "TASK-N2-040": ["reports/n2/n2-edge-hypothesis-scan.json"],
+  "TASK-N2-041": ["reports/n2/n2-edge-historical-test.json"],
+  "TASK-N2-042": ["reports/n2/n2-confounder-audit.json"],
+};
+
+function sameStringSet(actual: readonly string[], expected: readonly string[]): boolean {
   return actual.length === expected.length
     && JSON.stringify([...actual].sort()) === JSON.stringify([...expected].sort());
 }
@@ -65,8 +75,11 @@ export function findN2DormantTaskDefinitionDrift(
     if (catalogTask && catalogTask.safetyLevel !== "L0") {
       issues.push(`${taskId}:CATALOG_SAFETY_LEVEL_MISMATCH`);
     }
-    if (catalogTask && !sameDependencySet(catalogTask.dependencies, N2_DORMANT_TASK_DEPENDENCIES[taskId])) {
+    if (catalogTask && !sameStringSet(catalogTask.dependencies, N2_DORMANT_TASK_DEPENDENCIES[taskId])) {
       issues.push(`${taskId}:CATALOG_DEPENDENCIES_MISMATCH`);
+    }
+    if (catalogTask && !sameStringSet(catalogTask.expectedOutputs, N2_DORMANT_EXPECTED_OUTPUTS[taskId])) {
+      issues.push(`${taskId}:CATALOG_EXPECTED_OUTPUTS_MISMATCH`);
     }
     if (catalogTask && queueTask && catalogTask.taskDefinitionVersion !== queueTask.taskDefinitionVersion) {
       issues.push(`${taskId}:TASK_DEFINITION_VERSION_MISMATCH`);
