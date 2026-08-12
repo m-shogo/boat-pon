@@ -5,6 +5,8 @@ import {
   buildN2DormantActivationPlan,
   type N2DormantTaskId,
 } from "./n2DormantActivationContract";
+import { TASK_STATUSES } from "./researchOrchestrator";
+import { DEFAULT_STATUSES } from "./taskCatalog";
 
 export const N2_DORMANT_ACTIVATION_REPORT_VERSION =
   "n2-dormant-activation-report-v1" as const;
@@ -91,6 +93,12 @@ export function buildN2DormantActivationReport(input: {
     const registered = input.runtimeRegisteredByTaskId[taskId] === true;
     if (!catalogTask) blockers.push(`${taskId}:CATALOG_TASK_MISSING`);
     if (!queueTask) blockers.push(`${taskId}:QUEUE_TASK_MISSING`);
+    if (catalogTask && !DEFAULT_STATUSES.includes(catalogTask.defaultStatus as (typeof DEFAULT_STATUSES)[number])) {
+      blockers.push(`${taskId}:CATALOG_DEFAULT_STATUS_INVALID`);
+    }
+    if (queueTask && !TASK_STATUSES.includes(queueTask.status as (typeof TASK_STATUSES)[number])) {
+      blockers.push(`${taskId}:QUEUE_STATUS_INVALID`);
+    }
     if (input.runtimeRegisteredByTaskId[taskId] === undefined) {
       blockers.push(`${taskId}:RUNTIME_REGISTRATION_STATE_MISSING`);
     }
