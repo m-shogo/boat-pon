@@ -89,3 +89,58 @@ test("self-digest-valid retention snapshots with impossible counts are rejected 
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("self-digest-valid retention snapshots with invalid audit status are rejected before publication", () => {
+  const root = mkdtempSync(join(tmpdir(), "boat-pon-retention-status-"));
+  try {
+    const report = buildResearchDurableKnowledgeCompletenessReport({ repoRoot: root });
+    const snapshot = buildResearchDurableRetentionSnapshot({
+      report,
+      sourceStateSha: "d".repeat(40),
+      mainAuthoritySha: "e".repeat(40),
+      firstObservedAt: "2026-08-07T14:00:00.000Z",
+    });
+    const invalid = withValidSelfDigest({
+      ...snapshot,
+      auditStatus: "UNKNOWN" as ResearchDurableRetentionSnapshot["auditStatus"],
+    });
+    const relativePath = durableRetentionSnapshotRelativePath(invalid);
+
+    assert.throws(
+      () => persistResearchDurableRetentionSnapshot({ repoRoot: root, snapshot: invalid }),
+      /DURABLE_RETENTION_AUDIT_STATUS_INVALID/u,
+    );
+    assert.equal(existsSync(join(root, relativePath)), false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("self-digest-valid retention snapshots with inconsistent classifications are rejected before publication", () => {
+  const root = mkdtempSync(join(tmpdir(), "boat-pon-retention-classifications-"));
+  try {
+    const report = buildResearchDurableKnowledgeCompletenessReport({ repoRoot: root });
+    const snapshot = buildResearchDurableRetentionSnapshot({
+      report,
+      sourceStateSha: "d".repeat(40),
+      mainAuthoritySha: "e".repeat(40),
+      firstObservedAt: "2026-08-07T14:00:00.000Z",
+    });
+    const invalid = withValidSelfDigest({
+      ...snapshot,
+      classificationCounts: {
+        ...snapshot.classificationCounts,
+        PASS_DURABLE_OUTPUTS: snapshot.classificationCounts.PASS_DURABLE_OUTPUTS + 1,
+      },
+    });
+    const relativePath = durableRetentionSnapshotRelativePath(invalid);
+
+    assert.throws(
+      () => persistResearchDurableRetentionSnapshot({ repoRoot: root, snapshot: invalid }),
+      /DURABLE_RETENTION_CLASSIFICATION_COUNT_MISMATCH/u,
+    );
+    assert.equal(existsSync(join(root, relativePath)), false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
