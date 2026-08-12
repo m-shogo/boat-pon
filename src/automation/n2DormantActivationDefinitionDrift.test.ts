@@ -117,3 +117,15 @@ test("N2 activation fails closed before readiness when a catalog task type drift
     ["TASK-N2-020:CATALOG_TASK_TYPE_MISMATCH"],
   );
 });
+
+test("N2 activation fails closed before readiness when a catalog executor drifts", () => {
+  const mismatchedCatalog = catalog();
+  const task = mismatchedCatalog.tasks.find((entry) => entry.taskId === "TASK-N2-020");
+  assert.ok(task);
+  task.executor = "baseline-historical";
+
+  assert.deepEqual(
+    findN2DormantTaskDefinitionDrift(mismatchedCatalog, queue()),
+    ["TASK-N2-020:CATALOG_EXECUTOR_MISMATCH"],
+  );
+});
