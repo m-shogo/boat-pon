@@ -68,6 +68,13 @@ export function findN2DormantTaskDefinitionDrift(
     if (catalogTask && queueTask && catalogTask.taskDefinitionVersion !== queueTask.taskDefinitionVersion) {
       issues.push(`${taskId}:TASK_DEFINITION_VERSION_MISMATCH`);
     }
+    if (queueTask?.status === "BLOCKED_EXECUTOR_PENDING") {
+      if (queueTask.authoritySha !== null) issues.push(`${taskId}:DORMANT_AUTHORITY_SHA_PRESENT`);
+      if (queueTask.evidenceLinks.length !== 0) issues.push(`${taskId}:DORMANT_EVIDENCE_PRESENT`);
+      if (queueTask.resultDigest !== null) issues.push(`${taskId}:DORMANT_RESULT_DIGEST_PRESENT`);
+      if (queueTask.lastFailure !== null) issues.push(`${taskId}:DORMANT_LAST_FAILURE_PRESENT`);
+      if (queueTask.checkpoint !== null) issues.push(`${taskId}:DORMANT_CHECKPOINT_PRESENT`);
+    }
   }
   return issues;
 }
