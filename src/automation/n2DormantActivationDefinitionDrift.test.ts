@@ -69,3 +69,12 @@ test("N2 activation rejects future queue definition version too", () => {
     ["TASK-N2-020:TASK_DEFINITION_VERSION_MISMATCH"],
   );
 });
+
+test("N2 activation rejects queue state from a different catalog version", () => {
+  const mismatchedState = queue(2);
+  mismatchedState.catalogVersion = "v0";
+  assert.deepEqual(
+    findN2DormantTaskDefinitionDrift(catalog(), mismatchedState),
+    ["CATALOG_VERSION_MISMATCH"],
+  );
+});
