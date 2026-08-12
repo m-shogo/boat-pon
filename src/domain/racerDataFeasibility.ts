@@ -67,6 +67,8 @@ export function isRacerSnapshotEligibleForRace(input: {
 }): boolean {
   const observedDate = input.observedAt.slice(0, 10);
   if (!isDate(input.raceDate) || !isDate(input.asOfDate) || !isDate(observedDate)) return false;
+  if (input.effectiveFrom && !isDate(input.effectiveFrom)) return false;
+  if (input.effectiveTo && !isDate(input.effectiveTo)) return false;
   const cutoffTimestamp = Date.parse(input.targetFeatureCutoffAt);
   const observedTimestamp = Date.parse(input.observedAt);
   if (!Number.isFinite(cutoffTimestamp) || !Number.isFinite(observedTimestamp)) return false;
