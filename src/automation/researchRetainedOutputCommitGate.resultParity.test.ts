@@ -15,6 +15,7 @@ function validate(result: string): void {
       taskId: "TASK-N2-011",
       outputs: [],
       blocks,
+      executed: true,
       result,
     }),
   });
