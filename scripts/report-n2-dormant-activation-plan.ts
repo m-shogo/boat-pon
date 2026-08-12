@@ -35,13 +35,39 @@ function arg(name: string): string | null {
   return index >= 0 ? process.argv[index + 1] ?? null : null;
 }
 
+function exitAuthorityReadConflict(blocker: string): never {
+  console.log(JSON.stringify({
+    reportVersion: "n2-dormant-activation-report-v1",
+    status: "CONFLICT",
+    stage: "CONFLICT",
+    blockers: [blocker],
+    activationActions: [],
+    activationPlanningAttemptDelta: 0,
+    automaticMutationAuthorized: false,
+    currentBuyConnectionAuthorized: false,
+    lineConnectionAuthorized: false,
+    publicPublishAuthorized: false,
+    automatedBettingAuthorized: false,
+    productionApplyAuthorized: false,
+    databaseWriteCount: 0,
+    networkRequestCount: 0,
+    rawOddsValuesReadByPlanner: false,
+  }, null, 2));
+  process.exit(3);
+}
+
 const repoRoot = resolve(process.cwd());
-const policy = JSON.parse(
-  readGovernanceFileUtf8Bounded(
-    resolve(repoRoot, "config/research-automation-policy.json"),
-    MAX_N2_ACTIVATION_AUTHORITY_BYTES,
-  ).text,
-) as AutomationPolicy;
+let policy: AutomationPolicy;
+try {
+  policy = JSON.parse(
+    readGovernanceFileUtf8Bounded(
+      resolve(repoRoot, "config/research-automation-policy.json"),
+      MAX_N2_ACTIVATION_AUTHORITY_BYTES,
+    ).text,
+  ) as AutomationPolicy;
+} catch {
+  exitAuthorityReadConflict("POLICY_READ_FAILED");
+}
 const configuredDataRoot = process.env.BOAT_PON_DATA_ROOT?.trim()
   || (typeof policy.dataRoot === "string" ? policy.dataRoot.trim() : "")
   || repoRoot;
@@ -52,12 +78,17 @@ const sidecarDbPath = resolve(
 );
 const statePath = resolve(arg("state") ?? resolve(repoRoot, "automation/control/task-queue-state.json"));
 
-const catalogRaw = JSON.parse(
-  readGovernanceFileUtf8Bounded(
-    resolve(repoRoot, "automation/task-catalog.json"),
-    MAX_N2_ACTIVATION_AUTHORITY_BYTES,
-  ).text,
-);
+let catalogRaw: unknown;
+try {
+  catalogRaw = JSON.parse(
+    readGovernanceFileUtf8Bounded(
+      resolve(repoRoot, "automation/task-catalog.json"),
+      MAX_N2_ACTIVATION_AUTHORITY_BYTES,
+    ).text,
+  );
+} catch {
+  exitAuthorityReadConflict("CATALOG_READ_FAILED");
+}
 const catalogValidation = validateCatalog(catalogRaw);
 if (!catalogValidation.valid || !catalogValidation.catalog) {
   console.log(JSON.stringify({
@@ -85,24 +116,7 @@ if (!catalogValidation.valid || !catalogValidation.catalog) {
       readGovernanceFileUtf8Bounded(statePath, MAX_N2_ACTIVATION_AUTHORITY_BYTES).text,
     );
   } catch {
-    console.log(JSON.stringify({
-      reportVersion: "n2-dormant-activation-report-v1",
-      status: "CONFLICT",
-      stage: "CONFLICT",
-      blockers: ["QUEUE_STATE_READ_FAILED"],
-      activationActions: [],
-      activationPlanningAttemptDelta: 0,
-      automaticMutationAuthorized: false,
-      currentBuyConnectionAuthorized: false,
-      lineConnectionAuthorized: false,
-      publicPublishAuthorized: false,
-      automatedBettingAuthorized: false,
-      productionApplyAuthorized: false,
-      databaseWriteCount: 0,
-      networkRequestCount: 0,
-      rawOddsValuesReadByPlanner: false,
-    }, null, 2));
-    process.exitCode = 3;
+    exitAuthorityReadConflict("QUEUE_STATE_READ_FAILED");
   }
 
   if (stateRaw !== undefined) {
