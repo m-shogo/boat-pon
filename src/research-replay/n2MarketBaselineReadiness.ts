@@ -55,11 +55,12 @@ function uniqueDates(raceKeys: readonly string[]): string[] {
 
 export function classifyN2MarketBaselineReadiness(input: {
   blockerCount: number;
+  integrityBlockedRaceCount: number;
   acceptedT5RaceCount: number;
   settledAcceptedT5RaceCount: number;
   minimumSettledRaceCount: number;
 }): N2MarketBaselineReadinessStatus {
-  if (input.blockerCount > 0) return "BLOCKED";
+  if (input.blockerCount > 0 || input.integrityBlockedRaceCount > 0) return "BLOCKED";
   if (input.acceptedT5RaceCount === 0) return "NO_PRIVATE_MARKET_DATA";
   if (input.settledAcceptedT5RaceCount === 0) return "WAITING_FOR_SETTLEMENT";
   return input.settledAcceptedT5RaceCount < input.minimumSettledRaceCount
@@ -100,6 +101,7 @@ export function buildN2MarketBaselineReadinessReport(input: {
   const unsettledAcceptedT5RaceCount = accepted.length - settled.length;
   const status = classifyN2MarketBaselineReadiness({
     blockerCount: blockers.length,
+    integrityBlockedRaceCount: integrityBlocked.length,
     acceptedT5RaceCount: accepted.length,
     settledAcceptedT5RaceCount: settled.length,
     minimumSettledRaceCount,
