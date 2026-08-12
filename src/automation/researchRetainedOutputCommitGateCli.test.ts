@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, rmSync, truncateSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -12,6 +13,8 @@ const taskId = "TASK-N2-011";
 const outputDigest = "a".repeat(64);
 const idempotencyKey = "b".repeat(64);
 const authoritySha = "c".repeat(40);
+const retainedContent = "{}\n";
+const retainedContentDigest = createHash("sha256").update(retainedContent).digest("hex");
 assert.ok(trustedGitBin.startsWith("/"), "test runtime must resolve git to an absolute path");
 
 function terminalHistory(runId: string, overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -74,15 +77,26 @@ function runGate(
 test("CLI accepts an untracked retained output referenced by same-run terminal history", () => {
   withRepo((root) => {
     const runId = "12345";
-    const output = `reports/automation/retained-outputs/${runId}/${"a".repeat(64)}-report.json`;
+    const output = `reports/automation/retained-outputs/${runId}/${retainedContentDigest}-report.json`;
     const history = `reports/automation/history/${runId}-${taskId}.json`;
-    put(root, output, "{}\n");
+    put(root, output, retainedContent);
     put(root, history, `${JSON.stringify(terminalHistory(runId, { outputs: [output] }))}\n`);
     const value = JSON.parse(runGate(root, runId)) as Record<string, unknown>;
     assert.equal(value.retainedPathCount, 1);
     assert.equal(value.referencedRetainedPathCount, 1);
     assert.equal(value.currentBuyConnectionAuthorized, false);
     assert.equal(value.productionApplyAuthorized, false);
+  });
+});
+
+test("CLI rejects retained outputs whose filename digest does not match their bytes", () => {
+  withRepo((root) => {
+    const runId = "12345";
+    const output = `reports/automation/retained-outputs/${runId}/${"a".repeat(64)}-report.json`;
+    const history = `reports/automation/history/${runId}-${taskId}.json`;
+    put(root, output, retainedContent);
+    put(root, history, `${JSON.stringify(terminalHistory(runId, { outputs: [output] }))}\n`);
+    assert.throws(() => runGate(root, runId), /RETAINED_COMMIT_CONTENT_DIGEST_MISMATCH/u);
   });
 });
 
@@ -141,10 +155,10 @@ test("CLI fails closed when GitHub Actions run identity is missing or malformed"
 test("CLI rejects cross-run retained output lineage", () => {
   withRepo((root) => {
     const runId = "12345";
-    const output = `reports/automation/retained-outputs/${runId}/${"c".repeat(64)}-report.json`;
+    const output = `reports/automation/retained-outputs/${runId}/${retainedContentDigest}-report.json`;
     const otherOutput = `reports/automation/retained-outputs/99999/${"d".repeat(64)}-report.json`;
     const history = `reports/automation/history/${runId}-${taskId}.json`;
-    put(root, output, "{}\n");
+    put(root, output, retainedContent);
     put(root, history, `${JSON.stringify(terminalHistory(runId, { outputs: [output, otherOutput] }))}\n`);
     assert.throws(() => runGate(root, runId), /RETAINED_COMMIT_HISTORY_RETAINED_RUN_ID_MISMATCH/u);
   });
@@ -194,8 +208,8 @@ test("CLI rejects a task identity mismatch in append-only history", () => {
 test("CLI rejects an orphan retained output before git staging", () => {
   withRepo((root) => {
     const runId = "12345";
-    const output = `reports/automation/retained-outputs/${runId}/${"b".repeat(64)}-report.json`;
-    put(root, output, "{}\n");
+    const output = `reports/automation/retained-outputs/${runId}/${retainedContentDigest}-report.json`;
+    put(root, output, retainedContent);
     assert.throws(() => runGate(root, runId), /RETAINED_COMMIT_HISTORY_COUNT_INVALID/u);
     const status = execFileSync(trustedGitBin, ["status", "--porcelain", "-uall"], { cwd: root, encoding: "utf8" });
     assert.match(status, /reports\/automation\/retained-outputs\/12345/u);

@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   closeSync,
   constants as fsConstants,
@@ -14,13 +15,15 @@ import { TextDecoder } from "node:util";
 const RETAINED_PREFIX = "reports/automation/retained-outputs/";
 const HISTORY_PREFIX = "reports/automation/history/";
 const MAX_HISTORY_BYTES = 8_000_000;
+const MAX_RETAINED_BYTES = 2_097_152;
 const HISTORY_READ_CHUNK_BYTES = 64 * 1024;
+const RETAINED_READ_CHUNK_BYTES = 64 * 1024;
 const RUN_ID_RE = /^[0-9]+$/u;
 const SHA256_RE = /^[0-9a-f]{64}$/u;
 const GIT_SHA_RE = /^[0-9a-f]{40}$/u;
 const GITHUB_RUN_ID_RE = /^[0-9]+$/u;
 const HISTORY_RE = /^reports\/automation\/history\/([0-9]+)-(TASK-[0-9A-Za-z._-]+)\.json$/u;
-const RETAINED_RE = /^reports\/automation\/retained-outputs\/([0-9]+)\/[0-9a-f]{64}-(?!\.{1,2}$)[0-9A-Za-z._-]{1,160}$/u;
+const RETAINED_RE = /^reports\/automation\/retained-outputs\/([0-9]+)\/([0-9a-f]{64})-(?!\.{1,2}$)[0-9A-Za-z._-]{1,160}$/u;
 const TERMINAL_RESULTS = new Set([
   "PASS",
   "CONDITIONAL",
@@ -314,6 +317,98 @@ function readValidatedHistoryText(repoRoot, relativePath) {
   }
 }
 
+function assertRetainedParentDirectories(repoRoot, relativePath) {
+  const absolutePath = resolve(repoRoot, relativePath);
+  if (absolutePath !== repoRoot && !absolutePath.startsWith(`${repoRoot}${sep}`)) {
+    throw new Error(`RETAINED_COMMIT_RETAINED_PATH_ESCAPES_ROOT:${relativePath}`);
+  }
+  let cursor = dirname(absolutePath);
+  while (cursor !== repoRoot) {
+    if (!cursor.startsWith(`${repoRoot}${sep}`)) {
+      throw new Error(`RETAINED_COMMIT_RETAINED_PATH_ESCAPES_ROOT:${relativePath}`);
+    }
+    const stat = lstatSync(cursor);
+    if (stat.isSymbolicLink() || !stat.isDirectory()) {
+      throw new Error(`RETAINED_COMMIT_RETAINED_PARENT_INVALID:${relativePath}`);
+    }
+    const parent = dirname(cursor);
+    if (parent === cursor) {
+      throw new Error(`RETAINED_COMMIT_RETAINED_PATH_ESCAPES_ROOT:${relativePath}`);
+    }
+    cursor = parent;
+  }
+  return absolutePath;
+}
+
+function readValidatedRetainedBytes(repoRoot, relativePath) {
+  const absolutePath = assertRetainedParentDirectories(repoRoot, relativePath);
+  const expectedStat = lstatSync(absolutePath);
+  if (expectedStat.isSymbolicLink() || !expectedStat.isFile() || expectedStat.nlink !== 1) {
+    throw new Error(`RETAINED_COMMIT_RETAINED_FILE_TYPE_INVALID:${relativePath}`);
+  }
+  if (expectedStat.size <= 0 || expectedStat.size > MAX_RETAINED_BYTES) {
+    throw new Error(`RETAINED_COMMIT_RETAINED_SIZE_INVALID:${relativePath}`);
+  }
+
+  let fd = null;
+  try {
+    fd = openSync(absolutePath, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW | fsConstants.O_NONBLOCK);
+    const stat = fstatSync(fd);
+    if (
+      !stat.isFile()
+      || stat.nlink !== 1
+      || stat.dev !== expectedStat.dev
+      || stat.ino !== expectedStat.ino
+      || stat.size !== expectedStat.size
+    ) {
+      throw new Error(`RETAINED_COMMIT_RETAINED_FILE_CHANGED_DURING_READ:${relativePath}`);
+    }
+    if (stat.size <= 0 || stat.size > MAX_RETAINED_BYTES) {
+      throw new Error(`RETAINED_COMMIT_RETAINED_SIZE_INVALID:${relativePath}`);
+    }
+
+    const chunks = [];
+    let totalBytes = 0;
+    while (true) {
+      const remainingWithSentinel = MAX_RETAINED_BYTES - totalBytes + 1;
+      const chunk = Buffer.allocUnsafe(Math.min(RETAINED_READ_CHUNK_BYTES, remainingWithSentinel));
+      const bytesRead = readSync(fd, chunk, 0, chunk.length, null);
+      if (bytesRead === 0) break;
+      totalBytes += bytesRead;
+      if (totalBytes > MAX_RETAINED_BYTES) {
+        throw new Error(`RETAINED_COMMIT_RETAINED_SIZE_INVALID:${relativePath}`);
+      }
+      chunks.push(chunk.subarray(0, bytesRead));
+    }
+    const postReadStat = fstatSync(fd);
+    if (postReadStat.size !== stat.size || totalBytes !== stat.size) {
+      throw new Error(`RETAINED_COMMIT_RETAINED_FILE_CHANGED_DURING_READ:${relativePath}`);
+    }
+    return Buffer.concat(chunks, totalBytes);
+  } catch (error) {
+    if (error instanceof Error && "code" in error && (error.code === "ENOENT" || error.code === "ELOOP")) {
+      throw new Error(`RETAINED_COMMIT_RETAINED_FILE_TYPE_INVALID:${relativePath}`);
+    }
+    throw error;
+  } finally {
+    if (fd !== null) closeSync(fd);
+  }
+}
+
+function validateChangedRetainedContentDigests(repoRoot, changedPaths) {
+  for (const relativePath of changedPaths) {
+    if (!relativePath.startsWith(RETAINED_PREFIX)) continue;
+    const match = relativePath.match(RETAINED_RE);
+    if (!match) throw new Error(`RETAINED_COMMIT_PATH_INVALID:${relativePath}`);
+    const expectedDigest = match[2] ?? "";
+    const content = readValidatedRetainedBytes(repoRoot, relativePath);
+    const actualDigest = createHash("sha256").update(content).digest("hex");
+    if (actualDigest !== expectedDigest) {
+      throw new Error(`RETAINED_COMMIT_CONTENT_DIGEST_MISMATCH:${relativePath}`);
+    }
+  }
+}
+
 const requestedRunId = argument("run-id");
 if (process.env.GITHUB_ACTIONS === "true") {
   const githubRunId = (process.env.GITHUB_RUN_ID ?? "").trim();
@@ -352,6 +447,8 @@ const result = validateRetainedOutputCommit({
   expectedRunId: requestedRunId,
   readText: (relativePath) => readValidatedHistoryText(repoRoot, relativePath),
 });
+
+validateChangedRetainedContentDigests(repoRoot, changedPaths);
 
 console.log(JSON.stringify({
   gateVersion: "research-retained-output-commit-gate-v1",
