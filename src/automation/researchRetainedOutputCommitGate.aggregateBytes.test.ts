@@ -50,8 +50,8 @@ test("trusted CLI enforces the producer 8 MiB aggregate retained-output ceiling"
 
     const outputs: string[] = [];
     for (let index = 0; index < 4; index += 1) {
-      const content = Buffer.alloc(MAX_SINGLE_BYTES, index + 1);
-      const relative = retainedPath(content, `output-${index}.bin`);
+      const content = Buffer.alloc(MAX_SINGLE_BYTES, 0x61 + index);
+      const relative = retainedPath(content, `output-${index}.txt`);
       const absolute = join(root, relative);
       mkdirSync(dirname(absolute), { recursive: true });
       writeFileSync(absolute, content);
@@ -73,7 +73,7 @@ test("trusted CLI enforces the producer 8 MiB aggregate retained-output ceiling"
     }));
 
     const extraContent = Buffer.from("x");
-    const extraRelative = retainedPath(extraContent, "overflow.bin");
+    const extraRelative = retainedPath(extraContent, "overflow.txt");
     const extraAbsolute = join(root, extraRelative);
     mkdirSync(dirname(extraAbsolute), { recursive: true });
     writeFileSync(extraAbsolute, extraContent);
