@@ -79,6 +79,7 @@ export function appendPrivateJsonStore(input: {
   filename: string;
   contents: string;
   expectedEvidenceDigest: string;
+  validateExistingEvidence: (value: unknown) => boolean;
 }): string {
   if (basename(input.filename) !== input.filename || !/^[0-9A-Za-z._-]+\.json$/u.test(input.filename)) {
     throw new Error("private append-only store filename is invalid");
@@ -94,10 +95,8 @@ export function appendPrivateJsonStore(input: {
     const code = error instanceof Error && "code" in error ? String((error as NodeJS.ErrnoException).code) : "";
     if (code !== "EEXIST") throw error;
     let existing: Record<string, unknown>;
-    let existingContents: string;
     try {
-      existingContents = readExistingPrivateFile(path);
-      const parsed = JSON.parse(existingContents) as unknown;
+      const parsed = JSON.parse(readExistingPrivateFile(path)) as unknown;
       if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) throw new Error("not object");
       existing = parsed as Record<string, unknown>;
     } catch (existingError) {
@@ -106,10 +105,13 @@ export function appendPrivateJsonStore(input: {
       }`);
     }
     const evidence = existing.evidence;
+    if (!input.validateExistingEvidence(evidence)) {
+      throw new Error("append-only private store conflict: existing evidence is invalid");
+    }
     const existingDigest = typeof evidence === "object" && evidence !== null && !Array.isArray(evidence)
       ? (evidence as Record<string, unknown>).contentDigest
       : null;
-    if (existingDigest !== input.expectedEvidenceDigest || existingContents !== input.contents) {
+    if (existingDigest !== input.expectedEvidenceDigest) {
       throw new Error("append-only private store conflict: existing evidence differs");
     }
   }
