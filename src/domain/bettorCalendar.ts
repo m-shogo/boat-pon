@@ -1,7 +1,8 @@
 export type BettorCalendarFactor = { id: string; label: string; group: "calendar"|"weekday"|"season"|"placebo"; match: "month"|"quarter"; test: (date: string) => boolean };
 
-function utc(date:string){return new Date(`${date}T00:00:00Z`);}function day(date:string){return Number(date.slice(8,10));}function month(date:string){return Number(date.slice(5,7));}
-export function isLastCalendarDays(date:string,count:number){const d=utc(date),next=new Date(d);next.setUTCDate(d.getUTCDate()+count);return next.getUTCMonth()!==d.getUTCMonth();}
+function isCalendarDate(date:string){if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return false;const parsed=Date.parse(`${date}T00:00:00Z`);return Number.isFinite(parsed)&&new Date(parsed).toISOString().slice(0,10)===date;}
+function utc(date:string){return isCalendarDate(date)?new Date(`${date}T00:00:00Z`):new Date(NaN);}function day(date:string){return isCalendarDate(date)?Number(date.slice(8,10)):NaN;}function month(date:string){return isCalendarDate(date)?Number(date.slice(5,7)):NaN;}
+export function isLastCalendarDays(date:string,count:number){if(!isCalendarDate(date))return false;const d=utc(date),next=new Date(d);next.setUTCDate(d.getUTCDate()+count);return next.getUTCMonth()!==d.getUTCMonth();}
 
 /** 売上を直接観測しない、事前既知の日付proxy。給与・心理効果を断定しない。 */
 export const bettorCalendarFactors:BettorCalendarFactor[]=[
