@@ -170,3 +170,29 @@ test("digest-valid unknown readiness status is a fail-closed conflict", () => {
   assert.equal(report.automatedBettingAuthorized, false);
   assert.equal(report.productionApplyAuthorized, false);
 });
+
+test("digest-valid readiness status cannot contradict canonical counts", () => {
+  const valid = readiness(20);
+  const forgedWithStaleDigest = { ...valid, status: "ACCUMULATING", n2TaskReady: false } as const;
+  const { outputDigest: _staleDigest, ...forgedCore } = forgedWithStaleDigest;
+  const forged = {
+    ...forgedWithStaleDigest,
+    outputDigest: canonicalHash(forgedCore),
+  } as unknown as typeof valid;
+  const report = buildN2DormantActivationReport({
+    readiness: forged,
+    catalogTasks: catalog(),
+    queueTasks: queue(),
+    runtimeRegisteredByTaskId: registered(),
+  });
+  assert.equal(report.status, "CONFLICT");
+  assert.equal(report.stage, "CONFLICT");
+  assert.ok(report.blockers.includes("READINESS_STATUS_COUNTS_INCONSISTENT"));
+  assert.deepEqual(report.activationActions, []);
+  assert.equal(report.activationPlanningAttemptDelta, 0);
+  assert.equal(report.currentBuyConnectionAuthorized, false);
+  assert.equal(report.lineConnectionAuthorized, false);
+  assert.equal(report.publicPublishAuthorized, false);
+  assert.equal(report.automatedBettingAuthorized, false);
+  assert.equal(report.productionApplyAuthorized, false);
+});

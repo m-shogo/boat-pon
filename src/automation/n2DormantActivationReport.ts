@@ -2,6 +2,7 @@ import { canonicalHash } from "../research-replay/canonical";
 import {
   N2_MARKET_BASELINE_READINESS_STATUSES,
   N2_MARKET_BASELINE_READINESS_VERSION,
+  classifyN2MarketBaselineReadiness,
   type N2MarketBaselineReadinessReport,
 } from "../research-replay/n2MarketBaselineReadiness";
 import {
@@ -108,6 +109,15 @@ export function buildN2DormantActivationReport(input: {
     && Number.isSafeInteger(input.readiness.integrityBlockedRaceCount)
     && input.readiness.integrityBlockedRaceCount >= 0;
   if (!readinessCountsValid) blockers.push("READINESS_COUNTS_INVALID");
+  if (readinessCountsValid) {
+    const expectedStatus = classifyN2MarketBaselineReadiness({
+      blockerCount: input.readiness.blockers.length,
+      acceptedT5RaceCount: input.readiness.acceptedT5RaceCount,
+      settledAcceptedT5RaceCount: input.readiness.settledAcceptedT5RaceCount,
+      minimumSettledRaceCount: input.readiness.minimumSettledRaceCount,
+    });
+    if (input.readiness.status !== expectedStatus) blockers.push("READINESS_STATUS_COUNTS_INCONSISTENT");
+  }
   if (readinessSaysReady && readinessCountsValid
     && (input.readiness.settledAcceptedT5RaceCount < input.readiness.minimumSettledRaceCount
       || input.readiness.integrityBlockedRaceCount > 0)) {
