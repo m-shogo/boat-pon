@@ -11,6 +11,21 @@ const N2_DORMANT_TASK_TYPES: Record<N2DormantTaskId, string> = {
   "TASK-N2-042": "confounder-audit",
 };
 
+const N2_DORMANT_TASK_DEPENDENCIES: Record<N2DormantTaskId, readonly string[]> = {
+  "TASK-N2-020": ["TASK-N2-011", "TASK-N2-005"],
+  "TASK-N2-021": ["TASK-N2-011", "TASK-N2-005"],
+  "TASK-N2-022": ["TASK-N2-020", "TASK-N2-021"],
+  "TASK-N2-030": ["TASK-N2-022"],
+  "TASK-N2-040": ["TASK-N2-030"],
+  "TASK-N2-041": ["TASK-N2-040"],
+  "TASK-N2-042": ["TASK-N2-041"],
+};
+
+function sameDependencySet(actual: readonly string[], expected: readonly string[]): boolean {
+  return actual.length === expected.length
+    && JSON.stringify([...actual].sort()) === JSON.stringify([...expected].sort());
+}
+
 export function findN2DormantTaskDefinitionDrift(
   catalog: TaskCatalog,
   state: QueueState,
@@ -30,6 +45,9 @@ export function findN2DormantTaskDefinitionDrift(
     }
     if (catalogTask && catalogTask.executor !== N2_DORMANT_TASK_TYPES[taskId]) {
       issues.push(`${taskId}:CATALOG_EXECUTOR_MISMATCH`);
+    }
+    if (catalogTask && !sameDependencySet(catalogTask.dependencies, N2_DORMANT_TASK_DEPENDENCIES[taskId])) {
+      issues.push(`${taskId}:CATALOG_DEPENDENCIES_MISMATCH`);
     }
     if (catalogTask && queueTask && catalogTask.taskDefinitionVersion !== queueTask.taskDefinitionVersion) {
       issues.push(`${taskId}:TASK_DEFINITION_VERSION_MISMATCH`);
