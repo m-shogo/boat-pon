@@ -1,4 +1,8 @@
 import { canonicalHash } from "../research-replay/canonical";
+import {
+  N2_MARKET_BASELINE_READINESS_STATUSES,
+  type N2MarketBaselineReadinessStatus,
+} from "../research-replay/n2MarketBaselineReadiness";
 import { TASK_STATUSES, type TaskStatus } from "./researchOrchestrator";
 
 export const N2_DORMANT_ACTIVATION_CONTRACT_VERSION =
@@ -142,6 +146,11 @@ export function buildN2DormantActivationPlan(input: {
   ) as Record<N2DormantTaskId, boolean>;
 
   const blockers: string[] = [];
+  if (!N2_MARKET_BASELINE_READINESS_STATUSES.includes(
+    input.readinessStatus as N2MarketBaselineReadinessStatus,
+  )) {
+    blockers.push("READINESS_STATUS_INVALID");
+  }
   for (const taskId of N2_DORMANT_TASKS) {
     const rawRuntimeRegistration = input.runtimeExecutorRegistered[taskId] as unknown;
     if (typeof rawRuntimeRegistration !== "boolean") {
