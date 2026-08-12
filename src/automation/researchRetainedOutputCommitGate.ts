@@ -1,6 +1,7 @@
 const RETAINED_PREFIX = "reports/automation/retained-outputs/";
 const HISTORY_PREFIX = "reports/automation/history/";
 const MAX_RETAINED_PATHS = 64;
+const MAX_HISTORY_OUTPUT_PATHS = 64;
 const RUN_ID_RE = /^[0-9]+$/u;
 const SHA256_RE = /^[0-9a-f]{64}$/u;
 const GIT_SHA_RE = /^[0-9a-f]{40}$/u;
@@ -116,6 +117,9 @@ export function validateRetainedOutputCommit(input: {
     const outputs = history.outputs as string[];
     if (new Set(outputs).size !== outputs.length) {
       throw new Error(`RETAINED_COMMIT_HISTORY_OUTPUTS_DUPLICATE:${historyPath}`);
+    }
+    if (outputs.length > MAX_HISTORY_OUTPUT_PATHS) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_OUTPUT_COUNT_EXCEEDED:${historyPath}:${outputs.length}>${MAX_HISTORY_OUTPUT_PATHS}`);
     }
     for (const output of outputs) {
       if (!approvedOutputPath(output)) {
