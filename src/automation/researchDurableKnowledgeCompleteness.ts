@@ -173,7 +173,7 @@ function resolveInside(rootDir: string, relativePath: string): string {
 
 function safeRelativeOutputPath(value: unknown): string | null {
   if (typeof value !== "string" || !value || value.startsWith("/") || value.includes("\0")) return null;
-  if (value.split("/").some((part) => part === "..")) return null;
+  if (value.split("/").some((part) => part === "" || part === "." || part === "..")) return null;
   if (value.startsWith(`${HISTORY_RELATIVE_DIR}/`)) return null;
   return ALLOWED_OUTPUT_ROOTS.some((root) => value.startsWith(root)) ? value : null;
 }
