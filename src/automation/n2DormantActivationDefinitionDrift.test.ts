@@ -154,6 +154,18 @@ test("N2 activation fails closed before readiness when catalog safety level drif
   );
 });
 
+test("N2 activation fails closed before readiness when catalog default status drifts", () => {
+  const mismatchedCatalog = catalog();
+  const task = mismatchedCatalog.tasks.find((entry) => entry.taskId === "TASK-N2-020");
+  assert.ok(task);
+  task.defaultStatus = "READY";
+
+  assert.deepEqual(
+    findN2DormantTaskDefinitionDrift(mismatchedCatalog, queue()),
+    ["TASK-N2-020:CATALOG_DEFAULT_STATUS_MISMATCH"],
+  );
+});
+
 test("N2 activation fails closed before readiness when catalog dependencies drift", () => {
   const mismatchedCatalog = catalog();
   const task = mismatchedCatalog.tasks.find((entry) => entry.taskId === "TASK-N2-022");
