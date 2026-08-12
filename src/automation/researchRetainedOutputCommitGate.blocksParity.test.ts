@@ -12,7 +12,7 @@ const taskId = "TASK-N2-011";
 const historyPath = `reports/automation/history/${runId}-${taskId}.json`;
 
 function history(result: string, blocks: unknown): string {
-  return JSON.stringify({ runId, taskId, result, blocks, outputs: [] });
+  return JSON.stringify({ runId, taskId, result, blocks, executed: true, outputs: [] });
 }
 
 function validate(result: string, blocks: unknown): void {

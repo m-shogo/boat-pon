@@ -50,7 +50,7 @@ test("CLI accepts an untracked retained output referenced by same-run terminal h
     const output = `reports/automation/retained-outputs/${runId}/${"a".repeat(64)}-report.json`;
     const history = `reports/automation/history/${runId}-${taskId}.json`;
     put(root, output, "{}\n");
-    put(root, history, `${JSON.stringify({ runId, taskId, outputs: [output], result: "PASS", blocks: [] })}\n`);
+    put(root, history, `${JSON.stringify({ runId, taskId, outputs: [output], result: "PASS", blocks: [], executed: true })}\n`);
     const value = JSON.parse(runGate(root, runId)) as Record<string, unknown>;
     assert.equal(value.retainedPathCount, 1);
     assert.equal(value.referencedRetainedPathCount, 1);
@@ -84,7 +84,7 @@ test("CLI binds trusted run ID to the GitHub Actions run context", () => {
   withRepo((root) => {
     const runId = "12345";
     const history = `reports/automation/history/${runId}-${taskId}.json`;
-    put(root, history, `${JSON.stringify({ runId, taskId, outputs: [], result: "PASS", blocks: [] })}\n`);
+    put(root, history, `${JSON.stringify({ runId, taskId, outputs: [], result: "PASS", blocks: [], executed: true })}\n`);
     const value = JSON.parse(runGate(root, runId, { actions: true, runId })) as Record<string, unknown>;
     assert.equal(value.historyPathCount, 1);
     assert.throws(
@@ -118,7 +118,7 @@ test("CLI rejects cross-run retained output lineage", () => {
     const otherOutput = `reports/automation/retained-outputs/99999/${"d".repeat(64)}-report.json`;
     const history = `reports/automation/history/${runId}-${taskId}.json`;
     put(root, output, "{}\n");
-    put(root, history, `${JSON.stringify({ runId, taskId, outputs: [output, otherOutput], result: "PASS", blocks: [] })}\n`);
+    put(root, history, `${JSON.stringify({ runId, taskId, outputs: [output, otherOutput], result: "PASS", blocks: [], executed: true })}\n`);
     assert.throws(() => runGate(root, runId), /RETAINED_COMMIT_HISTORY_RETAINED_RUN_ID_MISMATCH/u);
   });
 });
@@ -128,7 +128,7 @@ test("CLI rejects history-only cross-run retained output lineage", () => {
     const historyRunId = "12345";
     const otherOutput = `reports/automation/retained-outputs/99999/${"e".repeat(64)}-report.json`;
     const history = `reports/automation/history/${historyRunId}-${taskId}.json`;
-    put(root, history, `${JSON.stringify({ runId: historyRunId, taskId, outputs: [otherOutput], result: "PASS", blocks: [] })}\n`);
+    put(root, history, `${JSON.stringify({ runId: historyRunId, taskId, outputs: [otherOutput], result: "PASS", blocks: [], executed: true })}\n`);
     assert.throws(() => runGate(root, "77777"), /RETAINED_COMMIT_HISTORY_RUN_ID_MISMATCH:12345!=77777/u);
   });
 });
@@ -137,7 +137,7 @@ test("CLI rejects history-only evidence for another workflow run even without re
   withRepo((root) => {
     const historyRunId = "12345";
     const history = `reports/automation/history/${historyRunId}-${taskId}.json`;
-    put(root, history, `${JSON.stringify({ runId: historyRunId, taskId, outputs: [], result: "PASS", blocks: [] })}\n`);
+    put(root, history, `${JSON.stringify({ runId: historyRunId, taskId, outputs: [], result: "PASS", blocks: [], executed: true })}\n`);
     assert.throws(() => runGate(root, "77777"), /RETAINED_COMMIT_HISTORY_RUN_ID_MISMATCH:12345!=77777/u);
   });
 });
@@ -149,8 +149,8 @@ test("CLI rejects two terminal histories from one workflow run", () => {
     const secondTaskId = "TASK-N2-012";
     const first = `reports/automation/history/${runId}-${firstTaskId}.json`;
     const second = `reports/automation/history/${runId}-${secondTaskId}.json`;
-    put(root, first, `${JSON.stringify({ runId, taskId: firstTaskId, outputs: [], result: "PASS", blocks: [] })}\n`);
-    put(root, second, `${JSON.stringify({ runId, taskId: secondTaskId, outputs: [], result: "PASS", blocks: [] })}\n`);
+    put(root, first, `${JSON.stringify({ runId, taskId: firstTaskId, outputs: [], result: "PASS", blocks: [], executed: true })}\n`);
+    put(root, second, `${JSON.stringify({ runId, taskId: secondTaskId, outputs: [], result: "PASS", blocks: [], executed: true })}\n`);
     assert.throws(() => runGate(root, runId), /RETAINED_COMMIT_HISTORY_COUNT_INVALID:12345:2/u);
   });
 });
@@ -159,7 +159,7 @@ test("CLI rejects a task identity mismatch in append-only history", () => {
   withRepo((root) => {
     const runId = "12345";
     const history = `reports/automation/history/${runId}-${taskId}.json`;
-    put(root, history, `${JSON.stringify({ runId, taskId: "TASK-N2-012", outputs: [], result: "PASS", blocks: [] })}\n`);
+    put(root, history, `${JSON.stringify({ runId, taskId: "TASK-N2-012", outputs: [], result: "PASS", blocks: [], executed: true })}\n`);
     assert.throws(() => runGate(root, runId), /RETAINED_COMMIT_HISTORY_TASK_ID_MISMATCH/u);
   });
 });
