@@ -11,6 +11,30 @@ const retained = (runId: string, name = "a".repeat(64) + "-report.json") =>
   `reports/automation/retained-outputs/${runId}/${name}`;
 const history = (runId: string) => `reports/automation/history/${runId}-${taskId}.json`;
 
+function evidence(runId: string, overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    runId,
+    requestId: "REQ-test",
+    intentId: "INTENT-test",
+    taskId,
+    taskType: "pit-audit",
+    safetyLevel: "L0",
+    executorVersion: "test-executor-v1",
+    outputs: [],
+    result: "PASS",
+    blocks: [],
+    executed: true,
+    outputDigest,
+    summary: {},
+    idempotencyKey,
+    authoritySha,
+    startedAt: "2026-08-12T00:00:00.000Z",
+    completedAt: "2026-08-12T00:00:01.000Z",
+    elapsedMs: 1000,
+    ...overrides,
+  };
+}
+
 function reader(files: Record<string, unknown>): (path: string) => string {
   return (path) => {
     if (!(path in files)) throw new Error(`missing fixture: ${path}`);
@@ -34,9 +58,7 @@ test("same-run terminal history must reference every retained output", () => {
   const result = validateRetainedOutputCommit({
     changedPaths: [output, historyPath, "reports/automation/current-status.json"],
     expectedRunId: "123",
-    readText: reader({
-      [historyPath]: { runId: "123", taskId, outputs: [output], result: "PASS", blocks: [], executed: true, outputDigest, summary: {}, idempotencyKey, authoritySha },
-    }),
+    readText: reader({ [historyPath]: evidence("123", { outputs: [output] }) }),
   });
   assert.equal(result.retainedPathCount, 1);
   assert.equal(result.referencedRetainedPathCount, 1);
@@ -49,7 +71,7 @@ test("terminal history result must be recognized", () => {
     () => validateRetainedOutputCommit({
       changedPaths: [historyPath],
       expectedRunId: "123",
-      readText: reader({ [historyPath]: { runId: "123", taskId, outputs: [], outputDigest, summary: {}, idempotencyKey, authoritySha } }),
+      readText: reader({ [historyPath]: evidence("123", { result: undefined }) }),
     }),
     /RETAINED_COMMIT_HISTORY_RESULT_INVALID:.*:missing/u,
   );
@@ -57,7 +79,7 @@ test("terminal history result must be recognized", () => {
     () => validateRetainedOutputCommit({
       changedPaths: [historyPath],
       expectedRunId: "123",
-      readText: reader({ [historyPath]: { runId: "123", taskId, outputs: [], result: "RUNNING", outputDigest, summary: {}, idempotencyKey, authoritySha } }),
+      readText: reader({ [historyPath]: evidence("123", { result: "RUNNING" }) }),
     }),
     /RETAINED_COMMIT_HISTORY_RESULT_INVALID:.*:RUNNING/u,
   );
@@ -70,9 +92,7 @@ test("terminal history cannot claim retained output from another run", () => {
     () => validateRetainedOutputCommit({
       changedPaths: [output, historyPath],
       expectedRunId: "123",
-      readText: reader({
-        [historyPath]: { runId: "123", taskId, outputs: [output, retained("999")], result: "PASS", blocks: [], executed: true, outputDigest, summary: {}, idempotencyKey, authoritySha },
-      }),
+      readText: reader({ [historyPath]: evidence("123", { outputs: [output, retained("999")] }) }),
     }),
     /RETAINED_COMMIT_HISTORY_RETAINED_RUN_ID_MISMATCH/u,
   );
@@ -84,9 +104,7 @@ test("history-only change cannot claim retained output from another run", () => 
     () => validateRetainedOutputCommit({
       changedPaths: [historyPath],
       expectedRunId: "456",
-      readText: reader({
-        [historyPath]: { runId: "123", taskId, outputs: [retained("999")], result: "PASS", blocks: [], executed: true, outputDigest, summary: {}, idempotencyKey, authoritySha },
-      }),
+      readText: reader({ [historyPath]: evidence("123", { outputs: [retained("999")] }) }),
     }),
     /RETAINED_COMMIT_HISTORY_RUN_ID_MISMATCH:123!=456/u,
   );
@@ -99,9 +117,7 @@ test("terminal history rejects malformed retained-output references", () => {
     () => validateRetainedOutputCommit({
       changedPaths: [output, historyPath],
       expectedRunId: "123",
-      readText: reader({
-        [historyPath]: { runId: "123", taskId, outputs: [output, "reports/automation/retained-outputs/123/nested/report.json"], result: "PASS", blocks: [], executed: true, outputDigest, summary: {}, idempotencyKey, authoritySha },
-      }),
+      readText: reader({ [historyPath]: evidence("123", { outputs: [output, "reports/automation/retained-outputs/123/nested/report.json"] }) }),
     }),
     /RETAINED_COMMIT_HISTORY_RETAINED_PATH_INVALID/u,
   );
@@ -114,7 +130,7 @@ test("orphan retained output is rejected", () => {
     () => validateRetainedOutputCommit({
       changedPaths: [output, historyPath],
       expectedRunId: "123",
-      readText: reader({ [historyPath]: { runId: "123", taskId, outputs: [], result: "PASS", blocks: [], executed: true, outputDigest, summary: {}, idempotencyKey, authoritySha } }),
+      readText: reader({ [historyPath]: evidence("123") }),
     }),
     /RETAINED_COMMIT_ORPHAN/u,
   );
@@ -135,7 +151,7 @@ test("wrong workflow run cannot commit another run retained output", () => {
     () => validateRetainedOutputCommit({
       changedPaths: [output, historyPath],
       expectedRunId: "123",
-      readText: reader({ [historyPath]: { runId: "124", taskId, outputs: [output], result: "PASS", blocks: [], executed: true, outputDigest, summary: {}, idempotencyKey, authoritySha } }),
+      readText: reader({ [historyPath]: evidence("124", { outputs: [output] }) }),
     }),
     /RETAINED_COMMIT_HISTORY_RUN_ID_MISMATCH:124!=123/u,
   );
@@ -147,7 +163,7 @@ test("duplicate changed paths are normalized", () => {
   const result = validateRetainedOutputCommit({
     changedPaths: [output, output, historyPath, historyPath],
     expectedRunId: "123",
-    readText: reader({ [historyPath]: { runId: "123", taskId, outputs: [output], result: "PASS", blocks: [], executed: true, outputDigest, summary: {}, idempotencyKey, authoritySha } }),
+    readText: reader({ [historyPath]: evidence("123", { outputs: [output] }) }),
   });
   assert.equal(result.retainedPathCount, 1);
   assert.equal(result.historyPathCount, 1);
@@ -168,7 +184,7 @@ test("malformed or mismatched history fails closed", () => {
     () => validateRetainedOutputCommit({
       changedPaths: [output, historyPath],
       expectedRunId: "123",
-      readText: reader({ [historyPath]: { runId: "999", taskId, outputs: [output], result: "PASS", blocks: [], executed: true, outputDigest, summary: {}, idempotencyKey, authoritySha } }),
+      readText: reader({ [historyPath]: evidence("999", { outputs: [output] }) }),
     }),
     /RETAINED_COMMIT_HISTORY_RUN_ID_MISMATCH/u,
   );
@@ -181,7 +197,7 @@ test("local mode derives run identity from retained paths", () => {
   const result = validateRetainedOutputCommit({
     changedPaths: [output, historyPath],
     expectedRunId: "local",
-    readText: reader({ [historyPath]: { runId, taskId, outputs: [output], result: "PASS", blocks: [], executed: true, outputDigest, summary: {}, idempotencyKey, authoritySha } }),
+    readText: reader({ [historyPath]: evidence(runId, { outputs: [output] }) }),
   });
   assert.deepEqual(result.runIds, [runId]);
 });
