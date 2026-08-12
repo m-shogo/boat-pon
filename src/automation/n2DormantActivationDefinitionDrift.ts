@@ -1,6 +1,8 @@
 import { N2_DORMANT_TASKS, type N2DormantTaskId } from "./n2DormantActivationContract";
 import type { QueueState, TaskCatalog } from "./taskCatalog";
 
+const N2_DORMANT_MAX_ATTEMPTS = 3;
+
 const N2_DORMANT_TASK_TYPES: Record<N2DormantTaskId, string> = {
   "TASK-N2-020": "baseline-market",
   "TASK-N2-021": "baseline-historical",
@@ -69,6 +71,8 @@ export function findN2DormantTaskDefinitionDrift(
       issues.push(`${taskId}:TASK_DEFINITION_VERSION_MISMATCH`);
     }
     if (queueTask?.status === "BLOCKED_EXECUTOR_PENDING") {
+      if (queueTask.attemptCount !== 0) issues.push(`${taskId}:DORMANT_ATTEMPT_COUNT_NOT_ZERO`);
+      if (queueTask.maxAttempts !== N2_DORMANT_MAX_ATTEMPTS) issues.push(`${taskId}:DORMANT_MAX_ATTEMPTS_MISMATCH`);
       if (queueTask.authoritySha !== null) issues.push(`${taskId}:DORMANT_AUTHORITY_SHA_PRESENT`);
       if (queueTask.evidenceLinks.length !== 0) issues.push(`${taskId}:DORMANT_EVIDENCE_PRESENT`);
       if (queueTask.resultDigest !== null) issues.push(`${taskId}:DORMANT_RESULT_DIGEST_PRESENT`);
