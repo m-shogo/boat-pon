@@ -158,6 +158,10 @@ export function buildN2DormantActivationPlan(input: {
 
   const blockers: string[] = [];
   for (const taskId of N2_DORMANT_TASKS) {
+    const rawRuntimeRegistration = input.runtimeExecutorRegistered[taskId] as unknown;
+    if (typeof rawRuntimeRegistration !== "boolean") {
+      blockers.push(`${taskId}:RUNTIME_REGISTRATION_STATE_INVALID`);
+    }
     const taskStatus = taskStatuses[taskId];
     const defaultStatus = catalogDefaultStatuses[taskId];
     const registered = runtimeExecutorRegistered[taskId];
