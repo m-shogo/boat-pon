@@ -43,11 +43,11 @@ test("bounded evidence is finite, quiescent and excludes outcome/delivery column
   assert.equal(source.includes("notification_log"), false);
 });
 
-test("private evidence store is append-only and owner-readable", () => {
-  assert.match(source, /flag: "wx"/);
-  assert.match(source, /mode: 0o600/);
-  assert.match(source, /mode: 0o700/);
-  assert.match(source, /append-only private store conflict/);
+test("private evidence store delegates append-only safety to the hardened store", () => {
+  assert.match(source, /import \{ appendPrivateJsonStore \} from "\.\.\/src\/research\/governance\/privateAppendOnlyJsonStore"/);
+  assert.match(source, /appendPrivateJsonStore\(\{/);
+  assert.match(source, /expectedEvidenceDigest: evidence\.contentDigest/);
   assert.match(source, /sourceDescriptorDigest\.slice\(0, 12\)/);
   assert.match(source, /contentDigest\.slice\(0, 12\)/);
+  assert.doesNotMatch(source, /readFileSync\(path, "utf8"\)/);
 });
