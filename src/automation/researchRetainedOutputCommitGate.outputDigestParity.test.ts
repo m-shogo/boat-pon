@@ -10,45 +10,48 @@ import { validateRetainedOutputCommit } from "./researchRetainedOutputCommitGate
 const runId = "12345";
 const taskId = "TASK-N2-011";
 const historyPath = `reports/automation/history/${runId}-${taskId}.json`;
-const outputDigest = "a".repeat(64);
+const validDigest = "a".repeat(64);
 
-function history(executed: unknown): string {
-  return JSON.stringify({ runId, taskId, result: "PASS", blocks: [], executed, outputDigest, outputs: [] });
+function history(outputDigest: unknown): string {
+  return JSON.stringify({
+    runId,
+    taskId,
+    result: "PASS",
+    blocks: [],
+    executed: true,
+    outputDigest,
+    outputs: [],
+  });
 }
 
-test("retained gate requires terminal history to have executed true", () => {
-  assert.throws(
-    () => validateRetainedOutputCommit({
-      changedPaths: [historyPath],
-      expectedRunId: runId,
-      readText: () => JSON.stringify({ runId, taskId, result: "PASS", blocks: [], outputs: [] }),
-    }),
-    /RETAINED_COMMIT_HISTORY_EXECUTED_NOT_TRUE/u,
-  );
-  assert.throws(
-    () => validateRetainedOutputCommit({
-      changedPaths: [historyPath],
-      expectedRunId: runId,
-      readText: () => history(false),
-    }),
-    /RETAINED_COMMIT_HISTORY_EXECUTED_NOT_TRUE/u,
-  );
+test("retained gate requires a canonical lowercase sha256 output digest", () => {
+  for (const outputDigest of [undefined, "a".repeat(63), "A".repeat(64), `${validDigest}0`]) {
+    assert.throws(
+      () => validateRetainedOutputCommit({
+        changedPaths: [historyPath],
+        expectedRunId: runId,
+        readText: () => history(outputDigest),
+      }),
+      /RETAINED_COMMIT_HISTORY_OUTPUT_DIGEST_INVALID/u,
+    );
+  }
   assert.doesNotThrow(() => validateRetainedOutputCommit({
     changedPaths: [historyPath],
     expectedRunId: runId,
-    readText: () => history(true),
+    readText: () => history(validDigest),
   }));
 });
 
-test("trusted CLI rejects terminal evidence that was not executed", () => {
-  const root = mkdtempSync(join(tmpdir(), "boat-pon-retained-executed-"));
+test("trusted CLI rejects retained history with a malformed output digest", () => {
+  const root = mkdtempSync(join(tmpdir(), "boat-pon-retained-output-digest-"));
   const trustedGitBin = execFileSync("which", ["git"], { encoding: "utf8" }).trim();
   const gateCli = resolve(process.cwd(), "scripts/check-research-retained-output-commit.mjs");
   try {
     execFileSync(trustedGitBin, ["init", "-q"], { cwd: root });
     const absoluteHistory = join(root, historyPath);
     mkdirSync(dirname(absoluteHistory), { recursive: true });
-    writeFileSync(absoluteHistory, `${history(false)}\n`, "utf8");
+    writeFileSync(absoluteHistory, `${history("not-a-sha256")}\n`, "utf8");
+
     assert.throws(
       () => execFileSync(process.execPath, [gateCli, `--run-id=${runId}`], {
         cwd: root,
@@ -60,7 +63,7 @@ test("trusted CLI rejects terminal evidence that was not executed", () => {
           GITHUB_RUN_ID: "",
         },
       }),
-      /RETAINED_COMMIT_HISTORY_EXECUTED_NOT_TRUE/u,
+      /RETAINED_COMMIT_HISTORY_OUTPUT_DIGEST_INVALID/u,
     );
   } finally {
     rmSync(root, { recursive: true, force: true });

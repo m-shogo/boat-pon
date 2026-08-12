@@ -4,6 +4,7 @@ import test from "node:test";
 import { validateRetainedOutputCommit } from "./researchRetainedOutputCommitGate";
 
 const path = "reports/automation/history/12345-TASK-N2-011.json";
+const outputDigest = "a".repeat(64);
 
 function validate(result: string): void {
   const blocks = result === "BLOCKED" || result === "FAILED" ? ["terminal-block"] : [];
@@ -16,6 +17,7 @@ function validate(result: string): void {
       outputs: [],
       blocks,
       executed: true,
+      outputDigest,
       result,
     }),
   });
