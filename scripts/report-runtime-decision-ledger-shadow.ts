@@ -161,7 +161,7 @@ SELECT
   dh.decision_reasons,
   dh.feature_adjustment,
   dh.feature_adjustment_breakdown,
-  dh.close_at,
+  p.close_at,
   p.imported_at AS program_imported_at
 FROM decision_history dh
 LEFT JOIN official_programs p ON p.race_id = dh.race_id
