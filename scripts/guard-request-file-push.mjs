@@ -3,8 +3,8 @@
 // strict schema・digest 一致・未処理」であることを検証する。1 つでも外れたら BLOCK。
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readdirSync } from "node:fs";
-import { readSafeUtf8 } from "./read-safe-utf8.mjs";
+import { existsSync } from "node:fs";
+import { listSafeDirectoryNames, readSafeUtf8 } from "./read-safe-utf8.mjs";
 
 const PENDING_DIR = "automation/requests/pending";
 const MAX_BYTES = 65536;
@@ -112,8 +112,19 @@ if (!authorityOk) {
 }
 
 // replay 防止: processed registry（completed/failed）に同じ requestId があれば拒否。
+// directory 自体が symlink / non-directory なら ledger を隠せるため fail-closed。
 for (const dir of ["automation/requests/completed", "automation/requests/failed"]) {
-  if (existsSync(dir) && readdirSync(dir).some((f) => f === `${request.requestId}.json`)) {
+  let entries;
+  try {
+    entries = listSafeDirectoryNames(dir, {
+      label: "processed request directory",
+      baseDir: process.cwd(),
+      allowMissing: true,
+    });
+  } catch (error) {
+    fail(`processed request directory unsafe: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  if (entries.some((f) => f === `${request.requestId}.json`)) {
     fail(`duplicate/replayed requestId: ${request.requestId}`);
   }
 }
