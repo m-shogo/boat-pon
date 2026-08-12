@@ -190,8 +190,8 @@ test("malformed or mismatched history fails closed", () => {
   );
 });
 
-test("local mode derives run identity from retained paths", () => {
-  const runId = "local-123";
+test("local mode derives numeric run identity from retained paths", () => {
+  const runId = "123";
   const output = retained(runId);
   const historyPath = history(runId);
   const result = validateRetainedOutputCommit({
