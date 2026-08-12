@@ -55,6 +55,6 @@ test("validateRetainedOutputCommit rejects 65 canonical referenced retained path
       expectedRunId: RUN_ID,
       readText: () => history(retained),
     }),
-    /RETAINED_COMMIT_COUNT_EXCEEDED:65>64/u,
+    /RETAINED_COMMIT_HISTORY_OUTPUT_COUNT_EXCEEDED:.*:65>64/u,
   );
 });
