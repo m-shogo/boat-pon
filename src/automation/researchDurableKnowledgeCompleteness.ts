@@ -8,7 +8,10 @@ import {
 import { join, resolve, sep } from "node:path";
 
 import { contractDigest } from "../research/governance/contracts";
-import { readGovernanceFileUtf8Bounded } from "../research/governance/safeFs";
+import {
+  assertGovernanceDirectorySafe,
+  readGovernanceFileUtf8Bounded,
+} from "../research/governance/safeFs";
 
 export const RESEARCH_DURABLE_KNOWLEDGE_COMPLETENESS_VERSION =
   "research-durable-knowledge-completeness-v1" as const;
@@ -783,8 +786,9 @@ export function buildResearchDurableKnowledgeCompletenessReport(input: {
     };
     return { ...core, outputDigest: sha256Text(JSON.stringify(core)) };
   }
-  const dirStat = lstatSync(historyDir);
-  if (dirStat.isSymbolicLink() || !dirStat.isDirectory()) {
+  try {
+    assertGovernanceDirectorySafe(historyDir, input.repoRoot);
+  } catch {
     throw new Error("DURABLE_KNOWLEDGE_HISTORY_DIR_INVALID");
   }
   const files = readdirSync(historyDir).sort();
