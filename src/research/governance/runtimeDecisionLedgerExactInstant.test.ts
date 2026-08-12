@@ -42,17 +42,18 @@ function record(): RuntimeDecisionLedgerRecord {
   };
 }
 
-test("Runtime Decision Ledger rejects date-only and timezone-less temporal evidence", () => {
+test("Runtime Decision Ledger rejects ambiguous and impossible temporal evidence", () => {
   for (const [field, value] of [
     ["decisionAt", "2026-08-05"],
     ["decisionAt", "2026-08-05T05:26:30"],
+    ["decisionAt", "2026-02-30T05:26:30Z"],
     ["oddsObservedAt", "2026-08-05 05:26:10Z"],
     ["scheduledCloseAtSeen", "Wed, 05 Aug 2026 05:32:00 GMT"],
   ] as const) {
     const candidate = { ...record(), [field]: value };
     const result = validateRuntimeDecisionLedgerRecord(candidate);
     assert.equal(result.valid, false, `${field}=${value} must fail closed`);
-    assert.ok(result.errors.includes(`${field} must be a timezone-bound ISO timestamp`));
+    assert.ok(result.errors.includes(`${field} must be a valid timezone-bound ISO timestamp`));
   }
 });
 
