@@ -22,6 +22,7 @@ function history(authoritySha: unknown): string {
     blocks: [],
     executed: true,
     outputDigest,
+    summary: {},
     idempotencyKey,
     authoritySha,
     outputs: [],
@@ -31,19 +32,11 @@ function history(authoritySha: unknown): string {
 test("retained gate requires a canonical lowercase git authority sha", () => {
   for (const authoritySha of [undefined, "c".repeat(39), "C".repeat(40), `${validAuthoritySha}0`]) {
     assert.throws(
-      () => validateRetainedOutputCommit({
-        changedPaths: [historyPath],
-        expectedRunId: runId,
-        readText: () => history(authoritySha),
-      }),
+      () => validateRetainedOutputCommit({ changedPaths: [historyPath], expectedRunId: runId, readText: () => history(authoritySha) }),
       /RETAINED_COMMIT_HISTORY_AUTHORITY_SHA_INVALID/u,
     );
   }
-  assert.doesNotThrow(() => validateRetainedOutputCommit({
-    changedPaths: [historyPath],
-    expectedRunId: runId,
-    readText: () => history(validAuthoritySha),
-  }));
+  assert.doesNotThrow(() => validateRetainedOutputCommit({ changedPaths: [historyPath], expectedRunId: runId, readText: () => history(validAuthoritySha) }));
 });
 
 test("trusted CLI rejects retained history with a malformed authority sha", () => {
@@ -55,17 +48,11 @@ test("trusted CLI rejects retained history with a malformed authority sha", () =
     const absoluteHistory = join(root, historyPath);
     mkdirSync(dirname(absoluteHistory), { recursive: true });
     writeFileSync(absoluteHistory, `${history("not-a-git-sha")}\n`, "utf8");
-
     assert.throws(
       () => execFileSync(process.execPath, [gateCli, `--run-id=${runId}`], {
         cwd: root,
         encoding: "utf8",
-        env: {
-          ...process.env,
-          TRUSTED_GIT_BIN: trustedGitBin,
-          GITHUB_ACTIONS: "false",
-          GITHUB_RUN_ID: "",
-        },
+        env: { ...process.env, TRUSTED_GIT_BIN: trustedGitBin, GITHUB_ACTIONS: "false", GITHUB_RUN_ID: "" },
       }),
       /RETAINED_COMMIT_HISTORY_AUTHORITY_SHA_INVALID/u,
     );
