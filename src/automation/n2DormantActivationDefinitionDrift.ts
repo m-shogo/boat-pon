@@ -79,6 +79,9 @@ export function findN2DormantTaskDefinitionDrift(
     if (catalogTask && catalogTask.maxDurationSeconds !== N2_DORMANT_MAX_DURATION_SECONDS) {
       issues.push(`${taskId}:CATALOG_MAX_DURATION_MISMATCH`);
     }
+    if (catalogTask?.recurring === true) {
+      issues.push(`${taskId}:CATALOG_RECURRING_MISMATCH`);
+    }
     if (catalogTask && !sameStringSet(catalogTask.dependencies, N2_DORMANT_TASK_DEPENDENCIES[taskId])) {
       issues.push(`${taskId}:CATALOG_DEPENDENCIES_MISMATCH`);
     }
