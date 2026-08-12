@@ -15,31 +15,19 @@ const idempotencyKey = "b".repeat(64);
 const authoritySha = "c".repeat(40);
 
 function history(executed: unknown): string {
-  return JSON.stringify({ runId, taskId, result: "PASS", blocks: [], executed, outputDigest, idempotencyKey, authoritySha, outputs: [] });
+  return JSON.stringify({ runId, taskId, result: "PASS", blocks: [], executed, outputDigest, summary: {}, idempotencyKey, authoritySha, outputs: [] });
 }
 
 test("retained gate requires terminal history to have executed true", () => {
   assert.throws(
-    () => validateRetainedOutputCommit({
-      changedPaths: [historyPath],
-      expectedRunId: runId,
-      readText: () => JSON.stringify({ runId, taskId, result: "PASS", blocks: [], outputs: [] }),
-    }),
+    () => validateRetainedOutputCommit({ changedPaths: [historyPath], expectedRunId: runId, readText: () => JSON.stringify({ runId, taskId, result: "PASS", blocks: [], outputs: [] }) }),
     /RETAINED_COMMIT_HISTORY_EXECUTED_NOT_TRUE/u,
   );
   assert.throws(
-    () => validateRetainedOutputCommit({
-      changedPaths: [historyPath],
-      expectedRunId: runId,
-      readText: () => history(false),
-    }),
+    () => validateRetainedOutputCommit({ changedPaths: [historyPath], expectedRunId: runId, readText: () => history(false) }),
     /RETAINED_COMMIT_HISTORY_EXECUTED_NOT_TRUE/u,
   );
-  assert.doesNotThrow(() => validateRetainedOutputCommit({
-    changedPaths: [historyPath],
-    expectedRunId: runId,
-    readText: () => history(true),
-  }));
+  assert.doesNotThrow(() => validateRetainedOutputCommit({ changedPaths: [historyPath], expectedRunId: runId, readText: () => history(true) }));
 });
 
 test("trusted CLI rejects terminal evidence that was not executed", () => {
@@ -51,19 +39,7 @@ test("trusted CLI rejects terminal evidence that was not executed", () => {
     const absoluteHistory = join(root, historyPath);
     mkdirSync(dirname(absoluteHistory), { recursive: true });
     writeFileSync(absoluteHistory, `${history(false)}\n`, "utf8");
-    assert.throws(
-      () => execFileSync(process.execPath, [gateCli, `--run-id=${runId}`], {
-        cwd: root,
-        encoding: "utf8",
-        env: {
-          ...process.env,
-          TRUSTED_GIT_BIN: trustedGitBin,
-          GITHUB_ACTIONS: "false",
-          GITHUB_RUN_ID: "",
-        },
-      }),
-      /RETAINED_COMMIT_HISTORY_EXECUTED_NOT_TRUE/u,
-    );
+    assert.throws(() => execFileSync(process.execPath, [gateCli, `--run-id=${runId}`], { cwd: root, encoding: "utf8", env: { ...process.env, TRUSTED_GIT_BIN: trustedGitBin, GITHUB_ACTIONS: "false", GITHUB_RUN_ID: "" } }), /RETAINED_COMMIT_HISTORY_EXECUTED_NOT_TRUE/u);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
