@@ -12,10 +12,11 @@ const taskId = "TASK-N2-011";
 const historyPath = `reports/automation/history/${runId}-${taskId}.json`;
 const digest = "a".repeat(64);
 const idempotencyKey = "b".repeat(64);
+const authoritySha = "c".repeat(40);
 const noncanonicalRetainedPath = `reports/automation/retained-outputs/${runId}/${digest}-not canonical.json`;
 
 function historyText(output = noncanonicalRetainedPath): string {
-  return JSON.stringify({ runId, taskId, result: "PASS", blocks: [], executed: true, outputDigest: digest, idempotencyKey, outputs: [output] });
+  return JSON.stringify({ runId, taskId, result: "PASS", blocks: [], executed: true, outputDigest: digest, idempotencyKey, authoritySha, outputs: [output] });
 }
 
 test("retained commit gate rejects filenames the canonical writer cannot produce", () => {
