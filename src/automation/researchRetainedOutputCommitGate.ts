@@ -95,6 +95,9 @@ export function validateRetainedOutputCommit(input: {
     if (typeof history.outputDigest !== "string" || !SHA256_RE.test(history.outputDigest)) {
       throw new Error(`RETAINED_COMMIT_HISTORY_OUTPUT_DIGEST_INVALID:${historyPath}`);
     }
+    if (typeof history.idempotencyKey !== "string" || !SHA256_RE.test(history.idempotencyKey)) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_IDEMPOTENCY_KEY_INVALID:${historyPath}`);
+    }
     if (!Array.isArray(history.outputs) || history.outputs.some((value) => typeof value !== "string")) {
       throw new Error(`RETAINED_COMMIT_HISTORY_OUTPUTS_INVALID:${historyPath}`);
     }

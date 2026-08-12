@@ -10,10 +10,10 @@ import { validateRetainedOutputCommit } from "./researchRetainedOutputCommitGate
 const runId = "12345";
 const taskId = "TASK-N2-011";
 const historyPath = `reports/automation/history/${runId}-${taskId}.json`;
-const validDigest = "a".repeat(64);
-const idempotencyKey = "b".repeat(64);
+const outputDigest = "a".repeat(64);
+const validIdempotencyKey = "b".repeat(64);
 
-function history(outputDigest: unknown): string {
+function history(idempotencyKey: unknown): string {
   return JSON.stringify({
     runId,
     taskId,
@@ -26,26 +26,26 @@ function history(outputDigest: unknown): string {
   });
 }
 
-test("retained gate requires a canonical lowercase sha256 output digest", () => {
-  for (const outputDigest of [undefined, "a".repeat(63), "A".repeat(64), `${validDigest}0`]) {
+test("retained gate requires a canonical lowercase sha256 idempotency key", () => {
+  for (const idempotencyKey of [undefined, "b".repeat(63), "B".repeat(64), `${validIdempotencyKey}0`]) {
     assert.throws(
       () => validateRetainedOutputCommit({
         changedPaths: [historyPath],
         expectedRunId: runId,
-        readText: () => history(outputDigest),
+        readText: () => history(idempotencyKey),
       }),
-      /RETAINED_COMMIT_HISTORY_OUTPUT_DIGEST_INVALID/u,
+      /RETAINED_COMMIT_HISTORY_IDEMPOTENCY_KEY_INVALID/u,
     );
   }
   assert.doesNotThrow(() => validateRetainedOutputCommit({
     changedPaths: [historyPath],
     expectedRunId: runId,
-    readText: () => history(validDigest),
+    readText: () => history(validIdempotencyKey),
   }));
 });
 
-test("trusted CLI rejects retained history with a malformed output digest", () => {
-  const root = mkdtempSync(join(tmpdir(), "boat-pon-retained-output-digest-"));
+test("trusted CLI rejects retained history with a malformed idempotency key", () => {
+  const root = mkdtempSync(join(tmpdir(), "boat-pon-retained-idempotency-key-"));
   const trustedGitBin = execFileSync("which", ["git"], { encoding: "utf8" }).trim();
   const gateCli = resolve(process.cwd(), "scripts/check-research-retained-output-commit.mjs");
   try {
@@ -65,7 +65,7 @@ test("trusted CLI rejects retained history with a malformed output digest", () =
           GITHUB_RUN_ID: "",
         },
       }),
-      /RETAINED_COMMIT_HISTORY_OUTPUT_DIGEST_INVALID/u,
+      /RETAINED_COMMIT_HISTORY_IDEMPOTENCY_KEY_INVALID/u,
     );
   } finally {
     rmSync(root, { recursive: true, force: true });

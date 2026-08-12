@@ -11,9 +11,10 @@ const runId = "12345";
 const taskId = "TASK-N2-011";
 const historyPath = `reports/automation/history/${runId}-${taskId}.json`;
 const outputDigest = "a".repeat(64);
+const idempotencyKey = "b".repeat(64);
 
 function history(result: string, blocks: unknown): string {
-  return JSON.stringify({ runId, taskId, result, blocks, executed: true, outputDigest, outputs: [] });
+  return JSON.stringify({ runId, taskId, result, blocks, executed: true, outputDigest, idempotencyKey, outputs: [] });
 }
 
 function validate(result: string, blocks: unknown): void {
