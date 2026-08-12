@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 const scriptPath = fileURLToPath(new URL("../../scripts/audit-official-racer-relationships.ts", import.meta.url));
+const tsxImport = fileURLToPath(import.meta.resolve("tsx"));
 
 function runAudit(sourcePublishedDate: string, verifiedAt: string) {
   const root = mkdtempSync(join(tmpdir(), "boat-pon-relationship-audit-"));
@@ -29,7 +30,7 @@ function runAudit(sourcePublishedDate: string, verifiedAt: string) {
         verifiedAt,
       }],
     }));
-    return spawnSync(process.execPath, ["--import", "tsx", scriptPath], { cwd: root, encoding: "utf8" });
+    return spawnSync(process.execPath, ["--import", tsxImport, scriptPath], { cwd: root, encoding: "utf8" });
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
