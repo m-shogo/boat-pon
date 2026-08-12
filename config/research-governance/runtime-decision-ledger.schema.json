@@ -150,6 +150,17 @@
           "notificationDedupeKey": { "type": "string", "minLength": 1 }
         }
       }
+    },
+    {
+      "if": {
+        "properties": { "notificationEligible": { "const": false } },
+        "required": ["notificationEligible"]
+      },
+      "then": {
+        "properties": {
+          "notificationDedupeKey": { "type": "null" }
+        }
+      }
     }
   ]
 }
