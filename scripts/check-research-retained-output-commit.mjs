@@ -60,6 +60,10 @@ function approvedOutputPath(value) {
   return ALLOWED_OUTPUT_ROOTS.some((root) => value.startsWith(root));
 }
 
+function nonEmptyString(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
 function validateRetainedOutputCommit(input) {
   const changed = [...new Set(input.changedPaths.filter(Boolean))];
   const retained = changed.filter((path) => path.startsWith(RETAINED_PREFIX));
@@ -100,6 +104,12 @@ function validateRetainedOutputCommit(input) {
     }
     if (String(history.taskId ?? "") !== pathTaskId) {
       throw new Error(`RETAINED_COMMIT_HISTORY_TASK_ID_MISMATCH:${historyPath}`);
+    }
+    if (!nonEmptyString(history.requestId)) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_REQUEST_ID_INVALID:${historyPath}`);
+    }
+    if (!nonEmptyString(history.intentId)) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_INTENT_ID_INVALID:${historyPath}`);
     }
     const historyResult = String(history.result ?? "");
     if (!TERMINAL_RESULTS.has(historyResult)) {
