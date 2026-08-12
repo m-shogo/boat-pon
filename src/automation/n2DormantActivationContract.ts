@@ -131,6 +131,15 @@ function dormant(
     && !runtimeExecutorRegistered[taskId];
 }
 
+function activated(
+  taskId: N2DormantTaskId,
+  catalogDefaultStatuses: Record<N2DormantTaskId, string>,
+  runtimeExecutorRegistered: Record<N2DormantTaskId, boolean>,
+): boolean {
+  return catalogDefaultStatuses[taskId] !== "BLOCKED_EXECUTOR_PENDING"
+    && runtimeExecutorRegistered[taskId];
+}
+
 export function buildN2DormantActivationPlan(input: {
   readinessStatus: string;
   taskStatuses: Readonly<Record<string, string | undefined>>;
@@ -169,7 +178,11 @@ export function buildN2DormantActivationPlan(input: {
   const baseline021Pass = taskStatuses["TASK-N2-021"] === "PASS";
   const baseline020Dormant = dormant("TASK-N2-020", taskStatuses, catalogDefaultStatuses, runtimeExecutorRegistered);
   const baseline021Dormant = dormant("TASK-N2-021", taskStatuses, catalogDefaultStatuses, runtimeExecutorRegistered);
-  if (baseline020Dormant !== baseline021Dormant) blockers.push("BASELINE_PAIR_ACTIVATION_STATE_DIVERGED");
+  const baseline020Activated = activated("TASK-N2-020", catalogDefaultStatuses, runtimeExecutorRegistered);
+  const baseline021Activated = activated("TASK-N2-021", catalogDefaultStatuses, runtimeExecutorRegistered);
+  if ((baseline020Activated && baseline021Dormant) || (baseline021Activated && baseline020Dormant)) {
+    blockers.push("BASELINE_PAIR_ACTIVATION_STATE_DIVERGED");
+  }
   if (baseline020Pass !== baseline021Pass) blockers.push("BASELINE_PAIR_PASS_STATE_DIVERGED");
   if (taskStatuses["TASK-N2-022"] === "PASS" && !(baseline020Pass && baseline021Pass)) {
     blockers.push("COMMON_COHORT_PASS_WITHOUT_BOTH_BASELINES_PASS");
