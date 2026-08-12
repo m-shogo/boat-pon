@@ -17,6 +17,8 @@ import { DEFAULT_STATUSES } from "./taskCatalog";
 export const N2_DORMANT_ACTIVATION_REPORT_VERSION =
   "n2-dormant-activation-report-v1" as const;
 
+const N2_DORMANT_MAX_ATTEMPTS = 3;
+
 const N2_DORMANT_TASK_TYPES: Record<N2DormantTaskId, string> = {
   "TASK-N2-020": "baseline-market",
   "TASK-N2-021": "baseline-historical",
@@ -186,6 +188,7 @@ export function buildN2DormantActivationReport(input: {
     }
     if (queueTask && (!Number.isSafeInteger(queueTask.attemptCount) || queueTask.attemptCount < 0)) blockers.push(`${taskId}:ATTEMPT_COUNT_INVALID`);
     if (queueTask && (!Number.isSafeInteger(queueTask.maxAttempts) || queueTask.maxAttempts < 1 || queueTask.attemptCount > queueTask.maxAttempts)) blockers.push(`${taskId}:MAX_ATTEMPTS_INVALID`);
+    if (queueTask && queueTask.maxAttempts !== N2_DORMANT_MAX_ATTEMPTS) blockers.push(`${taskId}:MAX_ATTEMPTS_MISMATCH`);
     if (queueTask?.status === "BLOCKED_EXECUTOR_PENDING"
       && catalogTask?.defaultStatus === "BLOCKED_EXECUTOR_PENDING"
       && !registered
