@@ -57,7 +57,7 @@ function resolveInside(repoRoot: string, relativePath: string): string {
   if (!relativePath || relativePath.startsWith("/") || relativePath.includes("\0")) {
     throw new Error("RETAINED_OUTPUT_PATH_UNSAFE");
   }
-  if (relativePath.split("/").some((part) => part === "..")) {
+  if (relativePath.split("/").some((part) => part === "" || part === "." || part === "..")) {
     throw new Error("RETAINED_OUTPUT_PATH_UNSAFE");
   }
   const root = resolve(repoRoot);
