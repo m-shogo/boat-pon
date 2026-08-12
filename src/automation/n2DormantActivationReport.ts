@@ -1,5 +1,6 @@
 import { canonicalHash } from "../research-replay/canonical";
 import {
+  N2_MARKET_BASELINE_MIN_SETTLED_RACES,
   N2_MARKET_BASELINE_READINESS_STATUSES,
   N2_MARKET_BASELINE_READINESS_VERSION,
   classifyN2MarketBaselineReadiness,
@@ -123,6 +124,9 @@ export function buildN2DormantActivationReport(input: {
     && Number.isSafeInteger(input.readiness.integrityBlockedRaceCount)
     && input.readiness.integrityBlockedRaceCount >= 0;
   if (!readinessCountsValid) blockers.push("READINESS_COUNTS_INVALID");
+  if (input.readiness.minimumSettledRaceCount !== N2_MARKET_BASELINE_MIN_SETTLED_RACES) {
+    blockers.push("READINESS_MINIMUM_SETTLED_RACES_MISMATCH");
+  }
   if (readinessCountsValid) {
     const expectedStatus = classifyN2MarketBaselineReadiness({
       blockerCount: readinessBlockers.length,
