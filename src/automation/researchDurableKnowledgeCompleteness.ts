@@ -295,7 +295,7 @@ function assessOutput(input: {
       warnings,
     };
   }
-  const text = readGovernanceFileUtf8Bounded(absolutePath, maxOutputBytes).text;
+  const text = readGovernanceFileUtf8Bounded(absolutePath, maxOutputBytes, input.repoRoot).text;
   const contentDigest = sha256Text(text);
   if (rootClass === "RETAINED") {
     const retainedMatch = input.relativePath.match(
@@ -507,7 +507,7 @@ function assessHistoryFile(input: {
       issues: ["HISTORY_FILE_SIZE_OR_TYPE_INVALID"],
     });
   }
-  const text = readGovernanceFileUtf8Bounded(absolutePath, MAX_HISTORY_BYTES).text;
+  const text = readGovernanceFileUtf8Bounded(absolutePath, MAX_HISTORY_BYTES, input.repoRoot).text;
   const contentDigest = sha256Text(text);
   let history: HistoryLike;
   try {
