@@ -73,15 +73,15 @@ test("history task identity must match its append-only filename", () => {
   );
 });
 
-test("local mode can inspect multiple histories without pretending to be one workflow run", () => {
+test("local mode can inspect multiple numeric histories without pretending to be one workflow run", () => {
   const firstTaskId = "TASK-N2-011";
   const secondTaskId = "TASK-N2-012";
-  const first = history("local-a", firstTaskId);
-  const second = history("local-b", secondTaskId);
+  const first = history("123", firstTaskId);
+  const second = history("456", secondTaskId);
   const result = validateRetainedOutputCommit({
     changedPaths: [first, second],
     expectedRunId: "local",
-    readText: reader({ [first]: evidence("local-a", firstTaskId), [second]: evidence("local-b", secondTaskId) }),
+    readText: reader({ [first]: evidence("123", firstTaskId), [second]: evidence("456", secondTaskId) }),
   });
   assert.equal(result.historyPathCount, 2);
   assert.equal(result.retainedPathCount, 0);
