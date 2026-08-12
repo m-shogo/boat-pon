@@ -15,7 +15,26 @@ const idempotencyKey = "b".repeat(64);
 const authoritySha = "c".repeat(40);
 
 function history(result: string, blocks: unknown): string {
-  return JSON.stringify({ runId, taskId, result, blocks, executed: true, outputDigest, summary: {}, idempotencyKey, authoritySha, outputs: [] });
+  return JSON.stringify({
+    runId,
+    requestId: "REQ-test",
+    intentId: "INTENT-test",
+    taskId,
+    taskType: "pit-audit",
+    safetyLevel: "L0",
+    executorVersion: "test-executor-v1",
+    result,
+    blocks,
+    executed: true,
+    outputDigest,
+    summary: {},
+    idempotencyKey,
+    authoritySha,
+    outputs: [],
+    startedAt: "2026-08-12T00:00:00.000Z",
+    completedAt: "2026-08-12T00:00:01.000Z",
+    elapsedMs: 1000,
+  });
 }
 
 function validate(result: string, blocks: unknown): void {
