@@ -27,6 +27,7 @@ const ALLOWED_OUTPUT_ROOTS = [
   "research/registries/",
   "automation/control/",
 ] as const;
+const RETAINED_OUTPUT_RE = /^reports\/automation\/retained-outputs\/([0-9]+)\/[0-9a-f]{64}-(?!\.{1,2}$)[0-9A-Za-z._-]{1,160}$/u;
 
 export type ResearchAutomationHistoryResult = (typeof RESULTS)[number];
 
@@ -552,6 +553,17 @@ function assessHistoryFile(input: {
     if (safeOutputs.some((value) => value == null)) issues.push("HISTORY_OUTPUT_PATH_NOT_APPROVED");
     const strings = history.outputs.filter((value): value is string => typeof value === "string");
     if (new Set(strings).size !== strings.length) issues.push("HISTORY_OUTPUT_PATH_DUPLICATE");
+    if (typeof history.runId === "string" && RUN_ID_RE.test(history.runId)) {
+      for (const output of strings) {
+        if (!output.startsWith("reports/automation/retained-outputs/")) continue;
+        const retainedMatch = output.match(RETAINED_OUTPUT_RE);
+        if (!retainedMatch) {
+          issues.push("HISTORY_RETAINED_PATH_INVALID");
+        } else if (retainedMatch[1] !== history.runId) {
+          issues.push("HISTORY_RETAINED_RUN_ID_MISMATCH");
+        }
+      }
+    }
   }
   if (history.result === "PASS" && Array.isArray(history.blocks) && history.blocks.length > 0) {
     issues.push("HISTORY_PASS_HAS_BLOCKS");
