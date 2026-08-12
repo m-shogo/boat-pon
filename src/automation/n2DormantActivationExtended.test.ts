@@ -15,12 +15,28 @@ function catalog(): Record<string, string> {
 function registrations(): Record<string, boolean> {
   return Object.fromEntries(N2_DORMANT_TASKS.map((taskId) => [taskId, false]));
 }
-function plan(taskStatuses: Record<string, string>, catalogStatuses = catalog(), registered = registrations()) {
+function lifecycleFor(taskStatuses: Record<string, string>) {
+  const catalogStatuses = catalog();
+  const registered = registrations();
+  for (const taskId of N2_DORMANT_TASKS) {
+    if (taskStatuses[taskId] === "PASS") {
+      catalogStatuses[taskId] = "READY";
+      registered[taskId] = true;
+    }
+  }
+  return { catalogStatuses, registered };
+}
+function plan(
+  taskStatuses: Record<string, string>,
+  catalogStatuses?: Record<string, string>,
+  registered?: Record<string, boolean>,
+) {
+  const lifecycle = lifecycleFor(taskStatuses);
   return buildN2DormantActivationPlan({
     readinessStatus: "READY_FOR_N2_020",
     taskStatuses,
-    catalogDefaultStatuses: catalogStatuses,
-    runtimeExecutorRegistered: registered,
+    catalogDefaultStatuses: catalogStatuses ?? lifecycle.catalogStatuses,
+    runtimeExecutorRegistered: registered ?? lifecycle.registered,
   });
 }
 
@@ -61,8 +77,7 @@ test("confounder audit PASS completes the full dormant N2 chain", () => {
 
 test("an already activated stage waits for its own PASS instead of advancing", () => {
   const taskStatuses = passThrough("TASK-N2-030");
-  const catalogStatuses = catalog();
-  const registered = registrations();
+  const { catalogStatuses, registered } = lifecycleFor(taskStatuses);
   catalogStatuses["TASK-N2-040"] = "READY";
   registered["TASK-N2-040"] = true;
   taskStatuses["TASK-N2-040"] = "RUNNING";
