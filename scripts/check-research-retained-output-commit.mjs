@@ -16,6 +16,7 @@ const RETAINED_PREFIX = "reports/automation/retained-outputs/";
 const HISTORY_PREFIX = "reports/automation/history/";
 const MAX_HISTORY_BYTES = 8_000_000;
 const MAX_RETAINED_BYTES = 2_097_152;
+const MAX_HISTORY_OUTPUT_PATHS = 64;
 const HISTORY_READ_CHUNK_BYTES = 64 * 1024;
 const RETAINED_READ_CHUNK_BYTES = 64 * 1024;
 const RUN_ID_RE = /^[0-9]+$/u;
@@ -142,6 +143,9 @@ function validateRetainedOutputCommit(input) {
     const outputs = history.outputs;
     if (new Set(outputs).size !== outputs.length) {
       throw new Error(`RETAINED_COMMIT_HISTORY_OUTPUTS_DUPLICATE:${historyPath}`);
+    }
+    if (outputs.length > MAX_HISTORY_OUTPUT_PATHS) {
+      throw new Error(`RETAINED_COMMIT_HISTORY_OUTPUT_COUNT_EXCEEDED:${historyPath}:${outputs.length}>${MAX_HISTORY_OUTPUT_PATHS}`);
     }
     for (const output of outputs) {
       if (!approvedOutputPath(output)) {
