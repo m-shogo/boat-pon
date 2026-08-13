@@ -93,3 +93,23 @@ test("builder rejects malformed authority and empty failure code", () => {
   assert.throws(() => history({ authoritySha: "short" }), /FAILURE_HISTORY_AUTHORITY_SHA_INVALID/u);
   assert.throws(() => history({ failureCode: "" }), /FAILURE_HISTORY_FAILURE_CODE_INVALID/u);
 });
+
+test("builder rejects impossible failure-history calendar dates", () => {
+  assert.throws(
+    () => history({ startedAt: "2026-02-30T08:00:00.000Z" }),
+    /FAILURE_HISTORY_STARTED_AT_INVALID/u,
+  );
+  assert.throws(
+    () => history({ completedAt: "2026-04-31T08:00:01.000+09:00" }),
+    /FAILURE_HISTORY_COMPLETED_AT_INVALID/u,
+  );
+});
+
+test("builder preserves valid leap-day failure-history timestamps", () => {
+  const value = history({
+    startedAt: "2028-02-29T08:00:00.000+09:00",
+    completedAt: "2028-02-29T08:00:01.000+09:00",
+  });
+  assert.equal(value.startedAt, "2028-02-28T23:00:00.000Z");
+  assert.equal(value.completedAt, "2028-02-28T23:00:01.000Z");
+});
