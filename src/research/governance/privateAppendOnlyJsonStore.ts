@@ -74,6 +74,31 @@ function readExistingPrivateFile(path: string): string {
   }
 }
 
+function candidateEvidence(input: {
+  contents: string;
+  expectedEvidenceDigest: string;
+  validateExistingEvidence: (value: unknown) => boolean;
+}): void {
+  let payload: Record<string, unknown>;
+  try {
+    const parsed = JSON.parse(input.contents) as unknown;
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) throw new Error("not object");
+    payload = parsed as Record<string, unknown>;
+  } catch {
+    throw new Error("private append-only store candidate payload is invalid");
+  }
+  const evidence = payload.evidence;
+  if (!input.validateExistingEvidence(evidence)) {
+    throw new Error("private append-only store candidate evidence is invalid");
+  }
+  const digest = typeof evidence === "object" && evidence !== null && !Array.isArray(evidence)
+    ? (evidence as Record<string, unknown>).contentDigest
+    : null;
+  if (digest !== input.expectedEvidenceDigest) {
+    throw new Error("private append-only store candidate evidence differs");
+  }
+}
+
 export function appendPrivateJsonStore(input: {
   directory: string;
   filename: string;
@@ -87,6 +112,7 @@ export function appendPrivateJsonStore(input: {
   if (!/^[0-9a-f]{64}$/u.test(input.expectedEvidenceDigest)) {
     throw new Error("private append-only store evidence digest is invalid");
   }
+  candidateEvidence(input);
   const directory = assertPrivateDirectory(input.directory);
   const path = join(directory, input.filename);
   try {
