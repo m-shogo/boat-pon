@@ -51,6 +51,12 @@ type ProgramRow = {
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const VENUE_RE = /^(0[1-9]|1\d|2[0-4])$/;
 
+function isCanonicalCalendarDate(value: string): boolean {
+  if (!DATE_RE.test(value)) return false;
+  const parsed = Date.parse(`${value}T00:00:00.000Z`);
+  return Number.isFinite(parsed) && new Date(parsed).toISOString().slice(0, 10) === value;
+}
+
 function dbMeta(path: string): {
   bytes: number;
   modifiedMs: number;
@@ -95,7 +101,7 @@ export function readN2TrifectaPrivateCapturePlan(input: {
   venueCode: string;
 }): N2TrifectaPrivateCapturePlanReadResult {
   const blockers: string[] = [];
-  if (!DATE_RE.test(input.date)) blockers.push("INVALID_DATE");
+  if (!isCanonicalCalendarDate(input.date)) blockers.push("INVALID_DATE");
   if (!VENUE_RE.test(input.venueCode)) blockers.push("INVALID_VENUE_CODE");
 
   const before = dbMeta(input.primaryDbPath);
