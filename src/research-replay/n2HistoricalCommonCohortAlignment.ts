@@ -2,7 +2,7 @@ import {
   evaluateN2Baseline,
   type N2BaselinePredictionRow,
 } from "./n2BaselineEvaluation";
-import { canonicalHash } from "./canonical";
+import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import type { N2HistoricalOnlyBaselineDataset } from "./n2HistoricalOnlyBaselineDataset";
 
 export const N2_HISTORICAL_COMMON_COHORT_ALIGNMENT_VERSION =
@@ -18,6 +18,16 @@ export type N2HistoricalCommonCohortAlignmentResult = {
 
 function unique(values: readonly string[]): string[] {
   return [...new Set(values)].sort();
+}
+
+function validDecisionCutoff(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  try {
+    canonicalUtcTimestamp(value);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function blockedDataset(
@@ -56,7 +66,7 @@ export function alignN2HistoricalBaselineToDecisionCutoffs(input: {
   const raceKeys = [...new Set(input.dataset.rows.map((row) => row.canonicalRaceKey))].sort();
   for (const raceKey of raceKeys) {
     const cutoff = input.decisionCutoffByRaceKey[raceKey];
-    if (typeof cutoff !== "string" || !Number.isFinite(Date.parse(cutoff))) {
+    if (!validDecisionCutoff(cutoff)) {
       blockers.push(`${raceKey}:DECISION_CUTOFF_MISSING_OR_INVALID`);
       continue;
     }
