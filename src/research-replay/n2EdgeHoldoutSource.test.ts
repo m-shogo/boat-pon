@@ -35,6 +35,16 @@ test("holdout source returns validation/test candidates plus prior rolling histo
  assert.equal(r.reads.rawJsonReadCount,0); assert.equal(r.reads.primaryDatabaseWriteCount,0); assert.equal(r.reads.sidecarDatabaseWriteCount,0);
 }));
 
+test("impossible historical holdout race dates fail closed",()=>withDb((paths,dbs)=>{
+ winner(dbs.sidecar,"bad","2024-02-30:11:R1");
+ dbs.primary.close();dbs.sidecar.close();
+ const r=readN2EdgeHoldoutSource({primaryDbPath:paths.primary,sidecarDbPath:paths.sidecar});
+ assert.equal(r.status,"BLOCKED");
+ assert.ok(r.blockers.includes("2024-02-30:11:R1:RACE_KEY_INVALID"));
+ assert.equal(r.candidateRaceCount,0);
+ assert.equal(r.reads.rawJsonReadCount,0);
+}));
+
 test("post-cutoff program is excluded and counted",()=>withDb((paths,dbs)=>{
  winner(dbs.sidecar,"v","2022-01-01:11:R1");
  program(dbs.primary,"20220101-びわこ-01","2022-01-01","びわこ",1,"2022-01-01 15:00:00");
