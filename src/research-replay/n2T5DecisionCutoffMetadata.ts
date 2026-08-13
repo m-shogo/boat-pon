@@ -1,5 +1,5 @@
-import { existsSync, lstatSync, readFileSync, statSync } from "node:fs";
 import { resolve, sep } from "node:path";
+import { readGovernanceFileUtf8Bounded } from "../research/governance/safeFs";
 
 export const N2_T5_DECISION_CUTOFF_METADATA_VERSION =
   "n2-t5-decision-cutoff-metadata-v1" as const;
@@ -54,13 +54,16 @@ function resolveInside(rootDir: string, relativePath: string): string {
   return target;
 }
 
-function readJsonBounded<T>(path: string, maxBytes: number): T {
-  if (!existsSync(path)) throw new Error("PRIVATE_METADATA_MISSING");
-  const lstat = lstatSync(path);
-  if (lstat.isSymbolicLink() || !lstat.isFile()) throw new Error("PRIVATE_METADATA_FILE_TYPE_INVALID");
-  const stat = statSync(path);
-  if (stat.size <= 0 || stat.size > maxBytes) throw new Error("PRIVATE_METADATA_SIZE_INVALID");
-  return JSON.parse(readFileSync(path, "utf8")) as T;
+function readJsonBounded<T>(path: string, maxBytes: number, trustedRoot: string): T {
+  try {
+    const { text, bytes } = readGovernanceFileUtf8Bounded(path, maxBytes, trustedRoot);
+    if (bytes <= 0) throw new Error("PRIVATE_METADATA_EMPTY");
+    return JSON.parse(text) as T;
+  } catch (error) {
+    if (error instanceof SyntaxError) throw new Error("PRIVATE_METADATA_JSON_INVALID");
+    if (error instanceof Error && error.message === "PRIVATE_METADATA_EMPTY") throw error;
+    throw new Error("PRIVATE_METADATA_READ_INVALID");
+  }
 }
 
 function unique(values: readonly string[]): string[] {
@@ -123,6 +126,7 @@ export function readN2T5DecisionCutoffMetadata(input: {
       marker = readJsonBounded<AcceptedMarker>(
         resolveInside(dataRoot, `${location.directory}/accepted.json`),
         MAX_MARKER_BYTES,
+        dataRoot,
       );
     } catch (error) {
       blockers.push(`${raceKey}:ACCEPTED_MARKER_${error instanceof Error ? error.message : "INVALID"}`);
@@ -148,6 +152,7 @@ export function readN2T5DecisionCutoffMetadata(input: {
       envelope = readJsonBounded<CaptureEnvelope>(
         resolveInside(dataRoot, marker.envelopeRelativePath),
         MAX_ENVELOPE_BYTES,
+        dataRoot,
       );
       privateEnvelopeMetadataReadCount += 1;
     } catch (error) {
