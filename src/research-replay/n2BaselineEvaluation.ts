@@ -1,4 +1,4 @@
-import { canonicalHash } from "./canonical";
+import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import {
   enumerateBetSelections,
   validateOddsUsage,
@@ -115,7 +115,12 @@ const EPSILON = 1e-15;
 const CALIBRATION_BIN_COUNT = 10;
 
 function validTimestamp(value: string): boolean {
-  return Number.isFinite(Date.parse(value));
+  try {
+    canonicalUtcTimestamp(value);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function raceDate(canonicalRaceKey: string): string | null {
