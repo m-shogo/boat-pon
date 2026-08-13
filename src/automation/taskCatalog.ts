@@ -13,88 +13,47 @@ import { TASK_STATUSES, type SafetyLevel, type TaskStatus } from "./researchOrch
 export const CATALOG_SCHEMA_VERSION = "research-task-catalog-v1";
 export const QUEUE_STATE_SCHEMA_VERSION = "research-queue-state-v1";
 
-// executor 未実装の task を READY にしないための擬似状態（catalog 側 defaultStatus 用）。
 export const DEFAULT_STATUSES = ["READY", "BLOCKED_EXECUTOR_PENDING", "BLOCKED_DEPENDENCY"] as const;
 export type DefaultStatus = (typeof DEFAULT_STATUSES)[number];
 
 export type TaskDefinition = {
-  taskId: string;
-  taskDefinitionVersion: number;
-  title: string;
-  objective: string;
-  taskType: string;
-  executor: string;
-  safetyLevel: SafetyLevel;
-  dependencies: string[];
-  maxDurationSeconds: number;
-  expectedInputs: string[];
-  expectedOutputs: string[];
-  estimatedDurationSeconds: number;
-  defaultStatus: DefaultStatus;
-  valueOfInformation: string;
-  invalidationCondition: string;
-  /** true の task は成功後に READY へ戻る（planner 等の恒久 task）。同一入力では no-op。 */
-  recurring?: boolean;
+  taskId: string; taskDefinitionVersion: number; title: string; objective: string; taskType: string; executor: string;
+  safetyLevel: SafetyLevel; dependencies: string[]; maxDurationSeconds: number; expectedInputs: string[];
+  expectedOutputs: string[]; estimatedDurationSeconds: number; defaultStatus: DefaultStatus; valueOfInformation: string;
+  invalidationCondition: string; recurring?: boolean;
 };
-
-export type TaskCatalog = {
-  catalogSchemaVersion: string;
-  catalogVersion: string;
-  updatedAt: string;
-  note?: string;
-  tasks: TaskDefinition[];
-};
-
+export type TaskCatalog = { catalogSchemaVersion: string; catalogVersion: string; updatedAt: string; note?: string; tasks: TaskDefinition[] };
 export type TaskState = {
-  status: TaskStatus;
-  taskDefinitionVersion: number;
-  authoritySha: string | null;
-  attemptCount: number;
-  maxAttempts: number;
-  evidenceLinks: string[];
-  resultDigest: string | null;
-  lastFailure: { code: string; at: string; message?: string } | null;
-  checkpoint: unknown | null;
-  updatedAt: string;
-  nextDecision?: string;
+  status: TaskStatus; taskDefinitionVersion: number; authoritySha: string | null; attemptCount: number; maxAttempts: number;
+  evidenceLinks: string[]; resultDigest: string | null; lastFailure: { code: string; at: string; message?: string } | null;
+  checkpoint: unknown | null; updatedAt: string; nextDecision?: string;
 };
+export type QueueState = { stateSchemaVersion: string; stateVersion: number; catalogVersion: string; updatedAt: string; tasks: Record<string, TaskState> };
 
-export type QueueState = {
-  stateSchemaVersion: string;
-  stateVersion: number;
-  catalogVersion: string;
-  updatedAt: string;
-  tasks: Record<string, TaskState>;
-};
-
-// ---- catalog validation（strict, fail-closed）----
 const TASKID_RE = /^TASK-[0-9A-Za-z._-]{1,64}$/;
 const RFC3339_TIMESTAMP_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+function hasValidCalendarDate(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T/u.exec(value);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return parsed.getUTCFullYear() === year && parsed.getUTCMonth() === month - 1 && parsed.getUTCDate() === day;
+}
 const isValidTimestamp = (value: unknown): value is string =>
-  typeof value === "string" && RFC3339_TIMESTAMP_RE.test(value) && Number.isFinite(Date.parse(value));
+  typeof value === "string" && RFC3339_TIMESTAMP_RE.test(value) && hasValidCalendarDate(value) && Number.isFinite(Date.parse(value));
 const SAFETY = new Set(["L0", "L1", "L2", "L3", "L4"]);
 const CATALOG_FIELDS = new Set(["catalogSchemaVersion", "catalogVersion", "updatedAt", "note", "tasks"]);
-const TASK_DEFINITION_FIELDS = new Set([
-  "taskId", "taskDefinitionVersion", "title", "objective", "taskType", "executor", "safetyLevel",
-  "dependencies", "maxDurationSeconds", "expectedInputs", "expectedOutputs", "estimatedDurationSeconds",
-  "defaultStatus", "valueOfInformation", "invalidationCondition", "recurring",
-]);
+const TASK_DEFINITION_FIELDS = new Set(["taskId", "taskDefinitionVersion", "title", "objective", "taskType", "executor", "safetyLevel", "dependencies", "maxDurationSeconds", "expectedInputs", "expectedOutputs", "estimatedDurationSeconds", "defaultStatus", "valueOfInformation", "invalidationCondition", "recurring"]);
 const QUEUE_STATE_FIELDS = new Set(["stateSchemaVersion", "stateVersion", "catalogVersion", "updatedAt", "tasks"]);
-const TASK_STATE_FIELDS = new Set([
-  "status", "taskDefinitionVersion", "authoritySha", "attemptCount", "maxAttempts", "evidenceLinks",
-  "resultDigest", "lastFailure", "checkpoint", "updatedAt", "nextDecision",
-]);
-const TASK_STATE_REQUIRED_FIELDS = [
-  "status", "taskDefinitionVersion", "authoritySha", "attemptCount", "maxAttempts", "evidenceLinks",
-  "resultDigest", "lastFailure", "checkpoint", "updatedAt",
-] as const;
+const TASK_STATE_FIELDS = new Set(["status", "taskDefinitionVersion", "authoritySha", "attemptCount", "maxAttempts", "evidenceLinks", "resultDigest", "lastFailure", "checkpoint", "updatedAt", "nextDecision"]);
+const TASK_STATE_REQUIRED_FIELDS = ["status", "taskDefinitionVersion", "authoritySha", "attemptCount", "maxAttempts", "evidenceLinks", "resultDigest", "lastFailure", "checkpoint", "updatedAt"] as const;
 const LAST_FAILURE_FIELDS = new Set(["code", "at", "message"]);
 
 export function validateCatalog(input: unknown): { valid: boolean; errors: string[]; catalog: TaskCatalog | null } {
   const errors: string[] = [];
-  if (typeof input !== "object" || input === null || Array.isArray(input)) {
-    return { valid: false, errors: ["catalog must be an object"], catalog: null };
-  }
+  if (typeof input !== "object" || input === null || Array.isArray(input)) return { valid: false, errors: ["catalog must be an object"], catalog: null };
   const c = input as Record<string, unknown>;
   for (const field of Object.keys(c)) if (!CATALOG_FIELDS.has(field)) errors.push(`unknown catalog field: ${field}`);
   if (c.catalogSchemaVersion !== CATALOG_SCHEMA_VERSION) errors.push(`catalogSchemaVersion must be ${CATALOG_SCHEMA_VERSION}`);
@@ -105,18 +64,12 @@ export function validateCatalog(input: unknown): { valid: boolean; errors: strin
   const ids = new Set<string>();
   for (const [i, t0] of (c.tasks as unknown[]).entries()) {
     const at = `tasks[${i}]`;
-    if (typeof t0 !== "object" || t0 === null || Array.isArray(t0)) {
-      errors.push(`${at} must be an object`);
-      continue;
-    }
+    if (typeof t0 !== "object" || t0 === null || Array.isArray(t0)) { errors.push(`${at} must be an object`); continue; }
     const t = t0 as Record<string, unknown>;
     for (const field of Object.keys(t)) if (!TASK_DEFINITION_FIELDS.has(field)) errors.push(`${at} unknown field: ${field}`);
-    if (typeof t.taskId !== "string" || !TASKID_RE.test(t.taskId)) errors.push(`${at}.taskId invalid`);
-    else { if (ids.has(t.taskId)) errors.push(`${at}.taskId duplicate: ${t.taskId}`); ids.add(t.taskId); }
+    if (typeof t.taskId !== "string" || !TASKID_RE.test(t.taskId)) errors.push(`${at}.taskId invalid`); else { if (ids.has(t.taskId)) errors.push(`${at}.taskId duplicate: ${t.taskId}`); ids.add(t.taskId); }
     if (!Number.isInteger(t.taskDefinitionVersion) || (t.taskDefinitionVersion as number) < 1) errors.push(`${at}.taskDefinitionVersion invalid`);
-    for (const f of ["title", "objective", "taskType", "executor", "valueOfInformation", "invalidationCondition"]) {
-      if (typeof t[f] !== "string" || (t[f] as string).trim() === "") errors.push(`${at}.${f} invalid`);
-    }
+    for (const f of ["title", "objective", "taskType", "executor", "valueOfInformation", "invalidationCondition"]) if (typeof t[f] !== "string" || (t[f] as string).trim() === "") errors.push(`${at}.${f} invalid`);
     if (!SAFETY.has(t.safetyLevel as string)) errors.push(`${at}.safetyLevel invalid`);
     if (!Array.isArray(t.dependencies) || (t.dependencies as unknown[]).some((d) => typeof d !== "string")) errors.push(`${at}.dependencies invalid`);
     if (!Number.isInteger(t.maxDurationSeconds) || (t.maxDurationSeconds as number) < 60 || (t.maxDurationSeconds as number) > 21600) errors.push(`${at}.maxDurationSeconds invalid`);
@@ -126,14 +79,12 @@ export function validateCatalog(input: unknown): { valid: boolean; errors: strin
     if (!DEFAULT_STATUSES.includes(t.defaultStatus as DefaultStatus)) errors.push(`${at}.defaultStatus invalid`);
     if ("recurring" in t && typeof t.recurring !== "boolean") errors.push(`${at}.recurring must be boolean`);
   }
-  // dependency 参照先が catalog に存在すること。
   for (const t0 of c.tasks as unknown[]) {
     if (typeof t0 !== "object" || t0 === null || Array.isArray(t0)) continue;
     const t = t0 as Record<string, unknown>;
     if (typeof t.taskId !== "string" || !Array.isArray(t.dependencies)) continue;
     for (const d of t.dependencies) if (typeof d === "string" && !ids.has(d)) errors.push(`task ${t.taskId} depends on unknown ${d}`);
   }
-  // dependency graph はDAGでなければならない。cycle/self-dependencyは永久deadlockになるためfail-closed。
   const graph = new Map<string, string[]>();
   for (const t0 of c.tasks as unknown[]) {
     if (typeof t0 !== "object" || t0 === null || Array.isArray(t0)) continue;
@@ -142,36 +93,21 @@ export function validateCatalog(input: unknown): { valid: boolean; errors: strin
     if (!Array.isArray(t.dependencies) || (t.dependencies as unknown[]).some((d) => typeof d !== "string")) continue;
     graph.set(t.taskId, t.dependencies as string[]);
   }
-  const visiting = new Set<string>();
-  const visited = new Set<string>();
+  const visiting = new Set<string>(); const visited = new Set<string>();
   const visit = (id: string, path: string[]): boolean => {
-    if (visiting.has(id)) {
-      const cycleStart = path.indexOf(id);
-      const cycle = [...(cycleStart >= 0 ? path.slice(cycleStart) : path), id];
-      errors.push(`dependency cycle: ${cycle.join(" -> ")}`);
-      return true;
-    }
+    if (visiting.has(id)) { const cycleStart = path.indexOf(id); const cycle = [...(cycleStart >= 0 ? path.slice(cycleStart) : path), id]; errors.push(`dependency cycle: ${cycle.join(" -> ")}`); return true; }
     if (visited.has(id)) return false;
-    visiting.add(id);
-    for (const dependency of graph.get(id) ?? []) {
-      if (graph.has(dependency) && visit(dependency, [...path, id])) return true;
-    }
-    visiting.delete(id);
-    visited.add(id);
-    return false;
+    visiting.add(id); for (const dependency of graph.get(id) ?? []) if (graph.has(dependency) && visit(dependency, [...path, id])) return true;
+    visiting.delete(id); visited.add(id); return false;
   };
-  for (const id of [...graph.keys()].sort()) {
-    if (visit(id, [])) break;
-  }
+  for (const id of [...graph.keys()].sort()) if (visit(id, [])) break;
   if (errors.length > 0) return { valid: false, errors, catalog: null };
   return { valid: true, errors: [], catalog: c as unknown as TaskCatalog };
 }
 
 export function validateQueueState(input: unknown): { valid: boolean; errors: string[]; state: QueueState | null } {
   const errors: string[] = [];
-  if (typeof input !== "object" || input === null || Array.isArray(input)) {
-    return { valid: false, errors: ["state must be an object"], state: null };
-  }
+  if (typeof input !== "object" || input === null || Array.isArray(input)) return { valid: false, errors: ["state must be an object"], state: null };
   const s = input as Record<string, unknown>;
   for (const field of Object.keys(s)) if (!QUEUE_STATE_FIELDS.has(field)) errors.push(`unknown state field: ${field}`);
   if (s.stateSchemaVersion !== QUEUE_STATE_SCHEMA_VERSION) errors.push(`stateSchemaVersion must be ${QUEUE_STATE_SCHEMA_VERSION}`);
@@ -181,10 +117,7 @@ export function validateQueueState(input: unknown): { valid: boolean; errors: st
   if (typeof s.tasks !== "object" || s.tasks === null || Array.isArray(s.tasks)) { errors.push("tasks must be an object map"); return { valid: false, errors, state: null }; }
   for (const [id, v0] of Object.entries(s.tasks as Record<string, unknown>)) {
     if (!TASKID_RE.test(id)) errors.push(`state task id invalid: ${id}`);
-    if (typeof v0 !== "object" || v0 === null || Array.isArray(v0)) {
-      errors.push(`state ${id} must be an object`);
-      continue;
-    }
+    if (typeof v0 !== "object" || v0 === null || Array.isArray(v0)) { errors.push(`state ${id} must be an object`); continue; }
     const v = v0 as Record<string, unknown>;
     for (const field of Object.keys(v)) if (!TASK_STATE_FIELDS.has(field)) errors.push(`state ${id} unknown field: ${field}`);
     for (const field of TASK_STATE_REQUIRED_FIELDS) if (!(field in v)) errors.push(`state ${id}.${field} required`);
@@ -192,18 +125,14 @@ export function validateQueueState(input: unknown): { valid: boolean; errors: st
     if (!Number.isInteger(v.taskDefinitionVersion) || (v.taskDefinitionVersion as number) < 1) errors.push(`state ${id}.taskDefinitionVersion invalid`);
     if (!Number.isInteger(v.attemptCount) || (v.attemptCount as number) < 0) errors.push(`state ${id}.attemptCount invalid`);
     if (!Number.isInteger(v.maxAttempts) || (v.maxAttempts as number) < 1) errors.push(`state ${id}.maxAttempts invalid`);
-    if (Number.isInteger(v.attemptCount) && Number.isInteger(v.maxAttempts) && (v.attemptCount as number) > (v.maxAttempts as number)) {
-      errors.push(`state ${id}.attemptCount exceeds maxAttempts`);
-    }
+    if (Number.isInteger(v.attemptCount) && Number.isInteger(v.maxAttempts) && (v.attemptCount as number) > (v.maxAttempts as number)) errors.push(`state ${id}.attemptCount exceeds maxAttempts`);
     if ("authoritySha" in v && v.authoritySha !== null && (typeof v.authoritySha !== "string" || !/^[0-9a-f]{7,40}$/.test(v.authoritySha))) errors.push(`state ${id}.authoritySha invalid`);
     if ("resultDigest" in v && v.resultDigest !== null && (typeof v.resultDigest !== "string" || !/^[0-9a-f]{64}$/.test(v.resultDigest))) errors.push(`state ${id}.resultDigest invalid`);
     if ("evidenceLinks" in v && (!Array.isArray(v.evidenceLinks) || (v.evidenceLinks as unknown[]).some((link) => typeof link !== "string"))) errors.push(`state ${id}.evidenceLinks invalid`);
     if (!isValidTimestamp(v.updatedAt)) errors.push(`state ${id}.updatedAt invalid`);
     if ("nextDecision" in v && (typeof v.nextDecision !== "string" || v.nextDecision.trim() === "")) errors.push(`state ${id}.nextDecision invalid`);
     if ("lastFailure" in v && v.lastFailure !== null) {
-      if (typeof v.lastFailure !== "object" || Array.isArray(v.lastFailure)) {
-        errors.push(`state ${id}.lastFailure invalid`);
-      } else {
+      if (typeof v.lastFailure !== "object" || Array.isArray(v.lastFailure)) errors.push(`state ${id}.lastFailure invalid`); else {
         const failure = v.lastFailure as Record<string, unknown>;
         for (const field of Object.keys(failure)) if (!LAST_FAILURE_FIELDS.has(field)) errors.push(`state ${id}.lastFailure unknown field: ${field}`);
         if (typeof failure.code !== "string" || failure.code.trim() === "") errors.push(`state ${id}.lastFailure.code invalid`);
@@ -216,124 +145,24 @@ export function validateQueueState(input: unknown): { valid: boolean; errors: st
   return { valid: true, errors: [], state: s as unknown as QueueState };
 }
 
-// state 全体の deterministic digest（旧 queueDigest の後継）。key 順を固定して安定化する。
 export function computeStateDigest(state: QueueState): string {
-  const stable = {
-    stateSchemaVersion: state.stateSchemaVersion,
-    stateVersion: state.stateVersion,
-    catalogVersion: state.catalogVersion,
-    tasks: Object.fromEntries(
-      Object.keys(state.tasks).sort().map((k) => {
-        const t = state.tasks[k];
-        return [k, { status: t.status, taskDefinitionVersion: t.taskDefinitionVersion, attemptCount: t.attemptCount, resultDigest: t.resultDigest ?? null }];
-      }),
-    ),
-  };
+  const stable = { stateSchemaVersion: state.stateSchemaVersion, stateVersion: state.stateVersion, catalogVersion: state.catalogVersion, tasks: Object.fromEntries(Object.keys(state.tasks).sort().map((k) => { const t = state.tasks[k]; return [k, { status: t.status, taskDefinitionVersion: t.taskDefinitionVersion, attemptCount: t.attemptCount, resultDigest: t.resultDigest ?? null }]; })) };
   return createHash("sha256").update(JSON.stringify(stable)).digest("hex");
 }
 
-export type MergedTask = TaskDefinition & {
-  status: TaskStatus | "BLOCKED_EXECUTOR_PENDING" | "BLOCKED_DEPENDENCY";
-  state: TaskState | null;
-  staleDefinition: boolean;
-};
-
-// catalog（定義）と state（状態）を合成する。state に無い task は defaultStatus を状態とする。
-// state.taskDefinitionVersion が catalog と一致しない場合は staleDefinition=true（revalidation 待ち）。
-export function mergeCatalogAndState(catalog: TaskCatalog, state: QueueState): MergedTask[] {
-  return catalog.tasks.map((def) => {
-    const st = state.tasks[def.taskId] ?? null;
-    const staleDefinition = st != null && st.taskDefinitionVersion !== def.taskDefinitionVersion;
-    const status = st ? st.status : (def.defaultStatus as MergedTask["status"]);
-    return { ...def, status, state: st, staleDefinition };
-  });
-}
-
-// dispatch 可能な task: status=READY かつ全 dependency が PASS。
-// ただしどこか1件でも definition drift があれば、queue authority 全体をfail-closedにする。
-export function dispatchableTasks(merged: MergedTask[]): MergedTask[] {
-  if (merged.some((t) => t.staleDefinition)) return [];
-  const byId = new Map(merged.map((t) => [t.taskId, t]));
-  return merged.filter((t) =>
-    t.status === "READY"
-    && !t.staleDefinition
-    && (t.dependencies ?? []).every((d) => byId.get(d)?.status === "PASS"));
-}
-
-// taskId（または NEXT）を解決する。NEXT は dispatchable のうち estimatedDuration 昇順で 1 件。
-export function resolveTask(merged: MergedTask[], taskId: string): { task: MergedTask | null; reason: string } {
-  if (taskId === "NEXT") {
-    const cands = dispatchableTasks(merged).sort((a, b) => a.estimatedDurationSeconds - b.estimatedDurationSeconds);
-    return cands.length ? { task: cands[0], reason: "NEXT resolved to earliest-dispatchable" } : { task: null, reason: "no dispatchable READY task" };
-  }
-  const t = merged.find((x) => x.taskId === taskId);
-  if (!t) return { task: null, reason: `task not found in catalog: ${taskId}` };
-  if (merged.some((x) => x.staleDefinition)) {
-    return { task: t.staleDefinition ? t : { ...t, staleDefinition: true }, reason: "global task definition drift blocks dispatch" };
-  }
-  return { task: t, reason: "resolved by id" };
-}
-
+export type MergedTask = TaskDefinition & { status: TaskStatus | "BLOCKED_EXECUTOR_PENDING" | "BLOCKED_DEPENDENCY"; state: TaskState | null; staleDefinition: boolean };
+export function mergeCatalogAndState(catalog: TaskCatalog, state: QueueState): MergedTask[] { return catalog.tasks.map((def) => { const st = state.tasks[def.taskId] ?? null; const staleDefinition = st != null && st.taskDefinitionVersion !== def.taskDefinitionVersion; const status = st ? st.status : (def.defaultStatus as MergedTask["status"]); return { ...def, status, state: st, staleDefinition }; }); }
+export function dispatchableTasks(merged: MergedTask[]): MergedTask[] { if (merged.some((t) => t.staleDefinition)) return []; const byId = new Map(merged.map((t) => [t.taskId, t])); return merged.filter((t) => t.status === "READY" && !t.staleDefinition && (t.dependencies ?? []).every((d) => byId.get(d)?.status === "PASS")); }
+export function resolveTask(merged: MergedTask[], taskId: string): { task: MergedTask | null; reason: string } { if (taskId === "NEXT") { const cands = dispatchableTasks(merged).sort((a, b) => a.estimatedDurationSeconds - b.estimatedDurationSeconds); return cands.length ? { task: cands[0], reason: "NEXT resolved to earliest-dispatchable" } : { task: null, reason: "no dispatchable READY task" }; } const t = merged.find((x) => x.taskId === taskId); if (!t) return { task: null, reason: `task not found in catalog: ${taskId}` }; if (merged.some((x) => x.staleDefinition)) return { task: t.staleDefinition ? t : { ...t, staleDefinition: true }, reason: "global task definition drift blocks dispatch" }; return { task: t, reason: "resolved by id" }; }
 export const DEFAULT_MAX_ATTEMPTS = 3;
-
-export type ReconcilePlan = {
-  added: Array<{ taskId: string; status: string; taskDefinitionVersion: number }>;
-  preserved: string[];
-  staleDefinition: Array<{ taskId: string; stateDefinitionVersion: number; catalogDefinitionVersion: number }>;
-  orphaned: string[];
-  catalogVersionChanged: boolean;
-};
+export type ReconcilePlan = { added: Array<{ taskId: string; status: string; taskDefinitionVersion: number }>; preserved: string[]; staleDefinition: Array<{ taskId: string; stateDefinitionVersion: number; catalogDefinitionVersion: number }>; orphaned: string[]; catalogVersionChanged: boolean };
 export type ReconcileResult = { changed: boolean; plan: ReconcilePlan; nextState: QueueState };
-
-// catalog（main, 正）と queue-state（automation branch）を reconcile する純関数。
-// 決定的・冪等・fail-safe。既存 state entry は一切変更しない（PASS / attemptCount / evidence を保存）。
-// - catalog に在り state に無い task → defaultStatus で追加
-// - state に在り catalog に無い task → ORPHANED（残す・dispatch しない・削除しない）
-// - taskDefinitionVersion が catalog と不一致 → staleDefinition 診断（自動で READY へ戻さない）
-// - 変更が無ければ changed=false（stateVersion を進めない・入力 state をそのまま返す = NO_CHANGE）
-export function reconcileCatalogState(
-  catalog: TaskCatalog, state: QueueState, opts: { now?: string; maxAttempts?: number } = {},
-): ReconcileResult {
-  const now = opts.now ?? new Date().toISOString();
-  const maxAttempts = opts.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
-  const catalogById = new Map(catalog.tasks.map((t) => [t.taskId, t]));
-
-  const added: ReconcilePlan["added"] = [];
-  const preserved: string[] = [];
-  const staleDefinition: ReconcilePlan["staleDefinition"] = [];
-  const orphaned: string[] = [];
-
-  // 既存 entry を verbatim 保存（順序も安定化のため id 昇順で再構築）。
-  const nextTasks: Record<string, TaskState> = {};
-  for (const id of Object.keys(state.tasks).sort()) {
-    nextTasks[id] = { ...state.tasks[id] };
-    const def = catalogById.get(id);
-    if (!def) { orphaned.push(id); continue; }
-    preserved.push(id);
-    if (state.tasks[id].taskDefinitionVersion !== def.taskDefinitionVersion) {
-      staleDefinition.push({ taskId: id, stateDefinitionVersion: state.tasks[id].taskDefinitionVersion, catalogDefinitionVersion: def.taskDefinitionVersion });
-    }
-  }
-  // catalog 順（決定的）に、state に無い task を defaultStatus で追加。
-  for (const def of catalog.tasks) {
-    if (def.taskId in nextTasks) continue;
-    nextTasks[def.taskId] = {
-      status: def.defaultStatus as TaskStatus,
-      taskDefinitionVersion: def.taskDefinitionVersion,
-      authoritySha: null, attemptCount: 0, maxAttempts,
-      evidenceLinks: [], resultDigest: null, lastFailure: null, checkpoint: null, updatedAt: now,
-    };
-    added.push({ taskId: def.taskId, status: def.defaultStatus, taskDefinitionVersion: def.taskDefinitionVersion });
-  }
-
-  const catalogVersionChanged = state.catalogVersion !== catalog.catalogVersion;
-  const changed = added.length > 0 || catalogVersionChanged;
-  const plan: ReconcilePlan = { added, preserved, staleDefinition, orphaned, catalogVersionChanged };
-
+export function reconcileCatalogState(catalog: TaskCatalog, state: QueueState, opts: { now?: string; maxAttempts?: number } = {}): ReconcileResult {
+  const now = opts.now ?? new Date().toISOString(); const maxAttempts = opts.maxAttempts ?? DEFAULT_MAX_ATTEMPTS; const catalogById = new Map(catalog.tasks.map((t) => [t.taskId, t]));
+  const added: ReconcilePlan["added"] = []; const preserved: string[] = []; const staleDefinition: ReconcilePlan["staleDefinition"] = []; const orphaned: string[] = []; const nextTasks: Record<string, TaskState> = {};
+  for (const id of Object.keys(state.tasks).sort()) { nextTasks[id] = { ...state.tasks[id] }; const def = catalogById.get(id); if (!def) { orphaned.push(id); continue; } preserved.push(id); if (state.tasks[id].taskDefinitionVersion !== def.taskDefinitionVersion) staleDefinition.push({ taskId: id, stateDefinitionVersion: state.tasks[id].taskDefinitionVersion, catalogDefinitionVersion: def.taskDefinitionVersion }); }
+  for (const def of catalog.tasks) { if (def.taskId in nextTasks) continue; nextTasks[def.taskId] = { status: def.defaultStatus as TaskStatus, taskDefinitionVersion: def.taskDefinitionVersion, authoritySha: null, attemptCount: 0, maxAttempts, evidenceLinks: [], resultDigest: null, lastFailure: null, checkpoint: null, updatedAt: now }; added.push({ taskId: def.taskId, status: def.defaultStatus, taskDefinitionVersion: def.taskDefinitionVersion }); }
+  const catalogVersionChanged = state.catalogVersion !== catalog.catalogVersion; const changed = added.length > 0 || catalogVersionChanged; const plan: ReconcilePlan = { added, preserved, staleDefinition, orphaned, catalogVersionChanged };
   if (!changed) return { changed: false, plan, nextState: state };
-  const nextState: QueueState = {
-    ...state, tasks: nextTasks, catalogVersion: catalog.catalogVersion,
-    stateVersion: state.stateVersion + 1, updatedAt: now,
-  };
-  return { changed: true, plan, nextState };
+  return { changed: true, plan, nextState: { ...state, tasks: nextTasks, catalogVersion: catalog.catalogVersion, stateVersion: state.stateVersion + 1, updatedAt: now } };
 }
