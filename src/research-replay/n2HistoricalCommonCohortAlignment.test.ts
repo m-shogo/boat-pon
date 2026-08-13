@@ -105,3 +105,17 @@ test("alignment fails closed when even one market cutoff is missing", () => {
   assert.ok(aligned.blockers.includes("2026-08-07:05:R1:DECISION_CUTOFF_MISSING_OR_INVALID"));
   assert.equal(aligned.dataset.rowCount, 0);
 });
+
+test("alignment rejects an impossible market cutoff calendar date", () => {
+  const races = evaluation();
+  const base = buildN2HistoricalOnlyBaselineDataset({ training: training(), evaluationRaces: races });
+  const map = cutoffs(races);
+  map["2026-08-07:05:R1"] = "2026-02-30T03:30:00.000Z";
+  const aligned = alignN2HistoricalBaselineToDecisionCutoffs({
+    dataset: base,
+    decisionCutoffByRaceKey: map,
+  });
+  assert.equal(aligned.status, "BLOCKED");
+  assert.ok(aligned.blockers.includes("2026-08-07:05:R1:DECISION_CUTOFF_MISSING_OR_INVALID"));
+  assert.equal(aligned.dataset.rowCount, 0);
+});
