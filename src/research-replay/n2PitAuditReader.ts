@@ -1,6 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { pathToFileURL } from "node:url";
 import { officialVenueCode } from "../domain/officialLinks";
+import { canonicalRaceKey } from "./identity";
 import type { N2PitAuditObservation } from "./n2PitAudit";
 
 export const N2_PIT_AUDIT_READER_VERSION = "n2-pit-audit-reader-v2";
@@ -62,21 +63,27 @@ function openImmutable(path: string): DatabaseSync {
   return db;
 }
 
-function parseCanonicalN2Key(canonicalRaceKey: string): CanonicalN2Key | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2}):(0[1-9]|1\d|2[0-4]):R(\d{1,2})$/.exec(canonicalRaceKey);
+function parseCanonicalN2Key(canonicalRaceKeyValue: string): CanonicalN2Key | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2}):(0[1-9]|1\d|2[0-4]):R(\d{1,2})$/.exec(canonicalRaceKeyValue);
   if (!match) return null;
   const raceNo = Number(match[5]);
   if (!Number.isInteger(raceNo) || raceNo < 1 || raceNo > 12) return null;
+  const date = `${match[1]}-${match[2]}-${match[3]}`;
+  try {
+    canonicalRaceKey(date, match[4], raceNo);
+  } catch {
+    return null;
+  }
   return {
-    date: `${match[1]}-${match[2]}-${match[3]}`,
+    date,
     compactDate: `${match[1]}${match[2]}${match[3]}`,
     venueCode: match[4],
     raceNo,
   };
 }
 
-export function raceIdFromCanonicalN2Key(canonicalRaceKey: string): string | null {
-  const parsed = parseCanonicalN2Key(canonicalRaceKey);
+export function raceIdFromCanonicalN2Key(canonicalRaceKeyValue: string): string | null {
+  const parsed = parseCanonicalN2Key(canonicalRaceKeyValue);
   return parsed === null
     ? null
     : `${parsed.compactDate}-${parsed.venueCode}-${String(parsed.raceNo).padStart(2, "0")}`;
