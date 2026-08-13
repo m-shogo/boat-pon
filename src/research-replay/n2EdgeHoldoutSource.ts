@@ -52,6 +52,12 @@ export type N2EdgeHoldoutSourceRead = {
 
 function unique(values: string[]): string[] { return [...new Set(values)].sort(); }
 function validSelection(value: string): boolean { return SELECTION_RE.test(value) && new Set(value.split("-")).size === 3; }
+function validRaceKey(value: string): boolean {
+  const match = RACE_KEY_RE.exec(value);
+  if (!match) return false;
+  const parsed = Date.parse(`${match[1]}T00:00:00.000Z`);
+  return Number.isFinite(parsed) && new Date(parsed).toISOString().slice(0, 10) === match[1];
+}
 function tableExists(db: DatabaseSync, table: string): boolean {
   return Boolean(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table));
 }
@@ -124,7 +130,7 @@ export function readN2EdgeHoldoutSource(input: { primaryDbPath: string; sidecarD
       const current=grouped.get(row.raceKey)??[]; if(row.winningSelection!=null) current.push(row.winningSelection); grouped.set(row.raceKey,current);
     }
     for (const [raceKey,selections] of grouped) {
-      if (!RACE_KEY_RE.test(raceKey)) { blockers.push(`${raceKey}:RACE_KEY_INVALID`); continue; }
+      if (!validRaceKey(raceKey)) { blockers.push(`${raceKey}:RACE_KEY_INVALID`); continue; }
       if (selections.length!==1) { blockers.push(`${raceKey}:ACTIVE_WINNER_COUNT_${selections.length}`); continue; }
       if (!validSelection(selections[0])) { blockers.push(`${raceKey}:WINNING_SELECTION_INVALID`); continue; }
       historicalOutcomes.push({canonicalRaceKey:raceKey,winningSelection:selections[0]});
