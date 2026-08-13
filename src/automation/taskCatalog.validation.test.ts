@@ -90,6 +90,15 @@ test("queue state requires RFC3339 task timestamps", () => {
   assert.equal(validateQueueState(queue(validTask({ updatedAt: "2026-08-10T00:00:00+09:00" }))).valid, true);
 });
 
+test("queue state rejects impossible Gregorian calendar timestamps", () => {
+  assert.equal(validateQueueState({ ...queue(validTask()), updatedAt: "2026-02-30T00:00:00Z" }).valid, false);
+  assert.equal(validateQueueState(queue(validTask({ updatedAt: "2026-04-31T00:00:00+09:00" }))).valid, false);
+  assert.equal(validateQueueState(queue(validTask({
+    lastFailure: { code: "EXECUTOR_EXCEPTION", at: "2026-02-29T00:00:00Z" },
+  }))).valid, false);
+  assert.equal(validateQueueState(queue(validTask({ updatedAt: "2028-02-29T00:00:00+09:00" }))).valid, true);
+});
+
 test("queue state validates lastFailure structure fail-closed", () => {
   assert.equal(validateQueueState(queue(validTask({ lastFailure: null }))).valid, true);
   assert.equal(validateQueueState(queue(validTask({ lastFailure: "boom" }))).valid, false);
