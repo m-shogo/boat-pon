@@ -79,13 +79,16 @@ function parseRaceKey(value: string): { date: string; venueCode: string; raceNo:
   const match = RACE_KEY_RE.exec(value);
   if (!match) return null;
   const date = match[1];
-  if (!Number.isFinite(Date.parse(`${date}T00:00:00.000Z`))) return null;
+  const parsed = Date.parse(`${date}T00:00:00.000Z`);
+  if (!Number.isFinite(parsed) || new Date(parsed).toISOString().slice(0, 10) !== date) return null;
   return { date, venueCode: match[2], raceNo: Number(match[3]) };
 }
 
 function addDays(date: string, days: number): string {
   const value = new Date(`${date}T00:00:00.000Z`);
-  if (!Number.isFinite(value.getTime())) throw new Error(`N2_ROLLING_DATE_INVALID:${date}`);
+  if (!Number.isFinite(value.getTime()) || value.toISOString().slice(0, 10) !== date) {
+    throw new Error(`N2_ROLLING_DATE_INVALID:${date}`);
+  }
   value.setUTCDate(value.getUTCDate() + days);
   return value.toISOString().slice(0, 10);
 }

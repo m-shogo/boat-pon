@@ -154,6 +154,22 @@ test("duplicate/invalid source or request keys fail closed", () => {
   });
   assert.equal(invalid.status, "BLOCKED");
   assert.ok(invalid.blockers.includes("bad-key:REQUEST_RACE_KEY_INVALID"));
+
+  const impossibleRequest = buildN2HistoricalRollingBaseline({
+    outcomes: historyFixture(),
+    requestedRaceKeys: ["2020-02-30:05:R1"],
+  });
+  assert.equal(impossibleRequest.status, "BLOCKED");
+  assert.ok(impossibleRequest.blockers.includes("2020-02-30:05:R1:REQUEST_RACE_KEY_INVALID"));
+  assert.equal(impossibleRequest.baselineRaceCount, 0);
+
+  const impossibleOutcome = buildN2HistoricalRollingBaseline({
+    outcomes: [{ canonicalRaceKey: "2020-02-30:05:R1", winningSelection: "1-2-3" }],
+    requestedRaceKeys: [],
+  });
+  assert.equal(impossibleOutcome.status, "BLOCKED");
+  assert.ok(impossibleOutcome.blockers.includes("2020-02-30:05:R1:OUTCOME_RACE_KEY_INVALID"));
+  assert.equal(impossibleOutcome.baselineRaceCount, 0);
 });
 
 test("rolling output is deterministic for reordered outcome and request input", () => {
