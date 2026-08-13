@@ -124,7 +124,14 @@ test("N2-011 migration fails closed when the final attempt budget or completed c
 test("N2-011 migration rejects malformed current-run timestamps", () => {
   const before = queue();
   const base = currentRun(before);
-  for (const updatedAt of ["not-a-time", "2026-08-06", "2026-08-06T01:38:22"]) {
+  for (const updatedAt of [
+    "not-a-time",
+    "2026-08-06",
+    "2026-08-06T01:38:22",
+    "2026-02-29T01:38:22Z",
+    "2026-02-30T01:38:22Z",
+    "2026-04-31T01:38:22+09:00",
+  ]) {
     assert.throws(
       () => migrateN2011QueueToV4(before, { ...base, updatedAt }),
       /current-run updatedAt invalid/,
@@ -132,4 +139,5 @@ test("N2-011 migration rejects malformed current-run timestamps", () => {
     );
   }
   assert.doesNotThrow(() => migrateN2011QueueToV4(before, { ...base, updatedAt: "2026-08-06T10:38:22+09:00" }));
+  assert.doesNotThrow(() => migrateN2011QueueToV4(before, { ...base, updatedAt: "2028-02-29T10:38:22+09:00" }));
 });
