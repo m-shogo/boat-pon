@@ -40,9 +40,21 @@ function digest(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
 }
 
+function validCalendarDate(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})(?:T|$)/u.exec(value);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return parsed.getUTCFullYear() === year
+    && parsed.getUTCMonth() === month - 1
+    && parsed.getUTCDate() === day;
+}
+
 function iso(value: string, code: string): string {
   const parsed = Date.parse(value);
-  if (!Number.isFinite(parsed)) throw new Error(code);
+  if (!validCalendarDate(value) || !Number.isFinite(parsed)) throw new Error(code);
   return new Date(parsed).toISOString();
 }
 
