@@ -54,6 +54,42 @@ test("readiness accumulates clean settled races until the fixed minimum", () => 
   assert.equal(ready.n2TaskReady, true);
 });
 
+test("impossible calendar dates cannot contribute to N2-020 readiness", () => {
+  const accepted = [
+    ...Array.from({ length: 12 }, (_, index) => race(index + 1, "2026-08-07")),
+    ...Array.from({ length: 7 }, (_, index) => race(index + 1, "2026-08-08")),
+    race(1, "2026-02-30"),
+  ];
+  const report = buildN2MarketBaselineReadinessReport({
+    acceptedT5RaceKeys: accepted,
+    settledRaceKeys: accepted,
+  });
+  assert.equal(report.status, "BLOCKED");
+  assert.deepEqual(report.blockers, ["INVALID_CANONICAL_RACE_KEY:1"]);
+  assert.equal(report.n2TaskReady, false);
+  assert.equal(report.distinctAcceptedDateCount, 2);
+  assert.equal(report.distinctSettledDateCount, 2);
+  assert.equal(report.automaticPromotionAuthorized, false);
+  assert.equal(report.currentBuyConnectionAuthorized, false);
+  assert.equal(report.lineConnectionAuthorized, false);
+  assert.equal(report.publicPublishAuthorized, false);
+  assert.equal(report.databaseWriteAuthorized, false);
+  assert.equal(report.automatedBettingAuthorized, false);
+  assert.equal(report.productionApplyAuthorized, false);
+});
+
+test("canonical leap-day race keys remain valid", () => {
+  const leapDay = race(1, "2028-02-29");
+  const report = buildN2MarketBaselineReadinessReport({
+    acceptedT5RaceKeys: [leapDay],
+    settledRaceKeys: [leapDay],
+    minimumSettledRaceCount: 1,
+  });
+  assert.equal(report.status, "READY_FOR_N2_020");
+  assert.deepEqual(report.blockers, []);
+  assert.equal(report.n2TaskReady, true);
+});
+
 test("duplicates do not inflate readiness and unrelated settlement rows are ignored", () => {
   const report = buildN2MarketBaselineReadinessReport({
     acceptedT5RaceKeys: [race(1), race(1)],

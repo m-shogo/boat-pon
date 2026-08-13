@@ -45,8 +45,18 @@ function uniqueRaceKeys(values: readonly string[]): string[] {
   return [...new Set(values)].sort();
 }
 
+function isCanonicalCalendarDate(value: string): boolean {
+  const parsed = Date.parse(`${value}T00:00:00.000Z`);
+  return Number.isFinite(parsed) && new Date(parsed).toISOString().slice(0, 10) === value;
+}
+
+function parseRaceKey(raceKey: string): RegExpExecArray | null {
+  const match = RACE_KEY_RE.exec(raceKey);
+  return match && isCanonicalCalendarDate(match[1]) ? match : null;
+}
+
 function raceDate(raceKey: string): string | null {
-  return RACE_KEY_RE.exec(raceKey)?.[1] ?? null;
+  return parseRaceKey(raceKey)?.[1] ?? null;
 }
 
 function uniqueDates(raceKeys: readonly string[]): string[] {
@@ -89,7 +99,7 @@ export function buildN2MarketBaselineReadinessReport(input: {
     ...accepted,
     ...settled,
     ...integrityBlocked,
-  ]).filter((raceKey) => !RACE_KEY_RE.test(raceKey)).length;
+  ]).filter((raceKey) => parseRaceKey(raceKey) === null).length;
 
   const blockers = [...new Set([
     ...(input.sourceBlockers ?? []),
