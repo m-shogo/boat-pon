@@ -64,8 +64,14 @@ export function openN2CoverageDbImmutable(path: string): DatabaseSync {
   return new DatabaseSync(uri, { readOnly: true } as never);
 }
 
+function isCanonicalCalendarDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = Date.parse(`${value}T00:00:00Z`);
+  return Number.isFinite(parsed) && new Date(parsed).toISOString().slice(0, 10) === value;
+}
+
 export function canonicalN2CoverageRaceKey(row: Pick<N2CoverageRaceRow, "raceId" | "date" | "venue" | "raceNo">): string {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(row.date) || !Number.isFinite(Date.parse(`${row.date}T00:00:00Z`))) {
+  if (!isCanonicalCalendarDate(row.date)) {
     throw new Error(`N2_COVERAGE_INVALID_PROGRAM_DATE:${row.raceId}`);
   }
   if (!/^\d{2}$/.test(row.venue)) throw new Error(`N2_COVERAGE_INVALID_PROGRAM_VENUE:${row.raceId}`);
@@ -163,7 +169,7 @@ export function readOfficialProgramCoverageEvents(input: {
   dateFrom: string;
   dateTo: string;
 }): N2FeatureCoverageEvent[] {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.dateFrom) || !/^\d{4}-\d{2}-\d{2}$/.test(input.dateTo)
+  if (!isCanonicalCalendarDate(input.dateFrom) || !isCanonicalCalendarDate(input.dateTo)
     || input.dateFrom > input.dateTo) {
     throw new Error("N2_COVERAGE_INVALID_DATE_RANGE");
   }
