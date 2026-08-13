@@ -50,9 +50,19 @@ type ParsedRaceKey = {
 const RACE_KEY_RE = /^(\d{4}-\d{2}-\d{2}):(0[1-9]|1\d|2[0-4]):R([1-9]|1[0-2])$/u;
 const SELECTION_RE = /^[1-6]-[1-6]-[1-6]$/u;
 
+function isCanonicalCalendarDate(value: string): boolean {
+  const parsed = Date.parse(`${value}T00:00:00.000Z`);
+  return Number.isFinite(parsed) && new Date(parsed).toISOString().slice(0, 10) === value;
+}
+
+function isCanonicalIsoInstant(value: string): boolean {
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) && new Date(parsed).toISOString() === value;
+}
+
 function parseRaceKey(value: string): ParsedRaceKey | null {
   const match = RACE_KEY_RE.exec(value);
-  if (!match) return null;
+  if (!match || !isCanonicalCalendarDate(match[1])) return null;
   return {
     date: match[1],
     venue: Number(match[2]),
@@ -76,11 +86,11 @@ function unique<T>(values: readonly T[]): T[] {
 function validateSource(source: N2MarketOnlyBaselineRaceSource): string[] {
   const blockers: string[] = [];
   if (!parseRaceKey(source.canonicalRaceKey)) blockers.push("RACE_KEY_INVALID");
-  if (!Number.isFinite(Date.parse(source.decisionCutoff))) blockers.push("DECISION_CUTOFF_INVALID");
-  if (!Number.isFinite(Date.parse(source.capturedAt))) blockers.push("CAPTURED_AT_INVALID");
-  if (!Number.isFinite(Date.parse(source.availableAt))) blockers.push("AVAILABLE_AT_INVALID");
-  if (Number.isFinite(Date.parse(source.availableAt))
-    && Number.isFinite(Date.parse(source.decisionCutoff))
+  if (!isCanonicalIsoInstant(source.decisionCutoff)) blockers.push("DECISION_CUTOFF_INVALID");
+  if (!isCanonicalIsoInstant(source.capturedAt)) blockers.push("CAPTURED_AT_INVALID");
+  if (!isCanonicalIsoInstant(source.availableAt)) blockers.push("AVAILABLE_AT_INVALID");
+  if (isCanonicalIsoInstant(source.availableAt)
+    && isCanonicalIsoInstant(source.decisionCutoff)
     && Date.parse(source.availableAt) > Date.parse(source.decisionCutoff)) {
     blockers.push("AVAILABLE_AFTER_DECISION_CUTOFF");
   }

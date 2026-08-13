@@ -98,6 +98,31 @@ test("duplicate race sources fail closed instead of silently choosing one", () =
   assert.deepEqual(dataset.blockers, ["DUPLICATE_RACE_SOURCE:1"]);
 });
 
+test("impossible calendar dates in canonical race keys fail closed", () => {
+  const sources = twentySources();
+  sources[0] = source("2026-02-30:05:R1");
+  const dataset = buildN2MarketOnlyBaselineDataset({ sources });
+  assert.equal(dataset.status, "BLOCKED");
+  assert.ok(dataset.blockers.some((blocker) => blocker === "2026-02-30:05:R1:RACE_KEY_INVALID"));
+  assert.equal(dataset.rowCount, 0);
+});
+
+test("market evidence timestamps must use the canonical ISO instant form", () => {
+  const sources = twentySources();
+  sources[0] = {
+    ...sources[0],
+    decisionCutoff: "2026-08-08T12:30:00+09:00",
+    capturedAt: "2026-08-08T12:25:30+09:00",
+    availableAt: "2026-08-08T12:25:00+09:00",
+  };
+  const dataset = buildN2MarketOnlyBaselineDataset({ sources });
+  assert.equal(dataset.status, "BLOCKED");
+  assert.ok(dataset.blockers.some((blocker) => blocker.endsWith(":DECISION_CUTOFF_INVALID")));
+  assert.ok(dataset.blockers.some((blocker) => blocker.endsWith(":CAPTURED_AT_INVALID")));
+  assert.ok(dataset.blockers.some((blocker) => blocker.endsWith(":AVAILABLE_AT_INVALID")));
+  assert.equal(dataset.rowCount, 0);
+});
+
 test("post-cutoff market evidence blocks the entire fixed cohort", () => {
   const sources = twentySources();
   sources[4] = {
