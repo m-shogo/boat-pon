@@ -174,6 +174,12 @@ function eventsForRace(row: N2CoverageRaceRow, evidenceRows: MarketEvidenceRow[]
   });
 }
 
+function isCanonicalCalendarDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = Date.parse(`${value}T00:00:00Z`);
+  return Number.isFinite(parsed) && new Date(parsed).toISOString().slice(0, 10) === value;
+}
+
 export function readTrifectaMarketCoverageEvents(input: {
   primaryDbPath: string;
   sidecarDbPath: string;
@@ -181,7 +187,7 @@ export function readTrifectaMarketCoverageEvents(input: {
   dateTo: string;
   checkpoint: N2LiveCheckpoint;
 }): N2FeatureCoverageEvent[] {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.dateFrom) || !/^\d{4}-\d{2}-\d{2}$/.test(input.dateTo)
+  if (!isCanonicalCalendarDate(input.dateFrom) || !isCanonicalCalendarDate(input.dateTo)
     || input.dateFrom > input.dateTo) throw new Error("N2_COVERAGE_INVALID_DATE_RANGE");
   const primary = openN2CoverageDbImmutable(input.primaryDbPath);
   const sidecar = openN2CoverageDbImmutable(input.sidecarDbPath);
