@@ -38,8 +38,14 @@ const REQUEST_ID_RE = /^REQ-[0-9A-Za-z._-]{4,64}$/;
 const TASKID_RE = /^(TASK-[0-9A-Za-z._-]{1,64}|NEXT)$/;
 const AUTOMATION_HISTORY_PATH_RE = /^reports\/automation\/history\/[0-9A-Za-z._-]+-TASK-[0-9A-Za-z._-]+\.json$/;
 const RFC3339_TIMESTAMP_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
-const isValidTimestamp = (value: unknown): value is string =>
-  typeof value === "string" && RFC3339_TIMESTAMP_RE.test(value) && Number.isFinite(Date.parse(value));
+const isValidTimestamp = (value: unknown): value is string => {
+  if (typeof value !== "string" || !RFC3339_TIMESTAMP_RE.test(value)) return false;
+  const parsed = Date.parse(value);
+  if (!Number.isFinite(parsed)) return false;
+  const date = value.slice(0, 10);
+  const midnight = Date.parse(`${date}T00:00:00.000Z`);
+  return Number.isFinite(midnight) && new Date(midnight).toISOString().slice(0, 10) === date;
+};
 const PROCESSED_RESULTS = new Set(["PASS", "DRY_RUN_OK", "CONDITIONAL", "BLOCKED", "FAILED", "FAILED_RETRYABLE", "FAILED_FINAL"]);
 const PROCESSED_INTENT_SCHEMA_VERSION = "processed-intents-v1";
 const PROCESSED_REQUEST_SCHEMA_VERSION = "processed-requests-v1";
