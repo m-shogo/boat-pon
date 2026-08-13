@@ -138,6 +138,21 @@ test("normalization matches the reviewed official-program canary on its known 20
   assert.equal(canonicalDatabaseTimestamp("2026-08-05 01:00:00"), item.sourceObservedAt);
 });
 
+test("program normalization rejects impossible calendar dates", () => {
+  assert.throws(() => normalizeDiscoveryProgramRow({
+    raceId: "20260230-びわこ-01",
+    date: "2026-02-30",
+    venue: "びわこ",
+    raceNo: 1,
+    closeAt: "23:00",
+    importedAt: "2026-02-28 01:00:00",
+  }), /INVALID_RACE_DATE/);
+  assert.equal(
+    officialProgramDecisionCutoffUtc("2028-02-29", "23:00"),
+    "2028-02-29T14:00:00.000Z",
+  );
+});
+
 test("source intersects clean winners with eligible pre-cutoff metadata and never reads raw_json", () => {
   withDatabases((paths, dbs) => {
     insertWinner(dbs.sidecar, "warm", "2003-12-31:11:R1", "1-3-2");
@@ -166,6 +181,18 @@ test("source intersects clean winners with eligible pre-cutoff metadata and neve
     assert.equal(report.reads.primaryDatabaseWriteCount, 0);
     assert.equal(report.reads.sidecarDatabaseWriteCount, 0);
     assert.doesNotMatch(JSON.stringify(report), /raw_json|\/cache\//u);
+  });
+});
+
+test("impossible settled race dates fail closed before discovery candidates are built", () => {
+  withDatabases((paths, dbs) => {
+    insertWinner(dbs.sidecar, "bad-date", "2004-02-30:11:R1", "1-2-3");
+    dbs.primary.close();
+    dbs.sidecar.close();
+    const report = readN2EdgeDiscoverySource({ primaryDbPath: paths.primary, sidecarDbPath: paths.sidecar });
+    assert.equal(report.status, "BLOCKED");
+    assert.ok(report.blockers.includes("2004-02-30:11:R1:CANONICAL_RACE_KEY_INVALID"));
+    assert.equal(report.candidateRaceCount, 0);
   });
 });
 
