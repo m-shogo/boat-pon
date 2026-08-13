@@ -73,7 +73,8 @@ function parseRaceKey(value: string): { date: string; year: number; venueCode: s
   const match = RACE_KEY_RE.exec(value);
   if (!match) return null;
   const date = `${match[1]}-${match[2]}-${match[3]}`;
-  if (!Number.isFinite(Date.parse(`${date}T00:00:00.000Z`))) return null;
+  const parsed = Date.parse(`${date}T00:00:00.000Z`);
+  if (!Number.isFinite(parsed) || new Date(parsed).toISOString().slice(0, 10) !== date) return null;
   return { date, year: Number(match[1]), venueCode: match[4], raceNo: Number(match[5]) };
 }
 
