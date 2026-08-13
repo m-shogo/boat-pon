@@ -76,9 +76,14 @@ const SELECTION_RE = /^[1-6]-[1-6]-[1-6]$/u;
 const TRIFECTA_SELECTIONS = enumerateBetSelections("trifecta");
 const TRIFECTA_SELECTION_SET = new Set(TRIFECTA_SELECTIONS);
 
+function isCanonicalCalendarDate(value: string): boolean {
+  const parsed = Date.parse(`${value}T00:00:00.000Z`);
+  return Number.isFinite(parsed) && new Date(parsed).toISOString().slice(0, 10) === value;
+}
+
 function parseRaceKey(value: string): ParsedRaceKey | null {
   const match = RACE_KEY_RE.exec(value);
-  if (!match) return null;
+  if (!match || !isCanonicalCalendarDate(match[1])) return null;
   return { date: match[1], venueCode: match[2], raceNo: Number(match[3]) };
 }
 
