@@ -110,8 +110,9 @@ function validGitSha(value: string): boolean {
 }
 
 function validDate(value: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value)
-    && Number.isFinite(Date.parse(`${value}T00:00:00.000Z`));
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = Date.parse(`${value}T00:00:00.000Z`);
+  return Number.isFinite(parsed) && new Date(parsed).toISOString().slice(0, 10) === value;
 }
 
 function assertCohort(cohort: OfficialProgramCanaryCohort): void {
