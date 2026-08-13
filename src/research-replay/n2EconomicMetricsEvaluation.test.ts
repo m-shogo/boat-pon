@@ -115,6 +115,28 @@ test("economic evaluation fails closed if a baseline lacks one canonical selecti
   assert.ok(report.blockers.some((blocker) => blocker.includes("legacy:PROBABILITY_SELECTION_COUNT:119/120")));
 });
 
+test("economic evaluation rejects impossible race-key and cutoff calendar dates", () => {
+  const invalidRaceKey = twentyRaces();
+  invalidRaceKey[0].canonicalRaceKey = "2026-02-30:05:R1";
+  const raceKeyReport = evaluateN2EconomicMetrics({ races: invalidRaceKey });
+  assert.equal(raceKeyReport.status, "BLOCKED");
+  assert.ok(raceKeyReport.blockers.includes("2026-02-30:05:R1:RACE_KEY_INVALID"));
+
+  const invalidCutoff = twentyRaces();
+  invalidCutoff[0].decisionCutoff = "2026-02-30T03:30:00.000Z";
+  const cutoffReport = evaluateN2EconomicMetrics({ races: invalidCutoff });
+  assert.equal(cutoffReport.status, "BLOCKED");
+  assert.ok(cutoffReport.blockers.includes("2026-08-07:05:R1:DECISION_CUTOFF_INVALID"));
+});
+
+test("economic evaluation accepts a real leap-day race and cutoff", () => {
+  const races = twentyRaces();
+  races[0].canonicalRaceKey = "2028-02-29:05:R1";
+  races[0].decisionCutoff = "2028-02-29T03:30:00.000Z";
+  const report = evaluateN2EconomicMetrics({ races });
+  assert.equal(report.status, "PASS");
+});
+
 test("economic evaluation output is deterministic", () => {
   const first = evaluateN2EconomicMetrics({ races: twentyRaces() });
   const second = evaluateN2EconomicMetrics({ races: twentyRaces() });
