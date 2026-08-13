@@ -76,8 +76,14 @@ function unique(values: readonly string[]): string[] {
 }
 
 function validDate(value: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value)
-    && Number.isFinite(Date.parse(`${value}T00:00:00.000Z`));
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = Date.parse(`${value}T00:00:00.000Z`);
+  return Number.isFinite(parsed) && new Date(parsed).toISOString().slice(0, 10) === value;
+}
+
+function validRaceKey(value: string): boolean {
+  const match = CANONICAL_RACE_KEY_RE.exec(value);
+  return match !== null && validDate(match[1]);
 }
 
 function validSelection(value: string): boolean {
@@ -208,7 +214,7 @@ function readHistoricalOutcomes(path: string): { rows: N2HistoricalOutcomeRow[];
     const blockers: string[] = [];
     const rows: N2HistoricalOutcomeRow[] = [];
     for (const [raceKey, selections] of grouped.entries()) {
-      if (!CANONICAL_RACE_KEY_RE.test(raceKey)) {
+      if (!validRaceKey(raceKey)) {
         blockers.push(`${raceKey}:CANONICAL_RACE_KEY_INVALID`);
         continue;
       }
