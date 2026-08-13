@@ -41,7 +41,7 @@ function unique(values: readonly string[]): string[] {
   return [...new Set(values)].sort();
 }
 
-function isCanonicalRaceKey(value: string): boolean {
+export function isCanonicalN2EvaluationRaceKey(value: string): boolean {
   const match = RACE_KEY_RE.exec(value);
   if (!match) return false;
   const date = match[1];
@@ -86,7 +86,7 @@ export function readN2EvaluationMetricsSettlements(input: {
   if (requested.length === 0) blockers.push("NO_RACE_KEYS");
   if (new Set(requested).size !== requested.length) blockers.push("DUPLICATE_RACE_KEY_REQUEST");
   for (const raceKey of requested) {
-    if (!isCanonicalRaceKey(raceKey)) blockers.push(`RACE_KEY_INVALID:${raceKey}`);
+    if (!isCanonicalN2EvaluationRaceKey(raceKey)) blockers.push(`RACE_KEY_INVALID:${raceKey}`);
   }
   if (blockers.length > 0) return blocked(blockers, requested.length, 0);
 
