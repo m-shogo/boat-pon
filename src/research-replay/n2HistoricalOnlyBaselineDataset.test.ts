@@ -84,6 +84,40 @@ test("historical training excludes same-day outcomes and never borrows evaluatio
   assert.ok(secondDay.every((profile) => profile.trainingToRaceKeyExclusive.startsWith("2026-08-08:")));
 });
 
+test("impossible training dates fail closed before PIT model construction", () => {
+  const training = historicalTraining();
+  training[0] = { ...training[0], canonicalRaceKey: "2026-02-30:05:R1" };
+  const dataset = buildN2HistoricalOnlyBaselineDataset({
+    training,
+    evaluationRaces: evaluationRaces(),
+  });
+  assert.equal(dataset.status, "BLOCKED");
+  assert.ok(dataset.blockers.includes("2026-02-30:05:R1:TRAINING_RACE_KEY_INVALID"));
+  assert.equal(dataset.rowCount, 0);
+});
+
+test("impossible evaluation dates fail closed before cohort ordering", () => {
+  const evals = evaluationRaces();
+  evals[0] = { ...evals[0], canonicalRaceKey: "2026-02-30:05:R1" };
+  const dataset = buildN2HistoricalOnlyBaselineDataset({
+    training: historicalTraining(),
+    evaluationRaces: evals,
+  });
+  assert.equal(dataset.status, "BLOCKED");
+  assert.ok(dataset.blockers.includes("2026-02-30:05:R1:EVALUATION_RACE_KEY_INVALID"));
+  assert.equal(dataset.rowCount, 0);
+});
+
+test("canonical leap-day historical race keys remain valid", () => {
+  const training = historicalTraining();
+  training[0] = { ...training[0], canonicalRaceKey: "2024-02-29:05:R1" };
+  const dataset = buildN2HistoricalOnlyBaselineDataset({
+    training,
+    evaluationRaces: evaluationRaces(),
+  });
+  assert.equal(dataset.blockers.some((blocker) => blocker.includes("TRAINING_RACE_KEY_INVALID")), false);
+});
+
 test("historical baseline blocks when venue history is too small", () => {
   const training = historicalTraining().map((row, index) =>
     index < 20 ? row : { ...row, canonicalRaceKey: row.canonicalRaceKey.replace(":05:", ":06:") },
