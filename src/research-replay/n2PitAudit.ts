@@ -74,8 +74,20 @@ function increment(map: Map<string, number>, key: string): void {
   map.set(key, (map.get(key) ?? 0) + 1);
 }
 
+function hasValidCalendarDate(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})(?:T|$)/.exec(value);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return parsed.getUTCFullYear() === year
+    && parsed.getUTCMonth() === month - 1
+    && parsed.getUTCDate() === day;
+}
+
 function validTimestamp(value: string | null): value is string {
-  return value !== null && Number.isFinite(Date.parse(value));
+  return value !== null && hasValidCalendarDate(value) && Number.isFinite(Date.parse(value));
 }
 
 function lineageReasonClass(reason: string): N2PitAuditReasonClass {
