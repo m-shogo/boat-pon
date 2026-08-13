@@ -43,6 +43,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+function hasValidCalendarDate(value: string): boolean {
+  const [yearText, monthText, dayText] = value.slice(0, 10).split("-");
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return false;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
+
 export function authorityMatches(expectedAuthoritySha: string, acceptableAuthorityShas: string[]): boolean {
   return acceptableAuthorityShas.some(
     (sha) => sha.startsWith(expectedAuthoritySha) || expectedAuthoritySha.startsWith(sha),
@@ -77,7 +87,12 @@ export function validateIntentSupersession(
   if (typeof input.observedAuthoritySha !== "string" || !/^[0-9a-f]{40}$/.test(input.observedAuthoritySha)) {
     errors.push("observedAuthoritySha must be a full 40-character SHA");
   }
-  if (typeof input.createdAt !== "string" || !RFC3339_DATE_TIME_RE.test(input.createdAt) || Number.isNaN(Date.parse(input.createdAt))) {
+  if (
+    typeof input.createdAt !== "string" ||
+    !RFC3339_DATE_TIME_RE.test(input.createdAt) ||
+    !hasValidCalendarDate(input.createdAt) ||
+    Number.isNaN(Date.parse(input.createdAt))
+  ) {
     errors.push("invalid createdAt");
   }
   if (typeof input.requestedBy !== "string" || input.requestedBy.trim() === "" || input.requestedBy.length > 128) {
