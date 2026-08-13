@@ -93,11 +93,12 @@ export function buildN2MarketBaselineReadinessReport(input: {
 
   const accepted = uniqueRaceKeys(input.acceptedT5RaceKeys);
   const acceptedSet = new Set(accepted);
-  const settled = uniqueRaceKeys(input.settledRaceKeys).filter((raceKey) => acceptedSet.has(raceKey));
+  const settledInput = uniqueRaceKeys(input.settledRaceKeys);
+  const settled = settledInput.filter((raceKey) => acceptedSet.has(raceKey));
   const integrityBlocked = uniqueRaceKeys(input.integrityBlockedRaceKeys ?? []);
   const invalidRaceKeyCount = uniqueRaceKeys([
     ...accepted,
-    ...settled,
+    ...settledInput,
     ...integrityBlocked,
   ]).filter((raceKey) => parseRaceKey(raceKey) === null).length;
 
