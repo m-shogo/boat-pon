@@ -64,7 +64,20 @@ export function canonicalHash(value: unknown): string {
   return sha256Bytes(Buffer.from(canonicalSerialize(value), "utf8"));
 }
 
+function hasValidCalendarDate(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})(?:T|$)/.exec(value);
+  if (!match) return true;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return parsed.getUTCFullYear() === year
+    && parsed.getUTCMonth() === month - 1
+    && parsed.getUTCDate() === day;
+}
+
 export function canonicalUtcTimestamp(value: string): string {
+  if (!hasValidCalendarDate(value)) throw new Error(`invalid timestamp: ${value}`);
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) throw new Error(`invalid timestamp: ${value}`);
   return parsed.toISOString();
