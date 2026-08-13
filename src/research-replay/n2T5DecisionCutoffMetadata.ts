@@ -72,6 +72,11 @@ function isCanonicalCalendarDate(date: string): boolean {
   return Number.isFinite(value) && new Date(value).toISOString().slice(0, 10) === date;
 }
 
+function isCanonicalIsoInstant(value: string): boolean {
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) && new Date(parsed).toISOString() === value;
+}
+
 function expectedMetadataLocation(raceKey: string): {
   date: string;
   venue: string;
@@ -92,10 +97,11 @@ function expectedMetadataLocation(raceKey: string): {
 }
 
 function cutoffWithinRaceDate(date: string, cutoff: string): boolean {
+  if (!isCanonicalIsoInstant(cutoff)) return false;
   const value = Date.parse(cutoff);
   const start = Date.parse(`${date}T00:00:00+09:00`);
   const end = start + 24 * 60 * 60 * 1000;
-  return Number.isFinite(value) && value >= start && value < end;
+  return value >= start && value < end;
 }
 
 export function readN2T5DecisionCutoffMetadata(input: {
