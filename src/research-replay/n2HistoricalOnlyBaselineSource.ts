@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 
+import { parseCanonicalRaceKey } from "./identity";
 import {
   N2_HISTORICAL_EVALUATION_COHORT_RACE_COUNT,
   N2_HISTORICAL_LOOKBACK_DAYS,
@@ -50,8 +51,21 @@ function unique(values: readonly string[]): string[] {
   return [...new Set(values)].sort();
 }
 
+export function isCanonicalN2HistoricalRaceKey(value: string): boolean {
+  try {
+    parseCanonicalRaceKey(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function raceDate(raceKey: string): string | null {
-  return RACE_KEY_RE.exec(raceKey)?.[1] ?? null;
+  try {
+    return parseCanonicalRaceKey(raceKey).raceDateJst;
+  } catch {
+    return null;
+  }
 }
 
 function compareRaceKeys(left: string, right: string): number {
@@ -143,7 +157,7 @@ function readCleanTrifectaWinners(input: {
     const blockers: string[] = [];
     const rows: N2HistoricalOutcomeRow[] = [];
     for (const [raceKey, selections] of grouped.entries()) {
-      if (!RACE_KEY_RE.test(raceKey)) {
+      if (!isCanonicalN2HistoricalRaceKey(raceKey)) {
         blockers.push(`${raceKey}:CANONICAL_RACE_KEY_INVALID`);
         continue;
       }
