@@ -42,8 +42,20 @@ export const N2_OFFICIAL_PROGRAM_FEATURE_KEYS = [
   "boatTop2Rate",
 ] as const satisfies readonly (keyof BoatFeature)[];
 
+function hasValidCalendarDate(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})(?:T|$)/.exec(value);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return parsed.getUTCFullYear() === year
+    && parsed.getUTCMonth() === month - 1
+    && parsed.getUTCDate() === day;
+}
+
 function validTime(value: string | null): value is string {
-  return value !== null && Number.isFinite(Date.parse(value));
+  return value !== null && hasValidCalendarDate(value) && Number.isFinite(Date.parse(value));
 }
 
 // imported_atやrace dateをsource availabilityの代用にしない。F0 observation/raw lineageが揃う場合だけ昇格する。
