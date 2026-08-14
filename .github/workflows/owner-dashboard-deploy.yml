@@ -39,14 +39,15 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Verify source is canonical main and clean
+      - name: Verify source is exact canonical main and clean
         id: source
         shell: bash
         run: |
           set -euo pipefail
           git fetch origin main --depth=1
-          if ! git merge-base --is-ancestor "$TARGET_SHA" origin/main; then
-            echo "::error::target SHA is not on canonical main"
+          CURRENT_MAIN=$(git rev-parse origin/main)
+          if [ "$CURRENT_MAIN" != "$TARGET_SHA" ]; then
+            echo "::error::target SHA is stale; current main is $CURRENT_MAIN"
             exit 1
           fi
           test -z "$(git status --porcelain)" || { echo "::error::checkout is dirty"; git status --short; exit 1; }
@@ -90,12 +91,12 @@ jobs:
       - name: Verify deploy-ready directory
         run: npx tsx scripts/verify-public-dashboard-deploy.ts --dir=dist-public-deploy
 
-      - name: Verify no private material in deploy artifact
+      - name: Verify no secrets or local paths in deploy artifact
         shell: bash
         run: |
           set -euo pipefail
-          if grep -RInE '/Users/|/home/|gh[opusr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,}|app_settings|currentOdds|requiredOdds|recommendedAmount|automation/requests' dist-public-deploy; then
-            echo "::error::private marker found in public deploy artifact"
+          if grep -RInE '/Users/|/home/|/private/|gh[opusr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[0-9A-Za-z-]{10,}|data/boat\.sqlite' dist-public-deploy; then
+            echo "::error::secret-like value or private path found in public deploy artifact"
             exit 1
           fi
 
