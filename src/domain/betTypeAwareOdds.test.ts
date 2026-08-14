@@ -29,6 +29,25 @@ test("券種付きrowをselection順に生成する", () => {
   assert.equal(rows[0]?.betType, "exacta");
 });
 
+test("capturedAtは実在する暦日だけを受理する", () => {
+  for (const capturedAt of [
+    "2026-02-29T12:00:00.000Z",
+    "2026-02-30T12:00:00.000Z",
+    "2026-04-31T12:00:00+09:00",
+  ]) {
+    assert.throws(
+      () => buildBetTypeAwareOddsRows({ ...common, capturedAt, oddsBySelection: new Map([["1-2", 10.2]]) }),
+      /capturedAt must be ISO-like/,
+    );
+  }
+
+  assert.doesNotThrow(() => buildBetTypeAwareOddsRows({
+    ...common,
+    capturedAt: "2028-02-29T12:00:00+09:00",
+    oddsBySelection: new Map([["1-2", 10.2]]),
+  }));
+});
+
 test("exactaに3桁selectionや0倍を混入させない", () => {
   assert.throws(() => buildBetTypeAwareOddsRows({ ...common, oddsBySelection: new Map([["1-2-3", 10]]) }), /invalid exacta/);
   assert.throws(() => buildBetTypeAwareOddsRows({ ...common, oddsBySelection: new Map([["1-2", 0]]) }), /positive/);
