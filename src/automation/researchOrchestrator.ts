@@ -64,6 +64,25 @@ export type RequestValidation = {
   request: TaskRequest | null;
 };
 
+function hasValidCalendarDate(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T/.exec(value);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return parsed.getUTCFullYear() === year
+    && parsed.getUTCMonth() === month - 1
+    && parsed.getUTCDate() === day;
+}
+
+function isValidRequestTimestamp(value: unknown): value is string {
+  return typeof value === "string"
+    && value.length >= 20
+    && hasValidCalendarDate(value)
+    && !Number.isNaN(Date.parse(value));
+}
+
 // strict decode: unknown field / missing field / 形式不正 / digest 不一致はすべて拒否（fail-closed）。
 export function validateRequest(input: unknown): RequestValidation {
   const errors: string[] = [];
@@ -82,7 +101,7 @@ export function validateRequest(input: unknown): RequestValidation {
   if (!SAFETY_LEVELS.includes(raw.safetyLevel as SafetyLevel)) errors.push("invalid safetyLevel");
   if (typeof raw.authoritySha !== "string" || !/^[0-9a-f]{7,40}$/.test(raw.authoritySha)) errors.push("invalid authoritySha");
   if (typeof raw.queueDigest !== "string" || !/^[0-9a-f]{64}$/.test(raw.queueDigest)) errors.push("invalid queueDigest");
-  if (typeof raw.createdAt !== "string" || raw.createdAt.length < 20 || Number.isNaN(Date.parse(raw.createdAt))) errors.push("invalid createdAt");
+  if (!isValidRequestTimestamp(raw.createdAt)) errors.push("invalid createdAt");
   if (typeof raw.requestedBy !== "string" || raw.requestedBy.trim() === "") errors.push("invalid requestedBy");
   if (!Number.isInteger(raw.maxDurationSeconds) || (raw.maxDurationSeconds as number) < 60 || (raw.maxDurationSeconds as number) > 21600) errors.push("invalid maxDurationSeconds");
   if (typeof raw.expectedOutput !== "string" || raw.expectedOutput.trim() === "") errors.push("invalid expectedOutput");
