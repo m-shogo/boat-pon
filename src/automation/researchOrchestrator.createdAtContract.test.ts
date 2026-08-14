@@ -25,8 +25,25 @@ test("request validator accepts schema-length timestamps", () => {
   assert.equal(result.valid, true, result.errors.join("; "));
 });
 
+test("request validator accepts valid leap-day timestamps with offsets", () => {
+  const result = validateRequest(request("2028-02-29T11:55:00+09:00"));
+  assert.equal(result.valid, true, result.errors.join("; "));
+});
+
 test("request validator rejects date-only createdAt values accepted by Date.parse", () => {
   const result = validateRequest(request("2026-08-11"));
   assert.equal(result.valid, false);
   assert.match(result.errors.join("\n"), /invalid createdAt/);
+});
+
+test("request validator rejects impossible calendar dates normalized by Date.parse", () => {
+  for (const createdAt of [
+    "2026-02-29T02:55:00Z",
+    "2026-02-30T02:55:00Z",
+    "2026-04-31T11:55:00+09:00",
+  ]) {
+    const result = validateRequest(request(createdAt));
+    assert.equal(result.valid, false, createdAt);
+    assert.match(result.errors.join("\n"), /invalid createdAt/, createdAt);
+  }
 });
