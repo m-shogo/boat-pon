@@ -68,6 +68,36 @@ test("adapter maps official-program safe fields by explicit first/second/third s
   assert.equal(report.sourceEvidence.databaseWriteAuthorized, false);
 });
 
+test("adapter accepts valid leap-day cutoffs with offsets", () => {
+  const leapCutoff = "2028-02-29T12:30:00+09:00";
+  const report = adaptN2HistoricalProgramFeatures({
+    betSelection: "1-2-3",
+    decisionCutoff: leapCutoff,
+    featureMode: "historical-readonly",
+    programFeatures: programFeatures(),
+  });
+  assert.equal(report.status, "PASS", report.blockers.join("; "));
+  assert.equal(report.features.firstClassName.availableAt, leapCutoff);
+});
+
+test("adapter rejects impossible calendar cutoffs before emitting features", () => {
+  for (const decisionCutoff of [
+    "2026-02-29T03:30:00.000Z",
+    "2026-02-30T03:30:00.000Z",
+    "2026-04-31T12:30:00+09:00",
+  ]) {
+    const report = adaptN2HistoricalProgramFeatures({
+      betSelection: "1-2-3",
+      decisionCutoff,
+      featureMode: "historical-readonly",
+      programFeatures: programFeatures(),
+    });
+    assert.equal(report.status, "BLOCKED", decisionCutoff);
+    assert.ok(report.blockers.includes("INVALID_DECISION_CUTOFF"), decisionCutoff);
+    assert.deepEqual(report.features, {}, decisionCutoff);
+  }
+});
+
 test("adapter never exposes identity fields or timed ST/exhibition/weather fields", () => {
   const report = adaptN2HistoricalProgramFeatures({
     betSelection: "1-2-3",
