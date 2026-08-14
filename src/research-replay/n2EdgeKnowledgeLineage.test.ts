@@ -87,6 +87,25 @@ test("confirmed-pending hypothesis creates a valid experiment plus reusable disc
   assert.equal(plan.authority.currentBuyConnectionAuthorized, false);
 });
 
+test("lineage accepts valid leap-day timestamps with offsets", () => {
+  const plan = buildN2EdgeKnowledgeLineagePlan(input({ createdAt: "2028-02-29T19:00:00+09:00" }));
+  assert.equal(plan.status, "PASS", plan.blockers.join("; "));
+});
+
+test("lineage rejects impossible calendar dates normalized by Date.parse", () => {
+  for (const createdAt of [
+    "2026-02-29T10:00:00.000Z",
+    "2026-02-30T10:00:00.000Z",
+    "2026-04-31T19:00:00+09:00",
+  ]) {
+    const plan = buildN2EdgeKnowledgeLineagePlan(input({ createdAt }));
+    assert.equal(plan.status, "BLOCKED", createdAt);
+    assert.ok(plan.blockers.includes("CREATED_AT_INVALID"), createdAt);
+    assert.equal(plan.registryPlan.experimentAppendEligible, false, createdAt);
+    assert.equal(plan.registryPlan.discoveryAppendEligible, false, createdAt);
+  }
+});
+
 test("historical rejection creates only a rejected experiment, never a discovery", () => {
   const plan = buildN2EdgeKnowledgeLineagePlan(input({
     confirmation: confirmation("HISTORICAL_REJECTED"),
