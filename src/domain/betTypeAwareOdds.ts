@@ -98,5 +98,17 @@ CREATE INDEX idx_odds_timeseries_bet_type
 `;
 
 function isValidIsoDate(value: string): boolean {
+  const calendarDate = /^(\d{4})-(\d{2})-(\d{2})(?:T|$)/u.exec(value);
+  if (calendarDate) {
+    const year = Number(calendarDate[1]);
+    const month = Number(calendarDate[2]);
+    const day = Number(calendarDate[3]);
+    const parsedDate = new Date(Date.UTC(year, month - 1, day));
+    if (
+      parsedDate.getUTCFullYear() !== year
+      || parsedDate.getUTCMonth() !== month - 1
+      || parsedDate.getUTCDate() !== day
+    ) return false;
+  }
   return Number.isFinite(Date.parse(value));
 }
