@@ -49,6 +49,23 @@ function digestMatches<T extends { outputDigest: string }>(value: T): boolean {
   const { outputDigest, ...body } = value;
   return isDigest(outputDigest) && canonicalHash(body) === outputDigest;
 }
+function hasValidCalendarDate(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T/u.exec(value);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return parsed.getUTCFullYear() === year
+    && parsed.getUTCMonth() === month - 1
+    && parsed.getUTCDate() === day;
+}
+function isValidHistoricalGeneratedAt(value: unknown): value is string {
+  return typeof value === "string"
+    && value.length >= 20
+    && hasValidCalendarDate(value)
+    && !Number.isNaN(Date.parse(value));
+}
 function rejectionSubjectIdentityBlocker(record: Rejection): string | null {
   const prefix = REJECTION_SUBJECT_PREFIX[record.subjectType];
   const valid = new RegExp(`^${prefix}-[0-9A-Za-z._-]{1,80}$`, "u").test(record.subjectId);
@@ -70,7 +87,7 @@ export function readN2HistoricalTestArtifact(repoRoot: string): {
   const blockers: string[] = [];
   if (value.status !== "PASS") blockers.push("HISTORICAL_TEST_REPORT_NOT_PASS");
   if (!isDigest(value.outputDigest)) blockers.push("HISTORICAL_TEST_OUTPUT_DIGEST_INVALID");
-  if (typeof value.generatedAt !== "string" || !Number.isFinite(Date.parse(value.generatedAt))) blockers.push("HISTORICAL_TEST_GENERATED_AT_INVALID");
+  if (!isValidHistoricalGeneratedAt(value.generatedAt)) blockers.push("HISTORICAL_TEST_GENERATED_AT_INVALID");
 
   const confirmation = value.confirmation as N2EdgeHistoricalConfirmationReport | undefined;
   if (!confirmation || confirmation.status !== "PASS") blockers.push("HISTORICAL_CONFIRMATION_NOT_PASS");
