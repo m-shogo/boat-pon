@@ -1,4 +1,4 @@
-import { canonicalHash } from "./canonical";
+import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import type { N2ConfounderAuditItem } from "./n2ConfounderRejectionAudit";
 import type { N2EdgeHistoricalConfirmationResult } from "./n2EdgeHistoricalConfirmation";
 import {
@@ -61,6 +61,15 @@ function isDigest(value: string): boolean {
 
 function unique(values: readonly string[]): string[] {
   return [...new Set(values)].sort();
+}
+
+function isValidTimestamp(value: string): boolean {
+  try {
+    canonicalUtcTimestamp(value);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function hypothesisText(input: N2EdgeKnowledgeLineageInput): string {
@@ -156,7 +165,7 @@ export function buildN2EdgeKnowledgeLineagePlan(
   ] as const) if (!isDigest(digest)) blockers.push(`${name.toUpperCase()}_ARTIFACT_DIGEST_INVALID`);
   if (!Number.isSafeInteger(input.testedConditionCount) || input.testedConditionCount < 0) blockers.push("TESTED_CONDITION_COUNT_INVALID");
   if (!Number.isSafeInteger(input.totalTrialCount) || input.totalTrialCount < input.testedConditionCount) blockers.push("TOTAL_TRIAL_COUNT_INVALID");
-  if (!Number.isFinite(Date.parse(input.createdAt))) blockers.push("CREATED_AT_INVALID");
+  if (!isValidTimestamp(input.createdAt)) blockers.push("CREATED_AT_INVALID");
   if (input.auditItem.disposition === "CONFIRMED_PENDING_CONFOUNDER_REVIEW"
     && input.confirmation.verdict !== "HISTORICAL_CONFIRMED") blockers.push("DISCOVERY_ELIGIBLE_DISPOSITION_WITHOUT_HISTORICAL_CONFIRMATION");
   if (blockers.length > 0) return blockedPlan(blockers);
