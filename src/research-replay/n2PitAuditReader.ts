@@ -116,9 +116,9 @@ export function decisionCutoffFromProgram(row: ProgramCutoffRow | null, expected
     return null;
   }
   const close = row.closeAt.trim();
-  const time = /^\d{2}:\d{2}$/.test(close) ? `${close}:00`
-    : /^\d{2}:\d{2}:\d{2}$/.test(close) ? close : null;
-  if (time === null) return null;
+  const timeMatch = /^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/.exec(close);
+  if (!timeMatch) return null;
+  const time = `${timeMatch[1]}:${timeMatch[2]}:${timeMatch[3] ?? "00"}`;
   const parsed = Date.parse(`${row.date}T${time}+09:00`);
   return Number.isFinite(parsed) ? new Date(parsed).toISOString() : null;
 }
