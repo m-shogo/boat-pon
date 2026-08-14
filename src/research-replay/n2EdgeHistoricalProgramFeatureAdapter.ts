@@ -4,7 +4,7 @@ import {
   type HistoricalProgramFeatureUsageMode,
 } from "../domain/programFeatureSafety";
 import type { BoatFeature, ProgramFeatureSnapshot } from "../domain/programFeatures";
-import { canonicalHash } from "./canonical";
+import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import { enumerateBetSelections } from "./n2DatasetContract";
 import type { N2EdgeFeatureObservation } from "./n2EdgeHypothesisScan";
 
@@ -81,6 +81,15 @@ function blocked(input: {
   return { ...core, outputDigest: canonicalHash(core) };
 }
 
+function validDecisionCutoff(value: string): boolean {
+  try {
+    canonicalUtcTimestamp(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function observation(value: unknown, decisionCutoff: string): N2EdgeFeatureObservation {
   const normalized = typeof value === "string"
     ? (value.trim() ? value.trim() : null)
@@ -112,7 +121,7 @@ export function adaptN2HistoricalProgramFeatures(input: {
   if (!TRIFECTA_SELECTIONS.has(input.betSelection)) {
     blockers.push(`INVALID_TRIFECTA_SELECTION:${input.betSelection}`);
   }
-  if (!Number.isFinite(Date.parse(input.decisionCutoff))) {
+  if (!validDecisionCutoff(input.decisionCutoff)) {
     blockers.push("INVALID_DECISION_CUTOFF");
   }
 
