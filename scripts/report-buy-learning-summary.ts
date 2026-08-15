@@ -4,6 +4,7 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { buildBuyLearningSummary, unavailableBuyLearningSummary, validateBuyLearningSummary, type BuyLearningSummary } from "../src/presentation/buyLearningSummary";
+import { buildBuyOutcomeSettlementSource, type BuyOutcomeSettlementSource } from "../src/presentation/buyOutcomeSettlementSource";
 
 const args = parseArgs(process.argv.slice(2));
 const dbPath = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
@@ -14,43 +15,44 @@ db.exec("PRAGMA query_only = ON");
 db.exec("PRAGMA busy_timeout = 5000");
 
 try {
-  const where = ["decision = 'BUY'"];
-  const params: Array<string | number> = [];
-  if (args.from) { where.push("date >= ?"); params.push(args.from); }
-  if (args.to) { where.push("date <= ?"); params.push(args.to); }
-  if (args.runKind) { where.push("run_kind = ?"); params.push(args.runKind); }
-  if (args.modelVersion) { where.push("model_version = ?"); params.push(args.modelVersion); }
-  const predicate = where.join(" AND ");
-  const settledEconomic = "result IS NOT NULL AND payout_yen IS NOT NULL AND returned = 0";
+  const source = buildBuyOutcomeSettlementSource({
+    from: args.from,
+    to: args.to,
+    runKind: args.runKind,
+    modelVersion: args.modelVersion,
+  });
+  assertPaperLiveSettlementConsistency(db, source);
+  const settledEconomic = "outcome_result IS NOT NULL AND outcome_payout_yen IS NOT NULL AND outcome_returned = 0";
 
   const all = db.prepare(`
+    ${source.cte}
     SELECT
       COUNT(*) AS totalDecisions,
       COALESCE(SUM(CASE WHEN ${settledEconomic} THEN 1 ELSE 0 END), 0) AS settled,
-      COALESCE(SUM(CASE WHEN ${settledEconomic} AND selection = result THEN 1 ELSE 0 END), 0) AS hits,
-      COALESCE(SUM(CASE WHEN ${settledEconomic} AND selection = result THEN payout_yen / 100.0 ELSE 0 END), 0) AS payoutOddsSum,
-      COALESCE(MAX(CASE WHEN ${settledEconomic} AND selection = result THEN payout_yen / 100.0 ELSE 0 END), 0) AS maxPayoutOdds,
+      COALESCE(SUM(CASE WHEN ${settledEconomic} AND selection = outcome_result THEN 1 ELSE 0 END), 0) AS hits,
+      COALESCE(SUM(CASE WHEN ${settledEconomic} AND selection = outcome_result THEN outcome_payout_yen / 100.0 ELSE 0 END), 0) AS payoutOddsSum,
+      COALESCE(MAX(CASE WHEN ${settledEconomic} AND selection = outcome_result THEN outcome_payout_yen / 100.0 ELSE 0 END), 0) AS maxPayoutOdds,
       AVG(CASE WHEN ${settledEconomic} THEN estimated_hit_rate ELSE NULL END) AS avgEstimatedHitRate,
-      COALESCE(SUM(CASE WHEN ${settledEconomic} AND selection != result AND sample_size IS NOT NULL AND sample_size < 30 THEN 1 ELSE 0 END), 0) AS smallSampleMisses,
-      COALESCE(SUM(CASE WHEN ${settledEconomic} AND selection != result AND estimated_hit_rate IS NOT NULL AND estimated_hit_rate >= 0.5 THEN 1 ELSE 0 END), 0) AS highConfidenceMisses,
-      COALESCE(SUM(CASE WHEN ${settledEconomic} AND selection != result AND ev IS NOT NULL AND ev >= 1.2 THEN 1 ELSE 0 END), 0) AS highEvMisses
-    FROM decision_history
-    WHERE ${predicate}
-  `).get(...params) as AggregateRow;
+      COALESCE(SUM(CASE WHEN ${settledEconomic} AND selection != outcome_result AND sample_size IS NOT NULL AND sample_size < 30 THEN 1 ELSE 0 END), 0) AS smallSampleMisses,
+      COALESCE(SUM(CASE WHEN ${settledEconomic} AND selection != outcome_result AND estimated_hit_rate IS NOT NULL AND estimated_hit_rate >= 0.5 THEN 1 ELSE 0 END), 0) AS highConfidenceMisses,
+      COALESCE(SUM(CASE WHEN ${settledEconomic} AND selection != outcome_result AND ev IS NOT NULL AND ev >= 1.2 THEN 1 ELSE 0 END), 0) AS highEvMisses
+    FROM buy_outcomes
+  `).get(...source.params) as AggregateRow;
 
-  const recentParams = [...params, args.recent];
+  const recentParams = [...source.params, args.recent];
   const recent = db.prepare(`
-    WITH recent_buy AS (
-      SELECT selection, result, payout_yen
-      FROM decision_history
-      WHERE ${predicate} AND ${settledEconomic}
+    ${source.cte},
+    recent_buy AS (
+      SELECT selection, outcome_result, outcome_payout_yen
+      FROM buy_outcomes
+      WHERE ${settledEconomic}
       ORDER BY date DESC, venue DESC, race_no DESC
       LIMIT ?
     )
     SELECT
       COUNT(*) AS settled,
-      COALESCE(SUM(CASE WHEN selection = result THEN 1 ELSE 0 END), 0) AS hits,
-      COALESCE(SUM(CASE WHEN selection = result THEN payout_yen / 100.0 ELSE 0 END), 0) AS payoutOddsSum
+      COALESCE(SUM(CASE WHEN selection = outcome_result THEN 1 ELSE 0 END), 0) AS hits,
+      COALESCE(SUM(CASE WHEN selection = outcome_result THEN outcome_payout_yen / 100.0 ELSE 0 END), 0) AS payoutOddsSum
     FROM recent_buy
   `).get(...recentParams) as RecentRow;
 
@@ -100,6 +102,21 @@ try {
 type AggregateRow = Record<"totalDecisions" | "settled" | "hits" | "payoutOddsSum" | "maxPayoutOdds" | "smallSampleMisses" | "highConfidenceMisses" | "highEvMisses", number | bigint | null> & { avgEstimatedHitRate: number | null };
 type RecentRow = { settled: number | bigint | null; hits: number | bigint | null; payoutOddsSum: number | null };
 type PatternSignal = { id: string; direction: "SUCCESS_EDGE" | "FAILURE_REGIME"; dimension: string; evidenceCount: number; roiDelta: number; confidence: "WATCH" | "STRONG"; productionChangeAllowed: false };
+
+function assertPaperLiveSettlementConsistency(db: DatabaseSync, source: BuyOutcomeSettlementSource) {
+  if (!source.usesOfficialRaceResults) return;
+  const row = db.prepare(`
+    ${source.cte}
+    SELECT COUNT(*) AS mismatches
+    FROM buy_outcomes
+    WHERE decision_result IS NOT NULL
+      AND outcome_result IS NOT NULL
+      AND decision_result != outcome_result
+  `).get(...source.params) as { mismatches: number | bigint | null };
+  if (number(row.mismatches) > 0) {
+    throw new Error("paper-live settlement result conflicts with official race_results");
+  }
+}
 
 function parseArgs(argv: string[]) {
   const parsed = { from: null as string | null, to: null as string | null, runKind: null as string | null, modelVersion: null as string | null, recent: 30, output: null as string | null, retainPrivateDir: null as string | null, patternSignals: null as string | null };
