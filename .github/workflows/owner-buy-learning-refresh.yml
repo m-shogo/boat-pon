@@ -103,6 +103,15 @@ jobs:
           --summary data/tmp/owner-buy-learning-latest.json
           --output data/tmp/owner-buy-hit-rate-uncertainty.json
 
+      - name: Report BUY ROI uncertainty
+        run: >-
+          npx tsx scripts/report-buy-roi-uncertainty.ts
+          --run-kind paper-live
+          --recent 30
+          --minimum-trials 30
+          --iterations 5000
+          --output data/tmp/owner-buy-roi-uncertainty.json
+
       - name: Report public-safe BUY learning diagnostics
         shell: bash
         run: |
@@ -112,8 +121,9 @@ jobs:
           const patterns = JSON.parse(fs.readFileSync('data/tmp/owner-buy-patterns-public.json', 'utf8'));
           const tail = JSON.parse(fs.readFileSync('data/tmp/owner-buy-tail-public.json', 'utf8'));
           const uncertainty = JSON.parse(fs.readFileSync('data/tmp/owner-buy-hit-rate-uncertainty.json', 'utf8'));
+          const roiUncertainty = JSON.parse(fs.readFileSync('data/tmp/owner-buy-roi-uncertainty.json', 'utf8'));
           const summary = JSON.parse(fs.readFileSync('data/tmp/owner-buy-learning-latest.json', 'utf8'));
-          if (patterns.productionChangeAllowed !== false || tail.productionChangeAllowed !== false || uncertainty.productionChangeAllowed !== false) throw new Error('BUY diagnostics must not allow production changes');
+          if (patterns.productionChangeAllowed !== false || tail.productionChangeAllowed !== false || uncertainty.productionChangeAllowed !== false || roiUncertainty.productionChangeAllowed !== false) throw new Error('BUY diagnostics must not allow production changes');
           const diagnostics = {
             schemaVersion: 'owner-buy-learning-diagnostics-v1',
             status: summary.status,
@@ -136,6 +146,11 @@ jobs:
               status: uncertainty.status,
               performance: uncertainty.performance ?? null,
               recent: uncertainty.recent ?? null,
+            },
+            roiUncertainty: {
+              status: roiUncertainty.status,
+              performance: roiUncertainty.performance?.interval ?? null,
+              recent: roiUncertainty.recent?.interval ?? null,
             },
             patternSupport: {
               status: patterns.support?.status ?? null,
@@ -185,6 +200,7 @@ jobs:
           --patterns data/tmp/owner-buy-patterns-public.json
           --tail data/tmp/owner-buy-tail-public.json
           --uncertainty data/tmp/owner-buy-hit-rate-uncertainty.json
+          --roi-uncertainty data/tmp/owner-buy-roi-uncertainty.json
           --output data/tmp/owner-buy-evidence.json
 
       - name: Verify public source boundary
