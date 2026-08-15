@@ -31,6 +31,70 @@ export type PublicOutcomePatternSignal = {
   productionChangeAllowed: false;
 };
 
+export type BuyOutcomePatternSupport = {
+  status: "INSUFFICIENT_GLOBAL_SUPPORT" | "NO_SUPPORTED_CONTRAST" | "SUPPORTED_CONTRASTS";
+  baselineSettled: number;
+  minimumSettledPerSide: number;
+  minimumTotalSettledForAnyContrast: number;
+  globalAdditionalSettledForAnyContrast: number;
+  validSegmentCount: number;
+  segmentSideEligibleCount: number;
+  supportedContrastCount: number;
+  supportedDimensionCount: number;
+};
+
+export function assessBuyOutcomePatternSupport(
+  segments: BuyOutcomeSegment[],
+  baseline: { settled: number; payoutOddsSum: number },
+  options: { minSettled?: number; minComparisonSettled?: number } = {},
+): BuyOutcomePatternSupport {
+  const minSettled = options.minSettled ?? 30;
+  const minComparisonSettled = options.minComparisonSettled ?? minSettled;
+  if (!Number.isInteger(minSettled) || minSettled < 1 || !Number.isInteger(minComparisonSettled) || minComparisonSettled < 1) {
+    throw new Error("invalid BUY pattern support thresholds");
+  }
+  const minimumTotalSettledForAnyContrast = minSettled + minComparisonSettled;
+  if (!validBaseline(baseline)) {
+    return {
+      status: "INSUFFICIENT_GLOBAL_SUPPORT",
+      baselineSettled: 0,
+      minimumSettledPerSide: minSettled,
+      minimumTotalSettledForAnyContrast,
+      globalAdditionalSettledForAnyContrast: minimumTotalSettledForAnyContrast,
+      validSegmentCount: 0,
+      segmentSideEligibleCount: 0,
+      supportedContrastCount: 0,
+      supportedDimensionCount: 0,
+    };
+  }
+
+  const validSegments = segments.filter((segment) => validSegment(segment)
+    && segment.settled <= baseline.settled
+    && segment.payoutOddsSum <= baseline.payoutOddsSum);
+  const segmentSideEligible = validSegments.filter((segment) => segment.settled >= minSettled);
+  const supported = segmentSideEligible.filter((segment) => (
+    baseline.settled - segment.settled >= minComparisonSettled
+      && baseline.payoutOddsSum - segment.payoutOddsSum >= 0
+  ));
+  const status = baseline.settled < minimumTotalSettledForAnyContrast
+    ? "INSUFFICIENT_GLOBAL_SUPPORT"
+    : supported.length === 0
+      ? "NO_SUPPORTED_CONTRAST"
+      : "SUPPORTED_CONTRASTS";
+
+  return {
+    status,
+    baselineSettled: baseline.settled,
+    minimumSettledPerSide: minSettled,
+    minimumTotalSettledForAnyContrast,
+    globalAdditionalSettledForAnyContrast: Math.max(0, minimumTotalSettledForAnyContrast - baseline.settled),
+    validSegmentCount: validSegments.length,
+    segmentSideEligibleCount: segmentSideEligible.length,
+    supportedContrastCount: supported.length,
+    supportedDimensionCount: new Set(supported.map((segment) => segment.dimension)).size,
+  };
+}
+
 export function mineBuyOutcomePatterns(
   segments: BuyOutcomeSegment[],
   baseline: { settled: number; payoutOddsSum: number },

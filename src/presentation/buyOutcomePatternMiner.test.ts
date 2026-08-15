@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { mineBuyOutcomePatterns, toPublicOutcomePatternSignals } from "./buyOutcomePatternMiner";
+import { assessBuyOutcomePatternSupport, mineBuyOutcomePatterns, toPublicOutcomePatternSignals } from "./buyOutcomePatternMiner";
 
 test("detects repeatable success/failure segments against the supported complement cohort", () => {
   const patterns = mineBuyOutcomePatterns([
@@ -28,6 +28,57 @@ test("detects repeatable success/failure segments against the supported compleme
   assert.ok(patterns.every((item) => item.segmentKey !== "1.2-1.4"));
 });
 
+test("explains that the current 58-BUY cohort cannot support any 30-vs-30 contrast yet", () => {
+  const support = assessBuyOutcomePatternSupport([
+    { dimension: "venue", segmentKey: "private-a", settled: 30, hits: 2, payoutOddsSum: 40 },
+    { dimension: "venue", segmentKey: "private-b", settled: 28, hits: 0, payoutOddsSum: 28 },
+    { dimension: "evBand", segmentKey: "private-high-ev", settled: 40, hits: 2, payoutOddsSum: 50 },
+  ], { settled: 58, payoutOddsSum: 68 });
+  assert.deepEqual(support, {
+    status: "INSUFFICIENT_GLOBAL_SUPPORT",
+    baselineSettled: 58,
+    minimumSettledPerSide: 30,
+    minimumTotalSettledForAnyContrast: 60,
+    globalAdditionalSettledForAnyContrast: 2,
+    validSegmentCount: 3,
+    segmentSideEligibleCount: 2,
+    supportedContrastCount: 0,
+    supportedDimensionCount: 0,
+  });
+});
+
+test("distinguishes global maturity from actual segment/complement support", () => {
+  const noSupportedContrast = assessBuyOutcomePatternSupport([
+    { dimension: "venue", segmentKey: "dominant", settled: 50, hits: 2, payoutOddsSum: 60 },
+    { dimension: "venue", segmentKey: "thin", settled: 20, hits: 0, payoutOddsSum: 10 },
+  ], { settled: 70, payoutOddsSum: 70 });
+  assert.equal(noSupportedContrast.status, "NO_SUPPORTED_CONTRAST");
+  assert.equal(noSupportedContrast.globalAdditionalSettledForAnyContrast, 0);
+  assert.equal(noSupportedContrast.segmentSideEligibleCount, 1);
+  assert.equal(noSupportedContrast.supportedContrastCount, 0);
+
+  const supported = assessBuyOutcomePatternSupport([
+    { dimension: "venue", segmentKey: "a", settled: 35, hits: 2, payoutOddsSum: 45 },
+    { dimension: "venue", segmentKey: "b", settled: 35, hits: 0, payoutOddsSum: 25 },
+    { dimension: "evBand", segmentKey: "high", settled: 30, hits: 1, payoutOddsSum: 35 },
+    { dimension: "evBand", segmentKey: "low", settled: 40, hits: 1, payoutOddsSum: 35 },
+  ], { settled: 70, payoutOddsSum: 70 });
+  assert.equal(supported.status, "SUPPORTED_CONTRASTS");
+  assert.equal(supported.supportedContrastCount, 4);
+  assert.equal(supported.supportedDimensionCount, 2);
+});
+
+test("does not count invalid or impossible segment aggregates as support", () => {
+  const support = assessBuyOutcomePatternSupport([
+    { dimension: "venue", segmentKey: "", settled: 30, hits: 2, payoutOddsSum: 10 },
+    { dimension: "venue", segmentKey: "too-many", settled: 80, hits: 2, payoutOddsSum: 10 },
+    { dimension: "evBand", segmentKey: "too-much-payout", settled: 30, hits: 2, payoutOddsSum: 200 },
+  ], { settled: 70, payoutOddsSum: 100 });
+  assert.equal(support.validSegmentCount, 0);
+  assert.equal(support.supportedContrastCount, 0);
+  assert.equal(support.status, "NO_SUPPORTED_CONTRAST");
+});
+
 test("does not surface weak or tiny segments", () => {
   const patterns = mineBuyOutcomePatterns([
     { dimension: "sampleBand", segmentKey: "30-99", settled: 29, hits: 5, payoutOddsSum: 5 },
@@ -38,7 +89,7 @@ test("does not surface weak or tiny segments", () => {
 
 test("does not surface a segment when the rest of the cohort is under-supported", () => {
   const patterns = mineBuyOutcomePatterns([
-    { dimension: "venue", segmentKey: "premature-edge", settled: 30, hits: 10, payoutOddsSum: 90 },
+    { dimension: "venue", segmentKey: "premature-edge", settled: 30, hits: 10, payoutOddsSum: 60 },
   ], { settled: 58, payoutOddsSum: 68.3 }, {
     minSettled: 30,
     minRoiDelta: 0.15,
