@@ -165,29 +165,6 @@ function decideTicket(input: {
     : { placed: false, selection: null };
 }
 
-type TicketDecision = {
-  placed: boolean;
-  selection: string | null;
-};
-
-function decideTicket(input: {
-  policyId: N2EconomicPolicyId;
-  probabilities: Record<string, number>;
-  marketOdds: Record<string, number>;
-}): TicketDecision {
-  if (input.policyId === "forced_top1") {
-    const best = bestBy(input.probabilities, (_selection, probability) => probability);
-    return { placed: true, selection: best.selection };
-  }
-  const best = bestBy(
-    input.probabilities,
-    (selection, probability) => probability * input.marketOdds[selection],
-  );
-  return best.score > N2_METRICS_POSITIVE_EV_THRESHOLD + N2_METRICS_EV_EPSILON
-    ? { placed: true, selection: best.selection }
-    : { placed: false, selection: null };
-}
-
 function evaluatePolicy(input: {
   policyId: N2EconomicPolicyId;
   baselineId: string;
