@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { readTrifectaMarketCoverageEvents } from "./n2OddsCoverageReader";
+import { isExplicitMarketObservedAt, readTrifectaMarketCoverageEvents } from "./n2OddsCoverageReader";
 
 test("odds coverage rejects impossible calendar ranges before opening databases", () => {
   for (const [dateFrom, dateTo] of [
@@ -17,4 +17,19 @@ test("odds coverage rejects impossible calendar ranges before opening databases"
       checkpoint: "T-5",
     }), /N2_COVERAGE_INVALID_DATE_RANGE/);
   }
+});
+
+test("market observedAt requires a real calendar date, valid clock, and explicit timezone", () => {
+  for (const value of [
+    "2026-02-30T02:55:00Z",
+    "2026-05-20T24:00:00Z",
+    "2026-05-20T23:60:00Z",
+    "2026-05-20T23:59:60Z",
+    "2026-05-20T02:55:00",
+  ]) {
+    assert.equal(isExplicitMarketObservedAt(value), false, value);
+  }
+
+  assert.equal(isExplicitMarketObservedAt("2024-02-29T02:55:00Z"), true);
+  assert.equal(isExplicitMarketObservedAt("2026-05-20T11:55:00+09:00"), true);
 });
