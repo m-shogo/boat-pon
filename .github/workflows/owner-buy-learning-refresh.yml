@@ -78,13 +78,19 @@ jobs:
           --output-public data/tmp/owner-buy-tail-public.json
           --retain-private-dir data/private/outcome-tail-ledger
 
-      - name: Build and retain read-only BUY outcome learning summary
+      - name: Build read-only BUY outcome learning summary
         run: >-
           npx tsx scripts/report-buy-learning-summary.ts
           --run-kind paper-live
           --recent 30
           --pattern-signals data/tmp/owner-buy-patterns-public.json
           --output data/tmp/owner-buy-learning-latest.json
+
+      - name: Merge supported tail stability and retain final BUY learning
+        run: >-
+          npx tsx scripts/merge-buy-tail-learning.ts
+          --summary data/tmp/owner-buy-learning-latest.json
+          --tail-signal data/tmp/owner-buy-tail-public.json
           --retain-private-dir data/private/outcome-learning-ledger
 
       - name: Report public-safe BUY learning diagnostics

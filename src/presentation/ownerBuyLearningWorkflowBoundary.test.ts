@@ -44,6 +44,19 @@ test("owner BUY refresh researches max-hit dependence only across independent su
   assert.match(workflow, /--output-public data\/tmp\/owner-buy-tail-public\.json/u);
 });
 
+test("owner BUY refresh retains only the final tail-enriched learning summary", () => {
+  const summaryStart = workflow.indexOf("- name: Build read-only BUY outcome learning summary");
+  const mergeStart = workflow.indexOf("- name: Merge supported tail stability and retain final BUY learning");
+  const diagnosticsStart = workflow.indexOf("- name: Report public-safe BUY learning diagnostics");
+  assert.ok(summaryStart >= 0 && mergeStart > summaryStart && diagnosticsStart > mergeStart);
+  const summaryStep = workflow.slice(summaryStart, mergeStart);
+  const mergeStep = workflow.slice(mergeStart, diagnosticsStart);
+  assert.doesNotMatch(summaryStep, /--retain-private-dir/u);
+  assert.match(mergeStep, /merge-buy-tail-learning\.ts/u);
+  assert.match(mergeStep, /--tail-signal data\/tmp\/owner-buy-tail-public\.json/u);
+  assert.match(mergeStep, /--retain-private-dir data\/private\/outcome-learning-ledger/u);
+});
+
 test("owner BUY diagnostics expose only aggregate public-safe learning state", () => {
   const start = workflow.indexOf("- name: Report public-safe BUY learning diagnostics");
   const end = workflow.indexOf("- name: Verify public source boundary", start);
