@@ -4,6 +4,7 @@
 // self-hosted runner 上で安全に実行するための純粋ロジック層。
 // 本モジュールは schedule / cron / daemon / watch を一切持たない（禁止）。
 import { createHash } from "node:crypto";
+import { canonicalUtcTimestamp } from "../research-replay/canonical";
 
 export const REQUEST_SCHEMA_VERSION = "research-task-request-v1";
 export const ORCHESTRATOR_VERSION = "research-orchestrator-v1";
@@ -64,23 +65,14 @@ export type RequestValidation = {
   request: TaskRequest | null;
 };
 
-function hasValidCalendarDate(value: string): boolean {
-  const match = /^(\d{4})-(\d{2})-(\d{2})T/.exec(value);
-  if (!match) return false;
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  const parsed = new Date(Date.UTC(year, month - 1, day));
-  return parsed.getUTCFullYear() === year
-    && parsed.getUTCMonth() === month - 1
-    && parsed.getUTCDate() === day;
-}
-
 function isValidRequestTimestamp(value: unknown): value is string {
-  return typeof value === "string"
-    && value.length >= 20
-    && hasValidCalendarDate(value)
-    && !Number.isNaN(Date.parse(value));
+  if (typeof value !== "string") return false;
+  try {
+    canonicalUtcTimestamp(value);
+    return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})$/u.test(value);
+  } catch {
+    return false;
+  }
 }
 
 // strict decode: unknown field / missing field / 形式不正 / digest 不一致はすべて拒否（fail-closed）。
