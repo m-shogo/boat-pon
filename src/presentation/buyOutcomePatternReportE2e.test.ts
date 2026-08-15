@@ -56,12 +56,22 @@ test("BUY outcome pattern report reconciles paper-live to official race_results 
 
     const status = JSON.parse(stdout.trim()) as {
       analyzedSettled: number;
+      supportStatus: string;
+      globalAdditionalSettledForAnyContrast: number;
+      supportedContrastCount: number;
+      supportedDimensionCount: number;
+      noSignalReason: string | null;
       privatePatternCount: number;
       publicSignalCount: number;
       retained: boolean;
       productionChangeAllowed: boolean;
     };
     assert.equal(status.analyzedSettled, 60);
+    assert.equal(status.supportStatus, "SUPPORTED_CONTRASTS");
+    assert.equal(status.globalAdditionalSettledForAnyContrast, 0);
+    assert.equal(status.supportedContrastCount, 2);
+    assert.equal(status.supportedDimensionCount, 1);
+    assert.equal(status.noSignalReason, null);
     assert.equal(status.privatePatternCount, 2);
     assert.equal(status.publicSignalCount, 2);
     assert.equal(status.retained, true);
@@ -69,9 +79,30 @@ test("BUY outcome pattern report reconciles paper-live to official race_results 
 
     const publicRecord = JSON.parse(await readFile(output, "utf8")) as {
       analyzedSettled: number;
+      support: {
+        status: string;
+        minimumSettledPerSide: number;
+        minimumTotalSettledForAnyContrast: number;
+        globalAdditionalSettledForAnyContrast: number;
+        supportedContrastCount: number;
+        supportedDimensionCount: number;
+      };
+      noSignalReason: string | null;
       signals: Array<{ direction: string; dimension: string; roiDelta: number; productionChangeAllowed: boolean }>;
     };
     assert.equal(publicRecord.analyzedSettled, 60);
+    assert.deepEqual(publicRecord.support, {
+      status: "SUPPORTED_CONTRASTS",
+      baselineSettled: 60,
+      minimumSettledPerSide: 30,
+      minimumTotalSettledForAnyContrast: 60,
+      globalAdditionalSettledForAnyContrast: 0,
+      validSegmentCount: 8,
+      segmentSideEligibleCount: 7,
+      supportedContrastCount: 2,
+      supportedDimensionCount: 1,
+    });
+    assert.equal(publicRecord.noSignalReason, null);
     assert.deepEqual(new Set(publicRecord.signals.map((signal) => signal.direction)), new Set(["SUCCESS_EDGE", "FAILURE_REGIME"]));
     assert.ok(publicRecord.signals.every((signal) => signal.dimension === "venue"));
     // Each 30-race venue is compared with the other 30-race venue: ROI 2.0 vs 0.0.
