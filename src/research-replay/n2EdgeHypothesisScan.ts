@@ -1,4 +1,4 @@
-import { canonicalHash } from "./canonical";
+import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import {
   enumerateBetSelections,
   validateFeaturePIT,
@@ -327,6 +327,15 @@ function compareRaceKeys(left: string, right: string): number {
     || Number(a[3]) - Number(b[3]);
 }
 
+function hasValidDecisionCutoff(value: string): boolean {
+  try {
+    canonicalUtcTimestamp(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function commonReportFields(inputCount: number) {
   return {
     discoverySplit: "train" as const,
@@ -406,7 +415,7 @@ export class N2EdgeHypothesisAccumulator {
     if (canonicalSplit === null) observationBlockers.push(`INVALID_RACE_KEY:${observation.canonicalRaceKey}`);
     else if (observation.split !== canonicalSplit) observationBlockers.push(`SPLIT_MISMATCH:${observation.canonicalRaceKey}:${observation.split}/${canonicalSplit}`);
     if (observation.split !== "train") observationBlockers.push(`NON_DISCOVERY_SPLIT_PRESENT:${observation.split}`);
-    if (!Number.isFinite(Date.parse(observation.decisionCutoff))) observationBlockers.push("INVALID_DECISION_CUTOFF");
+    if (!hasValidDecisionCutoff(observation.decisionCutoff)) observationBlockers.push("INVALID_DECISION_CUTOFF");
     if (!TRIFECTA_SELECTIONS.has(observation.betSelection)) observationBlockers.push(`INVALID_TRIFECTA_SELECTION:${observation.betSelection}`);
     if (!Number.isFinite(observation.baselineProbability)
       || observation.baselineProbability < 0
