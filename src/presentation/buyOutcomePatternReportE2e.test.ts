@@ -40,8 +40,8 @@ test("BUY outcome pattern report uses paper-live official payouts and keeps exac
     for (let i = 0; i < 30; i += 1) {
       // Official payout is 2x although decision-time odds are deliberately low.
       insert.run("BUY", "1-2-3", "1-2-3", 0, 200, "VENUE_SUCCESS_PRIVATE", "v1", 0.4, 1.1, 0.5, 100, "paper-live");
-      // Misses have an official race payout but contribute zero return to this BUY.
-      insert.run("BUY", "1-2-3", "1-3-2", 0, 200, "VENUE_FAILURE_PRIVATE", "v1", 0.4, 1.1, 100.0, 100, "paper-live");
+      // Same decision-time odds keep odds-band neutral; official settlement separates venue outcomes.
+      insert.run("BUY", "1-2-3", "1-3-2", 0, 200, "VENUE_FAILURE_PRIVATE", "v1", 0.4, 1.1, 0.5, 100, "paper-live");
       // Huge historical hits must not affect the Current BUY baseline or signals.
       insert.run("BUY", "1-2-3", "1-2-3", 0, 10000, "VENUE_HISTORY_PRIVATE", "v0", 0.9, 90.0, 100.0, 500, "historical-backfill");
     }
@@ -67,7 +67,7 @@ test("BUY outcome pattern report uses paper-live official payouts and keeps exac
       productionChangeAllowed: boolean;
     };
     assert.equal(status.analyzedSettled, 60);
-    assert.ok(status.privatePatternCount >= 2);
+    assert.equal(status.privatePatternCount, 2);
     assert.equal(status.publicSignalCount, 2);
     assert.equal(status.retained, true);
     assert.equal(status.productionChangeAllowed, false);
