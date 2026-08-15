@@ -74,18 +74,20 @@ test("BUY outcome pattern report reconciles paper-live to official race_results 
     assert.equal(publicRecord.analyzedSettled, 60);
     assert.deepEqual(new Set(publicRecord.signals.map((signal) => signal.direction)), new Set(["SUCCESS_EDGE", "FAILURE_REGIME"]));
     assert.ok(publicRecord.signals.every((signal) => signal.dimension === "venue"));
-    assert.ok(publicRecord.signals.every((signal) => Math.abs(signal.roiDelta) === 1));
+    // Each 30-race venue is compared with the other 30-race venue: ROI 2.0 vs 0.0.
+    assert.ok(publicRecord.signals.every((signal) => Math.abs(signal.roiDelta) === 2));
     assert.ok(publicRecord.signals.every((signal) => signal.productionChangeAllowed === false));
 
     const publicText = JSON.stringify(publicRecord);
     assert.doesNotMatch(publicText, /VENUE_SUCCESS_PRIVATE|VENUE_FAILURE_PRIVATE|VENUE_HISTORY_PRIVATE|VENUE_RETURNED_PRIVATE/);
-    assert.doesNotMatch(publicText, /segmentKey|selection|currentOdds|requiredOdds|stake/);
+    assert.doesNotMatch(publicText, /segmentKey|selection|currentOdds|requiredOdds|stake|comparisonSettled|comparisonRoiProxy/);
 
     const privateFiles = await readdir(privateDir);
     assert.equal(privateFiles.length, 1);
     const privateText = await readFile(join(privateDir, privateFiles[0]!), "utf8");
     assert.match(privateText, /VENUE_SUCCESS_PRIVATE/);
     assert.match(privateText, /VENUE_FAILURE_PRIVATE/);
+    assert.match(privateText, /"comparisonSettled": 30/);
     assert.doesNotMatch(privateText, /VENUE_HISTORY_PRIVATE|VENUE_RETURNED_PRIVATE/);
   } finally {
     await rm(output, { force: true });
