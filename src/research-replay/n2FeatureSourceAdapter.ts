@@ -54,8 +54,19 @@ function hasValidCalendarDate(value: string): boolean {
     && parsed.getUTCDate() === day;
 }
 
+function hasValidClock(value: string): boolean {
+  const clock = /T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?/u.exec(value);
+  if (clock === null) return false;
+  if (Number(clock[1]) > 23 || Number(clock[2]) > 59 || Number(clock[3] ?? "0") > 59) return false;
+  const offset = /([+-])(\d{2}):(\d{2})$/u.exec(value);
+  return offset === null || (Number(offset[2]) <= 23 && Number(offset[3]) <= 59);
+}
+
 function validTime(value: string | null): value is string {
-  return value !== null && hasValidCalendarDate(value) && Number.isFinite(Date.parse(value));
+  return value !== null
+    && hasValidCalendarDate(value)
+    && hasValidClock(value)
+    && Number.isFinite(Date.parse(value));
 }
 
 // imported_atやrace dateをsource availabilityの代用にしない。F0 observation/raw lineageが揃う場合だけ昇格する。

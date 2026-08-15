@@ -38,6 +38,54 @@ test("rejects impossible calendar dates before trusting odds lineage", () => {
   });
 });
 
+test("rejects clock values normalized by Date.parse before trusting program lineage", () => {
+  for (const importedAt of [
+    "2026-08-07T24:00:00Z",
+    "2026-08-07T23:60:00+09:00",
+    "2026-08-07T23:59:60Z",
+  ]) {
+    const result = adaptOfficialProgramFeatures({
+      raceId: "race-1",
+      rawJson: "{}",
+      sourceFile: "fixture.json",
+      importedAt,
+      lineage: null,
+    });
+
+    assert.deepEqual(result, {
+      status: "excluded",
+      reason: "excluded_invalid_program_imported_at",
+    }, importedAt);
+  }
+});
+
+test("rejects clock values normalized by Date.parse before trusting odds lineage", () => {
+  for (const capturedAt of [
+    "2026-08-07T24:00:00Z",
+    "2026-08-07T23:60:00+09:00",
+    "2026-08-07T23:59:60Z",
+  ]) {
+    const result = adaptLiveOddsRows({
+      expectedBetType: "trifecta",
+      rows: [{
+        id: 1,
+        raceId: "race-1",
+        betType: "trifecta",
+        betSelection: "1-2-3",
+        odds: 12.3,
+        capturedAt,
+        source: "fixture",
+        lineage: null,
+      }],
+    });
+
+    assert.deepEqual(result, {
+      status: "excluded",
+      reason: "excluded_invalid_odds_captured_at",
+    }, capturedAt);
+  }
+});
+
 test("keeps valid leap-day timestamps eligible for normal lineage validation", () => {
   const result = adaptLiveOddsRows({
     expectedBetType: "trifecta",
