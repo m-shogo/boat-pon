@@ -36,6 +36,24 @@ const SELECTIONS = enumerateBetSelections("trifecta");
 type HoldoutSourceReader = typeof readN2EdgeHoldoutSource;
 type SelectedProgramReader = typeof readN2EdgeSelectedProgramFeatures;
 
+function isDigest(value: unknown): value is string {
+  return typeof value === "string" && /^[0-9a-f]{64}$/u.test(value);
+}
+
+function discoveryArtifactDigestMatches(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const {
+    outputDigest,
+    runId: _runId,
+    requestId: _requestId,
+    taskId: _taskId,
+    executorVersion: _executorVersion,
+    generatedAt: _generatedAt,
+    ...summary
+  } = value as Record<string, unknown>;
+  return isDigest(outputDigest) && canonicalHash(summary) === outputDigest;
+}
+
 function lockedHypothesesFromArtifact(repoRoot: string): { hypotheses: N2EdgeHypothesis[]; digest: string; blockers: string[] } {
   const path = join(repoRoot, DISCOVERY_REPORT_RELATIVE_PATH);
   if (!existsSync(path)) return { hypotheses: [], digest: canonicalHash("missing-discovery-report"), blockers: ["DISCOVERY_REPORT_MISSING"] };
@@ -43,6 +61,12 @@ function lockedHypothesesFromArtifact(repoRoot: string): { hypotheses: N2EdgeHyp
   try { parsed = JSON.parse(readFileSync(path, "utf8")); }
   catch { return { hypotheses: [], digest: canonicalHash("invalid-discovery-report"), blockers: ["DISCOVERY_REPORT_INVALID_JSON"] }; }
   const report = parsed as { status?: unknown; scan?: { status?: unknown; scanVersion?: unknown; signals?: unknown }; outputDigest?: unknown };
+  if (!isDigest(report.outputDigest)) {
+    return { hypotheses: [], digest: canonicalHash(parsed), blockers: ["DISCOVERY_OUTPUT_DIGEST_INVALID"] };
+  }
+  if (!discoveryArtifactDigestMatches(parsed)) {
+    return { hypotheses: [], digest: canonicalHash(parsed), blockers: ["DISCOVERY_OUTPUT_DIGEST_MISMATCH"] };
+  }
   if (report.status !== "PASS" || report.scan?.status !== "PASS") {
     return { hypotheses: [], digest: canonicalHash(parsed), blockers: ["DISCOVERY_REPORT_NOT_PASS"] };
   }
