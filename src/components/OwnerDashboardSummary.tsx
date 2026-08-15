@@ -1,5 +1,5 @@
 import type { OwnerDashboardSnapshot } from "../presentation/ownerDashboardSnapshot";
-import type { OwnerBuyWilsonInterval } from "../presentation/ownerBuyEvidenceDiagnostics";
+import type { OwnerBuyRoiBootstrapInterval, OwnerBuyWilsonInterval } from "../presentation/ownerBuyEvidenceDiagnostics";
 
 export function OwnerDashboardSummary({ snapshot }: { snapshot: OwnerDashboardSnapshot | null }) {
   if (!snapshot) {
@@ -44,7 +44,7 @@ export function OwnerDashboardSummary({ snapshot }: { snapshot: OwnerDashboardSn
           <OwnerCard label="Recent unit-stake ROI" value={formatRoi(learning.recent.roi)} />
         </div>
 
-        {evidence.status === "AVAILABLE" && evidence.patternSupport && evidence.hitRateUncertainty && evidence.tailStability ? <>
+        {evidence.status === "AVAILABLE" && evidence.patternSupport && evidence.hitRateUncertainty && evidence.roiUncertainty && evidence.tailStability ? <>
           <div className="ownerSectionHead"><h3>Outcome Evidence Maturity</h3><p>成功/失敗を断定する前のsupport・不確実性・時系列再現性。production auto-change: OFF</p></div>
           <div className="ownerGrid ownerBuyGrid">
             <OwnerCard label="Pattern support" value={formatPatternSupport(evidence.patternSupport.status)} />
@@ -52,6 +52,9 @@ export function OwnerDashboardSummary({ snapshot }: { snapshot: OwnerDashboardSn
             <OwnerCard label="Supported dimensions" value={String(evidence.patternSupport.supportedDimensionCount)} />
             <OwnerCard label="Hit rate 95%" value={formatInterval(evidence.hitRateUncertainty.performance)} />
             <OwnerCard label="Recent hit rate 95%" value={formatInterval(evidence.hitRateUncertainty.recent)} />
+            <OwnerCard label="ROI 95%" value={formatRoiInterval(evidence.roiUncertainty.performance.interval)} />
+            <OwnerCard label="Recent ROI 95%" value={formatRoiInterval(evidence.roiUncertainty.recent.interval)} />
+            <OwnerCard label="ROI evidence" value={formatRoiClassification(evidence.roiUncertainty.performance.interval?.classification ?? null)} />
             <OwnerCard label="Tail stability" value={formatTailStatus(evidence.tailStability.status)} />
           </div>
           <div className="ownerSplit">
@@ -74,6 +77,8 @@ export function OwnerDashboardSummary({ snapshot }: { snapshot: OwnerDashboardSn
                 <div><dt>Prior max-hit ROI gap</dt><dd>{formatRoiGap(evidence.tailStability.priorTailGap)}</dd></div>
                 <div><dt>Overall hit-rate interval</dt><dd>{formatIntervalLong(evidence.hitRateUncertainty.performance)}</dd></div>
                 <div><dt>Recent hit-rate interval</dt><dd>{formatIntervalLong(evidence.hitRateUncertainty.recent)}</dd></div>
+                <div><dt>Overall ROI interval</dt><dd>{formatRoiIntervalLong(evidence.roiUncertainty.performance.interval)}</dd></div>
+                <div><dt>Recent ROI interval</dt><dd>{formatRoiIntervalLong(evidence.roiUncertainty.recent.interval)}</dd></div>
               </dl>
             </article>
           </div>
@@ -130,6 +135,14 @@ function formatRoi(value: number | null): string { return value == null ? "NOT_A
 function formatRoiGap(value: number | null): string { return value == null ? "NOT_AVAILABLE" : `${(value * 100).toFixed(1)} pt`; }
 function formatInterval(value: OwnerBuyWilsonInterval): string { return value.lower == null || value.upper == null ? "NOT_AVAILABLE" : `${(value.lower * 100).toFixed(1)}–${(value.upper * 100).toFixed(1)}%`; }
 function formatIntervalLong(value: OwnerBuyWilsonInterval): string { return value.pointEstimate == null ? "NOT_AVAILABLE" : `${formatPct(value.pointEstimate)} / 95% ${formatInterval(value)}`; }
+function formatRoiInterval(value: OwnerBuyRoiBootstrapInterval | null): string { return value == null ? "NOT_AVAILABLE" : `${(value.lower * 100).toFixed(1)}–${(value.upper * 100).toFixed(1)}%`; }
+function formatRoiIntervalLong(value: OwnerBuyRoiBootstrapInterval | null): string { return value == null ? "NOT_AVAILABLE" : `${formatRoi(value.pointEstimate)} / 95% ${formatRoiInterval(value)} / ${formatRoiClassification(value.classification)}`; }
+function formatRoiClassification(value: OwnerBuyRoiBootstrapInterval["classification"] | null): string {
+  if (value === "ABOVE_BREAK_EVEN") return "95%区間も損益分岐超え";
+  if (value === "BELOW_BREAK_EVEN") return "95%区間も損益分岐未満";
+  if (value === "CROSSES_BREAK_EVEN") return "損益分岐をまたぐ";
+  return "NOT_AVAILABLE";
+}
 function formatPatternSupport(value: NonNullable<OwnerDashboardSnapshot["buyEvidence"]["patternSupport"]>["status"]): string {
   if (value === "INSUFFICIENT_GLOBAL_SUPPORT") return "GLOBAL SUPPORT不足";
   if (value === "NO_SUPPORTED_CONTRAST") return "比較cohort未成立";
