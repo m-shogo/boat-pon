@@ -50,10 +50,19 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Mine repeatable BUY success and failure patterns
+        run: >-
+          npx tsx scripts/analyze-buy-outcome-patterns.ts
+          --min-settled 30
+          --min-roi-delta 0.15
+          --output-public data/tmp/owner-buy-patterns-public.json
+          --retain-private-dir data/private/outcome-pattern-ledger
+
       - name: Build and retain read-only BUY outcome learning summary
         run: >-
           npx tsx scripts/report-buy-learning-summary.ts
           --recent 30
+          --pattern-signals data/tmp/owner-buy-patterns-public.json
           --output data/tmp/owner-buy-learning-latest.json
           --retain-private-dir data/private/outcome-learning-ledger
 
