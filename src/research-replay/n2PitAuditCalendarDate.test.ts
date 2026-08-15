@@ -39,6 +39,30 @@ test("PIT audit: impossible decision cutoff dates fail closed before lineage", (
   }
 });
 
+test("PIT audit: timezone-less decision cutoffs fail closed before lineage", () => {
+  for (const decisionCutoff of [
+    "2028-02-29",
+    "2028-02-29T01:00:00",
+    "2028-02-29 01:00:00Z",
+  ]) {
+    assert.deepEqual(auditN2PitObservation(row({ decisionCutoff })), {
+      observationType: "official_program",
+      reasonClass: "ambiguous_timing",
+      reason: "decision_cutoff_missing_or_invalid",
+      usable: false,
+    });
+  }
+});
+
+test("PIT audit: explicit timezone offsets remain valid", () => {
+  assert.deepEqual(auditN2PitObservation(row({ decisionCutoff: "2028-02-29T10:00:00+09:00" })), {
+    observationType: "official_program",
+    reasonClass: "safe",
+    reason: "pit_safe",
+    usable: true,
+  });
+});
+
 test("PIT audit: a real leap-day decision cutoff remains valid", () => {
   assert.deepEqual(auditN2PitObservation(row()), {
     observationType: "official_program",
