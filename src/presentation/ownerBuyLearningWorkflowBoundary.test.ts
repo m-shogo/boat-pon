@@ -27,3 +27,12 @@ test("automatic outcome learning remains scoped to Current BUY paper-live", () =
   assert.equal(runKindMatches.length, 2);
   assert.doesNotMatch(workflow, /\bschedule:/u);
 });
+
+test("owner BUY learning reads the canonical private local DB instead of checkout-local data", () => {
+  assert.match(
+    workflow,
+    /BOAT_PON_DB_PATH:\s*\/Users\/m-shogo\/Developer\/personal\/boat-pon\/data\/boat\.sqlite/u,
+  );
+  assert.match(workflow, /name:\s*Verify private BUY source DB[\s\S]*test -f "\$BOAT_PON_DB_PATH"/u);
+  assert.doesNotMatch(workflow, /cp\s+[^\n]*boat\.sqlite/u);
+});
