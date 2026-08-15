@@ -3,7 +3,7 @@ import test from "node:test";
 import { assessBuyTailDependence } from "./buyTailDependence";
 
 const stableTail = { settled: 30, hits: 1, payoutOddsSum: 60, maxPayoutOdds: 60 };
-const diversified = { settled: 30, hits: 6, payoutOddsSum: 36, maxPayoutOdds: 6 };
+const diversified = { settled: 30, hits: 15, payoutOddsSum: 30, maxPayoutOdds: 2 };
 
 test("requires two complete independent windows before judging tail stability", () => {
   const assessment = assessBuyTailDependence(
