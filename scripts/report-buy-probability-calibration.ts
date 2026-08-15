@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { mkdir, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { classifyBuyCalibrationStability, type BuyCalibrationWindow } from "../src/presentation/buyCalibrationStability";
 import { calculateBuyProbabilityCalibration, type BuyCalibrationMetrics, type BuyCalibrationObservation } from "../src/presentation/buyProbabilityCalibration";
 import { buildBuyOutcomeSettlementSource, type BuyOutcomeSettlementSource } from "../src/presentation/buyOutcomeSettlementSource";
 
@@ -32,11 +33,7 @@ try {
     SELECT
       estimated_hit_rate AS predicted,
       CASE WHEN selection = outcome_result THEN 1 ELSE 0 END AS hit,
-      ev,
-      date,
-      venue,
-      race_no,
-      race_id
+      ev
     FROM buy_outcomes
     WHERE ${settledEconomic}
     ORDER BY date DESC, venue DESC, race_no DESC, race_id DESC
@@ -44,19 +41,25 @@ try {
     predicted: number | null;
     hit: number | bigint;
     ev: number | null;
-    date: string;
-    venue: string;
-    race_no: number | bigint;
-    race_id: string;
   }>;
 
   const overall = scope(rows, args.minimumTrials);
-  const recent = scope(rows.slice(0, args.recent), args.minimumTrials);
+  const recentRows = rows.slice(0, args.recent);
+  const priorRows = rows.slice(args.recent, args.recent * 2);
+  const recent = scope(recentRows, args.minimumTrials);
+  const prior = scope(priorRows, args.minimumTrials);
   const highEvRows = rows.filter((row) => row.ev !== null && Number.isFinite(Number(row.ev)) && Number(row.ev) >= args.highEvThreshold);
   const highEv = scope(highEvRows, args.minimumTrials);
+  const stability = classifyBuyCalibrationStability({
+    totalSettled: rows.length,
+    windowSize: args.recent,
+    minimumEligible: args.minimumTrials,
+    recent: calibrationWindow(recent),
+    prior: calibrationWindow(prior),
+  });
 
   const report = {
-    schemaVersion: "buy-probability-calibration-public-v1" as const,
+    schemaVersion: "buy-probability-calibration-public-v2" as const,
     generatedAt: new Date().toISOString(),
     status: overall.status,
     minimumTrials: args.minimumTrials,
@@ -64,8 +67,10 @@ try {
     highEvThreshold: args.highEvThreshold,
     overall,
     recent,
+    prior,
     highEv,
-    note: "Calibration compares decision-time estimated hit probabilities with official settled outcomes. Aggregate diagnostics are descriptive and cannot change production BUY conditions.",
+    stability,
+    note: "Calibration compares decision-time estimated hit probabilities with official settled outcomes. Stability requires two non-overlapping recent-sized windows. Aggregate diagnostics are descriptive and cannot change production BUY conditions.",
     productionChangeAllowed: false as const,
   };
 
@@ -78,7 +83,9 @@ try {
     status: report.status,
     overall: report.overall,
     recent: report.recent,
+    prior: report.prior,
     highEv: report.highEv,
+    stability: report.stability,
     productionChangeAllowed: false,
   }));
 } finally {
@@ -122,6 +129,15 @@ function scope(rows: Array<{ predicted: number | null; hit: number | bigint }>, 
   };
 }
 
+function calibrationWindow(scopeResult: ScopeResult): BuyCalibrationWindow {
+  return {
+    settled: scopeResult.settled,
+    probabilityEligible: scopeResult.probabilityEligible,
+    missingProbability: scopeResult.missingProbability,
+    metrics: scopeResult.metrics,
+  };
+}
+
 function assertPaperLiveSettlementConsistency(db: DatabaseSync, source: BuyOutcomeSettlementSource) {
   if (!source.usesOfficialRaceResults) return;
   const row = db.prepare(`
@@ -154,6 +170,7 @@ function parseArgs(argv: string[]) {
     else throw new Error(`unknown option: ${key}`);
   }
   if (parsed.runKind !== "paper-live") throw new Error("Owner BUY probability calibration must stay scoped to paper-live");
+  if (parsed.minimumTrials > parsed.recent) throw new Error("minimum-trials cannot exceed recent window size");
   if (!parsed.output) throw new Error("output is required");
   return parsed as { runKind: "paper-live"; recent: number; minimumTrials: number; highEvThreshold: number; output: string };
 }
