@@ -76,8 +76,21 @@ function hasValidCalendarDate(value: string): boolean {
     && parsed.getUTCDate() === day;
 }
 
+function hasValidExplicitIsoClock(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}T/u.test(value)) return true;
+  if (!/(?:Z|[+-]\d{2}:\d{2})$/u.test(value)) return false;
+  const match = /^\d{4}-\d{2}-\d{2}T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})$/u.exec(value);
+  if (match === null) return false;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  const second = Number(match[3] ?? "0");
+  return hour <= 23 && minute <= 59 && second <= 59;
+}
+
 export function canonicalUtcTimestamp(value: string): string {
-  if (!hasValidCalendarDate(value)) throw new Error(`invalid timestamp: ${value}`);
+  if (!hasValidCalendarDate(value) || !hasValidExplicitIsoClock(value)) {
+    throw new Error(`invalid timestamp: ${value}`);
+  }
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) throw new Error(`invalid timestamp: ${value}`);
   return parsed.toISOString();
