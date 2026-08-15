@@ -65,7 +65,10 @@ const TRIFECTA_SPACE = SELECTIONS.length;
 function parseRaceKey(value: string): ParsedRaceKey | null {
   const match = RACE_KEY_RE.exec(value);
   if (!match) return null;
-  return { date: match[1], venueCode: match[2], raceNo: Number(match[3]) };
+  const date = match[1];
+  const parsedDate = Date.parse(`${date}T00:00:00.000Z`);
+  if (!Number.isFinite(parsedDate) || new Date(parsedDate).toISOString().slice(0, 10) !== date) return null;
+  return { date, venueCode: match[2], raceNo: Number(match[3]) };
 }
 
 function compareRaceKeys(left: string, right: string): number {
