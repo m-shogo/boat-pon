@@ -1,0 +1,121 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { buildBuyLearningSummary } from "./buyLearningSummary";
+import { buildOwnerBuyEvidenceDiagnostics, unavailableOwnerBuyEvidenceDiagnostics, validateOwnerBuyEvidenceDiagnostics } from "./ownerBuyEvidenceDiagnostics";
+
+const learning = buildBuyLearningSummary({
+  generatedAt: "2026-08-15T12:39:43.000Z",
+  totalDecisions: 61,
+  settled: 61,
+  hits: 2,
+  payoutOddsSum: 68.3,
+  maxPayoutOdds: 40,
+  avgEstimatedHitRate: 0.03,
+  recentSettled: 30,
+  recentHits: 1,
+  recentPayoutOddsSum: 40.3,
+  smallSampleMisses: 0,
+  highConfidenceMisses: 0,
+  highEvMisses: 10,
+});
+
+const patterns = {
+  schemaVersion: "buy-outcome-pattern-public-v1",
+  generatedAt: "2026-08-15T12:39:42.000Z",
+  status: "NO_SIGNAL",
+  analyzedSettled: 61,
+  support: {
+    status: "NO_SUPPORTED_CONTRAST",
+    baselineSettled: 61,
+    minimumSettledPerSide: 30,
+    minimumTotalSettledForAnyContrast: 60,
+    globalAdditionalSettledForAnyContrast: 0,
+    validSegmentCount: 21,
+    segmentSideEligibleCount: 5,
+    supportedContrastCount: 0,
+    supportedDimensionCount: 0,
+  },
+  noSignalReason: "NO_SUPPORTED_CONTRAST",
+  signals: [],
+  productionChangeAllowed: false,
+};
+
+const tail = {
+  schemaVersion: "buy-tail-dependence-public-v1",
+  generatedAt: "2026-08-15T12:39:42.100Z",
+  status: "PERSISTENT_TAIL_DEPENDENCE",
+  windowSize: 30,
+  minimumTailGap: 0.15,
+  totalSettled: 61,
+  support: { recentSettled: 30, priorSettled: 30, missingSettledToCompare: 0 },
+  recent: { settled: 30, hits: 1, roi: 1.3433, roiExMax: 0, tailGap: 1.3433, tailDependent: true },
+  prior: { settled: 30, hits: 1, roi: 0.9667, roiExMax: 0.0334, tailGap: 0.9333, tailDependent: true },
+  productionChangeAllowed: false,
+};
+
+const uncertainty = {
+  schemaVersion: "buy-hit-rate-uncertainty-public-v1",
+  generatedAt: "2026-08-15T12:39:43.500Z",
+  status: "AVAILABLE",
+  performance: { confidenceLevel: 0.95, method: "WILSON_SCORE", trials: 61, successes: 2, pointEstimate: 0.0328, lower: 0.009, upper: 0.1119, width: 0.1029 },
+  recent: { confidenceLevel: 0.95, method: "WILSON_SCORE", trials: 30, successes: 1, pointEstimate: 0.0333, lower: 0.0059, upper: 0.1667, width: 0.1608 },
+  note: "95% Wilson score intervals describe binomial hit-rate uncertainty only; they do not estimate payout ROI uncertainty.",
+  productionChangeAllowed: false,
+};
+
+test("builds strict public-safe evidence diagnostics from the same settled BUY cohort", () => {
+  const diagnostics = buildOwnerBuyEvidenceDiagnostics({
+    generatedAt: "2026-08-15T12:40:00.000Z",
+    buyLearning: learning,
+    patterns,
+    tail,
+    uncertainty,
+  });
+  assert.equal(diagnostics.status, "AVAILABLE");
+  assert.equal(diagnostics.patternSupport?.status, "NO_SUPPORTED_CONTRAST");
+  assert.equal(diagnostics.patternSupport?.analyzedSettled, 61);
+  assert.equal(diagnostics.patternSupport?.validSegmentCount, 21);
+  assert.equal(diagnostics.patternSupport?.segmentSideEligibleCount, 5);
+  assert.equal(diagnostics.tailStability?.status, "PERSISTENT_TAIL_DEPENDENCE");
+  assert.equal(diagnostics.tailStability?.recentTailGap, 1.3433);
+  assert.equal(diagnostics.hitRateUncertainty?.performance.lower, 0.009);
+  assert.equal(diagnostics.hitRateUncertainty?.performance.upper, 0.1119);
+  assert.equal(diagnostics.productionChangeAllowed, false);
+  assert.deepEqual(validateOwnerBuyEvidenceDiagnostics(diagnostics), []);
+  assert.doesNotMatch(JSON.stringify(diagnostics), /selection|raceId|decisionId|currentOdds|requiredOdds|stake|segmentKey|PRIVATE/i);
+});
+
+test("rejects stale or inconsistent evidence sources instead of mixing cohorts", () => {
+  assert.throws(() => buildOwnerBuyEvidenceDiagnostics({
+    generatedAt: "2026-08-15T12:40:00.000Z",
+    buyLearning: learning,
+    patterns: { ...patterns, analyzedSettled: 60 },
+    tail,
+    uncertainty,
+  }), /pattern\/dashboard settled count mismatch/u);
+
+  assert.throws(() => buildOwnerBuyEvidenceDiagnostics({
+    generatedAt: "2026-08-15T12:40:00.000Z",
+    buyLearning: learning,
+    patterns,
+    tail: { ...tail, totalSettled: 60 },
+    uncertainty,
+  }), /tail\/dashboard settled count mismatch|tail.*support/u);
+
+  assert.throws(() => buildOwnerBuyEvidenceDiagnostics({
+    generatedAt: "2026-08-15T12:40:00.000Z",
+    buyLearning: learning,
+    patterns,
+    tail,
+    uncertainty: { ...uncertainty, performance: { ...uncertainty.performance, trials: 60 } },
+  }), /Wilson performance count mismatch/u);
+});
+
+test("NOT_AVAILABLE evidence remains explicit and empty", () => {
+  const value = unavailableOwnerBuyEvidenceDiagnostics("2026-08-15T12:40:00.000Z");
+  assert.equal(value.status, "NOT_AVAILABLE");
+  assert.equal(value.patternSupport, null);
+  assert.equal(value.hitRateUncertainty, null);
+  assert.equal(value.tailStability, null);
+  assert.deepEqual(validateOwnerBuyEvidenceDiagnostics(value), []);
+});
