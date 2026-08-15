@@ -155,12 +155,16 @@ function eventsForProgram(
   }, evidence);
   if (verification.status === "excluded") return excludedProgramEvents(canonicalKey, verification.reason);
 
+  const typedPayload = loadTypedPayload(evidence.observationId);
+  if (typedPayload === null) {
+    return excludedProgramEvents(canonicalKey, "excluded_program_typed_payload_missing");
+  }
+
   const row = loadProgramRow(identity.raceId);
   if (row === null) throw new Error("N2_COVERAGE_PROGRAM_SET_CHANGED_AFTER_PREFLIGHT");
   const loadedCanonicalKey = canonicalN2CoverageRaceKey(row);
   if (loadedCanonicalKey !== canonicalKey) throw new Error("N2_COVERAGE_PROGRAM_SET_CHANGED_AFTER_PREFLIGHT");
 
-  const typedPayload = loadTypedPayload(evidence.observationId);
   const payloadVerification = verifyOfficialProgramTypedPayload({
     canonicalRaceKey: canonicalKey,
     sourceObservedAt: evidence.sourceObservedAt,
@@ -169,10 +173,10 @@ function eventsForProgram(
       domainPayloadType: evidence.domainPayloadType,
       domainPayloadSchemaVersion: evidence.domainPayloadSchemaVersion,
       domainSemanticPayloadHash: evidence.domainSemanticPayloadHash,
-      typedPayloadType: typedPayload?.typedPayloadType ?? null,
-      typedPayloadSchemaVersion: typedPayload?.typedPayloadSchemaVersion ?? null,
-      typedPayloadJson: typedPayload?.typedPayloadJson ?? null,
-      typedPayloadHash: typedPayload?.typedPayloadHash ?? null,
+      typedPayloadType: typedPayload.typedPayloadType,
+      typedPayloadSchemaVersion: typedPayload.typedPayloadSchemaVersion,
+      typedPayloadJson: typedPayload.typedPayloadJson,
+      typedPayloadHash: typedPayload.typedPayloadHash,
     },
   });
   if (payloadVerification.status === "excluded") {
