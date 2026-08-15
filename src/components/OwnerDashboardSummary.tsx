@@ -1,4 +1,5 @@
 import type { OwnerDashboardSnapshot } from "../presentation/ownerDashboardSnapshot";
+import type { OwnerBuyWilsonInterval } from "../presentation/ownerBuyEvidenceDiagnostics";
 
 export function OwnerDashboardSummary({ snapshot }: { snapshot: OwnerDashboardSnapshot | null }) {
   if (!snapshot) {
@@ -13,6 +14,7 @@ export function OwnerDashboardSummary({ snapshot }: { snapshot: OwnerDashboardSn
   }
 
   const learning = snapshot.buyLearning;
+  const evidence = snapshot.buyEvidence;
   return (
     <section className="ownerDashboard" aria-label="Owner Dashboard">
       <div className={`ownerOverall owner-${snapshot.overall.status.toLowerCase()}`}>
@@ -29,18 +31,54 @@ export function OwnerDashboardSummary({ snapshot }: { snapshot: OwnerDashboardSn
         <OwnerCard label="Main updated" value={formatDate(snapshot.git.updatedAt)} />
       </div>
 
-      <div className="ownerSectionHead"><h3>BUY Performance & Learning</h3><p>settled outcomeの安全な集計。ROIはdecision-time odds proxyで、Current BUYは変更しません</p></div>
+      <div className="ownerSectionHead"><h3>BUY Performance & Learning</h3><p>公式settlement払戻を100円unit-stakeへ正規化した集計。実stake損益ではなく、Current BUYは自動変更しません</p></div>
       {learning.status === "AVAILABLE" ? <>
         <div className="ownerGrid ownerBuyGrid">
           <OwnerCard label="Settled BUY" value={formatNumber(learning.performance.settled)} />
           <OwnerCard label="Hits" value={formatNumber(learning.performance.hits)} />
           <OwnerCard label="Misses" value={formatNumber(learning.performance.misses)} />
           <OwnerCard label="Hit rate" value={formatPct(learning.performance.hitRate)} />
-          <OwnerCard label="ROI proxy" value={formatRoi(learning.performance.roi)} />
-          <OwnerCard label="ROI proxy ex max-hit" value={formatRoi(learning.performance.roiExMax)} />
+          <OwnerCard label="Unit-stake ROI" value={formatRoi(learning.performance.roi)} />
+          <OwnerCard label="ROI ex max-hit" value={formatRoi(learning.performance.roiExMax)} />
           <OwnerCard label="Recent hit rate" value={formatPct(learning.recent.hitRate)} />
-          <OwnerCard label="Recent ROI proxy" value={formatRoi(learning.recent.roi)} />
+          <OwnerCard label="Recent unit-stake ROI" value={formatRoi(learning.recent.roi)} />
         </div>
+
+        {evidence.status === "AVAILABLE" && evidence.patternSupport && evidence.hitRateUncertainty && evidence.tailStability ? <>
+          <div className="ownerSectionHead"><h3>Outcome Evidence Maturity</h3><p>成功/失敗を断定する前のsupport・不確実性・時系列再現性。production auto-change: OFF</p></div>
+          <div className="ownerGrid ownerBuyGrid">
+            <OwnerCard label="Pattern support" value={formatPatternSupport(evidence.patternSupport.status)} />
+            <OwnerCard label="Supported contrasts" value={String(evidence.patternSupport.supportedContrastCount)} />
+            <OwnerCard label="Supported dimensions" value={String(evidence.patternSupport.supportedDimensionCount)} />
+            <OwnerCard label="Hit rate 95%" value={formatInterval(evidence.hitRateUncertainty.performance)} />
+            <OwnerCard label="Recent hit rate 95%" value={formatInterval(evidence.hitRateUncertainty.recent)} />
+            <OwnerCard label="Tail stability" value={formatTailStatus(evidence.tailStability.status)} />
+          </div>
+          <div className="ownerSplit">
+            <article className="ownerPanel">
+              <header><span>PATTERN SCREENING</span><strong>{evidence.patternSupport.patternSignalCount}</strong></header>
+              <dl>
+                <div><dt>Reason</dt><dd>{formatNoSignalReason(evidence.patternSupport.noSignalReason)}</dd></div>
+                <div><dt>Support floor</dt><dd>{evidence.patternSupport.minimumSettledPerSide} vs {evidence.patternSupport.minimumSettledPerSide}</dd></div>
+                <div><dt>Valid segment cells</dt><dd>{evidence.patternSupport.validSegmentCount}</dd></div>
+                <div><dt>Segment-side eligible</dt><dd>{evidence.patternSupport.segmentSideEligibleCount}</dd></div>
+                <div><dt>Supported contrasts</dt><dd>{evidence.patternSupport.supportedContrastCount}</dd></div>
+                <div><dt>Global additional settled</dt><dd>{evidence.patternSupport.globalAdditionalSettledForAnyContrast}</dd></div>
+              </dl>
+            </article>
+            <article className="ownerPanel">
+              <header><span>TAIL / UNCERTAINTY</span><strong>{formatTailStatus(evidence.tailStability.status)}</strong></header>
+              <dl>
+                <div><dt>Independent windows</dt><dd>{evidence.tailStability.recentSettled} / {evidence.tailStability.priorSettled}</dd></div>
+                <div><dt>Recent max-hit ROI gap</dt><dd>{formatRoiGap(evidence.tailStability.recentTailGap)}</dd></div>
+                <div><dt>Prior max-hit ROI gap</dt><dd>{formatRoiGap(evidence.tailStability.priorTailGap)}</dd></div>
+                <div><dt>Overall hit-rate interval</dt><dd>{formatIntervalLong(evidence.hitRateUncertainty.performance)}</dd></div>
+                <div><dt>Recent hit-rate interval</dt><dd>{formatIntervalLong(evidence.hitRateUncertainty.recent)}</dd></div>
+              </dl>
+            </article>
+          </div>
+        </> : <article className="ownerPanel"><header><span>OUTCOME EVIDENCE</span><strong>NOT_AVAILABLE</strong></header><p className="ownerClear">検証済みsupport / uncertainty / temporal evidenceがないため推測表示しません。</p></article>}
+
         <div className="ownerSplit">
           <article className="ownerPanel ownerLearningPanel">
             <header><span>WHAT WE LEARNED</span><strong>{learning.learnings.length}</strong></header>
@@ -89,3 +127,24 @@ function formatDate(value: string | null): string { if (!value) return "NOT_AVAI
 function formatNumber(value: number | null): string { return value == null ? "NOT_AVAILABLE" : value.toLocaleString("ja-JP"); }
 function formatPct(value: number | null): string { return value == null ? "NOT_AVAILABLE" : `${(value * 100).toFixed(1)}%`; }
 function formatRoi(value: number | null): string { return value == null ? "NOT_AVAILABLE" : `${(value * 100).toFixed(1)}%`; }
+function formatRoiGap(value: number | null): string { return value == null ? "NOT_AVAILABLE" : `${(value * 100).toFixed(1)} pt`; }
+function formatInterval(value: OwnerBuyWilsonInterval): string { return value.lower == null || value.upper == null ? "NOT_AVAILABLE" : `${(value.lower * 100).toFixed(1)}–${(value.upper * 100).toFixed(1)}%`; }
+function formatIntervalLong(value: OwnerBuyWilsonInterval): string { return value.pointEstimate == null ? "NOT_AVAILABLE" : `${formatPct(value.pointEstimate)} / 95% ${formatInterval(value)}`; }
+function formatPatternSupport(value: NonNullable<OwnerDashboardSnapshot["buyEvidence"]["patternSupport"]>["status"]): string {
+  if (value === "INSUFFICIENT_GLOBAL_SUPPORT") return "GLOBAL SUPPORT不足";
+  if (value === "NO_SUPPORTED_CONTRAST") return "比較cohort未成立";
+  return "比較可能";
+}
+function formatNoSignalReason(value: NonNullable<OwnerDashboardSnapshot["buyEvidence"]["patternSupport"]>["noSignalReason"]): string {
+  if (value === null) return "signalあり";
+  if (value === "INSUFFICIENT_GLOBAL_SUPPORT") return "全体母数不足";
+  if (value === "NO_SUPPORTED_CONTRAST") return "segment/complementの両側support不足";
+  return "比較可能だがROI差が閾値未満";
+}
+function formatTailStatus(value: NonNullable<OwnerDashboardSnapshot["buyEvidence"]["tailStability"]>["status"]): string {
+  if (value === "PERSISTENT_TAIL_DEPENDENCE") return "継続依存";
+  if (value === "RECENT_TAIL_DEPENDENCE") return "直近のみ";
+  if (value === "PRIOR_TAIL_DEPENDENCE") return "過去のみ";
+  if (value === "NO_TAIL_DEPENDENCE_SIGNAL") return "反復なし";
+  return "support不足";
+}
