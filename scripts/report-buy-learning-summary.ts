@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { buildBuyLearningSummary, validateBuyLearningSummary, type BuyLearningSummary } from "../src/presentation/buyLearningSummary";
+import { buildBuyLearningSummary, unavailableBuyLearningSummary, validateBuyLearningSummary, type BuyLearningSummary } from "../src/presentation/buyLearningSummary";
 
 const args = parseArgs(process.argv.slice(2));
 const dbPath = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
@@ -54,25 +54,29 @@ try {
     FROM recent_buy
   `).get(...recentParams) as RecentRow;
 
-  let summary = buildBuyLearningSummary({
-    generatedAt: new Date().toISOString(),
-    from: args.from,
-    to: args.to,
-    totalDecisions: number(all.totalDecisions),
-    settled: number(all.settled),
-    hits: number(all.hits),
-    payoutOddsSum: finite(all.payoutOddsSum),
-    maxPayoutOdds: finite(all.maxPayoutOdds),
-    avgEstimatedHitRate: nullableFinite(all.avgEstimatedHitRate),
-    recentSettled: number(recent.settled),
-    recentHits: number(recent.hits),
-    recentPayoutOddsSum: finite(recent.payoutOddsSum),
-    smallSampleMisses: number(all.smallSampleMisses),
-    highConfidenceMisses: number(all.highConfidenceMisses),
-    highEvMisses: number(all.highEvMisses),
-  });
+  const generatedAt = new Date().toISOString();
+  const settled = number(all.settled);
+  let summary = settled === 0
+    ? unavailableBuyLearningSummary(generatedAt)
+    : buildBuyLearningSummary({
+      generatedAt,
+      from: args.from,
+      to: args.to,
+      totalDecisions: number(all.totalDecisions),
+      settled,
+      hits: number(all.hits),
+      payoutOddsSum: finite(all.payoutOddsSum),
+      maxPayoutOdds: finite(all.maxPayoutOdds),
+      avgEstimatedHitRate: nullableFinite(all.avgEstimatedHitRate),
+      recentSettled: number(recent.settled),
+      recentHits: number(recent.hits),
+      recentPayoutOddsSum: finite(recent.payoutOddsSum),
+      smallSampleMisses: number(all.smallSampleMisses),
+      highConfidenceMisses: number(all.highConfidenceMisses),
+      highEvMisses: number(all.highEvMisses),
+    });
 
-  if (args.patternSignals) summary = await mergePatternSignals(summary, args.patternSignals);
+  if (args.patternSignals && summary.status === "AVAILABLE") summary = await mergePatternSignals(summary, args.patternSignals);
   const validationErrors = validateBuyLearningSummary(summary);
   if (validationErrors.length) throw new Error(`enriched BUY learning summary invalid: ${validationErrors.join("; ")}`);
 
