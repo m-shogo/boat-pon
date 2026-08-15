@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { mineBuyOutcomePatterns, toPublicOutcomePatternSignals, type BuyOutcomeSegment } from "../src/presentation/buyOutcomePatternMiner";
+import { assessBuyOutcomePatternSupport, mineBuyOutcomePatterns, toPublicOutcomePatternSignals, type BuyOutcomeSegment } from "../src/presentation/buyOutcomePatternMiner";
 import { buildBuyOutcomeSettlementSource, type BuyOutcomeSettlementSource } from "../src/presentation/buyOutcomeSettlementSource";
 
 const args = parseArgs(process.argv.slice(2));
@@ -81,10 +81,18 @@ try {
     hits: count(row.hits),
     payoutOddsSum: finite(row.payoutOddsSum),
   }));
-  const patterns = mineBuyOutcomePatterns(segments, {
+  const baselineAggregate = {
     settled: count(baseline.settled),
     payoutOddsSum: finite(baseline.payoutOddsSum),
-  }, { minSettled: args.minSettled, minRoiDelta: args.minRoiDelta });
+  };
+  const support = assessBuyOutcomePatternSupport(segments, baselineAggregate, {
+    minSettled: args.minSettled,
+    minComparisonSettled: args.minSettled,
+  });
+  const patterns = mineBuyOutcomePatterns(segments, baselineAggregate, {
+    minSettled: args.minSettled,
+    minRoiDelta: args.minRoiDelta,
+  });
 
   const privateRecord = {
     schemaVersion: "buy-outcome-pattern-mining.0.1",
@@ -99,7 +107,8 @@ try {
       productionChangeAllowed: false,
       note: "Exploratory pattern mining only; multiple-comparison risk requires governed validation before promotion.",
     },
-    baseline: { settled: count(baseline.settled), roiProxy: ratio(finite(baseline.payoutOddsSum), count(baseline.settled)) },
+    baseline: { settled: baselineAggregate.settled, roiProxy: ratio(baselineAggregate.payoutOddsSum, baselineAggregate.settled) },
+    support,
     patterns,
   };
   const publicRecord = {
@@ -107,6 +116,14 @@ try {
     generatedAt: privateRecord.generatedAt,
     status: patterns.length ? "SIGNALS_FOUND" : "NO_SIGNAL",
     analyzedSettled: privateRecord.baseline.settled,
+    support,
+    noSignalReason: patterns.length
+      ? null
+      : support.status === "INSUFFICIENT_GLOBAL_SUPPORT"
+        ? "INSUFFICIENT_GLOBAL_SUPPORT"
+        : support.status === "NO_SUPPORTED_CONTRAST"
+          ? "NO_SUPPORTED_CONTRAST"
+          : "NO_MATERIAL_ROI_CONTRAST",
     signals: toPublicOutcomePatternSignals(patterns),
     productionChangeAllowed: false,
   };
@@ -116,6 +133,11 @@ try {
   console.log(JSON.stringify({
     status: publicRecord.status,
     analyzedSettled: publicRecord.analyzedSettled,
+    supportStatus: support.status,
+    globalAdditionalSettledForAnyContrast: support.globalAdditionalSettledForAnyContrast,
+    supportedContrastCount: support.supportedContrastCount,
+    supportedDimensionCount: support.supportedDimensionCount,
+    noSignalReason: publicRecord.noSignalReason,
     privatePatternCount: patterns.length,
     publicSignalCount: publicRecord.signals.length,
     retained,
