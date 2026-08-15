@@ -34,7 +34,7 @@ export function validateBuyTailPublicSignal(value: unknown): BuyTailPublicSignal
   if (!isRecord(value)) throw new Error("invalid BUY tail public signal");
   exactKeys(value, new Set(["schemaVersion", "generatedAt", "status", "windowSize", "minimumTailGap", "totalSettled", "support", "recent", "prior", "productionChangeAllowed"]), "tail");
   if (value.schemaVersion !== "buy-tail-dependence-public-v1") throw new Error("invalid BUY tail schemaVersion");
-  if (typeof value.generatedAt !== "string" || !Number.isFinite(Date.parse(value.generatedAt))) throw new Error("invalid BUY tail generatedAt");
+  if (typeof value.generatedAt !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value.generatedAt) || !Number.isFinite(Date.parse(value.generatedAt))) throw new Error("invalid BUY tail generatedAt");
   if (!TAIL_STATUSES.has(String(value.status))) throw new Error("invalid BUY tail status");
   if (!isInt(value.windowSize, 10, 200)) throw new Error("invalid BUY tail windowSize");
   if (!isFiniteBetween(value.minimumTailGap, 0.05, 2)) throw new Error("invalid BUY tail minimumTailGap");
@@ -70,7 +70,9 @@ export function validateBuyTailPublicSignal(value: unknown): BuyTailPublicSignal
 
 export function mergeBuyTailLearning(summary: BuyLearningSummary, rawTail: unknown): BuyLearningSummary {
   const tail = validateBuyTailPublicSignal(rawTail);
-  if (summary.status !== "AVAILABLE" || tail.status === "INSUFFICIENT_SUPPORT") return summary;
+  if (summary.status !== "AVAILABLE") return summary;
+  if (summary.performance.settled !== tail.totalSettled) throw new Error("BUY tail/learning settled count mismatch");
+  if (tail.status === "INSUFFICIENT_SUPPORT") return summary;
 
   const learnings = [...summary.learnings];
   let candidates = [...summary.researchCandidates];
