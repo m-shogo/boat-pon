@@ -10,7 +10,7 @@ import { validateBuyLearningSummary } from "./buyLearningSummary";
 
 const execFileAsync = promisify(execFile);
 
-test("BUY learning report derives sanitized outcomes and retains semantic evidence idempotently", async () => {
+test("BUY learning report derives paper-live outcomes from official race_results and retains semantic evidence idempotently", async () => {
   const temp = await mkdtemp(join(tmpdir(), "boat-pon-buy-learning-"));
   const dbPath = join(temp, "boat.sqlite");
   const suffix = `${process.pid}-${Date.now()}`;
@@ -20,11 +20,14 @@ test("BUY learning report derives sanitized outcomes and retains semantic eviden
   try {
     db.exec(`
       CREATE TABLE decision_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        race_id TEXT NOT NULL,
         date TEXT NOT NULL,
         venue TEXT NOT NULL,
         race_no INTEGER NOT NULL,
+        bet_type TEXT NOT NULL,
         decision TEXT NOT NULL,
-        selection TEXT,
+        selection TEXT NOT NULL,
         result TEXT,
         returned INTEGER NOT NULL DEFAULT 0,
         current_odds REAL,
@@ -33,19 +36,32 @@ test("BUY learning report derives sanitized outcomes and retains semantic eviden
         sample_size INTEGER,
         ev REAL,
         model_version TEXT,
-        run_kind TEXT
+        run_kind TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      CREATE TABLE race_results (
+        race_id TEXT PRIMARY KEY,
+        trifecta TEXT,
+        payout_yen INTEGER,
+        returned INTEGER NOT NULL DEFAULT 0
       );
     `);
     const insert = db.prepare(`INSERT INTO decision_history
-      (date,venue,race_no,decision,selection,result,returned,current_odds,payout_yen,estimated_hit_rate,sample_size,ev,model_version,run_kind)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
-    // Decision-time odds intentionally differ from official payout so the E2E test proves settlement reconciliation.
-    insert.run("2026-08-01", "A", 1, "BUY", "1-2-3", "1-2-3", 0, 2.4, 360, 0.60, 80, 1.44, "v1", "paper-live");
-    insert.run("2026-08-02", "A", 2, "BUY", "1-2-3", "1-3-2", 0, 4.2, 420, 0.55, 20, 2.31, "v1", "paper-live");
-    insert.run("2026-08-03", "B", 3, "BUY", "2-1-3", "3-1-2", 0, 3.0, 300, 0.30, 100, 0.90, "v1", "paper-live");
-    insert.run("2026-08-04", "B", 4, "WATCH", "1-2-3", "1-2-3", 0, 2.0, 200, 0.50, 100, 1.00, "v1", "paper-live");
+      (race_id,date,venue,race_no,bet_type,decision,selection,result,returned,current_odds,payout_yen,estimated_hit_rate,sample_size,ev,model_version,run_kind,created_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+    const result = db.prepare("INSERT INTO race_results (race_id,trifecta,payout_yen,returned) VALUES (?,?,?,?)");
+
+    // decision_history settlement is deliberately null. Official race_results must drive economics.
+    insert.run("r1", "2026-08-01", "A", 1, "trifecta", "BUY", "1-2-3", null, 0, 2.4, null, 0.60, 80, 1.44, "v1", "paper-live", "2026-08-01T00:00:00Z");
+    result.run("r1", "1-2-3", 360, 0);
+    insert.run("r2", "2026-08-02", "A", 2, "trifecta", "BUY", "1-2-3", null, 0, 4.2, null, 0.55, 20, 2.31, "v1", "paper-live", "2026-08-02T00:00:00Z");
+    result.run("r2", "1-3-2", 420, 0);
+    insert.run("r3", "2026-08-03", "B", 3, "trifecta", "BUY", "2-1-3", null, 0, 3.0, null, 0.30, 100, 0.90, "v1", "paper-live", "2026-08-03T00:00:00Z");
+    result.run("r3", "3-1-2", 300, 0);
+    insert.run("r4", "2026-08-04", "B", 4, "trifecta", "WATCH", "1-2-3", null, 0, 2.0, null, 0.50, 100, 1.00, "v1", "paper-live", "2026-08-04T00:00:00Z");
+
     // A huge historical hit must not contaminate Current BUY learning.
-    insert.run("2026-07-31", "A", 5, "BUY", "1-2-3", "1-2-3", 0, 99.0, 9900, 0.90, 500, 89.10, "v0", "historical-backfill");
+    insert.run("history", "2026-07-31", "A", 5, "trifecta", "BUY", "1-2-3", "1-2-3", 0, 99.0, 9900, 0.90, 500, 89.10, "v0", "historical-backfill", "2026-07-31T00:00:00Z");
   } finally {
     db.close();
   }
@@ -68,6 +84,7 @@ test("BUY learning report derives sanitized outcomes and retains semantic eviden
     assert.equal(JSON.stringify(summary).includes("1-2-3"), false);
     assert.equal(JSON.stringify(summary).includes("currentOdds"), false);
     assert.equal((summary.performance as { settled: number }).settled, 3);
+    // One 3.6x official payout across three unit stakes => 1.2 realized ROI proxy.
     assert.equal((summary.performance as { roi: number }).roi, 1.2);
 
     const files = await readdir(privateDir);
