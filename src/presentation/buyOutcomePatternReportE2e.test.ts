@@ -128,6 +128,7 @@ function createTables(db: DatabaseSync) {
       venue TEXT NOT NULL,
       race_no INTEGER NOT NULL,
       bet_type TEXT NOT NULL,
+      decision TEXT NOT NULL,
       selection TEXT NOT NULL,
       result TEXT,
       payout_yen INTEGER,
@@ -151,8 +152,8 @@ function createTables(db: DatabaseSync) {
 
 function decisionInsert(db: DatabaseSync) {
   return db.prepare(`INSERT INTO decision_history
-    (race_id,date,venue,race_no,bet_type,selection,result,payout_yen,returned,model_version,estimated_hit_rate,ev,current_odds,sample_size,run_kind,created_at)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+    (race_id,date,venue,race_no,bet_type,decision,selection,result,payout_yen,returned,model_version,estimated_hit_rate,ev,current_odds,sample_size,run_kind,created_at)
+    VALUES (?,?,?,?,?,'BUY',?,?,?,?,?,?,?,?,?,?,?)`);
 }
 
 function resultInsert(db: DatabaseSync) {
