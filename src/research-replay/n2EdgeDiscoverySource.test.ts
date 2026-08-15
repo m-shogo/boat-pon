@@ -153,6 +153,24 @@ test("program normalization rejects impossible calendar dates", () => {
   );
 });
 
+test("program normalization rejects close clocks normalized by Date.parse", () => {
+  for (const closeAt of ["24:00", "23:60", "23:59:60"]) {
+    assert.throws(
+      () => officialProgramDecisionCutoffUtc("2026-08-05", closeAt),
+      /INVALID_CLOSE_AT/,
+      closeAt,
+    );
+    assert.throws(() => normalizeDiscoveryProgramRow({
+      raceId: "20260805-びわこ-01",
+      date: "2026-08-05",
+      venue: "びわこ",
+      raceNo: 1,
+      closeAt,
+      importedAt: "2026-08-05 01:00:00",
+    }), /INVALID_CLOSE_AT/, closeAt);
+  }
+});
+
 test("source intersects clean winners with eligible pre-cutoff metadata and never reads raw_json", () => {
   withDatabases((paths, dbs) => {
     insertWinner(dbs.sidecar, "warm", "2003-12-31:11:R1", "1-3-2");
