@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildN2FeatureDatasetRows } from "./n2FeatureDatasetBuilder";
+import { buildN2FeatureDatasetRows } from "./n2FeatureFeatureDatasetBuilder";
 import { adaptLiveOddsRows, adaptOfficialProgramFeatures, type OddsTimeseriesSourceRow } from "./n2FeatureSourceAdapter";
 import { verifyN2FeatureLineage, type N2FeatureLineageEvidenceRow } from "./n2FeatureLineage";
 
@@ -80,10 +80,12 @@ test("program adapter: source availability after import is inconsistent", () => 
 
 function odds(over: Partial<OddsTimeseriesSourceRow> = {}): OddsTimeseriesSourceRow {
   const capturedAt = over.capturedAt ?? "2026-05-20T04:59:00.000Z";
+  const lineage = Object.prototype.hasOwnProperty.call(over, "lineage")
+    ? over.lineage ?? null
+    : verifiedLineage("trifecta_market", capturedAt);
   return {
     id: 1, raceId: "race-1", betType: "exacta", betSelection: "1-2", odds: 5.2,
-    capturedAt, source: "official",
-    lineage: verifiedLineage("trifecta_market", capturedAt), ...over,
+    capturedAt, source: "official", lineage, ...over,
   };
 }
 
