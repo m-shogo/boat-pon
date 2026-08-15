@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildN2FeatureDatasetRows } from "./n2FeatureFeatureDatasetBuilder";
+import { buildN2FeatureDatasetRows } from "./n2FeatureDatasetBuilder";
 import { adaptLiveOddsRows, adaptOfficialProgramFeatures, type OddsTimeseriesSourceRow } from "./n2FeatureSourceAdapter";
 import { verifyN2FeatureLineage, type N2FeatureLineageEvidenceRow } from "./n2FeatureLineage";
 
