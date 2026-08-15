@@ -74,6 +74,29 @@ function excluded(canonicalRaceKey: string, checkpoint: N2LiveCheckpoint, reason
   }));
 }
 
+function hasValidCalendarDate(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T/.exec(value);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return parsed.getUTCFullYear() === year
+    && parsed.getUTCMonth() === month - 1
+    && parsed.getUTCDate() === day;
+}
+
+export function isExplicitMarketObservedAt(value: string): boolean {
+  if (!hasValidCalendarDate(value)) return false;
+  const clock = /T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?/.exec(value);
+  if (clock === null) return false;
+  if (Number(clock[1]) > 23 || Number(clock[2]) > 59 || Number(clock[3]) > 59) return false;
+  if (!/(?:Z|[+-]\d{2}:\d{2})$/i.test(value)) return false;
+  const offset = /([+-])(\d{2}):(\d{2})$/.exec(value);
+  if (offset !== null && (Number(offset[2]) > 23 || Number(offset[3]) > 59)) return false;
+  return Number.isFinite(Date.parse(value));
+}
+
 function parsePayload(row: MarketEvidenceRow): TrifectaMarketPayload | null {
   if (row.payloadType !== "trifecta_market" || row.observationPayloadType !== "trifecta_market"
     || row.payloadSchemaVersion !== "rr-payload-v1" || row.observationPayloadSchemaVersion !== "rr-payload-v1"
@@ -87,6 +110,7 @@ function parsePayload(row: MarketEvidenceRow): TrifectaMarketPayload | null {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
   const payload = value as Record<string, unknown>;
   if (!Array.isArray(payload.selections) || typeof payload.observedAt !== "string"
+    || !isExplicitMarketObservedAt(payload.observedAt)
     || typeof payload.checkpointLabelAtCapture !== "string" || payload.marketKind !== "live_checkpoint") return null;
   if (!["T-30", "T-20", "T-10", "T-5", "ad-hoc"].includes(payload.checkpointLabelAtCapture)) return null;
   const selections: Array<{ selection: string; odds: number }> = [];
@@ -124,8 +148,7 @@ function eventsForRace(row: N2CoverageRaceRow, evidenceRows: MarketEvidenceRow[]
     allowedObservationTypes: ["trifecta_market"],
   }, evidence);
   if (verification.status === "excluded") return excluded(canonicalRaceKey, checkpoint, verification.reason);
-  if (!Number.isFinite(Date.parse(payload.observedAt))
-    || Date.parse(payload.observedAt) !== Date.parse(evidence.sourceObservedAt)) {
+  if (Date.parse(payload.observedAt) !== Date.parse(evidence.sourceObservedAt)) {
     return excluded(canonicalRaceKey, checkpoint, "excluded_market_observed_at_mismatch");
   }
 
