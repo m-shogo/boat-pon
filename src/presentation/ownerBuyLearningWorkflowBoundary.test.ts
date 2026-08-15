@@ -37,6 +37,17 @@ test("owner BUY learning reads the canonical private local DB instead of checkou
   assert.doesNotMatch(workflow, /cp\s+[^\n]*boat\.sqlite/u);
 });
 
+test("persistent Mac Owner refresh avoids slow remote npm cache restoration", () => {
+  const start = workflow.indexOf("- name: Setup Node");
+  const end = workflow.indexOf("- name: Install", start);
+  assert.ok(start >= 0 && end > start);
+  const setupNodeStep = workflow.slice(start, end);
+  assert.match(setupNodeStep, /actions\/setup-node@v4/u);
+  assert.match(setupNodeStep, /node-version-file:\s*\.nvmrc/u);
+  assert.doesNotMatch(setupNodeStep, /\bcache:/u);
+  assert.match(workflow, /- name:\s*Install[\s\S]*run:\s*npm ci/u);
+});
+
 test("owner BUY refresh researches max-hit dependence only across independent supported windows", () => {
   assert.match(workflow, /name:\s*Analyze BUY max-hit dependence across independent windows/u);
   assert.match(workflow, /analyze-buy-tail-dependence\.ts[\s\S]*--window-size 30[\s\S]*--min-tail-gap 0\.15/u);
