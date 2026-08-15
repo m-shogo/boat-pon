@@ -82,7 +82,7 @@ test("owner BUY refresh derives Wilson uncertainty from the final learning summa
 
 test("owner BUY diagnostics expose only aggregate public-safe learning state", () => {
   const start = workflow.indexOf("- name: Report public-safe BUY learning diagnostics");
-  const end = workflow.indexOf("- name: Verify public source boundary", start);
+  const end = workflow.indexOf("- name: Build validated Owner BUY evidence diagnostics", start);
   assert.ok(start >= 0 && end > start);
   const diagnosticsStep = workflow.slice(start, end);
 
@@ -106,4 +106,22 @@ test("owner BUY diagnostics expose only aggregate public-safe learning state", (
   assert.match(diagnosticsStep, /productionChangeAllowed:\s*false/u);
   assert.match(diagnosticsStep, /private or operational BUY field reached public-safe diagnostics/u);
   assert.doesNotMatch(diagnosticsStep, /item\.segmentKey|patterns\.support\?\.segmentKey|item\.selection|item\.currentOdds|item\.raceId|item\.decisionId/u);
+});
+
+test("owner BUY evidence is schema-validated before entering the public snapshot", () => {
+  const buildStart = workflow.indexOf("- name: Build validated Owner BUY evidence diagnostics");
+  const boundaryStart = workflow.indexOf("- name: Verify public source boundary", buildStart);
+  assert.ok(buildStart >= 0 && boundaryStart > buildStart);
+  const buildStep = workflow.slice(buildStart, boundaryStart);
+  assert.match(buildStep, /build-owner-buy-evidence-diagnostics\.ts/u);
+  assert.match(buildStep, /--buy-learning data\/tmp\/owner-buy-learning-latest\.json/u);
+  assert.match(buildStep, /--patterns data\/tmp\/owner-buy-patterns-public\.json/u);
+  assert.match(buildStep, /--tail data\/tmp\/owner-buy-tail-public\.json/u);
+  assert.match(buildStep, /--uncertainty data\/tmp\/owner-buy-hit-rate-uncertainty\.json/u);
+  assert.match(buildStep, /--output data\/tmp\/owner-buy-evidence\.json/u);
+
+  const snapshotStart = workflow.indexOf("- name: Build Owner snapshot with BUY learning");
+  const snapshotEnd = workflow.indexOf("- name: Assemble deploy-ready directory", snapshotStart);
+  const snapshotStep = workflow.slice(snapshotStart, snapshotEnd);
+  assert.match(snapshotStep, /--buy-evidence data\/tmp\/owner-buy-evidence\.json/u);
 });
