@@ -8,7 +8,10 @@ import { canonicalHash } from "../research-replay/canonical";
 import type { ProgramFeatureSnapshot } from "../domain/programFeatures";
 import type { N2EdgeHoldoutSourceRead } from "../research-replay/n2EdgeHoldoutSource";
 import type { N2EdgeSelectedProgramFeaturesRead } from "../research-replay/n2EdgeSelectedProgramFeatures";
-import type { N2EdgeHypothesis } from "../research-replay/n2EdgeHypothesisScan";
+import {
+  N2_EDGE_HYPOTHESIS_SCAN_VERSION,
+  type N2EdgeHypothesis,
+} from "../research-replay/n2EdgeHypothesisScan";
 import { createN2EdgeHistoricalTestExecutor } from "./n2EdgeHistoricalTestExecutor";
 import type { ExecutorContext } from "./taskExecutors";
 
@@ -16,7 +19,7 @@ function date(base:string,offset:number){const d=new Date(`${base}T00:00:00.000Z
 function safeProgram():ProgramFeatureSnapshot{return{boats:Array.from({length:6},(_,i)=>({course:i+1,className:i===0?"A1":"B1",nationalWinRate:5+i*.1,nationalTop2Rate:35+i,localWinRate:4.8+i*.1,localTop2Rate:33+i,motorTop2Rate:31+i,boatTop2Rate:30+i,venueMotorTop2Rate:null,venueBoatTop2Rate:null,courseAvgSt:null,courseTop3Rate:null,flyingCount:null,lateStartCount:null,exhibitionStResidual:null}))};}
 
 function lockedHypothesis():N2EdgeHypothesis{return{hypothesisId:"N2EDGE-lock-course1",featureKey:"firstCourse",family:"course",selectionRole:"first",bucket:"1",direction:"underpredicted",uniqueRaceCount:300,meanResidual:.02,standardError:.002,zScore:10,rawPValue:1e-8,holmAdjustedPValue:1e-8,discoverySplit:"train",confirmationSplits:["validation","test"],forwardShadowReserved:true};}
-function writeDiscovery(root:string,signals:N2EdgeHypothesis[]){const path=join(root,"reports/n2/n2-edge-hypothesis-scan.json");mkdirSync(dirname(path),{recursive:true});writeFileSync(path,JSON.stringify({status:"PASS",scan:{status:"PASS",signals},outputDigest:"a".repeat(64)}));}
+function writeDiscovery(root:string,signals:N2EdgeHypothesis[],scanVersion:string=N2_EDGE_HYPOTHESIS_SCAN_VERSION){const path=join(root,"reports/n2/n2-edge-hypothesis-scan.json");mkdirSync(dirname(path),{recursive:true});writeFileSync(path,JSON.stringify({status:"PASS",scan:{status:"PASS",scanVersion,signals},outputDigest:"a".repeat(64)}));}
 
 function source():N2EdgeHoldoutSourceRead{
  const outcomes:Array<{canonicalRaceKey:string;winningSelection:string}>=[]; const candidates:N2EdgeHoldoutSourceRead["candidates"]=[];
@@ -42,6 +45,14 @@ test("no discovery signals short-circuits without holdout or raw-program reads",
 test("dependency blocks before discovery artifact/source reads",()=>withRoot(root=>{
  let sourceCalls=0;const executor=createN2EdgeHistoricalTestExecutor(()=>{sourceCalls++;return source();},input=>selected(input.selectedCandidates));
  const result=executor(context(root,"BLOCKED"));assert.equal(result.result,"BLOCKED");assert.equal(sourceCalls,0);assert.equal(existsSync(join(root,"reports/n2/n2-edge-historical-test.json")),false);
+}));
+
+test("stale discovery scan version blocks before holdout or raw-program reads",()=>withRoot(root=>{
+ writeDiscovery(root,[lockedHypothesis()],"n2-edge-hypothesis-scan-v1");let sourceCalls=0,selectedCalls=0;
+ const executor=createN2EdgeHistoricalTestExecutor(()=>{sourceCalls++;return source();},input=>{selectedCalls++;return selected(input.selectedCandidates);});
+ const result=executor(context(root));assert.equal(result.result,"BLOCKED");assert.equal(sourceCalls,0);assert.equal(selectedCalls,0);
+ assert.equal(existsSync(join(root,"reports/n2/n2-edge-historical-test.json")),false);
+ assert.match(JSON.stringify(result.summary),/DISCOVERY_SCAN_VERSION_MISMATCH:n2-edge-hypothesis-scan-v1\/n2-edge-hypothesis-scan-v2/u);
 }));
 
 test("locked hypothesis runs deterministic validation/test holdouts and persists aggregate-only evidence",()=>withRoot(root=>{
