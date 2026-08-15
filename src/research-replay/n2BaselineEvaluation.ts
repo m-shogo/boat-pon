@@ -138,7 +138,9 @@ function validTimestamp(value: string): boolean {
   }
 }
 
-function raceDate(canonicalRaceKey: string): string | null {
+type ParsedRaceKey = { date: string; venue: number; raceNo: number };
+
+function parseRaceKey(canonicalRaceKey: string): ParsedRaceKey | null {
   const match = RACE_KEY_RE.exec(canonicalRaceKey);
   if (!match) return null;
   const date = `${match[1]}-${match[2]}-${match[3]}`;
@@ -148,7 +150,20 @@ function raceDate(canonicalRaceKey: string): string | null {
   if (!Number.isFinite(parsedDate) || new Date(parsedDate).toISOString().slice(0, 10) !== date) return null;
   if (!Number.isInteger(venue) || venue < 1 || venue > 24) return null;
   if (!Number.isInteger(raceNo) || raceNo < 1 || raceNo > 12) return null;
-  return date;
+  return { date, venue, raceNo };
+}
+
+function raceDate(canonicalRaceKey: string): string | null {
+  return parseRaceKey(canonicalRaceKey)?.date ?? null;
+}
+
+function compareCanonicalRaceKeys(left: string, right: string): number | null {
+  const a = parseRaceKey(left);
+  const b = parseRaceKey(right);
+  if (a === null || b === null) return null;
+  return a.date.localeCompare(b.date)
+    || a.venue - b.venue
+    || a.raceNo - b.raceNo;
 }
 
 export function splitForN2RaceKey(canonicalRaceKey: string): N2EvaluationSplit | null {
@@ -218,8 +233,9 @@ export function validateN2BaselineRow(row: N2BaselinePredictionRow): N2BaselineV
   } else if (row.provenance.kind === "historical_only") {
     const source = row.provenance;
     if (!source.modelVersion || !source.featureContractVersion) errors.push("historical model identity is required");
-    if (raceDate(source.trainingToRaceKeyExclusive) === null) errors.push("invalid trainingToRaceKeyExclusive");
-    if (source.trainingToRaceKeyExclusive > row.canonicalRaceKey) errors.push("historical training boundary reaches evaluation row");
+    const boundaryComparison = compareCanonicalRaceKeys(source.trainingToRaceKeyExclusive, row.canonicalRaceKey);
+    if (boundaryComparison === null) errors.push("invalid trainingToRaceKeyExclusive");
+    else if (boundaryComparison > 0) errors.push("historical training boundary reaches evaluation row");
     if (!SHA256_RE.test(source.trainingSnapshotDigest)) errors.push("invalid trainingSnapshotDigest");
   } else {
     const source = row.provenance;
