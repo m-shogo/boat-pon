@@ -29,17 +29,17 @@ export function OwnerDashboardSummary({ snapshot }: { snapshot: OwnerDashboardSn
         <OwnerCard label="Main updated" value={formatDate(snapshot.git.updatedAt)} />
       </div>
 
-      <div className="ownerSectionHead"><h3>BUY Performance & Learning</h3><p>settled outcomeの安全な集計のみ。Current BUYは変更しません</p></div>
+      <div className="ownerSectionHead"><h3>BUY Performance & Learning</h3><p>settled outcomeの安全な集計。ROIはdecision-time odds proxyで、Current BUYは変更しません</p></div>
       {learning.status === "AVAILABLE" ? <>
         <div className="ownerGrid ownerBuyGrid">
           <OwnerCard label="Settled BUY" value={formatNumber(learning.performance.settled)} />
           <OwnerCard label="Hits" value={formatNumber(learning.performance.hits)} />
           <OwnerCard label="Misses" value={formatNumber(learning.performance.misses)} />
           <OwnerCard label="Hit rate" value={formatPct(learning.performance.hitRate)} />
-          <OwnerCard label="ROI" value={formatRoi(learning.performance.roi)} />
-          <OwnerCard label="ROI ex max-hit" value={formatRoi(learning.performance.roiExMax)} />
+          <OwnerCard label="ROI proxy" value={formatRoi(learning.performance.roi)} />
+          <OwnerCard label="ROI proxy ex max-hit" value={formatRoi(learning.performance.roiExMax)} />
           <OwnerCard label="Recent hit rate" value={formatPct(learning.recent.hitRate)} />
-          <OwnerCard label="Recent ROI" value={formatRoi(learning.recent.roi)} />
+          <OwnerCard label="Recent ROI proxy" value={formatRoi(learning.recent.roi)} />
         </div>
         <div className="ownerSplit">
           <article className="ownerPanel ownerLearningPanel">
