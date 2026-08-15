@@ -14,7 +14,8 @@ export type BuyOutcomePattern = {
   hits: number;
   hitRate: number;
   roiProxy: number;
-  baselineRoiProxy: number;
+  comparisonSettled: number;
+  comparisonRoiProxy: number;
   roiDelta: number;
   confidence: "WATCH" | "STRONG";
   productionChangeAllowed: false;
@@ -33,20 +34,29 @@ export type PublicOutcomePatternSignal = {
 export function mineBuyOutcomePatterns(
   segments: BuyOutcomeSegment[],
   baseline: { settled: number; payoutOddsSum: number },
-  options: { minSettled?: number; minRoiDelta?: number } = {},
+  options: { minSettled?: number; minComparisonSettled?: number; minRoiDelta?: number } = {},
 ): BuyOutcomePattern[] {
   const minSettled = options.minSettled ?? 30;
+  const minComparisonSettled = options.minComparisonSettled ?? minSettled;
   const minRoiDelta = options.minRoiDelta ?? 0.15;
-  const baselineRoi = ratio(baseline.payoutOddsSum, baseline.settled);
-  if (baselineRoi === null) return [];
+  if (!validBaseline(baseline)) return [];
 
   return segments
     .filter((segment) => validSegment(segment) && segment.settled >= minSettled)
     .map((segment): BuyOutcomePattern | null => {
+      const comparisonSettled = baseline.settled - segment.settled;
+      const comparisonPayoutOddsSum = baseline.payoutOddsSum - segment.payoutOddsSum;
+      if (comparisonSettled < minComparisonSettled || comparisonPayoutOddsSum < 0) return null;
+
       const roi = ratio(segment.payoutOddsSum, segment.settled);
+      const comparisonRoi = ratio(comparisonPayoutOddsSum, comparisonSettled);
       const hitRate = ratio(segment.hits, segment.settled);
-      if (roi === null || hitRate === null) return null;
-      const delta = round4(roi - baselineRoi);
+      if (roi === null || comparisonRoi === null || hitRate === null) return null;
+
+      // Compare a segment with the rest of the same settled cohort. Comparing it
+      // with an overall baseline that includes the segment itself mechanically
+      // shrinks the contrast and does not provide an independent support side.
+      const delta = round4(roi - comparisonRoi);
       if (Math.abs(delta) < minRoiDelta) return null;
       const direction = delta > 0 ? "SUCCESS_EDGE" : "FAILURE_REGIME";
       return {
@@ -57,9 +67,10 @@ export function mineBuyOutcomePatterns(
         hits: segment.hits,
         hitRate,
         roiProxy: roi,
-        baselineRoiProxy: baselineRoi,
+        comparisonSettled,
+        comparisonRoiProxy: comparisonRoi,
         roiDelta: delta,
-        confidence: segment.settled >= 100 && Math.abs(delta) >= 0.25 ? "STRONG" : "WATCH",
+        confidence: segment.settled >= 100 && comparisonSettled >= 100 && Math.abs(delta) >= 0.25 ? "STRONG" : "WATCH",
         productionChangeAllowed: false,
       };
     })
@@ -92,6 +103,13 @@ export function toPublicOutcomePatternSignals(patterns: BuyOutcomePattern[], lim
     if (signals.length >= limit) break;
   }
   return signals;
+}
+
+function validBaseline(baseline: { settled: number; payoutOddsSum: number }): boolean {
+  return Number.isInteger(baseline.settled)
+    && baseline.settled >= 0
+    && Number.isFinite(baseline.payoutOddsSum)
+    && baseline.payoutOddsSum >= 0;
 }
 
 function validSegment(segment: BuyOutcomeSegment): boolean {
