@@ -36,3 +36,19 @@ test("owner BUY learning reads the canonical private local DB instead of checkou
   assert.match(workflow, /name:\s*Verify private BUY source DB[\s\S]*test -f "\$BOAT_PON_DB_PATH"/u);
   assert.doesNotMatch(workflow, /cp\s+[^\n]*boat\.sqlite/u);
 });
+
+test("owner BUY diagnostics expose only aggregate public-safe learning state", () => {
+  const start = workflow.indexOf("- name: Report public-safe BUY learning diagnostics");
+  const end = workflow.indexOf("- name: Verify public source boundary", start);
+  assert.ok(start >= 0 && end > start);
+  const diagnosticsStep = workflow.slice(start, end);
+
+  assert.match(diagnosticsStep, /schemaVersion:\s*'owner-buy-learning-diagnostics-v1'/u);
+  assert.match(diagnosticsStep, /learningIds:/u);
+  assert.match(diagnosticsStep, /failurePatternIds:/u);
+  assert.match(diagnosticsStep, /researchCandidateIds:/u);
+  assert.match(diagnosticsStep, /patternSignals:/u);
+  assert.match(diagnosticsStep, /productionChangeAllowed:\s*false/u);
+  assert.match(diagnosticsStep, /private or operational BUY field reached public-safe diagnostics/u);
+  assert.doesNotMatch(diagnosticsStep, /item\.segmentKey|item\.selection|item\.currentOdds|item\.raceId|item\.decisionId/u);
+});
