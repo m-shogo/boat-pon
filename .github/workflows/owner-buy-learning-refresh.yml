@@ -69,6 +69,15 @@ jobs:
           --output-public data/tmp/owner-buy-patterns-public.json
           --retain-private-dir data/private/outcome-pattern-ledger
 
+      - name: Analyze BUY max-hit dependence across independent windows
+        run: >-
+          npx tsx scripts/analyze-buy-tail-dependence.ts
+          --run-kind paper-live
+          --window-size 30
+          --min-tail-gap 0.15
+          --output-public data/tmp/owner-buy-tail-public.json
+          --retain-private-dir data/private/outcome-tail-ledger
+
       - name: Build and retain read-only BUY outcome learning summary
         run: >-
           npx tsx scripts/report-buy-learning-summary.ts
@@ -85,8 +94,9 @@ jobs:
           node - <<'NODE'
           const fs = require('node:fs');
           const patterns = JSON.parse(fs.readFileSync('data/tmp/owner-buy-patterns-public.json', 'utf8'));
+          const tail = JSON.parse(fs.readFileSync('data/tmp/owner-buy-tail-public.json', 'utf8'));
           const summary = JSON.parse(fs.readFileSync('data/tmp/owner-buy-learning-latest.json', 'utf8'));
-          if (patterns.productionChangeAllowed !== false) throw new Error('pattern diagnostics must not allow production changes');
+          if (patterns.productionChangeAllowed !== false || tail.productionChangeAllowed !== false) throw new Error('BUY diagnostics must not allow production changes');
           const diagnostics = {
             schemaVersion: 'owner-buy-learning-diagnostics-v1',
             status: summary.status,
@@ -115,6 +125,17 @@ jobs:
               roiDelta: item.roiDelta,
               confidence: item.confidence,
             })) : [],
+            tailStability: {
+              status: tail.status,
+              windowSize: tail.windowSize,
+              minimumTailGap: tail.minimumTailGap,
+              totalSettled: tail.totalSettled,
+              recentSettled: tail.support?.recentSettled ?? null,
+              priorSettled: tail.support?.priorSettled ?? null,
+              missingSettledToCompare: tail.support?.missingSettledToCompare ?? null,
+              recentTailGap: tail.recent?.tailGap ?? null,
+              priorTailGap: tail.prior?.tailGap ?? null,
+            },
             productionChangeAllowed: false,
           };
           const serialized = JSON.stringify(diagnostics);

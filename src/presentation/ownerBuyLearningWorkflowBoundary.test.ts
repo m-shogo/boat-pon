@@ -24,7 +24,7 @@ test("owner BUY learning refresh serializes instead of cancelling in-flight priv
 
 test("automatic outcome learning remains scoped to Current BUY paper-live", () => {
   const runKindMatches = workflow.match(/--run-kind paper-live/gu) ?? [];
-  assert.equal(runKindMatches.length, 2);
+  assert.equal(runKindMatches.length, 3);
   assert.doesNotMatch(workflow, /\bschedule:/u);
 });
 
@@ -35,6 +35,13 @@ test("owner BUY learning reads the canonical private local DB instead of checkou
   );
   assert.match(workflow, /name:\s*Verify private BUY source DB[\s\S]*test -f "\$BOAT_PON_DB_PATH"/u);
   assert.doesNotMatch(workflow, /cp\s+[^\n]*boat\.sqlite/u);
+});
+
+test("owner BUY refresh researches max-hit dependence only across independent supported windows", () => {
+  assert.match(workflow, /name:\s*Analyze BUY max-hit dependence across independent windows/u);
+  assert.match(workflow, /analyze-buy-tail-dependence\.ts[\s\S]*--window-size 30[\s\S]*--min-tail-gap 0\.15/u);
+  assert.match(workflow, /--retain-private-dir data\/private\/outcome-tail-ledger/u);
+  assert.match(workflow, /--output-public data\/tmp\/owner-buy-tail-public\.json/u);
 });
 
 test("owner BUY diagnostics expose only aggregate public-safe learning state", () => {
@@ -48,6 +55,10 @@ test("owner BUY diagnostics expose only aggregate public-safe learning state", (
   assert.match(diagnosticsStep, /failurePatternIds:/u);
   assert.match(diagnosticsStep, /researchCandidateIds:/u);
   assert.match(diagnosticsStep, /patternSignals:/u);
+  assert.match(diagnosticsStep, /tailStability:/u);
+  assert.match(diagnosticsStep, /missingSettledToCompare:/u);
+  assert.match(diagnosticsStep, /recentTailGap:/u);
+  assert.match(diagnosticsStep, /priorTailGap:/u);
   assert.match(diagnosticsStep, /productionChangeAllowed:\s*false/u);
   assert.match(diagnosticsStep, /private or operational BUY field reached public-safe diagnostics/u);
   assert.doesNotMatch(diagnosticsStep, /item\.segmentKey|item\.selection|item\.currentOdds|item\.raceId|item\.decisionId/u);
