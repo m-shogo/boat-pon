@@ -47,20 +47,27 @@ function withRoot(fn: (root: string) => void): void {
   }
 }
 
-test("historical artifact accepts a real leap-day generatedAt", () => {
-  withRoot((root) => {
-    writeArtifact(root, "2028-02-29T07:00:00.000Z");
-    const result = readN2HistoricalTestArtifact(root);
-    assert.notEqual(result.artifact, null, result.blockers.join("; "));
-    assert.deepEqual(result.blockers, []);
-  });
+test("historical artifact accepts canonical leap-day and explicit-offset generatedAt values", () => {
+  for (const generatedAt of [
+    "2028-02-29T07:00:00.000Z",
+    "2028-02-29T16:00:00+09:00",
+  ]) {
+    withRoot((root) => {
+      writeArtifact(root, generatedAt);
+      const result = readN2HistoricalTestArtifact(root);
+      assert.notEqual(result.artifact, null, `${generatedAt}: ${result.blockers.join("; ")}`);
+      assert.deepEqual(result.blockers, []);
+    });
+  }
 });
 
-test("historical artifact rejects impossible calendar dates normalized by Date.parse", () => {
+test("historical artifact rejects normalized or timezone-ambiguous generatedAt values", () => {
   for (const generatedAt of [
     "2026-02-29T07:00:00.000Z",
     "2026-02-30T07:00:00.000Z",
     "2026-04-31T16:00:00+09:00",
+    "2026-08-06T24:00:00.000Z",
+    "2026-08-06T12:00:00.000",
   ]) {
     withRoot((root) => {
       writeArtifact(root, generatedAt);

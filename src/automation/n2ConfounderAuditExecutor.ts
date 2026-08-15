@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 
-import { canonicalHash } from "../research-replay/canonical";
+import { canonicalHash, canonicalUtcTimestamp } from "../research-replay/canonical";
 import { buildN2ConfounderDistributionBridge, type N2ConfounderDistributionBridgeReport } from "../research-replay/n2ConfounderDistributionBridge";
 import { auditN2ConfoundersAndRejections, type N2ConfounderRejectionAuditReport } from "../research-replay/n2ConfounderRejectionAudit";
 import type { N2EdgeHistoricalConfirmationReport } from "../research-replay/n2EdgeHistoricalConfirmation";
@@ -51,22 +51,14 @@ function digestMatches<T extends { outputDigest: string }>(value: T): boolean {
   const { outputDigest, ...body } = value;
   return isDigest(outputDigest) && canonicalHash(body) === outputDigest;
 }
-function hasValidCalendarDate(value: string): boolean {
-  const match = /^(\d{4})-(\d{2})-(\d{2})T/u.exec(value);
-  if (!match) return false;
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  const parsed = new Date(Date.UTC(year, month - 1, day));
-  return parsed.getUTCFullYear() === year
-    && parsed.getUTCMonth() === month - 1
-    && parsed.getUTCDate() === day;
-}
 function isValidHistoricalGeneratedAt(value: unknown): value is string {
-  return typeof value === "string"
-    && value.length >= 20
-    && hasValidCalendarDate(value)
-    && !Number.isNaN(Date.parse(value));
+  if (typeof value !== "string") return false;
+  try {
+    canonicalUtcTimestamp(value);
+    return true;
+  } catch {
+    return false;
+  }
 }
 function rejectionSubjectIdentityBlocker(record: Rejection): string | null {
   const prefix = REJECTION_SUBJECT_PREFIX[record.subjectType];
