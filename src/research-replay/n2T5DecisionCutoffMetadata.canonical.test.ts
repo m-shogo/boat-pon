@@ -17,6 +17,7 @@ function withMetadata(cutoff: string, fn: (root: string) => void): void {
       raceIdentity: "20260807-05-01",
       checkpointLabel: "T-5",
       envelopeRelativePath: `${base}/fixture.envelope.json`,
+      acceptedAt: "2026-08-07T03:31:00.000Z",
     })}\n`, "utf8");
     writeFileSync(join(dir, "fixture.envelope.json"), `${JSON.stringify({
       envelopeVersion: "n2-trifecta-private-capture-envelope-v1",
