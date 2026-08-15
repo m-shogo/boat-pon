@@ -115,6 +115,21 @@ const EPSILON = 1e-15;
 const CALIBRATION_BIN_COUNT = 10;
 
 function validTimestamp(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/i.exec(value);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = Number(match[4]);
+  const minute = Number(match[5]);
+  const second = Number(match[6]);
+  const parsedDate = new Date(Date.UTC(year, month - 1, day));
+  if (parsedDate.getUTCFullYear() !== year
+    || parsedDate.getUTCMonth() !== month - 1
+    || parsedDate.getUTCDate() !== day
+    || hour > 23 || minute > 59 || second > 59) return false;
+  const offset = /([+-])(\d{2}):(\d{2})$/i.exec(value);
+  if (offset !== null && (Number(offset[2]) > 23 || Number(offset[3]) > 59)) return false;
   try {
     canonicalUtcTimestamp(value);
     return true;

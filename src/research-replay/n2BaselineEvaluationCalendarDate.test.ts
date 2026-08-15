@@ -55,3 +55,25 @@ test("historical training boundary requires a canonical real race key", () => {
 
   assert.equal(validateN2BaselineRow(historicalRow("2024-02-29:01:R1")).valid, true);
 });
+
+test("baseline evaluation timestamps require valid clocks and explicit timezones", () => {
+  for (const [field, value] of [
+    ["decisionCutoff", "2024-06-01T01:00:00"],
+    ["predictionAvailableAt", "2024-06-01T00:50:00"],
+    ["decisionCutoff", "2024-06-01"],
+    ["predictionAvailableAt", "2024-06-01T24:00:00Z"],
+    ["decisionCutoff", "2024-06-01T23:60:00Z"],
+    ["predictionAvailableAt", "2024-02-30T00:50:00Z"],
+  ] as const) {
+    const row = historicalRow("2024-02-29:01:R1");
+    row[field] = value;
+    const validation = validateN2BaselineRow(row);
+    assert.equal(validation.valid, false, `${field}=${value} must be rejected`);
+    assert.match(validation.errors.join("\n"), new RegExp(`invalid ${field}`));
+  }
+
+  const leapDay = historicalRow("2024-02-29:01:R1");
+  leapDay.decisionCutoff = "2024-02-29T12:00:00+09:00";
+  leapDay.predictionAvailableAt = "2024-02-29T02:50:00Z";
+  assert.equal(validateN2BaselineRow(leapDay).valid, true);
+});
