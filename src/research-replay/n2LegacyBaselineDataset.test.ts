@@ -136,3 +136,18 @@ test("legacy baseline blocks if exact T-5 cutoff metadata is incomplete", () => 
   assert.ok(dataset.blockers.includes("2026-08-07:05:R1:DECISION_CUTOFF_MISSING_OR_INVALID"));
   assert.equal(dataset.rowCount, 0);
 });
+
+test("legacy baseline rejects impossible calendar dates in training history", () => {
+  const invalidTraining = [...training(), {
+    canonicalRaceKey: "2026-02-30:05:R1",
+    winningSelection: selections[0],
+  }];
+  const dataset = buildN2LegacyBaselineDataset({
+    training: invalidTraining,
+    evaluationRaces: evaluationRaces(),
+    decisionCutoffByRaceKey: cutoffs(),
+  });
+  assert.equal(dataset.status, "BLOCKED");
+  assert.ok(dataset.blockers.includes("2026-02-30:05:R1:TRAINING_RACE_KEY_INVALID"));
+  assert.equal(dataset.rowCount, 0);
+});
