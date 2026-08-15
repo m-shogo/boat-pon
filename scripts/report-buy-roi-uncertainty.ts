@@ -36,7 +36,7 @@ try {
     minimumTrials: args.minimumTrials,
     performance: scope(payouts, args.minimumTrials, args.iterations),
     recent: scope(recent, args.minimumTrials, args.iterations),
-    note: "95% deterministic percentile bootstrap describes uncertainty in observed unit-stake realized ROI. It is descriptive, tail-sensitive, and does not justify production BUY changes.",
+    note: "95% deterministic percentile bootstrap describes uncertainty in observed 100-yen normalized realized ROI. It is descriptive, tail-sensitive, and does not justify production BUY changes.",
     productionChangeAllowed: false as const,
   };
 
