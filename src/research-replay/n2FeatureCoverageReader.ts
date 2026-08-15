@@ -74,6 +74,19 @@ FROM typed_observation_payloads
 WHERE observation_id = ?
 `;
 
+const PROGRAM_RAW_SQL = `
+SELECT
+  race_id AS raceId,
+  date,
+  venue,
+  race_no AS raceNo,
+  source_file AS sourceFile,
+  raw_json AS rawJson,
+  imported_at AS importedAt
+FROM official_programs
+WHERE race_id = ?
+`;
+
 export function openN2CoverageDbImmutable(path: string): DatabaseSync {
   const uri = `${pathToFileURL(path).href}?immutable=1`;
   return new DatabaseSync(uri, { readOnly: true } as never);
@@ -124,11 +137,12 @@ function excludedProgramEvents(canonicalKey: string, reason: string): N2FeatureC
 }
 
 function eventsForProgram(
-  row: N2CoverageRaceRow,
+  identity: N2CoverageRaceIdentityRow,
   evidenceRows: ProgramLineageRow[],
+  loadProgramRow: (raceId: string) => N2CoverageRaceRow | null,
   loadTypedPayload: (observationId: string) => ProgramTypedPayloadRow | null,
 ): N2FeatureCoverageEvent[] {
-  const canonicalKey = canonicalN2CoverageRaceKey(row);
+  const canonicalKey = canonicalN2CoverageRaceKey(identity);
   if (evidenceRows.length === 0) return excludedProgramEvents(canonicalKey, "excluded_lineage_not_found");
   if (evidenceRows.length > 1) return excludedProgramEvents(canonicalKey, "excluded_lineage_ambiguous_match");
 
@@ -140,6 +154,11 @@ function eventsForProgram(
     allowedObservationTypes: ["official_program"],
   }, evidence);
   if (verification.status === "excluded") return excludedProgramEvents(canonicalKey, verification.reason);
+
+  const row = loadProgramRow(identity.raceId);
+  if (row === null) throw new Error("N2_COVERAGE_PROGRAM_SET_CHANGED_AFTER_PREFLIGHT");
+  const loadedCanonicalKey = canonicalN2CoverageRaceKey(row);
+  if (loadedCanonicalKey !== canonicalKey) throw new Error("N2_COVERAGE_PROGRAM_SET_CHANGED_AFTER_PREFLIGHT");
 
   const typedPayload = loadTypedPayload(evidence.observationId);
   const payloadVerification = verifyOfficialProgramTypedPayload({
@@ -219,28 +238,21 @@ export function readOfficialProgramCoverageEvents(input: {
     `).all(input.dateFrom, input.dateTo) as unknown as N2CoverageRaceIdentityRow[];
     for (const row of identities) canonicalN2CoverageRaceKey(row);
 
-    const rows = primary.prepare(`
-      SELECT
-        race_id AS raceId,
-        date,
-        venue,
-        race_no AS raceNo,
-        source_file AS sourceFile,
-        raw_json AS rawJson,
-        imported_at AS importedAt
-      FROM official_programs
-      WHERE date >= ? AND date <= ?
-      ORDER BY date, venue, race_no
-    `).all(input.dateFrom, input.dateTo) as unknown as N2CoverageRaceRow[];
-    if (rows.length !== identities.length) throw new Error("N2_COVERAGE_PROGRAM_SET_CHANGED_AFTER_PREFLIGHT");
     const lineage = sidecar.prepare(PROGRAM_LINEAGE_SQL);
     const events: N2FeatureCoverageEvent[] = [];
-    for (const row of rows) {
-      const canonicalKey = canonicalN2CoverageRaceKey(row);
+    for (const identity of identities) {
+      const canonicalKey = canonicalN2CoverageRaceKey(identity);
       const evidenceRows = lineage.all(canonicalKey) as unknown as ProgramLineageRow[];
-      events.push(...eventsForProgram(row, evidenceRows, (observationId) => (
-        sidecar.prepare(PROGRAM_TYPED_PAYLOAD_SQL).get(observationId) as unknown as ProgramTypedPayloadRow | undefined
-      ) ?? null));
+      events.push(...eventsForProgram(
+        identity,
+        evidenceRows,
+        (raceId) => (
+          primary.prepare(PROGRAM_RAW_SQL).get(raceId) as unknown as N2CoverageRaceRow | undefined
+        ) ?? null,
+        (observationId) => (
+          sidecar.prepare(PROGRAM_TYPED_PAYLOAD_SQL).get(observationId) as unknown as ProgramTypedPayloadRow | undefined
+        ) ?? null,
+      ));
     }
     return events;
   } finally {
