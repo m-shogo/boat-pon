@@ -1,7 +1,7 @@
 import { validateBuyLearningSummary, type BuyLearningSummary } from "./buyLearningSummary";
 import { validateBuyTailPublicSignal } from "./buyTailLearningMerge";
 
-export const OWNER_BUY_EVIDENCE_SCHEMA_VERSION = "owner-buy-evidence-diagnostics-v1" as const;
+export const OWNER_BUY_EVIDENCE_SCHEMA_VERSION = "owner-buy-evidence-diagnostics-v2" as const;
 
 export type OwnerBuyWilsonInterval = {
   confidenceLevel: 0.95;
@@ -12,6 +12,27 @@ export type OwnerBuyWilsonInterval = {
   lower: number | null;
   upper: number | null;
   width: number | null;
+};
+
+export type OwnerBuyRoiBootstrapInterval = {
+  confidenceLevel: 0.95;
+  method: "DETERMINISTIC_PERCENTILE_BOOTSTRAP";
+  trials: number;
+  iterations: number;
+  pointEstimate: number;
+  lower: number;
+  upper: number;
+  width: number;
+  breakEven: 1;
+  classification: "BELOW_BREAK_EVEN" | "CROSSES_BREAK_EVEN" | "ABOVE_BREAK_EVEN";
+};
+
+export type OwnerBuyRoiScope = {
+  status: "AVAILABLE" | "INSUFFICIENT_SUPPORT";
+  trials: number;
+  minimumTrials: number;
+  missingTrials: number;
+  interval: OwnerBuyRoiBootstrapInterval | null;
 };
 
 export type OwnerBuyEvidenceDiagnostics = {
@@ -36,6 +57,12 @@ export type OwnerBuyEvidenceDiagnostics = {
     performance: OwnerBuyWilsonInterval;
     recent: OwnerBuyWilsonInterval;
   };
+  roiUncertainty: null | {
+    status: "AVAILABLE" | "INSUFFICIENT_SUPPORT";
+    minimumTrials: number;
+    performance: OwnerBuyRoiScope;
+    recent: OwnerBuyRoiScope;
+  };
   tailStability: null | {
     status: "INSUFFICIENT_SUPPORT" | "PERSISTENT_TAIL_DEPENDENCE" | "RECENT_TAIL_DEPENDENCE" | "PRIOR_TAIL_DEPENDENCE" | "NO_TAIL_DEPENDENCE_SIGNAL";
     windowSize: number;
@@ -56,15 +83,21 @@ type BuildInput = {
   patterns: unknown;
   tail: unknown;
   uncertainty: unknown;
+  roiUncertainty: unknown;
 };
 
-const TOP_KEYS = new Set(["schemaVersion", "generatedAt", "status", "patternSupport", "hitRateUncertainty", "tailStability", "productionChangeAllowed"]);
+const TOP_KEYS = new Set(["schemaVersion", "generatedAt", "status", "patternSupport", "hitRateUncertainty", "roiUncertainty", "tailStability", "productionChangeAllowed"]);
 const PATTERN_KEYS = new Set(["status", "noSignalReason", "analyzedSettled", "minimumSettledPerSide", "minimumTotalSettledForAnyContrast", "globalAdditionalSettledForAnyContrast", "validSegmentCount", "segmentSideEligibleCount", "supportedContrastCount", "supportedDimensionCount", "patternSignalCount"]);
 const HIT_RATE_KEYS = new Set(["status", "performance", "recent"]);
 const INTERVAL_KEYS = new Set(["confidenceLevel", "method", "trials", "successes", "pointEstimate", "lower", "upper", "width"]);
+const ROI_KEYS = new Set(["status", "minimumTrials", "performance", "recent"]);
+const ROI_SCOPE_KEYS = new Set(["status", "trials", "minimumTrials", "missingTrials", "interval"]);
+const ROI_INTERVAL_KEYS = new Set(["confidenceLevel", "method", "trials", "iterations", "pointEstimate", "lower", "upper", "width", "breakEven", "classification"]);
 const TAIL_KEYS = new Set(["status", "windowSize", "minimumTailGap", "totalSettled", "recentSettled", "priorSettled", "missingSettledToCompare", "recentTailGap", "priorTailGap"]);
 const PATTERN_STATUSES = new Set(["INSUFFICIENT_GLOBAL_SUPPORT", "NO_SUPPORTED_CONTRAST", "SUPPORTED_CONTRASTS"]);
 const NO_SIGNAL_REASONS = new Set(["INSUFFICIENT_GLOBAL_SUPPORT", "NO_SUPPORTED_CONTRAST", "NO_MATERIAL_ROI_CONTRAST"]);
+const ROI_SCOPE_STATUSES = new Set(["AVAILABLE", "INSUFFICIENT_SUPPORT"]);
+const ROI_CLASSIFICATIONS = new Set(["BELOW_BREAK_EVEN", "CROSSES_BREAK_EVEN", "ABOVE_BREAK_EVEN"]);
 const TAIL_STATUSES = new Set(["INSUFFICIENT_SUPPORT", "PERSISTENT_TAIL_DEPENDENCE", "RECENT_TAIL_DEPENDENCE", "PRIOR_TAIL_DEPENDENCE", "NO_TAIL_DEPENDENCE_SIGNAL"]);
 const RFC3339_TIMESTAMP_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
 
@@ -75,6 +108,7 @@ export function unavailableOwnerBuyEvidenceDiagnostics(generatedAt: string): Own
     status: "NOT_AVAILABLE",
     patternSupport: null,
     hitRateUncertainty: null,
+    roiUncertainty: null,
     tailStability: null,
     productionChangeAllowed: false,
   };
@@ -86,12 +120,15 @@ export function buildOwnerBuyEvidenceDiagnostics(input: BuildInput): OwnerBuyEvi
   if (buyLearning.status !== "AVAILABLE") return unavailableOwnerBuyEvidenceDiagnostics(input.generatedAt);
   const settled = buyLearning.performance.settled;
   const hits = buyLearning.performance.hits;
+  const roi = buyLearning.performance.roi;
   const recentSettled = buyLearning.recent.settled;
   const recentHits = buyLearning.recent.hits;
-  if (settled === null || hits === null || recentSettled === null || recentHits === null) throw new Error("AVAILABLE BUY learning must include settled counts");
+  const recentRoi = buyLearning.recent.roi;
+  if (settled === null || hits === null || roi === null || recentSettled === null || recentHits === null) throw new Error("AVAILABLE BUY learning must include settled metrics");
 
   const patternSupport = parsePatternSupport(input.patterns, settled);
   const hitRateUncertainty = parseHitRateUncertainty(input.uncertainty, { settled, hits, recentSettled, recentHits });
+  const roiUncertainty = parseRoiUncertainty(input.roiUncertainty, { settled, roi, recentSettled, recentRoi });
   const tail = validateBuyTailPublicSignal(input.tail);
   if (tail.totalSettled !== settled) throw new Error("BUY tail/dashboard settled count mismatch");
 
@@ -101,6 +138,7 @@ export function buildOwnerBuyEvidenceDiagnostics(input: BuildInput): OwnerBuyEvi
     status: "AVAILABLE",
     patternSupport,
     hitRateUncertainty,
+    roiUncertainty,
     tailStability: {
       status: tail.status,
       windowSize: tail.windowSize,
@@ -129,10 +167,11 @@ export function validateOwnerBuyEvidenceDiagnostics(value: unknown): string[] {
   if (value.productionChangeAllowed !== false) errors.push("productionChangeAllowed must be false");
 
   if (value.status === "NOT_AVAILABLE") {
-    if (value.patternSupport !== null || value.hitRateUncertainty !== null || value.tailStability !== null) errors.push("NOT_AVAILABLE diagnostics must keep evidence null");
+    if (value.patternSupport !== null || value.hitRateUncertainty !== null || value.roiUncertainty !== null || value.tailStability !== null) errors.push("NOT_AVAILABLE diagnostics must keep evidence null");
   } else {
     validatePatternProjection(value.patternSupport, errors);
     validateHitRateProjection(value.hitRateUncertainty, errors);
+    validateRoiProjection(value.roiUncertainty, errors);
     validateTailProjection(value.tailStability, errors);
   }
 
@@ -140,7 +179,7 @@ export function validateOwnerBuyEvidenceDiagnostics(value: unknown): string[] {
   for (const forbidden of ["selection", "currentOdds", "requiredOdds", "recommendedAmount", "stake", "raceId", "decisionId", "segmentKey", "/Users/", "/home/", "app_settings", "automation/requests", "holdoutRawKey"]) {
     if (serialized.toLowerCase().includes(forbidden.toLowerCase())) errors.push(`private marker forbidden: ${forbidden}`);
   }
-  if (serialized.length > 16000) errors.push("diagnostics too large");
+  if (serialized.length > 20000) errors.push("diagnostics too large");
   return errors;
 }
 
@@ -208,6 +247,51 @@ function parseWilson(value: unknown, trials: number, successes: number, label: s
   return value as unknown as OwnerBuyWilsonInterval;
 }
 
+function parseRoiUncertainty(
+  value: unknown,
+  expected: { settled: number; roi: number; recentSettled: number; recentRoi: number | null },
+): NonNullable<OwnerBuyEvidenceDiagnostics["roiUncertainty"]> {
+  if (!isRecord(value) || value.schemaVersion !== "buy-roi-uncertainty-public-v1" || value.productionChangeAllowed !== false) throw new Error("invalid BUY ROI uncertainty source");
+  if (!isCount(value.minimumTrials) || Number(value.minimumTrials) < 20) throw new Error("invalid BUY ROI uncertainty minimumTrials");
+  const minimumTrials = Number(value.minimumTrials);
+  const performance = parseRoiScope(value.performance, expected.settled, expected.roi, minimumTrials, "performance");
+  const recent = parseRoiScope(value.recent, expected.recentSettled, expected.recentRoi, minimumTrials, "recent");
+  const expectedStatus = performance.status === "AVAILABLE" ? "AVAILABLE" : "INSUFFICIENT_SUPPORT";
+  if (value.status !== expectedStatus) throw new Error("BUY ROI uncertainty top-level status mismatch");
+  return { status: expectedStatus, minimumTrials, performance, recent };
+}
+
+function parseRoiScope(value: unknown, trials: number, pointEstimate: number | null, minimumTrials: number, label: string): OwnerBuyRoiScope {
+  if (!isRecord(value)) throw new Error(`invalid BUY ROI ${label} scope`);
+  exactKeys(value, ROI_SCOPE_KEYS, `$.roiUncertainty.${label}`, []);
+  if (!ROI_SCOPE_STATUSES.has(String(value.status)) || value.trials !== trials || value.minimumTrials !== minimumTrials) throw new Error(`BUY ROI ${label} support mismatch`);
+  const missingTrials = Math.max(0, minimumTrials - trials);
+  if (value.missingTrials !== missingTrials) throw new Error(`BUY ROI ${label} missingTrials mismatch`);
+  if (trials < minimumTrials) {
+    if (value.status !== "INSUFFICIENT_SUPPORT" || value.interval !== null) throw new Error(`BUY ROI ${label} must stay unavailable below support floor`);
+    return { status: "INSUFFICIENT_SUPPORT", trials, minimumTrials, missingTrials, interval: null };
+  }
+  if (value.status !== "AVAILABLE" || pointEstimate === null) throw new Error(`BUY ROI ${label} unexpectedly unavailable`);
+  const interval = parseRoiInterval(value.interval, trials, pointEstimate, label);
+  return { status: "AVAILABLE", trials, minimumTrials, missingTrials: 0, interval };
+}
+
+function parseRoiInterval(value: unknown, trials: number, pointEstimate: number, label: string): OwnerBuyRoiBootstrapInterval {
+  if (!isRecord(value)) throw new Error(`invalid BUY ROI ${label} interval`);
+  for (const key of ROI_INTERVAL_KEYS) if (!(key in value)) throw new Error(`BUY ROI ${label} interval missing ${key}`);
+  for (const key of Object.keys(value)) if (!ROI_INTERVAL_KEYS.has(key)) throw new Error(`BUY ROI ${label} interval unknown ${key}`);
+  if (value.confidenceLevel !== 0.95 || value.method !== "DETERMINISTIC_PERCENTILE_BOOTSTRAP" || value.trials !== trials) throw new Error(`BUY ROI ${label} interval identity mismatch`);
+  if (!Number.isInteger(value.iterations) || Number(value.iterations) < 1000 || Number(value.iterations) > 50000) throw new Error(`invalid BUY ROI ${label} iterations`);
+  for (const key of ["pointEstimate", "lower", "upper", "width"] as const) if (!isNonNegativeFinite(value[key])) throw new Error(`invalid BUY ROI ${label}.${key}`);
+  if (value.breakEven !== 1 || !ROI_CLASSIFICATIONS.has(String(value.classification))) throw new Error(`invalid BUY ROI ${label} classification`);
+  if (Math.abs(Number(value.pointEstimate) - pointEstimate) > 0.0001) throw new Error(`BUY ROI ${label} point estimate mismatch`);
+  if (Number(value.lower) > Number(value.pointEstimate) || Number(value.pointEstimate) > Number(value.upper)) throw new Error(`BUY ROI ${label} bounds inconsistent`);
+  if (Math.abs(Number(value.width) - round4(Number(value.upper) - Number(value.lower))) > 0.0001) throw new Error(`BUY ROI ${label} width mismatch`);
+  const expectedClassification = Number(value.lower) > 1 ? "ABOVE_BREAK_EVEN" : Number(value.upper) < 1 ? "BELOW_BREAK_EVEN" : "CROSSES_BREAK_EVEN";
+  if (value.classification !== expectedClassification) throw new Error(`BUY ROI ${label} classification mismatch`);
+  return value as unknown as OwnerBuyRoiBootstrapInterval;
+}
+
 function validatePatternProjection(value: unknown, errors: string[]) {
   if (!isRecord(value)) return errors.push("invalid patternSupport"), undefined;
   exactKeys(value, PATTERN_KEYS, "$.patternSupport", errors);
@@ -231,6 +315,33 @@ function validateInterval(value: unknown, path: string, errors: string[]) {
   for (const key of ["pointEstimate", "lower", "upper", "width"] as const) if (!(value[key] === null || isProbability(value[key]))) errors.push(`invalid ${path}.${key}`);
 }
 
+function validateRoiProjection(value: unknown, errors: string[]) {
+  if (!isRecord(value)) return errors.push("invalid roiUncertainty"), undefined;
+  exactKeys(value, ROI_KEYS, "$.roiUncertainty", errors);
+  if (!ROI_SCOPE_STATUSES.has(String(value.status)) || !isCount(value.minimumTrials) || Number(value.minimumTrials) < 20) errors.push("invalid roiUncertainty identity");
+  validateRoiScopeProjection(value.performance, "$.roiUncertainty.performance", errors);
+  validateRoiScopeProjection(value.recent, "$.roiUncertainty.recent", errors);
+}
+
+function validateRoiScopeProjection(value: unknown, path: string, errors: string[]) {
+  if (!isRecord(value)) return errors.push(`invalid ${path}`), undefined;
+  exactKeys(value, ROI_SCOPE_KEYS, path, errors);
+  if (!ROI_SCOPE_STATUSES.has(String(value.status)) || !isCount(value.trials) || !isCount(value.minimumTrials) || !isCount(value.missingTrials)) errors.push(`invalid ${path} support`);
+  if (value.status === "INSUFFICIENT_SUPPORT") {
+    if (value.interval !== null) errors.push(`invalid ${path}.interval`);
+    return;
+  }
+  validateRoiIntervalProjection(value.interval, `${path}.interval`, errors);
+}
+
+function validateRoiIntervalProjection(value: unknown, path: string, errors: string[]) {
+  if (!isRecord(value)) return errors.push(`invalid ${path}`), undefined;
+  exactKeys(value, ROI_INTERVAL_KEYS, path, errors);
+  if (value.confidenceLevel !== 0.95 || value.method !== "DETERMINISTIC_PERCENTILE_BOOTSTRAP" || !isCount(value.trials) || !isCount(value.iterations) || Number(value.iterations) < 1000) errors.push(`invalid ${path} identity`);
+  for (const key of ["pointEstimate", "lower", "upper", "width"] as const) if (!isNonNegativeFinite(value[key])) errors.push(`invalid ${path}.${key}`);
+  if (value.breakEven !== 1 || !ROI_CLASSIFICATIONS.has(String(value.classification))) errors.push(`invalid ${path} classification`);
+}
+
 function validateTailProjection(value: unknown, errors: string[]) {
   if (!isRecord(value)) return errors.push("invalid tailStability"), undefined;
   exactKeys(value, TAIL_KEYS, "$.tailStability", errors);
@@ -245,4 +356,6 @@ function isRecord(value: unknown): value is Record<string, unknown> { return typ
 function isCount(value: unknown): value is number { return Number.isInteger(value) && Number(value) >= 0; }
 function isProbability(value: unknown): value is number { return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1; }
 function isFiniteNumber(value: unknown): value is number { return typeof value === "number" && Number.isFinite(value); }
+function isNonNegativeFinite(value: unknown): value is number { return typeof value === "number" && Number.isFinite(value) && value >= 0; }
 function isIso(value: unknown): value is string { return typeof value === "string" && RFC3339_TIMESTAMP_RE.test(value) && Number.isFinite(Date.parse(value)); }
+function round4(value: number): number { return Math.round(value * 10000) / 10000; }
