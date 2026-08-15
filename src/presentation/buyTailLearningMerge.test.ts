@@ -3,11 +3,11 @@ import test from "node:test";
 import { buildBuyLearningSummary } from "./buyLearningSummary";
 import { mergeBuyTailLearning, validateBuyTailPublicSignal } from "./buyTailLearningMerge";
 
-function baseSummary() {
+function baseSummary(settled = 58) {
   return buildBuyLearningSummary({
     generatedAt: "2026-08-15T12:00:00.000Z",
-    totalDecisions: 58,
-    settled: 58,
+    totalDecisions: settled,
+    settled,
     hits: 2,
     payoutOddsSum: 68.24,
     maxPayoutOdds: 40,
@@ -46,7 +46,7 @@ test("insufficient 58-BUY support is a strict no-op for learning promotion", () 
 });
 
 test("persistent dependence promotes only a governed research learning after two full windows", () => {
-  const merged = mergeBuyTailLearning(baseSummary(), tail("PERSISTENT_TAIL_DEPENDENCE"));
+  const merged = mergeBuyTailLearning(baseSummary(60), tail("PERSISTENT_TAIL_DEPENDENCE"));
   const learning = merged.learnings.find((item) => item.id === "TAIL_DEPENDENCE_PERSISTS");
   assert.equal(learning?.evidenceCount, 60);
   assert.equal(learning?.severity, "ACTION");
@@ -56,9 +56,16 @@ test("persistent dependence promotes only a governed research learning after two
 });
 
 test("recent-only dependence creates a regime-shift research candidate without production permission", () => {
-  const merged = mergeBuyTailLearning(baseSummary(), tail("RECENT_TAIL_DEPENDENCE"));
+  const merged = mergeBuyTailLearning(baseSummary(60), tail("RECENT_TAIL_DEPENDENCE"));
   assert.ok(merged.learnings.some((item) => item.id === "TAIL_DEPENDENCE_RECENT_ONLY"));
   assert.ok(merged.researchCandidates.some((item) => item.id === "RESEARCH-TAIL-REGIME-SHIFT" && item.productionChangeAllowed === false));
+});
+
+test("stale tail and learning artifacts fail closed before promotion", () => {
+  assert.throws(
+    () => mergeBuyTailLearning(baseSummary(58), tail("PERSISTENT_TAIL_DEPENDENCE")),
+    /tail\/learning settled count mismatch/u,
+  );
 });
 
 test("tail public signal validation fails closed on private fields or inconsistent support", () => {
