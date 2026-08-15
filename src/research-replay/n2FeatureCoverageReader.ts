@@ -10,6 +10,7 @@ import {
   N2_OFFICIAL_PROGRAM_FEATURE_KEYS,
   type OfficialProgramSourceRow,
 } from "./n2FeatureSourceAdapter";
+import { PAYLOAD_SCHEMA_VERSION } from "./domain";
 import {
   verifyOfficialProgramTypedPayload,
   type OfficialProgramTypedPayloadRow,
@@ -136,6 +137,20 @@ function excludedProgramEvents(canonicalKey: string, reason: string): N2FeatureC
   }));
 }
 
+function preflightProgramTypedPayloadMetadata(
+  evidence: ProgramLineageRow,
+  typedPayload: ProgramTypedPayloadRow,
+): string | null {
+  if (evidence.domainPayloadType !== "official_program" || typedPayload.typedPayloadType !== "official_program") {
+    return "excluded_program_typed_payload_type_mismatch";
+  }
+  if (evidence.domainPayloadSchemaVersion !== PAYLOAD_SCHEMA_VERSION
+    || typedPayload.typedPayloadSchemaVersion !== PAYLOAD_SCHEMA_VERSION) {
+    return "excluded_program_typed_payload_schema_mismatch";
+  }
+  return null;
+}
+
 function eventsForProgram(
   identity: N2CoverageRaceIdentityRow,
   evidenceRows: ProgramLineageRow[],
@@ -158,6 +173,10 @@ function eventsForProgram(
   const typedPayload = loadTypedPayload(evidence.observationId);
   if (typedPayload === null) {
     return excludedProgramEvents(canonicalKey, "excluded_program_typed_payload_missing");
+  }
+  const typedPayloadMetadataFailure = preflightProgramTypedPayloadMetadata(evidence, typedPayload);
+  if (typedPayloadMetadataFailure !== null) {
+    return excludedProgramEvents(canonicalKey, typedPayloadMetadataFailure);
   }
 
   const row = loadProgramRow(identity.raceId);
