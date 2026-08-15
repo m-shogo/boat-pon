@@ -73,6 +73,22 @@ jobs:
           npx tsx scripts/report-buy-pattern-support-readiness.ts
           --patterns data/tmp/owner-buy-patterns-public.json
 
+      - name: Confirm BUY patterns across independent windows
+        run: >-
+          npx tsx scripts/analyze-buy-pattern-replication.ts
+          --run-kind paper-live
+          --window-size 60
+          --min-settled 30
+          --min-roi-delta 0.15
+          --output-public data/tmp/owner-buy-pattern-replication-public.json
+          --retain-private-dir data/private/outcome-pattern-replication-ledger
+
+      - name: Project only replicated BUY patterns into learning input
+        run: >-
+          npx tsx scripts/project-replicated-buy-pattern-signals.ts
+          --input data/tmp/owner-buy-pattern-replication-public.json
+          --output data/tmp/owner-buy-patterns-replicated-input.json
+
       - name: Analyze BUY max-hit dependence across independent windows
         run: >-
           npx tsx scripts/analyze-buy-tail-dependence.ts
@@ -87,7 +103,7 @@ jobs:
           npx tsx scripts/report-buy-learning-summary.ts
           --run-kind paper-live
           --recent 30
-          --pattern-signals data/tmp/owner-buy-patterns-public.json
+          --pattern-signals data/tmp/owner-buy-patterns-replicated-input.json
           --output data/tmp/owner-buy-learning-latest.json
 
       - name: Merge supported tail stability and retain final BUY learning
@@ -119,11 +135,12 @@ jobs:
           node - <<'NODE'
           const fs = require('node:fs');
           const patterns = JSON.parse(fs.readFileSync('data/tmp/owner-buy-patterns-public.json', 'utf8'));
+          const replication = JSON.parse(fs.readFileSync('data/tmp/owner-buy-pattern-replication-public.json', 'utf8'));
           const tail = JSON.parse(fs.readFileSync('data/tmp/owner-buy-tail-public.json', 'utf8'));
           const uncertainty = JSON.parse(fs.readFileSync('data/tmp/owner-buy-hit-rate-uncertainty.json', 'utf8'));
           const roiUncertainty = JSON.parse(fs.readFileSync('data/tmp/owner-buy-roi-uncertainty.json', 'utf8'));
           const summary = JSON.parse(fs.readFileSync('data/tmp/owner-buy-learning-latest.json', 'utf8'));
-          if (patterns.productionChangeAllowed !== false || tail.productionChangeAllowed !== false || uncertainty.productionChangeAllowed !== false || roiUncertainty.productionChangeAllowed !== false) throw new Error('BUY diagnostics must not allow production changes');
+          if (patterns.productionChangeAllowed !== false || replication.productionChangeAllowed !== false || tail.productionChangeAllowed !== false || uncertainty.productionChangeAllowed !== false || roiUncertainty.productionChangeAllowed !== false) throw new Error('BUY diagnostics must not allow production changes');
           const diagnostics = {
             schemaVersion: 'owner-buy-learning-diagnostics-v1',
             status: summary.status,
@@ -162,6 +179,17 @@ jobs:
               segmentSideEligibleCount: patterns.support?.segmentSideEligibleCount ?? null,
               supportedContrastCount: patterns.support?.supportedContrastCount ?? null,
               supportedDimensionCount: patterns.support?.supportedDimensionCount ?? null,
+            },
+            patternReplication: {
+              status: replication.status,
+              totalSettled: replication.totalSettled,
+              windowSize: replication.windowSize,
+              requiredSettled: replication.requiredSettled,
+              missingSettledToCompare: replication.missingSettledToCompare,
+              discoveryPatternCount: replication.discoveryPatternCount,
+              confirmationPatternCount: replication.confirmationPatternCount,
+              replicatedPatternCount: replication.replicatedPatternCount,
+              publicSignalCount: Array.isArray(replication.signals) ? replication.signals.length : 0,
             },
             learningIds: Array.isArray(summary.learnings) ? summary.learnings.map((item) => item.id) : [],
             failurePatternIds: Array.isArray(summary.failurePatterns) ? summary.failurePatterns.map((item) => item.id) : [],
