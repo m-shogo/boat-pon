@@ -14,6 +14,7 @@ function withRoot(fn: (root: string) => void): void {
 function writeMetadata(root: string, options: {
   cutoff?: string;
   envelopeRelativePath?: string;
+  acceptedAt?: string;
 } = {}): void {
   const base = "data/raw/research/trifecta-market/2026-08-07/05/01/T-5";
   const dir = join(root, base);
@@ -24,6 +25,7 @@ function writeMetadata(root: string, options: {
     raceIdentity: "20260807-05-01",
     checkpointLabel: "T-5",
     envelopeRelativePath,
+    acceptedAt: options.acceptedAt ?? "2026-08-07T03:31:00.000Z",
   }, null, 2)}\n`, "utf8");
   if (envelopeRelativePath.startsWith(base)) {
     writeFileSync(join(root, envelopeRelativePath), `${JSON.stringify({
@@ -84,6 +86,21 @@ test("reader rejects impossible race-key calendar dates before private metadata 
     });
     assert.equal(read.status, "BLOCKED");
     assert.deepEqual(read.blockers, ["2026-02-30:05:R1:RACE_KEY_INVALID"]);
+    assert.deepEqual(read.decisionCutoffByRaceKey, {});
+    assert.equal(read.privateEnvelopeMetadataReadCount, 0);
+    assert.equal(read.rawOddsValuesRead, false);
+  });
+});
+
+test("reader rejects invalid accepted marker timestamps before envelope reads", () => {
+  withRoot((root) => {
+    writeMetadata(root, { acceptedAt: "2026-02-30T03:31:00.000Z" });
+    const read = readN2T5DecisionCutoffMetadata({
+      dataRoot: root,
+      raceKeys: ["2026-08-07:05:R1"],
+    });
+    assert.equal(read.status, "BLOCKED");
+    assert.deepEqual(read.blockers, ["2026-08-07:05:R1:ACCEPTED_MARKER_ACCEPTED_AT_INVALID"]);
     assert.deepEqual(read.decisionCutoffByRaceKey, {});
     assert.equal(read.privateEnvelopeMetadataReadCount, 0);
     assert.equal(read.rawOddsValuesRead, false);

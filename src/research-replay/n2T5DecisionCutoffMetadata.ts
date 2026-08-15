@@ -23,6 +23,7 @@ type AcceptedMarker = {
   raceIdentity?: unknown;
   checkpointLabel?: unknown;
   envelopeRelativePath?: unknown;
+  acceptedAt?: unknown;
 };
 
 type CaptureEnvelope = {
@@ -138,6 +139,10 @@ export function readN2T5DecisionCutoffMetadata(input: {
     }
     if (marker.raceIdentity !== location.raceIdentity || marker.checkpointLabel !== "T-5") {
       blockers.push(`${raceKey}:ACCEPTED_MARKER_IDENTITY_INVALID`);
+      continue;
+    }
+    if (typeof marker.acceptedAt !== "string" || !isCanonicalIsoInstant(marker.acceptedAt)) {
+      blockers.push(`${raceKey}:ACCEPTED_MARKER_ACCEPTED_AT_INVALID`);
       continue;
     }
     if (typeof marker.envelopeRelativePath !== "string"
