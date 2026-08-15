@@ -81,9 +81,12 @@ test("BUY outcome pattern report reconciles paper-live to official race_results 
       analyzedSettled: number;
       support: {
         status: string;
+        baselineSettled: number;
         minimumSettledPerSide: number;
         minimumTotalSettledForAnyContrast: number;
         globalAdditionalSettledForAnyContrast: number;
+        validSegmentCount: number;
+        segmentSideEligibleCount: number;
         supportedContrastCount: number;
         supportedDimensionCount: number;
       };
@@ -97,7 +100,7 @@ test("BUY outcome pattern report reconciles paper-live to official race_results 
       minimumSettledPerSide: 30,
       minimumTotalSettledForAnyContrast: 60,
       globalAdditionalSettledForAnyContrast: 0,
-      validSegmentCount: 8,
+      validSegmentCount: 7,
       segmentSideEligibleCount: 7,
       supportedContrastCount: 2,
       supportedDimensionCount: 1,
