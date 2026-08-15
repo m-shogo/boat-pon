@@ -49,13 +49,16 @@ export type N2EdgeSelectedProgramFeaturesRead = {
   outputDigest: string;
 };
 
-type RawProgramRow = {
+type ProgramMetadataRow = {
   raceId: string;
   date: string;
   venue: string;
   raceNo: number;
   closeAt: string;
   importedAt: string;
+};
+
+type RawProgramRow = ProgramMetadataRow & {
   rawJson: string;
 };
 
@@ -219,6 +222,69 @@ export function readN2EdgeSelectedProgramFeatures(input: {
   }
 
   let primaryDatabaseReadCount = 0;
+  const metadataByRaceId = new Map<string, ProgramMetadataRow>();
+  try {
+    for (let offset = 0; offset < requested.length; offset += N2_EDGE_SELECTED_PROGRAM_QUERY_BATCH_SIZE) {
+      const batch = requested.slice(offset, offset + N2_EDGE_SELECTED_PROGRAM_QUERY_BATCH_SIZE);
+      const placeholders = batch.map(() => "?").join(",");
+      const rows = db.prepare(`
+        SELECT
+          race_id AS raceId,
+          date,
+          venue,
+          race_no AS raceNo,
+          close_at AS closeAt,
+          imported_at AS importedAt
+        FROM official_programs
+        WHERE race_id IN (${placeholders})
+        ORDER BY race_id
+      `).all(...batch.map((item) => item.primaryRaceId)) as unknown as ProgramMetadataRow[];
+      primaryDatabaseReadCount += 1;
+      for (const row of rows) {
+        if (metadataByRaceId.has(row.raceId)) blockers.push(`${row.raceId}:DUPLICATE_PRIMARY_ROW`);
+        metadataByRaceId.set(row.raceId, row);
+      }
+    }
+  } catch (error) {
+    db.close();
+    return blocked({
+      blockers: [error instanceof Error ? error.message : "PRIMARY_SELECTED_PROGRAM_METADATA_READ_FAILED"],
+      requestedRaceCount: requested.length,
+      matchedProgramCount: metadataByRaceId.size,
+      rawJsonReadCount: 0,
+      primaryDatabaseReadCount,
+    });
+  }
+
+  if (metadataByRaceId.size !== requested.length) blockers.push(`MATCHED_PROGRAM_COUNT:${metadataByRaceId.size}/${requested.length}`);
+  for (const candidate of requested) {
+    const row = metadataByRaceId.get(candidate.primaryRaceId);
+    if (!row) {
+      blockers.push(`${candidate.canonicalRaceKey}:SELECTED_PROGRAM_MISSING`);
+      continue;
+    }
+    let normalized: ReturnType<typeof normalizeDiscoveryProgramRow>;
+    try {
+      normalized = normalizeDiscoveryProgramRow(row);
+    } catch (error) {
+      blockers.push(`${candidate.canonicalRaceKey}:METADATA_REVALIDATION_${error instanceof Error ? error.message : "FAILED"}`);
+      continue;
+    }
+    if (!metadataMatchesCandidate(normalized, candidate)) {
+      blockers.push(`${candidate.canonicalRaceKey}:METADATA_CHANGED_AFTER_SELECTION`);
+    }
+  }
+  if (blockers.length > 0) {
+    db.close();
+    return blocked({
+      blockers,
+      requestedRaceCount: requested.length,
+      matchedProgramCount: metadataByRaceId.size,
+      rawJsonReadCount: 0,
+      primaryDatabaseReadCount,
+    });
+  }
+
   const rowsByRaceId = new Map<string, RawProgramRow>();
   try {
     for (let offset = 0; offset < requested.length; offset += N2_EDGE_SELECTED_PROGRAM_QUERY_BATCH_SIZE) {
@@ -255,13 +321,13 @@ export function readN2EdgeSelectedProgramFeatures(input: {
   }
   db.close();
 
-  if (rowsByRaceId.size !== requested.length) blockers.push(`MATCHED_PROGRAM_COUNT:${rowsByRaceId.size}/${requested.length}`);
+  if (rowsByRaceId.size !== requested.length) blockers.push(`MATCHED_PROGRAM_COUNT_AFTER_METADATA_PREFLIGHT:${rowsByRaceId.size}/${requested.length}`);
   const programs: N2EdgeSelectedProgramFeatureRace[] = [];
   let parsedProgramCount = 0;
   for (const candidate of requested) {
     const row = rowsByRaceId.get(candidate.primaryRaceId);
     if (!row) {
-      blockers.push(`${candidate.canonicalRaceKey}:SELECTED_PROGRAM_MISSING`);
+      blockers.push(`${candidate.canonicalRaceKey}:SELECTED_PROGRAM_MISSING_AFTER_METADATA_PREFLIGHT`);
       continue;
     }
     let normalized: ReturnType<typeof normalizeDiscoveryProgramRow>;
@@ -272,7 +338,7 @@ export function readN2EdgeSelectedProgramFeatures(input: {
       continue;
     }
     if (!metadataMatchesCandidate(normalized, candidate)) {
-      blockers.push(`${candidate.canonicalRaceKey}:METADATA_CHANGED_AFTER_SELECTION`);
+      blockers.push(`${candidate.canonicalRaceKey}:METADATA_CHANGED_DURING_RAW_READ`);
       continue;
     }
     let raw: unknown;
