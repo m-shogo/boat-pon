@@ -138,3 +138,20 @@ test("typed program payload schema mismatch is rejected before primary raw proje
     rmSync(fixture.dir, { recursive: true, force: true });
   }
 });
+
+test("invalid typed program payload content is rejected before primary raw projection is touched", () => {
+  const fixture = createFixture("official_program", "rr-payload-v1");
+  try {
+    const sidecar = new DatabaseSync(fixture.sidecarPath);
+    sidecar.prepare("UPDATE domain_observations SET payload_schema_version = ? WHERE observation_id = ?")
+      .run("rr-payload-v1", "obs-program-2004");
+    sidecar.close();
+
+    const events = readFixture(fixture.primaryPath, fixture.sidecarPath);
+    assert.equal(events.length, 42);
+    assert.ok(events.every((event) => event.status === "excluded"));
+    assert.ok(events.every((event) => event.exclusionReason === "excluded_program_typed_payload_invalid"));
+  } finally {
+    rmSync(fixture.dir, { recursive: true, force: true });
+  }
+});

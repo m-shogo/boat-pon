@@ -10,7 +10,12 @@ import {
   N2_OFFICIAL_PROGRAM_FEATURE_KEYS,
   type OfficialProgramSourceRow,
 } from "./n2FeatureSourceAdapter";
-import { PAYLOAD_SCHEMA_VERSION } from "./domain";
+import {
+  PAYLOAD_SCHEMA_VERSION,
+  semanticPayloadHash,
+  validateTypedPayload,
+  type OfficialProgramPayload,
+} from "./domain";
 import {
   verifyOfficialProgramTypedPayload,
   type OfficialProgramTypedPayloadRow,
@@ -137,7 +142,8 @@ function excludedProgramEvents(canonicalKey: string, reason: string): N2FeatureC
   }));
 }
 
-function preflightProgramTypedPayloadMetadata(
+function preflightProgramTypedPayload(
+  canonicalRaceKey: string,
   evidence: ProgramLineageRow,
   typedPayload: ProgramTypedPayloadRow,
 ): string | null {
@@ -147,6 +153,26 @@ function preflightProgramTypedPayloadMetadata(
   if (evidence.domainPayloadSchemaVersion !== PAYLOAD_SCHEMA_VERSION
     || typedPayload.typedPayloadSchemaVersion !== PAYLOAD_SCHEMA_VERSION) {
     return "excluded_program_typed_payload_schema_mismatch";
+  }
+  if (typedPayload.typedPayloadJson === null) return "excluded_program_typed_payload_missing";
+
+  let parsed: OfficialProgramPayload;
+  try {
+    parsed = validateTypedPayload(
+      "official_program",
+      JSON.parse(typedPayload.typedPayloadJson) as unknown,
+    ) as OfficialProgramPayload;
+  } catch {
+    return "excluded_program_typed_payload_invalid";
+  }
+
+  const typedHash = semanticPayloadHash("official_program", parsed);
+  if (typedPayload.typedPayloadHash !== typedHash || evidence.domainSemanticPayloadHash !== typedHash) {
+    return "excluded_program_typed_payload_hash_mismatch";
+  }
+  if (parsed.canonicalRaceKey !== canonicalRaceKey
+    || Date.parse(parsed.observedAt) !== Date.parse(evidence.sourceObservedAt)) {
+    return "excluded_program_typed_payload_identity_mismatch";
   }
   return null;
 }
@@ -174,9 +200,9 @@ function eventsForProgram(
   if (typedPayload === null) {
     return excludedProgramEvents(canonicalKey, "excluded_program_typed_payload_missing");
   }
-  const typedPayloadMetadataFailure = preflightProgramTypedPayloadMetadata(evidence, typedPayload);
-  if (typedPayloadMetadataFailure !== null) {
-    return excludedProgramEvents(canonicalKey, typedPayloadMetadataFailure);
+  const typedPayloadFailure = preflightProgramTypedPayload(canonicalKey, evidence, typedPayload);
+  if (typedPayloadFailure !== null) {
+    return excludedProgramEvents(canonicalKey, typedPayloadFailure);
   }
 
   const row = loadProgramRow(identity.raceId);
