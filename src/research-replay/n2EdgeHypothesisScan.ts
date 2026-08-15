@@ -408,10 +408,15 @@ export class N2EdgeHypothesisAccumulator {
 
   add(observation: N2EdgeScanObservation): void {
     this.inputObservationCount += 1;
-    this.baselineIds.add(observation.baselineId);
 
     const canonicalSplit = splitForN2RaceKey(observation.canonicalRaceKey);
     const observationBlockers: string[] = [];
+    const normalizedBaselineId = observation.baselineId.trim();
+    if (normalizedBaselineId.length === 0 || normalizedBaselineId !== observation.baselineId) {
+      observationBlockers.push("INVALID_BASELINE_ID");
+    } else {
+      this.baselineIds.add(observation.baselineId);
+    }
     if (canonicalSplit === null) observationBlockers.push(`INVALID_RACE_KEY:${observation.canonicalRaceKey}`);
     else if (observation.split !== canonicalSplit) observationBlockers.push(`SPLIT_MISMATCH:${observation.canonicalRaceKey}:${observation.split}/${canonicalSplit}`);
     if (observation.split !== "train") observationBlockers.push(`NON_DISCOVERY_SPLIT_PRESENT:${observation.split}`);
