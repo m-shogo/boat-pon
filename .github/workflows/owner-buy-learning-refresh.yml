@@ -22,6 +22,8 @@ jobs:
       (github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.conclusion == 'success')
     runs-on: [self-hosted, macOS, boat-pon-local]
     timeout-minutes: 30
+    env:
+      BOAT_PON_DB_PATH: /Users/m-shogo/Developer/personal/boat-pon/data/boat.sqlite
     steps:
       - name: Checkout current main without deleting private ignored data
         uses: actions/checkout@v4
@@ -41,6 +43,13 @@ jobs:
           test -z "$(git status --porcelain --untracked-files=no)" || { echo "::error::tracked checkout is dirty"; git status --short; exit 1; }
           echo "sha=$CURRENT_MAIN" >> "$GITHUB_OUTPUT"
           echo "updated_at=$(git show -s --format=%cI "$CURRENT_MAIN")" >> "$GITHUB_OUTPUT"
+
+      - name: Verify private BUY source DB
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$BOAT_PON_DB_PATH" = "/Users/m-shogo/Developer/personal/boat-pon/data/boat.sqlite" || { echo "::error::unexpected BUY DB path"; exit 1; }
+          test -f "$BOAT_PON_DB_PATH" || { echo "::error::canonical private BUY DB is unavailable"; exit 1; }
 
       - name: Setup Node
         uses: actions/setup-node@v4
