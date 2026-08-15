@@ -28,6 +28,7 @@ test("BUY learning report derives sanitized outcomes and retains semantic eviden
         result TEXT,
         returned INTEGER NOT NULL DEFAULT 0,
         current_odds REAL,
+        payout_yen INTEGER,
         estimated_hit_rate REAL,
         sample_size INTEGER,
         ev REAL,
@@ -36,12 +37,13 @@ test("BUY learning report derives sanitized outcomes and retains semantic eviden
       );
     `);
     const insert = db.prepare(`INSERT INTO decision_history
-      (date,venue,race_no,decision,selection,result,returned,current_odds,estimated_hit_rate,sample_size,ev,model_version,run_kind)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`);
-    insert.run("2026-08-01", "A", 1, "BUY", "1-2-3", "1-2-3", 0, 2.4, 0.60, 80, 1.44, "v1", "paper-live");
-    insert.run("2026-08-02", "A", 2, "BUY", "1-2-3", "1-3-2", 0, 4.2, 0.55, 20, 2.31, "v1", "paper-live");
-    insert.run("2026-08-03", "B", 3, "BUY", "2-1-3", "3-1-2", 0, 3.0, 0.30, 100, 0.90, "v1", "paper-live");
-    insert.run("2026-08-04", "B", 4, "WATCH", "1-2-3", "1-2-3", 0, 2.0, 0.50, 100, 1.00, "v1", "paper-live");
+      (date,venue,race_no,decision,selection,result,returned,current_odds,payout_yen,estimated_hit_rate,sample_size,ev,model_version,run_kind)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+    insert.run("2026-08-01", "A", 1, "BUY", "1-2-3", "1-2-3", 0, 2.4, 240, 0.60, 80, 1.44, "v1", "paper-live");
+    insert.run("2026-08-02", "A", 2, "BUY", "1-2-3", "1-3-2", 0, 4.2, 420, 0.55, 20, 2.31, "v1", "paper-live");
+    insert.run("2026-08-03", "B", 3, "BUY", "2-1-3", "3-1-2", 0, 3.0, 300, 0.30, 100, 0.90, "v1", "paper-live");
+    insert.run("2026-08-04", "B", 4, "WATCH", "1-2-3", "1-2-3", 0, 2.0, 200, 0.50, 100, 1.00, "v1", "paper-live");
+    insert.run("2026-07-31", "A", 5, "BUY", "1-2-3", "1-2-3", 0, 99.0, 9900, 0.90, 500, 89.10, "v0", "historical-backfill");
   } finally {
     db.close();
   }
@@ -64,6 +66,7 @@ test("BUY learning report derives sanitized outcomes and retains semantic eviden
     assert.equal(JSON.stringify(summary).includes("1-2-3"), false);
     assert.equal(JSON.stringify(summary).includes("currentOdds"), false);
     assert.equal((summary.performance as { settled: number }).settled, 3);
+    assert.equal((summary.performance as { roiProxy: number }).roiProxy, 0.8);
 
     const files = await readdir(privateDir);
     assert.equal(files.length, 1);
