@@ -41,6 +41,22 @@ test("program adapter: imported_at is never substituted for unknown source avail
   assert.deepEqual(result, { status: "excluded", reason: "excluded_unverified_program_lineage" });
 });
 
+test("program adapter: timezone-less imported_at is rejected", () => {
+  const result = adaptOfficialProgramFeatures({
+    raceId: "race-1", rawJson: PROGRAM_RAW, sourceFile: "program.json", importedAt: "2026-05-20T04:00:00",
+    lineage: verifiedLineage("official_program"),
+  });
+  assert.deepEqual(result, { status: "excluded", reason: "excluded_invalid_program_imported_at" });
+});
+
+test("program adapter: explicit timezone offset remains valid", () => {
+  const result = adaptOfficialProgramFeatures({
+    raceId: "race-1", rawJson: PROGRAM_RAW, sourceFile: "program.json", importedAt: "2026-05-20T13:00:00+09:00",
+    lineage: verifiedLineage("official_program"),
+  });
+  assert.equal(result.status, "adapted");
+});
+
 test("program adapter: trusted lineage emits only raw historical-safe feature observations", () => {
   const result = adaptOfficialProgramFeatures({
     raceId: "race-1", rawJson: PROGRAM_RAW, sourceFile: "program.json", importedAt: "2026-05-20T04:00:00.000Z",
@@ -64,10 +80,12 @@ test("program adapter: source availability after import is inconsistent", () => 
 
 function odds(over: Partial<OddsTimeseriesSourceRow> = {}): OddsTimeseriesSourceRow {
   const capturedAt = over.capturedAt ?? "2026-05-20T04:59:00.000Z";
+  const lineage = Object.prototype.hasOwnProperty.call(over, "lineage")
+    ? over.lineage ?? null
+    : verifiedLineage("trifecta_market", capturedAt);
   return {
     id: 1, raceId: "race-1", betType: "exacta", betSelection: "1-2", odds: 5.2,
-    capturedAt, source: "official",
-    lineage: verifiedLineage("trifecta_market", capturedAt), ...over,
+    capturedAt, source: "official", lineage, ...over,
   };
 }
 
@@ -79,6 +97,14 @@ test("odds adapter: legacy row without bet_type is not inferred for exacta", () 
 test("odds adapter: verified raw lineage is mandatory", () => {
   const result = adaptLiveOddsRows({ rows: [odds({ lineage: null })], expectedBetType: "exacta" });
   assert.deepEqual(result, { status: "excluded", reason: "excluded_unverified_odds_lineage" });
+});
+
+test("odds adapter: timezone-less captured_at is rejected", () => {
+  const result = adaptLiveOddsRows({ rows: [odds({
+    capturedAt: "2026-05-20T04:59:00",
+    lineage: verifiedLineage("trifecta_market", "2026-05-20T04:59:00.000Z"),
+  })], expectedBetType: "exacta" });
+  assert.deepEqual(result, { status: "excluded", reason: "excluded_invalid_odds_captured_at" });
 });
 
 test("odds adapter: captured_at must identify the same F0 observation instant", () => {
