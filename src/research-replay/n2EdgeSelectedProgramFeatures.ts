@@ -1,5 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 
+import { officialVenueCode } from "../domain/officialLinks";
 import { classifyProgramFeatureSafety } from "../domain/programFeatureSafety";
 import { extractProgramFeatures, type ProgramFeatureSnapshot } from "../domain/programFeatures";
 import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
@@ -58,6 +59,9 @@ type RawProgramRow = {
   rawJson: string;
 };
 
+const SELECTED_CANONICAL_RACE_KEY_RE = /^(\d{4}-\d{2}-\d{2}):(0[1-9]|1\d|2[0-4]):R([1-9]|1[0-2])$/u;
+const SELECTED_PRIMARY_RACE_ID_RE = /^(\d{8})-(.+)-(0[1-9]|1[0-2])$/u;
+
 function unique(values: readonly string[]): string[] {
   return [...new Set(values)].sort();
 }
@@ -68,6 +72,24 @@ function isCanonicalUtcTimestamp(value: string): boolean {
   } catch {
     return false;
   }
+}
+
+function selectedCandidateIdentityValid(candidate: N2EdgeDiscoveryCandidate): boolean {
+  const raceKey = SELECTED_CANONICAL_RACE_KEY_RE.exec(candidate.canonicalRaceKey);
+  const primaryRaceId = SELECTED_PRIMARY_RACE_ID_RE.exec(candidate.primaryRaceId);
+  if (raceKey === null || primaryRaceId === null) return false;
+
+  const date = raceKey[1];
+  const venueCode = raceKey[2];
+  const raceNo = Number(raceKey[3]);
+  const primaryDate = primaryRaceId[1];
+  const primaryVenueToken = primaryRaceId[2];
+  const primaryRaceNo = Number(primaryRaceId[3]);
+  if (primaryDate !== date.replaceAll("-", "") || primaryRaceNo !== raceNo) return false;
+  if (officialVenueCode(primaryVenueToken) !== venueCode) return false;
+
+  const actualEncoding = primaryVenueToken === venueCode ? "venue_code" : "venue_label";
+  return actualEncoding === candidate.primaryIdentityEncoding;
 }
 
 function blocked(input: {
@@ -167,6 +189,7 @@ export function readN2EdgeSelectedProgramFeatures(input: {
   if (new Set(requested.map((item) => item.canonicalRaceKey)).size !== requested.length) blockers.push("DUPLICATE_CANONICAL_RACE_KEY");
   if (new Set(requested.map((item) => item.primaryRaceId)).size !== requested.length) blockers.push("DUPLICATE_PRIMARY_RACE_ID");
   for (const candidate of requested) {
+    if (!selectedCandidateIdentityValid(candidate)) blockers.push(`${candidate.canonicalRaceKey}:INVALID_SELECTED_IDENTITY`);
     const decisionCutoffValid = isCanonicalUtcTimestamp(candidate.decisionCutoff);
     const sourceObservedAtValid = isCanonicalUtcTimestamp(candidate.sourceObservedAt);
     if (!decisionCutoffValid) blockers.push(`${candidate.canonicalRaceKey}:INVALID_DECISION_CUTOFF`);
