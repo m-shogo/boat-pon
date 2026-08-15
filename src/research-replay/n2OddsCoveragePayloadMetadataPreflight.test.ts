@@ -51,13 +51,21 @@ function createFixture(): { dir: string; primaryPath: string; sidecarPath: strin
       timing_quality TEXT NOT NULL,
       source_quality TEXT NOT NULL
     );
-    CREATE TABLE typed_observation_payloads (
+    CREATE TABLE typed_payload_base (
       observation_id TEXT PRIMARY KEY,
       payload_type TEXT NOT NULL,
       payload_schema_version TEXT NOT NULL,
       payload_hash TEXT NOT NULL,
-      payload_json TEXT GENERATED ALWAYS AS (json_extract('not-json', '$')) VIRTUAL
+      payload_blob TEXT NOT NULL
     );
+    CREATE VIEW typed_observation_payloads AS
+    SELECT
+      observation_id,
+      payload_type,
+      payload_schema_version,
+      payload_hash,
+      json_extract(payload_blob, '$') AS payload_json
+    FROM typed_payload_base;
     INSERT INTO raw_documents VALUES ('raw-market', 'verified', 'passed', 1);
     INSERT INTO parse_runs VALUES ('parse-market', 'raw-market', 'success');
     INSERT INTO domain_observations VALUES (
@@ -65,9 +73,9 @@ function createFixture(): { dir: string; primaryPath: string; sidecarPath: strin
       'rr-payload-v1', '${"a".repeat(64)}', 'raw-market', 'parse-market', NULL,
       '2026-05-20T02:55:00Z', '2026-05-20T02:55:00Z', 'observed_only', 'official_public'
     );
-    INSERT INTO typed_observation_payloads (
-      observation_id, payload_type, payload_schema_version, payload_hash
-    ) VALUES ('obs-market', 'official_program', 'rr-payload-v1', '${"a".repeat(64)}');
+    INSERT INTO typed_payload_base VALUES (
+      'obs-market', 'official_program', 'rr-payload-v1', '${"a".repeat(64)}', 'not-json'
+    );
   `);
   sidecar.close();
 
