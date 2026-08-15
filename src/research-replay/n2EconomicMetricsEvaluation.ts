@@ -79,8 +79,12 @@ function isValidRaceKey(value: string): boolean {
 }
 
 function isValidDecisionCutoff(value: string): boolean {
-  const date = value.slice(0, 10);
-  return isCanonicalCalendarDate(date) && Number.isFinite(Date.parse(value));
+  const calendar = /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})$/u.exec(value);
+  if (calendar === null || !isCanonicalCalendarDate(calendar[1])) return false;
+  if (Number(calendar[2]) > 23 || Number(calendar[3]) > 59 || Number(calendar[4] ?? "0") > 59) return false;
+  const offset = /([+-])(\d{2}):(\d{2})$/u.exec(value);
+  if (offset !== null && (Number(offset[2]) > 23 || Number(offset[3]) > 59)) return false;
+  return Number.isFinite(Date.parse(value));
 }
 
 function validateSelectionMap(

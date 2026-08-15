@@ -129,6 +129,24 @@ test("economic evaluation rejects impossible race-key and cutoff calendar dates"
   assert.ok(cutoffReport.blockers.includes("2026-08-07:05:R1:DECISION_CUTOFF_INVALID"));
 });
 
+test("economic evaluation rejects cutoff clocks normalized by Date.parse", () => {
+  for (const decisionCutoff of [
+    "2026-08-07T24:00:00.000Z",
+    "2026-08-07T23:60:00+09:00",
+    "2026-08-07T23:59:60Z",
+  ]) {
+    const races = twentyRaces();
+    races[0].decisionCutoff = decisionCutoff;
+    const report = evaluateN2EconomicMetrics({ races });
+    assert.equal(report.status, "BLOCKED", decisionCutoff);
+    assert.ok(
+      report.blockers.includes("2026-08-07:05:R1:DECISION_CUTOFF_INVALID"),
+      decisionCutoff,
+    );
+    assert.deepEqual(report.metricsByBaseline, {}, decisionCutoff);
+  }
+});
+
 test("economic evaluation accepts a real leap-day race and cutoff", () => {
   const races = twentyRaces();
   races[0].canonicalRaceKey = "2028-02-29:05:R1";
