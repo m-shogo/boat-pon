@@ -93,7 +93,23 @@ function regularBounded(path: string, maxBytes: number): boolean {
 }
 
 function parseIso(value: unknown): boolean {
-  return typeof value === "string" && Number.isFinite(Date.parse(value));
+  if (typeof value !== "string") return false;
+  const calendar = /^(\d{4})-(\d{2})-(\d{2})(?:T| )/u.exec(value);
+  if (calendar === null) return false;
+  const year = Number(calendar[1]);
+  const month = Number(calendar[2]);
+  const day = Number(calendar[3]);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return false;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year
+    || date.getUTCMonth() !== month - 1
+    || date.getUTCDate() !== day) return false;
+  const clock = /(?:T| )(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?/u.exec(value);
+  if (clock === null) return false;
+  if (Number(clock[1]) > 23 || Number(clock[2]) > 59 || Number(clock[3] ?? "0") > 59) return false;
+  const offset = /([+-])(\d{2}):(\d{2})$/u.exec(value);
+  if (offset !== null && (Number(offset[2]) > 23 || Number(offset[3]) > 59)) return false;
+  return Number.isFinite(Date.parse(value));
 }
 
 function validateAcceptedMarker(input: {
