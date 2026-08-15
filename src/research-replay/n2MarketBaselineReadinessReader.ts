@@ -74,6 +74,16 @@ function resolveInside(rootDir: string, relativePath: string): string {
   return target;
 }
 
+function resolveInsideExpectedDirectory(
+  rootDir: string,
+  relativePath: string,
+  expectedRelativeDirectory: string,
+): string | null {
+  const target = resolveInside(rootDir, relativePath);
+  const expectedDirectory = resolve(rootDir, expectedRelativeDirectory);
+  return target.startsWith(`${expectedDirectory}${sep}`) ? target : null;
+}
+
 function safeDirectoryNames(rootDir: string, relativeDir: string): string[] {
   const path = resolveInside(rootDir, relativeDir);
   if (!existsSync(path)) return [];
@@ -160,8 +170,14 @@ function validateAcceptedMarker(input: {
     || !rawRelativePath.endsWith(".html")) {
     blockers.push("ACCEPTED_MARKER_RAW_PATH_INVALID");
   } else {
-    const rawPath = resolveInside(input.dataRoot, rawRelativePath);
-    if (!regularBounded(rawPath, MAX_EVIDENCE_BYTES)) blockers.push("ACCEPTED_RAW_EVIDENCE_FILE_INVALID");
+    let rawPath: string | null = null;
+    try {
+      rawPath = resolveInsideExpectedDirectory(input.dataRoot, rawRelativePath, directory);
+    } catch {
+      rawPath = null;
+    }
+    if (!rawPath) blockers.push("ACCEPTED_MARKER_RAW_PATH_INVALID");
+    else if (!regularBounded(rawPath, MAX_EVIDENCE_BYTES)) blockers.push("ACCEPTED_RAW_EVIDENCE_FILE_INVALID");
   }
   const envelopeRelativePath = marker.envelopeRelativePath;
   if (typeof envelopeRelativePath !== "string"
@@ -169,8 +185,14 @@ function validateAcceptedMarker(input: {
     || !envelopeRelativePath.endsWith(".envelope.json")) {
     blockers.push("ACCEPTED_MARKER_ENVELOPE_PATH_INVALID");
   } else {
-    const envelopePath = resolveInside(input.dataRoot, envelopeRelativePath);
-    if (!regularBounded(envelopePath, MAX_EVIDENCE_BYTES)) blockers.push("ACCEPTED_ENVELOPE_EVIDENCE_FILE_INVALID");
+    let envelopePath: string | null = null;
+    try {
+      envelopePath = resolveInsideExpectedDirectory(input.dataRoot, envelopeRelativePath, directory);
+    } catch {
+      envelopePath = null;
+    }
+    if (!envelopePath) blockers.push("ACCEPTED_MARKER_ENVELOPE_PATH_INVALID");
+    else if (!regularBounded(envelopePath, MAX_EVIDENCE_BYTES)) blockers.push("ACCEPTED_ENVELOPE_EVIDENCE_FILE_INVALID");
   }
   return { valid: blockers.length === 0, raceKey, blockers: unique(blockers) };
 }
