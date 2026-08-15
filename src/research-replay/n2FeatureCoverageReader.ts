@@ -28,6 +28,14 @@ export type N2CoverageRaceRow = {
 };
 
 type N2CoverageRaceIdentityRow = Pick<N2CoverageRaceRow, "raceId" | "date" | "venue" | "raceNo">;
+type ProgramLineageRow = N2FeatureLineageEvidenceRow & Pick<
+  OfficialProgramTypedPayloadRow,
+  "domainPayloadType" | "domainPayloadSchemaVersion" | "domainSemanticPayloadHash"
+>;
+type ProgramTypedPayloadRow = Pick<
+  OfficialProgramTypedPayloadRow,
+  "typedPayloadType" | "typedPayloadSchemaVersion" | "typedPayloadJson" | "typedPayloadHash"
+>;
 
 const PROGRAM_LINEAGE_SQL = `
 SELECT
@@ -48,17 +56,22 @@ SELECT
   r.raw_document_id AS rawDocumentId,
   r.integrity_status AS integrityStatus,
   r.security_scan_status AS securityScanStatus,
-  r.parser_replay_eligible AS parserReplayEligible,
-  t.payload_type AS typedPayloadType,
-  t.payload_schema_version AS typedPayloadSchemaVersion,
-  t.payload_json AS typedPayloadJson,
-  t.payload_hash AS typedPayloadHash
+  r.parser_replay_eligible AS parserReplayEligible
 FROM domain_observations o
 JOIN parse_runs p ON p.parse_run_id = o.parse_run_id
 JOIN raw_documents r ON r.raw_document_id = o.raw_document_id
-LEFT JOIN typed_observation_payloads t ON t.observation_id = o.observation_id
 WHERE o.canonical_race_key = ? AND o.observation_type = 'official_program'
 ORDER BY o.observation_id
+`;
+
+const PROGRAM_TYPED_PAYLOAD_SQL = `
+SELECT
+  payload_type AS typedPayloadType,
+  payload_schema_version AS typedPayloadSchemaVersion,
+  payload_json AS typedPayloadJson,
+  payload_hash AS typedPayloadHash
+FROM typed_observation_payloads
+WHERE observation_id = ?
 `;
 
 export function openN2CoverageDbImmutable(path: string): DatabaseSync {
@@ -112,7 +125,8 @@ function excludedProgramEvents(canonicalKey: string, reason: string): N2FeatureC
 
 function eventsForProgram(
   row: N2CoverageRaceRow,
-  evidenceRows: Array<N2FeatureLineageEvidenceRow & OfficialProgramTypedPayloadRow>,
+  evidenceRows: ProgramLineageRow[],
+  loadTypedPayload: (observationId: string) => ProgramTypedPayloadRow | null,
 ): N2FeatureCoverageEvent[] {
   const canonicalKey = canonicalN2CoverageRaceKey(row);
   if (evidenceRows.length === 0) return excludedProgramEvents(canonicalKey, "excluded_lineage_not_found");
@@ -127,11 +141,20 @@ function eventsForProgram(
   }, evidence);
   if (verification.status === "excluded") return excludedProgramEvents(canonicalKey, verification.reason);
 
+  const typedPayload = loadTypedPayload(evidence.observationId);
   const payloadVerification = verifyOfficialProgramTypedPayload({
     canonicalRaceKey: canonicalKey,
     sourceObservedAt: evidence.sourceObservedAt,
     primaryRawJson: row.rawJson,
-    row: evidence,
+    row: {
+      domainPayloadType: evidence.domainPayloadType,
+      domainPayloadSchemaVersion: evidence.domainPayloadSchemaVersion,
+      domainSemanticPayloadHash: evidence.domainSemanticPayloadHash,
+      typedPayloadType: typedPayload?.typedPayloadType ?? null,
+      typedPayloadSchemaVersion: typedPayload?.typedPayloadSchemaVersion ?? null,
+      typedPayloadJson: typedPayload?.typedPayloadJson ?? null,
+      typedPayloadHash: typedPayload?.typedPayloadHash ?? null,
+    },
   });
   if (payloadVerification.status === "excluded") {
     return excludedProgramEvents(canonicalKey, payloadVerification.reason);
@@ -211,13 +234,14 @@ export function readOfficialProgramCoverageEvents(input: {
     `).all(input.dateFrom, input.dateTo) as unknown as N2CoverageRaceRow[];
     if (rows.length !== identities.length) throw new Error("N2_COVERAGE_PROGRAM_SET_CHANGED_AFTER_PREFLIGHT");
     const lineage = sidecar.prepare(PROGRAM_LINEAGE_SQL);
+    const typedPayload = sidecar.prepare(PROGRAM_TYPED_PAYLOAD_SQL);
     const events: N2FeatureCoverageEvent[] = [];
     for (const row of rows) {
       const canonicalKey = canonicalN2CoverageRaceKey(row);
-      const evidenceRows = lineage.all(canonicalKey) as unknown as Array<
-        N2FeatureLineageEvidenceRow & OfficialProgramTypedPayloadRow
-      >;
-      events.push(...eventsForProgram(row, evidenceRows));
+      const evidenceRows = lineage.all(canonicalKey) as unknown as ProgramLineageRow[];
+      events.push(...eventsForProgram(row, evidenceRows, (observationId) => (
+        typedPayload.get(observationId) as unknown as ProgramTypedPayloadRow | undefined
+      ) ?? null));
     }
     return events;
   } finally {
