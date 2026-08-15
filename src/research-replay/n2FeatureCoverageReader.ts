@@ -27,6 +27,8 @@ export type N2CoverageRaceRow = {
   importedAt: string;
 };
 
+type N2CoverageRaceIdentityRow = Pick<N2CoverageRaceRow, "raceId" | "date" | "venue" | "raceNo">;
+
 const PROGRAM_LINEAGE_SQL = `
 SELECT
   o.observation_id AS observationId,
@@ -182,6 +184,18 @@ export function readOfficialProgramCoverageEvents(input: {
   const primary = openN2CoverageDbImmutable(input.primaryDbPath);
   const sidecar = openN2CoverageDbImmutable(input.sidecarDbPath);
   try {
+    const identities = primary.prepare(`
+      SELECT
+        race_id AS raceId,
+        date,
+        venue,
+        race_no AS raceNo
+      FROM official_programs
+      WHERE date >= ? AND date <= ?
+      ORDER BY date, venue, race_no
+    `).all(input.dateFrom, input.dateTo) as unknown as N2CoverageRaceIdentityRow[];
+    for (const row of identities) canonicalN2CoverageRaceKey(row);
+
     const rows = primary.prepare(`
       SELECT
         race_id AS raceId,
@@ -195,6 +209,7 @@ export function readOfficialProgramCoverageEvents(input: {
       WHERE date >= ? AND date <= ?
       ORDER BY date, venue, race_no
     `).all(input.dateFrom, input.dateTo) as unknown as N2CoverageRaceRow[];
+    if (rows.length !== identities.length) throw new Error("N2_COVERAGE_PROGRAM_SET_CHANGED_AFTER_PREFLIGHT");
     const lineage = sidecar.prepare(PROGRAM_LINEAGE_SQL);
     const events: N2FeatureCoverageEvent[] = [];
     for (const row of rows) {
