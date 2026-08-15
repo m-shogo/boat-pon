@@ -68,6 +68,11 @@ jobs:
           --output-public data/tmp/owner-buy-patterns-public.json
           --retain-private-dir data/private/outcome-pattern-ledger
 
+      - name: Report BUY contrast support readiness
+        run: >-
+          npx tsx scripts/report-buy-pattern-support-readiness.ts
+          --patterns data/tmp/owner-buy-patterns-public.json
+
       - name: Analyze BUY max-hit dependence across independent windows
         run: >-
           npx tsx scripts/analyze-buy-tail-dependence.ts
