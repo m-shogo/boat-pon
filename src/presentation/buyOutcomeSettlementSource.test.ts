@@ -20,3 +20,9 @@ test("automatic outcome learning is scoped to paper-live decisions", () => {
   assert.match(patternSource, /--run-kind/);
   assert.match(summarySource, /--run-kind/);
 });
+
+test("PR CI completions cannot cancel a queued main BUY learning refresh", () => {
+  assert.match(workflowSource, /workflow_run:[\s\S]*?branches: \[main\]/);
+  assert.match(workflowSource, /group: owner-buy-learning-refresh/);
+  assert.match(workflowSource, /cancel-in-progress: true/);
+});
