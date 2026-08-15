@@ -116,11 +116,17 @@ export function isExplicitMarketObservedAt(value: string): boolean {
   return Number.isFinite(Date.parse(value));
 }
 
+function hasValidMarketPayloadMetadata(row: MarketEvidenceMetadataRow): boolean {
+  return row.payloadType === "trifecta_market"
+    && row.observationPayloadType === "trifecta_market"
+    && row.payloadSchemaVersion === PAYLOAD_SCHEMA_VERSION
+    && row.observationPayloadSchemaVersion === PAYLOAD_SCHEMA_VERSION
+    && Boolean(row.payloadHash)
+    && row.payloadHash === row.observationPayloadHash;
+}
+
 function parsePayload(row: MarketEvidenceRow): TrifectaMarketPayload | null {
-  if (row.payloadType !== "trifecta_market" || row.observationPayloadType !== "trifecta_market"
-    || row.payloadSchemaVersion !== PAYLOAD_SCHEMA_VERSION
-    || row.observationPayloadSchemaVersion !== PAYLOAD_SCHEMA_VERSION
-    || !row.payloadHash || !row.observationPayloadHash) return null;
+  if (!hasValidMarketPayloadMetadata(row)) return null;
   let payload: TrifectaMarketPayload;
   try {
     payload = validateTypedPayload(
@@ -155,6 +161,10 @@ function eventsForRace(input: {
     }, evidence);
     if (verification.status === "excluded") {
       lineageFailures.push(verification.reason);
+      continue;
+    }
+    if (!hasValidMarketPayloadMetadata(evidence)) {
+      verified.push({ evidence, lineage: verification.lineage, payload: null });
       continue;
     }
     const payloadJson = input.loadPayloadJson(evidence.observationId);
