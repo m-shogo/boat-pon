@@ -50,8 +50,12 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Build read-only BUY outcome learning summary
-        run: npx tsx scripts/report-buy-learning-summary.ts --recent 30 --output data/tmp/owner-buy-learning-latest.json
+      - name: Build and retain read-only BUY outcome learning summary
+        run: >-
+          npx tsx scripts/report-buy-learning-summary.ts
+          --recent 30
+          --output data/tmp/owner-buy-learning-latest.json
+          --retain-private-dir data/private/outcome-learning-ledger
 
       - name: Verify public source boundary
         run: node scripts/verify-product-boundaries.mjs
