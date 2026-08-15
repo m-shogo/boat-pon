@@ -1,6 +1,7 @@
+import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import { mkdir, rename, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { buildBuyLearningSummary } from "../src/presentation/buyLearningSummary";
 
@@ -42,7 +43,7 @@ try {
       SELECT selection, result, returned, current_odds
       FROM decision_history
       WHERE ${predicate} AND result IS NOT NULL AND returned = 0
-      ORDER BY date DESC, venue DESC, race_no DESC, id DESC
+      ORDER BY date DESC, venue DESC, race_no DESC
       LIMIT ?
     )
     SELECT
@@ -71,6 +72,7 @@ try {
   });
 
   if (args.output) await atomicWrite(args.output, `${JSON.stringify(summary, null, 2)}\n`);
+  const retained = args.retainPrivateDir ? await retainPrivateLearning(args.retainPrivateDir, summary) : false;
   console.log(JSON.stringify({
     status: summary.status,
     output: args.output ?? null,
@@ -79,6 +81,7 @@ try {
     misses: summary.performance.misses,
     learningCount: summary.learnings.length,
     researchCandidateCount: summary.researchCandidates.length,
+    privateLearningRetained: retained,
     productionChangeAllowed: false,
   }));
 } finally {
@@ -89,7 +92,7 @@ type AggregateRow = Record<"totalDecisions" | "settled" | "hits" | "payoutOddsSu
 type RecentRow = { settled: number | bigint | null; hits: number | bigint | null; payoutOddsSum: number | null };
 
 function parseArgs(argv: string[]) {
-  const parsed = { from: null as string | null, to: null as string | null, runKind: null as string | null, modelVersion: null as string | null, recent: 30, output: null as string | null };
+  const parsed = { from: null as string | null, to: null as string | null, runKind: null as string | null, modelVersion: null as string | null, recent: 30, output: null as string | null, retainPrivateDir: null as string | null };
   for (let i = 0; i < argv.length; i += 1) {
     const key = argv[i]; const value = argv[i + 1];
     if (key === "--from") { parsed.from = date(value); i += 1; }
@@ -98,6 +101,7 @@ function parseArgs(argv: string[]) {
     else if (key === "--model-version") { parsed.modelVersion = safeArg(value); i += 1; }
     else if (key === "--recent") { parsed.recent = boundedInt(value, 10, 200); i += 1; }
     else if (key === "--output") { parsed.output = safeOutput(value); i += 1; }
+    else if (key === "--retain-private-dir") { parsed.retainPrivateDir = safePrivateDir(value); i += 1; }
     else if (key === "--") { /* npm separator */ }
     else throw new Error(`unknown option: ${key}`);
   }
@@ -107,7 +111,26 @@ function date(value: string | undefined) { if (!value || !/^\d{4}-\d{2}-\d{2}$/.
 function safeArg(value: string | undefined) { if (!value || !/^[A-Za-z0-9_.-]{1,80}$/.test(value)) throw new Error("invalid filter"); return value; }
 function boundedInt(value: string | undefined, min: number, max: number) { const n = Number(value); if (!Number.isInteger(n) || n < min || n > max) throw new Error("invalid integer option"); return n; }
 function safeOutput(value: string | undefined) { if (!value || value.startsWith("/") || value.includes("..") || !/^[A-Za-z0-9_./-]+\.json$/.test(value)) throw new Error("output must be a relative json path"); return value; }
+function safePrivateDir(value: string | undefined) { if (!value || !/^data\/private\/[A-Za-z0-9_./-]+$/.test(value) || value.includes("..")) throw new Error("private retention must stay under data/private"); return value.replace(/\/$/, ""); }
 function number(value: number | bigint | null) { const n = Number(value ?? 0); return Number.isFinite(n) && n >= 0 ? Math.trunc(n) : 0; }
 function finite(value: number | bigint | null) { const n = Number(value ?? 0); return Number.isFinite(n) ? n : 0; }
 function nullableFinite(value: number | null) { return value == null || !Number.isFinite(Number(value)) ? null : Number(value); }
 async function atomicWrite(path: string, contents: string) { await mkdir(dirname(path), { recursive: true }); const temp = `${path}.tmp-${process.pid}`; await writeFile(temp, contents, { encoding: "utf8", mode: 0o600 }); await rename(temp, path); }
+async function retainPrivateLearning(dir: string, summary: unknown): Promise<boolean> {
+  const value = summary as Record<string, unknown>;
+  const semantic = { ...value, generatedAt: undefined };
+  const digest = createHash("sha256").update(JSON.stringify(semantic)).digest("hex");
+  const record = { schemaVersion: "buy-outcome-learning-ledger.0.1", semanticDigest: digest, recordedAt: new Date().toISOString(), summary };
+  await mkdir(dir, { recursive: true, mode: 0o700 });
+  const path = join(dir, `buy-learning-${digest}.json`);
+  try {
+    await writeFile(path, `${JSON.stringify(record, null, 2)}\n`, { encoding: "utf8", mode: 0o600, flag: "wx" });
+    return true;
+  } catch (error) {
+    if (!isNodeError(error) || error.code !== "EEXIST") throw error;
+    const existing = JSON.parse(await readFile(path, "utf8")) as { semanticDigest?: string };
+    if (existing.semanticDigest !== digest) throw new Error("private BUY learning ledger conflict");
+    return false;
+  }
+}
+function isNodeError(error: unknown): error is NodeJS.ErrnoException { return error instanceof Error && "code" in error; }
