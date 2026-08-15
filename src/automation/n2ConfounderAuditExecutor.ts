@@ -154,37 +154,57 @@ export function buildN2GovernanceRejectionRecords(input: {
 }
 
 function stripRegistryMetadata(record: Record<string, unknown>): Record<string, unknown> {
-  const { _digest, _recordedAt, ...body } = record;
+  const { _digest, _digestVersion, _recordedAt, ...body } = record;
+  return body;
+}
+function stripRejectionCreatedAt(record: Record<string, unknown>): Record<string, unknown> {
+  const { createdAt: _createdAt, ...body } = record;
   return body;
 }
 export function preflightN2RejectionRegistry(registryRoot: string, planned: readonly Rejection[]) {
   const blockers: string[] = [];
   const plannedIds = planned.map((record) => record.rejectionId);
+  const resolvedRecords = planned.map((record) => ({ ...record }));
   if (new Set(plannedIds).size !== plannedIds.length) blockers.push("DUPLICATE_PLANNED_REJECTION_ID");
   for (const record of planned) {
     const blocker = rejectionSubjectIdentityBlocker(record);
     if (blocker) blockers.push(blocker);
   }
   if (blockers.length > 0) {
-    return { ok: false, blockers: unique(blockers), alreadyRecordedCount: 0 };
+    return { ok: false, blockers: unique(blockers), alreadyRecordedCount: 0, resolvedRecords };
   }
   let existing: Record<string, unknown>[];
   try { existing = listRecords<Record<string, unknown>>(registryRoot, "rejections"); }
   catch (error) {
-    return { ok: false, blockers: [`REJECTION_REGISTRY_READ_FAILED:${error instanceof Error ? error.message.slice(0, 180) : "UNKNOWN"}`], alreadyRecordedCount: 0 };
+    return { ok: false, blockers: [`REJECTION_REGISTRY_READ_FAILED:${error instanceof Error ? error.message.slice(0, 180) : "UNKNOWN"}`], alreadyRecordedCount: 0, resolvedRecords };
   }
   const byId = new Map(existing.map((record) => [String(record.rejectionId), record]));
   let alreadyRecordedCount = 0;
-  for (const record of planned) {
+  for (const [index, record] of planned.entries()) {
     const prior = byId.get(record.rejectionId);
     if (!prior) continue;
     const body = stripRegistryMetadata(prior);
     const storedDigest = typeof prior._digest === "string" ? prior._digest : contractDigest(body);
+    const bodyDigest = contractDigest(body);
     const expectedDigest = contractDigest(record as unknown as Record<string, unknown>);
-    if (storedDigest !== expectedDigest || contractDigest(body) !== expectedDigest) blockers.push(`REJECTION_REGISTRY_CONFLICT:${record.rejectionId}`);
-    else alreadyRecordedCount += 1;
+    if (storedDigest !== bodyDigest) {
+      blockers.push(`REJECTION_REGISTRY_CONFLICT:${record.rejectionId}`);
+      continue;
+    }
+    if (bodyDigest === expectedDigest) {
+      alreadyRecordedCount += 1;
+      continue;
+    }
+    const sameSemantics = contractDigest(stripRejectionCreatedAt(body))
+      === contractDigest(stripRejectionCreatedAt(record as unknown as Record<string, unknown>));
+    if (sameSemantics && isValidHistoricalGeneratedAt(body.createdAt)) {
+      resolvedRecords[index] = { ...record, createdAt: body.createdAt };
+      alreadyRecordedCount += 1;
+      continue;
+    }
+    blockers.push(`REJECTION_REGISTRY_CONFLICT:${record.rejectionId}`);
   }
-  return { ok: blockers.length === 0, blockers: unique(blockers), alreadyRecordedCount };
+  return { ok: blockers.length === 0, blockers: unique(blockers), alreadyRecordedCount, resolvedRecords };
 }
 function relativeRegistryOutput(repoRoot: string, absolutePath: string): string {
   const output = relative(repoRoot, absolutePath).replaceAll("\\", "/");
@@ -221,6 +241,7 @@ export function createN2ConfounderAuditExecutor(): Executor {
         plannedRejections = buildN2GovernanceRejectionRecords({ sourceArtifactDigest: source.outputDigest, sourceGeneratedAt: source.generatedAt, audit });
         const preflight = preflightN2RejectionRegistry(registryRoot, plannedRejections);
         preflightAlreadyRecordedCount = preflight.alreadyRecordedCount;
+        plannedRejections = preflight.resolvedRecords;
         return { ok: preflight.ok, errors: preflight.blockers };
       },
       executeReadOnly: () => {
