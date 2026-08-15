@@ -93,6 +93,12 @@ jobs:
           --tail-signal data/tmp/owner-buy-tail-public.json
           --retain-private-dir data/private/outcome-learning-ledger
 
+      - name: Report BUY hit-rate uncertainty
+        run: >-
+          npx tsx scripts/report-buy-hit-rate-uncertainty.ts
+          --summary data/tmp/owner-buy-learning-latest.json
+          --output data/tmp/owner-buy-hit-rate-uncertainty.json
+
       - name: Report public-safe BUY learning diagnostics
         shell: bash
         run: |
@@ -101,8 +107,9 @@ jobs:
           const fs = require('node:fs');
           const patterns = JSON.parse(fs.readFileSync('data/tmp/owner-buy-patterns-public.json', 'utf8'));
           const tail = JSON.parse(fs.readFileSync('data/tmp/owner-buy-tail-public.json', 'utf8'));
+          const uncertainty = JSON.parse(fs.readFileSync('data/tmp/owner-buy-hit-rate-uncertainty.json', 'utf8'));
           const summary = JSON.parse(fs.readFileSync('data/tmp/owner-buy-learning-latest.json', 'utf8'));
-          if (patterns.productionChangeAllowed !== false || tail.productionChangeAllowed !== false) throw new Error('BUY diagnostics must not allow production changes');
+          if (patterns.productionChangeAllowed !== false || tail.productionChangeAllowed !== false || uncertainty.productionChangeAllowed !== false) throw new Error('BUY diagnostics must not allow production changes');
           const diagnostics = {
             schemaVersion: 'owner-buy-learning-diagnostics-v1',
             status: summary.status,
@@ -120,6 +127,11 @@ jobs:
               misses: summary.recent?.misses ?? null,
               hitRate: summary.recent?.hitRate ?? null,
               roi: summary.recent?.roi ?? null,
+            },
+            hitRateUncertainty: {
+              status: uncertainty.status,
+              performance: uncertainty.performance ?? null,
+              recent: uncertainty.recent ?? null,
             },
             learningIds: Array.isArray(summary.learnings) ? summary.learnings.map((item) => item.id) : [],
             failurePatternIds: Array.isArray(summary.failurePatterns) ? summary.failurePatterns.map((item) => item.id) : [],
