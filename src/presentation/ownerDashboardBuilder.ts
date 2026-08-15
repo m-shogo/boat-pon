@@ -111,10 +111,18 @@ function parseBuyEvidence(value: unknown, generatedAt: string, buyLearning: BuyL
   const evidence = value as OwnerBuyEvidenceDiagnostics;
   if (buyLearning.status !== "AVAILABLE" || evidence.status !== "AVAILABLE") return evidence.status === "NOT_AVAILABLE" ? evidence : unavailableOwnerBuyEvidenceDiagnostics(generatedAt);
   const settled = buyLearning.performance.settled;
+  const roi = buyLearning.performance.roi;
+  const recentSettled = buyLearning.recent.settled;
+  const recentRoi = buyLearning.recent.roi;
   if (settled === null
+    || recentSettled === null
     || evidence.patternSupport?.analyzedSettled !== settled
     || evidence.tailStability?.totalSettled !== settled
-    || evidence.hitRateUncertainty?.performance.trials !== settled) return unavailableOwnerBuyEvidenceDiagnostics(generatedAt);
+    || evidence.hitRateUncertainty?.performance.trials !== settled
+    || evidence.roiUncertainty?.performance.trials !== settled
+    || evidence.roiUncertainty?.recent.trials !== recentSettled
+    || !sameMetric(evidence.roiUncertainty?.performance.interval?.pointEstimate ?? null, roi)
+    || !sameMetric(evidence.roiUncertainty?.recent.interval?.pointEstimate ?? null, recentRoi)) return unavailableOwnerBuyEvidenceDiagnostics(generatedAt);
   return evidence;
 }
 
@@ -174,6 +182,10 @@ function inferNextAction(tasks: OwnerDashboardSnapshot["n2Tasks"], buyLearning: 
   return engineering ? `${engineering.taskId} のexecutor/read-only実装を整備（自動activateしない）` : null;
 }
 
+function sameMetric(left: number | null, right: number | null): boolean {
+  if (left === null || right === null) return left === right;
+  return Math.abs(left - right) <= 0.0001;
+}
 function friendlyStatus(status: string): string { return status.startsWith("BLOCKED_EXECUTOR") ? "executor未実装" : status; }
 function humanizeCommit(message: string): string { return message.replace(/^(fix|feat|research|test)(\([^)]*\))?:\s*/i, "").replace(/\s*\(#\d+\)$/, ""); }
 function summarizeCommit(message: string): string { return humanizeCommit(message); }
