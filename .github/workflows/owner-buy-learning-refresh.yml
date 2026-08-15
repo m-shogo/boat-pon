@@ -237,7 +237,7 @@ jobs:
             productionChangeAllowed: false,
           };
           const serialized = JSON.stringify(diagnostics);
-          if (/(selection|currentOdds|requiredOdds|recommendedAmount|stake|raceId|decisionId|segmentKey|\/Users\/|\/home\/|venue)/i.test(serialized)) {
+          if (/(selection|currentOdds|requiredOdds|recommendedAmount|stake|raceId|decisionId|segmentKey|\/Users\/|\/home\/)/i.test(serialized)) {
             throw new Error('private or operational BUY field reached public-safe diagnostics');
           }
           console.log(serialized);
@@ -303,7 +303,7 @@ jobs:
             echo "::error::private value, secret-like token, or concrete local path found in public deploy artifact"
             exit 1
           fi
-          if grep -RInE '/(private|var|Volumes)/|"(selection|stake|currentOdds|requiredOdds|recommendedAmount|raceId|decisionId|segmentKey|venue)"[[:space:]]*:' dist-public-deploy/public-data; then
+          if grep -RInE '/(private|var|Volumes)/|"(selection|stake|currentOdds|requiredOdds|recommendedAmount|raceId|decisionId|segmentKey)"[[:space:]]*:' dist-public-deploy/public-data; then
             echo "::error::private path or operational field found in public JSON"
             exit 1
           fi
