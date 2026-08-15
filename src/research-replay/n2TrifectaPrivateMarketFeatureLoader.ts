@@ -8,7 +8,7 @@ import {
 import { resolve, sep } from "node:path";
 
 import { parseAllTrifectaOdds } from "../domain/oddsParser";
-import { canonicalHash } from "./canonical";
+import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import type { N2TrifectaPrivateCaptureEnvelope } from "./n2TrifectaPrivateCaptureExecutor";
 import {
   N2_TRIFECTA_MARKET_CHECKPOINTS,
@@ -102,6 +102,15 @@ function sha256(bytes: Uint8Array): string {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
+function isCanonicalIsoInstant(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  try {
+    return canonicalUtcTimestamp(value) === value;
+  } catch {
+    return false;
+  }
+}
+
 function raceIdentity(input: N2TrifectaPrivateMarketFeatureLoaderInput): string {
   return `${input.date.replaceAll("-", "")}-${input.venueCode}-${String(input.raceNo).padStart(2, "0")}`;
 }
@@ -159,6 +168,7 @@ function loadCheckpoint(
   if (marker.raceIdentity !== expectedRaceIdentity) blockers.push("ACCEPTED_RACE_IDENTITY_MISMATCH");
   if (marker.checkpointLabel !== checkpointLabel) blockers.push("ACCEPTED_CHECKPOINT_MISMATCH");
   if (!SHA256_RE.test(marker.rawSha256)) blockers.push("ACCEPTED_RAW_SHA256_INVALID");
+  if (!isCanonicalIsoInstant(marker.acceptedAt)) blockers.push("ACCEPTED_AT_INVALID");
   if (marker.databaseWriteAuthorized !== false) blockers.push("ACCEPTED_DATABASE_BOUNDARY_WIDENED");
   if (marker.productionApplyExecuted !== false) blockers.push("ACCEPTED_PRODUCTION_APPLY_CHANGED");
   if (typeof marker.rawRelativePath !== "string" || !marker.rawRelativePath.startsWith(`${directory}/`)
