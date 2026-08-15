@@ -9,7 +9,7 @@ import {
   type N2EvaluationSplit,
 } from "./n2BaselineEvaluation";
 
-export const N2_EDGE_HYPOTHESIS_SCAN_VERSION = "n2-edge-hypothesis-scan-v1" as const;
+export const N2_EDGE_HYPOTHESIS_SCAN_VERSION = "n2-edge-hypothesis-scan-v2" as const;
 export const N2_EDGE_SCAN_ALPHA = 0.05;
 export const N2_EDGE_SCAN_MIN_UNIQUE_RACES = 200;
 export const N2_EDGE_SCAN_MIN_ABSOLUTE_RESIDUAL = 0.001;
@@ -543,11 +543,13 @@ export class N2EdgeHypothesisAccumulator {
       || left.bucket.localeCompare(right.bucket),
     );
     let priorAdjusted = 0;
+    const baselineId = [...this.baselineIds][0];
     const adjusted: N2EdgeHypothesis[] = ordered.map((candidate, index) => {
       const adjustedP = Math.min(1, Math.max(priorAdjusted, candidate.rawPValue * (ordered.length - index)));
       priorAdjusted = adjustedP;
       const identity = {
         scanVersion: N2_EDGE_HYPOTHESIS_SCAN_VERSION,
+        baselineId,
         featureKey: candidate.featureKey,
         selectionRole: candidate.selectionRole,
         bucket: candidate.bucket,
@@ -575,7 +577,7 @@ export class N2EdgeHypothesisAccumulator {
       scanVersion: N2_EDGE_HYPOTHESIS_SCAN_VERSION,
       status: "PASS" as const,
       blockers: [] as string[],
-      baselineId: [...this.baselineIds][0],
+      baselineId,
       ...commonReportFields(this.inputObservationCount),
       pitExcludedFeatureValueCount: this.pitExcludedFeatureValueCount,
       adapterGatedFeatureValueCount: this.adapterGatedFeatureValueCount,
