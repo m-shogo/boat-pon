@@ -11,6 +11,8 @@ import { enumerateBetSelections } from "./n2DatasetContract";
 export const N2_ODDS_COVERAGE_READER_VERSION = "n2-odds-coverage-reader-v1";
 export type N2LiveCheckpoint = "T-30" | "T-20" | "T-10" | "T-5" | "ad-hoc";
 
+type OddsCoverageRaceRow = Pick<N2CoverageRaceRow, "raceId" | "date" | "venue" | "raceNo">;
+
 type MarketEvidenceRow = N2FeatureLineageEvidenceRow & {
   payloadType: string;
   observationPayloadType: string;
@@ -129,7 +131,7 @@ function parsePayload(row: MarketEvidenceRow): TrifectaMarketPayload | null {
   };
 }
 
-function eventsForRace(row: N2CoverageRaceRow, evidenceRows: MarketEvidenceRow[], checkpoint: N2LiveCheckpoint): N2FeatureCoverageEvent[] {
+function eventsForRace(row: OddsCoverageRaceRow, evidenceRows: MarketEvidenceRow[], checkpoint: N2LiveCheckpoint): N2FeatureCoverageEvent[] {
   const canonicalRaceKey = canonicalN2CoverageRaceKey(row);
   const parsed = evidenceRows.map((evidence) => ({ evidence, payload: parsePayload(evidence) }));
   const matching = parsed.filter((item) => item.payload?.checkpointLabelAtCapture === checkpoint);
@@ -216,12 +218,11 @@ export function readTrifectaMarketCoverageEvents(input: {
   const sidecar = openN2CoverageDbImmutable(input.sidecarDbPath);
   try {
     const rows = primary.prepare(`
-      SELECT race_id AS raceId, date, venue, race_no AS raceNo,
-             source_file AS sourceFile, raw_json AS rawJson, imported_at AS importedAt
+      SELECT race_id AS raceId, date, venue, race_no AS raceNo
       FROM official_programs
       WHERE date >= ? AND date <= ?
       ORDER BY date, venue, race_no
-    `).all(input.dateFrom, input.dateTo) as unknown as N2CoverageRaceRow[];
+    `).all(input.dateFrom, input.dateTo) as unknown as OddsCoverageRaceRow[];
     const statement = sidecar.prepare(MARKET_EVIDENCE_SQL);
     const events: N2FeatureCoverageEvent[] = [];
     for (const row of rows) {
