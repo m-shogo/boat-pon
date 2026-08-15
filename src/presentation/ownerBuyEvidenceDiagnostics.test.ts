@@ -63,6 +63,29 @@ const uncertainty = {
   productionChangeAllowed: false,
 };
 
+const roiUncertainty = {
+  schemaVersion: "buy-roi-uncertainty-public-v1",
+  generatedAt: "2026-08-15T12:39:43.700Z",
+  status: "AVAILABLE",
+  minimumTrials: 30,
+  performance: {
+    status: "AVAILABLE",
+    trials: 61,
+    minimumTrials: 30,
+    missingTrials: 0,
+    interval: { confidenceLevel: 0.95, method: "DETERMINISTIC_PERCENTILE_BOOTSTRAP", trials: 61, iterations: 5000, pointEstimate: 1.1197, lower: 0, upper: 3, width: 3, breakEven: 1, classification: "CROSSES_BREAK_EVEN" },
+  },
+  recent: {
+    status: "AVAILABLE",
+    trials: 30,
+    minimumTrials: 30,
+    missingTrials: 0,
+    interval: { confidenceLevel: 0.95, method: "DETERMINISTIC_PERCENTILE_BOOTSTRAP", trials: 30, iterations: 5000, pointEstimate: 1.3433, lower: 0, upper: 4, width: 4, breakEven: 1, classification: "CROSSES_BREAK_EVEN" },
+  },
+  note: "descriptive only",
+  productionChangeAllowed: false,
+};
+
 test("builds strict public-safe evidence diagnostics from the same settled BUY cohort", () => {
   const diagnostics = buildOwnerBuyEvidenceDiagnostics({
     generatedAt: "2026-08-15T12:40:00.000Z",
@@ -70,6 +93,7 @@ test("builds strict public-safe evidence diagnostics from the same settled BUY c
     patterns,
     tail,
     uncertainty,
+    roiUncertainty,
   });
   assert.equal(diagnostics.status, "AVAILABLE");
   assert.equal(diagnostics.patternSupport?.status, "NO_SUPPORTED_CONTRAST");
@@ -80,6 +104,8 @@ test("builds strict public-safe evidence diagnostics from the same settled BUY c
   assert.equal(diagnostics.tailStability?.recentTailGap, 1.3433);
   assert.equal(diagnostics.hitRateUncertainty?.performance.lower, 0.009);
   assert.equal(diagnostics.hitRateUncertainty?.performance.upper, 0.1119);
+  assert.equal(diagnostics.roiUncertainty?.performance.interval?.pointEstimate, 1.1197);
+  assert.equal(diagnostics.roiUncertainty?.performance.interval?.classification, "CROSSES_BREAK_EVEN");
   assert.equal(diagnostics.productionChangeAllowed, false);
   assert.deepEqual(validateOwnerBuyEvidenceDiagnostics(diagnostics), []);
   assert.doesNotMatch(JSON.stringify(diagnostics), /selection|raceId|decisionId|currentOdds|requiredOdds|stake|segmentKey|PRIVATE/i);
@@ -92,6 +118,7 @@ test("rejects stale or inconsistent evidence sources instead of mixing cohorts",
     patterns: { ...patterns, analyzedSettled: 60 },
     tail,
     uncertainty,
+    roiUncertainty,
   }), /pattern\/dashboard settled count mismatch/u);
 
   assert.throws(() => buildOwnerBuyEvidenceDiagnostics({
@@ -100,6 +127,7 @@ test("rejects stale or inconsistent evidence sources instead of mixing cohorts",
     patterns,
     tail: { ...tail, totalSettled: 60 },
     uncertainty,
+    roiUncertainty,
   }), /tail\/dashboard settled count mismatch|tail.*support/u);
 
   assert.throws(() => buildOwnerBuyEvidenceDiagnostics({
@@ -108,7 +136,32 @@ test("rejects stale or inconsistent evidence sources instead of mixing cohorts",
     patterns,
     tail,
     uncertainty: { ...uncertainty, performance: { ...uncertainty.performance, trials: 60 } },
+    roiUncertainty,
   }), /Wilson performance count mismatch/u);
+
+  assert.throws(() => buildOwnerBuyEvidenceDiagnostics({
+    generatedAt: "2026-08-15T12:40:00.000Z",
+    buyLearning: learning,
+    patterns,
+    tail,
+    uncertainty,
+    roiUncertainty: { ...roiUncertainty, performance: { ...roiUncertainty.performance, trials: 60 } },
+  }), /ROI performance support mismatch/u);
+
+  assert.throws(() => buildOwnerBuyEvidenceDiagnostics({
+    generatedAt: "2026-08-15T12:40:00.000Z",
+    buyLearning: learning,
+    patterns,
+    tail,
+    uncertainty,
+    roiUncertainty: {
+      ...roiUncertainty,
+      performance: {
+        ...roiUncertainty.performance,
+        interval: { ...roiUncertainty.performance.interval, pointEstimate: 1.5 },
+      },
+    },
+  }), /ROI performance point estimate mismatch/u);
 });
 
 test("NOT_AVAILABLE evidence remains explicit and empty", () => {
@@ -116,6 +169,7 @@ test("NOT_AVAILABLE evidence remains explicit and empty", () => {
   assert.equal(value.status, "NOT_AVAILABLE");
   assert.equal(value.patternSupport, null);
   assert.equal(value.hitRateUncertainty, null);
+  assert.equal(value.roiUncertainty, null);
   assert.equal(value.tailStability, null);
   assert.deepEqual(validateOwnerBuyEvidenceDiagnostics(value), []);
 });
