@@ -86,6 +86,16 @@ function resolveInside(rootDir: string, relativePath: string): string {
   return target;
 }
 
+function resolveInsideExpectedDirectory(
+  rootDir: string,
+  relativePath: string,
+  expectedRelativeDirectory: string,
+): string | null {
+  const target = resolveInside(rootDir, relativePath);
+  const expectedDirectory = resolve(rootDir, expectedRelativeDirectory);
+  return target.startsWith(`${expectedDirectory}${sep}`) ? target : null;
+}
+
 function readJsonBounded<T>(path: string): T {
   const lstat = lstatSync(path);
   if (lstat.isSymbolicLink() || !lstat.isFile()) {
@@ -186,20 +196,22 @@ function loadCheckpoint(
     || !marker.envelopeRelativePath.endsWith(".envelope.json")) {
     blockers.push("ACCEPTED_ENVELOPE_PATH_INVALID");
   }
+
+  let rawPath: string | null = null;
+  let envelopePath: string | null = null;
+  if (typeof marker.rawRelativePath === "string" && typeof marker.envelopeRelativePath === "string") {
+    try {
+      rawPath = resolveInsideExpectedDirectory(input.rootDir, marker.rawRelativePath, directory);
+      envelopePath = resolveInsideExpectedDirectory(input.rootDir, marker.envelopeRelativePath, directory);
+    } catch {
+      rawPath = null;
+      envelopePath = null;
+    }
+  }
+  if (!rawPath) blockers.push("ACCEPTED_RAW_PATH_INVALID");
+  if (!envelopePath) blockers.push("ACCEPTED_ENVELOPE_PATH_INVALID");
   if (blockers.length > 0) return { status: "BLOCKED", blockers: unique(blockers), snapshot: null };
 
-  let rawPath: string;
-  let envelopePath: string;
-  try {
-    rawPath = resolveInside(input.rootDir, marker.rawRelativePath);
-    envelopePath = resolveInside(input.rootDir, marker.envelopeRelativePath);
-  } catch (error) {
-    return {
-      status: "BLOCKED",
-      blockers: [error instanceof Error ? error.message : "PRIVATE_PATH_INVALID"],
-      snapshot: null,
-    };
-  }
   if (!existsSync(rawPath)) blockers.push("PRIVATE_RAW_FILE_MISSING");
   if (!existsSync(envelopePath)) blockers.push("PRIVATE_ENVELOPE_FILE_MISSING");
   if (blockers.length > 0) return { status: "BLOCKED", blockers: unique(blockers), snapshot: null };
