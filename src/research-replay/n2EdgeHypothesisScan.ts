@@ -9,7 +9,7 @@ import {
   type N2EvaluationSplit,
 } from "./n2BaselineEvaluation";
 
-export const N2_EDGE_HYPOTHESIS_SCAN_VERSION = "n2-edge-hypothesis-scan-v1" as const;
+export const N2_EDGE_HYPOTHESIS_SCAN_VERSION = "n2-edge-hypothesis-scan-v2" as const;
 export const N2_EDGE_SCAN_ALPHA = 0.05;
 export const N2_EDGE_SCAN_MIN_UNIQUE_RACES = 200;
 export const N2_EDGE_SCAN_MIN_ABSOLUTE_RESIDUAL = 0.001;
