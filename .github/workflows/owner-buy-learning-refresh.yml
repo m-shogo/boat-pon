@@ -106,6 +106,12 @@ jobs:
           --pattern-signals data/tmp/owner-buy-patterns-replicated-input.json
           --output data/tmp/owner-buy-learning-latest.json
 
+      - name: Merge BUY pattern replication readiness into learning
+        run: >-
+          npx tsx scripts/merge-buy-pattern-replication-readiness.ts
+          --summary data/tmp/owner-buy-learning-latest.json
+          --replication data/tmp/owner-buy-pattern-replication-public.json
+
       - name: Merge supported tail stability and retain final BUY learning
         run: >-
           npx tsx scripts/merge-buy-tail-learning.ts
