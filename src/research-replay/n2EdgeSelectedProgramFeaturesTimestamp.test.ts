@@ -61,6 +61,22 @@ test("selected feature reader rejects candidate identity mismatches before priva
   assert.equal(wrongEncoding.rawJsonReadCount, 0);
 });
 
+test("selected feature reader rejects impossible race dates before private database read", () => {
+  const canonicalRaceKey = "2004-02-30:11:R1";
+  const impossibleDate = readN2EdgeSelectedProgramFeatures({
+    primaryDbPath: "/private/should-not-be-opened.sqlite",
+    selectedCandidates: [{
+      ...BASE,
+      canonicalRaceKey,
+      primaryRaceId: "20040230-びわこ-01",
+    }],
+  });
+  assert.equal(impossibleDate.status, "BLOCKED");
+  assert.ok(impossibleDate.blockers.includes(`${canonicalRaceKey}:INVALID_SELECTED_IDENTITY`));
+  assert.equal(impossibleDate.primaryDatabaseReadCount, 0);
+  assert.equal(impossibleDate.rawJsonReadCount, 0);
+});
+
 test("selected feature reader keeps producer-canonical identity and timestamps eligible for database access", () => {
   const labelIdentity = readN2EdgeSelectedProgramFeatures({
     primaryDbPath: "/does/not/exist.sqlite",
