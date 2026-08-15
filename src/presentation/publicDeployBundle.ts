@@ -109,8 +109,11 @@ async function verifyOptionalSnapshots(root: string, files: Set<string>, errors:
       const value = JSON.parse(await readFile(join(root, ...path.split("/")), "utf8")) as unknown; const verified = await verifyPublicDashboardSnapshotIntegrity(value);
       if (!verified.ok || !verified.snapshot) { errors.push(`${path} failed snapshot integrity verification`); continue; }
       const dataAsOf = Date.parse(verified.snapshot.dataAsOf), generatedAt = Date.parse(verified.snapshot.generatedAt);
-      if (!Number.isFinite(dataAsOf) || !Number.isFinite(generatedAt)) { errors.push(`${path} has invalid timestamps`); continue; }
-      if (generatedAt - nowMs > DEFAULT_PUBLIC_SNAPSHOT_FUTURE_SKEW_MS || dataAsOf - nowMs > DEFAULT_PUBLIC_SNAPSHOT_FUTURE_SKEW_MS || dataAsOf > generatedAt + DEFAULT_PUBLIC_SNAPSHOT_FUTURE_SKEW_MS) { errors.push(`${path} has invalid time ordering`); continue; }
+      if (!Number.isFinite(dataAsOf)) { errors.push(`${path} has an invalid dataAsOf`); continue; }
+      if (!Number.isFinite(generatedAt)) { errors.push(`${path} has an invalid generatedAt`); continue; }
+      if (generatedAt - nowMs > DEFAULT_PUBLIC_SNAPSHOT_FUTURE_SKEW_MS) { errors.push(`${path} generatedAt is in the future`); continue; }
+      if (dataAsOf - nowMs > DEFAULT_PUBLIC_SNAPSHOT_FUTURE_SKEW_MS) { errors.push(`${path} dataAsOf is in the future`); continue; }
+      if (dataAsOf > generatedAt + DEFAULT_PUBLIC_SNAPSHOT_FUTURE_SKEW_MS) { errors.push(`${path} dataAsOf is after generatedAt`); continue; }
       snapshots.push({ path, dataAsOf, generatedAt });
     } catch (error) { errors.push(`${path} is invalid JSON: ${messageOf(error)}`); }
   }
@@ -127,7 +130,34 @@ async function verifyOptionalSnapshots(root: string, files: Set<string>, errors:
 }
 
 async function createManifest(root: string): Promise<PublicDeployManifest> { const files = (await listFiles(root)).filter((path) => path !== "deploy-manifest.json"); const entries: PublicDeployManifest["files"] = []; for (const path of files) { const content = await readFile(join(root, ...path.split("/"))); entries.push({ path, bytes: content.byteLength, sha256: createHash("sha256").update(content).digest("hex") }); } return { schemaVersion: PUBLIC_DEPLOY_MANIFEST_VERSION, entry: "index.html", files: entries.sort((a,b)=>a.path.localeCompare(b.path)) }; }
-async function validateManifest(root: string, manifest: PublicDeployManifest, actualFiles: string[]): Promise<string[]> { const errors: string[] = []; if (manifest.schemaVersion !== PUBLIC_DEPLOY_MANIFEST_VERSION) errors.push("unsupported deploy manifest schema"); if (manifest.entry !== "index.html") errors.push("deploy manifest entry must be index.html"); if (!Array.isArray(manifest.files)) return [...errors, "deploy manifest files must be an array"]; const expectedPaths = actualFiles.filter((path)=>path!=="deploy-manifest.json").sort(), validEntries: PublicDeployManifest["files"] = []; for (const entry of manifest.files) { if (!entry || typeof entry.path !== "string") { errors.push("deploy manifest contains an invalid file entry"); continue; } if (!isSafeRelativePath(entry.path) || !expectedPaths.includes(entry.path) || !Number.isInteger(entry.bytes) || entry.bytes < 0 || !/^[a-f0-9]{64}$/.test(entry.sha256)) { errors.push(`deploy manifest contains invalid entry: ${entry.path}`); continue; } validEntries.push(entry); } const manifestPaths=validEntries.map(f=>f.path).sort(); if(new Set(manifestPaths).size!==manifestPaths.length) errors.push("deploy manifest contains duplicate paths"); if(JSON.stringify(expectedPaths)!==JSON.stringify(manifestPaths)) errors.push("deploy manifest file set does not match artifact contents"); for(const entry of validEntries){ const content=await readFile(join(root,...entry.path.split("/"))); if(entry.bytes!==content.byteLength) errors.push(`manifest byte count mismatch: ${entry.path}`); if(entry.sha256!==createHash("sha256").update(content).digest("hex")) errors.push(`manifest digest mismatch: ${entry.path}`);} return errors; }
+async function validateManifest(root: string, manifest: PublicDeployManifest, actualFiles: string[]): Promise<string[]> {
+  const errors: string[] = [];
+  if (manifest.schemaVersion !== PUBLIC_DEPLOY_MANIFEST_VERSION) errors.push("unsupported deploy manifest schema");
+  if (manifest.entry !== "index.html") errors.push("deploy manifest entry must be index.html");
+  if (!Array.isArray(manifest.files)) return [...errors, "deploy manifest files must be an array"];
+  const expectedPaths = actualFiles.filter((path)=>path!=="deploy-manifest.json").sort(), validEntries: PublicDeployManifest["files"] = [];
+  for (const entry of manifest.files) {
+    if (!entry || typeof entry.path !== "string") { errors.push("deploy manifest contains an invalid file entry"); continue; }
+    if (!isSafeRelativePath(entry.path)) { errors.push(`deploy manifest contains an unsafe path: ${entry.path}`); continue; }
+    if (!expectedPaths.includes(entry.path)) { errors.push(`deploy manifest references a non-artifact path: ${entry.path}`); continue; }
+    if (!Number.isInteger(entry.bytes) || entry.bytes < 0) { errors.push(`deploy manifest contains invalid bytes: ${entry.path}`); continue; }
+    if (!/^[a-f0-9]{64}$/.test(entry.sha256)) { errors.push(`deploy manifest contains invalid digest: ${entry.path}`); continue; }
+    validEntries.push(entry);
+  }
+  const manifestPaths=validEntries.map(f=>f.path).sort();
+  if(new Set(manifestPaths).size!==manifestPaths.length) errors.push("deploy manifest contains duplicate paths");
+  if(JSON.stringify(expectedPaths)!==JSON.stringify(manifestPaths)) errors.push("deploy manifest file set does not match artifact contents");
+  for(const entry of validEntries){
+    const absolute = join(root,...entry.path.split("/"));
+    const info = await lstat(absolute);
+    if (info.isSymbolicLink() || !info.isFile()) { errors.push(`manifest file must be a regular file: ${entry.path}`); continue; }
+    if (info.size > MAX_PUBLIC_FILE_BYTES) continue;
+    const content=await readFile(absolute);
+    if(entry.bytes!==content.byteLength) errors.push(`manifest byte count mismatch: ${entry.path}`);
+    if(entry.sha256!==createHash("sha256").update(content).digest("hex")) errors.push(`manifest digest mismatch: ${entry.path}`);
+  }
+  return errors;
+}
 function isAllowedPublicPath(path:string){ if(!path.includes("/")) return ALLOWED_ROOT_FILES.has(path); if(OPTIONAL_PUBLIC_DATA_FILES.has(path)) return true; if(!path.startsWith("assets/")) return false; return ALLOWED_ASSET_EXTENSIONS.has(extname(path)); }
 function isSafeRelativePath(path:string){ return !!path && !path.startsWith("/") && !path.includes("\\") && path.split("/").every((part)=>part!==""&&part!=="."&&part!==".."); }
 function extractAbsoluteAssetReferences(html:string){ const refs=new Set<string>(); for(const match of html.matchAll(/(?:src|href)="\/([^"#?]+)(?:[?#][^"]*)?"/g)){ if(match[1]) refs.add(match[1]); } return [...refs]; }
@@ -139,8 +169,38 @@ async function listFiles(root:string){ const output:string[]=[]; async function 
 function assertDistinctDirectories(...directories:string[]){ const unique=new Set(directories.map((directory)=>resolve(directory))); if(unique.size!==directories.length) throw new Error("dist, static and output directories must be distinct"); for(const left of unique) for(const right of unique) if(left!==right&&(left.startsWith(`${right}${sep}`)||right.startsWith(`${left}${sep}`))) throw new Error("dist, static and output directories must not contain one another"); }
 function assertSnapshotDirectoryIsolation(snapshotDir:string,...directories:string[]){ const snapshot=resolve(snapshotDir); for(const directory of directories.map((value)=>resolve(value))) if(snapshot===directory||snapshot.startsWith(`${directory}${sep}`)||directory.startsWith(`${snapshot}${sep}`)) throw new Error("snapshot directory must be distinct from deploy input/output directories and must not contain one another"); }
 async function validateSnapshotInputs(snapshotDir:string){ const present:string[]=[]; for(const name of SNAPSHOT_NAMES){ const source=join(snapshotDir,name); let sourceInfo; try{sourceInfo=await lstat(source);}catch(error){if(isEnoent(error)) continue; throw error;} if(sourceInfo.isSymbolicLink()||!sourceInfo.isFile()) throw new Error(`snapshot input must be a regular file: ${source}`); if(sourceInfo.size>MAX_PUBLIC_FILE_BYTES) throw new Error(`refusing to copy oversized public snapshot: ${source}`); present.push(name);} const researchCount=present.filter((name)=>name==="latest.json"||name==="last-known-good.json").length; if(researchCount===1) throw new Error("latest.json and last-known-good.json must be supplied together"); }
-async function validateSnapshotSemantics(snapshotDir:string){ const nowMs=Date.now(); const latestPath=join(snapshotDir,"latest.json"); if(await pathExists(latestPath)){ const snapshots=new Map<string,{dataAsOf:number;generatedAt:number}>(); for(const name of ["latest.json","last-known-good.json"] as const){let value:unknown; try{value=JSON.parse(await readFile(join(snapshotDir,name),"utf8")) as unknown;}catch(error){throw new Error(`${name} is invalid JSON: ${messageOf(error)}`);} const verified=await verifyPublicDashboardSnapshotIntegrity(value); if(!verified.ok||!verified.snapshot) throw new Error(`${name} failed snapshot integrity verification`); const dataAsOf=Date.parse(verified.snapshot.dataAsOf),generatedAt=Date.parse(verified.snapshot.generatedAt); if(!Number.isFinite(dataAsOf)||!Number.isFinite(generatedAt)||generatedAt-nowMs>DEFAULT_PUBLIC_SNAPSHOT_FUTURE_SKEW_MS||dataAsOf-nowMs>DEFAULT_PUBLIC_SNAPSHOT_FUTURE_SKEW_MS||dataAsOf>generatedAt+DEFAULT_PUBLIC_SNAPSHOT_FUTURE_SKEW_MS) throw new Error(`${name} has invalid timestamps`); snapshots.set(name,{dataAsOf,generatedAt});} const latest=snapshots.get("latest.json")!,fallback=snapshots.get("last-known-good.json")!; if(latest.dataAsOf<fallback.dataAsOf) throw new Error("latest.json is older than last-known-good.json"); if(latest.dataAsOf===fallback.dataAsOf&&latest.generatedAt<fallback.generatedAt) throw new Error("latest.json generation is older than last-known-good.json"); }
-  const ownerPath=join(snapshotDir,"owner-latest.json"); if(await pathExists(ownerPath)){ let value:unknown; try{value=JSON.parse(await readFile(ownerPath,"utf8")) as unknown;}catch(error){throw new Error(`owner-latest.json is invalid JSON: ${messageOf(error)}`);} const errors=validateOwnerDashboardSnapshot(value); if(errors.length) throw new Error(`owner-latest.json failed owner schema verification: ${errors.join(";")}`); const generatedAt=Date.parse((value as {generatedAt:string}).generatedAt); if(generatedAt-nowMs>DEFAULT_PUBLIC_SNAPSHOT_FUTURE_SKEW_MS) throw new Error("owner-latest.json generatedAt is in the future"); }}
+async function validateSnapshotSemantics(snapshotDir:string){
+  const nowMs=Date.now();
+  const latestPath=join(snapshotDir,"latest.json");
+  if(await pathExists(latestPath)){
+    const snapshots=new Map<string,{dataAsOf:number;generatedAt:number}>();
+    for(const name of ["latest.json","last-known-good.json"] as const){
+      let value:unknown;
+      try{value=JSON.parse(await readFile(join(snapshotDir,name),"utf8")) as unknown;}catch(error){throw new Error(`${name} is invalid JSON: ${messageOf(error)}`);}
+      const verified=await verifyPublicDashboardSnapshotIntegrity(value);
+      if(!verified.ok||!verified.snapshot) throw new Error(`${name} failed snapshot integrity verification`);
+      const dataAsOf=Date.parse(verified.snapshot.dataAsOf),generatedAt=Date.parse(verified.snapshot.generatedAt);
+      if(!Number.isFinite(dataAsOf)) throw new Error(`${name} has an invalid dataAsOf`);
+      if(!Number.isFinite(generatedAt)) throw new Error(`${name} has an invalid generatedAt`);
+      if(generatedAt-nowMs>DEFAULT_PUBLIC_SNAPSHOT_FUTURE_SKEW_MS) throw new Error(`${name} generatedAt is in the future`);
+      if(dataAsOf-nowMs>DEFAULT_PUBLIC_SNAPSHOT_FUTURE_SKEW_MS) throw new Error(`${name} dataAsOf is in the future`);
+      if(dataAsOf>generatedAt+DEFAULT_PUBLIC_SNAPSHOT_FUTURE_SKEW_MS) throw new Error(`${name} dataAsOf is after generatedAt`);
+      snapshots.set(name,{dataAsOf,generatedAt});
+    }
+    const latest=snapshots.get("latest.json")!,fallback=snapshots.get("last-known-good.json")!;
+    if(latest.dataAsOf<fallback.dataAsOf) throw new Error("latest.json is older than last-known-good.json");
+    if(latest.dataAsOf===fallback.dataAsOf&&latest.generatedAt<fallback.generatedAt) throw new Error("latest.json generation is older than last-known-good.json");
+  }
+  const ownerPath=join(snapshotDir,"owner-latest.json");
+  if(await pathExists(ownerPath)){
+    let value:unknown;
+    try{value=JSON.parse(await readFile(ownerPath,"utf8")) as unknown;}catch(error){throw new Error(`owner-latest.json is invalid JSON: ${messageOf(error)}`);}
+    const errors=validateOwnerDashboardSnapshot(value);
+    if(errors.length) throw new Error(`owner-latest.json failed owner schema verification: ${errors.join(";")}`);
+    const generatedAt=Date.parse((value as {generatedAt:string}).generatedAt);
+    if(generatedAt-nowMs>DEFAULT_PUBLIC_SNAPSHOT_FUTURE_SKEW_MS) throw new Error("owner-latest.json generatedAt is in the future");
+  }
+}
 async function canonicalDirectoryTarget(path:string){ const unresolved=[basename(path)]; let parent=dirname(path); while(true){try{return join(await realpath(parent),...unresolved);}catch(error){if(!isEnoent(error)) throw error; const nextParent=dirname(parent); if(nextParent===parent) throw error; unresolved.unshift(basename(parent)); parent=nextParent;}} }
 function isEnoent(error:unknown){return typeof error==="object"&&error!==null&&"code" in error&&(error as {code?:unknown}).code==="ENOENT";}
 async function requireDirectory(path:string,label:string){const info=await lstat(path); if(info.isSymbolicLink()) throw new Error(`${label} must not be a symbolic link: ${path}`); if(!info.isDirectory()) throw new Error(`${label} is not a directory: ${path}`);}
