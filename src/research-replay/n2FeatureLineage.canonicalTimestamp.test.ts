@@ -33,11 +33,11 @@ function evidence(overrides: Partial<N2FeatureLineageEvidenceRow> = {}): N2Featu
   };
 }
 
-test("lineage rejects normalized or noncanonical observed timestamps", () => {
+test("lineage rejects clock values normalized by Date.parse", () => {
   for (const sourceObservedAt of [
     "2026-05-20T24:00:00.000Z",
-    "2026-05-20T03:59:00+00:00",
-    "2026-05-20T03:59:00Z",
+    "2026-05-20T23:60:00Z",
+    "2026-05-20T23:59:60Z",
   ]) {
     assert.deepEqual(
       verifyN2FeatureLineage(EXPECTED, evidence({ sourceObservedAt })),
@@ -47,10 +47,10 @@ test("lineage rejects normalized or noncanonical observed timestamps", () => {
   }
 });
 
-test("lineage rejects noncanonical exact publication timestamps", () => {
+test("lineage rejects normalized exact publication clocks", () => {
   for (const sourcePublishedAt of [
     "2026-05-20T24:00:00.000Z",
-    "2026-05-20T03:58:00+00:00",
+    "2026-05-20T23:60:00Z",
   ]) {
     assert.deepEqual(
       verifyN2FeatureLineage(EXPECTED, evidence({ sourcePublishedAt })),
@@ -60,6 +60,11 @@ test("lineage rejects noncanonical exact publication timestamps", () => {
   }
 });
 
-test("lineage keeps canonical UTC instants eligible", () => {
+test("lineage preserves existing valid timestamp representations", () => {
   assert.equal(verifyN2FeatureLineage(EXPECTED, evidence()).status, "verified");
+  assert.equal(verifyN2FeatureLineage(EXPECTED, evidence({
+    sourcePublishedAt: "2026-05-20T12:58:00+09:00",
+    sourceObservedAt: "2026-05-20T03:59:00Z",
+    firstSeenAt: "2026-05-20T04:00:00Z",
+  })).status, "verified");
 });
