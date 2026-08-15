@@ -6,192 +6,36 @@ import test from "node:test";
 import { build as viteBuild } from "vite";
 import fixture from "./fixtures/public-dashboard-snapshot-v1.json";
 import type { PublicDashboardSnapshot } from "./publicSnapshot";
-import {
-  assemblePublicDashboardDeploy,
-  verifyPublicDashboardDeploy,
-} from "./publicDeployBundle";
+import { buildOwnerDashboardSnapshot } from "./ownerDashboardBuilder";
+import { assemblePublicDashboardDeploy, verifyPublicDashboardDeploy } from "./publicDeployBundle";
 import { sealPublicDashboardSnapshot } from "./publicSnapshotTransport";
 
-async function makeFixtureRoot(): Promise<{
-  root: string;
-  dist: string;
-  staticDir: string;
-  output: string;
-  snapshotDir: string;
-}> {
+async function makeFixtureRoot() {
   const root = await mkdtemp(join(tmpdir(), "boat-pon-public-deploy-"));
-  const dist = join(root, "dist");
-  const staticDir = join(root, "static");
-  const output = join(root, "output");
-  const snapshotDir = join(root, "snapshot");
+  const dist = join(root, "dist"), staticDir = join(root, "static"), output = join(root, "output"), snapshotDir = join(root, "snapshot");
+  await Promise.all([mkdir(join(dist, "assets"), { recursive: true }), mkdir(staticDir, { recursive: true }), mkdir(snapshotDir, { recursive: true })]);
   await Promise.all([
-    mkdir(join(dist, "assets"), { recursive: true }),
-    mkdir(staticDir, { recursive: true }),
-    mkdir(snapshotDir, { recursive: true }),
+    writeFile(join(dist, "public-dashboard.html"), '<!doctype html><html><head><link rel="stylesheet" href="/assets/public.css"><link rel="manifest" href="/manifest.webmanifest"></head><body><div id="public-root"></div><script type="module" src="/assets/public.js"></script></body></html>', "utf8"),
+    writeFile(join(dist, "assets", "public.js"), "console.log('public dashboard');\n", "utf8"), writeFile(join(dist, "assets", "public.css"), "body{margin:0}\n", "utf8"),
+    writeFile(join(staticDir, "404.html"), '<!doctype html><meta name=robots content=noindex><a href="/">home</a>', "utf8"), writeFile(join(staticDir, "robots.txt"), "User-agent: *\nAllow: /\n", "utf8"), writeFile(join(staticDir, "manifest.webmanifest"), '{"name":"Boat Pon","start_url":"/"}\n', "utf8"), writeFile(join(staticDir, "_headers"), "/*\n  X-Content-Type-Options: nosniff\n", "utf8"), writeFile(join(staticDir, "_redirects"), "/public-dashboard.html / 301\n", "utf8"),
   ]);
-
-  await Promise.all([
-    writeFile(join(dist, "public-dashboard.html"), [
-      "<!doctype html>",
-      "<html><head>",
-      '<link rel="stylesheet" href="/assets/public.css">',
-      '<link rel="manifest" href="/manifest.webmanifest">',
-      "</head><body>",
-      '<div id="public-root"></div>',
-      '<script type="module" src="/assets/public.js"></script>',
-      "</body></html>",
-    ].join(""), "utf8"),
-    writeFile(join(dist, "assets", "public.js"), "console.log('public dashboard');\n", "utf8"),
-    writeFile(join(dist, "assets", "public.css"), "body{margin:0}\n", "utf8"),
-    writeFile(join(staticDir, "404.html"), "<!doctype html><meta name=robots content=noindex><a href=\"/\">home</a>", "utf8"),
-    writeFile(join(staticDir, "robots.txt"), "User-agent: *\nAllow: /\n", "utf8"),
-    writeFile(join(staticDir, "manifest.webmanifest"), "{\"name\":\"Boat Pon\",\"start_url\":\"/\"}\n", "utf8"),
-    writeFile(join(staticDir, "_headers"), "/*\n  X-Content-Type-Options: nosniff\n", "utf8"),
-    writeFile(join(staticDir, "_redirects"), "/public-dashboard.html / 301\n", "utf8"),
-  ]);
-
+  const now = Date.now();
   const latest = structuredClone(fixture) as PublicDashboardSnapshot;
-  latest.dataAsOf = "2026-08-05T09:00:00.000Z";
-  latest.generatedAt = "2026-08-05T09:01:00.000Z";
-  const fallback = structuredClone(latest);
-  fallback.dataAsOf = "2026-08-05T08:00:00.000Z";
-  fallback.generatedAt = "2026-08-05T08:01:00.000Z";
-  await Promise.all([
-    writeFile(join(snapshotDir, "latest.json"), `${JSON.stringify(await sealPublicDashboardSnapshot(latest), null, 2)}\n`, "utf8"),
-    writeFile(join(snapshotDir, "last-known-good.json"), `${JSON.stringify(await sealPublicDashboardSnapshot(fallback), null, 2)}\n`, "utf8"),
-  ]);
-
+  latest.dataAsOf = new Date(now - 2 * 60_000).toISOString(); latest.generatedAt = new Date(now - 60_000).toISOString();
+  const fallback = structuredClone(latest); fallback.dataAsOf = new Date(now - 4 * 60_000).toISOString(); fallback.generatedAt = new Date(now - 3 * 60_000).toISOString();
+  const owner = buildOwnerDashboardSnapshot({ generatedAt: new Date(now - 60_000).toISOString(), canonicalBranch: "main", mainSha: "70050f70d1a18df7329cc59aa0276797442fa5a3", ciStatus: "PASS", openPrCount: 1, gitCleanliness: "CLEAN", gitUpdatedAt: new Date(now - 2 * 60_000).toISOString(), taskCatalog: { tasks: [{ taskId: "TASK-N2-011", title: "PIT再検証" }] }, queueState: { tasks: { "TASK-N2-011": { status: "PASS", attemptCount: 3, maxAttempts: 3 } } }, currentRun: { updatedAt: new Date(now - 3 * 60_000).toISOString(), lastResult: "PASS", lastTaskId: "TASK-N2-011", blocks: [] } });
+  await Promise.all([writeFile(join(snapshotDir, "latest.json"), `${JSON.stringify(await sealPublicDashboardSnapshot(latest), null, 2)}\n`, "utf8"), writeFile(join(snapshotDir, "last-known-good.json"), `${JSON.stringify(await sealPublicDashboardSnapshot(fallback), null, 2)}\n`, "utf8"), writeFile(join(snapshotDir, "owner-latest.json"), `${JSON.stringify(owner, null, 2)}\n`, "utf8")]);
   return { root, dist, staticDir, output, snapshotDir };
 }
 
-test("isolated public deploy bundle contains only allowlisted verified files", async () => {
-  const fixtureRoot = await makeFixtureRoot();
-  try {
-    const manifest = await assemblePublicDashboardDeploy({
-      distDir: fixtureRoot.dist,
-      staticDir: fixtureRoot.staticDir,
-      outputDir: fixtureRoot.output,
-      snapshotDir: fixtureRoot.snapshotDir,
-    });
+test("isolated public deploy bundle contains only allowlisted verified files", async () => { const f = await makeFixtureRoot(); try { const manifest = await assemblePublicDashboardDeploy({ distDir:f.dist, staticDir:f.staticDir, outputDir:f.output, snapshotDir:f.snapshotDir }); assert.equal(manifest.entry,"index.html"); assert.ok(manifest.files.some(file=>file.path==="assets/public.js")); assert.ok(manifest.files.some(file=>file.path==="public-data/latest.json")); assert.ok(manifest.files.some(file=>file.path==="public-data/owner-latest.json")); await assert.rejects(readFile(join(f.output,"public-dashboard.html"),"utf8")); const verified=await verifyPublicDashboardDeploy(f.output); assert.equal(verified.ok,true,verified.errors.join("\n")); } finally { await rm(f.root,{recursive:true,force:true}); } });
 
-    assert.equal(manifest.entry, "index.html");
-    assert.ok(manifest.files.some((file) => file.path === "assets/public.js"));
-    assert.ok(manifest.files.some((file) => file.path === "public-data/latest.json"));
-    await assert.rejects(readFile(join(fixtureRoot.output, "public-dashboard.html"), "utf8"));
+test("real isolated Vite build excludes the operational application", async () => { const root=await mkdtemp(join(tmpdir(),"boat-pon-public-vite-")),dist=join(root,"dist"),output=join(root,"output"); try { await viteBuild({configFile:"vite.public.config.ts",logLevel:"silent",build:{outDir:dist,emptyOutDir:true}}); const manifest=await assemblePublicDashboardDeploy({distDir:dist,staticDir:"public-site",outputDir:output}); const index=await readFile(join(output,"index.html"),"utf8"); assert.match(index,/id="public-root"/); assert.doesNotMatch(index,/id="root"/); assert.ok(manifest.files.some(file=>file.path.startsWith("assets/")&&file.path.endsWith(".js"))); assert.equal(manifest.files.some(file=>file.path==="app.html"),false); assert.equal((await verifyPublicDashboardDeploy(output)).ok,true); } finally { await rm(root,{recursive:true,force:true}); } });
 
-    const verified = await verifyPublicDashboardDeploy(fixtureRoot.output);
-    assert.equal(verified.ok, true, verified.errors.join("\n"));
-  } finally {
-    await rm(fixtureRoot.root, { recursive: true, force: true });
-  }
-});
+test("private files and post-manifest tampering fail closed", async()=>{const f=await makeFixtureRoot();try{await assemblePublicDashboardDeploy({distDir:f.dist,staticDir:f.staticDir,outputDir:f.output});await mkdir(join(f.output,"data"),{recursive:true});await writeFile(join(f.output,"data","boat.sqlite"),"private","utf8");const privateResult=await verifyPublicDashboardDeploy(f.output);assert.equal(privateResult.ok,false);assert.match(privateResult.errors.join("\n"),/non-allowlisted|private\/runtime/);await rm(join(f.output,"data"),{recursive:true,force:true});await writeFile(join(f.output,"assets","public.js"),"console.log('tampered');\n","utf8");assert.match((await verifyPublicDashboardDeploy(f.output)).errors.join("\n"),/manifest (?:byte count|digest) mismatch/);}finally{await rm(f.root,{recursive:true,force:true});}});
 
-test("real isolated Vite build excludes the operational application", async () => {
-  const root = await mkdtemp(join(tmpdir(), "boat-pon-public-vite-"));
-  const dist = join(root, "dist");
-  const output = join(root, "output");
-  try {
-    await viteBuild({
-      configFile: "vite.public.config.ts",
-      logLevel: "silent",
-      build: {
-        outDir: dist,
-        emptyOutDir: true,
-      },
-    });
+test("owner snapshot with unknown/private fields is rejected", async()=>{const f=await makeFixtureRoot();try{const path=join(f.snapshotDir,"owner-latest.json");const value=JSON.parse(await readFile(path,"utf8")) as Record<string,unknown>;value.privatePayload={currentOdds:12.3};await writeFile(path,JSON.stringify(value),"utf8");await assert.rejects(assemblePublicDashboardDeploy({distDir:f.dist,staticDir:f.staticDir,outputDir:f.output,snapshotDir:f.snapshotDir}),/owner schema verification/);}finally{await rm(f.root,{recursive:true,force:true});}});
 
-    const manifest = await assemblePublicDashboardDeploy({
-      distDir: dist,
-      staticDir: "public-site",
-      outputDir: output,
-    });
-    const index = await readFile(join(output, "index.html"), "utf8");
+test("snapshot rollback and preview workflow write or deploy privileges are rejected", async()=>{const f=await makeFixtureRoot();try{const latestPath=join(f.snapshotDir,"latest.json"),fallbackPath=join(f.snapshotDir,"last-known-good.json");const latest=JSON.parse(await readFile(latestPath,"utf8")),fallback=JSON.parse(await readFile(fallbackPath,"utf8"));await Promise.all([writeFile(latestPath,JSON.stringify(fallback),"utf8"),writeFile(fallbackPath,JSON.stringify(latest),"utf8")]);await assert.rejects(assemblePublicDashboardDeploy({distDir:f.dist,staticDir:f.staticDir,outputDir:f.output,snapshotDir:f.snapshotDir}),/latest\.json is older than last-known-good\.json/);const workflow=await readFile(".github/workflows/public-dashboard-preview.yml","utf8");assert.match(workflow,/workflow_dispatch:/);assert.match(workflow,/contents: read/);assert.match(workflow,/actions\/upload-artifact@v4/);assert.doesNotMatch(workflow,/\bschedule:/);assert.doesNotMatch(workflow,/contents: write|wrangler\s+deploy|pages\s+deploy|cloudflare/i);}finally{await rm(f.root,{recursive:true,force:true});}});
 
-    assert.match(index, /id="public-root"/);
-    assert.doesNotMatch(index, /id="root"/);
-    assert.ok(manifest.files.some((file) => file.path.startsWith("assets/") && file.path.endsWith(".js")));
-    assert.equal(manifest.files.some((file) => file.path === "app.html"), false);
-
-    const verified = await verifyPublicDashboardDeploy(output);
-    assert.equal(verified.ok, true, verified.errors.join("\n"));
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
-});
-
-test("private files and post-manifest tampering fail closed", async () => {
-  const fixtureRoot = await makeFixtureRoot();
-  try {
-    await assemblePublicDashboardDeploy({
-      distDir: fixtureRoot.dist,
-      staticDir: fixtureRoot.staticDir,
-      outputDir: fixtureRoot.output,
-    });
-
-    await mkdir(join(fixtureRoot.output, "data"), { recursive: true });
-    await writeFile(join(fixtureRoot.output, "data", "boat.sqlite"), "private", "utf8");
-    const privateResult = await verifyPublicDashboardDeploy(fixtureRoot.output);
-    assert.equal(privateResult.ok, false);
-    assert.match(privateResult.errors.join("\n"), /non-allowlisted|private\/runtime/);
-
-    await rm(join(fixtureRoot.output, "data"), { recursive: true, force: true });
-    await writeFile(join(fixtureRoot.output, "assets", "public.js"), "console.log('tampered');\n", "utf8");
-    const tamperedResult = await verifyPublicDashboardDeploy(fixtureRoot.output);
-    assert.equal(tamperedResult.ok, false);
-    assert.match(tamperedResult.errors.join("\n"), /manifest (?:byte count|digest) mismatch/);
-  } finally {
-    await rm(fixtureRoot.root, { recursive: true, force: true });
-  }
-});
-
-test("snapshot rollback and workflow write or deploy privileges are rejected", async () => {
-  const fixtureRoot = await makeFixtureRoot();
-  try {
-    const latestPath = join(fixtureRoot.snapshotDir, "latest.json");
-    const fallbackPath = join(fixtureRoot.snapshotDir, "last-known-good.json");
-    const latest = JSON.parse(await readFile(latestPath, "utf8")) as PublicDashboardSnapshot;
-    const fallback = JSON.parse(await readFile(fallbackPath, "utf8")) as PublicDashboardSnapshot;
-    await Promise.all([
-      writeFile(latestPath, `${JSON.stringify(fallback, null, 2)}\n`, "utf8"),
-      writeFile(fallbackPath, `${JSON.stringify(latest, null, 2)}\n`, "utf8"),
-    ]);
-
-    await assert.rejects(
-      assemblePublicDashboardDeploy({
-        distDir: fixtureRoot.dist,
-        staticDir: fixtureRoot.staticDir,
-        outputDir: fixtureRoot.output,
-        snapshotDir: fixtureRoot.snapshotDir,
-      }),
-      /latest\.json is older than last-known-good\.json/,
-    );
-
-    const workflow = await readFile(".github/workflows/public-dashboard-preview.yml", "utf8");
-    assert.match(workflow, /workflow_dispatch:/);
-    assert.match(workflow, /contents: read/);
-    assert.match(workflow, /actions\/upload-artifact@v4/);
-    assert.doesNotMatch(workflow, /\bschedule:/);
-    assert.doesNotMatch(workflow, /contents: write|wrangler\s+deploy|pages\s+deploy|cloudflare/i);
-  } finally {
-    await rm(fixtureRoot.root, { recursive: true, force: true });
-  }
-});
-
-test("real public-site support files remain copyable without symlinks", async () => {
-  const root = await mkdtemp(join(tmpdir(), "boat-pon-public-static-"));
-  try {
-    await cp("public-site", join(root, "public-site"), { recursive: true });
-    const files = await Promise.all([
-      readFile(join(root, "public-site", "_headers"), "utf8"),
-      readFile(join(root, "public-site", "_redirects"), "utf8"),
-      readFile(join(root, "public-site", "404.html"), "utf8"),
-      readFile(join(root, "public-site", "assets", "public-404.css"), "utf8"),
-    ]);
-    assert.match(files[0], /Content-Security-Policy/);
-    assert.match(files[1], /public-dashboard\.html/);
-    assert.match(files[2], /noindex/);
-    assert.match(files[3], /\.notFound/);
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
-});
+test("real public-site support files remain copyable without symlinks", async()=>{const root=await mkdtemp(join(tmpdir(),"boat-pon-public-static-"));try{await cp("public-site",join(root,"public-site"),{recursive:true});const files=await Promise.all([readFile(join(root,"public-site","_headers"),"utf8"),readFile(join(root,"public-site","_redirects"),"utf8"),readFile(join(root,"public-site","404.html"),"utf8"),readFile(join(root,"public-site","assets","public-404.css"),"utf8")]);assert.match(files[0],/Content-Security-Policy/);assert.match(files[1],/public-dashboard\.html/);assert.match(files[2],/noindex/);assert.match(files[3],/\.notFound/);}finally{await rm(root,{recursive:true,force:true});}});

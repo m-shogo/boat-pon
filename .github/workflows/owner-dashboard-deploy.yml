@@ -1,0 +1,112 @@
+name: owner dashboard deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: owner-dashboard-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TARGET_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+    steps:
+      - name: Checkout verified main
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 8
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Verify source is exact canonical main and clean
+        id: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --depth=1
+          CURRENT_MAIN=$(git rev-parse origin/main)
+          if [ "$CURRENT_MAIN" != "$TARGET_SHA" ]; then
+            echo "::error::target SHA is stale; current main is $CURRENT_MAIN"
+            exit 1
+          fi
+          test -z "$(git status --porcelain)" || { echo "::error::checkout is dirty"; git status --short; exit 1; }
+          echo "updated_at=$(git show -s --format=%cI "$TARGET_SHA")" >> "$GITHUB_OUTPUT"
+
+      - name: Verify public source boundary
+        run: node scripts/verify-product-boundaries.mjs
+
+      - name: Build isolated public dashboard
+        run: npx vite build --config vite.public.config.ts
+
+      - name: Build safe snapshots
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .tmp-owner-snapshot
+          node - <<'NODE' > .tmp-owner-snapshot/recent-commits.json
+          const { execFileSync } = require('node:child_process');
+          const lines = execFileSync('git', ['log', '-5', '--format=%H%x09%cI%x09%s'], { encoding: 'utf8' }).trim().split('\n').filter(Boolean);
+          process.stdout.write(JSON.stringify(lines.map(line => { const [sha, committedAt, ...message] = line.split('\t'); return { sha, committedAt, message: message.join('\t') }; }), null, 2));
+          NODE
+          OPEN_PRS=$(gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls?state=open&per_page=100" --jq 'length' | awk '{s+=$1} END {print s+0}')
+          npx tsx scripts/export-owner-dashboard-snapshot.ts \
+            --catalog automation/task-catalog.json \
+            --queue-state automation/control/task-queue-state.json \
+            --current-run automation/control/current-run.json \
+            --recent-commits .tmp-owner-snapshot/recent-commits.json \
+            --canonical-branch main \
+            --main-sha "$TARGET_SHA" \
+            --ci-status PASS \
+            --open-pr-count "$OPEN_PRS" \
+            --git-cleanliness CLEAN \
+            --git-updated-at "${{ steps.source.outputs.updated_at }}" \
+            --output .tmp-owner-snapshot/owner-latest.json
+
+      - name: Assemble deploy-ready directory
+        run: npx tsx scripts/assemble-public-dashboard-deploy.ts --dist=dist-public-dashboard --static=public-site --output=dist-public-deploy --snapshot=.tmp-owner-snapshot
+
+      - name: Verify deploy-ready directory
+        run: npx tsx scripts/verify-public-dashboard-deploy.ts --dir=dist-public-deploy
+
+      - name: Verify no secrets or local paths in deploy artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -RInE '/Users/|/home/|/private/|gh[opusr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[0-9A-Za-z-]{10,}|data/boat\.sqlite' dist-public-deploy; then
+            echo "::error::secret-like value or private path found in public deploy artifact"
+            exit 1
+          fi
+
+      - name: Deploy to Cloudflare Workers Static Assets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::CLOUDFLARE_API_TOKEN is not configured"; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::CLOUDFLARE_ACCOUNT_ID is not configured"; exit 1; }
+          npx --yes wrangler@latest deploy --config wrangler.owner-dashboard.jsonc

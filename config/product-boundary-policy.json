@@ -4,8 +4,10 @@
   "publicBrowserFiles": [
     "src/public-main.tsx",
     "src/components/PublicDashboardApp.tsx",
+    "src/components/OwnerDashboardSummary.tsx",
     "src/components/ResearchCommandCenter.tsx",
     "src/components/GlossaryTip.tsx",
+    "src/components/useOwnerDashboardSnapshot.ts",
     "src/components/usePublicDashboardSnapshot.ts"
   ],
   "publicSourceFiles": [
@@ -21,23 +23,20 @@
     "src/presentation/publicDashboardShell.test.ts",
     "src/presentation/publicDeployBundle.ts",
     "src/presentation/publicDeployBundle.test.ts",
+    "src/presentation/ownerDashboardSnapshot.ts",
+    "src/presentation/ownerDashboardBuilder.ts",
+    "src/presentation/ownerDashboardBuilder.test.ts",
+    "src/presentation/ownerDashboardIsolation.test.ts",
     "src/presentation/glossary.ts",
     "scripts/export-public-dashboard-snapshot.ts",
+    "scripts/export-owner-dashboard-snapshot.ts",
     "scripts/publish-public-dashboard-snapshot.ts",
     "scripts/assemble-public-dashboard-deploy.ts",
     "scripts/verify-public-dashboard-deploy.ts",
     "vite.public.config.ts"
   ],
-  "publicSourceRoots": [
-    "apps/portal/public",
-    "packages/public-contracts/src",
-    "packages/glossary/src"
-  ],
-  "optionalPaths": [
-    "apps/portal/public",
-    "packages/public-contracts/src",
-    "packages/glossary/src"
-  ],
+  "publicSourceRoots": ["apps/portal/public", "packages/public-contracts/src", "packages/glossary/src"],
+  "optionalPaths": ["apps/portal/public", "packages/public-contracts/src", "packages/glossary/src"],
   "allowedBrowserImportPatterns": [
     "^react$",
     "^react-dom/client$",
@@ -45,77 +44,30 @@
     "^\\.\\/presentation\\/",
     "^\\.\\/components\\/PublicDashboardApp$",
     "^\\.\\/PublicDashboardApp$",
+    "^\\.\\/OwnerDashboardSummary$",
     "^\\.\\/ResearchCommandCenter$",
+    "^\\.\\/useOwnerDashboardSnapshot$",
     "^\\.\\/usePublicDashboardSnapshot$",
     "^\\.\\/GlossaryTip$",
     "^\\.\\/Tooltip$",
     "^\\.\\/public-portal\\.css$",
+    "^\\.\\.\\/owner-dashboard\\.css$",
     "^\\.\\.\\/public-dashboard\\.css$"
   ],
   "forbiddenImportFragments": [
-    "/server/",
-    "../server",
-    "../../server",
-    "/domain/",
-    "../domain",
-    "../../domain",
-    "/decision/",
-    "../decision",
-    "../../decision",
-    "/production/",
-    "../production",
-    "../../production",
-    "better-sqlite3",
-    "sqlite3",
-    "notify-line",
-    "notificationWriter",
-    "app_settings",
-    "automation/requests",
-    "sidecar"
+    "/server/", "../server", "../../server", "/domain/", "../domain", "../../domain", "/decision/", "../decision", "../../decision", "/production/", "../production", "../../production", "better-sqlite3", "sqlite3", "notify-line", "notificationWriter", "app_settings", "automation/requests", "sidecar"
   ],
   "forbiddenBrowserPatterns": [
-    {
-      "id": "SIDE_EFFECT_DASHBOARD_ENDPOINT",
-      "pattern": "fetch\\s*\\(\\s*[\"'`]\\/api\\/dashboard"
-    },
-    {
-      "id": "OWNER_API_FROM_PUBLIC_BROWSER",
-      "pattern": "fetch\\s*\\(\\s*[\"'`]\\/api\\/owner"
-    },
-    {
-      "id": "BROWSER_WRITE_METHOD",
-      "pattern": "method\\s*:\\s*[\"'`](POST|PUT|PATCH|DELETE)[\"'`]"
-    },
-    {
-      "id": "PROCESS_ENV_IN_PUBLIC_BROWSER",
-      "pattern": "\\bprocess\\.env\\b"
-    },
-    {
-      "id": "PUBLIC_WEBSOCKET",
-      "pattern": "\\bnew\\s+WebSocket\\b"
-    },
-    {
-      "id": "PUBLIC_EVENT_SOURCE",
-      "pattern": "\\bnew\\s+EventSource\\b"
-    },
-    {
-      "id": "XMLHTTPREQUEST",
-      "pattern": "\\bXMLHttpRequest\\b"
-    }
+    {"id":"SIDE_EFFECT_DASHBOARD_ENDPOINT","pattern":"fetch\\s*\\(\\s*[\"'`]\\/api\\/dashboard"},
+    {"id":"OWNER_API_FROM_PUBLIC_BROWSER","pattern":"fetch\\s*\\(\\s*[\"'`]\\/api\\/owner"},
+    {"id":"BROWSER_WRITE_METHOD","pattern":"method\\s*:\\s*[\"'`](POST|PUT|PATCH|DELETE)[\"'`]"},
+    {"id":"PROCESS_ENV_IN_PUBLIC_BROWSER","pattern":"\\bprocess\\.env\\b"},
+    {"id":"PUBLIC_WEBSOCKET","pattern":"\\bnew\\s+WebSocket\\b"},
+    {"id":"PUBLIC_EVENT_SOURCE","pattern":"\\bnew\\s+EventSource\\b"},
+    {"id":"XMLHTTPREQUEST","pattern":"\\bXMLHttpRequest\\b"}
   ],
   "protectedAuthoritativePaths": [
-    "src/domain",
-    "src/decision",
-    "src/production",
-    "server/db.ts",
-    "server/index.ts",
-    "scripts/notify-line.ts",
-    "automation/task-catalog.json",
-    "automation/phase-mapping.json",
-    "automation/requests",
-    "config/app_settings",
-    "data",
-    "research/registries"
+    "src/domain", "src/decision", "src/production", "server/db.ts", "server/index.ts", "scripts/notify-line.ts", "automation/task-catalog.json", "automation/phase-mapping.json", "automation/requests", "config/app_settings", "data", "research/registries"
   ],
   "requiredPrinciples": [
     "LINE is independently actionable",
