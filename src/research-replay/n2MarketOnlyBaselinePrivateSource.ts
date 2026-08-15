@@ -122,8 +122,29 @@ function sha256(bytes: Uint8Array): string {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
+function hasValidCalendarDate(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})(?:T| )/u.exec(value);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return false;
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return parsed.getUTCFullYear() === year
+    && parsed.getUTCMonth() === month - 1
+    && parsed.getUTCDate() === day;
+}
+
 function parseInstant(value: unknown): number | null {
-  if (typeof value !== "string") return null;
+  if (typeof value !== "string" || !hasValidCalendarDate(value)) return null;
+  const clock = /(?:T| )(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?/u.exec(value);
+  if (clock === null) return null;
+  const hour = Number(clock[1]);
+  const minute = Number(clock[2]);
+  const second = Number(clock[3] ?? "0");
+  if (hour > 23 || minute > 59 || second > 59) return null;
+  const offset = /([+-])(\d{2}):(\d{2})$/u.exec(value);
+  if (offset !== null && (Number(offset[2]) > 23 || Number(offset[3]) > 59)) return null;
   const parsed = Date.parse(value);
   return Number.isFinite(parsed) ? parsed : null;
 }

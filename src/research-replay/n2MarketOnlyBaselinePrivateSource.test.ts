@@ -50,7 +50,15 @@ function raceSpec(index: number): { date: string; venue: string; raceNo: number;
   return { date, venue: "05", raceNo, raceKey: `${date}:05:R${raceNo}` };
 }
 
-function writeAcceptedT5(root: string, spec: ReturnType<typeof raceSpec>, options: { tamperRaw?: boolean } = {}): void {
+type T5FixtureOptions = {
+  tamperRaw?: boolean;
+  acceptedAt?: string;
+  decisionCutoff?: string;
+  fetchedAt?: string;
+  availableAt?: string;
+};
+
+function writeAcceptedT5(root: string, spec: ReturnType<typeof raceSpec>, options: T5FixtureOptions = {}): void {
   const raceDir = String(spec.raceNo).padStart(2, "0");
   const raceIdentity = `${spec.date.replaceAll("-", "")}-${spec.venue}-${raceDir}`;
   const dirRelative = `data/raw/research/trifecta-market/${spec.date}/${spec.venue}/${raceDir}/T-5`;
@@ -62,9 +70,9 @@ function writeAcceptedT5(root: string, spec: ReturnType<typeof raceSpec>, option
   const envelopeRelativePath = `${dirRelative}/fixture.envelope.json`;
   const rawDocumentId = `raw-${spec.date}-${spec.venue}-${raceDir}`;
   const observationId = `obs-${spec.date}-${spec.venue}-${raceDir}`;
-  const availableAt = `${spec.date}T03:25:00.000Z`;
-  const fetchedAt = `${spec.date}T03:25:30.000Z`;
-  const decisionCutoff = `${spec.date}T03:30:00.000Z`;
+  const availableAt = options.availableAt ?? `${spec.date}T03:25:00.000Z`;
+  const fetchedAt = options.fetchedAt ?? `${spec.date}T03:25:30.000Z`;
+  const decisionCutoff = options.decisionCutoff ?? `${spec.date}T03:30:00.000Z`;
   writeFileSync(join(root, rawRelativePath), options.tamperRaw ? Buffer.from(`${raw.toString("utf8")}tamper`) : raw);
   writeFileSync(join(root, envelopeRelativePath), `${JSON.stringify({
     envelopeVersion: "n2-trifecta-private-capture-envelope-v1",
@@ -109,7 +117,7 @@ function writeAcceptedT5(root: string, spec: ReturnType<typeof raceSpec>, option
     rawSha256: digest,
     rawRelativePath,
     envelopeRelativePath,
-    acceptedAt: fetchedAt,
+    acceptedAt: options.acceptedAt ?? `${spec.date}T03:25:30.000Z`,
     databaseWriteAuthorized: false,
     productionApplyExecuted: false,
   }, null, 2)}\n`);
@@ -166,11 +174,19 @@ function insertSettlement(path: string, spec: ReturnType<typeof raceSpec>, index
   }
 }
 
-function prepare(root: string, count: number, tamperIndex: number | null = null): string {
+function prepare(
+  root: string,
+  count: number,
+  tamperIndex: number | null = null,
+  fixtureOptions: (index: number) => T5FixtureOptions = () => ({}),
+): string {
   const sidecar = createSidecar(root);
   for (let index = 0; index < count; index += 1) {
     const spec = raceSpec(index);
-    writeAcceptedT5(root, spec, { tamperRaw: tamperIndex === index });
+    writeAcceptedT5(root, spec, {
+      ...fixtureOptions(index),
+      tamperRaw: tamperIndex === index || fixtureOptions(index).tamperRaw,
+    });
     insertSettlement(sidecar, spec, index);
   }
   return sidecar;
@@ -221,5 +237,54 @@ test("executor source loading revalidates raw SHA after readiness passes", () =>
     assert.equal(result.sources.length, 0);
     assert.equal(result.rawValuesPublished, false);
     assert.equal(result.databaseWriteCount, 0);
+  });
+});
+
+test("private source reader rejects accepted marker timestamps normalized by Date.parse", () => {
+  for (const acceptedAt of [
+    "2026-02-30T03:25:30.000Z",
+    "2026-08-07T24:00:00.000Z",
+  ]) {
+    withRoot((root) => {
+      prepare(root, 20, null, (index) => index === 0 ? { acceptedAt } : {});
+      const result = readN2MarketOnlyBaselinePrivateSources({ dataRoot: root });
+      assert.equal(result.status, "BLOCKED", acceptedAt);
+      assert.ok(result.blockers.some((blocker) => blocker.includes("T5_ACCEPTED_AT_INVALID")), acceptedAt);
+      assert.equal(result.sources.length, 0, acceptedAt);
+      assert.equal(result.rawValuesPublished, false, acceptedAt);
+      assert.equal(result.databaseWriteCount, 0, acceptedAt);
+    });
+  }
+});
+
+test("private source reader rejects impossible envelope timing metadata", () => {
+  for (const [field, timestamp, blocker] of [
+    ["decisionCutoff", "2026-08-07T24:00:00.000Z", "T5_DECISION_CUTOFF_INVALID"],
+    ["fetchedAt", "2026-02-30T03:25:30.000Z", "T5_CAPTURED_AT_INVALID"],
+    ["availableAt", "2026-08-07T23:60:00Z", "T5_AVAILABLE_AT_INVALID"],
+  ] as const) {
+    withRoot((root) => {
+      prepare(root, 20, null, (index) => index === 0 ? { [field]: timestamp } : {});
+      const result = readN2MarketOnlyBaselinePrivateSources({ dataRoot: root });
+      assert.equal(result.status, "BLOCKED", `${field}:${timestamp}`);
+      assert.ok(result.blockers.some((value) => value.includes(blocker)), `${field}:${timestamp}`);
+      assert.equal(result.sources.length, 0);
+      assert.equal(result.rawValuesPublished, false);
+      assert.equal(result.databaseWriteCount, 0);
+    });
+  }
+});
+
+test("private source reader preserves valid leap-day and offset timestamps", () => {
+  withRoot((root) => {
+    prepare(root, 20, null, (index) => index === 0 ? {
+      acceptedAt: "2024-02-29T12:25:30+09:00",
+      decisionCutoff: "2026-08-07T12:30:00+09:00",
+      fetchedAt: "2026-08-07T03:25:30Z",
+      availableAt: "2026-08-07T03:25:00Z",
+    } : {});
+    const result = readN2MarketOnlyBaselinePrivateSources({ dataRoot: root });
+    assert.equal(result.status, "PASS");
+    assert.deepEqual(result.blockers, []);
   });
 });
