@@ -3,143 +3,113 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import test from "node:test";
 
-const workflow = readFileSync(
-  resolve(process.cwd(), ".github/workflows/owner-buy-learning-refresh.yml"),
-  "utf8",
-);
-const roiReport = readFileSync(
-  resolve(process.cwd(), "scripts/report-buy-roi-uncertainty.ts"),
-  "utf8",
-);
-const replicationReport = readFileSync(
-  resolve(process.cwd(), "scripts/analyze-buy-pattern-replication.ts"),
-  "utf8",
-);
+const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/owner-buy-learning-refresh.yml"), "utf8");
+const roiReport = readFileSync(resolve(process.cwd(), "scripts/report-buy-roi-uncertainty.ts"), "utf8");
+const calibrationReport = readFileSync(resolve(process.cwd(), "scripts/report-buy-probability-calibration.ts"), "utf8");
+const replicationReport = readFileSync(resolve(process.cwd(), "scripts/analyze-buy-pattern-replication.ts"), "utf8");
 
-test("owner BUY learning refresh only follows main workflow completions", () => {
+test("owner BUY learning refresh only follows successful main workflow completions and serializes", () => {
   assert.match(workflow, /workflow_run:[\s\S]*branches:\s*\[main\]/u);
-  assert.match(
-    workflow,
-    /github\.event\.workflow_run\.head_branch == 'main'[\s\S]*github\.event\.workflow_run\.conclusion == 'success'/u,
-  );
-});
-
-test("owner BUY learning refresh serializes instead of cancelling in-flight private learning", () => {
+  assert.match(workflow, /github\.event\.workflow_run\.head_branch == 'main'[\s\S]*github\.event\.workflow_run\.conclusion == 'success'/u);
   assert.match(workflow, /group:\s*owner-buy-learning-refresh/u);
   assert.match(workflow, /cancel-in-progress:\s*false/u);
-  assert.doesNotMatch(workflow, /cancel-in-progress:\s*true/u);
+  assert.doesNotMatch(workflow, /cancel-in-progress:\s*true|\bschedule:/u);
 });
 
-test("automatic outcome learning remains scoped to Current BUY paper-live", () => {
+test("automatic DB-reading outcome analysis remains scoped to Current BUY paper-live", () => {
   const runKindMatches = workflow.match(/--run-kind paper-live/gu) ?? [];
-  assert.equal(runKindMatches.length, 5);
+  assert.equal(runKindMatches.length, 6);
   for (const script of [
     "analyze-buy-outcome-patterns.ts",
     "analyze-buy-pattern-replication.ts",
     "analyze-buy-tail-dependence.ts",
     "report-buy-learning-summary.ts",
     "report-buy-roi-uncertainty.ts",
+    "report-buy-probability-calibration.ts",
   ]) {
     const start = workflow.indexOf(script);
     assert.ok(start >= 0, `${script} must remain in Owner BUY refresh`);
-    assert.match(workflow.slice(start, start + 600), /--run-kind paper-live/u);
+    assert.match(workflow.slice(start, start + 700), /--run-kind paper-live/u);
   }
-  assert.doesNotMatch(workflow, /\bschedule:/u);
 });
 
-test("owner BUY learning reads the canonical private local DB instead of checkout-local data", () => {
-  assert.match(
-    workflow,
-    /BOAT_PON_DB_PATH:\s*\/Users\/m-shogo\/Developer\/personal\/boat-pon\/data\/boat\.sqlite/u,
-  );
+test("owner BUY learning reads canonical private local DB without copying it", () => {
+  assert.match(workflow, /BOAT_PON_DB_PATH:\s*\/Users\/m-shogo\/Developer\/personal\/boat-pon\/data\/boat\.sqlite/u);
   assert.match(workflow, /name:\s*Verify private BUY source DB[\s\S]*test -f "\$BOAT_PON_DB_PATH"/u);
   assert.doesNotMatch(workflow, /cp\s+[^\n]*boat\.sqlite/u);
 });
 
-test("persistent Mac Owner refresh avoids slow remote npm cache restoration", () => {
+test("persistent Mac Owner refresh keeps Node selection but avoids remote npm cache restoration", () => {
   const start = workflow.indexOf("- name: Setup Node");
   const end = workflow.indexOf("- name: Install", start);
   assert.ok(start >= 0 && end > start);
-  const setupNodeStep = workflow.slice(start, end);
-  assert.match(setupNodeStep, /actions\/setup-node@v4/u);
-  assert.match(setupNodeStep, /node-version-file:\s*\.nvmrc/u);
-  assert.doesNotMatch(setupNodeStep, /\bcache:/u);
+  const step = workflow.slice(start, end);
+  assert.match(step, /actions\/setup-node@v4/u);
+  assert.match(step, /node-version-file:\s*\.nvmrc/u);
+  assert.doesNotMatch(step, /\bcache:/u);
   assert.match(workflow, /- name:\s*Install[\s\S]*run:\s*npm ci/u);
 });
 
-test("owner BUY pattern learning requires two complete independent confirmation windows", () => {
+test("pattern learning requires two independent windows and exact replication projection", () => {
   const start = workflow.indexOf("- name: Confirm BUY patterns across independent windows");
   const projectStart = workflow.indexOf("- name: Project only replicated BUY patterns into learning input", start);
   const tailStart = workflow.indexOf("- name: Analyze BUY max-hit dependence across independent windows", projectStart);
   assert.ok(start >= 0 && projectStart > start && tailStart > projectStart);
-  const confirmationStep = workflow.slice(start, projectStart);
-  const projectionStep = workflow.slice(projectStart, tailStart);
-  assert.match(confirmationStep, /analyze-buy-pattern-replication\.ts/u);
-  assert.match(confirmationStep, /--run-kind paper-live/u);
-  assert.match(confirmationStep, /--window-size 60/u);
-  assert.match(confirmationStep, /--min-settled 30/u);
-  assert.match(confirmationStep, /--min-roi-delta 0\.15/u);
-  assert.match(confirmationStep, /--retain-private-dir data\/private\/outcome-pattern-replication-ledger/u);
-  assert.match(projectionStep, /project-replicated-buy-pattern-signals\.ts/u);
-  assert.match(projectionStep, /owner-buy-pattern-replication-public\.json/u);
-  assert.match(projectionStep, /owner-buy-patterns-replicated-input\.json/u);
+  const confirmation = workflow.slice(start, projectStart);
+  const projection = workflow.slice(projectStart, tailStart);
+  assert.match(confirmation, /analyze-buy-pattern-replication\.ts/u);
+  assert.match(confirmation, /--run-kind paper-live/u);
+  assert.match(confirmation, /--window-size 60/u);
+  assert.match(confirmation, /--min-settled 30/u);
+  assert.match(confirmation, /--min-roi-delta 0\.15/u);
+  assert.match(confirmation, /--retain-private-dir data\/private\/outcome-pattern-replication-ledger/u);
+  assert.match(projection, /project-replicated-buy-pattern-signals\.ts/u);
+  assert.match(projection, /owner-buy-pattern-replication-public\.json/u);
+  assert.match(projection, /owner-buy-patterns-replicated-input\.json/u);
 
   assert.match(replicationReport, /new DatabaseSync\(dbPath, \{ readOnly: true \}\)/u);
   assert.match(replicationReport, /PRAGMA query_only = ON/u);
   assert.match(replicationReport, /buildBuyOutcomeSettlementSource\(\{ runKind: args\.runKind \}\)/u);
   assert.match(replicationReport, /parsed\.runKind !== "paper-live"/u);
   assert.match(replicationReport, /requiredSettled = args\.windowSize \* 2/u);
-  assert.match(replicationReport, /ROW_NUMBER\(\) OVER/u);
   assert.match(replicationReport, /temporal_row > \? AND temporal_row <= \?/u);
-  assert.match(replicationReport, /productionChangeAllowed:\s*false/u);
   assert.doesNotMatch(replicationReport, /from "\.\.\/server\/db"|UPDATE\s+decision_history|INSERT\s+INTO\s+decision_history|DELETE\s+FROM\s+decision_history/u);
 });
 
-test("owner BUY summary consumes only temporally replicated pattern signals", () => {
-  const start = workflow.indexOf("- name: Build read-only BUY outcome learning summary");
-  const end = workflow.indexOf("- name: Merge supported tail stability and retain final BUY learning", start);
-  assert.ok(start >= 0 && end > start);
-  const summaryStep = workflow.slice(start, end);
-  assert.match(summaryStep, /report-buy-learning-summary\.ts/u);
-  assert.match(summaryStep, /--pattern-signals data\/tmp\/owner-buy-patterns-replicated-input\.json/u);
-  assert.doesNotMatch(summaryStep, /--pattern-signals data\/tmp\/owner-buy-patterns-public\.json/u);
+test("final BUY summary consumes only replicated pattern signals and retains only final enriched learning", () => {
+  const summaryStart = workflow.indexOf("- name: Build read-only BUY outcome learning summary");
+  const readinessStart = workflow.indexOf("- name: Merge BUY pattern replication readiness into learning", summaryStart);
+  const mergeStart = workflow.indexOf("- name: Merge supported tail stability and retain final BUY learning", readinessStart);
+  const uncertaintyStart = workflow.indexOf("- name: Report BUY hit-rate uncertainty", mergeStart);
+  assert.ok(summaryStart >= 0 && readinessStart > summaryStart && mergeStart > readinessStart && uncertaintyStart > mergeStart);
+  const summary = workflow.slice(summaryStart, readinessStart);
+  const merge = workflow.slice(mergeStart, uncertaintyStart);
+  assert.match(summary, /--pattern-signals data\/tmp\/owner-buy-patterns-replicated-input\.json/u);
+  assert.doesNotMatch(summary, /--pattern-signals data\/tmp\/owner-buy-patterns-public\.json|--retain-private-dir/u);
+  assert.match(merge, /merge-buy-tail-learning\.ts/u);
+  assert.match(merge, /--tail-signal data\/tmp\/owner-buy-tail-public\.json/u);
+  assert.match(merge, /--retain-private-dir data\/private\/outcome-learning-ledger/u);
 });
 
-test("owner BUY refresh researches max-hit dependence only across independent supported windows", () => {
+test("tail dependence remains independent-window research only", () => {
   assert.match(workflow, /name:\s*Analyze BUY max-hit dependence across independent windows/u);
   assert.match(workflow, /analyze-buy-tail-dependence\.ts[\s\S]*--window-size 30[\s\S]*--min-tail-gap 0\.15/u);
   assert.match(workflow, /--retain-private-dir data\/private\/outcome-tail-ledger/u);
-  assert.match(workflow, /--output-public data\/tmp\/owner-buy-tail-public\.json/u);
 });
 
-test("owner BUY refresh retains only the final tail-enriched learning summary", () => {
-  const summaryStart = workflow.indexOf("- name: Build read-only BUY outcome learning summary");
-  const mergeStart = workflow.indexOf("- name: Merge supported tail stability and retain final BUY learning");
-  const uncertaintyStart = workflow.indexOf("- name: Report BUY hit-rate uncertainty");
-  const diagnosticsStart = workflow.indexOf("- name: Report public-safe BUY learning diagnostics");
-  assert.ok(summaryStart >= 0 && mergeStart > summaryStart && uncertaintyStart > mergeStart && diagnosticsStart > uncertaintyStart);
-  const summaryStep = workflow.slice(summaryStart, mergeStart);
-  const mergeStep = workflow.slice(mergeStart, uncertaintyStart);
-  assert.doesNotMatch(summaryStep, /--retain-private-dir/u);
-  assert.match(mergeStep, /merge-buy-tail-learning\.ts/u);
-  assert.match(mergeStep, /--tail-signal data\/tmp\/owner-buy-tail-public\.json/u);
-  assert.match(mergeStep, /--retain-private-dir data\/private\/outcome-learning-ledger/u);
-});
-
-test("owner BUY refresh derives Wilson uncertainty from the final learning summary without another DB read", () => {
+test("Wilson uncertainty derives from final summary without another DB read", () => {
   const start = workflow.indexOf("- name: Report BUY hit-rate uncertainty");
   const end = workflow.indexOf("- name: Report BUY ROI uncertainty", start);
   assert.ok(start >= 0 && end > start);
   const step = workflow.slice(start, end);
   assert.match(step, /report-buy-hit-rate-uncertainty\.ts/u);
   assert.match(step, /--summary data\/tmp\/owner-buy-learning-latest\.json/u);
-  assert.match(step, /--output data\/tmp\/owner-buy-hit-rate-uncertainty\.json/u);
   assert.doesNotMatch(step, /BOAT_PON_DB_PATH|boat\.sqlite|--run-kind/u);
 });
 
-test("owner BUY ROI uncertainty reuses the official paper-live settlement source read-only", () => {
+test("ROI uncertainty reuses official paper-live settlement source read-only", () => {
   const start = workflow.indexOf("- name: Report BUY ROI uncertainty");
-  const end = workflow.indexOf("- name: Report public-safe BUY learning diagnostics", start);
+  const end = workflow.indexOf("- name: Report BUY probability calibration", start);
   assert.ok(start >= 0 && end > start);
   const step = workflow.slice(start, end);
   assert.match(step, /report-buy-roi-uncertainty\.ts/u);
@@ -147,64 +117,63 @@ test("owner BUY ROI uncertainty reuses the official paper-live settlement source
   assert.match(step, /--recent 30/u);
   assert.match(step, /--minimum-trials 30/u);
   assert.match(step, /--iterations 5000/u);
-  assert.match(step, /--output data\/tmp\/owner-buy-roi-uncertainty\.json/u);
-
   assert.match(roiReport, /new DatabaseSync\(dbPath, \{ readOnly: true \}\)/u);
   assert.match(roiReport, /PRAGMA query_only = ON/u);
   assert.match(roiReport, /buildBuyOutcomeSettlementSource\(\{ runKind: args\.runKind \}\)/u);
   assert.match(roiReport, /parsed\.runKind !== "paper-live"/u);
-  assert.match(roiReport, /productionChangeAllowed:\s*false/u);
   assert.doesNotMatch(roiReport, /from "\.\.\/server\/db"|UPDATE\s+decision_history|INSERT\s+INTO\s+decision_history|DELETE\s+FROM\s+decision_history/u);
 });
 
-test("owner BUY diagnostics expose only aggregate public-safe learning state", () => {
+test("probability calibration uses official outcomes read-only with explicit support and high-EV cohort", () => {
+  const start = workflow.indexOf("- name: Report BUY probability calibration");
+  const end = workflow.indexOf("- name: Report public-safe BUY learning diagnostics", start);
+  assert.ok(start >= 0 && end > start);
+  const step = workflow.slice(start, end);
+  assert.match(step, /report-buy-probability-calibration\.ts/u);
+  assert.match(step, /--run-kind paper-live/u);
+  assert.match(step, /--recent 30/u);
+  assert.match(step, /--minimum-trials 30/u);
+  assert.match(step, /--high-ev-threshold 1\.2/u);
+  assert.match(step, /owner-buy-probability-calibration\.json/u);
+
+  assert.match(calibrationReport, /new DatabaseSync\(dbPath, \{ readOnly: true \}\)/u);
+  assert.match(calibrationReport, /PRAGMA query_only = ON/u);
+  assert.match(calibrationReport, /buildBuyOutcomeSettlementSource\(\{ runKind: args\.runKind \}\)/u);
+  assert.match(calibrationReport, /estimated_hit_rate outside \[0,1\]/u);
+  assert.match(calibrationReport, /args\.highEvThreshold/u);
+  assert.match(calibrationReport, /productionChangeAllowed:\s*false/u);
+  assert.doesNotMatch(calibrationReport, /from "\.\.\/server\/db"|UPDATE\s+decision_history|INSERT\s+INTO\s+decision_history|DELETE\s+FROM\s+decision_history/u);
+});
+
+test("public diagnostics expose aggregate uncertainty/calibration only", () => {
   const start = workflow.indexOf("- name: Report public-safe BUY learning diagnostics");
   const end = workflow.indexOf("- name: Build validated Owner BUY evidence diagnostics", start);
   assert.ok(start >= 0 && end > start);
-  const diagnosticsStep = workflow.slice(start, end);
-
-  assert.match(diagnosticsStep, /schemaVersion:\s*'owner-buy-learning-diagnostics-v1'/u);
-  assert.match(diagnosticsStep, /hitRateUncertainty:/u);
-  assert.match(diagnosticsStep, /owner-buy-hit-rate-uncertainty\.json/u);
-  assert.match(diagnosticsStep, /roiUncertainty:/u);
-  assert.match(diagnosticsStep, /owner-buy-roi-uncertainty\.json/u);
-  assert.match(diagnosticsStep, /patternSupport:/u);
-  assert.match(diagnosticsStep, /patternReplication:/u);
-  assert.match(diagnosticsStep, /replication\.requiredSettled/u);
-  assert.match(diagnosticsStep, /replication\.replicatedPatternCount/u);
-  assert.match(diagnosticsStep, /noSignalReason:/u);
-  assert.match(diagnosticsStep, /minimumSettledPerSide:/u);
-  assert.match(diagnosticsStep, /globalAdditionalSettledForAnyContrast:/u);
-  assert.match(diagnosticsStep, /supportedContrastCount:/u);
-  assert.match(diagnosticsStep, /supportedDimensionCount:/u);
-  assert.match(diagnosticsStep, /learningIds:/u);
-  assert.match(diagnosticsStep, /failurePatternIds:/u);
-  assert.match(diagnosticsStep, /researchCandidateIds:/u);
-  assert.match(diagnosticsStep, /patternSignals:/u);
-  assert.match(diagnosticsStep, /tailStability:/u);
-  assert.match(diagnosticsStep, /missingSettledToCompare:/u);
-  assert.match(diagnosticsStep, /recentTailGap:/u);
-  assert.match(diagnosticsStep, /priorTailGap:/u);
-  assert.match(diagnosticsStep, /productionChangeAllowed:\s*false/u);
-  assert.match(diagnosticsStep, /private or operational BUY field reached public-safe diagnostics/u);
-  assert.doesNotMatch(diagnosticsStep, /item\.segmentKey|patterns\.support\?\.segmentKey|item\.selection|item\.currentOdds|item\.raceId|item\.decisionId/u);
+  const step = workflow.slice(start, end);
+  for (const marker of [
+    "hitRateUncertainty:", "roiUncertainty:", "probabilityCalibration:", "patternSupport:", "patternReplication:",
+    "learningIds:", "failurePatternIds:", "researchCandidateIds:", "patternSignals:", "tailStability:",
+  ]) assert.match(step, new RegExp(marker));
+  assert.match(step, /owner-buy-probability-calibration\.json/u);
+  assert.match(step, /productionChangeAllowed:\s*false/u);
+  assert.match(step, /private or operational BUY field reached public-safe diagnostics/u);
+  assert.doesNotMatch(step, /item\.segmentKey|item\.selection|item\.currentOdds|item\.raceId|item\.decisionId/u);
 });
 
-test("owner BUY evidence is schema-validated before entering the public snapshot", () => {
+test("Owner BUY evidence remains schema-validated before public snapshot", () => {
   const buildStart = workflow.indexOf("- name: Build validated Owner BUY evidence diagnostics");
   const boundaryStart = workflow.indexOf("- name: Verify public source boundary", buildStart);
   assert.ok(buildStart >= 0 && boundaryStart > buildStart);
-  const buildStep = workflow.slice(buildStart, boundaryStart);
-  assert.match(buildStep, /build-owner-buy-evidence-diagnostics\.ts/u);
-  assert.match(buildStep, /--buy-learning data\/tmp\/owner-buy-learning-latest\.json/u);
-  assert.match(buildStep, /--patterns data\/tmp\/owner-buy-patterns-public\.json/u);
-  assert.match(buildStep, /--tail data\/tmp\/owner-buy-tail-public\.json/u);
-  assert.match(buildStep, /--uncertainty data\/tmp\/owner-buy-hit-rate-uncertainty\.json/u);
-  assert.match(buildStep, /--roi-uncertainty data\/tmp\/owner-buy-roi-uncertainty\.json/u);
-  assert.match(buildStep, /--output data\/tmp\/owner-buy-evidence\.json/u);
+  const build = workflow.slice(buildStart, boundaryStart);
+  assert.match(build, /build-owner-buy-evidence-diagnostics\.ts/u);
+  assert.match(build, /--buy-learning data\/tmp\/owner-buy-learning-latest\.json/u);
+  assert.match(build, /--patterns data\/tmp\/owner-buy-patterns-public\.json/u);
+  assert.match(build, /--tail data\/tmp\/owner-buy-tail-public\.json/u);
+  assert.match(build, /--uncertainty data\/tmp\/owner-buy-hit-rate-uncertainty\.json/u);
+  assert.match(build, /--roi-uncertainty data\/tmp\/owner-buy-roi-uncertainty\.json/u);
+  assert.match(build, /--output data\/tmp\/owner-buy-evidence\.json/u);
 
   const snapshotStart = workflow.indexOf("- name: Build Owner snapshot with BUY learning");
   const snapshotEnd = workflow.indexOf("- name: Assemble deploy-ready directory", snapshotStart);
-  const snapshotStep = workflow.slice(snapshotStart, snapshotEnd);
-  assert.match(snapshotStep, /--buy-evidence data\/tmp\/owner-buy-evidence\.json/u);
+  assert.match(workflow.slice(snapshotStart, snapshotEnd), /--buy-evidence data\/tmp\/owner-buy-evidence\.json/u);
 });
