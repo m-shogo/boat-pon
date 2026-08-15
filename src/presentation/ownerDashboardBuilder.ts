@@ -6,6 +6,7 @@ import {
   type OwnerOverallStatus,
 } from "./ownerDashboardSnapshot";
 import { unavailableBuyLearningSummary, validateBuyLearningSummary, type BuyLearningSummary } from "./buyLearningSummary";
+import { unavailableOwnerBuyEvidenceDiagnostics, validateOwnerBuyEvidenceDiagnostics, type OwnerBuyEvidenceDiagnostics } from "./ownerBuyEvidenceDiagnostics";
 
 export type OwnerDashboardBuilderInput = {
   generatedAt: string;
@@ -20,6 +21,7 @@ export type OwnerDashboardBuilderInput = {
   currentRun: unknown;
   recentCommits?: unknown;
   buyLearning?: unknown;
+  buyEvidence?: unknown;
 };
 
 type CatalogTask = { taskId: string; title: string };
@@ -30,6 +32,7 @@ export function buildOwnerDashboardSnapshot(input: OwnerDashboardBuilderInput): 
   const queue = parseQueue(input.queueState);
   const currentRun = parseCurrentRun(input.currentRun);
   const buyLearning = parseBuyLearning(input.buyLearning, input.generatedAt);
+  const buyEvidence = parseBuyEvidence(input.buyEvidence, input.generatedAt, buyLearning);
   const n2Tasks = [...queue.entries()]
     .filter(([taskId]) => taskId.startsWith("TASK-N2-"))
     .map(([taskId, state]) => ({ taskId, label: catalog.get(taskId)?.title ?? taskId, status: state.status, attemptCount: state.attemptCount, maxAttempts: state.maxAttempts }))
@@ -76,6 +79,7 @@ export function buildOwnerDashboardSnapshot(input: OwnerDashboardBuilderInput): 
       nextSafeAction,
     },
     buyLearning,
+    buyEvidence,
     n2Tasks,
     recentProgress: progress,
     blockers,
@@ -98,6 +102,20 @@ function parseBuyLearning(value: unknown, generatedAt: string): BuyLearningSumma
   if (value === undefined || value === null) return unavailableBuyLearningSummary(generatedAt);
   const errors = validateBuyLearningSummary(value);
   return errors.length ? unavailableBuyLearningSummary(generatedAt) : value as BuyLearningSummary;
+}
+
+function parseBuyEvidence(value: unknown, generatedAt: string, buyLearning: BuyLearningSummary): OwnerBuyEvidenceDiagnostics {
+  if (value === undefined || value === null) return unavailableOwnerBuyEvidenceDiagnostics(generatedAt);
+  const errors = validateOwnerBuyEvidenceDiagnostics(value);
+  if (errors.length) return unavailableOwnerBuyEvidenceDiagnostics(generatedAt);
+  const evidence = value as OwnerBuyEvidenceDiagnostics;
+  if (buyLearning.status !== "AVAILABLE" || evidence.status !== "AVAILABLE") return evidence.status === "NOT_AVAILABLE" ? evidence : unavailableOwnerBuyEvidenceDiagnostics(generatedAt);
+  const settled = buyLearning.performance.settled;
+  if (settled === null
+    || evidence.patternSupport?.analyzedSettled !== settled
+    || evidence.tailStability?.totalSettled !== settled
+    || evidence.hitRateUncertainty?.performance.trials !== settled) return unavailableOwnerBuyEvidenceDiagnostics(generatedAt);
+  return evidence;
 }
 
 function parseCatalog(value: unknown): Map<string, CatalogTask> {
@@ -161,4 +179,4 @@ function humanizeCommit(message: string): string { return message.replace(/^(fix
 function summarizeCommit(message: string): string { return humanizeCommit(message); }
 function integer(value: unknown): number | null { return Number.isInteger(value) && Number(value) >= 0 ? Number(value) : null; }
 function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }
-function safeText(value: string): boolean { return value.trim().length > 0 && value.length <= 500 && !/(?:\/Users\/|\/home\/|gh[opusr]_|github_pat_|currentOdds|requiredOdds|recommendedAmount|stake|selection|app_settings|automation\/requests)/i.test(value); }
+function safeText(value: string): boolean { return value.trim().length > 0 && value.length <= 500 && !/(?:\/Users\/|\/home\/|gh[opusr]_|github_pat_|currentOdds|requiredOdds|recommendedAmount|stake|selection|raceId|decisionId|segmentKey|app_settings|automation\/requests)/i.test(value); }
