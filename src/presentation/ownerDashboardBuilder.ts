@@ -5,6 +5,7 @@ import {
   type OwnerGitCleanliness,
   type OwnerOverallStatus,
 } from "./ownerDashboardSnapshot";
+import { unavailableBuyLearningSummary, validateBuyLearningSummary, type BuyLearningSummary } from "./buyLearningSummary";
 
 export type OwnerDashboardBuilderInput = {
   generatedAt: string;
@@ -18,6 +19,7 @@ export type OwnerDashboardBuilderInput = {
   taskCatalog: unknown;
   currentRun: unknown;
   recentCommits?: unknown;
+  buyLearning?: unknown;
 };
 
 type CatalogTask = { taskId: string; title: string };
@@ -27,6 +29,7 @@ export function buildOwnerDashboardSnapshot(input: OwnerDashboardBuilderInput): 
   const catalog = parseCatalog(input.taskCatalog);
   const queue = parseQueue(input.queueState);
   const currentRun = parseCurrentRun(input.currentRun);
+  const buyLearning = parseBuyLearning(input.buyLearning, input.generatedAt);
   const n2Tasks = [...queue.entries()]
     .filter(([taskId]) => taskId.startsWith("TASK-N2-"))
     .map(([taskId, state]) => ({ taskId, label: catalog.get(taskId)?.title ?? taskId, status: state.status, attemptCount: state.attemptCount, maxAttempts: state.maxAttempts }))
@@ -50,8 +53,8 @@ export function buildOwnerDashboardSnapshot(input: OwnerDashboardBuilderInput): 
   const lastResult = progressMs > currentRunMs
     ? (input.ciStatus === "PASS" ? "MAIN UPDATED / CI PASS" : "MAIN UPDATED")
     : currentRun.lastResult;
-  const nextSafeAction = currentRun.nextCandidate ?? inferNextAction(n2Tasks);
-  const overall = deriveOverall({ ciStatus: input.ciStatus, blockers, lastResult: currentRun.lastResult });
+  const nextSafeAction = currentRun.nextCandidate ?? inferNextAction(n2Tasks, buyLearning);
+  const overall = deriveOverall({ ciStatus: input.ciStatus, blockers, lastResult: currentRun.lastResult, buyLearning });
 
   const snapshot: OwnerDashboardSnapshot = {
     schemaVersion: OWNER_DASHBOARD_SCHEMA_VERSION,
@@ -72,6 +75,7 @@ export function buildOwnerDashboardSnapshot(input: OwnerDashboardBuilderInput): 
       blocker: currentRun.blocks[0] ?? blockers[0] ?? null,
       nextSafeAction,
     },
+    buyLearning,
     n2Tasks,
     recentProgress: progress,
     blockers,
@@ -83,10 +87,17 @@ export function buildOwnerDashboardSnapshot(input: OwnerDashboardBuilderInput): 
   return snapshot;
 }
 
-function deriveOverall(input: { ciStatus: OwnerDashboardBuilderInput["ciStatus"]; blockers: string[]; lastResult: string }): { status: OwnerOverallStatus; reason: string } {
+function deriveOverall(input: { ciStatus: OwnerDashboardBuilderInput["ciStatus"]; blockers: string[]; lastResult: string; buyLearning: BuyLearningSummary }): { status: OwnerOverallStatus; reason: string } {
   if (input.ciStatus === "FAIL" || input.lastResult === "FAILED") return { status: "BLOCKED", reason: "CIまたは直近Research実行に失敗があります" };
   if (input.blockers.length > 0 || input.ciStatus === "PENDING" || input.ciStatus === "NOT_AVAILABLE") return { status: "ATTENTION", reason: input.blockers.length ? `${input.blockers.length}件のResearch blockerがあります` : "CI状態の確認が必要です" };
+  if (input.buyLearning.status === "AVAILABLE" && input.buyLearning.learnings.some((item) => item.severity === "ACTION")) return { status: "ATTENTION", reason: "BUY outcomeから改善研究候補が検出されています（production自動変更なし）" };
   return { status: "HEALTHY", reason: "既知の停止要因はなく、read-only監視範囲は正常です" };
+}
+
+function parseBuyLearning(value: unknown, generatedAt: string): BuyLearningSummary {
+  if (value === undefined || value === null) return unavailableBuyLearningSummary(generatedAt);
+  const errors = validateBuyLearningSummary(value);
+  return errors.length ? unavailableBuyLearningSummary(generatedAt) : value as BuyLearningSummary;
 }
 
 function parseCatalog(value: unknown): Map<string, CatalogTask> {
@@ -136,7 +147,9 @@ function parseRecentCommits(value: unknown): OwnerDashboardSnapshot["recentProgr
   }).slice(0, 5);
 }
 
-function inferNextAction(tasks: OwnerDashboardSnapshot["n2Tasks"]): string | null {
+function inferNextAction(tasks: OwnerDashboardSnapshot["n2Tasks"], buyLearning: BuyLearningSummary): string | null {
+  const buyCandidate = buyLearning.researchCandidates[0];
+  if (buyCandidate) return `${buyCandidate.id}: ${buyCandidate.title} をread-only researchで検証（production自動変更なし）`;
   const ready = tasks.find((task) => task.status === "READY");
   if (ready) return `${ready.taskId} を安全境界内で次候補として確認`;
   const engineering = tasks.find((task) => task.status.startsWith("BLOCKED_EXECUTOR") || task.status === "ENGINEERING_REQUIRED");

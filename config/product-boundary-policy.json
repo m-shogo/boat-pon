@@ -23,6 +23,8 @@
     "src/presentation/publicDashboardShell.test.ts",
     "src/presentation/publicDeployBundle.ts",
     "src/presentation/publicDeployBundle.test.ts",
+    "src/presentation/buyLearningSummary.ts",
+    "src/presentation/buyLearningSummary.test.ts",
     "src/presentation/ownerDashboardSnapshot.ts",
     "src/presentation/ownerDashboardBuilder.ts",
     "src/presentation/ownerDashboardBuilder.test.ts",

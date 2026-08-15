@@ -1,4 +1,4 @@
-name: owner dashboard deploy
+name: owner dashboard static validation
 
 on:
   workflow_run:
@@ -11,11 +11,11 @@ permissions:
   pull-requests: read
 
 concurrency:
-  group: owner-dashboard-deploy
+  group: owner-dashboard-static-validation
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  validate:
     if: >-
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'workflow_run' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.conclusion == 'success')
@@ -59,7 +59,7 @@ jobs:
       - name: Build isolated public dashboard
         run: npx vite build --config vite.public.config.ts
 
-      - name: Build safe snapshots
+      - name: Build fail-safe static snapshot
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -95,18 +95,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if grep -RInE '/Users/|/home/|/private/|gh[opusr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[0-9A-Za-z-]{10,}|data/boat\.sqlite' dist-public-deploy; then
-            echo "::error::secret-like value or private path found in public deploy artifact"
+          if grep -RInE '/Users/|/home/|/private/|gh[opusr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[0-9A-Za-z-]{10,}|data/boat\.sqlite|currentOdds|requiredOdds|recommendedAmount|"selection"|"stake"' dist-public-deploy; then
+            echo "::error::secret-like value or private marker found in public deploy artifact"
             exit 1
           fi
 
-      - name: Deploy to Cloudflare Workers Static Assets
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        shell: bash
+      - name: Confirm enriched deploy is delegated to Mac refresh
         run: |
-          set -euo pipefail
-          test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::CLOUDFLARE_API_TOKEN is not configured"; exit 1; }
-          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::CLOUDFLARE_ACCOUNT_ID is not configured"; exit 1; }
-          npx --yes wrangler@latest deploy --config wrangler.owner-dashboard.jsonc
+          echo "Static artifact verified only. Cloudflare deployment is owned by owner-buy-learning-refresh.yml so an unavailable BUY summary cannot overwrite enriched learning."

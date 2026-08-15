@@ -1,0 +1,117 @@
+name: owner BUY learning refresh
+
+on:
+  workflow_run:
+    workflows: ["CI", "boat-pon local research (one-shot)"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: owner-buy-learning-refresh
+  cancel-in-progress: true
+
+jobs:
+  refresh:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.conclusion == 'success')
+    runs-on: [self-hosted, macOS, boat-pon-local]
+    timeout-minutes: 30
+    steps:
+      - name: Checkout current main without deleting private ignored data
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 8
+          clean: false
+
+      - name: Verify tracked checkout is canonical main
+        id: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --depth=1
+          CURRENT_MAIN=$(git rev-parse origin/main)
+          git reset --hard "$CURRENT_MAIN"
+          test -z "$(git status --porcelain --untracked-files=no)" || { echo "::error::tracked checkout is dirty"; git status --short; exit 1; }
+          echo "sha=$CURRENT_MAIN" >> "$GITHUB_OUTPUT"
+          echo "updated_at=$(git show -s --format=%cI "$CURRENT_MAIN")" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build and retain read-only BUY outcome learning summary
+        run: >-
+          npx tsx scripts/report-buy-learning-summary.ts
+          --recent 30
+          --output data/tmp/owner-buy-learning-latest.json
+          --retain-private-dir data/private/outcome-learning-ledger
+
+      - name: Verify public source boundary
+        run: node scripts/verify-product-boundaries.mjs
+
+      - name: Build isolated public dashboard
+        run: npx vite build --config vite.public.config.ts
+
+      - name: Build Owner snapshot with BUY learning
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p data/tmp/owner-dashboard-refresh
+          node - <<'NODE' > data/tmp/owner-dashboard-refresh/recent-commits.json
+          const { execFileSync } = require('node:child_process');
+          const lines = execFileSync('git', ['log', '-5', '--format=%H%x09%cI%x09%s'], { encoding: 'utf8' }).trim().split('\n').filter(Boolean);
+          process.stdout.write(JSON.stringify(lines.map(line => { const [sha, committedAt, ...message] = line.split('\t'); return { sha, committedAt, message: message.join('\t') }; }), null, 2));
+          NODE
+          OPEN_PRS=$(gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls?state=open&per_page=100" --jq 'length' | awk '{s+=$1} END {print s+0}')
+          npx tsx scripts/export-owner-dashboard-snapshot.ts \
+            --catalog automation/task-catalog.json \
+            --queue-state automation/control/task-queue-state.json \
+            --current-run automation/control/current-run.json \
+            --recent-commits data/tmp/owner-dashboard-refresh/recent-commits.json \
+            --buy-learning data/tmp/owner-buy-learning-latest.json \
+            --canonical-branch main \
+            --main-sha "${{ steps.source.outputs.sha }}" \
+            --ci-status PASS \
+            --open-pr-count "$OPEN_PRS" \
+            --git-cleanliness CLEAN \
+            --git-updated-at "${{ steps.source.outputs.updated_at }}" \
+            --output data/tmp/owner-dashboard-refresh/owner-latest.json
+
+      - name: Assemble deploy-ready directory
+        run: npx tsx scripts/assemble-public-dashboard-deploy.ts --dist=dist-public-dashboard --static=public-site --output=dist-public-deploy --snapshot=data/tmp/owner-dashboard-refresh
+
+      - name: Verify deploy-ready directory
+        run: npx tsx scripts/verify-public-dashboard-deploy.ts --dir=dist-public-deploy
+
+      - name: Verify no private data in public artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -RInE '/Users/|/home/|/private/|gh[opusr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[0-9A-Za-z-]{10,}|data/boat\.sqlite|currentOdds|requiredOdds|recommendedAmount|"selection"|"stake"' dist-public-deploy; then
+            echo "::error::private value or operational marker found in public deploy artifact"
+            exit 1
+          fi
+
+      - name: Deploy refreshed Owner Dashboard
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::CLOUDFLARE_API_TOKEN is not configured"; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::CLOUDFLARE_ACCOUNT_ID is not configured"; exit 1; }
+          npx --yes wrangler@latest deploy --config wrangler.owner-dashboard.jsonc

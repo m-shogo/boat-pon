@@ -13,6 +13,7 @@ const gitCleanliness = required("git-cleanliness") as OwnerGitCleanliness;
 if (!["CLEAN", "ATTENTION", "NOT_AVAILABLE"].includes(gitCleanliness)) throw new Error("invalid --git-cleanliness");
 
 const recentCommits = args["recent-commits"] ? await readJson(args["recent-commits"]) : [];
+const buyLearning = args["buy-learning"] ? await readJson(args["buy-learning"]) : undefined;
 const snapshot = buildOwnerDashboardSnapshot({
   generatedAt: new Date().toISOString(),
   canonicalBranch: required("canonical-branch"),
@@ -25,8 +26,9 @@ const snapshot = buildOwnerDashboardSnapshot({
   taskCatalog: await readJson(required("catalog")),
   currentRun: await readJson(required("current-run")),
   recentCommits,
+  buyLearning,
 });
 const output = required("output");
 await mkdir(dirname(output), { recursive: true });
 await writeFile(output, `${JSON.stringify(snapshot, null, 2)}\n`, "utf8");
-console.log(JSON.stringify({ status: "PASS", output, tasks: snapshot.n2Tasks.length, blockers: snapshot.blockers.length }));
+console.log(JSON.stringify({ status: "PASS", output, tasks: snapshot.n2Tasks.length, blockers: snapshot.blockers.length, buyLearning: snapshot.buyLearning.status }));
