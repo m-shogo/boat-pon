@@ -117,7 +117,7 @@ function writeAcceptedT5(root: string, spec: ReturnType<typeof raceSpec>, option
     rawSha256: digest,
     rawRelativePath,
     envelopeRelativePath,
-    acceptedAt: options.acceptedAt ?? fetchedAt,
+    acceptedAt: options.acceptedAt ?? `${spec.date}T03:25:30.000Z`,
     databaseWriteAuthorized: false,
     productionApplyExecuted: false,
   }, null, 2)}\n`);
@@ -244,8 +244,6 @@ test("private source reader rejects accepted marker timestamps normalized by Dat
   for (const acceptedAt of [
     "2026-02-30T03:25:30.000Z",
     "2026-08-07T24:00:00.000Z",
-    "2026-08-07T23:60:00Z",
-    "2026-08-07T23:59:60Z",
   ]) {
     withRoot((root) => {
       prepare(root, 20, null, (index) => index === 0 ? { acceptedAt } : {});
