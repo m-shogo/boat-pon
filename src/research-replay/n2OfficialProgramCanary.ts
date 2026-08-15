@@ -128,6 +128,14 @@ function canonicalDatabaseTimestamp(value: string): string {
   return canonicalUtcTimestamp(normalized);
 }
 
+function isCanonicalUtcTimestamp(value: string): boolean {
+  try {
+    return canonicalUtcTimestamp(value) === value;
+  } catch {
+    return false;
+  }
+}
+
 function closeAtUtc(date: string, closeAt: string): string {
   const match = /^(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(closeAt);
   if (match === null) throw new Error("INVALID_CLOSE_AT");
@@ -287,6 +295,8 @@ export function assertOfficialProgramCanaryManifest(manifest: OfficialProgramCan
       || item.date < manifest.binding.cohort.dateFrom
       || item.date > manifest.binding.cohort.dateTo
       || item.canonicalRaceKey !== canonicalRaceKey(item.date, item.venueCode, item.raceNo)
+      || !isCanonicalUtcTimestamp(item.sourceObservedAt)
+      || !isCanonicalUtcTimestamp(item.decisionCutoff)
       || Date.parse(item.sourceObservedAt) >= Date.parse(item.decisionCutoff)) {
       throw new Error("CANARY_MANIFEST_ITEM_INVALID");
     }
