@@ -47,14 +47,26 @@ test("owner BUY refresh researches max-hit dependence only across independent su
 test("owner BUY refresh retains only the final tail-enriched learning summary", () => {
   const summaryStart = workflow.indexOf("- name: Build read-only BUY outcome learning summary");
   const mergeStart = workflow.indexOf("- name: Merge supported tail stability and retain final BUY learning");
+  const uncertaintyStart = workflow.indexOf("- name: Report BUY hit-rate uncertainty");
   const diagnosticsStart = workflow.indexOf("- name: Report public-safe BUY learning diagnostics");
-  assert.ok(summaryStart >= 0 && mergeStart > summaryStart && diagnosticsStart > mergeStart);
+  assert.ok(summaryStart >= 0 && mergeStart > summaryStart && uncertaintyStart > mergeStart && diagnosticsStart > uncertaintyStart);
   const summaryStep = workflow.slice(summaryStart, mergeStart);
-  const mergeStep = workflow.slice(mergeStart, diagnosticsStart);
+  const mergeStep = workflow.slice(mergeStart, uncertaintyStart);
   assert.doesNotMatch(summaryStep, /--retain-private-dir/u);
   assert.match(mergeStep, /merge-buy-tail-learning\.ts/u);
   assert.match(mergeStep, /--tail-signal data\/tmp\/owner-buy-tail-public\.json/u);
   assert.match(mergeStep, /--retain-private-dir data\/private\/outcome-learning-ledger/u);
+});
+
+test("owner BUY refresh derives Wilson uncertainty from the final learning summary without another DB read", () => {
+  const start = workflow.indexOf("- name: Report BUY hit-rate uncertainty");
+  const end = workflow.indexOf("- name: Report public-safe BUY learning diagnostics", start);
+  assert.ok(start >= 0 && end > start);
+  const step = workflow.slice(start, end);
+  assert.match(step, /report-buy-hit-rate-uncertainty\.ts/u);
+  assert.match(step, /--summary data\/tmp\/owner-buy-learning-latest\.json/u);
+  assert.match(step, /--output data\/tmp\/owner-buy-hit-rate-uncertainty\.json/u);
+  assert.doesNotMatch(step, /BOAT_PON_DB_PATH|boat\.sqlite|--run-kind/u);
 });
 
 test("owner BUY diagnostics expose only aggregate public-safe learning state", () => {
@@ -64,6 +76,8 @@ test("owner BUY diagnostics expose only aggregate public-safe learning state", (
   const diagnosticsStep = workflow.slice(start, end);
 
   assert.match(diagnosticsStep, /schemaVersion:\s*'owner-buy-learning-diagnostics-v1'/u);
+  assert.match(diagnosticsStep, /hitRateUncertainty:/u);
+  assert.match(diagnosticsStep, /owner-buy-hit-rate-uncertainty\.json/u);
   assert.match(diagnosticsStep, /learningIds:/u);
   assert.match(diagnosticsStep, /failurePatternIds:/u);
   assert.match(diagnosticsStep, /researchCandidateIds:/u);
