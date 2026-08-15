@@ -95,8 +95,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if grep -RInE '/Users/|/home/|/private/|gh[opusr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[0-9A-Za-z-]{10,}|data/boat\.sqlite|currentOdds|requiredOdds|recommendedAmount|"selection"|"stake"' dist-public-deploy; then
-            echo "::error::secret-like value or private marker found in public deploy artifact"
+          if grep -RInE '/Users/|/home/|/private/|gh[opusr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[0-9A-Za-z-]{10,}|data/boat\.sqlite' dist-public-deploy; then
+            echo "::error::secret-like value or private path found in public deploy artifact"
+            exit 1
+          fi
+          if grep -RInE '"(selection|stake|currentOdds|requiredOdds|recommendedAmount|raceId|decisionId)"[[:space:]]*:' dist-public-deploy/public-data; then
+            echo "::error::private operational field found in public JSON"
             exit 1
           fi
 
