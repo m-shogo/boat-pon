@@ -10,25 +10,23 @@ export const N2_FEATURE_PIT_CONTRACT_VERSION = "n2-feature-pit-contract-v2";
 // ===== eligibility（settlement state → dataset 採否） =====
 export type EligibilityCode =
   | "eligible"
-  | "excluded_unsettled"        // pending
-  | "excluded_cancelled"        // cancelled
-  | "excluded_no_sale"          // no_sale（当該券種発売なし）
-  | "excluded_refunded"         // 全返還（hit/miss label 不成立）
-  | "excluded_conflict"         // source_conflict（自動採用しない）
-  | "excluded_unresolved"       // unresolved/quarantined
-  | "excluded_source_duplicate" // canonical で無効化された重複 copy
-  | "excluded_unknown";         // 未知 → fail closed
+  | "excluded_unsettled"
+  | "excluded_cancelled"
+  | "excluded_no_sale"
+  | "excluded_refunded"
+  | "excluded_conflict"
+  | "excluded_unresolved"
+  | "excluded_source_duplicate"
+  | "excluded_unknown";
 
 export type CandidateEligibilityInput = {
   settlementStatus: SettlementStatus;
   resolutionStatus: ResolutionStatus;
-  isSourceDuplicate: boolean; // settlement_source_duplicate_resolutions_v2 に duplicate として存在するか
+  isSourceDuplicate: boolean;
 };
 
-// fail-closed: 既知の eligible 条件以外はすべて除外し、理由コードを必ず付ける。
 export function classifyEligibility(input: CandidateEligibilityInput): { eligible: boolean; reason: EligibilityCode } {
   if (input.isSourceDuplicate) return { eligible: false, reason: "excluded_source_duplicate" };
-  // resolution が resolved 以外は採用しない（conflict/unresolved/quarantined を fail-closed）。
   if (input.resolutionStatus === "source_conflict") return { eligible: false, reason: "excluded_conflict" };
   if (input.resolutionStatus === "unresolved" || input.resolutionStatus === "quarantined") {
     return { eligible: false, reason: "excluded_unresolved" };
@@ -36,9 +34,7 @@ export function classifyEligibility(input: CandidateEligibilityInput): { eligibl
   if (input.resolutionStatus !== "resolved") return { eligible: false, reason: "excluded_unknown" };
   switch (input.settlementStatus) {
     case "settled":
-      return { eligible: true, reason: "eligible" };
     case "partially_refunded":
-      // payout line が存在するため hit/miss label は成立する（refund は financial target 側で扱う）。
       return { eligible: true, reason: "eligible" };
     case "refunded":
       return { eligible: false, reason: "excluded_refunded" };
@@ -56,13 +52,11 @@ export function classifyEligibility(input: CandidateEligibilityInput): { eligibl
 // ===== target derivation（canonical active settlement → label） =====
 export type BetSelectionLabelInput = {
   eligibility: { eligible: boolean; reason: EligibilityCode };
-  betSelection: string;        // 評価対象の買い目 canonical（例 "1-2-3"）
-  winningSelections: string[]; // 当該 candidate の payout line canonical 群（同着/複勝/wide で複数）
-  payoutYenBySelection: Record<string, number>; // canonical → payout_yen（100円あたり）
-  // 一部返還はcandidate全体を除外せず、返還対象selectionだけをlossから分離する。
+  betSelection: string;
+  winningSelections: string[];
+  payoutYenBySelection: Record<string, number>;
   refundedSelections?: string[];
   refundYenBySelection?: Record<string, number | null>;
-  // 特払いは的中selectionを持たない券種別financial outcome。通常hitへ推測変換しない。
   specialPayoutYenPer100?: number | null;
 };
 
@@ -72,12 +66,10 @@ export type BetLabel = {
   eligible: boolean;
   reason: EligibilityCode;
   outcome: BetLabelOutcome;
-  hit: 0 | 1 | null;           // refund/special_payout/void は null（classification loss にしない）
-  payoutYenPer100: number | null; // financial target。refund/special_payoutは実額、voidはnull
+  hit: 0 | 1 | null;
+  payoutYenPer100: number | null;
 };
 
-// hit/miss は canonical active settlement の payout line からのみ導出。
-// refund を loss、unresolved を loss として扱わない（fail-closed で null）。
 export function deriveBetLabel(input: BetSelectionLabelInput): BetLabel {
   if (!input.eligibility.eligible) {
     return {
@@ -140,8 +132,6 @@ const N2_SELECTION_ARITY: Readonly<Record<SettlementBetType, 1 | 2 | 3>> = {
 
 const N2_UNORDERED_BET_TYPES = new Set<SettlementBetType>(["quinella", "wide", "trio"]);
 
-// N1 canonical selectionと同じく艇番1〜6、ordered券種は順列、unordered券種は昇順組合せ。
-// 返却順も固定し、dataset digest/rebuildがruntimeのSet順等に依存しないようにする。
 export function enumerateBetSelections(betType: SettlementBetType): string[] {
   const arity = N2_SELECTION_ARITY[betType];
   const unordered = N2_UNORDERED_BET_TYPES.has(betType);
@@ -176,7 +166,6 @@ export type SelectionLevelLabel = BetLabel & {
   betSelection: string;
 };
 
-// candidate-level summaryではなく、全selectionを実際にderiveBetLabelへ通す唯一の入口。
 export function deriveSelectionLevelLabels(input: SelectionLevelLabelInput): SelectionLevelLabel[] {
   return enumerateBetSelections(input.betType).map((betSelection) => ({
     betType: input.betType,
@@ -185,14 +174,36 @@ export function deriveSelectionLevelLabels(input: SelectionLevelLabelInput): Sel
   }));
 }
 
+function hasValidCalendarDate(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T/.exec(value);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return parsed.getUTCFullYear() === year
+    && parsed.getUTCMonth() === month - 1
+    && parsed.getUTCDate() === day;
+}
+
+function isExplicitTimestamp(value: string | null): value is string {
+  if (value === null || !hasValidCalendarDate(value)) return false;
+  const clock = /T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?/.exec(value);
+  if (clock === null) return false;
+  if (Number(clock[1]) > 23 || Number(clock[2]) > 59 || Number(clock[3]) > 59) return false;
+  if (!/(?:Z|[+-]\d{2}:\d{2})$/i.test(value)) return false;
+  const offset = /([+-])(\d{2}):(\d{2})$/.exec(value);
+  if (offset !== null && (Number(offset[2]) > 23 || Number(offset[3]) > 59)) return false;
+  return Number.isFinite(Date.parse(value));
+}
+
 // ===== feature PIT contract（available_at <= decision cutoff、fail-closed） =====
-// programFeatureSafety.ts の live-only/historical-safe 分類を N2 の PIT 判定へ統合する。
 export type FeaturePITClass = "historical_safe" | "live_only" | "odds_timed" | "unknown";
 
 export type FeatureAvailability = {
   featureKey: string;
   pitClass: FeaturePITClass;
-  availableAt: string | null; // ISO。null = 有効時点不明
+  availableAt: string | null;
 };
 
 export type PITMode = "historical" | "live";
@@ -207,8 +218,6 @@ export type FeaturePITResult = {
     | "excluded_live_only_in_historical";
 };
 
-// decisionCutoff（通常 race lock time）以前に available だった feature のみ使用可。
-// historical mode では live-only を常に除外。available_at 不明は fail-closed（除外）。
 export function validateFeaturePIT(
   feature: FeatureAvailability,
   decisionCutoff: string,
@@ -217,15 +226,11 @@ export function validateFeaturePIT(
   if (mode === "historical" && feature.pitClass === "live_only") {
     return { featureKey: feature.featureKey, usable: false, reason: "excluded_live_only_in_historical" };
   }
-  if (feature.pitClass === "unknown" || feature.availableAt === null) {
+  if (feature.pitClass === "unknown" || !isExplicitTimestamp(feature.availableAt) || !isExplicitTimestamp(decisionCutoff)) {
     return { featureKey: feature.featureKey, usable: false, reason: "excluded_pit_unknown_availability" };
   }
   const avail = Date.parse(feature.availableAt);
   const cutoff = Date.parse(decisionCutoff);
-  if (!Number.isFinite(avail) || !Number.isFinite(cutoff)) {
-    return { featureKey: feature.featureKey, usable: false, reason: "excluded_pit_unknown_availability" };
-  }
-  // 同一 millisecond は inclusive（available_at == cutoff は可）。
   if (avail > cutoff) {
     return { featureKey: feature.featureKey, usable: false, reason: "excluded_pit_after_cutoff" };
   }
@@ -239,9 +244,9 @@ export type OddsKind = "live_checkpoint" | "closing" | "post_race_imputed" | "un
 export type OddsUsageInput = {
   kind: OddsKind;
   role: OddsRole;
-  capturedAt: string | null;       // 実際に値を取得した時刻
-  availableAt: string | null;      // source上で値が利用可能になった時刻
-  decisionCutoff: string | null;   // feature/decision/live checkpoint評価のPIT境界
+  capturedAt: string | null;
+  availableAt: string | null;
+  decisionCutoff: string | null;
 };
 
 export type OddsUsageReason =
@@ -255,23 +260,21 @@ export type OddsUsageReason =
 
 export type OddsUsageResult = { usable: boolean; reason: OddsUsageReason };
 
-// kindだけを検査すると未来のlive checkpointを許可できてしまうため、kind/role/三時刻を
-// 必ず同じ呼出しで検証する。closingはpost-cutoffでも価格評価専用としてのみ許可する。
 export function validateOddsUsage(input: OddsUsageInput): OddsUsageResult {
   const kindAllowed = input.kind === "live_checkpoint"
     || (input.role === "evaluation" && input.kind === "closing");
   if (!kindAllowed) return { usable: false, reason: "excluded_odds_kind_for_role" };
 
-  const captured = input.capturedAt === null ? Number.NaN : Date.parse(input.capturedAt);
-  const available = input.availableAt === null ? Number.NaN : Date.parse(input.availableAt);
-  if (!Number.isFinite(captured) || !Number.isFinite(available)) {
+  if (!isExplicitTimestamp(input.capturedAt) || !isExplicitTimestamp(input.availableAt)) {
     return { usable: false, reason: "excluded_odds_unknown_timestamp" };
   }
+  const captured = Date.parse(input.capturedAt);
+  const available = Date.parse(input.availableAt);
   if (input.kind === "live_checkpoint") {
-    const cutoff = input.decisionCutoff === null ? Number.NaN : Date.parse(input.decisionCutoff);
-    if (!Number.isFinite(cutoff)) {
+    if (!isExplicitTimestamp(input.decisionCutoff)) {
       return { usable: false, reason: "excluded_odds_unknown_timestamp" };
     }
+    const cutoff = Date.parse(input.decisionCutoff);
     if (captured > cutoff) {
       return { usable: false, reason: "excluded_odds_capture_after_cutoff" };
     }
@@ -279,7 +282,6 @@ export function validateOddsUsage(input: OddsUsageInput): OddsUsageResult {
       return { usable: false, reason: "excluded_odds_available_after_cutoff" };
     }
   }
-  // source availabilityがcaptureより未来なら、観測provenanceが自己矛盾している。
   if (available > captured) {
     return { usable: false, reason: "excluded_odds_available_after_capture" };
   }
