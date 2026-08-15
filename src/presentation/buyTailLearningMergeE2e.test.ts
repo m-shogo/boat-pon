@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
 import { promisify } from "node:util";
 import test from "node:test";
 import { buildBuyLearningSummary, validateBuyLearningSummary } from "./buyLearningSummary";
@@ -15,40 +14,28 @@ test("tail learning merge is a no-op at 58 support and promotes only after two c
   const privateDir = `data/private/tail-learning-merge-${suffix}`;
   await mkdir("data/tmp", { recursive: true });
 
-  const base = buildBuyLearningSummary({
-    generatedAt: "2026-08-15T12:00:00.000Z",
-    totalDecisions: 58,
-    settled: 58,
-    hits: 2,
-    payoutOddsSum: 68.24,
-    maxPayoutOdds: 40,
-    avgEstimatedHitRate: 0.03,
-    recentSettled: 30,
-    recentHits: 1,
-    recentPayoutOddsSum: 40.3,
-    smallSampleMisses: 0,
-    highConfidenceMisses: 0,
-    highEvMisses: 10,
-  });
-
+  const base58 = summary(58);
   try {
-    await writeFile(summaryPath, `${JSON.stringify(base, null, 2)}\n`, "utf8");
+    await writeFile(summaryPath, `${JSON.stringify(base58, null, 2)}\n`, "utf8");
     await writeFile(tailPath, `${JSON.stringify(signal("INSUFFICIENT_SUPPORT", 28), null, 2)}\n`, "utf8");
     const first = await run(summaryPath, tailPath, privateDir);
     const firstStatus = JSON.parse(first.stdout.trim()) as { tailLearningAdded: boolean; privateLearningRetained: boolean; productionChangeAllowed: boolean };
     assert.equal(firstStatus.tailLearningAdded, false);
     assert.equal(firstStatus.privateLearningRetained, true);
     assert.equal(firstStatus.productionChangeAllowed, false);
-    const firstSummary = JSON.parse(await readFile(summaryPath, "utf8")) as typeof base;
-    assert.deepEqual(firstSummary.learnings.map((item) => item.id), base.learnings.map((item) => item.id));
+    const firstSummary = JSON.parse(await readFile(summaryPath, "utf8")) as typeof base58;
+    assert.deepEqual(firstSummary.learnings.map((item) => item.id), base58.learnings.map((item) => item.id));
     assert.equal((await readdir(privateDir)).length, 1);
 
+    // A real workflow would rebuild the summary after two new official settlements before merging the 60-BUY tail signal.
+    const base60 = summary(60);
+    await writeFile(summaryPath, `${JSON.stringify(base60, null, 2)}\n`, "utf8");
     await writeFile(tailPath, `${JSON.stringify(signal("PERSISTENT_TAIL_DEPENDENCE", 30), null, 2)}\n`, "utf8");
     const second = await run(summaryPath, tailPath, privateDir);
     const secondStatus = JSON.parse(second.stdout.trim()) as { tailLearningAdded: boolean; privateLearningRetained: boolean };
     assert.equal(secondStatus.tailLearningAdded, true);
     assert.equal(secondStatus.privateLearningRetained, true);
-    const secondSummary = JSON.parse(await readFile(summaryPath, "utf8")) as typeof base;
+    const secondSummary = JSON.parse(await readFile(summaryPath, "utf8")) as typeof base60;
     assert.deepEqual(validateBuyLearningSummary(secondSummary), []);
     assert.ok(secondSummary.learnings.some((item) => item.id === "TAIL_DEPENDENCE_PERSISTS"));
     assert.ok(secondSummary.researchCandidates.some((item) => item.id === "RESEARCH-TAIL-DEPENDENCE" && item.productionChangeAllowed === false));
@@ -61,6 +48,24 @@ test("tail learning merge is a no-op at 58 support and promotes only after two c
     await rm(privateDir, { recursive: true, force: true });
   }
 });
+
+function summary(settled: number) {
+  return buildBuyLearningSummary({
+    generatedAt: "2026-08-15T12:00:00.000Z",
+    totalDecisions: settled,
+    settled,
+    hits: 2,
+    payoutOddsSum: 68.24,
+    maxPayoutOdds: 40,
+    avgEstimatedHitRate: 0.03,
+    recentSettled: 30,
+    recentHits: 1,
+    recentPayoutOddsSum: 40.3,
+    smallSampleMisses: 0,
+    highConfidenceMisses: 0,
+    highEvMisses: 10,
+  });
+}
 
 function run(summaryPath: string, tailPath: string, privateDir: string) {
   return execFileAsync("npx", [
