@@ -46,6 +46,20 @@ test("unknown processed-intent fields and metadata drift fail closed", () => {
   } as any, "INTENT-20260806-new1"), true);
 });
 
+test("normalized or impossible processed-intent timestamps fail closed", () => {
+  for (const recordedAt of [
+    "2026-08-06T24:00:00Z",
+    "2026-08-06T23:60:00Z",
+    "2026-08-06T23:59:60Z",
+    "2026-02-30T07:10:30Z",
+  ]) {
+    assert.equal(isIntentProcessed({
+      ...intentLedger,
+      entries: [{ ...intentLedger.entries[0], recordedAt }],
+    } as any, "INTENT-20260806-new1"), true, recordedAt);
+  }
+});
+
 test("unknown processed-request fields and metadata drift fail closed", () => {
   assert.equal(isRequestReplay({ ...requestLedger, hiddenAuthority: true } as any, "REQ-20260806-new1"), true);
   assert.equal(isRequestReplay({ ...requestLedger, ledgerSchemaVersion: "processed-requests-v2" } as any, "REQ-20260806-new1"), true);
@@ -54,6 +68,24 @@ test("unknown processed-request fields and metadata drift fail closed", () => {
     ...requestLedger,
     idempotencyKeys: { [key]: { ...requestLedger.idempotencyKeys[key], hiddenAuthority: true } },
   } as any, key), /malformed processed request ledger/);
+});
+
+test("normalized or impossible processed-request timestamps fail closed", () => {
+  for (const recordedAt of [
+    "2026-08-06T24:00:00Z",
+    "2026-08-06T23:60:00Z",
+    "2026-08-06T23:59:60Z",
+    "2026-02-30T07:10:30Z",
+  ]) {
+    const malformed = {
+      ...requestLedger,
+      idempotencyKeys: {
+        [key]: { ...requestLedger.idempotencyKeys[key], recordedAt },
+      },
+    };
+    assert.equal(isRequestReplay(malformed as any, "REQ-20260806-new1"), true, recordedAt);
+    assert.throws(() => findIdempotentSuccess(malformed as any, key), /malformed processed request ledger/, recordedAt);
+  }
 });
 
 test("duplicate request provenance across idempotency keys fails closed", () => {
