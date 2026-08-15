@@ -22,10 +22,8 @@ function writeArtifact(root: string, generatedAt: string): void {
       automaticPromotionAuthorized: false,
     },
   };
-  const payload = {
+  const summary = {
     status: "PASS",
-    generatedAt,
-    outputDigest: "a".repeat(64),
     confirmation: {
       ...confirmationCore,
       outputDigest: canonicalHash(confirmationCore),
@@ -34,6 +32,11 @@ function writeArtifact(root: string, generatedAt: string): void {
       automaticPromotionAuthorized: false,
       productionApplyAuthorized: false,
     },
+  };
+  const payload = {
+    ...summary,
+    generatedAt,
+    outputDigest: canonicalHash(summary),
   };
   writeFileSync(join(reports, "n2-edge-historical-test.json"), `${JSON.stringify(payload, null, 2)}\n`, "utf8");
 }
