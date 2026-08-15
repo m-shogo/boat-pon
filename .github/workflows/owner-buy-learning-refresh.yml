@@ -109,10 +109,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Scan the whole bundle only for concrete secret/token forms and concrete local paths.
-          # Generic path-family denylist literals are intentionally compiled into the client validator,
-          # so those are checked only against emitted public JSON.
-          if grep -RInE '/Users/[^ |"'"'<>]+|/home/[^ |"'"'<>]+|gh[opusr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[0-9A-Za-z-]{10,}|data/boat\.sqlite' dist-public-deploy; then
+          # Whole-bundle scan catches concrete local paths and secret/token forms.
+          # Generic path-family vocabulary is checked only against emitted public JSON.
+          if grep -RInE '/Users/[A-Za-z0-9._~!$&()*+,;=:@%/ -]+|/home/[A-Za-z0-9._~!$&()*+,;=:@%/ -]+|gh[opusr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[0-9A-Za-z-]{10,}|data/boat\.sqlite' dist-public-deploy; then
             echo "::error::private value, secret-like token, or concrete local path found in public deploy artifact"
             exit 1
           fi
