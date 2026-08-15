@@ -2,7 +2,7 @@ name: owner BUY learning refresh
 
 on:
   workflow_run:
-    workflows: ["boat-pon local research (one-shot)"]
+    workflows: ["CI", "boat-pon local research (one-shot)"]
     types: [completed]
   workflow_dispatch:
 
