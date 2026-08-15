@@ -20,6 +20,7 @@ import type { Executor, ExecutorResult } from "./taskExecutors";
 export const N2_CONFOUNDER_AUDIT_EXECUTOR_VERSION = "n2-confounder-audit-executor-v2" as const;
 const REPORT_RELATIVE_PATH = "reports/n2/n2-confounder-audit.json";
 const HISTORICAL_REPORT_RELATIVE_PATH = "reports/n2/n2-edge-historical-test.json";
+const DISCOVERY_REPORT_RELATIVE_PATH = "reports/n2/n2-edge-hypothesis-scan.json";
 const REGISTRY_ROOT_RELATIVE_PATH = "research/registries";
 const REJECTION_TRIAL_FAMILY = "N2-EDGE-V1";
 const REJECTION_SUBJECT_PREFIX: Record<Rejection["subjectType"], string> = {
@@ -33,6 +34,7 @@ export type N2HistoricalTestArtifact = {
   status: "PASS";
   generatedAt: string;
   outputDigest: string;
+  discoveryArtifactDigest?: string;
   confirmation: N2EdgeHistoricalConfirmationReport;
   distributionEvidence?: N2EdgeHoldoutDistributionEvidenceReport;
   authority?: {
@@ -88,6 +90,18 @@ export function readN2HistoricalTestArtifact(repoRoot: string): {
   if (value.status !== "PASS") blockers.push("HISTORICAL_TEST_REPORT_NOT_PASS");
   if (!isDigest(value.outputDigest)) blockers.push("HISTORICAL_TEST_OUTPUT_DIGEST_INVALID");
   if (!isValidHistoricalGeneratedAt(value.generatedAt)) blockers.push("HISTORICAL_TEST_GENERATED_AT_INVALID");
+
+  const discoveryPath = join(repoRoot, DISCOVERY_REPORT_RELATIVE_PATH);
+  if (existsSync(discoveryPath)) {
+    let discovery: unknown;
+    try { discovery = JSON.parse(readFileSync(discoveryPath, "utf8")); }
+    catch { blockers.push("DISCOVERY_REPORT_INVALID_JSON"); }
+    if (discovery !== undefined) {
+      const currentDiscoveryDigest = canonicalHash(discovery);
+      if (!isDigest(value.discoveryArtifactDigest)) blockers.push("HISTORICAL_DISCOVERY_DIGEST_INVALID");
+      else if (value.discoveryArtifactDigest !== currentDiscoveryDigest) blockers.push("HISTORICAL_DISCOVERY_DIGEST_MISMATCH");
+    }
+  }
 
   const confirmation = value.confirmation as N2EdgeHistoricalConfirmationReport | undefined;
   if (!confirmation || confirmation.status !== "PASS") blockers.push("HISTORICAL_CONFIRMATION_NOT_PASS");
