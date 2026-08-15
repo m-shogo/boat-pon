@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -53,7 +53,11 @@ test("BUY learning report derives sanitized outcomes and retains semantic eviden
     });
     const first = await run();
     const firstStatus = JSON.parse(first.stdout.trim()) as { settled: number; hits: number; misses: number; privateLearningRetained: boolean; productionChangeAllowed: boolean };
-    assert.deepEqual(firstStatus, { settled: 3, hits: 1, misses: 2, privateLearningRetained: true, productionChangeAllowed: false });
+    assert.equal(firstStatus.settled, 3);
+    assert.equal(firstStatus.hits, 1);
+    assert.equal(firstStatus.misses, 2);
+    assert.equal(firstStatus.privateLearningRetained, true);
+    assert.equal(firstStatus.productionChangeAllowed, false);
 
     const summary = JSON.parse(await readFile(output, "utf8")) as Record<string, unknown>;
     assert.deepEqual(validateBuyLearningSummary(summary), []);
@@ -61,12 +65,18 @@ test("BUY learning report derives sanitized outcomes and retains semantic eviden
     assert.equal(JSON.stringify(summary).includes("currentOdds"), false);
     assert.equal((summary.performance as { settled: number }).settled, 3);
 
+    const files = await readdir(privateDir);
+    assert.equal(files.length, 1);
+    const privateFile = join(privateDir, files[0]!);
+    assert.equal((await stat(privateDir)).mode & 0o777, 0o700);
+    assert.equal((await stat(privateFile)).mode & 0o777, 0o600);
+    const retained = await readFile(privateFile, "utf8");
+    assert.doesNotMatch(retained, /\/Users\/|\/home\/|api[_-]?token/i);
+
     const second = await run();
     const secondStatus = JSON.parse(second.stdout.trim()) as { privateLearningRetained: boolean };
     assert.equal(secondStatus.privateLearningRetained, false);
-
-    const privateStats = await stat(privateDir);
-    assert.equal(privateStats.isDirectory(), true);
+    assert.equal((await readdir(privateDir)).length, 1);
   } finally {
     await rm(output, { force: true });
     await rm(privateDir, { recursive: true, force: true });
