@@ -55,6 +55,16 @@ function resolveInside(rootDir: string, relativePath: string): string {
   return target;
 }
 
+function resolveInsideExpectedDirectory(
+  rootDir: string,
+  relativePath: string,
+  expectedRelativeDirectory: string,
+): string | null {
+  const target = resolveInside(rootDir, relativePath);
+  const expectedDirectory = resolve(rootDir, expectedRelativeDirectory);
+  return target.startsWith(`${expectedDirectory}${sep}`) ? target : null;
+}
+
 function readJsonBounded<T>(path: string, maxBytes: number, trustedRoot: string): T {
   try {
     const { text, bytes } = readGovernanceFileUtf8Bounded(path, maxBytes, trustedRoot);
@@ -152,10 +162,25 @@ export function readN2T5DecisionCutoffMetadata(input: {
       continue;
     }
 
+    let envelopePath: string | null = null;
+    try {
+      envelopePath = resolveInsideExpectedDirectory(
+        dataRoot,
+        marker.envelopeRelativePath,
+        location.directory,
+      );
+    } catch {
+      envelopePath = null;
+    }
+    if (!envelopePath) {
+      blockers.push(`${raceKey}:ENVELOPE_PATH_INVALID`);
+      continue;
+    }
+
     let envelope: CaptureEnvelope;
     try {
       envelope = readJsonBounded<CaptureEnvelope>(
-        resolveInside(dataRoot, marker.envelopeRelativePath),
+        envelopePath,
         MAX_ENVELOPE_BYTES,
         dataRoot,
       );
