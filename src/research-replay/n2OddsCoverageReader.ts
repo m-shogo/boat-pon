@@ -7,6 +7,12 @@ import {
 import { verifyN2FeatureLineage, type N2FeatureLineageEvidenceRow } from "./n2FeatureLineage";
 import { adaptLiveOddsRows, type OddsTimeseriesSourceRow } from "./n2FeatureSourceAdapter";
 import { enumerateBetSelections } from "./n2DatasetContract";
+import {
+  PAYLOAD_SCHEMA_VERSION,
+  semanticPayloadHash,
+  validateTypedPayload,
+  type TrifectaMarketPayload,
+} from "./domain";
 
 export const N2_ODDS_COVERAGE_READER_VERSION = "n2-odds-coverage-reader-v1";
 export type N2LiveCheckpoint = "T-30" | "T-20" | "T-10" | "T-5" | "ad-hoc";
@@ -21,13 +27,6 @@ type MarketEvidenceRow = N2FeatureLineageEvidenceRow & {
   observationPayloadHash: string;
   payloadJson: string;
   payloadHash: string;
-};
-
-type TrifectaMarketPayload = {
-  selections: Array<{ selection: string; odds: number }>;
-  observedAt: string;
-  checkpointLabelAtCapture: N2LiveCheckpoint;
-  marketKind: "live_checkpoint";
 };
 
 const MARKET_EVIDENCE_SQL = `
@@ -101,34 +100,22 @@ export function isExplicitMarketObservedAt(value: string): boolean {
 
 function parsePayload(row: MarketEvidenceRow): TrifectaMarketPayload | null {
   if (row.payloadType !== "trifecta_market" || row.observationPayloadType !== "trifecta_market"
-    || row.payloadSchemaVersion !== "rr-payload-v1" || row.observationPayloadSchemaVersion !== "rr-payload-v1"
-    || !row.payloadHash || row.payloadHash !== row.observationPayloadHash) return null;
-  let value: unknown;
+    || row.payloadSchemaVersion !== PAYLOAD_SCHEMA_VERSION
+    || row.observationPayloadSchemaVersion !== PAYLOAD_SCHEMA_VERSION
+    || !row.payloadHash || !row.observationPayloadHash) return null;
+  let payload: TrifectaMarketPayload;
   try {
-    value = JSON.parse(row.payloadJson);
+    payload = validateTypedPayload(
+      "trifecta_market",
+      JSON.parse(row.payloadJson) as unknown,
+    ) as TrifectaMarketPayload;
   } catch {
     return null;
   }
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
-  const payload = value as Record<string, unknown>;
-  if (!Array.isArray(payload.selections) || typeof payload.observedAt !== "string"
-    || !isExplicitMarketObservedAt(payload.observedAt)
-    || typeof payload.checkpointLabelAtCapture !== "string" || payload.marketKind !== "live_checkpoint") return null;
-  if (!["T-30", "T-20", "T-10", "T-5", "ad-hoc"].includes(payload.checkpointLabelAtCapture)) return null;
-  const selections: Array<{ selection: string; odds: number }> = [];
-  for (const item of payload.selections) {
-    if (typeof item !== "object" || item === null || Array.isArray(item)) return null;
-    const selection = (item as Record<string, unknown>).selection;
-    const odds = (item as Record<string, unknown>).odds;
-    if (typeof selection !== "string" || typeof odds !== "number" || !Number.isFinite(odds) || odds <= 0) return null;
-    selections.push({ selection, odds });
-  }
-  return {
-    selections,
-    observedAt: payload.observedAt,
-    checkpointLabelAtCapture: payload.checkpointLabelAtCapture as N2LiveCheckpoint,
-    marketKind: "live_checkpoint",
-  };
+  if (!isExplicitMarketObservedAt(payload.observedAt)) return null;
+  const semanticHash = semanticPayloadHash("trifecta_market", payload);
+  if (row.payloadHash !== semanticHash || row.observationPayloadHash !== semanticHash) return null;
+  return payload;
 }
 
 function eventsForRace(row: OddsCoverageRaceRow, evidenceRows: MarketEvidenceRow[], checkpoint: N2LiveCheckpoint): N2FeatureCoverageEvent[] {
