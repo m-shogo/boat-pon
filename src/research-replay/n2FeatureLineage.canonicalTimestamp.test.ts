@@ -47,10 +47,25 @@ test("lineage rejects clock values normalized by Date.parse", () => {
   }
 });
 
+test("lineage rejects timestamps without an explicit timezone", () => {
+  for (const sourceObservedAt of [
+    "2026-05-20",
+    "2026-05-20T03:59:00",
+    "2026-05-20 03:59:00Z",
+  ]) {
+    assert.deepEqual(
+      verifyN2FeatureLineage(EXPECTED, evidence({ sourceObservedAt })),
+      { status: "excluded", reason: "excluded_lineage_unknown_timestamp" },
+      sourceObservedAt,
+    );
+  }
+});
+
 test("lineage rejects normalized exact publication clocks", () => {
   for (const sourcePublishedAt of [
     "2026-05-20T24:00:00.000Z",
     "2026-05-20T23:60:00Z",
+    "2026-05-20T03:58:00",
   ]) {
     assert.deepEqual(
       verifyN2FeatureLineage(EXPECTED, evidence({ sourcePublishedAt })),
