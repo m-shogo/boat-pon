@@ -74,12 +74,18 @@ function isCanonicalUtcTimestamp(value: string): boolean {
   }
 }
 
+function validSelectedRaceDate(value: string): boolean {
+  const parsed = Date.parse(`${value}T00:00:00.000Z`);
+  return Number.isFinite(parsed) && new Date(parsed).toISOString().slice(0, 10) === value;
+}
+
 function selectedCandidateIdentityValid(candidate: N2EdgeDiscoveryCandidate): boolean {
   const raceKey = SELECTED_CANONICAL_RACE_KEY_RE.exec(candidate.canonicalRaceKey);
   const primaryRaceId = SELECTED_PRIMARY_RACE_ID_RE.exec(candidate.primaryRaceId);
   if (raceKey === null || primaryRaceId === null) return false;
 
   const date = raceKey[1];
+  if (!validSelectedRaceDate(date)) return false;
   const venueCode = raceKey[2];
   const raceNo = Number(raceKey[3]);
   const primaryDate = primaryRaceId[1];
