@@ -39,6 +39,8 @@ export type BuyOutcomePatternSupport = {
   globalAdditionalSettledForAnyContrast: number;
   validSegmentCount: number;
   segmentSideEligibleCount: number;
+  closestObservedComplementSettled: number | null;
+  minimumObservedComplementShortfall: number | null;
   supportedContrastCount: number;
   supportedDimensionCount: number;
 };
@@ -63,6 +65,8 @@ export function assessBuyOutcomePatternSupport(
       globalAdditionalSettledForAnyContrast: minimumTotalSettledForAnyContrast,
       validSegmentCount: 0,
       segmentSideEligibleCount: 0,
+      closestObservedComplementSettled: null,
+      minimumObservedComplementShortfall: null,
       supportedContrastCount: 0,
       supportedDimensionCount: 0,
     };
@@ -72,6 +76,11 @@ export function assessBuyOutcomePatternSupport(
     && segment.settled <= baseline.settled
     && segment.payoutOddsSum <= baseline.payoutOddsSum);
   const segmentSideEligible = validSegments.filter((segment) => segment.settled >= minSettled);
+  const complementSettled = segmentSideEligible.map((segment) => baseline.settled - segment.settled);
+  const closestObservedComplementSettled = complementSettled.length ? Math.max(...complementSettled) : null;
+  const minimumObservedComplementShortfall = closestObservedComplementSettled === null
+    ? null
+    : Math.max(0, minComparisonSettled - closestObservedComplementSettled);
   const supported = segmentSideEligible.filter((segment) => (
     baseline.settled - segment.settled >= minComparisonSettled
       && baseline.payoutOddsSum - segment.payoutOddsSum >= 0
@@ -90,6 +99,8 @@ export function assessBuyOutcomePatternSupport(
     globalAdditionalSettledForAnyContrast: Math.max(0, minimumTotalSettledForAnyContrast - baseline.settled),
     validSegmentCount: validSegments.length,
     segmentSideEligibleCount: segmentSideEligible.length,
+    closestObservedComplementSettled,
+    minimumObservedComplementShortfall,
     supportedContrastCount: supported.length,
     supportedDimensionCount: new Set(supported.map((segment) => segment.dimension)).size,
   };
