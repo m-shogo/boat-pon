@@ -70,11 +70,17 @@ function isCanonicalCalendarDate(value: string): boolean {
   return Number.isFinite(parsed) && new Date(parsed).toISOString().slice(0, 10) === value;
 }
 
+function isCanonicalVenueCode(value: string): boolean {
+  if (!/^\d{2}$/.test(value)) return false;
+  const venue = Number(value);
+  return Number.isInteger(venue) && venue >= 1 && venue <= 24;
+}
+
 export function canonicalN2CoverageRaceKey(row: Pick<N2CoverageRaceRow, "raceId" | "date" | "venue" | "raceNo">): string {
   if (!isCanonicalCalendarDate(row.date)) {
     throw new Error(`N2_COVERAGE_INVALID_PROGRAM_DATE:${row.raceId}`);
   }
-  if (!/^\d{2}$/.test(row.venue)) throw new Error(`N2_COVERAGE_INVALID_PROGRAM_VENUE:${row.raceId}`);
+  if (!isCanonicalVenueCode(row.venue)) throw new Error(`N2_COVERAGE_INVALID_PROGRAM_VENUE:${row.raceId}`);
   if (!Number.isInteger(row.raceNo) || row.raceNo < 1 || row.raceNo > 12) {
     throw new Error(`N2_COVERAGE_INVALID_PROGRAM_RACE_NO:${row.raceId}`);
   }
