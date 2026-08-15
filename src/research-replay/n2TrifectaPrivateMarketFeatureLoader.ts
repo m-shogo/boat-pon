@@ -111,6 +111,12 @@ function isCanonicalIsoInstant(value: unknown): value is string {
   }
 }
 
+function isCanonicalCalendarDate(value: string): boolean {
+  if (!DATE_RE.test(value)) return false;
+  const parsed = Date.parse(`${value}T00:00:00.000Z`);
+  return Number.isFinite(parsed) && new Date(parsed).toISOString().slice(0, 10) === value;
+}
+
 function raceIdentity(input: N2TrifectaPrivateMarketFeatureLoaderInput): string {
   return `${input.date.replaceAll("-", "")}-${input.venueCode}-${String(input.raceNo).padStart(2, "0")}`;
 }
@@ -133,7 +139,7 @@ function checkpointDirectory(
 
 function validateInput(input: N2TrifectaPrivateMarketFeatureLoaderInput): string[] {
   const blockers: string[] = [];
-  if (!DATE_RE.test(input.date)) blockers.push("DATE_INVALID");
+  if (!isCanonicalCalendarDate(input.date)) blockers.push("DATE_INVALID");
   if (!VENUE_RE.test(input.venueCode)) blockers.push("VENUE_CODE_INVALID");
   if (!Number.isSafeInteger(input.raceNo) || input.raceNo < 1 || input.raceNo > 12) {
     blockers.push("RACE_NO_INVALID");
