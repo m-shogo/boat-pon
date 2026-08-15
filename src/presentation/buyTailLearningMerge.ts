@@ -41,14 +41,18 @@ export function validateBuyTailPublicSignal(value: unknown): BuyTailPublicSignal
   if (!isCount(value.totalSettled)) throw new Error("invalid BUY tail totalSettled");
   if (value.productionChangeAllowed !== false) throw new Error("BUY tail signal cannot allow production change");
 
-  const support = validateSupport(value.support, Number(value.windowSize));
-  const recent = validateWindow(value.recent, Number(value.windowSize), "recent");
-  const prior = validateWindow(value.prior, Number(value.windowSize), "prior");
+  const windowSize = Number(value.windowSize);
+  const minimumTailGap = Number(value.minimumTailGap);
+  const support = validateSupport(value.support, windowSize);
+  const recent = validateWindow(value.recent, windowSize, "recent");
+  const prior = validateWindow(value.prior, windowSize, "prior");
+  assertWindowMetrics(recent, windowSize, minimumTailGap, "recent");
+  assertWindowMetrics(prior, windowSize, minimumTailGap, "prior");
   if (support.recentSettled !== recent.settled || support.priorSettled !== prior.settled) throw new Error("BUY tail support/window mismatch");
   if (support.recentSettled + support.priorSettled > Number(value.totalSettled)) throw new Error("BUY tail support exceeds total settled");
-  const expectedMissing = Math.max(0, Number(value.windowSize) * 2 - support.recentSettled - support.priorSettled);
+  const expectedMissing = Math.max(0, windowSize * 2 - support.recentSettled - support.priorSettled);
   if (support.missingSettledToCompare !== expectedMissing) throw new Error("BUY tail missing support mismatch");
-  const fullySupported = support.recentSettled === value.windowSize && support.priorSettled === value.windowSize;
+  const fullySupported = support.recentSettled === windowSize && support.priorSettled === windowSize;
   if ((value.status === "INSUFFICIENT_SUPPORT") === fullySupported) throw new Error("BUY tail support/status mismatch");
   if (fullySupported) {
     const expected = recent.tailDependent && prior.tailDependent
@@ -144,6 +148,12 @@ function validateWindow(value: unknown, windowSize: number, name: string): TailW
   return value as unknown as TailWindow;
 }
 
+function assertWindowMetrics(window: TailWindow, windowSize: number, minimumTailGap: number, name: string) {
+  const expectedGap = window.roi === null || window.roiExMax === null ? null : round4(window.roi - window.roiExMax);
+  if (expectedGap !== window.tailGap) throw new Error(`BUY tail ${name} gap mismatch`);
+  const expectedDependent = window.settled === windowSize && window.tailGap !== null && window.tailGap >= minimumTailGap;
+  if (window.tailDependent !== expectedDependent) throw new Error(`BUY tail ${name} dependence mismatch`);
+}
 function replaceCandidate(items: BuyLearningSummary["researchCandidates"], replacement: BuyLearningSummary["researchCandidates"][number]) {
   return [...items.filter((item) => item.id !== replacement.id), replacement];
 }
@@ -153,3 +163,4 @@ function isRecord(value: unknown): value is Record<string, unknown> { return typ
 function isCount(value: unknown) { return Number.isInteger(value) && Number(value) >= 0; }
 function isInt(value: unknown, min: number, max: number) { return Number.isInteger(value) && Number(value) >= min && Number(value) <= max; }
 function isFiniteBetween(value: unknown, min: number, max: number) { return typeof value === "number" && Number.isFinite(value) && value >= min && value <= max; }
+function round4(value: number) { return Math.round(value * 10000) / 10000; }
