@@ -252,7 +252,7 @@ export function createN2ConfounderAuditExecutor(): Executor {
             aggregateDistributionEvidenceAvailable: source.distributionEvidence !== undefined,
             concentrationPolicyVersion: bridge.policy?.policyVersion ?? null,
             confirmedWithoutBlockingConcentrationCount: bridge.confirmedWithoutBlockingConcentrationCount,
-            confirmedBlockedCount: bridge.confirmedBlockedByConcentrationCount,
+            confirmedBlockedByConcentrationCount: bridge.confirmedBlockedByConcentrationCount,
             confirmedBlockedByInsufficientDistributionCount: bridge.confirmedBlockedByInsufficientDistributionCount,
             confirmedBlockedByMissingDistributionCount: bridge.confirmedBlockedByMissingDistributionCount,
             rejectedHypothesisRescueAllowed: false,
