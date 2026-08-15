@@ -53,6 +53,7 @@ jobs:
       - name: Mine repeatable BUY success and failure patterns
         run: >-
           npx tsx scripts/analyze-buy-outcome-patterns.ts
+          --run-kind paper-live
           --min-settled 30
           --min-roi-delta 0.15
           --output-public data/tmp/owner-buy-patterns-public.json
@@ -61,6 +62,7 @@ jobs:
       - name: Build and retain read-only BUY outcome learning summary
         run: >-
           npx tsx scripts/report-buy-learning-summary.ts
+          --run-kind paper-live
           --recent 30
           --pattern-signals data/tmp/owner-buy-patterns-public.json
           --output data/tmp/owner-buy-learning-latest.json
