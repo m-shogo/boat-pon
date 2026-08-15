@@ -45,7 +45,7 @@ function sha256(content: Buffer): string {
 function writeAcceptedCheckpoint(
   root: string,
   checkpointLabel: N2TrifectaMarketCheckpointLabel,
-  options: { multiplier?: number; corruptMarkerSha?: boolean; fetchedAt?: string } = {},
+  options: { multiplier?: number; corruptMarkerSha?: boolean; fetchedAt?: string; acceptedAt?: string } = {},
 ): void {
   const date = "2026-08-07";
   const venueCode = "05";
@@ -109,7 +109,7 @@ function writeAcceptedCheckpoint(
     rawSha256: options.corruptMarkerSha ? "0".repeat(64) : digest,
     rawRelativePath,
     envelopeRelativePath,
-    acceptedAt: fetchedAt,
+    acceptedAt: options.acceptedAt ?? fetchedAt,
     databaseWriteAuthorized: false,
     productionApplyExecuted: false,
   }, null, 2)}\n`);
@@ -194,6 +194,25 @@ test("loader fails closed on accepted-marker/raw digest mismatch", () => {
     });
     assert.equal(report.status, "BLOCKED");
     assert.ok(report.blockers.some((blocker) => blocker.includes("PRIVATE_RAW_SHA256_MISMATCH")));
+    assert.equal(report.sequence.snapshots.length, 0);
+    assert.equal(report.networkRequestCount, 0);
+    assert.equal(report.databaseWriteCount, 0);
+  });
+});
+
+test("loader rejects invalid accepted-marker time before loading a snapshot", () => {
+  withTempRoot((root) => {
+    writeAcceptedCheckpoint(root, "T-30", { acceptedAt: "2026-02-30T01:00:30.000Z" });
+    const report = loadN2TrifectaPrivateMarketFeatures({
+      rootDir: root,
+      date: "2026-08-07",
+      venueCode: "05",
+      raceNo: 1,
+    });
+    assert.equal(report.status, "BLOCKED");
+    assert.ok(report.blockers.includes("T-30_ACCEPTED_AT_INVALID"));
+    assert.equal(report.loadedSnapshotCount, 0);
+    assert.equal(report.rawValuesReadPrivately, false);
     assert.equal(report.sequence.snapshots.length, 0);
     assert.equal(report.networkRequestCount, 0);
     assert.equal(report.databaseWriteCount, 0);
