@@ -12,7 +12,11 @@ import {
 import { readN2EdgeHoldoutSource, type N2EdgeHoldoutSourceRead } from "../research-replay/n2EdgeHoldoutSource";
 import { resolveN2EdgeFeatureBucket } from "../research-replay/n2EdgeFeatureBucketResolver";
 import { adaptN2HistoricalProgramFeatures } from "../research-replay/n2EdgeHistoricalProgramFeatureAdapter";
-import { type N2EdgeHypothesis, N2_EDGE_SCAN_MAX_SIGNALS } from "../research-replay/n2EdgeHypothesisScan";
+import {
+  type N2EdgeHypothesis,
+  N2_EDGE_HYPOTHESIS_SCAN_VERSION,
+  N2_EDGE_SCAN_MAX_SIGNALS,
+} from "../research-replay/n2EdgeHypothesisScan";
 import { readN2EdgeSelectedProgramFeatures, type N2EdgeSelectedProgramFeaturesRead } from "../research-replay/n2EdgeSelectedProgramFeatures";
 import { buildN2HistoricalRollingBaseline } from "../research-replay/n2HistoricalRollingBaseline";
 import {
@@ -38,9 +42,16 @@ function lockedHypothesesFromArtifact(repoRoot: string): { hypotheses: N2EdgeHyp
   let parsed: unknown;
   try { parsed = JSON.parse(readFileSync(path, "utf8")); }
   catch { return { hypotheses: [], digest: canonicalHash("invalid-discovery-report"), blockers: ["DISCOVERY_REPORT_INVALID_JSON"] }; }
-  const report = parsed as { status?: unknown; scan?: { status?: unknown; signals?: unknown }; outputDigest?: unknown };
+  const report = parsed as { status?: unknown; scan?: { status?: unknown; scanVersion?: unknown; signals?: unknown }; outputDigest?: unknown };
   if (report.status !== "PASS" || report.scan?.status !== "PASS") {
     return { hypotheses: [], digest: canonicalHash(parsed), blockers: ["DISCOVERY_REPORT_NOT_PASS"] };
+  }
+  if (report.scan.scanVersion !== N2_EDGE_HYPOTHESIS_SCAN_VERSION) {
+    return {
+      hypotheses: [],
+      digest: canonicalHash(parsed),
+      blockers: [`DISCOVERY_SCAN_VERSION_MISMATCH:${String(report.scan.scanVersion ?? "MISSING")}/${N2_EDGE_HYPOTHESIS_SCAN_VERSION}`],
+    };
   }
   if (!Array.isArray(report.scan.signals)) return { hypotheses: [], digest: canonicalHash(parsed), blockers: ["DISCOVERY_SIGNALS_NOT_ARRAY"] };
   if (report.scan.signals.length > N2_EDGE_SCAN_MAX_SIGNALS) {
