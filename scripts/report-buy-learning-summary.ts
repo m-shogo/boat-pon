@@ -21,18 +21,19 @@ try {
   if (args.runKind) { where.push("run_kind = ?"); params.push(args.runKind); }
   if (args.modelVersion) { where.push("model_version = ?"); params.push(args.modelVersion); }
   const predicate = where.join(" AND ");
+  const settledEconomic = "result IS NOT NULL AND payout_yen IS NOT NULL AND returned = 0";
 
   const all = db.prepare(`
     SELECT
       COUNT(*) AS totalDecisions,
-      COALESCE(SUM(CASE WHEN result IS NOT NULL AND returned = 0 THEN 1 ELSE 0 END), 0) AS settled,
-      COALESCE(SUM(CASE WHEN selection = result AND returned = 0 THEN 1 ELSE 0 END), 0) AS hits,
-      COALESCE(SUM(CASE WHEN selection = result AND returned = 0 THEN current_odds ELSE 0 END), 0) AS payoutOddsSum,
-      COALESCE(MAX(CASE WHEN selection = result AND returned = 0 THEN current_odds ELSE 0 END), 0) AS maxPayoutOdds,
-      AVG(CASE WHEN result IS NOT NULL AND returned = 0 THEN estimated_hit_rate ELSE NULL END) AS avgEstimatedHitRate,
-      COALESCE(SUM(CASE WHEN result IS NOT NULL AND returned = 0 AND selection != result AND sample_size IS NOT NULL AND sample_size < 30 THEN 1 ELSE 0 END), 0) AS smallSampleMisses,
-      COALESCE(SUM(CASE WHEN result IS NOT NULL AND returned = 0 AND selection != result AND estimated_hit_rate IS NOT NULL AND estimated_hit_rate >= 0.5 THEN 1 ELSE 0 END), 0) AS highConfidenceMisses,
-      COALESCE(SUM(CASE WHEN result IS NOT NULL AND returned = 0 AND selection != result AND ev IS NOT NULL AND ev >= 1.2 THEN 1 ELSE 0 END), 0) AS highEvMisses
+      COALESCE(SUM(CASE WHEN ${settledEconomic} THEN 1 ELSE 0 END), 0) AS settled,
+      COALESCE(SUM(CASE WHEN ${settledEconomic} AND selection = result THEN 1 ELSE 0 END), 0) AS hits,
+      COALESCE(SUM(CASE WHEN ${settledEconomic} AND selection = result THEN payout_yen / 100.0 ELSE 0 END), 0) AS payoutOddsSum,
+      COALESCE(MAX(CASE WHEN ${settledEconomic} AND selection = result THEN payout_yen / 100.0 ELSE 0 END), 0) AS maxPayoutOdds,
+      AVG(CASE WHEN ${settledEconomic} THEN estimated_hit_rate ELSE NULL END) AS avgEstimatedHitRate,
+      COALESCE(SUM(CASE WHEN ${settledEconomic} AND selection != result AND sample_size IS NOT NULL AND sample_size < 30 THEN 1 ELSE 0 END), 0) AS smallSampleMisses,
+      COALESCE(SUM(CASE WHEN ${settledEconomic} AND selection != result AND estimated_hit_rate IS NOT NULL AND estimated_hit_rate >= 0.5 THEN 1 ELSE 0 END), 0) AS highConfidenceMisses,
+      COALESCE(SUM(CASE WHEN ${settledEconomic} AND selection != result AND ev IS NOT NULL AND ev >= 1.2 THEN 1 ELSE 0 END), 0) AS highEvMisses
     FROM decision_history
     WHERE ${predicate}
   `).get(...params) as AggregateRow;
@@ -40,16 +41,16 @@ try {
   const recentParams = [...params, args.recent];
   const recent = db.prepare(`
     WITH recent_buy AS (
-      SELECT selection, result, returned, current_odds
+      SELECT selection, result, payout_yen
       FROM decision_history
-      WHERE ${predicate} AND result IS NOT NULL AND returned = 0
+      WHERE ${predicate} AND ${settledEconomic}
       ORDER BY date DESC, venue DESC, race_no DESC
       LIMIT ?
     )
     SELECT
       COUNT(*) AS settled,
       COALESCE(SUM(CASE WHEN selection = result THEN 1 ELSE 0 END), 0) AS hits,
-      COALESCE(SUM(CASE WHEN selection = result THEN current_odds ELSE 0 END), 0) AS payoutOddsSum
+      COALESCE(SUM(CASE WHEN selection = result THEN payout_yen / 100.0 ELSE 0 END), 0) AS payoutOddsSum
     FROM recent_buy
   `).get(...recentParams) as RecentRow;
 
