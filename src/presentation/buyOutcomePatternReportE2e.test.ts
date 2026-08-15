@@ -87,6 +87,8 @@ test("BUY outcome pattern report reconciles paper-live to official race_results 
         globalAdditionalSettledForAnyContrast: number;
         validSegmentCount: number;
         segmentSideEligibleCount: number;
+        closestObservedComplementSettled: number | null;
+        minimumObservedComplementShortfall: number | null;
         supportedContrastCount: number;
         supportedDimensionCount: number;
       };
@@ -102,6 +104,8 @@ test("BUY outcome pattern report reconciles paper-live to official race_results 
       globalAdditionalSettledForAnyContrast: 0,
       validSegmentCount: 7,
       segmentSideEligibleCount: 7,
+      closestObservedComplementSettled: 30,
+      minimumObservedComplementShortfall: 0,
       supportedContrastCount: 2,
       supportedDimensionCount: 1,
     });
