@@ -13,9 +13,24 @@ test("canonical timestamp rejects impossible Gregorian dates instead of normaliz
   }
 });
 
+test("canonical timestamp rejects implicit timezone and normalized ISO clocks", () => {
+  for (const value of [
+    "2026-08-05T09:30:00",
+    "2026-08-05T24:00:00Z",
+    "2026-08-05T23:60:00Z",
+    "2026-08-05T23:59:60Z",
+  ]) {
+    assert.throws(() => canonicalUtcTimestamp(value), /invalid timestamp/);
+  }
+});
+
 test("canonical timestamp preserves valid leap-day and timezone normalization", () => {
   assert.equal(
     canonicalUtcTimestamp("2028-02-29T09:30:00+09:00"),
+    "2028-02-29T00:30:00.000Z",
+  );
+  assert.equal(
+    canonicalUtcTimestamp("2028-02-29T00:30:00Z"),
     "2028-02-29T00:30:00.000Z",
   );
 });
