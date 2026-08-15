@@ -4,6 +4,7 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { mineBuyOutcomePatterns, toPublicOutcomePatternSignals, type BuyOutcomeSegment } from "../src/presentation/buyOutcomePatternMiner";
+import { buildBuyOutcomeSettlementSource, type BuyOutcomeSettlementSource } from "../src/presentation/buyOutcomeSettlementSource";
 
 const args = parseArgs(process.argv.slice(2));
 const dbPath = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
@@ -14,22 +15,26 @@ db.exec("PRAGMA query_only = ON");
 db.exec("PRAGMA busy_timeout = 5000");
 
 try {
-  const where = ["decision = 'BUY'", "result IS NOT NULL", "payout_yen IS NOT NULL", "returned = 0"];
-  const params: Array<string | number> = [];
-  if (args.runKind) { where.push("run_kind = ?"); params.push(args.runKind); }
-  const predicate = where.join(" AND ");
+  const source = buildBuyOutcomeSettlementSource({ runKind: args.runKind });
+  assertPaperLiveSettlementConsistency(db, source);
+  const settledEconomic = "outcome_result IS NOT NULL AND outcome_payout_yen IS NOT NULL AND outcome_returned = 0";
+
   const baseline = db.prepare(`
+    ${source.cte}
     SELECT COUNT(*) AS settled,
-      COALESCE(SUM(CASE WHEN selection = result THEN payout_yen / 100.0 ELSE 0 END), 0) AS payoutOddsSum
-    FROM decision_history WHERE ${predicate}
-  `).get(...params) as { settled: number | bigint | null; payoutOddsSum: number | null };
+      COALESCE(SUM(CASE WHEN selection = outcome_result THEN outcome_payout_yen / 100.0 ELSE 0 END), 0) AS payoutOddsSum
+    FROM buy_outcomes
+    WHERE ${settledEconomic}
+  `).get(...source.params) as { settled: number | bigint | null; payoutOddsSum: number | null };
 
   const raw = db.prepare(`
-    WITH settled_buy AS (
+    ${source.cte},
+    settled_buy AS (
       SELECT venue, model_version, estimated_hit_rate, ev, current_odds, sample_size,
-        CASE WHEN selection = result THEN 1 ELSE 0 END AS hit,
-        CASE WHEN selection = result THEN payout_yen / 100.0 ELSE 0 END AS payout
-      FROM decision_history WHERE ${predicate}
+        CASE WHEN selection = outcome_result THEN 1 ELSE 0 END AS hit,
+        CASE WHEN selection = outcome_result THEN outcome_payout_yen / 100.0 ELSE 0 END AS payout
+      FROM buy_outcomes
+      WHERE ${settledEconomic}
     ), segments AS (
       SELECT 'venue' AS dimension, COALESCE(NULLIF(venue,''), 'UNKNOWN') AS segmentKey, hit, payout FROM settled_buy
       UNION ALL
@@ -67,7 +72,7 @@ try {
     SELECT dimension, segmentKey, COUNT(*) AS settled, SUM(hit) AS hits, SUM(payout) AS payoutOddsSum
     FROM segments
     GROUP BY dimension, segmentKey
-  `).all(...params) as Array<Record<string, unknown>>;
+  `).all(...source.params) as Array<Record<string, unknown>>;
 
   const segments: BuyOutcomeSegment[] = raw.map((row) => ({
     dimension: dimension(row.dimension),
@@ -88,7 +93,9 @@ try {
       minimumSettledPerSegment: args.minSettled,
       minimumAbsoluteRoiDelta: args.minRoiDelta,
       runKind: args.runKind,
-      settlementEconomics: "official-payout-yen-per-100",
+      settlementEconomics: source.usesOfficialRaceResults
+        ? "official-race-results-payout-yen-per-100"
+        : "decision-history-payout-yen-per-100",
       productionChangeAllowed: false,
       note: "Exploratory pattern mining only; multiple-comparison risk requires governed validation before promotion.",
     },
@@ -116,6 +123,21 @@ try {
   }));
 } finally {
   db.close();
+}
+
+function assertPaperLiveSettlementConsistency(db: DatabaseSync, source: BuyOutcomeSettlementSource) {
+  if (!source.usesOfficialRaceResults) return;
+  const row = db.prepare(`
+    ${source.cte}
+    SELECT COUNT(*) AS mismatches
+    FROM buy_outcomes
+    WHERE decision_result IS NOT NULL
+      AND outcome_result IS NOT NULL
+      AND decision_result != outcome_result
+  `).get(...source.params) as { mismatches: number | bigint | null };
+  if (count(row.mismatches) > 0) {
+    throw new Error("paper-live settlement result conflicts with official race_results");
+  }
 }
 
 function parseArgs(argv: string[]) {
