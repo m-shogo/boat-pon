@@ -4,7 +4,11 @@ import {
   openN2CoverageDbImmutable,
   type N2CoverageRaceRow,
 } from "./n2FeatureCoverageReader";
-import { verifyN2FeatureLineage, type N2FeatureLineageEvidenceRow } from "./n2FeatureLineage";
+import {
+  verifyN2FeatureLineage,
+  type N2FeatureLineageEvidenceRow,
+  type VerifiedN2SourceLineage,
+} from "./n2FeatureLineage";
 import { adaptLiveOddsRows, type OddsTimeseriesSourceRow } from "./n2FeatureSourceAdapter";
 import { enumerateBetSelections } from "./n2DatasetContract";
 import {
@@ -19,17 +23,26 @@ export type N2LiveCheckpoint = "T-30" | "T-20" | "T-10" | "T-5" | "ad-hoc";
 
 type OddsCoverageRaceRow = Pick<N2CoverageRaceRow, "raceId" | "date" | "venue" | "raceNo">;
 
-type MarketEvidenceRow = N2FeatureLineageEvidenceRow & {
+type MarketEvidenceMetadataRow = N2FeatureLineageEvidenceRow & {
   payloadType: string;
   observationPayloadType: string;
   payloadSchemaVersion: string;
   observationPayloadSchemaVersion: string;
   observationPayloadHash: string;
-  payloadJson: string;
   payloadHash: string;
 };
 
-const MARKET_EVIDENCE_SQL = `
+type MarketEvidenceRow = MarketEvidenceMetadataRow & {
+  payloadJson: string;
+};
+
+type VerifiedMarketEvidence = {
+  evidence: MarketEvidenceMetadataRow;
+  lineage: VerifiedN2SourceLineage;
+  payload: TrifectaMarketPayload | null;
+};
+
+const MARKET_EVIDENCE_METADATA_SQL = `
 SELECT
   o.observation_id AS observationId,
   o.canonical_race_key AS canonicalRaceKey,
@@ -51,7 +64,6 @@ SELECT
   r.parser_replay_eligible AS parserReplayEligible,
   t.payload_type AS payloadType,
   t.payload_schema_version AS payloadSchemaVersion,
-  t.payload_json AS payloadJson,
   t.payload_hash AS payloadHash
 FROM domain_observations o
 JOIN parse_runs p ON p.parse_run_id = o.parse_run_id
@@ -59,6 +71,12 @@ JOIN raw_documents r ON r.raw_document_id = o.raw_document_id
 JOIN typed_observation_payloads t ON t.observation_id = o.observation_id
 WHERE o.canonical_race_key = ? AND o.observation_type = 'trifecta_market'
 ORDER BY o.observation_id
+`;
+
+const MARKET_PAYLOAD_SQL = `
+SELECT payload_json AS payloadJson
+FROM typed_observation_payloads
+WHERE observation_id = ?
 `;
 
 function key(checkpoint: N2LiveCheckpoint, selection: string): string {
@@ -118,27 +136,48 @@ function parsePayload(row: MarketEvidenceRow): TrifectaMarketPayload | null {
   return payload;
 }
 
-function eventsForRace(row: OddsCoverageRaceRow, evidenceRows: MarketEvidenceRow[], checkpoint: N2LiveCheckpoint): N2FeatureCoverageEvent[] {
-  const canonicalRaceKey = canonicalN2CoverageRaceKey(row);
-  const parsed = evidenceRows.map((evidence) => ({ evidence, payload: parsePayload(evidence) }));
-  const matching = parsed.filter((item) => item.payload?.checkpointLabelAtCapture === checkpoint);
-  if (matching.length === 0) {
-    return excluded(canonicalRaceKey, checkpoint,
-      parsed.some((item) => item.payload === null) ? "excluded_invalid_market_payload" : "excluded_market_checkpoint_not_found");
-  }
-  if (matching.length > 1) return excluded(canonicalRaceKey, checkpoint, "excluded_market_checkpoint_ambiguous");
+function eventsForRace(input: {
+  row: OddsCoverageRaceRow;
+  evidenceRows: MarketEvidenceMetadataRow[];
+  checkpoint: N2LiveCheckpoint;
+  loadPayloadJson: (observationId: string) => string | null;
+}): N2FeatureCoverageEvent[] {
+  const canonicalRaceKey = canonicalN2CoverageRaceKey(input.row);
+  const verified: VerifiedMarketEvidence[] = [];
+  const lineageFailures: string[] = [];
 
-  const { evidence, payload } = matching[0];
-  if (payload === null) return excluded(canonicalRaceKey, checkpoint, "excluded_invalid_market_payload");
-  const verification = verifyN2FeatureLineage({
-    canonicalRaceKey,
-    observationId: evidence.observationId,
-    rawDocumentId: evidence.rawDocumentId,
-    allowedObservationTypes: ["trifecta_market"],
-  }, evidence);
-  if (verification.status === "excluded") return excluded(canonicalRaceKey, checkpoint, verification.reason);
+  for (const evidence of input.evidenceRows) {
+    const verification = verifyN2FeatureLineage({
+      canonicalRaceKey,
+      observationId: evidence.observationId,
+      rawDocumentId: evidence.rawDocumentId,
+      allowedObservationTypes: ["trifecta_market"],
+    }, evidence);
+    if (verification.status === "excluded") {
+      lineageFailures.push(verification.reason);
+      continue;
+    }
+    const payloadJson = input.loadPayloadJson(evidence.observationId);
+    const payload = payloadJson === null ? null : parsePayload({ ...evidence, payloadJson });
+    verified.push({ evidence, lineage: verification.lineage, payload });
+  }
+
+  const matching = verified.filter((item) => item.payload?.checkpointLabelAtCapture === input.checkpoint);
+  if (matching.length === 0) {
+    if (verified.some((item) => item.payload === null)) {
+      return excluded(canonicalRaceKey, input.checkpoint, "excluded_invalid_market_payload");
+    }
+    if (verified.length === 0 && lineageFailures.length > 0) {
+      return excluded(canonicalRaceKey, input.checkpoint, lineageFailures[0]);
+    }
+    return excluded(canonicalRaceKey, input.checkpoint, "excluded_market_checkpoint_not_found");
+  }
+  if (matching.length > 1) return excluded(canonicalRaceKey, input.checkpoint, "excluded_market_checkpoint_ambiguous");
+
+  const { evidence, lineage, payload } = matching[0];
+  if (payload === null) return excluded(canonicalRaceKey, input.checkpoint, "excluded_invalid_market_payload");
   if (Date.parse(payload.observedAt) !== Date.parse(evidence.sourceObservedAt)) {
-    return excluded(canonicalRaceKey, checkpoint, "excluded_market_observed_at_mismatch");
+    return excluded(canonicalRaceKey, input.checkpoint, "excluded_market_observed_at_mismatch");
   }
 
   const expected = enumerateBetSelections("trifecta");
@@ -146,22 +185,22 @@ function eventsForRace(row: OddsCoverageRaceRow, evidenceRows: MarketEvidenceRow
   const actual = new Map<string, number>();
   for (const item of payload.selections) {
     if (!expectedSet.has(item.selection) || actual.has(item.selection)) {
-      return excluded(canonicalRaceKey, checkpoint, "excluded_invalid_market_selection_space");
+      return excluded(canonicalRaceKey, input.checkpoint, "excluded_invalid_market_selection_space");
     }
     actual.set(item.selection, item.odds);
   }
   const sourceRows: OddsTimeseriesSourceRow[] = [...actual].map(([betSelection, odds], id) => ({
     id,
-    raceId: row.raceId,
+    raceId: input.row.raceId,
     betType: "trifecta",
     betSelection,
     odds,
     capturedAt: payload.observedAt,
     source: "f0:trifecta_market",
-    lineage: verification.lineage,
+    lineage,
   }));
   const adapted = adaptLiveOddsRows({ rows: sourceRows, expectedBetType: "trifecta" });
-  if (adapted.status === "excluded") return excluded(canonicalRaceKey, checkpoint, adapted.reason);
+  if (adapted.status === "excluded") return excluded(canonicalRaceKey, input.checkpoint, adapted.reason);
   const observations = new Map(adapted.value.map((item) => [item.betSelection, item]));
   return expected.map((selection): N2FeatureCoverageEvent => {
     const observation = observations.get(selection);
@@ -169,7 +208,7 @@ function eventsForRace(row: OddsCoverageRaceRow, evidenceRows: MarketEvidenceRow
       return {
         canonicalRaceKey,
         sourceKind: "odds",
-        key: key(checkpoint, selection),
+        key: key(input.checkpoint, selection),
         status: "excluded",
         exclusionReason: "excluded_missing_market_selection",
       };
@@ -177,11 +216,11 @@ function eventsForRace(row: OddsCoverageRaceRow, evidenceRows: MarketEvidenceRow
     return {
       canonicalRaceKey,
       sourceKind: "odds",
-      key: key(checkpoint, selection),
+      key: key(input.checkpoint, selection),
       status: "verified",
       observationId: observation.observationId,
       rawDocumentId: observation.rawDocumentId,
-      availabilityBasis: verification.lineage.availabilityBasis,
+      availabilityBasis: lineage.availabilityBasis,
     };
   });
 }
@@ -210,12 +249,21 @@ export function readTrifectaMarketCoverageEvents(input: {
       WHERE date >= ? AND date <= ?
       ORDER BY date, venue, race_no
     `).all(input.dateFrom, input.dateTo) as unknown as OddsCoverageRaceRow[];
-    const statement = sidecar.prepare(MARKET_EVIDENCE_SQL);
+    const metadataStatement = sidecar.prepare(MARKET_EVIDENCE_METADATA_SQL);
+    const payloadStatement = sidecar.prepare(MARKET_PAYLOAD_SQL);
     const events: N2FeatureCoverageEvent[] = [];
     for (const row of rows) {
       const canonicalRaceKey = canonicalN2CoverageRaceKey(row);
-      const evidence = statement.all(canonicalRaceKey) as unknown as MarketEvidenceRow[];
-      events.push(...eventsForRace(row, evidence, input.checkpoint));
+      const evidenceRows = metadataStatement.all(canonicalRaceKey) as unknown as MarketEvidenceMetadataRow[];
+      events.push(...eventsForRace({
+        row,
+        evidenceRows,
+        checkpoint: input.checkpoint,
+        loadPayloadJson: (observationId) => {
+          const payloadRow = payloadStatement.get(observationId) as { payloadJson: string } | undefined;
+          return payloadRow?.payloadJson ?? null;
+        },
+      }));
     }
     return events;
   } finally {
