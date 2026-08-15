@@ -11,6 +11,10 @@ const roiReport = readFileSync(
   resolve(process.cwd(), "scripts/report-buy-roi-uncertainty.ts"),
   "utf8",
 );
+const replicationReport = readFileSync(
+  resolve(process.cwd(), "scripts/analyze-buy-pattern-replication.ts"),
+  "utf8",
+);
 
 test("owner BUY learning refresh only follows main workflow completions", () => {
   assert.match(workflow, /workflow_run:[\s\S]*branches:\s*\[main\]/u);
@@ -28,16 +32,17 @@ test("owner BUY learning refresh serializes instead of cancelling in-flight priv
 
 test("automatic outcome learning remains scoped to Current BUY paper-live", () => {
   const runKindMatches = workflow.match(/--run-kind paper-live/gu) ?? [];
-  assert.equal(runKindMatches.length, 4);
+  assert.equal(runKindMatches.length, 5);
   for (const script of [
     "analyze-buy-outcome-patterns.ts",
+    "analyze-buy-pattern-replication.ts",
     "analyze-buy-tail-dependence.ts",
     "report-buy-learning-summary.ts",
     "report-buy-roi-uncertainty.ts",
   ]) {
     const start = workflow.indexOf(script);
     assert.ok(start >= 0, `${script} must remain in Owner BUY refresh`);
-    assert.match(workflow.slice(start, start + 500), /--run-kind paper-live/u);
+    assert.match(workflow.slice(start, start + 600), /--run-kind paper-live/u);
   }
   assert.doesNotMatch(workflow, /\bschedule:/u);
 });
@@ -60,6 +65,44 @@ test("persistent Mac Owner refresh avoids slow remote npm cache restoration", ()
   assert.match(setupNodeStep, /node-version-file:\s*\.nvmrc/u);
   assert.doesNotMatch(setupNodeStep, /\bcache:/u);
   assert.match(workflow, /- name:\s*Install[\s\S]*run:\s*npm ci/u);
+});
+
+test("owner BUY pattern learning requires two complete independent confirmation windows", () => {
+  const start = workflow.indexOf("- name: Confirm BUY patterns across independent windows");
+  const projectStart = workflow.indexOf("- name: Project only replicated BUY patterns into learning input", start);
+  const tailStart = workflow.indexOf("- name: Analyze BUY max-hit dependence across independent windows", projectStart);
+  assert.ok(start >= 0 && projectStart > start && tailStart > projectStart);
+  const confirmationStep = workflow.slice(start, projectStart);
+  const projectionStep = workflow.slice(projectStart, tailStart);
+  assert.match(confirmationStep, /analyze-buy-pattern-replication\.ts/u);
+  assert.match(confirmationStep, /--run-kind paper-live/u);
+  assert.match(confirmationStep, /--window-size 60/u);
+  assert.match(confirmationStep, /--min-settled 30/u);
+  assert.match(confirmationStep, /--min-roi-delta 0\.15/u);
+  assert.match(confirmationStep, /--retain-private-dir data\/private\/outcome-pattern-replication-ledger/u);
+  assert.match(projectionStep, /project-replicated-buy-pattern-signals\.ts/u);
+  assert.match(projectionStep, /owner-buy-pattern-replication-public\.json/u);
+  assert.match(projectionStep, /owner-buy-patterns-replicated-input\.json/u);
+
+  assert.match(replicationReport, /new DatabaseSync\(dbPath, \{ readOnly: true \}\)/u);
+  assert.match(replicationReport, /PRAGMA query_only = ON/u);
+  assert.match(replicationReport, /buildBuyOutcomeSettlementSource\(\{ runKind: args\.runKind \}\)/u);
+  assert.match(replicationReport, /parsed\.runKind !== "paper-live"/u);
+  assert.match(replicationReport, /requiredSettled = args\.windowSize \* 2/u);
+  assert.match(replicationReport, /ROW_NUMBER\(\) OVER/u);
+  assert.match(replicationReport, /temporal_row > \? AND temporal_row <= \?/u);
+  assert.match(replicationReport, /productionChangeAllowed:\s*false/u);
+  assert.doesNotMatch(replicationReport, /from "\.\.\/server\/db"|UPDATE\s+decision_history|INSERT\s+INTO\s+decision_history|DELETE\s+FROM\s+decision_history/u);
+});
+
+test("owner BUY summary consumes only temporally replicated pattern signals", () => {
+  const start = workflow.indexOf("- name: Build read-only BUY outcome learning summary");
+  const end = workflow.indexOf("- name: Merge supported tail stability and retain final BUY learning", start);
+  assert.ok(start >= 0 && end > start);
+  const summaryStep = workflow.slice(start, end);
+  assert.match(summaryStep, /report-buy-learning-summary\.ts/u);
+  assert.match(summaryStep, /--pattern-signals data\/tmp\/owner-buy-patterns-replicated-input\.json/u);
+  assert.doesNotMatch(summaryStep, /--pattern-signals data\/tmp\/owner-buy-patterns-public\.json/u);
 });
 
 test("owner BUY refresh researches max-hit dependence only across independent supported windows", () => {
@@ -126,6 +169,9 @@ test("owner BUY diagnostics expose only aggregate public-safe learning state", (
   assert.match(diagnosticsStep, /roiUncertainty:/u);
   assert.match(diagnosticsStep, /owner-buy-roi-uncertainty\.json/u);
   assert.match(diagnosticsStep, /patternSupport:/u);
+  assert.match(diagnosticsStep, /patternReplication:/u);
+  assert.match(diagnosticsStep, /replication\.requiredSettled/u);
+  assert.match(diagnosticsStep, /replication\.replicatedPatternCount/u);
   assert.match(diagnosticsStep, /noSignalReason:/u);
   assert.match(diagnosticsStep, /minimumSettledPerSide:/u);
   assert.match(diagnosticsStep, /globalAdditionalSettledForAnyContrast:/u);
