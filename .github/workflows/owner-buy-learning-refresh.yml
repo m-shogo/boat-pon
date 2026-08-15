@@ -109,12 +109,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if grep -RInE '/Users/|/home/|/private/|gh[opusr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[0-9A-Za-z-]{10,}|data/boat\.sqlite' dist-public-deploy; then
-            echo "::error::private value or secret-like token found in public deploy artifact"
+          # Scan the whole bundle only for concrete secret/token forms and concrete local paths.
+          # Generic path-family denylist literals are intentionally compiled into the client validator,
+          # so those are checked only against emitted public JSON.
+          if grep -RInE '/Users/[^ |"'"'<>]+|/home/[^ |"'"'<>]+|gh[opusr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[0-9A-Za-z-]{10,}|data/boat\.sqlite' dist-public-deploy; then
+            echo "::error::private value, secret-like token, or concrete local path found in public deploy artifact"
             exit 1
           fi
-          if grep -RInE '"(selection|stake|currentOdds|requiredOdds|recommendedAmount|raceId|decisionId)"[[:space:]]*:' dist-public-deploy/public-data; then
-            echo "::error::private operational field found in public JSON"
+          if grep -RInE '/(private|var|Volumes)/|"(selection|stake|currentOdds|requiredOdds|recommendedAmount|raceId|decisionId)"[[:space:]]*:' dist-public-deploy/public-data; then
+            echo "::error::private path or operational field found in public JSON"
             exit 1
           fi
 
