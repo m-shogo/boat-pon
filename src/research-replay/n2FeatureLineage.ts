@@ -78,8 +78,16 @@ function hasValidCalendarDate(value: string): boolean {
 
 function validTime(value: string | null): value is string {
   if (value === null || !hasValidCalendarDate(value)) return false;
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) && new Date(parsed).toISOString() === value;
+  const clock = /(?:T| )(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?/.exec(value);
+  if (clock !== null) {
+    const hour = Number(clock[1]);
+    const minute = Number(clock[2]);
+    const second = Number(clock[3] ?? "0");
+    if (hour > 23 || minute > 59 || second > 59) return false;
+  }
+  const offset = /([+-])(\d{2}):(\d{2})$/.exec(value);
+  if (offset !== null && (Number(offset[2]) > 23 || Number(offset[3]) > 59)) return false;
+  return Number.isFinite(Date.parse(value));
 }
 
 export function verifyN2FeatureLineage(
