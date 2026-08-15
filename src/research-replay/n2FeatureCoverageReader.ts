@@ -234,13 +234,12 @@ export function readOfficialProgramCoverageEvents(input: {
     `).all(input.dateFrom, input.dateTo) as unknown as N2CoverageRaceRow[];
     if (rows.length !== identities.length) throw new Error("N2_COVERAGE_PROGRAM_SET_CHANGED_AFTER_PREFLIGHT");
     const lineage = sidecar.prepare(PROGRAM_LINEAGE_SQL);
-    const typedPayload = sidecar.prepare(PROGRAM_TYPED_PAYLOAD_SQL);
     const events: N2FeatureCoverageEvent[] = [];
     for (const row of rows) {
       const canonicalKey = canonicalN2CoverageRaceKey(row);
       const evidenceRows = lineage.all(canonicalKey) as unknown as ProgramLineageRow[];
       events.push(...eventsForProgram(row, evidenceRows, (observationId) => (
-        typedPayload.get(observationId) as unknown as ProgramTypedPayloadRow | undefined
+        sidecar.prepare(PROGRAM_TYPED_PAYLOAD_SQL).get(observationId) as unknown as ProgramTypedPayloadRow | undefined
       ) ?? null));
     }
     return events;
