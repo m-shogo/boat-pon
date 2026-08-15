@@ -111,9 +111,18 @@ function validateSelectionMap(
   return unique(blockers);
 }
 
+function compareCanonicalRaceKeys(left: string, right: string): number {
+  const a = RACE_KEY_RE.exec(left);
+  const b = RACE_KEY_RE.exec(right);
+  if (a === null || b === null) return left.localeCompare(right);
+  return a[1].localeCompare(b[1])
+    || Number(a[2]) - Number(b[2])
+    || Number(a[3]) - Number(b[3]);
+}
+
 function compareRaceOrder(left: N2EconomicEvaluationRace, right: N2EconomicEvaluationRace): number {
   return Date.parse(left.decisionCutoff) - Date.parse(right.decisionCutoff)
-    || left.canonicalRaceKey.localeCompare(right.canonicalRaceKey);
+    || compareCanonicalRaceKeys(left.canonicalRaceKey, right.canonicalRaceKey);
 }
 
 function bestBy(
@@ -131,6 +140,29 @@ function bestBy(
     }
   }
   return { selection: bestSelection, score: bestScore };
+}
+
+type TicketDecision = {
+  placed: boolean;
+  selection: string | null;
+};
+
+function decideTicket(input: {
+  policyId: N2EconomicPolicyId;
+  probabilities: Record<string, number>;
+  marketOdds: Record<string, number>;
+}): TicketDecision {
+  if (input.policyId === "forced_top1") {
+    const best = bestBy(input.probabilities, (_selection, probability) => probability);
+    return { placed: true, selection: best.selection };
+  }
+  const best = bestBy(
+    input.probabilities,
+    (selection, probability) => probability * input.marketOdds[selection],
+  );
+  return best.score > N2_METRICS_POSITIVE_EV_THRESHOLD + N2_METRICS_EV_EPSILON
+    ? { placed: true, selection: best.selection }
+    : { placed: false, selection: null };
 }
 
 type TicketDecision = {
