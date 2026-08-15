@@ -51,6 +51,19 @@ function digestMatches<T extends { outputDigest: string }>(value: T): boolean {
   const { outputDigest, ...body } = value;
   return isDigest(outputDigest) && canonicalHash(body) === outputDigest;
 }
+function historicalArtifactDigestMatches(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const {
+    outputDigest,
+    runId: _runId,
+    requestId: _requestId,
+    taskId: _taskId,
+    executorVersion: _executorVersion,
+    generatedAt: _generatedAt,
+    ...summary
+  } = value as Record<string, unknown>;
+  return isDigest(outputDigest) && canonicalHash(summary) === outputDigest;
+}
 function isValidHistoricalGeneratedAt(value: unknown): value is string {
   if (typeof value !== "string") return false;
   try {
@@ -81,6 +94,7 @@ export function readN2HistoricalTestArtifact(repoRoot: string): {
   const blockers: string[] = [];
   if (value.status !== "PASS") blockers.push("HISTORICAL_TEST_REPORT_NOT_PASS");
   if (!isDigest(value.outputDigest)) blockers.push("HISTORICAL_TEST_OUTPUT_DIGEST_INVALID");
+  else if (!historicalArtifactDigestMatches(parsed)) blockers.push("HISTORICAL_TEST_OUTPUT_DIGEST_MISMATCH");
   if (!isValidHistoricalGeneratedAt(value.generatedAt)) blockers.push("HISTORICAL_TEST_GENERATED_AT_INVALID");
 
   const discoveryPath = join(repoRoot, DISCOVERY_REPORT_RELATIVE_PATH);

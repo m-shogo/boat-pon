@@ -102,16 +102,19 @@ function writeHistoricalArtifact(
 ): string {
   const reports = join(root, "reports/n2");
   mkdirSync(reports, { recursive: true });
-  const payload = {
+  const summary = {
     status: "PASS",
-    generatedAt: "2026-08-08T07:00:00.000Z",
-    outputDigest: canonicalHash({ source: "n2-041-fixture", results }),
     confirmation: confirmation(results),
     authority: {
       automaticPromotionAuthorized: false,
       productionApplyAuthorized: false,
     },
     ...overrides,
+  };
+  const payload = {
+    ...summary,
+    generatedAt: "2026-08-08T07:00:00.000Z",
+    outputDigest: canonicalHash(summary),
   };
   writeFileSync(join(reports, "n2-edge-historical-test.json"), `${JSON.stringify(payload, null, 2)}\n`, "utf8");
   return payload.outputDigest;
@@ -212,6 +215,20 @@ test("malformed append-only registry blocks cleanly for a well-typed planned sub
     const outcome = preflightN2RejectionRegistry(registryRoot, [validDiscoveryRejection()]);
     assert.equal(outcome.ok, false);
     assert.ok(outcome.blockers.some((blocker) => blocker.includes("REJECTION_REGISTRY_READ_FAILED")));
+  });
+});
+
+test("artifact with forged historical output digest fails closed", () => {
+  withRoot((root) => {
+    writeHistoricalArtifact(root, [result("H-CONFIRMED", "HISTORICAL_CONFIRMED")]);
+    const path = join(root, "reports/n2/n2-edge-historical-test.json");
+    const payload = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
+    payload.outputDigest = "a".repeat(64);
+    writeFileSync(path, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+
+    const read = readN2HistoricalTestArtifact(root);
+    assert.equal(read.artifact, null);
+    assert.ok(read.blockers.includes("HISTORICAL_TEST_OUTPUT_DIGEST_MISMATCH"));
   });
 });
 

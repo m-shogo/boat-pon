@@ -48,10 +48,8 @@ function writeHistorical(root: string, discoveryArtifactDigest: string | undefin
       automaticPromotionAuthorized: false,
     },
   };
-  const payload = {
+  const summary = {
     status: "PASS",
-    generatedAt: "2026-08-06T12:00:00.000Z",
-    outputDigest: "a".repeat(64),
     ...(discoveryArtifactDigest === undefined ? {} : { discoveryArtifactDigest }),
     confirmation: {
       ...confirmationCore,
@@ -61,6 +59,11 @@ function writeHistorical(root: string, discoveryArtifactDigest: string | undefin
       automaticPromotionAuthorized: false,
       productionApplyAuthorized: false,
     },
+  };
+  const payload = {
+    ...summary,
+    generatedAt: "2026-08-06T12:00:00.000Z",
+    outputDigest: canonicalHash(summary),
   };
   writeFileSync(join(reports, "n2-edge-historical-test.json"), `${JSON.stringify(payload, null, 2)}\n`, "utf8");
 }
