@@ -5,6 +5,7 @@ import { officialOddsUrl, teleBoatUrl } from "../src/domain/officialLinks";
 import { buildBuyResultNotification } from "../src/domain/buyResultNotification";
 import { buildLineText, lineMessagingConfigFromEnv, sendLinePushTextToRecipients } from "../src/domain/lineMessaging";
 import { formatNoBuyReasonSummary, summarizeNoBuyReasons } from "../src/domain/lineDailySummary";
+import { formatLineDailyLatestHit, type LineDailyLatestHit } from "../src/domain/lineDailyLatestHit";
 import { LIVE_MONITOR_MODEL_VERSION } from "../src/domain/liveMonitor";
 
 type Mode = "daily" | "test" | "results" | "forward" | "errors";
@@ -47,6 +48,14 @@ type DailyCounts = {
 
 type NoBuyReasonRow = {
   decision_reasons: string | null;
+};
+
+type LatestHitRow = {
+  date: string;
+  venue: string;
+  race_no: number;
+  selection: string;
+  winning_payout_yen: number;
 };
 
 function todayJst() {
@@ -262,7 +271,54 @@ WHERE date = ?
 `).all(date, LIVE_MONITOR_MODEL_VERSION) as NoBuyReasonRow[];
 }
 
-function buildDailySummary(date: string, counts: DailyCounts, buyRows: BuyRow[], noBuyReasonRows: NoBuyReasonRow[]) {
+function latestBuyHit(db: DatabaseSync): LineDailyLatestHit | null {
+  const row = db.prepare(`
+WITH buy_rows AS (
+  SELECT dh.*,
+    ROW_NUMBER() OVER (
+      PARTITION BY dh.race_id, dh.bet_type, dh.selection
+      ORDER BY dh.created_at DESC, dh.id DESC
+    ) AS row_num
+  FROM decision_history dh
+  WHERE dh.decision = 'BUY'
+    AND dh.model_version = ?
+    AND dh.run_kind = 'paper-live'
+)
+SELECT
+  dh.date,
+  dh.venue,
+  dh.race_no,
+  dh.selection,
+  rr.payout_yen AS winning_payout_yen
+FROM buy_rows dh
+JOIN race_results rr ON rr.race_id = dh.race_id
+WHERE dh.row_num = 1
+  AND dh.bet_type IN ('trifecta', '3連単')
+  AND COALESCE(rr.returned, 0) = 0
+  AND rr.trifecta IS NOT NULL
+  AND rr.trifecta = dh.selection
+  AND rr.payout_yen IS NOT NULL
+ORDER BY dh.date DESC, dh.race_no DESC, dh.created_at DESC, dh.id DESC
+LIMIT 1
+`).get(LIVE_MONITOR_MODEL_VERSION) as LatestHitRow | undefined;
+
+  if (!row) return null;
+  return {
+    date: row.date,
+    venue: row.venue,
+    raceNo: row.race_no,
+    selection: row.selection,
+    payoutYen: row.winning_payout_yen,
+  };
+}
+
+function buildDailySummary(
+  date: string,
+  counts: DailyCounts,
+  buyRows: BuyRow[],
+  noBuyReasonRows: NoBuyReasonRow[],
+  latestHit: LineDailyLatestHit | null,
+) {
   const buyPreview = buyRows.slice(0, 5).map((row) => {
     const odds = formatOdds(row.current_odds);
     return `・${row.venue} ${row.race_no}R ${row.selection} / ${odds}`;
@@ -272,6 +328,7 @@ function buildDailySummary(date: string, counts: DailyCounts, buyRows: BuyRow[],
     `BUY=${counts.buy} WATCH=${counts.watch} SKIP=${counts.skip}`,
     `odds=${oddsRate}`,
     `model=${LIVE_MONITOR_MODEL_VERSION} / paper-live`,
+    formatLineDailyLatestHit(latestHit),
     buyPreview.length > 0 ? ["", "BUY候補:", ...buyPreview].join("\n") : "BUY候補なし。買わない日として観察継続。",
     "",
     formatNoBuyReasonSummary(summarizeNoBuyReasons(noBuyReasonRows.map((row) => row.decision_reasons))),
@@ -284,6 +341,7 @@ function buildDailyNotifications(db: DatabaseSync, date: string, dryRun: boolean
   const counts = dailyCounts(db, date);
   const buyRows = listBuyRows(db, date);
   const noBuyReasonRows = listNoBuyReasonRows(db, date);
+  const latestHit = latestBuyHit(db);
   const notifications: NotificationRow[] = [];
 
   const summaryTitle = counts.buy > 0
@@ -292,7 +350,7 @@ function buildDailyNotifications(db: DatabaseSync, date: string, dryRun: boolean
   const summary = upsertPendingNotification(db, {
     raceId: `line-daily-${date}`,
     title: summaryTitle,
-    body: buildDailySummary(date, counts, buyRows, noBuyReasonRows),
+    body: buildDailySummary(date, counts, buyRows, noBuyReasonRows, latestHit),
     officialUrl: "https://www.boatrace.jp/",
     dryRun,
   });
