@@ -87,7 +87,17 @@ function hasValidCalendarDate(value: string): boolean {
 }
 
 function validTimestamp(value: string | null): value is string {
-  return value !== null && hasValidCalendarDate(value) && Number.isFinite(Date.parse(value));
+  if (value === null || !hasValidCalendarDate(value)) return false;
+  const clock = /T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?/.exec(value);
+  if (clock === null) return false;
+  const hour = Number(clock[1]);
+  const minute = Number(clock[2]);
+  const second = Number(clock[3]);
+  if (hour > 23 || minute > 59 || second > 59) return false;
+  if (!/(?:Z|[+-]\d{2}:\d{2})$/i.test(value)) return false;
+  const offset = /([+-])(\d{2}):(\d{2})$/.exec(value);
+  if (offset !== null && (Number(offset[2]) > 23 || Number(offset[3]) > 59)) return false;
+  return Number.isFinite(Date.parse(value));
 }
 
 function lineageReasonClass(reason: string): N2PitAuditReasonClass {
