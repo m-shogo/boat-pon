@@ -77,7 +77,9 @@ function hasValidCalendarDate(value: string): boolean {
 }
 
 function validTime(value: string | null): value is string {
-  return value !== null && hasValidCalendarDate(value) && Number.isFinite(Date.parse(value));
+  if (value === null || !hasValidCalendarDate(value)) return false;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) && new Date(parsed).toISOString() === value;
 }
 
 export function verifyN2FeatureLineage(
