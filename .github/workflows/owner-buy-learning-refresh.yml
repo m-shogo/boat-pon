@@ -4,6 +4,7 @@ on:
   workflow_run:
     workflows: ["CI", "boat-pon local research (one-shot)"]
     types: [completed]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
