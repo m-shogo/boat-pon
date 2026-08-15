@@ -129,9 +129,13 @@ function canonicalDatabaseTimestamp(value: string): string {
 }
 
 function closeAtUtc(date: string, closeAt: string): string {
-  const time = /^\d{2}:\d{2}$/.test(closeAt) ? `${closeAt}:00`
-    : /^\d{2}:\d{2}:\d{2}$/.test(closeAt) ? closeAt : null;
-  if (time === null) throw new Error("INVALID_CLOSE_AT");
+  const match = /^(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(closeAt);
+  if (match === null) throw new Error("INVALID_CLOSE_AT");
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  const second = Number(match[3] ?? "0");
+  if (hour > 23 || minute > 59 || second > 59) throw new Error("INVALID_CLOSE_AT");
+  const time = `${match[1]}:${match[2]}:${match[3] ?? "00"}`;
   const parsed = Date.parse(`${date}T${time}+09:00`);
   if (!Number.isFinite(parsed)) throw new Error("INVALID_CLOSE_AT");
   return new Date(parsed).toISOString();
