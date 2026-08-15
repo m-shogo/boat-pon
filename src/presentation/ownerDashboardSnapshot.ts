@@ -1,6 +1,6 @@
 import { validateBuyLearningSummary, type BuyLearningSummary } from "./buyLearningSummary";
 
-export const OWNER_DASHBOARD_SCHEMA_VERSION = "owner-dashboard-read-model-v1" as const;
+export const OWNER_DASHBOARD_SCHEMA_VERSION = "owner-dashboard-read-model-v2" as const;
 
 export type OwnerOverallStatus = "HEALTHY" | "ATTENTION" | "BLOCKED" | "UNKNOWN";
 export type OwnerGitCleanliness = "CLEAN" | "ATTENTION" | "NOT_AVAILABLE";
