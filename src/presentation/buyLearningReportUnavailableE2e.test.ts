@@ -22,11 +22,14 @@ test("BUY learning report fails safe as NOT_AVAILABLE when paper-live has no eco
   try {
     db.exec(`
       CREATE TABLE decision_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        race_id TEXT NOT NULL,
         date TEXT NOT NULL,
         venue TEXT NOT NULL,
         race_no INTEGER NOT NULL,
+        bet_type TEXT NOT NULL,
         decision TEXT NOT NULL,
-        selection TEXT,
+        selection TEXT NOT NULL,
         result TEXT,
         returned INTEGER NOT NULL DEFAULT 0,
         current_odds REAL,
@@ -35,13 +38,20 @@ test("BUY learning report fails safe as NOT_AVAILABLE when paper-live has no eco
         sample_size INTEGER,
         ev REAL,
         model_version TEXT,
-        run_kind TEXT
+        run_kind TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      CREATE TABLE race_results (
+        race_id TEXT PRIMARY KEY,
+        trifecta TEXT,
+        payout_yen INTEGER,
+        returned INTEGER NOT NULL DEFAULT 0
       );
     `);
     db.prepare(`INSERT INTO decision_history
-      (date,venue,race_no,decision,selection,result,returned,current_odds,payout_yen,estimated_hit_rate,sample_size,ev,model_version,run_kind)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-      .run("2026-08-15", "A", 1, "BUY", "1-2-3", null, 0, 2.5, null, 0.45, 80, 1.12, "v1", "paper-live");
+      (race_id,date,venue,race_no,bet_type,decision,selection,result,returned,current_odds,payout_yen,estimated_hit_rate,sample_size,ev,model_version,run_kind,created_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .run("pending-1", "2026-08-15", "A", 1, "trifecta", "BUY", "1-2-3", null, 0, 2.5, null, 0.45, 80, 1.12, "v1", "paper-live", "2026-08-15T00:00:00Z");
   } finally {
     db.close();
   }
