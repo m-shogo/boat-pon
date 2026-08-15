@@ -240,7 +240,7 @@ test("executor source loading revalidates raw SHA after readiness passes", () =>
   });
 });
 
-test("private source reader rejects accepted marker timestamps normalized by Date.parse", () => {
+test("private source reader stops at readiness for accepted marker timestamps normalized by Date.parse", () => {
   for (const acceptedAt of [
     "2026-02-30T03:25:30.000Z",
     "2026-08-07T24:00:00.000Z",
@@ -249,10 +249,18 @@ test("private source reader rejects accepted marker timestamps normalized by Dat
       prepare(root, 20, null, (index) => index === 0 ? { acceptedAt } : {});
       const result = readN2MarketOnlyBaselinePrivateSources({ dataRoot: root });
       assert.equal(result.status, "BLOCKED", acceptedAt);
-      assert.ok(result.blockers.some((blocker) => blocker.includes("T5_ACCEPTED_AT_INVALID")), acceptedAt);
+      assert.equal(result.readinessStatus, "BLOCKED", acceptedAt);
+      assert.ok(result.blockers.includes("READINESS_BLOCKED"), acceptedAt);
+      assert.ok(result.blockers.includes("PRIVATE_CAPTURE_INTEGRITY_BLOCKED:1"), acceptedAt);
+      assert.equal(result.selectedCohortRaceCount, 0, acceptedAt);
       assert.equal(result.sources.length, 0, acceptedAt);
+      assert.equal(result.privateRawFileReadCount, 0, acceptedAt);
+      assert.equal(result.privateEnvelopeReadCount, 0, acceptedAt);
+      assert.equal(result.rawValuesReadPrivately, false, acceptedAt);
       assert.equal(result.rawValuesPublished, false, acceptedAt);
+      assert.equal(result.databaseReadCount, 1, acceptedAt);
       assert.equal(result.databaseWriteCount, 0, acceptedAt);
+      assert.equal(result.networkRequestCount, 0, acceptedAt);
     });
   }
 });
