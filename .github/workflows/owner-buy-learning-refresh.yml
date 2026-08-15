@@ -78,6 +78,52 @@ jobs:
           --output data/tmp/owner-buy-learning-latest.json
           --retain-private-dir data/private/outcome-learning-ledger
 
+      - name: Report public-safe BUY learning diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const patterns = JSON.parse(fs.readFileSync('data/tmp/owner-buy-patterns-public.json', 'utf8'));
+          const summary = JSON.parse(fs.readFileSync('data/tmp/owner-buy-learning-latest.json', 'utf8'));
+          if (patterns.productionChangeAllowed !== false) throw new Error('pattern diagnostics must not allow production changes');
+          const diagnostics = {
+            schemaVersion: 'owner-buy-learning-diagnostics-v1',
+            status: summary.status,
+            performance: {
+              settled: summary.performance?.settled ?? null,
+              hits: summary.performance?.hits ?? null,
+              misses: summary.performance?.misses ?? null,
+              hitRate: summary.performance?.hitRate ?? null,
+              roi: summary.performance?.roi ?? null,
+              roiExMax: summary.performance?.roiExMax ?? null,
+            },
+            recent: {
+              settled: summary.recent?.settled ?? null,
+              hits: summary.recent?.hits ?? null,
+              misses: summary.recent?.misses ?? null,
+              hitRate: summary.recent?.hitRate ?? null,
+              roi: summary.recent?.roi ?? null,
+            },
+            learningIds: Array.isArray(summary.learnings) ? summary.learnings.map((item) => item.id) : [],
+            failurePatternIds: Array.isArray(summary.failurePatterns) ? summary.failurePatterns.map((item) => item.id) : [],
+            researchCandidateIds: Array.isArray(summary.researchCandidates) ? summary.researchCandidates.map((item) => item.id) : [],
+            patternSignals: Array.isArray(patterns.signals) ? patterns.signals.map((item) => ({
+              direction: item.direction,
+              dimension: item.dimension,
+              evidenceCount: item.evidenceCount,
+              roiDelta: item.roiDelta,
+              confidence: item.confidence,
+            })) : [],
+            productionChangeAllowed: false,
+          };
+          const serialized = JSON.stringify(diagnostics);
+          if (/(selection|currentOdds|requiredOdds|recommendedAmount|stake|raceId|decisionId|segmentKey|\/Users\/|\/home\/)/i.test(serialized)) {
+            throw new Error('private or operational BUY field reached public-safe diagnostics');
+          }
+          console.log(serialized);
+          NODE
+
       - name: Verify public source boundary
         run: node scripts/verify-product-boundaries.mjs
 
