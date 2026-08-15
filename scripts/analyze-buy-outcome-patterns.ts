@@ -14,18 +14,21 @@ db.exec("PRAGMA query_only = ON");
 db.exec("PRAGMA busy_timeout = 5000");
 
 try {
-  const predicate = "decision = 'BUY' AND result IS NOT NULL AND returned = 0";
+  const where = ["decision = 'BUY'", "result IS NOT NULL", "payout_yen IS NOT NULL", "returned = 0"];
+  const params: Array<string | number> = [];
+  if (args.runKind) { where.push("run_kind = ?"); params.push(args.runKind); }
+  const predicate = where.join(" AND ");
   const baseline = db.prepare(`
     SELECT COUNT(*) AS settled,
-      COALESCE(SUM(CASE WHEN selection = result THEN current_odds ELSE 0 END), 0) AS payoutOddsSum
+      COALESCE(SUM(CASE WHEN selection = result THEN payout_yen / 100.0 ELSE 0 END), 0) AS payoutOddsSum
     FROM decision_history WHERE ${predicate}
-  `).get() as { settled: number | bigint | null; payoutOddsSum: number | null };
+  `).get(...params) as { settled: number | bigint | null; payoutOddsSum: number | null };
 
   const raw = db.prepare(`
     WITH settled_buy AS (
       SELECT venue, model_version, estimated_hit_rate, ev, current_odds, sample_size,
         CASE WHEN selection = result THEN 1 ELSE 0 END AS hit,
-        CASE WHEN selection = result THEN current_odds ELSE 0 END AS payout
+        CASE WHEN selection = result THEN payout_yen / 100.0 ELSE 0 END AS payout
       FROM decision_history WHERE ${predicate}
     ), segments AS (
       SELECT 'venue' AS dimension, COALESCE(NULLIF(venue,''), 'UNKNOWN') AS segmentKey, hit, payout FROM settled_buy
@@ -64,7 +67,7 @@ try {
     SELECT dimension, segmentKey, COUNT(*) AS settled, SUM(hit) AS hits, SUM(payout) AS payoutOddsSum
     FROM segments
     GROUP BY dimension, segmentKey
-  `).all() as Array<Record<string, unknown>>;
+  `).all(...params) as Array<Record<string, unknown>>;
 
   const segments: BuyOutcomeSegment[] = raw.map((row) => ({
     dimension: dimension(row.dimension),
@@ -84,6 +87,8 @@ try {
     policy: {
       minimumSettledPerSegment: args.minSettled,
       minimumAbsoluteRoiDelta: args.minRoiDelta,
+      runKind: args.runKind,
+      settlementEconomics: "official-payout-yen-per-100",
       productionChangeAllowed: false,
       note: "Exploratory pattern mining only; multiple-comparison risk requires governed validation before promotion.",
     },
@@ -114,11 +119,12 @@ try {
 }
 
 function parseArgs(argv: string[]) {
-  const parsed = { minSettled: 30, minRoiDelta: 0.15, outputPublic: null as string | null, retainPrivateDir: null as string | null };
+  const parsed = { minSettled: 30, minRoiDelta: 0.15, runKind: null as string | null, outputPublic: null as string | null, retainPrivateDir: null as string | null };
   for (let i = 0; i < argv.length; i += 1) {
     const key = argv[i]; const value = argv[i + 1];
     if (key === "--min-settled") { parsed.minSettled = boundedInt(value, 20, 1000); i += 1; }
     else if (key === "--min-roi-delta") { parsed.minRoiDelta = boundedNumber(value, 0.05, 2); i += 1; }
+    else if (key === "--run-kind") { parsed.runKind = safeArg(value); i += 1; }
     else if (key === "--output-public") { parsed.outputPublic = safeOutput(value); i += 1; }
     else if (key === "--retain-private-dir") { parsed.retainPrivateDir = safePrivateDir(value); i += 1; }
     else if (key === "--") { /* npm separator */ }
@@ -134,6 +140,7 @@ function dimension(value: unknown): BuyOutcomeSegment["dimension"] {
 }
 function boundedInt(value: string | undefined, min: number, max: number) { const n = Number(value); if (!Number.isInteger(n) || n < min || n > max) throw new Error("invalid integer option"); return n; }
 function boundedNumber(value: string | undefined, min: number, max: number) { const n = Number(value); if (!Number.isFinite(n) || n < min || n > max) throw new Error("invalid numeric option"); return n; }
+function safeArg(value: string | undefined) { if (!value || !/^[A-Za-z0-9_.-]{1,80}$/.test(value)) throw new Error("invalid filter"); return value; }
 function safeOutput(value: string | undefined) { if (!value || value.startsWith("/") || value.includes("..") || !/^[A-Za-z0-9_./-]+\.json$/.test(value)) throw new Error("output must be a relative json path"); return value; }
 function safePrivateDir(value: string | undefined) { if (!value || !/^data\/private\/[A-Za-z0-9_./-]+$/.test(value) || value.includes("..")) throw new Error("private retention must stay under data/private"); return value.replace(/\/$/, ""); }
 function count(value: unknown) { const n = Number(value ?? 0); return Number.isFinite(n) && n >= 0 ? Math.trunc(n) : 0; }
