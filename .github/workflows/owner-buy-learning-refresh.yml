@@ -173,6 +173,15 @@ jobs:
           console.log(serialized);
           NODE
 
+      - name: Build validated Owner BUY evidence diagnostics
+        run: >-
+          npx tsx scripts/build-owner-buy-evidence-diagnostics.ts
+          --buy-learning data/tmp/owner-buy-learning-latest.json
+          --patterns data/tmp/owner-buy-patterns-public.json
+          --tail data/tmp/owner-buy-tail-public.json
+          --uncertainty data/tmp/owner-buy-hit-rate-uncertainty.json
+          --output data/tmp/owner-buy-evidence.json
+
       - name: Verify public source boundary
         run: node scripts/verify-product-boundaries.mjs
 
@@ -198,6 +207,7 @@ jobs:
             --current-run automation/control/current-run.json \
             --recent-commits data/tmp/owner-dashboard-refresh/recent-commits.json \
             --buy-learning data/tmp/owner-buy-learning-latest.json \
+            --buy-evidence data/tmp/owner-buy-evidence.json \
             --canonical-branch main \
             --main-sha "${{ steps.source.outputs.sha }}" \
             --ci-status PASS \
@@ -222,7 +232,7 @@ jobs:
             echo "::error::private value, secret-like token, or concrete local path found in public deploy artifact"
             exit 1
           fi
-          if grep -RInE '/(private|var|Volumes)/|"(selection|stake|currentOdds|requiredOdds|recommendedAmount|raceId|decisionId)"[[:space:]]*:' dist-public-deploy/public-data; then
+          if grep -RInE '/(private|var|Volumes)/|"(selection|stake|currentOdds|requiredOdds|recommendedAmount|raceId|decisionId|segmentKey)"[[:space:]]*:' dist-public-deploy/public-data; then
             echo "::error::private path or operational field found in public JSON"
             exit 1
           fi
