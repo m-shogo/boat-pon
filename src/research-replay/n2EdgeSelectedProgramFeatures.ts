@@ -2,7 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 
 import { classifyProgramFeatureSafety } from "../domain/programFeatureSafety";
 import { extractProgramFeatures, type ProgramFeatureSnapshot } from "../domain/programFeatures";
-import { canonicalHash } from "./canonical";
+import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import { N2_EDGE_DISCOVERY_MAX_RACES } from "./n2EdgeDiscoveryCohort";
 import {
   normalizeDiscoveryProgramRow,
@@ -62,6 +62,14 @@ function unique(values: readonly string[]): string[] {
   return [...new Set(values)].sort();
 }
 
+function isCanonicalUtcTimestamp(value: string): boolean {
+  try {
+    return canonicalUtcTimestamp(value) === value;
+  } catch {
+    return false;
+  }
+}
+
 function blocked(input: {
   blockers: string[];
   requestedRaceCount: number;
@@ -115,9 +123,6 @@ function sanitizeProgramFeatures(snapshot: ProgramFeatureSnapshot): ProgramFeatu
       localTop2Rate: boat.localTop2Rate ?? null,
       motorTop2Rate: boat.motorTop2Rate ?? null,
       boatTop2Rate: boat.boatTop2Rate ?? null,
-      // These fields are classified historical-safe in the generic program
-      // contract, but the motor_boat_stats table has no reviewed observed-at
-      // timestamp. Discovery v1 therefore does not inject them.
       venueMotorTop2Rate: null,
       venueBoatTop2Rate: null,
       courseAvgSt: null,
@@ -162,9 +167,13 @@ export function readN2EdgeSelectedProgramFeatures(input: {
   if (new Set(requested.map((item) => item.canonicalRaceKey)).size !== requested.length) blockers.push("DUPLICATE_CANONICAL_RACE_KEY");
   if (new Set(requested.map((item) => item.primaryRaceId)).size !== requested.length) blockers.push("DUPLICATE_PRIMARY_RACE_ID");
   for (const candidate of requested) {
-    if (!Number.isFinite(Date.parse(candidate.decisionCutoff))) blockers.push(`${candidate.canonicalRaceKey}:INVALID_DECISION_CUTOFF`);
-    if (!Number.isFinite(Date.parse(candidate.sourceObservedAt))) blockers.push(`${candidate.canonicalRaceKey}:INVALID_SOURCE_OBSERVED_AT`);
-    if (Date.parse(candidate.sourceObservedAt) >= Date.parse(candidate.decisionCutoff)) {
+    const decisionCutoffValid = isCanonicalUtcTimestamp(candidate.decisionCutoff);
+    const sourceObservedAtValid = isCanonicalUtcTimestamp(candidate.sourceObservedAt);
+    if (!decisionCutoffValid) blockers.push(`${candidate.canonicalRaceKey}:INVALID_DECISION_CUTOFF`);
+    if (!sourceObservedAtValid) blockers.push(`${candidate.canonicalRaceKey}:INVALID_SOURCE_OBSERVED_AT`);
+    if (decisionCutoffValid
+      && sourceObservedAtValid
+      && Date.parse(candidate.sourceObservedAt) >= Date.parse(candidate.decisionCutoff)) {
       blockers.push(`${candidate.canonicalRaceKey}:SOURCE_NOT_PRE_CUTOFF`);
     }
   }
