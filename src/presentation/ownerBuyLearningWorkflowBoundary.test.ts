@@ -89,6 +89,12 @@ test("owner BUY diagnostics expose only aggregate public-safe learning state", (
   assert.match(diagnosticsStep, /schemaVersion:\s*'owner-buy-learning-diagnostics-v1'/u);
   assert.match(diagnosticsStep, /hitRateUncertainty:/u);
   assert.match(diagnosticsStep, /owner-buy-hit-rate-uncertainty\.json/u);
+  assert.match(diagnosticsStep, /patternSupport:/u);
+  assert.match(diagnosticsStep, /noSignalReason:/u);
+  assert.match(diagnosticsStep, /minimumSettledPerSide:/u);
+  assert.match(diagnosticsStep, /globalAdditionalSettledForAnyContrast:/u);
+  assert.match(diagnosticsStep, /supportedContrastCount:/u);
+  assert.match(diagnosticsStep, /supportedDimensionCount:/u);
   assert.match(diagnosticsStep, /learningIds:/u);
   assert.match(diagnosticsStep, /failurePatternIds:/u);
   assert.match(diagnosticsStep, /researchCandidateIds:/u);
@@ -99,5 +105,5 @@ test("owner BUY diagnostics expose only aggregate public-safe learning state", (
   assert.match(diagnosticsStep, /priorTailGap:/u);
   assert.match(diagnosticsStep, /productionChangeAllowed:\s*false/u);
   assert.match(diagnosticsStep, /private or operational BUY field reached public-safe diagnostics/u);
-  assert.doesNotMatch(diagnosticsStep, /item\.segmentKey|item\.selection|item\.currentOdds|item\.raceId|item\.decisionId/u);
+  assert.doesNotMatch(diagnosticsStep, /item\.segmentKey|patterns\.support\?\.segmentKey|item\.selection|item\.currentOdds|item\.raceId|item\.decisionId/u);
 });
