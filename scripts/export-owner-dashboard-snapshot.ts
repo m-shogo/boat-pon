@@ -14,6 +14,7 @@ if (!["CLEAN", "ATTENTION", "NOT_AVAILABLE"].includes(gitCleanliness)) throw new
 
 const recentCommits = args["recent-commits"] ? await readJson(args["recent-commits"]) : [];
 const buyLearning = args["buy-learning"] ? await readJson(args["buy-learning"]) : undefined;
+const buyEvidence = args["buy-evidence"] ? await readJson(args["buy-evidence"]) : undefined;
 const snapshot = buildOwnerDashboardSnapshot({
   generatedAt: new Date().toISOString(),
   canonicalBranch: required("canonical-branch"),
@@ -27,8 +28,9 @@ const snapshot = buildOwnerDashboardSnapshot({
   currentRun: await readJson(required("current-run")),
   recentCommits,
   buyLearning,
+  buyEvidence,
 });
 const output = required("output");
 await mkdir(dirname(output), { recursive: true });
 await writeFile(output, `${JSON.stringify(snapshot, null, 2)}\n`, "utf8");
-console.log(JSON.stringify({ status: "PASS", output, tasks: snapshot.n2Tasks.length, blockers: snapshot.blockers.length, buyLearning: snapshot.buyLearning.status }));
+console.log(JSON.stringify({ status: "PASS", output, tasks: snapshot.n2Tasks.length, blockers: snapshot.blockers.length, buyLearning: snapshot.buyLearning.status, buyEvidence: snapshot.buyEvidence.status }));
