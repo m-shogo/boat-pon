@@ -52,7 +52,7 @@ test("stale discovery scan version blocks before holdout or raw-program reads",(
  const executor=createN2EdgeHistoricalTestExecutor(()=>{sourceCalls++;return source();},input=>{selectedCalls++;return selected(input.selectedCandidates);});
  const result=executor(context(root));assert.equal(result.result,"BLOCKED");assert.equal(sourceCalls,0);assert.equal(selectedCalls,0);
  assert.equal(existsSync(join(root,"reports/n2/n2-edge-historical-test.json")),false);
- assert.match(JSON.stringify(result.summary),/DISCOVERY_SCAN_VERSION_MISMATCH:n2-edge-hypothesis-scan-v1\/n2-edge-hypothesis-scan-v2/u);
+ assert.match(JSON.stringify(result.blocks),/DISCOVERY_SCAN_VERSION_MISMATCH:n2-edge-hypothesis-scan-v1\/n2-edge-hypothesis-scan-v2/u);
 }));
 
 test("locked hypothesis runs deterministic validation/test holdouts and persists aggregate-only evidence",()=>withRoot(root=>{
