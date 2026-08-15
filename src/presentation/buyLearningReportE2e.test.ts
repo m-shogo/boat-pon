@@ -66,7 +66,7 @@ test("BUY learning report derives sanitized outcomes and retains semantic eviden
     assert.equal(JSON.stringify(summary).includes("1-2-3"), false);
     assert.equal(JSON.stringify(summary).includes("currentOdds"), false);
     assert.equal((summary.performance as { settled: number }).settled, 3);
-    assert.equal((summary.performance as { roiProxy: number }).roiProxy, 0.8);
+    assert.equal((summary.performance as { roi: number }).roi, 0.8);
 
     const files = await readdir(privateDir);
     assert.equal(files.length, 1);
