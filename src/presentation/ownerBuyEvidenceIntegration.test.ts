@@ -82,6 +82,28 @@ function evidence(buyLearning = learning()) {
       note: "95% Wilson score intervals describe binomial hit-rate uncertainty only; they do not estimate payout ROI uncertainty.",
       productionChangeAllowed: false,
     },
+    roiUncertainty: {
+      schemaVersion: "buy-roi-uncertainty-public-v1",
+      generatedAt: "2026-08-15T12:39:43Z",
+      status: "AVAILABLE",
+      minimumTrials: 30,
+      performance: {
+        status: "AVAILABLE",
+        trials: 61,
+        minimumTrials: 30,
+        missingTrials: 0,
+        interval: { confidenceLevel: 0.95, method: "DETERMINISTIC_PERCENTILE_BOOTSTRAP", trials: 61, iterations: 5000, pointEstimate: 1.1197, lower: 0, upper: 3, width: 3, breakEven: 1, classification: "CROSSES_BREAK_EVEN" },
+      },
+      recent: {
+        status: "AVAILABLE",
+        trials: 30,
+        minimumTrials: 30,
+        missingTrials: 0,
+        interval: { confidenceLevel: 0.95, method: "DETERMINISTIC_PERCENTILE_BOOTSTRAP", trials: 30, iterations: 5000, pointEstimate: 1.3433, lower: 0, upper: 4, width: 4, breakEven: 1, classification: "CROSSES_BREAK_EVEN" },
+      },
+      note: "descriptive only",
+      productionChangeAllowed: false,
+    },
   });
 }
 
@@ -93,6 +115,7 @@ test("owner snapshot exposes aggregate BUY evidence without operational identiti
   assert.equal(snapshot.buyEvidence.patternSupport?.supportedContrastCount, 0);
   assert.equal(snapshot.buyEvidence.tailStability?.status, "PERSISTENT_TAIL_DEPENDENCE");
   assert.equal(snapshot.buyEvidence.hitRateUncertainty?.performance.lower, 0.009);
+  assert.equal(snapshot.buyEvidence.roiUncertainty?.performance.interval?.classification, "CROSSES_BREAK_EVEN");
   assert.deepEqual(validateOwnerDashboardSnapshot(snapshot), []);
   assert.doesNotMatch(JSON.stringify(snapshot), /selection|raceId|decisionId|segmentKey|currentOdds|requiredOdds|recommendedAmount|stake|PRIVATE/i);
 });
@@ -105,9 +128,10 @@ test("owner snapshot degrades stale BUY evidence to NOT_AVAILABLE instead of mix
   assert.deepEqual(validateOwnerDashboardSnapshot(snapshot), []);
 });
 
-test("Owner dashboard copy identifies official settlement unit-stake ROI instead of old decision-time odds proxy", () => {
+test("Owner dashboard copy identifies official settlement unit-stake ROI and uncertainty", () => {
   const source = readFileSync("src/components/OwnerDashboardSummary.tsx", "utf8");
   assert.match(source, /公式settlement払戻を100円unit-stake/u);
   assert.match(source, /Outcome Evidence Maturity/u);
+  assert.match(source, /ROI 95%/u);
   assert.doesNotMatch(source, /ROIはdecision-time odds proxy/u);
 });
