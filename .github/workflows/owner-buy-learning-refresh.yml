@@ -134,6 +134,15 @@ jobs:
           --iterations 5000
           --output data/tmp/owner-buy-roi-uncertainty.json
 
+      - name: Report BUY probability calibration
+        run: >-
+          npx tsx scripts/report-buy-probability-calibration.ts
+          --run-kind paper-live
+          --recent 30
+          --minimum-trials 30
+          --high-ev-threshold 1.2
+          --output data/tmp/owner-buy-probability-calibration.json
+
       - name: Report public-safe BUY learning diagnostics
         shell: bash
         run: |
@@ -145,8 +154,9 @@ jobs:
           const tail = JSON.parse(fs.readFileSync('data/tmp/owner-buy-tail-public.json', 'utf8'));
           const uncertainty = JSON.parse(fs.readFileSync('data/tmp/owner-buy-hit-rate-uncertainty.json', 'utf8'));
           const roiUncertainty = JSON.parse(fs.readFileSync('data/tmp/owner-buy-roi-uncertainty.json', 'utf8'));
+          const calibration = JSON.parse(fs.readFileSync('data/tmp/owner-buy-probability-calibration.json', 'utf8'));
           const summary = JSON.parse(fs.readFileSync('data/tmp/owner-buy-learning-latest.json', 'utf8'));
-          if (patterns.productionChangeAllowed !== false || replication.productionChangeAllowed !== false || tail.productionChangeAllowed !== false || uncertainty.productionChangeAllowed !== false || roiUncertainty.productionChangeAllowed !== false) throw new Error('BUY diagnostics must not allow production changes');
+          if (patterns.productionChangeAllowed !== false || replication.productionChangeAllowed !== false || tail.productionChangeAllowed !== false || uncertainty.productionChangeAllowed !== false || roiUncertainty.productionChangeAllowed !== false || calibration.productionChangeAllowed !== false) throw new Error('BUY diagnostics must not allow production changes');
           const diagnostics = {
             schemaVersion: 'owner-buy-learning-diagnostics-v1',
             status: summary.status,
@@ -174,6 +184,12 @@ jobs:
               status: roiUncertainty.status,
               performance: roiUncertainty.performance?.interval ?? null,
               recent: roiUncertainty.recent?.interval ?? null,
+            },
+            probabilityCalibration: {
+              status: calibration.status,
+              overall: calibration.overall ?? null,
+              recent: calibration.recent ?? null,
+              highEv: calibration.highEv ?? null,
             },
             patternSupport: {
               status: patterns.support?.status ?? null,
