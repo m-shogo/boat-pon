@@ -9,7 +9,7 @@ import test from "node:test";
 
 const execFileAsync = promisify(execFile);
 
-test("BUY calibration stability requires matching conclusions in two independent official-settlement windows", async () => {
+test("BUY probability report classifies matching conclusions in two independent official-settlement windows", async () => {
   const temp = await mkdtemp(join(tmpdir(), "boat-pon-calibration-stability-"));
   const dbPath = join(temp, "boat.sqlite");
   const output = `data/tmp/calibration-stability-${process.pid}-${Date.now()}.json`;
@@ -22,8 +22,7 @@ test("BUY calibration stability requires matching conclusions in two independent
     const result = db.prepare("INSERT INTO race_results (race_id,trifecta,payout_yen,returned) VALUES (?,?,?,?)");
     for (let i = 0; i < 60; i += 1) {
       const raceId = `paper-${String(i).padStart(3, "0")}`;
-      const dayIndex = i + 1;
-      const date = new Date(Date.UTC(2026, 5, dayIndex)).toISOString().slice(0, 10);
+      const date = new Date(Date.UTC(2026, 5, i + 1)).toISOString().slice(0, 10);
       const hit = i === 10 || i === 40;
       decision.run(raceId, date, "PRIVATE", 1, "trifecta", "1-2-3", null, null, 0, "v1", 0.06, 1.3, 22, 100, "paper-live", `${date}T00:00:00Z`);
       result.run(raceId, hit ? "1-2-3" : "1-3-2", 4000, 0);
@@ -34,31 +33,35 @@ test("BUY calibration stability requires matching conclusions in two independent
   }
   try {
     const { stdout } = await execFileAsync("npx", [
-      "tsx", "scripts/analyze-buy-calibration-stability.ts",
+      "tsx", "scripts/report-buy-probability-calibration.ts",
       "--run-kind", "paper-live",
-      "--window-size", "30",
-      "--minimum-eligible", "30",
+      "--recent", "30",
+      "--minimum-trials", "30",
+      "--high-ev-threshold", "1.2",
       "--output", output,
     ], { env: { ...process.env, BOAT_PON_DB_PATH: dbPath }, maxBuffer: 1024 * 1024 });
     const status = JSON.parse(stdout.trim()) as any;
-    assert.equal(status.status, "STABLE_WITHIN_5PT");
-    assert.equal(status.totalSettled, 60);
-    assert.equal(status.requiredSettled, 60);
-    assert.equal(status.missingSettledToCompare, 0);
-    assert.equal(status.recent.probabilityEligible, 30);
-    assert.equal(status.prior.probabilityEligible, 30);
-    assert.equal(status.recent.metrics.classification, "WITHIN_5PT");
-    assert.equal(status.prior.metrics.classification, "WITHIN_5PT");
+    assert.equal(status.stability.status, "STABLE_WITHIN_5PT");
+    assert.equal(status.stability.totalSettled, 60);
+    assert.equal(status.stability.requiredSettled, 60);
+    assert.equal(status.stability.missingSettledToCompare, 0);
+    assert.equal(status.stability.recent.probabilityEligible, 30);
+    assert.equal(status.stability.prior.probabilityEligible, 30);
+    assert.equal(status.stability.recent.metrics.classification, "WITHIN_5PT");
+    assert.equal(status.stability.prior.metrics.classification, "WITHIN_5PT");
     assert.equal(status.productionChangeAllowed, false);
-    const reportText = await readFile(output, "utf8");
-    assert.doesNotMatch(reportText, /PRIVATE|PRIVATE_HISTORY|selection|raceId|decisionId|currentOdds|stake|venue/u);
+    const report = JSON.parse(await readFile(output, "utf8")) as any;
+    assert.equal(report.schemaVersion, "buy-probability-calibration-public-v2");
+    assert.equal(report.prior.status, "AVAILABLE");
+    assert.equal(report.stability.status, "STABLE_WITHIN_5PT");
+    assert.doesNotMatch(JSON.stringify(report), /PRIVATE|PRIVATE_HISTORY|selection|raceId|decisionId|currentOdds|stake|venue/u);
   } finally {
     await rm(output, { force: true });
     await rm(temp, { recursive: true, force: true });
   }
 });
 
-test("BUY calibration stability stays unavailable when a window lacks full probability support", async () => {
+test("BUY probability report keeps calibration stability unavailable when one window lacks probability support", async () => {
   const temp = await mkdtemp(join(tmpdir(), "boat-pon-calibration-stability-missing-"));
   const dbPath = join(temp, "boat.sqlite");
   const output = `data/tmp/calibration-stability-missing-${process.pid}-${Date.now()}.json`;
@@ -77,10 +80,10 @@ test("BUY calibration stability stays unavailable when a window lacks full proba
     }
   } finally { db.close(); }
   try {
-    const { stdout } = await execFileAsync("npx", ["tsx", "scripts/analyze-buy-calibration-stability.ts", "--run-kind", "paper-live", "--window-size", "30", "--minimum-eligible", "30", "--output", output], { env: { ...process.env, BOAT_PON_DB_PATH: dbPath } });
+    const { stdout } = await execFileAsync("npx", ["tsx", "scripts/report-buy-probability-calibration.ts", "--run-kind", "paper-live", "--recent", "30", "--minimum-trials", "30", "--output", output], { env: { ...process.env, BOAT_PON_DB_PATH: dbPath } });
     const status = JSON.parse(stdout.trim()) as any;
-    assert.equal(status.status, "INSUFFICIENT_SUPPORT");
-    assert.ok(status.recent.probabilityEligible === 29 || status.prior.probabilityEligible === 29);
+    assert.equal(status.stability.status, "INSUFFICIENT_SUPPORT");
+    assert.ok(status.stability.recent.probabilityEligible === 29 || status.stability.prior.probabilityEligible === 29);
   } finally {
     await rm(output, { force: true });
     await rm(temp, { recursive: true, force: true });
