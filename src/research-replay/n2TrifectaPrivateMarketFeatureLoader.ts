@@ -210,7 +210,9 @@ function loadCheckpoint(
   }
   if (!rawPath) blockers.push("ACCEPTED_RAW_PATH_INVALID");
   if (!envelopePath) blockers.push("ACCEPTED_ENVELOPE_PATH_INVALID");
-  if (blockers.length > 0) return { status: "BLOCKED", blockers: unique(blockers), snapshot: null };
+  if (blockers.length > 0 || rawPath === null || envelopePath === null) {
+    return { status: "BLOCKED", blockers: unique(blockers), snapshot: null };
+  }
 
   if (!existsSync(rawPath)) blockers.push("PRIVATE_RAW_FILE_MISSING");
   if (!existsSync(envelopePath)) blockers.push("PRIVATE_ENVELOPE_FILE_MISSING");
