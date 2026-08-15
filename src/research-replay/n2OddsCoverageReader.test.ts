@@ -8,6 +8,7 @@ import { DatabaseSync } from "node:sqlite";
 import { enumerateBetSelections } from "./n2DatasetContract";
 import { buildN2FeatureCoverageProfile } from "./n2FeatureCoverage";
 import { readTrifectaMarketCoverageEvents } from "./n2OddsCoverageReader";
+import { semanticPayloadHash } from "./domain";
 
 function sha256(path: string): string {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
@@ -24,6 +25,10 @@ function payload(observedAt: string, selections = enumerateBetSelections("trifec
     checkpointPolicyVersion: "t-minus-nearest-v1",
     marketKind: "live_checkpoint",
   });
+}
+
+function payloadSemanticHash(payloadJson: string): string {
+  return semanticPayloadHash("trifecta_market", JSON.parse(payloadJson) as unknown);
 }
 
 function createFixture(): { dir: string; primaryPath: string; sidecarPath: string } {
@@ -81,7 +86,7 @@ function insertMarket(input: {
   payloadHash?: string;
 }): void {
   const db = new DatabaseSync(input.sidecarPath);
-  const hash = input.payloadHash ?? `hash-${input.suffix}`;
+  const hash = input.payloadHash ?? payloadSemanticHash(input.payloadJson);
   db.prepare("INSERT INTO raw_documents VALUES (?, 'verified', 'passed', 1)").run(`raw-${input.suffix}`);
   db.prepare("INSERT INTO parse_runs VALUES (?, ?, 'success')").run(`parse-${input.suffix}`, `raw-${input.suffix}`);
   db.prepare(`INSERT INTO domain_observations VALUES (?, ?, 'trifecta_market', 'trifecta_market',
@@ -180,6 +185,37 @@ test("typed payload hash mismatch is rejected", () => {
     const db = new DatabaseSync(fixture.sidecarPath);
     db.exec("UPDATE typed_observation_payloads SET payload_hash = 'tampered'");
     db.close();
+    const events = readTrifectaMarketCoverageEvents({
+      primaryDbPath: fixture.primaryPath, sidecarDbPath: fixture.sidecarPath,
+      dateFrom: "2026-05-20", dateTo: "2026-05-20", checkpoint: "T-5",
+    });
+    assert.equal(events.length, 120);
+    assert.ok(events.every((event) => event.exclusionReason === "excluded_invalid_market_payload"));
+  } finally {
+    rmSync(fixture.dir, { recursive: true, force: true });
+  }
+});
+
+test("typed payload body tampering is rejected even when stored hashes still agree", () => {
+  const fixture = createFixture();
+  try {
+    const original = payload("2026-05-20T02:55:00Z");
+    insertMarket({
+      sidecarPath: fixture.sidecarPath,
+      suffix: "body-tamper",
+      raceKey: "2026-05-20:01:R1",
+      observedAt: "2026-05-20T02:55:00Z",
+      payloadJson: original,
+    });
+    const tampered = JSON.parse(original) as {
+      selections: Array<{ selection: string; odds: number }>;
+    };
+    tampered.selections[0].odds += 100;
+    const db = new DatabaseSync(fixture.sidecarPath);
+    db.prepare("UPDATE typed_observation_payloads SET payload_json = ? WHERE observation_id = 'obs-body-tamper'")
+      .run(JSON.stringify(tampered));
+    db.close();
+
     const events = readTrifectaMarketCoverageEvents({
       primaryDbPath: fixture.primaryPath, sidecarDbPath: fixture.sidecarPath,
       dateFrom: "2026-05-20", dateTo: "2026-05-20", checkpoint: "T-5",
