@@ -1,4 +1,4 @@
-import { canonicalHash } from "./canonical";
+import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import {
   validateFeaturePIT,
   validateOddsUsage,
@@ -10,7 +10,7 @@ import {
   type N2FeatureLineageEvidenceRow,
 } from "./n2FeatureLineage";
 
-export const N2_PIT_AUDIT_VERSION = "n2-pit-audit-v1";
+export const N2_PIT_AUDIT_VERSION = "n2-pit-audit-v2";
 
 export const N2_PIT_FEATURE_SOURCE_TYPES = ["official_program", "trifecta_market"] as const;
 export type N2PitFeatureSourceType = (typeof N2_PIT_FEATURE_SOURCE_TYPES)[number];
@@ -98,6 +98,15 @@ function validTimestamp(value: string | null): value is string {
   const offset = /([+-])(\d{2}):(\d{2})$/.exec(value);
   if (offset !== null && (Number(offset[2]) > 23 || Number(offset[3]) > 59)) return false;
   return Number.isFinite(Date.parse(value));
+}
+
+function canonicalTimestampForDigest(value: string | null): string | null {
+  if (value === null || !validTimestamp(value)) return value;
+  try {
+    return canonicalUtcTimestamp(value);
+  } catch {
+    return value;
+  }
 }
 
 function lineageReasonClass(reason: string): N2PitAuditReasonClass {
@@ -203,9 +212,9 @@ function auditInputDigest(observations: N2PitAuditObservation[]): string {
     canonicalRaceKey: observation.canonicalRaceKey,
     observationType: observation.observationType,
     rawDocumentId: observation.rawDocumentId,
-    sourcePublishedAt: observation.sourcePublishedAt,
-    sourceObservedAt: observation.sourceObservedAt,
-    firstSeenAt: observation.firstSeenAt,
+    sourcePublishedAt: canonicalTimestampForDigest(observation.sourcePublishedAt),
+    sourceObservedAt: canonicalTimestampForDigest(observation.sourceObservedAt),
+    firstSeenAt: canonicalTimestampForDigest(observation.firstSeenAt),
     timingQuality: observation.timingQuality,
     sourceQuality: observation.sourceQuality,
     parseRawDocumentId: observation.parseRawDocumentId,
@@ -213,7 +222,7 @@ function auditInputDigest(observations: N2PitAuditObservation[]): string {
     integrityStatus: observation.integrityStatus,
     securityScanStatus: observation.securityScanStatus,
     parserReplayEligible: observation.parserReplayEligible,
-    decisionCutoff: observation.decisionCutoff,
+    decisionCutoff: canonicalTimestampForDigest(observation.decisionCutoff),
   })).sort((a, b) => `${a.canonicalRaceKey}\u0000${a.observationId}`.localeCompare(
     `${b.canonicalRaceKey}\u0000${b.observationId}`,
   )));

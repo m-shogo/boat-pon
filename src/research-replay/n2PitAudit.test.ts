@@ -139,6 +139,20 @@ test("clean real observations produce deterministic PASS summary", () => {
   assert.equal(first.inputDigest, second.inputDigest);
 });
 
+test("equivalent explicit-zone instants produce identical PIT audit digests", () => {
+  const canonical = buildN2PitAuditSummary([row()]);
+  const offset = buildN2PitAuditSummary([row({
+    sourcePublishedAt: "2024-06-01T09:00:00+09:00",
+    sourceObservedAt: "2024-06-01T09:01:00+09:00",
+    firstSeenAt: "2024-06-01T09:02:00+09:00",
+    decisionCutoff: "2024-06-01T10:00:00+09:00",
+  })]);
+  assert.equal(canonical.status, "PASS");
+  assert.equal(offset.status, "PASS");
+  assert.equal(offset.inputDigest, canonical.inputDigest);
+  assert.equal(offset.outputDigest, canonical.outputDigest);
+});
+
 test("no real events is CONDITIONAL rather than a fabricated zero-coverage PASS", () => {
   const summary = buildN2PitAuditSummary([]);
   assert.equal(summary.status, "CONDITIONAL");
