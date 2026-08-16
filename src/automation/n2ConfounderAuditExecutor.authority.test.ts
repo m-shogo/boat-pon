@@ -16,6 +16,8 @@ const PRODUCTION_AUTHORITY = {
   productionApplyAuthorized: false,
 };
 
+type ProductionAuthorityField = keyof typeof PRODUCTION_AUTHORITY;
+
 function splitResult(split: "validation" | "test") {
   return {
     split,
@@ -115,14 +117,17 @@ function withRoot(fn: (root: string) => void): void {
 
 function writeArtifact(root: string, input: {
   historicalAuthority?: Record<string, boolean>;
+  historicalAuthorityOmit?: ProductionAuthorityField;
   confirmationAuthority?: Record<string, boolean>;
   distributionAuthority?: Record<string, boolean>;
 }): void {
+  const historicalAuthority: Record<string, boolean> = { ...PRODUCTION_AUTHORITY, ...input.historicalAuthority };
+  if (input.historicalAuthorityOmit) delete historicalAuthority[input.historicalAuthorityOmit];
   const summary = {
     status: "PASS",
     confirmation: confirmation(input.confirmationAuthority),
     distributionEvidence: distribution(input.distributionAuthority),
-    authority: { ...PRODUCTION_AUTHORITY, ...input.historicalAuthority },
+    authority: historicalAuthority,
   };
   const payload = {
     ...summary,
@@ -149,6 +154,25 @@ test("confounder artifact ingestion rejects widened historical production author
       const read = readN2HistoricalTestArtifact(root);
       assert.equal(read.artifact, null);
       assert.ok(read.blockers.includes(blocker), `${field} must fail closed at artifact ingestion`);
+    });
+  }
+});
+
+test("confounder artifact ingestion rejects missing historical production authority fields", () => {
+  const cases: Array<[ProductionAuthorityField, string]> = [
+    ["automaticPromotionAuthorized", "HISTORICAL_REPORT_PROMOTION_AUTHORITY_INVALID"],
+    ["currentBuyConnectionAuthorized", "HISTORICAL_REPORT_BUY_AUTHORITY_INVALID"],
+    ["lineConnectionAuthorized", "HISTORICAL_REPORT_LINE_AUTHORITY_INVALID"],
+    ["publicPublishAuthorized", "HISTORICAL_REPORT_PUBLIC_AUTHORITY_INVALID"],
+    ["automatedBettingAuthorized", "HISTORICAL_REPORT_AUTOMATED_BETTING_AUTHORITY_INVALID"],
+    ["productionApplyAuthorized", "HISTORICAL_REPORT_PRODUCTION_AUTHORITY_INVALID"],
+  ];
+  for (const [field, blocker] of cases) {
+    withRoot((root) => {
+      writeArtifact(root, { historicalAuthorityOmit: field });
+      const read = readN2HistoricalTestArtifact(root);
+      assert.equal(read.artifact, null);
+      assert.ok(read.blockers.includes(blocker), `${field} omission must fail closed at artifact ingestion`);
     });
   }
 });
