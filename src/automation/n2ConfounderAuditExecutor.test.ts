@@ -95,6 +95,23 @@ function confirmation(results: N2EdgeHistoricalConfirmationResult[]): N2EdgeHist
   return { ...core, outputDigest: canonicalHash(core) };
 }
 
+function writeCurrentDiscovery(root: string): unknown {
+  const reports = join(root, "reports/n2");
+  mkdirSync(reports, { recursive: true });
+  const discovery = {
+    status: "PASS",
+    scan: {
+      status: "PASS",
+      scanVersion: "n2-edge-hypothesis-scan-v2",
+      signals: [],
+    },
+    outputDigest: canonicalHash({ revision: "fixture-current" }),
+    revision: "fixture-current",
+  };
+  writeFileSync(join(reports, "n2-edge-hypothesis-scan.json"), `${JSON.stringify(discovery, null, 2)}\n`, "utf8");
+  return discovery;
+}
+
 function writeHistoricalArtifact(
   root: string,
   results: N2EdgeHistoricalConfirmationResult[],
@@ -102,8 +119,10 @@ function writeHistoricalArtifact(
 ): string {
   const reports = join(root, "reports/n2");
   mkdirSync(reports, { recursive: true });
+  const discovery = writeCurrentDiscovery(root);
   const summary = {
     status: "PASS",
+    discoveryArtifactDigest: canonicalHash(discovery),
     confirmation: confirmation(results),
     authority: {
       automaticPromotionAuthorized: false,
