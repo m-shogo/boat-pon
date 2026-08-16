@@ -26,7 +26,9 @@ import {
 const SHA = "0123456789abcdef0123456789abcdef01234567";
 const RUNTIME = `/Users/test/Library/Application Support/BoatPon/trifecta-private-capture/releases/${SHA}`;
 
-function authorization(): N2TrifectaLocalCaptureAuthorization {
+function authorization(
+  overrides: Partial<N2TrifectaLocalCaptureAuthorization> = {},
+): N2TrifectaLocalCaptureAuthorization {
   return {
     authorizationVersion: N2_TRIFECTA_LOCAL_CAPTURE_AUTHORIZATION_VERSION,
     authorizationId: "AUTH-N2-TRI-LOCAL-private-research-0001",
@@ -42,6 +44,7 @@ function authorization(): N2TrifectaLocalCaptureAuthorization {
     currentBuyConnectionAuthorized: false,
     lineConnectionAuthorized: false,
     automatedBettingAuthorized: false,
+    ...overrides,
   };
 }
 
@@ -95,6 +98,17 @@ test("binding inherits the exact authorization interval and private-only boundar
   assert.equal(result.automatedBettingAuthorized, false);
 });
 
+test("binding rejects normalized authorization timestamps", () => {
+  assert.throws(
+    () => buildN2TrifectaImmutableRuntimeAuthorityBinding({
+      authorization: authorization({ issuedAt: "2026-08-01T24:00:00Z" }),
+      authoritySha: SHA,
+      runtimeRoot: RUNTIME,
+    }),
+    /AUTHORIZATION_TIME_INVALID/,
+  );
+});
+
 test("exact detached clean runtime authority passes", () => {
   assert.deepEqual(auditN2TrifectaImmutableRuntimeAuthority({
     authorization: authorization(),
@@ -110,6 +124,28 @@ test("exact detached clean runtime authority passes", () => {
     detachedHead: true,
     trackedWorktreeClean: true,
   });
+});
+
+test("runtime audit rejects normalized binding and audit timestamps", () => {
+  const invalidIntervalAuthorization = authorization({ issuedAt: "2026-08-01T24:00:00Z" });
+  const invalidBinding = binding({ issuedAt: invalidIntervalAuthorization.issuedAt });
+  const intervalResult = auditN2TrifectaImmutableRuntimeAuthority({
+    authorization: invalidIntervalAuthorization,
+    binding: invalidBinding,
+    observed: observed(),
+    now: "2026-08-06T00:35:00.000Z",
+  });
+  assert.equal(intervalResult.status, "BLOCKED");
+  assert.ok(intervalResult.blockers.includes("BINDING_ISSUED_AT_INVALID"));
+
+  const nowResult = auditN2TrifectaImmutableRuntimeAuthority({
+    authorization: authorization(),
+    binding: binding(),
+    observed: observed(),
+    now: "2026-08-05T24:00:00Z",
+  });
+  assert.equal(nowResult.status, "BLOCKED");
+  assert.ok(nowResult.blockers.includes("NOW_INVALID"));
 });
 
 test("SHA, root, attached branch, tracked dirt and authorization mismatch fail closed", () => {
