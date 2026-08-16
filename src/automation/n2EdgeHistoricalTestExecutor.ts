@@ -54,13 +54,32 @@ function discoveryArtifactDigestMatches(value: unknown): boolean {
   return isDigest(outputDigest) && canonicalHash(summary) === outputDigest;
 }
 
+function discoveryAuthorityIsReadOnly(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const authority = value as Record<string, unknown>;
+  return (
+    authority.discoveryOnly === true &&
+    authority.validationLabelsUsedForDiscovery === false &&
+    authority.testLabelsUsedForDiscovery === false &&
+    authority.automaticPromotionAuthorized === false &&
+    authority.automaticForwardAuthorized === false &&
+    authority.roiPayoutAccessAuthorized === false &&
+    authority.databaseWriteAuthorized === false &&
+    authority.currentBuyConnectionAuthorized === false &&
+    authority.lineConnectionAuthorized === false &&
+    authority.publicPublishAuthorized === false &&
+    authority.automatedBettingAuthorized === false &&
+    authority.productionApplyAuthorized === false
+  );
+}
+
 function lockedHypothesesFromArtifact(repoRoot: string): { hypotheses: N2EdgeHypothesis[]; digest: string; blockers: string[] } {
   const path = join(repoRoot, DISCOVERY_REPORT_RELATIVE_PATH);
   if (!existsSync(path)) return { hypotheses: [], digest: canonicalHash("missing-discovery-report"), blockers: ["DISCOVERY_REPORT_MISSING"] };
   let parsed: unknown;
   try { parsed = JSON.parse(readFileSync(path, "utf8")); }
   catch { return { hypotheses: [], digest: canonicalHash("invalid-discovery-report"), blockers: ["DISCOVERY_REPORT_INVALID_JSON"] }; }
-  const report = parsed as { status?: unknown; scan?: { status?: unknown; scanVersion?: unknown; signals?: unknown }; outputDigest?: unknown };
+  const report = parsed as { status?: unknown; scan?: { status?: unknown; scanVersion?: unknown; signals?: unknown; authority?: unknown }; outputDigest?: unknown };
   if (!isDigest(report.outputDigest)) {
     return { hypotheses: [], digest: canonicalHash(parsed), blockers: ["DISCOVERY_OUTPUT_DIGEST_INVALID"] };
   }
@@ -76,6 +95,9 @@ function lockedHypothesesFromArtifact(repoRoot: string): { hypotheses: N2EdgeHyp
       digest: canonicalHash(parsed),
       blockers: [`DISCOVERY_SCAN_VERSION_MISMATCH:${String(report.scan.scanVersion ?? "MISSING")}/${N2_EDGE_HYPOTHESIS_SCAN_VERSION}`],
     };
+  }
+  if (!discoveryAuthorityIsReadOnly(report.scan.authority)) {
+    return { hypotheses: [], digest: canonicalHash(parsed), blockers: ["DISCOVERY_AUTHORITY_INVALID"] };
   }
   if (!Array.isArray(report.scan.signals)) return { hypotheses: [], digest: canonicalHash(parsed), blockers: ["DISCOVERY_SIGNALS_NOT_ARRAY"] };
   if (report.scan.signals.length > N2_EDGE_SCAN_MAX_SIGNALS) {
