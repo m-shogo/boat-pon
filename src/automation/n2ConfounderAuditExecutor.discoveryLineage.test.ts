@@ -114,13 +114,13 @@ test("historical artifact rejects missing discovery lineage when a current disco
   });
 });
 
-test("historical artifact rejects lineage when the current discovery artifact is missing", () => {
+test("confounder ingestion rejects lineage when the current discovery artifact is missing", () => {
   withRoot((root) => {
     const discovery = writeDiscovery(root, "current");
     writeHistorical(root, canonicalHash(discovery));
     rmSync(join(root, "reports/n2/n2-edge-hypothesis-scan.json"));
 
-    const result = readN2HistoricalTestArtifact(root);
+    const result = readN2HistoricalTestArtifact(root, { requireCurrentDiscovery: true });
 
     assert.equal(result.artifact, null);
     assert.ok(result.blockers.includes("DISCOVERY_REPORT_MISSING"), result.blockers.join("; "));
