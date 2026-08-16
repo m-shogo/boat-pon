@@ -37,6 +37,9 @@ function writeMetadata(root: string, options: {
         checkpointLabel: "T-5",
         decisionCutoff: options.cutoff ?? "2026-08-07T03:30:00.000Z",
       },
+      databaseWriteAuthorized: false,
+      currentBuyConnectionAuthorized: false,
+      lineConnectionAuthorized: false,
       publicPublishAuthorized: false,
       productionApplyExecuted: false,
     }, null, 2)}\n`, "utf8");

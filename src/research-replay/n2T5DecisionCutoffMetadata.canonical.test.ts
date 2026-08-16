@@ -28,6 +28,9 @@ function withMetadata(cutoff: string, fn: (root: string) => void): void {
         checkpointLabel: "T-5",
         decisionCutoff: cutoff,
       },
+      databaseWriteAuthorized: false,
+      currentBuyConnectionAuthorized: false,
+      lineConnectionAuthorized: false,
       publicPublishAuthorized: false,
       productionApplyExecuted: false,
     })}\n`, "utf8");

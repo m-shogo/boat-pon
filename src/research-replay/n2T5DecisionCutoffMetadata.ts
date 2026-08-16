@@ -35,6 +35,9 @@ type CaptureEnvelope = {
     checkpointLabel?: unknown;
     decisionCutoff?: unknown;
   };
+  databaseWriteAuthorized?: unknown;
+  currentBuyConnectionAuthorized?: unknown;
+  lineConnectionAuthorized?: unknown;
   publicPublishAuthorized?: unknown;
   productionApplyExecuted?: unknown;
 };
@@ -202,7 +205,11 @@ export function readN2T5DecisionCutoffMetadata(input: {
     } else {
       decisionCutoffByRaceKey[raceKey] = decisionCutoff;
     }
-    if (envelope.publicPublishAuthorized !== false || envelope.productionApplyExecuted !== false) {
+    if (envelope.databaseWriteAuthorized !== false
+      || envelope.currentBuyConnectionAuthorized !== false
+      || envelope.lineConnectionAuthorized !== false
+      || envelope.publicPublishAuthorized !== false
+      || envelope.productionApplyExecuted !== false) {
       blockers.push(`${raceKey}:ENVELOPE_AUTHORITY_WIDENED`);
     }
   }
