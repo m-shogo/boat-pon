@@ -38,6 +38,58 @@ test("builder: emits every exacta selection with label, feature and provenance",
   assert.equal(result.rows[0].odds, null);
 });
 
+test("builder: invalid decision cutoff fails closed even without feature or odds observations", () => {
+  const result = buildN2FeatureDatasetRows(base({
+    decisionCutoff: "2026-05-20T24:00:00Z",
+    features: [],
+    odds: [],
+  }));
+  assert.equal(result.status, "excluded");
+  assert.equal(result.rows.length, 0);
+  assert.deepEqual(result.exclusions, [{
+    scope: "candidate",
+    key: "2026-05-20:01:01",
+    reason: "excluded_invalid_decision_cutoff",
+  }]);
+});
+
+test("builder: equivalent explicit-zone times emit identical canonical rows", () => {
+  const canonical = buildN2FeatureDatasetRows(base({
+    odds: [{
+      betSelection: "1-2",
+      odds: 5.2,
+      kind: "live_checkpoint",
+      capturedAt: "2026-05-20T04:59:30.000Z",
+      availableAt: "2026-05-20T04:59:00.000Z",
+      observationId: "obs-odds",
+      rawDocumentId: "raw-odds",
+    }],
+  }));
+  const offset = buildN2FeatureDatasetRows(base({
+    decisionCutoff: "2026-05-20T14:00:00+09:00",
+    features: [{
+      featureKey: "nationalWinRate",
+      value: 7.1,
+      pitClass: "historical_safe",
+      availableAt: "2026-05-20T13:00:00+09:00",
+      observationId: "obs-feature-1",
+      rawDocumentId: "raw-feature-1",
+    }],
+    odds: [{
+      betSelection: "1-2",
+      odds: 5.2,
+      kind: "live_checkpoint",
+      capturedAt: "2026-05-20T13:59:30+09:00",
+      availableAt: "2026-05-20T13:59:00+09:00",
+      observationId: "obs-odds",
+      rawDocumentId: "raw-odds",
+    }],
+  }));
+  assert.equal(canonical.status, "built");
+  assert.equal(offset.status, "built");
+  assert.deepEqual(offset.rows, canonical.rows);
+});
+
 test("builder: known live-only key cannot be laundered as historical_safe", () => {
   const result = buildN2FeatureDatasetRows(base({ features: [{
     featureKey: "courseAvgSt",
