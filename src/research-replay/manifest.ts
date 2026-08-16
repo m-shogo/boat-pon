@@ -270,7 +270,7 @@ export function buildRaceAsOfManifest(input: {
   parseCanonicalRaceKey(input.canonicalRaceKey);
   const asOfAt = canonicalUtcTimestamp(input.asOfAt);
   const policy = RESOLUTION_POLICIES[input.purpose];
-  const createdAt = input.createdAt ?? new Date().toISOString();
+  const createdAt = canonicalUtcTimestamp(input.createdAt ?? new Date().toISOString());
   const idFactory = input.idFactory ?? randomUUID;
   registerResolutionPolicies(input.db, createdAt);
   const rows = input.db.prepare(`
