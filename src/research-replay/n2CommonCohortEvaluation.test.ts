@@ -76,8 +76,14 @@ test("N2 common cohort compares market, historical, and legacy on exactly 2400 r
   assert.equal(report.requiredCommonRowCount, N2_COMMON_COHORT_REQUIRED_ROWS);
   assert.equal(report.commonRowCount, 2400);
   assert.equal(report.commonPositiveCount, 20);
-  assert.equal(report.baselineIds.length, 3);
-  assert.deepEqual(report.baselineKinds, ["market_only", "historical_only", "legacy"]);
+  assert.deepEqual(
+    report.baselineIds.map((baselineId, index) => [baselineId, report.baselineKinds[index]]),
+    [
+      ["n2-historical-venue-frequency-v1", "historical_only"],
+      ["n2-legacy-boatpon-v3-core-v1", "legacy"],
+      ["n2-market-only-t5-v1", "market_only"],
+    ],
+  );
   assert.ok(Object.values(report.baselineInputRowCounts).every((count) => count === 2400));
   assert.ok(Object.values(report.excludedOutsideCommonCohort).every((count) => count === 0));
   assert.equal(Object.keys(report.baselineMetrics).length, 3);

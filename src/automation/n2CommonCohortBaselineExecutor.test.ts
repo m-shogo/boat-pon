@@ -163,7 +163,16 @@ test("executor persists only aggregate three-baseline common cohort evidence", (
     assert.equal(report.requiredCommonRowCount, 2400);
     assert.equal(report.commonRowCount, 2400);
     assert.equal(report.commonPositiveCount, 20);
-    assert.deepEqual(report.baselineKinds, ["market_only", "historical_only", "legacy"]);
+    const baselineIds = report.baselineIds as string[];
+    const baselineKinds = report.baselineKinds as string[];
+    assert.deepEqual(
+      baselineIds.map((baselineId, index) => [baselineId, baselineKinds[index]]),
+      [
+        ["n2-historical-venue-frequency-v1", "historical_only"],
+        ["n2-legacy-boatpon-v3-core-v1", "legacy"],
+        ["n2-market-only-t5-v1", "market_only"],
+      ],
+    );
     assert.equal(report.currentBuyConnectionAuthorized, false);
     assert.equal(report.lineConnectionAuthorized, false);
     assert.equal(report.publicPublishAuthorized, false);
