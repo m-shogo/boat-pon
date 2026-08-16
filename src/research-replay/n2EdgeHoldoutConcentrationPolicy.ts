@@ -82,15 +82,38 @@ function validShare(value: number | null): boolean {
   return value === null || (Number.isFinite(value) && value >= 0 && value <= 1);
 }
 
-function evaluateSplit(evidence: N2EdgeHoldoutDistributionSplitEvidence): N2EdgeHoldoutConcentrationSplitDecision {
+function shareMatchesCount(share: number | null, maxCount: number, totalCount: number): boolean {
+  if (totalCount === 0) return share === null && maxCount === 0;
+  if (share === null) return false;
+  return Math.abs(share - maxCount / totalCount) <= 1e-12;
+}
+
+function evaluateSplit(
+  evidence: N2EdgeHoldoutDistributionSplitEvidence,
+  expectedSplit: "validation" | "test",
+): N2EdgeHoldoutConcentrationSplitDecision {
   const malformed: string[] = [];
+  if (evidence.split !== expectedSplit) malformed.push(`SPLIT_LABEL_INVALID:${evidence.split}/${expectedSplit}`);
   if (!Number.isSafeInteger(evidence.uniqueRaceCount) || evidence.uniqueRaceCount < 0) malformed.push("UNIQUE_RACE_COUNT_INVALID");
   if (!Number.isSafeInteger(evidence.distinctVenueCount) || evidence.distinctVenueCount < 0 || evidence.distinctVenueCount > 24) malformed.push("DISTINCT_VENUE_COUNT_INVALID");
+  if (!Number.isSafeInteger(evidence.maxVenueRaceCount) || evidence.maxVenueRaceCount < 0 || evidence.maxVenueRaceCount > evidence.uniqueRaceCount) malformed.push("MAX_VENUE_RACE_COUNT_INVALID");
   if (!Number.isSafeInteger(evidence.distinctYearCount) || evidence.distinctYearCount < 0 || evidence.distinctYearCount > 2) malformed.push("DISTINCT_YEAR_COUNT_INVALID");
+  if (!Number.isSafeInteger(evidence.maxYearRaceCount) || evidence.maxYearRaceCount < 0 || evidence.maxYearRaceCount > evidence.uniqueRaceCount) malformed.push("MAX_YEAR_RACE_COUNT_INVALID");
   if (!validShare(evidence.maxVenueShare)) malformed.push("MAX_VENUE_SHARE_INVALID");
   if (!validShare(evidence.maxYearShare)) malformed.push("MAX_YEAR_SHARE_INVALID");
-  if (evidence.uniqueRaceCount === 0 && (evidence.maxVenueShare !== null || evidence.maxYearShare !== null)) malformed.push("ZERO_SUPPORT_SHARE_MUST_BE_NULL");
-  if (evidence.uniqueRaceCount > 0 && (evidence.maxVenueShare === null || evidence.maxYearShare === null)) malformed.push("NONZERO_SUPPORT_SHARE_MISSING");
+  if (evidence.uniqueRaceCount === 0) {
+    if (evidence.distinctVenueCount !== 0) malformed.push("ZERO_SUPPORT_VENUE_COUNT_MUST_BE_ZERO");
+    if (evidence.distinctYearCount !== 0) malformed.push("ZERO_SUPPORT_YEAR_COUNT_MUST_BE_ZERO");
+  } else {
+    if (evidence.distinctVenueCount === 0) malformed.push("NONZERO_SUPPORT_VENUE_COUNT_MISSING");
+    if (evidence.distinctYearCount === 0) malformed.push("NONZERO_SUPPORT_YEAR_COUNT_MISSING");
+  }
+  if (!shareMatchesCount(evidence.maxVenueShare, evidence.maxVenueRaceCount, evidence.uniqueRaceCount)) {
+    malformed.push("MAX_VENUE_SHARE_COUNT_MISMATCH");
+  }
+  if (!shareMatchesCount(evidence.maxYearShare, evidence.maxYearRaceCount, evidence.uniqueRaceCount)) {
+    malformed.push("MAX_YEAR_SHARE_COUNT_MISMATCH");
+  }
   if (malformed.length > 0) {
     return {
       split: evidence.split,
@@ -143,8 +166,8 @@ function evaluateSplit(evidence: N2EdgeHoldoutDistributionSplitEvidence): N2Edge
 function evaluateHypothesis(
   evidence: N2EdgeHoldoutDistributionHypothesisEvidence,
 ): N2EdgeHoldoutConcentrationHypothesisDecision {
-  const validation = evaluateSplit(evidence.validation);
-  const test = evaluateSplit(evidence.test);
+  const validation = evaluateSplit(evidence.validation, "validation");
+  const test = evaluateSplit(evidence.test, "test");
   const blockers = unique([
     ...validation.blockers.map((blocker) => `validation:${blocker}`),
     ...test.blockers.map((blocker) => `test:${blocker}`),
