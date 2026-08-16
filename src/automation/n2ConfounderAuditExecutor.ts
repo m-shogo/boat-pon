@@ -102,7 +102,9 @@ export function readN2HistoricalTestArtifact(repoRoot: string): {
   if (!isValidHistoricalGeneratedAt(value.generatedAt)) blockers.push("HISTORICAL_TEST_GENERATED_AT_INVALID");
 
   const discoveryPath = join(repoRoot, DISCOVERY_REPORT_RELATIVE_PATH);
-  if (existsSync(discoveryPath)) {
+  if (!existsSync(discoveryPath)) {
+    blockers.push("DISCOVERY_REPORT_MISSING");
+  } else {
     let discovery: unknown;
     try { discovery = JSON.parse(readFileSync(discoveryPath, "utf8")); }
     catch { blockers.push("DISCOVERY_REPORT_INVALID_JSON"); }
