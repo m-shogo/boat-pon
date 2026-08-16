@@ -18,7 +18,7 @@ try {
   const source = buildBuyOutcomeSettlementSource({ runKind: args.runKind });
   assertPaperLiveSettlementConsistency(db, source);
   const settledEconomic = "outcome_result IS NOT NULL AND outcome_payout_yen IS NOT NULL AND outcome_returned = 0";
-  const invalid = db.prepare(`
+  const invalidModel = db.prepare(`
     ${source.cte}
     SELECT COUNT(*) AS invalid
     FROM buy_outcomes
@@ -26,30 +26,32 @@ try {
       AND estimated_hit_rate IS NOT NULL
       AND (estimated_hit_rate < 0 OR estimated_hit_rate > 1)
   `).get(...source.params) as { invalid: number | bigint | null };
-  if (count(invalid.invalid) > 0) throw new Error("settled BUY contains estimated_hit_rate outside [0,1]");
+  if (count(invalidModel.invalid) > 0) throw new Error("settled BUY contains estimated_hit_rate outside [0,1]");
 
   const rows = db.prepare(`
     ${source.cte}
     SELECT
-      estimated_hit_rate AS predicted,
-      CASE WHEN selection = outcome_result THEN 1 ELSE 0 END AS hit,
-      ev
+      estimated_hit_rate AS model_predicted,
+      ev,
+      current_odds,
+      CASE WHEN selection = outcome_result THEN 1 ELSE 0 END AS hit
     FROM buy_outcomes
     WHERE ${settledEconomic}
     ORDER BY date DESC, venue DESC, race_no DESC, race_id DESC
-  `).all(...source.params) as Array<{
-    predicted: number | null;
-    hit: number | bigint;
-    ev: number | null;
-  }>;
+  `).all(...source.params) as SourceRow[];
 
-  const overall = scope(rows, args.minimumTrials);
-  const recentRows = rows.slice(0, args.recent);
-  const priorRows = rows.slice(args.recent, args.recent * 2);
-  const recent = scope(recentRows, args.minimumTrials);
-  const prior = scope(priorRows, args.minimumTrials);
-  const highEvRows = rows.filter((row) => row.ev !== null && Number.isFinite(Number(row.ev)) && Number(row.ev) >= args.highEvThreshold);
-  const highEv = scope(highEvRows, args.minimumTrials);
+  const decisionRows = rows.map(toDecisionCalibrationRow);
+  const modelRows = rows.map((row) => ({ predicted: nullableNumber(row.model_predicted), hit: row.hit }));
+  const recentDecisionRows = decisionRows.slice(0, args.recent);
+  const priorDecisionRows = decisionRows.slice(args.recent, args.recent * 2);
+  const recentModelRows = modelRows.slice(0, args.recent);
+  const priorModelRows = modelRows.slice(args.recent, args.recent * 2);
+  const highEvIndexes = rows.flatMap((row, index) => isHighEv(row.ev, args.highEvThreshold) ? [index] : []);
+
+  const overall = scope(decisionRows, args.minimumTrials);
+  const recent = scope(recentDecisionRows, args.minimumTrials);
+  const prior = scope(priorDecisionRows, args.minimumTrials);
+  const highEv = scope(highEvIndexes.map((index) => decisionRows[index]), args.minimumTrials);
   const stability = classifyBuyCalibrationStability({
     totalSettled: rows.length,
     windowSize: args.recent,
@@ -57,11 +59,19 @@ try {
     recent: calibrationWindow(recent),
     prior: calibrationWindow(prior),
   });
+  const preCalibration = {
+    overall: scope(modelRows, args.minimumTrials),
+    recent: scope(recentModelRows, args.minimumTrials),
+    prior: scope(priorModelRows, args.minimumTrials),
+    highEv: scope(highEvIndexes.map((index) => modelRows[index]), args.minimumTrials),
+  };
 
   const report = {
-    schemaVersion: "buy-probability-calibration-public-v2" as const,
+    schemaVersion: "buy-probability-calibration-public-v3" as const,
     generatedAt: new Date().toISOString(),
     status: overall.status,
+    probabilityBasis: "decision_effective_probability_reconstructed_from_stored_ev_and_decision_odds" as const,
+    preCalibrationBasis: "stored_model_estimate_before_decision_empirical_calibration" as const,
     minimumTrials: args.minimumTrials,
     materialBiasThreshold: 0.05,
     highEvThreshold: args.highEvThreshold,
@@ -70,7 +80,8 @@ try {
     prior,
     highEv,
     stability,
-    note: "Calibration compares decision-time estimated hit probabilities with official settled outcomes. Stability requires two non-overlapping recent-sized windows. Aggregate diagnostics are descriptive and cannot change production BUY conditions.",
+    preCalibration,
+    note: "Primary calibration uses the effective probability that actually produced the stored BUY EV, reconstructed from stored EV divided by decision-time odds. The stored model estimate is retained separately as pre-calibration context. Official settled outcomes only; descriptive diagnostics cannot change production BUY conditions.",
     productionChangeAllowed: false as const,
   };
 
@@ -81,16 +92,27 @@ try {
   await atomicWrite(args.output, `${JSON.stringify(report, null, 2)}\n`);
   console.log(JSON.stringify({
     status: report.status,
+    probabilityBasis: report.probabilityBasis,
     overall: report.overall,
     recent: report.recent,
     prior: report.prior,
     highEv: report.highEv,
     stability: report.stability,
+    preCalibration: report.preCalibration,
     productionChangeAllowed: false,
   }));
 } finally {
   db.close();
 }
+
+type SourceRow = {
+  model_predicted: number | null;
+  ev: number | null;
+  current_odds: number | null;
+  hit: number | bigint;
+};
+
+type CalibrationRow = { predicted: number | null; hit: number | bigint };
 
 type ScopeResult = {
   status: "AVAILABLE" | "INSUFFICIENT_SUPPORT";
@@ -103,7 +125,21 @@ type ScopeResult = {
   metrics: BuyCalibrationMetrics | null;
 };
 
-function scope(rows: Array<{ predicted: number | null; hit: number | bigint }>, minimumTrials: number): ScopeResult {
+function toDecisionCalibrationRow(row: SourceRow): CalibrationRow {
+  if (row.ev === null || row.current_odds === null) return { predicted: null, hit: row.hit };
+  const ev = Number(row.ev);
+  const odds = Number(row.current_odds);
+  if (!Number.isFinite(ev) || !Number.isFinite(odds) || odds <= 0) {
+    throw new Error("settled BUY decision-effective probability basis is invalid");
+  }
+  const predicted = ev / odds;
+  if (!Number.isFinite(predicted) || predicted < 0 || predicted > 1) {
+    throw new Error("settled BUY decision-effective hit rate outside [0,1]");
+  }
+  return { predicted, hit: row.hit };
+}
+
+function scope(rows: CalibrationRow[], minimumTrials: number): ScopeResult {
   const settled = rows.length;
   const observations: BuyCalibrationObservation[] = rows.flatMap((row) => {
     if (row.predicted === null) return [];
@@ -175,6 +211,8 @@ function parseArgs(argv: string[]) {
   return parsed as { runKind: "paper-live"; recent: number; minimumTrials: number; highEvThreshold: number; output: string };
 }
 
+function nullableNumber(value: number | null): number | null { return value === null ? null : Number(value); }
+function isHighEv(value: number | null, threshold: number): boolean { return value !== null && Number.isFinite(Number(value)) && Number(value) >= threshold; }
 function safeArg(value: string | undefined) { if (!value || !/^[A-Za-z0-9_.-]{1,80}$/.test(value)) throw new Error("invalid filter"); return value; }
 function safeJson(value: string | undefined) { if (!value || value.startsWith("/") || value.includes("..") || !/^[A-Za-z0-9_./-]+\.json$/.test(value)) throw new Error("path must be a relative json file"); return value; }
 function boundedInt(value: string | undefined, min: number, max: number) { const n = Number(value); if (!Number.isInteger(n) || n < min || n > max) throw new Error("invalid integer option"); return n; }
