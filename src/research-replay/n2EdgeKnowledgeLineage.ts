@@ -118,7 +118,7 @@ function buildExperiment(input: N2EdgeKnowledgeLineageInput): Experiment {
     multiplicityFamily: "N2-EDGE-V1 Holm-Bonferroni within each locked holdout split",
     evidenceStage: "holdout",
     status: experimentStatus(input.auditItem.disposition),
-    createdAt: input.createdAt,
+    createdAt: canonicalUtcTimestamp(input.createdAt),
   };
 }
 
@@ -147,7 +147,7 @@ function buildDiscovery(input: N2EdgeKnowledgeLineageInput, experiment: Experime
     trialCountAtDiscovery: input.totalTrialCount,
     adoptedBy: [],
     rejectedBy: [],
-    createdAt: input.createdAt,
+    createdAt: canonicalUtcTimestamp(input.createdAt),
   };
 }
 
