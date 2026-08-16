@@ -62,6 +62,19 @@ function unique(values: readonly string[]): string[] {
   return [...new Set(values)].sort();
 }
 
+function isValidCalendarDateDirectory(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/u.exec(value);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return false;
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return parsed.getUTCFullYear() === year
+    && parsed.getUTCMonth() === month - 1
+    && parsed.getUTCDate() === day;
+}
+
 function resolveInside(rootDir: string, relativePath: string): string {
   if (!relativePath || relativePath.startsWith("/") || relativePath.includes("\0")) {
     throw new Error("UNSAFE_PRIVATE_RELATIVE_PATH");
@@ -210,7 +223,14 @@ function discoverAcceptedT5(dataRoot: string): {
   let invalidAcceptedMarkerCount = 0;
   let dates: string[];
   try {
-    dates = safeDirectoryNames(dataRoot, base).filter((name) => DATE_RE.test(name));
+    dates = safeDirectoryNames(dataRoot, base).filter((name) => {
+      if (!DATE_RE.test(name)) return false;
+      if (!isValidCalendarDateDirectory(name)) {
+        sourceBlockers.push(`PRIVATE_CAPTURE_DATE_INVALID:${name}`);
+        return false;
+      }
+      return true;
+    });
   } catch (error) {
     return {
       acceptedRaceKeys: [],
