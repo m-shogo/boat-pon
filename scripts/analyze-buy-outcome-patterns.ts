@@ -18,6 +18,7 @@ try {
   const source = buildBuyOutcomeSettlementSource({ runKind: args.runKind });
   assertPaperLiveSettlementConsistency(db, source);
   const settledEconomic = "outcome_result IS NOT NULL AND outcome_payout_yen IS NOT NULL AND outcome_returned = 0";
+  assertDecisionEffectiveProbabilityConsistency(db, source, settledEconomic);
 
   const baseline = db.prepare(`
     ${source.cte}
@@ -30,7 +31,8 @@ try {
   const raw = db.prepare(`
     ${source.cte},
     settled_buy AS (
-      SELECT venue, model_version, estimated_hit_rate, ev, current_odds, sample_size,
+      SELECT venue, model_version, ev, current_odds, sample_size,
+        CASE WHEN ev IS NULL OR current_odds IS NULL THEN NULL ELSE ev / current_odds END AS decision_effective_hit_rate,
         CASE WHEN selection = outcome_result THEN 1 ELSE 0 END AS hit,
         CASE WHEN selection = outcome_result THEN outcome_payout_yen / 100.0 ELSE 0 END AS payout
       FROM buy_outcomes
@@ -41,10 +43,10 @@ try {
       SELECT 'modelVersion', COALESCE(NULLIF(model_version,''), 'UNKNOWN'), hit, payout FROM settled_buy
       UNION ALL
       SELECT 'confidenceBand', CASE
-        WHEN estimated_hit_rate IS NULL THEN 'UNKNOWN'
-        WHEN estimated_hit_rate < 0.20 THEN '<0.20'
-        WHEN estimated_hit_rate < 0.35 THEN '0.20-0.35'
-        WHEN estimated_hit_rate < 0.50 THEN '0.35-0.50'
+        WHEN decision_effective_hit_rate IS NULL THEN 'UNKNOWN'
+        WHEN decision_effective_hit_rate < 0.20 THEN '<0.20'
+        WHEN decision_effective_hit_rate < 0.35 THEN '0.20-0.35'
+        WHEN decision_effective_hit_rate < 0.50 THEN '0.35-0.50'
         ELSE '>=0.50' END, hit, payout FROM settled_buy
       UNION ALL
       SELECT 'evBand', CASE
@@ -101,6 +103,7 @@ try {
       minimumSettledPerSegment: args.minSettled,
       minimumAbsoluteRoiDelta: args.minRoiDelta,
       runKind: args.runKind,
+      confidenceBandProbabilityBasis: "decision-effective-probability-reconstructed-from-stored-ev-and-decision-odds",
       settlementEconomics: source.usesOfficialRaceResults
         ? "official-race-results-payout-yen-per-100"
         : "decision-history-payout-yen-per-100",
@@ -160,6 +163,19 @@ function assertPaperLiveSettlementConsistency(db: DatabaseSync, source: BuyOutco
   if (count(row.mismatches) > 0) {
     throw new Error("paper-live settlement result conflicts with official race_results");
   }
+}
+
+function assertDecisionEffectiveProbabilityConsistency(db: DatabaseSync, source: BuyOutcomeSettlementSource, settledEconomic: string) {
+  const row = db.prepare(`
+    ${source.cte}
+    SELECT COUNT(*) AS invalid
+    FROM buy_outcomes
+    WHERE ${settledEconomic}
+      AND ev IS NOT NULL
+      AND current_odds IS NOT NULL
+      AND (current_odds <= 0 OR ev < 0 OR ev / current_odds < 0 OR ev / current_odds > 1)
+  `).get(...source.params) as { invalid: number | bigint | null };
+  if (count(row.invalid) > 0) throw new Error("settled BUY decision-effective hit rate outside [0,1]");
 }
 
 function parseArgs(argv: string[]) {
