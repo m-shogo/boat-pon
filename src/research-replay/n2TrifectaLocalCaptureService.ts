@@ -15,7 +15,7 @@ import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 
 import { officialVenueCode } from "../domain/officialLinks";
-import { canonicalHash } from "./canonical";
+import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import {
   N2_TRIFECTA_ODDS_CAPTURE_APPROVAL_SCOPE,
   N2_TRIFECTA_ODDS_CHECKPOINT_COLLECTION_VERSION,
@@ -155,8 +155,11 @@ const VENUE_RE = /^(0[1-9]|1\d|2[0-4])$/;
 const EXPECTED_CHECKPOINTS = ["T-30", "T-20", "T-10", "T-5"] as const;
 
 function parseInstant(value: string): number | null {
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? parsed : null;
+  try {
+    return Date.parse(canonicalUtcTimestamp(value));
+  } catch {
+    return null;
+  }
 }
 
 function unique(values: string[]): string[] {
@@ -360,8 +363,7 @@ function loadOrCreateSelection(input: {
     requestBudget: selected.requestBudget,
   };
   try {
-    exclusiveWrite(path, `${JSON.stringify(selection, null, 2)}
-`);
+    exclusiveWrite(path, `${JSON.stringify(selection, null, 2)}\n`);
     return { selection, relativePath, created: true };
   } catch (error) {
     if (!isAlreadyExistsError(error)) throw error;
@@ -561,9 +563,9 @@ export async function runN2TrifectaLocalCaptureTick(
         ? [cachedSourcePlan]
         : discoverVenueCodes(input.primaryDbPath, date)
           .map((venueCode) => readN2TrifectaPrivateCapturePlan({
-primaryDbPath: input.primaryDbPath,
-date,
-venueCode,
+            primaryDbPath: input.primaryDbPath,
+            date,
+            venueCode,
           }))
           .filter((result) => result.status === "PASS")
           .map((result) => result.plan);
@@ -577,100 +579,99 @@ venueCode,
         selectionPath = selected.relativePath;
         selectedVenueCode = selected.selection.venueCode;
         const sourcePlan = plans.find(
-(plan) => plan.entries[0]?.venueCode === selected.selection.venueCode,
+          (plan) => plan.entries[0]?.venueCode === selected.selection.venueCode,
         );
         if (!sourcePlan) {
-blockers.push("SELECTED_SOURCE_PLAN_MISSING");
+          blockers.push("SELECTED_SOURCE_PLAN_MISSING");
         } else {
-selectedSourcePlanDigest = sourcePlan.manifestDigest;
-selectedRaceCount = sourcePlan.raceCount;
-const dueEntries = sourcePlan.entries
-  .filter((entry) => isDue(entry, nowMs))
-  .sort((left, right) => {
-    const target = left.targetCaptureAt.localeCompare(right.targetCaptureAt);
-    if (target !== 0) return target;
-    return left.raceNo - right.raceNo;
-  });
-dueEntryCount = dueEntries.length;
+          selectedSourcePlanDigest = sourcePlan.manifestDigest;
+          selectedRaceCount = sourcePlan.raceCount;
+          const dueEntries = sourcePlan.entries
+            .filter((entry) => isDue(entry, nowMs))
+            .sort((left, right) => {
+              const target = left.targetCaptureAt.localeCompare(right.targetCaptureAt);
+              if (target !== 0) return target;
+              return left.raceNo - right.raceNo;
+            });
+          dueEntryCount = dueEntries.length;
 
-const budgetRelative = budgetDirectoryRelativePath(date);
-const budgetPath = resolveInside(input.dataRoot, budgetRelative);
-mkdirSync(budgetPath, { recursive: true, mode: 0o700 });
-dailyReservationCountBefore = readdirSync(budgetPath)
-  .filter((name) => name.endsWith(".json"))
-  .length;
-dailyReservationCountAfter = dailyReservationCountBefore;
+          const budgetRelative = budgetDirectoryRelativePath(date);
+          const budgetPath = resolveInside(input.dataRoot, budgetRelative);
+          mkdirSync(budgetPath, { recursive: true, mode: 0o700 });
+          dailyReservationCountBefore = readdirSync(budgetPath)
+            .filter((name) => name.endsWith(".json"))
+            .length;
+          dailyReservationCountAfter = dailyReservationCountBefore;
 
-let reservationCreated = false;
-for (const candidate of dueEntries) {
-  const reservationKey = canonicalHash({
-    authorizationId: input.authorization.authorizationId,
-    raceIdentity: candidate.raceIdentity,
-    checkpointLabel: candidate.checkpointLabel,
-    targetCaptureAt: candidate.targetCaptureAt,
-  });
-  const candidateReservationPath = `${budgetRelative}/${reservationKey}.json`;
-  const reservationAbsolute = resolveInside(input.dataRoot, candidateReservationPath);
-  if (existsSync(reservationAbsolute)) continue;
-  if (dailyReservationCountBefore >= input.authorization.maxRequestsPerDay) {
-    blockers.push("DAILY_REQUEST_BUDGET_EXHAUSTED");
-    break;
-  }
-  const reservation: N2TrifectaLocalCaptureReservation = {
-    reservationVersion: N2_TRIFECTA_LOCAL_CAPTURE_RESERVATION_VERSION,
-    authorizationId: input.authorization.authorizationId,
-    date,
-    venueCode: candidate.venueCode,
-    raceIdentity: candidate.raceIdentity,
-    checkpointLabel: candidate.checkpointLabel,
-    targetCaptureAt: candidate.targetCaptureAt,
-    reservationKey,
-    reservedAt: input.now,
-    networkRequestCeiling: 1,
-  };
-  try {
-    exclusiveWrite(
-      reservationAbsolute,
-      `${JSON.stringify(reservation, null, 2)}
-`,
-    );
-    selectedEntry = candidate;
-    reservationPath = candidateReservationPath;
-    reservationCreated = true;
-    dailyReservationCountAfter += 1;
-    break;
-  } catch (error) {
-    if (!isAlreadyExistsError(error)) throw error;
-  }
-}
+          let reservationCreated = false;
+          for (const candidate of dueEntries) {
+            const reservationKey = canonicalHash({
+              authorizationId: input.authorization.authorizationId,
+              raceIdentity: candidate.raceIdentity,
+              checkpointLabel: candidate.checkpointLabel,
+              targetCaptureAt: candidate.targetCaptureAt,
+            });
+            const candidateReservationPath = `${budgetRelative}/${reservationKey}.json`;
+            const reservationAbsolute = resolveInside(input.dataRoot, candidateReservationPath);
+            if (existsSync(reservationAbsolute)) continue;
+            if (dailyReservationCountBefore >= input.authorization.maxRequestsPerDay) {
+              blockers.push("DAILY_REQUEST_BUDGET_EXHAUSTED");
+              break;
+            }
+            const reservation: N2TrifectaLocalCaptureReservation = {
+              reservationVersion: N2_TRIFECTA_LOCAL_CAPTURE_RESERVATION_VERSION,
+              authorizationId: input.authorization.authorizationId,
+              date,
+              venueCode: candidate.venueCode,
+              raceIdentity: candidate.raceIdentity,
+              checkpointLabel: candidate.checkpointLabel,
+              targetCaptureAt: candidate.targetCaptureAt,
+              reservationKey,
+              reservedAt: input.now,
+              networkRequestCeiling: 1,
+            };
+            try {
+              exclusiveWrite(
+                reservationAbsolute,
+                `${JSON.stringify(reservation, null, 2)}\n`,
+              );
+              selectedEntry = candidate;
+              reservationPath = candidateReservationPath;
+              reservationCreated = true;
+              dailyReservationCountAfter += 1;
+              break;
+            } catch (error) {
+              if (!isAlreadyExistsError(error)) throw error;
+            }
+          }
 
-if (selectedEntry) {
-  if (reservationCreated) {
-    const singlePlan = buildN2TrifectaSingleEntryPlan({
-      sourcePlan,
-      entry: selectedEntry,
-    });
-    singleEntryPlanDigest = singlePlan.manifestDigest;
-    const approval = buildN2TrifectaEphemeralApproval({
-      authorization: input.authorization,
-      plan: singlePlan,
-      entry: selectedEntry,
-    });
-    ephemeralApprovalId = approval.approvalId;
-    executorReport = await executeN2TrifectaPrivateCapture({
-      plan: singlePlan,
-      approval,
-      rootDir: input.dataRoot,
-      now: input.now,
-      executionMode: "execute",
-      fetcher: input.fetcher,
-      sleep: async () => undefined,
-    });
-    blockers.push(
-      ...executorReport.blockers.map((blocker) => `EXECUTOR_${blocker}`),
-    );
-  }
-}
+          if (selectedEntry) {
+            if (reservationCreated) {
+              const singlePlan = buildN2TrifectaSingleEntryPlan({
+                sourcePlan,
+                entry: selectedEntry,
+              });
+              singleEntryPlanDigest = singlePlan.manifestDigest;
+              const approval = buildN2TrifectaEphemeralApproval({
+                authorization: input.authorization,
+                plan: singlePlan,
+                entry: selectedEntry,
+              });
+              ephemeralApprovalId = approval.approvalId;
+              executorReport = await executeN2TrifectaPrivateCapture({
+                plan: singlePlan,
+                approval,
+                rootDir: input.dataRoot,
+                now: input.now,
+                executionMode: "execute",
+                fetcher: input.fetcher,
+                sleep: async () => undefined,
+              });
+              blockers.push(
+                ...executorReport.blockers.map((blocker) => `EXECUTOR_${blocker}`),
+              );
+            }
+          }
         }
       }
     } catch (error) {
@@ -751,8 +752,7 @@ if (selectedEntry) {
     try {
       exclusiveWrite(
         resolveInside(input.dataRoot, eventReportPath),
-        `${JSON.stringify(final, null, 2)}
-`,
+        `${JSON.stringify(final, null, 2)}\n`,
       );
     } catch (error) {
       if (!isAlreadyExistsError(error)) throw error;
@@ -765,8 +765,7 @@ if (selectedEntry) {
       eventDigest,
       checkedAt: input.now,
       report: final,
-    }, null, 2)}
-`,
+    }, null, 2)}\n`,
   );
   return final;
 }
