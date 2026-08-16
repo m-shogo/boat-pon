@@ -182,7 +182,12 @@ function featureWarnings(row: DecisionHistoryShadowRow): string[] {
   return warnings;
 }
 
-function sourceRowDigest(row: DecisionHistoryShadowRow): string {
+function sourceRowDigest(row: DecisionHistoryShadowRow, times: {
+  decisionAt: string;
+  oddsObservedAt: string;
+  scheduledCloseAtSeen: string;
+  programImportedAt: string;
+}): string {
   return digest({
     id: row.id,
     raceId: row.race_id,
@@ -202,13 +207,13 @@ function sourceRowDigest(row: DecisionHistoryShadowRow): string {
     modelVersion: row.model_version,
     runKind: row.run_kind,
     source: row.source,
-    fetchedAt: row.fetched_at,
-    createdAt: row.created_at,
+    fetchedAt: times.oddsObservedAt,
+    createdAt: times.decisionAt,
     decisionReasons: row.decision_reasons,
     featureAdjustment: row.feature_adjustment,
     featureAdjustmentBreakdown: row.feature_adjustment_breakdown,
-    closeAt: row.close_at,
-    programImportedAt: row.program_imported_at,
+    closeAt: times.scheduledCloseAtSeen,
+    programImportedAt: times.programImportedAt,
   });
 }
 
@@ -285,7 +290,12 @@ export function mapDecisionHistoryRowToRuntimeLedger(
   const notificationEligible = context.lineNotificationEligible === true && decision === "BUY";
   const currentOddsPresent = row.current_odds != null && row.current_odds > 0;
   const dataCompleteness = decision === "BUY" || currentOddsPresent ? "complete" : "partial";
-  const sourceDigest = sourceRowDigest(row);
+  const sourceDigest = sourceRowDigest(row, {
+    decisionAt: decisionAt!,
+    oddsObservedAt: oddsObservedAt!,
+    scheduledCloseAtSeen: scheduledCloseAtSeen!,
+    programImportedAt: programImportedAt!,
+  });
 
   const record: RuntimeDecisionLedgerRecord = {
     schemaVersion: RUNTIME_DECISION_LEDGER_SCHEMA_VERSION,
