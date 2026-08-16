@@ -3,7 +3,7 @@ import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 
 import { officialVenueCode } from "../domain/officialLinks";
-import { canonicalHash } from "./canonical";
+import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import {
   buildN2TrifectaOddsCheckpointPlan,
   type N2TrifectaOddsCheckpointPlan,
@@ -101,8 +101,11 @@ type VenueDayRow = {
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 function parseInstant(value: string): number | null {
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? parsed : null;
+  try {
+    return Date.parse(canonicalUtcTimestamp(value));
+  } catch {
+    return null;
+  }
 }
 
 function dbMeta(path: string): DbMeta {
