@@ -18,8 +18,15 @@ import type { ExecutorContext } from "./taskExecutors";
 function date(base:string,offset:number){const d=new Date(`${base}T00:00:00.000Z`);d.setUTCDate(d.getUTCDate()+offset);return d.toISOString().slice(0,10);}
 function safeProgram():ProgramFeatureSnapshot{return{boats:Array.from({length:6},(_,i)=>({course:i+1,className:i===0?"A1":"B1",nationalWinRate:5+i*.1,nationalTop2Rate:35+i,localWinRate:4.8+i*.1,localTop2Rate:33+i,motorTop2Rate:31+i,boatTop2Rate:30+i,venueMotorTop2Rate:null,venueBoatTop2Rate:null,courseAvgSt:null,courseTop3Rate:null,flyingCount:null,lateStartCount:null,exhibitionStResidual:null}))};}
 
+type DiscoveryAuthority = {
+ discoveryOnly:boolean;validationLabelsUsedForDiscovery:boolean;testLabelsUsedForDiscovery:boolean;
+ automaticPromotionAuthorized:boolean;automaticForwardAuthorized:boolean;roiPayoutAccessAuthorized:boolean;databaseWriteAuthorized:boolean;
+ currentBuyConnectionAuthorized:boolean;lineConnectionAuthorized:boolean;publicPublishAuthorized:boolean;automatedBettingAuthorized:boolean;productionApplyAuthorized:boolean;
+};
+const READ_ONLY_DISCOVERY_AUTHORITY:DiscoveryAuthority={discoveryOnly:true,validationLabelsUsedForDiscovery:false,testLabelsUsedForDiscovery:false,automaticPromotionAuthorized:false,automaticForwardAuthorized:false,roiPayoutAccessAuthorized:false,databaseWriteAuthorized:false,currentBuyConnectionAuthorized:false,lineConnectionAuthorized:false,publicPublishAuthorized:false,automatedBettingAuthorized:false,productionApplyAuthorized:false};
+
 function lockedHypothesis():N2EdgeHypothesis{return{hypothesisId:"N2EDGE-lock-course1",featureKey:"firstCourse",family:"course",selectionRole:"first",bucket:"1",direction:"underpredicted",uniqueRaceCount:300,meanResidual:.02,standardError:.002,zScore:10,rawPValue:1e-8,holmAdjustedPValue:1e-8,discoverySplit:"train",confirmationSplits:["validation","test"],forwardShadowReserved:true};}
-function writeDiscovery(root:string,signals:N2EdgeHypothesis[],scanVersion:string=N2_EDGE_HYPOTHESIS_SCAN_VERSION){const path=join(root,"reports/n2/n2-edge-hypothesis-scan.json");mkdirSync(dirname(path),{recursive:true});const summary={status:"PASS",scan:{status:"PASS",scanVersion,signals}};writeFileSync(path,JSON.stringify({...summary,outputDigest:canonicalHash(summary)}));}
+function writeDiscovery(root:string,signals:N2EdgeHypothesis[],scanVersion:string=N2_EDGE_HYPOTHESIS_SCAN_VERSION,authorityOverrides:Partial<DiscoveryAuthority>={}){const path=join(root,"reports/n2/n2-edge-hypothesis-scan.json");mkdirSync(dirname(path),{recursive:true});const summary={status:"PASS",scan:{status:"PASS",scanVersion,signals,authority:{...READ_ONLY_DISCOVERY_AUTHORITY,...authorityOverrides}}};writeFileSync(path,JSON.stringify({...summary,outputDigest:canonicalHash(summary)}));}
 
 function source():N2EdgeHoldoutSourceRead{
  const outcomes:Array<{canonicalRaceKey:string;winningSelection:string}>=[]; const candidates:N2EdgeHoldoutSourceRead["candidates"]=[];
@@ -67,6 +74,21 @@ test("tampered discovery digest blocks before holdout or raw-program reads",()=>
  assert.equal(existsSync(join(root,"reports/n2/n2-edge-historical-test.json")),false);
  assert.match(JSON.stringify(result.blocks),/DISCOVERY_OUTPUT_DIGEST_MISMATCH/u);
 }));
+
+test("widened discovery authority blocks before holdout or raw-program reads even when rehashed",()=>{
+ const widened:Array<Partial<DiscoveryAuthority>>=[
+  {discoveryOnly:false},{validationLabelsUsedForDiscovery:true},{testLabelsUsedForDiscovery:true},
+  {automaticPromotionAuthorized:true},{automaticForwardAuthorized:true},{roiPayoutAccessAuthorized:true},{databaseWriteAuthorized:true},
+  {currentBuyConnectionAuthorized:true},{lineConnectionAuthorized:true},{publicPublishAuthorized:true},{automatedBettingAuthorized:true},{productionApplyAuthorized:true},
+ ];
+ for(const authorityOverrides of widened)withRoot(root=>{
+  writeDiscovery(root,[lockedHypothesis()],N2_EDGE_HYPOTHESIS_SCAN_VERSION,authorityOverrides);let sourceCalls=0,selectedCalls=0;
+  const executor=createN2EdgeHistoricalTestExecutor(()=>{sourceCalls++;return source();},input=>{selectedCalls++;return selected(input.selectedCandidates);});
+  const result=executor(context(root));assert.equal(result.result,"BLOCKED");assert.equal(sourceCalls,0);assert.equal(selectedCalls,0);
+  assert.equal(existsSync(join(root,"reports/n2/n2-edge-historical-test.json")),false);
+  assert.match(JSON.stringify(result.blocks),/DISCOVERY_AUTHORITY_INVALID/u);
+ });
+});
 
 test("locked hypothesis runs deterministic validation/test holdouts and persists aggregate-only evidence",()=>withRoot(root=>{
  writeDiscovery(root,[lockedHypothesis()]);const src=source();let selectedCalls=0;
