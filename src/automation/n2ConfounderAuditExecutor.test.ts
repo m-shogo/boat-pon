@@ -107,6 +107,10 @@ function writeHistoricalArtifact(
     confirmation: confirmation(results),
     authority: {
       automaticPromotionAuthorized: false,
+      currentBuyConnectionAuthorized: false,
+      lineConnectionAuthorized: false,
+      publicPublishAuthorized: false,
+      automatedBettingAuthorized: false,
       productionApplyAuthorized: false,
     },
     ...overrides,
@@ -241,7 +245,14 @@ test("artifact with tampered confirmation, forward-label or promotion authority 
     };
     writeHistoricalArtifact(root, [result("H-CONFIRMED", "HISTORICAL_CONFIRMED")], {
       confirmation: badConfirmation,
-      authority: { automaticPromotionAuthorized: true, productionApplyAuthorized: false },
+      authority: {
+        automaticPromotionAuthorized: true,
+        currentBuyConnectionAuthorized: false,
+        lineConnectionAuthorized: false,
+        publicPublishAuthorized: false,
+        automatedBettingAuthorized: false,
+        productionApplyAuthorized: false,
+      },
     });
     const read = readN2HistoricalTestArtifact(root);
     assert.equal(read.artifact, null);
