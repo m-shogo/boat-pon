@@ -51,10 +51,11 @@ test("BUY probability report classifies matching conclusions in two independent 
     assert.equal(status.stability.prior.metrics.classification, "WITHIN_5PT");
     assert.equal(status.productionChangeAllowed, false);
     const report = JSON.parse(await readFile(output, "utf8")) as any;
-    assert.equal(report.schemaVersion, "buy-probability-calibration-public-v3");
+    assert.equal(report.schemaVersion, "buy-probability-calibration-public-v4");
     assert.match(report.probabilityBasis, /decision_effective/u);
     assert.equal(report.prior.status, "AVAILABLE");
     assert.equal(report.stability.status, "STABLE_WITHIN_5PT");
+    assert.equal(report.probabilityPipeline.overall.settled, 60);
     assert.doesNotMatch(JSON.stringify(report), /PRIVATE|PRIVATE_HISTORY|selection|raceId|decisionId|currentOdds|stake|venue/u);
   } finally {
     await rm(output, { force: true });
@@ -85,7 +86,6 @@ test("BUY probability report keeps calibration stability unavailable when one wi
     const status = JSON.parse(stdout.trim()) as any;
     assert.equal(status.stability.status, "INSUFFICIENT_SUPPORT");
     assert.ok(status.stability.recent.probabilityEligible === 29 || status.stability.prior.probabilityEligible === 29);
-    assert.equal(status.preCalibration.stability, undefined);
   } finally {
     await rm(output, { force: true });
     await rm(temp, { recursive: true, force: true });
@@ -108,6 +108,8 @@ function createTables(db: DatabaseSync) {
       returned INTEGER NOT NULL DEFAULT 0,
       model_version TEXT,
       estimated_hit_rate REAL,
+      raw_estimated_hit_rate REAL,
+      conservative_hit_rate REAL,
       ev REAL,
       current_odds REAL,
       sample_size INTEGER,
