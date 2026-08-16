@@ -47,12 +47,12 @@ test("manifest persistence canonicalizes createdAt before immutable writes", () 
     const expectationTimes = db.prepare(`
       SELECT DISTINCT created_at FROM race_asof_manifest_expectations WHERE manifest_id=? ORDER BY created_at
     `).all(result.manifestId) as Array<{ created_at: string }>;
-    assert.deepEqual(expectationTimes, [{ created_at: "2026-07-24T00:00:00.000Z" }]);
+    assert.deepEqual(expectationTimes.map((row) => row.created_at), ["2026-07-24T00:00:00.000Z"]);
 
     const policyTimes = db.prepare("SELECT DISTINCT created_at FROM asof_resolution_policies ORDER BY created_at").all() as Array<{
       created_at: string;
     }>;
-    assert.deepEqual(policyTimes, [{ created_at: "2026-07-24T00:00:00.000Z" }]);
+    assert.deepEqual(policyTimes.map((row) => row.created_at), ["2026-07-24T00:00:00.000Z"]);
   });
 });
 
