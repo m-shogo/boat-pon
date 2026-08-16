@@ -57,6 +57,19 @@ test("program adapter: explicit timezone offset remains valid", () => {
   assert.equal(result.status, "adapted");
 });
 
+test("program adapter: source availability is emitted as canonical UTC", () => {
+  const result = adaptOfficialProgramFeatures({
+    raceId: "race-1", rawJson: PROGRAM_RAW, sourceFile: "program.json", importedAt: "2026-05-20T13:00:00+09:00",
+    lineage: {
+      ...verifiedLineage("official_program"),
+      sourceAvailableAt: "2026-05-20T12:58:00+09:00",
+    },
+  });
+  assert.equal(result.status, "adapted");
+  if (result.status !== "adapted") return;
+  assert.equal(result.value.every((feature) => feature.availableAt === "2026-05-20T03:58:00.000Z"), true);
+});
+
 test("program adapter: trusted lineage emits only raw historical-safe feature observations", () => {
   const result = adaptOfficialProgramFeatures({
     raceId: "race-1", rawJson: PROGRAM_RAW, sourceFile: "program.json", importedAt: "2026-05-20T04:00:00.000Z",
@@ -112,6 +125,28 @@ test("odds adapter: captured_at must identify the same F0 observation instant", 
     lineage: verifiedLineage("trifecta_market", "2026-05-20T04:58:59.000Z"),
   })], expectedBetType: "exacta" });
   assert.deepEqual(result, { status: "excluded", reason: "excluded_odds_capture_lineage_mismatch" });
+});
+
+test("odds adapter: equivalent offset instants emit the same canonical observation times", () => {
+  const canonicalLineage = verifiedLineage("trifecta_market", "2026-05-20T04:59:00.000Z");
+  const zulu = adaptLiveOddsRows({ rows: [odds({
+    capturedAt: "2026-05-20T04:59:00.000Z",
+    lineage: canonicalLineage,
+  })], expectedBetType: "exacta" });
+  const offset = adaptLiveOddsRows({ rows: [odds({
+    capturedAt: "2026-05-20T13:59:00+09:00",
+    lineage: {
+      ...canonicalLineage,
+      sourceObservedAt: "2026-05-20T13:59:00+09:00",
+      sourceAvailableAt: "2026-05-20T12:58:00+09:00",
+    },
+  })], expectedBetType: "exacta" });
+  assert.equal(zulu.status, "adapted");
+  assert.equal(offset.status, "adapted");
+  if (zulu.status !== "adapted" || offset.status !== "adapted") return;
+  assert.equal(offset.value[0].capturedAt, "2026-05-20T04:59:00.000Z");
+  assert.equal(offset.value[0].availableAt, "2026-05-20T03:58:00.000Z");
+  assert.deepEqual(offset.value, zulu.value);
 });
 
 test("adapter + builder: verified future odds still fail PIT", () => {
