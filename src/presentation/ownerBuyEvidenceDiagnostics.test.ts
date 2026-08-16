@@ -82,6 +82,15 @@ const roiUncertainty = {
     missingTrials: 0,
     interval: { confidenceLevel: 0.95, method: "DETERMINISTIC_PERCENTILE_BOOTSTRAP", trials: 30, iterations: 5000, pointEstimate: 1.3433, lower: 0, upper: 4, width: 4, breakEven: 1, classification: "CROSSES_BREAK_EVEN" },
   },
+  expectationRealization: {
+    performance: { status: "AVAILABLE", trials: 61, expectedEvEligible: 61, missingExpectedEv: 0, minimumTrials: 30, averageStoredEv: 1.4, realizedRoi: 1.1197, realizedToExpectedRatio: 0.7998, classification: "CROSSES_EXPECTED" },
+    recent: { status: "AVAILABLE", trials: 30, expectedEvEligible: 30, missingExpectedEv: 0, minimumTrials: 30, averageStoredEv: 1.4, realizedRoi: 1.3433, realizedToExpectedRatio: 0.9595, classification: "CROSSES_EXPECTED" },
+  },
+  priceRealization: {
+    minimumHits: 5,
+    performance: { status: "INSUFFICIENT_HIT_SUPPORT", hits: 2, priceEligibleHits: 2, minimumHits: 5, missingHits: 3, averageDecisionPriceProxy: null, averageRealizedPriceProxy: null, realizedToDecisionRatio: null, averagePriceGap: null },
+    recent: { status: "INSUFFICIENT_HIT_SUPPORT", hits: 1, priceEligibleHits: 1, minimumHits: 5, missingHits: 4, averageDecisionPriceProxy: null, averageRealizedPriceProxy: null, realizedToDecisionRatio: null, averagePriceGap: null },
+  },
   note: "descriptive only",
   productionChangeAllowed: false,
 };
@@ -106,6 +115,8 @@ test("builds strict public-safe evidence diagnostics from the same settled BUY c
   assert.equal(diagnostics.hitRateUncertainty?.performance.upper, 0.1119);
   assert.equal(diagnostics.roiUncertainty?.performance.interval?.pointEstimate, 1.1197);
   assert.equal(diagnostics.roiUncertainty?.performance.interval?.classification, "CROSSES_BREAK_EVEN");
+  assert.equal("expectationRealization" in diagnostics, false);
+  assert.equal("priceRealization" in diagnostics, false);
   assert.equal(diagnostics.productionChangeAllowed, false);
   assert.deepEqual(validateOwnerBuyEvidenceDiagnostics(diagnostics), []);
   assert.doesNotMatch(JSON.stringify(diagnostics), /selection|raceId|decisionId|currentOdds|requiredOdds|stake|segmentKey|PRIVATE/i);
