@@ -1,7 +1,7 @@
 import { canonicalHash } from "./canonical";
 import { splitForN2RaceKey } from "./n2BaselineEvaluation";
 
-export const N2_EDGE_HOLDOUT_COHORT_VERSION = "n2-edge-holdout-cohort-v1" as const;
+export const N2_EDGE_HOLDOUT_COHORT_VERSION = "n2-edge-holdout-cohort-v2" as const;
 export const N2_EDGE_HOLDOUT_RACES_PER_VENUE_YEAR = 12;
 export const N2_EDGE_VALIDATION_FROM_DATE = "2022-01-01" as const;
 export const N2_EDGE_VALIDATION_TO_DATE = "2023-12-31" as const;
@@ -55,13 +55,29 @@ export type N2EdgeHoldoutCohortReport = {
   outputDigest: string;
 };
 
-function parse(value: string): { date: string; year: number; venueCode: string } | null {
+type ParsedRaceKey = {
+  date: string;
+  year: number;
+  venueCode: string;
+  raceNo: number;
+};
+
+function parse(value: string): ParsedRaceKey | null {
   const match = RACE_KEY_RE.exec(value);
   if (!match) return null;
   const date = `${match[1]}-${match[2]}-${match[3]}`;
   const parsed = Date.parse(`${date}T00:00:00.000Z`);
   if (!Number.isFinite(parsed) || new Date(parsed).toISOString().slice(0, 10) !== date) return null;
-  return { date, year: Number(match[1]), venueCode: match[4] };
+  return { date, year: Number(match[1]), venueCode: match[4], raceNo: Number(match[5]) };
+}
+
+function compareCanonicalRaceKeys(left: string, right: string): number {
+  const a = parse(left);
+  const b = parse(right);
+  if (a === null || b === null) return left.localeCompare(right);
+  return a.date.localeCompare(b.date)
+    || Number(a.venueCode) - Number(b.venueCode)
+    || a.raceNo - b.raceNo;
 }
 
 function unique(values: string[]): string[] { return [...new Set(values)].sort(); }
@@ -133,12 +149,13 @@ export function buildN2EdgeHoldoutCohort(candidates: N2EdgeHoldoutCandidate[]): 
     const chosen = races.map((race) => ({
       ...race,
       deterministicRankDigest: canonicalHash(`${N2_EDGE_HOLDOUT_HASH_SALT}|${race.split}|${race.canonicalRaceKey}`),
-    })).sort((a, b) => a.deterministicRankDigest.localeCompare(b.deterministicRankDigest) || a.canonicalRaceKey.localeCompare(b.canonicalRaceKey))
+    })).sort((a, b) => a.deterministicRankDigest.localeCompare(b.deterministicRankDigest)
+      || compareCanonicalRaceKeys(a.canonicalRaceKey, b.canonicalRaceKey))
       .slice(0, N2_EDGE_HOLDOUT_RACES_PER_VENUE_YEAR);
     selectedByStratum[stratumId] = chosen.length;
     selected.push(...chosen.map((race) => ({ ...race, stratumId })));
   }
-  selected.sort((a, b) => a.canonicalRaceKey.localeCompare(b.canonicalRaceKey));
+  selected.sort((a, b) => compareCanonicalRaceKeys(a.canonicalRaceKey, b.canonicalRaceKey));
   const validation = selected.filter((race) => race.split === "validation");
   const test = selected.filter((race) => race.split === "test");
   const core = {
