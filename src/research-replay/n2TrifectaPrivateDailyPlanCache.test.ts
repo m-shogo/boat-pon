@@ -23,11 +23,11 @@ import {
   writeN2TrifectaPrivateDailyPlanCache,
 } from "./n2TrifectaPrivateDailyPlanCache.js";
 
-function completePlan(venueCode = "05"): N2TrifectaOddsCheckpointPlan {
+function completePlan(venueCode = "05", date = "2026-08-06"): N2TrifectaOddsCheckpointPlan {
   return buildN2TrifectaOddsCheckpointPlan({
     stage: "ONE_VENUE_REVIEW",
     races: Array.from({ length: 12 }, (_, index) => ({
-      date: "2026-08-06",
+      date,
       venueCode,
       raceNo: index + 1,
       closeAt: `${String(10 + Math.floor(index / 2)).padStart(2, "0")}:${index % 2 === 0 ? "05" : "35"}`,
@@ -75,6 +75,36 @@ test("complete one-venue daily plan is private, deterministic, and 12R/48-checkp
   assert.equal(cache.lineConnectionAuthorized, false);
   assert.equal(cache.publicPublishAuthorized, false);
   assert.equal(cache.automatedBettingAuthorized, false);
+});
+
+test("daily plan rejects normalized generatedAt clocks instead of rolling them into the next JST day", () => {
+  assert.throws(
+    () => buildN2TrifectaPrivateDailyPlanCache({
+      date: "2026-08-07",
+      generatedAt: "2026-08-06T24:00:00+09:00",
+      plans: [completePlan("05", "2026-08-07")],
+      source: sourceEvidence(),
+    }),
+    /DAILY_PLAN_DATE_INVALID/,
+  );
+
+  assert.doesNotThrow(() => buildN2TrifectaPrivateDailyPlanCache({
+    date: "2028-02-29",
+    generatedAt: "2028-02-29T00:00:00+09:00",
+    plans: [completePlan("05", "2028-02-29")],
+    source: sourceEvidence(),
+  }));
+});
+
+test("daily plan cache paths reject impossible calendar dates", () => {
+  assert.throws(
+    () => n2TrifectaPrivateDailyPlanRelativePath("2026-02-30"),
+    /INVALID_DATE/,
+  );
+  assert.equal(
+    n2TrifectaPrivateDailyPlanRelativePath("2028-02-29"),
+    "data/private/trifecta-capture/plans/2028-02-29.json",
+  );
 });
 
 test("atomic private write is owner-only and reads back without database fallback", () => {
