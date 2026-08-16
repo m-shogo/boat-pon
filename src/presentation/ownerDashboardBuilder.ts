@@ -7,6 +7,7 @@ import {
 } from "./ownerDashboardSnapshot";
 import { unavailableBuyLearningSummary, validateBuyLearningSummary, type BuyLearningSummary } from "./buyLearningSummary";
 import { unavailableOwnerBuyEvidenceDiagnostics, validateOwnerBuyEvidenceDiagnostics, type OwnerBuyEvidenceDiagnostics } from "./ownerBuyEvidenceDiagnostics";
+import { unavailableOwnerBuyMarketHealth, validateOwnerBuyMarketHealth, type OwnerBuyMarketHealth } from "./ownerBuyMarketHealth";
 
 export type OwnerDashboardBuilderInput = {
   generatedAt: string;
@@ -22,6 +23,7 @@ export type OwnerDashboardBuilderInput = {
   recentCommits?: unknown;
   buyLearning?: unknown;
   buyEvidence?: unknown;
+  buyMarketHealth?: unknown;
 };
 
 type CatalogTask = { taskId: string; title: string };
@@ -33,6 +35,7 @@ export function buildOwnerDashboardSnapshot(input: OwnerDashboardBuilderInput): 
   const currentRun = parseCurrentRun(input.currentRun);
   const buyLearning = parseBuyLearning(input.buyLearning, input.generatedAt);
   const buyEvidence = parseBuyEvidence(input.buyEvidence, input.generatedAt, buyLearning);
+  const buyMarketHealth = parseBuyMarketHealth(input.buyMarketHealth, input.generatedAt, buyLearning);
   const n2Tasks = [...queue.entries()]
     .filter(([taskId]) => taskId.startsWith("TASK-N2-"))
     .map(([taskId, state]) => ({ taskId, label: catalog.get(taskId)?.title ?? taskId, status: state.status, attemptCount: state.attemptCount, maxAttempts: state.maxAttempts }))
@@ -80,6 +83,7 @@ export function buildOwnerDashboardSnapshot(input: OwnerDashboardBuilderInput): 
     },
     buyLearning,
     buyEvidence,
+    buyMarketHealth,
     n2Tasks,
     recentProgress: progress,
     blockers,
@@ -124,6 +128,30 @@ function parseBuyEvidence(value: unknown, generatedAt: string, buyLearning: BuyL
     || !sameMetric(evidence.roiUncertainty?.performance.interval?.pointEstimate ?? null, roi)
     || !sameMetric(evidence.roiUncertainty?.recent.interval?.pointEstimate ?? null, recentRoi)) return unavailableOwnerBuyEvidenceDiagnostics(generatedAt);
   return evidence;
+}
+
+function parseBuyMarketHealth(value: unknown, generatedAt: string, buyLearning: BuyLearningSummary): OwnerBuyMarketHealth {
+  if (value === undefined || value === null) return unavailableOwnerBuyMarketHealth(generatedAt);
+  const errors = validateOwnerBuyMarketHealth(value);
+  if (errors.length) return unavailableOwnerBuyMarketHealth(generatedAt);
+  const health = value as OwnerBuyMarketHealth;
+  if (buyLearning.status !== "AVAILABLE" || health.status !== "AVAILABLE") return health.status === "NOT_AVAILABLE" ? health : unavailableOwnerBuyMarketHealth(generatedAt);
+  const settled = buyLearning.performance.settled;
+  const hits = buyLearning.performance.hits;
+  const roi = buyLearning.performance.roi;
+  const recentSettled = buyLearning.recent.settled;
+  const recentHits = buyLearning.recent.hits;
+  const recentRoi = buyLearning.recent.roi;
+  if (settled === null || hits === null || roi === null || recentSettled === null || recentHits === null || recentRoi === null
+    || health.probability?.settled !== settled
+    || !sameMetric(health.probability?.observedHitRate ?? null, buyLearning.performance.hitRate)
+    || health.evRealization?.performance.trials !== settled
+    || health.evRealization?.recent.trials !== recentSettled
+    || !sameMetric(health.evRealization?.performance.realizedRoi ?? null, roi)
+    || !sameMetric(health.evRealization?.recent.realizedRoi ?? null, recentRoi)
+    || health.priceReadiness?.performance.hits !== hits
+    || health.priceReadiness?.recent.hits !== recentHits) return unavailableOwnerBuyMarketHealth(generatedAt);
+  return health;
 }
 
 function parseCatalog(value: unknown): Map<string, CatalogTask> {
