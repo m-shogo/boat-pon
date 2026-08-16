@@ -12,7 +12,7 @@ import {
 import { dirname, resolve, sep } from "node:path";
 
 import type { N2TrifectaLocalCaptureAuthorization } from "./n2TrifectaLocalCaptureService";
-import { canonicalHash } from "./canonical";
+import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 
 export const N2_TRIFECTA_IMMUTABLE_RUNTIME_AUTHORITY_VERSION =
   "n2-trifecta-immutable-runtime-authority-v1" as const;
@@ -85,8 +85,11 @@ export type N2TrifectaImmutableRuntimeBlockReport = {
 };
 
 function parseInstant(value: string): number | null {
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? parsed : null;
+  try {
+    return Date.parse(canonicalUtcTimestamp(value));
+  } catch {
+    return null;
+  }
 }
 
 function unique(values: string[]): string[] {
