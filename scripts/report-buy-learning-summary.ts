@@ -33,8 +33,10 @@ try {
       COALESCE(SUM(CASE WHEN ${settledEconomic} AND selection = outcome_result THEN outcome_payout_yen / 100.0 ELSE 0 END), 0) AS payoutOddsSum,
       COALESCE(MAX(CASE WHEN ${settledEconomic} AND selection = outcome_result THEN outcome_payout_yen / 100.0 ELSE 0 END), 0) AS maxPayoutOdds,
       AVG(CASE WHEN ${settledEconomic} THEN estimated_hit_rate ELSE NULL END) AS avgEstimatedHitRate,
+      AVG(CASE WHEN ${settledEconomic} AND ev IS NOT NULL AND current_odds IS NOT NULL AND current_odds > 0 THEN ev / current_odds ELSE NULL END) AS avgDecisionEffectiveHitRate,
       COALESCE(SUM(CASE WHEN ${settledEconomic} AND selection != outcome_result AND sample_size IS NOT NULL AND sample_size < 30 THEN 1 ELSE 0 END), 0) AS smallSampleMisses,
-      COALESCE(SUM(CASE WHEN ${settledEconomic} AND selection != outcome_result AND estimated_hit_rate IS NOT NULL AND estimated_hit_rate >= 0.5 THEN 1 ELSE 0 END), 0) AS highConfidenceMisses,
+      COALESCE(SUM(CASE WHEN ${settledEconomic} AND selection != outcome_result AND ev IS NOT NULL AND current_odds IS NOT NULL AND current_odds > 0 AND ev / current_odds >= 0.5 THEN 1 ELSE 0 END), 0) AS highConfidenceMisses,
+      COALESCE(SUM(CASE WHEN ${settledEconomic} AND ev IS NOT NULL AND ev >= 1.2 THEN 1 ELSE 0 END), 0) AS highEvSettled,
       COALESCE(SUM(CASE WHEN ${settledEconomic} AND selection != outcome_result AND ev IS NOT NULL AND ev >= 1.2 THEN 1 ELSE 0 END), 0) AS highEvMisses
     FROM buy_outcomes
   `).get(...source.params) as AggregateRow;
@@ -69,12 +71,14 @@ try {
       hits: number(all.hits),
       payoutOddsSum: finite(all.payoutOddsSum),
       maxPayoutOdds: finite(all.maxPayoutOdds),
-      avgEstimatedHitRate: nullableFinite(all.avgEstimatedHitRate),
+      avgEstimatedHitRate: nullableProbability(all.avgEstimatedHitRate, "avgEstimatedHitRate"),
+      avgDecisionEffectiveHitRate: nullableProbability(all.avgDecisionEffectiveHitRate, "avgDecisionEffectiveHitRate"),
       recentSettled: number(recent.settled),
       recentHits: number(recent.hits),
       recentPayoutOddsSum: finite(recent.payoutOddsSum),
       smallSampleMisses: number(all.smallSampleMisses),
       highConfidenceMisses: number(all.highConfidenceMisses),
+      highEvSettled: number(all.highEvSettled),
       highEvMisses: number(all.highEvMisses),
     });
 
@@ -99,7 +103,10 @@ try {
   db.close();
 }
 
-type AggregateRow = Record<"totalDecisions" | "settled" | "hits" | "payoutOddsSum" | "maxPayoutOdds" | "smallSampleMisses" | "highConfidenceMisses" | "highEvMisses", number | bigint | null> & { avgEstimatedHitRate: number | null };
+type AggregateRow = Record<"totalDecisions" | "settled" | "hits" | "payoutOddsSum" | "maxPayoutOdds" | "smallSampleMisses" | "highConfidenceMisses" | "highEvSettled" | "highEvMisses", number | bigint | null> & {
+  avgEstimatedHitRate: number | null;
+  avgDecisionEffectiveHitRate: number | null;
+};
 type RecentRow = { settled: number | bigint | null; hits: number | bigint | null; payoutOddsSum: number | null };
 type PatternSignal = { id: string; direction: "SUCCESS_EDGE" | "FAILURE_REGIME"; dimension: string; evidenceCount: number; roiDelta: number; confidence: "WATCH" | "STRONG"; productionChangeAllowed: false };
 
@@ -113,9 +120,7 @@ function assertPaperLiveSettlementConsistency(db: DatabaseSync, source: BuyOutco
       AND outcome_result IS NOT NULL
       AND decision_result != outcome_result
   `).get(...source.params) as { mismatches: number | bigint | null };
-  if (number(row.mismatches) > 0) {
-    throw new Error("paper-live settlement result conflicts with official race_results");
-  }
+  if (number(row.mismatches) > 0) throw new Error("paper-live settlement result conflicts with official race_results");
 }
 
 function parseArgs(argv: string[]) {
@@ -190,7 +195,12 @@ function safeOutput(value: string | undefined) { if (!value || value.startsWith(
 function safePrivateDir(value: string | undefined) { if (!value || !/^data\/private\/[A-Za-z0-9_./-]+$/.test(value) || value.includes("..")) throw new Error("private retention must stay under data/private"); return value.replace(/\/$/, ""); }
 function number(value: number | bigint | null) { const n = Number(value ?? 0); return Number.isFinite(n) && n >= 0 ? Math.trunc(n) : 0; }
 function finite(value: number | bigint | null) { const n = Number(value ?? 0); return Number.isFinite(n) ? n : 0; }
-function nullableFinite(value: number | null) { return value == null || !Number.isFinite(Number(value)) ? null : Number(value); }
+function nullableProbability(value: number | null, label: string) {
+  if (value == null) return null;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0 || n > 1) throw new Error(`${label} must stay within [0,1]`);
+  return n;
+}
 async function atomicWrite(path: string, contents: string) { await mkdir(dirname(path), { recursive: true }); const temp = `${path}.tmp-${process.pid}`; await writeFile(temp, contents, { encoding: "utf8", mode: 0o600 }); await rename(temp, path); }
 async function retainPrivateLearning(dir: string, summary: unknown): Promise<boolean> {
   const value = summary as Record<string, unknown>;
