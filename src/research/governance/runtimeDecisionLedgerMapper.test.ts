@@ -61,6 +61,29 @@ test("maps deterministically with JST close and UTC SQLite timestamps", () => {
   assert.equal(a.ledgerDigest, b.ledgerDigest);
 });
 
+test("canonical timestamp equivalents remain one idempotent runtime ledger record", () => {
+  const base = row();
+  const equivalent = row({
+    fetched_at: "2026-08-05T05:26:10.000Z",
+    created_at: "2026-08-05T14:26:30+09:00",
+    close_at: "2026-08-05T05:32:00.000Z",
+    program_imported_at: "2026-08-05T13:00:00+09:00",
+  });
+  const a = mapDecisionHistoryRowToRuntimeLedger(base, context);
+  const b = mapDecisionHistoryRowToRuntimeLedger(equivalent, context);
+  assert.equal(a.status, "mapped");
+  assert.equal(b.status, "mapped");
+  if (a.status !== "mapped" || b.status !== "mapped") return;
+  assert.equal(a.record.sourceRowDigest, b.record.sourceRowDigest);
+  assert.equal(a.ledgerDigest, b.ledgerDigest);
+
+  const reconciled = reconcileDecisionHistoryRowsToRuntimeLedger([base, equivalent], context);
+  assert.equal(reconciled.status, "PASS");
+  assert.equal(reconciled.mappedUnique, 1);
+  assert.equal(reconciled.exactDuplicates, 1);
+  assert.equal(reconciled.conflictCount, 0);
+});
+
 test("does not claim close-time visibility when program import is later", () => {
   const result = mapDecisionHistoryRowToRuntimeLedger(row({ program_imported_at: "2026-08-05 05:30:00" }), context);
   assert.equal(result.status, "unresolved");
