@@ -133,15 +133,28 @@ test("malformed or authority-bearing evidence fails the whole policy report clos
   assert.equal(badShare.hypotheses[0].status, "BLOCKED");
   assert.ok(badShare.hypotheses[0].validation.blockers.includes("MAX_VENUE_SHARE_INVALID"));
 
-  const base = evidence();
-  const badAuthority: N2EdgeHoldoutDistributionEvidenceReport = {
-    ...base,
-    authority: { ...base.authority, automaticPromotionAuthorized: true as never },
-  };
-  const authorityReport = evaluateN2EdgeHoldoutConcentration(badAuthority);
-  assert.equal(authorityReport.status, "BLOCKED");
-  assert.ok(authorityReport.blockers.includes("DISTRIBUTION_EVIDENCE_AUTHORITY_INVALID"));
-  assert.equal(authorityReport.hypothesisCount, 0);
+  const unsafeAuthorityFields = [
+    "automaticPromotionAuthorized",
+    "currentBuyConnectionAuthorized",
+    "lineConnectionAuthorized",
+    "publicPublishAuthorized",
+    "automatedBettingAuthorized",
+    "productionApplyAuthorized",
+  ] as const;
+  for (const field of unsafeAuthorityFields) {
+    const base = evidence();
+    const badAuthority: N2EdgeHoldoutDistributionEvidenceReport = {
+      ...base,
+      authority: { ...base.authority, [field]: true as never },
+    };
+    const authorityReport = evaluateN2EdgeHoldoutConcentration(badAuthority);
+    assert.equal(authorityReport.status, "BLOCKED", field);
+    assert.ok(
+      authorityReport.blockers.includes("DISTRIBUTION_EVIDENCE_AUTHORITY_INVALID"),
+      field,
+    );
+    assert.equal(authorityReport.hypothesisCount, 0, field);
+  }
 });
 
 test("policy output is deterministic under hypothesis input reordering", () => {
