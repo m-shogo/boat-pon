@@ -61,6 +61,7 @@ export type N2EconomicMetricsEvaluation = {
 
 const SELECTIONS = enumerateBetSelections("trifecta");
 const SELECTION_SET = new Set(SELECTIONS);
+const BASELINE_ID_RE = /^[0-9A-Za-z][0-9A-Za-z._:-]{2,127}$/u;
 const RACE_KEY_RE = /^(\d{4}-\d{2}-\d{2}):(0[1-9]|1\d|2[0-4]):R([1-9]|1[0-2])$/u;
 
 function unique(values: readonly string[]): string[] {
@@ -262,6 +263,11 @@ export function evaluateN2EconomicMetrics(input: {
     const baselineIds = Object.keys(race.probabilityByBaseline).sort();
     if (baselineIds.length !== N2_METRICS_REQUIRED_BASELINE_COUNT) {
       blockers.push(`${race.canonicalRaceKey}:BASELINE_COUNT:${baselineIds.length}/${N2_METRICS_REQUIRED_BASELINE_COUNT}`);
+    }
+    for (const baselineId of baselineIds) {
+      if (!BASELINE_ID_RE.test(baselineId)) {
+        blockers.push(`${race.canonicalRaceKey}:BASELINE_ID_INVALID:${baselineId}`);
+      }
     }
     if (expectedBaselineIds == null) expectedBaselineIds = baselineIds;
     else if (baselineIds.join("|") !== expectedBaselineIds.join("|")) {
