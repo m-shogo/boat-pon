@@ -1,5 +1,6 @@
 import { resolve, sep } from "node:path";
 
+import { canonicalUtcTimestamp } from "./canonical";
 import {
   N2_TRIFECTA_LOCAL_CAPTURE_AUTHORIZATION_VERSION,
   type N2TrifectaLocalCaptureAuthorization,
@@ -29,9 +30,11 @@ export type N2TrifectaLocalCaptureLaunchAgentInput = {
 };
 
 function parseInstant(value: string): number {
-  const parsed = Date.parse(value);
-  if (!Number.isFinite(parsed)) throw new Error("INVALID_INSTANT");
-  return parsed;
+  try {
+    return new Date(canonicalUtcTimestamp(value)).getTime();
+  } catch {
+    throw new Error("INVALID_INSTANT");
+  }
 }
 
 function xmlEscape(value: string): string {
