@@ -49,6 +49,7 @@ export function OwnerDashboardSummary({ snapshot }: { snapshot: OwnerDashboardSn
           <div className="ownerSectionHead"><h3>Outcome Evidence Maturity</h3><p>成功/失敗を断定する前のsupport・不確実性・時系列再現性。production auto-change: OFF</p></div>
           <div className="ownerGrid ownerBuyGrid">
             <OwnerCard label="Pattern support" value={formatPatternSupport(evidence.patternSupport.status)} />
+            <OwnerCard label="Contrast blocker" value={formatPatternContrastBlocker(evidence.patternSupport.contrastBlocker)} />
             <OwnerCard label="Supported contrasts" value={String(evidence.patternSupport.supportedContrastCount)} />
             <OwnerCard label="Supported dimensions" value={String(evidence.patternSupport.supportedDimensionCount)} />
             <OwnerCard label="Hit rate 95%" value={formatInterval(evidence.hitRateUncertainty.performance)} />
@@ -63,9 +64,13 @@ export function OwnerDashboardSummary({ snapshot }: { snapshot: OwnerDashboardSn
               <header><span>PATTERN SCREENING</span><strong>{evidence.patternSupport.patternSignalCount}</strong></header>
               <dl>
                 <div><dt>Reason</dt><dd>{formatNoSignalReason(evidence.patternSupport.noSignalReason)}</dd></div>
+                <div><dt>Contrast blocker</dt><dd>{formatPatternContrastBlocker(evidence.patternSupport.contrastBlocker)}</dd></div>
                 <div><dt>Support floor</dt><dd>{evidence.patternSupport.minimumSettledPerSide} vs {evidence.patternSupport.minimumSettledPerSide}</dd></div>
                 <div><dt>Valid segment cells</dt><dd>{evidence.patternSupport.validSegmentCount}</dd></div>
                 <div><dt>Segment-side eligible</dt><dd>{evidence.patternSupport.segmentSideEligibleCount}</dd></div>
+                <div><dt>Universal eligible</dt><dd>{evidence.patternSupport.universalEligibleSegmentCount} / {evidence.patternSupport.segmentSideEligibleCount}</dd></div>
+                <div><dt>Closest complement</dt><dd>{formatComplementSupport(evidence.patternSupport.closestObservedComplementSettled, evidence.patternSupport.minimumSettledPerSide)}</dd></div>
+                <div><dt>Complement shortfall</dt><dd>{formatSupportShortfall(evidence.patternSupport.minimumObservedComplementShortfall)}</dd></div>
                 <div><dt>Supported contrasts</dt><dd>{evidence.patternSupport.supportedContrastCount}</dd></div>
                 <div><dt>Global additional settled</dt><dd>{evidence.patternSupport.globalAdditionalSettledForAnyContrast}</dd></div>
               </dl>
@@ -187,6 +192,14 @@ function formatPatternSupport(value: NonNullable<OwnerDashboardSnapshot["buyEvid
   if (value === "NO_SUPPORTED_CONTRAST") return "比較cohort未成立";
   return "比較可能";
 }
+function formatPatternContrastBlocker(value: NonNullable<OwnerDashboardSnapshot["buyEvidence"]["patternSupport"]>["contrastBlocker"]): string {
+  if (value === "UNIVERSAL_SEGMENT_COVERAGE") return "全件同一区分 / 比較不能";
+  if (value === "COMPLEMENT_SUPPORT_SHORTFALL") return "比較側の母数不足";
+  if (value === "NO_ELIGIBLE_SEGMENT") return "segment側の母数不足";
+  return "比較可能";
+}
+function formatComplementSupport(value: number | null, minimum: number): string { return value == null ? "NOT_AVAILABLE" : `${value} / ${minimum}`; }
+function formatSupportShortfall(value: number | null): string { return value == null ? "NOT_AVAILABLE" : value === 0 ? "なし" : `あと${value}`; }
 function formatNoSignalReason(value: NonNullable<OwnerDashboardSnapshot["buyEvidence"]["patternSupport"]>["noSignalReason"]): string {
   if (value === null) return "signalあり";
   if (value === "INSUFFICIENT_GLOBAL_SUPPORT") return "全体母数不足";
