@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { BUY_OUTCOME_PATTERN_DIMENSIONS, summarizeBuyPatternDimensionReadiness } from "../src/presentation/buyPatternDimensionReadiness";
 import { assessBuyOutcomePatternSupport, mineBuyOutcomePatterns, toPublicOutcomePatternSignals, type BuyOutcomeSegment } from "../src/presentation/buyOutcomePatternMiner";
 import { buildBuyOutcomeSettlementSource, type BuyOutcomeSettlementSource } from "../src/presentation/buyOutcomeSettlementSource";
 
@@ -83,18 +84,10 @@ try {
     hits: count(row.hits),
     payoutOddsSum: finite(row.payoutOddsSum),
   }));
-  const baselineAggregate = {
-    settled: count(baseline.settled),
-    payoutOddsSum: finite(baseline.payoutOddsSum),
-  };
-  const support = assessBuyOutcomePatternSupport(segments, baselineAggregate, {
-    minSettled: args.minSettled,
-    minComparisonSettled: args.minSettled,
-  });
-  const patterns = mineBuyOutcomePatterns(segments, baselineAggregate, {
-    minSettled: args.minSettled,
-    minRoiDelta: args.minRoiDelta,
-  });
+  const baselineAggregate = { settled: count(baseline.settled), payoutOddsSum: finite(baseline.payoutOddsSum) };
+  const support = assessBuyOutcomePatternSupport(segments, baselineAggregate, { minSettled: args.minSettled, minComparisonSettled: args.minSettled });
+  const patterns = mineBuyOutcomePatterns(segments, baselineAggregate, { minSettled: args.minSettled, minRoiDelta: args.minRoiDelta });
+  const dimensionReadiness = summarizeBuyPatternDimensionReadiness(segments, baselineAggregate.settled, args.minSettled);
 
   const privateRecord = {
     schemaVersion: "buy-outcome-pattern-mining.0.1",
@@ -104,14 +97,13 @@ try {
       minimumAbsoluteRoiDelta: args.minRoiDelta,
       runKind: args.runKind,
       confidenceBandProbabilityBasis: "decision-effective-probability-reconstructed-from-stored-ev-and-decision-odds",
-      settlementEconomics: source.usesOfficialRaceResults
-        ? "official-race-results-payout-yen-per-100"
-        : "decision-history-payout-yen-per-100",
+      settlementEconomics: source.usesOfficialRaceResults ? "official-race-results-payout-yen-per-100" : "decision-history-payout-yen-per-100",
       productionChangeAllowed: false,
       note: "Exploratory pattern mining only; multiple-comparison risk requires governed validation before promotion.",
     },
     baseline: { settled: baselineAggregate.settled, roiProxy: ratio(baselineAggregate.payoutOddsSum, baselineAggregate.settled) },
     support,
+    dimensionReadiness,
     patterns,
   };
   const publicRecord = {
@@ -120,13 +112,8 @@ try {
     status: patterns.length ? "SIGNALS_FOUND" : "NO_SIGNAL",
     analyzedSettled: privateRecord.baseline.settled,
     support,
-    noSignalReason: patterns.length
-      ? null
-      : support.status === "INSUFFICIENT_GLOBAL_SUPPORT"
-        ? "INSUFFICIENT_GLOBAL_SUPPORT"
-        : support.status === "NO_SUPPORTED_CONTRAST"
-          ? "NO_SUPPORTED_CONTRAST"
-          : "NO_MATERIAL_ROI_CONTRAST",
+    dimensionReadiness,
+    noSignalReason: patterns.length ? null : support.status === "INSUFFICIENT_GLOBAL_SUPPORT" ? "INSUFFICIENT_GLOBAL_SUPPORT" : support.status === "NO_SUPPORTED_CONTRAST" ? "NO_SUPPORTED_CONTRAST" : "NO_MATERIAL_ROI_CONTRAST",
     signals: toPublicOutcomePatternSignals(patterns),
     productionChangeAllowed: false,
   };
@@ -140,44 +127,24 @@ try {
     globalAdditionalSettledForAnyContrast: support.globalAdditionalSettledForAnyContrast,
     supportedContrastCount: support.supportedContrastCount,
     supportedDimensionCount: support.supportedDimensionCount,
+    dimensionReadiness,
     noSignalReason: publicRecord.noSignalReason,
     privatePatternCount: patterns.length,
     publicSignalCount: publicRecord.signals.length,
     retained,
     productionChangeAllowed: false,
   }));
-} finally {
-  db.close();
-}
+} finally { db.close(); }
 
 function assertPaperLiveSettlementConsistency(db: DatabaseSync, source: BuyOutcomeSettlementSource) {
   if (!source.usesOfficialRaceResults) return;
-  const row = db.prepare(`
-    ${source.cte}
-    SELECT COUNT(*) AS mismatches
-    FROM buy_outcomes
-    WHERE decision_result IS NOT NULL
-      AND outcome_result IS NOT NULL
-      AND decision_result != outcome_result
-  `).get(...source.params) as { mismatches: number | bigint | null };
-  if (count(row.mismatches) > 0) {
-    throw new Error("paper-live settlement result conflicts with official race_results");
-  }
+  const row = db.prepare(`${source.cte} SELECT COUNT(*) AS mismatches FROM buy_outcomes WHERE decision_result IS NOT NULL AND outcome_result IS NOT NULL AND decision_result != outcome_result`).get(...source.params) as { mismatches: number | bigint | null };
+  if (count(row.mismatches) > 0) throw new Error("paper-live settlement result conflicts with official race_results");
 }
-
 function assertDecisionEffectiveProbabilityConsistency(db: DatabaseSync, source: BuyOutcomeSettlementSource, settledEconomic: string) {
-  const row = db.prepare(`
-    ${source.cte}
-    SELECT COUNT(*) AS invalid
-    FROM buy_outcomes
-    WHERE ${settledEconomic}
-      AND ev IS NOT NULL
-      AND current_odds IS NOT NULL
-      AND (current_odds <= 0 OR ev < 0 OR ev / current_odds < 0 OR ev / current_odds > 1)
-  `).get(...source.params) as { invalid: number | bigint | null };
+  const row = db.prepare(`${source.cte} SELECT COUNT(*) AS invalid FROM buy_outcomes WHERE ${settledEconomic} AND ev IS NOT NULL AND current_odds IS NOT NULL AND (current_odds <= 0 OR ev < 0 OR ev / current_odds < 0 OR ev / current_odds > 1)`).get(...source.params) as { invalid: number | bigint | null };
   if (count(row.invalid) > 0) throw new Error("settled BUY decision-effective hit rate outside [0,1]");
 }
-
 function parseArgs(argv: string[]) {
   const parsed = { minSettled: 30, minRoiDelta: 0.15, runKind: null as string | null, outputPublic: null as string | null, retainPrivateDir: null as string | null };
   for (let i = 0; i < argv.length; i += 1) {
@@ -192,12 +159,7 @@ function parseArgs(argv: string[]) {
   }
   return parsed;
 }
-
-function dimension(value: unknown): BuyOutcomeSegment["dimension"] {
-  const text = String(value);
-  if (["venue", "modelVersion", "confidenceBand", "evBand", "oddsBand", "sampleBand"].includes(text)) return text as BuyOutcomeSegment["dimension"];
-  throw new Error(`unexpected pattern dimension: ${text}`);
-}
+function dimension(value: unknown): BuyOutcomeSegment["dimension"] { const text = String(value); if (BUY_OUTCOME_PATTERN_DIMENSIONS.includes(text as BuyOutcomeSegment["dimension"])) return text as BuyOutcomeSegment["dimension"]; throw new Error(`unexpected pattern dimension: ${text}`); }
 function boundedInt(value: string | undefined, min: number, max: number) { const n = Number(value); if (!Number.isInteger(n) || n < min || n > max) throw new Error("invalid integer option"); return n; }
 function boundedNumber(value: string | undefined, min: number, max: number) { const n = Number(value); if (!Number.isFinite(n) || n < min || n > max) throw new Error("invalid numeric option"); return n; }
 function safeArg(value: string | undefined) { if (!value || !/^[A-Za-z0-9_.-]{1,80}$/.test(value)) throw new Error("invalid filter"); return value; }
@@ -208,20 +170,12 @@ function finite(value: unknown) { const n = Number(value ?? 0); return Number.is
 function ratio(numerator: number, denominator: number) { return denominator > 0 ? Math.round((numerator / denominator) * 10000) / 10000 : null; }
 async function atomicWrite(path: string, contents: string) { await mkdir(dirname(path), { recursive: true }); const temp = `${path}.tmp-${process.pid}`; await writeFile(temp, contents, { encoding: "utf8", mode: 0o600 }); await rename(temp, path); }
 async function retain(dir: string, record: unknown): Promise<boolean> {
-  const semantic = JSON.parse(JSON.stringify(record)) as Record<string, unknown>;
-  delete semantic.generatedAt;
+  const semantic = JSON.parse(JSON.stringify(record)) as Record<string, unknown>; delete semantic.generatedAt;
   const digest = createHash("sha256").update(JSON.stringify(semantic)).digest("hex");
   const envelope = { schemaVersion: "buy-outcome-pattern-ledger.0.1", semanticDigest: digest, recordedAt: new Date().toISOString(), record };
   await mkdir(dir, { recursive: true, mode: 0o700 });
   const path = join(dir, `pattern-${digest}.json`);
-  try {
-    await writeFile(path, `${JSON.stringify(envelope, null, 2)}\n`, { encoding: "utf8", mode: 0o600, flag: "wx" });
-    return true;
-  } catch (error) {
-    if (!isNodeError(error) || error.code !== "EEXIST") throw error;
-    const existing = JSON.parse(await readFile(path, "utf8")) as { semanticDigest?: string };
-    if (existing.semanticDigest !== digest) throw new Error("private BUY pattern ledger conflict");
-    return false;
-  }
+  try { await writeFile(path, `${JSON.stringify(envelope, null, 2)}\n`, { encoding: "utf8", mode: 0o600, flag: "wx" }); return true; }
+  catch (error) { if (!isNodeError(error) || error.code !== "EEXIST") throw error; const existing = JSON.parse(await readFile(path, "utf8")) as { semanticDigest?: string }; if (existing.semanticDigest !== digest) throw new Error("private BUY pattern ledger conflict"); return false; }
 }
 function isNodeError(error: unknown): error is NodeJS.ErrnoException { return error instanceof Error && "code" in error; }
