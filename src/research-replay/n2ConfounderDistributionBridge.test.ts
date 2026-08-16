@@ -43,16 +43,24 @@ function evidence(input: {
   testRaceCount?: number;
   validationVenueCount?: number;
   testVenueCount?: number;
+  validationMaxVenueRaceCount?: number;
+  testMaxVenueRaceCount?: number;
   validationMaxVenueShare?: number;
   testMaxVenueShare?: number;
   validationYearCount?: number;
   testYearCount?: number;
+  validationMaxYearRaceCount?: number;
+  testMaxYearRaceCount?: number;
   validationMaxYearShare?: number;
   testMaxYearShare?: number;
 } = {}): N2EdgeHoldoutDistributionEvidenceReport {
   const hypothesisId = input.hypothesisId ?? "H-A";
   const validationRaceCount = input.validationRaceCount ?? 220;
   const testRaceCount = input.testRaceCount ?? 220;
+  const validationMaxVenueRaceCount = input.validationMaxVenueRaceCount ?? 14;
+  const testMaxVenueRaceCount = input.testMaxVenueRaceCount ?? 14;
+  const validationMaxYearRaceCount = input.validationMaxYearRaceCount ?? 120;
+  const testMaxYearRaceCount = input.testMaxYearRaceCount ?? 120;
   const core = {
     evidenceVersion: "n2-edge-holdout-distribution-evidence-v1" as const,
     status: "PASS" as const,
@@ -67,21 +75,21 @@ function evidence(input: {
         split: "validation" as const,
         uniqueRaceCount: validationRaceCount,
         distinctVenueCount: input.validationVenueCount ?? 17,
-        maxVenueRaceCount: 14,
-        maxVenueShare: input.validationMaxVenueShare ?? 14 / validationRaceCount,
+        maxVenueRaceCount: validationMaxVenueRaceCount,
+        maxVenueShare: input.validationMaxVenueShare ?? validationMaxVenueRaceCount / validationRaceCount,
         distinctYearCount: input.validationYearCount ?? 2,
-        maxYearRaceCount: 120,
-        maxYearShare: input.validationMaxYearShare ?? 120 / validationRaceCount,
+        maxYearRaceCount: validationMaxYearRaceCount,
+        maxYearShare: input.validationMaxYearShare ?? validationMaxYearRaceCount / validationRaceCount,
       },
       test: {
         split: "test" as const,
         uniqueRaceCount: testRaceCount,
         distinctVenueCount: input.testVenueCount ?? 17,
-        maxVenueRaceCount: 14,
-        maxVenueShare: input.testMaxVenueShare ?? 14 / testRaceCount,
+        maxVenueRaceCount: testMaxVenueRaceCount,
+        maxVenueShare: input.testMaxVenueShare ?? testMaxVenueRaceCount / testRaceCount,
         distinctYearCount: input.testYearCount ?? 2,
-        maxYearRaceCount: 120,
-        maxYearShare: input.testMaxYearShare ?? 120 / testRaceCount,
+        maxYearRaceCount: testMaxYearRaceCount,
+        maxYearShare: input.testMaxYearShare ?? testMaxYearRaceCount / testRaceCount,
       },
     }],
     privacy: {
@@ -135,7 +143,11 @@ test("well-distributed confirmed hypothesis has no blocking concentration flag b
 test("pre-registered concentration failure becomes a blocking confounder", () => {
   const report = buildN2ConfounderDistributionBridge({
     confirmationResults: [confirmation("H-A")],
-    distributionEvidence: evidence({ validationVenueCount: 8, validationMaxVenueShare: 0.2 }),
+    distributionEvidence: evidence({
+      validationVenueCount: 8,
+      validationMaxVenueRaceCount: 44,
+      validationMaxVenueShare: 44 / 220,
+    }),
   });
   assert.equal(report.status, "PASS");
   assert.equal(report.confirmedBlockedByConcentrationCount, 1);
@@ -149,7 +161,9 @@ test("distribution support below 200 blocks as insufficient evidence, not histor
     confirmationResults: [confirmation("H-A")],
     distributionEvidence: evidence({
       validationRaceCount: 199,
+      validationMaxVenueRaceCount: 12,
       validationMaxVenueShare: 12 / 199,
+      validationMaxYearRaceCount: 110,
       validationMaxYearShare: 110 / 199,
     }),
   });
