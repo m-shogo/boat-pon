@@ -46,6 +46,11 @@ function writeHistorical(root: string, discoveryArtifactDigest: string | undefin
     authority: {
       forwardLabelsUsedForConfirmation: false,
       automaticPromotionAuthorized: false,
+      currentBuyConnectionAuthorized: false,
+      lineConnectionAuthorized: false,
+      publicPublishAuthorized: false,
+      automatedBettingAuthorized: false,
+      productionApplyAuthorized: false,
     },
   };
   const summary = {
