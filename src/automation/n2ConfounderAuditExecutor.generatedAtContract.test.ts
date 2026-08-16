@@ -35,6 +35,10 @@ function writeArtifact(root: string, generatedAt: string): void {
     },
     authority: {
       automaticPromotionAuthorized: false,
+      currentBuyConnectionAuthorized: false,
+      lineConnectionAuthorized: false,
+      publicPublishAuthorized: false,
+      automatedBettingAuthorized: false,
       productionApplyAuthorized: false,
     },
   };
