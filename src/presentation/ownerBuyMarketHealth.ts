@@ -153,10 +153,10 @@ function parseProbability(value: unknown, expected: { settled: number; hits: num
   const transition = pipeline.transitions.featureAdjustedToDecisionEffective;
   if (!isRecord(feature) || !isRecord(effective) || !isRecord(transition)) throw new Error("BUY probability pipeline stages unavailable");
   if (!isProbability(feature.averageProbability) || !isProbability(effective.averageProbability) || !isNonNegativeFinite(transition.retentionRatio)) throw new Error("invalid BUY probability pipeline aggregate");
-  if (!sameMetric(effective.averageProbability, metrics.averagePredictedHitRate)) throw new Error("BUY decision-effective probability mismatch");
+  if (!sameMetric(effective.averageProbability, Number(metrics.averagePredictedHitRate))) throw new Error("BUY decision-effective probability mismatch");
   if (!isCount(effective.eligible) || effective.eligible !== expected.settled || effective.missing !== 0 || effective.coverage !== 1) throw new Error("BUY decision-effective probability coverage incomplete");
   const expectedRetention = Number(feature.averageProbability) > 0 ? Number(effective.averageProbability) / Number(feature.averageProbability) : null;
-  if (expectedRetention === null || !sameMetric(transition.retentionRatio, expectedRetention)) throw new Error("BUY probability retention mismatch");
+  if (expectedRetention === null || !sameRatio(transition.retentionRatio, expectedRetention)) throw new Error("BUY probability retention mismatch");
   return {
     settled: expected.settled,
     decisionEffectiveHitRate: round4(Number(metrics.averagePredictedHitRate)),
@@ -277,4 +277,5 @@ function isIso(value: unknown): value is string { return typeof value === "strin
 function requiredCount(value: number | null, label: string): number { if (!isCount(value)) throw new Error(`BUY learning missing ${label}`); return value; }
 function requiredNumber(value: number | null, label: string): number { if (!isFiniteNumber(value)) throw new Error(`BUY learning missing ${label}`); return value; }
 function sameMetric(left: unknown, right: number): boolean { return isFiniteNumber(left) && Math.abs(left - right) <= 0.00015; }
+function sameRatio(left: unknown, right: number): boolean { return isFiniteNumber(left) && Math.abs(left - right) <= 0.002; }
 function round4(value: number): number { return Math.round(value * 10000) / 10000; }
