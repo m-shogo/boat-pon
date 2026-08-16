@@ -27,17 +27,23 @@ for (const recordedAt of [
   });
 }
 
-test("private heartbeat preserves valid leap-day timestamps with an explicit offset", () => {
-  const recordedAt = "2028-02-29T23:30:00.000+09:00";
-  const record = buildN2TrifectaPrivateHeartbeatRecord({
-    recordedAt,
+test("private heartbeat canonicalizes equivalent explicit-offset instants before hashing", () => {
+  const offsetRecord = buildN2TrifectaPrivateHeartbeatRecord({
+    recordedAt: "2028-02-29T23:30:00.000+09:00",
+    status: "NO_CHANGE",
+    runtimeAuthorityStatus: "PASS",
+  });
+  const utcRecord = buildN2TrifectaPrivateHeartbeatRecord({
+    recordedAt: "2028-02-29T14:30:00.000Z",
     status: "NO_CHANGE",
     runtimeAuthorityStatus: "PASS",
   });
 
-  assert.equal(record.dateJst, "2028-02-29");
+  assert.equal(offsetRecord.recordedAt, "2028-02-29T14:30:00.000Z");
+  assert.equal(offsetRecord.dateJst, "2028-02-29");
+  assert.equal(offsetRecord.recordDigest, utcRecord.recordDigest);
   assert.equal(
-    n2TrifectaPrivateHeartbeatRelativePath(recordedAt),
+    n2TrifectaPrivateHeartbeatRelativePath("2028-02-29T23:30:00.000+09:00"),
     "data/private/trifecta-capture/heartbeats/2028-02-29.jsonl",
   );
 });
