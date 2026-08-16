@@ -6,7 +6,7 @@ import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import type { N2HistoricalOnlyBaselineDataset } from "./n2HistoricalOnlyBaselineDataset";
 
 export const N2_HISTORICAL_COMMON_COHORT_ALIGNMENT_VERSION =
-  "n2-historical-common-cohort-alignment-v1" as const;
+  "n2-historical-common-cohort-alignment-v2" as const;
 
 export type N2HistoricalCommonCohortAlignmentResult = {
   status: "PASS" | "BLOCKED";
@@ -20,13 +20,12 @@ function unique(values: readonly string[]): string[] {
   return [...new Set(values)].sort();
 }
 
-function validDecisionCutoff(value: unknown): value is string {
-  if (typeof value !== "string") return false;
+function canonicalDecisionCutoff(value: unknown): string | null {
+  if (typeof value !== "string") return null;
   try {
-    canonicalUtcTimestamp(value);
-    return true;
+    return canonicalUtcTimestamp(value);
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -64,12 +63,14 @@ export function alignN2HistoricalBaselineToDecisionCutoffs(input: {
   }
   const blockers: string[] = [];
   const raceKeys = [...new Set(input.dataset.rows.map((row) => row.canonicalRaceKey))].sort();
+  const canonicalCutoffByRaceKey: Record<string, string> = {};
   for (const raceKey of raceKeys) {
-    const cutoff = input.decisionCutoffByRaceKey[raceKey];
-    if (!validDecisionCutoff(cutoff)) {
+    const cutoff = canonicalDecisionCutoff(input.decisionCutoffByRaceKey[raceKey]);
+    if (cutoff === null) {
       blockers.push(`${raceKey}:DECISION_CUTOFF_MISSING_OR_INVALID`);
       continue;
     }
+    canonicalCutoffByRaceKey[raceKey] = cutoff;
     const predictionAvailableAt = input.dataset.rows.find((row) => row.canonicalRaceKey === raceKey)?.predictionAvailableAt;
     if (!predictionAvailableAt || Date.parse(predictionAvailableAt) > Date.parse(cutoff)) {
       blockers.push(`${raceKey}:HISTORICAL_PREDICTION_AFTER_DECISION_CUTOFF`);
@@ -87,7 +88,7 @@ export function alignN2HistoricalBaselineToDecisionCutoffs(input: {
 
   const rows = input.dataset.rows.map((row) => ({
     ...row,
-    decisionCutoff: input.decisionCutoffByRaceKey[row.canonicalRaceKey],
+    decisionCutoff: canonicalCutoffByRaceKey[row.canonicalRaceKey],
   }));
   const evaluation = evaluateN2Baseline(rows);
   if (evaluation.status !== "PASS") {
