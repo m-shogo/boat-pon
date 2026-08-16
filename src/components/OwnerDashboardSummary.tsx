@@ -15,6 +15,7 @@ export function OwnerDashboardSummary({ snapshot }: { snapshot: OwnerDashboardSn
 
   const learning = snapshot.buyLearning;
   const evidence = snapshot.buyEvidence;
+  const marketHealth = snapshot.buyMarketHealth;
   return (
     <section className="ownerDashboard" aria-label="Owner Dashboard">
       <div className={`ownerOverall owner-${snapshot.overall.status.toLowerCase()}`}>
@@ -84,6 +85,43 @@ export function OwnerDashboardSummary({ snapshot }: { snapshot: OwnerDashboardSn
           </div>
         </> : <article className="ownerPanel"><header><span>OUTCOME EVIDENCE</span><strong>NOT_AVAILABLE</strong></header><p className="ownerClear">検証済みsupport / uncertainty / temporal evidenceがないため推測表示しません。</p></article>}
 
+        {marketHealth.status === "AVAILABLE" && marketHealth.probability && marketHealth.evRealization && marketHealth.priceReadiness ? <>
+          <div className="ownerSectionHead"><h3>BUY Market Health</h3><p>BUY判定に実際に使った確率・stored EV・価格検証readinessを同一cohortで照合。個別オッズは非公開、production auto-change: OFF</p></div>
+          <div className="ownerGrid ownerBuyGrid">
+            <OwnerCard label="BUY p / actual" value={`${formatPct(marketHealth.probability.decisionEffectiveHitRate)} / ${formatPct(marketHealth.probability.observedHitRate)}`} />
+            <OwnerCard label="Calibration" value={formatCalibration(marketHealth.probability.classification)} />
+            <OwnerCard label="Calibration stability" value={formatCalibrationStability(marketHealth.probability.stability)} />
+            <OwnerCard label="Feature p" value={formatPct(marketHealth.probability.featureAdjustedHitRate)} />
+            <OwnerCard label="Empirical retention" value={formatPct(marketHealth.probability.featureToDecisionRetention)} />
+            <OwnerCard label="Stored EV avg" value={formatRoi(marketHealth.evRealization.performance.averageStoredEv)} />
+            <OwnerCard label="EV realized / expected" value={formatPct(marketHealth.evRealization.performance.realizedToExpectedRatio)} />
+            <OwnerCard label="EV evidence" value={formatExpectedEvClassification(marketHealth.evRealization.performance.classification)} />
+            <OwnerCard label="Price evidence" value={formatPriceReadiness(marketHealth.priceReadiness.performance)} />
+          </div>
+          <div className="ownerSplit">
+            <article className="ownerPanel">
+              <header><span>PROBABILITY PIPELINE</span><strong>{formatCalibrationStability(marketHealth.probability.stability)}</strong></header>
+              <dl>
+                <div><dt>Feature-adjusted p</dt><dd>{formatPct(marketHealth.probability.featureAdjustedHitRate)}</dd></div>
+                <div><dt>Decision-effective p</dt><dd>{formatPct(marketHealth.probability.decisionEffectiveHitRate)}</dd></div>
+                <div><dt>Observed hit rate</dt><dd>{formatPct(marketHealth.probability.observedHitRate)}</dd></div>
+                <div><dt>Calibration bias</dt><dd>{formatSignedPctPoint(marketHealth.probability.calibrationBias)}</dd></div>
+                <div><dt>Empirical retention</dt><dd>{formatPct(marketHealth.probability.featureToDecisionRetention)}</dd></div>
+              </dl>
+            </article>
+            <article className="ownerPanel">
+              <header><span>EV / PRICE READINESS</span><strong>{formatExpectedEvClassification(marketHealth.evRealization.performance.classification)}</strong></header>
+              <dl>
+                <div><dt>Stored EV / realized ROI</dt><dd>{formatRoi(marketHealth.evRealization.performance.averageStoredEv)} / {formatRoi(marketHealth.evRealization.performance.realizedRoi)}</dd></div>
+                <div><dt>Realized / expected</dt><dd>{formatPct(marketHealth.evRealization.performance.realizedToExpectedRatio)}</dd></div>
+                <div><dt>Recent realized / expected</dt><dd>{formatPct(marketHealth.evRealization.recent.realizedToExpectedRatio)}</dd></div>
+                <div><dt>Price evidence support</dt><dd>{formatPriceReadiness(marketHealth.priceReadiness.performance)}</dd></div>
+                <div><dt>Recent price support</dt><dd>{formatPriceReadiness(marketHealth.priceReadiness.recent)}</dd></div>
+              </dl>
+            </article>
+          </div>
+        </> : <article className="ownerPanel"><header><span>BUY MARKET HEALTH</span><strong>NOT_AVAILABLE</strong></header><p className="ownerClear">確率・EV・価格readinessの同一cohort検証が成立していないため推測表示しません。</p></article>}
+
         <div className="ownerSplit">
           <article className="ownerPanel ownerLearningPanel">
             <header><span>WHAT WE LEARNED</span><strong>{learning.learnings.length}</strong></header>
@@ -133,6 +171,7 @@ function formatNumber(value: number | null): string { return value == null ? "NO
 function formatPct(value: number | null): string { return value == null ? "NOT_AVAILABLE" : `${(value * 100).toFixed(1)}%`; }
 function formatRoi(value: number | null): string { return value == null ? "NOT_AVAILABLE" : `${(value * 100).toFixed(1)}%`; }
 function formatRoiGap(value: number | null): string { return value == null ? "NOT_AVAILABLE" : `${(value * 100).toFixed(1)} pt`; }
+function formatSignedPctPoint(value: number): string { return `${value >= 0 ? "+" : ""}${(value * 100).toFixed(2)} pt`; }
 function formatInterval(value: OwnerBuyWilsonInterval): string { return value.lower == null || value.upper == null ? "NOT_AVAILABLE" : `${(value.lower * 100).toFixed(1)}–${(value.upper * 100).toFixed(1)}%`; }
 function formatIntervalLong(value: OwnerBuyWilsonInterval): string { return value.pointEstimate == null ? "NOT_AVAILABLE" : `${formatPct(value.pointEstimate)} / 95% ${formatInterval(value)}`; }
 function formatRoiInterval(value: OwnerBuyRoiBootstrapInterval | null): string { return value == null ? "NOT_AVAILABLE" : `${(value.lower * 100).toFixed(1)}–${(value.upper * 100).toFixed(1)}%`; }
@@ -160,4 +199,25 @@ function formatTailStatus(value: NonNullable<OwnerDashboardSnapshot["buyEvidence
   if (value === "PRIOR_TAIL_DEPENDENCE") return "過去のみ";
   if (value === "NO_TAIL_DEPENDENCE_SIGNAL") return "反復なし";
   return "support不足";
+}
+function formatCalibration(value: NonNullable<OwnerDashboardSnapshot["buyMarketHealth"]["probability"]>["classification"]): string {
+  if (value === "OVERCONFIDENT") return "過大推定";
+  if (value === "UNDERCONFIDENT") return "過小推定";
+  return "±5pt内";
+}
+function formatCalibrationStability(value: NonNullable<OwnerDashboardSnapshot["buyMarketHealth"]["probability"]>["stability"]): string {
+  if (value === "STABLE_WITHIN_5PT") return "2窓とも±5pt内";
+  if (value === "PERSISTENT_OVERCONFIDENCE") return "過大推定が継続";
+  if (value === "PERSISTENT_UNDERCONFIDENCE") return "過小推定が継続";
+  if (value === "CALIBRATION_REGIME_CHANGED") return "window間で変化";
+  return "support不足";
+}
+function formatExpectedEvClassification(value: NonNullable<OwnerDashboardSnapshot["buyMarketHealth"]["evRealization"]>["performance"]["classification"]): string {
+  if (value === "BELOW_EXPECTED") return "95%区間も期待EV未満";
+  if (value === "ABOVE_EXPECTED") return "95%区間も期待EV超え";
+  return "期待EVを95%区間がまたぐ";
+}
+function formatPriceReadiness(value: NonNullable<OwnerDashboardSnapshot["buyMarketHealth"]["priceReadiness"]>["performance"]): string {
+  if (value.status === "AVAILABLE") return `${value.hits}/${value.minimumHits} hits / 比較可能`;
+  return `${value.hits}/${value.minimumHits} hits / あと${value.missingHits}`;
 }
