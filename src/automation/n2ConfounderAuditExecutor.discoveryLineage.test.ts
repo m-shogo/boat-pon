@@ -62,6 +62,10 @@ function writeHistorical(root: string, discoveryArtifactDigest: string | undefin
     },
     authority: {
       automaticPromotionAuthorized: false,
+      currentBuyConnectionAuthorized: false,
+      lineConnectionAuthorized: false,
+      publicPublishAuthorized: false,
+      automatedBettingAuthorized: false,
       productionApplyAuthorized: false,
     },
   };

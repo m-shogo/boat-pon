@@ -143,12 +143,12 @@ export function readN2HistoricalTestArtifact(repoRoot: string): {
       || distribution.authority.automatedBettingAuthorized !== false
       || distribution.authority.productionApplyAuthorized !== false) blockers.push("DISTRIBUTION_EVIDENCE_AUTHORITY_INVALID");
   }
-  if (value.authority?.automaticPromotionAuthorized !== undefined && value.authority.automaticPromotionAuthorized !== false) blockers.push("HISTORICAL_REPORT_PROMOTION_AUTHORITY_INVALID");
-  if (value.authority?.currentBuyConnectionAuthorized !== undefined && value.authority.currentBuyConnectionAuthorized !== false) blockers.push("HISTORICAL_REPORT_BUY_AUTHORITY_INVALID");
-  if (value.authority?.lineConnectionAuthorized !== undefined && value.authority.lineConnectionAuthorized !== false) blockers.push("HISTORICAL_REPORT_LINE_AUTHORITY_INVALID");
-  if (value.authority?.publicPublishAuthorized !== undefined && value.authority.publicPublishAuthorized !== false) blockers.push("HISTORICAL_REPORT_PUBLIC_AUTHORITY_INVALID");
-  if (value.authority?.automatedBettingAuthorized !== undefined && value.authority.automatedBettingAuthorized !== false) blockers.push("HISTORICAL_REPORT_AUTOMATED_BETTING_AUTHORITY_INVALID");
-  if (value.authority?.productionApplyAuthorized !== undefined && value.authority.productionApplyAuthorized !== false) blockers.push("HISTORICAL_REPORT_PRODUCTION_AUTHORITY_INVALID");
+  if (value.authority?.automaticPromotionAuthorized !== false) blockers.push("HISTORICAL_REPORT_PROMOTION_AUTHORITY_INVALID");
+  if (value.authority?.currentBuyConnectionAuthorized !== false) blockers.push("HISTORICAL_REPORT_BUY_AUTHORITY_INVALID");
+  if (value.authority?.lineConnectionAuthorized !== false) blockers.push("HISTORICAL_REPORT_LINE_AUTHORITY_INVALID");
+  if (value.authority?.publicPublishAuthorized !== false) blockers.push("HISTORICAL_REPORT_PUBLIC_AUTHORITY_INVALID");
+  if (value.authority?.automatedBettingAuthorized !== false) blockers.push("HISTORICAL_REPORT_AUTOMATED_BETTING_AUTHORITY_INVALID");
+  if (value.authority?.productionApplyAuthorized !== false) blockers.push("HISTORICAL_REPORT_PRODUCTION_AUTHORITY_INVALID");
 
   return blockers.length > 0
     ? { artifact: null, blockers: unique(blockers) }
