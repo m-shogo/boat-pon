@@ -11,6 +11,8 @@ if (!["INSUFFICIENT_GLOBAL_SUPPORT", "NO_SUPPORTED_CONTRAST", "SUPPORTED_CONTRAS
 const analyzedSettled = count(value.analyzedSettled, "analyzedSettled");
 const minimumSettledPerSide = count(support.minimumSettledPerSide, "minimumSettledPerSide");
 const segmentSideEligibleCount = count(support.segmentSideEligibleCount, "segmentSideEligibleCount");
+const universalEligibleSegmentCount = count(support.universalEligibleSegmentCount, "universalEligibleSegmentCount");
+if (universalEligibleSegmentCount > segmentSideEligibleCount) throw new Error("universal eligible BUY segment count exceeds eligible segments");
 const supportedContrastCount = count(support.supportedContrastCount, "supportedContrastCount");
 const supportedDimensionCount = count(support.supportedDimensionCount, "supportedDimensionCount");
 const closestObservedComplementSettled = nullableCount(support.closestObservedComplementSettled, "closestObservedComplementSettled");
@@ -18,6 +20,12 @@ const minimumObservedComplementShortfall = nullableCount(support.minimumObserved
 if ((segmentSideEligibleCount === 0) !== (closestObservedComplementSettled === null || minimumObservedComplementShortfall === null)) throw new Error("BUY pattern complement readiness nullability mismatch");
 if (closestObservedComplementSettled !== null && minimumObservedComplementShortfall !== Math.max(0, minimumSettledPerSide - closestObservedComplementSettled)) throw new Error("BUY pattern complement shortfall mismatch");
 if (supportedContrastCount > 0 && minimumObservedComplementShortfall !== 0) throw new Error("supported BUY contrast must have zero complement shortfall");
+const contrastBlocker = support.contrastBlocker === null ? null : String(support.contrastBlocker);
+if (contrastBlocker !== null && !["NO_ELIGIBLE_SEGMENT", "UNIVERSAL_SEGMENT_COVERAGE", "COMPLEMENT_SUPPORT_SHORTFALL"].includes(contrastBlocker)) throw new Error("invalid BUY pattern contrast blocker");
+if (supportedContrastCount > 0 && contrastBlocker !== null) throw new Error("supported BUY contrast cannot have blocker");
+if (contrastBlocker === "NO_ELIGIBLE_SEGMENT" && segmentSideEligibleCount !== 0) throw new Error("NO_ELIGIBLE_SEGMENT blocker mismatch");
+if (contrastBlocker === "UNIVERSAL_SEGMENT_COVERAGE" && (segmentSideEligibleCount === 0 || universalEligibleSegmentCount !== segmentSideEligibleCount || closestObservedComplementSettled !== 0)) throw new Error("UNIVERSAL_SEGMENT_COVERAGE blocker mismatch");
+if (contrastBlocker === "COMPLEMENT_SUPPORT_SHORTFALL" && (segmentSideEligibleCount === 0 || minimumObservedComplementShortfall === null || minimumObservedComplementShortfall <= 0)) throw new Error("COMPLEMENT_SUPPORT_SHORTFALL blocker mismatch");
 const noSignalReason = value.noSignalReason === null ? null : String(value.noSignalReason);
 if (noSignalReason !== null && !["INSUFFICIENT_GLOBAL_SUPPORT", "NO_SUPPORTED_CONTRAST", "NO_MATERIAL_ROI_CONTRAST"].includes(noSignalReason)) throw new Error("invalid BUY pattern noSignalReason");
 const report = {
@@ -26,8 +34,10 @@ const report = {
   analyzedSettled,
   minimumSettledPerSide,
   segmentSideEligibleCount,
+  universalEligibleSegmentCount,
   closestObservedComplementSettled,
   minimumObservedComplementShortfall,
+  contrastBlocker,
   supportedContrastCount,
   supportedDimensionCount,
   noSignalReason,
