@@ -1,7 +1,8 @@
 import { validateBuyLearningSummary, type BuyLearningSummary } from "./buyLearningSummary";
 import { validateOwnerBuyEvidenceDiagnostics, type OwnerBuyEvidenceDiagnostics } from "./ownerBuyEvidenceDiagnostics";
+import { validateOwnerBuyMarketHealth, type OwnerBuyMarketHealth } from "./ownerBuyMarketHealth";
 
-export const OWNER_DASHBOARD_SCHEMA_VERSION = "owner-dashboard-read-model-v3" as const;
+export const OWNER_DASHBOARD_SCHEMA_VERSION = "owner-dashboard-read-model-v4" as const;
 
 export type OwnerOverallStatus = "HEALTHY" | "ATTENTION" | "BLOCKED" | "UNKNOWN";
 export type OwnerGitCleanliness = "CLEAN" | "ATTENTION" | "NOT_AVAILABLE";
@@ -27,6 +28,7 @@ export type OwnerDashboardSnapshot = {
   };
   buyLearning: BuyLearningSummary;
   buyEvidence: OwnerBuyEvidenceDiagnostics;
+  buyMarketHealth: OwnerBuyMarketHealth;
   n2Tasks: Array<{ taskId: string; label: string; status: string; attemptCount: number; maxAttempts: number }>;
   recentProgress: Array<{ title: string; summary: string; sha: string; committedAt: string }>;
   blockers: string[];
@@ -36,7 +38,7 @@ export type OwnerDashboardSnapshot = {
 const RFC3339_TIMESTAMP_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
 const SECRET_RE = /\b(?:gh[opusr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[0-9A-Za-z-]{10,})\b/;
 const PRIVATE_PATH_RE = /(?:^|[\s"'])\/(?:Users|home|var|private|Volumes)\//;
-const TOP_KEYS = new Set(["schemaVersion", "generatedAt", "overall", "git", "hourlyResearch", "buyLearning", "buyEvidence", "n2Tasks", "recentProgress", "blockers", "nextSafeAction"]);
+const TOP_KEYS = new Set(["schemaVersion", "generatedAt", "overall", "git", "hourlyResearch", "buyLearning", "buyEvidence", "buyMarketHealth", "n2Tasks", "recentProgress", "blockers", "nextSafeAction"]);
 const OVERALL_KEYS = new Set(["status", "reason"]);
 const GIT_KEYS = new Set(["canonicalBranch", "mainSha", "ciStatus", "openPrCount", "cleanliness", "updatedAt"]);
 const HOURLY_KEYS = new Set(["lastRunAt", "lastResult", "changedSummary", "blocker", "nextSafeAction"]);
@@ -75,6 +77,8 @@ export function validateOwnerDashboardSnapshot(value: unknown): string[] {
   errors.push(...buyLearningErrors.map((error) => `$.buyLearning: ${error}`));
   const buyEvidenceErrors = validateOwnerBuyEvidenceDiagnostics(value.buyEvidence);
   errors.push(...buyEvidenceErrors.map((error) => `$.buyEvidence: ${error}`));
+  const buyMarketHealthErrors = validateOwnerBuyMarketHealth(value.buyMarketHealth);
+  errors.push(...buyMarketHealthErrors.map((error) => `$.buyMarketHealth: ${error}`));
 
   if (!Array.isArray(value.n2Tasks) || value.n2Tasks.length > 100) errors.push("invalid n2Tasks");
   else value.n2Tasks.forEach((task, index) => {
