@@ -40,6 +40,31 @@ test("authorization remains private, one-venue, bounded and expires within 90 da
   );
 });
 
+test("authorization launch time rejects JavaScript-normalized or timezone-ambiguous instants", () => {
+  for (const now of [
+    "2026-08-06T24:00:00.000Z",
+    "2026-02-30T12:00:00.000Z",
+    "2026-08-06T12:00:00.000",
+  ]) {
+    assert.throws(
+      () => buildN2TrifectaLocalCaptureAuthorization({
+        now,
+        authorizationDays: 30,
+      }),
+      /INVALID_INSTANT/,
+      now,
+    );
+  }
+
+  const leapDayOffset = buildN2TrifectaLocalCaptureAuthorization({
+    now: "2028-02-29T21:00:00+09:00",
+    authorizationDays: 1,
+    authorizationId: "AUTH-N2-TRI-LOCAL-leap-offset-0001",
+  });
+  assert.equal(leapDayOffset.issuedAt, "2028-02-29T12:00:00.000Z");
+  assert.equal(leapDayOffset.expiresAt, "2028-03-01T12:00:00.000Z");
+});
+
 test("immutable runtime is outside mutable repo and runner workspace", () => {
   assert.equal(buildN2TrifectaImmutableRuntimeRoot({
     releasesRoot: "/Users/test/Library/Application Support/BoatPon/trifecta-private-capture/releases",
