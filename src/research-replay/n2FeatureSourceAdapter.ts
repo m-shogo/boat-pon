@@ -4,8 +4,9 @@ import { extractProgramFeatures, type BoatFeature } from "../domain/programFeatu
 import type { SettlementBetType } from "./settlement";
 import type { N2FeatureObservation, N2OddsObservation } from "./n2FeatureDatasetBuilder";
 import type { VerifiedN2SourceLineage } from "./n2FeatureLineage";
+import { canonicalUtcTimestamp } from "./canonical";
 
-export const N2_FEATURE_SOURCE_ADAPTER_VERSION = "n2-feature-source-adapter-v1";
+export const N2_FEATURE_SOURCE_ADAPTER_VERSION = "n2-feature-source-adapter-v2";
 
 export type SourceLineage = VerifiedN2SourceLineage;
 
@@ -42,40 +43,23 @@ export const N2_OFFICIAL_PROGRAM_FEATURE_KEYS = [
   "boatTop2Rate",
 ] as const satisfies readonly (keyof BoatFeature)[];
 
-function hasValidCalendarDate(value: string): boolean {
-  const match = /^(\d{4})-(\d{2})-(\d{2})(?:T|$)/.exec(value);
-  if (!match) return false;
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  const parsed = new Date(Date.UTC(year, month - 1, day));
-  return parsed.getUTCFullYear() === year
-    && parsed.getUTCMonth() === month - 1
-    && parsed.getUTCDate() === day;
-}
-
-function hasValidClock(value: string): boolean {
-  const clock = /T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?/u.exec(value);
-  if (clock === null) return false;
-  if (Number(clock[1]) > 23 || Number(clock[2]) > 59 || Number(clock[3] ?? "0") > 59) return false;
-  if (/Z$/iu.test(value)) return true;
-  const offset = /([+-])(\d{2}):(\d{2})$/u.exec(value);
-  return offset !== null && Number(offset[2]) <= 23 && Number(offset[3]) <= 59;
-}
-
-function validTime(value: string | null): value is string {
-  return value !== null
-    && hasValidCalendarDate(value)
-    && hasValidClock(value)
-    && Number.isFinite(Date.parse(value));
+function canonicalTime(value: string | null): string | null {
+  if (value === null) return null;
+  try {
+    return canonicalUtcTimestamp(value);
+  } catch {
+    return null;
+  }
 }
 
 // imported_atやrace dateをsource availabilityの代用にしない。F0 observation/raw lineageが揃う場合だけ昇格する。
 export function adaptOfficialProgramFeatures(row: OfficialProgramSourceRow): SourceAdapterResult<N2FeatureObservation[]> {
-  if (!validTime(row.importedAt)) return { status: "excluded", reason: "excluded_invalid_program_imported_at" };
+  const importedAt = canonicalTime(row.importedAt);
+  if (importedAt === null) return { status: "excluded", reason: "excluded_invalid_program_imported_at" };
   if (row.lineage === null) return { status: "excluded", reason: "excluded_unverified_program_lineage" };
-  if (!validTime(row.lineage.sourceAvailableAt)) return { status: "excluded", reason: "excluded_unknown_program_source_availability" };
-  if (Date.parse(row.lineage.sourceAvailableAt) > Date.parse(row.importedAt)) {
+  const sourceAvailableAt = canonicalTime(row.lineage.sourceAvailableAt);
+  if (sourceAvailableAt === null) return { status: "excluded", reason: "excluded_unknown_program_source_availability" };
+  if (Date.parse(sourceAvailableAt) > Date.parse(importedAt)) {
     return { status: "excluded", reason: "excluded_program_available_after_import" };
   }
 
@@ -99,7 +83,7 @@ export function adaptOfficialProgramFeatures(row: OfficialProgramSourceRow): Sou
         featureKey: `boat.${boat.course}.${key}`,
         value: boat[key] ?? null,
         pitClass: "historical_safe",
-        availableAt: row.lineage.sourceAvailableAt,
+        availableAt: sourceAvailableAt,
         observationId: row.lineage.observationId,
         rawDocumentId: row.lineage.rawDocumentId,
       });
@@ -121,17 +105,23 @@ export function adaptLiveOddsRows(input: {
     if (betType === null) return { status: "excluded", reason: "excluded_unknown_odds_bet_type" };
     if (betType !== input.expectedBetType) return { status: "excluded", reason: "excluded_mismatched_odds_bet_type" };
     if (!Number.isFinite(row.odds) || row.odds <= 0) return { status: "excluded", reason: "excluded_invalid_odds_value" };
-    if (!validTime(row.capturedAt)) return { status: "excluded", reason: "excluded_invalid_odds_captured_at" };
+    const capturedAt = canonicalTime(row.capturedAt);
+    if (capturedAt === null) return { status: "excluded", reason: "excluded_invalid_odds_captured_at" };
     if (row.lineage === null) return { status: "excluded", reason: "excluded_unverified_odds_lineage" };
-    if (Date.parse(row.capturedAt) !== Date.parse(row.lineage.sourceObservedAt)) {
+    const sourceObservedAt = canonicalTime(row.lineage.sourceObservedAt);
+    const sourceAvailableAt = canonicalTime(row.lineage.sourceAvailableAt);
+    if (sourceObservedAt === null || sourceAvailableAt === null) {
+      return { status: "excluded", reason: "excluded_invalid_odds_lineage_time" };
+    }
+    if (Date.parse(capturedAt) !== Date.parse(sourceObservedAt)) {
       return { status: "excluded", reason: "excluded_odds_capture_lineage_mismatch" };
     }
     observations.push({
       betSelection: row.betSelection,
       odds: row.odds,
       kind: "live_checkpoint",
-      capturedAt: row.capturedAt,
-      availableAt: row.lineage.sourceAvailableAt,
+      capturedAt,
+      availableAt: sourceAvailableAt,
       observationId: row.lineage.observationId,
       rawDocumentId: row.lineage.rawDocumentId,
     });
