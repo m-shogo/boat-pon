@@ -41,12 +41,19 @@ export type N2TrifectaPrivateHeartbeatRecord = {
   recordDigest: string;
 };
 
-function parseInstant(value: string): number | null {
+function canonicalInstant(value: string): string | null {
   try {
-    return Date.parse(canonicalUtcTimestamp(value));
+    return canonicalUtcTimestamp(value);
   } catch {
     return null;
   }
+}
+
+function parseInstant(value: string): number | null {
+  const canonical = canonicalInstant(value);
+  if (canonical == null) return null;
+  const parsed = Date.parse(canonical);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function jstDate(value: string): string | null {
@@ -87,7 +94,9 @@ export function buildN2TrifectaPrivateHeartbeatRecord(input: {
   capturedCount?: number;
   blockedEvidenceCount?: number;
 }): N2TrifectaPrivateHeartbeatRecord {
-  const dateJst = jstDate(input.recordedAt);
+  const recordedAt = canonicalInstant(input.recordedAt);
+  if (!recordedAt) throw new Error("HEARTBEAT_RECORDED_AT_INVALID");
+  const dateJst = jstDate(recordedAt);
   if (!dateJst) throw new Error("HEARTBEAT_RECORDED_AT_INVALID");
   const nonNegativeInteger = (value: number | undefined, code: string): number => {
     const normalized = value ?? 0;
@@ -96,7 +105,7 @@ export function buildN2TrifectaPrivateHeartbeatRecord(input: {
   };
   const core = {
     heartbeatVersion: N2_TRIFECTA_PRIVATE_HEARTBEAT_VERSION,
-    recordedAt: input.recordedAt,
+    recordedAt,
     dateJst,
     status: input.status,
     blockers: [...new Set(input.blockers ?? [])].sort(),
