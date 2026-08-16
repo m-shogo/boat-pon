@@ -11,7 +11,7 @@ import {
 } from "node:fs";
 import { dirname, resolve, sep } from "node:path";
 
-import { canonicalHash } from "./canonical";
+import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import {
   buildN2TrifectaOddsCheckpointPlan,
   type N2TrifectaOddsCheckpointPlan,
@@ -62,9 +62,21 @@ const VENUE_RE = /^(0[1-9]|1\d|2[0-4])$/;
 const SHA256_RE = /^[0-9a-f]{64}$/;
 const EXPECTED_LABELS = ["T-30", "T-20", "T-10", "T-5"] as const;
 
+function isCalendarDate(value: string): boolean {
+  if (!DATE_RE.test(value)) return false;
+  try {
+    return canonicalUtcTimestamp(`${value}T00:00:00.000Z`).slice(0, 10) === value;
+  } catch {
+    return false;
+  }
+}
+
 function parseInstant(value: string): number | null {
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? parsed : null;
+  try {
+    return Date.parse(canonicalUtcTimestamp(value));
+  } catch {
+    return null;
+  }
 }
 
 function jstDate(value: string): string | null {
@@ -90,7 +102,7 @@ function resolveInside(rootDir: string, relativePath: string): string {
 }
 
 export function n2TrifectaPrivateDailyPlanRelativePath(date: string): string {
-  if (!DATE_RE.test(date)) throw new Error("INVALID_DATE");
+  if (!isCalendarDate(date)) throw new Error("INVALID_DATE");
   return `data/private/trifecta-capture/plans/${date}.json`;
 }
 
@@ -124,7 +136,7 @@ function rebuildPlan(plan: N2TrifectaOddsCheckpointPlan): N2TrifectaOddsCheckpoi
   if (plan.stage !== "ONE_VENUE_REVIEW") return null;
   const races = new Map<number, N2TrifectaOddsRaceInput>();
   for (const entry of plan.entries) {
-    if (!DATE_RE.test(entry.date) || !VENUE_RE.test(entry.venueCode)) return null;
+    if (!isCalendarDate(entry.date) || !VENUE_RE.test(entry.venueCode)) return null;
     const existing = races.get(entry.raceNo);
     const candidate = {
       date: entry.date,
@@ -150,7 +162,8 @@ export function auditN2TrifectaPrivateDailyPlanCache(
   if (cache.cacheVersion !== N2_TRIFECTA_PRIVATE_DAILY_PLAN_CACHE_VERSION) {
     blockers.push("CACHE_VERSION_MISMATCH");
   }
-  if (!DATE_RE.test(cache.date) || cache.date !== input.expectedDate) stale.push("CACHE_DATE_STALE");
+  if (!isCalendarDate(cache.date) || cache.date !== input.expectedDate) stale.push("CACHE_DATE_STALE");
+  if (!isCalendarDate(input.expectedDate)) blockers.push("EXPECTED_DATE_INVALID");
   if (!VENUE_RE.test(cache.venueCode)) blockers.push("VENUE_CODE_INVALID");
   const nowMs = parseInstant(input.now);
   const generatedMs = parseInstant(cache.generatedAt);
@@ -243,7 +256,7 @@ export function buildN2TrifectaPrivateDailyPlanCache(input: {
   plans: N2TrifectaOddsCheckpointPlan[];
   source: N2TrifectaPrivateDailyPlanSourceEvidence;
 }): N2TrifectaPrivateDailyPlanCache {
-  if (!DATE_RE.test(input.date) || jstDate(input.generatedAt) !== input.date) {
+  if (!isCalendarDate(input.date) || jstDate(input.generatedAt) !== input.date) {
     throw new Error("DAILY_PLAN_DATE_INVALID");
   }
   const eligible = input.plans
