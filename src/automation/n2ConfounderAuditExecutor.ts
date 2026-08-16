@@ -120,8 +120,8 @@ export function readN2HistoricalTestArtifact(repoRoot: string): {
   if (confirmation && confirmation.results.length !== confirmation.lockedHypothesisCount) blockers.push(`HISTORICAL_CONFIRMATION_COUNT_MISMATCH:${confirmation.results.length}/${confirmation.lockedHypothesisCount}`);
   if (confirmation && confirmation.confirmedCount + confirmation.rejectedCount + confirmation.insufficientCount !== confirmation.results.length) blockers.push("HISTORICAL_CONFIRMATION_VERDICT_COUNTS_INVALID");
   if (confirmation?.authority.forwardLabelsUsedForConfirmation !== false) blockers.push("FORWARD_LABEL_AUTHORITY_INVALID");
-  if (confirmation?.authority.automaticPromotionAuthorized !== false
-    || confirmation?.authority.currentBuyConnectionAuthorized !== false
+  if (confirmation?.authority.automaticPromotionAuthorized !== false) blockers.push("CONFIRMATION_PROMOTION_AUTHORITY_INVALID");
+  if (confirmation?.authority.currentBuyConnectionAuthorized !== false
     || confirmation?.authority.lineConnectionAuthorized !== false
     || confirmation?.authority.publicPublishAuthorized !== false
     || confirmation?.authority.automatedBettingAuthorized !== false
