@@ -169,7 +169,12 @@ export function evaluateN2EdgeHoldoutConcentration(
   if (evidence.authority.confirmationVerdictChanged !== false
     || evidence.authority.rejectionRescueAuthorized !== false
     || evidence.authority.automaticPromotionAuthorized !== false
-    || evidence.authority.forwardLabelsUsed !== false) {
+    || evidence.authority.forwardLabelsUsed !== false
+    || evidence.authority.currentBuyConnectionAuthorized !== false
+    || evidence.authority.lineConnectionAuthorized !== false
+    || evidence.authority.publicPublishAuthorized !== false
+    || evidence.authority.automatedBettingAuthorized !== false
+    || evidence.authority.productionApplyAuthorized !== false) {
     blockers.push("DISTRIBUTION_EVIDENCE_AUTHORITY_INVALID");
   }
   const hypotheses = blockers.length === 0
