@@ -39,6 +39,10 @@ export type N2HistoricalTestArtifact = {
   distributionEvidence?: N2EdgeHoldoutDistributionEvidenceReport;
   authority?: {
     automaticPromotionAuthorized?: unknown;
+    currentBuyConnectionAuthorized?: unknown;
+    lineConnectionAuthorized?: unknown;
+    publicPublishAuthorized?: unknown;
+    automatedBettingAuthorized?: unknown;
     productionApplyAuthorized?: unknown;
   };
 };
@@ -117,6 +121,11 @@ export function readN2HistoricalTestArtifact(repoRoot: string): {
   if (confirmation && confirmation.confirmedCount + confirmation.rejectedCount + confirmation.insufficientCount !== confirmation.results.length) blockers.push("HISTORICAL_CONFIRMATION_VERDICT_COUNTS_INVALID");
   if (confirmation?.authority.forwardLabelsUsedForConfirmation !== false) blockers.push("FORWARD_LABEL_AUTHORITY_INVALID");
   if (confirmation?.authority.automaticPromotionAuthorized !== false) blockers.push("CONFIRMATION_PROMOTION_AUTHORITY_INVALID");
+  if (confirmation?.authority.currentBuyConnectionAuthorized !== false
+    || confirmation?.authority.lineConnectionAuthorized !== false
+    || confirmation?.authority.publicPublishAuthorized !== false
+    || confirmation?.authority.automatedBettingAuthorized !== false
+    || confirmation?.authority.productionApplyAuthorized !== false) blockers.push("CONFIRMATION_PRODUCTION_AUTHORITY_INVALID");
   const ids = confirmation?.results.map((result) => result.hypothesisId) ?? [];
   if (new Set(ids).size !== ids.length) blockers.push("HISTORICAL_CONFIRMATION_DUPLICATE_HYPOTHESIS");
 
@@ -127,9 +136,18 @@ export function readN2HistoricalTestArtifact(repoRoot: string): {
     if (distribution.authority.confirmationVerdictChanged !== false
       || distribution.authority.rejectionRescueAuthorized !== false
       || distribution.authority.automaticPromotionAuthorized !== false
-      || distribution.authority.forwardLabelsUsed !== false) blockers.push("DISTRIBUTION_EVIDENCE_AUTHORITY_INVALID");
+      || distribution.authority.forwardLabelsUsed !== false
+      || distribution.authority.currentBuyConnectionAuthorized !== false
+      || distribution.authority.lineConnectionAuthorized !== false
+      || distribution.authority.publicPublishAuthorized !== false
+      || distribution.authority.automatedBettingAuthorized !== false
+      || distribution.authority.productionApplyAuthorized !== false) blockers.push("DISTRIBUTION_EVIDENCE_AUTHORITY_INVALID");
   }
   if (value.authority?.automaticPromotionAuthorized !== undefined && value.authority.automaticPromotionAuthorized !== false) blockers.push("HISTORICAL_REPORT_PROMOTION_AUTHORITY_INVALID");
+  if (value.authority?.currentBuyConnectionAuthorized !== undefined && value.authority.currentBuyConnectionAuthorized !== false) blockers.push("HISTORICAL_REPORT_BUY_AUTHORITY_INVALID");
+  if (value.authority?.lineConnectionAuthorized !== undefined && value.authority.lineConnectionAuthorized !== false) blockers.push("HISTORICAL_REPORT_LINE_AUTHORITY_INVALID");
+  if (value.authority?.publicPublishAuthorized !== undefined && value.authority.publicPublishAuthorized !== false) blockers.push("HISTORICAL_REPORT_PUBLIC_AUTHORITY_INVALID");
+  if (value.authority?.automatedBettingAuthorized !== undefined && value.authority.automatedBettingAuthorized !== false) blockers.push("HISTORICAL_REPORT_AUTOMATED_BETTING_AUTHORITY_INVALID");
   if (value.authority?.productionApplyAuthorized !== undefined && value.authority.productionApplyAuthorized !== false) blockers.push("HISTORICAL_REPORT_PRODUCTION_AUTHORITY_INVALID");
 
   return blockers.length > 0
