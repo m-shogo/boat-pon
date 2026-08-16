@@ -6,7 +6,7 @@ import {
   countZeroTrifectaSelections,
   parseAllTrifectaOdds,
 } from "../domain/oddsParser";
-import { canonicalHash } from "./canonical";
+import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import { buildBoatRaceOfficialSourceUrl } from "./n2ExternalSourceCaptureContract";
 import {
   auditN2TrifectaMarketSnapshot,
@@ -182,8 +182,13 @@ function isCanonicalCalendarDate(value: string): boolean {
 }
 
 function parseInstant(value: string): number | null {
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? parsed : null;
+  try {
+    const canonical = canonicalUtcTimestamp(value);
+    const parsed = Date.parse(canonical);
+    return Number.isFinite(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
 }
 
 function compactDate(date: string): string {
