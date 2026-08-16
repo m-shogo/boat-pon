@@ -1,4 +1,4 @@
-import { canonicalHash } from "./canonical";
+import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import { buildBoatRaceOfficialSourceUrl } from "./n2ExternalSourceCaptureContract";
 
 export const N2_TRIFECTA_ODDS_CHECKPOINT_COLLECTION_VERSION =
@@ -120,9 +120,21 @@ function unique(values: string[]): string[] {
   return [...new Set(values)].sort();
 }
 
+function isCalendarDate(value: string): boolean {
+  if (!DATE_RE.test(value)) return false;
+  try {
+    return canonicalUtcTimestamp(`${value}T00:00:00.000Z`).slice(0, 10) === value;
+  } catch {
+    return false;
+  }
+}
+
 function parseInstant(value: string): number | null {
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? parsed : null;
+  try {
+    return Date.parse(canonicalUtcTimestamp(value));
+  } catch {
+    return null;
+  }
 }
 
 function compactDate(date: string): string {
@@ -130,6 +142,7 @@ function compactDate(date: string): string {
 }
 
 function closeAtUtc(date: string, closeAt: string): string | null {
+  if (!isCalendarDate(date)) return null;
   const dateMatch = DATE_RE.exec(date);
   const closeMatch = CLOSE_RE.exec(closeAt);
   if (!dateMatch || !closeMatch) return null;
@@ -194,7 +207,7 @@ export function buildN2TrifectaOddsCheckpointPlan(input: {
   const entries: N2TrifectaOddsCheckpointEntry[] = [];
 
   for (const race of input.races) {
-    if (!DATE_RE.test(race.date)) blockers.push("INVALID_RACE_DATE");
+    if (!isCalendarDate(race.date)) blockers.push("INVALID_RACE_DATE");
     if (!VENUE_RE.test(race.venueCode)) blockers.push("INVALID_VENUE_CODE");
     if (!Number.isInteger(race.raceNo) || race.raceNo < 1 || race.raceNo > 12) {
       blockers.push("INVALID_RACE_NO");
