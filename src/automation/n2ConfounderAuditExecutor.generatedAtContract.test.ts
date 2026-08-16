@@ -20,6 +20,11 @@ function writeArtifact(root: string, generatedAt: string): void {
     authority: {
       forwardLabelsUsedForConfirmation: false,
       automaticPromotionAuthorized: false,
+      currentBuyConnectionAuthorized: false,
+      lineConnectionAuthorized: false,
+      publicPublishAuthorized: false,
+      automatedBettingAuthorized: false,
+      productionApplyAuthorized: false,
     },
   };
   const summary = {
