@@ -32,6 +32,10 @@ const patterns = {
     globalAdditionalSettledForAnyContrast: 0,
     validSegmentCount: 21,
     segmentSideEligibleCount: 5,
+    universalEligibleSegmentCount: 5,
+    closestObservedComplementSettled: 0,
+    minimumObservedComplementShortfall: 30,
+    contrastBlocker: "UNIVERSAL_SEGMENT_COVERAGE",
     supportedContrastCount: 0,
     supportedDimensionCount: 0,
   },
@@ -89,7 +93,7 @@ const roiUncertainty = {
   priceRealization: {
     minimumHits: 5,
     performance: { status: "INSUFFICIENT_HIT_SUPPORT", hits: 2, priceEligibleHits: 2, minimumHits: 5, missingHits: 3, averageDecisionPriceProxy: null, averageRealizedPriceProxy: null, realizedToDecisionRatio: null, averagePriceGap: null },
-    recent: { status: "INSUFFICIENT_HIT_SUPPORT", hits: 1, priceEligibleHits: 1, minimumHits: 5, missingHits: 4, averageDecisionPriceProxy: null, averageRealizedPriceProxy: null, realizedToDecisionRatio: null, averagePriceGap: null },
+    recent: { status: "INSUFFICIENT_HIT_SUPPORT", hits: 1, priceEligibleHits: 1, minimumHits: 5, missingHits: 4, averageDecisionPriceProxy: null, averageRealizedPriceProxy: null, averagePriceGap: null, realizedToDecisionRatio: null },
   },
   note: "descriptive only",
   productionChangeAllowed: false,
@@ -105,10 +109,15 @@ test("builds strict public-safe evidence diagnostics from the same settled BUY c
     roiUncertainty,
   });
   assert.equal(diagnostics.status, "AVAILABLE");
+  assert.equal(diagnostics.schemaVersion, "owner-buy-evidence-diagnostics-v3");
   assert.equal(diagnostics.patternSupport?.status, "NO_SUPPORTED_CONTRAST");
   assert.equal(diagnostics.patternSupport?.analyzedSettled, 61);
   assert.equal(diagnostics.patternSupport?.validSegmentCount, 21);
   assert.equal(diagnostics.patternSupport?.segmentSideEligibleCount, 5);
+  assert.equal(diagnostics.patternSupport?.universalEligibleSegmentCount, 5);
+  assert.equal(diagnostics.patternSupport?.closestObservedComplementSettled, 0);
+  assert.equal(diagnostics.patternSupport?.minimumObservedComplementShortfall, 30);
+  assert.equal(diagnostics.patternSupport?.contrastBlocker, "UNIVERSAL_SEGMENT_COVERAGE");
   assert.equal(diagnostics.tailStability?.status, "PERSISTENT_TAIL_DEPENDENCE");
   assert.equal(diagnostics.tailStability?.recentTailGap, 1.3433);
   assert.equal(diagnostics.hitRateUncertainty?.performance.lower, 0.009);
@@ -173,6 +182,38 @@ test("rejects stale or inconsistent evidence sources instead of mixing cohorts",
       },
     },
   }), /ROI performance point estimate mismatch/u);
+});
+
+test("rejects contradictory public-safe pattern blocker evidence", () => {
+  assert.throws(() => buildOwnerBuyEvidenceDiagnostics({
+    generatedAt: "2026-08-15T12:40:00.000Z",
+    buyLearning: learning,
+    patterns: {
+      ...patterns,
+      support: {
+        ...patterns.support,
+        contrastBlocker: "COMPLEMENT_SUPPORT_SHORTFALL",
+      },
+    },
+    tail,
+    uncertainty,
+    roiUncertainty,
+  }), /UNIVERSAL_SEGMENT_COVERAGE blocker mismatch/u);
+
+  assert.throws(() => buildOwnerBuyEvidenceDiagnostics({
+    generatedAt: "2026-08-15T12:40:00.000Z",
+    buyLearning: learning,
+    patterns: {
+      ...patterns,
+      support: {
+        ...patterns.support,
+        universalEligibleSegmentCount: 6,
+      },
+    },
+    tail,
+    uncertainty,
+    roiUncertainty,
+  }), /support counts inconsistent/u);
 });
 
 test("NOT_AVAILABLE evidence remains explicit and empty", () => {

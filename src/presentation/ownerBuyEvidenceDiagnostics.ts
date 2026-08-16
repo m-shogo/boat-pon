@@ -1,7 +1,7 @@
 import { validateBuyLearningSummary, type BuyLearningSummary } from "./buyLearningSummary";
 import { validateBuyTailPublicSignal } from "./buyTailLearningMerge";
 
-export const OWNER_BUY_EVIDENCE_SCHEMA_VERSION = "owner-buy-evidence-diagnostics-v2" as const;
+export const OWNER_BUY_EVIDENCE_SCHEMA_VERSION = "owner-buy-evidence-diagnostics-v3" as const;
 
 export type OwnerBuyWilsonInterval = {
   confidenceLevel: 0.95;
@@ -48,6 +48,10 @@ export type OwnerBuyEvidenceDiagnostics = {
     globalAdditionalSettledForAnyContrast: number;
     validSegmentCount: number;
     segmentSideEligibleCount: number;
+    universalEligibleSegmentCount: number;
+    closestObservedComplementSettled: number | null;
+    minimumObservedComplementShortfall: number | null;
+    contrastBlocker: "NO_ELIGIBLE_SEGMENT" | "UNIVERSAL_SEGMENT_COVERAGE" | "COMPLEMENT_SUPPORT_SHORTFALL" | null;
     supportedContrastCount: number;
     supportedDimensionCount: number;
     patternSignalCount: number;
@@ -87,7 +91,7 @@ type BuildInput = {
 };
 
 const TOP_KEYS = new Set(["schemaVersion", "generatedAt", "status", "patternSupport", "hitRateUncertainty", "roiUncertainty", "tailStability", "productionChangeAllowed"]);
-const PATTERN_KEYS = new Set(["status", "noSignalReason", "analyzedSettled", "minimumSettledPerSide", "minimumTotalSettledForAnyContrast", "globalAdditionalSettledForAnyContrast", "validSegmentCount", "segmentSideEligibleCount", "supportedContrastCount", "supportedDimensionCount", "patternSignalCount"]);
+const PATTERN_KEYS = new Set(["status", "noSignalReason", "analyzedSettled", "minimumSettledPerSide", "minimumTotalSettledForAnyContrast", "globalAdditionalSettledForAnyContrast", "validSegmentCount", "segmentSideEligibleCount", "universalEligibleSegmentCount", "closestObservedComplementSettled", "minimumObservedComplementShortfall", "contrastBlocker", "supportedContrastCount", "supportedDimensionCount", "patternSignalCount"]);
 const HIT_RATE_KEYS = new Set(["status", "performance", "recent"]);
 const INTERVAL_KEYS = new Set(["confidenceLevel", "method", "trials", "successes", "pointEstimate", "lower", "upper", "width"]);
 const ROI_KEYS = new Set(["status", "minimumTrials", "performance", "recent"]);
@@ -96,6 +100,7 @@ const ROI_INTERVAL_KEYS = new Set(["confidenceLevel", "method", "trials", "itera
 const TAIL_KEYS = new Set(["status", "windowSize", "minimumTailGap", "totalSettled", "recentSettled", "priorSettled", "missingSettledToCompare", "recentTailGap", "priorTailGap"]);
 const PATTERN_STATUSES = new Set(["INSUFFICIENT_GLOBAL_SUPPORT", "NO_SUPPORTED_CONTRAST", "SUPPORTED_CONTRASTS"]);
 const NO_SIGNAL_REASONS = new Set(["INSUFFICIENT_GLOBAL_SUPPORT", "NO_SUPPORTED_CONTRAST", "NO_MATERIAL_ROI_CONTRAST"]);
+const PATTERN_BLOCKERS = new Set(["NO_ELIGIBLE_SEGMENT", "UNIVERSAL_SEGMENT_COVERAGE", "COMPLEMENT_SUPPORT_SHORTFALL"]);
 const ROI_SCOPE_STATUSES = new Set(["AVAILABLE", "INSUFFICIENT_SUPPORT"]);
 const ROI_CLASSIFICATIONS = new Set(["BELOW_BREAK_EVEN", "CROSSES_BREAK_EVEN", "ABOVE_BREAK_EVEN"]);
 const TAIL_STATUSES = new Set(["INSUFFICIENT_SUPPORT", "PERSISTENT_TAIL_DEPENDENCE", "RECENT_TAIL_DEPENDENCE", "PRIOR_TAIL_DEPENDENCE", "NO_TAIL_DEPENDENCE_SIGNAL"]);
@@ -196,7 +201,7 @@ function parsePatternSupport(value: unknown, settled: number): NonNullable<Owner
   const support = value.support;
   const status = String(support.status);
   if (!PATTERN_STATUSES.has(status)) throw new Error("invalid BUY pattern support status");
-  for (const key of ["minimumSettledPerSide", "minimumTotalSettledForAnyContrast", "globalAdditionalSettledForAnyContrast", "validSegmentCount", "segmentSideEligibleCount", "supportedContrastCount", "supportedDimensionCount"] as const) {
+  for (const key of ["minimumSettledPerSide", "minimumTotalSettledForAnyContrast", "globalAdditionalSettledForAnyContrast", "validSegmentCount", "segmentSideEligibleCount", "universalEligibleSegmentCount", "supportedContrastCount", "supportedDimensionCount"] as const) {
     if (!isCount(support[key])) throw new Error(`invalid BUY pattern support ${key}`);
   }
   const minimumSettledPerSide = Number(support.minimumSettledPerSide);
@@ -204,11 +209,29 @@ function parsePatternSupport(value: unknown, settled: number): NonNullable<Owner
   const globalAdditionalSettledForAnyContrast = Number(support.globalAdditionalSettledForAnyContrast);
   const validSegmentCount = Number(support.validSegmentCount);
   const segmentSideEligibleCount = Number(support.segmentSideEligibleCount);
+  const universalEligibleSegmentCount = Number(support.universalEligibleSegmentCount);
   const supportedContrastCount = Number(support.supportedContrastCount);
   const supportedDimensionCount = Number(support.supportedDimensionCount);
+  const closestObservedComplementSettled = nullableCount(support.closestObservedComplementSettled, "closestObservedComplementSettled");
+  const minimumObservedComplementShortfall = nullableCount(support.minimumObservedComplementShortfall, "minimumObservedComplementShortfall");
+  const contrastBlocker = support.contrastBlocker === null ? null : String(support.contrastBlocker);
+
   if (minimumSettledPerSide < 1 || minimumTotalSettledForAnyContrast !== minimumSettledPerSide * 2) throw new Error("invalid BUY pattern two-sided support floor");
   if (globalAdditionalSettledForAnyContrast !== Math.max(0, minimumTotalSettledForAnyContrast - settled)) throw new Error("BUY pattern global support delta mismatch");
-  if (segmentSideEligibleCount > validSegmentCount || supportedContrastCount > segmentSideEligibleCount || supportedDimensionCount > 6) throw new Error("BUY pattern support counts inconsistent");
+  if (segmentSideEligibleCount > validSegmentCount || universalEligibleSegmentCount > segmentSideEligibleCount || supportedContrastCount > segmentSideEligibleCount || supportedDimensionCount > 6) throw new Error("BUY pattern support counts inconsistent");
+  if ((segmentSideEligibleCount === 0) !== (closestObservedComplementSettled === null || minimumObservedComplementShortfall === null)) throw new Error("BUY pattern complement readiness nullability mismatch");
+  if (closestObservedComplementSettled !== null && minimumObservedComplementShortfall !== Math.max(0, minimumSettledPerSide - closestObservedComplementSettled)) throw new Error("BUY pattern complement shortfall mismatch");
+  if (contrastBlocker !== null && !PATTERN_BLOCKERS.has(contrastBlocker)) throw new Error("invalid BUY pattern contrast blocker");
+  if (supportedContrastCount > 0) {
+    if (contrastBlocker !== null || minimumObservedComplementShortfall !== 0) throw new Error("supported BUY contrast blocker mismatch");
+  } else if (segmentSideEligibleCount === 0) {
+    if (contrastBlocker !== "NO_ELIGIBLE_SEGMENT") throw new Error("NO_ELIGIBLE_SEGMENT blocker mismatch");
+  } else if (universalEligibleSegmentCount === segmentSideEligibleCount) {
+    if (contrastBlocker !== "UNIVERSAL_SEGMENT_COVERAGE" || closestObservedComplementSettled !== 0) throw new Error("UNIVERSAL_SEGMENT_COVERAGE blocker mismatch");
+  } else if (contrastBlocker !== "COMPLEMENT_SUPPORT_SHORTFALL" || minimumObservedComplementShortfall === null || minimumObservedComplementShortfall <= 0) {
+    throw new Error("COMPLEMENT_SUPPORT_SHORTFALL blocker mismatch");
+  }
+
   const signals = Array.isArray(value.signals) ? value.signals : [];
   const noSignalReason = value.noSignalReason === null ? null : String(value.noSignalReason);
   if (noSignalReason !== null && !NO_SIGNAL_REASONS.has(noSignalReason)) throw new Error("invalid BUY pattern noSignalReason");
@@ -223,6 +246,10 @@ function parsePatternSupport(value: unknown, settled: number): NonNullable<Owner
     globalAdditionalSettledForAnyContrast,
     validSegmentCount,
     segmentSideEligibleCount,
+    universalEligibleSegmentCount,
+    closestObservedComplementSettled,
+    minimumObservedComplementShortfall,
+    contrastBlocker: contrastBlocker as NonNullable<OwnerBuyEvidenceDiagnostics["patternSupport"]>["contrastBlocker"],
     supportedContrastCount,
     supportedDimensionCount,
     patternSignalCount: signals.length,
@@ -297,7 +324,12 @@ function validatePatternProjection(value: unknown, errors: string[]) {
   exactKeys(value, PATTERN_KEYS, "$.patternSupport", errors);
   if (!PATTERN_STATUSES.has(String(value.status))) errors.push("invalid patternSupport.status");
   if (!(value.noSignalReason === null || NO_SIGNAL_REASONS.has(String(value.noSignalReason)))) errors.push("invalid patternSupport.noSignalReason");
-  for (const key of ["analyzedSettled", "minimumSettledPerSide", "minimumTotalSettledForAnyContrast", "globalAdditionalSettledForAnyContrast", "validSegmentCount", "segmentSideEligibleCount", "supportedContrastCount", "supportedDimensionCount", "patternSignalCount"] as const) if (!isCount(value[key])) errors.push(`invalid patternSupport.${key}`);
+  for (const key of ["analyzedSettled", "minimumSettledPerSide", "minimumTotalSettledForAnyContrast", "globalAdditionalSettledForAnyContrast", "validSegmentCount", "segmentSideEligibleCount", "universalEligibleSegmentCount", "supportedContrastCount", "supportedDimensionCount", "patternSignalCount"] as const) if (!isCount(value[key])) errors.push(`invalid patternSupport.${key}`);
+  if (!(value.closestObservedComplementSettled === null || isCount(value.closestObservedComplementSettled))) errors.push("invalid patternSupport.closestObservedComplementSettled");
+  if (!(value.minimumObservedComplementShortfall === null || isCount(value.minimumObservedComplementShortfall))) errors.push("invalid patternSupport.minimumObservedComplementShortfall");
+  if (!(value.contrastBlocker === null || PATTERN_BLOCKERS.has(String(value.contrastBlocker)))) errors.push("invalid patternSupport.contrastBlocker");
+  if (isCount(value.segmentSideEligibleCount) && isCount(value.universalEligibleSegmentCount) && Number(value.universalEligibleSegmentCount) > Number(value.segmentSideEligibleCount)) errors.push("invalid patternSupport universal count");
+  if (isCount(value.minimumSettledPerSide) && isCount(value.closestObservedComplementSettled) && isCount(value.minimumObservedComplementShortfall) && Number(value.minimumObservedComplementShortfall) !== Math.max(0, Number(value.minimumSettledPerSide) - Number(value.closestObservedComplementSettled))) errors.push("invalid patternSupport complement shortfall");
 }
 
 function validateHitRateProjection(value: unknown, errors: string[]) {
@@ -354,6 +386,7 @@ function validateTailProjection(value: unknown, errors: string[]) {
 function exactKeys(value: Record<string, unknown>, allowed: Set<string>, path: string, errors: string[]) { for (const key of Object.keys(value)) if (!allowed.has(key)) errors.push(`${path}.${key}: unknown key`); for (const key of allowed) if (!(key in value)) errors.push(`${path}.${key}: required`); }
 function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }
 function isCount(value: unknown): value is number { return Number.isInteger(value) && Number(value) >= 0; }
+function nullableCount(value: unknown, name: string): number | null { if (value === null) return null; if (!isCount(value)) throw new Error(`invalid BUY pattern support ${name}`); return Number(value); }
 function isProbability(value: unknown): value is number { return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1; }
 function isFiniteNumber(value: unknown): value is number { return typeof value === "number" && Number.isFinite(value); }
 function isNonNegativeFinite(value: unknown): value is number { return typeof value === "number" && Number.isFinite(value) && value >= 0; }
