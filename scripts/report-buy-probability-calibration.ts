@@ -17,31 +17,32 @@ db.exec("PRAGMA busy_timeout = 5000");
 try {
   const source = buildBuyOutcomeSettlementSource({ runKind: args.runKind });
   assertPaperLiveSettlementConsistency(db, source);
-  const settledEconomic = "outcome_result IS NOT NULL AND outcome_payout_yen IS NOT NULL AND outcome_returned = 0";
-  const invalidModel = db.prepare(`
-    ${source.cte}
-    SELECT COUNT(*) AS invalid
-    FROM buy_outcomes
-    WHERE ${settledEconomic}
-      AND estimated_hit_rate IS NOT NULL
-      AND (estimated_hit_rate < 0 OR estimated_hit_rate > 1)
-  `).get(...source.params) as { invalid: number | bigint | null };
-  if (count(invalidModel.invalid) > 0) throw new Error("settled BUY contains estimated_hit_rate outside [0,1]");
-
   const rows = db.prepare(`
     ${source.cte}
     SELECT
-      estimated_hit_rate AS model_predicted,
-      ev,
-      current_odds,
-      CASE WHEN selection = outcome_result THEN 1 ELSE 0 END AS hit
-    FROM buy_outcomes
-    WHERE ${settledEconomic}
-    ORDER BY date DESC, venue DESC, race_no DESC, race_id DESC
+      dh.raw_estimated_hit_rate AS raw_predicted,
+      dh.conservative_hit_rate AS conservative_predicted,
+      bo.estimated_hit_rate AS model_predicted,
+      bo.ev,
+      bo.current_odds,
+      CASE WHEN bo.selection = bo.outcome_result THEN 1 ELSE 0 END AS hit
+    FROM buy_outcomes bo
+    JOIN ranked_buy dh
+      ON dh.race_id = bo.race_id
+      AND dh.bet_type = bo.bet_type
+      AND dh.selection = bo.selection
+      AND dh.outcome_row_num = 1
+    WHERE bo.outcome_result IS NOT NULL
+      AND bo.outcome_payout_yen IS NOT NULL
+      AND bo.outcome_returned = 0
+    ORDER BY bo.date DESC, bo.venue DESC, bo.race_no DESC, bo.race_id DESC
   `).all(...source.params) as SourceRow[];
 
+  validateStoredProbabilityStages(rows);
   const decisionRows = rows.map(toDecisionCalibrationRow);
   const modelRows = rows.map((row) => ({ predicted: nullableNumber(row.model_predicted), hit: row.hit }));
+  const recentRows = rows.slice(0, args.recent);
+  const priorRows = rows.slice(args.recent, args.recent * 2);
   const recentDecisionRows = decisionRows.slice(0, args.recent);
   const priorDecisionRows = decisionRows.slice(args.recent, args.recent * 2);
   const recentModelRows = modelRows.slice(0, args.recent);
@@ -65,9 +66,14 @@ try {
     prior: scope(priorModelRows, args.minimumTrials),
     highEv: scope(highEvIndexes.map((index) => modelRows[index]), args.minimumTrials),
   };
+  const probabilityPipeline = {
+    overall: buildProbabilityPipeline(rows),
+    recent: buildProbabilityPipeline(recentRows),
+    prior: buildProbabilityPipeline(priorRows),
+  };
 
   const report = {
-    schemaVersion: "buy-probability-calibration-public-v3" as const,
+    schemaVersion: "buy-probability-calibration-public-v4" as const,
     generatedAt: new Date().toISOString(),
     status: overall.status,
     probabilityBasis: "decision_effective_probability_reconstructed_from_stored_ev_and_decision_odds" as const,
@@ -81,7 +87,8 @@ try {
     highEv,
     stability,
     preCalibration,
-    note: "Primary calibration uses the effective probability that actually produced the stored BUY EV, reconstructed from stored EV divided by decision-time odds. The stored model estimate is retained separately as pre-calibration context. Official settled outcomes only; descriptive diagnostics cannot change production BUY conditions.",
+    probabilityPipeline,
+    note: "Primary calibration uses the effective probability that actually produced the stored BUY EV. The probability pipeline shows aggregate raw-model, conservative-model, feature-adjusted, and decision-effective stages from the same settled BUY cohort. Official settled outcomes only; descriptive diagnostics cannot change production BUY conditions.",
     productionChangeAllowed: false as const,
   };
 
@@ -99,6 +106,7 @@ try {
     highEv: report.highEv,
     stability: report.stability,
     preCalibration: report.preCalibration,
+    probabilityPipeline: report.probabilityPipeline,
     productionChangeAllowed: false,
   }));
 } finally {
@@ -106,6 +114,8 @@ try {
 }
 
 type SourceRow = {
+  raw_predicted: number | null;
+  conservative_predicted: number | null;
   model_predicted: number | null;
   ev: number | null;
   current_odds: number | null;
@@ -124,6 +134,9 @@ type ScopeResult = {
   missingEligibleToEvaluate: number;
   metrics: BuyCalibrationMetrics | null;
 };
+
+type PipelineStageKey = "rawModel" | "conservativeModel" | "featureAdjusted" | "decisionEffective";
+type PipelineValueRow = Record<PipelineStageKey, number | null> & { hit: 0 | 1 };
 
 function toDecisionCalibrationRow(row: SourceRow): CalibrationRow {
   if (row.ev === null || row.current_odds === null) return { predicted: null, hit: row.hit };
@@ -163,6 +176,80 @@ function scope(rows: CalibrationRow[], minimumTrials: number): ScopeResult {
     missingEligibleToEvaluate,
     metrics: probabilityEligible >= minimumTrials ? calculateBuyProbabilityCalibration(observations) : null,
   };
+}
+
+function buildProbabilityPipeline(rows: SourceRow[]) {
+  const values: PipelineValueRow[] = rows.map((row) => {
+    const hit = Number(row.hit);
+    if (hit !== 0 && hit !== 1) throw new Error("BUY probability pipeline outcome must be binary");
+    return {
+      rawModel: nullableNumber(row.raw_predicted),
+      conservativeModel: nullableNumber(row.conservative_predicted),
+      featureAdjusted: nullableNumber(row.model_predicted),
+      decisionEffective: nullableNumber(toDecisionCalibrationRow(row).predicted),
+      hit: hit as 0 | 1,
+    };
+  });
+  const observedHits = values.reduce((sum, row) => sum + row.hit, 0);
+  const settled = values.length;
+  return {
+    settled,
+    observedHits,
+    observedHitRate: settled > 0 ? round4(observedHits / settled) : null,
+    stages: {
+      rawModel: pipelineStage(values, "rawModel"),
+      conservativeModel: pipelineStage(values, "conservativeModel"),
+      featureAdjusted: pipelineStage(values, "featureAdjusted"),
+      decisionEffective: pipelineStage(values, "decisionEffective"),
+    },
+    transitions: {
+      rawToConservative: pipelineTransition(values, "rawModel", "conservativeModel"),
+      conservativeToFeatureAdjusted: pipelineTransition(values, "conservativeModel", "featureAdjusted"),
+      featureAdjustedToDecisionEffective: pipelineTransition(values, "featureAdjusted", "decisionEffective"),
+    },
+  };
+}
+
+function pipelineStage(rows: PipelineValueRow[], key: PipelineStageKey) {
+  const values = rows.flatMap((row) => row[key] === null ? [] : [row[key] as number]);
+  const eligible = values.length;
+  const settled = rows.length;
+  const averageProbability = eligible > 0 ? mean(values) : null;
+  return {
+    eligible,
+    missing: settled - eligible,
+    coverage: settled > 0 ? round4(eligible / settled) : null,
+    averageProbability: averageProbability === null ? null : round4(averageProbability),
+    expectedHits: averageProbability === null ? null : round4(averageProbability * eligible),
+  };
+}
+
+function pipelineTransition(rows: PipelineValueRow[], from: PipelineStageKey, to: PipelineStageKey) {
+  const pairs = rows.flatMap((row) => row[from] === null || row[to] === null ? [] : [[row[from] as number, row[to] as number] as const]);
+  if (!pairs.length) return { paired: 0, fromAverage: null, toAverage: null, delta: null, retentionRatio: null };
+  const fromAverage = mean(pairs.map(([value]) => value));
+  const toAverage = mean(pairs.map(([, value]) => value));
+  return {
+    paired: pairs.length,
+    fromAverage: round4(fromAverage),
+    toAverage: round4(toAverage),
+    delta: round4(toAverage - fromAverage),
+    retentionRatio: fromAverage > 0 ? round4(toAverage / fromAverage) : null,
+  };
+}
+
+function validateStoredProbabilityStages(rows: SourceRow[]) {
+  for (const row of rows) {
+    validateNullableProbability(row.raw_predicted, "raw_estimated_hit_rate");
+    validateNullableProbability(row.conservative_predicted, "conservative_hit_rate");
+    validateNullableProbability(row.model_predicted, "estimated_hit_rate");
+  }
+}
+
+function validateNullableProbability(value: number | null, label: string) {
+  if (value === null) return;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0 || n > 1) throw new Error(`settled BUY contains ${label} outside [0,1]`);
 }
 
 function calibrationWindow(scopeResult: ScopeResult): BuyCalibrationWindow {
@@ -213,6 +300,7 @@ function parseArgs(argv: string[]) {
 
 function nullableNumber(value: number | null): number | null { return value === null ? null : Number(value); }
 function isHighEv(value: number | null, threshold: number): boolean { return value !== null && Number.isFinite(Number(value)) && Number(value) >= threshold; }
+function mean(values: number[]): number { return values.reduce((sum, value) => sum + value, 0) / values.length; }
 function safeArg(value: string | undefined) { if (!value || !/^[A-Za-z0-9_.-]{1,80}$/.test(value)) throw new Error("invalid filter"); return value; }
 function safeJson(value: string | undefined) { if (!value || value.startsWith("/") || value.includes("..") || !/^[A-Za-z0-9_./-]+\.json$/.test(value)) throw new Error("path must be a relative json file"); return value; }
 function boundedInt(value: string | undefined, min: number, max: number) { const n = Number(value); if (!Number.isInteger(n) || n < min || n > max) throw new Error("invalid integer option"); return n; }

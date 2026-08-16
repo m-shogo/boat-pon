@@ -139,8 +139,13 @@ test("probability calibration uses official outcomes read-only with explicit sup
   assert.match(calibrationReport, /new DatabaseSync\(dbPath, \{ readOnly: true \}\)/u);
   assert.match(calibrationReport, /PRAGMA query_only = ON/u);
   assert.match(calibrationReport, /buildBuyOutcomeSettlementSource\(\{ runKind: args\.runKind \}\)/u);
-  assert.match(calibrationReport, /estimated_hit_rate outside \[0,1\]/u);
+  assert.match(calibrationReport, /validateNullableProbability\(row\.raw_predicted, "raw_estimated_hit_rate"\)/u);
+  assert.match(calibrationReport, /validateNullableProbability\(row\.conservative_predicted, "conservative_hit_rate"\)/u);
+  assert.match(calibrationReport, /validateNullableProbability\(row\.model_predicted, "estimated_hit_rate"\)/u);
+  assert.match(calibrationReport, /settled BUY contains \$\{label\} outside \[0,1\]/u);
+  assert.match(calibrationReport, /decision-effective hit rate outside \[0,1\]/u);
   assert.match(calibrationReport, /args\.highEvThreshold/u);
+  assert.match(calibrationReport, /probabilityPipeline/u);
   assert.match(calibrationReport, /productionChangeAllowed:\s*false/u);
   assert.doesNotMatch(calibrationReport, /from "\.\.\/server\/db"|UPDATE\s+decision_history|INSERT\s+INTO\s+decision_history|DELETE\s+FROM\s+decision_history/u);
 });
