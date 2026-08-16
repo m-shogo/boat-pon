@@ -85,7 +85,10 @@ function rejectionSubjectIdentityBlocker(record: Rejection): string | null {
     : `REJECTION_SUBJECT_ID_MISMATCH:${record.rejectionId}:${record.subjectType}:${record.subjectId}`;
 }
 
-export function readN2HistoricalTestArtifact(repoRoot: string): {
+export function readN2HistoricalTestArtifact(
+  repoRoot: string,
+  options: { requireCurrentDiscovery?: boolean } = {},
+): {
   artifact: N2HistoricalTestArtifact | null;
   blockers: string[];
 } {
@@ -103,7 +106,7 @@ export function readN2HistoricalTestArtifact(repoRoot: string): {
 
   const discoveryPath = join(repoRoot, DISCOVERY_REPORT_RELATIVE_PATH);
   if (!existsSync(discoveryPath)) {
-    blockers.push("DISCOVERY_REPORT_MISSING");
+    if (options.requireCurrentDiscovery) blockers.push("DISCOVERY_REPORT_MISSING");
   } else {
     let discovery: unknown;
     try { discovery = JSON.parse(readFileSync(discoveryPath, "utf8")); }
@@ -248,7 +251,7 @@ export function createN2ConfounderAuditExecutor(): Executor {
       name: "confounder-audit", safetyLevel: "L0", implemented: true,
       inputContract: () => {
         if (ctx.taskStatuses["TASK-N2-041"] !== "PASS") return { ok: false, errors: [`DEPENDENCY_NOT_SATISFIED:TASK-N2-041=${ctx.taskStatuses["TASK-N2-041"] ?? "UNKNOWN"}`] };
-        const read = readN2HistoricalTestArtifact(ctx.repoRoot);
+        const read = readN2HistoricalTestArtifact(ctx.repoRoot, { requireCurrentDiscovery: true });
         if (!read.artifact) return { ok: false, errors: read.blockers };
         source = read.artifact;
         bridge = buildN2ConfounderDistributionBridge({
