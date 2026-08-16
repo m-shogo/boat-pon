@@ -79,13 +79,17 @@ test("BUY learning report derives paper-live outcomes from official race_results
     assert.equal(firstStatus.privateLearningRetained, true);
     assert.equal(firstStatus.productionChangeAllowed, false);
 
-    const summary = JSON.parse(await readFile(output, "utf8")) as Record<string, unknown>;
+    const summary = JSON.parse(await readFile(output, "utf8")) as Record<string, any>;
     assert.deepEqual(validateBuyLearningSummary(summary), []);
     assert.equal(JSON.stringify(summary).includes("1-2-3"), false);
     assert.equal(JSON.stringify(summary).includes("currentOdds"), false);
-    assert.equal((summary.performance as { settled: number }).settled, 3);
+    assert.equal(summary.performance.settled, 3);
     // One 3.6x official payout across three unit stakes => 1.2 realized ROI proxy.
-    assert.equal((summary.performance as { roi: number }).roi, 1.2);
+    assert.equal(summary.performance.roi, 1.2);
+    // 2/3 settled BUYs are high-EV but the non-high-EV side has no comparison support.
+    assert.ok(summary.learnings.some((item: { id: string }) => item.id === "HIGH_EV_COMPARISON_PENDING"));
+    assert.equal(summary.learnings.some((item: { id: string }) => item.id === "HIGH_EV_MISSES"), false);
+    assert.equal(summary.failurePatterns.some((item: { id: string }) => item.id === "HIGH_EV"), false);
 
     const files = await readdir(privateDir);
     assert.equal(files.length, 1);
