@@ -12,8 +12,9 @@ import {
 } from "./n2DatasetContract";
 import type { SettlementBetType } from "./settlement";
 import { HISTORICAL_SAFE_FEATURE_KEYS, LIVE_ONLY_FEATURE_KEYS } from "../domain/programFeatureSafety";
+import { canonicalUtcTimestamp } from "./canonical";
 
-export const N2_FEATURE_DATASET_BUILDER_VERSION = "n2-feature-dataset-builder-v1";
+export const N2_FEATURE_DATASET_BUILDER_VERSION = "n2-feature-dataset-builder-v2";
 
 export type N2FeatureValue = string | number | boolean | null;
 
@@ -104,10 +105,23 @@ function exclude(scope: N2FeatureDatasetExclusion["scope"], key: string, reason:
   return { status: "excluded", rows: [], exclusions: [{ scope, key, reason }] };
 }
 
+function canonicalTimestamp(value: string): string | null {
+  try {
+    return canonicalUtcTimestamp(value);
+  } catch {
+    return null;
+  }
+}
+
 // unsafe inputが一つでもあればcandidate全体をfail-closedにし、部分的な学習行を返さない。
 export function buildN2FeatureDatasetRows(input: N2FeatureDatasetBuildInput): N2FeatureDatasetBuildResult {
   if (!input.eligibility.eligible) {
     return exclude("candidate", input.canonicalRaceKey, input.eligibility.reason);
+  }
+
+  const canonicalDecisionCutoff = canonicalTimestamp(input.decisionCutoff);
+  if (canonicalDecisionCutoff === null) {
+    return exclude("candidate", input.canonicalRaceKey, "excluded_invalid_decision_cutoff");
   }
 
   const labels = deriveSelectionLevelLabels({
@@ -128,15 +142,17 @@ export function buildN2FeatureDatasetRows(input: N2FeatureDatasetBuildInput): N2
     if (featureKeys.has(feature.featureKey)) return exclude("feature", feature.featureKey, "excluded_duplicate_feature_key");
     featureKeys.add(feature.featureKey);
     if (!classificationMatches(feature)) return exclude("feature", feature.featureKey, "excluded_feature_class_mismatch");
-    const pit = validateFeaturePIT(feature, input.decisionCutoff, input.mode);
+    const pit = validateFeaturePIT(feature, canonicalDecisionCutoff, input.mode);
     if (!pit.usable) return exclude("feature", feature.featureKey, pit.reason);
     if (!feature.observationId || !feature.rawDocumentId || feature.availableAt === null) {
       return exclude("feature", feature.featureKey, "excluded_missing_feature_provenance");
     }
+    const canonicalAvailableAt = canonicalTimestamp(feature.availableAt);
+    if (canonicalAvailableAt === null) return exclude("feature", feature.featureKey, "excluded_pit_unknown_availability");
     features[feature.featureKey] = feature.value;
     featureProvenance.push({
       featureKey: feature.featureKey,
-      availableAt: feature.availableAt,
+      availableAt: canonicalAvailableAt,
       observationId: feature.observationId,
       rawDocumentId: feature.rawDocumentId,
     });
@@ -152,17 +168,22 @@ export function buildN2FeatureDatasetRows(input: N2FeatureDatasetBuildInput): N2
       role: "feature",
       capturedAt: odds.capturedAt,
       availableAt: odds.availableAt,
-      decisionCutoff: input.decisionCutoff,
+      decisionCutoff: canonicalDecisionCutoff,
     });
     if (!timing.usable) return exclude("odds", odds.betSelection, timing.reason);
     if (!odds.observationId || !odds.rawDocumentId || odds.capturedAt === null || odds.availableAt === null) {
       return exclude("odds", odds.betSelection, "excluded_missing_odds_provenance");
     }
+    const canonicalCapturedAt = canonicalTimestamp(odds.capturedAt);
+    const canonicalAvailableAt = canonicalTimestamp(odds.availableAt);
+    if (canonicalCapturedAt === null || canonicalAvailableAt === null) {
+      return exclude("odds", odds.betSelection, "excluded_odds_unknown_timestamp");
+    }
     oddsBySelection.set(odds.betSelection, {
       value: odds.odds,
       kind: "live_checkpoint",
-      capturedAt: odds.capturedAt,
-      availableAt: odds.availableAt,
+      capturedAt: canonicalCapturedAt,
+      availableAt: canonicalAvailableAt,
       observationId: odds.observationId,
       rawDocumentId: odds.rawDocumentId,
     });
@@ -182,7 +203,7 @@ export function buildN2FeatureDatasetRows(input: N2FeatureDatasetBuildInput): N2
       canonicalRaceKey: input.canonicalRaceKey,
       betType: input.betType,
       betSelection: label.betSelection,
-      decisionCutoff: input.decisionCutoff,
+      decisionCutoff: canonicalDecisionCutoff,
       label,
       features: { ...stableFeatures },
       featureProvenance: stableProvenance.map((item) => ({ ...item })),
