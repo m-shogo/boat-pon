@@ -9,7 +9,7 @@ import {
 } from "node:fs";
 import { dirname, resolve, sep } from "node:path";
 
-import { canonicalHash } from "./canonical";
+import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 
 export const N2_TRIFECTA_PRIVATE_HEARTBEAT_VERSION =
   "n2-trifecta-private-heartbeat-v1" as const;
@@ -42,8 +42,11 @@ export type N2TrifectaPrivateHeartbeatRecord = {
 };
 
 function parseInstant(value: string): number | null {
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? parsed : null;
+  try {
+    return Date.parse(canonicalUtcTimestamp(value));
+  } catch {
+    return null;
+  }
 }
 
 function jstDate(value: string): string | null {
