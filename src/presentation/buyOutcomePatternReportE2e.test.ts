@@ -23,14 +23,14 @@ test("BUY outcome pattern report reconciles paper-live to official race_results 
     for (let i = 0; i < 30; i += 1) {
       const successRace = `success-${i}`;
       const failureRace = `failure-${i}`;
-      insertDecision.run(successRace, "2026-08-15", "VENUE_SUCCESS_PRIVATE", i + 1, "trifecta", "1-2-3", null, null, 0, "v1", 0.4, 1.1, 0.5, 100, "paper-live", "2026-08-15T00:00:00Z");
+      insertDecision.run(successRace, "2026-08-15", "VENUE_SUCCESS_PRIVATE", i + 1, "trifecta", "1-2-3", null, null, 0, "v1", 0.4, 1.1, 10, 100, "paper-live", "2026-08-15T00:00:00Z");
       insertResult.run(successRace, "1-2-3", 200, 0);
-      insertDecision.run(failureRace, "2026-08-15", "VENUE_FAILURE_PRIVATE", i + 1, "trifecta", "1-2-3", null, null, 0, "v1", 0.4, 1.1, 0.5, 100, "paper-live", "2026-08-15T00:00:00Z");
+      insertDecision.run(failureRace, "2026-08-15", "VENUE_FAILURE_PRIVATE", i + 1, "trifecta", "1-2-3", null, null, 0, "v1", 0.4, 1.1, 10, 100, "paper-live", "2026-08-15T00:00:00Z");
       insertResult.run(failureRace, "1-3-2", 200, 0);
       insertDecision.run(`history-${i}`, "2025-01-01", "VENUE_HISTORY_PRIVATE", i + 1, "trifecta", "1-2-3", "1-2-3", 10000, 0, "v0", 0.9, 90.0, 100.0, 500, "historical-backfill", "2025-01-01T00:00:00Z");
     }
-    insertDecision.run("success-0", "2026-08-15", "VENUE_SUCCESS_PRIVATE", 1, "trifecta", "1-2-3", null, null, 0, "v1", 0.4, 1.1, 0.5, 100, "paper-live", "2026-08-15T01:00:00Z");
-    insertDecision.run("returned-1", "2026-08-15", "VENUE_RETURNED_PRIVATE", 12, "trifecta", "1-2-3", null, null, 0, "v1", 0.4, 1.1, 0.5, 100, "paper-live", "2026-08-15T00:00:00Z");
+    insertDecision.run("success-0", "2026-08-15", "VENUE_SUCCESS_PRIVATE", 1, "trifecta", "1-2-3", null, null, 0, "v1", 0.4, 1.1, 10, 100, "paper-live", "2026-08-15T01:00:00Z");
+    insertDecision.run("returned-1", "2026-08-15", "VENUE_RETURNED_PRIVATE", 12, "trifecta", "1-2-3", null, null, 0, "v1", 0.4, 1.1, 10, 100, "paper-live", "2026-08-15T00:00:00Z");
     insertResult.run("returned-1", null, null, 1);
   } finally { db.close(); }
 
@@ -80,6 +80,7 @@ test("BUY outcome pattern report reconciles paper-live to official race_results 
     assert.match(privateText, /VENUE_SUCCESS_PRIVATE/);
     assert.match(privateText, /VENUE_FAILURE_PRIVATE/);
     assert.match(privateText, /"comparisonSettled": 30/);
+    assert.match(privateText, /decision-effective-probability-reconstructed-from-stored-ev-and-decision-odds/);
     assert.doesNotMatch(privateText, /VENUE_HISTORY_PRIVATE|VENUE_RETURNED_PRIVATE/);
   } finally {
     await rm(output, { force: true });
@@ -99,6 +100,23 @@ test("paper-live pattern mining fails closed when decision result conflicts with
   } finally { db.close(); }
   try {
     await assert.rejects(execFileAsync("npx", ["tsx", "scripts/analyze-buy-outcome-patterns.ts", "--run-kind", "paper-live"], { env: { ...process.env, BOAT_PON_DB_PATH: dbPath }, maxBuffer: 1024 * 1024 }), (error: unknown) => String((error as { stderr?: string }).stderr ?? error).includes("paper-live settlement result conflicts with official race_results"));
+  } finally { await rm(temp, { recursive: true, force: true }); }
+});
+
+test("paper-live pattern mining fails closed when stored EV and decision odds imply an impossible hit rate", async () => {
+  const temp = await mkdtemp(join(tmpdir(), "boat-pon-buy-pattern-invalid-probability-"));
+  const dbPath = join(temp, "boat.sqlite");
+  const db = new DatabaseSync(dbPath);
+  try {
+    createTables(db);
+    decisionInsert(db).run("invalid-probability-1", "2026-08-15", "PRIVATE", 1, "trifecta", "1-2-3", null, null, 0, "v1", 0.4, 1.1, 0.5, 100, "paper-live", "2026-08-15T00:00:00Z");
+    resultInsert(db).run("invalid-probability-1", "1-2-3", 200, 0);
+  } finally { db.close(); }
+  try {
+    await assert.rejects(
+      execFileAsync("npx", ["tsx", "scripts/analyze-buy-outcome-patterns.ts", "--run-kind", "paper-live"], { env: { ...process.env, BOAT_PON_DB_PATH: dbPath }, maxBuffer: 1024 * 1024 }),
+      (error: unknown) => String((error as { stderr?: string }).stderr ?? error).includes("settled BUY decision-effective hit rate outside [0,1]"),
+    );
   } finally { await rm(temp, { recursive: true, force: true }); }
 });
 
