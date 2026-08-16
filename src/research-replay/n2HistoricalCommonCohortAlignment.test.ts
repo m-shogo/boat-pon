@@ -92,6 +92,28 @@ test("historical rows align to the exact market decision cutoff and become compa
   assert.deepEqual(comparison.conflicts, []);
 });
 
+test("equivalent explicit-zone cutoff maps produce identical historical datasets", () => {
+  const races = evaluation();
+  const base = buildN2HistoricalOnlyBaselineDataset({ training: training(), evaluationRaces: races });
+  assert.equal(base.status, "PASS");
+  const canonical = alignN2HistoricalBaselineToDecisionCutoffs({
+    dataset: base,
+    decisionCutoffByRaceKey: cutoffs(races),
+  });
+  const offsetCutoffs = Object.fromEntries(races.map((race) => [
+    race.canonicalRaceKey,
+    `${race.canonicalRaceKey.slice(0, 10)}T12:30:00+09:00`,
+  ]));
+  const offset = alignN2HistoricalBaselineToDecisionCutoffs({
+    dataset: base,
+    decisionCutoffByRaceKey: offsetCutoffs,
+  });
+  assert.equal(canonical.status, "PASS");
+  assert.equal(offset.status, "PASS");
+  assert.deepEqual(offset.dataset.rows, canonical.dataset.rows);
+  assert.equal(offset.dataset.outputDigest, canonical.dataset.outputDigest);
+});
+
 test("alignment fails closed when even one market cutoff is missing", () => {
   const races = evaluation();
   const base = buildN2HistoricalOnlyBaselineDataset({ training: training(), evaluationRaces: races });
