@@ -51,7 +51,8 @@ test("BUY probability report classifies matching conclusions in two independent 
     assert.equal(status.stability.prior.metrics.classification, "WITHIN_5PT");
     assert.equal(status.productionChangeAllowed, false);
     const report = JSON.parse(await readFile(output, "utf8")) as any;
-    assert.equal(report.schemaVersion, "buy-probability-calibration-public-v2");
+    assert.equal(report.schemaVersion, "buy-probability-calibration-public-v3");
+    assert.match(report.probabilityBasis, /decision_effective/u);
     assert.equal(report.prior.status, "AVAILABLE");
     assert.equal(report.stability.status, "STABLE_WITHIN_5PT");
     assert.doesNotMatch(JSON.stringify(report), /PRIVATE|PRIVATE_HISTORY|selection|raceId|decisionId|currentOdds|stake|venue/u);
@@ -61,7 +62,7 @@ test("BUY probability report classifies matching conclusions in two independent 
   }
 });
 
-test("BUY probability report keeps calibration stability unavailable when one window lacks probability support", async () => {
+test("BUY probability report keeps calibration stability unavailable when one window lacks decision-effective probability support", async () => {
   const temp = await mkdtemp(join(tmpdir(), "boat-pon-calibration-stability-missing-"));
   const dbPath = join(temp, "boat.sqlite");
   const output = `data/tmp/calibration-stability-missing-${process.pid}-${Date.now()}.json`;
@@ -75,7 +76,7 @@ test("BUY probability report keeps calibration stability unavailable when one wi
     for (let i = 0; i < 60; i += 1) {
       const raceId = `paper-${String(i).padStart(3, "0")}`;
       const date = new Date(Date.UTC(2026, 5, i + 1)).toISOString().slice(0, 10);
-      decision.run(raceId, date, "PRIVATE", 1, "trifecta", "1-2-3", null, null, 0, "v1", i === 59 ? null : 0.06, 1.3, 22, 100, "paper-live", `${date}T00:00:00Z`);
+      decision.run(raceId, date, "PRIVATE", 1, "trifecta", "1-2-3", null, null, 0, "v1", 0.06, i === 59 ? null : 1.3, 22, 100, "paper-live", `${date}T00:00:00Z`);
       result.run(raceId, i === 10 || i === 40 ? "1-2-3" : "1-3-2", 4000, 0);
     }
   } finally { db.close(); }
@@ -84,6 +85,7 @@ test("BUY probability report keeps calibration stability unavailable when one wi
     const status = JSON.parse(stdout.trim()) as any;
     assert.equal(status.stability.status, "INSUFFICIENT_SUPPORT");
     assert.ok(status.stability.recent.probabilityEligible === 29 || status.stability.prior.probabilityEligible === 29);
+    assert.equal(status.preCalibration.stability, undefined);
   } finally {
     await rm(output, { force: true });
     await rm(temp, { recursive: true, force: true });
