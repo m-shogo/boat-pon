@@ -6,6 +6,7 @@ import { buildN2ConfounderDistributionBridge, type N2ConfounderDistributionBridg
 import { auditN2ConfoundersAndRejections, type N2ConfounderRejectionAuditReport } from "../research-replay/n2ConfounderRejectionAudit";
 import type { N2EdgeHistoricalConfirmationReport } from "../research-replay/n2EdgeHistoricalConfirmation";
 import type { N2EdgeHoldoutDistributionEvidenceReport } from "../research-replay/n2EdgeHoldoutDistributionEvidence";
+import { N2_EDGE_HYPOTHESIS_SCAN_VERSION, N2_EDGE_SCAN_MAX_SIGNALS, type N2EdgeHypothesis } from "../research-replay/n2EdgeHypothesisScan";
 import { contractDigest, type Rejection } from "../research/governance/contracts";
 import { appendRecordIdempotent, listRecords } from "../research/governance/registryStore";
 import {
@@ -68,6 +69,71 @@ function historicalArtifactDigestMatches(value: unknown): boolean {
   } = value as Record<string, unknown>;
   return isDigest(outputDigest) && canonicalHash(summary) === outputDigest;
 }
+function discoveryArtifactDigestMatches(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const {
+    outputDigest,
+    runId: _runId,
+    requestId: _requestId,
+    taskId: _taskId,
+    executorVersion: _executorVersion,
+    generatedAt: _generatedAt,
+    ...summary
+  } = value as Record<string, unknown>;
+  return isDigest(outputDigest) && canonicalHash(summary) === outputDigest;
+}
+function discoveryAuthorityIsReadOnly(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const authority = value as Record<string, unknown>;
+  return (
+    authority.discoveryOnly === true
+    && authority.validationLabelsUsedForDiscovery === false
+    && authority.testLabelsUsedForDiscovery === false
+    && authority.automaticPromotionAuthorized === false
+    && authority.automaticForwardAuthorized === false
+    && authority.roiPayoutAccessAuthorized === false
+    && authority.databaseWriteAuthorized === false
+    && authority.currentBuyConnectionAuthorized === false
+    && authority.lineConnectionAuthorized === false
+    && authority.publicPublishAuthorized === false
+    && authority.automatedBettingAuthorized === false
+    && authority.productionApplyAuthorized === false
+  );
+}
+function currentDiscoveryContractBlockers(value: unknown): string[] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return ["DISCOVERY_REPORT_INVALID"];
+  const report = value as {
+    status?: unknown;
+    outputDigest?: unknown;
+    scan?: { status?: unknown; scanVersion?: unknown; signals?: unknown; authority?: unknown };
+  };
+  const blockers: string[] = [];
+  if (!isDigest(report.outputDigest)) blockers.push("DISCOVERY_OUTPUT_DIGEST_INVALID");
+  else if (!discoveryArtifactDigestMatches(value)) blockers.push("DISCOVERY_OUTPUT_DIGEST_MISMATCH");
+  if (report.status !== "PASS" || report.scan?.status !== "PASS") blockers.push("DISCOVERY_REPORT_NOT_PASS");
+  if (report.scan?.scanVersion !== N2_EDGE_HYPOTHESIS_SCAN_VERSION) {
+    blockers.push(`DISCOVERY_SCAN_VERSION_MISMATCH:${String(report.scan?.scanVersion ?? "MISSING")}/${N2_EDGE_HYPOTHESIS_SCAN_VERSION}`);
+  }
+  if (!discoveryAuthorityIsReadOnly(report.scan?.authority)) blockers.push("DISCOVERY_AUTHORITY_INVALID");
+  if (!Array.isArray(report.scan?.signals)) {
+    blockers.push("DISCOVERY_SIGNALS_NOT_ARRAY");
+    return unique(blockers);
+  }
+  if (report.scan.signals.length > N2_EDGE_SCAN_MAX_SIGNALS) blockers.push(`DISCOVERY_SIGNAL_COUNT:${report.scan.signals.length}/${N2_EDGE_SCAN_MAX_SIGNALS}`);
+  const ids: string[] = [];
+  for (const [index, signal] of report.scan.signals.entries()) {
+    const item = signal as Partial<N2EdgeHypothesis>;
+    if (typeof item.hypothesisId !== "string" || !item.hypothesisId) blockers.push(`SIGNAL_${index}:HYPOTHESIS_ID_INVALID`);
+    else ids.push(item.hypothesisId);
+    if (typeof item.featureKey !== "string" || !item.featureKey) blockers.push(`SIGNAL_${index}:FEATURE_KEY_INVALID`);
+    if (typeof item.bucket !== "string" || !item.bucket) blockers.push(`SIGNAL_${index}:BUCKET_INVALID`);
+    if (item.direction !== "underpredicted" && item.direction !== "overpredicted") blockers.push(`SIGNAL_${index}:DIRECTION_INVALID`);
+    if (item.discoverySplit !== "train") blockers.push(`SIGNAL_${index}:DISCOVERY_SPLIT_INVALID`);
+    if (item.forwardShadowReserved !== true) blockers.push(`SIGNAL_${index}:FORWARD_RESERVATION_INVALID`);
+  }
+  if (new Set(ids).size !== ids.length) blockers.push("DUPLICATE_LOCKED_HYPOTHESIS_ID");
+  return unique(blockers);
+}
 function isValidHistoricalGeneratedAt(value: unknown): value is string {
   if (typeof value !== "string") return false;
   try {
@@ -112,6 +178,7 @@ export function readN2HistoricalTestArtifact(
     try { discovery = JSON.parse(readFileSync(discoveryPath, "utf8")); }
     catch { blockers.push("DISCOVERY_REPORT_INVALID_JSON"); }
     if (discovery !== undefined) {
+      if (options.requireCurrentDiscovery) blockers.push(...currentDiscoveryContractBlockers(discovery));
       const currentDiscoveryDigest = canonicalHash(discovery);
       if (!isDigest(value.discoveryArtifactDigest)) blockers.push("HISTORICAL_DISCOVERY_DIGEST_INVALID");
       else if (value.discoveryArtifactDigest !== currentDiscoveryDigest) blockers.push("HISTORICAL_DISCOVERY_DIGEST_MISMATCH");
