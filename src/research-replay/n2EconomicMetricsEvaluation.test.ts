@@ -115,6 +115,36 @@ test("economic evaluation fails closed if a baseline lacks one canonical selecti
   assert.ok(report.blockers.some((blocker) => blocker.includes("legacy:PROBABILITY_SELECTION_COUNT:119/120")));
 });
 
+test("economic evaluation rejects noncanonical baseline ids", () => {
+  for (const baselineId of ["", "  ", "ab", " historical", "historical ", "historical baseline"]) {
+    const races = twentyRaces();
+    for (const item of races) {
+      const historical = item.probabilityByBaseline.historical;
+      delete item.probabilityByBaseline.historical;
+      item.probabilityByBaseline[baselineId] = historical;
+    }
+    const report = evaluateN2EconomicMetrics({ races });
+    assert.equal(report.status, "BLOCKED", JSON.stringify(baselineId));
+    assert.ok(
+      report.blockers.some((blocker) => blocker.includes(`:BASELINE_ID_INVALID:${baselineId}`)),
+      JSON.stringify(baselineId),
+    );
+    assert.deepEqual(report.metricsByBaseline, {}, JSON.stringify(baselineId));
+  }
+});
+
+test("economic evaluation accepts canonical baseline id punctuation", () => {
+  const races = twentyRaces();
+  for (const item of races) {
+    const historical = item.probabilityByBaseline.historical;
+    delete item.probabilityByBaseline.historical;
+    item.probabilityByBaseline["historical:v2.test_1"] = historical;
+  }
+  const report = evaluateN2EconomicMetrics({ races });
+  assert.equal(report.status, "PASS");
+  assert.ok(report.baselineIds.includes("historical:v2.test_1"));
+});
+
 test("economic evaluation rejects impossible race-key and cutoff calendar dates", () => {
   const invalidRaceKey = twentyRaces();
   invalidRaceKey[0].canonicalRaceKey = "2026-02-30:05:R1";
