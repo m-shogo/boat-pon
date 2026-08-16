@@ -5,6 +5,8 @@ import { DatabaseSync } from "node:sqlite";
 import { bootstrapRoi95, type BuyRoiBootstrapInterval } from "../src/presentation/buyRoiBootstrap";
 import { buildBuyOutcomeSettlementSource, type BuyOutcomeSettlementSource } from "../src/presentation/buyOutcomeSettlementSource";
 
+const MINIMUM_PRICE_HITS = 5;
+
 const args = parseArgs(process.argv.slice(2));
 const dbPath = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 if (!existsSync(dbPath)) throw new Error("BUY ROI uncertainty source DB is unavailable");
@@ -20,23 +22,39 @@ try {
   const rows = db.prepare(`
     ${source.cte}
     SELECT
-      CASE WHEN selection = outcome_result THEN outcome_payout_yen / 100.0 ELSE 0 END AS payout
+      CASE WHEN selection = outcome_result THEN outcome_payout_yen / 100.0 ELSE 0 END AS payout,
+      ev AS stored_ev,
+      current_odds AS decision_price_proxy,
+      CASE WHEN selection = outcome_result THEN 1 ELSE 0 END AS hit
     FROM buy_outcomes
     WHERE ${settledEconomic}
     ORDER BY date DESC, venue DESC, race_no DESC, race_id DESC
-  `).all(...source.params) as Array<{ payout: number | null }>;
+  `).all(...source.params) as SourceRow[];
 
-  const payouts = rows.map((row) => finiteNonNegative(row.payout));
-  const recent = payouts.slice(0, args.recent);
+  const normalized = rows.map(normalizeRow);
+  const payouts = normalized.map((row) => row.payout);
+  const recentRows = normalized.slice(0, args.recent);
+  const recentPayouts = recentRows.map((row) => row.payout);
+  const performance = scope(payouts, args.minimumTrials, args.iterations);
+  const recent = scope(recentPayouts, args.minimumTrials, args.iterations);
   const generatedAt = new Date().toISOString();
   const report = {
     schemaVersion: "buy-roi-uncertainty-public-v1" as const,
     generatedAt,
     status: payouts.length >= args.minimumTrials ? "AVAILABLE" as const : "INSUFFICIENT_SUPPORT" as const,
     minimumTrials: args.minimumTrials,
-    performance: scope(payouts, args.minimumTrials, args.iterations),
-    recent: scope(recent, args.minimumTrials, args.iterations),
-    note: "95% deterministic percentile bootstrap describes uncertainty in observed 100-yen normalized realized ROI. It is descriptive, tail-sensitive, and does not justify production BUY changes.",
+    performance,
+    recent,
+    expectationRealization: {
+      performance: expectationScope(normalized, performance, args.minimumTrials),
+      recent: expectationScope(recentRows, recent, args.minimumTrials),
+    },
+    priceRealization: {
+      minimumHits: MINIMUM_PRICE_HITS,
+      performance: priceScope(normalized, MINIMUM_PRICE_HITS),
+      recent: priceScope(recentRows, MINIMUM_PRICE_HITS),
+    },
+    note: "95% deterministic percentile bootstrap describes uncertainty in observed 100-yen normalized realized ROI. Stored EV is compared only as an aggregate decision-time benchmark. Price realization remains hidden until at least five hit observations are available, preventing disclosure from tiny hit cohorts. These diagnostics are descriptive, tail-sensitive, and cannot change production BUY conditions.",
     productionChangeAllowed: false as const,
   };
 
@@ -49,11 +67,27 @@ try {
     status: report.status,
     performance: report.performance,
     recent: report.recent,
+    expectationRealization: report.expectationRealization,
+    priceRealization: report.priceRealization,
     productionChangeAllowed: false,
   }));
 } finally {
   db.close();
 }
+
+type SourceRow = {
+  payout: number | null;
+  stored_ev: number | null;
+  decision_price_proxy: number | null;
+  hit: number | bigint;
+};
+
+type NormalizedRow = {
+  payout: number;
+  storedEv: number | null;
+  decisionPriceProxy: number | null;
+  hit: 0 | 1;
+};
 
 type Scope = {
   status: "AVAILABLE" | "INSUFFICIENT_SUPPORT";
@@ -62,6 +96,8 @@ type Scope = {
   missingTrials: number;
   interval: BuyRoiBootstrapInterval | null;
 };
+
+type ExpectationClassification = "BELOW_EXPECTED" | "CROSSES_EXPECTED" | "ABOVE_EXPECTED";
 
 function scope(values: number[], minimumTrials: number, iterations: number): Scope {
   if (values.length < minimumTrials) {
@@ -79,6 +115,92 @@ function scope(values: number[], minimumTrials: number, iterations: number): Sco
     minimumTrials,
     missingTrials: 0,
     interval: bootstrapRoi95(values, iterations),
+  };
+}
+
+function expectationScope(rows: NormalizedRow[], roiScope: Scope, minimumTrials: number) {
+  const storedEvs = rows.flatMap((row) => row.storedEv === null ? [] : [row.storedEv]);
+  const eligible = storedEvs.length;
+  const missing = rows.length - eligible;
+  const fullCoverage = eligible === rows.length;
+  if (!fullCoverage || eligible < minimumTrials || roiScope.interval === null) {
+    return {
+      status: "INSUFFICIENT_SUPPORT" as const,
+      trials: rows.length,
+      expectedEvEligible: eligible,
+      missingExpectedEv: missing,
+      minimumTrials,
+      averageStoredEv: null,
+      realizedRoi: roiScope.interval?.pointEstimate ?? null,
+      realizedToExpectedRatio: null,
+      classification: null,
+    };
+  }
+  const averageStoredEv = round4(mean(storedEvs));
+  const interval = roiScope.interval;
+  const classification: ExpectationClassification = interval.upper < averageStoredEv
+    ? "BELOW_EXPECTED"
+    : interval.lower > averageStoredEv
+      ? "ABOVE_EXPECTED"
+      : "CROSSES_EXPECTED";
+  return {
+    status: "AVAILABLE" as const,
+    trials: rows.length,
+    expectedEvEligible: eligible,
+    missingExpectedEv: 0,
+    minimumTrials,
+    averageStoredEv,
+    realizedRoi: interval.pointEstimate,
+    realizedToExpectedRatio: averageStoredEv > 0 ? round4(interval.pointEstimate / averageStoredEv) : null,
+    classification,
+  };
+}
+
+function priceScope(rows: NormalizedRow[], minimumHits: number) {
+  const hits = rows.filter((row) => row.hit === 1);
+  const pairs = hits.flatMap((row) => {
+    if (row.decisionPriceProxy === null) return [];
+    if (row.payout <= 0) throw new Error("hit BUY must have a positive realized payout multiple");
+    return [{ decision: row.decisionPriceProxy, realized: row.payout }];
+  });
+  const eligibleHits = pairs.length;
+  const missingHits = Math.max(0, minimumHits - eligibleHits);
+  if (eligibleHits < minimumHits) {
+    return {
+      status: "INSUFFICIENT_HIT_SUPPORT" as const,
+      hits: hits.length,
+      priceEligibleHits: eligibleHits,
+      minimumHits,
+      missingHits,
+      averageDecisionPriceProxy: null,
+      averageRealizedPriceProxy: null,
+      realizedToDecisionRatio: null,
+      averagePriceGap: null,
+    };
+  }
+  const averageDecisionPriceProxy = round4(mean(pairs.map((pair) => pair.decision)));
+  const averageRealizedPriceProxy = round4(mean(pairs.map((pair) => pair.realized)));
+  return {
+    status: "AVAILABLE" as const,
+    hits: hits.length,
+    priceEligibleHits: eligibleHits,
+    minimumHits,
+    missingHits: 0,
+    averageDecisionPriceProxy,
+    averageRealizedPriceProxy,
+    realizedToDecisionRatio: averageDecisionPriceProxy > 0 ? round4(averageRealizedPriceProxy / averageDecisionPriceProxy) : null,
+    averagePriceGap: round4(averageRealizedPriceProxy - averageDecisionPriceProxy),
+  };
+}
+
+function normalizeRow(row: SourceRow): NormalizedRow {
+  const hit = Number(row.hit);
+  if (hit !== 0 && hit !== 1) throw new Error("BUY ROI hit flag must be binary");
+  return {
+    payout: finiteNonNegative(row.payout),
+    storedEv: nullableNonNegative(row.stored_ev, "stored BUY EV"),
+    decisionPriceProxy: nullablePositive(row.decision_price_proxy, "decision price proxy"),
+    hit: hit as 0 | 1,
   };
 }
 
@@ -140,6 +262,20 @@ function finiteNonNegative(value: number | null) {
   if (!Number.isFinite(n) || n < 0) throw new Error("invalid realized BUY payout");
   return n;
 }
+function nullableNonNegative(value: number | null, label: string): number | null {
+  if (value === null) return null;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) throw new Error(`invalid ${label}`);
+  return n;
+}
+function nullablePositive(value: number | null, label: string): number | null {
+  if (value === null) return null;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) throw new Error(`invalid ${label}`);
+  return n;
+}
+function mean(values: number[]) { return values.reduce((sum, value) => sum + value, 0) / values.length; }
+function round4(value: number): number { return Math.round(value * 10000) / 10000; }
 async function atomicWrite(path: string, contents: string) {
   await mkdir(dirname(path), { recursive: true });
   const temp = `${path}.tmp-${process.pid}`;
