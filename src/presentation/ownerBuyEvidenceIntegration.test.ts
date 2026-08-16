@@ -54,6 +54,10 @@ function evidence(buyLearning = learning()) {
         globalAdditionalSettledForAnyContrast: 0,
         validSegmentCount: 21,
         segmentSideEligibleCount: 5,
+        universalEligibleSegmentCount: 5,
+        closestObservedComplementSettled: 0,
+        minimumObservedComplementShortfall: 30,
+        contrastBlocker: "UNIVERSAL_SEGMENT_COVERAGE",
         supportedContrastCount: 0,
         supportedDimensionCount: 0,
       },
@@ -112,6 +116,10 @@ test("owner snapshot exposes aggregate BUY evidence without operational identiti
   const snapshot = buildOwnerDashboardSnapshot({ ...base, buyLearning, buyEvidence: evidence(buyLearning) });
   assert.equal(snapshot.buyEvidence.status, "AVAILABLE");
   assert.equal(snapshot.buyEvidence.patternSupport?.status, "NO_SUPPORTED_CONTRAST");
+  assert.equal(snapshot.buyEvidence.patternSupport?.contrastBlocker, "UNIVERSAL_SEGMENT_COVERAGE");
+  assert.equal(snapshot.buyEvidence.patternSupport?.universalEligibleSegmentCount, 5);
+  assert.equal(snapshot.buyEvidence.patternSupport?.closestObservedComplementSettled, 0);
+  assert.equal(snapshot.buyEvidence.patternSupport?.minimumObservedComplementShortfall, 30);
   assert.equal(snapshot.buyEvidence.patternSupport?.supportedContrastCount, 0);
   assert.equal(snapshot.buyEvidence.tailStability?.status, "PERSISTENT_TAIL_DEPENDENCE");
   assert.equal(snapshot.buyEvidence.hitRateUncertainty?.performance.lower, 0.009);
