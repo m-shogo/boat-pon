@@ -163,7 +163,20 @@ export function evaluateN2CommonCohort(input: {
     });
   }
 
-  const baselineKinds = ["market_only", "historical_only", "legacy"];
+  const baselineKindById: Readonly<Record<string, string>> = {
+    [market.baselineId]: "market_only",
+    [historical.baselineId]: "historical_only",
+    [legacy.baselineId]: "legacy",
+  };
+  const baselineKinds = comparison.baselineIds.map((baselineId) => baselineKindById[baselineId]);
+  if (baselineKinds.some((baselineKind) => baselineKind === undefined)) {
+    return blocked({
+      blockers: ["BASELINE_KIND_LINEAGE_MISSING"],
+      marketDatasetDigest: market.outputDigest,
+      historicalDatasetDigest: historical.outputDigest,
+      legacyDatasetDigest: legacy.outputDigest,
+    });
+  }
   const baselineMetrics = Object.fromEntries(
     comparison.baselineIds.map((baselineId) => [baselineId, comparison.reports[baselineId].metrics]),
   ) as Record<string, N2BaselineMetrics>;
@@ -186,7 +199,7 @@ export function evaluateN2CommonCohort(input: {
     requiredBaselineCount: N2_COMMON_COHORT_REQUIRED_BASELINES,
     requiredCommonRowCount: N2_COMMON_COHORT_REQUIRED_ROWS,
     baselineIds: comparison.baselineIds,
-    baselineKinds,
+    baselineKinds: baselineKinds as string[],
     baselineInputRowCounts: comparison.inputCounts,
     commonRowCount: comparison.commonRowCount,
     commonPositiveCount: commonPositiveCounts[0] ?? 0,
