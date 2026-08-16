@@ -16,18 +16,53 @@ function withRoot(fn: (root: string) => void): void {
   }
 }
 
-function writeDiscovery(root: string, revision: string): unknown {
+function discoveryAuthority() {
+  return {
+    discoveryOnly: true,
+    validationLabelsUsedForDiscovery: false,
+    testLabelsUsedForDiscovery: false,
+    automaticPromotionAuthorized: false,
+    automaticForwardAuthorized: false,
+    roiPayoutAccessAuthorized: false,
+    databaseWriteAuthorized: false,
+    currentBuyConnectionAuthorized: false,
+    lineConnectionAuthorized: false,
+    publicPublishAuthorized: false,
+    automatedBettingAuthorized: false,
+    productionApplyAuthorized: false,
+  };
+}
+
+function writeDiscovery(
+  root: string,
+  revision: string,
+  mutate?: (summary: {
+    status: "PASS";
+    scan: {
+      status: "PASS";
+      scanVersion: string;
+      signals: unknown[];
+      authority: ReturnType<typeof discoveryAuthority>;
+    };
+    revision: string;
+  }) => void,
+): unknown {
   const reports = join(root, "reports/n2");
   mkdirSync(reports, { recursive: true });
-  const discovery = {
-    status: "PASS",
+  const summary = {
+    status: "PASS" as const,
     scan: {
-      status: "PASS",
+      status: "PASS" as const,
       scanVersion: "n2-edge-hypothesis-scan-v2",
-      signals: [],
+      signals: [] as unknown[],
+      authority: discoveryAuthority(),
     },
-    outputDigest: canonicalHash({ revision }),
     revision,
+  };
+  mutate?.(summary);
+  const discovery = {
+    ...summary,
+    outputDigest: canonicalHash(summary),
   };
   writeFileSync(join(reports, "n2-edge-hypothesis-scan.json"), `${JSON.stringify(discovery, null, 2)}\n`, "utf8");
   return discovery;
@@ -124,5 +159,33 @@ test("confounder ingestion rejects lineage when the current discovery artifact i
 
     assert.equal(result.artifact, null);
     assert.ok(result.blockers.includes("DISCOVERY_REPORT_MISSING"), result.blockers.join("; "));
+  });
+});
+
+test("confounder ingestion rejects a rehashed discovery artifact with widened authority", () => {
+  withRoot((root) => {
+    const discovery = writeDiscovery(root, "tampered", (summary) => {
+      summary.scan.authority.currentBuyConnectionAuthorized = true;
+    });
+    writeHistorical(root, canonicalHash(discovery));
+
+    const result = readN2HistoricalTestArtifact(root, { requireCurrentDiscovery: true });
+
+    assert.equal(result.artifact, null);
+    assert.ok(result.blockers.includes("DISCOVERY_AUTHORITY_INVALID"), result.blockers.join("; "));
+  });
+});
+
+test("confounder ingestion rejects a rehashed discovery artifact with stale scan version", () => {
+  withRoot((root) => {
+    const discovery = writeDiscovery(root, "stale-version", (summary) => {
+      summary.scan.scanVersion = "n2-edge-hypothesis-scan-v1";
+    });
+    writeHistorical(root, canonicalHash(discovery));
+
+    const result = readN2HistoricalTestArtifact(root, { requireCurrentDiscovery: true });
+
+    assert.equal(result.artifact, null);
+    assert.ok(result.blockers.some((blocker) => blocker.startsWith("DISCOVERY_SCAN_VERSION_MISMATCH:")), result.blockers.join("; "));
   });
 });
