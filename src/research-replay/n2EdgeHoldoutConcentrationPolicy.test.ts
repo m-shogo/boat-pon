@@ -81,11 +81,12 @@ test("well-distributed two-era evidence passes without authorizing promotion", (
 });
 
 test("venue breadth and concentration block independently of confirmation result", () => {
+  const maxVenueRaceCount = 29;
   const report = evaluateN2EdgeHoldoutConcentration(evidence(
     split("validation", {
       distinctVenueCount: N2_EDGE_HOLDOUT_MIN_DISTINCT_VENUES - 1,
-      maxVenueRaceCount: 30,
-      maxVenueShare: N2_EDGE_HOLDOUT_MAX_VENUE_SHARE + 0.01,
+      maxVenueRaceCount,
+      maxVenueShare: maxVenueRaceCount / 220,
     }),
   ));
   assert.equal(report.status, "PASS");
@@ -95,11 +96,12 @@ test("venue breadth and concentration block independently of confirmation result
 });
 
 test("single-era or dominant-era evidence blocks", () => {
+  const maxYearRaceCount = 168;
   const report = evaluateN2EdgeHoldoutConcentration(evidence(
     split("validation", {
       distinctYearCount: N2_EDGE_HOLDOUT_MIN_DISTINCT_YEARS - 1,
-      maxYearRaceCount: 180,
-      maxYearShare: N2_EDGE_HOLDOUT_MAX_YEAR_SHARE + 0.01,
+      maxYearRaceCount,
+      maxYearShare: maxYearRaceCount / 220,
     }),
   ));
   assert.equal(report.hypotheses[0].status, "BLOCKED");
@@ -123,6 +125,32 @@ test("support below 200 is insufficient rather than a confounder rejection", () 
   assert.ok(report.hypotheses[0].blockers.includes("validation:UNIQUE_RACE_SUPPORT:199/200"));
   assert.equal(report.blockedHypothesisCount, 0);
   assert.equal(report.insufficientHypothesisCount, 1);
+});
+
+test("tampered concentration counts cannot be hidden behind smaller shares", () => {
+  const report = evaluateN2EdgeHoldoutConcentration(evidence(
+    split("validation", {
+      maxVenueRaceCount: 200,
+      maxVenueShare: 0.05,
+      maxYearRaceCount: 210,
+      maxYearShare: 0.55,
+    }),
+  ));
+  assert.equal(report.status, "PASS");
+  assert.equal(report.hypotheses[0].status, "BLOCKED");
+  assert.ok(report.hypotheses[0].validation.blockers.includes("MAX_VENUE_SHARE_COUNT_MISMATCH"));
+  assert.ok(report.hypotheses[0].validation.blockers.includes("MAX_YEAR_SHARE_COUNT_MISMATCH"));
+});
+
+test("swapped split labels fail closed instead of silently relabeling evidence", () => {
+  const report = evaluateN2EdgeHoldoutConcentration(evidence(
+    split("test"),
+    split("validation"),
+  ));
+  assert.equal(report.status, "PASS");
+  assert.equal(report.hypotheses[0].status, "BLOCKED");
+  assert.ok(report.hypotheses[0].validation.blockers.includes("SPLIT_LABEL_INVALID:test/validation"));
+  assert.ok(report.hypotheses[0].test.blockers.includes("SPLIT_LABEL_INVALID:validation/test"));
 });
 
 test("malformed or authority-bearing evidence fails the whole policy report closed", () => {
