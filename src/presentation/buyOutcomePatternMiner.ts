@@ -31,6 +31,8 @@ export type PublicOutcomePatternSignal = {
   productionChangeAllowed: false;
 };
 
+export type BuyOutcomeContrastBlocker = "NO_ELIGIBLE_SEGMENT" | "UNIVERSAL_SEGMENT_COVERAGE" | "COMPLEMENT_SUPPORT_SHORTFALL" | null;
+
 export type BuyOutcomePatternSupport = {
   status: "INSUFFICIENT_GLOBAL_SUPPORT" | "NO_SUPPORTED_CONTRAST" | "SUPPORTED_CONTRASTS";
   baselineSettled: number;
@@ -39,8 +41,10 @@ export type BuyOutcomePatternSupport = {
   globalAdditionalSettledForAnyContrast: number;
   validSegmentCount: number;
   segmentSideEligibleCount: number;
+  universalEligibleSegmentCount: number;
   closestObservedComplementSettled: number | null;
   minimumObservedComplementShortfall: number | null;
+  contrastBlocker: BuyOutcomeContrastBlocker;
   supportedContrastCount: number;
   supportedDimensionCount: number;
 };
@@ -65,8 +69,10 @@ export function assessBuyOutcomePatternSupport(
       globalAdditionalSettledForAnyContrast: minimumTotalSettledForAnyContrast,
       validSegmentCount: 0,
       segmentSideEligibleCount: 0,
+      universalEligibleSegmentCount: 0,
       closestObservedComplementSettled: null,
       minimumObservedComplementShortfall: null,
+      contrastBlocker: "NO_ELIGIBLE_SEGMENT",
       supportedContrastCount: 0,
       supportedDimensionCount: 0,
     };
@@ -77,6 +83,7 @@ export function assessBuyOutcomePatternSupport(
     && segment.payoutOddsSum <= baseline.payoutOddsSum);
   const segmentSideEligible = validSegments.filter((segment) => segment.settled >= minSettled);
   const complementSettled = segmentSideEligible.map((segment) => baseline.settled - segment.settled);
+  const universalEligibleSegmentCount = complementSettled.filter((settled) => settled === 0).length;
   const closestObservedComplementSettled = complementSettled.length ? Math.max(...complementSettled) : null;
   const minimumObservedComplementShortfall = closestObservedComplementSettled === null
     ? null
@@ -90,6 +97,13 @@ export function assessBuyOutcomePatternSupport(
     : supported.length === 0
       ? "NO_SUPPORTED_CONTRAST"
       : "SUPPORTED_CONTRASTS";
+  const contrastBlocker: BuyOutcomeContrastBlocker = supported.length > 0
+    ? null
+    : segmentSideEligible.length === 0
+      ? "NO_ELIGIBLE_SEGMENT"
+      : universalEligibleSegmentCount === segmentSideEligible.length
+        ? "UNIVERSAL_SEGMENT_COVERAGE"
+        : "COMPLEMENT_SUPPORT_SHORTFALL";
 
   return {
     status,
@@ -99,8 +113,10 @@ export function assessBuyOutcomePatternSupport(
     globalAdditionalSettledForAnyContrast: Math.max(0, minimumTotalSettledForAnyContrast - baseline.settled),
     validSegmentCount: validSegments.length,
     segmentSideEligibleCount: segmentSideEligible.length,
+    universalEligibleSegmentCount,
     closestObservedComplementSettled,
     minimumObservedComplementShortfall,
+    contrastBlocker,
     supportedContrastCount: supported.length,
     supportedDimensionCount: new Set(supported.map((segment) => segment.dimension)).size,
   };
@@ -127,10 +143,6 @@ export function mineBuyOutcomePatterns(
       const comparisonRoi = ratio(comparisonPayoutOddsSum, comparisonSettled);
       const hitRate = ratio(segment.hits, segment.settled);
       if (roi === null || comparisonRoi === null || hitRate === null) return null;
-
-      // Compare a segment with the rest of the same settled cohort. Comparing it
-      // with an overall baseline that includes the segment itself mechanically
-      // shrinks the contrast and does not provide an independent support side.
       const delta = round4(roi - comparisonRoi);
       if (Math.abs(delta) < minRoiDelta) return null;
       const direction = delta > 0 ? "SUCCESS_EDGE" : "FAILURE_REGIME";
@@ -161,8 +173,6 @@ export function toPublicOutcomePatternSignals(patterns: BuyOutcomePattern[], lim
   const seen = new Set<string>();
   const signals: PublicOutcomePatternSignal[] = [];
   for (const pattern of patterns) {
-    // Public projection deliberately removes the segment value (venue/model/band identity).
-    // The exact key remains private research evidence only.
     const identity = `${pattern.direction}:${pattern.dimension}`;
     if (seen.has(identity)) continue;
     seen.add(identity);
