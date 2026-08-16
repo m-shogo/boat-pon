@@ -107,6 +107,17 @@ test("future selector keeps only races whose complete T-30 path is still availab
   assert.equal(result.databaseWriteCount, 0);
 });
 
+test("future selector rejects normalized now timestamps", () => {
+  const result = selectN2TrifectaFuturePlan({
+    now: "2026-08-05T24:00:00Z",
+    candidates: [candidate("2026-08-06", "12", 2, "10:35")],
+  });
+  assert.equal(result.status, "BLOCKED");
+  assert.ok(result.blockers.includes("INVALID_NOW"));
+  assert.equal(result.networkExecuted, false);
+  assert.equal(result.databaseWriteCount, 0);
+});
+
 test("candidate with more fully future races wins before later date", () => {
   const result = selectN2TrifectaFuturePlan({
     now: "2026-08-06T00:00:00.000Z",
@@ -159,6 +170,31 @@ test("real DB preflight chooses the largest future one-venue cohort read-only", 
     assert.equal(report.databaseWriteCount, 0);
     assert.equal(report.approvalCreated, false);
     assert.equal(report.productionApplyExecuted, false);
+    assert.equal(after.size, before.size);
+    assert.equal(after.mtimeMs, before.mtimeMs);
+  });
+});
+
+test("normalized now is blocked before private DB discovery", () => {
+  withTempDb((path) => {
+    createPrograms(path);
+    const before = statSync(path);
+    const report = readN2TrifectaRealPlanPreflight({
+      primaryDbPath: path,
+      now: "2026-08-05T24:00:00Z",
+      executionLocation: "fixture",
+    });
+    const after = statSync(path);
+
+    assert.equal(report.status, "BLOCKED");
+    assert.ok(report.blockers.includes("INVALID_NOW"));
+    assert.equal(report.inventory.requestedDateFrom, "INVALID");
+    assert.equal(report.inventory.discoveredDateCount, 0);
+    assert.equal(report.inventory.discoveredVenueDayCount, 0);
+    assert.equal(report.inventory.readableCandidatePlanCount, 0);
+    assert.equal(report.source.metadataUnchanged, true);
+    assert.equal(report.networkExecuted, false);
+    assert.equal(report.databaseWriteCount, 0);
     assert.equal(after.size, before.size);
     assert.equal(after.mtimeMs, before.mtimeMs);
   });
