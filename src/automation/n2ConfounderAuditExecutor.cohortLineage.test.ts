@@ -6,6 +6,7 @@ import test from "node:test";
 
 import { canonicalHash } from "../research-replay/canonical";
 import type { N2EdgeHistoricalConfirmationReport } from "../research-replay/n2EdgeHistoricalConfirmation";
+import { N2_EDGE_HOLDOUT_MAX_RACES_PER_SPLIT } from "../research-replay/n2EdgeHoldoutCohort";
 import type { N2EdgeHoldoutDistributionEvidenceReport } from "../research-replay/n2EdgeHoldoutDistributionEvidence";
 import { readN2HistoricalTestArtifact } from "./n2ConfounderAuditExecutor";
 
@@ -199,4 +200,15 @@ test("rehashing cannot claim more hypothesis support than the persisted cohort",
   assert.equal(read.artifact, null);
   assert.ok(read.blockers.includes(`${HYPOTHESIS_ID}:HISTORICAL_VALIDATION_SUPPORT_EXCEEDS_COHORT:220/10`));
   assert.ok(read.blockers.includes(`${HYPOTHESIS_ID}:HISTORICAL_TEST_SUPPORT_EXCEEDS_COHORT:220/10`));
+}));
+
+test("rehashing cannot exceed the producer holdout cohort ceiling", () => withRoot((root) => {
+  const impossibleCount = N2_EDGE_HOLDOUT_MAX_RACES_PER_SPLIT + 1;
+  writeFixture(root, impossibleCount, impossibleCount);
+  const read = readN2HistoricalTestArtifact(root, { requireCurrentDiscovery: true });
+  assert.equal(read.artifact, null);
+  assert.ok(read.blockers.includes(
+    `HISTORICAL_COHORT_MAX_RACES_EXCEEDED:${impossibleCount}/${N2_EDGE_HOLDOUT_MAX_RACES_PER_SPLIT}`
+      + `:${impossibleCount}/${N2_EDGE_HOLDOUT_MAX_RACES_PER_SPLIT}`,
+  ));
 }));
