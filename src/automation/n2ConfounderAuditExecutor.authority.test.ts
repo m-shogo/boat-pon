@@ -84,9 +84,9 @@ function distribution(authorityOverrides: Record<string, boolean> = {}) {
     status: "PASS",
     blockers: [],
     lockedHypothesisCount: 1,
-    inputRaceCount: 0,
-    validationInputRaceCount: 0,
-    testInputRaceCount: 0,
+    inputRaceCount: 440,
+    validationInputRaceCount: 220,
+    testInputRaceCount: 220,
     hypotheses: [],
     privacy: {
       raceKeysPersisted: false,
@@ -125,6 +125,10 @@ function writeArtifact(root: string, input: {
   if (input.historicalAuthorityOmit) delete historicalAuthority[input.historicalAuthorityOmit];
   const summary = {
     status: "PASS",
+    cohort: {
+      selectedValidationRaceCount: 220,
+      selectedTestRaceCount: 220,
+    },
     confirmation: confirmation(input.confirmationAuthority),
     distributionEvidence: distribution(input.distributionAuthority),
     authority: historicalAuthority,

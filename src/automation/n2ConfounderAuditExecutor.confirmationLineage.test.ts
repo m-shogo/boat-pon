@@ -93,6 +93,8 @@ function writeHistorical(root: string, discovery: unknown, overrides: {
   const confirmationCore = {
     status: "PASS" as const,
     lockedHypothesisCount: 1,
+    validationRaceCount: 220,
+    testRaceCount: 220,
     confirmedCount: 1,
     rejectedCount: 0,
     insufficientCount: 0,
@@ -110,6 +112,10 @@ function writeHistorical(root: string, discovery: unknown, overrides: {
   const summary = {
     status: "PASS" as const,
     discoveryArtifactDigest: canonicalHash(discovery),
+    cohort: {
+      selectedValidationRaceCount: 220,
+      selectedTestRaceCount: 220,
+    },
     confirmation: { ...confirmationCore, outputDigest: canonicalHash(confirmationCore) },
     authority: {
       automaticPromotionAuthorized: false as const,

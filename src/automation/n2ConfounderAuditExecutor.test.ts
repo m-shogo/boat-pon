@@ -168,6 +168,10 @@ function writeHistoricalArtifact(
   const summary = {
     status: "PASS",
     discoveryArtifactDigest: canonicalHash(discovery),
+    cohort: {
+      selectedValidationRaceCount: 220,
+      selectedTestRaceCount: 220,
+    },
     confirmation: confirmation(results),
     authority: {
       automaticPromotionAuthorized: false,
