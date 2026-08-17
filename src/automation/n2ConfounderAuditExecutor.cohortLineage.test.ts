@@ -141,7 +141,7 @@ function writeFixture(
   totalPerSplit: number,
   supportPerSplit: number,
   executorContractVersion: string = N2_EDGE_HISTORICAL_TEST_EXECUTOR_VERSION,
-  reportVersion: string | undefined = N2_EDGE_HISTORICAL_TEST_REPORT_VERSION,
+  reportVersion: string | null = N2_EDGE_HISTORICAL_TEST_REPORT_VERSION,
 ): void {
   const dir = join(root, "reports/n2");
   mkdirSync(dir, { recursive: true });
@@ -165,7 +165,7 @@ function writeFixture(
   writeFileSync(join(dir, "n2-edge-hypothesis-scan.json"), JSON.stringify(discovery));
 
   const historicalSummary = {
-    ...(reportVersion === undefined ? {} : { reportVersion }),
+    ...(reportVersion === null ? {} : { reportVersion }),
     executorContractVersion,
     status: "PASS" as const,
     discoveryArtifactDigest: canonicalHash(discovery),
@@ -244,7 +244,7 @@ test("rehashing cannot replace the historical report version", () => withRoot((r
 }));
 
 test("rehashing cannot omit the historical report version", () => withRoot((root) => {
-  writeFixture(root, 220, 220, N2_EDGE_HISTORICAL_TEST_EXECUTOR_VERSION, undefined);
+  writeFixture(root, 220, 220, N2_EDGE_HISTORICAL_TEST_EXECUTOR_VERSION, null);
   const read = readN2HistoricalTestArtifact(root, { requireCurrentDiscovery: true, requireProducerContract: true });
   assert.equal(read.artifact, null);
   assert.ok(read.blockers.includes(
