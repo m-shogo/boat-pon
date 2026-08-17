@@ -488,7 +488,7 @@ export function createN2ConfounderAuditExecutor(): Executor {
           if (!result.ok) return { ok: false, errors: [`${result.code}: ${result.errors.join("; ")}`], outputs: registryOutputs };
           if (result.path) {
             try { registryOutputs.push(relativeRegistryOutput(ctx.repoRoot, result.path)); }
-            catch (error) { return { ok: false, errors: [error instanceof Error ? error.message : String(error)], outputs: registryOutputs };
+            catch (error) { return { ok: false, errors: [error instanceof Error ? error.message : String(error)], outputs: registryOutputs }; }
           }
         }
         try {
