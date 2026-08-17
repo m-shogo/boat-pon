@@ -108,6 +108,22 @@ function evaluateSplit(
   } else {
     if (evidence.distinctVenueCount === 0) malformed.push("NONZERO_SUPPORT_VENUE_COUNT_MISSING");
     if (evidence.distinctYearCount === 0) malformed.push("NONZERO_SUPPORT_YEAR_COUNT_MISSING");
+    if (Number.isSafeInteger(evidence.distinctVenueCount) && evidence.distinctVenueCount > evidence.uniqueRaceCount) {
+      malformed.push("DISTINCT_VENUE_COUNT_EXCEEDS_SUPPORT");
+    }
+    if (Number.isSafeInteger(evidence.distinctYearCount) && evidence.distinctYearCount > evidence.uniqueRaceCount) {
+      malformed.push("DISTINCT_YEAR_COUNT_EXCEEDS_SUPPORT");
+    }
+    if (Number.isSafeInteger(evidence.distinctVenueCount) && evidence.distinctVenueCount > 0
+      && Number.isSafeInteger(evidence.maxVenueRaceCount)
+      && evidence.maxVenueRaceCount < Math.ceil(evidence.uniqueRaceCount / evidence.distinctVenueCount)) {
+      malformed.push("MAX_VENUE_RACE_COUNT_TOO_SMALL_FOR_SUPPORT");
+    }
+    if (Number.isSafeInteger(evidence.distinctYearCount) && evidence.distinctYearCount > 0
+      && Number.isSafeInteger(evidence.maxYearRaceCount)
+      && evidence.maxYearRaceCount < Math.ceil(evidence.uniqueRaceCount / evidence.distinctYearCount)) {
+      malformed.push("MAX_YEAR_RACE_COUNT_TOO_SMALL_FOR_SUPPORT");
+    }
   }
   if (!shareMatchesCount(evidence.maxVenueShare, evidence.maxVenueRaceCount, evidence.uniqueRaceCount)) {
     malformed.push("MAX_VENUE_SHARE_COUNT_MISMATCH");
