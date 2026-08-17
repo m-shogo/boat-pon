@@ -132,6 +132,21 @@ export function buildN2ConfounderDistributionBridge(input: {
   if (policy.status === "PASS" && canonicalHash(policyIds) !== canonicalHash(confirmationIds)) {
     blockers.push("CONCENTRATION_POLICY_HYPOTHESIS_SET_MISMATCH");
   }
+  if (policy.status === "PASS") {
+    const policyById = new Map(policy.hypotheses.map((item) => [item.hypothesisId, item]));
+    for (const result of input.confirmationResults) {
+      const decision = policyById.get(result.hypothesisId);
+      if (!decision) continue;
+      if (decision.validation.uniqueRaceCount !== result.validation.uniqueRaceCount
+        || decision.test.uniqueRaceCount !== result.test.uniqueRaceCount) {
+        blockers.push(
+          `CONCENTRATION_POLICY_CONFIRMATION_SUPPORT_MISMATCH:${result.hypothesisId}`
+          + `:${decision.validation.uniqueRaceCount}/${result.validation.uniqueRaceCount}`
+          + `:${decision.test.uniqueRaceCount}/${result.test.uniqueRaceCount}`,
+        );
+      }
+    }
+  }
   if (blockers.length > 0) {
     return blocked({
       blockers,

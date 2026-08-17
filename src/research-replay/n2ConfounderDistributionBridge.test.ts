@@ -6,33 +6,35 @@ import type { N2EdgeHistoricalConfirmationResult } from "./n2EdgeHistoricalConfi
 import type { N2EdgeHoldoutDistributionEvidenceReport } from "./n2EdgeHoldoutDistributionEvidence";
 import { buildN2ConfounderDistributionBridge } from "./n2ConfounderDistributionBridge";
 
-function splitResult(split: "validation" | "test") {
+function splitResult(split: "validation" | "test", uniqueRaceCount = 220) {
   return {
     split,
-    uniqueRaceCount: 220,
+    uniqueRaceCount,
     meanResidual: 0.02,
     standardError: 0.002,
     zScore: 10,
     rawPValue: 1e-8,
     holmAdjustedPValue: 1e-8,
-    supportSufficient: true,
+    supportSufficient: uniqueRaceCount >= 200,
     effectSufficient: true,
     directionMatchesDiscovery: true,
-    statisticallyConfirmed: true,
+    statisticallyConfirmed: uniqueRaceCount >= 200,
   };
 }
 
 function confirmation(
   hypothesisId: string,
   verdict: N2EdgeHistoricalConfirmationResult["verdict"] = "HISTORICAL_CONFIRMED",
+  validationRaceCount = 220,
+  testRaceCount = 220,
 ): N2EdgeHistoricalConfirmationResult {
   return {
     hypothesisId,
     featureKey: "firstCourse",
     bucket: "1",
     discoveryDirection: "underpredicted",
-    validation: splitResult("validation"),
-    test: splitResult("test"),
+    validation: splitResult("validation", validationRaceCount),
+    test: splitResult("test", testRaceCount),
     verdict,
   };
 }
@@ -156,7 +158,24 @@ test("pre-registered concentration failure becomes a blocking confounder", () =>
   assert.match(report.confounderFlags[0].detail, /VENUE_BREADTH/u);
 });
 
-test("distribution support below 200 blocks as insufficient evidence, not historical rejection", () => {
+test("distribution support below 200 blocks as insufficient evidence when confirmation support matches", () => {
+  const report = buildN2ConfounderDistributionBridge({
+    confirmationResults: [confirmation("H-A", "INSUFFICIENT_HOLDOUT", 199, 220)],
+    distributionEvidence: evidence({
+      validationRaceCount: 199,
+      validationMaxVenueRaceCount: 12,
+      validationMaxVenueShare: 12 / 199,
+      validationMaxYearRaceCount: 110,
+      validationMaxYearShare: 110 / 199,
+    }),
+  });
+  assert.equal(report.status, "PASS");
+  assert.equal(report.confirmedBlockedByInsufficientDistributionCount, 0);
+  assert.deepEqual(report.confounderFlags, []);
+  assert.equal(report.authority.rejectedHypothesisRescueAuthorized, false);
+});
+
+test("distribution evidence from a different support cohort fails closed even when hypothesis ids match", () => {
   const report = buildN2ConfounderDistributionBridge({
     confirmationResults: [confirmation("H-A")],
     distributionEvidence: evidence({
@@ -167,10 +186,9 @@ test("distribution support below 200 blocks as insufficient evidence, not histor
       validationMaxYearShare: 110 / 199,
     }),
   });
-  assert.equal(report.status, "PASS");
-  assert.equal(report.confirmedBlockedByInsufficientDistributionCount, 1);
-  assert.equal(report.confounderFlags[0].flagId, "holdout-distribution-evidence-insufficient-v1");
-  assert.equal(report.authority.rejectedHypothesisRescueAuthorized, false);
+  assert.equal(report.status, "BLOCKED");
+  assert.ok(report.blockers.includes("CONCENTRATION_POLICY_CONFIRMATION_SUPPORT_MISMATCH:H-A:199/220:220/220"));
+  assert.deepEqual(report.confounderFlags, []);
 });
 
 test("rejected hypotheses are never rescued or decorated into confirmation by distribution evidence", () => {
