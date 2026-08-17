@@ -9,6 +9,7 @@ import type { N2EdgeHistoricalConfirmationReport } from "../research-replay/n2Ed
 import { N2_EDGE_HOLDOUT_MAX_RACES_PER_SPLIT } from "../research-replay/n2EdgeHoldoutCohort";
 import type { N2EdgeHoldoutDistributionEvidenceReport } from "../research-replay/n2EdgeHoldoutDistributionEvidence";
 import { readN2HistoricalTestArtifact } from "./n2ConfounderAuditExecutor";
+import { N2_EDGE_HISTORICAL_TEST_EXECUTOR_VERSION } from "./n2EdgeHistoricalTestExecutor";
 
 const HYPOTHESIS_ID = "DISC-cohort-lineage";
 
@@ -132,7 +133,12 @@ function distribution(totalPerSplit: number, supportPerSplit: number): N2EdgeHol
   return { ...core, outputDigest: canonicalHash(core) };
 }
 
-function writeFixture(root: string, totalPerSplit: number, supportPerSplit: number): void {
+function writeFixture(
+  root: string,
+  totalPerSplit: number,
+  supportPerSplit: number,
+  executorContractVersion: string = N2_EDGE_HISTORICAL_TEST_EXECUTOR_VERSION,
+): void {
   const dir = join(root, "reports/n2");
   mkdirSync(dir, { recursive: true });
   const discoverySummary = {
@@ -155,6 +161,7 @@ function writeFixture(root: string, totalPerSplit: number, supportPerSplit: numb
   writeFileSync(join(dir, "n2-edge-hypothesis-scan.json"), JSON.stringify(discovery));
 
   const historicalSummary = {
+    executorContractVersion,
     status: "PASS" as const,
     discoveryArtifactDigest: canonicalHash(discovery),
     cohort: {
@@ -189,14 +196,14 @@ function withRoot(run: (root: string) => void): void {
 
 test("canonical historical cohort counts remain readable", () => withRoot((root) => {
   writeFixture(root, 220, 220);
-  const read = readN2HistoricalTestArtifact(root, { requireCurrentDiscovery: true });
+  const read = readN2HistoricalTestArtifact(root, { requireCurrentDiscovery: true, requireProducerContract: true });
   assert.deepEqual(read.blockers, []);
   assert.ok(read.artifact);
 }));
 
 test("rehashing cannot claim more hypothesis support than the persisted cohort", () => withRoot((root) => {
   writeFixture(root, 10, 220);
-  const read = readN2HistoricalTestArtifact(root, { requireCurrentDiscovery: true });
+  const read = readN2HistoricalTestArtifact(root, { requireCurrentDiscovery: true, requireProducerContract: true });
   assert.equal(read.artifact, null);
   assert.ok(read.blockers.includes(`${HYPOTHESIS_ID}:HISTORICAL_VALIDATION_SUPPORT_EXCEEDS_COHORT:220/10`));
   assert.ok(read.blockers.includes(`${HYPOTHESIS_ID}:HISTORICAL_TEST_SUPPORT_EXCEEDS_COHORT:220/10`));
@@ -205,10 +212,19 @@ test("rehashing cannot claim more hypothesis support than the persisted cohort",
 test("rehashing cannot exceed the producer holdout cohort ceiling", () => withRoot((root) => {
   const impossibleCount = N2_EDGE_HOLDOUT_MAX_RACES_PER_SPLIT + 1;
   writeFixture(root, impossibleCount, impossibleCount);
-  const read = readN2HistoricalTestArtifact(root, { requireCurrentDiscovery: true });
+  const read = readN2HistoricalTestArtifact(root, { requireCurrentDiscovery: true, requireProducerContract: true });
   assert.equal(read.artifact, null);
   assert.ok(read.blockers.includes(
     `HISTORICAL_COHORT_MAX_RACES_EXCEEDED:${impossibleCount}/${N2_EDGE_HOLDOUT_MAX_RACES_PER_SPLIT}`
       + `:${impossibleCount}/${N2_EDGE_HOLDOUT_MAX_RACES_PER_SPLIT}`,
+  ));
+}));
+
+test("rehashing cannot replace the historical executor contract", () => withRoot((root) => {
+  writeFixture(root, 220, 220, "n2-edge-historical-test-executor-v0");
+  const read = readN2HistoricalTestArtifact(root, { requireCurrentDiscovery: true, requireProducerContract: true });
+  assert.equal(read.artifact, null);
+  assert.ok(read.blockers.includes(
+    `HISTORICAL_TEST_EXECUTOR_CONTRACT_VERSION_MISMATCH:n2-edge-historical-test-executor-v0/${N2_EDGE_HISTORICAL_TEST_EXECUTOR_VERSION}`,
   ));
 }));

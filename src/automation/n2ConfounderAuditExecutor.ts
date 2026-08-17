@@ -17,6 +17,7 @@ import {
   type ExecutorSpec,
   type SdkContext,
 } from "../research/governance/executorSdk";
+import { N2_EDGE_HISTORICAL_TEST_EXECUTOR_VERSION } from "./n2EdgeHistoricalTestExecutor";
 import type { Executor, ExecutorResult } from "./taskExecutors";
 
 export const N2_CONFOUNDER_AUDIT_EXECUTOR_VERSION = "n2-confounder-audit-executor-v2" as const;
@@ -36,6 +37,7 @@ export type N2HistoricalTestArtifact = {
   status: "PASS";
   generatedAt: string;
   outputDigest: string;
+  executorContractVersion?: unknown;
   discoveryArtifactDigest?: string;
   cohort?: {
     selectedValidationRaceCount?: unknown;
@@ -164,7 +166,7 @@ function rejectionSubjectIdentityBlocker(record: Rejection): string | null {
 
 export function readN2HistoricalTestArtifact(
   repoRoot: string,
-  options: { requireCurrentDiscovery?: boolean } = {},
+  options: { requireCurrentDiscovery?: boolean; requireProducerContract?: boolean } = {},
 ): {
   artifact: N2HistoricalTestArtifact | null;
   blockers: string[];
@@ -178,6 +180,9 @@ export function readN2HistoricalTestArtifact(
   const blockers: string[] = [];
   let currentDiscoverySignals: N2EdgeHypothesis[] | null = null;
   if (value.status !== "PASS") blockers.push("HISTORICAL_TEST_REPORT_NOT_PASS");
+  if (options.requireProducerContract && value.executorContractVersion !== N2_EDGE_HISTORICAL_TEST_EXECUTOR_VERSION) {
+    blockers.push(`HISTORICAL_TEST_EXECUTOR_CONTRACT_VERSION_MISMATCH:${String(value.executorContractVersion ?? "MISSING")}/${N2_EDGE_HISTORICAL_TEST_EXECUTOR_VERSION}`);
+  }
   if (!isDigest(value.outputDigest)) blockers.push("HISTORICAL_TEST_OUTPUT_DIGEST_INVALID");
   else if (!historicalArtifactDigestMatches(parsed)) blockers.push("HISTORICAL_TEST_OUTPUT_DIGEST_MISMATCH");
   if (!isValidHistoricalGeneratedAt(value.generatedAt)) blockers.push("HISTORICAL_TEST_GENERATED_AT_INVALID");
@@ -400,7 +405,7 @@ export function createN2ConfounderAuditExecutor(): Executor {
       name: "confounder-audit", safetyLevel: "L0", implemented: true,
       inputContract: () => {
         if (ctx.taskStatuses["TASK-N2-041"] !== "PASS") return { ok: false, errors: [`DEPENDENCY_NOT_SATISFIED:TASK-N2-041=${ctx.taskStatuses["TASK-N2-041"] ?? "UNKNOWN"}`] };
-        const read = readN2HistoricalTestArtifact(ctx.repoRoot, { requireCurrentDiscovery: true });
+        const read = readN2HistoricalTestArtifact(ctx.repoRoot, { requireCurrentDiscovery: true, requireProducerContract: true });
         if (!read.artifact) return { ok: false, errors: read.blockers };
         source = read.artifact;
         bridge = buildN2ConfounderDistributionBridge({
