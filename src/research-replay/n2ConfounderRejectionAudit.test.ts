@@ -62,6 +62,17 @@ test("rehashable historical split semantic drift fails closed before disposition
  }
 });
 
+test("rehashable p-value drift cannot forge a historical confirmation",()=>{
+ const source=result("H1","HISTORICAL_CONFIRMED");
+ const forgedSplit={...source.validation,standardError:0.02/1.5,zScore:1.5,rawPValue:0.001,holmAdjustedPValue:0.001};
+ const forged={...source,validation:forgedSplit,test:{...forgedSplit,split:"test" as const}};
+ const report=auditN2ConfoundersAndRejections({confirmationResults:[forged],confounderFlags:[]});
+ assert.equal(report.status,"BLOCKED");
+ assert.ok(report.blockers.includes("HISTORICAL_SPLIT_RAW_P_VALUE_INCONSISTENT:H1:validation"));
+ assert.ok(report.blockers.includes("HISTORICAL_SPLIT_RAW_P_VALUE_INCONSISTENT:H1:test"));
+ assert.equal(report.items.length,0);assert.equal(report.rejectionEntries.length,0);
+});
+
 test("flags for unknown hypotheses and duplicate confirmation results fail closed",()=>{
  const unknown=auditN2ConfoundersAndRejections({confirmationResults:[result("H1","HISTORICAL_CONFIRMED")],confounderFlags:[{hypothesisId:"H2",flagId:"x",severity:"warning",detail:"x"}]});assert.equal(unknown.status,"BLOCKED");assert.ok(unknown.blockers.includes("UNKNOWN_FLAG_HYPOTHESIS:H2"));
  const dup=auditN2ConfoundersAndRejections({confirmationResults:[result("H1","HISTORICAL_CONFIRMED"),result("H1","HISTORICAL_REJECTED")],confounderFlags:[]});assert.equal(dup.status,"BLOCKED");assert.ok(dup.blockers.includes("DUPLICATE_CONFIRMATION:H1"));
