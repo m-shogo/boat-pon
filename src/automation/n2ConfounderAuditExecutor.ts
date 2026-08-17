@@ -17,7 +17,10 @@ import {
   type ExecutorSpec,
   type SdkContext,
 } from "../research/governance/executorSdk";
-import { N2_EDGE_HISTORICAL_TEST_EXECUTOR_VERSION } from "./n2EdgeHistoricalTestExecutor";
+import {
+  N2_EDGE_HISTORICAL_TEST_EXECUTOR_VERSION,
+  N2_EDGE_HISTORICAL_TEST_REPORT_VERSION,
+} from "./n2EdgeHistoricalTestExecutor";
 import type { Executor, ExecutorResult } from "./taskExecutors";
 
 export const N2_CONFOUNDER_AUDIT_EXECUTOR_VERSION = "n2-confounder-audit-executor-v2" as const;
@@ -34,6 +37,7 @@ const REJECTION_SUBJECT_PREFIX: Record<Rejection["subjectType"], string> = {
 };
 
 export type N2HistoricalTestArtifact = {
+  reportVersion?: unknown;
   status: "PASS";
   generatedAt: string;
   outputDigest: string;
@@ -180,6 +184,9 @@ export function readN2HistoricalTestArtifact(
   const blockers: string[] = [];
   let currentDiscoverySignals: N2EdgeHypothesis[] | null = null;
   if (value.status !== "PASS") blockers.push("HISTORICAL_TEST_REPORT_NOT_PASS");
+  if (options.requireProducerContract && value.reportVersion !== N2_EDGE_HISTORICAL_TEST_REPORT_VERSION) {
+    blockers.push(`HISTORICAL_TEST_REPORT_VERSION_MISMATCH:${String(value.reportVersion ?? "MISSING")}/${N2_EDGE_HISTORICAL_TEST_REPORT_VERSION}`);
+  }
   if (options.requireProducerContract && value.executorContractVersion !== N2_EDGE_HISTORICAL_TEST_EXECUTOR_VERSION) {
     blockers.push(`HISTORICAL_TEST_EXECUTOR_CONTRACT_VERSION_MISMATCH:${String(value.executorContractVersion ?? "MISSING")}/${N2_EDGE_HISTORICAL_TEST_EXECUTOR_VERSION}`);
   }
