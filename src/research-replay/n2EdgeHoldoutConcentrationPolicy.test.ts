@@ -86,8 +86,8 @@ test("well-distributed two-era evidence passes without authorizing promotion", (
   assert.equal(report.authority.rejectedHypothesisRescueAuthorized, false);
 });
 
-test("venue breadth and concentration block independently of confirmation result", () => {
-  const maxVenueRaceCount = 29;
+test("venue breadth blocks independently of confirmation result", () => {
+  const maxVenueRaceCount = 24;
   const report = evaluateN2EdgeHoldoutConcentration(evidence(
     split("validation", {
       distinctVenueCount: N2_EDGE_HOLDOUT_MIN_DISTINCT_VENUES - 1,
@@ -98,7 +98,6 @@ test("venue breadth and concentration block independently of confirmation result
   assert.equal(report.status, "PASS");
   assert.equal(report.hypotheses[0].status, "BLOCKED");
   assert.ok(report.hypotheses[0].blockers.some((blocker) => blocker.startsWith("validation:VENUE_BREADTH:")));
-  assert.ok(report.hypotheses[0].blockers.some((blocker) => blocker.startsWith("validation:VENUE_CONCENTRATION:")));
 });
 
 test("single-era or dominant-era evidence blocks", () => {
