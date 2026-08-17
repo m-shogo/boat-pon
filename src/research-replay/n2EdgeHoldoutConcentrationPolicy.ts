@@ -192,11 +192,34 @@ export function evaluateN2EdgeHoldoutConcentration(
   if (canonicalHash(evidenceCore) !== outputDigest) blockers.push("DISTRIBUTION_EVIDENCE_DIGEST_INVALID");
   if (evidence.status !== "PASS") blockers.push("DISTRIBUTION_EVIDENCE_NOT_PASS");
   if (evidence.lockedHypothesisCount !== evidence.hypotheses.length) blockers.push("DISTRIBUTION_EVIDENCE_COUNT_MISMATCH");
-  if (evidence.inputRaceCount !== evidence.validationInputRaceCount + evidence.testInputRaceCount) {
+  const inputCountsValid = Number.isSafeInteger(evidence.inputRaceCount) && evidence.inputRaceCount >= 0
+    && Number.isSafeInteger(evidence.validationInputRaceCount) && evidence.validationInputRaceCount >= 0
+    && Number.isSafeInteger(evidence.testInputRaceCount) && evidence.testInputRaceCount >= 0;
+  if (!inputCountsValid) {
+    blockers.push("DISTRIBUTION_EVIDENCE_INPUT_COUNT_INVALID");
+  } else if (evidence.inputRaceCount !== evidence.validationInputRaceCount + evidence.testInputRaceCount) {
     blockers.push("DISTRIBUTION_EVIDENCE_INPUT_COUNT_MISMATCH");
   }
   if (new Set(evidence.hypotheses.map((item) => item.hypothesisId)).size !== evidence.hypotheses.length) {
     blockers.push("DISTRIBUTION_EVIDENCE_DUPLICATE_HYPOTHESIS");
+  }
+  if (inputCountsValid) {
+    for (const item of evidence.hypotheses) {
+      if (Number.isSafeInteger(item.validation.uniqueRaceCount)
+        && item.validation.uniqueRaceCount > evidence.validationInputRaceCount) {
+        blockers.push(
+          `DISTRIBUTION_EVIDENCE_VALIDATION_SUPPORT_EXCEEDS_INPUT:${item.hypothesisId}`
+          + `:${item.validation.uniqueRaceCount}/${evidence.validationInputRaceCount}`,
+        );
+      }
+      if (Number.isSafeInteger(item.test.uniqueRaceCount)
+        && item.test.uniqueRaceCount > evidence.testInputRaceCount) {
+        blockers.push(
+          `DISTRIBUTION_EVIDENCE_TEST_SUPPORT_EXCEEDS_INPUT:${item.hypothesisId}`
+          + `:${item.test.uniqueRaceCount}/${evidence.testInputRaceCount}`,
+        );
+      }
+    }
   }
   if (evidence.privacy.raceKeysPersisted !== false
     || evidence.privacy.venueCodesPersisted !== false
