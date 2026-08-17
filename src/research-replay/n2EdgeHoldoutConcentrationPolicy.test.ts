@@ -65,6 +65,12 @@ function evidence(
   return { ...core, outputDigest: canonicalHash(core) };
 }
 
+function rehashEvidence(
+  value: Omit<N2EdgeHoldoutDistributionEvidenceReport, "outputDigest">,
+): N2EdgeHoldoutDistributionEvidenceReport {
+  return { ...value, outputDigest: canonicalHash(value) };
+}
+
 test("well-distributed two-era evidence passes without authorizing promotion", () => {
   const report = evaluateN2EdgeHoldoutConcentration(evidence());
   assert.equal(report.status, "PASS");
@@ -153,6 +159,26 @@ test("swapped split labels fail closed instead of silently relabeling evidence",
   assert.ok(report.hypotheses[0].test.blockers.includes("SPLIT_LABEL_INVALID:validation/test"));
 });
 
+test("stale digest, widened privacy, and inconsistent top-level counts fail closed", () => {
+  const base = evidence();
+  const staleDigest = {
+    ...base,
+    inputRaceCount: base.inputRaceCount + 1,
+  } as N2EdgeHoldoutDistributionEvidenceReport;
+  const staleReport = evaluateN2EdgeHoldoutConcentration(staleDigest);
+  assert.equal(staleReport.status, "BLOCKED");
+  assert.ok(staleReport.blockers.includes("DISTRIBUTION_EVIDENCE_DIGEST_INVALID"));
+  assert.ok(staleReport.blockers.includes("DISTRIBUTION_EVIDENCE_INPUT_COUNT_MISMATCH"));
+
+  const { outputDigest: _ignored, ...baseCore } = base;
+  const privacyReport = evaluateN2EdgeHoldoutConcentration(rehashEvidence({
+    ...baseCore,
+    privacy: { ...base.privacy, raceKeysPersisted: true as never },
+  }));
+  assert.equal(privacyReport.status, "BLOCKED");
+  assert.ok(privacyReport.blockers.includes("DISTRIBUTION_EVIDENCE_PRIVACY_INVALID"));
+});
+
 test("malformed or authority-bearing evidence fails the whole policy report closed", () => {
   const badShare = evaluateN2EdgeHoldoutConcentration(evidence(
     split("validation", { maxVenueShare: 1.1 }),
@@ -171,10 +197,11 @@ test("malformed or authority-bearing evidence fails the whole policy report clos
   ] as const;
   for (const field of unsafeAuthorityFields) {
     const base = evidence();
-    const badAuthority: N2EdgeHoldoutDistributionEvidenceReport = {
-      ...base,
+    const { outputDigest: _ignored, ...baseCore } = base;
+    const badAuthority = rehashEvidence({
+      ...baseCore,
       authority: { ...base.authority, [field]: true as never },
-    };
+    });
     const authorityReport = evaluateN2EdgeHoldoutConcentration(badAuthority);
     assert.equal(authorityReport.status, "BLOCKED", field);
     assert.ok(
@@ -196,9 +223,10 @@ test("policy output is deterministic under hypothesis input reordering", () => {
     ],
   };
   const { outputDigest: _ignored, ...withoutDigest } = secondCore;
-  const second = { ...withoutDigest, outputDigest: canonicalHash(withoutDigest) } as N2EdgeHoldoutDistributionEvidenceReport;
+  const second = rehashEvidence(withoutDigest);
   const a = evaluateN2EdgeHoldoutConcentration(second);
-  const bInput = { ...second, hypotheses: [...second.hypotheses].reverse() };
+  const { outputDigest: _secondDigest, ...secondWithoutDigest } = second;
+  const bInput = rehashEvidence({ ...secondWithoutDigest, hypotheses: [...second.hypotheses].reverse() });
   const b = evaluateN2EdgeHoldoutConcentration(bInput);
   assert.equal(a.outputDigest, b.outputDigest);
   assert.deepEqual(a.hypotheses, b.hypotheses);
