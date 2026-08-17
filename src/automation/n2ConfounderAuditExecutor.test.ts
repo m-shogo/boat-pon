@@ -112,7 +112,10 @@ function discoveryAuthority() {
   };
 }
 
-function writeCurrentDiscovery(root: string): unknown {
+function writeCurrentDiscovery(
+  root: string,
+  results: N2EdgeHistoricalConfirmationResult[],
+): unknown {
   const reports = join(root, "reports/n2");
   mkdirSync(reports, { recursive: true });
   const summary = {
@@ -120,7 +123,14 @@ function writeCurrentDiscovery(root: string): unknown {
     scan: {
       status: "PASS" as const,
       scanVersion: "n2-edge-hypothesis-scan-v2",
-      signals: [] as unknown[],
+      signals: results.map((item) => ({
+        hypothesisId: item.hypothesisId,
+        featureKey: item.featureKey,
+        bucket: item.bucket,
+        direction: item.discoveryDirection,
+        discoverySplit: "train" as const,
+        forwardShadowReserved: true as const,
+      })),
       authority: discoveryAuthority(),
     },
     revision: "fixture-current",
@@ -140,7 +150,7 @@ function writeHistoricalArtifact(
 ): string {
   const reports = join(root, "reports/n2");
   mkdirSync(reports, { recursive: true });
-  const discovery = writeCurrentDiscovery(root);
+  const discovery = writeCurrentDiscovery(root, results);
   const summary = {
     status: "PASS",
     discoveryArtifactDigest: canonicalHash(discovery),
