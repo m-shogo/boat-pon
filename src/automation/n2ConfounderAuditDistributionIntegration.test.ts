@@ -10,11 +10,19 @@ import type { N2EdgeHoldoutDistributionEvidenceReport } from "../research-replay
 import { createN2ConfounderAuditExecutor } from "./n2ConfounderAuditExecutor";
 import type { ExecutorContext } from "./taskExecutors";
 
-function splitResult(split: "validation" | "test") {
-  return { split, uniqueRaceCount:220, meanResidual:0.02, standardError:0.002, zScore:10, rawPValue:1e-8, holmAdjustedPValue:1e-8, supportSufficient:true, effectSufficient:true, directionMatchesDiscovery:true, statisticallyConfirmed:true };
+function splitResult(
+  split: "validation" | "test",
+  overrides: Partial<N2EdgeHistoricalConfirmationResult["test"]> = {},
+) {
+  return { split, uniqueRaceCount:220, meanResidual:0.02, standardError:0.002, zScore:10, rawPValue:1e-8, holmAdjustedPValue:1e-8, supportSufficient:true, effectSufficient:true, directionMatchesDiscovery:true, statisticallyConfirmed:true, ...overrides };
 }
 function confirmationResult(id:string, verdict:N2EdgeHistoricalConfirmationResult["verdict"]="HISTORICAL_CONFIRMED"):N2EdgeHistoricalConfirmationResult{
-  return { hypothesisId:id, featureKey:"firstCourse", bucket:"1", discoveryDirection:"underpredicted", validation:splitResult("validation"), test:splitResult("test"), verdict };
+  const test = verdict === "HISTORICAL_REJECTED"
+    ? splitResult("test", { statisticallyConfirmed:false })
+    : verdict === "INSUFFICIENT_HOLDOUT"
+      ? splitResult("test", { uniqueRaceCount:199, supportSufficient:false, statisticallyConfirmed:false })
+      : splitResult("test");
+  return { hypothesisId:id, featureKey:"firstCourse", bucket:"1", discoveryDirection:"underpredicted", validation:splitResult("validation"), test, verdict };
 }
 function confirmation(results:N2EdgeHistoricalConfirmationResult[]):N2EdgeHistoricalConfirmationReport{
   const core={confirmationVersion:"n2-edge-historical-confirmation-v1" as const,status:"PASS" as const,blockers:[] as string[],lockedHypothesisCount:results.length,validationRaceCount:220,testRaceCount:220,confirmationMethod:{rediscoveryAllowed:false as const,interactionSearchAllowed:false as const,raceLevelResidualRequired:true as const,minUniqueRacesPerSplit:200,minAbsoluteResidual:0.001,familyWiseAlpha:0.05,multipleTesting:"Holm-Bonferroni separately within validation and test" as const,bothHoldoutSplitsRequired:true as const,sameDirectionRequired:true as const,forwardShadowUsed:false as const},confirmedCount:results.filter(r=>r.verdict==="HISTORICAL_CONFIRMED").length,rejectedCount:results.filter(r=>r.verdict==="HISTORICAL_REJECTED").length,insufficientCount:results.filter(r=>r.verdict==="INSUFFICIENT_HOLDOUT").length,results,authority:{roiUsedForConfirmation:false as const,payoutUsedForConfirmation:false as const,trainLabelsUsedForConfirmation:false as const,forwardLabelsUsedForConfirmation:false as const,automaticPromotionAuthorized:false as const,currentBuyConnectionAuthorized:false as const,lineConnectionAuthorized:false as const,publicPublishAuthorized:false as const,automatedBettingAuthorized:false as const,productionApplyAuthorized:false as const}};

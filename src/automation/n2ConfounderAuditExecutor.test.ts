@@ -24,7 +24,11 @@ import {
 } from "./n2ConfounderAuditExecutor";
 import type { ExecutorContext } from "./taskExecutors";
 
-function splitResult(split: "validation" | "test", meanResidual = 0.02) {
+function splitResult(
+  split: "validation" | "test",
+  meanResidual = 0.02,
+  overrides: Partial<N2EdgeHistoricalConfirmationResult["test"]> = {},
+) {
   return {
     split,
     uniqueRaceCount: 220,
@@ -37,6 +41,7 @@ function splitResult(split: "validation" | "test", meanResidual = 0.02) {
     effectSufficient: true,
     directionMatchesDiscovery: true,
     statisticallyConfirmed: true,
+    ...overrides,
   };
 }
 
@@ -44,13 +49,22 @@ function result(
   hypothesisId: string,
   verdict: N2EdgeHistoricalConfirmationResult["verdict"],
 ): N2EdgeHistoricalConfirmationResult {
+  const test = verdict === "HISTORICAL_REJECTED"
+    ? splitResult("test", 0.02, { statisticallyConfirmed: false })
+    : verdict === "INSUFFICIENT_HOLDOUT"
+      ? splitResult("test", 0.02, {
+        uniqueRaceCount: 199,
+        supportSufficient: false,
+        statisticallyConfirmed: false,
+      })
+      : splitResult("test");
   return {
     hypothesisId,
     featureKey: "firstCourse",
     bucket: "1",
     discoveryDirection: "underpredicted",
     validation: splitResult("validation"),
-    test: splitResult("test"),
+    test,
     verdict,
   };
 }

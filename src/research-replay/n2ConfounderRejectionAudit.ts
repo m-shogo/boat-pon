@@ -67,13 +67,26 @@ function blocked(blockers: string[]): N2ConfounderRejectionAuditReport {
   return {...core,outputDigest:canonicalHash(core)};
 }
 
+function expectedHistoricalVerdict(
+  result: N2EdgeHistoricalConfirmationResult,
+): N2EdgeHistoricalConfirmationResult["verdict"] {
+  if (!result.validation.supportSufficient || !result.test.supportSufficient) return "INSUFFICIENT_HOLDOUT";
+  if (result.validation.statisticallyConfirmed && result.test.statisticallyConfirmed) return "HISTORICAL_CONFIRMED";
+  return "HISTORICAL_REJECTED";
+}
+
 export function auditN2ConfoundersAndRejections(input:{
   confirmationResults:N2EdgeHistoricalConfirmationResult[];
   confounderFlags:N2ConfounderFlag[];
 }):N2ConfounderRejectionAuditReport{
   const blockers:string[]=[];
   const byId=new Map<string,N2EdgeHistoricalConfirmationResult>();
-  for(const result of input.confirmationResults){if(byId.has(result.hypothesisId)) blockers.push(`DUPLICATE_CONFIRMATION:${result.hypothesisId}`);byId.set(result.hypothesisId,result);}
+  for(const result of input.confirmationResults){
+    if(byId.has(result.hypothesisId)) blockers.push(`DUPLICATE_CONFIRMATION:${result.hypothesisId}`);
+    byId.set(result.hypothesisId,result);
+    const expectedVerdict=expectedHistoricalVerdict(result);
+    if(result.verdict!==expectedVerdict) blockers.push(`HISTORICAL_VERDICT_INCONSISTENT:${result.hypothesisId}:${result.verdict}/${expectedVerdict}`);
+  }
   const flagsById=new Map<string,N2ConfounderFlag[]>();
   for(const flag of input.confounderFlags){
     if(!byId.has(flag.hypothesisId)){blockers.push(`UNKNOWN_FLAG_HYPOTHESIS:${flag.hypothesisId}`);continue;}
