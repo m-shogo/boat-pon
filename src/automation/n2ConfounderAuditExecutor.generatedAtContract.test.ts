@@ -6,6 +6,7 @@ import test from "node:test";
 
 import { canonicalHash } from "../research-replay/canonical";
 import { readN2HistoricalTestArtifact } from "./n2ConfounderAuditExecutor";
+import { N2_EDGE_HISTORICAL_TEST_EXECUTOR_VERSION } from "./n2EdgeHistoricalTestExecutor";
 
 function writeArtifact(root: string, generatedAt: string): void {
   const reports = join(root, "reports/n2");
@@ -30,6 +31,7 @@ function writeArtifact(root: string, generatedAt: string): void {
     },
   };
   const summary = {
+    executorContractVersion: N2_EDGE_HISTORICAL_TEST_EXECUTOR_VERSION,
     status: "PASS",
     confirmation: {
       ...confirmationCore,
