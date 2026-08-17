@@ -74,6 +74,8 @@ function writeHistorical(root: string, discoveryArtifactDigest: string | undefin
   const confirmationCore = {
     status: "PASS",
     lockedHypothesisCount: 0,
+    validationRaceCount: 0,
+    testRaceCount: 0,
     confirmedCount: 0,
     rejectedCount: 0,
     insufficientCount: 0,
