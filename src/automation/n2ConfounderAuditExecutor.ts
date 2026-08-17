@@ -165,6 +165,7 @@ export function readN2HistoricalTestArtifact(
   catch { return { artifact: null, blockers: ["HISTORICAL_TEST_REPORT_INVALID_JSON"] }; }
   const value = parsed as Partial<N2HistoricalTestArtifact>;
   const blockers: string[] = [];
+  let currentDiscoverySignals: N2EdgeHypothesis[] | null = null;
   if (value.status !== "PASS") blockers.push("HISTORICAL_TEST_REPORT_NOT_PASS");
   if (!isDigest(value.outputDigest)) blockers.push("HISTORICAL_TEST_OUTPUT_DIGEST_INVALID");
   else if (!historicalArtifactDigestMatches(parsed)) blockers.push("HISTORICAL_TEST_OUTPUT_DIGEST_MISMATCH");
@@ -178,7 +179,14 @@ export function readN2HistoricalTestArtifact(
     try { discovery = JSON.parse(readFileSync(discoveryPath, "utf8")); }
     catch { blockers.push("DISCOVERY_REPORT_INVALID_JSON"); }
     if (discovery !== undefined) {
-      if (options.requireCurrentDiscovery) blockers.push(...currentDiscoveryContractBlockers(discovery));
+      if (options.requireCurrentDiscovery) {
+        const discoveryBlockers = currentDiscoveryContractBlockers(discovery);
+        blockers.push(...discoveryBlockers);
+        if (discoveryBlockers.length === 0) {
+          const current = discovery as { scan?: { signals?: unknown } };
+          if (Array.isArray(current.scan?.signals)) currentDiscoverySignals = current.scan.signals as N2EdgeHypothesis[];
+        }
+      }
       const currentDiscoveryDigest = canonicalHash(discovery);
       if (!isDigest(value.discoveryArtifactDigest)) blockers.push("HISTORICAL_DISCOVERY_DIGEST_INVALID");
       else if (value.discoveryArtifactDigest !== currentDiscoveryDigest) blockers.push("HISTORICAL_DISCOVERY_DIGEST_MISMATCH");
@@ -200,6 +208,23 @@ export function readN2HistoricalTestArtifact(
     || confirmation?.authority.productionApplyAuthorized !== false) blockers.push("CONFIRMATION_PRODUCTION_AUTHORITY_INVALID");
   const ids = confirmation?.results.map((result) => result.hypothesisId) ?? [];
   if (new Set(ids).size !== ids.length) blockers.push("HISTORICAL_CONFIRMATION_DUPLICATE_HYPOTHESIS");
+  if (options.requireCurrentDiscovery && currentDiscoverySignals && confirmation && Array.isArray(confirmation.results)) {
+    const discoveryById = new Map(currentDiscoverySignals.map((signal) => [signal.hypothesisId, signal]));
+    const confirmationIds = [...ids].sort();
+    const discoveryIds = [...discoveryById.keys()].sort();
+    if (canonicalHash(confirmationIds) !== canonicalHash(discoveryIds)) {
+      blockers.push("HISTORICAL_CONFIRMATION_DISCOVERY_SET_MISMATCH");
+    }
+    for (const result of confirmation.results) {
+      const signal = discoveryById.get(result.hypothesisId);
+      if (!signal) continue;
+      if (result.featureKey !== signal.featureKey
+        || result.bucket !== signal.bucket
+        || result.discoveryDirection !== signal.direction) {
+        blockers.push(`HISTORICAL_CONFIRMATION_DISCOVERY_IDENTITY_MISMATCH:${result.hypothesisId}`);
+      }
+    }
+  }
 
   const distribution = value.distributionEvidence;
   if (distribution !== undefined) {
