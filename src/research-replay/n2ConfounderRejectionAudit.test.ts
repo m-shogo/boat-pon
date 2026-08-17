@@ -5,7 +5,7 @@ import { auditN2ConfoundersAndRejections } from "./n2ConfounderRejectionAudit";
 
 function result(id:string,verdict:N2EdgeHistoricalConfirmationResult["verdict"]):N2EdgeHistoricalConfirmationResult{
  const confirmedSplit={split:"validation" as const,uniqueRaceCount:220,meanResidual:.02,standardError:.002,zScore:10,rawPValue:1e-10,holmAdjustedPValue:1e-10,supportSufficient:true,effectSufficient:true,directionMatchesDiscovery:true,statisticallyConfirmed:true};
- const rejectedSplit={...confirmedSplit,effectSufficient:false,statisticallyConfirmed:false};
+ const rejectedSplit={...confirmedSplit,meanResidual:-.02,zScore:-10,directionMatchesDiscovery:false,statisticallyConfirmed:false};
  const insufficientSplit={...confirmedSplit,uniqueRaceCount:100,supportSufficient:false,statisticallyConfirmed:false};
  const validation=verdict==="HISTORICAL_CONFIRMED"?confirmedSplit:verdict==="HISTORICAL_REJECTED"?rejectedSplit:insufficientSplit;
  const test={...validation,split:"test" as const};
@@ -45,6 +45,20 @@ test("rehashable historical verdict drift fails closed before disposition or rej
   assert.ok(report.blockers.includes(`HISTORICAL_VERDICT_INCONSISTENT:H1:${forgedVerdict}/${sourceVerdict}`));
   assert.equal(report.items.length,0);
   assert.equal(report.rejectionEntries.length,0);
+ }
+});
+
+test("rehashable historical split semantic drift fails closed before disposition",()=>{
+ const source=result("H1","HISTORICAL_CONFIRMED");
+ const cases:[N2EdgeHistoricalConfirmationResult,string][]=[
+  [{...source,validation:{...source.validation,supportSufficient:false,statisticallyConfirmed:false},verdict:"INSUFFICIENT_HOLDOUT"},"HISTORICAL_SPLIT_SUPPORT_INCONSISTENT:H1:validation"],
+  [{...source,validation:{...source.validation,effectSufficient:false,statisticallyConfirmed:false},verdict:"HISTORICAL_REJECTED"},"HISTORICAL_SPLIT_EFFECT_INCONSISTENT:H1:validation"],
+  [{...source,validation:{...source.validation,directionMatchesDiscovery:false,statisticallyConfirmed:false},verdict:"HISTORICAL_REJECTED"},"HISTORICAL_SPLIT_DIRECTION_INCONSISTENT:H1:validation"],
+  [{...source,validation:{...source.validation,statisticallyConfirmed:false},verdict:"HISTORICAL_REJECTED"},"HISTORICAL_SPLIT_CONFIRMATION_INCONSISTENT:H1:validation"],
+ ];
+ for(const [forged,blocker] of cases){
+  const report=auditN2ConfoundersAndRejections({confirmationResults:[forged],confounderFlags:[]});
+  assert.equal(report.status,"BLOCKED");assert.ok(report.blockers.includes(blocker));assert.equal(report.items.length,0);assert.equal(report.rejectionEntries.length,0);
  }
 });
 

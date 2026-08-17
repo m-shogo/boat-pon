@@ -50,7 +50,7 @@ function result(
   verdict: N2EdgeHistoricalConfirmationResult["verdict"],
 ): N2EdgeHistoricalConfirmationResult {
   const test = verdict === "HISTORICAL_REJECTED"
-    ? splitResult("test", 0.02, { statisticallyConfirmed: false })
+    ? splitResult("test", -0.02, { directionMatchesDiscovery: false, statisticallyConfirmed: false })
     : verdict === "INSUFFICIENT_HOLDOUT"
       ? splitResult("test", 0.02, {
         uniqueRaceCount: 199,
