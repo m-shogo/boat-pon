@@ -143,12 +143,13 @@ test("well-distributed confirmed hypothesis has no blocking concentration flag b
 });
 
 test("pre-registered concentration failure becomes a blocking confounder", () => {
+  const maxVenueRaceCount = 20;
   const report = buildN2ConfounderDistributionBridge({
     confirmationResults: [confirmation("H-A")],
     distributionEvidence: evidence({
-      validationVenueCount: 8,
-      validationMaxVenueRaceCount: 44,
-      validationMaxVenueShare: 44 / 220,
+      validationVenueCount: 11,
+      validationMaxVenueRaceCount: maxVenueRaceCount,
+      validationMaxVenueShare: maxVenueRaceCount / 220,
     }),
   });
   assert.equal(report.status, "PASS");
