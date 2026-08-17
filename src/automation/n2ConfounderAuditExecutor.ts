@@ -5,6 +5,7 @@ import { canonicalHash, canonicalUtcTimestamp } from "../research-replay/canonic
 import { buildN2ConfounderDistributionBridge, type N2ConfounderDistributionBridgeReport } from "../research-replay/n2ConfounderDistributionBridge";
 import { auditN2ConfoundersAndRejections, type N2ConfounderRejectionAuditReport } from "../research-replay/n2ConfounderRejectionAudit";
 import type { N2EdgeHistoricalConfirmationReport } from "../research-replay/n2EdgeHistoricalConfirmation";
+import { N2_EDGE_HOLDOUT_MAX_RACES_PER_SPLIT } from "../research-replay/n2EdgeHoldoutCohort";
 import type { N2EdgeHoldoutDistributionEvidenceReport } from "../research-replay/n2EdgeHoldoutDistributionEvidence";
 import { N2_EDGE_HYPOTHESIS_SCAN_VERSION, N2_EDGE_SCAN_MAX_SIGNALS, type N2EdgeHypothesis } from "../research-replay/n2EdgeHypothesisScan";
 import { contractDigest, type Rejection } from "../research/governance/contracts";
@@ -232,6 +233,12 @@ export function readN2HistoricalTestArtifact(
     } else if (!isNonnegativeSafeInteger(cohort.selectedValidationRaceCount)
       || !isNonnegativeSafeInteger(cohort.selectedTestRaceCount)) {
       blockers.push("HISTORICAL_COHORT_COUNTS_INVALID");
+    } else if (cohort.selectedValidationRaceCount > N2_EDGE_HOLDOUT_MAX_RACES_PER_SPLIT
+      || cohort.selectedTestRaceCount > N2_EDGE_HOLDOUT_MAX_RACES_PER_SPLIT) {
+      blockers.push(
+        `HISTORICAL_COHORT_MAX_RACES_EXCEEDED:${cohort.selectedValidationRaceCount}/${N2_EDGE_HOLDOUT_MAX_RACES_PER_SPLIT}`
+        + `:${cohort.selectedTestRaceCount}/${N2_EDGE_HOLDOUT_MAX_RACES_PER_SPLIT}`,
+      );
     } else if (confirmationCountsValid
       && (cohort.selectedValidationRaceCount !== confirmation.validationRaceCount
         || cohort.selectedTestRaceCount !== confirmation.testRaceCount)) {
