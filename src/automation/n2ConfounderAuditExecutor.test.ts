@@ -110,6 +110,55 @@ function confirmation(results: N2EdgeHistoricalConfirmationResult[]): N2EdgeHist
   return { ...core, outputDigest: canonicalHash(core) };
 }
 
+function distribution(results: N2EdgeHistoricalConfirmationResult[]) {
+  function splitEvidence(split: "validation" | "test", uniqueRaceCount: number) {
+    const maxVenueRaceCount = uniqueRaceCount === 0 ? 0 : Math.ceil(uniqueRaceCount / 17);
+    const maxYearRaceCount = uniqueRaceCount === 0 ? 0 : Math.ceil(uniqueRaceCount / 2);
+    return {
+      split,
+      uniqueRaceCount,
+      distinctVenueCount: uniqueRaceCount === 0 ? 0 : 17,
+      maxVenueRaceCount,
+      maxVenueShare: uniqueRaceCount === 0 ? null : maxVenueRaceCount / uniqueRaceCount,
+      distinctYearCount: uniqueRaceCount === 0 ? 0 : 2,
+      maxYearRaceCount,
+      maxYearShare: uniqueRaceCount === 0 ? null : maxYearRaceCount / uniqueRaceCount,
+    };
+  }
+  const core = {
+    evidenceVersion: "n2-edge-holdout-distribution-evidence-v1" as const,
+    status: "PASS" as const,
+    blockers: [] as string[],
+    lockedHypothesisCount: results.length,
+    inputRaceCount: 440,
+    validationInputRaceCount: 220,
+    testInputRaceCount: 220,
+    hypotheses: results.map((item) => ({
+      hypothesisId: item.hypothesisId,
+      validation: splitEvidence("validation", item.validation.uniqueRaceCount),
+      test: splitEvidence("test", item.test.uniqueRaceCount),
+    })),
+    privacy: {
+      raceKeysPersisted: false as const,
+      venueCodesPersisted: false as const,
+      yearsPersisted: false as const,
+      perRaceResidualsPersisted: false as const,
+    },
+    authority: {
+      confirmationVerdictChanged: false as const,
+      rejectionRescueAuthorized: false as const,
+      automaticPromotionAuthorized: false as const,
+      forwardLabelsUsed: false as const,
+      currentBuyConnectionAuthorized: false as const,
+      lineConnectionAuthorized: false as const,
+      publicPublishAuthorized: false as const,
+      automatedBettingAuthorized: false as const,
+      productionApplyAuthorized: false as const,
+    },
+  };
+  return { ...core, outputDigest: canonicalHash(core) };
+}
+
 function discoveryAuthority() {
   return {
     discoveryOnly: true,
@@ -176,6 +225,7 @@ function writeHistoricalArtifact(
       selectedTestRaceCount: 220,
     },
     confirmation: confirmation(results),
+    distributionEvidence: distribution(results),
     authority: {
       automaticPromotionAuthorized: false,
       currentBuyConnectionAuthorized: false,
