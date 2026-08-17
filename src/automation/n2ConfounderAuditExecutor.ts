@@ -36,6 +36,13 @@ export type N2HistoricalTestArtifact = {
   generatedAt: string;
   outputDigest: string;
   discoveryArtifactDigest?: string;
+  cohort?: {
+    selectedValidationRaceCount?: unknown;
+    selectedTestRaceCount?: unknown;
+    validationCohortDigest?: unknown;
+    testCohortDigest?: unknown;
+    outputDigest?: unknown;
+  };
   confirmation: N2EdgeHistoricalConfirmationReport;
   distributionEvidence?: N2EdgeHoldoutDistributionEvidenceReport;
   authority?: {
@@ -50,6 +57,9 @@ export type N2HistoricalTestArtifact = {
 
 function isDigest(value: unknown): value is string {
   return typeof value === "string" && /^[0-9a-f]{64}$/u.test(value);
+}
+function isNonnegativeSafeInteger(value: unknown): value is number {
+  return Number.isSafeInteger(value) && Number(value) >= 0;
 }
 function unique(values: readonly string[]): string[] { return [...new Set(values)].sort(); }
 function digestMatches<T extends { outputDigest: string }>(value: T): boolean {
@@ -199,6 +209,38 @@ export function readN2HistoricalTestArtifact(
   if (confirmation && !Array.isArray(confirmation.results)) blockers.push("HISTORICAL_CONFIRMATION_RESULTS_INVALID");
   if (confirmation && confirmation.results.length !== confirmation.lockedHypothesisCount) blockers.push(`HISTORICAL_CONFIRMATION_COUNT_MISMATCH:${confirmation.results.length}/${confirmation.lockedHypothesisCount}`);
   if (confirmation && confirmation.confirmedCount + confirmation.rejectedCount + confirmation.insufficientCount !== confirmation.results.length) blockers.push("HISTORICAL_CONFIRMATION_VERDICT_COUNTS_INVALID");
+  const confirmationCountsValid = Boolean(confirmation)
+    && isNonnegativeSafeInteger(confirmation?.validationRaceCount)
+    && isNonnegativeSafeInteger(confirmation?.testRaceCount);
+  if (confirmation && !confirmationCountsValid) blockers.push("HISTORICAL_CONFIRMATION_RACE_COUNTS_INVALID");
+  if (confirmation && confirmationCountsValid) {
+    for (const result of confirmation.results) {
+      if (isNonnegativeSafeInteger(result.validation.uniqueRaceCount)
+        && result.validation.uniqueRaceCount > confirmation.validationRaceCount) {
+        blockers.push(`${result.hypothesisId}:HISTORICAL_VALIDATION_SUPPORT_EXCEEDS_COHORT:${result.validation.uniqueRaceCount}/${confirmation.validationRaceCount}`);
+      }
+      if (isNonnegativeSafeInteger(result.test.uniqueRaceCount)
+        && result.test.uniqueRaceCount > confirmation.testRaceCount) {
+        blockers.push(`${result.hypothesisId}:HISTORICAL_TEST_SUPPORT_EXCEEDS_COHORT:${result.test.uniqueRaceCount}/${confirmation.testRaceCount}`);
+      }
+    }
+  }
+  if (confirmation && confirmation.lockedHypothesisCount > 0) {
+    const cohort = value.cohort;
+    if (!cohort) {
+      blockers.push("HISTORICAL_COHORT_LINEAGE_MISSING");
+    } else if (!isNonnegativeSafeInteger(cohort.selectedValidationRaceCount)
+      || !isNonnegativeSafeInteger(cohort.selectedTestRaceCount)) {
+      blockers.push("HISTORICAL_COHORT_COUNTS_INVALID");
+    } else if (confirmationCountsValid
+      && (cohort.selectedValidationRaceCount !== confirmation.validationRaceCount
+        || cohort.selectedTestRaceCount !== confirmation.testRaceCount)) {
+      blockers.push(
+        `HISTORICAL_COHORT_CONFIRMATION_COUNT_MISMATCH:${cohort.selectedValidationRaceCount}/${confirmation.validationRaceCount}`
+        + `:${cohort.selectedTestRaceCount}/${confirmation.testRaceCount}`,
+      );
+    }
+  }
   if (confirmation?.authority.forwardLabelsUsedForConfirmation !== false) blockers.push("FORWARD_LABEL_AUTHORITY_INVALID");
   if (confirmation?.authority.automaticPromotionAuthorized !== false) blockers.push("CONFIRMATION_PROMOTION_AUTHORITY_INVALID");
   if (confirmation?.authority.currentBuyConnectionAuthorized !== false
@@ -230,6 +272,14 @@ export function readN2HistoricalTestArtifact(
   if (distribution !== undefined) {
     if (distribution.status !== "PASS") blockers.push("DISTRIBUTION_EVIDENCE_NOT_PASS");
     if (!digestMatches(distribution)) blockers.push("DISTRIBUTION_EVIDENCE_DIGEST_MISMATCH");
+    if (confirmation && confirmationCountsValid
+      && (distribution.validationInputRaceCount !== confirmation.validationRaceCount
+        || distribution.testInputRaceCount !== confirmation.testRaceCount)) {
+      blockers.push(
+        `DISTRIBUTION_EVIDENCE_CONFIRMATION_INPUT_COUNT_MISMATCH:${distribution.validationInputRaceCount}/${confirmation.validationRaceCount}`
+        + `:${distribution.testInputRaceCount}/${confirmation.testRaceCount}`,
+      );
+    }
     if (distribution.authority.confirmationVerdictChanged !== false
       || distribution.authority.rejectionRescueAuthorized !== false
       || distribution.authority.automaticPromotionAuthorized !== false
