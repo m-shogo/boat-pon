@@ -6,6 +6,7 @@ import test from "node:test";
 
 import { canonicalHash } from "../research-replay/canonical";
 import { readN2HistoricalTestArtifact } from "./n2ConfounderAuditExecutor";
+import { N2_EDGE_HISTORICAL_TEST_EXECUTOR_VERSION } from "./n2EdgeHistoricalTestExecutor";
 
 function withRoot(fn: (root: string) => void): void {
   const root = mkdtempSync(join(tmpdir(), "boat-pon-n2-confounder-lineage-"));
@@ -91,6 +92,7 @@ function writeHistorical(root: string, discoveryArtifactDigest: string | undefin
     },
   };
   const summary = {
+    executorContractVersion: N2_EDGE_HISTORICAL_TEST_EXECUTOR_VERSION,
     status: "PASS",
     ...(discoveryArtifactDigest === undefined ? {} : { discoveryArtifactDigest }),
     confirmation: {
