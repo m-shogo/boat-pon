@@ -4,7 +4,7 @@ import { join, relative } from "node:path";
 import { canonicalHash, canonicalUtcTimestamp } from "../research-replay/canonical";
 import { buildN2ConfounderDistributionBridge, type N2ConfounderDistributionBridgeReport } from "../research-replay/n2ConfounderDistributionBridge";
 import { auditN2ConfoundersAndRejections, type N2ConfounderRejectionAuditReport } from "../research-replay/n2ConfounderRejectionAudit";
-import type { N2EdgeHistoricalConfirmationReport } from "../research-replay/n2EdgeHistoricalConfirmation";
+import { N2_EDGE_HISTORICAL_CONFIRMATION_VERSION, type N2EdgeHistoricalConfirmationReport } from "../research-replay/n2EdgeHistoricalConfirmation";
 import { N2_EDGE_HOLDOUT_MAX_RACES_PER_SPLIT } from "../research-replay/n2EdgeHoldoutCohort";
 import type { N2EdgeHoldoutDistributionEvidenceReport } from "../research-replay/n2EdgeHoldoutDistributionEvidence";
 import { N2_EDGE_HYPOTHESIS_SCAN_VERSION, N2_EDGE_SCAN_MAX_SIGNALS, type N2EdgeHypothesis } from "../research-replay/n2EdgeHypothesisScan";
@@ -218,6 +218,9 @@ export function readN2HistoricalTestArtifact(
 
   const confirmation = value.confirmation as N2EdgeHistoricalConfirmationReport | undefined;
   if (!confirmation || confirmation.status !== "PASS") blockers.push("HISTORICAL_CONFIRMATION_NOT_PASS");
+  if (options.requireProducerContract && confirmation?.confirmationVersion !== N2_EDGE_HISTORICAL_CONFIRMATION_VERSION) {
+    blockers.push(`HISTORICAL_CONFIRMATION_VERSION_MISMATCH:${String(confirmation?.confirmationVersion ?? "MISSING")}/${N2_EDGE_HISTORICAL_CONFIRMATION_VERSION}`);
+  }
   if (confirmation && !digestMatches(confirmation)) blockers.push("HISTORICAL_CONFIRMATION_DIGEST_MISMATCH");
   if (confirmation && !Array.isArray(confirmation.results)) blockers.push("HISTORICAL_CONFIRMATION_RESULTS_INVALID");
   if (confirmation && confirmation.results.length !== confirmation.lockedHypothesisCount) blockers.push(`HISTORICAL_CONFIRMATION_COUNT_MISMATCH:${confirmation.results.length}/${confirmation.lockedHypothesisCount}`);
