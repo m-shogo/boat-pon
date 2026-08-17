@@ -1,5 +1,10 @@
 import { canonicalHash } from "./canonical";
 import type { N2EdgeHistoricalConfirmationResult } from "./n2EdgeHistoricalConfirmation";
+import {
+  N2_EDGE_SCAN_ALPHA,
+  N2_EDGE_SCAN_MIN_ABSOLUTE_RESIDUAL,
+  N2_EDGE_SCAN_MIN_UNIQUE_RACES,
+} from "./n2EdgeHypothesisScan";
 
 export const N2_CONFOUNDER_REJECTION_AUDIT_VERSION = "n2-confounder-rejection-audit-v1" as const;
 
@@ -75,6 +80,34 @@ function expectedHistoricalVerdict(
   return "HISTORICAL_REJECTED";
 }
 
+function validateSplitSemantics(
+  result: N2EdgeHistoricalConfirmationResult,
+  split: "validation" | "test",
+): string[] {
+  const value = result[split];
+  const blockers: string[] = [];
+  const expectedSupport = Number.isSafeInteger(value.uniqueRaceCount)
+    && value.uniqueRaceCount >= N2_EDGE_SCAN_MIN_UNIQUE_RACES;
+  const expectedEffect = value.meanResidual !== null
+    && Number.isFinite(value.meanResidual)
+    && Math.abs(value.meanResidual) >= N2_EDGE_SCAN_MIN_ABSOLUTE_RESIDUAL;
+  const expectedDirection = value.meanResidual !== null
+    && Number.isFinite(value.meanResidual)
+    && (result.discoveryDirection === "underpredicted" ? value.meanResidual > 0 : value.meanResidual < 0);
+  const expectedConfirmed = expectedSupport
+    && expectedEffect
+    && expectedDirection
+    && Number.isFinite(value.holmAdjustedPValue)
+    && value.holmAdjustedPValue >= 0
+    && value.holmAdjustedPValue <= N2_EDGE_SCAN_ALPHA;
+
+  if (value.supportSufficient !== expectedSupport) blockers.push(`HISTORICAL_SPLIT_SUPPORT_INCONSISTENT:${result.hypothesisId}:${split}`);
+  if (value.effectSufficient !== expectedEffect) blockers.push(`HISTORICAL_SPLIT_EFFECT_INCONSISTENT:${result.hypothesisId}:${split}`);
+  if (value.directionMatchesDiscovery !== expectedDirection) blockers.push(`HISTORICAL_SPLIT_DIRECTION_INCONSISTENT:${result.hypothesisId}:${split}`);
+  if (value.statisticallyConfirmed !== expectedConfirmed) blockers.push(`HISTORICAL_SPLIT_CONFIRMATION_INCONSISTENT:${result.hypothesisId}:${split}`);
+  return blockers;
+}
+
 export function auditN2ConfoundersAndRejections(input:{
   confirmationResults:N2EdgeHistoricalConfirmationResult[];
   confounderFlags:N2ConfounderFlag[];
@@ -84,6 +117,7 @@ export function auditN2ConfoundersAndRejections(input:{
   for(const result of input.confirmationResults){
     if(byId.has(result.hypothesisId)) blockers.push(`DUPLICATE_CONFIRMATION:${result.hypothesisId}`);
     byId.set(result.hypothesisId,result);
+    blockers.push(...validateSplitSemantics(result,"validation"),...validateSplitSemantics(result,"test"));
     const expectedVerdict=expectedHistoricalVerdict(result);
     if(result.verdict!==expectedVerdict) blockers.push(`HISTORICAL_VERDICT_INCONSISTENT:${result.hypothesisId}:${result.verdict}/${expectedVerdict}`);
   }
