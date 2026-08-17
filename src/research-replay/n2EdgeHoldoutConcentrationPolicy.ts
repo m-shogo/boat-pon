@@ -5,6 +5,7 @@ import {
   type N2EdgeHoldoutDistributionHypothesisEvidence,
   type N2EdgeHoldoutDistributionSplitEvidence,
 } from "./n2EdgeHoldoutDistributionEvidence";
+import { N2_EDGE_HOLDOUT_RACES_PER_VENUE_YEAR } from "./n2EdgeHoldoutCohort";
 import { N2_EDGE_SCAN_MIN_UNIQUE_RACES } from "./n2EdgeHypothesisScan";
 
 export const N2_EDGE_HOLDOUT_CONCENTRATION_POLICY_VERSION =
@@ -25,6 +26,8 @@ export const N2_EDGE_HOLDOUT_MIN_DISTINCT_VENUES = 12;
 export const N2_EDGE_HOLDOUT_MAX_VENUE_SHARE = 0.12;
 export const N2_EDGE_HOLDOUT_MIN_DISTINCT_YEARS = 2;
 export const N2_EDGE_HOLDOUT_MAX_YEAR_SHARE = 0.75;
+export const N2_EDGE_HOLDOUT_MAX_RACES_PER_VENUE = 2 * N2_EDGE_HOLDOUT_RACES_PER_VENUE_YEAR;
+export const N2_EDGE_HOLDOUT_MAX_RACES_PER_YEAR = 24 * N2_EDGE_HOLDOUT_RACES_PER_VENUE_YEAR;
 
 export type N2EdgeHoldoutConcentrationSplitDecision = {
   split: "validation" | "test";
@@ -98,8 +101,14 @@ function evaluateSplit(
   if (!Number.isSafeInteger(evidence.uniqueRaceCount) || evidence.uniqueRaceCount < 0) malformed.push("UNIQUE_RACE_COUNT_INVALID");
   if (!Number.isSafeInteger(evidence.distinctVenueCount) || evidence.distinctVenueCount < 0 || evidence.distinctVenueCount > 24) malformed.push("DISTINCT_VENUE_COUNT_INVALID");
   if (!Number.isSafeInteger(evidence.maxVenueRaceCount) || evidence.maxVenueRaceCount < 0 || evidence.maxVenueRaceCount > evidence.uniqueRaceCount) malformed.push("MAX_VENUE_RACE_COUNT_INVALID");
+  if (Number.isSafeInteger(evidence.maxVenueRaceCount) && evidence.maxVenueRaceCount > N2_EDGE_HOLDOUT_MAX_RACES_PER_VENUE) {
+    malformed.push(`MAX_VENUE_RACE_COUNT_EXCEEDS_HOLDOUT:${evidence.maxVenueRaceCount}/${N2_EDGE_HOLDOUT_MAX_RACES_PER_VENUE}`);
+  }
   if (!Number.isSafeInteger(evidence.distinctYearCount) || evidence.distinctYearCount < 0 || evidence.distinctYearCount > 2) malformed.push("DISTINCT_YEAR_COUNT_INVALID");
   if (!Number.isSafeInteger(evidence.maxYearRaceCount) || evidence.maxYearRaceCount < 0 || evidence.maxYearRaceCount > evidence.uniqueRaceCount) malformed.push("MAX_YEAR_RACE_COUNT_INVALID");
+  if (Number.isSafeInteger(evidence.maxYearRaceCount) && evidence.maxYearRaceCount > N2_EDGE_HOLDOUT_MAX_RACES_PER_YEAR) {
+    malformed.push(`MAX_YEAR_RACE_COUNT_EXCEEDS_HOLDOUT:${evidence.maxYearRaceCount}/${N2_EDGE_HOLDOUT_MAX_RACES_PER_YEAR}`);
+  }
   if (!validShare(evidence.maxVenueShare)) malformed.push("MAX_VENUE_SHARE_INVALID");
   if (!validShare(evidence.maxYearShare)) malformed.push("MAX_YEAR_SHARE_INVALID");
   if (evidence.uniqueRaceCount === 0) {
