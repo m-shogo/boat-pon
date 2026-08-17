@@ -22,7 +22,7 @@ import {
   preflightN2RejectionRegistry,
   readN2HistoricalTestArtifact,
 } from "./n2ConfounderAuditExecutor";
-import { N2_EDGE_HISTORICAL_TEST_EXECUTOR_VERSION } from "./n2EdgeHistoricalTestExecutor";
+import { N2_EDGE_HISTORICAL_TEST_EXECUTOR_VERSION, N2_EDGE_HISTORICAL_TEST_REPORT_VERSION } from "./n2EdgeHistoricalTestExecutor";
 import type { ExecutorContext } from "./taskExecutors";
 
 function splitResult(
@@ -167,6 +167,7 @@ function writeHistoricalArtifact(
   mkdirSync(reports, { recursive: true });
   const discovery = writeCurrentDiscovery(root, results);
   const summary = {
+    reportVersion: N2_EDGE_HISTORICAL_TEST_REPORT_VERSION,
     executorContractVersion: N2_EDGE_HISTORICAL_TEST_EXECUTOR_VERSION,
     status: "PASS",
     discoveryArtifactDigest: canonicalHash(discovery),
