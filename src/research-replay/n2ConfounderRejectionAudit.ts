@@ -5,6 +5,7 @@ import {
   N2_EDGE_SCAN_MIN_ABSOLUTE_RESIDUAL,
   N2_EDGE_SCAN_MIN_UNIQUE_RACES,
 } from "./n2EdgeHypothesisScan";
+import { validateN2HistoricalStatisticalIntegrity } from "./n2HistoricalStatisticalIntegrity";
 
 export const N2_CONFOUNDER_REJECTION_AUDIT_VERSION = "n2-confounder-rejection-audit-v1" as const;
 
@@ -121,6 +122,7 @@ export function auditN2ConfoundersAndRejections(input:{
     const expectedVerdict=expectedHistoricalVerdict(result);
     if(result.verdict!==expectedVerdict) blockers.push(`HISTORICAL_VERDICT_INCONSISTENT:${result.hypothesisId}:${result.verdict}/${expectedVerdict}`);
   }
+  blockers.push(...validateN2HistoricalStatisticalIntegrity(input.confirmationResults));
   const flagsById=new Map<string,N2ConfounderFlag[]>();
   for(const flag of input.confounderFlags){
     if(!byId.has(flag.hypothesisId)){blockers.push(`UNKNOWN_FLAG_HYPOTHESIS:${flag.hypothesisId}`);continue;}
