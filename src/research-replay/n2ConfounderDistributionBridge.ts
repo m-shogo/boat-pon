@@ -82,48 +82,13 @@ export function buildN2ConfounderDistributionBridge(input: {
   if (new Set(confirmationIds).size !== confirmationIds.length) blockers.push("DUPLICATE_CONFIRMATION_HYPOTHESIS_ID");
 
   if (input.distributionEvidence === null) {
-    if (blockers.length > 0) {
-      return blocked({
-        blockers,
-        evidenceMode: "aggregate_distribution_missing",
-        confirmationHypothesisCount: confirmationIds.length,
-        policy: null,
-      });
-    }
-    const flags = input.confirmationResults
-      .filter((result) => result.verdict === "HISTORICAL_CONFIRMED")
-      .map((result): N2ConfounderFlag => ({
-        hypothesisId: result.hypothesisId,
-        flagId: "distribution-concentration-evidence-missing-v1",
-        severity: "blocking",
-        detail: "Aggregate validation/test venue-year concentration evidence is missing; historical confirmation remains blocked from later promotion review.",
-      }))
-      .sort((left, right) => left.hypothesisId.localeCompare(right.hypothesisId));
-    const core = {
-      bridgeVersion: N2_CONFOUNDER_DISTRIBUTION_BRIDGE_VERSION,
-      status: "PASS" as const,
-      blockers: [] as string[],
-      evidenceMode: "aggregate_distribution_missing" as const,
+    blockers.push("DISTRIBUTION_EVIDENCE_REQUIRED_BY_PRODUCER_CONTRACT");
+    return blocked({
+      blockers,
+      evidenceMode: "aggregate_distribution_missing",
       confirmationHypothesisCount: confirmationIds.length,
       policy: null,
-      confounderFlags: flags,
-      confirmedWithoutBlockingConcentrationCount: 0,
-      confirmedBlockedByConcentrationCount: 0,
-      confirmedBlockedByInsufficientDistributionCount: 0,
-      confirmedBlockedByMissingDistributionCount: flags.length,
-      authority: {
-        historicalVerdictChanged: false as const,
-        rejectedHypothesisRescueAuthorized: false as const,
-        automaticPromotionAuthorized: false as const,
-        forwardLabelsUsed: false as const,
-        currentBuyConnectionAuthorized: false as const,
-        lineConnectionAuthorized: false as const,
-        publicPublishAuthorized: false as const,
-        automatedBettingAuthorized: false as const,
-        productionApplyAuthorized: false as const,
-      },
-    };
-    return { ...core, outputDigest: canonicalHash(core) };
+    });
   }
 
   const policy = evaluateN2EdgeHoldoutConcentration(input.distributionEvidence);

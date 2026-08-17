@@ -115,16 +115,16 @@ function evidence(input: {
   return { ...core, outputDigest: canonicalHash(core) };
 }
 
-test("missing aggregate evidence keeps confirmed hypotheses blocked without changing verdict", () => {
+test("missing aggregate evidence fails closed before confounder decisions", () => {
   const report = buildN2ConfounderDistributionBridge({
     confirmationResults: [confirmation("H-A")],
     distributionEvidence: null,
   });
-  assert.equal(report.status, "PASS");
+  assert.equal(report.status, "BLOCKED");
   assert.equal(report.evidenceMode, "aggregate_distribution_missing");
-  assert.equal(report.confirmedBlockedByMissingDistributionCount, 1);
-  assert.equal(report.confounderFlags.length, 1);
-  assert.equal(report.confounderFlags[0].flagId, "distribution-concentration-evidence-missing-v1");
+  assert.ok(report.blockers.includes("DISTRIBUTION_EVIDENCE_REQUIRED_BY_PRODUCER_CONTRACT"));
+  assert.equal(report.confirmedBlockedByMissingDistributionCount, 0);
+  assert.deepEqual(report.confounderFlags, []);
   assert.equal(report.authority.historicalVerdictChanged, false);
   assert.equal(report.authority.automaticPromotionAuthorized, false);
 });
