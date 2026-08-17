@@ -1,5 +1,6 @@
 import { canonicalHash } from "./canonical";
 import {
+  N2_EDGE_HOLDOUT_DISTRIBUTION_EVIDENCE_VERSION,
   type N2EdgeHoldoutDistributionEvidenceReport,
   type N2EdgeHoldoutDistributionHypothesisEvidence,
   type N2EdgeHoldoutDistributionSplitEvidence,
@@ -184,10 +185,24 @@ export function evaluateN2EdgeHoldoutConcentration(
   evidence: N2EdgeHoldoutDistributionEvidenceReport,
 ): N2EdgeHoldoutConcentrationPolicyReport {
   const blockers: string[] = [];
+  const { outputDigest, ...evidenceCore } = evidence;
+  if (evidence.evidenceVersion !== N2_EDGE_HOLDOUT_DISTRIBUTION_EVIDENCE_VERSION) {
+    blockers.push("DISTRIBUTION_EVIDENCE_VERSION_INVALID");
+  }
+  if (canonicalHash(evidenceCore) !== outputDigest) blockers.push("DISTRIBUTION_EVIDENCE_DIGEST_INVALID");
   if (evidence.status !== "PASS") blockers.push("DISTRIBUTION_EVIDENCE_NOT_PASS");
   if (evidence.lockedHypothesisCount !== evidence.hypotheses.length) blockers.push("DISTRIBUTION_EVIDENCE_COUNT_MISMATCH");
+  if (evidence.inputRaceCount !== evidence.validationInputRaceCount + evidence.testInputRaceCount) {
+    blockers.push("DISTRIBUTION_EVIDENCE_INPUT_COUNT_MISMATCH");
+  }
   if (new Set(evidence.hypotheses.map((item) => item.hypothesisId)).size !== evidence.hypotheses.length) {
     blockers.push("DISTRIBUTION_EVIDENCE_DUPLICATE_HYPOTHESIS");
+  }
+  if (evidence.privacy.raceKeysPersisted !== false
+    || evidence.privacy.venueCodesPersisted !== false
+    || evidence.privacy.yearsPersisted !== false
+    || evidence.privacy.perRaceResidualsPersisted !== false) {
+    blockers.push("DISTRIBUTION_EVIDENCE_PRIVACY_INVALID");
   }
   if (evidence.authority.confirmationVerdictChanged !== false
     || evidence.authority.rejectionRescueAuthorized !== false
