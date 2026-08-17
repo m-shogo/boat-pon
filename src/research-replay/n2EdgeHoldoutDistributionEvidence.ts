@@ -72,7 +72,13 @@ function parseRaceKey(value: string): ParsedRace | null {
   const match = RACE_KEY_RE.exec(value);
   if (!match) return null;
   const date = `${match[1]}-${match[2]}-${match[3]}`;
-  if (!Number.isFinite(Date.parse(`${date}T00:00:00.000Z`))) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  if (parsed.getUTCFullYear() !== year
+    || parsed.getUTCMonth() !== month - 1
+    || parsed.getUTCDate() !== day) return null;
   return { year: match[1], venueCode: match[4] };
 }
 
