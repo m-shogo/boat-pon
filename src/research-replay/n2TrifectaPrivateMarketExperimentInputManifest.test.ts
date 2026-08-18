@@ -270,7 +270,7 @@ test("rehashed non-canonical day index times fail closed before manifest lineage
       "2026-08-07T12:30:00.000+09:00",
       "2026-08-07T03:30:00",
     ]) {
-      const tampered = { ...index, generatedAt };
+      const tampered: Record<string, unknown> = { ...index, generatedAt };
       const { indexDigest: _indexDigest, ...core } = tampered;
       tampered.indexDigest = canonicalHash(core);
       writeFileSync(path, `${JSON.stringify(tampered, null, 2)}\n`, "utf8");
