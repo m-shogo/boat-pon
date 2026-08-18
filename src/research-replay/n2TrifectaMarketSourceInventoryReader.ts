@@ -1,6 +1,7 @@
 import { existsSync, statSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
+import { canonicalUtcTimestamp } from "./canonical";
 import type { N2TrifectaMarketSourceInventory } from "./n2TrifectaMarketFoundation";
 
 export const N2_TRIFECTA_MARKET_SOURCE_INVENTORY_READER_VERSION = "n2-trifecta-market-source-inventory-reader-v1";
@@ -44,6 +45,12 @@ function latestProgramDate(db: DatabaseSync): string {
   if (!tableExists(db, "official_programs")) throw new Error("OFFICIAL_PROGRAMS_TABLE_MISSING");
   const row = db.prepare("SELECT MAX(date) dateTo FROM official_programs").get() as unknown as { dateTo: string | null };
   if (!row.dateTo || !/^\d{4}-\d{2}-\d{2}$/.test(row.dateTo)) throw new Error("OFFICIAL_PROGRAMS_EMPTY");
+  try {
+    const canonicalDate = canonicalUtcTimestamp(`${row.dateTo}T00:00:00.000Z`).slice(0, 10);
+    if (canonicalDate !== row.dateTo) throw new Error("OFFICIAL_PROGRAM_DATE_INVALID");
+  } catch {
+    throw new Error("OFFICIAL_PROGRAM_DATE_INVALID");
+  }
   return row.dateTo;
 }
 
