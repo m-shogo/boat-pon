@@ -26,6 +26,8 @@ function writeMetadata(root: string, options: {
     checkpointLabel: "T-5",
     envelopeRelativePath,
     acceptedAt: options.acceptedAt ?? "2026-08-07T03:31:00.000Z",
+    databaseWriteAuthorized: false,
+    productionApplyExecuted: false,
   }, null, 2)}\n`, "utf8");
   if (envelopeRelativePath.startsWith(base)) {
     writeFileSync(join(root, envelopeRelativePath), `${JSON.stringify({
@@ -49,15 +51,10 @@ function writeMetadata(root: string, options: {
 test("reader extracts only T-5 cutoff metadata without raw odds access", () => {
   withRoot((root) => {
     writeMetadata(root);
-    const read = readN2T5DecisionCutoffMetadata({
-      dataRoot: root,
-      raceKeys: ["2026-08-07:05:R1"],
-    });
+    const read = readN2T5DecisionCutoffMetadata({ dataRoot: root, raceKeys: ["2026-08-07:05:R1"] });
     assert.equal(read.status, "PASS");
     assert.deepEqual(read.blockers, []);
-    assert.deepEqual(read.decisionCutoffByRaceKey, {
-      "2026-08-07:05:R1": "2026-08-07T03:30:00.000Z",
-    });
+    assert.deepEqual(read.decisionCutoffByRaceKey, { "2026-08-07:05:R1": "2026-08-07T03:30:00.000Z" });
     assert.equal(read.privateEnvelopeMetadataReadCount, 1);
     assert.equal(read.rawOddsValuesRead, false);
     assert.equal(read.networkRequestCount, 0);
@@ -71,10 +68,7 @@ test("reader extracts only T-5 cutoff metadata without raw odds access", () => {
 test("reader blocks a cutoff outside the race's JST date", () => {
   withRoot((root) => {
     writeMetadata(root, { cutoff: "2026-08-06T03:30:00.000Z" });
-    const read = readN2T5DecisionCutoffMetadata({
-      dataRoot: root,
-      raceKeys: ["2026-08-07:05:R1"],
-    });
+    const read = readN2T5DecisionCutoffMetadata({ dataRoot: root, raceKeys: ["2026-08-07:05:R1"] });
     assert.equal(read.status, "BLOCKED");
     assert.ok(read.blockers.includes("2026-08-07:05:R1:DECISION_CUTOFF_INVALID"));
     assert.deepEqual(read.decisionCutoffByRaceKey, {});
@@ -83,10 +77,7 @@ test("reader blocks a cutoff outside the race's JST date", () => {
 
 test("reader rejects impossible race-key calendar dates before private metadata reads", () => {
   withRoot((root) => {
-    const read = readN2T5DecisionCutoffMetadata({
-      dataRoot: root,
-      raceKeys: ["2026-02-30:05:R1"],
-    });
+    const read = readN2T5DecisionCutoffMetadata({ dataRoot: root, raceKeys: ["2026-02-30:05:R1"] });
     assert.equal(read.status, "BLOCKED");
     assert.deepEqual(read.blockers, ["2026-02-30:05:R1:RACE_KEY_INVALID"]);
     assert.deepEqual(read.decisionCutoffByRaceKey, {});
@@ -98,10 +89,7 @@ test("reader rejects impossible race-key calendar dates before private metadata 
 test("reader rejects invalid accepted marker timestamps before envelope reads", () => {
   withRoot((root) => {
     writeMetadata(root, { acceptedAt: "2026-02-30T03:31:00.000Z" });
-    const read = readN2T5DecisionCutoffMetadata({
-      dataRoot: root,
-      raceKeys: ["2026-08-07:05:R1"],
-    });
+    const read = readN2T5DecisionCutoffMetadata({ dataRoot: root, raceKeys: ["2026-08-07:05:R1"] });
     assert.equal(read.status, "BLOCKED");
     assert.deepEqual(read.blockers, ["2026-08-07:05:R1:ACCEPTED_MARKER_ACCEPTED_AT_INVALID"]);
     assert.deepEqual(read.decisionCutoffByRaceKey, {});
@@ -113,10 +101,7 @@ test("reader rejects invalid accepted marker timestamps before envelope reads", 
 test("reader rejects envelope paths outside the expected private T-5 directory", () => {
   withRoot((root) => {
     writeMetadata(root, { envelopeRelativePath: "data/raw/research/other.envelope.json" });
-    const read = readN2T5DecisionCutoffMetadata({
-      dataRoot: root,
-      raceKeys: ["2026-08-07:05:R1"],
-    });
+    const read = readN2T5DecisionCutoffMetadata({ dataRoot: root, raceKeys: ["2026-08-07:05:R1"] });
     assert.equal(read.status, "BLOCKED");
     assert.ok(read.blockers.includes("2026-08-07:05:R1:ENVELOPE_PATH_INVALID"));
     assert.equal(read.privateEnvelopeMetadataReadCount, 0);
