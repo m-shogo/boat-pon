@@ -17,7 +17,10 @@ import { dirname, resolve, sep } from "node:path";
 
 import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import type { N2TrifectaMarketRaceFeatureSequence } from "./n2TrifectaMarketFeatureEngineering";
-import type { N2TrifectaPrivateMarketFeatureLoadReport } from "./n2TrifectaPrivateMarketFeatureLoader";
+import {
+  N2_TRIFECTA_PRIVATE_MARKET_FEATURE_LOADER_VERSION,
+  type N2TrifectaPrivateMarketFeatureLoadReport,
+} from "./n2TrifectaPrivateMarketFeatureLoader";
 
 export const N2_TRIFECTA_PRIVATE_MARKET_FEATURE_ARTIFACT_VERSION =
   "n2-trifecta-private-market-feature-artifact-v2" as const;
@@ -93,6 +96,9 @@ function canonicalRaceDate(date: string): string | null {
 
 function validateReport(report: N2TrifectaPrivateMarketFeatureLoadReport): asserts report is
   N2TrifectaPrivateMarketFeatureLoadReport & { status: "PASS" | "PARTIAL" } {
+  if (report.loaderVersion !== N2_TRIFECTA_PRIVATE_MARKET_FEATURE_LOADER_VERSION) {
+    throw new Error("PRIVATE_FEATURE_ARTIFACT_SOURCE_VERSION_INVALID");
+  }
   if (report.status !== "PASS" && report.status !== "PARTIAL") {
     throw new Error("PRIVATE_FEATURE_ARTIFACT_REQUIRES_PASS_OR_PARTIAL");
   }
