@@ -52,6 +52,8 @@ export type N2HistoricalTestArtifact = {
   };
   confirmation: N2EdgeHistoricalConfirmationReport;
   distributionEvidence?: N2EdgeHoldoutDistributionEvidenceReport;
+  databaseWriteCount?: unknown;
+  networkRequestCount?: unknown;
   authority?: {
     automaticPromotionAuthorized?: unknown;
     currentBuyConnectionAuthorized?: unknown;
@@ -189,6 +191,12 @@ export function readN2HistoricalTestArtifact(
   }
   if (options.requireProducerContract && value.executorContractVersion !== N2_EDGE_HISTORICAL_TEST_EXECUTOR_VERSION) {
     blockers.push(`HISTORICAL_TEST_EXECUTOR_CONTRACT_VERSION_MISMATCH:${String(value.executorContractVersion ?? "MISSING")}/${N2_EDGE_HISTORICAL_TEST_EXECUTOR_VERSION}`);
+  }
+  if (options.requireProducerContract && value.databaseWriteCount !== 0) {
+    blockers.push(`HISTORICAL_TEST_DATABASE_WRITE_COUNT_INVALID:${String(value.databaseWriteCount ?? "MISSING")}`);
+  }
+  if (options.requireProducerContract && value.networkRequestCount !== 0) {
+    blockers.push(`HISTORICAL_TEST_NETWORK_REQUEST_COUNT_INVALID:${String(value.networkRequestCount ?? "MISSING")}`);
   }
   if (!isDigest(value.outputDigest)) blockers.push("HISTORICAL_TEST_OUTPUT_DIGEST_INVALID");
   else if (!historicalArtifactDigestMatches(parsed)) blockers.push("HISTORICAL_TEST_OUTPUT_DIGEST_MISMATCH");
