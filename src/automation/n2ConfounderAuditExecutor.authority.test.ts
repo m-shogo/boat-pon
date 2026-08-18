@@ -181,6 +181,21 @@ test("confounder artifact ingestion rejects missing historical production author
   }
 });
 
+test("confounder artifact ingestion rejects contaminated confirmation holdout authorities", () => {
+  for (const field of [
+    "roiUsedForConfirmation",
+    "payoutUsedForConfirmation",
+    "trainLabelsUsedForConfirmation",
+  ] as const) {
+    withRoot((root) => {
+      writeArtifact(root, { confirmationAuthority: { [field]: true } });
+      const read = readN2HistoricalTestArtifact(root);
+      assert.equal(read.artifact, null);
+      assert.ok(read.blockers.includes("CONFIRMATION_HOLDOUT_AUTHORITY_INVALID"), `${field} must fail closed at confirmation ingestion`);
+    });
+  }
+});
+
 test("confounder artifact ingestion rejects widened confirmation production authorities", () => {
   for (const field of [
     "currentBuyConnectionAuthorized",
