@@ -15,7 +15,7 @@ import {
   countUnavailableTrifectaSelections,
   parseAllTrifectaOdds,
 } from "../domain/oddsParser";
-import { canonicalHash } from "./canonical";
+import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import {
   N2_TRIFECTA_RAW_PARSER_VERSION,
   parseBoatRaceDisplayedOddsUpdateTime,
@@ -165,8 +165,18 @@ const ALLOWED_HEADERS = new Set([
   "last-modified",
 ]);
 
+function canonicalInstant(value: string): string | null {
+  try {
+    return canonicalUtcTimestamp(value);
+  } catch {
+    return null;
+  }
+}
+
 function parseInstant(value: string): number | null {
-  const parsed = Date.parse(value);
+  const canonical = canonicalInstant(value);
+  if (!canonical) return null;
+  const parsed = Date.parse(canonical);
   return Number.isFinite(parsed) ? parsed : null;
 }
 
@@ -302,7 +312,8 @@ function buildEnvelope(input: {
 }): N2TrifectaPrivateCaptureEnvelope {
   const blockers: string[] = [];
   const { entry, response, plan } = input;
-  const fetchedAtMs = parseInstant(response.fetchedAt);
+  const canonicalFetchedAt = canonicalInstant(response.fetchedAt);
+  const fetchedAtMs = canonicalFetchedAt ? Date.parse(canonicalFetchedAt) : null;
   const targetAtMs = parseInstant(entry.targetCaptureAt);
   const cutoffMs = parseInstant(entry.decisionCutoff);
 
@@ -361,12 +372,13 @@ function buildEnvelope(input: {
   if (parsedOdds.size !== 120) blockers.push("PARSED_SELECTION_COUNT_NOT_120");
   if (unavailableSelectionCount !== 0) blockers.push("UNAVAILABLE_SELECTIONS_PRESENT");
 
+  const normalizedFetchedAt = canonicalFetchedAt ?? response.fetchedAt;
   const rawSha256 = sha256(response.rawBytes);
   const rawDocumentId = response.rawBytes.byteLength > 0
     ? `raw-${canonicalHash({
         manifestDigest: plan.manifestDigest,
         sourceUrl: entry.sourceUrl,
-        fetchedAt: response.fetchedAt,
+        fetchedAt: normalizedFetchedAt,
         rawSha256,
       }).slice(0, 40)}`
     : null;
@@ -396,7 +408,7 @@ function buildEnvelope(input: {
     snapshotCandidate = {
       raceId: entry.raceIdentity,
       checkpointLabel: entry.checkpointLabel,
-      capturedAt: response.fetchedAt,
+      capturedAt: normalizedFetchedAt,
       availableAt: sourceDisplayedUpdate.availableAt,
       decisionCutoff: entry.decisionCutoff,
       rawDocumentId,
@@ -421,7 +433,7 @@ function buildEnvelope(input: {
   const rawRelativePath = rawDocumentId
     ? buildN2TrifectaRawRelativePath({
         entry,
-        fetchedAt: response.fetchedAt,
+        fetchedAt: normalizedFetchedAt,
         rawSha256,
       })
     : null;
@@ -439,7 +451,7 @@ function buildEnvelope(input: {
     response: {
       statusCode: response.statusCode,
       contentType: response.contentType,
-      fetchedAt: response.fetchedAt,
+      fetchedAt: normalizedFetchedAt,
       rawByteLength: response.rawBytes.byteLength,
       rawSha256,
       headers: sanitizeHeaders(response.headers),
