@@ -110,6 +110,16 @@ function resolveInside(rootDir: string, relativePath: string): string {
   return target;
 }
 
+function resolveInsideExpectedDirectory(
+  rootDir: string,
+  relativePath: string,
+  expectedRelativeDirectory: string,
+): string | null {
+  const target = resolveInside(rootDir, relativePath);
+  const expectedDirectory = resolve(rootDir, expectedRelativeDirectory);
+  return target.startsWith(`${expectedDirectory}${sep}`) ? target : null;
+}
+
 function readJsonBounded<T>(path: string): T {
   const lstat = lstatSync(path);
   if (lstat.isSymbolicLink() || !lstat.isFile()) throw new Error("PRIVATE_JSON_FILE_TYPE_INVALID");
@@ -147,6 +157,13 @@ function parseInstant(value: unknown): number | null {
   if (offset !== null && (Number(offset[2]) > 23 || Number(offset[3]) > 59)) return null;
   const parsed = Date.parse(value);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function instantWithinRaceDateJst(date: string, value: unknown): boolean {
+  const instant = parseInstant(value);
+  if (instant == null) return false;
+  const start = Date.parse(`${date}T00:00:00+09:00`);
+  return Number.isFinite(start) && instant >= start && instant < start + 24 * 60 * 60 * 1000;
 }
 
 function loadT5Source(input: {
@@ -188,8 +205,22 @@ function loadT5Source(input: {
     || !marker.envelopeRelativePath.endsWith(".envelope.json")) blockers.push("T5_ENVELOPE_PATH_INVALID");
   if (blockers.length > 0) return { source: null, blockers: unique(blockers) };
 
-  const rawPath = resolveInside(input.dataRoot, marker.rawRelativePath as string);
-  const envelopePath = resolveInside(input.dataRoot, marker.envelopeRelativePath as string);
+  let rawPath: string | null = null;
+  let envelopePath: string | null = null;
+  try {
+    rawPath = resolveInsideExpectedDirectory(input.dataRoot, marker.rawRelativePath as string, directory);
+  } catch {
+    rawPath = null;
+  }
+  try {
+    envelopePath = resolveInsideExpectedDirectory(input.dataRoot, marker.envelopeRelativePath as string, directory);
+  } catch {
+    envelopePath = null;
+  }
+  if (!rawPath) blockers.push("T5_RAW_PATH_INVALID");
+  if (!envelopePath) blockers.push("T5_ENVELOPE_PATH_INVALID");
+  if (blockers.length > 0) return { source: null, blockers: unique(blockers) };
+
   if (!existsSync(rawPath)) blockers.push("T5_RAW_FILE_MISSING");
   if (!existsSync(envelopePath)) blockers.push("T5_ENVELOPE_FILE_MISSING");
   if (blockers.length > 0) return { source: null, blockers: unique(blockers) };
@@ -198,8 +229,6 @@ function loadT5Source(input: {
   if (rawStat.isSymbolicLink() || !rawStat.isFile()) blockers.push("T5_RAW_FILE_TYPE_INVALID");
   if (rawStat.size <= 0 || rawStat.size > MAX_RAW_BYTES) blockers.push("T5_RAW_SIZE_INVALID");
   if (blockers.length > 0) return { source: null, blockers: unique(blockers) };
-  const rawBytes = readFileSync(rawPath);
-  if (sha256(rawBytes) !== marker.rawSha256) blockers.push("T5_RAW_SHA256_MISMATCH");
 
   let envelope: N2TrifectaPrivateCaptureEnvelope;
   try {
@@ -233,6 +262,7 @@ function loadT5Source(input: {
   const capturedMs = parseInstant(capturedAt);
   const availableMs = parseInstant(availableAt);
   if (decisionMs == null) blockers.push("T5_DECISION_CUTOFF_INVALID");
+  else if (!instantWithinRaceDateJst(parsed.date, decisionCutoff)) blockers.push("T5_DECISION_CUTOFF_OUTSIDE_RACE_DATE");
   if (capturedMs == null) blockers.push("T5_CAPTURED_AT_INVALID");
   if (availableMs == null) blockers.push("T5_AVAILABLE_AT_INVALID");
   if (decisionMs != null && capturedMs != null && capturedMs > decisionMs) blockers.push("T5_CAPTURE_AFTER_DECISION_CUTOFF");
@@ -241,6 +271,8 @@ function loadT5Source(input: {
   if (typeof envelope.proposedObservationId !== "string" || !envelope.proposedObservationId.trim()) blockers.push("T5_OBSERVATION_ID_INVALID");
   if (blockers.length > 0) return { source: null, blockers: unique(blockers) };
 
+  const rawBytes = readFileSync(rawPath);
+  if (sha256(rawBytes) !== marker.rawSha256) return { source: null, blockers: ["T5_RAW_SHA256_MISMATCH"] };
   const odds = parseAllTrifectaOdds(rawBytes.toString("utf8"));
   if (odds.size !== 120) return { source: null, blockers: ["T5_REPARSE_SELECTION_COUNT_NOT_120"] };
   const selections = [...odds.entries()]
