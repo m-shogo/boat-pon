@@ -203,16 +203,21 @@ const EXPECTED_SELECTION_SET = new Set(EXPECTED_SELECTIONS);
 export function buildN2TrifectaCheckpointIdentity(
   candidate: N2TrifectaMarketSnapshotCandidate,
 ): string | null {
+  let capturedAt: string;
+  try {
+    capturedAt = canonicalUtcTimestamp(candidate.capturedAt);
+  } catch {
+    return null;
+  }
   const identityInputValid = isRaceId(candidate.raceId)
     && isNonEmpty(candidate.checkpointLabel)
-    && parseInstant(candidate.capturedAt) !== null
     && isNonEmpty(candidate.rawDocumentId);
   if (!identityInputValid) return null;
   return canonicalHash({
     sourceType: "trifecta_market",
     raceId: candidate.raceId,
     checkpointLabel: candidate.checkpointLabel,
-    capturedAt: candidate.capturedAt,
+    capturedAt,
     rawDocumentId: candidate.rawDocumentId,
   });
 }
