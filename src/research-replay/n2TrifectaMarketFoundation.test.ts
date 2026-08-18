@@ -88,6 +88,30 @@ test("a complete, atomic-PIT, lineaged snapshot passes", () => {
   assert.match(audit.idempotencyKey ?? "", /^[0-9a-f]{64}$/);
 });
 
+test("market foundation rejects normalized or timezone-ambiguous PIT timestamps", () => {
+  const cases: Array<[keyof Pick<N2TrifectaMarketSnapshotCandidate, "availableAt" | "capturedAt" | "decisionCutoff">, string, string]> = [
+    ["availableAt", "2026-02-30T03:49:00.000Z", "AVAILABLE_AT_INVALID"],
+    ["capturedAt", "2026-08-06T24:00:00.000Z", "CAPTURED_AT_INVALID"],
+    ["decisionCutoff", "2026-08-06T04:00:00.000", "DECISION_CUTOFF_INVALID"],
+  ];
+  for (const [field, value, blocker] of cases) {
+    const audit = auditN2TrifectaMarketSnapshot(candidate(1, { [field]: value }));
+    assert.equal(audit.status, "BLOCKED");
+    assert.equal(audit.pit.status, "BLOCKED");
+    assert.ok(audit.blockers.includes(blocker));
+  }
+});
+
+test("market foundation preserves valid leap-day and explicit-offset PIT timestamps", () => {
+  const audit = auditN2TrifectaMarketSnapshot(candidate(1, {
+    availableAt: "2028-02-29T12:49:00+09:00",
+    capturedAt: "2028-02-29T12:50:00+09:00",
+    decisionCutoff: "2028-02-29T13:00:00+09:00",
+  }));
+  assert.equal(audit.status, "PASS");
+  assert.equal(audit.pit.status, "PASS");
+});
+
 test("incomplete payload, duplicate selection, bad odds, and PIT inversion fail closed", () => {
   const odds = candidate().odds.slice(0, 119);
   odds.push({ selection: odds[0].selection, odds: 0 });
