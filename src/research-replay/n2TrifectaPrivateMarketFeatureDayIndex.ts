@@ -74,6 +74,7 @@ type FeatureArtifactLike = {
   raceIdentity?: unknown;
   status?: unknown;
   sequence?: {
+    status?: unknown;
     availableCheckpoints?: unknown;
     missingCheckpoints?: unknown;
     snapshots?: unknown;
@@ -168,6 +169,9 @@ function validateArtifactCore(input: {
   }
   if (typeof artifact.sequence !== "object" || artifact.sequence == null) {
     throw new Error(`R${input.raceNo}_SEQUENCE_INVALID`);
+  }
+  if (artifact.sequence.status !== artifact.status) {
+    throw new Error(`R${input.raceNo}_SEQUENCE_STATUS_INVALID`);
   }
   const availableCheckpoints = normalizeCheckpointArray(
     artifact.sequence.availableCheckpoints,
