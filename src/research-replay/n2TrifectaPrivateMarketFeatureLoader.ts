@@ -278,8 +278,8 @@ function loadCheckpoint(
   if (blockers.length > 0 || !fetchedAtValid || !availableAtValid) {
     return { status: "BLOCKED", blockers: unique(blockers), snapshot: null };
   }
-  const validatedFetchedAt: string = fetchedAt;
-  const validatedAvailableAt: string = availableAt;
+  const validatedFetchedAt = canonicalUtcTimestamp(fetchedAt);
+  const validatedAvailableAt = canonicalUtcTimestamp(availableAt);
 
   const rawBytes = readFileSync(rawPath);
   const actualSha256 = sha256(rawBytes);
