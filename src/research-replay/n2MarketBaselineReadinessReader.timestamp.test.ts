@@ -43,8 +43,10 @@ function writeAcceptedMarker(root: string, acceptedAt: string): void {
 for (const acceptedAt of [
   "2026-02-30T03:00:00.000Z",
   "2026-08-07T24:00:00.000Z",
+  "2026-08-07T03:25:30.000",
+  "2026-08-07 03:25:30+09:00",
 ]) {
-  test(`readiness rejects normalized acceptedAt ${acceptedAt} before any raw-odds read`, () => {
+  test(`readiness rejects normalized or ambiguous acceptedAt ${acceptedAt} before any raw-odds read`, () => {
     withRoot((root) => {
       writeAcceptedMarker(root, acceptedAt);
       const result = readN2MarketBaselineReadiness({ dataRoot: root });
