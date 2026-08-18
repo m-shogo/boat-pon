@@ -28,7 +28,9 @@ function syntheticPassReport(): N2TrifectaPrivateMarketFeatureLoadReport {
     acceptedMarkerCount: 4,
     loadedSnapshotCount: 4,
     sequence: {
+      featureVersion: "n2-trifecta-market-features-v1",
       status: "PASS",
+      raceIdentity: "20260807-10-01",
       availableCheckpoints: [...checkpoints],
       missingCheckpoints: [],
       snapshots: checkpoints.map((checkpointLabel, index) => ({ checkpointLabel, syntheticSnapshotIndex: index })),
@@ -76,6 +78,48 @@ test("day index rejects a rehashed artifact whose nested sequence status contrad
       }),
       /R1_SEQUENCE_STATUS_INVALID/u,
     );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("day index rejects rehashed nested sequence version and race lineage drift", () => {
+  const root = mkdtempSync(join(tmpdir(), "boat-pon-day-index-sequence-lineage-"));
+  try {
+    const written = writeN2TrifectaPrivateMarketFeatureArtifact({
+      rootDir: root,
+      report: syntheticPassReport(),
+      generatedAt: "2026-08-07T02:00:00.000Z",
+    });
+    const path = join(root, written.relativePath);
+
+    for (const [field, value, expected] of [
+      ["featureVersion", "n2-trifecta-market-features-v0", /R1_SEQUENCE_VERSION_INVALID/u],
+      ["raceIdentity", "20260807-10-02", /R1_SEQUENCE_RACE_IDENTITY_INVALID/u],
+    ] as const) {
+      const artifact = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
+      const sequence = artifact.sequence as Record<string, unknown>;
+      sequence[field] = value;
+      const { artifactDigest: _artifactDigest, ...core } = artifact;
+      artifact.artifactDigest = canonicalHash(core);
+      writeFileSync(path, `${JSON.stringify(artifact, null, 2)}\n`, "utf8");
+
+      assert.throws(
+        () => buildN2TrifectaPrivateMarketFeatureDayIndex({
+          rootDir: root,
+          date: "2026-08-07",
+          venueCode: "10",
+          generatedAt: "2026-08-07T02:05:00.000Z",
+        }),
+        expected,
+      );
+
+      writeN2TrifectaPrivateMarketFeatureArtifact({
+        rootDir: root,
+        report: syntheticPassReport(),
+        generatedAt: "2026-08-07T02:00:00.000Z",
+      });
+    }
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
