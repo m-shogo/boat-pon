@@ -15,8 +15,7 @@ function withRoot(fn: (root: string) => void): void {
   }
 }
 
-function writeAcceptedMarker(root: string, acceptedAt: string): void {
-  const date = "2026-08-07";
+function writeAcceptedMarker(root: string, acceptedAt: string, date = "2026-08-07"): void {
   const venue = "10";
   const raceDir = "01";
   const relativeDir = `data/raw/research/trifecta-market/${date}/${venue}/${raceDir}/T-5`;
@@ -28,7 +27,7 @@ function writeAcceptedMarker(root: string, acceptedAt: string): void {
   writeFileSync(join(root, envelopeRelativePath), "{}\n", "utf8");
   writeFileSync(join(directory, "accepted.json"), `${JSON.stringify({
     markerVersion: "n2-trifecta-private-capture-accepted-v1",
-    raceIdentity: "20260807-10-01",
+    raceIdentity: `${date.replaceAll("-", "")}-10-01`,
     checkpointLabel: "T-5",
     rawDocumentId: "raw-fixture",
     rawSha256: "b".repeat(64),
@@ -45,8 +44,9 @@ for (const acceptedAt of [
   "2026-08-07T24:00:00.000Z",
   "2026-08-07T03:25:30.000",
   "2026-08-07 03:25:30+09:00",
+  "2026-08-06T03:25:30.000Z",
 ]) {
-  test(`readiness rejects normalized or ambiguous acceptedAt ${acceptedAt} before any raw-odds read`, () => {
+  test(`readiness rejects invalid or out-of-race-date acceptedAt ${acceptedAt} before any raw-odds read`, () => {
     withRoot((root) => {
       writeAcceptedMarker(root, acceptedAt);
       const result = readN2MarketBaselineReadiness({ dataRoot: root });
@@ -59,11 +59,24 @@ for (const acceptedAt of [
   });
 }
 
-test("readiness preserves valid leap-day and timezone-offset acceptedAt forms", () => {
+test("readiness preserves valid explicit-offset acceptedAt within the race date", () => {
   withRoot((root) => {
-    writeAcceptedMarker(root, "2024-02-29T12:25:30+09:00");
+    writeAcceptedMarker(root, "2026-08-07T12:25:30+09:00");
     const result = readN2MarketBaselineReadiness({ dataRoot: root });
     assert.deepEqual(result.acceptedT5RaceKeys, ["2026-08-07:10:R1"]);
+    assert.deepEqual(result.integrityBlockedRaceKeys, []);
+    assert.equal(result.invalidAcceptedMarkerCount, 0);
+    assert.ok(result.sourceBlockers.includes("SIDECAR_NOT_FOUND"));
+    assert.equal(result.databaseReadCount, 0);
+    assert.equal(result.rawOddsValuesRead, false);
+  });
+});
+
+test("readiness preserves a valid leap-day acceptedAt when the race date is the same leap day", () => {
+  withRoot((root) => {
+    writeAcceptedMarker(root, "2024-02-29T12:25:30+09:00", "2024-02-29");
+    const result = readN2MarketBaselineReadiness({ dataRoot: root });
+    assert.deepEqual(result.acceptedT5RaceKeys, ["2024-02-29:10:R1"]);
     assert.deepEqual(result.integrityBlockedRaceKeys, []);
     assert.equal(result.invalidAcceptedMarkerCount, 0);
     assert.ok(result.sourceBlockers.includes("SIDECAR_NOT_FOUND"));
