@@ -121,6 +121,16 @@ function isCanonicalIsoInstant(value: unknown): value is string {
   }
 }
 
+function isValidExplicitIsoInstant(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  try {
+    canonicalUtcTimestamp(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function isCanonicalCalendarDate(value: string): boolean {
   if (!DATE_RE.test(value)) return false;
   const parsed = Date.parse(`${value}T00:00:00.000Z`);
@@ -256,9 +266,20 @@ function loadCheckpoint(
     || envelope.productionApplyExecuted !== false) {
     blockers.push("PRIVATE_ENVELOPE_BOUNDARY_WIDENED");
   }
+  const fetchedAt = envelope.response.fetchedAt;
   const availableAt = envelope.sourceDisplayedUpdate.availableAt;
-  if (typeof availableAt !== "string") blockers.push("PRIVATE_AVAILABLE_AT_MISSING");
-  if (blockers.length > 0) return { status: "BLOCKED", blockers: unique(blockers), snapshot: null };
+  const fetchedAtValid = isValidExplicitIsoInstant(fetchedAt);
+  const availableAtValid = isValidExplicitIsoInstant(availableAt);
+  if (!fetchedAtValid) blockers.push("PRIVATE_FETCHED_AT_INVALID");
+  if (!availableAtValid) blockers.push("PRIVATE_AVAILABLE_AT_INVALID");
+  if (fetchedAtValid && availableAtValid && Date.parse(availableAt) > Date.parse(fetchedAt)) {
+    blockers.push("PRIVATE_AVAILABLE_AT_AFTER_FETCHED_AT");
+  }
+  if (blockers.length > 0 || !fetchedAtValid || !availableAtValid) {
+    return { status: "BLOCKED", blockers: unique(blockers), snapshot: null };
+  }
+  const validatedFetchedAt: string = fetchedAt;
+  const validatedAvailableAt: string = availableAt;
 
   const rawBytes = readFileSync(rawPath);
   const actualSha256 = sha256(rawBytes);
@@ -275,8 +296,8 @@ function loadCheckpoint(
     snapshot: {
       raceIdentity: expectedRaceIdentity,
       checkpointLabel,
-      capturedAt: envelope.response.fetchedAt,
-      availableAt: availableAt!,
+      capturedAt: validatedFetchedAt,
+      availableAt: validatedAvailableAt,
       odds,
     },
   };
