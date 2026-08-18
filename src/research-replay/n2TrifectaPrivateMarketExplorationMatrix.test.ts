@@ -271,3 +271,46 @@ test("rejects rehashed manifests with non-canonical sourceAsOf before feature ar
     });
   }
 });
+
+test("rejects rehashed transition churn inconsistent with retained top-5 count", () => {
+  withRoot((root) => {
+    const { manifestDigest, featurePath } = createManifest(root);
+    const artifact = JSON.parse(readFileSync(featurePath, "utf8")) as any;
+    const transition = artifact.sequence.transitions[0];
+    transition.top5ChurnRate = transition.top5ChurnRate === 0 ? 0.2 : 0;
+    delete transition.outputDigest;
+    transition.outputDigest = canonicalHash(transition);
+    delete artifact.sequence.outputDigest;
+    artifact.sequence.outputDigest = canonicalHash(artifact.sequence);
+    delete artifact.artifactDigest;
+    artifact.artifactDigest = canonicalHash(artifact);
+    writeFileSync(featurePath, `${JSON.stringify(artifact, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
+    chmodSync(featurePath, 0o600);
+
+    const originalManifestPath = join(
+      root,
+      "data/private/trifecta-market-experiments/manifests",
+      `${manifestDigest}.json`,
+    );
+    const manifest = JSON.parse(readFileSync(originalManifestPath, "utf8")) as any;
+    manifest.races[0].featureArtifactDigest = artifact.artifactDigest;
+    delete manifest.manifestDigest;
+    const rehashedManifestDigest = canonicalHash(manifest);
+    manifest.manifestDigest = rehashedManifestDigest;
+    const rehashedManifestPath = join(
+      root,
+      "data/private/trifecta-market-experiments/manifests",
+      `${rehashedManifestDigest}.json`,
+    );
+    writeFileSync(rehashedManifestPath, `${JSON.stringify(manifest, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
+    chmodSync(rehashedManifestPath, 0o600);
+
+    assert.throws(
+      () => buildN2TrifectaPrivateMarketExplorationMatrix({
+        rootDir: root,
+        manifestDigest: rehashedManifestDigest,
+      }),
+      /EXPLORATION_MATRIX_T30_TO_T20_TOP5_CHURN_INCONSISTENT/u,
+    );
+  });
+});
