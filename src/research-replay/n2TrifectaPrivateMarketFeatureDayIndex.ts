@@ -77,11 +77,16 @@ type FeatureArtifactLike = {
   sequence?: {
     featureVersion?: unknown;
     status?: unknown;
+    blockers?: unknown;
     raceIdentity?: unknown;
     availableCheckpoints?: unknown;
     missingCheckpoints?: unknown;
     snapshots?: unknown;
     transitions?: unknown;
+    privateResearchOnly?: unknown;
+    publicPublishAuthorized?: unknown;
+    databaseWriteAuthorized?: unknown;
+    outputDigest?: unknown;
   } | null;
   privateResearchOnly?: unknown;
   publicPublishAuthorized?: unknown;
@@ -181,6 +186,22 @@ function validateArtifactCore(input: {
   }
   if (artifact.sequence.status !== artifact.status) {
     throw new Error(`R${input.raceNo}_SEQUENCE_STATUS_INVALID`);
+  }
+  if (!Array.isArray(artifact.sequence.blockers)
+    || artifact.sequence.blockers.some((blocker) => typeof blocker !== "string")) {
+    throw new Error(`R${input.raceNo}_SEQUENCE_BLOCKERS_INVALID`);
+  }
+  if (artifact.sequence.privateResearchOnly !== true
+    || artifact.sequence.publicPublishAuthorized !== false
+    || artifact.sequence.databaseWriteAuthorized !== false) {
+    throw new Error(`R${input.raceNo}_SEQUENCE_AUTHORITY_INVALID`);
+  }
+  if (typeof artifact.sequence.outputDigest !== "string" || !/^[0-9a-f]{64}$/u.test(artifact.sequence.outputDigest)) {
+    throw new Error(`R${input.raceNo}_SEQUENCE_DIGEST_INVALID`);
+  }
+  const { outputDigest: sequenceDigest, ...sequenceCore } = artifact.sequence;
+  if (canonicalHash(sequenceCore) !== sequenceDigest) {
+    throw new Error(`R${input.raceNo}_SEQUENCE_DIGEST_MISMATCH`);
   }
   const availableCheckpoints = normalizeCheckpointArray(
     artifact.sequence.availableCheckpoints,
