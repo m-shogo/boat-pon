@@ -29,6 +29,17 @@ function canonicalDecisionCutoff(value: unknown): string | null {
   }
 }
 
+function cutoffWithinRaceDate(raceKey: string, cutoff: string): boolean {
+  const match = /^(\d{4}-\d{2}-\d{2}):/u.exec(raceKey);
+  if (match === null) return false;
+  const cutoffMs = Date.parse(cutoff);
+  const raceDateStartJstMs = Date.parse(`${match[1]}T00:00:00+09:00`);
+  return Number.isFinite(cutoffMs)
+    && Number.isFinite(raceDateStartJstMs)
+    && cutoffMs >= raceDateStartJstMs
+    && cutoffMs < raceDateStartJstMs + 24 * 60 * 60 * 1000;
+}
+
 function blockedDataset(
   dataset: N2HistoricalOnlyBaselineDataset,
   blockers: string[],
@@ -68,6 +79,10 @@ export function alignN2HistoricalBaselineToDecisionCutoffs(input: {
     const cutoff = canonicalDecisionCutoff(input.decisionCutoffByRaceKey[raceKey]);
     if (cutoff === null) {
       blockers.push(`${raceKey}:DECISION_CUTOFF_MISSING_OR_INVALID`);
+      continue;
+    }
+    if (!cutoffWithinRaceDate(raceKey, cutoff)) {
+      blockers.push(`${raceKey}:DECISION_CUTOFF_OUTSIDE_RACE_DATE`);
       continue;
     }
     canonicalCutoffByRaceKey[raceKey] = cutoff;
