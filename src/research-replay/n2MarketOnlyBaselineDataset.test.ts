@@ -39,6 +39,16 @@ function source(raceKey: string): N2MarketOnlyBaselineRaceSource {
   };
 }
 
+function sourceAt(raceKey: string, cutoffHour: string): N2MarketOnlyBaselineRaceSource {
+  const date = raceKey.slice(0, 10);
+  return {
+    ...source(raceKey),
+    decisionCutoff: `${date}T${cutoffHour}:00:00.000Z`,
+    capturedAt: `${date}T${cutoffHour}:00:00.000Z`,
+    availableAt: `${date}T${cutoffHour}:00:00.000Z`,
+  };
+}
+
 function twentySources(): N2MarketOnlyBaselineRaceSource[] {
   return [
     ...Array.from({ length: 12 }, (_, index) => source(`2026-08-07:05:R${index + 1}`)),
@@ -46,7 +56,7 @@ function twentySources(): N2MarketOnlyBaselineRaceSource[] {
   ];
 }
 
-test("race-time ordering is numeric within a venue", () => {
+test("race-key tie-break ordering is numeric within a venue", () => {
   const keys = [
     "2026-08-07:05:R10",
     "2026-08-07:05:R2",
@@ -59,6 +69,22 @@ test("race-time ordering is numeric within a venue", () => {
     "2026-08-07:05:R10",
     "2026-08-08:01:R1",
   ]);
+});
+
+test("fixed cohort follows decision cutoff time across venues", () => {
+  const dataset = buildN2MarketOnlyBaselineDataset({
+    cohortRaceCount: 2,
+    sources: [
+      sourceAt("2026-08-07:01:R1", "05"),
+      sourceAt("2026-08-07:02:R1", "03"),
+      sourceAt("2026-08-07:03:R1", "04"),
+    ],
+  });
+  assert.equal(dataset.status, "PASS");
+  assert.equal(dataset.rowCount, 2 * 120);
+  const raceKeys = [...new Set(dataset.rows.map((row) => row.canonicalRaceKey))];
+  assert.deepEqual(raceKeys, ["2026-08-07:02:R1", "2026-08-07:03:R1"]);
+  assert.equal(raceKeys.includes("2026-08-07:01:R1"), false);
 });
 
 test("market-only baseline fixes the initial cohort at 20 settled T-5 races", () => {
