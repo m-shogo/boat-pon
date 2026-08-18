@@ -271,6 +271,9 @@ export function readN2HistoricalTestArtifact(
       );
     }
   }
+  if (confirmation?.authority.roiUsedForConfirmation !== false
+    || confirmation?.authority.payoutUsedForConfirmation !== false
+    || confirmation?.authority.trainLabelsUsedForConfirmation !== false) blockers.push("CONFIRMATION_HOLDOUT_AUTHORITY_INVALID");
   if (confirmation?.authority.forwardLabelsUsedForConfirmation !== false) blockers.push("FORWARD_LABEL_AUTHORITY_INVALID");
   if (confirmation?.authority.automaticPromotionAuthorized !== false) blockers.push("CONFIRMATION_PROMOTION_AUTHORITY_INVALID");
   if (confirmation?.authority.currentBuyConnectionAuthorized !== false

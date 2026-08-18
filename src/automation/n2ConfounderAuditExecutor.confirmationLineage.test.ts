@@ -100,6 +100,9 @@ function writeHistorical(root: string, discovery: unknown, overrides: {
     insufficientCount: 0,
     results: [result],
     authority: {
+      roiUsedForConfirmation: false as const,
+      payoutUsedForConfirmation: false as const,
+      trainLabelsUsedForConfirmation: false as const,
       forwardLabelsUsedForConfirmation: false as const,
       automaticPromotionAuthorized: false as const,
       currentBuyConnectionAuthorized: false as const,

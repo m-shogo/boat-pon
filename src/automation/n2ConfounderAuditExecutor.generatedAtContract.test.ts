@@ -21,6 +21,9 @@ function writeArtifact(root: string, generatedAt: string): void {
     insufficientCount: 0,
     results: [],
     authority: {
+      roiUsedForConfirmation: false,
+      payoutUsedForConfirmation: false,
+      trainLabelsUsedForConfirmation: false,
       forwardLabelsUsedForConfirmation: false,
       automaticPromotionAuthorized: false,
       currentBuyConnectionAuthorized: false,
