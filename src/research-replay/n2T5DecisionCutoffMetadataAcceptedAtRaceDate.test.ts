@@ -18,6 +18,8 @@ function withMarker(acceptedAt: string, fn: (root: string) => void): void {
       checkpointLabel: "T-5",
       envelopeRelativePath: `${base}/fixture.envelope.json`,
       acceptedAt,
+      databaseWriteAuthorized: false,
+      productionApplyExecuted: false,
     })}\n`, "utf8");
     writeFileSync(join(dir, "fixture.envelope.json"), "NOT_VALID_JSON\n", "utf8");
     fn(root);
@@ -28,11 +30,7 @@ function withMarker(acceptedAt: string, fn: (root: string) => void): void {
 
 test("T-5 cutoff metadata rejects a canonical accepted marker from another race date before envelope read", () => {
   withMarker("2026-08-06T03:31:00.000Z", (root) => {
-    const read = readN2T5DecisionCutoffMetadata({
-      dataRoot: root,
-      raceKeys: ["2026-08-07:05:R1"],
-    });
-
+    const read = readN2T5DecisionCutoffMetadata({ dataRoot: root, raceKeys: ["2026-08-07:05:R1"] });
     assert.equal(read.status, "BLOCKED");
     assert.deepEqual(read.blockers, ["2026-08-07:05:R1:ACCEPTED_MARKER_ACCEPTED_AT_INVALID"]);
     assert.deepEqual(read.decisionCutoffByRaceKey, {});
@@ -55,6 +53,8 @@ test("T-5 cutoff metadata accepts a canonical marker inside the JST race date", 
       checkpointLabel: "T-5",
       envelopeRelativePath: `${base}/fixture.envelope.json`,
       acceptedAt: "2026-08-07T03:31:00.000Z",
+      databaseWriteAuthorized: false,
+      productionApplyExecuted: false,
     })}\n`, "utf8");
     writeFileSync(join(dir, "fixture.envelope.json"), `${JSON.stringify({
       envelopeVersion: "n2-trifecta-private-capture-envelope-v1",
@@ -72,16 +72,10 @@ test("T-5 cutoff metadata accepts a canonical marker inside the JST race date", 
       productionApplyExecuted: false,
     })}\n`, "utf8");
 
-    const read = readN2T5DecisionCutoffMetadata({
-      dataRoot: root,
-      raceKeys: ["2026-08-07:05:R1"],
-    });
-
+    const read = readN2T5DecisionCutoffMetadata({ dataRoot: root, raceKeys: ["2026-08-07:05:R1"] });
     assert.equal(read.status, "PASS");
     assert.deepEqual(read.blockers, []);
-    assert.deepEqual(read.decisionCutoffByRaceKey, {
-      "2026-08-07:05:R1": "2026-08-07T03:30:00.000Z",
-    });
+    assert.deepEqual(read.decisionCutoffByRaceKey, { "2026-08-07:05:R1": "2026-08-07T03:30:00.000Z" });
     assert.equal(read.privateEnvelopeMetadataReadCount, 1);
     assert.equal(read.rawOddsValuesRead, false);
   } finally {
