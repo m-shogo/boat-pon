@@ -10,6 +10,7 @@ import {
   type N2TrifectaPrivateMarketReadinessCatalog,
 } from "./n2TrifectaPrivateMarketReadinessCatalog";
 import {
+  canonicalReadinessCatalogGeneratedAt,
   writeVerifiedN2TrifectaPrivateMarketReadinessCatalog,
 } from "./n2TrifectaPrivateMarketReadinessCatalogWriteBoundary";
 
@@ -27,6 +28,33 @@ function rehash(catalog: N2TrifectaPrivateMarketReadinessCatalog): void {
   const { catalogDigest: _catalogDigest, ...core } = record;
   record.catalogDigest = canonicalHash(core);
 }
+
+test("readiness catalog CLI time rejects values JavaScript Date would normalize", () => {
+  for (const value of [
+    "2026-08-19T24:00:00Z",
+    "2026-02-30T00:00:00Z",
+    "2026-08-19T12:00:00",
+  ]) {
+    assert.throws(
+      () => canonicalReadinessCatalogGeneratedAt(value, "2026-08-19T00:00:00.000Z"),
+      /READINESS_CATALOG_GENERATED_AT_INVALID/u,
+    );
+  }
+});
+
+test("readiness catalog CLI time canonicalizes valid explicit offsets and default now", () => {
+  assert.equal(
+    canonicalReadinessCatalogGeneratedAt(
+      "2026-08-19T09:00:00+09:00",
+      "2026-08-19T01:00:00.000Z",
+    ),
+    "2026-08-19T00:00:00.000Z",
+  );
+  assert.equal(
+    canonicalReadinessCatalogGeneratedAt(null, "2026-08-19T01:00:00.000Z"),
+    "2026-08-19T01:00:00.000Z",
+  );
+});
 
 test("valid producer catalog remains writable", () => {
   withRoot((root) => {
