@@ -33,10 +33,10 @@ function syntheticPassReport(): N2TrifectaPrivateMarketFeatureLoadReport {
     publicPublishAuthorized: false as const,
     databaseWriteAuthorized: false as const,
   };
-  return {
+  const core = {
     loaderVersion: "n2-trifecta-private-market-feature-loader-v1",
-    status: "PASS",
-    blockers: [],
+    status: "PASS" as const,
+    blockers: [] as string[],
     date: "2026-08-07",
     venueCode: "10",
     raceNo: 1,
@@ -47,15 +47,15 @@ function syntheticPassReport(): N2TrifectaPrivateMarketFeatureLoadReport {
       ...sequenceCore,
       outputDigest: canonicalHash(sequenceCore),
     } as unknown as N2TrifectaPrivateMarketFeatureLoadReport["sequence"],
-    networkRequestCount: 0,
-    databaseReadCount: 0,
-    databaseWriteCount: 0,
+    networkRequestCount: 0 as const,
+    databaseReadCount: 0 as const,
+    databaseWriteCount: 0 as const,
     rawValuesReadPrivately: true,
-    rawValuesPublished: false,
-    privateResearchOnly: true,
-    publicPublishAuthorized: false,
-    outputDigest: "1".padStart(64, "0"),
+    rawValuesPublished: false as const,
+    privateResearchOnly: true as const,
+    publicPublishAuthorized: false as const,
   };
+  return { ...core, outputDigest: canonicalHash(core) } as N2TrifectaPrivateMarketFeatureLoadReport;
 }
 
 test("day index rejects a rehashed artifact whose nested sequence status contradicts the artifact status", () => {
@@ -70,10 +70,7 @@ test("day index rejects a rehashed artifact whose nested sequence status contrad
     const artifact = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
     const sequence = artifact.sequence as Record<string, unknown>;
     sequence.status = "BLOCKED";
-    const {
-      artifactDigest: _artifactDigest,
-      ...core
-    } = artifact;
+    const { artifactDigest: _artifactDigest, ...core } = artifact;
     artifact.artifactDigest = canonicalHash(core);
     writeFileSync(path, `${JSON.stringify(artifact, null, 2)}\n`, "utf8");
 
