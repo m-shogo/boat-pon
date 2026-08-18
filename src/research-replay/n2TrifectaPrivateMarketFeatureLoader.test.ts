@@ -56,6 +56,7 @@ function writeAcceptedCheckpoint(
   mkdirSync(dir, { recursive: true });
   const raw = Buffer.from(html(options.multiplier ?? 1), "utf8");
   const digest = sha256(raw);
+  const authoritativeDigest = options.corruptMarkerSha ? "0".repeat(64) : digest;
   const rawRelativePath = `${dirRelative}/fixture-${checkpointLabel}.html`;
   const envelopeRelativePath = `${dirRelative}/fixture-${checkpointLabel}.envelope.json`;
   const fetchedAt = options.fetchedAt ?? "2026-08-07T01:00:30.000Z";
@@ -75,7 +76,7 @@ function writeAcceptedCheckpoint(
       contentType: "text/html",
       fetchedAt,
       rawByteLength: raw.length,
-      rawSha256: digest,
+      rawSha256: authoritativeDigest,
       headers: {},
     },
     sourceDisplayedUpdate: {
@@ -106,7 +107,7 @@ function writeAcceptedCheckpoint(
     raceIdentity,
     checkpointLabel,
     rawDocumentId: "raw-fixture",
-    rawSha256: options.corruptMarkerSha ? "0".repeat(64) : digest,
+    rawSha256: authoritativeDigest,
     rawRelativePath,
     envelopeRelativePath,
     acceptedAt: options.acceptedAt ?? fetchedAt,
