@@ -125,6 +125,16 @@ function evaluateSplit(
     }
     if (Number.isSafeInteger(evidence.distinctVenueCount) && evidence.distinctVenueCount > 0
       && Number.isSafeInteger(evidence.maxVenueRaceCount)
+      && evidence.maxVenueRaceCount > evidence.uniqueRaceCount - (evidence.distinctVenueCount - 1)) {
+      malformed.push("MAX_VENUE_RACE_COUNT_LEAVES_NO_SUPPORT_FOR_DISTINCT_VENUES");
+    }
+    if (Number.isSafeInteger(evidence.distinctYearCount) && evidence.distinctYearCount > 0
+      && Number.isSafeInteger(evidence.maxYearRaceCount)
+      && evidence.maxYearRaceCount > evidence.uniqueRaceCount - (evidence.distinctYearCount - 1)) {
+      malformed.push("MAX_YEAR_RACE_COUNT_LEAVES_NO_SUPPORT_FOR_DISTINCT_YEARS");
+    }
+    if (Number.isSafeInteger(evidence.distinctVenueCount) && evidence.distinctVenueCount > 0
+      && Number.isSafeInteger(evidence.maxVenueRaceCount)
       && evidence.maxVenueRaceCount < Math.ceil(evidence.uniqueRaceCount / evidence.distinctVenueCount)) {
       malformed.push("MAX_VENUE_RACE_COUNT_TOO_SMALL_FOR_SUPPORT");
     }
