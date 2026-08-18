@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
+import { canonicalHash } from "./canonical.js";
 import {
   appendN2TrifectaPrivateHeartbeat,
   buildN2TrifectaPrivateHeartbeatRecord,
@@ -44,6 +45,19 @@ function syntheticReport(input: {
     toCheckpointLabel: checkpointLabel,
   }));
   const raceIdentity = `20260807-10-${String(input.raceNo).padStart(2, "0")}`;
+  const sequenceCore = {
+    featureVersion: "n2-trifecta-market-features-v1" as const,
+    status: input.status,
+    blockers: [] as string[],
+    raceIdentity,
+    availableCheckpoints: [...availableCheckpoints],
+    missingCheckpoints: [...missingCheckpoints],
+    snapshots,
+    transitions,
+    privateResearchOnly: true as const,
+    publicPublishAuthorized: false as const,
+    databaseWriteAuthorized: false as const,
+  };
   return {
     loaderVersion: "n2-trifecta-private-market-feature-loader-v1",
     status: input.status,
@@ -55,13 +69,8 @@ function syntheticReport(input: {
     acceptedMarkerCount: availableCheckpoints.length,
     loadedSnapshotCount: availableCheckpoints.length,
     sequence: {
-      featureVersion: "n2-trifecta-market-features-v1",
-      status: input.status,
-      raceIdentity,
-      availableCheckpoints: [...availableCheckpoints],
-      missingCheckpoints: [...missingCheckpoints],
-      snapshots,
-      transitions,
+      ...sequenceCore,
+      outputDigest: canonicalHash(sequenceCore),
     } as unknown as N2TrifectaPrivateMarketFeatureLoadReport["sequence"],
     networkRequestCount: 0,
     databaseReadCount: 0,

@@ -16,6 +16,22 @@ import { buildN2TrifectaPrivateMarketExperimentInputManifest } from
 const checkpoints = ["T-30", "T-20", "T-10", "T-5"] as const;
 
 function passReport(): N2TrifectaPrivateMarketFeatureLoadReport {
+  const sequenceCore = {
+    featureVersion: "n2-trifecta-market-features-v1" as const,
+    status: "PASS" as const,
+    blockers: [] as string[],
+    raceIdentity: "20260807-10-01",
+    availableCheckpoints: [...checkpoints],
+    missingCheckpoints: [] as string[],
+    snapshots: checkpoints.map((checkpointLabel, index) => ({ checkpointLabel, index })),
+    transitions: checkpoints.slice(1).map((checkpointLabel, index) => ({
+      fromCheckpointLabel: checkpoints[index],
+      toCheckpointLabel: checkpointLabel,
+    })),
+    privateResearchOnly: true as const,
+    publicPublishAuthorized: false as const,
+    databaseWriteAuthorized: false as const,
+  };
   return {
     loaderVersion: "n2-trifecta-private-market-feature-loader-v1",
     status: "PASS",
@@ -27,21 +43,8 @@ function passReport(): N2TrifectaPrivateMarketFeatureLoadReport {
     acceptedMarkerCount: 4,
     loadedSnapshotCount: 4,
     sequence: {
-      featureVersion: "n2-trifecta-market-features-v1",
-      status: "PASS",
-      blockers: [],
-      raceIdentity: "20260807-10-01",
-      availableCheckpoints: [...checkpoints],
-      missingCheckpoints: [],
-      snapshots: checkpoints.map((checkpointLabel, index) => ({ checkpointLabel, index })),
-      transitions: checkpoints.slice(1).map((checkpointLabel, index) => ({
-        fromCheckpointLabel: checkpoints[index],
-        toCheckpointLabel: checkpointLabel,
-      })),
-      privateResearchOnly: true,
-      publicPublishAuthorized: false,
-      databaseWriteAuthorized: false,
-      outputDigest: "a".repeat(64),
+      ...sequenceCore,
+      outputDigest: canonicalHash(sequenceCore),
     } as unknown as N2TrifectaPrivateMarketFeatureLoadReport["sequence"],
     networkRequestCount: 0,
     databaseReadCount: 0,
