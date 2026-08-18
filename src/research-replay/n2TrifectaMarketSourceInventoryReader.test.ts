@@ -94,6 +94,25 @@ test("reader inventories a complete raw market source without mutating the DB", 
   });
 });
 
+test("reader rejects impossible official program cohort dates before source inventory queries", () => {
+  withTempDb((path) => {
+    const db = new DatabaseSync(path);
+    try {
+      db.exec(`
+        CREATE TABLE official_programs (date TEXT NOT NULL);
+        INSERT INTO official_programs(date) VALUES ('2026-02-30');
+      `);
+    } finally {
+      db.close();
+    }
+
+    assert.throws(
+      () => readN2TrifectaMarketSourceInventory({ primaryDbPath: path }),
+      /OFFICIAL_PROGRAM_DATE_INVALID/,
+    );
+  });
+});
+
 test("reader exposes aggregate odds sources as lineage-incomplete instead of relabeling them", () => {
   withTempDb((path) => {
     const db = new DatabaseSync(path);
