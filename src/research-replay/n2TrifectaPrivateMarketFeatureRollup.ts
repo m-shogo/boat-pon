@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 
+import { canonicalUtcTimestamp } from "./canonical";
 import { loadN2TrifectaPrivateMarketFeatures } from
   "./n2TrifectaPrivateMarketFeatureLoader";
 import { writeN2TrifectaPrivateMarketFeatureArtifact } from
@@ -106,9 +107,13 @@ export function runN2TrifectaPrivateMarketFeatureRollup(input: {
   dataRoot: string;
   now: string;
 }): N2TrifectaPrivateMarketFeatureRollupReport {
-  const nowMs = Date.parse(input.now);
-  if (!Number.isFinite(nowMs)) throw new Error("FEATURE_ROLLUP_NOW_INVALID");
-  const normalizedNow = new Date(nowMs).toISOString();
+  let normalizedNow: string;
+  try {
+    normalizedNow = canonicalUtcTimestamp(input.now);
+  } catch {
+    throw new Error("FEATURE_ROLLUP_NOW_INVALID");
+  }
+  const nowMs = Date.parse(normalizedNow);
   const date = currentJstDate(new Date(nowMs));
   const dataRoot = resolve(input.dataRoot);
   const planPath = resolve(dataRoot, `data/private/trifecta-capture/plans/${date}.json`);
