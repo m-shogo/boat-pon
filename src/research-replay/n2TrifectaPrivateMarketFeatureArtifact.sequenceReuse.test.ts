@@ -9,10 +9,10 @@ import type { N2TrifectaPrivateMarketFeatureLoadReport } from "./n2TrifectaPriva
 import { writeN2TrifectaPrivateMarketFeatureArtifact } from "./n2TrifectaPrivateMarketFeatureArtifact.js";
 
 function report(): N2TrifectaPrivateMarketFeatureLoadReport {
-  return {
-    loaderVersion: "n2-trifecta-private-market-feature-loader-v1",
-    status: "PASS",
-    blockers: [],
+  const core = {
+    loaderVersion: "n2-trifecta-private-market-feature-loader-v1" as const,
+    status: "PASS" as const,
+    blockers: [] as string[],
     date: "2026-08-07",
     venueCode: "10",
     raceNo: 4,
@@ -33,15 +33,15 @@ function report(): N2TrifectaPrivateMarketFeatureLoadReport {
       databaseWriteAuthorized: false,
       outputDigest: "a".repeat(64),
     } as unknown as N2TrifectaPrivateMarketFeatureLoadReport["sequence"],
-    networkRequestCount: 0,
-    databaseReadCount: 0,
-    databaseWriteCount: 0,
+    networkRequestCount: 0 as const,
+    databaseReadCount: 0 as const,
+    databaseWriteCount: 0 as const,
     rawValuesReadPrivately: true,
-    rawValuesPublished: false,
-    privateResearchOnly: true,
-    publicPublishAuthorized: false,
-    outputDigest: "b".repeat(64),
+    rawValuesPublished: false as const,
+    privateResearchOnly: true as const,
+    publicPublishAuthorized: false as const,
   };
+  return { ...core, outputDigest: canonicalHash(core) };
 }
 
 test("same source digest rebuilds a rehashed artifact whose nested sequence drifted", () => {
