@@ -204,6 +204,7 @@ function reusableArtifactDigest(input: {
   }
   if (generatedAt !== value.generatedAt) return null;
   if (typeof value.sequence !== "object" || value.sequence == null) return null;
+  if (canonicalHash(value.sequence) !== canonicalHash(input.report.sequence)) return null;
   if (value.privateResearchOnly !== true || value.publicPublishAuthorized !== false
     || value.databaseWriteAuthorized !== false || value.currentBuyConnectionAuthorized !== false
     || value.lineConnectionAuthorized !== false || value.automatedBettingAuthorized !== false) {
