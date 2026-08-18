@@ -142,6 +142,8 @@ function writeFixture(
   supportPerSplit: number,
   executorContractVersion: string = N2_EDGE_HISTORICAL_TEST_EXECUTOR_VERSION,
   reportVersion: string | null = N2_EDGE_HISTORICAL_TEST_REPORT_VERSION,
+  databaseWriteCount: number | null = 0,
+  networkRequestCount: number | null = 0,
 ): void {
   const dir = join(root, "reports/n2");
   mkdirSync(dir, { recursive: true });
@@ -178,6 +180,8 @@ function writeFixture(
     },
     confirmation: confirmation(totalPerSplit, supportPerSplit),
     distributionEvidence: distribution(totalPerSplit, supportPerSplit),
+    ...(databaseWriteCount === null ? {} : { databaseWriteCount }),
+    ...(networkRequestCount === null ? {} : { networkRequestCount }),
     authority: {
       automaticPromotionAuthorized: false,
       currentBuyConnectionAuthorized: false,
@@ -204,6 +208,28 @@ test("canonical historical cohort counts remain readable", () => withRoot((root)
   const read = readN2HistoricalTestArtifact(root, { requireCurrentDiscovery: true, requireProducerContract: true });
   assert.deepEqual(read.blockers, []);
   assert.ok(read.artifact);
+}));
+
+test("rehashing cannot claim historical database writes", () => withRoot((root) => {
+  writeFixture(root, 220, 220, N2_EDGE_HISTORICAL_TEST_EXECUTOR_VERSION, N2_EDGE_HISTORICAL_TEST_REPORT_VERSION, 1, 0);
+  const read = readN2HistoricalTestArtifact(root, { requireCurrentDiscovery: true, requireProducerContract: true });
+  assert.equal(read.artifact, null);
+  assert.ok(read.blockers.includes("HISTORICAL_TEST_DATABASE_WRITE_COUNT_INVALID:1"));
+}));
+
+test("rehashing cannot claim historical network requests", () => withRoot((root) => {
+  writeFixture(root, 220, 220, N2_EDGE_HISTORICAL_TEST_EXECUTOR_VERSION, N2_EDGE_HISTORICAL_TEST_REPORT_VERSION, 0, 1);
+  const read = readN2HistoricalTestArtifact(root, { requireCurrentDiscovery: true, requireProducerContract: true });
+  assert.equal(read.artifact, null);
+  assert.ok(read.blockers.includes("HISTORICAL_TEST_NETWORK_REQUEST_COUNT_INVALID:1"));
+}));
+
+test("producer provenance counts are required", () => withRoot((root) => {
+  writeFixture(root, 220, 220, N2_EDGE_HISTORICAL_TEST_EXECUTOR_VERSION, N2_EDGE_HISTORICAL_TEST_REPORT_VERSION, null, null);
+  const read = readN2HistoricalTestArtifact(root, { requireCurrentDiscovery: true, requireProducerContract: true });
+  assert.equal(read.artifact, null);
+  assert.ok(read.blockers.includes("HISTORICAL_TEST_DATABASE_WRITE_COUNT_INVALID:MISSING"));
+  assert.ok(read.blockers.includes("HISTORICAL_TEST_NETWORK_REQUEST_COUNT_INVALID:MISSING"));
 }));
 
 test("rehashing cannot claim more hypothesis support than the persisted cohort", () => withRoot((root) => {

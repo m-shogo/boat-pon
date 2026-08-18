@@ -91,6 +91,8 @@ function writeFixture(root: string, confirmationVersion: string | null): void {
     status: "PASS" as const,
     discoveryArtifactDigest: canonicalHash(discovery),
     confirmation: confirmation(confirmationVersion),
+    databaseWriteCount: 0,
+    networkRequestCount: 0,
     authority: {
       automaticPromotionAuthorized: false as const,
       currentBuyConnectionAuthorized: false as const,
