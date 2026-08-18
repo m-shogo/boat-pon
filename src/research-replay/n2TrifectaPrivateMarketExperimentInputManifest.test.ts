@@ -35,6 +35,7 @@ function report(input: {
 }): N2TrifectaPrivateMarketFeatureLoadReport {
   const available = checkpoints.slice(0, input.availableCount);
   const missing = checkpoints.slice(input.availableCount);
+  const raceIdentity = `${input.date.replaceAll("-", "")}-${input.venueCode}-${String(input.raceNo).padStart(2, "0")}`;
   return {
     loaderVersion: "n2-trifecta-private-market-feature-loader-v1",
     status: input.status,
@@ -42,11 +43,13 @@ function report(input: {
     date: input.date,
     venueCode: input.venueCode,
     raceNo: input.raceNo,
-    raceIdentity: `${input.date.replaceAll("-", "")}-${input.venueCode}-${String(input.raceNo).padStart(2, "0")}`,
+    raceIdentity,
     acceptedMarkerCount: available.length,
     loadedSnapshotCount: available.length,
     sequence: {
+      featureVersion: "n2-trifecta-market-features-v1",
       status: input.status,
+      raceIdentity,
       availableCheckpoints: [...available],
       missingCheckpoints: [...missing],
       snapshots: available.map((checkpointLabel, index) => ({ checkpointLabel, index })),
