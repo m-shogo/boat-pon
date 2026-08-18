@@ -88,6 +88,14 @@ function isValidDecisionCutoff(value: string): boolean {
   return Number.isFinite(Date.parse(value));
 }
 
+function cutoffWithinRaceDate(canonicalRaceKey: string, cutoff: string): boolean {
+  const match = RACE_KEY_RE.exec(canonicalRaceKey);
+  if (match === null || !isCanonicalCalendarDate(match[1]) || !isValidDecisionCutoff(cutoff)) return false;
+  const cutoffMs = Date.parse(cutoff);
+  const raceDateStartJstMs = Date.parse(`${match[1]}T00:00:00+09:00`);
+  return cutoffMs >= raceDateStartJstMs && cutoffMs < raceDateStartJstMs + 24 * 60 * 60 * 1000;
+}
+
 function validateSelectionMap(
   map: Record<string, number>,
   kind: "odds" | "probability",
@@ -253,6 +261,9 @@ export function evaluateN2EconomicMetrics(input: {
   for (const race of input.races) {
     if (!isValidRaceKey(race.canonicalRaceKey)) blockers.push(`${race.canonicalRaceKey}:RACE_KEY_INVALID`);
     if (!isValidDecisionCutoff(race.decisionCutoff)) blockers.push(`${race.canonicalRaceKey}:DECISION_CUTOFF_INVALID`);
+    else if (!cutoffWithinRaceDate(race.canonicalRaceKey, race.decisionCutoff)) {
+      blockers.push(`${race.canonicalRaceKey}:DECISION_CUTOFF_OUTSIDE_RACE_DATE`);
+    }
     if (!SELECTION_SET.has(race.winningSelection)) blockers.push(`${race.canonicalRaceKey}:WINNING_SELECTION_INVALID`);
     if (!Number.isSafeInteger(race.payoutYen) || race.payoutYen < N2_METRICS_FIXED_STAKE_YEN) {
       blockers.push(`${race.canonicalRaceKey}:PAYOUT_INVALID`);
