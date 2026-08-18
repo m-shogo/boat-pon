@@ -3,6 +3,7 @@ import type { N2EdgeHistoricalConfirmationResult } from "./n2EdgeHistoricalConfi
 const ABSOLUTE_TOLERANCE = 1e-12;
 const RELATIVE_TOLERANCE = 1e-9;
 const NUMERIC_ZERO_P_FLOOR = 1e-8;
+const MAX_ABSOLUTE_RACE_RESIDUAL = 1;
 
 type Split = "validation" | "test";
 
@@ -42,6 +43,14 @@ function pValueMatches(actual: number, expected: number): boolean {
   return approximatelyEqual(actual, expected);
 }
 
+function maxStandardErrorForBoundedResiduals(uniqueRaceCount: number): number {
+  if (uniqueRaceCount <= 1) return 0;
+  // Producer residuals are individually constrained to [-1, 1]. Popoviciu's
+  // inequality bounds population variance by 1; converting to sample variance
+  // and then standard error gives SE <= 1 / sqrt(n - 1).
+  return MAX_ABSOLUTE_RACE_RESIDUAL / Math.sqrt(uniqueRaceCount - 1);
+}
+
 function validateSplitStatistic(
   result: N2EdgeHistoricalConfirmationResult,
   split: Split,
@@ -66,8 +75,17 @@ function validateSplitStatistic(
     blockers.push(`HISTORICAL_SPLIT_MEAN_INVALID:${prefix}`);
     return blockers;
   }
+  if (Math.abs(value.meanResidual) > MAX_ABSOLUTE_RACE_RESIDUAL + ABSOLUTE_TOLERANCE) {
+    blockers.push(`HISTORICAL_SPLIT_MEAN_OUT_OF_BOUNDS:${prefix}`);
+    return blockers;
+  }
   if (value.standardError === null || !Number.isFinite(value.standardError) || value.standardError < 0) {
     blockers.push(`HISTORICAL_SPLIT_STANDARD_ERROR_INVALID:${prefix}`);
+    return blockers;
+  }
+  const maxStandardError = maxStandardErrorForBoundedResiduals(value.uniqueRaceCount);
+  if (value.standardError > maxStandardError + ABSOLUTE_TOLERANCE) {
+    blockers.push(`HISTORICAL_SPLIT_STANDARD_ERROR_OUT_OF_BOUNDS:${prefix}`);
     return blockers;
   }
 
