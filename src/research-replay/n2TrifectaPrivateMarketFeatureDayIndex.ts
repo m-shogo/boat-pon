@@ -102,6 +102,13 @@ function resolveInside(rootDir: string, relativePath: string): string {
 
 function validateScope(date: string, venueCode: string): void {
   if (!/^\d{4}-\d{2}-\d{2}$/u.test(date)) throw new Error("PRIVATE_FEATURE_DAY_INDEX_DATE_INVALID");
+  let canonicalDate: string;
+  try {
+    canonicalDate = canonicalUtcTimestamp(`${date}T00:00:00.000Z`).slice(0, 10);
+  } catch {
+    throw new Error("PRIVATE_FEATURE_DAY_INDEX_DATE_INVALID");
+  }
+  if (canonicalDate !== date) throw new Error("PRIVATE_FEATURE_DAY_INDEX_DATE_INVALID");
   if (!/^(0[1-9]|1\d|2[0-4])$/u.test(venueCode)) throw new Error("PRIVATE_FEATURE_DAY_INDEX_VENUE_INVALID");
 }
 
