@@ -223,10 +223,6 @@ function loadCheckpoint(
   if (rawStat.size <= 0 || rawStat.size > MAX_PRIVATE_RAW_BYTES) blockers.push("PRIVATE_RAW_SIZE_INVALID");
   if (blockers.length > 0) return { status: "BLOCKED", blockers: unique(blockers), snapshot: null };
 
-  const rawBytes = readFileSync(rawPath);
-  const actualSha256 = sha256(rawBytes);
-  if (actualSha256 !== marker.rawSha256) blockers.push("PRIVATE_RAW_SHA256_MISMATCH");
-
   let envelope: N2TrifectaPrivateCaptureEnvelope;
   try {
     envelope = readJsonBounded<N2TrifectaPrivateCaptureEnvelope>(envelopePath);
@@ -258,6 +254,11 @@ function loadCheckpoint(
   if (typeof availableAt !== "string") blockers.push("PRIVATE_AVAILABLE_AT_MISSING");
   if (blockers.length > 0) return { status: "BLOCKED", blockers: unique(blockers), snapshot: null };
 
+  const rawBytes = readFileSync(rawPath);
+  const actualSha256 = sha256(rawBytes);
+  if (actualSha256 !== marker.rawSha256) {
+    return { status: "BLOCKED", blockers: ["PRIVATE_RAW_SHA256_MISMATCH"], snapshot: null };
+  }
   const odds = parseAllTrifectaOdds(rawBytes.toString("utf8"));
   if (odds.size !== 120) {
     return { status: "BLOCKED", blockers: ["PRIVATE_REPARSE_SELECTION_COUNT_NOT_120"], snapshot: null };
