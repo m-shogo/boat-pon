@@ -188,6 +188,9 @@ function validateReadinessArtifact(input: {
   if (!(["PASS", "DEGRADED", "NO_DATA", "BLOCKED"] as unknown[]).includes(value.status)) {
     throw new Error("READINESS_CATALOG_ARTIFACT_STATUS_INVALID");
   }
+  if (!Array.isArray(value.blockers) || value.blockers.some((blocker) => typeof blocker !== "string")) {
+    throw new Error("READINESS_CATALOG_ARTIFACT_BLOCKERS_INVALID");
+  }
   if (!(["PASS", "PARTIAL", "NO_DATA"] as unknown[]).includes(value.sourceDayIndexStatus)
     || typeof value.sourceDayIndexDigest !== "string" || !DIGEST_RE.test(value.sourceDayIndexDigest)) {
     throw new Error("READINESS_CATALOG_ARTIFACT_DAY_INDEX_INVALID");
@@ -220,6 +223,16 @@ function validateReadinessArtifact(input: {
     || !isNonNegativeInteger(value.heartbeatAffectedCheckpointCount)
     || typeof value.heartbeatCurrentGapOverThreshold !== "boolean") {
     throw new Error("READINESS_CATALOG_ARTIFACT_HEARTBEAT_INVALID");
+  }
+  const expectedStatus: N2TrifectaPrivateMarketDailyReadinessStatus = value.blockers.length > 0
+    ? "BLOCKED"
+    : value.sourceDayIndexStatus === "NO_DATA"
+      ? "NO_DATA"
+      : value.sourceDayIndexStatus !== "PASS" || value.heartbeatStatus !== "PASS" || value.heartbeatPlanStatus !== "PASS"
+        ? "DEGRADED"
+        : "PASS";
+  if (value.status !== expectedStatus) {
+    throw new Error("READINESS_CATALOG_ARTIFACT_STATUS_INCONSISTENT");
   }
   if (value.automaticFreezeAuthorized !== false
     || value.outcomeDataRead !== false || value.validationDataRead !== false || value.holdoutDataRead !== false
