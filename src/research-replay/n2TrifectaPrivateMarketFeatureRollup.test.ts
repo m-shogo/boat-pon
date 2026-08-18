@@ -56,6 +56,34 @@ function writeValidPlan(root: string): string {
   return plan.manifestDigest;
 }
 
+test("feature rollup rejects normalized or ambiguous now values before day selection", () => {
+  withRoot((root) => {
+    for (const now of [
+      "2026-08-07T24:00:00.000Z",
+      "2026-02-30T01:00:00.000Z",
+      "2026-08-07T01:00:00",
+    ]) {
+      assert.throws(
+        () => runN2TrifectaPrivateMarketFeatureRollup({ dataRoot: root, now }),
+        /FEATURE_ROLLUP_NOW_INVALID/u,
+        now,
+      );
+    }
+  });
+});
+
+test("feature rollup canonicalizes valid explicit-offset now values", () => {
+  withRoot((root) => {
+    const report = runN2TrifectaPrivateMarketFeatureRollup({
+      dataRoot: root,
+      now: "2026-08-07T10:00:00+09:00",
+    });
+    assert.equal(report.status, "NO_CHANGE");
+    assert.equal(report.checkedAt, "2026-08-07T01:00:00.000Z");
+    assert.equal(report.date, "2026-08-07");
+  });
+});
+
 test("missing current-day plan is a quiet NO_CHANGE with no IO or production authority", () => {
   withRoot((root) => {
     const report = runN2TrifectaPrivateMarketFeatureRollup({
