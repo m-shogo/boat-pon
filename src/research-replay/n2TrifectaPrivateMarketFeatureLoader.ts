@@ -183,6 +183,9 @@ function loadCheckpoint(
   }
   if (marker.raceIdentity !== expectedRaceIdentity) blockers.push("ACCEPTED_RACE_IDENTITY_MISMATCH");
   if (marker.checkpointLabel !== checkpointLabel) blockers.push("ACCEPTED_CHECKPOINT_MISMATCH");
+  if (!SHA256_RE.test(marker.manifestDigest)) blockers.push("ACCEPTED_MANIFEST_DIGEST_INVALID");
+  if (!SHA256_RE.test(marker.checkpointKey)) blockers.push("ACCEPTED_CHECKPOINT_KEY_INVALID");
+  if (typeof marker.rawDocumentId !== "string" || marker.rawDocumentId.length < 1) blockers.push("ACCEPTED_RAW_DOCUMENT_ID_INVALID");
   if (!SHA256_RE.test(marker.rawSha256)) blockers.push("ACCEPTED_RAW_SHA256_INVALID");
   if (!isCanonicalIsoInstant(marker.acceptedAt)) blockers.push("ACCEPTED_AT_INVALID");
   if (marker.databaseWriteAuthorized !== false) blockers.push("ACCEPTED_DATABASE_BOUNDARY_WIDENED");
@@ -234,6 +237,9 @@ function loadCheckpoint(
     blockers.push("PRIVATE_ENVELOPE_VERSION_MISMATCH");
   }
   if (envelope.status !== "PASS" || envelope.blockers.length > 0) blockers.push("PRIVATE_ENVELOPE_NOT_PASS");
+  if (envelope.manifestDigest !== marker.manifestDigest) blockers.push("PRIVATE_ENVELOPE_MANIFEST_DIGEST_MISMATCH");
+  if (envelope.checkpointKey !== marker.checkpointKey) blockers.push("PRIVATE_ENVELOPE_CHECKPOINT_KEY_MISMATCH");
+  if (envelope.rawDocumentId !== marker.rawDocumentId) blockers.push("PRIVATE_ENVELOPE_RAW_DOCUMENT_ID_MISMATCH");
   if (envelope.entry.raceIdentity !== expectedRaceIdentity) blockers.push("PRIVATE_ENVELOPE_RACE_MISMATCH");
   if (envelope.entry.checkpointLabel !== checkpointLabel) blockers.push("PRIVATE_ENVELOPE_CHECKPOINT_MISMATCH");
   if (envelope.response.rawSha256 !== marker.rawSha256) blockers.push("PRIVATE_ENVELOPE_SHA_MISMATCH");
