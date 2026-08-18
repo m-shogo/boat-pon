@@ -75,6 +75,21 @@ test("impossible venue and year maxima cannot masquerade as low concentration", 
   assert.ok(report.hypotheses[0].validation.blockers.includes("MAX_YEAR_RACE_COUNT_TOO_SMALL_FOR_SUPPORT"));
 });
 
+test("declared distinct years must retain at least one support race each", () => {
+  const report = evaluateN2EdgeHoldoutConcentration(reportWithValidationGeometry({
+    distinctVenueCount: 17,
+    maxVenueRaceCount: 14,
+    distinctYearCount: 2,
+    maxYearRaceCount: 220,
+  }));
+
+  assert.equal(report.status, "PASS");
+  assert.equal(report.hypotheses[0].status, "BLOCKED");
+  assert.ok(report.hypotheses[0].validation.blockers.includes(
+    "MAX_YEAR_RACE_COUNT_LEAVES_NO_SUPPORT_FOR_DISTINCT_YEARS",
+  ));
+});
+
 test("mathematically possible concentration geometry remains accepted", () => {
   const report = evaluateN2EdgeHoldoutConcentration(reportWithValidationGeometry({
     distinctVenueCount: 17,
