@@ -56,10 +56,10 @@ function completeReport(): N2TrifectaPrivateMarketFeatureLoadReport {
   }));
   const sequence = buildN2TrifectaMarketRaceFeatureSequence(inputs);
   assert.equal(sequence.status, "PASS");
-  return {
-    loaderVersion: "n2-trifecta-private-market-feature-loader-v1",
-    status: "PASS",
-    blockers: [],
+  const reportCore = {
+    loaderVersion: "n2-trifecta-private-market-feature-loader-v1" as const,
+    status: "PASS" as const,
+    blockers: [] as string[],
     date,
     venueCode,
     raceNo,
@@ -67,15 +67,15 @@ function completeReport(): N2TrifectaPrivateMarketFeatureLoadReport {
     acceptedMarkerCount: 4,
     loadedSnapshotCount: 4,
     sequence,
-    networkRequestCount: 0,
-    databaseReadCount: 0,
-    databaseWriteCount: 0,
+    networkRequestCount: 0 as const,
+    databaseReadCount: 0 as const,
+    databaseWriteCount: 0 as const,
     rawValuesReadPrivately: true,
-    rawValuesPublished: false,
-    privateResearchOnly: true,
-    publicPublishAuthorized: false,
-    outputDigest: canonicalHash({ raceIdentity, sequenceDigest: sequence.outputDigest }),
+    rawValuesPublished: false as const,
+    privateResearchOnly: true as const,
+    publicPublishAuthorized: false as const,
   };
+  return { ...reportCore, outputDigest: canonicalHash(reportCore) };
 }
 
 function rehash(record: Record<string, unknown>, field: string): string {

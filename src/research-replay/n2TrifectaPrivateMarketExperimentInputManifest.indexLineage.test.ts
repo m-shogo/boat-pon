@@ -32,10 +32,10 @@ function passReport(): N2TrifectaPrivateMarketFeatureLoadReport {
     publicPublishAuthorized: false as const,
     databaseWriteAuthorized: false as const,
   };
-  return {
-    loaderVersion: "n2-trifecta-private-market-feature-loader-v1",
-    status: "PASS",
-    blockers: [],
+  const reportCore = {
+    loaderVersion: "n2-trifecta-private-market-feature-loader-v1" as const,
+    status: "PASS" as const,
+    blockers: [] as string[],
     date: "2026-08-07",
     venueCode: "10",
     raceNo: 1,
@@ -46,15 +46,15 @@ function passReport(): N2TrifectaPrivateMarketFeatureLoadReport {
       ...sequenceCore,
       outputDigest: canonicalHash(sequenceCore),
     } as unknown as N2TrifectaPrivateMarketFeatureLoadReport["sequence"],
-    networkRequestCount: 0,
-    databaseReadCount: 0,
-    databaseWriteCount: 0,
+    networkRequestCount: 0 as const,
+    databaseReadCount: 0 as const,
+    databaseWriteCount: 0 as const,
     rawValuesReadPrivately: true,
-    rawValuesPublished: false,
-    privateResearchOnly: true,
-    publicPublishAuthorized: false,
-    outputDigest: "b".repeat(64),
+    rawValuesPublished: false as const,
+    privateResearchOnly: true as const,
+    publicPublishAuthorized: false as const,
   };
+  return { ...reportCore, outputDigest: canonicalHash(reportCore) };
 }
 
 test("experiment input rejects a rehashed day index that invents a PASS race", () => {

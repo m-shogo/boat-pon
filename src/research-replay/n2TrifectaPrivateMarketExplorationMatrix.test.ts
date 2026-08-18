@@ -77,9 +77,9 @@ function completeReport(input: {
 }): N2TrifectaPrivateMarketFeatureLoadReport {
   const raceIdentity = `${input.date.replaceAll("-", "")}-${input.venueCode}-${String(input.raceNo).padStart(2, "0")}`;
   const sequence = completeSequence(raceIdentity);
-  return {
-    loaderVersion: "n2-trifecta-private-market-feature-loader-v1",
-    status: "PASS",
+  const core = {
+    loaderVersion: "n2-trifecta-private-market-feature-loader-v1" as const,
+    status: "PASS" as const,
     blockers: [],
     date: input.date,
     venueCode: input.venueCode,
@@ -88,15 +88,15 @@ function completeReport(input: {
     acceptedMarkerCount: 4,
     loadedSnapshotCount: 4,
     sequence,
-    networkRequestCount: 0,
-    databaseReadCount: 0,
-    databaseWriteCount: 0,
+    networkRequestCount: 0 as const,
+    databaseReadCount: 0 as const,
+    databaseWriteCount: 0 as const,
     rawValuesReadPrivately: true,
-    rawValuesPublished: false,
-    privateResearchOnly: true,
-    publicPublishAuthorized: false,
-    outputDigest: canonicalHash({ raceIdentity, sequenceDigest: sequence.outputDigest }),
+    rawValuesPublished: false as const,
+    privateResearchOnly: true as const,
+    publicPublishAuthorized: false as const,
   };
+  return { ...core, outputDigest: canonicalHash(core) };
 }
 
 function createManifest(root: string): { manifestDigest: string; featurePath: string } {

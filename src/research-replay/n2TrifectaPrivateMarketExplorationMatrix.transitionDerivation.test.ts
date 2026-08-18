@@ -70,10 +70,10 @@ function createFixture(root: string): { manifestDigest: string; featurePath: str
   const raceNo = 4;
   const raceIdentity = "20260807-10-04";
   const sequence = sequenceFor(raceIdentity);
-  const report: N2TrifectaPrivateMarketFeatureLoadReport = {
-    loaderVersion: "n2-trifecta-private-market-feature-loader-v1",
-    status: "PASS",
-    blockers: [],
+  const reportCore = {
+    loaderVersion: "n2-trifecta-private-market-feature-loader-v1" as const,
+    status: "PASS" as const,
+    blockers: [] as string[],
     date,
     venueCode,
     raceNo,
@@ -81,14 +81,17 @@ function createFixture(root: string): { manifestDigest: string; featurePath: str
     acceptedMarkerCount: 4,
     loadedSnapshotCount: 4,
     sequence,
-    networkRequestCount: 0,
-    databaseReadCount: 0,
-    databaseWriteCount: 0,
+    networkRequestCount: 0 as const,
+    databaseReadCount: 0 as const,
+    databaseWriteCount: 0 as const,
     rawValuesReadPrivately: true,
-    rawValuesPublished: false,
-    privateResearchOnly: true,
-    publicPublishAuthorized: false,
-    outputDigest: canonicalHash({ raceIdentity, sequenceDigest: sequence.outputDigest }),
+    rawValuesPublished: false as const,
+    privateResearchOnly: true as const,
+    publicPublishAuthorized: false as const,
+  };
+  const report: N2TrifectaPrivateMarketFeatureLoadReport = {
+    ...reportCore,
+    outputDigest: canonicalHash(reportCore),
   };
   const featureWrite = writeN2TrifectaPrivateMarketFeatureArtifact({
     rootDir: root,

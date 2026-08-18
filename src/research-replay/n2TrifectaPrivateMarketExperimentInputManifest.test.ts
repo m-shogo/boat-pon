@@ -52,10 +52,10 @@ function report(input: {
     publicPublishAuthorized: false as const,
     databaseWriteAuthorized: false as const,
   };
-  return {
-    loaderVersion: "n2-trifecta-private-market-feature-loader-v1",
+  const reportCore = {
+    loaderVersion: "n2-trifecta-private-market-feature-loader-v1" as const,
     status: input.status,
-    blockers: [],
+    blockers: [] as string[],
     date: input.date,
     venueCode: input.venueCode,
     raceNo: input.raceNo,
@@ -66,18 +66,15 @@ function report(input: {
       ...sequenceCore,
       outputDigest: canonicalHash(sequenceCore),
     } as unknown as N2TrifectaPrivateMarketFeatureLoadReport["sequence"],
-    networkRequestCount: 0,
-    databaseReadCount: 0,
-    databaseWriteCount: 0,
+    networkRequestCount: 0 as const,
+    databaseReadCount: 0 as const,
+    databaseWriteCount: 0 as const,
     rawValuesReadPrivately: true,
-    rawValuesPublished: false,
-    privateResearchOnly: true,
-    publicPublishAuthorized: false,
-    outputDigest: `${input.date.replaceAll("-", "")}${input.venueCode}${String(input.raceNo).padStart(2, "0")}`
-      .padStart(64, "0")
-      .slice(-64)
-      .replace(/[^0-9a-f]/gu, "a"),
+    rawValuesPublished: false as const,
+    privateResearchOnly: true as const,
+    publicPublishAuthorized: false as const,
   };
+  return { ...reportCore, outputDigest: canonicalHash(reportCore) };
 }
 
 function createDay(input: {
