@@ -195,6 +195,46 @@ test("tampered readiness artifact fails closed", () => {
   });
 });
 
+test("rehashed contradictory readiness status fails closed", () => {
+  withRoot((root) => {
+    const original = readiness({
+      date: "2026-08-07", venueCode: "10", checkedAt: "2026-08-07T05:00:00.000Z",
+      complete: 7, partial: 4, noData: 1, snapshots: 38, transitions: 27,
+    });
+    const { outputDigest: _outputDigest, ...core } = original;
+    const tamperedCore = { ...core, status: "PASS" as const };
+    const tampered = { ...tamperedCore, outputDigest: canonicalHash(tamperedCore) };
+    writeReadiness(root, tampered);
+
+    assert.throws(
+      () => buildN2TrifectaPrivateMarketReadinessCatalog({ dataRoot: root, generatedAt: "2026-08-07T05:10:00.000Z" }),
+      /READINESS_CATALOG_ARTIFACT_STATUS_INCONSISTENT/u,
+    );
+  });
+});
+
+test("rehashed contradictory day index status cannot launder readiness to PASS", () => {
+  withRoot((root) => {
+    const original = readiness({
+      date: "2026-08-07", venueCode: "10", checkedAt: "2026-08-07T05:00:00.000Z",
+      complete: 7, partial: 4, noData: 1, snapshots: 38, transitions: 27,
+    });
+    const { outputDigest: _outputDigest, ...core } = original;
+    const tamperedCore = {
+      ...core,
+      sourceDayIndexStatus: "PASS" as const,
+      status: "PASS" as const,
+    };
+    const tampered = { ...tamperedCore, outputDigest: canonicalHash(tamperedCore) };
+    writeReadiness(root, tampered);
+
+    assert.throws(
+      () => buildN2TrifectaPrivateMarketReadinessCatalog({ dataRoot: root, generatedAt: "2026-08-07T05:10:00.000Z" }),
+      /READINESS_CATALOG_ARTIFACT_DAY_INDEX_STATUS_INCONSISTENT/u,
+    );
+  });
+});
+
 test("permission-widened readiness artifact fails closed", () => {
   withRoot((root) => {
     const relativePath = writeReadiness(root, readiness({
