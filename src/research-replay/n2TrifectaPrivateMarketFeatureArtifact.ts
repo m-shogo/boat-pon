@@ -117,6 +117,10 @@ function validateReport(report: N2TrifectaPrivateMarketFeatureLoadReport): asser
   if (report.outputDigest.length !== 64 || !/^[0-9a-f]+$/u.test(report.outputDigest)) {
     throw new Error("PRIVATE_FEATURE_ARTIFACT_SOURCE_DIGEST_INVALID");
   }
+  const { outputDigest, ...sourceCore } = report;
+  if (canonicalHash(sourceCore) !== outputDigest) {
+    throw new Error("PRIVATE_FEATURE_ARTIFACT_SOURCE_DIGEST_MISMATCH");
+  }
   if (report.networkRequestCount !== 0 || report.databaseReadCount !== 0 || report.databaseWriteCount !== 0) {
     throw new Error("PRIVATE_FEATURE_ARTIFACT_SOURCE_IO_BOUNDARY_INVALID");
   }
