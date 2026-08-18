@@ -154,7 +154,9 @@ export function readN2T5DecisionCutoffMetadata(input: {
       blockers.push(`${raceKey}:ACCEPTED_MARKER_IDENTITY_INVALID`);
       continue;
     }
-    if (typeof marker.acceptedAt !== "string" || !isCanonicalIsoInstant(marker.acceptedAt)) {
+    if (typeof marker.acceptedAt !== "string"
+      || !isCanonicalIsoInstant(marker.acceptedAt)
+      || !cutoffWithinRaceDate(location.date, marker.acceptedAt)) {
       blockers.push(`${raceKey}:ACCEPTED_MARKER_ACCEPTED_AT_INVALID`);
       continue;
     }
