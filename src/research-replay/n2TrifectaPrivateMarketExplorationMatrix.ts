@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { dirname, resolve, sep } from "node:path";
 
-import { canonicalHash } from "./canonical";
+import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import { N2_TRIFECTA_MARKET_FEATURE_VERSION } from "./n2TrifectaMarketFeatureEngineering";
 import { N2_TRIFECTA_PRIVATE_MARKET_FEATURE_ARTIFACT_VERSION } from
   "./n2TrifectaPrivateMarketFeatureArtifact";
@@ -299,7 +299,15 @@ function readManifest(input: {
   if (manifest.manifestDigest !== input.manifestDigest || !canonicalDigestMatches(manifest as Record<string, unknown>, "manifestDigest")) {
     throw new Error("EXPLORATION_MATRIX_MANIFEST_DIGEST_MISMATCH");
   }
-  if (typeof manifest.sourceAsOf !== "string" || !Number.isFinite(Date.parse(manifest.sourceAsOf))) {
+  let canonicalSourceAsOf: string;
+  try {
+    canonicalSourceAsOf = typeof manifest.sourceAsOf === "string"
+      ? canonicalUtcTimestamp(manifest.sourceAsOf)
+      : "";
+  } catch {
+    throw new Error("EXPLORATION_MATRIX_MANIFEST_SOURCE_AS_OF_INVALID");
+  }
+  if (canonicalSourceAsOf.length === 0 || canonicalSourceAsOf !== manifest.sourceAsOf) {
     throw new Error("EXPLORATION_MATRIX_MANIFEST_SOURCE_AS_OF_INVALID");
   }
   if (!Array.isArray(manifest.sourceIndices) || !Array.isArray(manifest.races)) {
@@ -522,7 +530,7 @@ export function buildN2TrifectaPrivateMarketExplorationMatrix(input: {
     coveragePolicy: "FULL_TRAJECTORY_ONLY" as const,
     manifestDigest: input.manifestDigest,
     manifestVersion: N2_TRIFECTA_PRIVATE_MARKET_EXPERIMENT_INPUT_MANIFEST_VERSION,
-    sourceAsOf: new Date(Date.parse(manifest.sourceAsOf as string)).toISOString(),
+    sourceAsOf: manifest.sourceAsOf as string,
     featureSchemaVersion: N2_TRIFECTA_PRIVATE_MARKET_EXPLORATION_FEATURE_SCHEMA_VERSION,
     featureSchemaDigest: N2_TRIFECTA_PRIVATE_MARKET_EXPLORATION_FEATURE_SCHEMA_DIGEST,
     columns: [...N2_TRIFECTA_PRIVATE_MARKET_EXPLORATION_COLUMNS],
