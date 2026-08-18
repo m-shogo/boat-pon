@@ -49,18 +49,20 @@ function inventory(overrides: Partial<N2TrifectaMarketSourceInventory> = {}): N2
 }
 
 function candidate(id = 1, overrides: Partial<N2TrifectaMarketSnapshotCandidate> = {}): N2TrifectaMarketSnapshotCandidate {
-  const race = String(id).padStart(2, "0");
+  const token = String(id).padStart(2, "0");
+  const venue = String(5 + Math.floor((id - 1) / 12)).padStart(2, "0");
+  const race = String(((id - 1) % 12) + 1).padStart(2, "0");
   return {
-    raceId: `20260806-05-${race}`,
+    raceId: `20260806-${venue}-${race}`,
     checkpointLabel: "T-10",
     availableAt: "2026-08-06T03:49:00.000Z",
     capturedAt: "2026-08-06T03:50:00.000Z",
     decisionCutoff: "2026-08-06T04:00:00.000Z",
-    rawDocumentId: `raw-doc-${race}`,
+    rawDocumentId: `raw-doc-${token}`,
     rawPayloadDigest: "a".repeat(64),
-    parseRunId: `parse-${race}`,
+    parseRunId: `parse-${token}`,
     sourceUrl: "https://example.invalid/official-market",
-    proposedObservationId: `obs-${race}`,
+    proposedObservationId: `obs-${token}`,
     odds: buildCanonicalTrifectaSelectionSpace().map((selection, index) => ({ selection, odds: index + 1.5 })),
     ...overrides,
   };
@@ -110,6 +112,29 @@ test("market foundation preserves valid leap-day and explicit-offset PIT timesta
   }));
   assert.equal(audit.status, "PASS");
   assert.equal(audit.pit.status, "PASS");
+});
+
+test("market foundation rejects impossible or out-of-range race identities", () => {
+  for (const raceId of [
+    "20260230-05-01",
+    "20260806-00-01",
+    "20260806-25-01",
+    "20260806-05-00",
+    "20260806-05-13",
+    "20260806-tokyo-01",
+  ]) {
+    const audit = auditN2TrifectaMarketSnapshot(candidate(1, { raceId }));
+    assert.equal(audit.status, "BLOCKED");
+    assert.ok(audit.blockers.includes("RACE_ID_INVALID"));
+    assert.ok(audit.blockers.includes("CHECKPOINT_IDENTITY_UNRESOLVED"));
+    assert.equal(audit.checkpointIdentity, null);
+  }
+});
+
+test("market foundation accepts leap-day boundary race identity", () => {
+  const audit = auditN2TrifectaMarketSnapshot(candidate(1, { raceId: "20280229-24-12" }));
+  assert.equal(audit.status, "PASS");
+  assert.match(audit.checkpointIdentity ?? "", /^[0-9a-f]{64}$/);
 });
 
 test("incomplete payload, duplicate selection, bad odds, and PIT inversion fail closed", () => {
