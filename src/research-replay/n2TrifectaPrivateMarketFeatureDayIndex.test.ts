@@ -1,16 +1,10 @@
 import assert from "node:assert/strict";
-import {
-  chmodSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
+import { canonicalHash } from "./canonical.js";
 import type { N2TrifectaPrivateMarketFeatureLoadReport } from "./n2TrifectaPrivateMarketFeatureLoader.js";
 import { writeN2TrifectaPrivateMarketFeatureArtifact } from "./n2TrifectaPrivateMarketFeatureArtifact.js";
 import {
@@ -21,22 +15,28 @@ import {
 
 const checkpoints = ["T-30", "T-20", "T-10", "T-5"] as const;
 
-function syntheticReport(input: {
-  raceNo: number;
-  status: "PASS" | "PARTIAL";
-  availableCount: number;
-}): N2TrifectaPrivateMarketFeatureLoadReport {
+function syntheticReport(input: { raceNo: number; status: "PASS" | "PARTIAL"; availableCount: number }): N2TrifectaPrivateMarketFeatureLoadReport {
   const availableCheckpoints = checkpoints.slice(0, input.availableCount);
   const missingCheckpoints = checkpoints.slice(input.availableCount);
-  const snapshots = availableCheckpoints.map((checkpointLabel, index) => ({
-    checkpointLabel,
-    syntheticSnapshotIndex: index,
-  }));
+  const snapshots = availableCheckpoints.map((checkpointLabel, index) => ({ checkpointLabel, syntheticSnapshotIndex: index }));
   const transitions = availableCheckpoints.slice(1).map((checkpointLabel, index) => ({
     fromCheckpointLabel: availableCheckpoints[index],
     toCheckpointLabel: checkpointLabel,
   }));
   const raceIdentity = `20260807-10-${String(input.raceNo).padStart(2, "0")}`;
+  const sequenceCore = {
+    featureVersion: "n2-trifecta-market-features-v1" as const,
+    status: input.status,
+    blockers: [] as string[],
+    raceIdentity,
+    availableCheckpoints: [...availableCheckpoints],
+    missingCheckpoints: [...missingCheckpoints],
+    snapshots,
+    transitions,
+    privateResearchOnly: true as const,
+    publicPublishAuthorized: false as const,
+    databaseWriteAuthorized: false as const,
+  };
   return {
     loaderVersion: "n2-trifecta-private-market-feature-loader-v1",
     status: input.status,
@@ -47,15 +47,7 @@ function syntheticReport(input: {
     raceIdentity,
     acceptedMarkerCount: availableCheckpoints.length,
     loadedSnapshotCount: availableCheckpoints.length,
-    sequence: {
-      featureVersion: "n2-trifecta-market-features-v1",
-      status: input.status,
-      raceIdentity,
-      availableCheckpoints: [...availableCheckpoints],
-      missingCheckpoints: [...missingCheckpoints],
-      snapshots,
-      transitions,
-    } as unknown as N2TrifectaPrivateMarketFeatureLoadReport["sequence"],
+    sequence: { ...sequenceCore, outputDigest: canonicalHash(sequenceCore) } as unknown as N2TrifectaPrivateMarketFeatureLoadReport["sequence"],
     networkRequestCount: 0,
     databaseReadCount: 0,
     databaseWriteCount: 0,
@@ -69,33 +61,14 @@ function syntheticReport(input: {
 
 function withRoot(run: (root: string) => void): void {
   const root = mkdtempSync(join(tmpdir(), "boat-pon-market-feature-day-index-"));
-  try {
-    run(root);
-  } finally {
-    rmSync(root, { recursive: true, force: true });
-  }
+  try { run(root); } finally { rmSync(root, { recursive: true, force: true }); }
 }
 
 test("day index verifies private v2 artifacts and summarizes coverage without feature vectors", () => {
   withRoot((root) => {
-    writeN2TrifectaPrivateMarketFeatureArtifact({
-      rootDir: root,
-      report: syntheticReport({ raceNo: 1, status: "PASS", availableCount: 4 }),
-      generatedAt: "2026-08-07T02:00:00.000Z",
-    });
-    writeN2TrifectaPrivateMarketFeatureArtifact({
-      rootDir: root,
-      report: syntheticReport({ raceNo: 2, status: "PARTIAL", availableCount: 2 }),
-      generatedAt: "2026-08-07T02:01:00.000Z",
-    });
-
-    const index = buildN2TrifectaPrivateMarketFeatureDayIndex({
-      rootDir: root,
-      date: "2026-08-07",
-      venueCode: "10",
-      generatedAt: "2026-08-07T02:05:00.000Z",
-    });
-
+    writeN2TrifectaPrivateMarketFeatureArtifact({ rootDir: root, report: syntheticReport({ raceNo: 1, status: "PASS", availableCount: 4 }), generatedAt: "2026-08-07T02:00:00.000Z" });
+    writeN2TrifectaPrivateMarketFeatureArtifact({ rootDir: root, report: syntheticReport({ raceNo: 2, status: "PARTIAL", availableCount: 2 }), generatedAt: "2026-08-07T02:01:00.000Z" });
+    const index = buildN2TrifectaPrivateMarketFeatureDayIndex({ rootDir: root, date: "2026-08-07", venueCode: "10", generatedAt: "2026-08-07T02:05:00.000Z" });
     assert.equal(index.indexVersion, N2_TRIFECTA_PRIVATE_MARKET_FEATURE_DAY_INDEX_VERSION);
     assert.equal(index.status, "PARTIAL");
     assert.equal(index.raceCount, 12);
@@ -122,10 +95,7 @@ test("day index verifies private v2 artifacts and summarizes coverage without fe
     assert.equal(index.currentBuyConnectionAuthorized, false);
     assert.equal(index.lineConnectionAuthorized, false);
     assert.equal(index.automatedBettingAuthorized, false);
-
-    const serialized = JSON.stringify(index);
-    assert.doesNotMatch(serialized, /syntheticSnapshotIndex|fromCheckpointLabel|toCheckpointLabel/u);
-
+    assert.doesNotMatch(JSON.stringify(index), /syntheticSnapshotIndex|fromCheckpointLabel|toCheckpointLabel/u);
     const written = writeN2TrifectaPrivateMarketFeatureDayIndex({ rootDir: root, index });
     assert.equal(written.changed, true);
     const path = join(root, written.relativePath);
@@ -137,17 +107,8 @@ test("day index verifies private v2 artifacts and summarizes coverage without fe
 
 test("same deterministic index is idempotent", () => {
   withRoot((root) => {
-    writeN2TrifectaPrivateMarketFeatureArtifact({
-      rootDir: root,
-      report: syntheticReport({ raceNo: 4, status: "PASS", availableCount: 4 }),
-      generatedAt: "2026-08-07T02:00:00.000Z",
-    });
-    const index = buildN2TrifectaPrivateMarketFeatureDayIndex({
-      rootDir: root,
-      date: "2026-08-07",
-      venueCode: "10",
-      generatedAt: "2026-08-07T02:05:00.000Z",
-    });
+    writeN2TrifectaPrivateMarketFeatureArtifact({ rootDir: root, report: syntheticReport({ raceNo: 4, status: "PASS", availableCount: 4 }), generatedAt: "2026-08-07T02:00:00.000Z" });
+    const index = buildN2TrifectaPrivateMarketFeatureDayIndex({ rootDir: root, date: "2026-08-07", venueCode: "10", generatedAt: "2026-08-07T02:05:00.000Z" });
     const first = writeN2TrifectaPrivateMarketFeatureDayIndex({ rootDir: root, index });
     const second = writeN2TrifectaPrivateMarketFeatureDayIndex({ rootDir: root, index });
     assert.equal(first.changed, true);
@@ -158,24 +119,10 @@ test("same deterministic index is idempotent", () => {
 
 test("semantically identical index reuses existing digest across generatedAt changes", () => {
   withRoot((root) => {
-    writeN2TrifectaPrivateMarketFeatureArtifact({
-      rootDir: root,
-      report: syntheticReport({ raceNo: 4, status: "PASS", availableCount: 4 }),
-      generatedAt: "2026-08-07T02:00:00.000Z",
-    });
-    const firstIndex = buildN2TrifectaPrivateMarketFeatureDayIndex({
-      rootDir: root,
-      date: "2026-08-07",
-      venueCode: "10",
-      generatedAt: "2026-08-07T02:05:00.000Z",
-    });
+    writeN2TrifectaPrivateMarketFeatureArtifact({ rootDir: root, report: syntheticReport({ raceNo: 4, status: "PASS", availableCount: 4 }), generatedAt: "2026-08-07T02:00:00.000Z" });
+    const firstIndex = buildN2TrifectaPrivateMarketFeatureDayIndex({ rootDir: root, date: "2026-08-07", venueCode: "10", generatedAt: "2026-08-07T02:05:00.000Z" });
     const first = writeN2TrifectaPrivateMarketFeatureDayIndex({ rootDir: root, index: firstIndex });
-    const laterIndex = buildN2TrifectaPrivateMarketFeatureDayIndex({
-      rootDir: root,
-      date: "2026-08-07",
-      venueCode: "10",
-      generatedAt: "2026-08-07T02:10:00.000Z",
-    });
+    const laterIndex = buildN2TrifectaPrivateMarketFeatureDayIndex({ rootDir: root, date: "2026-08-07", venueCode: "10", generatedAt: "2026-08-07T02:10:00.000Z" });
     assert.notEqual(laterIndex.indexDigest, firstIndex.indexDigest);
     const second = writeN2TrifectaPrivateMarketFeatureDayIndex({ rootDir: root, index: laterIndex });
     assert.equal(second.changed, false);
@@ -188,29 +135,14 @@ test("semantically identical index reuses existing digest across generatedAt cha
 
 test("tampered existing index is rebuilt instead of semantically reused", () => {
   withRoot((root) => {
-    writeN2TrifectaPrivateMarketFeatureArtifact({
-      rootDir: root,
-      report: syntheticReport({ raceNo: 4, status: "PASS", availableCount: 4 }),
-      generatedAt: "2026-08-07T02:00:00.000Z",
-    });
-    const firstIndex = buildN2TrifectaPrivateMarketFeatureDayIndex({
-      rootDir: root,
-      date: "2026-08-07",
-      venueCode: "10",
-      generatedAt: "2026-08-07T02:05:00.000Z",
-    });
+    writeN2TrifectaPrivateMarketFeatureArtifact({ rootDir: root, report: syntheticReport({ raceNo: 4, status: "PASS", availableCount: 4 }), generatedAt: "2026-08-07T02:00:00.000Z" });
+    const firstIndex = buildN2TrifectaPrivateMarketFeatureDayIndex({ rootDir: root, date: "2026-08-07", venueCode: "10", generatedAt: "2026-08-07T02:05:00.000Z" });
     const first = writeN2TrifectaPrivateMarketFeatureDayIndex({ rootDir: root, index: firstIndex });
     const path = join(root, first.relativePath);
     const tampered = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
     tampered.generatedAt = "2026-08-07T02:06:00.000Z";
     writeFileSync(path, `${JSON.stringify(tampered, null, 2)}\n`, "utf8");
-
-    const laterIndex = buildN2TrifectaPrivateMarketFeatureDayIndex({
-      rootDir: root,
-      date: "2026-08-07",
-      venueCode: "10",
-      generatedAt: "2026-08-07T02:10:00.000Z",
-    });
+    const laterIndex = buildN2TrifectaPrivateMarketFeatureDayIndex({ rootDir: root, date: "2026-08-07", venueCode: "10", generatedAt: "2026-08-07T02:10:00.000Z" });
     const second = writeN2TrifectaPrivateMarketFeatureDayIndex({ rootDir: root, index: laterIndex });
     assert.equal(second.changed, true);
     assert.equal(second.indexDigest, laterIndex.indexDigest);
@@ -222,34 +154,15 @@ test("tampered existing index is rebuilt instead of semantically reused", () => 
 
 test("tampered or permission-widened feature artifacts fail closed", () => {
   withRoot((root) => {
-    const write = writeN2TrifectaPrivateMarketFeatureArtifact({
-      rootDir: root,
-      report: syntheticReport({ raceNo: 3, status: "PASS", availableCount: 4 }),
-      generatedAt: "2026-08-07T02:00:00.000Z",
-    });
+    const write = writeN2TrifectaPrivateMarketFeatureArtifact({ rootDir: root, report: syntheticReport({ raceNo: 3, status: "PASS", availableCount: 4 }), generatedAt: "2026-08-07T02:00:00.000Z" });
     const path = join(root, write.relativePath);
     const artifact = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
     artifact.publicPublishAuthorized = true;
     writeFileSync(path, `${JSON.stringify(artifact, null, 2)}\n`, "utf8");
-    assert.throws(
-      () => buildN2TrifectaPrivateMarketFeatureDayIndex({
-        rootDir: root,
-        date: "2026-08-07",
-        venueCode: "10",
-      }),
-      /R3_PROTECTED_BOUNDARY_INVALID/u,
-    );
-
+    assert.throws(() => buildN2TrifectaPrivateMarketFeatureDayIndex({ rootDir: root, date: "2026-08-07", venueCode: "10" }), /R3_PROTECTED_BOUNDARY_INVALID/u);
     artifact.publicPublishAuthorized = false;
     writeFileSync(path, `${JSON.stringify(artifact, null, 2)}\n`, "utf8");
     chmodSync(path, 0o644);
-    assert.throws(
-      () => buildN2TrifectaPrivateMarketFeatureDayIndex({
-        rootDir: root,
-        date: "2026-08-07",
-        venueCode: "10",
-      }),
-      /R3_FEATURE_FILE_MODE_INVALID/u,
-    );
+    assert.throws(() => buildN2TrifectaPrivateMarketFeatureDayIndex({ rootDir: root, date: "2026-08-07", venueCode: "10" }), /R3_FEATURE_FILE_MODE_INVALID/u);
   });
 });
