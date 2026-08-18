@@ -133,6 +133,16 @@ function evaluateSplit(
       && evidence.maxYearRaceCount < Math.ceil(evidence.uniqueRaceCount / evidence.distinctYearCount)) {
       malformed.push("MAX_YEAR_RACE_COUNT_TOO_SMALL_FOR_SUPPORT");
     }
+    if (Number.isSafeInteger(evidence.distinctYearCount) && evidence.distinctYearCount > 0
+      && Number.isSafeInteger(evidence.maxVenueRaceCount)
+      && evidence.maxVenueRaceCount > evidence.distinctYearCount * N2_EDGE_HOLDOUT_RACES_PER_VENUE_YEAR) {
+      malformed.push("MAX_VENUE_RACE_COUNT_EXCEEDS_YEAR_CAPACITY");
+    }
+    if (Number.isSafeInteger(evidence.distinctVenueCount) && evidence.distinctVenueCount > 0
+      && Number.isSafeInteger(evidence.maxYearRaceCount)
+      && evidence.maxYearRaceCount > evidence.distinctVenueCount * N2_EDGE_HOLDOUT_RACES_PER_VENUE_YEAR) {
+      malformed.push("MAX_YEAR_RACE_COUNT_EXCEEDS_VENUE_CAPACITY");
+    }
   }
   if (!shareMatchesCount(evidence.maxVenueShare, evidence.maxVenueRaceCount, evidence.uniqueRaceCount)) {
     malformed.push("MAX_VENUE_SHARE_COUNT_MISMATCH");
