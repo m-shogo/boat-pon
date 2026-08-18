@@ -13,8 +13,10 @@ import { dirname, resolve, sep } from "node:path";
 import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import { N2_TRIFECTA_PRIVATE_MARKET_FEATURE_ARTIFACT_VERSION } from
   "./n2TrifectaPrivateMarketFeatureArtifact";
-import { N2_TRIFECTA_PRIVATE_MARKET_FEATURE_DAY_INDEX_VERSION } from
-  "./n2TrifectaPrivateMarketFeatureDayIndex";
+import {
+  N2_TRIFECTA_PRIVATE_MARKET_FEATURE_DAY_INDEX_VERSION,
+  buildN2TrifectaPrivateMarketFeatureDayIndex,
+} from "./n2TrifectaPrivateMarketFeatureDayIndex";
 
 export const N2_TRIFECTA_PRIVATE_MARKET_EXPERIMENT_INPUT_MANIFEST_VERSION =
   "n2-trifecta-private-market-experiment-input-manifest-v1" as const;
@@ -186,6 +188,14 @@ function readDayIndex(input: {
   }
   const { indexDigest, ...core } = index as DayIndexLike & { indexDigest: string };
   if (canonicalHash(core) !== indexDigest) throw new Error("DAY_INDEX_DIGEST_MISMATCH");
+
+  const rebuilt = buildN2TrifectaPrivateMarketFeatureDayIndex({
+    rootDir: input.rootDir,
+    date: input.scope.date,
+    venueCode: input.scope.venueCode,
+    generatedAt: indexGeneratedAt,
+  });
+  if (rebuilt.indexDigest !== indexDigest) throw new Error("DAY_INDEX_SOURCE_LINEAGE_MISMATCH");
 
   const passCount = Number(index.passCount);
   const partialCount = Number(index.partialCount);
