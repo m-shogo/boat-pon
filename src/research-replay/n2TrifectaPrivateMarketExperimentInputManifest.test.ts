@@ -285,3 +285,22 @@ test("rehashed non-canonical day index times fail closed before manifest lineage
     }
   });
 });
+
+test("impossible scope dates fail closed before private day index lookup", () => {
+  withRoot((root) => {
+    assert.throws(
+      () => buildN2TrifectaPrivateMarketExperimentInputManifest({
+        rootDir: root,
+        scopes: [{ date: "2026-02-30", venueCode: "10" }],
+      }),
+      /EXPERIMENT_INPUT_DATE_INVALID/u,
+    );
+    assert.throws(
+      () => buildN2TrifectaPrivateMarketExperimentInputManifest({
+        rootDir: root,
+        scopes: [{ date: "2028-02-29", venueCode: "10" }],
+      }),
+      /DAY_INDEX_MISSING:2028-02-29:10/u,
+    );
+  });
+});

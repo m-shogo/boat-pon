@@ -131,6 +131,12 @@ function resolveInside(rootDir: string, relativePath: string): string {
 
 function validateScope(scope: N2TrifectaExperimentInputScope): void {
   if (!/^\d{4}-\d{2}-\d{2}$/u.test(scope.date)) throw new Error("EXPERIMENT_INPUT_DATE_INVALID");
+  try {
+    const canonicalDate = canonicalUtcTimestamp(`${scope.date}T00:00:00.000Z`).slice(0, 10);
+    if (canonicalDate !== scope.date) throw new Error("EXPERIMENT_INPUT_DATE_INVALID");
+  } catch {
+    throw new Error("EXPERIMENT_INPUT_DATE_INVALID");
+  }
   if (!/^(0[1-9]|1\d|2[0-4])$/u.test(scope.venueCode)) throw new Error("EXPERIMENT_INPUT_VENUE_INVALID");
 }
 
