@@ -110,6 +110,34 @@ function createFixture(root: string): { manifestDigest: string; featurePath: str
   return { manifestDigest: manifest.manifestDigest, featurePath: join(root, featureWrite.relativePath) };
 }
 
+function writeRehashedManifest(input: {
+  root: string;
+  manifestDigest: string;
+  mutate: (manifest: any) => void;
+}): string {
+  const manifestPath = join(
+    input.root,
+    "data/private/trifecta-market-experiments/manifests",
+    `${input.manifestDigest}.json`,
+  );
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as any;
+  input.mutate(manifest);
+  delete manifest.manifestDigest;
+  const rehashedManifestDigest = canonicalHash(manifest);
+  manifest.manifestDigest = rehashedManifestDigest;
+  const rehashedManifestPath = join(
+    input.root,
+    "data/private/trifecta-market-experiments/manifests",
+    `${rehashedManifestDigest}.json`,
+  );
+  writeFileSync(rehashedManifestPath, `${JSON.stringify(manifest, null, 2)}\n`, {
+    encoding: "utf8",
+    mode: 0o600,
+  });
+  chmodSync(rehashedManifestPath, 0o600);
+  return rehashedManifestDigest;
+}
+
 test("rejects a fully rehashed transition whose aggregates do not derive from adjacent snapshots", () => {
   const root = mkdtempSync(join(tmpdir(), "boat-pon-transition-derivation-"));
   try {
@@ -126,26 +154,13 @@ test("rejects a fully rehashed transition whose aggregates do not derive from ad
     writeFileSync(featurePath, `${JSON.stringify(artifact, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
     chmodSync(featurePath, 0o600);
 
-    const manifestPath = join(
+    const rehashedManifestDigest = writeRehashedManifest({
       root,
-      "data/private/trifecta-market-experiments/manifests",
-      `${manifestDigest}.json`,
-    );
-    const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as any;
-    manifest.races[0].featureArtifactDigest = artifact.artifactDigest;
-    delete manifest.manifestDigest;
-    const rehashedManifestDigest = canonicalHash(manifest);
-    manifest.manifestDigest = rehashedManifestDigest;
-    const rehashedManifestPath = join(
-      root,
-      "data/private/trifecta-market-experiments/manifests",
-      `${rehashedManifestDigest}.json`,
-    );
-    writeFileSync(rehashedManifestPath, `${JSON.stringify(manifest, null, 2)}\n`, {
-      encoding: "utf8",
-      mode: 0o600,
+      manifestDigest,
+      mutate: (manifest) => {
+        manifest.races[0].featureArtifactDigest = artifact.artifactDigest;
+      },
     });
-    chmodSync(rehashedManifestPath, 0o600);
 
     assert.throws(
       () => buildN2TrifectaPrivateMarketExplorationMatrix({
@@ -170,28 +185,15 @@ test("rejects producer-impossible manifest race fields before reading a relocate
     writeFileSync(impossibleFeaturePath, readFileSync(featurePath), { mode: 0o600 });
     chmodSync(impossibleFeaturePath, 0o600);
 
-    const manifestPath = join(
+    const rehashedManifestDigest = writeRehashedManifest({
       root,
-      "data/private/trifecta-market-experiments/manifests",
-      `${manifestDigest}.json`,
-    );
-    const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as any;
-    manifest.races[0].raceNo = 14;
-    manifest.races[0].featureArtifactRelativePath =
-      "data/private/trifecta-market-features/2026-08-07/10/14.json";
-    delete manifest.manifestDigest;
-    const rehashedManifestDigest = canonicalHash(manifest);
-    manifest.manifestDigest = rehashedManifestDigest;
-    const rehashedManifestPath = join(
-      root,
-      "data/private/trifecta-market-experiments/manifests",
-      `${rehashedManifestDigest}.json`,
-    );
-    writeFileSync(rehashedManifestPath, `${JSON.stringify(manifest, null, 2)}\n`, {
-      encoding: "utf8",
-      mode: 0o600,
+      manifestDigest,
+      mutate: (manifest) => {
+        manifest.races[0].raceNo = 14;
+        manifest.races[0].featureArtifactRelativePath =
+          "data/private/trifecta-market-features/2026-08-07/10/14.json";
+      },
     });
-    chmodSync(rehashedManifestPath, 0o600);
 
     assert.throws(
       () => buildN2TrifectaPrivateMarketExplorationMatrix({
@@ -199,6 +201,37 @@ test("rejects producer-impossible manifest race fields before reading a relocate
         manifestDigest: rehashedManifestDigest,
       }),
       /EXPLORATION_MATRIX_RACE_FIELDS_INVALID/u,
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("rejects rehashed feature artifacts with non-canonical generatedAt", () => {
+  const root = mkdtempSync(join(tmpdir(), "boat-pon-exploration-artifact-time-"));
+  try {
+    const { manifestDigest, featurePath } = createFixture(root);
+    const artifact = JSON.parse(readFileSync(featurePath, "utf8")) as any;
+    artifact.generatedAt = "2026-08-07T12:00:00.000+09:00";
+    delete artifact.artifactDigest;
+    artifact.artifactDigest = canonicalHash(artifact);
+    writeFileSync(featurePath, `${JSON.stringify(artifact, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
+    chmodSync(featurePath, 0o600);
+
+    const rehashedManifestDigest = writeRehashedManifest({
+      root,
+      manifestDigest,
+      mutate: (manifest) => {
+        manifest.races[0].featureArtifactDigest = artifact.artifactDigest;
+      },
+    });
+
+    assert.throws(
+      () => buildN2TrifectaPrivateMarketExplorationMatrix({
+        rootDir: root,
+        manifestDigest: rehashedManifestDigest,
+      }),
+      /EXPLORATION_MATRIX_FEATURE_GENERATED_AT_INVALID/u,
     );
   } finally {
     rmSync(root, { recursive: true, force: true });
