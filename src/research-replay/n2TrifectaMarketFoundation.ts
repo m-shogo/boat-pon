@@ -168,8 +168,19 @@ function isNonEmpty(value: string): boolean {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function isCanonicalCompactRaceDate(value: string): boolean {
+  if (!/^\d{8}$/.test(value)) return false;
+  const isoDate = `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}`;
+  try {
+    return canonicalUtcTimestamp(`${isoDate}T00:00:00.000Z`).slice(0, 10) === isoDate;
+  } catch {
+    return false;
+  }
+}
+
 function isRaceId(value: string): boolean {
-  return /^\d{8}-(?:\d{2}|[^-]+)-\d{2}$/.test(value);
+  const match = /^(\d{8})-(0[1-9]|1\d|2[0-4])-(0[1-9]|1[0-2])$/.exec(value);
+  return match !== null && isCanonicalCompactRaceDate(match[1]);
 }
 
 export function buildCanonicalTrifectaSelectionSpace(): string[] {
