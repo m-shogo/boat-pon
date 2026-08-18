@@ -82,6 +82,15 @@ function resolveInside(rootDir: string, relativePath: string): string {
   return target;
 }
 
+function canonicalRaceDate(date: string): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/u.test(date)) return null;
+  try {
+    return canonicalUtcTimestamp(`${date}T00:00:00.000Z`).slice(0, 10) === date ? date : null;
+  } catch {
+    return null;
+  }
+}
+
 function validateReport(report: N2TrifectaPrivateMarketFeatureLoadReport): asserts report is
   N2TrifectaPrivateMarketFeatureLoadReport & { status: "PASS" | "PARTIAL" } {
   if (report.status !== "PASS" && report.status !== "PARTIAL") {
@@ -89,6 +98,15 @@ function validateReport(report: N2TrifectaPrivateMarketFeatureLoadReport): asser
   }
   if (!/^\d{8}-(0[1-9]|1\d|2[0-4])-\d{2}$/u.test(report.raceIdentity)) {
     throw new Error("PRIVATE_FEATURE_ARTIFACT_RACE_IDENTITY_INVALID");
+  }
+  if (canonicalRaceDate(report.date) == null
+    || !/^(0[1-9]|1\d|2[0-4])$/u.test(report.venueCode)
+    || !Number.isSafeInteger(report.raceNo) || report.raceNo < 1 || report.raceNo > 12) {
+    throw new Error("PRIVATE_FEATURE_ARTIFACT_RACE_FIELDS_INVALID");
+  }
+  const expectedRaceIdentity = `${report.date.replaceAll("-", "")}-${report.venueCode}-${String(report.raceNo).padStart(2, "0")}`;
+  if (report.raceIdentity !== expectedRaceIdentity) {
+    throw new Error("PRIVATE_FEATURE_ARTIFACT_RACE_LINEAGE_MISMATCH");
   }
   if (report.outputDigest.length !== 64 || !/^[0-9a-f]+$/u.test(report.outputDigest)) {
     throw new Error("PRIVATE_FEATURE_ARTIFACT_SOURCE_DIGEST_INVALID");
@@ -107,7 +125,7 @@ export function privateMarketFeatureArtifactRelativePath(input: {
   venueCode: string;
   raceNo: number;
 }): string {
-  if (!/^\d{4}-\d{2}-\d{2}$/u.test(input.date)) throw new Error("PRIVATE_FEATURE_DATE_INVALID");
+  if (canonicalRaceDate(input.date) == null) throw new Error("PRIVATE_FEATURE_DATE_INVALID");
   if (!/^(0[1-9]|1\d|2[0-4])$/u.test(input.venueCode)) throw new Error("PRIVATE_FEATURE_VENUE_INVALID");
   if (!Number.isSafeInteger(input.raceNo) || input.raceNo < 1 || input.raceNo > 12) {
     throw new Error("PRIVATE_FEATURE_RACE_NO_INVALID");
