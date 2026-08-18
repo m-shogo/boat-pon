@@ -283,6 +283,23 @@ test("private source reader rejects impossible envelope timing metadata", () => 
   }
 });
 
+test("private source reader rejects cross-date envelope metadata before raw SHA validation", () => {
+  withRoot((root) => {
+    prepare(root, 20, 0, (index) => index === 0 ? {
+      decisionCutoff: "2026-08-08T03:30:00.000Z",
+      fetchedAt: "2026-08-08T03:25:30.000Z",
+      availableAt: "2026-08-08T03:25:00.000Z",
+    } : {});
+    const result = readN2MarketOnlyBaselinePrivateSources({ dataRoot: root });
+    assert.equal(result.status, "BLOCKED");
+    assert.ok(result.blockers.includes("2026-08-07:05:R1:T5_DECISION_CUTOFF_OUTSIDE_RACE_DATE"));
+    assert.equal(result.blockers.some((value) => value.includes("T5_RAW_SHA256_MISMATCH")), false);
+    assert.equal(result.sources.length, 0);
+    assert.equal(result.rawValuesPublished, false);
+    assert.equal(result.databaseWriteCount, 0);
+  });
+});
+
 test("private source reader preserves valid leap-day and offset timestamps", () => {
   withRoot((root) => {
     prepare(root, 20, null, (index) => index === 0 ? {
