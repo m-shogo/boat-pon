@@ -300,10 +300,10 @@ test("private source reader rejects cross-date envelope metadata before raw SHA 
   });
 });
 
-test("private source reader preserves valid leap-day and offset timestamps", () => {
+test("private source reader preserves valid offset timestamps within the race date", () => {
   withRoot((root) => {
     prepare(root, 20, null, (index) => index === 0 ? {
-      acceptedAt: "2024-02-29T12:25:30+09:00",
+      acceptedAt: "2026-08-07T12:25:30+09:00",
       decisionCutoff: "2026-08-07T12:30:00+09:00",
       fetchedAt: "2026-08-07T03:25:30Z",
       availableAt: "2026-08-07T03:25:00Z",
