@@ -226,6 +226,8 @@ function writeHistoricalArtifact(
     },
     confirmation: confirmation(results),
     distributionEvidence: distribution(results),
+    databaseWriteCount: 0,
+    networkRequestCount: 0,
     authority: {
       automaticPromotionAuthorized: false,
       currentBuyConnectionAuthorized: false,
