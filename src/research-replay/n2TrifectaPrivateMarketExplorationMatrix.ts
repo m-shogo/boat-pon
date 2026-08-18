@@ -329,6 +329,15 @@ function readManifest(input: {
   return manifest as ManifestLike & { manifestDigest: string; races: ManifestRaceLike[] };
 }
 
+function parseSnapshotInstant(value: unknown): number {
+  if (typeof value !== "string") return Number.NaN;
+  try {
+    return Date.parse(canonicalUtcTimestamp(value));
+  } catch {
+    return Number.NaN;
+  }
+}
+
 function validateSnapshot(input: {
   snapshot: SnapshotLike;
   raceIdentity: string;
@@ -343,8 +352,8 @@ function validateSnapshot(input: {
     || value.databaseWriteAuthorized !== false || !canonicalDigestMatches(value, "outputDigest")) {
     throw new Error(`${code}_SNAPSHOT_INVALID`);
   }
-  const capturedAt = typeof value.capturedAt === "string" ? Date.parse(value.capturedAt) : Number.NaN;
-  const availableAt = typeof value.availableAt === "string" ? Date.parse(value.availableAt) : Number.NaN;
+  const capturedAt = parseSnapshotInstant(value.capturedAt);
+  const availableAt = parseSnapshotInstant(value.availableAt);
   if (!Number.isFinite(capturedAt) || !Number.isFinite(availableAt) || availableAt > capturedAt) {
     throw new Error(`${code}_PIT_TIME_INVALID`);
   }
