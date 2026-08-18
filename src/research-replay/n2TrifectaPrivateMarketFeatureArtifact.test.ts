@@ -13,6 +13,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
 
+import { canonicalHash } from "./canonical.js";
 import type { N2TrifectaMarketRaceFeatureSequence } from "./n2TrifectaMarketFeatureEngineering.js";
 import type { N2TrifectaPrivateMarketFeatureLoadReport } from "./n2TrifectaPrivateMarketFeatureLoader.js";
 import {
@@ -33,9 +34,8 @@ function sequence(status: "PASS" | "PARTIAL"): N2TrifectaMarketRaceFeatureSequen
 
 function report(input: {
   status: "PASS" | "PARTIAL" | "NO_DATA" | "BLOCKED";
-  digest: string;
 }): N2TrifectaPrivateMarketFeatureLoadReport {
-  return {
+  const core = {
     loaderVersion: "n2-trifecta-private-market-feature-loader-v1",
     status: input.status,
     blockers: input.status === "BLOCKED" ? ["FIXTURE_BLOCKER"] : [],
@@ -46,15 +46,15 @@ function report(input: {
     acceptedMarkerCount: input.status === "PASS" ? 4 : input.status === "PARTIAL" ? 2 : 0,
     loadedSnapshotCount: input.status === "PASS" ? 4 : input.status === "PARTIAL" ? 2 : 0,
     sequence: sequence(input.status === "PASS" ? "PASS" : "PARTIAL"),
-    networkRequestCount: 0,
-    databaseReadCount: 0,
-    databaseWriteCount: 0,
+    networkRequestCount: 0 as const,
+    databaseReadCount: 0 as const,
+    databaseWriteCount: 0 as const,
     rawValuesReadPrivately: input.status === "PASS" || input.status === "PARTIAL",
-    rawValuesPublished: false,
-    privateResearchOnly: true,
-    publicPublishAuthorized: false,
-    outputDigest: input.digest,
+    rawValuesPublished: false as const,
+    privateResearchOnly: true as const,
+    publicPublishAuthorized: false as const,
   };
+  return { ...core, outputDigest: canonicalHash(core) } as N2TrifectaPrivateMarketFeatureLoadReport;
 }
 
 function withRoot(run: (root: string) => void): void {
@@ -68,9 +68,10 @@ function withRoot(run: (root: string) => void): void {
 
 test("a later source digest atomically replaces an earlier derived PARTIAL artifact", () => {
   withRoot((root) => {
+    const partialReport = report({ status: "PARTIAL" });
     const partial = writeN2TrifectaPrivateMarketFeatureArtifact({
       rootDir: root,
-      report: report({ status: "PARTIAL", digest: "a".repeat(64) }),
+      report: partialReport,
       generatedAt: "2026-08-07T02:00:00.000Z",
     });
     assert.equal(partial.changed, true);
@@ -82,7 +83,7 @@ test("a later source digest atomically replaces an earlier derived PARTIAL artif
     const first = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
     assert.equal(first.featureArtifactVersion, N2_TRIFECTA_PRIVATE_MARKET_FEATURE_ARTIFACT_VERSION);
     assert.equal(first.status, "PARTIAL");
-    assert.equal(first.sourceLoadDigest, "a".repeat(64));
+    assert.equal(first.sourceLoadDigest, partialReport.outputDigest);
     assert.equal(first.privateResearchOnly, true);
     assert.equal(first.publicPublishAuthorized, false);
     assert.equal(first.databaseWriteAuthorized, false);
@@ -90,9 +91,10 @@ test("a later source digest atomically replaces an earlier derived PARTIAL artif
     assert.equal(first.lineConnectionAuthorized, false);
     assert.equal(first.automatedBettingAuthorized, false);
 
+    const completeReport = report({ status: "PASS" });
     const complete = writeN2TrifectaPrivateMarketFeatureArtifact({
       rootDir: root,
-      report: report({ status: "PASS", digest: "b".repeat(64) }),
+      report: completeReport,
       generatedAt: "2026-08-07T02:10:00.000Z",
     });
     assert.equal(complete.changed, true);
@@ -100,7 +102,8 @@ test("a later source digest atomically replaces an earlier derived PARTIAL artif
     assert.equal(statSync(path).mode & 0o777, 0o600);
     const second = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
     assert.equal(second.status, "PASS");
-    assert.equal(second.sourceLoadDigest, "b".repeat(64));
+    assert.equal(second.sourceLoadDigest, completeReport.outputDigest);
+    assert.notEqual(second.sourceLoadDigest, first.sourceLoadDigest);
     assert.equal(second.generatedAt, "2026-08-07T02:10:00.000Z");
     assert.notEqual(second.artifactDigest, first.artifactDigest);
   });
@@ -108,7 +111,7 @@ test("a later source digest atomically replaces an earlier derived PARTIAL artif
 
 test("artifact generatedAt rejects normalized timestamps and canonicalizes valid offsets", () => {
   withRoot((root) => {
-    const source = report({ status: "PASS", digest: "1".repeat(64) });
+    const source = report({ status: "PASS" });
     for (const generatedAt of [
       "2026-08-07T24:00:00.000Z",
       "2026-02-30T02:00:00.000Z",
@@ -133,16 +136,17 @@ test("artifact generatedAt rejects normalized timestamps and canonicalizes valid
 
 test("the same valid source digest is idempotent and does not rewrite the derived artifact", () => {
   withRoot((root) => {
+    const source = report({ status: "PASS" });
     const first = writeN2TrifectaPrivateMarketFeatureArtifact({
       rootDir: root,
-      report: report({ status: "PASS", digest: "c".repeat(64) }),
+      report: source,
       generatedAt: "2026-08-07T02:00:00.000Z",
     });
     const path = join(root, first.relativePath);
     const before = readFileSync(path, "utf8");
     const second = writeN2TrifectaPrivateMarketFeatureArtifact({
       rootDir: root,
-      report: report({ status: "PASS", digest: "c".repeat(64) }),
+      report: source,
       generatedAt: "2026-08-07T03:00:00.000Z",
     });
     const after = readFileSync(path, "utf8");
@@ -154,7 +158,7 @@ test("the same valid source digest is idempotent and does not rewrite the derive
 
 test("the same source digest rebuilds a non-canonical timestamp representation", () => {
   withRoot((root) => {
-    const source = report({ status: "PASS", digest: "2".repeat(64) });
+    const source = report({ status: "PASS" });
     const first = writeN2TrifectaPrivateMarketFeatureArtifact({
       rootDir: root,
       report: source,
@@ -179,7 +183,7 @@ test("the same source digest rebuilds a non-canonical timestamp representation",
 
 test("the same source digest rebuilds a tampered or overly permissive derived artifact", () => {
   withRoot((root) => {
-    const source = report({ status: "PASS", digest: "d".repeat(64) });
+    const source = report({ status: "PASS" });
     const first = writeN2TrifectaPrivateMarketFeatureArtifact({
       rootDir: root,
       report: source,
@@ -211,14 +215,14 @@ test("writer rejects non-research statuses and unsafe existing targets", () => {
     assert.throws(
       () => writeN2TrifectaPrivateMarketFeatureArtifact({
         rootDir: root,
-        report: report({ status: "NO_DATA", digest: "e".repeat(64) }),
+        report: report({ status: "NO_DATA" }),
       }),
       /PRIVATE_FEATURE_ARTIFACT_REQUIRES_PASS_OR_PARTIAL/u,
     );
     assert.throws(
       () => writeN2TrifectaPrivateMarketFeatureArtifact({
         rootDir: root,
-        report: report({ status: "BLOCKED", digest: "f".repeat(64) }),
+        report: report({ status: "BLOCKED" }),
       }),
       /PRIVATE_FEATURE_ARTIFACT_REQUIRES_PASS_OR_PARTIAL/u,
     );
@@ -236,7 +240,7 @@ test("writer rejects non-research statuses and unsafe existing targets", () => {
     assert.throws(
       () => writeN2TrifectaPrivateMarketFeatureArtifact({
         rootDir: root,
-        report: report({ status: "PASS", digest: "0".repeat(64) }),
+        report: report({ status: "PASS" }),
       }),
       /PRIVATE_FEATURE_EXISTING_FILE_TYPE_INVALID/u,
     );
