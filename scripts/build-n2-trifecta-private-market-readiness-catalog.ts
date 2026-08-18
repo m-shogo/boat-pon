@@ -4,6 +4,7 @@ import {
   buildN2TrifectaPrivateMarketReadinessCatalog,
 } from "../src/research-replay/n2TrifectaPrivateMarketReadinessCatalog";
 import {
+  canonicalReadinessCatalogGeneratedAt,
   writeVerifiedN2TrifectaPrivateMarketReadinessCatalog,
 } from "../src/research-replay/n2TrifectaPrivateMarketReadinessCatalogWriteBoundary";
 
@@ -15,15 +16,17 @@ function argument(name: string): string | null {
 }
 
 const generatedAtArg = argument("generated-at");
-const generatedAtDate = generatedAtArg == null ? new Date() : new Date(generatedAtArg);
-if (!Number.isFinite(generatedAtDate.getTime())) {
+let generatedAt: string;
+try {
+  generatedAt = canonicalReadinessCatalogGeneratedAt(generatedAtArg, new Date().toISOString());
+} catch {
   console.error("invalid --generated-at");
   process.exit(2);
 }
 const dataRoot = resolve(process.env.BOAT_PON_DATA_ROOT?.trim() || process.cwd());
 const catalog = buildN2TrifectaPrivateMarketReadinessCatalog({
   dataRoot,
-  generatedAt: generatedAtDate.toISOString(),
+  generatedAt,
 });
 const writePrivate = process.argv.includes("--write-private");
 const writeResult = writePrivate

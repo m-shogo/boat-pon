@@ -1,8 +1,18 @@
+import { canonicalUtcTimestamp } from "./canonical";
 import {
   N2_TRIFECTA_PRIVATE_MARKET_READINESS_CATALOG_VERSION,
   writeN2TrifectaPrivateMarketReadinessCatalog,
   type N2TrifectaPrivateMarketReadinessCatalog,
 } from "./n2TrifectaPrivateMarketReadinessCatalog";
+
+export function canonicalReadinessCatalogGeneratedAt(input: string | null, now: string): string {
+  const candidate = input ?? now;
+  try {
+    return canonicalUtcTimestamp(candidate);
+  } catch {
+    throw new Error("READINESS_CATALOG_GENERATED_AT_INVALID");
+  }
+}
 
 function requireProducerBoundary(catalog: N2TrifectaPrivateMarketReadinessCatalog): void {
   if (catalog.catalogVersion !== N2_TRIFECTA_PRIVATE_MARKET_READINESS_CATALOG_VERSION
