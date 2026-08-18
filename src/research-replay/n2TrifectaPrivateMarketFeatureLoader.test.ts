@@ -162,6 +162,25 @@ test("one accepted checkpoint loads as a private PARTIAL feature sequence", () =
   });
 });
 
+test("feature snapshots canonicalize equivalent fetchedAt offsets", () => {
+  withTempRoot((root) => {
+    writeAcceptedCheckpoint(root, "T-30", {
+      fetchedAt: "2026-08-07T10:00:30+09:00",
+      acceptedAt: "2026-08-07T01:00:30.000Z",
+    });
+    const report = loadN2TrifectaPrivateMarketFeatures({
+      rootDir: root,
+      date: "2026-08-07",
+      venueCode: "05",
+      raceNo: 1,
+    });
+    assert.equal(report.status, "PARTIAL");
+    assert.equal(report.loadedSnapshotCount, 1);
+    assert.equal(report.sequence.snapshots[0].capturedAt, "2026-08-07T01:00:30.000Z");
+    assert.equal(report.sequence.snapshots[0].availableAt, "2026-08-07T01:00:00.000Z");
+  });
+});
+
 test("four accepted checkpoints produce a complete sequence with three transitions", () => {
   withTempRoot((root) => {
     writeAcceptedCheckpoint(root, "T-30", { multiplier: 1, fetchedAt: "2026-08-07T01:00:30.000Z" });
