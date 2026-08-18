@@ -112,6 +112,29 @@ test("market foundation preserves valid leap-day and explicit-offset PIT timesta
   assert.equal(audit.pit.status, "PASS");
 });
 
+test("market foundation rejects impossible or out-of-range race identities", () => {
+  for (const raceId of [
+    "20260230-05-01",
+    "20260806-00-01",
+    "20260806-25-01",
+    "20260806-05-00",
+    "20260806-05-13",
+    "20260806-tokyo-01",
+  ]) {
+    const audit = auditN2TrifectaMarketSnapshot(candidate(1, { raceId }));
+    assert.equal(audit.status, "BLOCKED");
+    assert.ok(audit.blockers.includes("RACE_ID_INVALID"));
+    assert.ok(audit.blockers.includes("CHECKPOINT_IDENTITY_UNRESOLVED"));
+    assert.equal(audit.checkpointIdentity, null);
+  }
+});
+
+test("market foundation accepts leap-day boundary race identity", () => {
+  const audit = auditN2TrifectaMarketSnapshot(candidate(1, { raceId: "20280229-24-12" }));
+  assert.equal(audit.status, "PASS");
+  assert.match(audit.checkpointIdentity ?? "", /^[0-9a-f]{64}$/);
+});
+
 test("incomplete payload, duplicate selection, bad odds, and PIT inversion fail closed", () => {
   const odds = candidate().odds.slice(0, 119);
   odds.push({ selection: odds[0].selection, odds: 0 });
