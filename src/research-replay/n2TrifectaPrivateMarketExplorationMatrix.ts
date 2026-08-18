@@ -536,6 +536,17 @@ function readFeatureArtifact(input: {
   } catch {
     throw new Error("EXPLORATION_MATRIX_FEATURE_JSON_INVALID");
   }
+  let artifactGeneratedAt: string;
+  try {
+    artifactGeneratedAt = typeof artifact.generatedAt === "string"
+      ? canonicalUtcTimestamp(artifact.generatedAt)
+      : "";
+  } catch {
+    throw new Error("EXPLORATION_MATRIX_FEATURE_GENERATED_AT_INVALID");
+  }
+  if (artifactGeneratedAt.length === 0 || artifactGeneratedAt !== artifact.generatedAt) {
+    throw new Error("EXPLORATION_MATRIX_FEATURE_GENERATED_AT_INVALID");
+  }
   if (artifact.featureArtifactVersion !== N2_TRIFECTA_PRIVATE_MARKET_FEATURE_ARTIFACT_VERSION
     || artifact.raceIdentity !== input.race.raceIdentity || artifact.status !== "PASS"
     || artifact.sourceLoadDigest !== input.race.sourceLoadDigest || artifact.artifactDigest !== input.race.featureArtifactDigest
