@@ -106,6 +106,31 @@ test("a later source digest atomically replaces an earlier derived PARTIAL artif
   });
 });
 
+test("artifact generatedAt rejects normalized timestamps and canonicalizes valid offsets", () => {
+  withRoot((root) => {
+    const source = report({ status: "PASS", digest: "1".repeat(64) });
+    for (const generatedAt of [
+      "2026-08-07T24:00:00.000Z",
+      "2026-02-30T02:00:00.000Z",
+      "2026-08-07T02:00:00",
+    ]) {
+      assert.throws(
+        () => writeN2TrifectaPrivateMarketFeatureArtifact({ rootDir: root, report: source, generatedAt }),
+        /PRIVATE_FEATURE_GENERATED_AT_INVALID/u,
+        generatedAt,
+      );
+    }
+
+    const write = writeN2TrifectaPrivateMarketFeatureArtifact({
+      rootDir: root,
+      report: source,
+      generatedAt: "2026-08-07T11:00:00+09:00",
+    });
+    const value = JSON.parse(readFileSync(join(root, write.relativePath), "utf8")) as Record<string, unknown>;
+    assert.equal(value.generatedAt, "2026-08-07T02:00:00.000Z");
+  });
+});
+
 test("the same valid source digest is idempotent and does not rewrite the derived artifact", () => {
   withRoot((root) => {
     const first = writeN2TrifectaPrivateMarketFeatureArtifact({
@@ -124,6 +149,31 @@ test("the same valid source digest is idempotent and does not rewrite the derive
     assert.equal(second.changed, false);
     assert.equal(second.replacedExisting, true);
     assert.equal(after, before);
+  });
+});
+
+test("the same source digest rebuilds a non-canonical timestamp representation", () => {
+  withRoot((root) => {
+    const source = report({ status: "PASS", digest: "2".repeat(64) });
+    const first = writeN2TrifectaPrivateMarketFeatureArtifact({
+      rootDir: root,
+      report: source,
+      generatedAt: "2026-08-07T02:00:00.000Z",
+    });
+    const path = join(root, first.relativePath);
+    const tampered = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
+    tampered.generatedAt = "2026-08-07T11:00:00+09:00";
+    writeFileSync(path, `${JSON.stringify(tampered, null, 2)}\n`, "utf8");
+
+    const repaired = writeN2TrifectaPrivateMarketFeatureArtifact({
+      rootDir: root,
+      report: source,
+      generatedAt: "2026-08-07T04:00:00.000Z",
+    });
+    assert.equal(repaired.changed, true);
+    assert.equal(repaired.replacedExisting, true);
+    const value = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
+    assert.equal(value.generatedAt, "2026-08-07T04:00:00.000Z");
   });
 });
 
