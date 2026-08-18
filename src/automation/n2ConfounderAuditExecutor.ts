@@ -162,6 +162,20 @@ function isValidHistoricalGeneratedAt(value: unknown): value is string {
     return false;
   }
 }
+function confirmationMethodMatchesProducer(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const method = value as Record<string, unknown>;
+  return method.rediscoveryAllowed === false
+    && method.interactionSearchAllowed === false
+    && method.raceLevelResidualRequired === true
+    && method.minUniqueRacesPerSplit === 200
+    && method.minAbsoluteResidual === 0.001
+    && method.familyWiseAlpha === 0.05
+    && method.multipleTesting === "Holm-Bonferroni separately within validation and test"
+    && method.bothHoldoutSplitsRequired === true
+    && method.sameDirectionRequired === true
+    && method.forwardShadowUsed === false;
+}
 function rejectionSubjectIdentityBlocker(record: Rejection): string | null {
   const prefix = REJECTION_SUBJECT_PREFIX[record.subjectType];
   const valid = new RegExp(`^${prefix}-[0-9A-Za-z._-]{1,80}$`, "u").test(record.subjectId);
@@ -228,6 +242,9 @@ export function readN2HistoricalTestArtifact(
   if (!confirmation || confirmation.status !== "PASS") blockers.push("HISTORICAL_CONFIRMATION_NOT_PASS");
   if (options.requireProducerContract && confirmation?.confirmationVersion !== N2_EDGE_HISTORICAL_CONFIRMATION_VERSION) {
     blockers.push(`HISTORICAL_CONFIRMATION_VERSION_MISMATCH:${String(confirmation?.confirmationVersion ?? "MISSING")}/${N2_EDGE_HISTORICAL_CONFIRMATION_VERSION}`);
+  }
+  if (options.requireProducerContract && !confirmationMethodMatchesProducer(confirmation?.confirmationMethod)) {
+    blockers.push("HISTORICAL_CONFIRMATION_METHOD_INVALID");
   }
   if (confirmation && !digestMatches(confirmation)) blockers.push("HISTORICAL_CONFIRMATION_DIGEST_MISMATCH");
   if (confirmation && !Array.isArray(confirmation.results)) blockers.push("HISTORICAL_CONFIRMATION_RESULTS_INVALID");
