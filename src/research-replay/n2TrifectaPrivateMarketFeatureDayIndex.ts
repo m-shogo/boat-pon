@@ -15,7 +15,7 @@ import {
 } from "node:fs";
 import { dirname, resolve, sep } from "node:path";
 
-import { canonicalHash } from "./canonical";
+import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import { N2_TRIFECTA_PRIVATE_MARKET_FEATURE_ARTIFACT_VERSION } from
   "./n2TrifectaPrivateMarketFeatureArtifact";
 
@@ -140,9 +140,14 @@ function validateArtifactCore(input: {
   }
   if (artifact.raceIdentity !== expectedRaceIdentity) throw new Error(`R${input.raceNo}_RACE_IDENTITY_INVALID`);
   if (artifact.status !== "PASS" && artifact.status !== "PARTIAL") throw new Error(`R${input.raceNo}_STATUS_INVALID`);
-  if (typeof artifact.generatedAt !== "string" || !Number.isFinite(Date.parse(artifact.generatedAt))) {
+  if (typeof artifact.generatedAt !== "string") throw new Error(`R${input.raceNo}_GENERATED_AT_INVALID`);
+  let artifactGeneratedAt: string;
+  try {
+    artifactGeneratedAt = canonicalUtcTimestamp(artifact.generatedAt);
+  } catch {
     throw new Error(`R${input.raceNo}_GENERATED_AT_INVALID`);
   }
+  if (artifactGeneratedAt !== artifact.generatedAt) throw new Error(`R${input.raceNo}_GENERATED_AT_INVALID`);
   if (typeof artifact.sourceLoadDigest !== "string" || !/^[0-9a-f]{64}$/u.test(artifact.sourceLoadDigest)) {
     throw new Error(`R${input.raceNo}_SOURCE_DIGEST_INVALID`);
   }
@@ -187,7 +192,7 @@ function validateArtifactCore(input: {
 
   const core = {
     featureArtifactVersion: artifact.featureArtifactVersion,
-    generatedAt: new Date(Date.parse(artifact.generatedAt)).toISOString(),
+    generatedAt: artifactGeneratedAt,
     sourceLoadDigest: artifact.sourceLoadDigest,
     raceIdentity: artifact.raceIdentity,
     status: artifact.status,
@@ -263,8 +268,12 @@ export function buildN2TrifectaPrivateMarketFeatureDayIndex(input: {
   generatedAt?: string;
 }): N2TrifectaPrivateMarketFeatureDayIndex {
   validateScope(input.date, input.venueCode);
-  const generatedAt = input.generatedAt ?? new Date().toISOString();
-  if (!Number.isFinite(Date.parse(generatedAt))) throw new Error("PRIVATE_FEATURE_DAY_INDEX_GENERATED_AT_INVALID");
+  let generatedAt: string;
+  try {
+    generatedAt = canonicalUtcTimestamp(input.generatedAt ?? new Date().toISOString());
+  } catch {
+    throw new Error("PRIVATE_FEATURE_DAY_INDEX_GENERATED_AT_INVALID");
+  }
   const races = Array.from({ length: 12 }, (_, index) => readRace({
     rootDir: input.rootDir,
     date: input.date,
@@ -281,7 +290,7 @@ export function buildN2TrifectaPrivateMarketFeatureDayIndex(input: {
       : "PARTIAL" as const;
   const core = {
     indexVersion: N2_TRIFECTA_PRIVATE_MARKET_FEATURE_DAY_INDEX_VERSION,
-    generatedAt: new Date(Date.parse(generatedAt)).toISOString(),
+    generatedAt,
     date: input.date,
     venueCode: input.venueCode,
     raceCount: 12 as const,
@@ -350,20 +359,28 @@ export function writeN2TrifectaPrivateMarketFeatureDayIndex(input: {
       try {
         const current = JSON.parse(readFileSync(path, "utf8")) as N2TrifectaPrivateMarketFeatureDayIndex;
         if (typeof current.indexDigest === "string" && /^[0-9a-f]{64}$/u.test(current.indexDigest)
-          && typeof current.generatedAt === "string" && Number.isFinite(Date.parse(current.generatedAt))) {
-          const { indexDigest: currentDigest, ...currentCore } = current;
-          if (canonicalHash(currentCore) === currentDigest) {
-            if (currentDigest === input.index.indexDigest) {
-              return { relativePath, changed: false, indexDigest: currentDigest, fileMode: 0o600 };
-            }
-            const { generatedAt: _currentGeneratedAt, ...currentSemanticCore } = currentCore;
-            const {
-              indexDigest: _nextDigest,
-              generatedAt: _nextGeneratedAt,
-              ...nextSemanticCore
-            } = input.index;
-            if (canonicalHash(currentSemanticCore) === canonicalHash(nextSemanticCore)) {
-              return { relativePath, changed: false, indexDigest: currentDigest, fileMode: 0o600 };
+          && typeof current.generatedAt === "string") {
+          let currentGeneratedAt: string;
+          try {
+            currentGeneratedAt = canonicalUtcTimestamp(current.generatedAt);
+          } catch {
+            currentGeneratedAt = "";
+          }
+          if (currentGeneratedAt === current.generatedAt) {
+            const { indexDigest: currentDigest, ...currentCore } = current;
+            if (canonicalHash(currentCore) === currentDigest) {
+              if (currentDigest === input.index.indexDigest) {
+                return { relativePath, changed: false, indexDigest: currentDigest, fileMode: 0o600 };
+              }
+              const { generatedAt: _currentGeneratedAt, ...currentSemanticCore } = currentCore;
+              const {
+                indexDigest: _nextDigest,
+                generatedAt: _nextGeneratedAt,
+                ...nextSemanticCore
+              } = input.index;
+              if (canonicalHash(currentSemanticCore) === canonicalHash(nextSemanticCore)) {
+                return { relativePath, changed: false, indexDigest: currentDigest, fileMode: 0o600 };
+              }
             }
           }
         }
