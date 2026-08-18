@@ -236,3 +236,38 @@ test("tampered or permission-widened referenced feature artifacts fail closed", 
     );
   });
 });
+
+test("rejects rehashed manifests with non-canonical sourceAsOf before feature artifact reads", () => {
+  for (const sourceAsOf of [
+    "2026-08-07T24:00:00.000Z",
+    "2026-08-07T12:05:00+09:00",
+    "2026-08-07T03:05:00",
+  ]) {
+    withRoot((root) => {
+      const { manifestDigest, featurePath } = createManifest(root);
+      const originalPath = join(
+        root,
+        "data/private/trifecta-market-experiments/manifests",
+        `${manifestDigest}.json`,
+      );
+      const manifest = JSON.parse(readFileSync(originalPath, "utf8")) as Record<string, unknown>;
+      manifest.sourceAsOf = sourceAsOf;
+      delete manifest.manifestDigest;
+      const rehashedDigest = canonicalHash(manifest);
+      manifest.manifestDigest = rehashedDigest;
+      const rehashedPath = join(
+        root,
+        "data/private/trifecta-market-experiments/manifests",
+        `${rehashedDigest}.json`,
+      );
+      writeFileSync(rehashedPath, `${JSON.stringify(manifest, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
+      chmodSync(rehashedPath, 0o600);
+      rmSync(featurePath);
+
+      assert.throws(
+        () => buildN2TrifectaPrivateMarketExplorationMatrix({ rootDir: root, manifestDigest: rehashedDigest }),
+        /EXPLORATION_MATRIX_MANIFEST_SOURCE_AS_OF_INVALID/u,
+      );
+    });
+  }
+});
