@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
+import { canonicalHash } from "./canonical.js";
 import type { N2TrifectaPrivateMarketFeatureLoadReport } from "./n2TrifectaPrivateMarketFeatureLoader.js";
 import { writeN2TrifectaPrivateMarketFeatureArtifact } from "./n2TrifectaPrivateMarketFeatureArtifact.js";
 import {
@@ -250,5 +251,37 @@ test("tampered or permission-widened day indices fail closed before cohort assem
       }),
       /DAY_INDEX_FILE_MODE_INVALID/u,
     );
+  });
+});
+
+test("rehashed non-canonical day index times fail closed before manifest lineage assembly", () => {
+  withRoot((root) => {
+    createDay({
+      root,
+      date: "2026-08-07",
+      venueCode: "10",
+      passRaces: [4],
+      generatedAt: "2026-08-07T03:30:00.000Z",
+    });
+    const path = join(root, "data/private/trifecta-market-features/2026-08-07/10/index.json");
+    const index = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
+    for (const generatedAt of [
+      "2026-08-06T27:30:00.000Z",
+      "2026-08-07T12:30:00.000+09:00",
+      "2026-08-07T03:30:00",
+    ]) {
+      const tampered = { ...index, generatedAt };
+      const { indexDigest: _indexDigest, ...core } = tampered;
+      tampered.indexDigest = canonicalHash(core);
+      writeFileSync(path, `${JSON.stringify(tampered, null, 2)}\n`, "utf8");
+      assert.throws(
+        () => buildN2TrifectaPrivateMarketExperimentInputManifest({
+          rootDir: root,
+          scopes: [{ date: "2026-08-07", venueCode: "10" }],
+        }),
+        /DAY_INDEX_GENERATED_AT_INVALID/u,
+        generatedAt,
+      );
+    }
   });
 });
