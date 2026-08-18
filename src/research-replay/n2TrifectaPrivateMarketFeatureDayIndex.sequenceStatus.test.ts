@@ -92,12 +92,14 @@ test("day index rejects rehashed nested sequence version and race lineage drift"
       generatedAt: "2026-08-07T02:00:00.000Z",
     });
     const path = join(root, written.relativePath);
+    const originalContent = readFileSync(path, "utf8");
 
     for (const [field, value, expected] of [
       ["featureVersion", "n2-trifecta-market-features-v0", /R1_SEQUENCE_VERSION_INVALID/u],
       ["raceIdentity", "20260807-10-02", /R1_SEQUENCE_RACE_IDENTITY_INVALID/u],
     ] as const) {
-      const artifact = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
+      writeFileSync(path, originalContent, "utf8");
+      const artifact = JSON.parse(originalContent) as Record<string, unknown>;
       const sequence = artifact.sequence as Record<string, unknown>;
       sequence[field] = value;
       const { artifactDigest: _artifactDigest, ...core } = artifact;
@@ -113,12 +115,6 @@ test("day index rejects rehashed nested sequence version and race lineage drift"
         }),
         expected,
       );
-
-      writeN2TrifectaPrivateMarketFeatureArtifact({
-        rootDir: root,
-        report: syntheticPassReport(),
-        generatedAt: "2026-08-07T02:00:00.000Z",
-      });
     }
   } finally {
     rmSync(root, { recursive: true, force: true });
