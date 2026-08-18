@@ -2,8 +2,10 @@ import { resolve } from "node:path";
 
 import {
   buildN2TrifectaPrivateMarketReadinessCatalog,
-  writeN2TrifectaPrivateMarketReadinessCatalog,
 } from "../src/research-replay/n2TrifectaPrivateMarketReadinessCatalog";
+import {
+  writeVerifiedN2TrifectaPrivateMarketReadinessCatalog,
+} from "../src/research-replay/n2TrifectaPrivateMarketReadinessCatalogWriteBoundary";
 
 function argument(name: string): string | null {
   const inline = process.argv.find((value) => value.startsWith(`--${name}=`));
@@ -25,7 +27,7 @@ const catalog = buildN2TrifectaPrivateMarketReadinessCatalog({
 });
 const writePrivate = process.argv.includes("--write-private");
 const writeResult = writePrivate
-  ? writeN2TrifectaPrivateMarketReadinessCatalog({ dataRoot, catalog })
+  ? writeVerifiedN2TrifectaPrivateMarketReadinessCatalog({ dataRoot, catalog })
   : null;
 
 const persistedCatalogDigest = writeResult?.catalogDigest ?? catalog.catalogDigest;

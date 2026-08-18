@@ -43,7 +43,8 @@ test("readiness catalog scans only local private readiness artifacts", () => {
 
 test("catalog CLI exposes only catalog metadata and protected boundary flags", () => {
   assert.match(cli, /buildN2TrifectaPrivateMarketReadinessCatalog/u);
-  assert.match(cli, /writeN2TrifectaPrivateMarketReadinessCatalog/u);
+  assert.match(cli, /writeVerifiedN2TrifectaPrivateMarketReadinessCatalog/u);
+  assert.doesNotMatch(cli, /\bwriteN2TrifectaPrivateMarketReadinessCatalog\s*\(/u);
   assert.match(cli, /--write-private/u);
   assert.match(cli, /automaticFreezeAuthorized/u);
   assert.match(cli, /outcomeDataRead/u);
