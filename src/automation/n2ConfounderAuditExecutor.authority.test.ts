@@ -34,7 +34,7 @@ function splitResult(split: "validation" | "test") {
   };
 }
 
-function confirmation(authorityOverrides: Record<string, boolean> = {}) {
+function confirmation(authorityOverrides: Record<string, boolean> = {}, methodOverrides: Record<string, unknown> = {}) {
   const core = {
     confirmationVersion: "n2-edge-historical-confirmation-v1",
     status: "PASS",
@@ -53,6 +53,7 @@ function confirmation(authorityOverrides: Record<string, boolean> = {}) {
       bothHoldoutSplitsRequired: true,
       sameDirectionRequired: true,
       forwardShadowUsed: false,
+      ...methodOverrides,
     },
     confirmedCount: 1,
     rejectedCount: 0,
@@ -119,6 +120,7 @@ function writeArtifact(root: string, input: {
   historicalAuthority?: Record<string, boolean>;
   historicalAuthorityOmit?: ProductionAuthorityField;
   confirmationAuthority?: Record<string, boolean>;
+  confirmationMethod?: Record<string, unknown>;
   distributionAuthority?: Record<string, boolean>;
 }): void {
   const historicalAuthority: Record<string, boolean> = { ...PRODUCTION_AUTHORITY, ...input.historicalAuthority };
@@ -129,7 +131,7 @@ function writeArtifact(root: string, input: {
       selectedValidationRaceCount: 220,
       selectedTestRaceCount: 220,
     },
-    confirmation: confirmation(input.confirmationAuthority),
+    confirmation: confirmation(input.confirmationAuthority, input.confirmationMethod),
     distributionEvidence: distribution(input.distributionAuthority),
     authority: historicalAuthority,
   };
@@ -192,6 +194,29 @@ test("confounder artifact ingestion rejects contaminated confirmation holdout au
       const read = readN2HistoricalTestArtifact(root);
       assert.equal(read.artifact, null);
       assert.ok(read.blockers.includes("CONFIRMATION_HOLDOUT_AUTHORITY_INVALID"), `${field} must fail closed at confirmation ingestion`);
+    });
+  }
+});
+
+test("confounder producer-contract ingestion rejects contaminated confirmation methods", () => {
+  const cases: Array<[string, unknown]> = [
+    ["rediscoveryAllowed", true],
+    ["interactionSearchAllowed", true],
+    ["raceLevelResidualRequired", false],
+    ["minUniqueRacesPerSplit", 199],
+    ["minAbsoluteResidual", 0],
+    ["familyWiseAlpha", 0.1],
+    ["multipleTesting", "none"],
+    ["bothHoldoutSplitsRequired", false],
+    ["sameDirectionRequired", false],
+    ["forwardShadowUsed", true],
+  ];
+  for (const [field, value] of cases) {
+    withRoot((root) => {
+      writeArtifact(root, { confirmationMethod: { [field]: value } });
+      const read = readN2HistoricalTestArtifact(root, { requireProducerContract: true });
+      assert.equal(read.artifact, null);
+      assert.ok(read.blockers.includes("HISTORICAL_CONFIRMATION_METHOD_INVALID"), `${field} must fail closed at producer-contract ingestion`);
     });
   }
 });
