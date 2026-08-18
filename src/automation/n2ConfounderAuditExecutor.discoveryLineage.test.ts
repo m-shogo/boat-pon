@@ -82,6 +82,9 @@ function writeHistorical(root: string, discoveryArtifactDigest: string | undefin
     insufficientCount: 0,
     results: [],
     authority: {
+      roiUsedForConfirmation: false,
+      payoutUsedForConfirmation: false,
+      trainLabelsUsedForConfirmation: false,
       forwardLabelsUsedForConfirmation: false,
       automaticPromotionAuthorized: false,
       currentBuyConnectionAuthorized: false,
