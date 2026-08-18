@@ -72,6 +72,25 @@ test("rejects a standard error above the mathematical maximum for residuals in [
   assert.ok(blockers.includes("HISTORICAL_SPLIT_STANDARD_ERROR_OUT_OF_BOUNDS:N2EDGE-bounded-statistics:validation"));
 });
 
+test("rejects a mean and standard-error pair that bounded residuals cannot jointly generate", () => {
+  const result = resultWithValidation({
+    split: "validation",
+    uniqueRaceCount: 200,
+    meanResidual: 0.99,
+    standardError: 0.05,
+    zScore: 19.8,
+    rawPValue: 0,
+    holmAdjustedPValue: 0,
+    supportSufficient: true,
+    effectSufficient: true,
+    directionMatchesDiscovery: true,
+    statisticallyConfirmed: true,
+  });
+
+  const blockers = validateN2HistoricalStatisticalIntegrity([result]);
+  assert.ok(blockers.includes("HISTORICAL_SPLIT_STANDARD_ERROR_OUT_OF_BOUNDS:N2EDGE-bounded-statistics:validation"));
+});
+
 test("keeps producer-valid boundary statistics accepted", () => {
   const result = resultWithValidation({
     split: "validation",

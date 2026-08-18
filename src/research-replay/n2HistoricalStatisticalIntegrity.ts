@@ -43,12 +43,15 @@ function pValueMatches(actual: number, expected: number): boolean {
   return approximatelyEqual(actual, expected);
 }
 
-function maxStandardErrorForBoundedResiduals(uniqueRaceCount: number): number {
+function maxStandardErrorForBoundedResiduals(uniqueRaceCount: number, meanResidual: number): number {
   if (uniqueRaceCount <= 1) return 0;
-  // Producer residuals are individually constrained to [-1, 1]. Popoviciu's
-  // inequality bounds population variance by 1; converting to sample variance
-  // and then standard error gives SE <= 1 / sqrt(n - 1).
-  return MAX_ABSOLUTE_RACE_RESIDUAL / Math.sqrt(uniqueRaceCount - 1);
+  // For producer residuals x in [-1, 1], E[x^2] <= 1, hence population
+  // variance <= 1 - mean^2. Converting to the producer's sample variance and
+  // standard error gives SE^2 <= (1 - mean^2) / (n - 1). This is tighter than
+  // the mean-independent Popoviciu bound and prevents mutually impossible
+  // mean/SE pairs from being accepted after artifact re-hashing.
+  const residualVarianceCeiling = Math.max(0, MAX_ABSOLUTE_RACE_RESIDUAL ** 2 - meanResidual ** 2);
+  return Math.sqrt(residualVarianceCeiling / (uniqueRaceCount - 1));
 }
 
 function validateSplitStatistic(
@@ -83,7 +86,7 @@ function validateSplitStatistic(
     blockers.push(`HISTORICAL_SPLIT_STANDARD_ERROR_INVALID:${prefix}`);
     return blockers;
   }
-  const maxStandardError = maxStandardErrorForBoundedResiduals(value.uniqueRaceCount);
+  const maxStandardError = maxStandardErrorForBoundedResiduals(value.uniqueRaceCount, value.meanResidual);
   if (value.standardError > maxStandardError + ABSOLUTE_TOLERANCE) {
     blockers.push(`HISTORICAL_SPLIT_STANDARD_ERROR_OUT_OF_BOUNDS:${prefix}`);
     return blockers;
