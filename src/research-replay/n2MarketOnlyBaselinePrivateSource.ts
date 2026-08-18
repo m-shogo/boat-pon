@@ -221,18 +221,18 @@ function loadT5Source(input: {
   if (!envelopePath) blockers.push("T5_ENVELOPE_PATH_INVALID");
   if (blockers.length > 0) return { source: null, blockers: unique(blockers) };
 
-  if (!existsSync(rawPath)) blockers.push("T5_RAW_FILE_MISSING");
-  if (!existsSync(envelopePath)) blockers.push("T5_ENVELOPE_FILE_MISSING");
+  if (!existsSync(rawPath!)) blockers.push("T5_RAW_FILE_MISSING");
+  if (!existsSync(envelopePath!)) blockers.push("T5_ENVELOPE_FILE_MISSING");
   if (blockers.length > 0) return { source: null, blockers: unique(blockers) };
 
-  const rawStat = lstatSync(rawPath);
+  const rawStat = lstatSync(rawPath!);
   if (rawStat.isSymbolicLink() || !rawStat.isFile()) blockers.push("T5_RAW_FILE_TYPE_INVALID");
   if (rawStat.size <= 0 || rawStat.size > MAX_RAW_BYTES) blockers.push("T5_RAW_SIZE_INVALID");
   if (blockers.length > 0) return { source: null, blockers: unique(blockers) };
 
   let envelope: N2TrifectaPrivateCaptureEnvelope;
   try {
-    envelope = readJsonBounded<N2TrifectaPrivateCaptureEnvelope>(envelopePath);
+    envelope = readJsonBounded<N2TrifectaPrivateCaptureEnvelope>(envelopePath!);
   } catch (error) {
     blockers.push(`T5_ENVELOPE_${error instanceof Error ? error.message : "INVALID"}`);
     return { source: null, blockers: unique(blockers) };
@@ -271,7 +271,7 @@ function loadT5Source(input: {
   if (typeof envelope.proposedObservationId !== "string" || !envelope.proposedObservationId.trim()) blockers.push("T5_OBSERVATION_ID_INVALID");
   if (blockers.length > 0) return { source: null, blockers: unique(blockers) };
 
-  const rawBytes = readFileSync(rawPath);
+  const rawBytes = readFileSync(rawPath!);
   if (sha256(rawBytes) !== marker.rawSha256) return { source: null, blockers: ["T5_RAW_SHA256_MISMATCH"] };
   const odds = parseAllTrifectaOdds(rawBytes.toString("utf8"));
   if (odds.size !== 120) return { source: null, blockers: ["T5_REPARSE_SELECTION_COUNT_NOT_120"] };
