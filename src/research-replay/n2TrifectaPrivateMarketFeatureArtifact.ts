@@ -15,7 +15,7 @@ import {
 } from "node:fs";
 import { dirname, resolve, sep } from "node:path";
 
-import { canonicalHash } from "./canonical";
+import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import type { N2TrifectaMarketRaceFeatureSequence } from "./n2TrifectaMarketFeatureEngineering";
 import type { N2TrifectaPrivateMarketFeatureLoadReport } from "./n2TrifectaPrivateMarketFeatureLoader";
 
@@ -127,11 +127,15 @@ export function buildN2TrifectaPrivateMarketFeatureArtifact(input: {
   generatedAt: string;
 }): N2TrifectaPrivateMarketFeatureArtifact {
   validateReport(input.report);
-  const generatedAtMs = Date.parse(input.generatedAt);
-  if (!Number.isFinite(generatedAtMs)) throw new Error("PRIVATE_FEATURE_GENERATED_AT_INVALID");
+  let generatedAt: string;
+  try {
+    generatedAt = canonicalUtcTimestamp(input.generatedAt);
+  } catch {
+    throw new Error("PRIVATE_FEATURE_GENERATED_AT_INVALID");
+  }
   const core = {
     featureArtifactVersion: N2_TRIFECTA_PRIVATE_MARKET_FEATURE_ARTIFACT_VERSION,
-    generatedAt: new Date(generatedAtMs).toISOString(),
+    generatedAt,
     sourceLoadDigest: input.report.outputDigest,
     raceIdentity: input.report.raceIdentity,
     status: input.report.status,
@@ -173,7 +177,14 @@ function reusableArtifactDigest(input: {
   if (value.featureArtifactVersion !== N2_TRIFECTA_PRIVATE_MARKET_FEATURE_ARTIFACT_VERSION) return null;
   if (value.sourceLoadDigest !== input.report.outputDigest) return null;
   if (value.raceIdentity !== input.report.raceIdentity || value.status !== input.report.status) return null;
-  if (typeof value.generatedAt !== "string" || !Number.isFinite(Date.parse(value.generatedAt))) return null;
+  if (typeof value.generatedAt !== "string") return null;
+  let generatedAt: string;
+  try {
+    generatedAt = canonicalUtcTimestamp(value.generatedAt);
+  } catch {
+    return null;
+  }
+  if (generatedAt !== value.generatedAt) return null;
   if (typeof value.sequence !== "object" || value.sequence == null) return null;
   if (value.privateResearchOnly !== true || value.publicPublishAuthorized !== false
     || value.databaseWriteAuthorized !== false || value.currentBuyConnectionAuthorized !== false
@@ -183,7 +194,7 @@ function reusableArtifactDigest(input: {
   if (typeof value.artifactDigest !== "string" || !/^[0-9a-f]{64}$/u.test(value.artifactDigest)) return null;
   const core = {
     featureArtifactVersion: value.featureArtifactVersion,
-    generatedAt: new Date(Date.parse(value.generatedAt)).toISOString(),
+    generatedAt,
     sourceLoadDigest: value.sourceLoadDigest,
     raceIdentity: value.raceIdentity,
     status: value.status,
