@@ -414,6 +414,8 @@ function validateTransition(input: {
   if (typeof value.favoriteChanged !== "boolean") throw new Error(`${code}_FAVORITE_CHANGED_INVALID`);
   const retained = integerInRange(value.top5RetainedCount, 0, 5, `${code}_TOP5_RETAINED_INVALID`);
   const churn = boundedNumber(value.top5ChurnRate, 0, 1, `${code}_TOP5_CHURN_INVALID`);
+  const expectedChurn = 1 - retained / 5;
+  if (Math.abs(churn - expectedChurn) > 1e-12) throw new Error(`${code}_TOP5_CHURN_INCONSISTENT`);
   const medianMove = nonNegativeNumber(value.medianAbsoluteLogOddsMove, `${code}_MEDIAN_MOVE_INVALID`);
   const maxMove = nonNegativeNumber(value.maxAbsoluteLogOddsMove, `${code}_MAX_MOVE_INVALID`);
   const weightedMove = nonNegativeNumber(value.massWeightedAbsoluteLogOddsMove, `${code}_WEIGHTED_MOVE_INVALID`);
