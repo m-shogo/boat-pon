@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
+import { canonicalHash } from "./canonical.js";
 import type { N2TrifectaPrivateMarketFeatureLoadReport } from "./n2TrifectaPrivateMarketFeatureLoader.js";
 import { writeN2TrifectaPrivateMarketFeatureArtifact } from "./n2TrifectaPrivateMarketFeatureArtifact.js";
 import {
@@ -14,10 +15,10 @@ import {
 const checkpoints = ["T-30", "T-20", "T-10", "T-5"] as const;
 
 function syntheticReport(): N2TrifectaPrivateMarketFeatureLoadReport {
-  return {
-    loaderVersion: "n2-trifecta-private-market-feature-loader-v1",
-    status: "PASS",
-    blockers: [],
+  const reportCore = {
+    loaderVersion: "n2-trifecta-private-market-feature-loader-v1" as const,
+    status: "PASS" as const,
+    blockers: [] as string[],
     date: "2026-08-07",
     venueCode: "10",
     raceNo: 1,
@@ -36,14 +37,17 @@ function syntheticReport(): N2TrifectaPrivateMarketFeatureLoadReport {
         toCheckpointLabel: checkpointLabel,
       })),
     } as unknown as N2TrifectaPrivateMarketFeatureLoadReport["sequence"],
-    networkRequestCount: 0,
-    databaseReadCount: 0,
-    databaseWriteCount: 0,
-    rawValuesReadPrivately: true,
-    rawValuesPublished: false,
-    privateResearchOnly: true,
-    publicPublishAuthorized: false,
-    outputDigest: "1".repeat(64),
+    networkRequestCount: 0 as const,
+    databaseReadCount: 0 as const,
+    databaseWriteCount: 0 as const,
+    rawValuesReadPrivately: true as const,
+    rawValuesPublished: false as const,
+    privateResearchOnly: true as const,
+    publicPublishAuthorized: false as const,
+  };
+  return {
+    ...reportCore,
+    outputDigest: canonicalHash(reportCore),
   };
 }
 
