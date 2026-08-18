@@ -16,6 +16,7 @@ import {
 import { dirname, resolve, sep } from "node:path";
 
 import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
+import { N2_TRIFECTA_MARKET_FEATURE_VERSION } from "./n2TrifectaMarketFeatureEngineering";
 import { N2_TRIFECTA_PRIVATE_MARKET_FEATURE_ARTIFACT_VERSION } from
   "./n2TrifectaPrivateMarketFeatureArtifact";
 
@@ -74,7 +75,9 @@ type FeatureArtifactLike = {
   raceIdentity?: unknown;
   status?: unknown;
   sequence?: {
+    featureVersion?: unknown;
     status?: unknown;
+    raceIdentity?: unknown;
     availableCheckpoints?: unknown;
     missingCheckpoints?: unknown;
     snapshots?: unknown;
@@ -169,6 +172,12 @@ function validateArtifactCore(input: {
   }
   if (typeof artifact.sequence !== "object" || artifact.sequence == null) {
     throw new Error(`R${input.raceNo}_SEQUENCE_INVALID`);
+  }
+  if (artifact.sequence.featureVersion !== N2_TRIFECTA_MARKET_FEATURE_VERSION) {
+    throw new Error(`R${input.raceNo}_SEQUENCE_VERSION_INVALID`);
+  }
+  if (artifact.sequence.raceIdentity !== expectedRaceIdentity) {
+    throw new Error(`R${input.raceNo}_SEQUENCE_RACE_IDENTITY_INVALID`);
   }
   if (artifact.sequence.status !== artifact.status) {
     throw new Error(`R${input.raceNo}_SEQUENCE_STATUS_INVALID`);

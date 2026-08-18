@@ -36,6 +36,7 @@ function syntheticReport(input: {
     fromCheckpointLabel: availableCheckpoints[index],
     toCheckpointLabel: checkpointLabel,
   }));
+  const raceIdentity = `20260807-10-${String(input.raceNo).padStart(2, "0")}`;
   return {
     loaderVersion: "n2-trifecta-private-market-feature-loader-v1",
     status: input.status,
@@ -43,11 +44,13 @@ function syntheticReport(input: {
     date: "2026-08-07",
     venueCode: "10",
     raceNo: input.raceNo,
-    raceIdentity: `20260807-10-${String(input.raceNo).padStart(2, "0")}`,
+    raceIdentity,
     acceptedMarkerCount: availableCheckpoints.length,
     loadedSnapshotCount: availableCheckpoints.length,
     sequence: {
+      featureVersion: "n2-trifecta-market-features-v1",
       status: input.status,
+      raceIdentity,
       availableCheckpoints: [...availableCheckpoints],
       missingCheckpoints: [...missingCheckpoints],
       snapshots,
@@ -178,7 +181,7 @@ test("semantically identical index reuses existing digest across generatedAt cha
     assert.equal(second.changed, false);
     assert.equal(second.indexDigest, first.indexDigest);
     const disk = JSON.parse(readFileSync(join(root, second.relativePath), "utf8")) as Record<string, unknown>;
-    assert.equal(disk.indexDigest, first.indexDigest);
+    assert.equal(disk.indexDigest, firstIndex.indexDigest);
     assert.equal(disk.generatedAt, firstIndex.generatedAt);
   });
 });

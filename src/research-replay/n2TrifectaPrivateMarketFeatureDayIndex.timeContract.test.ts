@@ -25,7 +25,9 @@ function syntheticReport(): N2TrifectaPrivateMarketFeatureLoadReport {
     acceptedMarkerCount: 4,
     loadedSnapshotCount: 4,
     sequence: {
+      featureVersion: "n2-trifecta-market-features-v1",
       status: "PASS",
+      raceIdentity: "20260807-10-01",
       availableCheckpoints: [...checkpoints],
       missingCheckpoints: [],
       snapshots: checkpoints.map((checkpointLabel, index) => ({ checkpointLabel, syntheticSnapshotIndex: index })),
