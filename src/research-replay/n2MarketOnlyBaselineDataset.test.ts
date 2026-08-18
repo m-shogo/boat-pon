@@ -26,11 +26,12 @@ function selections(): N2MarketOnlyBaselineRaceSource["selections"] {
 }
 
 function source(raceKey: string): N2MarketOnlyBaselineRaceSource {
+  const date = raceKey.slice(0, 10);
   return {
     canonicalRaceKey: raceKey,
-    decisionCutoff: "2026-08-08T03:30:00.000Z",
-    capturedAt: "2026-08-08T03:25:30.000Z",
-    availableAt: "2026-08-08T03:25:00.000Z",
+    decisionCutoff: `${date}T03:30:00.000Z`,
+    capturedAt: `${date}T03:25:30.000Z`,
+    availableAt: `${date}T03:25:00.000Z`,
     observationId: `obs-${raceKey}`,
     rawDocumentId: `raw-${raceKey}`,
     winningSelection: "1-2-3",
@@ -111,9 +112,9 @@ test("market evidence timestamps must use the canonical ISO instant form", () =>
   const sources = twentySources();
   sources[0] = {
     ...sources[0],
-    decisionCutoff: "2026-08-08T12:30:00+09:00",
-    capturedAt: "2026-08-08T12:25:30+09:00",
-    availableAt: "2026-08-08T12:25:00+09:00",
+    decisionCutoff: "2026-08-07T12:30:00+09:00",
+    capturedAt: "2026-08-07T12:25:30+09:00",
+    availableAt: "2026-08-07T12:25:00+09:00",
   };
   const dataset = buildN2MarketOnlyBaselineDataset({ sources });
   assert.equal(dataset.status, "BLOCKED");
@@ -123,11 +124,37 @@ test("market evidence timestamps must use the canonical ISO instant form", () =>
   assert.equal(dataset.rowCount, 0);
 });
 
+test("market-only baseline rejects a canonical cutoff outside the race's JST date", () => {
+  const sources = twentySources();
+  sources[0] = {
+    ...sources[0],
+    decisionCutoff: "2026-08-08T03:30:00.000Z",
+    capturedAt: "2026-08-08T03:25:30.000Z",
+    availableAt: "2026-08-08T03:25:00.000Z",
+  };
+  const dataset = buildN2MarketOnlyBaselineDataset({ sources });
+  assert.equal(dataset.status, "BLOCKED");
+  assert.ok(dataset.blockers.includes("2026-08-07:05:R1:DECISION_CUTOFF_OUTSIDE_RACE_DATE"));
+  assert.equal(dataset.rowCount, 0);
+});
+
+test("market-only baseline accepts a UTC cutoff instant inside the race's JST date", () => {
+  const sources = twentySources();
+  sources[0] = {
+    ...sources[0],
+    decisionCutoff: "2026-08-06T16:30:00.000Z",
+    capturedAt: "2026-08-06T16:25:30.000Z",
+    availableAt: "2026-08-06T16:25:00.000Z",
+  };
+  const dataset = buildN2MarketOnlyBaselineDataset({ sources });
+  assert.equal(dataset.status, "PASS");
+});
+
 test("post-cutoff market evidence blocks the entire fixed cohort", () => {
   const sources = twentySources();
   sources[4] = {
     ...sources[4],
-    availableAt: "2026-08-08T03:31:00.000Z",
+    availableAt: "2026-08-07T03:31:00.000Z",
   };
   const dataset = buildN2MarketOnlyBaselineDataset({ sources });
   assert.equal(dataset.status, "BLOCKED");
