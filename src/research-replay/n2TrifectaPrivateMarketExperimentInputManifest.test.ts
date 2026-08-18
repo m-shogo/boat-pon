@@ -36,6 +36,22 @@ function report(input: {
   const available = checkpoints.slice(0, input.availableCount);
   const missing = checkpoints.slice(input.availableCount);
   const raceIdentity = `${input.date.replaceAll("-", "")}-${input.venueCode}-${String(input.raceNo).padStart(2, "0")}`;
+  const sequenceCore = {
+    featureVersion: "n2-trifecta-market-features-v1" as const,
+    status: input.status,
+    blockers: [] as string[],
+    raceIdentity,
+    availableCheckpoints: [...available],
+    missingCheckpoints: [...missing],
+    snapshots: available.map((checkpointLabel, index) => ({ checkpointLabel, index })),
+    transitions: available.slice(1).map((checkpointLabel, index) => ({
+      fromCheckpointLabel: available[index],
+      toCheckpointLabel: checkpointLabel,
+    })),
+    privateResearchOnly: true as const,
+    publicPublishAuthorized: false as const,
+    databaseWriteAuthorized: false as const,
+  };
   return {
     loaderVersion: "n2-trifecta-private-market-feature-loader-v1",
     status: input.status,
@@ -47,16 +63,8 @@ function report(input: {
     acceptedMarkerCount: available.length,
     loadedSnapshotCount: available.length,
     sequence: {
-      featureVersion: "n2-trifecta-market-features-v1",
-      status: input.status,
-      raceIdentity,
-      availableCheckpoints: [...available],
-      missingCheckpoints: [...missing],
-      snapshots: available.map((checkpointLabel, index) => ({ checkpointLabel, index })),
-      transitions: available.slice(1).map((checkpointLabel, index) => ({
-        fromCheckpointLabel: available[index],
-        toCheckpointLabel: checkpointLabel,
-      })),
+      ...sequenceCore,
+      outputDigest: canonicalHash(sequenceCore),
     } as unknown as N2TrifectaPrivateMarketFeatureLoadReport["sequence"],
     networkRequestCount: 0,
     databaseReadCount: 0,
