@@ -107,3 +107,28 @@ test("rehashing cannot exceed the frozen per-year holdout capacity", () => {
     `MAX_YEAR_RACE_COUNT_EXCEEDS_HOLDOUT:${impossible}/${N2_EDGE_HOLDOUT_MAX_RACES_PER_YEAR}`,
   ));
 });
+
+test("rehashing cannot claim a year with more races than its distinct venues can host", () => {
+  const validation = split("validation", {
+    uniqueRaceCount: 200,
+    distinctVenueCount: 12,
+    maxVenueRaceCount: 17,
+    maxVenueShare: 17 / 200,
+    distinctYearCount: 2,
+    maxYearRaceCount: 150,
+    maxYearShare: 150 / 200,
+  });
+  const base = evidence(validation);
+  const core = {
+    ...base,
+    inputRaceCount: 420,
+    validationInputRaceCount: 200,
+    hypotheses: [{ hypothesisId: "H-A", validation, test: split("test") }],
+  };
+  const { outputDigest: _ignored, ...withoutDigest } = core;
+  const report = evaluateN2EdgeHoldoutConcentration({ ...withoutDigest, outputDigest: canonicalHash(withoutDigest) });
+
+  assert.equal(report.status, "PASS");
+  assert.equal(report.hypotheses[0].status, "BLOCKED");
+  assert.ok(report.hypotheses[0].validation.blockers.includes("MAX_YEAR_RACE_COUNT_EXCEEDS_VENUE_CAPACITY"));
+});
