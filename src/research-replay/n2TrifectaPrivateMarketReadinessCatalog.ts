@@ -16,7 +16,7 @@ import {
 } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
 
-import { canonicalHash } from "./canonical";
+import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import {
   N2_TRIFECTA_PRIVATE_MARKET_DAILY_READINESS_VERSION,
   type N2TrifectaPrivateMarketDailyReadiness,
@@ -94,13 +94,28 @@ type VerifiedReadinessArtifact = {
   outputDigest: string;
 };
 
-function parseInstant(value: string): number | null {
-  const parsed = Date.parse(value);
+function canonicalInstant(value: string): string | null {
+  try {
+    return canonicalUtcTimestamp(value);
+  } catch {
+    return null;
+  }
+}
+
+function canonicalStoredInstant(value: string): string | null {
+  const canonical = canonicalInstant(value);
+  return canonical === value ? canonical : null;
+}
+
+function parseStoredInstant(value: string): number | null {
+  const canonical = canonicalStoredInstant(value);
+  if (canonical == null) return null;
+  const parsed = Date.parse(canonical);
   return Number.isFinite(parsed) ? parsed : null;
 }
 
 function jstDate(value: string): string | null {
-  const parsed = parseInstant(value);
+  const parsed = parseStoredInstant(value);
   if (parsed == null) return null;
   return new Date(parsed + 9 * 60 * 60 * 1_000).toISOString().slice(0, 10);
 }
@@ -166,7 +181,7 @@ function validateReadinessArtifact(input: {
   if (canonicalHash(core) !== outputDigest) {
     throw new Error("READINESS_CATALOG_ARTIFACT_DIGEST_MISMATCH");
   }
-  if (typeof value.checkedAt !== "string" || parseInstant(value.checkedAt) == null
+  if (typeof value.checkedAt !== "string" || canonicalStoredInstant(value.checkedAt) == null
     || jstDate(value.checkedAt) !== input.expectedDate) {
     throw new Error("READINESS_CATALOG_ARTIFACT_CHECKED_AT_INVALID");
   }
@@ -264,9 +279,8 @@ export function buildN2TrifectaPrivateMarketReadinessCatalog(input: {
   dataRoot: string;
   generatedAt?: string;
 }): N2TrifectaPrivateMarketReadinessCatalog {
-  const generatedAtMs = parseInstant(input.generatedAt ?? new Date().toISOString());
-  if (generatedAtMs == null) throw new Error("READINESS_CATALOG_GENERATED_AT_INVALID");
-  const generatedAt = new Date(generatedAtMs).toISOString();
+  const generatedAt = canonicalInstant(input.generatedAt ?? new Date().toISOString());
+  if (generatedAt == null) throw new Error("READINESS_CATALOG_GENERATED_AT_INVALID");
   const artifacts = scanVerifiedArtifacts(input.dataRoot);
   const byScope = new Map<string, VerifiedReadinessArtifact[]>();
   for (const artifact of artifacts) {
@@ -374,7 +388,7 @@ function reusableExistingCatalog(input: {
   }
   if (existing.catalogVersion !== N2_TRIFECTA_PRIVATE_MARKET_READINESS_CATALOG_VERSION
     || typeof existing.catalogDigest !== "string" || !DIGEST_RE.test(existing.catalogDigest)
-    || typeof existing.generatedAt !== "string" || parseInstant(existing.generatedAt) == null) {
+    || typeof existing.generatedAt !== "string" || canonicalStoredInstant(existing.generatedAt) == null) {
     return null;
   }
   const existingDigest = existing.catalogDigest;
