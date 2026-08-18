@@ -117,7 +117,8 @@ function regularBounded(path: string, maxBytes: number): boolean {
 
 function parseIso(value: unknown): boolean {
   if (typeof value !== "string") return false;
-  const calendar = /^(\d{4})-(\d{2})-(\d{2})(?:T| )/u.exec(value);
+  if (!/^\d{4}-\d{2}-\d{2}T/u.test(value) || !/(?:Z|[+-]\d{2}:\d{2})$/u.test(value)) return false;
+  const calendar = /^(\d{4})-(\d{2})-(\d{2})T/u.exec(value);
   if (calendar === null) return false;
   const year = Number(calendar[1]);
   const month = Number(calendar[2]);
@@ -127,7 +128,7 @@ function parseIso(value: unknown): boolean {
   if (date.getUTCFullYear() !== year
     || date.getUTCMonth() !== month - 1
     || date.getUTCDate() !== day) return false;
-  const clock = /(?:T| )(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?/u.exec(value);
+  const clock = /T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?/u.exec(value);
   if (clock === null) return false;
   if (Number(clock[1]) > 23 || Number(clock[2]) > 59 || Number(clock[3] ?? "0") > 59) return false;
   const offset = /([+-])(\d{2}):(\d{2})$/u.exec(value);
