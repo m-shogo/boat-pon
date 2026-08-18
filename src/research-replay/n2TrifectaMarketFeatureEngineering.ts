@@ -1,4 +1,4 @@
-import { canonicalHash } from "./canonical";
+import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 
 export const N2_TRIFECTA_MARKET_FEATURE_VERSION =
   "n2-trifecta-market-features-v1" as const;
@@ -146,8 +146,11 @@ function checkpointIndex(label: N2TrifectaMarketCheckpointLabel): number {
 }
 
 function instant(value: string): number | null {
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? parsed : null;
+  try {
+    return Date.parse(canonicalUtcTimestamp(value));
+  } catch {
+    return null;
+  }
 }
 
 function unique(values: string[]): string[] {
