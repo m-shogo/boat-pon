@@ -60,6 +60,13 @@ function isCanonicalIsoInstant(value: string): boolean {
   return Number.isFinite(parsed) && new Date(parsed).toISOString() === value;
 }
 
+function cutoffWithinRaceDate(date: string, cutoff: string): boolean {
+  if (!isCanonicalIsoInstant(cutoff)) return false;
+  const cutoffMs = Date.parse(cutoff);
+  const raceDateStartJstMs = Date.parse(`${date}T00:00:00+09:00`);
+  return cutoffMs >= raceDateStartJstMs && cutoffMs < raceDateStartJstMs + 24 * 60 * 60 * 1000;
+}
+
 function parseRaceKey(value: string): ParsedRaceKey | null {
   const match = RACE_KEY_RE.exec(value);
   if (!match || !isCanonicalCalendarDate(match[1])) return null;
@@ -85,8 +92,12 @@ function unique<T>(values: readonly T[]): T[] {
 
 function validateSource(source: N2MarketOnlyBaselineRaceSource): string[] {
   const blockers: string[] = [];
-  if (!parseRaceKey(source.canonicalRaceKey)) blockers.push("RACE_KEY_INVALID");
+  const parsedRaceKey = parseRaceKey(source.canonicalRaceKey);
+  if (!parsedRaceKey) blockers.push("RACE_KEY_INVALID");
   if (!isCanonicalIsoInstant(source.decisionCutoff)) blockers.push("DECISION_CUTOFF_INVALID");
+  else if (parsedRaceKey && !cutoffWithinRaceDate(parsedRaceKey.date, source.decisionCutoff)) {
+    blockers.push("DECISION_CUTOFF_OUTSIDE_RACE_DATE");
+  }
   if (!isCanonicalIsoInstant(source.capturedAt)) blockers.push("CAPTURED_AT_INVALID");
   if (!isCanonicalIsoInstant(source.availableAt)) blockers.push("AVAILABLE_AT_INVALID");
   if (isCanonicalIsoInstant(source.availableAt)
