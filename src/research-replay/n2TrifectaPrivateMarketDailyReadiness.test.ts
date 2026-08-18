@@ -58,10 +58,10 @@ function syntheticReport(input: {
     publicPublishAuthorized: false as const,
     databaseWriteAuthorized: false as const,
   };
-  return {
+  const core = {
     loaderVersion: "n2-trifecta-private-market-feature-loader-v1",
     status: input.status,
-    blockers: [],
+    blockers: [] as string[],
     date: "2026-08-07",
     venueCode: "10",
     raceNo: input.raceNo,
@@ -72,15 +72,15 @@ function syntheticReport(input: {
       ...sequenceCore,
       outputDigest: canonicalHash(sequenceCore),
     } as unknown as N2TrifectaPrivateMarketFeatureLoadReport["sequence"],
-    networkRequestCount: 0,
-    databaseReadCount: 0,
-    databaseWriteCount: 0,
+    networkRequestCount: 0 as const,
+    databaseReadCount: 0 as const,
+    databaseWriteCount: 0 as const,
     rawValuesReadPrivately: true,
-    rawValuesPublished: false,
-    privateResearchOnly: true,
-    publicPublishAuthorized: false,
-    outputDigest: input.raceNo.toString(16).padStart(64, "0"),
+    rawValuesPublished: false as const,
+    privateResearchOnly: true as const,
+    publicPublishAuthorized: false as const,
   };
+  return { ...core, outputDigest: canonicalHash(core) } as N2TrifectaPrivateMarketFeatureLoadReport;
 }
 
 function withRoot(run: (root: string) => void): void {
