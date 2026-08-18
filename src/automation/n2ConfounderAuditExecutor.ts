@@ -7,7 +7,14 @@ import { auditN2ConfoundersAndRejections, type N2ConfounderRejectionAuditReport 
 import { N2_EDGE_HISTORICAL_CONFIRMATION_VERSION, type N2EdgeHistoricalConfirmationReport } from "../research-replay/n2EdgeHistoricalConfirmation";
 import { N2_EDGE_HOLDOUT_MAX_RACES_PER_SPLIT } from "../research-replay/n2EdgeHoldoutCohort";
 import type { N2EdgeHoldoutDistributionEvidenceReport } from "../research-replay/n2EdgeHoldoutDistributionEvidence";
-import { N2_EDGE_HYPOTHESIS_SCAN_VERSION, N2_EDGE_SCAN_MAX_SIGNALS, type N2EdgeHypothesis } from "../research-replay/n2EdgeHypothesisScan";
+import {
+  N2_EDGE_HYPOTHESIS_SCAN_VERSION,
+  N2_EDGE_SCAN_ALPHA,
+  N2_EDGE_SCAN_MAX_SIGNALS,
+  N2_EDGE_SCAN_MIN_ABSOLUTE_RESIDUAL,
+  N2_EDGE_SCAN_MIN_UNIQUE_RACES,
+  type N2EdgeHypothesis,
+} from "../research-replay/n2EdgeHypothesisScan";
 import { contractDigest, type Rejection } from "../research/governance/contracts";
 import { appendRecordIdempotent, listRecords } from "../research/governance/registryStore";
 import {
@@ -168,9 +175,9 @@ function confirmationMethodMatchesProducer(value: unknown): boolean {
   return method.rediscoveryAllowed === false
     && method.interactionSearchAllowed === false
     && method.raceLevelResidualRequired === true
-    && method.minUniqueRacesPerSplit === 200
-    && method.minAbsoluteResidual === 0.001
-    && method.familyWiseAlpha === 0.05
+    && method.minUniqueRacesPerSplit === N2_EDGE_SCAN_MIN_UNIQUE_RACES
+    && method.minAbsoluteResidual === N2_EDGE_SCAN_MIN_ABSOLUTE_RESIDUAL
+    && method.familyWiseAlpha === N2_EDGE_SCAN_ALPHA
     && method.multipleTesting === "Holm-Bonferroni separately within validation and test"
     && method.bothHoldoutSplitsRequired === true
     && method.sameDirectionRequired === true
