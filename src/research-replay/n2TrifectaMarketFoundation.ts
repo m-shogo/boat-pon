@@ -1,4 +1,4 @@
-import { canonicalHash } from "./canonical";
+import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 
 export const N2_TRIFECTA_MARKET_FOUNDATION_VERSION = "n2-trifecta-market-foundation-v1";
 export const N2_TRIFECTA_MARKET_CANARY_MANIFEST_VERSION = "n2-trifecta-market-canary-manifest-v1";
@@ -153,8 +153,11 @@ function assertCount(value: number, field: string): void {
 
 function parseInstant(value: string): number | null {
   if (typeof value !== "string" || value.trim() === "") return null;
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? parsed : null;
+  try {
+    return Date.parse(canonicalUtcTimestamp(value));
+  } catch {
+    return null;
+  }
 }
 
 function isSha256(value: string): boolean {
@@ -370,30 +373,30 @@ export function buildN2TrifectaMarketFoundation(input: {
   }
 
   const candidateAuditPairs = input.candidates
-  .map((candidate) => ({ candidate, audit: auditN2TrifectaMarketSnapshot(candidate) }))
-  .sort((left, right) => {
-    const identity = (left.audit.checkpointIdentity ?? "").localeCompare(right.audit.checkpointIdentity ?? "");
-    if (identity !== 0) return identity;
-    const race = left.candidate.raceId.localeCompare(right.candidate.raceId);
-    if (race !== 0) return race;
-    const checkpoint = left.candidate.checkpointLabel.localeCompare(right.candidate.checkpointLabel);
-    if (checkpoint !== 0) return checkpoint;
-    const captured = left.candidate.capturedAt.localeCompare(right.candidate.capturedAt);
-    if (captured !== 0) return captured;
-    return left.candidate.proposedObservationId.localeCompare(right.candidate.proposedObservationId);
-  });
-const audits = candidateAuditPairs.map(({ audit }) => audit);
-const identities = new Map<string, number>();
-for (const audit of audits) {
-  if (audit.checkpointIdentity) identities.set(audit.checkpointIdentity, (identities.get(audit.checkpointIdentity) ?? 0) + 1);
-}
-const duplicateCheckpointIdentities = [...identities.entries()]
-  .filter(([, count]) => count > 1)
-  .map(([identity]) => identity)
-  .sort();
+    .map((candidate) => ({ candidate, audit: auditN2TrifectaMarketSnapshot(candidate) }))
+    .sort((left, right) => {
+      const identity = (left.audit.checkpointIdentity ?? "").localeCompare(right.audit.checkpointIdentity ?? "");
+      if (identity !== 0) return identity;
+      const race = left.candidate.raceId.localeCompare(right.candidate.raceId);
+      if (race !== 0) return race;
+      const checkpoint = left.candidate.checkpointLabel.localeCompare(right.candidate.checkpointLabel);
+      if (checkpoint !== 0) return checkpoint;
+      const captured = left.candidate.capturedAt.localeCompare(right.candidate.capturedAt);
+      if (captured !== 0) return captured;
+      return left.candidate.proposedObservationId.localeCompare(right.candidate.proposedObservationId);
+    });
+  const audits = candidateAuditPairs.map(({ audit }) => audit);
+  const identities = new Map<string, number>();
+  for (const audit of audits) {
+    if (audit.checkpointIdentity) identities.set(audit.checkpointIdentity, (identities.get(audit.checkpointIdentity) ?? 0) + 1);
+  }
+  const duplicateCheckpointIdentities = [...identities.entries()]
+    .filter(([, count]) => count > 1)
+    .map(([identity]) => identity)
+    .sort();
 
-const sourceBlockers = inventoryBlockers(input.inventory);
-const safePairs = candidateAuditPairs.filter(({ audit }) => audit.status === "PASS");
+  const sourceBlockers = inventoryBlockers(input.inventory);
+  const safePairs = candidateAuditPairs.filter(({ audit }) => audit.status === "PASS");
 
   const globallyBlocked = sourceBlockers.length > 0 || duplicateCheckpointIdentities.length > 0;
   const selected = globallyBlocked ? [] : safePairs.slice(0, requestedMaxRaces);
