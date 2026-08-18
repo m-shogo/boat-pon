@@ -24,6 +24,8 @@ type AcceptedMarker = {
   checkpointLabel?: unknown;
   envelopeRelativePath?: unknown;
   acceptedAt?: unknown;
+  databaseWriteAuthorized?: unknown;
+  productionApplyExecuted?: unknown;
 };
 
 type CaptureEnvelope = {
@@ -158,6 +160,10 @@ export function readN2T5DecisionCutoffMetadata(input: {
       || !isCanonicalIsoInstant(marker.acceptedAt)
       || !cutoffWithinRaceDate(location.date, marker.acceptedAt)) {
       blockers.push(`${raceKey}:ACCEPTED_MARKER_ACCEPTED_AT_INVALID`);
+      continue;
+    }
+    if (marker.databaseWriteAuthorized !== false || marker.productionApplyExecuted !== false) {
+      blockers.push(`${raceKey}:ACCEPTED_MARKER_AUTHORITY_WIDENED`);
       continue;
     }
     if (typeof marker.envelopeRelativePath !== "string"

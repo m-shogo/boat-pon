@@ -20,6 +20,8 @@ test("reader rejects normalized envelope traversal before private envelope metad
       checkpointLabel: "T-5",
       envelopeRelativePath: traversingPath,
       acceptedAt: "2026-08-07T03:31:00.000Z",
+      databaseWriteAuthorized: false,
+      productionApplyExecuted: false,
     }, null, 2)}\n`, "utf8");
 
     const escapedEnvelope = join(root, "data/raw/research/trifecta-market/2026-08-07/05/other.envelope.json");
@@ -33,15 +35,14 @@ test("reader rejects normalized envelope traversal before private envelope metad
         checkpointLabel: "T-5",
         decisionCutoff: "2026-08-07T03:30:00.000Z",
       },
+      databaseWriteAuthorized: false,
+      currentBuyConnectionAuthorized: false,
+      lineConnectionAuthorized: false,
       publicPublishAuthorized: false,
       productionApplyExecuted: false,
     }, null, 2)}\n`, "utf8");
 
-    const read = readN2T5DecisionCutoffMetadata({
-      dataRoot: root,
-      raceKeys: ["2026-08-07:05:R1"],
-    });
-
+    const read = readN2T5DecisionCutoffMetadata({ dataRoot: root, raceKeys: ["2026-08-07:05:R1"] });
     assert.equal(read.status, "BLOCKED");
     assert.deepEqual(read.blockers, ["2026-08-07:05:R1:ENVELOPE_PATH_INVALID"]);
     assert.deepEqual(read.decisionCutoffByRaceKey, {});

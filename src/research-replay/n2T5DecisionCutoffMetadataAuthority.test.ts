@@ -11,7 +11,10 @@ const RACE_IDENTITY = "20260806-01-01";
 const DIRECTORY = "data/raw/research/trifecta-market/2026-08-06/01/01/T-5";
 const ENVELOPE_RELATIVE_PATH = `${DIRECTORY}/authority-test.envelope.json`;
 
-function writeFixture(root: string, widenedField: "databaseWriteAuthorized" | "currentBuyConnectionAuthorized" | "lineConnectionAuthorized") {
+function writeEnvelopeAuthorityFixture(
+  root: string,
+  widenedField: "databaseWriteAuthorized" | "currentBuyConnectionAuthorized" | "lineConnectionAuthorized",
+): void {
   const directory = join(root, DIRECTORY);
   mkdirSync(directory, { recursive: true });
   writeFileSync(join(directory, "accepted.json"), JSON.stringify({
@@ -20,6 +23,8 @@ function writeFixture(root: string, widenedField: "databaseWriteAuthorized" | "c
     checkpointLabel: "T-5",
     envelopeRelativePath: ENVELOPE_RELATIVE_PATH,
     acceptedAt: "2026-08-06T03:00:00.000Z",
+    databaseWriteAuthorized: false,
+    productionApplyExecuted: false,
   }));
   writeFileSync(join(root, ENVELOPE_RELATIVE_PATH), JSON.stringify({
     envelopeVersion: "n2-trifecta-private-capture-envelope-v1",
@@ -39,7 +44,26 @@ function writeFixture(root: string, widenedField: "databaseWriteAuthorized" | "c
   }));
 }
 
-test("T-5 cutoff metadata rejects every private-capture authority widening", () => {
+function writeMarkerAuthorityFixture(
+  root: string,
+  markerAuthority: { databaseWriteAuthorized?: boolean; productionApplyExecuted?: boolean },
+): void {
+  const directory = join(root, DIRECTORY);
+  mkdirSync(directory, { recursive: true });
+  writeFileSync(join(directory, "accepted.json"), JSON.stringify({
+    markerVersion: "n2-trifecta-private-capture-accepted-v1",
+    raceIdentity: RACE_IDENTITY,
+    checkpointLabel: "T-5",
+    envelopeRelativePath: ENVELOPE_RELATIVE_PATH,
+    acceptedAt: "2026-08-06T03:00:00.000Z",
+    databaseWriteAuthorized: false,
+    productionApplyExecuted: false,
+    ...markerAuthority,
+  }));
+  writeFileSync(join(root, ENVELOPE_RELATIVE_PATH), "NOT_VALID_JSON\n", "utf8");
+}
+
+test("T-5 cutoff metadata rejects every private-capture envelope authority widening", () => {
   for (const widenedField of [
     "databaseWriteAuthorized",
     "currentBuyConnectionAuthorized",
@@ -47,7 +71,7 @@ test("T-5 cutoff metadata rejects every private-capture authority widening", () 
   ] as const) {
     const root = mkdtempSync(join(tmpdir(), "boat-pon-t5-cutoff-authority-"));
     try {
-      writeFixture(root, widenedField);
+      writeEnvelopeAuthorityFixture(root, widenedField);
       const result = readN2T5DecisionCutoffMetadata({ dataRoot: root, raceKeys: [RACE_KEY] });
       assert.equal(result.status, "BLOCKED", widenedField);
       assert.deepEqual(result.decisionCutoffByRaceKey, {}, widenedField);
@@ -58,6 +82,32 @@ test("T-5 cutoff metadata rejects every private-capture authority widening", () 
       assert.equal(result.databaseWriteCount, 0, widenedField);
       assert.equal(result.publicPublishAuthorized, false, widenedField);
       assert.equal(result.productionApplyExecuted, false, widenedField);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }
+});
+
+test("T-5 cutoff metadata rejects accepted-marker authority widening before envelope reads", () => {
+  for (const markerAuthority of [
+    { databaseWriteAuthorized: true },
+    { productionApplyExecuted: true },
+    { databaseWriteAuthorized: undefined },
+    { productionApplyExecuted: undefined },
+  ]) {
+    const root = mkdtempSync(join(tmpdir(), "boat-pon-t5-marker-authority-"));
+    try {
+      writeMarkerAuthorityFixture(root, markerAuthority);
+      const result = readN2T5DecisionCutoffMetadata({ dataRoot: root, raceKeys: [RACE_KEY] });
+      assert.equal(result.status, "BLOCKED");
+      assert.deepEqual(result.blockers, [`${RACE_KEY}:ACCEPTED_MARKER_AUTHORITY_WIDENED`]);
+      assert.deepEqual(result.decisionCutoffByRaceKey, {});
+      assert.equal(result.privateEnvelopeMetadataReadCount, 0);
+      assert.equal(result.rawOddsValuesRead, false);
+      assert.equal(result.databaseReadCount, 0);
+      assert.equal(result.databaseWriteCount, 0);
+      assert.equal(result.publicPublishAuthorized, false);
+      assert.equal(result.productionApplyExecuted, false);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
