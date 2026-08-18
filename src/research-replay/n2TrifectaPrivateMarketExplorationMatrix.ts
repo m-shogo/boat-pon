@@ -491,6 +491,26 @@ function readFeatureArtifact(input: {
   if (typeof input.race.raceIdentity !== "string" || !/^\d{8}-(0[1-9]|1\d|2[0-4])-\d{2}$/u.test(input.race.raceIdentity)) {
     throw new Error("EXPLORATION_MATRIX_RACE_IDENTITY_INVALID");
   }
+  const date = input.race.date;
+  const venueCode = input.race.venueCode;
+  const raceNo = input.race.raceNo;
+  if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/u.test(date)
+    || typeof venueCode !== "string" || !/^(0[1-9]|1\d|2[0-4])$/u.test(venueCode)
+    || !Number.isSafeInteger(raceNo) || (raceNo as number) < 1 || (raceNo as number) > 12) {
+    throw new Error("EXPLORATION_MATRIX_RACE_FIELDS_INVALID");
+  }
+  try {
+    if (canonicalUtcTimestamp(`${date}T00:00:00.000Z`).slice(0, 10) !== date) {
+      throw new Error("EXPLORATION_MATRIX_RACE_FIELDS_INVALID");
+    }
+  } catch {
+    throw new Error("EXPLORATION_MATRIX_RACE_FIELDS_INVALID");
+  }
+  const normalizedRaceNo = raceNo as number;
+  const expectedRaceIdentity = `${date.replaceAll("-", "")}-${venueCode}-${String(normalizedRaceNo).padStart(2, "0")}`;
+  if (input.race.raceIdentity !== expectedRaceIdentity) {
+    throw new Error("EXPLORATION_MATRIX_RACE_IDENTITY_FIELDS_MISMATCH");
+  }
   if (!isDigest(input.race.sourceLoadDigest) || !isDigest(input.race.featureArtifactDigest)
     || input.race.featureArtifactVersion !== N2_TRIFECTA_PRIVATE_MARKET_FEATURE_ARTIFACT_VERSION
     || typeof input.race.featureArtifactRelativePath !== "string") {
@@ -502,7 +522,7 @@ function readFeatureArtifact(input: {
     throw new Error("EXPLORATION_MATRIX_RACE_COVERAGE_INVALID");
   }
   const path = resolveInside(input.rootDir, input.race.featureArtifactRelativePath);
-  const expectedPath = `data/private/trifecta-market-features/${String(input.race.date)}/${String(input.race.venueCode)}/${String(input.race.raceNo).padStart(2, "0")}.json`;
+  const expectedPath = `data/private/trifecta-market-features/${date}/${venueCode}/${String(normalizedRaceNo).padStart(2, "0")}.json`;
   if (input.race.featureArtifactRelativePath !== expectedPath) throw new Error("EXPLORATION_MATRIX_FEATURE_PATH_MISMATCH");
   if (!existsSync(path)) throw new Error("EXPLORATION_MATRIX_FEATURE_MISSING");
   const lst = lstatSync(path);
