@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { dirname, resolve, sep } from "node:path";
 
-import { canonicalHash } from "./canonical";
+import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import {
   buildN2TrifectaPrivateHeartbeatGapDiagnostics,
   type N2TrifectaPrivateHeartbeatGapDiagnosticsReport,
@@ -86,14 +86,18 @@ export type N2TrifectaPrivateMarketDailyReadiness = {
 
 type StoredDayIndexLike = Partial<N2TrifectaPrivateMarketFeatureDayIndex> & Record<string, unknown>;
 
-function parseInstant(value: string): number | null {
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? parsed : null;
+function canonicalInstant(value: string): string | null {
+  try {
+    return canonicalUtcTimestamp(value);
+  } catch {
+    return null;
+  }
 }
 
 function jstDate(value: string): string | null {
-  const parsed = parseInstant(value);
-  if (parsed == null) return null;
+  const canonical = canonicalInstant(value);
+  if (canonical == null) return null;
+  const parsed = Date.parse(canonical);
   return new Date(parsed + 9 * 60 * 60 * 1_000).toISOString().slice(0, 10);
 }
 
@@ -144,7 +148,11 @@ function readVerifiedDayIndex(input: {
   if (stored.date !== input.date || stored.venueCode !== input.venueCode) {
     throw new Error("DAILY_READINESS_DAY_INDEX_SCOPE_MISMATCH");
   }
-  if (typeof stored.generatedAt !== "string" || parseInstant(stored.generatedAt) == null) {
+  if (typeof stored.generatedAt !== "string") {
+    throw new Error("DAILY_READINESS_DAY_INDEX_GENERATED_AT_INVALID");
+  }
+  const storedGeneratedAt = canonicalInstant(stored.generatedAt);
+  if (storedGeneratedAt == null || storedGeneratedAt !== stored.generatedAt) {
     throw new Error("DAILY_READINESS_DAY_INDEX_GENERATED_AT_INVALID");
   }
   if (typeof stored.indexDigest !== "string" || !/^[0-9a-f]{64}$/u.test(stored.indexDigest)) {
@@ -152,16 +160,16 @@ function readVerifiedDayIndex(input: {
   }
 
   const storedDigest = stored.indexDigest;
-const { indexDigest: _storedDigest, ...storedCore } = stored;
-if (canonicalHash(storedCore) !== storedDigest) {
-  throw new Error("DAILY_READINESS_DAY_INDEX_DIGEST_MISMATCH");
-}
+  const { indexDigest: _storedDigest, ...storedCore } = stored;
+  if (canonicalHash(storedCore) !== storedDigest) {
+    throw new Error("DAILY_READINESS_DAY_INDEX_DIGEST_MISMATCH");
+  }
 
   const rebuilt = buildN2TrifectaPrivateMarketFeatureDayIndex({
     rootDir: input.dataRoot,
     date: input.date,
     venueCode: input.venueCode,
-    generatedAt: stored.generatedAt,
+    generatedAt: storedGeneratedAt,
   });
   if (rebuilt.indexDigest !== storedDigest) {
     throw new Error("DAILY_READINESS_DAY_INDEX_DIGEST_MISMATCH");
@@ -180,9 +188,8 @@ export function buildN2TrifectaPrivateMarketDailyReadiness(input: {
   checkedAt: string;
 }): N2TrifectaPrivateMarketDailyReadiness {
   validateScope(input.date, input.venueCode);
-  const checkedAtMs = parseInstant(input.checkedAt);
-  if (checkedAtMs == null) throw new Error("DAILY_READINESS_CHECKED_AT_INVALID");
-  const checkedAt = new Date(checkedAtMs).toISOString();
+  const checkedAt = canonicalInstant(input.checkedAt);
+  if (checkedAt == null) throw new Error("DAILY_READINESS_CHECKED_AT_INVALID");
   if (jstDate(checkedAt) !== input.date) throw new Error("DAILY_READINESS_CHECKED_AT_DATE_MISMATCH");
 
   const dayIndex = readVerifiedDayIndex({
