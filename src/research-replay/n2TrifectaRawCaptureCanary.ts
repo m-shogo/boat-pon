@@ -181,14 +181,19 @@ function isCanonicalCalendarDate(value: string): boolean {
     && parsed.getUTCDate() === day;
 }
 
-function parseInstant(value: string): number | null {
+function canonicalInstant(value: string): string | null {
   try {
-    const canonical = canonicalUtcTimestamp(value);
-    const parsed = Date.parse(canonical);
-    return Number.isFinite(parsed) ? parsed : null;
+    return canonicalUtcTimestamp(value);
   } catch {
     return null;
   }
+}
+
+function parseInstant(value: string): number | null {
+  const canonical = canonicalInstant(value);
+  if (!canonical) return null;
+  const parsed = Date.parse(canonical);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function compactDate(date: string): string {
@@ -409,7 +414,8 @@ export function buildN2TrifectaRawReviewEnvelope(input: {
     blockers.push("RAW_BYTES_TOO_LARGE");
   }
 
-  const fetchedAtMs = parseInstant(input.fetchedAt);
+  const canonicalFetchedAt = canonicalInstant(input.fetchedAt);
+  const fetchedAtMs = canonicalFetchedAt ? Date.parse(canonicalFetchedAt) : null;
   const requestWindowStartMs = parseInstant(input.entry.requestWindowStart);
   const requestWindowEndMs = parseInstant(input.entry.requestWindowEnd);
   const decisionCutoffMs = parseInstant(input.entry.decisionCutoff);
@@ -481,13 +487,14 @@ export function buildN2TrifectaRawReviewEnvelope(input: {
     blockers.push("UNAVAILABLE_SELECTIONS_PRESENT");
   }
 
+  const normalizedFetchedAt = canonicalFetchedAt ?? input.fetchedAt;
   const rawSha256 = sha256(input.rawBytes);
   const rawDocumentId = blockers.includes("RAW_BYTES_EMPTY")
     ? null
     : `raw-${canonicalHash({
         sourceUrl: input.sourceUrl,
         rawSha256,
-        fetchedAt: input.fetchedAt,
+        fetchedAt: normalizedFetchedAt,
       }).slice(0, 40)}`;
   const parseRunId = rawDocumentId
     ? `parse-${canonicalHash({
@@ -515,7 +522,7 @@ export function buildN2TrifectaRawReviewEnvelope(input: {
     snapshotCandidate = {
       raceId: input.entry.observationRaceId,
       checkpointLabel: input.entry.checkpointLabel,
-      capturedAt: input.fetchedAt,
+      capturedAt: normalizedFetchedAt,
       availableAt: sourceDisplayedUpdate.availableAt,
       decisionCutoff: input.entry.decisionCutoff,
       rawDocumentId,
@@ -553,7 +560,7 @@ export function buildN2TrifectaRawReviewEnvelope(input: {
     response: {
       statusCode: input.statusCode,
       contentType: input.contentType,
-      fetchedAt: input.fetchedAt,
+      fetchedAt: normalizedFetchedAt,
       headers: sanitizeHeaders(input.responseHeaders),
       rawByteLength: input.rawBytes.byteLength,
       rawSha256,

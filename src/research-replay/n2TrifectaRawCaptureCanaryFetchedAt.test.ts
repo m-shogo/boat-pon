@@ -46,3 +46,15 @@ test("raw review preserves valid explicit-offset fetchedAt instants", () => {
   const result = review("2026-08-05T11:50:00+09:00");
   assert.ok(!result.blockers.includes("FETCHED_AT_INVALID"));
 });
+
+test("raw review canonicalizes equivalent fetchedAt instants into one lineage identity", () => {
+  const utc = review("2026-08-05T02:50:00.000Z");
+  const offset = review("2026-08-05T11:50:00.000+09:00");
+
+  assert.equal(utc.response.fetchedAt, "2026-08-05T02:50:00.000Z");
+  assert.equal(offset.response.fetchedAt, utc.response.fetchedAt);
+  assert.equal(offset.rawDocumentId, utc.rawDocumentId);
+  assert.equal(offset.parseRunId, utc.parseRunId);
+  assert.equal(offset.proposedObservationId, utc.proposedObservationId);
+  assert.equal(offset.snapshotCandidate?.capturedAt, utc.snapshotCandidate?.capturedAt);
+});
