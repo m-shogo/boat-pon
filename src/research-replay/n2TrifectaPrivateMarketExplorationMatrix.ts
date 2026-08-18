@@ -11,7 +11,10 @@ import {
 import { dirname, resolve, sep } from "node:path";
 
 import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
-import { N2_TRIFECTA_MARKET_FEATURE_VERSION } from "./n2TrifectaMarketFeatureEngineering";
+import {
+  N2_TRIFECTA_MARKET_FEATURE_VERSION,
+  buildN2TrifectaMarketSnapshotFeatures,
+} from "./n2TrifectaMarketFeatureEngineering";
 import { N2_TRIFECTA_PRIVATE_MARKET_FEATURE_ARTIFACT_VERSION } from
   "./n2TrifectaPrivateMarketFeatureArtifact";
 import { N2_TRIFECTA_PRIVATE_MARKET_EXPERIMENT_INPUT_MANIFEST_VERSION } from
@@ -356,6 +359,30 @@ function validateSnapshot(input: {
   const availableAt = parseSnapshotInstant(value.availableAt);
   if (!Number.isFinite(capturedAt) || !Number.isFinite(availableAt) || availableAt > capturedAt) {
     throw new Error(`${code}_PIT_TIME_INVALID`);
+  }
+  if (typeof value.capturedAt !== "string" || typeof value.availableAt !== "string") {
+    throw new Error(`${code}_SNAPSHOT_DERIVATION_INVALID`);
+  }
+  const odds: Record<string, number> = {};
+  for (const selection of value.selections) {
+    if (typeof selection !== "object" || selection == null || Array.isArray(selection)) {
+      throw new Error(`${code}_SNAPSHOT_DERIVATION_INVALID`);
+    }
+    const row = selection as Record<string, unknown>;
+    if (typeof row.selection !== "string" || typeof row.odds !== "number" || !Number.isFinite(row.odds)) {
+      throw new Error(`${code}_SNAPSHOT_DERIVATION_INVALID`);
+    }
+    odds[row.selection] = row.odds;
+  }
+  const derived = buildN2TrifectaMarketSnapshotFeatures({
+    raceIdentity: input.raceIdentity,
+    checkpointLabel: input.checkpoint,
+    capturedAt: value.capturedAt,
+    availableAt: value.availableAt,
+    odds,
+  });
+  if (derived.status !== "PASS" || derived.snapshot == null || derived.snapshot.outputDigest !== value.outputDigest) {
+    throw new Error(`${code}_SNAPSHOT_DERIVATION_MISMATCH`);
   }
 
   const normalizedEntropy = boundedNumber(value.normalizedEntropy, 0, 1, `${code}_NORMALIZED_ENTROPY_INVALID`);
