@@ -102,8 +102,12 @@ test("venue breadth blocks independently of confirmation result", () => {
 
 test("single-era or dominant-era evidence blocks", () => {
   const maxYearRaceCount = 220;
+  const maxVenueRaceCount = 11;
   const report = evaluateN2EdgeHoldoutConcentration(evidence(
     split("validation", {
+      distinctVenueCount: 20,
+      maxVenueRaceCount,
+      maxVenueShare: maxVenueRaceCount / 220,
       distinctYearCount: N2_EDGE_HOLDOUT_MIN_DISTINCT_YEARS - 1,
       maxYearRaceCount,
       maxYearShare: maxYearRaceCount / 220,
