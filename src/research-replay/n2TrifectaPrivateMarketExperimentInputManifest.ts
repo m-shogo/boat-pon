@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { dirname, resolve, sep } from "node:path";
 
-import { canonicalHash } from "./canonical";
+import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import { N2_TRIFECTA_PRIVATE_MARKET_FEATURE_ARTIFACT_VERSION } from
   "./n2TrifectaPrivateMarketFeatureArtifact";
 import { N2_TRIFECTA_PRIVATE_MARKET_FEATURE_DAY_INDEX_VERSION } from
@@ -162,7 +162,14 @@ function readDayIndex(input: {
   if (index.indexVersion !== N2_TRIFECTA_PRIVATE_MARKET_FEATURE_DAY_INDEX_VERSION) throw new Error("DAY_INDEX_VERSION_INVALID");
   if (index.date !== input.scope.date || index.venueCode !== input.scope.venueCode) throw new Error("DAY_INDEX_SCOPE_MISMATCH");
   if (index.raceCount !== 12 || !Array.isArray(index.races) || index.races.length !== 12) throw new Error("DAY_INDEX_RACE_COUNT_INVALID");
-  if (typeof index.generatedAt !== "string" || !Number.isFinite(Date.parse(index.generatedAt))) throw new Error("DAY_INDEX_GENERATED_AT_INVALID");
+  if (typeof index.generatedAt !== "string") throw new Error("DAY_INDEX_GENERATED_AT_INVALID");
+  let indexGeneratedAt: string;
+  try {
+    indexGeneratedAt = canonicalUtcTimestamp(index.generatedAt);
+  } catch {
+    throw new Error("DAY_INDEX_GENERATED_AT_INVALID");
+  }
+  if (indexGeneratedAt !== index.generatedAt) throw new Error("DAY_INDEX_GENERATED_AT_INVALID");
   if (typeof index.indexDigest !== "string" || !/^[0-9a-f]{64}$/u.test(index.indexDigest)) throw new Error("DAY_INDEX_DIGEST_INVALID");
   if (index.privateResearchOnly !== true || index.publicPublishAuthorized !== false
     || index.databaseReadCount !== 0 || index.databaseWriteCount !== 0 || index.networkRequestCount !== 0
@@ -231,7 +238,7 @@ function readDayIndex(input: {
       venueCode: input.scope.venueCode,
       indexRelativePath: relativePath,
       indexDigest,
-      indexGeneratedAt: new Date(Date.parse(index.generatedAt)).toISOString(),
+      indexGeneratedAt,
       passCount,
       partialCount,
       noDataCount,
