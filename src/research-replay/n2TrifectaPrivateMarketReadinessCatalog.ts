@@ -201,6 +201,14 @@ function validateReadinessArtifact(input: {
     || value.completeRaceCount + value.partialRaceCount + value.noDataRaceCount !== 12) {
     throw new Error("READINESS_CATALOG_ARTIFACT_RACE_COUNTS_INVALID");
   }
+  const expectedDayIndexStatus = value.completeRaceCount === 12
+    ? "PASS"
+    : value.noDataRaceCount === 12
+      ? "NO_DATA"
+      : "PARTIAL";
+  if (value.sourceDayIndexStatus !== expectedDayIndexStatus) {
+    throw new Error("READINESS_CATALOG_ARTIFACT_DAY_INDEX_STATUS_INCONSISTENT");
+  }
   if (!isNonNegativeInteger(value.cohortCandidateRaceCount)
     || value.cohortCandidateRaceCount !== value.completeRaceCount
     || !Array.isArray(value.cohortCandidateRaceIdentities)
