@@ -14,6 +14,8 @@ import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import {
   N2_TRIFECTA_MARKET_FEATURE_VERSION,
   buildN2TrifectaMarketSnapshotFeatures,
+  buildN2TrifectaMarketTransitionFeatures,
+  type N2TrifectaMarketSnapshotFeatures,
 } from "./n2TrifectaMarketFeatureEngineering";
 import { N2_TRIFECTA_PRIVATE_MARKET_FEATURE_ARTIFACT_VERSION } from
   "./n2TrifectaPrivateMarketFeatureArtifact";
@@ -422,6 +424,8 @@ function validateSnapshot(input: {
 
 function validateTransition(input: {
   transition: TransitionLike;
+  previousSnapshot: SnapshotLike;
+  currentSnapshot: SnapshotLike;
   raceIdentity: string;
   from: typeof CHECKPOINTS[number];
   to: typeof CHECKPOINTS[number];
@@ -451,6 +455,19 @@ function validateTransition(input: {
   const unchanged = integerInRange(value.unchangedSelectionCount, 0, 120, `${code}_UNCHANGED_COUNT_INVALID`);
   if (shortening + lengthening + unchanged !== 120) throw new Error(`${code}_MOVE_COUNTS_INVALID`);
   if (maxMove < medianMove) throw new Error(`${code}_MOVE_ORDER_INVALID`);
+
+  let derived;
+  try {
+    derived = buildN2TrifectaMarketTransitionFeatures(
+      input.previousSnapshot as N2TrifectaMarketSnapshotFeatures,
+      input.currentSnapshot as N2TrifectaMarketSnapshotFeatures,
+    );
+  } catch {
+    throw new Error(`${code}_TRANSITION_DERIVATION_MISMATCH`);
+  }
+  if (derived.outputDigest !== value.outputDigest) {
+    throw new Error(`${code}_TRANSITION_DERIVATION_MISMATCH`);
+  }
 
   return [
     js,
@@ -538,6 +555,8 @@ function readFeatureArtifact(input: {
     const [from, to] = TRANSITIONS[index];
     values.push(...validateTransition({
       transition: transitions[index] as TransitionLike,
+      previousSnapshot: snapshots[index] as SnapshotLike,
+      currentSnapshot: snapshots[index + 1] as SnapshotLike,
       raceIdentity: input.race.raceIdentity,
       from,
       to,
