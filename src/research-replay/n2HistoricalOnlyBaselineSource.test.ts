@@ -90,11 +90,14 @@ function writeAcceptedT5(root: string, input: {
   const manifestDigest = "a".repeat(64);
   const decisionCutoff = input.decisionCutoff ?? `${input.date}T03:30:00.000Z`;
   const canonicalCutoff = canonicalUtcTimestamp(decisionCutoff);
+  const targetCaptureAt = new Date(Date.parse(canonicalCutoff) - 5 * 60_000).toISOString();
+  const fetchedAt = new Date(Date.parse(targetCaptureAt) + 30_000).toISOString();
+  const availableAt = targetCaptureAt;
   const checkpointKey = canonicalHash({
     manifestDigest,
     raceIdentity,
     checkpointLabel: "T-5",
-    targetCaptureAt: new Date(Date.parse(canonicalCutoff) - 5 * 60_000).toISOString(),
+    targetCaptureAt,
     sourceUrl: buildBoatRaceOfficialSourceUrl(
       "boatrace_official_trifecta_odds_html",
       { date: input.date.replaceAll("-", ""), venueCode: input.venue, raceNo: input.raceNo },
@@ -108,6 +111,8 @@ function writeAcceptedT5(root: string, input: {
     manifestDigest,
     checkpointKey,
     entry: { raceIdentity, checkpointLabel: "T-5", decisionCutoff },
+    response: { fetchedAt },
+    sourceDisplayedUpdate: { availableAt },
     databaseWriteAuthorized: false,
     currentBuyConnectionAuthorized: false,
     lineConnectionAuthorized: false,
@@ -124,7 +129,7 @@ function writeAcceptedT5(root: string, input: {
     rawSha256: "a".repeat(64),
     rawRelativePath,
     envelopeRelativePath,
-    acceptedAt: `${input.date}T03:00:00.000Z`,
+    acceptedAt: fetchedAt,
     databaseWriteAuthorized: false,
     productionApplyExecuted: false,
   }, null, 2)}\n`, "utf8");
