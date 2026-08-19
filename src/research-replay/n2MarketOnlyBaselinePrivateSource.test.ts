@@ -6,6 +6,8 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 
+import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
+import { buildBoatRaceOfficialSourceUrl } from "./n2ExternalSourceCaptureContract";
 import { readN2MarketOnlyBaselinePrivateSources } from "./n2MarketOnlyBaselinePrivateSource";
 
 function html(multiplier = 1): string {
@@ -72,14 +74,28 @@ function writeAcceptedT5(root: string, spec: ReturnType<typeof raceSpec>, option
   const observationId = `obs-${spec.date}-${spec.venue}-${raceDir}`;
   const availableAt = options.availableAt ?? `${spec.date}T03:25:00.000Z`;
   const fetchedAt = options.fetchedAt ?? `${spec.date}T03:25:30.000Z`;
-  const decisionCutoff = options.decisionCutoff ?? `${spec.date}T03:30:00.000Z`;
+  const defaultDecisionCutoff = `${spec.date}T03:30:00.000Z`;
+  const decisionCutoff = options.decisionCutoff ?? defaultDecisionCutoff;
+  let checkpointCutoff = defaultDecisionCutoff;
+  try { checkpointCutoff = canonicalUtcTimestamp(decisionCutoff); } catch { /* preserve the intentional invalid cutoff */ }
+  const manifestDigest = "a".repeat(64);
+  const checkpointKey = canonicalHash({
+    manifestDigest,
+    raceIdentity,
+    checkpointLabel: "T-5",
+    targetCaptureAt: new Date(Date.parse(checkpointCutoff) - 5 * 60_000).toISOString(),
+    sourceUrl: buildBoatRaceOfficialSourceUrl(
+      "boatrace_official_trifecta_odds_html",
+      { date: spec.date.replaceAll("-", ""), venueCode: spec.venue, raceNo: spec.raceNo },
+    ),
+  });
   writeFileSync(join(root, rawRelativePath), options.tamperRaw ? Buffer.from(`${raw.toString("utf8")}tamper`) : raw);
   writeFileSync(join(root, envelopeRelativePath), `${JSON.stringify({
     envelopeVersion: "n2-trifecta-private-capture-envelope-v1",
     status: "PASS",
     blockers: [],
-    manifestDigest: "a".repeat(64),
-    checkpointKey: "b".repeat(64),
+    manifestDigest,
+    checkpointKey,
     entry: { raceIdentity, checkpointLabel: "T-5", decisionCutoff },
     response: {
       statusCode: 200,
@@ -109,8 +125,8 @@ function writeAcceptedT5(root: string, spec: ReturnType<typeof raceSpec>, option
   }, null, 2)}\n`);
   writeFileSync(join(dir, "accepted.json"), `${JSON.stringify({
     markerVersion: "n2-trifecta-private-capture-accepted-v1",
-    manifestDigest: "a".repeat(64),
-    checkpointKey: "b".repeat(64),
+    manifestDigest,
+    checkpointKey,
     raceIdentity,
     checkpointLabel: "T-5",
     rawDocumentId,

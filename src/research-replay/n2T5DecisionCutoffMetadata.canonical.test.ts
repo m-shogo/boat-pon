@@ -4,6 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
+import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
+import { buildBoatRaceOfficialSourceUrl } from "./n2ExternalSourceCaptureContract";
 import { readN2T5DecisionCutoffMetadata } from "./n2T5DecisionCutoffMetadata";
 
 function withMetadata(cutoff: string, fn: (root: string) => void): void {
@@ -11,14 +13,25 @@ function withMetadata(cutoff: string, fn: (root: string) => void): void {
   const base = "data/raw/research/trifecta-market/2026-08-07/05/01/T-5";
   const dir = join(root, base);
   const manifestDigest = "a".repeat(64);
-  const checkpointKey = "b".repeat(64);
+  const raceIdentity = "20260807-05-01";
+  const canonicalCutoff = canonicalUtcTimestamp(cutoff);
+  const checkpointKey = canonicalHash({
+    manifestDigest,
+    raceIdentity,
+    checkpointLabel: "T-5",
+    targetCaptureAt: new Date(Date.parse(canonicalCutoff) - 5 * 60_000).toISOString(),
+    sourceUrl: buildBoatRaceOfficialSourceUrl(
+      "boatrace_official_trifecta_odds_html",
+      { date: "20260807", venueCode: "05", raceNo: 1 },
+    ),
+  });
   try {
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, "accepted.json"), `${JSON.stringify({
       markerVersion: "n2-trifecta-private-capture-accepted-v1",
       manifestDigest,
       checkpointKey,
-      raceIdentity: "20260807-05-01",
+      raceIdentity,
       checkpointLabel: "T-5",
       envelopeRelativePath: `${base}/fixture.envelope.json`,
       acceptedAt: "2026-08-07T03:31:00.000Z",
@@ -32,7 +45,7 @@ function withMetadata(cutoff: string, fn: (root: string) => void): void {
       manifestDigest,
       checkpointKey,
       entry: {
-        raceIdentity: "20260807-05-01",
+        raceIdentity,
         checkpointLabel: "T-5",
         decisionCutoff: cutoff,
       },

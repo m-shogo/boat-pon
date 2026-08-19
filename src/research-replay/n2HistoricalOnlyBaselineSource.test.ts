@@ -5,6 +5,8 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 
+import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
+import { buildBoatRaceOfficialSourceUrl } from "./n2ExternalSourceCaptureContract";
 import { readN2HistoricalOnlyBaselineSources } from "./n2HistoricalOnlyBaselineSource";
 
 function withRoot(fn: (root: string) => void): void {
@@ -86,8 +88,18 @@ function writeAcceptedT5(root: string, input: {
   const rawRelativePath = `${base}/fixture.html`;
   const envelopeRelativePath = `${base}/fixture.envelope.json`;
   const manifestDigest = "a".repeat(64);
-  const checkpointKey = "b".repeat(64);
   const decisionCutoff = input.decisionCutoff ?? `${input.date}T03:30:00.000Z`;
+  const canonicalCutoff = canonicalUtcTimestamp(decisionCutoff);
+  const checkpointKey = canonicalHash({
+    manifestDigest,
+    raceIdentity,
+    checkpointLabel: "T-5",
+    targetCaptureAt: new Date(Date.parse(canonicalCutoff) - 5 * 60_000).toISOString(),
+    sourceUrl: buildBoatRaceOfficialSourceUrl(
+      "boatrace_official_trifecta_odds_html",
+      { date: input.date.replaceAll("-", ""), venueCode: input.venue, raceNo: input.raceNo },
+    ),
+  });
   writeFileSync(join(root, rawRelativePath), "private odds fixture placeholder\n", "utf8");
   writeFileSync(join(root, envelopeRelativePath), `${JSON.stringify({
     envelopeVersion: "n2-trifecta-private-capture-envelope-v1",

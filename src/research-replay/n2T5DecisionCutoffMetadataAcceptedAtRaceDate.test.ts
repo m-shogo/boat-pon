@@ -4,10 +4,23 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
+import { canonicalHash } from "./canonical";
+import { buildBoatRaceOfficialSourceUrl } from "./n2ExternalSourceCaptureContract";
 import { readN2T5DecisionCutoffMetadata } from "./n2T5DecisionCutoffMetadata";
 
 const MANIFEST_DIGEST = "a".repeat(64);
-const CHECKPOINT_KEY = "b".repeat(64);
+const RACE_IDENTITY = "20260807-05-01";
+const DECISION_CUTOFF = "2026-08-07T03:30:00.000Z";
+const CHECKPOINT_KEY = canonicalHash({
+  manifestDigest: MANIFEST_DIGEST,
+  raceIdentity: RACE_IDENTITY,
+  checkpointLabel: "T-5",
+  targetCaptureAt: "2026-08-07T03:25:00.000Z",
+  sourceUrl: buildBoatRaceOfficialSourceUrl(
+    "boatrace_official_trifecta_odds_html",
+    { date: "20260807", venueCode: "05", raceNo: 1 },
+  ),
+});
 
 function withMarker(acceptedAt: string, fn: (root: string) => void): void {
   const root = mkdtempSync(join(tmpdir(), "boat-pon-t5-marker-race-date-"));
@@ -19,7 +32,7 @@ function withMarker(acceptedAt: string, fn: (root: string) => void): void {
       markerVersion: "n2-trifecta-private-capture-accepted-v1",
       manifestDigest: MANIFEST_DIGEST,
       checkpointKey: CHECKPOINT_KEY,
-      raceIdentity: "20260807-05-01",
+      raceIdentity: RACE_IDENTITY,
       checkpointLabel: "T-5",
       envelopeRelativePath: `${base}/fixture.envelope.json`,
       acceptedAt,
@@ -56,7 +69,7 @@ test("T-5 cutoff metadata accepts a canonical marker inside the JST race date", 
       markerVersion: "n2-trifecta-private-capture-accepted-v1",
       manifestDigest: MANIFEST_DIGEST,
       checkpointKey: CHECKPOINT_KEY,
-      raceIdentity: "20260807-05-01",
+      raceIdentity: RACE_IDENTITY,
       checkpointLabel: "T-5",
       envelopeRelativePath: `${base}/fixture.envelope.json`,
       acceptedAt: "2026-08-07T03:31:00.000Z",
@@ -70,9 +83,9 @@ test("T-5 cutoff metadata accepts a canonical marker inside the JST race date", 
       manifestDigest: MANIFEST_DIGEST,
       checkpointKey: CHECKPOINT_KEY,
       entry: {
-        raceIdentity: "20260807-05-01",
+        raceIdentity: RACE_IDENTITY,
         checkpointLabel: "T-5",
-        decisionCutoff: "2026-08-07T03:30:00.000Z",
+        decisionCutoff: DECISION_CUTOFF,
       },
       databaseWriteAuthorized: false,
       currentBuyConnectionAuthorized: false,
@@ -84,7 +97,7 @@ test("T-5 cutoff metadata accepts a canonical marker inside the JST race date", 
     const read = readN2T5DecisionCutoffMetadata({ dataRoot: root, raceKeys: ["2026-08-07:05:R1"] });
     assert.equal(read.status, "PASS");
     assert.deepEqual(read.blockers, []);
-    assert.deepEqual(read.decisionCutoffByRaceKey, { "2026-08-07:05:R1": "2026-08-07T03:30:00.000Z" });
+    assert.deepEqual(read.decisionCutoffByRaceKey, { "2026-08-07:05:R1": DECISION_CUTOFF });
     assert.equal(read.privateEnvelopeMetadataReadCount, 1);
     assert.equal(read.rawOddsValuesRead, false);
   } finally {
