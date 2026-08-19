@@ -78,6 +78,26 @@ test("reader selects the latest seven-day cohort deterministically without writi
   }
 });
 
+test("reader rejects an impossible latest date instead of normalizing the cohort boundary", () => {
+  const dir = mkdtempSync(join(tmpdir(), "n2-program-canary-reader-invalid-date-"));
+  const path = join(dir, "primary.sqlite");
+  const db = createPrimary(path);
+  try {
+    insertRow(db, { raceId: "20040229-01-01", date: "2004-02-29" });
+    insertRow(db, { raceId: "20040230-01-02", date: "2004-02-30", raceNo: 2 });
+  } finally {
+    db.close();
+  }
+  try {
+    assert.throws(
+      () => readOfficialProgramCanarySource({ primaryDbPath: path }),
+      /INVALID_PRIMARY_MAX_DATE/,
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("reader reports deterministic truncation and rejects invalid limits", () => {
   const dir = mkdtempSync(join(tmpdir(), "n2-program-canary-reader-limit-"));
   const path = join(dir, "primary.sqlite");
