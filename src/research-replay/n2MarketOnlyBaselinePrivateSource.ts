@@ -23,6 +23,7 @@ import {
 import {
   readN2MarketBaselineReadiness,
 } from "./n2MarketBaselineReadinessReader";
+import { readN2T5DecisionCutoffMetadata } from "./n2T5DecisionCutoffMetadata";
 
 export const N2_MARKET_ONLY_BASELINE_PRIVATE_SOURCE_VERSION =
   "n2-market-only-baseline-private-source-v1" as const;
@@ -382,8 +383,37 @@ export function readN2MarketOnlyBaselinePrivateSources(input: {
     };
   }
 
+  const cutoffRead = readN2T5DecisionCutoffMetadata({
+    dataRoot,
+    raceKeys: readinessRead.settledRaceKeys,
+  });
+  if (cutoffRead.status !== "PASS") {
+    return {
+      readerVersion: N2_MARKET_ONLY_BASELINE_PRIVATE_SOURCE_VERSION,
+      status: "BLOCKED",
+      blockers: cutoffRead.blockers.map((blocker) => `T5_CUTOFF_METADATA:${blocker}`),
+      readinessStatus: readiness.status,
+      readinessDigest: readiness.outputDigest,
+      acceptedT5RaceCount: readiness.acceptedT5RaceCount,
+      settledAcceptedT5RaceCount: readiness.settledAcceptedT5RaceCount,
+      selectedCohortRaceCount: 0,
+      sources: [],
+      privateRawFileReadCount: 0,
+      privateEnvelopeReadCount: cutoffRead.privateEnvelopeMetadataReadCount,
+      databaseReadCount: readinessRead.databaseReadCount,
+      databaseWriteCount: 0,
+      networkRequestCount: 0,
+      rawValuesReadPrivately: false,
+      rawValuesPublished: false,
+      publicPublishAuthorized: false,
+      productionApplyExecuted: false,
+    };
+  }
+
   const raceKeys = [...readinessRead.settledRaceKeys]
-    .sort(compareN2RaceKeysByRaceTime)
+    .sort((left, right) => Date.parse(cutoffRead.decisionCutoffByRaceKey[left])
+      - Date.parse(cutoffRead.decisionCutoffByRaceKey[right])
+      || compareN2RaceKeysByRaceTime(left, right))
     .slice(0, N2_MARKET_ONLY_BASELINE_COHORT_RACE_COUNT);
   const winnerRead = readWinners(sidecarDbPath, raceKeys);
   if (winnerRead.blockers.length > 0) {
@@ -398,7 +428,7 @@ export function readN2MarketOnlyBaselinePrivateSources(input: {
       selectedCohortRaceCount: raceKeys.length,
       sources: [],
       privateRawFileReadCount: 0,
-      privateEnvelopeReadCount: 0,
+      privateEnvelopeReadCount: cutoffRead.privateEnvelopeMetadataReadCount,
       databaseReadCount: readinessRead.databaseReadCount + 1,
       databaseWriteCount: 0,
       networkRequestCount: 0,
@@ -413,7 +443,7 @@ export function readN2MarketOnlyBaselinePrivateSources(input: {
   const blockers: string[] = [];
   const privateReadAudit: PrivateReadAudit = {
     privateRawFileReadCount: 0,
-    privateEnvelopeReadCount: 0,
+    privateEnvelopeReadCount: cutoffRead.privateEnvelopeMetadataReadCount,
     rawValuesReadPrivately: false,
   };
   for (const raceKey of raceKeys) {

@@ -1,5 +1,6 @@
 import { resolve, sep } from "node:path";
 import { readGovernanceFileUtf8Bounded } from "../research/governance/safeFs";
+import { canonicalUtcTimestamp } from "./canonical";
 
 export const N2_T5_DECISION_CUTOFF_METADATA_VERSION =
   "n2-t5-decision-cutoff-metadata-v1" as const;
@@ -47,6 +48,8 @@ type CaptureEnvelope = {
   publicPublishAuthorized?: unknown;
   productionApplyExecuted?: unknown;
 };
+
+type TimestampMode = "producer-canonical" | "canonicalizable-explicit-zone";
 
 const RACE_KEY_RE = /^(\d{4}-\d{2}-\d{2}):(0[1-9]|1\d|2[0-4]):R([1-9]|1[0-2])$/u;
 const SHA256_RE = /^[0-9a-f]{64}$/u;
@@ -101,6 +104,16 @@ function isCanonicalIsoInstant(value: string): boolean {
   return Number.isFinite(parsed) && new Date(parsed).toISOString() === value;
 }
 
+function canonicalInstant(value: unknown, mode: TimestampMode): string | null {
+  if (typeof value !== "string") return null;
+  if (mode === "producer-canonical") return isCanonicalIsoInstant(value) ? value : null;
+  try {
+    return canonicalUtcTimestamp(value);
+  } catch {
+    return null;
+  }
+}
+
 function expectedMetadataLocation(raceKey: string): {
   date: string;
   venue: string;
@@ -120,19 +133,20 @@ function expectedMetadataLocation(raceKey: string): {
   };
 }
 
-function cutoffWithinRaceDate(date: string, cutoff: string): boolean {
-  if (!isCanonicalIsoInstant(cutoff)) return false;
-  const value = Date.parse(cutoff);
+function instantWithinRaceDate(date: string, instant: string): boolean {
+  const value = Date.parse(instant);
   const start = Date.parse(`${date}T00:00:00+09:00`);
   const end = start + 24 * 60 * 60 * 1000;
-  return value >= start && value < end;
+  return Number.isFinite(value) && value >= start && value < end;
 }
 
 export function readN2T5DecisionCutoffMetadata(input: {
   dataRoot: string;
   raceKeys: readonly string[];
+  timestampMode?: TimestampMode;
 }): N2T5DecisionCutoffMetadataRead {
   const dataRoot = resolve(input.dataRoot);
+  const timestampMode = input.timestampMode ?? "canonicalizable-explicit-zone";
   const blockers: string[] = [];
   const decisionCutoffByRaceKey: Record<string, string> = {};
   let privateEnvelopeMetadataReadCount = 0;
@@ -166,9 +180,8 @@ export function readN2T5DecisionCutoffMetadata(input: {
       blockers.push(`${raceKey}:ACCEPTED_MARKER_IDENTITY_INVALID`);
       continue;
     }
-    if (typeof marker.acceptedAt !== "string"
-      || !isCanonicalIsoInstant(marker.acceptedAt)
-      || !cutoffWithinRaceDate(location.date, marker.acceptedAt)) {
+    const acceptedAt = canonicalInstant(marker.acceptedAt, timestampMode);
+    if (acceptedAt == null || !instantWithinRaceDate(location.date, acceptedAt)) {
       blockers.push(`${raceKey}:ACCEPTED_MARKER_ACCEPTED_AT_INVALID`);
       continue;
     }
@@ -220,8 +233,8 @@ export function readN2T5DecisionCutoffMetadata(input: {
     if (envelope.entry?.raceIdentity !== location.raceIdentity || envelope.entry?.checkpointLabel !== "T-5") {
       blockers.push(`${raceKey}:ENVELOPE_IDENTITY_INVALID`);
     }
-    const decisionCutoff = envelope.entry?.decisionCutoff;
-    if (typeof decisionCutoff !== "string" || !cutoffWithinRaceDate(location.date, decisionCutoff)) {
+    const decisionCutoff = canonicalInstant(envelope.entry?.decisionCutoff, timestampMode);
+    if (decisionCutoff == null || !instantWithinRaceDate(location.date, decisionCutoff)) {
       blockers.push(`${raceKey}:DECISION_CUTOFF_INVALID`);
     } else {
       decisionCutoffByRaceKey[raceKey] = decisionCutoff;

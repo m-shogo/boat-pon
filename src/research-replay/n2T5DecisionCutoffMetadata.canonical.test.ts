@@ -48,13 +48,26 @@ function withMetadata(cutoff: string, fn: (root: string) => void): void {
   }
 }
 
-test("T-5 cutoff metadata rejects noncanonical aliases for the same instant", () => {
+test("strict T-5 producer mode rejects noncanonical aliases for the same instant", () => {
   withMetadata("2026-08-07T12:30:00+09:00", (root) => {
-    const read = readN2T5DecisionCutoffMetadata({ dataRoot: root, raceKeys: ["2026-08-07:05:R1"] });
+    const read = readN2T5DecisionCutoffMetadata({
+      dataRoot: root,
+      raceKeys: ["2026-08-07:05:R1"],
+      timestampMode: "producer-canonical",
+    });
     assert.equal(read.status, "BLOCKED");
     assert.deepEqual(read.blockers, ["2026-08-07:05:R1:DECISION_CUTOFF_INVALID"]);
     assert.deepEqual(read.decisionCutoffByRaceKey, {});
     assert.equal(read.privateEnvelopeMetadataReadCount, 1);
+    assert.equal(read.rawOddsValuesRead, false);
+  });
+});
+
+test("T-5 cutoff metadata canonicalizes valid explicit-zone aliases for cohort consumers", () => {
+  withMetadata("2026-08-07T12:30:00+09:00", (root) => {
+    const read = readN2T5DecisionCutoffMetadata({ dataRoot: root, raceKeys: ["2026-08-07:05:R1"] });
+    assert.equal(read.status, "PASS");
+    assert.deepEqual(read.decisionCutoffByRaceKey, { "2026-08-07:05:R1": "2026-08-07T03:30:00.000Z" });
     assert.equal(read.rawOddsValuesRead, false);
   });
 });
