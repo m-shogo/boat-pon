@@ -1,6 +1,7 @@
 import { canonicalHash } from "./canonical";
 import {
   evaluateN2CommonCohort,
+  n2BaselineRaceMembershipDigest,
   type N2CommonCohortEvaluation,
 } from "./n2CommonCohortEvaluation";
 import {
@@ -25,7 +26,7 @@ import {
 import type { N2BaselinePredictionRow } from "./n2BaselineEvaluation";
 
 export const N2_EVALUATION_METRICS_BUNDLE_VERSION =
-  "n2-evaluation-metrics-bundle-v1" as const;
+  "n2-evaluation-metrics-bundle-v2" as const;
 
 export type N2EvaluationMetricsBundle = {
   bundleVersion: typeof N2_EVALUATION_METRICS_BUNDLE_VERSION;
@@ -164,12 +165,16 @@ export function buildN2EvaluationMetricsBundle(input: {
   });
   if (legacy.status !== "PASS") return blocked(legacy.blockers.map((item) => `LEGACY:${item}`));
 
+  const marketMembershipDigest = n2BaselineRaceMembershipDigest(market.rows);
+  const historicalMembershipDigest = n2BaselineRaceMembershipDigest(historical.rows);
+  const legacyMembershipDigest = n2BaselineRaceMembershipDigest(legacy.rows);
   const digestBlockers: string[] = [];
   if (market.outputDigest !== common.marketDatasetDigest) digestBlockers.push("MARKET_DATASET_DIGEST_MISMATCH");
   if (historical.outputDigest !== common.historicalDatasetDigest) digestBlockers.push("HISTORICAL_DATASET_DIGEST_MISMATCH");
   if (legacy.outputDigest !== common.legacyDatasetDigest) digestBlockers.push("LEGACY_DATASET_DIGEST_MISMATCH");
-  if (market.cohortDigest !== historical.cohortDigest || market.cohortDigest !== legacy.cohortDigest) {
-    digestBlockers.push("DATASET_COHORT_DIGEST_MISMATCH");
+  if (marketMembershipDigest !== historicalMembershipDigest
+    || marketMembershipDigest !== legacyMembershipDigest) {
+    digestBlockers.push("DATASET_COHORT_MEMBERSHIP_MISMATCH");
   }
   if (digestBlockers.length > 0) return blocked(digestBlockers);
 
@@ -245,7 +250,7 @@ export function buildN2EvaluationMetricsBundle(input: {
       historical: historical.outputDigest,
       legacy: legacy.outputDigest,
     },
-    datasetCohortDigest: market.cohortDigest,
+    datasetCohortDigest: marketMembershipDigest,
     settlementSetDigest,
     privacy: {
       rowLevelPredictionsPersisted: false as const,
