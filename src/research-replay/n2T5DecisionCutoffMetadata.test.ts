@@ -4,6 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
+import { canonicalHash } from "./canonical";
+import { buildBoatRaceOfficialSourceUrl } from "./n2ExternalSourceCaptureContract";
 import { readN2T5DecisionCutoffMetadata } from "./n2T5DecisionCutoffMetadata";
 
 function withRoot(fn: (root: string) => void): void {
@@ -13,8 +15,10 @@ function withRoot(fn: (root: string) => void): void {
 
 function writeMetadata(root: string, options: {
   cutoff?: string;
+  checkpointCutoff?: string;
   envelopeRelativePath?: string;
   acceptedAt?: string;
+  markerCheckpointKey?: string;
   envelopeManifestDigest?: string;
   envelopeCheckpointKey?: string;
 } = {}): void {
@@ -22,16 +26,31 @@ function writeMetadata(root: string, options: {
   const dir = join(root, base);
   mkdirSync(dir, { recursive: true });
   const manifestDigest = "a".repeat(64);
-  const checkpointKey = "b".repeat(64);
+  const raceIdentity = "20260807-05-01";
+  const cutoff = options.cutoff ?? "2026-08-07T03:30:00.000Z";
+  const checkpointCutoff = options.checkpointCutoff ?? cutoff;
+  const targetCaptureAt = new Date(Date.parse(checkpointCutoff) - 5 * 60_000).toISOString();
+  const sourceUrl = buildBoatRaceOfficialSourceUrl(
+    "boatrace_official_trifecta_odds_html",
+    { date: "20260807", venueCode: "05", raceNo: 1 },
+  );
+  const producerCheckpointKey = canonicalHash({
+    manifestDigest,
+    raceIdentity,
+    checkpointLabel: "T-5",
+    targetCaptureAt,
+    sourceUrl,
+  });
+  const markerCheckpointKey = options.markerCheckpointKey ?? producerCheckpointKey;
   const envelopeRelativePath = options.envelopeRelativePath ?? `${base}/fixture.envelope.json`;
   writeFileSync(join(dir, "accepted.json"), `${JSON.stringify({
     markerVersion: "n2-trifecta-private-capture-accepted-v1",
     manifestDigest,
-    checkpointKey,
-    raceIdentity: "20260807-05-01",
+    checkpointKey: markerCheckpointKey,
+    raceIdentity,
     checkpointLabel: "T-5",
     envelopeRelativePath,
-    acceptedAt: options.acceptedAt ?? "2026-08-07T03:31:00.000Z",
+    acceptedAt: options.acceptedAt ?? "2026-08-07T03:25:30.000Z",
     databaseWriteAuthorized: false,
     productionApplyExecuted: false,
   }, null, 2)}\n`, "utf8");
@@ -41,11 +60,11 @@ function writeMetadata(root: string, options: {
       status: "PASS",
       blockers: [],
       manifestDigest: options.envelopeManifestDigest ?? manifestDigest,
-      checkpointKey: options.envelopeCheckpointKey ?? checkpointKey,
+      checkpointKey: options.envelopeCheckpointKey ?? markerCheckpointKey,
       entry: {
-        raceIdentity: "20260807-05-01",
+        raceIdentity,
         checkpointLabel: "T-5",
-        decisionCutoff: options.cutoff ?? "2026-08-07T03:30:00.000Z",
+        decisionCutoff: cutoff,
       },
       databaseWriteAuthorized: false,
       currentBuyConnectionAuthorized: false,
@@ -105,6 +124,34 @@ test("reader rejects an envelope from a different accepted capture lineage", () 
       assert.equal(read.rawOddsValuesRead, false);
     });
   }
+});
+
+test("reader rejects a cutoff that no longer matches the accepted checkpoint identity", () => {
+  withRoot((root) => {
+    writeMetadata(root, {
+      cutoff: "2026-08-07T04:30:00.000Z",
+      checkpointCutoff: "2026-08-07T03:30:00.000Z",
+    });
+    const read = readN2T5DecisionCutoffMetadata({ dataRoot: root, raceKeys: ["2026-08-07:05:R1"] });
+    assert.equal(read.status, "BLOCKED");
+    assert.ok(read.blockers.includes("2026-08-07:05:R1:CHECKPOINT_KEY_INVALID"));
+    assert.deepEqual(read.decisionCutoffByRaceKey, {});
+    assert.equal(read.rawOddsValuesRead, false);
+  });
+});
+
+test("reader rejects matching marker/envelope checkpoint keys that were not producer-derived", () => {
+  withRoot((root) => {
+    const bogusCheckpointKey = "b".repeat(64);
+    writeMetadata(root, {
+      markerCheckpointKey: bogusCheckpointKey,
+      envelopeCheckpointKey: bogusCheckpointKey,
+    });
+    const read = readN2T5DecisionCutoffMetadata({ dataRoot: root, raceKeys: ["2026-08-07:05:R1"] });
+    assert.equal(read.status, "BLOCKED");
+    assert.ok(read.blockers.includes("2026-08-07:05:R1:CHECKPOINT_KEY_INVALID"));
+    assert.deepEqual(read.decisionCutoffByRaceKey, {});
+  });
 });
 
 test("reader blocks a cutoff outside the race's JST date", () => {
