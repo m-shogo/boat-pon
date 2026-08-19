@@ -60,15 +60,17 @@ function writeTamperedAcceptedT5(root: string, spec: ReturnType<typeof raceSpec>
   const rawDocumentId = `raw-${spec.date}-${spec.venue}-${raceDir}`;
   const manifestDigest = "a".repeat(64);
   const decisionCutoff = `${spec.date}T03:30:00.000Z`;
+  const targetCaptureAt = `${spec.date}T03:25:00.000Z`;
+  const sourceUrl = buildBoatRaceOfficialSourceUrl(
+    "boatrace_official_trifecta_odds_html",
+    { date: spec.date.replaceAll("-", ""), venueCode: spec.venue, raceNo: spec.raceNo },
+  );
   const checkpointKey = canonicalHash({
     manifestDigest,
     raceIdentity,
     checkpointLabel: "T-5",
-    targetCaptureAt: `${spec.date}T03:25:00.000Z`,
-    sourceUrl: buildBoatRaceOfficialSourceUrl(
-      "boatrace_official_trifecta_odds_html",
-      { date: spec.date.replaceAll("-", ""), venueCode: spec.venue, raceNo: spec.raceNo },
-    ),
+    targetCaptureAt,
+    sourceUrl,
   });
   writeFileSync(join(root, rawRelativePath), Buffer.from(`${raw.toString("utf8")}tamper`));
   writeFileSync(join(root, envelopeRelativePath), `${JSON.stringify({
@@ -80,7 +82,9 @@ function writeTamperedAcceptedT5(root: string, spec: ReturnType<typeof raceSpec>
     entry: {
       raceIdentity,
       checkpointLabel: "T-5",
+      targetCaptureAt,
       decisionCutoff,
+      sourceUrl,
     },
     response: {
       statusCode: 200,
