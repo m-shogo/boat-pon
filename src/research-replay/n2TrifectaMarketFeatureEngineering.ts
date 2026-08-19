@@ -215,6 +215,8 @@ export function buildN2TrifectaMarketSnapshotFeatures(
   const blockers = validateSnapshotInput(input);
   if (blockers.length > 0) return { status: "BLOCKED", blockers, snapshot: null };
 
+  const capturedAt = canonicalUtcTimestamp(input.capturedAt);
+  const availableAt = canonicalUtcTimestamp(input.availableAt);
   const ranked = oddsEntries(input.odds)
     .map(([selection, odds]) => ({ selection, odds }))
     .sort((left, right) => left.odds - right.odds || selectionCompare(left.selection, right.selection));
@@ -248,8 +250,8 @@ export function buildN2TrifectaMarketSnapshotFeatures(
     featureVersion: N2_TRIFECTA_MARKET_FEATURE_VERSION,
     raceIdentity: input.raceIdentity,
     checkpointLabel: input.checkpointLabel,
-    capturedAt: input.capturedAt,
-    availableAt: input.availableAt,
+    capturedAt,
+    availableAt,
     selectionCount: 120 as const,
     inverseOddsMassTotal,
     entropyNats,
