@@ -111,7 +111,6 @@ function validateOrderingSource(source: N2MarketOnlyBaselineRaceSource): string[
 
 function validateSource(source: N2MarketOnlyBaselineRaceSource): string[] {
   const blockers = validateOrderingSource(source);
-  const parsedRaceKey = parseRaceKey(source.canonicalRaceKey);
   if (!isCanonicalIsoInstant(source.capturedAt)) blockers.push("CAPTURED_AT_INVALID");
   if (!isCanonicalIsoInstant(source.availableAt)) blockers.push("AVAILABLE_AT_INVALID");
   if (isCanonicalIsoInstant(source.availableAt)
