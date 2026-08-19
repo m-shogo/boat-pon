@@ -1,6 +1,7 @@
 import { resolve, sep } from "node:path";
 import { readGovernanceFileUtf8Bounded } from "../research/governance/safeFs";
-import { canonicalUtcTimestamp } from "./canonical";
+import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
+import { buildBoatRaceOfficialSourceUrl } from "./n2ExternalSourceCaptureContract";
 
 export const N2_T5_DECISION_CUTOFF_METADATA_VERSION =
   "n2-t5-decision-cutoff-metadata-v1" as const;
@@ -55,6 +56,7 @@ const RACE_KEY_RE = /^(\d{4}-\d{2}-\d{2}):(0[1-9]|1\d|2[0-4]):R([1-9]|1[0-2])$/u
 const SHA256_RE = /^[0-9a-f]{64}$/u;
 const MAX_MARKER_BYTES = 128 * 1024;
 const MAX_ENVELOPE_BYTES = 2_000_000;
+const T5_CHECKPOINT_MINUTES = 5;
 
 function resolveInside(rootDir: string, relativePath: string): string {
   if (!relativePath || relativePath.startsWith("/") || relativePath.includes("\0")) {
@@ -138,6 +140,39 @@ function instantWithinRaceDate(date: string, instant: string): boolean {
   const start = Date.parse(`${date}T00:00:00+09:00`);
   const end = start + 24 * 60 * 60 * 1000;
   return Number.isFinite(value) && value >= start && value < end;
+}
+
+function expectedT5CheckpointKey(input: {
+  manifestDigest: string;
+  raceIdentity: string;
+  date: string;
+  venue: string;
+  raceNo: number;
+  decisionCutoff: string;
+}): string | null {
+  const cutoffMs = Date.parse(input.decisionCutoff);
+  if (!Number.isFinite(cutoffMs)) return null;
+  const targetCaptureAt = new Date(cutoffMs - T5_CHECKPOINT_MINUTES * 60_000).toISOString();
+  let sourceUrl: string;
+  try {
+    sourceUrl = buildBoatRaceOfficialSourceUrl(
+      "boatrace_official_trifecta_odds_html",
+      {
+        date: input.date.replaceAll("-", ""),
+        venueCode: input.venue,
+        raceNo: input.raceNo,
+      },
+    );
+  } catch {
+    return null;
+  }
+  return canonicalHash({
+    manifestDigest: input.manifestDigest,
+    raceIdentity: input.raceIdentity,
+    checkpointLabel: "T-5",
+    targetCaptureAt,
+    sourceUrl,
+  });
 }
 
 export function readN2T5DecisionCutoffMetadata(input: {
@@ -237,7 +272,21 @@ export function readN2T5DecisionCutoffMetadata(input: {
     if (decisionCutoff == null || !instantWithinRaceDate(location.date, decisionCutoff)) {
       blockers.push(`${raceKey}:DECISION_CUTOFF_INVALID`);
     } else {
-      decisionCutoffByRaceKey[raceKey] = decisionCutoff;
+      const expectedCheckpointKey = expectedT5CheckpointKey({
+        manifestDigest: marker.manifestDigest,
+        raceIdentity: location.raceIdentity,
+        date: location.date,
+        venue: location.venue,
+        raceNo: Number(location.raceDir),
+        decisionCutoff,
+      });
+      if (expectedCheckpointKey == null
+        || marker.checkpointKey !== expectedCheckpointKey
+        || envelope.checkpointKey !== expectedCheckpointKey) {
+        blockers.push(`${raceKey}:CHECKPOINT_KEY_INVALID`);
+      } else {
+        decisionCutoffByRaceKey[raceKey] = decisionCutoff;
+      }
     }
     if (envelope.databaseWriteAuthorized !== false
       || envelope.currentBuyConnectionAuthorized !== false
