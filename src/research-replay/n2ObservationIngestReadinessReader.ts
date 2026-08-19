@@ -127,6 +127,17 @@ function selectOddsSourceTable(primary: DatabaseSync): string | null {
   return null;
 }
 
+const VALID_TRIFECTA_SELECTION_SQL = `
+  bet_selection IS NOT NULL
+  AND LENGTH(TRIM(bet_selection))=3
+  AND SUBSTR(TRIM(bet_selection),1,1) BETWEEN '1' AND '6'
+  AND SUBSTR(TRIM(bet_selection),2,1) BETWEEN '1' AND '6'
+  AND SUBSTR(TRIM(bet_selection),3,1) BETWEEN '1' AND '6'
+  AND SUBSTR(TRIM(bet_selection),1,1) <> SUBSTR(TRIM(bet_selection),2,1)
+  AND SUBSTR(TRIM(bet_selection),1,1) <> SUBSTR(TRIM(bet_selection),3,1)
+  AND SUBSTR(TRIM(bet_selection),2,1) <> SUBSTR(TRIM(bet_selection),3,1)
+`;
+
 function readTrifectaMarketCounts(
   primary: DatabaseSync,
   table: string | null,
@@ -173,7 +184,7 @@ function readTrifectaMarketCounts(
       COUNT(*) totalRows,
       COUNT(DISTINCT race_id) raceCount,
       SUM(CASE WHEN captured_at IS NOT NULL AND LENGTH(TRIM(captured_at))>0 AND ${checkpointValid} THEN 1 ELSE 0 END) validTimingRows,
-      SUM(CASE WHEN bet_selection IS NOT NULL AND LENGTH(TRIM(bet_selection))=3 AND odds>0 THEN 1 ELSE 0 END) validSelectionRows
+      SUM(CASE WHEN ${VALID_TRIFECTA_SELECTION_SQL} AND odds>0 THEN 1 ELSE 0 END) validSelectionRows
     FROM ${quoted}
     WHERE SUBSTR(race_id,1,8) >= ? AND SUBSTR(race_id,1,8) <= ? AND bet_type='trifecta'
   `).get(fromCompact, toCompact) as unknown as Record<string, number>;
@@ -184,7 +195,7 @@ function readTrifectaMarketCounts(
       FROM ${quoted}
       WHERE SUBSTR(race_id,1,8) >= ? AND SUBSTR(race_id,1,8) <= ?
         AND bet_type='trifecta' AND odds>0
-        AND bet_selection IS NOT NULL AND LENGTH(TRIM(bet_selection))=3
+        AND ${VALID_TRIFECTA_SELECTION_SQL}
         AND captured_at IS NOT NULL AND LENGTH(TRIM(captured_at))>0
         ${hasCheckpoint ? "AND checkpoint_label IN ('T-30','T-20','T-10','T-5','ad-hoc')" : ""}
       GROUP BY race_id, captured_at${hasCheckpoint ? ", checkpoint_label" : ""}
