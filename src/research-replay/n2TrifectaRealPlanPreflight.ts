@@ -264,9 +264,16 @@ export function readN2TrifectaRealPlanPreflight(input: {
         `).all(requestedDateFrom) as unknown as VenueDayRow[];
         const allDates = uniqueSorted(rows.map((row) => row.date));
         const invalidDates = allDates.filter((date) => !isCanonicalCalendarDate(date));
+        const invalidVenues = rows.filter((row) => officialVenueCode(row.venue) == null);
         if (invalidDates.length > 0) {
           blockers.push(...invalidDates.map((date) => `OFFICIAL_PROGRAM_DATE_INVALID:${date}`));
-        } else {
+        }
+        if (invalidVenues.length > 0) {
+          blockers.push(...invalidVenues.map(
+            (row) => `OFFICIAL_PROGRAM_VENUE_INVALID:${row.date}:${row.venue}`,
+          ));
+        }
+        if (invalidDates.length === 0 && invalidVenues.length === 0) {
           const dates = allDates.slice(0, N2_TRIFECTA_REAL_PLAN_MAX_DATES);
           const dateSet = new Set(dates);
           for (const row of rows) {
