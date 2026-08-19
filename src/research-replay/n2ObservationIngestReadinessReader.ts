@@ -208,7 +208,7 @@ function readTrifectaMarketCounts(
       AND captured_at IS NOT NULL AND LENGTH(TRIM(captured_at))>0
       ${hasCheckpoint ? "AND checkpoint_label IN ('T-30','T-20','T-10','T-5','ad-hoc')" : ""}
     GROUP BY race_id, captured_at${hasCheckpoint ? ", checkpoint_label" : ""}
-    HAVING COUNT(*)=? AND COUNT(DISTINCT bet_selection)=?
+    HAVING COUNT(*)=? AND COUNT(DISTINCT TRIM(bet_selection))=?
   `).all(fromCompact, toCompact, COMPLETE_TRIFECTA_SELECTION_COUNT, COMPLETE_TRIFECTA_SELECTION_COUNT) as unknown as Array<{
     raceId: string;
     capturedAt: string;
