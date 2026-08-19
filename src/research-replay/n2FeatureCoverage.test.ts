@@ -54,6 +54,9 @@ test("coverage: invalid canonical race key and ambiguous excluded event are reje
     canonicalRaceKey: "bad", sourceKind: "feature", key: "x", status: "excluded", exclusionReason: "missing",
   }] }), /N2_COVERAGE_INVALID_RACE_KEY/);
   assert.throws(() => buildN2FeatureCoverageProfile({ inputKind: "fixture", events: [{
+    canonicalRaceKey: "2026-02-30:01:01", sourceKind: "feature", key: "x", status: "excluded", exclusionReason: "missing",
+  }] }), /N2_COVERAGE_INVALID_RACE_KEY/);
+  assert.throws(() => buildN2FeatureCoverageProfile({ inputKind: "fixture", events: [{
     canonicalRaceKey: "2026-05-20:01:01", sourceKind: "feature", key: "x", status: "excluded",
     exclusionReason: "missing", observationId: "should-not-exist",
   }] }), /N2_COVERAGE_INVALID_EXCLUDED_EVENT/);
