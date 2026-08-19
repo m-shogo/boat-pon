@@ -2,6 +2,10 @@ import { resolve, sep } from "node:path";
 import { readGovernanceFileUtf8Bounded } from "../research/governance/safeFs";
 import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import { buildBoatRaceOfficialSourceUrl } from "./n2ExternalSourceCaptureContract";
+import {
+  N2_TRIFECTA_PRIVATE_CAPTURE_EARLY_WINDOW_SECONDS,
+  N2_TRIFECTA_PRIVATE_CAPTURE_LATE_WINDOW_SECONDS,
+} from "./n2TrifectaPrivateCaptureExecutor";
 
 export const N2_T5_DECISION_CUTOFF_METADATA_VERSION =
   "n2-t5-decision-cutoff-metadata-v1" as const;
@@ -181,6 +185,15 @@ function expectedT5CheckpointKey(input: {
   });
 }
 
+function captureWithinT5Window(decisionCutoff: string, capturedAt: string): boolean {
+  const cutoffMs = Date.parse(decisionCutoff);
+  const capturedMs = Date.parse(capturedAt);
+  if (!Number.isFinite(cutoffMs) || !Number.isFinite(capturedMs)) return false;
+  const targetMs = cutoffMs - T5_CHECKPOINT_MINUTES * 60_000;
+  return capturedMs >= targetMs - N2_TRIFECTA_PRIVATE_CAPTURE_EARLY_WINDOW_SECONDS * 1_000
+    && capturedMs <= targetMs + N2_TRIFECTA_PRIVATE_CAPTURE_LATE_WINDOW_SECONDS * 1_000;
+}
+
 export function readN2T5DecisionCutoffMetadata(input: {
   dataRoot: string;
   raceKeys: readonly string[];
@@ -296,6 +309,9 @@ export function readN2T5DecisionCutoffMetadata(input: {
     }
     if (capturedAt == null) blockers.push(`${raceKey}:CAPTURED_AT_INVALID`);
     if (availableAt == null) blockers.push(`${raceKey}:AVAILABLE_AT_INVALID`);
+    if (decisionCutoff != null && capturedAt != null && !captureWithinT5Window(decisionCutoff, capturedAt)) {
+      blockers.push(`${raceKey}:CAPTURE_OUTSIDE_CHECKPOINT_WINDOW`);
+    }
     if (decisionCutoff != null && capturedAt != null && Date.parse(capturedAt) > Date.parse(decisionCutoff)) {
       blockers.push(`${raceKey}:CAPTURE_AFTER_DECISION_CUTOFF`);
     }
