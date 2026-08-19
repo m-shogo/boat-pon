@@ -152,6 +152,33 @@ test("reader builds a deterministic latest seven-day readiness input", () => {
   }
 });
 
+test("reader rejects an impossible latest program date before deriving readiness cohort", () => {
+  const fixture = setup();
+  const db = new DatabaseSync(fixture.primary);
+  try {
+    db.prepare("INSERT INTO official_programs VALUES(?,?,?,?,?,?,?,?)").run(
+      "20260832-01-04",
+      "2026-08-32",
+      "01",
+      4,
+      "14:00",
+      "program-invalid.json",
+      JSON.stringify({ race: 4 }),
+      "2026-08-05T00:00:00.000Z",
+    );
+  } finally {
+    db.close();
+  }
+  try {
+    assert.throws(
+      () => readN2ObservationIngestReadiness({ primaryDbPath: fixture.primary, sidecarDbPath: fixture.sidecar }),
+      /N2_READINESS_INVALID_MAX_DATE/,
+    );
+  } finally {
+    rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
 test("active WAL blocks without checkpointing or deletion", () => {
   const fixture = setup();
   try {
