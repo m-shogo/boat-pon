@@ -48,9 +48,25 @@ function countTable(db: DatabaseSync, table: string): number {
   return Number((db.prepare(`SELECT COUNT(*) n FROM ${quoted}`).get() as unknown as { n: number }).n);
 }
 
+function assertCanonicalDate(date: string): void {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!match) throw new Error("N2_READINESS_INVALID_MAX_DATE");
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  if (
+    parsed.getUTCFullYear() !== year
+    || parsed.getUTCMonth() !== month - 1
+    || parsed.getUTCDate() !== day
+  ) {
+    throw new Error("N2_READINESS_INVALID_MAX_DATE");
+  }
+}
+
 function subtractUtcDays(date: string, days: number): string {
+  assertCanonicalDate(date);
   const parsed = new Date(`${date}T00:00:00.000Z`);
-  if (!Number.isFinite(parsed.getTime())) throw new Error("N2_READINESS_INVALID_MAX_DATE");
   parsed.setUTCDate(parsed.getUTCDate() - days);
   return parsed.toISOString().slice(0, 10);
 }
@@ -62,9 +78,8 @@ function compactDate(date: string): string {
 function latestProgramDate(primary: DatabaseSync): string {
   if (!tableExists(primary, "official_programs")) throw new Error("N2_READINESS_OFFICIAL_PROGRAMS_TABLE_MISSING");
   const row = primary.prepare("SELECT MAX(date) maxDate FROM official_programs").get() as unknown as { maxDate: string | null };
-  if (!row.maxDate || !/^\d{4}-\d{2}-\d{2}$/.test(row.maxDate)) {
-    throw new Error("N2_READINESS_OFFICIAL_PROGRAMS_EMPTY");
-  }
+  if (!row.maxDate) throw new Error("N2_READINESS_OFFICIAL_PROGRAMS_EMPTY");
+  assertCanonicalDate(row.maxDate);
   return row.maxDate;
 }
 
