@@ -12,6 +12,8 @@ import {
 } from "./n2HistoricalOnlyBaselineDataset";
 import { buildN2MarketBaselineReadinessReport } from "./n2MarketBaselineReadiness";
 import { readN2MarketBaselineReadiness } from "./n2MarketBaselineReadinessReader";
+import { compareN2RaceKeysByRaceTime } from "./n2MarketOnlyBaselineDataset";
+import { readN2T5DecisionCutoffMetadata } from "./n2T5DecisionCutoffMetadata";
 
 export const N2_HISTORICAL_ONLY_BASELINE_SOURCE_VERSION =
   "n2-historical-only-baseline-source-v1" as const;
@@ -237,8 +239,25 @@ export function readN2HistoricalOnlyBaselineSources(input: {
     });
   }
 
+  const cutoffRead = readN2T5DecisionCutoffMetadata({
+    dataRoot,
+    raceKeys: readinessRead.settledRaceKeys,
+  });
+  if (cutoffRead.status !== "PASS") {
+    return blocked({
+      blockers: cutoffRead.blockers.map((blocker) => `T5_CUTOFF_METADATA:${blocker}`),
+      readinessStatus: readiness.status,
+      readinessDigest: readiness.outputDigest,
+      acceptedT5RaceCount: readiness.acceptedT5RaceCount,
+      settledAcceptedT5RaceCount: readiness.settledAcceptedT5RaceCount,
+      databaseReadCount: readinessRead.databaseReadCount,
+    });
+  }
+
   const evaluationKeys = [...readinessRead.settledRaceKeys]
-    .sort(compareRaceKeys)
+    .sort((left, right) => Date.parse(cutoffRead.decisionCutoffByRaceKey[left])
+      - Date.parse(cutoffRead.decisionCutoffByRaceKey[right])
+      || compareN2RaceKeysByRaceTime(left, right))
     .slice(0, N2_HISTORICAL_EVALUATION_COHORT_RACE_COUNT);
   const evaluationDates = evaluationKeys.map(raceDate).filter((date): date is string => date != null);
   if (evaluationKeys.length !== N2_HISTORICAL_EVALUATION_COHORT_RACE_COUNT
