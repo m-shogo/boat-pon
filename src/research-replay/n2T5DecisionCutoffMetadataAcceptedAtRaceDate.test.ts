@@ -11,15 +11,17 @@ import { readN2T5DecisionCutoffMetadata } from "./n2T5DecisionCutoffMetadata";
 const MANIFEST_DIGEST = "a".repeat(64);
 const RACE_IDENTITY = "20260807-05-01";
 const DECISION_CUTOFF = "2026-08-07T03:30:00.000Z";
+const TARGET_CAPTURE_AT = "2026-08-07T03:25:00.000Z";
+const SOURCE_URL = buildBoatRaceOfficialSourceUrl(
+  "boatrace_official_trifecta_odds_html",
+  { date: "20260807", venueCode: "05", raceNo: 1 },
+);
 const CHECKPOINT_KEY = canonicalHash({
   manifestDigest: MANIFEST_DIGEST,
   raceIdentity: RACE_IDENTITY,
   checkpointLabel: "T-5",
-  targetCaptureAt: "2026-08-07T03:25:00.000Z",
-  sourceUrl: buildBoatRaceOfficialSourceUrl(
-    "boatrace_official_trifecta_odds_html",
-    { date: "20260807", venueCode: "05", raceNo: 1 },
-  ),
+  targetCaptureAt: TARGET_CAPTURE_AT,
+  sourceUrl: SOURCE_URL,
 });
 
 function withMarker(acceptedAt: string, fn: (root: string) => void): void {
@@ -85,7 +87,9 @@ test("T-5 cutoff metadata accepts a canonical marker inside the JST race date", 
       entry: {
         raceIdentity: RACE_IDENTITY,
         checkpointLabel: "T-5",
+        targetCaptureAt: TARGET_CAPTURE_AT,
         decisionCutoff: DECISION_CUTOFF,
+        sourceUrl: SOURCE_URL,
       },
       response: {
         fetchedAt: "2026-08-07T03:25:30.000Z",
