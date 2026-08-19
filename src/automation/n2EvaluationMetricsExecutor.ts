@@ -2,6 +2,7 @@ import { dirname, join } from "node:path";
 
 import { canonicalHash } from "../research-replay/canonical";
 import {
+  N2_EVALUATION_METRICS_BUNDLE_VERSION,
   buildN2EvaluationMetricsBundle,
 } from "../research-replay/n2EvaluationMetricsBundle";
 import {
@@ -31,7 +32,7 @@ import {
 import type { Executor, ExecutorResult } from "./taskExecutors";
 
 export const N2_EVALUATION_METRICS_EXECUTOR_VERSION =
-  "n2-evaluation-metrics-executor-v1" as const;
+  "n2-evaluation-metrics-executor-v2" as const;
 const REPORT_RELATIVE_PATH = "reports/n2/n2-evaluation-metrics.json";
 
 type MarketReader = typeof readN2MarketOnlyBaselinePrivateSources;
@@ -173,14 +174,16 @@ export function createN2EvaluationMetricsExecutor(
         if (bundle.status !== "PASS") throw new Error(`EVALUATION_METRICS_BLOCKED:${bundle.blockers.join(",")}`);
         const metricsDefinition = buildN2MetricsDefinition();
         const summary = {
-          reportVersion: "n2-evaluation-metrics-report-v1",
+          reportVersion: "n2-evaluation-metrics-report-v2",
           executorContractVersion: N2_EVALUATION_METRICS_EXECUTOR_VERSION,
+          bundleVersion: N2_EVALUATION_METRICS_BUNDLE_VERSION,
           status: "PASS",
           metricsDefinitionDigest: metricsDefinition.outputDigest,
           commonCohort: bundle.commonCohort,
           predictiveByBaseline: bundle.predictiveByBaseline,
           economic: bundle.economic,
           datasetDigests: bundle.datasetDigests,
+          datasetCohortDigest: bundle.datasetCohortDigest,
           settlementSetDigest: bundle.settlementSetDigest,
           sources: {
             market: sanitizedMarket(marketRead),
