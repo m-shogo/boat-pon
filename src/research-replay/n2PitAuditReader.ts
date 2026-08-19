@@ -52,7 +52,12 @@ FROM domain_observations o
 JOIN parse_runs p ON p.parse_run_id = o.parse_run_id
 JOIN raw_documents r ON r.raw_document_id = o.raw_document_id
 WHERE o.observation_type IN ('official_program', 'trifecta_market')
-ORDER BY o.canonical_race_key, o.observation_type, o.observation_id
+ORDER BY
+  substr(o.canonical_race_key, 1, 10),
+  substr(o.canonical_race_key, 12, 2),
+  CAST(substr(o.canonical_race_key, instr(o.canonical_race_key, ':R') + 2) AS INTEGER),
+  o.observation_type,
+  o.observation_id
 LIMIT ?
 `;
 
