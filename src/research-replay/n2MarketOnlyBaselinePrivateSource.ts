@@ -76,6 +76,12 @@ type ParsedRaceKey = {
   raceIdentity: string;
 };
 
+type PrivateReadAudit = {
+  privateRawFileReadCount: number;
+  privateEnvelopeReadCount: number;
+  rawValuesReadPrivately: boolean;
+};
+
 const RACE_KEY_RE = /^(\d{4}-\d{2}-\d{2}):(0[1-9]|1\d|2[0-4]):R([1-9]|1[0-2])$/u;
 const SHA256_RE = /^[0-9a-f]{64}$/u;
 const MAX_JSON_BYTES = 2_000_000;
@@ -154,6 +160,7 @@ function loadT5Source(input: {
   dataRoot: string;
   canonicalRaceKey: string;
   winningSelection: string;
+  audit: PrivateReadAudit;
 }): { source: N2MarketOnlyBaselineRaceSource | null; blockers: string[] } {
   const parsed = parseRaceKey(input.canonicalRaceKey);
   if (!parsed) return { source: null, blockers: ["RACE_KEY_INVALID"] };
@@ -216,6 +223,7 @@ function loadT5Source(input: {
 
   let envelope: N2TrifectaPrivateCaptureEnvelope;
   try {
+    input.audit.privateEnvelopeReadCount += 1;
     envelope = readJsonBounded<N2TrifectaPrivateCaptureEnvelope>(envelopePath!);
   } catch (error) {
     blockers.push(`T5_ENVELOPE_${error instanceof Error ? error.message : "INVALID"}`);
@@ -255,9 +263,11 @@ function loadT5Source(input: {
   if (typeof envelope.proposedObservationId !== "string" || !envelope.proposedObservationId.trim()) blockers.push("T5_OBSERVATION_ID_INVALID");
   if (blockers.length > 0) return { source: null, blockers: unique(blockers) };
 
+  input.audit.privateRawFileReadCount += 1;
   const rawBytes = readFileSync(rawPath!);
   if (sha256(rawBytes) !== marker.rawSha256) return { source: null, blockers: ["T5_RAW_SHA256_MISMATCH"] };
   const odds = parseAllTrifectaOdds(rawBytes.toString("utf8"));
+  input.audit.rawValuesReadPrivately = true;
   if (odds.size !== 120) return { source: null, blockers: ["T5_REPARSE_SELECTION_COUNT_NOT_120"] };
   const selections = [...odds.entries()]
     .map(([selection, value]) => ({ selection, odds: value }))
@@ -401,13 +411,23 @@ export function readN2MarketOnlyBaselinePrivateSources(input: {
 
   const sources: N2MarketOnlyBaselineRaceSource[] = [];
   const blockers: string[] = [];
+  const privateReadAudit: PrivateReadAudit = {
+    privateRawFileReadCount: 0,
+    privateEnvelopeReadCount: 0,
+    rawValuesReadPrivately: false,
+  };
   for (const raceKey of raceKeys) {
     const winningSelection = winnerRead.winners.get(raceKey);
     if (!winningSelection) {
       blockers.push(`${raceKey}:WINNER_MISSING`);
       continue;
     }
-    const loaded = loadT5Source({ dataRoot, canonicalRaceKey: raceKey, winningSelection });
+    const loaded = loadT5Source({
+      dataRoot,
+      canonicalRaceKey: raceKey,
+      winningSelection,
+      audit: privateReadAudit,
+    });
     if (loaded.source) sources.push(loaded.source);
     else blockers.push(...loaded.blockers.map((blocker) => `${raceKey}:${blocker}`));
   }
@@ -428,12 +448,12 @@ export function readN2MarketOnlyBaselinePrivateSources(input: {
     settledAcceptedT5RaceCount: readiness.settledAcceptedT5RaceCount,
     selectedCohortRaceCount: raceKeys.length,
     sources: normalizedBlockers.length === 0 ? sources : [],
-    privateRawFileReadCount: sources.length,
-    privateEnvelopeReadCount: sources.length,
+    privateRawFileReadCount: privateReadAudit.privateRawFileReadCount,
+    privateEnvelopeReadCount: privateReadAudit.privateEnvelopeReadCount,
     databaseReadCount: readinessRead.databaseReadCount + 1,
     databaseWriteCount: 0,
     networkRequestCount: 0,
-    rawValuesReadPrivately: sources.length > 0,
+    rawValuesReadPrivately: privateReadAudit.rawValuesReadPrivately,
     rawValuesPublished: false,
     publicPublishAuthorized: false,
     productionApplyExecuted: false,
