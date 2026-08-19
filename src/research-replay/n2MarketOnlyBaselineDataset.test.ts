@@ -87,6 +87,19 @@ test("fixed cohort follows decision cutoff time across venues", () => {
   assert.equal(raceKeys.includes("2026-08-07:01:R1"), false);
 });
 
+test("ordering metadata is validated before fixed-cohort truncation", () => {
+  const invalidLaterSource = {
+    ...source("2026-08-09:05:R1"),
+    decisionCutoff: "2026-08-09T24:00:00.000Z",
+  };
+  const dataset = buildN2MarketOnlyBaselineDataset({
+    sources: [invalidLaterSource, ...twentySources()],
+  });
+  assert.equal(dataset.status, "BLOCKED");
+  assert.ok(dataset.blockers.includes("2026-08-09:05:R1:DECISION_CUTOFF_INVALID"));
+  assert.equal(dataset.rowCount, 0);
+});
+
 test("market-only baseline fixes the initial cohort at 20 settled T-5 races", () => {
   const extraEarlierInArrayButLaterInTime = source("2026-08-09:05:R1");
   const dataset = buildN2MarketOnlyBaselineDataset({
@@ -134,17 +147,15 @@ test("impossible calendar dates in canonical race keys fail closed", () => {
   assert.equal(dataset.rowCount, 0);
 });
 
-test("market evidence timestamps must use the canonical ISO instant form", () => {
+test("selected market evidence timestamps must use the canonical ISO instant form", () => {
   const sources = twentySources();
   sources[0] = {
     ...sources[0],
-    decisionCutoff: "2026-08-07T12:30:00+09:00",
     capturedAt: "2026-08-07T12:25:30+09:00",
     availableAt: "2026-08-07T12:25:00+09:00",
   };
   const dataset = buildN2MarketOnlyBaselineDataset({ sources });
   assert.equal(dataset.status, "BLOCKED");
-  assert.ok(dataset.blockers.some((blocker) => blocker.endsWith(":DECISION_CUTOFF_INVALID")));
   assert.ok(dataset.blockers.some((blocker) => blocker.endsWith(":CAPTURED_AT_INVALID")));
   assert.ok(dataset.blockers.some((blocker) => blocker.endsWith(":AVAILABLE_AT_INVALID")));
   assert.equal(dataset.rowCount, 0);
