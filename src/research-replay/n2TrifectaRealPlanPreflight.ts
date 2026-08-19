@@ -93,12 +93,16 @@ type DbMeta = {
   walBytes: number;
 };
 
-type VenueDayRow = {
+type ProgramInventoryRow = {
+  raceId: string;
   date: string;
   venue: string;
+  raceNo: number;
+  closeAt: string;
 };
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const CLOSE_AT_RE = /^([01]\d|2[0-3]):([0-5]\d)(?::00)?$/;
 
 function parseInstant(value: string): number | null {
   try {
@@ -112,6 +116,13 @@ function isCanonicalCalendarDate(value: string): boolean {
   if (!DATE_RE.test(value)) return false;
   const parsed = Date.parse(`${value}T00:00:00.000Z`);
   return Number.isFinite(parsed) && new Date(parsed).toISOString().slice(0, 10) === value;
+}
+
+function hasValidRaceMetadata(row: ProgramInventoryRow): boolean {
+  return Number.isInteger(row.raceNo)
+    && row.raceNo >= 1
+    && row.raceNo <= 12
+    && CLOSE_AT_RE.test(row.closeAt.trim());
 }
 
 function dbMeta(path: string): DbMeta {
@@ -257,14 +268,15 @@ export function readN2TrifectaRealPlanPreflight(input: {
       if (!table) blockers.push("OFFICIAL_PROGRAMS_TABLE_MISSING");
       else {
         const rows = db.prepare(`
-          SELECT DISTINCT date, venue
+          SELECT race_id AS raceId, date, venue, race_no AS raceNo, close_at AS closeAt
           FROM official_programs
           WHERE date >= ?
-          ORDER BY date, venue
-        `).all(requestedDateFrom) as unknown as VenueDayRow[];
+          ORDER BY date, venue, race_no, race_id
+        `).all(requestedDateFrom) as unknown as ProgramInventoryRow[];
         const allDates = uniqueSorted(rows.map((row) => row.date));
         const invalidDates = allDates.filter((date) => !isCanonicalCalendarDate(date));
         const invalidVenues = rows.filter((row) => officialVenueCode(row.venue) == null);
+        const invalidRaceMetadata = rows.filter((row) => !hasValidRaceMetadata(row));
         if (invalidDates.length > 0) {
           blockers.push(...invalidDates.map((date) => `OFFICIAL_PROGRAM_DATE_INVALID:${date}`));
         }
@@ -273,7 +285,16 @@ export function readN2TrifectaRealPlanPreflight(input: {
             (row) => `OFFICIAL_PROGRAM_VENUE_INVALID:${row.date}:${row.venue}`,
           ));
         }
-        if (invalidDates.length === 0 && invalidVenues.length === 0) {
+        if (invalidRaceMetadata.length > 0) {
+          blockers.push(...invalidRaceMetadata.map(
+            (row) => `OFFICIAL_PROGRAM_RACE_METADATA_INVALID:${row.date}:${row.venue}:${row.raceId}`,
+          ));
+        }
+        if (
+          invalidDates.length === 0
+          && invalidVenues.length === 0
+          && invalidRaceMetadata.length === 0
+        ) {
           const dates = allDates.slice(0, N2_TRIFECTA_REAL_PLAN_MAX_DATES);
           const dateSet = new Set(dates);
           for (const row of rows) {
