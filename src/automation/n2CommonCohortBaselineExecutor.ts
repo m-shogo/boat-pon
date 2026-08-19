@@ -2,6 +2,7 @@ import { dirname, join } from "node:path";
 
 import { canonicalHash } from "../research-replay/canonical";
 import {
+  N2_COMMON_COHORT_EVALUATION_VERSION,
   evaluateN2CommonCohort,
 } from "../research-replay/n2CommonCohortEvaluation";
 import {
@@ -26,7 +27,7 @@ import {
 import type { Executor, ExecutorResult } from "./taskExecutors";
 
 export const N2_COMMON_COHORT_BASELINE_EXECUTOR_VERSION =
-  "n2-common-cohort-baseline-executor-v1" as const;
+  "n2-common-cohort-baseline-executor-v2" as const;
 const REPORT_RELATIVE_PATH = "reports/n2/n2-baseline-common-cohort.json";
 
 type MarketReader = typeof readN2MarketOnlyBaselinePrivateSources;
@@ -158,8 +159,9 @@ export function createN2CommonCohortBaselineExecutor(
           throw new Error(`COMMON_COHORT_BLOCKED:${comparison.blockers.join(",")}`);
         }
         const summary = {
-          reportVersion: "n2-baseline-common-cohort-report-v1",
+          reportVersion: "n2-baseline-common-cohort-report-v2",
           executorContractVersion: N2_COMMON_COHORT_BASELINE_EXECUTOR_VERSION,
+          evaluationVersion: N2_COMMON_COHORT_EVALUATION_VERSION,
           status: comparison.status,
           requiredBaselineCount: comparison.requiredBaselineCount,
           requiredCommonRowCount: comparison.requiredCommonRowCount,
