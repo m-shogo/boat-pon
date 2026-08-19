@@ -3,6 +3,7 @@ import test from "node:test";
 
 import { enumerateBetSelections } from "./n2DatasetContract";
 import {
+  N2_COMMON_COHORT_EVALUATION_VERSION,
   N2_COMMON_COHORT_REQUIRED_ROWS,
   evaluateN2CommonCohort,
 } from "./n2CommonCohortEvaluation";
@@ -70,6 +71,7 @@ test("N2 common cohort compares market, historical, and legacy on exactly 2400 r
     evaluationRaces: evaluationRaces(),
     decisionCutoffByRaceKey: cutoffs(),
   });
+  assert.equal(report.evaluationVersion, N2_COMMON_COHORT_EVALUATION_VERSION);
   assert.equal(report.status, "COMPARABLE");
   assert.deepEqual(report.blockers, []);
   assert.equal(report.requiredBaselineCount, 3);
@@ -92,6 +94,28 @@ test("N2 common cohort compares market, historical, and legacy on exactly 2400 r
   assert.match(report.outputDigest, /^[0-9a-f]{64}$/u);
 });
 
+test("common cohort compares the same race membership even when actual cutoff order differs from race-key order", () => {
+  const decisionCutoffByRaceKey = cutoffs();
+  decisionCutoffByRaceKey["2026-08-07:05:R1"] = "2026-08-07T03:31:00.000Z";
+  decisionCutoffByRaceKey["2026-08-07:05:R2"] = "2026-08-07T03:29:00.000Z";
+  const market = marketSources().map((source) => ({
+    ...source,
+    decisionCutoff: decisionCutoffByRaceKey[source.canonicalRaceKey],
+  }));
+
+  const report = evaluateN2CommonCohort({
+    marketSources: market,
+    historicalTraining: historicalTraining(),
+    evaluationRaces: evaluationRaces(),
+    decisionCutoffByRaceKey,
+  });
+
+  assert.equal(report.status, "COMPARABLE");
+  assert.deepEqual(report.blockers, []);
+  assert.equal(report.commonRowCount, N2_COMMON_COHORT_REQUIRED_ROWS);
+  assert.equal(report.commonPositiveCount, 20);
+});
+
 test("common cohort fails closed when one market cutoff diverges", () => {
   const market = marketSources();
   market[0] = {
@@ -105,8 +129,7 @@ test("common cohort fails closed when one market cutoff diverges", () => {
     decisionCutoffByRaceKey: cutoffs(),
   });
   assert.equal(report.status, "BLOCKED");
-  assert.ok(report.blockers.some((blocker) => blocker === "COHORT_DIGEST_MISMATCH"
-    || blocker.startsWith("COMPARISON_STATUS:CONFLICT")
+  assert.ok(report.blockers.some((blocker) => blocker.startsWith("COMPARISON_STATUS:CONFLICT")
     || blocker.startsWith("CONFLICT:")));
   assert.equal(report.commonRowCount, 0);
 });
