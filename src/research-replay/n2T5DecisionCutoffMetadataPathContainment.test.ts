@@ -11,11 +11,15 @@ test("reader rejects normalized envelope traversal before private envelope metad
   try {
     const base = "data/raw/research/trifecta-market/2026-08-07/05/01/T-5";
     const baseDir = join(root, base);
+    const manifestDigest = "a".repeat(64);
+    const checkpointKey = "b".repeat(64);
     mkdirSync(baseDir, { recursive: true });
 
     const traversingPath = `${base}/../../other.envelope.json`;
     writeFileSync(join(baseDir, "accepted.json"), `${JSON.stringify({
       markerVersion: "n2-trifecta-private-capture-accepted-v1",
+      manifestDigest,
+      checkpointKey,
       raceIdentity: "20260807-05-01",
       checkpointLabel: "T-5",
       envelopeRelativePath: traversingPath,
@@ -30,6 +34,8 @@ test("reader rejects normalized envelope traversal before private envelope metad
       envelopeVersion: "n2-trifecta-private-capture-envelope-v1",
       status: "PASS",
       blockers: [],
+      manifestDigest,
+      checkpointKey,
       entry: {
         raceIdentity: "20260807-05-01",
         checkpointLabel: "T-5",
