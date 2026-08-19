@@ -72,18 +72,41 @@ function insertWinner(path: string, input: {
   }
 }
 
-function writeAcceptedT5(root: string, input: { date: string; venue: string; raceNo: number }): void {
+function writeAcceptedT5(root: string, input: {
+  date: string;
+  venue: string;
+  raceNo: number;
+  decisionCutoff?: string;
+}): void {
   const raceDir = String(input.raceNo).padStart(2, "0");
+  const raceIdentity = `${input.date.replaceAll("-", "")}-${input.venue}-${raceDir}`;
   const base = `data/raw/research/trifecta-market/${input.date}/${input.venue}/${raceDir}/T-5`;
   const dir = join(root, base);
   mkdirSync(dir, { recursive: true });
   const rawRelativePath = `${base}/fixture.html`;
   const envelopeRelativePath = `${base}/fixture.envelope.json`;
+  const manifestDigest = "a".repeat(64);
+  const checkpointKey = "b".repeat(64);
+  const decisionCutoff = input.decisionCutoff ?? `${input.date}T03:30:00.000Z`;
   writeFileSync(join(root, rawRelativePath), "private odds fixture placeholder\n", "utf8");
-  writeFileSync(join(root, envelopeRelativePath), "{}\n", "utf8");
+  writeFileSync(join(root, envelopeRelativePath), `${JSON.stringify({
+    envelopeVersion: "n2-trifecta-private-capture-envelope-v1",
+    status: "PASS",
+    blockers: [],
+    manifestDigest,
+    checkpointKey,
+    entry: { raceIdentity, checkpointLabel: "T-5", decisionCutoff },
+    databaseWriteAuthorized: false,
+    currentBuyConnectionAuthorized: false,
+    lineConnectionAuthorized: false,
+    publicPublishAuthorized: false,
+    productionApplyExecuted: false,
+  }, null, 2)}\n`, "utf8");
   writeFileSync(join(dir, "accepted.json"), `${JSON.stringify({
     markerVersion: "n2-trifecta-private-capture-accepted-v1",
-    raceIdentity: `${input.date.replaceAll("-", "")}-${input.venue}-${raceDir}`,
+    manifestDigest,
+    checkpointKey,
+    raceIdentity,
     checkpointLabel: "T-5",
     rawDocumentId: `raw-${input.date}-${input.venue}-${raceDir}`,
     rawSha256: "a".repeat(64),
@@ -142,6 +165,26 @@ test("source reader selects the same 20 accepted T-5 cohort without reading odds
     assert.equal(read.liveOnlyFeatureReadCount, 0);
     assert.equal(read.publicPublishAuthorized, false);
     assert.equal(read.productionApplyExecuted, false);
+  });
+});
+
+test("historical cohort follows verified T-5 cutoff time across venues", () => {
+  withRoot((root) => {
+    const sidecar = prepare(root);
+    const lateRace = { date: "2026-08-07", venue: "01", raceNo: 1, raceKey: "2026-08-07:01:R1" };
+    const earlyRace = { date: "2026-08-07", venue: "24", raceNo: 1, raceKey: "2026-08-07:24:R1" };
+    for (const [spec, cutoff, id] of [
+      [lateRace, "2026-08-07T08:00:00.000Z", "late"],
+      [earlyRace, "2026-08-07T01:00:00.000Z", "early"],
+    ] as const) {
+      insertWinner(sidecar, { raceKey: spec.raceKey, candidateId: `extra-${id}`, selection: "1-2-3" });
+      writeAcceptedT5(root, { ...spec, decisionCutoff: cutoff });
+    }
+    const read = readN2HistoricalOnlyBaselineSources({ dataRoot: root });
+    assert.equal(read.status, "PASS");
+    assert.equal(read.evaluationRaces.some((race) => race.canonicalRaceKey === earlyRace.raceKey), true);
+    assert.equal(read.evaluationRaces.some((race) => race.canonicalRaceKey === lateRace.raceKey), false);
+    assert.equal(read.rawOddsValuesRead, false);
   });
 });
 
