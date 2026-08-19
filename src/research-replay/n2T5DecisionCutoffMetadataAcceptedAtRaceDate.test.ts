@@ -6,6 +6,9 @@ import test from "node:test";
 
 import { readN2T5DecisionCutoffMetadata } from "./n2T5DecisionCutoffMetadata";
 
+const MANIFEST_DIGEST = "a".repeat(64);
+const CHECKPOINT_KEY = "b".repeat(64);
+
 function withMarker(acceptedAt: string, fn: (root: string) => void): void {
   const root = mkdtempSync(join(tmpdir(), "boat-pon-t5-marker-race-date-"));
   const base = "data/raw/research/trifecta-market/2026-08-07/05/01/T-5";
@@ -14,6 +17,8 @@ function withMarker(acceptedAt: string, fn: (root: string) => void): void {
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, "accepted.json"), `${JSON.stringify({
       markerVersion: "n2-trifecta-private-capture-accepted-v1",
+      manifestDigest: MANIFEST_DIGEST,
+      checkpointKey: CHECKPOINT_KEY,
       raceIdentity: "20260807-05-01",
       checkpointLabel: "T-5",
       envelopeRelativePath: `${base}/fixture.envelope.json`,
@@ -49,6 +54,8 @@ test("T-5 cutoff metadata accepts a canonical marker inside the JST race date", 
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, "accepted.json"), `${JSON.stringify({
       markerVersion: "n2-trifecta-private-capture-accepted-v1",
+      manifestDigest: MANIFEST_DIGEST,
+      checkpointKey: CHECKPOINT_KEY,
       raceIdentity: "20260807-05-01",
       checkpointLabel: "T-5",
       envelopeRelativePath: `${base}/fixture.envelope.json`,
@@ -60,6 +67,8 @@ test("T-5 cutoff metadata accepts a canonical marker inside the JST race date", 
       envelopeVersion: "n2-trifecta-private-capture-envelope-v1",
       status: "PASS",
       blockers: [],
+      manifestDigest: MANIFEST_DIGEST,
+      checkpointKey: CHECKPOINT_KEY,
       entry: {
         raceIdentity: "20260807-05-01",
         checkpointLabel: "T-5",
