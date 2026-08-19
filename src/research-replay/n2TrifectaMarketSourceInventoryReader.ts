@@ -8,6 +8,26 @@ export const N2_TRIFECTA_MARKET_SOURCE_INVENTORY_READER_VERSION = "n2-trifecta-m
 const COHORT_DAY_COUNT = 7;
 const COMPLETE_SELECTION_COUNT = 120;
 
+const VALID_TRIFECTA_SELECTION_SQL = `
+  bet_selection IS NOT NULL
+  AND LENGTH(TRIM(bet_selection))=3
+  AND SUBSTR(TRIM(bet_selection),1,1) BETWEEN '1' AND '6'
+  AND SUBSTR(TRIM(bet_selection),2,1) BETWEEN '1' AND '6'
+  AND SUBSTR(TRIM(bet_selection),3,1) BETWEEN '1' AND '6'
+  AND SUBSTR(TRIM(bet_selection),1,1) <> SUBSTR(TRIM(bet_selection),2,1)
+  AND SUBSTR(TRIM(bet_selection),1,1) <> SUBSTR(TRIM(bet_selection),3,1)
+  AND SUBSTR(TRIM(bet_selection),2,1) <> SUBSTR(TRIM(bet_selection),3,1)
+`;
+
+function validMarketCapturedAt(value: string): boolean {
+  try {
+    canonicalUtcTimestamp(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function assertQuiescent(path: string): void {
   if (!existsSync(path)) throw new Error("PRIMARY_DB_NOT_FOUND");
   const walPath = `${path}-wal`;
@@ -143,8 +163,8 @@ export function readN2TrifectaMarketSourceInventory(input: {
     const groupColumns = columns.includes("checkpoint_label")
       ? "race_id, checkpoint_label, captured_at"
       : "race_id, captured_at";
-    const complete = db.prepare(`
-      SELECT COUNT(*) n FROM (
+    const completeSnapshotRows = db.prepare(`
+      SELECT captured_at AS capturedAt FROM (
         SELECT ${groupColumns}
         FROM ${table}
         WHERE SUBSTR(race_id, 1, 8) >= ?
@@ -152,20 +172,22 @@ export function readN2TrifectaMarketSourceInventory(input: {
           AND bet_type='trifecta'
           AND captured_at IS NOT NULL
           AND LENGTH(TRIM(captured_at)) > 0
-          AND bet_selection IS NOT NULL
-          AND LENGTH(TRIM(bet_selection)) = 3
+          AND ${VALID_TRIFECTA_SELECTION_SQL}
           AND odds > 0
         GROUP BY ${groupColumns}
-        HAVING COUNT(*)=? AND COUNT(DISTINCT bet_selection)=?
+        HAVING COUNT(*)=? AND COUNT(DISTINCT TRIM(bet_selection))=?
       )
-    `).get(fromCompact, toCompact, COMPLETE_SELECTION_COUNT, COMPLETE_SELECTION_COUNT) as unknown as { n: number };
+    `).all(fromCompact, toCompact, COMPLETE_SELECTION_COUNT, COMPLETE_SELECTION_COUNT) as unknown as Array<{
+      capturedAt: string;
+    }>;
+    const completeSnapshotCount = completeSnapshotRows.filter((row) => validMarketCapturedAt(row.capturedAt)).length;
 
     return {
       ...inventory,
       totalRows: Number(counts.totalRows ?? 0),
       raceCount: Number(counts.raceCount ?? 0),
       checkpointCount: Number(counts.checkpointCount ?? 0),
-      completeSnapshotCount: Number(complete.n ?? 0),
+      completeSnapshotCount,
     };
   } finally {
     db.close();
