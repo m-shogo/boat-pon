@@ -125,6 +125,30 @@ function hasValidRaceMetadata(row: ProgramInventoryRow): boolean {
     && CLOSE_AT_RE.test(row.closeAt.trim());
 }
 
+function hasValidRaceIdentity(row: ProgramInventoryRow): boolean {
+  const venueCode = officialVenueCode(row.venue);
+  if (!venueCode || !isCanonicalCalendarDate(row.date) || !hasValidRaceMetadata(row)) return false;
+  const compactDate = row.date.replaceAll("-", "");
+  const suffix = String(row.raceNo).padStart(2, "0");
+  return new Set([
+    `${compactDate}-${venueCode}-${suffix}`,
+    `${compactDate}-${row.venue.trim()}-${suffix}`,
+  ]).has(row.raceId);
+}
+
+function duplicateRaceNumbers(rows: ProgramInventoryRow[]): string[] {
+  const seen = new Set<string>();
+  const duplicates = new Set<string>();
+  for (const row of rows) {
+    const venueCode = officialVenueCode(row.venue);
+    if (!venueCode || !Number.isInteger(row.raceNo) || row.raceNo < 1 || row.raceNo > 12) continue;
+    const key = `${row.date}:${venueCode}:R${row.raceNo}`;
+    if (seen.has(key)) duplicates.add(key);
+    seen.add(key);
+  }
+  return [...duplicates].sort();
+}
+
 function dbMeta(path: string): DbMeta {
   const walPath = `${path}-wal`;
   return {
@@ -277,6 +301,8 @@ export function readN2TrifectaRealPlanPreflight(input: {
         const invalidDates = allDates.filter((date) => !isCanonicalCalendarDate(date));
         const invalidVenues = rows.filter((row) => officialVenueCode(row.venue) == null);
         const invalidRaceMetadata = rows.filter((row) => !hasValidRaceMetadata(row));
+        const invalidRaceIdentities = rows.filter((row) => !hasValidRaceIdentity(row));
+        const duplicateRaceNos = duplicateRaceNumbers(rows);
         if (invalidDates.length > 0) {
           blockers.push(...invalidDates.map((date) => `OFFICIAL_PROGRAM_DATE_INVALID:${date}`));
         }
@@ -290,10 +316,22 @@ export function readN2TrifectaRealPlanPreflight(input: {
             (row) => `OFFICIAL_PROGRAM_RACE_METADATA_INVALID:${row.date}:${row.venue}:${row.raceId}`,
           ));
         }
+        if (invalidRaceIdentities.length > 0) {
+          blockers.push(...invalidRaceIdentities.map(
+            (row) => `OFFICIAL_PROGRAM_RACE_IDENTITY_INVALID:${row.date}:${row.venue}:${row.raceId}`,
+          ));
+        }
+        if (duplicateRaceNos.length > 0) {
+          blockers.push(...duplicateRaceNos.map(
+            (key) => `OFFICIAL_PROGRAM_DUPLICATE_RACE_NO:${key}`,
+          ));
+        }
         if (
           invalidDates.length === 0
           && invalidVenues.length === 0
           && invalidRaceMetadata.length === 0
+          && invalidRaceIdentities.length === 0
+          && duplicateRaceNos.length === 0
         ) {
           const dates = allDates.slice(0, N2_TRIFECTA_REAL_PLAN_MAX_DATES);
           const dateSet = new Set(dates);
