@@ -46,6 +46,8 @@ type CaptureEnvelope = {
     raceIdentity?: unknown;
     checkpointLabel?: unknown;
     decisionCutoff?: unknown;
+    targetCaptureAt?: unknown;
+    sourceUrl?: unknown;
   };
   response?: {
     fetchedAt?: unknown;
@@ -152,14 +154,14 @@ function instantWithinRaceDate(date: string, instant: string): boolean {
   return Number.isFinite(value) && value >= start && value < end;
 }
 
-function expectedT5CheckpointKey(input: {
+function expectedT5CheckpointIdentity(input: {
   manifestDigest: string;
   raceIdentity: string;
   date: string;
   venue: string;
   raceNo: number;
   decisionCutoff: string;
-}): string | null {
+}): { checkpointKey: string; targetCaptureAt: string; sourceUrl: string } | null {
   const cutoffMs = Date.parse(input.decisionCutoff);
   if (!Number.isFinite(cutoffMs)) return null;
   const targetCaptureAt = new Date(cutoffMs - T5_CHECKPOINT_MINUTES * 60_000).toISOString();
@@ -176,13 +178,17 @@ function expectedT5CheckpointKey(input: {
   } catch {
     return null;
   }
-  return canonicalHash({
-    manifestDigest: input.manifestDigest,
-    raceIdentity: input.raceIdentity,
-    checkpointLabel: "T-5",
+  return {
+    checkpointKey: canonicalHash({
+      manifestDigest: input.manifestDigest,
+      raceIdentity: input.raceIdentity,
+      checkpointLabel: "T-5",
+      targetCaptureAt,
+      sourceUrl,
+    }),
     targetCaptureAt,
     sourceUrl,
-  });
+  };
 }
 
 function captureWithinT5Window(decisionCutoff: string, capturedAt: string): boolean {
@@ -293,7 +299,7 @@ export function readN2T5DecisionCutoffMetadata(input: {
     if (decisionCutoff == null || !instantWithinRaceDate(location.date, decisionCutoff)) {
       blockers.push(`${raceKey}:DECISION_CUTOFF_INVALID`);
     } else {
-      const expectedCheckpointKey = expectedT5CheckpointKey({
+      const expectedCheckpointIdentity = expectedT5CheckpointIdentity({
         manifestDigest: marker.manifestDigest,
         raceIdentity: location.raceIdentity,
         date: location.date,
@@ -301,10 +307,19 @@ export function readN2T5DecisionCutoffMetadata(input: {
         raceNo: Number(location.raceDir),
         decisionCutoff,
       });
-      if (expectedCheckpointKey == null
-        || marker.checkpointKey !== expectedCheckpointKey
-        || envelope.checkpointKey !== expectedCheckpointKey) {
+      if (expectedCheckpointIdentity == null
+        || marker.checkpointKey !== expectedCheckpointIdentity.checkpointKey
+        || envelope.checkpointKey !== expectedCheckpointIdentity.checkpointKey) {
         blockers.push(`${raceKey}:CHECKPOINT_KEY_INVALID`);
+      }
+      const envelopeTargetCaptureAt = canonicalInstant(envelope.entry?.targetCaptureAt, timestampMode);
+      if (expectedCheckpointIdentity == null
+        || envelopeTargetCaptureAt !== expectedCheckpointIdentity.targetCaptureAt) {
+        blockers.push(`${raceKey}:ENVELOPE_TARGET_CAPTURE_AT_INVALID`);
+      }
+      if (expectedCheckpointIdentity == null
+        || envelope.entry?.sourceUrl !== expectedCheckpointIdentity.sourceUrl) {
+        blockers.push(`${raceKey}:ENVELOPE_SOURCE_URL_INVALID`);
       }
     }
     if (capturedAt == null) blockers.push(`${raceKey}:CAPTURED_AT_INVALID`);
