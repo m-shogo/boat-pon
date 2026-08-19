@@ -105,15 +105,17 @@ function writeAcceptedT5(root: string, spec: ReturnType<typeof raceSpec>, offset
   const availableAt = offsetTime ? `${spec.date}T12:25:00+09:00` : `${spec.date}T03:25:00.000Z`;
   const manifestDigest = "a".repeat(64);
   const canonicalCutoff = canonicalUtcTimestamp(decisionCutoff);
+  const targetCaptureAt = new Date(Date.parse(canonicalCutoff) - 5 * 60_000).toISOString();
+  const sourceUrl = buildBoatRaceOfficialSourceUrl(
+    "boatrace_official_trifecta_odds_html",
+    { date: spec.date.replaceAll("-", ""), venueCode: spec.venue, raceNo: spec.raceNo },
+  );
   const checkpointKey = canonicalHash({
     manifestDigest,
     raceIdentity,
     checkpointLabel: "T-5",
-    targetCaptureAt: new Date(Date.parse(canonicalCutoff) - 5 * 60_000).toISOString(),
-    sourceUrl: buildBoatRaceOfficialSourceUrl(
-      "boatrace_official_trifecta_odds_html",
-      { date: spec.date.replaceAll("-", ""), venueCode: spec.venue, raceNo: spec.raceNo },
-    ),
+    targetCaptureAt,
+    sourceUrl,
   });
 
   writeFileSync(join(root, rawRelativePath), raw);
@@ -123,7 +125,7 @@ function writeAcceptedT5(root: string, spec: ReturnType<typeof raceSpec>, offset
     blockers: [],
     manifestDigest,
     checkpointKey,
-    entry: { raceIdentity, checkpointLabel: "T-5", decisionCutoff },
+    entry: { raceIdentity, checkpointLabel: "T-5", targetCaptureAt, decisionCutoff, sourceUrl },
     response: {
       statusCode: 200,
       contentType: "text/html",
