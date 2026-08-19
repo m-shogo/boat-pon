@@ -18,6 +18,8 @@ function writeMetadata(root: string, options: {
   checkpointCutoff?: string;
   envelopeRelativePath?: string;
   acceptedAt?: string;
+  fetchedAt?: string;
+  availableAt?: string;
   markerCheckpointKey?: string;
   envelopeManifestDigest?: string;
   envelopeCheckpointKey?: string;
@@ -65,6 +67,12 @@ function writeMetadata(root: string, options: {
         raceIdentity,
         checkpointLabel: "T-5",
         decisionCutoff: cutoff,
+      },
+      response: {
+        fetchedAt: options.fetchedAt ?? "2026-08-07T03:25:30.000Z",
+      },
+      sourceDisplayedUpdate: {
+        availableAt: options.availableAt ?? "2026-08-07T03:24:00.000Z",
       },
       databaseWriteAuthorized: false,
       currentBuyConnectionAuthorized: false,
@@ -152,6 +160,40 @@ test("reader rejects matching marker/envelope checkpoint keys that were not prod
     assert.ok(read.blockers.includes("2026-08-07:05:R1:CHECKPOINT_KEY_INVALID"));
     assert.deepEqual(read.decisionCutoffByRaceKey, {});
   });
+});
+
+test("reader rejects T-5 capture timing that violates the decision cutoff", () => {
+  for (const [options, blocker] of [
+    [{ fetchedAt: "2026-08-07T03:30:01.000Z" }, "CAPTURE_AFTER_DECISION_CUTOFF"],
+    [{ availableAt: "2026-08-07T03:30:01.000Z" }, "AVAILABLE_AFTER_DECISION_CUTOFF"],
+    [{ fetchedAt: "2026-08-07T03:25:00.000Z", availableAt: "2026-08-07T03:25:01.000Z" }, "AVAILABLE_AFTER_CAPTURE"],
+  ] as const) {
+    withRoot((root) => {
+      writeMetadata(root, options);
+      const read = readN2T5DecisionCutoffMetadata({ dataRoot: root, raceKeys: ["2026-08-07:05:R1"] });
+      assert.equal(read.status, "BLOCKED");
+      assert.ok(read.blockers.includes(`2026-08-07:05:R1:${blocker}`));
+      assert.deepEqual(read.decisionCutoffByRaceKey, {});
+      assert.equal(read.privateEnvelopeMetadataReadCount, 1);
+      assert.equal(read.rawOddsValuesRead, false);
+    });
+  }
+});
+
+test("reader rejects noncanonical capture timing metadata", () => {
+  for (const [options, blocker] of [
+    [{ fetchedAt: "2026-08-07T24:00:00.000Z" }, "CAPTURED_AT_INVALID"],
+    [{ availableAt: "2026-02-30T03:24:00.000Z" }, "AVAILABLE_AT_INVALID"],
+  ] as const) {
+    withRoot((root) => {
+      writeMetadata(root, options);
+      const read = readN2T5DecisionCutoffMetadata({ dataRoot: root, raceKeys: ["2026-08-07:05:R1"] });
+      assert.equal(read.status, "BLOCKED");
+      assert.ok(read.blockers.includes(`2026-08-07:05:R1:${blocker}`));
+      assert.deepEqual(read.decisionCutoffByRaceKey, {});
+      assert.equal(read.rawOddsValuesRead, false);
+    });
+  }
 });
 
 test("reader blocks a cutoff outside the race's JST date", () => {
