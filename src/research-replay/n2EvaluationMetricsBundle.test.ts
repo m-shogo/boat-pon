@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { enumerateBetSelections } from "./n2DatasetContract";
-import { buildN2EvaluationMetricsBundle } from "./n2EvaluationMetricsBundle";
+import {
+  N2_EVALUATION_METRICS_BUNDLE_VERSION,
+  buildN2EvaluationMetricsBundle,
+} from "./n2EvaluationMetricsBundle";
 
 const selections = enumerateBetSelections("trifecta");
 
@@ -32,10 +35,10 @@ function cutoffs(): Record<string, string> {
   ]));
 }
 
-function marketSources() {
+function marketSources(decisionCutoffByRaceKey: Readonly<Record<string, string>> = cutoffs()) {
   return evaluationRaces().map((race, raceIndex) => ({
     canonicalRaceKey: race.canonicalRaceKey,
-    decisionCutoff: cutoffs()[race.canonicalRaceKey],
+    decisionCutoff: decisionCutoffByRaceKey[race.canonicalRaceKey],
     capturedAt: `${race.canonicalRaceKey.slice(0, 10)}T03:25:30.000Z`,
     availableAt: `${race.canonicalRaceKey.slice(0, 10)}T03:25:00.000Z`,
     observationId: `obs-${raceIndex}`,
@@ -71,6 +74,7 @@ test("metrics bundle recomputes exact three-baseline common cohort and aggregate
     decisionCutoffByRaceKey: cutoffs(),
     settlements: settlements(),
   });
+  assert.equal(report.bundleVersion, N2_EVALUATION_METRICS_BUNDLE_VERSION);
   assert.equal(report.status, "PASS");
   assert.equal(report.commonCohort.status, "COMPARABLE");
   assert.equal(report.commonCohort.baselineIds.length, 3);
@@ -83,6 +87,7 @@ test("metrics bundle recomputes exact three-baseline common cohort and aggregate
   assert.match(report.datasetDigests.market, /^[0-9a-f]{64}$/u);
   assert.match(report.datasetDigests.historical, /^[0-9a-f]{64}$/u);
   assert.match(report.datasetDigests.legacy, /^[0-9a-f]{64}$/u);
+  assert.match(report.datasetCohortDigest, /^[0-9a-f]{64}$/u);
   assert.match(report.settlementSetDigest, /^[0-9a-f]{64}$/u);
   assert.equal(report.privacy.rowLevelPredictionsPersisted, false);
   assert.equal(report.privacy.rawMarketOddsPersisted, false);
@@ -96,6 +101,26 @@ test("metrics bundle recomputes exact three-baseline common cohort and aggregate
   assert.doesNotMatch(persistedShape, /"winningSelection"\s*:/u);
   assert.doesNotMatch(persistedShape, /"marketOddsBySelection"\s*:/u);
   assert.doesNotMatch(persistedShape, /2026-08-0[78]:05:R/u);
+});
+
+test("metrics bundle preserves an identical race membership when actual cutoff order differs", () => {
+  const decisionCutoffByRaceKey = cutoffs();
+  decisionCutoffByRaceKey["2026-08-07:05:R1"] = "2026-08-07T03:31:00.000Z";
+  decisionCutoffByRaceKey["2026-08-07:05:R2"] = "2026-08-07T03:29:00.000Z";
+
+  const report = buildN2EvaluationMetricsBundle({
+    marketSources: marketSources(decisionCutoffByRaceKey),
+    historicalTraining: training(),
+    evaluationRaces: evaluationRaces(),
+    decisionCutoffByRaceKey,
+    settlements: settlements(),
+  });
+
+  assert.equal(report.status, "PASS");
+  assert.equal(report.commonCohort.status, "COMPARABLE");
+  assert.equal(report.commonCohort.commonRowCount, 2400);
+  assert.equal(report.economic.status, "PASS");
+  assert.equal(report.economic.raceCount, 20);
 });
 
 test("settlement label conflict fails closed before economic scoring", () => {
