@@ -73,6 +73,23 @@ test("reader extracts only T-5 cutoff metadata without raw odds access", () => {
   });
 });
 
+test("reader reports an attempted envelope metadata read even when JSON is invalid", () => {
+  withRoot((root) => {
+    writeMetadata(root);
+    const envelopePath = join(
+      root,
+      "data/raw/research/trifecta-market/2026-08-07/05/01/T-5/fixture.envelope.json",
+    );
+    writeFileSync(envelopePath, "{not-json\n", "utf8");
+    const read = readN2T5DecisionCutoffMetadata({ dataRoot: root, raceKeys: ["2026-08-07:05:R1"] });
+    assert.equal(read.status, "BLOCKED");
+    assert.ok(read.blockers.some((blocker) => blocker.startsWith("2026-08-07:05:R1:ENVELOPE_")));
+    assert.deepEqual(read.decisionCutoffByRaceKey, {});
+    assert.equal(read.privateEnvelopeMetadataReadCount, 1);
+    assert.equal(read.rawOddsValuesRead, false);
+  });
+});
+
 test("reader rejects an envelope from a different accepted capture lineage", () => {
   for (const options of [
     { envelopeManifestDigest: "c".repeat(64) },
