@@ -267,7 +267,7 @@ test("private source reader stops at readiness for accepted marker timestamps no
 
 test("private source reader rejects impossible envelope timing metadata", () => {
   for (const [field, timestamp, blocker] of [
-    ["decisionCutoff", "2026-08-07T24:00:00.000Z", "T5_DECISION_CUTOFF_INVALID"],
+    ["decisionCutoff", "2026-08-07T24:00:00.000Z", "DECISION_CUTOFF_INVALID"],
     ["fetchedAt", "2026-02-30T03:25:30.000Z", "T5_CAPTURED_AT_INVALID"],
     ["availableAt", "2026-08-07T23:60:00Z", "T5_AVAILABLE_AT_INVALID"],
   ] as const) {
@@ -292,7 +292,7 @@ test("private source reader rejects cross-date envelope metadata before raw SHA 
     } : {});
     const result = readN2MarketOnlyBaselinePrivateSources({ dataRoot: root });
     assert.equal(result.status, "BLOCKED");
-    assert.ok(result.blockers.includes("2026-08-07:05:R1:T5_DECISION_CUTOFF_OUTSIDE_RACE_DATE"));
+    assert.ok(result.blockers.includes("T5_CUTOFF_METADATA:2026-08-07:05:R1:DECISION_CUTOFF_INVALID"));
     assert.equal(result.blockers.some((value) => value.includes("T5_RAW_SHA256_MISMATCH")), false);
     assert.equal(result.sources.length, 0);
     assert.equal(result.rawValuesPublished, false);
