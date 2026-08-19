@@ -2,6 +2,10 @@ import { resolve, sep } from "node:path";
 import { readGovernanceFileUtf8Bounded } from "../research/governance/safeFs";
 import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import { buildBoatRaceOfficialSourceUrl } from "./n2ExternalSourceCaptureContract";
+import {
+  N2_TRIFECTA_PRIVATE_CAPTURE_EARLY_WINDOW_SECONDS,
+  N2_TRIFECTA_PRIVATE_CAPTURE_LATE_WINDOW_SECONDS,
+} from "./n2TrifectaPrivateCaptureExecutor";
 
 export const N2_T5_DECISION_CUTOFF_METADATA_VERSION =
   "n2-t5-decision-cutoff-metadata-v1" as const;
@@ -42,6 +46,12 @@ type CaptureEnvelope = {
     raceIdentity?: unknown;
     checkpointLabel?: unknown;
     decisionCutoff?: unknown;
+  };
+  response?: {
+    fetchedAt?: unknown;
+  };
+  sourceDisplayedUpdate?: {
+    availableAt?: unknown;
   };
   databaseWriteAuthorized?: unknown;
   currentBuyConnectionAuthorized?: unknown;
@@ -175,6 +185,15 @@ function expectedT5CheckpointKey(input: {
   });
 }
 
+function captureWithinT5Window(decisionCutoff: string, capturedAt: string): boolean {
+  const cutoffMs = Date.parse(decisionCutoff);
+  const capturedMs = Date.parse(capturedAt);
+  if (!Number.isFinite(cutoffMs) || !Number.isFinite(capturedMs)) return false;
+  const targetMs = cutoffMs - T5_CHECKPOINT_MINUTES * 60_000;
+  return capturedMs >= targetMs - N2_TRIFECTA_PRIVATE_CAPTURE_EARLY_WINDOW_SECONDS * 1_000
+    && capturedMs <= targetMs + N2_TRIFECTA_PRIVATE_CAPTURE_LATE_WINDOW_SECONDS * 1_000;
+}
+
 export function readN2T5DecisionCutoffMetadata(input: {
   dataRoot: string;
   raceKeys: readonly string[];
@@ -269,6 +288,8 @@ export function readN2T5DecisionCutoffMetadata(input: {
       blockers.push(`${raceKey}:ENVELOPE_IDENTITY_INVALID`);
     }
     const decisionCutoff = canonicalInstant(envelope.entry?.decisionCutoff, timestampMode);
+    const capturedAt = canonicalInstant(envelope.response?.fetchedAt, timestampMode);
+    const availableAt = canonicalInstant(envelope.sourceDisplayedUpdate?.availableAt, timestampMode);
     if (decisionCutoff == null || !instantWithinRaceDate(location.date, decisionCutoff)) {
       blockers.push(`${raceKey}:DECISION_CUTOFF_INVALID`);
     } else {
@@ -284,9 +305,21 @@ export function readN2T5DecisionCutoffMetadata(input: {
         || marker.checkpointKey !== expectedCheckpointKey
         || envelope.checkpointKey !== expectedCheckpointKey) {
         blockers.push(`${raceKey}:CHECKPOINT_KEY_INVALID`);
-      } else {
-        decisionCutoffByRaceKey[raceKey] = decisionCutoff;
       }
+    }
+    if (capturedAt == null) blockers.push(`${raceKey}:CAPTURED_AT_INVALID`);
+    if (availableAt == null) blockers.push(`${raceKey}:AVAILABLE_AT_INVALID`);
+    if (decisionCutoff != null && capturedAt != null && !captureWithinT5Window(decisionCutoff, capturedAt)) {
+      blockers.push(`${raceKey}:CAPTURE_OUTSIDE_CHECKPOINT_WINDOW`);
+    }
+    if (decisionCutoff != null && capturedAt != null && Date.parse(capturedAt) > Date.parse(decisionCutoff)) {
+      blockers.push(`${raceKey}:CAPTURE_AFTER_DECISION_CUTOFF`);
+    }
+    if (decisionCutoff != null && availableAt != null && Date.parse(availableAt) > Date.parse(decisionCutoff)) {
+      blockers.push(`${raceKey}:AVAILABLE_AFTER_DECISION_CUTOFF`);
+    }
+    if (capturedAt != null && availableAt != null && Date.parse(availableAt) > Date.parse(capturedAt)) {
+      blockers.push(`${raceKey}:AVAILABLE_AFTER_CAPTURE`);
     }
     if (envelope.databaseWriteAuthorized !== false
       || envelope.currentBuyConnectionAuthorized !== false
@@ -294,6 +327,10 @@ export function readN2T5DecisionCutoffMetadata(input: {
       || envelope.publicPublishAuthorized !== false
       || envelope.productionApplyExecuted !== false) {
       blockers.push(`${raceKey}:ENVELOPE_AUTHORITY_WIDENED`);
+    }
+    const raceBlockerPrefix = `${raceKey}:`;
+    if (!blockers.some((blocker) => blocker.startsWith(raceBlockerPrefix)) && decisionCutoff != null) {
+      decisionCutoffByRaceKey[raceKey] = decisionCutoff;
     }
   }
   const normalizedBlockers = unique(blockers);

@@ -281,18 +281,23 @@ test("private source reader stops at readiness for accepted marker timestamps no
   }
 });
 
-test("private source reader rejects impossible envelope timing metadata", () => {
+test("private source reader rejects impossible envelope timing metadata during ordering preflight", () => {
   for (const [field, timestamp, blocker] of [
     ["decisionCutoff", "2026-08-07T24:00:00.000Z", "DECISION_CUTOFF_INVALID"],
-    ["fetchedAt", "2026-02-30T03:25:30.000Z", "T5_CAPTURED_AT_INVALID"],
-    ["availableAt", "2026-08-07T23:60:00Z", "T5_AVAILABLE_AT_INVALID"],
+    ["fetchedAt", "2026-02-30T03:25:30.000Z", "CAPTURED_AT_INVALID"],
+    ["availableAt", "2026-08-07T23:60:00Z", "AVAILABLE_AT_INVALID"],
   ] as const) {
     withRoot((root) => {
       prepare(root, 20, null, (index) => index === 0 ? { [field]: timestamp } : {});
       const result = readN2MarketOnlyBaselinePrivateSources({ dataRoot: root });
       assert.equal(result.status, "BLOCKED", `${field}:${timestamp}`);
-      assert.ok(result.blockers.some((value) => value.includes(blocker)), `${field}:${timestamp}`);
+      assert.ok(
+        result.blockers.includes(`T5_CUTOFF_METADATA:2026-08-07:05:R1:${blocker}`),
+        `${field}:${timestamp}`,
+      );
       assert.equal(result.sources.length, 0);
+      assert.equal(result.privateRawFileReadCount, 0);
+      assert.equal(result.rawValuesReadPrivately, false);
       assert.equal(result.rawValuesPublished, false);
       assert.equal(result.databaseWriteCount, 0);
     });
