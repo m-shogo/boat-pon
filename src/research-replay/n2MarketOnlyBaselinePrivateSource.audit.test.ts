@@ -161,7 +161,7 @@ function insertSettlement(path: string, spec: ReturnType<typeof raceSpec>, index
   }
 }
 
-test("private read audit counts raw and envelope reads even when every raw SHA fails", () => {
+test("private read audit counts metadata preflight and selected raw reads even when every raw SHA fails", () => {
   const root = mkdtempSync(join(tmpdir(), "boat-pon-market-baseline-private-audit-"));
   try {
     const sidecar = createSidecar(root);
@@ -174,7 +174,7 @@ test("private read audit counts raw and envelope reads even when every raw SHA f
     const result = readN2MarketOnlyBaselinePrivateSources({ dataRoot: root });
     assert.equal(result.status, "BLOCKED");
     assert.equal(result.sources.length, 0);
-    assert.equal(result.privateEnvelopeReadCount, 20);
+    assert.equal(result.privateEnvelopeReadCount, 40);
     assert.equal(result.privateRawFileReadCount, 20);
     assert.equal(result.rawValuesReadPrivately, false);
     assert.equal(result.blockers.filter((value) => value.includes("T5_RAW_SHA256_MISMATCH")).length, 20);
