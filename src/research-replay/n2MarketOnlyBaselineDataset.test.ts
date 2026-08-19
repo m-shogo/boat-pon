@@ -87,6 +87,19 @@ test("fixed cohort follows decision cutoff time across venues", () => {
   assert.equal(raceKeys.includes("2026-08-07:01:R1"), false);
 });
 
+test("ordering metadata is validated before fixed-cohort truncation", () => {
+  const invalidLaterSource = {
+    ...source("2026-08-09:05:R1"),
+    decisionCutoff: "2026-08-09T24:00:00.000Z",
+  };
+  const dataset = buildN2MarketOnlyBaselineDataset({
+    sources: [invalidLaterSource, ...twentySources()],
+  });
+  assert.equal(dataset.status, "BLOCKED");
+  assert.ok(dataset.blockers.includes("2026-08-09:05:R1:DECISION_CUTOFF_INVALID"));
+  assert.equal(dataset.rowCount, 0);
+});
+
 test("market-only baseline fixes the initial cohort at 20 settled T-5 races", () => {
   const extraEarlierInArrayButLaterInTime = source("2026-08-09:05:R1");
   const dataset = buildN2MarketOnlyBaselineDataset({
