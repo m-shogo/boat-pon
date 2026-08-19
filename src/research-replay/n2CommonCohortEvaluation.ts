@@ -1,6 +1,7 @@
 import {
   compareN2BaselinesOnCommonCohort,
   type N2BaselineMetrics,
+  type N2BaselinePredictionRow,
 } from "./n2BaselineEvaluation";
 import { canonicalHash } from "./canonical";
 import {
@@ -20,7 +21,7 @@ import {
 } from "./n2MarketOnlyBaselineDataset";
 
 export const N2_COMMON_COHORT_EVALUATION_VERSION =
-  "n2-common-cohort-evaluation-v1" as const;
+  "n2-common-cohort-evaluation-v2" as const;
 export const N2_COMMON_COHORT_REQUIRED_ROWS = 2400;
 export const N2_COMMON_COHORT_REQUIRED_BASELINES = 3;
 
@@ -72,6 +73,11 @@ function blocked(input: {
     legacyDatasetDigest: input.legacyDatasetDigest ?? canonicalHash("legacy-not-built"),
   };
   return { ...core, outputDigest: canonicalHash(core) };
+}
+
+function cohortMembershipDigest(rows: readonly N2BaselinePredictionRow[]): string {
+  const raceKeys = [...new Set(rows.map((row) => row.canonicalRaceKey))].sort();
+  return canonicalHash(raceKeys);
 }
 
 export function evaluateN2CommonCohort(input: {
@@ -126,9 +132,13 @@ export function evaluateN2CommonCohort(input: {
     });
   }
 
-  if (market.cohortDigest !== historical.cohortDigest || market.cohortDigest !== legacy.cohortDigest) {
+  const marketMembershipDigest = cohortMembershipDigest(market.rows);
+  const historicalMembershipDigest = cohortMembershipDigest(historical.rows);
+  const legacyMembershipDigest = cohortMembershipDigest(legacy.rows);
+  if (marketMembershipDigest !== historicalMembershipDigest
+    || marketMembershipDigest !== legacyMembershipDigest) {
     return blocked({
-      blockers: ["COHORT_DIGEST_MISMATCH"],
+      blockers: ["COHORT_MEMBERSHIP_MISMATCH"],
       marketDatasetDigest: market.outputDigest,
       historicalDatasetDigest: historical.outputDigest,
       legacyDatasetDigest: legacy.outputDigest,
