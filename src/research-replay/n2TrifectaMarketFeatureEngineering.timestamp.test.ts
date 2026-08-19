@@ -52,13 +52,31 @@ test("market feature core rejects JavaScript-normalized timestamps", () => {
   assert.ok(timezoneMissing.blockers.includes("CAPTURED_AT_INVALID"));
 });
 
-test("market feature core preserves valid leap-day and explicit-offset timestamps", () => {
+test("market feature core canonicalizes valid leap-day and explicit-offset timestamps", () => {
   const result = build(
     "2028-02-29T10:25:30+09:00",
     "2028-02-29T10:25:00+09:00",
   );
   assert.equal(result.status, "PASS");
   assert.ok(result.snapshot);
-  assert.equal(result.snapshot.capturedAt, "2028-02-29T10:25:30+09:00");
-  assert.equal(result.snapshot.availableAt, "2028-02-29T10:25:00+09:00");
+  assert.equal(result.snapshot.capturedAt, "2028-02-29T01:25:30.000Z");
+  assert.equal(result.snapshot.availableAt, "2028-02-29T01:25:00.000Z");
+});
+
+test("market feature core gives equivalent timestamp representations one lineage digest", () => {
+  const utc = build(
+    "2028-02-29T01:25:30.000Z",
+    "2028-02-29T01:25:00.000Z",
+  );
+  const offset = build(
+    "2028-02-29T10:25:30+09:00",
+    "2028-02-29T10:25:00+09:00",
+  );
+
+  assert.equal(utc.status, "PASS");
+  assert.equal(offset.status, "PASS");
+  assert.ok(utc.snapshot);
+  assert.ok(offset.snapshot);
+  assert.deepEqual(offset.snapshot, utc.snapshot);
+  assert.equal(offset.snapshot.outputDigest, utc.snapshot.outputDigest);
 });
