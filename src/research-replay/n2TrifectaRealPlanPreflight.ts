@@ -108,6 +108,12 @@ function parseInstant(value: string): number | null {
   }
 }
 
+function isCanonicalCalendarDate(value: string): boolean {
+  if (!DATE_RE.test(value)) return false;
+  const parsed = Date.parse(`${value}T00:00:00.000Z`);
+  return Number.isFinite(parsed) && new Date(parsed).toISOString().slice(0, 10) === value;
+}
+
 function dbMeta(path: string): DbMeta {
   const walPath = `${path}-wal`;
   return {
@@ -256,17 +262,22 @@ export function readN2TrifectaRealPlanPreflight(input: {
           WHERE date >= ?
           ORDER BY date, venue
         `).all(requestedDateFrom) as unknown as VenueDayRow[];
-        const dates = uniqueSorted(rows.map((row) => row.date))
-          .slice(0, N2_TRIFECTA_REAL_PLAN_MAX_DATES);
-        const dateSet = new Set(dates);
-        for (const row of rows) {
-          if (!dateSet.has(row.date)) continue;
-          const venueCode = officialVenueCode(row.venue);
-          if (!venueCode) continue;
-          discovered.set(`${row.date}|${venueCode}`, {
-            date: row.date,
-            venueCode,
-          });
+        const allDates = uniqueSorted(rows.map((row) => row.date));
+        const invalidDates = allDates.filter((date) => !isCanonicalCalendarDate(date));
+        if (invalidDates.length > 0) {
+          blockers.push(...invalidDates.map((date) => `OFFICIAL_PROGRAM_DATE_INVALID:${date}`));
+        } else {
+          const dates = allDates.slice(0, N2_TRIFECTA_REAL_PLAN_MAX_DATES);
+          const dateSet = new Set(dates);
+          for (const row of rows) {
+            if (!dateSet.has(row.date)) continue;
+            const venueCode = officialVenueCode(row.venue);
+            if (!venueCode) continue;
+            discovered.set(`${row.date}|${venueCode}`, {
+              date: row.date,
+              venueCode,
+            });
+          }
         }
       }
     } finally {
