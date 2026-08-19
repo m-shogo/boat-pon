@@ -57,6 +57,7 @@ const SHA256_RE = /^[0-9a-f]{64}$/u;
 const MAX_DATE_DIRS = 366;
 const MAX_MARKER_BYTES = 128 * 1024;
 const MAX_EVIDENCE_BYTES = 2_000_000;
+const DAY_MS = 24 * 60 * 60 * 1_000;
 
 function unique(values: readonly string[]): string[] {
   return [...new Set(values)].sort();
@@ -117,7 +118,8 @@ function regularBounded(path: string, maxBytes: number): boolean {
 
 function parseIso(value: unknown): boolean {
   if (typeof value !== "string") return false;
-  const calendar = /^(\d{4})-(\d{2})-(\d{2})(?:T| )/u.exec(value);
+  if (!/^\d{4}-\d{2}-\d{2}T/u.test(value) || !/(?:Z|[+-]\d{2}:\d{2})$/u.test(value)) return false;
+  const calendar = /^(\d{4})-(\d{2})-(\d{2})T/u.exec(value);
   if (calendar === null) return false;
   const year = Number(calendar[1]);
   const month = Number(calendar[2]);
@@ -127,12 +129,19 @@ function parseIso(value: unknown): boolean {
   if (date.getUTCFullYear() !== year
     || date.getUTCMonth() !== month - 1
     || date.getUTCDate() !== day) return false;
-  const clock = /(?:T| )(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?/u.exec(value);
+  const clock = /T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?/u.exec(value);
   if (clock === null) return false;
   if (Number(clock[1]) > 23 || Number(clock[2]) > 59 || Number(clock[3] ?? "0") > 59) return false;
   const offset = /([+-])(\d{2}):(\d{2})$/u.exec(value);
   if (offset !== null && (Number(offset[2]) > 23 || Number(offset[3]) > 59)) return false;
   return Number.isFinite(Date.parse(value));
+}
+
+function timestampWithinRaceDateJst(date: string, value: unknown): boolean {
+  if (!parseIso(value) || typeof value !== "string" || !isValidCalendarDateDirectory(date)) return false;
+  const instant = Date.parse(value);
+  const start = Date.parse(`${date}T00:00:00+09:00`);
+  return Number.isFinite(instant) && instant >= start && instant < start + DAY_MS;
 }
 
 function validateAcceptedMarker(input: {
@@ -173,7 +182,7 @@ function validateAcceptedMarker(input: {
   if (marker.checkpointLabel !== "T-5") blockers.push("ACCEPTED_MARKER_CHECKPOINT_MISMATCH");
   if (typeof marker.rawDocumentId !== "string" || marker.rawDocumentId.length < 1) blockers.push("ACCEPTED_MARKER_RAW_DOCUMENT_ID_INVALID");
   if (typeof marker.rawSha256 !== "string" || !SHA256_RE.test(marker.rawSha256)) blockers.push("ACCEPTED_MARKER_RAW_SHA256_INVALID");
-  if (!parseIso(marker.acceptedAt)) blockers.push("ACCEPTED_MARKER_ACCEPTED_AT_INVALID");
+  if (!timestampWithinRaceDateJst(input.date, marker.acceptedAt)) blockers.push("ACCEPTED_MARKER_ACCEPTED_AT_INVALID");
   if (marker.databaseWriteAuthorized !== false) blockers.push("ACCEPTED_MARKER_DATABASE_BOUNDARY_WIDENED");
   if (marker.productionApplyExecuted !== false) blockers.push("ACCEPTED_MARKER_PRODUCTION_BOUNDARY_WIDENED");
 
