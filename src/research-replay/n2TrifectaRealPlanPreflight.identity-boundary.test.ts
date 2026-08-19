@@ -98,7 +98,7 @@ test("real plan preflight rejects duplicate race numbers before the three-date b
     assert.ok(report.blockers.includes("OFFICIAL_PROGRAM_DUPLICATE_RACE_NO:2026-10-01:05:R1"));
     assert.equal(report.inventory.discoveredDateCount, 0);
     assert.equal(report.inventory.discoveredVenueDayCount, 0);
-    assert.equal(report.readableCandidatePlanCount, undefined);
+    assert.equal(report.inventory.readableCandidatePlanCount, 0);
     assert.equal(report.networkExecuted, false);
     assert.equal(report.rawPersisted, false);
     assert.equal(report.databaseWriteCount, 0);
