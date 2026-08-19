@@ -90,13 +90,7 @@ function compareMarketSourcesByRaceTime(
   left: N2MarketOnlyBaselineRaceSource,
   right: N2MarketOnlyBaselineRaceSource,
 ): number {
-  const leftCutoff = isCanonicalIsoInstant(left.decisionCutoff)
-    ? Date.parse(left.decisionCutoff)
-    : Number.POSITIVE_INFINITY;
-  const rightCutoff = isCanonicalIsoInstant(right.decisionCutoff)
-    ? Date.parse(right.decisionCutoff)
-    : Number.POSITIVE_INFINITY;
-  return leftCutoff - rightCutoff
+  return Date.parse(left.decisionCutoff) - Date.parse(right.decisionCutoff)
     || compareN2RaceKeysByRaceTime(left.canonicalRaceKey, right.canonicalRaceKey);
 }
 
@@ -104,7 +98,7 @@ function unique<T>(values: readonly T[]): T[] {
   return [...new Set(values)];
 }
 
-function validateSource(source: N2MarketOnlyBaselineRaceSource): string[] {
+function validateOrderingSource(source: N2MarketOnlyBaselineRaceSource): string[] {
   const blockers: string[] = [];
   const parsedRaceKey = parseRaceKey(source.canonicalRaceKey);
   if (!parsedRaceKey) blockers.push("RACE_KEY_INVALID");
@@ -112,6 +106,12 @@ function validateSource(source: N2MarketOnlyBaselineRaceSource): string[] {
   else if (parsedRaceKey && !cutoffWithinRaceDate(parsedRaceKey.date, source.decisionCutoff)) {
     blockers.push("DECISION_CUTOFF_OUTSIDE_RACE_DATE");
   }
+  return blockers;
+}
+
+function validateSource(source: N2MarketOnlyBaselineRaceSource): string[] {
+  const blockers = validateOrderingSource(source);
+  const parsedRaceKey = parseRaceKey(source.canonicalRaceKey);
   if (!isCanonicalIsoInstant(source.capturedAt)) blockers.push("CAPTURED_AT_INVALID");
   if (!isCanonicalIsoInstant(source.availableAt)) blockers.push("AVAILABLE_AT_INVALID");
   if (isCanonicalIsoInstant(source.availableAt)
@@ -180,6 +180,17 @@ export function buildN2MarketOnlyBaselineDataset(input: {
   if (duplicateRaceKeys.size > 0) {
     return blockedDataset({
       blockers: [`DUPLICATE_RACE_SOURCE:${duplicateRaceKeys.size}`],
+      sourceRaceCount: byRace.size,
+      cohortRaceCount,
+    });
+  }
+
+  const orderingBlockers = [...byRace.values()].flatMap((source) =>
+    validateOrderingSource(source).map((blocker) => `${source.canonicalRaceKey}:${blocker}`),
+  );
+  if (orderingBlockers.length > 0) {
+    return blockedDataset({
+      blockers: orderingBlockers,
       sourceRaceCount: byRace.size,
       cohortRaceCount,
     });
