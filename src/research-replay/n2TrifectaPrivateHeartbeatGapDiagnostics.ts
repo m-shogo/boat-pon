@@ -6,7 +6,7 @@ import {
 } from "node:fs";
 import { resolve, sep } from "node:path";
 
-import { canonicalHash } from "./canonical";
+import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import { N2_TRIFECTA_PRIVATE_CAPTURE_LATE_WINDOW_SECONDS } from "./n2TrifectaPrivateCaptureExecutor";
 import {
   N2_TRIFECTA_PRIVATE_HEARTBEAT_VERSION,
@@ -86,10 +86,29 @@ type CheckpointWindow = {
   endMs: number;
 };
 
-function parseInstant(value: unknown): number | null {
+function canonicalInstant(value: unknown): string | null {
   if (typeof value !== "string") return null;
-  const parsed = Date.parse(value);
+  try {
+    return canonicalUtcTimestamp(value);
+  } catch {
+    return null;
+  }
+}
+
+function parseInstant(value: unknown): number | null {
+  const canonical = canonicalInstant(value);
+  if (canonical == null) return null;
+  const parsed = Date.parse(canonical);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function validCalendarDate(date: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/u.test(date)) return false;
+  try {
+    return canonicalUtcTimestamp(`${date}T00:00:00.000Z`).slice(0, 10) === date;
+  } catch {
+    return false;
+  }
 }
 
 function resolveInside(rootDir: string, relativePath: string): string {
@@ -100,7 +119,7 @@ function resolveInside(rootDir: string, relativePath: string): string {
 }
 
 function heartbeatRelativePath(date: string): string {
-  if (!/^\d{4}-\d{2}-\d{2}$/u.test(date)) throw new Error("HEARTBEAT_DATE_INVALID");
+  if (!validCalendarDate(date)) throw new Error("HEARTBEAT_DATE_INVALID");
   return `data/private/trifecta-capture/heartbeats/${date}.jsonl`;
 }
 
@@ -109,7 +128,9 @@ function validateHeartbeatRecord(record: HeartbeatRecordLike, date: string): str
   if (record.heartbeatVersion !== N2_TRIFECTA_PRIVATE_HEARTBEAT_VERSION) {
     blockers.push("HEARTBEAT_VERSION_INVALID");
   }
-  if (parseInstant(record.recordedAt) == null) blockers.push("HEARTBEAT_RECORDED_AT_INVALID");
+  const canonicalRecordedAt = canonicalInstant(record.recordedAt);
+  if (canonicalRecordedAt == null) blockers.push("HEARTBEAT_RECORDED_AT_INVALID");
+  else if (canonicalRecordedAt !== record.recordedAt) blockers.push("HEARTBEAT_RECORDED_AT_NON_CANONICAL");
   if (record.dateJst !== date) blockers.push("HEARTBEAT_DATE_MISMATCH");
   if (!["PASS", "NO_CHANGE", "BLOCKED"].includes(String(record.status))) {
     blockers.push("HEARTBEAT_STATUS_INVALID");
@@ -126,6 +147,10 @@ function validateHeartbeatRecord(record: HeartbeatRecordLike, date: string): str
   if (record.publicPublished !== false) blockers.push("HEARTBEAT_PUBLIC_BOUNDARY_INVALID");
   if (record.automatedBettingChanged !== false) blockers.push("HEARTBEAT_AUTOMATED_BETTING_BOUNDARY_INVALID");
   if (record.productionApplyExecuted !== false) blockers.push("HEARTBEAT_PRODUCTION_APPLY_BOUNDARY_INVALID");
+  const { recordDigest, ...core } = record;
+  if (typeof recordDigest !== "string" || canonicalHash(core) !== recordDigest) {
+    blockers.push("HEARTBEAT_RECORD_DIGEST_MISMATCH");
+  }
   return blockers;
 }
 
@@ -240,8 +265,9 @@ export function buildN2TrifectaPrivateHeartbeatGapDiagnostics(input: {
   recentWindowSeconds?: number;
 }): N2TrifectaPrivateHeartbeatGapDiagnosticsReport {
   const blockers: string[] = [];
-  const nowMs = parseInstant(input.now);
-  if (nowMs == null) blockers.push("NOW_INVALID");
+  const canonicalNow = canonicalInstant(input.now);
+  const nowMs = canonicalNow == null ? null : Date.parse(canonicalNow);
+  if (nowMs == null || !Number.isFinite(nowMs)) blockers.push("NOW_INVALID");
   const expectedIntervalSeconds = input.expectedIntervalSeconds ?? DEFAULT_EXPECTED_INTERVAL_SECONDS;
   const gapThresholdSeconds = input.gapThresholdSeconds ?? DEFAULT_GAP_THRESHOLD_SECONDS;
   const recentWindowSeconds = input.recentWindowSeconds ?? DEFAULT_RECENT_WINDOW_SECONDS;
@@ -257,13 +283,17 @@ export function buildN2TrifectaPrivateHeartbeatGapDiagnostics(input: {
     blockers.push(error instanceof Error ? error.message : "HEARTBEAT_HISTORY_READ_FAILED");
   }
 
-  const plan = checkpointWindows({ dataRoot: input.dataRoot, date: input.date, now: input.now });
+  const plan = checkpointWindows({
+    dataRoot: input.dataRoot,
+    date: input.date,
+    now: canonicalNow ?? input.now,
+  });
   const validRecords = history.records
     .map((record) => ({ record, ms: parseInstant(record.recordedAt) }))
     .filter((item): item is { record: HeartbeatRecordLike; ms: number } => item.ms != null);
 
   const gaps: N2TrifectaHeartbeatGap[] = [];
-  if (nowMs != null && blockers.length === 0) {
+  if (nowMs != null && Number.isFinite(nowMs) && blockers.length === 0) {
     for (let index = 1; index < validRecords.length; index += 1) {
       const previous = validRecords[index - 1];
       const current = validRecords[index];
@@ -301,10 +331,12 @@ export function buildN2TrifectaPrivateHeartbeatGapDiagnostics(input: {
   }
 
   const latestRecord = validRecords.at(-1) ?? null;
-  const latestAgeSeconds = latestRecord && nowMs != null
+  const latestAgeSeconds = latestRecord && nowMs != null && Number.isFinite(nowMs)
     ? Math.max(0, Number(((nowMs - latestRecord.ms) / 1_000).toFixed(3)))
     : null;
-  const recentCutoff = nowMs == null ? null : nowMs - recentWindowSeconds * 1_000;
+  const recentCutoff = nowMs == null || !Number.isFinite(nowMs)
+    ? null
+    : nowMs - recentWindowSeconds * 1_000;
   const recentSignificantGapCount = recentCutoff == null
     ? 0
     : gaps.filter((gap) => {
@@ -328,7 +360,7 @@ export function buildN2TrifectaPrivateHeartbeatGapDiagnostics(input: {
     reportVersion: N2_TRIFECTA_PRIVATE_HEARTBEAT_GAP_DIAGNOSTICS_VERSION,
     status,
     blockers: normalizedBlockers,
-    checkedAt: input.now,
+    checkedAt: canonicalNow ?? input.now,
     date: input.date,
     historyPresent: history.present,
     historyRecordCount: validRecords.length,
