@@ -10,6 +10,7 @@ import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 
 import { parseAllTrifectaOdds } from "../domain/oddsParser";
+import { canonicalUtcTimestamp } from "./canonical";
 import type { N2TrifectaPrivateCaptureEnvelope } from "./n2TrifectaPrivateCaptureExecutor";
 import {
   N2_MARKET_ONLY_BASELINE_COHORT_RACE_COUNT,
@@ -132,36 +133,19 @@ function sha256(bytes: Uint8Array): string {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
-function hasValidCalendarDate(value: string): boolean {
-  const match = /^(\d{4})-(\d{2})-(\d{2})(?:T| )/u.exec(value);
-  if (!match) return false;
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  if (month < 1 || month > 12 || day < 1 || day > 31) return false;
-  const parsed = new Date(Date.UTC(year, month - 1, day));
-  return parsed.getUTCFullYear() === year
-    && parsed.getUTCMonth() === month - 1
-    && parsed.getUTCDate() === day;
-}
-
-function parseInstant(value: unknown): number | null {
-  if (typeof value !== "string" || !hasValidCalendarDate(value)) return null;
-  const clock = /(?:T| )(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?/u.exec(value);
-  if (clock === null) return null;
-  const hour = Number(clock[1]);
-  const minute = Number(clock[2]);
-  const second = Number(clock[3] ?? "0");
-  if (hour > 23 || minute > 59 || second > 59) return null;
-  const offset = /([+-])(\d{2}):(\d{2})$/u.exec(value);
-  if (offset !== null && (Number(offset[2]) > 23 || Number(offset[3]) > 59)) return null;
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? parsed : null;
+function canonicalInstant(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  try {
+    return canonicalUtcTimestamp(value);
+  } catch {
+    return null;
+  }
 }
 
 function instantWithinRaceDateJst(date: string, value: unknown): boolean {
-  const instant = parseInstant(value);
-  if (instant == null) return false;
+  const canonical = canonicalInstant(value);
+  if (canonical == null) return false;
+  const instant = Date.parse(canonical);
   const start = Date.parse(`${date}T00:00:00+09:00`);
   return Number.isFinite(start) && instant >= start && instant < start + 24 * 60 * 60 * 1000;
 }
@@ -194,7 +178,7 @@ function loadT5Source(input: {
   if (marker.checkpointLabel !== "T-5") blockers.push("T5_CHECKPOINT_LABEL_INVALID");
   if (typeof marker.rawDocumentId !== "string" || !marker.rawDocumentId.trim()) blockers.push("T5_RAW_DOCUMENT_ID_INVALID");
   if (typeof marker.rawSha256 !== "string" || !SHA256_RE.test(marker.rawSha256)) blockers.push("T5_RAW_SHA256_INVALID");
-  if (parseInstant(marker.acceptedAt) == null) blockers.push("T5_ACCEPTED_AT_INVALID");
+  if (canonicalInstant(marker.acceptedAt) == null) blockers.push("T5_ACCEPTED_AT_INVALID");
   if (marker.databaseWriteAuthorized !== false) blockers.push("T5_MARKER_DATABASE_BOUNDARY_WIDENED");
   if (marker.productionApplyExecuted !== false) blockers.push("T5_MARKER_PRODUCTION_BOUNDARY_WIDENED");
   if (typeof marker.rawRelativePath !== "string"
@@ -255,12 +239,12 @@ function loadT5Source(input: {
     || envelope.publicPublishAuthorized !== false
     || envelope.productionApplyExecuted !== false) blockers.push("T5_ENVELOPE_BOUNDARY_WIDENED");
 
-  const decisionCutoff = envelope.entry.decisionCutoff;
-  const capturedAt = envelope.response.fetchedAt;
-  const availableAt = envelope.sourceDisplayedUpdate.availableAt;
-  const decisionMs = parseInstant(decisionCutoff);
-  const capturedMs = parseInstant(capturedAt);
-  const availableMs = parseInstant(availableAt);
+  const decisionCutoff = canonicalInstant(envelope.entry.decisionCutoff);
+  const capturedAt = canonicalInstant(envelope.response.fetchedAt);
+  const availableAt = canonicalInstant(envelope.sourceDisplayedUpdate.availableAt);
+  const decisionMs = decisionCutoff == null ? null : Date.parse(decisionCutoff);
+  const capturedMs = capturedAt == null ? null : Date.parse(capturedAt);
+  const availableMs = availableAt == null ? null : Date.parse(availableAt);
   if (decisionMs == null) blockers.push("T5_DECISION_CUTOFF_INVALID");
   else if (!instantWithinRaceDateJst(parsed.date, decisionCutoff)) blockers.push("T5_DECISION_CUTOFF_OUTSIDE_RACE_DATE");
   if (capturedMs == null) blockers.push("T5_CAPTURED_AT_INVALID");
@@ -282,7 +266,7 @@ function loadT5Source(input: {
     source: {
       canonicalRaceKey: input.canonicalRaceKey,
       decisionCutoff: decisionCutoff!,
-      capturedAt,
+      capturedAt: capturedAt!,
       availableAt: availableAt!,
       observationId: envelope.proposedObservationId!,
       rawDocumentId: marker.rawDocumentId as string,
