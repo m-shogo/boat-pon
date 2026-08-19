@@ -162,8 +162,9 @@ test("reader rejects matching marker/envelope checkpoint keys that were not prod
   });
 });
 
-test("reader rejects T-5 capture timing that violates the decision cutoff", () => {
+test("reader rejects T-5 capture timing that violates the decision cutoff or producer window", () => {
   for (const [options, blocker] of [
+    [{ fetchedAt: "2026-08-07T03:28:00.000Z" }, "CAPTURE_OUTSIDE_CHECKPOINT_WINDOW"],
     [{ fetchedAt: "2026-08-07T03:30:01.000Z" }, "CAPTURE_AFTER_DECISION_CUTOFF"],
     [{ availableAt: "2026-08-07T03:30:01.000Z" }, "AVAILABLE_AFTER_DECISION_CUTOFF"],
     [{ fetchedAt: "2026-08-07T03:25:00.000Z", availableAt: "2026-08-07T03:25:01.000Z" }, "AVAILABLE_AFTER_CAPTURE"],
