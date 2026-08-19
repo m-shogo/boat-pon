@@ -297,7 +297,7 @@ test("private source reader rejects impossible envelope timing metadata during o
       );
       assert.equal(result.sources.length, 0);
       assert.equal(result.privateRawFileReadCount, 0);
-      assert.equal(result.rawValuesPrivatelyRead, false);
+      assert.equal(result.rawValuesReadPrivately, false);
       assert.equal(result.rawValuesPublished, false);
       assert.equal(result.databaseWriteCount, 0);
     });
