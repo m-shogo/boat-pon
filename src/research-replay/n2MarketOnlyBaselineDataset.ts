@@ -86,6 +86,20 @@ export function compareN2RaceKeysByRaceTime(left: string, right: string): number
     || a.raceNo - b.raceNo;
 }
 
+function compareMarketSourcesByRaceTime(
+  left: N2MarketOnlyBaselineRaceSource,
+  right: N2MarketOnlyBaselineRaceSource,
+): number {
+  const leftCutoff = isCanonicalIsoInstant(left.decisionCutoff)
+    ? Date.parse(left.decisionCutoff)
+    : Number.POSITIVE_INFINITY;
+  const rightCutoff = isCanonicalIsoInstant(right.decisionCutoff)
+    ? Date.parse(right.decisionCutoff)
+    : Number.POSITIVE_INFINITY;
+  return leftCutoff - rightCutoff
+    || compareN2RaceKeysByRaceTime(left.canonicalRaceKey, right.canonicalRaceKey);
+}
+
 function unique<T>(values: readonly T[]): T[] {
   return [...new Set(values)];
 }
@@ -171,8 +185,7 @@ export function buildN2MarketOnlyBaselineDataset(input: {
     });
   }
 
-  const ordered = [...byRace.values()]
-    .sort((left, right) => compareN2RaceKeysByRaceTime(left.canonicalRaceKey, right.canonicalRaceKey));
+  const ordered = [...byRace.values()].sort(compareMarketSourcesByRaceTime);
   if (ordered.length < cohortRaceCount) {
     return blockedDataset({
       blockers: [`INSUFFICIENT_SETTLED_T5_RACES:${ordered.length}/${cohortRaceCount}`],
