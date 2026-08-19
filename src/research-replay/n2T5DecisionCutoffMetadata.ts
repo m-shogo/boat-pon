@@ -20,6 +20,8 @@ export type N2T5DecisionCutoffMetadataRead = {
 
 type AcceptedMarker = {
   markerVersion?: unknown;
+  manifestDigest?: unknown;
+  checkpointKey?: unknown;
   raceIdentity?: unknown;
   checkpointLabel?: unknown;
   envelopeRelativePath?: unknown;
@@ -32,6 +34,8 @@ type CaptureEnvelope = {
   envelopeVersion?: unknown;
   status?: unknown;
   blockers?: unknown;
+  manifestDigest?: unknown;
+  checkpointKey?: unknown;
   entry?: {
     raceIdentity?: unknown;
     checkpointLabel?: unknown;
@@ -45,6 +49,7 @@ type CaptureEnvelope = {
 };
 
 const RACE_KEY_RE = /^(\d{4}-\d{2}-\d{2}):(0[1-9]|1\d|2[0-4]):R([1-9]|1[0-2])$/u;
+const SHA256_RE = /^[0-9a-f]{64}$/u;
 const MAX_MARKER_BYTES = 128 * 1024;
 const MAX_ENVELOPE_BYTES = 2_000_000;
 
@@ -152,6 +157,11 @@ export function readN2T5DecisionCutoffMetadata(input: {
       blockers.push(`${raceKey}:ACCEPTED_MARKER_VERSION_INVALID`);
       continue;
     }
+    if (typeof marker.manifestDigest !== "string" || !SHA256_RE.test(marker.manifestDigest)
+      || typeof marker.checkpointKey !== "string" || !SHA256_RE.test(marker.checkpointKey)) {
+      blockers.push(`${raceKey}:ACCEPTED_MARKER_LINEAGE_INVALID`);
+      continue;
+    }
     if (marker.raceIdentity !== location.raceIdentity || marker.checkpointLabel !== "T-5") {
       blockers.push(`${raceKey}:ACCEPTED_MARKER_IDENTITY_INVALID`);
       continue;
@@ -203,6 +213,9 @@ export function readN2T5DecisionCutoffMetadata(input: {
     if (envelope.envelopeVersion !== "n2-trifecta-private-capture-envelope-v1") blockers.push(`${raceKey}:ENVELOPE_VERSION_INVALID`);
     if (envelope.status !== "PASS" || !Array.isArray(envelope.blockers) || envelope.blockers.length !== 0) {
       blockers.push(`${raceKey}:ENVELOPE_STATUS_INVALID`);
+    }
+    if (envelope.manifestDigest !== marker.manifestDigest || envelope.checkpointKey !== marker.checkpointKey) {
+      blockers.push(`${raceKey}:ENVELOPE_LINEAGE_MISMATCH`);
     }
     if (envelope.entry?.raceIdentity !== location.raceIdentity || envelope.entry?.checkpointLabel !== "T-5") {
       blockers.push(`${raceKey}:ENVELOPE_IDENTITY_INVALID`);

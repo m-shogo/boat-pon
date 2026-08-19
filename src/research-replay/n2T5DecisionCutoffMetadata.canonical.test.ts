@@ -10,10 +10,14 @@ function withMetadata(cutoff: string, fn: (root: string) => void): void {
   const root = mkdtempSync(join(tmpdir(), "boat-pon-t5-cutoff-canonical-"));
   const base = "data/raw/research/trifecta-market/2026-08-07/05/01/T-5";
   const dir = join(root, base);
+  const manifestDigest = "a".repeat(64);
+  const checkpointKey = "b".repeat(64);
   try {
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, "accepted.json"), `${JSON.stringify({
       markerVersion: "n2-trifecta-private-capture-accepted-v1",
+      manifestDigest,
+      checkpointKey,
       raceIdentity: "20260807-05-01",
       checkpointLabel: "T-5",
       envelopeRelativePath: `${base}/fixture.envelope.json`,
@@ -25,6 +29,8 @@ function withMetadata(cutoff: string, fn: (root: string) => void): void {
       envelopeVersion: "n2-trifecta-private-capture-envelope-v1",
       status: "PASS",
       blockers: [],
+      manifestDigest,
+      checkpointKey,
       entry: {
         raceIdentity: "20260807-05-01",
         checkpointLabel: "T-5",
