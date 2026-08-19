@@ -66,7 +66,9 @@ function writeMetadata(root: string, options: {
       entry: {
         raceIdentity,
         checkpointLabel: "T-5",
+        targetCaptureAt,
         decisionCutoff: cutoff,
+        sourceUrl,
       },
       response: {
         fetchedAt: options.fetchedAt ?? "2026-08-07T03:25:30.000Z",
