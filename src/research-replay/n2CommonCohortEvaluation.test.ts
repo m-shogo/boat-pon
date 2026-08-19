@@ -105,7 +105,9 @@ test("common cohort fails closed when one market cutoff diverges", () => {
     decisionCutoffByRaceKey: cutoffs(),
   });
   assert.equal(report.status, "BLOCKED");
-  assert.ok(report.blockers.some((blocker) => blocker.startsWith("COMPARISON_STATUS:CONFLICT") || blocker.startsWith("CONFLICT:")));
+  assert.ok(report.blockers.some((blocker) => blocker === "COHORT_DIGEST_MISMATCH"
+    || blocker.startsWith("COMPARISON_STATUS:CONFLICT")
+    || blocker.startsWith("CONFLICT:")));
   assert.equal(report.commonRowCount, 0);
 });
 
