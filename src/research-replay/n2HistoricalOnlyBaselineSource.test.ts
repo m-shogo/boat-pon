@@ -171,11 +171,11 @@ test("source reader selects the same 20 accepted T-5 cohort without reading odds
 test("historical cohort follows verified T-5 cutoff time across venues", () => {
   withRoot((root) => {
     const sidecar = prepare(root);
-    const lateRace = { date: "2026-08-07", venue: "01", raceNo: 1, raceKey: "2026-08-07:01:R1" };
-    const earlyRace = { date: "2026-08-07", venue: "24", raceNo: 1, raceKey: "2026-08-07:24:R1" };
+    const lateRace = { date: "2026-08-08", venue: "01", raceNo: 1, raceKey: "2026-08-08:01:R1" };
+    const earlyRace = { date: "2026-08-08", venue: "24", raceNo: 1, raceKey: "2026-08-08:24:R1" };
     for (const [spec, cutoff, id] of [
-      [lateRace, "2026-08-07T08:00:00.000Z", "late"],
-      [earlyRace, "2026-08-07T01:00:00.000Z", "early"],
+      [lateRace, "2026-08-08T08:00:00.000Z", "late"],
+      [earlyRace, "2026-08-08T01:00:00.000Z", "early"],
     ] as const) {
       insertWinner(sidecar, { raceKey: spec.raceKey, candidateId: `extra-${id}`, selection: "1-2-3" });
       writeAcceptedT5(root, { ...spec, decisionCutoff: cutoff });
