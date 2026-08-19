@@ -1,6 +1,7 @@
 import { existsSync, statSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
+import { canonicalUtcTimestamp } from "./canonical";
 import type { N2ObservationIngestReadinessInput } from "./n2ObservationIngestReadiness";
 
 export const N2_OBSERVATION_INGEST_READINESS_READER_VERSION = "n2-observation-ingest-readiness-reader-v1";
@@ -138,6 +139,15 @@ const VALID_TRIFECTA_SELECTION_SQL = `
   AND SUBSTR(TRIM(bet_selection),2,1) <> SUBSTR(TRIM(bet_selection),3,1)
 `;
 
+function validMarketCapturedAt(value: string): boolean {
+  try {
+    canonicalUtcTimestamp(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function readTrifectaMarketCounts(
   primary: DatabaseSync,
   table: string | null,
@@ -189,19 +199,22 @@ function readTrifectaMarketCounts(
     WHERE SUBSTR(race_id,1,8) >= ? AND SUBSTR(race_id,1,8) <= ? AND bet_type='trifecta'
   `).get(fromCompact, toCompact) as unknown as Record<string, number>;
 
-  const completeSnapshotCount = Number((primary.prepare(`
-    SELECT COUNT(*) n FROM (
-      SELECT race_id, captured_at${hasCheckpoint ? ", checkpoint_label" : ""}
-      FROM ${quoted}
-      WHERE SUBSTR(race_id,1,8) >= ? AND SUBSTR(race_id,1,8) <= ?
-        AND bet_type='trifecta' AND odds>0
-        AND ${VALID_TRIFECTA_SELECTION_SQL}
-        AND captured_at IS NOT NULL AND LENGTH(TRIM(captured_at))>0
-        ${hasCheckpoint ? "AND checkpoint_label IN ('T-30','T-20','T-10','T-5','ad-hoc')" : ""}
-      GROUP BY race_id, captured_at${hasCheckpoint ? ", checkpoint_label" : ""}
-      HAVING COUNT(*)=? AND COUNT(DISTINCT bet_selection)=?
-    )
-  `).get(fromCompact, toCompact, COMPLETE_TRIFECTA_SELECTION_COUNT, COMPLETE_TRIFECTA_SELECTION_COUNT) as unknown as { n: number }).n);
+  const completeSnapshotRows = primary.prepare(`
+    SELECT race_id AS raceId, captured_at AS capturedAt${hasCheckpoint ? ", checkpoint_label AS checkpointLabel" : ""}
+    FROM ${quoted}
+    WHERE SUBSTR(race_id,1,8) >= ? AND SUBSTR(race_id,1,8) <= ?
+      AND bet_type='trifecta' AND odds>0
+      AND ${VALID_TRIFECTA_SELECTION_SQL}
+      AND captured_at IS NOT NULL AND LENGTH(TRIM(captured_at))>0
+      ${hasCheckpoint ? "AND checkpoint_label IN ('T-30','T-20','T-10','T-5','ad-hoc')" : ""}
+    GROUP BY race_id, captured_at${hasCheckpoint ? ", checkpoint_label" : ""}
+    HAVING COUNT(*)=? AND COUNT(DISTINCT bet_selection)=?
+  `).all(fromCompact, toCompact, COMPLETE_TRIFECTA_SELECTION_COUNT, COMPLETE_TRIFECTA_SELECTION_COUNT) as unknown as Array<{
+    raceId: string;
+    capturedAt: string;
+    checkpointLabel?: string;
+  }>;
+  const completeSnapshotCount = completeSnapshotRows.filter((snapshot) => validMarketCapturedAt(snapshot.capturedAt)).length;
 
   return {
     sourceTablePresent: true,
