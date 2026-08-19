@@ -75,7 +75,7 @@ function blocked(input: {
   return { ...core, outputDigest: canonicalHash(core) };
 }
 
-function cohortMembershipDigest(rows: readonly N2BaselinePredictionRow[]): string {
+export function n2BaselineRaceMembershipDigest(rows: readonly N2BaselinePredictionRow[]): string {
   const raceKeys = [...new Set(rows.map((row) => row.canonicalRaceKey))].sort();
   return canonicalHash(raceKeys);
 }
@@ -132,9 +132,9 @@ export function evaluateN2CommonCohort(input: {
     });
   }
 
-  const marketMembershipDigest = cohortMembershipDigest(market.rows);
-  const historicalMembershipDigest = cohortMembershipDigest(historical.rows);
-  const legacyMembershipDigest = cohortMembershipDigest(legacy.rows);
+  const marketMembershipDigest = n2BaselineRaceMembershipDigest(market.rows);
+  const historicalMembershipDigest = n2BaselineRaceMembershipDigest(historical.rows);
+  const legacyMembershipDigest = n2BaselineRaceMembershipDigest(legacy.rows);
   if (marketMembershipDigest !== historicalMembershipDigest
     || marketMembershipDigest !== legacyMembershipDigest) {
     return blocked({
