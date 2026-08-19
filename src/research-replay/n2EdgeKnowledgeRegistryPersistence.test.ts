@@ -61,6 +61,7 @@ function plan(input: {
   verdict?: N2EdgeHistoricalConfirmationResult["verdict"];
   disposition?: N2ConfounderAuditItem["disposition"];
   confounderDigest?: string;
+  createdAt?: string;
 } = {}) {
   const verdict = input.verdict ?? "HISTORICAL_CONFIRMED";
   const disposition = input.disposition ?? "CONFIRMED_PENDING_CONFOUNDER_REVIEW";
@@ -72,7 +73,7 @@ function plan(input: {
     confounderAuditArtifactDigest: input.confounderDigest ?? DIGEST_C,
     testedConditionCount: 40,
     totalTrialCount: 40,
-    createdAt: "2026-08-08T12:00:00.000Z",
+    createdAt: input.createdAt ?? "2026-08-08T12:00:00.000Z",
   });
 }
 
@@ -132,6 +133,46 @@ test("exact retry is idempotent and creates no duplicate registry records", () =
     assert.equal(second.experiment.appended, false);
     assert.equal(second.discovery.alreadyRecorded, true);
     assert.equal(second.discovery.appended, false);
+    assert.equal(readdirSync(join(registryRoot, "experiments")).filter((name) => name.endsWith(".json")).length, 1);
+    assert.equal(readdirSync(join(registryRoot, "discoveries")).filter((name) => name.endsWith(".json")).length, 1);
+  });
+});
+
+test("semantic retry at a later createdAt preserves the original immutable registry timestamps", () => {
+  withRoot((root, registryRoot) => {
+    const originalCreatedAt = "2026-08-08T12:00:00.000Z";
+    const replayCreatedAt = "2026-08-08T13:00:00.000Z";
+    const firstPlan = plan({ createdAt: originalCreatedAt });
+    const replayPlan = plan({ createdAt: replayCreatedAt });
+    assert.equal(firstPlan.experiment?.experimentId, replayPlan.experiment?.experimentId);
+    assert.equal(firstPlan.discoveryCandidate?.discoveryId, replayPlan.discoveryCandidate?.discoveryId);
+
+    const first = persistN2EdgeKnowledgeLineage({
+      repoRoot: root,
+      registryRoot,
+      plan: firstPlan,
+      writeIntent: N2_EDGE_KNOWLEDGE_REGISTRY_WRITE_INTENT,
+    });
+    const replay = persistN2EdgeKnowledgeLineage({
+      repoRoot: root,
+      registryRoot,
+      plan: replayPlan,
+      writeIntent: N2_EDGE_KNOWLEDGE_REGISTRY_WRITE_INTENT,
+    });
+
+    assert.equal(first.status, "PASS");
+    assert.equal(replay.status, "PASS");
+    assert.equal(replay.experiment.alreadyRecorded, true);
+    assert.equal(replay.experiment.appended, false);
+    assert.equal(replay.discovery.alreadyRecorded, true);
+    assert.equal(replay.discovery.appended, false);
+
+    const experimentPath = join(registryRoot, "experiments", `${firstPlan.experiment!.experimentId}.json`);
+    const discoveryPath = join(registryRoot, "discoveries", `${firstPlan.discoveryCandidate!.discoveryId}.json`);
+    const storedExperiment = JSON.parse(readFileSync(experimentPath, "utf8"));
+    const storedDiscovery = JSON.parse(readFileSync(discoveryPath, "utf8"));
+    assert.equal(storedExperiment.createdAt, originalCreatedAt);
+    assert.equal(storedDiscovery.createdAt, originalCreatedAt);
     assert.equal(readdirSync(join(registryRoot, "experiments")).filter((name) => name.endsWith(".json")).length, 1);
     assert.equal(readdirSync(join(registryRoot, "discoveries")).filter((name) => name.endsWith(".json")).length, 1);
   });
