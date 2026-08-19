@@ -146,7 +146,7 @@ export function readN2T5DecisionCutoffMetadata(input: {
   timestampMode?: TimestampMode;
 }): N2T5DecisionCutoffMetadataRead {
   const dataRoot = resolve(input.dataRoot);
-  const timestampMode = input.timestampMode ?? "producer-canonical";
+  const timestampMode = input.timestampMode ?? "canonicalizable-explicit-zone";
   const blockers: string[] = [];
   const decisionCutoffByRaceKey: Record<string, string> = {};
   let privateEnvelopeMetadataReadCount = 0;
