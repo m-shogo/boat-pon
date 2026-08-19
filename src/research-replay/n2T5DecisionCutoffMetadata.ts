@@ -43,6 +43,12 @@ type CaptureEnvelope = {
     checkpointLabel?: unknown;
     decisionCutoff?: unknown;
   };
+  response?: {
+    fetchedAt?: unknown;
+  };
+  sourceDisplayedUpdate?: {
+    availableAt?: unknown;
+  };
   databaseWriteAuthorized?: unknown;
   currentBuyConnectionAuthorized?: unknown;
   lineConnectionAuthorized?: unknown;
@@ -269,6 +275,8 @@ export function readN2T5DecisionCutoffMetadata(input: {
       blockers.push(`${raceKey}:ENVELOPE_IDENTITY_INVALID`);
     }
     const decisionCutoff = canonicalInstant(envelope.entry?.decisionCutoff, timestampMode);
+    const capturedAt = canonicalInstant(envelope.response?.fetchedAt, timestampMode);
+    const availableAt = canonicalInstant(envelope.sourceDisplayedUpdate?.availableAt, timestampMode);
     if (decisionCutoff == null || !instantWithinRaceDate(location.date, decisionCutoff)) {
       blockers.push(`${raceKey}:DECISION_CUTOFF_INVALID`);
     } else {
@@ -284,9 +292,18 @@ export function readN2T5DecisionCutoffMetadata(input: {
         || marker.checkpointKey !== expectedCheckpointKey
         || envelope.checkpointKey !== expectedCheckpointKey) {
         blockers.push(`${raceKey}:CHECKPOINT_KEY_INVALID`);
-      } else {
-        decisionCutoffByRaceKey[raceKey] = decisionCutoff;
       }
+    }
+    if (capturedAt == null) blockers.push(`${raceKey}:CAPTURED_AT_INVALID`);
+    if (availableAt == null) blockers.push(`${raceKey}:AVAILABLE_AT_INVALID`);
+    if (decisionCutoff != null && capturedAt != null && Date.parse(capturedAt) > Date.parse(decisionCutoff)) {
+      blockers.push(`${raceKey}:CAPTURE_AFTER_DECISION_CUTOFF`);
+    }
+    if (decisionCutoff != null && availableAt != null && Date.parse(availableAt) > Date.parse(decisionCutoff)) {
+      blockers.push(`${raceKey}:AVAILABLE_AFTER_DECISION_CUTOFF`);
+    }
+    if (capturedAt != null && availableAt != null && Date.parse(availableAt) > Date.parse(capturedAt)) {
+      blockers.push(`${raceKey}:AVAILABLE_AFTER_CAPTURE`);
     }
     if (envelope.databaseWriteAuthorized !== false
       || envelope.currentBuyConnectionAuthorized !== false
@@ -294,6 +311,10 @@ export function readN2T5DecisionCutoffMetadata(input: {
       || envelope.publicPublishAuthorized !== false
       || envelope.productionApplyExecuted !== false) {
       blockers.push(`${raceKey}:ENVELOPE_AUTHORITY_WIDENED`);
+    }
+    const raceBlockerPrefix = `${raceKey}:`;
+    if (!blockers.some((blocker) => blocker.startsWith(raceBlockerPrefix)) && decisionCutoff != null) {
+      decisionCutoffByRaceKey[raceKey] = decisionCutoff;
     }
   }
   const normalizedBlockers = unique(blockers);
