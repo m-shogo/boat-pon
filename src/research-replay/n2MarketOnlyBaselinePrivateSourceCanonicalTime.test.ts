@@ -6,6 +6,8 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 
+import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
+import { buildBoatRaceOfficialSourceUrl } from "./n2ExternalSourceCaptureContract";
 import { buildN2MarketOnlyBaselineDataset } from "./n2MarketOnlyBaselineDataset";
 import { readN2MarketOnlyBaselinePrivateSources } from "./n2MarketOnlyBaselinePrivateSource";
 
@@ -101,14 +103,26 @@ function writeAcceptedT5(root: string, spec: ReturnType<typeof raceSpec>, offset
   const decisionCutoff = offsetTime ? `${spec.date}T12:30:00+09:00` : `${spec.date}T03:30:00.000Z`;
   const fetchedAt = offsetTime ? `${spec.date}T12:25:30+09:00` : `${spec.date}T03:25:30.000Z`;
   const availableAt = offsetTime ? `${spec.date}T12:25:00+09:00` : `${spec.date}T03:25:00.000Z`;
+  const manifestDigest = "a".repeat(64);
+  const canonicalCutoff = canonicalUtcTimestamp(decisionCutoff);
+  const checkpointKey = canonicalHash({
+    manifestDigest,
+    raceIdentity,
+    checkpointLabel: "T-5",
+    targetCaptureAt: new Date(Date.parse(canonicalCutoff) - 5 * 60_000).toISOString(),
+    sourceUrl: buildBoatRaceOfficialSourceUrl(
+      "boatrace_official_trifecta_odds_html",
+      { date: spec.date.replaceAll("-", ""), venueCode: spec.venue, raceNo: spec.raceNo },
+    ),
+  });
 
   writeFileSync(join(root, rawRelativePath), raw);
   writeFileSync(join(root, envelopeRelativePath), `${JSON.stringify({
     envelopeVersion: "n2-trifecta-private-capture-envelope-v1",
     status: "PASS",
     blockers: [],
-    manifestDigest: "a".repeat(64),
-    checkpointKey: "b".repeat(64),
+    manifestDigest,
+    checkpointKey,
     entry: { raceIdentity, checkpointLabel: "T-5", decisionCutoff },
     response: {
       statusCode: 200,
@@ -138,8 +152,8 @@ function writeAcceptedT5(root: string, spec: ReturnType<typeof raceSpec>, offset
   }, null, 2)}\n`);
   writeFileSync(join(dir, "accepted.json"), `${JSON.stringify({
     markerVersion: "n2-trifecta-private-capture-accepted-v1",
-    manifestDigest: "a".repeat(64),
-    checkpointKey: "b".repeat(64),
+    manifestDigest,
+    checkpointKey,
     raceIdentity,
     checkpointLabel: "T-5",
     rawDocumentId,
