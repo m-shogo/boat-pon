@@ -15,15 +15,17 @@ function withMetadata(cutoff: string, fn: (root: string) => void): void {
   const manifestDigest = "a".repeat(64);
   const raceIdentity = "20260807-05-01";
   const canonicalCutoff = canonicalUtcTimestamp(cutoff);
+  const targetCaptureAt = new Date(Date.parse(canonicalCutoff) - 5 * 60_000).toISOString();
+  const sourceUrl = buildBoatRaceOfficialSourceUrl(
+    "boatrace_official_trifecta_odds_html",
+    { date: "20260807", venueCode: "05", raceNo: 1 },
+  );
   const checkpointKey = canonicalHash({
     manifestDigest,
     raceIdentity,
     checkpointLabel: "T-5",
-    targetCaptureAt: new Date(Date.parse(canonicalCutoff) - 5 * 60_000).toISOString(),
-    sourceUrl: buildBoatRaceOfficialSourceUrl(
-      "boatrace_official_trifecta_odds_html",
-      { date: "20260807", venueCode: "05", raceNo: 1 },
-    ),
+    targetCaptureAt,
+    sourceUrl,
   });
   try {
     mkdirSync(dir, { recursive: true });
@@ -47,7 +49,9 @@ function withMetadata(cutoff: string, fn: (root: string) => void): void {
       entry: {
         raceIdentity,
         checkpointLabel: "T-5",
+        targetCaptureAt,
         decisionCutoff: cutoff,
+        sourceUrl,
       },
       response: {
         fetchedAt: "2026-08-07T03:25:30.000Z",
