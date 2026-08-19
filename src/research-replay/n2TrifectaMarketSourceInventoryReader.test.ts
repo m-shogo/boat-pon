@@ -94,6 +94,55 @@ test("reader inventories a complete raw market source without mutating the DB", 
   });
 });
 
+test("reader does not count arbitrary three-character selections as a complete snapshot", () => {
+  withTempDb((path) => {
+    createCompleteRawSource(path);
+    const db = new DatabaseSync(path);
+    try {
+      const rows = db.prepare("SELECT rowid FROM trifecta_market_raw_snapshots ORDER BY rowid").all() as unknown as Array<{ rowid: number }>;
+      const update = db.prepare("UPDATE trifecta_market_raw_snapshots SET bet_selection=? WHERE rowid=?");
+      for (const [index, row] of rows.entries()) {
+        update.run(`X${index.toString(36).padStart(2, "0")}`, row.rowid);
+      }
+    } finally {
+      db.close();
+    }
+
+    const inventory = readN2TrifectaMarketSourceInventory({ primaryDbPath: path });
+    assert.equal(inventory.completeSnapshotCount, 0);
+  });
+});
+
+test("reader counts semantic trifecta selections only once", () => {
+  withTempDb((path) => {
+    createCompleteRawSource(path);
+    const db = new DatabaseSync(path);
+    try {
+      db.prepare("UPDATE trifecta_market_raw_snapshots SET bet_selection=' 123' WHERE bet_selection='124'").run();
+    } finally {
+      db.close();
+    }
+
+    const inventory = readN2TrifectaMarketSourceInventory({ primaryDbPath: path });
+    assert.equal(inventory.completeSnapshotCount, 0);
+  });
+});
+
+test("reader rejects normalized captured times from complete snapshot inventory", () => {
+  withTempDb((path) => {
+    createCompleteRawSource(path);
+    const db = new DatabaseSync(path);
+    try {
+      db.prepare("UPDATE trifecta_market_raw_snapshots SET captured_at='2026-08-06T24:00:00.000Z'").run();
+    } finally {
+      db.close();
+    }
+
+    const inventory = readN2TrifectaMarketSourceInventory({ primaryDbPath: path });
+    assert.equal(inventory.completeSnapshotCount, 0);
+  });
+});
+
 test("reader rejects impossible official program cohort dates before source inventory queries", () => {
   withTempDb((path) => {
     const db = new DatabaseSync(path);
