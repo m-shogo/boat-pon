@@ -83,7 +83,18 @@ function latestProgramDate(primary: DatabaseSync): string {
   return row.maxDate;
 }
 
+function assertOfficialProgramCohortDates(primary: DatabaseSync, dateFrom: string, dateTo: string): void {
+  const rows = primary.prepare(`
+    SELECT DISTINCT date
+    FROM official_programs
+    WHERE date >= ? AND date <= ?
+    ORDER BY date
+  `).all(dateFrom, dateTo) as unknown as Array<{ date: string }>;
+  for (const row of rows) assertCanonicalDate(row.date);
+}
+
 function readOfficialProgramCounts(primary: DatabaseSync, dateFrom: string, dateTo: string): N2ObservationIngestReadinessInput["primaryOfficialProgram"] {
+  assertOfficialProgramCohortDates(primary, dateFrom, dateTo);
   const row = primary.prepare(`
     SELECT
       COUNT(*) totalRows,
