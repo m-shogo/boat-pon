@@ -49,6 +49,12 @@ function withMetadata(cutoff: string, fn: (root: string) => void): void {
         checkpointLabel: "T-5",
         decisionCutoff: cutoff,
       },
+      response: {
+        fetchedAt: "2026-08-07T03:25:30.000Z",
+      },
+      sourceDisplayedUpdate: {
+        availableAt: "2026-08-07T03:24:00.000Z",
+      },
       databaseWriteAuthorized: false,
       currentBuyConnectionAuthorized: false,
       lineConnectionAuthorized: false,
