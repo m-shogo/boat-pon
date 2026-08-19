@@ -94,9 +94,13 @@ function freezeBucket(key: string, bucket: MutableBucket): N2FeatureCoverageBuck
 }
 
 function raceYear(canonicalRaceKey: string): string {
-  const match = /^(\d{4})-\d{2}-\d{2}:/.exec(canonicalRaceKey);
+  const match = /^(\d{4}-\d{2}-\d{2}):/.exec(canonicalRaceKey);
   if (!match) throw new Error(`N2_COVERAGE_INVALID_RACE_KEY:${canonicalRaceKey}`);
-  return match[1];
+  const parsed = Date.parse(`${match[1]}T00:00:00.000Z`);
+  if (!Number.isFinite(parsed) || new Date(parsed).toISOString().slice(0, 10) !== match[1]) {
+    throw new Error(`N2_COVERAGE_INVALID_RACE_KEY:${canonicalRaceKey}`);
+  }
+  return match[1].slice(0, 4);
 }
 
 export function buildN2FeatureCoverageProfile(input: {
