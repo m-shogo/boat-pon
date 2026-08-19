@@ -10,6 +10,8 @@ const RACE_KEY = "2026-08-06:01:R1";
 const RACE_IDENTITY = "20260806-01-01";
 const DIRECTORY = "data/raw/research/trifecta-market/2026-08-06/01/01/T-5";
 const ENVELOPE_RELATIVE_PATH = `${DIRECTORY}/authority-test.envelope.json`;
+const MANIFEST_DIGEST = "a".repeat(64);
+const CHECKPOINT_KEY = "b".repeat(64);
 
 function writeEnvelopeAuthorityFixture(
   root: string,
@@ -19,6 +21,8 @@ function writeEnvelopeAuthorityFixture(
   mkdirSync(directory, { recursive: true });
   writeFileSync(join(directory, "accepted.json"), JSON.stringify({
     markerVersion: "n2-trifecta-private-capture-accepted-v1",
+    manifestDigest: MANIFEST_DIGEST,
+    checkpointKey: CHECKPOINT_KEY,
     raceIdentity: RACE_IDENTITY,
     checkpointLabel: "T-5",
     envelopeRelativePath: ENVELOPE_RELATIVE_PATH,
@@ -30,6 +34,8 @@ function writeEnvelopeAuthorityFixture(
     envelopeVersion: "n2-trifecta-private-capture-envelope-v1",
     status: "PASS",
     blockers: [],
+    manifestDigest: MANIFEST_DIGEST,
+    checkpointKey: CHECKPOINT_KEY,
     entry: {
       raceIdentity: RACE_IDENTITY,
       checkpointLabel: "T-5",
@@ -52,6 +58,8 @@ function writeMarkerAuthorityFixture(
   mkdirSync(directory, { recursive: true });
   writeFileSync(join(directory, "accepted.json"), JSON.stringify({
     markerVersion: "n2-trifecta-private-capture-accepted-v1",
+    manifestDigest: MANIFEST_DIGEST,
+    checkpointKey: CHECKPOINT_KEY,
     raceIdentity: RACE_IDENTITY,
     checkpointLabel: "T-5",
     envelopeRelativePath: ENVELOPE_RELATIVE_PATH,
