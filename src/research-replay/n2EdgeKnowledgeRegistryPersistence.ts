@@ -43,12 +43,24 @@ export type N2EdgeKnowledgeRegistryPersistenceResult = {
   productionApplyAuthorized: false;
 };
 
+type PreflightRecordResult = {
+  ok: boolean;
+  blocker: string | null;
+  alreadyRecorded: boolean;
+  bodyForAppend: Record<string, unknown>;
+};
+
 function unique(values: readonly string[]): string[] {
   return [...new Set(values)].sort();
 }
 
 function stripMetadata(record: Record<string, unknown>): Record<string, unknown> {
   const { _digest, _recordedAt, ...body } = record;
+  return body;
+}
+
+function stripCreatedAt(record: Record<string, unknown>): Record<string, unknown> {
+  const { createdAt: _createdAt, ...body } = record;
   return body;
 }
 
@@ -102,7 +114,7 @@ function preflightRecord(input: {
   idField: "experimentId" | "discoveryId";
   recordId: string;
   body: Record<string, unknown>;
-}): { ok: boolean; blocker: string | null; alreadyRecorded: boolean } {
+}): PreflightRecordResult {
   let existing: Record<string, unknown>[];
   try {
     existing = listRecords<Record<string, unknown>>(input.registryRoot, input.kind);
@@ -111,6 +123,7 @@ function preflightRecord(input: {
       ok: false,
       blocker: `${input.kind.toUpperCase()}_REGISTRY_READ_FAILED:${error instanceof Error ? error.message.slice(0, 180) : "UNKNOWN"}`,
       alreadyRecorded: false,
+      bodyForAppend: input.body,
     };
   }
   const matching = existing.filter((record) => record[input.idField] === input.recordId);
@@ -119,21 +132,40 @@ function preflightRecord(input: {
       ok: false,
       blocker: `${input.kind.toUpperCase()}_REGISTRY_DUPLICATE_ID:${input.recordId}`,
       alreadyRecorded: false,
+      bodyForAppend: input.body,
     };
   }
-  if (matching.length === 0) return { ok: true, blocker: null, alreadyRecorded: false };
+  if (matching.length === 0) {
+    return { ok: true, blocker: null, alreadyRecorded: false, bodyForAppend: input.body };
+  }
   const stored = matching[0];
-  const body = stripMetadata(stored);
+  const storedBody = stripMetadata(stored);
   const expectedDigest = contractDigest(input.body);
-  const storedDigest = typeof stored._digest === "string" ? stored._digest : contractDigest(body);
-  if (storedDigest !== expectedDigest || contractDigest(body) !== expectedDigest) {
-    return {
-      ok: false,
-      blocker: `${input.kind.toUpperCase()}_REGISTRY_CONFLICT:${input.recordId}`,
-      alreadyRecorded: false,
-    };
+  const storedDigest = typeof stored._digest === "string" ? stored._digest : contractDigest(storedBody);
+  if (storedDigest === expectedDigest && contractDigest(storedBody) === expectedDigest) {
+    return { ok: true, blocker: null, alreadyRecorded: true, bodyForAppend: input.body };
   }
-  return { ok: true, blocker: null, alreadyRecorded: true };
+
+  const incomingCreatedAt = input.body.createdAt;
+  const storedCreatedAt = storedBody.createdAt;
+  if (typeof incomingCreatedAt === "string" && typeof storedCreatedAt === "string") {
+    const incomingSemanticDigest = contractDigest(stripCreatedAt(input.body));
+    const storedSemanticDigest = contractDigest(stripCreatedAt(storedBody));
+    if (incomingSemanticDigest === storedSemanticDigest) {
+      const replayBody = { ...input.body, createdAt: storedCreatedAt };
+      const replayDigest = contractDigest(replayBody);
+      if (storedDigest === replayDigest && contractDigest(storedBody) === replayDigest) {
+        return { ok: true, blocker: null, alreadyRecorded: true, bodyForAppend: replayBody };
+      }
+    }
+  }
+
+  return {
+    ok: false,
+    blocker: `${input.kind.toUpperCase()}_REGISTRY_CONFLICT:${input.recordId}`,
+    alreadyRecorded: false,
+    bodyForAppend: input.body,
+  };
 }
 
 function blocked(blockers: string[]): N2EdgeKnowledgeRegistryPersistenceResult {
@@ -228,7 +260,7 @@ export function persistN2EdgeKnowledgeLineage(input: {
   const experimentAppend = appendRecordIdempotent(
     input.registryRoot,
     "experiments",
-    experiment as unknown as Record<string, unknown>,
+    experimentPreflight.bodyForAppend,
   );
   if (!experimentAppend.ok) return blocked([`EXPERIMENT_${experimentAppend.code}:${experimentAppend.errors.join(";")}`]);
   let experimentOutputPath: string | null = null;
@@ -264,7 +296,7 @@ export function persistN2EdgeKnowledgeLineage(input: {
   const discoveryAppend = appendRecordIdempotent(
     input.registryRoot,
     "discoveries",
-    discovery as unknown as Record<string, unknown>,
+    discoveryPreflight!.bodyForAppend,
   );
   if (!discoveryAppend.ok) {
     return {
