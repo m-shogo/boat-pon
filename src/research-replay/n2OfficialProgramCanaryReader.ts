@@ -45,9 +45,25 @@ function requiredColumnsPresent(db: DatabaseSync): boolean {
     .every((column) => columns.includes(column));
 }
 
+function assertCanonicalDate(date: string): void {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!match) throw new Error("INVALID_PRIMARY_MAX_DATE");
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  if (
+    parsed.getUTCFullYear() !== year
+    || parsed.getUTCMonth() !== month - 1
+    || parsed.getUTCDate() !== day
+  ) {
+    throw new Error("INVALID_PRIMARY_MAX_DATE");
+  }
+}
+
 function subtractUtcDays(date: string, days: number): string {
+  assertCanonicalDate(date);
   const parsed = new Date(`${date}T00:00:00.000Z`);
-  if (!Number.isFinite(parsed.getTime())) throw new Error("INVALID_PRIMARY_MAX_DATE");
   parsed.setUTCDate(parsed.getUTCDate() - days);
   return parsed.toISOString().slice(0, 10);
 }
@@ -68,9 +84,8 @@ export function readOfficialProgramCanarySource(input: {
     const latest = primary.prepare("SELECT MAX(date) maxDate FROM official_programs").get() as unknown as {
       maxDate: string | null;
     };
-    if (!latest.maxDate || !/^\d{4}-\d{2}-\d{2}$/.test(latest.maxDate)) {
-      throw new Error("OFFICIAL_PROGRAMS_EMPTY");
-    }
+    if (!latest.maxDate) throw new Error("OFFICIAL_PROGRAMS_EMPTY");
+    assertCanonicalDate(latest.maxDate);
     const cohort: OfficialProgramCanaryCohort = {
       dateFrom: subtractUtcDays(latest.maxDate, N2_OFFICIAL_PROGRAM_CANARY_COHORT_DAYS - 1),
       dateTo: latest.maxDate,
