@@ -200,12 +200,12 @@ export function readN2T5DecisionCutoffMetadata(input: {
 
     let envelope: CaptureEnvelope;
     try {
+      privateEnvelopeMetadataReadCount += 1;
       envelope = readJsonBounded<CaptureEnvelope>(
         envelopePath,
         MAX_ENVELOPE_BYTES,
         dataRoot,
       );
-      privateEnvelopeMetadataReadCount += 1;
     } catch (error) {
       blockers.push(`${raceKey}:ENVELOPE_${error instanceof Error ? error.message : "INVALID"}`);
       continue;
