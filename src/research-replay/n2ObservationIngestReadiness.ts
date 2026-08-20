@@ -1,4 +1,4 @@
-export const N2_OBSERVATION_INGEST_READINESS_VERSION = "n2-observation-ingest-readiness-v1";
+export const N2_OBSERVATION_INGEST_READINESS_VERSION = "n2-observation-ingest-readiness-v2";
 
 export const N2_OFFICIAL_PROGRAM_CANARY_APPROVAL = "N2_OFFICIAL_PROGRAM_OBSERVATION_CANARY";
 export const N2_TRIFECTA_MARKET_CANARY_APPROVAL = "N2_TRIFECTA_MARKET_OBSERVATION_CANARY";
@@ -129,7 +129,7 @@ function validateInput(input: N2ObservationIngestReadinessInput): void {
 function rolloutBlockers(input: N2ObservationIngestReadinessInput, approvalScope: string): string[] {
   const blockers: string[] = [];
   if (input.rollout.killSwitchEngaged) blockers.push("KILL_SWITCH_ENGAGED");
-  if (!input.rollout.shadowWriteEnabled) blockers.push("SHADOW_WRITE_DISABLED");
+  if (input.rollout.shadowWriteEnabled) blockers.push("GLOBAL_SHADOW_WRITE_MUST_REMAIN_DISABLED");
   if (!input.rollout.approvalScopes.includes(approvalScope)) blockers.push(`APPROVAL_REQUIRED:${approvalScope}`);
   return blockers;
 }
@@ -172,8 +172,10 @@ export function buildN2ObservationIngestReadiness(
   if (!input.wiring.trifectaMarketWriterImplemented) {
     nextActions.push("Implement a trifecta-market raw capture and typed-observation writer with exact checkpoint and selection-space validation.");
   }
-  if (!input.rollout.shadowWriteEnabled) {
-    nextActions.push("Keep shadow_write_enabled=false until a source-specific canary approval and rollback plan exist.");
+  if (input.rollout.shadowWriteEnabled) {
+    nextActions.push("Disable global shadow_write_enabled before any source-specific bounded canary.");
+  } else {
+    nextActions.push("Keep shadow_write_enabled=false for source-specific bounded canaries.");
   }
   nextActions.push("Rerun TASK-N2-011 only after both official_program and trifecta_market observations are non-zero.");
 
