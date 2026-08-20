@@ -30,7 +30,7 @@ function parseRunId(rawDocumentId: string): string {
   }).slice(0, 40)}`;
 }
 
-test("readiness requires raw payload and parse lineage to match producer identity", () => {
+test("readiness requires raw payload, parse lineage, and one source URL lineage to match producer identity", () => {
   const root = mkdtempSync(join(tmpdir(), "n2-readiness-lineage-data-"));
   const primaryPath = join(root, "boat.sqlite");
   const sidecarPath = join(root, "research-replay.sqlite");
@@ -61,10 +61,11 @@ test("readiness requires raw payload and parse lineage to match producer identit
         raw_document_id TEXT,
         raw_payload TEXT,
         raw_payload_digest TEXT,
-        parse_run_id TEXT
+        parse_run_id TEXT,
+        source_url TEXT
       );
     `);
-    const insert = primary.prepare("INSERT INTO trifecta_market_raw_snapshots VALUES(?,?,?,?,?,?,?,?,?,?)");
+    const insert = primary.prepare("INSERT INTO trifecta_market_raw_snapshots VALUES(?,?,?,?,?,?,?,?,?,?,?)");
     for (const selection of trifectaSelections()) {
       insert.run(
         "20260805-01-01",
@@ -73,6 +74,7 @@ test("readiness requires raw payload and parse lineage to match producer identit
         10.5,
         "2026-08-05T00:30:00.000Z",
         "T-30",
+        "",
         "",
         "",
         "",
@@ -93,7 +95,7 @@ test("readiness requires raw payload and parse lineage to match producer identit
     try {
       db.prepare(`
         UPDATE trifecta_market_raw_snapshots
-        SET raw_document_id='raw-1', raw_payload='{}', raw_payload_digest=?, parse_run_id='parse-forged'
+        SET raw_document_id='raw-1', raw_payload='{}', raw_payload_digest=?, parse_run_id='parse-forged', source_url='https://example.test/odds'
       `).run("a".repeat(64));
     } finally {
       db.close();
@@ -127,8 +129,32 @@ test("readiness requires raw payload and parse lineage to match producer identit
     assert.equal(withLineage.input.primaryTrifectaMarket.completeSnapshotCount, 1);
     assert.equal(withLineage.input.primaryTrifectaMarket.rawLineageCompleteSnapshotCount, 1);
 
+    const missingSourceDb = new DatabaseSync(primaryPath);
+    try {
+      missingSourceDb.prepare("UPDATE trifecta_market_raw_snapshots SET source_url='' WHERE bet_selection='123'").run();
+    } finally {
+      missingSourceDb.close();
+    }
+
+    const missingSource = readN2ObservationIngestReadiness({ primaryDbPath: primaryPath, sidecarDbPath: sidecarPath });
+    assert.equal(missingSource.input.primaryTrifectaMarket.completeSnapshotCount, 1);
+    assert.equal(missingSource.input.primaryTrifectaMarket.rawLineageCompleteSnapshotCount, 0);
+
+    const mixedSourceDb = new DatabaseSync(primaryPath);
+    try {
+      mixedSourceDb.prepare("UPDATE trifecta_market_raw_snapshots SET source_url='https://example.test/odds'").run();
+      mixedSourceDb.prepare("UPDATE trifecta_market_raw_snapshots SET source_url='https://example.test/other' WHERE bet_selection='123'").run();
+    } finally {
+      mixedSourceDb.close();
+    }
+
+    const mixedSource = readN2ObservationIngestReadiness({ primaryDbPath: primaryPath, sidecarDbPath: sidecarPath });
+    assert.equal(mixedSource.input.primaryTrifectaMarket.completeSnapshotCount, 1);
+    assert.equal(mixedSource.input.primaryTrifectaMarket.rawLineageCompleteSnapshotCount, 0);
+
     const mixedLineageDb = new DatabaseSync(primaryPath);
     try {
+      mixedLineageDb.prepare("UPDATE trifecta_market_raw_snapshots SET source_url='https://example.test/odds'").run();
       mixedLineageDb.prepare(`
         UPDATE trifecta_market_raw_snapshots
         SET raw_document_id=?, parse_run_id=?
