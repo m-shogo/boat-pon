@@ -4,6 +4,7 @@ import { canonicalHash } from "../research-replay/canonical";
 import { readLifecycleValidApprovalScopes } from "../research-replay/n2ObservationIngestApprovalScopes";
 import { buildN2ObservationIngestReadiness } from "../research-replay/n2ObservationIngestReadiness";
 import { readN2ObservationIngestReadiness } from "../research-replay/n2ObservationIngestReadinessReader";
+import { readCanonicalRolloutState } from "../research-replay/n2ObservationIngestRolloutState";
 import {
   atomicWriteJson,
   runExecutorLifecycle,
@@ -51,10 +52,11 @@ export const runN2ObservationIngestReadinessExecutor: Executor = (ctx) => {
         primaryDbPath,
         sidecarDbPath: ctx.sidecarPath,
       });
+      const rolloutState = readCanonicalRolloutState(ctx.sidecarPath);
       const readinessInput = {
         ...read.input,
         rollout: {
-          ...read.input.rollout,
+          ...rolloutState,
           approvalScopes: readLifecycleValidApprovalScopes(ctx.sidecarPath),
         },
       };
@@ -88,7 +90,7 @@ export const runN2ObservationIngestReadinessExecutor: Executor = (ctx) => {
       ambiguousTimingCount: 0,
       evidencePath: null,
       evidenceDigest: null,
-      notApplicableReason: "readiness inventory does not join labels or emit prediction features",
+      notApplicableReason: "readiness inventory does not join labels or emit prediction-time writes",
     }),
     writeArtifacts: (sdk, artifact) => {
       try {
