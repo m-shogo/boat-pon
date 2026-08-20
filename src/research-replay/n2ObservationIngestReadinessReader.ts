@@ -446,7 +446,7 @@ export function readN2ObservationIngestReadiness(input: {
   sidecarDbPath: string;
 }): N2ObservationIngestReadinessReadResult {
   assertQuiescent(input.primaryDbPath, "PRIMARY_DB");
-  assertQuiescent(input.sidecarDbPath, "SIDECAR_DB");
+  assertQuiescent(input.sidecarDbPath, "SIDECAR");
   const primary = openImmutable(input.primaryDbPath);
   const sidecar = openImmutable(input.sidecarDbPath);
   try {
