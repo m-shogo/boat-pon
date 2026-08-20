@@ -126,6 +126,21 @@ test("readiness requires raw payload and parse lineage to match producer identit
     const withLineage = readN2ObservationIngestReadiness({ primaryDbPath: primaryPath, sidecarDbPath: sidecarPath });
     assert.equal(withLineage.input.primaryTrifectaMarket.completeSnapshotCount, 1);
     assert.equal(withLineage.input.primaryTrifectaMarket.rawLineageCompleteSnapshotCount, 1);
+
+    const mixedLineageDb = new DatabaseSync(primaryPath);
+    try {
+      mixedLineageDb.prepare(`
+        UPDATE trifecta_market_raw_snapshots
+        SET raw_document_id=?, parse_run_id=?
+        WHERE bet_selection=?
+      `).run("raw-2", parseRunId("raw-2"), "123");
+    } finally {
+      mixedLineageDb.close();
+    }
+
+    const mixedLineage = readN2ObservationIngestReadiness({ primaryDbPath: primaryPath, sidecarDbPath: sidecarPath });
+    assert.equal(mixedLineage.input.primaryTrifectaMarket.completeSnapshotCount, 1);
+    assert.equal(mixedLineage.input.primaryTrifectaMarket.rawLineageCompleteSnapshotCount, 0);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
