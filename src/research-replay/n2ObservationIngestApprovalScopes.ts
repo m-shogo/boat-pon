@@ -115,21 +115,9 @@ export function readLifecycleValidApprovalScopes(sidecarDbPath: string): string[
   db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=5000");
   try {
     if (!tableExists(db, "rollout_approval_grants_v2")) return [];
-    const grantColumns = tableColumns(db, "rollout_approval_grants_v2");
-
-    // Preserve compatibility with old synthetic/legacy fixtures that only model approval_scope.
-    // Real v2 authority uses the full hashed grant + lifecycle schema below.
-    if (!hasColumns(grantColumns, GRANT_COLUMNS)) {
-      if (tableExists(db, "rollout_approval_lifecycle_events_v2")) return [];
-      const rows = db.prepare(
-        "SELECT DISTINCT approval_scope FROM rollout_approval_grants_v2 ORDER BY approval_scope",
-      ).all() as unknown as Array<{ approval_scope: string }>;
-      return rows.map((row) => row.approval_scope).filter((scope) => typeof scope === "string" && scope.trim() !== "");
-    }
-
+    if (!hasColumns(tableColumns(db, "rollout_approval_grants_v2"), GRANT_COLUMNS)) return [];
     if (!tableExists(db, "rollout_approval_lifecycle_events_v2")) return [];
-    const lifecycleColumns = tableColumns(db, "rollout_approval_lifecycle_events_v2");
-    if (!hasColumns(lifecycleColumns, LIFECYCLE_COLUMNS)) return [];
+    if (!hasColumns(tableColumns(db, "rollout_approval_lifecycle_events_v2"), LIFECYCLE_COLUMNS)) return [];
 
     const grants = db.prepare(`
       SELECT approval_id, approval_scope, approval_source, approval_reference,
