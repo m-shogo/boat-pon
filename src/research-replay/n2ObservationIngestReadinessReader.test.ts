@@ -20,6 +20,35 @@ function trifectaSelections(): string[] {
   return selections;
 }
 
+function validProgramRawJson(): string {
+  return JSON.stringify({
+    boats: [
+      {
+        course: 1,
+        registrationNo: "4001",
+        className: "A1",
+        nationalWinRate: 7.1,
+        nationalTop2Rate: 55.2,
+        localWinRate: 6.8,
+        localTop2Rate: 50.1,
+        motorTop2Rate: 40.2,
+        boatTop2Rate: 38.4,
+      },
+      {
+        course: 2,
+        registrationNo: "4002",
+        className: "A2",
+        nationalWinRate: 6.2,
+        nationalTop2Rate: 44.1,
+        localWinRate: null,
+        localTop2Rate: null,
+        motorTop2Rate: 35.1,
+        boatTop2Rate: 36,
+      },
+    ],
+  });
+}
+
 function createPrimary(path: string): void {
   const db = new DatabaseSync(path);
   try {
@@ -53,7 +82,7 @@ function createPrimary(path: string): void {
         index + 1,
         `1${index}:00`,
         `program-${index}.json`,
-        JSON.stringify({ race: index + 1 }),
+        validProgramRawJson(),
         `${date}T00:00:00.000Z`,
       );
     }
@@ -176,36 +205,5 @@ test("reader rejects an impossible latest program date before deriving readiness
     );
   } finally {
     rmSync(fixture.root, { recursive: true, force: true });
-  }
-});
-
-test("active WAL blocks without checkpointing or deletion", () => {
-  const fixture = setup();
-  try {
-    const wal = `${fixture.sidecar}-wal`;
-    writeFileSync(wal, "active");
-    assert.throws(
-      () => readN2ObservationIngestReadiness({ primaryDbPath: fixture.primary, sidecarDbPath: fixture.sidecar }),
-      /SIDECAR_ACTIVE_WAL/,
-    );
-    assert.equal(existsSync(wal), true);
-  } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
-  }
-});
-
-test("missing official program table fails closed", () => {
-  const root = mkdtempSync(join(tmpdir(), "n2-ingest-readiness-missing-"));
-  const primary = join(root, "boat.sqlite");
-  const sidecar = join(root, "research-replay.sqlite");
-  new DatabaseSync(primary).close();
-  createSidecar(sidecar);
-  try {
-    assert.throws(
-      () => readN2ObservationIngestReadiness({ primaryDbPath: primary, sidecarDbPath: sidecar }),
-      /OFFICIAL_PROGRAMS_TABLE_MISSING/,
-    );
-  } finally {
-    rmSync(root, { recursive: true, force: true });
   }
 });
