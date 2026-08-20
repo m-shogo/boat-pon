@@ -231,9 +231,8 @@ function validMarketSnapshotLineage(raceId: string, capturedAt: string): boolean
 
 function rawPayloadDigestMatches(payload: unknown, digest: unknown): boolean {
   if (typeof payload !== "string" || payload.trim() === "" || typeof digest !== "string") return false;
-  const normalizedDigest = digest.trim().toLowerCase();
-  if (!/^[0-9a-f]{64}$/.test(normalizedDigest)) return false;
-  return createHash("sha256").update(payload, "utf8").digest("hex") === normalizedDigest;
+  if (!/^[0-9a-f]{64}$/.test(digest)) return false;
+  return createHash("sha256").update(payload, "utf8").digest("hex") === digest;
 }
 
 function parseRunIdMatches(rawDocumentId: unknown, parseRunId: unknown): boolean {
@@ -322,7 +321,7 @@ function snapshotHasVerifiedRawLineage(input: {
     return false;
   }
   return new Set(rows.map((row) => row.rawDocumentId)).size === 1
-    && new Set(rows.map((row) => row.rawPayloadDigest?.trim().toLowerCase())).size === 1
+    && new Set(rows.map((row) => row.rawPayloadDigest)).size === 1
     && new Set(rows.map((row) => row.parseRunId)).size === 1
     && new Set(rows.map((row) => row.sourceUrl)).size === 1
     && new Set(rows.map((row) => row.availableAt)).size === 1
