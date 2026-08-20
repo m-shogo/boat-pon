@@ -56,7 +56,6 @@ function baseInput(): N2ObservationIngestReadinessInput {
 }
 
 function enableCanary(input: N2ObservationIngestReadinessInput): void {
-  input.rollout.shadowWriteEnabled = true;
   input.rollout.approvalScopes = [
     N2_OFFICIAL_PROGRAM_CANARY_APPROVAL,
     N2_TRIFECTA_MARKET_CANARY_APPROVAL,
@@ -78,11 +77,12 @@ function enableFullRawLineage(input: N2ObservationIngestReadinessInput): void {
 
 test("realistic current state is blocked without authorizing writes", () => {
   const summary = buildN2ObservationIngestReadiness(baseInput());
+  assert.equal(summary.readinessVersion, "n2-observation-ingest-readiness-v2");
   assert.equal(summary.overallStatus, "BLOCKED_NOT_READY_FOR_WRITE");
   assert.equal(summary.writeAuthorized, false);
   assert.equal(summary.autoEnableShadowWrite, false);
   assert.equal(summary.recommendedCanaryMaxRaces, 20);
-  assert.match(summary.officialProgram.blockers.join("\n"), /SHADOW_WRITE_DISABLED/);
+  assert.doesNotMatch(summary.officialProgram.blockers.join("\n"), /SHADOW_WRITE_DISABLED/);
   assert.match(summary.officialProgram.blockers.join("\n"), /APPROVAL_REQUIRED:N2_OFFICIAL_PROGRAM_OBSERVATION_CANARY/);
   assert.match(summary.officialProgram.blockers.join("\n"), /OFFICIAL_PROGRAM_PRODUCTION_CALLER_NOT_CONNECTED/);
   assert.match(summary.trifectaMarket.blockers.join("\n"), /TRIFECTA_MARKET_RAW_LINEAGE_UNAVAILABLE/);
@@ -143,17 +143,31 @@ test("raw lineage without atomic PIT columns stays blocked", () => {
   assert.deepEqual(missingDecisionCutoff.trifectaMarket.blockers, ["TRIFECTA_MARKET_RAW_LINEAGE_UNAVAILABLE"]);
 });
 
-test("fully approved, wired and raw-lineage capable sources become canary-ready only", () => {
+test("fully approved, wired and raw-lineage capable sources become canary-ready with global shadow disabled", () => {
   const input = baseInput();
   enableCanary(input);
   enableFullRawLineage(input);
   const summary = buildN2ObservationIngestReadiness(input);
+  assert.equal(input.rollout.shadowWriteEnabled, false);
   assert.equal(summary.overallStatus, "READY_FOR_BOUNDED_CANARY");
   assert.equal(summary.officialProgram.status, "READY_FOR_BOUNDED_CANARY");
   assert.equal(summary.trifectaMarket.status, "READY_FOR_BOUNDED_CANARY");
   assert.equal(summary.trifectaMarket.rawLineageCompleteSnapshotCount, 20);
   assert.equal(summary.writeAuthorized, false);
+  assert.equal(summary.autoEnableShadowWrite, false);
   assert.equal(summary.recommendedCanaryMaxRaces, 20);
+});
+
+test("global shadow enabled blocks source-specific bounded canaries", () => {
+  const input = baseInput();
+  enableCanary(input);
+  enableFullRawLineage(input);
+  input.rollout.shadowWriteEnabled = true;
+  const summary = buildN2ObservationIngestReadiness(input);
+  assert.equal(summary.overallStatus, "BLOCKED_NOT_READY_FOR_WRITE");
+  assert.deepEqual(summary.officialProgram.blockers, ["GLOBAL_SHADOW_WRITE_MUST_REMAIN_DISABLED"]);
+  assert.deepEqual(summary.trifectaMarket.blockers, ["GLOBAL_SHADOW_WRITE_MUST_REMAIN_DISABLED"]);
+  assert.match(summary.nextActions.join("\n"), /Disable global shadow_write_enabled/);
 });
 
 test("kill switch blocks both sources even with approvals", () => {
