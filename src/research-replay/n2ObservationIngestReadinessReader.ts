@@ -256,18 +256,31 @@ function validSourceUrl(value: unknown): boolean {
   }
 }
 
+function validAtomicPit(availableAt: unknown, capturedAt: unknown, decisionCutoff: unknown): boolean {
+  if (typeof availableAt !== "string" || typeof capturedAt !== "string" || typeof decisionCutoff !== "string") return false;
+  try {
+    const available = Date.parse(canonicalUtcTimestamp(availableAt));
+    const captured = Date.parse(canonicalUtcTimestamp(capturedAt));
+    const cutoff = Date.parse(canonicalUtcTimestamp(decisionCutoff));
+    return available <= captured && captured <= cutoff;
+  } catch {
+    return false;
+  }
+}
+
 function snapshotHasVerifiedRawLineage(input: {
   primary: DatabaseSync;
   quotedTable: string;
   rawPayloadColumn: string | null;
   rawPayloadDigestColumn: string | null;
   hasRawLineageSchema: boolean;
+  hasAtomicPitSchema: boolean;
   hasCheckpoint: boolean;
   raceId: string;
   capturedAt: string;
   checkpointLabel?: string;
 }): boolean {
-  if (!input.hasRawLineageSchema || !input.rawPayloadColumn || !input.rawPayloadDigestColumn) return false;
+  if (!input.hasRawLineageSchema || !input.hasAtomicPitSchema || !input.rawPayloadColumn || !input.rawPayloadDigestColumn) return false;
   const checkpointClause = input.hasCheckpoint ? " AND checkpoint_label=?" : "";
   const args: Array<string> = [input.raceId, input.capturedAt];
   if (input.hasCheckpoint) {
@@ -280,7 +293,9 @@ function snapshotHasVerifiedRawLineage(input: {
       "${input.rawPayloadColumn}" AS rawPayload,
       "${input.rawPayloadDigestColumn}" AS rawPayloadDigest,
       parse_run_id AS parseRunId,
-      source_url AS sourceUrl
+      source_url AS sourceUrl,
+      available_at AS availableAt,
+      decision_cutoff AS decisionCutoff
     FROM ${input.quotedTable}
     WHERE race_id=? AND captured_at=?${checkpointClause}
       AND bet_type='trifecta' AND odds>0 AND odds < 1e308
@@ -291,18 +306,23 @@ function snapshotHasVerifiedRawLineage(input: {
     rawPayloadDigest: string | null;
     parseRunId: string | null;
     sourceUrl: string | null;
+    availableAt: string | null;
+    decisionCutoff: string | null;
   }>;
   if (rows.length !== COMPLETE_TRIFECTA_SELECTION_COUNT || !rows.every((row) => (
     rawPayloadDigestMatches(row.rawPayload, row.rawPayloadDigest)
       && parseRunIdMatches(row.rawDocumentId, row.parseRunId)
       && validSourceUrl(row.sourceUrl)
+      && validAtomicPit(row.availableAt, input.capturedAt, row.decisionCutoff)
   ))) {
     return false;
   }
   return new Set(rows.map((row) => row.rawDocumentId)).size === 1
     && new Set(rows.map((row) => row.rawPayloadDigest?.trim().toLowerCase())).size === 1
     && new Set(rows.map((row) => row.parseRunId)).size === 1
-    && new Set(rows.map((row) => row.sourceUrl)).size === 1;
+    && new Set(rows.map((row) => row.sourceUrl)).size === 1
+    && new Set(rows.map((row) => row.availableAt)).size === 1
+    && new Set(rows.map((row) => row.decisionCutoff)).size === 1;
 }
 
 function readTrifectaMarketCounts(
@@ -337,6 +357,7 @@ function readTrifectaMarketCounts(
     && rawPayloadDigestColumn !== null
     && columns.includes("parse_run_id")
     && columns.includes("source_url");
+  const hasAtomicPitSchema = columns.includes("available_at") && columns.includes("decision_cutoff");
   const required = ["race_id", "bet_type", "bet_selection", "odds", "captured_at"];
   if (required.some((column) => !columns.includes(column))) {
     return {
@@ -363,13 +384,15 @@ function readTrifectaMarketCounts(
   const checkpointValid = hasCheckpoint
     ? "checkpoint_label IN ('T-30','T-20','T-10','T-5','ad-hoc')"
     : "0=1";
-  const rawLineageValid = hasRawLineageSchema
+  const rawLineageValid = hasRawLineageSchema && hasAtomicPitSchema
     ? `raw_document_id IS NOT NULL AND LENGTH(TRIM(raw_document_id))>0
        AND "${rawPayloadColumn}" IS NOT NULL AND LENGTH(TRIM("${rawPayloadColumn}"))>0
        AND "${rawPayloadDigestColumn}" IS NOT NULL AND LENGTH(TRIM("${rawPayloadDigestColumn}"))=64
        AND LOWER(TRIM("${rawPayloadDigestColumn}")) NOT GLOB '*[^0-9a-f]*'
        AND parse_run_id IS NOT NULL AND LENGTH(TRIM(parse_run_id))>0
-       AND source_url IS NOT NULL AND LENGTH(TRIM(source_url))>0`
+       AND source_url IS NOT NULL AND LENGTH(TRIM(source_url))>0
+       AND available_at IS NOT NULL AND LENGTH(TRIM(available_at))>0
+       AND decision_cutoff IS NOT NULL AND LENGTH(TRIM(decision_cutoff))>0`
     : "0=1";
   const row = primary.prepare(`
     SELECT
@@ -412,6 +435,7 @@ function readTrifectaMarketCounts(
         rawPayloadColumn,
         rawPayloadDigestColumn,
         hasRawLineageSchema,
+        hasAtomicPitSchema,
         hasCheckpoint,
         raceId: snapshot.raceId,
         capturedAt: snapshot.capturedAt,
