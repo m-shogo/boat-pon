@@ -283,7 +283,7 @@ function snapshotHasVerifiedRawLineage(input: {
       source_url AS sourceUrl
     FROM ${input.quotedTable}
     WHERE race_id=? AND captured_at=?${checkpointClause}
-      AND bet_type='trifecta' AND odds>0
+      AND bet_type='trifecta' AND odds>0 AND odds < 1e308
       AND ${VALID_TRIFECTA_SELECTION_SQL}
   `).all(...args) as unknown as Array<{
     rawDocumentId: string | null;
@@ -372,7 +372,7 @@ function readTrifectaMarketCounts(
       COUNT(*) totalRows,
       COUNT(DISTINCT race_id) raceCount,
       SUM(CASE WHEN captured_at IS NOT NULL AND LENGTH(TRIM(captured_at))>0 AND ${checkpointValid} THEN 1 ELSE 0 END) validTimingRows,
-      SUM(CASE WHEN ${VALID_TRIFECTA_SELECTION_SQL} AND odds>0 THEN 1 ELSE 0 END) validSelectionRows
+      SUM(CASE WHEN ${VALID_TRIFECTA_SELECTION_SQL} AND odds>0 AND odds < 1e308 THEN 1 ELSE 0 END) validSelectionRows
     FROM ${quoted}
     WHERE SUBSTR(race_id,1,8) >= ? AND SUBSTR(race_id,1,8) <= ? AND bet_type='trifecta'
   `).get(fromCompact, toCompact) as unknown as Record<string, number>;
@@ -384,7 +384,7 @@ function readTrifectaMarketCounts(
       SUM(CASE WHEN ${rawLineageValid} THEN 1 ELSE 0 END) AS rawLineageRows
     FROM ${quoted}
     WHERE SUBSTR(race_id,1,8) >= ? AND SUBSTR(race_id,1,8) <= ?
-      AND bet_type='trifecta' AND odds>0
+      AND bet_type='trifecta' AND odds>0 AND odds < 1e308
       AND ${VALID_TRIFECTA_SELECTION_SQL}
       AND captured_at IS NOT NULL AND LENGTH(TRIM(captured_at))>0
       AND ${checkpointValid}
