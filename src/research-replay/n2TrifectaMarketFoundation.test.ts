@@ -104,8 +104,23 @@ test("market foundation rejects normalized or timezone-ambiguous PIT timestamps"
   }
 });
 
+test("market foundation rejects PIT timestamps from another race day", () => {
+  const cases: Array<[keyof Pick<N2TrifectaMarketSnapshotCandidate, "availableAt" | "capturedAt" | "decisionCutoff">, string, string]> = [
+    ["availableAt", "2026-08-07T03:49:00.000Z", "AVAILABLE_AT_RACE_DATE_MISMATCH"],
+    ["capturedAt", "2026-08-07T03:50:00.000Z", "CAPTURED_AT_RACE_DATE_MISMATCH"],
+    ["decisionCutoff", "2026-08-07T04:00:00.000Z", "DECISION_CUTOFF_RACE_DATE_MISMATCH"],
+  ];
+  for (const [field, value, blocker] of cases) {
+    const audit = auditN2TrifectaMarketSnapshot(candidate(1, { [field]: value }));
+    assert.equal(audit.status, "BLOCKED");
+    assert.equal(audit.pit.status, "BLOCKED");
+    assert.ok(audit.blockers.includes(blocker));
+  }
+});
+
 test("market foundation preserves valid leap-day and explicit-offset PIT timestamps", () => {
   const audit = auditN2TrifectaMarketSnapshot(candidate(1, {
+    raceId: "20280229-24-12",
     availableAt: "2028-02-29T12:49:00+09:00",
     capturedAt: "2028-02-29T12:50:00+09:00",
     decisionCutoff: "2028-02-29T13:00:00+09:00",
@@ -132,7 +147,12 @@ test("market foundation rejects impossible or out-of-range race identities", () 
 });
 
 test("market foundation accepts leap-day boundary race identity", () => {
-  const audit = auditN2TrifectaMarketSnapshot(candidate(1, { raceId: "20280229-24-12" }));
+  const audit = auditN2TrifectaMarketSnapshot(candidate(1, {
+    raceId: "20280229-24-12",
+    availableAt: "2028-02-29T03:49:00.000Z",
+    capturedAt: "2028-02-29T03:50:00.000Z",
+    decisionCutoff: "2028-02-29T04:00:00.000Z",
+  }));
   assert.equal(audit.status, "PASS");
   assert.match(audit.checkpointIdentity ?? "", /^[0-9a-f]{64}$/);
 });
