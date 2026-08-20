@@ -2,6 +2,7 @@ import { existsSync, statSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { canonicalUtcTimestamp } from "./canonical";
+import { canonicalRaceKey } from "./identity";
 import type { N2TrifectaMarketSourceInventory } from "./n2TrifectaMarketFoundation";
 
 export const N2_TRIFECTA_MARKET_SOURCE_INVENTORY_READER_VERSION = "n2-trifecta-market-source-inventory-reader-v1";
@@ -22,6 +23,20 @@ const VALID_TRIFECTA_SELECTION_SQL = `
 function validMarketCapturedAt(value: string): boolean {
   try {
     canonicalUtcTimestamp(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function validMarketRaceId(value: string): boolean {
+  const match = /^(\d{4})(\d{2})(\d{2})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+  const date = `${match[1]}-${match[2]}-${match[3]}`;
+  const venueCode = match[4];
+  const raceNo = Number(match[5]);
+  try {
+    canonicalRaceKey(date, venueCode, raceNo);
     return true;
   } catch {
     return false;
@@ -164,7 +179,7 @@ export function readN2TrifectaMarketSourceInventory(input: {
       ? "race_id, checkpoint_label, captured_at"
       : "race_id, captured_at";
     const completeSnapshotRows = db.prepare(`
-      SELECT captured_at AS capturedAt FROM (
+      SELECT race_id AS raceId, captured_at AS capturedAt FROM (
         SELECT ${groupColumns}
         FROM ${table}
         WHERE SUBSTR(race_id, 1, 8) >= ?
@@ -178,9 +193,12 @@ export function readN2TrifectaMarketSourceInventory(input: {
         HAVING COUNT(*)=? AND COUNT(DISTINCT TRIM(bet_selection))=?
       )
     `).all(fromCompact, toCompact, COMPLETE_SELECTION_COUNT, COMPLETE_SELECTION_COUNT) as unknown as Array<{
+      raceId: string;
       capturedAt: string;
     }>;
-    const completeSnapshotCount = completeSnapshotRows.filter((row) => validMarketCapturedAt(row.capturedAt)).length;
+    const completeSnapshotCount = completeSnapshotRows.filter((row) => (
+      validMarketRaceId(row.raceId) && validMarketCapturedAt(row.capturedAt)
+    )).length;
 
     return {
       ...inventory,
