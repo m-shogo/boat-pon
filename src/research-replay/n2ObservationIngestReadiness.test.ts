@@ -68,6 +68,7 @@ function enableFullRawLineage(input: N2ObservationIngestReadinessInput): void {
   input.primaryTrifectaMarket.rawPayloadColumnPresent = true;
   input.primaryTrifectaMarket.rawPayloadDigestColumnPresent = true;
   input.primaryTrifectaMarket.parseRunIdColumnPresent = true;
+  input.primaryTrifectaMarket.sourceUrlColumnPresent = true;
   input.primaryTrifectaMarket.rawLineageCompleteSnapshotCount = input.primaryTrifectaMarket.completeSnapshotCount;
 }
 
@@ -102,8 +103,20 @@ test("raw lineage columns alone do not prove lineage-bearing snapshots", () => {
   input.primaryTrifectaMarket.rawPayloadColumnPresent = true;
   input.primaryTrifectaMarket.rawPayloadDigestColumnPresent = true;
   input.primaryTrifectaMarket.parseRunIdColumnPresent = true;
+  input.primaryTrifectaMarket.sourceUrlColumnPresent = true;
   const summary = buildN2ObservationIngestReadiness(input);
   assert.equal(summary.trifectaMarket.rawLineageCompleteSnapshotCount, 0);
+  assert.equal(summary.trifectaMarket.rawLineageCapable, false);
+  assert.deepEqual(summary.trifectaMarket.blockers, ["TRIFECTA_MARKET_RAW_LINEAGE_UNAVAILABLE"]);
+});
+
+test("raw lineage without source URL provenance stays blocked", () => {
+  const input = baseInput();
+  enableCanary(input);
+  enableFullRawLineage(input);
+  input.primaryTrifectaMarket.sourceUrlColumnPresent = false;
+  const summary = buildN2ObservationIngestReadiness(input);
+  assert.equal(summary.trifectaMarket.rawLineageCompleteSnapshotCount, 20);
   assert.equal(summary.trifectaMarket.rawLineageCapable, false);
   assert.deepEqual(summary.trifectaMarket.blockers, ["TRIFECTA_MARKET_RAW_LINEAGE_UNAVAILABLE"]);
 });
