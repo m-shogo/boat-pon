@@ -186,16 +186,15 @@ test("latest grant lifecycle is authoritative for a scope", () => {
   }
 });
 
-test("legacy synthetic approval-scope-only schema remains readable", () => {
-  const root = mkdtempSync(join(tmpdir(), "n2-readiness-approval-legacy-"));
+test("incomplete v2 approval schema fails closed", () => {
+  const root = mkdtempSync(join(tmpdir(), "n2-readiness-approval-incomplete-"));
   const path = join(root, "research-replay.sqlite");
   const db = new DatabaseSync(path);
   try {
     db.exec("CREATE TABLE rollout_approval_grants_v2 (approval_scope TEXT NOT NULL)");
-    db.prepare("INSERT INTO rollout_approval_grants_v2 VALUES(?)").run("SCOPE_B");
-    db.prepare("INSERT INTO rollout_approval_grants_v2 VALUES(?)").run("SCOPE_A");
+    db.prepare("INSERT INTO rollout_approval_grants_v2 VALUES(?)").run("N2_OFFICIAL_PROGRAM_OBSERVATION_CANARY");
     db.close();
-    assert.deepEqual(readLifecycleValidApprovalScopes(path), ["SCOPE_A", "SCOPE_B"]);
+    assert.deepEqual(readLifecycleValidApprovalScopes(path), []);
   } finally {
     try { db.close(); } catch {}
     rmSync(root, { recursive: true, force: true });
