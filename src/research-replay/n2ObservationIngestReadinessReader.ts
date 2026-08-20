@@ -267,7 +267,7 @@ function readTrifectaMarketCounts(
   const hasCheckpoint = columns.includes("checkpoint_label");
   const checkpointValid = hasCheckpoint
     ? "checkpoint_label IN ('T-30','T-20','T-10','T-5','ad-hoc')"
-    : "1=1";
+    : "0=1";
   const row = primary.prepare(`
     SELECT
       COUNT(*) totalRows,
@@ -285,7 +285,7 @@ function readTrifectaMarketCounts(
       AND bet_type='trifecta' AND odds>0
       AND ${VALID_TRIFECTA_SELECTION_SQL}
       AND captured_at IS NOT NULL AND LENGTH(TRIM(captured_at))>0
-      ${hasCheckpoint ? "AND checkpoint_label IN ('T-30','T-20','T-10','T-5','ad-hoc')" : ""}
+      AND ${checkpointValid}
     GROUP BY race_id, captured_at${hasCheckpoint ? ", checkpoint_label" : ""}
     HAVING COUNT(*)=? AND COUNT(DISTINCT TRIM(bet_selection))=?
   `).all(fromCompact, toCompact, COMPLETE_TRIFECTA_SELECTION_COUNT, COMPLETE_TRIFECTA_SELECTION_COUNT) as unknown as Array<{
