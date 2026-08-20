@@ -3,7 +3,9 @@ import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { officialVenueCode } from "../domain/officialLinks";
 import { canonicalUtcTimestamp } from "./canonical";
+import { canonicalRaceKey } from "./identity";
 import type { N2ObservationIngestReadinessInput } from "./n2ObservationIngestReadiness";
+import { buildOfficialProgramObservationEnvelope } from "./n2OfficialProgramObservation";
 
 export const N2_OBSERVATION_INGEST_READINESS_READER_VERSION = "n2-observation-ingest-readiness-reader-v1";
 const CANARY_DAY_COUNT = 7;
@@ -141,7 +143,15 @@ function validOfficialProgramReadinessRow(row: OfficialProgramReadinessRow): boo
     if (!row.importedAt || row.importedAt.trim() === "" || !row.closeAt || row.closeAt.trim() === "") return false;
     const sourceObservedAt = canonicalDatabaseTimestamp(row.importedAt);
     const decisionCutoff = closeAtUtc(row.date, row.closeAt);
-    return Date.parse(sourceObservedAt) < Date.parse(decisionCutoff);
+    if (Date.parse(sourceObservedAt) >= Date.parse(decisionCutoff)) return false;
+    buildOfficialProgramObservationEnvelope({
+      canonicalRaceKey: canonicalRaceKey(row.date, venueCode, row.raceNo),
+      rawJson: row.rawJson,
+      sourcePublishedAt: null,
+      sourceObservedAt,
+      firstSeenAt: sourceObservedAt,
+    });
+    return true;
   } catch {
     return false;
   }
