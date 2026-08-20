@@ -203,6 +203,7 @@ export function readN2TrifectaMarketSourceInventory(input: {
           AND LENGTH(TRIM(captured_at)) > 0
           AND ${VALID_TRIFECTA_SELECTION_SQL}
           AND odds > 0
+          AND odds < 1e308
         GROUP BY ${groupColumns}
         HAVING COUNT(*)=? AND COUNT(DISTINCT TRIM(bet_selection))=?
       )
