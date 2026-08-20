@@ -246,6 +246,16 @@ function parseRunIdMatches(rawDocumentId: unknown, parseRunId: unknown): boolean
   return parseRunId === expected;
 }
 
+function validSourceUrl(value: unknown): boolean {
+  if (typeof value !== "string" || value.trim() === "" || value !== value.trim()) return false;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 function snapshotHasVerifiedRawLineage(input: {
   primary: DatabaseSync;
   quotedTable: string;
@@ -285,9 +295,7 @@ function snapshotHasVerifiedRawLineage(input: {
   if (rows.length !== COMPLETE_TRIFECTA_SELECTION_COUNT || !rows.every((row) => (
     rawPayloadDigestMatches(row.rawPayload, row.rawPayloadDigest)
       && parseRunIdMatches(row.rawDocumentId, row.parseRunId)
-      && typeof row.sourceUrl === "string"
-      && row.sourceUrl.trim() !== ""
-      && row.sourceUrl === row.sourceUrl.trim()
+      && validSourceUrl(row.sourceUrl)
   ))) {
     return false;
   }
