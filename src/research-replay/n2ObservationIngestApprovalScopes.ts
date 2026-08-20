@@ -1,6 +1,16 @@
 import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
+import {
+  N2_OFFICIAL_PROGRAM_CANARY_APPROVAL_SCOPE,
+  N2_OFFICIAL_PROGRAM_CANARY_CONTRACT_PREFIX,
+  N2_OFFICIAL_PROGRAM_CANARY_TARGET_STAGE,
+} from "./n2OfficialProgramCanary";
+import {
+  APPROVAL_CONTRACT_VERSION,
+  ROLLOUT_SCHEMA_VERSION,
+  SIDECAR_SCHEMA_VERSION,
+} from "./schema";
 
 const GRANT_COLUMNS = [
   "approval_id",
@@ -75,11 +85,23 @@ function isCanonicalTimestamp(value: string): boolean {
   }
 }
 
+function validOfficialProgramTarget(row: GrantRow): boolean {
+  if (row.approval_scope !== N2_OFFICIAL_PROGRAM_CANARY_APPROVAL_SCOPE) return true;
+  const expectedSchema = `${ROLLOUT_SCHEMA_VERSION}@${SIDECAR_SCHEMA_VERSION}`;
+  const contractPattern = new RegExp(
+    `^${N2_OFFICIAL_PROGRAM_CANARY_CONTRACT_PREFIX}:[a-f0-9]{64}:${APPROVAL_CONTRACT_VERSION}$`,
+  );
+  return row.target_stage === N2_OFFICIAL_PROGRAM_CANARY_TARGET_STAGE
+    && row.target_schema_version === expectedSchema
+    && contractPattern.test(row.target_contract_version);
+}
+
 function validGrant(row: GrantRow): boolean {
   if (!row.approval_id || !row.approval_scope || !row.approval_source || !row.approval_reference) return false;
   if (!row.target_stage || !row.target_schema_version || !row.target_contract_version) return false;
   if (!isCanonicalTimestamp(row.approved_at)) return false;
   if (row.approval_mode !== "production") return false;
+  if (!validOfficialProgramTarget(row)) return false;
   const expected = canonicalHash({
     approvalId: row.approval_id,
     approvalScope: row.approval_scope,
