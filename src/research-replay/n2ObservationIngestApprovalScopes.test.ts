@@ -44,6 +44,7 @@ function insertGrant(db: DatabaseSync, input: {
   approvalId: string;
   approvalScope: string;
   approvedAt: string;
+  approvalMode?: "production" | "simulated";
   contentHash?: string;
 }): void {
   const grant = {
@@ -55,7 +56,7 @@ function insertGrant(db: DatabaseSync, input: {
     targetSchemaVersion: "schema-v1",
     targetContractVersion: "contract-v1",
     approvedAt: input.approvedAt,
-    approvalMode: "production",
+    approvalMode: input.approvalMode ?? "production",
   };
   const contentHash = input.contentHash ?? canonicalHash(grant);
   db.prepare(`
@@ -110,7 +111,7 @@ function insertLifecycle(db: DatabaseSync, input: {
   );
 }
 
-test("readiness approval scopes exclude revoked, superseded, and hash-invalid grants", () => {
+test("readiness approval scopes exclude revoked, simulated, and hash-invalid grants", () => {
   const root = mkdtempSync(join(tmpdir(), "n2-readiness-approval-scope-"));
   const path = join(root, "research-replay.sqlite");
   createAuthorityDb(path);
@@ -131,6 +132,12 @@ test("readiness approval scopes exclude revoked, superseded, and hash-invalid gr
       eventKind: "revoked",
       subjectApprovalId: "approval-revoked",
       occurredAt: "2026-08-20T10:02:00.000Z",
+    });
+    insertGrant(db, {
+      approvalId: "approval-simulated",
+      approvalScope: "N2_SIMULATED_CANARY",
+      approvedAt: "2026-08-20T10:02:30.000Z",
+      approvalMode: "simulated",
     });
     insertGrant(db, {
       approvalId: "approval-tampered",
