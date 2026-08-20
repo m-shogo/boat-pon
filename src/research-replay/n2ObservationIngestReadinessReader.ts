@@ -1,6 +1,7 @@
 import { existsSync, statSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
+import { officialVenueCode } from "../domain/officialLinks";
 import { canonicalUtcTimestamp } from "./canonical";
 import type { N2ObservationIngestReadinessInput } from "./n2ObservationIngestReadiness";
 
@@ -12,6 +13,17 @@ type RolloutRow = {
   shadow_write_enabled: number;
   operational_gc_enabled: number;
   kill_switch_engaged: number;
+};
+
+type OfficialProgramReadinessRow = {
+  raceId: string;
+  date: string;
+  venue: string;
+  raceNo: number;
+  closeAt: string | null;
+  sourceFile: string | null;
+  rawJson: string | null;
+  importedAt: string | null;
 };
 
 export type N2ObservationIngestReadinessReadResult = {
@@ -94,6 +106,47 @@ function assertOfficialProgramCohortDates(primary: DatabaseSync, dateFrom: strin
   for (const row of rows) assertCanonicalDate(row.date);
 }
 
+function canonicalDatabaseTimestamp(value: string): string {
+  const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)
+    ? `${value.replace(" ", "T")}Z`
+    : value;
+  return canonicalUtcTimestamp(normalized);
+}
+
+function closeAtUtc(date: string, closeAt: string): string {
+  const match = /^(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(closeAt);
+  if (!match) throw new Error("INVALID_CLOSE_AT");
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  const second = Number(match[3] ?? "0");
+  if (hour > 23 || minute > 59 || second > 59) throw new Error("INVALID_CLOSE_AT");
+  const parsed = Date.parse(`${date}T${match[1]}:${match[2]}:${match[3] ?? "00"}+09:00`);
+  if (!Number.isFinite(parsed)) throw new Error("INVALID_CLOSE_AT");
+  return new Date(parsed).toISOString();
+}
+
+function validOfficialProgramReadinessRow(row: OfficialProgramReadinessRow): boolean {
+  try {
+    assertCanonicalDate(row.date);
+    if (!Number.isInteger(row.raceNo) || row.raceNo < 1 || row.raceNo > 12) return false;
+    const venueCode = officialVenueCode(row.venue);
+    if (venueCode === null) return false;
+    const suffix = String(row.raceNo).padStart(2, "0");
+    const compact = compactDate(row.date);
+    const venueToken = row.venue.trim();
+    const labelIdentity = `${compact}-${venueToken}-${suffix}`;
+    const codeIdentity = `${compact}-${venueCode}-${suffix}`;
+    if (row.raceId !== labelIdentity && row.raceId !== codeIdentity) return false;
+    if (!row.sourceFile || row.sourceFile.trim() === "" || !row.rawJson || row.rawJson.trim() === "") return false;
+    if (!row.importedAt || row.importedAt.trim() === "" || !row.closeAt || row.closeAt.trim() === "") return false;
+    const sourceObservedAt = canonicalDatabaseTimestamp(row.importedAt);
+    const decisionCutoff = closeAtUtc(row.date, row.closeAt);
+    return Date.parse(sourceObservedAt) < Date.parse(decisionCutoff);
+  } catch {
+    return false;
+  }
+}
+
 function readOfficialProgramCounts(primary: DatabaseSync, dateFrom: string, dateTo: string): N2ObservationIngestReadinessInput["primaryOfficialProgram"] {
   assertOfficialProgramCohortDates(primary, dateFrom, dateTo);
   const row = primary.prepare(`
@@ -102,18 +155,26 @@ function readOfficialProgramCounts(primary: DatabaseSync, dateFrom: string, date
       SUM(CASE WHEN raw_json IS NULL OR LENGTH(TRIM(raw_json))=0 THEN 1 ELSE 0 END) missingRawJson,
       SUM(CASE WHEN source_file IS NULL OR LENGTH(TRIM(source_file))=0 THEN 1 ELSE 0 END) missingSourceFile,
       SUM(CASE WHEN imported_at IS NULL OR LENGTH(TRIM(imported_at))=0 THEN 1 ELSE 0 END) missingImportedAt,
-      SUM(CASE WHEN close_at IS NULL OR LENGTH(TRIM(close_at))=0 THEN 1 ELSE 0 END) missingCloseAt,
-      SUM(CASE WHEN raw_json IS NOT NULL AND LENGTH(TRIM(raw_json))>0
-                    AND source_file IS NOT NULL AND LENGTH(TRIM(source_file))>0
-                    AND imported_at IS NOT NULL AND LENGTH(TRIM(imported_at))>0
-                    AND close_at IS NOT NULL AND LENGTH(TRIM(close_at))>0
-               THEN 1 ELSE 0 END) eligibleRows
+      SUM(CASE WHEN close_at IS NULL OR LENGTH(TRIM(close_at))=0 THEN 1 ELSE 0 END) missingCloseAt
     FROM official_programs
     WHERE date >= ? AND date <= ?
   `).get(dateFrom, dateTo) as unknown as Record<string, number>;
+  const readinessRows = primary.prepare(`
+    SELECT
+      race_id AS raceId,
+      date,
+      venue,
+      race_no AS raceNo,
+      close_at AS closeAt,
+      source_file AS sourceFile,
+      raw_json AS rawJson,
+      imported_at AS importedAt
+    FROM official_programs
+    WHERE date >= ? AND date <= ?
+  `).all(dateFrom, dateTo) as unknown as OfficialProgramReadinessRow[];
   return {
     totalRows: Number(row.totalRows ?? 0),
-    eligibleRows: Number(row.eligibleRows ?? 0),
+    eligibleRows: readinessRows.filter(validOfficialProgramReadinessRow).length,
     missingRawJson: Number(row.missingRawJson ?? 0),
     missingSourceFile: Number(row.missingSourceFile ?? 0),
     missingImportedAt: Number(row.missingImportedAt ?? 0),
