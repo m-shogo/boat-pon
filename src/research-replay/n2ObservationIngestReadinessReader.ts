@@ -269,7 +269,8 @@ function snapshotHasVerifiedRawLineage(input: {
       raw_document_id AS rawDocumentId,
       "${input.rawPayloadColumn}" AS rawPayload,
       "${input.rawPayloadDigestColumn}" AS rawPayloadDigest,
-      parse_run_id AS parseRunId
+      parse_run_id AS parseRunId,
+      source_url AS sourceUrl
     FROM ${input.quotedTable}
     WHERE race_id=? AND captured_at=?${checkpointClause}
       AND bet_type='trifecta' AND odds>0
@@ -279,16 +280,21 @@ function snapshotHasVerifiedRawLineage(input: {
     rawPayload: unknown;
     rawPayloadDigest: string | null;
     parseRunId: string | null;
+    sourceUrl: string | null;
   }>;
   if (rows.length !== COMPLETE_TRIFECTA_SELECTION_COUNT || !rows.every((row) => (
     rawPayloadDigestMatches(row.rawPayload, row.rawPayloadDigest)
       && parseRunIdMatches(row.rawDocumentId, row.parseRunId)
+      && typeof row.sourceUrl === "string"
+      && row.sourceUrl.trim() !== ""
+      && row.sourceUrl === row.sourceUrl.trim()
   ))) {
     return false;
   }
   return new Set(rows.map((row) => row.rawDocumentId)).size === 1
     && new Set(rows.map((row) => row.rawPayloadDigest?.trim().toLowerCase())).size === 1
-    && new Set(rows.map((row) => row.parseRunId)).size === 1;
+    && new Set(rows.map((row) => row.parseRunId)).size === 1
+    && new Set(rows.map((row) => row.sourceUrl)).size === 1;
 }
 
 function readTrifectaMarketCounts(
@@ -319,7 +325,8 @@ function readTrifectaMarketCounts(
   const hasRawLineageSchema = columns.includes("raw_document_id")
     && rawPayloadColumn !== null
     && rawPayloadDigestColumn !== null
-    && columns.includes("parse_run_id");
+    && columns.includes("parse_run_id")
+    && columns.includes("source_url");
   const required = ["race_id", "bet_type", "bet_selection", "odds", "captured_at"];
   if (required.some((column) => !columns.includes(column))) {
     return {
@@ -349,7 +356,8 @@ function readTrifectaMarketCounts(
        AND "${rawPayloadColumn}" IS NOT NULL AND LENGTH(TRIM("${rawPayloadColumn}"))>0
        AND "${rawPayloadDigestColumn}" IS NOT NULL AND LENGTH(TRIM("${rawPayloadDigestColumn}"))=64
        AND LOWER(TRIM("${rawPayloadDigestColumn}")) NOT GLOB '*[^0-9a-f]*'
-       AND parse_run_id IS NOT NULL AND LENGTH(TRIM(parse_run_id))>0`
+       AND parse_run_id IS NOT NULL AND LENGTH(TRIM(parse_run_id))>0
+       AND source_url IS NOT NULL AND LENGTH(TRIM(source_url))>0`
     : "0=1";
   const row = primary.prepare(`
     SELECT
