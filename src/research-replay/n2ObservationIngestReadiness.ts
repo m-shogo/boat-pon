@@ -26,6 +26,8 @@ export type N2ObservationIngestReadinessInput = {
     completeSnapshotCount: number;
     rawDocumentIdColumnPresent: boolean;
     rawPayloadColumnPresent: boolean;
+    rawPayloadDigestColumnPresent: boolean;
+    parseRunIdColumnPresent: boolean;
     sourceUrlColumnPresent: boolean;
   };
   sidecar: {
@@ -135,7 +137,9 @@ export function buildN2ObservationIngestReadiness(
   if (!input.wiring.officialProgramProductionCallerConnected) officialBlockers.push("OFFICIAL_PROGRAM_PRODUCTION_CALLER_NOT_CONNECTED");
 
   const rawLineageCapable = input.primaryTrifectaMarket.rawDocumentIdColumnPresent
-    && input.primaryTrifectaMarket.rawPayloadColumnPresent;
+    && input.primaryTrifectaMarket.rawPayloadColumnPresent
+    && input.primaryTrifectaMarket.rawPayloadDigestColumnPresent
+    && input.primaryTrifectaMarket.parseRunIdColumnPresent;
   const marketBlockers = rolloutBlockers(input, N2_TRIFECTA_MARKET_CANARY_APPROVAL);
   if (!input.primaryTrifectaMarket.sourceTablePresent || input.primaryTrifectaMarket.totalRows === 0) {
     marketBlockers.push("TRIFECTA_MARKET_SOURCE_EMPTY");
