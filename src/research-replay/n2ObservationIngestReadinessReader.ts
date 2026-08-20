@@ -280,10 +280,15 @@ function snapshotHasVerifiedRawLineage(input: {
     rawPayloadDigest: string | null;
     parseRunId: string | null;
   }>;
-  return rows.length === COMPLETE_TRIFECTA_SELECTION_COUNT && rows.every((row) => (
+  if (rows.length !== COMPLETE_TRIFECTA_SELECTION_COUNT || !rows.every((row) => (
     rawPayloadDigestMatches(row.rawPayload, row.rawPayloadDigest)
       && parseRunIdMatches(row.rawDocumentId, row.parseRunId)
-  ));
+  ))) {
+    return false;
+  }
+  return new Set(rows.map((row) => row.rawDocumentId)).size === 1
+    && new Set(rows.map((row) => row.rawPayloadDigest?.trim().toLowerCase())).size === 1
+    && new Set(rows.map((row) => row.parseRunId)).size === 1;
 }
 
 function readTrifectaMarketCounts(
