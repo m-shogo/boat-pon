@@ -194,7 +194,7 @@ function readOfficialProgramCounts(primary: DatabaseSync, dateFrom: string, date
 }
 
 function selectOddsSourceTable(primary: DatabaseSync): string | null {
-  for (const candidate of ["odds_timeseries_snapshots", "odds_timeseries"]) {
+  for (const candidate of ["trifecta_market_raw_snapshots", "odds_timeseries_snapshots", "odds_timeseries"]) {
     if (tableExists(primary, candidate)) return candidate;
   }
   return null;
