@@ -79,7 +79,7 @@ function validGrant(row: GrantRow): boolean {
   if (!row.approval_id || !row.approval_scope || !row.approval_source || !row.approval_reference) return false;
   if (!row.target_stage || !row.target_schema_version || !row.target_contract_version) return false;
   if (!isCanonicalTimestamp(row.approved_at)) return false;
-  if (row.approval_mode !== "production" && row.approval_mode !== "simulated") return false;
+  if (row.approval_mode !== "production") return false;
   const expected = canonicalHash({
     approvalId: row.approval_id,
     approvalScope: row.approval_scope,
