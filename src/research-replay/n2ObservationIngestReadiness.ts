@@ -24,6 +24,7 @@ export type N2ObservationIngestReadinessInput = {
     validTimingRows: number;
     validSelectionRows: number;
     completeSnapshotCount: number;
+    rawLineageCompleteSnapshotCount: number;
     rawDocumentIdColumnPresent: boolean;
     rawPayloadColumnPresent: boolean;
     rawPayloadDigestColumnPresent: boolean;
@@ -73,6 +74,7 @@ export type N2ObservationIngestReadinessSummary = {
     sourceRows: number;
     sourceRaceCount: number;
     completeSnapshotCount: number;
+    rawLineageCompleteSnapshotCount: number;
     rawLineageCapable: boolean;
   };
   rollout: N2ObservationIngestReadinessInput["rollout"];
@@ -107,11 +109,15 @@ function validateInput(input: N2ObservationIngestReadinessInput): void {
     validTimingRows: input.primaryTrifectaMarket.validTimingRows,
     validSelectionRows: input.primaryTrifectaMarket.validSelectionRows,
     completeSnapshotCount: input.primaryTrifectaMarket.completeSnapshotCount,
+    rawLineageCompleteSnapshotCount: input.primaryTrifectaMarket.rawLineageCompleteSnapshotCount,
   })) {
     if (typeof value === "number") assertCount(value, field);
   }
   if (input.primaryOfficialProgram.eligibleRows > input.primaryOfficialProgram.totalRows) {
     throw new Error("official program eligible rows exceed total rows");
+  }
+  if (input.primaryTrifectaMarket.rawLineageCompleteSnapshotCount > input.primaryTrifectaMarket.completeSnapshotCount) {
+    throw new Error("raw lineage complete snapshots exceed complete snapshots");
   }
   if (new Set(input.rollout.approvalScopes).size !== input.rollout.approvalScopes.length) {
     throw new Error("duplicate approval scope");
@@ -139,7 +145,8 @@ export function buildN2ObservationIngestReadiness(
   const rawLineageCapable = input.primaryTrifectaMarket.rawDocumentIdColumnPresent
     && input.primaryTrifectaMarket.rawPayloadColumnPresent
     && input.primaryTrifectaMarket.rawPayloadDigestColumnPresent
-    && input.primaryTrifectaMarket.parseRunIdColumnPresent;
+    && input.primaryTrifectaMarket.parseRunIdColumnPresent
+    && input.primaryTrifectaMarket.rawLineageCompleteSnapshotCount > 0;
   const marketBlockers = rolloutBlockers(input, N2_TRIFECTA_MARKET_CANARY_APPROVAL);
   if (!input.primaryTrifectaMarket.sourceTablePresent || input.primaryTrifectaMarket.totalRows === 0) {
     marketBlockers.push("TRIFECTA_MARKET_SOURCE_EMPTY");
@@ -192,6 +199,7 @@ export function buildN2ObservationIngestReadiness(
       sourceRows: input.primaryTrifectaMarket.totalRows,
       sourceRaceCount: input.primaryTrifectaMarket.raceCount,
       completeSnapshotCount: input.primaryTrifectaMarket.completeSnapshotCount,
+      rawLineageCompleteSnapshotCount: input.primaryTrifectaMarket.rawLineageCompleteSnapshotCount,
       rawLineageCapable,
     },
     rollout: input.rollout,

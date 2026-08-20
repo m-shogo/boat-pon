@@ -241,6 +241,7 @@ function readTrifectaMarketCounts(
       validTimingRows: 0,
       validSelectionRows: 0,
       completeSnapshotCount: 0,
+      rawLineageCompleteSnapshotCount: 0,
       rawDocumentIdColumnPresent: false,
       rawPayloadColumnPresent: false,
       rawPayloadDigestColumnPresent: false,
@@ -249,6 +250,12 @@ function readTrifectaMarketCounts(
     };
   }
   const columns = tableColumns(primary, table);
+  const rawPayloadColumn = ["raw_payload", "raw_json", "response_body"].find((column) => columns.includes(column)) ?? null;
+  const rawPayloadDigestColumn = ["raw_payload_digest", "payload_sha256", "raw_sha256"].find((column) => columns.includes(column)) ?? null;
+  const hasRawLineageSchema = columns.includes("raw_document_id")
+    && rawPayloadColumn !== null
+    && rawPayloadDigestColumn !== null
+    && columns.includes("parse_run_id");
   const required = ["race_id", "bet_type", "bet_selection", "odds", "captured_at"];
   if (required.some((column) => !columns.includes(column))) {
     return {
@@ -258,9 +265,10 @@ function readTrifectaMarketCounts(
       validTimingRows: 0,
       validSelectionRows: 0,
       completeSnapshotCount: 0,
+      rawLineageCompleteSnapshotCount: 0,
       rawDocumentIdColumnPresent: columns.includes("raw_document_id"),
-      rawPayloadColumnPresent: columns.some((column) => ["raw_json", "raw_payload", "response_body"].includes(column)),
-      rawPayloadDigestColumnPresent: columns.some((column) => ["raw_payload_digest", "payload_sha256", "raw_sha256"].includes(column)),
+      rawPayloadColumnPresent: rawPayloadColumn !== null,
+      rawPayloadDigestColumnPresent: rawPayloadDigestColumn !== null,
       parseRunIdColumnPresent: columns.includes("parse_run_id"),
       sourceUrlColumnPresent: columns.includes("source_url"),
     };
@@ -271,6 +279,13 @@ function readTrifectaMarketCounts(
   const hasCheckpoint = columns.includes("checkpoint_label");
   const checkpointValid = hasCheckpoint
     ? "checkpoint_label IN ('T-30','T-20','T-10','T-5','ad-hoc')"
+    : "0=1";
+  const rawLineageValid = hasRawLineageSchema
+    ? `raw_document_id IS NOT NULL AND LENGTH(TRIM(raw_document_id))>0
+       AND "${rawPayloadColumn}" IS NOT NULL AND LENGTH(TRIM("${rawPayloadColumn}"))>0
+       AND "${rawPayloadDigestColumn}" IS NOT NULL AND LENGTH(TRIM("${rawPayloadDigestColumn}"))=64
+       AND LOWER(TRIM("${rawPayloadDigestColumn}")) NOT GLOB '*[^0-9a-f]*'
+       AND parse_run_id IS NOT NULL AND LENGTH(TRIM(parse_run_id))>0`
     : "0=1";
   const row = primary.prepare(`
     SELECT
@@ -283,7 +298,10 @@ function readTrifectaMarketCounts(
   `).get(fromCompact, toCompact) as unknown as Record<string, number>;
 
   const completeSnapshotRows = primary.prepare(`
-    SELECT race_id AS raceId, captured_at AS capturedAt${hasCheckpoint ? ", checkpoint_label AS checkpointLabel" : ""}
+    SELECT
+      race_id AS raceId,
+      captured_at AS capturedAt${hasCheckpoint ? ", checkpoint_label AS checkpointLabel" : ""},
+      SUM(CASE WHEN ${rawLineageValid} THEN 1 ELSE 0 END) AS rawLineageRows
     FROM ${quoted}
     WHERE SUBSTR(race_id,1,8) >= ? AND SUBSTR(race_id,1,8) <= ?
       AND bet_type='trifecta' AND odds>0
@@ -296,9 +314,14 @@ function readTrifectaMarketCounts(
     raceId: string;
     capturedAt: string;
     checkpointLabel?: string;
+    rawLineageRows: number;
   }>;
-  const completeSnapshotCount = completeSnapshotRows.filter((snapshot) => (
+  const validSnapshots = completeSnapshotRows.filter((snapshot) => (
     validMarketSnapshotLineage(snapshot.raceId, snapshot.capturedAt)
+  ));
+  const completeSnapshotCount = validSnapshots.length;
+  const rawLineageCompleteSnapshotCount = validSnapshots.filter((snapshot) => (
+    Number(snapshot.rawLineageRows) === COMPLETE_TRIFECTA_SELECTION_COUNT
   )).length;
 
   return {
@@ -308,9 +331,10 @@ function readTrifectaMarketCounts(
     validTimingRows: Number(row.validTimingRows ?? 0),
     validSelectionRows: Number(row.validSelectionRows ?? 0),
     completeSnapshotCount,
+    rawLineageCompleteSnapshotCount,
     rawDocumentIdColumnPresent: columns.includes("raw_document_id"),
-    rawPayloadColumnPresent: columns.some((column) => ["raw_json", "raw_payload", "response_body"].includes(column)),
-    rawPayloadDigestColumnPresent: columns.some((column) => ["raw_payload_digest", "payload_sha256", "raw_sha256"].includes(column)),
+    rawPayloadColumnPresent: rawPayloadColumn !== null,
+    rawPayloadDigestColumnPresent: rawPayloadDigestColumn !== null,
     parseRunIdColumnPresent: columns.includes("parse_run_id"),
     sourceUrlColumnPresent: columns.includes("source_url"),
   };
