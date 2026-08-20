@@ -8,6 +8,7 @@ import type { N2TrifectaMarketSourceInventory } from "./n2TrifectaMarketFoundati
 export const N2_TRIFECTA_MARKET_SOURCE_INVENTORY_READER_VERSION = "n2-trifecta-market-source-inventory-reader-v1";
 const COHORT_DAY_COUNT = 7;
 const COMPLETE_SELECTION_COUNT = 120;
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
 const VALID_TRIFECTA_SELECTION_SQL = `
   bet_selection IS NOT NULL
@@ -20,27 +21,40 @@ const VALID_TRIFECTA_SELECTION_SQL = `
   AND SUBSTR(TRIM(bet_selection),2,1) <> SUBSTR(TRIM(bet_selection),3,1)
 `;
 
-function validMarketCapturedAt(value: string): boolean {
+function canonicalMarketCapturedAt(value: string): string | null {
   try {
-    canonicalUtcTimestamp(value);
-    return true;
+    return canonicalUtcTimestamp(value);
   } catch {
-    return false;
+    return null;
   }
 }
 
-function validMarketRaceId(value: string): boolean {
+function marketRaceDate(value: string): string | null {
   const match = /^(\d{4})(\d{2})(\d{2})-(\d{2})-(\d{2})$/.exec(value);
-  if (!match) return false;
+  if (!match) return null;
   const date = `${match[1]}-${match[2]}-${match[3]}`;
   const venueCode = match[4];
   const raceNo = Number(match[5]);
   try {
     canonicalRaceKey(date, venueCode, raceNo);
-    return true;
+    return date;
   } catch {
-    return false;
+    return null;
   }
+}
+
+function capturedAtJstDate(canonicalCapturedAt: string): string {
+  return new Date(new Date(canonicalCapturedAt).getTime() + JST_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+function validCompleteSnapshotLineage(raceId: string, capturedAt: string): boolean {
+  const raceDate = marketRaceDate(raceId);
+  const canonicalCapturedAt = canonicalMarketCapturedAt(capturedAt);
+  return Boolean(
+    raceDate
+      && canonicalCapturedAt
+      && capturedAtJstDate(canonicalCapturedAt) === raceDate,
+  );
 }
 
 function assertQuiescent(path: string): void {
@@ -197,7 +211,7 @@ export function readN2TrifectaMarketSourceInventory(input: {
       capturedAt: string;
     }>;
     const completeSnapshotCount = completeSnapshotRows.filter((row) => (
-      validMarketRaceId(row.raceId) && validMarketCapturedAt(row.capturedAt)
+      validCompleteSnapshotLineage(row.raceId, row.capturedAt)
     )).length;
 
     return {
