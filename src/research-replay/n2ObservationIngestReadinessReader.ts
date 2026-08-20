@@ -10,6 +10,7 @@ import { buildOfficialProgramObservationEnvelope } from "./n2OfficialProgramObse
 export const N2_OBSERVATION_INGEST_READINESS_READER_VERSION = "n2-observation-ingest-readiness-reader-v1";
 const CANARY_DAY_COUNT = 7;
 const COMPLETE_TRIFECTA_SELECTION_COUNT = 120;
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
 type RolloutRow = {
   shadow_write_enabled: number;
@@ -210,10 +211,17 @@ const VALID_TRIFECTA_SELECTION_SQL = `
   AND SUBSTR(TRIM(bet_selection),2,1) <> SUBSTR(TRIM(bet_selection),3,1)
 `;
 
-function validMarketCapturedAt(value: string): boolean {
+function validMarketSnapshotLineage(raceId: string, capturedAt: string): boolean {
+  const match = /^(\d{4})(\d{2})(\d{2})-(\d{2})-(\d{2})$/.exec(raceId);
+  if (!match) return false;
+  const raceDate = `${match[1]}-${match[2]}-${match[3]}`;
   try {
-    canonicalUtcTimestamp(value);
-    return true;
+    canonicalRaceKey(raceDate, match[4], Number(match[5]));
+    const canonicalCapturedAt = canonicalUtcTimestamp(capturedAt);
+    const capturedJstDate = new Date(new Date(canonicalCapturedAt).getTime() + JST_OFFSET_MS)
+      .toISOString()
+      .slice(0, 10);
+    return capturedJstDate === raceDate;
   } catch {
     return false;
   }
@@ -285,7 +293,9 @@ function readTrifectaMarketCounts(
     capturedAt: string;
     checkpointLabel?: string;
   }>;
-  const completeSnapshotCount = completeSnapshotRows.filter((snapshot) => validMarketCapturedAt(snapshot.capturedAt)).length;
+  const completeSnapshotCount = completeSnapshotRows.filter((snapshot) => (
+    validMarketSnapshotLineage(snapshot.raceId, snapshot.capturedAt)
+  )).length;
 
   return {
     sourceTablePresent: true,

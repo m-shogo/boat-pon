@@ -88,6 +88,17 @@ test("complete trifecta snapshots require an explicit valid capture timestamp", 
   }
 });
 
+test("complete trifecta snapshots must belong to the race day in JST", () => {
+  for (const capturedAt of [
+    "2026-08-04T14:59:59.000Z",
+    "2026-08-05T15:00:00.000Z",
+  ]) {
+    const result = readWithCapturedAt(capturedAt);
+    assert.equal(result.input.primaryTrifectaMarket.totalRows, 120, capturedAt);
+    assert.equal(result.input.primaryTrifectaMarket.completeSnapshotCount, 0, capturedAt);
+  }
+});
+
 test("complete trifecta snapshots retain valid explicit timezone offsets", () => {
   const result = readWithCapturedAt("2026-08-05T11:30:00+09:00");
   assert.equal(result.input.primaryTrifectaMarket.completeSnapshotCount, 1);
