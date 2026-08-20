@@ -165,7 +165,7 @@ function isSha256(value: string): boolean {
 }
 
 function isNonEmpty(value: string): boolean {
-  return typeof value === "string" && value.trim().length > 0;
+  return typeof value === "string" && value.length > 0 && value === value.trim();
 }
 
 function isHttpUrl(value: string): boolean {
