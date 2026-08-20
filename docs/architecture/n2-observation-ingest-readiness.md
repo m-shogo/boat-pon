@@ -69,7 +69,7 @@ N2_TRIFECTA_MARKET_OBSERVATION_CANARY
 Each source is blocked when any applicable condition is true:
 
 - kill switch engaged;
-- global shadow write disabled;
+- global shadow write enabled — source-specific bounded canaries require it to remain disabled;
 - source-specific approval missing;
 - eligible source data absent;
 - reviewed writer/caller not connected;
@@ -84,7 +84,7 @@ autoEnableShadowWrite: false
 recommendedCanaryMaxRaces: 20
 ```
 
-No task or report automatically changes rollout configuration or creates approvals.
+No task or report automatically changes rollout configuration or creates approvals. `READY_FOR_BOUNDED_CANARY` therefore describes a source-specific reviewed canary boundary while the global shadow rollout remains disabled; it is not permission to enable global shadow writes.
 
 ## Result semantics
 
@@ -106,7 +106,7 @@ readiness inventory does not join labels or emit prediction features
 ## Expected next sequence
 
 1. Run TASK-N2-012 read-only and preserve its evidence.
-2. Implement an approval-gated official-program canary writer for at most 20 races; do not enable global writes automatically.
+2. Implement an approval-gated official-program canary writer for at most 20 races; keep global shadow writes disabled.
 3. Implement raw trifecta source capture before market observation writing.
 4. Add source-specific approvals and rollback evidence in separate reviewed changes.
 5. Produce non-zero `official_program` and `trifecta_market` observations.
