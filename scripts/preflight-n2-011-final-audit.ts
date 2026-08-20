@@ -15,6 +15,7 @@ import { canonicalHash } from "../src/research-replay/canonical";
 import { buildN2PitAuditSummary } from "../src/research-replay/n2PitAudit";
 import { readN2PitAuditObservations } from "../src/research-replay/n2PitAuditReader";
 import { readN2ObservationIngestReadiness } from "../src/research-replay/n2ObservationIngestReadinessReader";
+import { readCanonicalRolloutState } from "../src/research-replay/n2ObservationIngestRolloutState";
 import {
   computeStateDigest,
   validateCatalog,
@@ -279,10 +280,11 @@ try {
   }, "DATASET_MANIFEST_INVALID");
 
   const readiness = readN2ObservationIngestReadiness({ primaryDbPath, sidecarDbPath });
-  addCheck("rolloutSafety", readiness.input.rollout.shadowWriteEnabled === false
-    && readiness.input.rollout.killSwitchEngaged === false
-    && readiness.input.rollout.operationalGcEnabled === false,
-  readiness.input.rollout, "ROLLOUT_SAFETY_NOT_OFF");
+  const rollout = readCanonicalRolloutState(sidecarDbPath);
+  addCheck("rolloutSafety", rollout.shadowWriteEnabled === false
+    && rollout.killSwitchEngaged === false
+    && rollout.operationalGcEnabled === false,
+  rollout, "ROLLOUT_SAFETY_NOT_OFF");
   addCheck("officialProgramCanaryMaintained",
     readiness.input.sidecar.officialProgramObservationCount === 20
     && readiness.input.sidecar.trifectaMarketObservationCount === 0
