@@ -5,7 +5,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
+import { canonicalHash } from "./canonical";
 import { readN2ObservationIngestReadiness } from "./n2ObservationIngestReadinessReader";
+import { N2_TRIFECTA_RAW_PARSER_VERSION } from "./n2TrifectaRawCaptureCanary";
 
 function trifectaSelections(): string[] {
   const selections: string[] = [];
@@ -21,7 +23,14 @@ function trifectaSelections(): string[] {
   return selections;
 }
 
-test("readiness requires raw payload digests to match lineage-bearing payloads", () => {
+function parseRunId(rawDocumentId: string): string {
+  return `parse-${canonicalHash({
+    rawDocumentId,
+    parserVersion: N2_TRIFECTA_RAW_PARSER_VERSION,
+  }).slice(0, 40)}`;
+}
+
+test("readiness requires raw payload and parse lineage to match producer identity", () => {
   const root = mkdtempSync(join(tmpdir(), "n2-readiness-lineage-data-"));
   const primaryPath = join(root, "boat.sqlite");
   const sidecarPath = join(root, "research-replay.sqlite");
@@ -84,7 +93,7 @@ test("readiness requires raw payload digests to match lineage-bearing payloads",
     try {
       db.prepare(`
         UPDATE trifecta_market_raw_snapshots
-        SET raw_document_id='raw-1', raw_payload='{}', raw_payload_digest=?, parse_run_id='parse-1'
+        SET raw_document_id='raw-1', raw_payload='{}', raw_payload_digest=?, parse_run_id='parse-forged'
       `).run("a".repeat(64));
     } finally {
       db.close();
@@ -100,6 +109,18 @@ test("readiness requires raw payload digests to match lineage-bearing payloads",
       validDb.prepare("UPDATE trifecta_market_raw_snapshots SET raw_payload_digest=?").run(validDigest);
     } finally {
       validDb.close();
+    }
+
+    const forgedParseLineage = readN2ObservationIngestReadiness({ primaryDbPath: primaryPath, sidecarDbPath: sidecarPath });
+    assert.equal(forgedParseLineage.input.primaryTrifectaMarket.completeSnapshotCount, 1);
+    assert.equal(forgedParseLineage.input.primaryTrifectaMarket.rawLineageCompleteSnapshotCount, 0);
+
+    const producerValidDb = new DatabaseSync(primaryPath);
+    try {
+      producerValidDb.prepare("UPDATE trifecta_market_raw_snapshots SET parse_run_id=?")
+        .run(parseRunId("raw-1"));
+    } finally {
+      producerValidDb.close();
     }
 
     const withLineage = readN2ObservationIngestReadiness({ primaryDbPath: primaryPath, sidecarDbPath: sidecarPath });
