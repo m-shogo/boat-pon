@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { canonicalHash } from "../src/research-replay/canonical";
+import { readLifecycleValidApprovalScopes } from "../src/research-replay/n2ObservationIngestApprovalScopes";
 import { buildN2TrifectaMarketFoundation } from "../src/research-replay/n2TrifectaMarketFoundation";
 import { readN2TrifectaMarketSourceInventory } from "../src/research-replay/n2TrifectaMarketSourceInventoryReader";
 import { readN2ObservationIngestReadiness } from "../src/research-replay/n2ObservationIngestReadinessReader";
@@ -28,6 +29,7 @@ const sidecarBefore = dbMeta(sidecarDbPath);
 const generatedAt = new Date().toISOString();
 const inventory = readN2TrifectaMarketSourceInventory({ primaryDbPath });
 const readiness = readN2ObservationIngestReadiness({ primaryDbPath, sidecarDbPath });
+const lifecycleValidApprovalScopes = readLifecycleValidApprovalScopes(sidecarDbPath);
 
 // This report intentionally does not synthesize raw snapshot candidates from aggregate odds rows.
 // A non-empty manifest requires a future reviewed raw-document reader with exact PIT and lineage fields.
@@ -56,7 +58,7 @@ const core = {
     shadowWriteEnabled: readiness.input.rollout.shadowWriteEnabled,
     operationalGcEnabled: readiness.input.rollout.operationalGcEnabled,
     killSwitchEngaged: readiness.input.rollout.killSwitchEngaged,
-    approvalPresent: readiness.input.rollout.approvalScopes.includes("N2_TRIFECTA_MARKET_OBSERVATION_CANARY"),
+    approvalPresent: lifecycleValidApprovalScopes.includes("N2_TRIFECTA_MARKET_OBSERVATION_CANARY"),
   },
   sourceCandidatesMaterialized: 0,
   sourceCandidatePolicy: "aggregate odds rows are inventory only and are never relabeled as raw official documents",
