@@ -143,6 +143,22 @@ test("reader rejects normalized captured times from complete snapshot inventory"
   });
 });
 
+test("reader rejects invalid race identities from complete snapshot inventory", () => {
+  withTempDb((path) => {
+    createCompleteRawSource(path);
+    const db = new DatabaseSync(path);
+    try {
+      db.prepare("UPDATE trifecta_market_raw_snapshots SET race_id='20260806-99-13'").run();
+    } finally {
+      db.close();
+    }
+
+    const inventory = readN2TrifectaMarketSourceInventory({ primaryDbPath: path });
+    assert.equal(inventory.totalRows, 120);
+    assert.equal(inventory.completeSnapshotCount, 0);
+  });
+});
+
 test("reader rejects impossible official program cohort dates before source inventory queries", () => {
   withTempDb((path) => {
     const db = new DatabaseSync(path);
