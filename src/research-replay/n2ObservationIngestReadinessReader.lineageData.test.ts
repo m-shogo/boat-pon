@@ -30,7 +30,7 @@ function parseRunId(rawDocumentId: string): string {
   }).slice(0, 40)}`;
 }
 
-test("readiness requires raw payload, parse lineage, and one source URL lineage to match producer identity", () => {
+test("readiness requires raw payload, parse lineage, and one HTTP(S) source URL lineage to match producer identity", () => {
   const root = mkdtempSync(join(tmpdir(), "n2-readiness-lineage-data-"));
   const primaryPath = join(root, "boat.sqlite");
   const sidecarPath = join(root, "research-replay.sqlite");
@@ -129,8 +129,20 @@ test("readiness requires raw payload, parse lineage, and one source URL lineage 
     assert.equal(withLineage.input.primaryTrifectaMarket.completeSnapshotCount, 1);
     assert.equal(withLineage.input.primaryTrifectaMarket.rawLineageCompleteSnapshotCount, 1);
 
+    const invalidSchemeDb = new DatabaseSync(primaryPath);
+    try {
+      invalidSchemeDb.prepare("UPDATE trifecta_market_raw_snapshots SET source_url='file:///tmp/odds.json'").run();
+    } finally {
+      invalidSchemeDb.close();
+    }
+
+    const invalidScheme = readN2ObservationIngestReadiness({ primaryDbPath: primaryPath, sidecarDbPath: sidecarPath });
+    assert.equal(invalidScheme.input.primaryTrifectaMarket.completeSnapshotCount, 1);
+    assert.equal(invalidScheme.input.primaryTrifectaMarket.rawLineageCompleteSnapshotCount, 0);
+
     const missingSourceDb = new DatabaseSync(primaryPath);
     try {
+      missingSourceDb.prepare("UPDATE trifecta_market_raw_snapshots SET source_url='https://example.test/odds'").run();
       missingSourceDb.prepare("UPDATE trifecta_market_raw_snapshots SET source_url='' WHERE bet_selection='123'").run();
     } finally {
       missingSourceDb.close();
