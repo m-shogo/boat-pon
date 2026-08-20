@@ -14,7 +14,7 @@ import {
 } from "../research/governance/executorSdk";
 import type { Executor, ExecutorResult } from "./taskExecutors";
 
-export const N2_OBSERVATION_INGEST_READINESS_EXECUTOR_VERSION = "n2-observation-ingest-readiness-executor-v1";
+export const N2_OBSERVATION_INGEST_READINESS_EXECUTOR_VERSION = "n2-observation-ingest-readiness-executor-v2";
 const REPORT_RELATIVE_PATH = "reports/n2/n2-observation-ingest-readiness.json";
 const PRIMARY_DB_FILENAME = "boat.sqlite";
 
