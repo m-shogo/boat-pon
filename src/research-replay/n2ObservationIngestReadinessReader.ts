@@ -325,6 +325,8 @@ function readTrifectaMarketCounts(
       rawPayloadDigestColumnPresent: false,
       parseRunIdColumnPresent: false,
       sourceUrlColumnPresent: false,
+      availableAtColumnPresent: false,
+      decisionCutoffColumnPresent: false,
     };
   }
   const columns = tableColumns(primary, table);
@@ -350,6 +352,8 @@ function readTrifectaMarketCounts(
       rawPayloadDigestColumnPresent: rawPayloadDigestColumn !== null,
       parseRunIdColumnPresent: columns.includes("parse_run_id"),
       sourceUrlColumnPresent: columns.includes("source_url"),
+      availableAtColumnPresent: columns.includes("available_at"),
+      decisionCutoffColumnPresent: columns.includes("decision_cutoff"),
     };
   }
   const quoted = `"${table.replaceAll('"', '""')}"`;
@@ -428,6 +432,8 @@ function readTrifectaMarketCounts(
     rawPayloadDigestColumnPresent: rawPayloadDigestColumn !== null,
     parseRunIdColumnPresent: columns.includes("parse_run_id"),
     sourceUrlColumnPresent: columns.includes("source_url"),
+    availableAtColumnPresent: columns.includes("available_at"),
+    decisionCutoffColumnPresent: columns.includes("decision_cutoff"),
   };
 }
 
