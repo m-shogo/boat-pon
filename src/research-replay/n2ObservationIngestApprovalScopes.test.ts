@@ -5,6 +5,10 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import { canonicalHash } from "./canonical";
+import {
+  N2_OFFICIAL_PROGRAM_CANARY_APPROVAL_SCOPE,
+  officialProgramCanaryApprovalTarget,
+} from "./n2OfficialProgramCanary";
 import { readLifecycleValidApprovalScopes } from "./n2ObservationIngestApprovalScopes";
 
 function createAuthorityDb(path: string): void {
@@ -46,15 +50,26 @@ function insertGrant(db: DatabaseSync, input: {
   approvedAt: string;
   approvalMode?: "production" | "simulated";
   contentHash?: string;
+  targetStage?: string;
+  targetSchemaVersion?: string;
+  targetContractVersion?: string;
 }): void {
+  const officialTarget = officialProgramCanaryApprovalTarget("a".repeat(64));
+  const defaultTarget = input.approvalScope === N2_OFFICIAL_PROGRAM_CANARY_APPROVAL_SCOPE
+    ? officialTarget
+    : {
+      targetStage: "N2-CANARY",
+      targetSchemaVersion: "schema-v1",
+      targetContractVersion: "contract-v1",
+    };
   const grant = {
     approvalId: input.approvalId,
     approvalScope: input.approvalScope,
     approvalSource: "human-review",
     approvalReference: `ref:${input.approvalId}`,
-    targetStage: "N2-CANARY",
-    targetSchemaVersion: "schema-v1",
-    targetContractVersion: "contract-v1",
+    targetStage: input.targetStage ?? defaultTarget.targetStage,
+    targetSchemaVersion: input.targetSchemaVersion ?? defaultTarget.targetSchemaVersion,
+    targetContractVersion: input.targetContractVersion ?? defaultTarget.targetContractVersion,
     approvedAt: input.approvedAt,
     approvalMode: input.approvalMode ?? "production",
   };
@@ -119,7 +134,7 @@ test("readiness approval scopes exclude revoked, simulated, and hash-invalid gra
   try {
     insertGrant(db, {
       approvalId: "approval-active",
-      approvalScope: "N2_OFFICIAL_PROGRAM_OBSERVATION_CANARY",
+      approvalScope: N2_OFFICIAL_PROGRAM_CANARY_APPROVAL_SCOPE,
       approvedAt: "2026-08-20T10:00:00.000Z",
     });
     insertGrant(db, {
@@ -147,7 +162,64 @@ test("readiness approval scopes exclude revoked, simulated, and hash-invalid gra
     });
 
     assert.deepEqual(readLifecycleValidApprovalScopes(path), [
-      "N2_OFFICIAL_PROGRAM_OBSERVATION_CANARY",
+      N2_OFFICIAL_PROGRAM_CANARY_APPROVAL_SCOPE,
+    ]);
+  } finally {
+    db.close();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("official-program readiness approval requires the canary target contract", () => {
+  const root = mkdtempSync(join(tmpdir(), "n2-readiness-approval-target-"));
+  const path = join(root, "research-replay.sqlite");
+  createAuthorityDb(path);
+  const db = new DatabaseSync(path);
+  try {
+    const validTarget = officialProgramCanaryApprovalTarget("b".repeat(64));
+    insertGrant(db, {
+      approvalId: "approval-wrong-stage",
+      approvalScope: N2_OFFICIAL_PROGRAM_CANARY_APPROVAL_SCOPE,
+      approvedAt: "2026-08-20T10:00:00.000Z",
+      targetStage: "F0-R",
+      targetSchemaVersion: validTarget.targetSchemaVersion,
+      targetContractVersion: validTarget.targetContractVersion,
+    });
+    assert.deepEqual(readLifecycleValidApprovalScopes(path), []);
+
+    db.prepare("DELETE FROM rollout_approval_grants_v2").run();
+    insertGrant(db, {
+      approvalId: "approval-wrong-schema",
+      approvalScope: N2_OFFICIAL_PROGRAM_CANARY_APPROVAL_SCOPE,
+      approvedAt: "2026-08-20T10:00:00.000Z",
+      targetStage: validTarget.targetStage,
+      targetSchemaVersion: "wrong-schema",
+      targetContractVersion: validTarget.targetContractVersion,
+    });
+    assert.deepEqual(readLifecycleValidApprovalScopes(path), []);
+
+    db.prepare("DELETE FROM rollout_approval_grants_v2").run();
+    insertGrant(db, {
+      approvalId: "approval-wrong-contract",
+      approvalScope: N2_OFFICIAL_PROGRAM_CANARY_APPROVAL_SCOPE,
+      approvedAt: "2026-08-20T10:00:00.000Z",
+      targetStage: validTarget.targetStage,
+      targetSchemaVersion: validTarget.targetSchemaVersion,
+      targetContractVersion: "n2-official-program-observation-canary-v0:deadbeef:approval-v0",
+    });
+    assert.deepEqual(readLifecycleValidApprovalScopes(path), []);
+
+    db.prepare("DELETE FROM rollout_approval_grants_v2").run();
+    insertGrant(db, {
+      approvalId: "approval-valid-target",
+      approvalScope: N2_OFFICIAL_PROGRAM_CANARY_APPROVAL_SCOPE,
+      approvedAt: "2026-08-20T10:00:00.000Z",
+      targetStage: validTarget.targetStage,
+      targetSchemaVersion: validTarget.targetSchemaVersion,
+      targetContractVersion: validTarget.targetContractVersion,
+    });
+    assert.deepEqual(readLifecycleValidApprovalScopes(path), [
+      N2_OFFICIAL_PROGRAM_CANARY_APPROVAL_SCOPE,
     ]);
   } finally {
     db.close();
@@ -163,12 +235,12 @@ test("latest grant lifecycle is authoritative for a scope", () => {
   try {
     insertGrant(db, {
       approvalId: "approval-old",
-      approvalScope: "N2_OFFICIAL_PROGRAM_OBSERVATION_CANARY",
+      approvalScope: N2_OFFICIAL_PROGRAM_CANARY_APPROVAL_SCOPE,
       approvedAt: "2026-08-20T09:00:00.000Z",
     });
     insertGrant(db, {
       approvalId: "approval-new",
-      approvalScope: "N2_OFFICIAL_PROGRAM_OBSERVATION_CANARY",
+      approvalScope: N2_OFFICIAL_PROGRAM_CANARY_APPROVAL_SCOPE,
       approvedAt: "2026-08-20T10:00:00.000Z",
     });
     insertLifecycle(db, {
@@ -192,7 +264,7 @@ test("incomplete v2 approval schema fails closed", () => {
   const db = new DatabaseSync(path);
   try {
     db.exec("CREATE TABLE rollout_approval_grants_v2 (approval_scope TEXT NOT NULL)");
-    db.prepare("INSERT INTO rollout_approval_grants_v2 VALUES(?)").run("N2_OFFICIAL_PROGRAM_OBSERVATION_CANARY");
+    db.prepare("INSERT INTO rollout_approval_grants_v2 VALUES(?)").run(N2_OFFICIAL_PROGRAM_CANARY_APPROVAL_SCOPE);
     db.close();
     assert.deepEqual(readLifecycleValidApprovalScopes(path), []);
   } finally {
