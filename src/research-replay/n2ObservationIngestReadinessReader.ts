@@ -256,13 +256,17 @@ function validSourceUrl(value: unknown): boolean {
   }
 }
 
-function validAtomicPit(availableAt: unknown, capturedAt: unknown, decisionCutoff: unknown): boolean {
+function validAtomicPit(raceId: string, availableAt: unknown, capturedAt: unknown, decisionCutoff: unknown): boolean {
   if (typeof availableAt !== "string" || typeof capturedAt !== "string" || typeof decisionCutoff !== "string") return false;
   try {
     const available = Date.parse(canonicalUtcTimestamp(availableAt));
     const captured = Date.parse(canonicalUtcTimestamp(capturedAt));
     const cutoff = Date.parse(canonicalUtcTimestamp(decisionCutoff));
-    return available <= captured && captured <= cutoff;
+    return validMarketSnapshotLineage(raceId, availableAt)
+      && validMarketSnapshotLineage(raceId, capturedAt)
+      && validMarketSnapshotLineage(raceId, decisionCutoff)
+      && available <= captured
+      && captured <= cutoff;
   } catch {
     return false;
   }
@@ -313,7 +317,7 @@ function snapshotHasVerifiedRawLineage(input: {
     rawPayloadDigestMatches(row.rawPayload, row.rawPayloadDigest)
       && parseRunIdMatches(row.rawDocumentId, row.parseRunId)
       && validSourceUrl(row.sourceUrl)
-      && validAtomicPit(row.availableAt, input.capturedAt, row.decisionCutoff)
+      && validAtomicPit(input.raceId, row.availableAt, input.capturedAt, row.decisionCutoff)
   ))) {
     return false;
   }
