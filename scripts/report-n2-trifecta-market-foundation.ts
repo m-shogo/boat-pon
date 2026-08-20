@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "no
 import { dirname, join, resolve } from "node:path";
 import { canonicalHash } from "../src/research-replay/canonical";
 import { readLifecycleValidApprovalScopes } from "../src/research-replay/n2ObservationIngestApprovalScopes";
+import { readCanonicalRolloutState } from "../src/research-replay/n2ObservationIngestRolloutState";
 import { buildN2TrifectaMarketFoundation } from "../src/research-replay/n2TrifectaMarketFoundation";
 import { readN2TrifectaMarketSourceInventory } from "../src/research-replay/n2TrifectaMarketSourceInventoryReader";
 import { readN2ObservationIngestReadiness } from "../src/research-replay/n2ObservationIngestReadinessReader";
@@ -29,6 +30,7 @@ const sidecarBefore = dbMeta(sidecarDbPath);
 const generatedAt = new Date().toISOString();
 const inventory = readN2TrifectaMarketSourceInventory({ primaryDbPath });
 const readiness = readN2ObservationIngestReadiness({ primaryDbPath, sidecarDbPath });
+const rolloutState = readCanonicalRolloutState(sidecarDbPath);
 const lifecycleValidApprovalScopes = readLifecycleValidApprovalScopes(sidecarDbPath);
 
 // This report intentionally does not synthesize raw snapshot candidates from aggregate odds rows.
@@ -55,9 +57,9 @@ const core = {
   existingState: {
     trifectaMarketObservationCount: readiness.input.sidecar.trifectaMarketObservationCount,
     captureAttemptCount: readiness.input.sidecar.captureAttemptCount,
-    shadowWriteEnabled: readiness.input.rollout.shadowWriteEnabled,
-    operationalGcEnabled: readiness.input.rollout.operationalGcEnabled,
-    killSwitchEngaged: readiness.input.rollout.killSwitchEngaged,
+    shadowWriteEnabled: rolloutState.shadowWriteEnabled,
+    operationalGcEnabled: rolloutState.operationalGcEnabled,
+    killSwitchEngaged: rolloutState.killSwitchEngaged,
     approvalPresent: lifecycleValidApprovalScopes.includes("N2_TRIFECTA_MARKET_OBSERVATION_CANARY"),
   },
   sourceCandidatesMaterialized: 0,
