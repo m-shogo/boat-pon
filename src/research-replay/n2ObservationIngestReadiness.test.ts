@@ -25,6 +25,7 @@ function baseInput(): N2ObservationIngestReadinessInput {
       validTimingRows: 2_400,
       validSelectionRows: 2_400,
       completeSnapshotCount: 20,
+      rawLineageCompleteSnapshotCount: 0,
       rawDocumentIdColumnPresent: false,
       rawPayloadColumnPresent: false,
       rawPayloadDigestColumnPresent: false,
@@ -67,6 +68,7 @@ function enableFullRawLineage(input: N2ObservationIngestReadinessInput): void {
   input.primaryTrifectaMarket.rawPayloadColumnPresent = true;
   input.primaryTrifectaMarket.rawPayloadDigestColumnPresent = true;
   input.primaryTrifectaMarket.parseRunIdColumnPresent = true;
+  input.primaryTrifectaMarket.rawLineageCompleteSnapshotCount = input.primaryTrifectaMarket.completeSnapshotCount;
 }
 
 test("realistic current state is blocked without authorizing writes", () => {
@@ -93,12 +95,15 @@ test("market aggregate rows never become ready without raw lineage", () => {
   assert.match(summary.nextActions.join("\n"), /Capture live trifecta raw source documents/);
 });
 
-test("raw document and payload columns alone do not satisfy parse lineage", () => {
+test("raw lineage columns alone do not prove lineage-bearing snapshots", () => {
   const input = baseInput();
   enableCanary(input);
   input.primaryTrifectaMarket.rawDocumentIdColumnPresent = true;
   input.primaryTrifectaMarket.rawPayloadColumnPresent = true;
+  input.primaryTrifectaMarket.rawPayloadDigestColumnPresent = true;
+  input.primaryTrifectaMarket.parseRunIdColumnPresent = true;
   const summary = buildN2ObservationIngestReadiness(input);
+  assert.equal(summary.trifectaMarket.rawLineageCompleteSnapshotCount, 0);
   assert.equal(summary.trifectaMarket.rawLineageCapable, false);
   assert.deepEqual(summary.trifectaMarket.blockers, ["TRIFECTA_MARKET_RAW_LINEAGE_UNAVAILABLE"]);
 });
@@ -111,6 +116,7 @@ test("fully approved, wired and raw-lineage capable sources become canary-ready 
   assert.equal(summary.overallStatus, "READY_FOR_BOUNDED_CANARY");
   assert.equal(summary.officialProgram.status, "READY_FOR_BOUNDED_CANARY");
   assert.equal(summary.trifectaMarket.status, "READY_FOR_BOUNDED_CANARY");
+  assert.equal(summary.trifectaMarket.rawLineageCompleteSnapshotCount, 20);
   assert.equal(summary.writeAuthorized, false);
   assert.equal(summary.recommendedCanaryMaxRaces, 20);
 });
@@ -129,6 +135,13 @@ test("invalid counts, cohort and duplicate approvals fail closed", () => {
   const negative = baseInput();
   negative.primaryOfficialProgram.totalRows = -1;
   assert.throws(() => buildN2ObservationIngestReadiness(negative), /non-negative safe integer/);
+
+  const invalidLineageCount = baseInput();
+  invalidLineageCount.primaryTrifectaMarket.rawLineageCompleteSnapshotCount = 21;
+  assert.throws(
+    () => buildN2ObservationIngestReadiness(invalidLineageCount),
+    /raw lineage complete snapshots exceed complete snapshots/,
+  );
 
   const invalidCohort = baseInput();
   invalidCohort.cohort.dayCount = 32;
