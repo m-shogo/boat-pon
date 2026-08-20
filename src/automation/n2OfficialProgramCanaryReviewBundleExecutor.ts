@@ -12,6 +12,7 @@ import { readOfficialProgramCanarySource } from "../research-replay/n2OfficialPr
 import { buildOfficialProgramCanaryReviewBundle } from "../research-replay/n2OfficialProgramCanaryReviewBundle";
 import { buildN2ObservationIngestReadiness } from "../research-replay/n2ObservationIngestReadiness";
 import { readN2ObservationIngestReadiness } from "../research-replay/n2ObservationIngestReadinessReader";
+import { readCanonicalRolloutState } from "../research-replay/n2ObservationIngestRolloutState";
 import {
   atomicWriteJson,
   runExecutorLifecycle,
@@ -84,7 +85,14 @@ export const runN2OfficialProgramCanaryReviewBundleExecutor: Executor = (ctx) =>
         primaryDbPath,
         sidecarDbPath: ctx.sidecarPath,
       });
-      const readiness = buildN2ObservationIngestReadiness(readinessRead.input);
+      const rolloutState = readCanonicalRolloutState(ctx.sidecarPath);
+      const readiness = buildN2ObservationIngestReadiness({
+        ...readinessRead.input,
+        rollout: {
+          ...readinessRead.input.rollout,
+          ...rolloutState,
+        },
+      });
       const sidecar = openImmutable(ctx.sidecarPath);
       try {
         const gatePreview = resolveOfficialProgramCanaryGate(sidecar, {
