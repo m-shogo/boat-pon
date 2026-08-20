@@ -84,7 +84,7 @@ autoEnableShadowWrite: false
 recommendedCanaryMaxRaces: 20
 ```
 
-No task or report automatically changes rollout configuration or creates approvals. `READY_FOR_BOUNDED_CANARY` therefore describes a source-specific reviewed canary boundary while the global shadow rollout remains disabled; it is not permission to enable global shadow writes.
+Do not enable global writes automatically. No task or report automatically changes rollout configuration or creates approvals. `READY_FOR_BOUNDED_CANARY` therefore describes a source-specific reviewed canary boundary while the global shadow rollout remains disabled; it is not permission to enable global shadow writes.
 
 ## Result semantics
 
