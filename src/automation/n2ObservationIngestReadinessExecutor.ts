@@ -90,7 +90,7 @@ export const runN2ObservationIngestReadinessExecutor: Executor = (ctx) => {
       ambiguousTimingCount: 0,
       evidencePath: null,
       evidenceDigest: null,
-      notApplicableReason: "readiness inventory does not join labels or emit prediction-time writes",
+      notApplicableReason: "readiness inventory does not join labels or emit prediction features",
     }),
     writeArtifacts: (sdk, artifact) => {
       try {
