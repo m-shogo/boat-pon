@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -20,7 +21,7 @@ function trifectaSelections(): string[] {
   return selections;
 }
 
-test("readiness distinguishes complete odds from complete raw lineage", () => {
+test("readiness requires raw payload digests to match lineage-bearing payloads", () => {
   const root = mkdtempSync(join(tmpdir(), "n2-readiness-lineage-data-"));
   const primaryPath = join(root, "boat.sqlite");
   const sidecarPath = join(root, "research-replay.sqlite");
@@ -87,6 +88,18 @@ test("readiness distinguishes complete odds from complete raw lineage", () => {
       `).run("a".repeat(64));
     } finally {
       db.close();
+    }
+
+    const forgedDigest = readN2ObservationIngestReadiness({ primaryDbPath: primaryPath, sidecarDbPath: sidecarPath });
+    assert.equal(forgedDigest.input.primaryTrifectaMarket.completeSnapshotCount, 1);
+    assert.equal(forgedDigest.input.primaryTrifectaMarket.rawLineageCompleteSnapshotCount, 0);
+
+    const validDigest = createHash("sha256").update("{}", "utf8").digest("hex");
+    const validDb = new DatabaseSync(primaryPath);
+    try {
+      validDb.prepare("UPDATE trifecta_market_raw_snapshots SET raw_payload_digest=?").run(validDigest);
+    } finally {
+      validDb.close();
     }
 
     const withLineage = readN2ObservationIngestReadiness({ primaryDbPath: primaryPath, sidecarDbPath: sidecarPath });

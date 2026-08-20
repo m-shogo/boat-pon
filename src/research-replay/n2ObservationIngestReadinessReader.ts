@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { existsSync, statSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
@@ -227,6 +228,54 @@ function validMarketSnapshotLineage(raceId: string, capturedAt: string): boolean
   }
 }
 
+function rawPayloadDigestMatches(payload: unknown, digest: unknown): boolean {
+  if (typeof payload !== "string" || payload.trim() === "" || typeof digest !== "string") return false;
+  const normalizedDigest = digest.trim().toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(normalizedDigest)) return false;
+  return createHash("sha256").update(payload, "utf8").digest("hex") === normalizedDigest;
+}
+
+function snapshotHasVerifiedRawLineage(input: {
+  primary: DatabaseSync;
+  quotedTable: string;
+  rawPayloadColumn: string | null;
+  rawPayloadDigestColumn: string | null;
+  hasRawLineageSchema: boolean;
+  hasCheckpoint: boolean;
+  raceId: string;
+  capturedAt: string;
+  checkpointLabel?: string;
+}): boolean {
+  if (!input.hasRawLineageSchema || !input.rawPayloadColumn || !input.rawPayloadDigestColumn) return false;
+  const checkpointClause = input.hasCheckpoint ? " AND checkpoint_label=?" : "";
+  const args: Array<string> = [input.raceId, input.capturedAt];
+  if (input.hasCheckpoint) {
+    if (!input.checkpointLabel) return false;
+    args.push(input.checkpointLabel);
+  }
+  const rows = input.primary.prepare(`
+    SELECT
+      raw_document_id AS rawDocumentId,
+      "${input.rawPayloadColumn}" AS rawPayload,
+      "${input.rawPayloadDigestColumn}" AS rawPayloadDigest,
+      parse_run_id AS parseRunId
+    FROM ${input.quotedTable}
+    WHERE race_id=? AND captured_at=?${checkpointClause}
+      AND bet_type='trifecta' AND odds>0
+      AND ${VALID_TRIFECTA_SELECTION_SQL}
+  `).all(...args) as unknown as Array<{
+    rawDocumentId: string | null;
+    rawPayload: unknown;
+    rawPayloadDigest: string | null;
+    parseRunId: string | null;
+  }>;
+  return rows.length === COMPLETE_TRIFECTA_SELECTION_COUNT && rows.every((row) => (
+    Boolean(row.rawDocumentId?.trim())
+      && Boolean(row.parseRunId?.trim())
+      && rawPayloadDigestMatches(row.rawPayload, row.rawPayloadDigest)
+  ));
+}
+
 function readTrifectaMarketCounts(
   primary: DatabaseSync,
   table: string | null,
@@ -322,6 +371,17 @@ function readTrifectaMarketCounts(
   const completeSnapshotCount = validSnapshots.length;
   const rawLineageCompleteSnapshotCount = validSnapshots.filter((snapshot) => (
     Number(snapshot.rawLineageRows) === COMPLETE_TRIFECTA_SELECTION_COUNT
+      && snapshotHasVerifiedRawLineage({
+        primary,
+        quotedTable: quoted,
+        rawPayloadColumn,
+        rawPayloadDigestColumn,
+        hasRawLineageSchema,
+        hasCheckpoint,
+        raceId: snapshot.raceId,
+        capturedAt: snapshot.capturedAt,
+        checkpointLabel: snapshot.checkpointLabel,
+      })
   )).length;
 
   return {
