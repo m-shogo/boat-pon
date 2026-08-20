@@ -27,6 +27,8 @@ function baseInput(): N2ObservationIngestReadinessInput {
       completeSnapshotCount: 20,
       rawDocumentIdColumnPresent: false,
       rawPayloadColumnPresent: false,
+      rawPayloadDigestColumnPresent: false,
+      parseRunIdColumnPresent: false,
       sourceUrlColumnPresent: false,
     },
     sidecar: {
@@ -50,6 +52,23 @@ function baseInput(): N2ObservationIngestReadinessInput {
   };
 }
 
+function enableCanary(input: N2ObservationIngestReadinessInput): void {
+  input.rollout.shadowWriteEnabled = true;
+  input.rollout.approvalScopes = [
+    N2_OFFICIAL_PROGRAM_CANARY_APPROVAL,
+    N2_TRIFECTA_MARKET_CANARY_APPROVAL,
+  ];
+  input.wiring.officialProgramProductionCallerConnected = true;
+  input.wiring.trifectaMarketWriterImplemented = true;
+}
+
+function enableFullRawLineage(input: N2ObservationIngestReadinessInput): void {
+  input.primaryTrifectaMarket.rawDocumentIdColumnPresent = true;
+  input.primaryTrifectaMarket.rawPayloadColumnPresent = true;
+  input.primaryTrifectaMarket.rawPayloadDigestColumnPresent = true;
+  input.primaryTrifectaMarket.parseRunIdColumnPresent = true;
+}
+
 test("realistic current state is blocked without authorizing writes", () => {
   const summary = buildN2ObservationIngestReadiness(baseInput());
   assert.equal(summary.overallStatus, "BLOCKED_NOT_READY_FOR_WRITE");
@@ -66,13 +85,7 @@ test("realistic current state is blocked without authorizing writes", () => {
 
 test("market aggregate rows never become ready without raw lineage", () => {
   const input = baseInput();
-  input.rollout.shadowWriteEnabled = true;
-  input.rollout.approvalScopes = [
-    N2_OFFICIAL_PROGRAM_CANARY_APPROVAL,
-    N2_TRIFECTA_MARKET_CANARY_APPROVAL,
-  ];
-  input.wiring.officialProgramProductionCallerConnected = true;
-  input.wiring.trifectaMarketWriterImplemented = true;
+  enableCanary(input);
   const summary = buildN2ObservationIngestReadiness(input);
   assert.equal(summary.officialProgram.status, "READY_FOR_BOUNDED_CANARY");
   assert.equal(summary.trifectaMarket.status, "BLOCKED_NOT_READY");
@@ -80,17 +93,20 @@ test("market aggregate rows never become ready without raw lineage", () => {
   assert.match(summary.nextActions.join("\n"), /Capture live trifecta raw source documents/);
 });
 
-test("fully approved, wired and raw-lineage capable sources become canary-ready only", () => {
+test("raw document and payload columns alone do not satisfy parse lineage", () => {
   const input = baseInput();
-  input.rollout.shadowWriteEnabled = true;
-  input.rollout.approvalScopes = [
-    N2_OFFICIAL_PROGRAM_CANARY_APPROVAL,
-    N2_TRIFECTA_MARKET_CANARY_APPROVAL,
-  ];
-  input.wiring.officialProgramProductionCallerConnected = true;
-  input.wiring.trifectaMarketWriterImplemented = true;
+  enableCanary(input);
   input.primaryTrifectaMarket.rawDocumentIdColumnPresent = true;
   input.primaryTrifectaMarket.rawPayloadColumnPresent = true;
+  const summary = buildN2ObservationIngestReadiness(input);
+  assert.equal(summary.trifectaMarket.rawLineageCapable, false);
+  assert.deepEqual(summary.trifectaMarket.blockers, ["TRIFECTA_MARKET_RAW_LINEAGE_UNAVAILABLE"]);
+});
+
+test("fully approved, wired and raw-lineage capable sources become canary-ready only", () => {
+  const input = baseInput();
+  enableCanary(input);
+  enableFullRawLineage(input);
   const summary = buildN2ObservationIngestReadiness(input);
   assert.equal(summary.overallStatus, "READY_FOR_BOUNDED_CANARY");
   assert.equal(summary.officialProgram.status, "READY_FOR_BOUNDED_CANARY");
@@ -101,16 +117,9 @@ test("fully approved, wired and raw-lineage capable sources become canary-ready 
 
 test("kill switch blocks both sources even with approvals", () => {
   const input = baseInput();
-  input.rollout.shadowWriteEnabled = true;
+  enableCanary(input);
+  enableFullRawLineage(input);
   input.rollout.killSwitchEngaged = true;
-  input.rollout.approvalScopes = [
-    N2_OFFICIAL_PROGRAM_CANARY_APPROVAL,
-    N2_TRIFECTA_MARKET_CANARY_APPROVAL,
-  ];
-  input.wiring.officialProgramProductionCallerConnected = true;
-  input.wiring.trifectaMarketWriterImplemented = true;
-  input.primaryTrifectaMarket.rawDocumentIdColumnPresent = true;
-  input.primaryTrifectaMarket.rawPayloadColumnPresent = true;
   const summary = buildN2ObservationIngestReadiness(input);
   assert.match(summary.officialProgram.blockers.join("\n"), /KILL_SWITCH_ENGAGED/);
   assert.match(summary.trifectaMarket.blockers.join("\n"), /KILL_SWITCH_ENGAGED/);
