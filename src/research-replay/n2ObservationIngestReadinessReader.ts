@@ -243,6 +243,8 @@ function readTrifectaMarketCounts(
       completeSnapshotCount: 0,
       rawDocumentIdColumnPresent: false,
       rawPayloadColumnPresent: false,
+      rawPayloadDigestColumnPresent: false,
+      parseRunIdColumnPresent: false,
       sourceUrlColumnPresent: false,
     };
   }
@@ -258,6 +260,8 @@ function readTrifectaMarketCounts(
       completeSnapshotCount: 0,
       rawDocumentIdColumnPresent: columns.includes("raw_document_id"),
       rawPayloadColumnPresent: columns.some((column) => ["raw_json", "raw_payload", "response_body"].includes(column)),
+      rawPayloadDigestColumnPresent: columns.some((column) => ["raw_payload_digest", "payload_sha256", "raw_sha256"].includes(column)),
+      parseRunIdColumnPresent: columns.includes("parse_run_id"),
       sourceUrlColumnPresent: columns.includes("source_url"),
     };
   }
@@ -306,6 +310,8 @@ function readTrifectaMarketCounts(
     completeSnapshotCount,
     rawDocumentIdColumnPresent: columns.includes("raw_document_id"),
     rawPayloadColumnPresent: columns.some((column) => ["raw_json", "raw_payload", "response_body"].includes(column)),
+    rawPayloadDigestColumnPresent: columns.some((column) => ["raw_payload_digest", "payload_sha256", "raw_sha256"].includes(column)),
+    parseRunIdColumnPresent: columns.includes("parse_run_id"),
     sourceUrlColumnPresent: columns.includes("source_url"),
   };
 }
