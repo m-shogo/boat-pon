@@ -3,10 +3,11 @@ import { existsSync, statSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { officialVenueCode } from "../domain/officialLinks";
-import { canonicalUtcTimestamp } from "./canonical";
+import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import { canonicalRaceKey } from "./identity";
 import type { N2ObservationIngestReadinessInput } from "./n2ObservationIngestReadiness";
 import { buildOfficialProgramObservationEnvelope } from "./n2OfficialProgramObservation";
+import { N2_TRIFECTA_RAW_PARSER_VERSION } from "./n2TrifectaRawCaptureCanary";
 
 export const N2_OBSERVATION_INGEST_READINESS_READER_VERSION = "n2-observation-ingest-readiness-reader-v1";
 const CANARY_DAY_COUNT = 7;
@@ -235,6 +236,16 @@ function rawPayloadDigestMatches(payload: unknown, digest: unknown): boolean {
   return createHash("sha256").update(payload, "utf8").digest("hex") === normalizedDigest;
 }
 
+function parseRunIdMatches(rawDocumentId: unknown, parseRunId: unknown): boolean {
+  if (typeof rawDocumentId !== "string" || rawDocumentId.trim() === "" || rawDocumentId !== rawDocumentId.trim()) return false;
+  if (typeof parseRunId !== "string" || parseRunId.trim() === "" || parseRunId !== parseRunId.trim()) return false;
+  const expected = `parse-${canonicalHash({
+    rawDocumentId,
+    parserVersion: N2_TRIFECTA_RAW_PARSER_VERSION,
+  }).slice(0, 40)}`;
+  return parseRunId === expected;
+}
+
 function snapshotHasVerifiedRawLineage(input: {
   primary: DatabaseSync;
   quotedTable: string;
@@ -270,9 +281,8 @@ function snapshotHasVerifiedRawLineage(input: {
     parseRunId: string | null;
   }>;
   return rows.length === COMPLETE_TRIFECTA_SELECTION_COUNT && rows.every((row) => (
-    Boolean(row.rawDocumentId?.trim())
-      && Boolean(row.parseRunId?.trim())
-      && rawPayloadDigestMatches(row.rawPayload, row.rawPayloadDigest)
+    rawPayloadDigestMatches(row.rawPayload, row.rawPayloadDigest)
+      && parseRunIdMatches(row.rawDocumentId, row.parseRunId)
   ));
 }
 
@@ -436,7 +446,7 @@ export function readN2ObservationIngestReadiness(input: {
   sidecarDbPath: string;
 }): N2ObservationIngestReadinessReadResult {
   assertQuiescent(input.primaryDbPath, "PRIMARY_DB");
-  assertQuiescent(input.sidecarDbPath, "SIDECAR");
+  assertQuiescent(input.sidecarDbPath, "SIDECAR_DB");
   const primary = openImmutable(input.primaryDbPath);
   const sidecar = openImmutable(input.sidecarDbPath);
   try {
