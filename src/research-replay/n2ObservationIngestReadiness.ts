@@ -30,6 +30,8 @@ export type N2ObservationIngestReadinessInput = {
     rawPayloadDigestColumnPresent: boolean;
     parseRunIdColumnPresent: boolean;
     sourceUrlColumnPresent: boolean;
+    availableAtColumnPresent?: boolean;
+    decisionCutoffColumnPresent?: boolean;
   };
   sidecar: {
     officialProgramObservationCount: number;
@@ -147,6 +149,8 @@ export function buildN2ObservationIngestReadiness(
     && input.primaryTrifectaMarket.rawPayloadDigestColumnPresent
     && input.primaryTrifectaMarket.parseRunIdColumnPresent
     && input.primaryTrifectaMarket.sourceUrlColumnPresent
+    && input.primaryTrifectaMarket.availableAtColumnPresent === true
+    && input.primaryTrifectaMarket.decisionCutoffColumnPresent === true
     && input.primaryTrifectaMarket.rawLineageCompleteSnapshotCount > 0;
   const marketBlockers = rolloutBlockers(input, N2_TRIFECTA_MARKET_CANARY_APPROVAL);
   if (!input.primaryTrifectaMarket.sourceTablePresent || input.primaryTrifectaMarket.totalRows === 0) {

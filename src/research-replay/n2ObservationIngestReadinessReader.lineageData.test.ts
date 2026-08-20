@@ -30,7 +30,7 @@ function parseRunId(rawDocumentId: string): string {
   }).slice(0, 40)}`;
 }
 
-test("readiness requires raw payload, parse lineage, and one HTTP(S) source URL lineage to match producer identity", () => {
+test("readiness requires raw payload, parse lineage, one HTTP(S) source URL, and atomic PIT to match producer identity", () => {
   const root = mkdtempSync(join(tmpdir(), "n2-readiness-lineage-data-"));
   const primaryPath = join(root, "boat.sqlite");
   const sidecarPath = join(root, "research-replay.sqlite");
@@ -62,10 +62,12 @@ test("readiness requires raw payload, parse lineage, and one HTTP(S) source URL 
         raw_payload TEXT,
         raw_payload_digest TEXT,
         parse_run_id TEXT,
-        source_url TEXT
+        source_url TEXT,
+        available_at TEXT,
+        decision_cutoff TEXT
       );
     `);
-    const insert = primary.prepare("INSERT INTO trifecta_market_raw_snapshots VALUES(?,?,?,?,?,?,?,?,?,?,?)");
+    const insert = primary.prepare("INSERT INTO trifecta_market_raw_snapshots VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)");
     for (const selection of trifectaSelections()) {
       insert.run(
         "20260805-01-01",
@@ -79,6 +81,8 @@ test("readiness requires raw payload, parse lineage, and one HTTP(S) source URL 
         "",
         "",
         "",
+        "2026-08-05T00:29:00.000Z",
+        "2026-08-05T00:31:00.000Z",
       );
     }
   } finally {
@@ -90,6 +94,8 @@ test("readiness requires raw payload, parse lineage, and one HTTP(S) source URL 
     const withoutLineage = readN2ObservationIngestReadiness({ primaryDbPath: primaryPath, sidecarDbPath: sidecarPath });
     assert.equal(withoutLineage.input.primaryTrifectaMarket.completeSnapshotCount, 1);
     assert.equal(withoutLineage.input.primaryTrifectaMarket.rawLineageCompleteSnapshotCount, 0);
+    assert.equal(withoutLineage.input.primaryTrifectaMarket.availableAtColumnPresent, true);
+    assert.equal(withoutLineage.input.primaryTrifectaMarket.decisionCutoffColumnPresent, true);
 
     const db = new DatabaseSync(primaryPath);
     try {
@@ -128,6 +134,55 @@ test("readiness requires raw payload, parse lineage, and one HTTP(S) source URL 
     const withLineage = readN2ObservationIngestReadiness({ primaryDbPath: primaryPath, sidecarDbPath: sidecarPath });
     assert.equal(withLineage.input.primaryTrifectaMarket.completeSnapshotCount, 1);
     assert.equal(withLineage.input.primaryTrifectaMarket.rawLineageCompleteSnapshotCount, 1);
+
+    const availableAfterCaptureDb = new DatabaseSync(primaryPath);
+    try {
+      availableAfterCaptureDb.prepare("UPDATE trifecta_market_raw_snapshots SET available_at='2026-08-05T00:31:00.000Z'").run();
+    } finally {
+      availableAfterCaptureDb.close();
+    }
+
+    const availableAfterCapture = readN2ObservationIngestReadiness({ primaryDbPath: primaryPath, sidecarDbPath: sidecarPath });
+    assert.equal(availableAfterCapture.input.primaryTrifectaMarket.completeSnapshotCount, 1);
+    assert.equal(availableAfterCapture.input.primaryTrifectaMarket.rawLineageCompleteSnapshotCount, 0);
+
+    const captureAfterCutoffDb = new DatabaseSync(primaryPath);
+    try {
+      captureAfterCutoffDb.prepare(`
+        UPDATE trifecta_market_raw_snapshots
+        SET available_at='2026-08-05T00:29:00.000Z', decision_cutoff='2026-08-05T00:29:59.000Z'
+      `).run();
+    } finally {
+      captureAfterCutoffDb.close();
+    }
+
+    const captureAfterCutoff = readN2ObservationIngestReadiness({ primaryDbPath: primaryPath, sidecarDbPath: sidecarPath });
+    assert.equal(captureAfterCutoff.input.primaryTrifectaMarket.completeSnapshotCount, 1);
+    assert.equal(captureAfterCutoff.input.primaryTrifectaMarket.rawLineageCompleteSnapshotCount, 0);
+
+    const invalidPitClockDb = new DatabaseSync(primaryPath);
+    try {
+      invalidPitClockDb.prepare(`
+        UPDATE trifecta_market_raw_snapshots
+        SET available_at='2026-08-05T00:29:00.000Z', decision_cutoff='2026-08-05T24:00:00.000Z'
+      `).run();
+    } finally {
+      invalidPitClockDb.close();
+    }
+
+    const invalidPitClock = readN2ObservationIngestReadiness({ primaryDbPath: primaryPath, sidecarDbPath: sidecarPath });
+    assert.equal(invalidPitClock.input.primaryTrifectaMarket.completeSnapshotCount, 1);
+    assert.equal(invalidPitClock.input.primaryTrifectaMarket.rawLineageCompleteSnapshotCount, 0);
+
+    const restorePitDb = new DatabaseSync(primaryPath);
+    try {
+      restorePitDb.prepare(`
+        UPDATE trifecta_market_raw_snapshots
+        SET available_at='2026-08-05T00:29:00.000Z', decision_cutoff='2026-08-05T00:31:00.000Z'
+      `).run();
+    } finally {
+      restorePitDb.close();
+    }
 
     const invalidSchemeDb = new DatabaseSync(primaryPath);
     try {
