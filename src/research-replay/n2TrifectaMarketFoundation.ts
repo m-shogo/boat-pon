@@ -168,6 +168,16 @@ function isNonEmpty(value: string): boolean {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function isHttpUrl(value: string): boolean {
+  if (typeof value !== "string" || value.trim() === "" || value !== value.trim()) return false;
+  try {
+    const parsed = new URL(value);
+    return (parsed.protocol === "http:" || parsed.protocol === "https:") && parsed.hostname.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 function isCanonicalCompactRaceDate(value: string): boolean {
   if (!/^\d{8}$/.test(value)) return false;
   const isoDate = `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}`;
@@ -284,7 +294,7 @@ export function auditN2TrifectaMarketSnapshot(
   if (!isSha256(candidate.rawPayloadDigest)) blockers.push("RAW_PAYLOAD_DIGEST_INVALID");
   if (!isNonEmpty(candidate.parseRunId)) blockers.push("PARSE_RUN_ID_MISSING");
   if (!isNonEmpty(candidate.proposedObservationId)) blockers.push("PROPOSED_OBSERVATION_ID_MISSING");
-  if (candidate.sourceUrl !== null && !/^https?:\/\//.test(candidate.sourceUrl)) blockers.push("SOURCE_URL_INVALID");
+  if (candidate.sourceUrl !== null && !isHttpUrl(candidate.sourceUrl)) blockers.push("SOURCE_URL_INVALID");
 
   const checkpointIdentity = buildN2TrifectaCheckpointIdentity(candidate);
   const idempotencyKey = buildN2TrifectaIdempotencyKey(candidate, checkpointIdentity);
