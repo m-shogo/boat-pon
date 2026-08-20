@@ -1,6 +1,7 @@
 import { existsSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { canonicalHash } from "../research-replay/canonical";
+import { readLifecycleValidApprovalScopes } from "../research-replay/n2ObservationIngestApprovalScopes";
 import { buildN2ObservationIngestReadiness } from "../research-replay/n2ObservationIngestReadiness";
 import { readN2ObservationIngestReadiness } from "../research-replay/n2ObservationIngestReadinessReader";
 import {
@@ -50,7 +51,14 @@ export const runN2ObservationIngestReadinessExecutor: Executor = (ctx) => {
         primaryDbPath,
         sidecarDbPath: ctx.sidecarPath,
       });
-      const readiness = buildN2ObservationIngestReadiness(read.input);
+      const readinessInput = {
+        ...read.input,
+        rollout: {
+          ...read.input.rollout,
+          approvalScopes: readLifecycleValidApprovalScopes(ctx.sidecarPath),
+        },
+      };
+      const readiness = buildN2ObservationIngestReadiness(readinessInput);
       const checkedSourceRecordCount = readiness.officialProgram.sourceRows
         + readiness.trifectaMarket.sourceRows;
       const summary = {
