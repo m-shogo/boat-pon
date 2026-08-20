@@ -147,6 +147,8 @@ export type N2TrifectaMarketFoundationSummary = {
   reviewBundleDigest: string;
 };
 
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
 function assertCount(value: number, field: string): void {
   if (!Number.isSafeInteger(value) || value < 0) throw new Error(`${field} must be a non-negative safe integer`);
 }
@@ -188,9 +190,18 @@ function isCanonicalCompactRaceDate(value: string): boolean {
   }
 }
 
-function isRaceId(value: string): boolean {
+function raceDateFromId(value: string): string | null {
   const match = /^(\d{8})-(0[1-9]|1\d|2[0-4])-(0[1-9]|1[0-2])$/.exec(value);
-  return match !== null && isCanonicalCompactRaceDate(match[1]);
+  if (!match || !isCanonicalCompactRaceDate(match[1])) return null;
+  return `${match[1].slice(0, 4)}-${match[1].slice(4, 6)}-${match[1].slice(6, 8)}`;
+}
+
+function isRaceId(value: string): boolean {
+  return raceDateFromId(value) !== null;
+}
+
+function instantJstDate(value: number): string {
+  return new Date(value + JST_OFFSET_MS).toISOString().slice(0, 10);
 }
 
 export function buildCanonicalTrifectaSelectionSpace(): string[] {
@@ -253,7 +264,8 @@ export function auditN2TrifectaMarketSnapshot(
   candidate: N2TrifectaMarketSnapshotCandidate,
 ): N2TrifectaSnapshotAudit {
   const blockers: string[] = [];
-  if (!isRaceId(candidate.raceId)) blockers.push("RACE_ID_INVALID");
+  const raceDate = raceDateFromId(candidate.raceId);
+  if (!raceDate) blockers.push("RACE_ID_INVALID");
   if (!isNonEmpty(candidate.checkpointLabel)) blockers.push("CHECKPOINT_LABEL_MISSING");
 
   const availableAt = parseInstant(candidate.availableAt);
@@ -262,6 +274,15 @@ export function auditN2TrifectaMarketSnapshot(
   if (availableAt === null) blockers.push("AVAILABLE_AT_INVALID");
   if (capturedAt === null) blockers.push("CAPTURED_AT_INVALID");
   if (decisionCutoff === null) blockers.push("DECISION_CUTOFF_INVALID");
+  if (raceDate && availableAt !== null && instantJstDate(availableAt) !== raceDate) {
+    blockers.push("AVAILABLE_AT_RACE_DATE_MISMATCH");
+  }
+  if (raceDate && capturedAt !== null && instantJstDate(capturedAt) !== raceDate) {
+    blockers.push("CAPTURED_AT_RACE_DATE_MISMATCH");
+  }
+  if (raceDate && decisionCutoff !== null && instantJstDate(decisionCutoff) !== raceDate) {
+    blockers.push("DECISION_CUTOFF_RACE_DATE_MISMATCH");
+  }
   if (availableAt !== null && capturedAt !== null && availableAt > capturedAt) {
     blockers.push("AVAILABLE_AFTER_CAPTURE");
   }
@@ -306,6 +327,9 @@ export function auditN2TrifectaMarketSnapshot(
     "AVAILABLE_AT_INVALID",
     "CAPTURED_AT_INVALID",
     "DECISION_CUTOFF_INVALID",
+    "AVAILABLE_AT_RACE_DATE_MISMATCH",
+    "CAPTURED_AT_RACE_DATE_MISMATCH",
+    "DECISION_CUTOFF_RACE_DATE_MISMATCH",
     "AVAILABLE_AFTER_CAPTURE",
     "CAPTURE_AFTER_DECISION_CUTOFF",
   ].includes(blocker));
