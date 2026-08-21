@@ -35,6 +35,13 @@ function assertCalendarDate(date: string, file: string): void {
   }
 }
 
+function archiveFilenameDate(file: string): string | null {
+  const match = /^k(\d{2})(\d{2})(\d{2})\.lzh$/i.exec(file);
+  if (!match) return null;
+  const year = Number(match[1]) >= 70 ? `19${match[1]}` : `20${match[1]}`;
+  return `${year}-${match[2]}-${match[3]}`;
+}
+
 function lastCompletedJstRaceDate(asOf: string): string {
   // K archives are complete Japanese race-day files. Never ingest the JST calendar
   // day that is still in progress at asOf; the latest safe archive day is yesterday JST.
@@ -54,7 +61,16 @@ export function buildArchiveReconcileSelection(input: {
   const cutoffDate = lastCompletedJstRaceDate(asOf);
   const dated = input.discoveredFiles.map((path) => {
     const file = basename(path);
-    const date = fileDate(path);
+    let date: string;
+    try {
+      date = fileDate(path);
+    } catch (error) {
+      const parsedFilenameDate = archiveFilenameDate(file);
+      if (parsedFilenameDate !== null) {
+        throw new Error(`ARCHIVE_FILE_DATE_INVALID:${file}:${parsedFilenameDate}`, { cause: error });
+      }
+      throw error;
+    }
     assertCalendarDate(date, file);
     return { path, file, date };
   });
