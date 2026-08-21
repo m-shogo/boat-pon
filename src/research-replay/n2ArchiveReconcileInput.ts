@@ -182,6 +182,48 @@ function assertArchiveReconcileProcessedFiles(
   }
 }
 
+function assertNonNegativeSafeInteger(value: unknown, label: string): void {
+  if (!Number.isSafeInteger(value) || (value as number) < 0) {
+    throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_COUNT_INVALID:${label}:${String(value)}`);
+  }
+}
+
+function assertCountEntries(value: unknown, label: string, nested: boolean): void {
+  if (!Array.isArray(value)) {
+    throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_COUNT_TABLE_INVALID:${label}`);
+  }
+  const seenKeys = new Set<string>();
+  for (const entry of value) {
+    if (!Array.isArray(entry) || entry.length !== 2 || typeof entry[0] !== "string") {
+      throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_COUNT_ENTRY_INVALID:${label}`);
+    }
+    if (seenKeys.has(entry[0])) {
+      throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_COUNT_KEY_DUPLICATE:${label}:${entry[0]}`);
+    }
+    seenKeys.add(entry[0]);
+    if (!nested) {
+      assertNonNegativeSafeInteger(entry[1], `${label}:${entry[0]}`);
+      continue;
+    }
+    if (typeof entry[1] !== "object" || entry[1] === null || Array.isArray(entry[1])) {
+      throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_COUNT_ENTRY_INVALID:${label}:${entry[0]}`);
+    }
+    for (const [countName, count] of Object.entries(entry[1] as Record<string, unknown>)) {
+      assertNonNegativeSafeInteger(count, `${label}:${entry[0]}:${countName}`);
+    }
+  }
+}
+
+function assertArchiveReconcileAggregateCounts(state: unknown): void {
+  if (typeof state !== "object" || state === null || Array.isArray(state)) {
+    throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_STATE_INVALID");
+  }
+  const record = state as Record<string, unknown>;
+  assertCountEntries(record.cells, "cells", true);
+  assertCountEntries(record.paired, "paired", false);
+  assertCountEntries(record.statusMatrix, "statusMatrix", false);
+}
+
 export function assertArchiveReconcileCheckpointStateDigest(
   actualDigest: unknown,
   checkpointContract: ArchiveReconcileCheckpointContract,
@@ -195,4 +237,5 @@ export function assertArchiveReconcileCheckpointStateDigest(
     throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_STATE_DIGEST_MISMATCH");
   }
   assertArchiveReconcileProcessedFiles(checkpointContract, state);
+  assertArchiveReconcileAggregateCounts(state);
 }

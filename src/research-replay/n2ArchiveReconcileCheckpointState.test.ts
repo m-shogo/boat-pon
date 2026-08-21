@@ -61,6 +61,43 @@ test("archive reconcile resume rejects rehashed duplicate processed files", () =
   );
 });
 
+test("archive reconcile resume rejects rehashed negative aggregate counts", () => {
+  const tampered = {
+    ...state,
+    cells: [["2026\u0000trifecta\u0000Toda", { exact_match: -1, falseRefund: 0 }]],
+  };
+  const digest = buildArchiveReconcileCheckpointStateDigest(contract, tampered);
+  assert.throws(
+    () => assertArchiveReconcileCheckpointStateDigest(digest, contract, tampered),
+    /ARCHIVE_RECONCILE_CHECKPOINT_COUNT_INVALID:cells:.*:exact_match:-1/,
+  );
+});
+
+test("archive reconcile resume rejects rehashed unsafe aggregate counts", () => {
+  const tampered = {
+    ...state,
+    paired: [["2026\u0000trifecta\u0000Toda", Number.MAX_SAFE_INTEGER + 1]],
+  };
+  const digest = buildArchiveReconcileCheckpointStateDigest(contract, tampered);
+  assert.throws(
+    () => assertArchiveReconcileCheckpointStateDigest(digest, contract, tampered),
+    /ARCHIVE_RECONCILE_CHECKPOINT_COUNT_INVALID:paired:.*:9007199254740992/,
+  );
+});
+
+test("archive reconcile resume rejects duplicate aggregate keys even after rehash", () => {
+  const key = "2026\u0000trifecta\u0000Toda";
+  const tampered = {
+    ...state,
+    paired: [[key, 1], [key, 2]],
+  };
+  const digest = buildArchiveReconcileCheckpointStateDigest(contract, tampered);
+  assert.throws(
+    () => assertArchiveReconcileCheckpointStateDigest(digest, contract, tampered),
+    /ARCHIVE_RECONCILE_CHECKPOINT_COUNT_KEY_DUPLICATE:paired:/,
+  );
+});
+
 test("archive reconcile resume rejects missing or non-canonical state digests", () => {
   assert.throws(
     () => assertArchiveReconcileCheckpointStateDigest(undefined, contract, state),
