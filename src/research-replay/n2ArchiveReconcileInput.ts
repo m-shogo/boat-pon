@@ -4,7 +4,7 @@ import { canonicalHash, canonicalUtcTimestamp, sha256Bytes } from "./canonical";
 import { fileDate } from "./n1Backfill";
 
 export const ARCHIVE_RECONCILE_SELECTION_VERSION = "n2-archive-reconcile-selection-v3";
-export const ARCHIVE_RECONCILE_CHECKPOINT_VERSION = "n2-archive-reconcile-checkpoint-v4";
+export const ARCHIVE_RECONCILE_CHECKPOINT_VERSION = "n2-archive-reconcile-checkpoint-v5";
 export const ARCHIVE_RECONCILE_CHECKPOINT_STATE_DIGEST_VERSION = "n2-archive-reconcile-checkpoint-state-digest-v1";
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
@@ -22,6 +22,7 @@ export type ArchiveReconcileCheckpointContract = {
   asOf: string;
   inventoryDigest: string;
   selectedFileCount: number;
+  sourceSidecarSha256: string;
 };
 
 function assertCalendarDate(date: string, file: string): void {
@@ -106,13 +107,20 @@ export function buildArchiveReconcileSelection(input: {
   };
 }
 
-export function archiveReconcileCheckpointContract(selection: ArchiveReconcileSelection): ArchiveReconcileCheckpointContract {
+export function archiveReconcileCheckpointContract(
+  selection: ArchiveReconcileSelection,
+  sourceSidecarSha256: string,
+): ArchiveReconcileCheckpointContract {
+  if (!/^[0-9a-f]{64}$/.test(sourceSidecarSha256)) {
+    throw new Error("ARCHIVE_RECONCILE_SIDECAR_SHA_INVALID");
+  }
   return {
     checkpointVersion: ARCHIVE_RECONCILE_CHECKPOINT_VERSION,
     selectionVersion: ARCHIVE_RECONCILE_SELECTION_VERSION,
     asOf: selection.asOf,
     inventoryDigest: selection.inventoryDigest,
     selectedFileCount: selection.selectedFiles.length,
+    sourceSidecarSha256,
   };
 }
 
