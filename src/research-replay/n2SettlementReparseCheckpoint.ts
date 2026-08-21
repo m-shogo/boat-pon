@@ -20,6 +20,15 @@ export type N2SettlementReparseCheckpointIdentity = {
   selectedFilesDigest: string;
 };
 
+export function assertN2SettlementReparseResumeMode(input: {
+  resume: boolean;
+  makeCopy: boolean;
+}): void {
+  if (input.resume && input.makeCopy) {
+    throw new Error("REPARSE_RESUME_MAKE_COPY_CONFLICT");
+  }
+}
+
 export function buildN2SettlementReparseCheckpointIdentity(input: {
   reparseSchemaVersion: string;
   sourceParserVersion: string;
