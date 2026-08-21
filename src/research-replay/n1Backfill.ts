@@ -414,6 +414,37 @@ export type BackfillRunSummary = {
   fileResults: ArchiveFileResult[];
 };
 
+export function latestBackfillCheckpointForParser(input: {
+  db: DatabaseSync;
+  archiveFile: string;
+  parserVersion?: string;
+}): { state: string; retryCount: number } | null {
+  const parserVersion = input.parserVersion ?? N1_SETTLEMENT_PARSER_VERSION;
+  const row = input.db.prepare(`
+    SELECT state, retry_count AS retryCount
+    FROM n1_settlement_backfill_checkpoints
+    WHERE archive_file=? AND parser_version=?
+    ORDER BY created_at DESC, rowid DESC
+    LIMIT 1
+  `).get(input.archiveFile, parserVersion) as { state: string; retryCount: number } | undefined;
+  return row ?? null;
+}
+
+export function completedBackfillCountForParser(input: {
+  db: DatabaseSync;
+  parserVersion?: string;
+}): number {
+  const parserVersion = input.parserVersion ?? N1_SETTLEMENT_PARSER_VERSION;
+  return Number((input.db.prepare(`
+    SELECT COUNT(*) c FROM (
+      SELECT archive_file, state,
+             ROW_NUMBER() OVER (PARTITION BY archive_file ORDER BY created_at DESC, rowid DESC) rn
+      FROM n1_settlement_backfill_checkpoints
+      WHERE parser_version=?
+    ) WHERE rn=1 AND state='completed'
+  `).get(parserVersion) as { c: number }).c);
+}
+
 // checkpoint駆動でarchive fileを順に処理する。per-fileで単一transaction（atomic batch）。
 // limit=このrunで新規処理する最大file数（milestone gate用）。maxFiles=対象listのslice（sample用）。
 // guardに1つでも抵触したらfile境界で安全停止する。
@@ -454,7 +485,7 @@ export async function runBackfill(input: {
     const s = statfsSync(target);
     return Number(s.bavail) * Number(s.bsize);
   };
-  const startCompletedTotal = checkpoints.completedCount();
+  const startCompletedTotal = completedBackfillCountForParser({ db: input.db });
   const summary: BackfillRunSummary = {
     executorVersion: N1_BACKFILL_EXECUTOR_VERSION, externalRequests: 0,
     requestedFiles: files.length, processedFiles: 0, skippedCompleted: 0, failedFiles: 0,
@@ -510,7 +541,10 @@ export async function runBackfill(input: {
 
   for (const filePath of files) {
     const file = basename(filePath);
-    if (checkpoints.isCompleted(file)) { summary.skippedCompleted += 1; continue; }
+    if (latestBackfillCheckpointForParser({ db: input.db, archiveFile: file })?.state === "completed") {
+      summary.skippedCompleted += 1;
+      continue;
+    }
     if (input.limit !== undefined && summary.processedFiles >= input.limit) break;
 
     const stop = guard();
@@ -570,6 +604,6 @@ export async function runBackfill(input: {
     }
   }
   summary.dbBytesEnd = dbSize();
-  summary.endCompletedTotal = checkpoints.completedCount();
+  summary.endCompletedTotal = completedBackfillCountForParser({ db: input.db });
   return summary;
 }
