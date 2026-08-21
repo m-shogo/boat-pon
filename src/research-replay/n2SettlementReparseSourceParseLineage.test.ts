@@ -55,6 +55,14 @@ function observationCount(db: DatabaseSync): number {
   return Number((db.prepare("SELECT COUNT(*) AS n FROM domain_observations").get() as { n: number }).n);
 }
 
+function assertNoReparseSideEffects(db: DatabaseSync, state: ReturnType<typeof newState>): void {
+  assert.equal(reparseParseRunCount(db), 0);
+  assert.equal(observationCount(db), 0);
+  assert.equal(state.counts.appended_parse_runs, 0);
+  assert.equal(state.counts.appended_observations, 0);
+  assert.equal(state.counts.appended_candidates, 0);
+}
+
 test("reparse blocks before append when source parser lineage is ambiguous", () => {
   const { db, repo } = setup();
   insertSourceParseRun(db, "v1-parse-a");
@@ -66,11 +74,7 @@ test("reparse blocks before append when source parser lineage is ambiguous", () 
     () => applyReparseForDocument(db, repo, META, DERIVED, active, state, NOW),
     /REPARSE_SOURCE_PARSE_RUN_AMBIGUOUS:raw-source-lineage:2/,
   );
-  assert.equal(reparseParseRunCount(db), 0);
-  assert.equal(observationCount(db), 0);
-  assert.equal(state.counts.appended_parse_runs, 0);
-  assert.equal(state.counts.appended_observations, 0);
-  assert.equal(state.counts.appended_candidates, 0);
+  assertNoReparseSideEffects(db, state);
   db.close();
 });
 
@@ -83,10 +87,40 @@ test("reparse blocks before append when source parser lineage is missing", () =>
     () => applyReparseForDocument(db, repo, META, DERIVED, active, state, NOW),
     /REPARSE_SOURCE_PARSE_RUN_MISSING:raw-source-lineage/,
   );
-  assert.equal(reparseParseRunCount(db), 0);
-  assert.equal(observationCount(db), 0);
-  assert.equal(state.counts.appended_parse_runs, 0);
-  assert.equal(state.counts.appended_observations, 0);
-  assert.equal(state.counts.appended_candidates, 0);
+  assertNoReparseSideEffects(db, state);
   db.close();
 });
+
+for (const invalidSource of [
+  {
+    label: "wrong parser name",
+    mutate: "UPDATE parse_runs SET parser_name='other-parser' WHERE parse_run_id='v1-parse-a'",
+  },
+  {
+    label: "wrong source schema",
+    mutate: "UPDATE parse_runs SET source_schema_version='legacy_pre_trifecta' WHERE parse_run_id='v1-parse-a'",
+  },
+  {
+    label: "wrong payload type",
+    mutate: "UPDATE parse_runs SET payload_type='official_program' WHERE parse_run_id='v1-parse-a'",
+  },
+  {
+    label: "non-success status",
+    mutate: "UPDATE parse_runs SET status='error', error_code='BROKEN_SOURCE_PARSE' WHERE parse_run_id='v1-parse-a'",
+  },
+] as const) {
+  test(`reparse rejects ${invalidSource.label} as a supersession source`, () => {
+    const { db, repo } = setup();
+    insertSourceParseRun(db, "v1-parse-a");
+    db.exec(invalidSource.mutate);
+    const active = loadActiveState(db, loadSourceDuplicateSet(db));
+    const state = newState();
+
+    assert.throws(
+      () => applyReparseForDocument(db, repo, META, DERIVED, active, state, NOW),
+      /REPARSE_SOURCE_PARSE_RUN_INVALID:raw-source-lineage:v1-parse-a/,
+    );
+    assertNoReparseSideEffects(db, state);
+    db.close();
+  });
+}

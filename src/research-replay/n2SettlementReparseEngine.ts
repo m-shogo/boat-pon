@@ -87,17 +87,38 @@ export function loadActiveState(db: DatabaseSync, sourceDup: Set<string>): Activ
 export const ensureSupersedesIndex = (db: DatabaseSync): void =>
   db.exec("CREATE INDEX IF NOT EXISTS reparse_idx_supersedes ON settlement_candidates_v2(supersedes_candidate_id) WHERE supersedes_candidate_id IS NOT NULL");
 
-function requireSingleSourceParseRun(db: DatabaseSync, rawDocumentId: string): string {
+function requireSingleSourceParseRun(db: DatabaseSync, rawDocumentId: string, sourceSchemaVersion: string): string {
   const rows = db.prepare(
-    "SELECT parse_run_id AS id FROM parse_runs WHERE raw_document_id=? AND parser_version=? ORDER BY parse_run_id",
-  ).all(rawDocumentId, REPARSE_SOURCE_PARSER_VERSION) as Array<{ id: string }>;
+    `SELECT parse_run_id AS id, parser_name AS parserName, source_schema_version AS sourceSchemaVersion,
+            payload_type AS payloadType, status, error_code AS errorCode
+     FROM parse_runs
+     WHERE raw_document_id=? AND parser_version=?
+     ORDER BY parse_run_id`,
+  ).all(rawDocumentId, REPARSE_SOURCE_PARSER_VERSION) as Array<{
+    id: string;
+    parserName: string;
+    sourceSchemaVersion: string;
+    payloadType: string;
+    status: string;
+    errorCode: string | null;
+  }>;
   if (rows.length === 0) {
     throw new Error(`REPARSE_SOURCE_PARSE_RUN_MISSING:${rawDocumentId}`);
   }
   if (rows.length > 1) {
     throw new Error(`REPARSE_SOURCE_PARSE_RUN_AMBIGUOUS:${rawDocumentId}:${rows.length}`);
   }
-  return rows[0].id;
+  const row = rows[0];
+  if (
+    row.parserName !== "n1-backfill-archive" ||
+    row.sourceSchemaVersion !== sourceSchemaVersion ||
+    row.payloadType !== "settlement_result" ||
+    row.status !== "success" ||
+    row.errorCode !== null
+  ) {
+    throw new Error(`REPARSE_SOURCE_PARSE_RUN_INVALID:${rawDocumentId}:${row.id}`);
+  }
+  return row.id;
 }
 
 // 1 raw document 分の v2 derived candidate を temp copy へ append-only 適用する（per-document transaction）。
@@ -110,7 +131,7 @@ export function applyReparseForDocument(
   db.exec("BEGIN IMMEDIATE");
   try {
     const parseRunId = `rpr-parse-${meta.rawDocumentId}`;
-    const v1ParseRunId = requireSingleSourceParseRun(db, meta.rawDocumentId);
+    const v1ParseRunId = requireSingleSourceParseRun(db, meta.rawDocumentId, meta.family);
     const prInfo = db.prepare(
       `INSERT OR IGNORE INTO parse_runs
        (parse_run_id, raw_document_id, parser_name, parser_version, source_schema_version,
