@@ -103,7 +103,8 @@ export async function auditAllLocalKArchives(root: string, concurrency = 8): Pro
       }
     }
   };
-  await Promise.all(Array.from({ length: concurrency }, () => worker()));
+  const workerCount = Math.min(concurrency, Math.max(1, files.length));
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
   return report;
 }
 
