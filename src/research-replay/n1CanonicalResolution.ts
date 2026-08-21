@@ -11,8 +11,8 @@ export const SOURCE_DUPLICATE_RESOLVER_VERSION = "n1c-source-duplicate-resolver-
 export const SOURCE_DUPLICATE_POLICY_VERSION = "n1c-source-duplicate-policy-v1"; // canonical = first observation by source order (rowid asc)
 
 const SOURCE_DUPLICATE_DETECTION_REASON = "intra_file_source_duplicate: same raw document produced multiple identical race observations";
-const SETTLEMENT_OBSERVATION_WHERE = "observation_type='settlement_result' AND payload_type='settlement_result'";
-const SETTLEMENT_OBSERVATION_WHERE_O = "o.observation_type='settlement_result' AND o.payload_type='settlement_result'";
+const SOURCE_SETTLEMENT_OBSERVATION_WHERE = "observation_type='settlement_result' AND payload_type='settlement_result' AND supersedes_id IS NULL AND correction_kind IS NULL AND correction_reason IS NULL";
+const SOURCE_SETTLEMENT_OBSERVATION_WHERE_O = "o.observation_type='settlement_result' AND o.payload_type='settlement_result' AND o.supersedes_id IS NULL AND o.correction_kind IS NULL AND o.correction_reason IS NULL";
 
 type SettlementObservationLineage = {
   observation_id: string;
@@ -68,13 +68,13 @@ export type DuplicateResolutionPlan = {
   valueConflicts: DuplicateResolutionPlanItem[]; // exact でない（値が異なる）→ resolution しない
 };
 
-// source 順で最初の settlement observation を canonical、残りを duplicate 候補として計画する。
-// 非settlement observationは共有domain_observations上の同一race eventであり、N1 source-duplicateではない。
+// source 順で最初の未訂正 settlement observation を canonical、残りを duplicate 候補として計画する。
+// parser reparse / correction は source duplicate ではなく独立したrevision lineageなので候補集合から除外する。
 // 同一raw・同一parse runの未訂正observationでcandidate集合も一致する場合だけ exact source duplicate とする。
 export function planSourceDuplicateResolution(db: DatabaseSync): DuplicateResolutionPlan {
   const dupRaces = db.prepare(`
     SELECT canonical_race_key FROM domain_observations
-    WHERE ${SETTLEMENT_OBSERVATION_WHERE}
+    WHERE ${SOURCE_SETTLEMENT_OBSERVATION_WHERE}
     GROUP BY canonical_race_key HAVING COUNT(*)>1
     ORDER BY canonical_race_key
   `).all() as Array<{ canonical_race_key: string }>;
@@ -84,7 +84,7 @@ export function planSourceDuplicateResolution(db: DatabaseSync): DuplicateResolu
     const obs = db.prepare(`
       SELECT observation_id, raw_document_id, parse_run_id, supersedes_id, correction_kind, correction_reason
       FROM domain_observations
-      WHERE canonical_race_key=? AND ${SETTLEMENT_OBSERVATION_WHERE} ORDER BY rowid ASC
+      WHERE canonical_race_key=? AND ${SOURCE_SETTLEMENT_OBSERVATION_WHERE} ORDER BY rowid ASC
     `).all(raceKey) as SettlementObservationLineage[];
     const canonical = obs[0];
     const canonicalDigest = observationCandidateDigest(db, canonical.observation_id);
@@ -234,17 +234,17 @@ export type CanonicalDuplicateAudit = {
 };
 
 export function auditCanonicalDuplicates(db: DatabaseSync): CanonicalDuplicateAudit {
-  const rawObservations = scalar(db, `SELECT COUNT(*) c FROM domain_observations o WHERE ${SETTLEMENT_OBSERVATION_WHERE_O}`);
-  const rawDistinctRaceKeys = scalar(db, `SELECT COUNT(DISTINCT o.canonical_race_key) c FROM domain_observations o WHERE ${SETTLEMENT_OBSERVATION_WHERE_O}`);
-  // active duplicate observations: resolved duplicate を除いた上で race あたり >1 settlement observation の余剰
+  const rawObservations = scalar(db, `SELECT COUNT(*) c FROM domain_observations o WHERE ${SOURCE_SETTLEMENT_OBSERVATION_WHERE_O}`);
+  const rawDistinctRaceKeys = scalar(db, `SELECT COUNT(DISTINCT o.canonical_race_key) c FROM domain_observations o WHERE ${SOURCE_SETTLEMENT_OBSERVATION_WHERE_O}`);
+  // active duplicate observations: resolved duplicate を除いた上で race あたり >1 source settlement observation の余剰
   const activeDupObsRaces = scalar(db, `
     SELECT COUNT(*) c FROM (
       SELECT o.canonical_race_key FROM domain_observations o
-      WHERE ${SETTLEMENT_OBSERVATION_WHERE_O} AND ${NOT_RESOLVED}
+      WHERE ${SOURCE_SETTLEMENT_OBSERVATION_WHERE_O} AND ${NOT_RESOLVED}
       GROUP BY o.canonical_race_key HAVING COUNT(*)>1
     )`);
-  const activeObsTotal = scalar(db, `SELECT COUNT(*) c FROM domain_observations o WHERE ${SETTLEMENT_OBSERVATION_WHERE_O} AND ${NOT_RESOLVED}`);
-  const activeDistinctRaces = scalar(db, `SELECT COUNT(DISTINCT o.canonical_race_key) c FROM domain_observations o WHERE ${SETTLEMENT_OBSERVATION_WHERE_O} AND ${NOT_RESOLVED}`);
+  const activeObsTotal = scalar(db, `SELECT COUNT(*) c FROM domain_observations o WHERE ${SOURCE_SETTLEMENT_OBSERVATION_WHERE_O} AND ${NOT_RESOLVED}`);
+  const activeDistinctRaces = scalar(db, `SELECT COUNT(DISTINCT o.canonical_race_key) c FROM domain_observations o WHERE ${SOURCE_SETTLEMENT_OBSERVATION_WHERE_O} AND ${NOT_RESOLVED}`);
   const activeDuplicateObservations = activeObsTotal - activeDistinctRaces;
   void activeDupObsRaces;
   const rawCandidates = scalar(db, "SELECT COUNT(*) c FROM settlement_candidates_v2");
@@ -265,8 +265,8 @@ export function auditCanonicalDuplicates(db: DatabaseSync): CanonicalDuplicateAu
 }
 
 // ===== future ingest guard =====
-// 同一 raw document 内で同一 canonical race key の settlement observation が複数生成された場合に、
-// 同一parse runの未訂正observationでcandidate集合一致だけを exact duplicate とする。
+// 同一 raw document 内で同一 canonical race key の未訂正 settlement observation が複数生成された場合に、
+// 同一parse runでcandidate集合一致だけを exact source duplicate とする。correction/reparseは対象外。
 export function detectExactDuplicateObservationsInRaw(
   db: DatabaseSync,
   rawDocumentId: string,
@@ -274,7 +274,7 @@ export function detectExactDuplicateObservationsInRaw(
   const rows = db.prepare(`
     SELECT canonical_race_key, observation_id, raw_document_id, parse_run_id, supersedes_id, correction_kind, correction_reason
     FROM domain_observations
-    WHERE raw_document_id=? AND ${SETTLEMENT_OBSERVATION_WHERE} ORDER BY canonical_race_key, rowid ASC
+    WHERE raw_document_id=? AND ${SOURCE_SETTLEMENT_OBSERVATION_WHERE} ORDER BY canonical_race_key, rowid ASC
   `).all(rawDocumentId) as Array<SettlementObservationLineage & { canonical_race_key: string }>;
   const byRace = new Map<string, Array<SettlementObservationLineage & { canonical_race_key: string }>>();
   for (const row of rows) {
