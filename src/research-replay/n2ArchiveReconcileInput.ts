@@ -192,10 +192,15 @@ function assertCountEntries(value: unknown, label: string, nested: boolean): voi
   if (!Array.isArray(value)) {
     throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_COUNT_TABLE_INVALID:${label}`);
   }
+  const seenKeys = new Set<string>();
   for (const entry of value) {
     if (!Array.isArray(entry) || entry.length !== 2 || typeof entry[0] !== "string") {
       throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_COUNT_ENTRY_INVALID:${label}`);
     }
+    if (seenKeys.has(entry[0])) {
+      throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_COUNT_KEY_DUPLICATE:${label}:${entry[0]}`);
+    }
+    seenKeys.add(entry[0]);
     if (!nested) {
       assertNonNegativeSafeInteger(entry[1], `${label}:${entry[0]}`);
       continue;
