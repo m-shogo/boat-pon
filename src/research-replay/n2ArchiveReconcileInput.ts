@@ -25,6 +25,19 @@ export type ArchiveReconcileCheckpointContract = {
   sourceSidecarSha256: string;
 };
 
+export function parseArchiveReconcilePositiveInt(
+  value: string | null,
+  fallback: number | null,
+  option: "limit" | "concurrency",
+): number | null {
+  if (value === null) return fallback;
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    throw new Error(`ARCHIVE_RECONCILE_${option.toUpperCase()}_INVALID:${value}`);
+  }
+  return parsed;
+}
+
 function assertCalendarDate(date: string, file: string): void {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
   if (!match) throw new Error(`ARCHIVE_FILE_DATE_INVALID:${file}:${date}`);
