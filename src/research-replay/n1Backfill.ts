@@ -35,6 +35,12 @@ export const VENUE_CODES: Record<string, string> = {
   下関: "19", 若松: "20", 芦屋: "21", 福岡: "22", 唐津: "23", 大村: "24",
 };
 
+export function backfillVenueCode(venue: string): string {
+  const code = VENUE_CODES[venue];
+  if (!code) throw new Error(`N1_BACKFILL_VENUE_INVALID:${venue}`);
+  return code;
+}
+
 export function canonicalBackfillRaceKey(raceDateJst: string, venueCode: string, raceNo: number): string {
   return canonicalRaceKey(raceDateJst, venueCode, raceNo);
 }
@@ -322,8 +328,7 @@ function ingestParsedArchive(input: {
     VALUES (?, 'settlement_result', 'rr-payload-v1', ?, ?, ?)
   `);
   for (const condition of parsed.conditions) {
-    const code = VENUE_CODES[condition.venue];
-    if (!code || condition.raceNo < 1 || condition.raceNo > 12) continue;
+    const code = backfillVenueCode(condition.venue);
     const raceKey = canonicalBackfillRaceKey(condition.date, code, condition.raceNo);
     result.parsedRaces += 1;
     result.firstRaceKey ??= raceKey;
