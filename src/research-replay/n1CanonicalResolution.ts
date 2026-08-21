@@ -14,6 +14,26 @@ const SOURCE_DUPLICATE_DETECTION_REASON = "intra_file_source_duplicate: same raw
 const SETTLEMENT_OBSERVATION_WHERE = "observation_type='settlement_result' AND payload_type='settlement_result'";
 const SETTLEMENT_OBSERVATION_WHERE_O = "o.observation_type='settlement_result' AND o.payload_type='settlement_result'";
 
+type SettlementObservationLineage = {
+  observation_id: string;
+  raw_document_id: string;
+  parse_run_id: string;
+  supersedes_id: string | null;
+  correction_kind: string | null;
+  correction_reason: string | null;
+};
+
+function sameUncorrectedParseLineage(left: SettlementObservationLineage, right: SettlementObservationLineage): boolean {
+  return left.raw_document_id === right.raw_document_id
+    && left.parse_run_id === right.parse_run_id
+    && left.supersedes_id === null
+    && right.supersedes_id === null
+    && left.correction_kind === null
+    && right.correction_kind === null
+    && left.correction_reason === null
+    && right.correction_reason === null;
+}
+
 // canonical_race_key "YYYY-MM-DD:VV:RN" → source archive file "kYYMMDD.lzh"。
 // 不正なrace identityはappend-only resolution lineageへ入れる前にfail-closedする。
 export function archiveFileForRaceKey(raceKey: string): string {
@@ -50,7 +70,7 @@ export type DuplicateResolutionPlan = {
 
 // source 順で最初の settlement observation を canonical、残りを duplicate 候補として計画する。
 // 非settlement observationは共有domain_observations上の同一race eventであり、N1 source-duplicateではない。
-// duplicate の candidate 集合が canonical と一致（exact source duplicate）する場合のみ resolution 対象。
+// 同一raw・同一parse runの未訂正observationでcandidate集合も一致する場合だけ exact source duplicate とする。
 export function planSourceDuplicateResolution(db: DatabaseSync): DuplicateResolutionPlan {
   const dupRaces = db.prepare(`
     SELECT canonical_race_key FROM domain_observations
@@ -62,16 +82,17 @@ export function planSourceDuplicateResolution(db: DatabaseSync): DuplicateResolu
   const conflicts: DuplicateResolutionPlanItem[] = [];
   for (const { canonical_race_key: raceKey } of dupRaces) {
     const obs = db.prepare(`
-      SELECT observation_id, raw_document_id FROM domain_observations
+      SELECT observation_id, raw_document_id, parse_run_id, supersedes_id, correction_kind, correction_reason
+      FROM domain_observations
       WHERE canonical_race_key=? AND ${SETTLEMENT_OBSERVATION_WHERE} ORDER BY rowid ASC
-    `).all(raceKey) as Array<{ observation_id: string; raw_document_id: string }>;
+    `).all(raceKey) as SettlementObservationLineage[];
     const canonical = obs[0];
     const canonicalDigest = observationCandidateDigest(db, canonical.observation_id);
     for (const dup of obs.slice(1)) {
       const dupDigest = observationCandidateDigest(db, dup.observation_id);
       const valueEqual = dupDigest.digest === canonicalDigest.digest
         && dupDigest.count === canonicalDigest.count
-        && dup.raw_document_id === canonical.raw_document_id;
+        && sameUncorrectedParseLineage(canonical, dup);
       const item: DuplicateResolutionPlanItem = {
         canonicalRaceKey: raceKey,
         canonicalObservationId: canonical.observation_id,
@@ -245,30 +266,36 @@ export function auditCanonicalDuplicates(db: DatabaseSync): CanonicalDuplicateAu
 
 // ===== future ingest guard =====
 // 同一 raw document 内で同一 canonical race key の settlement observation が複数生成された場合に、
-// exact duplicate（candidate 集合一致）を検出する。value が異なる場合は duplicate 扱いにしない。
+// 同一parse runの未訂正observationでcandidate集合一致だけを exact duplicate とする。
 export function detectExactDuplicateObservationsInRaw(
   db: DatabaseSync,
   rawDocumentId: string,
 ): Array<{ canonicalRaceKey: string; canonicalObservationId: string; duplicateObservationId: string; valueEqual: boolean }> {
   const rows = db.prepare(`
-    SELECT canonical_race_key, observation_id FROM domain_observations
+    SELECT canonical_race_key, observation_id, raw_document_id, parse_run_id, supersedes_id, correction_kind, correction_reason
+    FROM domain_observations
     WHERE raw_document_id=? AND ${SETTLEMENT_OBSERVATION_WHERE} ORDER BY canonical_race_key, rowid ASC
-  `).all(rawDocumentId) as Array<{ canonical_race_key: string; observation_id: string }>;
-  const byRace = new Map<string, string[]>();
-  for (const r of rows) {
-    const list = byRace.get(r.canonical_race_key) ?? [];
-    list.push(r.observation_id);
-    byRace.set(r.canonical_race_key, list);
+  `).all(rawDocumentId) as Array<SettlementObservationLineage & { canonical_race_key: string }>;
+  const byRace = new Map<string, Array<SettlementObservationLineage & { canonical_race_key: string }>>();
+  for (const row of rows) {
+    const list = byRace.get(row.canonical_race_key) ?? [];
+    list.push(row);
+    byRace.set(row.canonical_race_key, list);
   }
   const out: Array<{ canonicalRaceKey: string; canonicalObservationId: string; duplicateObservationId: string; valueEqual: boolean }> = [];
-  for (const [raceKey, obsIds] of byRace) {
-    if (obsIds.length < 2) continue;
-    const canonicalDigest = observationCandidateDigest(db, obsIds[0]);
-    for (const dup of obsIds.slice(1)) {
-      const d = observationCandidateDigest(db, dup);
+  for (const [raceKey, observations] of byRace) {
+    if (observations.length < 2) continue;
+    const canonical = observations[0];
+    const canonicalDigest = observationCandidateDigest(db, canonical.observation_id);
+    for (const dup of observations.slice(1)) {
+      const digest = observationCandidateDigest(db, dup.observation_id);
       out.push({
-        canonicalRaceKey: raceKey, canonicalObservationId: obsIds[0], duplicateObservationId: dup,
-        valueEqual: d.digest === canonicalDigest.digest && d.count === canonicalDigest.count,
+        canonicalRaceKey: raceKey,
+        canonicalObservationId: canonical.observation_id,
+        duplicateObservationId: dup.observation_id,
+        valueEqual: digest.digest === canonicalDigest.digest
+          && digest.count === canonicalDigest.count
+          && sameUncorrectedParseLineage(canonical, dup),
       });
     }
   }
