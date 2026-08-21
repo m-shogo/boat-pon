@@ -78,6 +78,7 @@ function insertCandidate(input: {
   rawDocumentId: string;
   parseRunId: string;
   revisionKind: "initial" | "parser_reparse";
+  canonicalRaceKey?: string;
   betType?: "win" | "place";
   semanticHash?: string;
   correctionReason?: string | null;
@@ -89,7 +90,7 @@ function insertCandidate(input: {
     VALUES (?,?,?,'settled','normal',?,'resolved','official_archive','scope-v1',?,?,?,?,NULL,?,?,?)`)
     .run(
       input.candidateId,
-      RACE_KEY,
+      input.canonicalRaceKey ?? RACE_KEY,
       input.betType ?? "win",
       input.revisionKind,
       input.observationId,
@@ -202,5 +203,40 @@ test("revision candidates attached to uncorrected observations do not alter sour
   assert.equal(audit.rawCandidates, 2);
   assert.equal(audit.rawDistinctRaceBetHash, 1);
   assert.equal(audit.rawRaceLevelDuplicateCandidates, 1);
+  db.close();
+});
+
+test("candidate race drift cannot hide a source duplicate from candidate audit", () => {
+  const { db, rawDocumentId } = setup();
+  insertParseRun(db, rawDocumentId, "parse-original");
+  insertObservation({ db, observationId: "settlement-original-a", rawDocumentId, parseRunId: "parse-original" });
+  insertObservation({ db, observationId: "settlement-original-b", rawDocumentId, parseRunId: "parse-original" });
+  insertCandidate({
+    db,
+    candidateId: "candidate-original-a",
+    observationId: "settlement-original-a",
+    rawDocumentId,
+    parseRunId: "parse-original",
+    revisionKind: "initial",
+  });
+  insertCandidate({
+    db,
+    candidateId: "candidate-original-b",
+    observationId: "settlement-original-b",
+    rawDocumentId,
+    parseRunId: "parse-original",
+    revisionKind: "initial",
+    canonicalRaceKey: "2026-08-21:05:R4",
+  });
+
+  const audit = auditCanonicalDuplicates(db);
+  assert.equal(audit.rawObservations, 2);
+  assert.equal(audit.rawDistinctRaceKeys, 1);
+  assert.equal(audit.rawCandidates, 2);
+  assert.equal(audit.rawDistinctRaceBetHash, 1);
+  assert.equal(audit.rawRaceLevelDuplicateCandidates, 1);
+  assert.equal(audit.activeCandidates, 2);
+  assert.equal(audit.activeDistinctRaceBetHash, 1);
+  assert.equal(audit.activeCanonicalRaceLevelDuplicateCandidates, 1);
   db.close();
 });
