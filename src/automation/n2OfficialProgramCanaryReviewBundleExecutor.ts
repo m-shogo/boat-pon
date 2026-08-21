@@ -10,6 +10,7 @@ import {
 } from "../research-replay/n2OfficialProgramCanary";
 import { readOfficialProgramCanarySource } from "../research-replay/n2OfficialProgramCanaryReader";
 import { buildOfficialProgramCanaryReviewBundle } from "../research-replay/n2OfficialProgramCanaryReviewBundle";
+import { readLifecycleValidApprovalScopes } from "../research-replay/n2ObservationIngestApprovalScopes";
 import { buildN2ObservationIngestReadiness } from "../research-replay/n2ObservationIngestReadiness";
 import { readN2ObservationIngestReadiness } from "../research-replay/n2ObservationIngestReadinessReader";
 import { readCanonicalRolloutState } from "../research-replay/n2ObservationIngestRolloutState";
@@ -89,8 +90,8 @@ export const runN2OfficialProgramCanaryReviewBundleExecutor: Executor = (ctx) =>
       const readiness = buildN2ObservationIngestReadiness({
         ...readinessRead.input,
         rollout: {
-          ...readinessRead.input.rollout,
           ...rolloutState,
+          approvalScopes: readLifecycleValidApprovalScopes(ctx.sidecarPath),
         },
       });
       const sidecar = openImmutable(ctx.sidecarPath);
