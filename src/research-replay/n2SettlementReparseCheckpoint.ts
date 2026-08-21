@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { basename, isAbsolute, join, resolve } from "node:path";
 
 import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
@@ -34,14 +34,48 @@ export function assertN2SettlementReparseResumeMode(input: {
   }
 }
 
+function checkpointArgValue(name: string): string | null {
+  const direct = process.argv.find((value) => value.startsWith(`${name}=`));
+  if (direct) return direct.slice(name.length + 1);
+  const index = process.argv.indexOf(name);
+  return index >= 0 ? process.argv[index + 1] ?? null : null;
+}
+
+function checkpointPathFromCli(): string {
+  return resolve(
+    checkpointArgValue("--checkpoint") ?? join(process.cwd(), "data", "tmp", "reparse-settlement.checkpoint.json"),
+  );
+}
+
 // This module is imported by the reparse CLI before any filesystem mutation.
 // Fail closed here so `--resume --make-copy` cannot recreate the target and then
 // reuse a checkpoint whose processed-file state refers to the previous target.
 const invokedByReparseCli = process.argv.some((value) => /(?:^|\/)reparse-settlement-v2\.(?:ts|js)$/.test(value));
 if (invokedByReparseCli) {
+  const resume = process.argv.includes("--resume");
   assertN2SettlementReparseResumeMode({
-    resume: process.argv.includes("--resume"),
+    resume,
     makeCopy: process.argv.includes("--make-copy"),
+  });
+  const checkpointPath = checkpointPathFromCli();
+  if (resume && existsSync(checkpointPath)) {
+    const raw = JSON.parse(readFileSync(checkpointPath, "utf8")) as Record<string, unknown>;
+    assertN2SettlementReparseCheckpointStateDigest(
+      raw.stateDigest,
+      raw.checkpointIdentity as N2SettlementReparseCheckpointIdentity,
+      raw.state,
+    );
+  }
+  process.once("beforeExit", () => {
+    if (!existsSync(checkpointPath)) return;
+    const raw = JSON.parse(readFileSync(checkpointPath, "utf8")) as Record<string, unknown>;
+    if (typeof raw.checkpointIdentity !== "object" || raw.checkpointIdentity === null || Array.isArray(raw.checkpointIdentity)) return;
+    if (typeof raw.state !== "object" || raw.state === null || Array.isArray(raw.state)) return;
+    raw.stateDigest = buildN2SettlementReparseCheckpointStateDigest(
+      raw.checkpointIdentity as N2SettlementReparseCheckpointIdentity,
+      raw.state,
+    );
+    writeFileSync(checkpointPath, `${JSON.stringify(raw)}\n`);
   });
 }
 
