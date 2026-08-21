@@ -32,6 +32,7 @@ export type PitRejectionCode =
   | "PARSER_VERSION_UNKNOWN"
   | "PARSE_STATUS_NOT_REUSABLE"
   | "RAW_LINEAGE_MISMATCH"
+  | "RAW_EVIDENCE_NOT_ELIGIBLE"
   | "PAYLOAD_SCHEMA_UNKNOWN"
   | "PAYLOAD_REFERENCE_MISSING"
   | "CANONICAL_RACE_MISMATCH"
@@ -89,6 +90,9 @@ type ObservationRow = {
   parse_run_id: string;
   raw_document_id: string;
   parse_raw_document_id?: string;
+  raw_integrity_status?: string;
+  raw_security_scan_status?: string;
+  raw_parser_replay_eligible?: number;
   source_published_at: string | null;
   source_observed_at: string;
   first_seen_at: string;
@@ -249,6 +253,16 @@ export function strictPitGuard(input: {
   if (observation.parse_raw_document_id !== undefined && observation.raw_document_id !== observation.parse_raw_document_id) {
     codes.push("RAW_LINEAGE_MISMATCH");
   }
+  const rawEligibilityPresent = observation.raw_integrity_status !== undefined
+    || observation.raw_security_scan_status !== undefined
+    || observation.raw_parser_replay_eligible !== undefined;
+  if (rawEligibilityPresent && (
+    observation.raw_integrity_status !== "verified"
+    || observation.raw_security_scan_status !== "passed"
+    || observation.raw_parser_replay_eligible !== 1
+  )) {
+    codes.push("RAW_EVIDENCE_NOT_ELIGIBLE");
+  }
   if (observation.payload_schema_version !== PAYLOAD_SCHEMA_VERSION) codes.push("PAYLOAD_SCHEMA_UNKNOWN");
   if (category === "post_race") codes.push("POST_RACE_OBSERVATION", "RESULT_ONLY_SOURCE");
   if (category === "current_only") codes.push("CURRENT_PROFILE_USED_FOR_PAST_RACE");
@@ -322,9 +336,13 @@ export function buildRaceAsOfManifest(input: {
   const idFactory = input.idFactory ?? randomUUID;
   registerResolutionPolicies(input.db, createdAt);
   const rows = input.db.prepare(`
-    SELECT o.*, p.parser_version, p.status AS parse_status, p.raw_document_id AS parse_raw_document_id
+    SELECT o.*, p.parser_version, p.status AS parse_status, p.raw_document_id AS parse_raw_document_id,
+           r.integrity_status AS raw_integrity_status,
+           r.security_scan_status AS raw_security_scan_status,
+           r.parser_replay_eligible AS raw_parser_replay_eligible
     FROM domain_observations o
     JOIN parse_runs p ON p.parse_run_id = o.parse_run_id
+    JOIN raw_documents r ON r.raw_document_id = o.raw_document_id
     WHERE o.canonical_race_key = ?
     ORDER BY o.observation_id
   `).all(input.canonicalRaceKey) as ObservationRow[];
