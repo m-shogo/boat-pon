@@ -184,6 +184,14 @@ function typedPayloadIntegrity(row: SourceObservationRow): "verified" | "invalid
   }
 }
 
+function assertCanonicalSourceTimestamps(row: SourceObservationRow): void {
+  if (canonicalInstant(row.sourceObservedAt) === null
+    || canonicalInstant(row.firstSeenAt) === null
+    || (row.sourcePublishedAt !== null && canonicalInstant(row.sourcePublishedAt) === null)) {
+    throw new Error(`N2_PIT_AUDIT_INVALID_SOURCE_TIMESTAMP:${row.observationId}`);
+  }
+}
+
 export function readN2PitAuditObservations(input: {
   primaryDbPath: string;
   sidecarDbPath: string;
@@ -202,6 +210,7 @@ export function readN2PitAuditObservations(input: {
       if (parseCanonicalN2Key(row.canonicalRaceKey) === null) {
         throw new Error(`N2_PIT_AUDIT_INVALID_RACE_KEY:${row.canonicalRaceKey}`);
       }
+      assertCanonicalSourceTimestamps(row);
     }
     const truncated = sourceRows.length > limit;
     const boundedRows = truncated ? sourceRows.slice(0, limit) : sourceRows;
