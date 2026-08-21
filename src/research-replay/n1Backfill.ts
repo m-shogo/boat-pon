@@ -466,6 +466,18 @@ function requireOptionalBound(name: "MAX_FILES" | "LIMIT", value: number | undef
   }
 }
 
+function requireOptionalSafetyBytes(name: "QUOTA_BYTES" | "DISK_FLOOR_BYTES", value: number | undefined): void {
+  if (value !== undefined && (!Number.isSafeInteger(value) || value < 0)) {
+    throw new Error(`N1_BACKFILL_${name}_INVALID:${value}`);
+  }
+}
+
+function requirePrimaryMonitor(value: unknown): asserts value is "strict" | "structural" | undefined {
+  if (value !== undefined && value !== "strict" && value !== "structural") {
+    throw new Error(`N1_BACKFILL_PRIMARY_MONITOR_INVALID:${String(value)}`);
+  }
+}
+
 export async function runBackfill(input: {
   db: DatabaseSync;
   rawStore: RawStore;
@@ -491,6 +503,9 @@ export async function runBackfill(input: {
 }): Promise<BackfillRunSummary> {
   requireOptionalBound("MAX_FILES", input.maxFiles);
   requireOptionalBound("LIMIT", input.limit);
+  requireOptionalSafetyBytes("QUOTA_BYTES", input.quotaBytes);
+  requireOptionalSafetyBytes("DISK_FLOOR_BYTES", input.diskFloorBytes);
+  requirePrimaryMonitor(input.primaryMonitor);
   const primaryMonitor = input.primaryMonitor ?? "strict";
   const idPrefix = input.idPrefix ?? "n1bf";
   const checkpoints = new BackfillCheckpointRepository(input.db);

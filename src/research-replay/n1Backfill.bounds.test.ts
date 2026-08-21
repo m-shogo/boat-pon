@@ -64,6 +64,35 @@ test("backfill bounded inputs reject negative, fractional, and unsafe values bef
   }
 });
 
+test("backfill safety guards reject invalid quota, disk floor, and primary monitor before archive reads", async () => {
+  const invalidCases = [
+    { quotaBytes: Number.NaN, pattern: /N1_BACKFILL_QUOTA_BYTES_INVALID/ },
+    { quotaBytes: -1, pattern: /N1_BACKFILL_QUOTA_BYTES_INVALID/ },
+    { quotaBytes: 1.5, pattern: /N1_BACKFILL_QUOTA_BYTES_INVALID/ },
+    { diskFloorBytes: Number.NaN, pattern: /N1_BACKFILL_DISK_FLOOR_BYTES_INVALID/ },
+    { diskFloorBytes: -1, pattern: /N1_BACKFILL_DISK_FLOOR_BYTES_INVALID/ },
+    { diskFloorBytes: 1.5, pattern: /N1_BACKFILL_DISK_FLOOR_BYTES_INVALID/ },
+    { primaryMonitor: "disabled" as never, pattern: /N1_BACKFILL_PRIMARY_MONITOR_INVALID/ },
+  ];
+
+  for (const invalid of invalidCases) {
+    const { db, rawStore } = setup();
+    await assert.rejects(
+      runBackfill({
+        db,
+        rawStore,
+        archiveFiles: ["/definitely-not-read/k260101.lzh"],
+        now: NOW,
+        ...invalid,
+      }),
+      invalid.pattern,
+    );
+    const checkpointCount = Number((db.prepare("SELECT COUNT(*) c FROM n1_settlement_backfill_checkpoints").get() as { c: number }).c);
+    assert.equal(checkpointCount, 0);
+    db.close();
+  }
+});
+
 test("backfill limit bounds failed archive attempts as well as completed files", async () => {
   const { db, rawStore } = setup();
   const summary = await runBackfill({
