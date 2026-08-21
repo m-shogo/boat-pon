@@ -16,6 +16,7 @@ const contract: ArchiveReconcileCheckpointContract = {
   asOf: "2026-08-01T00:00:00.000Z",
   inventoryDigest: "a".repeat(64),
   selectedFileCount: 2,
+  sourceSidecarSha256: "b".repeat(64),
 };
 
 const state = {
