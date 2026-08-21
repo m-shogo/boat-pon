@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { semanticPayloadHash, validateTypedPayload } from "./domain";
+import { semanticPayloadHash, validateTypedPayload, type SettlementObservationPayload } from "./domain";
 
 function settlementPayload(candidateCount: number) {
   return {
@@ -32,9 +32,7 @@ test("settlement typed payload rejects unsafe candidate counts", () => {
 
 test("settlement typed payload keeps safe non-negative candidate counts", () => {
   const payload = settlementPayload(Number.MAX_SAFE_INTEGER);
-  assert.equal(
-    validateTypedPayload("settlement_result", payload).candidateCount,
-    Number.MAX_SAFE_INTEGER,
-  );
+  const validated = validateTypedPayload("settlement_result", payload) as SettlementObservationPayload;
+  assert.equal(validated.candidateCount, Number.MAX_SAFE_INTEGER);
   assert.match(semanticPayloadHash("settlement_result", payload), /^[0-9a-f]{64}$/u);
 });
