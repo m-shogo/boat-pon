@@ -206,7 +206,7 @@ test("revision candidates attached to uncorrected observations do not alter sour
   db.close();
 });
 
-test("candidate race drift cannot hide a source duplicate from candidate audit", () => {
+test("candidate race drift cannot be auto-resolved as an exact source duplicate", () => {
   const { db, rawDocumentId } = setup();
   insertParseRun(db, rawDocumentId, "parse-original");
   insertObservation({ db, observationId: "settlement-original-a", rawDocumentId, parseRunId: "parse-original" });
@@ -228,6 +228,15 @@ test("candidate race drift cannot hide a source duplicate from candidate audit",
     revisionKind: "initial",
     canonicalRaceKey: "2026-08-21:05:R4",
   });
+
+  const plan = planSourceDuplicateResolution(db);
+  assert.equal(plan.duplicatedRaces, 1);
+  assert.equal(plan.plannedResolutions.length, 0);
+  assert.equal(plan.valueConflicts.length, 1);
+
+  const detected = detectExactDuplicateObservationsInRaw(db, rawDocumentId);
+  assert.equal(detected.length, 1);
+  assert.equal(detected[0]?.valueEqual, false);
 
   const audit = auditCanonicalDuplicates(db);
   assert.equal(audit.rawObservations, 2);
