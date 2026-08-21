@@ -268,7 +268,7 @@ export function validateTypedPayload(type: ObservationType, payload: unknown): T
       if (!["success", "warning", "error", "unsupported_schema"].includes(String(payload.parseStatus))) {
         throw new Error("invalid settlement parse status");
       }
-      if (!Number.isInteger(payload.candidateCount) || Number(payload.candidateCount) < 0) {
+      if (!Number.isSafeInteger(payload.candidateCount) || Number(payload.candidateCount) < 0) {
         throw new Error("invalid settlement candidate count");
       }
       if (!Array.isArray(payload.diagnosticCodes) || payload.diagnosticCodes.some((value) => typeof value !== "string")) {
