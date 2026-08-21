@@ -37,6 +37,7 @@ export type PitRejectionCode =
   | "PAYLOAD_REFERENCE_MISSING"
   | "CANONICAL_RACE_MISMATCH"
   | "SCHEDULE_VERSION_MISSING"
+  | "SCHEDULE_VERSION_INVALID"
   | "REQUIRED_INPUT_MISSING"
   | "STALE_REQUIRED_INPUT";
 
@@ -223,6 +224,23 @@ export function registerResolutionPolicies(db: DatabaseSync, createdAt: string):
   }
 }
 
+function marketScheduleReferenceValid(
+  repository: ResearchReplayRepository,
+  market: TrifectaMarketPayload,
+  canonicalRaceKey: string,
+): boolean {
+  if (!market.scheduledCloseObservationId) return false;
+  try {
+    const schedule = repository.loadTypedPayload(market.scheduledCloseObservationId);
+    if (schedule.type !== "race_schedule") return false;
+    const payload = schedule.payload as { canonicalRaceKey: string; scheduledCloseAt: string };
+    return payload.canonicalRaceKey === canonicalRaceKey
+      && canonicalUtcTimestamp(payload.scheduledCloseAt) === canonicalUtcTimestamp(market.scheduledCloseAtSeen);
+  } catch {
+    return false;
+  }
+}
+
 export function strictPitGuard(input: {
   observation: ObservationRow;
   repository: ResearchReplayRepository;
@@ -277,7 +295,11 @@ export function strictPitGuard(input: {
   }
   try {
     const typed = repository.loadTypedPayload(observation.observation_id);
-    if (typed.type === "trifecta_market" || typed.type === "historical_closing_odds") {
+    if (typed.type === "trifecta_market") {
+      const market = typed.payload as TrifectaMarketPayload;
+      if (!market.scheduledCloseObservationId) codes.push("SCHEDULE_VERSION_MISSING");
+      else if (!marketScheduleReferenceValid(repository, market, canonicalRaceKey)) codes.push("SCHEDULE_VERSION_INVALID");
+    } else if (typed.type === "historical_closing_odds") {
       const market = typed.payload as TrifectaMarketPayload;
       if (!market.scheduledCloseObservationId) codes.push("SCHEDULE_VERSION_MISSING");
     }
