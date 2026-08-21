@@ -26,6 +26,7 @@ export const N2_POST_RACE_SOURCE_TYPES = [
 
 export type N2PitAuditObservation = N2FeatureLineageEvidenceRow & {
   decisionCutoff: string | null;
+  typedPayloadIntegrity?: "verified" | "invalid";
 };
 
 export type N2PitAuditReasonClass =
@@ -153,6 +154,14 @@ export function auditN2PitObservation(observation: N2PitAuditObservation): N2Pit
       usable: false,
     };
   }
+  if (observation.typedPayloadIntegrity === "invalid") {
+    return {
+      observationType: observation.observationType,
+      reasonClass: "lineage_exclusion",
+      reason: "excluded_lineage_typed_payload_invalid",
+      usable: false,
+    };
+  }
   if (!validTimestamp(observation.decisionCutoff)) {
     return {
       observationType: observation.observationType,
@@ -222,6 +231,7 @@ function auditInputDigest(observations: N2PitAuditObservation[]): string {
     integrityStatus: observation.integrityStatus,
     securityScanStatus: observation.securityScanStatus,
     parserReplayEligible: observation.parserReplayEligible,
+    typedPayloadIntegrity: observation.typedPayloadIntegrity ?? null,
     decisionCutoff: canonicalTimestampForDigest(observation.decisionCutoff),
   })).sort((a, b) => `${a.canonicalRaceKey}\u0000${a.observationId}`.localeCompare(
     `${b.canonicalRaceKey}\u0000${b.observationId}`,
