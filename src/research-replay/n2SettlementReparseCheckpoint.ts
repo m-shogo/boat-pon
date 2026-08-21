@@ -4,7 +4,7 @@ import { basename, isAbsolute, join, resolve } from "node:path";
 
 import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 
-export const N2_SETTLEMENT_REPARSE_CHECKPOINT_VERSION = "n2-settlement-reparse-checkpoint-v4";
+export const N2_SETTLEMENT_REPARSE_CHECKPOINT_VERSION = "n2-settlement-reparse-checkpoint-v5";
 export const N2_SETTLEMENT_REPARSE_CHECKPOINT_STATE_DIGEST_VERSION = "n2-settlement-reparse-checkpoint-state-digest-v1";
 
 export type N2SettlementReparseCheckpointIdentity = {
@@ -23,6 +23,7 @@ export type N2SettlementReparseCheckpointIdentity = {
   targetPath: string;
   archiveRoot: string;
   selectedFilesDigest: string;
+  selectedFileBasenames: string[];
 };
 
 export function assertN2SettlementReparseResumeMode(input: {
@@ -125,6 +126,7 @@ export function buildN2SettlementReparseCheckpointIdentity(input: {
     targetPath: input.targetPath,
     archiveRoot: input.archiveRoot,
     selectedFilesDigest,
+    selectedFileBasenames: selectedFiles.map((entry) => entry.name),
   };
 }
 
@@ -151,6 +153,30 @@ export function buildN2SettlementReparseCheckpointStateDigest(
   });
 }
 
+function assertN2SettlementReparseProcessedFiles(
+  checkpointIdentity: N2SettlementReparseCheckpointIdentity,
+  state: unknown,
+): void {
+  if (typeof state !== "object" || state === null || Array.isArray(state)) {
+    throw new Error("REPARSE_CHECKPOINT_STATE_INVALID");
+  }
+  const processedFiles = (state as Record<string, unknown>).processedFiles;
+  if (!Array.isArray(processedFiles)) {
+    throw new Error("REPARSE_CHECKPOINT_PROCESSED_FILES_INVALID");
+  }
+  const allowed = new Set(checkpointIdentity.selectedFileBasenames);
+  const seen = new Set<string>();
+  for (const file of processedFiles) {
+    if (typeof file !== "string" || basename(file) !== file || !allowed.has(file)) {
+      throw new Error(`REPARSE_CHECKPOINT_PROCESSED_FILE_OUT_OF_SELECTION:${String(file)}`);
+    }
+    if (seen.has(file)) {
+      throw new Error(`REPARSE_CHECKPOINT_PROCESSED_FILE_DUPLICATE:${file}`);
+    }
+    seen.add(file);
+  }
+}
+
 export function assertN2SettlementReparseCheckpointStateDigest(
   actualDigest: unknown,
   checkpointIdentity: N2SettlementReparseCheckpointIdentity,
@@ -163,4 +189,5 @@ export function assertN2SettlementReparseCheckpointStateDigest(
   if (actualDigest !== expectedDigest) {
     throw new Error("REPARSE_CHECKPOINT_STATE_DIGEST_MISMATCH");
   }
+  assertN2SettlementReparseProcessedFiles(checkpointIdentity, state);
 }
