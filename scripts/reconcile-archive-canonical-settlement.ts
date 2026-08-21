@@ -16,6 +16,14 @@ import { DatabaseSync } from "node:sqlite";
 import { parseOfficialResultDetail } from "../src/domain/officialResultDetailParser";
 import { canonicalHash } from "../src/research-replay/canonical";
 import { fileDate, listArchiveFiles } from "../src/research-replay/n1Backfill";
+import {
+  ARCHIVE_RECONCILE_CHECKPOINT_VERSION,
+  ARCHIVE_RECONCILE_SELECTION_VERSION,
+  archiveReconcileCheckpointContract,
+  assertArchiveReconcileCheckpointContract,
+  buildArchiveReconcileSelection,
+  type ArchiveReconcileCheckpointContract,
+} from "../src/research-replay/n2ArchiveReconcileInput";
 import { BET_TYPES, type SettlementBetType, type SettlementStatus } from "../src/research-replay/settlement";
 import {
   EVENT_CLASSIFICATION_VERSION,
@@ -55,8 +63,8 @@ function positiveInt(value: string | null, fallback: number | null): number | nu
   return parsed;
 }
 
-const asOf = argValue("--as-of");
-if (!asOf || Number.isNaN(Date.parse(asOf))) {
+const asOfInput = argValue("--as-of");
+if (!asOfInput) {
   throw new Error("--as-of=<ISO8601 UTC> は必須です（archive cutoff の明示指定）");
 }
 const sidecarPath = resolve(argValue("--sidecar") ?? join(root, "data", "research-replay.sqlite"));
@@ -136,9 +144,10 @@ function newAggregate(): Aggregate {
 }
 
 // checkpoint シリアライズ（Map → 配列、決定的順序）。
-function serializeAggregate(agg: Aggregate): unknown {
+function serializeAggregate(agg: Aggregate, checkpointContract: ArchiveReconcileCheckpointContract): unknown {
   return {
     version: RECONCILE_INPUT_VERSION,
+    checkpointContract,
     cells: [...agg.cells.entries()].sort((a, b) => a[0].localeCompare(b[0])),
     paired: [...agg.paired.entries()].sort((a, b) => a[0].localeCompare(b[0])),
     statusMatrix: [...agg.statusMatrix.entries()].sort((a, b) => a[0].localeCompare(b[0])),
@@ -148,18 +157,21 @@ function serializeAggregate(agg: Aggregate): unknown {
     ambiguousKeys: agg.ambiguousKeys,
   };
 }
-function loadAggregate(path: string): Aggregate | null {
+function loadAggregate(path: string, expectedContract: ArchiveReconcileCheckpointContract): Aggregate | null {
   if (!existsSync(path)) return null;
-  const raw = JSON.parse(readFileSync(path, "utf8")) as ReturnType<typeof serializeAggregate> & Record<string, unknown>;
-  if ((raw as { version?: string }).version !== RECONCILE_INPUT_VERSION) return null;
+  const raw = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
+  if (raw.version !== RECONCILE_INPUT_VERSION) {
+    throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_VERSION_MISMATCH:${String(raw.version ?? "missing")}`);
+  }
+  assertArchiveReconcileCheckpointContract(raw.checkpointContract, expectedContract);
   const agg = newAggregate();
-  for (const [k, v] of (raw as { cells: [string, Cell][] }).cells) agg.cells.set(k, v);
-  for (const [k, v] of (raw as { paired: [string, number][] }).paired) agg.paired.set(k, v);
-  for (const [k, v] of (raw as { statusMatrix: [string, number][] }).statusMatrix) agg.statusMatrix.set(k, v);
-  agg.samples = (raw as { samples: SampleRow[] }).samples;
-  agg.processedFiles = (raw as { processedFiles: string[] }).processedFiles;
-  agg.parseErrors = (raw as { parseErrors: Array<{ file: string; error: string }> }).parseErrors;
-  agg.ambiguousKeys = (raw as { ambiguousKeys: string[] }).ambiguousKeys;
+  for (const [k, v] of raw.cells as [string, Cell][]) agg.cells.set(k, v);
+  for (const [k, v] of raw.paired as [string, number][]) agg.paired.set(k, v);
+  for (const [k, v] of raw.statusMatrix as [string, number][]) agg.statusMatrix.set(k, v);
+  agg.samples = raw.samples as SampleRow[];
+  agg.processedFiles = raw.processedFiles as string[];
+  agg.parseErrors = raw.parseErrors as Array<{ file: string; error: string }>;
+  agg.ambiguousKeys = raw.ambiguousKeys as string[];
   return agg;
 }
 
@@ -304,12 +316,19 @@ async function main(): Promise<void> {
   );
 
   const discovered = listArchiveFiles(archiveRoot);
-  const selected = limit == null ? discovered : discovered.slice(0, limit);
+  const selection = buildArchiveReconcileSelection({ discoveredFiles: discovered, asOf: asOfInput, limit });
+  const selected = selection.selectedFiles;
+  const asOf = selection.asOf;
+  const archiveInventoryDigest = selection.inventoryDigest;
+  const checkpointContract = archiveReconcileCheckpointContract(selection);
 
-  const agg = (resume && loadAggregate(checkpointPath)) || newAggregate();
+  const agg = (resume ? loadAggregate(checkpointPath, checkpointContract) : null) ?? newAggregate();
   const done = new Set(agg.processedFiles);
   const pending = selected.filter((path) => !done.has(basename(path)));
-  process.stderr.write(`[reconcile] files: discovered=${discovered.length} selected=${selected.length} pending=${pending.length}\n`);
+  process.stderr.write(
+    `[reconcile] files: discovered=${discovered.length} cutoffEligible=${selection.eligibleFiles.length} `
+      + `selected=${selected.length} pending=${pending.length}\n`,
+  );
 
   let cursor = 0;
   let processed = agg.processedFiles.length;
@@ -331,14 +350,14 @@ async function main(): Promise<void> {
       agg.processedFiles.push(result.file);
       processed += 1;
       if (processed % flushEvery === 0) {
-        writeFileSync(checkpointPath, `${JSON.stringify(serializeAggregate(agg))}\n`);
+        writeFileSync(checkpointPath, `${JSON.stringify(serializeAggregate(agg, checkpointContract))}\n`);
         process.stderr.write(`[reconcile] processed ${processed}/${selected.length} files\n`);
       }
     }
   };
   mkdirSync(join(root, "data", "tmp"), { recursive: true });
   await Promise.all(Array.from({ length: inFlight }, () => worker()));
-  writeFileSync(checkpointPath, `${JSON.stringify(serializeAggregate(agg))}\n`);
+  writeFileSync(checkpointPath, `${JSON.stringify(serializeAggregate(agg, checkpointContract))}\n`);
 
   // canonical_only を dbActive − paired で導出し、cell へ反映する。
   for (const [key, active] of db.dbActive) {
@@ -382,14 +401,17 @@ async function main(): Promise<void> {
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .map(([transition, count]) => ({ transition, count }));
 
-  // 決定的 digest（timestamp を含めない）。
+  // 決定的 digest（runtime timestamp を含めない）。
   const digestBody = {
     reportSchemaVersion: REPORT_SCHEMA_VERSION,
     reconcileInputVersion: RECONCILE_INPUT_VERSION,
+    archiveSelectionVersion: ARCHIVE_RECONCILE_SELECTION_VERSION,
     raceIdentityVersion: RACE_IDENTITY_VERSION,
     eventClassificationVersion: EVENT_CLASSIFICATION_VERSION,
     settlementCanonicalizationVersion: SETTLEMENT_CANONICALIZATION_VERSION,
     settlementSchemaVersion: db.schemaVersion,
+    asOf,
+    archiveInventoryDigest,
     archiveFilesScanned: selected.length,
     parseErrors: agg.parseErrors.length,
     totals,
@@ -400,7 +422,6 @@ async function main(): Promise<void> {
     ambiguousKeys: [...agg.ambiguousKeys].sort(),
   };
   const outputDigest = canonicalHash(digestBody);
-  const archiveInventoryDigest = canonicalHash(selected.map((p) => basename(p)).sort());
 
   const payload = {
     phase: "N2_ARCHIVE_CANONICAL_SETTLEMENT_RECONCILIATION",
@@ -413,6 +434,8 @@ async function main(): Promise<void> {
     scope: "read-only reconciliation of v2-parsed K archive vs canonical active settlement candidates; no DB/archive/sidecar mutation",
     contract: {
       reconcileInputVersion: RECONCILE_INPUT_VERSION,
+      archiveSelectionVersion: ARCHIVE_RECONCILE_SELECTION_VERSION,
+      checkpointVersion: ARCHIVE_RECONCILE_CHECKPOINT_VERSION,
       raceIdentityVersion: RACE_IDENTITY_VERSION,
       eventClassificationVersion: EVENT_CLASSIFICATION_VERSION,
       settlementCanonicalizationVersion: SETTLEMENT_CANONICALIZATION_VERSION,
@@ -424,6 +447,7 @@ async function main(): Promise<void> {
       sidecar: sidecarPath,
       archiveRoot,
       archiveFilesDiscovered: discovered.length,
+      archiveFilesEligibleAtCutoff: selection.eligibleFiles.length,
       archiveFilesScanned: selected.length,
       limited: limit != null,
       archiveInventoryDigest,
