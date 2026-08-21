@@ -45,13 +45,22 @@ export function archiveFileForRaceKey(raceKey: string): string {
 
 // 1 observation の未訂正 candidate 集合 digest（bet_type, semantic_hash を sort して hash）。
 // correction / reparse candidate は source duplicate ではなく revision lineage なので除外する。
-function observationCandidateDigest(db: DatabaseSync, observationId: string): { digest: string; count: number } {
+// candidate自身のrace identityがobservationとずれている場合はexact source duplicateとして解決しない。
+function observationCandidateDigest(
+  db: DatabaseSync,
+  observationId: string,
+  expectedRaceKey: string,
+): { digest: string; count: number; raceLineageValid: boolean } {
   const rows = db.prepare(
-    `SELECT c.bet_type, c.semantic_hash FROM settlement_candidates_v2 c
+    `SELECT c.canonical_race_key, c.bet_type, c.semantic_hash FROM settlement_candidates_v2 c
      WHERE c.observation_id=? AND ${SOURCE_SETTLEMENT_CANDIDATE_WHERE_C}
      ORDER BY c.bet_type, c.semantic_hash`,
-  ).all(observationId) as Array<{ bet_type: string; semantic_hash: string }>;
-  return { digest: canonicalHash(rows.map((r) => [r.bet_type, r.semantic_hash])), count: rows.length };
+  ).all(observationId) as Array<{ canonical_race_key: string; bet_type: string; semantic_hash: string }>;
+  return {
+    digest: canonicalHash(rows.map((r) => [r.bet_type, r.semantic_hash])),
+    count: rows.length,
+    raceLineageValid: rows.every((row) => row.canonical_race_key === expectedRaceKey),
+  };
 }
 
 export type DuplicateResolutionPlanItem = {
@@ -91,10 +100,12 @@ export function planSourceDuplicateResolution(db: DatabaseSync): DuplicateResolu
       WHERE canonical_race_key=? AND ${SOURCE_SETTLEMENT_OBSERVATION_WHERE} ORDER BY rowid ASC
     `).all(raceKey) as SettlementObservationLineage[];
     const canonical = obs[0];
-    const canonicalDigest = observationCandidateDigest(db, canonical.observation_id);
+    const canonicalDigest = observationCandidateDigest(db, canonical.observation_id, raceKey);
     for (const dup of obs.slice(1)) {
-      const dupDigest = observationCandidateDigest(db, dup.observation_id);
-      const valueEqual = dupDigest.digest === canonicalDigest.digest
+      const dupDigest = observationCandidateDigest(db, dup.observation_id, raceKey);
+      const valueEqual = canonicalDigest.raceLineageValid
+        && dupDigest.raceLineageValid
+        && dupDigest.digest === canonicalDigest.digest
         && dupDigest.count === canonicalDigest.count
         && sameUncorrectedParseLineage(canonical, dup);
       const item: DuplicateResolutionPlanItem = {
@@ -300,14 +311,16 @@ export function detectExactDuplicateObservationsInRaw(
   for (const [raceKey, observations] of byRace) {
     if (observations.length < 2) continue;
     const canonical = observations[0];
-    const canonicalDigest = observationCandidateDigest(db, canonical.observation_id);
+    const canonicalDigest = observationCandidateDigest(db, canonical.observation_id, raceKey);
     for (const dup of observations.slice(1)) {
-      const digest = observationCandidateDigest(db, dup.observation_id);
+      const digest = observationCandidateDigest(db, dup.observation_id, raceKey);
       out.push({
         canonicalRaceKey: raceKey,
         canonicalObservationId: canonical.observation_id,
         duplicateObservationId: dup.observation_id,
-        valueEqual: digest.digest === canonicalDigest.digest
+        valueEqual: canonicalDigest.raceLineageValid
+          && digest.raceLineageValid
+          && digest.digest === canonicalDigest.digest
           && digest.count === canonicalDigest.count
           && sameUncorrectedParseLineage(canonical, dup),
       });
