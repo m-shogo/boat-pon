@@ -1,5 +1,6 @@
 // F0 evidence tablesをread-only JOINした結果だけをN2 source adapterへ昇格する純関数契約。
 // ID文字列の存在だけではlineageと認めず、observation -> parse run -> raw documentを同時に検証する。
+import { canonicalUtcTimestamp } from "./canonical";
 
 export const N2_FEATURE_LINEAGE_CONTRACT_VERSION = "n2-feature-lineage-v1";
 
@@ -127,16 +128,27 @@ export function verifyN2FeatureLineage(
     return { status: "excluded", reason: "excluded_lineage_ambiguous_timing" };
   }
 
-  if (Date.parse(sourceAvailableAt) > Date.parse(row.sourceObservedAt)
-    || Date.parse(row.sourceObservedAt) > Date.parse(row.firstSeenAt)) {
+  let canonicalAvailableAt: string;
+  let canonicalObservedAt: string;
+  let canonicalFirstSeenAt: string;
+  try {
+    canonicalAvailableAt = canonicalUtcTimestamp(sourceAvailableAt);
+    canonicalObservedAt = canonicalUtcTimestamp(row.sourceObservedAt);
+    canonicalFirstSeenAt = canonicalUtcTimestamp(row.firstSeenAt);
+  } catch {
+    return { status: "excluded", reason: "excluded_lineage_unknown_timestamp" };
+  }
+
+  if (Date.parse(canonicalAvailableAt) > Date.parse(canonicalObservedAt)
+    || Date.parse(canonicalObservedAt) > Date.parse(canonicalFirstSeenAt)) {
     return { status: "excluded", reason: "excluded_lineage_timestamp_order" };
   }
   return {
     status: "verified",
     lineage: {
       contractVersion: N2_FEATURE_LINEAGE_CONTRACT_VERSION,
-      sourceAvailableAt,
-      sourceObservedAt: row.sourceObservedAt,
+      sourceAvailableAt: canonicalAvailableAt,
+      sourceObservedAt: canonicalObservedAt,
       availabilityBasis,
       observationId: row.observationId,
       rawDocumentId: row.rawDocumentId,
