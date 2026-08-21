@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { canonicalBackfillRaceKey, fileDate } from "./n1Backfill";
+import { backfillVenueCode, canonicalBackfillRaceKey, fileDate } from "./n1Backfill";
 
 test("backfill archive filename dates must be real Gregorian dates", () => {
   assert.equal(fileDate("/archive/k280229.lzh"), "2028-02-29");
@@ -8,6 +8,8 @@ test("backfill archive filename dates must be real Gregorian dates", () => {
 });
 
 test("backfill race identity is canonical before append-only ingest", () => {
+  assert.equal(backfillVenueCode("蒲郡"), "07");
+  assert.throws(() => backfillVenueCode("UNKNOWN"), /N1_BACKFILL_VENUE_INVALID/);
   assert.equal(canonicalBackfillRaceKey("2028-02-29", "24", 12), "2028-02-29:24:R12");
   assert.throws(() => canonicalBackfillRaceKey("2026-02-30", "01", 1), /invalid JST race date/);
   assert.throws(() => canonicalBackfillRaceKey("2026-08-21", "25", 1), /invalid venue code/);
