@@ -13,6 +13,7 @@ import { adaptLiveOddsRows, type OddsTimeseriesSourceRow } from "./n2FeatureSour
 import { enumerateBetSelections } from "./n2DatasetContract";
 import {
   PAYLOAD_SCHEMA_VERSION,
+  freezeCheckpoint,
   semanticPayloadHash,
   validateTypedPayload,
   type TrifectaMarketPayload,
@@ -125,6 +126,19 @@ function hasValidMarketPayloadMetadata(row: MarketEvidenceMetadataRow): boolean 
     && row.payloadHash === row.observationPayloadHash;
 }
 
+function hasValidCheckpointSemantics(payload: TrifectaMarketPayload): boolean {
+  try {
+    const expected = freezeCheckpoint(payload.scheduledCloseAtSeen, payload.observedAt);
+    return payload.scheduledCloseAtSeen === expected.scheduledCloseAtSeen
+      && payload.observedAt === expected.observedAt
+      && payload.minutesBeforeCloseAtCapture === expected.minutesBeforeCloseAtCapture
+      && payload.checkpointLabelAtCapture === expected.checkpointLabelAtCapture
+      && payload.checkpointPolicyVersion === expected.checkpointPolicyVersion;
+  } catch {
+    return false;
+  }
+}
+
 function parsePayload(row: MarketEvidenceRow): TrifectaMarketPayload | null {
   if (!hasValidMarketPayloadMetadata(row)) return null;
   let payload: TrifectaMarketPayload;
@@ -136,7 +150,7 @@ function parsePayload(row: MarketEvidenceRow): TrifectaMarketPayload | null {
   } catch {
     return null;
   }
-  if (!isExplicitMarketObservedAt(payload.observedAt)) return null;
+  if (!isExplicitMarketObservedAt(payload.observedAt) || !hasValidCheckpointSemantics(payload)) return null;
   const semanticHash = semanticPayloadHash("trifecta_market", payload);
   if (row.payloadHash !== semanticHash || row.observationPayloadHash !== semanticHash) return null;
   return payload;
