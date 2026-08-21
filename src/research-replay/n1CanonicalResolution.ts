@@ -255,13 +255,13 @@ export function auditCanonicalDuplicates(db: DatabaseSync): CanonicalDuplicateAu
   void activeDupObsRaces;
   const rawCandidates = scalar(db, `SELECT COUNT(*) c FROM ${SOURCE_SETTLEMENT_CANDIDATE_FROM} WHERE ${SOURCE_SETTLEMENT_OBSERVATION_WHERE_O} AND ${SOURCE_SETTLEMENT_CANDIDATE_WHERE_C}`);
   const rawDistinctRaceBetHash = scalar(db, `SELECT COUNT(*) c FROM (
-    SELECT DISTINCT c.canonical_race_key,c.bet_type,c.semantic_hash
+    SELECT DISTINCT o.canonical_race_key,c.bet_type,c.semantic_hash
     FROM ${SOURCE_SETTLEMENT_CANDIDATE_FROM}
     WHERE ${SOURCE_SETTLEMENT_OBSERVATION_WHERE_O} AND ${SOURCE_SETTLEMENT_CANDIDATE_WHERE_C}
   )`);
   const activeCandidates = scalar(db, `SELECT COUNT(*) c FROM ${SOURCE_SETTLEMENT_CANDIDATE_FROM} WHERE ${SOURCE_SETTLEMENT_OBSERVATION_WHERE_O} AND ${SOURCE_SETTLEMENT_CANDIDATE_WHERE_C} AND ${CAND_NOT_RESOLVED}`);
   const activeDistinctRaceBetHash = scalar(db, `SELECT COUNT(*) c FROM (
-    SELECT DISTINCT c.canonical_race_key,c.bet_type,c.semantic_hash
+    SELECT DISTINCT o.canonical_race_key,c.bet_type,c.semantic_hash
     FROM ${SOURCE_SETTLEMENT_CANDIDATE_FROM}
     WHERE ${SOURCE_SETTLEMENT_OBSERVATION_WHERE_O} AND ${SOURCE_SETTLEMENT_CANDIDATE_WHERE_C} AND ${CAND_NOT_RESOLVED}
   )`);
