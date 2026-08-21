@@ -87,6 +87,19 @@ export function loadActiveState(db: DatabaseSync, sourceDup: Set<string>): Activ
 export const ensureSupersedesIndex = (db: DatabaseSync): void =>
   db.exec("CREATE INDEX IF NOT EXISTS reparse_idx_supersedes ON settlement_candidates_v2(supersedes_candidate_id) WHERE supersedes_candidate_id IS NOT NULL");
 
+function requireSingleSourceParseRun(db: DatabaseSync, rawDocumentId: string): string {
+  const rows = db.prepare(
+    "SELECT parse_run_id AS id FROM parse_runs WHERE raw_document_id=? AND parser_version=? ORDER BY parse_run_id",
+  ).all(rawDocumentId, REPARSE_SOURCE_PARSER_VERSION) as Array<{ id: string }>;
+  if (rows.length === 0) {
+    throw new Error(`REPARSE_SOURCE_PARSE_RUN_MISSING:${rawDocumentId}`);
+  }
+  if (rows.length > 1) {
+    throw new Error(`REPARSE_SOURCE_PARSE_RUN_AMBIGUOUS:${rawDocumentId}:${rows.length}`);
+  }
+  return rows[0].id;
+}
+
 // 1 raw document 分の v2 derived candidate を temp copy へ append-only 適用する（per-document transaction）。
 // meta.rawDocumentId は当該 raw の既存 raw_document_id（provenance 保持）。state/activeState を mutate する。
 export function applyReparseForDocument(
@@ -97,8 +110,7 @@ export function applyReparseForDocument(
   db.exec("BEGIN IMMEDIATE");
   try {
     const parseRunId = `rpr-parse-${meta.rawDocumentId}`;
-    const v1ParseRun = db.prepare("SELECT parse_run_id AS id FROM parse_runs WHERE raw_document_id=? AND parser_version=? LIMIT 1")
-      .get(meta.rawDocumentId, REPARSE_SOURCE_PARSER_VERSION) as { id: string } | undefined;
+    const v1ParseRunId = requireSingleSourceParseRun(db, meta.rawDocumentId);
     const prInfo = db.prepare(
       `INSERT OR IGNORE INTO parse_runs
        (parse_run_id, raw_document_id, parser_name, parser_version, source_schema_version,
@@ -107,7 +119,7 @@ export function applyReparseForDocument(
        VALUES (?,?,?,?,?,?, 'settlement_result', 'success', '[]', NULL, ?,?,?,?, 'parser_reparse', ?, ?)`,
     ).run(parseRunId, meta.rawDocumentId, REPARSE_PARSER_NAME, REPARSE_TARGET_PARSER_VERSION, meta.family,
       REPARSE_CANONICALIZATION_VERSION, nowIso, nowIso, canonicalHash({ reparse: meta.rawDocumentId }),
-      v1ParseRun?.id ?? null, REPARSE_DEFECT_CODE, nowIso);
+      v1ParseRunId, REPARSE_DEFECT_CODE, nowIso);
     if (Number(prInfo.changes) > 0) state.counts.appended_parse_runs += 1;
 
     const obsInsert = db.prepare(
