@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { RECONCILE_INPUT_VERSION } from "./n2ArchiveCanonicalReconcile";
 import {
   ARCHIVE_RECONCILE_CHECKPOINT_VERSION,
   ARCHIVE_RECONCILE_SELECTION_VERSION,
@@ -18,7 +19,7 @@ const contract: ArchiveReconcileCheckpointContract = {
 };
 
 const state = {
-  version: "n2-archive-canonical-reconcile-input-v2",
+  version: RECONCILE_INPUT_VERSION,
   cells: [],
   paired: [],
   statusMatrix: [],
