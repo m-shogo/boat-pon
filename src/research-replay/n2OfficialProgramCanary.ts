@@ -451,6 +451,27 @@ function captureCachedOfficialProgram(input: {
   return { observationId: parse.observationId, reusedObservation: reusable !== null };
 }
 
+function hasReusableCurrentOfficialProgramObservation(input: {
+  db: DatabaseSync;
+  repository: ResearchReplayRepository;
+  item: OfficialProgramCanaryManifestItem;
+}): boolean {
+  const raw = input.db.prepare(`
+    SELECT raw_document_id
+    FROM raw_documents
+    WHERE raw_sha256=?
+  `).get(input.item.rawSha256) as { raw_document_id: string } | undefined;
+  if (!raw) return false;
+  return input.repository.findReusableTypedObservation({
+    rawDocumentId: raw.raw_document_id,
+    canonicalRaceKey: input.item.canonicalRaceKey,
+    parserName: "n2-official-program",
+    parserVersion: N2_OFFICIAL_PROGRAM_PARSER_VERSION,
+    sourceSchemaVersion: N2_OFFICIAL_PROGRAM_SOURCE_SCHEMA_VERSION,
+    payloadType: "official_program",
+  }) !== null;
+}
+
 export function applyOfficialProgramCanary(input: {
   db: DatabaseSync;
   repository: ResearchReplayRepository;
@@ -467,14 +488,11 @@ export function applyOfficialProgramCanary(input: {
   let insertedCount = 0;
   let reusedCount = 0;
   for (const item of input.manifest.binding.items) {
-    const existing = Number((input.db.prepare(`
-      SELECT COUNT(*) n
-      FROM domain_observations o
-      JOIN raw_documents r ON r.raw_document_id=o.raw_document_id
-      WHERE o.canonical_race_key=? AND o.observation_type='official_program' AND r.raw_sha256=?
-    `).get(item.canonicalRaceKey, item.rawSha256) as { n: number }).n);
-    if (existing > 1) throw new Error(`AMBIGUOUS_EXISTING_OBSERVATION:${item.primaryRecordId}`);
-    if (existing === 1) {
+    if (hasReusableCurrentOfficialProgramObservation({
+      db: input.db,
+      repository: input.repository,
+      item,
+    })) {
       reusedCount += 1;
       continue;
     }
