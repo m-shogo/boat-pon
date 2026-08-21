@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import test from "node:test";
 
 import {
@@ -51,6 +51,16 @@ test("reparse checkpoint identity canonicalizes equivalent as-of instants", () =
     assert.deepEqual(
       build(files, { asOf: "2026-08-01T09:00:00+09:00" }),
       build(files, { asOf: "2026-08-01T00:00:00.000Z" }),
+    );
+  });
+});
+
+test("reparse checkpoint identity resolves CLI basename selections from archive root", () => {
+  withArchiveFiles((files) => {
+    const archiveRoot = dirname(files[0]);
+    assert.deepEqual(
+      build(files.map((file) => basename(file)), { archiveRoot }),
+      build(files, { archiveRoot }),
     );
   });
 });
@@ -105,6 +115,24 @@ test("reparse checkpoint identity rejects duplicate archive basenames", () => {
       rmSync(otherDir, { recursive: true, force: true });
     }
   });
+});
+
+test("reparse checkpoint identity rejects ambiguous basename lookup under archive root", () => {
+  const archiveRoot = mkdtempSync(join(tmpdir(), "boat-pon-reparse-ambiguous-"));
+  try {
+    const firstDir = join(archiveRoot, "first");
+    const secondDir = join(archiveRoot, "second");
+    mkdirSync(firstDir, { recursive: true });
+    mkdirSync(secondDir, { recursive: true });
+    writeFileSync(join(firstDir, "k260801.lzh"), "archive-one");
+    writeFileSync(join(secondDir, "k260801.lzh"), "archive-two");
+    assert.throws(
+      () => build(["k260801.lzh"], { archiveRoot }),
+      /REPARSE_CHECKPOINT_ARCHIVE_BASENAME_AMBIGUOUS/,
+    );
+  } finally {
+    rmSync(archiveRoot, { recursive: true, force: true });
+  }
 });
 
 test("reparse checkpoint identity rejects impossible timestamps and malformed source digests", () => {
