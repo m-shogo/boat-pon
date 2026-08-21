@@ -55,6 +55,9 @@ export function archiveFallbackDate(path: string): string {
 }
 
 export async function auditAllLocalKArchives(root: string, concurrency = 8): Promise<ArchiveAudit> {
+  if (!Number.isSafeInteger(concurrency) || concurrency <= 0) {
+    throw new Error(`N1_ARCHIVE_AUDIT_CONCURRENCY_INVALID:${concurrency}`);
+  }
   if (!statSync(root).isDirectory()) throw new Error(`archive root is not a directory: ${root}`);
   const files = walk(root).sort((left, right) => left.localeCompare(right));
   const report: ArchiveAudit = {
@@ -100,7 +103,7 @@ export async function auditAllLocalKArchives(root: string, concurrency = 8): Pro
       }
     }
   };
-  await Promise.all(Array.from({ length: Math.max(1, concurrency) }, () => worker()));
+  await Promise.all(Array.from({ length: concurrency }, () => worker()));
   return report;
 }
 
