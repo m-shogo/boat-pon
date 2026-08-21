@@ -460,6 +460,12 @@ export function completedBackfillCountForParser(input: {
 // checkpoint駆動でarchive fileを順に処理する。per-fileで単一transaction（atomic batch）。
 // limit=このrunで新規処理する最大file数（milestone gate用）。maxFiles=対象listのslice（sample用）。
 // guardに1つでも抵触したらfile境界で安全停止する。
+function requireOptionalBound(name: "MAX_FILES" | "LIMIT", value: number | undefined): void {
+  if (value !== undefined && (!Number.isSafeInteger(value) || value < 0)) {
+    throw new Error(`N1_BACKFILL_${name}_INVALID:${value}`);
+  }
+}
+
 export async function runBackfill(input: {
   db: DatabaseSync;
   rawStore: RawStore;
@@ -483,12 +489,14 @@ export async function runBackfill(input: {
   healthEvery?: number;
   onProgress?: (completedTotal: number, file: string) => void;
 }): Promise<BackfillRunSummary> {
+  requireOptionalBound("MAX_FILES", input.maxFiles);
+  requireOptionalBound("LIMIT", input.limit);
   const primaryMonitor = input.primaryMonitor ?? "strict";
   const idPrefix = input.idPrefix ?? "n1bf";
   const checkpoints = new BackfillCheckpointRepository(input.db);
   const replay = new ResearchReplayRepository(input.db, input.rawStore, undefined, () => input.now);
   const settlement = new SettlementRepository(input.db);
-  const files = input.maxFiles ? input.archiveFiles.slice(0, input.maxFiles) : input.archiveFiles;
+  const files = input.maxFiles !== undefined ? input.archiveFiles.slice(0, input.maxFiles) : input.archiveFiles;
   const totalArchiveCount = input.totalArchiveCount ?? input.archiveFiles.length;
   const dbSize = (): number | null => input.dbPath ? statSync(input.dbPath).size : null;
   const walSize = (): number => { try { return input.dbPath ? statSync(`${input.dbPath}-wal`).size : 0; } catch { return 0; } };
