@@ -14,6 +14,7 @@ export type N2SettlementReparseCheckpointIdentity = {
   canary: boolean;
   filesLimit: number | null;
   sourcePath: string;
+  sourceSidecarSha256: string;
   targetPath: string;
   archiveRoot: string;
   selectedFilesDigest: string;
@@ -30,10 +31,14 @@ export function buildN2SettlementReparseCheckpointIdentity(input: {
   canary: boolean;
   filesLimit: number | null;
   sourcePath: string;
+  sourceSidecarSha256: string;
   targetPath: string;
   archiveRoot: string;
   selectedFiles: string[];
 }): N2SettlementReparseCheckpointIdentity {
+  if (!/^[0-9a-f]{64}$/.test(input.sourceSidecarSha256)) {
+    throw new Error("REPARSE_CHECKPOINT_SOURCE_SHA_INVALID");
+  }
   return {
     checkpointVersion: N2_SETTLEMENT_REPARSE_CHECKPOINT_VERSION,
     reparseSchemaVersion: input.reparseSchemaVersion,
@@ -46,6 +51,7 @@ export function buildN2SettlementReparseCheckpointIdentity(input: {
     canary: input.canary,
     filesLimit: input.filesLimit,
     sourcePath: input.sourcePath,
+    sourceSidecarSha256: input.sourceSidecarSha256,
     targetPath: input.targetPath,
     archiveRoot: input.archiveRoot,
     selectedFilesDigest: canonicalHash([...input.selectedFiles]),
