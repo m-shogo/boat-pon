@@ -13,6 +13,7 @@ export const SOURCE_DUPLICATE_POLICY_VERSION = "n1c-source-duplicate-policy-v1";
 const SOURCE_DUPLICATE_DETECTION_REASON = "intra_file_source_duplicate: same raw document produced multiple identical race observations";
 const SOURCE_SETTLEMENT_OBSERVATION_WHERE = "observation_type='settlement_result' AND payload_type='settlement_result' AND supersedes_id IS NULL AND correction_kind IS NULL AND correction_reason IS NULL";
 const SOURCE_SETTLEMENT_OBSERVATION_WHERE_O = "o.observation_type='settlement_result' AND o.payload_type='settlement_result' AND o.supersedes_id IS NULL AND o.correction_kind IS NULL AND o.correction_reason IS NULL";
+const SOURCE_SETTLEMENT_CANDIDATE_WHERE_C = "c.revision_kind='initial' AND c.supersedes_candidate_id IS NULL AND c.correction_reason IS NULL";
 
 type SettlementObservationLineage = {
   observation_id: string;
@@ -42,10 +43,13 @@ export function archiveFileForRaceKey(raceKey: string): string {
   return `k${year.slice(2)}${month}${day}.lzh`;
 }
 
-// 1 observation の candidate 集合 digest（bet_type, semantic_hash を sort して hash）。
+// 1 observation の未訂正 candidate 集合 digest（bet_type, semantic_hash を sort して hash）。
+// correction / reparse candidate は source duplicate ではなく revision lineage なので除外する。
 function observationCandidateDigest(db: DatabaseSync, observationId: string): { digest: string; count: number } {
   const rows = db.prepare(
-    "SELECT bet_type, semantic_hash FROM settlement_candidates_v2 WHERE observation_id=? ORDER BY bet_type, semantic_hash",
+    `SELECT c.bet_type, c.semantic_hash FROM settlement_candidates_v2 c
+     WHERE c.observation_id=? AND ${SOURCE_SETTLEMENT_CANDIDATE_WHERE_C}
+     ORDER BY c.bet_type, c.semantic_hash`,
   ).all(observationId) as Array<{ bet_type: string; semantic_hash: string }>;
   return { digest: canonicalHash(rows.map((r) => [r.bet_type, r.semantic_hash])), count: rows.length };
 }
@@ -249,17 +253,17 @@ export function auditCanonicalDuplicates(db: DatabaseSync): CanonicalDuplicateAu
   const activeDistinctRaces = scalar(db, `SELECT COUNT(DISTINCT o.canonical_race_key) c FROM domain_observations o WHERE ${SOURCE_SETTLEMENT_OBSERVATION_WHERE_O} AND ${NOT_RESOLVED}`);
   const activeDuplicateObservations = activeObsTotal - activeDistinctRaces;
   void activeDupObsRaces;
-  const rawCandidates = scalar(db, `SELECT COUNT(*) c FROM ${SOURCE_SETTLEMENT_CANDIDATE_FROM} WHERE ${SOURCE_SETTLEMENT_OBSERVATION_WHERE_O}`);
+  const rawCandidates = scalar(db, `SELECT COUNT(*) c FROM ${SOURCE_SETTLEMENT_CANDIDATE_FROM} WHERE ${SOURCE_SETTLEMENT_OBSERVATION_WHERE_O} AND ${SOURCE_SETTLEMENT_CANDIDATE_WHERE_C}`);
   const rawDistinctRaceBetHash = scalar(db, `SELECT COUNT(*) c FROM (
     SELECT DISTINCT c.canonical_race_key,c.bet_type,c.semantic_hash
     FROM ${SOURCE_SETTLEMENT_CANDIDATE_FROM}
-    WHERE ${SOURCE_SETTLEMENT_OBSERVATION_WHERE_O}
+    WHERE ${SOURCE_SETTLEMENT_OBSERVATION_WHERE_O} AND ${SOURCE_SETTLEMENT_CANDIDATE_WHERE_C}
   )`);
-  const activeCandidates = scalar(db, `SELECT COUNT(*) c FROM ${SOURCE_SETTLEMENT_CANDIDATE_FROM} WHERE ${SOURCE_SETTLEMENT_OBSERVATION_WHERE_O} AND ${CAND_NOT_RESOLVED}`);
+  const activeCandidates = scalar(db, `SELECT COUNT(*) c FROM ${SOURCE_SETTLEMENT_CANDIDATE_FROM} WHERE ${SOURCE_SETTLEMENT_OBSERVATION_WHERE_O} AND ${SOURCE_SETTLEMENT_CANDIDATE_WHERE_C} AND ${CAND_NOT_RESOLVED}`);
   const activeDistinctRaceBetHash = scalar(db, `SELECT COUNT(*) c FROM (
     SELECT DISTINCT c.canonical_race_key,c.bet_type,c.semantic_hash
     FROM ${SOURCE_SETTLEMENT_CANDIDATE_FROM}
-    WHERE ${SOURCE_SETTLEMENT_OBSERVATION_WHERE_O} AND ${CAND_NOT_RESOLVED}
+    WHERE ${SOURCE_SETTLEMENT_OBSERVATION_WHERE_O} AND ${SOURCE_SETTLEMENT_CANDIDATE_WHERE_C} AND ${CAND_NOT_RESOLVED}
   )`);
   const resolvedDuplicateObservations = scalar(db, "SELECT COUNT(*) c FROM settlement_source_duplicate_resolutions_v2");
   return {
