@@ -82,3 +82,9 @@ test("review bundle and executor remain read-only and bind factual generation ti
   assert.equal(executorSource.includes("recordApprovalGrant"), false);
   assert.equal(executorSource.includes("applyOfficialProgramCanary"), false);
 });
+
+test("review readiness uses lifecycle-valid approval authority instead of raw grant scopes", () => {
+  assert.ok(executorSource.includes("readLifecycleValidApprovalScopes"));
+  assert.ok(executorSource.includes("approvalScopes: readLifecycleValidApprovalScopes(ctx.sidecarPath)"));
+  assert.equal(executorSource.includes("...readinessRead.input.rollout"), false);
+});
