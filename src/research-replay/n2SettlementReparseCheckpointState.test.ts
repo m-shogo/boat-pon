@@ -24,6 +24,7 @@ const identity: N2SettlementReparseCheckpointIdentity = {
   targetPath: "/tmp/target.sqlite",
   archiveRoot: "/tmp/archive",
   selectedFilesDigest: "b".repeat(64),
+  selectedFileBasenames: ["k260801.lzh", "k260802.lzh"],
 };
 
 const state = {
@@ -45,6 +46,24 @@ test("reparse checkpoint state digest is bound to checkpoint identity and state"
   assert.throws(
     () => assertN2SettlementReparseCheckpointStateDigest(digest, identity, tampered),
     /REPARSE_CHECKPOINT_STATE_DIGEST_MISMATCH/,
+  );
+});
+
+test("reparse checkpoint resume rejects rehashed processed files outside selected inventory", () => {
+  const tampered = { ...state, processedFiles: ["k260801.lzh", "k260803.lzh"] };
+  const digest = buildN2SettlementReparseCheckpointStateDigest(identity, tampered);
+  assert.throws(
+    () => assertN2SettlementReparseCheckpointStateDigest(digest, identity, tampered),
+    /REPARSE_CHECKPOINT_PROCESSED_FILE_OUT_OF_SELECTION:k260803\.lzh/,
+  );
+});
+
+test("reparse checkpoint resume rejects rehashed duplicate processed files", () => {
+  const tampered = { ...state, processedFiles: ["k260801.lzh", "k260801.lzh"] };
+  const digest = buildN2SettlementReparseCheckpointStateDigest(identity, tampered);
+  assert.throws(
+    () => assertN2SettlementReparseCheckpointStateDigest(digest, identity, tampered),
+    /REPARSE_CHECKPOINT_PROCESSED_FILE_DUPLICATE:k260801\.lzh/,
   );
 });
 
