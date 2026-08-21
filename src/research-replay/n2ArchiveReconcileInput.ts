@@ -57,6 +57,9 @@ export function buildArchiveReconcileSelection(input: {
   readArchiveBytes?: (path: string) => Uint8Array;
 }): ArchiveReconcileSelection {
   if (!input.asOf) throw new Error("ARCHIVE_RECONCILE_AS_OF_MISSING");
+  if (input.limit !== null && (!Number.isSafeInteger(input.limit) || input.limit <= 0)) {
+    throw new Error(`ARCHIVE_RECONCILE_LIMIT_INVALID:${String(input.limit)}`);
+  }
   const asOf = canonicalUtcTimestamp(input.asOf);
   const cutoffDate = lastCompletedJstRaceDate(asOf);
   const dated = input.discoveredFiles.map((path) => {
