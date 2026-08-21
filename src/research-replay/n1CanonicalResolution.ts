@@ -214,6 +214,8 @@ const NOT_RESOLVED = `NOT EXISTS (
 const CAND_NOT_RESOLVED = `NOT EXISTS (
   SELECT 1 FROM settlement_source_duplicate_resolutions_v2 r
   WHERE r.duplicate_observation_id = c.observation_id)`;
+const SOURCE_SETTLEMENT_CANDIDATE_FROM = `settlement_candidates_v2 c
+  JOIN domain_observations o ON o.observation_id = c.observation_id`;
 
 function scalar(db: DatabaseSync, sql: string): number {
   return Number((db.prepare(sql).get() as { c: number }).c);
@@ -247,10 +249,18 @@ export function auditCanonicalDuplicates(db: DatabaseSync): CanonicalDuplicateAu
   const activeDistinctRaces = scalar(db, `SELECT COUNT(DISTINCT o.canonical_race_key) c FROM domain_observations o WHERE ${SOURCE_SETTLEMENT_OBSERVATION_WHERE_O} AND ${NOT_RESOLVED}`);
   const activeDuplicateObservations = activeObsTotal - activeDistinctRaces;
   void activeDupObsRaces;
-  const rawCandidates = scalar(db, "SELECT COUNT(*) c FROM settlement_candidates_v2");
-  const rawDistinctRaceBetHash = scalar(db, "SELECT COUNT(*) c FROM (SELECT DISTINCT canonical_race_key,bet_type,semantic_hash FROM settlement_candidates_v2)");
-  const activeCandidates = scalar(db, `SELECT COUNT(*) c FROM settlement_candidates_v2 c WHERE ${CAND_NOT_RESOLVED}`);
-  const activeDistinctRaceBetHash = scalar(db, `SELECT COUNT(*) c FROM (SELECT DISTINCT canonical_race_key,bet_type,semantic_hash FROM settlement_candidates_v2 c WHERE ${CAND_NOT_RESOLVED})`);
+  const rawCandidates = scalar(db, `SELECT COUNT(*) c FROM ${SOURCE_SETTLEMENT_CANDIDATE_FROM} WHERE ${SOURCE_SETTLEMENT_OBSERVATION_WHERE_O}`);
+  const rawDistinctRaceBetHash = scalar(db, `SELECT COUNT(*) c FROM (
+    SELECT DISTINCT c.canonical_race_key,c.bet_type,c.semantic_hash
+    FROM ${SOURCE_SETTLEMENT_CANDIDATE_FROM}
+    WHERE ${SOURCE_SETTLEMENT_OBSERVATION_WHERE_O}
+  )`);
+  const activeCandidates = scalar(db, `SELECT COUNT(*) c FROM ${SOURCE_SETTLEMENT_CANDIDATE_FROM} WHERE ${SOURCE_SETTLEMENT_OBSERVATION_WHERE_O} AND ${CAND_NOT_RESOLVED}`);
+  const activeDistinctRaceBetHash = scalar(db, `SELECT COUNT(*) c FROM (
+    SELECT DISTINCT c.canonical_race_key,c.bet_type,c.semantic_hash
+    FROM ${SOURCE_SETTLEMENT_CANDIDATE_FROM}
+    WHERE ${SOURCE_SETTLEMENT_OBSERVATION_WHERE_O} AND ${CAND_NOT_RESOLVED}
+  )`);
   const resolvedDuplicateObservations = scalar(db, "SELECT COUNT(*) c FROM settlement_source_duplicate_resolutions_v2");
   return {
     rawObservations, rawDistinctRaceKeys,

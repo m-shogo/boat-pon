@@ -18,6 +18,7 @@ import {
 
 const NOW = "2026-08-21T09:45:00.000Z";
 const RACE_KEY = "2026-08-21:05:R3";
+const SHARED_SEMANTIC_HASH = "a".repeat(64);
 
 function setup() {
   const root = mkdtempSync(join(tmpdir(), "n1-canonical-correction-scope-"));
@@ -70,7 +71,35 @@ function insertObservation(input: {
     );
 }
 
-test("parser-reparse observations do not block source-duplicate resolution or inflate source-observation audit", () => {
+function insertCandidate(input: {
+  db: ReturnType<typeof openSidecarDatabase>;
+  candidateId: string;
+  observationId: string;
+  rawDocumentId: string;
+  parseRunId: string;
+  revisionKind: "initial" | "parser_reparse";
+  correctionReason?: string | null;
+}): void {
+  input.db.prepare(`INSERT INTO settlement_candidates_v2
+    (candidate_id,canonical_race_key,bet_type,settlement_status,result_kind,revision_kind,resolution_status,
+     source_kind,source_schema_version,observation_id,parse_run_id,raw_document_id,semantic_hash,
+     supersedes_candidate_id,correction_reason,observed_at,created_at)
+    VALUES (?,?,'win','settled','normal',?,'resolved','official_archive','scope-v1',?,?,?,?,NULL,?,?,?)`)
+    .run(
+      input.candidateId,
+      RACE_KEY,
+      input.revisionKind,
+      input.observationId,
+      input.parseRunId,
+      input.rawDocumentId,
+      SHARED_SEMANTIC_HASH,
+      input.correctionReason ?? null,
+      NOW,
+      NOW,
+    );
+}
+
+test("parser-reparse observations and candidates do not inflate source-duplicate audit", () => {
   const { db, rawDocumentId } = setup();
   insertParseRun(db, rawDocumentId, "parse-original");
   insertParseRun(db, rawDocumentId, "parse-reparse");
@@ -81,6 +110,23 @@ test("parser-reparse observations do not block source-duplicate resolution or in
     rawDocumentId,
     parseRunId: "parse-reparse",
     correctionKind: "parser_reparse",
+    correctionReason: "TEST_REPARSE",
+  });
+  insertCandidate({
+    db,
+    candidateId: "candidate-original",
+    observationId: "settlement-original",
+    rawDocumentId,
+    parseRunId: "parse-original",
+    revisionKind: "initial",
+  });
+  insertCandidate({
+    db,
+    candidateId: "candidate-reparse",
+    observationId: "settlement-reparse",
+    rawDocumentId,
+    parseRunId: "parse-reparse",
+    revisionKind: "parser_reparse",
     correctionReason: "TEST_REPARSE",
   });
 
@@ -95,5 +141,11 @@ test("parser-reparse observations do not block source-duplicate resolution or in
   assert.equal(audit.rawDistinctRaceKeys, 1);
   assert.equal(audit.rawDuplicateObservations, 0);
   assert.equal(audit.activeDuplicateObservations, 0);
+  assert.equal(audit.rawCandidates, 1);
+  assert.equal(audit.rawDistinctRaceBetHash, 1);
+  assert.equal(audit.rawRaceLevelDuplicateCandidates, 0);
+  assert.equal(audit.activeCandidates, 1);
+  assert.equal(audit.activeDistinctRaceBetHash, 1);
+  assert.equal(audit.activeCanonicalRaceLevelDuplicateCandidates, 0);
   db.close();
 });
