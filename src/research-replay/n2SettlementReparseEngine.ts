@@ -224,6 +224,69 @@ function requireTargetObservationContract(
   }
 }
 
+function requireTargetCandidateContract(
+  db: DatabaseSync,
+  candidateId: string,
+  expected: {
+    raceKey: string;
+    betType: SettlementBetType;
+    settlementStatus: SettlementStatus;
+    resultKind: ResultKind;
+    revisionKind: "initial" | "parser_reparse";
+    sourceSchemaVersion: string;
+    observationId: string;
+    parseRunId: string;
+    rawDocumentId: string;
+    semanticHash: string;
+    supersedesCandidateId: string | null;
+    correctionReason: string | null;
+  },
+): void {
+  const row = db.prepare(
+    `SELECT canonical_race_key AS raceKey, bet_type AS betType, settlement_status AS settlementStatus,
+            result_kind AS resultKind, revision_kind AS revisionKind, resolution_status AS resolutionStatus,
+            source_kind AS sourceKind, source_schema_version AS sourceSchemaVersion,
+            observation_id AS observationId, parse_run_id AS parseRunId, raw_document_id AS rawDocumentId,
+            semantic_hash AS semanticHash, supersedes_candidate_id AS supersedesCandidateId,
+            correction_reason AS correctionReason
+     FROM settlement_candidates_v2 WHERE candidate_id=?`,
+  ).get(candidateId) as {
+    raceKey: string;
+    betType: string;
+    settlementStatus: string;
+    resultKind: string;
+    revisionKind: string;
+    resolutionStatus: string;
+    sourceKind: string;
+    sourceSchemaVersion: string;
+    observationId: string;
+    parseRunId: string;
+    rawDocumentId: string;
+    semanticHash: string;
+    supersedesCandidateId: string | null;
+    correctionReason: string | null;
+  } | undefined;
+  if (
+    row === undefined ||
+    row.raceKey !== expected.raceKey ||
+    row.betType !== expected.betType ||
+    row.settlementStatus !== expected.settlementStatus ||
+    row.resultKind !== expected.resultKind ||
+    row.revisionKind !== expected.revisionKind ||
+    row.resolutionStatus !== "resolved" ||
+    row.sourceKind !== "official_archive" ||
+    row.sourceSchemaVersion !== expected.sourceSchemaVersion ||
+    row.observationId !== expected.observationId ||
+    row.parseRunId !== expected.parseRunId ||
+    row.rawDocumentId !== expected.rawDocumentId ||
+    row.semanticHash !== expected.semanticHash ||
+    row.supersedesCandidateId !== expected.supersedesCandidateId ||
+    row.correctionReason !== expected.correctionReason
+  ) {
+    throw new Error(`REPARSE_TARGET_CANDIDATE_CONFLICT:${expected.rawDocumentId}:${candidateId}`);
+  }
+}
+
 // 1 raw document 分の v2 derived candidate を temp copy へ append-only 適用する（per-document transaction）。
 // meta.rawDocumentId は当該 raw の既存 raw_document_id（provenance 保持）。state/activeState を mutate する。
 export function applyReparseForDocument(
@@ -277,16 +340,33 @@ export function applyReparseForDocument(
         observedRaces.add(cand.raceKey);
       }
       const superseding = isSupersedingAction(action);
+      const sourceSchemaVersion = existing?.sourceSchemaVersion ?? meta.family;
+      const supersedesCandidateId = superseding ? existing!.candidateId : null;
+      const correctionReason = superseding ? REPARSE_DEFECT_CODE : null;
       const appended = repo.appendCandidate({
         canonicalRaceKey: cand.raceKey, betType: cand.betType, settlementStatus: cand.status, resultKind: cand.resultKind,
         revisionKind: superseding ? "parser_reparse" : "initial", resolutionStatus: "resolved", sourceKind: "official_archive",
-        sourceSchemaVersion: existing?.sourceSchemaVersion ?? meta.family,
+        sourceSchemaVersion,
         observationId, parseRunId, rawDocumentId: meta.rawDocumentId, observedAt: nowIso,
-        supersedesCandidateId: superseding ? existing!.candidateId : null,
-        correctionReason: superseding ? REPARSE_DEFECT_CODE : null,
+        supersedesCandidateId,
+        correctionReason,
         payouts: cand.payouts.map((p) => ({ selection: p.selection, payoutYen: p.payoutYen, popularity: p.popularity, lineKind: p.lineKind })),
         refunds: cand.refunds.map((r) => ({ selection: r.selection, scope: r.scope, refundYenPer100: r.refundYenPer100, reasonCode: r.reasonCode })),
         emitEvidencePins: false, withinTransaction: true,
+      });
+      requireTargetCandidateContract(db, appended.candidateId, {
+        raceKey: cand.raceKey,
+        betType: cand.betType,
+        settlementStatus: cand.status,
+        resultKind: cand.resultKind,
+        revisionKind: superseding ? "parser_reparse" : "initial",
+        sourceSchemaVersion,
+        observationId,
+        parseRunId,
+        rawDocumentId: meta.rawDocumentId,
+        semanticHash: appended.semanticHash,
+        supersedesCandidateId,
+        correctionReason,
       });
       if (appended.inserted) {
         state.counts.appended_candidates += 1;
