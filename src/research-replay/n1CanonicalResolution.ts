@@ -4,6 +4,7 @@
 // 決定的 canonical = 各 race の source 順で最初の observation（domain_observations.rowid 昇順）。
 import type { DatabaseSync } from "node:sqlite";
 import { canonicalHash } from "./canonical";
+import { parseCanonicalRaceKey } from "./identity";
 import { N1_CANONICAL_RESOLUTION_SCHEMA_VERSION, SourceDuplicateResolutionRepository } from "./settlement";
 
 export const SOURCE_DUPLICATE_RESOLVER_VERSION = "n1c-source-duplicate-resolver-v1";
@@ -11,11 +12,12 @@ export const SOURCE_DUPLICATE_POLICY_VERSION = "n1c-source-duplicate-policy-v1";
 
 const SOURCE_DUPLICATE_DETECTION_REASON = "intra_file_source_duplicate: same raw document produced multiple identical race observations";
 
-// canonical_race_key "YYYY-MM-DD:VV:RN" → source archive file "kYYMMDD.lzh"
+// canonical_race_key "YYYY-MM-DD:VV:RN" → source archive file "kYYMMDD.lzh"。
+// 不正なrace identityはappend-only resolution lineageへ入れる前にfail-closedする。
 export function archiveFileForRaceKey(raceKey: string): string {
-  const m = raceKey.match(/^(\d{4})-(\d{2})-(\d{2}):/);
-  if (!m) return "unknown";
-  return `k${m[1].slice(2)}${m[2]}${m[3]}.lzh`;
+  const { raceDateJst } = parseCanonicalRaceKey(raceKey);
+  const [year, month, day] = raceDateJst.split("-");
+  return `k${year.slice(2)}${month}${day}.lzh`;
 }
 
 // 1 observation の candidate 集合 digest（bet_type, semantic_hash を sort して hash）。
