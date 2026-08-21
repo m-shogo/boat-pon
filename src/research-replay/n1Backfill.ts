@@ -507,6 +507,17 @@ export async function runBackfill(input: {
   requireOptionalSafetyBytes("DISK_FLOOR_BYTES", input.diskFloorBytes);
   requirePrimaryMonitor(input.primaryMonitor);
   const primaryMonitor = input.primaryMonitor ?? "strict";
+  if (input.totalArchiveCount !== undefined
+    && (!Number.isSafeInteger(input.totalArchiveCount) || input.totalArchiveCount < input.archiveFiles.length)) {
+    throw new Error(`N1_BACKFILL_TOTAL_ARCHIVE_COUNT_INVALID:${input.totalArchiveCount}`);
+  }
+  if (input.primaryPath && primaryMonitor === "strict" && !input.primaryFingerprint) {
+    throw new Error("N1_BACKFILL_PRIMARY_FINGERPRINT_REQUIRED");
+  }
+  if (input.primaryPath && primaryMonitor === "structural"
+    && (!input.primaryStructuralBaseline || !input.primaryStructuralProbe)) {
+    throw new Error("N1_BACKFILL_PRIMARY_STRUCTURAL_MONITOR_REQUIRED");
+  }
   const idPrefix = input.idPrefix ?? "n1bf";
   const checkpoints = new BackfillCheckpointRepository(input.db);
   const replay = new ResearchReplayRepository(input.db, input.rawStore, undefined, () => input.now);

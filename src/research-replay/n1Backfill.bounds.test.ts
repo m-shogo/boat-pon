@@ -93,6 +93,67 @@ test("backfill safety guards reject invalid quota, disk floor, and primary monit
   }
 });
 
+test("backfill primary monitor requires its runtime authority before archive reads", async () => {
+  const invalidCases = [
+    {
+      primaryPath: "/definitely-not-read/boat.sqlite",
+      primaryMonitor: "strict" as const,
+      pattern: /N1_BACKFILL_PRIMARY_FINGERPRINT_REQUIRED/,
+    },
+    {
+      primaryPath: "/definitely-not-read/boat.sqlite",
+      primaryMonitor: "structural" as const,
+      pattern: /N1_BACKFILL_PRIMARY_STRUCTURAL_MONITOR_REQUIRED/,
+    },
+    {
+      primaryPath: "/definitely-not-read/boat.sqlite",
+      primaryMonitor: "structural" as const,
+      primaryStructuralBaseline: { schemaHash: "schema", appSettingsHash: "settings" },
+      pattern: /N1_BACKFILL_PRIMARY_STRUCTURAL_MONITOR_REQUIRED/,
+    },
+  ];
+
+  for (const invalid of invalidCases) {
+    const { db, rawStore } = setup();
+    await assert.rejects(
+      runBackfill({
+        db,
+        rawStore,
+        archiveFiles: ["/definitely-not-read/k260101.lzh"],
+        now: NOW,
+        ...invalid,
+      }),
+      invalid.pattern,
+    );
+    const checkpointCount = Number((db.prepare("SELECT COUNT(*) c FROM n1_settlement_backfill_checkpoints").get() as { c: number }).c);
+    assert.equal(checkpointCount, 0);
+    db.close();
+  }
+});
+
+test("backfill total archive count cannot understate projection authority", async () => {
+  const invalidCases = [Number.NaN, -1, 1.5, 1, Number.MAX_SAFE_INTEGER + 1];
+  for (const totalArchiveCount of invalidCases) {
+    const { db, rawStore } = setup();
+    await assert.rejects(
+      runBackfill({
+        db,
+        rawStore,
+        archiveFiles: [
+          "/definitely-not-read/k260101.lzh",
+          "/definitely-not-read/k260102.lzh",
+        ],
+        now: NOW,
+        totalArchiveCount,
+      }),
+      /N1_BACKFILL_TOTAL_ARCHIVE_COUNT_INVALID/,
+    );
+    const checkpointCount = Number((db.prepare("SELECT COUNT(*) c FROM n1_settlement_backfill_checkpoints").get() as { c: number }).c);
+    assert.equal(checkpointCount, 0);
+    db.close();
+  }
+});
+
 test("backfill limit bounds failed archive attempts as well as completed files", async () => {
   const { db, rawStore } = setup();
   const summary = await runBackfill({
