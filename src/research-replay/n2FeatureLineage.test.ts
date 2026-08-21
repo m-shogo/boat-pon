@@ -35,6 +35,19 @@ test("lineage: exact published time produces verified immutable evidence", () =>
   } });
 });
 
+test("lineage: equivalent explicit offsets canonicalize to one immutable UTC lineage", () => {
+  const result = verifyN2FeatureLineage(EXPECTED, evidence({
+    sourcePublishedAt: "2026-05-20T12:58:00+09:00",
+    sourceObservedAt: "2026-05-20T12:59:00+09:00",
+    firstSeenAt: "2026-05-20T13:00:00+09:00",
+  }));
+  assert.deepEqual(result, { status: "verified", lineage: {
+    contractVersion: "n2-feature-lineage-v1", sourceAvailableAt: "2026-05-20T03:58:00.000Z",
+    sourceObservedAt: "2026-05-20T03:59:00.000Z",
+    availabilityBasis: "source_published_at", observationId: "obs-1", rawDocumentId: "raw-1",
+  } });
+});
+
 test("lineage: observed-only availability is conservative and explicit", () => {
   const result = verifyN2FeatureLineage(EXPECTED, evidence({ timingQuality: "observed_only", sourcePublishedAt: null }));
   assert.equal(result.status, "verified");
