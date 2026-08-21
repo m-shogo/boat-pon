@@ -67,10 +67,15 @@ export function buildN2SettlementReparseCheckpointIdentity(input: {
   if (!/^[0-9a-f]{64}$/.test(input.sourceSidecarSha256)) {
     throw new Error("REPARSE_CHECKPOINT_SOURCE_SHA_INVALID");
   }
-  const selectedFilesDigest = canonicalHash(input.selectedFiles.map((path) => ({
+  const selectedFiles = input.selectedFiles.map((path) => ({
     name: basename(path),
     sha256: sha256File(path),
-  })));
+  }));
+  const uniqueBasenames = new Set(selectedFiles.map((entry) => entry.name));
+  if (uniqueBasenames.size !== selectedFiles.length) {
+    throw new Error("REPARSE_CHECKPOINT_ARCHIVE_BASENAME_DUPLICATE");
+  }
+  const selectedFilesDigest = canonicalHash(selectedFiles);
   return {
     checkpointVersion: N2_SETTLEMENT_REPARSE_CHECKPOINT_VERSION,
     reparseSchemaVersion: input.reparseSchemaVersion,
