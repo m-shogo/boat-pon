@@ -6,7 +6,7 @@ import {
   buildArchiveReconcileSelection,
 } from "./n2ArchiveReconcileInput";
 
-test("archive reconciliation applies as-of cutoff before limit", () => {
+test("archive reconciliation applies last-completed JST race-day cutoff before limit", () => {
   const selection = buildArchiveReconcileSelection({
     discoveredFiles: [
       "/archive/z/k260802.lzh",
@@ -22,15 +22,26 @@ test("archive reconciliation applies as-of cutoff before limit", () => {
   assert.deepEqual(selection.selectedFiles.map((path) => path.split("/").at(-1)), ["k260731.lzh"]);
 });
 
-test("archive reconciliation canonicalizes equivalent explicit-zone as-of instants", () => {
+test("archive reconciliation excludes the JST race day still in progress", () => {
   const selection = buildArchiveReconcileSelection({
-    discoveredFiles: ["/archive/k260801.lzh"],
-    asOf: "2026-08-02T08:00:00+09:00",
+    discoveredFiles: ["/archive/k260731.lzh", "/archive/k260801.lzh"],
+    asOf: "2026-08-01T00:00:00.000Z",
     limit: null,
   });
-  assert.equal(selection.asOf, "2026-08-01T23:00:00.000Z");
+  // 00:00Z is 09:00 JST on Aug 1, so the complete Aug 1 daily archive is future information.
+  assert.equal(selection.cutoffDate, "2026-07-31");
+  assert.deepEqual(selection.selectedFiles.map((path) => path.split("/").at(-1)), ["k260731.lzh"]);
+});
+
+test("archive reconciliation includes the prior JST day exactly after its midnight boundary", () => {
+  const selection = buildArchiveReconcileSelection({
+    discoveredFiles: ["/archive/k260801.lzh", "/archive/k260802.lzh"],
+    asOf: "2026-08-02T00:00:00+09:00",
+    limit: null,
+  });
+  assert.equal(selection.asOf, "2026-08-01T15:00:00.000Z");
   assert.equal(selection.cutoffDate, "2026-08-01");
-  assert.equal(selection.selectedFiles.length, 1);
+  assert.deepEqual(selection.selectedFiles.map((path) => path.split("/").at(-1)), ["k260801.lzh"]);
 });
 
 test("archive reconciliation rejects normalized or impossible input dates", () => {
@@ -48,10 +59,10 @@ test("archive reconciliation rejects normalized or impossible input dates", () =
 
 test("archive reconciliation rejects ambiguous duplicate archive basenames", () => {
   assert.throws(() => buildArchiveReconcileSelection({
-    discoveredFiles: ["/archive/a/k260801.lzh", "/archive/b/k260801.lzh"],
+    discoveredFiles: ["/archive/a/k260731.lzh", "/archive/b/k260731.lzh"],
     asOf: "2026-08-01T23:59:59.000Z",
     limit: null,
-  }), /ARCHIVE_INVENTORY_BASENAME_DUPLICATE:k260801\.lzh/);
+  }), /ARCHIVE_INVENTORY_BASENAME_DUPLICATE:k260731\.lzh/);
 });
 
 test("resume checkpoint is bound to canonical as-of and selected inventory", () => {
