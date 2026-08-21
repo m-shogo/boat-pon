@@ -91,6 +91,22 @@ test("reparse checkpoint identity rejects changed archive bytes under the same f
   });
 });
 
+test("reparse checkpoint identity rejects duplicate archive basenames", () => {
+  withArchiveFiles((files) => {
+    const otherDir = mkdtempSync(join(tmpdir(), "boat-pon-reparse-duplicate-"));
+    try {
+      const duplicate = join(otherDir, "k260801.lzh");
+      writeFileSync(duplicate, "different-archive-with-same-name");
+      assert.throws(
+        () => build([files[0], duplicate]),
+        /REPARSE_CHECKPOINT_ARCHIVE_BASENAME_DUPLICATE/,
+      );
+    } finally {
+      rmSync(otherDir, { recursive: true, force: true });
+    }
+  });
+});
+
 test("reparse checkpoint identity rejects impossible timestamps and malformed source digests", () => {
   withArchiveFiles((files) => {
     assert.throws(
