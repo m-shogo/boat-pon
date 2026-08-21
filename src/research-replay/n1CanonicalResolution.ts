@@ -1,7 +1,7 @@
 // N1 canonical source-duplicate resolution。
 // raw provenance（重複 observation/candidate）は削除せず保持し、canonical evaluation で
 // source-level exact duplicate copy を append-only mapping で 1 回だけ有効化する。
-// 決定的 canonical = 各 race の source 順で最初の observation（domain_observations.rowid 昇順）。
+// 決定的 canonical = 各 raw source 内の source 順で最初の observation（domain_observations.rowid 昇順）。
 import type { DatabaseSync } from "node:sqlite";
 import { canonicalHash } from "./canonical";
 import { parseCanonicalRaceKey } from "./identity";
@@ -81,24 +81,28 @@ export type DuplicateResolutionPlan = {
   valueConflicts: DuplicateResolutionPlanItem[]; // exact でない（値が異なる）→ resolution しない
 };
 
-// source 順で最初の未訂正 settlement observation を canonical、残りを duplicate 候補として計画する。
+// 同一raw source内で最初の未訂正 settlement observation を canonical、残りを duplicate 候補として計画する。
 // parser reparse / correction は source duplicate ではなく独立したrevision lineageなので候補集合から除外する。
+// 別raw documentの同一race observationはsource duplicateではないため、このplanのconflictへ混ぜない。
 // 同一raw・同一parse runの未訂正observationでcandidate集合も一致する場合だけ exact source duplicate とする。
 export function planSourceDuplicateResolution(db: DatabaseSync): DuplicateResolutionPlan {
-  const dupRaces = db.prepare(`
-    SELECT canonical_race_key FROM domain_observations
+  const duplicateGroups = db.prepare(`
+    SELECT canonical_race_key, raw_document_id
+    FROM domain_observations
     WHERE ${SOURCE_SETTLEMENT_OBSERVATION_WHERE}
-    GROUP BY canonical_race_key HAVING COUNT(*)>1
-    ORDER BY canonical_race_key
-  `).all() as Array<{ canonical_race_key: string }>;
+    GROUP BY canonical_race_key, raw_document_id HAVING COUNT(*)>1
+    ORDER BY canonical_race_key, MIN(rowid)
+  `).all() as Array<{ canonical_race_key: string; raw_document_id: string }>;
+  const duplicatedRaceKeys = new Set(duplicateGroups.map((group) => group.canonical_race_key));
   const planned: DuplicateResolutionPlanItem[] = [];
   const conflicts: DuplicateResolutionPlanItem[] = [];
-  for (const { canonical_race_key: raceKey } of dupRaces) {
+  for (const { canonical_race_key: raceKey, raw_document_id: rawDocumentId } of duplicateGroups) {
     const obs = db.prepare(`
       SELECT observation_id, raw_document_id, parse_run_id, supersedes_id, correction_kind, correction_reason
       FROM domain_observations
-      WHERE canonical_race_key=? AND ${SOURCE_SETTLEMENT_OBSERVATION_WHERE} ORDER BY rowid ASC
-    `).all(raceKey) as SettlementObservationLineage[];
+      WHERE canonical_race_key=? AND raw_document_id=? AND ${SOURCE_SETTLEMENT_OBSERVATION_WHERE}
+      ORDER BY rowid ASC
+    `).all(raceKey, rawDocumentId) as SettlementObservationLineage[];
     const canonical = obs[0];
     const canonicalDigest = observationCandidateDigest(db, canonical.observation_id, raceKey);
     for (const dup of obs.slice(1)) {
@@ -124,7 +128,7 @@ export function planSourceDuplicateResolution(db: DatabaseSync): DuplicateResolu
   return {
     resolverVersion: SOURCE_DUPLICATE_RESOLVER_VERSION,
     policyVersion: SOURCE_DUPLICATE_POLICY_VERSION,
-    duplicatedRaces: dupRaces.length,
+    duplicatedRaces: duplicatedRaceKeys.size,
     plannedResolutions: planned,
     valueConflicts: conflicts,
   };
