@@ -186,6 +186,11 @@ export function readN2PitAuditObservations(input: {
   const sidecar = openImmutable(input.sidecarDbPath);
   try {
     const sourceRows = sidecar.prepare(FEATURE_OBSERVATION_SQL).all(limit + 1) as unknown as SourceObservationRow[];
+    for (const row of sourceRows) {
+      if (parseCanonicalN2Key(row.canonicalRaceKey) === null) {
+        throw new Error(`N2_PIT_AUDIT_INVALID_RACE_KEY:${row.canonicalRaceKey}`);
+      }
+    }
     const truncated = sourceRows.length > limit;
     const boundedRows = truncated ? sourceRows.slice(0, limit) : sourceRows;
     const programCandidates = primary.prepare(`
