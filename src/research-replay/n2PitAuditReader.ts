@@ -1,6 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { pathToFileURL } from "node:url";
 import { officialVenueCode } from "../domain/officialLinks";
+import { canonicalUtcTimestamp } from "./canonical";
 import { canonicalRaceKey } from "./identity";
 import { PAYLOAD_SCHEMA_VERSION, semanticPayloadHash, validateTypedPayload } from "./domain";
 import type { N2PitAuditObservation } from "./n2PitAudit";
@@ -145,6 +146,15 @@ export function decisionCutoffFromProgram(row: ProgramCutoffRow | null, expected
   return Number.isFinite(parsed) ? new Date(parsed).toISOString() : null;
 }
 
+function canonicalInstant(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  try {
+    return canonicalUtcTimestamp(value);
+  } catch {
+    return null;
+  }
+}
+
 function typedPayloadIntegrity(row: SourceObservationRow): "verified" | "invalid" {
   if ((row.observationType !== "official_program" && row.observationType !== "trifecta_market")
     || row.observationPayloadType !== row.observationType
@@ -165,7 +175,9 @@ function typedPayloadIntegrity(row: SourceObservationRow): "verified" | "invalid
     const semanticHash = semanticPayloadHash(row.observationType, payload);
     if (semanticHash !== row.observationPayloadHash || semanticHash !== row.typedPayloadHash) return "invalid";
     if (row.observationType === "official_program" && payload.canonicalRaceKey !== row.canonicalRaceKey) return "invalid";
-    if (typeof payload.observedAt !== "string" || Date.parse(payload.observedAt) !== Date.parse(row.sourceObservedAt)) return "invalid";
+    const payloadObservedAt = canonicalInstant(payload.observedAt);
+    const sourceObservedAt = canonicalInstant(row.sourceObservedAt);
+    if (payloadObservedAt === null || sourceObservedAt === null || payloadObservedAt !== sourceObservedAt) return "invalid";
     return "verified";
   } catch {
     return "invalid";
