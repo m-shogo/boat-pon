@@ -3,7 +3,9 @@ import { existsSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { canonicalHash } from "./canonical";
 import { RawStore } from "./rawStore";
+import { ResearchReplayRepository } from "./repository";
 import { initializeSidecarSchema, openSidecarDatabase } from "./schema";
 import {
   BackfillCheckpointRepository,
@@ -15,7 +17,13 @@ import {
   verifyN1BackfillSchema,
   verifyN1SettlementSchema,
 } from "./settlement";
-import { classifyRaceLines, listArchiveFiles, resolveStatus, runBackfill } from "./n1Backfill";
+import {
+  classifyRaceLines,
+  listArchiveFiles,
+  requireBackfillParseRunContract,
+  resolveStatus,
+  runBackfill,
+} from "./n1Backfill";
 import {
   parseOfficialResultDetail,
   parseOfficialResultDetailLegacyV1ForAudit,
@@ -68,6 +76,60 @@ test("backfill migration checksum mismatch is default-deny", () => {
     .run("bad", N1_BACKFILL_SCHEMA_VERSION, "0".repeat(64), NOW, process.version);
   assert.throws(() => initializeN1BackfillSchema(db, NOW), /checksum mismatch/);
   assert.notEqual(N1_BACKFILL_MIGRATION_CHECKSUM, "0".repeat(64));
+  db.close();
+});
+
+test("backfill parse-run retry rejects immutable lineage drift", () => {
+  const { root, db } = setup();
+  const rawStore = new RawStore(join(root, "raw"));
+  const replay = new ResearchReplayRepository(db, rawStore, undefined, () => NOW);
+  const raw = replay.recordRawDocument({ bytes: Buffer.from("archive-fixture"), contentType: "text/plain", charset: "shift_jis" });
+  const parseRunId = `n1bf-parse-${raw.rawDocumentId}`;
+  const semanticPayloadHash = canonicalHash({ file: "k260101.lzh" });
+  db.prepare(`
+    INSERT INTO parse_runs
+    (parse_run_id, raw_document_id, parser_name, parser_version, source_schema_version,
+     canonicalization_version, payload_type, status, warning_codes, error_code,
+     started_at, completed_at, semantic_payload_hash, supersedes_id, correction_kind,
+     correction_reason, created_at)
+    VALUES (?, ?, 'n1-backfill-archive', 'stale-parser-v0', 'modern_seven_display',
+            'rr-c14n-v1', 'settlement_result', 'success', '[]', NULL,
+            ?, ?, ?, NULL, NULL, NULL, ?)
+  `).run(parseRunId, raw.rawDocumentId, NOW, NOW, semanticPayloadHash, NOW);
+  assert.throws(() => requireBackfillParseRunContract({
+    db,
+    parseRunId,
+    rawDocumentId: raw.rawDocumentId,
+    sourceSchemaVersion: "modern_seven_display",
+    semanticPayloadHash,
+  }), /N1_BACKFILL_PARSE_RUN_CONFLICT/);
+  db.close();
+});
+
+test("backfill parse-run retry accepts the exact immutable lineage", () => {
+  const { root, db } = setup();
+  const rawStore = new RawStore(join(root, "raw"));
+  const replay = new ResearchReplayRepository(db, rawStore, undefined, () => NOW);
+  const raw = replay.recordRawDocument({ bytes: Buffer.from("archive-fixture"), contentType: "text/plain", charset: "shift_jis" });
+  const parseRunId = `n1bf-parse-${raw.rawDocumentId}`;
+  const semanticPayloadHash = canonicalHash({ file: "k260101.lzh" });
+  db.prepare(`
+    INSERT INTO parse_runs
+    (parse_run_id, raw_document_id, parser_name, parser_version, source_schema_version,
+     canonicalization_version, payload_type, status, warning_codes, error_code,
+     started_at, completed_at, semantic_payload_hash, supersedes_id, correction_kind,
+     correction_reason, created_at)
+    VALUES (?, ?, 'n1-backfill-archive', ?, 'modern_seven_display',
+            'rr-c14n-v1', 'settlement_result', 'success', '[]', NULL,
+            ?, ?, ?, NULL, NULL, NULL, ?)
+  `).run(parseRunId, raw.rawDocumentId, N1_SETTLEMENT_PARSER_VERSION, NOW, NOW, semanticPayloadHash, NOW);
+  assert.doesNotThrow(() => requireBackfillParseRunContract({
+    db,
+    parseRunId,
+    rawDocumentId: raw.rawDocumentId,
+    sourceSchemaVersion: "modern_seven_display",
+    semanticPayloadHash,
+  }));
   db.close();
 });
 
