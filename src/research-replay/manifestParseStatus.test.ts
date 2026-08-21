@@ -62,6 +62,27 @@ test("PIT guard rejects observation raw lineage that differs from its parse run"
   assert.ok(result.codes.includes("RAW_LINEAGE_MISMATCH"));
 });
 
+test("PIT guard rejects quarantined or replay-ineligible raw evidence", () => {
+  const variants = [
+    { raw_integrity_status: "quarantined", raw_security_scan_status: "passed", raw_parser_replay_eligible: 1 },
+    { raw_integrity_status: "verified", raw_security_scan_status: "quarantined", raw_parser_replay_eligible: 1 },
+    { raw_integrity_status: "verified", raw_security_scan_status: "passed", raw_parser_replay_eligible: 0 },
+  ];
+
+  for (const rawEligibility of variants) {
+    const result = strictPitGuard({
+      observation: { ...observation("success"), ...rawEligibility },
+      repository,
+      canonicalRaceKey: RACE_KEY,
+      asOfAt: AS_OF,
+      policy: RESOLUTION_POLICIES.research_replay_strict_pre_race,
+    });
+
+    assert.equal(result.disposition, "rejected");
+    assert.ok(result.codes.includes("RAW_EVIDENCE_NOT_ELIGIBLE"));
+  }
+});
+
 test("PIT guard keeps reusable parse-run states eligible", () => {
   for (const parseStatus of ["success", "warning"]) {
     const result = strictPitGuard({
