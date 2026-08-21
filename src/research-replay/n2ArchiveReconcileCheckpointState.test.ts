@@ -16,6 +16,7 @@ const contract: ArchiveReconcileCheckpointContract = {
   asOf: "2026-08-01T00:00:00.000Z",
   inventoryDigest: "a".repeat(64),
   selectedFileCount: 2,
+  selectedFileBasenames: ["k260730.lzh", "k260731.lzh"],
   sourceSidecarSha256: "b".repeat(64),
 };
 
@@ -39,6 +40,24 @@ test("archive reconcile checkpoint state digest binds processed-file resume stat
   assert.throws(
     () => assertArchiveReconcileCheckpointStateDigest(digest, contract, tampered),
     /ARCHIVE_RECONCILE_CHECKPOINT_STATE_DIGEST_MISMATCH/,
+  );
+});
+
+test("archive reconcile resume rejects rehashed processed files outside selected inventory", () => {
+  const tampered = { ...state, processedFiles: ["k260731.lzh", "k260801.lzh"] };
+  const digest = buildArchiveReconcileCheckpointStateDigest(contract, tampered);
+  assert.throws(
+    () => assertArchiveReconcileCheckpointStateDigest(digest, contract, tampered),
+    /ARCHIVE_RECONCILE_CHECKPOINT_PROCESSED_FILE_OUT_OF_SELECTION:k260801\.lzh/,
+  );
+});
+
+test("archive reconcile resume rejects rehashed duplicate processed files", () => {
+  const tampered = { ...state, processedFiles: ["k260730.lzh", "k260730.lzh"] };
+  const digest = buildArchiveReconcileCheckpointStateDigest(contract, tampered);
+  assert.throws(
+    () => assertArchiveReconcileCheckpointStateDigest(digest, contract, tampered),
+    /ARCHIVE_RECONCILE_CHECKPOINT_PROCESSED_FILE_DUPLICATE:k260730\.lzh/,
   );
 });
 

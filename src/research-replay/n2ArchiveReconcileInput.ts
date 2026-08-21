@@ -4,7 +4,7 @@ import { canonicalHash, canonicalUtcTimestamp, sha256Bytes } from "./canonical";
 import { fileDate } from "./n1Backfill";
 
 export const ARCHIVE_RECONCILE_SELECTION_VERSION = "n2-archive-reconcile-selection-v3";
-export const ARCHIVE_RECONCILE_CHECKPOINT_VERSION = "n2-archive-reconcile-checkpoint-v5";
+export const ARCHIVE_RECONCILE_CHECKPOINT_VERSION = "n2-archive-reconcile-checkpoint-v6";
 export const ARCHIVE_RECONCILE_CHECKPOINT_STATE_DIGEST_VERSION = "n2-archive-reconcile-checkpoint-state-digest-v1";
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
@@ -22,6 +22,7 @@ export type ArchiveReconcileCheckpointContract = {
   asOf: string;
   inventoryDigest: string;
   selectedFileCount: number;
+  selectedFileBasenames: string[];
   sourceSidecarSha256: string;
 };
 
@@ -120,6 +121,7 @@ export function archiveReconcileCheckpointContract(
     asOf: selection.asOf,
     inventoryDigest: selection.inventoryDigest,
     selectedFileCount: selection.selectedFiles.length,
+    selectedFileBasenames: selection.selectedFiles.map((path) => basename(path)),
     sourceSidecarSha256,
   };
 }
@@ -133,6 +135,12 @@ export function assertArchiveReconcileCheckpointContract(
   }
   const record = actual as Record<string, unknown>;
   for (const [key, value] of Object.entries(expected)) {
+    if (Array.isArray(value)) {
+      if (!Array.isArray(record[key]) || canonicalHash(record[key]) !== canonicalHash(value)) {
+        throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_CONTRACT_MISMATCH:${key}`);
+      }
+      continue;
+    }
     if (record[key] !== value) {
       throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_CONTRACT_MISMATCH:${key}`);
     }
@@ -150,6 +158,30 @@ export function buildArchiveReconcileCheckpointStateDigest(
   });
 }
 
+function assertArchiveReconcileProcessedFiles(
+  checkpointContract: ArchiveReconcileCheckpointContract,
+  state: unknown,
+): void {
+  if (typeof state !== "object" || state === null || Array.isArray(state)) {
+    throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_STATE_INVALID");
+  }
+  const processedFiles = (state as Record<string, unknown>).processedFiles;
+  if (!Array.isArray(processedFiles)) {
+    throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_PROCESSED_FILES_INVALID");
+  }
+  const allowed = new Set(checkpointContract.selectedFileBasenames);
+  const seen = new Set<string>();
+  for (const file of processedFiles) {
+    if (typeof file !== "string" || basename(file) !== file || !allowed.has(file)) {
+      throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_PROCESSED_FILE_OUT_OF_SELECTION:${String(file)}`);
+    }
+    if (seen.has(file)) {
+      throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_PROCESSED_FILE_DUPLICATE:${file}`);
+    }
+    seen.add(file);
+  }
+}
+
 export function assertArchiveReconcileCheckpointStateDigest(
   actualDigest: unknown,
   checkpointContract: ArchiveReconcileCheckpointContract,
@@ -162,4 +194,5 @@ export function assertArchiveReconcileCheckpointStateDigest(
   if (actualDigest !== expectedDigest) {
     throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_STATE_DIGEST_MISMATCH");
   }
+  assertArchiveReconcileProcessedFiles(checkpointContract, state);
 }
