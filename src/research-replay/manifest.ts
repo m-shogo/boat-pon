@@ -149,6 +149,20 @@ function contentHash(policy: ResolutionPolicy): string {
   return canonicalHash(policy);
 }
 
+type StoredResolutionPolicy = {
+  policy_version: string;
+  purpose: string;
+  required_observation_types: string;
+  optional_observation_types: string;
+  source_priority: string;
+  max_staleness_seconds: number;
+  timestamp_unknown_policy: string;
+  tie_break_policy: string;
+  fallback_policy: string;
+  forbidden_observation_types: string;
+  content_hash: string;
+};
+
 export function registerResolutionPolicies(db: DatabaseSync, createdAt: string): void {
   const statement = db.prepare(`
     INSERT OR IGNORE INTO asof_resolution_policies
@@ -157,21 +171,48 @@ export function registerResolutionPolicies(db: DatabaseSync, createdAt: string):
      fallback_policy, forbidden_observation_types, content_hash, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
+  const readback = db.prepare(`
+    SELECT policy_version, purpose, required_observation_types, optional_observation_types,
+           source_priority, max_staleness_seconds, timestamp_unknown_policy, tie_break_policy,
+           fallback_policy, forbidden_observation_types, content_hash
+    FROM asof_resolution_policies
+    WHERE policy_version=?
+  `);
   for (const policy of Object.values(RESOLUTION_POLICIES)) {
+    const requiredObservationTypes = JSON.stringify(policy.requiredObservationTypes);
+    const optionalObservationTypes = JSON.stringify(policy.optionalObservationTypes);
+    const sourcePriority = JSON.stringify(policy.sourcePriority);
+    const forbiddenObservationTypes = JSON.stringify(policy.forbiddenObservationTypes);
+    const expectedContentHash = contentHash(policy);
     statement.run(
       policy.policyVersion,
       policy.purpose,
-      JSON.stringify(policy.requiredObservationTypes),
-      JSON.stringify(policy.optionalObservationTypes),
-      JSON.stringify(policy.sourcePriority),
+      requiredObservationTypes,
+      optionalObservationTypes,
+      sourcePriority,
       policy.maxStalenessSeconds,
       policy.timestampUnknownPolicy,
       policy.tieBreakPolicy,
       policy.fallbackPolicy,
-      JSON.stringify(policy.forbiddenObservationTypes),
-      contentHash(policy),
+      forbiddenObservationTypes,
+      expectedContentHash,
       createdAt,
     );
+    const stored = readback.get(policy.policyVersion) as StoredResolutionPolicy | undefined;
+    if (!stored
+      || stored.policy_version !== policy.policyVersion
+      || stored.purpose !== policy.purpose
+      || stored.required_observation_types !== requiredObservationTypes
+      || stored.optional_observation_types !== optionalObservationTypes
+      || stored.source_priority !== sourcePriority
+      || stored.max_staleness_seconds !== policy.maxStalenessSeconds
+      || stored.timestamp_unknown_policy !== policy.timestampUnknownPolicy
+      || stored.tie_break_policy !== policy.tieBreakPolicy
+      || stored.fallback_policy !== policy.fallbackPolicy
+      || stored.forbidden_observation_types !== forbiddenObservationTypes
+      || stored.content_hash !== expectedContentHash) {
+      throw new Error(`RESOLUTION_POLICY_REGISTRATION_CONFLICT:${policy.policyVersion}`);
+    }
   }
 }
 
