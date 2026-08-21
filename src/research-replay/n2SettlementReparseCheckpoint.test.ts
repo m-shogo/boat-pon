@@ -18,6 +18,7 @@ function build(overrides: Partial<Parameters<typeof buildN2SettlementReparseChec
     canary: false,
     filesLimit: 20,
     sourcePath: "/repo/data/research-replay.sqlite",
+    sourceSidecarSha256: "a".repeat(64),
     targetPath: "/repo/data/tmp/reparse-target.sqlite",
     archiveRoot: "/repo/data/raw/official/results",
     selectedFiles: ["k260801.lzh", "k260802.lzh"],
@@ -44,6 +45,7 @@ test("reparse checkpoint identity rejects stale selection and parser lineage", (
     build({ targetParserVersion: "settlement-v3" }),
     build({ asOf: "2026-08-02T00:00:00.000Z" }),
     build({ sourcePath: "/other/source.sqlite" }),
+    build({ sourceSidecarSha256: "b".repeat(64) }),
     build({ archiveRoot: "/other/archive" }),
   ]) {
     assert.throws(
@@ -53,9 +55,13 @@ test("reparse checkpoint identity rejects stale selection and parser lineage", (
   }
 });
 
-test("reparse checkpoint identity rejects impossible timestamps", () => {
+test("reparse checkpoint identity rejects impossible timestamps and malformed source digests", () => {
   assert.throws(
     () => build({ asOf: "2026-08-01T24:00:00Z" }),
     /timestamp/i,
+  );
+  assert.throws(
+    () => build({ sourceSidecarSha256: "not-a-sha" }),
+    /REPARSE_CHECKPOINT_SOURCE_SHA_INVALID/,
   );
 });
