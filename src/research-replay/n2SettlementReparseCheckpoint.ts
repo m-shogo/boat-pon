@@ -1,6 +1,10 @@
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { basename } from "node:path";
+
 import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 
-export const N2_SETTLEMENT_REPARSE_CHECKPOINT_VERSION = "n2-settlement-reparse-checkpoint-v2";
+export const N2_SETTLEMENT_REPARSE_CHECKPOINT_VERSION = "n2-settlement-reparse-checkpoint-v3";
 
 export type N2SettlementReparseCheckpointIdentity = {
   checkpointVersion: typeof N2_SETTLEMENT_REPARSE_CHECKPOINT_VERSION;
@@ -40,6 +44,10 @@ if (invokedByReparseCli) {
   });
 }
 
+function sha256File(path: string): string {
+  return createHash("sha256").update(readFileSync(path)).digest("hex");
+}
+
 export function buildN2SettlementReparseCheckpointIdentity(input: {
   reparseSchemaVersion: string;
   sourceParserVersion: string;
@@ -59,6 +67,10 @@ export function buildN2SettlementReparseCheckpointIdentity(input: {
   if (!/^[0-9a-f]{64}$/.test(input.sourceSidecarSha256)) {
     throw new Error("REPARSE_CHECKPOINT_SOURCE_SHA_INVALID");
   }
+  const selectedFilesDigest = canonicalHash(input.selectedFiles.map((path) => ({
+    name: basename(path),
+    sha256: sha256File(path),
+  })));
   return {
     checkpointVersion: N2_SETTLEMENT_REPARSE_CHECKPOINT_VERSION,
     reparseSchemaVersion: input.reparseSchemaVersion,
@@ -74,7 +86,7 @@ export function buildN2SettlementReparseCheckpointIdentity(input: {
     sourceSidecarSha256: input.sourceSidecarSha256,
     targetPath: input.targetPath,
     archiveRoot: input.archiveRoot,
-    selectedFilesDigest: canonicalHash([...input.selectedFiles]),
+    selectedFilesDigest,
   };
 }
 
