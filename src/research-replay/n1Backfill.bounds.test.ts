@@ -83,6 +83,6 @@ test("backfill limit bounds failed archive attempts as well as completed files",
   assert.equal(summary.fileResults.length, 1);
   assert.equal(summary.fileResults[0]?.archiveFile, "k260101.lzh");
   const checkpoints = db.prepare("SELECT archive_file AS archiveFile FROM n1_settlement_backfill_checkpoints ORDER BY rowid").all() as Array<{ archiveFile: string }>;
-  assert.deepEqual(checkpoints, [{ archiveFile: "k260101.lzh" }]);
+  assert.deepEqual(checkpoints.map((row) => row.archiveFile), ["k260101.lzh"]);
   db.close();
 });
