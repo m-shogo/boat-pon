@@ -21,6 +21,14 @@ const DERIVED: DerivedCandidate[] = [{
   refunds: [],
 }];
 
+type SourceParseRunOverrides = Partial<{
+  parserName: string;
+  sourceSchemaVersion: string;
+  payloadType: string;
+  status: "success" | "warning" | "error" | "unknown_schema";
+  errorCode: string | null;
+}>;
+
 function setup(): { db: DatabaseSync; repo: SettlementRepository } {
   const root = mkdtempSync(join(tmpdir(), "reparse-source-lineage-test-"));
   const db = openSidecarDatabase(join(root, "sidecar.sqlite"));
@@ -37,14 +45,18 @@ function setup(): { db: DatabaseSync; repo: SettlementRepository } {
   return { db, repo: new SettlementRepository(db, () => "id-source-lineage") };
 }
 
-function insertSourceParseRun(db: DatabaseSync, parseRunId: string): void {
+function insertSourceParseRun(db: DatabaseSync, parseRunId: string, overrides: SourceParseRunOverrides = {}): void {
+  const parserName = overrides.parserName ?? "n1-backfill-archive";
+  const sourceSchemaVersion = overrides.sourceSchemaVersion ?? "modern_seven_display";
+  const payloadType = overrides.payloadType ?? "settlement_result";
+  const status = overrides.status ?? "success";
+  const errorCode = overrides.errorCode ?? null;
   db.prepare(`INSERT INTO parse_runs
     (parse_run_id, raw_document_id, parser_name, parser_version, source_schema_version,
      canonicalization_version, payload_type, status, warning_codes, error_code,
      started_at, completed_at, semantic_payload_hash, supersedes_id, correction_kind, correction_reason, created_at)
-    VALUES (?,?, 'n1-backfill-archive','n1-settlement-parser-v1','modern_seven_display','rr-c14n-v1',
-            'settlement_result','success','[]',NULL,?,?,?,NULL,NULL,NULL,?)`)
-    .run(parseRunId, RAW_ID, NOW, NOW, "h".repeat(64), NOW);
+    VALUES (?,?,?,'n1-settlement-parser-v1',?,'rr-c14n-v1',?,?, '[]', ?,?,?,?,NULL,NULL,NULL,?)`)
+    .run(parseRunId, RAW_ID, parserName, sourceSchemaVersion, payloadType, status, errorCode, NOW, NOW, "h".repeat(64), NOW);
 }
 
 function reparseParseRunCount(db: DatabaseSync): number {
@@ -92,27 +104,14 @@ test("reparse blocks before append when source parser lineage is missing", () =>
 });
 
 for (const invalidSource of [
-  {
-    label: "wrong parser name",
-    mutate: "UPDATE parse_runs SET parser_name='other-parser' WHERE parse_run_id='v1-parse-a'",
-  },
-  {
-    label: "wrong source schema",
-    mutate: "UPDATE parse_runs SET source_schema_version='legacy_pre_trifecta' WHERE parse_run_id='v1-parse-a'",
-  },
-  {
-    label: "wrong payload type",
-    mutate: "UPDATE parse_runs SET payload_type='official_program' WHERE parse_run_id='v1-parse-a'",
-  },
-  {
-    label: "non-success status",
-    mutate: "UPDATE parse_runs SET status='error', error_code='BROKEN_SOURCE_PARSE' WHERE parse_run_id='v1-parse-a'",
-  },
-] as const) {
+  { label: "wrong parser name", overrides: { parserName: "other-parser" } },
+  { label: "wrong source schema", overrides: { sourceSchemaVersion: "legacy_pre_trifecta" } },
+  { label: "wrong payload type", overrides: { payloadType: "official_program" } },
+  { label: "non-success status", overrides: { status: "error", errorCode: "BROKEN_SOURCE_PARSE" } },
+] satisfies Array<{ label: string; overrides: SourceParseRunOverrides }>) {
   test(`reparse rejects ${invalidSource.label} as a supersession source`, () => {
     const { db, repo } = setup();
-    insertSourceParseRun(db, "v1-parse-a");
-    db.exec(invalidSource.mutate);
+    insertSourceParseRun(db, "v1-parse-a", invalidSource.overrides);
     const active = loadActiveState(db, loadSourceDuplicateSet(db));
     const state = newState();
 
