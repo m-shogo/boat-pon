@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
-import { basename } from "node:path";
+import { readFileSync, readdirSync } from "node:fs";
+import { basename, isAbsolute, join, resolve } from "node:path";
 
 import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 
@@ -48,6 +48,37 @@ function sha256File(path: string): string {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
 }
 
+function indexArchiveBasenames(rootDir: string): Map<string, string[]> {
+  const byBasename = new Map<string, string[]>();
+  const pending = [resolve(rootDir)];
+  while (pending.length > 0) {
+    const current = pending.pop()!;
+    for (const entry of readdirSync(current, { withFileTypes: true })) {
+      const path = join(current, entry.name);
+      if (entry.isDirectory()) {
+        pending.push(path);
+      } else if (entry.isFile()) {
+        const matches = byBasename.get(entry.name) ?? [];
+        matches.push(path);
+        byBasename.set(entry.name, matches);
+      }
+    }
+  }
+  return byBasename;
+}
+
+function resolveSelectedArchivePaths(archiveRoot: string, selectedFiles: string[]): string[] {
+  const needsRootLookup = selectedFiles.some((path) => !isAbsolute(path));
+  const byBasename = needsRootLookup ? indexArchiveBasenames(archiveRoot) : new Map<string, string[]>();
+  return selectedFiles.map((path) => {
+    if (isAbsolute(path)) return path;
+    const matches = byBasename.get(path) ?? [];
+    if (matches.length === 0) throw new Error(`REPARSE_CHECKPOINT_ARCHIVE_NOT_FOUND:${path}`);
+    if (matches.length > 1) throw new Error(`REPARSE_CHECKPOINT_ARCHIVE_BASENAME_AMBIGUOUS:${path}`);
+    return matches[0];
+  });
+}
+
 export function buildN2SettlementReparseCheckpointIdentity(input: {
   reparseSchemaVersion: string;
   sourceParserVersion: string;
@@ -67,7 +98,8 @@ export function buildN2SettlementReparseCheckpointIdentity(input: {
   if (!/^[0-9a-f]{64}$/.test(input.sourceSidecarSha256)) {
     throw new Error("REPARSE_CHECKPOINT_SOURCE_SHA_INVALID");
   }
-  const selectedFiles = input.selectedFiles.map((path) => ({
+  const resolvedSelections = resolveSelectedArchivePaths(input.archiveRoot, input.selectedFiles);
+  const selectedFiles = resolvedSelections.map((path) => ({
     name: basename(path),
     sha256: sha256File(path),
   }));
