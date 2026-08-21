@@ -121,6 +121,56 @@ function requireSingleSourceParseRun(db: DatabaseSync, rawDocumentId: string, so
   return row.id;
 }
 
+function requireTargetParseRunContract(
+  db: DatabaseSync,
+  parseRunId: string,
+  rawDocumentId: string,
+  sourceSchemaVersion: string,
+  sourceParseRunId: string,
+): void {
+  const row = db.prepare(
+    `SELECT raw_document_id AS rawDocumentId, parser_name AS parserName, parser_version AS parserVersion,
+            source_schema_version AS sourceSchemaVersion, canonicalization_version AS canonicalizationVersion,
+            payload_type AS payloadType, status, warning_codes AS warningCodes, error_code AS errorCode,
+            semantic_payload_hash AS semanticPayloadHash, supersedes_id AS supersedesId,
+            correction_kind AS correctionKind, correction_reason AS correctionReason
+     FROM parse_runs WHERE parse_run_id=?`,
+  ).get(parseRunId) as {
+    rawDocumentId: string;
+    parserName: string;
+    parserVersion: string;
+    sourceSchemaVersion: string;
+    canonicalizationVersion: string;
+    payloadType: string;
+    status: string;
+    warningCodes: string;
+    errorCode: string | null;
+    semanticPayloadHash: string | null;
+    supersedesId: string | null;
+    correctionKind: string | null;
+    correctionReason: string | null;
+  } | undefined;
+  const expectedSemanticPayloadHash = canonicalHash({ reparse: rawDocumentId });
+  if (
+    row === undefined ||
+    row.rawDocumentId !== rawDocumentId ||
+    row.parserName !== REPARSE_PARSER_NAME ||
+    row.parserVersion !== REPARSE_TARGET_PARSER_VERSION ||
+    row.sourceSchemaVersion !== sourceSchemaVersion ||
+    row.canonicalizationVersion !== REPARSE_CANONICALIZATION_VERSION ||
+    row.payloadType !== "settlement_result" ||
+    row.status !== "success" ||
+    row.warningCodes !== "[]" ||
+    row.errorCode !== null ||
+    row.semanticPayloadHash !== expectedSemanticPayloadHash ||
+    row.supersedesId !== sourceParseRunId ||
+    row.correctionKind !== "parser_reparse" ||
+    row.correctionReason !== REPARSE_DEFECT_CODE
+  ) {
+    throw new Error(`REPARSE_TARGET_PARSE_RUN_CONFLICT:${rawDocumentId}:${parseRunId}`);
+  }
+}
+
 // 1 raw document 分の v2 derived candidate を temp copy へ append-only 適用する（per-document transaction）。
 // meta.rawDocumentId は当該 raw の既存 raw_document_id（provenance 保持）。state/activeState を mutate する。
 export function applyReparseForDocument(
@@ -141,6 +191,7 @@ export function applyReparseForDocument(
     ).run(parseRunId, meta.rawDocumentId, REPARSE_PARSER_NAME, REPARSE_TARGET_PARSER_VERSION, meta.family,
       REPARSE_CANONICALIZATION_VERSION, nowIso, nowIso, canonicalHash({ reparse: meta.rawDocumentId }),
       v1ParseRunId, REPARSE_DEFECT_CODE, nowIso);
+    requireTargetParseRunContract(db, parseRunId, meta.rawDocumentId, meta.family, v1ParseRunId);
     if (Number(prInfo.changes) > 0) state.counts.appended_parse_runs += 1;
 
     const obsInsert = db.prepare(
