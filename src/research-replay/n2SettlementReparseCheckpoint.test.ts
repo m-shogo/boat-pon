@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   assertN2SettlementReparseCheckpointIdentity,
+  assertN2SettlementReparseResumeMode,
   buildN2SettlementReparseCheckpointIdentity,
 } from "./n2SettlementReparseCheckpoint";
 
@@ -63,5 +64,14 @@ test("reparse checkpoint identity rejects impossible timestamps and malformed so
   assert.throws(
     () => build({ sourceSidecarSha256: "not-a-sha" }),
     /REPARSE_CHECKPOINT_SOURCE_SHA_INVALID/,
+  );
+});
+
+test("reparse resume cannot recreate the target copy", () => {
+  assert.doesNotThrow(() => assertN2SettlementReparseResumeMode({ resume: false, makeCopy: true }));
+  assert.doesNotThrow(() => assertN2SettlementReparseResumeMode({ resume: true, makeCopy: false }));
+  assert.throws(
+    () => assertN2SettlementReparseResumeMode({ resume: true, makeCopy: true }),
+    /REPARSE_RESUME_MAKE_COPY_CONFLICT/,
   );
 });
