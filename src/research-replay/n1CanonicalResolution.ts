@@ -4,10 +4,12 @@
 // 決定的 canonical = 各 race の source 順で最初の observation（domain_observations.rowid 昇順）。
 import type { DatabaseSync } from "node:sqlite";
 import { canonicalHash } from "./canonical";
-import { SourceDuplicateResolutionRepository } from "./settlement";
+import { N1_CANONICAL_RESOLUTION_SCHEMA_VERSION, SourceDuplicateResolutionRepository } from "./settlement";
 
 export const SOURCE_DUPLICATE_RESOLVER_VERSION = "n1c-source-duplicate-resolver-v1";
 export const SOURCE_DUPLICATE_POLICY_VERSION = "n1c-source-duplicate-policy-v1"; // canonical = first observation by source order (rowid asc)
+
+const SOURCE_DUPLICATE_DETECTION_REASON = "intra_file_source_duplicate: same raw document produced multiple identical race observations";
 
 // canonical_race_key "YYYY-MM-DD:VV:RN" → source archive file "kYYMMDD.lzh"
 export function archiveFileForRaceKey(raceKey: string): string {
@@ -86,8 +88,60 @@ export function planSourceDuplicateResolution(db: DatabaseSync): DuplicateResolu
   };
 }
 
+function requireSourceDuplicateResolutionContract(
+  db: DatabaseSync,
+  resolutionId: string,
+  item: DuplicateResolutionPlanItem,
+  resolverVersion: string,
+  policyVersion: string,
+): void {
+  const row = db.prepare(`
+    SELECT duplicate_observation_id AS duplicateObservationId,
+           canonical_observation_id AS canonicalObservationId,
+           canonical_race_key AS canonicalRaceKey,
+           raw_document_id AS rawDocumentId,
+           source_archive_file AS sourceArchiveFile,
+           resolution_kind AS resolutionKind,
+           detection_reason AS detectionReason,
+           duplicate_semantic_digest AS duplicateSemanticDigest,
+           resolver_version AS resolverVersion,
+           policy_version AS policyVersion,
+           schema_version AS schemaVersion
+    FROM settlement_source_duplicate_resolutions_v2
+    WHERE resolution_id=?
+  `).get(resolutionId) as {
+    duplicateObservationId: string;
+    canonicalObservationId: string;
+    canonicalRaceKey: string;
+    rawDocumentId: string;
+    sourceArchiveFile: string;
+    resolutionKind: string;
+    detectionReason: string;
+    duplicateSemanticDigest: string;
+    resolverVersion: string;
+    policyVersion: string;
+    schemaVersion: string;
+  } | undefined;
+  if (
+    row === undefined ||
+    row.duplicateObservationId !== item.duplicateObservationId ||
+    row.canonicalObservationId !== item.canonicalObservationId ||
+    row.canonicalRaceKey !== item.canonicalRaceKey ||
+    row.rawDocumentId !== item.rawDocumentId ||
+    row.sourceArchiveFile !== item.sourceArchiveFile ||
+    row.resolutionKind !== "source_duplicate" ||
+    row.detectionReason !== SOURCE_DUPLICATE_DETECTION_REASON ||
+    row.duplicateSemanticDigest !== item.duplicateSemanticDigest ||
+    row.resolverVersion !== resolverVersion ||
+    row.policyVersion !== policyVersion ||
+    row.schemaVersion !== N1_CANONICAL_RESOLUTION_SCHEMA_VERSION
+  ) {
+    throw new Error(`SOURCE_DUPLICATE_RESOLUTION_CONFLICT:${item.duplicateObservationId}:${resolutionId}`);
+  }
+}
+
 // append-only で resolution を適用する。value conflict があれば適用せず throw（stop condition）。
-// 既に解決済みの duplicate は no-op（冪等）。
+// 既に解決済みの duplicate は immutable body が一致する場合だけ no-op（冪等）。
 export function applySourceDuplicateResolution(
   db: DatabaseSync,
   plan: DuplicateResolutionPlan,
@@ -108,12 +162,13 @@ export function applySourceDuplicateResolution(
         canonicalRaceKey: item.canonicalRaceKey,
         rawDocumentId: item.rawDocumentId,
         sourceArchiveFile: item.sourceArchiveFile,
-        detectionReason: "intra_file_source_duplicate: same raw document produced multiple identical race observations",
+        detectionReason: SOURCE_DUPLICATE_DETECTION_REASON,
         duplicateSemanticDigest: item.duplicateSemanticDigest,
         resolverVersion: plan.resolverVersion,
         policyVersion: plan.policyVersion,
         detectedAt: now,
       });
+      requireSourceDuplicateResolutionContract(db, result.resolutionId, item, plan.resolverVersion, plan.policyVersion);
       if (result.inserted) inserted += 1; else noop += 1;
     }
     db.exec("COMMIT");
