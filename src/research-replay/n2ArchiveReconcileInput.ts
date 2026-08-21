@@ -1,9 +1,10 @@
+import { readFileSync } from "node:fs";
 import { basename } from "node:path";
-import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
+import { canonicalHash, canonicalUtcTimestamp, sha256Bytes } from "./canonical";
 import { fileDate } from "./n1Backfill";
 
-export const ARCHIVE_RECONCILE_SELECTION_VERSION = "n2-archive-reconcile-selection-v2";
-export const ARCHIVE_RECONCILE_CHECKPOINT_VERSION = "n2-archive-reconcile-checkpoint-v2";
+export const ARCHIVE_RECONCILE_SELECTION_VERSION = "n2-archive-reconcile-selection-v3";
+export const ARCHIVE_RECONCILE_CHECKPOINT_VERSION = "n2-archive-reconcile-checkpoint-v3";
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
 export type ArchiveReconcileSelection = {
@@ -46,6 +47,7 @@ export function buildArchiveReconcileSelection(input: {
   discoveredFiles: readonly string[];
   asOf: string | null;
   limit: number | null;
+  readArchiveBytes?: (path: string) => Uint8Array;
 }): ArchiveReconcileSelection {
   if (!input.asOf) throw new Error("ARCHIVE_RECONCILE_AS_OF_MISSING");
   const asOf = canonicalUtcTimestamp(input.asOf);
@@ -70,7 +72,11 @@ export function buildArchiveReconcileSelection(input: {
 
   const selected = input.limit == null ? eligible : eligible.slice(0, input.limit);
   const selectedFiles = selected.map((entry) => entry.path);
-  const inventoryDigest = canonicalHash(selected.map((entry) => entry.file));
+  const readArchiveBytes = input.readArchiveBytes ?? readFileSync;
+  const inventoryDigest = canonicalHash(selected.map((entry) => ({
+    file: entry.file,
+    compressedSha256: sha256Bytes(readArchiveBytes(entry.path)),
+  })));
   return {
     asOf,
     cutoffDate,
