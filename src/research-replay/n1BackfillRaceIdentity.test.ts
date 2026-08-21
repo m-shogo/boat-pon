@@ -12,6 +12,6 @@ test("backfill race identity is canonical before append-only ingest", () => {
   assert.throws(() => backfillVenueCode("UNKNOWN"), /N1_BACKFILL_VENUE_INVALID/);
   assert.equal(canonicalBackfillRaceKey("2028-02-29", "24", 12), "2028-02-29:24:R12");
   assert.throws(() => canonicalBackfillRaceKey("2026-02-30", "01", 1), /invalid JST race date/);
-  assert.throws(() => canonicalBackfillRaceKey("2026-08-21", "25", 1), /invalid venue code/);
+  assert.throws(() => canonicalBackfillRaceKey("2026-08-21", "25", 1), /invalid official venue code/);
   assert.throws(() => canonicalBackfillRaceKey("2026-08-21", "01", 13), /invalid race number/);
 });
