@@ -78,21 +78,24 @@ function insertCandidate(input: {
   rawDocumentId: string;
   parseRunId: string;
   revisionKind: "initial" | "parser_reparse";
+  betType?: "win" | "place";
+  semanticHash?: string;
   correctionReason?: string | null;
 }): void {
   input.db.prepare(`INSERT INTO settlement_candidates_v2
     (candidate_id,canonical_race_key,bet_type,settlement_status,result_kind,revision_kind,resolution_status,
      source_kind,source_schema_version,observation_id,parse_run_id,raw_document_id,semantic_hash,
      supersedes_candidate_id,correction_reason,observed_at,created_at)
-    VALUES (?,?,'win','settled','normal',?,'resolved','official_archive','scope-v1',?,?,?,?,NULL,?,?,?)`)
+    VALUES (?,?,?,'settled','normal',?,'resolved','official_archive','scope-v1',?,?,?,?,NULL,?,?,?)`)
     .run(
       input.candidateId,
       RACE_KEY,
+      input.betType ?? "win",
       input.revisionKind,
       input.observationId,
       input.parseRunId,
       input.rawDocumentId,
-      SHARED_SEMANTIC_HASH,
+      input.semanticHash ?? SHARED_SEMANTIC_HASH,
       input.correctionReason ?? null,
       NOW,
       NOW,
@@ -147,5 +150,57 @@ test("parser-reparse observations and candidates do not inflate source-duplicate
   assert.equal(audit.activeCandidates, 1);
   assert.equal(audit.activeDistinctRaceBetHash, 1);
   assert.equal(audit.activeCanonicalRaceLevelDuplicateCandidates, 0);
+  db.close();
+});
+
+test("revision candidates attached to uncorrected observations do not alter source-duplicate planning or audit", () => {
+  const { db, rawDocumentId } = setup();
+  insertParseRun(db, rawDocumentId, "parse-original");
+  insertObservation({ db, observationId: "settlement-original-a", rawDocumentId, parseRunId: "parse-original" });
+  insertObservation({ db, observationId: "settlement-original-b", rawDocumentId, parseRunId: "parse-original" });
+  insertCandidate({
+    db,
+    candidateId: "candidate-original-a",
+    observationId: "settlement-original-a",
+    rawDocumentId,
+    parseRunId: "parse-original",
+    revisionKind: "initial",
+  });
+  insertCandidate({
+    db,
+    candidateId: "candidate-original-b",
+    observationId: "settlement-original-b",
+    rawDocumentId,
+    parseRunId: "parse-original",
+    revisionKind: "initial",
+  });
+  insertCandidate({
+    db,
+    candidateId: "candidate-revision-b",
+    observationId: "settlement-original-b",
+    rawDocumentId,
+    parseRunId: "parse-original",
+    revisionKind: "parser_reparse",
+    betType: "place",
+    semanticHash: "b".repeat(64),
+    correctionReason: "TEST_REPARSE",
+  });
+
+  const plan = planSourceDuplicateResolution(db);
+  assert.equal(plan.duplicatedRaces, 1);
+  assert.equal(plan.plannedResolutions.length, 1);
+  assert.equal(plan.valueConflicts.length, 0);
+
+  const detected = detectExactDuplicateObservationsInRaw(db, rawDocumentId);
+  assert.equal(detected.length, 1);
+  assert.equal(detected[0]?.valueEqual, true);
+
+  const audit = auditCanonicalDuplicates(db);
+  assert.equal(audit.rawObservations, 2);
+  assert.equal(audit.rawDistinctRaceKeys, 1);
+  assert.equal(audit.rawDuplicateObservations, 1);
+  assert.equal(audit.rawCandidates, 2);
+  assert.equal(audit.rawDistinctRaceBetHash, 1);
+  assert.equal(audit.rawRaceLevelDuplicateCandidates, 1);
   db.close();
 });
