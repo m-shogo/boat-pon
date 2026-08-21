@@ -129,8 +129,8 @@ function hasValidMarketPayloadMetadata(row: MarketEvidenceMetadataRow): boolean 
 function hasValidCheckpointSemantics(payload: TrifectaMarketPayload): boolean {
   try {
     const expected = freezeCheckpoint(payload.scheduledCloseAtSeen, payload.observedAt);
-    return payload.scheduledCloseAtSeen === expected.scheduledCloseAtSeen
-      && payload.observedAt === expected.observedAt
+    return Date.parse(payload.scheduledCloseAtSeen) === Date.parse(expected.scheduledCloseAtSeen)
+      && Date.parse(payload.observedAt) === Date.parse(expected.observedAt)
       && payload.minutesBeforeCloseAtCapture === expected.minutesBeforeCloseAtCapture
       && payload.checkpointLabelAtCapture === expected.checkpointLabelAtCapture
       && payload.checkpointPolicyVersion === expected.checkpointPolicyVersion;
