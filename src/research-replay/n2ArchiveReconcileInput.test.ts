@@ -25,6 +25,23 @@ test("archive reconciliation applies last-completed JST race-day cutoff before l
   assert.deepEqual(selection.selectedFiles.map((path) => path.split("/").at(-1)), ["k260731.lzh"]);
 });
 
+test("archive reconciliation rejects invalid bounded-selection limits before reading inventory", () => {
+  let readCount = 0;
+  const readArchiveBytes = (path: string): Uint8Array => {
+    readCount += 1;
+    return fakeArchiveBytes(path);
+  };
+  for (const limit of [0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+    assert.throws(() => buildArchiveReconcileSelection({
+      discoveredFiles: ["/archive/k260731.lzh", "/archive/k260801.lzh"],
+      asOf: "2026-08-01T23:59:59.000Z",
+      limit,
+      readArchiveBytes,
+    }), /ARCHIVE_RECONCILE_LIMIT_INVALID/);
+  }
+  assert.equal(readCount, 0);
+});
+
 test("archive reconciliation excludes the JST race day still in progress", () => {
   const selection = buildArchiveReconcileSelection({
     discoveredFiles: ["/archive/k260731.lzh", "/archive/k260801.lzh"],
