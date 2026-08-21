@@ -138,7 +138,7 @@ test("reparse rejects semantic candidate reuse with stale parse lineage", () => 
 
   assert.throws(
     () => applyReparseForDocument(db, repo, META, DERIVED, activeState, state, NOW),
-    /REPARSE_TARGET_CANDIDATE_CONFLICT:raw-candidate-lineage:candidate-lineage-1/,
+    /SETTLEMENT_CANDIDATE_REUSE_CONFLICT:candidate-lineage-1/,
   );
   assert.equal(candidateCount(db), 1);
   assert.equal(state.counts.appended_parse_runs, 0);
