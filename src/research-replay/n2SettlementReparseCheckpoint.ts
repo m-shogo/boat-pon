@@ -4,7 +4,8 @@ import { basename, isAbsolute, join, resolve } from "node:path";
 
 import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 
-export const N2_SETTLEMENT_REPARSE_CHECKPOINT_VERSION = "n2-settlement-reparse-checkpoint-v3";
+export const N2_SETTLEMENT_REPARSE_CHECKPOINT_VERSION = "n2-settlement-reparse-checkpoint-v4";
+export const N2_SETTLEMENT_REPARSE_CHECKPOINT_STATE_DIGEST_VERSION = "n2-settlement-reparse-checkpoint-state-digest-v1";
 
 export type N2SettlementReparseCheckpointIdentity = {
   checkpointVersion: typeof N2_SETTLEMENT_REPARSE_CHECKPOINT_VERSION;
@@ -136,5 +137,30 @@ export function assertN2SettlementReparseCheckpointIdentity(
   }
   if (canonicalHash(actual) !== canonicalHash(expected)) {
     throw new Error("REPARSE_CHECKPOINT_IDENTITY_MISMATCH");
+  }
+}
+
+export function buildN2SettlementReparseCheckpointStateDigest(
+  checkpointIdentity: N2SettlementReparseCheckpointIdentity,
+  state: unknown,
+): string {
+  return canonicalHash({
+    digestVersion: N2_SETTLEMENT_REPARSE_CHECKPOINT_STATE_DIGEST_VERSION,
+    checkpointIdentity,
+    state,
+  });
+}
+
+export function assertN2SettlementReparseCheckpointStateDigest(
+  actualDigest: unknown,
+  checkpointIdentity: N2SettlementReparseCheckpointIdentity,
+  state: unknown,
+): asserts actualDigest is string {
+  if (typeof actualDigest !== "string" || !/^[0-9a-f]{64}$/.test(actualDigest)) {
+    throw new Error("REPARSE_CHECKPOINT_STATE_DIGEST_MISSING");
+  }
+  const expectedDigest = buildN2SettlementReparseCheckpointStateDigest(checkpointIdentity, state);
+  if (actualDigest !== expectedDigest) {
+    throw new Error("REPARSE_CHECKPOINT_STATE_DIGEST_MISMATCH");
   }
 }
