@@ -2,6 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { pathToFileURL } from "node:url";
 import { officialVenueCode } from "../domain/officialLinks";
 import { canonicalRaceKey } from "./identity";
+import { PAYLOAD_SCHEMA_VERSION, semanticPayloadHash, validateTypedPayload } from "./domain";
 import type { N2PitAuditObservation } from "./n2PitAudit";
 
 export const N2_PIT_AUDIT_READER_VERSION = "n2-pit-audit-reader-v2";
@@ -16,7 +17,15 @@ export type N2PitAuditReadResult = {
   sourceTypes: readonly ["official_program", "trifecta_market"];
 };
 
-type SourceObservationRow = Omit<N2PitAuditObservation, "decisionCutoff">;
+type SourceObservationRow = Omit<N2PitAuditObservation, "decisionCutoff" | "typedPayloadIntegrity"> & {
+  observationPayloadType: string | null;
+  observationPayloadSchemaVersion: string | null;
+  observationPayloadHash: string | null;
+  typedPayloadType: string | null;
+  typedPayloadSchemaVersion: string | null;
+  typedPayloadHash: string | null;
+  typedPayloadJson: string | null;
+};
 type ProgramCutoffRow = {
   raceId: string;
   date: string;
@@ -42,15 +51,23 @@ SELECT
   o.first_seen_at AS firstSeenAt,
   o.timing_quality AS timingQuality,
   o.source_quality AS sourceQuality,
+  o.payload_type AS observationPayloadType,
+  o.payload_schema_version AS observationPayloadSchemaVersion,
+  o.semantic_payload_hash AS observationPayloadHash,
   p.raw_document_id AS parseRawDocumentId,
   p.status AS parseStatus,
   r.raw_document_id AS rawDocumentId,
   r.integrity_status AS integrityStatus,
   r.security_scan_status AS securityScanStatus,
-  r.parser_replay_eligible AS parserReplayEligible
+  r.parser_replay_eligible AS parserReplayEligible,
+  t.payload_type AS typedPayloadType,
+  t.payload_schema_version AS typedPayloadSchemaVersion,
+  t.payload_hash AS typedPayloadHash,
+  t.payload_json AS typedPayloadJson
 FROM domain_observations o
 JOIN parse_runs p ON p.parse_run_id = o.parse_run_id
 JOIN raw_documents r ON r.raw_document_id = o.raw_document_id
+LEFT JOIN typed_observation_payloads t ON t.observation_id = o.observation_id
 WHERE o.observation_type IN ('official_program', 'trifecta_market')
 ORDER BY
   substr(o.canonical_race_key, 1, 10),
@@ -128,6 +145,33 @@ export function decisionCutoffFromProgram(row: ProgramCutoffRow | null, expected
   return Number.isFinite(parsed) ? new Date(parsed).toISOString() : null;
 }
 
+function typedPayloadIntegrity(row: SourceObservationRow): "verified" | "invalid" {
+  if ((row.observationType !== "official_program" && row.observationType !== "trifecta_market")
+    || row.observationPayloadType !== row.observationType
+    || row.typedPayloadType !== row.observationType
+    || row.observationPayloadSchemaVersion !== PAYLOAD_SCHEMA_VERSION
+    || row.typedPayloadSchemaVersion !== PAYLOAD_SCHEMA_VERSION
+    || row.observationPayloadHash === null
+    || row.typedPayloadHash === null
+    || row.observationPayloadHash !== row.typedPayloadHash
+    || row.typedPayloadJson === null) {
+    return "invalid";
+  }
+  try {
+    const payload = validateTypedPayload(
+      row.observationType,
+      JSON.parse(row.typedPayloadJson) as unknown,
+    ) as Record<string, unknown>;
+    const semanticHash = semanticPayloadHash(row.observationType, payload);
+    if (semanticHash !== row.observationPayloadHash || semanticHash !== row.typedPayloadHash) return "invalid";
+    if (row.observationType === "official_program" && payload.canonicalRaceKey !== row.canonicalRaceKey) return "invalid";
+    if (typeof payload.observedAt !== "string" || Date.parse(payload.observedAt) !== Date.parse(row.sourceObservedAt)) return "invalid";
+    return "verified";
+  } catch {
+    return "invalid";
+  }
+}
+
 export function readN2PitAuditObservations(input: {
   primaryDbPath: string;
   sidecarDbPath: string;
@@ -165,7 +209,21 @@ export function readN2PitAuditObservations(input: {
           : null;
         cutoffCache.set(row.canonicalRaceKey, cutoff);
       }
-      return { ...row, decisionCutoff: cutoff };
+      const {
+        observationPayloadType: _observationPayloadType,
+        observationPayloadSchemaVersion: _observationPayloadSchemaVersion,
+        observationPayloadHash: _observationPayloadHash,
+        typedPayloadType: _typedPayloadType,
+        typedPayloadSchemaVersion: _typedPayloadSchemaVersion,
+        typedPayloadHash: _typedPayloadHash,
+        typedPayloadJson: _typedPayloadJson,
+        ...evidence
+      } = row;
+      return {
+        ...evidence,
+        typedPayloadIntegrity: typedPayloadIntegrity(row),
+        decisionCutoff: cutoff,
+      };
     });
     return {
       observations,
