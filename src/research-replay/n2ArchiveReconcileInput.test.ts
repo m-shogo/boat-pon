@@ -7,6 +7,7 @@ import {
 } from "./n2ArchiveReconcileInput";
 
 const fakeArchiveBytes = (path: string): Uint8Array => Buffer.from(`bytes:${path}`, "utf8");
+const sidecarSha = "a".repeat(64);
 
 test("archive reconciliation applies last-completed JST race-day cutoff before limit", () => {
   const selection = buildArchiveReconcileSelection({
@@ -107,21 +108,21 @@ test("archive inventory digest changes when compressed archive bytes change", ()
   assert.notEqual(first.inventoryDigest, second.inventoryDigest);
   assert.throws(
     () => assertArchiveReconcileCheckpointContract(
-      archiveReconcileCheckpointContract(first),
-      archiveReconcileCheckpointContract(second),
+      archiveReconcileCheckpointContract(first, sidecarSha),
+      archiveReconcileCheckpointContract(second, sidecarSha),
     ),
     /ARCHIVE_RECONCILE_CHECKPOINT_CONTRACT_MISMATCH:inventoryDigest/,
   );
 });
 
-test("resume checkpoint is bound to canonical as-of and selected inventory", () => {
+test("resume checkpoint is bound to canonical as-of, inventory, and source sidecar snapshot", () => {
   const selection = buildArchiveReconcileSelection({
     discoveredFiles: ["/archive/k260731.lzh", "/archive/k260801.lzh"],
     asOf: "2026-08-01T23:59:59.000Z",
     limit: null,
     readArchiveBytes: fakeArchiveBytes,
   });
-  const contract = archiveReconcileCheckpointContract(selection);
+  const contract = archiveReconcileCheckpointContract(selection, sidecarSha);
   assert.doesNotThrow(() => assertArchiveReconcileCheckpointContract({ ...contract }, contract));
   assert.throws(
     () => assertArchiveReconcileCheckpointContract({ ...contract, asOf: "2026-08-02T00:00:00.000Z" }, contract),
@@ -130,5 +131,13 @@ test("resume checkpoint is bound to canonical as-of and selected inventory", () 
   assert.throws(
     () => assertArchiveReconcileCheckpointContract({ ...contract, inventoryDigest: "0".repeat(64) }, contract),
     /ARCHIVE_RECONCILE_CHECKPOINT_CONTRACT_MISMATCH:inventoryDigest/,
+  );
+  assert.throws(
+    () => assertArchiveReconcileCheckpointContract({ ...contract, sourceSidecarSha256: "b".repeat(64) }, contract),
+    /ARCHIVE_RECONCILE_CHECKPOINT_CONTRACT_MISMATCH:sourceSidecarSha256/,
+  );
+  assert.throws(
+    () => archiveReconcileCheckpointContract(selection, "ABC"),
+    /ARCHIVE_RECONCILE_SIDECAR_SHA_INVALID/,
   );
 });
