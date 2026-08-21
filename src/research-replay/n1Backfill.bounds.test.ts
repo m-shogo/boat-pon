@@ -63,3 +63,26 @@ test("backfill bounded inputs reject negative, fractional, and unsafe values bef
     db.close();
   }
 });
+
+test("backfill limit bounds failed archive attempts as well as completed files", async () => {
+  const { db, rawStore } = setup();
+  const summary = await runBackfill({
+    db,
+    rawStore,
+    archiveFiles: [
+      "/definitely-not-read/k260101.lzh",
+      "/definitely-not-read/k260102.lzh",
+    ],
+    now: NOW,
+    limit: 1,
+  });
+
+  assert.equal(summary.processedFiles, 0);
+  assert.equal(summary.failedFiles, 1);
+  assert.equal(summary.checkpointsRecorded, 1);
+  assert.equal(summary.fileResults.length, 1);
+  assert.equal(summary.fileResults[0]?.archiveFile, "k260101.lzh");
+  const checkpoints = db.prepare("SELECT archive_file AS archiveFile FROM n1_settlement_backfill_checkpoints ORDER BY rowid").all() as Array<{ archiveFile: string }>;
+  assert.deepEqual(checkpoints, [{ archiveFile: "k260101.lzh" }]);
+  db.close();
+});
