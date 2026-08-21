@@ -171,6 +171,59 @@ function requireTargetParseRunContract(
   }
 }
 
+function requireTargetObservationContract(
+  db: DatabaseSync,
+  observationId: string,
+  raceKey: string,
+  parseRunId: string,
+  rawDocumentId: string,
+): void {
+  const row = db.prepare(
+    `SELECT canonical_race_key AS raceKey, observation_type AS observationType,
+            payload_type AS payloadType, payload_schema_version AS payloadSchemaVersion,
+            parse_run_id AS parseRunId, raw_document_id AS rawDocumentId,
+            source_published_at AS sourcePublishedAt, timing_quality AS timingQuality,
+            source_quality AS sourceQuality, measurement_quality AS measurementQuality,
+            semantic_payload_hash AS semanticPayloadHash, supersedes_id AS supersedesId,
+            correction_kind AS correctionKind, correction_reason AS correctionReason
+     FROM domain_observations WHERE observation_id=?`,
+  ).get(observationId) as {
+    raceKey: string;
+    observationType: string;
+    payloadType: string;
+    payloadSchemaVersion: string;
+    parseRunId: string;
+    rawDocumentId: string;
+    sourcePublishedAt: string | null;
+    timingQuality: string;
+    sourceQuality: string;
+    measurementQuality: string;
+    semanticPayloadHash: string;
+    supersedesId: string | null;
+    correctionKind: string | null;
+    correctionReason: string | null;
+  } | undefined;
+  if (
+    row === undefined ||
+    row.raceKey !== raceKey ||
+    row.observationType !== "settlement_result" ||
+    row.payloadType !== "settlement_result" ||
+    row.payloadSchemaVersion !== "rr-payload-v1" ||
+    row.parseRunId !== parseRunId ||
+    row.rawDocumentId !== rawDocumentId ||
+    row.sourcePublishedAt !== null ||
+    row.timingQuality !== "observed_only" ||
+    row.sourceQuality !== "derived_existing_row" ||
+    row.measurementQuality !== "official_archive" ||
+    row.semanticPayloadHash !== canonicalHash({ reparse: observationId }) ||
+    row.supersedesId !== null ||
+    row.correctionKind !== "parser_reparse" ||
+    row.correctionReason !== REPARSE_DEFECT_CODE
+  ) {
+    throw new Error(`REPARSE_TARGET_OBSERVATION_CONFLICT:${rawDocumentId}:${observationId}`);
+  }
+}
+
 // 1 raw document 分の v2 derived candidate を temp copy へ append-only 適用する（per-document transaction）。
 // meta.rawDocumentId は当該 raw の既存 raw_document_id（provenance 保持）。state/activeState を mutate する。
 export function applyReparseForDocument(
@@ -219,6 +272,7 @@ export function applyReparseForDocument(
       if (!observedRaces.has(cand.raceKey)) {
         const oi = obsInsert.run(observationId, cand.raceKey, parseRunId, meta.rawDocumentId, nowIso, nowIso,
           canonicalHash({ reparse: observationId }), REPARSE_DEFECT_CODE, nowIso, nowIso, nowIso);
+        requireTargetObservationContract(db, observationId, cand.raceKey, parseRunId, meta.rawDocumentId);
         if (Number(oi.changes) > 0) state.counts.appended_observations += 1;
         observedRaces.add(cand.raceKey);
       }
