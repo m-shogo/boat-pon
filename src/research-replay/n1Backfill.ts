@@ -190,6 +190,73 @@ export function requireBackfillParseRunContract(input: {
   }
 }
 
+export function requireBackfillObservationContract(input: {
+  db: DatabaseSync;
+  observationId: string;
+  canonicalRaceKey: string;
+  parseRunId: string;
+  rawDocumentId: string;
+  semanticPayloadHash: string;
+  payloadJson: string;
+}): void {
+  const row = input.db.prepare(`
+    SELECT o.canonical_race_key AS canonicalRaceKey, o.observation_type AS observationType,
+           o.payload_type AS observationPayloadType, o.payload_schema_version AS observationPayloadSchemaVersion,
+           o.parse_run_id AS parseRunId, o.raw_document_id AS rawDocumentId,
+           o.source_published_at AS sourcePublishedAt, o.timing_quality AS timingQuality,
+           o.source_quality AS sourceQuality, o.measurement_quality AS measurementQuality,
+           o.semantic_payload_hash AS observationSemanticPayloadHash, o.supersedes_id AS supersedesId,
+           o.correction_kind AS correctionKind, o.correction_reason AS correctionReason,
+           p.payload_type AS storedPayloadType, p.payload_schema_version AS storedPayloadSchemaVersion,
+           p.payload_json AS payloadJson, p.payload_hash AS payloadHash
+    FROM domain_observations o
+    LEFT JOIN typed_observation_payloads p ON p.observation_id=o.observation_id
+    WHERE o.observation_id=?
+  `).get(input.observationId) as {
+    canonicalRaceKey: string;
+    observationType: string;
+    observationPayloadType: string;
+    observationPayloadSchemaVersion: string;
+    parseRunId: string;
+    rawDocumentId: string;
+    sourcePublishedAt: string | null;
+    timingQuality: string;
+    sourceQuality: string;
+    measurementQuality: string;
+    observationSemanticPayloadHash: string;
+    supersedesId: string | null;
+    correctionKind: string | null;
+    correctionReason: string | null;
+    storedPayloadType: string | null;
+    storedPayloadSchemaVersion: string | null;
+    payloadJson: string | null;
+    payloadHash: string | null;
+  } | undefined;
+  if (
+    row === undefined ||
+    row.canonicalRaceKey !== input.canonicalRaceKey ||
+    row.observationType !== "settlement_result" ||
+    row.observationPayloadType !== "settlement_result" ||
+    row.observationPayloadSchemaVersion !== "rr-payload-v1" ||
+    row.parseRunId !== input.parseRunId ||
+    row.rawDocumentId !== input.rawDocumentId ||
+    row.sourcePublishedAt !== null ||
+    row.timingQuality !== "observed_only" ||
+    row.sourceQuality !== "official_public" ||
+    row.measurementQuality !== "official_archive" ||
+    row.observationSemanticPayloadHash !== input.semanticPayloadHash ||
+    row.supersedesId !== null ||
+    row.correctionKind !== null ||
+    row.correctionReason !== null ||
+    row.storedPayloadType !== "settlement_result" ||
+    row.storedPayloadSchemaVersion !== "rr-payload-v1" ||
+    row.payloadJson !== input.payloadJson ||
+    row.payloadHash !== input.semanticPayloadHash
+  ) {
+    throw new Error(`N1_BACKFILL_OBSERVATION_CONFLICT:${input.observationId}`);
+  }
+}
+
 // 1 archiveの同期ingest。呼び出し側の単一transaction内で実行し（withinTransaction=true）、
 // per-file atomic batchとする。同一observation/bet-type/hashはUNIQUEでno-op（冪等）。pinはOption Bで保存しない。
 function ingestParsedArchive(input: {
@@ -269,8 +336,18 @@ function ingestParsedArchive(input: {
     };
     const observationId = `${input.idPrefix}-obs-${raw.rawDocumentId}-${++observationSeq}`;
     const payloadHash = semanticPayloadHash("settlement_result", payload);
+    const payloadJson = JSON.stringify(payload);
     insertObs.run(observationId, raceKey, parseRunId, raw.rawDocumentId, now, now, payloadHash, now, now, now);
-    insertPayload.run(observationId, JSON.stringify(payload), payloadHash, now);
+    insertPayload.run(observationId, payloadJson, payloadHash, now);
+    requireBackfillObservationContract({
+      db,
+      observationId,
+      canonicalRaceKey: raceKey,
+      parseRunId,
+      rawDocumentId: raw.rawDocumentId,
+      semanticPayloadHash: payloadHash,
+      payloadJson,
+    });
     for (const [betType, betLines] of byBet) {
       const bucket = classifyRaceLines(betType, betLines);
       const status = resolveStatus(bucket);
