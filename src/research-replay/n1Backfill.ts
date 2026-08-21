@@ -141,6 +141,7 @@ type ParsedArchive = {
   sha256: string;
 };
 
+// 非同期のunpack/parseはtransaction外で行い、DB書込みだけを同期transaction内に閉じる。
 async function parseArchive(filePath: string): Promise<ParsedArchive> {
   const bytes = await unpackToBuffer(filePath);
   const text = new TextDecoder("shift_jis").decode(bytes);
@@ -269,6 +270,8 @@ export function requireBackfillObservationContract(input: {
   }
 }
 
+// 1 archiveの同期ingest。呼び出し側の単一transaction内で実行し（withinTransaction=true）、
+// per-file atomic batchとする。同一observation/bet-type/hashはUNIQUEでno-op（冪等）。pinはOption Bで保存しない。
 function ingestParsedArchive(input: {
   archive: ParsedArchive;
   replay: ResearchReplayRepository;
@@ -375,6 +378,7 @@ function ingestParsedArchive(input: {
         result.payoutLines += bucket.payouts.length;
         result.refundLines += bucket.refunds.length;
       } catch {
+        // 異常lineはcandidate生成を拒否しskip（validationはINSERT前なので部分行を残さない）。
         result.skippedCandidates += 1;
       }
     }
@@ -453,6 +457,9 @@ export function completedBackfillCountForParser(input: {
   `).get(parserVersion) as { c: number }).c);
 }
 
+// checkpoint駆動でarchive fileを順に処理する。per-fileで単一transaction（atomic batch）。
+// limit=このrunで新規処理する最大file数（milestone gate用）。maxFiles=対象listのslice（sample用）。
+// guardに1つでも抵触したらfile境界で安全停止する。
 function requireOptionalBound(name: "MAX_FILES" | "LIMIT", value: number | undefined): void {
   if (value !== undefined && (!Number.isSafeInteger(value) || value < 0)) {
     throw new Error(`N1_BACKFILL_${name}_INVALID:${value}`);
@@ -473,6 +480,8 @@ export async function runBackfill(input: {
   diskFloorBytes?: number;
   primaryPath?: string;
   primaryFingerprint?: { size: number; mtimeMs: number };
+  // strict=size/mtime変化で即停止（並行書込みに厳格）。structural=schema/app_settings hashのみ監視し、
+  // 並行collectorのdata append(size/mtime変化)は許容する（N1 write=0はコード構造で別途保証）。
   primaryMonitor?: "strict" | "structural";
   primaryStructuralBaseline?: { schemaHash: string | null; appSettingsHash: string | null };
   primaryStructuralProbe?: () => { schemaHash: string | null; appSettingsHash: string | null };
@@ -507,6 +516,7 @@ export async function runBackfill(input: {
   };
   const healthEvery = input.healthEvery ?? 50;
 
+  // guard: file処理前に安全条件を確認。抵触時はstopReasonを返す（停止）。
   const guard = (): BackfillStopReason => {
     if (input.diskFloorBytes && diskFree() < input.diskFloorBytes) return "DISK_LOW";
     const bytes = dbSize();
@@ -525,6 +535,7 @@ export async function runBackfill(input: {
       } catch { return "PRIMARY_DB_CHANGED"; }
     }
     if (primaryMonitor === "structural" && input.primaryStructuralBaseline && input.primaryStructuralProbe) {
+      // structural monitor: size/mtimeの並行data appendは許容し、schema/app_settingsの変化のみ停止。
       try {
         const now = input.primaryStructuralProbe();
         if (now.schemaHash !== input.primaryStructuralBaseline.schemaHash
@@ -562,6 +573,7 @@ export async function runBackfill(input: {
     const previous = latestBackfillCheckpointForParser({ db: input.db, archiveFile: file });
     const retryCount = previous ? previous.retryCount + 1 : 0;
 
+    // unpack/parseはtransaction外（await）。
     let archive: ParsedArchive;
     try {
       archive = await parseArchive(filePath);
@@ -571,6 +583,7 @@ export async function runBackfill(input: {
       continue;
     }
 
+    // per-file 単一transaction（data + checkpoint をatomicにcommit）。
     input.db.exec("BEGIN IMMEDIATE");
     try {
       const fileResult = ingestParsedArchive({ archive, replay, settlement, db: input.db, now: input.now, idPrefix });
