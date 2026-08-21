@@ -8,7 +8,7 @@
 //   pnpm reconcile:n2:archive-canonical -- --as-of=2026-08-01T00:00:00.000Z
 //   （任意）--sidecar=<db> --archive-root=<dir> --limit=<n> --concurrency=<n>
 //            --report-dir=<dir> --checkpoint=<path> --resume
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -63,6 +63,13 @@ function positiveInt(value: string | null, fallback: number | null): number | nu
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed <= 0) throw new Error(`expected positive integer, got: ${value}`);
   return parsed;
+}
+function sha256File(path: string): string {
+  const out = spawnSync("shasum", ["-a", "256", path], { encoding: "utf8", maxBuffer: 1024 * 1024 });
+  if (out.status !== 0) throw new Error(`shasum failed for ${path}: ${out.stderr}`);
+  const hex = out.stdout.trim().split(/\s+/)[0];
+  if (!/^[0-9a-f]{64}$/.test(hex)) throw new Error(`unexpected shasum output for ${path}`);
+  return hex;
 }
 
 const asOfInput = argValue("--as-of");
@@ -328,6 +335,7 @@ async function main(): Promise<void> {
 
   const startedAt = new Date().toISOString();
   const startedMs = Date.now();
+  const sourceSidecarSha256 = sha256File(sidecarPath);
   process.stderr.write(`[reconcile] loading canonical DB side from ${sidecarPath} ...\n`);
   const db = loadDbSide();
   process.stderr.write(
@@ -341,7 +349,7 @@ async function main(): Promise<void> {
   const selected = selection.selectedFiles;
   const asOf = selection.asOf;
   const archiveInventoryDigest = selection.inventoryDigest;
-  const checkpointContract = archiveReconcileCheckpointContract(selection);
+  const checkpointContract = archiveReconcileCheckpointContract(selection, sourceSidecarSha256);
 
   const agg = (resume ? loadAggregate(checkpointPath, checkpointContract) : null) ?? newAggregate();
   const done = new Set(agg.processedFiles);
