@@ -29,6 +29,17 @@ export function assertN2SettlementReparseResumeMode(input: {
   }
 }
 
+// This module is imported by the reparse CLI before any filesystem mutation.
+// Fail closed here so `--resume --make-copy` cannot recreate the target and then
+// reuse a checkpoint whose processed-file state refers to the previous target.
+const invokedByReparseCli = process.argv.some((value) => /(?:^|\/)reparse-settlement-v2\.(?:ts|js)$/.test(value));
+if (invokedByReparseCli) {
+  assertN2SettlementReparseResumeMode({
+    resume: process.argv.includes("--resume"),
+    makeCopy: process.argv.includes("--make-copy"),
+  });
+}
+
 export function buildN2SettlementReparseCheckpointIdentity(input: {
   reparseSchemaVersion: string;
   sourceParserVersion: string;
