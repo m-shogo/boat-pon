@@ -141,6 +141,55 @@ async function parseArchive(filePath: string): Promise<ParsedArchive> {
   };
 }
 
+export function requireBackfillParseRunContract(input: {
+  db: DatabaseSync;
+  parseRunId: string;
+  rawDocumentId: string;
+  sourceSchemaVersion: string;
+  semanticPayloadHash: string;
+}): void {
+  const row = input.db.prepare(`
+    SELECT raw_document_id AS rawDocumentId, parser_name AS parserName, parser_version AS parserVersion,
+           source_schema_version AS sourceSchemaVersion, canonicalization_version AS canonicalizationVersion,
+           payload_type AS payloadType, status, warning_codes AS warningCodes, error_code AS errorCode,
+           semantic_payload_hash AS semanticPayloadHash, supersedes_id AS supersedesId,
+           correction_kind AS correctionKind, correction_reason AS correctionReason
+    FROM parse_runs WHERE parse_run_id=?
+  `).get(input.parseRunId) as {
+    rawDocumentId: string;
+    parserName: string;
+    parserVersion: string;
+    sourceSchemaVersion: string;
+    canonicalizationVersion: string;
+    payloadType: string;
+    status: string;
+    warningCodes: string;
+    errorCode: string | null;
+    semanticPayloadHash: string;
+    supersedesId: string | null;
+    correctionKind: string | null;
+    correctionReason: string | null;
+  } | undefined;
+  if (
+    row === undefined ||
+    row.rawDocumentId !== input.rawDocumentId ||
+    row.parserName !== "n1-backfill-archive" ||
+    row.parserVersion !== N1_SETTLEMENT_PARSER_VERSION ||
+    row.sourceSchemaVersion !== input.sourceSchemaVersion ||
+    row.canonicalizationVersion !== "rr-c14n-v1" ||
+    row.payloadType !== "settlement_result" ||
+    row.status !== "success" ||
+    row.warningCodes !== "[]" ||
+    row.errorCode !== null ||
+    row.semanticPayloadHash !== input.semanticPayloadHash ||
+    row.supersedesId !== null ||
+    row.correctionKind !== null ||
+    row.correctionReason !== null
+  ) {
+    throw new Error(`N1_BACKFILL_PARSE_RUN_CONFLICT:${input.parseRunId}`);
+  }
+}
+
 // 1 archiveの同期ingest。呼び出し側の単一transaction内で実行し（withinTransaction=true）、
 // per-file atomic batchとする。同一observation/bet-type/hashはUNIQUEでno-op（冪等）。pinはOption Bで保存しない。
 function ingestParsedArchive(input: {
@@ -159,6 +208,7 @@ function ingestParsedArchive(input: {
   };
   const raw = replay.recordRawDocument({ bytes, contentType: "text/plain", charset: "shift_jis" });
   const parseRunId = `${input.idPrefix}-parse-${raw.rawDocumentId}`;
+  const parseSemanticHash = canonicalHash({ file });
   db.prepare(`
     INSERT OR IGNORE INTO parse_runs
     (parse_run_id, raw_document_id, parser_name, parser_version, source_schema_version,
@@ -167,7 +217,14 @@ function ingestParsedArchive(input: {
      correction_reason, created_at)
     VALUES (?, ?, 'n1-backfill-archive', ?, ?, 'rr-c14n-v1', 'settlement_result', 'success', '[]', NULL,
             ?, ?, ?, NULL, NULL, NULL, ?)
-  `).run(parseRunId, raw.rawDocumentId, N1_SETTLEMENT_PARSER_VERSION, family, now, now, canonicalHash({ file }), now);
+  `).run(parseRunId, raw.rawDocumentId, N1_SETTLEMENT_PARSER_VERSION, family, now, now, parseSemanticHash, now);
+  requireBackfillParseRunContract({
+    db,
+    parseRunId,
+    rawDocumentId: raw.rawDocumentId,
+    sourceSchemaVersion: family,
+    semanticPayloadHash: parseSemanticHash,
+  });
 
   const payoutByRace = new Map<string, RacePayout[]>();
   for (const line of parsed.payouts) {
