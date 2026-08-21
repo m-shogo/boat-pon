@@ -562,7 +562,7 @@ export async function runBackfill(input: {
     const stop = guard();
     if (stop) { summary.stopped = true; summary.stopReason = stop; break; }
 
-    const previous = checkpoints.latest(file);
+    const previous = latestBackfillCheckpointForParser({ db: input.db, archiveFile: file });
     const retryCount = previous ? previous.retryCount + 1 : 0;
 
     // unpack/parseはtransaction外（await）。
