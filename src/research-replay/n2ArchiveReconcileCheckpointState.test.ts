@@ -85,6 +85,19 @@ test("archive reconcile resume rejects rehashed unsafe aggregate counts", () => 
   );
 });
 
+test("archive reconcile resume rejects duplicate aggregate keys even after rehash", () => {
+  const key = "2026\u0000trifecta\u0000Toda";
+  const tampered = {
+    ...state,
+    paired: [[key, 1], [key, 2]],
+  };
+  const digest = buildArchiveReconcileCheckpointStateDigest(contract, tampered);
+  assert.throws(
+    () => assertArchiveReconcileCheckpointStateDigest(digest, contract, tampered),
+    /ARCHIVE_RECONCILE_CHECKPOINT_COUNT_KEY_DUPLICATE:paired:/,
+  );
+});
+
 test("archive reconcile resume rejects missing or non-canonical state digests", () => {
   assert.throws(
     () => assertArchiveReconcileCheckpointStateDigest(undefined, contract, state),
