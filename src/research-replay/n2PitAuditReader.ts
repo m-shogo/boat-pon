@@ -3,7 +3,7 @@ import { pathToFileURL } from "node:url";
 import { officialVenueCode } from "../domain/officialLinks";
 import { canonicalUtcTimestamp } from "./canonical";
 import { canonicalRaceKey } from "./identity";
-import { PAYLOAD_SCHEMA_VERSION, semanticPayloadHash, validateTypedPayload } from "./domain";
+import { freezeCheckpoint, PAYLOAD_SCHEMA_VERSION, semanticPayloadHash, validateTypedPayload } from "./domain";
 import type { N2PitAuditObservation } from "./n2PitAudit";
 
 export const N2_PIT_AUDIT_READER_VERSION = "n2-pit-audit-reader-v2";
@@ -155,6 +155,22 @@ function canonicalInstant(value: unknown): string | null {
   }
 }
 
+function hasValidCheckpointSemantics(payload: Record<string, unknown>): boolean {
+  try {
+    const expected = freezeCheckpoint(
+      String(payload.scheduledCloseAtSeen),
+      String(payload.observedAt),
+    );
+    return canonicalInstant(payload.scheduledCloseAtSeen) === expected.scheduledCloseAtSeen
+      && canonicalInstant(payload.observedAt) === expected.observedAt
+      && payload.minutesBeforeCloseAtCapture === expected.minutesBeforeCloseAtCapture
+      && payload.checkpointLabelAtCapture === expected.checkpointLabelAtCapture
+      && payload.checkpointPolicyVersion === expected.checkpointPolicyVersion;
+  } catch {
+    return false;
+  }
+}
+
 function typedPayloadIntegrity(row: SourceObservationRow): "verified" | "invalid" {
   if ((row.observationType !== "official_program" && row.observationType !== "trifecta_market")
     || row.observationPayloadType !== row.observationType
@@ -175,6 +191,7 @@ function typedPayloadIntegrity(row: SourceObservationRow): "verified" | "invalid
     const semanticHash = semanticPayloadHash(row.observationType, payload);
     if (semanticHash !== row.observationPayloadHash || semanticHash !== row.typedPayloadHash) return "invalid";
     if (row.observationType === "official_program" && payload.canonicalRaceKey !== row.canonicalRaceKey) return "invalid";
+    if (row.observationType === "trifecta_market" && !hasValidCheckpointSemantics(payload)) return "invalid";
     const payloadObservedAt = canonicalInstant(payload.observedAt);
     const sourceObservedAt = canonicalInstant(row.sourceObservedAt);
     if (payloadObservedAt === null || sourceObservedAt === null || payloadObservedAt !== sourceObservedAt) return "invalid";
