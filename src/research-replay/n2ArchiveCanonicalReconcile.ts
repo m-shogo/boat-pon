@@ -8,12 +8,12 @@
 // 解凍は CLI（scripts/reconcile-archive-canonical-settlement.ts）が担い、ここへ渡す。
 // raw 本文・巨大 payload は保持しない。未知 bet type / 未知 status は明示的 unknown に落とす。
 import type { ParsedResultDetail } from "../domain/officialResultDetailParser";
-import { canonicalRaceKey } from "./identity";
+import { canonicalRaceKey, parseCanonicalRaceKey } from "./identity";
 import { classifyRaceLines, resolveStatus, VENUE_CODES } from "./n1Backfill";
 import { BET_TYPES, type SettlementBetType, type SettlementStatus } from "./settlement";
 
 // ---- fixed contract identities（暗黙 default を作らない）----
-export const RECONCILE_INPUT_VERSION = "n2-archive-canonical-reconcile-v1";
+export const RECONCILE_INPUT_VERSION = "n2-archive-canonical-reconcile-v2";
 export const RACE_IDENTITY_VERSION = "race-identity-v1"; // `${date}:${venueCode}:R${raceNo}`
 export const EVENT_CLASSIFICATION_VERSION = "refund-reconcile-events-v1";
 export const REPORT_SCHEMA_VERSION = "n2-archive-canonical-reconcile-report-v1";
@@ -63,16 +63,15 @@ const VENUE_CODE_TO_NAME: ReadonlyMap<string, string> = new Map(
 );
 
 export function venueCodeFromKey(raceKey: string): string {
-  const parts = raceKey.split(":");
-  return parts.length >= 2 ? parts[1] : "unknown";
+  return parseCanonicalRaceKey(raceKey).venueCode;
 }
 
 export function yearFromKey(raceKey: string): string {
-  const date = raceKey.split(":")[0] ?? "";
-  return /^\d{4}-/.test(date) ? date.slice(0, 4) : "unknown";
+  return parseCanonicalRaceKey(raceKey).raceDateJst.slice(0, 4);
 }
 
 export function candidateKey(raceKey: string, betType: SettlementBetType): string {
+  parseCanonicalRaceKey(raceKey);
   return `${raceKey}\u0000${betType}`;
 }
 
