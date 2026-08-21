@@ -4,6 +4,7 @@ import { fileDate } from "./n1Backfill";
 
 export const ARCHIVE_RECONCILE_SELECTION_VERSION = "n2-archive-reconcile-selection-v2";
 export const ARCHIVE_RECONCILE_CHECKPOINT_VERSION = "n2-archive-reconcile-checkpoint-v2";
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
 export type ArchiveReconcileSelection = {
   asOf: string;
@@ -33,6 +34,14 @@ function assertCalendarDate(date: string, file: string): void {
   }
 }
 
+function lastCompletedJstRaceDate(asOf: string): string {
+  // K archives are complete Japanese race-day files. Never ingest the JST calendar
+  // day that is still in progress at asOf; the latest safe archive day is yesterday JST.
+  const jst = new Date(Date.parse(asOf) + JST_OFFSET_MS);
+  const startOfCurrentJstDateUtc = Date.UTC(jst.getUTCFullYear(), jst.getUTCMonth(), jst.getUTCDate());
+  return new Date(startOfCurrentJstDateUtc - 1).toISOString().slice(0, 10);
+}
+
 export function buildArchiveReconcileSelection(input: {
   discoveredFiles: readonly string[];
   asOf: string | null;
@@ -40,7 +49,7 @@ export function buildArchiveReconcileSelection(input: {
 }): ArchiveReconcileSelection {
   if (!input.asOf) throw new Error("ARCHIVE_RECONCILE_AS_OF_MISSING");
   const asOf = canonicalUtcTimestamp(input.asOf);
-  const cutoffDate = asOf.slice(0, 10);
+  const cutoffDate = lastCompletedJstRaceDate(asOf);
   const dated = input.discoveredFiles.map((path) => {
     const file = basename(path);
     const date = fileDate(path);
