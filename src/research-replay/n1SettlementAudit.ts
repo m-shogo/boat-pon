@@ -3,6 +3,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { parseOfficialResultDetail } from "../domain/officialResultDetailParser";
+import { canonicalRaceKey } from "./identity";
 
 export type ArchiveAudit = {
   auditVersion: "n1-archive-audit-v1";
@@ -44,11 +45,13 @@ function unpackToBuffer(path: string): Promise<Buffer> {
   });
 }
 
-function archiveFallbackDate(path: string): string {
+export function archiveFallbackDate(path: string): string {
   const match = path.match(/k(\d{2})(\d{2})(\d{2})\.lzh$/i);
   if (!match) return "1970-01-01";
   const year = Number(match[1]) >= 70 ? `19${match[1]}` : `20${match[1]}`;
-  return `${year}-${match[2]}-${match[3]}`;
+  const date = `${year}-${match[2]}-${match[3]}`;
+  canonicalRaceKey(date, "01", 1);
+  return date;
 }
 
 export async function auditAllLocalKArchives(root: string, concurrency = 8): Promise<ArchiveAudit> {
