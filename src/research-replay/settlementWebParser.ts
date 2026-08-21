@@ -50,7 +50,7 @@ export function parseSanitizedOfficialWebResult(html: string): WebSettlementPars
     const selection = parseSettlementSelection(betType, match[2]);
     const payout = Number(match[3].replaceAll(",", ""));
     const popularity = match[4] == null ? null : Number(match[4]);
-    if (!selection.valid || !selection.canonical || !Number.isInteger(payout) || payout < 0) {
+    if (!selection.valid || !selection.canonical || !Number.isSafeInteger(payout) || payout < 0) {
       diagnostics.push(selection.reason ?? "INVALID_WEB_PAYOUT");
       continue;
     }
@@ -60,7 +60,7 @@ export function parseSanitizedOfficialWebResult(html: string): WebSettlementPars
       selectionNormalized: selection.normalized,
       selectionCanonical: selection.canonical,
       payoutYen: payout,
-      popularity: Number.isInteger(popularity) && popularity! > 0 ? popularity : null,
+      popularity: Number.isSafeInteger(popularity) && popularity! > 0 ? popularity : null,
     });
   }
   if (!race || lines.length === 0) {
