@@ -13,6 +13,7 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import { canonicalHash } from "../research-replay/canonical";
+import { PAYLOAD_SCHEMA_VERSION, semanticPayloadHash } from "../research-replay/domain";
 import { runN2PitAuditExecutor } from "./n2PitAuditExecutor";
 import type { ExecutorContext } from "./taskExecutors";
 
@@ -45,18 +46,36 @@ function createSidecar(path: string): void {
       );
       CREATE TABLE domain_observations (
         observation_id TEXT PRIMARY KEY, canonical_race_key TEXT NOT NULL,
-        observation_type TEXT NOT NULL, raw_document_id TEXT NOT NULL,
-        parse_run_id TEXT NOT NULL, source_published_at TEXT,
+        observation_type TEXT NOT NULL, payload_type TEXT NOT NULL,
+        payload_schema_version TEXT NOT NULL, semantic_payload_hash TEXT NOT NULL,
+        raw_document_id TEXT NOT NULL, parse_run_id TEXT NOT NULL, source_published_at TEXT,
         source_observed_at TEXT NOT NULL, first_seen_at TEXT NOT NULL,
         timing_quality TEXT NOT NULL, source_quality TEXT NOT NULL
+      );
+      CREATE TABLE typed_observation_payloads (
+        observation_id TEXT PRIMARY KEY, payload_type TEXT NOT NULL,
+        payload_schema_version TEXT NOT NULL, payload_json TEXT NOT NULL, payload_hash TEXT NOT NULL
       );
     `);
     db.prepare("INSERT INTO raw_documents VALUES(?,?,?,?)").run("raw-1", "verified", "passed", 1);
     db.prepare("INSERT INTO parse_runs VALUES(?,?,?)").run("parse-1", "raw-1", "success");
-    db.prepare("INSERT INTO domain_observations VALUES(?,?,?,?,?,?,?,?,?,?)").run(
+    const payload = {
+      canonicalRaceKey: "2024-06-01:01:R1",
+      observedAt: "2024-06-01T00:01:00.000Z",
+      boats: [{
+        course: 1, registrationNo: null, className: null,
+        nationalWinRate: null, nationalTop2Rate: null, localWinRate: null, localTop2Rate: null,
+        motorTop2Rate: null, boatTop2Rate: null,
+      }],
+    };
+    const hash = semanticPayloadHash("official_program", payload);
+    db.prepare("INSERT INTO domain_observations VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)").run(
       "obs-1",
       "2024-06-01:01:R1",
       "official_program",
+      "official_program",
+      PAYLOAD_SCHEMA_VERSION,
+      hash,
       "raw-1",
       "parse-1",
       "2024-06-01T00:00:00.000Z",
@@ -64,6 +83,9 @@ function createSidecar(path: string): void {
       "2024-06-01T00:02:00.000Z",
       "source_exact",
       "official_public",
+    );
+    db.prepare("INSERT INTO typed_observation_payloads VALUES(?,?,?,?,?)").run(
+      "obs-1", "official_program", PAYLOAD_SCHEMA_VERSION, JSON.stringify(payload), hash,
     );
   } finally {
     db.close();

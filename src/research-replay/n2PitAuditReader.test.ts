@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
+import { PAYLOAD_SCHEMA_VERSION, semanticPayloadHash } from "./domain";
 import { buildN2PitAuditSummary } from "./n2PitAudit";
 import {
   decisionCutoffFromProgram,
@@ -40,7 +41,31 @@ function createPrimary(path: string, includeProgram = true, identity: PrimaryIde
   }
 }
 
-function createSidecar(path: string, observationCount = 2): void {
+function payloadFor(type: "official_program" | "trifecta_market", observedAt: string): Record<string, unknown> {
+  if (type === "official_program") {
+    return {
+      canonicalRaceKey: "2024-06-01:01:R1",
+      observedAt,
+      boats: [{
+        course: 1, registrationNo: null, className: null,
+        nationalWinRate: null, nationalTop2Rate: null, localWinRate: null, localTop2Rate: null,
+        motorTop2Rate: null, boatTop2Rate: null,
+      }],
+    };
+  }
+  return {
+    selections: [{ selection: "1-2-3", odds: 12.5 }],
+    scheduledCloseObservationId: "schedule-1",
+    scheduledCloseAtSeen: "2024-06-01T01:00:00.000Z",
+    observedAt,
+    minutesBeforeCloseAtCapture: 5,
+    checkpointLabelAtCapture: "T-5",
+    checkpointPolicyVersion: "t-minus-nearest-v1",
+    marketKind: "live_checkpoint",
+  };
+}
+
+function createSidecar(path: string, observationCount = 2, tamperPayload = false): void {
   const db = new DatabaseSync(path);
   try {
     db.exec(`
@@ -59,6 +84,9 @@ function createSidecar(path: string, observationCount = 2): void {
         observation_id TEXT PRIMARY KEY,
         canonical_race_key TEXT NOT NULL,
         observation_type TEXT NOT NULL,
+        payload_type TEXT NOT NULL,
+        payload_schema_version TEXT NOT NULL,
+        semantic_payload_hash TEXT NOT NULL,
         raw_document_id TEXT NOT NULL,
         parse_run_id TEXT NOT NULL,
         source_published_at TEXT,
@@ -67,28 +95,49 @@ function createSidecar(path: string, observationCount = 2): void {
         timing_quality TEXT NOT NULL,
         source_quality TEXT NOT NULL
       );
+      CREATE TABLE typed_observation_payloads (
+        observation_id TEXT PRIMARY KEY,
+        payload_type TEXT NOT NULL,
+        payload_schema_version TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        payload_hash TEXT NOT NULL
+      );
     `);
     const insertRaw = db.prepare(`INSERT INTO raw_documents VALUES(?,?,?,?)`);
     const insertParse = db.prepare(`INSERT INTO parse_runs VALUES(?,?,?)`);
-    const insertObservation = db.prepare(`INSERT INTO domain_observations VALUES(?,?,?,?,?,?,?,?,?,?)`);
+    const insertObservation = db.prepare(`INSERT INTO domain_observations VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+    const insertPayload = db.prepare(`INSERT INTO typed_observation_payloads VALUES(?,?,?,?,?)`);
     for (let index = 0; index < observationCount; index += 1) {
       const id = index + 1;
       const raw = `raw-${id}`;
       const parse = `parse-${id}`;
       const type = index % 2 === 0 ? "official_program" : "trifecta_market";
+      const observedAt = type === "official_program" ? "2024-06-01T00:01:00.000Z" : "2024-06-01T00:55:00.000Z";
+      const payload = payloadFor(type, observedAt);
+      const hash = semanticPayloadHash(type, payload);
       insertRaw.run(raw, "verified", "passed", 1);
       insertParse.run(parse, raw, "success");
       insertObservation.run(
         `obs-${id}`,
         "2024-06-01:01:R1",
         type,
+        type,
+        PAYLOAD_SCHEMA_VERSION,
+        hash,
         raw,
         parse,
         type === "official_program" ? "2024-06-01T00:00:00.000Z" : null,
-        type === "official_program" ? "2024-06-01T00:01:00.000Z" : "2024-06-01T00:55:00.000Z",
+        observedAt,
         type === "official_program" ? "2024-06-01T00:02:00.000Z" : "2024-06-01T00:55:01.000Z",
         type === "official_program" ? "source_exact" : "observed_only",
         "official_public",
+      );
+      insertPayload.run(
+        `obs-${id}`,
+        type,
+        PAYLOAD_SCHEMA_VERSION,
+        JSON.stringify(tamperPayload && id === 1 ? { ...payload, observedAt: "2024-06-01T00:03:00.000Z" } : payload),
+        hash,
       );
     }
   } finally {
@@ -137,10 +186,29 @@ test("reader resolves the real primary venue-label identity read-only", () => {
     assert.equal(result.returnedObservationCount, 2);
     assert.deepEqual(result.sourceTypes, ["official_program", "trifecta_market"]);
     assert.equal(result.observations.every((item) => item.decisionCutoff === "2024-06-01T01:00:00.000Z"), true);
+    assert.equal(result.observations.every((item) => item.typedPayloadIntegrity === "verified"), true);
     const summary = buildN2PitAuditSummary(result.observations);
     assert.equal(summary.status, "PASS");
     assert.equal(summary.checkedFeatureCount, 1);
     assert.equal(summary.checkedOddsCount, 1);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("tampered typed payload is excluded from safe PIT evidence", () => {
+  const dir = mkdtempSync(join(tmpdir(), "n2-pit-reader-"));
+  try {
+    const primary = join(dir, "boat.sqlite");
+    const sidecar = join(dir, "research-replay.sqlite");
+    createPrimary(primary);
+    createSidecar(sidecar, 1, true);
+    const result = readN2PitAuditObservations({ primaryDbPath: primary, sidecarDbPath: sidecar });
+    assert.equal(result.observations[0].typedPayloadIntegrity, "invalid");
+    const summary = buildN2PitAuditSummary(result.observations);
+    assert.equal(summary.status, "CONDITIONAL");
+    assert.equal(summary.verifiedSafeCount, 0);
+    assert.equal(summary.reasonCounts.excluded_lineage_typed_payload_invalid, 1);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

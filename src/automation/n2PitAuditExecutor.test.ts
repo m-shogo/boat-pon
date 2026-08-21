@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import { canonicalHash } from "../research-replay/canonical";
+import { PAYLOAD_SCHEMA_VERSION, semanticPayloadHash } from "../research-replay/domain";
 import { runN2PitAuditExecutor } from "./n2PitAuditExecutor";
 import type { ExecutorContext } from "./taskExecutors";
 
@@ -33,10 +34,15 @@ function createSidecar(path: string, mode: "safe" | "future" | "empty"): void {
       );
       CREATE TABLE domain_observations (
         observation_id TEXT PRIMARY KEY, canonical_race_key TEXT NOT NULL,
-        observation_type TEXT NOT NULL, raw_document_id TEXT NOT NULL,
-        parse_run_id TEXT NOT NULL, source_published_at TEXT,
+        observation_type TEXT NOT NULL, payload_type TEXT NOT NULL,
+        payload_schema_version TEXT NOT NULL, semantic_payload_hash TEXT NOT NULL,
+        raw_document_id TEXT NOT NULL, parse_run_id TEXT NOT NULL, source_published_at TEXT,
         source_observed_at TEXT NOT NULL, first_seen_at TEXT NOT NULL,
         timing_quality TEXT NOT NULL, source_quality TEXT NOT NULL
+      );
+      CREATE TABLE typed_observation_payloads (
+        observation_id TEXT PRIMARY KEY, payload_type TEXT NOT NULL,
+        payload_schema_version TEXT NOT NULL, payload_json TEXT NOT NULL, payload_hash TEXT NOT NULL
       );
     `);
     if (mode === "empty") return;
@@ -45,9 +51,22 @@ function createSidecar(path: string, mode: "safe" | "future" | "empty"): void {
     const publishedAt = mode === "future" ? "2024-06-01T01:00:00.001Z" : "2024-06-01T00:00:00.000Z";
     const observedAt = mode === "future" ? "2024-06-01T01:00:01.000Z" : "2024-06-01T00:01:00.000Z";
     const firstSeenAt = mode === "future" ? "2024-06-01T01:00:02.000Z" : "2024-06-01T00:02:00.000Z";
-    db.prepare(`INSERT INTO domain_observations VALUES(?,?,?,?,?,?,?,?,?,?)`).run(
-      "obs-1", "2024-06-01:01:R1", "official_program", "raw-1", "parse-1",
-      publishedAt, observedAt, firstSeenAt, "source_exact", "official_public",
+    const payload = {
+      canonicalRaceKey: "2024-06-01:01:R1",
+      observedAt,
+      boats: [{
+        course: 1, registrationNo: null, className: null,
+        nationalWinRate: null, nationalTop2Rate: null, localWinRate: null, localTop2Rate: null,
+        motorTop2Rate: null, boatTop2Rate: null,
+      }],
+    };
+    const hash = semanticPayloadHash("official_program", payload);
+    db.prepare(`INSERT INTO domain_observations VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
+      "obs-1", "2024-06-01:01:R1", "official_program", "official_program", PAYLOAD_SCHEMA_VERSION, hash,
+      "raw-1", "parse-1", publishedAt, observedAt, firstSeenAt, "source_exact", "official_public",
+    );
+    db.prepare(`INSERT INTO typed_observation_payloads VALUES(?,?,?,?,?)`).run(
+      "obs-1", "official_program", PAYLOAD_SCHEMA_VERSION, JSON.stringify(payload), hash,
     );
   } finally { db.close(); }
 }
