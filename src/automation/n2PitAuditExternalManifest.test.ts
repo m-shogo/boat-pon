@@ -107,17 +107,21 @@ function validPitEvidence(candidateCount: number): Record<string, unknown> {
   };
 }
 
-function writeManifest(path: string, mutatePit: Record<string, unknown> = {}): void {
+function writeManifest(
+  path: string,
+  mutatePit: Record<string, unknown> = {},
+  candidateCount = 1,
+): void {
   const core: Record<string, unknown> = {
     datasetManifestVersion: "n2-dataset-manifest-v2",
     datasetVersion: "n2-corrected-2000_2026",
-    inventoryTotals: { candidates: 1, races: 1 },
+    inventoryTotals: { candidates: candidateCount, races: 1 },
     holdoutExcludedFromResearchCohort: true,
     readOnly: true,
   };
   writeFileSync(path, `${JSON.stringify({
     ...core,
-    pitEvidence: { ...validPitEvidence(1), ...mutatePit },
+    pitEvidence: { ...validPitEvidence(candidateCount), ...mutatePit },
     runId: "manifest-run",
     requestId: "manifest-request",
     taskId: "TASK-N2-010",
@@ -203,6 +207,25 @@ test("external manifest PIT violation is rejected even when core digest is valid
     const result = runN2PitAuditExecutor(context);
     assert.equal(result.result, "BLOCKED");
     assert.match(result.blocks.join("\n"), /N2_DATASET_MANIFEST_PIT_FUTURE_VIOLATION/);
+    assert.doesNotMatch(result.blocks.join("\n"), /OUTPUT_DIGEST_MISMATCH/);
+  } finally {
+    restoreEnv(previous);
+    rmSync(root, { recursive: true, force: true });
+    rmSync(externalRoot, { recursive: true, force: true });
+  }
+});
+
+test("external manifest rejects unsafe integer inventory counts even when digest and PIT evidence agree", () => {
+  const { root, externalRoot, context, manifestPath } = setup();
+  const previous = process.env[MANIFEST_ENV];
+  try {
+    const unsafeCount = Number.MAX_SAFE_INTEGER + 1;
+    writeManifest(manifestPath, {}, unsafeCount);
+    process.env[MANIFEST_ENV] = manifestPath;
+    const result = runN2PitAuditExecutor(context);
+    assert.equal(result.result, "BLOCKED");
+    assert.match(result.blocks.join("\n"), /N2_DATASET_MANIFEST_INVENTORY_CANDIDATES_INVALID/);
+    assert.match(result.blocks.join("\n"), /N2_DATASET_MANIFEST_PIT_CHECKED_COUNT_INVALID/);
     assert.doesNotMatch(result.blocks.join("\n"), /OUTPUT_DIGEST_MISMATCH/);
   } finally {
     restoreEnv(previous);
