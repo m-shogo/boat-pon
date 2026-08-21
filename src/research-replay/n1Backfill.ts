@@ -565,7 +565,7 @@ export async function runBackfill(input: {
       summary.skippedCompleted += 1;
       continue;
     }
-    if (input.limit !== undefined && summary.processedFiles >= input.limit) break;
+    if (input.limit !== undefined && summary.processedFiles + summary.failedFiles >= input.limit) break;
 
     const stop = guard();
     if (stop) { summary.stopped = true; summary.stopReason = stop; break; }
