@@ -21,6 +21,8 @@ import {
   ARCHIVE_RECONCILE_SELECTION_VERSION,
   archiveReconcileCheckpointContract,
   assertArchiveReconcileCheckpointContract,
+  assertArchiveReconcileCheckpointStateDigest,
+  buildArchiveReconcileCheckpointStateDigest,
   buildArchiveReconcileSelection,
   type ArchiveReconcileCheckpointContract,
 } from "../src/research-replay/n2ArchiveReconcileInput";
@@ -143,11 +145,9 @@ function newAggregate(): Aggregate {
   };
 }
 
-// checkpoint シリアライズ（Map → 配列、決定的順序）。
-function serializeAggregate(agg: Aggregate, checkpointContract: ArchiveReconcileCheckpointContract): unknown {
+function serializedAggregateState(agg: Aggregate): Record<string, unknown> {
   return {
     version: RECONCILE_INPUT_VERSION,
-    checkpointContract,
     cells: [...agg.cells.entries()].sort((a, b) => a[0].localeCompare(b[0])),
     paired: [...agg.paired.entries()].sort((a, b) => a[0].localeCompare(b[0])),
     statusMatrix: [...agg.statusMatrix.entries()].sort((a, b) => a[0].localeCompare(b[0])),
@@ -157,6 +157,16 @@ function serializeAggregate(agg: Aggregate, checkpointContract: ArchiveReconcile
     ambiguousKeys: agg.ambiguousKeys,
   };
 }
+
+// checkpoint シリアライズ（Map → 配列、決定的順序）。
+function serializeAggregate(agg: Aggregate, checkpointContract: ArchiveReconcileCheckpointContract): unknown {
+  const state = serializedAggregateState(agg);
+  return {
+    ...state,
+    checkpointContract,
+    stateDigest: buildArchiveReconcileCheckpointStateDigest(checkpointContract, state),
+  };
+}
 function loadAggregate(path: string, expectedContract: ArchiveReconcileCheckpointContract): Aggregate | null {
   if (!existsSync(path)) return null;
   const raw = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
@@ -164,6 +174,17 @@ function loadAggregate(path: string, expectedContract: ArchiveReconcileCheckpoin
     throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_VERSION_MISMATCH:${String(raw.version ?? "missing")}`);
   }
   assertArchiveReconcileCheckpointContract(raw.checkpointContract, expectedContract);
+  const state = {
+    version: raw.version,
+    cells: raw.cells,
+    paired: raw.paired,
+    statusMatrix: raw.statusMatrix,
+    samples: raw.samples,
+    processedFiles: raw.processedFiles,
+    parseErrors: raw.parseErrors,
+    ambiguousKeys: raw.ambiguousKeys,
+  };
+  assertArchiveReconcileCheckpointStateDigest(raw.stateDigest, expectedContract, state);
   const agg = newAggregate();
   for (const [k, v] of raw.cells as [string, Cell][]) agg.cells.set(k, v);
   for (const [k, v] of raw.paired as [string, number][]) agg.paired.set(k, v);
