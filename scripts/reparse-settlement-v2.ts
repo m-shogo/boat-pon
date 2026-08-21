@@ -23,7 +23,9 @@ import { listArchiveFiles } from "../src/research-replay/n1Backfill";
 import { SettlementRepository } from "../src/research-replay/settlement";
 import {
   assertN2SettlementReparseCheckpointIdentity,
+  assertN2SettlementReparseCheckpointStateDigest,
   buildN2SettlementReparseCheckpointIdentity,
+  buildN2SettlementReparseCheckpointStateDigest,
   type N2SettlementReparseCheckpointIdentity,
 } from "../src/research-replay/n2SettlementReparseCheckpoint";
 import {
@@ -188,13 +190,15 @@ async function reparseFile(db: DatabaseSync, repo: SettlementRepository, byHash:
 }
 
 function serializeState(s: ReparseState, checkpointIdentity: N2SettlementReparseCheckpointIdentity): unknown {
+  const state = {
+    version: REPARSE_SCHEMA_VERSION, counts: s.counts, corrections: s.corrections,
+    processedFiles: s.processedFiles, processedRawDocs: s.processedRawDocs,
+    byYear: [...s.byYear.entries()].sort(), byBetType: [...s.byBetType.entries()].sort(),
+  };
   return {
     checkpointIdentity,
-    state: {
-      version: REPARSE_SCHEMA_VERSION, counts: s.counts, corrections: s.corrections,
-      processedFiles: s.processedFiles, processedRawDocs: s.processedRawDocs,
-      byYear: [...s.byYear.entries()].sort(), byBetType: [...s.byBetType.entries()].sort(),
-    },
+    stateDigest: buildN2SettlementReparseCheckpointStateDigest(checkpointIdentity, state),
+    state,
   };
 }
 function loadState(path: string, expectedIdentity: N2SettlementReparseCheckpointIdentity): ReparseState | null {
@@ -204,6 +208,7 @@ function loadState(path: string, expectedIdentity: N2SettlementReparseCheckpoint
   if (typeof raw.state !== "object" || raw.state === null || Array.isArray(raw.state)) {
     throw new Error("REPARSE_CHECKPOINT_STATE_MISSING");
   }
+  assertN2SettlementReparseCheckpointStateDigest(raw.stateDigest, expectedIdentity, raw.state);
   const saved = raw.state as Record<string, unknown>;
   if (saved.version !== REPARSE_SCHEMA_VERSION) throw new Error("REPARSE_CHECKPOINT_STATE_VERSION_MISMATCH");
   const s = newState();
