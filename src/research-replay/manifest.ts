@@ -30,6 +30,7 @@ export type PitRejectionCode =
   | "FIXTURE_USED_AS_LIVE"
   | "UNKNOWN_OBSERVATION_TYPE"
   | "PARSER_VERSION_UNKNOWN"
+  | "PARSE_STATUS_NOT_REUSABLE"
   | "PAYLOAD_SCHEMA_UNKNOWN"
   | "PAYLOAD_REFERENCE_MISSING"
   | "CANONICAL_RACE_MISMATCH"
@@ -242,6 +243,7 @@ export function strictPitGuard(input: {
     codes.push("FIXTURE_USED_AS_LIVE");
   }
   if (!observation.parser_version.startsWith("rr-parser-")) codes.push("PARSER_VERSION_UNKNOWN");
+  if (!["success", "warning"].includes(observation.parse_status)) codes.push("PARSE_STATUS_NOT_REUSABLE");
   if (observation.payload_schema_version !== PAYLOAD_SCHEMA_VERSION) codes.push("PAYLOAD_SCHEMA_UNKNOWN");
   if (category === "post_race") codes.push("POST_RACE_OBSERVATION", "RESULT_ONLY_SOURCE");
   if (category === "current_only") codes.push("CURRENT_PROFILE_USED_FOR_PAST_RACE");
