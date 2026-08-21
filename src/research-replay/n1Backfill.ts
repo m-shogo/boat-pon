@@ -9,6 +9,7 @@ import { basename, dirname, join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { canonicalHash } from "./canonical";
 import { semanticPayloadHash } from "./domain";
+import { canonicalRaceKey } from "./identity";
 import { RawStore } from "./rawStore";
 import { ResearchReplayRepository } from "./repository";
 import {
@@ -34,11 +35,23 @@ export const VENUE_CODES: Record<string, string> = {
   下関: "19", 若松: "20", 芦屋: "21", 福岡: "22", 唐津: "23", 大村: "24",
 };
 
+export function backfillVenueCode(venue: string): string {
+  const code = VENUE_CODES[venue];
+  if (!code) throw new Error(`N1_BACKFILL_VENUE_INVALID:${venue}`);
+  return code;
+}
+
+export function canonicalBackfillRaceKey(raceDateJst: string, venueCode: string, raceNo: number): string {
+  return canonicalRaceKey(raceDateJst, venueCode, raceNo);
+}
+
 export function fileDate(path: string): string {
   const match = basename(path).match(/k(\d{2})(\d{2})(\d{2})\.lzh$/i);
   if (!match) return "1970-01-01";
   const year = Number(match[1]) >= 70 ? `19${match[1]}` : `20${match[1]}`;
-  return `${year}-${match[2]}-${match[3]}`;
+  const date = `${year}-${match[2]}-${match[3]}`;
+  canonicalBackfillRaceKey(date, "01", 1);
+  return date;
 }
 
 export function listArchiveFiles(root: string): string[] {
@@ -315,9 +328,8 @@ function ingestParsedArchive(input: {
     VALUES (?, 'settlement_result', 'rr-payload-v1', ?, ?, ?)
   `);
   for (const condition of parsed.conditions) {
-    const code = VENUE_CODES[condition.venue];
-    if (!code || condition.raceNo < 1 || condition.raceNo > 12) continue;
-    const raceKey = `${condition.date}:${code}:R${condition.raceNo}`;
+    const code = backfillVenueCode(condition.venue);
+    const raceKey = canonicalBackfillRaceKey(condition.date, code, condition.raceNo);
     result.parsedRaces += 1;
     result.firstRaceKey ??= raceKey;
     result.lastRaceKey = raceKey;
