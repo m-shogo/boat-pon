@@ -95,7 +95,7 @@ test("backfill completion is scoped to the current parser lineage", () => {
   db.close();
 });
 
-test("runBackfill does not skip a stale-parser completed checkpoint", async () => {
+test("runBackfill does not skip or inherit retry count from a stale-parser completed checkpoint", async () => {
   const { root, db } = setup();
   const checkpoints = new BackfillCheckpointRepository(db, () => "stale-cp");
   checkpoints.record({
@@ -118,5 +118,6 @@ test("runBackfill does not skip a stale-parser completed checkpoint", async () =
   assert.equal(summary.checkpointsRecorded, 1);
   assert.equal(summary.startCompletedTotal, 0);
   assert.equal(summary.endCompletedTotal, 0);
+  assert.equal(latestBackfillCheckpointForParser({ db, archiveFile: "k260102.lzh" })?.retryCount, 0);
   db.close();
 });
