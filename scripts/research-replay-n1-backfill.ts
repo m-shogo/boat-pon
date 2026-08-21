@@ -16,13 +16,13 @@ import {
   N1_BACKFILL_SCHEMA_VERSION,
   N1_SETTLEMENT_MIGRATION_CHECKSUM,
   N1_SETTLEMENT_SCHEMA_VERSION,
+  N1_SETTLEMENT_PARSER_VERSION,
   N1_CANONICAL_RESOLUTION_MIGRATION_CHECKSUM,
-  BackfillCheckpointRepository,
   verifyN1BackfillSchema,
   verifyN1CanonicalResolutionSchema,
   verifyN1SettlementSchema,
 } from "../src/research-replay/settlement";
-import { listArchiveFiles, runBackfill } from "../src/research-replay/n1Backfill";
+import { completedBackfillCountForParser, listArchiveFiles, runBackfill } from "../src/research-replay/n1Backfill";
 import { auditCanonicalDuplicates } from "../src/research-replay/n1CanonicalResolution";
 
 const root = resolve(process.cwd());
@@ -101,7 +101,6 @@ async function preflight(): Promise<void> {
   const raiseQuota = arg("raise-quota");
   let quotaAfter = configBefore.storageQuotaBytes;
   if (raiseQuota) {
-    // append-only config event。shadow/GC/kill-switchはOFFのまま維持。
     controller.recordConfig({
       ...configBefore, storageQuotaBytes: Number(raiseQuota),
       diskLowWaterBytes: Math.max(configBefore.diskLowWaterBytes, 16 * 1024 * 1024 * 1024),
@@ -179,7 +178,6 @@ function migrate(): void {
   const objectsBefore = Object.keys(before01).length;
 
   initializeN1BackfillSchema(db, NOW);
-  // 再適用がno-opであることを確認。
   initializeN1BackfillSchema(db, NOW);
 
   const after01 = schemaObjects(db);
@@ -219,8 +217,7 @@ async function run(): Promise<void> {
   const milestone = arg("milestone") ?? `target-${target}`;
   const db = openRolloutDatabase(SIDECAR);
   if (!verifyN1BackfillSchema(db).ok) { db.close(); throw new Error("0.2 not applied; run migrate first"); }
-  const checkpoints = new BackfillCheckpointRepository(db);
-  const completedBefore = checkpoints.completedCount();
+  const completedBefore = completedBackfillCountForParser({ db });
   const files = listArchiveFiles(ARCHIVE_ROOT);
   const limit = Math.max(0, target - completedBefore);
   const fp = primaryFingerprint();
@@ -240,13 +237,11 @@ async function run(): Promise<void> {
   });
   db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
   const skipFinal = process.argv.includes("--skip-final-check");
-  // 大規模DBでのfull integrity/foreign_key_checkは非常に遅い。deterministic-rerun（0処理）確認や
-  // atomic増分では省略できる（full検査は verify コマンド / 直近runで確認済み）。
   const integrity = skipFinal ? "skipped" : (db.prepare("PRAGMA integrity_check").get() as { integrity_check: string }).integrity_check;
   const fk = (skipFinal || process.argv.includes("--skip-fk-recheck")) ? 0 : db.prepare("PRAGMA foreign_key_check").all().length;
   const candidates = Number((db.prepare("SELECT COUNT(*) c FROM settlement_candidates_v2").get() as { c: number }).c);
   const pins = Number((db.prepare("SELECT COUNT(*) c FROM settlement_evidence_pins_v2").get() as { c: number }).c);
-  const completedAfter = checkpoints.completedCount();
+  const completedAfter = completedBackfillCountForParser({ db });
   db.close();
   const fpAfter = primaryFingerprint();
   const primaryUnchanged = fpAfter.size === fp.size && Math.trunc(fpAfter.mtimeMs) === Math.trunc(fp.mtimeMs);
@@ -284,7 +279,6 @@ async function run(): Promise<void> {
 
 function verify(): void {
   const db = openRolloutDatabase(SIDECAR);
-  const checkpoints = new BackfillCheckpointRepository(db);
   const files = listArchiveFiles(ARCHIVE_ROOT);
   const integrity = (db.prepare("PRAGMA integrity_check").get() as { integrity_check: string }).integrity_check;
   const fk = db.prepare("PRAGMA foreign_key_check").all().length;
@@ -293,13 +287,14 @@ function verify(): void {
   const crv = verifyN1CanonicalResolutionSchema(db);
   const rolloutOk = verifyRolloutSchema(db).ok;
   const canonicalAudit = crv.ok ? auditCanonicalDuplicates(db) : null;
-  const completed = checkpoints.completedCount();
+  const completed = completedBackfillCountForParser({ db });
   const failedRows = db.prepare(`
     SELECT archive_file, state FROM (
       SELECT archive_file, state, ROW_NUMBER() OVER (PARTITION BY archive_file ORDER BY created_at DESC, rowid DESC) rn
       FROM n1_settlement_backfill_checkpoints
+      WHERE parser_version=?
     ) WHERE rn=1 AND state!='completed'
-  `).all() as Array<{ archive_file: string; state: string }>;
+  `).all(N1_SETTLEMENT_PARSER_VERSION) as Array<{ archive_file: string; state: string }>;
   const counts = {
     candidates: Number((db.prepare("SELECT COUNT(*) c FROM settlement_candidates_v2").get() as { c: number }).c),
     payoutLines: Number((db.prepare("SELECT COUNT(*) c FROM race_payout_lines_v2").get() as { c: number }).c),
@@ -314,13 +309,12 @@ function verify(): void {
   const dupCandidates = counts.candidates - distinctCandidateKeys;
   const byStatus = db.prepare("SELECT settlement_status s, COUNT(*) c FROM settlement_candidates_v2 GROUP BY settlement_status").all() as Array<{ s: string; c: number }>;
   const byBetType = db.prepare("SELECT bet_type b, COUNT(*) c FROM settlement_candidates_v2 GROUP BY bet_type").all() as Array<{ b: string; c: number }>;
-  const implicitFkRefs = counts.candidates * 3; // raw+parse+observation FK参照(暗黙pin)
+  const implicitFkRefs = counts.candidates * 3;
   db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
   const dbBytes = statSync(SIDECAR).size;
   db.close();
 
   const coverageComplete = completed === files.length && failedRows.length === 0;
-  // canonical invariant: active（source_duplicate 除外後）の race-level 重複は 0 でなければならない。
   const canonicalOk = crv.ok && canonicalAudit !== null
     && canonicalAudit.activeDuplicateObservations === 0
     && canonicalAudit.activeCanonicalRaceLevelDuplicateCandidates === 0;
@@ -349,7 +343,7 @@ async function audit(): Promise<void> {
   const work = mkdtempSync(join(tmpdir(), "n1c-optionb-audit-"));
   const mk = (name: string) => {
     const db = openRolloutDatabase(join(work, name));
-    initializeRolloutSchema(db, NOW); // f0 + f0r + approval（RolloutControllerに必要）
+    initializeRolloutSchema(db, NOW);
     initializeN1BackfillSchema(db, NOW);
     return db;
   };
@@ -367,29 +361,24 @@ async function audit(): Promise<void> {
     rawDocumentId: rawId, observedAt: NOW, payouts: [{ selection: "1-2-3", payoutYen: 4200 }], emitEvidencePins,
   });
 
-  // Option B DB。
   const dbB = mk("optionb.sqlite");
   const rawStoreB = new RawStore(join(work, "rawB"));
   const rawIdB = seedRaw(dbB, rawStoreB);
   new SettlementRepository(dbB).appendCandidate(candidateInput(rawIdB, false));
   const pinsB = Number((dbB.prepare("SELECT COUNT(*) c FROM settlement_evidence_pins_v2").get() as { c: number }).c);
   const candB = Number((dbB.prepare("SELECT COUNT(*) c FROM settlement_candidates_v2").get() as { c: number }).c);
-  // GC: candidate参照中のrawはparse_run/observation経由で保護され削除されない（explicit pin 0でも）。
   const controllerB = new RolloutController(dbB, new ResearchReplayRepository(dbB, rawStoreB, undefined, () => NOW), rawStoreB, undefined, () => NOW);
   controllerB.recordConfig({ ...DEFAULT_ROLLOUT_CONFIG, operationalGcEnabled: true, storageQuotaBytes: 1, diskLowWaterBytes: 0 }, "audit GC pressure", NOW);
   const gc = controllerB.collectUnreferencedRaw();
   const rawSurvivesGc = !gc.deleted.includes(rawIdB)
     && existsSync(rawStoreB.absolutePathForHash((dbB.prepare("SELECT raw_sha256 FROM raw_documents WHERE raw_document_id=?").get(rawIdB) as { raw_sha256: string }).raw_sha256));
-  // FK RESTRICT: candidate参照中はraw_documents rowを削除できない。
   let fkRestrictBlocksRawDelete = false;
   try { dbB.prepare("DELETE FROM raw_documents WHERE raw_document_id=?").run(rawIdB); } catch { fkRestrictBlocksRawDelete = true; }
-  // append-only。
   let appendOnly = false;
   try { dbB.prepare("UPDATE settlement_candidates_v2 SET source_kind='x'").run(); } catch { appendOnly = true; }
   const payoutB = Number((dbB.prepare("SELECT COUNT(*) c FROM race_payout_lines_v2").get() as { c: number }).c);
   dbB.close();
 
-  // Option A DB（explicit pin）で意味論同一・容量表現のみ差を確認。
   const dbA = mk("optiona.sqlite");
   const rawStoreA = new RawStore(join(work, "rawA"));
   const rawIdA = seedRaw(dbA, rawStoreA);
@@ -400,7 +389,6 @@ async function audit(): Promise<void> {
   dbA.close();
   rmSync(work, { recursive: true, force: true });
 
-  // 永続sidecarのGC OFFを確認。
   const perm = openRolloutDatabase(SIDECAR);
   const permConfig = new RolloutController(perm, new ResearchReplayRepository(perm, new RawStore(RAW_ROOT), undefined, () => NOW), new RawStore(RAW_ROOT), undefined, () => NOW).currentConfig();
   perm.exec("PRAGMA wal_checkpoint(TRUNCATE)");
@@ -437,7 +425,6 @@ const CODE_TO_VENUE: Record<string, string> = {
   "19": "下関", "20": "若松", "21": "芦屋", "22": "福岡", "23": "唐津", "24": "大村",
 };
 
-// 対象差分の確定: 開始時 archive manifest（file数・総bytes・per-file SHA-256・manifest hash）を固定する。
 function manifest(): void {
   const files = listArchiveFiles(ARCHIVE_ROOT);
   let totalBytes = 0;
@@ -448,7 +435,6 @@ function manifest(): void {
     return { file: basename(f), bytes, sha256: sha };
   });
   const manifestHash = createHash("sha256").update(entries.map((e) => `${e.file}:${e.sha256}:${e.bytes}`).join("\n")).digest("hex");
-  // N1-A snapshot(2026-07-24)は k000101..k260722 = 8,164。それ以降の日次追加を特定する。
   const beyond = entries.filter((e) => e.file > "k260722.lzh");
   const payload = {
     phase: "MANIFEST", generatedAt: NOW, archiveRoot: "data/raw/official/results",
@@ -464,7 +450,6 @@ function manifest(): void {
   console.log(JSON.stringify({ ...payload, filesBeyondBaseline: payload.filesBeyondBaseline }, null, 2));
 }
 
-// 容量上振れ(5.38GB予測→9.0GB)の分解。
 function capacity(): void {
   const db = openRolloutDatabase(SIDECAR);
   const pageCount = Number((db.prepare("PRAGMA page_count").get() as { page_count: number }).page_count);
@@ -506,13 +491,12 @@ function capacity(): void {
   console.log(JSON.stringify({ ...payload, topTables: `[${payload.topTables.length}]`, topIndexes: `[${payload.topIndexes.length}]` }, null, 2));
 }
 
-// primaryUnchangedの契約再分類 + writer静止後の2時点不変確認 + read-only open証拠。
 async function primaryIdentity(): Promise<void> {
   const { probePrimaryReadOnly } = await import("../src/research-replay/n1Rollout");
   const phase0 = { size: 15134183424, mtimeMs: 1785114446000, sha256: "a9d76d88d6975d34543f27ac8cc679833b7914216e119bb06e125c595bce7797" };
   const probe = probePrimaryReadOnly(PRIMARY, SIDECAR);
   const stat1 = statSync(PRIMARY);
-  const sha1 = sha256File(PRIMARY); // streaming; ~1min; gap for 2-point check
+  const sha1 = sha256File(PRIMARY);
   const stat2 = statSync(PRIMARY);
   const twoPointStable = stat1.size === stat2.size && Math.trunc(stat1.mtimeMs) === Math.trunc(stat2.mtimeMs);
   const byteIdentityVsPhase0 = stat2.size === phase0.size && sha1 === phase0.sha256;
@@ -545,7 +529,6 @@ async function primaryIdentity(): Promise<void> {
   console.log(JSON.stringify(payload, null, 2));
 }
 
-// legacy race_payouts との payout 値照合（sample、read-only）。
 function legacyCompare(): void {
   const sampleLimit = Number(arg("sample") ?? 2000);
   const side = new DatabaseSync(`file:${resolve(SIDECAR)}?immutable=1`, { readOnly: true } as never);
@@ -582,7 +565,6 @@ function legacyCompare(): void {
   if (mismatch !== 0) process.exitCode = 1;
 }
 
-// PHASE 5: source-duplicate canonical resolution（append-only）。dry-run 既定、--apply で適用。
 async function resolveSourceDuplicates(): Promise<void> {
   const apply = process.argv.includes("--apply");
   const { planSourceDuplicateResolution, applySourceDuplicateResolution, auditCanonicalDuplicates } =
@@ -622,7 +604,6 @@ async function resolveSourceDuplicates(): Promise<void> {
     db.close();
     return;
   }
-  // apply
   initializeN1CanonicalResolutionSchema(db, NOW);
   if (!verifyN1CanonicalResolutionSchema(db).ok) { db.close(); throw new Error("0.3 schema not ok after migration"); }
   const applied = applySourceDuplicateResolution(db, plan, NOW);
