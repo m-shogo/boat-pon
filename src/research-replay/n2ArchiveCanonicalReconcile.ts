@@ -8,6 +8,7 @@
 // 解凍は CLI（scripts/reconcile-archive-canonical-settlement.ts）が担い、ここへ渡す。
 // raw 本文・巨大 payload は保持しない。未知 bet type / 未知 status は明示的 unknown に落とす。
 import type { ParsedResultDetail } from "../domain/officialResultDetailParser";
+import { canonicalRaceKey } from "./identity";
 import { classifyRaceLines, resolveStatus, VENUE_CODES } from "./n1Backfill";
 import { BET_TYPES, type SettlementBetType, type SettlementStatus } from "./settlement";
 
@@ -81,13 +82,17 @@ function deriveResultKind(specialPayoutLines: number): ResultKind {
 }
 
 // ParsedResultDetail（v2）から canonical race identity 付き candidate を導出する。
-// 未知 venue / 範囲外 raceNo は candidate を作らず除外（fail-closed）。
+// 未知 venue / 不可能日 / 範囲外 raceNo は candidate を作らず除外（fail-closed）。
 export function deriveArchiveCandidates(parsed: ParsedResultDetail): ArchiveCandidate[] {
   const raceKeyById = new Map<string, string>();
   for (const condition of parsed.conditions) {
     const code = VENUE_CODES[condition.venue];
-    if (!code || condition.raceNo < 1 || condition.raceNo > 12) continue;
-    raceKeyById.set(condition.raceId, `${condition.date}:${code}:R${condition.raceNo}`);
+    if (!code) continue;
+    try {
+      raceKeyById.set(condition.raceId, canonicalRaceKey(condition.date, code, condition.raceNo));
+    } catch {
+      continue;
+    }
   }
 
   const grouped = new Map<string, { raceKey: string; betType: SettlementBetType; lines: typeof parsed.payouts }>();
