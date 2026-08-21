@@ -18,9 +18,14 @@ import {
 import { basename, dirname, join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { parseOfficialResultDetail } from "../src/domain/officialResultDetailParser";
-import { canonicalHash } from "../src/research-replay/canonical";
+import { canonicalHash, canonicalUtcTimestamp } from "../src/research-replay/canonical";
 import { listArchiveFiles } from "../src/research-replay/n1Backfill";
 import { SettlementRepository } from "../src/research-replay/settlement";
+import {
+  assertN2SettlementReparseCheckpointIdentity,
+  buildN2SettlementReparseCheckpointIdentity,
+  type N2SettlementReparseCheckpointIdentity,
+} from "../src/research-replay/n2SettlementReparseCheckpoint";
 import {
   REPARSE_CANONICALIZATION_VERSION, REPARSE_PARSER_NAME, REPARSE_RACE_IDENTITY_VERSION,
   REPARSE_REPORT_SCHEMA_VERSION, REPARSE_SCHEMA_VERSION, REPARSE_SOURCE_PARSER_VERSION,
@@ -47,8 +52,14 @@ function positiveInt(v: string | null, fallback: number | null): number | null {
   return n;
 }
 
-const asOf = argValue("--as-of");
-if (!asOf || Number.isNaN(Date.parse(asOf))) throw new Error("--as-of=<ISO8601 UTC> は必須です");
+const rawAsOf = argValue("--as-of");
+if (!rawAsOf) throw new Error("--as-of=<ISO8601 UTC> は必須です");
+let asOf: string;
+try {
+  asOf = canonicalUtcTimestamp(rawAsOf);
+} catch {
+  throw new Error("--as-of=<ISO8601 UTC> は必須です");
+}
 const mode = argValue("--mode") ?? "simulated";
 if (mode !== "simulated" && mode !== "production") throw new Error("--mode は simulated|production");
 if (mode === "production") {
@@ -67,7 +78,7 @@ const canary = hasFlag("--canary");
 const verify = hasFlag("--verify");
 const secondRunCheck = hasFlag("--second-run-check");
 const resume = hasFlag("--resume");
-const nowIso = new Date(asOf).toISOString();
+const nowIso = asOf;
 
 function sha256File(path: string): string {
   const out = spawnSync("shasum", ["-a", "256", path], { encoding: "utf8", maxBuffer: 1024 * 1024 });
@@ -176,28 +187,46 @@ async function reparseFile(db: DatabaseSync, repo: SettlementRepository, byHash:
   state.processedRawDocs.push(meta.rawDocumentId);
 }
 
-function serializeState(s: ReparseState): unknown {
+function serializeState(s: ReparseState, checkpointIdentity: N2SettlementReparseCheckpointIdentity): unknown {
   return {
-    version: REPARSE_SCHEMA_VERSION, counts: s.counts, corrections: s.corrections,
-    processedFiles: s.processedFiles, processedRawDocs: s.processedRawDocs,
-    byYear: [...s.byYear.entries()].sort(), byBetType: [...s.byBetType.entries()].sort(),
+    checkpointIdentity,
+    state: {
+      version: REPARSE_SCHEMA_VERSION, counts: s.counts, corrections: s.corrections,
+      processedFiles: s.processedFiles, processedRawDocs: s.processedRawDocs,
+      byYear: [...s.byYear.entries()].sort(), byBetType: [...s.byBetType.entries()].sort(),
+    },
   };
 }
-function loadState(path: string): ReparseState | null {
+function loadState(path: string, expectedIdentity: N2SettlementReparseCheckpointIdentity): ReparseState | null {
   if (!existsSync(path)) return null;
   const raw = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
-  if (raw.version !== REPARSE_SCHEMA_VERSION) return null;
+  assertN2SettlementReparseCheckpointIdentity(raw.checkpointIdentity, expectedIdentity);
+  if (typeof raw.state !== "object" || raw.state === null || Array.isArray(raw.state)) {
+    throw new Error("REPARSE_CHECKPOINT_STATE_MISSING");
+  }
+  const saved = raw.state as Record<string, unknown>;
+  if (saved.version !== REPARSE_SCHEMA_VERSION) throw new Error("REPARSE_CHECKPOINT_STATE_VERSION_MISMATCH");
   const s = newState();
-  Object.assign(s.counts, raw.counts);
-  s.corrections = raw.corrections as ReparseState["corrections"];
-  s.processedFiles = raw.processedFiles as string[];
-  s.processedRawDocs = raw.processedRawDocs as string[];
-  for (const [k, v] of raw.byYear as Array<[string, Delta]>) s.byYear.set(k, v);
-  for (const [k, v] of raw.byBetType as Array<[string, Delta]>) s.byBetType.set(k, v);
+  Object.assign(s.counts, saved.counts);
+  s.corrections = saved.corrections as ReparseState["corrections"];
+  s.processedFiles = saved.processedFiles as string[];
+  s.processedRawDocs = saved.processedRawDocs as string[];
+  for (const [k, v] of saved.byYear as Array<[string, Delta]>) s.byYear.set(k, v);
+  for (const [k, v] of saved.byBetType as Array<[string, Delta]>) s.byBetType.set(k, v);
   return s;
 }
 
-async function runPass(db: DatabaseSync, repo: SettlementRepository, byHash: Map<string, RawMeta>, activeState: ActiveState, files: string[], state: ReparseState, label: string): Promise<void> {
+async function runPass(
+  db: DatabaseSync,
+  repo: SettlementRepository,
+  byHash: Map<string, RawMeta>,
+  activeState: ActiveState,
+  files: string[],
+  state: ReparseState,
+  label: string,
+  checkpointIdentity: N2SettlementReparseCheckpointIdentity,
+  persistCheckpoint = true,
+): Promise<void> {
   const processedRaw = new Set<string>(state.processedRawDocs);
   const done = new Set(state.processedFiles);
   let processed = state.processedFiles.length;
@@ -205,12 +234,14 @@ async function runPass(db: DatabaseSync, repo: SettlementRepository, byHash: Map
     if (done.has(basename(path))) continue;
     await reparseFile(db, repo, byHash, activeState, path, state, processedRaw);
     processed += 1;
-    if (processed % 500 === 0) {
-      writeFileSync(checkpointPath, `${JSON.stringify(serializeState(state))}\n`);
+    if (persistCheckpoint && processed % 500 === 0) {
+      writeFileSync(checkpointPath, `${JSON.stringify(serializeState(state, checkpointIdentity))}\n`);
       process.stderr.write(`[reparse:${label}] ${processed}/${files.length} files (ingested ${state.counts.files_ingested}, appended ${state.counts.appended_candidates})\n`);
     }
   }
-  writeFileSync(checkpointPath, `${JSON.stringify(serializeState(state))}\n`);
+  if (persistCheckpoint) {
+    writeFileSync(checkpointPath, `${JSON.stringify(serializeState(state, checkpointIdentity))}\n`);
+  }
 }
 
 function sortRec(r: Record<string, number>): Record<string, number> {
@@ -248,8 +279,27 @@ async function main(): Promise<void> {
     if (filesLimit != null) files = files.slice(0, filesLimit);
     process.stderr.write(`[reparse] mode=${mode} canary=${canary} files=${files.length} (of ${allFiles.length})\n`);
 
-    const state = (resume && loadState(checkpointPath)) || newState();
-    await runPass(db, repo, byHash, activeState, files, state, canary ? "canary" : "full");
+    const sourceSidecarSha256 = copy?.sourceSha256 ?? sha256File(sourcePath);
+    const checkpointIdentity = buildN2SettlementReparseCheckpointIdentity({
+      reparseSchemaVersion: REPARSE_SCHEMA_VERSION,
+      sourceParserVersion: REPARSE_SOURCE_PARSER_VERSION,
+      targetParserVersion: REPARSE_TARGET_PARSER_VERSION,
+      canonicalizationVersion: REPARSE_CANONICALIZATION_VERSION,
+      raceIdentityVersion: REPARSE_RACE_IDENTITY_VERSION,
+      asOf,
+      mode: "simulated",
+      canary,
+      filesLimit,
+      sourcePath,
+      sourceSidecarSha256,
+      targetPath,
+      archiveRoot,
+      selectedFiles: files.map((file) => basename(file)),
+    });
+    const resumedState = resume ? loadState(checkpointPath, checkpointIdentity) : null;
+    if (resume && resumedState === null) throw new Error("REPARSE_CHECKPOINT_MISSING");
+    const state = resumedState ?? newState();
+    await runPass(db, repo, byHash, activeState, files, state, canary ? "canary" : "full", checkpointIdentity);
 
     let secondRun: { appended: number; supersessions: number } | null = null;
     if (secondRunCheck) {
@@ -258,7 +308,7 @@ async function main(): Promise<void> {
       db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
       const active2 = loadActiveState(db, sourceDup);
       const s2 = newState();
-      await runPass(db, repo, byHash, active2, files, s2, "second");
+      await runPass(db, repo, byHash, active2, files, s2, "second", checkpointIdentity, false);
       secondRun = { appended: s2.counts.appended_candidates, supersessions: s2.counts.supersession_relations };
     }
 
