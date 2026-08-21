@@ -31,6 +31,7 @@ export type PitRejectionCode =
   | "UNKNOWN_OBSERVATION_TYPE"
   | "PARSER_VERSION_UNKNOWN"
   | "PARSE_STATUS_NOT_REUSABLE"
+  | "RAW_LINEAGE_MISMATCH"
   | "PAYLOAD_SCHEMA_UNKNOWN"
   | "PAYLOAD_REFERENCE_MISSING"
   | "CANONICAL_RACE_MISMATCH"
@@ -87,6 +88,7 @@ type ObservationRow = {
   payload_schema_version: string;
   parse_run_id: string;
   raw_document_id: string;
+  parse_raw_document_id?: string;
   source_published_at: string | null;
   source_observed_at: string;
   first_seen_at: string;
@@ -244,6 +246,9 @@ export function strictPitGuard(input: {
   }
   if (!observation.parser_version.startsWith("rr-parser-")) codes.push("PARSER_VERSION_UNKNOWN");
   if (!["success", "warning"].includes(observation.parse_status)) codes.push("PARSE_STATUS_NOT_REUSABLE");
+  if (observation.parse_raw_document_id !== undefined && observation.raw_document_id !== observation.parse_raw_document_id) {
+    codes.push("RAW_LINEAGE_MISMATCH");
+  }
   if (observation.payload_schema_version !== PAYLOAD_SCHEMA_VERSION) codes.push("PAYLOAD_SCHEMA_UNKNOWN");
   if (category === "post_race") codes.push("POST_RACE_OBSERVATION", "RESULT_ONLY_SOURCE");
   if (category === "current_only") codes.push("CURRENT_PROFILE_USED_FOR_PAST_RACE");
@@ -317,7 +322,7 @@ export function buildRaceAsOfManifest(input: {
   const idFactory = input.idFactory ?? randomUUID;
   registerResolutionPolicies(input.db, createdAt);
   const rows = input.db.prepare(`
-    SELECT o.*, p.parser_version, p.status AS parse_status
+    SELECT o.*, p.parser_version, p.status AS parse_status, p.raw_document_id AS parse_raw_document_id
     FROM domain_observations o
     JOIN parse_runs p ON p.parse_run_id = o.parse_run_id
     WHERE o.canonical_race_key = ?

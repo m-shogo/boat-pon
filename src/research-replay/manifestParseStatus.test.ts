@@ -7,14 +7,16 @@ import type { ResearchReplayRepository } from "./repository";
 const RACE_KEY = "2026-08-21:01:R1";
 const AS_OF = "2026-08-21T03:00:00.000Z";
 
-function observation(parseStatus: string) {
+function observation(parseStatus: string, parseRawDocumentId?: string) {
+  const rawDocumentId = `raw-${parseStatus}`;
   return {
     observation_id: `obs-${parseStatus}`,
     canonical_race_key: RACE_KEY,
     observation_type: "race_schedule",
     payload_schema_version: PAYLOAD_SCHEMA_VERSION,
     parse_run_id: `parse-${parseStatus}`,
-    raw_document_id: `raw-${parseStatus}`,
+    raw_document_id: rawDocumentId,
+    parse_raw_document_id: parseRawDocumentId ?? rawDocumentId,
     source_published_at: "2026-08-21T01:00:00.000Z",
     source_observed_at: "2026-08-21T01:00:01.000Z",
     first_seen_at: "2026-08-21T01:00:01.000Z",
@@ -47,6 +49,19 @@ test("PIT guard rejects observations produced by failed or unknown-schema parse 
   }
 });
 
+test("PIT guard rejects observation raw lineage that differs from its parse run", () => {
+  const result = strictPitGuard({
+    observation: observation("success", "raw-other"),
+    repository,
+    canonicalRaceKey: RACE_KEY,
+    asOfAt: AS_OF,
+    policy: RESOLUTION_POLICIES.research_replay_strict_pre_race,
+  });
+
+  assert.equal(result.disposition, "rejected");
+  assert.ok(result.codes.includes("RAW_LINEAGE_MISMATCH"));
+});
+
 test("PIT guard keeps reusable parse-run states eligible", () => {
   for (const parseStatus of ["success", "warning"]) {
     const result = strictPitGuard({
@@ -59,5 +74,6 @@ test("PIT guard keeps reusable parse-run states eligible", () => {
 
     assert.equal(result.disposition, "accepted");
     assert.equal(result.codes.includes("PARSE_STATUS_NOT_REUSABLE"), false);
+    assert.equal(result.codes.includes("RAW_LINEAGE_MISMATCH"), false);
   }
 });
