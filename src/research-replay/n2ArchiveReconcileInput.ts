@@ -4,7 +4,8 @@ import { canonicalHash, canonicalUtcTimestamp, sha256Bytes } from "./canonical";
 import { fileDate } from "./n1Backfill";
 
 export const ARCHIVE_RECONCILE_SELECTION_VERSION = "n2-archive-reconcile-selection-v3";
-export const ARCHIVE_RECONCILE_CHECKPOINT_VERSION = "n2-archive-reconcile-checkpoint-v3";
+export const ARCHIVE_RECONCILE_CHECKPOINT_VERSION = "n2-archive-reconcile-checkpoint-v4";
+export const ARCHIVE_RECONCILE_CHECKPOINT_STATE_DIGEST_VERSION = "n2-archive-reconcile-checkpoint-state-digest-v1";
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
 export type ArchiveReconcileSelection = {
@@ -127,5 +128,30 @@ export function assertArchiveReconcileCheckpointContract(
     if (record[key] !== value) {
       throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_CONTRACT_MISMATCH:${key}`);
     }
+  }
+}
+
+export function buildArchiveReconcileCheckpointStateDigest(
+  checkpointContract: ArchiveReconcileCheckpointContract,
+  state: unknown,
+): string {
+  return canonicalHash({
+    digestVersion: ARCHIVE_RECONCILE_CHECKPOINT_STATE_DIGEST_VERSION,
+    checkpointContract,
+    state,
+  });
+}
+
+export function assertArchiveReconcileCheckpointStateDigest(
+  actualDigest: unknown,
+  checkpointContract: ArchiveReconcileCheckpointContract,
+  state: unknown,
+): asserts actualDigest is string {
+  if (typeof actualDigest !== "string" || !/^[0-9a-f]{64}$/.test(actualDigest)) {
+    throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_STATE_DIGEST_MISSING");
+  }
+  const expectedDigest = buildArchiveReconcileCheckpointStateDigest(checkpointContract, state);
+  if (actualDigest !== expectedDigest) {
+    throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_STATE_DIGEST_MISMATCH");
   }
 }
