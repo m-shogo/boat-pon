@@ -532,17 +532,58 @@ export class SettlementRepository {
     if (input.settlementStatus === "refunded" && (payoutLines.length || !refundLines.length)) {
       throw new Error("REFUNDED_REQUIRES_REFUND_ONLY");
     }
+    if (input.revisionKind !== "initial" && (!input.supersedesCandidateId || !input.correctionReason)) {
+      throw new Error("REVISION_REQUIRES_SUPERSESSION_AND_REASON");
+    }
     const semanticHash = canonicalHash({
       betType: input.betType, settlementStatus: input.settlementStatus, resultKind: input.resultKind,
       payouts: payoutLines.map((line) => [line.selection.canonical, line.payoutYen, line.popularity ?? null, line.lineKind ?? "payout"]),
       refunds: refundLines.map((line) => [line.selection?.canonical ?? null, line.scope, line.refundYenPer100 ?? null, line.reasonCode]),
     });
-    const existing = this.db.prepare(
-      "SELECT candidate_id FROM settlement_candidates_v2 WHERE observation_id=? AND bet_type=? AND semantic_hash=?",
-    ).get(input.observationId, input.betType, semanticHash) as { candidate_id: string } | undefined;
-    if (existing) return { candidateId: existing.candidate_id, inserted: false, semanticHash };
-    if (input.revisionKind !== "initial" && (!input.supersedesCandidateId || !input.correctionReason)) {
-      throw new Error("REVISION_REQUIRES_SUPERSESSION_AND_REASON");
+    const existing = this.db.prepare(`
+      SELECT candidate_id AS candidateId,
+             canonical_race_key AS canonicalRaceKey,
+             settlement_status AS settlementStatus,
+             result_kind AS resultKind,
+             revision_kind AS revisionKind,
+             resolution_status AS resolutionStatus,
+             source_kind AS sourceKind,
+             source_schema_version AS sourceSchemaVersion,
+             parse_run_id AS parseRunId,
+             raw_document_id AS rawDocumentId,
+             supersedes_candidate_id AS supersedesCandidateId,
+             correction_reason AS correctionReason
+      FROM settlement_candidates_v2
+      WHERE observation_id=? AND bet_type=? AND semantic_hash=?
+    `).get(input.observationId, input.betType, semanticHash) as {
+      candidateId: string;
+      canonicalRaceKey: string;
+      settlementStatus: string;
+      resultKind: string;
+      revisionKind: string;
+      resolutionStatus: string;
+      sourceKind: string;
+      sourceSchemaVersion: string;
+      parseRunId: string;
+      rawDocumentId: string;
+      supersedesCandidateId: string | null;
+      correctionReason: string | null;
+    } | undefined;
+    if (existing) {
+      if (existing.canonicalRaceKey !== input.canonicalRaceKey
+        || existing.settlementStatus !== input.settlementStatus
+        || existing.resultKind !== input.resultKind
+        || existing.revisionKind !== input.revisionKind
+        || existing.resolutionStatus !== input.resolutionStatus
+        || existing.sourceKind !== input.sourceKind
+        || existing.sourceSchemaVersion !== input.sourceSchemaVersion
+        || existing.parseRunId !== input.parseRunId
+        || existing.rawDocumentId !== input.rawDocumentId
+        || existing.supersedesCandidateId !== (input.supersedesCandidateId ?? null)
+        || existing.correctionReason !== (input.correctionReason ?? null)) {
+        throw new Error(`SETTLEMENT_CANDIDATE_REUSE_CONFLICT:${existing.candidateId}`);
+      }
+      return { candidateId: existing.candidateId, inserted: false, semanticHash };
     }
     const candidateId = this.idFactory();
     const now = canonicalUtcTimestamp(input.observedAt);
