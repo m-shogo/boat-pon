@@ -35,9 +35,10 @@ function assertCalendarDate(date: string, file: string): void {
 
 export function buildArchiveReconcileSelection(input: {
   discoveredFiles: readonly string[];
-  asOf: string;
+  asOf: string | null;
   limit: number | null;
 }): ArchiveReconcileSelection {
+  if (!input.asOf) throw new Error("ARCHIVE_RECONCILE_AS_OF_MISSING");
   const asOf = canonicalUtcTimestamp(input.asOf);
   const cutoffDate = asOf.slice(0, 10);
   const dated = input.discoveredFiles.map((path) => {
