@@ -123,3 +123,28 @@ test("PIT audit truncates after numeric race ordering rather than lexical race-k
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("PIT audit rejects an invalid race key before it can consume the bounded read", () => {
+  const dir = mkdtempSync(join(tmpdir(), "n2-pit-invalid-race-"));
+  try {
+    const primaryDbPath = join(dir, "boat.sqlite");
+    const sidecarDbPath = join(dir, "research-replay.sqlite");
+    createPrimary(primaryDbPath);
+    createSidecar(sidecarDbPath);
+
+    const db = new DatabaseSync(sidecarDbPath);
+    try {
+      db.prepare("UPDATE domain_observations SET canonical_race_key = ? WHERE observation_id = ?")
+        .run("2024-02-30:01:R1", "obs-1");
+    } finally {
+      db.close();
+    }
+
+    assert.throws(
+      () => readN2PitAuditObservations({ primaryDbPath, sidecarDbPath, limit: 2 }),
+      /N2_PIT_AUDIT_INVALID_RACE_KEY:2024-02-30:01:R1/,
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
