@@ -227,6 +227,36 @@ test("official-program readiness approval requires the canary target contract", 
   }
 });
 
+test("same-timestamp latest grants fail closed instead of using rowid authority", () => {
+  const root = mkdtempSync(join(tmpdir(), "n2-readiness-approval-conflict-"));
+  const path = join(root, "research-replay.sqlite");
+  createAuthorityDb(path);
+  const db = new DatabaseSync(path);
+  try {
+    insertGrant(db, {
+      approvalId: "approval-revoked-same-time",
+      approvalScope: N2_OFFICIAL_PROGRAM_CANARY_APPROVAL_SCOPE,
+      approvedAt: "2026-08-20T10:00:00.000Z",
+    });
+    insertLifecycle(db, {
+      lifecycleEventId: "lifecycle-revoked-same-time",
+      eventKind: "revoked",
+      subjectApprovalId: "approval-revoked-same-time",
+      occurredAt: "2026-08-20T10:01:00.000Z",
+    });
+    insertGrant(db, {
+      approvalId: "approval-active-same-time",
+      approvalScope: N2_OFFICIAL_PROGRAM_CANARY_APPROVAL_SCOPE,
+      approvedAt: "2026-08-20T10:00:00.000Z",
+    });
+
+    assert.deepEqual(readLifecycleValidApprovalScopes(path), []);
+  } finally {
+    db.close();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("latest grant lifecycle is authoritative for a scope", () => {
   const root = mkdtempSync(join(tmpdir(), "n2-readiness-approval-latest-"));
   const path = join(root, "research-replay.sqlite");
