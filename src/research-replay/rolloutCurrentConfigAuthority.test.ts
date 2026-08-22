@@ -115,6 +115,41 @@ test("runtime rollout config rejects non-canonical historical timestamps before 
   );
 });
 
+test("runtime rollout config rejects producer-invalid historical flags before latest-state selection", (t) => {
+  const ctx = context();
+  t.after(() => ctx.close());
+  ctx.db.prepare(`
+    INSERT INTO rollout_config_events
+    (config_event_id, shadow_write_enabled, operational_gc_enabled, kill_switch_engaged,
+     queue_capacity, max_retries, storage_quota_bytes, disk_low_water_bytes,
+     reason, occurred_at, recorded_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    "rollout-config-invalid-flag",
+    2,
+    0,
+    0,
+    100,
+    3,
+    1024 * 1024,
+    0,
+    "invalid historical flag",
+    "2026-08-23T00:00:00.000Z",
+    "2026-08-23T00:00:00.000Z",
+  );
+  ctx.controller.recordConfig(
+    config(),
+    "clean later event",
+    "2026-08-23T01:00:00.000Z",
+    "rollout-config-later",
+  );
+
+  assert.throws(
+    () => ctx.controller.currentConfig(),
+    /invalid rollout config flag/,
+  );
+});
+
 test("identical full rollout configs may share the latest timestamp", (t) => {
   const ctx = context();
   t.after(() => ctx.close());
