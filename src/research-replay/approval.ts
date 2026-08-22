@@ -183,14 +183,23 @@ export function recordApprovalLifecycle(
     throw new Error("replacement_approval_id only allowed for superseded");
   }
   const subject = db.prepare(`
-    SELECT 1 FROM rollout_approval_grants_v2 WHERE approval_id=?
-  `).get(normalized.subjectApprovalId);
+    SELECT approved_at AS approvedAt FROM rollout_approval_grants_v2 WHERE approval_id=?
+  `).get(normalized.subjectApprovalId) as { approvedAt: string } | undefined;
   if (!subject) throw new Error("subject approval does not exist");
+  if (!isCanonicalStoredInstant(subject.approvedAt) || normalized.occurredAt < subject.approvedAt) {
+    throw new Error("approval lifecycle predates subject approval");
+  }
   if (normalized.replacementApprovalId) {
+    if (normalized.replacementApprovalId === normalized.subjectApprovalId) {
+      throw new Error("replacement approval must differ from subject approval");
+    }
     const replacement = db.prepare(`
-      SELECT 1 FROM rollout_approval_grants_v2 WHERE approval_id=?
-    `).get(normalized.replacementApprovalId);
+      SELECT approved_at AS approvedAt FROM rollout_approval_grants_v2 WHERE approval_id=?
+    `).get(normalized.replacementApprovalId) as { approvedAt: string } | undefined;
     if (!replacement) throw new Error("replacement approval does not exist");
+    if (!isCanonicalStoredInstant(replacement.approvedAt) || normalized.occurredAt < replacement.approvedAt) {
+      throw new Error("approval lifecycle predates replacement approval");
+    }
   }
   const contentHash = lifecycleHash(normalized);
   const existing = db.prepare(`
