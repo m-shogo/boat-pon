@@ -740,7 +740,7 @@ export class RolloutController {
         AND NOT EXISTS (
           SELECT 1 FROM operational_audit_events done
           WHERE done.operation_id=intent.operation_id
-            AND done.event_kind IN ('gc_deleted', 'gc_recovered')
+            AND done.event_kind IN ('gc_deleted', 'gc_recovered', 'gc_rejected')
         )
     `).all() as Array<{
       operation_id: string;
@@ -750,15 +750,55 @@ export class RolloutController {
     }>;
     const recovered: string[] = [];
     for (const row of rows) {
-      const removed = this.rawStore.removeVerified(row.storage_path, row.raw_sha256);
-      this.auditEvent({
-        operationId: row.operation_id,
-        eventKind: "gc_recovered",
-        subjectType: "raw_document",
-        subjectId: row.subject_id,
-        detail: { removed },
-      });
-      recovered.push(row.subject_id);
+      this.db.exec("BEGIN IMMEDIATE");
+      try {
+        const references = this.db.prepare(`
+          SELECT
+            EXISTS (
+              SELECT 1 FROM evidence_pins p
+              WHERE p.evidence_type='raw_document' AND p.evidence_id=?
+            ) AS pinned,
+            EXISTS (SELECT 1 FROM capture_raw_links c WHERE c.raw_document_id=?) AS captureLinked,
+            EXISTS (SELECT 1 FROM parse_runs p WHERE p.raw_document_id=?) AS parsed,
+            EXISTS (SELECT 1 FROM domain_observations o WHERE o.raw_document_id=?) AS observed
+        `).get(row.subject_id, row.subject_id, row.subject_id, row.subject_id) as {
+          pinned: number;
+          captureLinked: number;
+          parsed: number;
+          observed: number;
+        };
+        if (references.pinned === 1
+          || references.captureLinked === 1
+          || references.parsed === 1
+          || references.observed === 1) {
+          this.auditEvent({
+            operationId: row.operation_id,
+            eventKind: "gc_rejected",
+            subjectType: "raw_document",
+            subjectId: row.subject_id,
+            detail: { reason: "reference_added_after_gc_intent" },
+          });
+          this.db.exec("COMMIT");
+          continue;
+        }
+        const removed = this.rawStore.removeVerified(row.storage_path, row.raw_sha256);
+        this.auditEvent({
+          operationId: row.operation_id,
+          eventKind: "gc_recovered",
+          subjectType: "raw_document",
+          subjectId: row.subject_id,
+          detail: { removed },
+        });
+        this.db.exec("COMMIT");
+        recovered.push(row.subject_id);
+      } catch (error) {
+        try {
+          this.db.exec("ROLLBACK");
+        } catch {
+          // Preserve the original recovery failure when the transaction already ended.
+        }
+        throw error;
+      }
     }
     return recovered;
   }
