@@ -81,10 +81,7 @@ test("archive reconcile resume rejects impossible status transitions", () => {
 test("archive reconcile resume rejects zero-count transition evidence", () => {
   const tampered = {
     ...state,
-    cells: [[aggregateKey, { ...cell, status_mismatch: 0, falseRefund: 0 }]],
-    paired: [],
     statusMatrix: [["refunded->settled", 0]],
-    samples: [],
   };
   assert.throws(
     () => assertState(tampered),
