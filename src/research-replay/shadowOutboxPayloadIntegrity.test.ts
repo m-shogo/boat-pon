@@ -61,10 +61,8 @@ test("shadow drain never delivers a payload whose persisted hash is stale", () =
       FROM shadow_delivery_attempts
       WHERE outbox_message_id='message-1'
     `).get() as { outcome: string; errorCode: string | null };
-    assert.deepEqual(attempt, {
-      outcome: "permanent_failure",
-      errorCode: "SHADOW_PAYLOAD_HASH_MISMATCH",
-    });
+    assert.equal(attempt.outcome, "permanent_failure");
+    assert.equal(attempt.errorCode, "SHADOW_PAYLOAD_HASH_MISMATCH");
   } finally {
     db.close();
     rmSync(root, { recursive: true, force: true });
