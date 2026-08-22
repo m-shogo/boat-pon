@@ -15,6 +15,7 @@ type ShadowDeliveryAttemptRow = {
 };
 
 const TERMINAL_OUTCOMES = new Set(["succeeded", "permanent_failure", "cancelled"]);
+const RETRY_EXHAUSTED_ERROR_CODE = "SHADOW_RETRY_EXHAUSTED";
 
 function canonicalTimestampMs(value: string, name: string): number {
   const canonical = canonicalUtcTimestamp(value);
@@ -78,6 +79,12 @@ export function assertShadowDeliveryAttemptHistory(db: DatabaseSync, asOf?: stri
     }
     if (row.error_code !== null && row.error_code !== row.error_code.trim()) {
       throw new Error("non-canonical shadow delivery error_code");
+    }
+    if (row.outcome === "permanent_failure"
+      && row.error_code !== null
+      && row.error_code.toUpperCase() === RETRY_EXHAUSTED_ERROR_CODE
+      && row.error_code !== RETRY_EXHAUSTED_ERROR_CODE) {
+      throw new Error("non-canonical shadow retry exhausted error_code");
     }
     if (previousOutcome !== null) {
       if (TERMINAL_OUTCOMES.has(previousOutcome)) {
