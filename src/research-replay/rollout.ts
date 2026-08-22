@@ -289,6 +289,7 @@ export class RolloutController {
     idempotency_key: string;
     message_type: string;
     payload_json: string;
+    payload_hash: string;
     enqueued_at: string;
     available_at: string;
     attempt_count: number;
@@ -297,7 +298,7 @@ export class RolloutController {
   }> {
     return this.db.prepare(`
       SELECT m.outbox_message_id, m.idempotency_key, m.message_type, m.payload_json,
-             m.enqueued_at, m.available_at,
+             m.payload_hash, m.enqueued_at, m.available_at,
              COUNT(a.delivery_attempt_id) AS attempt_count,
              (
                SELECT outcome FROM shadow_delivery_attempts latest
@@ -452,10 +453,17 @@ export class RolloutController {
               }
             },
           };
+          const payload = JSON.parse(row.payload_json) as unknown;
+          if (canonicalHash(payload) !== row.payload_hash) {
+            throw new PermanentShadowDeliveryError(
+              "SHADOW_PAYLOAD_HASH_MISMATCH",
+              "shadow outbox payload hash mismatch",
+            );
+          }
           handler({
             outboxMessageId: row.outbox_message_id,
             messageType: row.message_type,
-            payload: JSON.parse(row.payload_json) as unknown,
+            payload,
           }, context);
           context.throwIfCancelled();
           this.db.exec("RELEASE shadow_delivery_handler");
