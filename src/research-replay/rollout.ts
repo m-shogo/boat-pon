@@ -282,6 +282,7 @@ export class RolloutController {
              queue_capacity, max_retries, storage_quota_bytes, disk_low_water_bytes,
              occurred_at
       FROM rollout_config_events
+      ORDER BY occurred_at DESC, rowid DESC
     `).all() as RolloutConfigRow[];
     if (timeline.length === 0) return { ...DEFAULT_ROLLOUT_CONFIG };
 
@@ -305,22 +306,7 @@ export class RolloutController {
       }
     }
 
-    const latestAt = timeline.reduce(
-      (latest, event) => event.occurred_at > latest ? event.occurred_at : latest,
-      timeline[0].occurred_at,
-    );
-    const latest = timeline.filter((event) => event.occurred_at === latestAt);
-    const latestStates = new Set(latest.map((event) => [
-      event.shadow_write_enabled,
-      event.operational_gc_enabled,
-      event.kill_switch_engaged,
-      event.queue_capacity,
-      event.max_retries,
-      event.storage_quota_bytes,
-      event.disk_low_water_bytes,
-    ].join(":")));
-    if (latestStates.size > 1) throw new Error("ambiguous rollout config at latest timestamp");
-    const row = latest[0];
+    const row = timeline[0];
     return {
       shadowWriteEnabled: row.shadow_write_enabled === 1,
       operationalGcEnabled: row.operational_gc_enabled === 1,
