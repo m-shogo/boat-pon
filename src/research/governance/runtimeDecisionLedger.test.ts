@@ -118,3 +118,17 @@ test("Runtime Decision Ledger requires valid source identity and digest", () => 
   assert.ok(result.errors.includes("sourceDecisionHistoryId must be a positive integer or null"));
   assert.ok(result.errors.includes("sourceRowDigest must be a SHA-256 hex digest"));
 });
+
+test("Runtime Decision Ledger rejects integers outside the JavaScript safe range", () => {
+  const unsafe = Number.MAX_SAFE_INTEGER + 1;
+  for (const [field, value] of [
+    ["sourceDecisionHistoryId", unsafe],
+    ["recommendedStakeYen", unsafe],
+    ["sampleSize", unsafe],
+  ] as const) {
+    const record = validBuyRecord();
+    record[field] = value;
+    const result = validateRuntimeDecisionLedgerRecord(record);
+    assert.equal(result.valid, false, `${field} must fail closed outside the safe integer range`);
+  }
+});
