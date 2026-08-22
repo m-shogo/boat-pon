@@ -11,6 +11,8 @@ type ShadowDeliveryAttemptRow = {
   created_at: string;
 };
 
+const TERMINAL_OUTCOMES = new Set(["succeeded", "permanent_failure", "cancelled"]);
+
 function canonicalTimestampMs(value: string, name: string): number {
   const canonical = canonicalUtcTimestamp(value);
   if (canonical !== value) throw new Error(`non-canonical ${name}`);
@@ -29,10 +31,16 @@ export function assertShadowDeliveryAttemptHistory(db: DatabaseSync): void {
 
   let currentMessageId: string | null = null;
   let expectedAttemptNo = 1;
+  let previousOutcome: string | null = null;
+  let previousCompletedAtMs: number | null = null;
+  let previousNextAvailableAtMs: number | null = null;
   for (const row of rows) {
     if (row.outbox_message_id !== currentMessageId) {
       currentMessageId = row.outbox_message_id;
       expectedAttemptNo = 1;
+      previousOutcome = null;
+      previousCompletedAtMs = null;
+      previousNextAvailableAtMs = null;
     }
     if (!Number.isSafeInteger(row.attempt_no) || row.attempt_no !== expectedAttemptNo) {
       throw new Error("non-contiguous shadow delivery attempt sequence");
@@ -43,13 +51,29 @@ export function assertShadowDeliveryAttemptHistory(db: DatabaseSync): void {
     const completedAtMs = canonicalTimestampMs(row.completed_at, "delivery attempt completed_at");
     canonicalTimestampMs(row.created_at, "delivery attempt created_at");
     if (completedAtMs < startedAtMs) throw new Error("shadow delivery attempt completed before start");
+    if (previousOutcome !== null) {
+      if (TERMINAL_OUTCOMES.has(previousOutcome)) {
+        throw new Error("shadow delivery attempt recorded after terminal outcome");
+      }
+      if (previousCompletedAtMs !== null && startedAtMs < previousCompletedAtMs) {
+        throw new Error("overlapping shadow delivery attempts");
+      }
+      if (previousNextAvailableAtMs !== null && startedAtMs < previousNextAvailableAtMs) {
+        throw new Error("shadow delivery attempt started before retry schedule");
+      }
+    }
 
+    let nextAvailableAtMs: number | null = null;
     if (row.outcome === "retryable_failure") {
       if (row.next_available_at === null) throw new Error("retryable shadow delivery attempt missing next_available_at");
-      const nextAvailableAtMs = canonicalTimestampMs(row.next_available_at, "delivery attempt next_available_at");
+      nextAvailableAtMs = canonicalTimestampMs(row.next_available_at, "delivery attempt next_available_at");
       if (nextAvailableAtMs <= startedAtMs) throw new Error("invalid shadow delivery retry schedule");
     } else if (row.next_available_at !== null) {
       throw new Error("terminal shadow delivery attempt must not have next_available_at");
     }
+
+    previousOutcome = row.outcome;
+    previousCompletedAtMs = completedAtMs;
+    previousNextAvailableAtMs = nextAvailableAtMs;
   }
 }
