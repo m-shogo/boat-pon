@@ -1,4 +1,4 @@
-import { sha256Bytes, canonicalUtcTimestamp } from "./canonical";
+import { canonicalHash, sha256Bytes, canonicalUtcTimestamp } from "./canonical";
 import {
   captureOfficialProgramObservation,
   buildOfficialProgramObservationEnvelope,
@@ -50,6 +50,13 @@ export class OfficialProgramShadowSourceError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "OFFICIAL_PROGRAM_SHADOW_SOURCE_INVALID";
+  }
+}
+
+export class OfficialProgramShadowIdempotencyConflictError extends Error {
+  constructor() {
+    super("official program shadow idempotency key already belongs to different immutable payload");
+    this.name = "OFFICIAL_PROGRAM_SHADOW_IDEMPOTENCY_CONFLICT";
   }
 }
 
@@ -115,16 +122,49 @@ function idempotencyKey(payload: OfficialProgramShadowPayload): string {
   ].join(":");
 }
 
+function assertExistingMessageMatches(
+  controller: RolloutController,
+  outboxMessageId: string,
+  payload: OfficialProgramShadowPayload,
+): void {
+  const existing = controller.db.prepare(`
+    SELECT message_type, payload_json, payload_hash
+    FROM shadow_outbox_messages
+    WHERE outbox_message_id=?
+  `).get(outboxMessageId) as {
+    message_type: string;
+    payload_json: string;
+    payload_hash: string;
+  } | undefined;
+  if (!existing || existing.message_type !== N2_OFFICIAL_PROGRAM_SHADOW_MESSAGE_TYPE) {
+    throw new OfficialProgramShadowIdempotencyConflictError();
+  }
+  let persistedPayload: unknown;
+  try {
+    persistedPayload = JSON.parse(existing.payload_json) as unknown;
+  } catch {
+    throw new OfficialProgramShadowIdempotencyConflictError();
+  }
+  const desiredHash = canonicalHash(payload);
+  if (existing.payload_hash !== desiredHash || canonicalHash(persistedPayload) !== desiredHash) {
+    throw new OfficialProgramShadowIdempotencyConflictError();
+  }
+}
+
 export function enqueueOfficialProgramShadow(
   controller: RolloutController,
   input: OfficialProgramShadowInput,
 ): EnqueueResult {
   const payload = canonicalizeInput(input);
-  return controller.enqueue({
+  const result = controller.enqueue({
     idempotencyKey: idempotencyKey(payload),
     messageType: N2_OFFICIAL_PROGRAM_SHADOW_MESSAGE_TYPE,
     payload,
   });
+  if (result.status === "existing" && result.outboxMessageId !== null) {
+    assertExistingMessageMatches(controller, result.outboxMessageId, payload);
+  }
+  return result;
 }
 
 function decodePayload(value: unknown): OfficialProgramShadowPayload {
