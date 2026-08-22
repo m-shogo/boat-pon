@@ -56,6 +56,27 @@ const state = {
   byBetType: [],
 };
 
+const validCorrectionState = {
+  ...state,
+  counts: {
+    ...state.counts,
+    appended_candidates: 1,
+    special_payout_addition: 1,
+  },
+  corrections: [{
+    raceKey: "2026-08-01:01:R1",
+    betType: "trifecta",
+    action: "special_payout_addition",
+    originalStatus: null,
+    correctedStatus: "settled",
+    originalResultKind: null,
+    correctedResultKind: "special_payout",
+    defectCode: "V1_SPECIAL_PAYOUT_FALSE_REFUND",
+  }],
+  byYear: [["2026", { false_refund: 0, result_kind: 0, special_addition: 1 }]],
+  byBetType: [["trifecta", { false_refund: 0, result_kind: 0, special_addition: 1 }]],
+};
+
 test("reparse checkpoint state digest is bound to checkpoint identity and state", () => {
   const digest = buildN2SettlementReparseCheckpointStateDigest(identity, state);
   assert.match(digest, /^[0-9a-f]{64}$/);
@@ -66,6 +87,11 @@ test("reparse checkpoint state digest is bound to checkpoint identity and state"
     () => assertN2SettlementReparseCheckpointStateDigest(digest, identity, tampered),
     /REPARSE_CHECKPOINT_STATE_DIGEST_MISMATCH/,
   );
+});
+
+test("reparse checkpoint resume accepts producer-consistent correction samples", () => {
+  const digest = buildN2SettlementReparseCheckpointStateDigest(identity, validCorrectionState);
+  assert.doesNotThrow(() => assertN2SettlementReparseCheckpointStateDigest(digest, identity, validCorrectionState));
 });
 
 test("reparse checkpoint resume rejects rehashed processed files outside selected inventory", () => {
@@ -163,6 +189,48 @@ test("reparse checkpoint resume binds correction samples to appended candidates"
   assert.throws(
     () => assertN2SettlementReparseCheckpointStateDigest(digest, identity, tampered),
     /REPARSE_CHECKPOINT_CORRECTION_COUNT_MISMATCH/,
+  );
+});
+
+test("reparse checkpoint resume rejects correction samples outside report aggregates", () => {
+  const tampered = {
+    ...validCorrectionState,
+    corrections: [{ ...validCorrectionState.corrections[0], raceKey: "2025-08-01:01:R1" }],
+  };
+  const digest = buildN2SettlementReparseCheckpointStateDigest(identity, tampered);
+  assert.throws(
+    () => assertN2SettlementReparseCheckpointStateDigest(digest, identity, tampered),
+    /REPARSE_CHECKPOINT_CORRECTION_AGGREGATE_MISMATCH:byYear:2025:special_addition:0/,
+  );
+});
+
+test("reparse checkpoint resume rejects correction action semantic drift", () => {
+  const tampered = {
+    ...validCorrectionState,
+    corrections: [{
+      ...validCorrectionState.corrections[0],
+      action: "result_kind_correction",
+      originalStatus: "refunded",
+      correctedStatus: "settled",
+      originalResultKind: "normal",
+    }],
+  };
+  const digest = buildN2SettlementReparseCheckpointStateDigest(identity, tampered);
+  assert.throws(
+    () => assertN2SettlementReparseCheckpointStateDigest(digest, identity, tampered),
+    /REPARSE_CHECKPOINT_CORRECTION_INVALID:0:resultKind/,
+  );
+});
+
+test("reparse checkpoint resume rejects correction defect-code drift", () => {
+  const tampered = {
+    ...validCorrectionState,
+    corrections: [{ ...validCorrectionState.corrections[0], defectCode: "OTHER_DEFECT" }],
+  };
+  const digest = buildN2SettlementReparseCheckpointStateDigest(identity, tampered);
+  assert.throws(
+    () => assertN2SettlementReparseCheckpointStateDigest(digest, identity, tampered),
+    /REPARSE_CHECKPOINT_CORRECTION_INVALID:0:defectCode/,
   );
 });
 
