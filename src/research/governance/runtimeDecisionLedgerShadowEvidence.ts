@@ -270,6 +270,67 @@ const TOP_LEVEL_KEYS = new Set([
   "contentDigest",
 ]);
 
+const SCOPE_KEYS = new Set(["runKind", "modelVersion", "from", "to", "limit", "returnedRows", "limitReached", "bounded"]);
+const SOURCE_KEYS = new Set([
+  "fileSizeBytes",
+  "modifiedTimeMs",
+  "sqliteSchemaVersion",
+  "sqliteUserVersion",
+  "pageCount",
+  "pageSizeBytes",
+  "freelistCount",
+  "journalMode",
+  "walPresent",
+  "readOnly",
+  "queryOnly",
+]);
+const RECONCILIATION_KEYS = new Set([
+  "status",
+  "sourceRows",
+  "mappedUnique",
+  "exactDuplicates",
+  "unresolvedCount",
+  "rejectedCount",
+  "conflictCount",
+  "recordsDigest",
+]);
+const COMPLETENESS_KEYS = new Set([
+  "mappedRate",
+  "unresolvedRate",
+  "rejectedRate",
+  "conflictRate",
+  "unresolvedReasonCounts",
+  "rejectedReasonCounts",
+  "taxonomyCounts",
+]);
+const PRIVACY_KEYS = new Set([
+  "rawRecordsIncluded",
+  "sourceRowIdsIncluded",
+  "raceIdsIncluded",
+  "selectionsIncluded",
+  "absolutePathsIncluded",
+  "localDbPathIncluded",
+  "outcomeColumnsRead",
+]);
+const SAFETY_KEYS = new Set([
+  "operationalDbWrites",
+  "notificationWrites",
+  "lineSends",
+  "appSettingsReads",
+  "publicWrites",
+  "productionPromotion",
+]);
+
+function requireExactObject(value: unknown, path: string, keys: Set<string>, errors: string[]): boolean {
+  if (!isRecord(value)) {
+    errors.push(`${path} must be an object`);
+    return false;
+  }
+  for (const key of Object.keys(value)) if (!keys.has(key)) errors.push(`unknown field: ${path}.${key}`);
+  for (const key of keys) if (!(key in value)) errors.push(`missing field: ${path}.${key}`);
+  return true;
+}
+
 const FORBIDDEN_KEYS = new Set([
   "records",
   "record",
@@ -310,6 +371,14 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
   if (!isRecord(value)) return { valid: false, errors: ["evidence must be an object"], evidence: null };
   for (const key of Object.keys(value)) if (!TOP_LEVEL_KEYS.has(key)) errors.push(`unknown top-level field: ${key}`);
   for (const key of TOP_LEVEL_KEYS) if (!(key in value)) errors.push(`missing top-level field: ${key}`);
+  if (errors.length > 0) return { valid: false, errors, evidence: null };
+
+  requireExactObject(value.scope, "scope", SCOPE_KEYS, errors);
+  requireExactObject(value.source, "source", SOURCE_KEYS, errors);
+  requireExactObject(value.reconciliation, "reconciliation", RECONCILIATION_KEYS, errors);
+  requireExactObject(value.completeness, "completeness", COMPLETENESS_KEYS, errors);
+  requireExactObject(value.privacy, "privacy", PRIVACY_KEYS, errors);
+  requireExactObject(value.safety, "safety", SAFETY_KEYS, errors);
   if (errors.length > 0) return { valid: false, errors, evidence: null };
 
   const evidence = value as unknown as RuntimeDecisionLedgerShadowEvidence;
