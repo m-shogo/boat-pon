@@ -26,12 +26,22 @@ function withAttempt(
        payload_hash, enqueued_at, available_at, created_at)
       VALUES ('message-1', 'message-1-key', 'fixture.v1', ?, ?, ?, ?, ?)
     `).run(JSON.stringify(payload), canonicalHash(payload), now, now, now);
+    const nextAvailableAt = outcome === "retryable_failure"
+      ? "2026-08-02T03:00:01.000Z"
+      : null;
     db.prepare(`
       INSERT INTO shadow_delivery_attempts
       (delivery_attempt_id, outbox_message_id, attempt_no, outcome, error_code,
        started_at, completed_at, next_available_at, created_at)
-      VALUES ('attempt-1', 'message-1', 1, ?, ?, ?, ?, NULL, ?)
-    `).run(outcome, errorCode, now, "2026-08-02T03:00:01.000Z", "2026-08-02T03:00:01.000Z");
+      VALUES ('attempt-1', 'message-1', 1, ?, ?, ?, ?, ?, ?)
+    `).run(
+      outcome,
+      errorCode,
+      now,
+      "2026-08-02T03:00:01.000Z",
+      nextAvailableAt,
+      "2026-08-02T03:00:01.000Z",
+    );
     db.close();
     run(dbPath);
   } finally {
@@ -75,6 +85,20 @@ test("retry exhaustion marker rejects case drift that would hide operability exh
       assert.throws(
         () => assertShadowDeliveryAttemptHistory(db, "2026-08-02T04:00:00.000Z"),
         /non-canonical shadow retry exhausted error_code/,
+      );
+    } finally {
+      db.close();
+    }
+  });
+});
+
+test("retry exhaustion marker requires the producer permanent failure outcome", () => {
+  withAttempt("retryable_failure", "SHADOW_RETRY_EXHAUSTED", (dbPath) => {
+    const db = openRolloutDatabase(dbPath);
+    try {
+      assert.throws(
+        () => assertShadowDeliveryAttemptHistory(db, "2026-08-02T04:00:00.000Z"),
+        /shadow retry exhausted marker requires permanent_failure outcome/,
       );
     } finally {
       db.close();
