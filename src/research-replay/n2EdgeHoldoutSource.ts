@@ -3,6 +3,7 @@ import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 
 import { canonicalHash } from "./canonical";
+import { readCurrentlyValidSourceDuplicateObservationIds } from "./n1SourceDuplicateResolutionValidation";
 import {
   normalizeDiscoveryProgramRow,
   type N2EdgeDiscoveryCandidate,
@@ -19,7 +20,7 @@ export const N2_EDGE_HOLDOUT_HISTORY_FROM_DATE = "2021-07-05" as const;
 const RACE_KEY_RE = /^(\d{4}-\d{2}-\d{2}):(0[1-9]|1\d|2[0-4]):R([1-9]|1[0-2])$/u;
 const SELECTION_RE = /^[1-6]-[1-6]-[1-6]$/u;
 
-type WinnerRow = { raceKey: string; winningSelection: string | null };
+type WinnerRow = { raceKey: string; observationId: string; winningSelection: string | null };
 type ProgramRow = { raceId: string; date: string; venue: string; raceNo: number; closeAt: string; importedAt: string };
 
 export type N2EdgeHoldoutSourceRead = {
@@ -109,24 +110,30 @@ export function readN2EdgeHoldoutSource(input: { primaryDbPath: string; sidecarD
   const historicalOutcomes: N2HistoricalOutcomeRow[] = [];
   const blockers: string[] = [];
   try {
-    for (const table of ["settlement_candidates_v2","race_payout_lines_v2","settlement_source_duplicate_resolutions_v2"]) {
+    for (const table of ["domain_observations","parse_runs","settlement_candidates_v2","race_payout_lines_v2","settlement_source_duplicate_resolutions_v2"]) {
       if (!tableExists(sidecar, table)) return blocked([`SIDECAR_TABLE_MISSING:${table}`],0,1);
     }
+    let validResolvedObservationIds: Set<string>;
+    try {
+      validResolvedObservationIds = readCurrentlyValidSourceDuplicateObservationIds(sidecar);
+    } catch {
+      return blocked(["SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID"],0,1);
+    }
     const rows = sidecar.prepare(`
-      SELECT c.canonical_race_key AS raceKey, p.selection_canonical AS winningSelection
+      SELECT c.canonical_race_key AS raceKey, c.observation_id AS observationId, p.selection_canonical AS winningSelection
       FROM settlement_candidates_v2 c
       JOIN race_payout_lines_v2 p ON p.candidate_id=c.candidate_id
        AND p.bet_type='trifecta' AND p.line_kind='payout' AND p.selection_canonical IS NOT NULL
       WHERE c.bet_type='trifecta' AND c.settlement_status='settled' AND c.result_kind='normal'
        AND c.resolution_status='resolved'
        AND substr(c.canonical_race_key,1,10) >= ? AND substr(c.canonical_race_key,1,10) <= ?
-       AND NOT EXISTS (SELECT 1 FROM settlement_source_duplicate_resolutions_v2 d WHERE d.duplicate_observation_id=c.observation_id)
        AND NOT EXISTS (SELECT 1 FROM settlement_candidates_v2 newer WHERE newer.supersedes_candidate_id=c.candidate_id)
        AND NOT EXISTS (SELECT 1 FROM race_payout_lines_v2 special WHERE special.candidate_id=c.candidate_id AND special.bet_type='trifecta' AND special.line_kind='special_payout')
       ORDER BY c.canonical_race_key,p.line_no
     `).all(N2_EDGE_HOLDOUT_HISTORY_FROM_DATE,N2_EDGE_TEST_TO_DATE) as unknown as WinnerRow[];
     const grouped = new Map<string,string[]>();
     for (const row of rows) {
+      if (validResolvedObservationIds.has(row.observationId)) continue;
       const current=grouped.get(row.raceKey)??[]; if(row.winningSelection!=null) current.push(row.winningSelection); grouped.set(row.raceKey,current);
     }
     for (const [raceKey,selections] of grouped) {
