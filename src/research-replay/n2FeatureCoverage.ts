@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { parseCanonicalRaceKey } from "./identity";
 
 export const N2_FEATURE_COVERAGE_PROFILE_VERSION = "n2-feature-coverage-v1";
 
@@ -93,14 +94,12 @@ function freezeBucket(key: string, bucket: MutableBucket): N2FeatureCoverageBuck
   };
 }
 
-function raceYear(canonicalRaceKey: string): string {
-  const match = /^(\d{4}-\d{2}-\d{2}):/.exec(canonicalRaceKey);
-  if (!match) throw new Error(`N2_COVERAGE_INVALID_RACE_KEY:${canonicalRaceKey}`);
-  const parsed = Date.parse(`${match[1]}T00:00:00.000Z`);
-  if (!Number.isFinite(parsed) || new Date(parsed).toISOString().slice(0, 10) !== match[1]) {
-    throw new Error(`N2_COVERAGE_INVALID_RACE_KEY:${canonicalRaceKey}`);
+function raceYear(canonicalRaceKeyValue: string): string {
+  try {
+    return parseCanonicalRaceKey(canonicalRaceKeyValue).raceDateJst.slice(0, 4);
+  } catch {
+    throw new Error(`N2_COVERAGE_INVALID_RACE_KEY:${canonicalRaceKeyValue}`);
   }
-  return match[1].slice(0, 4);
 }
 
 export function buildN2FeatureCoverageProfile(input: {
