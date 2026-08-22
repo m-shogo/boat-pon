@@ -75,6 +75,45 @@ function insertGrant(db: DatabaseSync, approvalId: string, approvedAt: string): 
   );
 }
 
+function insertLifecycle(
+  db: DatabaseSync,
+  input: {
+    lifecycleEventId: string;
+    eventKind: string;
+    subjectApprovalId: string;
+    replacementApprovalId?: string | null;
+    occurredAt: string;
+  },
+): void {
+  const lifecycle = {
+    lifecycleEventId: input.lifecycleEventId,
+    eventKind: input.eventKind,
+    subjectApprovalId: input.subjectApprovalId,
+    replacementApprovalId: input.replacementApprovalId ?? null,
+    reason: `reason:${input.lifecycleEventId}`,
+    source: "test",
+    reference: `ref:${input.lifecycleEventId}`,
+    occurredAt: input.occurredAt,
+  };
+  db.prepare(`
+    INSERT INTO rollout_approval_lifecycle_events_v2
+    (lifecycle_event_id, event_kind, subject_approval_id, replacement_approval_id,
+     reason, source, reference, occurred_at, content_hash, recorded_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    lifecycle.lifecycleEventId,
+    lifecycle.eventKind,
+    lifecycle.subjectApprovalId,
+    lifecycle.replacementApprovalId,
+    lifecycle.reason,
+    lifecycle.source,
+    lifecycle.reference,
+    lifecycle.occurredAt,
+    canonicalHash(lifecycle),
+    lifecycle.occurredAt,
+  );
+}
+
 function resolve(db: DatabaseSync) {
   return resolveApproval(db, {
     approvalScope: "TEST_SCOPE",
@@ -116,13 +155,83 @@ test("non-canonical persisted approval times fail closed before ordering", () =>
   const path = join(root, "approval.sqlite");
   const db = createApprovalDb(path);
   try {
-    // 05:00-07:00 is 12:00Z, which is after the 11:00Z rollout start.
-    // Raw string comparison would incorrectly place it before the rollout.
     insertGrant(db, "approval-offset", "2026-08-20T05:00:00-07:00");
     const resolution = resolve(db);
     assert.equal(resolution.approved, false);
     assert.equal(resolution.code, "APPROVAL_TIMESTAMP_INVALID");
     assert.equal(resolution.approvalId, null);
+  } finally {
+    db.close();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("same-timestamp lifecycle events fail closed instead of using rowid", () => {
+  const root = mkdtempSync(join(tmpdir(), "approval-lifecycle-ambiguity-"));
+  const path = join(root, "approval.sqlite");
+  const db = createApprovalDb(path);
+  try {
+    insertGrant(db, "approval-a", "2026-08-20T10:00:00.000Z");
+    insertLifecycle(db, {
+      lifecycleEventId: "lifecycle-a",
+      eventKind: "revoked",
+      subjectApprovalId: "approval-a",
+      occurredAt: "2026-08-20T10:30:00.000Z",
+    });
+    insertLifecycle(db, {
+      lifecycleEventId: "lifecycle-b",
+      eventKind: "legacy_disqualified",
+      subjectApprovalId: "approval-a",
+      occurredAt: "2026-08-20T10:30:00.000Z",
+    });
+    const resolution = resolve(db);
+    assert.equal(resolution.approved, false);
+    assert.equal(resolution.code, "APPROVAL_AMBIGUOUS");
+    assert.equal(resolution.approvalId, "approval-a");
+  } finally {
+    db.close();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("non-canonical lifecycle times fail closed before lifecycle ordering", () => {
+  const root = mkdtempSync(join(tmpdir(), "approval-lifecycle-time-contract-"));
+  const path = join(root, "approval.sqlite");
+  const db = createApprovalDb(path);
+  try {
+    insertGrant(db, "approval-a", "2026-08-20T10:00:00.000Z");
+    insertLifecycle(db, {
+      lifecycleEventId: "lifecycle-offset",
+      eventKind: "revoked",
+      subjectApprovalId: "approval-a",
+      occurredAt: "2026-08-20T03:30:00-07:00",
+    });
+    const resolution = resolve(db);
+    assert.equal(resolution.approved, false);
+    assert.equal(resolution.code, "APPROVAL_TIMESTAMP_INVALID");
+    assert.equal(resolution.approvalId, "approval-a");
+  } finally {
+    db.close();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("rehashed unknown lifecycle kinds cannot restore approval authority", () => {
+  const root = mkdtempSync(join(tmpdir(), "approval-lifecycle-kind-contract-"));
+  const path = join(root, "approval.sqlite");
+  const db = createApprovalDb(path);
+  try {
+    insertGrant(db, "approval-a", "2026-08-20T10:00:00.000Z");
+    insertLifecycle(db, {
+      lifecycleEventId: "lifecycle-unknown",
+      eventKind: "restored",
+      subjectApprovalId: "approval-a",
+      occurredAt: "2026-08-20T10:30:00.000Z",
+    });
+    const resolution = resolve(db);
+    assert.equal(resolution.approved, false);
+    assert.equal(resolution.code, "APPROVAL_HASH_INVALID");
+    assert.equal(resolution.approvalId, "approval-a");
   } finally {
     db.close();
     rmSync(root, { recursive: true, force: true });
