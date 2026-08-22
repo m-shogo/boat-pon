@@ -1,4 +1,5 @@
 import { canonicalHash, sha256Bytes, canonicalUtcTimestamp } from "./canonical";
+import { parseCanonicalRaceKey } from "./identity";
 import {
   captureOfficialProgramObservation,
   buildOfficialProgramObservationEnvelope,
@@ -222,6 +223,40 @@ function decodePayload(value: unknown): OfficialProgramShadowPayload {
   if (Object.values(headers).some((value) => typeof value !== "string")
     || JSON.stringify(allowlistedHeaders(headers)) !== JSON.stringify(headers)) {
     throw new OfficialProgramShadowPayloadError("official program shadow headers invalid");
+  }
+  let requestStartedAt: string;
+  let responseHeadersReceivedAt: string;
+  let bodyCompletedAt: string;
+  let sourceObservedAt: string;
+  let firstSeenAt: string;
+  let sourcePublishedAt: string | null;
+  try {
+    parseCanonicalRaceKey(payload.canonicalRaceKey);
+    requestStartedAt = canonicalUtcTimestamp(payload.requestStartedAt);
+    responseHeadersReceivedAt = canonicalUtcTimestamp(payload.responseHeadersReceivedAt);
+    bodyCompletedAt = canonicalUtcTimestamp(payload.bodyCompletedAt);
+    sourceObservedAt = canonicalUtcTimestamp(payload.sourceObservedAt);
+    firstSeenAt = canonicalUtcTimestamp(payload.firstSeenAt);
+    sourcePublishedAt = payload.sourcePublishedAt === null
+      ? null
+      : canonicalUtcTimestamp(payload.sourcePublishedAt);
+  } catch {
+    throw new OfficialProgramShadowPayloadError("official program shadow metadata invalid");
+  }
+  if (requestStartedAt !== payload.requestStartedAt
+    || responseHeadersReceivedAt !== payload.responseHeadersReceivedAt
+    || bodyCompletedAt !== payload.bodyCompletedAt
+    || sourceObservedAt !== payload.sourceObservedAt
+    || firstSeenAt !== payload.firstSeenAt
+    || sourcePublishedAt !== payload.sourcePublishedAt
+    || Date.parse(responseHeadersReceivedAt) < Date.parse(requestStartedAt)
+    || Date.parse(bodyCompletedAt) < Date.parse(responseHeadersReceivedAt)
+    || bodyCompletedAt !== sourceObservedAt
+    || (sourcePublishedAt !== null && Date.parse(sourcePublishedAt) > Date.parse(sourceObservedAt))
+    || Date.parse(sourceObservedAt) > Date.parse(firstSeenAt)
+    || payload.httpStatus < 100
+    || payload.httpStatus > 599) {
+    throw new OfficialProgramShadowPayloadError("official program shadow metadata invalid");
   }
   return payload;
 }
