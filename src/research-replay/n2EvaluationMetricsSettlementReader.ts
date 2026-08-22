@@ -7,7 +7,7 @@ import { enumerateBetSelections } from "./n2DatasetContract";
 import { readCurrentlyValidSourceDuplicateObservationIds } from "./n1SourceDuplicateResolutionValidation";
 
 export const N2_EVALUATION_METRICS_SETTLEMENT_READER_VERSION =
-  "n2-evaluation-metrics-settlement-reader-v1" as const;
+  "n2-evaluation-metrics-settlement-reader-v2" as const;
 
 const SELECTIONS = new Set(enumerateBetSelections("trifecta"));
 const RACE_KEY_RE = /^(\d{4}-\d{2}-\d{2}):(0[1-9]|1\d|2[0-4]):R([1-9]|1[0-2])$/u;
