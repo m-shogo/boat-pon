@@ -34,6 +34,8 @@ function fixture(): DatabaseSync {
       candidate_id TEXT PRIMARY KEY,
       canonical_race_key TEXT NOT NULL,
       bet_type TEXT NOT NULL,
+      settlement_status TEXT NOT NULL,
+      result_kind TEXT NOT NULL,
       revision_kind TEXT NOT NULL,
       observation_id TEXT NOT NULL,
       parse_run_id TEXT NOT NULL,
@@ -48,9 +50,9 @@ function fixture(): DatabaseSync {
   const insertObservation = db.prepare("INSERT INTO domain_observations VALUES (?,?,?,?,?,?,?,?,?)");
   insertObservation.run("obs-canonical", RACE_KEY, "settlement_result", "settlement_result", RAW_ID, PARSE_ID, null, null, null);
   insertObservation.run("obs-duplicate", RACE_KEY, "settlement_result", "settlement_result", RAW_ID, PARSE_ID, null, null, null);
-  const insertCandidate = db.prepare("INSERT INTO settlement_candidates_v2 VALUES (?,?,?,?,?,?,?,?,?,?)");
-  insertCandidate.run("candidate-canonical", RACE_KEY, "trifecta", "initial", "obs-canonical", PARSE_ID, RAW_ID, "same-semantic", null, null);
-  insertCandidate.run("candidate-duplicate", RACE_KEY, "trifecta", "initial", "obs-duplicate", "parse-2", "raw-2", "same-semantic", null, null);
+  const insertCandidate = db.prepare("INSERT INTO settlement_candidates_v2 VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
+  insertCandidate.run("candidate-canonical", RACE_KEY, "trifecta", "settled", "normal", "initial", "obs-canonical", PARSE_ID, RAW_ID, "same-semantic", null, null);
+  insertCandidate.run("candidate-duplicate", RACE_KEY, "trifecta", "settled", "normal", "initial", "obs-duplicate", "parse-2", "raw-2", "same-semantic", null, null);
   return db;
 }
 
