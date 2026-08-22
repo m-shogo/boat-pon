@@ -85,7 +85,18 @@ function createSidecar(root: string): string {
       line_kind TEXT NOT NULL
     );
     CREATE TABLE settlement_source_duplicate_resolutions_v2 (
-      duplicate_observation_id TEXT PRIMARY KEY
+      resolution_id TEXT PRIMARY KEY,
+      duplicate_observation_id TEXT NOT NULL,
+      canonical_observation_id TEXT NOT NULL,
+      canonical_race_key TEXT NOT NULL,
+      raw_document_id TEXT NOT NULL,
+      source_archive_file TEXT NOT NULL,
+      resolution_kind TEXT NOT NULL,
+      detection_reason TEXT NOT NULL,
+      duplicate_semantic_digest TEXT NOT NULL,
+      resolver_version TEXT NOT NULL,
+      policy_version TEXT NOT NULL,
+      schema_version TEXT NOT NULL
     );
   `);
   db.close();
@@ -208,6 +219,33 @@ test("duplicate active settlement candidates fail closed for that race", () => {
     const result = readN2MarketBaselineReadiness({ dataRoot: root });
     assert.deepEqual(result.settledRaceKeys, []);
     assert.deepEqual(result.integrityBlockedRaceKeys, ["2026-08-07:10:R1"]);
+  });
+});
+
+test("stale source-duplicate evidence blocks settlement readiness", () => {
+  withRoot((root) => {
+    writeAcceptedT5(root, { date: "2026-08-07", venue: "10", raceNo: 1 });
+    const sidecar = createSidecar(root);
+    insertCandidate(sidecar, {
+      raceKey: "2026-08-07:10:R1",
+      candidateId: "c1",
+      status: "settled",
+      payoutSelection: "1-2-3",
+    });
+    const db = new DatabaseSync(sidecar);
+    try {
+      db.prepare(`INSERT INTO settlement_source_duplicate_resolutions_v2
+        VALUES ('stale','obs-c1','missing-observation','2026-08-07:10:R1','raw-c1','k260807.lzh','source_duplicate','stale','deadbeef','stale','stale','stale')`).run();
+    } finally {
+      db.close();
+    }
+
+    const result = readN2MarketBaselineReadiness({ dataRoot: root });
+    assert.deepEqual(result.settledRaceKeys, []);
+    assert.deepEqual(result.sourceBlockers, ["SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID"]);
+    assert.equal(result.settlementEligibleRaceCount, 0);
+    assert.equal(result.databaseReadCount, 0);
+    assert.equal(result.rawOddsValuesRead, false);
   });
 });
 
