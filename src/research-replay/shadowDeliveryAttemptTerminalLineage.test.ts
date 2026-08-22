@@ -30,12 +30,13 @@ test("shadow attempt history rejects an attempt appended after a terminal outcom
       INSERT INTO shadow_delivery_attempts
       (delivery_attempt_id, outbox_message_id, attempt_no, outcome, error_code,
        started_at, completed_at, next_available_at, created_at)
-      VALUES (?, 'message-1', ?, ?, NULL, ?, ?, NULL, ?)
+      VALUES (?, 'message-1', ?, ?, ?, ?, ?, NULL, ?)
     `);
     insertAttempt.run(
       "attempt-1",
       1,
       "permanent_failure",
+      "FIXTURE_PERMANENT_FAILURE",
       "2026-08-02T04:00:01.000Z",
       "2026-08-02T04:00:02.000Z",
       "2026-08-02T04:00:02.000Z",
@@ -44,6 +45,7 @@ test("shadow attempt history rejects an attempt appended after a terminal outcom
       "attempt-2",
       2,
       "succeeded",
+      null,
       "2026-08-02T04:00:03.000Z",
       "2026-08-02T04:00:04.000Z",
       "2026-08-02T04:00:04.000Z",
