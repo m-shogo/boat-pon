@@ -17,6 +17,7 @@ export const N2_EDGE_DISCOVERY_HISTORY_FROM_DATE = "2003-07-05" as const;
 
 const CANONICAL_RACE_KEY_RE = /^(\d{4}-\d{2}-\d{2}):(0[1-9]|1\d|2[0-4]):R([1-9]|1[0-2])$/u;
 const TRIFECTA_SELECTION_RE = /^[1-6]-[1-6]-[1-6]$/u;
+const REUSABLE_PARSE_STATUSES = new Set(["success", "warning"]);
 
 export type N2EdgeDiscoveryCandidate = {
   canonicalRaceKey: string;
@@ -61,7 +62,20 @@ export type N2EdgeDiscoverySourceRead = {
   outputDigest: string;
 };
 
-type WinnerRow = { raceKey: string; observationId: string; winningSelection: string | null };
+type WinnerRow = {
+  raceKey: string;
+  observationId: string;
+  candidateParseRunId: string;
+  candidateRawDocumentId: string;
+  observationRaceKey: string | null;
+  observationType: string | null;
+  observationPayloadType: string | null;
+  observationParseRunId: string | null;
+  observationRawDocumentId: string | null;
+  parseRunRawDocumentId: string | null;
+  parseRunStatus: string | null;
+  winningSelection: string | null;
+};
 type ProgramRow = {
   raceId: string;
   date: string;
@@ -173,6 +187,8 @@ function readHistoricalOutcomes(path: string): { rows: N2HistoricalOutcomeRow[];
   const db = openImmutableSidecar(path);
   try {
     for (const table of [
+      "domain_observations",
+      "parse_runs",
       "settlement_candidates_v2",
       "race_payout_lines_v2",
       "settlement_source_duplicate_resolutions_v2",
@@ -186,8 +202,22 @@ function readHistoricalOutcomes(path: string): { rows: N2HistoricalOutcomeRow[];
       return { rows: [], blockers: ["SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID"] };
     }
     const raw = db.prepare(`
-      SELECT c.canonical_race_key AS raceKey, c.observation_id AS observationId, p.selection_canonical AS winningSelection
+      SELECT
+        c.canonical_race_key AS raceKey,
+        c.observation_id AS observationId,
+        c.parse_run_id AS candidateParseRunId,
+        c.raw_document_id AS candidateRawDocumentId,
+        o.canonical_race_key AS observationRaceKey,
+        o.observation_type AS observationType,
+        o.payload_type AS observationPayloadType,
+        o.parse_run_id AS observationParseRunId,
+        o.raw_document_id AS observationRawDocumentId,
+        pr.raw_document_id AS parseRunRawDocumentId,
+        pr.status AS parseRunStatus,
+        p.selection_canonical AS winningSelection
       FROM settlement_candidates_v2 c
+      LEFT JOIN domain_observations o ON o.observation_id=c.observation_id
+      LEFT JOIN parse_runs pr ON pr.parse_run_id=c.parse_run_id
       JOIN race_payout_lines_v2 p
         ON p.candidate_id=c.candidate_id
        AND p.bet_type='trifecta'
@@ -213,13 +243,24 @@ function readHistoricalOutcomes(path: string): { rows: N2HistoricalOutcomeRow[];
     `).all(N2_EDGE_DISCOVERY_HISTORY_FROM_DATE, N2_EDGE_DISCOVERY_TO_DATE) as unknown as WinnerRow[];
 
     const grouped = new Map<string, string[]>();
+    const blockers: string[] = [];
     for (const row of raw) {
       if (validResolvedObservationIds.has(row.observationId)) continue;
+      if (row.observationRaceKey !== row.raceKey
+        || row.observationType !== "settlement_result"
+        || row.observationPayloadType !== "settlement_result"
+        || row.observationParseRunId !== row.candidateParseRunId
+        || row.observationRawDocumentId !== row.candidateRawDocumentId
+        || row.parseRunRawDocumentId !== row.candidateRawDocumentId
+        || row.parseRunStatus == null
+        || !REUSABLE_PARSE_STATUSES.has(row.parseRunStatus)) {
+        blockers.push(`${row.raceKey}:SETTLEMENT_LINEAGE_MISMATCH:${row.observationId}`);
+        continue;
+      }
       const current = grouped.get(row.raceKey) ?? [];
       if (row.winningSelection != null) current.push(row.winningSelection);
       grouped.set(row.raceKey, current);
     }
-    const blockers: string[] = [];
     const rows: N2HistoricalOutcomeRow[] = [];
     for (const [raceKey, selections] of grouped.entries()) {
       if (!validRaceKey(raceKey)) {
