@@ -4,6 +4,7 @@ import { basename, isAbsolute, join, resolve } from "node:path";
 
 import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import { parseCanonicalRaceKey } from "./identity";
+import { fileDate } from "./n1Backfill";
 import { BET_TYPES } from "./settlement";
 
 export const N2_SETTLEMENT_REPARSE_CHECKPOINT_VERSION = "n2-settlement-reparse-checkpoint-v5";
@@ -164,7 +165,11 @@ function requireNonNegativeSafeInteger(value: unknown, label: string): number {
 
 type ReparseDelta = { false_refund: number; result_kind: number; special_addition: number };
 
-function assertDeltaEntries(value: unknown, label: string): { total: number; entries: Map<string, ReparseDelta> } {
+function assertDeltaEntries(
+  value: unknown,
+  label: string,
+  allowedKeys: ReadonlySet<string>,
+): { total: number; entries: Map<string, ReparseDelta> } {
   if (!Array.isArray(value)) {
     throw new Error(`REPARSE_CHECKPOINT_REPORT_TABLE_INVALID:${label}`);
   }
@@ -173,6 +178,9 @@ function assertDeltaEntries(value: unknown, label: string): { total: number; ent
   for (const entry of value) {
     if (!Array.isArray(entry) || entry.length !== 2 || typeof entry[0] !== "string" || entry[0].trim() !== entry[0] || entry[0].length === 0) {
       throw new Error(`REPARSE_CHECKPOINT_REPORT_ENTRY_INVALID:${label}`);
+    }
+    if (!allowedKeys.has(entry[0])) {
+      throw new Error(`REPARSE_CHECKPOINT_REPORT_KEY_INVALID:${label}:${entry[0]}`);
     }
     if (entries.has(entry[0])) {
       throw new Error(`REPARSE_CHECKPOINT_REPORT_KEY_DUPLICATE:${label}:${entry[0]}`);
@@ -314,9 +322,10 @@ function assertN2SettlementReparseStateAggregates(state: Record<string, unknown>
     seenRawDocs.add(rawDocumentId);
   }
 
+  const processedYears = new Set((processedFiles as string[]).map((file) => fileDate(file).slice(0, 4)));
   const appendedCandidates = requireNonNegativeSafeInteger(countRecord.appended_candidates, "appended_candidates");
-  const yearAggregate = assertDeltaEntries(state.byYear, "byYear");
-  const betAggregate = assertDeltaEntries(state.byBetType, "byBetType");
+  const yearAggregate = assertDeltaEntries(state.byYear, "byYear", processedYears);
+  const betAggregate = assertDeltaEntries(state.byBetType, "byBetType", BET_TYPE_SET);
   if (yearAggregate.total !== appendedCandidates || betAggregate.total !== appendedCandidates) {
     throw new Error("REPARSE_CHECKPOINT_REPORT_TOTAL_MISMATCH");
   }
