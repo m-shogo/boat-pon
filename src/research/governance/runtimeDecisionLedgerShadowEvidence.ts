@@ -174,6 +174,12 @@ function nonNegativeSafeInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 }
 
+function canonicalGeneratedAt(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) && new Date(parsed).toISOString() === value;
+}
+
 function expectedRate(count: number, total: number): number | null {
   return total === 0 ? null : count / total;
 }
@@ -310,7 +316,7 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
   if (evidence.schemaVersion !== RUNTIME_DECISION_LEDGER_SHADOW_EVIDENCE_SCHEMA_VERSION) {
     errors.push(`schemaVersion must be ${RUNTIME_DECISION_LEDGER_SHADOW_EVIDENCE_SCHEMA_VERSION}`);
   }
-  if (!Number.isFinite(Date.parse(evidence.generatedAt))) errors.push("generatedAt must be a date-time");
+  if (!canonicalGeneratedAt(evidence.generatedAt)) errors.push("generatedAt must be a canonical UTC date-time");
   if (!(["PASS", "CONDITIONAL", "FAILED"] as string[]).includes(evidence.verdict)) errors.push("invalid verdict");
   for (const [name, valueToCheck] of [
     ["sourceDescriptorDigest", evidence.sourceDescriptorDigest],
@@ -323,6 +329,26 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
 
   if (evidence.sourceDescriptorDigest !== digest(evidence.source)) {
     errors.push("sourceDescriptorDigest mismatch");
+  }
+
+  const source = evidence.source;
+  for (const [name, count] of [
+    ["fileSizeBytes", source.fileSizeBytes],
+    ["sqliteSchemaVersion", source.sqliteSchemaVersion],
+    ["sqliteUserVersion", source.sqliteUserVersion],
+    ["pageCount", source.pageCount],
+    ["freelistCount", source.freelistCount],
+  ] as const) {
+    if (!nonNegativeSafeInteger(count)) errors.push(`source.${name} must be a non-negative safe integer`);
+  }
+  if (!Number.isSafeInteger(source.pageSizeBytes) || source.pageSizeBytes < 1) {
+    errors.push("source.pageSizeBytes must be a positive safe integer");
+  }
+  if (!Number.isFinite(source.modifiedTimeMs) || source.modifiedTimeMs < 0) {
+    errors.push("source.modifiedTimeMs must be a non-negative finite number");
+  }
+  if (typeof source.journalMode !== "string" || source.journalMode.trim().length === 0) {
+    errors.push("source.journalMode must be a non-empty string");
   }
 
   const r = evidence.reconciliation;
