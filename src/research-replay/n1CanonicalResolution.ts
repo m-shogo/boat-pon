@@ -330,6 +330,43 @@ function scalar(db: DatabaseSync, sql: string): number {
   return Number((db.prepare(sql).get() as { c: number }).c);
 }
 
+function validateCurrentSourceDuplicateResolutionEvidence(db: DatabaseSync): void {
+  const rows = db.prepare(`
+    SELECT resolution_id AS resolutionId, duplicate_observation_id AS duplicateObservationId
+    FROM settlement_source_duplicate_resolutions_v2
+    ORDER BY duplicate_observation_id, resolution_id
+  `).all() as unknown as Array<{ resolutionId: string; duplicateObservationId: string }>;
+  if (rows.length === 0) return;
+
+  const plan = planSourceDuplicateResolution(db);
+  const currentByDuplicate = new Map<string, DuplicateResolutionPlanItem[]>();
+  for (const item of plan.plannedResolutions) {
+    const current = currentByDuplicate.get(item.duplicateObservationId) ?? [];
+    current.push(item);
+    currentByDuplicate.set(item.duplicateObservationId, current);
+  }
+
+  const seen = new Set<string>();
+  for (const row of rows) {
+    const current = currentByDuplicate.get(row.duplicateObservationId) ?? [];
+    if (seen.has(row.duplicateObservationId) || current.length !== 1) {
+      throw new Error(`SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID:${row.duplicateObservationId}`);
+    }
+    try {
+      requireSourceDuplicateResolutionContract(
+        db,
+        row.resolutionId,
+        current[0],
+        plan.resolverVersion,
+        plan.policyVersion,
+      );
+    } catch {
+      throw new Error(`SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID:${row.duplicateObservationId}`);
+    }
+    seen.add(row.duplicateObservationId);
+  }
+}
+
 export type CanonicalDuplicateAudit = {
   rawObservations: number;
   rawDistinctRaceKeys: number;
@@ -345,6 +382,7 @@ export type CanonicalDuplicateAudit = {
 };
 
 export function auditCanonicalDuplicates(db: DatabaseSync): CanonicalDuplicateAudit {
+  validateCurrentSourceDuplicateResolutionEvidence(db);
   const rawObservations = scalar(db, `SELECT COUNT(*) c FROM domain_observations o WHERE ${SOURCE_SETTLEMENT_OBSERVATION_WHERE_O}`);
   const rawDistinctRaceKeys = scalar(db, `SELECT COUNT(DISTINCT o.canonical_race_key) c FROM domain_observations o WHERE ${SOURCE_SETTLEMENT_OBSERVATION_WHERE_O}`);
   // active duplicate observations: resolved duplicate を除いた上で race あたり >1 source settlement observation の余剰
