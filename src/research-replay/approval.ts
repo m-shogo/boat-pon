@@ -49,6 +49,18 @@ type ApprovalGrantRow = {
   recorded_at: string;
 };
 
+type ApprovalLifecycleRow = {
+  lifecycle_event_id: string;
+  event_kind: ApprovalLifecycleInput["eventKind"];
+  subject_approval_id: string;
+  replacement_approval_id: string | null;
+  reason: string;
+  source: string;
+  reference: string;
+  occurred_at: string;
+  content_hash: string;
+};
+
 function required(name: string, value: string): string {
   if (typeof value !== "string" || value.trim() === "") {
     throw new Error(`approval field required: ${name}`);
@@ -301,22 +313,23 @@ export function resolveApproval(
   if (row.content_hash !== expectedHash) {
     return { ...base, ...selected, approved: false, code: "APPROVAL_HASH_INVALID" };
   }
-  const lifecycle = db.prepare(`
+  const lifecycleRows = db.prepare(`
     SELECT lifecycle_event_id, event_kind, subject_approval_id, replacement_approval_id,
            reason, source, reference, occurred_at, content_hash
     FROM rollout_approval_lifecycle_events_v2
-    WHERE subject_approval_id=? ORDER BY occurred_at DESC, rowid DESC LIMIT 1
-  `).get(row.approval_id) as {
-    lifecycle_event_id: string;
-    event_kind: ApprovalLifecycleInput["eventKind"];
-    subject_approval_id: string;
-    replacement_approval_id: string | null;
-    reason: string;
-    source: string;
-    reference: string;
-    occurred_at: string;
-    content_hash: string;
-  } | undefined;
+    WHERE subject_approval_id=? ORDER BY occurred_at DESC, rowid DESC
+  `).all(row.approval_id) as ApprovalLifecycleRow[];
+  if (lifecycleRows.some((candidate) => !isCanonicalStoredInstant(candidate.occurred_at))) {
+    return { ...base, ...selected, approved: false, code: "APPROVAL_TIMESTAMP_INVALID" };
+  }
+  const latestLifecycleAt = lifecycleRows[0]?.occurred_at;
+  const latestLifecycleRows = latestLifecycleAt == null
+    ? []
+    : lifecycleRows.filter((candidate) => candidate.occurred_at === latestLifecycleAt);
+  if (latestLifecycleRows.length > 1) {
+    return { ...base, ...selected, approved: false, code: "APPROVAL_AMBIGUOUS" };
+  }
+  const lifecycle = latestLifecycleRows[0];
   if (lifecycle && lifecycle.content_hash !== lifecycleHash({
     lifecycleEventId: lifecycle.lifecycle_event_id,
     eventKind: lifecycle.event_kind,
