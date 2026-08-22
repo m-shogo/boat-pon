@@ -76,3 +76,56 @@ test("shadow operability refuses delivery evidence that occurs after report asOf
     }), /future shadow delivery attempt timestamp/);
   });
 });
+
+test("shadow operability refuses outbox rows created after report asOf", () => {
+  withDb((db) => {
+    db.prepare(`
+      INSERT INTO shadow_outbox_messages
+      (outbox_message_id, idempotency_key, message_type, payload_json, payload_hash,
+       enqueued_at, available_at, created_at)
+      VALUES ('future-message', 'future-message-key', 'fixture.v1', '{}', ?, ?, ?, ?)
+    `).run(
+      canonicalHash({}),
+      "2026-08-02T04:04:00.000Z",
+      "2026-08-02T04:04:00.000Z",
+      "2026-08-02T04:10:00.000Z",
+    );
+    assert.throws(() => buildShadowOperabilityReport(db, {
+      policyVersion: "fixture-asof-v1",
+      asOf: "2026-08-02T04:05:00.000Z",
+      diagnosticsWindowMs: 60_000,
+      thresholds,
+    }), /future outbox created timestamp/);
+  });
+});
+
+test("shadow operability refuses diagnostics created after report asOf", () => {
+  withDb((db) => {
+    const diagnostics = {
+      succeeded: 0,
+      retrying: 0,
+      permanentlyFailed: 0,
+      examined: 1,
+      contended: 1,
+      skippedAfterClaim: 0,
+      handlerDeadlineExceeded: 0,
+    };
+    db.prepare(`
+      INSERT INTO operational_audit_events
+      (audit_event_id, operation_id, event_kind, subject_type, subject_id,
+       detail_json, occurred_at, created_at)
+      VALUES ('future-audit', 'future-operation', 'health_snapshot',
+              'shadow_outbox_drain', 'current', ?, ?, ?)
+    `).run(
+      JSON.stringify({ drainDiagnostics: diagnostics }),
+      "2026-08-02T04:04:00.000Z",
+      "2026-08-02T04:10:00.000Z",
+    );
+    assert.throws(() => buildShadowOperabilityReport(db, {
+      policyVersion: "fixture-asof-v1",
+      asOf: "2026-08-02T04:05:00.000Z",
+      diagnosticsWindowMs: 60_000,
+      thresholds,
+    }), /future shadow drain diagnostic created_at/);
+  });
+});
