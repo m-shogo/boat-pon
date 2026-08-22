@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 
 import { parseCanonicalRaceKey } from "./identity";
+import { readCurrentlyValidSourceDuplicateObservationIds } from "./n1SourceDuplicateResolutionValidation";
 import {
   N2_HISTORICAL_EVALUATION_COHORT_RACE_COUNT,
   N2_HISTORICAL_LOOKBACK_DAYS,
@@ -43,6 +44,7 @@ export type N2HistoricalOnlyBaselineSourceRead = {
 
 type WinnerRow = {
   raceKey: string;
+  observationId: string;
   winningSelection: string | null;
 };
 
@@ -117,9 +119,16 @@ function readCleanTrifectaWinners(input: {
     ]) {
       if (!tableExists(db, table)) return { rows: [], blockers: [`SIDECAR_TABLE_MISSING:${table}`] };
     }
+    let validResolvedObservationIds: Set<string>;
+    try {
+      validResolvedObservationIds = readCurrentlyValidSourceDuplicateObservationIds(db);
+    } catch {
+      return { rows: [], blockers: ["SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID"] };
+    }
     const rawRows = db.prepare(`
       SELECT
         c.canonical_race_key AS raceKey,
+        c.observation_id AS observationId,
         p.selection_canonical AS winningSelection
       FROM settlement_candidates_v2 c
       JOIN race_payout_lines_v2 p
@@ -133,10 +142,6 @@ function readCleanTrifectaWinners(input: {
         AND c.resolution_status='resolved'
         AND substr(c.canonical_race_key,1,10) >= ?
         AND substr(c.canonical_race_key,1,10) <= ?
-        AND NOT EXISTS (
-          SELECT 1 FROM settlement_source_duplicate_resolutions_v2 d
-          WHERE d.duplicate_observation_id=c.observation_id
-        )
         AND NOT EXISTS (
           SELECT 1 FROM settlement_candidates_v2 newer
           WHERE newer.supersedes_candidate_id=c.candidate_id
@@ -152,6 +157,7 @@ function readCleanTrifectaWinners(input: {
 
     const grouped = new Map<string, string[]>();
     for (const row of rawRows) {
+      if (validResolvedObservationIds.has(row.observationId)) continue;
       const current = grouped.get(row.raceKey) ?? [];
       if (row.winningSelection != null) current.push(row.winningSelection);
       grouped.set(row.raceKey, current);
