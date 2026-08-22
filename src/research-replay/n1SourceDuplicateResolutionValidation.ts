@@ -143,6 +143,10 @@ function resolutionRowValid(db: DatabaseSync, row: ResolutionRow): boolean {
 }
 
 export function readCurrentlyValidSourceDuplicateObservationIds(db: DatabaseSync): Set<string> {
+  const countRow = db.prepare("SELECT COUNT(*) AS count FROM settlement_source_duplicate_resolutions_v2")
+    .get() as { count: number } | undefined;
+  if (Number(countRow?.count ?? 0) === 0) return new Set<string>();
+
   const rows = db.prepare(`
     SELECT resolution_id AS resolutionId,
            duplicate_observation_id AS duplicateObservationId,
