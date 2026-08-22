@@ -47,6 +47,13 @@ function flag(value: number): boolean {
   return value === 1;
 }
 
+function assertCanonicalRolloutRow(row: RolloutRow): void {
+  assertCanonicalTimestamp(row.occurred_at);
+  flag(row.shadow_write_enabled);
+  flag(row.operational_gc_enabled);
+  flag(row.kill_switch_engaged);
+}
+
 export function readCanonicalRolloutState(sidecarDbPath: string): N2ObservationIngestRolloutState {
   const db = new DatabaseSync(`${pathToFileURL(sidecarDbPath).href}?immutable=1`, { readOnly: true } as never);
   db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=5000");
@@ -63,8 +70,11 @@ export function readCanonicalRolloutState(sidecarDbPath: string): N2ObservationI
       throw new Error("N2_READINESS_ROLLOUT_SCHEMA_INVALID");
     }
 
-    const timeline = db.prepare("SELECT occurred_at FROM rollout_config_events").all() as unknown as Array<{ occurred_at: unknown }>;
-    for (const event of timeline) assertCanonicalTimestamp(event.occurred_at);
+    const timeline = db.prepare(`
+      SELECT shadow_write_enabled, operational_gc_enabled, kill_switch_engaged, occurred_at
+      FROM rollout_config_events
+    `).all() as unknown as RolloutRow[];
+    for (const event of timeline) assertCanonicalRolloutRow(event);
 
     const row = db.prepare(`
       SELECT shadow_write_enabled, operational_gc_enabled, kill_switch_engaged, occurred_at
@@ -79,7 +89,7 @@ export function readCanonicalRolloutState(sidecarDbPath: string): N2ObservationI
         killSwitchEngaged: false,
       };
     }
-    assertCanonicalTimestamp(row.occurred_at);
+    assertCanonicalRolloutRow(row);
     return {
       shadowWriteEnabled: flag(row.shadow_write_enabled),
       operationalGcEnabled: flag(row.operational_gc_enabled),

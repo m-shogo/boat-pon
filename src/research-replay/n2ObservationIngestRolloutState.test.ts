@@ -58,6 +58,25 @@ test("non-canonical rollout timestamps fail closed before latest-state selection
   }
 });
 
+test("invalid historical rollout flags fail closed before latest-state selection", () => {
+  const root = mkdtempSync(join(tmpdir(), "n2-readiness-rollout-flags-"));
+  const path = join(root, "research-replay.sqlite");
+  const db = createRolloutTable(path);
+  try {
+    db.prepare("INSERT INTO rollout_config_events VALUES(2, 0, 0, ?)").run("2026-08-20T09:00:00.000Z");
+    db.prepare("INSERT INTO rollout_config_events VALUES(0, 0, 0, ?)").run("2026-08-20T10:00:00.000Z");
+    db.close();
+
+    assert.throws(
+      () => readCanonicalRolloutState(path),
+      /N2_READINESS_ROLLOUT_FLAG_INVALID/,
+    );
+  } finally {
+    try { db.close(); } catch {}
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("incomplete rollout schema fails closed", () => {
   const root = mkdtempSync(join(tmpdir(), "n2-readiness-rollout-schema-"));
   const path = join(root, "research-replay.sqlite");
