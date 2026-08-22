@@ -185,7 +185,12 @@ export function buildShadowOperabilityReport(
     WHERE event_kind='health_snapshot' AND subject_type='shadow_outbox_drain'
     ORDER BY audit_event_id
   `).all() as ShadowDrainAuditRow[];
+  const seenDiagnosticOperations = new Set<string>();
   const auditRows = auditCandidates.filter((row) => {
+    if (seenDiagnosticOperations.has(row.operation_id)) {
+      throw new Error("duplicate shadow drain diagnostic operation");
+    }
+    seenDiagnosticOperations.add(row.operation_id);
     const occurredAtMs = timestampMs(row.occurred_at, "diagnostic occurred_at");
     const createdAtMs = timestampMs(row.created_at, "diagnostic created_at");
     if (createdAtMs > asOfMs) throw new Error("future shadow drain diagnostic created_at");
@@ -194,12 +199,7 @@ export function buildShadowOperabilityReport(
   let examined = 0;
   let contended = 0;
   let handlerDeadlineExceeded = 0;
-  const seenDiagnosticOperations = new Set<string>();
   for (const row of auditRows) {
-    if (seenDiagnosticOperations.has(row.operation_id)) {
-      throw new Error("duplicate shadow drain diagnostic operation");
-    }
-    seenDiagnosticOperations.add(row.operation_id);
     const diagnostics = parseDiagnostics(row.detail_json);
     examined += diagnostics.examined;
     contended += diagnostics.contended;
