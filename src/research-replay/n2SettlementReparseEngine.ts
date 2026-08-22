@@ -5,6 +5,7 @@
 // CLI（scripts/reparse-settlement-v2.ts）と integration test の両方から使う。
 import type { DatabaseSync } from "node:sqlite";
 import { canonicalHash } from "./canonical";
+import { readCurrentlyValidSourceDuplicateObservationIds } from "./n1SourceDuplicateResolutionValidation";
 import { SettlementRepository, type ResultKind, type SettlementBetType, type SettlementStatus } from "./settlement";
 import {
   REPARSE_ACTIONS, REPARSE_CANONICALIZATION_VERSION, REPARSE_PARSER_NAME, REPARSE_SOURCE_PARSER_VERSION,
@@ -57,9 +58,7 @@ function bump(map: Map<string, Delta>, key: string, field: keyof Delta): void {
 }
 
 export function loadSourceDuplicateSet(db: DatabaseSync): Set<string> {
-  const set = new Set<string>();
-  for (const r of db.prepare("SELECT duplicate_observation_id AS id FROM settlement_source_duplicate_resolutions_v2").all() as Array<{ id: string }>) set.add(r.id);
-  return set;
+  return readCurrentlyValidSourceDuplicateObservationIds(db);
 }
 
 // 1回の sequential full scan で active map・before status counts・physical rows を構築する。
