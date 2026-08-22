@@ -33,6 +33,7 @@ type ResolutionRow = {
 
 type ObservationRow = {
   observationId: string;
+  sourceOrder: number;
   canonicalRaceKey: string;
   rawDocumentId: string;
   parseRunId: string;
@@ -47,6 +48,7 @@ type CandidateRow = {
 function observation(db: DatabaseSync, observationId: string): ObservationRow | null {
   return (db.prepare(`
     SELECT observation_id AS observationId,
+           rowid AS sourceOrder,
            canonical_race_key AS canonicalRaceKey,
            raw_document_id AS rawDocumentId,
            parse_run_id AS parseRunId
@@ -85,7 +87,8 @@ function candidateDigest(
 
 function resolutionRowValid(db: DatabaseSync, row: ResolutionRow): boolean {
   if (
-    row.resolutionKind !== "source_duplicate"
+    row.duplicateObservationId === row.canonicalObservationId
+    || row.resolutionKind !== "source_duplicate"
     || row.detectionReason !== SOURCE_DUPLICATE_DETECTION_REASON
     || row.resolverVersion !== SOURCE_DUPLICATE_RESOLVER_VERSION
     || row.policyVersion !== SOURCE_DUPLICATE_POLICY_VERSION
@@ -104,7 +107,8 @@ function resolutionRowValid(db: DatabaseSync, row: ResolutionRow): boolean {
   const canonical = observation(db, row.canonicalObservationId);
   if (!duplicate || !canonical) return false;
   if (
-    duplicate.canonicalRaceKey !== row.canonicalRaceKey
+    canonical.sourceOrder >= duplicate.sourceOrder
+    || duplicate.canonicalRaceKey !== row.canonicalRaceKey
     || canonical.canonicalRaceKey !== row.canonicalRaceKey
     || duplicate.rawDocumentId !== row.rawDocumentId
     || canonical.rawDocumentId !== row.rawDocumentId
