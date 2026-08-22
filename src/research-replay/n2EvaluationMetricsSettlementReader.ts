@@ -11,6 +11,7 @@ export const N2_EVALUATION_METRICS_SETTLEMENT_READER_VERSION =
 
 const SELECTIONS = new Set(enumerateBetSelections("trifecta"));
 const RACE_KEY_RE = /^(\d{4}-\d{2}-\d{2}):(0[1-9]|1\d|2[0-4]):R([1-9]|1[0-2])$/u;
+const REUSABLE_PARSE_STATUSES = new Set(["success", "warning"]);
 
 export type N2EvaluationSettlement = {
   canonicalRaceKey: string;
@@ -43,6 +44,7 @@ type Row = {
   observationParseRunId: string;
   observationRawDocumentId: string;
   parseRunRawDocumentId: string;
+  parseRunStatus: string;
   winningSelection: string | null;
   payoutYen: number | null;
 };
@@ -135,6 +137,7 @@ export function readN2EvaluationMetricsSettlements(input: {
         o.parse_run_id AS observationParseRunId,
         o.raw_document_id AS observationRawDocumentId,
         pr.raw_document_id AS parseRunRawDocumentId,
+        pr.status AS parseRunStatus,
         p.selection_canonical AS winningSelection,
         p.payout_yen AS payoutYen
       FROM settlement_candidates_v2 c
@@ -173,7 +176,8 @@ export function readN2EvaluationMetricsSettlements(input: {
         || row.observationPayloadType !== "settlement_result"
         || row.observationParseRunId !== row.candidateParseRunId
         || row.observationRawDocumentId !== row.candidateRawDocumentId
-        || row.parseRunRawDocumentId !== row.candidateRawDocumentId) {
+        || row.parseRunRawDocumentId !== row.candidateRawDocumentId
+        || !REUSABLE_PARSE_STATUSES.has(row.parseRunStatus)) {
         blockers.push(`${row.raceKey}:SETTLEMENT_LINEAGE_MISMATCH:${row.observationId}`);
         continue;
       }
