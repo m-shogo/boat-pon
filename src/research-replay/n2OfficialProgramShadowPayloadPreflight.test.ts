@@ -61,6 +61,8 @@ test("official program shadow rejects invalid persisted metadata before primary 
       { ...payload(rawJson), sourceObservedAt: "2004-01-01T24:00:00.000Z" },
       { ...payload(rawJson), httpStatus: 999 },
       { ...payload(rawJson), canonicalRaceKey: "2004-02-30:01:R1" },
+      { ...payload(rawJson), sourceUrl: "file:///tmp/official-program.json" },
+      { ...payload(rawJson), sourceUrl: "ftp://example.invalid/program" },
     ];
 
     for (const invalid of cases) {
@@ -73,7 +75,7 @@ test("official program shadow rejects invalid persisted metadata before primary 
           primaryRawReads += 1;
           return rawJson;
         },
-      }), /OFFICIAL_PROGRAM_SHADOW_PAYLOAD_INVALID|official program shadow metadata invalid/);
+      }), /OFFICIAL_PROGRAM_SHADOW_PAYLOAD_INVALID|official program shadow (metadata|reference integrity) invalid/);
       assert.equal(primaryRawReads, 0);
     }
     assert.equal((db.prepare("SELECT COUNT(*) count FROM raw_documents").get() as { count: number }).count, 0);
