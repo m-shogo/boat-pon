@@ -15,6 +15,8 @@ test("readiness rejects normalized T-5 evidence traversal instead of counting th
 
     writeFileSync(join(markerDir, "accepted.json"), `${JSON.stringify({
       markerVersion: "n2-trifecta-private-capture-accepted-v1",
+      manifestDigest: "a".repeat(64),
+      checkpointKey: "b".repeat(64),
       raceIdentity: "20260807-05-01",
       checkpointLabel: "T-5",
       rawDocumentId: "rr-raw-fixture",
