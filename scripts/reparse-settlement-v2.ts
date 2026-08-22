@@ -30,6 +30,10 @@ import {
 } from "../src/research-replay/n2SettlementReparseCheckpoint";
 import { assertN2SettlementReparseProcessedArchiveLineage } from "../src/research-replay/n2SettlementReparseResumeLineage";
 import {
+  n2SettlementReparseDoneFiles,
+  normalizeN2SettlementReparseTerminalDuplicateFiles,
+} from "../src/research-replay/n2SettlementReparseTerminalDuplicates";
+import {
   REPARSE_CANONICALIZATION_VERSION, REPARSE_PARSER_NAME, REPARSE_RACE_IDENTITY_VERSION,
   REPARSE_REPORT_SCHEMA_VERSION, REPARSE_SCHEMA_VERSION, REPARSE_SOURCE_PARSER_VERSION,
   REPARSE_TARGET_PARSER_VERSION, deriveSettlementCandidates,
@@ -39,6 +43,11 @@ import {
   fullIntegrity, lightIntegrity, loadActiveState, loadSourceDuplicateSet, newState, physicalRowCount,
   type ActiveState, type Delta, type RawMeta, type ReparseState,
 } from "../src/research-replay/n2SettlementReparseEngine";
+
+type CliReparseState = ReparseState & { terminalDuplicateFiles: string[] };
+function newCliState(): CliReparseState {
+  return Object.assign(newState(), { terminalDuplicateFiles: [] as string[] });
+}
 
 const root = resolve(process.cwd());
 function argValue(name: string): string | null {
@@ -138,8 +147,7 @@ function makeTempCopy(): CopyResult {
 function openTarget(): DatabaseSync {
   const db = new DatabaseSync(targetPath);
   db.exec("PRAGMA journal_mode=WAL");
-  db.exec("PRAGMA foreign_keys=ON");
-  db.exec("PRAGMA busy_timeout=60000");
+  db.exec("PRAGMA foreign_keys=ON; PRAGMA busy_timeout=60000");
   return db;
 }
 
@@ -173,14 +181,18 @@ function selectCanaryFiles(all: string[]): string[] {
 }
 
 // archive file を1つ処理して engine の applyReparseForDocument へ渡す（file レベル count は CLI 側）。
-async function reparseFile(db: DatabaseSync, repo: SettlementRepository, byHash: Map<string, RawMeta>, activeState: ActiveState, path: string, state: ReparseState, processedRaw: Set<string>): Promise<void> {
+async function reparseFile(db: DatabaseSync, repo: SettlementRepository, byHash: Map<string, RawMeta>, activeState: ActiveState, path: string, state: CliReparseState, processedRaw: Set<string>): Promise<void> {
   state.counts.files_scanned += 1;
   let bytes: Buffer;
   try { bytes = await unpack(path); } catch { state.counts.parse_errors += 1; return; }
   const hash = createHash("sha256").update(bytes).digest("hex");
   const meta = byHash.get(hash);
   if (!meta) { state.counts.files_not_ingested += 1; return; }
-  if (processedRaw.has(meta.rawDocumentId)) { state.counts.files_duplicate_source += 1; return; }
+  if (processedRaw.has(meta.rawDocumentId)) {
+    state.counts.files_duplicate_source += 1;
+    state.terminalDuplicateFiles.push(basename(path));
+    return;
+  }
   processedRaw.add(meta.rawDocumentId);
   state.counts.files_ingested += 1;
   const text = new TextDecoder("shift_jis").decode(bytes);
@@ -190,10 +202,11 @@ async function reparseFile(db: DatabaseSync, repo: SettlementRepository, byHash:
   state.processedRawDocs.push(meta.rawDocumentId);
 }
 
-function serializeState(s: ReparseState, checkpointIdentity: N2SettlementReparseCheckpointIdentity): unknown {
+function serializeState(s: CliReparseState, checkpointIdentity: N2SettlementReparseCheckpointIdentity): unknown {
   const state = {
     version: REPARSE_SCHEMA_VERSION, counts: s.counts, corrections: s.corrections,
     processedFiles: s.processedFiles, processedRawDocs: s.processedRawDocs,
+    terminalDuplicateFiles: s.terminalDuplicateFiles,
     byYear: [...s.byYear.entries()].sort(), byBetType: [...s.byBetType.entries()].sort(),
   };
   return {
@@ -202,7 +215,7 @@ function serializeState(s: ReparseState, checkpointIdentity: N2SettlementReparse
     state,
   };
 }
-function loadState(path: string, expectedIdentity: N2SettlementReparseCheckpointIdentity): ReparseState | null {
+function loadState(path: string, expectedIdentity: N2SettlementReparseCheckpointIdentity): CliReparseState | null {
   if (!existsSync(path)) return null;
   const raw = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
   assertN2SettlementReparseCheckpointIdentity(raw.checkpointIdentity, expectedIdentity);
@@ -212,11 +225,16 @@ function loadState(path: string, expectedIdentity: N2SettlementReparseCheckpoint
   assertN2SettlementReparseCheckpointStateDigest(raw.stateDigest, expectedIdentity, raw.state);
   const saved = raw.state as Record<string, unknown>;
   if (saved.version !== REPARSE_SCHEMA_VERSION) throw new Error("REPARSE_CHECKPOINT_STATE_VERSION_MISMATCH");
-  const s = newState();
+  const s = newCliState();
   Object.assign(s.counts, saved.counts);
   s.corrections = saved.corrections as ReparseState["corrections"];
   s.processedFiles = saved.processedFiles as string[];
   s.processedRawDocs = saved.processedRawDocs as string[];
+  s.terminalDuplicateFiles = normalizeN2SettlementReparseTerminalDuplicateFiles({
+    value: saved.terminalDuplicateFiles,
+    selectedFileBasenames: expectedIdentity.selectedFileBasenames,
+    processedFiles: s.processedFiles,
+  });
   for (const [k, v] of saved.byYear as Array<[string, Delta]>) s.byYear.set(k, v);
   for (const [k, v] of saved.byBetType as Array<[string, Delta]>) s.byBetType.set(k, v);
   return s;
@@ -252,14 +270,14 @@ async function runPass(
   byHash: Map<string, RawMeta>,
   activeState: ActiveState,
   files: string[],
-  state: ReparseState,
+  state: CliReparseState,
   label: string,
   checkpointIdentity: N2SettlementReparseCheckpointIdentity,
   persistCheckpoint = true,
 ): Promise<void> {
   const processedRaw = new Set<string>(state.processedRawDocs);
-  const done = new Set(state.processedFiles);
-  let processed = state.processedFiles.length;
+  const done = n2SettlementReparseDoneFiles(state.processedFiles, state.terminalDuplicateFiles);
+  let processed = done.size;
   for (const path of files) {
     if (done.has(basename(path))) continue;
     await reparseFile(db, repo, byHash, activeState, path, state, processedRaw);
@@ -329,7 +347,7 @@ async function main(): Promise<void> {
     const resumedState = resume ? loadState(checkpointPath, checkpointIdentity) : null;
     if (resume && resumedState === null) throw new Error("REPARSE_CHECKPOINT_MISSING");
     if (resumedState !== null) await assertResumeProcessedArchiveLineage(resumedState, files, byHash);
-    const state = resumedState ?? newState();
+    const state = resumedState ?? newCliState();
     await runPass(db, repo, byHash, activeState, files, state, canary ? "canary" : "full", checkpointIdentity);
 
     let secondRun: { appended: number; supersessions: number } | null = null;
@@ -338,7 +356,7 @@ async function main(): Promise<void> {
       activeState.active.clear();
       db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
       const active2 = loadActiveState(db, sourceDup);
-      const s2 = newState();
+      const s2 = newCliState();
       await runPass(db, repo, byHash, active2, files, s2, "second", checkpointIdentity, false);
       secondRun = { appended: s2.counts.appended_candidates, supersessions: s2.counts.supersession_relations };
     }
