@@ -116,7 +116,7 @@ export function buildShadowOperabilityReport(
   const asOf = canonicalUtcTimestamp(input.asOf);
   if (asOf !== input.asOf) throw new Error("non-canonical report asOf");
   const asOfMs = timestampMs(asOf, "report asOf");
-  const windowStart = new Date(asOfMs - input.diagnosticsWindowMs).toISOString();
+  const windowStartMs = asOfMs - input.diagnosticsWindowMs;
 
   const rows = db.prepare(`
     SELECT m.enqueued_at, m.available_at,
@@ -153,17 +153,19 @@ export function buildShadowOperabilityReport(
     if (timestampMs(effectiveAvailableAt, "effective available_at") <= asOfMs) readyQueued += 1;
   }
 
-  const auditRows = db.prepare(`
+  const auditCandidates = db.prepare(`
     SELECT occurred_at, detail_json FROM operational_audit_events
     WHERE event_kind='health_snapshot' AND subject_type='shadow_outbox_drain'
-      AND occurred_at >= ? AND occurred_at <= ?
-    ORDER BY occurred_at, audit_event_id
-  `).all(windowStart, asOf) as Array<{ occurred_at: string; detail_json: string }>;
+    ORDER BY audit_event_id
+  `).all() as Array<{ occurred_at: string; detail_json: string }>;
+  const auditRows = auditCandidates.filter((row) => {
+    const occurredAtMs = timestampMs(row.occurred_at, "diagnostic occurred_at");
+    return occurredAtMs >= windowStartMs && occurredAtMs <= asOfMs;
+  });
   let examined = 0;
   let contended = 0;
   let handlerDeadlineExceeded = 0;
   for (const row of auditRows) {
-    timestampMs(row.occurred_at, "diagnostic occurred_at");
     const diagnostics = parseDiagnostics(row.detail_json);
     examined += diagnostics.examined;
     contended += diagnostics.contended;
