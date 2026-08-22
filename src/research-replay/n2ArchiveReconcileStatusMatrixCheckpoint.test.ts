@@ -41,7 +41,7 @@ const cell = {
   falseRefund: 1,
 };
 
-const aggregateKey = "2026\u0000trifecta\u0000Toda";
+const aggregateKey = "2026\u0000trifecta\u0000戸田";
 const state = {
   version: RECONCILE_INPUT_VERSION,
   cells: [[aggregateKey, cell]],
@@ -81,10 +81,7 @@ test("archive reconcile resume rejects impossible status transitions", () => {
 test("archive reconcile resume rejects zero-count transition evidence", () => {
   const tampered = {
     ...state,
-    cells: [[aggregateKey, { ...cell, status_mismatch: 0, falseRefund: 0 }]],
-    paired: [],
     statusMatrix: [["refunded->settled", 0]],
-    samples: [],
   };
   assert.throws(
     () => assertState(tampered),

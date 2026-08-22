@@ -65,7 +65,7 @@ test("archive reconcile checkpoint state digest binds processed-file resume stat
 });
 
 test("archive reconcile resume accepts producer-consistent paired counts", () => {
-  const key = "2026\u0000trifecta\u0000Toda";
+  const key = "2026\u0000trifecta\u0000戸田";
   const pairedState = {
     ...state,
     cells: [[key, { ...emptyCell, exact_match: 1 }]],
@@ -76,7 +76,7 @@ test("archive reconcile resume accepts producer-consistent paired counts", () =>
 });
 
 test("archive reconcile resume accepts producer-consistent mismatch samples", () => {
-  const key = "2026\u0000trifecta\u0000Toda";
+  const key = "2026\u0000trifecta\u0000戸田";
   const mismatchState = {
     ...state,
     cells: [[key, { ...emptyCell, status_mismatch: 1, falseRefund: 1 }]],
@@ -89,7 +89,7 @@ test("archive reconcile resume accepts producer-consistent mismatch samples", ()
 });
 
 test("archive reconcile resume rejects rehashed mismatch sample deletion", () => {
-  const key = "2026\u0000trifecta\u0000Toda";
+  const key = "2026\u0000trifecta\u0000戸田";
   const tampered = {
     ...state,
     cells: [[key, { ...emptyCell, status_mismatch: 1, falseRefund: 1 }]],
@@ -105,7 +105,7 @@ test("archive reconcile resume rejects rehashed mismatch sample deletion", () =>
 });
 
 test("archive reconcile resume rejects rehashed impossible mismatch samples", () => {
-  const key = "2026\u0000trifecta\u0000Toda";
+  const key = "2026\u0000trifecta\u0000戸田";
   const tampered = {
     ...state,
     cells: [[key, { ...emptyCell, status_mismatch: 1, falseRefund: 1 }]],
@@ -141,7 +141,7 @@ test("archive reconcile resume rejects rehashed duplicate processed files", () =
 test("archive reconcile resume rejects rehashed negative aggregate counts", () => {
   const tampered = {
     ...state,
-    cells: [["2026\u0000trifecta\u0000Toda", { ...emptyCell, exact_match: -1 }]],
+    cells: [["2026\u0000trifecta\u0000戸田", { ...emptyCell, exact_match: -1 }]],
   };
   const digest = buildArchiveReconcileCheckpointStateDigest(contract, tampered);
   assert.throws(
@@ -153,7 +153,7 @@ test("archive reconcile resume rejects rehashed negative aggregate counts", () =
 test("archive reconcile resume rejects rehashed unsafe aggregate counts", () => {
   const tampered = {
     ...state,
-    paired: [["2026\u0000trifecta\u0000Toda", Number.MAX_SAFE_INTEGER + 1]],
+    paired: [["2026\u0000trifecta\u0000戸田", Number.MAX_SAFE_INTEGER + 1]],
   };
   const digest = buildArchiveReconcileCheckpointStateDigest(contract, tampered);
   assert.throws(
@@ -163,7 +163,7 @@ test("archive reconcile resume rejects rehashed unsafe aggregate counts", () => 
 });
 
 test("archive reconcile resume rejects duplicate aggregate keys even after rehash", () => {
-  const key = "2026\u0000trifecta\u0000Toda";
+  const key = "2026\u0000trifecta\u0000戸田";
   const tampered = {
     ...state,
     paired: [[key, 1], [key, 2]],
@@ -176,7 +176,7 @@ test("archive reconcile resume rejects duplicate aggregate keys even after rehas
 });
 
 test("archive reconcile resume rejects rehashed paired-count drift", () => {
-  const key = "2026\u0000trifecta\u0000Toda";
+  const key = "2026\u0000trifecta\u0000戸田";
   const tampered = {
     ...state,
     cells: [[key, { ...emptyCell, exact_match: 1 }]],
@@ -190,7 +190,7 @@ test("archive reconcile resume rejects rehashed paired-count drift", () => {
 });
 
 test("archive reconcile resume rejects canonical-only counts before final derivation", () => {
-  const key = "2026\u0000trifecta\u0000Toda";
+  const key = "2026\u0000trifecta\u0000戸田";
   const tampered = {
     ...state,
     cells: [[key, { ...emptyCell, canonical_only: 1 }]],
@@ -203,7 +203,7 @@ test("archive reconcile resume rejects canonical-only counts before final deriva
 });
 
 test("archive reconcile resume rejects status-matrix drift", () => {
-  const key = "2026\u0000trifecta\u0000Toda";
+  const key = "2026\u0000trifecta\u0000戸田";
   const tampered = {
     ...state,
     cells: [[key, { ...emptyCell, status_mismatch: 1, falseRefund: 1 }]],

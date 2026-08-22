@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { basename } from "node:path";
 import { canonicalHash, canonicalUtcTimestamp, sha256Bytes } from "./canonical";
 import { parseCanonicalRaceKey } from "./identity";
-import { fileDate } from "./n1Backfill";
+import { fileDate, VENUE_CODES } from "./n1Backfill";
 import { BET_TYPES } from "./settlement";
 
 export const ARCHIVE_RECONCILE_SELECTION_VERSION = "n2-archive-reconcile-selection-v3";
@@ -11,6 +11,7 @@ export const ARCHIVE_RECONCILE_CHECKPOINT_STATE_DIGEST_VERSION = "n2-archive-rec
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 const MAX_RECONCILE_SAMPLES = 200;
 const BET_TYPE_SET: ReadonlySet<string> = new Set(BET_TYPES);
+const VENUE_NAME_SET: ReadonlySet<string> = new Set(Object.keys(VENUE_CODES));
 const SETTLEMENT_STATUS_SET: ReadonlySet<string> = new Set([
   "pending", "settled", "refunded", "partially_refunded", "cancelled", "no_sale",
 ]);
@@ -214,7 +215,10 @@ const CELL_KEYS = [
   "parse_failure", "result_kind_mismatch", "status_mismatch",
 ] as const;
 
-function assertCellEntries(value: unknown): Map<string, ArchiveReconcileCheckpointCell> {
+function assertCellEntries(
+  value: unknown,
+  processedYears: ReadonlySet<string>,
+): Map<string, ArchiveReconcileCheckpointCell> {
   if (!Array.isArray(value)) throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_COUNT_TABLE_INVALID:cells");
   const entries = new Map<string, ArchiveReconcileCheckpointCell>();
   for (const entry of value) {
@@ -238,6 +242,23 @@ function assertCellEntries(value: unknown): Map<string, ArchiveReconcileCheckpoi
     }
     if (cell.falseRefund > cell.status_mismatch) {
       throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_FALSE_REFUND_INCONSISTENT:${entry[0]}`);
+    }
+
+    const parts = entry[0].split("\u0000");
+    if (parts.length !== 3 || !processedYears.has(parts[0])) {
+      throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_CELL_KEY_INVALID:${entry[0]}`);
+    }
+    const [year, betType, venueName] = parts;
+    const parseFailureKey = betType === "-" && venueName === "-";
+    const nonParseCount = cell.exact_match + cell.status_mismatch + cell.result_kind_mismatch
+      + cell.archive_only + cell.ambiguous_canonical + cell.falseRefund;
+    if (parseFailureKey) {
+      if (cell.parse_failure <= 0 || nonParseCount !== 0) {
+        throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_CELL_KEY_INVALID:${entry[0]}`);
+      }
+    } else if (!/^\d{4}$/.test(year) || !BET_TYPE_SET.has(betType) || !VENUE_NAME_SET.has(venueName)
+      || cell.parse_failure !== 0 || nonParseCount <= 0) {
+      throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_CELL_KEY_INVALID:${entry[0]}`);
     }
     entries.set(entry[0], cell);
   }
@@ -389,7 +410,12 @@ function assertArchiveReconcileAggregateCounts(
     throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_STATE_INVALID");
   }
   const record = state as Record<string, unknown>;
-  const cells = assertCellEntries(record.cells);
+  const processedFiles = record.processedFiles;
+  if (!Array.isArray(processedFiles) || processedFiles.some((file) => typeof file !== "string")) {
+    throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_PROCESSED_FILES_INVALID");
+  }
+  const processedYears = new Set((processedFiles as string[]).map((file) => fileDate(file).slice(0, 4)));
+  const cells = assertCellEntries(record.cells, processedYears);
   const paired = assertFlatCountEntries(record.paired, "paired");
   const statusMatrix = assertStatusMatrixEntries(record.statusMatrix);
 
