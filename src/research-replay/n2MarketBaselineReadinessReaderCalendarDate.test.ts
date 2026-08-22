@@ -14,6 +14,8 @@ function writeAcceptedMarker(root: string, date: string): void {
   writeFileSync(join(markerDir, "fixture.envelope.json"), "{}\n", "utf8");
   writeFileSync(join(markerDir, "accepted.json"), `${JSON.stringify({
     markerVersion: "n2-trifecta-private-capture-accepted-v1",
+    manifestDigest: "a".repeat(64),
+    checkpointKey: "b".repeat(64),
     raceIdentity: `${date.replaceAll("-", "")}-05-01`,
     checkpointLabel: "T-5",
     rawDocumentId: `raw-${date}`,
