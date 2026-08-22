@@ -169,9 +169,10 @@ export function readCurrentlyValidSourceDuplicateObservationIds(db: DatabaseSync
 
   const valid = new Set<string>();
   for (const [duplicateObservationId, candidates] of grouped) {
-    if (candidates.length === 1 && resolutionRowValid(db, candidates[0])) {
-      valid.add(duplicateObservationId);
+    if (candidates.length !== 1 || !resolutionRowValid(db, candidates[0])) {
+      throw new Error(`SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID:${duplicateObservationId}`);
     }
+    valid.add(duplicateObservationId);
   }
   return valid;
 }
