@@ -153,6 +153,53 @@ export function buildN2SettlementReparseCheckpointStateDigest(
   });
 }
 
+function requireNonNegativeSafeInteger(value: unknown, label: string): number {
+  if (!Number.isSafeInteger(value) || (value as number) < 0) {
+    throw new Error(`REPARSE_CHECKPOINT_COUNT_INVALID:${label}`);
+  }
+  return value as number;
+}
+
+function assertN2SettlementReparseStateAggregates(state: Record<string, unknown>): void {
+  const counts = state.counts;
+  if (typeof counts !== "object" || counts === null || Array.isArray(counts)) {
+    throw new Error("REPARSE_CHECKPOINT_COUNTS_INVALID");
+  }
+  const countRecord = counts as Record<string, unknown>;
+  for (const [key, value] of Object.entries(countRecord)) {
+    requireNonNegativeSafeInteger(value, key);
+  }
+
+  const filesScanned = requireNonNegativeSafeInteger(countRecord.files_scanned, "files_scanned");
+  const filesIngested = requireNonNegativeSafeInteger(countRecord.files_ingested, "files_ingested");
+  const filesNotIngested = requireNonNegativeSafeInteger(countRecord.files_not_ingested, "files_not_ingested");
+  const duplicateSource = requireNonNegativeSafeInteger(countRecord.files_duplicate_source, "files_duplicate_source");
+  const parseErrors = requireNonNegativeSafeInteger(countRecord.parse_errors, "parse_errors");
+  if (filesScanned !== filesIngested + filesNotIngested + duplicateSource + parseErrors) {
+    throw new Error("REPARSE_CHECKPOINT_FILE_COUNTS_INCONSISTENT");
+  }
+
+  const processedFiles = state.processedFiles;
+  const processedRawDocs = state.processedRawDocs;
+  if (!Array.isArray(processedFiles) || !Array.isArray(processedRawDocs)) {
+    throw new Error("REPARSE_CHECKPOINT_PROCESSED_LINEAGE_INVALID");
+  }
+  if (filesIngested !== processedFiles.length || filesIngested !== processedRawDocs.length) {
+    throw new Error("REPARSE_CHECKPOINT_PROCESSED_LINEAGE_COUNT_MISMATCH");
+  }
+
+  const seenRawDocs = new Set<string>();
+  for (const rawDocumentId of processedRawDocs) {
+    if (typeof rawDocumentId !== "string" || rawDocumentId.trim() !== rawDocumentId || rawDocumentId.length === 0) {
+      throw new Error(`REPARSE_CHECKPOINT_PROCESSED_RAW_INVALID:${String(rawDocumentId)}`);
+    }
+    if (seenRawDocs.has(rawDocumentId)) {
+      throw new Error(`REPARSE_CHECKPOINT_PROCESSED_RAW_DUPLICATE:${rawDocumentId}`);
+    }
+    seenRawDocs.add(rawDocumentId);
+  }
+}
+
 function assertN2SettlementReparseProcessedFiles(
   checkpointIdentity: N2SettlementReparseCheckpointIdentity,
   state: unknown,
@@ -160,7 +207,8 @@ function assertN2SettlementReparseProcessedFiles(
   if (typeof state !== "object" || state === null || Array.isArray(state)) {
     throw new Error("REPARSE_CHECKPOINT_STATE_INVALID");
   }
-  const processedFiles = (state as Record<string, unknown>).processedFiles;
+  const stateRecord = state as Record<string, unknown>;
+  const processedFiles = stateRecord.processedFiles;
   if (!Array.isArray(processedFiles)) {
     throw new Error("REPARSE_CHECKPOINT_PROCESSED_FILES_INVALID");
   }
@@ -175,6 +223,7 @@ function assertN2SettlementReparseProcessedFiles(
     }
     seen.add(file);
   }
+  assertN2SettlementReparseStateAggregates(stateRecord);
 }
 
 export function assertN2SettlementReparseCheckpointStateDigest(
