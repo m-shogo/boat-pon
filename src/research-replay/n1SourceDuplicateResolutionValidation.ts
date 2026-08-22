@@ -45,6 +45,8 @@ type CandidateRow = {
   betType: string;
   settlementStatus: string;
   resultKind: string;
+  parseRunId: string;
+  rawDocumentId: string;
   semanticHash: string;
 };
 
@@ -146,13 +148,17 @@ function candidateDigest(
   db: DatabaseSync,
   observationId: string,
   expectedRaceKey: string,
-): { digest: string; count: number; raceLineageValid: boolean; semanticIntegrityValid: boolean } {
+  expectedRawDocumentId: string,
+  expectedParseRunId: string,
+): { digest: string; count: number; lineageValid: boolean; semanticIntegrityValid: boolean } {
   const rows = db.prepare(`
     SELECT candidate_id AS candidateId,
            canonical_race_key AS canonicalRaceKey,
            bet_type AS betType,
            settlement_status AS settlementStatus,
            result_kind AS resultKind,
+           parse_run_id AS parseRunId,
+           raw_document_id AS rawDocumentId,
            semantic_hash AS semanticHash
     FROM settlement_candidates_v2
     WHERE observation_id=? AND ${SOURCE_CANDIDATE_WHERE}
@@ -161,7 +167,10 @@ function candidateDigest(
   return {
     digest: canonicalHash(rows.map((row) => [row.betType, row.semanticHash])),
     count: rows.length,
-    raceLineageValid: rows.every((row) => row.canonicalRaceKey === expectedRaceKey),
+    lineageValid: rows.every((row) =>
+      row.canonicalRaceKey === expectedRaceKey
+      && row.rawDocumentId === expectedRawDocumentId
+      && row.parseRunId === expectedParseRunId),
     semanticIntegrityValid: rows.every((row) => candidateSemanticHashValid(db, row)),
   };
 }
@@ -198,10 +207,22 @@ function resolutionRowValid(db: DatabaseSync, row: ResolutionRow): boolean {
   ) return false;
   if (!parseLineageValid(db, duplicate) || !parseLineageValid(db, canonical)) return false;
 
-  const duplicateDigest = candidateDigest(db, duplicate.observationId, row.canonicalRaceKey);
-  const canonicalDigest = candidateDigest(db, canonical.observationId, row.canonicalRaceKey);
-  return duplicateDigest.raceLineageValid
-    && canonicalDigest.raceLineageValid
+  const duplicateDigest = candidateDigest(
+    db,
+    duplicate.observationId,
+    row.canonicalRaceKey,
+    duplicate.rawDocumentId,
+    duplicate.parseRunId,
+  );
+  const canonicalDigest = candidateDigest(
+    db,
+    canonical.observationId,
+    row.canonicalRaceKey,
+    canonical.rawDocumentId,
+    canonical.parseRunId,
+  );
+  return duplicateDigest.lineageValid
+    && canonicalDigest.lineageValid
     && duplicateDigest.semanticIntegrityValid
     && canonicalDigest.semanticIntegrityValid
     && duplicateDigest.count === canonicalDigest.count
