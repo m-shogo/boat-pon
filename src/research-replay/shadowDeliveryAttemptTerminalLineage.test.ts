@@ -74,9 +74,9 @@ test("shadow attempt history rejects a retry started before its scheduled availa
       VALUES ('attempt-1', 'message-1', 1, 'retryable_failure', 'FIXTURE', ?, ?, ?, ?)
     `).run(
       "2026-08-02T04:00:01.000Z",
+      "2026-08-02T04:00:01.100Z",
       "2026-08-02T04:00:02.000Z",
-      "2026-08-02T04:01:00.000Z",
-      "2026-08-02T04:00:02.000Z",
+      "2026-08-02T04:00:01.100Z",
     );
     db.prepare(`
       INSERT INTO shadow_delivery_attempts
@@ -84,9 +84,9 @@ test("shadow attempt history rejects a retry started before its scheduled availa
        started_at, completed_at, next_available_at, created_at)
       VALUES ('attempt-2', 'message-1', 2, 'succeeded', NULL, ?, ?, NULL, ?)
     `).run(
-      "2026-08-02T04:00:30.000Z",
-      "2026-08-02T04:00:31.000Z",
-      "2026-08-02T04:00:31.000Z",
+      "2026-08-02T04:00:01.500Z",
+      "2026-08-02T04:00:01.600Z",
+      "2026-08-02T04:00:01.600Z",
     );
 
     assert.throws(

@@ -103,6 +103,10 @@ export function assertShadowDeliveryAttemptHistory(db: DatabaseSync, asOf?: stri
       if (row.next_available_at === null) throw new Error("retryable shadow delivery attempt missing next_available_at");
       nextAvailableAtMs = canonicalTimestampMs(row.next_available_at, "delivery attempt next_available_at");
       if (nextAvailableAtMs <= startedAtMs) throw new Error("invalid shadow delivery retry schedule");
+      const expectedBackoffMs = Math.min(60_000, 1000 * 2 ** (row.attempt_no - 1));
+      if (nextAvailableAtMs !== startedAtMs + expectedBackoffMs) {
+        throw new Error("shadow delivery retry schedule drift");
+      }
     } else if (row.next_available_at !== null) {
       throw new Error("terminal shadow delivery attempt must not have next_available_at");
     }
