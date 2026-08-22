@@ -14,6 +14,7 @@ const BET_TYPE_SET: ReadonlySet<string> = new Set(BET_TYPES);
 const SETTLEMENT_STATUS_SET: ReadonlySet<string> = new Set([
   "pending", "settled", "refunded", "partially_refunded", "cancelled", "no_sale",
 ]);
+const REFUND_STATUS_SET: ReadonlySet<string> = new Set(["refunded", "partially_refunded"]);
 const RESULT_KIND_SET: ReadonlySet<string> = new Set([
   "normal", "special_payout", "dead_heat", "source_defined", "unknown",
 ]);
@@ -256,6 +257,20 @@ function assertFlatCountEntries(value: unknown, label: string): Map<string, numb
   return entries;
 }
 
+function assertStatusMatrixEntries(value: unknown): { entries: Map<string, number>; falseRefundCount: number } {
+  const entries = assertFlatCountEntries(value, "statusMatrix");
+  let falseRefundCount = 0;
+  for (const [transition, count] of entries) {
+    const parts = transition.split("->");
+    if (count === 0 || parts.length !== 2
+      || !SETTLEMENT_STATUS_SET.has(parts[0]) || !SETTLEMENT_STATUS_SET.has(parts[1]) || parts[0] === parts[1]) {
+      throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_STATUS_MATRIX_ENTRY_INVALID:${transition}`);
+    }
+    if (REFUND_STATUS_SET.has(parts[0]) && parts[1] === "settled") falseRefundCount += count;
+  }
+  return { entries, falseRefundCount };
+}
+
 function assertArchiveReconcileParseErrors(
   checkpointContract: ArchiveReconcileCheckpointContract,
   state: Record<string, unknown>,
@@ -376,11 +391,12 @@ function assertArchiveReconcileAggregateCounts(
   const record = state as Record<string, unknown>;
   const cells = assertCellEntries(record.cells);
   const paired = assertFlatCountEntries(record.paired, "paired");
-  const statusMatrix = assertFlatCountEntries(record.statusMatrix, "statusMatrix");
+  const statusMatrix = assertStatusMatrixEntries(record.statusMatrix);
 
   let statusMismatchTotal = 0;
   let resultKindMismatchTotal = 0;
   let ambiguousCanonicalTotal = 0;
+  let falseRefundTotal = 0;
   let parseFailureTotal = 0;
   for (const [key, cell] of cells) {
     const expectedPaired = cell.exact_match + cell.status_mismatch + cell.result_kind_mismatch;
@@ -390,14 +406,18 @@ function assertArchiveReconcileAggregateCounts(
     statusMismatchTotal += cell.status_mismatch;
     resultKindMismatchTotal += cell.result_kind_mismatch;
     ambiguousCanonicalTotal += cell.ambiguous_canonical;
+    falseRefundTotal += cell.falseRefund;
     parseFailureTotal += cell.parse_failure;
   }
   for (const key of paired.keys()) {
     if (!cells.has(key)) throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_PAIRED_COUNT_MISMATCH:${key}`);
   }
-  const matrixTotal = [...statusMatrix.values()].reduce((sum, value) => sum + value, 0);
+  const matrixTotal = [...statusMatrix.entries.values()].reduce((sum, value) => sum + value, 0);
   if (matrixTotal !== statusMismatchTotal) {
     throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_STATUS_MATRIX_MISMATCH");
+  }
+  if (statusMatrix.falseRefundCount !== falseRefundTotal) {
+    throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_FALSE_REFUND_MATRIX_MISMATCH");
   }
   assertArchiveReconcileParseErrors(checkpointContract, record, parseFailureTotal);
   assertArchiveReconcileSamples(record, statusMismatchTotal + resultKindMismatchTotal);
