@@ -29,7 +29,26 @@ const identity: N2SettlementReparseCheckpointIdentity = {
 
 const state = {
   version: "n2-settlement-reparse-v1",
-  counts: { files_scanned: 1, files_ingested: 1 },
+  counts: {
+    files_scanned: 1,
+    files_ingested: 1,
+    files_not_ingested: 0,
+    files_duplicate_source: 0,
+    parse_errors: 0,
+    appended_candidates: 0,
+    appended_parse_runs: 0,
+    appended_observations: 0,
+    supersession_relations: 0,
+    ambiguous_active: 0,
+    fr_from_refunded: 0,
+    fr_from_partial: 0,
+    exact: 0,
+    false_refund_correction: 0,
+    result_kind_correction: 0,
+    special_payout_addition: 0,
+    ambiguous_non_defect: 0,
+    unexpected_addition: 0,
+  },
   corrections: [],
   processedFiles: ["k260801.lzh"],
   processedRawDocs: ["raw-1"],
@@ -64,6 +83,56 @@ test("reparse checkpoint resume rejects rehashed duplicate processed files", () 
   assert.throws(
     () => assertN2SettlementReparseCheckpointStateDigest(digest, identity, tampered),
     /REPARSE_CHECKPOINT_PROCESSED_FILE_DUPLICATE:k260801\.lzh/,
+  );
+});
+
+test("reparse checkpoint resume rejects rehashed aggregate count drift", () => {
+  const tampered = {
+    ...state,
+    counts: { ...state.counts, files_scanned: 2 },
+  };
+  const digest = buildN2SettlementReparseCheckpointStateDigest(identity, tampered);
+  assert.throws(
+    () => assertN2SettlementReparseCheckpointStateDigest(digest, identity, tampered),
+    /REPARSE_CHECKPOINT_FILE_COUNTS_INCONSISTENT/,
+  );
+});
+
+test("reparse checkpoint resume rejects unsafe aggregate counts", () => {
+  const tampered = {
+    ...state,
+    counts: { ...state.counts, appended_candidates: Number.MAX_SAFE_INTEGER + 1 },
+  };
+  const digest = buildN2SettlementReparseCheckpointStateDigest(identity, tampered);
+  assert.throws(
+    () => assertN2SettlementReparseCheckpointStateDigest(digest, identity, tampered),
+    /REPARSE_CHECKPOINT_COUNT_INVALID:appended_candidates/,
+  );
+});
+
+test("reparse checkpoint resume binds ingested count to processed lineage", () => {
+  const tampered = {
+    ...state,
+    processedRawDocs: [],
+  };
+  const digest = buildN2SettlementReparseCheckpointStateDigest(identity, tampered);
+  assert.throws(
+    () => assertN2SettlementReparseCheckpointStateDigest(digest, identity, tampered),
+    /REPARSE_CHECKPOINT_PROCESSED_LINEAGE_COUNT_MISMATCH/,
+  );
+});
+
+test("reparse checkpoint resume rejects duplicate processed raw lineage", () => {
+  const twoFileState = {
+    ...state,
+    counts: { ...state.counts, files_scanned: 2, files_ingested: 2 },
+    processedFiles: ["k260801.lzh", "k260802.lzh"],
+    processedRawDocs: ["raw-1", "raw-1"],
+  };
+  const digest = buildN2SettlementReparseCheckpointStateDigest(identity, twoFileState);
+  assert.throws(
+    () => assertN2SettlementReparseCheckpointStateDigest(digest, identity, twoFileState),
+    /REPARSE_CHECKPOINT_PROCESSED_RAW_DUPLICATE:raw-1/,
   );
 });
 
