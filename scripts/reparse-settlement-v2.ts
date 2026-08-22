@@ -30,6 +30,7 @@ import {
 } from "../src/research-replay/n2SettlementReparseCheckpoint";
 import { assertN2SettlementReparseProcessedArchiveLineage } from "../src/research-replay/n2SettlementReparseResumeLineage";
 import {
+  assertN2SettlementReparseTerminalDuplicateLineage,
   n2SettlementReparseDoneFiles,
   normalizeN2SettlementReparseTerminalDuplicateFiles,
 } from "../src/research-replay/n2SettlementReparseTerminalDuplicates";
@@ -147,7 +148,8 @@ function makeTempCopy(): CopyResult {
 function openTarget(): DatabaseSync {
   const db = new DatabaseSync(targetPath);
   db.exec("PRAGMA journal_mode=WAL");
-  db.exec("PRAGMA foreign_keys=ON; PRAGMA busy_timeout=60000");
+  db.exec("PRAGMA foreign_keys=ON");
+  db.exec("PRAGMA busy_timeout=60000");
   return db;
 }
 
@@ -241,13 +243,13 @@ function loadState(path: string, expectedIdentity: N2SettlementReparseCheckpoint
 }
 
 async function assertResumeProcessedArchiveLineage(
-  state: ReparseState,
+  state: CliReparseState,
   files: string[],
   byHash: Map<string, RawMeta>,
 ): Promise<void> {
   const pathByBasename = new Map(files.map((path) => [basename(path), path]));
-  const expectedRawDocumentIdByArchive = new Map<string, string>();
-  for (const archiveFile of state.processedFiles) {
+  const rawDocumentIdByArchive = new Map<string, string>();
+  for (const archiveFile of [...state.processedFiles, ...state.terminalDuplicateFiles]) {
     const path = pathByBasename.get(archiveFile);
     if (!path) throw new Error(`REPARSE_CHECKPOINT_PROCESSED_ARCHIVE_RAW_UNRESOLVED:${archiveFile}`);
     let bytes: Buffer;
@@ -259,9 +261,14 @@ async function assertResumeProcessedArchiveLineage(
     const hash = createHash("sha256").update(bytes).digest("hex");
     const meta = byHash.get(hash);
     if (!meta) throw new Error(`REPARSE_CHECKPOINT_PROCESSED_ARCHIVE_RAW_UNRESOLVED:${archiveFile}`);
-    expectedRawDocumentIdByArchive.set(archiveFile, meta.rawDocumentId);
+    rawDocumentIdByArchive.set(archiveFile, meta.rawDocumentId);
   }
-  assertN2SettlementReparseProcessedArchiveLineage(state, expectedRawDocumentIdByArchive);
+  assertN2SettlementReparseProcessedArchiveLineage(state, rawDocumentIdByArchive);
+  assertN2SettlementReparseTerminalDuplicateLineage({
+    terminalDuplicateFiles: state.terminalDuplicateFiles,
+    processedRawDocs: state.processedRawDocs,
+    rawDocumentIdByArchive,
+  });
 }
 
 async function runPass(
