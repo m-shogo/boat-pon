@@ -193,7 +193,9 @@ function validateAcceptedMarker(input: {
   if (marker.markerVersion !== "n2-trifecta-private-capture-accepted-v1") blockers.push("ACCEPTED_MARKER_VERSION_INVALID");
   if (marker.raceIdentity !== raceIdentity) blockers.push("ACCEPTED_MARKER_RACE_IDENTITY_MISMATCH");
   if (marker.checkpointLabel !== "T-5") blockers.push("ACCEPTED_MARKER_CHECKPOINT_MISMATCH");
-  if (typeof marker.rawDocumentId !== "string" || marker.rawDocumentId.length < 1) blockers.push("ACCEPTED_MARKER_RAW_DOCUMENT_ID_INVALID");
+  if (typeof marker.rawDocumentId !== "string"
+    || marker.rawDocumentId.length < 1
+    || marker.rawDocumentId.trim() !== marker.rawDocumentId) blockers.push("ACCEPTED_MARKER_RAW_DOCUMENT_ID_INVALID");
   if (typeof marker.rawSha256 !== "string" || !SHA256_RE.test(marker.rawSha256)) blockers.push("ACCEPTED_MARKER_RAW_SHA256_INVALID");
   if (!timestampWithinRaceDateJst(input.date, marker.acceptedAt)) blockers.push("ACCEPTED_MARKER_ACCEPTED_AT_INVALID");
   if (marker.databaseWriteAuthorized !== false) blockers.push("ACCEPTED_MARKER_DATABASE_BOUNDARY_WIDENED");
