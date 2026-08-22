@@ -40,6 +40,8 @@ export type ShadowOperabilityReport = {
 };
 
 type CurrentOutboxRow = {
+  payload_json: string;
+  payload_hash: string;
   enqueued_at: string;
   available_at: string;
   last_outcome: string | null;
@@ -61,6 +63,18 @@ function timestampMs(value: string, name: string): number {
   const milliseconds = Date.parse(value);
   if (!Number.isFinite(milliseconds)) throw new Error(`invalid ${name}`);
   return milliseconds;
+}
+
+function assertOutboxPayloadIntegrity(payloadJson: string, payloadHash: string): void {
+  let payload: unknown;
+  try {
+    payload = JSON.parse(payloadJson) as unknown;
+  } catch {
+    throw new Error("invalid shadow outbox payload JSON");
+  }
+  if (canonicalHash(payload) !== payloadHash) {
+    throw new Error("shadow outbox payload hash mismatch");
+  }
 }
 
 function assertThresholds(thresholds: ShadowOperabilityThresholds): void {
@@ -127,7 +141,7 @@ export function buildShadowOperabilityReport(
   assertShadowDeliveryAttemptHistory(db);
 
   const rows = db.prepare(`
-    SELECT m.enqueued_at, m.available_at,
+    SELECT m.payload_json, m.payload_hash, m.enqueued_at, m.available_at,
       (SELECT outcome FROM shadow_delivery_attempts a
        WHERE a.outbox_message_id=m.outbox_message_id ORDER BY attempt_no DESC LIMIT 1) last_outcome,
       (SELECT error_code FROM shadow_delivery_attempts a
@@ -144,6 +158,7 @@ export function buildShadowOperabilityReport(
   let retryExhausted = 0;
   let oldestQueuedAgeMs: number | null = null;
   for (const row of rows) {
+    assertOutboxPayloadIntegrity(row.payload_json, row.payload_hash);
     const enqueuedMs = timestampMs(row.enqueued_at, "outbox enqueued_at");
     timestampMs(row.available_at, "outbox available_at");
     if (row.next_available_at !== null) timestampMs(row.next_available_at, "attempt next_available_at");
