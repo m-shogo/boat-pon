@@ -16,14 +16,14 @@ import {
   CANARY_COHORT,
   EXECUTORS as CORE_EXECUTORS,
   KNOWN_TASK_TYPES as CORE_KNOWN_TASK_TYPES,
-  runDatasetCanary as runDatasetCanaryCore,
-  runDatasetExpand as runDatasetExpandCore,
-  runDatasetInventory as runDatasetInventoryCore,
+  runDatasetCanary,
+  runDatasetExpand,
+  runDatasetInventory,
   runFeatureCoverageAudit,
   runHoldoutFreeze,
   runPlannerNext,
-  runReadonlyAnalysis as runReadonlyAnalysisCore,
-  runReadonlyAudit as runReadonlyAuditCore,
+  runReadonlyAnalysis,
+  runReadonlyAudit,
   type Executor,
   type ExecutorContext,
   type ExecutorResult,
@@ -38,14 +38,14 @@ function withCurrentSourceDuplicateEvidence(executor: Executor): Executor {
     if (existsSync(walPath) && statSync(walPath).size > 0) return executor(ctx);
 
     let db: DatabaseSync | null = null;
+    let hasResolutionTable = false;
     try {
       db = new DatabaseSync(`${pathToFileURL(ctx.sidecarPath).href}?immutable=1`, { readOnly: true } as never);
       db.exec("PRAGMA query_only=ON");
-      const hasResolutionTable = Boolean(db.prepare(
+      hasResolutionTable = Boolean(db.prepare(
         "SELECT 1 FROM sqlite_master WHERE type='table' AND name='settlement_source_duplicate_resolutions_v2'",
       ).get());
-      if (!hasResolutionTable) return executor(ctx);
-      readCurrentlyValidSourceDuplicateObservationIds(db);
+      if (hasResolutionTable) readCurrentlyValidSourceDuplicateObservationIds(db);
     } catch {
       const blocks = ["SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID"];
       return {
@@ -63,20 +63,26 @@ function withCurrentSourceDuplicateEvidence(executor: Executor): Executor {
   };
 }
 
-// These legacy core executors filter source duplicates directly in SQL. Bind
-// them to the current append-only resolution semantics before they can emit
-// reports or registry evidence. The core implementations remain unchanged.
-export const runDatasetCanary = withCurrentSourceDuplicateEvidence(runDatasetCanaryCore);
-export const runReadonlyAnalysis = withCurrentSourceDuplicateEvidence(runReadonlyAnalysisCore);
-export const runReadonlyAudit = withCurrentSourceDuplicateEvidence(runReadonlyAuditCore);
-export const runDatasetInventory = withCurrentSourceDuplicateEvidence(runDatasetInventoryCore);
-export const runDatasetExpand = withCurrentSourceDuplicateEvidence(runDatasetExpandCore);
+// Runtime automation uses resolveExecutor(). Keep the direct legacy function
+// exports byte-for-byte compatible for unit-level callers, while the runtime
+// registry binds only the executors that filter source duplicates directly in
+// SQL to the current append-only resolution semantics.
+const runDatasetCanaryRuntime = withCurrentSourceDuplicateEvidence(runDatasetCanary);
+const runReadonlyAnalysisRuntime = withCurrentSourceDuplicateEvidence(runReadonlyAnalysis);
+const runReadonlyAuditRuntime = withCurrentSourceDuplicateEvidence(runReadonlyAudit);
+const runDatasetInventoryRuntime = withCurrentSourceDuplicateEvidence(runDatasetInventory);
+const runDatasetExpandRuntime = withCurrentSourceDuplicateEvidence(runDatasetExpand);
 
 export {
   CANARY_COHORT,
+  runDatasetCanary,
+  runDatasetExpand,
+  runDatasetInventory,
   runFeatureCoverageAudit,
   runHoldoutFreeze,
   runPlannerNext,
+  runReadonlyAnalysis,
+  runReadonlyAudit,
 };
 export type { Executor, ExecutorContext, ExecutorResult };
 
@@ -92,11 +98,11 @@ export const EXECUTORS: Readonly<Record<string, Executor>> = CORE_EXECUTORS;
 
 const REGISTERED_EXECUTORS: Readonly<Record<string, Executor>> = Object.freeze({
   ...CORE_EXECUTORS,
-  "dataset-canary": runDatasetCanary,
-  "readonly-analysis": runReadonlyAnalysis,
-  "readonly-audit": runReadonlyAudit,
-  "dataset-inventory": runDatasetInventory,
-  "dataset-expand": runDatasetExpand,
+  "dataset-canary": runDatasetCanaryRuntime,
+  "readonly-analysis": runReadonlyAnalysisRuntime,
+  "readonly-audit": runReadonlyAuditRuntime,
+  "dataset-inventory": runDatasetInventoryRuntime,
+  "dataset-expand": runDatasetExpandRuntime,
   "pit-audit": runN2PitAuditExecutor,
   "observation-ingest-readiness": runN2ObservationIngestReadinessExecutor,
   "official-program-canary-review-bundle": runN2OfficialProgramCanaryReviewBundleExecutor,
