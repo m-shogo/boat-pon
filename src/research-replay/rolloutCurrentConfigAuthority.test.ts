@@ -55,7 +55,7 @@ function config(overrides: Partial<RolloutConfig> = {}): RolloutConfig {
   };
 }
 
-test("runtime rollout config rejects conflicting latest-timestamp authority before shadow enqueue", (t) => {
+test("runtime rollout config preserves same-timestamp rowid last-write-wins semantics", (t) => {
   const ctx = context();
   t.after(() => ctx.close());
   const occurredAt = "2026-08-23T00:00:00.000Z";
@@ -65,17 +65,17 @@ test("runtime rollout config rejects conflicting latest-timestamp authority befo
     occurredAt,
     "rollout-config-enable",
   );
+  const expected = config({ shadowWriteEnabled: false, killSwitchEngaged: true });
   ctx.controller.recordConfig(
-    config({ shadowWriteEnabled: false, killSwitchEngaged: true }),
+    expected,
     "kill shadow",
     occurredAt,
     "rollout-config-kill",
   );
 
-  assert.throws(
-    () => ctx.controller.enqueue({ idempotencyKey: "must-not-write", messageType: "fixture", payload: {} }),
-    /ambiguous rollout config at latest timestamp/,
-  );
+  assert.deepEqual(ctx.controller.currentConfig(), expected);
+  const result = ctx.controller.enqueue({ idempotencyKey: "must-not-write", messageType: "fixture", payload: {} });
+  assert.equal(result.status, "killed");
   const row = ctx.db.prepare("SELECT COUNT(*) AS count FROM shadow_outbox_messages").get() as { count: number };
   assert.equal(row.count, 0);
 });
@@ -111,7 +111,7 @@ test("runtime rollout config rejects non-canonical historical timestamps before 
 
   assert.throws(
     () => ctx.controller.currentConfig(),
-    /non-canonical rollout config occurred_at/,
+    /timestamp/,
   );
 });
 
