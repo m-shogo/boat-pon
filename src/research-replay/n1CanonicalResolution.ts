@@ -53,21 +53,32 @@ export function archiveFileForRaceKey(raceKey: string): string {
 
 // 1 observation の未訂正 candidate 集合 digest（bet_type, semantic_hash を sort して hash）。
 // correction / reparse candidate は source duplicate ではなく revision lineage なので除外する。
-// candidate自身のrace identityがobservationとずれている場合はexact source duplicateとして解決しない。
+// candidate自身のrace/parse/raw identityがobservationとずれている場合はexact source duplicateとして解決しない。
 function observationCandidateDigest(
   db: DatabaseSync,
   observationId: string,
   expectedRaceKey: string,
-): { digest: string; count: number; raceLineageValid: boolean } {
+  expectedRawDocumentId: string,
+  expectedParseRunId: string,
+): { digest: string; count: number; lineageValid: boolean } {
   const rows = db.prepare(
-    `SELECT c.canonical_race_key, c.bet_type, c.semantic_hash FROM settlement_candidates_v2 c
+    `SELECT c.canonical_race_key, c.bet_type, c.parse_run_id, c.raw_document_id, c.semantic_hash FROM settlement_candidates_v2 c
      WHERE c.observation_id=? AND ${SOURCE_SETTLEMENT_CANDIDATE_WHERE_C}
      ORDER BY c.bet_type, c.semantic_hash`,
-  ).all(observationId) as Array<{ canonical_race_key: string; bet_type: string; semantic_hash: string }>;
+  ).all(observationId) as Array<{
+    canonical_race_key: string;
+    bet_type: string;
+    parse_run_id: string;
+    raw_document_id: string;
+    semantic_hash: string;
+  }>;
   return {
     digest: canonicalHash(rows.map((r) => [r.bet_type, r.semantic_hash])),
     count: rows.length,
-    raceLineageValid: rows.every((row) => row.canonical_race_key === expectedRaceKey),
+    lineageValid: rows.every((row) =>
+      row.canonical_race_key === expectedRaceKey
+      && row.raw_document_id === expectedRawDocumentId
+      && row.parse_run_id === expectedParseRunId),
   };
 }
 
@@ -112,14 +123,26 @@ export function planSourceDuplicateResolution(db: DatabaseSync): DuplicateResolu
       ORDER BY rowid ASC
     `).all(raceKey, rawDocumentId) as SettlementObservationLineage[];
     const canonical = obs[0];
-    const canonicalDigest = observationCandidateDigest(db, canonical.observation_id, raceKey);
+    const canonicalDigest = observationCandidateDigest(
+      db,
+      canonical.observation_id,
+      raceKey,
+      canonical.raw_document_id,
+      canonical.parse_run_id,
+    );
     const canonicalParseLineageValid = observationParseRawLineageValid(db, canonical);
     for (const dup of obs.slice(1)) {
-      const dupDigest = observationCandidateDigest(db, dup.observation_id, raceKey);
+      const dupDigest = observationCandidateDigest(
+        db,
+        dup.observation_id,
+        raceKey,
+        dup.raw_document_id,
+        dup.parse_run_id,
+      );
       const valueEqual = canonicalParseLineageValid
         && observationParseRawLineageValid(db, dup)
-        && canonicalDigest.raceLineageValid
-        && dupDigest.raceLineageValid
+        && canonicalDigest.lineageValid
+        && dupDigest.lineageValid
         && dupDigest.digest === canonicalDigest.digest
         && dupDigest.count === canonicalDigest.count
         && sameUncorrectedParseLineage(canonical, dup);
@@ -326,18 +349,30 @@ export function detectExactDuplicateObservationsInRaw(
   for (const [raceKey, observations] of byRace) {
     if (observations.length < 2) continue;
     const canonical = observations[0];
-    const canonicalDigest = observationCandidateDigest(db, canonical.observation_id, raceKey);
+    const canonicalDigest = observationCandidateDigest(
+      db,
+      canonical.observation_id,
+      raceKey,
+      canonical.raw_document_id,
+      canonical.parse_run_id,
+    );
     const canonicalParseLineageValid = observationParseRawLineageValid(db, canonical);
     for (const dup of observations.slice(1)) {
-      const digest = observationCandidateDigest(db, dup.observation_id, raceKey);
+      const digest = observationCandidateDigest(
+        db,
+        dup.observation_id,
+        raceKey,
+        dup.raw_document_id,
+        dup.parse_run_id,
+      );
       out.push({
         canonicalRaceKey: raceKey,
         canonicalObservationId: canonical.observation_id,
         duplicateObservationId: dup.observation_id,
         valueEqual: canonicalParseLineageValid
           && observationParseRawLineageValid(db, dup)
-          && canonicalDigest.raceLineageValid
-          && digest.raceLineageValid
+          && canonicalDigest.lineageValid
+          && digest.lineageValid
           && digest.digest === canonicalDigest.digest
           && digest.count === canonicalDigest.count
           && sameUncorrectedParseLineage(canonical, dup),
