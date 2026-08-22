@@ -76,6 +76,9 @@ export function assertShadowDeliveryAttemptHistory(db: DatabaseSync, asOf?: stri
       && (row.error_code === null || row.error_code.trim().length === 0)) {
       throw new Error("failed shadow delivery attempt missing error_code");
     }
+    if (row.error_code !== null && row.error_code !== row.error_code.trim()) {
+      throw new Error("non-canonical shadow delivery error_code");
+    }
     if (previousOutcome !== null) {
       if (TERMINAL_OUTCOMES.has(previousOutcome)) {
         throw new Error("shadow delivery attempt recorded after terminal outcome");

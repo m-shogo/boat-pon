@@ -54,6 +54,20 @@ test("failed shadow delivery attempt requires persisted error evidence", () => {
   });
 });
 
+test("failed shadow delivery attempt rejects padded error evidence", () => {
+  withAttempt("permanent_failure", " SHADOW_RETRY_EXHAUSTED ", (dbPath) => {
+    const db = openRolloutDatabase(dbPath);
+    try {
+      assert.throws(
+        () => assertShadowDeliveryAttemptHistory(db, "2026-08-02T04:00:00.000Z"),
+        /non-canonical shadow delivery error_code/,
+      );
+    } finally {
+      db.close();
+    }
+  });
+});
+
 test("successful shadow delivery attempt rejects contradictory error evidence", () => {
   withAttempt("succeeded", "SHADOW_RETRY_EXHAUSTED", (dbPath) => {
     const db = openRolloutDatabase(dbPath);
