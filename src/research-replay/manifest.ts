@@ -585,8 +585,7 @@ export function buildRaceAsOfManifest(input: {
         input.db.exec("COMMIT");
         persisted = true;
       } catch (error) {
-        input.db.exec("ROLLBACK TO SAVEPOINT typed_observation_write");
-        input.db.exec("RELEASE SAVEPOINT typed_observation_write");
+        input.db.exec("ROLLBACK");
         throw error;
       }
     }
