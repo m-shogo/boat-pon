@@ -149,13 +149,20 @@ export function readLifecycleValidApprovalScopes(sidecarDbPath: string): string[
       ORDER BY approval_scope, approved_at DESC, rowid DESC
     `).all() as unknown as GrantRow[];
 
-    const latestByScope = new Map<string, GrantRow>();
+    const grantsByScope = new Map<string, GrantRow[]>();
     for (const grant of grants) {
-      if (!latestByScope.has(grant.approval_scope)) latestByScope.set(grant.approval_scope, grant);
+      const scoped = grantsByScope.get(grant.approval_scope) ?? [];
+      scoped.push(grant);
+      grantsByScope.set(grant.approval_scope, scoped);
     }
 
     const activeScopes: string[] = [];
-    for (const [scope, grant] of latestByScope) {
+    for (const [scope, scopedGrants] of grantsByScope) {
+      const latestApprovedAt = scopedGrants[0]?.approved_at;
+      if (latestApprovedAt === undefined) continue;
+      const latestGrants = scopedGrants.filter((grant) => grant.approved_at === latestApprovedAt);
+      if (latestGrants.length !== 1) continue;
+      const grant = latestGrants[0];
       if (!validGrant(grant)) continue;
       const lifecycle = db.prepare(`
         SELECT lifecycle_event_id, event_kind, subject_approval_id, replacement_approval_id,
