@@ -135,14 +135,14 @@ test("revoked approval → BLOCKED", () => {
   db.close();
 });
 
-test("superseded approval → BLOCKED", () => {
+test("newer superseding target blocks the older matching approval", () => {
   const db = setup();
-  const id = grant(db); // only matching grant for the target
-  // replacement points to a grant with a DIFFERENT digest (does not match the gate target).
-  grant(db, { approvalId: "reparse-apply-grant-2", digest: "f".repeat(64) });
+  const id = grant(db); // older matching grant for the target
+  // A newer same-scope grant is the current authority even when it targets a different digest.
+  grant(db, { approvalId: "reparse-apply-grant-2", digest: "f".repeat(64), approvedAt: "2026-08-02T01:00:00.000Z" });
   recordApprovalLifecycle(db, { lifecycleEventId: "lc-2", eventKind: "superseded", subjectApprovalId: id, replacementApprovalId: "reparse-apply-grant-2", reason: "new digest", source: "human", reference: "wo", occurredAt: "2026-08-02T06:00:00.000Z" }, NOW);
   const r = resolveReparseApplyGate(db, { manifest: manifest(), onDisk: onDisk(), executionMode: "production", rolloutStartedAt: ROLL });
-  assert.ok(r.blocks.includes("APPROVAL_APPROVAL_SUPERSEDED"));
+  assert.ok(r.blocks.includes("APPROVAL_APPROVAL_TARGET_MISMATCH"));
   db.close();
 });
 

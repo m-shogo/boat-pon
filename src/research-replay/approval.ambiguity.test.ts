@@ -42,7 +42,12 @@ function createApprovalDb(path: string): DatabaseSync {
   return db;
 }
 
-function insertGrant(db: DatabaseSync, approvalId: string, approvedAt: string): void {
+function insertGrant(
+  db: DatabaseSync,
+  approvalId: string,
+  approvedAt: string,
+  targetContractVersion = "contract-v1",
+): void {
   const grant = {
     approvalId,
     approvalScope: "TEST_SCOPE",
@@ -50,7 +55,7 @@ function insertGrant(db: DatabaseSync, approvalId: string, approvedAt: string): 
     approvalReference: `ref:${approvalId}`,
     targetStage: "TEST_STAGE",
     targetSchemaVersion: "schema-v1",
-    targetContractVersion: "contract-v1",
+    targetContractVersion,
     approvedAt,
     approvalMode: "production" as const,
   };
@@ -160,6 +165,25 @@ test("non-canonical persisted approval times fail closed before ordering", () =>
     assert.equal(resolution.approved, false);
     assert.equal(resolution.code, "APPROVAL_TIMESTAMP_INVALID");
     assert.equal(resolution.approvalId, null);
+  } finally {
+    db.close();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a newer same-scope target supersedes an older matching target", () => {
+  const root = mkdtempSync(join(tmpdir(), "approval-latest-scope-target-"));
+  const path = join(root, "approval.sqlite");
+  const db = createApprovalDb(path);
+  try {
+    insertGrant(db, "approval-old-target", "2026-08-20T09:00:00.000Z", "contract-v1");
+    insertGrant(db, "approval-new-target", "2026-08-20T10:00:00.000Z", "contract-v2");
+    const resolution = resolve(db);
+    assert.equal(resolution.approved, false);
+    assert.equal(resolution.code, "APPROVAL_TARGET_MISMATCH");
+    assert.equal(resolution.approvalId, null);
+    assert.equal(resolution.approvedAt, "2026-08-20T10:00:00.000Z");
+    assert.equal(resolution.matchingGrantCount, 1);
   } finally {
     db.close();
     rmSync(root, { recursive: true, force: true });
