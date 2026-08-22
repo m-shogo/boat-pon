@@ -19,8 +19,22 @@ export const N2_EDGE_HOLDOUT_HISTORY_FROM_DATE = "2021-07-05" as const;
 
 const RACE_KEY_RE = /^(\d{4}-\d{2}-\d{2}):(0[1-9]|1\d|2[0-4]):R([1-9]|1[0-2])$/u;
 const SELECTION_RE = /^[1-6]-[1-6]-[1-6]$/u;
+const REUSABLE_PARSE_STATUSES = new Set(["success", "warning"]);
 
-type WinnerRow = { raceKey: string; observationId: string; winningSelection: string | null };
+type WinnerRow = {
+  raceKey: string;
+  observationId: string;
+  candidateParseRunId: string;
+  candidateRawDocumentId: string;
+  observationRaceKey: string | null;
+  observationType: string | null;
+  observationPayloadType: string | null;
+  observationParseRunId: string | null;
+  observationRawDocumentId: string | null;
+  parseRunRawDocumentId: string | null;
+  parseRunStatus: string | null;
+  winningSelection: string | null;
+};
 type ProgramRow = { raceId: string; date: string; venue: string; raceNo: number; closeAt: string; importedAt: string };
 
 export type N2EdgeHoldoutSourceRead = {
@@ -120,8 +134,22 @@ export function readN2EdgeHoldoutSource(input: { primaryDbPath: string; sidecarD
       return blocked(["SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID"],0,1);
     }
     const rows = sidecar.prepare(`
-      SELECT c.canonical_race_key AS raceKey, c.observation_id AS observationId, p.selection_canonical AS winningSelection
+      SELECT
+       c.canonical_race_key AS raceKey,
+       c.observation_id AS observationId,
+       c.parse_run_id AS candidateParseRunId,
+       c.raw_document_id AS candidateRawDocumentId,
+       o.canonical_race_key AS observationRaceKey,
+       o.observation_type AS observationType,
+       o.payload_type AS observationPayloadType,
+       o.parse_run_id AS observationParseRunId,
+       o.raw_document_id AS observationRawDocumentId,
+       pr.raw_document_id AS parseRunRawDocumentId,
+       pr.status AS parseRunStatus,
+       p.selection_canonical AS winningSelection
       FROM settlement_candidates_v2 c
+      LEFT JOIN domain_observations o ON o.observation_id=c.observation_id
+      LEFT JOIN parse_runs pr ON pr.parse_run_id=c.parse_run_id
       JOIN race_payout_lines_v2 p ON p.candidate_id=c.candidate_id
        AND p.bet_type='trifecta' AND p.line_kind='payout' AND p.selection_canonical IS NOT NULL
       WHERE c.bet_type='trifecta' AND c.settlement_status='settled' AND c.result_kind='normal'
@@ -134,6 +162,17 @@ export function readN2EdgeHoldoutSource(input: { primaryDbPath: string; sidecarD
     const grouped = new Map<string,string[]>();
     for (const row of rows) {
       if (validResolvedObservationIds.has(row.observationId)) continue;
+      if (row.observationRaceKey !== row.raceKey
+        || row.observationType !== "settlement_result"
+        || row.observationPayloadType !== "settlement_result"
+        || row.observationParseRunId !== row.candidateParseRunId
+        || row.observationRawDocumentId !== row.candidateRawDocumentId
+        || row.parseRunRawDocumentId !== row.candidateRawDocumentId
+        || row.parseRunStatus == null
+        || !REUSABLE_PARSE_STATUSES.has(row.parseRunStatus)) {
+        blockers.push(`${row.raceKey}:SETTLEMENT_LINEAGE_INVALID`);
+        continue;
+      }
       const current=grouped.get(row.raceKey)??[]; if(row.winningSelection!=null) current.push(row.winningSelection); grouped.set(row.raceKey,current);
     }
     for (const [raceKey,selections] of grouped) {
