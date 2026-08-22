@@ -98,6 +98,27 @@ test("reader rejects an impossible latest date instead of normalizing the cohort
   }
 });
 
+test("reader rejects two primary identities for the same canonical race before top-N selection", () => {
+  const dir = mkdtempSync(join(tmpdir(), "n2-program-canary-reader-duplicate-race-"));
+  const path = join(dir, "primary.sqlite");
+  const db = createPrimary(path);
+  try {
+    insertRow(db, { raceId: "20040110-01-01", date: "2004-01-10", venue: "桐生", raceNo: 1 });
+    insertRow(db, { raceId: "20040110-桐生-01", date: "2004-01-10", venue: "桐生", raceNo: 1 });
+    insertRow(db, { raceId: "20040110-01-02", date: "2004-01-10", venue: "桐生", raceNo: 2 });
+  } finally {
+    db.close();
+  }
+  try {
+    assert.throws(
+      () => readOfficialProgramCanarySource({ primaryDbPath: path, limit: 2 }),
+      /DUPLICATE_CANONICAL_RACE:2004-01-10:01:R1/,
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("reader reports deterministic truncation and rejects invalid limits", () => {
   const dir = mkdtempSync(join(tmpdir(), "n2-program-canary-reader-limit-"));
   const path = join(dir, "primary.sqlite");
