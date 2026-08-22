@@ -12,6 +12,7 @@ test("reparse resume treats verified terminal duplicate-source archives as done"
     value: ["k260802.lzh"],
     selectedFileBasenames: ["k260801.lzh", "k260802.lzh", "k260803.lzh"],
     processedFiles: ["k260801.lzh"],
+    expectedDuplicateCount: 1,
   });
   assert.doesNotThrow(() => assertN2SettlementReparseTerminalDuplicateLineage({
     terminalDuplicateFiles: terminal,
@@ -30,7 +31,23 @@ test("old reparse checkpoints without terminal duplicate state remain compatible
     value: undefined,
     selectedFileBasenames: ["k260801.lzh"],
     processedFiles: [],
+    expectedDuplicateCount: 1,
   }), []);
+});
+
+test("modern reparse checkpoints bind terminal duplicate evidence to the persisted count", () => {
+  assert.throws(() => normalizeN2SettlementReparseTerminalDuplicateFiles({
+    value: ["k260802.lzh"],
+    selectedFileBasenames: ["k260801.lzh", "k260802.lzh"],
+    processedFiles: ["k260801.lzh"],
+    expectedDuplicateCount: 0,
+  }), /REPARSE_CHECKPOINT_TERMINAL_DUPLICATE_COUNT_MISMATCH/);
+  assert.throws(() => normalizeN2SettlementReparseTerminalDuplicateFiles({
+    value: [],
+    selectedFileBasenames: ["k260801.lzh", "k260802.lzh"],
+    processedFiles: ["k260801.lzh"],
+    expectedDuplicateCount: 1,
+  }), /REPARSE_CHECKPOINT_TERMINAL_DUPLICATE_COUNT_MISMATCH/);
 });
 
 test("reparse resume rejects tampered terminal duplicate file evidence", () => {
