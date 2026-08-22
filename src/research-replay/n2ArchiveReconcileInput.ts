@@ -46,8 +46,6 @@ function archiveFilenameDate(file: string): string | null {
 }
 
 function lastCompletedJstRaceDate(asOf: string): string {
-  // K archives are complete Japanese race-day files. Never ingest the JST calendar
-  // day that is still in progress at asOf; the latest safe archive day is yesterday JST.
   const jst = new Date(Date.parse(asOf) + JST_OFFSET_MS);
   const startOfCurrentJstDateUtc = Date.UTC(jst.getUTCFullYear(), jst.getUTCMonth(), jst.getUTCDate());
   return new Date(startOfCurrentJstDateUtc - 1).toISOString().slice(0, 10);
@@ -182,46 +180,134 @@ function assertArchiveReconcileProcessedFiles(
   }
 }
 
-function assertNonNegativeSafeInteger(value: unknown, label: string): void {
+function assertNonNegativeSafeInteger(value: unknown, label: string): number {
   if (!Number.isSafeInteger(value) || (value as number) < 0) {
     throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_COUNT_INVALID:${label}:${String(value)}`);
   }
+  return value as number;
 }
 
-function assertCountEntries(value: unknown, label: string, nested: boolean): void {
-  if (!Array.isArray(value)) {
-    throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_COUNT_TABLE_INVALID:${label}`);
+type ArchiveReconcileCheckpointCell = {
+  exact_match: number;
+  status_mismatch: number;
+  result_kind_mismatch: number;
+  archive_only: number;
+  canonical_only: number;
+  ambiguous_canonical: number;
+  parse_failure: number;
+  falseRefund: number;
+};
+
+const CELL_KEYS = [
+  "ambiguous_canonical", "archive_only", "canonical_only", "exact_match", "falseRefund",
+  "parse_failure", "result_kind_mismatch", "status_mismatch",
+] as const;
+
+function assertCellEntries(value: unknown): Map<string, ArchiveReconcileCheckpointCell> {
+  if (!Array.isArray(value)) throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_COUNT_TABLE_INVALID:cells");
+  const entries = new Map<string, ArchiveReconcileCheckpointCell>();
+  for (const entry of value) {
+    if (!Array.isArray(entry) || entry.length !== 2 || typeof entry[0] !== "string") {
+      throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_COUNT_ENTRY_INVALID:cells");
+    }
+    if (entries.has(entry[0])) throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_COUNT_KEY_DUPLICATE:cells:${entry[0]}`);
+    if (typeof entry[1] !== "object" || entry[1] === null || Array.isArray(entry[1])) {
+      throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_COUNT_ENTRY_INVALID:cells:${entry[0]}`);
+    }
+    const raw = entry[1] as Record<string, unknown>;
+    if (Object.keys(raw).sort().join(",") !== [...CELL_KEYS].sort().join(",")) {
+      throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_COUNT_ENTRY_INVALID:cells:${entry[0]}`);
+    }
+    const cell = Object.fromEntries(CELL_KEYS.map((key) => [
+      key,
+      assertNonNegativeSafeInteger(raw[key], `cells:${entry[0]}:${key}`),
+    ])) as ArchiveReconcileCheckpointCell;
+    if (cell.canonical_only !== 0) {
+      throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_CANONICAL_ONLY_PREMATURE:${entry[0]}`);
+    }
+    if (cell.falseRefund > cell.status_mismatch) {
+      throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_FALSE_REFUND_INCONSISTENT:${entry[0]}`);
+    }
+    entries.set(entry[0], cell);
   }
-  const seenKeys = new Set<string>();
+  return entries;
+}
+
+function assertFlatCountEntries(value: unknown, label: string): Map<string, number> {
+  if (!Array.isArray(value)) throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_COUNT_TABLE_INVALID:${label}`);
+  const entries = new Map<string, number>();
   for (const entry of value) {
     if (!Array.isArray(entry) || entry.length !== 2 || typeof entry[0] !== "string") {
       throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_COUNT_ENTRY_INVALID:${label}`);
     }
-    if (seenKeys.has(entry[0])) {
-      throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_COUNT_KEY_DUPLICATE:${label}:${entry[0]}`);
+    if (entries.has(entry[0])) throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_COUNT_KEY_DUPLICATE:${label}:${entry[0]}`);
+    entries.set(entry[0], assertNonNegativeSafeInteger(entry[1], `${label}:${entry[0]}`));
+  }
+  return entries;
+}
+
+function assertArchiveReconcileParseErrors(
+  checkpointContract: ArchiveReconcileCheckpointContract,
+  state: Record<string, unknown>,
+  expectedCount: number,
+): void {
+  const parseErrors = state.parseErrors;
+  const processedFiles = state.processedFiles;
+  if (!Array.isArray(parseErrors) || !Array.isArray(processedFiles)) {
+    throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_PARSE_ERRORS_INVALID");
+  }
+  if (parseErrors.length !== expectedCount) {
+    throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_PARSE_ERROR_COUNT_MISMATCH");
+  }
+  const selected = new Set(checkpointContract.selectedFileBasenames);
+  const processed = new Set(processedFiles as string[]);
+  const seen = new Set<string>();
+  for (const entry of parseErrors) {
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
+      throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_PARSE_ERROR_ENTRY_INVALID");
     }
-    seenKeys.add(entry[0]);
-    if (!nested) {
-      assertNonNegativeSafeInteger(entry[1], `${label}:${entry[0]}`);
-      continue;
+    const record = entry as Record<string, unknown>;
+    if (typeof record.file !== "string" || basename(record.file) !== record.file || !selected.has(record.file) || !processed.has(record.file)) {
+      throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_PARSE_ERROR_FILE_INVALID:${String(record.file)}`);
     }
-    if (typeof entry[1] !== "object" || entry[1] === null || Array.isArray(entry[1])) {
-      throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_COUNT_ENTRY_INVALID:${label}:${entry[0]}`);
-    }
-    for (const [countName, count] of Object.entries(entry[1] as Record<string, unknown>)) {
-      assertNonNegativeSafeInteger(count, `${label}:${entry[0]}:${countName}`);
+    if (seen.has(record.file)) throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_PARSE_ERROR_FILE_DUPLICATE:${record.file}`);
+    seen.add(record.file);
+    if (typeof record.error !== "string" || record.error.length > 300) {
+      throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_PARSE_ERROR_DETAIL_INVALID:${record.file}`);
     }
   }
 }
 
-function assertArchiveReconcileAggregateCounts(state: unknown): void {
+function assertArchiveReconcileAggregateCounts(
+  checkpointContract: ArchiveReconcileCheckpointContract,
+  state: unknown,
+): void {
   if (typeof state !== "object" || state === null || Array.isArray(state)) {
     throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_STATE_INVALID");
   }
   const record = state as Record<string, unknown>;
-  assertCountEntries(record.cells, "cells", true);
-  assertCountEntries(record.paired, "paired", false);
-  assertCountEntries(record.statusMatrix, "statusMatrix", false);
+  const cells = assertCellEntries(record.cells);
+  const paired = assertFlatCountEntries(record.paired, "paired");
+  const statusMatrix = assertFlatCountEntries(record.statusMatrix, "statusMatrix");
+
+  let statusMismatchTotal = 0;
+  let parseFailureTotal = 0;
+  for (const [key, cell] of cells) {
+    const expectedPaired = cell.exact_match + cell.status_mismatch + cell.result_kind_mismatch;
+    if (!Number.isSafeInteger(expectedPaired) || (paired.get(key) ?? 0) !== expectedPaired) {
+      throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_PAIRED_COUNT_MISMATCH:${key}`);
+    }
+    statusMismatchTotal += cell.status_mismatch;
+    parseFailureTotal += cell.parse_failure;
+  }
+  for (const key of paired.keys()) {
+    if (!cells.has(key)) throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_PAIRED_COUNT_MISMATCH:${key}`);
+  }
+  const matrixTotal = [...statusMatrix.values()].reduce((sum, value) => sum + value, 0);
+  if (matrixTotal !== statusMismatchTotal) {
+    throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_STATUS_MATRIX_MISMATCH");
+  }
+  assertArchiveReconcileParseErrors(checkpointContract, record, parseFailureTotal);
 }
 
 export function assertArchiveReconcileCheckpointStateDigest(
@@ -237,5 +323,5 @@ export function assertArchiveReconcileCheckpointStateDigest(
     throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_STATE_DIGEST_MISMATCH");
   }
   assertArchiveReconcileProcessedFiles(checkpointContract, state);
-  assertArchiveReconcileAggregateCounts(state);
+  assertArchiveReconcileAggregateCounts(checkpointContract, state);
 }
