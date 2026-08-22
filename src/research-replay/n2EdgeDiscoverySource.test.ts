@@ -32,6 +32,19 @@ function withDatabases(fn: (paths: { primary: string; sidecar: string }, dbs: { 
     );
   `);
   sidecar.exec(`
+    CREATE TABLE parse_runs (
+      parse_run_id TEXT PRIMARY KEY,
+      raw_document_id TEXT NOT NULL,
+      status TEXT NOT NULL
+    );
+    CREATE TABLE domain_observations (
+      observation_id TEXT PRIMARY KEY,
+      canonical_race_key TEXT NOT NULL,
+      observation_type TEXT NOT NULL,
+      payload_type TEXT NOT NULL,
+      raw_document_id TEXT NOT NULL,
+      parse_run_id TEXT NOT NULL
+    );
     CREATE TABLE settlement_candidates_v2 (
       candidate_id TEXT PRIMARY KEY,
       canonical_race_key TEXT NOT NULL,
@@ -40,6 +53,8 @@ function withDatabases(fn: (paths: { primary: string; sidecar: string }, dbs: { 
       result_kind TEXT NOT NULL,
       resolution_status TEXT NOT NULL,
       observation_id TEXT NOT NULL,
+      parse_run_id TEXT NOT NULL,
+      raw_document_id TEXT NOT NULL,
       supersedes_candidate_id TEXT
     );
     CREATE TABLE race_payout_lines_v2 (
@@ -75,9 +90,16 @@ function withDatabases(fn: (paths: { primary: string; sidecar: string }, dbs: { 
 }
 
 function insertWinner(db: DatabaseSync, id: string, raceKey: string, selection: string): void {
+  const observationId = `obs-${id}`;
+  const parseRunId = `parse-${id}`;
+  const rawDocumentId = `raw-${id}`;
+  db.prepare("INSERT INTO parse_runs VALUES (?, ?, 'success')").run(parseRunId, rawDocumentId);
+  db.prepare(`INSERT INTO domain_observations
+    (observation_id,canonical_race_key,observation_type,payload_type,raw_document_id,parse_run_id)
+    VALUES (?,?,'settlement_result','settlement_result',?,?)`).run(observationId, raceKey, rawDocumentId, parseRunId);
   db.prepare(`INSERT INTO settlement_candidates_v2
-    (candidate_id,canonical_race_key,bet_type,settlement_status,result_kind,resolution_status,observation_id,supersedes_candidate_id)
-    VALUES (?,?, 'trifecta','settled','normal','resolved',?,NULL)`).run(id, raceKey, `obs-${id}`);
+    (candidate_id,canonical_race_key,bet_type,settlement_status,result_kind,resolution_status,observation_id,parse_run_id,raw_document_id,supersedes_candidate_id)
+    VALUES (?,?, 'trifecta','settled','normal','resolved',?,?,?,NULL)`).run(id, raceKey, observationId, parseRunId, rawDocumentId);
   db.prepare(`INSERT INTO race_payout_lines_v2
     (payout_line_id,candidate_id,line_no,bet_type,selection_canonical,payout_yen,line_kind)
     VALUES (?,?,1,'trifecta',?,1000,'payout')`).run(`p-${id}`, id, selection);
@@ -221,6 +243,22 @@ test("impossible settled race dates fail closed before discovery candidates are 
     const report = readN2EdgeDiscoverySource({ primaryDbPath: paths.primary, sidecarDbPath: paths.sidecar });
     assert.equal(report.status, "BLOCKED");
     assert.ok(report.blockers.includes("2004-02-30:11:R1:CANONICAL_RACE_KEY_INVALID"));
+    assert.equal(report.candidateRaceCount, 0);
+  });
+});
+
+test("settlement lineage drift blocks discovery ingestion before primary reads", () => {
+  withDatabases((paths, dbs) => {
+    const raceKey = "2004-01-01:11:R1";
+    insertWinner(dbs.sidecar, "a", raceKey, "1-2-3");
+    dbs.sidecar.prepare("UPDATE domain_observations SET canonical_race_key=? WHERE observation_id=?")
+      .run("2004-01-01:11:R2", "obs-a");
+    dbs.primary.close();
+    dbs.sidecar.close();
+    const report = readN2EdgeDiscoverySource({ primaryDbPath: paths.primary, sidecarDbPath: paths.sidecar });
+    assert.equal(report.status, "BLOCKED");
+    assert.ok(report.blockers.includes(`${raceKey}:SETTLEMENT_LINEAGE_INVALID`));
+    assert.equal(report.reads.primaryDatabaseReadCount, 0);
     assert.equal(report.candidateRaceCount, 0);
   });
 });
