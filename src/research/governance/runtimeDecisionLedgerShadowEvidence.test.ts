@@ -73,11 +73,13 @@ function canonicalize(value: unknown): unknown {
   return Object.fromEntries(Object.keys(record).sort().map((key) => [key, canonicalize(record[key])]));
 }
 
+function sha256(value: unknown): string {
+  return createHash("sha256").update(JSON.stringify(canonicalize(value))).digest("hex");
+}
+
 function resign(evidence: RuntimeDecisionLedgerShadowEvidence): void {
   const { generatedAt: _generatedAt, contentDigest: _contentDigest, ...digestable } = evidence;
-  evidence.contentDigest = createHash("sha256")
-    .update(JSON.stringify(canonicalize(digestable)))
-    .digest("hex");
+  evidence.contentDigest = sha256(digestable);
 }
 
 test("builds sanitized conditional evidence without row identities", () => {
@@ -196,6 +198,32 @@ test("validator binds source descriptor digest to the persisted descriptor", () 
   const validation = validateRuntimeDecisionLedgerShadowEvidence(evidence);
   assert.equal(validation.valid, false);
   assert.ok(validation.errors.includes("sourceDescriptorDigest mismatch"));
+});
+
+test("validator rejects non-canonical generatedAt even though it is outside contentDigest", () => {
+  for (const generatedAt of ["2026-08-05T17:10:00+09:00", "2026-08-05T24:00:00.000Z"]) {
+    const evidence = buildRuntimeDecisionLedgerShadowEvidence(input({ generatedAt }));
+    const validation = validateRuntimeDecisionLedgerShadowEvidence(evidence);
+    assert.equal(validation.valid, false);
+    assert.ok(validation.errors.includes("generatedAt must be a canonical UTC date-time"));
+  }
+});
+
+test("validator rejects rehashed impossible source descriptor values", () => {
+  const evidence = buildRuntimeDecisionLedgerShadowEvidence(input());
+  evidence.source.fileSizeBytes = -1;
+  evidence.source.pageSizeBytes = 0;
+  evidence.source.modifiedTimeMs = Number.POSITIVE_INFINITY;
+  evidence.source.journalMode = "";
+  evidence.sourceDescriptorDigest = sha256(evidence.source);
+  resign(evidence);
+
+  const validation = validateRuntimeDecisionLedgerShadowEvidence(evidence);
+  assert.equal(validation.valid, false);
+  assert.ok(validation.errors.includes("source.fileSizeBytes must be a non-negative safe integer"));
+  assert.ok(validation.errors.includes("source.pageSizeBytes must be a positive safe integer"));
+  assert.ok(validation.errors.includes("source.modifiedTimeMs must be a non-negative finite number"));
+  assert.ok(validation.errors.includes("source.journalMode must be a non-empty string"));
 });
 
 test("JSON Schema is aligned with the runtime version and privacy constants", () => {
