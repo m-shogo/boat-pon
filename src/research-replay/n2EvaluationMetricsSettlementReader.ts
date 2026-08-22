@@ -38,6 +38,8 @@ type Row = {
   candidateParseRunId: string;
   candidateRawDocumentId: string;
   observationRaceKey: string;
+  observationType: string;
+  observationPayloadType: string;
   observationParseRunId: string;
   observationRawDocumentId: string;
   parseRunRawDocumentId: string;
@@ -128,6 +130,8 @@ export function readN2EvaluationMetricsSettlements(input: {
         c.parse_run_id AS candidateParseRunId,
         c.raw_document_id AS candidateRawDocumentId,
         o.canonical_race_key AS observationRaceKey,
+        o.observation_type AS observationType,
+        o.payload_type AS observationPayloadType,
         o.parse_run_id AS observationParseRunId,
         o.raw_document_id AS observationRawDocumentId,
         pr.raw_document_id AS parseRunRawDocumentId,
@@ -165,6 +169,8 @@ export function readN2EvaluationMetricsSettlements(input: {
     for (const row of rows) {
       if (validResolvedObservationIds.has(row.observationId)) continue;
       if (row.observationRaceKey !== row.raceKey
+        || row.observationType !== "settlement_result"
+        || row.observationPayloadType !== "settlement_result"
         || row.observationParseRunId !== row.candidateParseRunId
         || row.observationRawDocumentId !== row.candidateRawDocumentId
         || row.parseRunRawDocumentId !== row.candidateRawDocumentId) {
