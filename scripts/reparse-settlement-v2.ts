@@ -29,6 +29,7 @@ import {
   type N2SettlementReparseCheckpointIdentity,
 } from "../src/research-replay/n2SettlementReparseCheckpoint";
 import { assertN2SettlementReparseProcessedArchiveLineage } from "../src/research-replay/n2SettlementReparseResumeLineage";
+import { resolveN2SettlementReparseResult } from "../src/research-replay/n2SettlementReparseResult";
 import {
   assertN2SettlementReparseTerminalDuplicateLineage,
   n2SettlementReparseDoneFiles,
@@ -385,6 +386,15 @@ async function main(): Promise<void> {
     };
     const outputDigest = canonicalHash(digestBody);
 
+    const result = resolveN2SettlementReparseResult({
+      counts: state.counts,
+      lightIntegrity: light,
+      appendOnlyEnforcement: appendOnly,
+      secondRun,
+      afterConsistent,
+      fullIntegrity: full,
+      ambiguousActiveKeys,
+    });
     const payload = {
       phase: "N2_SETTLEMENT_REPARSE_TEMP_COPY", reportSchemaVersion: REPARSE_REPORT_SCHEMA_VERSION,
       generatedAt: new Date().toISOString(), startedAt, completedAt: new Date().toISOString(),
@@ -407,10 +417,7 @@ async function main(): Promise<void> {
       byBetType: [...state.byBetType.entries()].sort().map(([betType, v]) => ({ betType, ...v })),
       secondRun, lightIntegrity: light, appendOnlyEnforcement: appendOnly, fullIntegrity: full, ambiguousActiveKeys,
       correctionSamples: state.corrections.slice(0, 100), outputDigest,
-      result: state.counts.parse_errors === 0 && state.counts.unexpected_addition === 0
-        && light.multipleActiveSuccessors === 0 && light.selfSupersedingCycles === 0 && light.danglingSupersedes === 0
-        && appendOnly.updateBlocked && appendOnly.deleteBlocked
-        && (secondRun ? secondRun.appended === 0 : true) ? "REPARSED" : "REPARSED_WITH_FLAGS",
+      result,
     };
 
     mkdirSync(reportDir, { recursive: true });
