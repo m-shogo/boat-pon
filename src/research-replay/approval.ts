@@ -182,6 +182,10 @@ export function recordApprovalLifecycle(
   if (normalized.eventKind !== "superseded" && normalized.replacementApprovalId) {
     throw new Error("replacement_approval_id only allowed for superseded");
   }
+  const subject = db.prepare(`
+    SELECT 1 FROM rollout_approval_grants_v2 WHERE approval_id=?
+  `).get(normalized.subjectApprovalId);
+  if (!subject) throw new Error("subject approval does not exist");
   if (normalized.replacementApprovalId) {
     const replacement = db.prepare(`
       SELECT 1 FROM rollout_approval_grants_v2 WHERE approval_id=?
