@@ -341,6 +341,36 @@ function assertArchiveReconcileParseErrors(
   }
 }
 
+function assertArchiveReconcileSuccessfulCellYears(
+  state: Record<string, unknown>,
+  cells: ReadonlyMap<string, ArchiveReconcileCheckpointCell>,
+): void {
+  const processedFiles = state.processedFiles;
+  const parseErrors = state.parseErrors;
+  if (!Array.isArray(processedFiles) || !Array.isArray(parseErrors)) {
+    throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_STATE_INVALID");
+  }
+  const failedFiles = new Set(
+    parseErrors.flatMap((entry) => (
+      typeof entry === "object" && entry !== null && !Array.isArray(entry)
+        && typeof (entry as Record<string, unknown>).file === "string"
+        ? [(entry as Record<string, unknown>).file as string]
+        : []
+    )),
+  );
+  const successfulYears = new Set(
+    (processedFiles as string[])
+      .filter((file) => !failedFiles.has(file))
+      .map((file) => fileDate(file).slice(0, 4)),
+  );
+  for (const [key] of cells) {
+    const [year, betType, venueName] = key.split("\u0000");
+    if (betType !== "-" && venueName !== "-" && !successfulYears.has(year)) {
+      throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_NORMAL_CELL_WITHOUT_SUCCESS:${key}`);
+    }
+  }
+}
+
 function assertArchiveReconcileSamples(
   state: Record<string, unknown>,
   expectedMismatchCount: number,
@@ -479,6 +509,7 @@ function assertArchiveReconcileAggregateCounts(
     throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_FALSE_REFUND_MATRIX_MISMATCH");
   }
   assertArchiveReconcileParseErrors(checkpointContract, record, parseFailureTotal, cells);
+  assertArchiveReconcileSuccessfulCellYears(record, cells);
   assertArchiveReconcileSamples(record, statusMismatchTotal + resultKindMismatchTotal);
   assertArchiveReconcileAmbiguousKeys(record, ambiguousCanonicalTotal, cells);
 }
