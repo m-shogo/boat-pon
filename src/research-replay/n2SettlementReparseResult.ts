@@ -7,11 +7,7 @@ type ReparseResultInput = {
     ambiguous_non_defect: number;
     unexpected_addition: number;
   };
-  lightIntegrity: {
-    multipleActiveSuccessors: number;
-    selfSupersedingCycles: number;
-    danglingSupersedes: number;
-  };
+  lightIntegrity: Record<string, number>;
   appendOnlyEnforcement: {
     updateBlocked: boolean;
     deleteBlocked: boolean;
