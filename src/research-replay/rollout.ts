@@ -376,6 +376,9 @@ export class RolloutController {
     limit = 100,
     options: ShadowDrainOptions = {},
   ): ShadowDrainDiagnostics {
+    if (!Number.isSafeInteger(limit) || limit < 0) {
+      throw new Error("invalid shadow drain limit");
+    }
     const handlerWallTimeBudgetMs = options.handlerWallTimeBudgetMs ?? 30_000;
     if (!Number.isSafeInteger(handlerWallTimeBudgetMs)
       || handlerWallTimeBudgetMs < 1
