@@ -180,6 +180,16 @@ function canonicalGeneratedAt(value: unknown): value is string {
   return Number.isFinite(parsed) && new Date(parsed).toISOString() === value;
 }
 
+function canonicalDate(value: unknown): value is string {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = Date.parse(`${value}T00:00:00.000Z`);
+  return Number.isFinite(parsed) && new Date(parsed).toISOString().slice(0, 10) === value;
+}
+
+function canonicalNonEmpty(value: unknown): value is string {
+  return typeof value === "string" && value.length > 0 && value.trim() === value;
+}
+
 function expectedRate(count: number, total: number): number | null {
   return total === 0 ? null : count / total;
 }
@@ -443,6 +453,13 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
     ) errors.push("reconciliation counts do not sum to sourceRows");
   }
 
+  if (!canonicalNonEmpty(evidence.scope.runKind)) errors.push("scope.runKind must be a canonical non-empty string");
+  if (!canonicalNonEmpty(evidence.scope.modelVersion)) errors.push("scope.modelVersion must be a canonical non-empty string");
+  if (!canonicalDate(evidence.scope.from) || !canonicalDate(evidence.scope.to)) {
+    errors.push("bounded scope requires canonical from/to dates");
+  } else if (evidence.scope.from > evidence.scope.to) {
+    errors.push("scope.from must not be after scope.to");
+  }
   if (!Number.isSafeInteger(evidence.scope.limit) || evidence.scope.limit < 1 || evidence.scope.limit > 5000) {
     errors.push("scope.limit must be an integer between 1 and 5000");
   }
