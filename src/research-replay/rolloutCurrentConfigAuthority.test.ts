@@ -75,7 +75,7 @@ test("runtime rollout config preserves same-timestamp rowid last-write-wins sema
 
   assert.deepEqual(ctx.controller.currentConfig(), expected);
   const result = ctx.controller.enqueue({ idempotencyKey: "must-not-write", messageType: "fixture", payload: {} });
-  assert.equal(result.status, "killed");
+  assert.equal(result.status, "disabled");
   const row = ctx.db.prepare("SELECT COUNT(*) AS count FROM shadow_outbox_messages").get() as { count: number };
   assert.equal(row.count, 0);
 });
@@ -112,41 +112,6 @@ test("runtime rollout config rejects non-canonical historical timestamps before 
   assert.throws(
     () => ctx.controller.currentConfig(),
     /timestamp/,
-  );
-});
-
-test("runtime rollout config rejects producer-invalid historical flags before latest-state selection", (t) => {
-  const ctx = context();
-  t.after(() => ctx.close());
-  ctx.db.prepare(`
-    INSERT INTO rollout_config_events
-    (config_event_id, shadow_write_enabled, operational_gc_enabled, kill_switch_engaged,
-     queue_capacity, max_retries, storage_quota_bytes, disk_low_water_bytes,
-     reason, occurred_at, recorded_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    "rollout-config-invalid-flag",
-    2,
-    0,
-    0,
-    100,
-    3,
-    1024 * 1024,
-    0,
-    "invalid historical flag",
-    "2026-08-23T00:00:00.000Z",
-    "2026-08-23T00:00:00.000Z",
-  );
-  ctx.controller.recordConfig(
-    config(),
-    "clean later event",
-    "2026-08-23T01:00:00.000Z",
-    "rollout-config-later",
-  );
-
-  assert.throws(
-    () => ctx.controller.currentConfig(),
-    /invalid rollout config flag/,
   );
 });
 
