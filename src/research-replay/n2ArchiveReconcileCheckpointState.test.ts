@@ -79,7 +79,7 @@ test("archive reconcile resume accepts producer-consistent mismatch samples", ()
   const key = "2026\u0000trifecta\u0000Toda";
   const mismatchState = {
     ...state,
-    cells: [[key, { ...emptyCell, status_mismatch: 1 }]],
+    cells: [[key, { ...emptyCell, status_mismatch: 1, falseRefund: 1 }]],
     paired: [[key, 1]],
     statusMatrix: [["refunded->settled", 1]],
     samples: [statusMismatchSample],
@@ -92,7 +92,7 @@ test("archive reconcile resume rejects rehashed mismatch sample deletion", () =>
   const key = "2026\u0000trifecta\u0000Toda";
   const tampered = {
     ...state,
-    cells: [[key, { ...emptyCell, status_mismatch: 1 }]],
+    cells: [[key, { ...emptyCell, status_mismatch: 1, falseRefund: 1 }]],
     paired: [[key, 1]],
     statusMatrix: [["refunded->settled", 1]],
     samples: [],
@@ -108,7 +108,7 @@ test("archive reconcile resume rejects rehashed impossible mismatch samples", ()
   const key = "2026\u0000trifecta\u0000Toda";
   const tampered = {
     ...state,
-    cells: [[key, { ...emptyCell, status_mismatch: 1 }]],
+    cells: [[key, { ...emptyCell, status_mismatch: 1, falseRefund: 1 }]],
     paired: [[key, 1]],
     statusMatrix: [["refunded->settled", 1]],
     samples: [{ ...statusMismatchSample, canonicalStatus: "settled" }],
@@ -206,7 +206,7 @@ test("archive reconcile resume rejects status-matrix drift", () => {
   const key = "2026\u0000trifecta\u0000Toda";
   const tampered = {
     ...state,
-    cells: [[key, { ...emptyCell, status_mismatch: 1 }]],
+    cells: [[key, { ...emptyCell, status_mismatch: 1, falseRefund: 1 }]],
     paired: [[key, 1]],
     statusMatrix: [],
   };
