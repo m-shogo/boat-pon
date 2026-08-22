@@ -77,7 +77,7 @@ function hasValidCalendarDate(value: string): boolean {
 }
 
 function hasValidExplicitIsoClock(value: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}T/u.test(value)) return true;
+  if (!/^\d{4}-\d{2}-\d{2}T/u.test(value)) return false;
   if (!/(?:Z|[+-]\d{2}:\d{2})$/u.test(value)) return false;
   const match = /^\d{4}-\d{2}-\d{2}T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})$/u.exec(value);
   if (match === null) return false;
