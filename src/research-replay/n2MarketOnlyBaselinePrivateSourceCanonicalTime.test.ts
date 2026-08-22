@@ -43,6 +43,19 @@ function createSidecar(root: string): string {
   mkdirSync(join(root, "data"), { recursive: true });
   const db = new DatabaseSync(path);
   db.exec(`
+    CREATE TABLE parse_runs (
+      parse_run_id TEXT PRIMARY KEY,
+      raw_document_id TEXT NOT NULL,
+      status TEXT NOT NULL
+    );
+    CREATE TABLE domain_observations (
+      observation_id TEXT PRIMARY KEY,
+      canonical_race_key TEXT NOT NULL,
+      observation_type TEXT NOT NULL,
+      payload_type TEXT NOT NULL,
+      raw_document_id TEXT NOT NULL,
+      parse_run_id TEXT NOT NULL
+    );
     CREATE TABLE settlement_candidates_v2 (
       candidate_id TEXT PRIMARY KEY,
       canonical_race_key TEXT NOT NULL,
@@ -51,6 +64,8 @@ function createSidecar(root: string): string {
       result_kind TEXT NOT NULL,
       resolution_status TEXT NOT NULL,
       observation_id TEXT NOT NULL,
+      parse_run_id TEXT NOT NULL,
+      raw_document_id TEXT NOT NULL,
       supersedes_candidate_id TEXT
     );
     CREATE TABLE race_payout_lines_v2 (
@@ -62,7 +77,18 @@ function createSidecar(root: string): string {
       line_kind TEXT NOT NULL
     );
     CREATE TABLE settlement_source_duplicate_resolutions_v2 (
-      duplicate_observation_id TEXT PRIMARY KEY
+      resolution_id TEXT PRIMARY KEY,
+      duplicate_observation_id TEXT NOT NULL,
+      canonical_observation_id TEXT NOT NULL,
+      canonical_race_key TEXT NOT NULL,
+      raw_document_id TEXT NOT NULL,
+      source_archive_file TEXT NOT NULL,
+      resolution_kind TEXT NOT NULL,
+      detection_reason TEXT NOT NULL,
+      duplicate_semantic_digest TEXT NOT NULL,
+      resolver_version TEXT NOT NULL,
+      policy_version TEXT NOT NULL,
+      schema_version TEXT NOT NULL
     );
   `);
   db.close();
@@ -73,12 +99,23 @@ function insertSettlement(path: string, spec: ReturnType<typeof raceSpec>, index
   const db = new DatabaseSync(path);
   try {
     const candidateId = `candidate-${index}`;
+    const observationId = `settlement-obs-${index}`;
+    const parseRunId = `settlement-parse-${index}`;
+    const rawDocumentId = `settlement-raw-${index}`;
+    db.prepare("INSERT INTO parse_runs VALUES (?, ?, 'success')").run(parseRunId, rawDocumentId);
+    db.prepare(`
+      INSERT INTO domain_observations (
+        observation_id, canonical_race_key, observation_type, payload_type,
+        raw_document_id, parse_run_id
+      ) VALUES (?, ?, 'settlement_result', 'settlement_result', ?, ?)
+    `).run(observationId, spec.raceKey, rawDocumentId, parseRunId);
     db.prepare(`
       INSERT INTO settlement_candidates_v2 (
         candidate_id, canonical_race_key, bet_type, settlement_status,
-        result_kind, resolution_status, observation_id, supersedes_candidate_id
-      ) VALUES (?, ?, 'trifecta', 'settled', 'normal', 'resolved', ?, NULL)
-    `).run(candidateId, spec.raceKey, `settlement-obs-${index}`);
+        result_kind, resolution_status, observation_id, parse_run_id,
+        raw_document_id, supersedes_candidate_id
+      ) VALUES (?, ?, 'trifecta', 'settled', 'normal', 'resolved', ?, ?, ?, NULL)
+    `).run(candidateId, spec.raceKey, observationId, parseRunId, rawDocumentId);
     db.prepare(`
       INSERT INTO race_payout_lines_v2 (
         payout_line_id, candidate_id, line_no, bet_type, selection_canonical, line_kind
