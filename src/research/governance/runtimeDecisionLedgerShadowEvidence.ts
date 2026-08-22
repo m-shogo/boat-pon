@@ -157,6 +157,32 @@ function evidenceVerdict(input: RuntimeDecisionLedgerShadowEvidenceInput): Runti
   return "PASS";
 }
 
+function expectedEvidenceVerdict(evidence: RuntimeDecisionLedgerShadowEvidence): RuntimeDecisionLedgerShadowEvidenceVerdict {
+  const reconciliation = evidence.reconciliation;
+  if (reconciliation.conflictCount > 0 || reconciliation.status === "FAILED") return "FAILED";
+  if (
+    reconciliation.sourceRows === 0 ||
+    evidence.scope.limitReached ||
+    reconciliation.unresolvedCount > 0 ||
+    reconciliation.rejectedCount > 0 ||
+    reconciliation.status === "CONDITIONAL"
+  ) return "CONDITIONAL";
+  return "PASS";
+}
+
+function nonNegativeSafeInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+}
+
+function expectedRate(count: number, total: number): number | null {
+  return total === 0 ? null : count / total;
+}
+
+function rateMatches(actual: unknown, count: number, total: number): boolean {
+  const expected = expectedRate(count, total);
+  return expected === null ? actual === null : actual === expected;
+}
+
 function digestableEvidence(
   evidence: Omit<RuntimeDecisionLedgerShadowEvidence, "generatedAt" | "contentDigest">,
 ): unknown {
@@ -295,10 +321,17 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
     if (typeof valueToCheck !== "string" || !/^[0-9a-f]{64}$/.test(valueToCheck)) errors.push(`${name} must be sha256 hex`);
   }
 
+  if (evidence.sourceDescriptorDigest !== digest(evidence.source)) {
+    errors.push("sourceDescriptorDigest mismatch");
+  }
+
   const r = evidence.reconciliation;
   if (!r || !isRecord(r)) {
     errors.push("reconciliation must be an object");
   } else {
+    if (!(["PASS", "CONDITIONAL", "FAILED"] as string[]).includes(r.status)) {
+      errors.push("reconciliation.status is invalid");
+    }
     for (const [name, count] of [
       ["sourceRows", r.sourceRows],
       ["mappedUnique", r.mappedUnique],
@@ -307,14 +340,27 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
       ["rejectedCount", r.rejectedCount],
       ["conflictCount", r.conflictCount],
     ] as const) {
-      if (!Number.isInteger(count) || count < 0) errors.push(`${name} must be a non-negative integer`);
+      if (!nonNegativeSafeInteger(count)) errors.push(`${name} must be a non-negative safe integer`);
     }
     if (
-      Number.isInteger(r.sourceRows) &&
+      nonNegativeSafeInteger(r.sourceRows) &&
       r.sourceRows !== r.mappedUnique + r.exactDuplicates + r.unresolvedCount + r.rejectedCount + r.conflictCount
     ) errors.push("reconciliation counts do not sum to sourceRows");
   }
 
+  if (!Number.isSafeInteger(evidence.scope.limit) || evidence.scope.limit < 1 || evidence.scope.limit > 5000) {
+    errors.push("scope.limit must be an integer between 1 and 5000");
+  }
+  if (!nonNegativeSafeInteger(evidence.scope.returnedRows)) {
+    errors.push("scope.returnedRows must be a non-negative safe integer");
+  }
+  if (evidence.scope.bounded !== true) errors.push("scope.bounded must be true");
+  if (typeof evidence.scope.limitReached !== "boolean") errors.push("scope.limitReached must be boolean");
+  if (Number.isSafeInteger(evidence.scope.limit)
+    && nonNegativeSafeInteger(evidence.scope.returnedRows)
+    && evidence.scope.returnedRows > evidence.scope.limit) {
+    errors.push("scope.returnedRows must not exceed scope.limit");
+  }
   if (evidence.scope.returnedRows !== evidence.reconciliation.sourceRows) {
     errors.push("scope.returnedRows must equal reconciliation.sourceRows");
   }
@@ -325,6 +371,30 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
   if (evidence.source.readOnly !== true || evidence.source.queryOnly !== true) {
     errors.push("source must be readOnly and queryOnly");
   }
+
+  const expectedVerdict = expectedEvidenceVerdict(evidence);
+  if (evidence.verdict !== expectedVerdict) errors.push(`verdict must be ${expectedVerdict}`);
+
+  if (!rateMatches(evidence.completeness.mappedRate, r.mappedUnique, r.sourceRows)) {
+    errors.push("completeness.mappedRate mismatch");
+  }
+  if (!rateMatches(evidence.completeness.unresolvedRate, r.unresolvedCount, r.sourceRows)) {
+    errors.push("completeness.unresolvedRate mismatch");
+  }
+  if (!rateMatches(evidence.completeness.rejectedRate, r.rejectedCount, r.sourceRows)) {
+    errors.push("completeness.rejectedRate mismatch");
+  }
+  if (!rateMatches(evidence.completeness.conflictRate, r.conflictCount, r.sourceRows)) {
+    errors.push("completeness.conflictRate mismatch");
+  }
+
+  for (const [name, actual] of Object.entries(evidence.privacy)) {
+    if (actual !== false) errors.push(`privacy.${name} must be false`);
+  }
+  for (const field of ["operationalDbWrites", "notificationWrites", "lineSends", "appSettingsReads", "publicWrites"] as const) {
+    if (evidence.safety[field] !== 0) errors.push(`safety.${field} must be 0`);
+  }
+  if (evidence.safety.productionPromotion !== false) errors.push("safety.productionPromotion must be false");
 
   const expectedDigest = digest(digestableEvidence({
     schemaVersion: evidence.schemaVersion,
