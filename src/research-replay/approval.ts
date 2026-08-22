@@ -280,18 +280,22 @@ export function resolveApproval(
   if (sameScope.length === 0) {
     return { ...base, approved: false, code: "APPROVAL_SCOPE_MISMATCH", approvalId: null, source: null, reference: null, approvedAt: null, mode: null };
   }
-  if (matching.length === 0) {
-    return { ...base, approved: false, code: "APPROVAL_TARGET_MISMATCH", approvalId: null, source: null, reference: null, approvedAt: null, mode: null };
-  }
-  if (matching.some((candidate) => !isCanonicalStoredInstant(candidate.approved_at))) {
+  if (sameScope.some((candidate) => !isCanonicalStoredInstant(candidate.approved_at))) {
     return { ...base, approved: false, code: "APPROVAL_TIMESTAMP_INVALID", approvalId: null, source: null, reference: null, approvedAt: null, mode: null };
   }
-  const latestApprovedAt = matching[0].approved_at;
-  const latestMatching = matching.filter((candidate) => candidate.approved_at === latestApprovedAt);
-  if (latestMatching.length !== 1) {
+  const latestApprovedAt = sameScope[0].approved_at;
+  const latestScopeGrants = sameScope.filter((candidate) => candidate.approved_at === latestApprovedAt);
+  if (latestScopeGrants.length !== 1) {
     return { ...base, approved: false, code: "APPROVAL_AMBIGUOUS", approvalId: null, source: null, reference: null, approvedAt: latestApprovedAt, mode: null };
   }
-  const row = latestMatching[0];
+  const row = latestScopeGrants[0];
+  if (
+    row.target_stage !== expected.targetStage
+    || row.target_schema_version !== expected.targetSchemaVersion
+    || row.target_contract_version !== expected.targetContractVersion
+  ) {
+    return { ...base, approved: false, code: "APPROVAL_TARGET_MISMATCH", approvalId: null, source: null, reference: null, approvedAt: row.approved_at, mode: null };
+  }
   const selected = {
     approvalId: row.approval_id,
     source: row.approval_source,
