@@ -20,6 +20,17 @@ const contract: ArchiveReconcileCheckpointContract = {
   sourceSidecarSha256: "b".repeat(64),
 };
 
+const emptyCell = {
+  exact_match: 0,
+  status_mismatch: 0,
+  result_kind_mismatch: 0,
+  archive_only: 0,
+  canonical_only: 0,
+  ambiguous_canonical: 0,
+  parse_failure: 0,
+  falseRefund: 0,
+};
+
 const state = {
   version: RECONCILE_INPUT_VERSION,
   cells: [],
@@ -43,6 +54,17 @@ test("archive reconcile checkpoint state digest binds processed-file resume stat
   );
 });
 
+test("archive reconcile resume accepts producer-consistent paired counts", () => {
+  const key = "2026\u0000trifecta\u0000Toda";
+  const pairedState = {
+    ...state,
+    cells: [[key, { ...emptyCell, exact_match: 1 }]],
+    paired: [[key, 1]],
+  };
+  const digest = buildArchiveReconcileCheckpointStateDigest(contract, pairedState);
+  assert.doesNotThrow(() => assertArchiveReconcileCheckpointStateDigest(digest, contract, pairedState));
+});
+
 test("archive reconcile resume rejects rehashed processed files outside selected inventory", () => {
   const tampered = { ...state, processedFiles: ["k260731.lzh", "k260801.lzh"] };
   const digest = buildArchiveReconcileCheckpointStateDigest(contract, tampered);
@@ -64,7 +86,7 @@ test("archive reconcile resume rejects rehashed duplicate processed files", () =
 test("archive reconcile resume rejects rehashed negative aggregate counts", () => {
   const tampered = {
     ...state,
-    cells: [["2026\u0000trifecta\u0000Toda", { exact_match: -1, falseRefund: 0 }]],
+    cells: [["2026\u0000trifecta\u0000Toda", { ...emptyCell, exact_match: -1 }]],
   };
   const digest = buildArchiveReconcileCheckpointStateDigest(contract, tampered);
   assert.throws(
@@ -95,6 +117,66 @@ test("archive reconcile resume rejects duplicate aggregate keys even after rehas
   assert.throws(
     () => assertArchiveReconcileCheckpointStateDigest(digest, contract, tampered),
     /ARCHIVE_RECONCILE_CHECKPOINT_COUNT_KEY_DUPLICATE:paired:/,
+  );
+});
+
+test("archive reconcile resume rejects rehashed paired-count drift", () => {
+  const key = "2026\u0000trifecta\u0000Toda";
+  const tampered = {
+    ...state,
+    cells: [[key, { ...emptyCell, exact_match: 1 }]],
+    paired: [],
+  };
+  const digest = buildArchiveReconcileCheckpointStateDigest(contract, tampered);
+  assert.throws(
+    () => assertArchiveReconcileCheckpointStateDigest(digest, contract, tampered),
+    /ARCHIVE_RECONCILE_CHECKPOINT_PAIRED_COUNT_MISMATCH:/,
+  );
+});
+
+test("archive reconcile resume rejects canonical-only counts before final derivation", () => {
+  const key = "2026\u0000trifecta\u0000Toda";
+  const tampered = {
+    ...state,
+    cells: [[key, { ...emptyCell, canonical_only: 1 }]],
+  };
+  const digest = buildArchiveReconcileCheckpointStateDigest(contract, tampered);
+  assert.throws(
+    () => assertArchiveReconcileCheckpointStateDigest(digest, contract, tampered),
+    /ARCHIVE_RECONCILE_CHECKPOINT_CANONICAL_ONLY_PREMATURE:/,
+  );
+});
+
+test("archive reconcile resume rejects status-matrix drift", () => {
+  const key = "2026\u0000trifecta\u0000Toda";
+  const tampered = {
+    ...state,
+    cells: [[key, { ...emptyCell, status_mismatch: 1 }]],
+    paired: [[key, 1]],
+    statusMatrix: [],
+  };
+  const digest = buildArchiveReconcileCheckpointStateDigest(contract, tampered);
+  assert.throws(
+    () => assertArchiveReconcileCheckpointStateDigest(digest, contract, tampered),
+    /ARCHIVE_RECONCILE_CHECKPOINT_STATUS_MATRIX_MISMATCH/,
+  );
+});
+
+test("archive reconcile resume rejects parse-error evidence deletion", () => {
+  const key = "2026\u0000-\u0000-";
+  const producerState = {
+    ...state,
+    cells: [[key, { ...emptyCell, parse_failure: 1 }]],
+    parseErrors: [{ file: "k260730.lzh", error: "synthetic parse failure" }],
+  };
+  const producerDigest = buildArchiveReconcileCheckpointStateDigest(contract, producerState);
+  assert.doesNotThrow(() => assertArchiveReconcileCheckpointStateDigest(producerDigest, contract, producerState));
+
+  const tampered = { ...producerState, parseErrors: [] };
+  const digest = buildArchiveReconcileCheckpointStateDigest(contract, tampered);
+  assert.throws(
+    () => assertArchiveReconcileCheckpointStateDigest(digest, contract, tampered),
+    /ARCHIVE_RECONCILE_CHECKPOINT_PARSE_ERROR_COUNT_MISMATCH/,
   );
 });
 
