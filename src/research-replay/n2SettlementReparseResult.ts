@@ -2,6 +2,7 @@ export type N2SettlementReparseResult = "REPARSED" | "REPARSED_WITH_FLAGS";
 
 type ReparseResultInput = {
   counts: {
+    files_not_ingested: number;
     parse_errors: number;
     ambiguous_active: number;
     ambiguous_non_defect: number;
@@ -28,7 +29,8 @@ function fullIntegrityIsClean(full: Record<string, unknown> | null): boolean {
 }
 
 export function resolveN2SettlementReparseResult(input: ReparseResultInput): N2SettlementReparseResult {
-  const clean = input.counts.parse_errors === 0
+  const clean = input.counts.files_not_ingested === 0
+    && input.counts.parse_errors === 0
     && input.counts.ambiguous_active === 0
     && input.counts.ambiguous_non_defect === 0
     && input.counts.unexpected_addition === 0
