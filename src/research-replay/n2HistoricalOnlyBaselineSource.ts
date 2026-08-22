@@ -47,13 +47,13 @@ type WinnerRow = {
   observationId: string;
   candidateParseRunId: string;
   candidateRawDocumentId: string;
-  observationRaceKey: string;
-  observationType: string;
-  observationPayloadType: string;
-  observationParseRunId: string;
-  observationRawDocumentId: string;
-  parseRunRawDocumentId: string;
-  parseRunStatus: string;
+  observationRaceKey: string | null;
+  observationType: string | null;
+  observationPayloadType: string | null;
+  observationParseRunId: string | null;
+  observationRawDocumentId: string | null;
+  parseRunRawDocumentId: string | null;
+  parseRunStatus: string | null;
   winningSelection: string | null;
 };
 
@@ -152,9 +152,9 @@ function readCleanTrifectaWinners(input: {
         pr.status AS parseRunStatus,
         p.selection_canonical AS winningSelection
       FROM settlement_candidates_v2 c
-      JOIN domain_observations o
+      LEFT JOIN domain_observations o
         ON o.observation_id=c.observation_id
-      JOIN parse_runs pr
+      LEFT JOIN parse_runs pr
         ON pr.parse_run_id=c.parse_run_id
       JOIN race_payout_lines_v2 p
         ON p.candidate_id=c.candidate_id
@@ -190,6 +190,7 @@ function readCleanTrifectaWinners(input: {
         || row.observationParseRunId !== row.candidateParseRunId
         || row.observationRawDocumentId !== row.candidateRawDocumentId
         || row.parseRunRawDocumentId !== row.candidateRawDocumentId
+        || row.parseRunStatus == null
         || !REUSABLE_PARSE_STATUSES.has(row.parseRunStatus)) {
         blockers.push(`${row.raceKey}:SETTLEMENT_LINEAGE_MISMATCH:${row.observationId}`);
         continue;
