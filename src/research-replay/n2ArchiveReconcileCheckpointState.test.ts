@@ -31,6 +31,16 @@ const emptyCell = {
   falseRefund: 0,
 };
 
+const statusMismatchSample = {
+  raceKey: "2026-07-30:01:R1",
+  betType: "trifecta",
+  class: "status_mismatch",
+  canonicalStatus: "refunded",
+  canonicalResultKind: "normal",
+  archiveStatus: "settled",
+  archiveResultKind: "normal",
+};
+
 const state = {
   version: RECONCILE_INPUT_VERSION,
   cells: [],
@@ -63,6 +73,51 @@ test("archive reconcile resume accepts producer-consistent paired counts", () =>
   };
   const digest = buildArchiveReconcileCheckpointStateDigest(contract, pairedState);
   assert.doesNotThrow(() => assertArchiveReconcileCheckpointStateDigest(digest, contract, pairedState));
+});
+
+test("archive reconcile resume accepts producer-consistent mismatch samples", () => {
+  const key = "2026\u0000trifecta\u0000Toda";
+  const mismatchState = {
+    ...state,
+    cells: [[key, { ...emptyCell, status_mismatch: 1 }]],
+    paired: [[key, 1]],
+    statusMatrix: [["refunded->settled", 1]],
+    samples: [statusMismatchSample],
+  };
+  const digest = buildArchiveReconcileCheckpointStateDigest(contract, mismatchState);
+  assert.doesNotThrow(() => assertArchiveReconcileCheckpointStateDigest(digest, contract, mismatchState));
+});
+
+test("archive reconcile resume rejects rehashed mismatch sample deletion", () => {
+  const key = "2026\u0000trifecta\u0000Toda";
+  const tampered = {
+    ...state,
+    cells: [[key, { ...emptyCell, status_mismatch: 1 }]],
+    paired: [[key, 1]],
+    statusMatrix: [["refunded->settled", 1]],
+    samples: [],
+  };
+  const digest = buildArchiveReconcileCheckpointStateDigest(contract, tampered);
+  assert.throws(
+    () => assertArchiveReconcileCheckpointStateDigest(digest, contract, tampered),
+    /ARCHIVE_RECONCILE_CHECKPOINT_SAMPLE_COUNT_MISMATCH:0:1/,
+  );
+});
+
+test("archive reconcile resume rejects rehashed impossible mismatch samples", () => {
+  const key = "2026\u0000trifecta\u0000Toda";
+  const tampered = {
+    ...state,
+    cells: [[key, { ...emptyCell, status_mismatch: 1 }]],
+    paired: [[key, 1]],
+    statusMatrix: [["refunded->settled", 1]],
+    samples: [{ ...statusMismatchSample, canonicalStatus: "settled" }],
+  };
+  const digest = buildArchiveReconcileCheckpointStateDigest(contract, tampered);
+  assert.throws(
+    () => assertArchiveReconcileCheckpointStateDigest(digest, contract, tampered),
+    /ARCHIVE_RECONCILE_CHECKPOINT_SAMPLE_CLASS_INCONSISTENT:status_mismatch/,
+  );
 });
 
 test("archive reconcile resume rejects rehashed processed files outside selected inventory", () => {

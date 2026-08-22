@@ -1,12 +1,22 @@
 import { readFileSync } from "node:fs";
 import { basename } from "node:path";
 import { canonicalHash, canonicalUtcTimestamp, sha256Bytes } from "./canonical";
+import { parseCanonicalRaceKey } from "./identity";
 import { fileDate } from "./n1Backfill";
+import { BET_TYPES } from "./settlement";
 
 export const ARCHIVE_RECONCILE_SELECTION_VERSION = "n2-archive-reconcile-selection-v3";
 export const ARCHIVE_RECONCILE_CHECKPOINT_VERSION = "n2-archive-reconcile-checkpoint-v6";
 export const ARCHIVE_RECONCILE_CHECKPOINT_STATE_DIGEST_VERSION = "n2-archive-reconcile-checkpoint-state-digest-v1";
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+const MAX_RECONCILE_SAMPLES = 200;
+const BET_TYPE_SET: ReadonlySet<string> = new Set(BET_TYPES);
+const SETTLEMENT_STATUS_SET: ReadonlySet<string> = new Set([
+  "pending", "settled", "refunded", "partially_refunded", "cancelled", "no_sale",
+]);
+const RESULT_KIND_SET: ReadonlySet<string> = new Set([
+  "normal", "special_payout", "dead_heat", "source_defined", "unknown",
+]);
 
 export type ArchiveReconcileSelection = {
   asOf: string;
@@ -278,6 +288,57 @@ function assertArchiveReconcileParseErrors(
   }
 }
 
+function assertArchiveReconcileSamples(
+  state: Record<string, unknown>,
+  expectedMismatchCount: number,
+): void {
+  const samples = state.samples;
+  if (!Array.isArray(samples)) throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_SAMPLES_INVALID");
+  const expectedSampleCount = Math.min(MAX_RECONCILE_SAMPLES, expectedMismatchCount);
+  if (samples.length !== expectedSampleCount) {
+    throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_SAMPLE_COUNT_MISMATCH:${samples.length}:${expectedSampleCount}`);
+  }
+  for (const entry of samples) {
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
+      throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_SAMPLE_INVALID");
+    }
+    const sample = entry as Record<string, unknown>;
+    const keys = [
+      "archiveResultKind", "archiveStatus", "betType", "canonicalResultKind", "canonicalStatus", "class", "raceKey",
+    ];
+    if (Object.keys(sample).sort().join(",") !== keys.sort().join(",")) {
+      throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_SAMPLE_INVALID");
+    }
+    if (typeof sample.raceKey !== "string") throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_SAMPLE_RACE_INVALID");
+    try {
+      parseCanonicalRaceKey(sample.raceKey);
+    } catch {
+      throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_SAMPLE_RACE_INVALID:${sample.raceKey}`);
+    }
+    if (typeof sample.betType !== "string" || !BET_TYPE_SET.has(sample.betType)) {
+      throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_SAMPLE_BET_TYPE_INVALID:${String(sample.betType)}`);
+    }
+    if (sample.class !== "status_mismatch" && sample.class !== "result_kind_mismatch") {
+      throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_SAMPLE_CLASS_INVALID:${String(sample.class)}`);
+    }
+    if (typeof sample.canonicalStatus !== "string" || !SETTLEMENT_STATUS_SET.has(sample.canonicalStatus)
+      || typeof sample.archiveStatus !== "string" || !SETTLEMENT_STATUS_SET.has(sample.archiveStatus)) {
+      throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_SAMPLE_STATUS_INVALID");
+    }
+    if (typeof sample.canonicalResultKind !== "string" || !RESULT_KIND_SET.has(sample.canonicalResultKind)
+      || typeof sample.archiveResultKind !== "string" || !RESULT_KIND_SET.has(sample.archiveResultKind)) {
+      throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_SAMPLE_RESULT_KIND_INVALID");
+    }
+    if (sample.class === "status_mismatch" && sample.canonicalStatus === sample.archiveStatus) {
+      throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_SAMPLE_CLASS_INCONSISTENT:status_mismatch");
+    }
+    if (sample.class === "result_kind_mismatch"
+      && (sample.canonicalStatus !== sample.archiveStatus || sample.canonicalResultKind === sample.archiveResultKind)) {
+      throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_SAMPLE_CLASS_INCONSISTENT:result_kind_mismatch");
+    }
+  }
+}
+
 function assertArchiveReconcileAggregateCounts(
   checkpointContract: ArchiveReconcileCheckpointContract,
   state: unknown,
@@ -291,6 +352,7 @@ function assertArchiveReconcileAggregateCounts(
   const statusMatrix = assertFlatCountEntries(record.statusMatrix, "statusMatrix");
 
   let statusMismatchTotal = 0;
+  let resultKindMismatchTotal = 0;
   let parseFailureTotal = 0;
   for (const [key, cell] of cells) {
     const expectedPaired = cell.exact_match + cell.status_mismatch + cell.result_kind_mismatch;
@@ -298,6 +360,7 @@ function assertArchiveReconcileAggregateCounts(
       throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_PAIRED_COUNT_MISMATCH:${key}`);
     }
     statusMismatchTotal += cell.status_mismatch;
+    resultKindMismatchTotal += cell.result_kind_mismatch;
     parseFailureTotal += cell.parse_failure;
   }
   for (const key of paired.keys()) {
@@ -308,6 +371,7 @@ function assertArchiveReconcileAggregateCounts(
     throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_STATUS_MATRIX_MISMATCH");
   }
   assertArchiveReconcileParseErrors(checkpointContract, record, parseFailureTotal);
+  assertArchiveReconcileSamples(record, statusMismatchTotal + resultKindMismatchTotal);
 }
 
 export function assertArchiveReconcileCheckpointStateDigest(
