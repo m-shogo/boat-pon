@@ -4,6 +4,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { readCurrentlyValidSourceDuplicateObservationIds } from "../src/research-replay/n1SourceDuplicateResolutionValidation";
 import {
   buildN2SelectionProfile,
   type N2PayoutLineInput,
@@ -47,6 +48,8 @@ type RefundRow = {
 function readProfileFromFreshConnection(): N2SelectionProfile {
   const db = new DatabaseSync(`file:${SIDECAR}?immutable=1`, { readOnly: true } as never);
   try {
+    // Each independent rebuild must fail closed if append-only duplicate-resolution evidence is stale or forged.
+    readCurrentlyValidSourceDuplicateObservationIds(db);
     const lower = `${PROTO_MONTH}-01`;
     const upper = `${PROTO_MONTH}-99`;
     const candidates = db.prepare(`
