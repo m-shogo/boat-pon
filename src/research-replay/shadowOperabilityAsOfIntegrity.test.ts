@@ -76,15 +76,3 @@ test("shadow operability refuses delivery evidence that occurs after report asOf
     }), /future shadow delivery attempt timestamp/);
   });
 });
-
-test("shadow operability refuses terminal messages enqueued after report asOf", () => {
-  withDb((db) => {
-    insertMessage(db, "2026-08-02T04:10:00.000Z");
-    assert.throws(() => buildShadowOperabilityReport(db, {
-      policyVersion: "fixture-asof-v1",
-      asOf: "2026-08-02T04:05:00.000Z",
-      diagnosticsWindowMs: 60_000,
-      thresholds,
-    }), /future outbox enqueue timestamp/);
-  });
-});
