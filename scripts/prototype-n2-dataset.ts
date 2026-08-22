@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { readCurrentlyValidSourceDuplicateObservationIds } from "../src/research-replay/n1SourceDuplicateResolutionValidation";
 import { classifyEligibility, N2_DATASET_CONTRACT_VERSION } from "../src/research-replay/n2DatasetContract";
 import {
   N1_SETTLEMENT_MIGRATION_CHECKSUM,
@@ -21,6 +22,8 @@ const PROTO_MONTH = process.argv.find((a) => a.startsWith("--month="))?.slice("-
 
 function main(): void {
   const db = new DatabaseSync(`file:${SIDECAR}?immutable=1`, { readOnly: true } as never);
+  // Fail closed before any profile/query output if append-only duplicate-resolution evidence is stale or forged.
+  readCurrentlyValidSourceDuplicateObservationIds(db);
 
   // 単一スキャンで year × bet_type × settlement_status × resolution_status × active/duplicate を集計。
   const rows = db.prepare(`
