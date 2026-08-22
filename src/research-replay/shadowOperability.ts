@@ -47,6 +47,12 @@ type CurrentOutboxRow = {
   next_available_at: string | null;
 };
 
+type ShadowDrainAuditRow = {
+  operation_id: string;
+  occurred_at: string;
+  detail_json: string;
+};
+
 const TERMINAL_OUTCOMES = new Set(["succeeded", "permanent_failure", "cancelled"]);
 
 function timestampMs(value: string, name: string): number {
@@ -156,10 +162,10 @@ export function buildShadowOperabilityReport(
   }
 
   const auditCandidates = db.prepare(`
-    SELECT occurred_at, detail_json FROM operational_audit_events
+    SELECT operation_id, occurred_at, detail_json FROM operational_audit_events
     WHERE event_kind='health_snapshot' AND subject_type='shadow_outbox_drain'
     ORDER BY audit_event_id
-  `).all() as Array<{ occurred_at: string; detail_json: string }>;
+  `).all() as ShadowDrainAuditRow[];
   const auditRows = auditCandidates.filter((row) => {
     const occurredAtMs = timestampMs(row.occurred_at, "diagnostic occurred_at");
     return occurredAtMs >= windowStartMs && occurredAtMs <= asOfMs;
@@ -167,7 +173,12 @@ export function buildShadowOperabilityReport(
   let examined = 0;
   let contended = 0;
   let handlerDeadlineExceeded = 0;
+  const seenDiagnosticOperations = new Set<string>();
   for (const row of auditRows) {
+    if (seenDiagnosticOperations.has(row.operation_id)) {
+      throw new Error("duplicate shadow drain diagnostic operation");
+    }
+    seenDiagnosticOperations.add(row.operation_id);
     const diagnostics = parseDiagnostics(row.detail_json);
     examined += diagnostics.examined;
     contended += diagnostics.contended;
