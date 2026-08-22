@@ -52,7 +52,18 @@ function withDatabases(fn: (paths: { primary: string; sidecar: string }, dbs: { 
       line_kind TEXT NOT NULL
     );
     CREATE TABLE settlement_source_duplicate_resolutions_v2 (
-      duplicate_observation_id TEXT NOT NULL
+      resolution_id TEXT PRIMARY KEY,
+      duplicate_observation_id TEXT NOT NULL,
+      canonical_observation_id TEXT NOT NULL,
+      canonical_race_key TEXT NOT NULL,
+      raw_document_id TEXT NOT NULL,
+      source_archive_file TEXT NOT NULL,
+      resolution_kind TEXT NOT NULL,
+      detection_reason TEXT NOT NULL,
+      duplicate_semantic_digest TEXT NOT NULL,
+      resolver_version TEXT NOT NULL,
+      policy_version TEXT NOT NULL,
+      schema_version TEXT NOT NULL
     );
   `);
   try { fn({ primary: primaryPath, sidecar: sidecarPath }, { primary, sidecar }); }
@@ -210,6 +221,22 @@ test("impossible settled race dates fail closed before discovery candidates are 
     const report = readN2EdgeDiscoverySource({ primaryDbPath: paths.primary, sidecarDbPath: paths.sidecar });
     assert.equal(report.status, "BLOCKED");
     assert.ok(report.blockers.includes("2004-02-30:11:R1:CANONICAL_RACE_KEY_INVALID"));
+    assert.equal(report.candidateRaceCount, 0);
+  });
+});
+
+test("stale source-duplicate evidence blocks discovery ingestion before primary reads", () => {
+  withDatabases((paths, dbs) => {
+    const raceKey = "2004-01-01:11:R1";
+    insertWinner(dbs.sidecar, "a", raceKey, "1-2-3");
+    dbs.sidecar.prepare(`INSERT INTO settlement_source_duplicate_resolutions_v2
+      VALUES ('stale','obs-a','missing-observation',?,'raw-a','k040101.lzh','source_duplicate','stale','deadbeef','stale','stale','stale')`).run(raceKey);
+    dbs.primary.close();
+    dbs.sidecar.close();
+    const report = readN2EdgeDiscoverySource({ primaryDbPath: paths.primary, sidecarDbPath: paths.sidecar });
+    assert.equal(report.status, "BLOCKED");
+    assert.ok(report.blockers.includes("SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID"));
+    assert.equal(report.reads.primaryDatabaseReadCount, 0);
     assert.equal(report.candidateRaceCount, 0);
   });
 });

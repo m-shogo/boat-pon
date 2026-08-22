@@ -5,6 +5,7 @@ import { DatabaseSync } from "node:sqlite";
 import { officialVenueCode } from "../domain/officialLinks";
 import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import { canonicalRaceKey } from "./identity";
+import { readCurrentlyValidSourceDuplicateObservationIds } from "./n1SourceDuplicateResolutionValidation";
 import {
   N2_EDGE_DISCOVERY_FROM_DATE,
   N2_EDGE_DISCOVERY_TO_DATE,
@@ -60,7 +61,7 @@ export type N2EdgeDiscoverySourceRead = {
   outputDigest: string;
 };
 
-type WinnerRow = { raceKey: string; winningSelection: string | null };
+type WinnerRow = { raceKey: string; observationId: string; winningSelection: string | null };
 type ProgramRow = {
   raceId: string;
   date: string;
@@ -178,8 +179,14 @@ function readHistoricalOutcomes(path: string): { rows: N2HistoricalOutcomeRow[];
     ]) {
       if (!tableExists(db, table)) return { rows: [], blockers: [`SIDECAR_TABLE_MISSING:${table}`] };
     }
+    let validResolvedObservationIds: Set<string>;
+    try {
+      validResolvedObservationIds = readCurrentlyValidSourceDuplicateObservationIds(db);
+    } catch {
+      return { rows: [], blockers: ["SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID"] };
+    }
     const raw = db.prepare(`
-      SELECT c.canonical_race_key AS raceKey, p.selection_canonical AS winningSelection
+      SELECT c.canonical_race_key AS raceKey, c.observation_id AS observationId, p.selection_canonical AS winningSelection
       FROM settlement_candidates_v2 c
       JOIN race_payout_lines_v2 p
         ON p.candidate_id=c.candidate_id
@@ -192,10 +199,6 @@ function readHistoricalOutcomes(path: string): { rows: N2HistoricalOutcomeRow[];
         AND c.resolution_status='resolved'
         AND substr(c.canonical_race_key,1,10) >= ?
         AND substr(c.canonical_race_key,1,10) <= ?
-        AND NOT EXISTS (
-          SELECT 1 FROM settlement_source_duplicate_resolutions_v2 d
-          WHERE d.duplicate_observation_id=c.observation_id
-        )
         AND NOT EXISTS (
           SELECT 1 FROM settlement_candidates_v2 newer
           WHERE newer.supersedes_candidate_id=c.candidate_id
@@ -211,6 +214,7 @@ function readHistoricalOutcomes(path: string): { rows: N2HistoricalOutcomeRow[];
 
     const grouped = new Map<string, string[]>();
     for (const row of raw) {
+      if (validResolvedObservationIds.has(row.observationId)) continue;
       const current = grouped.get(row.raceKey) ?? [];
       if (row.winningSelection != null) current.push(row.winningSelection);
       grouped.set(row.raceKey, current);
