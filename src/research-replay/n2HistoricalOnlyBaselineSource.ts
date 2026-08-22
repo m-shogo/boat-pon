@@ -45,11 +45,21 @@ export type N2HistoricalOnlyBaselineSourceRead = {
 type WinnerRow = {
   raceKey: string;
   observationId: string;
+  candidateParseRunId: string;
+  candidateRawDocumentId: string;
+  observationRaceKey: string | null;
+  observationType: string | null;
+  observationPayloadType: string | null;
+  observationParseRunId: string | null;
+  observationRawDocumentId: string | null;
+  parseRunRawDocumentId: string | null;
+  parseRunStatus: string | null;
   winningSelection: string | null;
 };
 
 const RACE_KEY_RE = /^(\d{4}-\d{2}-\d{2}):(0[1-9]|1\d|2[0-4]):R([1-9]|1[0-2])$/u;
 const TRIFECTA_SELECTION_RE = /^[1-6]-[1-6]-[1-6]$/u;
+const REUSABLE_PARSE_STATUSES = new Set(["success", "warning"]);
 
 function unique(values: readonly string[]): string[] {
   return [...new Set(values)].sort();
@@ -113,6 +123,8 @@ function readCleanTrifectaWinners(input: {
   const db = openImmutableSidecar(input.sidecarDbPath);
   try {
     for (const table of [
+      "domain_observations",
+      "parse_runs",
       "settlement_candidates_v2",
       "race_payout_lines_v2",
       "settlement_source_duplicate_resolutions_v2",
@@ -129,8 +141,21 @@ function readCleanTrifectaWinners(input: {
       SELECT
         c.canonical_race_key AS raceKey,
         c.observation_id AS observationId,
+        c.parse_run_id AS candidateParseRunId,
+        c.raw_document_id AS candidateRawDocumentId,
+        o.canonical_race_key AS observationRaceKey,
+        o.observation_type AS observationType,
+        o.payload_type AS observationPayloadType,
+        o.parse_run_id AS observationParseRunId,
+        o.raw_document_id AS observationRawDocumentId,
+        pr.raw_document_id AS parseRunRawDocumentId,
+        pr.status AS parseRunStatus,
         p.selection_canonical AS winningSelection
       FROM settlement_candidates_v2 c
+      LEFT JOIN domain_observations o
+        ON o.observation_id=c.observation_id
+      LEFT JOIN parse_runs pr
+        ON pr.parse_run_id=c.parse_run_id
       JOIN race_payout_lines_v2 p
         ON p.candidate_id=c.candidate_id
        AND p.bet_type='trifecta'
@@ -155,14 +180,25 @@ function readCleanTrifectaWinners(input: {
       ORDER BY c.canonical_race_key,p.line_no
     `).all(input.fromDate, input.toDate) as unknown as WinnerRow[];
 
+    const blockers: string[] = [];
     const grouped = new Map<string, string[]>();
     for (const row of rawRows) {
       if (validResolvedObservationIds.has(row.observationId)) continue;
+      if (row.observationRaceKey !== row.raceKey
+        || row.observationType !== "settlement_result"
+        || row.observationPayloadType !== "settlement_result"
+        || row.observationParseRunId !== row.candidateParseRunId
+        || row.observationRawDocumentId !== row.candidateRawDocumentId
+        || row.parseRunRawDocumentId !== row.candidateRawDocumentId
+        || row.parseRunStatus == null
+        || !REUSABLE_PARSE_STATUSES.has(row.parseRunStatus)) {
+        blockers.push(`${row.raceKey}:SETTLEMENT_LINEAGE_MISMATCH:${row.observationId}`);
+        continue;
+      }
       const current = grouped.get(row.raceKey) ?? [];
       if (row.winningSelection != null) current.push(row.winningSelection);
       grouped.set(row.raceKey, current);
     }
-    const blockers: string[] = [];
     const rows: N2HistoricalOutcomeRow[] = [];
     for (const [raceKey, selections] of grouped.entries()) {
       if (!isCanonicalN2HistoricalRaceKey(raceKey)) {

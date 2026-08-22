@@ -25,6 +25,19 @@ function createSidecar(root: string): string {
   mkdirSync(join(root, "data"), { recursive: true });
   const db = new DatabaseSync(path);
   db.exec(`
+    CREATE TABLE parse_runs (
+      parse_run_id TEXT PRIMARY KEY,
+      raw_document_id TEXT NOT NULL,
+      status TEXT NOT NULL
+    );
+    CREATE TABLE domain_observations (
+      observation_id TEXT PRIMARY KEY,
+      canonical_race_key TEXT NOT NULL,
+      observation_type TEXT NOT NULL,
+      payload_type TEXT NOT NULL,
+      raw_document_id TEXT NOT NULL,
+      parse_run_id TEXT NOT NULL
+    );
     CREATE TABLE settlement_candidates_v2 (
       candidate_id TEXT PRIMARY KEY,
       canonical_race_key TEXT NOT NULL,
@@ -33,6 +46,8 @@ function createSidecar(root: string): string {
       result_kind TEXT NOT NULL,
       resolution_status TEXT NOT NULL,
       observation_id TEXT NOT NULL,
+      parse_run_id TEXT NOT NULL,
+      raw_document_id TEXT NOT NULL,
       supersedes_candidate_id TEXT
     );
     CREATE TABLE race_payout_lines_v2 (
@@ -69,12 +84,24 @@ function insertWinner(path: string, input: {
 }): void {
   const db = new DatabaseSync(path);
   try {
+    const observationId = `obs-${input.candidateId}`;
+    const parseRunId = `parse-${input.candidateId}`;
+    const rawDocumentId = `raw-${input.candidateId}`;
+    db.prepare("INSERT INTO parse_runs VALUES (?, ?, 'success')")
+      .run(parseRunId, rawDocumentId);
+    db.prepare(`
+      INSERT INTO domain_observations (
+        observation_id, canonical_race_key, observation_type, payload_type,
+        raw_document_id, parse_run_id
+      ) VALUES (?, ?, 'settlement_result', 'settlement_result', ?, ?)
+    `).run(observationId, input.raceKey, rawDocumentId, parseRunId);
     db.prepare(`
       INSERT INTO settlement_candidates_v2 (
         candidate_id, canonical_race_key, bet_type, settlement_status,
-        result_kind, resolution_status, observation_id, supersedes_candidate_id
-      ) VALUES (?, ?, 'trifecta', 'settled', 'normal', 'resolved', ?, NULL)
-    `).run(input.candidateId, input.raceKey, `obs-${input.candidateId}`);
+        result_kind, resolution_status, observation_id, parse_run_id,
+        raw_document_id, supersedes_candidate_id
+      ) VALUES (?, ?, 'trifecta', 'settled', 'normal', 'resolved', ?, ?, ?, NULL)
+    `).run(input.candidateId, input.raceKey, observationId, parseRunId, rawDocumentId);
     db.prepare(`
       INSERT INTO race_payout_lines_v2 (
         payout_line_id, candidate_id, line_no, bet_type, selection_canonical, line_kind
@@ -252,6 +279,25 @@ test("ambiguous active historical winner blocks training rather than being silen
     assert.ok(read.blockers.some((blocker) => blocker.includes("2026-07-01:05:R1:ACTIVE_WINNER_COUNT_2")));
     assert.equal(read.training.length, 0);
     assert.equal(read.evaluationRaces.length, 0);
+  });
+});
+
+test("historical source rejects settlement candidate race lineage drift", () => {
+  withRoot((root) => {
+    const sidecar = prepare(root);
+    const db = new DatabaseSync(sidecar);
+    try {
+      db.prepare("UPDATE settlement_candidates_v2 SET canonical_race_key=? WHERE candidate_id=?")
+        .run("2026-07-02:05:R1", "train-37");
+    } finally {
+      db.close();
+    }
+    const read = readN2HistoricalOnlyBaselineSources({ dataRoot: root });
+    assert.equal(read.status, "BLOCKED");
+    assert.ok(read.blockers.includes("2026-07-02:05:R1:SETTLEMENT_LINEAGE_MISMATCH:obs-train-37"));
+    assert.equal(read.training.length, 0);
+    assert.equal(read.evaluationRaces.length, 0);
+    assert.equal(read.rawOddsValuesRead, false);
   });
 });
 
