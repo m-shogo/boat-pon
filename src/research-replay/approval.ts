@@ -62,6 +62,14 @@ function instant(name: string, value: string): string {
   return normalized;
 }
 
+function isCanonicalStoredInstant(value: string): boolean {
+  try {
+    return canonicalUtcTimestamp(value) === value;
+  } catch {
+    return false;
+  }
+}
+
 function grantHash(value: Omit<ApprovalGrantInput, "approvedAt"> & { approvedAt: string }): string {
   return canonicalHash({
     approvalId: value.approvalId,
@@ -205,6 +213,7 @@ export type ApprovalResolution = {
     | "APPROVAL_SCOPE_MISMATCH"
     | "APPROVAL_TARGET_MISMATCH"
     | "APPROVAL_AMBIGUOUS"
+    | "APPROVAL_TIMESTAMP_INVALID"
     | "APPROVAL_AFTER_ROLLOUT"
     | "APPROVAL_REVOKED"
     | "APPROVAL_SUPERSEDED"
@@ -261,6 +270,9 @@ export function resolveApproval(
   }
   if (matching.length === 0) {
     return { ...base, approved: false, code: "APPROVAL_TARGET_MISMATCH", approvalId: null, source: null, reference: null, approvedAt: null, mode: null };
+  }
+  if (matching.some((candidate) => !isCanonicalStoredInstant(candidate.approved_at))) {
+    return { ...base, approved: false, code: "APPROVAL_TIMESTAMP_INVALID", approvalId: null, source: null, reference: null, approvedAt: null, mode: null };
   }
   const latestApprovedAt = matching[0].approved_at;
   const latestMatching = matching.filter((candidate) => candidate.approved_at === latestApprovedAt);
