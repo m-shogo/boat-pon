@@ -3,6 +3,8 @@ import { readFileSync, readdirSync } from "node:fs";
 import { basename, isAbsolute, join, resolve } from "node:path";
 
 import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
+import { parseCanonicalRaceKey } from "./identity";
+import { BET_TYPES } from "./settlement";
 
 export const N2_SETTLEMENT_REPARSE_CHECKPOINT_VERSION = "n2-settlement-reparse-checkpoint-v5";
 export const N2_SETTLEMENT_REPARSE_CHECKPOINT_STATE_DIGEST_VERSION = "n2-settlement-reparse-checkpoint-state-digest-v1";
@@ -160,20 +162,21 @@ function requireNonNegativeSafeInteger(value: unknown, label: string): number {
   return value as number;
 }
 
-function assertDeltaEntries(value: unknown, label: string): number {
+type ReparseDelta = { false_refund: number; result_kind: number; special_addition: number };
+
+function assertDeltaEntries(value: unknown, label: string): { total: number; entries: Map<string, ReparseDelta> } {
   if (!Array.isArray(value)) {
     throw new Error(`REPARSE_CHECKPOINT_REPORT_TABLE_INVALID:${label}`);
   }
-  const seen = new Set<string>();
+  const entries = new Map<string, ReparseDelta>();
   let total = 0;
   for (const entry of value) {
     if (!Array.isArray(entry) || entry.length !== 2 || typeof entry[0] !== "string" || entry[0].trim() !== entry[0] || entry[0].length === 0) {
       throw new Error(`REPARSE_CHECKPOINT_REPORT_ENTRY_INVALID:${label}`);
     }
-    if (seen.has(entry[0])) {
+    if (entries.has(entry[0])) {
       throw new Error(`REPARSE_CHECKPOINT_REPORT_KEY_DUPLICATE:${label}:${entry[0]}`);
     }
-    seen.add(entry[0]);
     if (typeof entry[1] !== "object" || entry[1] === null || Array.isArray(entry[1])) {
       throw new Error(`REPARSE_CHECKPOINT_REPORT_ENTRY_INVALID:${label}:${entry[0]}`);
     }
@@ -181,14 +184,95 @@ function assertDeltaEntries(value: unknown, label: string): number {
     if (Object.keys(delta).sort().join(",") !== "false_refund,result_kind,special_addition") {
       throw new Error(`REPARSE_CHECKPOINT_REPORT_ENTRY_INVALID:${label}:${entry[0]}`);
     }
-    total += requireNonNegativeSafeInteger(delta.false_refund, `${label}:${entry[0]}:false_refund`);
-    total += requireNonNegativeSafeInteger(delta.result_kind, `${label}:${entry[0]}:result_kind`);
-    total += requireNonNegativeSafeInteger(delta.special_addition, `${label}:${entry[0]}:special_addition`);
+    const parsed: ReparseDelta = {
+      false_refund: requireNonNegativeSafeInteger(delta.false_refund, `${label}:${entry[0]}:false_refund`),
+      result_kind: requireNonNegativeSafeInteger(delta.result_kind, `${label}:${entry[0]}:result_kind`),
+      special_addition: requireNonNegativeSafeInteger(delta.special_addition, `${label}:${entry[0]}:special_addition`),
+    };
+    total += parsed.false_refund + parsed.result_kind + parsed.special_addition;
+    entries.set(entry[0], parsed);
   }
   if (!Number.isSafeInteger(total)) {
     throw new Error(`REPARSE_CHECKPOINT_REPORT_TOTAL_INVALID:${label}`);
   }
-  return total;
+  return { total, entries };
+}
+
+const CORRECTION_ACTION_FIELD = {
+  false_refund_correction: "false_refund",
+  result_kind_correction: "result_kind",
+  special_payout_addition: "special_addition",
+} as const;
+const BET_TYPE_SET = new Set<string>(BET_TYPES);
+
+function requireCorrectionSampleSemantics(sample: Record<string, unknown>, index: number): void {
+  const raceKey = sample.raceKey;
+  const betType = sample.betType;
+  const action = sample.action;
+  if (typeof raceKey !== "string") throw new Error(`REPARSE_CHECKPOINT_CORRECTION_INVALID:${index}:raceKey`);
+  parseCanonicalRaceKey(raceKey);
+  if (typeof betType !== "string" || !BET_TYPE_SET.has(betType)) throw new Error(`REPARSE_CHECKPOINT_CORRECTION_INVALID:${index}:betType`);
+  if (typeof action !== "string" || !(action in CORRECTION_ACTION_FIELD)) throw new Error(`REPARSE_CHECKPOINT_CORRECTION_INVALID:${index}:action`);
+  if (sample.defectCode !== "V1_SPECIAL_PAYOUT_FALSE_REFUND") throw new Error(`REPARSE_CHECKPOINT_CORRECTION_INVALID:${index}:defectCode`);
+
+  if (action === "false_refund_correction") {
+    if ((sample.originalStatus !== "refunded" && sample.originalStatus !== "partially_refunded") || sample.correctedStatus !== "settled") {
+      throw new Error(`REPARSE_CHECKPOINT_CORRECTION_INVALID:${index}:status`);
+    }
+  } else if (action === "result_kind_correction") {
+    if (typeof sample.originalStatus !== "string" || sample.originalStatus !== sample.correctedStatus || sample.originalResultKind === "special_payout" || sample.correctedResultKind !== "special_payout") {
+      throw new Error(`REPARSE_CHECKPOINT_CORRECTION_INVALID:${index}:resultKind`);
+    }
+  } else {
+    if (sample.originalStatus !== null || sample.originalResultKind !== null || sample.correctedResultKind !== "special_payout") {
+      throw new Error(`REPARSE_CHECKPOINT_CORRECTION_INVALID:${index}:addition`);
+    }
+  }
+}
+
+function consumeCorrectionAggregate(
+  table: Map<string, ReparseDelta>,
+  key: string,
+  action: keyof typeof CORRECTION_ACTION_FIELD,
+  label: string,
+  index: number,
+): void {
+  const entry = table.get(key);
+  const field = CORRECTION_ACTION_FIELD[action];
+  if (!entry || entry[field] <= 0) {
+    throw new Error(`REPARSE_CHECKPOINT_CORRECTION_AGGREGATE_MISMATCH:${label}:${key}:${field}:${index}`);
+  }
+  entry[field] -= 1;
+}
+
+function assertCorrectionSamples(
+  corrections: unknown,
+  appendedCandidates: number,
+  byYear: Map<string, ReparseDelta>,
+  byBetType: Map<string, ReparseDelta>,
+): void {
+  if (!Array.isArray(corrections) || corrections.length !== Math.min(appendedCandidates, 400)) {
+    throw new Error("REPARSE_CHECKPOINT_CORRECTION_COUNT_MISMATCH");
+  }
+  for (let index = 0; index < corrections.length; index += 1) {
+    const sample = corrections[index];
+    if (typeof sample !== "object" || sample === null || Array.isArray(sample)) {
+      throw new Error(`REPARSE_CHECKPOINT_CORRECTION_INVALID:${index}:shape`);
+    }
+    const record = sample as Record<string, unknown>;
+    requireCorrectionSampleSemantics(record, index);
+    const race = parseCanonicalRaceKey(record.raceKey as string);
+    const action = record.action as keyof typeof CORRECTION_ACTION_FIELD;
+    consumeCorrectionAggregate(byYear, race.raceDateJst.slice(0, 4), action, "byYear", index);
+    consumeCorrectionAggregate(byBetType, record.betType as string, action, "byBetType", index);
+  }
+  if (appendedCandidates <= 400) {
+    const remaining = [...byYear.values(), ...byBetType.values()].reduce(
+      (sum, delta) => sum + delta.false_refund + delta.result_kind + delta.special_addition,
+      0,
+    );
+    if (remaining !== 0) throw new Error("REPARSE_CHECKPOINT_CORRECTION_AGGREGATE_MISMATCH:remaining");
+  }
 }
 
 function assertN2SettlementReparseStateAggregates(state: Record<string, unknown>): void {
@@ -231,14 +315,12 @@ function assertN2SettlementReparseStateAggregates(state: Record<string, unknown>
   }
 
   const appendedCandidates = requireNonNegativeSafeInteger(countRecord.appended_candidates, "appended_candidates");
-  const byYearTotal = assertDeltaEntries(state.byYear, "byYear");
-  const byBetTypeTotal = assertDeltaEntries(state.byBetType, "byBetType");
-  if (byYearTotal !== appendedCandidates || byBetTypeTotal !== appendedCandidates) {
+  const yearAggregate = assertDeltaEntries(state.byYear, "byYear");
+  const betAggregate = assertDeltaEntries(state.byBetType, "byBetType");
+  if (yearAggregate.total !== appendedCandidates || betAggregate.total !== appendedCandidates) {
     throw new Error("REPARSE_CHECKPOINT_REPORT_TOTAL_MISMATCH");
   }
-  if (!Array.isArray(state.corrections) || state.corrections.length !== Math.min(appendedCandidates, 400)) {
-    throw new Error("REPARSE_CHECKPOINT_CORRECTION_COUNT_MISMATCH");
-  }
+  assertCorrectionSamples(state.corrections, appendedCandidates, yearAggregate.entries, betAggregate.entries);
 }
 
 function assertN2SettlementReparseProcessedFiles(
