@@ -322,6 +322,11 @@ function assertN2SettlementReparseStateAggregates(state: Record<string, unknown>
   if (filesScanned !== filesIngested + filesNotIngested + duplicateSource + parseErrors) {
     throw new Error("REPARSE_CHECKPOINT_FILE_COUNTS_INCONSISTENT");
   }
+  if (state.terminalDuplicateFiles !== undefined) {
+    if (!Array.isArray(state.terminalDuplicateFiles) || state.terminalDuplicateFiles.length !== duplicateSource) {
+      throw new Error("REPARSE_CHECKPOINT_TERMINAL_DUPLICATE_COUNT_MISMATCH");
+    }
+  }
 
   const processedFiles = state.processedFiles;
   const processedRawDocs = state.processedRawDocs;
