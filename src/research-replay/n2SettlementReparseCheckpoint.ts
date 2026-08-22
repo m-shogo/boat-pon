@@ -355,6 +355,14 @@ function assertN2SettlementReparseProcessedFiles(
     }
     seen.add(file);
   }
+  const counts = stateRecord.counts;
+  if (typeof counts !== "object" || counts === null || Array.isArray(counts)) {
+    throw new Error("REPARSE_CHECKPOINT_COUNTS_INVALID");
+  }
+  const filesScanned = requireNonNegativeSafeInteger((counts as Record<string, unknown>).files_scanned, "files_scanned");
+  if (filesScanned > checkpointIdentity.selectedFileBasenames.length) {
+    throw new Error("REPARSE_CHECKPOINT_FILE_COUNT_EXCEEDS_SELECTION");
+  }
   assertN2SettlementReparseStateAggregates(stateRecord);
 }
 
