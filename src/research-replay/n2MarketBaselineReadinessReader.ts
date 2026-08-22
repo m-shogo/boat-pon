@@ -9,6 +9,8 @@ import { resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 
+import { readCurrentlyValidSourceDuplicateObservationIds } from "./n1SourceDuplicateResolutionValidation";
+
 export const N2_MARKET_BASELINE_READINESS_READER_VERSION =
   "n2-market-baseline-readiness-reader-v1" as const;
 
@@ -43,6 +45,7 @@ type AcceptedMarker = {
 type SettlementRow = {
   raceKey: string;
   candidateId: string;
+  observationId: string;
   settlementStatus: string;
   resultKind: string;
   resolutionStatus: string;
@@ -321,11 +324,18 @@ function readSettlements(sidecarDbPath: string, raceKeys: string[]): {
         return { settledRaceKeys: [], integrityBlockedRaceKeys: [], eligibleRaceCount: 0, ineligibleRaceCount: 0, blockers: [`SIDECAR_TABLE_MISSING:${table}`] };
       }
     }
+    let validResolvedObservationIds: Set<string>;
+    try {
+      validResolvedObservationIds = readCurrentlyValidSourceDuplicateObservationIds(db);
+    } catch {
+      return { settledRaceKeys: [], integrityBlockedRaceKeys: [], eligibleRaceCount: 0, ineligibleRaceCount: 0, blockers: ["SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID"] };
+    }
     const placeholders = raceKeys.map(() => "?").join(",");
     const rows = db.prepare(`
       SELECT
         c.canonical_race_key AS raceKey,
         c.candidate_id AS candidateId,
+        c.observation_id AS observationId,
         c.settlement_status AS settlementStatus,
         c.result_kind AS resultKind,
         c.resolution_status AS resolutionStatus,
@@ -336,19 +346,16 @@ function readSettlements(sidecarDbPath: string, raceKeys: string[]): {
       WHERE c.bet_type='trifecta'
         AND c.canonical_race_key IN (${placeholders})
         AND NOT EXISTS (
-          SELECT 1 FROM settlement_source_duplicate_resolutions_v2 d
-          WHERE d.duplicate_observation_id=c.observation_id
-        )
-        AND NOT EXISTS (
           SELECT 1 FROM settlement_candidates_v2 newer
           WHERE newer.supersedes_candidate_id=c.candidate_id
         )
-      GROUP BY c.canonical_race_key,c.candidate_id,c.settlement_status,c.result_kind,c.resolution_status
+      GROUP BY c.canonical_race_key,c.candidate_id,c.observation_id,c.settlement_status,c.result_kind,c.resolution_status
       ORDER BY c.canonical_race_key,c.candidate_id
     `).all(...raceKeys) as unknown as SettlementRow[];
 
     const byRace = new Map<string, SettlementRow[]>();
     for (const row of rows) {
+      if (validResolvedObservationIds.has(row.observationId)) continue;
       const current = byRace.get(row.raceKey) ?? [];
       current.push({
         ...row,
