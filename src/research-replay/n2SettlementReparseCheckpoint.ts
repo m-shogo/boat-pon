@@ -160,6 +160,37 @@ function requireNonNegativeSafeInteger(value: unknown, label: string): number {
   return value as number;
 }
 
+function assertDeltaEntries(value: unknown, label: string): number {
+  if (!Array.isArray(value)) {
+    throw new Error(`REPARSE_CHECKPOINT_REPORT_TABLE_INVALID:${label}`);
+  }
+  const seen = new Set<string>();
+  let total = 0;
+  for (const entry of value) {
+    if (!Array.isArray(entry) || entry.length !== 2 || typeof entry[0] !== "string" || entry[0].trim() !== entry[0] || entry[0].length === 0) {
+      throw new Error(`REPARSE_CHECKPOINT_REPORT_ENTRY_INVALID:${label}`);
+    }
+    if (seen.has(entry[0])) {
+      throw new Error(`REPARSE_CHECKPOINT_REPORT_KEY_DUPLICATE:${label}:${entry[0]}`);
+    }
+    seen.add(entry[0]);
+    if (typeof entry[1] !== "object" || entry[1] === null || Array.isArray(entry[1])) {
+      throw new Error(`REPARSE_CHECKPOINT_REPORT_ENTRY_INVALID:${label}:${entry[0]}`);
+    }
+    const delta = entry[1] as Record<string, unknown>;
+    if (Object.keys(delta).sort().join(",") !== "false_refund,result_kind,special_addition") {
+      throw new Error(`REPARSE_CHECKPOINT_REPORT_ENTRY_INVALID:${label}:${entry[0]}`);
+    }
+    total += requireNonNegativeSafeInteger(delta.false_refund, `${label}:${entry[0]}:false_refund`);
+    total += requireNonNegativeSafeInteger(delta.result_kind, `${label}:${entry[0]}:result_kind`);
+    total += requireNonNegativeSafeInteger(delta.special_addition, `${label}:${entry[0]}:special_addition`);
+  }
+  if (!Number.isSafeInteger(total)) {
+    throw new Error(`REPARSE_CHECKPOINT_REPORT_TOTAL_INVALID:${label}`);
+  }
+  return total;
+}
+
 function assertN2SettlementReparseStateAggregates(state: Record<string, unknown>): void {
   const counts = state.counts;
   if (typeof counts !== "object" || counts === null || Array.isArray(counts)) {
@@ -197,6 +228,16 @@ function assertN2SettlementReparseStateAggregates(state: Record<string, unknown>
       throw new Error(`REPARSE_CHECKPOINT_PROCESSED_RAW_DUPLICATE:${rawDocumentId}`);
     }
     seenRawDocs.add(rawDocumentId);
+  }
+
+  const appendedCandidates = requireNonNegativeSafeInteger(countRecord.appended_candidates, "appended_candidates");
+  const byYearTotal = assertDeltaEntries(state.byYear, "byYear");
+  const byBetTypeTotal = assertDeltaEntries(state.byBetType, "byBetType");
+  if (byYearTotal !== appendedCandidates || byBetTypeTotal !== appendedCandidates) {
+    throw new Error("REPARSE_CHECKPOINT_REPORT_TOTAL_MISMATCH");
+  }
+  if (!Array.isArray(state.corrections) || state.corrections.length !== Math.min(appendedCandidates, 400)) {
+    throw new Error("REPARSE_CHECKPOINT_CORRECTION_COUNT_MISMATCH");
   }
 }
 

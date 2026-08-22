@@ -87,10 +87,7 @@ test("reparse checkpoint resume rejects rehashed duplicate processed files", () 
 });
 
 test("reparse checkpoint resume rejects rehashed aggregate count drift", () => {
-  const tampered = {
-    ...state,
-    counts: { ...state.counts, files_scanned: 2 },
-  };
+  const tampered = { ...state, counts: { ...state.counts, files_scanned: 2 } };
   const digest = buildN2SettlementReparseCheckpointStateDigest(identity, tampered);
   assert.throws(
     () => assertN2SettlementReparseCheckpointStateDigest(digest, identity, tampered),
@@ -99,10 +96,7 @@ test("reparse checkpoint resume rejects rehashed aggregate count drift", () => {
 });
 
 test("reparse checkpoint resume rejects unsafe aggregate counts", () => {
-  const tampered = {
-    ...state,
-    counts: { ...state.counts, appended_candidates: Number.MAX_SAFE_INTEGER + 1 },
-  };
+  const tampered = { ...state, counts: { ...state.counts, appended_candidates: Number.MAX_SAFE_INTEGER + 1 } };
   const digest = buildN2SettlementReparseCheckpointStateDigest(identity, tampered);
   assert.throws(
     () => assertN2SettlementReparseCheckpointStateDigest(digest, identity, tampered),
@@ -111,10 +105,7 @@ test("reparse checkpoint resume rejects unsafe aggregate counts", () => {
 });
 
 test("reparse checkpoint resume binds ingested count to processed lineage", () => {
-  const tampered = {
-    ...state,
-    processedRawDocs: [],
-  };
+  const tampered = { ...state, processedRawDocs: [] };
   const digest = buildN2SettlementReparseCheckpointStateDigest(identity, tampered);
   assert.throws(
     () => assertN2SettlementReparseCheckpointStateDigest(digest, identity, tampered),
@@ -133,6 +124,45 @@ test("reparse checkpoint resume rejects duplicate processed raw lineage", () => 
   assert.throws(
     () => assertN2SettlementReparseCheckpointStateDigest(digest, identity, twoFileState),
     /REPARSE_CHECKPOINT_PROCESSED_RAW_DUPLICATE:raw-1/,
+  );
+});
+
+test("reparse checkpoint resume rejects rehashed report totals", () => {
+  const tampered = {
+    ...state,
+    counts: { ...state.counts, appended_candidates: 1 },
+    corrections: [{}],
+    byYear: [["2026", { false_refund: 0, result_kind: 0, special_addition: 0 }]],
+    byBetType: [["trifecta", { false_refund: 0, result_kind: 0, special_addition: 0 }]],
+  };
+  const digest = buildN2SettlementReparseCheckpointStateDigest(identity, tampered);
+  assert.throws(
+    () => assertN2SettlementReparseCheckpointStateDigest(digest, identity, tampered),
+    /REPARSE_CHECKPOINT_REPORT_TOTAL_MISMATCH/,
+  );
+});
+
+test("reparse checkpoint resume rejects duplicate report aggregate keys", () => {
+  const tampered = {
+    ...state,
+    byYear: [
+      ["2026", { false_refund: 0, result_kind: 0, special_addition: 0 }],
+      ["2026", { false_refund: 0, result_kind: 0, special_addition: 0 }],
+    ],
+  };
+  const digest = buildN2SettlementReparseCheckpointStateDigest(identity, tampered);
+  assert.throws(
+    () => assertN2SettlementReparseCheckpointStateDigest(digest, identity, tampered),
+    /REPARSE_CHECKPOINT_REPORT_KEY_DUPLICATE:byYear:2026/,
+  );
+});
+
+test("reparse checkpoint resume binds correction samples to appended candidates", () => {
+  const tampered = { ...state, corrections: [{}] };
+  const digest = buildN2SettlementReparseCheckpointStateDigest(identity, tampered);
+  assert.throws(
+    () => assertN2SettlementReparseCheckpointStateDigest(digest, identity, tampered),
+    /REPARSE_CHECKPOINT_CORRECTION_COUNT_MISMATCH/,
   );
 });
 
