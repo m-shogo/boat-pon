@@ -57,6 +57,22 @@ function observation(db: DatabaseSync, observationId: string): ObservationRow | 
   `).get(observationId) as ObservationRow | undefined) ?? null;
 }
 
+function canonicalObservationIdForGroup(
+  db: DatabaseSync,
+  raceKey: string,
+  rawDocumentId: string,
+): string | null {
+  return (db.prepare(`
+    SELECT observation_id AS observationId
+    FROM domain_observations
+    WHERE canonical_race_key=?
+      AND raw_document_id=?
+      AND ${SOURCE_OBSERVATION_WHERE}
+    ORDER BY rowid ASC
+    LIMIT 1
+  `).get(raceKey, rawDocumentId) as { observationId: string } | undefined)?.observationId ?? null;
+}
+
 function parseLineageValid(db: DatabaseSync, row: ObservationRow): boolean {
   const parse = db.prepare("SELECT raw_document_id AS rawDocumentId,status FROM parse_runs WHERE parse_run_id=?")
     .get(row.parseRunId) as { rawDocumentId: string; status: string } | undefined;
@@ -108,6 +124,7 @@ function resolutionRowValid(db: DatabaseSync, row: ResolutionRow): boolean {
   if (!duplicate || !canonical) return false;
   if (
     canonical.sourceOrder >= duplicate.sourceOrder
+    || canonicalObservationIdForGroup(db, row.canonicalRaceKey, row.rawDocumentId) !== row.canonicalObservationId
     || duplicate.canonicalRaceKey !== row.canonicalRaceKey
     || canonical.canonicalRaceKey !== row.canonicalRaceKey
     || duplicate.rawDocumentId !== row.rawDocumentId
