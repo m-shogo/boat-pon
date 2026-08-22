@@ -138,7 +138,7 @@ export function buildShadowOperabilityReport(
   if (asOf !== input.asOf) throw new Error("non-canonical report asOf");
   const asOfMs = timestampMs(asOf, "report asOf");
   const windowStartMs = asOfMs - input.diagnosticsWindowMs;
-  assertShadowDeliveryAttemptHistory(db);
+  assertShadowDeliveryAttemptHistory(db, asOf);
 
   const rows = db.prepare(`
     SELECT m.payload_json, m.payload_hash, m.enqueued_at, m.available_at,
@@ -162,13 +162,13 @@ export function buildShadowOperabilityReport(
     const enqueuedMs = timestampMs(row.enqueued_at, "outbox enqueued_at");
     timestampMs(row.available_at, "outbox available_at");
     if (row.next_available_at !== null) timestampMs(row.next_available_at, "attempt next_available_at");
+    if (enqueuedMs > asOfMs) throw new Error("future outbox enqueue timestamp");
     if (row.last_outcome === "permanent_failure") {
       permanentlyFailed += 1;
       if (row.last_error_code === "SHADOW_RETRY_EXHAUSTED") retryExhausted += 1;
     }
     if (row.last_outcome === "retryable_failure") retrying += 1;
     if (TERMINAL_OUTCOMES.has(row.last_outcome ?? "")) continue;
-    if (enqueuedMs > asOfMs) throw new Error("future outbox enqueue timestamp");
     queued += 1;
     const age = asOfMs - enqueuedMs;
     oldestQueuedAgeMs = Math.max(oldestQueuedAgeMs ?? 0, age);
