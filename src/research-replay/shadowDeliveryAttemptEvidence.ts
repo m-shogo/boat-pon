@@ -5,6 +5,7 @@ type ShadowDeliveryAttemptRow = {
   outbox_message_id: string;
   attempt_no: number;
   outcome: string;
+  error_code: string | null;
   started_at: string;
   completed_at: string;
   next_available_at: string | null;
@@ -26,7 +27,7 @@ function canonicalTimestampMs(value: string, name: string): number {
 export function assertShadowDeliveryAttemptHistory(db: DatabaseSync, asOf?: string): void {
   const asOfMs = asOf === undefined ? null : canonicalTimestampMs(asOf, "delivery attempt asOf");
   const rows = db.prepare(`
-    SELECT a.outbox_message_id, a.attempt_no, a.outcome,
+    SELECT a.outbox_message_id, a.attempt_no, a.outcome, a.error_code,
            a.started_at, a.completed_at, a.next_available_at, a.created_at,
            m.enqueued_at AS message_enqueued_at,
            m.available_at AS message_available_at
@@ -68,6 +69,13 @@ export function assertShadowDeliveryAttemptHistory(db: DatabaseSync, asOf?: stri
       throw new Error("future shadow delivery attempt timestamp");
     }
     if (completedAtMs < startedAtMs) throw new Error("shadow delivery attempt completed before start");
+    if (row.outcome === "succeeded" && row.error_code !== null) {
+      throw new Error("successful shadow delivery attempt must not have error_code");
+    }
+    if ((row.outcome === "retryable_failure" || row.outcome === "permanent_failure")
+      && (row.error_code === null || row.error_code.trim().length === 0)) {
+      throw new Error("failed shadow delivery attempt missing error_code");
+    }
     if (previousOutcome !== null) {
       if (TERMINAL_OUTCOMES.has(previousOutcome)) {
         throw new Error("shadow delivery attempt recorded after terminal outcome");
