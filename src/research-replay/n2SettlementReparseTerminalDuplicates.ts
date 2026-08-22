@@ -4,10 +4,19 @@ export function normalizeN2SettlementReparseTerminalDuplicateFiles(input: {
   value: unknown;
   selectedFileBasenames: readonly string[];
   processedFiles: readonly string[];
+  expectedDuplicateCount?: number;
 }): string[] {
   if (input.value === undefined) return [];
   if (!Array.isArray(input.value)) {
     throw new Error("REPARSE_CHECKPOINT_TERMINAL_DUPLICATES_INVALID");
+  }
+  if (input.expectedDuplicateCount !== undefined) {
+    if (!Number.isSafeInteger(input.expectedDuplicateCount) || input.expectedDuplicateCount < 0) {
+      throw new Error("REPARSE_CHECKPOINT_TERMINAL_DUPLICATE_COUNT_INVALID");
+    }
+    if (input.value.length !== input.expectedDuplicateCount) {
+      throw new Error("REPARSE_CHECKPOINT_TERMINAL_DUPLICATE_COUNT_MISMATCH");
+    }
   }
   const selected = new Set(input.selectedFileBasenames);
   const processed = new Set(input.processedFiles);
