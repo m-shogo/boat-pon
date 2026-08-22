@@ -29,6 +29,23 @@ export function normalizeN2SettlementReparseTerminalDuplicateFiles(input: {
   return files;
 }
 
+export function assertN2SettlementReparseTerminalDuplicateLineage(input: {
+  terminalDuplicateFiles: readonly string[];
+  processedRawDocs: readonly string[];
+  rawDocumentIdByArchive: ReadonlyMap<string, string>;
+}): void {
+  const processedRawDocs = new Set(input.processedRawDocs);
+  for (const archiveFile of input.terminalDuplicateFiles) {
+    const rawDocumentId = input.rawDocumentIdByArchive.get(archiveFile);
+    if (rawDocumentId === undefined) {
+      throw new Error(`REPARSE_CHECKPOINT_TERMINAL_DUPLICATE_RAW_UNRESOLVED:${archiveFile}`);
+    }
+    if (!processedRawDocs.has(rawDocumentId)) {
+      throw new Error(`REPARSE_CHECKPOINT_TERMINAL_DUPLICATE_RAW_MISMATCH:${archiveFile}:${rawDocumentId}`);
+    }
+  }
+}
+
 export function n2SettlementReparseDoneFiles(
   processedFiles: readonly string[],
   terminalDuplicateFiles: readonly string[],
