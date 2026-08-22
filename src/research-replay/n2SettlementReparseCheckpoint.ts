@@ -5,6 +5,7 @@ import { basename, isAbsolute, join, resolve } from "node:path";
 import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import { parseCanonicalRaceKey } from "./identity";
 import { fileDate } from "./n1Backfill";
+import { REPARSE_ACTIONS } from "./n2SettlementReparse";
 import { BET_TYPES } from "./settlement";
 
 export const N2_SETTLEMENT_REPARSE_CHECKPOINT_VERSION = "n2-settlement-reparse-checkpoint-v5";
@@ -212,6 +213,22 @@ const CORRECTION_ACTION_FIELD = {
   special_payout_addition: "special_addition",
 } as const;
 const BET_TYPE_SET = new Set<string>(BET_TYPES);
+const REPARSE_COUNT_KEYS = [
+  "files_scanned",
+  "files_ingested",
+  "files_not_ingested",
+  "files_duplicate_source",
+  "parse_errors",
+  "appended_candidates",
+  "appended_parse_runs",
+  "appended_observations",
+  "supersession_relations",
+  "ambiguous_active",
+  "fr_from_refunded",
+  "fr_from_partial",
+  ...REPARSE_ACTIONS,
+] as const;
+const SORTED_REPARSE_COUNT_KEYS = [...REPARSE_COUNT_KEYS].sort();
 
 function requireCorrectionSampleSemantics(sample: Record<string, unknown>, index: number): void {
   const raceKey = sample.raceKey;
@@ -289,8 +306,12 @@ function assertN2SettlementReparseStateAggregates(state: Record<string, unknown>
     throw new Error("REPARSE_CHECKPOINT_COUNTS_INVALID");
   }
   const countRecord = counts as Record<string, unknown>;
-  for (const [key, value] of Object.entries(countRecord)) {
-    requireNonNegativeSafeInteger(value, key);
+  const actualCountKeys = Object.keys(countRecord).sort();
+  if (actualCountKeys.join(",") !== SORTED_REPARSE_COUNT_KEYS.join(",")) {
+    throw new Error("REPARSE_CHECKPOINT_COUNTS_SHAPE_INVALID");
+  }
+  for (const key of REPARSE_COUNT_KEYS) {
+    requireNonNegativeSafeInteger(countRecord[key], key);
   }
 
   const filesScanned = requireNonNegativeSafeInteger(countRecord.files_scanned, "files_scanned");
