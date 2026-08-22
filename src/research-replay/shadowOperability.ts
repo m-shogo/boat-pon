@@ -52,6 +52,7 @@ type CurrentOutboxRow = {
 
 type ShadowDrainAuditRow = {
   operation_id: string;
+  subject_id: string;
   occurred_at: string;
   created_at: string;
   detail_json: string;
@@ -181,12 +182,13 @@ export function buildShadowOperabilityReport(
   }
 
   const auditCandidates = db.prepare(`
-    SELECT operation_id, occurred_at, created_at, detail_json FROM operational_audit_events
+    SELECT operation_id, subject_id, occurred_at, created_at, detail_json FROM operational_audit_events
     WHERE event_kind='health_snapshot' AND subject_type='shadow_outbox_drain'
     ORDER BY audit_event_id
   `).all() as ShadowDrainAuditRow[];
   const seenDiagnosticOperations = new Set<string>();
   const auditRows = auditCandidates.filter((row) => {
+    if (row.subject_id !== "current") throw new Error("invalid shadow drain diagnostic subject");
     if (seenDiagnosticOperations.has(row.operation_id)) {
       throw new Error("duplicate shadow drain diagnostic operation");
     }
