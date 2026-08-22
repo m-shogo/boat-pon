@@ -79,7 +79,7 @@ function insertLifecycle(
   db: DatabaseSync,
   input: {
     lifecycleEventId: string;
-    eventKind: "revoked" | "superseded" | "legacy_disqualified";
+    eventKind: string;
     subjectApprovalId: string;
     replacementApprovalId?: string | null;
     occurredAt: string;
@@ -155,8 +155,6 @@ test("non-canonical persisted approval times fail closed before ordering", () =>
   const path = join(root, "approval.sqlite");
   const db = createApprovalDb(path);
   try {
-    // 05:00-07:00 is 12:00Z, which is after the 11:00Z rollout start.
-    // Raw string comparison would incorrectly place it before the rollout.
     insertGrant(db, "approval-offset", "2026-08-20T05:00:00-07:00");
     const resolution = resolve(db);
     assert.equal(resolution.approved, false);
@@ -211,6 +209,28 @@ test("non-canonical lifecycle times fail closed before lifecycle ordering", () =
     const resolution = resolve(db);
     assert.equal(resolution.approved, false);
     assert.equal(resolution.code, "APPROVAL_TIMESTAMP_INVALID");
+    assert.equal(resolution.approvalId, "approval-a");
+  } finally {
+    db.close();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("rehashed unknown lifecycle kinds cannot restore approval authority", () => {
+  const root = mkdtempSync(join(tmpdir(), "approval-lifecycle-kind-contract-"));
+  const path = join(root, "approval.sqlite");
+  const db = createApprovalDb(path);
+  try {
+    insertGrant(db, "approval-a", "2026-08-20T10:00:00.000Z");
+    insertLifecycle(db, {
+      lifecycleEventId: "lifecycle-unknown",
+      eventKind: "restored",
+      subjectApprovalId: "approval-a",
+      occurredAt: "2026-08-20T10:30:00.000Z",
+    });
+    const resolution = resolve(db);
+    assert.equal(resolution.approved, false);
+    assert.equal(resolution.code, "APPROVAL_HASH_INVALID");
     assert.equal(resolution.approvalId, "approval-a");
   } finally {
     db.close();
