@@ -130,6 +130,26 @@ test("reparse checkpoint resume rejects unsafe aggregate counts", () => {
   );
 });
 
+test("reparse checkpoint resume requires every producer count field", () => {
+  const counts = { ...state.counts } as Record<string, number>;
+  delete counts.unexpected_addition;
+  const tampered = { ...state, counts };
+  const digest = buildN2SettlementReparseCheckpointStateDigest(identity, tampered);
+  assert.throws(
+    () => assertN2SettlementReparseCheckpointStateDigest(digest, identity, tampered),
+    /REPARSE_CHECKPOINT_COUNTS_SHAPE_INVALID/,
+  );
+});
+
+test("reparse checkpoint resume rejects unknown count fields", () => {
+  const tampered = { ...state, counts: { ...state.counts, invented_counter: 0 } };
+  const digest = buildN2SettlementReparseCheckpointStateDigest(identity, tampered);
+  assert.throws(
+    () => assertN2SettlementReparseCheckpointStateDigest(digest, identity, tampered),
+    /REPARSE_CHECKPOINT_COUNTS_SHAPE_INVALID/,
+  );
+});
+
 test("reparse checkpoint resume binds ingested count to processed lineage", () => {
   const tampered = { ...state, processedRawDocs: [] };
   const digest = buildN2SettlementReparseCheckpointStateDigest(identity, tampered);
