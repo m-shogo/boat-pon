@@ -224,6 +224,13 @@ export function registerResolutionPolicies(db: DatabaseSync, createdAt: string):
   }
 }
 
+type ScheduleObservationLineage = {
+  canonical_race_key: string;
+  observation_type: string;
+  payload_schema_version: string;
+  semantic_payload_hash: string;
+};
+
 function marketScheduleReferenceValid(
   repository: ResearchReplayRepository,
   market: TrifectaMarketPayload,
@@ -231,8 +238,25 @@ function marketScheduleReferenceValid(
 ): boolean {
   if (!market.scheduledCloseObservationId) return false;
   try {
+    const observation = repository.db.prepare(`
+      SELECT canonical_race_key, observation_type, payload_schema_version, semantic_payload_hash
+      FROM domain_observations
+      WHERE observation_id=?
+    `).get(market.scheduledCloseObservationId) as ScheduleObservationLineage | undefined;
+    if (!observation
+      || observation.canonical_race_key !== canonicalRaceKey
+      || observation.observation_type !== "race_schedule"
+      || observation.payload_schema_version !== PAYLOAD_SCHEMA_VERSION) {
+      return false;
+    }
     const schedule = repository.loadTypedPayload(market.scheduledCloseObservationId);
     if (schedule.type !== "race_schedule") return false;
+    const expectedSemanticHash = canonicalHash({
+      payloadSchemaVersion: PAYLOAD_SCHEMA_VERSION,
+      payloadType: "race_schedule",
+      payload: schedule.payload,
+    });
+    if (observation.semantic_payload_hash !== expectedSemanticHash) return false;
     const payload = schedule.payload as { canonicalRaceKey: string; scheduledCloseAt: string };
     return payload.canonicalRaceKey === canonicalRaceKey
       && canonicalUtcTimestamp(payload.scheduledCloseAt) === canonicalUtcTimestamp(market.scheduledCloseAtSeen);
