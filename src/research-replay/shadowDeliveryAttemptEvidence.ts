@@ -10,6 +10,7 @@ type ShadowDeliveryAttemptRow = {
   next_available_at: string | null;
   created_at: string;
   message_enqueued_at: string;
+  message_available_at: string;
 };
 
 const TERMINAL_OUTCOMES = new Set(["succeeded", "permanent_failure", "cancelled"]);
@@ -27,7 +28,8 @@ export function assertShadowDeliveryAttemptHistory(db: DatabaseSync, asOf?: stri
   const rows = db.prepare(`
     SELECT a.outbox_message_id, a.attempt_no, a.outcome,
            a.started_at, a.completed_at, a.next_available_at, a.created_at,
-           m.enqueued_at AS message_enqueued_at
+           m.enqueued_at AS message_enqueued_at,
+           m.available_at AS message_available_at
     FROM shadow_delivery_attempts a
     JOIN shadow_outbox_messages m ON m.outbox_message_id=a.outbox_message_id
     ORDER BY a.outbox_message_id, a.attempt_no
@@ -52,11 +54,15 @@ export function assertShadowDeliveryAttemptHistory(db: DatabaseSync, asOf?: stri
     expectedAttemptNo += 1;
 
     const messageEnqueuedAtMs = canonicalTimestampMs(row.message_enqueued_at, "outbox enqueued_at");
+    const messageAvailableAtMs = canonicalTimestampMs(row.message_available_at, "outbox available_at");
     const startedAtMs = canonicalTimestampMs(row.started_at, "delivery attempt started_at");
     const completedAtMs = canonicalTimestampMs(row.completed_at, "delivery attempt completed_at");
     const createdAtMs = canonicalTimestampMs(row.created_at, "delivery attempt created_at");
     if (startedAtMs < messageEnqueuedAtMs) {
       throw new Error("shadow delivery attempt started before message enqueue");
+    }
+    if (startedAtMs < messageAvailableAtMs) {
+      throw new Error("shadow delivery attempt started before message availability");
     }
     if (asOfMs !== null && (startedAtMs > asOfMs || completedAtMs > asOfMs || createdAtMs > asOfMs)) {
       throw new Error("future shadow delivery attempt timestamp");
