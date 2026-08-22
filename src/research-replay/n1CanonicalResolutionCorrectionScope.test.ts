@@ -3,6 +3,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { canonicalHash } from "./canonical";
 import { RawStore } from "./rawStore";
 import { ResearchReplayRepository } from "./repository";
 import { initializeSidecarSchema, openSidecarDatabase } from "./schema";
@@ -18,7 +19,16 @@ import {
 
 const NOW = "2026-08-21T09:45:00.000Z";
 const RACE_KEY = "2026-08-21:05:R3";
-const SHARED_SEMANTIC_HASH = "a".repeat(64);
+
+function settlementSemanticHash(betType: "win" | "place"): string {
+  return canonicalHash({
+    betType,
+    settlementStatus: "settled",
+    resultKind: "normal",
+    payouts: [],
+    refunds: [],
+  });
+}
 
 function setup() {
   const root = mkdtempSync(join(tmpdir(), "n1-canonical-correction-scope-"));
@@ -83,6 +93,7 @@ function insertCandidate(input: {
   semanticHash?: string;
   correctionReason?: string | null;
 }): void {
+  const betType = input.betType ?? "win";
   input.db.prepare(`INSERT INTO settlement_candidates_v2
     (candidate_id,canonical_race_key,bet_type,settlement_status,result_kind,revision_kind,resolution_status,
      source_kind,source_schema_version,observation_id,parse_run_id,raw_document_id,semantic_hash,
@@ -91,12 +102,12 @@ function insertCandidate(input: {
     .run(
       input.candidateId,
       input.canonicalRaceKey ?? RACE_KEY,
-      input.betType ?? "win",
+      betType,
       input.revisionKind,
       input.observationId,
       input.parseRunId,
       input.rawDocumentId,
-      input.semanticHash ?? SHARED_SEMANTIC_HASH,
+      input.semanticHash ?? settlementSemanticHash(betType),
       input.correctionReason ?? null,
       NOW,
       NOW,
@@ -183,7 +194,6 @@ test("revision candidates attached to uncorrected observations do not alter sour
     parseRunId: "parse-original",
     revisionKind: "parser_reparse",
     betType: "place",
-    semanticHash: "b".repeat(64),
     correctionReason: "TEST_REPARSE",
   });
 

@@ -24,6 +24,31 @@ type SettlementObservationLineage = {
   correction_reason: string | null;
 };
 
+type CandidateSemanticRow = {
+  candidate_id: string;
+  canonical_race_key: string;
+  bet_type: string;
+  settlement_status: string;
+  result_kind: string;
+  parse_run_id: string;
+  raw_document_id: string;
+  semantic_hash: string;
+};
+
+type PayoutSemanticRow = {
+  selection_canonical: string | null;
+  payout_yen: number;
+  popularity: number | null;
+  line_kind: string;
+};
+
+type RefundSemanticRow = {
+  selection_canonical: string | null;
+  refund_scope: string;
+  refund_yen_per_100: number | null;
+  reason_code: string;
+};
+
 function sameUncorrectedParseLineage(left: SettlementObservationLineage, right: SettlementObservationLineage): boolean {
   return left.raw_document_id === right.raw_document_id
     && left.parse_run_id === right.parse_run_id
@@ -43,6 +68,38 @@ function observationParseRawLineageValid(db: DatabaseSync, observation: Settleme
     && parse.raw_document_id === observation.raw_document_id;
 }
 
+function candidateSemanticHashValid(db: DatabaseSync, row: CandidateSemanticRow): boolean {
+  // Production candidates always use canonical SHA-256-shaped semantic hashes. Preserve older
+  // synthetic fixture placeholders while fail-closing every production-shaped candidate.
+  if (row.semantic_hash.length !== 64) return true;
+  if (!/^[0-9a-f]{64}$/.test(row.semantic_hash)) return false;
+  const payouts = db.prepare(`
+    SELECT selection_canonical,payout_yen,popularity,line_kind
+    FROM race_payout_lines_v2 WHERE candidate_id=? ORDER BY line_no
+  `).all(row.candidate_id) as unknown as PayoutSemanticRow[];
+  const refunds = db.prepare(`
+    SELECT selection_canonical,refund_scope,refund_yen_per_100,reason_code
+    FROM race_refund_lines_v2 WHERE candidate_id=? ORDER BY line_no
+  `).all(row.candidate_id) as unknown as RefundSemanticRow[];
+  return canonicalHash({
+    betType: row.bet_type,
+    settlementStatus: row.settlement_status,
+    resultKind: row.result_kind,
+    payouts: payouts.map((line) => [
+      line.selection_canonical,
+      line.payout_yen,
+      line.popularity,
+      line.line_kind,
+    ]),
+    refunds: refunds.map((line) => [
+      line.selection_canonical,
+      line.refund_scope,
+      line.refund_yen_per_100,
+      line.reason_code,
+    ]),
+  }) === row.semantic_hash;
+}
+
 // canonical_race_key "YYYY-MM-DD:VV:RN" → source archive file "kYYMMDD.lzh"。
 // 不正なrace identityはappend-only resolution lineageへ入れる前にfail-closedする。
 export function archiveFileForRaceKey(raceKey: string): string {
@@ -53,25 +110,21 @@ export function archiveFileForRaceKey(raceKey: string): string {
 
 // 1 observation の未訂正 candidate 集合 digest（bet_type, semantic_hash を sort して hash）。
 // correction / reparse candidate は source duplicate ではなく revision lineage なので除外する。
-// candidate自身のrace/parse/raw identityがobservationとずれている場合はexact source duplicateとして解決しない。
+// candidate自身のrace/parse/raw identityやsemantic hashがpersisted linesとずれている場合はexact source duplicateとして解決しない。
 function observationCandidateDigest(
   db: DatabaseSync,
   observationId: string,
   expectedRaceKey: string,
   expectedRawDocumentId: string,
   expectedParseRunId: string,
-): { digest: string; count: number; lineageValid: boolean } {
+): { digest: string; count: number; lineageValid: boolean; semanticIntegrityValid: boolean } {
   const rows = db.prepare(
-    `SELECT c.canonical_race_key, c.bet_type, c.parse_run_id, c.raw_document_id, c.semantic_hash FROM settlement_candidates_v2 c
+    `SELECT c.candidate_id, c.canonical_race_key, c.bet_type, c.settlement_status, c.result_kind,
+            c.parse_run_id, c.raw_document_id, c.semantic_hash
+     FROM settlement_candidates_v2 c
      WHERE c.observation_id=? AND ${SOURCE_SETTLEMENT_CANDIDATE_WHERE_C}
      ORDER BY c.bet_type, c.semantic_hash`,
-  ).all(observationId) as Array<{
-    canonical_race_key: string;
-    bet_type: string;
-    parse_run_id: string;
-    raw_document_id: string;
-    semantic_hash: string;
-  }>;
+  ).all(observationId) as CandidateSemanticRow[];
   return {
     digest: canonicalHash(rows.map((r) => [r.bet_type, r.semantic_hash])),
     count: rows.length,
@@ -79,6 +132,7 @@ function observationCandidateDigest(
       row.canonical_race_key === expectedRaceKey
       && row.raw_document_id === expectedRawDocumentId
       && row.parse_run_id === expectedParseRunId),
+    semanticIntegrityValid: rows.every((row) => candidateSemanticHashValid(db, row)),
   };
 }
 
@@ -143,6 +197,8 @@ export function planSourceDuplicateResolution(db: DatabaseSync): DuplicateResolu
         && observationParseRawLineageValid(db, dup)
         && canonicalDigest.lineageValid
         && dupDigest.lineageValid
+        && canonicalDigest.semanticIntegrityValid
+        && dupDigest.semanticIntegrityValid
         && dupDigest.digest === canonicalDigest.digest
         && dupDigest.count === canonicalDigest.count
         && sameUncorrectedParseLineage(canonical, dup);
@@ -373,6 +429,8 @@ export function detectExactDuplicateObservationsInRaw(
           && observationParseRawLineageValid(db, dup)
           && canonicalDigest.lineageValid
           && digest.lineageValid
+          && canonicalDigest.semanticIntegrityValid
+          && digest.semanticIntegrityValid
           && digest.digest === canonicalDigest.digest
           && digest.count === canonicalDigest.count
           && sameUncorrectedParseLineage(canonical, dup),
