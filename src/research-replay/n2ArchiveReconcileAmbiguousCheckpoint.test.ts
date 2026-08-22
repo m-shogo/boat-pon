@@ -32,7 +32,7 @@ const cell = {
 };
 
 const aggregateKey = "2026\u0000trifecta\u0000戸田";
-const ambiguousKey = "2026-07-30:01:R1\u0000trifecta";
+const ambiguousKey = "2026-07-30:02:R1\u0000trifecta";
 
 const state = {
   version: RECONCILE_INPUT_VERSION,
@@ -62,8 +62,19 @@ test("archive reconcile resume rejects rehashed ambiguous evidence deletion", ()
   );
 });
 
+test("archive reconcile resume rejects rehashed ambiguous cell relocation", () => {
+  const tampered = {
+    ...state,
+    cells: [["2026\u0000trifecta\u0000桐生", cell]],
+  };
+  assert.throws(
+    () => assertState(tampered),
+    /ARCHIVE_RECONCILE_CHECKPOINT_AMBIGUOUS_CELL_MISMATCH:/,
+  );
+});
+
 test("archive reconcile resume rejects malformed ambiguous lineage keys", () => {
-  const tampered = { ...state, ambiguousKeys: ["2026-02-30:01:R1\u0000trifecta"] };
+  const tampered = { ...state, ambiguousKeys: ["2026-02-30:02:R1\u0000trifecta"] };
   assert.throws(
     () => assertState(tampered),
     /ARCHIVE_RECONCILE_CHECKPOINT_AMBIGUOUS_KEY_INVALID:/,
