@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { canonicalHash } from "./canonical";
 import { PAYLOAD_SCHEMA_VERSION } from "./domain";
 import { RESOLUTION_POLICIES, strictPitGuard } from "./manifest";
 import type { ResearchReplayRepository } from "./repository";
@@ -9,6 +10,14 @@ const AS_OF = "2026-08-21T03:00:00.000Z";
 const MARKET_OBSERVATION_ID = "market-1";
 const SCHEDULE_OBSERVATION_ID = "schedule-1";
 const CLOSE_AT = "2026-08-21T03:05:00.000Z";
+
+type Schedule = { canonicalRaceKey: string; scheduledCloseAt: string };
+type ScheduleLineageOverride = Partial<{
+  canonicalRaceKey: string;
+  observationType: string;
+  payloadSchemaVersion: string;
+  semanticPayloadHash: string;
+}>;
 
 function marketObservation() {
   return {
@@ -30,8 +39,31 @@ function marketObservation() {
   };
 }
 
-function repository(schedule: { canonicalRaceKey: string; scheduledCloseAt: string } | null) {
+function scheduleSemanticHash(schedule: Schedule): string {
+  return canonicalHash({
+    payloadSchemaVersion: PAYLOAD_SCHEMA_VERSION,
+    payloadType: "race_schedule",
+    payload: schedule,
+  });
+}
+
+function repository(schedule: Schedule | null, lineageOverride: ScheduleLineageOverride = {}) {
+  const scheduleLineage = schedule === null ? undefined : {
+    canonical_race_key: lineageOverride.canonicalRaceKey ?? schedule.canonicalRaceKey,
+    observation_type: lineageOverride.observationType ?? "race_schedule",
+    payload_schema_version: lineageOverride.payloadSchemaVersion ?? PAYLOAD_SCHEMA_VERSION,
+    semantic_payload_hash: lineageOverride.semanticPayloadHash ?? scheduleSemanticHash(schedule),
+  };
   return {
+    db: {
+      prepare() {
+        return {
+          get(observationId: string) {
+            return observationId === SCHEDULE_OBSERVATION_ID ? scheduleLineage : undefined;
+          },
+        };
+      },
+    },
     loadTypedPayload(observationId: string) {
       if (observationId === MARKET_OBSERVATION_ID) {
         return {
@@ -56,10 +88,10 @@ function repository(schedule: { canonicalRaceKey: string; scheduledCloseAt: stri
   } as unknown as ResearchReplayRepository;
 }
 
-function guard(schedule: { canonicalRaceKey: string; scheduledCloseAt: string } | null) {
+function guard(schedule: Schedule | null, lineageOverride: ScheduleLineageOverride = {}) {
   return strictPitGuard({
     observation: marketObservation(),
-    repository: repository(schedule),
+    repository: repository(schedule, lineageOverride),
     canonicalRaceKey: RACE_KEY,
     asOfAt: AS_OF,
     policy: RESOLUTION_POLICIES.research_replay_strict_pre_race,
@@ -86,6 +118,24 @@ test("PIT guard rejects a market checkpoint bound to a different race schedule",
 
 test("PIT guard rejects a market checkpoint whose frozen close differs from the referenced schedule", () => {
   const result = guard({ canonicalRaceKey: RACE_KEY, scheduledCloseAt: "2026-08-21T03:10:00.000Z" });
+  assert.equal(result.disposition, "rejected");
+  assert.ok(result.codes.includes("SCHEDULE_VERSION_INVALID"));
+});
+
+test("PIT guard rejects schedule payloads detached from their observation type lineage", () => {
+  const result = guard(
+    { canonicalRaceKey: RACE_KEY, scheduledCloseAt: CLOSE_AT },
+    { observationType: "beforeinfo" },
+  );
+  assert.equal(result.disposition, "rejected");
+  assert.ok(result.codes.includes("SCHEDULE_VERSION_INVALID"));
+});
+
+test("PIT guard rejects rehashed schedule payloads detached from observation semantic lineage", () => {
+  const result = guard(
+    { canonicalRaceKey: RACE_KEY, scheduledCloseAt: CLOSE_AT },
+    { semanticPayloadHash: "b".repeat(64) },
+  );
   assert.equal(result.disposition, "rejected");
   assert.ok(result.codes.includes("SCHEDULE_VERSION_INVALID"));
 });
