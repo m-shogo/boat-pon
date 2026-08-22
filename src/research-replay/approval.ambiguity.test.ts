@@ -111,6 +111,24 @@ test("same-timestamp matching approvals fail closed instead of using rowid", () 
   }
 });
 
+test("non-canonical persisted approval times fail closed before ordering", () => {
+  const root = mkdtempSync(join(tmpdir(), "approval-time-contract-"));
+  const path = join(root, "approval.sqlite");
+  const db = createApprovalDb(path);
+  try {
+    // 05:00-07:00 is 12:00Z, which is after the 11:00Z rollout start.
+    // Raw string comparison would incorrectly place it before the rollout.
+    insertGrant(db, "approval-offset", "2026-08-20T05:00:00-07:00");
+    const resolution = resolve(db);
+    assert.equal(resolution.approved, false);
+    assert.equal(resolution.code, "APPROVAL_TIMESTAMP_INVALID");
+    assert.equal(resolution.approvalId, null);
+  } finally {
+    db.close();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("a unique latest matching approval remains authoritative", () => {
   const root = mkdtempSync(join(tmpdir(), "approval-latest-"));
   const path = join(root, "approval.sqlite");
