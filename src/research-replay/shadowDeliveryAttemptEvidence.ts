@@ -9,6 +9,7 @@ type ShadowDeliveryAttemptRow = {
   completed_at: string;
   next_available_at: string | null;
   created_at: string;
+  message_enqueued_at: string;
 };
 
 const TERMINAL_OUTCOMES = new Set(["succeeded", "permanent_failure", "cancelled"]);
@@ -24,10 +25,12 @@ function canonicalTimestampMs(value: string, name: string): number {
 export function assertShadowDeliveryAttemptHistory(db: DatabaseSync, asOf?: string): void {
   const asOfMs = asOf === undefined ? null : canonicalTimestampMs(asOf, "delivery attempt asOf");
   const rows = db.prepare(`
-    SELECT outbox_message_id, attempt_no, outcome,
-           started_at, completed_at, next_available_at, created_at
-    FROM shadow_delivery_attempts
-    ORDER BY outbox_message_id, attempt_no
+    SELECT a.outbox_message_id, a.attempt_no, a.outcome,
+           a.started_at, a.completed_at, a.next_available_at, a.created_at,
+           m.enqueued_at AS message_enqueued_at
+    FROM shadow_delivery_attempts a
+    JOIN shadow_outbox_messages m ON m.outbox_message_id=a.outbox_message_id
+    ORDER BY a.outbox_message_id, a.attempt_no
   `).all() as ShadowDeliveryAttemptRow[];
 
   let currentMessageId: string | null = null;
@@ -48,9 +51,13 @@ export function assertShadowDeliveryAttemptHistory(db: DatabaseSync, asOf?: stri
     }
     expectedAttemptNo += 1;
 
+    const messageEnqueuedAtMs = canonicalTimestampMs(row.message_enqueued_at, "outbox enqueued_at");
     const startedAtMs = canonicalTimestampMs(row.started_at, "delivery attempt started_at");
     const completedAtMs = canonicalTimestampMs(row.completed_at, "delivery attempt completed_at");
     const createdAtMs = canonicalTimestampMs(row.created_at, "delivery attempt created_at");
+    if (startedAtMs < messageEnqueuedAtMs) {
+      throw new Error("shadow delivery attempt started before message enqueue");
+    }
     if (asOfMs !== null && (startedAtMs > asOfMs || completedAtMs > asOfMs || createdAtMs > asOfMs)) {
       throw new Error("future shadow delivery attempt timestamp");
     }
