@@ -18,7 +18,7 @@ import {
 
 const NOW = "2026-08-21T09:45:00.000Z";
 const RACE_KEY = "2026-08-21:05:R3";
-const SHARED_SEMANTIC_HASH = "a".repeat(64);
+const SHARED_SEMANTIC_HASH = "same-semantic";
 
 function setup() {
   const root = mkdtempSync(join(tmpdir(), "n1-canonical-correction-scope-"));
@@ -183,7 +183,7 @@ test("revision candidates attached to uncorrected observations do not alter sour
     parseRunId: "parse-original",
     revisionKind: "parser_reparse",
     betType: "place",
-    semanticHash: "b".repeat(64),
+    semanticHash: "revision-semantic",
     correctionReason: "TEST_REPARSE",
   });
 
