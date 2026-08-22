@@ -339,6 +339,33 @@ function assertArchiveReconcileSamples(
   }
 }
 
+function assertArchiveReconcileAmbiguousKeys(
+  state: Record<string, unknown>,
+  expectedCount: number,
+): void {
+  const ambiguousKeys = state.ambiguousKeys;
+  if (!Array.isArray(ambiguousKeys)) throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_AMBIGUOUS_KEYS_INVALID");
+  if (ambiguousKeys.length !== expectedCount) {
+    throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_AMBIGUOUS_KEY_COUNT_MISMATCH:${ambiguousKeys.length}:${expectedCount}`);
+  }
+  const seen = new Set<string>();
+  for (const key of ambiguousKeys) {
+    if (typeof key !== "string" || seen.has(key)) {
+      throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_AMBIGUOUS_KEY_INVALID:${String(key)}`);
+    }
+    seen.add(key);
+    const parts = key.split("\u0000");
+    if (parts.length !== 2 || !BET_TYPE_SET.has(parts[1])) {
+      throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_AMBIGUOUS_KEY_INVALID:${key}`);
+    }
+    try {
+      parseCanonicalRaceKey(parts[0]);
+    } catch {
+      throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_AMBIGUOUS_KEY_INVALID:${key}`);
+    }
+  }
+}
+
 function assertArchiveReconcileAggregateCounts(
   checkpointContract: ArchiveReconcileCheckpointContract,
   state: unknown,
@@ -353,6 +380,7 @@ function assertArchiveReconcileAggregateCounts(
 
   let statusMismatchTotal = 0;
   let resultKindMismatchTotal = 0;
+  let ambiguousCanonicalTotal = 0;
   let parseFailureTotal = 0;
   for (const [key, cell] of cells) {
     const expectedPaired = cell.exact_match + cell.status_mismatch + cell.result_kind_mismatch;
@@ -361,6 +389,7 @@ function assertArchiveReconcileAggregateCounts(
     }
     statusMismatchTotal += cell.status_mismatch;
     resultKindMismatchTotal += cell.result_kind_mismatch;
+    ambiguousCanonicalTotal += cell.ambiguous_canonical;
     parseFailureTotal += cell.parse_failure;
   }
   for (const key of paired.keys()) {
@@ -372,6 +401,7 @@ function assertArchiveReconcileAggregateCounts(
   }
   assertArchiveReconcileParseErrors(checkpointContract, record, parseFailureTotal);
   assertArchiveReconcileSamples(record, statusMismatchTotal + resultKindMismatchTotal);
+  assertArchiveReconcileAmbiguousKeys(record, ambiguousCanonicalTotal);
 }
 
 export function assertArchiveReconcileCheckpointStateDigest(
