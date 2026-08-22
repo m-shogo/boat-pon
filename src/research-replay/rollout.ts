@@ -17,6 +17,7 @@ import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import { RawStore } from "./rawStore";
 import { ResearchReplayRepository } from "./repository";
 import { verifyRolloutSchema } from "./schema";
+import { assertShadowDeliveryAttemptHistory } from "./shadowDeliveryAttemptEvidence";
 
 export const DEFAULT_ROLLOUT_CONFIG: RolloutConfig = Object.freeze({
   shadowWriteEnabled: false,
@@ -408,6 +409,7 @@ export class RolloutController {
     }
     const now = this.clock();
     const nowMs = canonicalShadowTimestampMs(now, "shadow drain now");
+    assertShadowDeliveryAttemptHistory(this.db, now);
     const outboxRows = this.currentOutboxRows();
     const outboxTiming = new Map<string, { enqueuedAtMs: number; effectiveAvailableAtMs: number }>();
     for (const row of outboxRows) {
