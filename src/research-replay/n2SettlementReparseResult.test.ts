@@ -5,6 +5,7 @@ import { resolveN2SettlementReparseResult } from "./n2SettlementReparseResult";
 
 const clean = {
   counts: {
+    files_not_ingested: 0,
     parse_errors: 0,
     ambiguous_active: 0,
     ambiguous_non_defect: 0,
@@ -37,6 +38,13 @@ test("reparse result accepts only fully clean verified evidence", () => {
 
 test("reparse result keeps non-verify mode compatible when optional verification is absent", () => {
   assert.equal(resolveN2SettlementReparseResult({ ...clean, afterConsistent: null, fullIntegrity: null, secondRun: null }), "REPARSED");
+});
+
+test("reparse result flags source archives that could not be ingested", () => {
+  assert.equal(resolveN2SettlementReparseResult({
+    ...clean,
+    counts: { ...clean.counts, files_not_ingested: 1 },
+  }), "REPARSED_WITH_FLAGS");
 });
 
 test("reparse result flags ambiguous correction and active-state evidence", () => {
