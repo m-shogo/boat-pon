@@ -26,6 +26,8 @@ test("N2 activation planner redacts private readiness read failures", (t) => {
   writeFileSync(join(root, envelopeRelativePath), "{}\n", "utf8");
   writeFileSync(join(directory, "accepted.json"), `${JSON.stringify({
     markerVersion: "n2-trifecta-private-capture-accepted-v1",
+    manifestDigest: "c".repeat(64),
+    checkpointKey: "b".repeat(64),
     raceIdentity: "20260807-10-01",
     checkpointLabel: "T-5",
     rawDocumentId: "fixture-document",
