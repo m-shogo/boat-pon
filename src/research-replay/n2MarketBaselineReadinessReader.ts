@@ -46,6 +46,15 @@ type SettlementRow = {
   raceKey: string;
   candidateId: string;
   observationId: string;
+  candidateParseRunId: string;
+  candidateRawDocumentId: string;
+  observationRaceKey: string | null;
+  observationType: string | null;
+  observationPayloadType: string | null;
+  observationParseRunId: string | null;
+  observationRawDocumentId: string | null;
+  parseRunRawDocumentId: string | null;
+  parseRunStatus: string | null;
   settlementStatus: string;
   resultKind: string;
   resolutionStatus: string;
@@ -57,6 +66,7 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/u;
 const VENUE_RE = /^(0[1-9]|1\d|2[0-4])$/u;
 const RACE_DIR_RE = /^(0[1-9]|1[0-2])$/u;
 const SHA256_RE = /^[0-9a-f]{64}$/u;
+const REUSABLE_PARSE_STATUSES = new Set(["success", "warning"]);
 const MAX_DATE_DIRS = 366;
 const MAX_MARKER_BYTES = 128 * 1024;
 const MAX_EVIDENCE_BYTES = 2_000_000;
@@ -316,6 +326,8 @@ function readSettlements(sidecarDbPath: string, raceKeys: string[]): {
   try {
     db.exec("PRAGMA query_only=ON");
     for (const table of [
+      "domain_observations",
+      "parse_runs",
       "settlement_candidates_v2",
       "race_payout_lines_v2",
       "settlement_source_duplicate_resolutions_v2",
@@ -336,12 +348,25 @@ function readSettlements(sidecarDbPath: string, raceKeys: string[]): {
         c.canonical_race_key AS raceKey,
         c.candidate_id AS candidateId,
         c.observation_id AS observationId,
+        c.parse_run_id AS candidateParseRunId,
+        c.raw_document_id AS candidateRawDocumentId,
+        o.canonical_race_key AS observationRaceKey,
+        o.observation_type AS observationType,
+        o.payload_type AS observationPayloadType,
+        o.parse_run_id AS observationParseRunId,
+        o.raw_document_id AS observationRawDocumentId,
+        pr.raw_document_id AS parseRunRawDocumentId,
+        pr.status AS parseRunStatus,
         c.settlement_status AS settlementStatus,
         c.result_kind AS resultKind,
         c.resolution_status AS resolutionStatus,
         SUM(CASE WHEN p.line_kind='payout' AND p.selection_canonical IS NOT NULL THEN 1 ELSE 0 END) AS payoutCount,
         SUM(CASE WHEN p.line_kind='special_payout' THEN 1 ELSE 0 END) AS specialPayoutCount
       FROM settlement_candidates_v2 c
+      LEFT JOIN domain_observations o
+        ON o.observation_id=c.observation_id
+      LEFT JOIN parse_runs pr
+        ON pr.parse_run_id=c.parse_run_id
       LEFT JOIN race_payout_lines_v2 p ON p.candidate_id=c.candidate_id AND p.bet_type='trifecta'
       WHERE c.bet_type='trifecta'
         AND c.canonical_race_key IN (${placeholders})
@@ -349,13 +374,27 @@ function readSettlements(sidecarDbPath: string, raceKeys: string[]): {
           SELECT 1 FROM settlement_candidates_v2 newer
           WHERE newer.supersedes_candidate_id=c.candidate_id
         )
-      GROUP BY c.canonical_race_key,c.candidate_id,c.observation_id,c.settlement_status,c.result_kind,c.resolution_status
+      GROUP BY c.canonical_race_key,c.candidate_id,c.observation_id,c.parse_run_id,c.raw_document_id,
+        o.canonical_race_key,o.observation_type,o.payload_type,o.parse_run_id,o.raw_document_id,
+        pr.raw_document_id,pr.status,c.settlement_status,c.result_kind,c.resolution_status
       ORDER BY c.canonical_race_key,c.candidate_id
     `).all(...raceKeys) as unknown as SettlementRow[];
 
     const byRace = new Map<string, SettlementRow[]>();
+    const lineageBlockedRaceKeys = new Set<string>();
     for (const row of rows) {
       if (validResolvedObservationIds.has(row.observationId)) continue;
+      if (row.observationRaceKey !== row.raceKey
+        || row.observationType !== "settlement_result"
+        || row.observationPayloadType !== "settlement_result"
+        || row.observationParseRunId !== row.candidateParseRunId
+        || row.observationRawDocumentId !== row.candidateRawDocumentId
+        || row.parseRunRawDocumentId !== row.candidateRawDocumentId
+        || row.parseRunStatus == null
+        || !REUSABLE_PARSE_STATUSES.has(row.parseRunStatus)) {
+        lineageBlockedRaceKeys.add(row.raceKey);
+        continue;
+      }
       const current = byRace.get(row.raceKey) ?? [];
       current.push({
         ...row,
@@ -369,6 +408,10 @@ function readSettlements(sidecarDbPath: string, raceKeys: string[]): {
     let eligibleRaceCount = 0;
     let ineligibleRaceCount = 0;
     for (const raceKey of raceKeys) {
+      if (lineageBlockedRaceKeys.has(raceKey)) {
+        integrityBlockedRaceKeys.push(raceKey);
+        continue;
+      }
       const candidates = byRace.get(raceKey) ?? [];
       if (candidates.length > 1) {
         integrityBlockedRaceKeys.push(raceKey);

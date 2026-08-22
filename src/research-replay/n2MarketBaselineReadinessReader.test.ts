@@ -67,6 +67,19 @@ function createSidecar(root: string): string {
   mkdirSync(dirname(path), { recursive: true });
   const db = new DatabaseSync(path);
   db.exec(`
+    CREATE TABLE parse_runs (
+      parse_run_id TEXT PRIMARY KEY,
+      raw_document_id TEXT NOT NULL,
+      status TEXT NOT NULL
+    );
+    CREATE TABLE domain_observations (
+      observation_id TEXT PRIMARY KEY,
+      canonical_race_key TEXT NOT NULL,
+      observation_type TEXT NOT NULL,
+      payload_type TEXT NOT NULL,
+      raw_document_id TEXT NOT NULL,
+      parse_run_id TEXT NOT NULL
+    );
     CREATE TABLE settlement_candidates_v2 (
       candidate_id TEXT PRIMARY KEY,
       canonical_race_key TEXT NOT NULL,
@@ -75,6 +88,8 @@ function createSidecar(root: string): string {
       result_kind TEXT NOT NULL,
       resolution_status TEXT NOT NULL,
       observation_id TEXT NOT NULL,
+      parse_run_id TEXT NOT NULL,
+      raw_document_id TEXT NOT NULL,
       supersedes_candidate_id TEXT
     );
     CREATE TABLE race_payout_lines_v2 (
@@ -114,18 +129,31 @@ function insertCandidate(path: string, input: {
 }): void {
   const db = new DatabaseSync(path);
   try {
+    const observationId = `obs-${input.candidateId}`;
+    const parseRunId = `parse-${input.candidateId}`;
+    const rawDocumentId = `raw-${input.candidateId}`;
+    db.prepare("INSERT INTO parse_runs VALUES (?, ?, 'success')").run(parseRunId, rawDocumentId);
+    db.prepare(`
+      INSERT INTO domain_observations (
+        observation_id, canonical_race_key, observation_type, payload_type,
+        raw_document_id, parse_run_id
+      ) VALUES (?, ?, 'settlement_result', 'settlement_result', ?, ?)
+    `).run(observationId, input.raceKey, rawDocumentId, parseRunId);
     db.prepare(`
       INSERT INTO settlement_candidates_v2 (
         candidate_id, canonical_race_key, bet_type, settlement_status,
-        result_kind, resolution_status, observation_id, supersedes_candidate_id
-      ) VALUES (?, ?, 'trifecta', ?, ?, ?, ?, NULL)
+        result_kind, resolution_status, observation_id, parse_run_id,
+        raw_document_id, supersedes_candidate_id
+      ) VALUES (?, ?, 'trifecta', ?, ?, ?, ?, ?, ?, NULL)
     `).run(
       input.candidateId,
       input.raceKey,
       input.status,
       input.resultKind ?? "normal",
       input.resolutionStatus ?? "resolved",
-      `obs-${input.candidateId}`,
+      observationId,
+      parseRunId,
+      rawDocumentId,
     );
     if (input.payoutSelection !== undefined) {
       db.prepare(`
@@ -219,6 +247,32 @@ test("duplicate active settlement candidates fail closed for that race", () => {
     const result = readN2MarketBaselineReadiness({ dataRoot: root });
     assert.deepEqual(result.settledRaceKeys, []);
     assert.deepEqual(result.integrityBlockedRaceKeys, ["2026-08-07:10:R1"]);
+  });
+});
+
+test("settlement lineage drift blocks readiness for the affected race", () => {
+  withRoot((root) => {
+    writeAcceptedT5(root, { date: "2026-08-07", venue: "10", raceNo: 1 });
+    const sidecar = createSidecar(root);
+    insertCandidate(sidecar, {
+      raceKey: "2026-08-07:10:R1",
+      candidateId: "c1",
+      status: "settled",
+      payoutSelection: "1-2-3",
+    });
+    const db = new DatabaseSync(sidecar);
+    try {
+      db.prepare("UPDATE domain_observations SET canonical_race_key=? WHERE observation_id=?")
+        .run("2026-08-07:10:R2", "obs-c1");
+    } finally {
+      db.close();
+    }
+
+    const result = readN2MarketBaselineReadiness({ dataRoot: root });
+    assert.deepEqual(result.settledRaceKeys, []);
+    assert.deepEqual(result.integrityBlockedRaceKeys, ["2026-08-07:10:R1"]);
+    assert.equal(result.settlementEligibleRaceCount, 0);
+    assert.equal(result.rawOddsValuesRead, false);
   });
 });
 
