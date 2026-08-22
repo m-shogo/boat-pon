@@ -130,6 +130,14 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+function canonicalShadowTimestampMs(value: string, name: string): number {
+  const canonical = canonicalUtcTimestamp(value);
+  if (canonical !== value) throw new Error(`non-canonical ${name}`);
+  const milliseconds = Date.parse(canonical);
+  if (!Number.isFinite(milliseconds)) throw new Error(`invalid ${name}`);
+  return milliseconds;
+}
+
 function safeJson(value: unknown): string {
   return JSON.stringify(value ?? null);
 }
@@ -399,9 +407,26 @@ export class RolloutController {
       };
     }
     const now = this.clock();
-    const candidates = this.currentOutboxRows().filter((row) => {
+    const nowMs = canonicalShadowTimestampMs(now, "shadow drain now");
+    const outboxRows = this.currentOutboxRows();
+    const outboxTiming = new Map<string, { enqueuedAtMs: number; effectiveAvailableAtMs: number }>();
+    for (const row of outboxRows) {
+      const enqueuedAtMs = canonicalShadowTimestampMs(row.enqueued_at, "shadow outbox enqueued_at");
+      canonicalShadowTimestampMs(row.available_at, "shadow outbox available_at");
+      const effectiveAvailableAt = row.next_available_at ?? row.available_at;
+      const effectiveAvailableAtMs = canonicalShadowTimestampMs(
+        effectiveAvailableAt,
+        row.next_available_at === null ? "shadow outbox available_at" : "shadow retry next_available_at",
+      );
+      outboxTiming.set(row.outbox_message_id, { enqueuedAtMs, effectiveAvailableAtMs });
+    }
+    const candidates = outboxRows.filter((row) => {
       if (["succeeded", "permanent_failure", "cancelled"].includes(row.last_outcome ?? "")) return false;
-      return (row.next_available_at ?? row.available_at) <= now;
+      return (outboxTiming.get(row.outbox_message_id)?.effectiveAvailableAtMs ?? Number.POSITIVE_INFINITY) <= nowMs;
+    }).sort((left, right) => {
+      const leftEnqueued = outboxTiming.get(left.outbox_message_id)?.enqueuedAtMs ?? Number.POSITIVE_INFINITY;
+      const rightEnqueued = outboxTiming.get(right.outbox_message_id)?.enqueuedAtMs ?? Number.POSITIVE_INFINITY;
+      return leftEnqueued - rightEnqueued || left.outbox_message_id.localeCompare(right.outbox_message_id);
     }).slice(0, limit);
     let succeeded = 0;
     let retrying = 0;
@@ -427,11 +452,18 @@ export class RolloutController {
           (current) => current.outbox_message_id === candidate.outbox_message_id,
         );
         const currentNow = this.clock();
+        const currentNowMs = canonicalShadowTimestampMs(currentNow, "shadow drain current time");
+        const effectiveAvailableAtMs = row
+          ? canonicalShadowTimestampMs(
+            row.next_available_at ?? row.available_at,
+            row.next_available_at === null ? "shadow outbox available_at" : "shadow retry next_available_at",
+          )
+          : Number.POSITIVE_INFINITY;
         if (!activeConfig.shadowWriteEnabled
           || activeConfig.killSwitchEngaged
           || !row
           || ["succeeded", "permanent_failure", "cancelled"].includes(row.last_outcome ?? "")
-          || (row.next_available_at ?? row.available_at) > currentNow) {
+          || effectiveAvailableAtMs > currentNowMs) {
           skippedAfterClaim += 1;
           this.db.exec("COMMIT");
           continue;
