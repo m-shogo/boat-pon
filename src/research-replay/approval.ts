@@ -204,6 +204,7 @@ export type ApprovalResolution = {
     | "HUMAN_APPROVAL_MISSING"
     | "APPROVAL_SCOPE_MISMATCH"
     | "APPROVAL_TARGET_MISMATCH"
+    | "APPROVAL_AMBIGUOUS"
     | "APPROVAL_AFTER_ROLLOUT"
     | "APPROVAL_REVOKED"
     | "APPROVAL_SUPERSEDED"
@@ -261,7 +262,12 @@ export function resolveApproval(
   if (matching.length === 0) {
     return { ...base, approved: false, code: "APPROVAL_TARGET_MISMATCH", approvalId: null, source: null, reference: null, approvedAt: null, mode: null };
   }
-  const row = matching[0];
+  const latestApprovedAt = matching[0].approved_at;
+  const latestMatching = matching.filter((candidate) => candidate.approved_at === latestApprovedAt);
+  if (latestMatching.length !== 1) {
+    return { ...base, approved: false, code: "APPROVAL_AMBIGUOUS", approvalId: null, source: null, reference: null, approvedAt: latestApprovedAt, mode: null };
+  }
+  const row = latestMatching[0];
   const selected = {
     approvalId: row.approval_id,
     source: row.approval_source,
