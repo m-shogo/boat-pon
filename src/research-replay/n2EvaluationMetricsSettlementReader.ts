@@ -4,6 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 
 import { canonicalHash } from "./canonical";
 import { enumerateBetSelections } from "./n2DatasetContract";
+import { readCurrentlyValidSourceDuplicateObservationIds } from "./n1SourceDuplicateResolutionValidation";
 
 export const N2_EVALUATION_METRICS_SETTLEMENT_READER_VERSION =
   "n2-evaluation-metrics-settlement-reader-v1" as const;
@@ -33,6 +34,7 @@ export type N2EvaluationMetricsSettlementRead = {
 
 type Row = {
   raceKey: string;
+  observationId: string;
   winningSelection: string | null;
   payoutYen: number | null;
 };
@@ -98,16 +100,25 @@ export function readN2EvaluationMetricsSettlements(input: {
   }
   try {
     for (const table of [
+      "domain_observations",
+      "parse_runs",
       "settlement_candidates_v2",
       "race_payout_lines_v2",
       "settlement_source_duplicate_resolutions_v2",
     ]) {
       if (!tableExists(db, table)) return blocked([`SIDECAR_TABLE_MISSING:${table}`], requested.length, 1);
     }
+    let validResolvedObservationIds: Set<string>;
+    try {
+      validResolvedObservationIds = readCurrentlyValidSourceDuplicateObservationIds(db);
+    } catch {
+      return blocked(["SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID"], requested.length, 1);
+    }
     const placeholders = requested.map(() => "?").join(",");
     const rows = db.prepare(`
       SELECT
         c.canonical_race_key AS raceKey,
+        c.observation_id AS observationId,
         p.selection_canonical AS winningSelection,
         p.payout_yen AS payoutYen
       FROM settlement_candidates_v2 c
@@ -121,10 +132,6 @@ export function readN2EvaluationMetricsSettlements(input: {
         AND c.result_kind='normal'
         AND c.resolution_status='resolved'
         AND c.canonical_race_key IN (${placeholders})
-        AND NOT EXISTS (
-          SELECT 1 FROM settlement_source_duplicate_resolutions_v2 d
-          WHERE d.duplicate_observation_id=c.observation_id
-        )
         AND NOT EXISTS (
           SELECT 1 FROM settlement_candidates_v2 newer
           WHERE newer.supersedes_candidate_id=c.candidate_id
@@ -140,6 +147,7 @@ export function readN2EvaluationMetricsSettlements(input: {
 
     const grouped = new Map<string, Row[]>();
     for (const row of rows) {
+      if (validResolvedObservationIds.has(row.observationId)) continue;
       const current = grouped.get(row.raceKey) ?? [];
       current.push(row);
       grouped.set(row.raceKey, current);
