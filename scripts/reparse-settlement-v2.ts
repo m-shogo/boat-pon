@@ -28,6 +28,7 @@ import {
   buildN2SettlementReparseCheckpointStateDigest,
   type N2SettlementReparseCheckpointIdentity,
 } from "../src/research-replay/n2SettlementReparseCheckpoint";
+import { assertN2SettlementReparseProcessedArchiveLineage } from "../src/research-replay/n2SettlementReparseResumeLineage";
 import {
   REPARSE_CANONICALIZATION_VERSION, REPARSE_PARSER_NAME, REPARSE_RACE_IDENTITY_VERSION,
   REPARSE_REPORT_SCHEMA_VERSION, REPARSE_SCHEMA_VERSION, REPARSE_SOURCE_PARSER_VERSION,
@@ -221,6 +222,30 @@ function loadState(path: string, expectedIdentity: N2SettlementReparseCheckpoint
   return s;
 }
 
+async function assertResumeProcessedArchiveLineage(
+  state: ReparseState,
+  files: string[],
+  byHash: Map<string, RawMeta>,
+): Promise<void> {
+  const pathByBasename = new Map(files.map((path) => [basename(path), path]));
+  const expectedRawDocumentIdByArchive = new Map<string, string>();
+  for (const archiveFile of state.processedFiles) {
+    const path = pathByBasename.get(archiveFile);
+    if (!path) throw new Error(`REPARSE_CHECKPOINT_PROCESSED_ARCHIVE_RAW_UNRESOLVED:${archiveFile}`);
+    let bytes: Buffer;
+    try {
+      bytes = await unpack(path);
+    } catch {
+      throw new Error(`REPARSE_CHECKPOINT_PROCESSED_ARCHIVE_RAW_UNRESOLVED:${archiveFile}`);
+    }
+    const hash = createHash("sha256").update(bytes).digest("hex");
+    const meta = byHash.get(hash);
+    if (!meta) throw new Error(`REPARSE_CHECKPOINT_PROCESSED_ARCHIVE_RAW_UNRESOLVED:${archiveFile}`);
+    expectedRawDocumentIdByArchive.set(archiveFile, meta.rawDocumentId);
+  }
+  assertN2SettlementReparseProcessedArchiveLineage(state, expectedRawDocumentIdByArchive);
+}
+
 async function runPass(
   db: DatabaseSync,
   repo: SettlementRepository,
@@ -303,6 +328,7 @@ async function main(): Promise<void> {
     });
     const resumedState = resume ? loadState(checkpointPath, checkpointIdentity) : null;
     if (resume && resumedState === null) throw new Error("REPARSE_CHECKPOINT_MISSING");
+    if (resumedState !== null) await assertResumeProcessedArchiveLineage(resumedState, files, byHash);
     const state = resumedState ?? newState();
     await runPass(db, repo, byHash, activeState, files, state, canary ? "canary" : "full", checkpointIdentity);
 
