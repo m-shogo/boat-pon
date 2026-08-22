@@ -195,6 +195,7 @@ export function buildShadowOperabilityReport(
     seenDiagnosticOperations.add(row.operation_id);
     const occurredAtMs = timestampMs(row.occurred_at, "diagnostic occurred_at");
     const createdAtMs = timestampMs(row.created_at, "diagnostic created_at");
+    if (occurredAtMs > asOfMs) throw new Error("future shadow drain diagnostic occurred_at");
     if (createdAtMs > asOfMs) throw new Error("future shadow drain diagnostic created_at");
     return occurredAtMs >= windowStartMs && occurredAtMs <= asOfMs;
   });
