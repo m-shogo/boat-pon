@@ -138,7 +138,7 @@ test("same-timestamp matching approvals fail closed instead of using rowid", () 
     insertGrant(db, "approval-a", "2026-08-20T10:00:00.000Z");
     insertGrant(db, "approval-b", "2026-08-20T10:00:00.000Z");
     assert.deepEqual(resolve(db), {
-      resolverVersion: "f0r-approval-resolver-v1",
+      resolverVersion: "f0r-approval-resolver-v2",
       approved: false,
       code: "APPROVAL_AMBIGUOUS",
       approvalId: null,

@@ -8,7 +8,7 @@ import {
 } from "./schema";
 
 export const F0R_APPROVAL_SCOPE = "F0-R_START_AND_SIDECAR_ROLLOUT";
-export const F0R_APPROVAL_RESOLVER_VERSION = "f0r-approval-resolver-v1";
+export const F0R_APPROVAL_RESOLVER_VERSION = "f0r-approval-resolver-v2";
 
 export type ApprovalMode = "production" | "simulated";
 
