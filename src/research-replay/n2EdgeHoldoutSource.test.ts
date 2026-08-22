@@ -68,6 +68,16 @@ test("current source-duplicate evidence removes only the duplicate holdout obser
  assert.equal(r.status,"PASS"); assert.equal(r.historicalOutcomeCount,1); assert.equal(r.candidateRaceCount,1);
 }));
 
+test("settlement lineage drift blocks holdout ingestion before primary reads",()=>withDb((paths,dbs)=>{
+ const key="2022-01-01:11:R1"; winner(dbs.sidecar,"v",key);
+ dbs.sidecar.prepare("UPDATE domain_observations SET canonical_race_key=? WHERE observation_id=?")
+  .run("2022-01-01:11:R2","obs-v");
+ dbs.primary.close();dbs.sidecar.close();
+ const r=readN2EdgeHoldoutSource({primaryDbPath:paths.primary,sidecarDbPath:paths.sidecar});
+ assert.equal(r.status,"BLOCKED"); assert.ok(r.blockers.includes(`${key}:SETTLEMENT_LINEAGE_INVALID`));
+ assert.equal(r.reads.primaryDatabaseReadCount,0); assert.equal(r.candidateRaceCount,0);
+}));
+
 test("stale source-duplicate evidence blocks holdout ingestion before primary reads",()=>withDb((paths,dbs)=>{
  const key="2022-01-01:11:R1"; winner(dbs.sidecar,"v",key);
  dbs.sidecar.prepare(`INSERT INTO settlement_source_duplicate_resolutions_v2 VALUES ('stale','obs-v','missing-observation',?,'raw-v',?,'source_duplicate',?,'deadbeef',?,?,?)`).run(
