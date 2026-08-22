@@ -44,7 +44,18 @@ function createSidecar(root: string): string {
       line_kind TEXT NOT NULL
     );
     CREATE TABLE settlement_source_duplicate_resolutions_v2 (
-      duplicate_observation_id TEXT PRIMARY KEY
+      resolution_id TEXT PRIMARY KEY,
+      duplicate_observation_id TEXT NOT NULL,
+      canonical_observation_id TEXT NOT NULL,
+      canonical_race_key TEXT NOT NULL,
+      raw_document_id TEXT NOT NULL,
+      source_archive_file TEXT NOT NULL,
+      resolution_kind TEXT NOT NULL,
+      detection_reason TEXT NOT NULL,
+      duplicate_semantic_digest TEXT NOT NULL,
+      resolver_version TEXT NOT NULL,
+      policy_version TEXT NOT NULL,
+      schema_version TEXT NOT NULL
     );
   `);
   db.close();
@@ -241,5 +252,24 @@ test("ambiguous active historical winner blocks training rather than being silen
     assert.ok(read.blockers.some((blocker) => blocker.includes("2026-07-01:05:R1:ACTIVE_WINNER_COUNT_2")));
     assert.equal(read.training.length, 0);
     assert.equal(read.evaluationRaces.length, 0);
+  });
+});
+
+test("stale source-duplicate evidence blocks historical source ingestion", () => {
+  withRoot((root) => {
+    const sidecar = prepare(root);
+    const db = new DatabaseSync(sidecar);
+    try {
+      db.prepare(`INSERT INTO settlement_source_duplicate_resolutions_v2
+        VALUES ('stale','obs-train-37','missing-observation','2026-07-01:05:R1','raw-train-37','k260701.lzh','source_duplicate','stale','deadbeef','stale','stale','stale')`).run();
+    } finally {
+      db.close();
+    }
+    const read = readN2HistoricalOnlyBaselineSources({ dataRoot: root });
+    assert.equal(read.status, "BLOCKED");
+    assert.ok(read.blockers.includes("SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID"));
+    assert.equal(read.training.length, 0);
+    assert.equal(read.evaluationRaces.length, 0);
+    assert.equal(read.rawOddsValuesRead, false);
   });
 });
