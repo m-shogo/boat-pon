@@ -164,3 +164,35 @@ test("reader rejects candidate parse/raw lineage that differs from its observati
     assert.equal(report.settlementCount, 0);
   });
 });
+
+test("reader rejects a non-settlement observation used as settlement evidence", () => {
+  withDb((path, db) => {
+    insertObservation(db, {
+      observationId: "obs-a",
+      raceKey: "2026-08-07:05:R1",
+      parseRunId: "parse-a",
+      rawDocumentId: "raw-a",
+    });
+    db.prepare(`UPDATE domain_observations
+      SET observation_type='official_program', payload_type='official_program'
+      WHERE observation_id='obs-a'`).run();
+    insertCandidate(db, {
+      candidateId: "candidate-a",
+      raceKey: "2026-08-07:05:R1",
+      observationId: "obs-a",
+      parseRunId: "parse-a",
+      rawDocumentId: "raw-a",
+    });
+    db.close();
+
+    const report = readN2EvaluationMetricsSettlements({
+      sidecarDbPath: path,
+      raceKeys: ["2026-08-07:05:R1"],
+    });
+    assert.equal(report.status, "BLOCKED");
+    assert.ok(report.blockers.includes(
+      "2026-08-07:05:R1:SETTLEMENT_LINEAGE_MISMATCH:obs-a",
+    ));
+    assert.equal(report.settlementCount, 0);
+  });
+});
