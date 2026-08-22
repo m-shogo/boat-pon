@@ -1,6 +1,7 @@
 import { existsSync, statSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
+import { officialVenueCode } from "../domain/officialLinks";
 import type {
   OfficialProgramCanaryCohort,
   OfficialProgramCanarySourceRow,
@@ -61,6 +62,32 @@ function assertCanonicalDate(date: string): void {
   }
 }
 
+function isCanonicalDate(date: string): boolean {
+  try {
+    assertCanonicalDate(date);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function assertNoDuplicateCanonicalRaces(rows: OfficialProgramCanarySourceRow[]): void {
+  const seen = new Set<string>();
+  for (const row of rows) {
+    if (!isCanonicalDate(row.date)
+      || !Number.isInteger(row.raceNo)
+      || row.raceNo < 1
+      || row.raceNo > 12) {
+      continue;
+    }
+    const venueCode = officialVenueCode(row.venue);
+    if (venueCode === null) continue;
+    const key = `${row.date}:${venueCode}:R${row.raceNo}`;
+    if (seen.has(key)) throw new Error(`DUPLICATE_CANONICAL_RACE:${key}`);
+    seen.add(key);
+  }
+}
+
 function subtractUtcDays(date: string, days: number): string {
   assertCanonicalDate(date);
   const parsed = new Date(`${date}T00:00:00.000Z`);
@@ -105,6 +132,7 @@ export function readOfficialProgramCanarySource(input: {
       ORDER BY date, venue, race_no, race_id
       LIMIT ?
     `).all(cohort.dateFrom, cohort.dateTo, limit + 1) as unknown as OfficialProgramCanarySourceRow[];
+    assertNoDuplicateCanonicalRaces(sourceRows);
     const truncated = sourceRows.length > limit;
     const rows = truncated ? sourceRows.slice(0, limit) : sourceRows;
     return {
