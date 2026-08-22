@@ -67,6 +67,16 @@ class OfficialProgramShadowPayloadError extends PermanentShadowDeliveryError {
   }
 }
 
+function isHttpUrl(value: string): boolean {
+  if (typeof value !== "string" || value.trim() === "" || value !== value.trim()) return false;
+  try {
+    const parsed = new URL(value);
+    return (parsed.protocol === "http:" || parsed.protocol === "https:") && parsed.hostname.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 function canonicalizeInput(input: OfficialProgramShadowInput): OfficialProgramShadowPayload {
   if (input.primaryRecordId.trim() === "" || input.logicalRequestGroupId.trim() === "") {
     throw new Error("official program shadow source identity missing");
@@ -89,6 +99,8 @@ function canonicalizeInput(input: OfficialProgramShadowInput): OfficialProgramSh
   if (!Number.isInteger(input.httpStatus) || input.httpStatus < 100 || input.httpStatus > 599) {
     throw new Error("official program shadow HTTP status invalid");
   }
+  const sourceUrl = redactSourceUrl(input.sourceUrl);
+  if (!isHttpUrl(sourceUrl)) throw new Error("official program shadow source URL invalid");
   buildOfficialProgramObservationEnvelope({
     canonicalRaceKey: input.canonicalRaceKey,
     rawJson: input.rawJson,
@@ -101,7 +113,7 @@ function canonicalizeInput(input: OfficialProgramShadowInput): OfficialProgramSh
     primaryRecordId: input.primaryRecordId,
     logicalRequestGroupId: input.logicalRequestGroupId,
     canonicalRaceKey: input.canonicalRaceKey,
-    sourceUrl: redactSourceUrl(input.sourceUrl),
+    sourceUrl,
     requestStartedAt,
     responseHeadersReceivedAt,
     bodyCompletedAt,
@@ -216,6 +228,7 @@ function decodePayload(value: unknown): OfficialProgramShadowPayload {
   }
   const payload = record as OfficialProgramShadowPayload;
   if (!/^[a-f0-9]{64}$/.test(payload.expectedRawSha256)
+    || !isHttpUrl(payload.sourceUrl)
     || redactSourceUrl(payload.sourceUrl) !== payload.sourceUrl) {
     throw new OfficialProgramShadowPayloadError("official program shadow reference integrity invalid");
   }
