@@ -149,8 +149,17 @@ export type ManifestBuildResult = {
   persisted: boolean;
 };
 
+function canonicalTimestampOrNull(value: string): string | null {
+  try {
+    const canonical = canonicalUtcTimestamp(value);
+    return canonical === value ? canonical : null;
+  } catch {
+    return null;
+  }
+}
+
 function laterThan(left: string, right: string): boolean {
-  return new Date(left).getTime() > new Date(right).getTime();
+  return Date.parse(left) > Date.parse(right);
 }
 
 function contentHash(policy: ResolutionPolicy): string {
@@ -253,13 +262,23 @@ export function strictPitGuard(input: {
   const codes: PitRejectionCode[] = [];
   const qualityFlags: string[] = [];
   const category = observationCategory(observation.observation_type);
+  const sourceObservedAt = canonicalTimestampOrNull(observation.source_observed_at);
+  const sourcePublishedAt = observation.source_published_at === null
+    ? null
+    : canonicalTimestampOrNull(observation.source_published_at);
+  const firstSeenAt = canonicalTimestampOrNull(observation.first_seen_at);
   if (!category) codes.push("UNKNOWN_OBSERVATION_TYPE");
   if (observation.canonical_race_key !== canonicalRaceKey) codes.push("CANONICAL_RACE_MISMATCH");
-  if (laterThan(observation.source_observed_at, asOfAt)) codes.push("OBSERVATION_AFTER_AS_OF");
-  if (observation.source_published_at && laterThan(observation.source_published_at, asOfAt)) {
-    codes.push("SOURCE_PUBLISHED_AFTER_AS_OF");
+  if (sourceObservedAt === null || firstSeenAt === null
+    || (observation.source_published_at !== null && sourcePublishedAt === null)) {
+    codes.push("TIMESTAMP_UNKNOWN");
+  } else {
+    if (laterThan(sourceObservedAt, asOfAt)) codes.push("OBSERVATION_AFTER_AS_OF");
+    if (sourcePublishedAt !== null && laterThan(sourcePublishedAt, asOfAt)) {
+      codes.push("SOURCE_PUBLISHED_AFTER_AS_OF");
+    }
+    if (laterThan(firstSeenAt, asOfAt)) codes.push("FIRST_SEEN_AFTER_AS_OF");
   }
-  if (laterThan(observation.first_seen_at, asOfAt)) codes.push("FIRST_SEEN_AFTER_AS_OF");
   if (observation.timing_quality === "unknown") codes.push("TIMESTAMP_UNKNOWN");
   if (observation.timing_quality === "ambiguous") codes.push("TIMING_AMBIGUOUS");
   if (!policy.sourcePriority.includes(observation.source_quality)) codes.push("SOURCE_QUALITY_NOT_ALLOWED");
