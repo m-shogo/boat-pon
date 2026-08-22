@@ -31,6 +31,8 @@ export type N2MarketBaselineReadinessRead = {
 
 type AcceptedMarker = {
   markerVersion?: unknown;
+  manifestDigest?: unknown;
+  checkpointKey?: unknown;
   raceIdentity?: unknown;
   checkpointLabel?: unknown;
   rawDocumentId?: unknown;
@@ -191,6 +193,8 @@ function validateAcceptedMarker(input: {
   }
   const blockers: string[] = [];
   if (marker.markerVersion !== "n2-trifecta-private-capture-accepted-v1") blockers.push("ACCEPTED_MARKER_VERSION_INVALID");
+  if (typeof marker.manifestDigest !== "string" || !SHA256_RE.test(marker.manifestDigest)) blockers.push("ACCEPTED_MARKER_MANIFEST_DIGEST_INVALID");
+  if (typeof marker.checkpointKey !== "string" || !SHA256_RE.test(marker.checkpointKey)) blockers.push("ACCEPTED_MARKER_CHECKPOINT_KEY_INVALID");
   if (marker.raceIdentity !== raceIdentity) blockers.push("ACCEPTED_MARKER_RACE_IDENTITY_MISMATCH");
   if (marker.checkpointLabel !== "T-5") blockers.push("ACCEPTED_MARKER_CHECKPOINT_MISMATCH");
   if (typeof marker.rawDocumentId !== "string"

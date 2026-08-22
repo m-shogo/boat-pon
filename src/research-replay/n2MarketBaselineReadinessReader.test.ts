@@ -49,6 +49,7 @@ function writeAcceptedT5(root: string, input: {
     markerVersion: input.malformed
       ? "wrong-version"
       : "n2-trifecta-private-capture-accepted-v1",
+    manifestDigest: "c".repeat(64),
     checkpointKey: "a".repeat(64),
     raceIdentity: `${input.date.replaceAll("-", "")}-${input.venue}-${raceDir}`,
     checkpointLabel: "T-5",
