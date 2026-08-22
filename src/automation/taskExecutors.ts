@@ -18,7 +18,7 @@ import {
   KNOWN_TASK_TYPES as CORE_KNOWN_TASK_TYPES,
   runDatasetCanary as runDatasetCanaryCore,
   runDatasetExpand as runDatasetExpandCore,
-  runDatasetInventory,
+  runDatasetInventory as runDatasetInventoryCore,
   runFeatureCoverageAudit,
   runHoldoutFreeze,
   runPlannerNext,
@@ -69,11 +69,11 @@ function withCurrentSourceDuplicateEvidence(executor: Executor): Executor {
 export const runDatasetCanary = withCurrentSourceDuplicateEvidence(runDatasetCanaryCore);
 export const runReadonlyAnalysis = withCurrentSourceDuplicateEvidence(runReadonlyAnalysisCore);
 export const runReadonlyAudit = withCurrentSourceDuplicateEvidence(runReadonlyAuditCore);
+export const runDatasetInventory = withCurrentSourceDuplicateEvidence(runDatasetInventoryCore);
 export const runDatasetExpand = withCurrentSourceDuplicateEvidence(runDatasetExpandCore);
 
 export {
   CANARY_COHORT,
-  runDatasetInventory,
   runFeatureCoverageAudit,
   runHoldoutFreeze,
   runPlannerNext,
@@ -95,6 +95,7 @@ const REGISTERED_EXECUTORS: Readonly<Record<string, Executor>> = Object.freeze({
   "dataset-canary": runDatasetCanary,
   "readonly-analysis": runReadonlyAnalysis,
   "readonly-audit": runReadonlyAudit,
+  "dataset-inventory": runDatasetInventory,
   "dataset-expand": runDatasetExpand,
   "pit-audit": runN2PitAuditExecutor,
   "observation-ingest-readiness": runN2ObservationIngestReadinessExecutor,
