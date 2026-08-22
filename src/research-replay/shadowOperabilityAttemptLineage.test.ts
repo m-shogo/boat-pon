@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { canonicalHash } from "./canonical";
 import { buildShadowOperabilityReport, type ShadowOperabilityThresholds } from "./shadowOperability";
 import { initializeRolloutSchema, openRolloutDatabase } from "./schema";
 
@@ -32,7 +33,7 @@ test("operability refuses a forged high attempt number that could hide a queued 
       "message-1-key",
       "fixture.v1",
       "{}",
-      "a".repeat(64),
+      canonicalHash({}),
       "2026-08-02T04:00:00.000Z",
       "2026-08-02T04:00:00.000Z",
       "2026-08-02T04:00:00.000Z",
