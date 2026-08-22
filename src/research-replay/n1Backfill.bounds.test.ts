@@ -154,6 +154,46 @@ test("backfill total archive count cannot understate projection authority", asyn
   }
 });
 
+test("backfill validates archive calendar identity before maxFiles truncation", async () => {
+  const { db, rawStore } = setup();
+  await assert.rejects(
+    runBackfill({
+      db,
+      rawStore,
+      archiveFiles: [
+        "/definitely-not-read/k260230.lzh",
+        "/definitely-not-read/k260301.lzh",
+      ],
+      now: NOW,
+      maxFiles: 1,
+    }),
+    /N1_BACKFILL_ARCHIVE_DATE_INVALID:k260230\.lzh/,
+  );
+  const checkpointCount = Number((db.prepare("SELECT COUNT(*) c FROM n1_settlement_backfill_checkpoints").get() as { c: number }).c);
+  assert.equal(checkpointCount, 0);
+  db.close();
+});
+
+test("backfill rejects duplicate archive basenames before checkpoint-based selection", async () => {
+  const { db, rawStore } = setup();
+  await assert.rejects(
+    runBackfill({
+      db,
+      rawStore,
+      archiveFiles: [
+        "/archive-a/k260101.lzh",
+        "/archive-b/k260101.lzh",
+      ],
+      now: NOW,
+      maxFiles: 1,
+    }),
+    /N1_BACKFILL_ARCHIVE_BASENAME_DUPLICATE:k260101\.lzh/,
+  );
+  const checkpointCount = Number((db.prepare("SELECT COUNT(*) c FROM n1_settlement_backfill_checkpoints").get() as { c: number }).c);
+  assert.equal(checkpointCount, 0);
+  db.close();
+});
+
 test("backfill limit bounds failed archive attempts as well as completed files", async () => {
   const { db, rawStore } = setup();
   const summary = await runBackfill({
