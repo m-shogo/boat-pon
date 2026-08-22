@@ -54,6 +54,22 @@ function assertCanonicalRolloutRow(row: RolloutRow): void {
   flag(row.kill_switch_engaged);
 }
 
+function assertLatestRolloutTimestampUnambiguous(timeline: readonly RolloutRow[]): void {
+  if (timeline.length === 0) return;
+  const latestAt = timeline.reduce(
+    (latest, event) => event.occurred_at > latest ? event.occurred_at : latest,
+    timeline[0].occurred_at,
+  );
+  const latestStates = new Set(
+    timeline
+      .filter((event) => event.occurred_at === latestAt)
+      .map((event) => `${event.shadow_write_enabled}:${event.operational_gc_enabled}:${event.kill_switch_engaged}`),
+  );
+  if (latestStates.size > 1) {
+    throw new Error("N2_READINESS_ROLLOUT_TIMESTAMP_CONFLICT");
+  }
+}
+
 export function readCanonicalRolloutState(sidecarDbPath: string): N2ObservationIngestRolloutState {
   const db = new DatabaseSync(`${pathToFileURL(sidecarDbPath).href}?immutable=1`, { readOnly: true } as never);
   db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=5000");
@@ -75,6 +91,7 @@ export function readCanonicalRolloutState(sidecarDbPath: string): N2ObservationI
       FROM rollout_config_events
     `).all() as unknown as RolloutRow[];
     for (const event of timeline) assertCanonicalRolloutRow(event);
+    assertLatestRolloutTimestampUnambiguous(timeline);
 
     const row = db.prepare(`
       SELECT shadow_write_enabled, operational_gc_enabled, kill_switch_engaged, occurred_at
