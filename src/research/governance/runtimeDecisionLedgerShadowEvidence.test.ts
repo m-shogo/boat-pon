@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   RUNTIME_DECISION_LEDGER_SHADOW_EVIDENCE_SCHEMA_VERSION,
   buildRuntimeDecisionLedgerShadowEvidence,
   validateRuntimeDecisionLedgerShadowEvidence,
+  type RuntimeDecisionLedgerShadowEvidence,
   type RuntimeDecisionLedgerShadowEvidenceInput,
 } from "./runtimeDecisionLedgerShadowEvidence";
 
@@ -62,6 +64,20 @@ function input(overrides: Partial<RuntimeDecisionLedgerShadowEvidenceInput> = {}
     },
     ...overrides,
   };
+}
+
+function canonicalize(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value === null || typeof value !== "object") return value;
+  const record = value as Record<string, unknown>;
+  return Object.fromEntries(Object.keys(record).sort().map((key) => [key, canonicalize(record[key])]));
+}
+
+function resign(evidence: RuntimeDecisionLedgerShadowEvidence): void {
+  const { generatedAt: _generatedAt, contentDigest: _contentDigest, ...digestable } = evidence;
+  evidence.contentDigest = createHash("sha256")
+    .update(JSON.stringify(canonicalize(digestable)))
+    .digest("hex");
 }
 
 test("builds sanitized conditional evidence without row identities", () => {
@@ -134,6 +150,52 @@ test("validator rejects count mismatch, active WAL and private fields", () => {
   const validation = validateRuntimeDecisionLedgerShadowEvidence(evidence);
   assert.equal(validation.valid, false);
   assert.match(validation.errors.join("\n"), /unknown top-level field: records/);
+});
+
+test("validator rejects rehashed semantic verdict, completeness and safety drift", () => {
+  const evidence = buildRuntimeDecisionLedgerShadowEvidence(input());
+  evidence.verdict = "PASS";
+  evidence.completeness.mappedRate = 1;
+  (evidence.safety as { publicWrites: number }).publicWrites = 1;
+  (evidence.privacy as { rawRecordsIncluded: boolean }).rawRecordsIncluded = true;
+  resign(evidence);
+
+  const validation = validateRuntimeDecisionLedgerShadowEvidence(evidence);
+  assert.equal(validation.valid, false);
+  assert.ok(validation.errors.includes("verdict must be CONDITIONAL"));
+  assert.ok(validation.errors.includes("completeness.mappedRate mismatch"));
+  assert.ok(validation.errors.includes("safety.publicWrites must be 0"));
+  assert.ok(validation.errors.includes("privacy.rawRecordsIncluded must be false"));
+});
+
+test("validator rejects rehashed unbounded or unsafe count evidence", () => {
+  const evidence = buildRuntimeDecisionLedgerShadowEvidence(input());
+  evidence.scope.limit = 5001;
+  evidence.scope.bounded = false as true;
+  evidence.reconciliation.sourceRows = Number.MAX_SAFE_INTEGER + 1;
+  evidence.scope.returnedRows = Number.MAX_SAFE_INTEGER + 1;
+  evidence.reconciliation.mappedUnique = Number.MAX_SAFE_INTEGER + 1;
+  evidence.reconciliation.unresolvedCount = 0;
+  evidence.completeness.mappedRate = 1;
+  evidence.completeness.unresolvedRate = 0;
+  resign(evidence);
+
+  const validation = validateRuntimeDecisionLedgerShadowEvidence(evidence);
+  assert.equal(validation.valid, false);
+  assert.ok(validation.errors.includes("sourceRows must be a non-negative safe integer"));
+  assert.ok(validation.errors.includes("mappedUnique must be a non-negative safe integer"));
+  assert.ok(validation.errors.includes("scope.limit must be an integer between 1 and 5000"));
+  assert.ok(validation.errors.includes("scope.bounded must be true"));
+});
+
+test("validator binds source descriptor digest to the persisted descriptor", () => {
+  const evidence = buildRuntimeDecisionLedgerShadowEvidence(input());
+  evidence.source.fileSizeBytes += 1;
+  resign(evidence);
+
+  const validation = validateRuntimeDecisionLedgerShadowEvidence(evidence);
+  assert.equal(validation.valid, false);
+  assert.ok(validation.errors.includes("sourceDescriptorDigest mismatch"));
 });
 
 test("JSON Schema is aligned with the runtime version and privacy constants", () => {
