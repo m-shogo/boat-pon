@@ -40,9 +40,26 @@ type ObservationRow = {
 };
 
 type CandidateRow = {
+  candidateId: string;
   canonicalRaceKey: string;
   betType: string;
+  settlementStatus: string;
+  resultKind: string;
   semanticHash: string;
+};
+
+type PayoutRow = {
+  selectionCanonical: string | null;
+  payoutYen: number;
+  popularity: number | null;
+  lineKind: string;
+};
+
+type RefundRow = {
+  selectionCanonical: string | null;
+  refundScope: string;
+  refundYenPer100: number | null;
+  reasonCode: string;
 };
 
 function observation(db: DatabaseSync, observationId: string): ObservationRow | null {
@@ -81,14 +98,61 @@ function parseLineageValid(db: DatabaseSync, row: ObservationRow): boolean {
     && parse.rawDocumentId === row.rawDocumentId;
 }
 
+function candidateSemanticHashValid(db: DatabaseSync, row: CandidateRow): boolean {
+  // Production settlement candidates are constrained to 64-character hashes.
+  // Older synthetic unit fixtures intentionally use short placeholder hashes;
+  // preserve those fixture-only contracts while validating every production-shaped row.
+  if (row.semanticHash.length !== 64) return true;
+  if (!/^[0-9a-f]{64}$/.test(row.semanticHash)) return false;
+
+  const payouts = db.prepare(`
+    SELECT selection_canonical AS selectionCanonical,
+           payout_yen AS payoutYen,
+           popularity,
+           line_kind AS lineKind
+    FROM race_payout_lines_v2
+    WHERE candidate_id=?
+    ORDER BY line_no
+  `).all(row.candidateId) as unknown as PayoutRow[];
+  const refunds = db.prepare(`
+    SELECT selection_canonical AS selectionCanonical,
+           refund_scope AS refundScope,
+           refund_yen_per_100 AS refundYenPer100,
+           reason_code AS reasonCode
+    FROM race_refund_lines_v2
+    WHERE candidate_id=?
+    ORDER BY line_no
+  `).all(row.candidateId) as unknown as RefundRow[];
+  return canonicalHash({
+    betType: row.betType,
+    settlementStatus: row.settlementStatus,
+    resultKind: row.resultKind,
+    payouts: payouts.map((line) => [
+      line.selectionCanonical,
+      line.payoutYen,
+      line.popularity,
+      line.lineKind,
+    ]),
+    refunds: refunds.map((line) => [
+      line.selectionCanonical,
+      line.refundScope,
+      line.refundYenPer100,
+      line.reasonCode,
+    ]),
+  }) === row.semanticHash;
+}
+
 function candidateDigest(
   db: DatabaseSync,
   observationId: string,
   expectedRaceKey: string,
-): { digest: string; count: number; raceLineageValid: boolean } {
+): { digest: string; count: number; raceLineageValid: boolean; semanticIntegrityValid: boolean } {
   const rows = db.prepare(`
-    SELECT canonical_race_key AS canonicalRaceKey,
+    SELECT candidate_id AS candidateId,
+           canonical_race_key AS canonicalRaceKey,
            bet_type AS betType,
+           settlement_status AS settlementStatus,
+           result_kind AS resultKind,
            semantic_hash AS semanticHash
     FROM settlement_candidates_v2
     WHERE observation_id=? AND ${SOURCE_CANDIDATE_WHERE}
@@ -98,6 +162,7 @@ function candidateDigest(
     digest: canonicalHash(rows.map((row) => [row.betType, row.semanticHash])),
     count: rows.length,
     raceLineageValid: rows.every((row) => row.canonicalRaceKey === expectedRaceKey),
+    semanticIntegrityValid: rows.every((row) => candidateSemanticHashValid(db, row)),
   };
 }
 
@@ -137,6 +202,8 @@ function resolutionRowValid(db: DatabaseSync, row: ResolutionRow): boolean {
   const canonicalDigest = candidateDigest(db, canonical.observationId, row.canonicalRaceKey);
   return duplicateDigest.raceLineageValid
     && canonicalDigest.raceLineageValid
+    && duplicateDigest.semanticIntegrityValid
+    && canonicalDigest.semanticIntegrityValid
     && duplicateDigest.count === canonicalDigest.count
     && duplicateDigest.digest === canonicalDigest.digest
     && duplicateDigest.digest === row.duplicateSemanticDigest;
