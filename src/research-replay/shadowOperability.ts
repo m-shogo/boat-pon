@@ -1,5 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
+import { assertShadowDeliveryAttemptHistory } from "./shadowDeliveryAttemptEvidence";
 import { assertShadowDrainDiagnostics, type ShadowDrainDiagnostics } from "./rollout";
 import { verifyRolloutSchema } from "./schema";
 
@@ -117,6 +118,7 @@ export function buildShadowOperabilityReport(
   if (asOf !== input.asOf) throw new Error("non-canonical report asOf");
   const asOfMs = timestampMs(asOf, "report asOf");
   const windowStartMs = asOfMs - input.diagnosticsWindowMs;
+  assertShadowDeliveryAttemptHistory(db);
 
   const rows = db.prepare(`
     SELECT m.enqueued_at, m.available_at,
