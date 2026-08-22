@@ -350,6 +350,20 @@ function assertN2SettlementReparseStateAggregates(state: Record<string, unknown>
   if (yearAggregate.total !== appendedCandidates || betAggregate.total !== appendedCandidates) {
     throw new Error("REPARSE_CHECKPOINT_REPORT_TOTAL_MISMATCH");
   }
+
+  const falseRefundInsertions = [...yearAggregate.entries.values()].reduce((sum, delta) => sum + delta.false_refund, 0);
+  const resultKindInsertions = [...yearAggregate.entries.values()].reduce((sum, delta) => sum + delta.result_kind, 0);
+  const supersessionRelations = requireNonNegativeSafeInteger(countRecord.supersession_relations, "supersession_relations");
+  if (supersessionRelations !== falseRefundInsertions + resultKindInsertions) {
+    throw new Error("REPARSE_CHECKPOINT_SUPERSESSION_COUNT_MISMATCH");
+  }
+  const falseRefundSources =
+    requireNonNegativeSafeInteger(countRecord.fr_from_refunded, "fr_from_refunded")
+    + requireNonNegativeSafeInteger(countRecord.fr_from_partial, "fr_from_partial");
+  if (!Number.isSafeInteger(falseRefundSources) || falseRefundSources !== falseRefundInsertions) {
+    throw new Error("REPARSE_CHECKPOINT_FALSE_REFUND_SOURCE_COUNT_MISMATCH");
+  }
+
   assertCorrectionSamples(state.corrections, appendedCandidates, yearAggregate.entries, betAggregate.entries);
 }
 
