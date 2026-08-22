@@ -55,6 +55,8 @@ function createFixture(): DatabaseSync {
       result_kind TEXT NOT NULL,
       revision_kind TEXT NOT NULL,
       observation_id TEXT NOT NULL,
+      parse_run_id TEXT NOT NULL,
+      raw_document_id TEXT NOT NULL,
       semantic_hash TEXT NOT NULL,
       supersedes_candidate_id TEXT,
       correction_reason TEXT
@@ -105,15 +107,15 @@ function createFixture(): DatabaseSync {
 
   const semanticHash = candidateSemanticHash(4200);
   const insertCandidate = db.prepare(`
-    INSERT INTO settlement_candidates_v2 VALUES (?,?,?,?,?,?,?,?,?,?)
+    INSERT INTO settlement_candidates_v2 VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
   `);
   insertCandidate.run(
     "candidate-canonical", RACE_KEY, "trifecta", "settled", "normal", "initial",
-    CANONICAL_OBSERVATION, semanticHash, null, null,
+    CANONICAL_OBSERVATION, PARSE_ID, RAW_ID, semanticHash, null, null,
   );
   insertCandidate.run(
     "candidate-duplicate", RACE_KEY, "trifecta", "settled", "normal", "initial",
-    DUPLICATE_OBSERVATION, semanticHash, null, null,
+    DUPLICATE_OBSERVATION, PARSE_ID, RAW_ID, semanticHash, null, null,
   );
   const insertPayout = db.prepare("INSERT INTO race_payout_lines_v2 VALUES (?,?,?,?,?,?)");
   insertPayout.run("candidate-canonical", 1, "1-2-3", 4200, null, "payout");
