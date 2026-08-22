@@ -68,6 +68,20 @@ test("failed shadow delivery attempt rejects padded error evidence", () => {
   });
 });
 
+test("retry exhaustion marker rejects case drift that would hide operability exhaustion", () => {
+  withAttempt("permanent_failure", "shadow_retry_exhausted", (dbPath) => {
+    const db = openRolloutDatabase(dbPath);
+    try {
+      assert.throws(
+        () => assertShadowDeliveryAttemptHistory(db, "2026-08-02T04:00:00.000Z"),
+        /non-canonical shadow retry exhausted error_code/,
+      );
+    } finally {
+      db.close();
+    }
+  });
+});
+
 test("successful shadow delivery attempt rejects contradictory error evidence", () => {
   withAttempt("succeeded", "SHADOW_RETRY_EXHAUSTED", (dbPath) => {
     const db = openRolloutDatabase(dbPath);
