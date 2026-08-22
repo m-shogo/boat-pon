@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import test from "node:test";
+import test, { type TestContext } from "node:test";
 import { recordApprovalGrant, recordApprovalLifecycle } from "./approval";
 import { initializeRolloutSchema, openRolloutDatabase } from "./schema";
 
 const NOW = "2026-08-22T12:00:00.000Z";
 
-function setup(t: Parameters<typeof test>[1] extends (arg: infer T) => unknown ? T : never) {
+function setup(t: TestContext) {
   const root = mkdtempSync(join(tmpdir(), "approval-lifecycle-chronology-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const db = openRolloutDatabase(join(root, "research-replay.sqlite"));
