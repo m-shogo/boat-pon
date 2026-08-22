@@ -39,6 +39,46 @@ test("readiness rollout state uses the latest canonical event", () => {
   }
 });
 
+test("conflicting states at the latest rollout timestamp fail closed", () => {
+  const root = mkdtempSync(join(tmpdir(), "n2-readiness-rollout-conflict-"));
+  const path = join(root, "research-replay.sqlite");
+  const db = createRolloutTable(path);
+  try {
+    db.prepare("INSERT INTO rollout_config_events VALUES(0, 0, 1, ?)").run("2026-08-20T09:00:00.000Z");
+    db.prepare("INSERT INTO rollout_config_events VALUES(0, 0, 0, ?)").run("2026-08-20T10:00:00.000Z");
+    db.prepare("INSERT INTO rollout_config_events VALUES(1, 0, 0, ?)").run("2026-08-20T10:00:00.000Z");
+    db.close();
+
+    assert.throws(
+      () => readCanonicalRolloutState(path),
+      /N2_READINESS_ROLLOUT_TIMESTAMP_CONFLICT/,
+    );
+  } finally {
+    try { db.close(); } catch {}
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("identical states may share the latest rollout timestamp", () => {
+  const root = mkdtempSync(join(tmpdir(), "n2-readiness-rollout-duplicate-"));
+  const path = join(root, "research-replay.sqlite");
+  const db = createRolloutTable(path);
+  try {
+    db.prepare("INSERT INTO rollout_config_events VALUES(1, 0, 0, ?)").run("2026-08-20T10:00:00.000Z");
+    db.prepare("INSERT INTO rollout_config_events VALUES(1, 0, 0, ?)").run("2026-08-20T10:00:00.000Z");
+    db.close();
+
+    assert.deepEqual(readCanonicalRolloutState(path), {
+      shadowWriteEnabled: true,
+      operationalGcEnabled: false,
+      killSwitchEngaged: false,
+    });
+  } finally {
+    try { db.close(); } catch {}
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("non-canonical rollout timestamps fail closed before latest-state selection", () => {
   const root = mkdtempSync(join(tmpdir(), "n2-readiness-rollout-time-"));
   const path = join(root, "research-replay.sqlite");
