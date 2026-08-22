@@ -649,6 +649,9 @@ export class RolloutController {
     deleted: string[];
     rejected: string[];
   } {
+    if (!Number.isSafeInteger(maxItems) || maxItems < 0) {
+      throw new Error("invalid operational GC maxItems");
+    }
     const config = this.currentConfig();
     if (!config.operationalGcEnabled) return { status: "disabled", deleted: [], rejected: [] };
     if (config.killSwitchEngaged) return { status: "killed", deleted: [], rejected: [] };
