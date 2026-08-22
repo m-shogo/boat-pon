@@ -267,12 +267,7 @@ export class RolloutController {
   }
 
   currentConfig(): RolloutConfig {
-    const row = this.db.prepare(`
-      SELECT shadow_write_enabled, operational_gc_enabled, kill_switch_engaged,
-             queue_capacity, max_retries, storage_quota_bytes, disk_low_water_bytes
-      FROM rollout_config_events
-      ORDER BY occurred_at DESC, rowid DESC LIMIT 1
-    `).get() as {
+    type RolloutConfigRow = {
       shadow_write_enabled: number;
       operational_gc_enabled: number;
       kill_switch_engaged: number;
@@ -280,12 +275,42 @@ export class RolloutController {
       max_retries: number;
       storage_quota_bytes: number;
       disk_low_water_bytes: number;
-    } | undefined;
-    if (!row) return { ...DEFAULT_ROLLOUT_CONFIG };
+      occurred_at: string;
+    };
+    const timeline = this.db.prepare(`
+      SELECT shadow_write_enabled, operational_gc_enabled, kill_switch_engaged,
+             queue_capacity, max_retries, storage_quota_bytes, disk_low_water_bytes,
+             occurred_at
+      FROM rollout_config_events
+      ORDER BY occurred_at DESC, rowid DESC
+    `).all() as RolloutConfigRow[];
+    if (timeline.length === 0) return { ...DEFAULT_ROLLOUT_CONFIG };
+
+    for (const event of timeline) {
+      canonicalShadowTimestampMs(event.occurred_at, "rollout config occurred_at");
+      if (![event.shadow_write_enabled, event.operational_gc_enabled, event.kill_switch_engaged]
+        .every((value) => value === 0 || value === 1)) {
+        throw new Error("invalid rollout config flag");
+      }
+      if (!Number.isInteger(event.queue_capacity) || event.queue_capacity < 1 || event.queue_capacity > 10_000) {
+        throw new Error("invalid rollout config queue capacity");
+      }
+      if (!Number.isInteger(event.max_retries) || event.max_retries < 0 || event.max_retries > 20) {
+        throw new Error("invalid rollout config max retries");
+      }
+      if (!Number.isSafeInteger(event.storage_quota_bytes) || event.storage_quota_bytes <= 0) {
+        throw new Error("invalid rollout config storage quota");
+      }
+      if (!Number.isSafeInteger(event.disk_low_water_bytes) || event.disk_low_water_bytes < 0) {
+        throw new Error("invalid rollout config disk low-water mark");
+      }
+    }
+
+    const row = timeline[0];
     return {
-      shadowWriteEnabled: Boolean(row.shadow_write_enabled),
-      operationalGcEnabled: Boolean(row.operational_gc_enabled),
-      killSwitchEngaged: Boolean(row.kill_switch_engaged),
+      shadowWriteEnabled: row.shadow_write_enabled === 1,
+      operationalGcEnabled: row.operational_gc_enabled === 1,
+      killSwitchEngaged: row.kill_switch_engaged === 1,
       queueCapacity: row.queue_capacity,
       maxRetries: row.max_retries,
       storageQuotaBytes: row.storage_quota_bytes,
