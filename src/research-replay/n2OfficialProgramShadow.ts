@@ -128,13 +128,16 @@ function assertExistingMessageMatches(
   payload: OfficialProgramShadowPayload,
 ): void {
   const existing = controller.db.prepare(`
-    SELECT message_type, payload_json, payload_hash
+    SELECT message_type, payload_json, payload_hash, enqueued_at, available_at, created_at
     FROM shadow_outbox_messages
     WHERE outbox_message_id=?
   `).get(outboxMessageId) as {
     message_type: string;
     payload_json: string;
     payload_hash: string;
+    enqueued_at: string;
+    available_at: string;
+    created_at: string;
   } | undefined;
   if (!existing || existing.message_type !== N2_OFFICIAL_PROGRAM_SHADOW_MESSAGE_TYPE) {
     throw new OfficialProgramShadowIdempotencyConflictError();
@@ -147,6 +150,18 @@ function assertExistingMessageMatches(
   }
   const desiredHash = canonicalHash(payload);
   if (existing.payload_hash !== desiredHash || canonicalHash(persistedPayload) !== desiredHash) {
+    throw new OfficialProgramShadowIdempotencyConflictError();
+  }
+  try {
+    if (canonicalUtcTimestamp(existing.enqueued_at) !== existing.enqueued_at
+      || canonicalUtcTimestamp(existing.available_at) !== existing.available_at
+      || canonicalUtcTimestamp(existing.created_at) !== existing.created_at
+      || existing.available_at !== existing.enqueued_at
+      || existing.created_at !== existing.enqueued_at) {
+      throw new OfficialProgramShadowIdempotencyConflictError();
+    }
+  } catch (error) {
+    if (error instanceof OfficialProgramShadowIdempotencyConflictError) throw error;
     throw new OfficialProgramShadowIdempotencyConflictError();
   }
 }
