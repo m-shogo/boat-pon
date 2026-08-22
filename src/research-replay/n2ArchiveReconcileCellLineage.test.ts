@@ -93,3 +93,22 @@ test("archive reconcile resume requires parse failures to use the producer senti
   const digest = buildArchiveReconcileCheckpointStateDigest(contract, valid);
   assert.doesNotThrow(() => assertArchiveReconcileCheckpointStateDigest(digest, contract, valid));
 });
+
+test("archive reconcile resume rejects normal rollups when every processed archive in that year failed", () => {
+  const normalKey = "2026\u0000trifecta\u0000戸田";
+  const failureKey = "2026\u0000-\u0000-";
+  const state = {
+    ...baseState,
+    cells: [
+      [normalKey, { ...emptyCell, exact_match: 1 }],
+      [failureKey, { ...emptyCell, parse_failure: 1 }],
+    ] as Array<[string, typeof emptyCell]>,
+    paired: [[normalKey, 1]] as Array<[string, number]>,
+    parseErrors: [{ file: "k260730.lzh", error: "synthetic parse failure" }],
+  };
+  const digest = buildArchiveReconcileCheckpointStateDigest(contract, state);
+  assert.throws(
+    () => assertArchiveReconcileCheckpointStateDigest(digest, contract, state),
+    /ARCHIVE_RECONCILE_CHECKPOINT_NORMAL_CELL_WITHOUT_SUCCESS:2026/,
+  );
+});
