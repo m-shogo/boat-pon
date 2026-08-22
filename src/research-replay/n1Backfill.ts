@@ -478,6 +478,26 @@ function requirePrimaryMonitor(value: unknown): asserts value is "strict" | "str
   }
 }
 
+function requireArchiveSelectionLineage(archiveFiles: readonly string[]): void {
+  const seenBasenames = new Set<string>();
+  for (const filePath of archiveFiles) {
+    const file = basename(filePath);
+    if (!/^k\d{6}\.lzh$/i.test(file)) {
+      throw new Error(`N1_BACKFILL_ARCHIVE_FILE_INVALID:${file}`);
+    }
+    try {
+      fileDate(filePath);
+    } catch {
+      throw new Error(`N1_BACKFILL_ARCHIVE_DATE_INVALID:${file}`);
+    }
+    const checkpointKey = file.toLowerCase();
+    if (seenBasenames.has(checkpointKey)) {
+      throw new Error(`N1_BACKFILL_ARCHIVE_BASENAME_DUPLICATE:${file}`);
+    }
+    seenBasenames.add(checkpointKey);
+  }
+}
+
 export async function runBackfill(input: {
   db: DatabaseSync;
   rawStore: RawStore;
@@ -506,6 +526,7 @@ export async function runBackfill(input: {
   requireOptionalSafetyBytes("QUOTA_BYTES", input.quotaBytes);
   requireOptionalSafetyBytes("DISK_FLOOR_BYTES", input.diskFloorBytes);
   requirePrimaryMonitor(input.primaryMonitor);
+  requireArchiveSelectionLineage(input.archiveFiles);
   const primaryMonitor = input.primaryMonitor ?? "strict";
   if (input.totalArchiveCount !== undefined
     && (!Number.isSafeInteger(input.totalArchiveCount) || input.totalArchiveCount < input.archiveFiles.length)) {
