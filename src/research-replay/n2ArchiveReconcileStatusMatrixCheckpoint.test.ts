@@ -41,7 +41,7 @@ const cell = {
   falseRefund: 1,
 };
 
-const aggregateKey = "2026\u0000trifecta\u0000Toda";
+const aggregateKey = "2026\u0000trifecta\u0000戸田";
 const state = {
   version: RECONCILE_INPUT_VERSION,
   cells: [[aggregateKey, cell]],
