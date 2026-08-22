@@ -51,7 +51,7 @@ function assertStateRejects(state: typeof baseState): void {
 }
 
 test("archive reconcile resume accepts producer cell lineage", () => {
-  const key = "2026\u0000trifecta\u0000Toda";
+  const key = "2026\u0000trifecta\u0000戸田";
   const state = {
     ...baseState,
     cells: [[key, { ...emptyCell, exact_match: 1 }]] as Array<[string, typeof emptyCell]>,
@@ -63,10 +63,10 @@ test("archive reconcile resume accepts producer cell lineage", () => {
 
 test("archive reconcile resume rejects rehashed cell rollup lineage drift", () => {
   for (const key of [
-    "2025\u0000trifecta\u0000Toda",
+    "2025\u0000trifecta\u0000戸田",
     "2026\u0000trifecta\u0000FakeVenue",
-    "2026\u0000fake\u0000Toda",
-    "2026\u0000-\u0000Toda",
+    "2026\u0000fake\u0000戸田",
+    "2026\u0000-\u0000戸田",
   ]) {
     const state = {
       ...baseState,
@@ -80,7 +80,7 @@ test("archive reconcile resume rejects rehashed cell rollup lineage drift", () =
 test("archive reconcile resume requires parse failures to use the producer sentinel cell", () => {
   const invalid = {
     ...baseState,
-    cells: [["2026\u0000trifecta\u0000Toda", { ...emptyCell, parse_failure: 1 }]] as Array<[string, typeof emptyCell]>,
+    cells: [["2026\u0000trifecta\u0000戸田", { ...emptyCell, parse_failure: 1 }]] as Array<[string, typeof emptyCell]>,
     parseErrors: [{ file: "k260730.lzh", error: "synthetic parse failure" }],
   };
   assertStateRejects(invalid);
