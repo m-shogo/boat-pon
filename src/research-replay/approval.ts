@@ -330,6 +330,13 @@ export function resolveApproval(
     return { ...base, ...selected, approved: false, code: "APPROVAL_AMBIGUOUS" };
   }
   const lifecycle = latestLifecycleRows[0];
+  if (lifecycle && (
+    !["revoked", "superseded", "legacy_disqualified"].includes(lifecycle.event_kind)
+    || (lifecycle.event_kind === "superseded" && !lifecycle.replacement_approval_id)
+    || (lifecycle.event_kind !== "superseded" && lifecycle.replacement_approval_id !== null)
+  )) {
+    return { ...base, ...selected, approved: false, code: "APPROVAL_HASH_INVALID" };
+  }
   if (lifecycle && lifecycle.content_hash !== lifecycleHash({
     lifecycleEventId: lifecycle.lifecycle_event_id,
     eventKind: lifecycle.event_kind,
