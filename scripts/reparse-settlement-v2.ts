@@ -237,6 +237,7 @@ function loadState(path: string, expectedIdentity: N2SettlementReparseCheckpoint
     value: saved.terminalDuplicateFiles,
     selectedFileBasenames: expectedIdentity.selectedFileBasenames,
     processedFiles: s.processedFiles,
+    expectedDuplicateCount: s.counts.files_duplicate_source,
   });
   for (const [k, v] of saved.byYear as Array<[string, Delta]>) s.byYear.set(k, v);
   for (const [k, v] of saved.byBetType as Array<[string, Delta]>) s.byBetType.set(k, v);
@@ -428,86 +429,39 @@ async function main(): Promise<void> {
       falseRefund: state.counts.false_refund_correction, resultKind: state.counts.result_kind_correction,
       specialAddition: state.counts.special_payout_addition, ambiguousNonDefect: state.counts.ambiguous_non_defect,
       unexpectedAddition: state.counts.unexpected_addition, secondRun, before, afterDelta, afterConsistent,
-      light, appendOnly, fullIntegrity: full, outputDigest, result: payload.result,
+      physicalBefore, physicalAfter, result, outputDigest,
     }, null, 2));
   } finally { db.close(); }
 }
 
-function writeMarkdown(p: Record<string, any>): void {
-  const c = p.counts;
-  const yearRows = p.byYear.map((r: Record<string, number | string>) => `| ${r.year} | ${r.false_refund} | ${r.result_kind} | ${r.special_addition} |`).join("\n");
-  const betRows = p.byBetType.map((r: Record<string, number | string>) => `| ${r.betType} | ${r.false_refund} | ${r.result_kind} | ${r.special_addition} |`).join("\n");
-  const md = `# Settlement reparse (temp-copy, ${p.canary ? "canary" : "full"})
-
-- generated: ${p.generatedAt}
-- mode: ${p.mode} (production apply BLOCKED)
-- as-of: ${p.asOf}
-- source: ${p.identity.sourcePath}
-- source sha256: ${p.identity.sourceSha256 ?? "(not copied this run)"}
-- target: ${p.identity.targetPath}
-- target final sha256: ${p.identity.targetFinalSha256}
-- defect: ${p.contract.defectCode}
-- source parser: ${p.contract.sourceParserVersion} → target parser: ${p.contract.targetParserVersion}
-- output digest: ${p.outputDigest}
-- result: ${p.result}
-
-## Actions
-
-| action | count |
-|---|---:|
-| exact | ${c.exact} |
-| false_refund_correction | ${c.false_refund_correction} |
-| result_kind_correction | ${c.result_kind_correction} |
-| special_payout_addition | ${c.special_payout_addition} |
-| ambiguous_non_defect | ${c.ambiguous_non_defect} |
-| unexpected_addition | ${c.unexpected_addition} |
-
-## Appends (append-only)
-
-- appended candidates ${c.appended_candidates} / supersession relations ${c.supersession_relations} / parse_runs ${c.appended_parse_runs} / observations ${c.appended_observations}
-
-## Files
-
-- scanned ${c.files_scanned} / ingested ${c.files_ingested} / not_ingested(backfill gap) ${c.files_not_ingested} / duplicate_source ${c.files_duplicate_source} / parse_errors ${c.parse_errors}
-
-## Active candidate counts (logical)
-
-| status | before | after (delta) | after (measured) |
-|---|---:|---:|---:|
-| settled | ${p.before.settled ?? 0} | ${p.afterDelta.settled ?? 0} | ${p.afterMeasured?.settled ?? "—"} |
-| refunded | ${p.before.refunded ?? 0} | ${p.afterDelta.refunded ?? 0} | ${p.afterMeasured?.refunded ?? "—"} |
-| partially_refunded | ${p.before.partially_refunded ?? 0} | ${p.afterDelta.partially_refunded ?? 0} | ${p.afterMeasured?.partially_refunded ?? "—"} |
-| **logical total** | ${p.logicalActive.before} | ${p.logicalActive.after} | |
-
-- after delta == measured: ${p.afterConsistent}
-- physical settlement_candidates_v2 rows: before ${p.physicalRows.before} → after ${p.physicalRows.after}
-- ambiguous active keys: ${p.ambiguousActiveKeys}
-
-## Second run (idempotency)
-
-${p.secondRun ? `- appended ${p.secondRun.appended} (expect 0) / supersessions ${p.secondRun.supersessions} (expect 0)` : "- not run"}
-
-## Integrity
-
-- light: ${JSON.stringify(p.lightIntegrity)}
-- append-only enforcement: ${JSON.stringify(p.appendOnlyEnforcement)}
-- full: ${p.fullIntegrity ? JSON.stringify(p.fullIntegrity) : "not run (pass --verify)"}
-
-## By year (corrections)
-
-| year | false_refund | result_kind | special_addition |
-|---|---:|---:|---:|
-${yearRows || "| — | 0 | 0 | 0 |"}
-
-## By bet type (corrections)
-
-| bet_type | false_refund | result_kind | special_addition |
-|---|---:|---:|---:|
-${betRows || "| — | 0 | 0 | 0 |"}
-
-> append-only: 既存 row を UPDATE/DELETE しない。source sidecar への write は 0。production apply は BLOCKED。
-`;
-  writeFileSync(join(reportDir, `${reportName}.md`), md);
+function writeMarkdown(payload: Record<string, unknown>): void {
+  const counts = payload.counts as Record<string, number>;
+  const before = payload.before as Record<string, number>;
+  const after = payload.afterDelta as Record<string, number>;
+  const secondRun = payload.secondRun as { appended: number; supersessions: number } | null;
+  const light = payload.lightIntegrity as Record<string, number>;
+  const full = payload.fullIntegrity as Record<string, unknown> | null;
+  const correctionSamples = payload.correctionSamples as Array<Record<string, unknown>>;
+  const byYear = payload.byYear as Array<Record<string, unknown>>;
+  const byBetType = payload.byBetType as Array<Record<string, unknown>>;
+  const result = payload.result as string;
+  const outputDigest = payload.outputDigest as string;
+  const second = secondRun ? `appended ${secondRun.appended} / supersessions ${secondRun.supersessions}` : "not executed";
+  const integrity = full ? `integrity=${full.integrityCheck}, FK=${full.foreignKeyViolations}, orphan payout=${full.orphanPayoutLines}, orphan refund=${full.orphanRefundLines}` : "full integrity not requested";
+  const yearRows = byYear.map((r) => `| ${r.year} | ${r.false_refund} | ${r.result_kind} | ${r.special_addition} |`).join("\n");
+  const betRows = byBetType.map((r) => `| ${r.betType} | ${r.false_refund} | ${r.result_kind} | ${r.special_addition} |`).join("\n");
+  writeFileSync(join(reportDir, `${reportName}.md`), `# N2 Settlement Reparse ${canary ? "Canary" : "Full"}\n\n` +
+`- result: **${result}**\n- mode: ${mode} (production apply: **blocked**)\n- asOf: ${asOf}\n- elapsed: ${payload.elapsedMs}ms\n- outputDigest: \`${outputDigest}\`\n\n` +
+`## Counts\n\n- files scanned/ingested/not-ingested/duplicate-source: ${counts.files_scanned} / ${counts.files_ingested} / ${counts.files_not_ingested} / ${counts.files_duplicate_source}\n` +
+`- parse errors: ${counts.parse_errors}\n- appended candidates: ${counts.appended_candidates}\n- false refund corrections: ${counts.false_refund_correction}\n- result-kind corrections: ${counts.result_kind_correction}\n- special-payout additions: ${counts.special_payout_addition}\n- ambiguous non-defect: ${counts.ambiguous_non_defect}\n- unexpected additions (not applied): ${counts.unexpected_addition}\n\n` +
+`## Before → After (logical active)\n\n| status | before | after |\n|---|---:|---:|\n| refunded | ${before.refunded ?? 0} | ${after.refunded ?? 0} |\n| partially_refunded | ${before.partially_refunded ?? 0} | ${after.partially_refunded ?? 0} |\n| settled | ${before.settled ?? 0} | ${after.settled ?? 0} |\n\n` +
+`## By Year\n\n| year | false refund | result-kind | special addition |\n|---|---:|---:|---:|\n${yearRows || "| — | 0 | 0 | 0 |"}\n\n` +
+`## By Bet Type\n\n| bet type | false refund | result-kind | special addition |\n|---|---:|---:|---:|\n${betRows || "| — | 0 | 0 | 0 |"}\n\n` +
+`## Integrity\n\n- light: multiple active successor=${light.multipleActiveSuccessors}, self-cycle=${light.selfSupersedingCycles}, dangling=${light.danglingSupersedes}\n` +
+`- append-only trigger: updateBlocked=${(payload.appendOnlyEnforcement as {updateBlocked:boolean}).updateBlocked}, deleteBlocked=${(payload.appendOnlyEnforcement as {deleteBlocked:boolean}).deleteBlocked}\n` +
+`- full: ${integrity}\n- second run: ${second}\n- afterConsistent: ${payload.afterConsistent ?? "not checked"}\n\n` +
+`## Correction sample (first ${correctionSamples.length})\n\n` +
+correctionSamples.map((s) => `- ${s.raceKey} / ${s.betType}: ${s.action} (${s.originalStatus ?? "none"}→${s.correctedStatus}, ${s.originalResultKind ?? "none"}→${s.correctedResultKind})`).join("\n") + "\n");
 }
 
 await main();
