@@ -178,7 +178,7 @@ test("currently valid source-duplicate resolution excludes the duplicate observa
   });
 });
 
-test("stale source-duplicate row no longer suppresses a settlement", () => {
+test("stale source-duplicate evidence blocks instead of silently suppressing or restoring settlement", () => {
   withDb((path, db) => {
     const raceKey = "2026-08-07:05:R1";
     insertClean(db, "a", raceKey, "1-2-3", 1230);
@@ -195,8 +195,9 @@ test("stale source-duplicate row no longer suppresses a settlement", () => {
       );
     db.close();
     const report = readN2EvaluationMetricsSettlements({ sidecarDbPath: path, raceKeys: [raceKey] });
-    assert.equal(report.status, "PASS");
-    assert.equal(report.settlementCount, 1);
+    assert.equal(report.status, "BLOCKED");
+    assert.ok(report.blockers.includes("SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID"));
+    assert.equal(report.settlementCount, 0);
   });
 });
 
