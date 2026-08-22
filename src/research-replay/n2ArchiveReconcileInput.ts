@@ -12,6 +12,9 @@ const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 const MAX_RECONCILE_SAMPLES = 200;
 const BET_TYPE_SET: ReadonlySet<string> = new Set(BET_TYPES);
 const VENUE_NAME_SET: ReadonlySet<string> = new Set(Object.keys(VENUE_CODES));
+const VENUE_NAME_BY_CODE: ReadonlyMap<string, string> = new Map(
+  Object.entries(VENUE_CODES).map(([name, code]) => [code, name]),
+);
 const SETTLEMENT_STATUS_SET: ReadonlySet<string> = new Set([
   "pending", "settled", "refunded", "partially_refunded", "cancelled", "no_sale",
 ]);
@@ -296,6 +299,7 @@ function assertArchiveReconcileParseErrors(
   checkpointContract: ArchiveReconcileCheckpointContract,
   state: Record<string, unknown>,
   expectedCount: number,
+  cells: ReadonlyMap<string, ArchiveReconcileCheckpointCell>,
 ): void {
   const parseErrors = state.parseErrors;
   const processedFiles = state.processedFiles;
@@ -308,6 +312,7 @@ function assertArchiveReconcileParseErrors(
   const selected = new Set(checkpointContract.selectedFileBasenames);
   const processed = new Set(processedFiles as string[]);
   const seen = new Set<string>();
+  const expectedByCell = new Map<string, number>();
   for (const entry of parseErrors) {
     if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
       throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_PARSE_ERROR_ENTRY_INVALID");
@@ -320,6 +325,18 @@ function assertArchiveReconcileParseErrors(
     seen.add(record.file);
     if (typeof record.error !== "string" || record.error.length > 300) {
       throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_PARSE_ERROR_DETAIL_INVALID:${record.file}`);
+    }
+    const cellKey = `${fileDate(record.file).slice(0, 4)}\u0000-\u0000-`;
+    expectedByCell.set(cellKey, (expectedByCell.get(cellKey) ?? 0) + 1);
+  }
+  for (const [key, cell] of cells) {
+    if (cell.parse_failure !== (expectedByCell.get(key) ?? 0)) {
+      throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_PARSE_ERROR_CELL_MISMATCH:${key}`);
+    }
+  }
+  for (const [key, count] of expectedByCell) {
+    if ((cells.get(key)?.parse_failure ?? 0) !== count) {
+      throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_PARSE_ERROR_CELL_MISMATCH:${key}`);
     }
   }
 }
@@ -378,6 +395,7 @@ function assertArchiveReconcileSamples(
 function assertArchiveReconcileAmbiguousKeys(
   state: Record<string, unknown>,
   expectedCount: number,
+  cells: ReadonlyMap<string, ArchiveReconcileCheckpointCell>,
 ): void {
   const ambiguousKeys = state.ambiguousKeys;
   if (!Array.isArray(ambiguousKeys)) throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_AMBIGUOUS_KEYS_INVALID");
@@ -385,6 +403,7 @@ function assertArchiveReconcileAmbiguousKeys(
     throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_AMBIGUOUS_KEY_COUNT_MISMATCH:${ambiguousKeys.length}:${expectedCount}`);
   }
   const seen = new Set<string>();
+  const expectedByCell = new Map<string, number>();
   for (const key of ambiguousKeys) {
     if (typeof key !== "string" || seen.has(key)) {
       throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_AMBIGUOUS_KEY_INVALID:${String(key)}`);
@@ -395,9 +414,23 @@ function assertArchiveReconcileAmbiguousKeys(
       throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_AMBIGUOUS_KEY_INVALID:${key}`);
     }
     try {
-      parseCanonicalRaceKey(parts[0]);
+      const race = parseCanonicalRaceKey(parts[0]);
+      const venueName = VENUE_NAME_BY_CODE.get(race.venueCode);
+      if (!venueName) throw new Error("venue missing");
+      const cellKey = `${race.raceDateJst.slice(0, 4)}\u0000${parts[1]}\u0000${venueName}`;
+      expectedByCell.set(cellKey, (expectedByCell.get(cellKey) ?? 0) + 1);
     } catch {
       throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_AMBIGUOUS_KEY_INVALID:${key}`);
+    }
+  }
+  for (const [key, cell] of cells) {
+    if (cell.ambiguous_canonical !== (expectedByCell.get(key) ?? 0)) {
+      throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_AMBIGUOUS_CELL_MISMATCH:${key}`);
+    }
+  }
+  for (const [key, count] of expectedByCell) {
+    if ((cells.get(key)?.ambiguous_canonical ?? 0) !== count) {
+      throw new Error(`ARCHIVE_RECONCILE_CHECKPOINT_AMBIGUOUS_CELL_MISMATCH:${key}`);
     }
   }
 }
@@ -445,9 +478,9 @@ function assertArchiveReconcileAggregateCounts(
   if (statusMatrix.falseRefundCount !== falseRefundTotal) {
     throw new Error("ARCHIVE_RECONCILE_CHECKPOINT_FALSE_REFUND_MATRIX_MISMATCH");
   }
-  assertArchiveReconcileParseErrors(checkpointContract, record, parseFailureTotal);
+  assertArchiveReconcileParseErrors(checkpointContract, record, parseFailureTotal, cells);
   assertArchiveReconcileSamples(record, statusMismatchTotal + resultKindMismatchTotal);
-  assertArchiveReconcileAmbiguousKeys(record, ambiguousCanonicalTotal);
+  assertArchiveReconcileAmbiguousKeys(record, ambiguousCanonicalTotal, cells);
 }
 
 export function assertArchiveReconcileCheckpointStateDigest(
