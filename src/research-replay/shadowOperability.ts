@@ -44,6 +44,7 @@ type CurrentOutboxRow = {
   payload_hash: string;
   enqueued_at: string;
   available_at: string;
+  created_at: string;
   last_outcome: string | null;
   last_error_code: string | null;
   next_available_at: string | null;
@@ -52,6 +53,7 @@ type CurrentOutboxRow = {
 type ShadowDrainAuditRow = {
   operation_id: string;
   occurred_at: string;
+  created_at: string;
   detail_json: string;
 };
 
@@ -141,7 +143,7 @@ export function buildShadowOperabilityReport(
   assertShadowDeliveryAttemptHistory(db, asOf);
 
   const rows = db.prepare(`
-    SELECT m.payload_json, m.payload_hash, m.enqueued_at, m.available_at,
+    SELECT m.payload_json, m.payload_hash, m.enqueued_at, m.available_at, m.created_at,
       (SELECT outcome FROM shadow_delivery_attempts a
        WHERE a.outbox_message_id=m.outbox_message_id ORDER BY attempt_no DESC LIMIT 1) last_outcome,
       (SELECT error_code FROM shadow_delivery_attempts a
@@ -161,8 +163,10 @@ export function buildShadowOperabilityReport(
     assertOutboxPayloadIntegrity(row.payload_json, row.payload_hash);
     const enqueuedMs = timestampMs(row.enqueued_at, "outbox enqueued_at");
     timestampMs(row.available_at, "outbox available_at");
+    const createdAtMs = timestampMs(row.created_at, "outbox created_at");
     if (row.next_available_at !== null) timestampMs(row.next_available_at, "attempt next_available_at");
     if (enqueuedMs > asOfMs) throw new Error("future outbox enqueue timestamp");
+    if (createdAtMs > asOfMs) throw new Error("future outbox created timestamp");
     if (row.last_outcome === "permanent_failure") {
       permanentlyFailed += 1;
       if (row.last_error_code === "SHADOW_RETRY_EXHAUSTED") retryExhausted += 1;
@@ -177,12 +181,14 @@ export function buildShadowOperabilityReport(
   }
 
   const auditCandidates = db.prepare(`
-    SELECT operation_id, occurred_at, detail_json FROM operational_audit_events
+    SELECT operation_id, occurred_at, created_at, detail_json FROM operational_audit_events
     WHERE event_kind='health_snapshot' AND subject_type='shadow_outbox_drain'
     ORDER BY audit_event_id
   `).all() as ShadowDrainAuditRow[];
   const auditRows = auditCandidates.filter((row) => {
     const occurredAtMs = timestampMs(row.occurred_at, "diagnostic occurred_at");
+    const createdAtMs = timestampMs(row.created_at, "diagnostic created_at");
+    if (createdAtMs > asOfMs) throw new Error("future shadow drain diagnostic created_at");
     return occurredAtMs >= windowStartMs && occurredAtMs <= asOfMs;
   });
   let examined = 0;
