@@ -9,7 +9,10 @@ import { DatabaseSync } from "node:sqlite";
 
 import { canonicalHash } from "../research-replay/canonical";
 import { readCurrentlyValidSourceDuplicateObservationIds } from "../research-replay/n1SourceDuplicateResolutionValidation";
-import { preflightN2DatasetCanarySettlementLineage } from "./n2DatasetCanarySettlementGuard";
+import {
+  preflightN2AllActiveSettlementLineage,
+  preflightN2DatasetCanarySettlementLineage,
+} from "./n2DatasetCanarySettlementGuard";
 import { runN2ObservationIngestReadinessExecutor } from "./n2ObservationIngestReadinessExecutor";
 import { runN2OfficialProgramCanaryReviewBundleExecutor } from "./n2OfficialProgramCanaryReviewBundleExecutor";
 import { runN2PitAuditExecutor } from "./n2PitAuditExecutor";
@@ -64,13 +67,21 @@ function withCurrentSourceDuplicateEvidence(executor: Executor): Executor {
   };
 }
 
-function withDatasetCanarySettlementLineage(executor: Executor): Executor {
+function blockedBySettlementPreflight(
+  executor: Executor,
+  preflight: (sidecarPath: string) => {
+    ok: boolean;
+    blocks: string[];
+    checkedCandidateCount: number;
+  },
+  fallbackBlock: string,
+): Executor {
   return (ctx) => {
-    let checked: ReturnType<typeof preflightN2DatasetCanarySettlementLineage>;
+    let checked: ReturnType<typeof preflight>;
     try {
-      checked = preflightN2DatasetCanarySettlementLineage(ctx.sidecarPath);
+      checked = preflight(ctx.sidecarPath);
     } catch {
-      checked = { ok: false, blocks: ["DATASET_CANARY_SETTLEMENT_LINEAGE_PREFLIGHT_FAILED"], checkedCandidateCount: 0 };
+      checked = { ok: false, blocks: [fallbackBlock], checkedCandidateCount: 0 };
     }
     if (!checked.ok) {
       const blocks = checked.blocks;
@@ -87,6 +98,20 @@ function withDatasetCanarySettlementLineage(executor: Executor): Executor {
   };
 }
 
+const withDatasetCanarySettlementLineage = (executor: Executor): Executor =>
+  blockedBySettlementPreflight(
+    executor,
+    preflightN2DatasetCanarySettlementLineage,
+    "DATASET_CANARY_SETTLEMENT_LINEAGE_PREFLIGHT_FAILED",
+  );
+
+const withAllActiveSettlementLineage = (executor: Executor): Executor =>
+  blockedBySettlementPreflight(
+    executor,
+    preflightN2AllActiveSettlementLineage,
+    "DATASET_ACTIVE_SETTLEMENT_LINEAGE_PREFLIGHT_FAILED",
+  );
+
 // Runtime automation uses resolveExecutor(). Keep the direct legacy function
 // exports byte-for-byte compatible for unit-level callers, while the runtime
 // registry binds only the executors that filter source duplicates directly in
@@ -96,8 +121,12 @@ const runDatasetCanaryRuntime = withCurrentSourceDuplicateEvidence(
 );
 const runReadonlyAnalysisRuntime = withCurrentSourceDuplicateEvidence(runReadonlyAnalysis);
 const runReadonlyAuditRuntime = withCurrentSourceDuplicateEvidence(runReadonlyAudit);
-const runDatasetInventoryRuntime = withCurrentSourceDuplicateEvidence(runDatasetInventory);
-const runDatasetExpandRuntime = withCurrentSourceDuplicateEvidence(runDatasetExpand);
+const runDatasetInventoryRuntime = withCurrentSourceDuplicateEvidence(
+  withAllActiveSettlementLineage(runDatasetInventory),
+);
+const runDatasetExpandRuntime = withCurrentSourceDuplicateEvidence(
+  withAllActiveSettlementLineage(runDatasetExpand),
+);
 
 export {
   CANARY_COHORT,
