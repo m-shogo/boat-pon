@@ -5,6 +5,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { buildBetTypeAwareOddsRows, assertMarketCoverage } from "../src/domain/betTypeAwareOdds";
 import { parseAllExactaOdds } from "../src/domain/exactaOddsParser";
+import { parseExactaTimeseriesDryRunOptions } from "../src/research-replay/exactaTimeseriesDryRunOptions";
 
 const venueCodes: Record<string, string> = {
   桐生: "01", 戸田: "02", 江戸川: "03", 平和島: "04", 多摩川: "05", 浜名湖: "06", 蒲郡: "07",
@@ -13,24 +14,11 @@ const venueCodes: Record<string, string> = {
   福岡: "22", 唐津: "23", 大村: "24",
 };
 
-const args = process.argv.slice(2);
-const value = (name: string) => {
-  const i = args.indexOf(name);
-  return i >= 0 ? args[i + 1] : undefined;
-};
-const date = value("--date");
-const venue = value("--venue");
-const raceNo = Number(value("--race") ?? "");
-const checkpoint = value("--checkpoint") ?? "ad-hoc";
-const minutesBeforeClose = value("--minutes-before-close");
-
-if (!date || !venue || !Number.isInteger(raceNo) || raceNo < 1 || raceNo > 12 || !venueCodes[venue]) {
-  console.error("usage: pnpm dry-run:exacta -- --date YYYY-MM-DD --venue 住之江 --race 6 [--checkpoint T-5] [--minutes-before-close 5]");
-  process.exit(1);
-}
-if (!["T-30", "T-20", "T-10", "T-5", "ad-hoc"].includes(checkpoint)) {
-  throw new Error(`invalid checkpoint: ${checkpoint}`);
-}
+const options = parseExactaTimeseriesDryRunOptions(
+  process.argv.slice(2),
+  new Set(Object.keys(venueCodes)),
+);
+const { date, venue, raceNo, checkpoint, minutesBeforeClose } = options;
 
 const url = `https://www.boatrace.jp/owpc/pc/race/odds2tf?rno=${raceNo}&jcd=${venueCodes[venue]}&hd=${date.replaceAll("-", "")}`;
 const response = await fetch(url, { headers: { "user-agent": "BoatPon/0.1 exacta dry-run" } });
@@ -44,14 +32,14 @@ const rows = buildBetTypeAwareOddsRows({
   popularity: null,
   source: "official-dry-run",
   capturedAt: new Date().toISOString(),
-  minutesBeforeClose: minutesBeforeClose == null ? null : Number(minutesBeforeClose),
-  checkpointLabel: checkpoint as "T-30" | "T-20" | "T-10" | "T-5" | "ad-hoc",
+  minutesBeforeClose,
+  checkpointLabel: checkpoint,
 });
 const coverage = assertMarketCoverage(rows, { activeBoats: 6, requireComplete: false });
 const report = {
   generatedAt: new Date().toISOString(),
   safety: { readOnlyDb: true, dbWrites: false, cacheWrites: false, productionConnected: false, autoBetting: false },
-  request: { date, venue, raceNo, checkpoint, minutesBeforeClose: minutesBeforeClose == null ? null : Number(minutesBeforeClose), url },
+  request: { date, venue, raceNo, checkpoint, minutesBeforeClose, url },
   market: { betType: "exacta", rowCount: rows.length, coverage, minOdds: Math.min(...rows.map((row) => row.odds)), maxOdds: Math.max(...rows.map((row) => row.odds)) },
   sample: rows.slice(0, 5),
   migration: { applied: false, reason: "odds_timeseries_snapshotsへのbet_type追加は別途レビュー後に実行" },
