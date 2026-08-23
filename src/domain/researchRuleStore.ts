@@ -64,6 +64,15 @@ function validateRuleRecordFields(rule: ResearchRule, subject: "new rule" | "per
   return null;
 }
 
+function findDuplicateRegistryRuleId(rules: ResearchRule[]): string | null {
+  const seen = new Set<string>();
+  for (const persisted of rules) {
+    if (seen.has(persisted.ruleId)) return persisted.ruleId;
+    seen.add(persisted.ruleId);
+  }
+  return null;
+}
+
 /** 新規ルールは常に"candidate"段階で作成する。他のstatusで直接作ることはできない。 */
 export function createResearchRule(
   ruleId: string,
@@ -90,6 +99,16 @@ export function addRule(rules: ResearchRule[], rule: ResearchRule): RuleStoreRes
   const recordError = validateRuleRecordFields(rule, "new rule");
   if (recordError !== null) {
     return { ok: false, error: { ruleId: String(rule.ruleId), reason: recordError } };
+  }
+  const duplicateRegistryRuleId = findDuplicateRegistryRuleId(rules);
+  if (duplicateRegistryRuleId !== null) {
+    return {
+      ok: false,
+      error: {
+        ruleId: duplicateRegistryRuleId,
+        reason: `persisted registry has duplicate ruleId "${duplicateRegistryRuleId}"; add is blocked while registry identity is ambiguous`,
+      },
+    };
   }
   if (findRule(rules, rule.ruleId)) {
     return { ok: false, error: { ruleId: rule.ruleId, reason: `rule "${rule.ruleId}" already exists` } };
