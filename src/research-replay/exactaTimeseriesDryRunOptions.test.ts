@@ -58,7 +58,7 @@ test("exacta dry-run rejects non-finite or negative minutes metadata", () => {
   );
 });
 
-test("exacta dry-run rejects missing required option values", () => {
+test("exacta dry-run rejects missing option values", () => {
   assert.throws(() => parseExactaTimeseriesDryRunOptions(["--date"], venues), /DATE_REQUIRED/u);
   assert.throws(
     () => parseExactaTimeseriesDryRunOptions(["--date", "2026-07-01", "--venue"], venues),
@@ -67,5 +67,13 @@ test("exacta dry-run rejects missing required option values", () => {
   assert.throws(
     () => parseExactaTimeseriesDryRunOptions(["--date", "2026-07-01", "--venue", "住之江", "--race"], venues),
     /RACE_REQUIRED/u,
+  );
+  assert.throws(
+    () => parseExactaTimeseriesDryRunOptions(["--date", "2026-07-01", "--venue", "住之江", "--race", "6", "--checkpoint"], venues),
+    /CHECKPOINT_MISSING/u,
+  );
+  assert.throws(
+    () => parseExactaTimeseriesDryRunOptions(["--date", "2026-07-01", "--venue", "住之江", "--race", "6", "--minutes-before-close"], venues),
+    /MINUTES_MISSING/u,
   );
 });
