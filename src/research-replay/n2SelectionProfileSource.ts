@@ -1,5 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 
+import { parseCanonicalRaceKey } from "./identity";
 import {
   buildN2SelectionProfile,
   type N2PayoutLineInput,
@@ -111,6 +112,14 @@ function requireCanonicalSelection(
   }
 }
 
+function requireCanonicalRaceIdentity(row: CandidateRow): void {
+  try {
+    parseCanonicalRaceKey(row.raceKey);
+  } catch {
+    throw new Error(`N2_SELECTION_PROFILE_RACE_KEY_INVALID:${row.id}`);
+  }
+}
+
 export function readN2SelectionProfileSource(
   db: DatabaseSync,
   month: string,
@@ -154,6 +163,7 @@ export function readN2SelectionProfileSource(
       )
     ORDER BY c.canonical_race_key, c.bet_type, c.candidate_id
   `).all(lower, upper) as unknown as CandidateRow[];
+  for (const row of candidateRows) requireCanonicalRaceIdentity(row);
   const candidates = candidateRows.map((row) => ({
     ...row,
     duplicate: validResolvedObservationIds.has(row.observationId) ? 1 : 0,
