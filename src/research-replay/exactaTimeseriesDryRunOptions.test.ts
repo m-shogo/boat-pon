@@ -13,6 +13,10 @@ test("exacta dry-run accepts canonical request metadata", () => {
     ),
     { date: "2028-02-29", venue: "住之江", raceNo: 6, checkpoint: "T-5", minutesBeforeClose: 5 },
   );
+  assert.deepEqual(
+    parseExactaTimeseriesDryRunOptions(["--", "--date", "2028-02-29", "--venue", "戸田", "--race", "1"], venues),
+    { date: "2028-02-29", venue: "戸田", raceNo: 1, checkpoint: "ad-hoc", minutesBeforeClose: null },
+  );
 });
 
 test("exacta dry-run rejects invalid dates before fetch", () => {
