@@ -15,10 +15,11 @@ export function selectUnexpectedAdditionsArchives(files: string[], limit: number
   for (const file of files) {
     fileDate(file);
     const archiveBasename = basename(file);
-    if (seenBasenames.has(archiveBasename)) {
+    const archiveIdentity = archiveBasename.toLowerCase();
+    if (seenBasenames.has(archiveIdentity)) {
       throw new Error(`N2_UNEXPECTED_ADDITIONS_ARCHIVE_BASENAME_DUPLICATE:${archiveBasename}`);
     }
-    seenBasenames.add(archiveBasename);
+    seenBasenames.add(archiveIdentity);
   }
   return limit == null ? files : files.slice(0, limit);
 }
