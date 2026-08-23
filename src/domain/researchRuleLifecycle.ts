@@ -1,6 +1,16 @@
 import type { ForwardTestResult, ResearchRule, RuleStatus } from "./researchRule";
 
 const STATUS_ORDER: RuleStatus[] = ["candidate", "backtest", "forward", "review", "approved", "production"];
+const VALID_RULE_STATUSES: readonly RuleStatus[] = [
+  "candidate",
+  "backtest",
+  "forward",
+  "review",
+  "approved",
+  "production",
+  "deprecated",
+  "archived",
+];
 
 /**
  * Production は forward n>=200 の候補を格上げ基準にした CLAUDE.md の現行運用に合わせた暫定値。
@@ -9,7 +19,14 @@ const STATUS_ORDER: RuleStatus[] = ["candidate", "backtest", "forward", "review"
 export const MIN_PRODUCTION_SAMPLE_SIZE = 200;
 export const MIN_PRODUCTION_CONFIDENCE = 0.8;
 
+function isRuleStatus(value: unknown): value is RuleStatus {
+  return typeof value === "string" && VALID_RULE_STATUSES.includes(value as RuleStatus);
+}
+
 export function canTransitionRuleStatus(from: RuleStatus, to: RuleStatus): boolean {
+  // Persisted JSON and programmatic callers can bypass the TypeScript union at runtime.
+  // Fail closed before applying the special deprecated/archive transition rules.
+  if (!isRuleStatus(from) || !isRuleStatus(to)) return false;
   if (from === to) return false;
   if (from === "archived") return false;
   if (to === "archived") return from === "deprecated";
