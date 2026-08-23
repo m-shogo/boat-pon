@@ -18,10 +18,13 @@
 
 import { openDb, upsertExhibitionData, upsertRaceEquipment, upsertRaceWeather } from "../server/db";
 import { parseBeforeInfoHtml } from "../src/domain/beforeInfoParser";
+import {
+  parseBeforeInfoBackfillOptions,
+  requireBeforeInfoBackfillTargets,
+} from "../src/research-replay/beforeInfoBackfillSafety";
 
 const SOURCE_TYPE = "official_historical";
 const SOURCE_QUALITY = "exact";
-const DEFAULT_INTERVAL_MS = 15_000;
 const DEFAULT_DECISIONS = ["BUY", "WATCH"];
 
 const venueCodes: Record<string, string> = {
@@ -82,20 +85,24 @@ function missingTables(db: ReturnType<typeof openDb>, raceId: string): string[] 
 
 async function main() {
   const dryRun = process.argv.includes("--dry-run");
-  const fromDate = argValue("--from");
-  const toDate = argValue("--to");
+  const fromDateRaw = argValue("--from");
+  const toDateRaw = argValue("--to");
   const limitArg = argValue("--limit");
   const decisionsArg = argValue("--decisions");
   const intervalArg = argValue("--interval-ms");
 
-  if (!fromDate || !toDate) {
+  if (!fromDateRaw || !toDateRaw) {
     console.error("usage: tsx scripts/backfill-beforeinfo.ts [--dry-run] --from YYYY-MM-DD --to YYYY-MM-DD");
     process.exit(1);
   }
 
+  const { fromDate, toDate, intervalMs, limit } = parseBeforeInfoBackfillOptions({
+    fromDate: fromDateRaw,
+    toDate: toDateRaw,
+    intervalMsRaw: intervalArg,
+    limitRaw: limitArg,
+  });
   const decisions = decisionsArg ? decisionsArg.split(",") : DEFAULT_DECISIONS;
-  const intervalMs = intervalArg ? Number(intervalArg) : DEFAULT_INTERVAL_MS;
-  const limit = limitArg ? Number(limitArg) : null;
 
   const db = openDb();
   try {
@@ -110,12 +117,18 @@ async function main() {
       ORDER BY date, venue, race_no
     `).all(...decisions, fromDate, toDate) as RaceTarget[];
 
+    requireBeforeInfoBackfillTargets(allTargets.map((target) => ({
+      date: target.date,
+      venue: target.venue,
+      raceNo: target.race_no,
+    })));
+
     // 3テーブル全て揃っているものをスキップ
     const targets = allTargets.filter((r) => !isFullyBackfilled(db, r.race_id));
     const skippedCount = allTargets.length - targets.length;
     const partialTargets = targets.filter((r) => missingTables(db, r.race_id).length < 3);
 
-    const limited = limit ? targets.slice(0, limit) : targets;
+    const limited = limit === null ? targets : targets.slice(0, limit);
 
     // --- dry-run サマリー ---
     console.log("=== backfill-beforeinfo dry-run ===" + (dryRun ? "" : " (本番モード)"));
