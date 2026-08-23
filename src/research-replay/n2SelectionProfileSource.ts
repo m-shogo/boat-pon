@@ -8,10 +8,11 @@ import {
   type N2SelectionProfileCandidate,
 } from "./n2SelectionProfile";
 import { readCurrentlyValidSourceDuplicateObservationIds } from "./n1SourceDuplicateResolutionValidation";
-import type {
-  ResolutionStatus,
-  SettlementBetType,
-  SettlementStatus,
+import {
+  parseSettlementSelection,
+  type ResolutionStatus,
+  type SettlementBetType,
+  type SettlementStatus,
 } from "./settlement";
 
 const REUSABLE_PARSE_STATUSES = new Set(["success", "warning"]);
@@ -94,6 +95,19 @@ function requireEligibleSettlementLineage(row: CandidateRow & { duplicate: numbe
     || row.rawSecurityScanStatus !== "passed"
     || row.rawParserReplayEligible !== 1) {
     throw new Error(`N2_SELECTION_PROFILE_SETTLEMENT_LINEAGE_INVALID:${row.id}`);
+  }
+}
+
+function requireCanonicalSelection(
+  candidateId: string,
+  betType: SettlementBetType,
+  selection: string | null,
+  errorCode: "PAYOUT" | "REFUND",
+): void {
+  if (selection === null) return;
+  const parsed = parseSettlementSelection(betType, selection);
+  if (!parsed.valid || parsed.canonical !== selection) {
+    throw new Error(`N2_SELECTION_PROFILE_${errorCode}_SELECTION_INVALID:${candidateId}`);
   }
 }
 
@@ -186,6 +200,7 @@ export function readN2SelectionProfileSource(
     if (row.lineBetType !== row.candidateBetType) {
       throw new Error(`N2_SELECTION_PROFILE_PAYOUT_BET_LINEAGE_INVALID:${row.candidateId}`);
     }
+    requireCanonicalSelection(row.candidateId, row.candidateBetType, row.selection, "PAYOUT");
     const lines = payoutsByCandidate.get(row.candidateId) ?? [];
     lines.push({ selection: row.selection, payoutYen: row.payoutYen, lineKind: row.lineKind });
     payoutsByCandidate.set(row.candidateId, lines);
@@ -195,6 +210,7 @@ export function readN2SelectionProfileSource(
     if (row.lineBetType !== row.candidateBetType) {
       throw new Error(`N2_SELECTION_PROFILE_REFUND_BET_LINEAGE_INVALID:${row.candidateId}`);
     }
+    requireCanonicalSelection(row.candidateId, row.candidateBetType, row.selection, "REFUND");
     const lines = refundsByCandidate.get(row.candidateId) ?? [];
     lines.push({
       selection: row.selection,
