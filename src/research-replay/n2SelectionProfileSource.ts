@@ -7,6 +7,7 @@ import {
   type N2SelectionProfile,
   type N2SelectionProfileCandidate,
 } from "./n2SelectionProfile";
+import { readCurrentlyValidSourceDuplicateObservationIds } from "./n1SourceDuplicateResolutionValidation";
 import type {
   ResolutionStatus,
   SettlementBetType,
@@ -18,11 +19,11 @@ const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/u;
 
 type CandidateRow = {
   id: string;
+  observationId: string;
   raceKey: string;
   betType: SettlementBetType;
   settlementStatus: SettlementStatus;
   resolutionStatus: ResolutionStatus;
-  duplicate: number;
   candidateParseRunId: string;
   candidateRawDocumentId: string;
   observationRaceKey: string | null;
@@ -73,13 +74,13 @@ function requireSourceTables(db: DatabaseSync): void {
   }
 }
 
-function isLabelBearing(row: CandidateRow): boolean {
+function isLabelBearing(row: CandidateRow & { duplicate: number }): boolean {
   return row.duplicate === 0
     && row.settlementStatus === "settled"
     && row.resolutionStatus === "resolved";
 }
 
-function requireEligibleSettlementLineage(row: CandidateRow): void {
+function requireEligibleSettlementLineage(row: CandidateRow & { duplicate: number }): void {
   if (!isLabelBearing(row)) return;
   if (row.observationRaceKey !== row.raceKey
     || row.observationType !== "settlement_result"
@@ -103,15 +104,16 @@ export function readN2SelectionProfileSource(
   if (!MONTH_RE.test(month)) throw new Error(`N2_SELECTION_PROFILE_MONTH_INVALID:${month}`);
   requireSourceTables(db);
 
+  const validResolvedObservationIds = readCurrentlyValidSourceDuplicateObservationIds(db);
   const lower = `${month}-01`;
   const upper = `${month}-99`;
-  const candidates = db.prepare(`
+  const candidateRows = db.prepare(`
     SELECT c.candidate_id id,
+           c.observation_id observationId,
            c.canonical_race_key raceKey,
            c.bet_type betType,
            c.settlement_status settlementStatus,
            c.resolution_status resolutionStatus,
-           CASE WHEN d.duplicate_observation_id IS NULL THEN 0 ELSE 1 END duplicate,
            c.parse_run_id candidateParseRunId,
            c.raw_document_id candidateRawDocumentId,
            o.canonical_race_key observationRaceKey,
@@ -125,8 +127,6 @@ export function readN2SelectionProfileSource(
            rd.security_scan_status rawSecurityScanStatus,
            rd.parser_replay_eligible rawParserReplayEligible
     FROM settlement_candidates_v2 c
-    LEFT JOIN settlement_source_duplicate_resolutions_v2 d
-      ON d.duplicate_observation_id = c.observation_id
     LEFT JOIN domain_observations o
       ON o.observation_id = c.observation_id
     LEFT JOIN parse_runs pr
@@ -140,6 +140,10 @@ export function readN2SelectionProfileSource(
       )
     ORDER BY c.canonical_race_key, c.bet_type, c.candidate_id
   `).all(lower, upper) as unknown as CandidateRow[];
+  const candidates = candidateRows.map((row) => ({
+    ...row,
+    duplicate: validResolvedObservationIds.has(row.observationId) ? 1 : 0,
+  }));
 
   for (const candidate of candidates) requireEligibleSettlementLineage(candidate);
 
