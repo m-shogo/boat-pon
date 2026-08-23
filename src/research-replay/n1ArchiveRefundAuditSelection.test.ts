@@ -15,6 +15,17 @@ test("refund audit validates all archive dates before bounded selection", () => 
   );
 });
 
+test("refund audit validates bounded selection limit before archive preflight", () => {
+  const files = ["/archive/k260230.lzh"];
+
+  for (const limit of [0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+    assert.throws(
+      () => selectRefundAuditArchives(files, limit),
+      /N1_REFUND_AUDIT_LIMIT_INVALID/u,
+    );
+  }
+});
+
 test("refund audit preserves valid archive ordering after preflight", () => {
   const files = [
     "/archive/k280229.lzh",
