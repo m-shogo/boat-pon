@@ -30,6 +30,18 @@ test("unexpected-additions scan validates archive dates before applying limit", 
   );
 });
 
+test("unexpected-additions scan rejects duplicate archive basenames before applying limit", () => {
+  const files = [
+    "/archive/a/k260101.lzh",
+    "/archive/b/K260101.LZH",
+    "/archive/k260102.lzh",
+  ];
+  assert.throws(
+    () => selectUnexpectedAdditionsArchives(files, 1),
+    /N2_UNEXPECTED_ADDITIONS_ARCHIVE_BASENAME_DUPLICATE:K260101\.LZH/,
+  );
+});
+
 test("unexpected-additions scan preserves valid bounded ordering", () => {
   const files = ["/archive/k280229.lzh", "/archive/k280301.lzh"];
   assert.deepEqual(selectUnexpectedAdditionsArchives(files, 1), [files[0]]);
