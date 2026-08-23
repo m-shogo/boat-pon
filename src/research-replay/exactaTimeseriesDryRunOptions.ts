@@ -9,10 +9,24 @@ export type ExactaTimeseriesDryRunOptions = {
   minutesBeforeClose: number | null;
 };
 
-function valueAfter(argv: readonly string[], name: string): string | null {
-  const index = argv.indexOf(name);
-  if (index < 0) return null;
-  return argv[index + 1] ?? null;
+const OPTION_NAMES = ["--date", "--venue", "--race", "--checkpoint", "--minutes-before-close"] as const;
+type OptionName = typeof OPTION_NAMES[number];
+
+function parseValues(argv: readonly string[]): Map<OptionName, string> {
+  const allowed: ReadonlySet<string> = new Set(OPTION_NAMES);
+  const values = new Map<OptionName, string>();
+  for (let index = 0; index < argv.length; index += 2) {
+    const name = argv[index];
+    if (!allowed.has(name)) throw new Error(`EXACTA_TIMESERIES_DRY_RUN_ARGUMENT_INVALID:${name}`);
+    const optionName = name as OptionName;
+    if (values.has(optionName)) throw new Error(`EXACTA_TIMESERIES_DRY_RUN_ARGUMENT_DUPLICATE:${name}`);
+    const value = argv[index + 1];
+    if (value == null || value.startsWith("--")) {
+      throw new Error(`EXACTA_TIMESERIES_DRY_RUN_ARGUMENT_MISSING:${name}`);
+    }
+    values.set(optionName, value);
+  }
+  return values;
 }
 
 function requireCanonicalDate(value: string): string {
@@ -33,8 +47,8 @@ function requireRaceNo(value: string): number {
   return Number(value);
 }
 
-function parseMinutes(value: string | null): number | null {
-  if (value === null) return null;
+function parseMinutes(value: string | undefined): number | null {
+  if (value === undefined) return null;
   if (value.trim() !== value || value === "") throw new Error(`EXACTA_TIMESERIES_DRY_RUN_MINUTES_INVALID:${value}`);
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 0) throw new Error(`EXACTA_TIMESERIES_DRY_RUN_MINUTES_INVALID:${value}`);
@@ -45,35 +59,26 @@ export function parseExactaTimeseriesDryRunOptions(
   argv: readonly string[],
   allowedVenues: ReadonlySet<string>,
 ): ExactaTimeseriesDryRunOptions {
-  const rawDate = valueAfter(argv, "--date");
-  if (rawDate === null) throw new Error("EXACTA_TIMESERIES_DRY_RUN_DATE_REQUIRED");
+  const values = parseValues(argv);
+  const rawDate = values.get("--date");
+  if (rawDate === undefined) throw new Error("EXACTA_TIMESERIES_DRY_RUN_DATE_REQUIRED");
   const date = requireCanonicalDate(rawDate);
 
-  const venue = valueAfter(argv, "--venue");
-  if (venue === null) throw new Error("EXACTA_TIMESERIES_DRY_RUN_VENUE_REQUIRED");
+  const venue = values.get("--venue");
+  if (venue === undefined) throw new Error("EXACTA_TIMESERIES_DRY_RUN_VENUE_REQUIRED");
   if (!allowedVenues.has(venue)) throw new Error(`EXACTA_TIMESERIES_DRY_RUN_VENUE_INVALID:${venue}`);
 
-  const rawRaceNo = valueAfter(argv, "--race");
-  if (rawRaceNo === null) throw new Error("EXACTA_TIMESERIES_DRY_RUN_RACE_REQUIRED");
+  const rawRaceNo = values.get("--race");
+  if (rawRaceNo === undefined) throw new Error("EXACTA_TIMESERIES_DRY_RUN_RACE_REQUIRED");
   const raceNo = requireRaceNo(rawRaceNo);
 
-  const checkpointProvided = argv.includes("--checkpoint");
-  const checkpointValue = valueAfter(argv, "--checkpoint");
-  if (checkpointProvided && checkpointValue === null) {
-    throw new Error("EXACTA_TIMESERIES_DRY_RUN_CHECKPOINT_MISSING");
-  }
-  const checkpointRaw = checkpointValue ?? "ad-hoc";
+  const checkpointRaw = values.get("--checkpoint") ?? "ad-hoc";
   const allowedCheckpoints: ReadonlySet<string> = new Set(EXACTA_TIMESERIES_DRY_RUN_CHECKPOINTS);
   if (!allowedCheckpoints.has(checkpointRaw)) {
     throw new Error(`EXACTA_TIMESERIES_DRY_RUN_CHECKPOINT_INVALID:${checkpointRaw}`);
   }
 
-  const minutesProvided = argv.includes("--minutes-before-close");
-  const minutesValue = valueAfter(argv, "--minutes-before-close");
-  if (minutesProvided && minutesValue === null) {
-    throw new Error("EXACTA_TIMESERIES_DRY_RUN_MINUTES_MISSING");
-  }
-  const minutesBeforeClose = parseMinutes(minutesValue);
+  const minutesBeforeClose = parseMinutes(values.get("--minutes-before-close"));
   return {
     date,
     venue,
