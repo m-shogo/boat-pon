@@ -54,7 +54,7 @@ export function addRule(rules: ResearchRule[], rule: ResearchRule): RuleStoreRes
 
 /**
  * 1件のルールの状態遷移を試みる。
- * - 未登録ruleId、canTransitionRuleStatusで許可されない遷移は拒否する
+ * - 未登録ruleId、重複してidentityが曖昧なruleId、canTransitionRuleStatusで許可されない遷移は拒否する
  * - "production"への遷移はevaluationを必須とし、validateProductionEligibilityを
  *   満たさなければ拒否する（Forward未通過ルールをProduction扱いしないための最終防波堤）
  */
@@ -65,10 +65,25 @@ export function applyRuleTransition(
   evaluation?: ForwardTestResult,
   now: string = new Date().toISOString(),
 ): RuleStoreResult {
-  const index = rules.findIndex((rule) => rule.ruleId === ruleId);
-  if (index === -1) {
+  const matchingIndexes: number[] = [];
+  for (let index = 0; index < rules.length; index += 1) {
+    if (rules[index].ruleId === ruleId) matchingIndexes.push(index);
+  }
+
+  if (matchingIndexes.length === 0) {
     return { ok: false, error: { ruleId, reason: `rule "${ruleId}" not found` } };
   }
+  if (matchingIndexes.length !== 1) {
+    return {
+      ok: false,
+      error: {
+        ruleId,
+        reason: `rule "${ruleId}" has ${matchingIndexes.length} registry entries; transition identity is ambiguous`,
+      },
+    };
+  }
+
+  const index = matchingIndexes[0];
   const rule = rules[index];
 
   if (!canTransitionRuleStatus(rule.status, to)) {
