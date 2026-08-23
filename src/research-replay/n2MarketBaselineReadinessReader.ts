@@ -58,6 +58,9 @@ type SettlementRow = {
   observationRawDocumentId: string | null;
   parseRunRawDocumentId: string | null;
   parseRunStatus: string | null;
+  rawIntegrityStatus: string | null;
+  rawSecurityScanStatus: string | null;
+  rawParserReplayEligible: number | null;
   settlementStatus: string;
   resultKind: string;
   resolutionStatus: string;
@@ -344,6 +347,7 @@ function readSettlements(sidecarDbPath: string, raceKeys: string[]): {
     for (const table of [
       "domain_observations",
       "parse_runs",
+      "raw_documents",
       "settlement_candidates_v2",
       "race_payout_lines_v2",
       "settlement_source_duplicate_resolutions_v2",
@@ -373,6 +377,9 @@ function readSettlements(sidecarDbPath: string, raceKeys: string[]): {
         o.raw_document_id AS observationRawDocumentId,
         pr.raw_document_id AS parseRunRawDocumentId,
         pr.status AS parseRunStatus,
+        rd.integrity_status AS rawIntegrityStatus,
+        rd.security_scan_status AS rawSecurityScanStatus,
+        rd.parser_replay_eligible AS rawParserReplayEligible,
         c.settlement_status AS settlementStatus,
         c.result_kind AS resultKind,
         c.resolution_status AS resolutionStatus,
@@ -383,6 +390,8 @@ function readSettlements(sidecarDbPath: string, raceKeys: string[]): {
         ON o.observation_id=c.observation_id
       LEFT JOIN parse_runs pr
         ON pr.parse_run_id=c.parse_run_id
+      LEFT JOIN raw_documents rd
+        ON rd.raw_document_id=c.raw_document_id
       LEFT JOIN race_payout_lines_v2 p ON p.candidate_id=c.candidate_id AND p.bet_type='trifecta'
       WHERE c.bet_type='trifecta'
         AND c.canonical_race_key IN (${placeholders})
@@ -392,7 +401,8 @@ function readSettlements(sidecarDbPath: string, raceKeys: string[]): {
         )
       GROUP BY c.canonical_race_key,c.candidate_id,c.observation_id,c.parse_run_id,c.raw_document_id,
         o.canonical_race_key,o.observation_type,o.payload_type,o.parse_run_id,o.raw_document_id,
-        pr.raw_document_id,pr.status,c.settlement_status,c.result_kind,c.resolution_status
+        pr.raw_document_id,pr.status,rd.integrity_status,rd.security_scan_status,rd.parser_replay_eligible,
+        c.settlement_status,c.result_kind,c.resolution_status
       ORDER BY c.canonical_race_key,c.candidate_id
     `).all(...raceKeys) as unknown as SettlementRow[];
 
@@ -407,7 +417,10 @@ function readSettlements(sidecarDbPath: string, raceKeys: string[]): {
         || row.observationRawDocumentId !== row.candidateRawDocumentId
         || row.parseRunRawDocumentId !== row.candidateRawDocumentId
         || row.parseRunStatus == null
-        || !REUSABLE_PARSE_STATUSES.has(row.parseRunStatus)) {
+        || !REUSABLE_PARSE_STATUSES.has(row.parseRunStatus)
+        || row.rawIntegrityStatus !== "verified"
+        || row.rawSecurityScanStatus !== "passed"
+        || row.rawParserReplayEligible !== 1) {
         lineageBlockedRaceKeys.add(row.raceKey);
         continue;
       }
