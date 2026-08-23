@@ -25,12 +25,16 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import {
+  parseExactaClosingOddsAuditSleepMs,
+  requireExactaClosingOddsAuditCandidates,
+} from "../src/research-replay/exactaClosingOddsAuditSafety";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD   = "reports/exacta-closing-odds-availability.md";
 const OUT_JSON = "reports/exacta-closing-odds-availability.json";
 const CACHE_DIR = "data/raw/official/odds2tf";
-const SLEEP_MS = parseInt(process.env.AUDIT_SLEEP_MS ?? "1500", 10);
+const SLEEP_MS = parseExactaClosingOddsAuditSleepMs(process.env.AUDIT_SLEEP_MS ?? "1500");
 const SAMPLES_PER_QUARTER = 2;
 
 if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
@@ -66,6 +70,13 @@ const buyRaces = db.prepare(`
     AND dh.date >= '2024-01-01'
   ORDER BY dh.date
 `).all() as Race[];
+
+requireExactaClosingOddsAuditCandidates(buyRaces.map(r => ({
+  date: r.date,
+  venue: r.venue,
+  raceNo: r.race_no,
+  quarter: r.quarter,
+})));
 
 // 四半期ごとに先頭から SAMPLES_PER_QUARTER 件
 const byQuarter = new Map<string, Race[]>();
