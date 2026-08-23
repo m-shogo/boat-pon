@@ -347,9 +347,22 @@ export class ResearchReplayRepository {
     correctionReason?: string | null;
   }): ParseResult {
     const raw = this.db.prepare(`
-      SELECT raw_sha256, storage_path FROM raw_documents WHERE raw_document_id = ?
-    `).get(input.rawDocumentId) as { raw_sha256: string; storage_path: string } | undefined;
+      SELECT raw_sha256, storage_path, integrity_status, security_scan_status, parser_replay_eligible
+      FROM raw_documents
+      WHERE raw_document_id = ?
+    `).get(input.rawDocumentId) as {
+      raw_sha256: string;
+      storage_path: string;
+      integrity_status: "verified" | "quarantined";
+      security_scan_status: "passed" | "quarantined";
+      parser_replay_eligible: number;
+    } | undefined;
     if (!raw) throw new Error("raw document missing");
+    if (raw.integrity_status !== "verified"
+      || raw.security_scan_status !== "passed"
+      || raw.parser_replay_eligible !== 1) {
+      throw new Error("RAW_DOCUMENT_REPLAY_INELIGIBLE");
+    }
     const bytes = this.rawStore.read(raw.storage_path, raw.raw_sha256);
     const parseRunId = input.parseRunId ?? this.idFactory();
     const startedAt = this.clock();
