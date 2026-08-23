@@ -36,6 +36,30 @@ test("selection profile rejects non-canonical payout selections", () => {
   }
 });
 
+test("selection profile rejects missing selection on normal payout lines", () => {
+  const db = fixture();
+  try {
+    db.prepare("UPDATE race_payout_lines_v2 SET selection_canonical=NULL WHERE candidate_id='candidate'").run();
+    assert.throws(
+      () => readN2SelectionProfileSource(db, "2026-05"),
+      /N2_SELECTION_PROFILE_PAYOUT_SELECTION_REQUIRED:candidate/u,
+    );
+  } finally {
+    db.close();
+  }
+});
+
+test("selection profile permits null selection for special payout lines", () => {
+  const db = fixture();
+  try {
+    db.prepare("UPDATE race_payout_lines_v2 SET selection_canonical=NULL,line_kind='special_payout' WHERE candidate_id='candidate'").run();
+    const profile = readN2SelectionProfileSource(db, "2026-05");
+    assert.equal(profile.totalCandidates, 1);
+  } finally {
+    db.close();
+  }
+});
+
 test("selection profile rejects non-canonical refund selections", () => {
   const db = fixture();
   try {
