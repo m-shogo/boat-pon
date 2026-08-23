@@ -51,6 +51,36 @@ test("addRuleは同じruleIdの重複登録を拒否する", () => {
   assert.match(second.error.reason, /already exists/);
 });
 
+test("addRuleはruntimeでcandidate開始を迂回したruleを拒否する", () => {
+  const rule = {
+    ...createResearchRule("rule-1", "x", "2026-01-01T00:00:00Z"),
+    status: "production" as const,
+  };
+  const result = addRule([], rule);
+  assert.equal(result.ok, false);
+  if (result.ok) return;
+  assert.match(result.error.reason, /candidate status/);
+});
+
+test("addRuleは不正な初期lifecycle timestampを拒否する", () => {
+  const nonCanonical = {
+    ...createResearchRule("rule-1", "x", "2026-01-01T00:00:00Z"),
+    createdAt: "2026-02-30T00:00:00Z",
+    updatedAt: "2026-02-30T00:00:00Z",
+  };
+  const invalidTimestamp = addRule([], nonCanonical);
+  assert.equal(invalidTimestamp.ok, false);
+  if (!invalidTimestamp.ok) assert.match(invalidTimestamp.error.reason, /canonical explicit-zone ISO-8601/);
+
+  const mismatched = {
+    ...createResearchRule("rule-2", "x", "2026-01-01T00:00:00Z"),
+    updatedAt: "2026-01-02T00:00:00Z",
+  };
+  const mismatchedLifecycle = addRule([], mismatched);
+  assert.equal(mismatchedLifecycle.ok, false);
+  if (!mismatchedLifecycle.ok) assert.match(mismatchedLifecycle.error.reason, /same instant/);
+});
+
 test("applyRuleTransitionは未登録ruleIdを拒否する", () => {
   const result = applyRuleTransition([], "no-such-rule", "backtest");
   assert.equal(result.ok, false);

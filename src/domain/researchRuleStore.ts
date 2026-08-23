@@ -8,7 +8,7 @@ import { canTransitionRuleStatus, validateProductionEligibility } from "./resear
  * （書き込み先はscripts/manage-research-rules.tsが担当する）。
  *
  * 安全装置:
- * - 新規ルールは必ず"candidate"から始まる（createResearchRule）
+ * - 新規ルールは必ず"candidate"から始まる（createResearchRule / addRule）
  * - canTransitionRuleStatus に反する遷移は拒否する（Production直行禁止を含む）
  * - "production"への遷移は、Forward Testを通過した評価（ForwardTestResult）を
  *   必須とし、validateProductionEligibilityを満たさなければ拒否する
@@ -73,6 +73,26 @@ export function findRule(rules: ResearchRule[], ruleId: string): ResearchRule | 
 export function addRule(rules: ResearchRule[], rule: ResearchRule): RuleStoreResult {
   if (findRule(rules, rule.ruleId)) {
     return { ok: false, error: { ruleId: rule.ruleId, reason: `rule "${rule.ruleId}" already exists` } };
+  }
+  if (rule.status !== "candidate") {
+    return {
+      ok: false,
+      error: { ruleId: rule.ruleId, reason: "new rules must enter the registry at candidate status" },
+    };
+  }
+  const createdAt = parseCanonicalLifecycleTimestamp(rule.createdAt);
+  const updatedAt = parseCanonicalLifecycleTimestamp(rule.updatedAt);
+  if (createdAt === null || updatedAt === null) {
+    return {
+      ok: false,
+      error: { ruleId: rule.ruleId, reason: "new rule lifecycle timestamps must be canonical explicit-zone ISO-8601 values" },
+    };
+  }
+  if (createdAt !== updatedAt) {
+    return {
+      ok: false,
+      error: { ruleId: rule.ruleId, reason: "new rule createdAt and updatedAt must represent the same instant" },
+    };
   }
   return { ok: true, rules: [...rules, rule] };
 }
