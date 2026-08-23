@@ -19,7 +19,7 @@ test("exacta closing odds audit accepts canonical low-frequency inputs", () => {
   assert.doesNotThrow(() => requireExactaClosingOddsAuditCandidate(valid()));
   assert.doesNotThrow(() => requireExactaClosingOddsAuditCandidate({
     date: "2028-02-29",
-    venue: "24",
+    venue: "大村",
     raceNo: 12,
     quarter: "2028-Q1",
   }));
@@ -35,6 +35,8 @@ test("exacta closing odds audit rejects invalid candidate identity before sampli
   const invalid = [
     { ...valid(), date: "2026-02-30", quarter: "2026-Q1" },
     { ...valid(), venue: "unknown" },
+    { ...valid(), venue: " 宮島 " },
+    { ...valid(), venue: "17" },
     { ...valid(), raceNo: 13 },
     { ...valid(), quarter: "2026-Q2" },
   ];
