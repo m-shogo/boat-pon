@@ -19,12 +19,19 @@ import type { ResearchRuleEvaluationCondition } from "./researchRule";
 export type ResearchRuleConditionValidation = {
   /** operator/keyともにallowlistを通過した条件のみ。 */
   validConditions: ResearchRuleEvaluationCondition[];
-  /** unsupported operator・unknown keyの理由を含むwarnings。throwはしない。 */
+  /** unsupported operator・unknown key・runtime shape違反の理由を含むwarnings。throwはしない。 */
   warnings: string[];
 };
 
+function isConditionValue(value: unknown): value is string | number | boolean {
+  return typeof value === "string"
+    || typeof value === "boolean"
+    || (typeof value === "number" && Number.isFinite(value));
+}
+
 /**
  * conditionsをallowlist方式で検証する。
+ * - runtimeで配列以外や壊れた要素が来てもthrowせずwarningに積んで無視する
  * - operatorが"equals"以外ならwarningに積んで無視する
  * - keyが`SUPPORTED_CONDITION_KEYS`（venue/raceNo/decision、既存ROI Explorerと同じ）
  *   以外ならwarningに積んで無視する
@@ -36,20 +43,45 @@ export function validateResearchRuleConditions(
   const validConditions: ResearchRuleEvaluationCondition[] = [];
   const warnings: string[] = [];
 
-  for (const condition of conditions ?? []) {
-    if (condition.operator !== "equals") {
+  if (conditions === undefined) return { validConditions, warnings };
+  if (!Array.isArray(conditions)) {
+    warnings.push("evaluationConditions must be an array; all conditions ignored");
+    return { validConditions, warnings };
+  }
+
+  for (let index = 0; index < conditions.length; index += 1) {
+    const candidate = conditions[index] as unknown;
+    if (candidate === null || typeof candidate !== "object" || Array.isArray(candidate)) {
+      warnings.push(`evaluation condition at index ${index} must be an object; condition ignored`);
+      continue;
+    }
+    const record = candidate as Record<string, unknown>;
+    if (typeof record.key !== "string"
+      || typeof record.operator !== "string"
+      || !isConditionValue(record.value)) {
       warnings.push(
-        `unsupported operator "${condition.operator}" for evaluation condition key "${condition.key}"; condition ignored (only "equals" is supported)`,
+        `evaluation condition at index ${index} must have string key/operator and finite primitive value; condition ignored`,
       );
       continue;
     }
-    if (!(SUPPORTED_CONDITION_KEYS as readonly string[]).includes(condition.key)) {
+
+    if (record.operator !== "equals") {
       warnings.push(
-        `unknown evaluation condition key "${condition.key}" (supported: ${SUPPORTED_CONDITION_KEYS.join(", ")}); condition ignored`,
+        `unsupported operator "${record.operator}" for evaluation condition key "${record.key}"; condition ignored (only "equals" is supported)`,
       );
       continue;
     }
-    validConditions.push(condition);
+    if (!(SUPPORTED_CONDITION_KEYS as readonly string[]).includes(record.key)) {
+      warnings.push(
+        `unknown evaluation condition key "${record.key}" (supported: ${SUPPORTED_CONDITION_KEYS.join(", ")}); condition ignored`,
+      );
+      continue;
+    }
+    validConditions.push({
+      key: record.key,
+      operator: "equals",
+      value: record.value,
+    });
   }
 
   return { validConditions, warnings };
@@ -66,7 +98,9 @@ export type ResearchRuleEvaluationScope = "rule-specific" | "shared-fallback" | 
 export function determineEvaluationScope(
   conditions: ResearchRuleEvaluationCondition[] | undefined,
 ): ResearchRuleEvaluationScope {
-  if (!conditions || conditions.length === 0) return "shared-fallback";
+  if (conditions === undefined || (Array.isArray(conditions) && conditions.length === 0)) {
+    return "shared-fallback";
+  }
   const { validConditions } = validateResearchRuleConditions(conditions);
   return validConditions.length > 0 ? "rule-specific" : "invalid-condition-fallback";
 }
