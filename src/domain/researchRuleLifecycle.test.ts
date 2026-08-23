@@ -56,6 +56,13 @@ test("sampleSize不足ならProduction不可", () => {
   assert.ok(result.reasons.some((reason) => reason.includes("sample size")));
 });
 
+test("別ルールのforward evidenceはProduction昇格へ流用不可", () => {
+  const evaluation = forwardResult({ ruleId: "rule-2" });
+  const result = validateProductionEligibility(rule("approved"), evaluation);
+  assert.equal(result.eligible, false);
+  assert.ok(result.reasons.some((reason) => reason.includes('evaluation ruleId "rule-2" does not match rule "rule-1"')));
+});
+
 test("CandidateからProductionへ直接遷移不可", () => {
   assert.equal(canTransitionRuleStatus("candidate", "production"), false);
   assert.equal(canTransitionRuleStatus("backtest", "production"), false);
@@ -63,7 +70,7 @@ test("CandidateからProductionへ直接遷移不可", () => {
   assert.equal(canTransitionRuleStatus("review", "production"), false);
 });
 
-test("ApprovedからProductionは条件を満たせば可能", () => {
+test("ApprovedからProductionは同一ruleの条件を満たすevidenceなら可能", () => {
   assert.equal(canTransitionRuleStatus("approved", "production"), true);
   const result = validateProductionEligibility(rule("approved"), forwardResult());
   assert.equal(result.eligible, true);
