@@ -9,6 +9,7 @@ import { DatabaseSync } from "node:sqlite";
 
 import { canonicalHash } from "../research-replay/canonical";
 import { readCurrentlyValidSourceDuplicateObservationIds } from "../research-replay/n1SourceDuplicateResolutionValidation";
+import { preflightN2DatasetCanarySettlementLineage } from "./n2DatasetCanarySettlementGuard";
 import { runN2ObservationIngestReadinessExecutor } from "./n2ObservationIngestReadinessExecutor";
 import { runN2OfficialProgramCanaryReviewBundleExecutor } from "./n2OfficialProgramCanaryReviewBundleExecutor";
 import { runN2PitAuditExecutor } from "./n2PitAuditExecutor";
@@ -63,11 +64,36 @@ function withCurrentSourceDuplicateEvidence(executor: Executor): Executor {
   };
 }
 
+function withDatasetCanarySettlementLineage(executor: Executor): Executor {
+  return (ctx) => {
+    let checked: ReturnType<typeof preflightN2DatasetCanarySettlementLineage>;
+    try {
+      checked = preflightN2DatasetCanarySettlementLineage(ctx.sidecarPath);
+    } catch {
+      checked = { ok: false, blocks: ["DATASET_CANARY_SETTLEMENT_LINEAGE_PREFLIGHT_FAILED"], checkedCandidateCount: 0 };
+    }
+    if (!checked.ok) {
+      const blocks = checked.blocks;
+      return {
+        result: "BLOCKED",
+        executorVersion: EXECUTOR_REGISTRY_VERSION,
+        summary: { blocks, checkedCandidateCount: checked.checkedCandidateCount },
+        outputs: [],
+        outputDigest: canonicalHash({ blocks, checkedCandidateCount: checked.checkedCandidateCount }),
+        blocks,
+      };
+    }
+    return executor(ctx);
+  };
+}
+
 // Runtime automation uses resolveExecutor(). Keep the direct legacy function
 // exports byte-for-byte compatible for unit-level callers, while the runtime
 // registry binds only the executors that filter source duplicates directly in
 // SQL to the current append-only resolution semantics.
-const runDatasetCanaryRuntime = withCurrentSourceDuplicateEvidence(runDatasetCanary);
+const runDatasetCanaryRuntime = withCurrentSourceDuplicateEvidence(
+  withDatasetCanarySettlementLineage(runDatasetCanary),
+);
 const runReadonlyAnalysisRuntime = withCurrentSourceDuplicateEvidence(runReadonlyAnalysis);
 const runReadonlyAuditRuntime = withCurrentSourceDuplicateEvidence(runReadonlyAudit);
 const runDatasetInventoryRuntime = withCurrentSourceDuplicateEvidence(runDatasetInventory);
