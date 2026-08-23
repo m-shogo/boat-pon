@@ -13,6 +13,7 @@ import {
   preflightN2AllActiveSettlementLineage,
   preflightN2DatasetCanarySettlementLineage,
 } from "./n2DatasetCanarySettlementGuard";
+import { runN2ActiveFeatureCoverageAudit } from "./n2FeatureCoverageAuditRuntime";
 import { runN2ObservationIngestReadinessExecutor } from "./n2ObservationIngestReadinessExecutor";
 import { runN2OfficialProgramCanaryReviewBundleExecutor } from "./n2OfficialProgramCanaryReviewBundleExecutor";
 import { runN2PitAuditExecutor } from "./n2PitAuditExecutor";
@@ -128,6 +129,9 @@ const runReadonlyAuditRuntime = withCurrentSourceDuplicateEvidence(
 const runDatasetInventoryRuntime = withCurrentSourceDuplicateEvidence(
   withAllActiveSettlementLineage(runDatasetInventory),
 );
+const runFeatureCoverageAuditRuntime = withCurrentSourceDuplicateEvidence(
+  withAllActiveSettlementLineage(runN2ActiveFeatureCoverageAudit),
+);
 const runDatasetExpandRuntime = withCurrentSourceDuplicateEvidence(
   withAllActiveSettlementLineage(runDatasetExpand),
 );
@@ -161,6 +165,7 @@ const REGISTERED_EXECUTORS: Readonly<Record<string, Executor>> = Object.freeze({
   "readonly-analysis": runReadonlyAnalysisRuntime,
   "readonly-audit": runReadonlyAuditRuntime,
   "dataset-inventory": runDatasetInventoryRuntime,
+  "feature-coverage-audit": runFeatureCoverageAuditRuntime,
   "dataset-expand": runDatasetExpandRuntime,
   "pit-audit": runN2PitAuditExecutor,
   "observation-ingest-readiness": runN2ObservationIngestReadinessExecutor,
