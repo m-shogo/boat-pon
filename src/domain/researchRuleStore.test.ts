@@ -145,8 +145,11 @@ test("Approvedでも別ruleのForward evidenceではProductionへ遷移できな
   assert.match(result.error.reason, /evaluation ruleId.*does not match rule/);
 });
 
-test("Approved かつ Forward通過・sampleSize\/confidence十分ならProductionへ遷移できる", () => {
-  const rule = { ...createResearchRule("rule-1", "x"), status: "approved" as const };
+test("Approved かつ Forward通過・sampleSize/confidence十分ならProductionへ遷移できる", () => {
+  const rule = {
+    ...createResearchRule("rule-1", "x", "2026-06-30T00:00:00Z"),
+    status: "approved" as const,
+  };
   const result = applyRuleTransition([rule], "rule-1", "production", forwardResult(), "2026-07-01T00:00:00Z");
   assert.equal(result.ok, true);
   if (!result.ok) return;
