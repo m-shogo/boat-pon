@@ -21,6 +21,13 @@ import { ResearchReplayRepository } from "./repository";
 import { initializeRolloutSchema, openRolloutDatabase } from "./schema";
 
 const CODE_SHA = "1234567890abcdef1234567890abcdef12345678";
+const NOW = "2004-01-01T01:00:00.000Z";
+
+type RawEligibility = {
+  integrityStatus: "verified" | "quarantined";
+  securityScanStatus: "passed" | "quarantined";
+  parserReplayEligible: 0 | 1;
+};
 
 function raw(): string {
   return JSON.stringify({
@@ -51,16 +58,17 @@ function sourceRow(): OfficialProgramCanarySourceRow {
   };
 }
 
-function runCase(mutateRaw: (db: ReturnType<typeof openRolloutDatabase>, rawDocumentId: string) => void): void {
+function runCase(eligibility: RawEligibility): void {
   const dir = mkdtempSync(join(tmpdir(), "n2-program-canary-raw-eligibility-"));
   const db = openRolloutDatabase(join(dir, "sidecar.sqlite"));
   initializeRolloutSchema(db, "2004-01-01T00:00:00.000Z");
   let sequence = 0;
+  const rawStore = new RawStore(join(dir, "raw"));
   const repository = new ResearchReplayRepository(
     db,
-    new RawStore(join(dir, "raw")),
+    rawStore,
     () => `raw-eligibility-${++sequence}`,
-    () => "2004-01-01T01:00:00.000Z",
+    () => NOW,
   );
 
   try {
@@ -72,27 +80,47 @@ function runCase(mutateRaw: (db: ReturnType<typeof openRolloutDatabase>, rawDocu
       generatedAt: "2004-01-08T00:00:00.000Z",
     });
     const item = manifest.binding.items[0];
-    const storedRaw = repository.recordRawDocument({
-      bytes: Buffer.from(row.rawJson, "utf8"),
+    const bytes = Buffer.from(row.rawJson, "utf8");
+    const write = rawStore.write({
+      bytes,
       contentType: "application/json",
       charset: "utf-8",
-      retentionClass: "research_evidence",
     });
+    const rawDocumentId = "raw-ineligible";
+    db.prepare(`
+      INSERT INTO raw_documents (
+        raw_document_id, raw_sha256, entity_body_byte_length, content_type, charset,
+        content_encoding, compressed_byte_length, decompression_ratio, integrity_status,
+        storage_type, storage_path, first_recorded_at, retention_class,
+        parser_replay_eligible, security_scan_status, created_at
+      ) VALUES (?, ?, ?, 'application/json', 'utf-8', NULL, NULL, ?, ?,
+                'content_addressed_filesystem', ?, ?, 'research_evidence', ?, ?, ?)
+    `).run(
+      rawDocumentId,
+      write.rawSha256,
+      write.byteLength,
+      write.decompressionRatio,
+      eligibility.integrityStatus,
+      write.relativePath,
+      NOW,
+      eligibility.parserReplayEligible,
+      eligibility.securityScanStatus,
+      NOW,
+    );
     const current = repository.parseTypedRawDocument({
-      rawDocumentId: storedRaw.rawDocumentId,
+      rawDocumentId,
       parserName: "n2-official-program",
       parserVersion: N2_OFFICIAL_PROGRAM_PARSER_VERSION,
       expectedSourceSchemaVersion: N2_OFFICIAL_PROGRAM_SOURCE_SCHEMA_VERSION,
-      parse: (bytes) => buildOfficialProgramObservationEnvelope({
+      parse: (storedBytes) => buildOfficialProgramObservationEnvelope({
         canonicalRaceKey: item.canonicalRaceKey,
-        rawJson: bytes.toString("utf8"),
+        rawJson: storedBytes.toString("utf8"),
         sourcePublishedAt: null,
         sourceObservedAt: item.sourceObservedAt,
         firstSeenAt: item.sourceObservedAt,
       }),
     });
     assert.ok(current.observationId);
-    mutateRaw(db, storedRaw.rawDocumentId);
 
     recordApprovalGrant(db, {
       approvalId: "approval-raw-eligibility",
@@ -101,7 +129,7 @@ function runCase(mutateRaw: (db: ReturnType<typeof openRolloutDatabase>, rawDocu
       approvalReference: "test://approval-raw-eligibility",
       approvedAt: "2004-01-01T00:45:00Z",
       approvalMode: "production",
-    }, "2004-01-01T01:00:00.000Z");
+    }, NOW);
 
     assert.throws(() => applyOfficialProgramCanary({
       db,
@@ -131,19 +159,25 @@ function runCase(mutateRaw: (db: ReturnType<typeof openRolloutDatabase>, rawDocu
 }
 
 test("canary refuses a current observation backed by quarantined raw evidence", () => {
-  runCase((db, rawDocumentId) => {
-    db.prepare("UPDATE raw_documents SET integrity_status='quarantined' WHERE raw_document_id=?").run(rawDocumentId);
+  runCase({
+    integrityStatus: "quarantined",
+    securityScanStatus: "passed",
+    parserReplayEligible: 1,
   });
 });
 
 test("canary refuses a current observation backed by security-quarantined raw evidence", () => {
-  runCase((db, rawDocumentId) => {
-    db.prepare("UPDATE raw_documents SET security_scan_status='quarantined' WHERE raw_document_id=?").run(rawDocumentId);
+  runCase({
+    integrityStatus: "verified",
+    securityScanStatus: "quarantined",
+    parserReplayEligible: 1,
   });
 });
 
 test("canary refuses a current observation backed by replay-ineligible raw evidence", () => {
-  runCase((db, rawDocumentId) => {
-    db.prepare("UPDATE raw_documents SET parser_replay_eligible=0 WHERE raw_document_id=?").run(rawDocumentId);
+  runCase({
+    integrityStatus: "verified",
+    securityScanStatus: "passed",
+    parserReplayEligible: 0,
   });
 });
