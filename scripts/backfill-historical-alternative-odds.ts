@@ -32,6 +32,16 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { parseAllTrifectaOdds } from "../src/domain/oddsParser";
+import {
+  parseHistoricalAltOddsOptionalDate,
+  parseHistoricalAltOddsPositiveSafeInteger,
+  parseHistoricalAltOddsPriority,
+  parseHistoricalAltOddsRaceNo,
+  parseHistoricalAltOddsVenue,
+  requireHistoricalAltOddsDateRange,
+  requireHistoricalAltOddsTargets,
+  type HistoricalAltOddsPriority,
+} from "../src/research-replay/historicalAlternativeOddsBackfillSafety";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD   = "reports/historical-alternative-odds-backfill.md";
@@ -63,15 +73,16 @@ function getArg(flag: string, defaultVal: string): string {
 }
 function hasFlag(flag: string): boolean { return argv.includes(flag); }
 
-const LIMIT      = parseInt(getArg("--limit", "30"), 10);
-const SLEEP_MS   = parseInt(getArg("--sleep-ms", "1000"), 10);
-const FROM_DATE  = getArg("--from", "");
-const TO_DATE    = getArg("--to", "");
-const VENUE_FILTER  = getArg("--venue", "");
-const RACENO_FILTER = getArg("--race-no", "");
-const PRIORITY   = getArg("--priority", "condB") as "condB" | "skip6R" | "skipVenue" | "allForward";
+const LIMIT      = parseHistoricalAltOddsPositiveSafeInteger(getArg("--limit", "30"), "LIMIT");
+const SLEEP_MS   = parseHistoricalAltOddsPositiveSafeInteger(getArg("--sleep-ms", "1000"), "SLEEP_MS", 1000);
+const FROM_DATE  = parseHistoricalAltOddsOptionalDate(getArg("--from", ""), "FROM_DATE");
+const TO_DATE    = parseHistoricalAltOddsOptionalDate(getArg("--to", ""), "TO_DATE");
+const VENUE_FILTER  = parseHistoricalAltOddsVenue(getArg("--venue", ""));
+const RACENO_FILTER = parseHistoricalAltOddsRaceNo(getArg("--race-no", ""));
+const PRIORITY   = parseHistoricalAltOddsPriority(getArg("--priority", "condB"));
 const WRITE_MODE = hasFlag("--write");
 const ONLY_MISSING = !hasFlag("--no-only-missing"); // デフォルト: 未取得のみ
+requireHistoricalAltOddsDateRange(FROM_DATE, TO_DATE);
 
 if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
 const db = new DatabaseSync(DB_PATH, { readOnly: !WRITE_MODE });
@@ -130,17 +141,16 @@ if (ONLY_MISSING) {
 
 // ─── 優先順位別 WHERE 句 ──────────────────────────────────────────────────────
 
-function priorityWhere(priority: string): string {
+function priorityWhere(priority: HistoricalAltOddsPriority): string {
   switch (priority) {
     case "condB":     return `AND ${WIND24} AND ${EXH1}`;
     case "skip6R":    return `AND dh.race_no = 6`;
     case "skipVenue": return `AND dh.venue IN ('浜名湖','住之江')`;
     case "allForward": return "";
-    default:          return "";
   }
 }
 
-const priorityLabel: Record<string, string> = {
+const priorityLabel: Record<HistoricalAltOddsPriority, string> = {
   condB: "条件B (風速2〜4 × 1号艇展示1位)",
   skip6R: "6R",
   skipVenue: "浜名湖+住之江",
@@ -161,7 +171,7 @@ const extraWhere = [
   FROM_DATE ? `dh.date >= '${FROM_DATE}'` : `dh.date >= '${FORWARD_START}'`,
   TO_DATE ? `dh.date <= '${TO_DATE}'` : null,
   VENUE_FILTER ? `dh.venue='${VENUE_FILTER}'` : null,
-  RACENO_FILTER ? `dh.race_no=${parseInt(RACENO_FILTER, 10)}` : null,
+  RACENO_FILTER != null ? `dh.race_no=${RACENO_FILTER}` : null,
 ].filter(Boolean).join(" AND ");
 
 const allCandidates = db.prepare(`
@@ -177,6 +187,13 @@ const allCandidates = db.prepare(`
     ${priorityWhere(PRIORITY)}
   ORDER BY dh.date DESC
 `).all() as TargetRace[];
+
+requireHistoricalAltOddsTargets(allCandidates.map((race) => ({
+  raceId: race.race_id,
+  date: race.date,
+  venue: race.venue,
+  raceNo: race.race_no,
+})));
 
 // --only-missing: 取得済みを除外
 const candidates = ONLY_MISSING
@@ -279,7 +296,7 @@ type RaceResult = {
 
 console.log(`=== historical closing odds backfill ===`);
 console.log(`モード: ${WRITE_MODE ? "⚠️ --write (DB INSERT)" : "✅ dry-run (DB書き込みなし)"}`);
-console.log(`優先順位: ${PRIORITY} (${priorityLabel[PRIORITY] ?? PRIORITY})`);
+console.log(`優先順位: ${PRIORITY} (${priorityLabel[PRIORITY]})`);
 console.log(`対象: ${targets.length}件 / 候補: ${allCandidates.length}件 / limit: ${LIMIT} / sleep: ${SLEEP_MS}ms`);
 console.log(`only-missing: ${ONLY_MISSING} / from: ${FROM_DATE || FORWARD_START} / to: ${TO_DATE || "(最新)"}`);
 if (ONLY_MISSING) {
@@ -453,7 +470,7 @@ lines.push(`# historical closing odds backfill dry-run`);
 lines.push(``);
 lines.push(`生成日時: ${now}`);
 lines.push(`モード: **${WRITE_MODE ? "⚠️ --write (DB INSERT実行)" : "✅ dry-run (DB書き込みなし)"}**`);
-lines.push(`優先順位: \`${PRIORITY}\` (${priorityLabel[PRIORITY] ?? PRIORITY})`);
+lines.push(`優先順位: \`${PRIORITY}\` (${priorityLabel[PRIORITY]})`);
 lines.push(``);
 lines.push(`> **historical closing odds は live/T-5/timeseries odds ではありません。**`);
 lines.push(`> **公式アーカイブから後日取得した「締切時オッズ backfill」です。**`);
