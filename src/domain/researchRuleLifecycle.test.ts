@@ -90,6 +90,29 @@ test("別ルールのforward evidenceはProduction昇格へ流用不可", () => 
   assert.ok(result.reasons.some((reason) => reason.includes('evaluation ruleId "rule-2" does not match rule "rule-1"')));
 });
 
+test("future leakを含むevaluation metadataはProduction不可", () => {
+  const evaluation = forwardResult({
+    metadata: {
+      ...forwardResult().metadata,
+      dataWindowEnd: "2026-12-31",
+      evaluationRunAt: "2026-06-02T00:00:00+09:00",
+    },
+  });
+  const result = validateProductionEligibility(rule("approved"), evaluation);
+  assert.equal(result.eligible, false);
+  assert.ok(result.reasons.some((reason) => reason.includes("future leak")));
+});
+
+test("temporal provenanceが欠損したevaluation metadataはProduction不可", () => {
+  const evaluation = forwardResult({
+    metadata: { sampleSize: MIN_PRODUCTION_SAMPLE_SIZE } as ForwardTestResult["metadata"],
+  });
+  const result = validateProductionEligibility(rule("approved"), evaluation);
+  assert.equal(result.eligible, false);
+  assert.ok(result.reasons.some((reason) => reason.includes("dataWindowStart is missing")));
+  assert.ok(result.reasons.some((reason) => reason.includes("evaluationRunAt is missing")));
+});
+
 test("CandidateからProductionへ直接遷移不可", () => {
   assert.equal(canTransitionRuleStatus("candidate", "production"), false);
   assert.equal(canTransitionRuleStatus("backtest", "production"), false);
