@@ -15,6 +15,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { requireExactaForwardMonitorRaceIdentities } from "../src/research-replay/exactaForwardMonitorSafety";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const CANDIDATES_PATH = "data/exacta-forward-candidates.json";
@@ -126,6 +127,12 @@ db.exec("PRAGMA busy_timeout = 5000;");
 
 try {
   const races = loadBaseRaces(candidateFile);
+  requireExactaForwardMonitorRaceIdentities(races.map((race) => ({
+    raceId: race.race_id,
+    date: race.date,
+    venue: race.venue,
+    raceNo: race.race_no,
+  })));
   const raceIds = races.map((r) => r.race_id);
   const oddsByRace = loadOddsByRace(raceIds);
   const payoutsByRace = loadPayoutsByRace(raceIds);
