@@ -29,6 +29,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { parseAllTrifectaOdds } from "../src/domain/oddsParser";
+import { parseHistoricalClosingOddsAuditOptions } from "../src/research-replay/historicalClosingOddsAuditOptions";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD   = "reports/historical-closing-odds-availability.md";
@@ -56,13 +57,23 @@ function getArg(flag: string, defaultVal: string): string {
   return idx >= 0 && argv[idx + 1] ? argv[idx + 1] : defaultVal;
 }
 
-const LIMIT    = parseInt(getArg("--limit", "30"), 10);
-const SLEEP_MS = parseInt(getArg("--sleep-ms", "1500"), 10);
-const FROM_DATE = getArg("--from", "");
-const TO_DATE   = getArg("--to", "");
-const VENUE_FILTER  = getArg("--venue", "");
-const RACENO_FILTER = getArg("--race-no", "");
-const CAT_FILTER    = getArg("--category", "");
+const parsedOptions = parseHistoricalClosingOddsAuditOptions({
+  limit: getArg("--limit", "30"),
+  sleepMs: getArg("--sleep-ms", "1500"),
+  fromDate: getArg("--from", ""),
+  toDate: getArg("--to", ""),
+  venueFilter: getArg("--venue", ""),
+  raceNoFilter: getArg("--race-no", ""),
+  categoryFilter: getArg("--category", ""),
+}, new Set(Object.keys(VENUE_CODES)));
+
+const LIMIT = parsedOptions.limit;
+const SLEEP_MS = parsedOptions.sleepMs;
+const FROM_DATE = parsedOptions.fromDate;
+const TO_DATE = parsedOptions.toDate;
+const VENUE_FILTER = parsedOptions.venueFilter;
+const RACENO_FILTER = parsedOptions.raceNoFilter;
+const CAT_FILTER = parsedOptions.categoryFilter;
 
 if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
 const db = new DatabaseSync(DB_PATH, { readOnly: true });
@@ -97,7 +108,7 @@ const dateWhere = [
   FROM_DATE ? `dh.date >= '${FROM_DATE}'` : `dh.date >= '${FORWARD_START}'`,
   TO_DATE ? `dh.date <= '${TO_DATE}'` : null,
   VENUE_FILTER ? `dh.venue='${VENUE_FILTER}'` : null,
-  RACENO_FILTER ? `dh.race_no=${parseInt(RACENO_FILTER, 10)}` : null,
+  RACENO_FILTER !== null ? `dh.race_no=${RACENO_FILTER}` : null,
 ].filter(Boolean).join(" AND ");
 
 // カテゴリ別に満遍なく選ぶ（各カテゴリから均等に）
