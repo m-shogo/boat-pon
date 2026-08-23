@@ -2,7 +2,7 @@
 
 - generated: 2026-08-03T07:11:39.381Z
 - scope: read-only immutable-source scan; no DB/archive/sidecar write
-- source: /Users/m-shogo/Developer/personal/boat-pon/data/research-replay.sqlite
+- source: research-replay.sqlite
 - archive files scanned: 8174 / ingested: 8167
 - unexpected_addition: **2** / ambiguous_non_defect: 0
 - classification contract: n2-reparse-addition-classification-v1
