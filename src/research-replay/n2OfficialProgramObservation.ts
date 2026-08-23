@@ -207,6 +207,24 @@ function rawFailureReason(error: unknown): CaptureFailureReason {
   return known.find((reason) => message.includes(reason)) ?? "partial_body";
 }
 
+function assertRawReplayEligible(repository: ResearchReplayRepository, rawDocumentId: string): void {
+  const raw = repository.db.prepare(`
+    SELECT integrity_status, security_scan_status, parser_replay_eligible
+    FROM raw_documents
+    WHERE raw_document_id = ?
+  `).get(rawDocumentId) as {
+    integrity_status: string;
+    security_scan_status: string;
+    parser_replay_eligible: number;
+  } | undefined;
+  if (!raw
+    || raw.integrity_status !== "verified"
+    || raw.security_scan_status !== "passed"
+    || raw.parser_replay_eligible !== 1) {
+    throw new Error("RAW_DOCUMENT_REPLAY_INELIGIBLE");
+  }
+}
+
 export function recordOfficialProgramCaptureFailure(input: {
   repository: ResearchReplayRepository;
   logicalRequestGroupId: string;
@@ -317,6 +335,7 @@ export function captureOfficialProgramObservation(input: {
       charset: "utf-8",
       retentionClass: "research_evidence",
     });
+    if (raw.deduplicated) assertRawReplayEligible(input.repository, raw.rawDocumentId);
   } catch (error) {
     input.repository.addCaptureEvent({
       eventId: input.failureEventId,
@@ -377,7 +396,6 @@ export function captureOfficialProgramObservation(input: {
     reusedObservation: reusable !== null,
   };
 }
-
 export function verifyOfficialProgramTypedPayload(input: {
   canonicalRaceKey: string;
   sourceObservedAt: string;
