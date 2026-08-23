@@ -136,7 +136,7 @@ async function main(): Promise<void> {
     const payload = {
       phase: "N2_UNEXPECTED_ADDITION_AUDIT", generatedAt: new Date().toISOString(), startedAt,
       gitSha: process.env.GIT_SHA ?? null, scope: "read-only immutable-source scan; no DB/archive/sidecar write",
-      sourceSidecar: sourcePath, archiveFilesScanned: files.length, ingested,
+      sourceSidecar: basename(sourcePath), archiveFilesScanned: files.length, ingested,
       unexpectedAdditionCount: unexpectedCount, ambiguousNonDefectCount: ambiguousCount,
       classificationContractVersion: "n2-reparse-addition-classification-v1",
       findings,

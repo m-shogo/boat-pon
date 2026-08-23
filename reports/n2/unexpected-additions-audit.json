@@ -4,7 +4,7 @@
   "startedAt": "2026-08-03T07:06:58.124Z",
   "gitSha": "1826da6545eca30b3d1c8a3e96a5bc883cd15511",
   "scope": "read-only immutable-source scan; no DB/archive/sidecar write",
-  "sourceSidecar": "/Users/m-shogo/Developer/personal/boat-pon/data/research-replay.sqlite",
+  "sourceSidecar": "research-replay.sqlite",
   "archiveFilesScanned": 8174,
   "ingested": 8167,
   "unexpectedAdditionCount": 2,
