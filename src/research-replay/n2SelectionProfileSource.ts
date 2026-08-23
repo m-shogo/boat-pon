@@ -46,7 +46,7 @@ type PayoutRow = {
   lineBetType: SettlementBetType;
   selection: string | null;
   payoutYen: number;
-  lineKind: "payout" | "special_payout";
+  lineKind: string;
 };
 
 type RefundRow = {
@@ -54,7 +54,7 @@ type RefundRow = {
   candidateBetType: SettlementBetType;
   lineBetType: SettlementBetType;
   selection: string | null;
-  scope: "selection" | "bet_type" | "race";
+  scope: string;
   refundYenPer100: number | null;
 };
 
@@ -120,6 +120,24 @@ function requireNonNegativeSafeAmount(
   if (value === null && errorCode === "REFUND") return;
   if (!Number.isSafeInteger(value) || (value ?? -1) < 0) {
     throw new Error(`N2_SELECTION_PROFILE_${errorCode}_AMOUNT_INVALID:${candidateId}`);
+  }
+}
+
+function requirePayoutLineKind(
+  candidateId: string,
+  lineKind: string,
+): asserts lineKind is N2PayoutLineInput["lineKind"] {
+  if (lineKind !== "payout" && lineKind !== "special_payout") {
+    throw new Error(`N2_SELECTION_PROFILE_PAYOUT_LINE_KIND_INVALID:${candidateId}`);
+  }
+}
+
+function requireRefundScope(
+  candidateId: string,
+  scope: string,
+): asserts scope is N2RefundLineInput["scope"] {
+  if (scope !== "selection" && scope !== "bet_type" && scope !== "race") {
+    throw new Error(`N2_SELECTION_PROFILE_REFUND_SCOPE_INVALID:${candidateId}`);
   }
 }
 
@@ -221,6 +239,7 @@ export function readN2SelectionProfileSource(
     if (row.lineBetType !== row.candidateBetType) {
       throw new Error(`N2_SELECTION_PROFILE_PAYOUT_BET_LINEAGE_INVALID:${row.candidateId}`);
     }
+    requirePayoutLineKind(row.candidateId, row.lineKind);
     requireCanonicalSelection(row.candidateId, row.candidateBetType, row.selection, "PAYOUT");
     requireNonNegativeSafeAmount(row.candidateId, row.payoutYen, "PAYOUT");
     const lines = payoutsByCandidate.get(row.candidateId) ?? [];
@@ -232,6 +251,7 @@ export function readN2SelectionProfileSource(
     if (row.lineBetType !== row.candidateBetType) {
       throw new Error(`N2_SELECTION_PROFILE_REFUND_BET_LINEAGE_INVALID:${row.candidateId}`);
     }
+    requireRefundScope(row.candidateId, row.scope);
     requireCanonicalSelection(row.candidateId, row.candidateBetType, row.selection, "REFUND");
     requireNonNegativeSafeAmount(row.candidateId, row.refundYenPer100, "REFUND");
     const lines = refundsByCandidate.get(row.candidateId) ?? [];
