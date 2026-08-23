@@ -25,7 +25,7 @@ export function parseExactaClosingOddsAuditSleepMs(raw: string): number {
 
 export function requireExactaClosingOddsAuditCandidate(candidate: ExactaClosingOddsAuditCandidate): void {
   const venueCode = officialVenueCode(candidate.venue);
-  if (!venueCode) {
+  if (!venueCode || candidate.venue !== candidate.venue.trim() || candidate.venue === venueCode) {
     throw new Error(`EXACTA_CLOSING_ODDS_AUDIT_VENUE_INVALID:${candidate.venue}`);
   }
   try {
