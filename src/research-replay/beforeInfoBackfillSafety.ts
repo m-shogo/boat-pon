@@ -9,6 +9,7 @@ export type BeforeInfoBackfillOptions = {
 };
 
 export type BeforeInfoBackfillTarget = {
+  raceId: string;
   date: string;
   venue: string;
   raceNo: number;
@@ -59,12 +60,16 @@ export function parseBeforeInfoBackfillOptions(input: {
 export function requireBeforeInfoBackfillTarget(target: BeforeInfoBackfillTarget): void {
   const venueCode = officialVenueCode(target.venue);
   if (!venueCode || target.venue !== target.venue.trim() || target.venue === venueCode) {
-    throw new Error(`BEFOREINFO_BACKFILL_TARGET_VENUE_INVALID:${target.date}:${target.venue}:${target.raceNo}`);
+    throw new Error(`BEFOREINFO_BACKFILL_TARGET_VENUE_INVALID:${target.raceId}:${target.venue}`);
   }
   try {
     canonicalRaceKey(target.date, venueCode, target.raceNo);
   } catch {
-    throw new Error(`BEFOREINFO_BACKFILL_TARGET_RACE_INVALID:${target.date}:${target.venue}:${target.raceNo}`);
+    throw new Error(`BEFOREINFO_BACKFILL_TARGET_RACE_INVALID:${target.raceId}:${target.date}:${target.venue}:${target.raceNo}`);
+  }
+  const expectedRaceId = `${target.date.replaceAll("-", "")}-${target.venue}-${String(target.raceNo).padStart(2, "0")}`;
+  if (target.raceId !== expectedRaceId) {
+    throw new Error(`BEFOREINFO_BACKFILL_TARGET_IDENTITY_INVALID:${target.raceId}:${expectedRaceId}`);
   }
 }
 

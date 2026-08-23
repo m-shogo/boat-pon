@@ -118,6 +118,7 @@ async function main() {
     `).all(...decisions, fromDate, toDate) as RaceTarget[];
 
     requireBeforeInfoBackfillTargets(allTargets.map((target) => ({
+      raceId: target.race_id,
       date: target.date,
       venue: target.venue,
       raceNo: target.race_no,
