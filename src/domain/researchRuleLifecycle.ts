@@ -1,4 +1,5 @@
 import type { ForwardTestResult, ResearchRule, RuleStatus } from "./researchRule";
+import { validateEvaluationMetadata } from "./researchEvaluation";
 
 const STATUS_ORDER: RuleStatus[] = ["candidate", "backtest", "forward", "review", "approved", "production"];
 const VALID_RULE_STATUSES: readonly RuleStatus[] = [
@@ -57,6 +58,16 @@ export function validateProductionEligibility(
   }
   if (evaluation.isForwardTested !== true) {
     reasons.push("evaluation has not passed forward test");
+  }
+
+  const metadata = evaluation.metadata;
+  if (metadata === null || typeof metadata !== "object") {
+    reasons.push("evaluation metadata is missing or invalid");
+  } else {
+    const metadataValidation = validateEvaluationMetadata(metadata);
+    for (const warning of metadataValidation.warnings) {
+      reasons.push(`evaluation metadata invalid: ${warning}`);
+    }
   }
 
   const sampleSize = evaluation.metadata?.sampleSize;
