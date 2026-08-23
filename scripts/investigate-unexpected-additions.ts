@@ -11,6 +11,10 @@ import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { parseOfficialResultDetail } from "../src/domain/officialResultDetailParser";
 import { listArchiveFiles } from "../src/research-replay/n1Backfill";
+import {
+  parseUnexpectedAdditionsLimit,
+  selectUnexpectedAdditionsArchives,
+} from "../src/research-replay/n2UnexpectedAdditionsArchiveSelection";
 import { classifyUnexpectedAddition, deriveSettlementCandidates, decideReparseAction, candidateKey } from "../src/research-replay/n2SettlementReparse";
 import type { ResultKind, SettlementBetType, SettlementStatus } from "../src/research-replay/settlement";
 import { loadActiveState, loadSourceDuplicateSet, type RawMeta } from "../src/research-replay/n2SettlementReparseEngine";
@@ -26,7 +30,7 @@ const sourcePath = resolve(arg("--source-sidecar") ?? join(root, "data", "resear
 const archiveRoot = resolve(arg("--archive-root") ?? join(root, "data", "raw", "official", "results"));
 const reportDir = resolve(arg("--report-dir") ?? join(root, "reports", "n2"));
 const reportName = arg("--report-name") ?? "unexpected-additions-audit";
-const limit = arg("--limit") ? Number(arg("--limit")) : null;
+const limit = parseUnexpectedAdditionsLimit(arg("--limit"));
 
 function unpack(path: string): Promise<Buffer> {
   return new Promise((res, rej) => {
@@ -81,7 +85,7 @@ async function main(): Promise<void> {
     for (const r of db.prepare("SELECT supersedes_candidate_id AS id FROM settlement_candidates_v2 WHERE supersedes_candidate_id IS NOT NULL").all() as Array<{ id: string }>) superseded.add(r.id);
 
     const allFiles = listArchiveFiles(archiveRoot);
-    const files = limit ? allFiles.slice(0, limit) : allFiles;
+    const files = selectUnexpectedAdditionsArchives(allFiles, limit);
     const findings: Finding[] = [];
     let ingested = 0; const processedRaw = new Set<string>();
     let unexpectedCount = 0; let ambiguousCount = 0;
