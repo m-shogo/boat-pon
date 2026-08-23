@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { parseRollingReportOptions } from "../src/research-replay/rollingReportOptions";
 
 type Row = { date: string; venue: string; race_no: number; decision: string; selection: string; result: string | null; returned: number; current_odds: number | null; required_odds: number | null; ev: number | null; sample_size?: number | null };
 type Summary = { rows: number; buy: number; watch: number; skip: number; settledBuy: number; hits: number; hitRate: number | null; roi: number | null; avgEv: number | null; avgOddsRatio: number | null };
@@ -17,7 +18,12 @@ type QualityReport = {
 };
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
-const parsed = parseArgs(process.argv.slice(2));
+const rawArgs = process.argv.slice(2);
+if (rawArgs.includes("--help") || rawArgs.includes("-h")) {
+  console.log("Usage: npm run report:quality -- --days 7 [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--json]");
+  process.exit(0);
+}
+const parsed = parseRollingReportOptions(rawArgs, 7);
 const to = parsed.to ?? todayTokyo();
 const from = parsed.from ?? addDays(to, -(parsed.days - 1));
 
@@ -181,5 +187,3 @@ function tableExists(db: DatabaseSync, table: string) { return db.prepare("SELEC
 function hasColumn(db: DatabaseSync, table: string, column: string) { return (db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>).some((r) => r.name === column); }
 function todayTokyo() { return new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()); }
 function addDays(date: string, days: number) { const [y, m, d] = date.split("-").map(Number); return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10); }
-function parseArgs(argv: string[]) { const parsed = { from: null as string | null, to: null as string | null, days: 7, json: false }; for (let i = 0; i < argv.length; i += 1) { const k = argv[i], v = argv[i + 1]; if (k === "--from") { parsed.from = date(v); i += 1; } else if (k === "--to") { parsed.to = date(v); i += 1; } else if (k === "--days") { parsed.days = Number(v); i += 1; } else if (k === "--json") parsed.json = true; else if (k === "--help") { console.log("Usage: npm run report:quality -- --from YYYY-MM-DD --to YYYY-MM-DD [--json]"); process.exit(0); } else throw new Error(`unknown option: ${k}`); } return parsed; }
-function date(v: string | undefined) { if (!v || !/^\d{4}-\d{2}-\d{2}$/.test(v)) throw new Error(`invalid date: ${v ?? ""}`); return v; }
