@@ -122,7 +122,9 @@ const runDatasetCanaryRuntime = withCurrentSourceDuplicateEvidence(
 const runReadonlyAnalysisRuntime = withCurrentSourceDuplicateEvidence(
   withAllActiveSettlementLineage(runReadonlyAnalysis),
 );
-const runReadonlyAuditRuntime = withCurrentSourceDuplicateEvidence(runReadonlyAudit);
+const runReadonlyAuditRuntime = withCurrentSourceDuplicateEvidence(
+  withAllActiveSettlementLineage(runReadonlyAudit),
+);
 const runDatasetInventoryRuntime = withCurrentSourceDuplicateEvidence(
   withAllActiveSettlementLineage(runDatasetInventory),
 );
