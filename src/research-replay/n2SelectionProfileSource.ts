@@ -112,6 +112,17 @@ function requireCanonicalSelection(
   }
 }
 
+function requireNonNegativeSafeAmount(
+  candidateId: string,
+  value: number | null,
+  errorCode: "PAYOUT" | "REFUND",
+): void {
+  if (value === null && errorCode === "REFUND") return;
+  if (!Number.isSafeInteger(value) || (value ?? -1) < 0) {
+    throw new Error(`N2_SELECTION_PROFILE_${errorCode}_AMOUNT_INVALID:${candidateId}`);
+  }
+}
+
 function requireCanonicalRaceIdentity(row: CandidateRow): void {
   try {
     parseCanonicalRaceKey(row.raceKey);
@@ -211,6 +222,7 @@ export function readN2SelectionProfileSource(
       throw new Error(`N2_SELECTION_PROFILE_PAYOUT_BET_LINEAGE_INVALID:${row.candidateId}`);
     }
     requireCanonicalSelection(row.candidateId, row.candidateBetType, row.selection, "PAYOUT");
+    requireNonNegativeSafeAmount(row.candidateId, row.payoutYen, "PAYOUT");
     const lines = payoutsByCandidate.get(row.candidateId) ?? [];
     lines.push({ selection: row.selection, payoutYen: row.payoutYen, lineKind: row.lineKind });
     payoutsByCandidate.set(row.candidateId, lines);
@@ -221,6 +233,7 @@ export function readN2SelectionProfileSource(
       throw new Error(`N2_SELECTION_PROFILE_REFUND_BET_LINEAGE_INVALID:${row.candidateId}`);
     }
     requireCanonicalSelection(row.candidateId, row.candidateBetType, row.selection, "REFUND");
+    requireNonNegativeSafeAmount(row.candidateId, row.refundYenPer100, "REFUND");
     const lines = refundsByCandidate.get(row.candidateId) ?? [];
     lines.push({
       selection: row.selection,
