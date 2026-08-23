@@ -44,11 +44,13 @@ function withSidecar(fn: (path: string, db: DatabaseSync) => void): void {
     );
     CREATE TABLE race_payout_lines_v2 (
       payout_line_id TEXT PRIMARY KEY,
-      candidate_id TEXT NOT NULL
+      candidate_id TEXT NOT NULL,
+      bet_type TEXT NOT NULL
     );
     CREATE TABLE race_refund_lines_v2 (
       refund_line_id TEXT PRIMARY KEY,
-      candidate_id TEXT NOT NULL
+      candidate_id TEXT NOT NULL,
+      bet_type TEXT NOT NULL
     );
     CREATE TABLE settlement_source_duplicate_resolutions_v2 (
       resolution_id TEXT PRIMARY KEY,
@@ -114,9 +116,9 @@ test("runtime feature coverage uses active settlement semantics", () => {
     insertCandidate(db, { id: "old", raceKey: "2024-01-01:01:R1", status: "settled" });
     insertCandidate(db, { id: "new", raceKey: "2024-01-01:01:R1", status: "settled", supersedes: "old" });
     insertCandidate(db, { id: "refund", raceKey: "2024-01-01:01:R2", status: "refunded" });
-    db.prepare("INSERT INTO race_payout_lines_v2 VALUES ('payout-old','old')").run();
-    db.prepare("INSERT INTO race_payout_lines_v2 VALUES ('payout-new','new')").run();
-    db.prepare("INSERT INTO race_refund_lines_v2 VALUES ('refund-line','refund')").run();
+    db.prepare("INSERT INTO race_payout_lines_v2 VALUES ('payout-old','old','trifecta')").run();
+    db.prepare("INSERT INTO race_payout_lines_v2 VALUES ('payout-new','new','trifecta')").run();
+    db.prepare("INSERT INTO race_refund_lines_v2 VALUES ('refund-line','refund','trifecta')").run();
     db.close();
 
     const resolved = resolveExecutor("feature-coverage-audit");
@@ -124,12 +126,37 @@ test("runtime feature coverage uses active settlement semantics", () => {
     assert.ok(resolved.executor);
     const result = resolved.executor(context(path));
     assert.equal(result.result, "PASS");
-    assert.equal(result.summary.auditContractVersion, "n2-settlement-coverage-v2-active");
+    assert.equal(result.summary.auditContractVersion, "n2-settlement-coverage-v3-active-line-bet-lineage");
     assert.equal(result.summary.settledCandidates, 1);
     assert.equal(result.summary.settledWithPayoutLines, 1);
     assert.equal(result.summary.refundedCandidates, 1);
     assert.equal(result.summary.refundedWithRefundLines, 1);
     assert.equal(result.summary.activeSettlementSemantics, true);
+    assert.equal(result.summary.lineBetTypeBound, true);
+  });
+});
+
+test("runtime feature coverage does not accept payout/refund lines from another bet type", () => {
+  withSidecar((path, db) => {
+    insertCandidate(db, { id: "settled", raceKey: "2024-01-01:01:R1", status: "settled" });
+    insertCandidate(db, { id: "refunded", raceKey: "2024-01-01:01:R2", status: "refunded" });
+    db.prepare("INSERT INTO race_payout_lines_v2 VALUES ('wrong-payout','settled','win')").run();
+    db.prepare("INSERT INTO race_refund_lines_v2 VALUES ('wrong-refund','refunded','win')").run();
+    db.close();
+
+    const resolved = resolveExecutor("feature-coverage-audit");
+    assert.equal(resolved.code, "OK");
+    assert.ok(resolved.executor);
+    const result = resolved.executor(context(path));
+    assert.equal(result.result, "PASS");
+    assert.equal(result.summary.settledCandidates, 1);
+    assert.equal(result.summary.settledWithPayoutLines, 0);
+    assert.equal(result.summary.refundedCandidates, 1);
+    assert.equal(result.summary.refundedWithRefundLines, 0);
+    assert.deepEqual(result.summary.missingness, {
+      settledMissingPayoutLines: 1,
+      refundedMissingRefundLines: 1,
+    });
   });
 });
 
@@ -141,7 +168,7 @@ test("runtime feature coverage blocks tainted active settlement lineage", () => 
       status: "settled",
       integrity: "quarantined",
     });
-    db.prepare("INSERT INTO race_payout_lines_v2 VALUES ('payout-tainted','tainted')").run();
+    db.prepare("INSERT INTO race_payout_lines_v2 VALUES ('payout-tainted','tainted','trifecta')").run();
     db.close();
 
     const resolved = resolveExecutor("feature-coverage-audit");
