@@ -11,9 +11,15 @@
 
 import { existsSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { parseDecisionHistoryReportOptions } from "../src/research-replay/decisionHistoryReportOptions";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
-const args = parseArgs(process.argv.slice(2));
+const rawArgs = process.argv.slice(2);
+if (rawArgs.includes("--help") || rawArgs.includes("-h")) {
+  printHelp();
+  process.exit(0);
+}
+const args = parseDecisionHistoryReportOptions(rawArgs);
 
 if (!existsSync(DB_PATH)) {
   console.error(`[report-clv] DB not found: ${DB_PATH}`);
@@ -149,38 +155,6 @@ function printRows(rows: ReportRow[]) {
 
 function format(value: number | null) {
   return value == null ? "-" : value.toFixed(3);
-}
-
-function parseArgs(argv: string[]) {
-  const parsed = {
-    from: null as string | null,
-    to: null as string | null,
-    decision: null as string | null,
-    modelVersion: null as string | null,
-    runKind: null as string | null,
-    json: false,
-  };
-
-  for (let i = 0; i < argv.length; i += 1) {
-    const key = argv[i];
-    const value = argv[i + 1];
-    if (key === "--from") { parsed.from = normalizeDate(value); i += 1; }
-    else if (key === "--to") { parsed.to = normalizeDate(value); i += 1; }
-    else if (key === "--decision") { parsed.decision = String(value ?? "").toUpperCase(); i += 1; }
-    else if (key === "--model-version") { parsed.modelVersion = String(value ?? ""); i += 1; }
-    else if (key === "--run-kind") { parsed.runKind = String(value ?? ""); i += 1; }
-    else if (key === "--json") parsed.json = true;
-    else if (key === "--help" || key === "-h") { printHelp(); process.exit(0); }
-    else if (key === "--") { /* pnpm separator */ }
-    else throw new Error(`unknown option: ${key}`);
-  }
-
-  return parsed;
-}
-
-function normalizeDate(value: string | undefined) {
-  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error(`date must be YYYY-MM-DD: ${value ?? ""}`);
-  return value;
 }
 
 function printHelp() {
