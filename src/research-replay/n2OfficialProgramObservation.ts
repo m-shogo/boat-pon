@@ -335,7 +335,6 @@ export function captureOfficialProgramObservation(input: {
       charset: "utf-8",
       retentionClass: "research_evidence",
     });
-    if (raw.deduplicated) assertRawReplayEligible(input.repository, raw.rawDocumentId);
   } catch (error) {
     input.repository.addCaptureEvent({
       eventId: input.failureEventId,
@@ -361,6 +360,7 @@ export function captureOfficialProgramObservation(input: {
     bodyCompletedEventId,
     linkedAt: bodyCompletedAt,
   });
+  if (raw.deduplicated) assertRawReplayEligible(input.repository, raw.rawDocumentId);
   const reusable = raw.deduplicated
     ? input.repository.findReusableTypedObservation({
       rawDocumentId: raw.rawDocumentId,
