@@ -72,6 +72,7 @@ const buyRaces = db.prepare(`
 `).all() as Race[];
 
 requireExactaClosingOddsAuditCandidates(buyRaces.map(r => ({
+  raceId: r.race_id,
   date: r.date,
   venue: r.venue,
   raceNo: r.race_no,
