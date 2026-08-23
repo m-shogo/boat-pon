@@ -25,6 +25,12 @@ function createSidecar(root: string): string {
   mkdirSync(join(root, "data"), { recursive: true });
   const db = new DatabaseSync(path);
   db.exec(`
+    CREATE TABLE raw_documents (
+      raw_document_id TEXT PRIMARY KEY,
+      integrity_status TEXT NOT NULL,
+      security_scan_status TEXT NOT NULL,
+      parser_replay_eligible INTEGER NOT NULL
+    );
     CREATE TABLE parse_runs (
       parse_run_id TEXT PRIMARY KEY,
       raw_document_id TEXT NOT NULL,
@@ -87,6 +93,8 @@ function insertWinner(path: string, input: {
     const observationId = `obs-${input.candidateId}`;
     const parseRunId = `parse-${input.candidateId}`;
     const rawDocumentId = `raw-${input.candidateId}`;
+    db.prepare("INSERT INTO raw_documents VALUES (?, 'verified', 'passed', 1)")
+      .run(rawDocumentId);
     db.prepare("INSERT INTO parse_runs VALUES (?, ?, 'success')")
       .run(parseRunId, rawDocumentId);
     db.prepare(`
