@@ -110,3 +110,10 @@ test("Archiveされたルールは削除ではなく保持前提（そこから�
   assert.equal(canTransitionRuleStatus("archived", "deprecated"), false);
   assert.equal(canTransitionRuleStatus("deprecated", "archived"), true);
 });
+
+test("runtimeで壊れたstatusからdeprecated/archiveへ遷移できない", () => {
+  const invalid = "corrupted" as RuleStatus;
+  assert.equal(canTransitionRuleStatus(invalid, "deprecated"), false);
+  assert.equal(canTransitionRuleStatus(invalid, "archived"), false);
+  assert.equal(canTransitionRuleStatus("production", invalid), false);
+});
