@@ -49,6 +49,7 @@ try {
     "backtest.ts",
     "researchEvaluation.ts",
     "researchRule.ts",
+    "researchRuleConditions.ts",
     "researchRuleLifecycle.ts",
     "researchRuleStore.ts",
   ]) {
