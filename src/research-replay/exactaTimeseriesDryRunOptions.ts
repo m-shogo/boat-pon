@@ -14,13 +14,14 @@ type OptionName = typeof OPTION_NAMES[number];
 
 function parseValues(argv: readonly string[]): Map<OptionName, string> {
   const allowed: ReadonlySet<string> = new Set(OPTION_NAMES);
+  const normalized = argv.filter((value) => value !== "--");
   const values = new Map<OptionName, string>();
-  for (let index = 0; index < argv.length; index += 2) {
-    const name = argv[index];
+  for (let index = 0; index < normalized.length; index += 2) {
+    const name = normalized[index];
     if (!allowed.has(name)) throw new Error(`EXACTA_TIMESERIES_DRY_RUN_ARGUMENT_INVALID:${name}`);
     const optionName = name as OptionName;
     if (values.has(optionName)) throw new Error(`EXACTA_TIMESERIES_DRY_RUN_ARGUMENT_DUPLICATE:${name}`);
-    const value = argv[index + 1];
+    const value = normalized[index + 1];
     if (value == null || value.startsWith("--")) {
       throw new Error(`EXACTA_TIMESERIES_DRY_RUN_ARGUMENT_MISSING:${name}`);
     }
