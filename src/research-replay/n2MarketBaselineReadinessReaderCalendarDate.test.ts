@@ -4,24 +4,63 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
+import { canonicalHash } from "./canonical";
+import { buildBoatRaceOfficialSourceUrl } from "./n2ExternalSourceCaptureContract";
 import { readN2MarketBaselineReadiness } from "./n2MarketBaselineReadinessReader";
 
 function writeAcceptedMarker(root: string, date: string): void {
-  const directory = `data/raw/research/trifecta-market/${date}/05/01/T-5`;
+  const venue = "05";
+  const raceDir = "01";
+  const raceIdentity = `${date.replaceAll("-", "")}-${venue}-${raceDir}`;
+  const directory = `data/raw/research/trifecta-market/${date}/${venue}/${raceDir}/T-5`;
   const markerDir = join(root, directory);
   mkdirSync(markerDir, { recursive: true });
-  writeFileSync(join(markerDir, "fixture.html"), "private fixture evidence", "utf8");
-  writeFileSync(join(markerDir, "fixture.envelope.json"), "{}\n", "utf8");
+  const rawRelativePath = `${directory}/fixture.html`;
+  const envelopeRelativePath = `${directory}/fixture.envelope.json`;
+  const manifestDigest = "a".repeat(64);
+  const decisionCutoff = `${date}T03:30:00.000Z`;
+  const targetCaptureAt = new Date(Date.parse(decisionCutoff) - 5 * 60_000).toISOString();
+  const sourceUrl = buildBoatRaceOfficialSourceUrl(
+    "boatrace_official_trifecta_odds_html",
+    { date: date.replaceAll("-", ""), venueCode: venue, raceNo: 1 },
+  );
+  const checkpointKey = canonicalHash({
+    manifestDigest,
+    raceIdentity,
+    checkpointLabel: "T-5",
+    targetCaptureAt,
+    sourceUrl,
+  });
+  writeFileSync(join(root, rawRelativePath), "private fixture evidence", "utf8");
+  writeFileSync(join(root, envelopeRelativePath), `${JSON.stringify({
+    envelopeVersion: "n2-trifecta-private-capture-envelope-v1",
+    status: "PASS",
+    blockers: [],
+    manifestDigest,
+    checkpointKey,
+    entry: {
+      raceIdentity,
+      checkpointLabel: "T-5",
+      decisionCutoff,
+    },
+    response: { fetchedAt: `${date}T03:25:30.000Z` },
+    sourceDisplayedUpdate: { availableAt: `${date}T03:24:00.000Z` },
+    databaseWriteAuthorized: false,
+    currentBuyConnectionAuthorized: false,
+    lineConnectionAuthorized: false,
+    publicPublishAuthorized: false,
+    productionApplyExecuted: false,
+  }, null, 2)}\n`, "utf8");
   writeFileSync(join(markerDir, "accepted.json"), `${JSON.stringify({
     markerVersion: "n2-trifecta-private-capture-accepted-v1",
-    manifestDigest: "a".repeat(64),
-    checkpointKey: "b".repeat(64),
-    raceIdentity: `${date.replaceAll("-", "")}-05-01`,
+    manifestDigest,
+    checkpointKey,
+    raceIdentity,
     checkpointLabel: "T-5",
     rawDocumentId: `raw-${date}`,
     rawSha256: "a".repeat(64),
-    rawRelativePath: `${directory}/fixture.html`,
-    envelopeRelativePath: `${directory}/fixture.envelope.json`,
+    rawRelativePath,
+    envelopeRelativePath,
     acceptedAt: "2024-02-29T03:25:30.000Z",
     databaseWriteAuthorized: false,
     productionApplyExecuted: false,

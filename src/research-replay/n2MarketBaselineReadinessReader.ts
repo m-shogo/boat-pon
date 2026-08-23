@@ -10,6 +10,7 @@ import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 
 import { readCurrentlyValidSourceDuplicateObservationIds } from "./n1SourceDuplicateResolutionValidation";
+import { readN2T5DecisionCutoffMetadata } from "./n2T5DecisionCutoffMetadata";
 
 export const N2_MARKET_BASELINE_READINESS_READER_VERSION =
   "n2-market-baseline-readiness-reader-v1" as const;
@@ -290,8 +291,17 @@ function discoverAcceptedT5(dataRoot: string): {
       }
       for (const raceDir of races) {
         const checked = validateAcceptedMarker({ dataRoot, date, venue, raceDir });
-        if (checked.valid) acceptedRaceKeys.push(checked.raceKey);
-        else if (checked.blockers.length > 0) {
+        if (checked.valid) {
+          const metadata = readN2T5DecisionCutoffMetadata({
+            dataRoot,
+            raceKeys: [checked.raceKey],
+          });
+          if (metadata.status === "PASS") acceptedRaceKeys.push(checked.raceKey);
+          else {
+            blockedRaceKeys.push(checked.raceKey);
+            invalidAcceptedMarkerCount += 1;
+          }
+        } else if (checked.blockers.length > 0) {
           blockedRaceKeys.push(checked.raceKey);
           invalidAcceptedMarkerCount += 1;
         }
