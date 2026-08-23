@@ -146,6 +146,16 @@ function requirePayoutLineKind(
   }
 }
 
+function requirePayoutSelectionShape(
+  candidateId: string,
+  lineKind: N2PayoutLineInput["lineKind"],
+  selection: string | null,
+): void {
+  if (lineKind === "payout" && selection === null) {
+    throw new Error(`N2_SELECTION_PROFILE_PAYOUT_SELECTION_REQUIRED:${candidateId}`);
+  }
+}
+
 function requireRefundScope(
   candidateId: string,
   scope: string,
@@ -270,6 +280,7 @@ export function readN2SelectionProfileSource(
       throw new Error(`N2_SELECTION_PROFILE_PAYOUT_BET_LINEAGE_INVALID:${row.candidateId}`);
     }
     requirePayoutLineKind(row.candidateId, row.lineKind);
+    requirePayoutSelectionShape(row.candidateId, row.lineKind, row.selection);
     requireCanonicalSelection(row.candidateId, row.candidateBetType, row.selection, "PAYOUT");
     requireNonNegativeSafeAmount(row.candidateId, row.payoutYen, "PAYOUT");
     const lines = payoutsByCandidate.get(row.candidateId) ?? [];
