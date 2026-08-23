@@ -105,6 +105,13 @@ export type OfficialProgramCanaryApplyResult = {
 
 type CachedCaptureResult = { observationId: string; reusedObservation: boolean };
 
+type RawEligibilityRow = {
+  raw_document_id: string;
+  integrity_status: string;
+  security_scan_status: string;
+  parser_replay_eligible: number;
+};
+
 function validGitSha(value: string): boolean {
   return /^[a-f0-9]{7,40}$/.test(value);
 }
@@ -393,7 +400,25 @@ export function verifyOfficialProgramCanaryPrimaryRows(
   return map;
 }
 
+function rawDocumentEligible(row: RawEligibilityRow): boolean {
+  return row.integrity_status === "verified"
+    && row.security_scan_status === "passed"
+    && row.parser_replay_eligible === 1;
+}
+
+function requireCanaryRawEligibility(db: DatabaseSync, rawDocumentId: string): void {
+  const row = db.prepare(`
+    SELECT raw_document_id, integrity_status, security_scan_status, parser_replay_eligible
+    FROM raw_documents
+    WHERE raw_document_id=?
+  `).get(rawDocumentId) as RawEligibilityRow | undefined;
+  if (!row || !rawDocumentEligible(row)) {
+    throw new Error(`CANARY_RAW_DOCUMENT_INELIGIBLE:${rawDocumentId}`);
+  }
+}
+
 function captureCachedOfficialProgram(input: {
+  db: DatabaseSync;
   repository: ResearchReplayRepository;
   manifestDigest: string;
   item: OfficialProgramCanaryManifestItem;
@@ -415,6 +440,7 @@ function captureCachedOfficialProgram(input: {
     charset: "utf-8",
     retentionClass: "research_evidence",
   });
+  requireCanaryRawEligibility(input.db, raw.rawDocumentId);
   const bodyCompletedEventId = input.repository.addCaptureEvent({
     captureAttemptId,
     eventKind: "body_completed",
@@ -457,11 +483,14 @@ function hasReusableCurrentOfficialProgramObservation(input: {
   item: OfficialProgramCanaryManifestItem;
 }): boolean {
   const raw = input.db.prepare(`
-    SELECT raw_document_id
+    SELECT raw_document_id, integrity_status, security_scan_status, parser_replay_eligible
     FROM raw_documents
     WHERE raw_sha256=?
-  `).get(input.item.rawSha256) as { raw_document_id: string } | undefined;
+  `).get(input.item.rawSha256) as RawEligibilityRow | undefined;
   if (!raw) return false;
+  if (!rawDocumentEligible(raw)) {
+    throw new Error(`CANARY_RAW_DOCUMENT_INELIGIBLE:${raw.raw_document_id}`);
+  }
   return input.repository.findReusableTypedObservation({
     rawDocumentId: raw.raw_document_id,
     canonicalRaceKey: input.item.canonicalRaceKey,
@@ -497,6 +526,7 @@ export function applyOfficialProgramCanary(input: {
       continue;
     }
     const capture = captureCachedOfficialProgram({
+      db: input.db,
       repository: input.repository,
       manifestDigest: input.manifest.manifestDigest,
       item,
