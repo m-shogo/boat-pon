@@ -119,6 +119,25 @@ test("reader rejects two primary identities for the same canonical race before t
   }
 });
 
+test("reader selects bounded rows by canonical venue identity rather than raw venue representation", () => {
+  const dir = mkdtempSync(join(tmpdir(), "n2-program-canary-reader-canonical-order-"));
+  const path = join(dir, "primary.sqlite");
+  const db = createPrimary(path);
+  try {
+    insertRow(db, { raceId: "20040110-02-01", date: "2004-01-10", venue: "02", raceNo: 1 });
+    insertRow(db, { raceId: "20040110-01-01", date: "2004-01-10", venue: "桐生", raceNo: 1 });
+  } finally {
+    db.close();
+  }
+  try {
+    const result = readOfficialProgramCanarySource({ primaryDbPath: path, limit: 1 });
+    assert.equal(result.truncated, true);
+    assert.deepEqual(result.rows.map((row) => row.raceId), ["20040110-01-01"]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("reader reports deterministic truncation and rejects invalid limits", () => {
   const dir = mkdtempSync(join(tmpdir(), "n2-program-canary-reader-limit-"));
   const path = join(dir, "primary.sqlite");
