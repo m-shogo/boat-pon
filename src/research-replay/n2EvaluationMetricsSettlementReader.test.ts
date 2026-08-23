@@ -23,6 +23,12 @@ function withDb(fn: (path: string, db: DatabaseSync) => void): void {
   const db = new DatabaseSync(path);
   try {
     db.exec(`
+      CREATE TABLE raw_documents (
+        raw_document_id TEXT PRIMARY KEY,
+        integrity_status TEXT NOT NULL,
+        security_scan_status TEXT NOT NULL,
+        parser_replay_eligible INTEGER NOT NULL
+      );
       CREATE TABLE parse_runs (
         parse_run_id TEXT PRIMARY KEY,
         raw_document_id TEXT NOT NULL,
@@ -97,6 +103,7 @@ function insertClean(
   const rawDocumentId = options.rawDocumentId ?? `raw-${id}`;
   const parseRunId = options.parseRunId ?? `parse-${id}`;
   const semanticHash = options.semanticHash ?? `semantic-${id}`;
+  db.prepare("INSERT OR IGNORE INTO raw_documents VALUES (?,'verified','passed',1)").run(rawDocumentId);
   db.prepare("INSERT OR IGNORE INTO parse_runs VALUES (?,?,'success')").run(parseRunId, rawDocumentId);
   db.prepare(`INSERT INTO domain_observations
     (observation_id,canonical_race_key,observation_type,payload_type,raw_document_id,parse_run_id,supersedes_id,correction_kind,correction_reason)
@@ -199,6 +206,26 @@ test("stale source-duplicate evidence blocks instead of silently suppressing or 
     assert.ok(report.blockers.includes("SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID"));
     assert.equal(report.settlementCount, 0);
   });
+});
+
+test("tainted raw settlement evidence cannot enter evaluation metrics", () => {
+  for (const [integrity, security, replay] of [
+    ["quarantined", "passed", 1],
+    ["verified", "quarantined", 1],
+    ["verified", "passed", 0],
+  ] as const) {
+    withDb((path, db) => {
+      const raceKey = "2026-08-07:05:R1";
+      insertClean(db, "a", raceKey, "1-2-3", 1230);
+      db.prepare("UPDATE raw_documents SET integrity_status=?,security_scan_status=?,parser_replay_eligible=? WHERE raw_document_id='raw-a'")
+        .run(integrity, security, replay);
+      db.close();
+      const report = readN2EvaluationMetricsSettlements({ sidecarDbPath: path, raceKeys: [raceKey] });
+      assert.equal(report.status, "BLOCKED");
+      assert.ok(report.blockers.includes(`${raceKey}:SETTLEMENT_LINEAGE_MISMATCH:obs-a`));
+      assert.equal(report.settlementCount, 0);
+    });
+  }
 });
 
 test("special-payout candidate is excluded from normal economic evaluation", () => {
