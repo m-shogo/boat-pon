@@ -26,6 +26,19 @@ test("refund audit validates bounded selection limit before archive preflight", 
   }
 });
 
+test("refund audit rejects duplicate archive basenames before bounded selection", () => {
+  const files = [
+    "/archive/a/k260101.lzh",
+    "/archive/b/K260101.LZH",
+    "/archive/k260102.lzh",
+  ];
+
+  assert.throws(
+    () => selectRefundAuditArchives(files, 1),
+    /N1_REFUND_AUDIT_ARCHIVE_BASENAME_DUPLICATE:K260101\.LZH/u,
+  );
+});
+
 test("refund audit preserves valid archive ordering after preflight", () => {
   const files = [
     "/archive/k280229.lzh",
