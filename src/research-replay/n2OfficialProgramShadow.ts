@@ -67,6 +67,12 @@ class OfficialProgramShadowPayloadError extends PermanentShadowDeliveryError {
   }
 }
 
+class OfficialProgramShadowRawEligibilityError extends PermanentShadowDeliveryError {
+  constructor() {
+    super("OFFICIAL_PROGRAM_SHADOW_RAW_INELIGIBLE", "existing official program raw evidence is ineligible");
+  }
+}
+
 function isHttpUrl(value: string): boolean {
   if (typeof value !== "string" || value.trim() === "" || value !== value.trim()) return false;
   try {
@@ -274,6 +280,24 @@ function decodePayload(value: unknown): OfficialProgramShadowPayload {
   return payload;
 }
 
+function requireExistingRawEligibility(repository: ResearchReplayRepository, rawSha256: string): void {
+  const row = repository.db.prepare(`
+    SELECT integrity_status, security_scan_status, parser_replay_eligible
+    FROM raw_documents
+    WHERE raw_sha256=?
+  `).get(rawSha256) as {
+    integrity_status: string;
+    security_scan_status: string;
+    parser_replay_eligible: number;
+  } | undefined;
+  if (!row) return;
+  if (row.integrity_status !== "verified"
+    || row.security_scan_status !== "passed"
+    || row.parser_replay_eligible !== 1) {
+    throw new OfficialProgramShadowRawEligibilityError();
+  }
+}
+
 export function handleOfficialProgramShadowMessage(input: {
   repository: ResearchReplayRepository;
   messageType: string;
@@ -293,6 +317,7 @@ export function handleOfficialProgramShadowMessage(input: {
   if (actualHash !== payload.expectedRawSha256) {
     throw new OfficialProgramShadowSourceError("primary official program raw hash mismatch");
   }
+  requireExistingRawEligibility(input.repository, actualHash);
   return captureOfficialProgramObservation({
     repository: input.repository,
     logicalRequestGroupId: payload.logicalRequestGroupId,
