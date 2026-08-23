@@ -10,6 +10,7 @@ import {
 } from "./n2SelectionProfile";
 import { readCurrentlyValidSourceDuplicateObservationIds } from "./n1SourceDuplicateResolutionValidation";
 import {
+  BET_TYPES,
   parseSettlementSelection,
   type ResolutionStatus,
   type SettlementBetType,
@@ -18,14 +19,21 @@ import {
 
 const REUSABLE_PARSE_STATUSES = new Set(["success", "warning"]);
 const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/u;
+const BET_TYPE_SET: ReadonlySet<string> = new Set(BET_TYPES);
+const SETTLEMENT_STATUS_SET: ReadonlySet<string> = new Set([
+  "pending", "settled", "refunded", "partially_refunded", "cancelled", "no_sale",
+]);
+const RESOLUTION_STATUS_SET: ReadonlySet<string> = new Set([
+  "resolved", "source_conflict", "unresolved", "quarantined",
+]);
 
 type CandidateRow = {
   id: string;
   observationId: string;
   raceKey: string;
-  betType: SettlementBetType;
-  settlementStatus: SettlementStatus;
-  resolutionStatus: ResolutionStatus;
+  betType: string;
+  settlementStatus: string;
+  resolutionStatus: string;
   candidateParseRunId: string;
   candidateRawDocumentId: string;
   observationRaceKey: string | null;
@@ -38,6 +46,12 @@ type CandidateRow = {
   rawIntegrityStatus: string | null;
   rawSecurityScanStatus: string | null;
   rawParserReplayEligible: number | null;
+};
+
+type ValidCandidateRow = Omit<CandidateRow, "betType" | "settlementStatus" | "resolutionStatus"> & {
+  betType: SettlementBetType;
+  settlementStatus: SettlementStatus;
+  resolutionStatus: ResolutionStatus;
 };
 
 type PayoutRow = {
@@ -76,13 +90,13 @@ function requireSourceTables(db: DatabaseSync): void {
   }
 }
 
-function isLabelBearing(row: CandidateRow & { duplicate: number }): boolean {
+function isLabelBearing(row: ValidCandidateRow & { duplicate: number }): boolean {
   return row.duplicate === 0
     && row.settlementStatus === "settled"
     && row.resolutionStatus === "resolved";
 }
 
-function requireEligibleSettlementLineage(row: CandidateRow & { duplicate: number }): void {
+function requireEligibleSettlementLineage(row: ValidCandidateRow & { duplicate: number }): void {
   if (!isLabelBearing(row)) return;
   if (row.observationRaceKey !== row.raceKey
     || row.observationType !== "settlement_result"
@@ -149,6 +163,19 @@ function requireCanonicalRaceIdentity(row: CandidateRow): void {
   }
 }
 
+function requireCandidateSemantics(row: CandidateRow): ValidCandidateRow {
+  if (!BET_TYPE_SET.has(row.betType)) {
+    throw new Error(`N2_SELECTION_PROFILE_BET_TYPE_INVALID:${row.id}`);
+  }
+  if (!SETTLEMENT_STATUS_SET.has(row.settlementStatus)) {
+    throw new Error(`N2_SELECTION_PROFILE_SETTLEMENT_STATUS_INVALID:${row.id}`);
+  }
+  if (!RESOLUTION_STATUS_SET.has(row.resolutionStatus)) {
+    throw new Error(`N2_SELECTION_PROFILE_RESOLUTION_STATUS_INVALID:${row.id}`);
+  }
+  return row as ValidCandidateRow;
+}
+
 export function readN2SelectionProfileSource(
   db: DatabaseSync,
   month: string,
@@ -192,8 +219,11 @@ export function readN2SelectionProfileSource(
       )
     ORDER BY c.canonical_race_key, c.bet_type, c.candidate_id
   `).all(lower, upper) as unknown as CandidateRow[];
-  for (const row of candidateRows) requireCanonicalRaceIdentity(row);
-  const candidates = candidateRows.map((row) => ({
+  const validatedRows = candidateRows.map((row) => {
+    requireCanonicalRaceIdentity(row);
+    return requireCandidateSemantics(row);
+  });
+  const candidates = validatedRows.map((row) => ({
     ...row,
     duplicate: validResolvedObservationIds.has(row.observationId) ? 1 : 0,
   }));
