@@ -1,5 +1,6 @@
 import type { ForwardTestResult, ResearchRule, RuleStatus } from "./researchRule";
 import { validateEvaluationMetadata } from "./researchEvaluation";
+import { determineEvaluationScope } from "./researchRuleConditions";
 
 const STATUS_ORDER: RuleStatus[] = ["candidate", "backtest", "forward", "review", "approved", "production"];
 const VALID_RULE_STATUSES: readonly RuleStatus[] = [
@@ -67,6 +68,11 @@ export function validateProductionEligibility(
 
   if (rule.status !== "approved") {
     reasons.push(`rule status is "${rule.status}", must be "approved" before production`);
+  }
+  if (determineEvaluationScope(rule.evaluationConditions) === "invalid-condition-fallback") {
+    reasons.push(
+      "rule evaluationConditions are invalid; production eligibility cannot use shared fallback for a condition-bearing rule",
+    );
   }
   if (typeof evaluation.ruleId !== "string" || evaluation.ruleId !== rule.ruleId) {
     reasons.push(`evaluation ruleId "${String(evaluation.ruleId)}" does not match rule "${rule.ruleId}"`);
