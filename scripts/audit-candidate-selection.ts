@@ -21,10 +21,14 @@ import { evaluateCandidateAuditGate } from "../src/domain/candidateAuditGate";
 import { judgeCandidate } from "../src/domain/decision";
 import { LIVE_MONITOR_MODEL_VERSION } from "../src/domain/liveMonitor";
 import { mergeOddsMaps } from "../src/domain/oddsSnapshot";
+import {
+  addCandidateSelectionAuditDays,
+  parseCandidateSelectionAuditOptions,
+} from "../src/research-replay/candidateSelectionAuditOptions";
 import type { BetCandidate, Decision } from "../src/domain/types";
 
 const DB_PATH = "data/boat.sqlite";
-const args = parseArgs(process.argv.slice(2));
+const args = parseCandidateSelectionAuditOptions(process.argv.slice(2), todayJst());
 const db = new DatabaseSync(DB_PATH, { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
 
@@ -38,7 +42,7 @@ try {
     now,
     raceOdds,
     listProgramInputs(db, args.date),
-    listResultsForModelRange(db, addDays(args.date, -180), args.date),
+    listResultsForModelRange(db, addCandidateSelectionAuditDays(args.date, -180), args.date),
     listEarlyOddsSnapshots(db),
     selectionOdds,
     loadRaceWeatherMap(db),
@@ -181,30 +185,8 @@ function printReport(report: {
   }
 }
 
-function parseArgs(argv: string[]) {
-  let date = todayJst();
-  let json = false;
-  let limit = 20;
-  let strict = false;
-  for (let i = 0; i < argv.length; i += 1) {
-    const value = argv[i];
-    if (value === "--json") json = true;
-    else if (value === "--strict") strict = true;
-    else if (value === "--date") date = argv[++i] ?? date;
-    else if (value.startsWith("--date=")) date = value.slice("--date=".length);
-    else if (value === "--limit") limit = Number(argv[++i] ?? limit);
-  }
-  return { date, json, strict, limit: Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 20 };
-}
-
 function todayJst() {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Tokyo", year: "numeric", month: "2-digit", day: "2-digit",
   }).format(new Date());
-}
-
-function addDays(date: string, delta: number) {
-  const value = new Date(`${date}T00:00:00+09:00`);
-  value.setUTCDate(value.getUTCDate() + delta);
-  return value.toLocaleDateString("en-CA", { timeZone: "Asia/Tokyo" });
 }
