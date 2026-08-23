@@ -35,6 +35,9 @@ export function validateProductionEligibility(
   if (rule.status !== "approved") {
     reasons.push(`rule status is "${rule.status}", must be "approved" before production`);
   }
+  if (evaluation.ruleId !== rule.ruleId) {
+    reasons.push(`evaluation ruleId "${evaluation.ruleId}" does not match rule "${rule.ruleId}"`);
+  }
   if (!evaluation.isForwardTested) {
     reasons.push("evaluation has not passed forward test");
   }
