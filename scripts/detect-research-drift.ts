@@ -16,16 +16,22 @@ import { existsSync, readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import type { DecisionHistoryRow } from "../src/domain/backtest";
 import type { DecisionStatus } from "../src/domain/types";
-import { applyCondition, buildRuleEvaluationResult, parseCondition, type RowCondition } from "../src/domain/researchEvaluation";
+import { applyCondition, buildRuleEvaluationResult } from "../src/domain/researchEvaluation";
 import { buildDriftDetectionResult } from "../src/domain/researchDrift";
 import type { ResearchRule } from "../src/domain/researchRule";
+import { parseDriftReportOptions } from "../src/research-replay/driftReportOptions";
 import { buildDriftDetectionViewModel } from "../src/view-models/driftViewModel.adapters";
 import { buildDriftPresentation } from "../src/presentation/driftPresentationBuilder";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const RULE_STORE_PATH = process.env.BOAT_PON_RULE_STORE_PATH ?? "data/research-rules.json";
 const evaluatedAt = new Date().toISOString();
-const args = parseArgs(process.argv.slice(2));
+const rawArgs = process.argv.slice(2);
+if (rawArgs.includes("--help") || rawArgs.includes("-h")) {
+  printHelp();
+  process.exit(0);
+}
+const args = parseDriftReportOptions(rawArgs, evaluatedAt.slice(0, 10));
 
 const baseline = evaluateWindow(args.baselineFrom, args.baselineTo, "baseline");
 const recent = evaluateWindow(args.recentFrom, args.recentTo, "recent");
@@ -146,46 +152,6 @@ function printResult() {
     console.log("warnings:");
     for (const warning of result.warnings) console.log(`  - ${warning}`);
   }
-}
-
-function parseArgs(argv: string[]) {
-  const parsed: {
-    baselineFrom: string;
-    baselineTo: string;
-    recentFrom: string;
-    recentTo: string;
-    ruleId: string;
-    json: boolean;
-    presentationJson: boolean;
-    condition?: RowCondition;
-  } = {
-    baselineFrom: "1970-01-01",
-    baselineTo: "1970-01-01",
-    recentFrom: "1970-01-01",
-    recentTo: evaluatedAtDate(),
-    ruleId: "detect-drift-adhoc",
-    json: false,
-    presentationJson: false,
-  };
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-    if (arg === "--") continue; // `pnpm detect:drift -- --json` forwards this separator as-is on some pnpm versions
-    if (arg === "--json") parsed.json = true;
-    else if (arg === "--presentation-json") parsed.presentationJson = true;
-    else if (arg === "--baseline-from") parsed.baselineFrom = argv[++i] ?? parsed.baselineFrom;
-    else if (arg === "--baseline-to") parsed.baselineTo = argv[++i] ?? parsed.baselineTo;
-    else if (arg === "--recent-from") parsed.recentFrom = argv[++i] ?? parsed.recentFrom;
-    else if (arg === "--recent-to") parsed.recentTo = argv[++i] ?? parsed.recentTo;
-    else if (arg === "--rule-id") parsed.ruleId = argv[++i] ?? parsed.ruleId;
-    else if (arg === "--condition") parsed.condition = parseCondition(argv[++i] ?? "");
-    else if (arg === "--help" || arg === "-h") { printHelp(); process.exit(0); }
-    else throw new Error(`unknown option: ${arg}`);
-  }
-  return parsed;
-}
-
-function evaluatedAtDate(): string {
-  return evaluatedAt.slice(0, 10);
 }
 
 function printHelp() {
