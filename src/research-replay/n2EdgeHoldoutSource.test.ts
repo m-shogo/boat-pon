@@ -21,7 +21,8 @@ function withDb(fn:(p:{primary:string;sidecar:string},d:{primary:DatabaseSync;si
  const root=mkdtempSync(join(tmpdir(),"n2-holdout-source-")); const pp=join(root,"p.sqlite"),sp=join(root,"s.sqlite");
  const p=new DatabaseSync(pp),s=new DatabaseSync(sp);
  p.exec(`CREATE TABLE official_programs(race_id TEXT PRIMARY KEY,date TEXT,venue TEXT,race_no INTEGER,close_at TEXT,source_file TEXT,raw_json TEXT,imported_at TEXT);`);
- s.exec(`CREATE TABLE parse_runs(parse_run_id TEXT PRIMARY KEY,raw_document_id TEXT NOT NULL,status TEXT NOT NULL);
+ s.exec(`CREATE TABLE raw_documents(raw_document_id TEXT PRIMARY KEY,integrity_status TEXT NOT NULL,security_scan_status TEXT NOT NULL,parser_replay_eligible INTEGER NOT NULL);
+ CREATE TABLE parse_runs(parse_run_id TEXT PRIMARY KEY,raw_document_id TEXT NOT NULL,status TEXT NOT NULL);
  CREATE TABLE domain_observations(observation_id TEXT PRIMARY KEY,canonical_race_key TEXT NOT NULL,observation_type TEXT NOT NULL,payload_type TEXT NOT NULL,raw_document_id TEXT NOT NULL,parse_run_id TEXT NOT NULL,supersedes_id TEXT,correction_kind TEXT,correction_reason TEXT);
  CREATE TABLE settlement_candidates_v2(candidate_id TEXT PRIMARY KEY,canonical_race_key TEXT,bet_type TEXT,settlement_status TEXT,result_kind TEXT,revision_kind TEXT,resolution_status TEXT,observation_id TEXT,parse_run_id TEXT,raw_document_id TEXT,semantic_hash TEXT,supersedes_candidate_id TEXT,correction_reason TEXT);
  CREATE TABLE race_payout_lines_v2(payout_line_id TEXT PRIMARY KEY,candidate_id TEXT,line_no INTEGER,bet_type TEXT,selection_canonical TEXT,payout_yen INTEGER,line_kind TEXT);
@@ -30,6 +31,7 @@ function withDb(fn:(p:{primary:string;sidecar:string},d:{primary:DatabaseSync;si
 }
 function winner(db:DatabaseSync,id:string,key:string,sel="1-2-3",options:{rawDocumentId?:string;parseRunId?:string;semanticHash?:string}={}){
  const rawDocumentId=options.rawDocumentId??`raw-${id}`; const parseRunId=options.parseRunId??`parse-${id}`; const semanticHash=options.semanticHash??`semantic-${id}`;
+ db.prepare("INSERT OR IGNORE INTO raw_documents VALUES (?,'verified','passed',1)").run(rawDocumentId);
  db.prepare("INSERT OR IGNORE INTO parse_runs VALUES (?,?,'success')").run(parseRunId,rawDocumentId);
  db.prepare(`INSERT INTO domain_observations VALUES (?,?,'settlement_result','settlement_result',?,?,NULL,NULL,NULL)`).run(`obs-${id}`,key,rawDocumentId,parseRunId);
  db.prepare(`INSERT INTO settlement_candidates_v2 VALUES (?,?, 'trifecta','settled','normal','initial','resolved',?,?,?,?,NULL,NULL)`).run(id,key,`obs-${id}`,parseRunId,rawDocumentId,semanticHash);
@@ -77,6 +79,20 @@ test("settlement lineage drift blocks holdout ingestion before primary reads",()
  assert.equal(r.status,"BLOCKED"); assert.ok(r.blockers.includes(`${key}:SETTLEMENT_LINEAGE_INVALID`));
  assert.equal(r.reads.primaryDatabaseReadCount,0); assert.equal(r.candidateRaceCount,0);
 }));
+
+test("tainted raw settlement blocks holdout ingestion before primary reads",()=>{
+ for(const [integrity,security,replay] of [["quarantined","passed",1],["verified","quarantined",1],["verified","passed",0]] as const){
+  withDb((paths,dbs)=>{
+   const key="2022-01-01:11:R1"; winner(dbs.sidecar,"v",key);
+   dbs.sidecar.prepare("UPDATE raw_documents SET integrity_status=?,security_scan_status=?,parser_replay_eligible=? WHERE raw_document_id='raw-v'")
+    .run(integrity,security,replay);
+   dbs.primary.close();dbs.sidecar.close();
+   const r=readN2EdgeHoldoutSource({primaryDbPath:paths.primary,sidecarDbPath:paths.sidecar});
+   assert.equal(r.status,"BLOCKED"); assert.ok(r.blockers.includes(`${key}:SETTLEMENT_LINEAGE_INVALID`));
+   assert.equal(r.reads.primaryDatabaseReadCount,0); assert.equal(r.candidateRaceCount,0);
+  });
+ }
+});
 
 test("stale source-duplicate evidence blocks holdout ingestion before primary reads",()=>withDb((paths,dbs)=>{
  const key="2022-01-01:11:R1"; winner(dbs.sidecar,"v",key);
