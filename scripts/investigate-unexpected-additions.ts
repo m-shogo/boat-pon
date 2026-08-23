@@ -114,6 +114,7 @@ async function main(): Promise<void> {
         const action = decideReparseAction(existing ? { candidateId: existing.candidateId, status: existing.status, resultKind: existing.resultKind, rawDocumentId: meta.rawDocumentId, sourceSchemaVersion: meta.family } : null, cand);
         if (action !== "unexpected_addition" && action !== "ambiguous_non_defect") continue;
         if (action === "unexpected_addition") unexpectedCount += 1; else ambiguousCount += 1;
+        // ambiguous は件数だけ集計（0 想定）。unexpected は全件詳細を取る。
         if (action === "ambiguous_non_defect") continue;
         const parts = cand.raceKey.split(":");
         const allCands = (candForRaceBetStmt.all(cand.raceKey, cand.betType) as Array<{ c: string; s: string; r: string; rev: string; pr: string; o: string }>).map((row) => ({
@@ -148,6 +149,7 @@ async function main(): Promise<void> {
   } finally { db.close(); }
 }
 
+// versioned classification（contract の classifyUnexpectedAddition を再利用）。
 type Cls = { classification: string; classificationReason: string; autoApplyEligible: boolean };
 function classify(cand: { betType: string; status: string; resultKind: string }, allCands: Finding["allCandidatesForRaceBet"]): Cls {
   const decision = classifyUnexpectedAddition({
