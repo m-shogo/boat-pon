@@ -45,7 +45,13 @@ try {
   mkdirSync(tempDomainDir, { recursive: true });
   mkdirSync(tempResearchReplayDir, { recursive: true });
   mkdirSync(tempScriptsDir, { recursive: true });
-  for (const name of ["researchRule.ts", "researchRuleLifecycle.ts", "researchRuleStore.ts"]) {
+  for (const name of [
+    "backtest.ts",
+    "researchEvaluation.ts",
+    "researchRule.ts",
+    "researchRuleLifecycle.ts",
+    "researchRuleStore.ts",
+  ]) {
     copyFileSync(join(repoRoot, "src", "domain", name), join(tempDomainDir, name));
   }
   copyFileSync(
