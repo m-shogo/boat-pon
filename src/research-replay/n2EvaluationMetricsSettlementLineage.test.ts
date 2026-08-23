@@ -13,6 +13,12 @@ function withDb(fn: (path: string, db: DatabaseSync) => void): void {
   const db = new DatabaseSync(path);
   try {
     db.exec(`
+      CREATE TABLE raw_documents (
+        raw_document_id TEXT PRIMARY KEY,
+        integrity_status TEXT NOT NULL,
+        security_scan_status TEXT NOT NULL,
+        parser_replay_eligible INTEGER NOT NULL
+      );
       CREATE TABLE parse_runs (
         parse_run_id TEXT PRIMARY KEY,
         raw_document_id TEXT NOT NULL,
@@ -81,6 +87,8 @@ function insertObservation(db: DatabaseSync, input: {
   parseRunId: string;
   rawDocumentId: string;
 }): void {
+  db.prepare("INSERT OR IGNORE INTO raw_documents VALUES (?,'verified','passed',1)")
+    .run(input.rawDocumentId);
   db.prepare("INSERT OR IGNORE INTO parse_runs VALUES (?,?,'success')")
     .run(input.parseRunId, input.rawDocumentId);
   db.prepare(`INSERT INTO domain_observations
@@ -143,6 +151,7 @@ test("reader rejects candidate parse/raw lineage that differs from its observati
       parseRunId: "parse-a",
       rawDocumentId: "raw-a",
     });
+    db.prepare("INSERT INTO raw_documents VALUES ('raw-b','verified','passed',1)").run();
     db.prepare("INSERT INTO parse_runs VALUES ('parse-b','raw-b','success')").run();
     insertCandidate(db, {
       candidateId: "candidate-a",
