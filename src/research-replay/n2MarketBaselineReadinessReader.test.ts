@@ -102,6 +102,12 @@ function createSidecar(root: string): string {
   mkdirSync(dirname(path), { recursive: true });
   const db = new DatabaseSync(path);
   db.exec(`
+    CREATE TABLE raw_documents (
+      raw_document_id TEXT PRIMARY KEY,
+      integrity_status TEXT NOT NULL,
+      security_scan_status TEXT NOT NULL,
+      parser_replay_eligible INTEGER NOT NULL
+    );
     CREATE TABLE parse_runs (
       parse_run_id TEXT PRIMARY KEY,
       raw_document_id TEXT NOT NULL,
@@ -167,6 +173,7 @@ function insertCandidate(path: string, input: {
     const observationId = `obs-${input.candidateId}`;
     const parseRunId = `parse-${input.candidateId}`;
     const rawDocumentId = `raw-${input.candidateId}`;
+    db.prepare("INSERT INTO raw_documents VALUES (?, 'verified', 'passed', 1)").run(rawDocumentId);
     db.prepare("INSERT INTO parse_runs VALUES (?, ?, 'success')").run(parseRunId, rawDocumentId);
     db.prepare(`
       INSERT INTO domain_observations (
@@ -320,6 +327,31 @@ test("settlement lineage drift blocks readiness for the affected race", () => {
     try {
       db.prepare("UPDATE domain_observations SET canonical_race_key=? WHERE observation_id=?")
         .run("2026-08-07:10:R2", "obs-c1");
+    } finally {
+      db.close();
+    }
+
+    const result = readN2MarketBaselineReadiness({ dataRoot: root });
+    assert.deepEqual(result.settledRaceKeys, []);
+    assert.deepEqual(result.integrityBlockedRaceKeys, ["2026-08-07:10:R1"]);
+    assert.equal(result.settlementEligibleRaceCount, 0);
+    assert.equal(result.rawOddsValuesRead, false);
+  });
+});
+
+test("ineligible raw settlement lineage blocks readiness for the affected race", () => {
+  withRoot((root) => {
+    writeAcceptedT5(root, { date: "2026-08-07", venue: "10", raceNo: 1 });
+    const sidecar = createSidecar(root);
+    insertCandidate(sidecar, {
+      raceKey: "2026-08-07:10:R1",
+      candidateId: "c1",
+      status: "settled",
+      payoutSelection: "1-2-3",
+    });
+    const db = new DatabaseSync(sidecar);
+    try {
+      db.prepare("UPDATE raw_documents SET integrity_status='quarantined' WHERE raw_document_id='raw-c1'").run();
     } finally {
       db.close();
     }
