@@ -54,6 +54,9 @@ type WinnerRow = {
   observationRawDocumentId: string | null;
   parseRunRawDocumentId: string | null;
   parseRunStatus: string | null;
+  rawIntegrityStatus: string | null;
+  rawSecurityScanStatus: string | null;
+  rawParserReplayEligible: number | null;
   winningSelection: string | null;
 };
 
@@ -115,7 +118,7 @@ function openImmutableSidecar(path: string): DatabaseSync {
   return db;
 }
 
-function readCleanTrifectaWinners(input: {
+export function readCleanTrifectaWinners(input: {
   sidecarDbPath: string;
   fromDate: string;
   toDate: string;
@@ -125,6 +128,7 @@ function readCleanTrifectaWinners(input: {
     for (const table of [
       "domain_observations",
       "parse_runs",
+      "raw_documents",
       "settlement_candidates_v2",
       "race_payout_lines_v2",
       "settlement_source_duplicate_resolutions_v2",
@@ -150,12 +154,17 @@ function readCleanTrifectaWinners(input: {
         o.raw_document_id AS observationRawDocumentId,
         pr.raw_document_id AS parseRunRawDocumentId,
         pr.status AS parseRunStatus,
+        rd.integrity_status AS rawIntegrityStatus,
+        rd.security_scan_status AS rawSecurityScanStatus,
+        rd.parser_replay_eligible AS rawParserReplayEligible,
         p.selection_canonical AS winningSelection
       FROM settlement_candidates_v2 c
       LEFT JOIN domain_observations o
         ON o.observation_id=c.observation_id
       LEFT JOIN parse_runs pr
         ON pr.parse_run_id=c.parse_run_id
+      LEFT JOIN raw_documents rd
+        ON rd.raw_document_id=c.raw_document_id
       JOIN race_payout_lines_v2 p
         ON p.candidate_id=c.candidate_id
        AND p.bet_type='trifecta'
@@ -191,7 +200,10 @@ function readCleanTrifectaWinners(input: {
         || row.observationRawDocumentId !== row.candidateRawDocumentId
         || row.parseRunRawDocumentId !== row.candidateRawDocumentId
         || row.parseRunStatus == null
-        || !REUSABLE_PARSE_STATUSES.has(row.parseRunStatus)) {
+        || !REUSABLE_PARSE_STATUSES.has(row.parseRunStatus)
+        || row.rawIntegrityStatus !== "verified"
+        || row.rawSecurityScanStatus !== "passed"
+        || row.rawParserReplayEligible !== 1) {
         blockers.push(`${row.raceKey}:SETTLEMENT_LINEAGE_MISMATCH:${row.observationId}`);
         continue;
       }
