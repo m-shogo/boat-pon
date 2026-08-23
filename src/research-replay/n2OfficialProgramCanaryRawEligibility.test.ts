@@ -93,18 +93,15 @@ function runCase(eligibility: RawEligibility): void {
         content_encoding, compressed_byte_length, decompression_ratio, integrity_status,
         storage_type, storage_path, first_recorded_at, retention_class,
         parser_replay_eligible, security_scan_status, created_at
-      ) VALUES (?, ?, ?, 'application/json', 'utf-8', NULL, NULL, ?, ?,
-                'content_addressed_filesystem', ?, ?, 'research_evidence', ?, ?, ?)
+      ) VALUES (?, ?, ?, 'application/json', 'utf-8', NULL, NULL, ?, 'verified',
+                'content_addressed_filesystem', ?, ?, 'research_evidence', 1, 'passed', ?)
     `).run(
       rawDocumentId,
       write.rawSha256,
       write.byteLength,
       write.decompressionRatio,
-      eligibility.integrityStatus,
       write.relativePath,
       NOW,
-      eligibility.parserReplayEligible,
-      eligibility.securityScanStatus,
       NOW,
     );
     const current = repository.parseTypedRawDocument({
@@ -121,6 +118,22 @@ function runCase(eligibility: RawEligibility): void {
       }),
     });
     assert.ok(current.observationId);
+
+    // Build the observation through the producer-valid replay path first, then
+    // simulate persisted raw-evidence drift. The central replay boundary must
+    // reject ineligible raw itself, while the canary still needs defense in
+    // depth against previously persisted observations whose raw later becomes
+    // ineligible.
+    db.prepare(`
+      UPDATE raw_documents
+      SET integrity_status = ?, security_scan_status = ?, parser_replay_eligible = ?
+      WHERE raw_document_id = ?
+    `).run(
+      eligibility.integrityStatus,
+      eligibility.securityScanStatus,
+      eligibility.parserReplayEligible,
+      rawDocumentId,
+    );
 
     recordApprovalGrant(db, {
       approvalId: "approval-raw-eligibility",
