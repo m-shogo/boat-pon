@@ -12,7 +12,7 @@ function approvedRule(evaluationConditions?: ResearchRuleEvaluationCondition[]):
     ruleId: "rule-1",
     status: "approved",
     createdAt: "2026-01-01T00:00:00+09:00",
-    updatedAt: "2026-06-02T00:00:00+09:00",
+    updatedAt: "2026-01-01T00:00:00+09:00",
     reasonSummary: "test rule",
     warnings: [],
     ...(evaluationConditions === undefined ? {} : { evaluationConditions }),
@@ -41,7 +41,7 @@ function forwardResult(): ForwardTestResult {
 
 test("条件未指定のapproved ruleは従来どおりproduction eligibilityを評価できる", () => {
   const result = validateProductionEligibility(approvedRule(), forwardResult());
-  assert.equal(result.eligible, true);
+  assert.equal(result.eligible, true, JSON.stringify(result.reasons));
 });
 
 test("valid rule-specific conditionはproduction eligibilityを直ちに拒否しない", () => {
@@ -49,7 +49,7 @@ test("valid rule-specific conditionはproduction eligibilityを直ちに拒否�
     approvedRule([{ key: "venue", operator: "equals", value: "桐生" }]),
     forwardResult(),
   );
-  assert.equal(result.eligible, true);
+  assert.equal(result.eligible, true, JSON.stringify(result.reasons));
 });
 
 test("unsupported conditionしかないruleはshared fallbackでProductionへ昇格できない", () => {
