@@ -5,18 +5,8 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { readCurrentlyValidSourceDuplicateObservationIds } from "../src/research-replay/n1SourceDuplicateResolutionValidation";
-import {
-  buildN2SelectionProfile,
-  type N2PayoutLineInput,
-  type N2RefundLineInput,
-  type N2SelectionProfile,
-  type N2SelectionProfileCandidate,
-} from "../src/research-replay/n2SelectionProfile";
-import type {
-  ResolutionStatus,
-  SettlementBetType,
-  SettlementStatus,
-} from "../src/research-replay/settlement";
+import { readN2SelectionProfileSource } from "../src/research-replay/n2SelectionProfileSource";
+import type { N2SelectionProfile } from "../src/research-replay/n2SelectionProfile";
 
 const root = resolve(process.cwd());
 const SIDECAR = join(root, "data", "research-replay.sqlite");
@@ -24,98 +14,12 @@ const REPORT_DIR = join(root, "reports", "n2");
 const PROTO_MONTH = process.argv.find((arg) => arg.startsWith("--month="))
   ?.slice("--month=".length) ?? "2026-05";
 
-type CandidateRow = {
-  id: string;
-  raceKey: string;
-  betType: SettlementBetType;
-  settlementStatus: SettlementStatus;
-  resolutionStatus: ResolutionStatus;
-  duplicate: number;
-};
-type PayoutRow = {
-  candidateId: string;
-  selection: string | null;
-  payoutYen: number;
-  lineKind: "payout" | "special_payout";
-};
-type RefundRow = {
-  candidateId: string;
-  selection: string | null;
-  scope: "selection" | "bet_type" | "race";
-  refundYenPer100: number | null;
-};
-
 function readProfileFromFreshConnection(): N2SelectionProfile {
   const db = new DatabaseSync(`file:${SIDECAR}?immutable=1`, { readOnly: true } as never);
   try {
     // Each independent rebuild must fail closed if append-only duplicate-resolution evidence is stale or forged.
     readCurrentlyValidSourceDuplicateObservationIds(db);
-    const lower = `${PROTO_MONTH}-01`;
-    const upper = `${PROTO_MONTH}-99`;
-    const candidates = db.prepare(`
-      SELECT c.candidate_id id,
-             c.canonical_race_key raceKey,
-             c.bet_type betType,
-             c.settlement_status settlementStatus,
-             c.resolution_status resolutionStatus,
-             CASE WHEN d.duplicate_observation_id IS NULL THEN 0 ELSE 1 END duplicate
-      FROM settlement_candidates_v2 c
-      LEFT JOIN settlement_source_duplicate_resolutions_v2 d
-        ON d.duplicate_observation_id = c.observation_id
-      WHERE c.canonical_race_key >= ? AND c.canonical_race_key < ?
-      ORDER BY c.canonical_race_key, c.bet_type, c.candidate_id
-    `).all(lower, upper) as CandidateRow[];
-
-    const payouts = db.prepare(`
-      SELECT p.candidate_id candidateId,
-             p.selection_canonical selection,
-             p.payout_yen payoutYen,
-             p.line_kind lineKind
-      FROM race_payout_lines_v2 p
-      JOIN settlement_candidates_v2 c ON c.candidate_id = p.candidate_id
-      WHERE c.canonical_race_key >= ? AND c.canonical_race_key < ?
-      ORDER BY c.canonical_race_key, c.bet_type, c.candidate_id, p.line_no
-    `).all(lower, upper) as PayoutRow[];
-
-    const refunds = db.prepare(`
-      SELECT f.candidate_id candidateId,
-             f.selection_canonical selection,
-             f.refund_scope scope,
-             f.refund_yen_per_100 refundYenPer100
-      FROM race_refund_lines_v2 f
-      JOIN settlement_candidates_v2 c ON c.candidate_id = f.candidate_id
-      WHERE c.canonical_race_key >= ? AND c.canonical_race_key < ?
-      ORDER BY c.canonical_race_key, c.bet_type, c.candidate_id, f.line_no
-    `).all(lower, upper) as RefundRow[];
-
-    const payoutsByCandidate = new Map<string, N2PayoutLineInput[]>();
-    for (const row of payouts) {
-      const lines = payoutsByCandidate.get(row.candidateId) ?? [];
-      lines.push({ selection: row.selection, payoutYen: row.payoutYen, lineKind: row.lineKind });
-      payoutsByCandidate.set(row.candidateId, lines);
-    }
-    const refundsByCandidate = new Map<string, N2RefundLineInput[]>();
-    for (const row of refunds) {
-      const lines = refundsByCandidate.get(row.candidateId) ?? [];
-      lines.push({
-        selection: row.selection,
-        scope: row.scope,
-        refundYenPer100: row.refundYenPer100,
-      });
-      refundsByCandidate.set(row.candidateId, lines);
-    }
-
-    const input: N2SelectionProfileCandidate[] = candidates.map((row) => ({
-      candidateId: row.id,
-      canonicalRaceKey: row.raceKey,
-      betType: row.betType,
-      settlementStatus: row.settlementStatus,
-      resolutionStatus: row.resolutionStatus,
-      isSourceDuplicate: row.duplicate === 1,
-      payouts: payoutsByCandidate.get(row.id) ?? [],
-      refunds: refundsByCandidate.get(row.id) ?? [],
-    }));
-    return buildN2SelectionProfile(input);
+    return readN2SelectionProfileSource(db, PROTO_MONTH);
   } finally {
     db.close();
   }
@@ -135,7 +39,7 @@ function main(): void {
     phase: "N2_SELECTION_LEVEL_LABEL_PROFILE",
     generatedAt: new Date().toISOString(),
     prototypeMonth: PROTO_MONTH,
-    scope: "immutable/read-only N1 sidecar; all 7 bet types × every canonical selection; no features/model/DB writes",
+    scope: "immutable/read-only N1 sidecar; active canonical settlements only; all 7 bet types × every canonical selection; no features/model/DB writes",
     labelTruthStatus: "STALE_ARCHIVE_SEMANTICS",
     staleReason: "current sidecar includes n1-settlement-parser-v1 observations; ARCHIVE_REFUND_SEMANTICS_AUDIT raw reparse/reconciliation pending",
     independentRebuild: {
