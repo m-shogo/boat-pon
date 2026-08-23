@@ -39,6 +39,8 @@ type CandidateRow = {
 
 type PayoutRow = {
   candidateId: string;
+  candidateBetType: SettlementBetType;
+  lineBetType: SettlementBetType;
   selection: string | null;
   payoutYen: number;
   lineKind: "payout" | "special_payout";
@@ -46,6 +48,8 @@ type PayoutRow = {
 
 type RefundRow = {
   candidateId: string;
+  candidateBetType: SettlementBetType;
+  lineBetType: SettlementBetType;
   selection: string | null;
   scope: "selection" | "bet_type" | "race";
   refundYenPer100: number | null;
@@ -141,6 +145,8 @@ export function readN2SelectionProfileSource(
 
   const payouts = db.prepare(`
     SELECT p.candidate_id candidateId,
+           c.bet_type candidateBetType,
+           p.bet_type lineBetType,
            p.selection_canonical selection,
            p.payout_yen payoutYen,
            p.line_kind lineKind
@@ -156,6 +162,8 @@ export function readN2SelectionProfileSource(
 
   const refunds = db.prepare(`
     SELECT f.candidate_id candidateId,
+           c.bet_type candidateBetType,
+           f.bet_type lineBetType,
            f.selection_canonical selection,
            f.refund_scope scope,
            f.refund_yen_per_100 refundYenPer100
@@ -171,12 +179,18 @@ export function readN2SelectionProfileSource(
 
   const payoutsByCandidate = new Map<string, N2PayoutLineInput[]>();
   for (const row of payouts) {
+    if (row.lineBetType !== row.candidateBetType) {
+      throw new Error(`N2_SELECTION_PROFILE_PAYOUT_BET_LINEAGE_INVALID:${row.candidateId}`);
+    }
     const lines = payoutsByCandidate.get(row.candidateId) ?? [];
     lines.push({ selection: row.selection, payoutYen: row.payoutYen, lineKind: row.lineKind });
     payoutsByCandidate.set(row.candidateId, lines);
   }
   const refundsByCandidate = new Map<string, N2RefundLineInput[]>();
   for (const row of refunds) {
+    if (row.lineBetType !== row.candidateBetType) {
+      throw new Error(`N2_SELECTION_PROFILE_REFUND_BET_LINEAGE_INVALID:${row.candidateId}`);
+    }
     const lines = refundsByCandidate.get(row.candidateId) ?? [];
     lines.push({
       selection: row.selection,

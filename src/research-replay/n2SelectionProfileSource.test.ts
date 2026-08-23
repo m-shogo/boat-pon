@@ -41,6 +41,7 @@ function makeDb(): DatabaseSync {
       payout_line_id TEXT PRIMARY KEY,
       candidate_id TEXT NOT NULL,
       line_no INTEGER NOT NULL,
+      bet_type TEXT NOT NULL,
       selection_canonical TEXT,
       payout_yen INTEGER NOT NULL,
       line_kind TEXT NOT NULL
@@ -49,6 +50,7 @@ function makeDb(): DatabaseSync {
       refund_line_id TEXT PRIMARY KEY,
       candidate_id TEXT NOT NULL,
       line_no INTEGER NOT NULL,
+      bet_type TEXT NOT NULL,
       selection_canonical TEXT,
       refund_scope TEXT NOT NULL,
       refund_yen_per_100 INTEGER
@@ -102,10 +104,11 @@ function insertCandidate(
     rawId,
     input.supersedes ?? null,
   );
-  db.prepare("INSERT INTO race_payout_lines_v2 VALUES (?,?,?,?,?,?)").run(
+  db.prepare("INSERT INTO race_payout_lines_v2 VALUES (?,?,?,?,?,?,?)").run(
     `payout-${input.id}`,
     input.id,
     1,
+    "trifecta",
     "1-2-3",
     input.payout ?? 1000,
     "payout",
@@ -145,5 +148,41 @@ test("selection profile rejects tainted raw lineage for an eligible label", () =
     } finally {
       db.close();
     }
+  }
+});
+
+test("selection profile rejects payout lines from another bet type", () => {
+  const db = makeDb();
+  try {
+    insertCandidate(db, { id: "active" });
+    db.prepare("UPDATE race_payout_lines_v2 SET bet_type='win' WHERE candidate_id='active'").run();
+    assert.throws(
+      () => readN2SelectionProfileSource(db, "2026-05"),
+      /N2_SELECTION_PROFILE_PAYOUT_BET_LINEAGE_INVALID:active/u,
+    );
+  } finally {
+    db.close();
+  }
+});
+
+test("selection profile rejects refund lines from another bet type", () => {
+  const db = makeDb();
+  try {
+    insertCandidate(db, { id: "active" });
+    db.prepare("INSERT INTO race_refund_lines_v2 VALUES (?,?,?,?,?,?,?)").run(
+      "refund-active",
+      "active",
+      1,
+      "win",
+      "1",
+      "selection",
+      100,
+    );
+    assert.throws(
+      () => readN2SelectionProfileSource(db, "2026-05"),
+      /N2_SELECTION_PROFILE_REFUND_BET_LINEAGE_INVALID:active/u,
+    );
+  } finally {
+    db.close();
   }
 });
