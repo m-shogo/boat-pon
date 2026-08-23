@@ -144,6 +144,13 @@ export function applyRuleTransition(
     if (!eligibility.eligible) {
       return { ok: false, error: { ruleId, reason: `not production eligible: ${eligibility.reasons.join("; ")}` } };
     }
+    const evaluationRunAt = parseCanonicalLifecycleTimestamp(evaluation.metadata.evaluationRunAt);
+    if (evaluationRunAt === null || transitionAt < evaluationRunAt) {
+      return {
+        ok: false,
+        error: { ruleId, reason: "production transition timestamp precedes the forward evaluation run" },
+      };
+    }
   }
 
   const updated: ResearchRule = { ...rule, status: to, updatedAt: now };
