@@ -59,21 +59,29 @@ test("exacta dry-run rejects non-finite or negative minutes metadata", () => {
 });
 
 test("exacta dry-run rejects missing option values", () => {
-  assert.throws(() => parseExactaTimeseriesDryRunOptions(["--date"], venues), /DATE_REQUIRED/u);
+  for (const argv of [
+    ["--date"],
+    ["--date", "2026-07-01", "--venue"],
+    ["--date", "2026-07-01", "--venue", "住之江", "--race"],
+    ["--date", "2026-07-01", "--venue", "住之江", "--race", "6", "--checkpoint"],
+    ["--date", "2026-07-01", "--venue", "住之江", "--race", "6", "--minutes-before-close"],
+  ]) {
+    assert.throws(
+      () => parseExactaTimeseriesDryRunOptions(argv, venues),
+      /EXACTA_TIMESERIES_DRY_RUN_ARGUMENT_MISSING/u,
+    );
+  }
+});
+
+test("exacta dry-run rejects unknown or duplicate arguments", () => {
   assert.throws(
-    () => parseExactaTimeseriesDryRunOptions(["--date", "2026-07-01", "--venue"], venues),
-    /VENUE_REQUIRED/u,
+    () => parseExactaTimeseriesDryRunOptions(["--date", "2026-07-01", "--venue", "住之江", "--race", "6", "--typo", "x"], venues),
+    /EXACTA_TIMESERIES_DRY_RUN_ARGUMENT_INVALID/u,
   );
   assert.throws(
-    () => parseExactaTimeseriesDryRunOptions(["--date", "2026-07-01", "--venue", "住之江", "--race"], venues),
-    /RACE_REQUIRED/u,
-  );
-  assert.throws(
-    () => parseExactaTimeseriesDryRunOptions(["--date", "2026-07-01", "--venue", "住之江", "--race", "6", "--checkpoint"], venues),
-    /CHECKPOINT_MISSING/u,
-  );
-  assert.throws(
-    () => parseExactaTimeseriesDryRunOptions(["--date", "2026-07-01", "--venue", "住之江", "--race", "6", "--minutes-before-close"], venues),
-    /MINUTES_MISSING/u,
+    () => parseExactaTimeseriesDryRunOptions([
+      "--date", "2026-07-01", "--venue", "住之江", "--race", "6", "--race", "7",
+    ], venues),
+    /EXACTA_TIMESERIES_DRY_RUN_ARGUMENT_DUPLICATE/u,
   );
 });
