@@ -6,8 +6,6 @@ export type BeforeInfoBackfillOptions = {
   toDate: string;
   intervalMs: number;
   limit: number | null;
-  venueFilter: string | null;
-  raceNoFilter: number | null;
 };
 
 export type BeforeInfoBackfillTarget = {
@@ -38,21 +36,11 @@ function parsePositiveSafeInteger(raw: string, label: string): number {
   return value;
 }
 
-function requireCanonicalVenueName(value: string, label: string): string {
-  const venueCode = officialVenueCode(value);
-  if (!venueCode || value !== value.trim() || value === venueCode) {
-    throw new Error(`BEFOREINFO_BACKFILL_${label}_INVALID:${value}`);
-  }
-  return value;
-}
-
 export function parseBeforeInfoBackfillOptions(input: {
   fromDate: string;
   toDate: string;
   intervalMsRaw?: string | null;
   limitRaw?: string | null;
-  venueFilterRaw?: string | null;
-  raceNoFilterRaw?: string | null;
 }): BeforeInfoBackfillOptions {
   const fromDate = requireCanonicalRaceDate(input.fromDate, "FROM_DATE");
   const toDate = requireCanonicalRaceDate(input.toDate, "TO_DATE");
@@ -64,17 +52,8 @@ export function parseBeforeInfoBackfillOptions(input: {
   const limit = input.limitRaw == null
     ? null
     : parseNonNegativeSafeInteger(input.limitRaw, "LIMIT");
-  const venueFilter = input.venueFilterRaw == null
-    ? null
-    : requireCanonicalVenueName(input.venueFilterRaw, "VENUE");
-  const raceNoFilter = input.raceNoFilterRaw == null
-    ? null
-    : parsePositiveSafeInteger(input.raceNoFilterRaw, "RACE_NO");
-  if (raceNoFilter != null && raceNoFilter > 12) {
-    throw new Error(`BEFOREINFO_BACKFILL_RACE_NO_INVALID:${input.raceNoFilterRaw}`);
-  }
 
-  return { fromDate, toDate, intervalMs, limit, venueFilter, raceNoFilter };
+  return { fromDate, toDate, intervalMs, limit };
 }
 
 export function requireBeforeInfoBackfillTarget(target: BeforeInfoBackfillTarget): void {
