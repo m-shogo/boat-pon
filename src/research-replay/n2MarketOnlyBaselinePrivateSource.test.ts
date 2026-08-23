@@ -318,20 +318,20 @@ test("private source reader stops at readiness for accepted marker timestamps no
   }
 });
 
-test("private source reader rejects impossible envelope timing metadata during ordering preflight", () => {
-  for (const [field, timestamp, blocker] of [
-    ["decisionCutoff", "2026-08-07T24:00:00.000Z", "DECISION_CUTOFF_INVALID"],
-    ["fetchedAt", "2026-02-30T03:25:30.000Z", "CAPTURED_AT_INVALID"],
-    ["availableAt", "2026-08-07T23:60:00Z", "AVAILABLE_AT_INVALID"],
+test("private source reader rejects impossible envelope timing metadata at readiness before raw loading", () => {
+  for (const [field, timestamp] of [
+    ["decisionCutoff", "2026-08-07T24:00:00.000Z"],
+    ["fetchedAt", "2026-02-30T03:25:30.000Z"],
+    ["availableAt", "2026-08-07T23:60:00Z"],
   ] as const) {
     withRoot((root) => {
       prepare(root, 20, null, (index) => index === 0 ? { [field]: timestamp } : {});
       const result = readN2MarketOnlyBaselinePrivateSources({ dataRoot: root });
       assert.equal(result.status, "BLOCKED", `${field}:${timestamp}`);
-      assert.ok(
-        result.blockers.includes(`T5_CUTOFF_METADATA:2026-08-07:05:R1:${blocker}`),
-        `${field}:${timestamp}`,
-      );
+      assert.equal(result.readinessStatus, "BLOCKED", `${field}:${timestamp}`);
+      assert.ok(result.blockers.includes("READINESS_BLOCKED"), `${field}:${timestamp}`);
+      assert.ok(result.blockers.includes("PRIVATE_CAPTURE_INTEGRITY_BLOCKED:1"), `${field}:${timestamp}`);
+      assert.equal(result.selectedCohortRaceCount, 0);
       assert.equal(result.sources.length, 0);
       assert.equal(result.privateRawFileReadCount, 0);
       assert.equal(result.rawValuesReadPrivately, false);
@@ -341,7 +341,7 @@ test("private source reader rejects impossible envelope timing metadata during o
   }
 });
 
-test("private source reader rejects cross-date envelope metadata before raw SHA validation", () => {
+test("private source reader rejects cross-date envelope metadata at readiness before raw SHA validation", () => {
   withRoot((root) => {
     prepare(root, 20, 0, (index) => index === 0 ? {
       decisionCutoff: "2026-08-08T03:30:00.000Z",
@@ -350,9 +350,13 @@ test("private source reader rejects cross-date envelope metadata before raw SHA 
     } : {});
     const result = readN2MarketOnlyBaselinePrivateSources({ dataRoot: root });
     assert.equal(result.status, "BLOCKED");
-    assert.ok(result.blockers.includes("T5_CUTOFF_METADATA:2026-08-07:05:R1:DECISION_CUTOFF_INVALID"));
+    assert.equal(result.readinessStatus, "BLOCKED");
+    assert.ok(result.blockers.includes("READINESS_BLOCKED"));
+    assert.ok(result.blockers.includes("PRIVATE_CAPTURE_INTEGRITY_BLOCKED:1"));
     assert.equal(result.blockers.some((value) => value.includes("T5_RAW_SHA256_MISMATCH")), false);
+    assert.equal(result.selectedCohortRaceCount, 0);
     assert.equal(result.sources.length, 0);
+    assert.equal(result.privateRawFileReadCount, 0);
     assert.equal(result.rawValuesPublished, false);
     assert.equal(result.databaseWriteCount, 0);
   });
