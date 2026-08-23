@@ -31,6 +31,12 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import {
+  parseExactaBackfillOptionalDate,
+  parseExactaBackfillPositiveSafeInteger,
+  requireExactaBackfillDateRange,
+  requireExactaBackfillTargets,
+} from "../src/research-replay/exactaClosingOddsBackfillSafety";
 
 const DB_PATH   = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD    = "reports/exacta-closing-odds-backfill.md";
@@ -62,12 +68,13 @@ function getArg(flag: string, defaultVal: string): string {
 function hasFlag(flag: string): boolean { return argv.includes(flag); }
 
 const WRITE_MODE  = hasFlag("--write") && !hasFlag("--dry-run");
-const LIMIT       = parseInt(getArg("--limit", "30"), 10);
-const SLEEP_MS    = parseInt(getArg("--sleep-ms", "1000"), 10);
-const FROM_DATE   = getArg("--from", "");
-const TO_DATE     = getArg("--to", "");
+const LIMIT       = parseExactaBackfillPositiveSafeInteger(getArg("--limit", "30"), "LIMIT");
+const SLEEP_MS    = parseExactaBackfillPositiveSafeInteger(getArg("--sleep-ms", "1000"), "SLEEP_MS", 1000);
+const FROM_DATE   = parseExactaBackfillOptionalDate(getArg("--from", ""), "FROM_DATE");
+const TO_DATE     = parseExactaBackfillOptionalDate(getArg("--to", ""), "TO_DATE");
 const H011_ONLY   = hasFlag("--h011-only");  // 3通りのみ (overround正規化不可)
-const BATCH_SIZE  = parseInt(getArg("--batch-size", "30"), 10);
+const BATCH_SIZE  = parseExactaBackfillPositiveSafeInteger(getArg("--batch-size", "30"), "BATCH_SIZE");
+requireExactaBackfillDateRange(FROM_DATE, TO_DATE);
 
 // H011専用の3通り。デフォルトは全30通りを保存する (overround正規化に必要)
 const H011_COMBOS = ["1-2", "1-3", "1-4"];
@@ -140,6 +147,13 @@ const allBuyRaces = db.prepare(`
 for (const r of allBuyRaces) {
   r.venue_code = VENUE_CODES[r.venue] ?? r.venue_code;
 }
+requireExactaBackfillTargets(allBuyRaces.map((race) => ({
+  raceId: race.race_id,
+  date: race.date,
+  venue: race.venue,
+  venueCode: race.venue_code,
+  raceNo: race.race_no,
+})));
 
 // 事前スキップ: COUNT=30 のみ (6艇完全保存確定)。
 // COUNT=20 の欠場レースや COUNT=3 の部分保存は fetch+parse 後に savedCount vs parsedCount で判定。
