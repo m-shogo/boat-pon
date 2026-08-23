@@ -47,6 +47,13 @@ test("Forward未通過ルールはProduction不可", () => {
   assert.ok(result.reasons.some((reason) => reason.includes("forward test")));
 });
 
+test("文字列のForward flagはtruthyでもProduction不可", () => {
+  const evaluation = { ...forwardResult(), isForwardTested: "false" } as unknown as ForwardTestResult;
+  const result = validateProductionEligibility(rule("approved"), evaluation);
+  assert.equal(result.eligible, false);
+  assert.ok(result.reasons.some((reason) => reason.includes("forward test")));
+});
+
 test("sampleSize不足ならProduction不可", () => {
   const evaluation = forwardResult({
     metadata: { ...forwardResult().metadata, sampleSize: MIN_PRODUCTION_SAMPLE_SIZE - 1 },
@@ -54,6 +61,26 @@ test("sampleSize不足ならProduction不可", () => {
   const result = validateProductionEligibility(rule("approved"), evaluation);
   assert.equal(result.eligible, false);
   assert.ok(result.reasons.some((reason) => reason.includes("sample size")));
+});
+
+test("文字列やunsafeなsampleSizeは数値比較へcoerceせずProduction不可", () => {
+  for (const sampleSize of [String(MIN_PRODUCTION_SAMPLE_SIZE), Number.MAX_SAFE_INTEGER + 1]) {
+    const evaluation = forwardResult({
+      metadata: { ...forwardResult().metadata, sampleSize: sampleSize as unknown as number },
+    });
+    const result = validateProductionEligibility(rule("approved"), evaluation);
+    assert.equal(result.eligible, false);
+    assert.ok(result.reasons.some((reason) => reason.includes("sample size")));
+  }
+});
+
+test("文字列・NaN・範囲外confidenceはProduction不可", () => {
+  for (const confidence of [String(MIN_PRODUCTION_CONFIDENCE), Number.NaN, 1.01]) {
+    const evaluation = forwardResult({ confidence: confidence as unknown as number });
+    const result = validateProductionEligibility(rule("approved"), evaluation);
+    assert.equal(result.eligible, false);
+    assert.ok(result.reasons.some((reason) => reason.includes("confidence")));
+  }
 });
 
 test("別ルールのforward evidenceはProduction昇格へ流用不可", () => {
