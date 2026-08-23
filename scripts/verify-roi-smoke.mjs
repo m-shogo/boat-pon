@@ -24,11 +24,6 @@ import { spawnSync } from "node:child_process";
 
 const KNOWN_EXTENSIONS = new Set(["ts", "tsx", "js", "jsx", "mjs", "cjs", "json"]);
 
-/**
- * A naive `/\.[a-zA-Z]+$/` check misfires on specifiers with a dot in the
- * filename but no real extension (e.g. "./researchViewModel.adapters") — only
- * treat it as "already has an extension" if the suffix is a known one.
- */
 function hasKnownExtension(spec) {
   const match = spec.match(/\.([a-zA-Z0-9]+)$/);
   return match != null && KNOWN_EXTENSIONS.has(match[1].toLowerCase());
@@ -45,8 +40,10 @@ try {
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const domainDir = join(repoRoot, "src", "domain");
+const researchReplayDir = join(repoRoot, "src", "research-replay");
 const tempDir = mkdtempSync(join(tmpdir(), "boatpon-verify-roi-smoke-"));
 const tempDomainDir = join(tempDir, "src", "domain");
+const tempResearchReplayDir = join(tempDir, "src", "research-replay");
 const tempViewModelsDir = join(tempDir, "src", "view-models");
 const tempPresentationDir = join(tempDir, "src", "presentation");
 const tempPresentationTokensDir = join(tempPresentationDir, "tokens");
@@ -57,14 +54,14 @@ let failures = 0;
 
 try {
   mkdirSync(tempDomainDir, { recursive: true });
+  mkdirSync(tempResearchReplayDir, { recursive: true });
   mkdirSync(tempViewModelsDir, { recursive: true });
   mkdirSync(tempPresentationTokensDir, { recursive: true });
   mkdirSync(tempScriptsDir, { recursive: true });
   for (const name of ["types.ts", "backtest.ts", "researchRule.ts", "researchRuleLifecycle.ts", "researchEvaluation.ts"]) {
     copyFileSync(join(domainDir, name), join(tempDomainDir, name));
   }
-  // explore-roi.ts --view-json/--presentation-json pull in the Phase 2.5/2.6 layers,
-  // whose imports must resolve even for --json (ES module imports are static).
+  copyFileSync(join(researchReplayDir, "roiExplorerOptions.ts"), join(tempResearchReplayDir, "roiExplorerOptions.ts"));
   for (const name of ["researchViewModel.ts", "researchViewModel.adapters.ts"]) {
     copyFileSync(join(repoRoot, "src", "view-models", name), join(tempViewModelsDir, name));
   }
@@ -73,6 +70,7 @@ try {
   }
   copyFileSync(join(repoRoot, "scripts", "explore-roi.ts"), join(tempScriptsDir, "explore-roi.ts"));
   addExplicitTsExtensions(tempDomainDir);
+  addExplicitTsExtensions(tempResearchReplayDir);
   addExplicitTsExtensions(tempViewModelsDir);
   addExplicitTsExtensions(tempPresentationDir);
   addExplicitTsExtensions(tempScriptsDir);
@@ -118,6 +116,10 @@ try {
     check("missing DB reports 0 sampleSize", noDbResult.metadata.sampleSize === 0);
     check("missing DB warns about it", noDbResult.warnings.some((w) => w.includes("db not found")));
   }
+
+  console.log("--- scenario 5: invalid window is rejected before evaluation ---");
+  const reversed = runExplore(["--from", "2026-06-02", "--to", "2026-06-01", "--json"]);
+  check("reversed window exits non-zero", reversed.status !== 0);
 } finally {
   rmSync(tempDir, { recursive: true, force: true });
 }
@@ -181,17 +183,11 @@ function buildFixtureDb(path) {
     );
   };
 
-  // row1: 桐生, hit, payout_yen present (1620/100yen) -> realized 1620
   row(1, { payoutYen: 1620 });
-  // row2: 桐生, hit, payout_yen missing -> fallback to currentOdds(30)*100=3000
   row(2, { currentOdds: 30, payoutYen: null });
-  // row3: 蒲郡, miss -> realized 0 regardless of basis
   row(3, { venue: "蒲郡", result: "3-1-2", payoutYen: 500 });
-  // row4: 蒲郡, SKIP -> excluded from BUY aggregation
   row(4, { venue: "蒲郡", decision: "SKIP" });
-  // row5: 蒲郡, unsettled BUY -> excluded from settled aggregation
   row(5, { venue: "蒲郡", result: null });
-  // row6: out of window (2027) -> excluded by date filter
   row(6, { date: "2027-01-01", venue: "蒲郡", currentOdds: 99, payoutYen: null });
 
   db.close();
