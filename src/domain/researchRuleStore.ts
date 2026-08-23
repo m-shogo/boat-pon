@@ -23,6 +23,31 @@ export type RuleStoreResult =
   | { ok: true; rules: ResearchRule[] }
   | { ok: false; error: RuleStoreError };
 
+function parseCanonicalLifecycleTimestamp(value: unknown): number | null {
+  if (typeof value !== "string") return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/u.exec(value);
+  if (match === null) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = Number(match[4]);
+  const minute = Number(match[5]);
+  const second = Number(match[6]);
+  const calendar = new Date(Date.UTC(year, month - 1, day));
+  if (calendar.getUTCFullYear() !== year
+    || calendar.getUTCMonth() !== month - 1
+    || calendar.getUTCDate() !== day
+    || hour > 23
+    || minute > 59
+    || second > 59) {
+    return null;
+  }
+
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 /** 新規ルールは常に"candidate"段階で作成する。他のstatusで直接作ることはできない。 */
 export function createResearchRule(
   ruleId: string,
@@ -85,6 +110,27 @@ export function applyRuleTransition(
 
   const index = matchingIndexes[0];
   const rule = rules[index];
+  const createdAt = parseCanonicalLifecycleTimestamp(rule.createdAt);
+  const updatedAt = parseCanonicalLifecycleTimestamp(rule.updatedAt);
+  const transitionAt = parseCanonicalLifecycleTimestamp(now);
+  if (createdAt === null || updatedAt === null || transitionAt === null) {
+    return {
+      ok: false,
+      error: { ruleId, reason: "rule lifecycle timestamps must be canonical explicit-zone ISO-8601 values" },
+    };
+  }
+  if (updatedAt < createdAt) {
+    return {
+      ok: false,
+      error: { ruleId, reason: "rule updatedAt precedes createdAt; lifecycle chronology is invalid" },
+    };
+  }
+  if (transitionAt < updatedAt) {
+    return {
+      ok: false,
+      error: { ruleId, reason: "transition timestamp precedes the current rule updatedAt" },
+    };
+  }
 
   if (!canTransitionRuleStatus(rule.status, to)) {
     return { ok: false, error: { ruleId, reason: `cannot transition from "${rule.status}" to "${to}"` } };

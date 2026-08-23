@@ -70,6 +70,39 @@ test("applyRuleTransitionはpersist済み重複ruleIdを曖昧なまま更新し
   assert.equal(second.status, "candidate");
 });
 
+test("applyRuleTransitionは非canonical lifecycle timestampを拒否する", () => {
+  const rule = {
+    ...createResearchRule("rule-1", "x", "2026-01-01T00:00:00Z"),
+    updatedAt: "2026-01-01 00:00:00",
+  };
+  const result = applyRuleTransition([rule], "rule-1", "backtest", undefined, "2026-02-01T00:00:00Z");
+  assert.equal(result.ok, false);
+  if (result.ok) return;
+  assert.match(result.error.reason, /canonical explicit-zone ISO-8601/);
+});
+
+test("applyRuleTransitionはupdatedAtがcreatedAtより前のpersist済み履歴を拒否する", () => {
+  const rule = {
+    ...createResearchRule("rule-1", "x", "2026-01-02T00:00:00Z"),
+    updatedAt: "2026-01-01T00:00:00Z",
+  };
+  const result = applyRuleTransition([rule], "rule-1", "backtest", undefined, "2026-02-01T00:00:00Z");
+  assert.equal(result.ok, false);
+  if (result.ok) return;
+  assert.match(result.error.reason, /updatedAt precedes createdAt/);
+});
+
+test("applyRuleTransitionは現在のupdatedAtより過去へ履歴を巻き戻さない", () => {
+  const rule = {
+    ...createResearchRule("rule-1", "x", "2026-01-01T00:00:00Z"),
+    updatedAt: "2026-02-01T00:00:00Z",
+  };
+  const result = applyRuleTransition([rule], "rule-1", "backtest", undefined, "2026-01-31T23:59:59Z");
+  assert.equal(result.ok, false);
+  if (result.ok) return;
+  assert.match(result.error.reason, /precedes the current rule updatedAt/);
+});
+
 test("CandidateからProductionへ直接遷移できない", () => {
   const rule = createResearchRule("rule-1", "x");
   const result = applyRuleTransition([rule], "rule-1", "production", forwardResult());
@@ -112,8 +145,11 @@ test("Approvedでも別ruleのForward evidenceではProductionへ遷移できな
   assert.match(result.error.reason, /evaluation ruleId.*does not match rule/);
 });
 
-test("Approved かつ Forward通過・sampleSize\/confidence十分ならProductionへ遷移できる", () => {
-  const rule = { ...createResearchRule("rule-1", "x"), status: "approved" as const };
+test("Approved かつ Forward通過・sampleSize/confidence十分ならProductionへ遷移できる", () => {
+  const rule = {
+    ...createResearchRule("rule-1", "x", "2026-06-30T00:00:00Z"),
+    status: "approved" as const,
+  };
   const result = applyRuleTransition([rule], "rule-1", "production", forwardResult(), "2026-07-01T00:00:00Z");
   assert.equal(result.ok, true);
   if (!result.ok) return;
