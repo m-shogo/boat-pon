@@ -136,9 +136,9 @@ test("canary refuses a current observation backed by quarantined raw evidence", 
   });
 });
 
-test("canary refuses a current observation backed by security-failed raw evidence", () => {
+test("canary refuses a current observation backed by security-quarantined raw evidence", () => {
   runCase((db, rawDocumentId) => {
-    db.prepare("UPDATE raw_documents SET security_scan_status='failed' WHERE raw_document_id=?").run(rawDocumentId);
+    db.prepare("UPDATE raw_documents SET security_scan_status='quarantined' WHERE raw_document_id=?").run(rawDocumentId);
   });
 });
 
