@@ -44,6 +44,21 @@ export type ProductionEligibility = {
   reasons: string[];
 };
 
+function requireFiniteMetric(
+  reasons: string[],
+  name: "hitRate" | "roi" | "maxDrawdown",
+  value: unknown,
+  options: { min: number; max?: number },
+): void {
+  if (typeof value !== "number"
+    || !Number.isFinite(value)
+    || value < options.min
+    || (options.max !== undefined && value > options.max)) {
+    const range = options.max === undefined ? `>= ${options.min}` : `${options.min}..${options.max}`;
+    reasons.push(`${name} ${String(value)} is invalid; expected a finite value in ${range}`);
+  }
+}
+
 export function validateProductionEligibility(
   rule: ResearchRule,
   evaluation: ForwardTestResult,
@@ -82,6 +97,10 @@ export function validateProductionEligibility(
     || confidence > 1) {
     reasons.push(`confidence ${String(confidence)} is invalid or below minimum ${MIN_PRODUCTION_CONFIDENCE}`);
   }
+
+  requireFiniteMetric(reasons, "hitRate", evaluation.hitRate, { min: 0, max: 1 });
+  requireFiniteMetric(reasons, "roi", evaluation.roi, { min: 0 });
+  requireFiniteMetric(reasons, "maxDrawdown", evaluation.maxDrawdown, { min: 0 });
 
   return { eligible: reasons.length === 0, reasons };
 }
