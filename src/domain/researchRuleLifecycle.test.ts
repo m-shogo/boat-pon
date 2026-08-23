@@ -83,6 +83,27 @@ test("文字列・NaN・範囲外confidenceはProduction不可", () => {
   }
 });
 
+test("producer生成不能な評価metricはProduction不可", () => {
+  const invalidMetrics: Array<Partial<ForwardTestResult>> = [
+    { hitRate: Number.NaN },
+    { hitRate: -0.01 },
+    { hitRate: 1.01 },
+    { roi: Number.POSITIVE_INFINITY },
+    { roi: -0.01 },
+    { maxDrawdown: Number.NaN },
+    { maxDrawdown: -0.01 },
+  ];
+  for (const overrides of invalidMetrics) {
+    const evaluation = forwardResult(overrides);
+    const result = validateProductionEligibility(rule("approved"), evaluation);
+    assert.equal(result.eligible, false, JSON.stringify(overrides));
+    assert.ok(
+      result.reasons.some((reason) => /hitRate|roi|maxDrawdown/u.test(reason)),
+      JSON.stringify(result.reasons),
+    );
+  }
+});
+
 test("別ルールのforward evidenceはProduction昇格へ流用不可", () => {
   const evaluation = forwardResult({ ruleId: "rule-2" });
   const result = validateProductionEligibility(rule("approved"), evaluation);
