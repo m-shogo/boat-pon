@@ -6,7 +6,7 @@ import { CANARY_COHORT } from "./taskExecutorsCore";
 
 const REUSABLE_PARSE_STATUSES = new Set(["success", "warning"]);
 
-export type N2DatasetCanarySettlementPreflight = {
+export type N2DatasetSettlementPreflight = {
   ok: boolean;
   blocks: string[];
   checkedCandidateCount: number;
@@ -29,13 +29,20 @@ type CandidateLineageRow = {
   rawParserReplayEligible: number | null;
 };
 
+type Bounds = {
+  fromRaceKey: string;
+  toRaceKeyExclusive: string;
+};
+
 function tableExists(db: DatabaseSync, name: string): boolean {
   return Boolean(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name));
 }
 
-export function preflightN2DatasetCanarySettlementLineage(
+function preflightActiveSettlementLineage(
   sidecarPath: string,
-): N2DatasetCanarySettlementPreflight {
+  prefix: "DATASET_CANARY" | "DATASET_ACTIVE",
+  bounds?: Bounds,
+): N2DatasetSettlementPreflight {
   if (!existsSync(sidecarPath)) return { ok: true, blocks: [], checkedCandidateCount: 0 };
   const walPath = `${sidecarPath}-wal`;
   if (existsSync(walPath) && statSync(walPath).size > 0) {
@@ -55,12 +62,15 @@ export function preflightN2DatasetCanarySettlementLineage(
       if (!tableExists(db, table)) {
         return {
           ok: false,
-          blocks: [`DATASET_CANARY_LINEAGE_TABLE_MISSING:${table}`],
+          blocks: [`${prefix}_LINEAGE_TABLE_MISSING:${table}`],
           checkedCandidateCount: 0,
         };
       }
     }
 
+    const rangeClause = bounds
+      ? "AND c.canonical_race_key >= ? AND c.canonical_race_key < ?"
+      : "";
     const rows = db.prepare(`
       SELECT c.candidate_id AS candidateId,
              c.canonical_race_key AS raceKey,
@@ -80,7 +90,8 @@ export function preflightN2DatasetCanarySettlementLineage(
       LEFT JOIN domain_observations o ON o.observation_id=c.observation_id
       LEFT JOIN parse_runs pr ON pr.parse_run_id=c.parse_run_id
       LEFT JOIN raw_documents rd ON rd.raw_document_id=c.raw_document_id
-      WHERE c.canonical_race_key >= ? AND c.canonical_race_key < ?
+      WHERE 1=1
+        ${rangeClause}
         AND NOT EXISTS (
           SELECT 1 FROM settlement_source_duplicate_resolutions_v2 d
           WHERE d.duplicate_observation_id=c.observation_id
@@ -90,7 +101,7 @@ export function preflightN2DatasetCanarySettlementLineage(
           WHERE newer.supersedes_candidate_id=c.candidate_id
         )
       ORDER BY c.canonical_race_key,c.bet_type,c.candidate_id
-    `).all(CANARY_COHORT.fromRaceKey, CANARY_COHORT.toRaceKeyExclusive) as unknown as CandidateLineageRow[];
+    `).all(...(bounds ? [bounds.fromRaceKey, bounds.toRaceKeyExclusive] : [])) as unknown as CandidateLineageRow[];
 
     const blocks: string[] = [];
     for (const row of rows) {
@@ -105,11 +116,26 @@ export function preflightN2DatasetCanarySettlementLineage(
         || row.rawIntegrityStatus !== "verified"
         || row.rawSecurityScanStatus !== "passed"
         || row.rawParserReplayEligible !== 1) {
-        blocks.push(`DATASET_CANARY_SETTLEMENT_LINEAGE_INVALID:${row.candidateId}`);
+        blocks.push(`${prefix}_SETTLEMENT_LINEAGE_INVALID:${row.candidateId}`);
       }
     }
     return { ok: blocks.length === 0, blocks, checkedCandidateCount: rows.length };
   } finally {
     db.close();
   }
+}
+
+export function preflightN2DatasetCanarySettlementLineage(
+  sidecarPath: string,
+): N2DatasetSettlementPreflight {
+  return preflightActiveSettlementLineage(sidecarPath, "DATASET_CANARY", {
+    fromRaceKey: CANARY_COHORT.fromRaceKey,
+    toRaceKeyExclusive: CANARY_COHORT.toRaceKeyExclusive,
+  });
+}
+
+export function preflightN2AllActiveSettlementLineage(
+  sidecarPath: string,
+): N2DatasetSettlementPreflight {
+  return preflightActiveSettlementLineage(sidecarPath, "DATASET_ACTIVE");
 }
