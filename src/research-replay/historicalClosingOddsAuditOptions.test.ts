@@ -58,7 +58,7 @@ test("historical closing odds audit rejects impossible dates before source acces
       /HISTORICAL_CLOSING_ODDS_AUDIT_(FROM_DATE|TO_DATE|DATE_RANGE)_INVALID/u,
     );
   }
-  assert.doesNotThrow(() => parseHistoricalClosingOddsAuditOptions({ ...valid(), fromDate: "2028-02-29" }, VENUES));
+  assert.doesNotThrow(() => parseHistoricalClosingOddsAuditOptions({ ...valid(), fromDate: "2028-02-29", toDate: "2028-03-01" }, VENUES));
 });
 
 test("historical closing odds audit validates venue, race, and category filters", () => {
