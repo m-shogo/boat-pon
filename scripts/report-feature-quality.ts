@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { LIVE_MONITOR_MODEL_VERSION } from "../src/domain/liveMonitor";
+import { parseRollingReportOptions } from "../src/research-replay/rollingReportOptions";
 
 type Row = {
   decision: string;
@@ -22,7 +23,12 @@ type Summary = { rows: number; buy: number; settledBuy: number; hits: number; hi
 type Group = Summary & { key: string };
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
-const args = parseArgs(process.argv.slice(2));
+const rawArgs = process.argv.slice(2);
+if (rawArgs.includes("--help") || rawArgs.includes("-h")) {
+  console.log("Usage: npm run report:features -- --days 30 [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--json]");
+  process.exit(0);
+}
+const args = parseRollingReportOptions(rawArgs, 30);
 const to = args.to ?? todayTokyo();
 const from = args.from ?? addDays(to, -(args.days - 1));
 
@@ -196,22 +202,3 @@ function addDays(date: string, days: number) { const [y, m, d] = date.split("-")
 function pctNumber(num: number, denom: number) { return denom === 0 ? null : Math.round((num / denom) * 1000) / 10; }
 function formatPct(value: number | null) { return value == null ? "n/a" : `${value.toFixed(1)}%`; }
 function formatRatio(value: number | null) { return value == null ? "-" : value.toFixed(3); }
-function parseArgs(argv: string[]) {
-  const parsed = { from: null as string | null, to: null as string | null, days: 30, json: false };
-  for (let i = 0; i < argv.length; i += 1) {
-    const key = argv[i];
-    const value = argv[i + 1];
-    if (key === "--from") { parsed.from = date(value); i += 1; }
-    else if (key === "--to") { parsed.to = date(value); i += 1; }
-    else if (key === "--days") { parsed.days = Number(value); i += 1; }
-    else if (key === "--json") parsed.json = true;
-    else if (key === "--help") { console.log("Usage: npm run report:features -- --days 30 [--json]"); process.exit(0); }
-    else if (key === "--") { /* pnpm separator */ }
-    else throw new Error(`unknown option: ${key}`);
-  }
-  return parsed;
-}
-function date(value: string | undefined) {
-  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error(`invalid date: ${value ?? ""}`);
-  return value;
-}
