@@ -58,6 +58,18 @@ test("applyRuleTransitionは未登録ruleIdを拒否する", () => {
   assert.match(result.error.reason, /not found/);
 });
 
+test("applyRuleTransitionはpersist済み重複ruleIdを曖昧なまま更新しない", () => {
+  const first = createResearchRule("rule-1", "first", "2026-01-01T00:00:00Z");
+  const second = createResearchRule("rule-1", "second", "2026-01-02T00:00:00Z");
+  const rules = [first, second];
+  const result = applyRuleTransition(rules, "rule-1", "backtest", undefined, "2026-02-01T00:00:00Z");
+  assert.equal(result.ok, false);
+  if (result.ok) return;
+  assert.match(result.error.reason, /transition identity is ambiguous/);
+  assert.equal(first.status, "candidate");
+  assert.equal(second.status, "candidate");
+});
+
 test("CandidateからProductionへ直接遷移できない", () => {
   const rule = createResearchRule("rule-1", "x");
   const result = applyRuleTransition([rule], "rule-1", "production", forwardResult());
