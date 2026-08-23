@@ -35,17 +35,24 @@ export function validateProductionEligibility(
   if (rule.status !== "approved") {
     reasons.push(`rule status is "${rule.status}", must be "approved" before production`);
   }
-  if (evaluation.ruleId !== rule.ruleId) {
-    reasons.push(`evaluation ruleId "${evaluation.ruleId}" does not match rule "${rule.ruleId}"`);
+  if (typeof evaluation.ruleId !== "string" || evaluation.ruleId !== rule.ruleId) {
+    reasons.push(`evaluation ruleId "${String(evaluation.ruleId)}" does not match rule "${rule.ruleId}"`);
   }
-  if (!evaluation.isForwardTested) {
+  if (evaluation.isForwardTested !== true) {
     reasons.push("evaluation has not passed forward test");
   }
-  if (evaluation.metadata.sampleSize < MIN_PRODUCTION_SAMPLE_SIZE) {
-    reasons.push(`sample size ${evaluation.metadata.sampleSize} is below minimum ${MIN_PRODUCTION_SAMPLE_SIZE}`);
+
+  const sampleSize = evaluation.metadata?.sampleSize;
+  if (!Number.isSafeInteger(sampleSize) || sampleSize < MIN_PRODUCTION_SAMPLE_SIZE) {
+    reasons.push(`sample size ${String(sampleSize)} is invalid or below minimum ${MIN_PRODUCTION_SAMPLE_SIZE}`);
   }
-  if (evaluation.confidence < MIN_PRODUCTION_CONFIDENCE) {
-    reasons.push(`confidence ${evaluation.confidence} is below minimum ${MIN_PRODUCTION_CONFIDENCE}`);
+
+  const confidence = evaluation.confidence;
+  if (typeof confidence !== "number"
+    || !Number.isFinite(confidence)
+    || confidence < MIN_PRODUCTION_CONFIDENCE
+    || confidence > 1) {
+    reasons.push(`confidence ${String(confidence)} is invalid or below minimum ${MIN_PRODUCTION_CONFIDENCE}`);
   }
 
   return { eligible: reasons.length === 0, reasons };
