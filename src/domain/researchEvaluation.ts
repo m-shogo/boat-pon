@@ -45,30 +45,24 @@ export function validateEvaluationMetadata(metadata: Partial<EvaluationMetadata>
   if (!evaluationRunAt) warnings.push("evaluationRunAt is missing");
   if (sampleSize == null) warnings.push("sampleSize is missing");
 
-  const startValid = dataWindowStart == null || dataWindowStart === ""
-    ? false
-    : isCanonicalCalendarDate(dataWindowStart);
-  const endValid = dataWindowEnd == null || dataWindowEnd === ""
-    ? false
-    : isCanonicalCalendarDate(dataWindowEnd);
-  const runAtValid = evaluationRunAt == null || evaluationRunAt === ""
-    ? false
-    : isExplicitIsoTimestamp(evaluationRunAt);
-
-  if (dataWindowStart && !startValid) {
+  if (dataWindowStart && !isCanonicalCalendarDate(dataWindowStart)) {
     warnings.push(`dataWindowStart ${String(dataWindowStart)} must be a canonical Gregorian YYYY-MM-DD date`);
   }
-  if (dataWindowEnd && !endValid) {
+  if (dataWindowEnd && !isCanonicalCalendarDate(dataWindowEnd)) {
     warnings.push(`dataWindowEnd ${String(dataWindowEnd)} must be a canonical Gregorian YYYY-MM-DD date`);
   }
-  if (evaluationRunAt && !runAtValid) {
+  if (evaluationRunAt && !isExplicitIsoTimestamp(evaluationRunAt)) {
     warnings.push(`evaluationRunAt ${String(evaluationRunAt)} must be an explicit-zone ISO-8601 timestamp`);
   }
 
-  if (startValid && endValid && dataWindowStart > dataWindowEnd) {
+  if (isCanonicalCalendarDate(dataWindowStart)
+    && isCanonicalCalendarDate(dataWindowEnd)
+    && dataWindowStart > dataWindowEnd) {
     warnings.push(`dataWindowStart ${dataWindowStart} is after dataWindowEnd ${dataWindowEnd}`);
   }
-  if (endValid && runAtValid && dataWindowEnd > evaluationRunAt.slice(0, 10)) {
+  if (isCanonicalCalendarDate(dataWindowEnd)
+    && isExplicitIsoTimestamp(evaluationRunAt)
+    && dataWindowEnd > evaluationRunAt.slice(0, 10)) {
     warnings.push(`dataWindowEnd ${dataWindowEnd} is after evaluationRunAt ${evaluationRunAt} (future leak risk)`);
   }
   if (sampleSize != null && (!Number.isSafeInteger(sampleSize) || sampleSize < 0)) {
