@@ -117,7 +117,7 @@ test("all-active preflight catches tainted settlements outside the canary month"
       assert.equal(checked.ok, false);
       assert.deepEqual(checked.blocks, ["DATASET_ACTIVE_SETTLEMENT_LINEAGE_INVALID:candidate-a"]);
 
-      for (const taskType of ["dataset-inventory", "dataset-expand"]) {
+      for (const taskType of ["dataset-inventory", "dataset-expand", "readonly-analysis"]) {
         const resolved = resolveExecutor(taskType);
         assert.equal(resolved.code, "OK");
         assert.ok(resolved.executor);
