@@ -162,7 +162,7 @@ test("shadow refuses deduplicated raw evidence after it becomes ineligible", () 
       payload: message.payload,
       loadPrimaryRaw: () => rawJson,
     }));
-    assert.deepEqual(result, { succeeded: 0, retrying: 0, permanentlyFailed: 1 });
+    assert.deepEqual(result, { succeeded: 0, retrying: 1, permanentlyFailed: 0 });
     assert.equal((ctx.db.prepare("SELECT COUNT(*) n FROM capture_attempts").get() as { n: number }).n, 0);
     const delivery = ctx.db.prepare("SELECT error_code FROM shadow_delivery_attempts").get() as { error_code: string };
     assert.equal(delivery.error_code, "OFFICIAL_PROGRAM_SHADOW_RAW_INELIGIBLE");
