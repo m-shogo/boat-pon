@@ -14,17 +14,23 @@ import { DatabaseSync } from "node:sqlite";
 import type { DecisionHistoryRow } from "../src/domain/backtest";
 import type { DecisionStatus } from "../src/domain/types";
 import type { ResearchRule } from "../src/domain/researchRule";
-import { applyCondition, buildRuleEvaluationResult, parseCondition, type RowCondition } from "../src/domain/researchEvaluation";
+import { applyCondition, buildRuleEvaluationResult } from "../src/domain/researchEvaluation";
+import { parseRoiExplorerOptions } from "../src/research-replay/roiExplorerOptions";
 import { buildResearchSummaryViewModel, buildRuleCardViewModel } from "../src/view-models/researchViewModel.adapters";
 import type { ResearchSummaryViewModel } from "../src/view-models/researchViewModel";
 import { buildResearchPresentation } from "../src/presentation/presentationBuilder";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
-const args = parseArgs(process.argv.slice(2));
-
 const evaluationRunAt = new Date().toISOString();
-const dataWindowStart = args.from ?? "1970-01-01";
-const dataWindowEnd = args.to ?? evaluationRunAt.slice(0, 10);
+const rawArgs = process.argv.slice(2);
+if (rawArgs.includes("--help") || rawArgs.includes("-h")) {
+  printHelp();
+  process.exit(0);
+}
+const args = parseRoiExplorerOptions(rawArgs, evaluationRunAt.slice(0, 10));
+
+const dataWindowStart = args.from;
+const dataWindowEnd = args.to;
 
 const { rows: loadedRows, sourceWarnings } = loadRows(dataWindowStart, dataWindowEnd);
 
@@ -143,37 +149,6 @@ function printResult() {
     console.log("warnings:");
     for (const warning of result.warnings) console.log(`  - ${warning}`);
   }
-}
-
-function parseArgs(argv: string[]) {
-  const parsed: {
-    from?: string;
-    to?: string;
-    ruleId: string;
-    json: boolean;
-    viewJson: boolean;
-    presentationJson: boolean;
-    condition?: RowCondition;
-  } = {
-    ruleId: "explore-roi-adhoc",
-    json: false,
-    viewJson: false,
-    presentationJson: false,
-  };
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-    if (arg === "--") continue; // `pnpm explore:roi -- --json` forwards this separator as-is on some pnpm versions
-    if (arg === "--json") parsed.json = true;
-    else if (arg === "--view-json") parsed.viewJson = true;
-    else if (arg === "--presentation-json") parsed.presentationJson = true;
-    else if (arg === "--from") parsed.from = argv[++i];
-    else if (arg === "--to") parsed.to = argv[++i];
-    else if (arg === "--rule-id") parsed.ruleId = argv[++i] ?? parsed.ruleId;
-    else if (arg === "--condition") parsed.condition = parseCondition(argv[++i] ?? "");
-    else if (arg === "--help" || arg === "-h") { printHelp(); process.exit(0); }
-    else throw new Error(`unknown option: ${arg}`);
-  }
-  return parsed;
 }
 
 function printHelp() {
