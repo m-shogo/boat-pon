@@ -135,7 +135,9 @@ function runCase(input: {
       FROM capture_attempt_events
       WHERE event_kind IN ('body_completed','capture_failed','capture_cancelled')
     `).all() as Array<{ event_kind: string; failure_reason: string | null }>;
-    assert.deepEqual(terminal, [{ event_kind: "body_completed", failure_reason: null }]);
+    assert.equal(terminal.length, 1);
+    assert.equal(terminal[0]?.event_kind, "body_completed");
+    assert.equal(terminal[0]?.failure_reason, null);
     assert.equal((db.prepare("SELECT COUNT(*) n FROM capture_raw_links").get() as { n: number }).n, 1);
     assert.equal((db.prepare("SELECT COUNT(*) n FROM parse_runs").get() as { n: number }).n, 1);
     assert.equal((db.prepare("SELECT COUNT(*) n FROM domain_observations").get() as { n: number }).n, 1);
