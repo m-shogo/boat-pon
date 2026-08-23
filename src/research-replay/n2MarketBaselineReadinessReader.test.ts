@@ -5,6 +5,8 @@ import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 
+import { canonicalHash } from "./canonical";
+import { buildBoatRaceOfficialSourceUrl } from "./n2ExternalSourceCaptureContract";
 import { readN2MarketBaselineReadiness } from "./n2MarketBaselineReadinessReader";
 
 function withRoot(fn: (root: string) => void): void {
@@ -21,8 +23,10 @@ function writeAcceptedT5(root: string, input: {
   venue: string;
   raceNo: number;
   malformed?: boolean;
+  envelopeManifestDigest?: string;
 }): void {
   const raceDir = String(input.raceNo).padStart(2, "0");
+  const raceIdentity = `${input.date.replaceAll("-", "")}-${input.venue}-${raceDir}`;
   const directory = join(
     root,
     "data/raw/research/trifecta-market",
@@ -32,26 +36,56 @@ function writeAcceptedT5(root: string, input: {
     "T-5",
   );
   mkdirSync(directory, { recursive: true });
-  const rawRelativePath = [
+  const relativeDirectory = [
     "data", "raw", "research", "trifecta-market",
-    input.date, input.venue, raceDir, "T-5", "capture.html",
+    input.date, input.venue, raceDir, "T-5",
   ].join("/");
-  const envelopeRelativePath = [
-    "data", "raw", "research", "trifecta-market",
-    input.date, input.venue, raceDir, "T-5", "capture.envelope.json",
-  ].join("/");
+  const rawRelativePath = `${relativeDirectory}/capture.html`;
+  const envelopeRelativePath = `${relativeDirectory}/capture.envelope.json`;
   const rawPath = join(root, rawRelativePath);
   const envelopePath = join(root, envelopeRelativePath);
+  const manifestDigest = "c".repeat(64);
+  const decisionCutoff = `${input.date}T03:30:00.000Z`;
+  const targetCaptureAt = new Date(Date.parse(decisionCutoff) - 5 * 60_000).toISOString();
+  const sourceUrl = buildBoatRaceOfficialSourceUrl(
+    "boatrace_official_trifecta_odds_html",
+    { date: input.date.replaceAll("-", ""), venueCode: input.venue, raceNo: input.raceNo },
+  );
+  const checkpointKey = canonicalHash({
+    manifestDigest,
+    raceIdentity,
+    checkpointLabel: "T-5",
+    targetCaptureAt,
+    sourceUrl,
+  });
   mkdirSync(dirname(rawPath), { recursive: true });
   writeFileSync(rawPath, "private raw fixture\n", "utf8");
-  writeFileSync(envelopePath, "{}\n", "utf8");
+  writeFileSync(envelopePath, `${JSON.stringify({
+    envelopeVersion: "n2-trifecta-private-capture-envelope-v1",
+    status: "PASS",
+    blockers: [],
+    manifestDigest: input.envelopeManifestDigest ?? manifestDigest,
+    checkpointKey,
+    entry: {
+      raceIdentity,
+      checkpointLabel: "T-5",
+      decisionCutoff,
+    },
+    response: { fetchedAt: `${input.date}T03:25:30.000Z` },
+    sourceDisplayedUpdate: { availableAt: `${input.date}T03:24:00.000Z` },
+    databaseWriteAuthorized: false,
+    currentBuyConnectionAuthorized: false,
+    lineConnectionAuthorized: false,
+    publicPublishAuthorized: false,
+    productionApplyExecuted: false,
+  }, null, 2)}\n`, "utf8");
   writeFileSync(join(directory, "accepted.json"), `${JSON.stringify({
     markerVersion: input.malformed
       ? "wrong-version"
       : "n2-trifecta-private-capture-accepted-v1",
-    manifestDigest: "c".repeat(64),
-    checkpointKey: "a".repeat(64),
-    raceIdentity: `${input.date.replaceAll("-", "")}-${input.venue}-${raceDir}`,
+    manifestDigest,
+    checkpointKey,
+    raceIdentity,
     checkpointLabel: "T-5",
     rawDocumentId: `raw-${input.date}-${input.venue}-${raceDir}`,
     rawSha256: "b".repeat(64),
@@ -204,6 +238,27 @@ test("reader intersects accepted T-5 races with clean trifecta settlements", () 
     assert.equal(result.settlementIneligibleRaceCount, 1);
     assert.equal(result.databaseReadCount, 1);
     assert.equal(result.databaseWriteCount, 0);
+    assert.equal(result.rawOddsValuesRead, false);
+  });
+});
+
+test("tampered T-5 envelope lineage is retained as integrity-blocked evidence", () => {
+  withRoot((root) => {
+    writeAcceptedT5(root, {
+      date: "2026-08-07",
+      venue: "10",
+      raceNo: 1,
+      envelopeManifestDigest: "d".repeat(64),
+    });
+    createSidecar(root);
+
+    const result = readN2MarketBaselineReadiness({ dataRoot: root });
+    assert.deepEqual(result.acceptedT5RaceKeys, []);
+    assert.deepEqual(result.settledRaceKeys, []);
+    assert.deepEqual(result.integrityBlockedRaceKeys, ["2026-08-07:10:R1"]);
+    assert.equal(result.acceptedMarkerCount, 0);
+    assert.equal(result.invalidAcceptedMarkerCount, 1);
+    assert.equal(result.databaseReadCount, 0);
     assert.equal(result.rawOddsValuesRead, false);
   });
 });
