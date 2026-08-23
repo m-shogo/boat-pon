@@ -35,6 +35,7 @@ function hasKnownExtension(spec) {
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const tempDir = mkdtempSync(join(tmpdir(), "boatpon-verify-rule-dry-run-"));
 const tempDomainDir = join(tempDir, "src", "domain");
+const tempResearchReplayDir = join(tempDir, "src", "research-replay");
 const tempScriptsDir = join(tempDir, "scripts");
 const storePath = join(tempDir, "rules.json");
 
@@ -42,12 +43,18 @@ let failures = 0;
 
 try {
   mkdirSync(tempDomainDir, { recursive: true });
+  mkdirSync(tempResearchReplayDir, { recursive: true });
   mkdirSync(tempScriptsDir, { recursive: true });
   for (const name of ["researchRule.ts", "researchRuleLifecycle.ts", "researchRuleStore.ts"]) {
     copyFileSync(join(repoRoot, "src", "domain", name), join(tempDomainDir, name));
   }
+  copyFileSync(
+    join(repoRoot, "src", "research-replay", "researchRuleCliOptions.ts"),
+    join(tempResearchReplayDir, "researchRuleCliOptions.ts"),
+  );
   copyFileSync(join(repoRoot, "scripts", "manage-research-rules.ts"), join(tempScriptsDir, "manage-research-rules.ts"));
   addExplicitTsExtensions(tempDomainDir);
+  addExplicitTsExtensions(tempResearchReplayDir);
   addExplicitTsExtensions(tempScriptsDir);
 
   console.log("--- dry-run add does not write the file ---");
@@ -66,6 +73,11 @@ try {
   check("dry-run transition exits 0", dryTransition.status === 0);
   check("dry-run transition does not change the store file", hashFile(storePath) === hashBefore);
   check("dry-run transition prints the would-be new status", parseJson(dryTransition.stdout)?.wouldUpdate?.status === "backtest");
+
+  console.log("--- ambiguous CLI input fails before changing the file ---");
+  const duplicateRuleId = run(["add", "--rule-id", "r2", "--rule-id", "r3", "--reason", "x"]);
+  check("duplicate rule-id exits non-zero", duplicateRuleId.status !== 0);
+  check("duplicate rule-id does not change the store file", hashFile(storePath) === hashBefore);
 
   console.log("--- dry-run still rejects candidate -> production ---");
   const dryInvalid = run(["transition", "--rule-id", "r1", "--to", "production", "--dry-run"]);
