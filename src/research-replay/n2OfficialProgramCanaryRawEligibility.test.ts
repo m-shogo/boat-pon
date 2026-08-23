@@ -5,6 +5,8 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { recordApprovalGrant } from "./approval";
+import { CANONICALIZATION_VERSION } from "./canonical";
+import { PAYLOAD_SCHEMA_VERSION, semanticPayloadHash } from "./domain";
 import {
   applyOfficialProgramCanary,
   buildOfficialProgramCanaryManifest,
@@ -107,20 +109,76 @@ function runCase(eligibility: RawEligibility): void {
       eligibility.securityScanStatus,
       NOW,
     );
-    const current = repository.parseTypedRawDocument({
-      rawDocumentId,
-      parserName: "n2-official-program",
-      parserVersion: N2_OFFICIAL_PROGRAM_PARSER_VERSION,
-      expectedSourceSchemaVersion: N2_OFFICIAL_PROGRAM_SOURCE_SCHEMA_VERSION,
-      parse: (storedBytes) => buildOfficialProgramObservationEnvelope({
-        canonicalRaceKey: item.canonicalRaceKey,
-        rawJson: storedBytes.toString("utf8"),
-        sourcePublishedAt: null,
-        sourceObservedAt: item.sourceObservedAt,
-        firstSeenAt: item.sourceObservedAt,
-      }),
+
+    // Model previously persisted parse/observation evidence directly. raw_documents,
+    // parse_runs, and observations are append-only, so a test must not manufacture
+    // an impossible UPDATE merely to reach the canary's defense-in-depth check.
+    const envelope = buildOfficialProgramObservationEnvelope({
+      canonicalRaceKey: item.canonicalRaceKey,
+      rawJson: row.rawJson,
+      sourcePublishedAt: null,
+      sourceObservedAt: item.sourceObservedAt,
+      firstSeenAt: item.sourceObservedAt,
     });
-    assert.ok(current.observationId);
+    const payloadHash = semanticPayloadHash("official_program", envelope.payload);
+    const parseRunId = "parse-ineligible";
+    const observationId = "observation-ineligible";
+    db.prepare(`
+      INSERT INTO parse_runs (
+        parse_run_id, raw_document_id, parser_name, parser_version,
+        source_schema_version, canonicalization_version, payload_type, status,
+        warning_codes, error_code, started_at, completed_at, semantic_payload_hash,
+        supersedes_id, correction_kind, correction_reason, created_at
+      ) VALUES (?, ?, 'n2-official-program', ?, ?, ?, 'official_program', 'success',
+                '[]', NULL, ?, ?, ?, NULL, NULL, NULL, ?)
+    `).run(
+      parseRunId,
+      rawDocumentId,
+      N2_OFFICIAL_PROGRAM_PARSER_VERSION,
+      N2_OFFICIAL_PROGRAM_SOURCE_SCHEMA_VERSION,
+      CANONICALIZATION_VERSION,
+      NOW,
+      NOW,
+      payloadHash,
+      NOW,
+    );
+    db.prepare(`
+      INSERT INTO domain_observations (
+        observation_id, canonical_race_key, observation_type, payload_type,
+        payload_schema_version, parse_run_id, raw_document_id, source_published_at,
+        source_observed_at, first_seen_at, timing_quality, source_quality,
+        measurement_quality, semantic_payload_hash, supersedes_id, correction_kind,
+        correction_reason, recorded_at, effective_at, created_at
+      ) VALUES (?, ?, 'official_program', 'official_program', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                NULL, NULL, NULL, ?, ?, ?)
+    `).run(
+      observationId,
+      item.canonicalRaceKey,
+      PAYLOAD_SCHEMA_VERSION,
+      parseRunId,
+      rawDocumentId,
+      envelope.sourcePublishedAt,
+      envelope.sourceObservedAt,
+      envelope.firstSeenAt,
+      envelope.timingQuality,
+      envelope.sourceQuality,
+      envelope.measurementQuality,
+      payloadHash,
+      NOW,
+      envelope.effectiveAt,
+      NOW,
+    );
+    db.prepare(`
+      INSERT INTO typed_observation_payloads (
+        observation_id, payload_type, payload_schema_version, payload_json, payload_hash, created_at
+      ) VALUES (?, 'official_program', ?, ?, ?, ?)
+    `).run(
+      observationId,
+      PAYLOAD_SCHEMA_VERSION,
+      JSON.stringify(envelope.payload),
+      payloadHash,
+      NOW,
+    );
 
     recordApprovalGrant(db, {
       approvalId: "approval-raw-eligibility",
