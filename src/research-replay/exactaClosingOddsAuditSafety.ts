@@ -2,6 +2,7 @@ import { officialVenueCode } from "../domain/officialLinks";
 import { canonicalRaceKey } from "./identity";
 
 export type ExactaClosingOddsAuditCandidate = {
+  raceId: string;
   date: string;
   venue: string;
   raceNo: number;
@@ -26,12 +27,16 @@ export function parseExactaClosingOddsAuditSleepMs(raw: string): number {
 export function requireExactaClosingOddsAuditCandidate(candidate: ExactaClosingOddsAuditCandidate): void {
   const venueCode = officialVenueCode(candidate.venue);
   if (!venueCode || candidate.venue !== candidate.venue.trim() || candidate.venue === venueCode) {
-    throw new Error(`EXACTA_CLOSING_ODDS_AUDIT_VENUE_INVALID:${candidate.venue}`);
+    throw new Error(`EXACTA_CLOSING_ODDS_AUDIT_VENUE_INVALID:${candidate.raceId}:${candidate.venue}`);
   }
   try {
     canonicalRaceKey(candidate.date, venueCode, candidate.raceNo);
   } catch {
-    throw new Error(`EXACTA_CLOSING_ODDS_AUDIT_RACE_IDENTITY_INVALID:${candidate.date}:${candidate.venue}:${candidate.raceNo}`);
+    throw new Error(`EXACTA_CLOSING_ODDS_AUDIT_RACE_IDENTITY_INVALID:${candidate.raceId}:${candidate.date}:${candidate.venue}:${candidate.raceNo}`);
+  }
+  const expectedRaceId = `${candidate.date.replaceAll("-", "")}-${candidate.venue}-${String(candidate.raceNo).padStart(2, "0")}`;
+  if (candidate.raceId !== expectedRaceId) {
+    throw new Error(`EXACTA_CLOSING_ODDS_AUDIT_RACE_IDENTITY_INVALID:${candidate.raceId}:${expectedRaceId}`);
   }
   const month = Number(candidate.date.slice(5, 7));
   const expectedQuarter = `${candidate.date.slice(0, 4)}-Q${Math.ceil(month / 3)}`;
