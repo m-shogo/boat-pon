@@ -6,11 +6,15 @@ import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 
 import { resolveExecutor, type ExecutorContext } from "./taskExecutors";
-import { preflightN2DatasetCanarySettlementLineage } from "./n2DatasetCanarySettlementGuard";
+import {
+  preflightN2AllActiveSettlementLineage,
+  preflightN2DatasetCanarySettlementLineage,
+} from "./n2DatasetCanarySettlementGuard";
 
 function withSidecar(
   raw: { integrity: string; security: string; replayEligible: number },
   fn: (path: string) => void,
+  raceKey = "2024-06-05:12:R1",
 ): void {
   const root = mkdtempSync(join(tmpdir(), "boat-pon-dataset-canary-lineage-"));
   const path = join(root, "sidecar.sqlite");
@@ -54,9 +58,9 @@ function withSidecar(
     .run(raw.integrity, raw.security, raw.replayEligible);
   db.prepare("INSERT INTO parse_runs VALUES ('parse-a','raw-a','success')").run();
   db.prepare(`INSERT INTO domain_observations
-    VALUES ('obs-a','2024-06-05:12:R1','settlement_result','settlement_result','raw-a','parse-a')`).run();
+    VALUES ('obs-a',?,'settlement_result','settlement_result','raw-a','parse-a')`).run(raceKey);
   db.prepare(`INSERT INTO settlement_candidates_v2
-    VALUES ('candidate-a','2024-06-05:12:R1','trifecta','settled','normal','obs-a','parse-a','raw-a',NULL)`).run();
+    VALUES ('candidate-a',?,'trifecta','settled','normal','obs-a','parse-a','raw-a',NULL)`).run(raceKey);
   db.close();
   try {
     fn(path);
@@ -103,4 +107,25 @@ test("runtime dataset canary fails closed on tainted active settlement lineage",
       assert.deepEqual(result.blocks, ["DATASET_CANARY_SETTLEMENT_LINEAGE_INVALID:candidate-a"]);
     });
   }
+});
+
+test("all-active preflight catches tainted settlements outside the canary month", () => {
+  withSidecar(
+    { integrity: "quarantined", security: "passed", replayEligible: 1 },
+    (path) => {
+      const checked = preflightN2AllActiveSettlementLineage(path);
+      assert.equal(checked.ok, false);
+      assert.deepEqual(checked.blocks, ["DATASET_ACTIVE_SETTLEMENT_LINEAGE_INVALID:candidate-a"]);
+
+      for (const taskType of ["dataset-inventory", "dataset-expand"]) {
+        const resolved = resolveExecutor(taskType);
+        assert.equal(resolved.code, "OK");
+        assert.ok(resolved.executor);
+        const result = resolved.executor(context(path));
+        assert.equal(result.result, "BLOCKED");
+        assert.deepEqual(result.blocks, ["DATASET_ACTIVE_SETTLEMENT_LINEAGE_INVALID:candidate-a"]);
+      }
+    },
+    "2020-06-05:12:R1",
+  );
 });
