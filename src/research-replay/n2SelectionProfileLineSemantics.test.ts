@@ -48,3 +48,31 @@ test("selection profile rejects non-canonical refund selections", () => {
     db.close();
   }
 });
+
+test("selection profile rejects unsafe payout amounts", () => {
+  const db = fixture();
+  try {
+    db.prepare("UPDATE race_payout_lines_v2 SET payout_yen=? WHERE candidate_id='candidate'")
+      .run(Number.MAX_SAFE_INTEGER + 1);
+    assert.throws(
+      () => readN2SelectionProfileSource(db, "2026-05"),
+      /N2_SELECTION_PROFILE_PAYOUT_AMOUNT_INVALID:candidate/u,
+    );
+  } finally {
+    db.close();
+  }
+});
+
+test("selection profile rejects unsafe refund amounts", () => {
+  const db = fixture();
+  try {
+    db.prepare("INSERT INTO race_refund_lines_v2 VALUES ('refund','candidate',1,'trifecta','1-2-3','selection',?)")
+      .run(Number.MAX_SAFE_INTEGER + 1);
+    assert.throws(
+      () => readN2SelectionProfileSource(db, "2026-05"),
+      /N2_SELECTION_PROFILE_REFUND_AMOUNT_INVALID:candidate/u,
+    );
+  } finally {
+    db.close();
+  }
+});
