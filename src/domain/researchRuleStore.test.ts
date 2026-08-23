@@ -145,6 +145,26 @@ test("Approvedでも別ruleのForward evidenceではProductionへ遷移できな
   assert.match(result.error.reason, /evaluation ruleId.*does not match rule/);
 });
 
+test("Production遷移時刻がForward evaluation実行前なら拒否する", () => {
+  const rule = {
+    ...createResearchRule("rule-1", "x", "2026-06-01T00:00:00Z"),
+    status: "approved" as const,
+  };
+  const evaluation = forwardResult({
+    metadata: { ...forwardResult().metadata, evaluationRunAt: "2026-06-02T00:00:00Z" },
+  });
+  const result = applyRuleTransition(
+    [rule],
+    "rule-1",
+    "production",
+    evaluation,
+    "2026-06-01T23:59:59Z",
+  );
+  assert.equal(result.ok, false);
+  if (result.ok) return;
+  assert.match(result.error.reason, /precedes the forward evaluation run/);
+});
+
 test("Approved かつ Forward通過・sampleSize/confidence十分ならProductionへ遷移できる", () => {
   const rule = {
     ...createResearchRule("rule-1", "x", "2026-06-30T00:00:00Z"),
