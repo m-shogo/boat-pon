@@ -4,6 +4,13 @@ import path from "node:path";
 import { recordOddsSnapshot, openDb } from "../server/db";
 import { kyotei24OddsUrls, parseKyotei24TrifectaOdds, type Kyotei24OddsTarget } from "../src/domain/kyotei24Odds";
 import type { OddsSnapshot } from "../src/domain/oddsSnapshot";
+import {
+  parseOddsBackfillDate,
+  parseOddsBackfillPositiveSafeInteger,
+  requireOddsBackfillDateRange,
+  requireOddsBackfillTarget,
+  requireOddsBackfillTargets,
+} from "../src/research-replay/oddsBackfillSafety";
 
 type Args = {
   help: boolean;
@@ -24,13 +31,14 @@ if (args.help) {
   printHelp();
   process.exit(0);
 }
-if (args.limit == null || args.limit <= 0) {
+if (args.limit == null) {
   throw new Error("安全のため --limit <件数> は必須です。例: tsx scripts/backfill-odds.ts --dry-run --limit 10");
 }
+requireOddsBackfillDateRange(args.from, args.to);
 
 const db = openDb();
 try {
-  const targets = listTargets(args).slice(0, args.limit);
+  const targets = listTargets(args);
   console.log(`odds backfill targets: ${targets.length} source=${args.source} dryRun=${args.dryRun}`);
   for (const target of targets) {
     const urls = kyotei24OddsUrls(target);
@@ -55,7 +63,10 @@ try {
 function listTargets(args: Args): Kyotei24OddsTarget[] {
   if (args.raceId) {
     const direct = directTarget(args.raceId, args.selection);
-    if (direct) return [direct];
+    if (direct) {
+      requireOddsBackfillTarget(direct);
+      return [direct];
+    }
   }
 
   const params: Array<string | number> = [];
@@ -87,16 +98,17 @@ FROM decision_history
 WHERE ${where.join(" AND ")}
   AND ${decisionFilter}
 ORDER BY date ASC, created_at ASC, id ASC
-LIMIT ?
-`).all(...params, args.limit) as Array<Record<string, unknown>>;
+`).all(...params) as Array<Record<string, unknown>>;
 
-  return rows.map((row) => ({
+  const candidates = rows.map((row) => ({
     raceId: String(row.race_id),
     date: String(row.date),
     venue: String(row.venue),
     raceNo: Number(row.race_no),
     selection: String(row.selection),
   }));
+  requireOddsBackfillTargets(candidates);
+  return candidates.slice(0, args.limit!);
 }
 
 function directTarget(raceId: string, selection: string | null): Kyotei24OddsTarget | null {
@@ -162,12 +174,12 @@ function parseArgs(argv: string[]): Args {
     else if (key === "--dry-run") args.dryRun = true;
     else if (key === "--include-existing") args.includeExisting = true;
     else if (key === "--include-skip-required-odds") args.includeSkipRequiredOdds = true;
-    else if (key === "--limit") { args.limit = Number(value); i += 1; }
-    else if (key === "--from") { args.from = normalizeDate(value); i += 1; }
-    else if (key === "--to") { args.to = normalizeDate(value); i += 1; }
+    else if (key === "--limit") { args.limit = parseOddsBackfillPositiveSafeInteger(value, "LIMIT"); i += 1; }
+    else if (key === "--from") { args.from = parseOddsBackfillDate(value, "FROM_DATE"); i += 1; }
+    else if (key === "--to") { args.to = parseOddsBackfillDate(value, "TO_DATE"); i += 1; }
     else if (key === "--race-id") { args.raceId = value; i += 1; }
     else if (key === "--selection") { args.selection = value; i += 1; }
-    else if (key === "--sleep-ms") { args.sleepMs = Math.max(1000, Number(value)); i += 1; }
+    else if (key === "--sleep-ms") { args.sleepMs = parseOddsBackfillPositiveSafeInteger(value, "SLEEP_MS", 1000); i += 1; }
     else if (key === "--source") {
       if (value !== "kyotei24") throw new Error("現時点の過去補完 source は kyotei24 のみです");
       args.source = value;
@@ -177,12 +189,6 @@ function parseArgs(argv: string[]): Args {
     }
   }
   return args;
-}
-
-function normalizeDate(value: string | undefined) {
-  if (!value) return null;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error(`date must be YYYY-MM-DD: ${value}`);
-  return value;
 }
 
 function sleep(ms: number) {
