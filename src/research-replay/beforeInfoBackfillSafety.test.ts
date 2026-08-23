@@ -14,16 +14,12 @@ test("beforeinfo backfill accepts canonical bounded options", () => {
       toDate: "2026-08-23",
       intervalMsRaw: "15000",
       limitRaw: "0",
-      venueFilterRaw: "宮島",
-      raceNoFilterRaw: "6",
     }),
     {
       fromDate: "2026-08-01",
       toDate: "2026-08-23",
       intervalMs: 15000,
       limit: 0,
-      venueFilter: "宮島",
-      raceNoFilter: 6,
     },
   );
   assert.doesNotThrow(() => parseBeforeInfoBackfillOptions({
@@ -47,7 +43,7 @@ test("beforeinfo backfill rejects unsafe bounded options before access", () => {
   }
 });
 
-test("beforeinfo backfill rejects invalid filters and date ranges", () => {
+test("beforeinfo backfill rejects impossible or reversed date ranges", () => {
   for (const fromDate of ["2026-02-30", "2026-8-01"]) {
     assert.throws(
       () => parseBeforeInfoBackfillOptions({ fromDate, toDate: "2026-08-23" }),
@@ -58,29 +54,23 @@ test("beforeinfo backfill rejects invalid filters and date ranges", () => {
     () => parseBeforeInfoBackfillOptions({ fromDate: "2026-08-23", toDate: "2026-08-01" }),
     /BEFOREINFO_BACKFILL_DATE_RANGE_INVALID/u,
   );
-  for (const venueFilterRaw of ["unknown", " 宮島 ", "17"]) {
-    assert.throws(
-      () => parseBeforeInfoBackfillOptions({ fromDate: "2026-08-01", toDate: "2026-08-23", venueFilterRaw }),
-      /BEFOREINFO_BACKFILL_VENUE_INVALID/u,
-    );
-  }
-  for (const raceNoFilterRaw of ["0", "13", "1.5", "race"] ) {
-    assert.throws(
-      () => parseBeforeInfoBackfillOptions({ fromDate: "2026-08-01", toDate: "2026-08-23", raceNoFilterRaw }),
-      /BEFOREINFO_BACKFILL_RACE_NO_INVALID/u,
-    );
-  }
 });
 
 test("beforeinfo backfill preflights every target before top-N selection", () => {
   assert.doesNotThrow(() => requireBeforeInfoBackfillTarget({ date: "2028-02-29", venue: "大村", raceNo: 12 }));
-  const targets = [
-    { date: "2026-08-01", venue: "宮島", raceNo: 1 },
+  for (const invalid of [
     { date: "2026-02-30", venue: "宮島", raceNo: 2 },
-    { date: "2026-08-02", venue: "宮島", raceNo: 3 },
-  ];
-  assert.throws(
-    () => requireBeforeInfoBackfillTargets(targets),
-    /BEFOREINFO_BACKFILL_TARGET_RACE_INVALID/u,
-  );
+    { date: "2026-08-02", venue: "unknown", raceNo: 3 },
+    { date: "2026-08-02", venue: "17", raceNo: 3 },
+    { date: "2026-08-02", venue: "宮島", raceNo: 13 },
+  ]) {
+    assert.throws(
+      () => requireBeforeInfoBackfillTargets([
+        { date: "2026-08-01", venue: "宮島", raceNo: 1 },
+        invalid,
+        { date: "2026-08-03", venue: "宮島", raceNo: 4 },
+      ]),
+      /BEFOREINFO_BACKFILL_TARGET_(RACE|VENUE)_INVALID/u,
+    );
+  }
 });
