@@ -6,8 +6,34 @@ export type EvaluationMetadataValidation = {
   warnings: string[];
 };
 
+function isCanonicalCalendarDate(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/u.exec(value);
+  if (match === null) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return parsed.getUTCFullYear() === year
+    && parsed.getUTCMonth() === month - 1
+    && parsed.getUTCDate() === day;
+}
+
+function isExplicitIsoTimestamp(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/u.exec(value);
+  if (match === null) return false;
+  if (!isCanonicalCalendarDate(`${match[1]}-${match[2]}-${match[3]}`)) return false;
+  const hour = Number(match[4]);
+  const minute = Number(match[5]);
+  const second = Number(match[6]);
+  if (hour > 23 || minute > 59 || second > 59) return false;
+  return Number.isFinite(Date.parse(value));
+}
+
 /**
- * Future Leak防止の最小チェック。日時はISO-8601文字列前提（辞書順比較で成立する形式のみ）。
+ * Future Leak防止の最小チェック。
+ * data windowはcanonicalなGregorian YYYY-MM-DD、evaluationRunAtはexplicit timezone付きISO-8601を必須とする。
  * 欠損・違反は例外にせず warnings に積み、ok=false で返す。
  */
 export function validateEvaluationMetadata(metadata: Partial<EvaluationMetadata>): EvaluationMetadataValidation {
@@ -19,14 +45,34 @@ export function validateEvaluationMetadata(metadata: Partial<EvaluationMetadata>
   if (!evaluationRunAt) warnings.push("evaluationRunAt is missing");
   if (sampleSize == null) warnings.push("sampleSize is missing");
 
-  if (dataWindowStart && dataWindowEnd && dataWindowStart > dataWindowEnd) {
+  const startValid = dataWindowStart == null || dataWindowStart === ""
+    ? false
+    : isCanonicalCalendarDate(dataWindowStart);
+  const endValid = dataWindowEnd == null || dataWindowEnd === ""
+    ? false
+    : isCanonicalCalendarDate(dataWindowEnd);
+  const runAtValid = evaluationRunAt == null || evaluationRunAt === ""
+    ? false
+    : isExplicitIsoTimestamp(evaluationRunAt);
+
+  if (dataWindowStart && !startValid) {
+    warnings.push(`dataWindowStart ${String(dataWindowStart)} must be a canonical Gregorian YYYY-MM-DD date`);
+  }
+  if (dataWindowEnd && !endValid) {
+    warnings.push(`dataWindowEnd ${String(dataWindowEnd)} must be a canonical Gregorian YYYY-MM-DD date`);
+  }
+  if (evaluationRunAt && !runAtValid) {
+    warnings.push(`evaluationRunAt ${String(evaluationRunAt)} must be an explicit-zone ISO-8601 timestamp`);
+  }
+
+  if (startValid && endValid && dataWindowStart > dataWindowEnd) {
     warnings.push(`dataWindowStart ${dataWindowStart} is after dataWindowEnd ${dataWindowEnd}`);
   }
-  if (dataWindowEnd && evaluationRunAt && dataWindowEnd > evaluationRunAt) {
+  if (endValid && runAtValid && dataWindowEnd > evaluationRunAt.slice(0, 10)) {
     warnings.push(`dataWindowEnd ${dataWindowEnd} is after evaluationRunAt ${evaluationRunAt} (future leak risk)`);
   }
-  if (sampleSize != null && (!Number.isFinite(sampleSize) || sampleSize < 0)) {
-    warnings.push(`sampleSize ${sampleSize} must be a non-negative finite number`);
+  if (sampleSize != null && (!Number.isSafeInteger(sampleSize) || sampleSize < 0)) {
+    warnings.push(`sampleSize ${sampleSize} must be a non-negative safe integer`);
   }
 
   return { ok: warnings.length === 0, warnings };
