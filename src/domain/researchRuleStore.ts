@@ -166,6 +166,16 @@ export function applyRuleTransition(
       },
     };
   }
+  const duplicateRegistryRuleId = findDuplicateRegistryRuleId(rules);
+  if (duplicateRegistryRuleId !== null) {
+    return {
+      ok: false,
+      error: {
+        ruleId: duplicateRegistryRuleId,
+        reason: `persisted registry has duplicate ruleId "${duplicateRegistryRuleId}"; transition is blocked while registry identity is ambiguous`,
+      },
+    };
+  }
 
   const index = matchingIndexes[0];
   const rule = rules[index];
