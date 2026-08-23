@@ -54,10 +54,12 @@ try {
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const domainDir = join(repoRoot, "src", "domain");
+const researchReplayDir = join(repoRoot, "src", "research-replay");
 const viewModelsDir = join(repoRoot, "src", "view-models");
 const presentationDir = join(repoRoot, "src", "presentation");
 const tempDir = mkdtempSync(join(tmpdir(), "boatpon-verify-drift-smoke-"));
 const tempDomainDir = join(tempDir, "src", "domain");
+const tempResearchReplayDir = join(tempDir, "src", "research-replay");
 const tempViewModelsDir = join(tempDir, "src", "view-models");
 const tempPresentationDir = join(tempDir, "src", "presentation");
 const tempScriptsDir = join(tempDir, "scripts");
@@ -68,12 +70,14 @@ let failures = 0;
 
 try {
   mkdirSync(tempDomainDir, { recursive: true });
+  mkdirSync(tempResearchReplayDir, { recursive: true });
   mkdirSync(tempViewModelsDir, { recursive: true });
   mkdirSync(tempPresentationDir, { recursive: true });
   mkdirSync(tempScriptsDir, { recursive: true });
   for (const name of ["types.ts", "backtest.ts", "researchRule.ts", "researchEvaluation.ts", "researchDrift.ts"]) {
     copyFileSync(join(domainDir, name), join(tempDomainDir, name));
   }
+  copyFileSync(join(researchReplayDir, "driftReportOptions.ts"), join(tempResearchReplayDir, "driftReportOptions.ts"));
   for (const name of ["driftViewModel.ts", "driftViewModel.adapters.ts"]) {
     copyFileSync(join(viewModelsDir, name), join(tempViewModelsDir, name));
   }
@@ -82,6 +86,7 @@ try {
   }
   copyFileSync(join(repoRoot, "scripts", "detect-research-drift.ts"), join(tempScriptsDir, "detect-research-drift.ts"));
   addExplicitTsExtensions(tempDomainDir);
+  addExplicitTsExtensions(tempResearchReplayDir);
   addExplicitTsExtensions(tempViewModelsDir);
   addExplicitTsExtensions(tempPresentationDir);
   addExplicitTsExtensions(tempScriptsDir);
@@ -131,7 +136,7 @@ try {
     "--recent-from", "2026-01-01", "--recent-to", "2026-06-01",
     "--rule-id", "adhoc-not-registered",
     "--presentation-json",
-  ], { BOAT_PON_RULE_STORE_PATH: ruleStorePath }); // path does not exist yet -> adhoc
+  ], { BOAT_PON_RULE_STORE_PATH: ruleStorePath });
   check("presentation-json exit code 0", presented.status === 0);
   const presentedResult = parseJson(presented.stdout);
   if (presentedResult) {
@@ -248,12 +253,10 @@ function buildFixtureDb(path) {
     );
   };
 
-  // baseline window (2025-02..): ROWS_PER_WINDOW hits, payout_yen present -> profitable (roi >= 1.0)
   for (let i = 0; i < ROWS_PER_WINDOW; i++) {
     row(i + 1, { date: isoDate("2025-02-01", i), payoutYen: 180 });
   }
 
-  // recent window (2026-02..): ROWS_PER_WINDOW misses -> realized 0, roi collapses to 0
   for (let i = 0; i < ROWS_PER_WINDOW; i++) {
     row(ROWS_PER_WINDOW + i + 1, { date: isoDate("2026-02-01", i), result: "3-1-2", payoutYen: 500 });
   }
