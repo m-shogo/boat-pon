@@ -8,6 +8,7 @@ import {
   parseOfficialResultDetailLegacyV1ForAudit,
   type BetType,
 } from "../src/domain/officialResultDetailParser";
+import { selectRefundAuditArchives } from "../src/research-replay/n1ArchiveRefundAuditSelection";
 import { fileDate, listArchiveFiles } from "../src/research-replay/n1Backfill";
 import {
   compareRefundSemantics,
@@ -98,7 +99,7 @@ function emptyAggregate(year: string, betType: BetType): AggregateRow {
 async function main(): Promise<void> {
   if (!existsSync(archiveRoot)) throw new Error(`archive root not found: ${archiveRoot}`);
   const discovered = listArchiveFiles(archiveRoot);
-  const selected = limit == null ? discovered : discovered.slice(0, limit);
+  const selected = selectRefundAuditArchives(discovered, limit);
   const results = new Array<FileResult>(selected.length);
   let cursor = 0;
   const worker = async (): Promise<void> => {
