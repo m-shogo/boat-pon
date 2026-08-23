@@ -48,6 +48,22 @@ function parseCanonicalLifecycleTimestamp(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function validateRuleRecordFields(rule: ResearchRule, subject: "new rule" | "persisted rule"): string | null {
+  if (typeof rule.ruleId !== "string" || rule.ruleId.length === 0 || rule.ruleId.trim() !== rule.ruleId) {
+    return `${subject} ruleId must be a non-blank, trimmed string`;
+  }
+  if (typeof rule.reasonSummary !== "string" || rule.reasonSummary.trim().length === 0) {
+    return `${subject} reasonSummary must be a non-blank string`;
+  }
+  if (!Array.isArray(rule.warnings) || !rule.warnings.every((warning) => typeof warning === "string")) {
+    return `${subject} warnings must be an array of strings`;
+  }
+  if (rule.title !== undefined && (typeof rule.title !== "string" || rule.title.trim().length === 0)) {
+    return `${subject} title must be a non-blank string when provided`;
+  }
+  return null;
+}
+
 /** 新規ルールは常に"candidate"段階で作成する。他のstatusで直接作ることはできない。 */
 export function createResearchRule(
   ruleId: string,
@@ -71,29 +87,9 @@ export function findRule(rules: ResearchRule[], ruleId: string): ResearchRule | 
 }
 
 export function addRule(rules: ResearchRule[], rule: ResearchRule): RuleStoreResult {
-  if (typeof rule.ruleId !== "string" || rule.ruleId.length === 0 || rule.ruleId.trim() !== rule.ruleId) {
-    return {
-      ok: false,
-      error: { ruleId: String(rule.ruleId), reason: "new ruleId must be a non-blank, trimmed string" },
-    };
-  }
-  if (typeof rule.reasonSummary !== "string" || rule.reasonSummary.trim().length === 0) {
-    return {
-      ok: false,
-      error: { ruleId: rule.ruleId, reason: "new rule reasonSummary must be a non-blank string" },
-    };
-  }
-  if (!Array.isArray(rule.warnings) || !rule.warnings.every((warning) => typeof warning === "string")) {
-    return {
-      ok: false,
-      error: { ruleId: rule.ruleId, reason: "new rule warnings must be an array of strings" },
-    };
-  }
-  if (rule.title !== undefined && (typeof rule.title !== "string" || rule.title.trim().length === 0)) {
-    return {
-      ok: false,
-      error: { ruleId: rule.ruleId, reason: "new rule title must be a non-blank string when provided" },
-    };
+  const recordError = validateRuleRecordFields(rule, "new rule");
+  if (recordError !== null) {
+    return { ok: false, error: { ruleId: String(rule.ruleId), reason: recordError } };
   }
   if (findRule(rules, rule.ruleId)) {
     return { ok: false, error: { ruleId: rule.ruleId, reason: `rule "${rule.ruleId}" already exists` } };
@@ -154,6 +150,10 @@ export function applyRuleTransition(
 
   const index = matchingIndexes[0];
   const rule = rules[index];
+  const recordError = validateRuleRecordFields(rule, "persisted rule");
+  if (recordError !== null) {
+    return { ok: false, error: { ruleId: String(rule.ruleId), reason: recordError } };
+  }
   const createdAt = parseCanonicalLifecycleTimestamp(rule.createdAt);
   const updatedAt = parseCanonicalLifecycleTimestamp(rule.updatedAt);
   const transitionAt = parseCanonicalLifecycleTimestamp(now);
