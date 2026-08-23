@@ -139,6 +139,36 @@ test("single outbox delivery closes byte-exact lineage and will not redeliver", 
   } finally { ctx.close(); }
 });
 
+test("shadow refuses deduplicated raw evidence after it becomes ineligible", () => {
+  const ctx = context();
+  try {
+    ctx.enable();
+    const rawJson = programRaw();
+    const stored = ctx.repository.recordRawDocument({
+      bytes: Buffer.from(rawJson, "utf8"),
+      contentType: "application/json",
+      charset: "utf-8",
+      retentionClass: "research_evidence",
+    });
+    ctx.db.prepare(`
+      UPDATE raw_documents
+      SET integrity_status='quarantined'
+      WHERE raw_document_id=?
+    `).run(stored.rawDocumentId);
+    enqueueOfficialProgramShadow(ctx.controller, captureInput(rawJson));
+    const result = ctx.controller.drain((message) => handleOfficialProgramShadowMessage({
+      repository: ctx.repository,
+      messageType: message.messageType,
+      payload: message.payload,
+      loadPrimaryRaw: () => rawJson,
+    }));
+    assert.deepEqual(result, { succeeded: 0, retrying: 0, permanentlyFailed: 1 });
+    assert.equal((ctx.db.prepare("SELECT COUNT(*) n FROM capture_attempts").get() as { n: number }).n, 0);
+    const delivery = ctx.db.prepare("SELECT error_code FROM shadow_delivery_attempts").get() as { error_code: string };
+    assert.equal(delivery.error_code, "OFFICIAL_PROGRAM_SHADOW_RAW_INELIGIBLE");
+  } finally { ctx.close(); }
+});
+
 test("primary raw mutation fails closed before any capture evidence is written", () => {
   const ctx = context();
   try {
