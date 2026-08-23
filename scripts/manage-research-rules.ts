@@ -21,7 +21,13 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { addRule, applyRuleTransition, createResearchRule } from "../src/domain/researchRuleStore";
-import type { ForwardTestResult, ResearchRule, RuleStatus } from "../src/domain/researchRule";
+import type { ForwardTestResult, ResearchRule } from "../src/domain/researchRule";
+import {
+  parseResearchRuleFlags,
+  parseResearchRuleStatus,
+  requireCanonicalRuleId,
+  requireNonBlankText,
+} from "../src/research-replay/researchRuleCliOptions";
 
 const STORE_PATH = process.env.BOAT_PON_RULE_STORE_PATH ?? "data/research-rules.json";
 
@@ -80,8 +86,10 @@ function saveStore(store: RuleStoreFile) {
 }
 
 function runList(argv: string[]) {
-  const args = parseFlags(argv, ["--status"]);
-  const statusFilter = args["--status"];
+  const args = parseResearchRuleFlags(argv, ["--status"]);
+  const statusFilter = args["--status"] === undefined
+    ? undefined
+    : parseResearchRuleStatus(args["--status"], "--status");
 
   const store = loadStore();
   const rules = statusFilter ? store.rules.filter((rule) => rule.status === statusFilter) : store.rules;
@@ -102,14 +110,13 @@ function runList(argv: string[]) {
 
 function runAdd(rawArgv: string[]) {
   const dryRun = rawArgv.includes("--dry-run");
-  const argv = rawArgv.filter((arg) => arg !== "--dry-run");
-  const args = parseFlags(argv, ["--rule-id", "--reason", "--title"]);
-  const ruleId = args["--rule-id"];
-  const reason = args["--reason"];
-  if (!ruleId || !reason) {
-    console.error("usage: add --rule-id <id> --reason <text> [--title <text>] [--dry-run]");
-    process.exit(1);
+  if (rawArgv.filter((arg) => arg === "--dry-run").length > 1) {
+    throw new Error("duplicate option: --dry-run");
   }
+  const argv = rawArgv.filter((arg) => arg !== "--dry-run");
+  const args = parseResearchRuleFlags(argv, ["--rule-id", "--reason", "--title"]);
+  const ruleId = requireCanonicalRuleId(args["--rule-id"]);
+  const reason = requireNonBlankText(args["--reason"], "--reason");
 
   const store = loadStore();
   const result = addRule(store.rules, createResearchRule(ruleId, reason, new Date().toISOString(), args["--title"]));
@@ -130,14 +137,13 @@ function runAdd(rawArgv: string[]) {
 
 function runTransition(rawArgv: string[]) {
   const dryRun = rawArgv.includes("--dry-run");
-  const argv = rawArgv.filter((arg) => arg !== "--dry-run");
-  const args = parseFlags(argv, ["--rule-id", "--to", "--evaluation-file"]);
-  const ruleId = args["--rule-id"];
-  const to = args["--to"] as RuleStatus | undefined;
-  if (!ruleId || !to) {
-    console.error("usage: transition --rule-id <id> --to <status> [--evaluation-file <path>] [--dry-run]");
-    process.exit(1);
+  if (rawArgv.filter((arg) => arg === "--dry-run").length > 1) {
+    throw new Error("duplicate option: --dry-run");
   }
+  const argv = rawArgv.filter((arg) => arg !== "--dry-run");
+  const args = parseResearchRuleFlags(argv, ["--rule-id", "--to", "--evaluation-file"]);
+  const ruleId = requireCanonicalRuleId(args["--rule-id"]);
+  const to = parseResearchRuleStatus(args["--to"], "--to");
 
   let evaluation: ForwardTestResult | undefined;
   const evaluationFile = args["--evaluation-file"];
@@ -164,16 +170,6 @@ function runTransition(rawArgv: string[]) {
   store.rules = result.rules;
   saveStore(store);
   console.log(`rule "${ruleId}" transitioned to "${to}"`);
-}
-
-function parseFlags(argv: string[], known: string[]): Record<string, string | undefined> {
-  const out: Record<string, string | undefined> = {};
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-    if (!known.includes(arg)) throw new Error(`unknown option: ${arg}`);
-    out[arg] = argv[++i];
-  }
-  return out;
 }
 
 function printHelp() {
