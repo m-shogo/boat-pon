@@ -57,20 +57,37 @@ test("beforeinfo backfill rejects impossible or reversed date ranges", () => {
 });
 
 test("beforeinfo backfill preflights every target before top-N selection", () => {
-  assert.doesNotThrow(() => requireBeforeInfoBackfillTarget({ date: "2028-02-29", venue: "大村", raceNo: 12 }));
+  assert.doesNotThrow(() => requireBeforeInfoBackfillTarget({
+    raceId: "20280229-大村-12",
+    date: "2028-02-29",
+    venue: "大村",
+    raceNo: 12,
+  }));
   for (const invalid of [
-    { date: "2026-02-30", venue: "宮島", raceNo: 2 },
-    { date: "2026-08-02", venue: "unknown", raceNo: 3 },
-    { date: "2026-08-02", venue: "17", raceNo: 3 },
-    { date: "2026-08-02", venue: "宮島", raceNo: 13 },
+    { raceId: "20260230-宮島-02", date: "2026-02-30", venue: "宮島", raceNo: 2 },
+    { raceId: "20260802-unknown-03", date: "2026-08-02", venue: "unknown", raceNo: 3 },
+    { raceId: "20260802-17-03", date: "2026-08-02", venue: "17", raceNo: 3 },
+    { raceId: "20260802-宮島-13", date: "2026-08-02", venue: "宮島", raceNo: 13 },
   ]) {
     assert.throws(
       () => requireBeforeInfoBackfillTargets([
-        { date: "2026-08-01", venue: "宮島", raceNo: 1 },
+        { raceId: "20260801-宮島-01", date: "2026-08-01", venue: "宮島", raceNo: 1 },
         invalid,
-        { date: "2026-08-03", venue: "宮島", raceNo: 4 },
+        { raceId: "20260803-宮島-04", date: "2026-08-03", venue: "宮島", raceNo: 4 },
       ]),
       /BEFOREINFO_BACKFILL_TARGET_(RACE|VENUE)_INVALID/u,
     );
   }
+});
+
+test("beforeinfo backfill rejects race_id that does not match target identity", () => {
+  assert.throws(
+    () => requireBeforeInfoBackfillTarget({
+      raceId: "20260803-宮島-04",
+      date: "2026-08-02",
+      venue: "宮島",
+      raceNo: 3,
+    }),
+    /BEFOREINFO_BACKFILL_TARGET_IDENTITY_INVALID/u,
+  );
 });
