@@ -32,6 +32,12 @@ function withDatabases(fn: (paths: { primary: string; sidecar: string }, dbs: { 
     );
   `);
   sidecar.exec(`
+    CREATE TABLE raw_documents (
+      raw_document_id TEXT PRIMARY KEY,
+      integrity_status TEXT NOT NULL,
+      security_scan_status TEXT NOT NULL,
+      parser_replay_eligible INTEGER NOT NULL
+    );
     CREATE TABLE parse_runs (
       parse_run_id TEXT PRIMARY KEY,
       raw_document_id TEXT NOT NULL,
@@ -93,6 +99,7 @@ function insertWinner(db: DatabaseSync, id: string, raceKey: string, selection: 
   const observationId = `obs-${id}`;
   const parseRunId = `parse-${id}`;
   const rawDocumentId = `raw-${id}`;
+  db.prepare("INSERT OR IGNORE INTO raw_documents VALUES (?,'verified','passed',1)").run(rawDocumentId);
   db.prepare("INSERT INTO parse_runs VALUES (?, ?, 'success')").run(parseRunId, rawDocumentId);
   db.prepare(`INSERT INTO domain_observations
     (observation_id,canonical_race_key,observation_type,payload_type,raw_document_id,parse_run_id)
