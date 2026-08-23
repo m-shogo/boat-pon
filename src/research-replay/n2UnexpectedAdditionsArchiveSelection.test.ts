@@ -33,12 +33,12 @@ test("unexpected-additions scan validates archive dates before applying limit", 
 test("unexpected-additions scan rejects duplicate archive basenames before applying limit", () => {
   const files = [
     "/archive/a/k260101.lzh",
-    "/archive/b/k260101.lzh",
+    "/archive/b/K260101.LZH",
     "/archive/k260102.lzh",
   ];
   assert.throws(
     () => selectUnexpectedAdditionsArchives(files, 1),
-    /N2_UNEXPECTED_ADDITIONS_ARCHIVE_BASENAME_DUPLICATE:k260101\.lzh/,
+    /N2_UNEXPECTED_ADDITIONS_ARCHIVE_BASENAME_DUPLICATE:K260101\.LZH/,
   );
 });
 
