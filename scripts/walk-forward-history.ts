@@ -1,12 +1,18 @@
 import { existsSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { parseWalkForwardHistoryOptions, type WalkForwardHistoryOptions } from "../src/research-replay/walkForwardHistoryOptions";
 
-type Args = { from: string | null; to: string | null; windowDays: number; stepDays: number; minBuys: number; json: boolean };
+type Args = WalkForwardHistoryOptions;
 type Row = { date: string; venue: string; race_no: number; decision: string; selection: string; result: string | null; returned: number; current_odds: number | null; ev: number | null };
 type WindowSummary = { from: string; to: string; rows: number; buy: number; settledBuy: number; hits: number; hitRate: number | null; roi: number | null; avgEv: number | null; status: "pass" | "watch" | "fail" | "no_sample" };
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
-const args = parseArgs(process.argv.slice(2));
+const rawArgs = process.argv.slice(2);
+if (rawArgs.includes("--help") || rawArgs.includes("-h")) {
+  printUsage();
+  process.exit(0);
+}
+const args = parseWalkForwardHistoryOptions(rawArgs);
 
 if (!existsSync(DB_PATH)) {
   console.error(`DB not found: ${DB_PATH}`);
@@ -99,31 +105,11 @@ function printReport(payload: { generatedAt: string; range: { from: string; to: 
   }
 }
 
-function parseArgs(argv: string[]): Args {
-  const args: Args = { from: null, to: null, windowDays: 30, stepDays: 7, minBuys: 5, json: false };
-  for (let i = 0; i < argv.length; i += 1) {
-    const key = argv[i];
-    const value = argv[i + 1];
-    if (key === "--from") { args.from = date(value); i += 1; }
-    else if (key === "--to") { args.to = date(value); i += 1; }
-    else if (key === "--window-days") { args.windowDays = positiveInt(value, key); i += 1; }
-    else if (key === "--step-days") { args.stepDays = positiveInt(value, key); i += 1; }
-    else if (key === "--min-buys") { args.minBuys = positiveInt(value, key); i += 1; }
-    else if (key === "--json") args.json = true;
-    else if (key === "--help" || key === "-h") { printUsage(); process.exit(0); }
-    else if (key === "--") { /* pnpm separator */ }
-    else throw new Error(`unknown option: ${key}`);
-  }
-  return args;
-}
-
 function tableExists(db: DatabaseSync, table: string) { return db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table) != null; }
 function average(values: Array<number | null>) { const finite = values.filter((value): value is number => value != null && Number.isFinite(value)); return finite.length ? finite.reduce((a, b) => a + b, 0) / finite.length : null; }
-function date(value: string | undefined) { if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error(`invalid date: ${value ?? ""}`); return value; }
-function positiveInt(value: string | undefined, key: string) { const n = Number(value); if (!Number.isInteger(n) || n <= 0) throw new Error(`${key} must be positive integer`); return n; }
 function addDays(date: string, days: number) { const [y, m, d] = date.split("-").map(Number); return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10); }
 function minDate(a: string, b: string) { return a < b ? a : b; }
 function todayTokyo() { return new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()); }
 function fmt(value: number | null) { return value == null ? "-" : value.toFixed(3); }
 function pct(value: number | null) { return value == null ? "-" : `${(value * 100).toFixed(1)}%`; }
-function printUsage() { console.log("Usage: npx tsx scripts/walk-forward-history.ts --from YYYY-MM-DD --to YYYY-MM-DD [--window-days 30] [--step-days 7] [--json]"); }
+function printUsage() { console.log("Usage: npx tsx scripts/walk-forward-history.ts --from YYYY-MM-DD --to YYYY-MM-DD [--window-days 30] [--step-days 7] [--min-buys 5] [--json]"); }
