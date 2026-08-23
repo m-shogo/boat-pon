@@ -57,13 +57,23 @@ export function parseExactaTimeseriesDryRunOptions(
   if (rawRaceNo === null) throw new Error("EXACTA_TIMESERIES_DRY_RUN_RACE_REQUIRED");
   const raceNo = requireRaceNo(rawRaceNo);
 
-  const checkpointRaw = valueAfter(argv, "--checkpoint") ?? "ad-hoc";
+  const checkpointProvided = argv.includes("--checkpoint");
+  const checkpointValue = valueAfter(argv, "--checkpoint");
+  if (checkpointProvided && checkpointValue === null) {
+    throw new Error("EXACTA_TIMESERIES_DRY_RUN_CHECKPOINT_MISSING");
+  }
+  const checkpointRaw = checkpointValue ?? "ad-hoc";
   const allowedCheckpoints: ReadonlySet<string> = new Set(EXACTA_TIMESERIES_DRY_RUN_CHECKPOINTS);
   if (!allowedCheckpoints.has(checkpointRaw)) {
     throw new Error(`EXACTA_TIMESERIES_DRY_RUN_CHECKPOINT_INVALID:${checkpointRaw}`);
   }
 
-  const minutesBeforeClose = parseMinutes(valueAfter(argv, "--minutes-before-close"));
+  const minutesProvided = argv.includes("--minutes-before-close");
+  const minutesValue = valueAfter(argv, "--minutes-before-close");
+  if (minutesProvided && minutesValue === null) {
+    throw new Error("EXACTA_TIMESERIES_DRY_RUN_MINUTES_MISSING");
+  }
+  const minutesBeforeClose = parseMinutes(minutesValue);
   return {
     date,
     venue,
