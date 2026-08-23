@@ -49,6 +49,32 @@ test("selection profile rejects non-canonical refund selections", () => {
   }
 });
 
+test("selection profile rejects unknown payout line kinds", () => {
+  const db = fixture();
+  try {
+    db.prepare("UPDATE race_payout_lines_v2 SET line_kind='unknown' WHERE candidate_id='candidate'").run();
+    assert.throws(
+      () => readN2SelectionProfileSource(db, "2026-05"),
+      /N2_SELECTION_PROFILE_PAYOUT_LINE_KIND_INVALID:candidate/u,
+    );
+  } finally {
+    db.close();
+  }
+});
+
+test("selection profile rejects unknown refund scopes", () => {
+  const db = fixture();
+  try {
+    db.prepare("INSERT INTO race_refund_lines_v2 VALUES ('refund','candidate',1,'trifecta','1-2-3','unknown',100)").run();
+    assert.throws(
+      () => readN2SelectionProfileSource(db, "2026-05"),
+      /N2_SELECTION_PROFILE_REFUND_SCOPE_INVALID:candidate/u,
+    );
+  } finally {
+    db.close();
+  }
+});
+
 test("selection profile fails closed when sqlite cannot represent an unsafe payout as a JavaScript number", () => {
   const db = fixture();
   try {
