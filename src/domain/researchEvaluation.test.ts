@@ -62,10 +62,55 @@ test("sampleSize が負なら失敗", () => {
   assert.equal(result.ok, false);
 });
 
+test("sampleSize はproducer生成可能なsafe integerのみ", () => {
+  for (const sampleSize of [1.5, Number.MAX_SAFE_INTEGER + 1]) {
+    const result = validateEvaluationMetadata({ ...VALID_METADATA, sampleSize });
+    assert.equal(result.ok, false);
+    assert.ok(result.warnings.some((warning) => warning.includes("safe integer")));
+  }
+});
+
 test("欠損フィールドは warnings に積まれる（throwしない）", () => {
   const result = validateEvaluationMetadata({});
   assert.equal(result.ok, false);
   assert.equal(result.warnings.length, 4);
+});
+
+test("不可能日・非canonicalなdata windowは失敗", () => {
+  for (const metadata of [
+    { ...VALID_METADATA, dataWindowStart: "2026-02-30" },
+    { ...VALID_METADATA, dataWindowStart: "2026-2-01" },
+    { ...VALID_METADATA, dataWindowEnd: "2026-06-31" },
+    { ...VALID_METADATA, dataWindowEnd: "2026-06-01T00:00:00Z" },
+  ]) {
+    const result = validateEvaluationMetadata(metadata);
+    assert.equal(result.ok, false);
+    assert.ok(result.warnings.some((warning) => warning.includes("canonical Gregorian")));
+  }
+});
+
+test("evaluationRunAt は実在するexplicit-zone ISO timestampのみ", () => {
+  for (const evaluationRunAt of [
+    "2026-06-02",
+    "2026-06-02T00:00:00",
+    "2026-02-30T00:00:00Z",
+    "2026-06-02T24:00:00Z",
+  ]) {
+    const result = validateEvaluationMetadata({ ...VALID_METADATA, evaluationRunAt });
+    assert.equal(result.ok, false);
+    assert.ok(result.warnings.some((warning) => warning.includes("explicit-zone ISO-8601")));
+  }
+});
+
+test("閏日とexplicit offsetを含む正常metadataは通る", () => {
+  const result = validateEvaluationMetadata({
+    dataWindowStart: "2028-02-29",
+    dataWindowEnd: "2028-03-01",
+    evaluationRunAt: "2028-03-02T09:30:00+09:00",
+    sampleSize: 200,
+  });
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.warnings, []);
 });
 
 test("正常metadataは通る", () => {
@@ -104,10 +149,9 @@ test("CLI出力（RuleEvaluationResult）が必須フィールドを持つ", () 
     assert.ok(field in result.metadata, `missing metadata field: ${field}`);
   }
 
-  // window内の確定BUYは2件（window外の2027年行・未確定行・SKIP行は除外される）
   assert.equal(result.metadata.sampleSize, 2);
   assert.equal(result.hitRate, 0.5);
-  assert.equal(result.roi, 15); // payout_yen無し(currentOdds30)*100 / (100+100)
+  assert.equal(result.roi, 15);
   assert.equal(result.isForwardTested, false);
   assert.equal(result.isProductionEligible, false);
   assert.ok(result.warnings.some((warning) => warning.includes("unsettled")));
@@ -122,8 +166,6 @@ test("payout_yen がある場合は payout_yen ベースのROIを使う", () => 
     evaluationRunAt: "2026-06-02T00:00:00+09:00",
   });
 
-  // payout_yenは100円あたりの公式払戻。currentOdds(99)由来なら990になるはずだが、
-  // payout_yen(1620)/100*stake(100)=1620が優先されることを確認する。
   assert.equal(result.roi, 16.2);
   assert.ok(result.reasonSummary.includes("payout_yen"));
   assert.ok(!result.warnings.some((warning) => warning.toLowerCase().includes("fallback")));
@@ -138,7 +180,7 @@ test("payout_yen が無い場合はcurrent_oddsへfallbackしwarningを出す", 
     evaluationRunAt: "2026-06-02T00:00:00+09:00",
   });
 
-  assert.equal(result.roi, 30); // fallback: currentOdds(30)*stake(100) / stake(100)
+  assert.equal(result.roi, 30);
   assert.ok(result.warnings.some((warning) => warning.includes("lack payout_yen")));
   assert.ok(result.reasonSummary.includes("current_odds (fallback)"));
 });
