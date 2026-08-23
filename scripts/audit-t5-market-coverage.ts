@@ -1,12 +1,14 @@
 /** T-5全120通りの収集率を公式番組母数で測るread-only監査。 */
 import { DatabaseSync } from "node:sqlite";
 import { evaluateT5MarketCoverage } from "../src/domain/t5MarketCoverage";
+import { parseT5MarketCoverageAuditOptions } from "../src/research-replay/t5MarketCoverageAuditOptions";
 
 const argv = process.argv.slice(2);
-const from = valueOf("--from") ?? "2026-06-01";
-const to = valueOf("--to") ?? todayJst();
-const json = argv.includes("--json");
-const strict = argv.includes("--strict");
+const options = parseT5MarketCoverageAuditOptions(argv, {
+  from: "2026-06-01",
+  to: todayJst(),
+});
+const { from, to, json, strict } = options;
 const db = new DatabaseSync("data/boat.sqlite", { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 30000;");
 
@@ -64,11 +66,6 @@ try {
   if (strict && !gate.passed) process.exitCode = 2;
 } finally {
   db.close();
-}
-
-function valueOf(name: string) {
-  const index = argv.indexOf(name);
-  return index >= 0 ? argv[index + 1] ?? null : null;
 }
 
 function todayJst() {
