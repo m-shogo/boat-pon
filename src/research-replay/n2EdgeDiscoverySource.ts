@@ -79,6 +79,13 @@ type WinnerRow = {
   rawParserReplayEligible: number | null;
   winningSelection: string | null;
 };
+
+type PayoutBetLineageRow = {
+  raceKey: string;
+  candidateId: string;
+  observationId: string;
+};
+
 type ProgramRow = {
   raceId: string;
   date: string;
@@ -204,6 +211,31 @@ function readHistoricalOutcomes(path: string): { rows: N2HistoricalOutcomeRow[];
       validResolvedObservationIds = readCurrentlyValidSourceDuplicateObservationIds(db);
     } catch {
       return { rows: [], blockers: ["SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID"] };
+    }
+    const payoutBetLineageRows = db.prepare(`
+      SELECT c.canonical_race_key AS raceKey,
+             c.candidate_id AS candidateId,
+             c.observation_id AS observationId
+      FROM settlement_candidates_v2 c
+      JOIN race_payout_lines_v2 p ON p.candidate_id=c.candidate_id
+      WHERE c.bet_type='trifecta'
+        AND c.settlement_status='settled'
+        AND c.result_kind='normal'
+        AND c.resolution_status='resolved'
+        AND substr(c.canonical_race_key,1,10) >= ?
+        AND substr(c.canonical_race_key,1,10) <= ?
+        AND p.bet_type<>c.bet_type
+        AND NOT EXISTS (
+          SELECT 1 FROM settlement_candidates_v2 newer
+          WHERE newer.supersedes_candidate_id=c.candidate_id
+        )
+      ORDER BY c.canonical_race_key,c.candidate_id
+    `).all(N2_EDGE_DISCOVERY_HISTORY_FROM_DATE, N2_EDGE_DISCOVERY_TO_DATE) as unknown as PayoutBetLineageRow[];
+    const payoutBetLineageBlockers = payoutBetLineageRows
+      .filter((row) => !validResolvedObservationIds.has(row.observationId))
+      .map((row) => `${row.raceKey}:PAYOUT_BET_LINEAGE_MISMATCH:${row.candidateId}`);
+    if (payoutBetLineageBlockers.length > 0) {
+      return { rows: [], blockers: unique(payoutBetLineageBlockers) };
     }
     const raw = db.prepare(`
       SELECT
