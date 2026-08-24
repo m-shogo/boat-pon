@@ -12,6 +12,7 @@ import {
   appendRecordIdempotent,
   listRecords,
 } from "../research/governance/registryStore";
+import { canonicalHash } from "./canonical";
 import type { N2EdgeKnowledgeLineagePlan } from "./n2EdgeKnowledgeLineage";
 
 export const N2_EDGE_KNOWLEDGE_REGISTRY_WRITE_INTENT =
@@ -62,6 +63,11 @@ function stripMetadata(record: Record<string, unknown>): Record<string, unknown>
 function stripCreatedAt(record: Record<string, unknown>): Record<string, unknown> {
   const { createdAt: _createdAt, ...body } = record;
   return body;
+}
+
+function lineagePlanDigestMatches(plan: N2EdgeKnowledgeLineagePlan): boolean {
+  const { outputDigest, ...body } = plan;
+  return /^[0-9a-f]{64}$/u.test(outputDigest) && canonicalHash(body) === outputDigest;
 }
 
 function registryRootPreflightBlocker(repoRoot: string, registryRoot: string): string | null {
@@ -209,6 +215,7 @@ export function persistN2EdgeKnowledgeLineage(input: {
   const blockers: string[] = [];
   if (input.writeIntent !== N2_EDGE_KNOWLEDGE_REGISTRY_WRITE_INTENT) blockers.push("WRITE_INTENT_INVALID");
   if (input.plan.status !== "PASS") blockers.push("LINEAGE_PLAN_NOT_PASS");
+  if (!lineagePlanDigestMatches(input.plan)) blockers.push("LINEAGE_PLAN_OUTPUT_DIGEST_MISMATCH");
   if (input.plan.registryPlan.registryWriteAuthorized !== false) blockers.push("LINEAGE_PLAN_WRITE_AUTHORITY_INVALID");
   if (input.plan.authority.automaticPromotionAuthorized !== false
     || input.plan.authority.currentBuyConnectionAuthorized !== false
