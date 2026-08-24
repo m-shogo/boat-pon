@@ -40,3 +40,32 @@ test("reparse resume rejects processed archives that no longer resolve to curren
     /REPARSE_CHECKPOINT_PROCESSED_ARCHIVE_RAW_UNRESOLVED:k260802\.lzh/,
   );
 });
+
+test("reparse resume rejects duplicate processed archive identities", () => {
+  assert.throws(
+    () => assertN2SettlementReparseProcessedArchiveLineage(
+      {
+        processedFiles: ["k260801.lzh", "k260801.lzh"],
+        processedRawDocs: ["raw-1", "raw-1"],
+      },
+      new Map([["k260801.lzh", "raw-1"]]),
+    ),
+    /REPARSE_CHECKPOINT_PROCESSED_ARCHIVE_DUPLICATE:k260801\.lzh/,
+  );
+});
+
+test("reparse resume rejects duplicate raw identity across processed archives", () => {
+  assert.throws(
+    () => assertN2SettlementReparseProcessedArchiveLineage(
+      {
+        processedFiles: ["k260801.lzh", "k260802.lzh"],
+        processedRawDocs: ["raw-1", "raw-1"],
+      },
+      new Map([
+        ["k260801.lzh", "raw-1"],
+        ["k260802.lzh", "raw-1"],
+      ]),
+    ),
+    /REPARSE_CHECKPOINT_PROCESSED_RAW_DUPLICATE:raw-1/,
+  );
+});
