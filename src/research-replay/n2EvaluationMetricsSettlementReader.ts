@@ -55,6 +55,11 @@ type Row = {
   payoutYen: number | null;
 };
 
+type PayoutBetLineageRow = {
+  raceKey: string;
+  candidateId: string;
+};
+
 function unique(values: readonly string[]): string[] {
   return [...new Set(values)].sort();
 }
@@ -132,6 +137,26 @@ export function readN2EvaluationMetricsSettlements(input: {
       return blocked(["SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID"], requested.length, 1);
     }
     const placeholders = requested.map(() => "?").join(",");
+    const payoutBetLineageRows = db.prepare(`
+      SELECT c.canonical_race_key AS raceKey,
+             c.candidate_id AS candidateId
+      FROM settlement_candidates_v2 c
+      JOIN race_payout_lines_v2 p ON p.candidate_id=c.candidate_id
+      WHERE c.canonical_race_key IN (${placeholders})
+        AND p.bet_type<>c.bet_type
+        AND NOT EXISTS (
+          SELECT 1 FROM settlement_candidates_v2 newer
+          WHERE newer.supersedes_candidate_id=c.candidate_id
+        )
+      ORDER BY c.canonical_race_key,c.candidate_id,p.line_no
+    `).all(...requested) as unknown as PayoutBetLineageRow[];
+    if (payoutBetLineageRows.length > 0) {
+      return blocked(
+        payoutBetLineageRows.map((row) => `${row.raceKey}:PAYOUT_BET_LINEAGE_MISMATCH:${row.candidateId}`),
+        requested.length,
+        1,
+      );
+    }
     const rows = db.prepare(`
       SELECT
         c.canonical_race_key AS raceKey,
