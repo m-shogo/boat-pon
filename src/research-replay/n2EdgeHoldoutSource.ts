@@ -13,6 +13,7 @@ import {
   N2_EDGE_VALIDATION_FROM_DATE,
 } from "./n2EdgeHoldoutCohort";
 import type { N2HistoricalOutcomeRow } from "./n2HistoricalOnlyBaselineDataset";
+import { parseSettlementSelection } from "./settlement";
 
 export const N2_EDGE_HOLDOUT_SOURCE_VERSION = "n2-edge-holdout-source-v1" as const;
 export const N2_EDGE_HOLDOUT_HISTORY_FROM_DATE = "2021-07-05" as const;
@@ -36,6 +37,8 @@ type WinnerRow = {
   rawIntegrityStatus: string | null;
   rawSecurityScanStatus: string | null;
   rawParserReplayEligible: number | null;
+  winningSelectionRaw: string | null;
+  winningSelectionNormalized: string | null;
   winningSelection: string | null;
 };
 
@@ -184,6 +187,8 @@ export function readN2EdgeHoldoutSource(input: { primaryDbPath: string; sidecarD
        rd.integrity_status AS rawIntegrityStatus,
        rd.security_scan_status AS rawSecurityScanStatus,
        rd.parser_replay_eligible AS rawParserReplayEligible,
+       p.selection_raw AS winningSelectionRaw,
+       p.selection_normalized AS winningSelectionNormalized,
        p.selection_canonical AS winningSelection
       FROM settlement_candidates_v2 c
       LEFT JOIN domain_observations o ON o.observation_id=c.observation_id
@@ -213,6 +218,17 @@ export function readN2EdgeHoldoutSource(input: { primaryDbPath: string; sidecarD
         || row.rawSecurityScanStatus !== "passed"
         || row.rawParserReplayEligible !== 1) {
         blockers.push(`${row.raceKey}:SETTLEMENT_LINEAGE_INVALID`);
+        continue;
+      }
+      if (row.winningSelectionRaw == null || row.winningSelectionNormalized == null) {
+        blockers.push(`${row.raceKey}:WINNING_SELECTION_SEMANTICS_MISMATCH`);
+        continue;
+      }
+      const selection = parseSettlementSelection("trifecta", row.winningSelectionRaw);
+      if (!selection.valid
+        || selection.normalized !== row.winningSelectionNormalized
+        || selection.canonical !== row.winningSelection) {
+        blockers.push(`${row.raceKey}:WINNING_SELECTION_SEMANTICS_MISMATCH`);
         continue;
       }
       const current=grouped.get(row.raceKey)??[]; if(row.winningSelection!=null) current.push(row.winningSelection); grouped.set(row.raceKey,current);
