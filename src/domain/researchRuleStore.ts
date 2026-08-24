@@ -269,6 +269,12 @@ export function applyRuleTransition(
         error: { ruleId, reason: "production transition timestamp precedes the forward evaluation run" },
       };
     }
+    if (evaluationRunAt < updatedAt) {
+      return {
+        ok: false,
+        error: { ruleId, reason: "forward evaluation run precedes the current approved rule state" },
+      };
+    }
   }
 
   const updated: ResearchRule = { ...rule, status: to, updatedAt: now };
