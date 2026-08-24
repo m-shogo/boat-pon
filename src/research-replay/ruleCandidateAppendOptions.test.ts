@@ -19,7 +19,7 @@ test("rule candidate append options accept documented overrides", () => {
     parseRuleCandidateAppendOptions([
       "--",
       "--input", "/tmp/boat-quality.json",
-      "--output", "docs/rule-candidates.md",
+      "--output", "docs/research/rule-candidates.md",
       "--status", "candidate",
       "--evidence", "report:monthly",
       "--action", "追加観察",
@@ -27,7 +27,7 @@ test("rule candidate append options accept documented overrides", () => {
     ]),
     {
       input: "/tmp/boat-quality.json",
-      output: "docs/rule-candidates.md",
+      output: "docs/research/rule-candidates.md",
       status: "candidate",
       evidence: "report:monthly",
       action: "追加観察",
@@ -53,4 +53,24 @@ test("rule candidate append options reject unknown or non-canonical statuses", (
     assert.throws(() => parseRuleCandidateAppendOptions(["--status", value]), /invalid --status|requires a value/u);
   }
   assert.throws(() => parseRuleCandidateAppendOptions(["--unknown", "x"]), /unknown option: --unknown/u);
+});
+
+test("rule candidate append options confine writes to canonical docs markdown paths", () => {
+  for (const output of [
+    "automation/control/task-queue-state.json",
+    "src/research-replay/settlement.ts",
+    "../docs/rule-candidates.md",
+    "docs/../automation/control/task-queue-state.md",
+    "/tmp/rule-candidates.md",
+    "docs\\rule-candidates.md",
+    "docs//rule-candidates.md",
+    " docs/rule-candidates.md",
+    "docs/rule-candidates.md ",
+    "docs/rule-candidates.json",
+  ]) {
+    assert.throws(
+      () => parseRuleCandidateAppendOptions(["--output", output]),
+      /invalid --output/u,
+    );
+  }
 });

@@ -1,3 +1,5 @@
+import { posix } from "node:path";
+
 export const RULE_CANDIDATE_STATUSES = [
   "watch",
   "candidate",
@@ -42,6 +44,17 @@ function parseStatus(value: string): RuleCandidateStatus {
   return value as RuleCandidateStatus;
 }
 
+function requireDocumentationOutputPath(value: string): string {
+  if (value.trim() !== value || value.includes("\\") || value.startsWith("/")) {
+    throw new Error(`invalid --output: ${value}`);
+  }
+  const normalized = posix.normalize(value);
+  if (normalized !== value || !normalized.startsWith("docs/") || !normalized.endsWith(".md")) {
+    throw new Error(`invalid --output: ${value}`);
+  }
+  return normalized;
+}
+
 export function parseRuleCandidateAppendOptions(argv: string[]): RuleCandidateAppendOptions {
   const parsed: RuleCandidateAppendOptions = {
     input: null,
@@ -66,7 +79,7 @@ export function parseRuleCandidateAppendOptions(argv: string[]): RuleCandidateAp
     i += 1;
 
     if (flag === "--input") parsed.input = value;
-    else if (flag === "--output") parsed.output = value;
+    else if (flag === "--output") parsed.output = requireDocumentationOutputPath(value);
     else if (flag === "--status") parsed.status = parseStatus(value);
     else if (flag === "--evidence") parsed.evidence = value;
     else if (flag === "--action") parsed.action = value;
