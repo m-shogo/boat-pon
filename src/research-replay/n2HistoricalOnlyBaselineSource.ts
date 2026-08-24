@@ -15,6 +15,7 @@ import { buildN2MarketBaselineReadinessReport } from "./n2MarketBaselineReadines
 import { readN2MarketBaselineReadiness } from "./n2MarketBaselineReadinessReader";
 import { compareN2RaceKeysByRaceTime } from "./n2MarketOnlyBaselineDataset";
 import { readN2T5DecisionCutoffMetadata } from "./n2T5DecisionCutoffMetadata";
+import { parseSettlementSelection } from "./settlement";
 
 export const N2_HISTORICAL_ONLY_BASELINE_SOURCE_VERSION =
   "n2-historical-only-baseline-source-v1" as const;
@@ -57,6 +58,8 @@ type WinnerRow = {
   rawIntegrityStatus: string | null;
   rawSecurityScanStatus: string | null;
   rawParserReplayEligible: number | null;
+  winningSelectionRaw: string | null;
+  winningSelectionNormalized: string | null;
   winningSelection: string | null;
 };
 
@@ -188,6 +191,8 @@ export function readCleanTrifectaWinners(input: {
         rd.integrity_status AS rawIntegrityStatus,
         rd.security_scan_status AS rawSecurityScanStatus,
         rd.parser_replay_eligible AS rawParserReplayEligible,
+        p.selection_raw AS winningSelectionRaw,
+        p.selection_normalized AS winningSelectionNormalized,
         p.selection_canonical AS winningSelection
       FROM settlement_candidates_v2 c
       LEFT JOIN domain_observations o
@@ -236,6 +241,17 @@ export function readCleanTrifectaWinners(input: {
         || row.rawSecurityScanStatus !== "passed"
         || row.rawParserReplayEligible !== 1) {
         blockers.push(`${row.raceKey}:SETTLEMENT_LINEAGE_MISMATCH:${row.observationId}`);
+        continue;
+      }
+      if (row.winningSelectionRaw == null || row.winningSelectionNormalized == null) {
+        blockers.push(`${row.raceKey}:WINNING_SELECTION_SEMANTICS_MISMATCH`);
+        continue;
+      }
+      const selection = parseSettlementSelection("trifecta", row.winningSelectionRaw);
+      if (!selection.valid
+        || selection.normalized !== row.winningSelectionNormalized
+        || selection.canonical !== row.winningSelection) {
+        blockers.push(`${row.raceKey}:WINNING_SELECTION_SEMANTICS_MISMATCH`);
         continue;
       }
       const current = grouped.get(row.raceKey) ?? [];
