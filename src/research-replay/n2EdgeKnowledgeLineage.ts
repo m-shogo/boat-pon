@@ -85,6 +85,14 @@ function experimentStatus(disposition: N2ConfounderAuditItem["disposition"]): Ex
   return "completed";
 }
 
+function expectedAuditDisposition(input: N2EdgeKnowledgeLineageInput): N2ConfounderAuditItem["disposition"] {
+  if (input.confirmation.verdict === "HISTORICAL_REJECTED") return "REJECT_AND_REGISTER";
+  if (input.confirmation.verdict === "INSUFFICIENT_HOLDOUT") return "INSUFFICIENT_HOLDOUT";
+  return input.auditItem.confounderFlags.some((flag) => flag.severity === "blocking")
+    ? "CONFIRMED_WITH_BLOCKING_CONFOUNDER"
+    : "CONFIRMED_PENDING_CONFOUNDER_REVIEW";
+}
+
 function buildExperiment(input: N2EdgeKnowledgeLineageInput): Experiment {
   const identity = canonicalHash({
     hypothesisId: input.confirmation.hypothesisId,
@@ -158,6 +166,12 @@ export function buildN2EdgeKnowledgeLineagePlan(
   if (input.auditItem.hypothesisId !== input.confirmation.hypothesisId) blockers.push("AUDIT_CONFIRMATION_HYPOTHESIS_MISMATCH");
   if (input.auditItem.historicalVerdict !== input.confirmation.verdict) blockers.push("AUDIT_CONFIRMATION_VERDICT_MISMATCH");
   if (input.auditItem.promotionAuthorized !== false) blockers.push("AUDIT_PROMOTION_AUTHORITY_INVALID");
+  if (input.auditItem.confounderFlags.some((flag) => flag.hypothesisId !== input.auditItem.hypothesisId)) {
+    blockers.push("AUDIT_CONFOUNDER_FLAG_HYPOTHESIS_MISMATCH");
+  }
+  if (input.auditItem.disposition !== expectedAuditDisposition(input)) {
+    blockers.push("AUDIT_DISPOSITION_INCONSISTENT");
+  }
   for (const [name, digest] of [
     ["scan", input.scanArtifactDigest],
     ["historical", input.historicalTestArtifactDigest],
