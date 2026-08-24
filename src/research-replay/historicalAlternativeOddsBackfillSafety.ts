@@ -80,5 +80,12 @@ export function requireHistoricalAltOddsTarget(target: HistoricalAltOddsBackfill
 }
 
 export function requireHistoricalAltOddsTargets(targets: readonly HistoricalAltOddsBackfillTarget[]): void {
-  for (const target of targets) requireHistoricalAltOddsTarget(target);
+  const seenRaceIds = new Set<string>();
+  for (const target of targets) {
+    requireHistoricalAltOddsTarget(target);
+    if (seenRaceIds.has(target.raceId)) {
+      throw new Error(`HISTORICAL_ALT_ODDS_TARGET_DUPLICATE:${target.raceId}`);
+    }
+    seenRaceIds.add(target.raceId);
+  }
 }
