@@ -11,6 +11,7 @@ import { DatabaseSync } from "node:sqlite";
 
 import { parseAllTrifectaOdds } from "../domain/oddsParser";
 import { canonicalUtcTimestamp } from "./canonical";
+import { readCurrentlyValidSourceDuplicateObservationIds } from "./n1SourceDuplicateResolutionValidation";
 import type { N2TrifectaPrivateCaptureEnvelope } from "./n2TrifectaPrivateCaptureExecutor";
 import {
   N2_MARKET_ONLY_BASELINE_COHORT_RACE_COUNT,
@@ -301,6 +302,7 @@ function readWinners(sidecarDbPath: string, raceKeys: string[]): {
   if (raceKeys.length === 0) return { winners: new Map(), blockers: [] };
   const db = openReadOnly(sidecarDbPath);
   try {
+    readCurrentlyValidSourceDuplicateObservationIds(db);
     const placeholders = raceKeys.map(() => "?").join(",");
     const rows = db.prepare(`
       SELECT c.canonical_race_key AS raceKey, p.selection_canonical AS winningSelection
