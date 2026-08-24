@@ -402,7 +402,7 @@ export function verifyN1CanonicalResolutionSchema(db: DatabaseSync): {
   const triggerCount = Number((db.prepare(
     `SELECT COUNT(*) count FROM sqlite_master WHERE type='trigger' AND name IN
      ('settlement_source_duplicate_resolutions_v2_append_only_update','settlement_source_duplicate_resolutions_v2_append_only_delete')`,
-  ).get() as { c: number }).count);
+  ).get() as { count: number }).count);
   return {
     ok: verifyN1SettlementSchema(db).ok && row?.status === "applied"
       && row.checksum === N1_CANONICAL_RESOLUTION_MIGRATION_CHECKSUM && triggerCount === 2,
