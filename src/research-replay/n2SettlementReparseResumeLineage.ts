@@ -10,9 +10,19 @@ export function assertN2SettlementReparseProcessedArchiveLineage(
   if (state.processedFiles.length !== state.processedRawDocs.length) {
     throw new Error("REPARSE_CHECKPOINT_PROCESSED_LINEAGE_COUNT_MISMATCH");
   }
+  const seenFiles = new Set<string>();
+  const seenRawDocumentIds = new Set<string>();
   for (let index = 0; index < state.processedFiles.length; index += 1) {
     const archiveFile = state.processedFiles[index];
     const savedRawDocumentId = state.processedRawDocs[index];
+    if (seenFiles.has(archiveFile)) {
+      throw new Error(`REPARSE_CHECKPOINT_PROCESSED_ARCHIVE_DUPLICATE:${archiveFile}`);
+    }
+    seenFiles.add(archiveFile);
+    if (seenRawDocumentIds.has(savedRawDocumentId)) {
+      throw new Error(`REPARSE_CHECKPOINT_PROCESSED_RAW_DUPLICATE:${savedRawDocumentId}`);
+    }
+    seenRawDocumentIds.add(savedRawDocumentId);
     const expectedRawDocumentId = expectedRawDocumentIdByArchive.get(archiveFile);
     if (expectedRawDocumentId === undefined) {
       throw new Error(`REPARSE_CHECKPOINT_PROCESSED_ARCHIVE_RAW_UNRESOLVED:${archiveFile}`);
