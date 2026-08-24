@@ -122,6 +122,9 @@ export function verifyN2FeatureLineage(
     sourceAvailableAt = row.sourcePublishedAt;
     availabilityBasis = "source_published_at";
   } else if (row.timingQuality === "observed_only") {
+    if (row.sourcePublishedAt !== null) {
+      return { status: "excluded", reason: "excluded_lineage_timing_semantics" };
+    }
     sourceAvailableAt = row.sourceObservedAt;
     availabilityBasis = "source_observed_at";
   } else {
