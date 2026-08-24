@@ -49,6 +49,8 @@ function withDb(fn: (path: string, db: DatabaseSync) => void): void {
         candidate_id TEXT NOT NULL,
         line_no INTEGER NOT NULL,
         bet_type TEXT NOT NULL,
+        selection_raw TEXT,
+        selection_normalized TEXT,
         selection_canonical TEXT,
         line_kind TEXT NOT NULL
       );
@@ -84,9 +86,9 @@ test("historical winner reader rejects cross-bet payout lineage before building 
     db.prepare(`INSERT INTO settlement_candidates_v2
       VALUES ('a',?,'trifecta','settled','normal','resolved','obs-a','parse-a','raw-a',NULL)`).run(raceKey);
     db.prepare(`INSERT INTO race_payout_lines_v2
-      VALUES ('normal-a','a',1,'trifecta','1-2-3','payout')`).run();
+      VALUES ('normal-a','a',1,'trifecta','1-2-3','1-2-3','1-2-3','payout')`).run();
     db.prepare(`INSERT INTO race_payout_lines_v2
-      VALUES ('forged-special-a','a',2,'exacta','1-2','special_payout')`).run();
+      VALUES ('forged-special-a','a',2,'exacta','1-2','1-2','1-2','special_payout')`).run();
     db.close();
 
     const result = readCleanTrifectaWinners({
