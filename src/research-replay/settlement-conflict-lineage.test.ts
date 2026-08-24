@@ -38,7 +38,6 @@ function ingest(ctx: ReturnType<typeof setup>, name: string, race: string) {
       parseStatus: "success",
       candidateCount: 1,
       diagnosticCodes: [],
-      fixtureName: name,
     },
     sourcePublishedAt: "2026-07-24T02:59:00.000Z",
     sourceObservedAt: NOW,
