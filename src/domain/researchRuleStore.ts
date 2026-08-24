@@ -23,6 +23,17 @@ export type RuleStoreResult =
   | { ok: true; rules: ResearchRule[] }
   | { ok: false; error: RuleStoreError };
 
+const VALID_RULE_STATUSES: ReadonlySet<string> = new Set([
+  "candidate",
+  "backtest",
+  "forward",
+  "review",
+  "approved",
+  "production",
+  "deprecated",
+  "archived",
+]);
+
 function parseCanonicalLifecycleTimestamp(value: unknown): number | null {
   if (typeof value !== "string") return null;
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/u.exec(value);
@@ -73,6 +84,36 @@ function findDuplicateRegistryRuleId(rules: ResearchRule[]): string | null {
   return null;
 }
 
+function validatePersistedRegistryIntegrity(rules: ResearchRule[]): RuleStoreError | null {
+  for (const persisted of rules) {
+    const recordError = validateRuleRecordFields(persisted, "persisted rule");
+    if (recordError !== null) {
+      return { ruleId: String(persisted.ruleId), reason: recordError };
+    }
+    if (!VALID_RULE_STATUSES.has(persisted.status as string)) {
+      return {
+        ruleId: persisted.ruleId,
+        reason: `persisted rule status "${String(persisted.status)}" is invalid`,
+      };
+    }
+    const createdAt = parseCanonicalLifecycleTimestamp(persisted.createdAt);
+    const updatedAt = parseCanonicalLifecycleTimestamp(persisted.updatedAt);
+    if (createdAt === null || updatedAt === null) {
+      return {
+        ruleId: persisted.ruleId,
+        reason: "persisted rule lifecycle timestamps must be canonical explicit-zone ISO-8601 values",
+      };
+    }
+    if (updatedAt < createdAt) {
+      return {
+        ruleId: persisted.ruleId,
+        reason: "persisted rule updatedAt precedes createdAt; lifecycle chronology is invalid",
+      };
+    }
+  }
+  return null;
+}
+
 /** 新規ルールは常に"candidate"段階で作成する。他のstatusで直接作ることはできない。 */
 export function createResearchRule(
   ruleId: string,
@@ -112,6 +153,10 @@ export function addRule(rules: ResearchRule[], rule: ResearchRule): RuleStoreRes
   }
   if (findRule(rules, rule.ruleId)) {
     return { ok: false, error: { ruleId: rule.ruleId, reason: `rule "${rule.ruleId}" already exists` } };
+  }
+  const registryError = validatePersistedRegistryIntegrity(rules);
+  if (registryError !== null) {
+    return { ok: false, error: registryError };
   }
   if (rule.status !== "candidate") {
     return {
@@ -176,13 +221,13 @@ export function applyRuleTransition(
       },
     };
   }
+  const registryError = validatePersistedRegistryIntegrity(rules);
+  if (registryError !== null) {
+    return { ok: false, error: registryError };
+  }
 
   const index = matchingIndexes[0];
   const rule = rules[index];
-  const recordError = validateRuleRecordFields(rule, "persisted rule");
-  if (recordError !== null) {
-    return { ok: false, error: { ruleId: String(rule.ruleId), reason: recordError } };
-  }
   const createdAt = parseCanonicalLifecycleTimestamp(rule.createdAt);
   const updatedAt = parseCanonicalLifecycleTimestamp(rule.updatedAt);
   const transitionAt = parseCanonicalLifecycleTimestamp(now);
