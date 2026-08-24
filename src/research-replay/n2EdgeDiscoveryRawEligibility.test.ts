@@ -64,6 +64,8 @@ function withDatabases(
       candidate_id TEXT NOT NULL,
       line_no INTEGER NOT NULL,
       bet_type TEXT NOT NULL,
+      selection_raw TEXT,
+      selection_normalized TEXT,
       selection_canonical TEXT,
       payout_yen INTEGER NOT NULL,
       line_kind TEXT NOT NULL
@@ -105,7 +107,7 @@ function insertWinner(
   db.prepare(`INSERT INTO settlement_candidates_v2
     VALUES ('candidate-a',?,'trifecta','settled','normal','resolved','obs-a','parse-a','raw-a',NULL)`).run(raceKey);
   db.prepare(`INSERT INTO race_payout_lines_v2
-    VALUES ('payout-a','candidate-a',1,'trifecta','1-2-3',1000,'payout')`).run();
+    VALUES ('payout-a','candidate-a',1,'trifecta','1-2-3','1-2-3','1-2-3',1000,'payout')`).run();
   return raceKey;
 }
 
