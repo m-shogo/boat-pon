@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  requireExactaForwardMonitorLockedAt,
   requireExactaForwardMonitorRaceIdentities,
   requireExactaForwardMonitorRaceIdentity,
 } from "./exactaForwardMonitorSafety";
@@ -11,6 +12,20 @@ const valid = () => ({
   date: "2026-08-23",
   venue: "宮島",
   raceNo: 6,
+});
+
+test("exacta forward monitor accepts canonical lock dates", () => {
+  assert.doesNotThrow(() => requireExactaForwardMonitorLockedAt("2026-06-12"));
+  assert.doesNotThrow(() => requireExactaForwardMonitorLockedAt("2028-02-29"));
+});
+
+test("exacta forward monitor rejects impossible or noncanonical lock dates", () => {
+  for (const value of ["2026-02-30", "2026-6-12", "2026-06-12T00:00:00Z", "invalid"]) {
+    assert.throws(
+      () => requireExactaForwardMonitorLockedAt(value),
+      /EXACTA_FORWARD_MONITOR_LOCKED_AT_INVALID/u,
+    );
+  }
 });
 
 test("exacta forward monitor accepts canonical race lineage", () => {
