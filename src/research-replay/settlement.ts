@@ -497,6 +497,16 @@ export class SettlementRepository {
       .get(input.parseRunId) as { status: string; raw_document_id: string } | undefined;
     if (!parse || !["success", "warning"].includes(parse.status)) throw new Error("PARSE_STATUS_FORBIDS_CANDIDATE");
     if (parse.raw_document_id !== input.rawDocumentId) throw new Error("RAW_PARSE_LINEAGE_MISMATCH");
+    const observation = this.db.prepare(`
+      SELECT parse_run_id,raw_document_id,canonical_race_key
+      FROM domain_observations WHERE observation_id=?
+    `).get(input.observationId) as {
+      parse_run_id: string; raw_document_id: string; canonical_race_key: string;
+    } | undefined;
+    if (!observation) throw new Error("SETTLEMENT_OBSERVATION_MISSING");
+    if (observation.parse_run_id !== input.parseRunId) throw new Error("OBSERVATION_PARSE_LINEAGE_MISMATCH");
+    if (observation.raw_document_id !== input.rawDocumentId) throw new Error("OBSERVATION_RAW_LINEAGE_MISMATCH");
+    if (observation.canonical_race_key !== input.canonicalRaceKey) throw new Error("OBSERVATION_RACE_LINEAGE_MISMATCH");
     const parsedPayoutLines = input.payouts.map((line) => {
       const selection = parseSettlementSelection(input.betType, line.selection);
       const special = (line.lineKind ?? "payout") === "special_payout";

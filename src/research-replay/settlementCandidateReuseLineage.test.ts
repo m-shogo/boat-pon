@@ -123,3 +123,16 @@ test("settlement candidate retry rejects immutable lineage drift", () => {
   );
   ctx.db.close();
 });
+
+test("settlement candidate rejects race identity that disagrees with its observation", () => {
+  const ctx = setup();
+  assert.throws(
+    () => ctx.settlement.appendCandidate({ ...input(ctx), canonicalRaceKey: "2026-08-21:05:R2" }),
+    /OBSERVATION_RACE_LINEAGE_MISMATCH/,
+  );
+  assert.equal(
+    Number((ctx.db.prepare("SELECT COUNT(*) AS count FROM settlement_candidates_v2").get() as { count: number }).count),
+    0,
+  );
+  ctx.db.close();
+});

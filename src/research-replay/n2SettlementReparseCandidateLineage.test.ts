@@ -126,6 +126,34 @@ function insertCandidate(repo: SettlementRepository, parseRunId: string): void {
   });
 }
 
+function insertPersistedStaleCandidate(db: DatabaseSync): void {
+  const semanticHash = canonicalHash({
+    betType: "win",
+    settlementStatus: "settled",
+    resultKind: "special_payout",
+    payouts: [[null, 70, null, "special_payout"]],
+    refunds: [],
+  });
+  db.prepare(`INSERT INTO settlement_candidates_v2
+    (candidate_id, canonical_race_key, bet_type, settlement_status, result_kind,
+     revision_kind, resolution_status, source_kind, source_schema_version,
+     observation_id, parse_run_id, raw_document_id, semantic_hash,
+     supersedes_candidate_id, correction_reason, observed_at, created_at)
+    VALUES (?, ?, 'win', 'settled', 'special_payout', 'initial', 'resolved', 'official_archive', ?,
+            ?, ?, ?, ?, NULL, NULL, ?, ?)`)
+    .run(
+      "candidate-lineage-1",
+      RACE_KEY,
+      META.family,
+      OBSERVATION_ID,
+      SOURCE_PARSE_ID,
+      RAW_ID,
+      semanticHash,
+      NOW,
+      NOW,
+    );
+}
+
 function candidateCount(db: DatabaseSync): number {
   return Number((db.prepare("SELECT COUNT(*) AS n FROM settlement_candidates_v2").get() as { n: number }).n);
 }
@@ -133,7 +161,9 @@ function candidateCount(db: DatabaseSync): number {
 test("reparse rejects semantic candidate reuse with stale parse lineage", () => {
   const { db, repo } = setup();
   const activeState = loadActiveState(db, loadSourceDuplicateSet(db));
-  insertCandidate(repo, SOURCE_PARSE_ID);
+  // This intentionally models persisted legacy/tampered evidence that the current
+  // appendCandidate producer now rejects before it can be written.
+  insertPersistedStaleCandidate(db);
   const state = newState();
 
   assert.throws(
