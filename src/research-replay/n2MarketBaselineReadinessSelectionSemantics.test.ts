@@ -143,12 +143,12 @@ function createSidecar(root: string): string {
   db.prepare(`INSERT INTO settlement_candidates_v2
     VALUES ('a','2026-08-07:10:R1','trifecta','settled','normal','resolved','obs-a','parse-a','raw-a',NULL)`).run();
   db.prepare(`INSERT INTO race_payout_lines_v2
-    VALUES ('payout-a','a','trifecta','2-1-3','2-1-3','1-2-3','payout')`).run();
+    VALUES ('payout-a','a','trifecta','9-9-9','9-9-9','9-9-9','payout')`).run();
   db.close();
   return path;
 }
 
-test("forged canonical payout selection cannot make market readiness settlement-eligible", () => {
+test("producer-impossible canonical payout selection cannot make market readiness settlement-eligible", () => {
   withRoot((root) => {
     writeAcceptedT5(root);
     createSidecar(root);
