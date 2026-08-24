@@ -33,25 +33,41 @@ export function parseCandidateSelectionAuditOptions(
   let json = false;
   let limit = 20;
   let strict = false;
+  const seen = new Set<string>();
+
+  const markSeen = (key: "date" | "json" | "limit" | "strict"): void => {
+    if (seen.has(key)) throw new Error(`CANDIDATE_SELECTION_AUDIT_ARGUMENT_DUPLICATE:${key}`);
+    seen.add(key);
+  };
 
   for (let i = 0; i < argv.length; i += 1) {
     const value = argv[i];
-    if (value === "--json") {
+    if (value === "--") {
+      continue;
+    } else if (value === "--json") {
+      markSeen("json");
       json = true;
     } else if (value === "--strict") {
+      markSeen("strict");
       strict = true;
     } else if (value === "--date") {
+      markSeen("date");
       const raw = argv[++i];
       if (raw == null) throw new Error("CANDIDATE_SELECTION_AUDIT_DATE_MISSING");
       date = requireCanonicalDate(raw);
     } else if (value.startsWith("--date=")) {
+      markSeen("date");
       date = requireCanonicalDate(value.slice("--date=".length));
     } else if (value === "--limit") {
+      markSeen("limit");
       const raw = argv[++i];
       if (raw == null) throw new Error("CANDIDATE_SELECTION_AUDIT_LIMIT_MISSING");
       limit = requirePositiveSafeInteger(raw);
     } else if (value.startsWith("--limit=")) {
+      markSeen("limit");
       limit = requirePositiveSafeInteger(value.slice("--limit=".length));
+    } else {
+      throw new Error(`CANDIDATE_SELECTION_AUDIT_ARGUMENT_INVALID:${value}`);
     }
   }
 
