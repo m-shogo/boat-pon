@@ -630,9 +630,17 @@ export class SettlementRepository {
     reason: string; createdAt: string;
   }): string | null {
     const rows = input.candidateIds.map((id) => this.db.prepare(
-      "SELECT candidate_id,source_kind,semantic_hash FROM settlement_candidates_v2 WHERE candidate_id=?",
-    ).get(id) as { candidate_id: string; source_kind: string; semantic_hash: string } | undefined);
+      "SELECT candidate_id,canonical_race_key,bet_type,source_kind,semantic_hash FROM settlement_candidates_v2 WHERE candidate_id=?",
+    ).get(id) as {
+      candidate_id: string; canonical_race_key: string; bet_type: string; source_kind: string; semantic_hash: string;
+    } | undefined);
     if (rows.some((row) => !row)) throw new Error("CONFLICT_CANDIDATE_MISSING");
+    if (rows.some((row) => row!.canonical_race_key !== input.canonicalRaceKey)) {
+      throw new Error("CONFLICT_CANDIDATE_RACE_MISMATCH");
+    }
+    if (rows.some((row) => row!.bet_type !== input.betType)) {
+      throw new Error("CONFLICT_CANDIDATE_BET_TYPE_MISMATCH");
+    }
     if (new Set(rows.map((row) => row!.semantic_hash)).size < 2) return null;
     const groupId = this.idFactory();
     const now = canonicalUtcTimestamp(input.createdAt);
