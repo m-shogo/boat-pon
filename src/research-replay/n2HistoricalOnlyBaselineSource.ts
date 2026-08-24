@@ -60,6 +60,12 @@ type WinnerRow = {
   winningSelection: string | null;
 };
 
+type PayoutBetLineageRow = {
+  raceKey: string;
+  candidateId: string;
+  observationId: string;
+};
+
 const RACE_KEY_RE = /^(\d{4}-\d{2}-\d{2}):(0[1-9]|1\d|2[0-4]):R([1-9]|1[0-2])$/u;
 const TRIFECTA_SELECTION_RE = /^[1-6]-[1-6]-[1-6]$/u;
 const REUSABLE_PARSE_STATUSES = new Set(["success", "warning"]);
@@ -140,6 +146,31 @@ export function readCleanTrifectaWinners(input: {
       validResolvedObservationIds = readCurrentlyValidSourceDuplicateObservationIds(db);
     } catch {
       return { rows: [], blockers: ["SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID"] };
+    }
+    const payoutBetLineageRows = db.prepare(`
+      SELECT c.canonical_race_key AS raceKey,
+             c.candidate_id AS candidateId,
+             c.observation_id AS observationId
+      FROM settlement_candidates_v2 c
+      JOIN race_payout_lines_v2 p ON p.candidate_id=c.candidate_id
+      WHERE c.bet_type='trifecta'
+        AND c.settlement_status='settled'
+        AND c.result_kind='normal'
+        AND c.resolution_status='resolved'
+        AND substr(c.canonical_race_key,1,10) >= ?
+        AND substr(c.canonical_race_key,1,10) <= ?
+        AND p.bet_type<>c.bet_type
+        AND NOT EXISTS (
+          SELECT 1 FROM settlement_candidates_v2 newer
+          WHERE newer.supersedes_candidate_id=c.candidate_id
+        )
+      ORDER BY c.canonical_race_key,c.candidate_id
+    `).all(input.fromDate, input.toDate) as unknown as PayoutBetLineageRow[];
+    const payoutBetLineageBlockers = payoutBetLineageRows
+      .filter((row) => !validResolvedObservationIds.has(row.observationId))
+      .map((row) => `${row.raceKey}:PAYOUT_BET_LINEAGE_MISMATCH:${row.candidateId}`);
+    if (payoutBetLineageBlockers.length > 0) {
+      return { rows: [], blockers: unique(payoutBetLineageBlockers) };
     }
     const rawRows = db.prepare(`
       SELECT
