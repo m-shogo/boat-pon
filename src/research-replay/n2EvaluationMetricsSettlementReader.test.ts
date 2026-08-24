@@ -125,7 +125,7 @@ function insertClean(
     .run(id, raceKey, observationId, parseRunId, rawDocumentId, semanticHash);
   db.prepare(`INSERT INTO race_payout_lines_v2
     (payout_line_id,candidate_id,line_no,bet_type,selection_raw,selection_normalized,selection_canonical,payout_yen,line_kind)
-    VALUES (?,?,1,'trifecta',?,?,?,?,?,'payout')`)
+    VALUES (?,?,1,'trifecta',?,?,?,?,'payout')`)
     .run(`p-${id}`, id, selectionRaw, selectionNormalized, selection, payoutYen);
 }
 
