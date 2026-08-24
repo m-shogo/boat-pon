@@ -9,7 +9,7 @@ function requireUnexpectedAdditionsLimit(limit: number | null): void {
 
 export function parseUnexpectedAdditionsLimit(value: string | null): number | null {
   if (value == null) return null;
-  if (!/^\d+$/u.test(value)) {
+  if (!/^[1-9]\d*$/u.test(value)) {
     throw new Error(`N2_UNEXPECTED_ADDITIONS_LIMIT_INVALID:${value}`);
   }
   const parsed = Number(value);
