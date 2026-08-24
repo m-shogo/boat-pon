@@ -20,6 +20,7 @@ import { DatabaseSync } from "node:sqlite";
 import { parseOfficialResultDetail } from "../src/domain/officialResultDetailParser";
 import { canonicalHash, canonicalUtcTimestamp } from "../src/research-replay/canonical";
 import { listArchiveFiles } from "../src/research-replay/n1Backfill";
+import { assertN2SettlementReparseArchiveSelection } from "../src/research-replay/n2SettlementReparseArchiveSelection";
 import { SettlementRepository } from "../src/research-replay/settlement";
 import {
   assertN2SettlementReparseCheckpointIdentity,
@@ -331,6 +332,7 @@ async function main(): Promise<void> {
     process.stderr.write(`[reparse] active=${activeState.active.size} ambiguous=${ambiguousActiveKeys} superseded=${activeState.supersededCount} physical=${physicalBefore}\n`);
 
     const allFiles = listArchiveFiles(archiveRoot);
+    assertN2SettlementReparseArchiveSelection(allFiles);
     let files = canary ? selectCanaryFiles(allFiles) : allFiles;
     if (filesLimit != null) files = files.slice(0, filesLimit);
     process.stderr.write(`[reparse] mode=${mode} canary=${canary} files=${files.length} (of ${allFiles.length})\n`);
