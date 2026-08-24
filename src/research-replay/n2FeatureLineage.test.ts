@@ -57,6 +57,13 @@ test("lineage: observed-only availability is conservative and explicit", () => {
   }
 });
 
+test("lineage: observed-only cannot hide a persisted published timestamp", () => {
+  assert.deepEqual(verifyN2FeatureLineage(EXPECTED, evidence({
+    timingQuality: "observed_only",
+    sourcePublishedAt: "2026-05-20T04:00:00.001Z",
+  })), { status: "excluded", reason: "excluded_lineage_timing_semantics" });
+});
+
 test("lineage: arbitrary IDs, cross-race and broken raw chain fail closed", () => {
   assert.equal(verifyN2FeatureLineage(EXPECTED, null).status, "excluded");
   assert.deepEqual(verifyN2FeatureLineage(EXPECTED, evidence({ canonicalRaceKey: "2026-05-20:01:02" })),
