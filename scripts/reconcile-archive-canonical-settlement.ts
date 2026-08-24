@@ -16,6 +16,7 @@ import { DatabaseSync } from "node:sqlite";
 import { parseOfficialResultDetail } from "../src/domain/officialResultDetailParser";
 import { canonicalHash } from "../src/research-replay/canonical";
 import { fileDate, listArchiveFiles } from "../src/research-replay/n1Backfill";
+import { readCurrentlyValidSourceDuplicateObservationIds } from "../src/research-replay/n1SourceDuplicateResolutionValidation";
 import {
   ARCHIVE_RECONCILE_CHECKPOINT_VERSION,
   ARCHIVE_RECONCILE_SELECTION_VERSION,
@@ -231,12 +232,7 @@ function loadDbSide(): DbSide {
       );
     }
     // source-duplicate observation（active から除外する）
-    const sourceDup = new Set<string>();
-    for (const row of db.prepare(
-      "SELECT duplicate_observation_id AS id FROM settlement_source_duplicate_resolutions_v2",
-    ).all() as Array<{ id: string }>) {
-      sourceDup.add(row.id);
-    }
+    const sourceDup = readCurrentlyValidSourceDuplicateObservationIds(db);
     // superseded candidate（active から除外する）
     const superseded = new Set<string>();
     for (const row of db.prepare(
