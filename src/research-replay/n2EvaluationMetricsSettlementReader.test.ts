@@ -65,6 +65,8 @@ function withDb(fn: (path: string, db: DatabaseSync) => void): void {
         candidate_id TEXT NOT NULL,
         line_no INTEGER NOT NULL,
         bet_type TEXT NOT NULL,
+        selection_raw TEXT NOT NULL,
+        selection_normalized TEXT NOT NULL,
         selection_canonical TEXT,
         payout_yen INTEGER NOT NULL,
         line_kind TEXT NOT NULL
@@ -97,12 +99,20 @@ function insertClean(
   raceKey: string,
   selection: string,
   payoutYen: number,
-  options: { rawDocumentId?: string; parseRunId?: string; semanticHash?: string } = {},
+  options: {
+    rawDocumentId?: string;
+    parseRunId?: string;
+    semanticHash?: string;
+    selectionRaw?: string;
+    selectionNormalized?: string;
+  } = {},
 ): void {
   const observationId = `obs-${id}`;
   const rawDocumentId = options.rawDocumentId ?? `raw-${id}`;
   const parseRunId = options.parseRunId ?? `parse-${id}`;
   const semanticHash = options.semanticHash ?? `semantic-${id}`;
+  const selectionRaw = options.selectionRaw ?? selection;
+  const selectionNormalized = options.selectionNormalized ?? selection;
   db.prepare("INSERT OR IGNORE INTO raw_documents VALUES (?,'verified','passed',1)").run(rawDocumentId);
   db.prepare("INSERT OR IGNORE INTO parse_runs VALUES (?,?,'success')").run(parseRunId, rawDocumentId);
   db.prepare(`INSERT INTO domain_observations
@@ -114,9 +124,9 @@ function insertClean(
     VALUES (?,?, 'trifecta','settled','normal','initial','resolved',?,?,?,?,NULL,NULL)`)
     .run(id, raceKey, observationId, parseRunId, rawDocumentId, semanticHash);
   db.prepare(`INSERT INTO race_payout_lines_v2
-    (payout_line_id,candidate_id,line_no,bet_type,selection_canonical,payout_yen,line_kind)
-    VALUES (?,?,1,'trifecta',?,?,'payout')`)
-    .run(`p-${id}`, id, selection, payoutYen);
+    (payout_line_id,candidate_id,line_no,bet_type,selection_raw,selection_normalized,selection_canonical,payout_yen,line_kind)
+    VALUES (?,?,1,'trifecta',?,?,?,?,'payout')`)
+    .run(`p-${id}`, id, selectionRaw, selectionNormalized, selection, payoutYen);
 }
 
 function insertValidResolution(
@@ -165,6 +175,21 @@ test("reader returns exactly one clean active normal trifecta payout per request
     assert.equal(report.databaseReadCount, 1);
     assert.equal(report.databaseWriteCount, 0);
     assert.equal(report.networkRequestCount, 0);
+  });
+});
+
+test("persisted winning selection must match producer raw and normalized semantics", () => {
+  withDb((path, db) => {
+    const raceKey = "2026-08-07:05:R1";
+    insertClean(db, "a", raceKey, "1-2-3", 1230, {
+      selectionRaw: "2-1-3",
+      selectionNormalized: "2-1-3",
+    });
+    db.close();
+    const report = readN2EvaluationMetricsSettlements({ sidecarDbPath: path, raceKeys: [raceKey] });
+    assert.equal(report.status, "BLOCKED");
+    assert.ok(report.blockers.includes(`${raceKey}:WINNING_SELECTION_SEMANTICS_MISMATCH`));
+    assert.equal(report.settlementCount, 0);
   });
 });
 
@@ -232,8 +257,8 @@ test("special-payout candidate is excluded from normal economic evaluation", () 
   withDb((path, db) => {
     insertClean(db, "a", "2026-08-07:05:R1", "1-2-3", 1230);
     db.prepare(`INSERT INTO race_payout_lines_v2
-      (payout_line_id,candidate_id,line_no,bet_type,selection_canonical,payout_yen,line_kind)
-      VALUES ('special-a','a',2,'trifecta','1-2-3',70,'special_payout')`).run();
+      (payout_line_id,candidate_id,line_no,bet_type,selection_raw,selection_normalized,selection_canonical,payout_yen,line_kind)
+      VALUES ('special-a','a',2,'trifecta','1-2-3','1-2-3','1-2-3',70,'special_payout')`).run();
     db.close();
     const report = readN2EvaluationMetricsSettlements({ sidecarDbPath: path, raceKeys: ["2026-08-07:05:R1"] });
     assert.equal(report.status, "BLOCKED");

@@ -5,6 +5,7 @@ import { DatabaseSync } from "node:sqlite";
 import { canonicalHash } from "./canonical";
 import { enumerateBetSelections } from "./n2DatasetContract";
 import { readCurrentlyValidSourceDuplicateObservationIds } from "./n1SourceDuplicateResolutionValidation";
+import { parseSettlementSelection } from "./settlement";
 
 export const N2_EVALUATION_METRICS_SETTLEMENT_READER_VERSION =
   "n2-evaluation-metrics-settlement-reader-v1" as const;
@@ -48,6 +49,8 @@ type Row = {
   rawIntegrityStatus: string;
   rawSecurityScanStatus: string;
   rawParserReplayEligible: number;
+  winningSelectionRaw: string;
+  winningSelectionNormalized: string;
   winningSelection: string | null;
   payoutYen: number | null;
 };
@@ -145,6 +148,8 @@ export function readN2EvaluationMetricsSettlements(input: {
         rd.integrity_status AS rawIntegrityStatus,
         rd.security_scan_status AS rawSecurityScanStatus,
         rd.parser_replay_eligible AS rawParserReplayEligible,
+        p.selection_raw AS winningSelectionRaw,
+        p.selection_normalized AS winningSelectionNormalized,
         p.selection_canonical AS winningSelection,
         p.payout_yen AS payoutYen
       FROM settlement_candidates_v2 c
@@ -191,6 +196,13 @@ export function readN2EvaluationMetricsSettlements(input: {
         || row.rawSecurityScanStatus !== "passed"
         || row.rawParserReplayEligible !== 1) {
         blockers.push(`${row.raceKey}:SETTLEMENT_LINEAGE_MISMATCH:${row.observationId}`);
+        continue;
+      }
+      const selection = parseSettlementSelection("trifecta", row.winningSelectionRaw);
+      if (!selection.valid
+        || selection.normalized !== row.winningSelectionNormalized
+        || selection.canonical !== row.winningSelection) {
+        blockers.push(`${row.raceKey}:WINNING_SELECTION_SEMANTICS_MISMATCH`);
         continue;
       }
       const current = grouped.get(row.raceKey) ?? [];

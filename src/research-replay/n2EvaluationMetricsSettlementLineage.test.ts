@@ -55,6 +55,8 @@ function withDb(fn: (path: string, db: DatabaseSync) => void): void {
         candidate_id TEXT NOT NULL,
         line_no INTEGER NOT NULL,
         bet_type TEXT NOT NULL,
+        selection_raw TEXT NOT NULL,
+        selection_normalized TEXT NOT NULL,
         selection_canonical TEXT,
         payout_yen INTEGER NOT NULL,
         line_kind TEXT NOT NULL
@@ -109,8 +111,8 @@ function insertCandidate(db: DatabaseSync, input: {
     VALUES (?,?,'trifecta','settled','normal','initial','resolved',?,?,?,'semantic',NULL,NULL)`)
     .run(input.candidateId, input.raceKey, input.observationId, input.parseRunId, input.rawDocumentId);
   db.prepare(`INSERT INTO race_payout_lines_v2
-    (payout_line_id,candidate_id,line_no,bet_type,selection_canonical,payout_yen,line_kind)
-    VALUES (?,?,1,'trifecta','1-2-3',1230,'payout')`)
+    (payout_line_id,candidate_id,line_no,bet_type,selection_raw,selection_normalized,selection_canonical,payout_yen,line_kind)
+    VALUES (?,?,1,'trifecta','1-2-3','1-2-3','1-2-3',1230,'payout')`)
     .run(`p-${input.candidateId}`, input.candidateId);
 }
 
