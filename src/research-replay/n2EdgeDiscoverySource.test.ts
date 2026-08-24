@@ -68,6 +68,8 @@ function withDatabases(fn: (paths: { primary: string; sidecar: string }, dbs: { 
       candidate_id TEXT NOT NULL,
       line_no INTEGER NOT NULL,
       bet_type TEXT NOT NULL,
+      selection_raw TEXT,
+      selection_normalized TEXT,
       selection_canonical TEXT,
       payout_yen INTEGER NOT NULL,
       line_kind TEXT NOT NULL
@@ -108,8 +110,8 @@ function insertWinner(db: DatabaseSync, id: string, raceKey: string, selection: 
     (candidate_id,canonical_race_key,bet_type,settlement_status,result_kind,resolution_status,observation_id,parse_run_id,raw_document_id,supersedes_candidate_id)
     VALUES (?,?, 'trifecta','settled','normal','resolved',?,?,?,NULL)`).run(id, raceKey, observationId, parseRunId, rawDocumentId);
   db.prepare(`INSERT INTO race_payout_lines_v2
-    (payout_line_id,candidate_id,line_no,bet_type,selection_canonical,payout_yen,line_kind)
-    VALUES (?,?,1,'trifecta',?,1000,'payout')`).run(`p-${id}`, id, selection);
+    (payout_line_id,candidate_id,line_no,bet_type,selection_raw,selection_normalized,selection_canonical,payout_yen,line_kind)
+    VALUES (?,?,1,'trifecta',?,?,?,1000,'payout')`).run(`p-${id}`, id, selection, selection, selection);
 }
 
 function insertProgram(db: DatabaseSync, input: {
