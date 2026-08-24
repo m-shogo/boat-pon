@@ -15,6 +15,7 @@ import {
   parseUnexpectedAdditionsLimit,
   selectUnexpectedAdditionsArchives,
 } from "../src/research-replay/n2UnexpectedAdditionsArchiveSelection";
+import { isUnexpectedAdditionsRawEligible } from "../src/research-replay/n2UnexpectedAdditionsRawEligibility";
 import { classifyUnexpectedAddition, deriveSettlementCandidates, decideReparseAction, candidateKey } from "../src/research-replay/n2SettlementReparse";
 import type { ResultKind, SettlementBetType, SettlementStatus } from "../src/research-replay/settlement";
 import { loadActiveState, loadSourceDuplicateSet, type RawMeta } from "../src/research-replay/n2SettlementReparseEngine";
@@ -53,7 +54,10 @@ function loadRawMaps(db: DatabaseSync): { byHash: Map<string, RawMeta>; sourceDu
     familyByRaw.set(r.rid, r.fam);
   }
   const byHash = new Map<string, RawMeta>();
-  for (const r of db.prepare("SELECT raw_document_id AS rid, raw_sha256 AS h FROM raw_documents").all() as Array<{ rid: string; h: string }>) {
+  for (const r of db.prepare(
+    "SELECT raw_document_id AS rid, raw_sha256 AS h, integrity_status AS integrityStatus, security_scan_status AS securityScanStatus, parser_replay_eligible AS parserReplayEligible FROM raw_documents",
+  ).all() as Array<{ rid: string; h: string; integrityStatus: string; securityScanStatus: string; parserReplayEligible: number }>) {
+    if (!isUnexpectedAdditionsRawEligible(r)) continue;
     const date = dateByRaw.get(r.rid);
     if (date) byHash.set(r.h, { rawDocumentId: r.rid, date, family: familyByRaw.get(r.rid) ?? "modern_seven_display" });
   }
