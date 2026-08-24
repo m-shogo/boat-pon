@@ -176,6 +176,7 @@ export function verifyN1SettlementSchema(db: DatabaseSync): {
   }
   const row = db.prepare("SELECT migration_version,checksum,status FROM n1_schema_migrations WHERE migration_version=?")
     .get(N1_SETTLEMENT_SCHEMA_VERSION) as { migration_version: string; checksum: string; status: string } | undefined;
+  // N1 settlement tableに限定してtriggerを数える。F0-Rのrollout_approval_*_v2_append_only_*等を混入させない。
   const expectedTriggers = TABLES.flatMap((table) => [
     `${table}_append_only_update`,
     `${table}_append_only_delete`,
@@ -193,6 +194,9 @@ export function verifyN1SettlementSchema(db: DatabaseSync): {
   };
 }
 
+// n1-settlement.0.2: expand-onlyでbackfill checkpoint tableを追加する（N1-Cで使用）。
+// 0.1のtable/triggerは変更しない。checkpointはevent-sourced append-only（1 chunk試行=1 row、
+// 最新rowが有効）。
 export const N1_BACKFILL_SCHEMA_VERSION = "n1-settlement.0.2";
 
 const N1_BACKFILL_SCHEMA_SQL = `
@@ -225,6 +229,7 @@ CREATE TRIGGER IF NOT EXISTS n1_settlement_backfill_checkpoints_append_only_dele
 
 export const N1_BACKFILL_MIGRATION_CHECKSUM = createHash("sha256").update(N1_BACKFILL_SCHEMA_SQL).digest("hex");
 
+// 0.1適用済みの上にexpand-onlyで0.2を積む。0.1未適用なら先に0.1を適用する。
 export function initializeN1BackfillSchema(db: DatabaseSync, now = new Date().toISOString()): void {
   if (!verifyN1SettlementSchema(db).ok) initializeN1SettlementSchema(db, now);
   const row = db.prepare("SELECT checksum,status FROM n1_schema_migrations WHERE migration_version=?")
@@ -338,6 +343,9 @@ export class BackfillCheckpointRepository {
   }
 }
 
+// n1-settlement.0.3: expand-onlyでsource-duplicate canonical resolution tableを追加する。
+// 0.1/0.2のtable/trigger/checksumは変更しない。raw provenance（重複observation/candidate）は
+// 削除せず保持し、canonical evaluationで重複copyを1回だけ有効化するためのappend-only mappingを持つ。
 export const N1_CANONICAL_RESOLUTION_SCHEMA_VERSION = "n1-settlement.0.3";
 
 const N1_CANONICAL_RESOLUTION_SCHEMA_SQL = `
@@ -428,6 +436,7 @@ export type SourceDuplicateResolutionInput = {
 export class SourceDuplicateResolutionRepository {
   constructor(private readonly db: DatabaseSync, private readonly idFactory: () => string = randomUUID) {}
 
+  // append-only。既に同一 duplicate_observation_id が解決済みなら no-op（冪等）。
   record(input: SourceDuplicateResolutionInput): { resolutionId: string; inserted: boolean } {
     const existing = this.db.prepare(
       "SELECT resolution_id FROM settlement_source_duplicate_resolutions_v2 WHERE duplicate_observation_id=?",
@@ -471,7 +480,12 @@ export type CandidateInput = {
   correctionReason?: string | null;
   payouts: Array<{ selection: string; payoutYen: number; popularity?: number | null; lineKind?: "payout" | "special_payout" }>;
   refunds?: Array<{ selection?: string | null; scope: "selection" | "bet_type" | "race"; refundYenPer100?: number | null; reasonCode: string }>;
+  // Option B: falseにするとexplicit evidence pinを保存しない。candidateの
+  // raw_document_id/parse_run_id/observation_id へのON DELETE RESTRICT FKを暗黙GC pinとして扱う。
+  // 既定trueでN1-A挙動を維持。full backfill(N1-C)はfalseで約3行/candidateの重複を削減する。
   emitEvidencePins?: boolean;
+  // trueにするとappendCandidate内でBEGIN/COMMIT/ROLLBACKを発行せず、呼び出し側transactionへ委ねる。
+  // backfillのper-file atomic batch用。既定falseでcandidate毎に自己完結transaction（N1-A挙動不変）。
   withinTransaction?: boolean;
 };
 
@@ -583,6 +597,8 @@ export class SettlementRepository {
     }
     const candidateId = this.idFactory();
     const now = canonicalUtcTimestamp(input.observedAt);
+    // withinTransaction=trueなら呼び出し側がtransactionを管理する（backfillのper-file atomic batch）。
+    // 既定はfalseでcandidate毎にBEGIN/COMMITする（N1-A挙動不変）。
     const manageTransaction = !(input.withinTransaction ?? false);
     if (manageTransaction) this.db.exec("BEGIN IMMEDIATE");
     try {
