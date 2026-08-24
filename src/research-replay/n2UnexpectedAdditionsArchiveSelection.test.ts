@@ -6,14 +6,27 @@ import {
   selectUnexpectedAdditionsArchives,
 } from "./n2UnexpectedAdditionsArchiveSelection";
 
-test("unexpected-additions scan requires a positive safe integer limit", () => {
+test("unexpected-additions scan requires a canonical positive safe integer limit", () => {
   assert.equal(parseUnexpectedAdditionsLimit(null), null);
   assert.equal(parseUnexpectedAdditionsLimit("1"), 1);
-  for (const invalid of ["0", "-1", "1.5", "NaN", String(Number.MAX_SAFE_INTEGER + 1)]) {
+  for (const invalid of [
+    "0", "01", "-1", "1.5", "NaN", " 1 ", "+1", "1e3", String(Number.MAX_SAFE_INTEGER + 1),
+  ]) {
     assert.throws(
       () => parseUnexpectedAdditionsLimit(invalid),
       /N2_UNEXPECTED_ADDITIONS_LIMIT_INVALID/,
       invalid,
+    );
+  }
+});
+
+test("unexpected-additions selector validates programmatic limits before archive work", () => {
+  const files = ["/archive/k260101.lzh", "/archive/k260102.lzh"];
+  for (const invalid of [0, -1, 1.5, Number.NaN, Number.MAX_SAFE_INTEGER + 1]) {
+    assert.throws(
+      () => selectUnexpectedAdditionsArchives(files, invalid),
+      /N2_UNEXPECTED_ADDITIONS_LIMIT_INVALID/,
+      String(invalid),
     );
   }
 });
