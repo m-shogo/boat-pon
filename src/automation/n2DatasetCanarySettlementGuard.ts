@@ -46,7 +46,7 @@ function preflightActiveSettlementLineage(
   if (!existsSync(sidecarPath)) return { ok: true, blocks: [], checkedCandidateCount: 0 };
   const walPath = `${sidecarPath}-wal`;
   if (existsSync(walPath) && statSync(walPath).size > 0) {
-    return { ok: true, blocks: [], checkedCandidateCount: 0 };
+    return { ok: false, blocks: [`${prefix}_SIDECAR_ACTIVE_WAL`], checkedCandidateCount: 0 };
   }
 
   const db = new DatabaseSync(`${pathToFileURL(sidecarPath).href}?immutable=1`, { readOnly: true } as never);

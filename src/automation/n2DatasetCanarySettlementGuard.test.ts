@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -89,6 +89,29 @@ test("dataset canary preflight accepts verified active settlement lineage", () =
     assert.equal(result.ok, true);
     assert.equal(result.checkedCandidateCount, 1);
     assert.deepEqual(result.blocks, []);
+  });
+});
+
+test("dataset settlement preflight fails closed when an active WAL prevents immutable verification", () => {
+  withSidecar({ integrity: "verified", security: "passed", replayEligible: 1 }, (path) => {
+    writeFileSync(`${path}-wal`, "active-wal");
+
+    const canary = preflightN2DatasetCanarySettlementLineage(path);
+    assert.equal(canary.ok, false);
+    assert.deepEqual(canary.blocks, ["DATASET_CANARY_SIDECAR_ACTIVE_WAL"]);
+    assert.equal(canary.checkedCandidateCount, 0);
+
+    const active = preflightN2AllActiveSettlementLineage(path);
+    assert.equal(active.ok, false);
+    assert.deepEqual(active.blocks, ["DATASET_ACTIVE_SIDECAR_ACTIVE_WAL"]);
+    assert.equal(active.checkedCandidateCount, 0);
+
+    const resolved = resolveExecutor("dataset-canary");
+    assert.equal(resolved.code, "OK");
+    assert.ok(resolved.executor);
+    const result = resolved.executor(context(path));
+    assert.equal(result.result, "BLOCKED");
+    assert.deepEqual(result.blocks, ["DATASET_CANARY_SIDECAR_ACTIVE_WAL"]);
   });
 });
 
