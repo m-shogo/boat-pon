@@ -43,3 +43,27 @@ for (const [field, value] of [
     assert.ok(result.codes.includes("TIMESTAMP_UNKNOWN"));
   });
 }
+
+for (const [name, observation] of [
+  ["published after observed", {
+    ...baseObservation,
+    source_published_at: "2026-08-02T03:30:00.000Z",
+  }],
+  ["observed after first seen", {
+    ...baseObservation,
+    source_observed_at: "2026-08-02T03:30:00.000Z",
+  }],
+] as const) {
+  test(`PIT manifest quarantines impossible timestamp chronology: ${name}`, () => {
+    const result = strictPitGuard({
+      observation,
+      repository,
+      canonicalRaceKey: baseObservation.canonical_race_key,
+      asOfAt: "2026-08-02T04:00:00.000Z",
+      policy: RESOLUTION_POLICIES.research_replay_strict_pre_race,
+    });
+
+    assert.equal(result.disposition, "quarantined");
+    assert.ok(result.codes.includes("TIMING_AMBIGUOUS"));
+  });
+}
