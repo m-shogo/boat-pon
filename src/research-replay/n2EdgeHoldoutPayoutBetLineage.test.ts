@@ -49,6 +49,8 @@ function withDb(fn: (path: string, db: DatabaseSync) => void): void {
         candidate_id TEXT NOT NULL,
         line_no INTEGER NOT NULL,
         bet_type TEXT NOT NULL,
+        selection_raw TEXT,
+        selection_normalized TEXT,
         selection_canonical TEXT,
         line_kind TEXT NOT NULL
       );
@@ -74,19 +76,23 @@ function withDb(fn: (path: string, db: DatabaseSync) => void): void {
   }
 }
 
+function seedCandidate(db: DatabaseSync, raceKey: string): void {
+  db.prepare("INSERT INTO raw_documents VALUES ('raw-a','verified','passed',1)").run();
+  db.prepare("INSERT INTO parse_runs VALUES ('parse-a','raw-a','success')").run();
+  db.prepare(`INSERT INTO domain_observations
+    VALUES ('obs-a',?,'settlement_result','settlement_result','raw-a','parse-a')`).run(raceKey);
+  db.prepare(`INSERT INTO settlement_candidates_v2
+    VALUES ('a',?,'trifecta','settled','normal','resolved','obs-a','parse-a','raw-a',NULL)`).run(raceKey);
+}
+
 test("edge holdout source rejects cross-bet payout lineage before reading primary program metadata", () => {
   withDb((path, db) => {
     const raceKey = "2024-08-01:05:R1";
-    db.prepare("INSERT INTO raw_documents VALUES ('raw-a','verified','passed',1)").run();
-    db.prepare("INSERT INTO parse_runs VALUES ('parse-a','raw-a','success')").run();
-    db.prepare(`INSERT INTO domain_observations
-      VALUES ('obs-a',?,'settlement_result','settlement_result','raw-a','parse-a')`).run(raceKey);
-    db.prepare(`INSERT INTO settlement_candidates_v2
-      VALUES ('a',?,'trifecta','settled','normal','resolved','obs-a','parse-a','raw-a',NULL)`).run(raceKey);
+    seedCandidate(db, raceKey);
     db.prepare(`INSERT INTO race_payout_lines_v2
-      VALUES ('normal-a','a',1,'trifecta','1-2-3','payout')`).run();
+      VALUES ('normal-a','a',1,'trifecta','1-2-3','1-2-3','1-2-3','payout')`).run();
     db.prepare(`INSERT INTO race_payout_lines_v2
-      VALUES ('forged-special-a','a',2,'exacta','1-2','special_payout')`).run();
+      VALUES ('forged-special-a','a',2,'exacta','1-2','1-2','1-2','special_payout')`).run();
     db.close();
 
     const result = readN2EdgeHoldoutSource({
@@ -96,6 +102,29 @@ test("edge holdout source rejects cross-bet payout lineage before reading primar
     assert.equal(result.status, "BLOCKED");
     assert.deepEqual(result.blockers, [
       `${raceKey}:PAYOUT_BET_LINEAGE_MISMATCH:a`,
+    ]);
+    assert.equal(result.reads.primaryDatabaseReadCount, 0);
+    assert.equal(result.reads.sidecarDatabaseReadCount, 1);
+    assert.deepEqual(result.historicalOutcomes, []);
+    assert.deepEqual(result.candidates, []);
+  });
+});
+
+test("edge holdout source rejects producer-impossible winner selection semantics before reading primary program metadata", () => {
+  withDb((path, db) => {
+    const raceKey = "2024-08-01:05:R1";
+    seedCandidate(db, raceKey);
+    db.prepare(`INSERT INTO race_payout_lines_v2
+      VALUES ('normal-a','a',1,'trifecta','2-1-3','2-1-3','1-2-3','payout')`).run();
+    db.close();
+
+    const result = readN2EdgeHoldoutSource({
+      sidecarDbPath: path,
+      primaryDbPath: join(tmpdir(), "must-not-be-read.sqlite"),
+    });
+    assert.equal(result.status, "BLOCKED");
+    assert.deepEqual(result.blockers, [
+      `${raceKey}:WINNING_SELECTION_SEMANTICS_MISMATCH`,
     ]);
     assert.equal(result.reads.primaryDatabaseReadCount, 0);
     assert.equal(result.reads.sidecarDatabaseReadCount, 1);
