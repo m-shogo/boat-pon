@@ -61,6 +61,8 @@ function createSidecar(root: string): string {
       candidate_id TEXT NOT NULL,
       line_no INTEGER NOT NULL,
       bet_type TEXT NOT NULL,
+      selection_raw TEXT,
+      selection_normalized TEXT,
       selection_canonical TEXT,
       line_kind TEXT NOT NULL
     );
@@ -112,9 +114,10 @@ function insertWinner(path: string, input: {
     `).run(input.candidateId, input.raceKey, observationId, parseRunId, rawDocumentId);
     db.prepare(`
       INSERT INTO race_payout_lines_v2 (
-        payout_line_id, candidate_id, line_no, bet_type, selection_canonical, line_kind
-      ) VALUES (?, ?, 1, 'trifecta', ?, 'payout')
-    `).run(`payout-${input.candidateId}`, input.candidateId, input.selection);
+        payout_line_id, candidate_id, line_no, bet_type,
+        selection_raw, selection_normalized, selection_canonical, line_kind
+      ) VALUES (?, ?, 1, 'trifecta', ?, ?, ?, 'payout')
+    `).run(`payout-${input.candidateId}`, input.candidateId, input.selection, input.selection, input.selection);
   } finally {
     db.close();
   }
@@ -303,6 +306,28 @@ test("historical source rejects settlement candidate race lineage drift", () => 
     const read = readN2HistoricalOnlyBaselineSources({ dataRoot: root });
     assert.equal(read.status, "BLOCKED");
     assert.ok(read.blockers.includes("2026-07-02:05:R1:SETTLEMENT_LINEAGE_MISMATCH:obs-train-37"));
+    assert.equal(read.training.length, 0);
+    assert.equal(read.evaluationRaces.length, 0);
+    assert.equal(read.rawOddsValuesRead, false);
+  });
+});
+
+test("historical source rejects payout selection semantic drift", () => {
+  withRoot((root) => {
+    const sidecar = prepare(root);
+    const db = new DatabaseSync(sidecar);
+    try {
+      db.prepare(`
+        UPDATE race_payout_lines_v2
+        SET selection_canonical='1-2-3'
+        WHERE candidate_id='train-37'
+      `).run();
+    } finally {
+      db.close();
+    }
+    const read = readN2HistoricalOnlyBaselineSources({ dataRoot: root });
+    assert.equal(read.status, "BLOCKED");
+    assert.ok(read.blockers.includes("2026-07-01:05:R1:WINNING_SELECTION_SEMANTICS_MISMATCH"));
     assert.equal(read.training.length, 0);
     assert.equal(read.evaluationRaces.length, 0);
     assert.equal(read.rawOddsValuesRead, false);
