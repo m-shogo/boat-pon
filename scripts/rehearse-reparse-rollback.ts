@@ -8,6 +8,7 @@ import { copyFileSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node
 import { dirname, join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { canonicalHash } from "../src/research-replay/canonical";
+import { readCurrentlyValidSourceDuplicateObservationIds } from "../src/research-replay/n1SourceDuplicateResolutionValidation";
 import { activeStatusCounts, physicalRowCount } from "../src/research-replay/n2SettlementReparseEngine";
 
 const root = resolve(process.cwd());
@@ -58,6 +59,7 @@ function main(): void {
     scope: "resolver-only rollback + append-only reversal + backup/restore on a temp copy; no production/source write",
   };
   try {
+    readCurrentlyValidSourceDuplicateObservationIds(db);
     // (1) operational disable: resolver-only rollback。
     const corrected = activeStatusCounts(db, false);
     const rolledBack = activeStatusCounts(db, true);
