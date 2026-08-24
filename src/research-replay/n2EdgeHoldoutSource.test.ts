@@ -25,7 +25,7 @@ function withDb(fn:(p:{primary:string;sidecar:string},d:{primary:DatabaseSync;si
  CREATE TABLE parse_runs(parse_run_id TEXT PRIMARY KEY,raw_document_id TEXT NOT NULL,status TEXT NOT NULL);
  CREATE TABLE domain_observations(observation_id TEXT PRIMARY KEY,canonical_race_key TEXT NOT NULL,observation_type TEXT NOT NULL,payload_type TEXT NOT NULL,raw_document_id TEXT NOT NULL,parse_run_id TEXT NOT NULL,supersedes_id TEXT,correction_kind TEXT,correction_reason TEXT);
  CREATE TABLE settlement_candidates_v2(candidate_id TEXT PRIMARY KEY,canonical_race_key TEXT,bet_type TEXT,settlement_status TEXT,result_kind TEXT,revision_kind TEXT,resolution_status TEXT,observation_id TEXT,parse_run_id TEXT,raw_document_id TEXT,semantic_hash TEXT,supersedes_candidate_id TEXT,correction_reason TEXT);
- CREATE TABLE race_payout_lines_v2(payout_line_id TEXT PRIMARY KEY,candidate_id TEXT,line_no INTEGER,bet_type TEXT,selection_canonical TEXT,payout_yen INTEGER,line_kind TEXT);
+ CREATE TABLE race_payout_lines_v2(payout_line_id TEXT PRIMARY KEY,candidate_id TEXT,line_no INTEGER,bet_type TEXT,selection_raw TEXT,selection_normalized TEXT,selection_canonical TEXT,payout_yen INTEGER,line_kind TEXT);
  CREATE TABLE settlement_source_duplicate_resolutions_v2(resolution_id TEXT PRIMARY KEY,duplicate_observation_id TEXT NOT NULL,canonical_observation_id TEXT NOT NULL,canonical_race_key TEXT NOT NULL,raw_document_id TEXT NOT NULL,source_archive_file TEXT NOT NULL,resolution_kind TEXT NOT NULL,detection_reason TEXT NOT NULL,duplicate_semantic_digest TEXT NOT NULL,resolver_version TEXT NOT NULL,policy_version TEXT NOT NULL,schema_version TEXT NOT NULL);`);
  try{fn({primary:pp,sidecar:sp},{primary:p,sidecar:s});}finally{try{p.close()}catch{} try{s.close()}catch{} rmSync(root,{recursive:true,force:true});}
 }
@@ -35,7 +35,7 @@ function winner(db:DatabaseSync,id:string,key:string,sel="1-2-3",options:{rawDoc
  db.prepare("INSERT OR IGNORE INTO parse_runs VALUES (?,?,'success')").run(parseRunId,rawDocumentId);
  db.prepare(`INSERT INTO domain_observations VALUES (?,?,'settlement_result','settlement_result',?,?,NULL,NULL,NULL)`).run(`obs-${id}`,key,rawDocumentId,parseRunId);
  db.prepare(`INSERT INTO settlement_candidates_v2 VALUES (?,?, 'trifecta','settled','normal','initial','resolved',?,?,?,?,NULL,NULL)`).run(id,key,`obs-${id}`,parseRunId,rawDocumentId,semanticHash);
- db.prepare(`INSERT INTO race_payout_lines_v2 VALUES (?,?,1,'trifecta',?,1000,'payout')`).run(`p-${id}`,id,sel);
+ db.prepare(`INSERT INTO race_payout_lines_v2 VALUES (?,?,1,'trifecta',?,?,?,1000,'payout')`).run(`p-${id}`,id,sel,sel,sel);
 }
 function sourceDuplicateResolution(db:DatabaseSync,duplicateId:string,canonicalId:string,key:string,rawDocumentId:string,semanticHash:string){
  db.prepare(`INSERT INTO settlement_source_duplicate_resolutions_v2 VALUES (?,?,?,?,?,?,'source_duplicate',?,?,?,?,?)`).run(
