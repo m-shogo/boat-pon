@@ -8,6 +8,14 @@ export type ExactaForwardMonitorRace = {
   raceNo: number;
 };
 
+export function requireExactaForwardMonitorLockedAt(value: string): void {
+  try {
+    canonicalRaceKey(value, "01", 1);
+  } catch {
+    throw new Error(`EXACTA_FORWARD_MONITOR_LOCKED_AT_INVALID:${value}`);
+  }
+}
+
 export function requireExactaForwardMonitorRaceIdentity(race: ExactaForwardMonitorRace): void {
   const venueCode = officialVenueCode(race.venue);
   if (!venueCode || race.venue !== race.venue.trim() || race.venue === venueCode) {
