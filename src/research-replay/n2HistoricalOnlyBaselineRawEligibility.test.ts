@@ -48,6 +48,8 @@ function withSidecar(fn: (path: string, db: DatabaseSync) => void): void {
       candidate_id TEXT NOT NULL,
       line_no INTEGER NOT NULL,
       bet_type TEXT NOT NULL,
+      selection_raw TEXT,
+      selection_normalized TEXT,
       selection_canonical TEXT,
       line_kind TEXT NOT NULL
     );
@@ -83,7 +85,7 @@ function insertWinner(db: DatabaseSync, rawIntegrityStatus: string, rawSecurityS
   db.prepare(`INSERT INTO settlement_candidates_v2 VALUES
     ('cand-1',?,'trifecta','settled','normal','resolved','obs-1','parse-1','raw-1',NULL)`).run(raceKey);
   db.prepare(`INSERT INTO race_payout_lines_v2 VALUES
-    ('payout-1','cand-1',1,'trifecta','1-2-3','payout')`).run();
+    ('payout-1','cand-1',1,'trifecta','1-2-3','1-2-3','1-2-3','payout')`).run();
 }
 
 test("historical winner reader rejects tainted raw evidence", () => {
