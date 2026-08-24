@@ -10,7 +10,7 @@ test("unexpected-additions scan requires a canonical positive safe integer limit
   assert.equal(parseUnexpectedAdditionsLimit(null), null);
   assert.equal(parseUnexpectedAdditionsLimit("1"), 1);
   for (const invalid of [
-    "0", "-1", "1.5", "NaN", " 1 ", "+1", "1e3", String(Number.MAX_SAFE_INTEGER + 1),
+    "0", "01", "-1", "1.5", "NaN", " 1 ", "+1", "1e3", String(Number.MAX_SAFE_INTEGER + 1),
   ]) {
     assert.throws(
       () => parseUnexpectedAdditionsLimit(invalid),
