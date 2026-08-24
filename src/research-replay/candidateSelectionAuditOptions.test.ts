@@ -14,6 +14,10 @@ test("candidate selection audit accepts canonical options", () => {
     ),
     { date: "2028-02-29", limit: 5, json: true, strict: true },
   );
+  assert.deepEqual(
+    parseCandidateSelectionAuditOptions(["--", "--date=2026-08-23"], "2026-08-22"),
+    { date: "2026-08-23", limit: 20, json: false, strict: false },
+  );
   assert.equal(addCandidateSelectionAuditDays("2028-02-29", -180), "2027-09-02");
 });
 
@@ -41,6 +45,33 @@ test("candidate selection audit rejects lossy or unsafe limits", () => {
     () => parseCandidateSelectionAuditOptions(["--limit"], "2026-08-23"),
     /CANDIDATE_SELECTION_AUDIT_LIMIT_MISSING/u,
   );
+});
+
+test("candidate selection audit rejects unknown arguments instead of silently weakening the audit", () => {
+  for (const argv of [
+    ["--strcit"],
+    ["--limt=5"],
+    ["unexpected-positional"],
+  ]) {
+    assert.throws(
+      () => parseCandidateSelectionAuditOptions(argv, "2026-08-23"),
+      /CANDIDATE_SELECTION_AUDIT_ARGUMENT_INVALID/u,
+    );
+  }
+});
+
+test("candidate selection audit rejects duplicate logical options", () => {
+  for (const argv of [
+    ["--strict", "--strict"],
+    ["--json", "--json"],
+    ["--date", "2026-08-23", "--date=2026-08-24"],
+    ["--limit=5", "--limit", "6"],
+  ]) {
+    assert.throws(
+      () => parseCandidateSelectionAuditOptions(argv, "2026-08-23"),
+      /CANDIDATE_SELECTION_AUDIT_ARGUMENT_DUPLICATE/u,
+    );
+  }
 });
 
 test("candidate selection audit day arithmetic rejects non-canonical inputs", () => {
