@@ -15,7 +15,10 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
-import { requireExactaForwardMonitorRaceIdentities } from "../src/research-replay/exactaForwardMonitorSafety";
+import {
+  requireExactaForwardMonitorLockedAt,
+  requireExactaForwardMonitorRaceIdentities,
+} from "../src/research-replay/exactaForwardMonitorSafety";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const CANDIDATES_PATH = "data/exacta-forward-candidates.json";
@@ -496,7 +499,7 @@ function renderMarkdown(report: {
 
 function validateCandidateFile(file: CandidateFile) {
   if (file.schemaVersion !== 1) throw new Error(`unsupported schemaVersion: ${file.schemaVersion}`);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(file.lockedAt)) throw new Error(`lockedAt must be YYYY-MM-DD: ${file.lockedAt}`);
+  requireExactaForwardMonitorLockedAt(file.lockedAt);
   const ids = new Set<string>();
   for (const candidate of file.candidates) {
     if (ids.has(candidate.id)) throw new Error(`duplicated candidate id: ${candidate.id}`);
