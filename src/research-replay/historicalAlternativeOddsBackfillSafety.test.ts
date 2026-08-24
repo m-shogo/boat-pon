@@ -72,3 +72,15 @@ test("historical alternative odds preflights every candidate before top-N", () =
     );
   }
 });
+
+test("historical alternative odds rejects duplicate race targets before top-N", () => {
+  const duplicate = { ...valid() };
+  assert.throws(
+    () => requireHistoricalAltOddsTargets([
+      valid(),
+      duplicate,
+      { ...valid(), date: "2026-08-24", raceId: "20260824-宮島-06" },
+    ]),
+    /HISTORICAL_ALT_ODDS_TARGET_DUPLICATE:20260823-宮島-06/u,
+  );
+});
