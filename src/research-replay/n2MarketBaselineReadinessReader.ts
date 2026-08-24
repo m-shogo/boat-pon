@@ -66,6 +66,7 @@ type SettlementRow = {
   resolutionStatus: string;
   payoutCount: number;
   specialPayoutCount: number;
+  payoutBetMismatchCount: number;
 };
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/u;
@@ -383,8 +384,9 @@ function readSettlements(sidecarDbPath: string, raceKeys: string[]): {
         c.settlement_status AS settlementStatus,
         c.result_kind AS resultKind,
         c.resolution_status AS resolutionStatus,
-        SUM(CASE WHEN p.line_kind='payout' AND p.selection_canonical IS NOT NULL THEN 1 ELSE 0 END) AS payoutCount,
-        SUM(CASE WHEN p.line_kind='special_payout' THEN 1 ELSE 0 END) AS specialPayoutCount
+        SUM(CASE WHEN p.bet_type=c.bet_type AND p.line_kind='payout' AND p.selection_canonical IS NOT NULL THEN 1 ELSE 0 END) AS payoutCount,
+        SUM(CASE WHEN p.bet_type=c.bet_type AND p.line_kind='special_payout' THEN 1 ELSE 0 END) AS specialPayoutCount,
+        SUM(CASE WHEN p.bet_type<>c.bet_type THEN 1 ELSE 0 END) AS payoutBetMismatchCount
       FROM settlement_candidates_v2 c
       LEFT JOIN domain_observations o
         ON o.observation_id=c.observation_id
@@ -392,7 +394,7 @@ function readSettlements(sidecarDbPath: string, raceKeys: string[]): {
         ON pr.parse_run_id=c.parse_run_id
       LEFT JOIN raw_documents rd
         ON rd.raw_document_id=c.raw_document_id
-      LEFT JOIN race_payout_lines_v2 p ON p.candidate_id=c.candidate_id AND p.bet_type='trifecta'
+      LEFT JOIN race_payout_lines_v2 p ON p.candidate_id=c.candidate_id
       WHERE c.bet_type='trifecta'
         AND c.canonical_race_key IN (${placeholders})
         AND NOT EXISTS (
@@ -420,7 +422,8 @@ function readSettlements(sidecarDbPath: string, raceKeys: string[]): {
         || !REUSABLE_PARSE_STATUSES.has(row.parseRunStatus)
         || row.rawIntegrityStatus !== "verified"
         || row.rawSecurityScanStatus !== "passed"
-        || row.rawParserReplayEligible !== 1) {
+        || row.rawParserReplayEligible !== 1
+        || Number(row.payoutBetMismatchCount) !== 0) {
         lineageBlockedRaceKeys.add(row.raceKey);
         continue;
       }
@@ -429,6 +432,7 @@ function readSettlements(sidecarDbPath: string, raceKeys: string[]): {
         ...row,
         payoutCount: Number(row.payoutCount),
         specialPayoutCount: Number(row.specialPayoutCount),
+        payoutBetMismatchCount: Number(row.payoutBetMismatchCount),
       });
       byRace.set(row.raceKey, current);
     }
