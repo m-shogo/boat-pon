@@ -88,11 +88,14 @@ export const ensureSupersedesIndex = (db: DatabaseSync): void =>
 
 function requireSingleSourceParseRun(db: DatabaseSync, rawDocumentId: string, sourceSchemaVersion: string): string {
   const rows = db.prepare(
-    `SELECT parse_run_id AS id, parser_name AS parserName, source_schema_version AS sourceSchemaVersion,
-            payload_type AS payloadType, status, error_code AS errorCode
-     FROM parse_runs
-     WHERE raw_document_id=? AND parser_version=?
-     ORDER BY parse_run_id`,
+    `SELECT pr.parse_run_id AS id, pr.parser_name AS parserName, pr.source_schema_version AS sourceSchemaVersion,
+            pr.payload_type AS payloadType, pr.status, pr.error_code AS errorCode,
+            rd.integrity_status AS rawIntegrityStatus, rd.security_scan_status AS rawSecurityScanStatus,
+            rd.parser_replay_eligible AS rawParserReplayEligible
+     FROM parse_runs pr
+     JOIN raw_documents rd ON rd.raw_document_id=pr.raw_document_id
+     WHERE pr.raw_document_id=? AND pr.parser_version=?
+     ORDER BY pr.parse_run_id`,
   ).all(rawDocumentId, REPARSE_SOURCE_PARSER_VERSION) as Array<{
     id: string;
     parserName: string;
@@ -100,6 +103,9 @@ function requireSingleSourceParseRun(db: DatabaseSync, rawDocumentId: string, so
     payloadType: string;
     status: string;
     errorCode: string | null;
+    rawIntegrityStatus: string;
+    rawSecurityScanStatus: string;
+    rawParserReplayEligible: number;
   }>;
   if (rows.length === 0) {
     throw new Error(`REPARSE_SOURCE_PARSE_RUN_MISSING:${rawDocumentId}`);
@@ -108,6 +114,11 @@ function requireSingleSourceParseRun(db: DatabaseSync, rawDocumentId: string, so
     throw new Error(`REPARSE_SOURCE_PARSE_RUN_AMBIGUOUS:${rawDocumentId}:${rows.length}`);
   }
   const row = rows[0];
+  if (row.rawIntegrityStatus !== "verified"
+    || row.rawSecurityScanStatus !== "passed"
+    || row.rawParserReplayEligible !== 1) {
+    throw new Error(`REPARSE_SOURCE_RAW_INELIGIBLE:${rawDocumentId}`);
+  }
   if (
     row.parserName !== "n1-backfill-archive" ||
     row.sourceSchemaVersion !== sourceSchemaVersion ||
