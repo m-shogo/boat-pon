@@ -67,6 +67,7 @@ type SettlementRow = {
   payoutCount: number;
   specialPayoutCount: number;
   payoutBetMismatchCount: number;
+  payoutSelectionInvalidCount: number;
 };
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/u;
@@ -386,7 +387,15 @@ function readSettlements(sidecarDbPath: string, raceKeys: string[]): {
         c.resolution_status AS resolutionStatus,
         SUM(CASE WHEN p.bet_type=c.bet_type AND p.line_kind='payout' AND p.selection_canonical IS NOT NULL THEN 1 ELSE 0 END) AS payoutCount,
         SUM(CASE WHEN p.bet_type=c.bet_type AND p.line_kind='special_payout' THEN 1 ELSE 0 END) AS specialPayoutCount,
-        SUM(CASE WHEN p.bet_type<>c.bet_type THEN 1 ELSE 0 END) AS payoutBetMismatchCount
+        SUM(CASE WHEN p.bet_type<>c.bet_type THEN 1 ELSE 0 END) AS payoutBetMismatchCount,
+        SUM(CASE WHEN p.bet_type=c.bet_type
+          AND p.selection_canonical IS NOT NULL
+          AND NOT (
+            p.selection_canonical GLOB '[1-6]-[1-6]-[1-6]'
+            AND substr(p.selection_canonical,1,1)<>substr(p.selection_canonical,3,1)
+            AND substr(p.selection_canonical,1,1)<>substr(p.selection_canonical,5,1)
+            AND substr(p.selection_canonical,3,1)<>substr(p.selection_canonical,5,1)
+          ) THEN 1 ELSE 0 END) AS payoutSelectionInvalidCount
       FROM settlement_candidates_v2 c
       LEFT JOIN domain_observations o
         ON o.observation_id=c.observation_id
@@ -423,7 +432,8 @@ function readSettlements(sidecarDbPath: string, raceKeys: string[]): {
         || row.rawIntegrityStatus !== "verified"
         || row.rawSecurityScanStatus !== "passed"
         || row.rawParserReplayEligible !== 1
-        || Number(row.payoutBetMismatchCount) !== 0) {
+        || Number(row.payoutBetMismatchCount) !== 0
+        || Number(row.payoutSelectionInvalidCount) !== 0) {
         lineageBlockedRaceKeys.add(row.raceKey);
         continue;
       }
@@ -433,6 +443,7 @@ function readSettlements(sidecarDbPath: string, raceKeys: string[]): {
         payoutCount: Number(row.payoutCount),
         specialPayoutCount: Number(row.specialPayoutCount),
         payoutBetMismatchCount: Number(row.payoutBetMismatchCount),
+        payoutSelectionInvalidCount: Number(row.payoutSelectionInvalidCount),
       });
       byRace.set(row.raceKey, current);
     }
