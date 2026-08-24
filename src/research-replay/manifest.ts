@@ -278,6 +278,10 @@ export function strictPitGuard(input: {
       codes.push("SOURCE_PUBLISHED_AFTER_AS_OF");
     }
     if (laterThan(firstSeenAt, asOfAt)) codes.push("FIRST_SEEN_AFTER_AS_OF");
+    if (sourcePublishedAt !== null && laterThan(sourcePublishedAt, sourceObservedAt)) {
+      codes.push("TIMING_AMBIGUOUS");
+    }
+    if (laterThan(sourceObservedAt, firstSeenAt)) codes.push("TIMING_AMBIGUOUS");
   }
   if (observation.timing_quality === "unknown") codes.push("TIMESTAMP_UNKNOWN");
   if (observation.timing_quality === "ambiguous") codes.push("TIMING_AMBIGUOUS");
