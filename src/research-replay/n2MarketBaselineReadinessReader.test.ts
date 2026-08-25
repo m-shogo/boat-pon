@@ -137,6 +137,8 @@ function createSidecar(root: string): string {
       payout_line_id TEXT PRIMARY KEY,
       candidate_id TEXT NOT NULL,
       bet_type TEXT NOT NULL,
+      selection_raw TEXT NOT NULL,
+      selection_normalized TEXT NOT NULL,
       selection_canonical TEXT,
       line_kind TEXT NOT NULL
     );
@@ -200,11 +202,14 @@ function insertCandidate(path: string, input: {
     if (input.payoutSelection !== undefined) {
       db.prepare(`
         INSERT INTO race_payout_lines_v2 (
-          payout_line_id, candidate_id, bet_type, selection_canonical, line_kind
-        ) VALUES (?, ?, 'trifecta', ?, ?)
+          payout_line_id, candidate_id, bet_type,
+          selection_raw, selection_normalized, selection_canonical, line_kind
+        ) VALUES (?, ?, 'trifecta', ?, ?, ?, ?)
       `).run(
         `payout-${input.candidateId}`,
         input.candidateId,
+        input.payoutSelection,
+        input.payoutSelection,
         input.payoutSelection,
         input.specialPayout ? "special_payout" : "payout",
       );
