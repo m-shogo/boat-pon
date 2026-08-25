@@ -116,6 +116,8 @@ function createSidecar(root: string): string {
       payout_line_id TEXT PRIMARY KEY,
       candidate_id TEXT NOT NULL,
       bet_type TEXT NOT NULL,
+      selection_raw TEXT NOT NULL,
+      selection_normalized TEXT NOT NULL,
       selection_canonical TEXT,
       line_kind TEXT NOT NULL
     );
@@ -141,9 +143,9 @@ function createSidecar(root: string): string {
   db.prepare(`INSERT INTO settlement_candidates_v2
     VALUES ('a','2026-08-07:10:R1','trifecta','settled','normal','resolved','obs-a','parse-a','raw-a',NULL)`).run();
   db.prepare(`INSERT INTO race_payout_lines_v2
-    VALUES ('normal-a','a','trifecta','1-2-3','payout')`).run();
+    VALUES ('normal-a','a','trifecta','1-2-3','1-2-3','1-2-3','payout')`).run();
   db.prepare(`INSERT INTO race_payout_lines_v2
-    VALUES ('forged-special-a','a','exacta','1-2','special_payout')`).run();
+    VALUES ('forged-special-a','a','exacta','1-2','1-2','1-2','special_payout')`).run();
   db.close();
   return path;
 }
