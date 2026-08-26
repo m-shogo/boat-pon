@@ -13,7 +13,8 @@ function fixture(): DatabaseSync {
       bet_type TEXT NOT NULL,
       selection_raw TEXT,
       selection_normalized TEXT,
-      selection_canonical TEXT
+      selection_canonical TEXT,
+      line_kind TEXT NOT NULL
     );
     CREATE TABLE race_refund_lines_v2 (
       candidate_id TEXT NOT NULL,
@@ -24,8 +25,8 @@ function fixture(): DatabaseSync {
       selection_canonical TEXT
     );
   `);
-  db.prepare("INSERT INTO race_payout_lines_v2 VALUES (?,?,?,?,?,?)")
-    .run("candidate", 1, "trifecta", "1-2-3", "1-2-3", "1-2-3");
+  db.prepare("INSERT INTO race_payout_lines_v2 VALUES (?,?,?,?,?,?,?)")
+    .run("candidate", 1, "trifecta", "1-2-3", "1-2-3", "1-2-3", "payout");
   return db;
 }
 
@@ -50,6 +51,34 @@ test("source duplicate line semantics accept producer-valid payout evidence", ()
   const db = fixture();
   try {
     assert.equal(sourceDuplicateCandidateLineSemanticsValid(db, "candidate", "trifecta"), true);
+  } finally {
+    db.close();
+  }
+});
+
+test("source duplicate line semantics accept producer-valid special payout with noncanonical selection", () => {
+  const db = fixture();
+  try {
+    db.prepare(`
+      UPDATE race_payout_lines_v2
+      SET selection_raw='9-9-9', selection_normalized='9-9-9', selection_canonical=NULL, line_kind='special_payout'
+      WHERE candidate_id='candidate'
+    `).run();
+    assert.equal(sourceDuplicateCandidateLineSemanticsValid(db, "candidate", "trifecta"), true);
+  } finally {
+    db.close();
+  }
+});
+
+test("source duplicate line semantics reject special payout normalization drift", () => {
+  const db = fixture();
+  try {
+    db.prepare(`
+      UPDATE race_payout_lines_v2
+      SET selection_raw='9>9>9', selection_normalized='9>9>9', selection_canonical=NULL, line_kind='special_payout'
+      WHERE candidate_id='candidate'
+    `).run();
+    assert.equal(sourceDuplicateCandidateLineSemanticsValid(db, "candidate", "trifecta"), false);
   } finally {
     db.close();
   }
