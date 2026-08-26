@@ -90,6 +90,39 @@ function addObservationWithCandidates(db: DatabaseSync, replay: ResearchReplayRe
   return observationId;
 }
 
+function requireDuplicatePlanValidationInsideWriteLock(db: DatabaseSync): DatabaseSync {
+  let writeLockHeld = false;
+  return new Proxy(db, {
+    get(target, property) {
+      if (property === "exec") {
+        return (sql: string) => {
+          const statement = sql.trim().toUpperCase();
+          if (statement === "BEGIN IMMEDIATE") writeLockHeld = true;
+          try {
+            return target.exec(sql);
+          } finally {
+            if (statement === "COMMIT" || statement === "ROLLBACK") writeLockHeld = false;
+          }
+        };
+      }
+      if (property === "prepare") {
+        return (sql: string) => {
+          if (
+            sql.includes("SELECT canonical_race_key, raw_document_id")
+            && sql.includes("GROUP BY canonical_race_key, raw_document_id")
+            && !writeLockHeld
+          ) {
+            throw new Error("SOURCE_DUPLICATE_PLAN_VALIDATED_BEFORE_WRITE_LOCK");
+          }
+          return target.prepare(sql);
+        };
+      }
+      const value = Reflect.get(target, property, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  }) as DatabaseSync;
+}
+
 test("source duplicate resolution rejects a forged first-time plan before append", () => {
   const { db, replay } = setup();
   addObservationWithCandidates(db, replay);
@@ -104,6 +137,21 @@ test("source duplicate resolution rejects a forged first-time plan before append
   assert.equal(
     Number((db.prepare("SELECT COUNT(*) AS n FROM settlement_source_duplicate_resolutions_v2").get() as { n: number }).n),
     0,
+  );
+  db.close();
+});
+
+test("source duplicate resolution validates the current plan only after acquiring the write lock", () => {
+  const { db, replay } = setup();
+  addObservationWithCandidates(db, replay);
+  addObservationWithCandidates(db, replay);
+  const plan = planSourceDuplicateResolution(db);
+  const guardedDb = requireDuplicatePlanValidationInsideWriteLock(db);
+
+  assert.deepEqual(applySourceDuplicateResolution(guardedDb, plan, NOW), { inserted: 1, noop: 0 });
+  assert.equal(
+    Number((db.prepare("SELECT COUNT(*) AS n FROM settlement_source_duplicate_resolutions_v2").get() as { n: number }).n),
+    1,
   );
   db.close();
 });
