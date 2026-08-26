@@ -6,6 +6,7 @@ import {
   SOURCE_DUPLICATE_RESOLVER_VERSION,
   archiveFileForRaceKey,
 } from "./n1CanonicalResolution";
+import { sourceDuplicateCandidateLineSemanticsValid } from "./n1SourceDuplicateLineSemantics";
 import { N1_CANONICAL_RESOLUTION_SCHEMA_VERSION } from "./settlement";
 
 const SOURCE_DUPLICATE_DETECTION_REASON =
@@ -171,7 +172,9 @@ function candidateDigest(
       row.canonicalRaceKey === expectedRaceKey
       && row.rawDocumentId === expectedRawDocumentId
       && row.parseRunId === expectedParseRunId),
-    semanticIntegrityValid: rows.every((row) => candidateSemanticHashValid(db, row)),
+    semanticIntegrityValid: rows.every((row) =>
+      candidateSemanticHashValid(db, row)
+      && sourceDuplicateCandidateLineSemanticsValid(db, row.candidateId, row.betType)),
   };
 }
 
