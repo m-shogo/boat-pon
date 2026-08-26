@@ -11,6 +11,10 @@ type LineRow = {
   selectionCanonical: string | null;
 };
 
+type PayoutLineRow = LineRow & {
+  lineKind: string | null;
+};
+
 function tableExists(db: DatabaseSync, table: string): boolean {
   return Boolean(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table));
 }
@@ -21,16 +25,39 @@ function tableHasColumns(db: DatabaseSync, table: string, required: readonly str
   return required.every((column) => names.has(column));
 }
 
-function lineSemanticsValid(candidateBetType: SettlementBetType, row: LineRow): boolean {
+function parsedSelectionMatches(
+  candidateBetType: SettlementBetType,
+  row: LineRow,
+  requireValid: boolean,
+): boolean {
+  if (row.selectionRaw === null || row.selectionNormalized === null) return false;
+  const parsed = parseSettlementSelection(candidateBetType, row.selectionRaw);
+  return (!requireValid || parsed.valid)
+    && parsed.normalized === row.selectionNormalized
+    && parsed.canonical === row.selectionCanonical;
+}
+
+function payoutLineSemanticsValid(candidateBetType: SettlementBetType, row: PayoutLineRow): boolean {
+  if (row.lineBetType !== candidateBetType) return false;
+  if (row.lineKind === null) {
+    if (row.selectionCanonical === null) return row.selectionRaw === null && row.selectionNormalized === null;
+    return parsedSelectionMatches(candidateBetType, row, true);
+  }
+  if (row.lineKind === "payout") {
+    return row.selectionCanonical !== null && parsedSelectionMatches(candidateBetType, row, true);
+  }
+  if (row.lineKind === "special_payout") {
+    return parsedSelectionMatches(candidateBetType, row, false);
+  }
+  return false;
+}
+
+function refundLineSemanticsValid(candidateBetType: SettlementBetType, row: LineRow): boolean {
   if (row.lineBetType !== candidateBetType) return false;
   if (row.selectionCanonical === null) {
     return row.selectionRaw === null && row.selectionNormalized === null;
   }
-  if (row.selectionRaw === null || row.selectionNormalized === null) return false;
-  const parsed = parseSettlementSelection(candidateBetType, row.selectionRaw);
-  return parsed.valid
-    && parsed.normalized === row.selectionNormalized
-    && parsed.canonical === row.selectionCanonical;
+  return parsedSelectionMatches(candidateBetType, row, true);
 }
 
 /**
@@ -59,15 +86,17 @@ export function sourceDuplicateCandidateLineSemanticsValid(
   if (!payoutSchemaCurrent && !refundSchemaCurrent) return true;
   if (payoutSchemaCurrent !== refundSchemaCurrent) return false;
 
+  const payoutHasLineKind = tableHasColumns(db, "race_payout_lines_v2", ["line_kind"]);
   const payouts = db.prepare(`
     SELECT bet_type AS lineBetType,
            selection_raw AS selectionRaw,
            selection_normalized AS selectionNormalized,
-           selection_canonical AS selectionCanonical
+           selection_canonical AS selectionCanonical,
+           ${payoutHasLineKind ? "line_kind" : "NULL"} AS lineKind
     FROM race_payout_lines_v2
     WHERE candidate_id=?
     ORDER BY line_no
-  `).all(candidateId) as unknown as LineRow[];
+  `).all(candidateId) as unknown as PayoutLineRow[];
   const refunds = db.prepare(`
     SELECT bet_type AS lineBetType,
            selection_raw AS selectionRaw,
@@ -79,6 +108,6 @@ export function sourceDuplicateCandidateLineSemanticsValid(
   `).all(candidateId) as unknown as LineRow[];
 
   const betType = candidateBetType as SettlementBetType;
-  return payouts.every((row) => lineSemanticsValid(betType, row))
-    && refunds.every((row) => lineSemanticsValid(betType, row));
+  return payouts.every((row) => payoutLineSemanticsValid(betType, row))
+    && refunds.every((row) => refundLineSemanticsValid(betType, row));
 }
