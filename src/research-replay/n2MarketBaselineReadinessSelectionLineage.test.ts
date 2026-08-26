@@ -10,7 +10,7 @@ import { buildBoatRaceOfficialSourceUrl } from "./n2ExternalSourceCaptureContrac
 import { readN2MarketBaselineReadiness } from "./n2MarketBaselineReadinessReader";
 
 function withRoot(fn: (root: string) => void): void {
-  const root = mkdtempSync(join(tmpdir(), "boat-pon-market-readiness-lineage-"));
+  const root = mkdtempSync(join(tmpdir(), "boat-pon-market-readiness-selection-lineage-"));
   try {
     fn(root);
   } finally {
@@ -44,7 +44,7 @@ function writeAcceptedT5(root: string): void {
   });
   mkdirSync(directory, { recursive: true });
   mkdirSync(dirname(join(root, rawRelativePath)), { recursive: true });
-  writeFileSync(join(root, rawRelativePath), "private raw fixture\n", "utf8");
+  writeFileSync(join(root, rawRelativePath), "synthetic private evidence\n", "utf8");
   writeFileSync(join(root, envelopeRelativePath), `${JSON.stringify({
     envelopeVersion: "n2-trifecta-private-capture-envelope-v1",
     status: "PASS",
@@ -76,7 +76,7 @@ function writeAcceptedT5(root: string): void {
   }, null, 2)}\n`, "utf8");
 }
 
-function createSidecar(root: string): string {
+function createSidecar(root: string): void {
   const path = join(root, "data/research-replay.sqlite");
   mkdirSync(dirname(path), { recursive: true });
   const db = new DatabaseSync(path);
@@ -143,14 +143,11 @@ function createSidecar(root: string): string {
   db.prepare(`INSERT INTO settlement_candidates_v2
     VALUES ('a','2026-08-07:10:R1','trifecta','settled','normal','resolved','obs-a','parse-a','raw-a',NULL)`).run();
   db.prepare(`INSERT INTO race_payout_lines_v2
-    VALUES ('normal-a','a','trifecta','1-2-3','1-2-3','1-2-3','payout')`).run();
-  db.prepare(`INSERT INTO race_payout_lines_v2
-    VALUES ('forged-special-a','a','exacta','1-2','1-2','1-2','special_payout')`).run();
+    VALUES ('payout-a','a','trifecta','2-1-3','2-1-3','1-2-3','payout')`).run();
   db.close();
-  return path;
 }
 
-test("mismatched payout bet lineage cannot hide special-payout evidence from market readiness", () => {
+test("producer-impossible payout selection lineage cannot make market readiness settlement-eligible", () => {
   withRoot((root) => {
     writeAcceptedT5(root);
     createSidecar(root);

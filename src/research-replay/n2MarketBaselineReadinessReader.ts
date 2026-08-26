@@ -11,6 +11,7 @@ import { DatabaseSync } from "node:sqlite";
 
 import { readCurrentlyValidSourceDuplicateObservationIds } from "./n1SourceDuplicateResolutionValidation";
 import { readN2T5DecisionCutoffMetadata } from "./n2T5DecisionCutoffMetadata";
+import { parseSettlementSelection } from "./settlement";
 
 export const N2_MARKET_BASELINE_READINESS_READER_VERSION =
   "n2-market-baseline-readiness-reader-v1" as const;
@@ -68,6 +69,9 @@ type SettlementRow = {
   specialPayoutCount: number;
   payoutBetMismatchCount: number;
   payoutSelectionInvalidCount: number;
+  payoutSelectionRaw: string | null;
+  payoutSelectionNormalized: string | null;
+  payoutSelectionCanonical: string | null;
 };
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/u;
@@ -395,7 +399,10 @@ function readSettlements(sidecarDbPath: string, raceKeys: string[]): {
             AND substr(p.selection_canonical,1,1)<>substr(p.selection_canonical,3,1)
             AND substr(p.selection_canonical,1,1)<>substr(p.selection_canonical,5,1)
             AND substr(p.selection_canonical,3,1)<>substr(p.selection_canonical,5,1)
-          ) THEN 1 ELSE 0 END) AS payoutSelectionInvalidCount
+          ) THEN 1 ELSE 0 END) AS payoutSelectionInvalidCount,
+        MAX(CASE WHEN p.bet_type=c.bet_type AND p.line_kind='payout' THEN p.selection_raw END) AS payoutSelectionRaw,
+        MAX(CASE WHEN p.bet_type=c.bet_type AND p.line_kind='payout' THEN p.selection_normalized END) AS payoutSelectionNormalized,
+        MAX(CASE WHEN p.bet_type=c.bet_type AND p.line_kind='payout' THEN p.selection_canonical END) AS payoutSelectionCanonical
       FROM settlement_candidates_v2 c
       LEFT JOIN domain_observations o
         ON o.observation_id=c.observation_id
@@ -421,6 +428,13 @@ function readSettlements(sidecarDbPath: string, raceKeys: string[]): {
     const lineageBlockedRaceKeys = new Set<string>();
     for (const row of rows) {
       if (validResolvedObservationIds.has(row.observationId)) continue;
+      const parsedSelection = row.payoutSelectionRaw === null
+        ? null
+        : parseSettlementSelection("trifecta", row.payoutSelectionRaw);
+      const payoutSelectionSemanticsInvalid = parsedSelection !== null
+        && (!parsedSelection.valid
+          || parsedSelection.normalized !== row.payoutSelectionNormalized
+          || parsedSelection.canonical !== row.payoutSelectionCanonical);
       if (row.observationRaceKey !== row.raceKey
         || row.observationType !== "settlement_result"
         || row.observationPayloadType !== "settlement_result"
@@ -433,7 +447,8 @@ function readSettlements(sidecarDbPath: string, raceKeys: string[]): {
         || row.rawSecurityScanStatus !== "passed"
         || row.rawParserReplayEligible !== 1
         || Number(row.payoutBetMismatchCount) !== 0
-        || Number(row.payoutSelectionInvalidCount) !== 0) {
+        || Number(row.payoutSelectionInvalidCount) !== 0
+        || payoutSelectionSemanticsInvalid) {
         lineageBlockedRaceKeys.add(row.raceKey);
         continue;
       }
