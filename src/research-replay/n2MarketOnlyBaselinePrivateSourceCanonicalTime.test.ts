@@ -79,6 +79,8 @@ function createSidecar(root: string): string {
       candidate_id TEXT NOT NULL,
       line_no INTEGER NOT NULL,
       bet_type TEXT NOT NULL,
+      selection_raw TEXT,
+      selection_normalized TEXT,
       selection_canonical TEXT,
       line_kind TEXT NOT NULL
     );
@@ -125,8 +127,9 @@ function insertSettlement(path: string, spec: ReturnType<typeof raceSpec>, index
     `).run(candidateId, spec.raceKey, observationId, parseRunId, rawDocumentId);
     db.prepare(`
       INSERT INTO race_payout_lines_v2 (
-        payout_line_id, candidate_id, line_no, bet_type, selection_canonical, line_kind
-      ) VALUES (?, ?, 1, 'trifecta', '1-2-3', 'payout')
+        payout_line_id, candidate_id, line_no, bet_type,
+        selection_raw, selection_normalized, selection_canonical, line_kind
+      ) VALUES (?, ?, 1, 'trifecta', '1-2-3', '1-2-3', '1-2-3', 'payout')
     `).run(`payout-${index}`, candidateId);
   } finally {
     db.close();
