@@ -15,15 +15,18 @@ import type {
   N2TrifectaOddsCheckpointPlan,
 } from "../src/research-replay/n2TrifectaOddsCheckpointCollection";
 import { executeN2TrifectaPrivateCapture } from "../src/research-replay/n2TrifectaPrivateCaptureExecutor";
+import { assertN2TrifectaPrivateCaptureReportOutputSafe } from "../src/research-replay/n2TrifectaPrivateCaptureReportOutput";
 
 const MAX_JSON_BYTES = 2_000_000;
-const rootDir = resolve(argument("root") ?? process.cwd());
+const repoRoot = resolve(process.cwd());
+const rootDir = resolve(argument("root") ?? repoRoot);
 const planPath = resolve(requiredArgument("plan"));
 const approvalArg = argument("approval");
 const approvalPath = approvalArg ? resolve(approvalArg) : null;
 const executionMode = process.argv.includes("--execute") ? "execute" : "dry-run";
 const now = argument("now") ?? new Date().toISOString();
 const reportArg = argument("report");
+const reportPath = reportArg ? resolve(reportArg) : null;
 
 function argument(name: string): string | null {
   const inline = process.argv.find((value) => value.startsWith(`--${name}=`));
@@ -63,6 +66,10 @@ function writeExclusive(path: string, content: string): void {
   }
 }
 
+if (reportPath) {
+  assertN2TrifectaPrivateCaptureReportOutputSafe({ repoRoot, captureRoot: rootDir, reportPath });
+}
+
 const plan = readJsonFile<N2TrifectaOddsCheckpointPlan>(planPath, "PLAN");
 const approval = approvalPath
   ? readJsonFile<N2TrifectaOddsCaptureApproval>(approvalPath, "APPROVAL")
@@ -83,8 +90,8 @@ const report = await executeN2TrifectaPrivateCapture({
 const output = `${JSON.stringify(report, null, 2)}\n`;
 console.log(output.trimEnd());
 
-if (reportArg) {
-  writeExclusive(resolve(reportArg), output);
+if (reportPath) {
+  writeExclusive(reportPath, output);
 }
 
 if (report.status === "BLOCKED") process.exitCode = 3;
