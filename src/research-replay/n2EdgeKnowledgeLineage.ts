@@ -11,6 +11,20 @@ import {
 export const N2_EDGE_KNOWLEDGE_LINEAGE_VERSION = "n2-edge-knowledge-lineage-v1" as const;
 export const N2_EDGE_TRIAL_FAMILY_ID = "N2-EDGE-V1" as const;
 
+const N2_CONFOUNDER_FLAG_SEVERITIES: ReadonlySet<string> = new Set(["info", "warning", "blocking"]);
+const N2_CONFOUNDER_AUDIT_DISPOSITIONS: ReadonlySet<string> = new Set([
+  "REJECT_AND_REGISTER",
+  "INSUFFICIENT_HOLDOUT",
+  "CONFIRMED_PENDING_CONFOUNDER_REVIEW",
+  "CONFIRMED_WITH_BLOCKING_CONFOUNDER",
+]);
+const N2_HISTORICAL_VERDICTS: ReadonlySet<string> = new Set([
+  "HISTORICAL_CONFIRMED",
+  "HISTORICAL_REJECTED",
+  "INSUFFICIENT_HOLDOUT",
+]);
+const N2_DISCOVERY_DIRECTIONS: ReadonlySet<string> = new Set(["underpredicted", "overpredicted"]);
+
 export type N2EdgeKnowledgeLineageInput = {
   confirmation: N2EdgeHistoricalConfirmationResult;
   auditItem: N2ConfounderAuditItem;
@@ -166,11 +180,19 @@ export function buildN2EdgeKnowledgeLineagePlan(
   input: N2EdgeKnowledgeLineageInput,
 ): N2EdgeKnowledgeLineagePlan {
   const blockers: string[] = [];
+  if (!N2_HISTORICAL_VERDICTS.has(input.confirmation.verdict)) blockers.push("CONFIRMATION_VERDICT_INVALID");
+  if (!N2_DISCOVERY_DIRECTIONS.has(input.confirmation.discoveryDirection)) blockers.push("CONFIRMATION_DISCOVERY_DIRECTION_INVALID");
   if (input.auditItem.hypothesisId !== input.confirmation.hypothesisId) blockers.push("AUDIT_CONFIRMATION_HYPOTHESIS_MISMATCH");
   if (input.auditItem.historicalVerdict !== input.confirmation.verdict) blockers.push("AUDIT_CONFIRMATION_VERDICT_MISMATCH");
   if (input.auditItem.promotionAuthorized !== false) blockers.push("AUDIT_PROMOTION_AUTHORITY_INVALID");
+  if (!N2_CONFOUNDER_AUDIT_DISPOSITIONS.has(input.auditItem.disposition)) {
+    blockers.push("AUDIT_DISPOSITION_INVALID");
+  }
   if (input.auditItem.confounderFlags.some((flag) => flag.hypothesisId !== input.auditItem.hypothesisId)) {
     blockers.push("AUDIT_CONFOUNDER_FLAG_HYPOTHESIS_MISMATCH");
+  }
+  if (input.auditItem.confounderFlags.some((flag) => !N2_CONFOUNDER_FLAG_SEVERITIES.has(flag.severity))) {
+    blockers.push("AUDIT_CONFOUNDER_FLAG_SEVERITY_INVALID");
   }
   if (!auditDispositionIsSafe(input)) blockers.push("AUDIT_DISPOSITION_INCONSISTENT");
   for (const [name, digest] of [
