@@ -106,6 +106,34 @@ test("settlement candidate exact retry remains idempotent across execution times
   ctx.db.close();
 });
 
+test("settlement candidate idempotency lookup runs under the repository write lock", () => {
+  const ctx = setup();
+  const events: string[] = [];
+  const originalExec = ctx.db.exec.bind(ctx.db);
+  const originalPrepare = ctx.db.prepare.bind(ctx.db);
+  Object.defineProperty(ctx.db, "exec", {
+    configurable: true,
+    value: (sql: string) => {
+      if (sql === "BEGIN IMMEDIATE") events.push("BEGIN");
+      return originalExec(sql);
+    },
+  });
+  Object.defineProperty(ctx.db, "prepare", {
+    configurable: true,
+    value: (sql: string) => {
+      if (sql.includes("FROM settlement_candidates_v2") && sql.includes("semantic_hash=?")) {
+        events.push("CANDIDATE_LOOKUP");
+      }
+      return originalPrepare(sql);
+    },
+  });
+  const result = ctx.settlement.appendCandidate(input(ctx));
+  assert.equal(result.inserted, true);
+  assert.ok(events.indexOf("BEGIN") >= 0);
+  assert.ok(events.indexOf("CANDIDATE_LOOKUP") > events.indexOf("BEGIN"));
+  ctx.db.close();
+});
+
 test("settlement candidate retry rejects immutable lineage drift", () => {
   const ctx = setup();
   ctx.settlement.appendCandidate(input(ctx));
