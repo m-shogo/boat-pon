@@ -18,6 +18,12 @@ const N2_CONFOUNDER_AUDIT_DISPOSITIONS: ReadonlySet<string> = new Set([
   "CONFIRMED_PENDING_CONFOUNDER_REVIEW",
   "CONFIRMED_WITH_BLOCKING_CONFOUNDER",
 ]);
+const N2_HISTORICAL_VERDICTS: ReadonlySet<string> = new Set([
+  "HISTORICAL_CONFIRMED",
+  "HISTORICAL_REJECTED",
+  "INSUFFICIENT_HOLDOUT",
+]);
+const N2_DISCOVERY_DIRECTIONS: ReadonlySet<string> = new Set(["underpredicted", "overpredicted"]);
 
 export type N2EdgeKnowledgeLineageInput = {
   confirmation: N2EdgeHistoricalConfirmationResult;
@@ -174,6 +180,8 @@ export function buildN2EdgeKnowledgeLineagePlan(
   input: N2EdgeKnowledgeLineageInput,
 ): N2EdgeKnowledgeLineagePlan {
   const blockers: string[] = [];
+  if (!N2_HISTORICAL_VERDICTS.has(input.confirmation.verdict)) blockers.push("CONFIRMATION_VERDICT_INVALID");
+  if (!N2_DISCOVERY_DIRECTIONS.has(input.confirmation.discoveryDirection)) blockers.push("CONFIRMATION_DISCOVERY_DIRECTION_INVALID");
   if (input.auditItem.hypothesisId !== input.confirmation.hypothesisId) blockers.push("AUDIT_CONFIRMATION_HYPOTHESIS_MISMATCH");
   if (input.auditItem.historicalVerdict !== input.confirmation.verdict) blockers.push("AUDIT_CONFIRMATION_VERDICT_MISMATCH");
   if (input.auditItem.promotionAuthorized !== false) blockers.push("AUDIT_PROMOTION_AUTHORITY_INVALID");
