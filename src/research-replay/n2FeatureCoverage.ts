@@ -48,6 +48,10 @@ type MutableBucket = {
   exclusionReasons: Map<string, number>;
 };
 
+const SOURCE_KINDS = new Set(["feature", "odds"]);
+const STATUSES = new Set(["verified", "excluded"]);
+const AVAILABILITY_BASES = new Set(["source_published_at", "source_observed_at"]);
+
 function emptyBucket(): MutableBucket {
   return {
     expected: 0, verified: 0, excluded: 0, provenanceComplete: 0,
@@ -118,13 +122,16 @@ export function buildN2FeatureCoverageProfile(input: {
   const features = new Map<string, MutableBucket>();
 
   for (const event of sorted) {
+    if (!SOURCE_KINDS.has(event.sourceKind)) throw new Error(`N2_COVERAGE_INVALID_SOURCE_KIND:${event.sourceKind}`);
+    if (!STATUSES.has(event.status)) throw new Error(`N2_COVERAGE_INVALID_STATUS:${event.status}`);
     if (!event.key) throw new Error("N2_COVERAGE_EMPTY_KEY");
     const identity = `${event.canonicalRaceKey}\u0000${event.sourceKind}\u0000${event.key}`;
     if (seen.has(identity)) throw new Error(`N2_COVERAGE_DUPLICATE_EVENT:${identity}`);
     seen.add(identity);
     const year = raceYear(event.canonicalRaceKey);
     if (event.status === "verified") {
-      if (!event.observationId || !event.rawDocumentId || !event.availabilityBasis || event.exclusionReason) {
+      if (!event.observationId || !event.rawDocumentId || !event.availabilityBasis
+        || !AVAILABILITY_BASES.has(event.availabilityBasis) || event.exclusionReason) {
         throw new Error(`N2_COVERAGE_INVALID_VERIFIED_EVENT:${identity}`);
       }
     } else if (!event.exclusionReason || event.observationId || event.rawDocumentId || event.availabilityBasis) {
