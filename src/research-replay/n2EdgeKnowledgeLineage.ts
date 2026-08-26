@@ -12,6 +12,12 @@ export const N2_EDGE_KNOWLEDGE_LINEAGE_VERSION = "n2-edge-knowledge-lineage-v1" 
 export const N2_EDGE_TRIAL_FAMILY_ID = "N2-EDGE-V1" as const;
 
 const N2_CONFOUNDER_FLAG_SEVERITIES: ReadonlySet<string> = new Set(["info", "warning", "blocking"]);
+const N2_CONFOUNDER_AUDIT_DISPOSITIONS: ReadonlySet<string> = new Set([
+  "REJECT_AND_REGISTER",
+  "INSUFFICIENT_HOLDOUT",
+  "CONFIRMED_PENDING_CONFOUNDER_REVIEW",
+  "CONFIRMED_WITH_BLOCKING_CONFOUNDER",
+]);
 
 export type N2EdgeKnowledgeLineageInput = {
   confirmation: N2EdgeHistoricalConfirmationResult;
@@ -171,6 +177,9 @@ export function buildN2EdgeKnowledgeLineagePlan(
   if (input.auditItem.hypothesisId !== input.confirmation.hypothesisId) blockers.push("AUDIT_CONFIRMATION_HYPOTHESIS_MISMATCH");
   if (input.auditItem.historicalVerdict !== input.confirmation.verdict) blockers.push("AUDIT_CONFIRMATION_VERDICT_MISMATCH");
   if (input.auditItem.promotionAuthorized !== false) blockers.push("AUDIT_PROMOTION_AUTHORITY_INVALID");
+  if (!N2_CONFOUNDER_AUDIT_DISPOSITIONS.has(input.auditItem.disposition)) {
+    blockers.push("AUDIT_DISPOSITION_INVALID");
+  }
   if (input.auditItem.confounderFlags.some((flag) => flag.hypothesisId !== input.auditItem.hypothesisId)) {
     blockers.push("AUDIT_CONFOUNDER_FLAG_HYPOTHESIS_MISMATCH");
   }
