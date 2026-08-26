@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  EXACTA_CLOSING_ODDS_AUDIT_MAX_SLEEP_MS,
   parseExactaClosingOddsAuditSleepMs,
   requireExactaClosingOddsAuditCandidate,
   requireExactaClosingOddsAuditCandidates,
@@ -17,6 +18,10 @@ const valid = () => ({
 
 test("exacta closing odds audit accepts canonical low-frequency inputs", () => {
   assert.equal(parseExactaClosingOddsAuditSleepMs("1500"), 1500);
+  assert.equal(
+    parseExactaClosingOddsAuditSleepMs(String(EXACTA_CLOSING_ODDS_AUDIT_MAX_SLEEP_MS)),
+    EXACTA_CLOSING_ODDS_AUDIT_MAX_SLEEP_MS,
+  );
   assert.doesNotThrow(() => requireExactaClosingOddsAuditCandidate(valid()));
   assert.doesNotThrow(() => requireExactaClosingOddsAuditCandidate({
     raceId: "20280229-大村-12",
@@ -27,8 +32,15 @@ test("exacta closing odds audit accepts canonical low-frequency inputs", () => {
   }));
 });
 
-test("exacta closing odds audit rejects disabled or coerced sleep intervals", () => {
-  for (const raw of ["0", "-1", "1.5", "fast", String(Number.MAX_SAFE_INTEGER + 1)]) {
+test("exacta closing odds audit rejects disabled, coerced, or overflowing sleep intervals", () => {
+  for (const raw of [
+    "0",
+    "-1",
+    "1.5",
+    "fast",
+    String(EXACTA_CLOSING_ODDS_AUDIT_MAX_SLEEP_MS + 1),
+    String(Number.MAX_SAFE_INTEGER + 1),
+  ]) {
     assert.throws(() => parseExactaClosingOddsAuditSleepMs(raw), /EXACTA_CLOSING_ODDS_AUDIT_SLEEP_MS_INVALID/u);
   }
 });
