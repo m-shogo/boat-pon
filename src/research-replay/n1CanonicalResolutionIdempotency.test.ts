@@ -123,7 +123,7 @@ test("source duplicate resolution rejects a conflicting immutable retry", () => 
   conflictingPlan.plannedResolutions[0].duplicateSemanticDigest = "0".repeat(64);
   assert.throws(
     () => applySourceDuplicateResolution(db, conflictingPlan, "2026-07-29T05:00:00.000Z"),
-    /SOURCE_DUPLICATE_RESOLUTION_PLAN_STALE:/,
+    /SOURCE_DUPLICATE_RESOLUTION_PLAN_STALE/,
   );
   assert.equal(
     Number((db.prepare("SELECT COUNT(*) AS n FROM settlement_source_duplicate_resolutions_v2").get() as { n: number }).n),
