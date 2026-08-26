@@ -6,6 +6,7 @@ import {
 import { dirname, join, resolve } from "node:path";
 
 import { readN2TrifectaRealPlanPreflight } from "../src/research-replay/n2TrifectaRealPlanPreflight";
+import { assertN2TrifectaRealPlanPreflightReportOutputSafe } from "../src/research-replay/n2TrifectaRealPlanPreflightReportOutput";
 
 const root = resolve(process.cwd());
 const policy = JSON.parse(
@@ -22,6 +23,7 @@ const outputPath = resolve(
   process.env.BOAT_PON_PREFLIGHT_REPORT_PATH
     ?? join(root, "reports/automation/validation/n2-trifecta-real-plan-preflight.json"),
 );
+assertN2TrifectaRealPlanPreflightReportOutputSafe({ root, primaryDbPath, outputPath });
 
 const report = readN2TrifectaRealPlanPreflight({
   primaryDbPath,
