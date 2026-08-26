@@ -1,4 +1,5 @@
 export const HISTORICAL_CLOSING_ODDS_AUDIT_MAX_LIMIT = 200;
+export const HISTORICAL_CLOSING_ODDS_AUDIT_MAX_SLEEP_MS = 2_147_483_647;
 
 export const HISTORICAL_CLOSING_ODDS_AUDIT_CATEGORIES = [
   "condB",
@@ -61,7 +62,7 @@ export function parseHistoricalClosingOddsAuditOptions(
   }
 
   const sleepMs = parseCanonicalInteger(raw.sleepMs, "SLEEP_MS");
-  if (sleepMs < 1) {
+  if (sleepMs < 1 || sleepMs > HISTORICAL_CLOSING_ODDS_AUDIT_MAX_SLEEP_MS) {
     throw new Error(`HISTORICAL_CLOSING_ODDS_AUDIT_SLEEP_MS_INVALID:${raw.sleepMs}`);
   }
 
