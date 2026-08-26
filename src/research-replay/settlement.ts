@@ -550,58 +550,59 @@ export class SettlementRepository {
       payouts: payoutLines.map((line) => [line.selection.canonical, line.payoutYen, line.popularity ?? null, line.lineKind ?? "payout"]),
       refunds: refundLines.map((line) => [line.selection?.canonical ?? null, line.scope, line.refundYenPer100 ?? null, line.reasonCode]),
     });
-    const existing = this.db.prepare(`
-      SELECT candidate_id AS candidateId,
-             canonical_race_key AS canonicalRaceKey,
-             settlement_status AS settlementStatus,
-             result_kind AS resultKind,
-             revision_kind AS revisionKind,
-             resolution_status AS resolutionStatus,
-             source_kind AS sourceKind,
-             source_schema_version AS sourceSchemaVersion,
-             parse_run_id AS parseRunId,
-             raw_document_id AS rawDocumentId,
-             supersedes_candidate_id AS supersedesCandidateId,
-             correction_reason AS correctionReason
-      FROM settlement_candidates_v2
-      WHERE observation_id=? AND bet_type=? AND semantic_hash=?
-    `).get(input.observationId, input.betType, semanticHash) as {
-      candidateId: string;
-      canonicalRaceKey: string;
-      settlementStatus: string;
-      resultKind: string;
-      revisionKind: string;
-      resolutionStatus: string;
-      sourceKind: string;
-      sourceSchemaVersion: string;
-      parseRunId: string;
-      rawDocumentId: string;
-      supersedesCandidateId: string | null;
-      correctionReason: string | null;
-    } | undefined;
-    if (existing) {
-      if (existing.canonicalRaceKey !== input.canonicalRaceKey
-        || existing.settlementStatus !== input.settlementStatus
-        || existing.resultKind !== input.resultKind
-        || existing.revisionKind !== input.revisionKind
-        || existing.resolutionStatus !== input.resolutionStatus
-        || existing.sourceKind !== input.sourceKind
-        || existing.sourceSchemaVersion !== input.sourceSchemaVersion
-        || existing.parseRunId !== input.parseRunId
-        || existing.rawDocumentId !== input.rawDocumentId
-        || existing.supersedesCandidateId !== (input.supersedesCandidateId ?? null)
-        || existing.correctionReason !== (input.correctionReason ?? null)) {
-        throw new Error(`SETTLEMENT_CANDIDATE_REUSE_CONFLICT:${existing.candidateId}`);
-      }
-      return { candidateId: existing.candidateId, inserted: false, semanticHash };
-    }
-    const candidateId = this.idFactory();
     const now = canonicalUtcTimestamp(input.observedAt);
     // withinTransaction=trueなら呼び出し側がtransactionを管理する（backfillのper-file atomic batch）。
     // 既定はfalseでcandidate毎にBEGIN/COMMITする（N1-A挙動不変）。
     const manageTransaction = !(input.withinTransaction ?? false);
     if (manageTransaction) this.db.exec("BEGIN IMMEDIATE");
     try {
+      const existing = this.db.prepare(`
+        SELECT candidate_id AS candidateId,
+               canonical_race_key AS canonicalRaceKey,
+               settlement_status AS settlementStatus,
+               result_kind AS resultKind,
+               revision_kind AS revisionKind,
+               resolution_status AS resolutionStatus,
+               source_kind AS sourceKind,
+               source_schema_version AS sourceSchemaVersion,
+               parse_run_id AS parseRunId,
+               raw_document_id AS rawDocumentId,
+               supersedes_candidate_id AS supersedesCandidateId,
+               correction_reason AS correctionReason
+        FROM settlement_candidates_v2
+        WHERE observation_id=? AND bet_type=? AND semantic_hash=?
+      `).get(input.observationId, input.betType, semanticHash) as {
+        candidateId: string;
+        canonicalRaceKey: string;
+        settlementStatus: string;
+        resultKind: string;
+        revisionKind: string;
+        resolutionStatus: string;
+        sourceKind: string;
+        sourceSchemaVersion: string;
+        parseRunId: string;
+        rawDocumentId: string;
+        supersedesCandidateId: string | null;
+        correctionReason: string | null;
+      } | undefined;
+      if (existing) {
+        if (existing.canonicalRaceKey !== input.canonicalRaceKey
+          || existing.settlementStatus !== input.settlementStatus
+          || existing.resultKind !== input.resultKind
+          || existing.revisionKind !== input.revisionKind
+          || existing.resolutionStatus !== input.resolutionStatus
+          || existing.sourceKind !== input.sourceKind
+          || existing.sourceSchemaVersion !== input.sourceSchemaVersion
+          || existing.parseRunId !== input.parseRunId
+          || existing.rawDocumentId !== input.rawDocumentId
+          || existing.supersedesCandidateId !== (input.supersedesCandidateId ?? null)
+          || existing.correctionReason !== (input.correctionReason ?? null)) {
+          throw new Error(`SETTLEMENT_CANDIDATE_REUSE_CONFLICT:${existing.candidateId}`);
+        }
+        if (manageTransaction) this.db.exec("COMMIT");
+        return { candidateId: existing.candidateId, inserted: false, semanticHash };
+      }
+      const candidateId = this.idFactory();
       this.db.prepare(`INSERT INTO settlement_candidates_v2 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
         candidateId, input.canonicalRaceKey, input.betType, input.settlementStatus, input.resultKind,
         input.revisionKind, input.resolutionStatus, input.sourceKind, input.sourceSchemaVersion,
@@ -628,11 +629,11 @@ export class SettlementRepository {
         pin.run(this.idFactory(), candidateId, "domain_observation", input.observationId, evidenceHash, now);
       }
       if (manageTransaction) this.db.exec("COMMIT");
+      return { candidateId, inserted: true, semanticHash };
     } catch (error) {
       if (manageTransaction) this.db.exec("ROLLBACK");
       throw error;
     }
-    return { candidateId, inserted: true, semanticHash };
   }
 
   createConflict(input: {
