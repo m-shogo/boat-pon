@@ -90,6 +90,24 @@ function addObservationWithCandidates(db: DatabaseSync, replay: ResearchReplayRe
   return observationId;
 }
 
+test("source duplicate resolution rejects a forged first-time plan before append", () => {
+  const { db, replay } = setup();
+  addObservationWithCandidates(db, replay);
+  addObservationWithCandidates(db, replay);
+  const forgedPlan = structuredClone(planSourceDuplicateResolution(db));
+  forgedPlan.plannedResolutions[0].duplicateSemanticDigest = "0".repeat(64);
+
+  assert.throws(
+    () => applySourceDuplicateResolution(db, forgedPlan, NOW),
+    /SOURCE_DUPLICATE_RESOLUTION_PLAN_STALE/,
+  );
+  assert.equal(
+    Number((db.prepare("SELECT COUNT(*) AS n FROM settlement_source_duplicate_resolutions_v2").get() as { n: number }).n),
+    0,
+  );
+  db.close();
+});
+
 test("source duplicate resolution rejects a conflicting immutable retry", () => {
   const { db, replay } = setup();
   addObservationWithCandidates(db, replay);
@@ -105,7 +123,7 @@ test("source duplicate resolution rejects a conflicting immutable retry", () => 
   conflictingPlan.plannedResolutions[0].duplicateSemanticDigest = "0".repeat(64);
   assert.throws(
     () => applySourceDuplicateResolution(db, conflictingPlan, "2026-07-29T05:00:00.000Z"),
-    /SOURCE_DUPLICATE_RESOLUTION_CONFLICT:/,
+    /SOURCE_DUPLICATE_RESOLUTION_PLAN_STALE/,
   );
   assert.equal(
     Number((db.prepare("SELECT COUNT(*) AS n FROM settlement_source_duplicate_resolutions_v2").get() as { n: number }).n),
