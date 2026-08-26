@@ -1,6 +1,7 @@
 import { officialVenueCode } from "../domain/officialLinks";
 import { canonicalRaceKey } from "./identity";
 
+export const HISTORICAL_ALT_ODDS_MAX_SLEEP_MS = 2_147_483_647;
 export const HISTORICAL_ALT_ODDS_PRIORITIES = ["condB", "skip6R", "skipVenue", "allForward"] as const;
 export type HistoricalAltOddsPriority = (typeof HISTORICAL_ALT_ODDS_PRIORITIES)[number];
 
@@ -18,7 +19,11 @@ export function parseHistoricalAltOddsPositiveSafeInteger(
 ): number {
   if (!/^\d+$/u.test(raw)) throw new Error(`HISTORICAL_ALT_ODDS_${label}_INVALID:${raw}`);
   const value = Number(raw);
-  if (!Number.isSafeInteger(value) || value < minimum) {
+  if (
+    !Number.isSafeInteger(value)
+    || value < minimum
+    || (label === "SLEEP_MS" && value > HISTORICAL_ALT_ODDS_MAX_SLEEP_MS)
+  ) {
     throw new Error(`HISTORICAL_ALT_ODDS_${label}_INVALID:${raw}`);
   }
   return value;
