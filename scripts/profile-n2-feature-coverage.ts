@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { buildN2FeatureCoverageProfile, type N2FeatureCoverageEvent } from "../src/research-replay/n2FeatureCoverage";
+import { assertN2FeatureCoverageInputAuthority } from "../src/research-replay/n2FeatureCoverageInputAuthority";
 import { readOfficialProgramCoverageEvents } from "../src/research-replay/n2FeatureCoverageReader";
 import { readTrifectaMarketCoverageEvents, type N2LiveCheckpoint } from "../src/research-replay/n2OddsCoverageReader";
 
@@ -16,6 +17,7 @@ const checkpointArg = value("checkpoint");
 const source = sourceArg ?? "program";
 const checkpoint = checkpointArg ?? "T-5";
 const fixture = process.argv.includes("--fixture");
+assertN2FeatureCoverageInputAuthority({ hasFileInput: Boolean(inputArg), fixture });
 if (inputArg && (primary || sidecar || dateFrom || dateTo || sourceArg || checkpointArg)) {
   throw new Error("N2_COVERAGE_MIXED_INPUT_MODES");
 }
