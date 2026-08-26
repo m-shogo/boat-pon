@@ -84,6 +84,20 @@ test("blocking confounder cannot be relabeled discovery-eligible", () => {
   assert.equal(canonical.discoveryCandidate, null);
 });
 
+test("unknown confounder severity cannot downgrade blocking evidence into discovery eligibility", () => {
+  const forgedFlag = {
+    hypothesisId: "N2EDGE-audit-semantics",
+    flagId: "venue-concentration-v1",
+    severity: "critical",
+    detail: "tampered severity must not become non-blocking",
+  } as unknown as N2ConfounderAuditItem["confounderFlags"][number];
+  const forged = plan(auditItem("CONFIRMED_PENDING_CONFOUNDER_REVIEW", [forgedFlag]));
+  assert.equal(forged.status, "BLOCKED");
+  assert.ok(forged.blockers.includes("AUDIT_CONFOUNDER_FLAG_SEVERITY_INVALID"));
+  assert.equal(forged.discoveryCandidate, null);
+  assert.equal(forged.registryPlan.discoveryAppendEligible, false);
+});
+
 test("confounder flags must belong to the audited hypothesis", () => {
   const foreignFlag = {
     hypothesisId: "N2EDGE-other",
