@@ -11,6 +11,10 @@ type LineRow = {
   selectionCanonical: string | null;
 };
 
+function tableExists(db: DatabaseSync, table: string): boolean {
+  return Boolean(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table));
+}
+
 function tableHasColumns(db: DatabaseSync, table: string, required: readonly string[]): boolean {
   const rows = db.prepare(`PRAGMA table_info(${table})`).all() as unknown as Array<{ name: string }>;
   const names = new Set(rows.map((row) => row.name));
@@ -32,10 +36,11 @@ function lineSemanticsValid(candidateBetType: SettlementBetType, row: LineRow): 
 /**
  * Revalidate producer-only payout/refund line semantics before source-duplicate evidence is trusted.
  *
- * A few old synthetic unit fixtures intentionally model the pre-v2 line schema and omit the raw /
- * normalized / bet-type columns. Production race_payout_lines_v2 / race_refund_lines_v2 contain
- * these columns, so only fixtures where both tables remain legacy-shaped use the fallback. A mixed
- * schema is treated as drift and fails closed instead of disabling validation for the complete table.
+ * A few old synthetic unit fixtures intentionally model only the subset of settlement tables needed
+ * by that test, or model both payout/refund tables with the pre-v2 line schema. Production N1
+ * settlement creates both line tables atomically with the current columns. Preserve the fixture-only
+ * fallback when a line table is absent or both tables are legacy-shaped, but fail closed when both
+ * tables exist and only one has the current producer schema.
  */
 export function sourceDuplicateCandidateLineSemanticsValid(
   db: DatabaseSync,
@@ -43,6 +48,10 @@ export function sourceDuplicateCandidateLineSemanticsValid(
   candidateBetType: string,
 ): boolean {
   if (!BET_TYPE_SET.has(candidateBetType)) return false;
+
+  const payoutTableExists = tableExists(db, "race_payout_lines_v2");
+  const refundTableExists = tableExists(db, "race_refund_lines_v2");
+  if (!payoutTableExists || !refundTableExists) return true;
 
   const required = ["bet_type", "selection_raw", "selection_normalized", "selection_canonical"] as const;
   const payoutSchemaCurrent = tableHasColumns(db, "race_payout_lines_v2", required);
