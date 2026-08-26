@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  BEFOREINFO_BACKFILL_MAX_INTERVAL_MS,
   parseBeforeInfoBackfillOptions,
   requireBeforeInfoBackfillTarget,
   requireBeforeInfoBackfillTargets,
@@ -26,6 +27,14 @@ test("beforeinfo backfill accepts canonical bounded options", () => {
     fromDate: "2028-02-29",
     toDate: "2028-02-29",
   }));
+  assert.equal(
+    parseBeforeInfoBackfillOptions({
+      fromDate: "2026-08-01",
+      toDate: "2026-08-23",
+      intervalMsRaw: String(BEFOREINFO_BACKFILL_MAX_INTERVAL_MS),
+    }).intervalMs,
+    BEFOREINFO_BACKFILL_MAX_INTERVAL_MS,
+  );
 });
 
 test("beforeinfo backfill rejects unsafe bounded options before access", () => {
@@ -35,7 +44,14 @@ test("beforeinfo backfill rejects unsafe bounded options before access", () => {
       /BEFOREINFO_BACKFILL_LIMIT_INVALID/u,
     );
   }
-  for (const raw of ["0", "-1", "1.5", "fast", String(Number.MAX_SAFE_INTEGER + 1)]) {
+  for (const raw of [
+    "0",
+    "-1",
+    "1.5",
+    "fast",
+    String(BEFOREINFO_BACKFILL_MAX_INTERVAL_MS + 1),
+    String(Number.MAX_SAFE_INTEGER + 1),
+  ]) {
     assert.throws(
       () => parseBeforeInfoBackfillOptions({ fromDate: "2026-08-01", toDate: "2026-08-23", intervalMsRaw: raw }),
       /BEFOREINFO_BACKFILL_INTERVAL_MS_INVALID/u,

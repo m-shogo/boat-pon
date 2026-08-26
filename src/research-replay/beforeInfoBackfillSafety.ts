@@ -1,6 +1,8 @@
 import { officialVenueCode } from "../domain/officialLinks";
 import { canonicalRaceKey } from "./identity";
 
+export const BEFOREINFO_BACKFILL_MAX_INTERVAL_MS = 2_147_483_647;
+
 export type BeforeInfoBackfillOptions = {
   fromDate: string;
   toDate: string;
@@ -50,6 +52,9 @@ export function parseBeforeInfoBackfillOptions(input: {
   const intervalMs = input.intervalMsRaw == null
     ? 15_000
     : parsePositiveSafeInteger(input.intervalMsRaw, "INTERVAL_MS");
+  if (intervalMs > BEFOREINFO_BACKFILL_MAX_INTERVAL_MS) {
+    throw new Error(`BEFOREINFO_BACKFILL_INTERVAL_MS_INVALID:${String(input.intervalMsRaw)}`);
+  }
   const limit = input.limitRaw == null
     ? null
     : parseNonNegativeSafeInteger(input.limitRaw, "LIMIT");
