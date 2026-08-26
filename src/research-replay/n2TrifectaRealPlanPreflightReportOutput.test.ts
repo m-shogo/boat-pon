@@ -3,16 +3,19 @@ import test from "node:test";
 import { assertN2TrifectaRealPlanPreflightReportOutputSafe } from "./n2TrifectaRealPlanPreflightReportOutput";
 
 const root = "/repo/boat-pon";
+const dataRoot = "/srv/boat-data";
 const primaryDbPath = "/srv/boat-data/data/boat.sqlite";
 
 test("private plan preflight output allows canonical validation and external scratch paths", () => {
   assert.doesNotThrow(() => assertN2TrifectaRealPlanPreflightReportOutputSafe({
     root,
+    dataRoot,
     primaryDbPath,
     outputPath: "/repo/boat-pon/reports/automation/validation/preflight.json",
   }));
   assert.doesNotThrow(() => assertN2TrifectaRealPlanPreflightReportOutputSafe({
     root,
+    dataRoot,
     primaryDbPath,
     outputPath: "/tmp/preflight.json",
   }));
@@ -26,6 +29,7 @@ test("private plan preflight output rejects repository source and config paths",
   ]) {
     assert.throws(() => assertN2TrifectaRealPlanPreflightReportOutputSafe({
       root,
+      dataRoot,
       primaryDbPath,
       outputPath,
     }), /N2_TRIFECTA_REAL_PLAN_PREFLIGHT_OUTPUT_REPO_PATH_FORBIDDEN/);
@@ -36,8 +40,24 @@ test("private plan preflight output rejects primary sqlite database files", () =
   for (const outputPath of [primaryDbPath, `${primaryDbPath}-wal`, `${primaryDbPath}-shm`]) {
     assert.throws(() => assertN2TrifectaRealPlanPreflightReportOutputSafe({
       root,
+      dataRoot,
       primaryDbPath,
       outputPath,
     }), /N2_TRIFECTA_REAL_PLAN_PREFLIGHT_OUTPUT_DATABASE_PATH_FORBIDDEN/);
+  }
+});
+
+test("private plan preflight output rejects other canonical data files", () => {
+  for (const outputPath of [
+    "/srv/boat-data/data/research-replay.sqlite",
+    "/srv/boat-data/data/research-replay.sqlite-wal",
+    "/srv/boat-data/data/tmp/preflight.json",
+  ]) {
+    assert.throws(() => assertN2TrifectaRealPlanPreflightReportOutputSafe({
+      root,
+      dataRoot,
+      primaryDbPath,
+      outputPath,
+    }), /N2_TRIFECTA_REAL_PLAN_PREFLIGHT_OUTPUT_DATA_PATH_FORBIDDEN/);
   }
 });
