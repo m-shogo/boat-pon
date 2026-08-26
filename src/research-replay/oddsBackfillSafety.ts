@@ -1,6 +1,8 @@
 import { officialVenueCode } from "../domain/officialLinks";
 import { canonicalRaceKey, canonicalTrifectaSelection } from "./identity";
 
+export const ODDS_BACKFILL_MAX_SLEEP_MS = 2_147_483_647;
+
 export type OddsBackfillTarget = {
   raceId: string;
   date: string;
@@ -18,7 +20,11 @@ export function parseOddsBackfillPositiveSafeInteger(
     throw new Error(`ODDS_BACKFILL_${label}_INVALID:${String(raw)}`);
   }
   const value = Number(raw);
-  if (!Number.isSafeInteger(value) || value < minimum) {
+  if (
+    !Number.isSafeInteger(value)
+    || value < minimum
+    || (label === "SLEEP_MS" && value > ODDS_BACKFILL_MAX_SLEEP_MS)
+  ) {
     throw new Error(`ODDS_BACKFILL_${label}_INVALID:${raw}`);
   }
   return value;
