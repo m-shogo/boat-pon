@@ -1,6 +1,8 @@
 import { officialVenueCode } from "../domain/officialLinks";
 import { canonicalRaceKey } from "./identity";
 
+export const EXACTA_CLOSING_ODDS_AUDIT_MAX_SLEEP_MS = 2_147_483_647;
+
 export type ExactaClosingOddsAuditCandidate = {
   raceId: string;
   date: string;
@@ -21,7 +23,11 @@ function parseCanonicalPositiveSafeInteger(raw: string, name: string): number {
 }
 
 export function parseExactaClosingOddsAuditSleepMs(raw: string): number {
-  return parseCanonicalPositiveSafeInteger(raw, "SLEEP_MS");
+  const value = parseCanonicalPositiveSafeInteger(raw, "SLEEP_MS");
+  if (value > EXACTA_CLOSING_ODDS_AUDIT_MAX_SLEEP_MS) {
+    throw new Error(`EXACTA_CLOSING_ODDS_AUDIT_SLEEP_MS_INVALID:${raw}`);
+  }
+  return value;
 }
 
 export function requireExactaClosingOddsAuditCandidate(candidate: ExactaClosingOddsAuditCandidate): void {
