@@ -4,6 +4,7 @@ import { canonicalHash } from "../src/research-replay/canonical";
 import { readLifecycleValidApprovalScopes } from "../src/research-replay/n2ObservationIngestApprovalScopes";
 import { readCanonicalRolloutState } from "../src/research-replay/n2ObservationIngestRolloutState";
 import { buildN2TrifectaMarketFoundation } from "../src/research-replay/n2TrifectaMarketFoundation";
+import { assertN2TrifectaMarketFoundationReportOutputSafe } from "../src/research-replay/n2TrifectaMarketFoundationReportOutput";
 import { readN2TrifectaMarketSourceInventory } from "../src/research-replay/n2TrifectaMarketSourceInventoryReader";
 import { readN2ObservationIngestReadiness } from "../src/research-replay/n2ObservationIngestReadinessReader";
 
@@ -14,6 +15,7 @@ const primaryDbPath = join(dataRoot, "data/boat.sqlite");
 const sidecarDbPath = join(dataRoot, "data/research-replay.sqlite");
 const outputPath = resolve(process.env.BOAT_PON_N2_TRIFECTA_FOUNDATION_REPORT
   ?? join(root, "reports/n2/n2-trifecta-market-foundation.json"));
+assertN2TrifectaMarketFoundationReportOutputSafe({ root, dataRoot, outputPath });
 
 function dbMeta(path: string): { exists: boolean; bytes: number | null; modifiedMs: number | null; walBytes: number } {
   const walPath = `${path}-wal`;
