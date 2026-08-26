@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  ODDS_BACKFILL_MAX_SLEEP_MS,
   parseOddsBackfillDate,
   parseOddsBackfillPositiveSafeInteger,
   requireOddsBackfillDateRange,
@@ -20,19 +21,32 @@ const valid = () => ({
 test("odds backfill accepts canonical bounded inputs", () => {
   assert.equal(parseOddsBackfillPositiveSafeInteger("10", "LIMIT"), 10);
   assert.equal(parseOddsBackfillPositiveSafeInteger("1000", "SLEEP_MS", 1000), 1000);
+  assert.equal(
+    parseOddsBackfillPositiveSafeInteger(String(ODDS_BACKFILL_MAX_SLEEP_MS), "SLEEP_MS", 1000),
+    ODDS_BACKFILL_MAX_SLEEP_MS,
+  );
   assert.equal(parseOddsBackfillDate("2028-02-29", "FROM_DATE"), "2028-02-29");
   assert.doesNotThrow(() => requireOddsBackfillDateRange("2026-08-01", "2026-08-23"));
   assert.doesNotThrow(() => requireOddsBackfillTarget(valid()));
 });
 
-test("odds backfill rejects coerced or disabled bounds", () => {
+test("odds backfill rejects coerced, disabled, or overflowing bounds", () => {
   for (const raw of [undefined, "0", "-1", "1.5", "many", String(Number.MAX_SAFE_INTEGER + 1)]) {
     assert.throws(
       () => parseOddsBackfillPositiveSafeInteger(raw, "LIMIT"),
       /ODDS_BACKFILL_LIMIT_INVALID/u,
     );
   }
-  for (const raw of [undefined, "0", "999", "-1", "1.5", "fast", String(Number.MAX_SAFE_INTEGER + 1)]) {
+  for (const raw of [
+    undefined,
+    "0",
+    "999",
+    "-1",
+    "1.5",
+    "fast",
+    String(ODDS_BACKFILL_MAX_SLEEP_MS + 1),
+    String(Number.MAX_SAFE_INTEGER + 1),
+  ]) {
     assert.throws(
       () => parseOddsBackfillPositiveSafeInteger(raw, "SLEEP_MS", 1000),
       /ODDS_BACKFILL_SLEEP_MS_INVALID/u,
