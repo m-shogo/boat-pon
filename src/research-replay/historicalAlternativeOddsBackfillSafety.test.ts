@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  HISTORICAL_ALT_ODDS_MAX_SLEEP_MS,
   parseHistoricalAltOddsOptionalDate,
   parseHistoricalAltOddsPositiveSafeInteger,
   parseHistoricalAltOddsPriority,
@@ -22,6 +23,10 @@ const valid = () => ({
 test("historical alternative odds accepts canonical safety inputs", () => {
   assert.equal(parseHistoricalAltOddsPositiveSafeInteger("30", "LIMIT"), 30);
   assert.equal(parseHistoricalAltOddsPositiveSafeInteger("1000", "SLEEP_MS", 1000), 1000);
+  assert.equal(
+    parseHistoricalAltOddsPositiveSafeInteger(String(HISTORICAL_ALT_ODDS_MAX_SLEEP_MS), "SLEEP_MS", 1000),
+    HISTORICAL_ALT_ODDS_MAX_SLEEP_MS,
+  );
   assert.equal(parseHistoricalAltOddsOptionalDate("2028-02-29", "FROM_DATE"), "2028-02-29");
   assert.equal(parseHistoricalAltOddsVenue("宮島"), "宮島");
   assert.equal(parseHistoricalAltOddsRaceNo("6"), 6);
@@ -33,7 +38,15 @@ test("historical alternative odds rejects unsafe bounds and cadence", () => {
   for (const raw of ["0", "-1", "1.5", "many", String(Number.MAX_SAFE_INTEGER + 1)]) {
     assert.throws(() => parseHistoricalAltOddsPositiveSafeInteger(raw, "LIMIT"), /HISTORICAL_ALT_ODDS_LIMIT_INVALID/u);
   }
-  for (const raw of ["0", "999", "-1", "1.5", "fast", String(Number.MAX_SAFE_INTEGER + 1)]) {
+  for (const raw of [
+    "0",
+    "999",
+    "-1",
+    "1.5",
+    "fast",
+    String(HISTORICAL_ALT_ODDS_MAX_SLEEP_MS + 1),
+    String(Number.MAX_SAFE_INTEGER + 1),
+  ]) {
     assert.throws(
       () => parseHistoricalAltOddsPositiveSafeInteger(raw, "SLEEP_MS", 1000),
       /HISTORICAL_ALT_ODDS_SLEEP_MS_INVALID/u,
