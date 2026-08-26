@@ -33,6 +33,15 @@ test("confirmed result without blocking flag stays pending review, never promote
  assert.equal(report.items[0].disposition,"CONFIRMED_PENDING_CONFOUNDER_REVIEW");assert.equal(report.items[0].promotionAuthorized,false);
 });
 
+test("unknown confounder severity fails closed before audit disposition is emitted",()=>{
+ const forgedFlag={hypothesisId:"H1",flagId:"tampered-severity",severity:"critical",detail:"unknown severity must not be treated as non-blocking"} as unknown as Parameters<typeof auditN2ConfoundersAndRejections>[0]["confounderFlags"][number];
+ const report=auditN2ConfoundersAndRejections({confirmationResults:[result("H1","HISTORICAL_CONFIRMED")],confounderFlags:[forgedFlag]});
+ assert.equal(report.status,"BLOCKED");
+ assert.ok(report.blockers.includes("INVALID_CONFOUNDER_FLAG_SEVERITY:H1:critical"));
+ assert.equal(report.items.length,0);
+ assert.equal(report.rejectionEntries.length,0);
+});
+
 test("rehashable historical verdict drift fails closed before disposition or rejection writes",()=>{
  for(const [sourceVerdict,forgedVerdict] of [
   ["HISTORICAL_CONFIRMED","HISTORICAL_REJECTED"],
