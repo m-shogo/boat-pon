@@ -5,6 +5,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { canonicalHash } from "./canonical";
 import { parseCanonicalRaceKey } from "./identity";
+import { sourceDuplicateCandidateLineSemanticsValid } from "./n1SourceDuplicateLineSemantics";
 import { N1_CANONICAL_RESOLUTION_SCHEMA_VERSION, SourceDuplicateResolutionRepository } from "./settlement";
 
 export const SOURCE_DUPLICATE_RESOLVER_VERSION = "n1c-source-duplicate-resolver-v1";
@@ -132,7 +133,9 @@ function observationCandidateDigest(
       row.canonical_race_key === expectedRaceKey
       && row.raw_document_id === expectedRawDocumentId
       && row.parse_run_id === expectedParseRunId),
-    semanticIntegrityValid: rows.every((row) => candidateSemanticHashValid(db, row)),
+    semanticIntegrityValid: rows.every((row) =>
+      candidateSemanticHashValid(db, row)
+      && sourceDuplicateCandidateLineSemanticsValid(db, row.candidate_id, row.bet_type)),
   };
 }
 
