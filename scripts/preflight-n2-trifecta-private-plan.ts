@@ -23,7 +23,7 @@ const outputPath = resolve(
   process.env.BOAT_PON_PREFLIGHT_REPORT_PATH
     ?? join(root, "reports/automation/validation/n2-trifecta-real-plan-preflight.json"),
 );
-assertN2TrifectaRealPlanPreflightReportOutputSafe({ root, primaryDbPath, outputPath });
+assertN2TrifectaRealPlanPreflightReportOutputSafe({ root, dataRoot, primaryDbPath, outputPath });
 
 const report = readN2TrifectaRealPlanPreflight({
   primaryDbPath,
