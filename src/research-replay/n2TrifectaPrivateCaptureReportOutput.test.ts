@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import test from "node:test";
@@ -62,5 +62,22 @@ test("private capture report rejects canonical capture data paths", () => {
         /N2_PRIVATE_CAPTURE_REPORT_DATA_PATH_FORBIDDEN/u,
       );
     }
+  });
+});
+
+test("private capture report rejects symlinked parents inside validation output", () => {
+  withRoots((repoRoot, captureRoot, scratchRoot) => {
+    const validationDir = join(repoRoot, "reports/automation/validation");
+    mkdirSync(validationDir, { recursive: true });
+    symlinkSync(scratchRoot, join(validationDir, "alias"), "dir");
+
+    assert.throws(
+      () => assertN2TrifectaPrivateCaptureReportOutputSafe({
+        repoRoot,
+        captureRoot,
+        reportPath: join(validationDir, "alias/private-capture.json"),
+      }),
+      /N2_PRIVATE_CAPTURE_REPORT_PATH_ALIAS/u,
+    );
   });
 });
