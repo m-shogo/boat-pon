@@ -5,6 +5,7 @@
  */
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertT5MarketBaselineWindow } from "../src/research-replay/t5MarketBaselineWindow";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const FROM = process.env.BOAT_PON_FROM ?? "2026-06-01";
@@ -12,6 +13,7 @@ const TO = process.env.BOAT_PON_TO ?? todayJst();
 const BOUNDARY = process.env.BOAT_PON_BOUNDARY ?? "2026-07-01";
 const OUT_MD = "reports/t5-market-baseline.md";
 const OUT_JSON = "reports/t5-market-baseline.json";
+assertT5MarketBaselineWindow({ from: FROM, to: TO, boundary: BOUNDARY });
 if (!existsSync(DB_PATH)) throw new Error(`DB not found: ${DB_PATH}`);
 
 type OddsRow = { id:number; race_id:string; selection:string; odds:number };
