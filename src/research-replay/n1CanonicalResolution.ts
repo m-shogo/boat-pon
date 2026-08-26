@@ -293,15 +293,15 @@ export function applySourceDuplicateResolution(
   plan: DuplicateResolutionPlan,
   now: string,
 ): { inserted: number; noop: number } {
-  requireCurrentSourceDuplicatePlan(db, plan);
-  if (plan.valueConflicts.length > 0) {
-    throw new Error(`value conflicts present (${plan.valueConflicts.length}); refuse to auto-resolve as source_duplicate`);
-  }
   const repo = new SourceDuplicateResolutionRepository(db);
   let inserted = 0;
   let noop = 0;
   db.exec("BEGIN IMMEDIATE");
   try {
+    requireCurrentSourceDuplicatePlan(db, plan);
+    if (plan.valueConflicts.length > 0) {
+      throw new Error(`value conflicts present (${plan.valueConflicts.length}); refuse to auto-resolve as source_duplicate`);
+    }
     for (const item of plan.plannedResolutions) {
       const result = repo.record({
         duplicateObservationId: item.duplicateObservationId,
