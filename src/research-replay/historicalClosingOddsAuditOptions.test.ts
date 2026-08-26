@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   HISTORICAL_CLOSING_ODDS_AUDIT_MAX_LIMIT,
+  HISTORICAL_CLOSING_ODDS_AUDIT_MAX_SLEEP_MS,
   parseHistoricalClosingOddsAuditOptions,
 } from "./historicalClosingOddsAuditOptions";
 
@@ -38,13 +39,24 @@ test("historical closing odds audit rejects unbounded or coerced limits", () => 
   }
 });
 
-test("historical closing odds audit requires a real positive sleep interval", () => {
-  for (const sleepMs of ["0", "-1", "1.5", "fast", String(Number.MAX_SAFE_INTEGER + 1)]) {
+test("historical closing odds audit requires a real positive bounded sleep interval", () => {
+  for (const sleepMs of [
+    "0",
+    "-1",
+    "1.5",
+    "fast",
+    String(HISTORICAL_CLOSING_ODDS_AUDIT_MAX_SLEEP_MS + 1),
+    String(Number.MAX_SAFE_INTEGER + 1),
+  ]) {
     assert.throws(
       () => parseHistoricalClosingOddsAuditOptions({ ...valid(), sleepMs }, VENUES),
       /HISTORICAL_CLOSING_ODDS_AUDIT_SLEEP_MS_INVALID/u,
     );
   }
+  assert.equal(
+    parseHistoricalClosingOddsAuditOptions({ ...valid(), sleepMs: String(HISTORICAL_CLOSING_ODDS_AUDIT_MAX_SLEEP_MS) }, VENUES).sleepMs,
+    HISTORICAL_CLOSING_ODDS_AUDIT_MAX_SLEEP_MS,
+  );
 });
 
 test("historical closing odds audit rejects impossible dates before source access", () => {
