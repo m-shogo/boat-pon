@@ -5,6 +5,7 @@
  */
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { isCanonicalT5TrifectaResult } from "../src/research-replay/t5MarketBaselineResult";
 import { assertT5MarketBaselineWindow } from "../src/research-replay/t5MarketBaselineWindow";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
@@ -59,6 +60,7 @@ for(const [raceId,market] of byRace){
   const values=[...unique.values()];
   if(values.some(r=>!validSelection(r.selection)||!Number.isFinite(r.odds)||r.odds<=1)){rejectedInvalid++;continue;}
   const result=resultByRace.get(raceId); if(!result?.trifecta||result.returned){unsettled++;continue;}
+  if(!isCanonicalT5TrifectaResult(result.trifecta)){rejectedInvalid++;continue;}
   const overround=values.reduce((s,r)=>s+1/r.odds,0); if(!(overround>0)){rejectedInvalid++;continue;}
   const probabilities=new Map(values.map(r=>[r.selection,(1/r.odds)/overround]));
   const favorite=values.reduce((a,b)=>b.odds<a.odds?b:a);
