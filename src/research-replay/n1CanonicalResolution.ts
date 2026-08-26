@@ -157,6 +157,10 @@ export type DuplicateResolutionPlan = {
   valueConflicts: DuplicateResolutionPlanItem[]; // exact でない（値が異なる）→ resolution しない
 };
 
+// 同一raw source内で最初の未訂正 settlement observation を canonical、残りを duplicate 候補として計画する。
+// parser reparse / correction は source duplicate ではなく独立したrevision lineageなので候補集合から除外する。
+// 別raw documentの同一race observationはsource duplicateではないため、このplanのconflictへ混ぜない。
+// 同一raw・同一parse runの未訂正observationでcandidate集合も一致する場合だけ exact source duplicate とする。
 export function planSourceDuplicateResolution(db: DatabaseSync): DuplicateResolutionPlan {
   const duplicateGroups = db.prepare(`
     SELECT canonical_race_key, raw_document_id
@@ -176,10 +180,22 @@ export function planSourceDuplicateResolution(db: DatabaseSync): DuplicateResolu
       ORDER BY rowid ASC
     `).all(raceKey, rawDocumentId) as SettlementObservationLineage[];
     const canonical = obs[0];
-    const canonicalDigest = observationCandidateDigest(db, canonical.observation_id, raceKey, canonical.raw_document_id, canonical.parse_run_id);
+    const canonicalDigest = observationCandidateDigest(
+      db,
+      canonical.observation_id,
+      raceKey,
+      canonical.raw_document_id,
+      canonical.parse_run_id,
+    );
     const canonicalParseLineageValid = observationParseRawLineageValid(db, canonical);
     for (const dup of obs.slice(1)) {
-      const dupDigest = observationCandidateDigest(db, dup.observation_id, raceKey, dup.raw_document_id, dup.parse_run_id);
+      const dupDigest = observationCandidateDigest(
+        db,
+        dup.observation_id,
+        raceKey,
+        dup.raw_document_id,
+        dup.parse_run_id,
+      );
       const valueEqual = canonicalParseLineageValid
         && observationParseRawLineageValid(db, dup)
         && canonicalDigest.lineageValid
@@ -232,7 +248,19 @@ function requireSourceDuplicateResolutionContract(
            schema_version AS schemaVersion
     FROM settlement_source_duplicate_resolutions_v2
     WHERE resolution_id=?
-  `).get(resolutionId) as any;
+  `).get(resolutionId) as {
+    duplicateObservationId: string;
+    canonicalObservationId: string;
+    canonicalRaceKey: string;
+    rawDocumentId: string;
+    sourceArchiveFile: string;
+    resolutionKind: string;
+    detectionReason: string;
+    duplicateSemanticDigest: string;
+    resolverVersion: string;
+    policyVersion: string;
+    schemaVersion: string;
+  } | undefined;
   if (
     row === undefined ||
     row.duplicateObservationId !== item.duplicateObservationId ||
@@ -258,20 +286,22 @@ function requireCurrentSourceDuplicatePlan(db: DatabaseSync, plan: DuplicateReso
   }
 }
 
+// append-only で resolution を適用する。value conflict があれば適用せず throw（stop condition）。
+// 既に解決済みの duplicate は immutable body が一致する場合だけ no-op（冪等）。
 export function applySourceDuplicateResolution(
   db: DatabaseSync,
   plan: DuplicateResolutionPlan,
   now: string,
 ): { inserted: number; noop: number } {
+  requireCurrentSourceDuplicatePlan(db, plan);
+  if (plan.valueConflicts.length > 0) {
+    throw new Error(`value conflicts present (${plan.valueConflicts.length}); refuse to auto-resolve as source_duplicate`);
+  }
   const repo = new SourceDuplicateResolutionRepository(db);
   let inserted = 0;
   let noop = 0;
   db.exec("BEGIN IMMEDIATE");
   try {
-    requireCurrentSourceDuplicatePlan(db, plan);
-    if (plan.valueConflicts.length > 0) {
-      throw new Error(`value conflicts present (${plan.valueConflicts.length}); refuse to auto-resolve as source_duplicate`);
-    }
     for (const item of plan.plannedResolutions) {
       const result = repo.record({
         duplicateObservationId: item.duplicateObservationId,
@@ -295,6 +325,8 @@ export function applySourceDuplicateResolution(
   }
   return { inserted, noop };
 }
+
+// ===== raw / active canonical duplicate 監査 =====
 
 const NOT_RESOLVED = `NOT EXISTS (
   SELECT 1 FROM settlement_source_duplicate_resolutions_v2 r
@@ -324,6 +356,7 @@ function validateCurrentSourceDuplicateResolutionEvidence(db: DatabaseSync): voi
     current.push(item);
     currentByDuplicate.set(item.duplicateObservationId, current);
   }
+
   const seen = new Set<string>();
   for (const row of rows) {
     const current = currentByDuplicate.get(row.duplicateObservationId) ?? [];
@@ -331,7 +364,13 @@ function validateCurrentSourceDuplicateResolutionEvidence(db: DatabaseSync): voi
       throw new Error(`SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID:${row.duplicateObservationId}`);
     }
     try {
-      requireSourceDuplicateResolutionContract(db, row.resolutionId, current[0], plan.resolverVersion, plan.policyVersion);
+      requireSourceDuplicateResolutionContract(
+        db,
+        row.resolutionId,
+        current[0],
+        plan.resolverVersion,
+        plan.policyVersion,
+      );
     } catch {
       throw new Error(`SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID:${row.duplicateObservationId}`);
     }
@@ -357,6 +396,7 @@ export function auditCanonicalDuplicates(db: DatabaseSync): CanonicalDuplicateAu
   validateCurrentSourceDuplicateResolutionEvidence(db);
   const rawObservations = scalar(db, `SELECT COUNT(*) c FROM domain_observations o WHERE ${SOURCE_SETTLEMENT_OBSERVATION_WHERE_O}`);
   const rawDistinctRaceKeys = scalar(db, `SELECT COUNT(DISTINCT o.canonical_race_key) c FROM domain_observations o WHERE ${SOURCE_SETTLEMENT_OBSERVATION_WHERE_O}`);
+  // active duplicate observations: resolved duplicate を除いた上で race あたり >1 source settlement observation の余剰
   const activeDupObsRaces = scalar(db, `
     SELECT COUNT(*) c FROM (
       SELECT o.canonical_race_key FROM domain_observations o
@@ -392,6 +432,9 @@ export function auditCanonicalDuplicates(db: DatabaseSync): CanonicalDuplicateAu
   };
 }
 
+// ===== future ingest guard =====
+// 同一 raw document 内で同一 canonical race key の未訂正 settlement observation が複数生成された場合に、
+// 同一parse runでcandidate集合一致だけを exact source duplicate とする。correction/reparseは対象外。
 export function detectExactDuplicateObservationsInRaw(
   db: DatabaseSync,
   rawDocumentId: string,
@@ -411,10 +454,22 @@ export function detectExactDuplicateObservationsInRaw(
   for (const [raceKey, observations] of byRace) {
     if (observations.length < 2) continue;
     const canonical = observations[0];
-    const canonicalDigest = observationCandidateDigest(db, canonical.observation_id, raceKey, canonical.raw_document_id, canonical.parse_run_id);
+    const canonicalDigest = observationCandidateDigest(
+      db,
+      canonical.observation_id,
+      raceKey,
+      canonical.raw_document_id,
+      canonical.parse_run_id,
+    );
     const canonicalParseLineageValid = observationParseRawLineageValid(db, canonical);
     for (const dup of observations.slice(1)) {
-      const digest = observationCandidateDigest(db, dup.observation_id, raceKey, dup.raw_document_id, dup.parse_run_id);
+      const digest = observationCandidateDigest(
+        db,
+        dup.observation_id,
+        raceKey,
+        dup.raw_document_id,
+        dup.parse_run_id,
+      );
       out.push({
         canonicalRaceKey: raceKey,
         canonicalObservationId: canonical.observation_id,
