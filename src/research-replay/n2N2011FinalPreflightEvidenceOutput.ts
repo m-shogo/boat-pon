@@ -14,7 +14,8 @@ export function assertN2N2011FinalPreflightEvidenceOutputSafe(input: {
 }): void {
   const root = resolve(input.root);
   const validationDir = resolve(root, "reports/automation/validation");
-  const canonicalDataDir = resolve(input.canonicalRepo, "data");
+  const canonicalRepo = resolve(input.canonicalRepo);
+  const canonicalDataDir = resolve(canonicalRepo, "data");
   const evidencePath = resolve(input.evidencePath);
   const protectedDatabasePaths = new Set([
     resolve(input.primaryDbPath),
@@ -30,6 +31,9 @@ export function assertN2N2011FinalPreflightEvidenceOutputSafe(input: {
   }
   if (isWithin(canonicalDataDir, evidencePath)) {
     throw new Error(`N2_011_PREFLIGHT_EVIDENCE_DATA_PATH_FORBIDDEN:${evidencePath}`);
+  }
+  if (isWithin(canonicalRepo, evidencePath)) {
+    throw new Error(`N2_011_PREFLIGHT_EVIDENCE_CANONICAL_REPO_PATH_FORBIDDEN:${evidencePath}`);
   }
   if (isWithin(root, evidencePath) && !isWithin(validationDir, evidencePath)) {
     throw new Error(`N2_011_PREFLIGHT_EVIDENCE_REPO_PATH_FORBIDDEN:${evidencePath}`);
