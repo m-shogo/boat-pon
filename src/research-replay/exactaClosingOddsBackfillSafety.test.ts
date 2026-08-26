@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  EXACTA_BACKFILL_MAX_SLEEP_MS,
   parseExactaBackfillOptionalDate,
   parseExactaBackfillPositiveSafeInteger,
   requireExactaBackfillDateRange,
@@ -20,6 +21,10 @@ const valid = () => ({
 test("exacta backfill accepts canonical bounded inputs", () => {
   assert.equal(parseExactaBackfillPositiveSafeInteger("30", "LIMIT"), 30);
   assert.equal(parseExactaBackfillPositiveSafeInteger("1000", "SLEEP_MS", 1000), 1000);
+  assert.equal(
+    parseExactaBackfillPositiveSafeInteger(String(EXACTA_BACKFILL_MAX_SLEEP_MS), "SLEEP_MS", 1000),
+    EXACTA_BACKFILL_MAX_SLEEP_MS,
+  );
   assert.equal(parseExactaBackfillPositiveSafeInteger("30", "BATCH_SIZE"), 30);
   assert.equal(parseExactaBackfillOptionalDate("2028-02-29", "FROM_DATE"), "2028-02-29");
   assert.equal(parseExactaBackfillOptionalDate("", "TO_DATE"), "");
@@ -32,7 +37,15 @@ test("exacta backfill rejects coerced or disabled bounds", () => {
       assert.throws(() => parseExactaBackfillPositiveSafeInteger(raw, label), new RegExp(`EXACTA_BACKFILL_${label}_INVALID`, "u"));
     }
   }
-  for (const raw of ["0", "999", "-1", "1.5", "fast", String(Number.MAX_SAFE_INTEGER + 1)]) {
+  for (const raw of [
+    "0",
+    "999",
+    "-1",
+    "1.5",
+    "fast",
+    String(EXACTA_BACKFILL_MAX_SLEEP_MS + 1),
+    String(Number.MAX_SAFE_INTEGER + 1),
+  ]) {
     assert.throws(
       () => parseExactaBackfillPositiveSafeInteger(raw, "SLEEP_MS", 1000),
       /EXACTA_BACKFILL_SLEEP_MS_INVALID/u,
