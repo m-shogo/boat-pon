@@ -49,6 +49,23 @@ test("coverage: verified event requires complete immutable provenance", () => {
   }] }), /N2_COVERAGE_INVALID_VERIFIED_EVENT/);
 });
 
+test("coverage: runtime enums fail closed before they can alter buckets", () => {
+  const base = {
+    canonicalRaceKey: "2026-05-20:01:01",
+    key: "x",
+  };
+  assert.throws(() => buildN2FeatureCoverageProfile({ inputKind: "fixture", events: [{
+    ...base, sourceKind: "other", status: "excluded", exclusionReason: "missing",
+  } as unknown as N2FeatureCoverageEvent] }), /N2_COVERAGE_INVALID_SOURCE_KIND:other/);
+  assert.throws(() => buildN2FeatureCoverageProfile({ inputKind: "fixture", events: [{
+    ...base, sourceKind: "feature", status: "unknown", exclusionReason: "missing",
+  } as unknown as N2FeatureCoverageEvent] }), /N2_COVERAGE_INVALID_STATUS:unknown/);
+  assert.throws(() => buildN2FeatureCoverageProfile({ inputKind: "fixture", events: [{
+    ...base, sourceKind: "feature", status: "verified", observationId: "obs", rawDocumentId: "raw",
+    availabilityBasis: "future_observed_at",
+  } as unknown as N2FeatureCoverageEvent] }), /N2_COVERAGE_INVALID_VERIFIED_EVENT/);
+});
+
 test("coverage: invalid canonical race key and ambiguous excluded event are rejected", () => {
   assert.throws(() => buildN2FeatureCoverageProfile({ inputKind: "fixture", events: [{
     canonicalRaceKey: "bad", sourceKind: "feature", key: "x", status: "excluded", exclusionReason: "missing",
