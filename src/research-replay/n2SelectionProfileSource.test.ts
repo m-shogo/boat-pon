@@ -59,6 +59,8 @@ function makeDb(): DatabaseSync {
       candidate_id TEXT NOT NULL,
       line_no INTEGER NOT NULL,
       bet_type TEXT NOT NULL,
+      selection_raw TEXT,
+      selection_normalized TEXT,
       selection_canonical TEXT,
       payout_yen INTEGER NOT NULL,
       popularity INTEGER,
@@ -69,6 +71,8 @@ function makeDb(): DatabaseSync {
       candidate_id TEXT NOT NULL,
       line_no INTEGER NOT NULL,
       bet_type TEXT NOT NULL,
+      selection_raw TEXT,
+      selection_normalized TEXT,
       selection_canonical TEXT,
       refund_scope TEXT NOT NULL,
       refund_yen_per_100 INTEGER,
@@ -145,11 +149,13 @@ function insertCandidate(
     input.supersedes ?? null,
     null,
   );
-  db.prepare("INSERT INTO race_payout_lines_v2 VALUES (?,?,?,?,?,?,?,?)").run(
+  db.prepare("INSERT INTO race_payout_lines_v2 VALUES (?,?,?,?,?,?,?,?,?,?)").run(
     `payout-${input.id}`,
     input.id,
     1,
     "trifecta",
+    "1-2-3",
+    "1-2-3",
     "1-2-3",
     input.payout ?? 1000,
     null,
@@ -237,11 +243,13 @@ test("selection profile rejects refund lines from another bet type", () => {
   const db = makeDb();
   try {
     insertCandidate(db, { id: "active" });
-    db.prepare("INSERT INTO race_refund_lines_v2 VALUES (?,?,?,?,?,?,?,?)").run(
+    db.prepare("INSERT INTO race_refund_lines_v2 VALUES (?,?,?,?,?,?,?,?,?,?)").run(
       "refund-active",
       "active",
       1,
       "win",
+      "1",
+      "1",
       "1",
       "selection",
       100,
