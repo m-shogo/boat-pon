@@ -2,6 +2,7 @@ import { existsSync, statSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 
+import { sourceDuplicateCandidateLineSemanticsValid } from "../research-replay/n1SourceDuplicateLineSemantics";
 import { CANARY_COHORT } from "./taskExecutorsCore";
 
 const REUSABLE_PARSE_STATUSES = new Set(["success", "warning"]);
@@ -15,6 +16,7 @@ export type N2DatasetSettlementPreflight = {
 type CandidateLineageRow = {
   candidateId: string;
   raceKey: string;
+  candidateBetType: string;
   candidateParseRunId: string;
   candidateRawDocumentId: string;
   observationRaceKey: string | null;
@@ -74,6 +76,7 @@ function preflightActiveSettlementLineage(
     const rows = db.prepare(`
       SELECT c.candidate_id AS candidateId,
              c.canonical_race_key AS raceKey,
+             c.bet_type AS candidateBetType,
              c.parse_run_id AS candidateParseRunId,
              c.raw_document_id AS candidateRawDocumentId,
              o.canonical_race_key AS observationRaceKey,
@@ -115,7 +118,8 @@ function preflightActiveSettlementLineage(
         || !REUSABLE_PARSE_STATUSES.has(row.parseRunStatus)
         || row.rawIntegrityStatus !== "verified"
         || row.rawSecurityScanStatus !== "passed"
-        || row.rawParserReplayEligible !== 1) {
+        || row.rawParserReplayEligible !== 1
+        || !sourceDuplicateCandidateLineSemanticsValid(db, row.candidateId, row.candidateBetType)) {
         blocks.push(`${prefix}_SETTLEMENT_LINEAGE_INVALID:${row.candidateId}`);
       }
     }

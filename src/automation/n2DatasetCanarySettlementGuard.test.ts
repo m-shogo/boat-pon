@@ -132,6 +132,48 @@ test("runtime dataset canary fails closed on tainted active settlement lineage",
   }
 });
 
+test("all-active preflight rejects producer-impossible settlement line semantics", () => {
+  withSidecar({ integrity: "verified", security: "passed", replayEligible: 1 }, (path) => {
+    const db = new DatabaseSync(path);
+    db.exec(`
+      CREATE TABLE race_payout_lines_v2 (
+        payout_line_id TEXT PRIMARY KEY,
+        candidate_id TEXT NOT NULL,
+        line_no INTEGER NOT NULL,
+        bet_type TEXT NOT NULL,
+        selection_raw TEXT,
+        selection_normalized TEXT,
+        selection_canonical TEXT,
+        line_kind TEXT
+      );
+      CREATE TABLE race_refund_lines_v2 (
+        refund_line_id TEXT PRIMARY KEY,
+        candidate_id TEXT NOT NULL,
+        line_no INTEGER NOT NULL,
+        bet_type TEXT NOT NULL,
+        selection_raw TEXT,
+        selection_normalized TEXT,
+        selection_canonical TEXT
+      );
+    `);
+    db.prepare(`INSERT INTO race_payout_lines_v2
+      VALUES ('payout-a','candidate-a',1,'trifecta','1-2-3','1-2-3','2-1-3','payout')`).run();
+    db.close();
+
+    const checked = preflightN2AllActiveSettlementLineage(path);
+    assert.equal(checked.ok, false);
+    assert.deepEqual(checked.blocks, ["DATASET_ACTIVE_SETTLEMENT_LINEAGE_INVALID:candidate-a"]);
+    assert.equal(checked.checkedCandidateCount, 1);
+
+    const resolved = resolveExecutor("feature-coverage-audit");
+    assert.equal(resolved.code, "OK");
+    assert.ok(resolved.executor);
+    const result = resolved.executor(context(path));
+    assert.equal(result.result, "BLOCKED");
+    assert.deepEqual(result.blocks, ["DATASET_ACTIVE_SETTLEMENT_LINEAGE_INVALID:candidate-a"]);
+  });
+});
+
 test("all-active preflight catches tainted settlements outside the canary month", () => {
   withSidecar(
     { integrity: "quarantined", security: "passed", replayEligible: 1 },
