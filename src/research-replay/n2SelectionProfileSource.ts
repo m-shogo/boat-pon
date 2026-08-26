@@ -58,6 +58,8 @@ type PayoutRow = {
   candidateId: string;
   candidateBetType: SettlementBetType;
   lineBetType: SettlementBetType;
+  selectionRaw: string | null;
+  selectionNormalized: string | null;
   selection: string | null;
   payoutYen: number;
   lineKind: string;
@@ -67,6 +69,8 @@ type RefundRow = {
   candidateId: string;
   candidateBetType: SettlementBetType;
   lineBetType: SettlementBetType;
+  selectionRaw: string | null;
+  selectionNormalized: string | null;
   selection: string | null;
   scope: string;
   refundYenPer100: number | null;
@@ -123,6 +127,26 @@ function requireCanonicalSelection(
   const parsed = parseSettlementSelection(betType, selection);
   if (!parsed.valid || parsed.canonical !== selection) {
     throw new Error(`N2_SELECTION_PROFILE_${errorCode}_SELECTION_INVALID:${candidateId}`);
+  }
+}
+
+function requireSelectionSemantics(
+  candidateId: string,
+  betType: SettlementBetType,
+  selectionRaw: string | null,
+  selectionNormalized: string | null,
+  selection: string | null,
+  errorCode: "PAYOUT" | "REFUND",
+): void {
+  if (selection === null) return;
+  if (selectionRaw === null || selectionNormalized === null) {
+    throw new Error(`N2_SELECTION_PROFILE_${errorCode}_SELECTION_SEMANTICS_INVALID:${candidateId}`);
+  }
+  const parsed = parseSettlementSelection(betType, selectionRaw);
+  if (!parsed.valid
+    || parsed.normalized !== selectionNormalized
+    || parsed.canonical !== selection) {
+    throw new Error(`N2_SELECTION_PROFILE_${errorCode}_SELECTION_SEMANTICS_INVALID:${candidateId}`);
   }
 }
 
@@ -234,6 +258,8 @@ export function readN2SelectionProfileSource(
     SELECT p.candidate_id candidateId,
            c.bet_type candidateBetType,
            p.bet_type lineBetType,
+           p.selection_raw selectionRaw,
+           p.selection_normalized selectionNormalized,
            p.selection_canonical selection,
            p.payout_yen payoutYen,
            p.line_kind lineKind
@@ -251,6 +277,8 @@ export function readN2SelectionProfileSource(
     SELECT f.candidate_id candidateId,
            c.bet_type candidateBetType,
            f.bet_type lineBetType,
+           f.selection_raw selectionRaw,
+           f.selection_normalized selectionNormalized,
            f.selection_canonical selection,
            f.refund_scope scope,
            f.refund_yen_per_100 refundYenPer100
@@ -271,6 +299,14 @@ export function readN2SelectionProfileSource(
     }
     requirePayoutLineKind(row.candidateId, row.lineKind);
     requireCanonicalSelection(row.candidateId, row.candidateBetType, row.selection, "PAYOUT");
+    requireSelectionSemantics(
+      row.candidateId,
+      row.candidateBetType,
+      row.selectionRaw,
+      row.selectionNormalized,
+      row.selection,
+      "PAYOUT",
+    );
     requireNonNegativeSafeAmount(row.candidateId, row.payoutYen, "PAYOUT");
     const lines = payoutsByCandidate.get(row.candidateId) ?? [];
     lines.push({ selection: row.selection, payoutYen: row.payoutYen, lineKind: row.lineKind });
@@ -283,6 +319,14 @@ export function readN2SelectionProfileSource(
     }
     requireRefundScope(row.candidateId, row.scope);
     requireCanonicalSelection(row.candidateId, row.candidateBetType, row.selection, "REFUND");
+    requireSelectionSemantics(
+      row.candidateId,
+      row.candidateBetType,
+      row.selectionRaw,
+      row.selectionNormalized,
+      row.selection,
+      "REFUND",
+    );
     requireNonNegativeSafeAmount(row.candidateId, row.refundYenPer100, "REFUND");
     const lines = refundsByCandidate.get(row.candidateId) ?? [];
     lines.push({
