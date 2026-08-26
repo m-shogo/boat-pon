@@ -3,9 +3,9 @@ import test from "node:test";
 import { buildN2FeatureCoverageProfile, type N2FeatureCoverageEvent } from "./n2FeatureCoverage";
 
 const EVENTS: N2FeatureCoverageEvent[] = [
-  { canonicalRaceKey: "2004-01-01:01:01", sourceKind: "feature", key: "boat.1.nationalWinRate", status: "verified", observationId: "obs-1", rawDocumentId: "raw-1", availabilityBasis: "source_published_at" },
-  { canonicalRaceKey: "2004-01-01:01:02", sourceKind: "feature", key: "boat.1.nationalWinRate", status: "excluded", exclusionReason: "excluded_lineage_not_found" },
-  { canonicalRaceKey: "2026-05-20:01:01", sourceKind: "odds", key: "exacta:1-2", status: "verified", observationId: "obs-2", rawDocumentId: "raw-2", availabilityBasis: "source_observed_at" },
+  { canonicalRaceKey: "2004-01-01:01:R1", sourceKind: "feature", key: "boat.1.nationalWinRate", status: "verified", observationId: "obs-1", rawDocumentId: "raw-1", availabilityBasis: "source_published_at" },
+  { canonicalRaceKey: "2004-01-01:01:R2", sourceKind: "feature", key: "boat.1.nationalWinRate", status: "excluded", exclusionReason: "excluded_lineage_not_found" },
+  { canonicalRaceKey: "2026-05-20:01:R1", sourceKind: "odds", key: "exacta:1-2", status: "verified", observationId: "obs-2", rawDocumentId: "raw-2", availabilityBasis: "source_observed_at" },
 ];
 
 test("coverage: groups exact denominators by year and feature", () => {
@@ -45,13 +45,13 @@ test("coverage: duplicate race/source/key denominator fails closed", () => {
 
 test("coverage: verified event requires complete immutable provenance", () => {
   assert.throws(() => buildN2FeatureCoverageProfile({ inputKind: "fixture", events: [{
-    canonicalRaceKey: "2026-05-20:01:01", sourceKind: "feature", key: "x", status: "verified",
+    canonicalRaceKey: "2026-05-20:01:R1", sourceKind: "feature", key: "x", status: "verified",
   }] }), /N2_COVERAGE_INVALID_VERIFIED_EVENT/);
 });
 
 test("coverage: runtime enums fail closed before they can alter buckets", () => {
   const base = {
-    canonicalRaceKey: "2026-05-20:01:01",
+    canonicalRaceKey: "2026-05-20:01:R1",
     key: "x",
   };
   assert.throws(() => buildN2FeatureCoverageProfile({ inputKind: "fixture", events: [{
@@ -67,14 +67,19 @@ test("coverage: runtime enums fail closed before they can alter buckets", () => 
 });
 
 test("coverage: invalid canonical race key and ambiguous excluded event are rejected", () => {
+  for (const canonicalRaceKey of [
+    "bad",
+    "2026-02-30:01:R1",
+    "2026-05-20:25:R1",
+    "2026-05-20:01:R13",
+    "2026-05-20:01:01",
+  ]) {
+    assert.throws(() => buildN2FeatureCoverageProfile({ inputKind: "fixture", events: [{
+      canonicalRaceKey, sourceKind: "feature", key: "x", status: "excluded", exclusionReason: "missing",
+    }] }), /N2_COVERAGE_INVALID_RACE_KEY/);
+  }
   assert.throws(() => buildN2FeatureCoverageProfile({ inputKind: "fixture", events: [{
-    canonicalRaceKey: "bad", sourceKind: "feature", key: "x", status: "excluded", exclusionReason: "missing",
-  }] }), /N2_COVERAGE_INVALID_RACE_KEY/);
-  assert.throws(() => buildN2FeatureCoverageProfile({ inputKind: "fixture", events: [{
-    canonicalRaceKey: "2026-02-30:01:01", sourceKind: "feature", key: "x", status: "excluded", exclusionReason: "missing",
-  }] }), /N2_COVERAGE_INVALID_RACE_KEY/);
-  assert.throws(() => buildN2FeatureCoverageProfile({ inputKind: "fixture", events: [{
-    canonicalRaceKey: "2026-05-20:01:01", sourceKind: "feature", key: "x", status: "excluded",
+    canonicalRaceKey: "2026-05-20:01:R1", sourceKind: "feature", key: "x", status: "excluded",
     exclusionReason: "missing", observationId: "should-not-exist",
   }] }), /N2_COVERAGE_INVALID_EXCLUDED_EVENT/);
 });
