@@ -13,6 +13,7 @@ import {
 import { basename, dirname, join, resolve } from "node:path";
 import { canonicalHash } from "../src/research-replay/canonical";
 import { buildN2PitAuditSummary } from "../src/research-replay/n2PitAudit";
+import { assertN2N2011FinalPreflightEvidenceOutputSafe } from "../src/research-replay/n2N2011FinalPreflightEvidenceOutput";
 import { readN2PitAuditObservations } from "../src/research-replay/n2PitAuditReader";
 import { readN2ObservationIngestReadiness } from "../src/research-replay/n2ObservationIngestReadinessReader";
 import { readCanonicalRolloutState } from "../src/research-replay/n2ObservationIngestRolloutState";
@@ -38,6 +39,13 @@ const policy = readJson(join(root, "config/research-automation-policy.json"));
 const canonicalRepo = resolve(String(policy.dataRoot ?? policy.repoPath ?? root));
 const primaryDbPath = join(canonicalRepo, "data/boat.sqlite");
 const sidecarDbPath = join(canonicalRepo, "data/research-replay.sqlite");
+assertN2N2011FinalPreflightEvidenceOutputSafe({
+  root,
+  canonicalRepo,
+  primaryDbPath,
+  sidecarDbPath,
+  evidencePath,
+});
 const manifestPath = join(authorityRoot, "reports/n2/n2-dataset-manifest.json");
 const queuePath = join(authorityRoot, "automation/control/task-queue-state.json");
 const currentRunPath = join(authorityRoot, "automation/control/current-run.json");
