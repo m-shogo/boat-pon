@@ -9,6 +9,8 @@ import { validateN2HistoricalStatisticalIntegrity } from "./n2HistoricalStatisti
 
 export const N2_CONFOUNDER_REJECTION_AUDIT_VERSION = "n2-confounder-rejection-audit-v1" as const;
 
+const N2_CONFOUNDER_FLAG_SEVERITIES: ReadonlySet<string> = new Set(["info", "warning", "blocking"]);
+
 export type N2ConfounderFlag = {
   hypothesisId: string;
   flagId: string;
@@ -127,6 +129,7 @@ export function auditN2ConfoundersAndRejections(input:{
   for(const flag of input.confounderFlags){
     if(!byId.has(flag.hypothesisId)){blockers.push(`UNKNOWN_FLAG_HYPOTHESIS:${flag.hypothesisId}`);continue;}
     if(!flag.flagId.trim()||!flag.detail.trim()) blockers.push(`INVALID_CONFOUNDER_FLAG:${flag.hypothesisId}`);
+    if(!N2_CONFOUNDER_FLAG_SEVERITIES.has(flag.severity)) blockers.push(`INVALID_CONFOUNDER_FLAG_SEVERITY:${flag.hypothesisId}:${String(flag.severity)}`);
     const current=flagsById.get(flag.hypothesisId)??[];current.push(flag);flagsById.set(flag.hypothesisId,current);
   }
   if(blockers.length) return blocked(blockers);
