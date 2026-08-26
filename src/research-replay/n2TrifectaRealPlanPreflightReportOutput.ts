@@ -7,11 +7,13 @@ function isWithin(parent: string, child: string): boolean {
 
 export function assertN2TrifectaRealPlanPreflightReportOutputSafe(input: {
   root: string;
+  dataRoot: string;
   primaryDbPath: string;
   outputPath: string;
 }): void {
   const root = resolve(input.root);
   const validationDir = resolve(root, "reports/automation/validation");
+  const dataDir = resolve(input.dataRoot, "data");
   const primaryDbPath = resolve(input.primaryDbPath);
   const outputPath = resolve(input.outputPath);
   const protectedDatabasePaths = new Set([
@@ -22,6 +24,9 @@ export function assertN2TrifectaRealPlanPreflightReportOutputSafe(input: {
 
   if (protectedDatabasePaths.has(outputPath)) {
     throw new Error(`N2_TRIFECTA_REAL_PLAN_PREFLIGHT_OUTPUT_DATABASE_PATH_FORBIDDEN:${outputPath}`);
+  }
+  if (isWithin(dataDir, outputPath)) {
+    throw new Error(`N2_TRIFECTA_REAL_PLAN_PREFLIGHT_OUTPUT_DATA_PATH_FORBIDDEN:${outputPath}`);
   }
   if (isWithin(root, outputPath) && !isWithin(validationDir, outputPath)) {
     throw new Error(`N2_TRIFECTA_REAL_PLAN_PREFLIGHT_OUTPUT_REPO_PATH_FORBIDDEN:${outputPath}`);
