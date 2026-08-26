@@ -93,6 +93,16 @@ test("source duplicate line semantics reject impossible null-selection provenanc
   }
 });
 
+test("source duplicate line semantics preserve fallback when a synthetic fixture omits one line table", () => {
+  const db = fixture();
+  try {
+    db.exec("DROP TABLE race_refund_lines_v2");
+    assert.equal(sourceDuplicateCandidateLineSemanticsValid(db, "candidate", "trifecta"), true);
+  } finally {
+    db.close();
+  }
+});
+
 test("source duplicate line semantics preserve legacy fallback only when both line tables are legacy-shaped", () => {
   const db = legacyFixture();
   try {
