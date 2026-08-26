@@ -279,6 +279,13 @@ function requireSourceDuplicateResolutionContract(
   }
 }
 
+function requireCurrentSourceDuplicatePlan(db: DatabaseSync, plan: DuplicateResolutionPlan): void {
+  const current = planSourceDuplicateResolution(db);
+  if (canonicalHash(current) !== canonicalHash(plan)) {
+    throw new Error("SOURCE_DUPLICATE_RESOLUTION_PLAN_STALE");
+  }
+}
+
 // append-only で resolution を適用する。value conflict があれば適用せず throw（stop condition）。
 // 既に解決済みの duplicate は immutable body が一致する場合だけ no-op（冪等）。
 export function applySourceDuplicateResolution(
@@ -286,6 +293,7 @@ export function applySourceDuplicateResolution(
   plan: DuplicateResolutionPlan,
   now: string,
 ): { inserted: number; noop: number } {
+  requireCurrentSourceDuplicatePlan(db, plan);
   if (plan.valueConflicts.length > 0) {
     throw new Error(`value conflicts present (${plan.valueConflicts.length}); refuse to auto-resolve as source_duplicate`);
   }
