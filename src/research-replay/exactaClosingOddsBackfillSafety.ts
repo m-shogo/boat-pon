@@ -1,6 +1,8 @@
 import { officialVenueCode } from "../domain/officialLinks";
 import { canonicalRaceKey } from "./identity";
 
+export const EXACTA_BACKFILL_MAX_SLEEP_MS = 2_147_483_647;
+
 export type ExactaClosingOddsBackfillTarget = {
   raceId: string;
   date: string;
@@ -16,7 +18,11 @@ export function parseExactaBackfillPositiveSafeInteger(
 ): number {
   if (!/^\d+$/u.test(raw)) throw new Error(`EXACTA_BACKFILL_${label}_INVALID:${raw}`);
   const value = Number(raw);
-  if (!Number.isSafeInteger(value) || value < minimum) {
+  if (
+    !Number.isSafeInteger(value)
+    || value < minimum
+    || (label === "SLEEP_MS" && value > EXACTA_BACKFILL_MAX_SLEEP_MS)
+  ) {
     throw new Error(`EXACTA_BACKFILL_${label}_INVALID:${raw}`);
   }
   return value;
