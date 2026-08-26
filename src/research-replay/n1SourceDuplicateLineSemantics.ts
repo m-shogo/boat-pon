@@ -34,7 +34,8 @@ function lineSemanticsValid(candidateBetType: SettlementBetType, row: LineRow): 
  *
  * A few old synthetic unit fixtures intentionally model the pre-v2 line schema and omit the raw /
  * normalized / bet-type columns. Production race_payout_lines_v2 / race_refund_lines_v2 contain
- * these columns, so only those fixture-only schemas use the legacy fallback.
+ * these columns, so only fixtures where both tables remain legacy-shaped use the fallback. A mixed
+ * schema is treated as drift and fails closed instead of disabling validation for the complete table.
  */
 export function sourceDuplicateCandidateLineSemanticsValid(
   db: DatabaseSync,
@@ -44,10 +45,10 @@ export function sourceDuplicateCandidateLineSemanticsValid(
   if (!BET_TYPE_SET.has(candidateBetType)) return false;
 
   const required = ["bet_type", "selection_raw", "selection_normalized", "selection_canonical"] as const;
-  if (!tableHasColumns(db, "race_payout_lines_v2", required)
-    || !tableHasColumns(db, "race_refund_lines_v2", required)) {
-    return true;
-  }
+  const payoutSchemaCurrent = tableHasColumns(db, "race_payout_lines_v2", required);
+  const refundSchemaCurrent = tableHasColumns(db, "race_refund_lines_v2", required);
+  if (!payoutSchemaCurrent && !refundSchemaCurrent) return true;
+  if (payoutSchemaCurrent !== refundSchemaCurrent) return false;
 
   const payouts = db.prepare(`
     SELECT bet_type AS lineBetType,
