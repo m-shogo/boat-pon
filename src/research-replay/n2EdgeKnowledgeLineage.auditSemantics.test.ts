@@ -108,6 +108,33 @@ test("unknown confounder disposition cannot forge a completed experiment", () =>
   assert.equal(forged.registryPlan.experimentAppendEligible, false);
 });
 
+test("unknown historical verdict cannot be rehashed into confirmed lineage", () => {
+  const forgedConfirmation = confirmation() as unknown as Record<string, unknown>;
+  forgedConfirmation.verdict = "HISTORICAL_PROMOTED";
+  const forgedAudit = auditItem("CONFIRMED_PENDING_CONFOUNDER_REVIEW") as unknown as Record<string, unknown>;
+  forgedAudit.historicalVerdict = "HISTORICAL_PROMOTED";
+  const forged = plan(
+    forgedAudit as unknown as N2ConfounderAuditItem,
+    forgedConfirmation as unknown as N2EdgeHistoricalConfirmationResult,
+  );
+  assert.equal(forged.status, "BLOCKED");
+  assert.ok(forged.blockers.includes("CONFIRMATION_VERDICT_INVALID"));
+  assert.equal(forged.discoveryCandidate, null);
+  assert.equal(forged.registryPlan.discoveryAppendEligible, false);
+});
+
+test("unknown discovery direction cannot be rewritten as a valid hypothesis direction", () => {
+  const forgedConfirmation = confirmation() as unknown as Record<string, unknown>;
+  forgedConfirmation.discoveryDirection = "neutral";
+  const forged = plan(
+    auditItem("CONFIRMED_PENDING_CONFOUNDER_REVIEW"),
+    forgedConfirmation as unknown as N2EdgeHistoricalConfirmationResult,
+  );
+  assert.equal(forged.status, "BLOCKED");
+  assert.ok(forged.blockers.includes("CONFIRMATION_DISCOVERY_DIRECTION_INVALID"));
+  assert.equal(forged.discoveryCandidate, null);
+});
+
 test("confounder flags must belong to the audited hypothesis", () => {
   const foreignFlag = {
     hypothesisId: "N2EDGE-other",
