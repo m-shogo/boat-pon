@@ -29,6 +29,23 @@ function fixture(): DatabaseSync {
   return db;
 }
 
+function legacyFixture(): DatabaseSync {
+  const db = new DatabaseSync(":memory:");
+  db.exec(`
+    CREATE TABLE race_payout_lines_v2 (
+      candidate_id TEXT NOT NULL,
+      line_no INTEGER NOT NULL,
+      selection_canonical TEXT
+    );
+    CREATE TABLE race_refund_lines_v2 (
+      candidate_id TEXT NOT NULL,
+      line_no INTEGER NOT NULL,
+      selection_canonical TEXT
+    );
+  `);
+  return db;
+}
+
 test("source duplicate line semantics accept producer-valid payout evidence", () => {
   const db = fixture();
   try {
@@ -70,6 +87,55 @@ test("source duplicate line semantics reject impossible null-selection provenanc
       SET selection_canonical=NULL, selection_raw='1-2-3', selection_normalized='1-2-3'
       WHERE candidate_id='candidate'
     `).run();
+    assert.equal(sourceDuplicateCandidateLineSemanticsValid(db, "candidate", "trifecta"), false);
+  } finally {
+    db.close();
+  }
+});
+
+test("source duplicate line semantics preserve legacy fallback only when both line tables are legacy-shaped", () => {
+  const db = legacyFixture();
+  try {
+    assert.equal(sourceDuplicateCandidateLineSemanticsValid(db, "candidate", "trifecta"), true);
+  } finally {
+    db.close();
+  }
+});
+
+test("source duplicate line semantics fail closed when only payout schema is current", () => {
+  const db = legacyFixture();
+  try {
+    db.exec("DROP TABLE race_payout_lines_v2");
+    db.exec(`
+      CREATE TABLE race_payout_lines_v2 (
+        candidate_id TEXT NOT NULL,
+        line_no INTEGER NOT NULL,
+        bet_type TEXT NOT NULL,
+        selection_raw TEXT,
+        selection_normalized TEXT,
+        selection_canonical TEXT
+      );
+    `);
+    assert.equal(sourceDuplicateCandidateLineSemanticsValid(db, "candidate", "trifecta"), false);
+  } finally {
+    db.close();
+  }
+});
+
+test("source duplicate line semantics fail closed when only refund schema is current", () => {
+  const db = legacyFixture();
+  try {
+    db.exec("DROP TABLE race_refund_lines_v2");
+    db.exec(`
+      CREATE TABLE race_refund_lines_v2 (
+        candidate_id TEXT NOT NULL,
+        line_no INTEGER NOT NULL,
+        bet_type TEXT NOT NULL,
+        selection_raw TEXT,
+        selection_normalized TEXT,
+        selection_canonical TEXT
+      );
+    `);
     assert.equal(sourceDuplicateCandidateLineSemanticsValid(db, "candidate", "trifecta"), false);
   } finally {
     db.close();
