@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { DatabaseSync } from "node:sqlite";
 import {
-  HISTORICAL_EXACTA_CANONICAL_SOURCE_PREDICATE,
   HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING,
+  historicalExactaCanonicalSourcePredicate,
   historicalExactaCompleteMarketPredicate,
 } from "./historicalExactaMarketAuthority";
 
@@ -44,7 +44,7 @@ function qualifyingRaceIds(db: DatabaseSync): string[] {
     SELECT DISTINCT h.race_id
     FROM historical_alternative_odds h
     WHERE h.bet_type = 'exacta'
-      AND h.${HISTORICAL_EXACTA_CANONICAL_SOURCE_PREDICATE}
+      AND ${historicalExactaCanonicalSourcePredicate("h")}
       AND ${historicalExactaCompleteMarketPredicate("h.race_id")}
     ORDER BY h.race_id
   `).all() as Array<{ race_id: string }>).map((row) => row.race_id);
@@ -69,7 +69,7 @@ test("exacta completeness requires the canonical 30-combination official closing
   }
 });
 
-test("overround grouping uses the same canonical exacta authority", () => {
+test("overround grouping ignores noncanonical sources and validates the official market", () => {
   const db = setup();
   try {
     const selections = exactaSelections();
@@ -82,7 +82,7 @@ test("overround grouping uses the same canonical exacta authority", () => {
       SELECT race_id
       FROM historical_alternative_odds
       WHERE bet_type = 'exacta'
-        AND ${HISTORICAL_EXACTA_CANONICAL_SOURCE_PREDICATE}
+        AND ${historicalExactaCanonicalSourcePredicate()}
       GROUP BY race_id
       HAVING ${HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING}
       ORDER BY race_id
