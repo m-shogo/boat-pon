@@ -18,10 +18,10 @@ db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 30000;");
 
 try {
   const programsInWindow = validateT5MarketCoverageProgramRows(db.prepare(`
-    SELECT race_id, date, race_no FROM official_programs
+    SELECT race_id, date, venue, race_no FROM official_programs
     WHERE date >= ? AND date <= ?
     ORDER BY date, race_id
-  `).all(from, to) as Array<{ race_id: string; date: string; race_no: number }>);
+  `).all(from, to) as Array<{ race_id: string; date: string; venue: string; race_no: number }>);
   const resultsByRace = new Map((db.prepare(`
     SELECT race_id, date, trifecta, returned FROM race_results WHERE date >= ? AND date <= ?
   `).all(from, to) as Array<{ race_id: string; date: string; trifecta: string | null; returned: number }>)
