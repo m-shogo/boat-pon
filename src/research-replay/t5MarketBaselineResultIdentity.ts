@@ -19,7 +19,13 @@ export function validateT5MarketBaselineResultIdentityRows<T extends T5MarketBas
     if (!Number.isInteger(row.race_no) || row.race_no < 1 || row.race_no > 12) {
       throw new Error(`N2_T5_MARKET_BASELINE_RESULT_RACE_NO_INVALID:${row.race_id}`);
     }
-    if (typeof row.venue !== "string" || row.venue.trim() === "" || /^\d{2}$/u.test(row.venue.trim()) || officialVenueCode(row.venue) === null) {
+    if (
+      typeof row.venue !== "string"
+      || row.venue.trim() === ""
+      || row.venue !== row.venue.trim()
+      || /^\d{2}$/u.test(row.venue)
+      || officialVenueCode(row.venue) === null
+    ) {
       throw new Error(`N2_T5_MARKET_BASELINE_RESULT_VENUE_INVALID:${row.race_id}`);
     }
     const expectedRaceId = `${row.date.replaceAll("-", "")}-${row.venue}-${String(row.race_no).padStart(2, "0")}`;
