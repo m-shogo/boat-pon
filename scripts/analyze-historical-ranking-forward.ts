@@ -8,10 +8,11 @@ import { DatabaseSync } from "node:sqlite";
 import { validateHistoricalRankingPayoutIdentityRows } from "../src/research-replay/historicalRankingPayoutIdentity";
 import { validateHistoricalRankingResultIdentityRows } from "../src/research-replay/historicalRankingResultIdentity";
 import { validateHistoricalRankingSettlementRows } from "../src/research-replay/historicalRankingSettlementIntegrity";
+import { parseHistoricalRankingEpochs } from "../src/research-replay/historicalRankingForwardOptions";
 import { validateT5MarketCoverageProgramRows } from "../src/research-replay/t5MarketCoverageProgramIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
-const EPOCHS = Number(process.env.BOAT_PON_RANKING_EPOCHS ?? 12);
+const EPOCHS = parseHistoricalRankingEpochs(process.env.BOAT_PON_RANKING_EPOCHS);
 const OUT_MD = "reports/historical-ranking-forward.md";
 const OUT_JSON = "reports/historical-ranking-forward.json";
 const OUT_MODEL = "reports/historical-ranking-model.json";
