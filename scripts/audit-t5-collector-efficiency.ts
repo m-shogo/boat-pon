@@ -1,6 +1,7 @@
 /** T-5収集の欠測と重複保存を日別に監査する。読み取り専用。 */
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { n2T5CollectorCloseTime } from "../src/research-replay/n2T5CollectorCloseTime";
 import { resolveN2T5CollectorEfficiencyInputs } from "../src/research-replay/n2T5CollectorEfficiencyInputs";
 import { n2CanonicalT5SelectionSql } from "../src/research-replay/n2T5CollectorSelectionSql";
 import { n2CanonicalT5CoverageTimingSql } from "../src/research-replay/n2T5MarketCoverageTimingSql";
@@ -181,7 +182,7 @@ writeFileSync("reports/t5-collector-efficiency.md", `${lines.join("\n")}\n`);
 console.log("[t5-collector-efficiency] wrote reports/t5-collector-efficiency.md / .json");
 
 function raceClose(date: string, closeAt: string) {
-  return new Date(`${date}T${closeAt}:00+09:00`);
+  return n2T5CollectorCloseTime(date, closeAt);
 }
 
 function percent(value: number) {
