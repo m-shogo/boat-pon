@@ -23,6 +23,7 @@ function setup(): DatabaseSync {
     CREATE TABLE historical_alternative_odds (
       race_id TEXT NOT NULL,
       combination TEXT NOT NULL,
+      odds REAL NOT NULL,
       bet_type TEXT NOT NULL,
       source_type TEXT NOT NULL,
       source_quality TEXT NOT NULL
@@ -31,12 +32,21 @@ function setup(): DatabaseSync {
   return db;
 }
 
-function insert(db: DatabaseSync, raceId: string, combinations: string[], sourceType: string, sourceQuality: string): void {
+function insert(
+  db: DatabaseSync,
+  raceId: string,
+  combinations: string[],
+  sourceType: string,
+  sourceQuality: string,
+  oddsForCombination: (combination: string, index: number) => number = (_combination, index) => 2 + index,
+): void {
   const statement = db.prepare(`
-    INSERT INTO historical_alternative_odds(race_id, combination, bet_type, source_type, source_quality)
-    VALUES (?, ?, 'exacta', ?, ?)
+    INSERT INTO historical_alternative_odds(race_id, combination, odds, bet_type, source_type, source_quality)
+    VALUES (?, ?, ?, 'exacta', ?, ?)
   `);
-  for (const combination of combinations) statement.run(raceId, combination, sourceType, sourceQuality);
+  combinations.forEach((combination, index) => {
+    statement.run(raceId, combination, oddsForCombination(combination, index), sourceType, sourceQuality);
+  });
 }
 
 function qualifyingRaceIds(db: DatabaseSync): string[] {
@@ -62,6 +72,14 @@ test("exacta completeness requires the canonical 30-combination official closing
     insert(db, "mixed-source", selections.slice(15), "secondary_archive", "historical_closing_odds");
     insert(db, "secondary-only", selections, "secondary_archive", "historical_closing_odds");
     insert(db, "malformed", [...selections.slice(0, 29), "7-1"], "official_archive", "historical_closing_odds");
+    insert(
+      db,
+      "invalid-odds",
+      selections,
+      "official_archive",
+      "historical_closing_odds",
+      (_combination, index) => index === 0 ? 1.0 : 2 + index,
+    );
 
     assert.deepEqual(qualifyingRaceIds(db), ["valid"]);
   } finally {
@@ -77,6 +95,14 @@ test("overround grouping ignores noncanonical sources and validates the official
     insert(db, "valid", selections.slice(0, 15), "secondary_archive", "historical_closing_odds");
     insert(db, "duplicate-source", selections.slice(0, 15), "official_archive", "historical_closing_odds");
     insert(db, "duplicate-source", selections.slice(0, 15), "secondary_archive", "historical_closing_odds");
+    insert(
+      db,
+      "invalid-odds",
+      selections,
+      "official_archive",
+      "historical_closing_odds",
+      (_combination, index) => index === 29 ? 0.5 : 2 + index,
+    );
 
     const rows = db.prepare(`
       SELECT race_id
