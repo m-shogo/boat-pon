@@ -1,3 +1,5 @@
+import { officialVenueCode } from "../domain/officialLinks";
+
 export type T5MarketCoverageProgramRow = {
   race_id: string;
   date: string;
@@ -15,7 +17,7 @@ export function validateT5MarketCoverageProgramRows(
     if (!Number.isInteger(row.race_no) || row.race_no < 1 || row.race_no > 12) {
       throw new Error(`N2_T5_MARKET_COVERAGE_PROGRAM_RACE_NO_INVALID:${row.race_id}`);
     }
-    if (typeof row.venue !== "string" || row.venue.trim() === "") {
+    if (typeof row.venue !== "string" || row.venue.trim() === "" || /^\d{2}$/u.test(row.venue.trim()) || officialVenueCode(row.venue) === null) {
       throw new Error(`N2_T5_MARKET_COVERAGE_PROGRAM_VENUE_INVALID:${row.race_id}`);
     }
     const expectedRaceId = `${row.date.replaceAll("-", "")}-${row.venue}-${String(row.race_no).padStart(2, "0")}`;
