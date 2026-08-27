@@ -52,6 +52,7 @@ const odds=db.prepare(`
     SELECT MAX(o.id)
     FROM odds_timeseries_snapshots o
     JOIN chosen c ON c.race_id=o.race_id AND c.captured_at=o.captured_at
+    WHERE o.checkpoint_label='T-5'
     GROUP BY o.race_id,o.selection
   )
 `).all(fromId,toExclusive) as OddsRow[];
