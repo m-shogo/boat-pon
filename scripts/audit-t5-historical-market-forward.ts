@@ -8,6 +8,7 @@ import { DatabaseSync } from "node:sqlite";
 import { n2CanonicalT5CompleteCaptureSelectionHavingSql } from "../src/research-replay/n2T5CompleteCaptureSelectionSql";
 import { n2CanonicalT5ForwardCaptureTimingHavingSql } from "../src/research-replay/n2T5ForwardCaptureTimingSql";
 import { validateT5MarketBaselineResultIdentityRows } from "../src/research-replay/t5MarketBaselineResultIdentity";
+import { validateT5MarketCoverageProgramRows } from "../src/research-replay/t5MarketCoverageProgramIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const MODEL_PATH = process.env.BOAT_PON_HISTORICAL_MODEL_PATH ?? "reports/historical-ranking-model.json";
@@ -329,11 +330,11 @@ function loadLatestCompleteCaptures(from: string, to: string, capturedFrom: stri
 }
 
 function loadPrograms(from: string, to: string) {
-  return db.prepare(`
+  return validateT5MarketCoverageProgramRows(db.prepare(`
     SELECT race_id, date, venue, race_no, close_at, raw_json
     FROM official_programs
     WHERE date >= ? AND date <= ?
-  `).all(from, to) as ProgramRow[];
+  `).all(from, to) as ProgramRow[]);
 }
 
 function loadResults(from: string, to: string) {
