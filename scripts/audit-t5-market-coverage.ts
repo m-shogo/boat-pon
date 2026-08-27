@@ -2,6 +2,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { evaluateT5MarketCoverage } from "../src/domain/t5MarketCoverage";
 import { n2CanonicalT5SelectionSql } from "../src/research-replay/n2T5CollectorSelectionSql";
+import { n2CanonicalT5CoverageTimingSql } from "../src/research-replay/n2T5MarketCoverageTimingSql";
 import { parseT5MarketCoverageAuditOptions } from "../src/research-replay/t5MarketCoverageAuditOptions";
 import { isCanonicalT5MarketCoverageSettlement } from "../src/research-replay/t5MarketCoverageSettlement";
 
@@ -26,11 +27,22 @@ try {
     .map(row => [row.race_id, row] as const));
   // checkpoint_label単独の索引走査を避け、race_id先頭の既存複合索引をレースごとに使う。
   const canonicalSelectionSql = n2CanonicalT5SelectionSql("selection");
+  const canonicalTimingSql = n2CanonicalT5CoverageTimingSql("minutes_before_close");
   const countT5 = db.prepare(`
-    SELECT COALESCE(MAX(CASE WHEN selections = canonical_selections THEN canonical_selections ELSE 0 END), 0) AS n FROM (
+    SELECT COALESCE(MAX(CASE
+      WHEN row_count = selections
+        AND selections = canonical_t5_selections
+        AND row_count = canonical_timing_rows
+        AND timing_values = 1
+      THEN canonical_t5_selections
+      ELSE 0
+    END), 0) AS n FROM (
       SELECT
+        COUNT(*) AS row_count,
         COUNT(DISTINCT selection) AS selections,
-        COUNT(DISTINCT CASE WHEN ${canonicalSelectionSql} THEN selection END) AS canonical_selections
+        COUNT(DISTINCT CASE WHEN ${canonicalSelectionSql} AND ${canonicalTimingSql} THEN selection END) AS canonical_t5_selections,
+        SUM(CASE WHEN ${canonicalTimingSql} THEN 1 ELSE 0 END) AS canonical_timing_rows,
+        COUNT(DISTINCT minutes_before_close) AS timing_values
       FROM odds_timeseries_snapshots
       WHERE race_id = ? AND checkpoint_label = 'T-5'
       GROUP BY captured_at
